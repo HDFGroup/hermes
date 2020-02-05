@@ -1,6 +1,7 @@
 #ifndef TRAIT_H_
 #define TRAIT_H_
 
+#include <memory>
 #include <string>
 
 #include "hermes.h"

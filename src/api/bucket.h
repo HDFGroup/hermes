@@ -19,8 +19,7 @@ namespace api
     // TODO: Think about the Big Three
 
     /** rename this bucket */
-    Status Rename(const std::string& old_name,
-                  const std::string& new_name,
+    Status Rename(const std::string& new_name,
                   Context& ctx);
 
     /** release this bucket and free its associated resources */

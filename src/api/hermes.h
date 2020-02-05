@@ -15,6 +15,9 @@ namespace api
   {
     /** if true will do more checks, warnings, expect slower code */
     const bool m_debug_mode = true;
+
+    // MPI comms.
+    // proxy/reference to Hermes core
   };
 
   class Trait;
@@ -36,9 +39,8 @@ namespace api
   /** acquire a bucket with the default trait */
   Bucket Acquire(const std::string& name, Context& ctx);
 
-  /** rename a bucket */
-  Status RenameBucket(Bucket& bkt,
-                      const std::string& old_name,
+  /** rename a bucket referred to by name only */
+  Status RenameBucket(const std::string& old_name,
                       const std::string& new_name,
                       Context& ctx);
 
