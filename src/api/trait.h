@@ -7,32 +7,35 @@
 
 namespace hermes
 {
-  namespace api
+namespace api
+{
+  class Trait
   {
-    class Trait
-    {
-    public:
+  public:
 
-      // TBD
+    /** internal HERMES object owned by trait */
+    std::shared_ptr<HERMES> m_HERMES;
 
-      static const Trait kDefault;
+    // TBD
 
-      /** update a trait property */
-      Status EditTrait(const std::string& key,
-                       const std::string& value,
-                       Context& ctx);
+    static const Trait kDefault;
 
-      /** acquire a bucket and link to this trait as a side-effect */
-      Bucket Acquire(const std::string& name, Context& ctx);
+    /** update a trait property */
+    Status EditTrait(const std::string& key,
+                     const std::string& value,
+                     Context& ctx);
 
-      /** link a bucket to this trait */
-      Status Link(const Bucket& bkt, Context& ctx);
+    /** acquire a bucket and link to this trait as a side-effect */
+    Bucket Acquire(const std::string& name, Context& ctx);
 
-      /** unlink a bucket from this trait */
-      Status Unlink(const Bucket& bkt, Context& ctx);
+    /** link a bucket to this trait */
+    Status Link(const Bucket& bkt, Context& ctx);
 
-    };
-  }  // end namespace api
-}  // end namespace hermes
+    /** unlink a bucket from this trait */
+    Status Unlink(const Bucket& bkt, Context& ctx);
+
+  };
+}  // api
+}  // hermes
 
 #endif  //  TRAIT_H_
