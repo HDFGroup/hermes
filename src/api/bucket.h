@@ -4,7 +4,7 @@
 #include <memory>
 #include <string>
 
-#include "hermes.hpp"
+#include "hermes.h"
 
 namespace hermes
 {
