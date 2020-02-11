@@ -50,7 +50,6 @@ namespace api
                       Bucket& dst_bkt,
                       const std::string& dst_blob_name,
                       Context& ctx);
-
 }  // api
 }  // hermes
 

@@ -10,7 +10,10 @@ namespace api
   template<class Tag, class T, T default_value>
   class ID
   {
-  public:
+   private:
+    T m_val;
+    
+   public:
     static ID Invalid() { return ID(); }
 
     // Defaults to ID::invalid()
@@ -24,9 +27,6 @@ namespace api
 
     friend bool operator==(ID a, ID b) { return a.m_val == b.m_val; }
     friend bool operator!=(ID a, ID b) { return a.m_val != b.m_val; }
-
-  private:
-    T m_val;
   };
 }  // api
 }  // hermes

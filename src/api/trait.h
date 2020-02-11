@@ -4,6 +4,8 @@
 #include <memory>
 #include <string>
 
+#include "glog/logging.h"
+
 #include "hermes.h"
 
 namespace hermes
@@ -12,14 +14,33 @@ namespace api
 {
   class Trait
   {
-  public:
-
+   private:
+    std::string name;
+      
+   public:
     /** internal HERMES object owned by trait */
     std::shared_ptr<HERMES> m_HERMES;
 
     // TBD
-
     static const Trait kDefault;
+        
+    Trait () : name("default")
+    {
+      //TODO: initialize kDefault
+      LOG(INFO) << "Create default Trait " << std::endl;
+    };
+        
+    Trait (std::string initial_name) : name(initial_name)
+    {
+      //TODO: initialize kDefault
+      LOG(INFO) << "Create Trait " << initial_name << std::endl;
+    };
+      
+    /** get the name of trait */
+    std::string GetName() const
+    {
+      return this->name;
+    }
 
     /** update a trait property */
     Status EditTrait(const std::string& key,
@@ -34,7 +55,6 @@ namespace api
 
     /** unlink a bucket from this trait */
     Status Unlink(const Bucket& bkt, Context& ctx);
-
   };
 }  // api
 }  // hermes

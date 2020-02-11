@@ -12,11 +12,31 @@ namespace api
 {
   class Bucket
   {
-  public:
+   private:
+    std::string name;
+    std::vector<Blob> blobs;
+      
+   public:
     /** internal HERMES object owned by Bucket */
     std::shared_ptr<HERMES> m_HERMES;
-
+        
     // TODO: Think about the Big Three
+        
+    Bucket () : name("")
+    {
+      LOG(INFO) << "Create NULL Bucket " << std::endl;
+    }
+        
+    Bucket (std::string initial_name) : name(initial_name)
+    {
+      LOG(INFO) << "Create Bucket " << initial_name << std::endl;
+    }
+      
+    /** get the name of bucket */
+    std::string GetName() const
+    {
+      return this->name;
+    }
 
     /** rename this bucket */
     Status Rename(const std::string& new_name,
@@ -29,7 +49,7 @@ namespace api
     Status Put(const std::string& name, const Blob& data, Context& ctx);
 
     /** get a blob on this bucket */
-    Blob& Get(const std::string& name, Context& ctx);
+    const Blob& Get(const std::string& name, Context& ctx);
 
     /** delete a blob from this bucket */
     Status DeleteBlob(const std::string& name, Context& ctx);
