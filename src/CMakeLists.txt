@@ -72,14 +72,14 @@ endif()
 #------------------------------------------------------------------------------
 if(NOT HERMES_EXTERNALLY_CONFIGURED)
   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY
-      ${PROJECT_BINARY_DIR}/bin CACHE PATH "Single Directory for all Executables."
+    ${PROJECT_BINARY_DIR}/bin CACHE PATH "Single Directory for all Executables."
   )
   set(EXECUTABLE_OUTPUT_PATH ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
   set(CMAKE_LIBRARY_OUTPUT_DIRECTORY
-      ${PROJECT_BINARY_DIR}/bin CACHE PATH "Single Directory for all Libraries"
+    ${PROJECT_BINARY_DIR}/bin CACHE PATH "Single Directory for all Libraries"
   )
   set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY
-      ${PROJECT_BINARY_DIR}/bin CACHE PATH "Single Directory for all static libraries."
+    ${PROJECT_BINARY_DIR}/bin CACHE PATH "Single Directory for all static libraries."
   )
 endif()
 
@@ -91,7 +91,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${HERMES_CMAKE_DIR})
 #------------------------------------------------------------------------------
 if("${HERMES_SOURCE_DIR}" STREQUAL "${HERMES_BINARY_DIR}")
   message(FATAL_ERROR
-	  "HERMES requires an out of source Build. "
+    "HERMES requires an out of source Build. "
     "Please create a separate binary directory and run CMake there.")
 endif()
 
@@ -107,9 +107,10 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     "MinSizeRel" "RelWithDebInfo")
 endif()
 
-if(NOT CMAKE_C_FLAGS AND CMAKE_COMPILER_IS_GNUCC)
-  message(STATUS "GCC detected, setting additional flags")
-  set(CMAKE_CXX_FLAGS "-Wall -Wextra -Winline -Wcast-qual -std=gnu99 -Wshadow" CACHE STRING "Flags used by the compiler during all build types." FORCE)
+if(NOT "${CMAKE_CXX_STANDARD}")
+  set(CMAKE_CXX_STANDARD 17)
+  set(CMAKE_CXX_STANDARD_REQUIRED ON)
+  set(CMAKE_CXX_EXTENSIONS OFF)
 endif()
 
 #-----------------------------------------------------------------------------
@@ -117,7 +118,7 @@ endif()
 # by other projects.
 #-----------------------------------------------------------------------------
 if(NOT HERMES_EXPORTED_TARGETS)
-	set(HERMES_EXPORTED_TARGETS "hermes-targets")
+  set(HERMES_EXPORTED_TARGETS "hermes-targets")
 endif()
 
 #------------------------------------------------------------------------------

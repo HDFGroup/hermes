@@ -18,7 +18,7 @@ if(GLOG_FOUND)
   )
   set(HERMES_EXT_LIB_DEPENDENCIES glog::glog ${HERMES_EXT_LIB_DEPENDENCIES})
 else()
-	message(STATUS, "GLOG not found")
+  message(STATUS, "GLOG not found")
 endif()
 
 #------------------------------------------------------------------------------
@@ -58,7 +58,6 @@ target_include_directories(hermes
           $<INSTALL_INTERFACE:${HERMES_INSTALL_INCLUDE_INTERFACE}>
 )
 
-message(STATUS "HERMES_EXT_LIB_DEPENDENCIES is ${HERMES_EXT_LIB_DEPENDENCIES}")
 target_link_libraries(hermes
   ${HERMES_EXPORTED_LIBS}
   ${HERMES_EXT_LIB_DEPENDENCIES}
