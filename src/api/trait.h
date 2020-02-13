@@ -8,54 +8,51 @@
 
 #include "hermes.h"
 
-namespace hermes
-{
-namespace api
-{
-  class Trait
-  {
-   private:
-    std::string name;
+namespace hermes {
+
+namespace api {
+
+class Trait {
+ private:
+  std::string name_;
       
-   public:
-    /** internal HERMES object owned by trait */
-    std::shared_ptr<HERMES> m_HERMES;
+ public:
+  /** internal HERMES object owned by trait */
+  std::shared_ptr<HERMES> m_HERMES_;
 
-    // TBD
-    static const Trait kDefault;
+  // TBD
+  static const Trait kDefault;
         
-    Trait () : name("default")
-    {
-      //TODO: initialize kDefault
-      LOG(INFO) << "Create default Trait " << std::endl;
-    };
-        
-    Trait (std::string initial_name) : name(initial_name)
-    {
-      //TODO: initialize kDefault
-      LOG(INFO) << "Create Trait " << initial_name << std::endl;
-    };
-      
-    /** get the name of trait */
-    std::string GetName() const
-    {
-      return this->name;
-    }
-
-    /** update a trait property */
-    Status EditTrait(const std::string& key,
-                     const std::string& value,
-                     Context& ctx);
-
-    /** acquire a bucket and link to this trait as a side-effect */
-    Bucket Acquire(const std::string& name, Context& ctx);
-
-    /** link a bucket to this trait */
-    Status Link(const Bucket& bkt, Context& ctx);
-
-    /** unlink a bucket from this trait */
-    Status Unlink(const Bucket& bkt, Context& ctx);
+  Trait() : name_("default") {
+    //TODO: initialize kDefault
+    LOG(INFO) << "Create default Trait " << std::endl;
   };
+        
+  Trait(std::string initial_name) : name_(initial_name) {
+    //TODO: initialize kDefault
+    LOG(INFO) << "Create Trait " << initial_name << std::endl;
+  };
+      
+  /** get the name of trait */
+  std::string GetName() const {
+    return this->name_;
+  }
+
+  /** update a trait property */
+  Status EditTrait(const std::string& key,
+                   const std::string& value,
+                   Context& ctx);
+
+  /** acquire a bucket and link to this trait as a side-effect */
+  Bucket Acquire(const std::string& name, Context& ctx);
+
+  /** link a bucket to this trait */
+  Status Link(const Bucket& bkt, Context& ctx);
+
+  /** unlink a bucket from this trait */
+  Status Unlink(const Bucket& bkt, Context& ctx);
+}; // class Trait
+
 }  // api
 }  // hermes
 

@@ -37,9 +37,9 @@ endif()
 # Set sources
 #------------------------------------------------------------------------------
 set(HERMES_SRCS
-  ${CMAKE_CURRENT_SOURCE_DIR}/bucket.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/hermes.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/trait.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/bucket.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/hermes.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/trait.cc
 )
 
 #------------------------------------------------------------------------------
