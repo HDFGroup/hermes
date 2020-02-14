@@ -210,7 +210,7 @@ install(
 )
 
 #-----------------------------------------------------------------------------
-# Configure the pdc-config-version .cmake file for the install directory
+# Configure the hermes-config-version .cmake file for the install directory
 #-----------------------------------------------------------------------------
 configure_file(
   ${HERMES_SOURCE_DIR}/CMake/hermes-config-version.cmake.in
