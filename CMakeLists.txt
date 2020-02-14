@@ -160,22 +160,22 @@ function(hermes_set_lib_options libtarget libname libtype)
   endif()
 
   set_target_properties(${libtarget}
-      PROPERTIES
-      DEBUG_OUTPUT_NAME          ${LIB_DEBUG_NAME}
-      RELEASE_OUTPUT_NAME        ${LIB_RELEASE_NAME}
-      MINSIZEREL_OUTPUT_NAME     ${LIB_RELEASE_NAME}
-      RELWITHDEBINFO_OUTPUT_NAME ${LIB_RELEASE_NAME}
-      VERSION                    ${LIB_VERSION}
-      SOVERSION                  ${LIB_VERSION}
+    PROPERTIES
+    DEBUG_OUTPUT_NAME          ${LIB_DEBUG_NAME}
+    RELEASE_OUTPUT_NAME        ${LIB_RELEASE_NAME}
+    MINSIZEREL_OUTPUT_NAME     ${LIB_RELEASE_NAME}
+    RELWITHDEBINFO_OUTPUT_NAME ${LIB_RELEASE_NAME}
+    VERSION                    ${LIB_VERSION}
+    SOVERSION                  ${LIB_VERSION}
   )
 
   #----- Use MSVC Naming conventions for Shared Libraries
   if(MINGW AND ${libtype} MATCHES "SHARED")
     set_target_properties(${libtarget}
-        PROPERTIES
-        IMPORT_SUFFIX ".lib"
-        IMPORT_PREFIX ""
-        PREFIX ""
+      PROPERTIES
+      IMPORT_SUFFIX ".lib"
+      IMPORT_PREFIX ""
+      PREFIX ""
     )
   endif()
 endfunction()
@@ -185,3 +185,41 @@ endfunction()
 #-----------------------------------------------------------------------------
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test)
+
+#-----------------------------------------------------------------------------
+# Configure the config.cmake file for the build directory
+#-----------------------------------------------------------------------------
+configure_file(
+ ${HERMES_SOURCE_DIR}/CMake/hermes-config.cmake.build.in
+ ${HERMES_BINARY_DIR}/hermes-config.cmake @ONLY
+)
+
+#-----------------------------------------------------------------------------
+# Configure the config.cmake file for the install directory
+#-----------------------------------------------------------------------------
+configure_file(
+ ${HERMES_SOURCE_DIR}/CMake/hermes-config.cmake.install.in
+ ${HERMES_BINARY_DIR}/CMakeFiles/hermes-config.cmake @ONLY
+)
+
+install(
+  FILES
+    ${HERMES_BINARY_DIR}/CMakeFiles/hermes-config.cmake
+  DESTINATION
+    ${HERMES_INSTALL_DATA_DIR}/cmake/hermes
+)
+
+#-----------------------------------------------------------------------------
+# Configure the hermes-config-version .cmake file for the install directory
+#-----------------------------------------------------------------------------
+configure_file(
+  ${HERMES_SOURCE_DIR}/CMake/hermes-config-version.cmake.in
+  ${HERMES_BINARY_DIR}/CMakeFiles/hermes-config-version.cmake @ONLY
+)
+
+install(
+  FILES
+    ${HERMES_BINARY_DIR}/CMakeFiles/hermes-config-version.cmake
+  DESTINATION
+    ${HERMES_INSTALL_DATA_DIR}/cmake/hermes
+)
