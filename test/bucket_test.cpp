@@ -12,6 +12,8 @@ int main()
   hermes::api::Trait my_trait("compression");
     
   hermes::api::Bucket my_bucket("application");
+  
+  hermes::api::VBucket my_bv("IIT");
     
   return 0;
 }

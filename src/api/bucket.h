@@ -30,6 +30,11 @@ class Bucket {
   Bucket(std::string initial_name) : name_(initial_name) {
     LOG(INFO) << "Create Bucket " << initial_name << std::endl;
   }
+  
+  ~Bucket() {
+    name_.clear();
+    blobs_.clear();
+  }
       
   /** get the name of bucket */
   std::string GetName() const {

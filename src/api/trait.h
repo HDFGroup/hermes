@@ -7,6 +7,7 @@
 #include "glog/logging.h"
 
 #include "hermes.h"
+#include "vbucket.h"
 
 namespace hermes {
 
@@ -32,12 +33,20 @@ class Trait {
     //TODO: initialize kDefault
     LOG(INFO) << "Create Trait " << initial_name << std::endl;
   };
+  
+  ~Trait() {
+    name_.clear();
+  }
       
   /** get the name of trait */
   std::string GetName() const {
     return this->name_;
   }
 
+  /** register a trait */
+  Status Register(std::string& name, const std::string& key,
+                  const std::string& value, Context& ctx);
+  
   /** update a trait property */
   Status EditTrait(const std::string& key,
                    const std::string& value,
@@ -45,12 +54,12 @@ class Trait {
 
   /** acquire a bucket and link to this trait as a side-effect */
   Bucket Acquire(const std::string& name, Context& ctx);
-
-  /** link a bucket to this trait */
-  Status Link(const Bucket& bkt, Context& ctx);
-
-  /** unlink a bucket from this trait */
-  Status Unlink(const Bucket& bkt, Context& ctx);
+  
+  /** link this trait to a vbucket */
+  Status Link(const VBucket& vb, Context& ctx);
+  
+  /** unlink this trait from a vbucket */
+  Status Unlink(const VBucket& vb, Context& ctx);
 }; // class Trait
 
 }  // api

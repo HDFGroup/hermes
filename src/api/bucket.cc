@@ -9,7 +9,7 @@ namespace api {
 Status Bucket::Rename(const std::string& new_name, Context& ctx) {
   Status ret = 0;
     
-  LOG(INFO) << "Rename a bucket to" << new_name << std::endl;
+  LOG(INFO) << "Rename a bucket to" << new_name << '\n';
     
   return ret;
 }
@@ -18,7 +18,7 @@ Status Bucket::Rename(const std::string& new_name, Context& ctx) {
 Status Bucket::Release(Context& ctx) {
   Status ret = 0;
     
-  LOG(INFO) << "Release bucket " << std::endl;
+  LOG(INFO) << "Release bucket " << '\n';
     
   return ret;
 }
@@ -26,7 +26,7 @@ Status Bucket::Release(Context& ctx) {
 Status Bucket::Put(const std::string& name, const Blob& data, Context& ctx) {
   Status ret = 0;
     
-  LOG(INFO) << "Attach blol " << name << "to Bucket " << std::endl;
+  LOG(INFO) << "Attach blob " << name << "to Bucket " << '\n';
     
   return ret;
 }
@@ -34,7 +34,7 @@ Status Bucket::Put(const std::string& name, const Blob& data, Context& ctx) {
 const Blob& Bucket::Get(const std::string& name, Context& ctx) {
   Blob& ret = blobs_[0];
     
-  LOG(INFO) << "Get Blob " << name << std::endl;
+  LOG(INFO) << "Get Blob " << name << " from bucket " << name_ << '\n';
     
   return ret;
 }
@@ -42,7 +42,7 @@ const Blob& Bucket::Get(const std::string& name, Context& ctx) {
 Status Bucket::DeleteBlob(const std::string& name, Context& ctx) {
   Status ret = 0;
     
-  LOG(INFO) << "Delete Blob " << name << std::endl;
+  LOG(INFO) << "Delete Blob " << name << " from bucket " << name_ << '\n';
     
   return ret;
 }
@@ -52,7 +52,7 @@ Status Bucket::RenameBlob(const std::string& old_name,
                           Context& ctx) {
   Status ret = 0;
     
-  LOG(INFO) << "Rename Blob " << old_name << " to " << new_name << std::endl;
+  LOG(INFO) << "Rename Blob " << old_name << " to " << new_name << '\n';
     
   return ret;
 }
