@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <string>
+#include <array>
 #include <unordered_map>
 
 #include "glog/logging.h"
@@ -12,41 +13,6 @@
 namespace hermes {
 
 namespace api {
-
-class TraitSchema {
- private:
-  std::string name_;
-  std::unordered_map<std::string, std::string> attributes_;
-  
- public:
-  /** internal HERMES object owned by trait */
-  std::shared_ptr<HERMES> m_HERMES_;
-  
-  TraitSchema() : name_("default_trtschema") {
-    //TODO: initialize kDefault
-    LOG(INFO) << "Create default TraitSchema" << std::endl;
-  };
-  
-  TraitSchema(std::string initial_name) : name_(initial_name) {
-    //TODO: initialize kDefault
-    LOG(INFO) << "Create TraitSchema " << initial_name << std::endl;
-  };
-  
-  ~TraitSchema() {
-    name_.clear();
-    attributes_.clear();
-  }
-  
-  /** get the name of traitschema */
-  std::string GetName() const {
-    return this->name_;
-  }
-  
-  /** register a traitschema */
-  Status Register(const std::string &name,
-                  std::unordered_map<std::string, std::string>,
-                  Context &ctx);
-};
   
 class Trait {
  private:
@@ -80,16 +46,28 @@ class Trait {
     return this->name_;
   }
   
-  /** acquire a trait schema and populate to this trait as a side-effect */
-  Trait& Acquire(const std::string &trtschema_name,
-                std::unordered_map<std::string, std::string>,
-                Context &ctx);
-  
   /** update a trait property */
   Status EditTrait(const std::string &key,
                    const std::string &value,
                    Context &ctx);
 }; // class Trait
+
+template <class... Args>
+class TraitSchema {
+ public:
+  static const size_t L = std::tuple_size<std::tuple<Args...>>::value;
+  std::array<std::string,L> key_name;
+    
+  TraitSchema(const std::array<std::string,L>& names) {
+    key_name = names;
+  };
+    
+  template <std::size_t N>
+  using type = typename std::tuple_element<N, std::tuple<Args...>>::type;
+    
+  Trait CreateInstance(Context &ctx);
+};
+#include "trait.inl"
 
 }  // api
 }  // hermes
