@@ -4,7 +4,8 @@
 #include <memory>
 #include <string>
 #include <array>
-#include <unordered_map>
+#include <vector>
+#include <tuple>
 
 #include "glog/logging.h"
 
@@ -13,61 +14,79 @@
 namespace hermes {
 
 namespace api {
-  
-class Trait {
- private:
-  std::string name_;
-  std::unordered_map<std::string, std::string> attributes_;
-      
- public:
-  /** internal HERMES object owned by trait */
-  std::shared_ptr<HERMES> m_HERMES_;
-  
-  // TBD
-  static const Trait kDefault;
-        
-  Trait() : name_("default_trait") {
-    //TODO: initialize kDefault
-    LOG(INFO) << "Create default Trait " << std::endl;
-  };
-        
-  Trait(std::string initial_name) : name_(initial_name) {
-    //TODO: initialize kDefault
-    LOG(INFO) << "Create Trait " << initial_name << std::endl;
-  };
-  
-  ~Trait() {
-    name_.clear();
-    attributes_.clear();
-  }
-      
-  /** get the name of trait */
-  std::string GetName() const {
-    return this->name_;
-  }
-  
-  /** update a trait property */
-  Status EditTrait(const std::string &key,
-                   const std::string &value,
-                   Context &ctx);
-}; // class Trait
 
 template <class... Args>
 class TraitSchema {
  public:
-  static const size_t L = std::tuple_size<std::tuple<Args...>>::value;
-  std::array<std::string,L> key_name;
+  class Trait {
+   private:
+    Trait(Args... args) {
+      attr_values_ = std::tuple<Args...>(args...);
+    }
     
-  TraitSchema(const std::array<std::string,L>& names) {
-    key_name = names;
-  };
+   public:
+    std::tuple<Args...> attr_values_;
+    /** internal HERMES object owned by trait */
+    std::shared_ptr<HERMES> m_HERMES_;
     
+    // TBD
+    static const Trait kDefault;
+    
+    ~Trait() {
+//      attributes_.clear();
+    }
+    
+    /** update a trait property */
+    Status EditTrait(const std::string &key,
+                     const std::string &value,
+                     Context &ctx);
+    
+    friend class TraitSchema;
+  }; // class Trait
+  
+  static const size_t arg_length_ = std::tuple_size<std::tuple<Args...>>::value;
+  std::array<std::string, arg_length_> key_names_;
+  std::vector<std::string> reg_names_;
+//  std::vector<* Trait> reg_traits_;
+  
   template <std::size_t N>
   using type = typename std::tuple_element<N, std::tuple<Args...>>::type;
+  
+  TraitSchema(const std::string reg_name,
+              const std::array<std::string,arg_length_>& names) {
+    key_names_ = names;
+    reg_names_.push_back(reg_name);
+  };
+  
+  Trait& CreateInstance(Context &ctx, Args... arg);
+}; // class TraitSchema
+
+template <class... Args>
+typename TraitSchema<Args...>::Trait& TraitSchema<Args...>
+  ::CreateInstance(Context &ctx, Args... args) {
+                               
+  LOG(INFO) << "Create TraitSchema instance\n";
+  
+  TraitSchema<Args...>::Trait trt(args...);
     
-  Trait CreateInstance(Context &ctx);
-};
-#include "trait.inl"
+  std::cout << "(" << std::get<0>(key_names_) << ", " << std::get<1>(key_names_)
+            << ", " << std::get<2>(key_names_) << ")\n";
+  std::cout << "(" << std::get<0>(trt.attr_values_) << ", " << std::get<1>(trt.attr_values_)
+            << ", " << std::get<2>(trt.attr_values_) << ")\n";
+                               
+  return trt;
+}
+  
+template <class... Args>
+Status TraitSchema<Args...>::Trait::EditTrait(const std::string& key,
+                                              const std::string& value,
+                                              Context& ctx) {
+  Status ret = 0;
+    
+  LOG(INFO) << "Editing Trait\n";
+    
+  return ret;
+}
 
 }  // api
 }  // hermes

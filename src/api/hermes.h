@@ -28,17 +28,9 @@ class HERMES {
 
   // MPI comms.
   // proxy/reference to Hermes core
-public:
-  /** register a traitschema */
-  template <class... Args>
-  Status Register(TraitSchema<Args...> &ts,
-                  const std::string &name,
-                  Context &ctx);
 };
-#include "hermes.inl"
-
-class Trait;
   
+template <class... Args>
 class VBucket;
 
 class Bucket;
@@ -65,6 +57,7 @@ Status TransferBlob(const Bucket &src_bkt,
                     Bucket &dst_bkt,
                     const std::string &dst_blob_name,
                     Context &ctx);
+  
 }  // api namespace
 }  // hermes namespace
 

@@ -7,11 +7,13 @@
 #include "glog/logging.h"
 
 #include "hermes.h"
+#include "trait.h"
 
 namespace hermes {
   
 namespace api {
-    
+  
+template <class... Args>
 class VBucket {
  private:
   std::string name_;
@@ -44,12 +46,50 @@ class VBucket {
   Status Unlink(std::string blob_name, std::string bucket_name, Context &ctx);
   
   /** attach a trait to this vbucket */
-  Status Attach(const Trait &trt, Context &ctx);
+  Status Attach(typename TraitSchema<Args...>::Trait &trt, Context &ctx);
   
   /** detach a trait to this vbucket */
-  Status Detach(const Trait &trt, Context &ctx);
+  Status Detach(typename TraitSchema<Args...>::Trait &trt, Context &ctx);
 }; // class VBucket
+  
+template <class... Args>
+Status VBucket<Args...>::Attach(typename TraitSchema<Args...>::Trait &trt, Context &ctx) {
+  Status ret = 0;
     
+  LOG(INFO) << "Attaching trait to VBucket " << name_ << '\n';
+    
+  return ret;
+}
+  
+template <class... Args>
+Status VBucket<Args...>::Detach(typename TraitSchema<Args...>::Trait& trt, Context& ctx) {
+  Status ret = 0;
+    
+  LOG(INFO) << "Detaching trait from VBucket " << name_ << '\n';
+    
+  return ret;
+}
+  
+template <class... Args>
+Status VBucket<Args...>::Link(std::string blob_name, std::string bucket_name, Context& ctx) {
+  Status ret = 0;
+    
+  LOG(INFO) << "Linking blob "<< blob_name << " in bucket "
+            << bucket_name << " to VBucket " << name_ << '\n';
+    
+  return ret;
+}
+  
+template <class... Args>
+Status VBucket<Args...>::Unlink(std::string blob_name, std::string bucket_name, Context& ctx) {
+  Status ret = 0;
+    
+  LOG(INFO) << "Unlinking blob "<< blob_name << " in bucket "
+            << bucket_name << " from VBucket " << name_ << '\n';
+    
+  return ret;
+}
+
 }  // api
 }  // hermes
 

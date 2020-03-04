@@ -33,7 +33,8 @@ Status TransferBlob(const Bucket &src_bkt,
                     Context &ctx) {
   Status ret = 0;
     
-  LOG(INFO) << "Transferring Blob from " << src_blob_name << " to " << dst_blob_name << '\n';
+  LOG(INFO) << "Transferring Blob from " << src_blob_name << " to "
+            << dst_blob_name << '\n';
     
   return ret;
 }

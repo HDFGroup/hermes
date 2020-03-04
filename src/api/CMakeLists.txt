@@ -39,8 +39,6 @@ endif()
 set(HERMES_SRCS
   ${CMAKE_CURRENT_SOURCE_DIR}/bucket.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/hermes.cc
-  ${CMAKE_CURRENT_SOURCE_DIR}/trait.cc
-  ${CMAKE_CURRENT_SOURCE_DIR}/vbucket.cc
 )
 
 #------------------------------------------------------------------------------
@@ -74,10 +72,8 @@ set(HERMES_EXPORTED_LIBS hermes ${HERMES_EXPORTED_LIBS})
 set(HERMES_HEADERS
   ${CMAKE_CURRENT_SOURCE_DIR}/bucket.h
   ${CMAKE_CURRENT_SOURCE_DIR}/hermes.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/hermes.inl
   ${CMAKE_CURRENT_SOURCE_DIR}/id.h
   ${CMAKE_CURRENT_SOURCE_DIR}/trait.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/trait.inl
   ${CMAKE_CURRENT_SOURCE_DIR}/vbucket.h
 )
 
