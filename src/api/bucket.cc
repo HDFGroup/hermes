@@ -6,6 +6,18 @@ namespace hermes {
 
 namespace api {
 
+Status Bucket::Check_blob(const std::string& blob_name) {
+	Status ret = 0;
+	
+	LOG(INFO) << "Checking if blob " << blob_name << " exists in Bucket "
+	          << name_ << '\n';
+	
+	if (blobs_.find(blob_name) != blobs_.end())
+		ret = 1;
+			
+  return ret;
+}
+
 Status Bucket::Rename(const std::string &new_name, Context &ctx) {
   Status ret = 0;
     
@@ -25,6 +37,11 @@ Status Bucket::Release(Context &ctx) {
 
 Status Bucket::Put(const std::string &name, const Blob &data, Context &ctx) {
   Status ret = 0;
+	// get blob buffer ID
+	uint64_t blob_id = 0;
+	
+	// Inserting blob[name, id] pair
+	blobs_[name] = blob_id;
     
   LOG(INFO) << "Attaching blob " << name << "to Bucket " << '\n';
     
@@ -32,11 +49,9 @@ Status Bucket::Put(const std::string &name, const Blob &data, Context &ctx) {
 }
 
 const Blob& Bucket::Get(const std::string &name, Context &ctx) {
-  Blob &ret = blobs_[0];
     
   LOG(INFO) << "Getting Blob " << name << " from bucket " << name_ << '\n';
     
-  return ret;
 }
 
 Status Bucket::DeleteBlob(const std::string &name, Context &ctx) {

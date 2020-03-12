@@ -3,7 +3,7 @@
 
 #include <cstdint>
 #include <string>
-#include <vector>
+#include <set>
 #include <iostream>
 
 #include "glog/logging.h"
@@ -16,26 +16,40 @@ namespace api {
   
 typedef int Status;
   
-class Context {
-};
-  
-template <class... Args>
-class TraitSchema;
-
 class HERMES {
+ public:
+	std::set<std::string> bucket_list_;
+	std::set<std::string> vbucket_list_;
+	
   /** if true will do more checks, warnings, expect slower code */
   const bool m_debug_mode_ = true;
+	
+	void Display_bucket() {
+		for (auto it = bucket_list_.begin(); it != bucket_list_.end(); ++it)
+			std::cout << *it << '\t';
+		std::cout << '\n';
+	}
+	
+	void Display_vbucket() {
+		for (auto it = vbucket_list_.begin(); it != vbucket_list_.end(); ++it)
+			std::cout << *it << '\t';
+		std::cout << '\n';
+	}
 
   // MPI comms.
   // proxy/reference to Hermes core
 };
+
+class TraitSchema;
   
-template <class... Args>
 class VBucket;
 
 class Bucket;
 
 typedef std::vector<unsigned char> Blob;
+
+class Context {
+};
 
 struct TraitTag{};
 typedef ID<TraitTag, int64_t, -1> THnd;
