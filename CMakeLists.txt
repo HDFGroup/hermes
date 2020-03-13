@@ -69,6 +69,11 @@ if(APPLE)
     )
 endif()
 
+if(NOT CMAKE_INSTALL_RPATH)
+  set (CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+  set (CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+endif()
+
 #------------------------------------------------------------------------------
 if(NOT HERMES_EXTERNALLY_CONFIGURED)
   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY
@@ -118,6 +123,7 @@ if(NOT CMAKE_CXX_FLAGS)
  set (CMAKE_CXX_FLAGS "-Wall -Wextra ${CMAKE_CXX_FLAGS}")
  message (STATUS "Warnings Configuration: default: ${CMAKE_CXX_FLAGS}")
 endif()
+
 #-----------------------------------------------------------------------------
 # Targets built within this project are exported at Install time for use
 # by other projects.
@@ -127,9 +133,12 @@ if(NOT HERMES_EXPORTED_TARGETS)
 endif()
 
 #------------------------------------------------------------------------------
-# Choose static or shared libraries.
+# Build options
 #------------------------------------------------------------------------------
-option(BUILD_SHARED_LIBS "Build with shared libraries." OFF)
+option(BUILD_SHARED_LIBS "Build with shared libraries." ON)
+
+option(HERMES_COMMUNICATION_MPI "Use MPI as the communication layer." ON)
+mark_as_advanced(HERMES_COMMUNICATION_MPI)
 
 #-------------------------------------------------------------------------------
 function(hermes_set_lib_options libtarget libname libtype)
@@ -179,6 +188,19 @@ function(hermes_set_lib_options libtarget libname libtype)
     )
   endif()
 endfunction()
+
+#-----------------------------------------------------------------------------
+# Dependencies common to all subdirectories
+#-----------------------------------------------------------------------------
+find_package(thallium CONFIG REQUIRED)
+if(thallium_FOUND)
+  message(STATUS "found thallium at ${thallium_DIR}")
+endif()
+
+if(HERMES_COMMUNICATION_MPI)
+  find_package(MPI REQUIRED COMPONENTS CXX)
+  message(STATUS "found mpi.h at ${MPI_CXX_INCLUDE_DIRS}")
+endif()
 
 #-----------------------------------------------------------------------------
 # Source

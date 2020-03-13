@@ -1,8 +1,9 @@
 #ifndef VBUCKET_H_
 #define VBUCKET_H_
 
-#include <string>
 #include <list>
+#include <memory>
+#include <string>
 
 #include "glog/logging.h"
 

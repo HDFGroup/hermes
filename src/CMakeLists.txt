@@ -41,6 +41,7 @@ set(HERMES_SRCS
   ${CMAKE_CURRENT_SOURCE_DIR}/api/bucket.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/api/hermes.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/api/vbucket.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/buffer_pool.cc
 )
 
 #------------------------------------------------------------------------------
@@ -60,8 +61,9 @@ target_include_directories(hermes
 )
 
 target_link_libraries(hermes
-  ${HERMES_EXPORTED_LIBS}
-  ${HERMES_EXT_LIB_DEPENDENCIES}
+  PUBLIC glog::glog
+  PRIVATE thallium
+  PRIVATE $<$<BOOL:HERMES_COMMUNICATION_MPI>:MPI::MPI_CXX>
 )
 
 hermes_set_lib_options(hermes "hermes" ${HERMES_LIBTYPE})
