@@ -6,53 +6,68 @@ namespace hermes {
 
 namespace api {
 
-Status Bucket::Rename(const std::string& new_name, Context& ctx) {
+Status Bucket::Contain_blob(const std::string& blob_name) {
+	Status ret = 0;
+	
+	LOG(INFO) << "Checking if blob " << blob_name << " exists in Bucket "
+	          << name_ << '\n';
+	
+	if (blobs_.find(blob_name) != blobs_.end())
+		ret = 1;
+			
+  return ret;
+}
+
+Status Bucket::Rename(const std::string &new_name, Context &ctx) {
   Status ret = 0;
     
-  LOG(INFO) << "Rename a bucket to" << new_name << std::endl;
+  LOG(INFO) << "Renaming a bucket to" << new_name << '\n';
     
   return ret;
 }
 
 
-Status Bucket::Release(Context& ctx) {
+Status Bucket::Release(Context &ctx) {
   Status ret = 0;
     
-  LOG(INFO) << "Release bucket " << std::endl;
+  LOG(INFO) << "Releasing bucket " << '\n';
     
   return ret;
 }
 
-Status Bucket::Put(const std::string& name, const Blob& data, Context& ctx) {
+Status Bucket::Put(const std::string &name, const Blob &data, Context &ctx) {
   Status ret = 0;
+	// get blob buffer ID
+	uint64_t blob_id = 0;
+	
+	// Inserting blob[name, id] pair
+	blobs_[name] = blob_id;
     
-  LOG(INFO) << "Attach blol " << name << "to Bucket " << std::endl;
+  LOG(INFO) << "Attaching blob " << name << "to Bucket " << '\n';
     
   return ret;
 }
 
-const Blob& Bucket::Get(const std::string& name, Context& ctx) {
-  Blob& ret = blobs_[0];
+const Blob& Bucket::Get(const std::string &name, Context &ctx) {
     
-  LOG(INFO) << "Get Blob " << name << std::endl;
+  LOG(INFO) << "Getting Blob " << name << " from bucket " << name_ << '\n';
+    
+}
+
+Status Bucket::DeleteBlob(const std::string &name, Context &ctx) {
+  Status ret = 0;
+    
+  LOG(INFO) << "Deleting Blob " << name << " from bucket " << name_ << '\n';
     
   return ret;
 }
 
-Status Bucket::DeleteBlob(const std::string& name, Context& ctx) {
+Status Bucket::RenameBlob(const std::string &old_name,
+                          const std::string &new_name,
+                          Context &ctx) {
   Status ret = 0;
     
-  LOG(INFO) << "Delete Blob " << name << std::endl;
-    
-  return ret;
-}
-
-Status Bucket::RenameBlob(const std::string& old_name,
-                          const std::string& new_name,
-                          Context& ctx) {
-  Status ret = 0;
-    
-  LOG(INFO) << "Rename Blob " << old_name << " to " << new_name << std::endl;
+  LOG(INFO) << "Renaming Blob " << old_name << " to " << new_name << '\n';
     
   return ret;
 }
