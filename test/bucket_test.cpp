@@ -4,7 +4,6 @@
 #include "zlib.h"
 
 #include "hermes.h"
-#include "trait.h"
 #include "bucket.h"
 #include "vbucket.h"
 
@@ -52,14 +51,15 @@ int main()
   
   hermes::api::Bucket my_bucket("compression", hermes_app);
 	hermes_app->Display_bucket();
-  hermes::api::Blob p1, p2;
+  hermes::api::Blob p1 (255, 1024);
+	hermes::api::Blob p2 (p1);
   my_bucket.Put("Blob1", p1, ctx);
   my_bucket.Put("Blob2", p2, ctx);
-	if(my_bucket.Check_blob("Blob1") == 1)
+	if (my_bucket.Contain_blob("Blob1") == 1)
 		std::cout<< "Found Blob1\n";
 	else
 		std::cout<< "Not found Blob1\n";
-	if(my_bucket.Check_blob("Blob2") == 1)
+	if (my_bucket.Contain_blob("Blob2") == 1)
 		std::cout<< "Found Blob2\n";
 	else
 		std::cout<< "Not found Blob2\n";

@@ -184,6 +184,9 @@ endfunction()
 # Source
 #-----------------------------------------------------------------------------
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src)
+#add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/posix_adapter)
+#add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/mpi_io_adapter)
+#add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/hermes_vol)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test)
 
 #-----------------------------------------------------------------------------

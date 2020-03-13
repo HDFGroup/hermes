@@ -2,8 +2,9 @@
 # Include source and build directories
 #------------------------------------------------------------------------------
 include_directories(
+  ${PROJECT_SOURCE_DIR}/src/api
   ${CMAKE_CURRENT_SOURCE_DIR}
-  ${CMAKE_CURRENT_BINARY_DIR}
+  
   ${HERMES_INCLUDES_BUILD_TIME}
 )
 

@@ -7,7 +7,6 @@
 #include "glog/logging.h"
 
 #include "hermes.h"
-#include "trait.h"
 
 namespace hermes {
   
@@ -45,7 +44,7 @@ class VBucket {
 	Status Contain_blob(std::string blob_name, std::string bucket_name);
 	
 	/** Get a blob linked to  this vbucket*/
-	const Blob& Get_blob(std::string blob_name, std::string bucket_name);
+	Blob& Get_blob(std::string blob_name, std::string bucket_name);
 	
 	typedef int (TraitFunc)(Blob &blob, void *trait);
 	

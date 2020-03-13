@@ -1,7 +1,4 @@
-#include "zlib.h"
-
 #include "vbucket.h"
-#include "trait.h"
 
 namespace hermes {
   
@@ -13,7 +10,7 @@ Status VBucket::Attach(void *trait, TraitFunc *func, Context& ctx) {
   LOG(INFO) << "Attaching trait to VBucket " << name_ << '\n';
 	
 	for (auto ci = linked_blobs_.begin(); ci != linked_blobs_.end(); ++ci) {
-	  const Blob &blob = Get_blob(ci->second, ci->first);
+		Blob &blob = Get_blob(ci->second, ci->first);
 //		func(blob, trait);
 	}
   
@@ -59,14 +56,14 @@ Status VBucket::Contain_blob(std::string blob_name, std::string bucket_name) {
 	for (auto ci = linked_blobs_.begin(); ci != linked_blobs_.end(); ++ci) {
 		bk_tmp = ci->first;
 		blob_tmp = ci->second;
-		if(bk_tmp == bucket_name && blob_tmp == blob_name)
+		if (bk_tmp == bucket_name && blob_tmp == blob_name)
 			ret = 1;
 	}
     
   return ret;
 }
 
-const Blob& VBucket::Get_blob(std::string blob_name, std::string bucket_name) {
+Blob& VBucket::Get_blob(std::string blob_name, std::string bucket_name) {
 	LOG(INFO) << "Retrieving blob "<< blob_name << " from bucket "
 	          << bucket_name << " in VBucket " << name_ << '\n';
 	

@@ -46,7 +46,7 @@ class Bucket {
   }
 
 	/** check if a blob name exists in this bucket*/
-	Status Check_blob(const std::string& blob_name);
+	Status Contain_blob(const std::string& blob_name);
 	
   /** rename this bucket */
   Status Rename(const std::string& new_name,

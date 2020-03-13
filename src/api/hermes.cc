@@ -2,7 +2,6 @@
 
 #include "hermes.h"
 #include "bucket.h"
-#include "trait.h"
 
 namespace hermes {
 

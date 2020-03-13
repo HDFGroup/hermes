@@ -39,8 +39,6 @@ class HERMES {
   // MPI comms.
   // proxy/reference to Hermes core
 };
-
-class TraitSchema;
   
 class VBucket;
 

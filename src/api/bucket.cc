@@ -6,7 +6,7 @@ namespace hermes {
 
 namespace api {
 
-Status Bucket::Check_blob(const std::string& blob_name) {
+Status Bucket::Contain_blob(const std::string& blob_name) {
 	Status ret = 0;
 	
 	LOG(INFO) << "Checking if blob " << blob_name << " exists in Bucket "
