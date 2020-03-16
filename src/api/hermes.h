@@ -12,6 +12,36 @@
 
 namespace hermes {
 
+typedef uint8_t u8;
+typedef uint16_t u16;
+typedef uint32_t u32;
+typedef uint64_t u64;
+typedef int8_t i8;
+typedef int16_t i16;
+typedef int32_t i32;
+typedef int64_t i64;
+typedef float f32;
+typedef double f64;
+
+typedef u16 TierID;
+
+/**
+ * A TieredSchema is a vector of (size, tier) pairs where size is the number of
+ * bytes to buffer and tier is the Tier ID where to buffer those bytes.
+ */
+using TieredSchema = std::vector<std::pair<size_t, TierID>>;
+
+/**
+ * Distinguishes whether the process (or rank) is part of the application cores
+ * or the Hermes core(s).
+ */
+enum class ProcessKind {
+  kApp,
+  kHermes,
+
+  kCount
+};
+
 namespace api {
   
 typedef int Status;
