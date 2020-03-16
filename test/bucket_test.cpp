@@ -13,7 +13,7 @@ struct MyTrait {
 };
 
 void add_buffer_to_vector(hermes::api::Blob &vector, const char *buffer, uLongf length) {
-    for (int character_index = 0; character_index < length; character_index++) {
+    for (uLongf character_index = 0; character_index < length; character_index++) {
         char current_character = buffer[character_index];
         vector.push_back(current_character);
     }
@@ -41,6 +41,8 @@ int compress_blob(hermes::api::Blob &blob, void *trait) {
 	//TODO: where to store compressed data
 	add_buffer_to_vector(destination, destination_data, destination_length);
 	delete [] destination_data;
+
+  return return_value;
 }
 
 
@@ -51,7 +53,7 @@ int main()
   
   hermes::api::Bucket my_bucket("compression", hermes_app);
 	hermes_app->Display_bucket();
-  hermes::api::Blob p1 (255, 1024);
+  hermes::api::Blob p1 (1024, 255);
 	hermes::api::Blob p2 (p1);
   my_bucket.Put("Blob1", p1, ctx);
   my_bucket.Put("Blob2", p2, ctx);

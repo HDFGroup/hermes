@@ -19,6 +19,7 @@ Status Bucket::Contain_blob(const std::string& blob_name) {
 }
 
 Status Bucket::Rename(const std::string &new_name, Context &ctx) {
+  (void)ctx;
   Status ret = 0;
     
   LOG(INFO) << "Renaming a bucket to" << new_name << '\n';
@@ -36,6 +37,7 @@ Status Bucket::Release(Context &ctx) {
 }
 
 Status Bucket::Put(const std::string &name, const Blob &data, Context &ctx) {
+  (void)ctx;
   Status ret = 0;
 	// get blob buffer ID
 	uint64_t blob_id = 0;
@@ -49,12 +51,14 @@ Status Bucket::Put(const std::string &name, const Blob &data, Context &ctx) {
 }
 
 const Blob& Bucket::Get(const std::string &name, Context &ctx) {
+  (void)ctx;
     
   LOG(INFO) << "Getting Blob " << name << " from bucket " << name_ << '\n';
     
 }
 
 Status Bucket::DeleteBlob(const std::string &name, Context &ctx) {
+  (void)ctx;
   Status ret = 0;
     
   LOG(INFO) << "Deleting Blob " << name << " from bucket " << name_ << '\n';
@@ -65,6 +69,7 @@ Status Bucket::DeleteBlob(const std::string &name, Context &ctx) {
 Status Bucket::RenameBlob(const std::string &old_name,
                           const std::string &new_name,
                           Context &ctx) {
+  (void)ctx;
   Status ret = 0;
     
   LOG(INFO) << "Renaming Blob " << old_name << " to " << new_name << '\n';

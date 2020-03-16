@@ -5,12 +5,16 @@ namespace hermes {
 namespace api {
   
 Status VBucket::Attach(void *trait, TraitFunc *func, Context& ctx) {
+  (void)ctx;
+  (void)trait;
   Status ret = 0;
   
   LOG(INFO) << "Attaching trait to VBucket " << name_ << '\n';
 	
 	for (auto ci = linked_blobs_.begin(); ci != linked_blobs_.end(); ++ci) {
 		Blob &blob = Get_blob(ci->second, ci->first);
+    (void)blob;
+    (void)func;
 //		func(blob, trait);
 	}
   
@@ -18,6 +22,8 @@ Status VBucket::Attach(void *trait, TraitFunc *func, Context& ctx) {
 }
   
 Status VBucket::Detach(void *trait, Context& ctx) {
+  (void)ctx;
+  (void)trait;
   Status ret = 0;
   
   LOG(INFO) << "Detaching trait from VBucket " << name_ << '\n';
@@ -26,6 +32,7 @@ Status VBucket::Detach(void *trait, Context& ctx) {
 }
 
 Status VBucket::Link(std::string blob_name, std::string bucket_name, Context& ctx) {
+  (void)ctx;
   Status ret = 0;
     
   LOG(INFO) << "Linking blob "<< blob_name << " in bucket "
@@ -38,6 +45,7 @@ Status VBucket::Link(std::string blob_name, std::string bucket_name, Context& ct
 }
   
 Status VBucket::Unlink(std::string blob_name, std::string bucket_name, Context& ctx) {
+  (void)ctx;
   Status ret = 0;
     
   LOG(INFO) << "Unlinking blob "<< blob_name << " in bucket "
