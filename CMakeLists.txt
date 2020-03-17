@@ -136,8 +136,10 @@ endif()
 # Build options
 #------------------------------------------------------------------------------
 option(BUILD_SHARED_LIBS "Build with shared libraries." ON)
-
 option(HERMES_COMMUNICATION_MPI "Use MPI as the communication layer." ON)
+option(BUILD_BUFFER_POOL_VISUALIZER "Build the BufferPool visualizer" OFF)
+
+# TODO(chogan): Expose this once we have more than one communication layer
 mark_as_advanced(HERMES_COMMUNICATION_MPI)
 
 #-------------------------------------------------------------------------------
@@ -202,6 +204,18 @@ if(HERMES_COMMUNICATION_MPI)
   message(STATUS "found mpi.h at ${MPI_CXX_INCLUDE_DIRS}")
 endif()
 
+find_library(LIBRT rt)
+if(NOT LIBRT)
+  message(FATAL_ERROR "librt is required for POSIX shared memory")
+endif()
+
+if(BUILD_BUFFER_POOL_VISUALIZER)
+  find_package(SDL2 CONFIG REQUIRED)
+  if(SDL2_FOUND)
+    message(STATUS "found SDL2 at ${SDL2_DIR}")
+  endif()
+endif()
+
 #-----------------------------------------------------------------------------
 # Source
 #-----------------------------------------------------------------------------
@@ -210,6 +224,10 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src)
 #add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/mpi_io_adapter)
 #add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/hermes_vol)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test)
+
+if(BUILD_BUFFER_POOL_VISUALIZER AND SDL2_FOUND)
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/buffer_pool_visualizer)
+endif()
 
 #-----------------------------------------------------------------------------
 # Configure the config.cmake file for the build directory

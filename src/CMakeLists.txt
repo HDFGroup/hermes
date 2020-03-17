@@ -50,6 +50,7 @@ set(HERMES_SRCS
 # HERMES
 set(HERMES_BUILD_INCLUDE_DEPENDENCIES
   ${CMAKE_CURRENT_SOURCE_DIR}
+  ${CMAKE_CURRENT_SOURCE_DIR}/api
   ${CMAKE_CURRENT_BINARY_DIR}
 )
 
@@ -64,6 +65,10 @@ target_link_libraries(hermes
   PUBLIC glog::glog
   PRIVATE thallium
   PRIVATE $<$<BOOL:HERMES_COMMUNICATION_MPI>:MPI::MPI_CXX>
+)
+
+target_compile_definitions(hermes
+  PRIVATE $<$<BOOL:HERMES_COMMUNICATION_MPI>:HERMES_COMMUNICATION_MPI>
 )
 
 hermes_set_lib_options(hermes "hermes" ${HERMES_LIBTYPE})
