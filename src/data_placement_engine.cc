@@ -1,18 +1,28 @@
 #include "data_placement_engine.h"
+#include "buffer_pool.h"
 
 namespace hermes {
 
 struct SystemViewState {
-  u64 capacities[kMaxTiers];
+  u64 bytes_available[kMaxTiers];
+  int num_tiers;
 };
 
 SystemViewState GetSystemViewState() {
   SystemViewState result = {};
+  // TODO(chogan): The BufferPool should feed an Apollo hook this info
+  result.num_tiers = 4;
+  u64 fifty_mb = 1024 * 1024 * 50;
+  result.bytes_available[0] = fifty_mb;
+  result.bytes_available[1] = fifty_mb;
+  result.bytes_available[2] = fifty_mb;
+  result.bytes_available[3] = fifty_mb;
 
   return result;
 }
 
 TieredSchema CalculatePlacement(size_t blob_size, const api::Context &ctx) {
+  (void)ctx;
   SystemViewState state = GetSystemViewState();
 
   // TODO(chogan): Return a TieredSchema that minimizes a cost function F given
@@ -20,17 +30,29 @@ TieredSchema CalculatePlacement(size_t blob_size, const api::Context &ctx) {
 
   // NOTE(chogan): Currently just placing into the highest available Tier.
   TieredSchema result;
+  size_t size_left = blob_size;
+  TierID current_tier = 0;
 
-  BufferPool *pool = GetBufferPoolFromContext(context);
-  int num_tiers = pool->num_tiers;
-  size_t num_bytes = blob_size;
+  while (size_left > 0 && current_tier < state.num_tiers) {
+    size_t bytes_used = 0;
+    if (state.bytes_available[current_tier] > size_left) {
+      bytes_used = size_left;
+    } else {
+      bytes_used = state.bytes_available[current_tier];
+      current_tier++;
+    }
 
-  for (TierID tier_id = 0; tier_id < num_tiers; ++tier_id) {
-
-    result.push_back(std::make_pair(tier_id, num_bytes));
+    if (bytes_used) {
+      size_left -= bytes_used;
+      result.push_back(std::make_pair(current_tier, bytes_used));
+    }
   }
 
-  // TODO(chogan): Could trigger BufferOrganizer
+  if (size_left > 0) {
+    // Couldn't fit everything, trigger BufferOrganizer
+    // EvictBuffers(eviction_schema);
+    result.clear();
+  }
 
   return result;
 }
@@ -40,7 +62,13 @@ Status Put(const std::string &name, const Blob &data, Context &ctx) {
   Status ret = 0;
   SharedMemoryContext *context = 0;
   TieredSchema schema = CalculatePlacement(data.size(), ctx);
+  while (schema.size() == 0) {
+    schema = CalculatePlacement(data.siz(), ctx);
+  }
   std::vector<BufferID> bufferIDs = GetBuffers(context, schema);
+  while (bufferIDs.size() == 0) {
+    bufferIDs = GetBuffers(context, schema);
+  }
   WriteBlobToBuffers(context, data, bufferIDs);
   // UpdateMDM();
   return ret;
