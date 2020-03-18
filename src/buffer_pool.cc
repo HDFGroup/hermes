@@ -990,7 +990,7 @@ void InitFilesForBuffering(SharedMemoryContext *context) {
       if (context->comm_state.app_proc_id == 0 && tier->has_fallocate) {
         // TODO(chogan): posix_fallocate may not be available on some
         // filesystems
-        posix_fallocate(fileno(buffering_file), 0, tier->capacity);
+        ftruncate(fileno(buffering_file), tier->capacity);
       }
       context->open_streams[tier_id][slab] = buffering_file;
     }
