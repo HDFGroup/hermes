@@ -27,7 +27,7 @@ enum class PlacementPolicy {
 };
 
 // TODO(chogan): Unfinished sketch
-TierSchema TopDownPlacement(size_t blob_size) {
+TieredSchema TopDownPlacement(size_t blob_size) {
   TieredSchema result;
   SystemViewState state = GetSystemViewState();
   size_t size_left = blob_size;
@@ -82,11 +82,13 @@ TieredSchema CalculatePlacement(size_t blob_size, const api::Context &ctx) {
 
   TieredSchema result;
   switch (policy) {
-    case kRandom: {
+    case PlacementPolicy::kRandom: {
       result = RandomPlacement(blob_size);
+      break;
     }
-    case kTopDown: {
+    case PlacementPolicy::kTopDown: {
       result = TopDownPlacement(blob_size);
+      break;
     }
   }
 
