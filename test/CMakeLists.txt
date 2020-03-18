@@ -29,7 +29,11 @@ endforeach()
 #------------------------------------------------------------------------------
 
 add_executable(bp buffer_pool_test.cc)
-target_link_libraries(bp hermes)
+if(NOT APPLE)
+  target_link_libraries(bp ${LIBRT} hermes)
+else()
+  target_link_libraries(bp hermes)
+endif()
 
 add_executable(bp_test buffer_pool_client_test.cc)
 target_link_libraries(bp_test hermes thallium MPI::MPI_CXX)
