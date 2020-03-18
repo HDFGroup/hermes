@@ -50,7 +50,7 @@ Status Bucket::Put(const std::string &name, const Blob &data, Context &ctx) {
   return ret;
 }
 
-const Blob& Bucket::Get(const std::string &name, Context &ctx) {
+size_t Bucket::Get(const std::string &name, Blob& user_blob, Context &ctx) {
   (void)ctx;
     
   LOG(INFO) << "Getting Blob " << name << " from bucket " << name_ << '\n';
