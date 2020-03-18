@@ -21,15 +21,15 @@ SystemViewState GetSystemViewState() {
   return result;
 }
 
-TieredSchema CalculatePlacement(size_t blob_size, const api::Context &ctx) {
-  (void)ctx;
-  SystemViewState state = GetSystemViewState();
+enum class PlacementPolicy {
+  kRandom,
+  kTopDown,
+};
 
-  // TODO(chogan): Return a TieredSchema that minimizes a cost function F given
-  // a set of N Tiers and a blob, while satisfying a policy P.
-
-  // NOTE(chogan): Currently just placing into the highest available Tier.
+// TODO(chogan): Unfinished sketch
+TierSchema TopDownPlacement(size_t blob_size) {
   TieredSchema result;
+  SystemViewState state = GetSystemViewState();
   size_t size_left = blob_size;
   TierID current_tier = 0;
 
@@ -52,6 +52,42 @@ TieredSchema CalculatePlacement(size_t blob_size, const api::Context &ctx) {
     // Couldn't fit everything, trigger BufferOrganizer
     // EvictBuffers(eviction_schema);
     result.clear();
+  }
+
+  return result;
+}
+
+TieredSchema RandomPlacement(size_t blob_size) {
+  TieredSchema result;
+  SystemViewState state = GetSystemViewState();
+  TierID tier_id = rand() % state.num_tiers;
+
+  if (state.bytes_available[tier_id] > blob_size) {
+    result.push_back(std::make_pair(tier_id, blob_size));
+  } else {
+    assert(!"Overflowing buffers not yet supported in RandomPlacement\n");
+  }
+
+  return result;
+}
+
+TieredSchema CalculatePlacement(size_t blob_size, const api::Context &ctx) {
+  (void)ctx;
+
+  // TODO(chogan): Return a TieredSchema that minimizes a cost function F given
+  // a set of N Tiers and a blob, while satisfying a policy P.
+
+  // TODO(chogan): This should be part of the Context
+  PlacementPolicy policy = PlacementPolicy::kRandom;
+
+  TieredSchema result;
+  switch (policy) {
+    case kRandom: {
+      result = RandomPlacement(blob_size);
+    }
+    case kTopDown: {
+      result = TopDownPlacement(blob_size);
+    }
   }
 
   return result;
