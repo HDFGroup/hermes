@@ -204,11 +204,6 @@ if(HERMES_COMMUNICATION_MPI)
   message(STATUS "found mpi.h at ${MPI_CXX_INCLUDE_DIRS}")
 endif()
 
-find_library(LIBRT rt)
-if(NOT LIBRT)
-  message(FATAL_ERROR "librt is required for POSIX shared memory")
-endif()
-
 if(BUILD_BUFFER_POOL_VISUALIZER)
   find_package(SDL2 CONFIG REQUIRED)
   if(SDL2_FOUND)
