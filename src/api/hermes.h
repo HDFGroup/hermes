@@ -25,6 +25,9 @@ typedef double f64;
 
 typedef u16 TierID;
 
+// TODO(chogan): Support an arbitrary number of Tiers
+constexpr int kMaxTiers = 8;
+
 /**
  * A TieredSchema is a vector of (size, tier) pairs where size is the number of
  * bytes to buffer and tier is the Tier ID where to buffer those bytes.
@@ -46,7 +49,7 @@ namespace api {
   
 typedef int Status;
   
-class HERMES {
+class Hermes {
  public:
 	std::set<std::string> bucket_list_;
 	std::set<std::string> vbucket_list_;

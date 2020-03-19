@@ -1,5 +1,6 @@
-#include "data_placement_engine.h"
-#include "buffer_pool.h"
+#include <assert.h>
+
+#include "hermes.h"
 
 namespace hermes {
 
@@ -10,7 +11,8 @@ struct SystemViewState {
 
 SystemViewState GetSystemViewState() {
   SystemViewState result = {};
-  // TODO(chogan): The BufferPool should feed an Apollo hook this info
+  // TODO(chogan): The BufferPool should feed this info to an Apollo hook. It
+  // should then be queried from a global SystemViewState.
   result.num_tiers = 4;
   u64 fifty_mb = 1024 * 1024 * 50;
   result.bytes_available[0] = fifty_mb;
@@ -49,7 +51,7 @@ TieredSchema TopDownPlacement(size_t blob_size) {
   }
 
   if (size_left > 0) {
-    // Couldn't fit everything, trigger BufferOrganizer
+    // TODO(chogan): Trigger BufferOrganizer
     // EvictBuffers(eviction_schema);
     result.clear();
   }
@@ -66,6 +68,8 @@ TieredSchema RandomPlacement(size_t blob_size) {
     result.push_back(std::make_pair(tier_id, blob_size));
   } else {
     assert(!"Overflowing buffers not yet supported in RandomPlacement\n");
+    // TODO(chogan): Trigger BufferOrganizer
+    // EvictBuffers(eviction_schema);
   }
 
   return result;
@@ -94,23 +98,5 @@ TieredSchema CalculatePlacement(size_t blob_size, const api::Context &ctx) {
 
   return result;
 }
-
-#if 0
-Status Put(const std::string &name, const Blob &data, Context &ctx) {
-  Status ret = 0;
-  SharedMemoryContext *context = 0;
-  TieredSchema schema = CalculatePlacement(data.size(), ctx);
-  while (schema.size() == 0) {
-    schema = CalculatePlacement(data.siz(), ctx);
-  }
-  std::vector<BufferID> bufferIDs = GetBuffers(context, schema);
-  while (bufferIDs.size() == 0) {
-    bufferIDs = GetBuffers(context, schema);
-  }
-  WriteBlobToBuffers(context, data, bufferIDs);
-  // UpdateMDM();
-  return ret;
-}
-#endif
 
 }  // namespace hermes

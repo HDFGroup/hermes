@@ -5,10 +5,11 @@
 
 namespace hermes {
 
-struct DataPlacementEngine {
+class DataPlacementEngine {
 
 };
 
+TieredSchema CalculatePlacement(size_t blob_size, const api::Context &ctx);
 
 }  // namespace hermes
 #endif  // HERMES_DATA_PLACEMENT_ENGINE_H_

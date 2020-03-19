@@ -19,14 +19,14 @@ class VBucket {
 	std::list<std::pair<std::string,std::string>> linked_blobs_;
       
  public:
-  /** internal HERMES object owned by vbucket */
-  std::shared_ptr<HERMES> m_HERMES_;
+  /** internal Hermes object owned by vbucket */
+  std::shared_ptr<Hermes> hermes_;
       
-  VBucket(std::string initial_name, std::shared_ptr<HERMES> const &h)
-	  : name_(initial_name), m_HERMES_(h) {
+  VBucket(std::string initial_name, std::shared_ptr<Hermes> const &h)
+	  : name_(initial_name), hermes_(h) {
     LOG(INFO) << "Create VBucket " << initial_name << std::endl;
-		if (m_HERMES_->vbucket_list_.find(initial_name) == m_HERMES_->vbucket_list_.end())
-		  m_HERMES_->vbucket_list_.insert(initial_name);
+		if (hermes_->vbucket_list_.find(initial_name) == hermes_->vbucket_list_.end())
+		  hermes_->vbucket_list_.insert(initial_name);
 		else
 			std::cerr << "VBucket " << initial_name << " exists\n";
   };
