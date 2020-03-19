@@ -59,7 +59,10 @@ class Bucket {
   Status Put(const std::string &name, const Blob &data, Context &ctx);
 
   /** get a blob on this bucket */
-  const Blob& Get(const std::string &name, Context &ctx);
+	/** - if user_blob.size() == 0 => return the minimum buffer size needed */
+	/** - if user_blob.size() > 0 => copy user_blob.size() bytes */
+	/** to user_blob and return user_blob.size() */
+  size_t Get(const std::string &name, Blob& user_blob, Context &ctx);
 
   /** delete a blob from this bucket */
   Status DeleteBlob(const std::string &name, Context &ctx);
