@@ -942,6 +942,15 @@ SharedMemoryContext InitBufferPool(u8 *hermes_memory, Arena *buffer_pool_arena,
   return context;
 }
 
+void SerializeBufferPoolToFile(SharedMemoryContext *context, FILE *file) {
+  int result = fwrite(context->shm_base, context->shm_size, 1, file);
+
+  if (result < 1) {
+    // TODO(chogan): @errorhandling
+    perror("Failed to serialize BufferPool to file");
+  }
+}
+
 // Per-rank application side initialization
 
 void MakeFullShmemName(char *dest, const char *base) {

@@ -124,7 +124,7 @@ void MpiFinalize(CommunicationState *comm_state) {
 void InitCommunication(Arena *arena, CommunicationAPI *comm_api,
                        CommunicationState *comm_state) {
   // TODO(chogan): MPI_THREAD_MULTIPLE
-  MPI_Init(0, 0);  // &argc, &argv);
+  // MPI_Init(0, 0);  // &argc, &argv);
 
   comm_api->get_node_info = MpiGetNodeInfo;
   comm_api->get_world_proc_id = MpiGetWorldProcId;
@@ -147,11 +147,11 @@ void InitCommunication(Arena *arena, CommunicationAPI *comm_api,
   comm_state->world_proc_id = MpiGetWorldProcId(comm_state);
   comm_state->world_size = MpiGetNumWorldProcs(comm_state);
 
-  int color = (int)ProcessKind::kHermes;
-  mpi_state->hermes_comm = MpiSplitCommunicator(mpi_state->world_comm, color,
-                                                comm_state->world_proc_id);
-  comm_state->hermes_proc_id = MpiGetHermesProcId(comm_state);
-  comm_state->hermes_size = MpiGetNumHermesProcs(comm_state);
+  // int color = (int)ProcessKind::kHermes;
+  // mpi_state->hermes_comm = MpiSplitCommunicator(mpi_state->world_comm, color,
+  //                                               comm_state->world_proc_id);
+  // comm_state->hermes_proc_id = MpiGetHermesProcId(comm_state);
+  // comm_state->hermes_size = MpiGetNumHermesProcs(comm_state);
   comm_state->node_id = -1;
   comm_state->num_nodes = -1;
 

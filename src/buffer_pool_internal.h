@@ -194,6 +194,11 @@ i32 GetSlabBufferSize(SharedMemoryContext *context, TierID tier_id,
                       int slab_index);
 
 /**
+ *
+ */
+void SerializeBufferPoolToFile(SharedMemoryContext *context, FILE *file);
+
+/**
  *  Lets Thallium know how to serialize a BufferID.
  *
  * This function is called implicitly by Thallium.
