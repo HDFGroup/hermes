@@ -61,12 +61,7 @@ int main(int argc, char **argv) {
     hapi::Context ctx;
     hapi::Bucket bucket(std::string("test_bucket"), hstate);
 
-    hapi::Blob put_data;
-    put_data.resize(bytes_per_rank);
-
-    for (size_t i = 0; i < bytes_per_rank; ++i) {
-      put_data[i] = i % 0xFF;
-    }
+    hapi::Blob put_data(bytes_per_rank, rand() % 255);
 
     std::string blob_name = ("test_blob" + std::to_string(app_rank));
     bucket.Put(blob_name, put_data, ctx);
