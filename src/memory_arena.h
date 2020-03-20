@@ -1,6 +1,8 @@
 #ifndef HERMES_MEMORY_ARENA_H_
 #define HERMES_MEMORY_ARENA_H_
 
+#include <assert.h>
+
 #include "hermes.h"
 
 /**

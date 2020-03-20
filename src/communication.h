@@ -1,9 +1,7 @@
 #ifndef HERMES_COMMUNICATION_H_
 #define HERMES_COMMUNICATION_H_
 
-#include "hermes.h"
 #include "memory_arena.h"
-
 
 /**
  * @file communication.h

@@ -25,13 +25,6 @@
 
 namespace hermes {
 
-// TODO(chogan): These constants impose limits on the number of slabs, file path
-// lengths, and shared memory name lengths, but eventually we should allow
-// arbitrary sizes of each.
-static constexpr int kMaxBufferPoolSlabs = 8;
-constexpr int kMaxPathLength = 256;
-constexpr int kMaxBufferPoolShmemNameLength = 64;
-
 /**
  * Implements a ticket lock as described at
  * https://en.wikipedia.org/wiki/Ticket_lock.
@@ -125,30 +118,6 @@ struct Tier {
   bool has_fallocate;
   /** The directory where buffering files can be created. */
   char mount_point[kMaxPathLength];
-};
-
-/**
- * A unique identifier for any buffer in the system.
- *
- * This number is unique for each buffer when read as a 64 bit integer. The top
- * 32 bits signify the node that "owns" the buffer, and the bottom 32 bits form
- * in index into the array of BufferHeaders in the BufferPool on that node. Node
- * indexing begins at 1 so that a BufferID of 0 represents the NULL BufferID.
- */
-union BufferID {
-  struct {
-    /** An index into the BufferHeaders array in the BufferPool on node
-     * `node_id`.
-     */
-    u32 header_index;
-    /** The node identifier where this BufferID's BufferHeader resides
-     * (1-based index).
-     */
-    u32 node_id;
-  } bits;
-
-  /** A single integer that uniquely identifies a buffer. */
-  u64 as_int;
 };
 
 /**
@@ -251,42 +220,12 @@ struct BufferPool {
   u32 total_headers;
 };
 
-/**
- * Information that allows each process to access the shared memory and
- * BufferPool information.
- *
- * A SharedMemoryContext is passed as a parameter to all functions that interact
- * with the BufferPool. This context allows each process to find the location of
- * the BufferPool within its virtual address space. Acquiring the context via
- * GetSharedMemoryContext will map the BufferPool's shared memory into the
- * calling processes address space. An application core will acquire this
- * context on initialization. At shutdown, application cores will call
- * ReleaseSharedMemoryContext to unmap the shared memory segemnt (although, this
- * happens automatically when the process exits). The Hermes core is responsible
- * for creating and destroying the shared memory segment.
- *
- * Example:
- * ```cpp
- * SharedMemoryContext *context = GetSharedMemoryContext("hermes_shmem_name");
- * BufferPool *pool = GetBufferPoolFromContext(context);
- * ```
- */
-struct SharedMemoryContext {
-  /** A pointer to the beginning of shared memory. */
-  u8 *shm_base;
-  /** The offset from the beginning of shared memory to the BufferPool. */
-  ptrdiff_t buffer_pool_offset;
-  /** The total size of the shared memory (needed for munmap). */
-  u64 shm_size;
 
-  // TEMP(chogan): These may get moved. Rather than this struct being
-  // specifically for shared memory info, maybe it should represent any
-  // information that is unique to each rank. Maybe CoreContext.
-  std::vector<std::vector<std::string>> buffering_filenames;
-  FILE *open_streams[kMaxTiers][kMaxBufferPoolSlabs];
-  CommunicationAPI comm_api;
-  CommunicationState comm_state;
-};
+/**
+ *
+ */
+size_t GetBlobSize(SharedMemoryContext *context,
+                   const std::vector<BufferID> &buffer_ids);
 
 /**
  * Constructs a unique (among users) shared memory name from a base name.
@@ -409,9 +348,11 @@ void WriteBlobToBuffers(SharedMemoryContext *context, const Blob &blob,
  * @param context The shared memory context needed to access BufferPool info.
  * @param blob A place to store the read data.
  * @param buffer_ids The collection of BufferIDs that hold the buffered blob.
+ *
+ * @return The total number of bytes read
  */
-void ReadBlobFromBuffers(SharedMemoryContext *context, Blob *blob,
-                         const std::vector<BufferID> &buffer_ids);
+size_t ReadBlobFromBuffers(SharedMemoryContext *context, Blob *blob,
+                           const std::vector<BufferID> &buffer_ids);
 
 }  // namespace hermes
 

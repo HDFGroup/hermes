@@ -16,8 +16,8 @@ namespace api {
 class Bucket {
  private:
   std::string name_;
-  std::unordered_map<std::string, uint64_t> blobs_;
-      
+  std::unordered_map<std::string, std::vector<BufferID>> blobs_;
+
  public:
   /** internal Hermes object owned by Bucket */
   std::shared_ptr<Hermes> hermes_;

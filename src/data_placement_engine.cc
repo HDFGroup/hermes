@@ -65,7 +65,7 @@ TieredSchema RandomPlacement(size_t blob_size) {
   TierID tier_id = rand() % state.num_tiers;
 
   if (state.bytes_available[tier_id] > blob_size) {
-    result.push_back(std::make_pair(tier_id, blob_size));
+    result.push_back(std::make_pair(blob_size, tier_id));
   } else {
     assert(!"Overflowing buffers not yet supported in RandomPlacement\n");
     // TODO(chogan): Trigger BufferOrganizer

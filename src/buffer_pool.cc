@@ -401,6 +401,22 @@ std::vector<BufferID> GetBuffers(SharedMemoryContext *context,
   return result;
 }
 
+size_t GetBlobSize(SharedMemoryContext *context,
+                   const std::vector<BufferID> &buffer_ids) {
+
+  size_t result = 0;
+  for (const auto &id : buffer_ids) {
+    if (false /* TODO(chogan): BufferIsRemote(context, id) */) {
+      // TODO(chogan): RPC
+    } else {
+      BufferHeader *header = GetHeaderByBufferId(context, id);
+      result += header->used;
+    }
+  }
+
+  return result;
+}
+
 ptrdiff_t BufferIdToOffset(SharedMemoryContext *context, BufferID id) {
   ptrdiff_t result = 0;
   BufferHeader *header = GetHeaderByIndex(context, id.bits.header_index);
@@ -1164,8 +1180,8 @@ void WriteBlobToBuffers(SharedMemoryContext *context, const Blob &blob,
   assert(at == blob.data + blob.size);
 }
 
-void ReadBlobFromBuffers(SharedMemoryContext *context, Blob *blob,
-                         const std::vector<BufferID> &buffer_ids) {
+size_t ReadBlobFromBuffers(SharedMemoryContext *context, Blob *blob,
+                           const std::vector<BufferID> &buffer_ids) {
   u8 *at = blob->data;
   size_t total_bytes_read = 0;
   for (const auto &id : buffer_ids) {
@@ -1208,6 +1224,8 @@ void ReadBlobFromBuffers(SharedMemoryContext *context, Blob *blob,
     }
   }
   assert(total_bytes_read == blob->size);
+
+  return total_bytes_read;
 }
 
 }  // namespace hermes
