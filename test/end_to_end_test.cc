@@ -27,8 +27,8 @@ int main(int argc, char **argv) {
   MPI_Comm app_comm = 0;
   hermes::SharedMemoryContext context = {};
 
+  hermes::Config config = {};
   if (world_rank == 0) {
-    hermes::Config config = {};
     InitTestConfig(&config);
     config.mount_points[0] = "";
     config.mount_points[1] = "./";
@@ -82,6 +82,15 @@ int main(int argc, char **argv) {
   }
 
   MPI_Barrier(MPI_COMM_WORLD);
+
+  if (world_rank == 0) {
+    munmap(context.shm_base, context.shm_size);
+    shm_unlink(config.buffer_pool_shmem_name);
+    // context.comm_api.finalize(&context.comm_state);
+  } else {
+    ReleaseSharedMemoryContext(&context);
+  }
+
   MPI_Finalize();
 
   return 0;
