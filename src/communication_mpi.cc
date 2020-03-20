@@ -121,39 +121,41 @@ void MpiFinalize(CommunicationState *comm_state) {
   MPI_Finalize();
 }
 
-void InitCommunication(Arena *arena, CommunicationAPI *comm_api,
-                       CommunicationState *comm_state) {
+void InitCommunication(Arena *arena, SharedMemoryContext *context, bool init_mpi) {
   // TODO(chogan): MPI_THREAD_MULTIPLE
-  // MPI_Init(0, 0);  // &argc, &argv);
+  if (init_mpi) {
+    MPI_Init(0, 0);  // &argc, &argv
+  }
 
-  comm_api->get_node_info = MpiGetNodeInfo;
-  comm_api->get_world_proc_id = MpiGetWorldProcId;
-  comm_api->get_hermes_proc_id = MpiGetHermesProcId;
+  context->comm_api.get_node_info = MpiGetNodeInfo;
+  context->comm_api.get_world_proc_id = MpiGetWorldProcId;
+  context->comm_api.get_hermes_proc_id = MpiGetHermesProcId;
   // TODO(chogan): @implement
-  // comm_api->get_app_proc_id = MpiGetAppProcId;
-  comm_api->get_num_world_procs = MpiGetNumWorldProcs;
-  comm_api->get_num_hermes_procs = MpiGetNumHermesProcs;
+  // comm_api.get_app_proc_id = MpiGetAppProcId;
+  context->comm_api.get_num_world_procs = MpiGetNumWorldProcs;
+  context->comm_api.get_num_hermes_procs = MpiGetNumHermesProcs;
   // TODO(chogan): @implement
-  // comm_api->get_num_app_procs = MpiGetNumAppProcs;
-  comm_api->world_barrier = MpiWorldBarrier;
-  comm_api->hermes_barrier = MpiHermesBarrier;
+  // comm_api.get_num_app_procs = MpiGetNumAppProcs;
+  context->comm_api.world_barrier = MpiWorldBarrier;
+  context->comm_api.hermes_barrier = MpiHermesBarrier;
   // TODO(chogan): @implement
-  // comm_api->app_barrier = MpiAppBarrier;
-  comm_api->finalize = MpiFinalize;
+  // comm_api.app_barrier = MpiAppBarrier;
+  context->comm_api.finalize = MpiFinalize;
 
   MPIState *mpi_state = PushStruct<MPIState>(arena);
   mpi_state->world_comm = MPI_COMM_WORLD;
-  comm_state->state = mpi_state;
-  comm_state->world_proc_id = MpiGetWorldProcId(comm_state);
-  comm_state->world_size = MpiGetNumWorldProcs(comm_state);
+  context->comm_state.state = mpi_state;
+  context->comm_state.world_proc_id = MpiGetWorldProcId(&context->comm_state);
+  context->comm_state.world_size = MpiGetNumWorldProcs(&context->comm_state);
 
-  // int color = (int)ProcessKind::kHermes;
-  // mpi_state->hermes_comm = MpiSplitCommunicator(mpi_state->world_comm, color,
-  //                                               comm_state->world_proc_id);
-  // comm_state->hermes_proc_id = MpiGetHermesProcId(comm_state);
-  // comm_state->hermes_size = MpiGetNumHermesProcs(comm_state);
-  comm_state->node_id = -1;
-  comm_state->num_nodes = -1;
+  int color = (int)ProcessKind::kHermes;
+  int world_id = context->comm_state.world_proc_id;
+  mpi_state->hermes_comm = MpiSplitCommunicator(mpi_state->world_comm, color,
+                                                world_id);
+  context->comm_state.hermes_proc_id = MpiGetHermesProcId(&context->comm_state);
+  context->comm_state.hermes_size = MpiGetNumHermesProcs(&context->comm_state);
+  context->comm_state.node_id = -1;
+  context->comm_state.num_nodes = -1;
 
   // TODO(chogan): Application core communication intialization is currently
   // being done in buffer_pool_test.cc. It will eventually need to be done on

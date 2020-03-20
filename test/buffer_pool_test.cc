@@ -70,7 +70,7 @@ int main(int argc, char **argv) {
   }
 
   SharedMemoryContext context = InitHermesCore(&config, start_rpc_server,
-                                               num_rpc_threads);
+                                               num_rpc_threads, true);
 
   if (!start_rpc_server) {
     std::cin.get();

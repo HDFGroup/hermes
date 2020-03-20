@@ -745,9 +745,8 @@ void SplitRamBufferFreeList(SharedMemoryContext *context, int slab_index) {
   EndTicketMutex(&pool->ticket_mutex);
 }
 
-SharedMemoryContext InitBufferPool(u8 *hermes_memory, Arena *buffer_pool_arena,
-                                   Arena *scratch_arena, i32 node_id,
-                                   Config *config) {
+ptrdiff_t InitBufferPool(u8 *hermes_memory, Arena *buffer_pool_arena,
+                         Arena *scratch_arena, i32 node_id, Config *config) {
   ScopedTemporaryMemory scratch(scratch_arena);
 
   i32 **buffer_counts = PushArray<i32*>(scratch, config->num_tiers);
@@ -933,13 +932,7 @@ SharedMemoryContext InitBufferPool(u8 *hermes_memory, Arena *buffer_pool_arena,
   ptrdiff_t buffer_pool_offset = (u8 *)pool - hermes_memory;
   *buffer_pool_offset_location = buffer_pool_offset;
 
-  SharedMemoryContext context = {};
-  context.shm_base = hermes_memory;
-  context.buffer_pool_offset = buffer_pool_offset;
-  // TODO(chogan): @configuration Assumes RAM is first Tier
-  context.shm_size = config->capacities[0];
-
-  return context;
+  return buffer_pool_offset;
 }
 
 void SerializeBufferPoolToFile(SharedMemoryContext *context, FILE *file) {

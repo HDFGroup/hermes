@@ -4,6 +4,7 @@
 #include "hermes.h"
 #include "memory_arena.h"
 
+
 /**
  * @file communication.h
  *
@@ -13,6 +14,8 @@
  */
 
 namespace hermes {
+
+struct SharedMemoryContext;
 
 struct CommunicationState {
   void *state;
@@ -47,8 +50,8 @@ struct CommunicationAPI {
   FinalizeFunc finalize;
 };
 
-void InitCommunication(Arena *arena, CommunicationAPI *comm_api,
-                       CommunicationState *comm_state);
+void InitCommunication(Arena *arena, SharedMemoryContext *context,
+                       bool init_mpi);
 
 }  // namespace hermes
 

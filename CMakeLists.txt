@@ -142,6 +142,11 @@ option(BUILD_BUFFER_POOL_VISUALIZER "Build the BufferPool visualizer" OFF)
 # TODO(chogan): Expose this once we have more than one communication layer
 mark_as_advanced(HERMES_COMMUNICATION_MPI)
 
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address"
+      CACHE STRING "" FORCE)
+endif()
+
 #-------------------------------------------------------------------------------
 function(hermes_set_lib_options libtarget libname libtype)
   if(${libtype} MATCHES "SHARED")
@@ -208,7 +213,7 @@ if(NOT APPLE)
   find_library(LIBRT rt)
   if(NOT LIBRT)
     message(FATAL_ERROR "librt is required for POSIX shared memory")
-  endif() 
+  endif()
 endif()
 
 if(BUILD_BUFFER_POOL_VISUALIZER)

@@ -75,12 +75,11 @@ size_t RoundDownToMultiple(size_t val, size_t multiple);
  * @param node_id The identifier of the node this function is running on.
  * @param config Configuration that specifies how the BufferPool is constructed.
  *
- * @return A SharedMemoryContext representing the shared memory segement in
- * which the BufferPool was initialized.
+ * @return The offset of the beginning of the BufferPool from the beginning of
+ * shared memory.
  */
-SharedMemoryContext InitBufferPool(u8 *hermes_memory, Arena *buffer_pool_arena,
-                                   Arena *scratch_arena, i32 node_id,
-                                   Config *config);
+ptrdiff_t InitBufferPool(u8 *hermes_memory, Arena *buffer_pool_arena,
+                         Arena *scratch_arena, i32 node_id, Config *config);
 
 /**
  * Obtains a pointer to the BufferPool constructed in shared memory.

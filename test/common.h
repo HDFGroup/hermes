@@ -70,7 +70,8 @@ void InitTestConfig(Config *config) {
   MakeFullShmemName(config->buffer_pool_shmem_name, buffer_pool_shmem_name);
 }
 
-SharedMemoryContext InitHermesCore(Config *config, bool start_rpc_server, int num_rpc_threads=0) {
+SharedMemoryContext InitHermesCore(Config *config, bool start_rpc_server,
+                                   int num_rpc_threads=0, bool init_mpi=false) {
   size_t page_size = sysconf(_SC_PAGESIZE);
   // NOTE(chogan): Assumes first Tier is RAM
   size_t total_hermes_memory = RoundDownToMultiple(config->capacities[0],
@@ -99,8 +100,6 @@ SharedMemoryContext InitHermesCore(Config *config, bool start_rpc_server, int nu
   size_t transient_memory_size = transient_memory_pages * page_size;
 
   SharedMemoryContext context = {};
-  CommunicationAPI comm_api = {};
-  CommunicationState comm_state = {};
 
   int shmem_fd = shm_open(config->buffer_pool_shmem_name, O_CREAT | O_RDWR,
                           S_IRUSR | S_IWUSR);
@@ -135,20 +134,25 @@ SharedMemoryContext InitHermesCore(Config *config, bool start_rpc_server, int nu
                  metadata_memory_size + transfer_window_memory_size));
 
       // TODO(chogan): Maybe we need a persistent_storage_arena?
-      InitCommunication(&metadata_arena, &comm_api, &comm_state);
+      InitCommunication(&metadata_arena, &context, init_mpi);
 
-      comm_api.get_node_info(&comm_state, &transient_arena);
-      assert(comm_state.node_id > 0);
-      assert(comm_state.num_nodes > 0);
+      context.comm_api.get_node_info(&context.comm_state, &transient_arena);
+      assert(context.comm_state.node_id > 0);
+      assert(context.comm_state.num_nodes > 0);
 
       // NOTE(chogan): We my have changed the RAM capacity for page size or
       // alignment, so update the config->
       config->capacities[0] = buffer_pool_memory_size;
+      context.shm_base = hermes_memory;
+      context.shm_size = total_hermes_memory;
 
-      context = InitBufferPool(hermes_memory, &buffer_pool_arena,
-                               &transient_arena, comm_state.node_id, config);
+      context.buffer_pool_offset = InitBufferPool(hermes_memory,
+                                                  &buffer_pool_arena,
+                                                  &transient_arena,
+                                                  context.comm_state.node_id,
+                                                  config);
 
-      comm_api.world_barrier(&comm_state);
+      context.comm_api.world_barrier(&context.comm_state);
 
       if (start_rpc_server) {
         StartBufferPoolRpcServer(&context, config->rpc_server_name,
