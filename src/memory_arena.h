@@ -78,7 +78,7 @@ struct ScopedTemporaryMemory {
    *
    * @param backing_arena The existing Arena backing the temporary memory.
    */
-  ScopedTemporaryMemory(Arena *backing_arena)
+  explicit ScopedTemporaryMemory(Arena *backing_arena)
       : arena(backing_arena), used(backing_arena->used) {
     // TODO(chogan): Currently not threadsafe unless each thread has a different
     // `backing_arena`

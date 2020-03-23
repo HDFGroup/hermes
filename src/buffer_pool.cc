@@ -198,7 +198,8 @@ f32 ComputeFragmentationScore(SharedMemoryContext *context) {
 }
 #endif
 
-i32 GetSlabUnitSize(SharedMemoryContext *context, TierID tier_id, int slab_index) {
+i32 GetSlabUnitSize(SharedMemoryContext *context, TierID tier_id,
+                    int slab_index) {
   BufferPool *pool = GetBufferPoolFromContext(context);
   i32 result = 0;
   i32 *slab_unit_sizes = nullptr;
@@ -403,7 +404,6 @@ std::vector<BufferID> GetBuffers(SharedMemoryContext *context,
 
 size_t GetBlobSize(SharedMemoryContext *context,
                    const std::vector<BufferID> &buffer_ids) {
-
   size_t result = 0;
   for (const auto &id : buffer_ids) {
     if (false /* TODO(chogan): BufferIsRemote(context, id) */) {
@@ -546,7 +546,6 @@ Tier *InitTiers(Arena *arena, Config *config) {
       assert(path_length < kMaxPathLength);
       snprintf(tier->mount_point, path_length + 1, "%s",
                config->mount_points[i]);
-
     }
   }
 

@@ -184,7 +184,8 @@ BufferID PeekFirstFreeBufferId(SharedMemoryContext *context, TierID tier_id,
 /**
  *
  */
-i32 GetSlabUnitSize(SharedMemoryContext *context, TierID tier_id, int slab_index);
+i32 GetSlabUnitSize(SharedMemoryContext *context, TierID tier_id,
+                    int slab_index);
 
 /**
  *

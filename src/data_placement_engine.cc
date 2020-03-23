@@ -1,5 +1,9 @@
+#include "data_placement_engine.h"
+
 #include <assert.h>
 #include <math.h>
+
+#include <utility>
 
 #include "hermes.h"
 

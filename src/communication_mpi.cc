@@ -121,7 +121,8 @@ void MpiFinalize(CommunicationState *comm_state) {
   MPI_Finalize();
 }
 
-void InitCommunication(Arena *arena, SharedMemoryContext *context, bool init_mpi) {
+void InitCommunication(Arena *arena, SharedMemoryContext *context,
+                       bool init_mpi) {
   // TODO(chogan): MPI_THREAD_MULTIPLE
   if (init_mpi) {
     MPI_Init(0, 0);  // &argc, &argv

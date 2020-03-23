@@ -8,6 +8,7 @@
 
 #include "glog/logging.h"
 
+#include "hermes_types.h"
 #include "buffer_pool.h"
 #include "id.h"
 

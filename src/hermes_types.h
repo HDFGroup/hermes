@@ -2,6 +2,7 @@
 #define HERMES_TYPES_H_
 
 #include <stdint.h>
+#include <utility>
 #include <vector>
 
 namespace hermes {
