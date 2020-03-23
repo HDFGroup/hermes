@@ -3,7 +3,7 @@
 
 #include <assert.h>
 
-#include "hermes.h"
+#include "hermes_types.h"
 
 /**
  * @file memory_arena.h

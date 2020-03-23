@@ -48,7 +48,7 @@ int main(int argc, char **argv) {
 
     context = hermes::InitHermesClient(world_rank, true);
 
-    size_t data_size = 4 * 1024;
+    size_t data_size = 16 * 1024;
     size_t bytes_per_rank = data_size / app_size ;
     size_t remaining_bytes = data_size % app_size;
 

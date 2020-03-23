@@ -1,7 +1,7 @@
 #ifndef HERMES_DATA_PLACEMENT_ENGINE_H_
 #define HERMES_DATA_PLACEMENT_ENGINE_H_
 
-#include "hermes.h"
+#include "hermes_types.h"
 
 namespace hermes {
 

@@ -2,7 +2,7 @@
 
 #include "SDL.h"
 
-#include "hermes.h"
+#include "hermes_types.h"
 #include "buffer_pool.h"
 #include "buffer_pool_internal.h"
 
@@ -234,11 +234,9 @@ static int DrawFileBuffers(SharedMemoryContext *context, SDL_Surface *surface,
 
     int pixel_offset = (int)(header->data_offset * memory_offset_to_pixels);
 
-    if (pixel_offset == 0) {
-      if (y) {
-        starting_y_offset = final_y + h;
-        block_refs_index++;
-      }
+    if (pixel_offset == 0 && y) {
+      starting_y_offset = final_y + h;
+      block_refs_index++;
     }
 
     // NOTE(chogan): Mark this region as in use so we can later ensure no more

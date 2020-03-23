@@ -1,7 +1,7 @@
 #include <string>
 
 #include "common.h"
-#include "hermes.h"
+#include "hermes_types.h"
 #include "buffer_pool.h"
 #include "buffer_pool_internal.h"
 #include "communication.h"
