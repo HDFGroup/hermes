@@ -42,6 +42,7 @@ set(HERMES_SRCS
   ${CMAKE_CURRENT_SOURCE_DIR}/api/hermes.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/api/vbucket.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/buffer_pool.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/data_placement_engine.cc
 )
 
 #------------------------------------------------------------------------------
@@ -86,6 +87,8 @@ set(HERMES_HEADERS
   ${CMAKE_CURRENT_SOURCE_DIR}/buffer_pool.h
   ${CMAKE_CURRENT_SOURCE_DIR}/buffer_pool_internal.h
   ${CMAKE_CURRENT_SOURCE_DIR}/communication.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/data_placement_engine.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/hermes_types.h
   ${CMAKE_CURRENT_SOURCE_DIR}/memory_arena.h
   ${CMAKE_CURRENT_SOURCE_DIR}/utils.h
 )

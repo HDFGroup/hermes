@@ -2,7 +2,7 @@
 
 #include "SDL.h"
 
-#include "hermes.h"
+#include "hermes_types.h"
 #include "buffer_pool.h"
 #include "buffer_pool_internal.h"
 
@@ -201,6 +201,117 @@ static int DrawBufferPool(SharedMemoryContext *context,
   }
 
   return final_y + h;
+}
+
+static int DrawFileBuffers(SharedMemoryContext *context, SDL_Surface *surface,
+                           int window_width, int window_height,
+                           TierID tier_id) {
+  BufferPool *pool = GetBufferPoolFromContext(context);
+  BufferHeader *headers = GetHeadersBase(context);
+  size_t block_size = pool->block_sizes[tier_id];
+  int block_width_pixels = 5;
+  f32 memory_offset_to_pixels = (f32)(block_width_pixels) / (f32)(block_size);
+  int pad = 2;
+  int h = 5;
+  int x = 0;
+  int y = 0;
+  int w = 0;
+  int final_y = 0;
+  int starting_y_offset = 0;
+
+  using BlockMap = std::unordered_map<std::string, int>;
+  std::vector<BlockMap> block_refs(pool->num_slabs[tier_id]);
+  int block_refs_index = 0;
+
+  Range header_range = GetHeaderIndexRange(context, tier_id);
+
+  for (int i = header_range.start; i < header_range.end; ++i) {
+    BufferHeader *header = headers + i;
+    assert((u8 *)header < (u8 *)pool);
+    if (HeaderIsDormant(header)) {
+      continue;
+    }
+
+    int pixel_offset = (int)(header->data_offset * memory_offset_to_pixels);
+
+    if (pixel_offset == 0 && y) {
+      starting_y_offset = final_y + h;
+      block_refs_index++;
+    }
+
+    // NOTE(chogan): Mark this region as in use so we can later ensure no more
+    // than one header ever refers to the same memory region
+    int index = header->data_offset / block_size;
+    int num_blocks = header->capacity / block_size;
+
+    for (int j = 0; j < num_blocks; ++j) {
+      std::string index_str = std::to_string(index) + std::to_string(j);
+      auto found = block_refs[block_refs_index].find(index_str);
+      if (found != block_refs[block_refs_index].end()) {
+        block_refs[block_refs_index][index_str] += 1;
+      } else {
+        block_refs[block_refs_index][index_str] = 1;
+      }
+    }
+
+    y = starting_y_offset + (pixel_offset / window_width) * h;
+    if (y + h + pad > window_height) {
+      SDL_Log("Not enough room to display all buffers\n");
+      break;
+    }
+
+    int color_index = -1;
+    for (int j = 0; j < pool->num_slabs[tier_id]; ++j) {
+      if (num_blocks == GetSlabUnitSize(context, tier_id, j)) {
+        color_index = j;
+        break;
+      }
+    }
+
+    assert(color_index >= 0);
+    u32 rgb_color = global_colors[color_index];
+
+    if (header->in_use) {
+      // TODO(chogan): Just draw used in white, not whole capacity
+      rgb_color = global_colors[(int)Color::kWhite];
+    }
+
+    x = pixel_offset % window_width;
+    w = num_blocks * block_width_pixels;
+
+    if (x + w >= window_width) {
+      // NOTE(chogan): Draw the portion of the rect that fits on this line
+      int this_line_width = window_width - (x + pad);
+      SDL_Rect this_line_rect = {x + pad, y + pad, this_line_width, h - pad};
+      SDL_FillRect(surface, &this_line_rect, rgb_color);
+
+      // NOTE(chogan): Draw the rest of the rect on the next line.
+      int off_screen_width = (x + w) - window_width;
+      SDL_Rect next_line_rect = {0, y + pad + h, off_screen_width, h - pad};
+      SDL_FillRect(surface, &next_line_rect, rgb_color);
+    } else {
+      // NOTE(chogan): Whole rect fits on one line
+      SDL_Rect rect = {x + pad, y + pad, w - pad, h - pad};
+      SDL_FillRect(surface, &rect, rgb_color);
+    }
+
+    if (y + pad >= final_y) {
+      final_y = y + pad;
+    }
+  }
+
+  // NOTE(chogan): Ensure that we are not drawing any portion of a buffer in
+  // more than one place (i.e, no headers point to overlapping buffers)
+  for (size_t i = 0; i < block_refs.size(); ++i) {
+    for (auto iter = block_refs[i].begin();
+         iter != block_refs[i].end();
+         ++iter) {
+        assert(iter->second <= 1 && iter->second >= 0);
+    }
+  }
+
+  return final_y + h;
+
 }
 
 static void DrawEndOfRamBuffers(SharedMemoryContext *context,
@@ -465,12 +576,18 @@ int main() {
     HandleInput(&bp_context, &running, screen, full_shmem_name);
 
     SDL_FillRect(back_buffer, NULL, global_colors[(int)Color::kBlack]);
-    int ending_y = DrawBufferPool(&bp_context, back_buffer, window_width,
-                                  window_height, global_active_tier);
+
+    int ending_y = 0;
     if (global_active_tier == 0) {
+      ending_y = DrawBufferPool(&bp_context, back_buffer, window_width,
+                                window_height, global_active_tier);
       DrawEndOfRamBuffers(&bp_context, back_buffer, window_width,
                           window_height);
+    } else {
+      ending_y = DrawFileBuffers(&bp_context, back_buffer, window_width,
+                                 window_height, global_active_tier);
     }
+
     ending_y += 2;
     SDL_Rect dividing_line = {0, ending_y, window_width, 1};
     SDL_FillRect(back_buffer, &dividing_line,

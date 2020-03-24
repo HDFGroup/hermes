@@ -48,7 +48,7 @@ int compress_blob(hermes::api::Blob &blob, void *trait) {
 
 int main()
 {
-	std::shared_ptr<hermes::api::HERMES> hermes_app = std::make_shared<hermes::api::HERMES>();
+	std::shared_ptr<hermes::api::Hermes> hermes_app = std::make_shared<hermes::api::Hermes>();
   hermes::api::Context ctx;
   
   hermes::api::Bucket my_bucket("compression", hermes_app);

@@ -11,6 +11,7 @@
 #include <thallium/serialization/stl/vector.hpp>
 #include <thallium/serialization/stl/pair.hpp>
 
+#include "common.h"
 #include "buffer_pool.h"
 #include "buffer_pool_internal.h"
 #include "utils.h"
@@ -260,16 +261,7 @@ int main(int argc, char **argv) {
   MPI_Barrier(MPI_COMM_WORLD);
 
   // NOTE(chogan): Per-application-core Hermes initialization
-  char full_shmem_name[kMaxBufferPoolShmemNameLength];
-  char base_shmem_name[] = "/hermes_buffer_pool_";
-  MakeFullShmemName(full_shmem_name, base_shmem_name);
-  SharedMemoryContext context = GetSharedMemoryContext(full_shmem_name);
-  // TODO(chogan): Proper application core comms intialization
-  context.comm_state.app_proc_id = app_rank;
-
-  if (test_file_buffering) {
-    InitFilesForBuffering(&context);
-  }
+  SharedMemoryContext context = InitHermesClient(app_rank, test_file_buffering);
 
   if (test_get_release) {
     TimingResult timing = {};

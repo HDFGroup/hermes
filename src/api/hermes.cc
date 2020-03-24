@@ -8,6 +8,7 @@ namespace hermes {
 namespace api {
 
 Bucket Acquire(const std::string &name, Context &ctx) {
+  (void)ctx;
   Bucket ret;
     
   LOG(INFO) << "Acquiring Bucket " << name << '\n';
@@ -18,6 +19,7 @@ Bucket Acquire(const std::string &name, Context &ctx) {
 Status RenameBucket(const std::string &old_name,
                     const std::string &new_name,
                     Context &ctx) {
+  (void)ctx;
   Status ret = 0;
     
   LOG(INFO) << "Renaming Bucket from " << old_name << " to " << new_name << '\n';
@@ -30,6 +32,9 @@ Status TransferBlob(const Bucket &src_bkt,
                     Bucket &dst_bkt,
                     const std::string &dst_blob_name,
                     Context &ctx) {
+  (void)src_bkt;
+  (void)dst_bkt;
+  (void)ctx;
   Status ret = 0;
     
   LOG(INFO) << "Transferring Blob from " << src_blob_name << " to "

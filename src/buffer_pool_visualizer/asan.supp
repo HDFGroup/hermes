@@ -1,0 +1,4 @@
+# Ignore leaks from external libraries
+leak:libX11.so
+leak:libGLX_mesa.so
+

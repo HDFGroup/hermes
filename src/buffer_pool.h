@@ -3,7 +3,6 @@
 
 #include <assert.h>
 #include <stddef.h>
-#include <stdint.h>
 #include <stdio.h>
 
 #include <atomic>
@@ -11,7 +10,7 @@
 #include <utility>
 #include <vector>
 
-#include "hermes.h"
+#include "hermes_types.h"
 #include "memory_arena.h"
 #include "communication.h"
 
@@ -24,14 +23,6 @@
  */
 
 namespace hermes {
-
-// TODO(chogan): These constants impose limits on the number of slabs, number of
-// Tiers, file path lengths, and shared memory name lengths, but eventually we
-// should allow arbitrary sizes of each.
-static constexpr int kMaxBufferPoolSlabs = 8;
-constexpr int kMaxTiers = 8;
-constexpr int kMaxPathLength = 256;
-constexpr int kMaxBufferPoolShmemNameLength = 64;
 
 /**
  * Implements a ticket lock as described at
@@ -285,8 +276,15 @@ struct SharedMemoryContext {
   // information that is unique to each rank. Maybe CoreContext.
   std::vector<std::vector<std::string>> buffering_filenames;
   FILE *open_streams[kMaxTiers][kMaxBufferPoolSlabs];
+  CommunicationAPI comm_api;
   CommunicationState comm_state;
 };
+
+/**
+ *
+ */
+size_t GetBlobSize(SharedMemoryContext *context,
+                   const std::vector<BufferID> &buffer_ids);
 
 /**
  * Constructs a unique (among users) shared memory name from a base name.
@@ -373,6 +371,48 @@ void ReleaseBuffers(SharedMemoryContext *context,
  */
 void StartBufferPoolRpcServer(SharedMemoryContext *context, const char *addr,
                               i32 num_rpc_threads);
+
+// I/O Clients
+
+/**
+ * Description of user data.
+ */
+struct Blob {
+  /** The beginning of the data */
+  u8 *data;
+  /** The size of the data in bytes */
+  u64 size;
+};
+
+/**
+ * Sketch of how an I/O client might write.
+ *
+ * Writes the blob to the collection of buffer_ids. The BufferIDs inform the
+ * call whether it is writing locally, remotely, to RAM (or a byte addressable
+ * Tier) or to a file (block addressable Tier).
+ *
+ * @param context The shared memory context needed to access BufferPool info.
+ * @param blob The data to write.
+ * @param buffer_ids The collection of BufferIDs that should buffer the blob.
+ */
+void WriteBlobToBuffers(SharedMemoryContext *context, const Blob &blob,
+                        const std::vector<BufferID> &buffer_ids);
+/**
+ * Sketch of how an I/O client might read.
+ *
+ * Reads the collection of buffer_ids into blob. The BufferIDs inform the
+ * call whether it is reading locally, remotely, from RAM (or a byte addressable
+ * Tier) or to a file (block addressable Tier).
+ *
+ * @param context The shared memory context needed to access BufferPool info.
+ * @param blob A place to store the read data.
+ * @param buffer_ids The collection of BufferIDs that hold the buffered blob.
+ *
+ * @return The total number of bytes read
+ */
+size_t ReadBlobFromBuffers(SharedMemoryContext *context, Blob *blob,
+                           const std::vector<BufferID> &buffer_ids);
+
 }  // namespace hermes
 
 #endif  // HERMES_BUFFER_POOL_H_

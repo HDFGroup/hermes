@@ -198,7 +198,8 @@ f32 ComputeFragmentationScore(SharedMemoryContext *context) {
 }
 #endif
 
-i32 GetSlabUnitSize(SharedMemoryContext *context, TierID tier_id, int slab_index) {
+i32 GetSlabUnitSize(SharedMemoryContext *context, TierID tier_id,
+                    int slab_index) {
   BufferPool *pool = GetBufferPoolFromContext(context);
   i32 result = 0;
   i32 *slab_unit_sizes = nullptr;
@@ -401,6 +402,21 @@ std::vector<BufferID> GetBuffers(SharedMemoryContext *context,
   return result;
 }
 
+size_t GetBlobSize(SharedMemoryContext *context,
+                   const std::vector<BufferID> &buffer_ids) {
+  size_t result = 0;
+  for (const auto &id : buffer_ids) {
+    if (false /* TODO(chogan): BufferIsRemote(context, id) */) {
+      // TODO(chogan): RPC
+    } else {
+      BufferHeader *header = GetHeaderByBufferId(context, id);
+      result += header->used;
+    }
+  }
+
+  return result;
+}
+
 ptrdiff_t BufferIdToOffset(SharedMemoryContext *context, BufferID id) {
   ptrdiff_t result = 0;
   BufferHeader *header = GetHeaderByIndex(context, id.bits.header_index);
@@ -530,7 +546,6 @@ Tier *InitTiers(Arena *arena, Config *config) {
       assert(path_length < kMaxPathLength);
       snprintf(tier->mount_point, path_length + 1, "%s",
                config->mount_points[i]);
-
     }
   }
 
@@ -745,9 +760,8 @@ void SplitRamBufferFreeList(SharedMemoryContext *context, int slab_index) {
   EndTicketMutex(&pool->ticket_mutex);
 }
 
-SharedMemoryContext InitBufferPool(u8 *hermes_memory, Arena *buffer_pool_arena,
-                                   Arena *scratch_arena, i32 node_id,
-                                   Config *config) {
+ptrdiff_t InitBufferPool(u8 *hermes_memory, Arena *buffer_pool_arena,
+                         Arena *scratch_arena, i32 node_id, Config *config) {
   ScopedTemporaryMemory scratch(scratch_arena);
 
   i32 **buffer_counts = PushArray<i32*>(scratch, config->num_tiers);
@@ -933,13 +947,16 @@ SharedMemoryContext InitBufferPool(u8 *hermes_memory, Arena *buffer_pool_arena,
   ptrdiff_t buffer_pool_offset = (u8 *)pool - hermes_memory;
   *buffer_pool_offset_location = buffer_pool_offset;
 
-  SharedMemoryContext context = {};
-  context.shm_base = hermes_memory;
-  context.buffer_pool_offset = buffer_pool_offset;
-  // TODO(chogan): @configuration Assumes RAM is first Tier
-  context.shm_size = config->capacities[0];
+  return buffer_pool_offset;
+}
 
-  return context;
+void SerializeBufferPoolToFile(SharedMemoryContext *context, FILE *file) {
+  int result = fwrite(context->shm_base, context->shm_size, 1, file);
+
+  if (result < 1) {
+    // TODO(chogan): @errorhandling
+    perror("Failed to serialize BufferPool to file");
+  }
 }
 
 // Per-rank application side initialization
@@ -1162,8 +1179,8 @@ void WriteBlobToBuffers(SharedMemoryContext *context, const Blob &blob,
   assert(at == blob.data + blob.size);
 }
 
-void ReadBlobFromBuffers(SharedMemoryContext *context, Blob *blob,
-                         const std::vector<BufferID> &buffer_ids) {
+size_t ReadBlobFromBuffers(SharedMemoryContext *context, Blob *blob,
+                           const std::vector<BufferID> &buffer_ids) {
   u8 *at = blob->data;
   size_t total_bytes_read = 0;
   for (const auto &id : buffer_ids) {
@@ -1206,6 +1223,8 @@ void ReadBlobFromBuffers(SharedMemoryContext *context, Blob *blob,
     }
   }
   assert(total_bytes_read == blob->size);
+
+  return total_bytes_read;
 }
 
 }  // namespace hermes

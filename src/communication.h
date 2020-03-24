@@ -1,7 +1,7 @@
 #ifndef HERMES_COMMUNICATION_H_
 #define HERMES_COMMUNICATION_H_
 
-#include "hermes.h"
+#include "hermes_types.h"
 #include "memory_arena.h"
 
 /**
@@ -13,6 +13,8 @@
  */
 
 namespace hermes {
+
+struct SharedMemoryContext;
 
 struct CommunicationState {
   void *state;
@@ -47,8 +49,8 @@ struct CommunicationAPI {
   FinalizeFunc finalize;
 };
 
-void InitCommunication(Arena *arena, CommunicationAPI *comm_api,
-                       CommunicationState *comm_state);
+void InitCommunication(Arena *arena, SharedMemoryContext *context,
+                       bool init_mpi);
 
 }  // namespace hermes
 

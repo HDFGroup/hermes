@@ -16,21 +16,21 @@ namespace api {
 class Bucket {
  private:
   std::string name_;
-  std::unordered_map<std::string, uint64_t> blobs_;
-      
+  std::unordered_map<std::string, std::vector<BufferID>> blobs_;
+
  public:
-  /** internal HERMES object owned by Bucket */
-  std::shared_ptr<HERMES> m_HERMES_;
+  /** internal Hermes object owned by Bucket */
+  std::shared_ptr<Hermes> hermes_;
         
   // TODO: Think about the Big Three
 	Bucket() : name_("") {
     LOG(INFO) << "Create NULL Bucket " << std::endl;
   }
 	
-  Bucket(std::string initial_name, std::shared_ptr<HERMES> const &h) : name_(initial_name), m_HERMES_(h) {
+  Bucket(std::string initial_name, std::shared_ptr<Hermes> const &h) : name_(initial_name), hermes_(h) {
     LOG(INFO) << "Create Bucket " << initial_name << std::endl;
-		if (m_HERMES_->bucket_list_.find(initial_name) == m_HERMES_->bucket_list_.end())
-		  m_HERMES_->bucket_list_.insert(initial_name);
+		if (hermes_->bucket_list_.find(initial_name) == hermes_->bucket_list_.end())
+		  hermes_->bucket_list_.insert(initial_name);
 		else
 			std::cerr << "Bucket " << initial_name << " exists\n";
   }

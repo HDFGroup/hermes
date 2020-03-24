@@ -1,7 +1,9 @@
 #ifndef HERMES_MEMORY_ARENA_H_
 #define HERMES_MEMORY_ARENA_H_
 
-#include "hermes.h"
+#include <assert.h>
+
+#include "hermes_types.h"
 
 /**
  * @file memory_arena.h
@@ -76,7 +78,7 @@ struct ScopedTemporaryMemory {
    *
    * @param backing_arena The existing Arena backing the temporary memory.
    */
-  ScopedTemporaryMemory(Arena *backing_arena)
+  explicit ScopedTemporaryMemory(Arena *backing_arena)
       : arena(backing_arena), used(backing_arena->used) {
     // TODO(chogan): Currently not threadsafe unless each thread has a different
     // `backing_arena`
