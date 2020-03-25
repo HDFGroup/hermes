@@ -261,7 +261,8 @@ int main(int argc, char **argv) {
   MPI_Barrier(MPI_COMM_WORLD);
 
   // NOTE(chogan): Per-application-core Hermes initialization
-  SharedMemoryContext context = InitHermesClient(app_rank, test_file_buffering);
+  // TODO(chogan): Call InitCommunication first (via InitHermes)
+  SharedMemoryContext context = InitHermesClient(NULL, NULL, test_file_buffering);
 
   if (test_get_release) {
     TimingResult timing = {};

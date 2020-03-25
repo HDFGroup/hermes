@@ -27,11 +27,11 @@ struct CommunicationState {
   i32 num_nodes;
   // NOTE(chogan): 1-based index
   i32 node_id;
+  ProcessKind proc_kind;
 };
 
 typedef int (*RankFunc)(CommunicationState*);
 typedef int (*SizeFunc)(CommunicationState*);
-typedef void (*NodeFunc)(CommunicationState*, Arena*);
 typedef void (*BarrierFunc)(CommunicationState*);
 typedef void (*FinalizeFunc)(CommunicationState*);
 
@@ -45,7 +45,6 @@ struct CommunicationAPI {
   BarrierFunc world_barrier;
   BarrierFunc hermes_barrier;
   BarrierFunc app_barrier;
-  NodeFunc get_node_info;
   FinalizeFunc finalize;
 };
 

@@ -72,8 +72,10 @@ void InitTestConfig(Config *config) {
   MakeFullShmemName(config->buffer_pool_shmem_name, buffer_pool_shmem_name);
 }
 
-SharedMemoryContext InitHermesCore(Config *config, bool start_rpc_server,
-                                   int num_rpc_threads=0, bool init_mpi=false) {
+SharedMemoryContext InitHermesCore(Config *config, CommunicationAPI *comm_api,
+                                   CommunicationState *comm_state,
+                                   bool start_rpc_server,
+                                   int num_rpc_threads=0) {
   size_t page_size = sysconf(_SC_PAGESIZE);
   // NOTE(chogan): Assumes first Tier is RAM
   size_t total_hermes_memory = RoundDownToMultiple(config->capacities[0],
@@ -102,6 +104,9 @@ SharedMemoryContext InitHermesCore(Config *config, bool start_rpc_server,
   size_t transient_memory_size = transient_memory_pages * page_size;
 
   SharedMemoryContext context = {};
+  // TEMP(chogan):
+  context.comm_api = *comm_api;
+  context.comm_state = *comm_state;
 
   int shmem_fd = shm_open(config->buffer_pool_shmem_name, O_CREAT | O_RDWR,
                           S_IRUSR | S_IWUSR);
@@ -135,13 +140,6 @@ SharedMemoryContext InitHermesCore(Config *config, bool start_rpc_server,
                 (hermes_memory + buffer_pool_memory_size +
                  metadata_memory_size + transfer_window_memory_size));
 
-      // TODO(chogan): Maybe we need a persistent_storage_arena?
-      InitCommunication(&metadata_arena, &context, init_mpi);
-
-      context.comm_api.get_node_info(&context.comm_state, &transient_arena);
-      assert(context.comm_state.node_id > 0);
-      assert(context.comm_state.num_nodes > 0);
-
       // NOTE(chogan): We my have changed the RAM capacity for page size or
       // alignment, so update the config->
       config->capacities[0] = buffer_pool_memory_size;
@@ -170,13 +168,15 @@ SharedMemoryContext InitHermesCore(Config *config, bool start_rpc_server,
   return context;
 }
 
-SharedMemoryContext InitHermesClient(int rank, bool init_buffering_files) {
+SharedMemoryContext InitHermesClient(CommunicationAPI *comm_api,
+                                     CommunicationState *comm_state,
+                                     bool init_buffering_files) {
   char full_shmem_name[kMaxBufferPoolShmemNameLength];
   char base_shmem_name[] = "/hermes_buffer_pool_";
   MakeFullShmemName(full_shmem_name, base_shmem_name);
   SharedMemoryContext context = GetSharedMemoryContext(full_shmem_name);
-  // TODO(chogan): Proper application core comms intialization
-  context.comm_state.app_proc_id = rank;
+  context.comm_api = *comm_api;
+  context.comm_state = *comm_state;
 
   if (init_buffering_files) {
     InitFilesForBuffering(&context);
@@ -185,45 +185,46 @@ SharedMemoryContext InitHermesClient(int rank, bool init_buffering_files) {
   return context;
 }
 
-std::shared_ptr<api::Hermes> InitHermes() {
-  int world_rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
-  int world_size;
-  MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+inline void WorldBarrier(SharedMemoryContext *context) {
+  context->comm_api.world_barrier(&context->comm_state);
+}
 
+std::shared_ptr<api::Hermes> InitHermes() {
+
+  // TODO(chogan):
+  Arena arena = {};
   hermes::SharedMemoryContext context = {};
+
+  InitCommunication(&arena, &context, false);
 
   std::shared_ptr<api::Hermes> result = nullptr;
 
-  if (world_rank == 0) {
+  if (context.comm_state.world_proc_id == 0) {
     hermes::Config config = {};
     InitTestConfig(&config);
     config.mount_points[0] = "";
     config.mount_points[1] = "./";
     config.mount_points[2] = "./";
     config.mount_points[3] = "./";
-    context = InitHermesCore(&config, false);
-    MPI_Barrier(MPI_COMM_WORLD);
+    context = InitHermesCore(&config, &context.comm_api, &context.comm_state,
+                             false);
+
+    WorldBarrier(&context);
+
     munmap(context.shm_base, context.shm_size);
     shm_unlink(config.buffer_pool_shmem_name);
     context.comm_api.finalize(&context.comm_state);
     exit(0);
   } else {
-    MPI_Comm app_comm = 0;
-    MPI_Comm_split(MPI_COMM_WORLD, (int)hermes::ProcessKind::kApp, world_rank,
-                   &app_comm);
-    MPI_Barrier(MPI_COMM_WORLD);
+    WorldBarrier(&context);
 
-    int app_rank;
-    MPI_Comm_rank(app_comm, &app_rank);
-    int app_size;
-    MPI_Comm_size(app_comm, &app_size);
-
-    context = hermes::InitHermesClient(world_rank, true);
+    context = hermes::InitHermesClient(&context.comm_api, &context.comm_state,
+                                       true);
     result = std::make_shared<api::Hermes>(context);
-    result->app_rank = app_rank;
-    result->app_size = app_size;
-    result->world_rank = world_rank;
+    // TODO(chogan): Make these getters on Hermes
+    result->app_rank = context.comm_state.app_proc_id;
+    result->app_size = context.comm_state.app_size;
+    result->world_rank = context.comm_state.world_proc_id;
   }
 
   return result;

@@ -16,7 +16,7 @@ void InitArena(Arena *arena, size_t bytes, u8 *base) {
 
 u8 *PushSize(Arena *arena, size_t size) {
   u8 *result = 0;
-  assert(size + arena->used < arena->capacity);
+  assert(size + arena->used <= arena->capacity);
   result = arena->base + arena->used;
   arena->used += size;
 

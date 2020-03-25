@@ -1061,6 +1061,8 @@ void ReleaseSharedMemoryContext(SharedMemoryContext *context) {
   }
   munmap(context->shm_base, context->shm_size);
   MPI_Barrier(MPI_COMM_WORLD);
+  // TEMP(chogan):
+  free(context->comm_state.state);
 }
 
 void StartBufferPoolRpcServer(SharedMemoryContext *context, const char *addr,

@@ -69,8 +69,10 @@ int main(int argc, char **argv) {
     PrintUsage(argv[0]);
   }
 
-  SharedMemoryContext context = InitHermesCore(&config, start_rpc_server,
-                                               num_rpc_threads, true);
+  // TODO(chogan): Call InitCommunication before this
+  SharedMemoryContext context = InitHermesCore(&config, NULL, NULL,
+                                               start_rpc_server,
+                                               num_rpc_threads);
 
   if (!start_rpc_server) {
     std::cin.get();
