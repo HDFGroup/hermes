@@ -10,9 +10,11 @@
 #include <unistd.h>
 
 #include <cmath>
-// TEMP(chogan): std::cin.get()
-#include <iostream>
+#include <memory>
 
+#include <mpi.h>
+
+#include "hermes.h"
 #include "buffer_pool.h"
 #include "buffer_pool_internal.h"
 
@@ -177,10 +179,54 @@ SharedMemoryContext InitHermesClient(int rank, bool init_buffering_files) {
   context.comm_state.app_proc_id = rank;
 
   if (init_buffering_files) {
-    InitFilesForBuffering(&context); 
+    InitFilesForBuffering(&context);
   }
 
   return context;
+}
+
+std::shared_ptr<api::Hermes> InitHermes() {
+  int world_rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+  int world_size;
+  MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+
+  hermes::SharedMemoryContext context = {};
+
+  std::shared_ptr<api::Hermes> result = nullptr;
+
+  if (world_rank == 0) {
+    hermes::Config config = {};
+    InitTestConfig(&config);
+    config.mount_points[0] = "";
+    config.mount_points[1] = "./";
+    config.mount_points[2] = "./";
+    config.mount_points[3] = "./";
+    context = InitHermesCore(&config, false);
+    MPI_Barrier(MPI_COMM_WORLD);
+    munmap(context.shm_base, context.shm_size);
+    shm_unlink(config.buffer_pool_shmem_name);
+    context.comm_api.finalize(&context.comm_state);
+    exit(0);
+  } else {
+    MPI_Comm app_comm = 0;
+    MPI_Comm_split(MPI_COMM_WORLD, (int)hermes::ProcessKind::kApp, world_rank,
+                   &app_comm);
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    int app_rank;
+    MPI_Comm_rank(app_comm, &app_rank);
+    int app_size;
+    MPI_Comm_size(app_comm, &app_size);
+
+    context = hermes::InitHermesClient(world_rank, true);
+    result = std::make_shared<api::Hermes>(context);
+    result->app_rank = app_rank;
+    result->app_size = app_size;
+    result->world_rank = world_rank;
+  }
+
+  return result;
 }
 
 }  // namespace hermes

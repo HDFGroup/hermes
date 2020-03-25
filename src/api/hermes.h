@@ -22,6 +22,9 @@ class Hermes {
   std::set<std::string> bucket_list_;
   std::set<std::string> vbucket_list_;
   hermes::SharedMemoryContext context_;
+  int app_rank;
+  int app_size;
+  int world_rank;
 
   /** if true will do more checks, warnings, expect slower code */
   const bool m_debug_mode_ = true;
