@@ -70,8 +70,7 @@ int main(int argc, char **argv) {
   }
 
   // TODO(chogan): Call InitCommunication before this
-  SharedMemoryContext context = InitHermesCore(&config, NULL, NULL,
-                                               start_rpc_server,
+  SharedMemoryContext context = InitHermesCore(&config, NULL, start_rpc_server,
                                                num_rpc_threads);
 
   if (!start_rpc_server) {
@@ -80,7 +79,8 @@ int main(int argc, char **argv) {
 
   munmap(context.shm_base, context.shm_size);
   shm_unlink(config.buffer_pool_shmem_name);
-  context.comm_api.finalize(&context.comm_state);
+  // TODO(chogan):
+  // context.comm.finalize(&context.comm);
 
   return 0;
 }

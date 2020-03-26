@@ -22,22 +22,22 @@ inline int MpiGetProcId(MPI_Comm comm) {
   return result;
 }
 
-inline int MpiGetWorldProcId(CommunicationState *comm_state) {
-  MPIState *mpi_state = (MPIState *)comm_state->state;
+inline int MpiGetWorldProcId(void *state) {
+  MPIState *mpi_state = (MPIState *)state;
   int result = MpiGetProcId(mpi_state->world_comm);
 
   return result;
 }
 
-inline int MpiGetHermesProcId(CommunicationState *comm_state) {
-  MPIState *mpi_state = (MPIState *)comm_state->state;
+inline int MpiGetHermesProcId(void *state) {
+  MPIState *mpi_state = (MPIState *)state;
   int result = MpiGetProcId(mpi_state->hermes_comm);
 
   return result;
 }
 
-inline int MpiGetAppProcId(CommunicationState *comm_state) {
-  MPIState *mpi_state = (MPIState *)comm_state->state;
+inline int MpiGetAppProcId(void *state) {
+  MPIState *mpi_state = (MPIState *)state;
   int result = MpiGetProcId(mpi_state->app_comm);
 
   return result;
@@ -50,22 +50,22 @@ inline int MpiGetNumProcs(MPI_Comm comm) {
   return result;
 }
 
-inline int MpiGetNumWorldProcs(CommunicationState *comm_state) {
-  MPIState *mpi_state = (MPIState *)comm_state->state;
+inline int MpiGetNumWorldProcs(void *state) {
+  MPIState *mpi_state = (MPIState *)state;
   int result = MpiGetNumProcs(mpi_state->world_comm);
 
   return result;
 }
 
-inline int MpiGetNumHermesProcs(CommunicationState *comm_state) {
-  MPIState *mpi_state = (MPIState *)comm_state->state;
+inline int MpiGetNumHermesProcs(void *state) {
+  MPIState *mpi_state = (MPIState *)state;
   int result = MpiGetNumProcs(mpi_state->hermes_comm);
 
   return result;
 }
 
-inline int MpiGetNumAppProcs(CommunicationState *comm_state) {
-  MPIState *mpi_state = (MPIState *)comm_state->state;
+inline int MpiGetNumAppProcs(void *state) {
+  MPIState *mpi_state = (MPIState *)state;
   int result = MpiGetNumProcs(mpi_state->app_comm);
 
   return result;
@@ -75,24 +75,25 @@ inline void MpiBarrier(MPI_Comm comm) {
   MPI_Barrier(comm);
 }
 
-inline void MpiWorldBarrier(CommunicationState *comm_state) {
-  MPIState *mpi_state = (MPIState *)comm_state->state;
+inline void MpiWorldBarrier(void *state) {
+  MPIState *mpi_state = (MPIState *)state;
   MpiBarrier(mpi_state->world_comm);
 }
 
-inline void MpiHermesBarrier(CommunicationState *comm_state) {
-  MPIState *mpi_state = (MPIState *)comm_state->state;
+inline void MpiHermesBarrier(void *state) {
+  MPIState *mpi_state = (MPIState *)state;
   MpiBarrier(mpi_state->hermes_comm);
 }
 
-inline void MpiAppBarrier(CommunicationState *comm_state) {
-  MPIState *mpi_state = (MPIState *)comm_state->state;
+inline void MpiAppBarrier(void *state) {
+  MPIState *mpi_state = (MPIState *)state;
   MpiBarrier(mpi_state->app_comm);
 }
 
-void MpiAssignIDsToNodes(CommunicationState *comm_state) {
-  int rank = comm_state->world_proc_id;
-  int size = comm_state->world_size;
+size_t MpiAssignIDsToNodes(CommunicationContext *comm,
+                           size_t trans_arena_size_per_node) {
+  int rank = comm->world_proc_id;
+  int size = comm->world_size;
 
   size_t scratch_size = (size * sizeof(char *) +
                          size * sizeof(char) * MPI_MAX_PROCESSOR_NAME);
@@ -108,7 +109,7 @@ void MpiAssignIDsToNodes(CommunicationState *comm_state) {
   int length;
   MPI_Get_processor_name(node_names[rank], &length);
 
-  MPIState *mpi_state = (MPIState *)comm_state->state;
+  MPIState *mpi_state = (MPIState *)comm->state;
   MPI_Allgather(MPI_IN_PLACE, 0, 0, node_names[0], MPI_MAX_PROCESSOR_NAME,
                 MPI_CHAR, mpi_state->world_comm);
 
@@ -121,9 +122,9 @@ void MpiAssignIDsToNodes(CommunicationState *comm_state) {
   }
 
   if (first_on_node == rank) {
-    comm_state->proc_kind = ProcessKind::kHermes;
+    comm->proc_kind = ProcessKind::kHermes;
   } else {
-    comm_state->proc_kind = ProcessKind::kApp;
+    comm->proc_kind = ProcessKind::kApp;
   }
 
   // NOTE(chogan): Create a set of unique node names
@@ -133,66 +134,80 @@ void MpiAssignIDsToNodes(CommunicationState *comm_state) {
     names.insert(name);
   }
 
-  comm_state->num_nodes = names.size();
+  comm->num_nodes = names.size();
+
+  std::vector<int> ranks_per_node_local(comm->num_nodes, 0);
 
   // NOTE(chogan): 1-based index so 0 can be the NULL BufferID
   int index = 1;
   for (auto &name : names) {
     if (name == node_names[rank]) {
-      comm_state->node_id = index;
+      comm->node_id = index;
+      ranks_per_node_local[index - 1]++;
       break;
     }
     ++index;
   }
 
-  // DestroyArena
+  std::vector<int> ranks_per_node(comm->num_nodes);
+  MPI_Reduce(ranks_per_node_local.data(), ranks_per_node.data(),
+             comm->num_nodes, MPI_INT, MPI_SUM, 0, mpi_state->world_comm);
+
+  // TODO(chogan): DestroyArena
   free(scratch_arena.base);
+
+  return trans_arena_size_per_node / (size_t)ranks_per_node[comm->node_id - 1];
 }
 
-void MpiFinalize(CommunicationState *comm_state) {
-  (void)comm_state;
+void MpiFinalize(void *state) {
+  (void)state;
   MPI_Finalize();
 }
 
-void InitCommunication(Arena *arena, SharedMemoryContext *context,
-                       bool init_mpi) {
-  // TODO(chogan): MPI_THREAD_MULTIPLE
-  if (init_mpi) {
-    MPI_Init(0, 0);  // &argc, &argv
+size_t InitCommunication(CommunicationContext *comm, Arena *arena,
+                         size_t trans_arena_size_per_node, bool do_init) {
+  if (do_init) {
+    int mpi_threads_provided;
+    MPI_Init_thread(0, 0, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
+    if (mpi_threads_provided < MPI_THREAD_MULTIPLE) {
+      fprintf(stderr, "Hermes core requires an MPI with MPI_THREAD_MULTIPLE\n");
+      exit(1);
+    }
   }
 
-  context->comm_api.get_world_proc_id = MpiGetWorldProcId;
-  context->comm_api.get_hermes_proc_id = MpiGetHermesProcId;
-  context->comm_api.get_app_proc_id = MpiGetAppProcId;
-  context->comm_api.get_num_world_procs = MpiGetNumWorldProcs;
-  context->comm_api.get_num_hermes_procs = MpiGetNumHermesProcs;
-  context->comm_api.get_num_app_procs = MpiGetNumAppProcs;
-  context->comm_api.world_barrier = MpiWorldBarrier;
-  context->comm_api.hermes_barrier = MpiHermesBarrier;
-  context->comm_api.app_barrier = MpiAppBarrier;
-  context->comm_api.finalize = MpiFinalize;
+  comm->get_world_proc_id = MpiGetWorldProcId;
+  comm->get_hermes_proc_id = MpiGetHermesProcId;
+  comm->get_app_proc_id = MpiGetAppProcId;
+  comm->get_num_world_procs = MpiGetNumWorldProcs;
+  comm->get_num_hermes_procs = MpiGetNumHermesProcs;
+  comm->get_num_app_procs = MpiGetNumAppProcs;
+  comm->world_barrier = MpiWorldBarrier;
+  comm->hermes_barrier = MpiHermesBarrier;
+  comm->app_barrier = MpiAppBarrier;
+  comm->finalize = MpiFinalize;
 
-  // TEMP(chogan):
-  MPIState *mpi_state = (MPIState *)malloc(sizeof(MPIState));
-  // MPIState *mpi_state = PushStruct<MPIState>(arena);
+  MPIState *mpi_state = PushStruct<MPIState>(arena);
   mpi_state->world_comm = MPI_COMM_WORLD;
-  context->comm_state.state = mpi_state;
-  context->comm_state.world_proc_id = MpiGetWorldProcId(&context->comm_state);
-  context->comm_state.world_size = MpiGetNumWorldProcs(&context->comm_state);
+  comm->state = mpi_state;
+  comm->world_proc_id = comm->get_world_proc_id(comm->state);
+  comm->world_size = comm->get_num_world_procs(comm->state);
 
-  MpiAssignIDsToNodes(&context->comm_state);
+  size_t trans_arena_size_for_rank =
+    MpiAssignIDsToNodes(comm, trans_arena_size_per_node);
 
-  if (context->comm_state.proc_kind == ProcessKind::kHermes) {
+  if (comm->proc_kind == ProcessKind::kHermes) {
     MPI_Comm_split(mpi_state->world_comm, (int)ProcessKind::kHermes,
-                   context->comm_state.world_proc_id, &mpi_state->hermes_comm);
-    context->comm_state.hermes_proc_id = MpiGetHermesProcId(&context->comm_state);
-    context->comm_state.hermes_size = MpiGetNumHermesProcs(&context->comm_state);
+                   comm->world_proc_id, &mpi_state->hermes_comm);
+    comm->hermes_proc_id = comm->get_hermes_proc_id(comm->state);
+    comm->hermes_size = comm->get_num_hermes_procs(comm->state);
   } else {
     MPI_Comm_split(mpi_state->world_comm, (int)ProcessKind::kApp,
-                   context->comm_state.world_proc_id, &mpi_state->app_comm);
-    context->comm_state.app_proc_id = MpiGetAppProcId(&context->comm_state);
-    context->comm_state.app_size = MpiGetNumAppProcs(&context->comm_state);
+                   comm->world_proc_id, &mpi_state->app_comm);
+    comm->app_proc_id = comm->get_app_proc_id(comm->state);
+    comm->app_size = comm->get_num_app_procs(comm->state);
   }
+
+  return trans_arena_size_for_rank;
 }
 
 }  // namespace hermes

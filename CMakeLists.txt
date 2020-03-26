@@ -138,13 +138,18 @@ endif()
 option(BUILD_SHARED_LIBS "Build with shared libraries." ON)
 option(HERMES_COMMUNICATION_MPI "Use MPI as the communication layer." ON)
 option(BUILD_BUFFER_POOL_VISUALIZER "Build the BufferPool visualizer" OFF)
+option(USE_ADDRESS_SANITIZER "Enable -fsanitize=address in Debug builds" ON)
 
 # TODO(chogan): Expose this once we have more than one communication layer
 mark_as_advanced(HERMES_COMMUNICATION_MPI)
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3 -fsanitize=address"
+  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3"
       CACHE STRING "" FORCE)
+  if (USE_ADDRESS_SANITIZER)
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address"
+        CACHE STRING "" FORCE)
+  endif()
 endif()
 
 #-------------------------------------------------------------------------------

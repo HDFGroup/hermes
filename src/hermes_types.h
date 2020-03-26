@@ -45,5 +45,54 @@ enum class ProcessKind {
   kCount
 };
 
+enum ArenaType {
+  kArenaType_BufferPool,
+  kArenaType_MetaData,
+  kArenaType_Transient,
+  kArenaType_TransferWindow,
+
+  kArenaType_Count
+};
+
+/**
+ * System and user configuration that is used to initialize Hermes.
+ */
+struct Config {
+  /** The total capacity of each buffering Tier */
+  size_t capacities[kMaxTiers];
+  /** The block sizes of each Tier */
+  int block_sizes[kMaxTiers];
+  /** The number of slabs that each Tier has */
+  int num_slabs[kMaxTiers];
+  /** The unit of each slab, which is a multiplier of the Tier's block size */
+  int slab_unit_sizes[kMaxTiers][kMaxBufferPoolSlabs];
+  /** The percentage of space each slab should occupy per Tier. The values for
+   * each Tier should add up to 1.0.
+   */
+  f32 desired_slab_percentages[kMaxTiers][kMaxBufferPoolSlabs];
+  /** The bandwidth of each Tier */
+  f32 bandwidths[kMaxTiers];
+  /** The latency of each Tier */
+  f32 latencies[kMaxTiers];
+  /** The percentages of the total available Hermes memory allotted for each
+   *  `ArenaType`
+   */
+  f32 arena_percentages[kArenaType_Count];
+  /** The number of Tiers */
+  int num_tiers;
+  /** The mount point or desired directory for each Tier. RAM Tier should be the
+   * empty string.
+   */
+  const char *mount_points[kMaxTiers];
+  /** The IP address and port number of the BufferPool RPC server in a format
+   * that Thallium understands. For example, tcp://172.20.101.25:8080.
+   */
+  const char *rpc_server_name;
+  /** A base name for the BufferPool shared memory segement. Hermes appends the
+   * value of the USER environment variable to this string.
+   */
+  char buffer_pool_shmem_name[kMaxBufferPoolShmemNameLength];
+};
+
 }  // namespace hermes
 #endif  // HERMES_TYPES_H_

@@ -22,12 +22,11 @@ class Hermes {
   std::set<std::string> bucket_list_;
   std::set<std::string> vbucket_list_;
   hermes::SharedMemoryContext context_;
-  int app_rank;
-  int app_size;
-  int world_rank;
+  hermes::CommunicationContext comm_;
+  std::string shmem_name_;
 
   /** if true will do more checks, warnings, expect slower code */
-  const bool m_debug_mode_ = true;
+  const bool debug_mode_ = true;
 
   Hermes() {}
 
@@ -44,6 +43,11 @@ class Hermes {
       std::cout << *it << '\t';
     std::cout << '\n';
   }
+
+  bool IsApplicationCore();
+  int GetProcessRank();
+  int GetNumProcesses();
+  void Finalize();
 
   // MPI comms.
   // proxy/reference to Hermes core

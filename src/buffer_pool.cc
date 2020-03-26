@@ -46,6 +46,10 @@ namespace tl = thallium;
 
 namespace hermes {
 
+void WorldBarrier(CommunicationContext *comm) {
+  comm->world_barrier(comm->state);
+}
+
 inline void BeginTicketMutex(TicketMutex *mutex) {
   u32 ticket = mutex->ticket.fetch_add(1);
   while (ticket != mutex->serving.load()) {
@@ -974,7 +978,7 @@ void MakeFullShmemName(char *dest, const char *base) {
   }
 }
 
-void InitFilesForBuffering(SharedMemoryContext *context) {
+void InitFilesForBuffering(SharedMemoryContext *context, bool make_space) {
   BufferPool *pool = GetBufferPoolFromContext(context);
   context->buffering_filenames.resize(pool->num_tiers);
 
@@ -1004,9 +1008,13 @@ void InitFilesForBuffering(SharedMemoryContext *context) {
       const char *buffering_fname =
         context->buffering_filenames[tier_id][slab].c_str();
       FILE *buffering_file = fopen(buffering_fname, "w+");
-      if (context->comm_state.app_proc_id == 0 && tier->has_fallocate) {
-        // TODO(chogan): posix_fallocate may not be available on some
-        // filesystems
+      if (make_space && tier->has_fallocate) {
+        // TODO(chogan): Some Tiers require file initialization on each node,
+        // and some are shared (burst buffers) and only require one rank to
+        // initialize them
+
+        // TODO(chogan): Use posix_fallocate when it is
+        // available
         ftruncate(fileno(buffering_file), tier->capacity);
       }
       context->open_streams[tier_id][slab] = buffering_file;
@@ -1060,9 +1068,6 @@ void ReleaseSharedMemoryContext(SharedMemoryContext *context) {
     }
   }
   munmap(context->shm_base, context->shm_size);
-  MPI_Barrier(MPI_COMM_WORLD);
-  // TEMP(chogan):
-  free(context->comm_state.state);
 }
 
 void StartBufferPoolRpcServer(SharedMemoryContext *context, const char *addr,
