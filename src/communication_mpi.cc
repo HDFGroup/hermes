@@ -90,6 +90,51 @@ inline void MpiAppBarrier(void *state) {
   MpiBarrier(mpi_state->app_comm);
 }
 
+/**
+ * Returns true if the calling rank is the lowest numbered rank on its node.
+ */
+bool MpiFirstOnNode(MPI_Comm comm) {
+  int rank = MpiGetProcId(comm);
+  int size = MpiGetNumProcs(comm);
+
+  size_t scratch_size = (size * sizeof(char *) +
+                         size * sizeof(char) * MPI_MAX_PROCESSOR_NAME);
+  u8 *scratch_memory = (u8 *)malloc(scratch_size);
+  Arena scratch_arena = {};
+  InitArena(&scratch_arena, scratch_size, scratch_memory);
+
+  char **node_names = PushArray<char *>(&scratch_arena, size);
+  for (int i = 0; i < size; ++i) {
+    node_names[i] = PushArray<char>(&scratch_arena, MPI_MAX_PROCESSOR_NAME);
+  }
+
+  int length;
+  MPI_Get_processor_name(node_names[rank], &length);
+
+  MPI_Allgather(MPI_IN_PLACE, 0, 0, node_names[0], MPI_MAX_PROCESSOR_NAME,
+                MPI_CHAR, comm);
+
+  int first_on_node = 0;
+  while (strncmp(node_names[rank], node_names[first_on_node],
+                 MPI_MAX_PROCESSOR_NAME) != 0) {
+    first_on_node++;
+  }
+
+  DestroyArena(&scratch_arena);
+
+  bool result = false;
+
+  if (first_on_node == rank) {
+    result = true;
+  }
+
+  return result;
+}
+
+/**
+ * Assigns each node an ID and returns the size in bytes of the transient arena
+ * for the calling rank.
+ */
 size_t MpiAssignIDsToNodes(CommunicationContext *comm,
                            size_t trans_arena_size_per_node) {
   int rank = comm->world_proc_id;
@@ -149,19 +194,35 @@ size_t MpiAssignIDsToNodes(CommunicationContext *comm,
     ++index;
   }
 
+  // NOTE(chogan): We're returning the transient arena size in bytes for the
+  // calling rank. To calculate that, we need to divide the total transient
+  // arena size for each node by the number of ranks on that node.
   std::vector<int> ranks_per_node(comm->num_nodes);
-  MPI_Reduce(ranks_per_node_local.data(), ranks_per_node.data(),
-             comm->num_nodes, MPI_INT, MPI_SUM, 0, mpi_state->world_comm);
+  MPI_Allreduce(ranks_per_node_local.data(), ranks_per_node.data(),
+                comm->num_nodes, MPI_INT, MPI_SUM, mpi_state->world_comm);
 
-  // TODO(chogan): DestroyArena
-  free(scratch_arena.base);
+  size_t result = trans_arena_size_per_node / (size_t)ranks_per_node[comm->node_id - 1];
 
-  return trans_arena_size_per_node / (size_t)ranks_per_node[comm->node_id - 1];
+  DestroyArena(&scratch_arena);
+
+  return result;
 }
 
 void MpiFinalize(void *state) {
   (void)state;
   MPI_Finalize();
+}
+
+void MpiCopyState(void *src, void *dest) {
+  MPIState *src_state = (MPIState *)src;
+  MPIState *dest_state = (MPIState *)dest;
+  *dest_state = *src_state;
+}
+
+void MpiAdjustSharedMetadata(void *hermes_state, void *app_state) {
+  MPIState *hermes_mpi = (MPIState *)hermes_state;
+  MPIState *app_mpi = (MPIState *)app_state;
+  hermes_mpi->app_comm = app_mpi->app_comm;
 }
 
 size_t InitCommunication(CommunicationContext *comm, Arena *arena,
@@ -185,8 +246,10 @@ size_t InitCommunication(CommunicationContext *comm, Arena *arena,
   comm->hermes_barrier = MpiHermesBarrier;
   comm->app_barrier = MpiAppBarrier;
   comm->finalize = MpiFinalize;
+  comm->copy_state = MpiCopyState;
+  comm->adjust_shared_metadata = MpiAdjustSharedMetadata;
 
-  MPIState *mpi_state = PushStruct<MPIState>(arena);
+  MPIState *mpi_state = PushClearedStruct<MPIState>(arena);
   mpi_state->world_comm = MPI_COMM_WORLD;
   comm->state = mpi_state;
   comm->world_proc_id = comm->get_world_proc_id(comm->state);
@@ -200,11 +263,13 @@ size_t InitCommunication(CommunicationContext *comm, Arena *arena,
                    comm->world_proc_id, &mpi_state->hermes_comm);
     comm->hermes_proc_id = comm->get_hermes_proc_id(comm->state);
     comm->hermes_size = comm->get_num_hermes_procs(comm->state);
+    comm->first_on_node = MpiFirstOnNode(mpi_state->hermes_comm);
   } else {
     MPI_Comm_split(mpi_state->world_comm, (int)ProcessKind::kApp,
                    comm->world_proc_id, &mpi_state->app_comm);
     comm->app_proc_id = comm->get_app_proc_id(comm->state);
     comm->app_size = comm->get_num_app_procs(comm->state);
+    comm->first_on_node = MpiFirstOnNode(mpi_state->app_comm);
   }
 
   return trans_arena_size_for_rank;

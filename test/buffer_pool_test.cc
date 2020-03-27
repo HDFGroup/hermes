@@ -70,6 +70,10 @@ int main(int argc, char **argv) {
   }
 
   // TODO(chogan): Call InitCommunication before this
+  // TEMP(chogan):
+  (void)start_rpc_server;
+  (void)num_rpc_threads;
+#if 0
   SharedMemoryContext context = InitHermesCore(&config, NULL, start_rpc_server,
                                                num_rpc_threads);
 
@@ -81,6 +85,7 @@ int main(int argc, char **argv) {
   shm_unlink(config.buffer_pool_shmem_name);
   // TODO(chogan):
   // context.comm.finalize(&context.comm);
+#endif
 
   return 0;
 }

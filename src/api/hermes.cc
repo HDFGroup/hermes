@@ -66,11 +66,11 @@ int Hermes::GetNumProcesses() {
 void Hermes::Finalize() {
   if (IsApplicationCore()) {
     ReleaseSharedMemoryContext(&context_);
-    WorldBarrier(&comm_);
   } else {
     munmap(context_.shm_base, context_.shm_size);
     shm_unlink(shmem_name_.c_str());
   }
+  DestroyArena(&trans_arena_);
 }
 
 } // api namepsace

@@ -18,6 +18,7 @@ typedef int (*RankFunc)(void *);
 typedef int (*SizeFunc)(void *);
 typedef void (*BarrierFunc)(void *);
 typedef void (*FinalizeFunc)(void *);
+typedef void (*CopyStateFunc)(void *src, void *dest);
 
 struct CommunicationContext {
   RankFunc get_hermes_proc_id;
@@ -30,6 +31,8 @@ struct CommunicationContext {
   BarrierFunc hermes_barrier;
   BarrierFunc app_barrier;
   FinalizeFunc finalize;
+  CopyStateFunc copy_state;
+  CopyStateFunc adjust_shared_metadata;
 
   void *state;
   i32 world_proc_id;
@@ -42,11 +45,14 @@ struct CommunicationContext {
   // NOTE(chogan): 1-based index
   i32 node_id;
   ProcessKind proc_kind;
+  bool first_on_node;
 };
 
 size_t InitCommunication(CommunicationContext *comm, Arena *arena,
                          size_t trans_arena_size_per_node, bool do_init);
 void WorldBarrier(CommunicationContext *comm);
+void HermesBarrier(CommunicationContext *comm);
+void AppBarrier(CommunicationContext *comm);
 
 }  // namespace hermes
 

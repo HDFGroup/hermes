@@ -23,6 +23,7 @@ class Hermes {
   std::set<std::string> vbucket_list_;
   hermes::SharedMemoryContext context_;
   hermes::CommunicationContext comm_;
+  hermes::Arena trans_arena_;
   std::string shmem_name_;
 
   /** if true will do more checks, warnings, expect slower code */

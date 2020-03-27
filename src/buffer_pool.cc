@@ -50,6 +50,14 @@ void WorldBarrier(CommunicationContext *comm) {
   comm->world_barrier(comm->state);
 }
 
+void AppBarrier(CommunicationContext *comm) {
+  comm->app_barrier(comm->state);
+}
+
+void HermesBarrier(CommunicationContext *comm) {
+  comm->hermes_barrier(comm->state);
+}
+
 inline void BeginTicketMutex(TicketMutex *mutex) {
   u32 ticket = mutex->ticket.fetch_add(1);
   while (ticket != mutex->serving.load()) {
@@ -539,7 +547,7 @@ Tier *InitTiers(Arena *arena, Config *config) {
     tier->id = i;
     // TODO(chogan): @configuration Get this from config.
     tier->is_remote = false;
-    // TODO(chogan): @configuration Get this from config.
+    // TODO(chogan): @configuration Get this from cmake.
     tier->has_fallocate = true;
     size_t path_length = strlen(config->mount_points[i]);
 
@@ -764,7 +772,7 @@ void SplitRamBufferFreeList(SharedMemoryContext *context, int slab_index) {
   EndTicketMutex(&pool->ticket_mutex);
 }
 
-ptrdiff_t InitBufferPool(u8 *hermes_memory, Arena *buffer_pool_arena,
+ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
                          Arena *scratch_arena, i32 node_id, Config *config) {
   ScopedTemporaryMemory scratch(scratch_arena);
 
@@ -919,8 +927,8 @@ ptrdiff_t InitBufferPool(u8 *hermes_memory, Arena *buffer_pool_arena,
 
   // TODO(chogan): @alignment
   BufferPool *pool = PushClearedStruct<BufferPool>(buffer_pool_arena);
-  pool->header_storage_offset = header_begin - hermes_memory;
-  pool->tier_storage_offset = (u8 *)tiers - hermes_memory;
+  pool->header_storage_offset = header_begin - shmem_base;
+  pool->tier_storage_offset = (u8 *)tiers - shmem_base;
   pool->num_tiers = config->num_tiers;
   pool->total_headers = total_headers;
 
@@ -939,16 +947,16 @@ ptrdiff_t InitBufferPool(u8 *hermes_memory, Arena *buffer_pool_arena,
       slab_unit_sizes[slab] = config->slab_unit_sizes[tier][slab];
       slab_buffer_sizes_for_tier[slab] = slab_buffer_sizes[tier][slab];
     }
-    pool->free_list_offsets[tier] = (u8 *)free_list - hermes_memory;
-    pool->slab_unit_sizes_offsets[tier] = (u8 *)slab_unit_sizes - hermes_memory;
+    pool->free_list_offsets[tier] = (u8 *)free_list - shmem_base;
+    pool->slab_unit_sizes_offsets[tier] = (u8 *)slab_unit_sizes - shmem_base;
     pool->slab_buffer_sizes_offsets[tier] = ((u8 *)slab_buffer_sizes_for_tier -
-                                             hermes_memory);
+                                             shmem_base);
   }
 
   // NOTE(chogan): The buffer pool offset is stored at the beginning of shared
   // memory so the client processes can read it on initialization
-  ptrdiff_t *buffer_pool_offset_location = (ptrdiff_t *)hermes_memory;
-  ptrdiff_t buffer_pool_offset = (u8 *)pool - hermes_memory;
+  ptrdiff_t *buffer_pool_offset_location = (ptrdiff_t *)shmem_base;
+  ptrdiff_t buffer_pool_offset = (u8 *)pool - shmem_base;
   *buffer_pool_offset_location = buffer_pool_offset;
 
   return buffer_pool_offset;
@@ -1036,19 +1044,26 @@ SharedMemoryContext GetSharedMemoryContext(char *shmem_name) {
 
       if (shm_base) {
         // NOTE(chogan): On startup, the buffer_pool_offset will be stored at
-        // the beginning of the shared memory segment.
+        // the beginning of the shared memory segment, and the
+        // metadata_arena_offset will be stored immediately after that.
         ptrdiff_t *buffer_pool_offset_location = (ptrdiff_t *)shm_base;
         result.buffer_pool_offset = *buffer_pool_offset_location;
+        ptrdiff_t *metadata_arena_offset_location =
+          (ptrdiff_t *)(shm_base + sizeof(result.buffer_pool_offset));
+        result.metadata_arena_offset = *metadata_arena_offset_location;
         result.shm_base = shm_base;
         result.shm_size = shm_stat.st_size;
       } else {
         // TODO(chogan): @logging Error handling
+        perror("mmap_failed");
       }
     } else {
       // TODO(chogan): @logging Error handling
+      perror("fstat failed");
     }
   } else {
     // TODO(chogan): @logging Error handling
+    perror("shm_open failed");
   }
 
   return result;

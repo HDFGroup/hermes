@@ -124,6 +124,18 @@ struct ScopedTemporaryMemory {
 void InitArena(Arena *arena, size_t bytes, u8 *base);
 
 /**
+ * Frees the memory backing the Arena, and zeros out all its fields.
+ *
+ * Only Arenas whose backing memory was created by malloc should be destroyed
+ * with this function. Arenas using shared memory as the backing store should
+ * not be destroyed. The backing memory is reclaimed when the shared memory is
+ * unlinked.
+ *
+ * @param[in,out] arena The Arena to destroy.
+ */
+void DestroyArena(Arena *arena);
+
+/**
  * Expands the backing memory for an arena to be `new_size` bytes.
  *
  * Becuase this function uses `realloc`, it will only work for Arenas whose

@@ -14,6 +14,14 @@ void InitArena(Arena *arena, size_t bytes, u8 *base) {
   arena->base = base;
 }
 
+void DestroyArena(Arena *arena) {
+  // TODO(chogan): Check for temp count?
+  free(arena->base);
+  arena->base = 0;
+  arena->used = 0;
+  arena->capacity = 0;
+}
+
 void GrowArena(Arena *arena, size_t new_size) {
   void *new_base = (u8 *)realloc(arena->base, new_size);
   if (new_base != arena->base) {

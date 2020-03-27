@@ -216,6 +216,8 @@ struct SharedMemoryContext {
   u8 *shm_base;
   /** The offset from the beginning of shared memory to the BufferPool. */
   ptrdiff_t buffer_pool_offset;
+  /** The offset from the beginning of shared memory to the Metadata Arena. */
+  ptrdiff_t metadata_arena_offset;
   /** The total size of the shared memory (needed for munmap). */
   u64 shm_size;
 
