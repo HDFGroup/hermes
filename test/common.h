@@ -26,7 +26,7 @@ const char nvme_mount_point[] = "/home/user/nvme/";
 const char bb_mount_point[] = "/mount/burst_buffer/";
 const char pfs_mount_point[] = "/mount/pfs/";
 const char buffer_pool_shmem_name[] = "/hermes_buffer_pool_";
-const char rpc_server_name[] = "tcp://172.20.101.25:8080";
+const char rpc_server_name[] = "sockets://localhost:8080";
 
 void InitTestConfig(Config *config) {
   // TODO(chogan): @configuration This will come from Apollo or a config file
