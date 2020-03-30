@@ -381,7 +381,7 @@ std::vector<BufferID> GetBuffers(SharedMemoryContext *context,
     // buffers first
     for (int i = pool->num_slabs[tier_id] - 1; i >= 0; --i) {
       size_t buffer_size = GetSlabBufferSize(context, tier_id, i);
-      size_t buffers = size_left / buffer_size;
+      size_t buffers = buffer_size ? size_left / buffer_size : 0;
       num_buffers[i] = buffers;
       size_left -= buffers * buffer_size;
     }
@@ -580,7 +580,7 @@ void MergeRamBufferFreeList(SharedMemoryContext *context, int slab_index) {
 
   // TODO(chogan): Currently just handling the case where the next slab size is
   // perfectly divisible by this slab's size
-  if (bigger_slab_unit_size % this_slab_unit_size != 0) {
+  if (this_slab_unit_size == 0 || bigger_slab_unit_size % this_slab_unit_size != 0) {
     // TODO(chogan): @logging
     return;
   }
@@ -714,7 +714,8 @@ void SplitRamBufferFreeList(SharedMemoryContext *context, int slab_index) {
 
   // TODO(chogan): Currently just handling the case where this slab size is
   // perfectly divisible by the next size down
-  assert(this_slab_unit_size % smaller_slab_unit_size == 0);
+  assert(smaller_slab_unit_size &&
+         this_slab_unit_size % smaller_slab_unit_size == 0);
 
   int split_factor = this_slab_unit_size / smaller_slab_unit_size;
   int new_slab_size_in_bytes = smaller_slab_unit_size * pool->block_sizes[0];
