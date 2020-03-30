@@ -18,6 +18,7 @@
 #include <utility>
 #include <vector>
 
+#include <glog/logging.h>
 #include <mpi.h>
 #include <thallium.hpp>
 #include <thallium/serialization/stl/vector.hpp>
@@ -1090,9 +1091,9 @@ void StartBufferPoolRpcServer(SharedMemoryContext *context, const char *addr,
                               i32 num_rpc_threads) {
   tl::engine buffer_pool_rpc_server(addr, THALLIUM_SERVER_MODE, false,
                                     num_rpc_threads);
-  // TODO(chogan): @logging
-  // std::cout << "Serving at " << buffer_pool_rpc_server.self()
-  //       << " with " << num_rpc_threads << " RPC threads" << std::endl;
+
+  LOG(INFO) << "Serving at " << buffer_pool_rpc_server.self()
+            << " with " << num_rpc_threads << " RPC threads" << std::endl;
 
   using std::function;
   using std::vector;

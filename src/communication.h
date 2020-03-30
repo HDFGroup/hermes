@@ -49,7 +49,9 @@ struct CommunicationContext {
 };
 
 size_t InitCommunication(CommunicationContext *comm, Arena *arena,
-                         size_t trans_arena_size_per_node, bool do_init);
+                         size_t trans_arena_size_per_node,
+                         bool is_daemon=false);
+
 void WorldBarrier(CommunicationContext *comm);
 void HermesBarrier(CommunicationContext *comm);
 void AppBarrier(CommunicationContext *comm);

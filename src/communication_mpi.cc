@@ -226,16 +226,7 @@ void MpiAdjustSharedMetadata(void *hermes_state, void *app_state) {
 }
 
 size_t InitCommunication(CommunicationContext *comm, Arena *arena,
-                         size_t trans_arena_size_per_node, bool do_init) {
-  if (do_init) {
-    int mpi_threads_provided;
-    MPI_Init_thread(0, 0, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
-    if (mpi_threads_provided < MPI_THREAD_MULTIPLE) {
-      fprintf(stderr, "Hermes core requires an MPI with MPI_THREAD_MULTIPLE\n");
-      exit(1);
-    }
-  }
-
+                         size_t trans_arena_size_per_node, bool is_daemon) {
   comm->get_world_proc_id = MpiGetWorldProcId;
   comm->get_hermes_proc_id = MpiGetHermesProcId;
   comm->get_app_proc_id = MpiGetAppProcId;
@@ -258,18 +249,26 @@ size_t InitCommunication(CommunicationContext *comm, Arena *arena,
   size_t trans_arena_size_for_rank =
     MpiAssignIDsToNodes(comm, trans_arena_size_per_node);
 
-  if (comm->proc_kind == ProcessKind::kHermes) {
-    MPI_Comm_split(mpi_state->world_comm, (int)ProcessKind::kHermes,
-                   comm->world_proc_id, &mpi_state->hermes_comm);
-    comm->hermes_proc_id = comm->get_hermes_proc_id(comm->state);
-    comm->hermes_size = comm->get_num_hermes_procs(comm->state);
-    comm->first_on_node = MpiFirstOnNode(mpi_state->hermes_comm);
+  if (is_daemon) {
+    comm->first_on_node = MpiFirstOnNode(mpi_state->world_comm);
+    comm->hermes_proc_id = comm->world_proc_id;
+    comm->hermes_size = comm->world_size;
+    comm->proc_kind = ProcessKind::kHermes;
+    mpi_state->hermes_comm = mpi_state->world_comm;
   } else {
-    MPI_Comm_split(mpi_state->world_comm, (int)ProcessKind::kApp,
-                   comm->world_proc_id, &mpi_state->app_comm);
-    comm->app_proc_id = comm->get_app_proc_id(comm->state);
-    comm->app_size = comm->get_num_app_procs(comm->state);
-    comm->first_on_node = MpiFirstOnNode(mpi_state->app_comm);
+    if (comm->proc_kind == ProcessKind::kHermes) {
+      MPI_Comm_split(mpi_state->world_comm, (int)ProcessKind::kHermes,
+                     comm->world_proc_id, &mpi_state->hermes_comm);
+      comm->hermes_proc_id = comm->get_hermes_proc_id(comm->state);
+      comm->hermes_size = comm->get_num_hermes_procs(comm->state);
+      comm->first_on_node = MpiFirstOnNode(mpi_state->hermes_comm);
+    } else {
+      MPI_Comm_split(mpi_state->world_comm, (int)ProcessKind::kApp,
+                     comm->world_proc_id, &mpi_state->app_comm);
+      comm->app_proc_id = comm->get_app_proc_id(comm->state);
+      comm->app_size = comm->get_num_app_procs(comm->state);
+      comm->first_on_node = MpiFirstOnNode(mpi_state->app_comm);
+    }
   }
 
   return trans_arena_size_for_rank;
