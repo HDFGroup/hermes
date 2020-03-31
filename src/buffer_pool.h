@@ -34,58 +34,6 @@ struct TicketMutex {
 };
 
 /**
- * System and user configuration that is used to initialize the BufferPool.
- */
-struct Config {
-  /** The total capacity of each buffering Tier */
-  size_t capacities[kMaxTiers];
-  /** The block sizes of each Tier */
-  int block_sizes[kMaxTiers];
-  /** The number of slabs that each Tier has */
-  int num_slabs[kMaxTiers];
-  /** The unit of each slab, which is a multiplier of the Tier's block size */
-  int slab_unit_sizes[kMaxTiers][kMaxBufferPoolSlabs];
-  /** The percentage of space each slab should occupy per Tier. The values for
-   * each Tier should add up to 1.0.
-   */
-  f32 desired_slab_percentages[kMaxTiers][kMaxBufferPoolSlabs];
-  /** The bandwidth of each Tier */
-  f32 bandwidths[kMaxTiers];
-  /** The latency of each Tier */
-  f32 latencies[kMaxTiers];
-  /** The percentage of the total available Hermes memory that is allotted for
-   * RAM buffering.
-   */
-  f32 buffer_pool_memory_percent;
-  /** The percentage of the total available Hermes memory that is allotted for
-   * metadata.
-   */
-  f32 metadata_memory_percent;
-  /** The percentage of the total available Hermes memory that is allotted as
-   * scratch space for transferring data among Tiers.
-   */
-  f32 transfer_window_memory_percent;
-  /** The percentage of the total available Hermes memory that is allotted for
-   * transient storage.
-   */
-  f32 transient_memory_percent;
-  /** The number of Tiers */
-  int num_tiers;
-  /** The mount point or desired directory for each Tier. RAM Tier should be the
-   * empty string.
-   */
-  const char *mount_points[kMaxTiers];
-  /** The IP address and port number of the BufferPool RPC server in a format
-   * that Thallium understands. For example, tcp://172.20.101.25:8080.
-   */
-  const char *rpc_server_name;
-  /** A base name for the BufferPool shared memory segement. Hermes appends the
-   * value of the USER environment variable to this string.
-   */
-  char buffer_pool_shmem_name[kMaxBufferPoolShmemNameLength];
-};
-
-/**
  * Information about a specific hardware Tier.
  *
  * This could represent local RAM, remote RAM, NVMe, burst buffers, a parallel
@@ -268,16 +216,14 @@ struct SharedMemoryContext {
   u8 *shm_base;
   /** The offset from the beginning of shared memory to the BufferPool. */
   ptrdiff_t buffer_pool_offset;
+  /** The offset from the beginning of shared memory to the Metadata Arena. */
+  ptrdiff_t metadata_arena_offset;
   /** The total size of the shared memory (needed for munmap). */
   u64 shm_size;
 
-  // TEMP(chogan): These may get moved. Rather than this struct being
-  // specifically for shared memory info, maybe it should represent any
-  // information that is unique to each rank. Maybe CoreContext.
+  // TODO(chogan): Move these into a FileBufferingContext
   std::vector<std::vector<std::string>> buffering_filenames;
   FILE *open_streams[kMaxTiers][kMaxBufferPoolSlabs];
-  CommunicationAPI comm_api;
-  CommunicationState comm_state;
 };
 
 /**
@@ -301,13 +247,16 @@ void MakeFullShmemName(char *dest, const char *base);
 /**
  * Creates and opens all files that will be used for buffering. Stores open FILE
  * pointers in the @p context. The file buffering paradaigm uses one file per
- * slab for each Tier. If `posix_fallocate` is available, each file's capacity
- * is reserved. Otherwise, the files will be initialized with 0 size.
+ * slab for each Tier. If `posix_fallocate` is available, and `make_space` is
+ * `true`, each file's capacity is reserved. Otherwise, the files will be
+ * initialized with 0 size.
  *
  * @param context The SharedMemoryContext in which to store the opened FILE
  * pointers.
+ * @param make_space If true, attempts to reserve space on the * filesystem for
+ * each file.
  */
-void InitFilesForBuffering(SharedMemoryContext *context);
+void InitFilesForBuffering(SharedMemoryContext *context, bool make_space);
 
 /**
  * Retrieves information required for accessing the BufferPool shared memory.

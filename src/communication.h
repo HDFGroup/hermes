@@ -14,9 +14,26 @@
 
 namespace hermes {
 
-struct SharedMemoryContext;
+typedef int (*RankFunc)(void *);
+typedef int (*SizeFunc)(void *);
+typedef void (*BarrierFunc)(void *);
+typedef void (*FinalizeFunc)(void *);
+typedef void (*CopyStateFunc)(void *src, void *dest);
 
-struct CommunicationState {
+struct CommunicationContext {
+  RankFunc get_hermes_proc_id;
+  RankFunc get_world_proc_id;
+  RankFunc get_app_proc_id;
+  SizeFunc get_num_hermes_procs;
+  SizeFunc get_num_world_procs;
+  SizeFunc get_num_app_procs;
+  BarrierFunc world_barrier;
+  BarrierFunc hermes_barrier;
+  BarrierFunc app_barrier;
+  FinalizeFunc finalize;
+  CopyStateFunc copy_state;
+  CopyStateFunc adjust_shared_metadata;
+
   void *state;
   i32 world_proc_id;
   i32 hermes_proc_id;
@@ -27,30 +44,15 @@ struct CommunicationState {
   i32 num_nodes;
   // NOTE(chogan): 1-based index
   i32 node_id;
+  ProcessKind proc_kind;
+  bool first_on_node;
 };
 
-typedef int (*RankFunc)(CommunicationState*);
-typedef int (*SizeFunc)(CommunicationState*);
-typedef void (*NodeFunc)(CommunicationState*, Arena*);
-typedef void (*BarrierFunc)(CommunicationState*);
-typedef void (*FinalizeFunc)(CommunicationState*);
-
-struct CommunicationAPI {
-  RankFunc get_hermes_proc_id;
-  RankFunc get_world_proc_id;
-  RankFunc get_app_proc_id;
-  SizeFunc get_num_hermes_procs;
-  SizeFunc get_num_world_procs;
-  SizeFunc get_num_app_procs;
-  BarrierFunc world_barrier;
-  BarrierFunc hermes_barrier;
-  BarrierFunc app_barrier;
-  NodeFunc get_node_info;
-  FinalizeFunc finalize;
-};
-
-void InitCommunication(Arena *arena, SharedMemoryContext *context,
-                       bool init_mpi);
+size_t InitCommunication(CommunicationContext *comm, Arena *arena,
+                         size_t trans_arena_size_per_node, bool do_init);
+void WorldBarrier(CommunicationContext *comm);
+void HermesBarrier(CommunicationContext *comm);
+void AppBarrier(CommunicationContext *comm);
 
 }  // namespace hermes
 

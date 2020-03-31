@@ -10,11 +10,19 @@
 #include <unistd.h>
 
 #include <cmath>
-// TEMP(chogan): std::cin.get()
-#include <iostream>
+#include <memory>
 
+#include <mpi.h>
+
+#include "hermes.h"
 #include "buffer_pool.h"
 #include "buffer_pool_internal.h"
+
+/**
+ * @file common.h
+ *
+ * Common configuration and utilities for tests.
+ */
 
 namespace hermes {
 
@@ -57,10 +65,10 @@ void InitTestConfig(Config *config) {
   config->latencies[1] = 250000;
   config->latencies[2] = 500000.0f;
   config->latencies[3] = 1000000.0f;
-  config->buffer_pool_memory_percent = 0.85f;
-  config->metadata_memory_percent = 0.04f;
-  config->transfer_window_memory_percent = 0.08f;
-  config->transient_memory_percent = 0.03f;
+  config->arena_percentages[kArenaType_BufferPool] = 0.85f;
+  config->arena_percentages[kArenaType_MetaData] = 0.04f;
+  config->arena_percentages[kArenaType_TransferWindow] = 0.08f;
+  config->arena_percentages[kArenaType_Transient] = 0.03f;
   config->mount_points[0] = mem_mount_point;
   config->mount_points[1] = nvme_mount_point;
   config->mount_points[2] = bb_mount_point;
@@ -70,117 +78,192 @@ void InitTestConfig(Config *config) {
   MakeFullShmemName(config->buffer_pool_shmem_name, buffer_pool_shmem_name);
 }
 
-SharedMemoryContext InitHermesCore(Config *config, bool start_rpc_server,
-                                   int num_rpc_threads=0, bool init_mpi=false) {
+ArenaInfo GetArenaInfo(Config *config) {
   size_t page_size = sysconf(_SC_PAGESIZE);
   // NOTE(chogan): Assumes first Tier is RAM
   size_t total_hermes_memory = RoundDownToMultiple(config->capacities[0],
                                                    page_size);
   size_t total_pages = total_hermes_memory / page_size;
+  size_t pages_left = total_pages;
 
-  size_t buffer_pool_pages = std::floor(config->buffer_pool_memory_percent *
-                                        total_pages);
-  size_t pages_left = total_pages - buffer_pool_pages;
+  ArenaInfo result = {};
 
-  size_t metadata_memory_pages = std::floor(config->metadata_memory_percent *
-                                            total_pages);
-  pages_left -= metadata_memory_pages;
+  for (int i = 0; i < kArenaType_Count; ++i) {
+    size_t pages = std::floor(config->arena_percentages[i] * total_pages);
+    pages_left -= pages;
+    size_t num_bytes = pages * page_size;
+    result.sizes[i] = num_bytes;
+    result.total += num_bytes;
+  }
 
-  size_t transfer_window_memory_pages =
-    std::floor(config->transfer_window_memory_percent * total_pages);
-  pages_left -= transfer_window_memory_pages;
+  assert(pages_left == 0);
 
-  size_t transient_memory_pages = std::floor(config->transient_memory_percent *
-                                             total_pages);
-  pages_left -= transient_memory_pages;
+  return result;
+}
 
-  size_t buffer_pool_memory_size = buffer_pool_pages * page_size;
-  size_t metadata_memory_size = metadata_memory_pages * page_size;
-  size_t transfer_window_memory_size = transfer_window_memory_pages * page_size;
-  size_t transient_memory_size = transient_memory_pages * page_size;
+u8 *InitSharedMemory(const char *shmem_name, size_t total_size) {
+  u8 *result = 0;
+  int shmem_fd = shm_open(shmem_name, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
+
+  if (shmem_fd >= 0) {
+    ftruncate(shmem_fd, total_size);
+    // TODO(chogan): Should we mlock() the segment to prevent page faults?
+    result = (u8 *)mmap(0, total_size, PROT_READ | PROT_WRITE, MAP_SHARED,
+                        shmem_fd, 0);
+    // TODO(chogan): @errorhandling
+    close(shmem_fd);
+  } else {
+    // TODO(chogan): @errorhandling
+    assert(!"shm_open failed\n");
+  }
+
+  // TODO(chogan): @errorhandling
+  assert(result);
+
+  return result;
+}
+
+// TODO(chogan): Move into library
+SharedMemoryContext InitHermesCore(Config *config, CommunicationContext *comm,
+                                   ArenaInfo *arena_info, Arena *arenas,
+                                   bool start_rpc_server,
+                                   int num_rpc_threads=0) {
+
+  size_t shmem_size = (arena_info->total -
+                       arena_info->sizes[kArenaType_Transient]);
+  u8 *shmem_base = InitSharedMemory(config->buffer_pool_shmem_name, shmem_size);
+
+  // NOTE(chogan): Initialize shared arenas
+  ptrdiff_t base_offset = 0;
+  ptrdiff_t metadata_arena_offset = 0;
+  for (int i = 0; i < kArenaType_Count; ++i) {
+    if (i == kArenaType_Transient) {
+      // NOTE(chogan): Transient arena exists per rank, not in shared memory
+      continue;
+    }
+    size_t arena_size = arena_info->sizes[i];
+    InitArena(&arenas[i], arena_size, shmem_base + base_offset);
+    if (i == kArenaType_MetaData) {
+      metadata_arena_offset = base_offset;
+    }
+    base_offset += arena_size;
+  }
+
+  // NOTE(chogan): Move comm.state from transient arena to metadata arena.
+  // Assumes the comm.state is the only thing that is in the transient arena
+  void *comm_state_dest = PushSize(&arenas[kArenaType_MetaData],
+                                   arenas[kArenaType_Transient].used);
+  comm->copy_state(comm->state, comm_state_dest);
+  comm->state = comm_state_dest;
 
   SharedMemoryContext context = {};
 
-  int shmem_fd = shm_open(config->buffer_pool_shmem_name, O_CREAT | O_RDWR,
-                          S_IRUSR | S_IWUSR);
-  if (shmem_fd >= 0) {
-    ftruncate(shmem_fd, total_hermes_memory);
-    // TODO(chogan): Should we mlock() the segment to prevent page faults?
-    u8 *hermes_memory = (u8 *)mmap(0, total_hermes_memory,
-                                   PROT_READ | PROT_WRITE, MAP_SHARED, shmem_fd,
-                                   0);
-    // TODO(chogan): @errorhandling
-    close(shmem_fd);
+  context.shm_base = shmem_base;
+  context.shm_size = shmem_size;
+  context.metadata_arena_offset = metadata_arena_offset;
+  context.buffer_pool_offset = InitBufferPool(context.shm_base,
+                                             &arenas[kArenaType_BufferPool],
+                                             &arenas[kArenaType_Transient],
+                                             comm->node_id, config);
 
-    if (hermes_memory) {
-      // TODO(chogan): At the moment, memory management as a whole is a bit
-      // conflated with memory management for the BufferPool. I think eventually
-      // we will only need the buffer_pool_arena here and the other three arenas
-      // can be moved.
-      Arena buffer_pool_arena = {};
-      InitArena(&buffer_pool_arena, buffer_pool_memory_size, hermes_memory);
+  // NOTE(chogan): Store the metadata arena offset right after the
+  // buffer_pool_offset so other processes can pick it up.
+  ptrdiff_t *metadata_arena_offset_location =
+    (ptrdiff_t *)(shmem_base + sizeof(context.buffer_pool_offset));
+  *metadata_arena_offset_location = metadata_arena_offset;
 
-      Arena metadata_arena = {};
-      InitArena(&metadata_arena, metadata_memory_size,
-                hermes_memory + buffer_pool_memory_size);
-
-      Arena transfer_window_arena = {};
-      InitArena(&transfer_window_arena, transfer_window_memory_size,
-                hermes_memory + buffer_pool_memory_size + metadata_memory_size);
-
-      Arena transient_arena = {};
-      InitArena(&transient_arena, transient_memory_size,
-                (hermes_memory + buffer_pool_memory_size +
-                 metadata_memory_size + transfer_window_memory_size));
-
-      // TODO(chogan): Maybe we need a persistent_storage_arena?
-      InitCommunication(&metadata_arena, &context, init_mpi);
-
-      context.comm_api.get_node_info(&context.comm_state, &transient_arena);
-      assert(context.comm_state.node_id > 0);
-      assert(context.comm_state.num_nodes > 0);
-
-      // NOTE(chogan): We my have changed the RAM capacity for page size or
-      // alignment, so update the config->
-      config->capacities[0] = buffer_pool_memory_size;
-      context.shm_base = hermes_memory;
-      context.shm_size = total_hermes_memory;
-
-      context.buffer_pool_offset = InitBufferPool(hermes_memory,
-                                                  &buffer_pool_arena,
-                                                  &transient_arena,
-                                                  context.comm_state.node_id,
-                                                  config);
-
-      context.comm_api.world_barrier(&context.comm_state);
-
-      if (start_rpc_server) {
-        StartBufferPoolRpcServer(&context, config->rpc_server_name,
-                                 num_rpc_threads);
-      }
-    } else {
-      perror("Couldn't map shared memory");
-    }
-  } else {
-    perror("Couldn't create shared memory");
+  if (start_rpc_server) {
+    StartBufferPoolRpcServer(&context, config->rpc_server_name, num_rpc_threads);
   }
 
   return context;
 }
 
-SharedMemoryContext InitHermesClient(int rank, bool init_buffering_files) {
-  char full_shmem_name[kMaxBufferPoolShmemNameLength];
-  char base_shmem_name[] = "/hermes_buffer_pool_";
-  MakeFullShmemName(full_shmem_name, base_shmem_name);
-  SharedMemoryContext context = GetSharedMemoryContext(full_shmem_name);
-  // TODO(chogan): Proper application core comms intialization
-  context.comm_state.app_proc_id = rank;
+// TODO(chogan): Move into library
+SharedMemoryContext InitHermesClient(CommunicationContext *comm,
+                                     char *shmem_name,
+                                     bool init_buffering_files) {
+  SharedMemoryContext context = GetSharedMemoryContext(shmem_name);
 
   if (init_buffering_files) {
-    InitFilesForBuffering(&context); 
+    InitFilesForBuffering(&context, comm->app_proc_id == 0);
   }
 
   return context;
+}
+
+// TODO(chogan): Move into library
+std::shared_ptr<api::Hermes> InitHermes() {
+
+  // TODO(chogan): Read Config from a file
+  hermes::Config config = {};
+  InitTestConfig(&config);
+  config.mount_points[0] = "";
+  config.mount_points[1] = "./";
+  config.mount_points[2] = "./";
+  config.mount_points[3] = "./";
+
+  // TODO(chogan): The metadata arena will be a different type of arena because
+  // it needs to be thread-safe, as it's shared among all ranks. For now we
+  // create it, put the CommnciationContext::state in it, and then ignore it.
+  // We'll probably put an HCL container o n top of it. The transfer window
+  // arena will probably become local to each rank.
+  Arena arenas[kArenaType_Count] = {};
+  size_t bootstrap_size = KILOBYTES(4);
+  u8 *bootstrap_memory = (u8 *)malloc(bootstrap_size);
+  InitArena(&arenas[kArenaType_Transient], bootstrap_size, bootstrap_memory);
+
+  ArenaInfo arena_info = GetArenaInfo(&config);
+  // NOTE(chogan): The buffering capacity for the RAM Tier is the size of the
+  // BufferPool Arena
+  config.capacities[0] = arena_info.sizes[kArenaType_BufferPool];
+
+  CommunicationContext comm = {};
+  size_t trans_arena_size =
+    InitCommunication(&comm, &arenas[kArenaType_Transient],
+                      arena_info.sizes[kArenaType_Transient], false);
+
+  GrowArena(&arenas[kArenaType_Transient], trans_arena_size);
+  comm.state = arenas[kArenaType_Transient].base;
+
+  SharedMemoryContext context = {};
+  if (comm.proc_kind == ProcessKind::kHermes && comm.first_on_node) {
+    // TODO(chogan): start RPC server by default
+    context = InitHermesCore(&config, &comm, &arena_info, arenas, false);
+  }
+
+  WorldBarrier(&comm);
+  std::shared_ptr<api::Hermes> result = nullptr;
+
+  if (comm.proc_kind == ProcessKind::kHermes) {
+    result = std::make_shared<api::Hermes>(context);
+    result->shmem_name_ = std::string(config.buffer_pool_shmem_name);
+  } else {
+    context = GetSharedMemoryContext(config.buffer_pool_shmem_name);
+
+    if (comm.first_on_node) {
+      void *metadata_arena_base =
+        context.shm_base + context.metadata_arena_offset;
+      comm.adjust_shared_metadata(metadata_arena_base, comm.state);
+      comm.state = metadata_arena_base;
+    }
+
+    AppBarrier(&comm);
+
+    InitFilesForBuffering(&context, comm.app_proc_id == 0);
+    result = std::make_shared<api::Hermes>(context);
+  }
+
+  WorldBarrier(&comm);
+
+  result->trans_arena_ = arenas[kArenaType_Transient];
+  // NOTE(chogan): Reset the transient arena since we're done with the data it
+  // contains
+  result->trans_arena_.used = 0;
+  result->comm_ = comm;
+  result->context_ = context;
+
+  return result;
 }
 
 }  // namespace hermes

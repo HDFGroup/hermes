@@ -13,6 +13,11 @@
 
 namespace hermes {
 
+struct ArenaInfo {
+  size_t sizes[kArenaType_Count];
+  size_t total;
+};
+
 /**
  * A block of memory that can be divided up dynamically.
  *
@@ -117,6 +122,30 @@ struct ScopedTemporaryMemory {
  * @param[in] base A pointer to the beginning of the Arena's backing memory.
  */
 void InitArena(Arena *arena, size_t bytes, u8 *base);
+
+/**
+ * Frees the memory backing the Arena, and zeros out all its fields.
+ *
+ * Only Arenas whose backing memory was created by malloc should be destroyed
+ * with this function. Arenas using shared memory as the backing store should
+ * not be destroyed. The backing memory is reclaimed when the shared memory is
+ * unlinked.
+ *
+ * @param[in,out] arena The Arena to destroy.
+ */
+void DestroyArena(Arena *arena);
+
+/**
+ * Expands the backing memory for an arena to be `new_size` bytes.
+ *
+ * Becuase this function uses `realloc`, it will only work for Arenas whose
+ * backing store was created with malloc. It cannot be used with Arenas whose
+ * backing store is shared memory (e.g., the BufferPool arena).
+ *
+ * @param arena The arena to expand.
+ * @param new_size The new (larger) size that the Arena should occupy.
+ */
+void GrowArena(Arena *arena, size_t new_size);
 
 /**
  * Returns a pointer to a raw region of @p size bytes.

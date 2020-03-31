@@ -69,8 +69,13 @@ int main(int argc, char **argv) {
     PrintUsage(argv[0]);
   }
 
-  SharedMemoryContext context = InitHermesCore(&config, start_rpc_server,
-                                               num_rpc_threads, true);
+  // TODO(chogan): Call InitCommunication before this
+  // TEMP(chogan):
+  (void)start_rpc_server;
+  (void)num_rpc_threads;
+#if 0
+  SharedMemoryContext context = InitHermesCore(&config, NULL, start_rpc_server,
+                                               num_rpc_threads);
 
   if (!start_rpc_server) {
     std::cin.get();
@@ -78,7 +83,9 @@ int main(int argc, char **argv) {
 
   munmap(context.shm_base, context.shm_size);
   shm_unlink(config.buffer_pool_shmem_name);
-  context.comm_api.finalize(&context.comm_state);
+  // TODO(chogan):
+  // context.comm.finalize(&context.comm);
+#endif
 
   return 0;
 }

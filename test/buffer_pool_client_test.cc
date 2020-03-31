@@ -31,6 +31,7 @@ namespace tl = thallium;
 using namespace hermes;
 
 static constexpr char kServerName[] = "ofi+sockets://172.20.101.25:8080";
+static constexpr char kBaseShemeName[] = "/hermes_buffer_pool_";
 
 struct TimingResult {
   double get_buffers_time;
@@ -260,8 +261,13 @@ int main(int argc, char **argv) {
   // NOTE(chogan): Wait for Buffer Pool initialization to complete
   MPI_Barrier(MPI_COMM_WORLD);
 
+  // TODO(chogan): Call InitCommunication first (via InitHermes)
+
   // NOTE(chogan): Per-application-core Hermes initialization
-  SharedMemoryContext context = InitHermesClient(app_rank, test_file_buffering);
+  char full_shmem_name[hermes::kMaxBufferPoolShmemNameLength];
+  MakeFullShmemName(full_shmem_name, kBaseShemeName);
+  SharedMemoryContext context = InitHermesClient(NULL, full_shmem_name,
+                                                 test_file_buffering);
 
   if (test_get_release) {
     TimingResult timing = {};
