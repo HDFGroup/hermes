@@ -217,11 +217,12 @@ int main(int argc, char **argv) {
   bool test_split = false;
   bool test_merge = false;
   bool test_file_buffering = false;
+  bool kill_server = false;
   int slab_index = 0;
   int iters = 100000;
   int pid = 0;
 
-  while ((option = getopt(argc, argv, "frs:i:m:p:")) != -1) {
+  while ((option = getopt(argc, argv, "fkrs:i:m:p:")) != -1) {
     switch (option) {
       case 'f': {
         test_file_buffering = true;
@@ -230,6 +231,10 @@ int main(int argc, char **argv) {
       }
       case 'i': {
         iters = atoi(optarg);
+        break;
+      }
+      case 'k': {
+        kill_server = true;
         break;
       }
       case 'm': {
@@ -258,9 +263,6 @@ int main(int argc, char **argv) {
     }
   }
 
-  std::shared_ptr<hapi::Hermes> hermes = hermes::InitHermesAdapter();
-
-#if 0
   char full_shmem_name[hermes::kMaxBufferPoolShmemNameLength];
   MakeFullShmemName(full_shmem_name, kBaseShemeName);
   SharedMemoryContext context = InitHermesClient(NULL, full_shmem_name,
@@ -309,8 +311,7 @@ int main(int argc, char **argv) {
   ReleaseSharedMemoryContext(&context);
   MPI_Barrier(MPI_COMM_WORLD);
 
-#endif
-  if (world_rank == 0) {
+  if (world_rank == 0 && kill_server) {
     // NOTE(chogan): Shut down the RPC server
     if (pid) {
       std::string shm_id = "0";
