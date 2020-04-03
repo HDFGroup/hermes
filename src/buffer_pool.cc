@@ -25,6 +25,7 @@
 #include <thallium/serialization/stl/pair.hpp>
 
 #include "memory_arena.cc"
+#include "config_parser.cc"
 
 #if defined(HERMES_COMMUNICATION_MPI)
 #include "communication_mpi.cc"
