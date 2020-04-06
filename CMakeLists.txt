@@ -235,10 +235,21 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src)
 #add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/posix_adapter)
 #add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/mpi_io_adapter)
 #add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/hermes_vol)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test)
 
 if(BUILD_BUFFER_POOL_VISUALIZER AND SDL2_FOUND)
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/buffer_pool_visualizer)
+endif()
+
+
+#-----------------------------------------------------------------------------
+# Testing
+#-----------------------------------------------------------------------------
+if(CMAKE_PROJECT_NAME STREQUAL HERMES)
+  include(CTest)
+endif()
+
+if(CMAKE_PROJECT_NAME STREQUAL HERMES AND BUILD_TESTING)
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test)
 endif()
 
 #-----------------------------------------------------------------------------

@@ -4,7 +4,6 @@
 include_directories(
   ${PROJECT_SOURCE_DIR}/src/api
   ${CMAKE_CURRENT_SOURCE_DIR}
-  
   ${HERMES_INCLUDES_BUILD_TIME}
 )
 
@@ -43,3 +42,6 @@ target_link_libraries(end_to_end_test hermes ${LIBRT} MPI::MPI_CXX)
 
 add_executable(config_parser_test config_parser_test.cc)
 target_link_libraries(config_parser_test hermes)
+
+add_test(NAME TestConfigParser
+  COMMAND config_parser_test ${CMAKE_CURRENT_SOURCE_DIR}/data/hermes.conf)
