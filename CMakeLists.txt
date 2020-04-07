@@ -136,6 +136,7 @@ endif()
 # Build options
 #------------------------------------------------------------------------------
 option(BUILD_SHARED_LIBS "Build with shared libraries." ON)
+option(HERMES_INTERCEPT_IO "Use GOTCHA as IO interception tool" ON)
 option(HERMES_COMMUNICATION_MPI "Use MPI as the communication layer." ON)
 option(BUILD_BUFFER_POOL_VISUALIZER "Build the BufferPool visualizer" OFF)
 option(USE_ADDRESS_SANITIZER "Enable -fsanitize=address in Debug builds" ON)
@@ -204,9 +205,36 @@ endfunction()
 #-----------------------------------------------------------------------------
 # Dependencies common to all subdirectories
 #-----------------------------------------------------------------------------
+#thallium
 find_package(thallium CONFIG REQUIRED)
 if(thallium_FOUND)
   message(STATUS "found thallium at ${thallium_DIR}")
+endif()
+
+# GOTCHA
+if(HERMES_INTERCEPT_IO)
+  find_package(Gotcha REQUIRED)
+  if(Gotcha_FOUND)
+    set(HERMES_HAVE_GOTCHA 1)
+    set(HERMES_EXT_INCLUDE_DEPENDENCIES ${GOTCHA_INCLUDE_DIRS}
+      ${HERMES_EXT_INCLUDE_DEPENDENCIES}
+    )
+    set(HERMES_EXT_LIB_DEPENDENCIES gotcha ${HERMES_EXT_LIB_DEPENDENCIES})
+    OPTION(HERMES_BUILD_POSIX_IO "Build POSIX I/O Module" ON)
+    OPTION(HERMES_BUILD_MPI_IO "Build MPI I/O Module" ON)
+  endif()
+endif()
+
+# google log
+find_package(GLOG REQUIRED)
+if(GLOG_FOUND)
+  message(STATUS "found glog, glog dir is ${GLOG_DIR}")
+  set(HERMES_EXT_INCLUDE_DEPENDENCIES ${GLOG_INCLUDE_DIR}
+    ${HERMES_EXT_INCLUDE_DEPENDENCIES}
+  )
+  set(HERMES_EXT_LIB_DEPENDENCIES glog::glog ${HERMES_EXT_LIB_DEPENDENCIES})
+else()
+  message(STATUS, "GLOG not found")
 endif()
 
 if(HERMES_COMMUNICATION_MPI)
@@ -232,6 +260,9 @@ endif()
 # Source
 #-----------------------------------------------------------------------------
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src)
+if(HERMES_HAVE_GOTCHA)
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/intercept_io)
+endif()
 #add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/posix_adapter)
 #add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/mpi_io_adapter)
 #add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/hermes_vol)

@@ -1,0 +1,6 @@
+FILE * fopen (const char *filename, const char * mode)
+int fclose (FILE *stream)
+size_t fwrite ( const void *ptr, size_t size, size_t count, FILE *stream)
+size_t fread (void * ptr, size_t size, size_t count, FILE *stream)
+ssize_t pwrite (int fd, const void *buf, size_t count, off_t offset)
+ssize_t pread (int fd, void *buf, size_t count, off_t offset)
