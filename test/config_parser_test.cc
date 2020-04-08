@@ -54,20 +54,17 @@ int main(int argc, char **argv) {
   Assert(config.arena_percentages[hermes::kArenaType_Transient] == 0.03f);
   Assert(config.arena_percentages[hermes::kArenaType_TransferWindow] == 0.08f);
 
-  Assert(strncmp(config.mount_points[0], "", 0) == 0);
-  Assert(strncmp(config.mount_points[1], "./", 2) == 0);
-  Assert(strncmp(config.mount_points[2], "./", 2) == 0);
-  Assert(strncmp(config.mount_points[3], "./", 2) == 0);
+  Assert(config.mount_points[0] == "");
+  Assert(config.mount_points[1] == "./");
+  Assert(config.mount_points[2] == "./");
+  Assert(config.mount_points[3] == "./");
 
-  const char expected_name[] = "sockets://localhost:8080";
-  Assert(strncmp(config.rpc_server_name, expected_name,
-                 sizeof(expected_name)) == 0);
+  const char expected_rpc_server_name[] = "sockets://localhost:8080";
+  Assert(config.rpc_server_name == expected_rpc_server_name);
 
-  // TEMP(chogan):
-  for (int i = 0; i < config.num_tiers; ++i) {
-    free((void *)config.mount_points[i]);
-  }
-  free((void *)config.rpc_server_name);
+  const char expected_shm_name[] = "/hermes_buffer_pool_";
+  Assert(strncmp(config.buffer_pool_shmem_name, expected_shm_name,
+                 sizeof(expected_shm_name)) == 0);
 
   return 0;
 }

@@ -173,7 +173,7 @@ SharedMemoryContext InitHermesCore(Config *config, CommunicationContext *comm,
   *metadata_arena_offset_location = metadata_arena_offset;
 
   if (start_rpc_server) {
-    StartBufferPoolRpcServer(&context, config->rpc_server_name, num_rpc_threads);
+    StartBufferPoolRpcServer(&context, config->rpc_server_name.c_str(), num_rpc_threads);
   }
 
   return context;

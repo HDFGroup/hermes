@@ -2,6 +2,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <string>
+
+#include <glog/logging.h>
+
 #include "hermes_types.h"
 #include "memory_arena.h"
 
@@ -21,6 +25,7 @@ enum class TokenType {
 };
 
 enum ConfigVariable {
+  ConfigVariable_Unkown,
   ConfigVariable_NumTiers,
   ConfigVariable_Capacities,
   ConfigVariable_BlockSizes,
@@ -35,11 +40,13 @@ enum ConfigVariable {
   ConfigVariable_TransientArenaPercentage,
   ConfigVariable_MountPoints,
   ConfigVariable_RpcServerName,
+  ConfigVariable_BufferPoolShmemName,
 
   ConfigVariable_Count
 };
 
 static const char *kConfigVariableStrings[ConfigVariable_Count] = {
+  "unknown",
   "num_tiers",
   "capacities_mb",
   "block_sizes_kb",
@@ -54,6 +61,7 @@ static const char *kConfigVariableStrings[ConfigVariable_Count] = {
   "transient_arena_percentage",
   "mount_points",
   "rpc_server_name",
+  "buffer_pool_shmem_name",
 };
 
 struct Token {
@@ -92,7 +100,9 @@ EntireFile ReadEntireFile(Arena *arena, const char *path) {
           assert(items_read == 1);
           result.size = file_size;
         } else {
-          // TODO(chogan): @logging
+          LOG(FATAL) << "Arena capacity (" << arena->capacity
+                     << ") too small to read file of size (" << file_size
+                     << ")" << std::endl;
         }
 
       } else {
@@ -298,12 +308,16 @@ inline bool IsSemicolon(Token *tok) {
   return result;
 }
 
+void PrintExpectedAndFail(const std::string &expected) {
+  LOG(FATAL) << "Configuration parser expected: " << expected << std::endl;
+}
+
 ConfigVariable GetConfigVariable(Token *tok) {
   bool found = false;
-  ConfigVariable result;
+  ConfigVariable result = ConfigVariable_Unkown;
 
   // TODO(chogan): Hash table would be faster, but this is already instantaneous
-  for (int i = 0; i < ConfigVariable_Count; ++i) {
+  for (int i = 1; i < ConfigVariable_Count; ++i) {
     if (strncmp(tok->data, kConfigVariableStrings[i], tok->size) == 0) {
       result = (ConfigVariable)i;
       found = true;
@@ -311,9 +325,8 @@ ConfigVariable GetConfigVariable(Token *tok) {
   }
 
   if (!found) {
-    // TODO(chogan): @logging
-    // TODO(chogan): @errorhandling
-    exit(1);
+    LOG(WARNING) << "Ignoring unrecognized configuration variable: "
+                 << std::string(tok->data, tok->size) << std::endl;
   }
 
   return result;
@@ -325,10 +338,12 @@ size_t ParseSizet(Token **tok) {
     if (sscanf((*tok)->data, "%zu", &result) == 1) {
       *tok = (*tok)->next;
     } else {
-      // TODO(chogan): @errorhandling
+      LOG(FATAL) << "Could not interpret token data '"
+                 << std::string((*tok)->data, (*tok)->size) << "' as a size_t"
+                 << std::endl;
     }
   } else {
-    // TODO(chogan): @errorhandling
+    PrintExpectedAndFail("a number");
   }
 
   return result;
@@ -340,14 +355,21 @@ Token *ParseSizetList(Token *tok, size_t *out, int n) {
     for (int i = 0; i < n; ++i) {
       out[i] = ParseSizet(&tok);
       if (i != n - 1) {
-        assert(IsComma(tok));
-        tok = tok->next;
+        if (IsComma(tok)) {
+          tok = tok->next;
+        } else {
+          PrintExpectedAndFail(",");
+        }
       }
     }
-    assert(IsCloseCurlyBrace(tok));
-    tok = tok->next;
+
+    if (IsCloseCurlyBrace(tok)) {
+      tok = tok->next;
+    } else {
+      PrintExpectedAndFail("}");
+    }
   } else {
-    // TODO(chogan): @errorhandling
+    PrintExpectedAndFail("{");
   }
 
   return tok;
@@ -359,7 +381,7 @@ int ParseInt(Token **tok) {
     result = atoi((*tok)->data);
     *tok = (*tok)->next;
   } else {
-    // TODO(chogan): @errorhandling
+    PrintExpectedAndFail("a number");
   }
 
   return result;
@@ -371,14 +393,20 @@ Token *ParseIntList(Token *tok, int *out, int n) {
     for (int i = 0; i < n; ++i) {
       out[i] = ParseInt(&tok);
       if (i != n - 1) {
-        assert(IsComma(tok));
-        tok = tok->next;
+        if (IsComma(tok)) {
+          tok = tok->next;
+        } else {
+          PrintExpectedAndFail(",");
+        }
       }
     }
-    assert(IsCloseCurlyBrace(tok));
-    tok = tok->next;
+    if (IsCloseCurlyBrace(tok)) {
+      tok = tok->next;
+    } else {
+      PrintExpectedAndFail("}");
+    }
   } else {
-    // TODO(chogan): @errorhandling
+    PrintExpectedAndFail("{");
   }
 
   return tok;
@@ -400,10 +428,13 @@ Token *ParseIntListList(Token *tok, int out[][hermes::kMaxBufferPoolSlabs],
         }
       }
     }
-    assert(IsCloseCurlyBrace(tok));
-    tok = tok->next;
+    if (IsCloseCurlyBrace(tok)) {
+      tok = tok->next;
+    } else {
+      PrintExpectedAndFail("}");
+    }
   } else {
-    // TODO(chogan): @errorhandling
+    PrintExpectedAndFail("{");
   }
 
   return tok;
@@ -415,7 +446,7 @@ f32 ParseFloat(Token **tok) {
     result = (f32)atof((*tok)->data);
     *tok = (*tok)->next;
   } else {
-    // TODO(chogan): @errorhandling
+    PrintExpectedAndFail("a number");
   }
 
   return result;
@@ -427,16 +458,22 @@ Token *ParseFloatList(Token *tok, f32 *out, int n) {
     for (int i = 0; i < n; ++i) {
       out[i] = ParseFloat(&tok);
       if (i != n - 1) {
-        assert(IsComma(tok));
-        tok = tok->next;
+        if (IsComma(tok)) {
+          tok = tok->next;
+        } else {
+          PrintExpectedAndFail(",");
+        }
       }
     }
-    assert(IsCloseCurlyBrace(tok));
-    tok = tok->next;
+    if (IsCloseCurlyBrace(tok)) {
+      tok = tok->next;
+    } else {
+      PrintExpectedAndFail("}");
+    }
   } else {
-    // TODO(chogan): @errorhandling
+    PrintExpectedAndFail("{");
   }
-  
+
   return tok;
 }
 
@@ -447,8 +484,11 @@ Token *ParseFloatListList(Token *tok, f32 out[][hermes::kMaxBufferPoolSlabs],
     for (int i = 0; i < n; ++i) {
       tok = ParseFloatList(tok, out[i], m[i]);
       if (i != n - 1) {
-        assert(IsComma(tok));
-        tok = tok->next;
+        if (IsComma(tok)) {
+          tok = tok->next;
+        } else {
+          PrintExpectedAndFail(",");
+        }
       } else {
         // Optional final comma
         if (IsComma(tok)) {
@@ -456,62 +496,78 @@ Token *ParseFloatListList(Token *tok, f32 out[][hermes::kMaxBufferPoolSlabs],
         }
       }
     }
-    assert(IsCloseCurlyBrace(tok));
-    tok = tok->next;
+    if (IsCloseCurlyBrace(tok)) {
+      tok = tok->next;
+    } else {
+      PrintExpectedAndFail("}");
+    }
   } else {
-    // TODO(chogan): @errorhandling
+    PrintExpectedAndFail("{");
   }
 
   return tok;
 }
 
-char *ParseString(Token **tok) {
-  char *result = 0;
+std::string ParseString(Token **tok) {
+  std::string result;
   if (*tok && IsString(*tok)) {
-    // TODO(chogan): Where should this memory come from?
-    result = (char *)malloc((*tok)->size + 1);
-    strncpy(result, (*tok)->data, (*tok)->size);
-    result[(*tok)->size] = '\0';
+    result = std::string((*tok)->data, (*tok)->size);
     *tok = (*tok)->next;
   } else {
-    // TODO(chogan): @errorhandling
+    PrintExpectedAndFail("a string");
   }
 
   return result;
 }
 
-Token *ParseStringList(Token *tok, const char **out, int n) {
+Token *ParseStringList(Token *tok, std::string *out, int n) {
   if (IsOpenCurlyBrace(tok)) {
     tok = tok->next;
     for (int i = 0; i < n; ++i) {
       out[i] = ParseString(&tok);
       if (i != n - 1) {
-        assert(IsComma(tok));
-        tok = tok->next;
+        if (IsComma(tok)) {
+          tok = tok->next;
+        } else {
+          PrintExpectedAndFail(",");
+        }
       }
     }
-    assert(IsCloseCurlyBrace(tok));
+    if (IsCloseCurlyBrace(tok)) {
+      tok = tok->next;
+    } else {
+      PrintExpectedAndFail("}");
+    }
+  } else {
+    PrintExpectedAndFail("{");
+  }
+
+  return tok;
+}
+
+Token *ParseCharArrayString(Token *tok, char *arr) {
+  if (tok && IsString(tok)) {
+    strncpy(arr, tok->data, tok->size);
+    arr[tok->size] = '\0';
     tok = tok->next;
   } else {
-    // TODO(chogan): @errorhandling
+    PrintExpectedAndFail("a string");
   }
-  
+
   return tok;
 }
 
 void RequireNumTiers(Config *config) {
   if (config->num_tiers == 0) {
-    // TODO(chogan): @errorhandling
-    fprintf(stderr, "num_iters required first\n");
-    exit(1);
+    LOG(FATAL) << "The configuration variable 'num_tiers' must be defined first"
+               << std::endl;
   }
 }
 
 void RequireNumSlabs(Config *config) {
   if (config->num_slabs == 0) {
-    // TODO(chogan): @errorhandling
-    fprintf(stderr, "num_iters required first\n");
-    exit(1);
+    LOG(FATAL) << "The configuration variable 'num_slabs' must be defined first"
+               << std::endl;
   }
 }
 
@@ -521,10 +577,10 @@ Token *BeginStatement(Token *tok) {
     if (tok && IsEqual(tok)) {
       tok = tok->next;
     } else {
-      // TODO(chogan): @errorhandling
+      PrintExpectedAndFail("=");
     }
   } else {
-    // TODO(chogan): @errorhandling
+    PrintExpectedAndFail("an identifier");
   }
 
   return tok;
@@ -534,7 +590,7 @@ Token *EndStatement(Token *tok) {
   if (tok && IsSemicolon(tok)) {
     tok = tok->next;
   } else {
-    // TODO(chogan): @errorhandling
+    PrintExpectedAndFail(";");
   }
 
   return tok;
@@ -546,13 +602,19 @@ void ParseTokens(TokenList *tokens, Config *config) {
   while (tok) {
     ConfigVariable var = GetConfigVariable(tok);
 
+    if (var == ConfigVariable_Unkown) {
+      tok = tok->next;
+      while (tok && !IsIdentifier(tok)) {
+        tok = tok->next;
+      }
+      continue;
+    }
+
     switch (var) {
       case ConfigVariable_NumTiers: {
         tok = BeginStatement(tok);
-
         int val = ParseInt(&tok);
         config->num_tiers = val;
-
         tok = EndStatement(tok);
         break;
       }
@@ -646,8 +708,13 @@ void ParseTokens(TokenList *tokens, Config *config) {
       }
       case ConfigVariable_RpcServerName: {
         tok = BeginStatement(tok);
-        char *val = ParseString(&tok);
-        config->rpc_server_name = val;
+        config->rpc_server_name = ParseString(&tok);
+        tok = EndStatement(tok);
+        break;
+      }
+      case ConfigVariable_BufferPoolShmemName: {
+        tok = BeginStatement(tok);
+        tok = ParseCharArrayString(tok, config->buffer_pool_shmem_name);
         tok = EndStatement(tok);
         break;
       }

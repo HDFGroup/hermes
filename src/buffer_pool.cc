@@ -551,7 +551,7 @@ Tier *InitTiers(Arena *arena, Config *config) {
     tier->is_remote = false;
     // TODO(chogan): @configuration Get this from cmake.
     tier->has_fallocate = true;
-    size_t path_length = strlen(config->mount_points[i]);
+    size_t path_length = config->mount_points[i].size();
 
     if (path_length == 0) {
       tier->is_ram = true;
@@ -559,7 +559,7 @@ Tier *InitTiers(Arena *arena, Config *config) {
       // TODO(chogan): @errorhandling
       assert(path_length < kMaxPathLength);
       snprintf(tier->mount_point, path_length + 1, "%s",
-               config->mount_points[i]);
+               config->mount_points[i].c_str());
     }
   }
 
