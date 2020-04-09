@@ -376,15 +376,18 @@ Token *ParseSizetList(Token *tok, size_t *out, int n) {
 }
 
 int ParseInt(Token **tok) {
-  int result = 0;
+  long result = 0;
   if (*tok && IsNumber(*tok)) {
-    result = atoi((*tok)->data);
+    result = strtol((*tok)->data, NULL, 0);
+    if (errno == ERANGE || result <= 0 || result >= INT_MAX) {
+      PrintExpectedAndFail("an integer between 1 and INT_MAX");
+    }
     *tok = (*tok)->next;
   } else {
     PrintExpectedAndFail("a number");
   }
 
-  return result;
+  return (int)result;
 }
 
 Token *ParseIntList(Token *tok, int *out, int n) {
