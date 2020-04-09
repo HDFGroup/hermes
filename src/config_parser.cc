@@ -1,3 +1,4 @@
+#include <float.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -444,15 +445,18 @@ Token *ParseIntListList(Token *tok, int out[][hermes::kMaxBufferPoolSlabs],
 }
 
 f32 ParseFloat(Token **tok) {
-  f32 result = 0;
+  double result = 0;
   if (*tok && IsNumber(*tok)) {
-    result = (f32)atof((*tok)->data);
+    result = strtod((*tok)->data, NULL);
+    if (result <= 0 || errno == ERANGE || result > FLT_MAX) {
+      PrintExpectedAndFail("a floating point number between 1 and FLT_MAX");
+    }
     *tok = (*tok)->next;
   } else {
     PrintExpectedAndFail("a number");
   }
 
-  return result;
+  return (f32)result;
 }
 
 Token *ParseFloatList(Token *tok, f32 *out, int n) {
