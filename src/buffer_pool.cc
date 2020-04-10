@@ -18,12 +18,14 @@
 #include <utility>
 #include <vector>
 
+#include <glog/logging.h>
 #include <mpi.h>
 #include <thallium.hpp>
 #include <thallium/serialization/stl/vector.hpp>
 #include <thallium/serialization/stl/pair.hpp>
 
 #include "memory_arena.cc"
+#include "config_parser.cc"
 
 #if defined(HERMES_COMMUNICATION_MPI)
 #include "communication_mpi.cc"
@@ -549,7 +551,7 @@ Tier *InitTiers(Arena *arena, Config *config) {
     tier->is_remote = false;
     // TODO(chogan): @configuration Get this from cmake.
     tier->has_fallocate = true;
-    size_t path_length = strlen(config->mount_points[i]);
+    size_t path_length = config->mount_points[i].size();
 
     if (path_length == 0) {
       tier->is_ram = true;
@@ -557,7 +559,7 @@ Tier *InitTiers(Arena *arena, Config *config) {
       // TODO(chogan): @errorhandling
       assert(path_length < kMaxPathLength);
       snprintf(tier->mount_point, path_length + 1, "%s",
-               config->mount_points[i]);
+               config->mount_points[i].c_str());
     }
   }
 
@@ -1090,9 +1092,9 @@ void StartBufferPoolRpcServer(SharedMemoryContext *context, const char *addr,
                               i32 num_rpc_threads) {
   tl::engine buffer_pool_rpc_server(addr, THALLIUM_SERVER_MODE, false,
                                     num_rpc_threads);
-  // TODO(chogan): @logging
-  // std::cout << "Serving at " << buffer_pool_rpc_server.self()
-  //       << " with " << num_rpc_threads << " RPC threads" << std::endl;
+
+  LOG(INFO) << "Serving at " << buffer_pool_rpc_server.self()
+            << " with " << num_rpc_threads << " RPC threads" << std::endl;
 
   using std::function;
   using std::vector;
