@@ -538,7 +538,6 @@ size_t RoundDownToMultiple(size_t val, size_t multiple) {
 }
 
 Tier *InitTiers(Arena *arena, Config *config) {
-  // TODO(chogan): @alignment
   Tier *result = PushArray<Tier>(arena, config->num_tiers);
 
   for (int i = 0; i < config->num_tiers; ++i) {
@@ -831,16 +830,15 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
   size_t tiers_size = config->num_tiers * sizeof(Tier);
   size_t buffer_pool_size = (sizeof(BufferPool) + free_lists_size +
                              slab_metadata_size);
+
+  // IMPORTANT(chogan): Currently, no additional bytes are added for alignment.
+  // However, if we add more metadata to the BufferPool in the future, automatic
+  // alignment could make this number larger than we think. `PushSize` will
+  // print out when it adds alignment padding, so for now we can monitor that.
+  // In the future it would be nice to have a programatic way to account for
+  // alignment padding.
   size_t required_bytes_for_metadata = (headers_size + buffer_pool_size +
                                         tiers_size);
-
-  // TODO(chogan): @blocker Add some padding to account for possibility of
-  // alignment inserting extra bytes.
-  // int alignment_padding = 256;
-  // int max_padding = sizeof(BufferPool) + sizeof(BufferHeader) + sizeof(Tier);
-  // int alignment_bytes_needed = 0;
-  // ...
-  // assert(alignment_bytes_needed <= alignment_padding);
 
   size_t required_bytes_for_metadata_rounded =
     RoundUpToMultiple(required_bytes_for_metadata, config->block_sizes[0]);
@@ -928,7 +926,6 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
 
   // Build BufferPool
 
-  // TODO(chogan): @alignment
   BufferPool *pool = PushClearedStruct<BufferPool>(buffer_pool_arena);
   pool->header_storage_offset = header_begin - shmem_base;
   pool->tier_storage_offset = (u8 *)tiers - shmem_base;

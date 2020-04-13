@@ -155,10 +155,11 @@ void GrowArena(Arena *arena, size_t new_size);
  *
  * @param[in,out] arena The Arena to allocate from.
  * @param[in] size The requested memory size in bytes.
+ * @param[in] alignment Align the result to a desired multiple.
  *
  * @return A pointer to the beginning of a contiguous region of @p size bytes.
  */
-u8 *PushSize(Arena *arena, size_t size);
+u8 *PushSize(Arena *arena, size_t size, size_t alignment=8);
 
 /**
  * Returns a pointer to a raw region of bytes that are cleared to zero.
@@ -167,10 +168,11 @@ u8 *PushSize(Arena *arena, size_t size);
  *
  * @param[in,out] arena The Arena to allocate from.
  * @param[in] size The requested memory size in bytes.
+ * @param[in] alignment Align the result to a desired multiple.
  *
  * @return A pointer to the beginning of a contiguous region of @p size zeros.
  */
-u8 *PushSizeAndClear(Arena *arena, size_t size);
+u8 *PushSizeAndClear(Arena *arena, size_t size, size_t alignment=8);
 
 /**
  * Reserves space for and returns a pointer to a T instance.
@@ -178,13 +180,14 @@ u8 *PushSizeAndClear(Arena *arena, size_t size);
  * Note that the T instance will be uninitialized. The caller is responsible for
  * any initialization.
  *
- * @param arena The backing Arena from which to reserve space.
+ * @param[in,out] arena The backing Arena from which to reserve space.
+ * @param[in] alignment Align the result to a desired multiple.
  *
  * @return A pointer to an uninitialized `T` instance.
  */
 template<typename T>
-inline T *PushStruct(Arena *arena) {
-  T *result = reinterpret_cast<T *>(PushSize(arena, sizeof(T)));
+inline T *PushStruct(Arena *arena, size_t alignment=8) {
+  T *result = reinterpret_cast<T *>(PushSize(arena, sizeof(T), alignment));
 
   return result;
 }
@@ -195,13 +198,15 @@ inline T *PushStruct(Arena *arena) {
  * Like PushStruct, but all the object's members are initialized to zero.
  * Note: assumes 0/NULL is a valid value for all the object's members.
  *
- * @param arena The backing Arena from which to reserve space.
+ * @param[in,out] arena The backing Arena from which to reserve space.
+ * @param[in] alignment Align the result to a desired multiple.
  *
  * @return A pointer to a `T` instance with all members initialized to zero.
  */
 template<typename T>
-inline T *PushClearedStruct(Arena *arena) {
-  T *result = reinterpret_cast<T *>(PushSizeAndClear(arena, sizeof(T)));
+inline T *PushClearedStruct(Arena *arena, size_t alignment=8) {
+  T *result = reinterpret_cast<T *>(PushSizeAndClear(arena, sizeof(T),
+                                                     alignment));
 
   return result;
 }
@@ -212,14 +217,16 @@ inline T *PushClearedStruct(Arena *arena) {
  *
  * The objects will be uninitialized.
  *
- * @param arena The backing Arena from which to reserve space.
- * @param count The number of objects to allocate.
+ * @param[in,out] arena The backing Arena from which to reserve space.
+ * @param[in] count The number of objects to allocate.
+ * @param[in] alignment Align the result to a desired multiple.
  *
  * @return A pointer to the first `T` instance in the uninitialized array.
  */
 template<typename T>
-inline T *PushArray(Arena *arena, int count) {
-  T *result = reinterpret_cast<T *>(PushSize(arena, sizeof(T) * count));
+inline T *PushArray(Arena *arena, int count, size_t alignment=8) {
+  T *result = reinterpret_cast<T *>(PushSize(arena, sizeof(T) * count,
+                                             alignment));
 
   return result;
 }
