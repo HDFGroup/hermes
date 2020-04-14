@@ -139,14 +139,20 @@ option(BUILD_SHARED_LIBS "Build with shared libraries." ON)
 option(HERMES_COMMUNICATION_MPI "Use MPI as the communication layer." ON)
 option(BUILD_BUFFER_POOL_VISUALIZER "Build the BufferPool visualizer" OFF)
 option(USE_ADDRESS_SANITIZER "Enable -fsanitize=address in Debug builds" ON)
+option(HERMES_USE_TCP "Use TCP as the transport layer for RPC." ON)
 
 # TODO(chogan): Expose this once we have more than one communication layer
 mark_as_advanced(HERMES_COMMUNICATION_MPI)
+# TODO(chogan): Eventually expose other transport layers like RoCE and IB
+mark_as_advanced(HERMES_USE_TCP)
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3"
-      CACHE STRING "" FORCE)
-  if (USE_ADDRESS_SANITIZER)
+  if (NOT "${CMAKE_CXX_FLAGS_DEBUG}" MATCHES ".*-g3.*")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3"
+        CACHE STRING "" FORCE)
+  endif()
+  if (USE_ADDRESS_SANITIZER AND
+      NOT "${CMAKE_CXX_FLAGS_DEBUG}" MATCHES ".*-fsanitize=address.*")
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address"
         CACHE STRING "" FORCE)
   endif()
@@ -207,6 +213,11 @@ endfunction()
 find_package(thallium CONFIG REQUIRED)
 if(thallium_FOUND)
   message(STATUS "found thallium at ${thallium_DIR}")
+endif()
+
+find_package(hcl CONFIG REQUIRED)
+if(hcl_FOUND)
+  message(STATUS "found HCL at ${hcl_DIR}")
 endif()
 
 if(HERMES_COMMUNICATION_MPI)
