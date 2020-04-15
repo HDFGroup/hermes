@@ -3,11 +3,10 @@
 #------------------------------------------------------------------------------
 include_directories(
   ${PROJECT_SOURCE_DIR}/src/api
+  ${PROJECT_SOURCE_DIR}/gotcha_intercept
   ${CMAKE_CURRENT_SOURCE_DIR}
-  
   ${HERMES_INCLUDES_BUILD_TIME}
 )
-
 
 #------------------------------------------------------------------------------
 # API tests
@@ -23,6 +22,16 @@ foreach(program ${API_TESTS})
   add_executable(${program} ${program}.cpp)
   target_link_libraries(${program} hermes ZLIB::ZLIB)
 endforeach()
+
+#------------------------------------------------------------------------------
+# POSIX GOTCHA test
+#------------------------------------------------------------------------------
+if(HERMES_HAVE_GOTCHA)
+  add_executable(stdio_test stdio_test.c)
+  target_link_libraries(stdio_test hermes)
+  add_executable(mpi_test mpi_test.c)
+  target_link_libraries(mpi_test hermes)
+endif()
 
 #------------------------------------------------------------------------------
 # BufferPool tests

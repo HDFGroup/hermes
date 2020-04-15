@@ -3,6 +3,8 @@
 # to the root binary directory of the project as ${HERMES_BINARY_DIR}.
 cmake_minimum_required (VERSION 3.10)
 
+cmake_policy(SET CMP0074  NEW)
+
 # Set a consistent MACOSX_RPATH default across all CMake versions.
 if(NOT DEFINED CMAKE_MACOSX_RPATH)
   set(CMAKE_MACOSX_RPATH 0)
@@ -141,6 +143,14 @@ option(HERMES_COMMUNICATION_MPI "Use MPI as the communication layer." ON)
 option(BUILD_BUFFER_POOL_VISUALIZER "Build the BufferPool visualizer" OFF)
 option(USE_ADDRESS_SANITIZER "Enable -fsanitize=address in Debug builds" ON)
 
+if(BUILD_SHARED_LIBS)
+  set(HERMES_BUILD_SHARED_LIBS 1)
+  set(HERMES_LIBTYPE SHARED)
+else()
+  set(HERMES_BUILD_SHARED_LIBS 0)
+  set(HERMES_LIBTYPE STATIC)
+endif()
+
 # TODO(chogan): Expose this once we have more than one communication layer
 mark_as_advanced(HERMES_COMMUNICATION_MPI)
 
@@ -213,28 +223,18 @@ endif()
 
 # GOTCHA
 if(HERMES_INTERCEPT_IO)
-  find_package(Gotcha REQUIRED)
-  if(Gotcha_FOUND)
+  find_package(GOTCHA REQUIRED)
+  if(GOTCHA_FOUND)
     set(HERMES_HAVE_GOTCHA 1)
+    include_directories(${GOTCHA_INCLUDE_DIRS})
     set(HERMES_EXT_INCLUDE_DEPENDENCIES ${GOTCHA_INCLUDE_DIRS}
       ${HERMES_EXT_INCLUDE_DEPENDENCIES}
     )
     set(HERMES_EXT_LIB_DEPENDENCIES gotcha ${HERMES_EXT_LIB_DEPENDENCIES})
-    OPTION(HERMES_BUILD_POSIX_IO "Build POSIX I/O Module" ON)
-    OPTION(HERMES_BUILD_MPI_IO "Build MPI I/O Module" ON)
+    option(HERMES_BUILD_POSIX_IO "Build POSIX I/O Module" ON)
+    option(HERMES_BUILD_MPI_IO "Build MPI I/O Module" ON)
+    option(HERMES_BUILD_STDIO "Build standard I/O Module" ON)
   endif()
-endif()
-
-# google log
-find_package(GLOG REQUIRED)
-if(GLOG_FOUND)
-  message(STATUS "found glog, glog dir is ${GLOG_DIR}")
-  set(HERMES_EXT_INCLUDE_DEPENDENCIES ${GLOG_INCLUDE_DIR}
-    ${HERMES_EXT_INCLUDE_DEPENDENCIES}
-  )
-  set(HERMES_EXT_LIB_DEPENDENCIES glog::glog ${HERMES_EXT_LIB_DEPENDENCIES})
-else()
-  message(STATUS, "GLOG not found")
 endif()
 
 if(HERMES_COMMUNICATION_MPI)
@@ -259,10 +259,10 @@ endif()
 #-----------------------------------------------------------------------------
 # Source
 #-----------------------------------------------------------------------------
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src)
 if(HERMES_HAVE_GOTCHA)
-  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/intercept_io)
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gotcha_intercept)
 endif()
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src)
 #add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/posix_adapter)
 #add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/mpi_io_adapter)
 #add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/hermes_vol)
