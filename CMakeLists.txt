@@ -142,6 +142,7 @@ option(HERMES_INTERCEPT_IO "Use GOTCHA as IO interception tool" ON)
 option(HERMES_COMMUNICATION_MPI "Use MPI as the communication layer." ON)
 option(BUILD_BUFFER_POOL_VISUALIZER "Build the BufferPool visualizer" OFF)
 option(USE_ADDRESS_SANITIZER "Enable -fsanitize=address in Debug builds" ON)
+option(HERMES_USE_TCP "Use TCP as the transport layer for RPC." ON)
 
 if(BUILD_SHARED_LIBS)
   set(HERMES_BUILD_SHARED_LIBS 1)
@@ -153,11 +154,16 @@ endif()
 
 # TODO(chogan): Expose this once we have more than one communication layer
 mark_as_advanced(HERMES_COMMUNICATION_MPI)
+# TODO(chogan): Eventually expose other transport layers like RoCE and IB
+mark_as_advanced(HERMES_USE_TCP)
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3"
-      CACHE STRING "" FORCE)
-  if (USE_ADDRESS_SANITIZER)
+  if (NOT "${CMAKE_CXX_FLAGS_DEBUG}" MATCHES ".*-g3.*")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3"
+        CACHE STRING "" FORCE)
+  endif()
+  if (USE_ADDRESS_SANITIZER AND
+      NOT "${CMAKE_CXX_FLAGS_DEBUG}" MATCHES ".*-fsanitize=address.*")
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address"
         CACHE STRING "" FORCE)
   endif()
@@ -215,7 +221,7 @@ endfunction()
 #-----------------------------------------------------------------------------
 # Dependencies common to all subdirectories
 #-----------------------------------------------------------------------------
-#thallium
+# thallium
 find_package(thallium CONFIG REQUIRED)
 if(thallium_FOUND)
   message(STATUS "found thallium at ${thallium_DIR}")
@@ -236,12 +242,19 @@ if(HERMES_INTERCEPT_IO)
     option(HERMES_BUILD_STDIO "Build standard I/O Module" ON)
   endif()
 endif()
+  
+# hcl
+find_package(hcl CONFIG REQUIRED)
+if(hcl_FOUND)
+  message(STATUS "found HCL at ${hcl_DIR}")
+endif()
 
 if(HERMES_COMMUNICATION_MPI)
   find_package(MPI REQUIRED COMPONENTS CXX)
   message(STATUS "found mpi.h at ${MPI_CXX_INCLUDE_DIRS}")
 endif()
 
+# librt
 if(NOT APPLE)
   find_library(LIBRT rt)
   if(NOT LIBRT)
@@ -249,6 +262,7 @@ if(NOT APPLE)
   endif()
 endif()
 
+# sdl2
 if(BUILD_BUFFER_POOL_VISUALIZER)
   find_package(SDL2 CONFIG REQUIRED)
   if(SDL2_FOUND)
@@ -266,10 +280,21 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src)
 #add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/posix_adapter)
 #add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/mpi_io_adapter)
 #add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/hermes_vol)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test)
 
 if(BUILD_BUFFER_POOL_VISUALIZER AND SDL2_FOUND)
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/buffer_pool_visualizer)
+endif()
+
+
+#-----------------------------------------------------------------------------
+# Testing
+#-----------------------------------------------------------------------------
+if(CMAKE_PROJECT_NAME STREQUAL HERMES)
+  include(CTest)
+endif()
+
+if(CMAKE_PROJECT_NAME STREQUAL HERMES AND BUILD_TESTING)
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test)
 endif()
 
 #-----------------------------------------------------------------------------

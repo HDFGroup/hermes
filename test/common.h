@@ -30,9 +30,9 @@ namespace hermes {
 #define MEGABYTES(n) (1024 * 1024 * (n))
 
 const char mem_mount_point[] = "";
-const char nvme_mount_point[] = "/home/user/nvme/";
-const char bb_mount_point[] = "/mount/burst_buffer/";
-const char pfs_mount_point[] = "/mount/pfs/";
+const char nvme_mount_point[] = "./";
+const char bb_mount_point[] = "./";
+const char pfs_mount_point[] = "./";
 const char buffer_pool_shmem_name[] = "/hermes_buffer_pool_";
 const char rpc_server_name[] = "sockets://localhost:8080";
 
@@ -47,9 +47,9 @@ void InitTestConfig(Config *config) {
     config->num_slabs[tier] = 4;
 
     config->slab_unit_sizes[tier][0] = 1;
-    config->slab_unit_sizes[tier][1]= 4;
-    config->slab_unit_sizes[tier][2]= 16;
-    config->slab_unit_sizes[tier][3]= 32;
+    config->slab_unit_sizes[tier][1] = 4;
+    config->slab_unit_sizes[tier][2] = 16;
+    config->slab_unit_sizes[tier][3] = 32;
 
     config->desired_slab_percentages[tier][0] = 0.25f;
     config->desired_slab_percentages[tier][1] = 0.25f;
@@ -173,10 +173,58 @@ SharedMemoryContext InitHermesCore(Config *config, CommunicationContext *comm,
   *metadata_arena_offset_location = metadata_arena_offset;
 
   if (start_rpc_server) {
-    StartBufferPoolRpcServer(&context, config->rpc_server_name, num_rpc_threads);
+    StartBufferPoolRpcServer(&context, config->rpc_server_name.c_str(), num_rpc_threads);
   }
 
   return context;
+}
+
+// TODO(chogan): Move into library
+std::shared_ptr<api::Hermes>
+InitDaemon(const std::string &buffering_path,
+           const std::string &rpc_server_name, int num_rpc_threads) {
+  // TODO(chogan): Read Config from a file
+  hermes::Config config = {};
+  InitTestConfig(&config);
+
+  config.rpc_server_name = rpc_server_name.c_str();
+
+  if (buffering_path.size() > 0) {
+    for (int i = 1; i < config.num_tiers; ++i) {
+      config.mount_points[i] = buffering_path.c_str();
+    }
+  }
+
+  Arena arenas[kArenaType_Count] = {};
+  size_t bootstrap_size = KILOBYTES(4);
+  u8 *bootstrap_memory = (u8 *)malloc(bootstrap_size);
+  InitArena(&arenas[kArenaType_Transient], bootstrap_size, bootstrap_memory);
+
+  ArenaInfo arena_info = GetArenaInfo(&config);
+  // NOTE(chogan): The buffering capacity for the RAM Tier is the size of the
+  // BufferPool Arena
+  config.capacities[0] = arena_info.sizes[kArenaType_BufferPool];
+
+  CommunicationContext comm = {};
+  size_t trans_arena_size =
+    InitCommunication(&comm, &arenas[kArenaType_Transient],
+                      arena_info.sizes[kArenaType_Transient], true);
+
+  GrowArena(&arenas[kArenaType_Transient], trans_arena_size);
+  comm.state = arenas[kArenaType_Transient].base;
+
+  SharedMemoryContext context = InitHermesCore(&config, &comm, &arena_info,
+                                               arenas, true, num_rpc_threads);
+  std::shared_ptr<api::Hermes> result = std::make_shared<api::Hermes>(context);
+  result->shmem_name_ = std::string(config.buffer_pool_shmem_name);
+  result->trans_arena_ = arenas[kArenaType_Transient];
+  // NOTE(chogan): Reset the transient arena since we're done with the data it
+  // contains
+  result->trans_arena_.used = 0;
+  result->comm_ = comm;
+  result->context_ = context;
+
+  return result;
 }
 
 // TODO(chogan): Move into library
@@ -194,20 +242,15 @@ SharedMemoryContext InitHermesClient(CommunicationContext *comm,
 
 // TODO(chogan): Move into library
 std::shared_ptr<api::Hermes> InitHermes() {
-
   // TODO(chogan): Read Config from a file
   hermes::Config config = {};
   InitTestConfig(&config);
-  config.mount_points[0] = "";
-  config.mount_points[1] = "./";
-  config.mount_points[2] = "./";
-  config.mount_points[3] = "./";
 
   // TODO(chogan): The metadata arena will be a different type of arena because
   // it needs to be thread-safe, as it's shared among all ranks. For now we
   // create it, put the CommnciationContext::state in it, and then ignore it.
-  // We'll probably put an HCL container o n top of it. The transfer window
-  // arena will probably become local to each rank.
+  // We'll probably put an HCL container on top of it. The transfer window arena
+  // will probably become local to each rank.
   Arena arenas[kArenaType_Count] = {};
   size_t bootstrap_size = KILOBYTES(4);
   u8 *bootstrap_memory = (u8 *)malloc(bootstrap_size);
@@ -221,7 +264,7 @@ std::shared_ptr<api::Hermes> InitHermes() {
   CommunicationContext comm = {};
   size_t trans_arena_size =
     InitCommunication(&comm, &arenas[kArenaType_Transient],
-                      arena_info.sizes[kArenaType_Transient], false);
+                      arena_info.sizes[kArenaType_Transient]);
 
   GrowArena(&arenas[kArenaType_Transient], trans_arena_size);
   comm.state = arenas[kArenaType_Transient].base;

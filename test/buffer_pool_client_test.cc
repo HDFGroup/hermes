@@ -200,22 +200,16 @@ void PrintUsage(char *program) {
 }
 
 int main(int argc, char **argv) {
-  // TODO(chogan): MPI_THREAD_MULTIPLE
-  MPI_Init(&argc, &argv);
-
+  int mpi_threads_provided;
+  MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
+  if (mpi_threads_provided < MPI_THREAD_MULTIPLE) {
+    fprintf(stderr, "Didn't receive appropriate MPI threading specification\n");
+    return 1;
+  }
   int world_rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
   int world_size;
   MPI_Comm_size(MPI_COMM_WORLD, &world_size);
-
-  int color = (int)ProcessKind::kApp;
-  MPI_Comm app_comm = {};
-  MPI_Comm_split(MPI_COMM_WORLD, color, world_rank, &app_comm);
-
-  int app_rank;
-  MPI_Comm_rank(app_comm, &app_rank);
-  int app_size;
-  MPI_Comm_size(app_comm, &app_size);
 
   int option = -1;
   bool test_get_release = true;
@@ -223,9 +217,12 @@ int main(int argc, char **argv) {
   bool test_split = false;
   bool test_merge = false;
   bool test_file_buffering = false;
+  bool kill_server = false;
   int slab_index = 0;
   int iters = 100000;
-  while ((option = getopt(argc, argv, "frs:m:i:")) != -1) {
+  int pid = 0;
+
+  while ((option = getopt(argc, argv, "fkrs:i:m:p:")) != -1) {
     switch (option) {
       case 'f': {
         test_file_buffering = true;
@@ -234,6 +231,20 @@ int main(int argc, char **argv) {
       }
       case 'i': {
         iters = atoi(optarg);
+        break;
+      }
+      case 'k': {
+        kill_server = true;
+        break;
+      }
+      case 'm': {
+        test_merge = true;
+        slab_index = atoi(optarg) - 1;
+        test_get_release = false;
+        break;
+      }
+      case 'p': {
+        pid = atoi(optarg);
         break;
       }
       case 'r': {
@@ -246,24 +257,12 @@ int main(int argc, char **argv) {
         test_get_release = false;
         break;
       }
-      case 'm': {
-        test_merge = true;
-        slab_index = atoi(optarg) - 1;
-        test_get_release = false;
-        break;
-      }
       default:
         PrintUsage(argv[0]);
         MPI_Abort(MPI_COMM_WORLD, 1);
     }
   }
 
-  // NOTE(chogan): Wait for Buffer Pool initialization to complete
-  MPI_Barrier(MPI_COMM_WORLD);
-
-  // TODO(chogan): Call InitCommunication first (via InitHermes)
-
-  // NOTE(chogan): Per-application-core Hermes initialization
   char full_shmem_name[hermes::kMaxBufferPoolShmemNameLength];
   MakeFullShmemName(full_shmem_name, kBaseShemeName);
   SharedMemoryContext context = InitHermesClient(NULL, full_shmem_name,
@@ -278,17 +277,17 @@ int main(int argc, char **argv) {
       timing = TestGetBuffers(&context, iters);
     }
 
-    int total_iters = iters * app_size;
+    int total_iters = iters * world_size;
     double total_get_seconds = 0;
     double total_release_seconds = 0;
     MPI_Reduce(&timing.get_buffers_time, &total_get_seconds, 1, MPI_DOUBLE,
-               MPI_SUM, 0, app_comm);
+               MPI_SUM, 0, MPI_COMM_WORLD);
     MPI_Reduce(&timing.release_buffers_time, &total_release_seconds, 1,
-               MPI_DOUBLE, MPI_SUM, 0, app_comm);
+               MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 
-    if (app_rank == 0) {
-      double avg_get_seconds = total_get_seconds / app_size;
-      double avg_release_seconds = total_release_seconds / app_size;
+    if (world_rank == 0) {
+      double avg_get_seconds = total_get_seconds / world_size;
+      double avg_release_seconds = total_release_seconds / world_size;
       double gets_per_second = total_iters / avg_get_seconds;
       double releases_per_second = total_iters / avg_release_seconds;
       printf("%f %f ", gets_per_second, releases_per_second);
@@ -306,20 +305,25 @@ int main(int argc, char **argv) {
     printf("%f\n", seconds_for_merge);
   }
   if (test_file_buffering) {
-    TestFileBuffering(&context, app_rank);
+    TestFileBuffering(&context, world_rank);
   }
 
   ReleaseSharedMemoryContext(&context);
-  MPI_Barrier(app_comm);
+  MPI_Barrier(MPI_COMM_WORLD);
 
-  if (app_rank == 0) {
-    if (use_rpc) {
-      // NOTE(chogan): Shut down the RPC server
-      tl::engine myEngine("tcp", THALLIUM_CLIENT_MODE);
+  if (world_rank == 0 && kill_server) {
+    // NOTE(chogan): Shut down the RPC server
+    if (pid) {
+      std::string shm_id = "0";
+      std::string shm_pid = std::to_string(pid);
+      std::string shm_name = "na+sm://" + shm_pid + "/" + shm_id;
+      tl::engine myEngine(shm_name, THALLIUM_CLIENT_MODE);
       tl::remote_procedure finalize =
         myEngine.define("Finalize").disable_response();
-      tl::endpoint server = myEngine.lookup(kServerName);
+      tl::endpoint server = myEngine.lookup(shm_name);
       finalize.on(server)();
+    } else {
+      // TODO(chogan): tcp address, etc.
     }
   }
 

@@ -1,54 +1,47 @@
 #include <string>
 
 #include "common.h"
-#include "hermes_types.h"
-#include "buffer_pool.h"
-#include "buffer_pool_internal.h"
-#include "communication.h"
 
 /**
  * @file buffer_pool_test.cc
  *
- * This is an example of what needs to happen in the Hermes core initialization
- * to set up and run a BufferPool.
+ * This is an example of starting a Hermes daemon that will service a FUSE
+ * adapter. When run with MPI, it should be configured to run one process per
+ * node.
  */
 
+namespace hapi = hermes::api;
+
 void PrintUsage(char *program) {
-  fprintf(stderr, "Usage: %s [-r] [-b arg] [-n arg]\n", program);
+  fprintf(stderr, "Usage: %s [-d arg] [-n arg]\n", program);
   fprintf(stderr, "  -d arg\n");
   fprintf(stderr, "     The path to a buffering directory.\n");
+  fprintf(stderr, "     Defaults to './'\n");
   fprintf(stderr, "  -n arg\n");
   fprintf(stderr, "     The number of RPC threads to start\n");
-  fprintf(stderr, "  -r\n");
-  fprintf(stderr, "     Start RPC server.\n");
+  fprintf(stderr, "  -r arg\n");
+  fprintf(stderr, "     The Mercury-compatible RPC server name.\n");
+  fprintf(stderr, "     Defaults to 'na+sm'.\n");
 }
 
 int main(int argc, char **argv) {
 
-  using namespace hermes;
-
-  Config config = {};
-  InitTestConfig(&config);
+  int mpi_threads_provided;
+  MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
+  if (mpi_threads_provided < MPI_THREAD_MULTIPLE) {
+    fprintf(stderr, "Didn't receive appropriate MPI threading specification\n");
+    return 1;
+  }
 
   int option = -1;
-  bool start_rpc_server = false;
-  i32 num_rpc_threads = 0;
+  int num_rpc_threads = 0;
   std::string buffering_path;
+  std::string rpc_server_name = "na+sm";
 
-  while ((option = getopt(argc, argv, "d:n:r")) != -1) {
+  while ((option = getopt(argc, argv, "d:n:r:")) != -1) {
     switch (option) {
       case 'd': {
         buffering_path = std::string(optarg);
-        for (int i = 0; i < config.num_tiers; ++i) {
-          if (i == 0) {
-            // NOTE(chogan): No mount point for RAM
-            config.mount_points[i] = "";
-          } else {
-            // NOTE(chogan): For now just use the path passed in as the mount
-            // point for all file Tiers.
-            config.mount_points[i] = buffering_path.c_str();
-          }
-        }
         break;
       }
       case 'n': {
@@ -56,7 +49,7 @@ int main(int argc, char **argv) {
         break;
       }
       case 'r': {
-        start_rpc_server = true;
+        rpc_server_name = std::string(optarg);
         break;
       }
       default:
@@ -69,23 +62,12 @@ int main(int argc, char **argv) {
     PrintUsage(argv[0]);
   }
 
-  // TODO(chogan): Call InitCommunication before this
-  // TEMP(chogan):
-  (void)start_rpc_server;
-  (void)num_rpc_threads;
-#if 0
-  SharedMemoryContext context = InitHermesCore(&config, NULL, start_rpc_server,
-                                               num_rpc_threads);
+  std::shared_ptr<hapi::Hermes> hermes =
+    hermes::InitDaemon(buffering_path, rpc_server_name, num_rpc_threads);
 
-  if (!start_rpc_server) {
-    std::cin.get();
-  }
+  hermes->Finalize();
 
-  munmap(context.shm_base, context.shm_size);
-  shm_unlink(config.buffer_pool_shmem_name);
-  // TODO(chogan):
-  // context.comm.finalize(&context.comm);
-#endif
+  MPI_Finalize();
 
   return 0;
 }

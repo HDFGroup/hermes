@@ -2,6 +2,8 @@
 #define HERMES_TYPES_H_
 
 #include <stdint.h>
+
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -83,11 +85,11 @@ struct Config {
   /** The mount point or desired directory for each Tier. RAM Tier should be the
    * empty string.
    */
-  const char *mount_points[kMaxTiers];
+  std::string mount_points[kMaxTiers];
   /** The IP address and port number of the BufferPool RPC server in a format
    * that Thallium understands. For example, tcp://172.20.101.25:8080.
    */
-  const char *rpc_server_name;
+  std::string rpc_server_name;
   /** A base name for the BufferPool shared memory segement. Hermes appends the
    * value of the USER environment variable to this string.
    */

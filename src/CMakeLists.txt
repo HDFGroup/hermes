@@ -53,12 +53,14 @@ target_include_directories(hermes
 target_link_libraries(hermes
   PUBLIC glog::glog
   PRIVATE thallium
+  PRIVATE hcl
   PUBLIC "$<$<BOOL:HERMES_INTERCEPT_IO>:${GOTCHA_MODULE_LIBS}>"
   PRIVATE $<$<BOOL:HERMES_COMMUNICATION_MPI>:MPI::MPI_CXX>
 )
 
 target_compile_definitions(hermes
   PRIVATE $<$<BOOL:HERMES_COMMUNICATION_MPI>:HERMES_COMMUNICATION_MPI>
+  PRIVATE $<$<BOOL:HERMES_USE_TCP>:HCL_ENABLE_THALLIUM_TCP>
 )
 
 hermes_set_lib_options(hermes "hermes" ${HERMES_LIBTYPE})
