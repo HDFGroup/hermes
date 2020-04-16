@@ -3,8 +3,6 @@
 # to the root binary directory of the project as ${HERMES_BINARY_DIR}.
 cmake_minimum_required (VERSION 3.10)
 
-cmake_policy(SET CMP0074  NEW)
-
 # Set a consistent MACOSX_RPATH default across all CMake versions.
 if(NOT DEFINED CMAKE_MACOSX_RPATH)
   set(CMAKE_MACOSX_RPATH 0)
@@ -229,11 +227,11 @@ endif()
 
 # GOTCHA
 if(HERMES_INTERCEPT_IO)
-  find_package(GOTCHA REQUIRED)
-  if(GOTCHA_FOUND)
+  find_package(gotcha REQUIRED)
+  if(gotcha_FOUND)
     set(HERMES_HAVE_GOTCHA 1)
-    include_directories(${GOTCHA_INCLUDE_DIRS})
-    set(HERMES_EXT_INCLUDE_DEPENDENCIES ${GOTCHA_INCLUDE_DIRS}
+    include_directories(${gotcha_INCLUDE_DIRS})
+    set(HERMES_EXT_INCLUDE_DEPENDENCIES ${gotcha_INCLUDE_DIRS}
       ${HERMES_EXT_INCLUDE_DEPENDENCIES}
     )
     set(HERMES_EXT_LIB_DEPENDENCIES gotcha ${HERMES_EXT_LIB_DEPENDENCIES})
