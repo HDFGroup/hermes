@@ -3,33 +3,6 @@
 namespace hermes {
   
 namespace api {
-  
-Status VBucket::Attach(void *trait, TraitFunc *func, Context& ctx) {
-  (void)ctx;
-  (void)trait;
-  Status ret = 0;
-  
-  LOG(INFO) << "Attaching trait to VBucket " << name_ << '\n';
-	
-	for (auto ci = linked_blobs_.begin(); ci != linked_blobs_.end(); ++ci) {
-		Blob &blob = Get_blob(ci->second, ci->first);
-    (void)blob;
-    (void)func;
-//		func(blob, trait);
-	}
-  
-  return ret;
-}
-  
-Status VBucket::Detach(void *trait, Context& ctx) {
-  (void)ctx;
-  (void)trait;
-  Status ret = 0;
-  
-  LOG(INFO) << "Detaching trait from VBucket " << name_ << '\n';
-  
-  return ret;
-}
 
 Status VBucket::Link(std::string blob_name, std::string bucket_name, Context& ctx) {
   (void)ctx;
@@ -76,6 +49,53 @@ Blob& VBucket::Get_blob(std::string blob_name, std::string bucket_name) {
 	          << bucket_name << " in VBucket " << name_ << '\n';
 	
 	// get blob by bucket and blob name;
+}
+  
+template<class Predicate>
+std::vector<std::string> VBucket::GetLinks(Predicate pred, Context &ctx) {
+	LOG(INFO) << "Getting subset of links satisfying pred in VBucket "
+	          << name_ << '\n';
+}
+
+Status VBucket::Attach(void *trait, TraitFunc *func, Context& ctx) {
+  (void)ctx;
+  (void)trait;
+  Status ret = 0;
+  
+  LOG(INFO) << "Attaching trait to VBucket " << name_ << '\n';
+	
+	for (auto ci = linked_blobs_.begin(); ci != linked_blobs_.end(); ++ci) {
+		Blob &blob = Get_blob(ci->second, ci->first);
+    (void)blob;
+    (void)func;
+//		func(blob, trait);
+	}
+  
+  return ret;
+}
+  
+Status VBucket::Detach(void *trait, Context& ctx) {
+  (void)ctx;
+  (void)trait;
+  Status ret = 0;
+  
+  LOG(INFO) << "Detaching trait from VBucket " << name_ << '\n';
+  
+  return ret;
+}
+
+template<class Predicate>
+std::vector<std::string> VBucket::GetTraits(Predicate pred, Context& ctx) {
+	(void)ctx;
+	
+	LOG(INFO) << "Getting the subset of attached traits satisfying pred in VBucket "
+						<< name_ << '\n';
+}
+
+Status VBucket::Delete(Context& ctx) {
+	(void)ctx;
+	
+	LOG(INFO) << "Deleting VBucket " << name_ << '\n';
 }
 
 } // api namepsace

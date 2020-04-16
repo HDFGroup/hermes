@@ -8,39 +8,12 @@ namespace hermes {
 
 namespace api {
 
-Status Bucket::Contain_blob(const std::string& blob_name) {
-	Status ret = 0;
+struct bkt_hdl * Open(const std::string &name, Context &ctx) {
+	(void)ctx;
+  struct bkt_hdl *ret = nullptr;
 	
-	LOG(INFO) << "Checking if blob " << blob_name << " exists in Bucket "
-	          << name_ << '\n';
-	
-	if (blobs_.find(blob_name) != blobs_.end())
-		ret = 1;
-			
-  return ret;
-}
-
-Status Bucket::Rename(const std::string &new_name, Context &ctx) {
-  (void)ctx;
-  Status ret = 0;
+	LOG(INFO) << "Opening a bucket to" << name << '\n';
     
-  LOG(INFO) << "Renaming a bucket to" << new_name << '\n';
-    
-  return ret;
-}
-
-
-Status Bucket::Release(Context &ctx) {
-  (void)ctx;
-  Status ret = 0;
-
-  LOG(INFO) << "Releasing bucket " << '\n';
-
-  for (const auto &name_buffer_ids : blobs_) {
-    ReleaseBuffers(&hermes_->context_, blobs_[name_buffer_ids.first]);
-  }
-  blobs_.clear();
-
   return ret;
 }
 
@@ -48,7 +21,7 @@ Status Bucket::Put(const std::string &name, const Blob &data, Context &ctx) {
   (void)ctx;
   Status ret = 0;
 
-  LOG(INFO) << "Attaching blob " << name << "to Bucket " << '\n';
+  LOG(INFO) << "Attaching blob " << name << " to Bucket " << '\n';
 
   TieredSchema schema = CalculatePlacement(data.size(), ctx);
   while (schema.size() == 0) {
@@ -94,6 +67,17 @@ size_t Bucket::Get(const std::string &name, Blob& user_blob, Context &ctx) {
   return ret;
 }
 
+template<class Predicate>
+Status Bucket::GetV(void *user_blob, Predicate pred, Context &ctx) {
+	(void)user_blob;
+	(void)ctx;
+	Status ret = 0;
+	
+	LOG(INFO) << "Getting blobs by predicate from bucket " << name_ << '\n';
+	
+	return ret;
+}
+
 Status Bucket::DeleteBlob(const std::string &name, Context &ctx) {
   (void)ctx;
   Status ret = 0;
@@ -113,6 +97,64 @@ Status Bucket::RenameBlob(const std::string &old_name,
   Status ret = 0;
     
   LOG(INFO) << "Renaming Blob " << old_name << " to " << new_name << '\n';
+    
+  return ret;
+}
+
+template<class Predicate>
+std::vector<std::string> Bucket::GetBlobNames(Predicate pred,
+																			        Context &ctx) {
+	(void)ctx;
+	
+	LOG(INFO) << "Getting blob names by predicate from bucket " << name_ << '\n';
+}
+
+struct bkt_info * Bucket::GetInfo(Context &ctx) {
+	(void)ctx;
+	struct bkt_info *ret = nullptr;
+	
+	LOG(INFO) << "Getting bucket information from bucket " << name_ << '\n';
+	
+	return ret;
+}
+
+Status Bucket::Rename(const std::string &new_name, Context &ctx) {
+  (void)ctx;
+  Status ret = 0;
+    
+  LOG(INFO) << "Renaming a bucket to" << new_name << '\n';
+    
+  return ret;
+}
+
+Status Bucket::Release(Context &ctx) {
+  (void)ctx;
+  Status ret = 0;
+
+  LOG(INFO) << "Releasing bucket " << '\n';
+
+  for (const auto &name_buffer_ids : blobs_) {
+    ReleaseBuffers(&hermes_->context_, blobs_[name_buffer_ids.first]);
+  }
+  blobs_.clear();
+
+  return ret;
+}
+
+Status Bucket::Close(Context &ctx) {
+	(void)ctx;
+  Status ret = 0;
+    
+  LOG(INFO) << "Closing a bucket to " << name_ << '\n';
+    
+  return ret;
+}
+
+Status Bucket::Destroy(Context &ctx) {
+	(void)ctx;
+  Status ret = 0;
+    
+  LOG(INFO) << "Destroying a bucket to " << name_ << '\n';
     
   return ret;
 }
