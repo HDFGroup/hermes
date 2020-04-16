@@ -136,10 +136,19 @@ endif()
 # Build options
 #------------------------------------------------------------------------------
 option(BUILD_SHARED_LIBS "Build with shared libraries." ON)
+option(HERMES_INTERCEPT_IO "Use GOTCHA as IO interception tool" ON)
 option(HERMES_COMMUNICATION_MPI "Use MPI as the communication layer." ON)
 option(BUILD_BUFFER_POOL_VISUALIZER "Build the BufferPool visualizer" OFF)
 option(USE_ADDRESS_SANITIZER "Enable -fsanitize=address in Debug builds" ON)
 option(HERMES_USE_TCP "Use TCP as the transport layer for RPC." ON)
+
+if(BUILD_SHARED_LIBS)
+  set(HERMES_BUILD_SHARED_LIBS 1)
+  set(HERMES_LIBTYPE SHARED)
+else()
+  set(HERMES_BUILD_SHARED_LIBS 0)
+  set(HERMES_LIBTYPE STATIC)
+endif()
 
 # TODO(chogan): Expose this once we have more than one communication layer
 mark_as_advanced(HERMES_COMMUNICATION_MPI)
@@ -210,11 +219,29 @@ endfunction()
 #-----------------------------------------------------------------------------
 # Dependencies common to all subdirectories
 #-----------------------------------------------------------------------------
+# thallium
 find_package(thallium CONFIG REQUIRED)
 if(thallium_FOUND)
   message(STATUS "found thallium at ${thallium_DIR}")
 endif()
 
+# GOTCHA
+if(HERMES_INTERCEPT_IO)
+  find_package(gotcha REQUIRED)
+  if(gotcha_FOUND)
+    set(HERMES_HAVE_GOTCHA 1)
+    include_directories(${gotcha_INCLUDE_DIRS})
+    set(HERMES_EXT_INCLUDE_DEPENDENCIES ${gotcha_INCLUDE_DIRS}
+      ${HERMES_EXT_INCLUDE_DEPENDENCIES}
+    )
+    set(HERMES_EXT_LIB_DEPENDENCIES gotcha ${HERMES_EXT_LIB_DEPENDENCIES})
+    option(HERMES_BUILD_POSIX_IO "Build POSIX I/O Module" ON)
+    option(HERMES_BUILD_MPI_IO "Build MPI I/O Module" ON)
+    option(HERMES_BUILD_STDIO "Build standard I/O Module" ON)
+  endif()
+endif()
+  
+# hcl
 find_package(hcl CONFIG REQUIRED)
 if(hcl_FOUND)
   message(STATUS "found HCL at ${hcl_DIR}")
@@ -225,6 +252,7 @@ if(HERMES_COMMUNICATION_MPI)
   message(STATUS "found mpi.h at ${MPI_CXX_INCLUDE_DIRS}")
 endif()
 
+# librt
 if(NOT APPLE)
   find_library(LIBRT rt)
   if(NOT LIBRT)
@@ -232,6 +260,7 @@ if(NOT APPLE)
   endif()
 endif()
 
+# sdl2
 if(BUILD_BUFFER_POOL_VISUALIZER)
   find_package(SDL2 CONFIG REQUIRED)
   if(SDL2_FOUND)
@@ -242,6 +271,9 @@ endif()
 #-----------------------------------------------------------------------------
 # Source
 #-----------------------------------------------------------------------------
+if(HERMES_HAVE_GOTCHA)
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gotcha_intercept)
+endif()
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src)
 #add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/posix_adapter)
 #add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/mpi_io_adapter)
