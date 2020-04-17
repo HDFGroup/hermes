@@ -26,6 +26,7 @@
 
 #include "memory_arena.cc"
 #include "config_parser.cc"
+#include "metadata_management.cc"
 
 #if defined(HERMES_COMMUNICATION_MPI)
 #include "communication_mpi.cc"
@@ -93,6 +94,12 @@ void UnlockBuffer(BufferHeader *header) {
 BufferPool *GetBufferPoolFromContext(SharedMemoryContext *context) {
   BufferPool *result = (BufferPool *)(context->shm_base +
                                       context->buffer_pool_offset);
+
+  return result;
+}
+
+Arena *GetMetadataArenaFromContext(SharedMemoryContext *context) {
+  Arena *result = (Arena *)(context->shm_base + context->metadata_arena_offset);
 
   return result;
 }

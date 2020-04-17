@@ -29,9 +29,18 @@ uintptr_t AlignForward(uintptr_t addr, size_t alignment) {
 }
 
 void InitArena(Arena *arena, size_t bytes, u8 *base) {
+  arena->base = base;
   arena->used = 0;
   arena->capacity = bytes;
-  arena->base = base;
+  arena->temp_count = 0;
+}
+
+Arena InitArenaAndAllocate(size_t bytes) {
+  Arena result = {};
+  result.base = (u8 *)malloc(bytes);
+  result.capacity = bytes;
+
+  return result;
 }
 
 void DestroyArena(Arena *arena) {

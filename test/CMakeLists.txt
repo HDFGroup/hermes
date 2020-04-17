@@ -55,3 +55,10 @@ target_link_libraries(config_parser_test hermes)
 
 add_test(NAME TestConfigParser
   COMMAND config_parser_test ${CMAKE_CURRENT_SOURCE_DIR}/data/hermes.conf)
+
+#------------------------------------------------------------------------------
+# Metadata Management tests
+#------------------------------------------------------------------------------
+
+add_executable(metadata_test metadata_test.cc)
+target_link_libraries(metadata_test ${LIBRT} hermes MPI::MPI_CXX)

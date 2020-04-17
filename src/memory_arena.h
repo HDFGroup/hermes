@@ -124,6 +124,16 @@ struct ScopedTemporaryMemory {
 void InitArena(Arena *arena, size_t bytes, u8 *base);
 
 /**
+ * Initializes an Arena with a starting size. This function uses malloc to
+ * allocate a contiguous region of length @p bytes for the arena.
+ *
+ * @param[in] bytes The desired size in bytes to allocate.
+ *
+ * @return An arena with capacity @p bytes.
+ */
+Arena InitArenaAndAllocate(size_t bytes);
+
+/**
  * Frees the memory backing the Arena, and zeros out all its fields.
  *
  * Only Arenas whose backing memory was created by malloc should be destroyed
