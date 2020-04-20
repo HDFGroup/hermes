@@ -98,12 +98,6 @@ BufferPool *GetBufferPoolFromContext(SharedMemoryContext *context) {
   return result;
 }
 
-Arena *GetMetadataArenaFromContext(SharedMemoryContext *context) {
-  Arena *result = (Arena *)(context->shm_base + context->metadata_arena_offset);
-
-  return result;
-}
-
 Tier *GetTierFromHeader(SharedMemoryContext *context, BufferHeader *header) {
   BufferPool *pool = GetBufferPoolFromContext(context);
   Tier *tiers_base = (Tier *)(context->shm_base + pool->tier_storage_offset);
@@ -1055,9 +1049,9 @@ SharedMemoryContext GetSharedMemoryContext(char *shmem_name) {
         // metadata_arena_offset will be stored immediately after that.
         ptrdiff_t *buffer_pool_offset_location = (ptrdiff_t *)shm_base;
         result.buffer_pool_offset = *buffer_pool_offset_location;
-        ptrdiff_t *metadata_arena_offset_location =
+        ptrdiff_t *metadata_manager_offset_location =
           (ptrdiff_t *)(shm_base + sizeof(result.buffer_pool_offset));
-        result.metadata_arena_offset = *metadata_arena_offset_location;
+        result.metadata_manager_offset = *metadata_manager_offset_location;
         result.shm_base = shm_base;
         result.shm_size = shm_stat.st_size;
       } else {

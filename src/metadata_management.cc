@@ -9,9 +9,45 @@
 
 namespace hermes {
 
-void DefragmentHeap(Heap *heap) {
+void InitMetadataManager(MetadataManager *mdm, Arena *arena) {
+
+  // list of BucketInfo
+  ptrdiff_t bucket_free_list_offset;
+  ptrdiff_t bucket_info_offset;
+  u32 num_buckets;
+
+  // list of VBucketInfo
+  ptrdiff_t vbucket_free_list_offset;
+  ptrdiff_t vbucket_info_offset;
+  u32 num_vbuckets;
+
+  // ID Heap
+  ptrdiff_t blob_id_free_list_offset;
+  ptrdiff_t buffer_id_free_list_offset;
+
+  // ID Maps
+  ptrdiff_t bucket_map_offset;
+  ptrdiff_t vbucket_map_offset;
+  ptrdiff_t blob_map_offset;
+
+  // Mutexes
+  TicketMutex bucket_mutex;
+  TicketMutex vbucket_mutex;
+  TicketMutex blob_id_mutex;
+  TicketMutex buffer_id_mutex;
+
+  // map mutexes?
+}
+
+MetadataManager *GetMetadataManagerFromContext(SharedMemoryContext *context) {
+  MetadataManager *result =
+    (MetadataManager *)(context->shm_base + contex->metadata_manager_offset);
+
+  return result;
+}
+
+void CoalesceFreeBlocks(Heap *heap) {
   (void)heap;
-  // TODO(chogan): Need to update all pointers into the Heap, which means keeping a map<id, ptr>
 }
 
 #if 0

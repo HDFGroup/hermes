@@ -112,6 +112,25 @@ struct ScopedTemporaryMemory {
   }
 };
 
+struct Heap {
+  Arena arena;
+  ptrdiff_t free_list_offset;
+  int alignment;
+};
+
+struct FreeBlock {
+  u32 next_offset;
+  u32 size;
+};
+
+struct Pool {
+  ptrdiff_t free_list_offset;
+  u32 used;
+  u32 capacity;
+  u32 object_size;
+  int alignment;
+};
+
 /**
  * Initializes an Arena with a starting size and base pointer. The @p base
  * parameter must point to a contiguous region of allocated memory of at least

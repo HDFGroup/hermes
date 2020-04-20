@@ -15,24 +15,9 @@ struct String {
   size_t length;
 };
 
-struct FreeBlock {
-  ptrdiff_t next_offset;
-  size_t size;
-};
-
-// TODO(chogan): Threadsafe Heap
-struct Heap {
-  Arena arena;
-  ptrdiff_t free_list_offset;
-  size_t alignment;
-};
-
-struct Pool {
-  ptrdiff_t free_list_offset;
-  u32 used;
-  u32 capacity;
-  u8 alignment;
-  u8 object_size;
+struct HeapString {
+  u32 str_offset;
+  u32 length;
 };
 
 union BucketID {
@@ -44,7 +29,7 @@ union BucketID {
   u64 as_int;
 };
 
-struct VBucketID {
+union VBucketID {
   struct {
     u32 index;
     u32 node_id;
@@ -53,12 +38,25 @@ struct VBucketID {
   u64 as_int;
 };
 
-struct BlobID {
-  u64 val;
+union BlobID {
+  struct {
+    u32 index;
+    u32 node_id;
+  } bits;
+
+  u64 as_int;
 };
 
 enum class TraitID : u8 {
+  Placement,
+  Flush,
+  Replication,
+  Checksum,
+  BlobSort,
+  BlobFilter,
+  Index,
 
+  Count,
 };
 
 struct Stats {
@@ -66,41 +64,23 @@ struct Stats {
 };
 
 struct BucketInfo {
+  u32 blobs_offset;  // BlobID array
+  u32 num_blobs;
   Stats stats;
-  ptrdiff_t blobs_offset;  // BlobID array
 };
 
 static constexpr int kMaxTraitsPerVBucket = 8;
 
 struct VBucketInfo {
-  Stats stats;
-  ptrdiff_t blobs_offset;  // BlobID array
+  u32 blobs_offset;  // BlobID array
+  u32 num_blobs;
   TraitID traits[kMaxTraitsPerVBucket];
+  Stats stats;
 };
 
-struct BlobNode {
-  BlobID id;
-  ptrdiff_t next_offset;
-};
-
-struct BufferNode {
-  BufferID id;
-  ptrdiff_t next_offset;
-};
-
-struct BucketMap {
+struct IdMap {
   char *key;
-  BucketID value;
-};
-
-struct VBucketMap {
-  char *key;
-  VBucketID value;
-};
-
-struct BlobMap {
-  char *key;
-  BlobID value;
+  u64 value;
 };
 
 struct MetadataManager {
