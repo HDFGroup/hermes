@@ -63,7 +63,16 @@ void GrowArena(Arena *arena, size_t new_size) {
 }
 
 u8 *PushSize(Arena *arena, size_t size, size_t alignment) {
-  assert(size + arena->used <= arena->capacity);
+  // TODO(chogan): Account for possible size increase due to alignment
+  // bool can_fit = GetAlignedSize(arena, size, alignment);
+  bool can_fit = size + arena->used <= arena->capacity;
+
+  if (!can_fit && arena->error_handler) {
+    arena->error_handler(arena);
+  }
+
+  assert(can_fit);
+
   u8 *base_result = 0;
   base_result = arena->base + arena->used;
   u8 *result = (u8 *)AlignForward((uintptr_t)base_result, alignment);
@@ -90,6 +99,25 @@ u8 *PushSizeAndClear(Arena *arena, size_t size, size_t alignment) {
   }
 
   return result;
+}
+
+void BeginTicketMutex(TicketMutex *mutex) {
+  u32 ticket = mutex->ticket.fetch_add(1);
+  while (ticket != mutex->serving.load()) {
+    // TODO(chogan): @optimization This seems to be necessary if we expect
+    // oversubscription. As soon as we have more MPI ranks than logical
+    // cores, the performance of the ticket mutex drops dramatically. We
+    // lose about 8% when yielding and not oversubscribed, but without
+    // yielding, it is unusable when oversubscribed. I want to implement a
+    // ticket mutex with a waiting array at some point:
+    // https://arxiv.org/pdf/1810.01573.pdf. It looks like that should give
+    // us the best of both worlds.
+    sched_yield();
+  }
+}
+
+void EndTicketMutex(TicketMutex *mutex) {
+  mutex->serving.fetch_add(1);
 }
 
 }  // namespace hermes

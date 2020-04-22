@@ -9,15 +9,6 @@ namespace hermes {
 
 namespace api {
 
-Bucket Acquire(const std::string &name, Context &ctx) {
-  (void)ctx;
-  Bucket ret;
-    
-  LOG(INFO) << "Acquiring Bucket " << name << '\n';
-    
-  return ret;
-}
-
 Status RenameBucket(const std::string &old_name,
                     const std::string &new_name,
                     Context &ctx) {

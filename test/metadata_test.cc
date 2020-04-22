@@ -1,7 +1,11 @@
+#include <memory>
+#include <string>
+
 #include <mpi.h>
 
-#include "metadata_management.h"
+#include "hermes.h"
 #include "common.h"
+#include "bucket.h"
 
 namespace hapi = hermes::api;
 
@@ -18,10 +22,27 @@ int main(int argc, char **argv) {
   std::shared_ptr<hapi::Hermes> hermes = hermes::InitHermes();
 
   if (hermes->IsApplicationCore()) {
-    // int app_rank = hermes->GetProcessRank();
+    int app_rank = hermes->GetProcessRank();
     // int app_size = hermes->GetNumProcesses();
 
-    // TODO(chogan): Build MetadataManager in InitBufferPool
+    hapi::Context ctx;
+    hapi::Bucket bucket(std::string("test_bucket_") + std::to_string(app_rank),
+                        hermes);
+
+    hapi::Blob put_data(4096, std::to_string(app_rank)[0]);
+
+    std::string blob_name = "test_blob" + std::to_string(app_rank);
+    bucket.Put(blob_name, put_data, ctx);
+
+    hapi::Blob get_result;
+    size_t blob_size = bucket.Get(blob_name, get_result, ctx);
+    get_result.resize(blob_size);
+    blob_size = bucket.Get(blob_name, get_result, ctx);
+
+    assert(put_data == get_result);
+
+    bucket.Release(ctx);
+
 
   } else {
     // Hermes core

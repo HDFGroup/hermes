@@ -61,25 +61,6 @@ void HermesBarrier(CommunicationContext *comm) {
   comm->hermes_barrier(comm->state);
 }
 
-inline void BeginTicketMutex(TicketMutex *mutex) {
-  u32 ticket = mutex->ticket.fetch_add(1);
-  while (ticket != mutex->serving.load()) {
-    // TODO(chogan): @optimization This seems to be necessary if we expect
-    // oversubscription. As soon as we have more MPI ranks than logical
-    // cores, the performance of the ticket mutex drops dramatically. We
-    // lose about 8% when yielding and not oversubscribed, but without
-    // yielding, it is unusable when oversubscribed. I want to implement a
-    // ticket mutex with a waiting array at some point:
-    // https://arxiv.org/pdf/1810.01573.pdf. It looks like that should give
-    // us the best of both worlds.
-    sched_yield();
-  }
-}
-
-inline void EndTicketMutex(TicketMutex *mutex) {
-  mutex->serving.fetch_add(1);
-}
-
 void LockBuffer(BufferHeader *header) {
   bool expected = false;
   while (header->locked.compare_exchange_weak(expected, true)) {

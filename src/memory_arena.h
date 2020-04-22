@@ -3,6 +3,8 @@
 
 #include <assert.h>
 
+#include <atomic>
+
 #include "hermes_types.h"
 
 /**
@@ -12,6 +14,18 @@
  */
 
 namespace hermes {
+
+struct Arena;
+typedef void (ArenaErrorFunc)(Arena *);
+
+/**
+ * Implements a ticket lock as described at
+ * https://en.wikipedia.org/wiki/Ticket_lock.
+ */
+struct TicketMutex {
+  std::atomic<u32> ticket;
+  std::atomic<u32> serving;
+};
 
 struct ArenaInfo {
   size_t sizes[kArenaType_Count];
@@ -42,6 +56,8 @@ struct Arena {
   size_t used;
   /** Total number of bytes in the block tracked by this Arena */
   size_t capacity;
+  /** Per-arena error handling function */
+  ArenaErrorFunc *error_handler;
   /** The number of ScopedTemporaryMemory instances that are using this Arena */
   i32 temp_count;
 };
@@ -114,12 +130,15 @@ struct ScopedTemporaryMemory {
 
 struct Heap {
   Arena arena;
-  ptrdiff_t free_list_offset;
-  int alignment;
+  TicketMutex mutex;
+  u32 free_list_offset;  // relative to arena.base
+  u32 alignment;
 };
 
 struct FreeBlock {
+  /* The offset of the next FreeBlock in the list. Offset 0 represents NULL */
   u32 next_offset;
+  /* The size of the next FreeBlock in the list. */
   u32 size;
 };
 
@@ -259,6 +278,9 @@ inline T *PushArray(Arena *arena, int count, size_t alignment=8) {
 
   return result;
 }
+
+void BeginTicketMutex(TicketMutex *mutex);
+void EndTicketMutex(TicketMutex *mutex);
 
 }  // namespace hermes
 

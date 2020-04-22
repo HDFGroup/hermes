@@ -17,6 +17,7 @@
 #include "hermes.h"
 #include "buffer_pool.h"
 #include "buffer_pool_internal.h"
+#include "metadata_management.h"
 
 /**
  * @file common.h
@@ -65,6 +66,9 @@ void InitTestConfig(Config *config) {
   config->latencies[1] = 250000;
   config->latencies[2] = 500000.0f;
   config->latencies[3] = 1000000.0f;
+
+  // TODO(chogan): Express these in bytes instead of percentages to avoid
+  // rounding errors?
   config->arena_percentages[kArenaType_BufferPool] = 0.85f;
   config->arena_percentages[kArenaType_MetaData] = 0.04f;
   config->arena_percentages[kArenaType_TransferWindow] = 0.08f;
@@ -74,6 +78,9 @@ void InitTestConfig(Config *config) {
   config->mount_points[2] = bb_mount_point;
   config->mount_points[3] = pfs_mount_point;
   config->rpc_server_name = rpc_server_name;
+
+  config->max_buckets_per_node = 32;
+  config->max_vbuckets_per_node = 16;
 
   MakeFullShmemName(config->buffer_pool_shmem_name, buffer_pool_shmem_name);
 }
@@ -163,8 +170,8 @@ SharedMemoryContext InitHermesCore(Config *config, CommunicationContext *comm,
 
   MetadataManager *mdm =
     PushStruct<MetadataManager>(&arenas[kArenaType_MetaData]);
-  context.metadata_manager_offset = mdm - shmem_base;
-  InitMetadataManager(mdm, &arenas[kArenaType_MetaData]);
+  context.metadata_manager_offset = (u8 *)mdm - (u8 *)shmem_base;
+  InitMetadataManager(mdm, &arenas[kArenaType_MetaData], config, comm->node_id);
 
   // NOTE(chogan): Store the metadata_manager_offset right after the
   // buffer_pool_offset so other processes can pick it up.

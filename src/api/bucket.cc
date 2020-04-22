@@ -17,6 +17,26 @@ struct bkt_hdl * Open(const std::string &name, Context &ctx) {
   return ret;
 }
 
+Bucket::Bucket(const std::string &initial_name,
+               const std::shared_ptr<Hermes> &h)
+    : name_(initial_name), hermes_(h) {
+
+  BucketID id = GetBucketIdByName(initial_name.c_str(), hermes_);
+
+  if (id.as_int != 0) {
+    LOG(INFO) << "Opening Bucket " << initial_name << std::endl;
+    id_ = id;
+  } else {
+    // LOG(INFO) << "Creating Bucket " << initial_name << std::endl;
+  }
+}
+
+bool Bucket::IsValid() const {
+  bool result = id_.as_int != 0;
+
+  return result;
+}
+
 Status Bucket::Put(const std::string &name, const Blob &data, Context &ctx) {
   (void)ctx;
   Status ret = 0;
@@ -107,6 +127,8 @@ std::vector<std::string> Bucket::GetBlobNames(Predicate pred,
 	(void)ctx;
 	
 	LOG(INFO) << "Getting blob names by predicate from bucket " << name_ << '\n';
+
+  return std::vector<std::string>();
 }
 
 struct bkt_info * Bucket::GetInfo(Context &ctx) {

@@ -25,15 +25,6 @@
 namespace hermes {
 
 /**
- * Implements a ticket lock as described at
- * https://en.wikipedia.org/wiki/Ticket_lock.
- */
-struct TicketMutex {
-  std::atomic<u32> ticket;
-  std::atomic<u32> serving;
-};
-
-/**
  * Information about a specific hardware Tier.
  *
  * This could represent local RAM, remote RAM, NVMe, burst buffers, a parallel

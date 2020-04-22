@@ -64,6 +64,7 @@ struct Stats {
 };
 
 struct BucketInfo {
+  BucketID next_free;
   u32 blobs_offset;  // BlobID array
   u32 num_blobs;
   Stats stats;
@@ -72,6 +73,7 @@ struct BucketInfo {
 static constexpr int kMaxTraitsPerVBucket = 8;
 
 struct VBucketInfo {
+  VBucketID next_free;
   u32 blobs_offset;  // BlobID array
   u32 num_blobs;
   TraitID traits[kMaxTraitsPerVBucket];
@@ -84,21 +86,54 @@ struct IdMap {
 };
 
 struct MetadataManager {
-  ptrdiff_t bucket_free_list_offset;
-  ptrdiff_t vbucket_free_list_offset;
   ptrdiff_t bucket_info_offset;
+  BucketID first_free_bucket;
+
   ptrdiff_t vbucket_info_offset;
-  ptrdiff_t blob_id_free_list_offset;
-  ptrdiff_t buffer_id_free_list_offset;
+  VBucketID first_free_vbucket;
+
+  ptrdiff_t blobid_heap_offset;
+  ptrdiff_t bufferid_heap_offset;
 
   ptrdiff_t bucket_map_offset;
   ptrdiff_t vbucket_map_offset;
   ptrdiff_t blob_map_offset;
 
+  TicketMutex bucket_mutex;
+  TicketMutex vbucket_mutex;
+  TicketMutex blob_id_mutex;
+  TicketMutex buffer_id_mutex;
+
+  TicketMutex bucket_map_mutex;
+  TicketMutex vbucket_map_mutex;
+  TicketMutex blob_map_mutex;
+
+  size_t map_seed;
+
   u32 num_buckets;
+  u32 max_buckets;
   u32 num_vbuckets;
+  u32 max_vbuckets;
+
+  u32 rpc_server_name_offset;
 };
 
-}  // namespace hermes
+void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
+                         int node_id);
+
+/**
+ *  Lets Thallium know how to serialize a BucketID.
+ *
+ * This function is called implicitly by Thallium.
+ *
+ * @param ar An archive provided by Thallium.
+ * @param bucket_id The BucketID to serialize.
+ */
+template<typename A>
+void serialize(A &ar, BucketID &bucket_id) {
+  ar & bucket_id.as_int;
+}
+
+} // namespace hermes
 
 #endif  // HERMES_METADATA_MANAGEMENT_H_

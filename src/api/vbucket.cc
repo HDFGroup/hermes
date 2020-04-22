@@ -44,17 +44,21 @@ Status VBucket::Contain_blob(std::string blob_name, std::string bucket_name) {
   return ret;
 }
 
+#if 0
 Blob& VBucket::Get_blob(std::string blob_name, std::string bucket_name) {
 	LOG(INFO) << "Retrieving blob "<< blob_name << " from bucket "
 	          << bucket_name << " in VBucket " << name_ << '\n';
 	
 	// get blob by bucket and blob name;
 }
-  
+#endif
+
 template<class Predicate>
 std::vector<std::string> VBucket::GetLinks(Predicate pred, Context &ctx) {
 	LOG(INFO) << "Getting subset of links satisfying pred in VBucket "
 	          << name_ << '\n';
+
+  return std::vector<std::string>();
 }
 
 Status VBucket::Attach(void *trait, TraitFunc *func, Context& ctx) {
@@ -65,8 +69,7 @@ Status VBucket::Attach(void *trait, TraitFunc *func, Context& ctx) {
   LOG(INFO) << "Attaching trait to VBucket " << name_ << '\n';
 	
 	for (auto ci = linked_blobs_.begin(); ci != linked_blobs_.end(); ++ci) {
-		Blob &blob = Get_blob(ci->second, ci->first);
-    (void)blob;
+		// Blob &blob = Get_blob(ci->second, ci->first);
     (void)func;
 //		func(blob, trait);
 	}
@@ -90,12 +93,14 @@ std::vector<std::string> VBucket::GetTraits(Predicate pred, Context& ctx) {
 	
 	LOG(INFO) << "Getting the subset of attached traits satisfying pred in VBucket "
 						<< name_ << '\n';
+  return std::vector<std::string>();
 }
 
 Status VBucket::Delete(Context& ctx) {
 	(void)ctx;
 	
 	LOG(INFO) << "Deleting VBucket " << name_ << '\n';
+  return Status();
 }
 
 } // api namepsace
