@@ -33,7 +33,13 @@
 #elif defined(HERMES_COMMUNICATION_ZMQ)
 #include "communication_zmq.cc"
 #else
-#error Communication implementation required.
+#error Communication implementation required (e.g., -DHERMES_COMMUNICATION_MPI).
+#endif
+
+#if defined(HERMES_RPC_THALLIUM)
+#include "rpc_thallium.cc"
+#else
+#error RPC implementation required (e.g., -DHERMES_RPC_THALLIUM).
 #endif
 
 /**
@@ -1079,6 +1085,8 @@ void StartBufferPoolRpcServer(SharedMemoryContext *context, const char *addr,
   using std::vector;
   using tl::request;
 
+  // BufferPool requests
+
   function<void(const request&, const TieredSchema&)> rpc_get_buffers =
     [context](const request &req, const TieredSchema &schema) {
       std::vector<BufferID> result = GetBuffers(context, schema);
@@ -1103,6 +1111,18 @@ void StartBufferPoolRpcServer(SharedMemoryContext *context, const char *addr,
       MergeRamBufferFreeList(context, slab_index);
     };
 
+  // Metadata requests
+
+  function<void(const request&, std::string)> rpc_map_get =
+    [context](const request &req, std::string name) {
+      MetadataManager *mdm = GetMetadataManagerFromContext(context);
+      IdMap *map = GetBucketMap(mdm);
+      BucketID result = {};
+      result.as_int = LocalGet(map, name.c_str(), &mdm->bucket_mutex);
+
+      req.respond(result);
+    };
+
   function<void(const request&)> rpc_finalize =
     [&buffer_pool_rpc_server](const request &req) {
       (void)req;
@@ -1116,6 +1136,7 @@ void StartBufferPoolRpcServer(SharedMemoryContext *context, const char *addr,
                                 rpc_split_buffers).disable_response();
   buffer_pool_rpc_server.define("MergeBuffers",
                                 rpc_merge_buffers).disable_response();
+  buffer_pool_rpc_server.define("RemoteGet", rpc_map_get);
   buffer_pool_rpc_server.define("Finalize", rpc_finalize).disable_response();
 
   // TODO(chogan): Currently the calling thread waits for finalize because

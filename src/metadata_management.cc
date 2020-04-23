@@ -11,12 +11,33 @@
 
 #include "memory_arena.h"
 #include "buffer_pool.h"
+#include "rpc.h"
 
 namespace tl = thallium;
 
 namespace hermes {
 
-u64 LocalGet(IdMap *map, char *key, TicketMutex *mutex) {
+bool IsNullBucketId(BucketID id) {
+  bool result = id.as_int == 0;
+
+  return result;
+}
+
+bool IsNullVBucketId(VBucketID id) {
+  bool result = id.as_int == 0;
+
+  return result;
+}
+
+void LocalPut(IdMap *map, const char *key, u64 value, TicketMutex *mutex) {
+  // TODO(chogan): Do we need to preserve order? A regular mutex may do.
+  BeginTicketMutex(mutex);
+  shput(map, key, value);
+  EndTicketMutex(mutex);
+}
+
+u64 LocalGet(IdMap *map, const char *key, TicketMutex *mutex) {
+  // TODO(chogan): Do we need to preserve order? A regular mutex may do.
   BeginTicketMutex(mutex);
   u64 result = shget(map, key);
   EndTicketMutex(mutex);
@@ -32,11 +53,10 @@ MetadataManager *GetMetadataManagerFromContext(SharedMemoryContext *context) {
 }
 
 static void MetadataArenaErrorHandler(Arena *arena) {
-  // TODO(chogan): GLOG FATAL
-  fprintf(stderr, "Metadata arena capacity (%zu bytes) exceeded. ",
-          arena->capacity);
-  fprintf(stderr, "Consider increasing the value of metadata_arena_percentage "
-                  "in the Hermes configuration file.\n");
+  LOG(FATAL) << "Metadata arena capacity (" << arena->capacity
+             << " bytes) exceeded. Consider increasing the value of "
+             << "metadata_arena_percentage in the Hermes configuration file."
+             << std::endl;
 }
 
 IdMap *GetMap(MetadataManager *mdm, u32 offset) {
@@ -63,33 +83,111 @@ IdMap *GetBlobMap(MetadataManager *mdm) {
   return result;
 }
 
-BucketID GetBucketIdByName(SharedMemoryContext *context, char *name,
-                           CommunicationContext *comm) {
+int HashString(MetadataManager *mdm, CommunicationContext *comm,
+               const char *str) {
+  int result =
+    (stbds_hash_string((char *)str, mdm->map_seed) % comm->num_nodes) + 1;
+
+  return result;
+}
+
+BucketID GetBucketIdByName(SharedMemoryContext *context, const char *name,
+                           CommunicationContext *comm, RpcContext *rpc) {
   BucketID result = {};
 
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
-  int node_id = (stbds_hash_string(name, mdm->map_seed) % comm->num_nodes) + 1;
+  int node_id = HashString(mdm, comm, name);
 
   if (node_id == comm->node_id) {
     IdMap *map = GetBucketMap(mdm);
     result.as_int = LocalGet(map, name, &mdm->bucket_mutex);
   } else {
-    // TODO(chogan): Store this in the metadata arena
-    // TODO(chogan): Server must include the node_id
-    const char kServerName[] = "ofi+sockets://localhost:8080";
-    tl::engine engine("tcp", THALLIUM_CLIENT_MODE);
-    tl::remote_procedure remote_get = engine.define("RemoteGet");
-    tl::endpoint server = engine.lookup(kServerName);
-    result.as_int = remote_get.on(server)(std::string(name));
+    result.as_int = rpc->call1("RemoteGet", std::string(name));
   }
 
   return result;
 }
 
+void PutBucketId(MetadataManager *mdm, CommunicationContext *comm,
+                 RpcContext *rpc, const std::string &name, BucketID id) {
+
+  int node_id = HashString(mdm, comm, name.c_str());
+
+  if (node_id == comm->node_id) {
+    IdMap *map = GetBucketMap(mdm);
+    LocalPut(map, name.c_str(), id.as_int, &mdm->bucket_map_mutex);
+  } else {
+    rpc->call2("RemotePut", name, id.as_int);
+  }
+}
+
+BucketInfo *GetBucketInfoByIndex(MetadataManager *mdm, u32 index) {
+  BucketInfo *info_array = (BucketInfo *)((u8 *)mdm + mdm->bucket_info_offset);
+  BucketInfo *result = info_array + index;
+
+  return result;
+}
+
+VBucketInfo *GetVBucketInfoByIndex(MetadataManager *mdm, u32 index) {
+  VBucketInfo *info_array =
+    (VBucketInfo *)((u8 *)mdm + mdm->vbucket_info_offset);
+  VBucketInfo *result = info_array + index;
+
+  return result;
+}
+
+BucketID GetNextFreeBucketId(SharedMemoryContext *context,
+                             CommunicationContext *comm, RpcContext *rpc,
+                             const std::string &name) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+
+  // TODO(chogan): Could replace this with lock-free version if/when it matters
+  BeginTicketMutex(&mdm->bucket_mutex);
+  BucketID result = mdm->first_free_bucket;
+  if (!IsNullBucketId(result)) {
+    BucketInfo *info = GetBucketInfoByIndex(mdm, result.bits.index);
+    info->blobs_offset = 0;
+    info->num_blobs = 0;
+    info->stats = {};
+    info->active = true;
+    mdm->first_free_bucket = info->next_free;
+  }
+  EndTicketMutex(&mdm->bucket_mutex);
+
+  BeginTicketMutex(&mdm->bucket_map_mutex);
+  PutBucketId(mdm, comm, rpc, name, result);
+  EndTicketMutex(&mdm->bucket_map_mutex);
+
+  return result;
+}
+
+VBucketID GetNextFreeVBucketId(SharedMemoryContext *context) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+
+  // TODO(chogan): Could replace this with lock-free version if/when it matters
+  BeginTicketMutex(&mdm->vbucket_mutex);
+  VBucketID result = mdm->first_free_vbucket;
+  if (!IsNullVBucketId(result)) {
+    VBucketInfo *info = GetVBucketInfoByIndex(mdm, result.bits.index);
+    info->blobs_offset = 0;
+    info->num_blobs = 0;
+    info->stats = {};
+    memset(info->traits, 0, sizeof(TraitID) * kMaxTraitsPerVBucket);
+    info->active = true;
+    mdm->first_free_vbucket = info->next_free;
+  }
+  EndTicketMutex(&mdm->vbucket_mutex);
+
+  return result;
+}
+
 Heap *InitHeapInArena(Arena *arena, u32 size, u32 alignment=8) {
+  // TODO(chogan): GetAlignedSizeFor()
+  size_t used = arena->used;
   Heap *result = PushStruct<Heap>(arena);
-  u32 heap_arena_size = size - sizeof(Heap);
-  u8 *heap_base = PushSize(arena, heap_arena_size);
+  u32 aligned_heap_size = arena->used - used;
+  u32 heap_arena_size = size - aligned_heap_size;
+  u8 *heap_base = PushSize(arena, heap_arena_size, 1);
   InitArena(&result->arena, heap_arena_size, heap_base);
   result->alignment = alignment;
   result->free_list_offset = alignment;
@@ -127,6 +225,7 @@ void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
 
   for (u32 i = 0; i < config->max_buckets_per_node; ++i) {
     BucketInfo *info = buckets + i;
+    info->active = false;
 
     if (i == config->max_buckets_per_node - 1) {
       info->next_free.as_int = 0;
@@ -148,6 +247,7 @@ void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
 
   for (u32 i = 0; i < config->max_vbuckets_per_node; ++i) {
     VBucketInfo *info = vbuckets + i;
+    info->active = false;
 
     if (i == config->max_vbuckets_per_node - 1) {
       info->next_free.as_int = 0;
@@ -177,6 +277,8 @@ void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
 
   // size_t estimated_blob_map_size = ?;
 
+  // TODO(chogan): These two heaps could grow towards each other to maximize
+  // space efficiency
   size_t quarter = metadata_space_remaining / 4;
   size_t blob_heap_size = quarter;
   size_t buffer_heap_size = quarter * 3;

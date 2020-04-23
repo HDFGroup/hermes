@@ -61,6 +61,7 @@ target_link_libraries(hermes
 target_compile_definitions(hermes
   PRIVATE $<$<BOOL:HERMES_COMMUNICATION_MPI>:HERMES_COMMUNICATION_MPI>
   PRIVATE $<$<BOOL:HERMES_USE_TCP>:HCL_ENABLE_THALLIUM_TCP>
+  PRIVATE $<$<BOOL:HERMES_RPC_THALLIUM>:HERMES_RPC_THALLIUM>
 )
 
 hermes_set_lib_options(hermes "hermes" ${HERMES_LIBTYPE})

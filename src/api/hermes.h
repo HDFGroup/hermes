@@ -10,6 +10,7 @@
 
 #include "hermes_types.h"
 #include "buffer_pool.h"
+#include "rpc.h"
 #include "id.h"
 
 namespace hermes {
@@ -23,6 +24,7 @@ class Hermes {
   std::set<std::string> vbucket_list_;
   hermes::SharedMemoryContext context_;
   hermes::CommunicationContext comm_;
+  hermes::RpcContext rpc_;
   hermes::Arena trans_arena_;
   std::string shmem_name_;
   std::string rpc_server_name_;

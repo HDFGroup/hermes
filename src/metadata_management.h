@@ -6,6 +6,7 @@
 #include <string>
 
 #include "memory_arena.h"
+#include "rpc.h"
 #include "buffer_pool.h"
 
 namespace hermes {
@@ -48,6 +49,7 @@ union BlobID {
 };
 
 enum class TraitID : u8 {
+  None,
   Placement,
   Flush,
   Replication,
@@ -67,6 +69,7 @@ struct BucketInfo {
   BucketID next_free;
   u32 blobs_offset;  // BlobID array
   u32 num_blobs;
+  bool active;
   Stats stats;
 };
 
@@ -77,6 +80,7 @@ struct VBucketInfo {
   u32 blobs_offset;  // BlobID array
   u32 num_blobs;
   TraitID traits[kMaxTraitsPerVBucket];
+  bool active;
   Stats stats;
 };
 
@@ -120,6 +124,16 @@ struct MetadataManager {
 
 void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
                          int node_id);
+BucketID GetBucketIdByName(SharedMemoryContext *context, const char *name,
+                           CommunicationContext *comm, RpcContext *rpc);
+BucketID GetNextFreeBucketId(SharedMemoryContext *context,
+                             CommunicationContext *comm, RpcContext *rpc,
+                             const std::string &name);
+
+// internal
+MetadataManager *GetMetadataManagerFromContext(SharedMemoryContext *context);
+BucketInfo *GetBucketInfoByIndex(MetadataManager *mdm, u32 index);
+VBucketInfo *GetVBucketInfoByIndex(MetadataManager *mdm, u32 index);
 
 /**
  *  Lets Thallium know how to serialize a BucketID.

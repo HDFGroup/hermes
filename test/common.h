@@ -79,8 +79,8 @@ void InitTestConfig(Config *config) {
   config->mount_points[3] = pfs_mount_point;
   config->rpc_server_name = rpc_server_name;
 
-  config->max_buckets_per_node = 32;
-  config->max_vbuckets_per_node = 16;
+  config->max_buckets_per_node = 16;
+  config->max_vbuckets_per_node = 8;
 
   MakeFullShmemName(config->buffer_pool_shmem_name, buffer_pool_shmem_name);
 }
@@ -189,7 +189,7 @@ SharedMemoryContext InitHermesCore(Config *config, CommunicationContext *comm,
 
 SharedMemoryContext
 BootstrapSharedMemory(Arena *arenas, Config *config, CommunicationContext *comm,
-                      int num_rpc_threads, bool is_daemon) {
+                      RpcContext *rpc, int num_rpc_threads, bool is_daemon) {
   size_t bootstrap_size = KILOBYTES(4);
   u8 *bootstrap_memory = (u8 *)malloc(bootstrap_size);
   InitArena(&arenas[kArenaType_Transient], bootstrap_size, bootstrap_memory);
@@ -205,6 +205,8 @@ BootstrapSharedMemory(Arena *arenas, Config *config, CommunicationContext *comm,
 
   GrowArena(&arenas[kArenaType_Transient], trans_arena_size);
   comm->state = arenas[kArenaType_Transient].base;
+
+  InitRpcContext(rpc);
 
   SharedMemoryContext result = {};
   // TODO(chogan): Always start RPC server (remove is_daemon param)
@@ -234,8 +236,9 @@ InitDaemon(const std::string &buffering_path,
 
   Arena arenas[kArenaType_Count] = {};
   CommunicationContext comm = {};
-  SharedMemoryContext context = BootstrapSharedMemory(arenas, &config, &comm,
-                                                      num_rpc_threads, true);
+  RpcContext rpc = {};
+  SharedMemoryContext context =
+    BootstrapSharedMemory(arenas, &config, &comm, &rpc, num_rpc_threads, true);
 
   std::shared_ptr<api::Hermes> result = std::make_shared<api::Hermes>(context);
   result->shmem_name_ = std::string(config.buffer_pool_shmem_name);
@@ -245,6 +248,7 @@ InitDaemon(const std::string &buffering_path,
   result->trans_arena_.used = 0;
   result->comm_ = comm;
   result->context_ = context;
+  result->rpc_ = rpc;
 
   return result;
 }
@@ -275,9 +279,11 @@ std::shared_ptr<api::Hermes> InitHermes() {
   // will probably become local to each rank.
   Arena arenas[kArenaType_Count] = {};
   CommunicationContext comm = {};
+  RpcContext rpc = {};
   // TODO(chogan): start RPC server by default, pass num_rpc_threads
-  SharedMemoryContext context = BootstrapSharedMemory(arenas, &config, &comm,
-                                                      0, false);
+  SharedMemoryContext context =
+    BootstrapSharedMemory(arenas, &config, &comm, &rpc, 0, false);
+
   WorldBarrier(&comm);
   std::shared_ptr<api::Hermes> result = nullptr;
 
@@ -307,6 +313,7 @@ std::shared_ptr<api::Hermes> InitHermes() {
   result->trans_arena_.used = 0;
   result->comm_ = comm;
   result->context_ = context;
+  result->rpc_ = rpc;
 
   return result;
 }

@@ -1,5 +1,6 @@
 #include "bucket.h"
 #include "buffer_pool.h"
+#include "metadata_management.h"
 #include "data_placement_engine.h"
 
 #include <iostream>
@@ -21,13 +22,17 @@ Bucket::Bucket(const std::string &initial_name,
                const std::shared_ptr<Hermes> &h)
     : name_(initial_name), hermes_(h) {
 
-  BucketID id = GetBucketIdByName(initial_name.c_str(), hermes_);
+  BucketID id = GetBucketIdByName(&hermes_->context_, initial_name.c_str(),
+                                  &hermes_->comm_, &hermes_->rpc_);
 
+  // TODO(chogan): Need to allow passing a Context for `Open` and `Create`
   if (id.as_int != 0) {
     LOG(INFO) << "Opening Bucket " << initial_name << std::endl;
     id_ = id;
   } else {
-    // LOG(INFO) << "Creating Bucket " << initial_name << std::endl;
+    LOG(INFO) << "Creating Bucket " << initial_name << std::endl;
+    id_ = GetNextFreeBucketId(&hermes_->context_, &hermes_->comm_,
+                              &hermes_->rpc_, initial_name);
   }
 }
 

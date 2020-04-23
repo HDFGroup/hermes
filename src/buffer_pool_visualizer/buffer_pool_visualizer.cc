@@ -5,6 +5,7 @@
 #include "hermes_types.h"
 #include "buffer_pool.h"
 #include "buffer_pool_internal.h"
+#include "metadata_management.h"
 
 using namespace hermes;
 
@@ -21,13 +22,24 @@ enum class Color {
   kCount
 };
 
+enum class ActiveSegment {
+  BufferPool,
+  Metadata,
+};
+
 static u32 global_colors[(int)Color::kCount];
 static int global_bitmap_index;
 static TierID global_active_tier;
+static ActiveSegment global_active_segment;
 
 struct Range {
   int start;
   int end;
+};
+
+struct Point {
+  int x;
+  int y;
 };
 
 static SDL_Window *CreateWindow(int width, int height) {
@@ -83,6 +95,25 @@ static SDL_Surface *CreateBackBuffer(int width, int height) {
   }
 
   return result;
+}
+
+void DrawWrappingRect(int x, int y, int w, int h, int width, int pad,
+                      SDL_Surface *surface, u32 color) {
+  if (x + w >= width) {
+    // NOTE(chogan): Draw the portion of the rect that fits on this line
+    int this_line_width = width - (x + pad);
+    SDL_Rect this_line_rect = {x + pad, y + pad, this_line_width, h - pad};
+    SDL_FillRect(surface, &this_line_rect, color);
+
+    // NOTE(chogan): Draw the rest of the rect on the next line.
+    int off_screen_width = (x + w) - width;
+    SDL_Rect next_line_rect = {0, y + pad + h, off_screen_width, h - pad};
+    SDL_FillRect(surface, &next_line_rect, color);
+  } else {
+    // NOTE(chogan): Whole rect fits on one line
+    SDL_Rect rect = {x + pad, y + pad, w - pad, h - pad};
+    SDL_FillRect(surface, &rect, color);
+  }
 }
 
 // NOTE(chogan): This won't work if we allow non-ram headers to be dormant
@@ -168,21 +199,7 @@ static int DrawBufferPool(SharedMemoryContext *context,
     x = pixel_offset % window_width;
     w = num_blocks * block_width_pixels;
 
-    if (x + w >= window_width) {
-      // NOTE(chogan): Draw the portion of the rect that fits on this line
-      int this_line_width = window_width - (x + pad);
-      SDL_Rect this_line_rect = {x + pad, y + pad, this_line_width, h - pad};
-      SDL_FillRect(surface, &this_line_rect, rgb_color);
-
-      // NOTE(chogan): Draw the rest of the rect on the next line.
-      int off_screen_width = (x + w) - window_width;
-      SDL_Rect next_line_rect = {0, y + pad + h, off_screen_width, h - pad};
-      SDL_FillRect(surface, &next_line_rect, rgb_color);
-    } else {
-      // NOTE(chogan): Whole rect fits on one line
-      SDL_Rect rect = {x + pad, y + pad, w - pad, h - pad};
-      SDL_FillRect(surface, &rect, rgb_color);
-    }
+    DrawWrappingRect(x, y, w, h, window_width, pad, surface, rgb_color);
 
     if (y + pad >= final_y) {
       final_y = y + pad;
@@ -279,21 +296,7 @@ static int DrawFileBuffers(SharedMemoryContext *context, SDL_Surface *surface,
     x = pixel_offset % window_width;
     w = num_blocks * block_width_pixels;
 
-    if (x + w >= window_width) {
-      // NOTE(chogan): Draw the portion of the rect that fits on this line
-      int this_line_width = window_width - (x + pad);
-      SDL_Rect this_line_rect = {x + pad, y + pad, this_line_width, h - pad};
-      SDL_FillRect(surface, &this_line_rect, rgb_color);
-
-      // NOTE(chogan): Draw the rest of the rect on the next line.
-      int off_screen_width = (x + w) - window_width;
-      SDL_Rect next_line_rect = {0, y + pad + h, off_screen_width, h - pad};
-      SDL_FillRect(surface, &next_line_rect, rgb_color);
-    } else {
-      // NOTE(chogan): Whole rect fits on one line
-      SDL_Rect rect = {x + pad, y + pad, w - pad, h - pad};
-      SDL_FillRect(surface, &rect, rgb_color);
-    }
+    DrawWrappingRect(x, y, w, h, window_width, pad, surface, rgb_color);
 
     if (y + pad >= final_y) {
       final_y = y + pad;
@@ -306,7 +309,7 @@ static int DrawFileBuffers(SharedMemoryContext *context, SDL_Surface *surface,
     for (auto iter = block_refs[i].begin();
          iter != block_refs[i].end();
          ++iter) {
-        assert(iter->second <= 1 && iter->second >= 0);
+      assert(iter->second <= 1 && iter->second >= 0);
     }
   }
 
@@ -510,12 +513,22 @@ static void HandleInput(SharedMemoryContext *context, bool *running,
             SetActiveTier(context, 7);
             break;
           }
+          case SDL_SCANCODE_B: {
+            global_active_segment =  ActiveSegment::BufferPool;
+            SDL_Log("Viewing BufferPool segment\n");
+            break;
+          }
           case SDL_SCANCODE_C: {
             PrintBufferCounts(context, global_active_tier);
             break;
           }
           case SDL_SCANCODE_F: {
             PrintFreeListSizes(context, global_active_tier);
+            break;
+          }
+          case SDL_SCANCODE_M: {
+            global_active_segment =  ActiveSegment::Metadata;
+            SDL_Log("Viewing Metadata segment\n");
             break;
           }
           case SDL_SCANCODE_R: {
@@ -551,6 +564,77 @@ static void InitColors(SDL_PixelFormat *format) {
   global_colors[(int)Color::kBlack] = SDL_MapRGB(format, 0, 0, 0);
 }
 
+void DisplayBufferPoolSegment(SharedMemoryContext *context,
+                              SDL_Surface *back_buffer, int width, int height) {
+  int ending_y = 0;
+  if (global_active_tier == 0) {
+    ending_y = DrawBufferPool(context, back_buffer, width, height,
+                              global_active_tier);
+    DrawEndOfRamBuffers(context, back_buffer, width, height);
+  } else {
+    ending_y = DrawFileBuffers(context, back_buffer, width, height,
+                               global_active_tier);
+  }
+
+  ending_y += 2;
+  SDL_Rect dividing_line = {0, ending_y, width, 1};
+  SDL_FillRect(back_buffer, &dividing_line,
+               global_colors[(int)Color::kMagenta]);
+  DrawHeaders(context, back_buffer, width, height,
+              ending_y + 5, global_active_tier);
+}
+
+
+void DisplayMetadataSegment(SharedMemoryContext *context,
+                            SDL_Surface *surface, int width, int height) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  int pad = 2;
+  int w = 5;
+  int h = 5;
+  int x = 0;
+  int y = 0;
+
+  // BucketInfo
+  for (size_t i = 0; i < mdm->max_buckets; ++i) {
+    BucketInfo *info = GetBucketInfoByIndex(mdm, i);
+
+    if (x > width) {
+      x = 0;
+      y += h + pad;
+    }
+
+    if (y + h + pad > height) {
+      SDL_Log("Not enough room to display all Buckets\n");
+      break;
+    }
+
+    u32 rgb_color = info->active ? global_colors[(int)Color::kWhite] :
+      global_colors[(int)Color::kRed];
+    DrawWrappingRect(x, y, w, h, width, pad, surface, rgb_color);
+    x += w;
+  }
+
+  // VBucketInfo
+  for (size_t i = 0; i < mdm->max_vbuckets; ++i) {
+    VBucketInfo *info = GetVBucketInfoByIndex(mdm, i);
+
+    if (x > width) {
+      x = 0;
+      y += h + pad;
+    }
+
+    if (y + h + pad > height) {
+      SDL_Log("Not enough room to display all Buckets\n");
+      break;
+    }
+
+    u32 rgb_color = info->active ? global_colors[(int)Color::kWhite] :
+      global_colors[(int)Color::kYellow];
+    DrawWrappingRect(x, y, w, h, width, pad, surface, rgb_color);
+    x += w;
+  }
+}
+
 int main() {
   SDL_Init(SDL_INIT_VIDEO);
 
@@ -565,42 +649,38 @@ int main() {
   char full_shmem_name[kMaxBufferPoolShmemNameLength];
   char base_shmem_name[] = "/hermes_buffer_pool_";
   MakeFullShmemName(full_shmem_name, base_shmem_name);
-  SharedMemoryContext bp_context = GetSharedMemoryContext(full_shmem_name);
-  if (bp_context.shm_base == 0) {
+  SharedMemoryContext context = GetSharedMemoryContext(full_shmem_name);
+  if (context.shm_base == 0) {
     SDL_Log("Couldn't open BufferPool shared memory\n");
     exit(1);
   }
 
   bool running = true;
   while (running) {
-    HandleInput(&bp_context, &running, screen, full_shmem_name);
+    HandleInput(&context, &running, screen, full_shmem_name);
 
     SDL_FillRect(back_buffer, NULL, global_colors[(int)Color::kBlack]);
 
-    int ending_y = 0;
-    if (global_active_tier == 0) {
-      ending_y = DrawBufferPool(&bp_context, back_buffer, window_width,
-                                window_height, global_active_tier);
-      DrawEndOfRamBuffers(&bp_context, back_buffer, window_width,
-                          window_height);
-    } else {
-      ending_y = DrawFileBuffers(&bp_context, back_buffer, window_width,
-                                 window_height, global_active_tier);
+    switch (global_active_segment) {
+      case ActiveSegment::BufferPool: {
+        DisplayBufferPoolSegment(&context, back_buffer, window_width,
+                                 window_height);
+        break;
+      }
+      case ActiveSegment::Metadata: {
+        DisplayMetadataSegment(&context, back_buffer, window_width,
+                               window_height);
+        break;
+      }
     }
 
-    ending_y += 2;
-    SDL_Rect dividing_line = {0, ending_y, window_width, 1};
-    SDL_FillRect(back_buffer, &dividing_line,
-                 global_colors[(int)Color::kMagenta]);
-    DrawHeaders(&bp_context, back_buffer, window_width, window_height,
-                ending_y + 5, global_active_tier);
     SDL_BlitSurface(back_buffer, NULL, screen, NULL);
     SDL_UpdateWindowSurface(window);
 
     SDL_Delay(60);
   }
 
-  ReleaseSharedMemoryContext(&bp_context);
+  ReleaseSharedMemoryContext(&context);
 
   SDL_FreeSurface(back_buffer);
   SDL_DestroyWindow(window);

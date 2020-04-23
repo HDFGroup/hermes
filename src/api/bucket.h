@@ -18,6 +18,7 @@ class Bucket {
  private:
   std::string name_;
   hermes::BucketID id_;
+  // TODO(chogan): Move to MetadataManager
   std::unordered_map<std::string, std::vector<BufferID>> blobs_;
 
  public:
@@ -25,7 +26,7 @@ class Bucket {
   std::shared_ptr<Hermes> hermes_;
 
   // TODO: Think about the Big Three
-	Bucket() : name_(""), id_{0, 0} {
+	Bucket() : name_(""), id_{0, 0}, hermes_(nullptr) {
     LOG(INFO) << "Create NULL Bucket " << std::endl;
   }
 
