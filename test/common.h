@@ -133,7 +133,7 @@ u8 *InitSharedMemory(const char *shmem_name, size_t total_size) {
 // TODO(chogan): Move into library
 SharedMemoryContext InitHermesCore(Config *config, CommunicationContext *comm,
                                    ArenaInfo *arena_info, Arena *arenas,
-                                   bool start_rpc_server,
+                                   bool start_rpc_server, RpcContext *rpc,
                                    int num_rpc_threads=0) {
 
   size_t shmem_size = (arena_info->total -
@@ -180,8 +180,8 @@ SharedMemoryContext InitHermesCore(Config *config, CommunicationContext *comm,
   *metadata_manager_offset_location = context.metadata_manager_offset;
 
   if (start_rpc_server) {
-    StartBufferPoolRpcServer(&context, config->rpc_server_name.c_str(),
-                             num_rpc_threads);
+    rpc->start_server(&context, config->rpc_server_name.c_str(),
+                      num_rpc_threads);
   }
 
   return context;
@@ -212,7 +212,7 @@ BootstrapSharedMemory(Arena *arenas, Config *config, CommunicationContext *comm,
   // TODO(chogan): Always start RPC server (remove is_daemon param)
   if (comm->proc_kind == ProcessKind::kHermes && comm->first_on_node) {
     result = InitHermesCore(config, comm, &arena_info, arenas, is_daemon,
-                            num_rpc_threads);
+                            rpc, num_rpc_threads);
   }
 
   return result;

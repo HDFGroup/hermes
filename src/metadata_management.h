@@ -6,10 +6,15 @@
 #include <string>
 
 #include "memory_arena.h"
-#include "rpc.h"
 #include "buffer_pool.h"
 
 namespace hermes {
+
+enum class MapType {
+  kBucket,
+  kVBucket,
+  kBlob,
+};
 
 struct String {
   char *str;
@@ -96,8 +101,12 @@ struct MetadataManager {
   ptrdiff_t vbucket_info_offset;
   VBucketID first_free_vbucket;
 
-  ptrdiff_t blobid_heap_offset;
-  ptrdiff_t bufferid_heap_offset;
+  ptrdiff_t id_heap_offset;
+  ptrdiff_t map_heap_offset;
+
+  // TODO(chogan): Make sure these don't cross
+  ptrdiff_t id_heap_start_offset;
+  ptrdiff_t map_heap_end_offset;
 
   ptrdiff_t bucket_map_offset;
   ptrdiff_t vbucket_map_offset;
@@ -121,6 +130,8 @@ struct MetadataManager {
 
   u32 rpc_server_name_offset;
 };
+
+struct RpcContext;
 
 void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
                          int node_id);
@@ -146,6 +157,11 @@ VBucketInfo *GetVBucketInfoByIndex(MetadataManager *mdm, u32 index);
 template<typename A>
 void serialize(A &ar, BucketID &bucket_id) {
   ar & bucket_id.as_int;
+}
+
+template<typename A>
+void serialize(A &ar, MapType map_type) {
+  ar & (int)map_type;
 }
 
 } // namespace hermes

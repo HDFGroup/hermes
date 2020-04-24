@@ -28,6 +28,20 @@ uintptr_t AlignForward(uintptr_t addr, size_t alignment) {
   return result;
 }
 
+uintptr_t AlignBackward(uintptr_t addr, size_t alignment) {
+  assert(IsPowerOfTwo(alignment));
+
+  uintptr_t result = addr;
+  uintptr_t a = (uintptr_t)alignment;
+  uintptr_t remainder = addr & (a - 1);
+
+  if (remainder != 0) {
+    result -= remainder;
+  }
+
+  return result;
+}
+
 void InitArena(Arena *arena, size_t bytes, u8 *base) {
   arena->base = base;
   arena->used = 0;
@@ -62,7 +76,7 @@ void GrowArena(Arena *arena, size_t new_size) {
   }
 }
 
-u8 *PushSize(Arena *arena, size_t size, size_t alignment) {
+u8 *PushSize(Arena *arena, size_t size, bool grows_up, size_t alignment) {
   // TODO(chogan): Account for possible size increase due to alignment
   // bool can_fit = GetAlignedSize(arena, size, alignment);
   bool can_fit = size + arena->used <= arena->capacity;
@@ -74,11 +88,24 @@ u8 *PushSize(Arena *arena, size_t size, size_t alignment) {
   assert(can_fit);
 
   u8 *base_result = 0;
-  base_result = arena->base + arena->used;
-  u8 *result = (u8 *)AlignForward((uintptr_t)base_result, alignment);
+  u8 *result = 0;
+
+  if (grows_up) {
+    base_result = arena->base + arena->used;
+    result = (u8 *)AlignForward((uintptr_t)base_result, alignment);
+  } else {
+    base_result = arena->base - arena->used;
+    result = (u8 *)AlignBackward((uintptr_t)base_result, alignment);
+  }
+
 
   if (base_result != result) {
-    ptrdiff_t alignment_size = result - base_result;
+    ptrdiff_t alignment_size;
+    if (grows_up) {
+      alignment_size = result - base_result;
+    } else {
+      alignment_size = base_result - result;
+    }
     arena->used += alignment_size;
     DLOG(INFO) << "PushSize added " << alignment_size
                << " bytes of padding for alignment" << std::endl;
@@ -88,15 +115,72 @@ u8 *PushSize(Arena *arena, size_t size, size_t alignment) {
   return result;
 }
 
-u8 *PushSizeAndClear(Arena *arena, size_t size, size_t alignment) {
+u8 *PushSizeAndClear(Arena *arena, size_t size, bool grows_up,
+                     size_t alignment) {
   size_t previously_used = arena->used;
-  u8 *result = PushSize(arena, size, alignment);
+  u8 *result = PushSize(arena, size, grows_up, alignment);
   // NOTE(chogan): Account for case when `size` is increased for alignment
   size_t bytes_to_clear = arena->used - previously_used;
 
   if (result) {
     memset(result, 0, bytes_to_clear);
   }
+
+  return result;
+}
+
+FreeBlock *FindFirstFit(Heap *heap, u32 size) {
+  FreeBlock *result = 0;
+
+  // TODO(chogan):
+  if (heap->grows_up) {
+  } else {
+  }
+
+  return result;
+}
+
+u8 *HeapPushSize(Heap *heap, u32 size) {
+  u8 *result = 0;
+
+  // TODO(chogan): Check when Heaps collide
+
+  // TODO(chogan):
+  if (heap->grows_up) {
+  } else {
+  }
+
+  // TODO(chogan): Think about lock granularity
+  BeginTicketMutex(&heap->mutex);
+  if (heap->free_list_offset) {
+    FreeBlock *first_fit = FindFirstFit(heap, size);
+    if (first_fit) {
+      result = (u8 *)first_fit;
+    } else {
+      // TODO(chogan): @errorhandling
+    }
+  } else {
+    // TODO(chogan): @errorhandling
+  }
+
+  EndTicketMutex(&heap->mutex);
+
+  return result;
+}
+
+void HeapFree(Heap *heap, void *ptr) {
+  if (heap && ptr) {
+    // FreeBlock *new_block = (FreeBlock *)(ptr);
+    // TODO(chogan):
+  }
+}
+
+void *HeapRealloc(Heap *heap, void *ptr, size_t size) {
+  // TODO(chogan): Store free blocks as offsets from arena.base
+  void *result = PushSize(&heap->arena, size);
+  memcpy(result, heap->arena.base, heap->arena.used);
+  HeapFree(heap, ptr);
+  heap->arena.base = (u8 *)result;
 
   return result;
 }

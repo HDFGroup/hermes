@@ -4,11 +4,13 @@
 #include <string>
 
 #include "hermes_types.h"
+#include "metadata_management.h"
 
 namespace hermes {
 
-typedef u64 (*Call1Func)(const char *, std::string);
-typedef void (*Call2Func)(const char *, const std::string&, u64);
+typedef u64 (*Call1Func)(const char *, std::string, MapType map_type);
+typedef void (*Call2Func)(const char *, const std::string&, u64,
+                          MapType map_type);
 typedef void (*StartFunc)(SharedMemoryContext *, const char *, i32);
 
 struct RpcContext {

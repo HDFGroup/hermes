@@ -132,7 +132,8 @@ struct Heap {
   Arena arena;
   TicketMutex mutex;
   u32 free_list_offset;  // relative to arena.base
-  u32 alignment;
+  u16 alignment;
+  u16 grows_up;
 };
 
 struct FreeBlock {
@@ -203,11 +204,12 @@ void GrowArena(Arena *arena, size_t new_size);
  *
  * @param[in,out] arena The Arena to allocate from.
  * @param[in] size The requested memory size in bytes.
+ * @param[in] grows_up True if pushing items increases addresses.
  * @param[in] alignment Align the result to a desired multiple.
  *
  * @return A pointer to the beginning of a contiguous region of @p size bytes.
  */
-u8 *PushSize(Arena *arena, size_t size, size_t alignment=8);
+u8 *PushSize(Arena *arena, size_t size, bool grows_up=true, size_t alignment=8);
 
 /**
  * Returns a pointer to a raw region of bytes that are cleared to zero.
@@ -216,11 +218,13 @@ u8 *PushSize(Arena *arena, size_t size, size_t alignment=8);
  *
  * @param[in,out] arena The Arena to allocate from.
  * @param[in] size The requested memory size in bytes.
+ * @param[in] grows_up True if pushing items increases addresses.
  * @param[in] alignment Align the result to a desired multiple.
  *
  * @return A pointer to the beginning of a contiguous region of @p size zeros.
  */
-u8 *PushSizeAndClear(Arena *arena, size_t size, size_t alignment=8);
+u8 *PushSizeAndClear(Arena *arena, size_t size, bool grows_up=true,
+                     size_t alignment=8);
 
 /**
  * Reserves space for and returns a pointer to a T instance.
@@ -235,7 +239,19 @@ u8 *PushSizeAndClear(Arena *arena, size_t size, size_t alignment=8);
  */
 template<typename T>
 inline T *PushStruct(Arena *arena, size_t alignment=8) {
-  T *result = reinterpret_cast<T *>(PushSize(arena, sizeof(T), alignment));
+  T *result = reinterpret_cast<T *>(PushSize(arena, sizeof(T), true,
+                                             alignment));
+
+  return result;
+}
+
+/**
+ * Like PushStruct but grows toward lower addresses.
+ */
+template<typename T>
+inline T *PushStructDown(Arena *arena, size_t alignment=8) {
+  T *result = reinterpret_cast<T *>(PushSize(arena, sizeof(T), false,
+                                             alignment));
 
   return result;
 }
@@ -253,7 +269,18 @@ inline T *PushStruct(Arena *arena, size_t alignment=8) {
  */
 template<typename T>
 inline T *PushClearedStruct(Arena *arena, size_t alignment=8) {
-  T *result = reinterpret_cast<T *>(PushSizeAndClear(arena, sizeof(T),
+  T *result = reinterpret_cast<T *>(PushSizeAndClear(arena, sizeof(T), true,
+                                                     alignment));
+
+  return result;
+}
+
+/**
+ * Like PushClearedStruct but grows toward lower addresses.
+ */
+template<typename T>
+inline T *PushClearedStructDown(Arena *arena, size_t alignment=8) {
+  T *result = reinterpret_cast<T *>(PushSizeAndClear(arena, sizeof(T), false,
                                                      alignment));
 
   return result;
@@ -273,11 +300,34 @@ inline T *PushClearedStruct(Arena *arena, size_t alignment=8) {
  */
 template<typename T>
 inline T *PushArray(Arena *arena, int count, size_t alignment=8) {
-  T *result = reinterpret_cast<T *>(PushSize(arena, sizeof(T) * count,
+  T *result = reinterpret_cast<T *>(PushSize(arena, sizeof(T) * count, true,
                                              alignment));
 
   return result;
 }
+
+/**
+ * Like PushArray but grows toward lower addresses.
+ */
+template<typename T>
+inline T *PushArrayDown(Arena *arena, int count, size_t alignment=8) {
+  T *result = reinterpret_cast<T *>(PushSize(arena, sizeof(T) * count, false,
+                                             alignment));
+
+  return result;
+}
+
+u8 *HeapPushSize(Heap *heap, size_t size);
+
+template<typename T>
+inline T *HeapPush(Heap *heap) {
+  T *result = reinterpret_cast<T *>(HeapPushSize(heap, sizeof(T)));
+
+  return result;
+}
+
+void HeapFree(Heap *heap, void *ptr);
+void *HeapRealloc(Heap *heap, void *ptr, size_t size);
 
 void BeginTicketMutex(TicketMutex *mutex);
 void EndTicketMutex(TicketMutex *mutex);

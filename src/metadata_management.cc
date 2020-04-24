@@ -6,6 +6,9 @@
 
 #include <thallium/serialization/stl/string.hpp>
 
+#define STBDS_REALLOC(heap, ptr, size) hermes::HeapRealloc(heap, ptr, size)
+#define STBDS_FREE(heap, ptr) hermes::HeapFree(heap, ptr)
+
 #define STB_DS_IMPLEMENTATION
 #include "stb_ds.h"
 
@@ -29,17 +32,93 @@ bool IsNullVBucketId(VBucketID id) {
   return result;
 }
 
-void LocalPut(IdMap *map, const char *key, u64 value, TicketMutex *mutex) {
-  // TODO(chogan): Do we need to preserve order? A regular mutex may do.
+TicketMutex *GetMapMutex(MetadataManager *mdm, MapType map_type) {
+  TicketMutex *mutex = 0;
+  switch (map_type) {
+    case MapType::kBucket: {
+      mutex = &mdm->bucket_map_mutex;
+      break;
+    }
+    case MapType::kVBucket: {
+      mutex = &mdm->vbucket_map_mutex;
+      break;
+    }
+    case MapType::kBlob: {
+      mutex = &mdm->blob_map_mutex;
+      break;
+    }
+    default: {
+      assert(!"Invalid code path\n");
+    }
+  }
+
+  return mutex;
+}
+
+IdMap *GetMapByOffset(MetadataManager *mdm, u32 offset) {
+  IdMap *result =(IdMap *)((u8 *)mdm + offset);
+
+  return result;
+}
+
+IdMap *GetBucketMap(MetadataManager *mdm) {
+  IdMap *result = GetMapByOffset(mdm, mdm->bucket_map_offset);
+
+  return result;
+}
+
+IdMap *GetVBucketMap(MetadataManager *mdm) {
+  IdMap *result = GetMapByOffset(mdm, mdm->bucket_map_offset);
+
+  return result;
+}
+
+IdMap *GetBlobMap(MetadataManager *mdm) {
+  IdMap *result = GetMapByOffset(mdm, mdm->bucket_map_offset);
+
+  return result;
+}
+
+IdMap *GetMap(MetadataManager *mdm, MapType map_type) {
+  IdMap *result = 0;
+  switch (map_type) {
+    case MapType::kBucket: {
+      result = GetBucketMap(mdm);
+      break;
+    }
+    case MapType::kVBucket: {
+      result = GetVBucketMap(mdm);
+      break;
+    }
+    case MapType::kBlob: {
+      result = GetBlobMap(mdm);
+      break;
+    }
+  }
+
+  return result;
+}
+
+void LocalPut(MetadataManager *mdm, const char *key, u64 val, MapType map_type){
+  // TODO(chogan):
+  Heap *heap = NULL;
+  TicketMutex *mutex = GetMapMutex(mdm, map_type);
+
   BeginTicketMutex(mutex);
-  shput(map, key, value);
+  IdMap *map = GetMap(mdm, map_type);
+  shput(map, key, val, heap);
   EndTicketMutex(mutex);
 }
 
-u64 LocalGet(IdMap *map, const char *key, TicketMutex *mutex) {
-  // TODO(chogan): Do we need to preserve order? A regular mutex may do.
+u64 LocalGet(MetadataManager *mdm, const char *key, MapType map_type) {
+  // TODO(chogan):
+  Heap *heap = NULL;
+  TicketMutex *mutex = GetMapMutex(mdm, map_type);
+
   BeginTicketMutex(mutex);
-  u64 result = shget(map, key);
+  IdMap *map = GetMap(mdm, map_type);
+  // TODO(chogan): Make sure default map value is 0
+  u64 result = shget(map, key, heap);
   EndTicketMutex(mutex);
 
   return result;
@@ -59,30 +138,6 @@ static void MetadataArenaErrorHandler(Arena *arena) {
              << std::endl;
 }
 
-IdMap *GetMap(MetadataManager *mdm, u32 offset) {
-  IdMap *result =(IdMap *)((u8 *)mdm + offset);
-
-  return result;
-}
-
-IdMap *GetBucketMap(MetadataManager *mdm) {
-  IdMap *result = GetMap(mdm, mdm->bucket_map_offset);
-
-  return result;
-}
-
-IdMap *GetVBucketMap(MetadataManager *mdm) {
-  IdMap *result = GetMap(mdm, mdm->bucket_map_offset);
-
-  return result;
-}
-
-IdMap *GetBlobMap(MetadataManager *mdm) {
-  IdMap *result = GetMap(mdm, mdm->bucket_map_offset);
-
-  return result;
-}
-
 int HashString(MetadataManager *mdm, CommunicationContext *comm,
                const char *str) {
   int result =
@@ -90,6 +145,7 @@ int HashString(MetadataManager *mdm, CommunicationContext *comm,
 
   return result;
 }
+
 
 BucketID GetBucketIdByName(SharedMemoryContext *context, const char *name,
                            CommunicationContext *comm, RpcContext *rpc) {
@@ -99,10 +155,9 @@ BucketID GetBucketIdByName(SharedMemoryContext *context, const char *name,
   int node_id = HashString(mdm, comm, name);
 
   if (node_id == comm->node_id) {
-    IdMap *map = GetBucketMap(mdm);
-    result.as_int = LocalGet(map, name, &mdm->bucket_mutex);
+    result.as_int = LocalGet(mdm, name, MapType::kBucket);
   } else {
-    result.as_int = rpc->call1("RemoteGet", std::string(name));
+    result.as_int = rpc->call1("RemoteGet", std::string(name), MapType::kBucket);
   }
 
   return result;
@@ -110,14 +165,12 @@ BucketID GetBucketIdByName(SharedMemoryContext *context, const char *name,
 
 void PutBucketId(MetadataManager *mdm, CommunicationContext *comm,
                  RpcContext *rpc, const std::string &name, BucketID id) {
-
   int node_id = HashString(mdm, comm, name.c_str());
 
   if (node_id == comm->node_id) {
-    IdMap *map = GetBucketMap(mdm);
-    LocalPut(map, name.c_str(), id.as_int, &mdm->bucket_map_mutex);
+    LocalPut(mdm, name.c_str(), id.as_int, MapType::kBucket);
   } else {
-    rpc->call2("RemotePut", name, id.as_int);
+    rpc->call2("RemotePut", name, id.as_int, MapType::kBucket);
   }
 }
 
@@ -181,27 +234,6 @@ VBucketID GetNextFreeVBucketId(SharedMemoryContext *context) {
   return result;
 }
 
-Heap *InitHeapInArena(Arena *arena, u32 size, u32 alignment=8) {
-  // TODO(chogan): GetAlignedSizeFor()
-  size_t used = arena->used;
-  Heap *result = PushStruct<Heap>(arena);
-  u32 aligned_heap_size = arena->used - used;
-  u32 heap_arena_size = size - aligned_heap_size;
-  u8 *heap_base = PushSize(arena, heap_arena_size, 1);
-  InitArena(&result->arena, heap_arena_size, heap_base);
-  result->alignment = alignment;
-  result->free_list_offset = alignment;
-
-  FreeBlock *free_block = (FreeBlock *)(result->arena.base + alignment);
-  // NOTE(chogan): offset 0 represents NULL
-  free_block->next_offset = 0;
-  // NOTE(chogan): Subtract alignment since we're using the first `alignment`
-  // sized block as the NULL block.
-  free_block->size = heap_arena_size - alignment;
-
-  return result;
-}
-
 void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
                          int node_id) {
 
@@ -257,47 +289,58 @@ void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
     }
   }
 
+  // Heaps
+
+  u32 heap_alignment = 8;
   size_t metadata_space_remaining = arena->capacity - arena->used;
+  size_t heap_space = metadata_space_remaining - sizeof(Heap);
 
-  // Remaining space in metadata arena is divided into
-  // - BlobID Heap
-  // - BufferID Heap
-  // - bucket Map = max_buckets * BucketID + max_buckets * avg_string_size
-  // - vbucket Map = max_vbuckets * VBucketID + max_vbuckets * avg_string_size
-  // - blob Map = avg_blobs_per_file?
+  Heap *map_heap = PushClearedStruct<Heap>(arena);
+  InitArena(&map_heap->arena, heap_space, (u8 *)(map_heap + 1));
+  map_heap->alignment = heap_alignment;
+  map_heap->free_list_offset = heap_alignment;
+  map_heap->grows_up = 1;
 
-  // size_t avg_name_length = 32;
-  // size_t estimated_bucket_map_size =
-  //   (config->max_buckets_per_node + 16) * sizeof(BucketID) +
-  //   (config->max_buckets_per_node + 16) * avg_name_length;
+  FreeBlock *map_first_free_block = (FreeBlock *)(map_heap->arena.base +
+                                                  heap_alignment);
+  // NOTE(chogan): offset 0 represents NULL
+  map_first_free_block->next_offset = 0;
+  // NOTE(chogan): Subtract alignment since we're using the first `alignment`
+  // sized block as the NULL block. It isn't crucial to get the size exactly
+  // right here, since we're growing toward another Heap and will use the end of
+  // that Heap for this Heap's upper bound.
+  map_first_free_block->size = heap_space - heap_alignment;
+  mdm->map_heap_offset = (u8 *)map_heap - (u8 *)mdm;
 
-  // size_t estimated_vbucket_map_size =
-  //   (config->max_vbuckets_per_node + 16) * sizeof(VBucketID) +
-  //   (config->max_vbuckets_per_node + 16) * avg_name_length;
+  // NOTE(chogan): This Heap is constructed at the end of the Metadata Arena and
+  // will grow towards smaller addresses.
+  Heap *id_heap = (Heap *)((arena->base + arena->capacity) - sizeof(Heap));
+  memset(id_heap, 0, sizeof(Heap));
+  InitArena(&id_heap->arena, heap_space, (u8 *)(id_heap - 1));
+  id_heap->alignment = heap_alignment;
+  id_heap->free_list_offset = heap_alignment;
+  id_heap->grows_up = 0;
 
-  // size_t estimated_blob_map_size = ?;
-
-  // TODO(chogan): These two heaps could grow towards each other to maximize
-  // space efficiency
-  size_t quarter = metadata_space_remaining / 4;
-  size_t blob_heap_size = quarter;
-  size_t buffer_heap_size = quarter * 3;
-
-  Heap *blobid_heap = InitHeapInArena(arena, blob_heap_size, sizeof(BlobID));
-  mdm->blobid_heap_offset = (u8 *)blobid_heap - (u8 *)mdm;
-
-  Heap *bufferid_heap = InitHeapInArena(arena, buffer_heap_size,
-                                        sizeof(BufferID));
-  mdm->bufferid_heap_offset = (u8 *)bufferid_heap - (u8 *)mdm;
+  FreeBlock *id_first_free_block =
+    (FreeBlock *)(id_heap->arena.base - heap_alignment);
+  id_first_free_block->next_offset = 0;
+  id_first_free_block->size = heap_space - heap_alignment;
+  mdm->id_heap_offset = (u8 *)id_heap - (u8 *)mdm;
 
   // ID Maps
-  // ptrdiff_t bucket_map_offset;
-  // ptrdiff_t vbucket_map_offset;
-  // ptrdiff_t blob_map_offset;
+
+  IdMap *bucket_map = HeapPush<IdMap>(map_heap);
+  mdm->bucket_map_offset = (u8 *)bucket_map - (u8 *)mdm;
+  IdMap *vbucket_map = HeapPush<IdMap>(map_heap);
+  mdm->vbucket_map_offset = (u8 *)vbucket_map - (u8 *)mdm;
+  IdMap *blob_map = HeapPush<IdMap>(map_heap);
+  mdm->blob_map_offset = (u8 *)blob_map - (u8 *)mdm;
 }
 
 void CoalesceFreeBlocks(Heap *heap) {
-  (void)heap;
+  if (heap->grows_up) {
+  } else {
+  }
 }
 
 #if 0

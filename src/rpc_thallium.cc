@@ -1,29 +1,34 @@
+#include <thallium.hpp>
+#include <thallium/serialization/stl/vector.hpp>
+#include <thallium/serialization/stl/pair.hpp>
+
 namespace hermes {
 
 struct ThalliumState {
   char *server_name;
 };
 
-u64 ThalliumCall1(const char *func_name, std::string name) {
+u64 ThalliumCall1(const char *func_name, std::string name, MapType map_type) {
   // TODO(chogan): Store this in the metadata arena
   // TODO(chogan): Server must include the node_id
   const char kServerName[] = "ofi+sockets://localhost:8080";
   tl::engine engine("tcp", THALLIUM_CLIENT_MODE);
   tl::remote_procedure remote_get = engine.define(func_name);
   tl::endpoint server = engine.lookup(kServerName);
-  u64 result = remote_get.on(server)(name);
+  u64 result = remote_get.on(server)(name, map_type);
 
   return result;
 }
 
-void ThalliumCall2(const char *func_name, const std::string &name, u64 val) {
+void ThalliumCall2(const char *func_name, const std::string &name, u64 val,
+                   MapType map_type) {
   // TODO(chogan): Store this in the metadata arena
   // TODO(chogan): Server must include the node_id
   const char kServerName[] = "ofi+sockets://localhost:8080";
   tl::engine engine("tcp", THALLIUM_CLIENT_MODE);
   tl::remote_procedure remote_put = engine.define(func_name);
   tl::endpoint server = engine.lookup(kServerName);
-  remote_put.on(server)(name, val);
+  remote_put.on(server)(name, val, map_type);
 }
 
 void ThalliumStartRpcServer(SharedMemoryContext *context, const char *addr,
@@ -66,22 +71,20 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, const char *addr,
 
   // Metadata requests
 
-  function<void(const request&, std::string)> rpc_map_get =
-    [context](const request &req, std::string name) {
+  function<void(const request&, std::string, MapType)> rpc_map_get =
+    [context](const request &req, std::string name, MapType map_type) {
       MetadataManager *mdm = GetMetadataManagerFromContext(context);
-      IdMap *map = GetBucketMap(mdm);
-      BucketID result = {};
-      result.as_int = LocalGet(map, name.c_str(), &mdm->bucket_mutex);
+      u64 result = LocalGet(mdm, name.c_str(), map_type);
 
       req.respond(result);
     };
 
-  function<void(const request&, const std::string&, u64)> rpc_map_put =
-    [context](const request &req, const std::string &name, u64 val) {
+  function<void(const request&, const std::string&, u64, MapType)> rpc_map_put =
+    [context](const request &req, const std::string &name, u64 val,
+              MapType map_type) {
       (void)req;
       MetadataManager *mdm = GetMetadataManagerFromContext(context);
-      IdMap *map = GetBucketMap(mdm);
-      LocalPut(map, name.c_str(), val, &mdm->bucket_map_mutex);
+      LocalPut(mdm, name.c_str(), val, map_type);
     };
 
   function<void(const request&)> rpc_finalize =
