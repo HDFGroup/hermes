@@ -15,8 +15,7 @@
 
 namespace hermes {
 
-struct Arena;
-typedef void (ArenaErrorFunc)(Arena *);
+typedef void (ArenaErrorFunc)();
 
 /**
  * Implements a ticket lock as described at
@@ -129,11 +128,18 @@ struct ScopedTemporaryMemory {
 };
 
 struct Heap {
-  Arena arena;
+  ArenaErrorFunc *error_handler;
   TicketMutex mutex;
-  u32 free_list_offset;  // relative to arena.base
+  /** Offset of the beginning of this heap's memory, relative to the Heap */
+  u32 base_offset;
+  /** Offset of the head of the free list, relative to base_offset */
+  u32 free_list_offset;
   u16 alignment;
   u16 grows_up;
+};
+
+struct FreeBlockHeader {
+  size_t size;
 };
 
 struct FreeBlock {
@@ -141,14 +147,6 @@ struct FreeBlock {
   u32 next_offset;
   /* The size of the next FreeBlock in the list. */
   u32 size;
-};
-
-struct Pool {
-  ptrdiff_t free_list_offset;
-  u32 used;
-  u32 capacity;
-  u32 object_size;
-  int alignment;
 };
 
 /**
@@ -317,15 +315,23 @@ inline T *PushArrayDown(Arena *arena, int count, size_t alignment=8) {
   return result;
 }
 
-u8 *HeapPushSize(Heap *heap, size_t size);
+u8 *HeapPushSize(Heap *heap, u32 size);
 
 template<typename T>
-inline T *HeapPush(Heap *heap) {
+inline T *HeapPushStruct(Heap *heap) {
   T *result = reinterpret_cast<T *>(HeapPushSize(heap, sizeof(T)));
 
   return result;
 }
 
+template<typename T>
+inline T *HeapPushArray(Heap *heap, u32 count) {
+  T *result = reinterpret_cast<T *>(HeapPushSize(heap, count * sizeof(T)));
+
+  return result;
+}
+
+Heap *InitHeapInArena(Arena *arena, bool grows_up=true, u16 alignment=8);
 void HeapFree(Heap *heap, void *ptr);
 void *HeapRealloc(Heap *heap, void *ptr, size_t size);
 

@@ -462,7 +462,7 @@ extern size_t stbds_hash_string(char *str, size_t seed);
 // this is a simple string arena allocator, initialize with e.g. 'stbds_string_arena my_arena={0}'.
 typedef struct stbds_string_arena stbds_string_arena;
 extern char * stbds_stralloc(stbds_string_arena *a, char *str, Heap *heap);
-extern void   stbds_strreset(stbds_string_arena *a);
+extern void   stbds_strreset(stbds_string_arena *a, Heap *heap);
 
 // have to #define STBDS_UNIT_TESTS to call this
 extern void stbds_unit_tests(void);
@@ -524,7 +524,7 @@ extern void * stbds_shmode_func(size_t elemsize, int mode);
 #define stbds_arrpop(a)       (stbds_header(a)->length--, (a)[stbds_header(a)->length])
 #define stbds_arraddn(a,n)    (stbds_arrmaybegrow(a,n), stbds_header(a)->length += (n), stbds_header(a)->length-(n))
 #define stbds_arrlast(a)      ((a)[stbds_header(a)->length-1])
-#define stbds_arrfree(a)      ((void) ((a) ? STBDS_FREE(NULL,stbds_header(a)) : (void)0), (a)=NULL)
+#define stbds_arrfree(a,heap)      ((void) ((a) ? STBDS_FREE(heap,stbds_header(a)) : (void)0), (a)=NULL)
 #define stbds_arrdel(a,i)     stbds_arrdeln(a,i,1)
 #define stbds_arrdeln(a,i,n)  (memmove(&(a)[i], &(a)[(i)+(n)], sizeof *(a) * (stbds_header(a)->length-(n)-(i))), stbds_header(a)->length -= (n))
 #define stbds_arrdelswap(a,i) ((a)[i] = stbds_arrlast(a), stbds_header(a)->length -= 1)
@@ -1180,7 +1180,7 @@ static int stbds_is_key_equal(void *a, size_t elemsize, void *key, size_t keysiz
 
 #define stbds_hash_table(a)  ((stbds_hash_index *) stbds_header(a)->hash_table)
 
-void stbds_hmfree_func(void *a, size_t elemsize)
+void stbds_hmfree_func(void *a, size_t elemsize, Heap *heap)
 {
   if (a == NULL) return;
   if (stbds_hash_table(a) != NULL) {
@@ -1188,12 +1188,12 @@ void stbds_hmfree_func(void *a, size_t elemsize)
       size_t i;
       // skip 0th element, which is default
       for (i=1; i < stbds_header(a)->length; ++i)
-        STBDS_FREE(NULL, *(char**) ((char *) a + elemsize*i));
+        STBDS_FREE(heap, *(char**) ((char *) a + elemsize*i));
     }
-    stbds_strreset(&stbds_hash_table(a)->string);
+    stbds_strreset(&stbds_hash_table(a)->string, heap);
   }
-  STBDS_FREE(NULL, stbds_header(a)->hash_table);
-  STBDS_FREE(NULL, stbds_header(a));
+  STBDS_FREE(heap, stbds_header(a)->hash_table);
+  STBDS_FREE(heap, stbds_header(a));
 }
 
 static ptrdiff_t stbds_hm_find_slot(void *a, size_t elemsize, void *key, size_t keysize, size_t keyoffset, int mode)
@@ -1328,7 +1328,7 @@ void *stbds_hmput_key(void *a, size_t elemsize, void *key, size_t keysize, int m
     slot_count = (table == NULL) ? STBDS_BUCKET_LENGTH : table->slot_count*2;
     nt = stbds_make_hash_index(slot_count, table, heap);
     if (table)
-      STBDS_FREE(NULL, table);
+      STBDS_FREE(heap, table);
     else
       nt->string.mode = mode >= STBDS_HM_STRING ? STBDS_SH_DEFAULT : 0;
     stbds_header(a)->hash_table = table = nt;
@@ -1465,7 +1465,7 @@ void * stbds_hmdel_key(void *a, size_t elemsize, void *key, size_t keysize, size
         b->index[i] = STBDS_INDEX_DELETED;
 
         if (mode == STBDS_HM_STRING && table->string.mode == STBDS_SH_STRDUP)
-          STBDS_FREE(NULL, *(char**) ((char *) a+elemsize*old_index));
+          STBDS_FREE(heap, *(char**) ((char *) a+elemsize*old_index));
 
         // if indices are the same, memcpy is a no-op, but back-pointer-fixup will fail, so skip
         if (old_index != final_index) {
@@ -1487,11 +1487,11 @@ void * stbds_hmdel_key(void *a, size_t elemsize, void *key, size_t keysize, size
 
         if (table->used_count < table->used_count_shrink_threshold && table->slot_count > STBDS_BUCKET_LENGTH) {
           stbds_header(raw_a)->hash_table = stbds_make_hash_index(table->slot_count>>1, table, heap);
-          STBDS_FREE(NULL, table);
+          STBDS_FREE(heap, table);
           STBDS_STATS(++stbds_hash_shrink);
         } else if (table->tombstone_count > table->tombstone_count_threshold) {
           stbds_header(raw_a)->hash_table = stbds_make_hash_index(table->slot_count   , table, heap);
-          STBDS_FREE(NULL, table);
+          STBDS_FREE(heap, table);
           STBDS_STATS(++stbds_hash_rebuild);
         }
 
@@ -1567,13 +1567,13 @@ char *stbds_stralloc(stbds_string_arena *a, char *str, Heap *heap)
   return p;
 }
 
-void stbds_strreset(stbds_string_arena *a)
+void stbds_strreset(stbds_string_arena *a, Heap *heap)
 {
   stbds_string_block *x,*y;
   x = a->storage;
   while (x) {
     y = x->next;
-    STBDS_FREE(NULL, x);
+    STBDS_FREE(heap, x);
     x = y;
   }
   memset(a, 0, sizeof(*a));

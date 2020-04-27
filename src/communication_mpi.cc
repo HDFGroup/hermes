@@ -142,9 +142,8 @@ size_t MpiAssignIDsToNodes(CommunicationContext *comm,
 
   size_t scratch_size = (size * sizeof(char *) +
                          size * sizeof(char) * MPI_MAX_PROCESSOR_NAME);
-  u8 *scratch_memory = (u8 *)malloc(scratch_size);
-  Arena scratch_arena = {};
-  InitArena(&scratch_arena, scratch_size, scratch_memory);
+
+  Arena scratch_arena = InitArenaAndAllocate(scratch_size);
 
   char **node_names = PushArray<char *>(&scratch_arena, size);
   for (int i = 0; i < size; ++i) {

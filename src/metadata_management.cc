@@ -131,10 +131,9 @@ MetadataManager *GetMetadataManagerFromContext(SharedMemoryContext *context) {
   return result;
 }
 
-static void MetadataArenaErrorHandler(Arena *arena) {
-  LOG(FATAL) << "Metadata arena capacity (" << arena->capacity
-             << " bytes) exceeded. Consider increasing the value of "
-             << "metadata_arena_percentage in the Hermes configuration file."
+static void MetadataArenaErrorHandler() {
+  LOG(FATAL) << "Metadata arena capacity exceeded. Consider increasing the "
+             << "value of metadata_arena_percentage in the Hermes configuration"
              << std::endl;
 }
 
@@ -292,137 +291,22 @@ void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
   // Heaps
 
   u32 heap_alignment = 8;
-  size_t metadata_space_remaining = arena->capacity - arena->used;
-  size_t heap_space = metadata_space_remaining - sizeof(Heap);
-
-  Heap *map_heap = PushClearedStruct<Heap>(arena);
-  InitArena(&map_heap->arena, heap_space, (u8 *)(map_heap + 1));
-  map_heap->alignment = heap_alignment;
-  map_heap->free_list_offset = heap_alignment;
-  map_heap->grows_up = 1;
-
-  FreeBlock *map_first_free_block = (FreeBlock *)(map_heap->arena.base +
-                                                  heap_alignment);
-  // NOTE(chogan): offset 0 represents NULL
-  map_first_free_block->next_offset = 0;
-  // NOTE(chogan): Subtract alignment since we're using the first `alignment`
-  // sized block as the NULL block. It isn't crucial to get the size exactly
-  // right here, since we're growing toward another Heap and will use the end of
-  // that Heap for this Heap's upper bound.
-  map_first_free_block->size = heap_space - heap_alignment;
+  Heap *map_heap = InitHeapInArena(arena, heap_alignment);
   mdm->map_heap_offset = (u8 *)map_heap - (u8 *)mdm;
 
   // NOTE(chogan): This Heap is constructed at the end of the Metadata Arena and
   // will grow towards smaller addresses.
-  Heap *id_heap = (Heap *)((arena->base + arena->capacity) - sizeof(Heap));
-  memset(id_heap, 0, sizeof(Heap));
-  InitArena(&id_heap->arena, heap_space, (u8 *)(id_heap - 1));
-  id_heap->alignment = heap_alignment;
-  id_heap->free_list_offset = heap_alignment;
-  id_heap->grows_up = 0;
-
-  FreeBlock *id_first_free_block =
-    (FreeBlock *)(id_heap->arena.base - heap_alignment);
-  id_first_free_block->next_offset = 0;
-  id_first_free_block->size = heap_space - heap_alignment;
+  Heap *id_heap = InitHeapInArena(arena, false, heap_alignment);
   mdm->id_heap_offset = (u8 *)id_heap - (u8 *)mdm;
 
   // ID Maps
 
-  IdMap *bucket_map = HeapPush<IdMap>(map_heap);
+  IdMap *bucket_map = HeapPushStruct<IdMap>(map_heap);
   mdm->bucket_map_offset = (u8 *)bucket_map - (u8 *)mdm;
-  IdMap *vbucket_map = HeapPush<IdMap>(map_heap);
+  IdMap *vbucket_map = HeapPushStruct<IdMap>(map_heap);
   mdm->vbucket_map_offset = (u8 *)vbucket_map - (u8 *)mdm;
-  IdMap *blob_map = HeapPush<IdMap>(map_heap);
+  IdMap *blob_map = HeapPushStruct<IdMap>(map_heap);
   mdm->blob_map_offset = (u8 *)blob_map - (u8 *)mdm;
 }
 
-void CoalesceFreeBlocks(Heap *heap) {
-  if (heap->grows_up) {
-  } else {
-  }
-}
-
-#if 0
-FreeBlock *FindBestFit(FreeBlock *head, size_t desired_size, u32 threshold=0) {
-  FreeBlock *result = 0;
-  FreeBlock *prev = head;
-  FreeBlock *smallest_prev = head;
-  u32 smallest_wasted = 0xFFFFFFFF;
-
-  while(head && smallest_wasted > threshold) {
-    if (head->size >= desired_size) {
-      u32 wasted_space = head->size - desired_size ;
-      if (wasted_space < smallest_wasted) {
-        smallest_wasted = wasted_space;
-        result = head;
-        smallest_prev = prev;
-      }
-    }
-    prev = head;
-    head = head->next;
-  }
-
-  if (result) {
-    smallest_prev->next = result->next;
-  }
-
-  return result;
-}
-
-String *PushString(Heap *heap, const char *str, size_t length) {
-  String *result = 0;
-
-  if (heap->free_list) {
-    FreeBlock *best_fit = FindBestFit(heap->free_list,
-                                      sizeof(String) + length + 1);
-    if (best_fit) {
-      result = (String *)best_fit;
-      result->str = (char *)(result + 1);
-    }
-  }
-
-  if (!result) {
-    result = PushStruct<String>(&heap->arena);
-    size_t total_size = RoundUpToMultiple(length + 1, heap->alignment);
-    result->str = PushArray<char>(&heap->arena, total_size, 1);
-  }
-
-  result->length = length;
-  for (int i = 0; i < length; ++i) {
-    result->str[i] = str[i];
-  }
-  result->str[length] = '\0';
-
-  return result;
-}
-
-String *PushString(Heap *heap, const char *str) {
-  size_t max_size = heap->arena.capacity - heap->arena.used - sizeof(String);
-  size_t length = strnlen(str, max_size - 1);
-  String *result = PushString(heap, str, length);
-
-  return result;
-}
-
-String *PushString(Heap *heap, const std::string &str) {
-  String *result = PushString(heap, str.c_str(), str.size());
-
-  return result;
-}
-
-void FreeString(Heap *heap, String **str) {
-  if (heap && str && *str) {
-    FreeBlock *new_block = (FreeBlock *)(*str);
-    new_block->next = heap->free_list;
-    size_t freed_str_size = RoundUpToMultiple((*str)->length + 1,
-                                              heap->alignment);
-    new_block->size = freed_str_size + sizeof(**str);
-    heap->free_list = new_block;
-
-    // Invalidate caller's pointer so they can't accidentally access freed data
-    *str = 0;
-  }
-}
-#endif
 }  // namespace hermes

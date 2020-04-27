@@ -1,5 +1,7 @@
 #include "memory_arena.h"
 
+#include <cmath>
+
 /**
  * @file memory_arena.cc
  *
@@ -82,7 +84,7 @@ u8 *PushSize(Arena *arena, size_t size, bool grows_up, size_t alignment) {
   bool can_fit = size + arena->used <= arena->capacity;
 
   if (!can_fit && arena->error_handler) {
-    arena->error_handler(arena);
+    arena->error_handler();
   }
 
   assert(can_fit);
@@ -129,36 +131,171 @@ u8 *PushSizeAndClear(Arena *arena, size_t size, bool grows_up,
   return result;
 }
 
-FreeBlock *FindFirstFit(Heap *heap, u32 size) {
-  FreeBlock *result = 0;
+u8 *GetHeapMemory(Heap *heap) {
+  u8 *result = (u8 *)heap + heap->base_offset;
 
-  // TODO(chogan):
-  if (heap->grows_up) {
-  } else {
+  return result;
+}
+
+static inline FreeBlock *GetHeapFreeList(Heap *heap) {
+  FreeBlock *result = 0;
+  if (heap->free_list_offset) {
+    if (heap->grows_up) {
+      result = (FreeBlock *)(GetHeapMemory(heap) + heap->free_list_offset);
+    } else {
+      result = (FreeBlock *)(GetHeapMemory(heap) - heap->free_list_offset -
+                             sizeof(FreeBlock));
+    }
   }
 
   return result;
 }
 
+static inline FreeBlock *NextFreeBlock(Heap *heap, FreeBlock *block) {
+  FreeBlock *result = 0;
+  if (heap->grows_up) {
+    result = (FreeBlock *)(GetHeapMemory(heap) + block->next_offset);
+  } else {
+    result = (FreeBlock *)(GetHeapMemory(heap) - block->next_offset -
+                           sizeof(FreeBlock));
+  }
+
+  return result;
+}
+
+static inline u32 GetHeapOffset(Heap *heap, FreeBlock *block) {
+  int adjustment = heap->grows_up ? 0 : sizeof(FreeBlock);
+  ptrdiff_t signed_result = (u8 *)block - GetHeapMemory(heap);
+  u32 result = (u32)std::abs(signed_result) + adjustment;
+
+  return result;
+}
+
+void HeapErrorHandler() {
+  LOG(FATAL) << "Heap out of memory. Increase size of Metadata Arena\n"
+             << std::endl;
+}
+
+Heap *InitHeapInArena(Arena *arena, bool grows_up, u16 alignment) {
+  Heap *result = 0;
+  if (grows_up) {
+    result = PushClearedStruct<Heap>(arena);
+  } else {
+    result = (Heap *)((arena->base + arena->capacity) - sizeof(Heap));
+    memset(result, 0, sizeof(Heap));
+  }
+
+  size_t heap_size = arena->capacity - arena->used;
+  result->base_offset = grows_up ? (u8 *)(result + 1) - (u8 *)result : 0;
+  result->error_handler = HeapErrorHandler;
+  result->alignment = alignment;
+  result->free_list_offset = alignment;
+  result->grows_up = grows_up;
+
+  FreeBlock *first_free_block = 0;
+  if (grows_up) {
+    first_free_block = (FreeBlock *)(GetHeapMemory(result) + alignment);
+  } else {
+    first_free_block =
+      (FreeBlock *)(GetHeapMemory(result) - sizeof(FreeBlock) - alignment);
+  }
+
+  // NOTE(chogan): offset 0 represents NULL
+  first_free_block->next_offset = 0;
+  // NOTE(chogan): Subtract alignment since we're using the first `alignment`
+  // sized block as the NULL block.
+  first_free_block->size = heap_size - alignment;
+
+  return result;
+}
+
+FreeBlock *FindFirstFit(Heap *heap, u32 desired_size) {
+  FreeBlock *result = 0;
+  FreeBlock *prev = 0;
+  FreeBlock *head = GetHeapFreeList(heap);
+
+  while (head) {
+    if (head->size >= desired_size) {
+      result = head;
+      u32 remaining_size = head->size - desired_size;
+      u32 next_offset = 0;
+
+      if (remaining_size) {
+        // NOTE(chogan): Split the remaining size off into a new FreeBlock
+        FreeBlock *split_block = 0;
+        if (heap->grows_up) {
+          split_block = (FreeBlock *)((u8 *)result + desired_size);
+        } else {
+          split_block = (FreeBlock *)((u8 *)result - desired_size -
+                                      sizeof(FreeBlock));
+        }
+        split_block->size = remaining_size;
+        split_block->next_offset = result->next_offset;
+        u32 split_block_offset = GetHeapOffset(heap, split_block);
+        next_offset = split_block_offset;
+      } else {
+        next_offset = result->next_offset;
+      }
+
+      if (prev) {
+        prev->next_offset = next_offset;
+      } else {
+        heap->free_list_offset = next_offset;
+      }
+
+      break;
+    }
+    prev = head;
+    head = NextFreeBlock(heap, head);
+  }
+
+  if (!result && heap->error_handler) {
+    heap->error_handler();
+  }
+
+  return result;
+}
+
+#if 0
+FreeBlock *FindBestFit(FreeBlock *head, size_t desired_size, u32 threshold=0) {
+  FreeBlock *result = 0;
+  FreeBlock *prev = head;
+  FreeBlock *smallest_prev = head;
+  u32 smallest_wasted = 0xFFFFFFFF;
+
+  while(head && smallest_wasted > threshold) {
+    if (head->size >= desired_size) {
+      u32 wasted_space = head->size - desired_size ;
+      if (wasted_space < smallest_wasted) {
+        smallest_wasted = wasted_space;
+        result = head;
+        smallest_prev = prev;
+      }
+    }
+    prev = head;
+    head = head->next;
+  }
+
+  if (result) {
+    smallest_prev->next = result->next;
+  }
+
+  return result;
+}
+#endif
+
 u8 *HeapPushSize(Heap *heap, u32 size) {
   u8 *result = 0;
 
-  // TODO(chogan): Check when Heaps collide
-
-  // TODO(chogan):
-  if (heap->grows_up) {
-  } else {
-  }
+  // TODO(chogan): Check for collision between Map Heap and ID List Heap
 
   // TODO(chogan): Think about lock granularity
   BeginTicketMutex(&heap->mutex);
-  if (heap->free_list_offset) {
-    FreeBlock *first_fit = FindFirstFit(heap, size);
-    if (first_fit) {
-      result = (u8 *)first_fit;
-    } else {
-      // TODO(chogan): @errorhandling
-    }
+  FreeBlock *first_fit = FindFirstFit(heap, size + sizeof(FreeBlockHeader));
+  if (first_fit) {
+    FreeBlockHeader *header = (FreeBlockHeader *)first_fit;
+    header->size = size;
+    result = (u8 *)(header + 1);
   } else {
     // TODO(chogan): @errorhandling
   }
@@ -169,20 +306,36 @@ u8 *HeapPushSize(Heap *heap, u32 size) {
 }
 
 void HeapFree(Heap *heap, void *ptr) {
+  BeginTicketMutex(&heap->mutex);
   if (heap && ptr) {
-    // FreeBlock *new_block = (FreeBlock *)(ptr);
-    // TODO(chogan):
+    FreeBlockHeader *header = (FreeBlockHeader *)ptr - 1;
+    u32 size = header->size;
+    FreeBlock *new_block = (FreeBlock *)(header);
+    new_block->size = size + sizeof(FreeBlockHeader);
+    new_block->next_offset = heap->free_list_offset;
+    heap->free_list_offset = GetHeapOffset(heap, new_block);
   }
+  EndTicketMutex(&heap->mutex);
 }
 
 void *HeapRealloc(Heap *heap, void *ptr, size_t size) {
-  // TODO(chogan): Store free blocks as offsets from arena.base
-  void *result = PushSize(&heap->arena, size);
-  memcpy(result, heap->arena.base, heap->arena.used);
-  HeapFree(heap, ptr);
-  heap->arena.base = (u8 *)result;
+
+  if (ptr) {
+    // Only support malloc behavior since the max Heap size can never grow
+    // TODO(chogan): @errorhandling
+    assert(!"Can't realloc in Heap\n");
+  }
+
+  void *result = HeapPushSize(heap, size);
 
   return result;
+}
+
+void CoalesceFreeBlocks(Heap *heap) {
+  // TODO(chogan):
+  if (heap->grows_up) {
+  } else {
+  }
 }
 
 void BeginTicketMutex(TicketMutex *mutex) {

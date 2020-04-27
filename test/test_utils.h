@@ -1,6 +1,9 @@
 #ifndef HERMES_TEST_UTILS_H_
 #define HERMES_TEST_UTILS_H_
 
+#include <stdio.h>
+#include <stdlib.h>
+
 namespace hermes {
 namespace testing {
 
