@@ -61,6 +61,33 @@ struct Arena {
   i32 temp_count;
 };
 
+struct Heap {
+  ArenaErrorFunc *error_handler;
+  TicketMutex mutex;
+  /** Offset of the beginning of this heap's memory, relative to the Heap */
+  u32 base_offset;
+  /** Offset of the head of the free list, relative to base_offset */
+  u32 free_list_offset;
+  u16 alignment;
+  u16 grows_up;
+};
+
+struct FreeBlockHeader {
+  size_t size;
+};
+
+struct FreeBlock {
+  /* The offset of the next FreeBlock in the list. Offset 0 represents NULL */
+  u32 next_offset;
+  /* The size of the next FreeBlock in the list. */
+  u32 size;
+};
+
+struct TemporaryMemory {
+  Arena *arena;
+  size_t used;
+};
+
 /**
  * A block of memory that can be used dynamically, but is deleted when exiting
  * the current scope.
@@ -127,27 +154,15 @@ struct ScopedTemporaryMemory {
   }
 };
 
-struct Heap {
-  ArenaErrorFunc *error_handler;
-  TicketMutex mutex;
-  /** Offset of the beginning of this heap's memory, relative to the Heap */
-  u32 base_offset;
-  /** Offset of the head of the free list, relative to base_offset */
-  u32 free_list_offset;
-  u16 alignment;
-  u16 grows_up;
-};
+/**
+ *
+ */
+TemporaryMemory BeginTemporaryMemory(Arena *arena);
 
-struct FreeBlockHeader {
-  size_t size;
-};
-
-struct FreeBlock {
-  /* The offset of the next FreeBlock in the list. Offset 0 represents NULL */
-  u32 next_offset;
-  /* The size of the next FreeBlock in the list. */
-  u32 size;
-};
+/**
+ *
+ */
+void EndTemporaryMemory(TemporaryMemory *temp_memory);
 
 /**
  * Initializes an Arena with a starting size and base pointer. The @p base

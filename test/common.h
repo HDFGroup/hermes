@@ -294,7 +294,9 @@ std::shared_ptr<api::Hermes> InitHermes() {
     context = GetSharedMemoryContext(config.buffer_pool_shmem_name);
 
     if (comm.first_on_node) {
-      void *comm_state_location = arenas[kArenaType_MetaData].base;
+      MetadataManager *mdm = GetMetadataManagerFromContext(&context);
+      size_t comm_state_size = arenas[kArenaType_Transient].used;
+      void *comm_state_location = (u8 *)mdm - comm_state_size;
       comm.sync_comm_state(comm_state_location, comm.state);
       comm.state = comm_state_location;
     }

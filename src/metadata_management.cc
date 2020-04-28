@@ -166,6 +166,8 @@ void PutBucketId(MetadataManager *mdm, CommunicationContext *comm,
                  RpcContext *rpc, const std::string &name, BucketID id) {
   int node_id = HashString(mdm, comm, name.c_str());
 
+  // TODO(chogan): Check for overlapping heaps here
+
   if (node_id == comm->node_id) {
     LocalPut(mdm, name.c_str(), id.as_int, MapType::kBucket);
   } else {
@@ -291,7 +293,7 @@ void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
   // Heaps
 
   u32 heap_alignment = 8;
-  Heap *map_heap = InitHeapInArena(arena, heap_alignment);
+  Heap *map_heap = InitHeapInArena(arena, true, heap_alignment);
   mdm->map_heap_offset = (u8 *)map_heap - (u8 *)mdm;
 
   // NOTE(chogan): This Heap is constructed at the end of the Metadata Arena and
