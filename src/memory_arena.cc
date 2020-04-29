@@ -351,6 +351,14 @@ void *HeapRealloc(Heap *heap, void *ptr, size_t size) {
 }
 
 void CoalesceFreeBlocks(Heap *heap) {
+  // Test case: Lots of blocks are free but none of the pointers are adjacent
+  // X: A used block
+  // n: A link to free block with index n
+  // /: End of the free list
+  //
+  //  0 1 2 3 4 5 6 7 8
+  // |2|/|4|1|6|3|8|X|5|
+
   // TODO(chogan):
   if (heap->grows_up) {
   } else {
