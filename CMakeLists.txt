@@ -167,6 +167,10 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
       NOT "${CMAKE_CXX_FLAGS_DEBUG}" MATCHES ".*-fsanitize=address.*")
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address"
         CACHE STRING "" FORCE)
+  else()
+    string(REPLACE
+      "-fsanitize=address" "" FLAGS_NO_SANITIZE "${CMAKE_CXX_FLAGS_DEBUG}")
+    set(CMAKE_CXX_FLAGS_DEBUG "${FLAGS_NO_SANITIZE}" CACHE STRING "" FORCE)
   endif()
 endif()
 
