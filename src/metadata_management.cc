@@ -55,29 +55,43 @@ TicketMutex *GetMapMutex(MetadataManager *mdm, MapType map_type) {
   return mutex;
 }
 
-IdMap *GetMapByOffset(MetadataManager *mdm, u32 offset) {
+static IdMap *GetMapByOffset(MetadataManager *mdm, u32 offset) {
   IdMap *result =(IdMap *)((u8 *)mdm + offset);
 
   return result;
 }
 
-IdMap *GetBucketMap(MetadataManager *mdm) {
+static IdMap *GetBucketMap(MetadataManager *mdm) {
   IdMap *result = GetMapByOffset(mdm, mdm->bucket_map_offset);
 
   return result;
 }
 
-IdMap *GetVBucketMap(MetadataManager *mdm) {
+static IdMap *GetVBucketMap(MetadataManager *mdm) {
   IdMap *result = GetMapByOffset(mdm, mdm->bucket_map_offset);
 
   return result;
 }
 
-IdMap *GetBlobMap(MetadataManager *mdm) {
+static IdMap *GetBlobMap(MetadataManager *mdm) {
   IdMap *result = GetMapByOffset(mdm, mdm->bucket_map_offset);
 
   return result;
 }
+
+static Heap *GetMapHeap(MetadataManager *mdm) {
+  Heap *result = (Heap *)((u8 *)mdm + mdm->map_heap_offset);
+
+  return result;
+}
+
+#if 0
+static Heap *GetIdHeap(MetadataManager *mdm) {
+  Heap *result = (Heap *)((u8 *)mdm + mdm->id_heap_offset);
+
+  return result;
+}
+#endif
 
 IdMap *GetMap(MetadataManager *mdm, MapType map_type) {
   IdMap *result = 0;
@@ -100,8 +114,7 @@ IdMap *GetMap(MetadataManager *mdm, MapType map_type) {
 }
 
 void LocalPut(MetadataManager *mdm, const char *key, u64 val, MapType map_type){
-  // TODO(chogan):
-  Heap *heap = NULL;
+  Heap *heap = GetMapHeap(mdm);
   TicketMutex *mutex = GetMapMutex(mdm, map_type);
 
   BeginTicketMutex(mutex);
@@ -111,13 +124,11 @@ void LocalPut(MetadataManager *mdm, const char *key, u64 val, MapType map_type){
 }
 
 u64 LocalGet(MetadataManager *mdm, const char *key, MapType map_type) {
-  // TODO(chogan):
-  Heap *heap = NULL;
+  Heap *heap = GetMapHeap(mdm);
   TicketMutex *mutex = GetMapMutex(mdm, map_type);
 
   BeginTicketMutex(mutex);
   IdMap *map = GetMap(mdm, map_type);
-  // TODO(chogan): Make sure default map value is 0
   u64 result = shget(map, key, heap);
   EndTicketMutex(mutex);
 
@@ -208,9 +219,7 @@ BucketID GetNextFreeBucketId(SharedMemoryContext *context,
   }
   EndTicketMutex(&mdm->bucket_mutex);
 
-  BeginTicketMutex(&mdm->bucket_map_mutex);
   PutBucketId(mdm, comm, rpc, name, result);
-  EndTicketMutex(&mdm->bucket_map_mutex);
 
   return result;
 }
@@ -303,11 +312,19 @@ void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
 
   // ID Maps
 
-  IdMap *bucket_map = HeapPushStruct<IdMap>(map_heap);
+  IdMap *bucket_map = 0;
+  sh_new_strdup(bucket_map, map_heap);
+  shdefault(bucket_map, 0, map_heap);
   mdm->bucket_map_offset = (u8 *)bucket_map - (u8 *)mdm;
-  IdMap *vbucket_map = HeapPushStruct<IdMap>(map_heap);
+
+  IdMap *vbucket_map = 0;
+  sh_new_strdup(vbucket_map, map_heap);
+  shdefault(vbucket_map, 0, map_heap);
   mdm->vbucket_map_offset = (u8 *)vbucket_map - (u8 *)mdm;
-  IdMap *blob_map = HeapPushStruct<IdMap>(map_heap);
+
+  IdMap *blob_map = 0;
+  sh_new_strdup(blob_map, map_heap);
+  shdefault(blob_map, 0, map_heap);
   mdm->blob_map_offset = (u8 *)blob_map - (u8 *)mdm;
 }
 

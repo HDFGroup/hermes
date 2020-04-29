@@ -16,16 +16,6 @@ enum class MapType {
   kBlob,
 };
 
-struct String {
-  char *str;
-  size_t length;
-};
-
-struct HeapString {
-  u32 str_offset;
-  u32 length;
-};
-
 union BucketID {
   struct {
     u32 index;
