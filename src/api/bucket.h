@@ -30,7 +30,8 @@ class Bucket {
     LOG(INFO) << "Create NULL Bucket " << std::endl;
   }
 
-  Bucket(const std::string &initial_name, std::shared_ptr<Hermes> const &h);
+  Bucket(const std::string &initial_name,
+         std::shared_ptr<Hermes> const &h, Context ctx);
 
   ~Bucket() {
     name_.clear();

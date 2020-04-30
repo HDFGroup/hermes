@@ -19,9 +19,9 @@ struct bkt_hdl * Open(const std::string &name, Context &ctx) {
 }
 
 Bucket::Bucket(const std::string &initial_name,
-               const std::shared_ptr<Hermes> &h)
+               const std::shared_ptr<Hermes> &h, Context ctx)
     : name_(initial_name), hermes_(h) {
-
+  (void)ctx;
   BucketID id = GetBucketIdByName(&hermes_->context_, initial_name.c_str(),
                                   &hermes_->comm_, &hermes_->rpc_);
 
