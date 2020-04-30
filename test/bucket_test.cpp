@@ -51,12 +51,15 @@ int main()
 	std::shared_ptr<hermes::api::Hermes> hermes_app = std::make_shared<hermes::api::Hermes>();
   hermes::api::Context ctx;
   
-  hermes::api::Bucket my_bucket("compression", hermes_app);
+  hermes::api::Bucket my_bucket("compression", hermes_app, ctx);
 	hermes_app->Display_bucket();
   hermes::api::Blob p1 (1024, 255);
 	hermes::api::Blob p2 (p1);
   my_bucket.Put("Blob1", p1, ctx);
   my_bucket.Put("Blob2", p2, ctx);
+
+  // TODO(chogan): Enable once MetadataManager is working
+#if 0
 	if (my_bucket.Contain_blob("Blob1") == 1)
 		std::cout<< "Found Blob1\n";
 	else
@@ -65,6 +68,7 @@ int main()
 		std::cout<< "Found Blob2\n";
 	else
 		std::cout<< "Not found Blob2\n";
+#endif
 
   hermes::api::VBucket my_vb("VB1", hermes_app);
 	hermes_app->Display_vbucket();
