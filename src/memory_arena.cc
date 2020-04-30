@@ -169,10 +169,13 @@ static inline FreeBlock *GetHeapFreeList(Heap *heap) {
 
 static inline FreeBlock *NextFreeBlock(Heap *heap, FreeBlock *block) {
   FreeBlock *result = 0;
-  if (heap->grows_up) {
-    result = (FreeBlock *)(GetHeapMemory(heap) + block->next_offset);
-  } else {
-    result = (FreeBlock *)(GetHeapMemory(heap) - block->next_offset);
+
+  if (block->next_offset) {
+    if (heap->grows_up) {
+      result = (FreeBlock *)(GetHeapMemory(heap) + block->next_offset);
+    } else {
+      result = (FreeBlock *)(GetHeapMemory(heap) - block->next_offset);
+    }
   }
 
   return result;
