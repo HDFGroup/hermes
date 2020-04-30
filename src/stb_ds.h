@@ -802,7 +802,7 @@ typedef struct
   size_t seed;
   size_t slot_count_log2;
   stbds_string_arena string;
-  stbds_hash_bucket *storage; // not a separate allocation, just 64-byte aligned storage after this struct
+  ptrdiff_t storage_offset; // not a separate allocation, just 64-byte aligned storage after this struct. stbds_hash_bucket
 } stbds_hash_index;
 
 #define STBDS_INDEX_EMPTY    -1
@@ -825,6 +825,8 @@ void stbds_rand_seed(size_t seed)
   var ^= temp ^ v32
 
 #define STBDS_SIZE_T_BITS           ((sizeof (size_t)) * 8)
+
+#define stbds_table_storage(t) ((stbds_hash_bucket *)(t->storage_offset ? (char *)t + t->storage_offset : 0))
 
 static size_t stbds_probe_position(size_t hash, size_t slot_count, size_t slot_log2)
 {
@@ -851,7 +853,8 @@ static stbds_hash_index *stbds_make_hash_index(size_t slot_count, stbds_hash_ind
 {
   stbds_hash_index *t;
   t = (stbds_hash_index *) STBDS_REALLOC(heap,0,(slot_count >> STBDS_BUCKET_SHIFT) * sizeof(stbds_hash_bucket) + sizeof(stbds_hash_index) + STBDS_CACHE_LINE_SIZE-1);
-  t->storage = (stbds_hash_bucket *) STBDS_ALIGN_FWD((size_t) (t+1), STBDS_CACHE_LINE_SIZE);
+  stbds_hash_bucket *t_storage = (stbds_hash_bucket *) STBDS_ALIGN_FWD((size_t) (t+1), STBDS_CACHE_LINE_SIZE);
+  t->storage_offset = (char *)t_storage - (char *)t;
   t->slot_count = slot_count;
   t->slot_count_log2 = stbds_log2(slot_count);
   t->tombstone_count = 0;
@@ -919,7 +922,7 @@ static stbds_hash_index *stbds_make_hash_index(size_t slot_count, stbds_hash_ind
   {
     size_t i,j;
     for (i=0; i < slot_count >> STBDS_BUCKET_SHIFT; ++i) {
-      stbds_hash_bucket *b = &t->storage[i];
+      stbds_hash_bucket *b = &stbds_table_storage(t)[i];
       for (j=0; j < STBDS_BUCKET_LENGTH; ++j)
         b->hash[j] = STBDS_HASH_EMPTY;
       for (j=0; j < STBDS_BUCKET_LENGTH; ++j)
@@ -932,7 +935,7 @@ static stbds_hash_index *stbds_make_hash_index(size_t slot_count, stbds_hash_ind
     size_t i,j;
     t->used_count = ot->used_count;
     for (i=0; i < ot->slot_count >> STBDS_BUCKET_SHIFT; ++i) {
-      stbds_hash_bucket *ob = &ot->storage[i];
+      stbds_hash_bucket *ob = &stbds_table_storage(ot)[i];
       for (j=0; j < STBDS_BUCKET_LENGTH; ++j) {
         if (STBDS_INDEX_IN_USE(ob->index[j])) {
           size_t hash = ob->hash[j];
@@ -942,7 +945,7 @@ static stbds_hash_index *stbds_make_hash_index(size_t slot_count, stbds_hash_ind
           for (;;) {
             size_t limit,z;
             stbds_hash_bucket *bucket;
-            bucket = &t->storage[pos >> STBDS_BUCKET_SHIFT];
+            bucket = &stbds_table_storage(t)[pos >> STBDS_BUCKET_SHIFT];
             STBDS_STATS(++stbds_rehash_probes);
 
             for (z=pos & STBDS_BUCKET_MASK; z < STBDS_BUCKET_LENGTH; ++z) {
@@ -1180,6 +1183,7 @@ static int stbds_is_key_equal(void *a, size_t elemsize, void *key, size_t keysiz
 
 #define stbds_hash_table(a)  ((stbds_hash_index *) (stbds_header(a)->hash_table_offset ? (char *)stbds_header(a) + stbds_header(a)->hash_table_offset : 0))
 
+
 void stbds_hmfree_func(void *a, size_t elemsize, Heap *heap)
 {
   if (a == NULL) return;
@@ -1212,7 +1216,7 @@ static ptrdiff_t stbds_hm_find_slot(void *a, size_t elemsize, void *key, size_t 
 
   for (;;) {
     STBDS_STATS(++stbds_hash_probes);
-    bucket = &table->storage[pos >> STBDS_BUCKET_SHIFT];
+    bucket = &stbds_table_storage(table)[pos >> STBDS_BUCKET_SHIFT];
 
     // start searching from pos to end of bucket, this should help performance on small hash tables that fit in cache
     for (i=pos & STBDS_BUCKET_MASK; i < STBDS_BUCKET_LENGTH; ++i) {
@@ -1268,7 +1272,7 @@ void * stbds_hmget_key_ts(void *a, size_t elemsize, void *key, size_t keysize, p
       if (slot < 0) {
         *temp = STBDS_INDEX_EMPTY;
       } else {
-        stbds_hash_bucket *b = &table->storage[slot >> STBDS_BUCKET_SHIFT];
+        stbds_hash_bucket *b = &stbds_table_storage(table)[slot >> STBDS_BUCKET_SHIFT];
         *temp = b->index[slot & STBDS_BUCKET_MASK];
       }
     }
@@ -1352,7 +1356,7 @@ void *stbds_hmput_key(void *a, size_t elemsize, void *key, size_t keysize, int m
 
     for (;;) {
       STBDS_STATS(++stbds_hash_probes);
-      bucket = &table->storage[pos >> STBDS_BUCKET_SHIFT];
+      bucket = &stbds_table_storage(table)[pos >> STBDS_BUCKET_SHIFT];
 
       // start searching from pos to end of bucket
       for (i=pos & STBDS_BUCKET_MASK; i < STBDS_BUCKET_LENGTH; ++i) {
@@ -1408,7 +1412,7 @@ void *stbds_hmput_key(void *a, size_t elemsize, void *key, size_t keysize, int m
 
       STBDS_ASSERT((size_t) i+1 <= stbds_arrcap(a));
       stbds_header(a)->length = i+1;
-      bucket = &table->storage[pos >> STBDS_BUCKET_SHIFT];
+      bucket = &stbds_table_storage(table)[pos >> STBDS_BUCKET_SHIFT];
       bucket->hash[pos & STBDS_BUCKET_MASK] = hash;
       bucket->index[pos & STBDS_BUCKET_MASK] = i-1;
       stbds_temp(a) = i-1;
@@ -1453,7 +1457,7 @@ void * stbds_hmdel_key(void *a, size_t elemsize, void *key, size_t keysize, size
       if (slot < 0)
         return a;
       else {
-        stbds_hash_bucket *b = &table->storage[slot >> STBDS_BUCKET_SHIFT];
+        stbds_hash_bucket *b = &stbds_table_storage(table)[slot >> STBDS_BUCKET_SHIFT];
         int i = slot & STBDS_BUCKET_MASK;
         ptrdiff_t old_index = b->index[i];
         ptrdiff_t final_index = (ptrdiff_t) stbds_arrlen(raw_a)-1-1; // minus one for the raw_a vs a, and minus one for 'last'
@@ -1480,7 +1484,7 @@ void * stbds_hmdel_key(void *a, size_t elemsize, void *key, size_t keysize, size
           else
             slot = stbds_hm_find_slot(a, elemsize,  (char* ) a+elemsize*old_index + keyoffset, keysize, keyoffset, mode);
           STBDS_ASSERT(slot >= 0);
-          b = &table->storage[slot >> STBDS_BUCKET_SHIFT];
+          b = &stbds_table_storage(table)[slot >> STBDS_BUCKET_SHIFT];
           i = slot & STBDS_BUCKET_MASK;
           STBDS_ASSERT(b->index[i] == final_index);
           b->index[i] = old_index;
