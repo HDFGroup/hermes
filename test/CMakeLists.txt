@@ -19,7 +19,7 @@ if(ZLIB_FOUND)
 endif()
 
 foreach(program ${API_TESTS})
-  add_executable(${program} ${program}.cpp)
+  add_executable(${program} ${program}.cc)
   target_link_libraries(${program} hermes ZLIB::ZLIB)
 endforeach()
 
