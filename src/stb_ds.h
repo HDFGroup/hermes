@@ -633,7 +633,7 @@ typedef struct
 {
   size_t      length;
   size_t      capacity;
-  void      * hash_table;
+  ptrdiff_t   hash_table_offset;
   ptrdiff_t   temp;
 } stbds_array_header;
 
@@ -760,7 +760,7 @@ void *stbds_arrgrowf(void *a, size_t elemsize, size_t addlen, size_t min_cap, He
   b = (char *) b + sizeof(stbds_array_header);
   if (a == NULL) {
     stbds_header(b)->length = 0;
-    stbds_header(b)->hash_table = 0;
+    stbds_header(b)->hash_table_offset = 0;
   } else {
     STBDS_STATS(++stbds_array_grow);
   }
@@ -1178,7 +1178,7 @@ static int stbds_is_key_equal(void *a, size_t elemsize, void *key, size_t keysiz
 #define STBDS_HASH_TO_ARR(x,elemsize) ((char*) (x) - (elemsize))
 #define STBDS_ARR_TO_HASH(x,elemsize) ((char*) (x) + (elemsize))
 
-#define stbds_hash_table(a)  ((stbds_hash_index *) stbds_header(a)->hash_table)
+#define stbds_hash_table(a)  ((stbds_hash_index *) (stbds_header(a)->hash_table_offset ? (char *)stbds_header(a) + stbds_header(a)->hash_table_offset : 0))
 
 void stbds_hmfree_func(void *a, size_t elemsize, Heap *heap)
 {
@@ -1192,7 +1192,7 @@ void stbds_hmfree_func(void *a, size_t elemsize, Heap *heap)
     }
     stbds_strreset(&stbds_hash_table(a)->string, heap);
   }
-  STBDS_FREE(heap, stbds_header(a)->hash_table);
+  STBDS_FREE(heap, stbds_hash_table(a));
   STBDS_FREE(heap, stbds_header(a));
 }
 
@@ -1260,7 +1260,7 @@ void * stbds_hmget_key_ts(void *a, size_t elemsize, void *key, size_t keysize, p
     stbds_hash_index *table;
     void *raw_a = STBDS_HASH_TO_ARR(a,elemsize);
     // adjust a to point to the default element
-    table = (stbds_hash_index *) stbds_header(raw_a)->hash_table;
+    table = stbds_hash_table(raw_a);
     if (table == 0) {
       *temp = -1;
     } else {
@@ -1319,7 +1319,7 @@ void *stbds_hmput_key(void *a, size_t elemsize, void *key, size_t keysize, int m
   raw_a = a;
   a = STBDS_HASH_TO_ARR(a,elemsize);
 
-  table = (stbds_hash_index *) stbds_header(a)->hash_table;
+  table = stbds_hash_table(a);
 
   if (table == NULL || table->used_count >= table->used_count_threshold) {
     stbds_hash_index *nt;
@@ -1331,7 +1331,8 @@ void *stbds_hmput_key(void *a, size_t elemsize, void *key, size_t keysize, int m
       STBDS_FREE(heap, table);
     else
       nt->string.mode = mode >= STBDS_HM_STRING ? STBDS_SH_DEFAULT : 0;
-    stbds_header(a)->hash_table = table = nt;
+    table = nt;
+    stbds_header(a)->hash_table_offset = table ? (char *)table - (char *)stbds_header(a) : 0;
     STBDS_STATS(++stbds_hash_grow);
   }
 
@@ -1429,7 +1430,8 @@ void * stbds_shmode_func(size_t elemsize, size_t capacity, int mode, Heap *heap)
   stbds_hash_index *h;
   memset(a, 0, elemsize);
   stbds_header(a)->length = 1;
-  stbds_header(a)->hash_table = h = (stbds_hash_index *) stbds_make_hash_index(STBDS_BUCKET_LENGTH, NULL, heap);
+  h = (stbds_hash_index *) stbds_make_hash_index(STBDS_BUCKET_LENGTH, NULL, heap);
+  stbds_header(a)->hash_table_offset = h ? (char *)h - (char *)stbds_header(a) : 0;
   h->string.mode = (unsigned char) mode;
   return STBDS_ARR_TO_HASH(a,elemsize);
 }
@@ -1441,7 +1443,7 @@ void * stbds_hmdel_key(void *a, size_t elemsize, void *key, size_t keysize, size
   } else {
     stbds_hash_index *table;
     void *raw_a = STBDS_HASH_TO_ARR(a,elemsize);
-    table = (stbds_hash_index *) stbds_header(raw_a)->hash_table;
+    table = stbds_hash_table(raw_a);
     stbds_temp(raw_a) = 0;
     if (table == 0) {
       return a;
@@ -1486,11 +1488,13 @@ void * stbds_hmdel_key(void *a, size_t elemsize, void *key, size_t keysize, size
         stbds_header(raw_a)->length -= 1;
 
         if (table->used_count < table->used_count_shrink_threshold && table->slot_count > STBDS_BUCKET_LENGTH) {
-          stbds_header(raw_a)->hash_table = stbds_make_hash_index(table->slot_count>>1, table, heap);
+          void *tmp = stbds_make_hash_index(table->slot_count>>1, table, heap);
+          stbds_header(raw_a)->hash_table_offset = tmp ? (char *)tmp - (char *)stbds_header(raw_a) : 0;
           STBDS_FREE(heap, table);
           STBDS_STATS(++stbds_hash_shrink);
         } else if (table->tombstone_count > table->tombstone_count_threshold) {
-          stbds_header(raw_a)->hash_table = stbds_make_hash_index(table->slot_count   , table, heap);
+          void *tmp = stbds_make_hash_index(table->slot_count   , table, heap);
+          stbds_header(raw_a)->hash_table_offset = tmp ? (char *)tmp - (char *)stbds_header(raw_a) : 0;
           STBDS_FREE(heap, table);
           STBDS_STATS(++stbds_hash_rebuild);
         }
