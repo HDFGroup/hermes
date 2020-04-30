@@ -1465,7 +1465,7 @@ void * stbds_hmdel_key(void *a, size_t elemsize, void *key, size_t keysize, size
         --table->used_count;
         ++table->tombstone_count;
         stbds_temp(raw_a) = 1;
-        STBDS_ASSERT(table->used_count >= 0);
+        // STBDS_ASSERT(table->used_count >= 0);
         //STBDS_ASSERT(table->tombstone_count < table->slot_count/4);
         b->hash[i] = STBDS_HASH_DELETED;
         b->index[i] = STBDS_INDEX_DELETED;
@@ -1635,17 +1635,17 @@ void stbds_unit_tests(Heap *heap)
   STBDS_ASSERT(0);
 #else
   const int testsize = 100000;
-  const int testsize2 = testsize/20;
+  // const int testsize2 = testsize/20;
   int *arr=NULL;
   // struct { int   key;        int value; }  *intmap  = NULL;
   // struct { char *key;        int value; }  *strmap  = NULL;
   struct TestIntMap *intmap = NULL;
   struct TestStrMap *strmap = NULL;
-  struct { stbds_struct key; int value; }  *map     = NULL;
-  stbds_struct                             *map2    = NULL;
-  stbds_struct2                            *map3    = NULL;
-  stbds_string_arena                        sa      = { 0 };
-  int key3[2] = { 1,2 };
+  // struct { stbds_struct key; int value; }  *map     = NULL;
+  // stbds_struct                             *map2    = NULL;
+  // stbds_struct2                            *map3    = NULL;
+  // stbds_string_arena                        sa      = { 0 };
+  // int key3[2] = { 1,2 };
   ptrdiff_t temp;
 
   int i,j;
