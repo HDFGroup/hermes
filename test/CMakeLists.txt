@@ -62,3 +62,15 @@ add_test(NAME TestConfigParser
 
 add_executable(metadata_test metadata_test.cc)
 target_link_libraries(metadata_test ${LIBRT} hermes MPI::MPI_CXX)
+
+#------------------------------------------------------------------------------
+# Memory Management tests
+#------------------------------------------------------------------------------
+
+add_executable(mem memory_test.cc)
+target_link_libraries(mem hermes)
+add_test(NAME TestMemoryManagement COMMAND mem)
+
+add_executable(stb_map stb_map_test.cc)
+target_link_libraries(stb_map hermes)
+add_test(NAME TestSTBMapWithHeap COMMAND stb_map)

@@ -25,7 +25,7 @@ int main(int argc, char **argv) {
     int app_rank = hermes->GetProcessRank();
     int app_size = hermes->GetNumProcesses();
 
-    size_t data_size = 4 * 1024;
+    size_t data_size = KILOBYTES(4);
     size_t bytes_per_rank = data_size / app_size ;
     size_t remaining_bytes = data_size % app_size;
 
@@ -34,7 +34,7 @@ int main(int argc, char **argv) {
     }
 
     hapi::Context ctx;
-    hapi::Bucket bucket(std::string("test_bucket"), hermes);
+    hapi::Bucket bucket(std::string("test_bucket"), hermes, ctx);
 
     hapi::Blob put_data(bytes_per_rank, rand() % 255);
 

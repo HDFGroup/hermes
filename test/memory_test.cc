@@ -70,7 +70,7 @@ void TestFillFreeBlocks(Heap *heap) {
 int main() {
 
 
-  Arena arena = InitArenaAndAllocate(4 * 1024);
+  Arena arena = InitArenaAndAllocate(KILOBYTES(4));
 
   TemporaryMemory temporary_memory = BeginTemporaryMemory(&arena);
   Heap *heap = InitHeapInArena(temporary_memory.arena);
