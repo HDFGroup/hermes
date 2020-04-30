@@ -10,11 +10,11 @@ namespace hermes {
 namespace api {
 
 struct bkt_hdl * Open(const std::string &name, Context &ctx) {
-	(void)ctx;
+  (void)ctx;
   struct bkt_hdl *ret = nullptr;
-	
-	LOG(INFO) << "Opening a bucket to" << name << '\n';
-    
+
+  LOG(INFO) << "Opening a bucket to" << name << '\n';
+
   return ret;
 }
 
@@ -25,7 +25,6 @@ Bucket::Bucket(const std::string &initial_name,
   BucketID id = GetBucketIdByName(&hermes_->context_, initial_name.c_str(),
                                   &hermes_->comm_, &hermes_->rpc_);
 
-  // TODO(chogan): Need to allow passing a Context for `Open` and `Create`
   if (id.as_int != 0) {
     LOG(INFO) << "Opening Bucket " << initial_name << std::endl;
     id_ = id;
@@ -94,13 +93,13 @@ size_t Bucket::Get(const std::string &name, Blob& user_blob, Context &ctx) {
 
 template<class Predicate>
 Status Bucket::GetV(void *user_blob, Predicate pred, Context &ctx) {
-	(void)user_blob;
-	(void)ctx;
-	Status ret = 0;
-	
-	LOG(INFO) << "Getting blobs by predicate from bucket " << name_ << '\n';
-	
-	return ret;
+  (void)user_blob;
+  (void)ctx;
+  Status ret = 0;
+
+  LOG(INFO) << "Getting blobs by predicate from bucket " << name_ << '\n';
+
+  return ret;
 }
 
 Status Bucket::DeleteBlob(const std::string &name, Context &ctx) {
@@ -120,37 +119,37 @@ Status Bucket::RenameBlob(const std::string &old_name,
                           Context &ctx) {
   (void)ctx;
   Status ret = 0;
-    
+
   LOG(INFO) << "Renaming Blob " << old_name << " to " << new_name << '\n';
-    
+
   return ret;
 }
 
 template<class Predicate>
 std::vector<std::string> Bucket::GetBlobNames(Predicate pred,
-																			        Context &ctx) {
-	(void)ctx;
-	
-	LOG(INFO) << "Getting blob names by predicate from bucket " << name_ << '\n';
+                                              Context &ctx) {
+  (void)ctx;
+
+  LOG(INFO) << "Getting blob names by predicate from bucket " << name_ << '\n';
 
   return std::vector<std::string>();
 }
 
 struct bkt_info * Bucket::GetInfo(Context &ctx) {
-	(void)ctx;
-	struct bkt_info *ret = nullptr;
-	
-	LOG(INFO) << "Getting bucket information from bucket " << name_ << '\n';
-	
-	return ret;
+  (void)ctx;
+  struct bkt_info *ret = nullptr;
+
+  LOG(INFO) << "Getting bucket information from bucket " << name_ << '\n';
+
+  return ret;
 }
 
 Status Bucket::Rename(const std::string &new_name, Context &ctx) {
   (void)ctx;
   Status ret = 0;
-    
+
   LOG(INFO) << "Renaming a bucket to" << new_name << '\n';
-    
+
   return ret;
 }
 
@@ -169,22 +168,22 @@ Status Bucket::Release(Context &ctx) {
 }
 
 Status Bucket::Close(Context &ctx) {
-	(void)ctx;
+  (void)ctx;
   Status ret = 0;
-    
+
   LOG(INFO) << "Closing a bucket to " << name_ << '\n';
-    
+
   return ret;
 }
 
 Status Bucket::Destroy(Context &ctx) {
-	(void)ctx;
+  (void)ctx;
   Status ret = 0;
-    
+
   LOG(INFO) << "Destroying a bucket to " << name_ << '\n';
-    
+
   return ret;
 }
-    
+
 } // api namespace
 } // hermes namespace
