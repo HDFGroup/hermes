@@ -164,12 +164,12 @@ SharedMemoryContext InitHermesCore(Config *config, CommunicationContext *comm,
   context.shm_base = shmem_base;
   context.shm_size = shmem_size;
   context.buffer_pool_offset = InitBufferPool(context.shm_base,
-                                             &arenas[kArenaType_BufferPool],
-                                             &arenas[kArenaType_Transient],
-                                             comm->node_id, config);
+                                              &arenas[kArenaType_BufferPool],
+                                              &arenas[kArenaType_Transient],
+                                              comm->node_id, config);
 
   MetadataManager *mdm =
-    PushStruct<MetadataManager>(&arenas[kArenaType_MetaData]);
+    PushClearedStruct<MetadataManager>(&arenas[kArenaType_MetaData]);
   context.metadata_manager_offset = (u8 *)mdm - (u8 *)shmem_base;
   InitMetadataManager(mdm, &arenas[kArenaType_MetaData], config, comm->node_id);
 
@@ -178,6 +178,13 @@ SharedMemoryContext InitHermesCore(Config *config, CommunicationContext *comm,
   ptrdiff_t *metadata_manager_offset_location =
     (ptrdiff_t *)(shmem_base + sizeof(context.buffer_pool_offset));
   *metadata_manager_offset_location = context.metadata_manager_offset;
+
+  // NOTE(chogan): Store the offset from the MDM to the communication state too.
+  ptrdiff_t *comm_state_offset_location =
+    (ptrdiff_t *)((u8 *)metadata_manager_offset_location +
+                  sizeof(context.metadata_manager_offset));
+  ptrdiff_t comm_state_offset_from_mdm = (u8 *)mdm - (u8 *)comm_state_dest;
+  *comm_state_offset_location = comm_state_offset_from_mdm;
 
   if (start_rpc_server) {
     rpc->start_server(&context, config->rpc_server_name.c_str(),
@@ -295,8 +302,10 @@ std::shared_ptr<api::Hermes> InitHermes() {
 
     if (comm.first_on_node) {
       MetadataManager *mdm = GetMetadataManagerFromContext(&context);
-      size_t comm_state_size = arenas[kArenaType_Transient].used;
-      void *comm_state_location = (u8 *)mdm - comm_state_size;
+      ptrdiff_t *comm_state_offset_location =
+        (ptrdiff_t *)(context.shm_base + sizeof(context.buffer_pool_offset) +
+                      sizeof(context.metadata_manager_offset));
+      void *comm_state_location = (u8 *)mdm - *comm_state_offset_location;
       comm.sync_comm_state(comm_state_location, comm.state);
       comm.state = comm_state_location;
     }
