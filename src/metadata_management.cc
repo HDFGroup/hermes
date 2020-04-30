@@ -312,18 +312,30 @@ void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
 
   // ID Maps
 
+  i64 total_map_capacity = GetHeapFreeList(map_heap)->size / 3;
+
   IdMap *bucket_map = 0;
-  sh_new_strdup(bucket_map, map_heap);
+  // TODO(chogan): We can either calculate an average expected size here, or
+  // make HeapRealloc acutally use realloc semantics so it can grow as big as
+  // needed. But that requires updating offsets for the map and the heap's free
+  // list
+  sh_new_strdup(bucket_map, config->max_buckets_per_node, map_heap);
   shdefault(bucket_map, 0, map_heap);
   mdm->bucket_map_offset = (u8 *)bucket_map - (u8 *)mdm;
+  total_map_capacity -= config->max_buckets_per_node * sizeof(IdMap);
+
+  // TODO(chogan): Just one map means better size estimate, but it's probably
+  // slower because they'll all share a lock.
 
   IdMap *vbucket_map = 0;
-  sh_new_strdup(vbucket_map, map_heap);
+  sh_new_strdup(vbucket_map, config->max_vbuckets_per_node, map_heap);
   shdefault(vbucket_map, 0, map_heap);
   mdm->vbucket_map_offset = (u8 *)vbucket_map - (u8 *)mdm;
+  total_map_capacity -= config->max_buckets_per_node * sizeof(VBucketID);
 
   IdMap *blob_map = 0;
-  sh_new_strdup(blob_map, map_heap);
+  size_t blob_map_capacity = total_map_capacity / sizeof(BlobID);
+  sh_new_strdup(blob_map, blob_map_capacity, map_heap);
   shdefault(blob_map, 0, map_heap);
   mdm->blob_map_offset = (u8 *)blob_map - (u8 *)mdm;
 }
