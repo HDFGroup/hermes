@@ -181,6 +181,25 @@ static inline FreeBlock *NextFreeBlock(Heap *heap, FreeBlock *block) {
   return result;
 }
 
+static inline u8 *HeapOffsetToPtr(Heap *heap, u32 offset) {
+  u8 *result = 0;
+  if (heap->grows_up) {
+    result = GetHeapMemory(heap) + offset;
+  } else {
+    result = GetHeapMemory(heap) - offset;
+  }
+
+  return result;
+}
+
+static inline u32 GetHeapOffset(Heap *heap, u8 *ptr) {
+  ptrdiff_t signed_result = (u8 *)ptr - GetHeapMemory(heap);
+  u32 result = (u32)std::abs(signed_result);
+
+  return result;
+}
+
+// TODO(chogan): Replace with GetHeapOffset
 static inline u32 GetFreeBlockOffset(Heap *heap, FreeBlock *block) {
   ptrdiff_t signed_result = (u8 *)block - GetHeapMemory(heap);
   u32 result = (u32)std::abs(signed_result);
@@ -315,6 +334,7 @@ u8 *HeapPushSize(Heap *heap, u32 size) {
       result = (u8 *)(header + 1);
     } else {
       // TODO(chogan): @errorhandling
+      heap->error_handler();
     }
   }
 

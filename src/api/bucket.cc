@@ -66,7 +66,10 @@ Status Bucket::Put(const std::string &name, const Blob &data, Context &ctx) {
   blob.size = data.size();
   WriteBlobToBuffers(&hermes_->context_, blob, buffer_ids);
 
-  // TODO(chogan): UpdateMetadata();
+  AttachBlobToBucket(&hermes_->context_, &hermes_->comm_, &hermes_->rpc_,
+                     name.c_str(), id_, buffer_ids);
+
+  // TODO(chogan):
   blobs_[name] = buffer_ids;
 
   return ret;

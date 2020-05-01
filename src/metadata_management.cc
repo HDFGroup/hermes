@@ -85,13 +85,11 @@ static Heap *GetMapHeap(MetadataManager *mdm) {
   return result;
 }
 
-#if 0
 static Heap *GetIdHeap(MetadataManager *mdm) {
   Heap *result = (Heap *)((u8 *)mdm + mdm->id_heap_offset);
 
   return result;
 }
-#endif
 
 IdMap *GetMap(MetadataManager *mdm, MapType map_type) {
   IdMap *result = 0;
@@ -173,22 +171,44 @@ BucketID GetBucketIdByName(SharedMemoryContext *context, const char *name,
   return result;
 }
 
-void PutBucketId(MetadataManager *mdm, CommunicationContext *comm,
-                 RpcContext *rpc, const std::string &name, BucketID id) {
+void PutId(MetadataManager *mdm, CommunicationContext *comm,
+           RpcContext *rpc, const std::string &name, u64 id, MapType map_type) {
   int node_id = HashString(mdm, comm, name.c_str());
 
   // TODO(chogan): Check for overlapping heaps here
 
   if (node_id == comm->node_id) {
-    LocalPut(mdm, name.c_str(), id.as_int, MapType::kBucket);
+    LocalPut(mdm, name.c_str(), id, map_type);
   } else {
-    rpc->call2("RemotePut", name, id.as_int, MapType::kBucket);
+    rpc->call2("RemotePut", name, id, map_type);
   }
+}
+
+void PutBucketId(MetadataManager *mdm, CommunicationContext *comm,
+                 RpcContext *rpc, const std::string &name, BucketID id) {
+  PutId(mdm, comm, rpc, name, id.as_int, MapType::kBucket);
+}
+
+void PutVBucketId(MetadataManager *mdm, CommunicationContext *comm,
+                  RpcContext *rpc, const std::string &name, VBucketID id) {
+  PutId(mdm, comm, rpc, name, id.as_int, MapType::kVBucket);
+}
+
+void PutBlobId(MetadataManager *mdm, CommunicationContext *comm,
+               RpcContext *rpc, const std::string &name, BlobID id) {
+  PutId(mdm, comm, rpc, name, id.as_int, MapType::kBlob);
 }
 
 BucketInfo *GetBucketInfoByIndex(MetadataManager *mdm, u32 index) {
   BucketInfo *info_array = (BucketInfo *)((u8 *)mdm + mdm->bucket_info_offset);
   BucketInfo *result = info_array + index;
+
+  return result;
+}
+
+// Assumes you're already on the correct node
+BucketInfo *GetBucketInfoById(MetadataManager *mdm, BucketID id) {
+  BucketInfo *result = GetBucketInfoByIndex(mdm, id.bits.index);
 
   return result;
 }
@@ -211,20 +231,22 @@ BucketID GetNextFreeBucketId(SharedMemoryContext *context,
   BucketID result = mdm->first_free_bucket;
   if (!IsNullBucketId(result)) {
     BucketInfo *info = GetBucketInfoByIndex(mdm, result.bits.index);
-    info->blobs_offset = 0;
-    info->num_blobs = 0;
+    info->blobs = {};
     info->stats = {};
     info->active = true;
     mdm->first_free_bucket = info->next_free;
   }
   EndTicketMutex(&mdm->bucket_mutex);
 
+  // NOTE(chogan): Add metadata entry
   PutBucketId(mdm, comm, rpc, name, result);
 
   return result;
 }
 
-VBucketID GetNextFreeVBucketId(SharedMemoryContext *context) {
+VBucketID GetNextFreeVBucketId(SharedMemoryContext *context,
+                               CommunicationContext *comm, RpcContext *rpc,
+                               const std::string &name) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
 
   // TODO(chogan): Could replace this with lock-free version if/when it matters
@@ -232,8 +254,7 @@ VBucketID GetNextFreeVBucketId(SharedMemoryContext *context) {
   VBucketID result = mdm->first_free_vbucket;
   if (!IsNullVBucketId(result)) {
     VBucketInfo *info = GetVBucketInfoByIndex(mdm, result.bits.index);
-    info->blobs_offset = 0;
-    info->num_blobs = 0;
+    info->blobs = {};
     info->stats = {};
     memset(info->traits, 0, sizeof(TraitID) * kMaxTraitsPerVBucket);
     info->active = true;
@@ -241,7 +262,95 @@ VBucketID GetNextFreeVBucketId(SharedMemoryContext *context) {
   }
   EndTicketMutex(&mdm->vbucket_mutex);
 
+  PutVBucketId(mdm, comm, rpc, name, result);
+
   return result;
+}
+
+void CopyBlobIds(BlobID *new_ids, BlobID *old_ids, u32 count) {
+  for (u32 i = 0; i < count; ++i) {
+    new_ids[i] = old_ids[i];
+  } 
+}
+
+void AllocateBlobIdList(MetadataManager *mdm, BlobIdList *blobs) {
+  Heap *id_heap = GetIdHeap(mdm);
+  BeginTicketMutex(&mdm->id_mutex);
+  if (blobs->capacity == 0) {
+    u8 *ids = HeapPushSize(id_heap, sizeof(BlobID) * kBlobIdListChunkSize);
+    if (ids) {
+      blobs->capacity = kBlobIdListChunkSize;
+      blobs->length = 0;
+      blobs->head_offset = GetHeapOffset(id_heap, (u8 *)ids);
+    }
+  } else {
+    // grow capacity by kBlobIdListChunkSize
+    BlobID *ids = (BlobID *)HeapOffsetToPtr(id_heap, blobs->head_offset);
+    size_t new_capacity = blobs->capacity + kBlobIdListChunkSize;
+    BlobID *new_ids = HeapPushArray<BlobID>(id_heap, new_capacity);
+    CopyBlobIds(new_ids, ids, blobs->length);
+    // HeapFree(id_heap, ids);
+    // TODO(chogan): Update any other data?
+  }
+  EndTicketMutex(&mdm->id_mutex);
+}
+
+void LocalAddBlobIdToBucket(MetadataManager *mdm, BucketID bucket_id,
+                            BlobID blob_id) {
+  // TODO(chogan): Think about lock granularity
+  BeginTicketMutex(&mdm->bucket_mutex);
+  BucketInfo *info = GetBucketInfoById(mdm, bucket_id);
+  BlobIdList *blobs = &info->blobs;
+
+  if (blobs->length >= blobs->capacity) {
+    AllocateBlobIdList(mdm, blobs);
+  }
+
+  Heap *id_heap = GetIdHeap(mdm);
+  BlobID *head = (BlobID *)HeapOffsetToPtr(id_heap, blobs->head_offset);
+  head[blobs->length++] = blob_id;
+                                     
+  EndTicketMutex(&mdm->bucket_mutex);
+}
+
+void AddBlobIdToBucket(MetadataManager *mdm, CommunicationContext *comm,
+                       RpcContext *rpc, BlobID blob_id, BucketID bucket_id) {
+  u32 target_node = bucket_id.bits.node_id;
+
+  if (target_node == (u32)comm->node_id) {
+    LocalAddBlobIdToBucket(mdm, bucket_id, blob_id);
+  } else {
+    // TODO(chogan):
+    // rpc->call3("RemoteAddBlobIdToBucket", bucket_id, blob_id);
+  }
+}
+
+u32 AllocateBufferIdList(MetadataManager *mdm,
+                         const std::vector<BufferID> &buffer_ids) {
+  Heap *heap = GetIdHeap(mdm);
+  // TODO(chogan):
+  u32 result = 0;
+
+  return result;
+}
+
+void AttachBlobToBucket(SharedMemoryContext *context,
+                        CommunicationContext *comm, RpcContext *rpc,
+                        const char *blob_name, BucketID bucket_id,
+                        const std::vector<BufferID> &buffer_ids) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+
+  // Get a free BlobID
+  BlobID blob_id = {};
+  blob_id.bits.node_id = comm->node_id;
+  // Associate buffer_ids with the BlobID
+  blob_id.bits.buffer_ids_offset = AllocateBufferIdList(mdm, buffer_ids);
+
+  // Update the blob map to associate "name" with the BlobID
+  PutBlobId(mdm, comm, rpc, blob_name, blob_id);
+
+  // Add the BlobID to BucketInfo.BlobList
+  AddBlobIdToBucket(mdm, comm, rpc, blob_id, bucket_id);
 }
 
 void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,

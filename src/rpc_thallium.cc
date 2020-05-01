@@ -33,11 +33,10 @@ void ThalliumCall2(const char *func_name, const std::string &name, u64 val,
 
 void ThalliumStartRpcServer(SharedMemoryContext *context, const char *addr,
                             i32 num_rpc_threads) {
-  tl::engine buffer_pool_rpc_server(addr, THALLIUM_SERVER_MODE, false,
-                                    num_rpc_threads);
+  tl::engine rpc_server(addr, THALLIUM_SERVER_MODE, false, num_rpc_threads);
 
-  LOG(INFO) << "Serving at " << buffer_pool_rpc_server.self()
-            << " with " << num_rpc_threads << " RPC threads" << std::endl;
+  LOG(INFO) << "Serving at " << rpc_server.self() << " with "
+            << num_rpc_threads << " RPC threads" << std::endl;
 
   using std::function;
   using std::vector;
@@ -87,28 +86,33 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, const char *addr,
       LocalPut(mdm, name.c_str(), val, map_type);
     };
 
-  function<void(const request&)> rpc_finalize =
-    [&buffer_pool_rpc_server](const request &req) {
+  function<void(const request&, BucketID, BlobID)> rpc_add_blob =
+    [context](const request &req, BucketID bucket_id, BlobID blob_id) {
       (void)req;
-      buffer_pool_rpc_server.finalize();
+      MetadataManager *mdm = GetMetadataManagerFromContext(context);
+      LocalAddBlobIdToBucket(mdm, bucket_id, blob_id);
     };
 
-  buffer_pool_rpc_server.define("GetBuffers", rpc_get_buffers);
-  buffer_pool_rpc_server.define("ReleaseBuffers",
-                                rpc_release_buffers).disable_response();
-  buffer_pool_rpc_server.define("SplitBuffers",
-                                rpc_split_buffers).disable_response();
-  buffer_pool_rpc_server.define("MergeBuffers",
-                                rpc_merge_buffers).disable_response();
-  buffer_pool_rpc_server.define("RemoteGet", rpc_map_get);
-  buffer_pool_rpc_server.define("RemotePut", rpc_map_put).disable_response();
-  buffer_pool_rpc_server.define("Finalize", rpc_finalize).disable_response();
+  function<void(const request&)> rpc_finalize =
+    [&rpc_server](const request &req) {
+      (void)req;
+      rpc_server.finalize();
+    };
+
+  rpc_server.define("GetBuffers", rpc_get_buffers);
+  rpc_server.define("ReleaseBuffers", rpc_release_buffers).disable_response();
+  rpc_server.define("SplitBuffers", rpc_split_buffers).disable_response();
+  rpc_server.define("MergeBuffers", rpc_merge_buffers).disable_response();
+  rpc_server.define("RemoteGet", rpc_map_get);
+  rpc_server.define("RemotePut", rpc_map_put).disable_response();
+  rpc_server.define("RemoteAddBlobIdToBucket", rpc_add_blob).disable_response();
+  rpc_server.define("Finalize", rpc_finalize).disable_response();
 
   // TODO(chogan): Currently the calling thread waits for finalize because
   // that's the way the tests are set up, but once the RPC server is started
   // from Hermes initialization the calling thread will need to continue
   // executing.
-  buffer_pool_rpc_server.wait_for_finalize();
+  rpc_server.wait_for_finalize();
 }
 
 void InitRpcContext(RpcContext *rpc) {

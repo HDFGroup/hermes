@@ -3,6 +3,7 @@
 
 #include <string.h>
 
+#include <atomic>
 #include <string>
 
 #include "memory_arena.h"
@@ -36,7 +37,7 @@ union VBucketID {
 
 union BlobID {
   struct {
-    u32 index;
+    u32 buffer_ids_offset;
     u32 node_id;
   } bits;
 
@@ -60,10 +61,18 @@ struct Stats {
 
 };
 
+const int kBlobIdListChunkSize = 10;
+
+struct BlobIdList {
+  u32 head_offset;
+  u32 length;
+  u32 capacity;
+};
+
 struct BucketInfo {
   BucketID next_free;
-  u32 blobs_offset;  // BlobID array
-  u32 num_blobs;
+  BlobIdList blobs;
+  std::atomic<int> ref_count;
   bool active;
   Stats stats;
 };
@@ -72,8 +81,8 @@ static constexpr int kMaxTraitsPerVBucket = 8;
 
 struct VBucketInfo {
   VBucketID next_free;
-  u32 blobs_offset;  // BlobID array
-  u32 num_blobs;
+  BlobIdList blobs;
+  std::atomic<int> ref_count;
   TraitID traits[kMaxTraitsPerVBucket];
   bool active;
   Stats stats;
@@ -104,12 +113,11 @@ struct MetadataManager {
 
   TicketMutex bucket_mutex;
   TicketMutex vbucket_mutex;
-  TicketMutex blob_id_mutex;
-  TicketMutex buffer_id_mutex;
 
   TicketMutex bucket_map_mutex;
   TicketMutex vbucket_map_mutex;
   TicketMutex blob_map_mutex;
+  TicketMutex id_mutex;
 
   size_t map_seed;
 
@@ -131,6 +139,20 @@ BucketID GetNextFreeBucketId(SharedMemoryContext *context,
                              CommunicationContext *comm, RpcContext *rpc,
                              const std::string &name);
 
+// TODO(chogan):
+#if 0
+struct MetadataContext {
+  SharedMemoryContext *shmem;
+  CommunicationContext *comm;
+  RpcContext *rpc;
+};
+#endif
+
+void AttachBlobToBucket(SharedMemoryContext *context,
+                        CommunicationContext *comm, RpcContext *rpc,
+                        const char *blob_name, BucketID bucket_id,
+                        const std::vector<BufferID> &buffer_ids);
+
 // internal
 MetadataManager *GetMetadataManagerFromContext(SharedMemoryContext *context);
 BucketInfo *GetBucketInfoByIndex(MetadataManager *mdm, u32 index);
@@ -149,6 +171,27 @@ void serialize(A &ar, BucketID &bucket_id) {
   ar & bucket_id.as_int;
 }
 
+/**
+ *  Lets Thallium know how to serialize a BlobID.
+ *
+ * This function is called implicitly by Thallium.
+ *
+ * @param ar An archive provided by Thallium.
+ * @param blob_id The BlobID to serialize.
+ */
+template<typename A>
+void serialize(A &ar, BlobID &blob_id) {
+  ar & blob_id.as_int;
+}
+
+/**
+ *  Lets Thallium know how to serialize a MapType.
+ *
+ * This function is called implicitly by Thallium.
+ *
+ * @param ar An archive provided by Thallium.
+ * @param map_type The MapType to serialize.
+ */
 template<typename A>
 void serialize(A &ar, MapType map_type) {
   ar & (int)map_type;
