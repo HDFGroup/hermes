@@ -17,9 +17,15 @@ using namespace hermes;
 int main() {
 
   Arena arena = InitArenaAndAllocate(MEGABYTES(32));
+  TemporaryMemory temp_memory = BeginTemporaryMemory(&arena);
   Heap *heap = InitHeapInArena(&arena, true, 8);
-
   stbds_unit_tests(heap);
+  EndTemporaryMemory(&temp_memory);
+
+  temp_memory = BeginTemporaryMemory(&arena);
+  Heap *reverse_heap = InitHeapInArena(&arena, false, 8);
+  stbds_unit_tests(reverse_heap);
+  EndTemporaryMemory(&temp_memory);
 
   DestroyArena(&arena);
 
