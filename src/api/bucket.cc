@@ -22,8 +22,8 @@ Bucket::Bucket(const std::string &initial_name,
                const std::shared_ptr<Hermes> &h, Context ctx)
     : name_(initial_name), hermes_(h) {
   (void)ctx;
-  BucketID id = GetBucketIdByName(&hermes_->context_, initial_name.c_str(),
-                                  &hermes_->comm_, &hermes_->rpc_);
+  BucketID id = GetBucketIdByName(&hermes_->context_, &hermes_->comm_,
+                                  &hermes_->rpc_,  initial_name.c_str());
 
   if (id.as_int != 0) {
     LOG(INFO) << "Opening Bucket " << initial_name << std::endl;
@@ -79,14 +79,20 @@ size_t Bucket::Get(const std::string &name, Blob& user_blob, Context &ctx) {
   size_t ret = 0;
   LOG(INFO) << "Getting Blob " << name << " from bucket " << name_ << '\n';
 
+  ScopedTemporaryMemory scratch(&hermes_->trans_arena_);
+  BufferIdArray buffer_ids =
+    GetBufferIdsFromBlobName(scratch, &hermes_->context_, &hermes_->comm_,
+                             &hermes_->rpc_, name.c_str());
+
   if (user_blob.size() == 0) {
-    ret = GetBlobSize(&hermes_->context_, &hermes_->comm_, blobs_[name]);
+    ret = GetBlobSize(&hermes_->context_, &hermes_->comm_, &buffer_ids);
   } else {
     hermes::Blob blob = {};
     blob.data = user_blob.data();
     blob.size = user_blob.size();
 
-    ret = ReadBlobFromBuffers(&hermes_->context_, &blob, blobs_[name]);
+    ret = ReadBlobFromBuffers(&hermes_->context_, &hermes_->comm_,
+                              &hermes_->rpc_, &blob, &buffer_ids);
   }
 
   return ret;

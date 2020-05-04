@@ -390,14 +390,14 @@ std::vector<BufferID> GetBuffers(SharedMemoryContext *context,
 }
 
 size_t GetBlobSize(SharedMemoryContext *context, CommunicationContext *comm,
-                   const std::vector<BufferID> &buffer_ids) {
+                   BufferIdArray *buffer_ids) {
   size_t result = 0;
-  for (const auto &id : buffer_ids) {
-    if (BufferIsRemote(comm, id)) {
+  for (u32 i = 0; i < buffer_ids->length; ++i) {
+    if (BufferIsRemote(comm, buffer_ids->ids[i])) {
       // TODO(chogan):
       // rpc->call();
     } else {
-      BufferHeader *header = GetHeaderByBufferId(context, id);
+      BufferHeader *header = GetHeaderByBufferId(context, buffer_ids->ids[i]);
       result += header->used;
     }
   }
@@ -1118,13 +1118,17 @@ void WriteBlobToBuffers(SharedMemoryContext *context, const Blob &blob,
   assert(at == blob.data + blob.size);
 }
 
-size_t ReadBlobFromBuffers(SharedMemoryContext *context, Blob *blob,
-                           const std::vector<BufferID> &buffer_ids) {
+size_t ReadBlobFromBuffers(SharedMemoryContext *context,
+                           CommunicationContext *comm, RpcContext *rpc,
+                           Blob *blob, BufferIdArray *buffer_ids) {
   u8 *at = blob->data;
   size_t total_bytes_read = 0;
-  for (const auto &id : buffer_ids) {
-    if (false /* TODO(chogan): BufferIsRemote(context, id) */) {
+  for (u32 i = 0; i < buffer_ids->length; ++i) {
+    BufferID id = buffer_ids->ids[i];
+    if (BufferIsRemote(comm, id)) {
       // TODO(chogan): RPC
+      (void)rpc;
+      // rpc->call();
     } else {
       BufferHeader *header = GetHeaderByIndex(context, id.bits.header_index);
       Tier *tier = GetTierFromHeader(context, header);

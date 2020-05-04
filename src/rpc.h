@@ -2,6 +2,7 @@
 #define HERMES_RPC_H_
 
 #include <string>
+#include <vector>
 
 #include "hermes_types.h"
 #include "metadata_management.h"
@@ -13,6 +14,7 @@ typedef u64 (*Call1Func)(const char *, std::string, MapType map_type);
 typedef void (*Call2Func)(const char *, const std::string&, u64,
                           MapType map_type);
 typedef void (*Call3Func)(const char *, BucketID, BlobID);
+typedef std::vector<BufferID> (*Call4Func)(const char *, BlobID);
 typedef void (*StartFunc)(SharedMemoryContext *, const char *, i32);
 
 struct RpcContext {
@@ -21,6 +23,7 @@ struct RpcContext {
   Call1Func call1;
   Call2Func call2;
   Call3Func call3;
+  Call4Func call4;
   StartFunc start_server;
 };
 

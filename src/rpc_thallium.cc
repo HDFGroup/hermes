@@ -41,6 +41,18 @@ void ThalliumCall3(const char * func_name, BucketID bucket_id, BlobID blob_id) {
   add_blob_id_to_bucket.on(server)(bucket_id, blob_id);
 }
 
+std::vector<BufferID> ThalliumCall4(const char *func_name, BlobID blob_id) {
+  // TODO(chogan): Store this in the metadata arena
+  // TODO(chogan): Server must include the node_id
+  const char kServerName[] = "ofi+sockets://localhost:8080";
+  tl::engine engine("tcp", THALLIUM_CLIENT_MODE);
+  tl::remote_procedure get_buffer_id_list = engine.define(func_name);
+  tl::endpoint server = engine.lookup(kServerName);
+  std::vector<BufferID> result = get_buffer_id_list.on(server)(blob_id);
+
+  return result;
+}
+
 void ThalliumStartRpcServer(SharedMemoryContext *context, const char *addr,
                             i32 num_rpc_threads) {
   tl::engine rpc_server(addr, THALLIUM_SERVER_MODE, false, num_rpc_threads);
@@ -103,6 +115,14 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, const char *addr,
       LocalAddBlobIdToBucket(mdm, bucket_id, blob_id);
     };
 
+  function<void(const request&, BlobID)> rpc_get_buffer_id_list =
+    [context](const request &req, BlobID blob_id) {
+      MetadataManager *mdm = GetMetadataManagerFromContext(context);
+      std::vector<BufferID> result = LocalGetBufferIdList(mdm, blob_id);
+
+      req.respond(result);
+    };
+
   function<void(const request&)> rpc_finalize =
     [&rpc_server](const request &req) {
       (void)req;
@@ -116,6 +136,7 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, const char *addr,
   rpc_server.define("RemoteGet", rpc_map_get);
   rpc_server.define("RemotePut", rpc_map_put).disable_response();
   rpc_server.define("RemoteAddBlobIdToBucket", rpc_add_blob).disable_response();
+  rpc_server.define("RemoteGetBufferIdList", rpc_get_buffer_id_list);
   rpc_server.define("Finalize", rpc_finalize).disable_response();
 
   // TODO(chogan): Currently the calling thread waits for finalize because
@@ -129,6 +150,7 @@ void InitRpcContext(RpcContext *rpc) {
   rpc->call1 = ThalliumCall1;
   rpc->call2 = ThalliumCall2;
   rpc->call3 = ThalliumCall3;
+  rpc->call4 = ThalliumCall4;
   rpc->start_server = ThalliumStartRpcServer;
 }
 

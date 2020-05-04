@@ -154,19 +154,45 @@ int HashString(MetadataManager *mdm, CommunicationContext *comm,
   return result;
 }
 
-
-BucketID GetBucketIdByName(SharedMemoryContext *context, const char *name,
-                           CommunicationContext *comm, RpcContext *rpc) {
-  BucketID result = {};
+u64 GetIdByName(SharedMemoryContext *context, CommunicationContext *comm,
+                RpcContext *rpc, const char *name, MapType map_type) {
+  u64 result = 0;
 
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   int node_id = HashString(mdm, comm, name);
 
   if (node_id == comm->node_id) {
-    result.as_int = LocalGet(mdm, name, MapType::kBucket);
+    result = LocalGet(mdm, name, map_type);
   } else {
-    result.as_int = rpc->call1("RemoteGet", std::string(name), MapType::kBucket);
+    result = rpc->call1("RemoteGet", std::string(name), map_type);
   }
+
+  return result;
+}
+
+BucketID GetBucketIdByName(SharedMemoryContext *context,
+                           CommunicationContext *comm, RpcContext *rpc,
+                           const char *name) {
+  BucketID result = {};
+  result.as_int = GetIdByName(context, comm, rpc, name, MapType::kBucket);
+
+  return result;
+}
+
+VBucketID GetVBucketIdByName(SharedMemoryContext *context,
+                             CommunicationContext *comm, RpcContext *rpc,
+                             const char *name) {
+  VBucketID result = {};
+  result.as_int = GetIdByName(context, comm, rpc, name, MapType::kVBucket);
+
+  return result;
+}
+
+BlobID GetBlobIdByName(SharedMemoryContext *context,
+                       CommunicationContext *comm, RpcContext *rpc,
+                       const char *name) {
+  BlobID result = {};
+  result.as_int = GetIdByName(context, comm, rpc, name, MapType::kBlob);
 
   return result;
 }
@@ -344,6 +370,57 @@ u32 AllocateBufferIdList(MetadataManager *mdm,
   return result;
 }
 
+std::vector<BufferID> LocalGetBufferIdList(MetadataManager *mdm,
+                                           BlobID blob_id) {
+  Heap *id_heap = GetIdHeap(mdm);
+  BufferIdList *id_list =
+    (BufferIdList *)HeapOffsetToPtr(id_heap, blob_id.bits.buffer_ids_offset);
+  BufferID *ids = (BufferID *)HeapOffsetToPtr(id_heap, id_list->head_offset);
+  std::vector<BufferID> result(id_list->length);
+  CopyIds((u64 *)result.data(), (u64 *)ids, id_list->length);
+
+  return result;
+}
+
+void LocalGetBufferIdList(Arena *arena, MetadataManager *mdm, BlobID blob_id,
+                          BufferIdArray *buffer_ids) {
+  Heap *id_heap = GetIdHeap(mdm);
+  BufferIdList *id_list =
+    (BufferIdList *)HeapOffsetToPtr(id_heap, blob_id.bits.buffer_ids_offset);
+  BufferID *ids = (BufferID *)HeapOffsetToPtr(id_heap, id_list->head_offset);
+  buffer_ids->ids = PushArray<BufferID>(arena, id_list->length);
+  buffer_ids->length = id_list->length;
+  CopyIds((u64 *)buffer_ids->ids, (u64 *)ids, id_list->length);
+}
+
+void GetBufferIdList(Arena *arena, SharedMemoryContext *context,
+                     CommunicationContext *comm, RpcContext *rpc,
+                     BlobID blob_id, BufferIdArray *buffer_ids) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  u32 target_node = blob_id.bits.node_id;
+
+  if (target_node == (u32)comm->node_id) {
+    LocalGetBufferIdList(arena, mdm, blob_id, buffer_ids);
+  } else {
+    std::vector<BufferID> result = rpc->call4("RemoteGetBufferIdList", blob_id);
+    buffer_ids->ids = PushArray<BufferID>(arena, result.size());
+    buffer_ids->length = (u32)result.size();
+    CopyIds((u64 *)buffer_ids->ids, (u64 *)result.data(), result.size());
+  }
+}
+
+BufferIdArray GetBufferIdsFromBlobName(Arena *arena,
+                                       SharedMemoryContext *context,
+                                       CommunicationContext *comm,
+                                       RpcContext *rpc,
+                                       const char *blob_name) {
+  BufferIdArray result = {};
+  BlobID blob_id = GetBlobIdByName(context, comm, rpc, blob_name);
+  GetBufferIdList(arena, context, comm, rpc, blob_id, &result);
+
+  return result;
+}
+
 void AttachBlobToBucket(SharedMemoryContext *context,
                         CommunicationContext *comm, RpcContext *rpc,
                         const char *blob_name, BucketID bucket_id,
@@ -360,7 +437,7 @@ void AttachBlobToBucket(SharedMemoryContext *context,
 void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
                          int node_id) {
 
-  // NOTE(chogan): All MetadatManager offsets are relative to the address of the
+  // NOTE(chogan): All MetadataManager offsets are relative to the address of the
   // MDM itself.
 
   arena->error_handler = MetadataArenaErrorHandler;

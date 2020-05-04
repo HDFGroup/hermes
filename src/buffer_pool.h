@@ -217,11 +217,13 @@ struct SharedMemoryContext {
   FILE *open_streams[kMaxTiers][kMaxBufferPoolSlabs];
 };
 
+struct BufferIdArray;
+
 /**
  *
  */
 size_t GetBlobSize(SharedMemoryContext *context, CommunicationContext *comm,
-                   const std::vector<BufferID> &buffer_ids);
+                   BufferIdArray *buffer_ids);
 
 /**
  * Constructs a unique (among users) shared memory name from a base name.
@@ -337,6 +339,9 @@ struct Blob {
  */
 void WriteBlobToBuffers(SharedMemoryContext *context, const Blob &blob,
                         const std::vector<BufferID> &buffer_ids);
+
+struct RpcContext;
+
 /**
  * Sketch of how an I/O client might read.
  *
@@ -350,8 +355,9 @@ void WriteBlobToBuffers(SharedMemoryContext *context, const Blob &blob,
  *
  * @return The total number of bytes read
  */
-size_t ReadBlobFromBuffers(SharedMemoryContext *context, Blob *blob,
-                           const std::vector<BufferID> &buffer_ids);
+size_t ReadBlobFromBuffers(SharedMemoryContext *context,
+                           CommunicationContext *comm, RpcContext *rpc,
+                           Blob *blob, BufferIdArray *buffer_ids);
 
 }  // namespace hermes
 

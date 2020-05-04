@@ -74,6 +74,11 @@ struct BufferIdList {
   u32 length;
 };
 
+struct BufferIdArray {
+  BufferID *ids;
+  u32 length;
+};
+
 struct BucketInfo {
   BucketID next_free;
   BlobIdList blobs;
@@ -148,12 +153,17 @@ struct RpcContext;
 
 void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
                          int node_id);
-BucketID GetBucketIdByName(SharedMemoryContext *context, const char *name,
-                           CommunicationContext *comm, RpcContext *rpc);
+BucketID GetBucketIdByName(SharedMemoryContext *context,
+                           CommunicationContext *comm, RpcContext *rpc,
+                           const char *name);
+BufferIdArray GetBufferIdsFromBlobName(Arena *arena,
+                                       SharedMemoryContext *context,
+                                       CommunicationContext *comm,
+                                       RpcContext *rpc,
+                                       const char *blob_name);
 BucketID GetNextFreeBucketId(SharedMemoryContext *context,
                              CommunicationContext *comm, RpcContext *rpc,
                              const std::string &name);
-
 void AttachBlobToBucket(SharedMemoryContext *context,
                         CommunicationContext *comm, RpcContext *rpc,
                         const char *blob_name, BucketID bucket_id,
