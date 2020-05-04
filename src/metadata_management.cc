@@ -68,13 +68,13 @@ static IdMap *GetBucketMap(MetadataManager *mdm) {
 }
 
 static IdMap *GetVBucketMap(MetadataManager *mdm) {
-  IdMap *result = GetMapByOffset(mdm, mdm->bucket_map_offset);
+  IdMap *result = GetMapByOffset(mdm, mdm->vbucket_map_offset);
 
   return result;
 }
 
 static IdMap *GetBlobMap(MetadataManager *mdm) {
-  IdMap *result = GetMapByOffset(mdm, mdm->bucket_map_offset);
+  IdMap *result = GetMapByOffset(mdm, mdm->blob_map_offset);
 
   return result;
 }
@@ -309,7 +309,6 @@ void LocalAddBlobIdToBucket(MetadataManager *mdm, BucketID bucket_id,
   Heap *id_heap = GetIdHeap(mdm);
   BlobID *head = (BlobID *)HeapOffsetToPtr(id_heap, blobs->head_offset);
   head[blobs->length++] = blob_id;
-                                     
   EndTicketMutex(&mdm->bucket_mutex);
 }
 
