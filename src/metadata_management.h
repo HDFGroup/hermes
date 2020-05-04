@@ -61,12 +61,17 @@ struct Stats {
 
 };
 
-const int kBlobIdListChunkSize = 10;
+const int kIdListChunkSize = 10;
 
 struct BlobIdList {
   u32 head_offset;
   u32 length;
   u32 capacity;
+};
+
+struct BufferIdList {
+  u32 head_offset;
+  u32 length;
 };
 
 struct BucketInfo {
@@ -92,6 +97,16 @@ struct IdMap {
   char *key;
   u64 value;
 };
+
+struct RpcContext;
+
+#if 0
+struct MetadataContext {
+  SharedMemoryContext *shmem;
+  CommunicationContext *comm;
+  RpcContext *rpc;
+};
+#endif
 
 struct MetadataManager {
   ptrdiff_t bucket_info_offset;
@@ -138,15 +153,6 @@ BucketID GetBucketIdByName(SharedMemoryContext *context, const char *name,
 BucketID GetNextFreeBucketId(SharedMemoryContext *context,
                              CommunicationContext *comm, RpcContext *rpc,
                              const std::string &name);
-
-// TODO(chogan):
-#if 0
-struct MetadataContext {
-  SharedMemoryContext *shmem;
-  CommunicationContext *comm;
-  RpcContext *rpc;
-};
-#endif
 
 void AttachBlobToBucket(SharedMemoryContext *context,
                         CommunicationContext *comm, RpcContext *rpc,

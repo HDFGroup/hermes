@@ -220,7 +220,7 @@ struct SharedMemoryContext {
 /**
  *
  */
-size_t GetBlobSize(SharedMemoryContext *context,
+size_t GetBlobSize(SharedMemoryContext *context, CommunicationContext *comm,
                    const std::vector<BufferID> &buffer_ids);
 
 /**

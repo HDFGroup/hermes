@@ -267,46 +267,50 @@ VBucketID GetNextFreeVBucketId(SharedMemoryContext *context,
   return result;
 }
 
-void CopyBlobIds(BlobID *new_ids, BlobID *old_ids, u32 count) {
+void CopyIds(u64 *dest, u64 *src, u32 count) {
+  static_assert(sizeof(BlobID) == sizeof(BufferID));
   for (u32 i = 0; i < count; ++i) {
-    new_ids[i] = old_ids[i];
-  } 
+    dest[i] = src[i];
+  }
 }
 
-void AllocateBlobIdList(MetadataManager *mdm, BlobIdList *blobs) {
+void AllocateOrGrowBlobIdList(MetadataManager *mdm, BlobIdList *blobs) {
   Heap *id_heap = GetIdHeap(mdm);
   BeginTicketMutex(&mdm->id_mutex);
   if (blobs->capacity == 0) {
-    u8 *ids = HeapPushSize(id_heap, sizeof(BlobID) * kBlobIdListChunkSize);
+    u8 *ids = HeapPushSize(id_heap, sizeof(BlobID) * kIdListChunkSize);
     if (ids) {
-      blobs->capacity = kBlobIdListChunkSize;
+      blobs->capacity = kIdListChunkSize;
       blobs->length = 0;
       blobs->head_offset = GetHeapOffset(id_heap, (u8 *)ids);
     }
   } else {
-    // grow capacity by kBlobIdListChunkSize
+    // NOTE(chogan): grow capacity by kIdListChunkSize IDs
     BlobID *ids = (BlobID *)HeapOffsetToPtr(id_heap, blobs->head_offset);
-    size_t new_capacity = blobs->capacity + kBlobIdListChunkSize;
+    size_t new_capacity = blobs->capacity + kIdListChunkSize;
     BlobID *new_ids = HeapPushArray<BlobID>(id_heap, new_capacity);
-    CopyBlobIds(new_ids, ids, blobs->length);
-    // HeapFree(id_heap, ids);
-    // TODO(chogan): Update any other data?
+    CopyIds((u64 *)new_ids, (u64 *)ids, blobs->length);
+    HeapFree(id_heap, ids);
+
+    blobs->capacity += kIdListChunkSize;
+    blobs->head_offset = GetHeapOffset(id_heap, (u8 *)new_ids);
   }
   EndTicketMutex(&mdm->id_mutex);
 }
 
 void LocalAddBlobIdToBucket(MetadataManager *mdm, BucketID bucket_id,
                             BlobID blob_id) {
+  Heap *id_heap = GetIdHeap(mdm);
+
   // TODO(chogan): Think about lock granularity
   BeginTicketMutex(&mdm->bucket_mutex);
   BucketInfo *info = GetBucketInfoById(mdm, bucket_id);
   BlobIdList *blobs = &info->blobs;
 
   if (blobs->length >= blobs->capacity) {
-    AllocateBlobIdList(mdm, blobs);
+    AllocateOrGrowBlobIdList(mdm, blobs);
   }
 
-  Heap *id_heap = GetIdHeap(mdm);
   BlobID *head = (BlobID *)HeapOffsetToPtr(id_heap, blobs->head_offset);
   head[blobs->length++] = blob_id;
   EndTicketMutex(&mdm->bucket_mutex);
@@ -319,16 +323,23 @@ void AddBlobIdToBucket(MetadataManager *mdm, CommunicationContext *comm,
   if (target_node == (u32)comm->node_id) {
     LocalAddBlobIdToBucket(mdm, bucket_id, blob_id);
   } else {
-    // TODO(chogan):
-    // rpc->call3("RemoteAddBlobIdToBucket", bucket_id, blob_id);
+    rpc->call3("RemoteAddBlobIdToBucket", bucket_id, blob_id);
   }
 }
 
 u32 AllocateBufferIdList(MetadataManager *mdm,
                          const std::vector<BufferID> &buffer_ids) {
-  Heap *heap = GetIdHeap(mdm);
-  // TODO(chogan):
-  u32 result = 0;
+  static_assert(sizeof(BufferIdList) == sizeof(BufferID));
+  Heap *id_heap = GetIdHeap(mdm);
+  u32 length = (u32)buffer_ids.size();
+  // NOTE(chogan): Add 1 extra for the embedded BufferIdList
+  BufferID *id_list_memory = HeapPushArray<BufferID>(id_heap, length + 1);
+  BufferIdList *id_list = (BufferIdList *)id_list_memory;
+  id_list->length = length;
+  id_list->head_offset = GetHeapOffset(id_heap, (u8 *)(id_list + 1));
+  CopyIds((u64 *)(id_list + 1), (u64 *)buffer_ids.data(), length);
+
+  u32 result = GetHeapOffset(id_heap, (u8 *)id_list);
 
   return result;
 }
@@ -339,16 +350,10 @@ void AttachBlobToBucket(SharedMemoryContext *context,
                         const std::vector<BufferID> &buffer_ids) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
 
-  // Get a free BlobID
   BlobID blob_id = {};
   blob_id.bits.node_id = comm->node_id;
-  // Associate buffer_ids with the BlobID
   blob_id.bits.buffer_ids_offset = AllocateBufferIdList(mdm, buffer_ids);
-
-  // Update the blob map to associate "name" with the BlobID
   PutBlobId(mdm, comm, rpc, blob_name, blob_id);
-
-  // Add the BlobID to BucketInfo.BlobList
   AddBlobIdToBucket(mdm, comm, rpc, blob_id, bucket_id);
 }
 

@@ -66,11 +66,9 @@ Status Bucket::Put(const std::string &name, const Blob &data, Context &ctx) {
   blob.size = data.size();
   WriteBlobToBuffers(&hermes_->context_, blob, buffer_ids);
 
+  // NOTE(chogan): Update all metadata associated with this Put
   AttachBlobToBucket(&hermes_->context_, &hermes_->comm_, &hermes_->rpc_,
                      name.c_str(), id_, buffer_ids);
-
-  // TODO(chogan):
-  blobs_[name] = buffer_ids;
 
   return ret;
 }
@@ -82,7 +80,7 @@ size_t Bucket::Get(const std::string &name, Blob& user_blob, Context &ctx) {
   LOG(INFO) << "Getting Blob " << name << " from bucket " << name_ << '\n';
 
   if (user_blob.size() == 0) {
-    ret = GetBlobSize(&hermes_->context_, blobs_[name]);
+    ret = GetBlobSize(&hermes_->context_, &hermes_->comm_, blobs_[name]);
   } else {
     hermes::Blob blob = {};
     blob.data = user_blob.data();

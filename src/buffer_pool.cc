@@ -264,19 +264,9 @@ int GetSlabIndexFromHeader(SharedMemoryContext *context, BufferHeader *header) {
   return result;
 }
 
-u32 GetNodeId(SharedMemoryContext *context) {
-  // TODO(chogan): @implement Where will `CommunicationAPI` come from?
-  (void)context;
-  assert(!"Not implemented yet");
-}
+bool BufferIsRemote(CommunicationContext *comm, BufferID buffer_id) {
+  bool result = (u32)comm->node_id != buffer_id.bits.node_id;
 
-bool BufferIsRemote(SharedMemoryContext *context, BufferID buffer_id) {
-  bool result = false;
-  u32 my_node_id = GetNodeId(context);
-
-  if (my_node_id == buffer_id.bits.node_id) {
-    result = true;
-  }
   return result;
 }
 
@@ -399,12 +389,13 @@ std::vector<BufferID> GetBuffers(SharedMemoryContext *context,
   return result;
 }
 
-size_t GetBlobSize(SharedMemoryContext *context,
+size_t GetBlobSize(SharedMemoryContext *context, CommunicationContext *comm,
                    const std::vector<BufferID> &buffer_ids) {
   size_t result = 0;
   for (const auto &id : buffer_ids) {
-    if (false /* TODO(chogan): BufferIsRemote(context, id) */) {
-      // TODO(chogan): RPC
+    if (BufferIsRemote(comm, id)) {
+      // TODO(chogan):
+      // rpc->call();
     } else {
       BufferHeader *header = GetHeaderByBufferId(context, id);
       result += header->used;

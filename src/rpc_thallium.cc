@@ -31,6 +31,16 @@ void ThalliumCall2(const char *func_name, const std::string &name, u64 val,
   remote_put.on(server)(name, val, map_type);
 }
 
+void ThalliumCall3(const char * func_name, BucketID bucket_id, BlobID blob_id) {
+  // TODO(chogan): Store this in the metadata arena
+  // TODO(chogan): Server must include the node_id
+  const char kServerName[] = "ofi+sockets://localhost:8080";
+  tl::engine engine("tcp", THALLIUM_CLIENT_MODE);
+  tl::remote_procedure add_blob_id_to_bucket = engine.define(func_name);
+  tl::endpoint server = engine.lookup(kServerName);
+  add_blob_id_to_bucket.on(server)(bucket_id, blob_id);
+}
+
 void ThalliumStartRpcServer(SharedMemoryContext *context, const char *addr,
                             i32 num_rpc_threads) {
   tl::engine rpc_server(addr, THALLIUM_SERVER_MODE, false, num_rpc_threads);
@@ -118,6 +128,7 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, const char *addr,
 void InitRpcContext(RpcContext *rpc) {
   rpc->call1 = ThalliumCall1;
   rpc->call2 = ThalliumCall2;
+  rpc->call3 = ThalliumCall3;
   rpc->start_server = ThalliumStartRpcServer;
 }
 
