@@ -3,6 +3,7 @@
 
 #include <mpi.h>
 
+#include "test_utils.h"
 #include "hermes.h"
 #include "common.h"
 #include "bucket.h"
@@ -26,10 +27,11 @@ int main(int argc, char **argv) {
     // int app_size = hermes->GetNumProcesses();
 
     hapi::Context ctx;
-    hapi::Bucket bucket(std::string("test_bucket_") + std::to_string(app_rank),
-                        hermes);
 
-    hapi::Blob put_data(4096, std::to_string(app_rank)[0]);
+    hapi::Bucket bucket(std::string("test_bucket_") + std::to_string(app_rank),
+                        hermes, ctx);
+
+    hapi::Blob put_data(KILOBYTES(4), std::to_string(app_rank)[0]);
 
     std::string blob_name = "test_blob" + std::to_string(app_rank);
     bucket.Put(blob_name, put_data, ctx);
@@ -41,9 +43,7 @@ int main(int argc, char **argv) {
 
     assert(put_data == get_result);
 
-    bucket.Release(ctx);
-
-
+    bucket.Destroy(ctx);
   } else {
     // Hermes core
   }

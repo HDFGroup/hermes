@@ -596,7 +596,7 @@ void DisplayMetadataSegment(SharedMemoryContext *context,
 
   // BucketInfo
   for (size_t i = 0; i < mdm->max_buckets; ++i) {
-    BucketInfo *info = GetBucketInfoByIndex(mdm, i);
+    BucketInfo *info = LocalGetBucketInfoByIndex(mdm, i);
 
     if (x > width) {
       x = 0;

@@ -88,10 +88,6 @@ class Bucket {
   Status Rename(const std::string& new_name,
                 Context &ctx);
 
-	/** release this bucket and free its associated resources */
-	/** check with Close function */
-	Status Release(Context &ctx);
-
 	/** close this bucket and free its associated resources (?) */
 	/** Invalidates handle */
   Status Close(Context &ctx);

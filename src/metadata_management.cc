@@ -9,11 +9,14 @@
 #define STBDS_REALLOC(heap, ptr, size) hermes::HeapRealloc(heap, ptr, size)
 #define STBDS_FREE(heap, ptr) hermes::HeapFree(heap, ptr)
 
+#define STBDS_ASSERT(x) assert((x))
+
 #define STB_DS_IMPLEMENTATION
 #include "stb_ds.h"
 
 #include "memory_arena.h"
 #include "buffer_pool.h"
+#include "buffer_pool_internal.h"
 #include "rpc.h"
 
 namespace tl = thallium;
@@ -33,26 +36,26 @@ bool IsNullVBucketId(VBucketID id) {
 }
 
 TicketMutex *GetMapMutex(MetadataManager *mdm, MapType map_type) {
-  TicketMutex *mutex = 0;
-  switch (map_type) {
-    case MapType::kBucket: {
-      mutex = &mdm->bucket_map_mutex;
-      break;
-    }
-    case MapType::kVBucket: {
-      mutex = &mdm->vbucket_map_mutex;
-      break;
-    }
-    case MapType::kBlob: {
-      mutex = &mdm->blob_map_mutex;
-      break;
-    }
-    default: {
-      assert(!"Invalid code path\n");
-    }
-  }
-
-  return mutex;
+  // TicketMutex *mutex = 0;
+  // switch (map_type) {
+  //   case MapType::kBucket: {
+  //     mutex = &mdm->bucket_map_mutex;
+  //     break;
+  //   }
+  //   case MapType::kVBucket: {
+  //     mutex = &mdm->vbucket_map_mutex;
+  //     break;
+  //   }
+  //   case MapType::kBlob: {
+  //     mutex = &mdm->blob_map_mutex;
+  //     break;
+  //   }
+  //   default: {
+  //     assert(!"Invalid code path\n");
+  //   }
+  // }
+  (void)map_type;
+  return &mdm->map_mutex;
 }
 
 static IdMap *GetMapByOffset(MetadataManager *mdm, u32 offset) {
@@ -111,7 +114,8 @@ IdMap *GetMap(MetadataManager *mdm, MapType map_type) {
   return result;
 }
 
-void LocalPut(MetadataManager *mdm, const char *key, u64 val, MapType map_type){
+void LocalPut(MetadataManager *mdm, const char *key, u64 val,
+              MapType map_type) {
   Heap *heap = GetMapHeap(mdm);
   TicketMutex *mutex = GetMapMutex(mdm, map_type);
 
@@ -131,6 +135,16 @@ u64 LocalGet(MetadataManager *mdm, const char *key, MapType map_type) {
   EndTicketMutex(mutex);
 
   return result;
+}
+
+void LocalDelete(MetadataManager *mdm, const char *key, MapType map_type) {
+  Heap *heap = GetMapHeap(mdm);
+  TicketMutex *mutex = GetMapMutex(mdm, map_type);
+
+  BeginTicketMutex(mutex);
+  IdMap *map = GetMap(mdm, map_type);
+  shdel(map, key, heap);
+  EndTicketMutex(mutex);
 }
 
 MetadataManager *GetMetadataManagerFromContext(SharedMemoryContext *context) {
@@ -164,7 +178,7 @@ u64 GetIdByName(SharedMemoryContext *context, CommunicationContext *comm,
   if (node_id == comm->node_id) {
     result = LocalGet(mdm, name, map_type);
   } else {
-    result = rpc->call1("RemoteGet", std::string(name), map_type);
+    result = RpcCall<u64>(rpc, 0, "RemoteGet", std::string(name), map_type);
   }
 
   return result;
@@ -202,11 +216,27 @@ void PutId(MetadataManager *mdm, CommunicationContext *comm,
   int node_id = HashString(mdm, comm, name.c_str());
 
   // TODO(chogan): Check for overlapping heaps here
+  // if (mdm->map_heap_end_offset >= mdm->id_heap_start_offset) {
+  //   uh-oh
+  // }
 
   if (node_id == comm->node_id) {
     LocalPut(mdm, name.c_str(), id, map_type);
   } else {
-    rpc->call2("RemotePut", name, id, map_type);
+    RpcCall<void>(rpc, 0, "RemotePut", name, id, map_type);
+  }
+}
+
+void DeleteId(MetadataManager *mdm, CommunicationContext *comm,
+              RpcContext *rpc, const std::string &name, MapType map_type) {
+  int node_id = HashString(mdm, comm, name.c_str());
+
+  // TODO(chogan): Update mdm->map_heap_end_offset
+
+  if (node_id == comm->node_id) {
+    LocalDelete(mdm, name.c_str(), map_type);
+  } else {
+    RpcCall<void>(rpc, node_id, "RemoteDelete", name, map_type);
   }
 }
 
@@ -225,16 +255,15 @@ void PutBlobId(MetadataManager *mdm, CommunicationContext *comm,
   PutId(mdm, comm, rpc, name, id.as_int, MapType::kBlob);
 }
 
-BucketInfo *GetBucketInfoByIndex(MetadataManager *mdm, u32 index) {
+BucketInfo *LocalGetBucketInfoByIndex(MetadataManager *mdm, u32 index) {
   BucketInfo *info_array = (BucketInfo *)((u8 *)mdm + mdm->bucket_info_offset);
   BucketInfo *result = info_array + index;
 
   return result;
 }
 
-// Assumes you're already on the correct node
-BucketInfo *GetBucketInfoById(MetadataManager *mdm, BucketID id) {
-  BucketInfo *result = GetBucketInfoByIndex(mdm, id.bits.index);
+BucketInfo *LocalGetBucketInfoById(MetadataManager *mdm, BucketID id) {
+  BucketInfo *result = LocalGetBucketInfoByIndex(mdm, id.bits.index);
 
   return result;
 }
@@ -251,21 +280,34 @@ BucketID GetNextFreeBucketId(SharedMemoryContext *context,
                              CommunicationContext *comm, RpcContext *rpc,
                              const std::string &name) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  BucketID result = {};
 
   // TODO(chogan): Could replace this with lock-free version if/when it matters
   BeginTicketMutex(&mdm->bucket_mutex);
-  BucketID result = mdm->first_free_bucket;
-  if (!IsNullBucketId(result)) {
-    BucketInfo *info = GetBucketInfoByIndex(mdm, result.bits.index);
-    info->blobs = {};
-    info->stats = {};
-    info->active = true;
-    mdm->first_free_bucket = info->next_free;
+  if (mdm->num_buckets < mdm->max_buckets) {
+    result = mdm->first_free_bucket;
+    assert(result.bits.node_id == (u32)comm->node_id);
+
+    if (!IsNullBucketId(result)) {
+      BucketInfo *info = LocalGetBucketInfoByIndex(mdm, result.bits.index);
+      info->blobs = {};
+      info->stats = {};
+      info->active = true;
+      mdm->first_free_bucket = info->next_free;
+      mdm->num_buckets++;
+    }
+  } else {
+    // TODO(chogan): @errorhandling
+    LOG(INFO) << "Exceeded max allowed buckets. "
+              << "Increase max_buckets_per_node in the Hermes configuration."
+              << std::endl;
   }
   EndTicketMutex(&mdm->bucket_mutex);
 
-  // NOTE(chogan): Add metadata entry
-  PutBucketId(mdm, comm, rpc, name, result);
+  if (!IsNullBucketId(result)) {
+    // NOTE(chogan): Add metadata entry
+    PutBucketId(mdm, comm, rpc, name, result);
+  }
 
   return result;
 }
@@ -274,21 +316,32 @@ VBucketID GetNextFreeVBucketId(SharedMemoryContext *context,
                                CommunicationContext *comm, RpcContext *rpc,
                                const std::string &name) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  VBucketID result = {};
 
   // TODO(chogan): Could replace this with lock-free version if/when it matters
   BeginTicketMutex(&mdm->vbucket_mutex);
-  VBucketID result = mdm->first_free_vbucket;
-  if (!IsNullVBucketId(result)) {
-    VBucketInfo *info = GetVBucketInfoByIndex(mdm, result.bits.index);
-    info->blobs = {};
-    info->stats = {};
-    memset(info->traits, 0, sizeof(TraitID) * kMaxTraitsPerVBucket);
-    info->active = true;
-    mdm->first_free_vbucket = info->next_free;
+  if (mdm->num_vbuckets < mdm->max_vbuckets) {
+    result = mdm->first_free_vbucket;
+    if (!IsNullVBucketId(result)) {
+      VBucketInfo *info = GetVBucketInfoByIndex(mdm, result.bits.index);
+      info->blobs = {};
+      info->stats = {};
+      memset(info->traits, 0, sizeof(TraitID) * kMaxTraitsPerVBucket);
+      info->active = true;
+      mdm->first_free_vbucket = info->next_free;
+      mdm->num_vbuckets++;
+    }
+  } else {
+    // TODO(chogan): @errorhandling
+    LOG(INFO) << "Exceeded max allowed vbuckets. "
+              << "Increase max_vbuckets_per_node in the Hermes configuration."
+              << std::endl;
   }
   EndTicketMutex(&mdm->vbucket_mutex);
 
-  PutVBucketId(mdm, comm, rpc, name, result);
+  if (!IsNullVBucketId(result)) {
+    PutVBucketId(mdm, comm, rpc, name, result);
+  }
 
   return result;
 }
@@ -330,7 +383,7 @@ void LocalAddBlobIdToBucket(MetadataManager *mdm, BucketID bucket_id,
 
   // TODO(chogan): Think about lock granularity
   BeginTicketMutex(&mdm->bucket_mutex);
-  BucketInfo *info = GetBucketInfoById(mdm, bucket_id);
+  BucketInfo *info = LocalGetBucketInfoById(mdm, bucket_id);
   BlobIdList *blobs = &info->blobs;
 
   if (blobs->length >= blobs->capacity) {
@@ -349,7 +402,7 @@ void AddBlobIdToBucket(MetadataManager *mdm, CommunicationContext *comm,
   if (target_node == (u32)comm->node_id) {
     LocalAddBlobIdToBucket(mdm, bucket_id, blob_id);
   } else {
-    rpc->call3("RemoteAddBlobIdToBucket", bucket_id, blob_id);
+    RpcCall<void>(rpc, 0, "RemoteAddBlobIdToBucket", bucket_id, blob_id);
   }
 }
 
@@ -402,7 +455,8 @@ void GetBufferIdList(Arena *arena, SharedMemoryContext *context,
   if (target_node == (u32)comm->node_id) {
     LocalGetBufferIdList(arena, mdm, blob_id, buffer_ids);
   } else {
-    std::vector<BufferID> result = rpc->call4("RemoteGetBufferIdList", blob_id);
+    std::vector<BufferID> result =
+      RpcCall<std::vector<BufferID>>(rpc, 0, "RemoteGetBufferIdList", blob_id);
     buffer_ids->ids = PushArray<BufferID>(arena, result.size());
     buffer_ids->length = (u32)result.size();
     CopyIds((u64 *)buffer_ids->ids, (u64 *)result.data(), result.size());
@@ -432,6 +486,74 @@ void AttachBlobToBucket(SharedMemoryContext *context,
   blob_id.bits.buffer_ids_offset = AllocateBufferIdList(mdm, buffer_ids);
   PutBlobId(mdm, comm, rpc, blob_name, blob_id);
   AddBlobIdToBucket(mdm, comm, rpc, blob_id, bucket_id);
+}
+
+void LocalDestroyBucket(SharedMemoryContext *context, const char *bucket_name,
+                        BucketID bucket_id, u32 current_node) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  BucketInfo *info = LocalGetBucketInfoById(mdm, bucket_id);
+  Heap *id_heap = GetIdHeap(mdm);
+  BlobID *blobs = (BlobID *)HeapOffsetToPtr(id_heap, info->blobs.head_offset);
+
+  // 1. Iterate through all BlobIDs in this Bucket
+  for (u32 i = 0; i < info->blobs.length; ++i) {
+    BlobID *blob_id = blobs + i;
+
+    if (blob_id->bits.node_id == current_node) {
+      // 2. ReleaseBuffers on each list of BufferIDs
+      std::vector<BufferID> buffer_ids = LocalGetBufferIdList(mdm, *blob_id);
+
+      for (size_t j = 0; j < buffer_ids.size(); ++j) {
+        if (buffer_ids[j].bits.node_id == current_node) {
+          ReleaseBuffer(context, buffer_ids[j]);
+        } else {
+          // TODO(chogan):
+          // RpcCall<>(rpc, 0, "ReleaseBuffer", buffer_ids[j]);
+        }
+      }
+      // Delete BufferID list
+      u8 *to_free = HeapOffsetToPtr(id_heap, blob_id->bits.buffer_ids_offset);
+      HeapFree(id_heap, to_free);
+
+    } else {
+      // TODO(chogan):
+      // RpcCall<>(rpc, 0, );
+    }
+  }
+
+  // Delete BlobId list
+  HeapFree(id_heap, blobs);
+  info->blobs.length = 0;
+  info->blobs.capacity = 0;
+  info->blobs.head_offset = 0;
+
+  // Delete BucketInfo
+  info->ref_count.store(0);
+  info->active = false;
+  info->stats = {};
+
+  BeginTicketMutex(&mdm->bucket_mutex);
+  mdm->num_buckets--;
+  info->next_free = mdm->first_free_bucket;
+  mdm->first_free_bucket = bucket_id;
+  EndTicketMutex(&mdm->bucket_mutex);
+
+  LocalDelete(mdm, bucket_name, MapType::kBucket);
+}
+
+void DestroyBucket(SharedMemoryContext *context, CommunicationContext *comm,
+                   RpcContext *rpc, const char *name, BucketID bucket_id) {
+  // TODO(chogan): Check refcounts
+
+  // TODO(chogan): Locks
+
+  u32 target_node = bucket_id.bits.node_id;
+  if (target_node == (u32)comm->node_id) {
+    LocalDestroyBucket(context, name, bucket_id, (u32)comm->node_id);
+  } else {
+    RpcCall<void>(rpc, target_node, "RemoteDestroyBucket", std::string(name),
+                  bucket_id);
+  }
 }
 
 void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,

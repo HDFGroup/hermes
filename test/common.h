@@ -18,6 +18,7 @@
 #include "buffer_pool.h"
 #include "buffer_pool_internal.h"
 #include "metadata_management.h"
+#include "test_utils.h"
 
 /**
  * @file common.h
@@ -26,9 +27,6 @@
  */
 
 namespace hermes {
-
-#define KILOBYTES(n) (1024 * (n))
-#define MEGABYTES(n) (1024 * 1024 * (n))
 
 const char mem_mount_point[] = "";
 const char nvme_mount_point[] = "./";
@@ -187,8 +185,8 @@ SharedMemoryContext InitHermesCore(Config *config, CommunicationContext *comm,
   *comm_state_offset_location = comm_state_offset_from_mdm;
 
   if (start_rpc_server) {
-    rpc->start_server(&context, config->rpc_server_name.c_str(),
-                      num_rpc_threads);
+    rpc->start_server(&context,
+                      config->rpc_server_name.c_str(), num_rpc_threads);
   }
 
   return context;
@@ -213,7 +211,8 @@ BootstrapSharedMemory(Arena *arenas, Config *config, CommunicationContext *comm,
   GrowArena(&arenas[kArenaType_Transient], trans_arena_size);
   comm->state = arenas[kArenaType_Transient].base;
 
-  InitRpcContext(rpc);
+  // TODO(chogan): Make sure each process has an udpated RpcContext
+  InitRpcContext(rpc, comm->num_nodes, comm->node_id);
 
   SharedMemoryContext result = {};
   // TODO(chogan): Always start RPC server (remove is_daemon param)

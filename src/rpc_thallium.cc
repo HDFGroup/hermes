@@ -1,6 +1,10 @@
+#include "rpc.h"
+
 #include <thallium.hpp>
 #include <thallium/serialization/stl/vector.hpp>
 #include <thallium/serialization/stl/pair.hpp>
+
+namespace tl = thallium;
 
 namespace hermes {
 
@@ -8,51 +12,31 @@ struct ThalliumState {
   char *server_name;
 };
 
-u64 ThalliumCall1(const char *func_name, std::string name, MapType map_type) {
+template<typename ReturnType, typename... Ts>
+auto RpcCall(RpcContext *rpc, u32 node_id, const char *func_name, Ts... args) {
   // TODO(chogan): Store this in the metadata arena
-  // TODO(chogan): Server must include the node_id
+  ThalliumState *tl_state = (ThalliumState *)rpc->state;
+  (void)tl_state;
+  (void)node_id;
   const char kServerName[] = "ofi+sockets://localhost:8080";
+  // TODO(chogan): Server must include the node_id
   tl::engine engine("tcp", THALLIUM_CLIENT_MODE);
-  tl::remote_procedure remote_get = engine.define(func_name);
+  tl::remote_procedure remote_proc = engine.define(func_name);
   tl::endpoint server = engine.lookup(kServerName);
-  u64 result = remote_get.on(server)(name, map_type);
 
-  return result;
+  if constexpr(std::is_same<ReturnType, void>::value)
+  {
+    remote_proc.on(server)(std::forward<Ts>(args)...);
+  }
+  else
+  {
+    ReturnType result = remote_proc.on(server)(std::forward<Ts>(args)...);
+
+    return result;
+  }
 }
 
-void ThalliumCall2(const char *func_name, const std::string &name, u64 val,
-                   MapType map_type) {
-  // TODO(chogan): Store this in the metadata arena
-  // TODO(chogan): Server must include the node_id
-  const char kServerName[] = "ofi+sockets://localhost:8080";
-  tl::engine engine("tcp", THALLIUM_CLIENT_MODE);
-  tl::remote_procedure remote_put = engine.define(func_name);
-  tl::endpoint server = engine.lookup(kServerName);
-  remote_put.on(server)(name, val, map_type);
-}
-
-void ThalliumCall3(const char * func_name, BucketID bucket_id, BlobID blob_id) {
-  // TODO(chogan): Store this in the metadata arena
-  // TODO(chogan): Server must include the node_id
-  const char kServerName[] = "ofi+sockets://localhost:8080";
-  tl::engine engine("tcp", THALLIUM_CLIENT_MODE);
-  tl::remote_procedure add_blob_id_to_bucket = engine.define(func_name);
-  tl::endpoint server = engine.lookup(kServerName);
-  add_blob_id_to_bucket.on(server)(bucket_id, blob_id);
-}
-
-std::vector<BufferID> ThalliumCall4(const char *func_name, BlobID blob_id) {
-  // TODO(chogan): Store this in the metadata arena
-  // TODO(chogan): Server must include the node_id
-  const char kServerName[] = "ofi+sockets://localhost:8080";
-  tl::engine engine("tcp", THALLIUM_CLIENT_MODE);
-  tl::remote_procedure get_buffer_id_list = engine.define(func_name);
-  tl::endpoint server = engine.lookup(kServerName);
-  std::vector<BufferID> result = get_buffer_id_list.on(server)(blob_id);
-
-  return result;
-}
-
+// TODO(chogan): addr should be in the RpcContext
 void ThalliumStartRpcServer(SharedMemoryContext *context, const char *addr,
                             i32 num_rpc_threads) {
   tl::engine rpc_server(addr, THALLIUM_SERVER_MODE, false, num_rpc_threads);
@@ -61,6 +45,7 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, const char *addr,
             << num_rpc_threads << " RPC threads" << std::endl;
 
   using std::function;
+  using std::string;
   using std::vector;
   using tl::request;
 
@@ -92,20 +77,26 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, const char *addr,
 
   // Metadata requests
 
-  function<void(const request&, std::string, MapType)> rpc_map_get =
-    [context](const request &req, std::string name, MapType map_type) {
+  function<void(const request&, string, MapType)> rpc_map_get =
+    [context](const request &req, string name, MapType map_type) {
       MetadataManager *mdm = GetMetadataManagerFromContext(context);
       u64 result = LocalGet(mdm, name.c_str(), map_type);
 
       req.respond(result);
     };
 
-  function<void(const request&, const std::string&, u64, MapType)> rpc_map_put =
-    [context](const request &req, const std::string &name, u64 val,
+  function<void(const request&, const string&, u64, MapType)> rpc_map_put =
+    [context](const request &req, const string &name, u64 val,
               MapType map_type) {
       (void)req;
       MetadataManager *mdm = GetMetadataManagerFromContext(context);
       LocalPut(mdm, name.c_str(), val, map_type);
+    };
+
+  function<void(const request&, string, MapType)> rpc_map_delete =
+    [context](const request &req, string name, MapType map_type) {
+      MetadataManager *mdm = GetMetadataManagerFromContext(context);
+      LocalDelete(mdm, name.c_str(), map_type);
     };
 
   function<void(const request&, BucketID, BlobID)> rpc_add_blob =
@@ -123,6 +114,13 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, const char *addr,
       req.respond(result);
     };
 
+  function<void(const request&, const string&, BucketID)> rpc_destroy_bucket =
+    [context](const request &req, const string &name, BucketID id) {
+      (void)req;
+      u32 current_node = id.bits.node_id;
+      LocalDestroyBucket(context, name.c_str(), id, current_node);
+    };
+
   function<void(const request&)> rpc_finalize =
     [&rpc_server](const request &req) {
       (void)req;
@@ -135,7 +133,10 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, const char *addr,
   rpc_server.define("MergeBuffers", rpc_merge_buffers).disable_response();
   rpc_server.define("RemoteGet", rpc_map_get);
   rpc_server.define("RemotePut", rpc_map_put).disable_response();
+  rpc_server.define("RemoteDelete", rpc_map_delete).disable_response();
   rpc_server.define("RemoteAddBlobIdToBucket", rpc_add_blob).disable_response();
+  rpc_server.define("RemoteDestroyBucket",
+                    rpc_destroy_bucket).disable_response();
   rpc_server.define("RemoteGetBufferIdList", rpc_get_buffer_id_list);
   rpc_server.define("Finalize", rpc_finalize).disable_response();
 
@@ -146,11 +147,9 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, const char *addr,
   rpc_server.wait_for_finalize();
 }
 
-void InitRpcContext(RpcContext *rpc) {
-  rpc->call1 = ThalliumCall1;
-  rpc->call2 = ThalliumCall2;
-  rpc->call3 = ThalliumCall3;
-  rpc->call4 = ThalliumCall4;
+void InitRpcContext(RpcContext *rpc, u32 num_nodes, u32 node_id) {
+  rpc->num_nodes = num_nodes;
+  rpc->node_id = node_id;
   rpc->start_server = ThalliumStartRpcServer;
 }
 

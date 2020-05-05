@@ -21,9 +21,9 @@
 #include <glog/logging.h>
 #include <mpi.h>
 
+#include "metadata_management.h"
 #include "memory_arena.cc"
 #include "config_parser.cc"
-#include "metadata_management.cc"
 
 #if defined(HERMES_COMMUNICATION_MPI)
 #include "communication_mpi.cc"
@@ -38,6 +38,8 @@
 #else
 #error RPC implementation required (e.g., -DHERMES_RPC_THALLIUM).
 #endif
+
+#include "metadata_management.cc"
 
 /**
  * @file buffer_pool.cc

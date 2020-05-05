@@ -9,25 +9,17 @@
 
 namespace hermes {
 
-// TODO(chogan): Templatize one `call` function
-typedef u64 (*Call1Func)(const char *, std::string, MapType map_type);
-typedef void (*Call2Func)(const char *, const std::string&, u64,
-                          MapType map_type);
-typedef void (*Call3Func)(const char *, BucketID, BlobID);
-typedef std::vector<BufferID> (*Call4Func)(const char *, BlobID);
-typedef void (*StartFunc)(SharedMemoryContext *, const char *, i32);
+typedef void (*StartFunc)(SharedMemoryContext*, const char*, int);
 
 struct RpcContext {
   void *state;
+  u32 node_id;
+  u32 num_nodes;
 
-  Call1Func call1;
-  Call2Func call2;
-  Call3Func call3;
-  Call4Func call4;
   StartFunc start_server;
 };
 
-void InitRpcContext(RpcContext *rpc);
+void InitRpcContext(RpcContext *rpc, u32 num_nodes, u32 node_id);
 
 }  // namespace hermes
 

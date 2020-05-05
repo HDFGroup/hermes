@@ -33,6 +33,8 @@ Bucket::Bucket(const std::string &initial_name,
     id_ = GetNextFreeBucketId(&hermes_->context_, &hermes_->comm_,
                               &hermes_->rpc_, initial_name);
   }
+
+  // IncrementRefcount(id);
 }
 
 bool Bucket::IsValid() const {
@@ -77,7 +79,6 @@ size_t Bucket::Get(const std::string &name, Blob& user_blob, Context &ctx) {
   (void)ctx;
 
   size_t ret = 0;
-  LOG(INFO) << "Getting Blob " << name << " from bucket " << name_ << '\n';
 
   ScopedTemporaryMemory scratch(&hermes_->trans_arena_);
   BufferIdArray buffer_ids =
@@ -85,8 +86,11 @@ size_t Bucket::Get(const std::string &name, Blob& user_blob, Context &ctx) {
                              &hermes_->rpc_, name.c_str());
 
   if (user_blob.size() == 0) {
+    LOG(INFO) << "Getting Blob " << name << " size from bucket "
+              << name_ << '\n';
     ret = GetBlobSize(&hermes_->context_, &hermes_->comm_, &buffer_ids);
   } else {
+    LOG(INFO) << "Getting Blob " << name << " from bucket " << name_ << '\n';
     hermes::Blob blob = {};
     blob.data = user_blob.data();
     blob.size = user_blob.size();
@@ -160,20 +164,6 @@ Status Bucket::Rename(const std::string &new_name, Context &ctx) {
   return ret;
 }
 
-Status Bucket::Release(Context &ctx) {
-  (void)ctx;
-  Status ret = 0;
-
-  LOG(INFO) << "Releasing bucket " << '\n';
-
-  for (const auto &name_buffer_ids : blobs_) {
-    ReleaseBuffers(&hermes_->context_, blobs_[name_buffer_ids.first]);
-  }
-  blobs_.clear();
-
-  return ret;
-}
-
 Status Bucket::Close(Context &ctx) {
   (void)ctx;
   Status ret = 0;
@@ -187,7 +177,9 @@ Status Bucket::Destroy(Context &ctx) {
   (void)ctx;
   Status ret = 0;
 
-  LOG(INFO) << "Destroying a bucket to " << name_ << '\n';
+  LOG(INFO) << "Destroying bucket '" << name_ << "'" << std::endl;
+  DestroyBucket(&hermes_->context_, &hermes_->comm_, &hermes_->rpc_,
+                name_.c_str(), id_);
 
   return ret;
 }

@@ -134,9 +134,10 @@ struct MetadataManager {
   TicketMutex bucket_mutex;
   TicketMutex vbucket_mutex;
 
-  TicketMutex bucket_map_mutex;
-  TicketMutex vbucket_map_mutex;
-  TicketMutex blob_map_mutex;
+  // TicketMutex bucket_map_mutex;
+  // TicketMutex vbucket_map_mutex;
+  // TicketMutex blob_map_mutex;
+  TicketMutex map_mutex;
   TicketMutex id_mutex;
 
   size_t map_seed;
@@ -156,6 +157,8 @@ void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
 BucketID GetBucketIdByName(SharedMemoryContext *context,
                            CommunicationContext *comm, RpcContext *rpc,
                            const char *name);
+void DestroyBucket(SharedMemoryContext *context, CommunicationContext *comm,
+                   RpcContext *rpc, const char *name, BucketID bucket_id);
 BufferIdArray GetBufferIdsFromBlobName(Arena *arena,
                                        SharedMemoryContext *context,
                                        CommunicationContext *comm,
@@ -171,8 +174,18 @@ void AttachBlobToBucket(SharedMemoryContext *context,
 
 // internal
 MetadataManager *GetMetadataManagerFromContext(SharedMemoryContext *context);
-BucketInfo *GetBucketInfoByIndex(MetadataManager *mdm, u32 index);
+BucketInfo *LocalGetBucketInfoByIndex(MetadataManager *mdm, u32 index);
 VBucketInfo *GetVBucketInfoByIndex(MetadataManager *mdm, u32 index);
+
+void LocalAddBlobIdToBucket(MetadataManager *mdm, BucketID bucket_id,
+                            BlobID blob_id);
+std::vector<BufferID> LocalGetBufferIdList(MetadataManager *mdm,
+                                           BlobID blob_id);
+void LocalDestroyBucket(SharedMemoryContext *context, const char *bucket_name,
+                        BucketID bucket_id, u32 current_node);
+u64 LocalGet(MetadataManager *mdm, const char *key, MapType map_type);
+void LocalPut(MetadataManager *mdm, const char *key, u64 val, MapType map_type);
+void LocalDelete(MetadataManager *mdm, const char *key, MapType map_type);
 
 /**
  *  Lets Thallium know how to serialize a BucketID.
