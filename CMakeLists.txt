@@ -140,6 +140,7 @@ option(HERMES_INTERCEPT_IO "Use GOTCHA as IO interception tool" ON)
 option(HERMES_COMMUNICATION_MPI "Use MPI as the communication layer." ON)
 option(BUILD_BUFFER_POOL_VISUALIZER "Build the BufferPool visualizer" OFF)
 option(USE_ADDRESS_SANITIZER "Enable -fsanitize=address in Debug builds" ON)
+option(USE_THREAD_SANITIZER "Enable -fsanitize=thread in Debug builds" OFF)
 option(HERMES_USE_TCP "Use TCP as the transport layer for RPC." ON)
 option(HERMES_RPC_THALLIUM "Use Thallium as the RPC library." ON)
 
@@ -163,6 +164,7 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3"
         CACHE STRING "" FORCE)
   endif()
+
   if (USE_ADDRESS_SANITIZER AND
       NOT "${CMAKE_CXX_FLAGS_DEBUG}" MATCHES ".*-fsanitize=address.*")
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address"
@@ -171,6 +173,21 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     string(REPLACE
       "-fsanitize=address" "" FLAGS_NO_SANITIZE "${CMAKE_CXX_FLAGS_DEBUG}")
     set(CMAKE_CXX_FLAGS_DEBUG "${FLAGS_NO_SANITIZE}" CACHE STRING "" FORCE)
+  endif()
+
+  if (USE_THREAD_SANITIZER AND USE_ADDRESS_SANITIZER)
+    message(FATAL_ERROR "Cannont use -fsanitize=address and -fsanitize=thread "
+                        "at the same time")
+  else()
+    if (USE_THREAD_SANITIZER AND
+        NOT "${CMAKE_CXX_FLAGS_DEBUG}" MATCHES ".*-fsanitize=thread.*")
+      set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=thread"
+        CACHE STRING "" FORCE)
+    else()
+      string(REPLACE
+        "-fsanitize=thread" "" FLAGS_NO_SANITIZE "${CMAKE_CXX_FLAGS_DEBUG}")
+      set(CMAKE_CXX_FLAGS_DEBUG "${FLAGS_NO_SANITIZE}" CACHE STRING "" FORCE)
+    endif()
   endif()
 endif()
 
