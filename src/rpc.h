@@ -9,7 +9,9 @@
 
 namespace hermes {
 
-typedef void (*StartFunc)(SharedMemoryContext*, const char*, int);
+struct RpcContext;
+
+typedef void (*StartFunc)(SharedMemoryContext*, RpcContext*, const char*, int);
 
 struct RpcContext {
   void *state;

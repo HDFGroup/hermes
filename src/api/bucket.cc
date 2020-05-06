@@ -34,6 +34,7 @@ Bucket::Bucket(const std::string &initial_name,
                               &hermes_->rpc_, initial_name);
   }
 
+  // TODO(chogan):
   // IncrementRefcount(id);
 }
 
@@ -119,7 +120,7 @@ Status Bucket::DeleteBlob(const std::string &name, Context &ctx) {
 
   LOG(INFO) << "Deleting Blob " << name << " from bucket " << name_ << '\n';
 
-  ReleaseBuffers(&hermes_->context_, blobs_[name]);
+  ReleaseBuffers(&hermes_->context_, &hermes_->rpc_, blobs_[name]);
   blobs_.erase(name);
 
   return ret;

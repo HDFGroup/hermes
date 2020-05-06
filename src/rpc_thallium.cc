@@ -37,8 +37,8 @@ auto RpcCall(RpcContext *rpc, u32 node_id, const char *func_name, Ts... args) {
 }
 
 // TODO(chogan): addr should be in the RpcContext
-void ThalliumStartRpcServer(SharedMemoryContext *context, const char *addr,
-                            i32 num_rpc_threads) {
+void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
+                            const char *addr, i32 num_rpc_threads) {
   tl::engine rpc_server(addr, THALLIUM_SERVER_MODE, false, num_rpc_threads);
 
   LOG(INFO) << "Serving at " << rpc_server.self() << " with "
@@ -57,10 +57,10 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, const char *addr,
       req.respond(result);
     };
 
-  function<void(const request&, const vector<BufferID>&)> rpc_release_buffers =
-    [context](const request &req, const vector<BufferID> &buffer_ids) {
+  function<void(const request&, BufferID)> rpc_release_buffer =
+    [context](const request &req, BufferID id) {
       (void)req;
-      ReleaseBuffers(context, buffer_ids);
+      LocalReleaseBuffer(context, id);
     };
 
   function<void(const request&, int)> rpc_split_buffers =
@@ -95,6 +95,7 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, const char *addr,
 
   function<void(const request&, string, MapType)> rpc_map_delete =
     [context](const request &req, string name, MapType map_type) {
+      (void)req;
       MetadataManager *mdm = GetMetadataManagerFromContext(context);
       LocalDelete(mdm, name.c_str(), map_type);
     };
@@ -114,11 +115,16 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, const char *addr,
       req.respond(result);
     };
 
-  function<void(const request&, const string&, BucketID)> rpc_destroy_bucket =
-    [context](const request &req, const string &name, BucketID id) {
+  function<void(const request&, BlobID)> rpc_free_buffer_id_list =
+    [context](const request &req, BlobID blob_id) {
       (void)req;
-      u32 current_node = id.bits.node_id;
-      LocalDestroyBucket(context, name.c_str(), id, current_node);
+      LocalFreeBufferIdList(context, blob_id);
+    };
+
+  function<void(const request&, const string&, BucketID)> rpc_destroy_bucket =
+    [context, rpc](const request &req, const string &name, BucketID id) {
+      (void)req;
+      LocalDestroyBucket(context, rpc, name.c_str(), id);
     };
 
   function<void(const request&)> rpc_finalize =
@@ -128,7 +134,7 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, const char *addr,
     };
 
   rpc_server.define("GetBuffers", rpc_get_buffers);
-  rpc_server.define("ReleaseBuffers", rpc_release_buffers).disable_response();
+  rpc_server.define("RemoteReleaseBuffer", rpc_release_buffer).disable_response();
   rpc_server.define("SplitBuffers", rpc_split_buffers).disable_response();
   rpc_server.define("MergeBuffers", rpc_merge_buffers).disable_response();
   rpc_server.define("RemoteGet", rpc_map_get);
@@ -138,6 +144,8 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, const char *addr,
   rpc_server.define("RemoteDestroyBucket",
                     rpc_destroy_bucket).disable_response();
   rpc_server.define("RemoteGetBufferIdList", rpc_get_buffer_id_list);
+  rpc_server.define("RemoteFreeBufferIdList",
+                    rpc_free_buffer_id_list).disable_response();
   rpc_server.define("Finalize", rpc_finalize).disable_response();
 
   // TODO(chogan): Currently the calling thread waits for finalize because

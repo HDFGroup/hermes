@@ -299,7 +299,7 @@ void SetFirstFreeBufferId(SharedMemoryContext *context, TierID tier_id,
   }
 }
 
-void ReleaseBuffer(SharedMemoryContext *context, BufferID buffer_id) {
+void LocalReleaseBuffer(SharedMemoryContext *context, BufferID buffer_id) {
   BufferPool *pool = GetBufferPoolFromContext(context);
   BufferHeader *header_to_free = GetHeaderByIndex(context,
                                                   buffer_id.bits.header_index);
@@ -316,10 +316,27 @@ void ReleaseBuffer(SharedMemoryContext *context, BufferID buffer_id) {
   }
 }
 
-void ReleaseBuffers(SharedMemoryContext *context,
+void ReleaseBuffer(SharedMemoryContext *context, RpcContext *rpc,
+                   BufferID buffer_id) {
+  u32 target_node = buffer_id.bits.node_id;
+  if (target_node == rpc->node_id) {
+    LocalReleaseBuffer(context, buffer_id);
+  } else {
+    RpcCall<void>(rpc, target_node, "ReleaseBuffer", buffer_id);
+  }
+}
+
+void ReleaseBuffers(SharedMemoryContext *context, RpcContext *rpc,
                     const std::vector<BufferID> &buffer_ids) {
   for (auto id : buffer_ids) {
-    ReleaseBuffer(context, id);
+    ReleaseBuffer(context, rpc, id);
+  }
+}
+
+void LocalReleaseBuffers(SharedMemoryContext *context,
+                         const std::vector<BufferID> &buffer_ids) {
+  for (auto id : buffer_ids) {
+    LocalReleaseBuffer(context, id);
   }
 }
 
@@ -384,7 +401,7 @@ std::vector<BufferID> GetBuffers(SharedMemoryContext *context,
   if (failed) {
     // NOTE(chogan): All or none operation. Must release the acquired buffers if
     // we didn't get all we asked for
-    ReleaseBuffers(context, result);
+    LocalReleaseBuffers(context, result);
     result.clear();
   }
 

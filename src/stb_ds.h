@@ -1169,11 +1169,14 @@ size_t stbds_hash_bytes(void *p, size_t len, size_t seed)
 #endif
 
 
-static int stbds_is_key_equal(void *a, size_t elemsize, void *key, size_t keysize, size_t keyoffset, int mode, size_t i)
+static int stbds_is_key_equal(void *a, size_t elemsize, void *key, size_t keysize, size_t keyoffset, int mode, size_t i, Heap *heap)
 {
   (void)keyoffset;
-  if (mode >= STBDS_HM_STRING)
-    return 0==strcmp((char *) key, * (char **) ((char *) a + elemsize*i));
+  if (mode >= STBDS_HM_STRING) {
+    hermes::u64 heap_offset = *(hermes::u64 *) ((char *) a + elemsize*i);
+    hermes::u8 *heap_ptr = HeapOffsetToPtr(heap, (hermes::u32)heap_offset);
+    return 0==strcmp((char *) key, (char *)heap_ptr);
+  }
   else
     return 0==memcmp(key, (char *) a + elemsize*i, keysize);
 }
@@ -1183,7 +1186,6 @@ static int stbds_is_key_equal(void *a, size_t elemsize, void *key, size_t keysiz
 
 #define stbds_hash_table(a)  ((stbds_hash_index *) (stbds_header(a)->hash_table_offset ? (char *)stbds_header(a) + stbds_header(a)->hash_table_offset : 0))
 
-
 void stbds_hmfree_func(void *a, size_t elemsize, Heap *heap)
 {
   if (a == NULL) return;
@@ -1191,8 +1193,11 @@ void stbds_hmfree_func(void *a, size_t elemsize, Heap *heap)
     if (stbds_hash_table(a)->string.mode == STBDS_SH_STRDUP) {
       size_t i;
       // skip 0th element, which is default
-      for (i=1; i < stbds_header(a)->length; ++i)
-        STBDS_FREE(heap, *(char**) ((char *) a + elemsize*i));
+      for (i=1; i < stbds_header(a)->length; ++i) {
+        hermes::u64 heap_offset = *(hermes::u64 *) ((char *) a + elemsize*i);
+        hermes::u8 *heap_ptr = HeapOffsetToPtr(heap, (hermes::u32)heap_offset);
+        STBDS_FREE(heap, heap_ptr);
+      }
     }
     stbds_strreset(&stbds_hash_table(a)->string, heap);
   }
@@ -1200,7 +1205,7 @@ void stbds_hmfree_func(void *a, size_t elemsize, Heap *heap)
   STBDS_FREE(heap, stbds_header(a));
 }
 
-static ptrdiff_t stbds_hm_find_slot(void *a, size_t elemsize, void *key, size_t keysize, size_t keyoffset, int mode)
+static ptrdiff_t stbds_hm_find_slot(void *a, size_t elemsize, void *key, size_t keysize, size_t keyoffset, int mode, Heap *heap)
 {
   void *raw_a = STBDS_HASH_TO_ARR(a,elemsize);
   stbds_hash_index *table = stbds_hash_table(raw_a);
@@ -1221,7 +1226,7 @@ static ptrdiff_t stbds_hm_find_slot(void *a, size_t elemsize, void *key, size_t 
     // start searching from pos to end of bucket, this should help performance on small hash tables that fit in cache
     for (i=pos & STBDS_BUCKET_MASK; i < STBDS_BUCKET_LENGTH; ++i) {
       if (bucket->hash[i] == hash) {
-        if (stbds_is_key_equal(a, elemsize, key, keysize, keyoffset, mode, bucket->index[i])) {
+        if (stbds_is_key_equal(a, elemsize, key, keysize, keyoffset, mode, bucket->index[i], heap)) {
           return (pos & ~STBDS_BUCKET_MASK)+i;
         }
       } else if (bucket->hash[i] == STBDS_HASH_EMPTY) {
@@ -1233,7 +1238,7 @@ static ptrdiff_t stbds_hm_find_slot(void *a, size_t elemsize, void *key, size_t 
     limit = pos & STBDS_BUCKET_MASK;
     for (i = 0; i < limit; ++i) {
       if (bucket->hash[i] == hash) {
-        if (stbds_is_key_equal(a, elemsize, key, keysize, keyoffset, mode, bucket->index[i])) {
+        if (stbds_is_key_equal(a, elemsize, key, keysize, keyoffset, mode, bucket->index[i], heap)) {
           return (pos & ~STBDS_BUCKET_MASK)+i;
         }
       } else if (bucket->hash[i] == STBDS_HASH_EMPTY) {
@@ -1268,7 +1273,7 @@ void * stbds_hmget_key_ts(void *a, size_t elemsize, void *key, size_t keysize, p
     if (table == 0) {
       *temp = -1;
     } else {
-      ptrdiff_t slot = stbds_hm_find_slot(a, elemsize, key, keysize, keyoffset, mode);
+      ptrdiff_t slot = stbds_hm_find_slot(a, elemsize, key, keysize, keyoffset, mode, heap);
       if (slot < 0) {
         *temp = STBDS_INDEX_EMPTY;
       } else {
@@ -1303,7 +1308,7 @@ void * stbds_hmput_default(void *a, size_t elemsize, Heap *heap)
   return a;
 }
 
-static char *stbds_strdup(char *str, Heap *heap);
+static hermes::u64 stbds_strdup(char *str, Heap *heap);
 
 void *stbds_hmput_key(void *a, size_t elemsize, void *key, size_t keysize, int mode, Heap *heap)
 {
@@ -1361,7 +1366,7 @@ void *stbds_hmput_key(void *a, size_t elemsize, void *key, size_t keysize, int m
       // start searching from pos to end of bucket
       for (i=pos & STBDS_BUCKET_MASK; i < STBDS_BUCKET_LENGTH; ++i) {
         if (bucket->hash[i] == hash) {
-          if (stbds_is_key_equal(raw_a, elemsize, key, keysize, keyoffset, mode, bucket->index[i])) {
+          if (stbds_is_key_equal(raw_a, elemsize, key, keysize, keyoffset, mode, bucket->index[i], heap)) {
             stbds_temp(a) = bucket->index[i];
             return STBDS_ARR_TO_HASH(a,elemsize);
           }
@@ -1378,7 +1383,7 @@ void *stbds_hmput_key(void *a, size_t elemsize, void *key, size_t keysize, int m
       limit = pos & STBDS_BUCKET_MASK;
       for (i = 0; i < limit; ++i) {
         if (bucket->hash[i] == hash) {
-          if (stbds_is_key_equal(raw_a, elemsize, key, keysize, keyoffset, mode, bucket->index[i])) {
+          if (stbds_is_key_equal(raw_a, elemsize, key, keysize, keyoffset, mode, bucket->index[i], heap)) {
             stbds_temp(a) = bucket->index[i];
             return STBDS_ARR_TO_HASH(a,elemsize);
           }
@@ -1418,7 +1423,7 @@ void *stbds_hmput_key(void *a, size_t elemsize, void *key, size_t keysize, int m
       stbds_temp(a) = i-1;
 
       switch (table->string.mode) {
-         case STBDS_SH_STRDUP:  *(char **) ((char *) a + elemsize*i) = stbds_strdup((char*) key, heap); break;
+        case STBDS_SH_STRDUP:  *(hermes::u64 *) ((char *) a + elemsize*i) = stbds_strdup((char*) key, heap); break;
          case STBDS_SH_ARENA:   *(char **) ((char *) a + elemsize*i) = stbds_stralloc(&table->string, (char*)key, heap); break;
          case STBDS_SH_DEFAULT: *(char **) ((char *) a + elemsize*i) = (char *) key; break;
          default:                memcpy((char *) a + elemsize*i, key, keysize); break;
@@ -1453,7 +1458,7 @@ void * stbds_hmdel_key(void *a, size_t elemsize, void *key, size_t keysize, size
       return a;
     } else {
       ptrdiff_t slot;
-      slot = stbds_hm_find_slot(a, elemsize, key, keysize, keyoffset, mode);
+      slot = stbds_hm_find_slot(a, elemsize, key, keysize, keyoffset, mode, heap);
       if (slot < 0)
         return a;
       else {
@@ -1470,8 +1475,11 @@ void * stbds_hmdel_key(void *a, size_t elemsize, void *key, size_t keysize, size
         b->hash[i] = STBDS_HASH_DELETED;
         b->index[i] = STBDS_INDEX_DELETED;
 
-        if (mode == STBDS_HM_STRING && table->string.mode == STBDS_SH_STRDUP)
-          STBDS_FREE(heap, *(char**) ((char *) a+elemsize*old_index));
+        if (mode == STBDS_HM_STRING && table->string.mode == STBDS_SH_STRDUP) {
+          hermes::u64 heap_offset = *(hermes::u64 *) ((char *) a + elemsize*old_index);
+          hermes::u8 *heap_ptr = hermes::HeapOffsetToPtr(heap, (hermes::u32)heap_offset);
+          STBDS_FREE(heap, heap_ptr);
+        }
 
         // if indices are the same, memcpy is a no-op, but back-pointer-fixup will fail, so skip
         if (old_index != final_index) {
@@ -1479,10 +1487,13 @@ void * stbds_hmdel_key(void *a, size_t elemsize, void *key, size_t keysize, size
           memmove((char*) a + elemsize*old_index, (char*) a + elemsize*final_index, elemsize);
 
           // now find the slot for the last element
-          if (mode == STBDS_HM_STRING)
-            slot = stbds_hm_find_slot(a, elemsize, *(char**) ((char *) a+elemsize*old_index + keyoffset), keysize, keyoffset, mode);
+          if (mode == STBDS_HM_STRING) {
+            hermes::u64 heap_offset = *(hermes::u64 *) ((char *) a + elemsize*old_index + keyoffset);
+            hermes::u8 *heap_ptr = HeapOffsetToPtr(heap, (hermes::u32)heap_offset);
+            slot = stbds_hm_find_slot(a, elemsize, heap_ptr, keysize, keyoffset, mode, heap);
+          }
           else
-            slot = stbds_hm_find_slot(a, elemsize,  (char* ) a+elemsize*old_index + keyoffset, keysize, keyoffset, mode);
+            slot = stbds_hm_find_slot(a, elemsize,  (char* ) a+elemsize*old_index + keyoffset, keysize, keyoffset, mode, heap);
           STBDS_ASSERT(slot >= 0);
           b = &stbds_table_storage(table)[slot >> STBDS_BUCKET_SHIFT];
           i = slot & STBDS_BUCKET_MASK;
@@ -1510,14 +1521,17 @@ void * stbds_hmdel_key(void *a, size_t elemsize, void *key, size_t keysize, size
   /* NOTREACHED */
 }
 
-static char *stbds_strdup(char *str, Heap *heap)
+static hermes::u64 stbds_strdup(char *str, Heap *heap)
 {
   // to keep replaceable allocator simple, we don't want to use strdup.
   // rolling our own also avoids problem of strdup vs _strdup
   size_t len = strlen(str)+1;
   char *p = (char*) STBDS_REALLOC(heap, 0, len);
   memmove(p, str, len);
-  return p;
+
+  hermes::u64 result = hermes::GetHeapOffset(heap, (hermes::u8 *)p);
+
+  return result;
 }
 
 #ifndef STBDS_STRING_ARENA_BLOCKSIZE_MIN

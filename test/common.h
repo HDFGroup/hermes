@@ -185,7 +185,7 @@ SharedMemoryContext InitHermesCore(Config *config, CommunicationContext *comm,
   *comm_state_offset_location = comm_state_offset_from_mdm;
 
   if (start_rpc_server) {
-    rpc->start_server(&context,
+    rpc->start_server(&context, rpc,
                       config->rpc_server_name.c_str(), num_rpc_threads);
   }
 

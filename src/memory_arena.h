@@ -349,6 +349,8 @@ inline T *HeapPushArray(Heap *heap, u32 count) {
 Heap *InitHeapInArena(Arena *arena, bool grows_up=true, u16 alignment=8);
 void HeapFree(Heap *heap, void *ptr);
 void *HeapRealloc(Heap *heap, void *ptr, size_t size);
+u32 GetHeapOffset(Heap *heap, u8 *ptr);
+u8 *HeapOffsetToPtr(Heap *heap, u32 offset);
 
 void BeginTicketMutex(TicketMutex *mutex);
 void EndTicketMutex(TicketMutex *mutex);

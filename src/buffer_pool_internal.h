@@ -197,8 +197,13 @@ BufferID PeekFirstFreeBufferId(SharedMemoryContext *context, TierID tier_id,
 /**
  *
  */
-void ReleaseBuffer(SharedMemoryContext *context, BufferID buffer_id);
+void LocalReleaseBuffer(SharedMemoryContext *context, BufferID buffer_id);
 
+/**
+ *
+ */
+void LocalReleaseBuffers(SharedMemoryContext *context,
+                         const std::vector<BufferID> &buffer_ids);
 /**
  *
  */

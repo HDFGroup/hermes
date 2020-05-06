@@ -27,7 +27,6 @@ int main(int argc, char **argv) {
     // int app_size = hermes->GetNumProcesses();
 
     hapi::Context ctx;
-
     hapi::Bucket bucket(std::string("test_bucket_") + std::to_string(app_rank),
                         hermes, ctx);
 

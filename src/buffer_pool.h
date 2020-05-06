@@ -24,6 +24,8 @@
 
 namespace hermes {
 
+struct RpcContext;
+
 /**
  * Information about a specific hardware Tier.
  *
@@ -298,9 +300,10 @@ std::vector<BufferID> GetBuffers(SharedMemoryContext *context,
  * again. Data in the buffers is considered abandonded, and can be overwritten.
  *
  * @param context The shared memory context where the BufferPool lives.
+ * @param rpc The RPC context to enable a remote call if necessary.
  * @param buffer_ids The list of buffer_ids to return to the BufferPool.
  */
-void ReleaseBuffers(SharedMemoryContext *context,
+void ReleaseBuffers(SharedMemoryContext *context, RpcContext *rpc,
                     const std::vector<BufferID> &buffer_ids);
 /**
  * Starts an RPC server that will listen for remote requests directed to the
@@ -339,8 +342,6 @@ struct Blob {
  */
 void WriteBlobToBuffers(SharedMemoryContext *context, const Blob &blob,
                         const std::vector<BufferID> &buffer_ids);
-
-struct RpcContext;
 
 /**
  * Sketch of how an I/O client might read.
