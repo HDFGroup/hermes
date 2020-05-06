@@ -3,6 +3,10 @@
 # to the root binary directory of the project as ${HERMES_BINARY_DIR}.
 cmake_minimum_required (VERSION 3.10)
 
+if(CMAKE_SIZEOF_VOID_P LESS 8)
+  message(FATAL_ERROR "Hermes currently requires a 64-bit processor")
+endif()
+
 # Set a consistent MACOSX_RPATH default across all CMake versions.
 if(NOT DEFINED CMAKE_MACOSX_RPATH)
   set(CMAKE_MACOSX_RPATH 0)
