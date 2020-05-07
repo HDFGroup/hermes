@@ -597,11 +597,26 @@ void LocalDestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
   BeginTicketMutex(&mdm->bucket_mutex);
   int ref_count = info->ref_count.load();
   if (ref_count == 1) {
+    IdMap *blob_map = GetBlobMap(mdm);
     for (u32 i = 0; i < info->blobs.length; ++i) {
       BlobID *blob_id = blobs + i;
-      // TODO(chogan):
-      const char *blob_name = "";
-      LocalDestroyBlob(context, rpc, blob_name, *blob_id);
+      u32 blob_name_offset = 0;
+      // TODO(chogan): This could be more efficient if necessary
+      for (int j = 0; j < shlen(blob_map); ++j) {
+        if (blob_map[j].value == (*blob_id).as_int) {
+          blob_name_offset = (u64)blob_map[j].key;
+        }
+      }
+      if (blob_name_offset) {
+        Heap *map_heap = GetMapHeap(mdm);
+        const char *blob_name = (char *)HeapOffsetToPtr(map_heap,
+                                                        blob_name_offset);
+        LocalDestroyBlob(context, rpc, blob_name, *blob_id);
+      } else {
+        // TODO(chogan): @errorhandling
+        DLOG(INFO) << "Expected to find blob_id " << (*blob_id).as_int
+                   << " in Map but didn't" << std::endl;
+      }
     }
 
     // Delete BlobId list
