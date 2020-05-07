@@ -11,6 +11,8 @@
 
 namespace hermes {
 
+struct RpcContext;
+
 enum class MapType {
   kBucket,
   kVBucket,
@@ -103,16 +105,6 @@ struct IdMap {
   u64 value;
 };
 
-struct RpcContext;
-
-#if 0
-struct MetadataContext {
-  SharedMemoryContext *shmem;
-  CommunicationContext *comm;
-  RpcContext *rpc;
-};
-#endif
-
 struct MetadataManager {
   ptrdiff_t bucket_info_offset;
   BucketID first_free_bucket;
@@ -154,23 +146,28 @@ struct RpcContext;
 
 void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
                          int node_id);
-BucketID GetBucketIdByName(SharedMemoryContext *context,
-                           CommunicationContext *comm, RpcContext *rpc,
+BucketID GetBucketIdByName(SharedMemoryContext *context, RpcContext *rpc,
                            const char *name);
-void DestroyBucket(SharedMemoryContext *context, CommunicationContext *comm,
-                   RpcContext *rpc, const char *name, BucketID bucket_id);
+void DestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
+                   const char *name, BucketID bucket_id);
+void DestroyBlob(SharedMemoryContext *context, RpcContext *rpc,
+                 BucketID bucket_id, const std::string &blob_name);
+void RenameBlob(SharedMemoryContext *context, RpcContext *rpc,
+                const std::string &old_name, const std::string &new_name);
+void RenameBucket(SharedMemoryContext *context, RpcContext *rpc, BucketID id,
+                  const std::string &old_name, const std::string &new_name);
 BufferIdArray GetBufferIdsFromBlobName(Arena *arena,
                                        SharedMemoryContext *context,
-                                       CommunicationContext *comm,
-                                       RpcContext *rpc,
-                                       const char *blob_name);
-BucketID GetNextFreeBucketId(SharedMemoryContext *context,
-                             CommunicationContext *comm, RpcContext *rpc,
+                                       RpcContext *rpc, const char *blob_name);
+BucketID GetNextFreeBucketId(SharedMemoryContext *context, RpcContext *rpc,
                              const std::string &name);
-void AttachBlobToBucket(SharedMemoryContext *context,
-                        CommunicationContext *comm, RpcContext *rpc,
+void AttachBlobToBucket(SharedMemoryContext *context, RpcContext *rpc,
                         const char *blob_name, BucketID bucket_id,
                         const std::vector<BufferID> &buffer_ids);
+void IncrementRefcount(SharedMemoryContext *context, RpcContext *rpc,
+                       BucketID id);
+void DecrementRefcount(SharedMemoryContext *context, RpcContext *rpc,
+                       BucketID id);
 
 // internal
 MetadataManager *GetMetadataManagerFromContext(SharedMemoryContext *context);
@@ -184,6 +181,16 @@ std::vector<BufferID> LocalGetBufferIdList(MetadataManager *mdm,
 void LocalFreeBufferIdList(SharedMemoryContext *context, BlobID blob_id);
 void LocalDestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
                         const char *bucket_name, BucketID bucket_id);
+void LocalDestroyBlob(SharedMemoryContext *context, RpcContext *rpc,
+                      const char *blob_name, BlobID blob_id);
+void LocalRenameBucket(SharedMemoryContext *context, RpcContext *rpc,
+                       BucketID id, const std::string &old_name,
+                       const std::string &new_name);
+void LocalRemoveBlobFromBucketInfo(SharedMemoryContext *context,
+                                   BucketID bucket_id, BlobID blob_id);
+void LocalIncrementRefcount(SharedMemoryContext *context, BucketID id);
+void LocalDecrementRefcount(SharedMemoryContext *context, BucketID id);
+
 u64 LocalGet(MetadataManager *mdm, const char *key, MapType map_type);
 void LocalPut(MetadataManager *mdm, const char *key, u64 val, MapType map_type);
 void LocalDelete(MetadataManager *mdm, const char *key, MapType map_type);

@@ -127,6 +127,40 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
       LocalDestroyBucket(context, rpc, name.c_str(), id);
     };
 
+  function<void(const request&, BucketID, const string&, const string&)>
+    rpc_rename_bucket = [context, rpc](const request &req, BucketID id,
+                                       const string &old_name,
+                                       const string &new_name) {
+      (void)req;
+      LocalRenameBucket(context, rpc, id, old_name.c_str(), new_name.c_str());
+    };
+
+  function<void(const request&, const string&, BlobID)> rpc_destroy_blob =
+    [context, rpc](const request &req, const string &name, BlobID id) {
+      (void)req;
+      LocalDestroyBlob(context, rpc, name.c_str(), id);
+    };
+
+  function<void(const request&, BucketID, BlobID)>
+    rpc_remove_blob_from_bucket_info = [context](const request &req,
+                                                 BucketID bucket_id,
+                                                 BlobID blob_id) {
+      (void)req;
+      LocalRemoveBlobFromBucketInfo(context, bucket_id, blob_id);
+    };
+
+  function<void(const request&, BucketID)> rpc_increment_refcount =
+    [context](const request &req, BucketID id) {
+      (void)req;
+      LocalIncrementRefcount(context, id);
+    };
+
+  function<void(const request&, BucketID)> rpc_decrement_refcount =
+    [context](const request &req, BucketID id) {
+      (void)req;
+      LocalDecrementRefcount(context, id);
+    };
+ 
   function<void(const request&)> rpc_finalize =
     [&rpc_server](const request &req) {
       (void)req;
@@ -134,7 +168,8 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
     };
 
   rpc_server.define("GetBuffers", rpc_get_buffers);
-  rpc_server.define("RemoteReleaseBuffer", rpc_release_buffer).disable_response();
+  rpc_server.define("RemoteReleaseBuffer",
+                    rpc_release_buffer).disable_response();
   rpc_server.define("SplitBuffers", rpc_split_buffers).disable_response();
   rpc_server.define("MergeBuffers", rpc_merge_buffers).disable_response();
   rpc_server.define("RemoteGet", rpc_map_get);
@@ -143,9 +178,17 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
   rpc_server.define("RemoteAddBlobIdToBucket", rpc_add_blob).disable_response();
   rpc_server.define("RemoteDestroyBucket",
                     rpc_destroy_bucket).disable_response();
+  rpc_server.define("RemoteRenameBucket", rpc_rename_bucket).disable_response();
+  rpc_server.define("RemoteDestroyBlob", rpc_destroy_blob).disable_response();
+  rpc_server.define("RemoteRemoveBlobFromBucketInfo",
+                    rpc_remove_blob_from_bucket_info).disable_response();
   rpc_server.define("RemoteGetBufferIdList", rpc_get_buffer_id_list);
   rpc_server.define("RemoteFreeBufferIdList",
                     rpc_free_buffer_id_list).disable_response();
+  rpc_server.define("RemoteIncrementRefcount",
+                    rpc_increment_refcount).disable_response();
+  rpc_server.define("RemoteDecrementRefcount",
+                    rpc_decrement_refcount).disable_response();
   rpc_server.define("Finalize", rpc_finalize).disable_response();
 
   // TODO(chogan): Currently the calling thread waits for finalize because

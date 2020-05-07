@@ -120,6 +120,8 @@ void LocalPut(MetadataManager *mdm, const char *key, u64 val,
   Heap *heap = GetMapHeap(mdm);
   TicketMutex *mutex = GetMapMutex(mdm, map_type);
 
+  // TODO(chogan): Update map heap end
+
   BeginTicketMutex(mutex);
   IdMap *map = GetMap(mdm, map_type);
   shput(map, key, val, heap);
@@ -142,6 +144,8 @@ void LocalDelete(MetadataManager *mdm, const char *key, MapType map_type) {
   Heap *heap = GetMapHeap(mdm);
   TicketMutex *mutex = GetMapMutex(mdm, map_type);
 
+  // TODO(chogan): Update map heap end
+
   BeginTicketMutex(mutex);
   IdMap *map = GetMap(mdm, map_type);
   shdel(map, key, heap);
@@ -161,22 +165,21 @@ static void MetadataArenaErrorHandler() {
              << std::endl;
 }
 
-int HashString(MetadataManager *mdm, CommunicationContext *comm,
-               const char *str) {
+u32 HashString(MetadataManager *mdm, RpcContext *rpc, const char *str) {
   int result =
-    (stbds_hash_string((char *)str, mdm->map_seed) % comm->num_nodes) + 1;
+    (stbds_hash_string((char *)str, mdm->map_seed) % rpc->num_nodes) + 1;
 
   return result;
 }
 
-u64 GetIdByName(SharedMemoryContext *context, CommunicationContext *comm,
-                RpcContext *rpc, const char *name, MapType map_type) {
+u64 GetIdByName(SharedMemoryContext *context, RpcContext *rpc, const char *name,
+                MapType map_type) {
   u64 result = 0;
 
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
-  int target_node = HashString(mdm, comm, name);
+  u32 target_node = HashString(mdm, rpc, name);
 
-  if (target_node == comm->node_id) {
+  if (target_node == rpc->node_id) {
     result = LocalGet(mdm, name, map_type);
   } else {
     result = RpcCall<u64>(rpc, target_node, "RemoteGet", std::string(name),
@@ -186,74 +189,69 @@ u64 GetIdByName(SharedMemoryContext *context, CommunicationContext *comm,
   return result;
 }
 
-BucketID GetBucketIdByName(SharedMemoryContext *context,
-                           CommunicationContext *comm, RpcContext *rpc,
+BucketID GetBucketIdByName(SharedMemoryContext *context, RpcContext *rpc,
                            const char *name) {
   BucketID result = {};
-  result.as_int = GetIdByName(context, comm, rpc, name, MapType::kBucket);
+  result.as_int = GetIdByName(context, rpc, name, MapType::kBucket);
 
   return result;
 }
 
-VBucketID GetVBucketIdByName(SharedMemoryContext *context,
-                             CommunicationContext *comm, RpcContext *rpc,
+VBucketID GetVBucketIdByName(SharedMemoryContext *context, RpcContext *rpc,
                              const char *name) {
   VBucketID result = {};
-  result.as_int = GetIdByName(context, comm, rpc, name, MapType::kVBucket);
+  result.as_int = GetIdByName(context, rpc, name, MapType::kVBucket);
 
   return result;
 }
 
-BlobID GetBlobIdByName(SharedMemoryContext *context,
-                       CommunicationContext *comm, RpcContext *rpc,
+BlobID GetBlobIdByName(SharedMemoryContext *context, RpcContext *rpc,
                        const char *name) {
   BlobID result = {};
-  result.as_int = GetIdByName(context, comm, rpc, name, MapType::kBlob);
+  result.as_int = GetIdByName(context, rpc, name, MapType::kBlob);
 
   return result;
 }
 
-void PutId(MetadataManager *mdm, CommunicationContext *comm,
-           RpcContext *rpc, const std::string &name, u64 id, MapType map_type) {
-  int target_node = HashString(mdm, comm, name.c_str());
+void PutId(MetadataManager *mdm, RpcContext *rpc, const std::string &name,
+           u64 id, MapType map_type) {
+  u32 target_node = HashString(mdm, rpc, name.c_str());
 
   // TODO(chogan): Check for overlapping heaps here
   // if (mdm->map_heap_end_offset >= mdm->id_heap_start_offset) {
   // }
 
-  if (target_node == comm->node_id) {
+  if (target_node == rpc->node_id) {
     LocalPut(mdm, name.c_str(), id, map_type);
   } else {
     RpcCall<void>(rpc, target_node, "RemotePut", name, id, map_type);
   }
 }
 
-void DeleteId(MetadataManager *mdm, CommunicationContext *comm,
-              RpcContext *rpc, const std::string &name, MapType map_type) {
-  int target_node = HashString(mdm, comm, name.c_str());
+void DeleteId(MetadataManager *mdm, RpcContext *rpc, const std::string &name,
+              MapType map_type) {
+  u32 target_node = HashString(mdm, rpc, name.c_str());
 
-  // TODO(chogan): Update mdm->map_heap_end_offset
-
-  if (target_node == comm->node_id) {
+  if (target_node == rpc->node_id) {
     LocalDelete(mdm, name.c_str(), map_type);
   } else {
     RpcCall<void>(rpc, target_node, "RemoteDelete", name, map_type);
   }
 }
 
-void PutBucketId(MetadataManager *mdm, CommunicationContext *comm,
-                 RpcContext *rpc, const std::string &name, BucketID id) {
-  PutId(mdm, comm, rpc, name, id.as_int, MapType::kBucket);
+void PutBucketId(MetadataManager *mdm, RpcContext *rpc, const std::string &name,
+                 BucketID id) {
+  PutId(mdm, rpc, name, id.as_int, MapType::kBucket);
 }
 
-void PutVBucketId(MetadataManager *mdm, CommunicationContext *comm,
-                  RpcContext *rpc, const std::string &name, VBucketID id) {
-  PutId(mdm, comm, rpc, name, id.as_int, MapType::kVBucket);
+void PutVBucketId(MetadataManager *mdm, RpcContext *rpc,
+                  const std::string &name, VBucketID id) {
+  PutId(mdm, rpc, name, id.as_int, MapType::kVBucket);
 }
 
-void PutBlobId(MetadataManager *mdm, CommunicationContext *comm,
-               RpcContext *rpc, const std::string &name, BlobID id) {
-  PutId(mdm, comm, rpc, name, id.as_int, MapType::kBlob);
+void PutBlobId(MetadataManager *mdm, RpcContext *rpc, const std::string &name,
+               BlobID id) {
+  PutId(mdm, rpc, name, id.as_int, MapType::kBlob);
 }
 
 BucketInfo *LocalGetBucketInfoByIndex(MetadataManager *mdm, u32 index) {
@@ -277,8 +275,7 @@ VBucketInfo *GetVBucketInfoByIndex(MetadataManager *mdm, u32 index) {
   return result;
 }
 
-BucketID GetNextFreeBucketId(SharedMemoryContext *context,
-                             CommunicationContext *comm, RpcContext *rpc,
+BucketID GetNextFreeBucketId(SharedMemoryContext *context, RpcContext *rpc,
                              const std::string &name) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   BucketID result = {};
@@ -287,12 +284,13 @@ BucketID GetNextFreeBucketId(SharedMemoryContext *context,
   BeginTicketMutex(&mdm->bucket_mutex);
   if (mdm->num_buckets < mdm->max_buckets) {
     result = mdm->first_free_bucket;
-    assert(result.bits.node_id == (u32)comm->node_id);
+    assert(result.bits.node_id == rpc->node_id);
 
     if (!IsNullBucketId(result)) {
       BucketInfo *info = LocalGetBucketInfoByIndex(mdm, result.bits.index);
       info->blobs = {};
       info->stats = {};
+      info->ref_count.store(1);
       info->active = true;
       mdm->first_free_bucket = info->next_free;
       mdm->num_buckets++;
@@ -307,14 +305,13 @@ BucketID GetNextFreeBucketId(SharedMemoryContext *context,
 
   if (!IsNullBucketId(result)) {
     // NOTE(chogan): Add metadata entry
-    PutBucketId(mdm, comm, rpc, name, result);
+    PutBucketId(mdm, rpc, name, result);
   }
 
   return result;
 }
 
-VBucketID GetNextFreeVBucketId(SharedMemoryContext *context,
-                               CommunicationContext *comm, RpcContext *rpc,
+VBucketID GetNextFreeVBucketId(SharedMemoryContext *context, RpcContext *rpc,
                                const std::string &name) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   VBucketID result = {};
@@ -328,6 +325,7 @@ VBucketID GetNextFreeVBucketId(SharedMemoryContext *context,
       info->blobs = {};
       info->stats = {};
       memset(info->traits, 0, sizeof(TraitID) * kMaxTraitsPerVBucket);
+      info->ref_count.store(1);
       info->active = true;
       mdm->first_free_vbucket = info->next_free;
       mdm->num_vbuckets++;
@@ -341,7 +339,7 @@ VBucketID GetNextFreeVBucketId(SharedMemoryContext *context,
   EndTicketMutex(&mdm->vbucket_mutex);
 
   if (!IsNullVBucketId(result)) {
-    PutVBucketId(mdm, comm, rpc, name, result);
+    PutVBucketId(mdm, rpc, name, result);
   }
 
   return result;
@@ -396,11 +394,11 @@ void LocalAddBlobIdToBucket(MetadataManager *mdm, BucketID bucket_id,
   EndTicketMutex(&mdm->bucket_mutex);
 }
 
-void AddBlobIdToBucket(MetadataManager *mdm, CommunicationContext *comm,
-                       RpcContext *rpc, BlobID blob_id, BucketID bucket_id) {
+void AddBlobIdToBucket(MetadataManager *mdm, RpcContext *rpc, BlobID blob_id,
+                       BucketID bucket_id) {
   u32 target_node = bucket_id.bits.node_id;
 
-  if (target_node == (u32)comm->node_id) {
+  if (target_node == rpc->node_id) {
     LocalAddBlobIdToBucket(mdm, bucket_id, blob_id);
   } else {
     RpcCall<void>(rpc, target_node, "RemoteAddBlobIdToBucket", bucket_id,
@@ -449,12 +447,12 @@ void LocalGetBufferIdList(Arena *arena, MetadataManager *mdm, BlobID blob_id,
 }
 
 void GetBufferIdList(Arena *arena, SharedMemoryContext *context,
-                     CommunicationContext *comm, RpcContext *rpc,
-                     BlobID blob_id, BufferIdArray *buffer_ids) {
+                     RpcContext *rpc, BlobID blob_id,
+                     BufferIdArray *buffer_ids) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   u32 target_node = blob_id.bits.node_id;
 
-  if (target_node == (u32)comm->node_id) {
+  if (target_node == rpc->node_id) {
     LocalGetBufferIdList(arena, mdm, blob_id, buffer_ids);
   } else {
     std::vector<BufferID> result =
@@ -485,27 +483,25 @@ std::vector<BufferID> GetBufferIdList(SharedMemoryContext *context,
 
 BufferIdArray GetBufferIdsFromBlobName(Arena *arena,
                                        SharedMemoryContext *context,
-                                       CommunicationContext *comm,
                                        RpcContext *rpc,
                                        const char *blob_name) {
   BufferIdArray result = {};
-  BlobID blob_id = GetBlobIdByName(context, comm, rpc, blob_name);
-  GetBufferIdList(arena, context, comm, rpc, blob_id, &result);
+  BlobID blob_id = GetBlobIdByName(context, rpc, blob_name);
+  GetBufferIdList(arena, context, rpc, blob_id, &result);
 
   return result;
 }
 
-void AttachBlobToBucket(SharedMemoryContext *context,
-                        CommunicationContext *comm, RpcContext *rpc,
+void AttachBlobToBucket(SharedMemoryContext *context, RpcContext *rpc,
                         const char *blob_name, BucketID bucket_id,
                         const std::vector<BufferID> &buffer_ids) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
 
   BlobID blob_id = {};
-  blob_id.bits.node_id = comm->node_id;
+  blob_id.bits.node_id = rpc->node_id;
   blob_id.bits.buffer_ids_offset = AllocateBufferIdList(mdm, buffer_ids);
-  PutBlobId(mdm, comm, rpc, blob_name, blob_id);
-  AddBlobIdToBucket(mdm, comm, rpc, blob_id, bucket_id);
+  PutBlobId(mdm, rpc, blob_name, blob_id);
+  AddBlobIdToBucket(mdm, rpc, blob_id, bucket_id);
 }
 
 void LocalFreeBufferIdList(SharedMemoryContext *context, BlobID blob_id) {
@@ -513,9 +509,7 @@ void LocalFreeBufferIdList(SharedMemoryContext *context, BlobID blob_id) {
   Heap *id_heap = GetIdHeap(mdm);
   u8 *to_free = HeapOffsetToPtr(id_heap, blob_id.bits.buffer_ids_offset);
 
-  BeginTicketMutex(&mdm->id_mutex);
   HeapFree(id_heap, to_free);
-  EndTicketMutex(&mdm->id_mutex);
 }
 
 void FreeBufferIdList(SharedMemoryContext *context, RpcContext *rpc,
@@ -528,58 +522,170 @@ void FreeBufferIdList(SharedMemoryContext *context, RpcContext *rpc,
   }
 }
 
+void LocalDestroyBlob(SharedMemoryContext *context, RpcContext *rpc,
+                      const char *blob_name, BlobID blob_id) {
+  std::vector<BufferID> buffer_ids = GetBufferIdList(context, rpc, blob_id);
+  ReleaseBuffers(context, rpc, buffer_ids);
+  FreeBufferIdList(context, rpc, blob_id);
+
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  DeleteId(mdm, rpc, blob_name, MapType::kBlob);
+}
+
+void LocalRemoveBlobFromBucketInfo(SharedMemoryContext *context,
+                                   BucketID bucket_id, BlobID blob_id) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  BucketInfo *info = LocalGetBucketInfoById(mdm, bucket_id);
+  BlobIdList *blobs = &info->blobs;
+  Heap *id_heap = GetIdHeap(mdm);
+
+  BeginTicketMutex(&mdm->bucket_mutex);
+  BlobID *blobs_arr = (BlobID *)HeapOffsetToPtr(id_heap, blobs->head_offset);
+  for (u32 i = 0; i < blobs->length; ++i) {
+    if (blobs_arr[i].as_int == blob_id.as_int) {
+      blobs_arr[i] = blobs_arr[--blobs->length];
+      break;
+    }
+  }
+  EndTicketMutex(&mdm->bucket_mutex);
+}
+
+void RemoveBlobFromBucketInfo(SharedMemoryContext *context, RpcContext *rpc,
+                              BucketID bucket_id, BlobID blob_id) {
+  u32 target_node = bucket_id.bits.node_id;
+  if (target_node == rpc->node_id) {
+    LocalRemoveBlobFromBucketInfo(context, bucket_id, blob_id);
+  } else {
+    RpcCall<void>(rpc, target_node, "RemoteRemoveBlobFromBucketInfo", bucket_id,
+                  blob_id);
+  }
+}
+
+void DestroyBlob(SharedMemoryContext *context, RpcContext *rpc,
+                 BucketID bucket_id, const std::string &blob_name) {
+  BlobID blob_id = GetBlobIdByName(context, rpc, blob_name.c_str());
+
+  u32 blob_id_target_node = blob_id.bits.node_id;
+
+  if (blob_id_target_node == rpc->node_id) {
+    LocalDestroyBlob(context, rpc, blob_name.c_str(), blob_id);
+  } else {
+    RpcCall<void>(rpc, blob_id_target_node, "RemoteDestroyBlob", blob_name,
+                  blob_id);
+  }
+
+  RemoveBlobFromBucketInfo(context, rpc, bucket_id, blob_id);
+}
+
+void RenameBlob(SharedMemoryContext *context, RpcContext *rpc,
+                const std::string &old_name, const std::string &new_name) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  BlobID blob_id = GetBlobIdByName(context, rpc, old_name.c_str());
+
+  DeleteId(mdm, rpc, old_name, MapType::kBlob);
+  PutBlobId(mdm, rpc, new_name, blob_id);
+}
+
 void LocalDestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
                         const char *bucket_name, BucketID bucket_id) {
-
-  // TODO(chogan): Check refcounts
-  // TODO(chogan): Lock granularity
-
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   BucketInfo *info = LocalGetBucketInfoById(mdm, bucket_id);
   Heap *id_heap = GetIdHeap(mdm);
   BlobID *blobs = (BlobID *)HeapOffsetToPtr(id_heap, info->blobs.head_offset);
 
-  for (u32 i = 0; i < info->blobs.length; ++i) {
-    BlobID *blob_id = blobs + i;
-    std::vector<BufferID> buffer_ids = GetBufferIdList(context, rpc, *blob_id);
-    ReleaseBuffers(context, rpc, buffer_ids);
-    FreeBufferIdList(context, rpc, *blob_id);
-    // TODO(chogan): Remove (name -> blob_id) entry from map. Need reverse
-    // lookup?
-  }
-
-  // Delete BlobId list
-  BeginTicketMutex(&mdm->id_mutex);
-  HeapFree(id_heap, blobs);
-  EndTicketMutex(&mdm->id_mutex);
-
-  info->blobs.length = 0;
-  info->blobs.capacity = 0;
-  info->blobs.head_offset = 0;
-
-  // Reset BucketInfo to initial values
-  info->ref_count.store(0);
-  info->active = false;
-  info->stats = {};
-
+  // TODO(chogan): Lock granularity can probably be relaxed if this is slow
   BeginTicketMutex(&mdm->bucket_mutex);
-  mdm->num_buckets--;
-  info->next_free = mdm->first_free_bucket;
-  mdm->first_free_bucket = bucket_id;
-  EndTicketMutex(&mdm->bucket_mutex);
+  int ref_count = info->ref_count.load();
+  if (ref_count == 1) {
+    for (u32 i = 0; i < info->blobs.length; ++i) {
+      BlobID *blob_id = blobs + i;
+      // TODO(chogan):
+      const char *blob_name = "";
+      LocalDestroyBlob(context, rpc, blob_name, *blob_id);
+    }
 
-  // Remove (name -> bucket_id) map entry
-  LocalDelete(mdm, bucket_name, MapType::kBucket);
+    // Delete BlobId list
+    HeapFree(id_heap, blobs);
+
+    info->blobs.length = 0;
+    info->blobs.capacity = 0;
+    info->blobs.head_offset = 0;
+
+    // Reset BucketInfo to initial values
+    info->ref_count.store(0);
+    info->active = false;
+    info->stats = {};
+
+    mdm->num_buckets--;
+    info->next_free = mdm->first_free_bucket;
+    mdm->first_free_bucket = bucket_id;
+
+    // Remove (name -> bucket_id) map entry
+    LocalDelete(mdm, bucket_name, MapType::kBucket);
+  }
+  EndTicketMutex(&mdm->bucket_mutex);
 }
 
-void DestroyBucket(SharedMemoryContext *context, CommunicationContext *comm,
-                   RpcContext *rpc, const char *name, BucketID bucket_id) {
+void DestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
+                   const char *name, BucketID bucket_id) {
   u32 target_node = bucket_id.bits.node_id;
-  if (target_node == (u32)comm->node_id) {
+  if (target_node == rpc->node_id) {
     LocalDestroyBucket(context, rpc, name, bucket_id);
   } else {
     RpcCall<void>(rpc, target_node, "RemoteDestroyBucket", std::string(name),
                   bucket_id);
+  }
+}
+
+void LocalRenameBucket(SharedMemoryContext *context, RpcContext *rpc,
+                       BucketID id, const std::string &old_name,
+                       const std::string &new_name) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  DeleteId(mdm, rpc, old_name, MapType::kBucket);
+  PutBucketId(mdm, rpc, new_name, id);
+}
+
+void RenameBucket(SharedMemoryContext *context, RpcContext *rpc, BucketID id,
+                  const std::string &old_name, const std::string &new_name) {
+  u32 target_node = id.bits.node_id;
+  if (target_node == rpc->node_id) {
+    LocalRenameBucket(context, rpc, id, old_name.c_str(), new_name.c_str()); 
+  } else {
+    RpcCall<void>(rpc, target_node, "RemoteRenameBucket", id, old_name,
+                  new_name);
+  }
+}
+
+void LocalIncrementRefcount(SharedMemoryContext *context, BucketID id) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  BucketInfo *info = LocalGetBucketInfoById(mdm, id);
+  info->ref_count.fetch_add(1);
+}
+
+void IncrementRefcount(SharedMemoryContext *context, RpcContext *rpc,
+                       BucketID id) {
+  u32 target_node = id.bits.node_id;
+  if (target_node == rpc->node_id) {
+    LocalIncrementRefcount(context, id);
+  } else {
+    RpcCall<void>(rpc, target_node, "RemoteIncrementRefcount", id);
+  }
+}
+
+void LocalDecrementRefcount(SharedMemoryContext *context, BucketID id) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  BucketInfo *info = LocalGetBucketInfoById(mdm, id);
+  info->ref_count.fetch_sub(1);
+  assert(info->ref_count.load() >= 0);
+}
+
+void DecrementRefcount(SharedMemoryContext *context, RpcContext *rpc,
+                       BucketID id) {
+  u32 target_node = id.bits.node_id;
+  if (target_node == rpc->node_id) {
+    LocalDecrementRefcount(context, id);
+  } else {
+    RpcCall<void>(rpc, target_node, "RemoteDecrementRefcount", id);
   }
 }
 

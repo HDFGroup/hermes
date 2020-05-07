@@ -19,7 +19,7 @@ class Bucket {
   std::string name_;
   hermes::BucketID id_;
   // TODO(chogan): Move to MetadataManager
-  std::unordered_map<std::string, std::vector<BufferID>> blobs_;
+  // std::unordered_map<std::string, std::vector<BufferID>> blobs_;
 
  public:
   /** internal Hermes object owned by Bucket */
@@ -38,7 +38,7 @@ class Bucket {
     Close(ctx);
 
     name_.clear();
-    blobs_.clear();
+    // blobs_.clear();
     id_.as_int = 0;
   }
 
