@@ -211,7 +211,6 @@ BootstrapSharedMemory(Arena *arenas, Config *config, CommunicationContext *comm,
   GrowArena(&arenas[kArenaType_Transient], trans_arena_size);
   comm->state = arenas[kArenaType_Transient].base;
 
-  // TODO(chogan): Make sure each process has an udpated RpcContext
   InitRpcContext(rpc, comm->num_nodes, comm->node_id);
 
   SharedMemoryContext result = {};
@@ -252,6 +251,10 @@ InitDaemon(const std::string &buffering_path,
   // NOTE(chogan): Reset the transient arena since we're done with the data it
   // contains
   result->trans_arena_.used = 0;
+
+  rpc.node_id = comm.node_id;
+  rpc.num_nodes = comm.num_nodes;
+
   result->comm_ = comm;
   result->context_ = context;
   result->rpc_ = rpc;
@@ -278,11 +281,8 @@ std::shared_ptr<api::Hermes> InitHermes() {
   hermes::Config config = {};
   InitTestConfig(&config);
 
-  // TODO(chogan): The metadata arena will be a different type of arena because
-  // it needs to be thread-safe, as it's shared among all ranks. For now we
-  // create it, put the CommnciationContext::state in it, and then ignore it.
-  // We'll probably put an HCL container on top of it. The transfer window arena
-  // will probably become local to each rank.
+  // TODO(chogan): Do we need a transfer window arena? We can probably just use
+  // the transient arena for this.
   Arena arenas[kArenaType_Count] = {};
   CommunicationContext comm = {};
   RpcContext rpc = {};
@@ -321,6 +321,10 @@ std::shared_ptr<api::Hermes> InitHermes() {
   // NOTE(chogan): Reset the transient arena since we're done with the data it
   // contains
   result->trans_arena_.used = 0;
+
+  rpc.node_id = comm.node_id;
+  rpc.num_nodes = comm.num_nodes;
+
   result->comm_ = comm;
   result->context_ = context;
   result->rpc_ = rpc;
