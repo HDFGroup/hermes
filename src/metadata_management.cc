@@ -37,26 +37,26 @@ bool IsNullVBucketId(VBucketID id) {
 }
 
 TicketMutex *GetMapMutex(MetadataManager *mdm, MapType map_type) {
-  // TicketMutex *mutex = 0;
-  // switch (map_type) {
-  //   case MapType::kBucket: {
-  //     mutex = &mdm->bucket_map_mutex;
-  //     break;
-  //   }
-  //   case MapType::kVBucket: {
-  //     mutex = &mdm->vbucket_map_mutex;
-  //     break;
-  //   }
-  //   case MapType::kBlob: {
-  //     mutex = &mdm->blob_map_mutex;
-  //     break;
-  //   }
-  //   default: {
-  //     assert(!"Invalid code path\n");
-  //   }
-  // }
-  (void)map_type;
-  return &mdm->map_mutex;
+  TicketMutex *mutex = 0;
+  switch (map_type) {
+    case MapType::kBucket: {
+      mutex = &mdm->bucket_map_mutex;
+      break;
+    }
+    case MapType::kVBucket: {
+      mutex = &mdm->vbucket_map_mutex;
+      break;
+    }
+    case MapType::kBlob: {
+      mutex = &mdm->blob_map_mutex;
+      break;
+    }
+    default: {
+      assert(!"Invalid code path\n");
+    }
+  }
+
+  return mutex;
 }
 
 static IdMap *GetMapByOffset(MetadataManager *mdm, u32 offset) {
@@ -95,6 +95,20 @@ static Heap *GetIdHeap(MetadataManager *mdm) {
   return result;
 }
 
+void CheckHeapOverlap(MetadataManager *mdm) {
+  Heap *map_heap = GetMapHeap(mdm);
+  Heap *id_heap = GetIdHeap(mdm);
+
+  u8 *map_heap_end = HeapExtentToPtr(map_heap);
+  u8 *id_heap_start = HeapExtentToPtr(id_heap);
+
+  if (map_heap_end >= id_heap_start) {
+    LOG(FATAL) << "Metadata Heaps have overlapped. Please increase "
+               << "metadata_arena_percentage in Hermes configuration."
+               << std::endl;
+  }
+}
+
 IdMap *GetMap(MetadataManager *mdm, MapType map_type) {
   IdMap *result = 0;
   switch (map_type) {
@@ -120,12 +134,13 @@ void LocalPut(MetadataManager *mdm, const char *key, u64 val,
   Heap *heap = GetMapHeap(mdm);
   TicketMutex *mutex = GetMapMutex(mdm, map_type);
 
-  // TODO(chogan): Update map heap end
-
   BeginTicketMutex(mutex);
   IdMap *map = GetMap(mdm, map_type);
   shput(map, key, val, heap);
   EndTicketMutex(mutex);
+
+  // TODO(chogan): Maybe wrap this in a DEBUG only macro?
+  CheckHeapOverlap(mdm);
 }
 
 u64 LocalGet(MetadataManager *mdm, const char *key, MapType map_type) {
@@ -144,12 +159,13 @@ void LocalDelete(MetadataManager *mdm, const char *key, MapType map_type) {
   Heap *heap = GetMapHeap(mdm);
   TicketMutex *mutex = GetMapMutex(mdm, map_type);
 
-  // TODO(chogan): Update map heap end
-
   BeginTicketMutex(mutex);
   IdMap *map = GetMap(mdm, map_type);
   shdel(map, key, heap);
   EndTicketMutex(mutex);
+
+  // TODO(chogan): Maybe wrap this in a DEBUG only macro?
+  CheckHeapOverlap(mdm);
 }
 
 MetadataManager *GetMetadataManagerFromContext(SharedMemoryContext *context) {
@@ -374,6 +390,8 @@ void AllocateOrGrowBlobIdList(MetadataManager *mdm, BlobIdList *blobs) {
     blobs->head_offset = GetHeapOffset(id_heap, (u8 *)new_ids);
   }
   EndTicketMutex(&mdm->id_mutex);
+
+  CheckHeapOverlap(mdm);
 }
 
 void LocalAddBlobIdToBucket(MetadataManager *mdm, BucketID bucket_id,
@@ -392,6 +410,8 @@ void LocalAddBlobIdToBucket(MetadataManager *mdm, BucketID bucket_id,
   BlobID *head = (BlobID *)HeapOffsetToPtr(id_heap, blobs->head_offset);
   head[blobs->length++] = blob_id;
   EndTicketMutex(&mdm->bucket_mutex);
+
+  CheckHeapOverlap(mdm);
 }
 
 void AddBlobIdToBucket(MetadataManager *mdm, RpcContext *rpc, BlobID blob_id,
@@ -419,6 +439,8 @@ u32 AllocateBufferIdList(MetadataManager *mdm,
   CopyIds((u64 *)(id_list + 1), (u64 *)buffer_ids.data(), length);
 
   u32 result = GetHeapOffset(id_heap, (u8 *)id_list);
+
+  CheckHeapOverlap(mdm);
 
   return result;
 }
@@ -510,6 +532,7 @@ void LocalFreeBufferIdList(SharedMemoryContext *context, BlobID blob_id) {
   u8 *to_free = HeapOffsetToPtr(id_heap, blob_id.bits.buffer_ids_offset);
 
   HeapFree(id_heap, to_free);
+  CheckHeapOverlap(mdm);
 }
 
 void FreeBufferIdList(SharedMemoryContext *context, RpcContext *rpc,
@@ -604,7 +627,11 @@ void LocalDestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
       // TODO(chogan): This could be more efficient if necessary
       for (int j = 0; j < shlen(blob_map); ++j) {
         if (blob_map[j].value == (*blob_id).as_int) {
+          // NOTE(chogan): Even though the key is a char*, we are actually just
+          // storing a u32 offset into the map's Heap. We convert it to the
+          // char* below with HeapOffsetToPtr
           blob_name_offset = (u64)blob_map[j].key;
+          break;
         }
       }
       if (blob_name_offset) {
@@ -639,6 +666,8 @@ void LocalDestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
     LocalDelete(mdm, bucket_name, MapType::kBucket);
   }
   EndTicketMutex(&mdm->bucket_mutex);
+
+  CheckHeapOverlap(mdm);
 }
 
 void DestroyBucket(SharedMemoryContext *context, RpcContext *rpc,

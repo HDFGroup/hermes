@@ -68,6 +68,7 @@ struct Heap {
   u32 base_offset;
   /** Offset of the head of the free list, relative to base_offset */
   u32 free_list_offset;
+  u32 extent;
   u16 alignment;
   u16 grows_up;
 };

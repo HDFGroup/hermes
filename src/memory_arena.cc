@@ -185,21 +185,44 @@ u32 GetHeapOffset(Heap *heap, u8 *ptr) {
   return result;
 }
 
-// TODO(chogan): Replace with GetHeapOffset
-static inline u32 GetFreeBlockOffset(Heap *heap, FreeBlock *block) {
-  ptrdiff_t signed_result = (u8 *)block - GetHeapMemory(heap);
-  u32 result = (u32)std::abs(signed_result);
-
-  return result;
-}
-
 void HeapErrorHandler() {
   LOG(FATAL) << "Heap out of memory. Increase size of Metadata Arena\n"
              << std::endl;
 }
 
+u32 ComputeHeapExtent(Heap *heap, void *item, u32 size) {
+  u32 result = 0;
+  if (heap->grows_up) {
+    result = ((u8 *)item + size) - (u8 *)heap;
+  } else {
+    result = (u8 *)(heap + 1) - (u8 *)item;
+  }
+
+  return result;
+}
+
+u8 *HeapExtentToPtr(Heap *heap) {
+  u8 *result = 0;
+  BeginTicketMutex(&heap->mutex);
+  if (heap->grows_up) {
+    result = (u8 *)heap + heap->extent;
+  } else {
+    result = (u8 *)(heap + 1) - heap->extent;
+  }
+  EndTicketMutex(&heap->mutex);
+
+  return result;
+}
+
 Heap *InitHeapInArena(Arena *arena, bool grows_up, u16 alignment) {
   Heap *result = 0;
+
+  if (arena->capacity >= 4UL * 1024UL * 1024UL * 1024UL) {
+    LOG(FATAL) << "Metadata heap cannot be larger than 4GB. Decrease "
+               << "metadata_arena_percentage in the Hermes configuration."
+               << std::endl;
+  }
+
   if (grows_up) {
     result = PushClearedStruct<Heap>(arena);
   } else {
@@ -221,6 +244,9 @@ Heap *InitHeapInArena(Arena *arena, bool grows_up, u16 alignment) {
   // NOTE(chogan): Subtract alignment since we're using the first `alignment`
   // sized block as the NULL block.
   first_free_block->size = heap_size - alignment;
+
+  result->extent = ComputeHeapExtent(result, first_free_block,
+                                     sizeof(*first_free_block));
 
   return result;
 }
@@ -246,7 +272,7 @@ FreeBlock *FindFirstFit(Heap *heap, u32 desired_size) {
         }
         split_block->size = remaining_size;
         split_block->next_offset = result->next_offset;
-        u32 split_block_offset = GetFreeBlockOffset(heap, split_block);
+        u32 split_block_offset = GetHeapOffset(heap, (u8 *)split_block);
         next_offset = split_block_offset;
       } else {
         next_offset = result->next_offset;
@@ -302,8 +328,6 @@ FreeBlock *FindBestFit(FreeBlock *head, size_t desired_size, u32 threshold=0) {
 u8 *HeapPushSize(Heap *heap, u32 size) {
   u8 *result = 0;
 
-  // TODO(chogan): Check for collision between Map Heap and ID List Heap
-
   if (size) {
     BeginTicketMutex(&heap->mutex);
     FreeBlock *first_fit = FindFirstFit(heap, size + sizeof(FreeBlockHeader));
@@ -318,6 +342,11 @@ u8 *HeapPushSize(Heap *heap, u32 size) {
       }
       header->size = size;
       result = (u8 *)(header + 1);
+
+      BeginTicketMutex(&heap->mutex);
+      heap->extent = std::max(heap->extent,
+                              ComputeHeapExtent(heap, result, size));
+      EndTicketMutex(&heap->mutex);
     } else {
       // TODO(chogan): @errorhandling
       heap->error_handler();
@@ -340,8 +369,14 @@ void HeapFree(Heap *heap, void *ptr) {
     new_block->size = size + sizeof(FreeBlockHeader);
 
     BeginTicketMutex(&heap->mutex);
+    u32 extent = ComputeHeapExtent(heap, ptr, size);
+    if (extent == heap->extent) {
+      assert(size < heap->extent);
+      heap->extent -= size;
+    }
+
     new_block->next_offset = heap->free_list_offset;
-    heap->free_list_offset = GetFreeBlockOffset(heap, new_block);
+    heap->free_list_offset = GetHeapOffset(heap, (u8 *)new_block);
     EndTicketMutex(&heap->mutex);
   }
 }

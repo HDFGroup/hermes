@@ -115,10 +115,6 @@ struct MetadataManager {
   ptrdiff_t id_heap_offset;
   ptrdiff_t map_heap_offset;
 
-  // TODO(chogan): Make sure these don't cross
-  ptrdiff_t id_heap_start_offset;
-  ptrdiff_t map_heap_end_offset;
-
   ptrdiff_t bucket_map_offset;
   ptrdiff_t vbucket_map_offset;
   ptrdiff_t blob_map_offset;
@@ -126,10 +122,9 @@ struct MetadataManager {
   TicketMutex bucket_mutex;
   TicketMutex vbucket_mutex;
 
-  // TicketMutex bucket_map_mutex;
-  // TicketMutex vbucket_map_mutex;
-  // TicketMutex blob_map_mutex;
-  TicketMutex map_mutex;
+  TicketMutex bucket_map_mutex;
+  TicketMutex vbucket_map_mutex;
+  TicketMutex blob_map_mutex;
   TicketMutex id_mutex;
 
   size_t map_seed;
