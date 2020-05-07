@@ -95,7 +95,7 @@ void EndTemporaryMemory(TemporaryMemory *temp_memory) {
   assert(temp_memory->arena->temp_count >= 0);
 }
 
-u8 *PushSize(Arena *arena, size_t size, bool grows_up, size_t alignment) {
+u8 *PushSize(Arena *arena, size_t size, size_t alignment) {
   // TODO(chogan): Account for possible size increase due to alignment
   // bool can_fit = GetAlignedSize(arena, size, alignment);
   bool can_fit = size + arena->used <= arena->capacity;
@@ -106,25 +106,12 @@ u8 *PushSize(Arena *arena, size_t size, bool grows_up, size_t alignment) {
 
   assert(can_fit);
 
-  u8 *base_result = 0;
-  u8 *result = 0;
-
-  if (grows_up) {
-    base_result = arena->base + arena->used;
-    result = (u8 *)AlignForward((uintptr_t)base_result, alignment);
-  } else {
-    base_result = arena->base - arena->used;
-    result = (u8 *)AlignBackward((uintptr_t)base_result, alignment);
-  }
-
+  u8 *base_result = arena->base + arena->used;
+  u8 *result = (u8 *)AlignForward((uintptr_t)base_result, alignment);
 
   if (base_result != result) {
     ptrdiff_t alignment_size;
-    if (grows_up) {
-      alignment_size = result - base_result;
-    } else {
-      alignment_size = base_result - result;
-    }
+    alignment_size = result - base_result;
     arena->used += alignment_size;
     DLOG(INFO) << "PushSize added " << alignment_size
                << " bytes of padding for alignment" << std::endl;
@@ -134,10 +121,9 @@ u8 *PushSize(Arena *arena, size_t size, bool grows_up, size_t alignment) {
   return result;
 }
 
-u8 *PushSizeAndClear(Arena *arena, size_t size, bool grows_up,
-                     size_t alignment) {
+u8 *PushSizeAndClear(Arena *arena, size_t size, size_t alignment) {
   size_t previously_used = arena->used;
-  u8 *result = PushSize(arena, size, grows_up, alignment);
+  u8 *result = PushSize(arena, size, alignment);
   // NOTE(chogan): Account for case when `size` is increased for alignment
   size_t bytes_to_clear = arena->used - previously_used;
 
