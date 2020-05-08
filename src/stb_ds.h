@@ -10,6 +10,29 @@
       #define STB_DS_IMPLEMENTATION
       #include "stb_ds.h"
 
+   NOTE(chogan): MODIFICATIONS FOR HERMES PROJECT, 5/8/20
+
+   In order for the string hash table to work in shared memory, we have made
+   some modifications.
+
+   1. We define STBDS_FREE and STBDS_REALLOC as hermes::HeapFree and
+   hermes::HeapRealloc. These allocation functions are designed to work in
+   shared memory. However, they require a hermes::Heap instance to be passed.
+   Thus, each stb function that calls STBDS_FREE or STBDS_REALLOC was modified
+   to accept a Heap instance.
+
+   2. Pointers internal to the stb map structure were changed to offsets. The
+   offsets are calculated with respect to the beginning of the header (the data
+   that lives before the beginning of the array). When the data corresponding to
+   these offsets need to be accessed, they are converted to pointers. This
+   ensures that the shared memory pointer is correct for each calling process.
+
+   3. The char* key for string hash maps is treated internally as a u64 because
+   it represents an offset into shared memory. When a pointer to the key is
+   requested, the offset is converted to the correct pointer. Therefore,
+   map[i].key will not work as expected. Instead, Hermes provides the function
+   GetKey(), which converts the offset into the correct pointer.
+
 TABLE OF CONTENTS
 
   Table of Contents

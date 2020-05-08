@@ -232,11 +232,6 @@ BlobID GetBlobIdByName(SharedMemoryContext *context, RpcContext *rpc,
 void PutId(MetadataManager *mdm, RpcContext *rpc, const std::string &name,
            u64 id, MapType map_type) {
   u32 target_node = HashString(mdm, rpc, name.c_str());
-
-  // TODO(chogan): Check for overlapping heaps here
-  // if (mdm->map_heap_end_offset >= mdm->id_heap_start_offset) {
-  // }
-
   if (target_node == rpc->node_id) {
     LocalPut(mdm, name.c_str(), id, map_type);
   } else {
@@ -644,6 +639,14 @@ bool ContainsBlob(SharedMemoryContext *context, RpcContext *rpc,
   return result;
 }
 
+char *GetKey(MetadataManager *mdm, IdMap *map, u32 index) {
+  u32 key_offset = (u64)map[index].key;
+  Heap *map_heap = GetMapHeap(mdm);
+  char *result = (char *)HeapOffsetToPtr(map_heap, key_offset);
+
+  return result;
+}
+
 void LocalDestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
                         const char *bucket_name, BucketID bucket_id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
@@ -658,21 +661,15 @@ void LocalDestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
     IdMap *blob_map = GetBlobMap(mdm);
     for (u32 i = 0; i < info->blobs.length; ++i) {
       BlobID *blob_id = blobs + i;
-      u32 blob_name_offset = 0;
+      char *blob_name = 0;
       // TODO(chogan): This could be more efficient if necessary
       for (int j = 0; j < shlen(blob_map); ++j) {
         if (blob_map[j].value == (*blob_id).as_int) {
-          // NOTE(chogan): Even though the key is a char*, we are actually just
-          // storing a u32 offset into the map's Heap. We convert it to the
-          // char* below with HeapOffsetToPtr
-          blob_name_offset = (u64)blob_map[j].key;
+          blob_name = GetKey(mdm, blob_map, j);
           break;
         }
       }
-      if (blob_name_offset) {
-        Heap *map_heap = GetMapHeap(mdm);
-        const char *blob_name = (char *)HeapOffsetToPtr(map_heap,
-                                                        blob_name_offset);
+      if (blob_name) {
         LocalDestroyBlob(context, rpc, blob_name, *blob_id);
       } else {
         // TODO(chogan): @errorhandling

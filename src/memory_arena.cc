@@ -186,8 +186,8 @@ u32 GetHeapOffset(Heap *heap, u8 *ptr) {
 }
 
 void HeapErrorHandler() {
-  LOG(FATAL) << "Heap out of memory. Increase size of Metadata Arena\n"
-             << std::endl;
+  LOG(FATAL) << "Heap out of memory. Increase metadata_arena_percentage "
+             << "in Hermes configuration." << std::endl;
 }
 
 u32 ComputeHeapExtent(Heap *heap, void *item, u32 size) {
@@ -330,6 +330,7 @@ u8 *HeapPushSize(Heap *heap, u32 size) {
 
   if (size) {
     BeginTicketMutex(&heap->mutex);
+    // TODO(chogan): Respect heap->alignment
     FreeBlock *first_fit = FindFirstFit(heap, size + sizeof(FreeBlockHeader));
     EndTicketMutex(&heap->mutex);
 
@@ -384,7 +385,10 @@ void HeapFree(Heap *heap, void *ptr) {
 void *HeapRealloc(Heap *heap, void *ptr, size_t size) {
 
   if (ptr) {
-    // Only support malloc behavior since the max Heap size can never grow
+    // NOTE(chogan): We only support malloc behavior for now. The stb_ds.h hash
+    // map uses STBDS_REALLOC for its malloc style allocations. We just give the
+    // initial map a large enough size so that it never needs to realloc.
+
     // TODO(chogan): @errorhandling
     assert(!"Can't realloc in Heap\n");
   }
@@ -395,18 +399,15 @@ void *HeapRealloc(Heap *heap, void *ptr, size_t size) {
 }
 
 void CoalesceFreeBlocks(Heap *heap) {
+  (void)heap;
+  // TODO(chogan): This will run as a deferred coalesce. How often?
   // Test case: Lots of blocks are free but none of the pointers are adjacent
   // X: A used block
   // n: A link to free block with index n
   // /: End of the free list
-  //
+
   //  0 1 2 3 4 5 6 7 8
   // |2|/|4|1|6|3|8|X|5|
-
-  // TODO(chogan):
-  if (heap->grows_up) {
-  } else {
-  }
 }
 
 void BeginTicketMutex(TicketMutex *mutex) {
