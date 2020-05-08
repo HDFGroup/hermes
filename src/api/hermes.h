@@ -49,6 +49,7 @@ class Hermes {
   }
 
   bool IsApplicationCore();
+  void AppBarrier();
   int GetProcessRank();
   int GetNumProcesses();
   void Finalize();

@@ -42,6 +42,10 @@ bool Hermes::IsApplicationCore() {
   return result;
 }
 
+void Hermes::AppBarrier() {
+  hermes::AppBarrier(&comm_);
+}
+
 int Hermes::GetProcessRank() {
   int result = comm_.app_proc_id;
 

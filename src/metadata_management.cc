@@ -83,13 +83,13 @@ static IdMap *GetBlobMap(MetadataManager *mdm) {
   return result;
 }
 
-static Heap *GetMapHeap(MetadataManager *mdm) {
+Heap *GetMapHeap(MetadataManager *mdm) {
   Heap *result = (Heap *)((u8 *)mdm + mdm->map_heap_offset);
 
   return result;
 }
 
-static Heap *GetIdHeap(MetadataManager *mdm) {
+Heap *GetIdHeap(MetadataManager *mdm) {
   Heap *result = (Heap *)((u8 *)mdm + mdm->id_heap_offset);
 
   return result;
