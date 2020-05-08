@@ -314,7 +314,10 @@ Heap *InitHeapInArena(Arena *arena, bool grows_up=true, u16 alignment=8);
 void HeapFree(Heap *heap, void *ptr);
 void *HeapRealloc(Heap *heap, void *ptr, size_t size);
 u32 GetHeapOffset(Heap *heap, u8 *ptr);
+FreeBlock *NextFreeBlock(Heap *heap, FreeBlock *block);
+FreeBlock *GetHeapFreeList(Heap *heap);
 u8 *HeapOffsetToPtr(Heap *heap, u32 offset);
+u8 *HeapExtentToPtr(Heap *heap);
 
 void BeginTicketMutex(TicketMutex *mutex);
 void EndTicketMutex(TicketMutex *mutex);

@@ -42,6 +42,16 @@ struct Point {
   int y;
 };
 
+struct HeapMetadata {
+  int total_pixels;
+  int screen_width;
+  int num_lanes;
+  int y_offset;
+  // int lane_height;
+  u8 *heap_base;
+  ptrdiff_t heap_size;
+};
+
 static SDL_Window *CreateWindow(int width, int height) {
   SDL_Window *result = SDL_CreateWindow("BufferPool Visualizer",
                                         SDL_WINDOWPOS_UNDEFINED,
@@ -99,6 +109,7 @@ static SDL_Surface *CreateBackBuffer(int width, int height) {
 
 void DrawWrappingRect(int x, int y, int w, int h, int width, int pad,
                       SDL_Surface *surface, u32 color) {
+  // TODO(chogan): Use while () to draw rect that spans multiple lines
   if (x + w >= width) {
     // NOTE(chogan): Draw the portion of the rect that fits on this line
     int this_line_width = width - (x + pad);
@@ -585,6 +596,23 @@ void DisplayBufferPoolSegment(SharedMemoryContext *context,
 }
 
 
+Point AddrToPoint(HeapMetadata *hmd, uintptr_t addr) {
+  Point result = {};
+  f32 t = (f32)(addr - (uintptr_t)hmd->heap_base) / (f32)hmd->heap_size;
+  u32 pixel_offset = (u32)(t * hmd->total_pixels);
+  result.y = (pixel_offset / hmd->screen_width) + hmd->y_offset;
+  result.x = pixel_offset % hmd->screen_width;
+
+  return result;
+}
+
+int HeapSizeToPixels(HeapMetadata *hmd, size_t size) {
+  f32 t = (f32)size / (f32)hmd->heap_size;
+  int result = t * (f32)hmd->total_pixels;
+
+  return result;
+}
+
 void DisplayMetadataSegment(SharedMemoryContext *context,
                             SDL_Surface *surface, int width, int height) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
@@ -633,6 +661,62 @@ void DisplayMetadataSegment(SharedMemoryContext *context,
     DrawWrappingRect(x, y, w, h, width, pad, surface, rgb_color);
     x += w;
   }
+
+  int ending_y = y + h + pad;
+  SDL_Rect dividing_line = {0, ending_y, width, 1};
+  SDL_FillRect(surface, &dividing_line, global_colors[(int)Color::kMagenta]);
+
+  ending_y += h + pad;
+
+  // Draw Metadata Heap
+
+  x = 0;
+  y = ending_y;
+  height -= ending_y;
+
+  Heap *id_heap = GetIdHeap(mdm);
+  Heap *map_heap = GetMapHeap(mdm);
+
+  HeapMetadata hmd = {};
+  hmd.num_lanes = height / (h + pad);
+  hmd.total_pixels = width * hmd.num_lanes;
+  hmd.heap_base = (u8 *)map_heap;
+  hmd.heap_size = (u8 *)(id_heap + 1) - (u8 *)map_heap;
+  hmd.screen_width = width;
+  hmd.y_offset = ending_y;
+  assert(hmd.heap_size > hmd.total_pixels);
+
+  // Draw map heap free list
+  FreeBlock *head = GetHeapFreeList(map_heap);
+  while (head) {
+    Point p = AddrToPoint(&hmd, (uintptr_t)head);
+    u32 rgb_color = global_colors[(int)Color::kWhite];
+    int pixel_width = HeapSizeToPixels(&hmd, head->size);
+    DrawWrappingRect(p.x, p.y, pixel_width, h, width, pad, surface, rgb_color);
+    head = NextFreeBlock(map_heap, head);
+  }
+
+  // Draw id heap free list
+  head = GetHeapFreeList(id_heap);
+  while (head) {
+    int pixel_width = HeapSizeToPixels(&hmd, head->size);
+    u32 rgb_color = global_colors[(int)Color::kYellow];
+    Point p = AddrToPoint(&hmd, (uintptr_t)head - head->size);
+    DrawWrappingRect(p.x, p.y, pixel_width, h, width, pad, surface, rgb_color);
+    head = NextFreeBlock(map_heap, head);
+  }
+
+  // Draw extent
+  u8 *map_extent = HeapExtentToPtr(map_heap);
+  Point map_extent_point = AddrToPoint(&hmd, (uintptr_t)map_extent);
+  DrawWrappingRect(map_extent_point.x, map_extent_point.y, w, h, width, pad,
+                   surface, global_colors[(int)Color::kMagenta]);
+
+  u8 *id_extent = HeapExtentToPtr(id_heap);
+  Point id_extent_point = AddrToPoint(&hmd, (uintptr_t)id_extent);
+  DrawWrappingRect(id_extent_point.x, id_extent_point.y, w, h, width, pad,
+                   surface, global_colors[(int)Color::kCyan]);
+
 }
 
 int main() {

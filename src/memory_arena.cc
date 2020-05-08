@@ -140,7 +140,7 @@ u8 *GetHeapMemory(Heap *heap) {
   return result;
 }
 
-static inline FreeBlock *GetHeapFreeList(Heap *heap) {
+FreeBlock *GetHeapFreeList(Heap *heap) {
   FreeBlock *result = 0;
   if (heap->free_list_offset) {
     if (heap->grows_up) {
@@ -153,7 +153,7 @@ static inline FreeBlock *GetHeapFreeList(Heap *heap) {
   return result;
 }
 
-static inline FreeBlock *NextFreeBlock(Heap *heap, FreeBlock *block) {
+FreeBlock *NextFreeBlock(Heap *heap, FreeBlock *block) {
   FreeBlock *result = 0;
 
   if (block->next_offset) {
