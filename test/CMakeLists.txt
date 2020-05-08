@@ -20,7 +20,10 @@ endif()
 
 foreach(program ${API_TESTS})
   add_executable(${program} ${program}.cc)
-  target_link_libraries(${program} hermes ZLIB::ZLIB)
+  target_link_libraries(${program} ${LIBRT} hermes MPI::MPI_CXX ZLIB::ZLIB)
+  add_test(NAME "Test${program}"
+    COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+            "${CMAKE_BINARY_DIR}/bin/${program}")
 endforeach()
 
 #------------------------------------------------------------------------------

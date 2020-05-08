@@ -48,7 +48,7 @@ int main(int argc, char **argv) {
 
     assert(put_data == get_result);
 
-    bucket.Release(ctx);
+    bucket.Destroy(ctx);
 
   } else {
     // Hermes core. No user code here.

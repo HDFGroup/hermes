@@ -139,28 +139,77 @@ struct MetadataManager {
 
 struct RpcContext;
 
+/**
+ *
+ */
 void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
                          int node_id);
+
+/**
+ *
+ */
 BucketID GetBucketIdByName(SharedMemoryContext *context, RpcContext *rpc,
                            const char *name);
+
+/**
+ *
+ */
 void DestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
                    const char *name, BucketID bucket_id);
+
+/**
+ *
+ */
 void DestroyBlob(SharedMemoryContext *context, RpcContext *rpc,
                  BucketID bucket_id, const std::string &blob_name);
+
+/**
+ *
+ */
 void RenameBlob(SharedMemoryContext *context, RpcContext *rpc,
                 const std::string &old_name, const std::string &new_name);
+
+/**
+ *
+ */
 void RenameBucket(SharedMemoryContext *context, RpcContext *rpc, BucketID id,
                   const std::string &old_name, const std::string &new_name);
+
+/**
+ *
+ */
+bool ContainsBlob(SharedMemoryContext *context, RpcContext *rpc,
+                  BucketID bucket_id, const std::string &blob_name);
+
+/**
+ *
+ */
 BufferIdArray GetBufferIdsFromBlobName(Arena *arena,
                                        SharedMemoryContext *context,
                                        RpcContext *rpc, const char *blob_name);
+
+/**
+ *
+ */
 BucketID GetNextFreeBucketId(SharedMemoryContext *context, RpcContext *rpc,
                              const std::string &name);
+
+/**
+ *
+ */
 void AttachBlobToBucket(SharedMemoryContext *context, RpcContext *rpc,
                         const char *blob_name, BucketID bucket_id,
                         const std::vector<BufferID> &buffer_ids);
+
+/**
+ *
+ */
 void IncrementRefcount(SharedMemoryContext *context, RpcContext *rpc,
                        BucketID id);
+
+/**
+ *
+ */
 void DecrementRefcount(SharedMemoryContext *context, RpcContext *rpc,
                        BucketID id);
 
@@ -181,6 +230,8 @@ void LocalDestroyBlob(SharedMemoryContext *context, RpcContext *rpc,
 void LocalRenameBucket(SharedMemoryContext *context, RpcContext *rpc,
                        BucketID id, const std::string &old_name,
                        const std::string &new_name);
+bool LocalContainsBlob(SharedMemoryContext *context, BucketID bucket_id,
+                       BlobID blob_id);
 void LocalRemoveBlobFromBucketInfo(SharedMemoryContext *context,
                                    BucketID bucket_id, BlobID blob_id);
 void LocalIncrementRefcount(SharedMemoryContext *context, BucketID id);

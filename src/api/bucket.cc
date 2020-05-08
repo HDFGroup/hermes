@@ -137,6 +137,13 @@ Status Bucket::RenameBlob(const std::string &old_name,
   return ret;
 }
 
+bool Bucket::ContainsBlob(const std::string &name) {
+  bool result = hermes::ContainsBlob(&hermes_->context_, &hermes_->rpc_, id_,
+                                     name);
+
+  return result;
+}
+
 template<class Predicate>
 std::vector<std::string> Bucket::GetBlobNames(Predicate pred,
                                               Context &ctx) {

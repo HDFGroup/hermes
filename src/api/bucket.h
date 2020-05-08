@@ -18,8 +18,6 @@ class Bucket {
  private:
   std::string name_;
   hermes::BucketID id_;
-  // TODO(chogan): Move to MetadataManager
-  // std::unordered_map<std::string, std::vector<BufferID>> blobs_;
 
  public:
   /** internal Hermes object owned by Bucket */
@@ -75,6 +73,9 @@ class Bucket {
   Status RenameBlob(const std::string &old_name,
                     const std::string &new_name,
                     Context &ctx);
+
+  /** Returns true if the Bucket contains a Blob called `name` */
+  bool ContainsBlob(const std::string &name);
 
 	/** get a list of blob names filtered by pred */
 	template<class Predicate>

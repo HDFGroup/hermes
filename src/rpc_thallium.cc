@@ -140,6 +140,11 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
       (void)req;
       LocalDestroyBlob(context, rpc, name.c_str(), id);
     };
+  function<void(const request&, BucketID, BlobID)> rpc_contains_blob =
+    [context](const request &req, BucketID bucket_id, BlobID blob_id) {
+      bool result = LocalContainsBlob(context, bucket_id, blob_id);
+      req.respond(result);
+    };
 
   function<void(const request&, BucketID, BlobID)>
     rpc_remove_blob_from_bucket_info = [context](const request &req,
@@ -160,7 +165,7 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
       (void)req;
       LocalDecrementRefcount(context, id);
     };
- 
+
   function<void(const request&)> rpc_finalize =
     [&rpc_server](const request &req) {
       (void)req;
@@ -180,6 +185,7 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
                     rpc_destroy_bucket).disable_response();
   rpc_server.define("RemoteRenameBucket", rpc_rename_bucket).disable_response();
   rpc_server.define("RemoteDestroyBlob", rpc_destroy_blob).disable_response();
+  rpc_server.define("RemoteContainsBlob", rpc_contains_blob);
   rpc_server.define("RemoteRemoveBlobFromBucketInfo",
                     rpc_remove_blob_from_bucket_info).disable_response();
   rpc_server.define("RemoteGetBufferIdList", rpc_get_buffer_id_list);

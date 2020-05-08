@@ -609,6 +609,41 @@ void RenameBlob(SharedMemoryContext *context, RpcContext *rpc,
   PutBlobId(mdm, rpc, new_name, blob_id);
 }
 
+bool LocalContainsBlob(SharedMemoryContext *context, BucketID bucket_id,
+                       BlobID blob_id) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  BucketInfo *info = LocalGetBucketInfoById(mdm, bucket_id);
+  BlobIdList *blobs = &info->blobs;
+  Heap *id_heap = GetIdHeap(mdm);
+  BlobID *blob_id_arr = (BlobID *)HeapOffsetToPtr(id_heap, blobs->head_offset);
+
+  bool result = false;
+  for (u32 i = 0; i < blobs->length; ++i) {
+    if (blob_id_arr[i].as_int == blob_id.as_int) {
+      result = true;
+      break;
+    }
+  }
+
+  return result;
+}
+
+bool ContainsBlob(SharedMemoryContext *context, RpcContext *rpc,
+                  BucketID bucket_id, const std::string &blob_name) {
+  BlobID blob_id = GetBlobIdByName(context, rpc, blob_name.c_str());
+  bool result = false;
+
+  u32 target_node = bucket_id.bits.node_id;
+  if (target_node == rpc->node_id) {
+    result = LocalContainsBlob(context, bucket_id, blob_id);
+  } else {
+    result = RpcCall<bool>(rpc, target_node, "RemoteContainsBlob", bucket_id,
+                           blob_name);
+  }
+
+  return result;
+}
+
 void LocalDestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
                         const char *bucket_name, BucketID bucket_id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
