@@ -27,10 +27,16 @@ enum class ActiveSegment {
   Metadata,
 };
 
+enum class ActiveHeap {
+  Map,
+  Id,
+};
+
 static u32 global_colors[(int)Color::kCount];
 static int global_bitmap_index;
 static TierID global_active_tier;
 static ActiveSegment global_active_segment;
+static ActiveHeap global_active_heap;
 
 struct Range {
   int start;
@@ -107,23 +113,29 @@ static SDL_Surface *CreateBackBuffer(int width, int height) {
   return result;
 }
 
-void DrawWrappingRect(int x, int y, int w, int h, int width, int pad,
-                      SDL_Surface *surface, u32 color) {
-  // TODO(chogan): Use while () to draw rect that spans multiple lines
-  if (x + w >= width) {
-    // NOTE(chogan): Draw the portion of the rect that fits on this line
-    int this_line_width = width - (x + pad);
-    SDL_Rect this_line_rect = {x + pad, y + pad, this_line_width, h - pad};
-    SDL_FillRect(surface, &this_line_rect, color);
+void DrawWrappingRect(SDL_Rect *rect, int width, int pad, SDL_Surface *surface,
+                      u32 color) {
+  int x = rect->x;
+  int y = rect->y;
+  int w = rect->w;
+  int h = rect->h;
+  bool multi_line = false;
 
-    // NOTE(chogan): Draw the rest of the rect on the next line.
-    int off_screen_width = (x + w) - width;
-    SDL_Rect next_line_rect = {0, y + pad + h, off_screen_width, h - pad};
-    SDL_FillRect(surface, &next_line_rect, color);
-  } else {
-    // NOTE(chogan): Whole rect fits on one line
-    SDL_Rect rect = {x + pad, y + pad, w - pad, h - pad};
-    SDL_FillRect(surface, &rect, color);
+  while (w > 0) {
+    SDL_Rect fill_rect = {x + pad, y + pad, 0, h - pad};
+    int rect_width = x + w;
+    if (rect_width > width) {
+      multi_line = true;
+      int this_line_width = width - (x + pad);
+      fill_rect.w = this_line_width;
+      w -= this_line_width;
+      x = 0;
+      y += h;
+    } else {
+      fill_rect.w = multi_line ? w - 2 * pad : w - pad;
+      w = -1;
+    }
+    SDL_FillRect(surface, &fill_rect, color);
   }
 }
 
@@ -210,7 +222,8 @@ static int DrawBufferPool(SharedMemoryContext *context,
     x = pixel_offset % window_width;
     w = num_blocks * block_width_pixels;
 
-    DrawWrappingRect(x, y, w, h, window_width, pad, surface, rgb_color);
+    SDL_Rect rect = {x, y, w, h};
+    DrawWrappingRect(&rect, window_width, pad, surface, rgb_color);
 
     if (y + pad >= final_y) {
       final_y = y + pad;
@@ -307,7 +320,8 @@ static int DrawFileBuffers(SharedMemoryContext *context, SDL_Surface *surface,
     x = pixel_offset % window_width;
     w = num_blocks * block_width_pixels;
 
-    DrawWrappingRect(x, y, w, h, window_width, pad, surface, rgb_color);
+    SDL_Rect rect = {x, y, w, h};
+    DrawWrappingRect(&rect, window_width, pad, surface, rgb_color);
 
     if (y + pad >= final_y) {
       final_y = y + pad;
@@ -493,11 +507,19 @@ static void HandleInput(SharedMemoryContext *context, bool *running,
       case SDL_KEYUP: {
         switch (event.key.keysym.scancode) {
           case SDL_SCANCODE_0: {
-            SetActiveTier(context, 0);
+            if (global_active_segment == ActiveSegment::BufferPool) {
+              SetActiveTier(context, 0);
+            } else {
+              global_active_heap = ActiveHeap::Id;
+            }
             break;
           }
           case SDL_SCANCODE_1: {
-            SetActiveTier(context, 1);
+            if (global_active_segment == ActiveSegment::BufferPool) {
+              SetActiveTier(context, 1);
+            } else {
+              global_active_heap = ActiveHeap::Map;
+            }
             break;
           }
           case SDL_SCANCODE_2: {
@@ -638,7 +660,9 @@ void DisplayMetadataSegment(SharedMemoryContext *context,
 
     u32 rgb_color = info->active ? global_colors[(int)Color::kWhite] :
       global_colors[(int)Color::kRed];
-    DrawWrappingRect(x, y, w, h, width, pad, surface, rgb_color);
+
+    SDL_Rect rect = {x, y, w, h};
+    DrawWrappingRect(&rect, width, pad, surface, rgb_color);
     x += w;
   }
 
@@ -658,7 +682,8 @@ void DisplayMetadataSegment(SharedMemoryContext *context,
 
     u32 rgb_color = info->active ? global_colors[(int)Color::kWhite] :
       global_colors[(int)Color::kYellow];
-    DrawWrappingRect(x, y, w, h, width, pad, surface, rgb_color);
+    SDL_Rect rect = {x, y, w, h};
+    DrawWrappingRect(&rect, width, pad, surface, rgb_color);
     x += w;
   }
 
@@ -679,44 +704,61 @@ void DisplayMetadataSegment(SharedMemoryContext *context,
 
   HeapMetadata hmd = {};
   hmd.num_lanes = height / (h + pad);
-  hmd.total_pixels = width * hmd.num_lanes;
+  hmd.total_pixels = width * height;
   hmd.heap_base = (u8 *)map_heap;
   hmd.heap_size = (u8 *)(id_heap + 1) - (u8 *)map_heap;
   hmd.screen_width = width;
   hmd.y_offset = ending_y;
   assert(hmd.heap_size > hmd.total_pixels);
 
-  // Draw map heap free list
-  FreeBlock *head = GetHeapFreeList(map_heap);
-  while (head) {
-    Point p = AddrToPoint(&hmd, (uintptr_t)head);
-    u32 rgb_color = global_colors[(int)Color::kWhite];
-    int pixel_width = HeapSizeToPixels(&hmd, head->size);
-    DrawWrappingRect(p.x, p.y, pixel_width, h, width, pad, surface, rgb_color);
-    head = NextFreeBlock(map_heap, head);
-  }
-
-  // Draw id heap free list
-  head = GetHeapFreeList(id_heap);
-  while (head) {
-    int pixel_width = HeapSizeToPixels(&hmd, head->size);
-    u32 rgb_color = global_colors[(int)Color::kYellow];
-    Point p = AddrToPoint(&hmd, (uintptr_t)head - head->size);
-    DrawWrappingRect(p.x, p.y, pixel_width, h, width, pad, surface, rgb_color);
-    head = NextFreeBlock(map_heap, head);
+  // TODO(chogan): Doesn't account for the fact that each pixel in y should take
+  // up h + pad pixels
+  u32 white = global_colors[(int)Color::kWhite];
+  switch (global_active_heap) {
+    case ActiveHeap::Map: {
+      FreeBlock *head = GetHeapFreeList(map_heap);
+      while (head) {
+        Point p = AddrToPoint(&hmd, (uintptr_t)head);
+        int pixel_width = HeapSizeToPixels(&hmd, head->size);
+        SDL_Rect rect = {p.x, p.y, pixel_width, h};
+        DrawWrappingRect(&rect, width, pad, surface, white);
+        head = NextFreeBlock(map_heap, head);
+      }
+      break;
+    }
+    case ActiveHeap::Id: {
+      FreeBlock *head = GetHeapFreeList(id_heap);
+      while (head) {
+        int pixel_width = HeapSizeToPixels(&hmd, head->size);
+        Point p = AddrToPoint(&hmd, (uintptr_t)head - head->size);
+        SDL_Rect rect = {p.x, p.y, pixel_width, h};
+        DrawWrappingRect(&rect, width, pad, surface, white);
+        head = NextFreeBlock(map_heap, head);
+      }
+      break;
+    }
   }
 
   // Draw extent
   u8 *map_extent = HeapExtentToPtr(map_heap);
   Point map_extent_point = AddrToPoint(&hmd, (uintptr_t)map_extent);
-  DrawWrappingRect(map_extent_point.x, map_extent_point.y, w, h, width, pad,
-                   surface, global_colors[(int)Color::kMagenta]);
+  SDL_Rect map_rect = {map_extent_point.x, map_extent_point.y, w, h};
+  DrawWrappingRect(&map_rect, width, pad, surface,
+                   global_colors[(int)Color::kYellow]);
 
   u8 *id_extent = HeapExtentToPtr(id_heap);
   Point id_extent_point = AddrToPoint(&hmd, (uintptr_t)id_extent);
-  DrawWrappingRect(id_extent_point.x, id_extent_point.y, w, h, width, pad,
-                   surface, global_colors[(int)Color::kCyan]);
-
+  SDL_Rect id_rect = {id_extent_point.x, id_extent_point.y-5, w, h};
+  DrawWrappingRect(&id_rect, width, pad, surface,
+                   global_colors[(int)Color::kCyan]);
+  // Draw heaps
+  Point map_heap_xy = AddrToPoint(&hmd, (uintptr_t)map_heap);
+  Point id_heap_xy = AddrToPoint(&hmd, (uintptr_t)id_heap);
+  SDL_Rect map_heap_rect = {map_heap_xy.x, map_heap_xy.y, w, h};
+  SDL_Rect id_heap_rect = {id_heap_xy.x, id_heap_xy.y-5, w, h};
+  u32 magenta = global_colors[(int)Color::kMagenta];
+  DrawWrappingRect(&map_heap_rect, width, pad, surface, magenta);
+  DrawWrappingRect(&id_heap_rect, width, pad, surface, magenta);
 }
 
 int main() {
