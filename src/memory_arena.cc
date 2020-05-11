@@ -372,8 +372,8 @@ void HeapFree(Heap *heap, void *ptr) {
     BeginTicketMutex(&heap->mutex);
     u32 extent = ComputeHeapExtent(heap, ptr, size);
     if (extent == heap->extent) {
-      assert(size < heap->extent);
-      heap->extent -= size;
+      assert(new_block->size < heap->extent);
+      heap->extent -= new_block->size;
     }
 
     new_block->next_offset = heap->free_list_offset;
