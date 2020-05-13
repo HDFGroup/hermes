@@ -6,20 +6,24 @@
 #include "buffer_pool.h"
 #include "buffer_pool_internal.h"
 #include "metadata_management.h"
+#include "debug_state.h"
 
 using namespace hermes;
 
-enum class Color {
-  kRed,
-  kYellow,
-  kGreen,
-  kCyan,
-  kGrey,
-  kWhite,
-  kMagenta,
-  kBlack,
+enum Color {
+  kColor_Red,
+  kColor_Yellow,
+  kColor_Green,
+  kColor_Cyan,
+  kColor_Magenta,
 
-  kCount
+  kColor_HeapMax,
+
+  kColor_Grey,
+  kColor_White,
+  kColor_Black,
+
+  kColor_Count
 };
 
 enum class ActiveSegment {
@@ -32,11 +36,19 @@ enum class ActiveHeap {
   Id,
 };
 
-static u32 global_colors[(int)Color::kCount];
+enum DebugStateType {
+  DebugState_Map,
+  DebugState_Id,
+
+  DebugState_Count
+};
+
+static u32 global_colors[kColor_Count];
 static int global_bitmap_index;
 static TierID global_active_tier;
 static ActiveSegment global_active_segment;
 static ActiveHeap global_active_heap;
+static u32 global_color_counter;
 
 struct Range {
   int start;
@@ -49,11 +61,13 @@ struct Point {
 };
 
 struct HeapMetadata {
-  int total_pixels;
+  int total_slots;
   int screen_width;
-  int num_lanes;
+  int num_rows;
   int y_offset;
-  // int lane_height;
+  int h;
+  f32 slots_to_bytes;
+  f32 bytes_to_slots;
   u8 *heap_base;
   ptrdiff_t heap_size;
 };
@@ -104,7 +118,7 @@ static SDL_Surface *CreateBackBuffer(int width, int height) {
 #endif
 
   SDL_Surface *result = SDL_CreateRGBSurface(0, width, height, 32, rmask,
-                         gmask, bmask, amask);
+                                             gmask, bmask, amask);
   if (result == NULL) {
     SDL_Log("SDL_CreateRGBSurface() failed: %s", SDL_GetError());
     exit(1);
@@ -216,7 +230,7 @@ static int DrawBufferPool(SharedMemoryContext *context,
 
     if (header->in_use) {
       // TODO(chogan): Just draw used in white, not whole capacity
-      rgb_color = global_colors[(int)Color::kWhite];
+      rgb_color = global_colors[kColor_White];
     }
 
     x = pixel_offset % window_width;
@@ -314,7 +328,7 @@ static int DrawFileBuffers(SharedMemoryContext *context, SDL_Surface *surface,
 
     if (header->in_use) {
       // TODO(chogan): Just draw used in white, not whole capacity
-      rgb_color = global_colors[(int)Color::kWhite];
+      rgb_color = global_colors[kColor_White];
     }
 
     x = pixel_offset % window_width;
@@ -360,7 +374,7 @@ static void DrawEndOfRamBuffers(SharedMemoryContext *context,
 
   if (y + pad < window_height) {
     SDL_Rect rect = {x + pad, y + pad, w - pad, h - pad};
-    u32 color = global_colors[(int)Color::kMagenta];
+    u32 color = global_colors[kColor_Magenta];
     SDL_FillRect(surface, &rect, color);
   }
 }
@@ -396,9 +410,9 @@ static void DrawHeaders(SharedMemoryContext *context, SDL_Surface *surface,
     SDL_Rect rect = {x + pad, y + pad, w - pad, h - pad};
     u32 color = 0;
     if (HeaderIsDormant(header)) {
-      color = global_colors[(int)Color::kGrey];
+      color = global_colors[kColor_Grey];
     } else {
-      color = global_colors[(int)Color::kGreen];
+      color = global_colors[kColor_Green];
     }
 
     SDL_FillRect(surface, &rect, color);
@@ -587,14 +601,14 @@ static void HandleInput(SharedMemoryContext *context, bool *running,
 }
 
 static void InitColors(SDL_PixelFormat *format) {
-  global_colors[(int)Color::kRed] = SDL_MapRGB(format, 255, 0, 0);
-  global_colors[(int)Color::kYellow] = SDL_MapRGB(format, 255, 255, 0);
-  global_colors[(int)Color::kGreen] = SDL_MapRGB(format, 0, 255, 0);
-  global_colors[(int)Color::kCyan] = SDL_MapRGB(format, 24, 154, 211);
-  global_colors[(int)Color::kGrey] = SDL_MapRGB(format, 128, 128, 128);
-  global_colors[(int)Color::kWhite] = SDL_MapRGB(format, 255, 255, 255);
-  global_colors[(int)Color::kMagenta] = SDL_MapRGB(format, 255, 0, 255);
-  global_colors[(int)Color::kBlack] = SDL_MapRGB(format, 0, 0, 0);
+  global_colors[kColor_Red] = SDL_MapRGB(format, 255, 0, 0);
+  global_colors[kColor_Yellow] = SDL_MapRGB(format, 255, 255, 0);
+  global_colors[kColor_Green] = SDL_MapRGB(format, 0, 255, 0);
+  global_colors[kColor_Cyan] = SDL_MapRGB(format, 24, 154, 211);
+  global_colors[kColor_Grey] = SDL_MapRGB(format, 128, 128, 128);
+  global_colors[kColor_White] = SDL_MapRGB(format, 255, 255, 255);
+  global_colors[kColor_Magenta] = SDL_MapRGB(format, 255, 0, 255);
+  global_colors[kColor_Black] = SDL_MapRGB(format, 0, 0, 0);
 }
 
 void DisplayBufferPoolSegment(SharedMemoryContext *context,
@@ -612,7 +626,7 @@ void DisplayBufferPoolSegment(SharedMemoryContext *context,
   ending_y += 2;
   SDL_Rect dividing_line = {0, ending_y, width, 1};
   SDL_FillRect(back_buffer, &dividing_line,
-               global_colors[(int)Color::kMagenta]);
+               global_colors[kColor_Magenta]);
   DrawHeaders(context, back_buffer, width, height,
               ending_y + 5, global_active_tier);
 }
@@ -621,22 +635,96 @@ void DisplayBufferPoolSegment(SharedMemoryContext *context,
 Point AddrToPoint(HeapMetadata *hmd, uintptr_t addr) {
   Point result = {};
   f32 t = (f32)(addr - (uintptr_t)hmd->heap_base) / (f32)hmd->heap_size;
-  u32 pixel_offset = (u32)(t * hmd->total_pixels);
-  result.y = (pixel_offset / hmd->screen_width) + hmd->y_offset;
-  result.x = pixel_offset % hmd->screen_width;
+  u32 slot_number = (u32)(t * hmd->total_slots);
+  result.x = slot_number % hmd->screen_width;
+  result.y = (slot_number / hmd->screen_width) * 5 + hmd->y_offset;
 
   return result;
 }
 
-int HeapSizeToPixels(HeapMetadata *hmd, size_t size) {
+int GetAllocationWidth(HeapMetadata *hmd, size_t size) {
   f32 t = (f32)size / (f32)hmd->heap_size;
-  int result = t * (f32)hmd->total_pixels;
+  int result = t * (f32)hmd->total_slots;
 
   return result;
+}
+
+void DrawAllocatedHeapBlocks(DebugState *state, HeapMetadata *hmd, Heap *heap,
+                             SDL_Surface *surface) {
+  global_color_counter = 0;
+  for (u32 i = 0; i < state->allocation_count; ++i) {
+    DebugHeapAllocation *allocation = &state->allocations[i];
+    u8 *heap_ptr = HeapOffsetToPtr(heap, allocation->offset);
+    uintptr_t ptr_adjustment = heap->grows_up ? 0 : allocation->size;
+    Point p = AddrToPoint(hmd, (uintptr_t)heap_ptr - ptr_adjustment);
+    int pixel_width = GetAllocationWidth(hmd, allocation->size);
+    SDL_Rect rect = {p.x, p.y, pixel_width, hmd->h};
+
+    global_color_counter++;
+    if (global_color_counter == kColor_HeapMax) {
+      global_color_counter = 0;
+    }
+    u32 color = global_colors[global_color_counter];
+    DrawWrappingRect(&rect, hmd->screen_width, 0, surface, color);
+  }
+}
+
+void DrawHeapExtent(HeapMetadata *hmd, Heap *heap, int w,
+                    SDL_Surface *surface) {
+  u8 *extent = HeapExtentToPtr(heap);
+  Point extent_point = AddrToPoint(hmd, (uintptr_t)extent);
+  SDL_Rect rect = {extent_point.x, extent_point.y, w, hmd->h};
+  DrawWrappingRect(&rect, hmd->screen_width, 0, surface,
+                   global_colors[kColor_White]);
+}
+
+void DrawHeap(HeapMetadata *hmd, Heap *heap, int w, SDL_Surface *surface) {
+  Point heap_xy = AddrToPoint(hmd, (uintptr_t)heap);
+  SDL_Rect heap_rect = {heap_xy.x, heap_xy.y, w, hmd->h};
+  DrawWrappingRect(&heap_rect, hmd->screen_width, 0, surface,
+                   global_colors[kColor_White]);
+}
+
+int ClampWidthToExtent(HeapMetadata *hmd, Heap *heap, u8 **block_addr,
+                       int block_width) {
+  int result = block_width;
+  u32 extent_offset_bytes = heap->extent;
+  u32 addr_offset_bytes = GetHeapOffset(heap, *block_addr);
+  u32 extent_slot = hmd->bytes_to_slots * (f32)extent_offset_bytes;
+  u32 addr_slot = hmd->bytes_to_slots * (f32)addr_offset_bytes;
+
+  if (heap->grows_up) {
+    if (addr_slot + block_width > extent_slot) {
+      result = extent_slot - addr_slot;
+    }
+  } else {
+    result -= extent_slot - addr_slot;
+    u8 *extent = HeapExtentToPtr(heap);
+    *block_addr = extent;
+  }
+
+  return result;
+}
+
+void DrawFreeHeapBlocks(HeapMetadata *hmd, Heap *heap, SDL_Surface *surface) {
+  FreeBlock *head = GetHeapFreeList(heap);
+  while (head) {
+    uintptr_t ptr_adjustment = heap->grows_up ? 0 : head->size;
+    u8 *addr = (u8 *)head - ptr_adjustment;
+    int pixel_width = GetAllocationWidth(hmd, head->size);
+    int clamped_width = ClampWidthToExtent(hmd, heap, &addr, pixel_width);
+    Point p = AddrToPoint(hmd, (uintptr_t)addr);
+    SDL_Rect rect = {p.x, p.y, clamped_width, hmd->h};
+    DrawWrappingRect(&rect, hmd->screen_width, 0, surface,
+                     global_colors[kColor_White]);
+    head = NextFreeBlock(heap, head);
+  }
 }
 
 void DisplayMetadataSegment(SharedMemoryContext *context,
-                            SDL_Surface *surface, int width, int height) {
+                            SDL_Surface *surface, int width, int height,
+                            DebugState *map_debug_state,
+                            DebugState *id_debug_state) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   int pad = 2;
   int w = 5;
@@ -658,8 +746,8 @@ void DisplayMetadataSegment(SharedMemoryContext *context,
       break;
     }
 
-    u32 rgb_color = info->active ? global_colors[(int)Color::kWhite] :
-      global_colors[(int)Color::kRed];
+    u32 rgb_color = info->active ? global_colors[kColor_White] :
+      global_colors[kColor_Red];
 
     SDL_Rect rect = {x, y, w, h};
     DrawWrappingRect(&rect, width, pad, surface, rgb_color);
@@ -680,8 +768,8 @@ void DisplayMetadataSegment(SharedMemoryContext *context,
       break;
     }
 
-    u32 rgb_color = info->active ? global_colors[(int)Color::kWhite] :
-      global_colors[(int)Color::kYellow];
+    u32 rgb_color = info->active ? global_colors[kColor_White] :
+      global_colors[kColor_Yellow];
     SDL_Rect rect = {x, y, w, h};
     DrawWrappingRect(&rect, width, pad, surface, rgb_color);
     x += w;
@@ -689,7 +777,7 @@ void DisplayMetadataSegment(SharedMemoryContext *context,
 
   int ending_y = y + h + pad;
   SDL_Rect dividing_line = {0, ending_y, width, 1};
-  SDL_FillRect(surface, &dividing_line, global_colors[(int)Color::kMagenta]);
+  SDL_FillRect(surface, &dividing_line, global_colors[kColor_Magenta]);
 
   ending_y += h + pad;
 
@@ -702,63 +790,39 @@ void DisplayMetadataSegment(SharedMemoryContext *context,
   Heap *id_heap = GetIdHeap(mdm);
   Heap *map_heap = GetMapHeap(mdm);
 
+  int num_pixel_rows = height - 1 - ending_y;
+  num_pixel_rows = RoundDownToMultiple(num_pixel_rows, h);
+
   HeapMetadata hmd = {};
-  hmd.num_lanes = height / (h + pad);
-  hmd.total_pixels = width * height;
+  hmd.num_rows = num_pixel_rows / h;
+  hmd.total_slots = width * hmd.num_rows;
   hmd.heap_base = (u8 *)map_heap;
-  hmd.heap_size = (u8 *)(id_heap + 1) - (u8 *)map_heap;
+  hmd.heap_size = (u8 *)(id_heap) - (u8 *)(map_heap + 1);
   hmd.screen_width = width;
   hmd.y_offset = ending_y;
-  assert(hmd.heap_size > hmd.total_pixels);
+  hmd.h = h;
+  hmd.slots_to_bytes = (f32)hmd.heap_size / (f32)hmd.total_slots;
+  hmd.bytes_to_slots = 1.0f / hmd.slots_to_bytes;
+  assert(hmd.heap_size > hmd.total_slots);
 
-  // TODO(chogan): Doesn't account for the fact that each pixel in y should take
-  // up h + pad pixels
-  u32 white = global_colors[(int)Color::kWhite];
   switch (global_active_heap) {
     case ActiveHeap::Map: {
-      FreeBlock *head = GetHeapFreeList(map_heap);
-      while (head) {
-        Point p = AddrToPoint(&hmd, (uintptr_t)head);
-        int pixel_width = HeapSizeToPixels(&hmd, head->size);
-        SDL_Rect rect = {p.x, p.y, pixel_width, h};
-        DrawWrappingRect(&rect, width, pad, surface, white);
-        head = NextFreeBlock(map_heap, head);
-      }
+      DrawAllocatedHeapBlocks(map_debug_state, &hmd, map_heap, surface);
+      DrawFreeHeapBlocks(&hmd, map_heap, surface);
       break;
     }
     case ActiveHeap::Id: {
-      FreeBlock *head = GetHeapFreeList(id_heap);
-      while (head) {
-        int pixel_width = HeapSizeToPixels(&hmd, head->size);
-        Point p = AddrToPoint(&hmd, (uintptr_t)head - head->size);
-        SDL_Rect rect = {p.x, p.y, pixel_width, h};
-        DrawWrappingRect(&rect, width, pad, surface, white);
-        head = NextFreeBlock(map_heap, head);
-      }
+      DrawAllocatedHeapBlocks(id_debug_state, &hmd, id_heap, surface);
+      // DrawFreeHeapBlocks(&hmd, id_heap, surface);
       break;
     }
   }
 
-  // Draw extent
-  u8 *map_extent = HeapExtentToPtr(map_heap);
-  Point map_extent_point = AddrToPoint(&hmd, (uintptr_t)map_extent);
-  SDL_Rect map_rect = {map_extent_point.x, map_extent_point.y, w, h};
-  DrawWrappingRect(&map_rect, width, pad, surface,
-                   global_colors[(int)Color::kYellow]);
+  DrawHeapExtent(&hmd, map_heap, w, surface);
+  DrawHeapExtent(&hmd, id_heap, w, surface);
 
-  u8 *id_extent = HeapExtentToPtr(id_heap);
-  Point id_extent_point = AddrToPoint(&hmd, (uintptr_t)id_extent);
-  SDL_Rect id_rect = {id_extent_point.x, id_extent_point.y-5, w, h};
-  DrawWrappingRect(&id_rect, width, pad, surface,
-                   global_colors[(int)Color::kCyan]);
-  // Draw heaps
-  Point map_heap_xy = AddrToPoint(&hmd, (uintptr_t)map_heap);
-  Point id_heap_xy = AddrToPoint(&hmd, (uintptr_t)id_heap);
-  SDL_Rect map_heap_rect = {map_heap_xy.x, map_heap_xy.y, w, h};
-  SDL_Rect id_heap_rect = {id_heap_xy.x, id_heap_xy.y-5, w, h};
-  u32 magenta = global_colors[(int)Color::kMagenta];
-  DrawWrappingRect(&map_heap_rect, width, pad, surface, magenta);
-  DrawWrappingRect(&id_heap_rect, width, pad, surface, magenta);
+  DrawHeap(&hmd, map_heap, w, surface);
+  DrawHeap(&hmd, id_heap, w, surface);
 }
 
 int main() {
@@ -770,6 +834,7 @@ int main() {
   SDL_Window *window = CreateWindow(window_width, window_height);
   SDL_Surface *screen = GetScreen(window);
   SDL_Surface *back_buffer = CreateBackBuffer(window_width, window_height);
+
   InitColors(back_buffer->format);
 
   char full_shmem_name[kMaxBufferPoolShmemNameLength];
@@ -781,11 +846,26 @@ int main() {
     exit(1);
   }
 
+  SharedMemoryContext id_debug_context =
+    GetSharedMemoryContext(global_debug_id_name);
+  SharedMemoryContext map_debug_context =
+    GetSharedMemoryContext(global_debug_map_name);
+
+  DebugState *id_debug_state = 0;
+  DebugState *map_debug_state = 0;
+
+  if (id_debug_context.shm_base) {
+    id_debug_state = (DebugState *)id_debug_context.shm_base;
+  }
+  if (map_debug_context.shm_base) {
+    map_debug_state = (DebugState *)map_debug_context.shm_base;
+  }
+
   bool running = true;
   while (running) {
     HandleInput(&context, &running, screen, full_shmem_name);
 
-    SDL_FillRect(back_buffer, NULL, global_colors[(int)Color::kBlack]);
+    SDL_FillRect(back_buffer, NULL, global_colors[kColor_Black]);
 
     switch (global_active_segment) {
       case ActiveSegment::BufferPool: {
@@ -795,7 +875,7 @@ int main() {
       }
       case ActiveSegment::Metadata: {
         DisplayMetadataSegment(&context, back_buffer, window_width,
-                               window_height);
+                               window_height, map_debug_state, id_debug_state);
         break;
       }
     }
@@ -807,6 +887,9 @@ int main() {
   }
 
   ReleaseSharedMemoryContext(&context);
+
+  UnmapSharedMemory(&id_debug_context);
+  UnmapSharedMemory(&map_debug_context);
 
   SDL_FreeSurface(back_buffer);
   SDL_DestroyWindow(window);
