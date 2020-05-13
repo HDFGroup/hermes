@@ -59,13 +59,8 @@ int Hermes::GetNumProcesses() {
 }
 
 void Hermes::Finalize() {
-  if (IsApplicationCore()) {
-    ReleaseSharedMemoryContext(&context_);
-  } else {
-    UnmapSharedMemory(&context_);
-    shm_unlink(shmem_name_.c_str());
-  }
-  DestroyArena(&trans_arena_);
+  hermes::Finalize(&context_, &comm_, shmem_name_.c_str(), &trans_arena_,
+                   IsApplicationCore());
 }
 
 } // api namepsace

@@ -66,6 +66,21 @@ void HermesBarrier(CommunicationContext *comm) {
   comm->hermes_barrier(comm->state);
 }
 
+void Finalize(SharedMemoryContext *context, CommunicationContext *comm,
+              const char *shmem_name, Arena *trans_arena,
+              bool is_application_core) {
+  WorldBarrier(comm);
+  if (is_application_core) {
+    ReleaseSharedMemoryContext(context);
+    DEBUG_CLIENT_CLOSE();
+  } else {
+    UnmapSharedMemory(context);
+    shm_unlink(shmem_name);
+    DEBUG_SERVER_CLOSE();
+  }
+  DestroyArena(trans_arena);
+}
+
 void LockBuffer(BufferHeader *header) {
   bool expected = false;
   while (header->locked.compare_exchange_weak(expected, true)) {
