@@ -2,7 +2,9 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <unistd.h>
+
 #include <chrono>
+#include <string>
 #include <utility>
 
 #include <mpi.h>
@@ -30,7 +32,7 @@ namespace tl = thallium;
 
 using namespace hermes;
 
-static constexpr char kServerName[] = "ofi+sockets://172.20.101.25:8080";
+static constexpr char kServerName[] = "ofi+sockets://127.0.0.1:8080";
 static constexpr char kBaseShemeName[] = "/hermes_buffer_pool_";
 
 struct TimingResult {
@@ -86,7 +88,7 @@ TimingResult TestGetBuffers(SharedMemoryContext *context, int iters) {
     }
 
     release_timer.resumeTime();
-    ReleaseBuffers(context, ret);
+    LocalReleaseBuffers(context, ret);
     release_timer.pauseTime();
   }
 
@@ -164,7 +166,12 @@ void TestFileBuffering(SharedMemoryContext *context, int rank) {
       Blob result = {};
       result.size = blob.size;
       result.data = data.data();
-      ReadBlobFromBuffers(context, &result, buffer_ids);
+
+      BufferIdArray buffer_id_arr = {};
+      buffer_id_arr.ids = buffer_ids.data();
+      buffer_id_arr.length = buffer_ids.size();
+      // TODO(chogan): Pass comm and rpc here
+      ReadBlobFromBuffers(context, NULL, NULL, &result, &buffer_id_arr);
 
       std::stringstream out_filename_stream;
       out_filename_stream << "TestfileBuffering_rank" << std::to_string(rank)
@@ -175,7 +182,7 @@ void TestFileBuffering(SharedMemoryContext *context, int rank) {
       assert(items_written == 1);
       fclose(out_file);
 
-      ReleaseBuffers(context, buffer_ids);
+      LocalReleaseBuffers(context, buffer_ids);
     } else {
       perror(0);
     }
@@ -187,6 +194,8 @@ void TestFileBuffering(SharedMemoryContext *context, int rank) {
 
 void PrintUsage(char *program) {
   fprintf(stderr, "Usage %s [-r]\n", program);
+  fprintf(stderr, "  -b\n");
+  fprintf(stderr, "     Run GetBuffers test.\n");
   fprintf(stderr, "  -f\n");
   fprintf(stderr, "     Run FileBuffering test.\n");
   fprintf(stderr, "  -i <num>\n");
@@ -212,7 +221,7 @@ int main(int argc, char **argv) {
   MPI_Comm_size(MPI_COMM_WORLD, &world_size);
 
   int option = -1;
-  bool test_get_release = true;
+  bool test_get_release = false;
   bool use_rpc = false;
   bool test_split = false;
   bool test_merge = false;
@@ -222,8 +231,12 @@ int main(int argc, char **argv) {
   int iters = 100000;
   int pid = 0;
 
-  while ((option = getopt(argc, argv, "fkrs:i:m:p:")) != -1) {
+  while ((option = getopt(argc, argv, "bfkrs:i:m:p:")) != -1) {
     switch (option) {
+      case 'b': {
+        test_get_release = true;
+        break;
+      }
       case 'f': {
         test_file_buffering = true;
         test_get_release = false;
@@ -265,6 +278,7 @@ int main(int argc, char **argv) {
 
   char full_shmem_name[hermes::kMaxBufferPoolShmemNameLength];
   MakeFullShmemName(full_shmem_name, kBaseShemeName);
+  // TODO(chogan): Client side comm and rpc initialization
   SharedMemoryContext context = InitHermesClient(NULL, full_shmem_name,
                                                  test_file_buffering);
 
@@ -313,18 +327,19 @@ int main(int argc, char **argv) {
 
   if (world_rank == 0 && kill_server) {
     // NOTE(chogan): Shut down the RPC server
+    std::string server_name;
     if (pid) {
       std::string shm_id = "0";
       std::string shm_pid = std::to_string(pid);
-      std::string shm_name = "na+sm://" + shm_pid + "/" + shm_id;
-      tl::engine myEngine(shm_name, THALLIUM_CLIENT_MODE);
-      tl::remote_procedure finalize =
-        myEngine.define("Finalize").disable_response();
-      tl::endpoint server = myEngine.lookup(shm_name);
-      finalize.on(server)();
+      server_name = "na+sm://" + shm_pid + "/" + shm_id;
     } else {
-      // TODO(chogan): tcp address, etc.
+      server_name = kServerName;
     }
+    tl::engine myEngine(server_name, THALLIUM_CLIENT_MODE);
+    tl::remote_procedure finalize =
+      myEngine.define("Finalize").disable_response();
+    tl::endpoint server = myEngine.lookup(server_name);
+    finalize.on(server)();
   }
 
   MPI_Finalize();

@@ -36,7 +36,7 @@ int main(int argc, char **argv) {
   int option = -1;
   int num_rpc_threads = 0;
   std::string buffering_path;
-  std::string rpc_server_name = "na+sm";
+  std::string rpc_server_name = "sockets://localhost:8080";
 
   while ((option = getopt(argc, argv, "d:n:r:")) != -1) {
     switch (option) {
