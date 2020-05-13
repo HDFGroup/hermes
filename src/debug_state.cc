@@ -11,6 +11,15 @@ DebugState *InitDebugState(const char *shmem_name) {
   return result;
 }
 
+void CloseDebugState(bool unlink) {
+  munmap(global_debug_map_name, sizeof(DebugState));
+  munmap(global_debug_id_name, sizeof(DebugState));
+  if (unlink) {
+    shm_unlink(global_debug_map_name);
+    shm_unlink(global_debug_id_name);
+  }
+}
+
 void AddDebugAllocation(DebugState *state, u32 offset, u32 size) {
   BeginTicketMutex(&state->mutex);
   assert(state->allocation_count < global_debug_max_allocations);
@@ -51,6 +60,9 @@ void RemoveDebugAllocation(DebugState *state, u32 offset, u32 size) {
     global_debug_map_state = (DebugState *)context.shm_base;            \
   }
 
+#define DEBUG_SERVER_CLOSE() CloseDebugState(true)
+#define DEBUG_CLIENT_CLOSE() CloseDebugState(false)
+
 #define DEBUG_TRACK_ALLOCATION(ptr, size, map)                          \
   if ((map)) {                                                          \
     AddDebugAllocation(global_debug_map_state,                          \
@@ -75,6 +87,8 @@ void RemoveDebugAllocation(DebugState *state, u32 offset, u32 size) {
 
 #define DEBUG_SERVER_INIT(grows_up)
 #define DEBUG_CLIENT_INIT()
+#define DEBUG_SERVER_CLOSE()
+#define DEBUG_CLIENT_CLOSE()
 #define DEBUG_TRACK_ALLOCATION(ptr, size, map)
 #define DEBUG_TRACK_FREE(ptr, size, map)
 
