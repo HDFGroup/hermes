@@ -110,8 +110,7 @@ u8 *PushSize(Arena *arena, size_t size, size_t alignment) {
   u8 *result = (u8 *)AlignForward((uintptr_t)base_result, alignment);
 
   if (base_result != result) {
-    ptrdiff_t alignment_size;
-    alignment_size = result - base_result;
+    ptrdiff_t alignment_size = result - base_result;
     arena->used += alignment_size;
     DLOG(INFO) << "PushSize added " << alignment_size
                << " bytes of padding for alignment" << std::endl;
@@ -233,7 +232,7 @@ Heap *InitHeapInArena(Arena *arena, bool grows_up, u16 alignment) {
     memset(result, 0, sizeof(Heap));
   }
 
-  DEBUG_SERVER_INIT(grows_up);
+  HERMES_DEBUG_SERVER_INIT(grows_up);
 
   result->base_offset = grows_up ? (u8 *)(result + 1) - (u8 *)result : 0;
   result->error_handler = HeapErrorHandler;
@@ -335,7 +334,7 @@ FreeBlock *FindBestFit(FreeBlock *head, size_t desired_size, u32 threshold=0) {
 u8 *HeapPushSize(Heap *heap, u32 size) {
   u8 *result = 0;
 
-  DEBUG_CLIENT_INIT();
+  HERMES_DEBUG_CLIENT_INIT();
 
   if (size) {
     BeginTicketMutex(&heap->mutex);
@@ -354,7 +353,7 @@ u8 *HeapPushSize(Heap *heap, u32 size) {
       header->size = actual_size;
       result = (u8 *)(header + 1);
 
-      DEBUG_TRACK_ALLOCATION(header, header->size + sizeof(FreeBlockHeader),
+      HERMES_DEBUG_TRACK_ALLOCATION(header, header->size + sizeof(FreeBlockHeader),
                              heap->grows_up);
 
       u32 extent_adustment = heap->grows_up ? 0 : sizeof(FreeBlock);
@@ -388,7 +387,7 @@ void HeapFree(Heap *heap, void *ptr) {
     }
     new_block->size = size + sizeof(FreeBlockHeader);
 
-    DEBUG_TRACK_FREE(header, new_block->size, heap->grows_up);
+    HERMES_DEBUG_TRACK_FREE(header, new_block->size, heap->grows_up);
 
     BeginTicketMutex(&heap->mutex);
     u32 extent = ComputeHeapExtent(heap, ptr, size);

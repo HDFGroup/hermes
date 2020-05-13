@@ -369,13 +369,13 @@ void WriteBlobToBuffers(SharedMemoryContext *context, const Blob &blob,
  * Tier) or to a file (block addressable Tier).
  *
  * @param context The shared memory context needed to access BufferPool info.
+ * @param rpc The RPC context needed to make a remote call if necessary.
  * @param blob A place to store the read data.
  * @param buffer_ids The collection of BufferIDs that hold the buffered blob.
  *
  * @return The total number of bytes read
  */
-size_t ReadBlobFromBuffers(SharedMemoryContext *context,
-                           CommunicationContext *comm, RpcContext *rpc,
+size_t ReadBlobFromBuffers(SharedMemoryContext *context, RpcContext *rpc,
                            Blob *blob, BufferIdArray *buffer_ids);
 
 }  // namespace hermes

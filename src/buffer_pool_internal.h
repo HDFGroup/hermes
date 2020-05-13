@@ -95,19 +95,6 @@ ptrdiff_t InitBufferPool(u8 *hermes_memory, Arena *buffer_pool_arena,
 BufferPool *GetBufferPoolFromContext(SharedMemoryContext *context);
 
 /**
- * Obtains a pointer to the metadata Arena constructed in shared memory.
- *
- * Since the metadata Arena lives in shared memory, this pointer should never be
- * freed. It is only destroyed when the Hermes core closes the shared memory.
- *
- * @param context The shared memory context for accessing the Arena.
- *
- * @return A pointer to the Arena constructed in the shared memory represented
- * by @p context.
- */
-Arena *GetMetadataArenaFromContext(SharedMemoryContext *context);
-
-/**
  * Returns a pointer to the Tier with index tier_id in the shared memory
  * context.
  *

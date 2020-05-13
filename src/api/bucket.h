@@ -48,7 +48,7 @@ class Bucket {
 	/** open a bucket and retrieve the bucket handle */
 	struct bkt_hdl * Open(const std::string &name, Context &ctx);
 
-  /** */
+  /** returns true if this Bucket has been created but not yet destroyed */
   bool IsValid() const;
 
 	/** put a blob on this bucket */

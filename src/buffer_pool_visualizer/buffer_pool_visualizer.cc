@@ -36,13 +36,6 @@ enum class ActiveHeap {
   Id,
 };
 
-enum DebugStateType {
-  DebugState_Map,
-  DebugState_Id,
-
-  DebugState_Count
-};
-
 static u32 global_colors[kColor_Count];
 static int global_bitmap_index;
 static TierID global_active_tier;
@@ -61,6 +54,8 @@ struct Point {
 };
 
 struct HeapMetadata {
+  u8 *heap_base;
+  ptrdiff_t heap_size;
   int total_slots;
   int screen_width;
   int num_rows;
@@ -68,8 +63,6 @@ struct HeapMetadata {
   int h;
   f32 slots_to_bytes;
   f32 bytes_to_slots;
-  u8 *heap_base;
-  ptrdiff_t heap_size;
 };
 
 static SDL_Window *CreateWindow(int width, int height) {

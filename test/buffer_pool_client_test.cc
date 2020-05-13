@@ -170,8 +170,8 @@ void TestFileBuffering(SharedMemoryContext *context, int rank) {
       BufferIdArray buffer_id_arr = {};
       buffer_id_arr.ids = buffer_ids.data();
       buffer_id_arr.length = buffer_ids.size();
-      // TODO(chogan): Pass comm and rpc here
-      ReadBlobFromBuffers(context, NULL, NULL, &result, &buffer_id_arr);
+      // TODO(chogan): Pass rpc here
+      ReadBlobFromBuffers(context,  NULL, &result, &buffer_id_arr);
 
       std::stringstream out_filename_stream;
       out_filename_stream << "TestfileBuffering_rank" << std::to_string(rank)

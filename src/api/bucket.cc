@@ -86,8 +86,8 @@ size_t Bucket::Get(const std::string &name, Blob& user_blob, Context &ctx) {
       blob.data = user_blob.data();
       blob.size = user_blob.size();
 
-      ret = ReadBlobFromBuffers(&hermes_->context_, &hermes_->comm_,
-                                &hermes_->rpc_, &blob, &buffer_ids);
+      ret = ReadBlobFromBuffers(&hermes_->context_, &hermes_->rpc_, &blob,
+                                &buffer_ids);
     }
   }
 

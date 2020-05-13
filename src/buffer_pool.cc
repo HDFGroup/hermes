@@ -72,11 +72,11 @@ void Finalize(SharedMemoryContext *context, CommunicationContext *comm,
   WorldBarrier(comm);
   if (is_application_core) {
     ReleaseSharedMemoryContext(context);
-    DEBUG_CLIENT_CLOSE();
+    HERMES_DEBUG_CLIENT_CLOSE();
   } else {
     UnmapSharedMemory(context);
     shm_unlink(shmem_name);
-    DEBUG_SERVER_CLOSE();
+    HERMES_DEBUG_SERVER_CLOSE();
   }
   DestroyArena(trans_arena);
 }
@@ -289,6 +289,12 @@ bool BufferIsRemote(CommunicationContext *comm, BufferID buffer_id) {
   return result;
 }
 
+bool BufferIsRemote(RpcContext *rpc, BufferID buffer_id) {
+  bool result = rpc->node_id != buffer_id.bits.node_id;
+
+  return result;
+}
+
 bool IsNullBufferId(BufferID id) {
   bool result = id.as_int == 0;
 
@@ -431,7 +437,7 @@ size_t GetBlobSize(SharedMemoryContext *context, CommunicationContext *comm,
   for (u32 i = 0; i < buffer_ids->length; ++i) {
     if (BufferIsRemote(comm, buffer_ids->ids[i])) {
       // TODO(chogan):
-      // rpc->call();
+      // RpcCall(rpc, buffer_ids->ids[i].node_id, ...);
     } else {
       BufferHeader *header = GetHeaderByBufferId(context, buffer_ids->ids[i]);
       result += header->used;
@@ -1179,14 +1185,13 @@ void WriteBlobToBuffers(SharedMemoryContext *context, const Blob &blob,
   assert(at == blob.data + blob.size);
 }
 
-size_t ReadBlobFromBuffers(SharedMemoryContext *context,
-                           CommunicationContext *comm, RpcContext *rpc,
+size_t ReadBlobFromBuffers(SharedMemoryContext *context, RpcContext *rpc,
                            Blob *blob, BufferIdArray *buffer_ids) {
   u8 *at = blob->data;
   size_t total_bytes_read = 0;
   for (u32 i = 0; i < buffer_ids->length; ++i) {
     BufferID id = buffer_ids->ids[i];
-    if (BufferIsRemote(comm, id)) {
+    if (BufferIsRemote(rpc, id)) {
       // TODO(chogan): RPC
       (void)rpc;
       // rpc->call();
