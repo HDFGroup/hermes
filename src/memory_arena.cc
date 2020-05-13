@@ -357,10 +357,15 @@ u8 *HeapPushSize(Heap *heap, u32 size) {
       DEBUG_TRACK_ALLOCATION(header, header->size + sizeof(FreeBlockHeader),
                              heap->grows_up);
 
+      u32 extent_adustment = heap->grows_up ? 0 : sizeof(FreeBlock);
+
       BeginTicketMutex(&heap->mutex);
       u32 this_extent =
         ComputeHeapExtent(heap, header, header->size + sizeof(FreeBlockHeader));
       heap->extent = std::max(heap->extent, this_extent);
+      if (heap->extent == heap->free_list_offset - extent_adustment) {
+        heap->extent += sizeof(FreeBlock);
+      }
       EndTicketMutex(&heap->mutex);
     } else {
       // TODO(chogan): @errorhandling
