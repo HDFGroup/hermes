@@ -22,17 +22,7 @@ Bucket::Bucket(const std::string &initial_name,
                const std::shared_ptr<Hermes> &h, Context ctx)
     : name_(initial_name), hermes_(h) {
   (void)ctx;
-  BucketID id = GetBucketIdByName(&hermes_->context_, &hermes_->rpc_,
-                                  initial_name.c_str());
-
-  if (id.as_int != 0) {
-    LOG(INFO) << "Opening Bucket " << initial_name << std::endl;
-    id_ = id;
-    IncrementRefcount(&hermes_->context_, &hermes_->rpc_, id_);
-  } else {
-    LOG(INFO) << "Creating Bucket " << initial_name << std::endl;
-    id_ = GetNextFreeBucketId(&hermes_->context_, &hermes_->rpc_, initial_name);
-  }
+  id_ = GetOrCreateBucketId(&hermes_->context_, &hermes_->rpc_, name_);
 }
 
 bool Bucket::IsValid() const {
@@ -177,9 +167,8 @@ Status Bucket::Close(Context &ctx) {
   (void)ctx;
   Status ret = 0;
 
-  LOG(INFO) << "Closing a bucket to " << name_ << '\n';
-
   if (IsValid()) {
+    LOG(INFO) << "Closing bucket '" << name_ << "'" << std::endl;
     DecrementRefcount(&hermes_->context_, &hermes_->rpc_, id_);
   }
 

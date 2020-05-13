@@ -32,11 +32,11 @@ class Bucket {
          std::shared_ptr<Hermes> const &h, Context ctx);
 
   ~Bucket() {
-    Context ctx;
-    Close(ctx);
+    // TODO(chogan): Should we close implicitly by default?
+    // Context ctx;
+    // Close(ctx);
 
     name_.clear();
-    // blobs_.clear();
     id_.as_int = 0;
   }
 

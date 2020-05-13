@@ -227,6 +227,11 @@ void SerializeBufferPoolToFile(SharedMemoryContext *context, FILE *file);
 void ParseConfig(Arena *arena, const char *path, Config *config);
 
 /**
+ *
+ */
+u8 *InitSharedMemory(const char *shmem_name, size_t total_size);
+
+/**
  *  Lets Thallium know how to serialize a BufferID.
  *
  * This function is called implicitly by Thallium.

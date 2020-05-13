@@ -280,6 +280,11 @@ SharedMemoryContext GetSharedMemoryContext(char *shmem_name);
 void ReleaseSharedMemoryContext(SharedMemoryContext *context);
 
 /**
+ *
+ */
+void UnmapSharedMemory(SharedMemoryContext *context);
+
+/**
  * Returns a vector of BufferIDs that satisfy the constrains of @p schema.
  *
  * If a request cannot be fulfilled, an empty list is returned. GetBuffers will

@@ -22,6 +22,8 @@
 #include <mpi.h>
 
 #include "metadata_management.h"
+
+#include "debug_state.cc"
 #include "memory_arena.cc"
 #include "config_parser.cc"
 
@@ -1023,6 +1025,27 @@ void InitFilesForBuffering(SharedMemoryContext *context, bool make_space) {
   }
 }
 
+u8 *InitSharedMemory(const char *shmem_name, size_t total_size) {
+  u8 *result = 0;
+  int shmem_fd = shm_open(shmem_name, O_CREAT | O_RDWR | O_TRUNC, S_IRUSR | S_IWUSR);
+
+  if (shmem_fd >= 0) {
+    ftruncate(shmem_fd, total_size);
+    result = (u8 *)mmap(0, total_size, PROT_READ | PROT_WRITE, MAP_SHARED,
+                        shmem_fd, 0);
+    // TODO(chogan): @errorhandling
+    close(shmem_fd);
+  } else {
+    // TODO(chogan): @errorhandling
+    assert(!"shm_open failed\n");
+  }
+
+  // TODO(chogan): @errorhandling
+  assert(result);
+
+  return result;
+}
+
 SharedMemoryContext GetSharedMemoryContext(char *shmem_name) {
   SharedMemoryContext result = {};
 
@@ -1062,6 +1085,10 @@ SharedMemoryContext GetSharedMemoryContext(char *shmem_name) {
   return result;
 }
 
+void UnmapSharedMemory(SharedMemoryContext *context) {
+  munmap(context->shm_base, context->shm_size);
+}
+
 void ReleaseSharedMemoryContext(SharedMemoryContext *context) {
   BufferPool *pool = GetBufferPoolFromContext(context);
 
@@ -1075,7 +1102,7 @@ void ReleaseSharedMemoryContext(SharedMemoryContext *context) {
       }
     }
   }
-  munmap(context->shm_base, context->shm_size);
+  UnmapSharedMemory(context);
 }
 
 // IO clients

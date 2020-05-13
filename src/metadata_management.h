@@ -106,6 +106,7 @@ struct IdMap {
 };
 
 struct MetadataManager {
+  // All offsets are relative to the beginning of the MDM
   ptrdiff_t bucket_info_offset;
   BucketID first_free_bucket;
 
@@ -148,12 +149,6 @@ void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
 /**
  *
  */
-BucketID GetBucketIdByName(SharedMemoryContext *context, RpcContext *rpc,
-                           const char *name);
-
-/**
- *
- */
 void DestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
                    const char *name, BucketID bucket_id);
 
@@ -191,7 +186,7 @@ BufferIdArray GetBufferIdsFromBlobName(Arena *arena,
 /**
  *
  */
-BucketID GetNextFreeBucketId(SharedMemoryContext *context, RpcContext *rpc,
+BucketID GetOrCreateBucketId(SharedMemoryContext *context, RpcContext *rpc,
                              const std::string &name);
 
 /**

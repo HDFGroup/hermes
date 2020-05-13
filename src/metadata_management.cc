@@ -291,8 +291,6 @@ BucketID GetNextFreeBucketId(SharedMemoryContext *context, RpcContext *rpc,
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   BucketID result = {};
 
-  // TODO(chogan): Could replace this with lock-free version if/when it matters
-  BeginTicketMutex(&mdm->bucket_mutex);
   if (mdm->num_buckets < mdm->max_buckets) {
     result = mdm->first_free_bucket;
     assert(result.bits.node_id == rpc->node_id);
@@ -312,12 +310,30 @@ BucketID GetNextFreeBucketId(SharedMemoryContext *context, RpcContext *rpc,
               << "Increase max_buckets_per_node in the Hermes configuration."
               << std::endl;
   }
-  EndTicketMutex(&mdm->bucket_mutex);
 
   if (!IsNullBucketId(result)) {
     // NOTE(chogan): Add metadata entry
     PutBucketId(mdm, rpc, name, result);
   }
+
+  return result;
+}
+
+BucketID GetOrCreateBucketId(SharedMemoryContext *context, RpcContext *rpc,
+                             const std::string &name) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+
+  BeginTicketMutex(&mdm->bucket_mutex);
+  BucketID result = GetBucketIdByName(context, rpc, name.c_str());
+
+  if (result.as_int != 0) {
+    LOG(INFO) << "Opening Bucket '" << name << "'" << std::endl;
+    IncrementRefcount(context, rpc, result);
+  } else {
+    LOG(INFO) << "Creating Bucket '" << name << "'" << std::endl;
+    result = GetNextFreeBucketId(context, rpc, name);
+  }
+  EndTicketMutex(&mdm->bucket_mutex);
 
   return result;
 }
@@ -843,7 +859,8 @@ void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
   sh_new_strdup(bucket_map, config->max_buckets_per_node, map_heap);
   shdefault(bucket_map, 0, map_heap);
   mdm->bucket_map_offset = (u8 *)bucket_map - (u8 *)mdm;
-  total_map_capacity -= config->max_buckets_per_node * sizeof(IdMap);
+  u32 bucket_map_num_bytes = map_heap->extent;
+  total_map_capacity -= bucket_map_num_bytes;
 
   // TODO(chogan): Just one map means better size estimate, but it's probably
   // slower because they'll all share a lock.
@@ -852,10 +869,12 @@ void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
   sh_new_strdup(vbucket_map, config->max_vbuckets_per_node, map_heap);
   shdefault(vbucket_map, 0, map_heap);
   mdm->vbucket_map_offset = (u8 *)vbucket_map - (u8 *)mdm;
-  total_map_capacity -= config->max_vbuckets_per_node * sizeof(IdMap);
+  u32 vbucket_map_num_bytes = map_heap->extent - bucket_map_num_bytes;
+  total_map_capacity -= vbucket_map_num_bytes;
 
   IdMap *blob_map = 0;
-  size_t blob_map_capacity = total_map_capacity / sizeof(IdMap);
+  // NOTE(chogan): Each map element requires twice its size for storage.
+  size_t blob_map_capacity = total_map_capacity / (2 * sizeof(IdMap));
   sh_new_strdup(blob_map, blob_map_capacity, map_heap);
   shdefault(blob_map, 0, map_heap);
   mdm->blob_map_offset = (u8 *)blob_map - (u8 *)mdm;

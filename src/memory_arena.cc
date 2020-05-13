@@ -193,9 +193,9 @@ void HeapErrorHandler() {
 u32 ComputeHeapExtent(Heap *heap, void *item, u32 size) {
   u32 result = 0;
   if (heap->grows_up) {
-    result = ((u8 *)item + size) - (u8 *)heap;
+    result = ((u8 *)item + size) - GetHeapMemory(heap);
   } else {
-    result = (u8 *)(heap + 1) - (u8 *)item;
+    result = GetHeapMemory(heap) - (u8 *)item;
   }
 
   return result;
@@ -205,9 +205,9 @@ u8 *HeapExtentToPtr(Heap *heap) {
   u8 *result = 0;
   BeginTicketMutex(&heap->mutex);
   if (heap->grows_up) {
-    result = (u8 *)heap + heap->extent;
+    result = GetHeapMemory(heap) + heap->extent;
   } else {
-    result = (u8 *)(heap + 1) - heap->extent;
+    result = GetHeapMemory(heap) - heap->extent;
   }
   EndTicketMutex(&heap->mutex);
 
@@ -223,14 +223,18 @@ Heap *InitHeapInArena(Arena *arena, bool grows_up, u16 alignment) {
                << std::endl;
   }
 
+  size_t heap_size = 0;
   if (grows_up) {
     result = PushClearedStruct<Heap>(arena);
+    heap_size = arena->capacity - arena->used;
   } else {
     result = (Heap *)((arena->base + arena->capacity) - sizeof(Heap));
+    heap_size = arena->capacity - arena->used - sizeof(Heap);
     memset(result, 0, sizeof(Heap));
   }
 
-  size_t heap_size = arena->capacity - arena->used;
+  DEBUG_SERVER_INIT(grows_up);
+
   result->base_offset = grows_up ? (u8 *)(result + 1) - (u8 *)result : 0;
   result->error_handler = HeapErrorHandler;
   result->alignment = alignment;
@@ -252,6 +256,7 @@ Heap *InitHeapInArena(Arena *arena, bool grows_up, u16 alignment) {
 }
 
 FreeBlock *FindFirstFit(Heap *heap, u32 desired_size) {
+  const u32 min_free_block_size = 8 + sizeof(FreeBlock);
   FreeBlock *result = 0;
   FreeBlock *prev = 0;
   FreeBlock *head = GetHeapFreeList(heap);
@@ -260,9 +265,10 @@ FreeBlock *FindFirstFit(Heap *heap, u32 desired_size) {
     if (head->size >= desired_size) {
       result = head;
       u32 remaining_size = head->size - desired_size;
+      result->size = desired_size;
       u32 next_offset = 0;
 
-      if (remaining_size) {
+      if (remaining_size >= min_free_block_size) {
         // NOTE(chogan): Split the remaining size off into a new FreeBlock
         FreeBlock *split_block = 0;
         if (heap->grows_up) {
@@ -276,6 +282,7 @@ FreeBlock *FindFirstFit(Heap *heap, u32 desired_size) {
         next_offset = split_block_offset;
       } else {
         next_offset = result->next_offset;
+        result->size += remaining_size;
       }
 
       if (prev) {
@@ -328,6 +335,8 @@ FreeBlock *FindBestFit(FreeBlock *head, size_t desired_size, u32 threshold=0) {
 u8 *HeapPushSize(Heap *heap, u32 size) {
   u8 *result = 0;
 
+  DEBUG_CLIENT_INIT();
+
   if (size) {
     BeginTicketMutex(&heap->mutex);
     // TODO(chogan): Respect heap->alignment
@@ -335,18 +344,23 @@ u8 *HeapPushSize(Heap *heap, u32 size) {
     EndTicketMutex(&heap->mutex);
 
     if (first_fit) {
+      u32 actual_size = first_fit->size - sizeof(FreeBlockHeader);
       FreeBlockHeader *header = 0;
       if (heap->grows_up) {
         header = (FreeBlockHeader *)first_fit;
       } else {
-        header = (FreeBlockHeader *)((u8 *)first_fit - size);
+        header = (FreeBlockHeader *)((u8 *)first_fit - actual_size);
       }
-      header->size = size;
+      header->size = actual_size;
       result = (u8 *)(header + 1);
 
+      DEBUG_TRACK_ALLOCATION(header, header->size + sizeof(FreeBlockHeader),
+                             heap->grows_up);
+
       BeginTicketMutex(&heap->mutex);
-      heap->extent = std::max(heap->extent,
-                              ComputeHeapExtent(heap, result, size));
+      u32 this_extent =
+        ComputeHeapExtent(heap, header, header->size + sizeof(FreeBlockHeader));
+      heap->extent = std::max(heap->extent, this_extent);
       EndTicketMutex(&heap->mutex);
     } else {
       // TODO(chogan): @errorhandling
@@ -368,6 +382,8 @@ void HeapFree(Heap *heap, void *ptr) {
       new_block = (FreeBlock *)((u8 *)(header + 1) + header->size - sizeof(FreeBlock));
     }
     new_block->size = size + sizeof(FreeBlockHeader);
+
+    DEBUG_TRACK_FREE(header, new_block->size, heap->grows_up);
 
     BeginTicketMutex(&heap->mutex);
     u32 extent = ComputeHeapExtent(heap, ptr, size);

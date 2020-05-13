@@ -62,7 +62,7 @@ void Hermes::Finalize() {
   if (IsApplicationCore()) {
     ReleaseSharedMemoryContext(&context_);
   } else {
-    munmap(context_.shm_base, context_.shm_size);
+    UnmapSharedMemory(&context_);
     shm_unlink(shmem_name_.c_str());
   }
   DestroyArena(&trans_arena_);

@@ -106,28 +106,6 @@ ArenaInfo GetArenaInfo(Config *config) {
   return result;
 }
 
-u8 *InitSharedMemory(const char *shmem_name, size_t total_size) {
-  u8 *result = 0;
-  int shmem_fd = shm_open(shmem_name, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
-
-  if (shmem_fd >= 0) {
-    ftruncate(shmem_fd, total_size);
-    // TODO(chogan): Should we mlock() the segment to prevent page faults?
-    result = (u8 *)mmap(0, total_size, PROT_READ | PROT_WRITE, MAP_SHARED,
-                        shmem_fd, 0);
-    // TODO(chogan): @errorhandling
-    close(shmem_fd);
-  } else {
-    // TODO(chogan): @errorhandling
-    assert(!"shm_open failed\n");
-  }
-
-  // TODO(chogan): @errorhandling
-  assert(result);
-
-  return result;
-}
-
 // TODO(chogan): Move into library
 SharedMemoryContext InitHermesCore(Config *config, CommunicationContext *comm,
                                    ArenaInfo *arena_info, Arena *arenas,
