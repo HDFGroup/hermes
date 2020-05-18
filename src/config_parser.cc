@@ -1,4 +1,5 @@
 #include <float.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -46,6 +47,7 @@ enum ConfigVariable {
   ConfigVariable_Count
 };
 
+// TODO(chogan): Make this work independent of declaration order
 static const char *kConfigVariableStrings[ConfigVariable_Count] = {
   "unknown",
   "num_tiers",

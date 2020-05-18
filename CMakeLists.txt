@@ -3,6 +3,10 @@
 # to the root binary directory of the project as ${HERMES_BINARY_DIR}.
 cmake_minimum_required (VERSION 3.10)
 
+if(CMAKE_SIZEOF_VOID_P LESS 8)
+  message(FATAL_ERROR "Hermes currently requires a 64-bit processor")
+endif()
+
 # Set a consistent MACOSX_RPATH default across all CMake versions.
 if(NOT DEFINED CMAKE_MACOSX_RPATH)
   set(CMAKE_MACOSX_RPATH 0)
@@ -140,7 +144,10 @@ option(HERMES_INTERCEPT_IO "Use GOTCHA as IO interception tool" ON)
 option(HERMES_COMMUNICATION_MPI "Use MPI as the communication layer." ON)
 option(BUILD_BUFFER_POOL_VISUALIZER "Build the BufferPool visualizer" OFF)
 option(USE_ADDRESS_SANITIZER "Enable -fsanitize=address in Debug builds" ON)
+option(USE_THREAD_SANITIZER "Enable -fsanitize=thread in Debug builds" OFF)
 option(HERMES_USE_TCP "Use TCP as the transport layer for RPC." ON)
+option(HERMES_RPC_THALLIUM "Use Thallium as the RPC library." ON)
+option(HERMES_DEBUG_HEAP "Store Heap debug information for visualization." OFF)
 
 if(BUILD_SHARED_LIBS)
   set(HERMES_BUILD_SHARED_LIBS 1)
@@ -154,16 +161,39 @@ endif()
 mark_as_advanced(HERMES_COMMUNICATION_MPI)
 # TODO(chogan): Eventually expose other transport layers like RoCE and IB
 mark_as_advanced(HERMES_USE_TCP)
+# TODO(chogan): Expose this once we support more than one RPC layer
+mark_as_advanced(HERMES_RPC_THALLIUM)
+mark_as_advanced(HERMES_DEBUG_HEAP)
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
   if (NOT "${CMAKE_CXX_FLAGS_DEBUG}" MATCHES ".*-g3.*")
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3"
         CACHE STRING "" FORCE)
   endif()
+
   if (USE_ADDRESS_SANITIZER AND
       NOT "${CMAKE_CXX_FLAGS_DEBUG}" MATCHES ".*-fsanitize=address.*")
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address"
         CACHE STRING "" FORCE)
+  else()
+    string(REPLACE
+      "-fsanitize=address" "" FLAGS_NO_SANITIZE "${CMAKE_CXX_FLAGS_DEBUG}")
+    set(CMAKE_CXX_FLAGS_DEBUG "${FLAGS_NO_SANITIZE}" CACHE STRING "" FORCE)
+  endif()
+
+  if (USE_THREAD_SANITIZER AND USE_ADDRESS_SANITIZER)
+    message(FATAL_ERROR "Cannont use -fsanitize=address and -fsanitize=thread "
+                        "at the same time")
+  else()
+    if (USE_THREAD_SANITIZER AND
+        NOT "${CMAKE_CXX_FLAGS_DEBUG}" MATCHES ".*-fsanitize=thread.*")
+      set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=thread"
+        CACHE STRING "" FORCE)
+    else()
+      string(REPLACE
+        "-fsanitize=thread" "" FLAGS_NO_SANITIZE "${CMAKE_CXX_FLAGS_DEBUG}")
+      set(CMAKE_CXX_FLAGS_DEBUG "${FLAGS_NO_SANITIZE}" CACHE STRING "" FORCE)
+    endif()
   endif()
 endif()
 
@@ -220,9 +250,11 @@ endfunction()
 # Dependencies common to all subdirectories
 #-----------------------------------------------------------------------------
 # thallium
-find_package(thallium CONFIG REQUIRED)
-if(thallium_FOUND)
-  message(STATUS "found thallium at ${thallium_DIR}")
+if(HERMES_RPC_THALLIUM)
+  find_package(thallium CONFIG REQUIRED)
+  if(thallium_FOUND)
+    message(STATUS "found thallium at ${thallium_DIR}")
+  endif()
 endif()
 
 # GOTCHA
@@ -240,7 +272,7 @@ if(HERMES_INTERCEPT_IO)
     option(HERMES_BUILD_STDIO "Build standard I/O Module" ON)
   endif()
 endif()
-  
+
 # hcl
 find_package(hcl CONFIG REQUIRED)
 if(hcl_FOUND)

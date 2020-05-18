@@ -142,9 +142,8 @@ size_t MpiAssignIDsToNodes(CommunicationContext *comm,
 
   size_t scratch_size = (size * sizeof(char *) +
                          size * sizeof(char) * MPI_MAX_PROCESSOR_NAME);
-  u8 *scratch_memory = (u8 *)malloc(scratch_size);
-  Arena scratch_arena = {};
-  InitArena(&scratch_arena, scratch_size, scratch_memory);
+
+  Arena scratch_arena = InitArenaAndAllocate(scratch_size);
 
   char **node_names = PushArray<char *>(&scratch_arena, size);
   for (int i = 0; i < size; ++i) {
@@ -219,7 +218,7 @@ void MpiCopyState(void *src, void *dest) {
   *dest_state = *src_state;
 }
 
-void MpiAdjustSharedMetadata(void *hermes_state, void *app_state) {
+void MpiSyncCommState(void *hermes_state, void *app_state) {
   MPIState *hermes_mpi = (MPIState *)hermes_state;
   MPIState *app_mpi = (MPIState *)app_state;
   hermes_mpi->app_comm = app_mpi->app_comm;
@@ -238,7 +237,7 @@ size_t InitCommunication(CommunicationContext *comm, Arena *arena,
   comm->app_barrier = MpiAppBarrier;
   comm->finalize = MpiFinalize;
   comm->copy_state = MpiCopyState;
-  comm->adjust_shared_metadata = MpiAdjustSharedMetadata;
+  comm->sync_comm_state = MpiSyncCommState;
 
   MPIState *mpi_state = PushClearedStruct<MPIState>(arena);
   mpi_state->world_comm = MPI_COMM_WORLD;

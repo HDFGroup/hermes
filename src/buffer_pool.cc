@@ -20,10 +20,10 @@
 
 #include <glog/logging.h>
 #include <mpi.h>
-#include <thallium.hpp>
-#include <thallium/serialization/stl/vector.hpp>
-#include <thallium/serialization/stl/pair.hpp>
 
+#include "metadata_management.h"
+
+#include "debug_state.cc"
 #include "memory_arena.cc"
 #include "config_parser.cc"
 
@@ -32,8 +32,16 @@
 #elif defined(HERMES_COMMUNICATION_ZMQ)
 #include "communication_zmq.cc"
 #else
-#error Communication implementation required.
+#error Communication implementation required (e.g., -DHERMES_COMMUNICATION_MPI).
 #endif
+
+#if defined(HERMES_RPC_THALLIUM)
+#include "rpc_thallium.cc"
+#else
+#error RPC implementation required (e.g., -DHERMES_RPC_THALLIUM).
+#endif
+
+#include "metadata_management.cc"
 
 /**
  * @file buffer_pool.cc
@@ -43,8 +51,6 @@
  * call to reserve a set of `BufferID`s and then using those IDs for I/O. Remote
  * processes can request remote buffers via the `GetBuffers` RPC call.
  */
-
-namespace tl = thallium;
 
 namespace hermes {
 
@@ -60,23 +66,19 @@ void HermesBarrier(CommunicationContext *comm) {
   comm->hermes_barrier(comm->state);
 }
 
-inline void BeginTicketMutex(TicketMutex *mutex) {
-  u32 ticket = mutex->ticket.fetch_add(1);
-  while (ticket != mutex->serving.load()) {
-    // TODO(chogan): @optimization This seems to be necessary if we expect
-    // oversubscription. As soon as we have more MPI ranks than logical
-    // cores, the performance of the ticket mutex drops dramatically. We
-    // lose about 8% when yielding and not oversubscribed, but without
-    // yielding, it is unusable when oversubscribed. I want to implement a
-    // ticket mutex with a waiting array at some point:
-    // https://arxiv.org/pdf/1810.01573.pdf. It looks like that should give
-    // us the best of both worlds.
-    sched_yield();
+void Finalize(SharedMemoryContext *context, CommunicationContext *comm,
+              const char *shmem_name, Arena *trans_arena,
+              bool is_application_core) {
+  WorldBarrier(comm);
+  if (is_application_core) {
+    ReleaseSharedMemoryContext(context);
+    HERMES_DEBUG_CLIENT_CLOSE();
+  } else {
+    UnmapSharedMemory(context);
+    shm_unlink(shmem_name);
+    HERMES_DEBUG_SERVER_CLOSE();
   }
-}
-
-inline void EndTicketMutex(TicketMutex *mutex) {
-  mutex->serving.fetch_add(1);
+  DestroyArena(trans_arena);
 }
 
 void LockBuffer(BufferHeader *header) {
@@ -281,19 +283,15 @@ int GetSlabIndexFromHeader(SharedMemoryContext *context, BufferHeader *header) {
   return result;
 }
 
-u32 GetNodeId(SharedMemoryContext *context) {
-  // TODO(chogan): @implement Where will `CommunicationAPI` come from?
-  (void)context;
-  assert(!"Not implemented yet");
+bool BufferIsRemote(CommunicationContext *comm, BufferID buffer_id) {
+  bool result = (u32)comm->node_id != buffer_id.bits.node_id;
+
+  return result;
 }
 
-bool BufferIsRemote(SharedMemoryContext *context, BufferID buffer_id) {
-  bool result = false;
-  u32 my_node_id = GetNodeId(context);
+bool BufferIsRemote(RpcContext *rpc, BufferID buffer_id) {
+  bool result = rpc->node_id != buffer_id.bits.node_id;
 
-  if (my_node_id == buffer_id.bits.node_id) {
-    result = true;
-  }
   return result;
 }
 
@@ -324,7 +322,7 @@ void SetFirstFreeBufferId(SharedMemoryContext *context, TierID tier_id,
   }
 }
 
-void ReleaseBuffer(SharedMemoryContext *context, BufferID buffer_id) {
+void LocalReleaseBuffer(SharedMemoryContext *context, BufferID buffer_id) {
   BufferPool *pool = GetBufferPoolFromContext(context);
   BufferHeader *header_to_free = GetHeaderByIndex(context,
                                                   buffer_id.bits.header_index);
@@ -341,10 +339,27 @@ void ReleaseBuffer(SharedMemoryContext *context, BufferID buffer_id) {
   }
 }
 
-void ReleaseBuffers(SharedMemoryContext *context,
+void ReleaseBuffer(SharedMemoryContext *context, RpcContext *rpc,
+                   BufferID buffer_id) {
+  u32 target_node = buffer_id.bits.node_id;
+  if (target_node == rpc->node_id) {
+    LocalReleaseBuffer(context, buffer_id);
+  } else {
+    RpcCall<void>(rpc, target_node, "ReleaseBuffer", buffer_id);
+  }
+}
+
+void ReleaseBuffers(SharedMemoryContext *context, RpcContext *rpc,
                     const std::vector<BufferID> &buffer_ids) {
   for (auto id : buffer_ids) {
-    ReleaseBuffer(context, id);
+    ReleaseBuffer(context, rpc, id);
+  }
+}
+
+void LocalReleaseBuffers(SharedMemoryContext *context,
+                         const std::vector<BufferID> &buffer_ids) {
+  for (auto id : buffer_ids) {
+    LocalReleaseBuffer(context, id);
   }
 }
 
@@ -409,21 +424,22 @@ std::vector<BufferID> GetBuffers(SharedMemoryContext *context,
   if (failed) {
     // NOTE(chogan): All or none operation. Must release the acquired buffers if
     // we didn't get all we asked for
-    ReleaseBuffers(context, result);
+    LocalReleaseBuffers(context, result);
     result.clear();
   }
 
   return result;
 }
 
-size_t GetBlobSize(SharedMemoryContext *context,
-                   const std::vector<BufferID> &buffer_ids) {
+size_t GetBlobSize(SharedMemoryContext *context, CommunicationContext *comm,
+                   BufferIdArray *buffer_ids) {
   size_t result = 0;
-  for (const auto &id : buffer_ids) {
-    if (false /* TODO(chogan): BufferIsRemote(context, id) */) {
-      // TODO(chogan): RPC
+  for (u32 i = 0; i < buffer_ids->length; ++i) {
+    if (BufferIsRemote(comm, buffer_ids->ids[i])) {
+      // TODO(chogan):
+      // RpcCall(rpc, buffer_ids->ids[i].node_id, ...);
     } else {
-      BufferHeader *header = GetHeaderByBufferId(context, id);
+      BufferHeader *header = GetHeaderByBufferId(context, buffer_ids->ids[i]);
       result += header->used;
     }
   }
@@ -1030,6 +1046,27 @@ void InitFilesForBuffering(SharedMemoryContext *context, bool make_space) {
   }
 }
 
+u8 *InitSharedMemory(const char *shmem_name, size_t total_size) {
+  u8 *result = 0;
+  int shmem_fd = shm_open(shmem_name, O_CREAT | O_RDWR | O_TRUNC, S_IRUSR | S_IWUSR);
+
+  if (shmem_fd >= 0) {
+    ftruncate(shmem_fd, total_size);
+    result = (u8 *)mmap(0, total_size, PROT_READ | PROT_WRITE, MAP_SHARED,
+                        shmem_fd, 0);
+    // TODO(chogan): @errorhandling
+    close(shmem_fd);
+  } else {
+    // TODO(chogan): @errorhandling
+    assert(!"shm_open failed\n");
+  }
+
+  // TODO(chogan): @errorhandling
+  assert(result);
+
+  return result;
+}
+
 SharedMemoryContext GetSharedMemoryContext(char *shmem_name) {
   SharedMemoryContext result = {};
 
@@ -1048,9 +1085,9 @@ SharedMemoryContext GetSharedMemoryContext(char *shmem_name) {
         // metadata_arena_offset will be stored immediately after that.
         ptrdiff_t *buffer_pool_offset_location = (ptrdiff_t *)shm_base;
         result.buffer_pool_offset = *buffer_pool_offset_location;
-        ptrdiff_t *metadata_arena_offset_location =
+        ptrdiff_t *metadata_manager_offset_location =
           (ptrdiff_t *)(shm_base + sizeof(result.buffer_pool_offset));
-        result.metadata_arena_offset = *metadata_arena_offset_location;
+        result.metadata_manager_offset = *metadata_manager_offset_location;
         result.shm_base = shm_base;
         result.shm_size = shm_stat.st_size;
       } else {
@@ -1069,6 +1106,10 @@ SharedMemoryContext GetSharedMemoryContext(char *shmem_name) {
   return result;
 }
 
+void UnmapSharedMemory(SharedMemoryContext *context) {
+  munmap(context->shm_base, context->shm_size);
+}
+
 void ReleaseSharedMemoryContext(SharedMemoryContext *context) {
   BufferPool *pool = GetBufferPoolFromContext(context);
 
@@ -1082,65 +1123,7 @@ void ReleaseSharedMemoryContext(SharedMemoryContext *context) {
       }
     }
   }
-  munmap(context->shm_base, context->shm_size);
-}
-
-void StartBufferPoolRpcServer(SharedMemoryContext *context, const char *addr,
-                              i32 num_rpc_threads) {
-  tl::engine buffer_pool_rpc_server(addr, THALLIUM_SERVER_MODE, false,
-                                    num_rpc_threads);
-
-  LOG(INFO) << "Serving at " << buffer_pool_rpc_server.self()
-            << " with " << num_rpc_threads << " RPC threads" << std::endl;
-
-  using std::function;
-  using std::vector;
-  using tl::request;
-
-  function<void(const request&, const TieredSchema&)> rpc_get_buffers =
-    [context](const request &req, const TieredSchema &schema) {
-      std::vector<BufferID> result = GetBuffers(context, schema);
-      req.respond(result);
-    };
-
-  function<void(const request&, const vector<BufferID>&)> rpc_release_buffers =
-    [context](const request &req, const vector<BufferID> &buffer_ids) {
-      (void)req;
-      ReleaseBuffers(context, buffer_ids);
-    };
-
-  function<void(const request&, int)> rpc_split_buffers =
-    [context](const request &req, int slab_index) {
-      (void)req;
-      SplitRamBufferFreeList(context, slab_index);
-    };
-
-  function<void(const request&, int)> rpc_merge_buffers =
-    [context](const request &req, int slab_index) {
-      (void)req;
-      MergeRamBufferFreeList(context, slab_index);
-    };
-
-  function<void(const request&)> rpc_finalize =
-    [&buffer_pool_rpc_server](const request &req) {
-      (void)req;
-      buffer_pool_rpc_server.finalize();
-    };
-
-  buffer_pool_rpc_server.define("GetBuffers", rpc_get_buffers);
-  buffer_pool_rpc_server.define("ReleaseBuffers",
-                                rpc_release_buffers).disable_response();
-  buffer_pool_rpc_server.define("SplitBuffers",
-                                rpc_split_buffers).disable_response();
-  buffer_pool_rpc_server.define("MergeBuffers",
-                                rpc_merge_buffers).disable_response();
-  buffer_pool_rpc_server.define("Finalize", rpc_finalize).disable_response();
-
-  // TODO(chogan): Currently the calling thread waits for finalize because
-  // that's the way the tests are set up, but once the RPC server is started
-  // from Hermes initialization the calling thread will need to continue
-  // executing.
-  buffer_pool_rpc_server.wait_for_finalize();
+  UnmapSharedMemory(context);
 }
 
 // IO clients
@@ -1202,13 +1185,16 @@ void WriteBlobToBuffers(SharedMemoryContext *context, const Blob &blob,
   assert(at == blob.data + blob.size);
 }
 
-size_t ReadBlobFromBuffers(SharedMemoryContext *context, Blob *blob,
-                           const std::vector<BufferID> &buffer_ids) {
+size_t ReadBlobFromBuffers(SharedMemoryContext *context, RpcContext *rpc,
+                           Blob *blob, BufferIdArray *buffer_ids) {
   u8 *at = blob->data;
   size_t total_bytes_read = 0;
-  for (const auto &id : buffer_ids) {
-    if (false /* TODO(chogan): BufferIsRemote(context, id) */) {
+  for (u32 i = 0; i < buffer_ids->length; ++i) {
+    BufferID id = buffer_ids->ids[i];
+    if (BufferIsRemote(rpc, id)) {
       // TODO(chogan): RPC
+      (void)rpc;
+      // rpc->call();
     } else {
       BufferHeader *header = GetHeaderByIndex(context, id.bits.header_index);
       Tier *tier = GetTierFromHeader(context, header);

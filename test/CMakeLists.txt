@@ -11,7 +11,7 @@ include_directories(
 #------------------------------------------------------------------------------
 # API tests
 #------------------------------------------------------------------------------
-set(API_TESTS bucket_test)
+set(API_TESTS bucket_test end_to_end_test)
 
 find_package(ZLIB)
 if(ZLIB_FOUND)
@@ -19,8 +19,11 @@ if(ZLIB_FOUND)
 endif()
 
 foreach(program ${API_TESTS})
-  add_executable(${program} ${program}.cpp)
-  target_link_libraries(${program} hermes ZLIB::ZLIB)
+  add_executable(${program} ${program}.cc)
+  target_link_libraries(${program} ${LIBRT} hermes MPI::MPI_CXX ZLIB::ZLIB)
+  add_test(NAME "Test${program}"
+    COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+            "${CMAKE_BINARY_DIR}/bin/${program}")
 endforeach()
 
 #------------------------------------------------------------------------------
@@ -43,9 +46,6 @@ target_link_libraries(bp ${LIBRT} hermes MPI::MPI_CXX)
 add_executable(bp_test buffer_pool_client_test.cc)
 target_link_libraries(bp_test hermes thallium MPI::MPI_CXX)
 
-add_executable(end_to_end_test end_to_end_test.cc)
-target_link_libraries(end_to_end_test hermes ${LIBRT} MPI::MPI_CXX)
-
 #------------------------------------------------------------------------------
 # Config Parser tests
 #------------------------------------------------------------------------------
@@ -55,3 +55,15 @@ target_link_libraries(config_parser_test hermes)
 
 add_test(NAME TestConfigParser
   COMMAND config_parser_test ${CMAKE_CURRENT_SOURCE_DIR}/data/hermes.conf)
+
+#------------------------------------------------------------------------------
+# Memory Management tests
+#------------------------------------------------------------------------------
+
+add_executable(mem memory_test.cc)
+target_link_libraries(mem hermes)
+add_test(NAME TestMemoryManagement COMMAND mem)
+
+add_executable(stb_map stb_map_test.cc)
+target_link_libraries(stb_map hermes ${LIBRT} MPI::MPI_CXX)
+add_test(NAME TestSTBMapWithHeap COMMAND stb_map)

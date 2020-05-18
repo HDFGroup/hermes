@@ -10,6 +10,7 @@
 
 #include "hermes_types.h"
 #include "buffer_pool.h"
+#include "rpc.h"
 #include "id.h"
 
 namespace hermes {
@@ -23,8 +24,10 @@ class Hermes {
   std::set<std::string> vbucket_list_;
   hermes::SharedMemoryContext context_;
   hermes::CommunicationContext comm_;
+  hermes::RpcContext rpc_;
   hermes::Arena trans_arena_;
   std::string shmem_name_;
+  std::string rpc_server_name_;
 
   /** if true will do more checks, warnings, expect slower code */
   const bool debug_mode_ = true;
@@ -46,6 +49,7 @@ class Hermes {
   }
 
   bool IsApplicationCore();
+  void AppBarrier();
   int GetProcessRank();
   int GetNumProcesses();
   void Finalize();
@@ -68,9 +72,6 @@ typedef ID<TraitTag, int64_t, -1> THnd;
 
 struct BucketTag{};
 typedef ID<BucketTag, int64_t, -1> BHnd;
-
-/** acquire a bucket with the default trait */
-Bucket Acquire(const std::string &name, Context &ctx);
 
 /** rename a bucket referred to by name only */
 Status RenameBucket(const std::string &old_name,

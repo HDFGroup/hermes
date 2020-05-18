@@ -1,6 +1,12 @@
 #ifndef HERMES_TEST_UTILS_H_
 #define HERMES_TEST_UTILS_H_
 
+#include <stdio.h>
+#include <stdlib.h>
+
+#define KILOBYTES(n) ((n) * 1024)
+#define MEGABYTES(n) ((n) * 1024 * 1024)
+
 namespace hermes {
 namespace testing {
 

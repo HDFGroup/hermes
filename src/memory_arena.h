@@ -3,6 +3,8 @@
 
 #include <assert.h>
 
+#include <atomic>
+
 #include "hermes_types.h"
 
 /**
@@ -12,6 +14,17 @@
  */
 
 namespace hermes {
+
+typedef void (ArenaErrorFunc)();
+
+/**
+ * Implements a ticket lock as described at
+ * https://en.wikipedia.org/wiki/Ticket_lock.
+ */
+struct TicketMutex {
+  std::atomic<u32> ticket;
+  std::atomic<u32> serving;
+};
 
 struct ArenaInfo {
   size_t sizes[kArenaType_Count];
@@ -42,8 +55,38 @@ struct Arena {
   size_t used;
   /** Total number of bytes in the block tracked by this Arena */
   size_t capacity;
+  /** Per-arena error handling function */
+  ArenaErrorFunc *error_handler;
   /** The number of ScopedTemporaryMemory instances that are using this Arena */
   i32 temp_count;
+};
+
+struct Heap {
+  ArenaErrorFunc *error_handler;
+  TicketMutex mutex;
+  /** Offset of the beginning of this heap's memory, relative to the Heap */
+  u32 base_offset;
+  /** Offset of the head of the free list, relative to base_offset */
+  u32 free_list_offset;
+  u32 extent;
+  u16 alignment;
+  u16 grows_up;
+};
+
+struct FreeBlockHeader {
+  size_t size;
+};
+
+struct FreeBlock {
+  /* The offset of the next FreeBlock in the list. Offset 0 represents NULL */
+  u32 next_offset;
+  /* The size of the next FreeBlock in the list. */
+  u32 size;
+};
+
+struct TemporaryMemory {
+  Arena *arena;
+  size_t used;
 };
 
 /**
@@ -113,6 +156,16 @@ struct ScopedTemporaryMemory {
 };
 
 /**
+ *
+ */
+TemporaryMemory BeginTemporaryMemory(Arena *arena);
+
+/**
+ *
+ */
+void EndTemporaryMemory(TemporaryMemory *temp_memory);
+
+/**
  * Initializes an Arena with a starting size and base pointer. The @p base
  * parameter must point to a contiguous region of allocated memory of at least
  * @p bytes bytes.
@@ -122,6 +175,16 @@ struct ScopedTemporaryMemory {
  * @param[in] base A pointer to the beginning of the Arena's backing memory.
  */
 void InitArena(Arena *arena, size_t bytes, u8 *base);
+
+/**
+ * Initializes an Arena with a starting size. This function uses malloc to
+ * allocate a contiguous region of length @p bytes for the arena.
+ *
+ * @param[in] bytes The desired size in bytes to allocate.
+ *
+ * @return An arena with capacity @p bytes.
+ */
+Arena InitArenaAndAllocate(size_t bytes);
 
 /**
  * Frees the memory backing the Arena, and zeros out all its fields.
@@ -230,6 +293,34 @@ inline T *PushArray(Arena *arena, int count, size_t alignment=8) {
 
   return result;
 }
+
+u8 *HeapPushSize(Heap *heap, u32 size);
+
+template<typename T>
+inline T *HeapPushStruct(Heap *heap) {
+  T *result = reinterpret_cast<T *>(HeapPushSize(heap, sizeof(T)));
+
+  return result;
+}
+
+template<typename T>
+inline T *HeapPushArray(Heap *heap, u32 count) {
+  T *result = reinterpret_cast<T *>(HeapPushSize(heap, count * sizeof(T)));
+
+  return result;
+}
+
+Heap *InitHeapInArena(Arena *arena, bool grows_up=true, u16 alignment=8);
+void HeapFree(Heap *heap, void *ptr);
+void *HeapRealloc(Heap *heap, void *ptr, size_t size);
+u32 GetHeapOffset(Heap *heap, u8 *ptr);
+FreeBlock *NextFreeBlock(Heap *heap, FreeBlock *block);
+FreeBlock *GetHeapFreeList(Heap *heap);
+u8 *HeapOffsetToPtr(Heap *heap, u32 offset);
+u8 *HeapExtentToPtr(Heap *heap);
+
+void BeginTicketMutex(TicketMutex *mutex);
+void EndTicketMutex(TicketMutex *mutex);
 
 }  // namespace hermes
 

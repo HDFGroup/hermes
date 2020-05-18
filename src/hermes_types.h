@@ -82,6 +82,10 @@ struct Config {
   f32 arena_percentages[kArenaType_Count];
   /** The number of Tiers */
   int num_tiers;
+
+  u32 max_buckets_per_node;
+  u32 max_vbuckets_per_node;
+
   /** The mount point or desired directory for each Tier. RAM Tier should be the
    * empty string.
    */

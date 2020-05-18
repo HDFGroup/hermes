@@ -24,14 +24,7 @@
 
 namespace hermes {
 
-/**
- * Implements a ticket lock as described at
- * https://en.wikipedia.org/wiki/Ticket_lock.
- */
-struct TicketMutex {
-  std::atomic<u32> ticket;
-  std::atomic<u32> serving;
-};
+struct RpcContext;
 
 /**
  * Information about a specific hardware Tier.
@@ -217,7 +210,7 @@ struct SharedMemoryContext {
   /** The offset from the beginning of shared memory to the BufferPool. */
   ptrdiff_t buffer_pool_offset;
   /** The offset from the beginning of shared memory to the Metadata Arena. */
-  ptrdiff_t metadata_arena_offset;
+  ptrdiff_t metadata_manager_offset;
   /** The total size of the shared memory (needed for munmap). */
   u64 shm_size;
 
@@ -226,11 +219,13 @@ struct SharedMemoryContext {
   FILE *open_streams[kMaxTiers][kMaxBufferPoolSlabs];
 };
 
+struct BufferIdArray;
+
 /**
  *
  */
-size_t GetBlobSize(SharedMemoryContext *context,
-                   const std::vector<BufferID> &buffer_ids);
+size_t GetBlobSize(SharedMemoryContext *context, CommunicationContext *comm,
+                   BufferIdArray *buffer_ids);
 
 /**
  * Constructs a unique (among users) shared memory name from a base name.
@@ -285,6 +280,11 @@ SharedMemoryContext GetSharedMemoryContext(char *shmem_name);
 void ReleaseSharedMemoryContext(SharedMemoryContext *context);
 
 /**
+ *
+ */
+void UnmapSharedMemory(SharedMemoryContext *context);
+
+/**
  * Returns a vector of BufferIDs that satisfy the constrains of @p schema.
  *
  * If a request cannot be fulfilled, an empty list is returned. GetBuffers will
@@ -305,9 +305,10 @@ std::vector<BufferID> GetBuffers(SharedMemoryContext *context,
  * again. Data in the buffers is considered abandonded, and can be overwritten.
  *
  * @param context The shared memory context where the BufferPool lives.
+ * @param rpc The RPC context to enable a remote call if necessary.
  * @param buffer_ids The list of buffer_ids to return to the BufferPool.
  */
-void ReleaseBuffers(SharedMemoryContext *context,
+void ReleaseBuffers(SharedMemoryContext *context, RpcContext *rpc,
                     const std::vector<BufferID> &buffer_ids);
 /**
  * Starts an RPC server that will listen for remote requests directed to the
@@ -320,6 +321,19 @@ void ReleaseBuffers(SharedMemoryContext *context,
  */
 void StartBufferPoolRpcServer(SharedMemoryContext *context, const char *addr,
                               i32 num_rpc_threads);
+
+/**
+ * Free all resources held by Hermes.
+ *
+ * @param context The Hermes instance's shared memory context.
+ * @param comm The Hermes instance's communication context.
+ * @param shmem_name The name of the shared memory.
+ * @param trans_arena The instance's transient arena.
+ * @param is_application_core Whether or not this rank is an app rank.
+ */
+void Finalize(SharedMemoryContext *context, CommunicationContext *comm,
+              const char *shmem_name, Arena *trans_arena,
+              bool is_application_core);
 
 // I/O Clients
 
@@ -346,6 +360,7 @@ struct Blob {
  */
 void WriteBlobToBuffers(SharedMemoryContext *context, const Blob &blob,
                         const std::vector<BufferID> &buffer_ids);
+
 /**
  * Sketch of how an I/O client might read.
  *
@@ -354,13 +369,14 @@ void WriteBlobToBuffers(SharedMemoryContext *context, const Blob &blob,
  * Tier) or to a file (block addressable Tier).
  *
  * @param context The shared memory context needed to access BufferPool info.
+ * @param rpc The RPC context needed to make a remote call if necessary.
  * @param blob A place to store the read data.
  * @param buffer_ids The collection of BufferIDs that hold the buffered blob.
  *
  * @return The total number of bytes read
  */
-size_t ReadBlobFromBuffers(SharedMemoryContext *context, Blob *blob,
-                           const std::vector<BufferID> &buffer_ids);
+size_t ReadBlobFromBuffers(SharedMemoryContext *context, RpcContext *rpc,
+                           Blob *blob, BufferIdArray *buffer_ids);
 
 }  // namespace hermes
 

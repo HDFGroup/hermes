@@ -90,7 +90,7 @@ ptrdiff_t InitBufferPool(u8 *hermes_memory, Arena *buffer_pool_arena,
  * @param context The shared memory context for accessing the BufferPool.
  *
  * @return A pointer to the BufferPool constructed in the shared memory
- * represented by context.
+ * represented by @p context.
  */
 BufferPool *GetBufferPoolFromContext(SharedMemoryContext *context);
 
@@ -184,6 +184,16 @@ BufferID PeekFirstFreeBufferId(SharedMemoryContext *context, TierID tier_id,
 /**
  *
  */
+void LocalReleaseBuffer(SharedMemoryContext *context, BufferID buffer_id);
+
+/**
+ *
+ */
+void LocalReleaseBuffers(SharedMemoryContext *context,
+                         const std::vector<BufferID> &buffer_ids);
+/**
+ *
+ */
 i32 GetSlabUnitSize(SharedMemoryContext *context, TierID tier_id,
                     int slab_index);
 
@@ -202,6 +212,11 @@ void SerializeBufferPoolToFile(SharedMemoryContext *context, FILE *file);
  *
  */
 void ParseConfig(Arena *arena, const char *path, Config *config);
+
+/**
+ *
+ */
+u8 *InitSharedMemory(const char *shmem_name, size_t total_size);
 
 /**
  *  Lets Thallium know how to serialize a BufferID.

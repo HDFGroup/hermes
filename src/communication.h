@@ -32,7 +32,7 @@ struct CommunicationContext {
   BarrierFunc app_barrier;
   FinalizeFunc finalize;
   CopyStateFunc copy_state;
-  CopyStateFunc adjust_shared_metadata;
+  CopyStateFunc sync_comm_state;
 
   void *state;
   i32 world_proc_id;
