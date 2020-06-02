@@ -222,6 +222,10 @@ void LocalDestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
                         const char *bucket_name, BucketID bucket_id);
 void LocalDestroyBlob(SharedMemoryContext *context, RpcContext *rpc,
                       const char *blob_name, BlobID blob_id);
+BucketID LocalGetNextFreeBucketId(SharedMemoryContext *context, RpcContext *rpc,
+                                  const std::string &name);
+u32 LocalAllocateBufferIdList(MetadataManager *mdm,
+                              const std::vector<BufferID> &buffer_ids);
 void LocalRenameBucket(SharedMemoryContext *context, RpcContext *rpc,
                        BucketID id, const std::string &old_name,
                        const std::string &new_name);

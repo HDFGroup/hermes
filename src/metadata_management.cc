@@ -286,7 +286,7 @@ VBucketInfo *GetVBucketInfoByIndex(MetadataManager *mdm, u32 index) {
   return result;
 }
 
-BucketID GetNextFreeBucketId(SharedMemoryContext *context, RpcContext *rpc,
+BucketID LocalGetNextFreeBucketId(SharedMemoryContext *context, RpcContext *rpc,
                              const std::string &name) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   BucketID result = {};
@@ -314,6 +314,22 @@ BucketID GetNextFreeBucketId(SharedMemoryContext *context, RpcContext *rpc,
   if (!IsNullBucketId(result)) {
     // NOTE(chogan): Add metadata entry
     PutBucketId(mdm, rpc, name, result);
+  }
+
+  return result;
+}
+
+BucketID GetNextFreeBucketId(SharedMemoryContext *context, RpcContext *rpc,
+                             const std::string &name) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  u32 target_node = HashString(mdm, rpc, name.c_str());
+  BucketID result = {};
+
+  if (target_node == rpc->node_id) {
+    result = LocalGetNextFreeBucketId(context, rpc, name);
+  } else {
+    result = RpcCall<BucketID>(rpc, target_node, "RemoteGetNextFreeBucketId",
+                               name);
   }
 
   return result;
@@ -437,7 +453,7 @@ void AddBlobIdToBucket(MetadataManager *mdm, RpcContext *rpc, BlobID blob_id,
   }
 }
 
-u32 AllocateBufferIdList(MetadataManager *mdm,
+u32 LocalAllocateBufferIdList(MetadataManager *mdm,
                          const std::vector<BufferID> &buffer_ids) {
   static_assert(sizeof(BufferIdList) == sizeof(BufferID));
   Heap *id_heap = GetIdHeap(mdm);
@@ -452,6 +468,22 @@ u32 AllocateBufferIdList(MetadataManager *mdm,
   u32 result = GetHeapOffset(id_heap, (u8 *)id_list);
 
   CheckHeapOverlap(mdm);
+
+  return result;
+}
+
+u32 AllocateBufferIdList(SharedMemoryContext *context, RpcContext *rpc,
+                         u32 target_node,
+                         const std::vector<BufferID> &buffer_ids) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  u32 result = 0;
+
+  if (target_node == rpc->node_id) {
+    result = LocalAllocateBufferIdList(mdm, buffer_ids);
+  } else {
+    result = RpcCall<u32>(rpc, target_node, "RemoteAllocateBufferIdList",
+                          buffer_ids);
+  }
 
   return result;
 }
@@ -530,9 +562,12 @@ void AttachBlobToBucket(SharedMemoryContext *context, RpcContext *rpc,
                         const std::vector<BufferID> &buffer_ids) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
 
+  u32 target_node = HashString(mdm, rpc, blob_name);
   BlobID blob_id = {};
-  blob_id.bits.node_id = rpc->node_id;
-  blob_id.bits.buffer_ids_offset = AllocateBufferIdList(mdm, buffer_ids);
+  blob_id.bits.node_id = target_node;
+  blob_id.bits.buffer_ids_offset = AllocateBufferIdList(context, rpc,
+                                                        target_node,
+                                                        buffer_ids);
   PutBlobId(mdm, rpc, blob_name, blob_id);
   AddBlobIdToBucket(mdm, rpc, blob_id, bucket_id);
 }

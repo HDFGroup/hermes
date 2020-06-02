@@ -127,6 +127,23 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
       LocalDestroyBucket(context, rpc, name.c_str(), id);
     };
 
+  function<void(const request&, const string&)>
+    rpc_get_next_free_bucket_id = [context, rpc](const request &req,
+                                                 const string &name) {
+      BucketID result = LocalGetNextFreeBucketId(context, rpc, name);
+
+      req.respond(result);
+    };
+
+  function<void(const request&, const vector<BufferID>&)>
+    rpc_allocate_buffer_id_list =
+      [context](const request &req, const vector<BufferID> &buffer_ids) {
+        MetadataManager *mdm = GetMetadataManagerFromContext(context);
+        u32 result = LocalAllocateBufferIdList(mdm, buffer_ids);
+
+        req.respond(result);
+    };
+
   function<void(const request&, BucketID, const string&, const string&)>
     rpc_rename_bucket = [context, rpc](const request &req, BucketID id,
                                        const string &old_name,
