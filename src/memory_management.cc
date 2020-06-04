@@ -1,9 +1,9 @@
-#include "memory_arena.h"
+#include "memory_management.h"
 
 #include <cmath>
 
 /**
- * @file memory_arena.cc
+ * @file memory_management.cc
  *
  * Basic Arena implementation.
  */

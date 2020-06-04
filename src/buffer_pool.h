@@ -11,7 +11,7 @@
 #include <vector>
 
 #include "hermes_types.h"
-#include "memory_arena.h"
+#include "memory_management.h"
 #include "communication.h"
 
 /** @file buffer_pool.h

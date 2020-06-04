@@ -6,7 +6,7 @@
 #include <atomic>
 #include <string>
 
-#include "memory_arena.h"
+#include "memory_management.h"
 #include "buffer_pool.h"
 
 namespace hermes {

@@ -1,5 +1,5 @@
-#ifndef HERMES_MEMORY_ARENA_H_
-#define HERMES_MEMORY_ARENA_H_
+#ifndef HERMES_MEMORY_MANAGEMENT_H_
+#define HERMES_MEMORY_MANAGEMENT_H_
 
 #include <assert.h>
 
@@ -8,7 +8,7 @@
 #include "hermes_types.h"
 
 /**
- * @file memory_arena.h
+ * @file memory_management.h
  *
  * Structures for memory management.
  */
@@ -324,4 +324,4 @@ void EndTicketMutex(TicketMutex *mutex);
 
 }  // namespace hermes
 
-#endif  // HERMES_MEMORY_ARENA_H_
+#endif  // HERMES_MEMORY_MANAGEMENT_H_
