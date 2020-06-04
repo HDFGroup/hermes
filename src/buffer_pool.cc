@@ -54,18 +54,6 @@
 
 namespace hermes {
 
-void WorldBarrier(CommunicationContext *comm) {
-  comm->world_barrier(comm->state);
-}
-
-void AppBarrier(CommunicationContext *comm) {
-  comm->app_barrier(comm->state);
-}
-
-void HermesBarrier(CommunicationContext *comm) {
-  comm->hermes_barrier(comm->state);
-}
-
 void Finalize(SharedMemoryContext *context, CommunicationContext *comm,
               const char *shmem_name, Arena *trans_arena,
               bool is_application_core) {
