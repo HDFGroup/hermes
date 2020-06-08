@@ -273,12 +273,6 @@ if(HERMES_INTERCEPT_IO)
   endif()
 endif()
 
-# hcl
-find_package(hcl CONFIG REQUIRED)
-if(hcl_FOUND)
-  message(STATUS "found HCL at ${hcl_DIR}")
-endif()
-
 if(HERMES_COMMUNICATION_MPI)
   find_package(MPI REQUIRED COMPONENTS CXX)
   message(STATUS "found mpi.h at ${MPI_CXX_INCLUDE_DIRS}")
