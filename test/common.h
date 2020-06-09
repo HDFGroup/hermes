@@ -128,14 +128,6 @@ SharedMemoryContext InitHermesCore(Config *config, CommunicationContext *comm,
     base_offset += arena_size;
   }
 
-  // NOTE(chogan): Move comm->state from transient arena to metadata arena.
-  // Assumes that comm->state is the only thing in the transient arena
-  size_t comm_state_size = arenas[kArenaType_Transient].used;
-  void *comm_state_dest = PushSize(&arenas[kArenaType_MetaData],
-                                   comm_state_size);
-  comm->copy_state(comm->state, comm_state_dest);
-  comm->state = comm_state_dest;
-
   SharedMemoryContext context = {};
   context.shm_base = shmem_base;
   context.shm_size = shmem_size;
@@ -154,13 +146,6 @@ SharedMemoryContext InitHermesCore(Config *config, CommunicationContext *comm,
   ptrdiff_t *metadata_manager_offset_location =
     (ptrdiff_t *)(shmem_base + sizeof(context.buffer_pool_offset));
   *metadata_manager_offset_location = context.metadata_manager_offset;
-
-  // NOTE(chogan): Store the offset from the MDM to the communication state too.
-  ptrdiff_t *comm_state_offset_location =
-    (ptrdiff_t *)((u8 *)metadata_manager_offset_location +
-                  sizeof(context.metadata_manager_offset));
-  ptrdiff_t comm_state_offset_from_mdm = (u8 *)mdm - (u8 *)comm_state_dest;
-  *comm_state_offset_location = comm_state_offset_from_mdm;
 
   if (start_rpc_server) {
     rpc->start_server(&context, rpc,
@@ -247,7 +232,7 @@ SharedMemoryContext InitHermesClient(CommunicationContext *comm,
   SharedMemoryContext context = GetSharedMemoryContext(shmem_name);
 
   if (init_buffering_files) {
-    InitFilesForBuffering(&context, comm->app_proc_id == 0);
+    InitFilesForBuffering(&context, comm->sub_proc_id == 0);
   }
 
   return context;
@@ -276,33 +261,17 @@ std::shared_ptr<api::Hermes> InitHermes() {
     result->shmem_name_ = std::string(config.buffer_pool_shmem_name);
   } else {
     context = GetSharedMemoryContext(config.buffer_pool_shmem_name);
-
-    if (comm.first_on_node) {
-      MetadataManager *mdm = GetMetadataManagerFromContext(&context);
-      ptrdiff_t *comm_state_offset_location =
-        (ptrdiff_t *)(context.shm_base + sizeof(context.buffer_pool_offset) +
-                      sizeof(context.metadata_manager_offset));
-      void *comm_state_location = (u8 *)mdm - *comm_state_offset_location;
-      comm.sync_comm_state(comm_state_location, comm.state);
-      comm.state = comm_state_location;
-    }
-
-    AppBarrier(&comm);
-
-    InitFilesForBuffering(&context, comm.app_proc_id == 0);
+    InitFilesForBuffering(&context, comm.sub_proc_id == 0);
+    SubBarrier(&comm);
     result = std::make_shared<api::Hermes>(context);
   }
 
   WorldBarrier(&comm);
 
-  result->trans_arena_ = arenas[kArenaType_Transient];
-  // NOTE(chogan): Reset the transient arena since we're done with the data it
-  // contains
-  result->trans_arena_.used = 0;
-
   rpc.node_id = comm.node_id;
   rpc.num_nodes = comm.num_nodes;
 
+  result->trans_arena_ = arenas[kArenaType_Transient];
   result->comm_ = comm;
   result->context_ = context;
   result->rpc_ = rpc;

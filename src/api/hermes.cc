@@ -43,11 +43,11 @@ bool Hermes::IsApplicationCore() {
 }
 
 void Hermes::AppBarrier() {
-  hermes::AppBarrier(&comm_);
+  hermes::SubBarrier(&comm_);
 }
 
 int Hermes::GetProcessRank() {
-  int result = comm_.app_proc_id;
+  int result = comm_.sub_proc_id;
 
   return result;
 }

@@ -11,8 +11,10 @@ namespace hermes {
 
 struct MPIState {
   MPI_Comm world_comm;
-  MPI_Comm hermes_comm;
-  MPI_Comm app_comm;
+  /** This communicator is in one of two groups, depending on the value of the
+   * rank's ProcessKind. When its kHermes, sub_comm groups all Hermes cores, and
+   * when its kApp, it groups all application cores. */
+  MPI_Comm sub_comm;
 };
 
 inline int MpiGetProcId(MPI_Comm comm) {
@@ -29,16 +31,9 @@ inline int MpiGetWorldProcId(void *state) {
   return result;
 }
 
-inline int MpiGetHermesProcId(void *state) {
+inline int MpiGetSubProcId(void *state) {
   MPIState *mpi_state = (MPIState *)state;
-  int result = MpiGetProcId(mpi_state->hermes_comm);
-
-  return result;
-}
-
-inline int MpiGetAppProcId(void *state) {
-  MPIState *mpi_state = (MPIState *)state;
-  int result = MpiGetProcId(mpi_state->app_comm);
+  int result = MpiGetProcId(mpi_state->sub_comm);
 
   return result;
 }
@@ -57,20 +52,6 @@ inline int MpiGetNumWorldProcs(void *state) {
   return result;
 }
 
-inline int MpiGetNumHermesProcs(void *state) {
-  MPIState *mpi_state = (MPIState *)state;
-  int result = MpiGetNumProcs(mpi_state->hermes_comm);
-
-  return result;
-}
-
-inline int MpiGetNumAppProcs(void *state) {
-  MPIState *mpi_state = (MPIState *)state;
-  int result = MpiGetNumProcs(mpi_state->app_comm);
-
-  return result;
-}
-
 inline void MpiBarrier(MPI_Comm comm) {
   MPI_Barrier(comm);
 }
@@ -80,18 +61,14 @@ inline void MpiWorldBarrier(void *state) {
   MpiBarrier(mpi_state->world_comm);
 }
 
-inline void MpiHermesBarrier(void *state) {
+inline void MpiSubBarrier(void *state) {
   MPIState *mpi_state = (MPIState *)state;
-  MpiBarrier(mpi_state->hermes_comm);
-}
-
-inline void MpiAppBarrier(void *state) {
-  MPIState *mpi_state = (MPIState *)state;
-  MpiBarrier(mpi_state->app_comm);
+  MpiBarrier(mpi_state->sub_comm);
 }
 
 /**
- * Returns true if the calling rank is the lowest numbered rank on its node.
+ * Returns true if the calling rank is the lowest numbered rank on its node in
+ * communicator @p comm.
  */
 bool MpiFirstOnNode(MPI_Comm comm) {
   int rank = MpiGetProcId(comm);
@@ -212,61 +189,48 @@ void MpiFinalize(void *state) {
   MPI_Finalize();
 }
 
-void MpiCopyState(void *src, void *dest) {
-  MPIState *src_state = (MPIState *)src;
-  MPIState *dest_state = (MPIState *)dest;
-  *dest_state = *src_state;
-}
-
-void MpiSyncCommState(void *hermes_state, void *app_state) {
-  MPIState *hermes_mpi = (MPIState *)hermes_state;
-  MPIState *app_mpi = (MPIState *)app_state;
-  hermes_mpi->app_comm = app_mpi->app_comm;
-}
-
 size_t InitCommunication(CommunicationContext *comm, Arena *arena,
                          size_t trans_arena_size_per_node, bool is_daemon) {
-  comm->get_world_proc_id = MpiGetWorldProcId;
-  comm->get_hermes_proc_id = MpiGetHermesProcId;
-  comm->get_app_proc_id = MpiGetAppProcId;
-  comm->get_num_world_procs = MpiGetNumWorldProcs;
-  comm->get_num_hermes_procs = MpiGetNumHermesProcs;
-  comm->get_num_app_procs = MpiGetNumAppProcs;
   comm->world_barrier = MpiWorldBarrier;
-  comm->hermes_barrier = MpiHermesBarrier;
-  comm->app_barrier = MpiAppBarrier;
+  comm->sub_barrier = MpiSubBarrier;
   comm->finalize = MpiFinalize;
-  comm->copy_state = MpiCopyState;
-  comm->sync_comm_state = MpiSyncCommState;
 
   MPIState *mpi_state = PushClearedStruct<MPIState>(arena);
   mpi_state->world_comm = MPI_COMM_WORLD;
   comm->state = mpi_state;
-  comm->world_proc_id = comm->get_world_proc_id(comm->state);
-  comm->world_size = comm->get_num_world_procs(comm->state);
+  comm->world_proc_id = MpiGetWorldProcId(comm->state);
+  comm->world_size = MpiGetNumWorldProcs(comm->state);
 
   size_t trans_arena_size_for_rank =
     MpiAssignIDsToNodes(comm, trans_arena_size_per_node);
 
   if (is_daemon) {
-    comm->first_on_node = MpiFirstOnNode(mpi_state->world_comm);
-    comm->hermes_proc_id = comm->world_proc_id;
+    mpi_state->sub_comm = mpi_state->world_comm;
+    comm->sub_proc_id = comm->world_proc_id;
     comm->hermes_size = comm->world_size;
     comm->proc_kind = ProcessKind::kHermes;
-    mpi_state->hermes_comm = mpi_state->world_comm;
+    comm->first_on_node = MpiFirstOnNode(mpi_state->world_comm);
   } else {
-    if (comm->proc_kind == ProcessKind::kHermes) {
-      MPI_Comm_split(mpi_state->world_comm, (int)ProcessKind::kHermes,
-                     comm->world_proc_id, &mpi_state->hermes_comm);
-      comm->hermes_proc_id = comm->get_hermes_proc_id(comm->state);
-      comm->hermes_size = comm->get_num_hermes_procs(comm->state);
-      comm->first_on_node = MpiFirstOnNode(mpi_state->hermes_comm);
-    } else {
-      MPI_Comm_split(mpi_state->world_comm, (int)ProcessKind::kApp,
-                     comm->world_proc_id, &mpi_state->app_comm);
-      comm->app_proc_id = comm->get_app_proc_id(comm->state);
-      comm->app_size = comm->get_num_app_procs(comm->state);
-      comm->first_on_node = MpiFirstOnNode(mpi_state->app_comm);
+    int color = (int)comm->proc_kind;
+    MPI_Comm_split(mpi_state->world_comm, color, comm->world_proc_id,
+                   &mpi_state->sub_comm);
+
+    comm->first_on_node = MpiFirstOnNode(mpi_state->sub_comm);
+    comm->sub_proc_id = MpiGetSubProcId(comm->state);
+
+    switch (comm->proc_kind) {
+      case ProcessKind::kHermes: {
+        MPI_Comm_size(mpi_state->sub_comm, &comm->hermes_size);
+        break;
+      }
+      case ProcessKind::kApp: {
+        MPI_Comm_size(mpi_state->sub_comm, &comm->app_size);
+        break;
+      }
+      default: {
+        assert(!"Invalid code path\n");
+        break;
+      }
     }
   }
 
