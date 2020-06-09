@@ -31,17 +31,17 @@ bool Bucket::IsValid() const {
   return result;
 }
 
-Status Bucket::Put(const std::string &name, const Blob &data, Context &ctx) {
-  (void)ctx;
+Status Bucket::Put(const std::string &name, const u8 *data, size_t size,
+                   Context &ctx) {
   Status ret = 0;
 
   if (IsValid()) {
     LOG(INFO) << "Attaching blob " << name << " to Bucket " << '\n';
 
-    TieredSchema schema = CalculatePlacement(data.size(), ctx);
+    TieredSchema schema = CalculatePlacement(size, ctx);
     while (schema.size() == 0) {
       // NOTE(chogan): Keep running the DPE until we get a valid placement
-      schema = CalculatePlacement(data.size(), ctx);
+      schema = CalculatePlacement(size, ctx);
     }
 
     std::vector<BufferID> buffer_ids = GetBuffers(&hermes_->context_, schema);
@@ -53,8 +53,8 @@ Status Bucket::Put(const std::string &name, const Blob &data, Context &ctx) {
     }
 
     hermes::Blob blob = {};
-    blob.data = (u8 *)data.data();
-    blob.size = data.size();
+    blob.data = (u8 *)data;
+    blob.size = size;
     WriteBlobToBuffers(&hermes_->context_, blob, buffer_ids);
 
     // NOTE(chogan): Update all metadata associated with this Put
