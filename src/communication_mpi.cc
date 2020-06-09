@@ -1,5 +1,5 @@
 #include "communication.h"
-#include "memory_arena.h"
+#include "memory_management.h"
 
 /**
  * @file communication_mpi.cc

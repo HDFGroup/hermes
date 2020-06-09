@@ -24,7 +24,7 @@
 #include "metadata_management.h"
 
 #include "debug_state.cc"
-#include "memory_arena.cc"
+#include "memory_management.cc"
 #include "config_parser.cc"
 
 #if defined(HERMES_COMMUNICATION_MPI)

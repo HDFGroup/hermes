@@ -9,7 +9,7 @@
 #include <glog/logging.h>
 
 #include "hermes_types.h"
-#include "memory_arena.h"
+#include "memory_management.h"
 
 namespace hermes {
 

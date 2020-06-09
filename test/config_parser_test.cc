@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include "hermes_types.h"
-#include "memory_arena.h"
+#include "memory_management.h"
 #include "buffer_pool_internal.h"
 #include "test_utils.h"
 

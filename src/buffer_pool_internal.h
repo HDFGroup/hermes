@@ -2,7 +2,7 @@
 #define HERMES_BUFFER_POOL_INTERNAL_H_
 
 #include "buffer_pool.h"
-#include "memory_arena.h"
+#include "memory_management.h"
 
 /**
  * @file buffer_pool_internal.h

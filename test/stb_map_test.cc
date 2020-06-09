@@ -1,7 +1,7 @@
 #include <stdio.h>
 
 #include "test_utils.h"
-#include "memory_arena.h"
+#include "memory_management.h"
 
 #define STBDS_ASSERT(x) Assert((x))
 
