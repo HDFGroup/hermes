@@ -1,0 +1,31 @@
+packages:
+  all:
+    target: [x86_64]
+  boost:
+    paths:
+      boost@1.72.0: /usr
+    buildable: False
+  mpich:
+    paths:
+      mpich@3.3: /opt/mpich-3.3-intel
+    buildable: False
+  cmake:
+    paths:
+      cmake@3.10.0: /usr/local/cmake-3.10.0
+    buildable: False
+  autoconf:
+    paths:
+      autoconf@2.69: /usr
+    buildable: False
+  automake:
+    paths:
+      automake@1.15: /usr
+    buildable: False
+  libtool:
+    paths:
+      libtool@2.4.6: /usr
+    buildable: False
+  m4:
+    paths:
+      m4@4.17: /usr
+    buildable: False
