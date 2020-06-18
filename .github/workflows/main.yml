@@ -1,0 +1,63 @@
+# This is a basic workflow to help you get started with Actions
+
+name: GitHub Actions
+
+# Controls when the action will run. Triggers the workflow on push or pull request
+# events but only for the master branch
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+ 
+env:
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+  BUILD_TYPE: Release
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - name: Get Sources
+        uses: actions/checkout@v2
+        
+      - name: Install Spack Dependencies
+        run: |
+          npm install
+          sudo apt-get install build-essential
+          sudo apt-get install cmake
+          sudo apt-get install autoconf
+          sudo apt-get install automake
+          sudo apt-get install libboost-all-dev
+          sudo apt-get install -y mpich
+          
+      - name: Build and Test
+        run: |
+          git clone https://github.com/spack/spack ${{ runner.workspace }}/spack
+          . ${{ runner.workspace }}/spack/share/spack/setup-env.sh
+          cp ci/packages.yaml ${{ runner.workspace }}/spack/etc/spack/packages.yaml
+          spack install gotcha@develop && spack load gotcha@develop
+          spack install glog@0.3.5 && spack load glog@0.3.5
+          git clone https://xgitlab.cels.anl.gov/sds/sds-repo.git
+          spack repo add sds-repo
+          spack install mochi-thallium~cereal && spack load -r mochi-thallium~cereal
+          spack find
+          spack location -i mochi-thallium
+          spack location -i gflags
+          ls `spack location -i gflags`/include
+          ls ${GITHUB_WORKSPACE}
+          echo "end of ls ${GITHUB_WORKSPACE}"
+          ls ${{ runner.workspace }}
+          echo "end of ls ${{ runner.workspace }}"
+          mkdir "${{ runner.workspace }}/build"
+          cd "${{ runner.workspace }}/build"
+          cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCMAKE_CXX_COMPILER=`which mpicxx` -DCMAKE_C_COMPILER=`which mpicc` -DBUILD_SHARED_LIBS=ON -DHERMES_INTERCEPT_IO=ON -DHERMES_COMMUNICATION_MPI=ON -DBUILD_BUFFER_POOL_VISUALIZER=OFF -DUSE_ADDRESS_SANITIZER=OFF -DUSE_THREAD_SANITIZER=ON -DHERMES_USE_TCP=ON -DHERMES_RPC_THALLIUM=ON -DHERMES_DEBUG_HEAP=OFF $GITHUB_WORKSPACE
+          cmake --build . -- -j4
+          ctest -C $BUILD_TYPE -VV
+        shell: bash
