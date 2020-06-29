@@ -41,7 +41,7 @@ jobs:
         run: |
           git clone https://github.com/spack/spack ${{ runner.workspace }}/spack
           . ${{ runner.workspace }}/spack/share/spack/setup-env.sh
-          cp ci/packages.yaml ${{ runner.workspace }}/spack/etc/spack/packages.yaml
+          cp .github/workflows/packages.yaml ${{ runner.workspace }}/spack/etc/spack/packages.yaml
           spack install gotcha@develop
           spack install glog@0.3.5
           git clone https://xgitlab.cels.anl.gov/sds/sds-repo.git
