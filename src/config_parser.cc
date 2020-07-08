@@ -99,7 +99,7 @@ EntireFile ReadEntireFile(Arena *arena, const char *path) {
         if ((u32)file_size <= arena->capacity) {
           fseek(fstream, 0, SEEK_SET);
           result.data = PushArray<u8>(arena, file_size);
-          int items_read = fread(result.data, file_size, 1, fstream);
+          [[maybe_unused]] int items_read = fread(result.data, file_size, 1, fstream);
           assert(items_read == 1);
           result.size = file_size;
         } else {

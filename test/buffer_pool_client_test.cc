@@ -33,7 +33,7 @@ namespace tl = thallium;
 using namespace hermes;
 
 static constexpr char kServerName[] = "ofi+sockets://127.0.0.1:8080";
-static constexpr char kBaseShemeName[] = "/hermes_buffer_pool_";
+static constexpr char kBaseShmemName[] = "/hermes_buffer_pool_";
 
 struct TimingResult {
   double get_buffers_time;
@@ -277,7 +277,7 @@ int main(int argc, char **argv) {
   }
 
   char full_shmem_name[hermes::kMaxBufferPoolShmemNameLength];
-  MakeFullShmemName(full_shmem_name, kBaseShemeName);
+  MakeFullShmemName(full_shmem_name, kBaseShmemName);
   // TODO(chogan): Client side comm and rpc initialization
   SharedMemoryContext context = InitHermesClient(NULL, full_shmem_name,
                                                  test_file_buffering);

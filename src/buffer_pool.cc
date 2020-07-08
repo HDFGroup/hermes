@@ -112,7 +112,7 @@ BufferHeader *GetHeadersBase(SharedMemoryContext *context) {
 }
 
 inline BufferHeader *GetHeaderByIndex(SharedMemoryContext *context, u32 index) {
-  BufferPool *pool = GetBufferPoolFromContext(context);
+  [[maybe_unused]] BufferPool *pool = GetBufferPoolFromContext(context);
   BufferHeader *headers = GetHeadersBase(context);
   assert(index < pool->total_headers);
   BufferHeader *result = headers + index;
@@ -470,17 +470,17 @@ void PartitionRamBuffers(Arena *arena, i32 buffer_size, i32 buffer_count,
                          int block_size) {
   for (int i = 0; i < buffer_count; ++i) {
     int num_blocks_needed = buffer_size / block_size;
-    u8 *first_buffer = PushArray<u8>(arena, block_size);
+    [[maybe_unused]] u8 *first_buffer = PushArray<u8>(arena, block_size);
 
     for (int block = 0; block < num_blocks_needed - 1; ++block) {
       // NOTE(chogan): @optimization Since we don't have to store these
       // pointers, the only effect of this loop is that the arena will end up
       // with the correct "next free" address. This function isn't really
       // necessary; it's mainly just testing that everything adds up correctly.
-      u8 *buffer = PushArray<u8>(arena, block_size);
+      [[maybe_unused]] u8 *buffer = PushArray<u8>(arena, block_size);
       // NOTE(chogan): Make sure the buffers are perfectly aligned (no holes or
       // padding is introduced)
-      i32 buffer_block_offset = (block + 1) * block_size;
+      [[maybe_unused]] i32 buffer_block_offset = (block + 1) * block_size;
       assert((u8 *)first_buffer == ((u8 *)buffer) - buffer_block_offset);
     }
   }
@@ -983,7 +983,7 @@ void MakeFullShmemName(char *dest, const char *base) {
   char *username = getenv("USER");
   if (username) {
     size_t username_length = strlen(username);
-    size_t total_length = base_name_length + username_length + 1;
+    [[maybe_unused]] size_t total_length = base_name_length + username_length + 1;
     // TODO(chogan): @errorhandling
     assert(total_length < kMaxBufferPoolShmemNameLength);
     snprintf(dest + base_name_length, username_length + 1, "%s", username);
@@ -1027,7 +1027,10 @@ void InitFilesForBuffering(SharedMemoryContext *context, bool make_space) {
 
         // TODO(chogan): Use posix_fallocate when it is
         // available
-        ftruncate(fileno(buffering_file), tier->capacity);
+        [[maybe_unused]] int ftruncate_result =
+          ftruncate(fileno(buffering_file), tier->capacity);
+        // TODO(chogan): @errorhandling
+        assert(ftruncate_result == 0);
       }
       context->open_streams[tier_id][slab] = buffering_file;
     }
@@ -1039,7 +1042,10 @@ u8 *InitSharedMemory(const char *shmem_name, size_t total_size) {
   int shmem_fd = shm_open(shmem_name, O_CREAT | O_RDWR | O_TRUNC, S_IRUSR | S_IWUSR);
 
   if (shmem_fd >= 0) {
-    ftruncate(shmem_fd, total_size);
+    [[maybe_unused]] int ftruncate_result = ftruncate(shmem_fd, total_size);
+    // TODO(chogan): @errorhandling
+    assert(ftruncate_result == 0);
+
     result = (u8 *)mmap(0, total_size, PROT_READ | PROT_WRITE, MAP_SHARED,
                         shmem_fd, 0);
     // TODO(chogan): @errorhandling
@@ -1160,7 +1166,7 @@ void WriteBlobToBuffers(SharedMemoryContext *context, const Blob &blob,
           context->open_streams[tier->id][slab_index] = file;
         }
         fseek(file, header->data_offset, SEEK_SET);
-        size_t items_written = fwrite(at, write_size, 1, file);
+        [[maybe_unused]] size_t items_written = fwrite(at, write_size, 1, file);
         // TODO(chogan): @errorhandling
         assert(items_written == 1);
         // fflush(file);
@@ -1207,7 +1213,7 @@ size_t ReadBlobFromBuffers(SharedMemoryContext *context, RpcContext *rpc,
           // May have to close something.
           const char *filename =
             context->buffering_filenames[tier->id][slab_index].c_str();
-          fopen(filename, "r+");
+          file = fopen(filename, "r+");
         }
         fseek(file, header->data_offset, SEEK_SET);
         size_t items_read = fread(at, read_size, 1, file);

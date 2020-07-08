@@ -375,7 +375,7 @@ static void DrawEndOfRamBuffers(SharedMemoryContext *context,
 static void DrawHeaders(SharedMemoryContext *context, SDL_Surface *surface,
                         int window_width, int window_height, int starting_y,
                         TierID tier_id) {
-  BufferPool *pool = GetBufferPoolFromContext(context);
+  [[maybe_unused]] BufferPool *pool = GetBufferPoolFromContext(context);
   BufferHeader *headers = GetHeadersBase(context);
   int pad = 1;
   int x = 0;
