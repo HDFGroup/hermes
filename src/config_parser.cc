@@ -11,6 +11,15 @@
 #include "hermes_types.h"
 #include "memory_management.h"
 
+// Steps to add a new configuration variable:
+// 1. Add an entry to the ConfigVariable enum
+// 2. Add the variable name to kConfigVariableStrings (currently the strings in
+// this array must be in the same order as the corresponding entries in the
+// ConfigVariable enum).
+// 3. If a Parse<type> function does not exist for the variable type, implement
+// it.
+// 4. Add a case to ParseTokens for the new variable.
+
 namespace hermes {
 
 enum class TokenType {
@@ -41,8 +50,11 @@ enum ConfigVariable {
   ConfigVariable_TransferWindowArenaPercentage,
   ConfigVariable_TransientArenaPercentage,
   ConfigVariable_MountPoints,
-  ConfigVariable_RpcServerName,
+  ConfigVariable_RpcServerBaseName,
   ConfigVariable_BufferPoolShmemName,
+  ConfigVariable_RpcProtocol,
+  ConfigVariable_RpcPort,
+  ConfigVariable_RpcHostNumberRange,
 
   ConfigVariable_Count
 };
@@ -63,8 +75,11 @@ static const char *kConfigVariableStrings[ConfigVariable_Count] = {
   "transfer_window_arena_percentage",
   "transient_arena_percentage",
   "mount_points",
-  "rpc_server_name",
+  "rpc_server_base_name",
   "buffer_pool_shmem_name",
+  "rpc_protocol",
+  "rpc_port",
+  "rpc_host_number_range",
 };
 
 struct Token {
@@ -619,112 +634,96 @@ void ParseTokens(TokenList *tokens, Config *config) {
       continue;
     }
 
+    tok = BeginStatement(tok);
+
     switch (var) {
       case ConfigVariable_NumTiers: {
-        tok = BeginStatement(tok);
         int val = ParseInt(&tok);
         config->num_tiers = val;
-        tok = EndStatement(tok);
         break;
       }
       case ConfigVariable_Capacities: {
         RequireNumTiers(config);
-        tok = BeginStatement(tok);
         tok = ParseSizetList(tok, config->capacities, config->num_tiers);
-        tok = EndStatement(tok);
         break;
       }
       case ConfigVariable_BlockSizes: {
         RequireNumTiers(config);
-        tok = BeginStatement(tok);
         tok = ParseIntList(tok, config->block_sizes, config->num_tiers);
-        tok = EndStatement(tok);
         break;
       }
       case ConfigVariable_NumSlabs: {
         RequireNumTiers(config);
-        tok = BeginStatement(tok);
         tok = ParseIntList(tok, config->num_slabs, config->num_tiers);
-        tok = EndStatement(tok);
         break;
       }
       case ConfigVariable_SlabUnitSizes: {
         RequireNumTiers(config);
         RequireNumSlabs(config);
-        tok = BeginStatement(tok);
         tok = ParseIntListList(tok, config->slab_unit_sizes, config->num_tiers,
                                config->num_slabs);
-        tok = EndStatement(tok);
         break;
       }
       case ConfigVariable_DesiredSlabPercentages: {
         RequireNumTiers(config);
         RequireNumSlabs(config);
-        tok = BeginStatement(tok);
         tok = ParseFloatListList(tok, config->desired_slab_percentages,
                                  config->num_tiers, config->num_slabs);
-        tok = EndStatement(tok);
         break;
       }
       case ConfigVariable_BandwidthsMbps: {
         RequireNumTiers(config);
-        tok = BeginStatement(tok);
         tok = ParseFloatList(tok, config->bandwidths, config->num_tiers);
-        tok = EndStatement(tok);
         break;
       }
       case ConfigVariable_LatenciesUs: {
         RequireNumTiers(config);
-        tok = BeginStatement(tok);
         tok = ParseFloatList(tok, config->latencies, config->num_tiers);
-        tok = EndStatement(tok);
         break;
       }
       case ConfigVariable_BufferPoolArenaPercentage: {
-        tok = BeginStatement(tok);
         f32 val = ParseFloat(&tok);
         config->arena_percentages[hermes::kArenaType_BufferPool] = val;
-        tok = EndStatement(tok);
         break;
       }
       case ConfigVariable_MetadataArenaPercentage: {
-        tok = BeginStatement(tok);
         f32 val = ParseFloat(&tok);
         config->arena_percentages[hermes::kArenaType_MetaData] = val;
-        tok = EndStatement(tok);
         break;
       }
       case ConfigVariable_TransferWindowArenaPercentage: {
-        tok = BeginStatement(tok);
         f32 val = ParseFloat(&tok);
         config->arena_percentages[hermes::kArenaType_TransferWindow] = val;
-        tok = EndStatement(tok);
         break;
       }
       case ConfigVariable_TransientArenaPercentage: {
-        tok = BeginStatement(tok);
         f32 val = ParseFloat(&tok);
         config->arena_percentages[hermes::kArenaType_Transient] = val;
-        tok = EndStatement(tok);
         break;
       }
       case ConfigVariable_MountPoints: {
         RequireNumTiers(config);
-        tok = BeginStatement(tok);
         tok = ParseStringList(tok, config->mount_points, config->num_tiers);
-        tok = EndStatement(tok);
         break;
       }
-      case ConfigVariable_RpcServerName: {
-        tok = BeginStatement(tok);
-        config->rpc_server_name = ParseString(&tok);
-        tok = EndStatement(tok);
+      case ConfigVariable_RpcServerBaseName: {
+        config->rpc_server_base_name = ParseString(&tok);
         break;
       }
       case ConfigVariable_BufferPoolShmemName: {
-        tok = BeginStatement(tok);
         tok = ParseCharArrayString(tok, config->buffer_pool_shmem_name);
-        tok = EndStatement(tok);
+        break;
+      }
+      case ConfigVariable_RpcProtocol: {
+        config->rpc_protocol = ParseString(&tok);
+        break;
+      }
+      case ConfigVariable_RpcPort: {
+        config->rpc_port = ParseInt(&tok);
+        break;
+      }
+      case ConfigVariable_RpcHostNumberRange: {
+        tok = ParseIntList(tok, config->rpc_host_number_range, 2);
         break;
       }
       default: {
@@ -732,6 +731,7 @@ void ParseTokens(TokenList *tokens, Config *config) {
         break;
       }
     }
+    tok = EndStatement(tok);
   }
 }
 

@@ -82,6 +82,8 @@ struct Config {
   f32 arena_percentages[kArenaType_Count];
   /** The number of Tiers */
   int num_tiers;
+  /** The total number of nodes in this Hermes run. */
+  int num_nodes;
 
   u32 max_buckets_per_node;
   u32 max_vbuckets_per_node;
@@ -93,7 +95,11 @@ struct Config {
   /** The IP address and port number of the BufferPool RPC server in a format
    * that Thallium understands. For example, tcp://172.20.101.25:8080.
    */
-  std::string rpc_server_name;
+  std::string rpc_server_base_name;
+  std::string rpc_protocol;
+  int rpc_port;
+  int rpc_host_number_range[2];
+
   /** A base name for the BufferPool shared memory segement. Hermes appends the
    * value of the USER environment variable to this string.
    */

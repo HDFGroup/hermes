@@ -178,7 +178,8 @@ void TestFileBuffering(SharedMemoryContext *context, int rank) {
                           << ".bmp";
       std::string out_filename = out_filename_stream.str();
       FILE *out_file = fopen(out_filename.c_str(), "w");
-      size_t items_written = fwrite(result.data, result.size, 1, out_file);
+      [[maybe_unused]] size_t items_written = fwrite(result.data, result.size,
+                                                     1, out_file);
       assert(items_written == 1);
       fclose(out_file);
 

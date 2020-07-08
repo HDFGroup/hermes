@@ -12,6 +12,11 @@ namespace hapi = hermes::api;
 
 int main(int argc, char **argv) {
 
+  if (argc < 2) {
+    fprintf(stderr, "Expected a path to a configuration file\n");
+    exit(-1);
+  }
+
   int mpi_threads_provided;
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
   if (mpi_threads_provided < MPI_THREAD_MULTIPLE) {
@@ -19,7 +24,7 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  std::shared_ptr<hapi::Hermes> hermes = hermes::InitHermes();
+  std::shared_ptr<hapi::Hermes> hermes = hermes::InitHermes(argv[1]);
 
   if (hermes->IsApplicationCore()) {
     int app_rank = hermes->GetProcessRank();

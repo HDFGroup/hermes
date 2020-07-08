@@ -75,7 +75,9 @@ void InitTestConfig(Config *config) {
   config->mount_points[1] = nvme_mount_point;
   config->mount_points[2] = bb_mount_point;
   config->mount_points[3] = pfs_mount_point;
-  config->rpc_server_name = rpc_server_name;
+  config->rpc_server_base_name = "localhost";
+  config->rpc_protocol = "tcp";
+  config->rpc_port = 8080;
 
   config->max_buckets_per_node = 16;
   config->max_vbuckets_per_node = 8;
@@ -149,7 +151,7 @@ SharedMemoryContext InitHermesCore(Config *config, CommunicationContext *comm,
 
   if (start_rpc_server) {
     rpc->start_server(&context, rpc,
-                      config->rpc_server_name.c_str(), num_rpc_threads);
+                      config->rpc_server_base_name.c_str(), num_rpc_threads);
   }
 
   return context;
@@ -194,7 +196,7 @@ InitDaemon(const std::string &buffering_path,
   hermes::Config config = {};
   InitTestConfig(&config);
 
-  config.rpc_server_name = rpc_server_name.c_str();
+  config.rpc_server_base_name = rpc_server_name.c_str();
 
   if (buffering_path.size() > 0) {
     for (int i = 1; i < config.num_tiers; ++i) {
@@ -239,10 +241,18 @@ SharedMemoryContext InitHermesClient(CommunicationContext *comm,
 }
 
 // TODO(chogan): Move into library
-std::shared_ptr<api::Hermes> InitHermes() {
-  // TODO(chogan): Read Config from a file
+std::shared_ptr<api::Hermes> InitHermes(const char *config_file=NULL) {
   hermes::Config config = {};
-  InitTestConfig(&config);
+  const size_t config_memory_size = KILOBYTES(6);
+  hermes::u8 config_memory[config_memory_size];
+
+  if (config_file) {
+    hermes::Arena config_arena = {};
+    hermes::InitArena(&config_arena, config_memory_size, config_memory);
+    hermes::ParseConfig(&config_arena, config_file, &config);
+  } else {
+    InitTestConfig(&config);
+  }
 
   // TODO(chogan): Do we need a transfer window arena? We can probably just use
   // the transient arena for this.

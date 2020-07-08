@@ -59,8 +59,14 @@ int main(int argc, char **argv) {
   Assert(config.mount_points[2] == "./");
   Assert(config.mount_points[3] == "./");
 
-  const char expected_rpc_server_name[] = "sockets://localhost:8080";
-  Assert(config.rpc_server_name == expected_rpc_server_name);
+
+  Assert(config.rpc_protocol == "tcp");
+  Assert(config.rpc_port == 8080);
+  Assert(config.rpc_host_number_range[0] == 31 &&
+         config.rpc_host_number_range[1] == 32);
+
+  const char expected_rpc_server_name[] = "localhost";
+  Assert(config.rpc_server_base_name == expected_rpc_server_name);
 
   const char expected_shm_name[] = "/hermes_buffer_pool_";
   Assert(strncmp(config.buffer_pool_shmem_name, expected_shm_name,

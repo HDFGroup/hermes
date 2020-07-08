@@ -227,4 +227,11 @@ void InitRpcContext(RpcContext *rpc, u32 num_nodes, u32 node_id) {
   rpc->start_server = ThalliumStartRpcServer;
 }
 
+std::string MakeRpcServerName(const Config *config, std::string &host_number) {
+  std::string result = config->protocol + "://" + config->rpc_server_base_name +
+    host_number + ":" + std::to_string(config->rpc_port);
+
+  return result;
+}
+
 }  // namespace hermes
