@@ -327,12 +327,13 @@ void StartBufferPoolRpcServer(SharedMemoryContext *context, const char *addr,
  *
  * @param context The Hermes instance's shared memory context.
  * @param comm The Hermes instance's communication context.
+ * @param rpc The Hermes instance's RPC context.
  * @param shmem_name The name of the shared memory.
  * @param trans_arena The instance's transient arena.
  * @param is_application_core Whether or not this rank is an app rank.
  */
 void Finalize(SharedMemoryContext *context, CommunicationContext *comm,
-              const char *shmem_name, Arena *trans_arena,
+              RpcContext *rpc, const char *shmem_name, Arena *trans_arena,
               bool is_application_core);
 
 // I/O Clients

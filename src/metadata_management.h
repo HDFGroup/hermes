@@ -113,6 +113,8 @@ struct MetadataManager {
   ptrdiff_t vbucket_info_offset;
   VBucketID first_free_vbucket;
 
+  ptrdiff_t rpc_state_offset;
+
   ptrdiff_t id_heap_offset;
   ptrdiff_t map_heap_offset;
 

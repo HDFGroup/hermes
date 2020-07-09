@@ -776,7 +776,7 @@ void RenameBucket(SharedMemoryContext *context, RpcContext *rpc, BucketID id,
                   const std::string &old_name, const std::string &new_name) {
   u32 target_node = id.bits.node_id;
   if (target_node == rpc->node_id) {
-    LocalRenameBucket(context, rpc, id, old_name.c_str(), new_name.c_str()); 
+    LocalRenameBucket(context, rpc, id, old_name.c_str(), new_name.c_str());
   } else {
     RpcCall<void>(rpc, target_node, "RemoteRenameBucket", id, old_name,
                   new_name);

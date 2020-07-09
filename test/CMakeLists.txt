@@ -11,7 +11,7 @@ include_directories(
 #------------------------------------------------------------------------------
 # API tests
 #------------------------------------------------------------------------------
-set(API_TESTS bucket_test end_to_end_test cluster_experiments)
+set(API_TESTS bucket_test end_to_end_test)
 
 find_package(ZLIB)
 if(ZLIB_FOUND)

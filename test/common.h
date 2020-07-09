@@ -11,6 +11,7 @@
 
 #include <cmath>
 #include <memory>
+#include <thread>
 
 #include <mpi.h>
 
@@ -60,6 +61,7 @@ void InitTestConfig(Config *config) {
   config->bandwidths[1] = 300.f;
   config->bandwidths[2] = 150.0f;
   config->bandwidths[3] = 70.0f;
+
   config->latencies[0] = 15.0f;
   config->latencies[1] = 250000;
   config->latencies[2] = 500000.0f;
@@ -71,10 +73,12 @@ void InitTestConfig(Config *config) {
   config->arena_percentages[kArenaType_MetaData] = 0.04f;
   config->arena_percentages[kArenaType_TransferWindow] = 0.08f;
   config->arena_percentages[kArenaType_Transient] = 0.03f;
+
   config->mount_points[0] = mem_mount_point;
   config->mount_points[1] = nvme_mount_point;
   config->mount_points[2] = bb_mount_point;
   config->mount_points[3] = pfs_mount_point;
+
   config->rpc_server_base_name = "localhost";
   config->rpc_protocol = "tcp";
   config->rpc_port = 8080;
@@ -111,8 +115,7 @@ ArenaInfo GetArenaInfo(Config *config) {
 // TODO(chogan): Move into library
 SharedMemoryContext InitHermesCore(Config *config, CommunicationContext *comm,
                                    ArenaInfo *arena_info, Arena *arenas,
-                                   bool start_rpc_server, RpcContext *rpc,
-                                   int num_rpc_threads=0) {
+                                   RpcContext *rpc, int num_rpc_threads=0) {
 
   size_t shmem_size = (arena_info->total -
                        arena_info->sizes[kArenaType_Transient]);
@@ -141,6 +144,12 @@ SharedMemoryContext InitHermesCore(Config *config, CommunicationContext *comm,
   MetadataManager *mdm =
     PushClearedStruct<MetadataManager>(&arenas[kArenaType_MetaData]);
   context.metadata_manager_offset = (u8 *)mdm - (u8 *)shmem_base;
+
+  // NOTE(chogan): Internal RPC state is stored in the Metadata Arena.
+  rpc->state = InitRpcContext(rpc, &arenas[kArenaType_MetaData],
+                              comm->num_nodes, comm->node_id, config);
+  mdm->rpc_state_offset = (u8 *)rpc->state - shmem_base;
+
   InitMetadataManager(mdm, &arenas[kArenaType_MetaData], config, comm->node_id);
 
   // NOTE(chogan): Store the metadata_manager_offset right after the
@@ -149,10 +158,21 @@ SharedMemoryContext InitHermesCore(Config *config, CommunicationContext *comm,
     (ptrdiff_t *)(shmem_base + sizeof(context.buffer_pool_offset));
   *metadata_manager_offset_location = context.metadata_manager_offset;
 
-  if (start_rpc_server) {
-    rpc->start_server(&context, rpc,
-                      config->rpc_server_base_name.c_str(), num_rpc_threads);
+  std::string host_number =
+    std::to_string(comm->node_id + rpc->first_host_number - 1);
+  if (config->rpc_host_number_range[0] == 0 &&
+      config->rpc_host_number_range[1] == 0) {
+    host_number = "";
   }
+
+  std::string rpc_server_addr = (config->rpc_protocol + "://" +
+                                 config->rpc_server_base_name + host_number +
+                                 ":" + std::to_string(config->rpc_port));
+
+  std::thread rpc_thread(rpc->start_server, &context, rpc,
+                         rpc_server_addr.c_str(), num_rpc_threads);
+  // rpc->start_server(&context, rpc, rpc_server_addr.c_str(), num_rpc_threads);
+  rpc_thread.detach();
 
   return context;
 }
@@ -176,13 +196,10 @@ BootstrapSharedMemory(Arena *arenas, Config *config, CommunicationContext *comm,
   GrowArena(&arenas[kArenaType_Transient], trans_arena_size);
   comm->state = arenas[kArenaType_Transient].base;
 
-  InitRpcContext(rpc, comm->num_nodes, comm->node_id);
-
   SharedMemoryContext result = {};
-  // TODO(chogan): Always start RPC server (remove is_daemon param)
   if (comm->proc_kind == ProcessKind::kHermes && comm->first_on_node) {
-    result = InitHermesCore(config, comm, &arena_info, arenas, is_daemon,
-                            rpc, num_rpc_threads);
+    result = InitHermesCore(config, comm, &arena_info, arenas, rpc,
+                            num_rpc_threads);
   }
 
   return result;
@@ -280,6 +297,10 @@ std::shared_ptr<api::Hermes> InitHermes(const char *config_file=NULL) {
 
   rpc.node_id = comm.node_id;
   rpc.num_nodes = comm.num_nodes;
+  // NOTE(chogan): Give every process a valid pointer to the internal RPC state
+  // in shared memory
+  MetadataManager *mdm = GetMetadataManagerFromContext(&context);
+  rpc.state = (void *)(context.shm_base + mdm->rpc_state_offset);
 
   result->trans_arena_ = arenas[kArenaType_Transient];
   result->comm_ = comm;

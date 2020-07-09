@@ -9,20 +9,31 @@ namespace tl = thallium;
 namespace hermes {
 
 struct ThalliumState {
-  char *server_name;
+  char server_name_prefix[kMaxServerNameSize];
+  char server_name_postfix[8];
 };
 
 template<typename ReturnType, typename... Ts>
 auto RpcCall(RpcContext *rpc, u32 node_id, const char *func_name, Ts... args) {
   // TODO(chogan): Store this in the metadata arena
   ThalliumState *tl_state = (ThalliumState *)rpc->state;
-  (void)tl_state;
-  (void)node_id;
-  const char kServerName[] = "ofi+sockets://localhost:8080";
-  // TODO(chogan): Server must include the node_id
-  tl::engine engine("tcp", THALLIUM_CLIENT_MODE);
+  std::string host_number = std::to_string(rpc->first_host_number +
+                                           node_id - 1);
+  if (host_number == "0") {
+    // TODO(chogan): Allow host numbers of 0. Need to check the host name range
+    // from the config.
+    host_number = "";
+  }
+  std::string server_name = (std::string(tl_state->server_name_prefix) +
+                             host_number +
+                             std::string(tl_state->server_name_postfix));
+
+  // TODO(chogan): Support all protocols
+  const char *protocol = "tcp";
+  // TODO(chogan): Save connections instead of creating them for every rpc
+  tl::engine engine(protocol, THALLIUM_CLIENT_MODE);
   tl::remote_procedure remote_proc = engine.define(func_name);
-  tl::endpoint server = engine.lookup(kServerName);
+  tl::endpoint server = engine.lookup(server_name);
 
   if constexpr(std::is_same<ReturnType, void>::value)
   {
@@ -36,13 +47,29 @@ auto RpcCall(RpcContext *rpc, u32 node_id, const char *func_name, Ts... args) {
   }
 }
 
+void CopyStringToCharArray(const std::string &src, char *dest) {
+  size_t src_size = src.size();
+  memcpy(dest, src.c_str(), src_size);
+  dest[src_size] = '\0';
+}
+
 // TODO(chogan): addr should be in the RpcContext
 void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
                             const char *addr, i32 num_rpc_threads) {
   tl::engine rpc_server(addr, THALLIUM_SERVER_MODE, false, num_rpc_threads);
 
-  LOG(INFO) << "Serving at " << rpc_server.self() << " with "
+  std::string rpc_server_name = rpc_server.self();
+  LOG(INFO) << "Serving at " << rpc_server_name << " with "
             << num_rpc_threads << " RPC threads" << std::endl;
+
+  ThalliumState *tl_state = (ThalliumState *)rpc->state;
+  size_t end_of_protocol = rpc_server_name.find_first_of(":");
+  std::string server_name_prefix = rpc_server_name.substr(0, end_of_protocol) +
+                                   "://" + std::string(rpc->base_hostname);
+  CopyStringToCharArray(server_name_prefix, tl_state->server_name_prefix);
+
+  std::string server_name_postfix = ":" + std::to_string(rpc->port);
+  CopyStringToCharArray(server_name_postfix, tl_state->server_name_postfix);
 
   using std::function;
   using std::string;
@@ -218,18 +245,20 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
   // that's the way the tests are set up, but once the RPC server is started
   // from Hermes initialization the calling thread will need to continue
   // executing.
-  rpc_server.wait_for_finalize();
+  // rpc_server.wait_for_finalize();
 }
 
-void InitRpcContext(RpcContext *rpc, u32 num_nodes, u32 node_id) {
+void *InitRpcContext(RpcContext *rpc, Arena *arena, u32 num_nodes, u32 node_id,
+                     Config *config) {
   rpc->num_nodes = num_nodes;
   rpc->node_id = node_id;
   rpc->start_server = ThalliumStartRpcServer;
-}
+  rpc->state_size = sizeof(ThalliumState);
+  rpc->port = config->rpc_port;
+  CopyStringToCharArray(config->rpc_server_base_name, rpc->base_hostname);
+  rpc->first_host_number = config->rpc_host_number_range[0];
 
-std::string MakeRpcServerName(const Config *config, std::string &host_number) {
-  std::string result = config->protocol + "://" + config->rpc_server_base_name +
-    host_number + ":" + std::to_string(config->rpc_port);
+  ThalliumState *result = PushClearedStruct<ThalliumState>(arena);
 
   return result;
 }
