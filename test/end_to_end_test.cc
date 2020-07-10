@@ -44,7 +44,12 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  std::shared_ptr<hapi::Hermes> hermes = hermes::InitHermes();
+  char *config_file = 0;
+  if (argc == 2) {
+    config_file = argv[1];
+  }
+
+  std::shared_ptr<hapi::Hermes> hermes = hermes::InitHermes(config_file);
 
   if (hermes->IsApplicationCore()) {
     int app_rank = hermes->GetProcessRank();
