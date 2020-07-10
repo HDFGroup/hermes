@@ -251,7 +251,7 @@ SharedMemoryContext InitHermesClient(CommunicationContext *comm,
 // TODO(chogan): Move into library
 std::shared_ptr<api::Hermes> InitHermes(const char *config_file=NULL) {
   hermes::Config config = {};
-  const size_t config_memory_size = KILOBYTES(6);
+  const size_t config_memory_size = KILOBYTES(16);
   hermes::u8 config_memory[config_memory_size];
 
   if (config_file) {
