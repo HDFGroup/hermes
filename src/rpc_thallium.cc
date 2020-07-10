@@ -1,3 +1,10 @@
+#include <netdb.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+
+#include <string>
+
 #include "rpc.h"
 
 #include <thallium.hpp>
@@ -9,23 +16,39 @@ namespace tl = thallium;
 namespace hermes {
 
 struct ThalliumState {
-  char server_name_prefix[kMaxServerNameSize];
+  char server_name_prefix[16];
   char server_name_postfix[8];
+  tl::engine *engine;
 };
+
+std::string GetHostNumberAsString(RpcContext *rpc, u32 node_id) {
+  std::string result = "";
+  if (rpc->host_number_range[0] != 0 && rpc->host_number_range[1] != 0) {
+    result = std::to_string(node_id + rpc->host_number_range[0] - 1);
+  }
+
+  return result;
+}
 
 template<typename ReturnType, typename... Ts>
 auto RpcCall(RpcContext *rpc, u32 node_id, const char *func_name, Ts... args) {
-  // TODO(chogan): Store this in the metadata arena
   ThalliumState *tl_state = (ThalliumState *)rpc->state;
-  std::string host_number = std::to_string(rpc->first_host_number +
-                                           node_id - 1);
-  if (host_number == "0") {
-    // TODO(chogan): Allow host numbers of 0. Need to check the host name range
-    // from the config.
-    host_number = "";
-  }
+
+  std::string host_number = GetHostNumberAsString(rpc, node_id);
+  std::string host_name = std::string(rpc->base_hostname) + host_number;
+
+  const int max_ip_address_size = 16;
+  char ip_address[max_ip_address_size];
+  // TODO(chogan): @errorhandling
+  // TODO(chogan): @optimization Could cache the last N hostname->IP mappings to
+  // avoid excessive syscalls. Should profile first.
+  struct hostent *hostname_info = gethostbyname(host_name.c_str());
+  in_addr **addr_list = (struct in_addr **)hostname_info->h_addr_list;
+  // TODO(chogan): @errorhandling
+  strncpy(ip_address, inet_ntoa(*addr_list[0]), max_ip_address_size);
+
   std::string server_name = (std::string(tl_state->server_name_prefix) +
-                             host_number +
+                             std::string(ip_address) +
                              std::string(tl_state->server_name_postfix));
 
   // TODO(chogan): Support all protocols
@@ -37,6 +60,7 @@ auto RpcCall(RpcContext *rpc, u32 node_id, const char *func_name, Ts... args) {
 
   if constexpr(std::is_same<ReturnType, void>::value)
   {
+    remote_proc.disable_response();
     remote_proc.on(server)(std::forward<Ts>(args)...);
   }
   else
@@ -53,23 +77,24 @@ void CopyStringToCharArray(const std::string &src, char *dest) {
   dest[src_size] = '\0';
 }
 
-// TODO(chogan): addr should be in the RpcContext
 void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
                             const char *addr, i32 num_rpc_threads) {
-  tl::engine rpc_server(addr, THALLIUM_SERVER_MODE, false, num_rpc_threads);
+  ThalliumState *state = (ThalliumState *)rpc->state;
+  tl::engine *rpc_server = new tl::engine(addr, THALLIUM_SERVER_MODE, true,
+                                         num_rpc_threads);
+  state->engine = rpc_server;
 
-  std::string rpc_server_name = rpc_server.self();
+  std::string rpc_server_name = rpc_server->self();
   LOG(INFO) << "Serving at " << rpc_server_name << " with "
             << num_rpc_threads << " RPC threads" << std::endl;
 
-  ThalliumState *tl_state = (ThalliumState *)rpc->state;
   size_t end_of_protocol = rpc_server_name.find_first_of(":");
   std::string server_name_prefix = rpc_server_name.substr(0, end_of_protocol) +
-                                   "://" + std::string(rpc->base_hostname);
-  CopyStringToCharArray(server_name_prefix, tl_state->server_name_prefix);
+                                   "://";
+  CopyStringToCharArray(server_name_prefix, state->server_name_prefix);
 
   std::string server_name_postfix = ":" + std::to_string(rpc->port);
-  CopyStringToCharArray(server_name_postfix, tl_state->server_name_postfix);
+  CopyStringToCharArray(server_name_postfix, state->server_name_postfix);
 
   using std::function;
   using std::string;
@@ -211,44 +236,46 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
     };
 
   function<void(const request&)> rpc_finalize =
-    [&rpc_server](const request &req) {
+    [rpc_server](const request &req) {
       (void)req;
-      rpc_server.finalize();
+      rpc_server->finalize();
     };
 
-  rpc_server.define("GetBuffers", rpc_get_buffers);
-  rpc_server.define("RemoteReleaseBuffer",
+  rpc_server->define("GetBuffers", rpc_get_buffers);
+  rpc_server->define("RemoteReleaseBuffer",
                     rpc_release_buffer).disable_response();
-  rpc_server.define("SplitBuffers", rpc_split_buffers).disable_response();
-  rpc_server.define("MergeBuffers", rpc_merge_buffers).disable_response();
-  rpc_server.define("RemoteGet", rpc_map_get);
-  rpc_server.define("RemotePut", rpc_map_put).disable_response();
-  rpc_server.define("RemoteDelete", rpc_map_delete).disable_response();
-  rpc_server.define("RemoteAddBlobIdToBucket", rpc_add_blob).disable_response();
-  rpc_server.define("RemoteDestroyBucket",
+  rpc_server->define("SplitBuffers", rpc_split_buffers).disable_response();
+  rpc_server->define("MergeBuffers", rpc_merge_buffers).disable_response();
+  rpc_server->define("RemoteGet", rpc_map_get);
+  rpc_server->define("RemotePut", rpc_map_put).disable_response();
+  rpc_server->define("RemoteDelete", rpc_map_delete).disable_response();
+  rpc_server->define("RemoteAddBlobIdToBucket",
+                     rpc_add_blob).disable_response();
+  rpc_server->define("RemoteDestroyBucket",
                     rpc_destroy_bucket).disable_response();
-  rpc_server.define("RemoteRenameBucket", rpc_rename_bucket).disable_response();
-  rpc_server.define("RemoteDestroyBlob", rpc_destroy_blob).disable_response();
-  rpc_server.define("RemoteContainsBlob", rpc_contains_blob);
-  rpc_server.define("RemoteRemoveBlobFromBucketInfo",
+  rpc_server->define("RemoteRenameBucket",
+                     rpc_rename_bucket).disable_response();
+  rpc_server->define("RemoteDestroyBlob", rpc_destroy_blob).disable_response();
+  rpc_server->define("RemoteContainsBlob", rpc_contains_blob);
+  rpc_server->define("RemoteRemoveBlobFromBucketInfo",
                     rpc_remove_blob_from_bucket_info).disable_response();
-  rpc_server.define("RemoteGetBufferIdList", rpc_get_buffer_id_list);
-  rpc_server.define("RemoteFreeBufferIdList",
+  rpc_server->define("RemoteGetBufferIdList", rpc_get_buffer_id_list);
+  rpc_server->define("RemoteFreeBufferIdList",
                     rpc_free_buffer_id_list).disable_response();
-  rpc_server.define("RemoteIncrementRefcount",
+  rpc_server->define("RemoteIncrementRefcount",
                     rpc_increment_refcount).disable_response();
-  rpc_server.define("RemoteDecrementRefcount",
+  rpc_server->define("RemoteDecrementRefcount",
                     rpc_decrement_refcount).disable_response();
-  rpc_server.define("Finalize", rpc_finalize).disable_response();
+  rpc_server->define("Finalize", rpc_finalize).disable_response();
 
   // TODO(chogan): Currently the calling thread waits for finalize because
   // that's the way the tests are set up, but once the RPC server is started
   // from Hermes initialization the calling thread will need to continue
   // executing.
-  // rpc_server.wait_for_finalize();
+  // rpc_server->wait_for_finalize();
 }
 
-void *InitRpcContext(RpcContext *rpc, Arena *arena, u32 num_nodes, u32 node_id,
+void InitRpcContext(RpcContext *rpc, u32 num_nodes, u32 node_id,
                      Config *config) {
   rpc->num_nodes = num_nodes;
   rpc->node_id = node_id;
@@ -256,11 +283,18 @@ void *InitRpcContext(RpcContext *rpc, Arena *arena, u32 num_nodes, u32 node_id,
   rpc->state_size = sizeof(ThalliumState);
   rpc->port = config->rpc_port;
   CopyStringToCharArray(config->rpc_server_base_name, rpc->base_hostname);
-  rpc->first_host_number = config->rpc_host_number_range[0];
+  rpc->host_number_range[0] = config->rpc_host_number_range[0];
+  rpc->host_number_range[1] = config->rpc_host_number_range[1];
+}
 
+void *CreateRpcState(Arena *arena) {
   ThalliumState *result = PushClearedStruct<ThalliumState>(arena);
 
   return result;
+}
+
+void FinalizeRpcContext(RpcContext *rpc) {
+  delete ((ThalliumState *)rpc->state)->engine;
 }
 
 }  // namespace hermes

@@ -59,11 +59,14 @@ void Finalize(SharedMemoryContext *context, CommunicationContext *comm,
               bool is_application_core) {
   WorldBarrier(comm);
   if (is_application_core) {
+    if (comm->first_on_node) {
+      RpcCall<void>(rpc, comm->node_id, "Finalize");
+    }
     ReleaseSharedMemoryContext(context);
     HERMES_DEBUG_CLIENT_CLOSE();
   } else {
     if (comm->first_on_node) {
-      RpcCall<void>(rpc, comm->node_id, "Finalize");
+      FinalizeRpcContext(rpc);
     }
     UnmapSharedMemory(context);
     shm_unlink(shmem_name);

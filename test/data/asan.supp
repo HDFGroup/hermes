@@ -1,0 +1,4 @@
+# Ignore leaks from external libraries
+leak:libfabric.so
+leak:libabt.so
+leak:libmargo.so

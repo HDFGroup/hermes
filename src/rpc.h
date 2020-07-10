@@ -22,14 +22,15 @@ struct RpcContext {
   u32 node_id;
   u32 num_nodes;
   int port;
-  /** Convenient way of specifiying multiple hostnames if the pattern is
-   * predictable (i.e., if running on three nodes with names cluster-node-6,
-   * cluster-node-7, and cluster-node-8, the first_host_number would be 6 and
-   * Hermes can generate the other two). */
-  u32 first_host_number;
-  /** The host name without the host number. Allows programmatic
-   * construction of predictable host names like cluster-node-1,
-   * cluster-node-2, etc. without storing extra copies of the base hostname.*/
+  /** The first and last host numbers. This is a convenient way of specifiying
+   * multiple hostnames if the pattern is predictable (i.e., if running on three
+   * nodes with names cluster-node-6, cluster-node-7, ... to cluster-node-32,
+   * the host_number_range would be {6, 32} and Hermes can generate all
+   * names). */
+  u32 host_number_range[2];
+  /** The host name without the host number. Allows programmatic construction of
+   * predictable host names like cluster-node-1, cluster-node-2, etc. without
+   * storing extra copies of the base hostname.*/
   char base_hostname[kMaxServerNameSize];
 
   // TODO(chogan): Also allow reading hostnames from a file for heterogeneous or
@@ -40,8 +41,12 @@ struct RpcContext {
   StartFunc start_server;
 };
 
-void *InitRpcContext(RpcContext *rpc, Arena *arena, u32 num_nodes, u32 node_id,
-                     Config *config);
+void InitRpcContext(RpcContext *rpc, u32 num_nodes, u32 node_id,
+                    Config *config);
+void *CreateRpcState(Arena *arena);
+void FinalizeRpcContext(RpcContext *rpc);
+
+std::string GetHostNumberAsString(RpcContext *rpc, u32 node_id);
 
 }  // namespace hermes
 

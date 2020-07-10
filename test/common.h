@@ -145,9 +145,7 @@ SharedMemoryContext InitHermesCore(Config *config, CommunicationContext *comm,
     PushClearedStruct<MetadataManager>(&arenas[kArenaType_MetaData]);
   context.metadata_manager_offset = (u8 *)mdm - (u8 *)shmem_base;
 
-  // NOTE(chogan): Internal RPC state is stored in the Metadata Arena.
-  rpc->state = InitRpcContext(rpc, &arenas[kArenaType_MetaData],
-                              comm->num_nodes, comm->node_id, config);
+  rpc->state = CreateRpcState(&arenas[kArenaType_MetaData]);
   mdm->rpc_state_offset = (u8 *)rpc->state - shmem_base;
 
   InitMetadataManager(mdm, &arenas[kArenaType_MetaData], config, comm->node_id);
@@ -158,21 +156,12 @@ SharedMemoryContext InitHermesCore(Config *config, CommunicationContext *comm,
     (ptrdiff_t *)(shmem_base + sizeof(context.buffer_pool_offset));
   *metadata_manager_offset_location = context.metadata_manager_offset;
 
-  std::string host_number =
-    std::to_string(comm->node_id + rpc->first_host_number - 1);
-  if (config->rpc_host_number_range[0] == 0 &&
-      config->rpc_host_number_range[1] == 0) {
-    host_number = "";
-  }
-
+  std::string host_number = GetHostNumberAsString(rpc, rpc->node_id);
   std::string rpc_server_addr = (config->rpc_protocol + "://" +
                                  config->rpc_server_base_name + host_number +
                                  ":" + std::to_string(config->rpc_port));
 
-  std::thread rpc_thread(rpc->start_server, &context, rpc,
-                         rpc_server_addr.c_str(), num_rpc_threads);
-  // rpc->start_server(&context, rpc, rpc_server_addr.c_str(), num_rpc_threads);
-  rpc_thread.detach();
+  rpc->start_server(&context, rpc, rpc_server_addr.c_str(), num_rpc_threads);
 
   return context;
 }
@@ -195,6 +184,8 @@ BootstrapSharedMemory(Arena *arenas, Config *config, CommunicationContext *comm,
 
   GrowArena(&arenas[kArenaType_Transient], trans_arena_size);
   comm->state = arenas[kArenaType_Transient].base;
+
+  InitRpcContext(rpc, comm->num_nodes, comm->node_id, config);
 
   SharedMemoryContext result = {};
   if (comm->proc_kind == ProcessKind::kHermes && comm->first_on_node) {
@@ -276,9 +267,10 @@ std::shared_ptr<api::Hermes> InitHermes(const char *config_file=NULL) {
   Arena arenas[kArenaType_Count] = {};
   CommunicationContext comm = {};
   RpcContext rpc = {};
-  // TODO(chogan): start RPC server by default, pass num_rpc_threads
+  // TODO(chogan): Should num_rpc_threads come from Config?
+  int num_rpc_threads = 1;
   SharedMemoryContext context =
-    BootstrapSharedMemory(arenas, &config, &comm, &rpc, 0, false);
+    BootstrapSharedMemory(arenas, &config, &comm, &rpc, num_rpc_threads, false);
 
   WorldBarrier(&comm);
   std::shared_ptr<api::Hermes> result = nullptr;

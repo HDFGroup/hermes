@@ -396,9 +396,10 @@ Token *ParseSizetList(Token *tok, size_t *out, int n) {
 int ParseInt(Token **tok) {
   long result = 0;
   if (*tok && IsNumber(*tok)) {
+    errno = 0;
     result = strtol((*tok)->data, NULL, 0);
-    if (errno == ERANGE || result <= 0 || result >= INT_MAX) {
-      PrintExpectedAndFail("an integer between 1 and INT_MAX");
+    if (errno == ERANGE || (result == 0 && errno != 0) || result >= INT_MAX) {
+      PrintExpectedAndFail("an integer between 0 and INT_MAX");
     }
     *tok = (*tok)->next;
   } else {
