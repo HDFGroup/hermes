@@ -646,11 +646,19 @@ void ParseTokens(TokenList *tokens, Config *config) {
       case ConfigVariable_Capacities: {
         RequireNumTiers(config);
         tok = ParseSizetList(tok, config->capacities, config->num_tiers);
+        // NOTE(chogan): Convert from MB to bytes
+        for (int i = 0; i < config->num_tiers; ++i) {
+          config->capacities[i] *= 1024 * 1024;
+        }
         break;
       }
       case ConfigVariable_BlockSizes: {
         RequireNumTiers(config);
         tok = ParseIntList(tok, config->block_sizes, config->num_tiers);
+        // NOTE(chogan): Convert from KB to bytes
+        for (int i = 0; i < config->num_tiers; ++i) {
+          config->block_sizes[i] *= 1024;
+        }
         break;
       }
       case ConfigVariable_NumSlabs: {

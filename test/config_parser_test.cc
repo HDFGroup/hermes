@@ -25,8 +25,8 @@ int main(int argc, char **argv) {
 
   Assert(config.num_tiers == 4);
   for (int i = 0; i < config.num_tiers; ++i) {
-    Assert(config.capacities[i] == 50);
-    Assert(config.block_sizes[i] == 4);
+    Assert(config.capacities[i] == MEGABYTES(50));
+    Assert(config.block_sizes[i] == KILOBYTES(4));
     Assert(config.num_slabs[i] == 4);
 
     Assert(config.slab_unit_sizes[i][0] == 1);
