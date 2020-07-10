@@ -69,3 +69,9 @@ add_test(NAME TestMemoryManagement COMMAND mem)
 add_executable(stb_map stb_map_test.cc)
 target_link_libraries(stb_map hermes ${LIBRT} MPI::MPI_CXX)
 add_test(NAME TestSTBMapWithHeap COMMAND stb_map)
+
+#------------------------------------------------------------------------------
+# Ares Cluster tests
+#------------------------------------------------------------------------------
+add_executable(ares_test cluster_experiments.cc)
+target_link_libraries(ares_test hermes thallium MPI::MPI_CXX)
