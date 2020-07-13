@@ -50,6 +50,8 @@ enum ConfigVariable {
   ConfigVariable_TransferWindowArenaPercentage,
   ConfigVariable_TransientArenaPercentage,
   ConfigVariable_MountPoints,
+  ConfigVariable_MaxBucketsPerNode,
+  ConfigVariable_MaxVBucketsPerNode,
   ConfigVariable_RpcServerBaseName,
   ConfigVariable_BufferPoolShmemName,
   ConfigVariable_RpcProtocol,
@@ -75,6 +77,8 @@ static const char *kConfigVariableStrings[ConfigVariable_Count] = {
   "transfer_window_arena_percentage",
   "transient_arena_percentage",
   "mount_points",
+  "max_buckets_per_node",
+  "max_vbuckets_per_node",
   "rpc_server_base_name",
   "buffer_pool_shmem_name",
   "rpc_protocol",
@@ -713,6 +717,14 @@ void ParseTokens(TokenList *tokens, Config *config) {
       case ConfigVariable_MountPoints: {
         RequireNumTiers(config);
         tok = ParseStringList(tok, config->mount_points, config->num_tiers);
+        break;
+      }
+      case ConfigVariable_MaxBucketsPerNode: {
+        config->max_buckets_per_node = ParseInt(&tok);
+        break;
+      }
+      case ConfigVariable_MaxVBucketsPerNode: {
+        config->max_vbuckets_per_node = ParseInt(&tok);
         break;
       }
       case ConfigVariable_RpcServerBaseName: {
