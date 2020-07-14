@@ -81,7 +81,7 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
                             const char *addr, i32 num_rpc_threads) {
   ThalliumState *state = (ThalliumState *)rpc->state;
   tl::engine *rpc_server = new tl::engine(addr, THALLIUM_SERVER_MODE, true,
-                                         num_rpc_threads);
+                                          num_rpc_threads);
   state->engine = rpc_server;
 
   std::string rpc_server_name = rpc_server->self();
@@ -257,8 +257,10 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
                      rpc_rename_bucket).disable_response();
   rpc_server->define("RemoteDestroyBlob", rpc_destroy_blob).disable_response();
   rpc_server->define("RemoteContainsBlob", rpc_contains_blob);
+  rpc_server->define("RemoteGetNextFreeBucketId", rpc_get_next_free_bucket_id);
   rpc_server->define("RemoteRemoveBlobFromBucketInfo",
                     rpc_remove_blob_from_bucket_info).disable_response();
+  rpc_server->define("RemoteAllocateBufferIdList", rpc_allocate_buffer_id_list);
   rpc_server->define("RemoteGetBufferIdList", rpc_get_buffer_id_list);
   rpc_server->define("RemoteFreeBufferIdList",
                     rpc_free_buffer_id_list).disable_response();
