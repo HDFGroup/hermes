@@ -127,6 +127,35 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
       MergeRamBufferFreeList(context, slab_index);
     };
 
+  function<void(const request&, BufferID, std::vector<u8>, size_t, size_t)>
+    rpc_write_buffer_by_id = [context](const request &req, BufferID id,
+                                       std::vector<u8> data,
+                                       size_t bytes_left_to_write,
+                                       size_t offset) {
+
+      Blob blob = {};
+      blob.size = data.size();
+      blob.data = data.data();
+      size_t result = LocalWriteBufferById(context, id, blob,
+                                           bytes_left_to_write, offset);
+
+      req.respond(result);
+
+    };
+
+  function<void(const request&, BufferID, size_t)> rpc_read_buffer_by_id =
+    [context](const request &req, BufferID id, size_t size) {
+      std::vector<u8> result(size);
+      Blob blob = {};
+      blob.size = size;
+      blob.data = result.data();
+      [[maybe_unused]] size_t bytes_read = LocalReadBufferById(context, id,
+                                                               &blob, 0);
+      assert(bytes_read == size);
+
+      req.respond(result);
+    };
+
   // Metadata requests
 
   function<void(const request&, string, MapType)> rpc_map_get =
@@ -246,6 +275,8 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
                     rpc_release_buffer).disable_response();
   rpc_server->define("SplitBuffers", rpc_split_buffers).disable_response();
   rpc_server->define("MergeBuffers", rpc_merge_buffers).disable_response();
+  rpc_server->define("RemoteReadBufferById", rpc_read_buffer_by_id);
+  rpc_server->define("RemoteWriteBufferById", rpc_write_buffer_by_id);
   rpc_server->define("RemoteGet", rpc_map_get);
   rpc_server->define("RemotePut", rpc_map_put).disable_response();
   rpc_server->define("RemoteDelete", rpc_map_delete).disable_response();

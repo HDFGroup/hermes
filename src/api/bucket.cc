@@ -55,7 +55,7 @@ Status Bucket::Put(const std::string &name, const u8 *data, size_t size,
     hermes::Blob blob = {};
     blob.data = (u8 *)data;
     blob.size = size;
-    WriteBlobToBuffers(&hermes_->context_, blob, buffer_ids);
+    WriteBlobToBuffers(&hermes_->context_, &hermes_->rpc_, blob, buffer_ids);
 
     // NOTE(chogan): Update all metadata associated with this Put
     AttachBlobToBucket(&hermes_->context_, &hermes_->rpc_, name.c_str(), id_,

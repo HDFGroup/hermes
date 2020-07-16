@@ -160,7 +160,9 @@ void TestFileBuffering(SharedMemoryContext *context, int rank) {
         buffer_ids = GetBuffers(context, schema);
       }
 
-      WriteBlobToBuffers(context, blob, buffer_ids);
+      // TEMP(chogan):
+      RpcContext rpc = {};
+      WriteBlobToBuffers(context, &rpc, blob, buffer_ids);
 
       std::vector<u8> data(blob.size);
       Blob result = {};

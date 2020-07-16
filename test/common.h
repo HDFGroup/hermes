@@ -289,6 +289,9 @@ std::shared_ptr<api::Hermes> InitHermes(const char *config_file=NULL) {
   result->context_ = context;
   result->rpc_ = rpc;
 
+  // NOTE(chogan): The RPC servers have to be started here because they need to
+  // save a reference to the context and rpc instances that are members of the
+  // Hermes instance.
   if (comm.proc_kind == ProcessKind::kHermes) {
     std::string host_number = GetHostNumberAsString(&result->rpc_,
                                                     result->rpc_.node_id);

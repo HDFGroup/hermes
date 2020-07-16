@@ -359,7 +359,8 @@ struct Blob {
  * @param blob The data to write.
  * @param buffer_ids The collection of BufferIDs that should buffer the blob.
  */
-void WriteBlobToBuffers(SharedMemoryContext *context, const Blob &blob,
+void WriteBlobToBuffers(SharedMemoryContext *context, RpcContext *rpc,
+                        const Blob &blob,
                         const std::vector<BufferID> &buffer_ids);
 
 /**
@@ -379,6 +380,11 @@ void WriteBlobToBuffers(SharedMemoryContext *context, const Blob &blob,
 size_t ReadBlobFromBuffers(SharedMemoryContext *context, RpcContext *rpc,
                            Blob *blob, BufferIdArray *buffer_ids);
 
+size_t LocalWriteBufferById(SharedMemoryContext *context, BufferID id,
+                            const Blob &blob, size_t bytes_left_to_write,
+                            size_t offset);
+size_t LocalReadBufferById(SharedMemoryContext *context, BufferID id,
+                           Blob *blob, size_t offset);
 }  // namespace hermes
 
 #endif  // HERMES_BUFFER_POOL_H_
