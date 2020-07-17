@@ -64,7 +64,9 @@ void Finalize(SharedMemoryContext *context, CommunicationContext *comm,
     }
     ReleaseSharedMemoryContext(context);
     HERMES_DEBUG_CLIENT_CLOSE();
-  } else {
+  }
+  WorldBarrier(comm);
+  if (!is_application_core) {
     if (comm->first_on_node) {
       FinalizeRpcContext(rpc);
     }
