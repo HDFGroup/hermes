@@ -95,6 +95,14 @@ Heap *GetIdHeap(MetadataManager *mdm) {
   return result;
 }
 
+char *GetKey(MetadataManager *mdm, IdMap *map, u32 index) {
+  u32 key_offset = (u64)map[index].key;
+  Heap *map_heap = GetMapHeap(mdm);
+  char *result = (char *)HeapOffsetToPtr(map_heap, key_offset);
+
+  return result;
+}
+
 void CheckHeapOverlap(MetadataManager *mdm) {
   Heap *map_heap = GetMapHeap(mdm);
   Heap *id_heap = GetIdHeap(mdm);
@@ -591,14 +599,41 @@ void FreeBufferIdList(SharedMemoryContext *context, RpcContext *rpc,
   }
 }
 
-void LocalDestroyBlob(SharedMemoryContext *context, RpcContext *rpc,
-                      const char *blob_name, BlobID blob_id) {
+void LocalDestroyBlobByName(SharedMemoryContext *context, RpcContext *rpc,
+                            const char *blob_name, BlobID blob_id) {
+
   std::vector<BufferID> buffer_ids = GetBufferIdList(context, rpc, blob_id);
   ReleaseBuffers(context, rpc, buffer_ids);
   FreeBufferIdList(context, rpc, blob_id);
 
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   DeleteId(mdm, rpc, blob_name, MapType::kBlob);
+}
+
+void LocalDestroyBlobById(SharedMemoryContext *context, RpcContext *rpc,
+                          BlobID blob_id) {
+  std::vector<BufferID> buffer_ids = GetBufferIdList(context, rpc, blob_id);
+  ReleaseBuffers(context, rpc, buffer_ids);
+  FreeBufferIdList(context, rpc, blob_id);
+
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  IdMap *blob_map = GetBlobMap(mdm);
+  char *blob_name = 0;
+
+  // TODO(chogan): @optimization This could be more efficient if necessary
+  for (int i = 0; i < shlen(blob_map); ++i) {
+    if (blob_map[i].value == blob_id.as_int) {
+      blob_name = GetKey(mdm, blob_map, i);
+      break;
+    }
+  }
+  if (blob_name) {
+    DeleteId(mdm, rpc, blob_name, MapType::kBlob);
+  } else {
+    // TODO(chogan): @errorhandling
+    DLOG(INFO) << "Expected to find blob_id " << blob_id.as_int
+               << " in Map but didn't" << std::endl;
+  }
 }
 
 void LocalRemoveBlobFromBucketInfo(SharedMemoryContext *context,
@@ -630,17 +665,17 @@ void RemoveBlobFromBucketInfo(SharedMemoryContext *context, RpcContext *rpc,
   }
 }
 
-void DestroyBlob(SharedMemoryContext *context, RpcContext *rpc,
-                 BucketID bucket_id, const std::string &blob_name) {
+void DestroyBlobByName(SharedMemoryContext *context, RpcContext *rpc,
+                       BucketID bucket_id, const std::string &blob_name) {
   BlobID blob_id = GetBlobIdByName(context, rpc, blob_name.c_str());
 
   u32 blob_id_target_node = blob_id.bits.node_id;
 
   if (blob_id_target_node == rpc->node_id) {
-    LocalDestroyBlob(context, rpc, blob_name.c_str(), blob_id);
+    LocalDestroyBlobByName(context, rpc, blob_name.c_str(), blob_id);
   } else {
-    RpcCall<void>(rpc, blob_id_target_node, "RemoteDestroyBlob", blob_name,
-                  blob_id);
+    RpcCall<void>(rpc, blob_id_target_node, "RemoteDestroyBlobByName",
+                  blob_name, blob_id);
   }
 
   RemoveBlobFromBucketInfo(context, rpc, bucket_id, blob_id);
@@ -690,12 +725,13 @@ bool ContainsBlob(SharedMemoryContext *context, RpcContext *rpc,
   return result;
 }
 
-char *GetKey(MetadataManager *mdm, IdMap *map, u32 index) {
-  u32 key_offset = (u64)map[index].key;
-  Heap *map_heap = GetMapHeap(mdm);
-  char *result = (char *)HeapOffsetToPtr(map_heap, key_offset);
-
-  return result;
+void DestroyBlobById(SharedMemoryContext *context, RpcContext *rpc, BlobID id) {
+  u32 target_node = id.bits.node_id;
+  if (target_node == rpc->node_id) {
+    LocalDestroyBlobById(context, rpc, id);
+  } else {
+    RpcCall<void>(rpc, target_node, "RemoteDestroyBlobById", id);
+  }
 }
 
 void LocalDestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
@@ -705,28 +741,14 @@ void LocalDestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
   Heap *id_heap = GetIdHeap(mdm);
   BlobID *blobs = (BlobID *)HeapOffsetToPtr(id_heap, info->blobs.head_offset);
 
-  // TODO(chogan): Lock granularity can probably be relaxed if this is slow
+  // TODO(chogan): @optimization Lock granularity can probably be relaxed if
+  // this is slow
   BeginTicketMutex(&mdm->bucket_mutex);
   int ref_count = info->ref_count.load();
   if (ref_count == 1) {
-    IdMap *blob_map = GetBlobMap(mdm);
     for (u32 i = 0; i < info->blobs.length; ++i) {
-      BlobID *blob_id = blobs + i;
-      char *blob_name = 0;
-      // TODO(chogan): This could be more efficient if necessary
-      for (int j = 0; j < shlen(blob_map); ++j) {
-        if (blob_map[j].value == (*blob_id).as_int) {
-          blob_name = GetKey(mdm, blob_map, j);
-          break;
-        }
-      }
-      if (blob_name) {
-        LocalDestroyBlob(context, rpc, blob_name, *blob_id);
-      } else {
-        // TODO(chogan): @errorhandling
-        DLOG(INFO) << "Expected to find blob_id " << (*blob_id).as_int
-                   << " in Map but didn't" << std::endl;
-      }
+      BlobID blob_id = *(blobs + i);
+      DestroyBlobById(context, rpc, blob_id);
     }
 
     // Delete BlobId list
@@ -749,8 +771,6 @@ void LocalDestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
     LocalDelete(mdm, bucket_name, MapType::kBucket);
   }
   EndTicketMutex(&mdm->bucket_mutex);
-
-  CheckHeapOverlap(mdm);
 }
 
 void DestroyBucket(SharedMemoryContext *context, RpcContext *rpc,

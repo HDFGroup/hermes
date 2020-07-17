@@ -157,8 +157,8 @@ void DestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
 /**
  *
  */
-void DestroyBlob(SharedMemoryContext *context, RpcContext *rpc,
-                 BucketID bucket_id, const std::string &blob_name);
+void DestroyBlobByName(SharedMemoryContext *context, RpcContext *rpc,
+                       BucketID bucket_id, const std::string &blob_name);
 
 /**
  *
@@ -222,8 +222,10 @@ std::vector<BufferID> LocalGetBufferIdList(MetadataManager *mdm,
 void LocalFreeBufferIdList(SharedMemoryContext *context, BlobID blob_id);
 void LocalDestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
                         const char *bucket_name, BucketID bucket_id);
-void LocalDestroyBlob(SharedMemoryContext *context, RpcContext *rpc,
-                      const char *blob_name, BlobID blob_id);
+void LocalDestroyBlobById(SharedMemoryContext *context, RpcContext *rpc,
+                          BlobID blob_id);
+void LocalDestroyBlobByName(SharedMemoryContext *context, RpcContext *rpc,
+                            const char *blob_name, BlobID blob_id);
 BucketID LocalGetNextFreeBucketId(SharedMemoryContext *context, RpcContext *rpc,
                                   const std::string &name);
 u32 LocalAllocateBufferIdList(MetadataManager *mdm,

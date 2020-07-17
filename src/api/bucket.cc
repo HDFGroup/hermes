@@ -110,7 +110,7 @@ Status Bucket::DeleteBlob(const std::string &name, Context &ctx) {
   Status ret = 0;
 
   LOG(INFO) << "Deleting Blob " << name << " from bucket " << name_ << '\n';
-  DestroyBlob(&hermes_->context_, &hermes_->rpc_, id_, name);
+  DestroyBlobByName(&hermes_->context_, &hermes_->rpc_, id_, name);
 
   return ret;
 }
