@@ -79,7 +79,7 @@ size_t Bucket::Get(const std::string &name, Blob& user_blob, Context &ctx) {
     if (user_blob.size() == 0) {
       LOG(INFO) << "Getting Blob " << name << " size from bucket "
                 << name_ << '\n';
-      ret = GetBlobSize(&hermes_->context_, &hermes_->comm_, &buffer_ids);
+      ret = GetBlobSize(&hermes_->context_, &hermes_->rpc_, &buffer_ids);
     } else {
       LOG(INFO) << "Getting Blob " << name << " from bucket " << name_ << '\n';
       hermes::Blob blob = {};

@@ -224,7 +224,7 @@ struct BufferIdArray;
 /**
  *
  */
-size_t GetBlobSize(SharedMemoryContext *context, CommunicationContext *comm,
+size_t GetBlobSize(SharedMemoryContext *context, RpcContext *rpc,
                    BufferIdArray *buffer_ids);
 
 /**

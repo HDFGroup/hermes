@@ -341,7 +341,7 @@ void ReleaseBuffer(SharedMemoryContext *context, RpcContext *rpc,
   if (target_node == rpc->node_id) {
     LocalReleaseBuffer(context, buffer_id);
   } else {
-    RpcCall<void>(rpc, target_node, "ReleaseBuffer", buffer_id);
+    RpcCall<void>(rpc, target_node, "RemoteReleaseBuffer", buffer_id);
   }
 }
 
@@ -427,17 +427,31 @@ std::vector<BufferID> GetBuffers(SharedMemoryContext *context,
   return result;
 }
 
-size_t GetBlobSize(SharedMemoryContext *context, CommunicationContext *comm,
+u32 LocalGetBufferSize(SharedMemoryContext *context, BufferID id) {
+  BufferHeader *header = GetHeaderByBufferId(context, id);
+  u32 result = header->used;
+
+  return result;
+}
+
+u32 GetBufferSize(SharedMemoryContext *context, RpcContext *rpc, BufferID id) {
+  u32 result = 0;
+  if (BufferIsRemote(rpc, id)) {
+    result = RpcCall<u32>(rpc, id.bits.node_id, "RemoteGetBufferSize", id);
+  } else {
+    result = LocalGetBufferSize(context, id);
+  }
+
+  return result;
+}
+
+size_t GetBlobSize(SharedMemoryContext *context, RpcContext *rpc,
                    BufferIdArray *buffer_ids) {
   size_t result = 0;
+  // TODO(chogan): @optimization Combine all ids on same node into 1 RPC
   for (u32 i = 0; i < buffer_ids->length; ++i) {
-    if (BufferIsRemote(comm, buffer_ids->ids[i])) {
-      // TODO(chogan):
-      // RpcCall(rpc, buffer_ids->ids[i].node_id, ...);
-    } else {
-      BufferHeader *header = GetHeaderByBufferId(context, buffer_ids->ids[i]);
-      result += header->used;
-    }
+    u32 size = GetBufferSize(context, rpc, buffer_ids->ids[i]);
+    result += size;
   }
 
   return result;

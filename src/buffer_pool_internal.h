@@ -200,6 +200,10 @@ i32 GetSlabUnitSize(SharedMemoryContext *context, TierID tier_id,
 /**
  *
  */
+u32 LocalGetBufferSize(SharedMemoryContext *context, BufferID id);
+/**
+ *
+ */
 i32 GetSlabBufferSize(SharedMemoryContext *context, TierID tier_id,
                       int slab_index);
 

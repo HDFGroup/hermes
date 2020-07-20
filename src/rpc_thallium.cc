@@ -137,6 +137,13 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
       MergeRamBufferFreeList(context, slab_index);
     };
 
+  function<void(const request&, BufferID)> rpc_get_buffer_size =
+    [context](const request &req, BufferID id) {
+      u32 result = LocalGetBufferSize(context, id);
+
+      req.respond(result);
+    };
+
   function<void(const request&, BufferID, std::vector<u8>, size_t, size_t)>
     rpc_write_buffer_by_id = [context](const request &req, BufferID id,
                                        std::vector<u8> data,
@@ -293,8 +300,11 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
                     rpc_release_buffer).disable_response();
   rpc_server->define("SplitBuffers", rpc_split_buffers).disable_response();
   rpc_server->define("MergeBuffers", rpc_merge_buffers).disable_response();
+  rpc_server->define("RemoteGetBufferSize", rpc_get_buffer_size);
+
   rpc_server->define("RemoteReadBufferById", rpc_read_buffer_by_id);
   rpc_server->define("RemoteWriteBufferById", rpc_write_buffer_by_id);
+
   rpc_server->define("RemoteGet", rpc_map_get);
   rpc_server->define("RemotePut", rpc_map_put).disable_response();
   rpc_server->define("RemoteDelete", rpc_map_delete).disable_response();
@@ -304,8 +314,10 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
                     rpc_destroy_bucket).disable_response();
   rpc_server->define("RemoteRenameBucket",
                      rpc_rename_bucket).disable_response();
-  rpc_server->define("RemoteDestroyBlobByName", rpc_destroy_blob_by_name).disable_response();
-  rpc_server->define("RemoteDestroyBlobById", rpc_destroy_blob_by_id).disable_response();
+  rpc_server->define("RemoteDestroyBlobByName",
+                     rpc_destroy_blob_by_name).disable_response();
+  rpc_server->define("RemoteDestroyBlobById",
+                     rpc_destroy_blob_by_id).disable_response();
   rpc_server->define("RemoteContainsBlob", rpc_contains_blob);
   rpc_server->define("RemoteGetNextFreeBucketId", rpc_get_next_free_bucket_id);
   rpc_server->define("RemoteRemoveBlobFromBucketInfo",
@@ -318,6 +330,7 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
                     rpc_increment_refcount).disable_response();
   rpc_server->define("RemoteDecrementRefcount",
                     rpc_decrement_refcount).disable_response();
+
   rpc_server->define("Finalize", rpc_finalize).disable_response();
 
   // TODO(chogan): Currently the calling thread waits for finalize because
