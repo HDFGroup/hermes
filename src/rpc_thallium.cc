@@ -19,9 +19,7 @@ namespace hermes {
 struct ThalliumState {
   char server_name_prefix[16];
   char server_name_postfix[8];
-  ABT_xstream execution_stream;
-  ABT_thread rpc_thread;
-  ABT_pool pool;
+  tl::engine *engine;
 };
 
 struct ThalliumRpcArgs {
@@ -88,18 +86,15 @@ void CopyStringToCharArray(const std::string &src, char *dest) {
   dest[src_size] = '\0';
 }
 
-void ThalliumStartRpcServerThread(void *args) {
-  ThalliumRpcArgs *tl_args = (ThalliumRpcArgs *)args;
-  SharedMemoryContext *context = tl_args->context;
-  RpcContext *rpc = tl_args->rpc;
-  const char *addr = tl_args->addr;
-  int num_rpc_threads = tl_args->num_rpc_threads;
-
+void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
+                            const char *addr, i32 num_rpc_threads) {
   ThalliumState *state = (ThalliumState *)rpc->state;
-  tl::engine rpc_server(addr, THALLIUM_SERVER_MODE, true, num_rpc_threads);
-  // state->engine = rpc_server;
+  state->engine = new tl::engine(addr, THALLIUM_SERVER_MODE, true,
+                                 num_rpc_threads);
 
-  std::string rpc_server_name = rpc_server.self();
+  tl::engine *rpc_server = state->engine;
+
+  std::string rpc_server_name = rpc_server->self();
   LOG(INFO) << "Serving at " << rpc_server_name << " with "
             << num_rpc_threads << " RPC threads" << std::endl;
 
@@ -290,82 +285,46 @@ void ThalliumStartRpcServerThread(void *args) {
   function<void(const request&)> rpc_finalize =
     [&rpc_server](const request &req) {
       (void)req;
-      rpc_server.finalize();
+      rpc_server->finalize();
     };
 
-  rpc_server.define("GetBuffers", rpc_get_buffers);
-  rpc_server.define("RemoteReleaseBuffer",
+  rpc_server->define("GetBuffers", rpc_get_buffers);
+  rpc_server->define("RemoteReleaseBuffer",
                     rpc_release_buffer).disable_response();
-  rpc_server.define("SplitBuffers", rpc_split_buffers).disable_response();
-  rpc_server.define("MergeBuffers", rpc_merge_buffers).disable_response();
-  rpc_server.define("RemoteReadBufferById", rpc_read_buffer_by_id);
-  rpc_server.define("RemoteWriteBufferById", rpc_write_buffer_by_id);
-  rpc_server.define("RemoteGet", rpc_map_get);
-  rpc_server.define("RemotePut", rpc_map_put).disable_response();
-  rpc_server.define("RemoteDelete", rpc_map_delete).disable_response();
-  rpc_server.define("RemoteAddBlobIdToBucket",
+  rpc_server->define("SplitBuffers", rpc_split_buffers).disable_response();
+  rpc_server->define("MergeBuffers", rpc_merge_buffers).disable_response();
+  rpc_server->define("RemoteReadBufferById", rpc_read_buffer_by_id);
+  rpc_server->define("RemoteWriteBufferById", rpc_write_buffer_by_id);
+  rpc_server->define("RemoteGet", rpc_map_get);
+  rpc_server->define("RemotePut", rpc_map_put).disable_response();
+  rpc_server->define("RemoteDelete", rpc_map_delete).disable_response();
+  rpc_server->define("RemoteAddBlobIdToBucket",
                      rpc_add_blob).disable_response();
-  rpc_server.define("RemoteDestroyBucket",
+  rpc_server->define("RemoteDestroyBucket",
                     rpc_destroy_bucket).disable_response();
-  rpc_server.define("RemoteRenameBucket",
+  rpc_server->define("RemoteRenameBucket",
                      rpc_rename_bucket).disable_response();
-  rpc_server.define("RemoteDestroyBlobByName", rpc_destroy_blob_by_name).disable_response();
-  rpc_server.define("RemoteDestroyBlobById", rpc_destroy_blob_by_id).disable_response();
-  rpc_server.define("RemoteContainsBlob", rpc_contains_blob);
-  rpc_server.define("RemoteGetNextFreeBucketId", rpc_get_next_free_bucket_id);
-  rpc_server.define("RemoteRemoveBlobFromBucketInfo",
+  rpc_server->define("RemoteDestroyBlobByName", rpc_destroy_blob_by_name).disable_response();
+  rpc_server->define("RemoteDestroyBlobById", rpc_destroy_blob_by_id).disable_response();
+  rpc_server->define("RemoteContainsBlob", rpc_contains_blob);
+  rpc_server->define("RemoteGetNextFreeBucketId", rpc_get_next_free_bucket_id);
+  rpc_server->define("RemoteRemoveBlobFromBucketInfo",
                     rpc_remove_blob_from_bucket_info).disable_response();
-  rpc_server.define("RemoteAllocateBufferIdList", rpc_allocate_buffer_id_list);
-  rpc_server.define("RemoteGetBufferIdList", rpc_get_buffer_id_list);
-  rpc_server.define("RemoteFreeBufferIdList",
+  rpc_server->define("RemoteAllocateBufferIdList", rpc_allocate_buffer_id_list);
+  rpc_server->define("RemoteGetBufferIdList", rpc_get_buffer_id_list);
+  rpc_server->define("RemoteFreeBufferIdList",
                     rpc_free_buffer_id_list).disable_response();
-  rpc_server.define("RemoteIncrementRefcount",
+  rpc_server->define("RemoteIncrementRefcount",
                     rpc_increment_refcount).disable_response();
-  rpc_server.define("RemoteDecrementRefcount",
+  rpc_server->define("RemoteDecrementRefcount",
                     rpc_decrement_refcount).disable_response();
-  rpc_server.define("Finalize", rpc_finalize).disable_response();
-
-  ABT_cond_signal(tl_args->cond);
+  rpc_server->define("Finalize", rpc_finalize).disable_response();
 
   // TODO(chogan): Currently the calling thread waits for finalize because
   // that's the way the tests are set up, but once the RPC server is started
   // from Hermes initialization the calling thread will need to continue
   // executing.
-  rpc_server.wait_for_finalize();
-}
-
-void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
-                            const char *addr, i32 num_rpc_threads) {
-  ThalliumState *state = (ThalliumState *)rpc->state;
-  CHECK_EQ(ABT_init(0, 0), ABT_SUCCESS) << "Failed to initialize Argobots\n";
-
-  CHECK_EQ(ABT_xstream_create(ABT_SCHED_NULL, &state->execution_stream),
-           ABT_SUCCESS) << "ABT_xstream_create failed\n";
-
-  ThalliumRpcArgs thread_args = {};
-  thread_args.context = context;
-  thread_args.rpc = rpc;
-  thread_args.addr = addr;
-  thread_args.num_rpc_threads = num_rpc_threads;
-  ABT_cond_create(&thread_args.cond);
-
-  CHECK_EQ(ABT_xstream_get_main_pools(state->execution_stream, 1, &state->pool),
-           ABT_SUCCESS) << "ABT_xstream_get_main_pools failed\n";
-
-  int result =
-    ABT_thread_create(state->pool, ThalliumStartRpcServerThread, &thread_args,
-                      ABT_THREAD_ATTR_NULL, &state->rpc_thread);
-  CHECK_EQ(result, ABT_SUCCESS) << "ABT_thread_create_on_xstream failed\n";
-
-  // TODO(chogan): @errorhandling
-  ABT_mutex mutex;
-  ABT_mutex_create(&mutex);
-  ABT_mutex_lock(mutex);
-  ABT_cond_wait(thread_args.cond, mutex);
-  ABT_mutex_unlock(mutex);
-
-  ABT_cond_free(&thread_args.cond);
-  ABT_mutex_free(&mutex);
+  // rpc_server->wait_for_finalize();
 }
 
 void InitRpcContext(RpcContext *rpc, u32 num_nodes, u32 node_id,
@@ -388,15 +347,7 @@ void *CreateRpcState(Arena *arena) {
 
 void FinalizeRpcContext(RpcContext *rpc) {
   ThalliumState *state = (ThalliumState *)rpc->state;
-
-  ABT_thread_join(state->rpc_thread);
-  ABT_xstream_join(state->execution_stream);
-
-  CHECK_EQ(ABT_thread_free(&state->rpc_thread),
-           ABT_SUCCESS) << "ABT_thread_free failed\n";
-  CHECK_EQ(ABT_xstream_free(&state->execution_stream),
-           ABT_SUCCESS) << "ABT_xstream_free failed\n";
-  CHECK_EQ(ABT_finalize(), ABT_SUCCESS) << "Failed to finalize Argobots\n";
+  delete state->engine;
 }
 
 }  // namespace hermes
