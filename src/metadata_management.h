@@ -13,10 +13,10 @@ namespace hermes {
 
 struct RpcContext;
 
-enum class MapType {
-  kBucket,
-  kVBucket,
-  kBlob,
+enum MapType {
+  kMapType_Bucket,
+  kMapType_VBucket,
+  kMapType_Blob,
 };
 
 union BucketID {
