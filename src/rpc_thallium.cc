@@ -350,9 +350,10 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
     };
 
   function<void(const request&)> rpc_finalize =
-    [&rpc_server](const request &req) {
+    [rpc](const request &req) {
       (void)req;
-      rpc_server->finalize();
+      ThalliumState *state = (ThalliumState *)rpc->state;
+      state->engine->finalize();
     };
 
   rpc_server->define("GetBuffers", rpc_get_buffers);
