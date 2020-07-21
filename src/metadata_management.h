@@ -248,45 +248,6 @@ void LocalDelete(MetadataManager *mdm, const char *key, MapType map_type);
 Heap *GetIdHeap(MetadataManager *mdm);
 Heap *GetMapHeap(MetadataManager *mdm);
 
-/**
- *  Lets Thallium know how to serialize a BucketID.
- *
- * This function is called implicitly by Thallium.
- *
- * @param ar An archive provided by Thallium.
- * @param bucket_id The BucketID to serialize.
- */
-template<typename A>
-void serialize(A &ar, BucketID &bucket_id) {
-  ar & bucket_id.as_int;
-}
-
-/**
- *  Lets Thallium know how to serialize a BlobID.
- *
- * This function is called implicitly by Thallium.
- *
- * @param ar An archive provided by Thallium.
- * @param blob_id The BlobID to serialize.
- */
-template<typename A>
-void serialize(A &ar, BlobID &blob_id) {
-  ar & blob_id.as_int;
-}
-
-/**
- *  Lets Thallium know how to serialize a MapType.
- *
- * This function is called implicitly by Thallium.
- *
- * @param ar An archive provided by Thallium.
- * @param map_type The MapType to serialize.
- */
-template<typename A>
-void serialize(A &ar, MapType map_type) {
-  ar & (int)map_type;
-}
-
 } // namespace hermes
 
 #endif  // HERMES_METADATA_MANAGEMENT_H_

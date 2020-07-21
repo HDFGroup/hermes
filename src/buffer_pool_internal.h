@@ -222,18 +222,5 @@ void ParseConfig(Arena *arena, const char *path, Config *config);
  */
 u8 *InitSharedMemory(const char *shmem_name, size_t total_size);
 
-/**
- *  Lets Thallium know how to serialize a BufferID.
- *
- * This function is called implicitly by Thallium.
- *
- * @param ar An archive provided by Thallium.
- * @param buffer_id The BufferID to serialize.
- */
-template<typename A>
-void serialize(A &ar, BufferID &buffer_id) {
-  ar & buffer_id.as_int;
-}
-
 }  // namespace hermes
 #endif  // HERMES_BUFFER_POOL_INTERNAL_H_
