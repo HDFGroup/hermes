@@ -123,7 +123,7 @@ auto RpcCall(RpcContext *rpc, u32 node_id, const char *func_name, Ts... args) {
   // TODO(chogan): Support all protocols
   const char *protocol = "tcp";
   // TODO(chogan): Save connections instead of creating them for every rpc
-  tl::engine engine(protocol, THALLIUM_CLIENT_MODE);
+  tl::engine engine(protocol, THALLIUM_CLIENT_MODE, true);
   tl::remote_procedure remote_proc = engine.define(func_name);
   tl::endpoint server = engine.lookup(server_name);
 
