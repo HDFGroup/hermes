@@ -40,6 +40,8 @@ struct TimingResult {
   double release_buffers_time;
 };
 
+// TODO(chogan): Refactor to use RpcCall and RpcContext
+#if 0
 TimingResult TestGetBuffersRpc(int iters) {
   TimingResult result = {};
 
@@ -71,6 +73,7 @@ TimingResult TestGetBuffersRpc(int iters) {
 
   return result;
 }
+#endif
 
 TimingResult TestGetBuffers(SharedMemoryContext *context, int iters) {
   TimingResult result = {};
@@ -289,7 +292,7 @@ int main(int argc, char **argv) {
     TimingResult timing = {};
 
     if (use_rpc) {
-      timing = TestGetBuffersRpc(iters);
+      // timing = TestGetBuffersRpc(iters);
     } else {
       timing = TestGetBuffers(&context, iters);
     }
