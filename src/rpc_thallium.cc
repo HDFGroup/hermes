@@ -70,7 +70,7 @@ void serialize(A &ar, BlobID &blob_id) {
  * @param map_type The MapType to serialize.
  */
 template<typename A>
-void serialize(A &ar, MapType map_type) {
+void serialize(A &ar, MapType &map_type) {
   ar & (int)map_type;
 }
 
