@@ -7,7 +7,6 @@
 
 #include "rpc.h"
 
-#include <abt.h>
 #include <thallium.hpp>
 #include <thallium/serialization/stl/vector.hpp>
 #include <thallium/serialization/stl/pair.hpp>
@@ -235,24 +234,24 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
 
   // Metadata requests
 
-  function<void(const request&, string, MapType)> rpc_map_get =
-    [context](const request &req, string name, MapType map_type) {
+  function<void(const request&, string, const MapType&)> rpc_map_get =
+    [context](const request &req, string name, const MapType &map_type) {
       MetadataManager *mdm = GetMetadataManagerFromContext(context);
       u64 result = LocalGet(mdm, name.c_str(), map_type);
 
       req.respond(result);
     };
 
-  function<void(const request&, const string&, u64, MapType)> rpc_map_put =
+  function<void(const request&, const string&, u64, const MapType&)> rpc_map_put =
     [context](const request &req, const string &name, u64 val,
-              MapType map_type) {
+              const MapType &map_type) {
       (void)req;
       MetadataManager *mdm = GetMetadataManagerFromContext(context);
       LocalPut(mdm, name.c_str(), val, map_type);
     };
 
-  function<void(const request&, string, MapType)> rpc_map_delete =
-    [context](const request &req, string name, MapType map_type) {
+  function<void(const request&, string, const MapType&)> rpc_map_delete =
+    [context](const request &req, string name, const MapType &map_type) {
       (void)req;
       MetadataManager *mdm = GetMetadataManagerFromContext(context);
       LocalDelete(mdm, name.c_str(), map_type);
