@@ -391,6 +391,7 @@ void *CreateRpcState(Arena *arena) {
 
 void FinalizeRpcContext(RpcContext *rpc) {
   ThalliumState *state = (ThalliumState *)rpc->state;
+  state->engine->finalize();
   delete state->engine;
 }
 
