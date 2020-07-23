@@ -60,7 +60,7 @@ void serialize(A &ar, BlobID &blob_id) {
   ar & blob_id.as_int;
 }
 
-#if !THALLIUM_USE_CEREAL
+#ifndef THALLIUM_USE_CEREAL
 /**
  *  Lets Thallium know how to serialize a MapType.
  *
