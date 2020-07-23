@@ -66,6 +66,7 @@ int main(int argc, char **argv) {
   Assert(config.rpc_port == 8080);
   Assert(config.rpc_host_number_range[0] == 0 &&
          config.rpc_host_number_range[1] == 0);
+  Assert(config.rpc_num_threads == 1);
 
   const char expected_rpc_server_name[] = "localhost";
   Assert(config.rpc_server_base_name == expected_rpc_server_name);

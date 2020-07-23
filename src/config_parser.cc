@@ -19,6 +19,7 @@
 // 3. If a Parse<type> function does not exist for the variable type, implement
 // it.
 // 4. Add a case to ParseTokens for the new variable.
+// 5. Add the new variable to the Config struct.
 
 namespace hermes {
 
@@ -57,6 +58,7 @@ enum ConfigVariable {
   ConfigVariable_RpcProtocol,
   ConfigVariable_RpcPort,
   ConfigVariable_RpcHostNumberRange,
+  ConfigVariable_RpcNumThreads,
 
   ConfigVariable_Count
 };
@@ -84,6 +86,7 @@ static const char *kConfigVariableStrings[ConfigVariable_Count] = {
   "rpc_protocol",
   "rpc_port",
   "rpc_host_number_range",
+  "rpc_num_threads",
 };
 
 struct Token {
@@ -745,6 +748,10 @@ void ParseTokens(TokenList *tokens, Config *config) {
       }
       case ConfigVariable_RpcHostNumberRange: {
         tok = ParseIntList(tok, config->rpc_host_number_range, 2);
+        break;
+      }
+      case ConfigVariable_RpcNumThreads: {
+        config->rpc_num_threads = ParseInt(&tok);
         break;
       }
       default: {

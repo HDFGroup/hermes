@@ -34,7 +34,6 @@ int main(int argc, char **argv) {
   }
 
   int option = -1;
-  int num_rpc_threads = 0;
   std::string buffering_path;
   std::string rpc_server_name = "sockets://localhost:8080";
 
@@ -42,10 +41,6 @@ int main(int argc, char **argv) {
     switch (option) {
       case 'd': {
         buffering_path = std::string(optarg);
-        break;
-      }
-      case 'n': {
-        num_rpc_threads = atoi(optarg);
         break;
       }
       case 'r': {
@@ -63,7 +58,7 @@ int main(int argc, char **argv) {
   }
 
   std::shared_ptr<hapi::Hermes> hermes =
-    hermes::InitDaemon(buffering_path, rpc_server_name, num_rpc_threads);
+    hermes::InitDaemon(buffering_path, rpc_server_name);
 
   hermes->Finalize();
 

@@ -97,6 +97,7 @@ struct Config {
   std::string rpc_protocol;
   int rpc_port;
   int rpc_host_number_range[2];
+  int rpc_num_threads;
 
   /** A base name for the BufferPool shared memory segement. Hermes appends the
    * value of the USER environment variable to this string.

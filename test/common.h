@@ -82,6 +82,7 @@ void InitTestConfig(Config *config) {
   config->rpc_server_base_name = "localhost";
   config->rpc_protocol = "tcp";
   config->rpc_port = 8080;
+  config->rpc_num_threads = 1;
 
   config->max_buckets_per_node = 16;
   config->max_vbuckets_per_node = 8;
@@ -191,7 +192,7 @@ BootstrapSharedMemory(Arena *arenas, Config *config, CommunicationContext *comm,
 // TODO(chogan): Move into library
 std::shared_ptr<api::Hermes>
 InitDaemon(const std::string &buffering_path,
-           const std::string &rpc_server_name, int num_rpc_threads) {
+           const std::string &rpc_server_name) {
   // TODO(chogan): Read Config from a file
   hermes::Config config = {};
   InitTestConfig(&config);
@@ -298,10 +299,8 @@ std::shared_ptr<api::Hermes> InitHermes(const char *config_file=NULL) {
     std::string rpc_server_addr = (config.rpc_protocol + "://" +
                                    config.rpc_server_base_name + host_number +
                                    ":" + std::to_string(config.rpc_port));
-    // TODO(chogan): Should num_rpc_threads come from Config?
-    int num_rpc_threads = 4;
     result->rpc_.start_server(&result->context_, &result->rpc_,
-                              rpc_server_addr.c_str(), num_rpc_threads);
+                              rpc_server_addr.c_str(), config.rpc_num_threads);
   }
 
   WorldBarrier(&comm);
