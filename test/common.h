@@ -299,7 +299,7 @@ std::shared_ptr<api::Hermes> InitHermes(const char *config_file=NULL) {
                                    config.rpc_server_base_name + host_number +
                                    ":" + std::to_string(config.rpc_port));
     // TODO(chogan): Should num_rpc_threads come from Config?
-    int num_rpc_threads = 1;
+    int num_rpc_threads = 2;
     result->rpc_.start_server(&result->context_, &result->rpc_,
                               rpc_server_addr.c_str(), num_rpc_threads);
   }
