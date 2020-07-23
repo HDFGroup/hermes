@@ -60,6 +60,37 @@ void serialize(A &ar, BlobID &blob_id) {
   ar & blob_id.as_int;
 }
 
+#ifndef THALLIUM_USE_CEREAL
+/**
+ *  Lets Thallium know how to serialize a MapType.
+ *
+ * This function is called implicitly by Thallium.
+ *
+ * @param ar An archive provided by Thallium.
+ * @param map_type The MapType to serialize.
+ */
+template<typename A>
+void save(A &ar, const MapType &map_type) {
+  int val = (int)map_type;
+  ar.write(&val, 1);
+}
+
+/**
+ *  Lets Thallium know how to serialize a MapType.
+ *
+ * This function is called implicitly by Thallium.
+ *
+ * @param ar An archive provided by Thallium.
+ * @param map_type The MapType to serialize.
+ */
+template<typename A>
+void load(A &ar, MapType &map_type) {
+  int val = 0;
+  ar.read(&val, 1);
+  map_type = (MapType)val;
+}
+#endif
+
 std::string GetHostNumberAsString(RpcContext *rpc, u32 node_id) {
   std::string result = "";
   if (rpc->host_number_range[0] != 0 && rpc->host_number_range[1] != 0) {
