@@ -343,7 +343,7 @@ int main(int argc, char **argv) {
     }
     tl::engine myEngine(server_name, THALLIUM_CLIENT_MODE);
     tl::remote_procedure finalize =
-      myEngine.define("Finalize").disable_response();
+      myEngine.define("RemoteFinalize").disable_response();
     tl::endpoint server = myEngine.lookup(server_name);
     finalize.on(server)();
   }

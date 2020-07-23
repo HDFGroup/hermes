@@ -357,11 +357,13 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
       state->engine->finalize();
     };
 
+  // TODO(chogan): Currently these are only used for testing.
   rpc_server->define("GetBuffers", rpc_get_buffers);
-  rpc_server->define("RemoteReleaseBuffer",
-                    rpc_release_buffer).disable_response();
   rpc_server->define("SplitBuffers", rpc_split_buffers).disable_response();
   rpc_server->define("MergeBuffers", rpc_merge_buffers).disable_response();
+
+  rpc_server->define("RemoteReleaseBuffer",
+                     rpc_release_buffer).disable_response();
   rpc_server->define("RemoteGetBufferSize", rpc_get_buffer_size);
 
   rpc_server->define("RemoteReadBufferById", rpc_read_buffer_by_id);
@@ -393,7 +395,7 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
   rpc_server->define("RemoteDecrementRefcount",
                     rpc_decrement_refcount).disable_response();
 
-  rpc_server->define("Finalize", rpc_finalize).disable_response();
+  rpc_server->define("RemoteFinalize", rpc_finalize).disable_response();
 }
 
 void InitRpcContext(RpcContext *rpc, u32 num_nodes, u32 node_id,
