@@ -11,7 +11,6 @@
 
 #include <cmath>
 #include <memory>
-#include <thread>
 
 #include <mpi.h>
 

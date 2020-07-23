@@ -23,10 +23,9 @@ struct RpcContext {
   u32 num_nodes;
   int port;
   /** The first and last host numbers. This is a convenient way of specifiying
-   * multiple hostnames if the pattern is predictable (i.e., if running on three
-   * nodes with names cluster-node-6, cluster-node-7, ... to cluster-node-32,
-   * the host_number_range would be {6, 32} and Hermes can generate all
-   * names). */
+   * multiple hostnames if the pattern is predictable (i.e., if running on nodes
+   * with names cluster-node-6, cluster-node-7, ... to cluster-node-32, the
+   * host_number_range would be {6, 32} and Hermes can generate all names). */
   u32 host_number_range[2];
   /** The host name without the host number. Allows programmatic construction of
    * predictable host names like cluster-node-1, cluster-node-2, etc. without

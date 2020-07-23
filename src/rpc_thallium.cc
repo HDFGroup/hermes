@@ -394,12 +394,6 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
                     rpc_decrement_refcount).disable_response();
 
   rpc_server->define("Finalize", rpc_finalize).disable_response();
-
-  // TODO(chogan): Currently the calling thread waits for finalize because
-  // that's the way the tests are set up, but once the RPC server is started
-  // from Hermes initialization the calling thread will need to continue
-  // executing.
-  // rpc_server->wait_for_finalize();
 }
 
 void InitRpcContext(RpcContext *rpc, u32 num_nodes, u32 node_id,
