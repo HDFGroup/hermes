@@ -20,7 +20,8 @@ endif()
 
 foreach(program ${API_TESTS})
   add_executable(${program} ${program}.cc)
-  target_link_libraries(${program} ${LIBRT} hermes MPI::MPI_CXX ZLIB::ZLIB)
+  target_link_libraries(${program} ${LIBRT} hermes MPI::MPI_CXX ZLIB::ZLIB
+   $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium>)
   target_compile_definitions(${program}
     PRIVATE $<$<BOOL:${HERMES_RPC_THALLIUM}>:HERMES_RPC_THALLIUM>)
   add_test(NAME "Test${program}"
@@ -45,12 +46,14 @@ endif()
 #------------------------------------------------------------------------------
 
 add_executable(bp buffer_pool_test.cc)
-target_link_libraries(bp ${LIBRT} hermes MPI::MPI_CXX)
+target_link_libraries(bp ${LIBRT} hermes MPI::MPI_CXX
+    $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium>)
 target_compile_definitions(bp
   PRIVATE $<$<BOOL:${HERMES_RPC_THALLIUM}>:HERMES_RPC_THALLIUM>)
 
 add_executable(bp_test buffer_pool_client_test.cc)
-target_link_libraries(bp_test hermes thallium MPI::MPI_CXX)
+target_link_libraries(bp_test hermes MPI::MPI_CXX
+     $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium>)
 target_compile_definitions(bp_test
   PRIVATE $<$<BOOL:${HERMES_RPC_THALLIUM}>:HERMES_RPC_THALLIUM>)
 
