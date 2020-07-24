@@ -79,14 +79,18 @@ void InitTestConfig(Config *config) {
   config->mount_points[3] = pfs_mount_point;
 
   config->rpc_server_base_name = "localhost";
-  config->rpc_protocol = "tcp";
+  config->rpc_protocol = "ofi+sockets";
   config->rpc_port = 8080;
   config->rpc_num_threads = 1;
 
   config->max_buckets_per_node = 16;
   config->max_vbuckets_per_node = 8;
 
-  MakeFullShmemName(config->buffer_pool_shmem_name, buffer_pool_shmem_name);
+  size_t shmem_name_size = strlen(buffer_pool_shmem_name);
+  for (size_t i = 0; i < shmem_name_size; ++i) {
+    config->buffer_pool_shmem_name[i] = buffer_pool_shmem_name[i];
+  }
+  config->buffer_pool_shmem_name[shmem_name_size] = '\0';
 }
 
 ArenaInfo GetArenaInfo(Config *config) {
@@ -161,7 +165,7 @@ SharedMemoryContext InitHermesCore(Config *config, CommunicationContext *comm,
 
 SharedMemoryContext
 BootstrapSharedMemory(Arena *arenas, Config *config, CommunicationContext *comm,
-                      RpcContext *rpc, bool is_daemon) {
+                      RpcContext *rpc, bool is_daemon, bool is_adapter) {
   size_t bootstrap_size = KILOBYTES(4);
   u8 *bootstrap_memory = (u8 *)malloc(bootstrap_size);
   InitArena(&arenas[kArenaType_Transient], bootstrap_size, bootstrap_memory);
@@ -173,7 +177,8 @@ BootstrapSharedMemory(Arena *arenas, Config *config, CommunicationContext *comm,
 
   size_t trans_arena_size =
     InitCommunication(comm, &arenas[kArenaType_Transient],
-                      arena_info.sizes[kArenaType_Transient], is_daemon);
+                      arena_info.sizes[kArenaType_Transient], is_daemon,
+                      is_adapter);
 
   GrowArena(&arenas[kArenaType_Transient], trans_arena_size);
   comm->state = arenas[kArenaType_Transient].base;
@@ -189,21 +194,9 @@ BootstrapSharedMemory(Arena *arenas, Config *config, CommunicationContext *comm,
 }
 
 // TODO(chogan): Move into library
-SharedMemoryContext InitHermesClient(CommunicationContext *comm,
-                                     char *shmem_name,
-                                     bool init_buffering_files) {
-  SharedMemoryContext context = GetSharedMemoryContext(shmem_name);
-
-  if (init_buffering_files) {
-    InitFilesForBuffering(&context, comm->sub_proc_id == 0);
-  }
-
-  return context;
-}
-
-// TODO(chogan): Move into library
 std::shared_ptr<api::Hermes> InitHermes(const char *config_file=NULL,
-                                        bool is_daemon=false) {
+                                        bool is_daemon=false,
+                                        bool is_adapter=false) {
   hermes::Config config = {};
   const size_t config_memory_size = KILOBYTES(16);
   hermes::u8 config_memory[config_memory_size];
@@ -215,6 +208,8 @@ std::shared_ptr<api::Hermes> InitHermes(const char *config_file=NULL,
   } else {
     InitTestConfig(&config);
   }
+  std::string base_shmem_name(config.buffer_pool_shmem_name);
+  MakeFullShmemName(config.buffer_pool_shmem_name, base_shmem_name.c_str());
 
   // TODO(chogan): Do we need a transfer window arena? We can probably just use
   // the transient arena for this.
@@ -222,7 +217,7 @@ std::shared_ptr<api::Hermes> InitHermes(const char *config_file=NULL,
   CommunicationContext comm = {};
   RpcContext rpc = {};
   SharedMemoryContext context =
-    BootstrapSharedMemory(arenas, &config, &comm, &rpc, is_daemon);
+    BootstrapSharedMemory(arenas, &config, &comm, &rpc, is_daemon, is_adapter);
 
   WorldBarrier(&comm);
   std::shared_ptr<api::Hermes> result = nullptr;
@@ -232,7 +227,7 @@ std::shared_ptr<api::Hermes> InitHermes(const char *config_file=NULL,
     result->shmem_name_ = std::string(config.buffer_pool_shmem_name);
   } else {
     context = GetSharedMemoryContext(config.buffer_pool_shmem_name);
-    InitFilesForBuffering(&context, comm.sub_proc_id == 0);
+    InitFilesForBuffering(&context, comm.first_on_node);
     SubBarrier(&comm);
     result = std::make_shared<api::Hermes>(context);
     // NOTE(chogan): Give every App process a valid pointer to the internal RPC
@@ -265,6 +260,13 @@ std::shared_ptr<api::Hermes> InitHermes(const char *config_file=NULL,
   }
 
   WorldBarrier(&comm);
+
+  return result;
+}
+
+// TODO(chogan): Move into library
+std::shared_ptr<api::Hermes> InitHermesClient(const char *config_file=NULL) {
+  std::shared_ptr<api::Hermes> result = InitHermes(config_file, false, true);
 
   return result;
 }

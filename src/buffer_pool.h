@@ -316,8 +316,7 @@ void ReleaseBuffers(SharedMemoryContext *context, RpcContext *rpc,
  *
  * @param context The shared memory context where the BufferPool lives.
  * @param addr The address and port where the RPC server will listen.
- * Currently, this is a Thallium compatible address. For example,
- * tcp://127.1.1.1:8080
+ * This address must be a compatible with whatever the RPC implementation is.
  */
 void StartBufferPoolRpcServer(SharedMemoryContext *context, const char *addr,
                               i32 num_rpc_threads);

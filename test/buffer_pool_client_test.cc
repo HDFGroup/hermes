@@ -28,35 +28,23 @@
  * node).
  */
 
-namespace tl = thallium;
-
 using namespace hermes;
-
-static constexpr char kServerName[] = "ofi+sockets://127.0.0.1:8080";
-static constexpr char kBaseShmemName[] = "/hermes_buffer_pool_";
 
 struct TimingResult {
   double get_buffers_time;
   double release_buffers_time;
 };
 
-// TODO(chogan): Refactor to use RpcCall and RpcContext
-#if 0
-TimingResult TestGetBuffersRpc(int iters) {
+TimingResult TestGetBuffersRpc(RpcContext *rpc, int iters) {
   TimingResult result = {};
-
-  tl::engine myEngine("tcp", THALLIUM_CLIENT_MODE);
-  tl::remote_procedure get_buffers = myEngine.define("GetBuffers");
-  tl::remote_procedure release_buffers =
-    myEngine.define("ReleaseBuffers").disable_response();
-  tl::endpoint server = myEngine.lookup(kServerName);
   TieredSchema schema{std::make_pair(4096, 0)};
 
   Timer get_timer;
   Timer release_timer;
   for (int i = 0; i < iters; ++i) {
     get_timer.resumeTime();
-    std::vector<BufferID> ret = get_buffers.on(server)(schema);
+    std::vector<BufferID> ret =
+      RpcCall<std::vector<BufferID>>(rpc, rpc->node_id, "GetBuffers", schema);
     get_timer.pauseTime();
 
     if (ret.size() == 0) {
@@ -64,7 +52,9 @@ TimingResult TestGetBuffersRpc(int iters) {
     }
 
     release_timer.resumeTime();
-    release_buffers.on(server)(ret);
+    for (size_t i = 0; i < ret.size(); ++i) {
+      RpcCall<void>(rpc, rpc->node_id, "RemoteReleaseBuffer", ret[i]);
+    }
     release_timer.pauseTime();
   }
 
@@ -73,7 +63,6 @@ TimingResult TestGetBuffersRpc(int iters) {
 
   return result;
 }
-#endif
 
 TimingResult TestGetBuffers(SharedMemoryContext *context, int iters) {
   TimingResult result = {};
@@ -101,16 +90,12 @@ TimingResult TestGetBuffers(SharedMemoryContext *context, int iters) {
   return result;
 }
 
-double TestSplitBuffers(SharedMemoryContext *context, int slab_index,
-                        bool use_rpc) {
+double TestSplitBuffers(SharedMemoryContext *context, RpcContext *rpc,
+                        int slab_index, bool use_rpc) {
   Timer timer;
   if (use_rpc) {
-    tl::engine myEngine("tcp", THALLIUM_CLIENT_MODE);
-    tl::remote_procedure split_buffers =
-      myEngine.define("SplitBuffers").disable_response();
-    tl::endpoint server = myEngine.lookup(kServerName);
     timer.resumeTime();
-    split_buffers.on(server)(slab_index);
+    RpcCall<void>(rpc, rpc->node_id, "SplitBuffers", slab_index);
     timer.pauseTime();
   } else {
     timer.resumeTime();
@@ -122,17 +107,13 @@ double TestSplitBuffers(SharedMemoryContext *context, int slab_index,
   return result;
 }
 
-double TestMergeBuffers(SharedMemoryContext *context, int slab_index,
-                        bool use_rpc) {
+double TestMergeBuffers(SharedMemoryContext *context, RpcContext *rpc,
+                        int slab_index, bool use_rpc) {
   Timer timer;
 
   if (use_rpc) {
-    tl::engine myEngine("tcp", THALLIUM_CLIENT_MODE);
-    tl::remote_procedure merge_buffers =
-      myEngine.define("MergeBuffers").disable_response();
-    tl::endpoint server = myEngine.lookup(kServerName);
     timer.resumeTime();
-    merge_buffers.on(server)(slab_index);
+    RpcCall<void>(rpc, rpc->node_id, "MergeBuffers", slab_index);
     timer.pauseTime();
   } else {
     timer.resumeTime();
@@ -202,10 +183,16 @@ void PrintUsage(char *program) {
   fprintf(stderr, "Usage %s [-r]\n", program);
   fprintf(stderr, "  -b\n");
   fprintf(stderr, "     Run GetBuffers test.\n");
+  fprintf(stderr, "  -c <path>\n");
+  fprintf(stderr, "     Path to a Hermes configuration file.\n");
   fprintf(stderr, "  -f\n");
   fprintf(stderr, "     Run FileBuffering test.\n");
+  fprintf(stderr, "  -h\n");
+  fprintf(stderr, "     Print help message and exit.\n");
   fprintf(stderr, "  -i <num>\n");
   fprintf(stderr, "     Use <num> iterations in GetBuffers test.\n");
+  fprintf(stderr, "  -k\n");
+  fprintf(stderr, "     Kill RPC server on program exit.\n");
   fprintf(stderr, "  -m <num>\n");
   fprintf(stderr, "     Run MergeBuffers test on slab <num>.\n");
   fprintf(stderr, "  -r\n");
@@ -214,20 +201,12 @@ void PrintUsage(char *program) {
   fprintf(stderr, "     Run SplitBuffers test on slab <num>.\n");
 }
 
-int main(int argc, char **argv) {
-  int mpi_threads_provided;
-  MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
-  if (mpi_threads_provided < MPI_THREAD_MULTIPLE) {
-    fprintf(stderr, "Didn't receive appropriate MPI threading specification\n");
-    return 1;
-  }
-  int world_rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
-  int world_size;
-  MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+namespace hapi = hermes::api;
 
+int main(int argc, char **argv) {
   int option = -1;
   bool test_get_release = false;
+  char *config_file = 0;
   bool use_rpc = false;
   bool test_split = false;
   bool test_merge = false;
@@ -235,18 +214,25 @@ int main(int argc, char **argv) {
   bool kill_server = false;
   int slab_index = 0;
   int iters = 100000;
-  int pid = 0;
 
-  while ((option = getopt(argc, argv, "bfkrs:i:m:p:")) != -1) {
+  while ((option = getopt(argc, argv, "bc:fhi:km:rs:")) != -1) {
     switch (option) {
       case 'b': {
         test_get_release = true;
+        break;
+      }
+      case 'c': {
+        config_file = optarg;
         break;
       }
       case 'f': {
         test_file_buffering = true;
         test_get_release = false;
         break;
+      }
+      case 'h': {
+        PrintUsage(argv[0]);
+        return 1;
       }
       case 'i': {
         iters = atoi(optarg);
@@ -262,10 +248,6 @@ int main(int argc, char **argv) {
         test_get_release = false;
         break;
       }
-      case 'p': {
-        pid = atoi(optarg);
-        break;
-      }
       case 'r': {
         use_rpc = true;
         break;
@@ -278,26 +260,33 @@ int main(int argc, char **argv) {
       }
       default:
         PrintUsage(argv[0]);
-        MPI_Abort(MPI_COMM_WORLD, 1);
+        return 1;
     }
   }
 
-  char full_shmem_name[hermes::kMaxBufferPoolShmemNameLength];
-  MakeFullShmemName(full_shmem_name, kBaseShmemName);
-  // TODO(chogan): Client side comm and rpc initialization
-  SharedMemoryContext context = InitHermesClient(NULL, full_shmem_name,
-                                                 test_file_buffering);
+  int mpi_threads_provided;
+  MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
+  if (mpi_threads_provided < MPI_THREAD_MULTIPLE) {
+    fprintf(stderr, "Didn't receive appropriate MPI threading specification\n");
+    return 1;
+  }
+
+  std::shared_ptr<hapi::Hermes> hermes = hermes::InitHermesClient(config_file);
+  int app_rank = hermes->GetProcessRank();
+  int app_size = hermes->GetNumProcesses();
+  SharedMemoryContext *context = &hermes->context_;
+  RpcContext *rpc = &hermes->rpc_;
 
   if (test_get_release) {
     TimingResult timing = {};
 
     if (use_rpc) {
-      // timing = TestGetBuffersRpc(iters);
+      timing = TestGetBuffersRpc(rpc, iters);
     } else {
-      timing = TestGetBuffers(&context, iters);
+      timing = TestGetBuffers(context, iters);
     }
 
-    int total_iters = iters * world_size;
+    int total_iters = iters * app_size;
     double total_get_seconds = 0;
     double total_release_seconds = 0;
     MPI_Reduce(&timing.get_buffers_time, &total_get_seconds, 1, MPI_DOUBLE,
@@ -305,9 +294,9 @@ int main(int argc, char **argv) {
     MPI_Reduce(&timing.release_buffers_time, &total_release_seconds, 1,
                MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 
-    if (world_rank == 0) {
-      double avg_get_seconds = total_get_seconds / world_size;
-      double avg_release_seconds = total_release_seconds / world_size;
+    if (app_rank == 0) {
+      double avg_get_seconds = total_get_seconds / app_size;
+      double avg_release_seconds = total_release_seconds / app_size;
       double gets_per_second = total_iters / avg_get_seconds;
       double releases_per_second = total_iters / avg_release_seconds;
       printf("%f %f ", gets_per_second, releases_per_second);
@@ -315,38 +304,26 @@ int main(int argc, char **argv) {
   }
 
   if (test_split) {
-    assert(world_size == 1);
-    double seconds_for_split = TestSplitBuffers(&context, slab_index, use_rpc);
+    assert(app_size == 1);
+    double seconds_for_split = TestSplitBuffers(context, rpc, slab_index,
+                                                use_rpc);
     printf("%f\n", seconds_for_split);
   }
   if (test_merge) {
-    assert(world_size == 1);
-    double seconds_for_merge = TestMergeBuffers(&context, slab_index, use_rpc);
+    assert(app_size == 1);
+    double seconds_for_merge = TestMergeBuffers(context, rpc, slab_index,
+                                                use_rpc);
     printf("%f\n", seconds_for_merge);
   }
   if (test_file_buffering) {
-    TestFileBuffering(&context, world_rank);
+    TestFileBuffering(context, app_rank);
   }
 
-  ReleaseSharedMemoryContext(&context);
-  MPI_Barrier(MPI_COMM_WORLD);
-
-  if (world_rank == 0 && kill_server) {
-    // NOTE(chogan): Shut down the RPC server
-    std::string server_name;
-    if (pid) {
-      std::string shm_id = "0";
-      std::string shm_pid = std::to_string(pid);
-      server_name = "na+sm://" + shm_pid + "/" + shm_id;
-    } else {
-      server_name = kServerName;
-    }
-    tl::engine myEngine(server_name, THALLIUM_CLIENT_MODE);
-    tl::remote_procedure finalize =
-      myEngine.define("RemoteFinalize").disable_response();
-    tl::endpoint server = myEngine.lookup(server_name);
-    finalize.on(server)();
+  if (app_rank == 0 && kill_server) {
+    hermes::RpcCall<void>(rpc, rpc->node_id, "RemoteFinalize");
   }
+
+  hermes->Finalize();
 
   MPI_Finalize();
 

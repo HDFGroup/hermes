@@ -43,10 +43,17 @@ struct RpcContext {
 void InitRpcContext(RpcContext *rpc, u32 num_nodes, u32 node_id,
                     Config *config);
 void *CreateRpcState(Arena *arena);
-void FinalizeRpcContext(RpcContext *rpc);
-
+void FinalizeRpcContext(RpcContext *rpc, bool is_daemon);
 std::string GetHostNumberAsString(RpcContext *rpc, u32 node_id);
 
 }  // namespace hermes
+
+// TODO(chogan): I don't like that code similar to this is in buffer_pool.cc.
+// I'd like to only have it in one place.
+#if defined(HERMES_RPC_THALLIUM)
+#include "rpc_thallium.h"
+#else
+#error RPC implementation required (e.g., -DHERMES_RPC_THALLIUM).
+#endif
 
 #endif  // HERMES_RPC_H_

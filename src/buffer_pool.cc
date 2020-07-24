@@ -22,6 +22,7 @@
 #include <mpi.h>
 
 #include "metadata_management.h"
+#include "rpc.h"
 
 #include "debug_state.cc"
 #include "memory_management.cc"
@@ -65,7 +66,8 @@ void Finalize(SharedMemoryContext *context, CommunicationContext *comm,
   WorldBarrier(comm);
   if (!is_application_core) {
     if (comm->first_on_node) {
-      FinalizeRpcContext(rpc);
+      bool is_daemon = comm->world_size == comm->num_nodes;
+      FinalizeRpcContext(rpc, is_daemon);
     }
     UnmapSharedMemory(context);
     shm_unlink(shmem_name);
@@ -1044,8 +1046,7 @@ void InitFilesForBuffering(SharedMemoryContext *context, bool make_space) {
         // and some are shared (burst buffers) and only require one rank to
         // initialize them
 
-        // TODO(chogan): Use posix_fallocate when it is
-        // available
+        // TODO(chogan): Use posix_fallocate when it is available
         [[maybe_unused]] int ftruncate_result =
           ftruncate(fileno(buffering_file), tier->capacity);
         // TODO(chogan): @errorhandling
