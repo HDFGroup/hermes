@@ -125,7 +125,8 @@ double TestMergeBuffers(SharedMemoryContext *context, RpcContext *rpc,
   return result;
 }
 
-void TestFileBuffering(SharedMemoryContext *context, int rank) {
+void TestFileBuffering(SharedMemoryContext *context, RpcContext *rpc,
+                       int rank) {
   Blob blob = {};
   TierID tier_id = 1;
 
@@ -144,9 +145,7 @@ void TestFileBuffering(SharedMemoryContext *context, int rank) {
         buffer_ids = GetBuffers(context, schema);
       }
 
-      // TEMP(chogan):
-      RpcContext rpc = {};
-      WriteBlobToBuffers(context, &rpc, blob, buffer_ids);
+      WriteBlobToBuffers(context, rpc, blob, buffer_ids);
 
       std::vector<u8> data(blob.size);
       Blob result = {};
@@ -156,8 +155,7 @@ void TestFileBuffering(SharedMemoryContext *context, int rank) {
       BufferIdArray buffer_id_arr = {};
       buffer_id_arr.ids = buffer_ids.data();
       buffer_id_arr.length = buffer_ids.size();
-      // TODO(chogan): Pass rpc here
-      ReadBlobFromBuffers(context,  NULL, &result, &buffer_id_arr);
+      ReadBlobFromBuffers(context,  rpc, &result, &buffer_id_arr);
 
       std::stringstream out_filename_stream;
       out_filename_stream << "TestfileBuffering_rank" << std::to_string(rank)
@@ -316,7 +314,7 @@ int main(int argc, char **argv) {
     printf("%f\n", seconds_for_merge);
   }
   if (test_file_buffering) {
-    TestFileBuffering(context, app_rank);
+    TestFileBuffering(context, rpc, app_rank);
   }
 
   if (app_rank == 0 && kill_server) {
