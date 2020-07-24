@@ -69,7 +69,7 @@ void serialize(A &ar, BlobID &blob_id) {
  * @param map_type The MapType to serialize.
  */
 template<typename A>
-void save(A &ar, const MapType &map_type) {
+void save(A &ar, MapType &map_type) {
   int val = (int)map_type;
   ar.write(&val, 1);
 }
