@@ -85,6 +85,7 @@ void InitTestConfig(Config *config) {
 
   config->max_buckets_per_node = 16;
   config->max_vbuckets_per_node = 8;
+  config->system_view_state_update_interval_ms = 1000;
 
   size_t shmem_name_size = strlen(buffer_pool_shmem_name);
   for (size_t i = 0; i < shmem_name_size; ++i) {

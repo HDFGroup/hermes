@@ -139,6 +139,7 @@ struct MetadataManager {
 
   size_t map_seed;
 
+  u32 system_view_state_update_interval_ms;
   u32 global_system_view_state_node_id;
   u32 num_buckets;
   u32 max_buckets;

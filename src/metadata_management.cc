@@ -891,6 +891,9 @@ void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
   mdm->map_seed = 0x4E58E5DF;
   stbds_rand_seed(mdm->map_seed);
 
+  mdm->system_view_state_update_interval_ms =
+    config->system_view_state_update_interval_ms;
+
   // Initialize SystemViewState
 
   SystemViewState *sv_state = CreateSystemViewState(arena, config);
