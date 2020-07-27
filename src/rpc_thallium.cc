@@ -224,6 +224,14 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
       LocalDecrementRefcount(context, id);
     };
 
+  function<void(const request&, i64, TierID)>
+    rpc_update_global_system_view_state = [context](const request &req,
+                                                    i64 adjustment,
+                                                    TierID tier) {
+      (void)req;
+      LocalUpdateGlobalSystemViewState(context, adjustment, tier);
+    };
+
   function<void(const request&)> rpc_finalize =
     [rpc](const request &req) {
       (void)req;
@@ -268,6 +276,8 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
                     rpc_increment_refcount).disable_response();
   rpc_server->define("RemoteDecrementRefcount",
                     rpc_decrement_refcount).disable_response();
+  rpc_server->define("RemoteUpdateGlobalSystemViewState",
+                     rpc_update_global_system_view_state).disable_response();
 
   rpc_server->define("RemoteFinalize", rpc_finalize).disable_response();
 }

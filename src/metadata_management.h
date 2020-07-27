@@ -106,7 +106,7 @@ struct IdMap {
 };
 
 struct SystemViewState {
-  u64 bytes_available[kMaxTiers];
+  std::atomic<u64> bytes_available[kMaxTiers];
   int num_tiers;
 };
 
@@ -120,6 +120,7 @@ struct MetadataManager {
 
   ptrdiff_t rpc_state_offset;
   ptrdiff_t system_view_state_offset;
+  ptrdiff_t global_system_view_state_offset;
 
   ptrdiff_t id_heap_offset;
   ptrdiff_t map_heap_offset;
@@ -138,6 +139,7 @@ struct MetadataManager {
 
   size_t map_seed;
 
+  u32 global_system_view_state_node_id;
   u32 num_buckets;
   u32 max_buckets;
   u32 num_vbuckets;
@@ -243,6 +245,8 @@ void LocalRemoveBlobFromBucketInfo(SharedMemoryContext *context,
                                    BucketID bucket_id, BlobID blob_id);
 void LocalIncrementRefcount(SharedMemoryContext *context, BucketID id);
 void LocalDecrementRefcount(SharedMemoryContext *context, BucketID id);
+void LocalUpdateGlobalSystemViewState(SharedMemoryContext *context,
+                                      i64 adjustment, TierID tier);
 
 u64 LocalGet(MetadataManager *mdm, const char *key, MapType map_type);
 void LocalPut(MetadataManager *mdm, const char *key, u64 val, MapType map_type);

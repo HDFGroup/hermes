@@ -836,9 +836,46 @@ void DecrementRefcount(SharedMemoryContext *context, RpcContext *rpc,
   }
 }
 
+SystemViewState *GetGlobalSystemViewState(MetadataManager *mdm) {
+  SystemViewState *result =
+    (SystemViewState *)((u8 *)mdm + mdm->global_system_view_state_offset);
+  assert((u8 *)result != (u8 *)mdm);
+
+  return result;
+}
+
+void LocalUpdateGlobalSystemViewState(SharedMemoryContext *context,
+                                      i64 adjustment, TierID tier) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  SystemViewState *global_state = GetGlobalSystemViewState(mdm);
+  global_state->bytes_available[tier].fetch_add(adjustment);
+}
+
+void UpdateGlobalSystemViewState(SharedMemoryContext *context,
+                                 RpcContext *rpc, i64 adjustment, TierID tier) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  u32 target_node = mdm->global_system_view_state_node_id;
+  if (target_node == rpc->node_id) {
+    LocalUpdateGlobalSystemViewState(context, adjustment, tier);
+  } else {
+    RpcCall<void>(rpc, target_node, "RemoteUpdateGlobalSystemViewState",
+                  adjustment, tier);
+  }
+}
+
 static ptrdiff_t GetOffsetFromMdm(MetadataManager *mdm, void *ptr) {
   assert((u8 *)ptr >= (u8 *)mdm);
   ptrdiff_t result = (u8 *)ptr - (u8 *)mdm;
+
+  return result;
+}
+
+SystemViewState *CreateSystemViewState(Arena *arena, Config *config) {
+  SystemViewState *result = PushClearedStruct<SystemViewState>(arena);
+  result->num_tiers = config->num_tiers;
+  for (int i = 0; i < result->num_tiers; ++i) {
+    result->bytes_available[i] = config->capacities[i];
+  }
 
   return result;
 }
@@ -856,12 +893,17 @@ void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
 
   // Initialize SystemViewState
 
-  SystemViewState *sv_state = PushClearedStruct<SystemViewState>(arena);
-  sv_state->num_tiers = config->num_tiers;
-  for (int i = 0; i < sv_state->num_tiers; ++i) {
-    sv_state->bytes_available[i] = config->capacities[i];
-  }
+  SystemViewState *sv_state = CreateSystemViewState(arena, config);
   mdm->system_view_state_offset = GetOffsetFromMdm(mdm, sv_state);
+
+  // Initialize Global SystemViewState
+
+  if (node_id == 1) {
+    // NOTE(chogan): Only Node 1 has the Global SystemViewState
+    SystemViewState *global_state = CreateSystemViewState(arena, config);
+    mdm->global_system_view_state_offset = GetOffsetFromMdm(mdm, global_state);
+  }
+  mdm->global_system_view_state_node_id = 1;
 
   // Initialize BucketInfo array
 
