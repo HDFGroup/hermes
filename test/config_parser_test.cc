@@ -16,7 +16,7 @@ int main(int argc, char **argv) {
 
   hermes::Config config = {};
 
-  const size_t config_memory_size = KILOBYTES(6);
+  const size_t config_memory_size = KILOBYTES(7);
   hermes::u8 config_memory[config_memory_size];
   hermes::Arena arena = {};
   hermes::InitArena(&arena, config_memory_size, config_memory);
@@ -61,6 +61,7 @@ int main(int argc, char **argv) {
 
   Assert(config.max_buckets_per_node == 16);
   Assert(config.max_vbuckets_per_node == 8);
+  Assert(config.system_view_state_update_interval_ms == 1000);
 
   Assert(config.rpc_protocol == "ofi+sockets");
   Assert(config.rpc_port == 8080);

@@ -90,6 +90,7 @@ struct Config {
 
   u32 max_buckets_per_node;
   u32 max_vbuckets_per_node;
+  u32 system_view_state_update_interval_ms;
 
   /** The mount point or desired directory for each Tier. RAM Tier should be the
    * empty string.
