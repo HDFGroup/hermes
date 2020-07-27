@@ -95,7 +95,7 @@ Heap *GetIdHeap(MetadataManager *mdm) {
   return result;
 }
 
-char *GetKey(MetadataManager *mdm, IdMap *map, u32 index) {
+static char *GetKey(MetadataManager *mdm, IdMap *map, u32 index) {
   u32 key_offset = (u64)map[index].key;
   Heap *map_heap = GetMapHeap(mdm);
   char *result = (char *)HeapOffsetToPtr(map_heap, key_offset);
@@ -836,6 +836,13 @@ void DecrementRefcount(SharedMemoryContext *context, RpcContext *rpc,
   }
 }
 
+static ptrdiff_t GetOffsetFromMdm(MetadataManager *mdm, void *ptr) {
+  assert((u8 *)ptr >= (u8 *)mdm);
+  ptrdiff_t result = (u8 *)ptr - (u8 *)mdm;
+
+  return result;
+}
+
 void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
                          int node_id) {
 
@@ -847,11 +854,20 @@ void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
   mdm->map_seed = 0x4E58E5DF;
   stbds_rand_seed(mdm->map_seed);
 
+  // Initialize SystemViewState
+
+  SystemViewState *sv_state = PushClearedStruct<SystemViewState>(arena);
+  sv_state->num_tiers = config->num_tiers;
+  for (int i = 0; i < sv_state->num_tiers; ++i) {
+    sv_state->bytes_available[i] = config->capacities[i];
+  }
+  mdm->system_view_state_offset = GetOffsetFromMdm(mdm, sv_state);
+
   // Initialize BucketInfo array
 
   BucketInfo *buckets = PushArray<BucketInfo>(arena,
                                               config->max_buckets_per_node);
-  mdm->bucket_info_offset = (u8 *)buckets - (u8 *)mdm;
+  mdm->bucket_info_offset = GetOffsetFromMdm(mdm, buckets);
   mdm->first_free_bucket.bits.node_id = (u32)node_id;
   mdm->first_free_bucket.bits.index = 0;
   mdm->num_buckets = 0;
@@ -873,7 +889,7 @@ void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
 
   VBucketInfo *vbuckets = PushArray<VBucketInfo>(arena,
                                                  config->max_vbuckets_per_node);
-  mdm->vbucket_info_offset = (u8 *)vbuckets - (u8 *)mdm;
+  mdm->vbucket_info_offset = GetOffsetFromMdm(mdm, vbuckets);
   mdm->first_free_vbucket.bits.node_id = (u32)node_id;
   mdm->first_free_vbucket.bits.index = 0;
   mdm->num_vbuckets = 0;
@@ -895,12 +911,12 @@ void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
 
   u32 heap_alignment = 8;
   Heap *map_heap = InitHeapInArena(arena, true, heap_alignment);
-  mdm->map_heap_offset = (u8 *)map_heap - (u8 *)mdm;
+  mdm->map_heap_offset = GetOffsetFromMdm(mdm, map_heap);
 
   // NOTE(chogan): This Heap is constructed at the end of the Metadata Arena and
   // will grow towards smaller addresses.
   Heap *id_heap = InitHeapInArena(arena, false, heap_alignment);
-  mdm->id_heap_offset = (u8 *)id_heap - (u8 *)mdm;
+  mdm->id_heap_offset = GetOffsetFromMdm(mdm, id_heap);
 
   // ID Maps
 
@@ -913,7 +929,7 @@ void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
   // list
   sh_new_strdup(bucket_map, config->max_buckets_per_node, map_heap);
   shdefault(bucket_map, 0, map_heap);
-  mdm->bucket_map_offset = (u8 *)bucket_map - (u8 *)mdm;
+  mdm->bucket_map_offset = GetOffsetFromMdm(mdm, bucket_map);
   u32 bucket_map_num_bytes = map_heap->extent;
   total_map_capacity -= bucket_map_num_bytes;
 
@@ -923,7 +939,7 @@ void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
   IdMap *vbucket_map = 0;
   sh_new_strdup(vbucket_map, config->max_vbuckets_per_node, map_heap);
   shdefault(vbucket_map, 0, map_heap);
-  mdm->vbucket_map_offset = (u8 *)vbucket_map - (u8 *)mdm;
+  mdm->vbucket_map_offset = GetOffsetFromMdm(mdm, vbucket_map);
   u32 vbucket_map_num_bytes = map_heap->extent - bucket_map_num_bytes;
   total_map_capacity -= vbucket_map_num_bytes;
 
@@ -932,7 +948,7 @@ void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
   size_t blob_map_capacity = total_map_capacity / (2 * sizeof(IdMap));
   sh_new_strdup(blob_map, blob_map_capacity, map_heap);
   shdefault(blob_map, 0, map_heap);
-  mdm->blob_map_offset = (u8 *)blob_map - (u8 *)mdm;
+  mdm->blob_map_offset = GetOffsetFromMdm(mdm, blob_map);
 }
 
 }  // namespace hermes

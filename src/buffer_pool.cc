@@ -466,7 +466,7 @@ ptrdiff_t BufferIdToOffset(SharedMemoryContext *context, BufferID id) {
       break;
     }
     default:
-      assert(!"Not implemented yet");
+      HERMES_NOT_IMPLEMENTED_YET;
   }
 
   return result;

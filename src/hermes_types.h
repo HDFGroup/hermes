@@ -7,6 +7,8 @@
 #include <utility>
 #include <vector>
 
+#include <glog/logging.h>
+
 namespace hermes {
 
 typedef uint8_t u8;
@@ -29,6 +31,9 @@ static constexpr int kMaxBufferPoolSlabs = 8;
 constexpr int kMaxPathLength = 256;
 constexpr int kMaxBufferPoolShmemNameLength = 64;
 constexpr int kMaxTiers = 8;
+
+#define HERMES_NOT_IMPLEMENTED_YET \
+  LOG(FATAL) << __func__ << "not implemented yet\n"
 
 /**
  * A TieredSchema is a vector of (size, tier) pairs where size is the number of

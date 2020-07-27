@@ -56,7 +56,7 @@ struct Tier {
    * Tier
    */
   bool has_fallocate;
-  /** The directory where buffering files can be created. */
+  /** The directory where buffering files can be created. Zero terminated. */
   char mount_point[kMaxPathLength];
 };
 

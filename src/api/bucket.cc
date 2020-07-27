@@ -38,10 +38,10 @@ Status Bucket::Put(const std::string &name, const u8 *data, size_t size,
   if (IsValid()) {
     LOG(INFO) << "Attaching blob " << name << " to Bucket " << '\n';
 
-    TieredSchema schema = CalculatePlacement(size, ctx);
+    TieredSchema schema = CalculatePlacement(&hermes_->context_, size, ctx);
     while (schema.size() == 0) {
       // NOTE(chogan): Keep running the DPE until we get a valid placement
-      schema = CalculatePlacement(size, ctx);
+      schema = CalculatePlacement(&hermes_->context_, size, ctx);
     }
 
     std::vector<BufferID> buffer_ids = GetBuffers(&hermes_->context_, schema);

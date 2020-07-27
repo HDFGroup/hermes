@@ -105,6 +105,11 @@ struct IdMap {
   u64 value;
 };
 
+struct SystemViewState {
+  u64 bytes_available[kMaxTiers];
+  int num_tiers;
+};
+
 struct MetadataManager {
   // All offsets are relative to the beginning of the MDM
   ptrdiff_t bucket_info_offset;
@@ -114,6 +119,7 @@ struct MetadataManager {
   VBucketID first_free_vbucket;
 
   ptrdiff_t rpc_state_offset;
+  ptrdiff_t system_view_state_offset;
 
   ptrdiff_t id_heap_offset;
   ptrdiff_t map_heap_offset;
@@ -136,8 +142,6 @@ struct MetadataManager {
   u32 max_buckets;
   u32 num_vbuckets;
   u32 max_vbuckets;
-
-  u32 rpc_server_name_offset;
 };
 
 struct RpcContext;

@@ -9,21 +9,10 @@
 
 namespace hermes {
 
-struct SystemViewState {
-  u64 bytes_available[kMaxTiers];
-  int num_tiers;
-};
-
-SystemViewState GetSystemViewState() {
-  SystemViewState result = {};
-  // TODO(chogan): The BufferPool should feed this info to an Apollo hook. It
-  // should then be queried from a global SystemViewState.
-  result.num_tiers = 4;
-  u64 fifty_mb = 1024 * 1024 * 50;
-  result.bytes_available[0] = fifty_mb;
-  result.bytes_available[1] = fifty_mb;
-  result.bytes_available[2] = fifty_mb;
-  result.bytes_available[3] = fifty_mb;
+const SystemViewState *GetSystemViewState(SharedMemoryContext *context) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  const SystemViewState *result =
+    (SystemViewState *)((u8 *)mdm + mdm->system_view_state_offset);
 
   return result;
 }
@@ -34,18 +23,20 @@ enum class PlacementPolicy {
 };
 
 // TODO(chogan): Unfinished sketch
-TieredSchema TopDownPlacement(size_t blob_size) {
+TieredSchema TopDownPlacement(SharedMemoryContext *context, size_t blob_size) {
+  HERMES_NOT_IMPLEMENTED_YET;
+
   TieredSchema result;
-  SystemViewState state = GetSystemViewState();
+  const SystemViewState *state = GetSystemViewState(context);
   size_t size_left = blob_size;
   TierID current_tier = 0;
 
-  while (size_left > 0 && current_tier < state.num_tiers) {
+  while (size_left > 0 && current_tier < state->num_tiers) {
     size_t bytes_used = 0;
-    if (state.bytes_available[current_tier] > size_left) {
+    if (state->bytes_available[current_tier] > size_left) {
       bytes_used = size_left;
     } else {
-      bytes_used = state.bytes_available[current_tier];
+      bytes_used = state->bytes_available[current_tier];
       current_tier++;
     }
 
@@ -64,15 +55,15 @@ TieredSchema TopDownPlacement(size_t blob_size) {
   return result;
 }
 
-TieredSchema RandomPlacement(size_t blob_size) {
+TieredSchema RandomPlacement(SharedMemoryContext *context, size_t blob_size) {
   TieredSchema result;
-  SystemViewState state = GetSystemViewState();
-  TierID tier_id = rand() % state.num_tiers;
+  const SystemViewState *state = GetSystemViewState(context);
+  TierID tier_id = rand() % state->num_tiers;
 
-  if (state.bytes_available[tier_id] > blob_size) {
+  if (state->bytes_available[tier_id] > blob_size) {
     result.push_back(std::make_pair(blob_size, tier_id));
   } else {
-    assert(!"Overflowing buffers not yet supported in RandomPlacement\n");
+    HERMES_NOT_IMPLEMENTED_YET;
     // TODO(chogan): Trigger BufferOrganizer
     // EvictBuffers(eviction_schema);
   }
@@ -80,8 +71,9 @@ TieredSchema RandomPlacement(size_t blob_size) {
   return result;
 }
 
-TieredSchema CalculatePlacement(size_t blob_size, const api::Context &ctx) {
-  (void)ctx;
+TieredSchema CalculatePlacement(SharedMemoryContext *context, size_t blob_size,
+                                const api::Context &api_context) {
+  (void)api_context;
 
   // TODO(chogan): Return a TieredSchema that minimizes a cost function F given
   // a set of N Tiers and a blob, while satisfying a policy P.
@@ -92,11 +84,11 @@ TieredSchema CalculatePlacement(size_t blob_size, const api::Context &ctx) {
   TieredSchema result;
   switch (policy) {
     case PlacementPolicy::kRandom: {
-      result = RandomPlacement(blob_size);
+      result = RandomPlacement(context, blob_size);
       break;
     }
     case PlacementPolicy::kTopDown: {
-      result = TopDownPlacement(blob_size);
+      result = TopDownPlacement(context, blob_size);
       break;
     }
   }
