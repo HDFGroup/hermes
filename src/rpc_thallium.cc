@@ -224,12 +224,19 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
       LocalDecrementRefcount(context, id);
     };
 
-  function<void(const request&, i64, TierID)>
-    rpc_update_global_system_view_state = [context](const request &req,
-                                                    i64 adjustment,
-                                                    TierID tier) {
+  function<void(const request&)> rpc_get_global_tier_capacities =
+    [context](const request &req) {
+      std::vector<u64> result = LocalGetGlobalTierCapacities(context);
+
+      req.respond(result);
+    };
+
+  // TODO(chogan): Only need this on mdm->global_system_view_state_node_id.
+  // Probably should move it to a completely separate tl::engine.
+  function<void(const request&, std::vector<i64>)> rpc_update_global_system_view_state =
+    [context](const request &req, std::vector<i64> adjustments) {
       (void)req;
-      LocalUpdateGlobalSystemViewState(context, adjustment, tier);
+      LocalUpdateGlobalSystemViewState(context, adjustments);
     };
 
   function<void(const request&)> rpc_finalize =
@@ -239,10 +246,11 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
       state->engine->finalize();
     };
 
-  // TODO(chogan): Currently these are only used for testing.
+  // TODO(chogan): Currently these three are only used for testing.
   rpc_server->define("GetBuffers", rpc_get_buffers);
   rpc_server->define("SplitBuffers", rpc_split_buffers).disable_response();
   rpc_server->define("MergeBuffers", rpc_merge_buffers).disable_response();
+  //
 
   rpc_server->define("RemoteReleaseBuffer",
                      rpc_release_buffer).disable_response();
@@ -278,7 +286,8 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
                     rpc_decrement_refcount).disable_response();
   rpc_server->define("RemoteUpdateGlobalSystemViewState",
                      rpc_update_global_system_view_state).disable_response();
-
+  rpc_server->define("RemoteGetGlobalTierCapacities",
+                     rpc_get_global_tier_capacities);
   rpc_server->define("RemoteFinalize", rpc_finalize).disable_response();
 }
 

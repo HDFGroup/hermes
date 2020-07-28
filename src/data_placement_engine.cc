@@ -6,16 +6,9 @@
 #include <utility>
 
 #include "hermes.h"
+#include "metadata_management.h"
 
 namespace hermes {
-
-const SystemViewState *GetSystemViewState(SharedMemoryContext *context) {
-  MetadataManager *mdm = GetMetadataManagerFromContext(context);
-  const SystemViewState *result =
-    (SystemViewState *)((u8 *)mdm + mdm->system_view_state_offset);
-
-  return result;
-}
 
 enum class PlacementPolicy {
   kRandom,
@@ -23,20 +16,21 @@ enum class PlacementPolicy {
 };
 
 // TODO(chogan): Unfinished sketch
-TieredSchema TopDownPlacement(SharedMemoryContext *context, size_t blob_size) {
+TieredSchema TopDownPlacement(SharedMemoryContext *context, RpcContext *rpc,
+                              size_t blob_size) {
   HERMES_NOT_IMPLEMENTED_YET;
 
   TieredSchema result;
-  const SystemViewState *state = GetSystemViewState(context);
+  std::vector<u64> global_state = GetGlobalTierCapacities(context, rpc);
   size_t size_left = blob_size;
   TierID current_tier = 0;
 
-  while (size_left > 0 && current_tier < state->num_tiers) {
+  while (size_left > 0 && current_tier < global_state.size()) {
     size_t bytes_used = 0;
-    if (state->bytes_available[current_tier] > size_left) {
+    if (global_state[current_tier] > size_left) {
       bytes_used = size_left;
     } else {
-      bytes_used = state->bytes_available[current_tier];
+      bytes_used = global_state[current_tier];
       current_tier++;
     }
 
@@ -55,12 +49,13 @@ TieredSchema TopDownPlacement(SharedMemoryContext *context, size_t blob_size) {
   return result;
 }
 
-TieredSchema RandomPlacement(SharedMemoryContext *context, size_t blob_size) {
+TieredSchema RandomPlacement(SharedMemoryContext *context, RpcContext *rpc,
+                             size_t blob_size) {
   TieredSchema result;
-  const SystemViewState *state = GetSystemViewState(context);
-  TierID tier_id = rand() % state->num_tiers;
+  std::vector<u64> global_state = GetGlobalTierCapacities(context, rpc);
+  TierID tier_id = rand() % global_state.size();
 
-  if (state->bytes_available[tier_id] > blob_size) {
+  if (global_state[tier_id] > blob_size) {
     result.push_back(std::make_pair(blob_size, tier_id));
   } else {
     HERMES_NOT_IMPLEMENTED_YET;
@@ -71,7 +66,8 @@ TieredSchema RandomPlacement(SharedMemoryContext *context, size_t blob_size) {
   return result;
 }
 
-TieredSchema CalculatePlacement(SharedMemoryContext *context, size_t blob_size,
+TieredSchema CalculatePlacement(SharedMemoryContext *context, RpcContext *rpc,
+                                size_t blob_size,
                                 const api::Context &api_context) {
   (void)api_context;
 
@@ -84,11 +80,11 @@ TieredSchema CalculatePlacement(SharedMemoryContext *context, size_t blob_size,
   TieredSchema result;
   switch (policy) {
     case PlacementPolicy::kRandom: {
-      result = RandomPlacement(context, blob_size);
+      result = RandomPlacement(context, rpc, blob_size);
       break;
     }
     case PlacementPolicy::kTopDown: {
-      result = TopDownPlacement(context, blob_size);
+      result = TopDownPlacement(context, rpc, blob_size);
       break;
     }
   }

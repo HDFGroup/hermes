@@ -836,30 +836,90 @@ void DecrementRefcount(SharedMemoryContext *context, RpcContext *rpc,
   }
 }
 
-SystemViewState *GetGlobalSystemViewState(MetadataManager *mdm) {
+SystemViewState *GetLocalSystemViewState(MetadataManager *mdm) {
   SystemViewState *result =
+    (SystemViewState *)((u8 *)mdm + mdm->system_view_state_offset);
+
+  return result;
+}
+
+SystemViewState *GetLocalSystemViewState(SharedMemoryContext *context) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  SystemViewState *result = GetLocalSystemViewState(mdm);
+
+  return result;
+}
+
+std::vector<u64> LocalGetGlobalTierCapacities(SharedMemoryContext *context) {
+
+  SystemViewState *global_svs = GetGlobalSystemViewState(context);
+
+  std::vector<u64> result(global_svs->num_tiers);
+  for (size_t i = 0; i < result.size(); ++i) {
+    result[i] = global_svs->bytes_available[i].load();
+  }
+
+  return result;
+}
+
+std::vector<u64> GetGlobalTierCapacities(SharedMemoryContext *context,
+                                         RpcContext *rpc) {
+
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  u32 target_node = mdm->global_system_view_state_node_id;
+
+  std::vector<u64> result;
+
+  if (target_node == rpc->node_id) {
+    result = LocalGetGlobalTierCapacities(context);
+  } else {
+    result = RpcCall<std::vector<u64>>(rpc, target_node,
+                                       "RemoteGetGlobalTierCapacities");
+  }
+
+  return result;
+}
+
+SystemViewState *GetGlobalSystemViewState(SharedMemoryContext *context) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  SystemViewState *result = 
     (SystemViewState *)((u8 *)mdm + mdm->global_system_view_state_offset);
   assert((u8 *)result != (u8 *)mdm);
 
   return result;
 }
 
-void LocalUpdateGlobalSystemViewState(SharedMemoryContext *context,
-                                      i64 adjustment, TierID tier) {
-  MetadataManager *mdm = GetMetadataManagerFromContext(context);
-  SystemViewState *global_state = GetGlobalSystemViewState(mdm);
-  global_state->bytes_available[tier].fetch_add(adjustment);
+void LocalUpdateGlobalSystemViewState(SharedMemoryContext *context, 
+                                      std::vector<i64> adjustments) {
+
+  for (size_t i = 0; i < adjustments.size(); ++i) {
+    SystemViewState *state = GetGlobalSystemViewState(context);
+    state->bytes_available[i].fetch_add(adjustments[i]);
+  }
 }
 
 void UpdateGlobalSystemViewState(SharedMemoryContext *context,
-                                 RpcContext *rpc, i64 adjustment, TierID tier) {
+                                 RpcContext *rpc) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
-  u32 target_node = mdm->global_system_view_state_node_id;
-  if (target_node == rpc->node_id) {
-    LocalUpdateGlobalSystemViewState(context, adjustment, tier);
-  } else {
-    RpcCall<void>(rpc, target_node, "RemoteUpdateGlobalSystemViewState",
-                  adjustment, tier);
+  BufferPool *pool = GetBufferPoolFromContext(context);
+
+  bool update_needed = false;
+  std::vector<i64> adjustments(pool->num_tiers);
+  for (size_t i = 0; i < adjustments.size(); ++i) {
+    adjustments[i] = pool->capacity_adjustments[i].exchange(0);
+    if (adjustments[i] != 0) {
+      update_needed = true;
+    }
+  }
+
+  if (update_needed) {
+    u32 target_node = mdm->global_system_view_state_node_id;
+    if (target_node == rpc->node_id) {
+      LocalUpdateGlobalSystemViewState(context, adjustments);
+    } else {
+      RpcCall<void>(rpc, target_node, "RemoteUpdateGlobalSystemViewState",
+                    adjustments);
+    }
   }
 }
 
@@ -969,7 +1029,7 @@ void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
 
   IdMap *bucket_map = 0;
   // TODO(chogan): We can either calculate an average expected size here, or
-  // make HeapRealloc acutally use realloc semantics so it can grow as big as
+  // make HeapRealloc actually use realloc semantics so it can grow as big as
   // needed. But that requires updating offsets for the map and the heap's free
   // list
   sh_new_strdup(bucket_map, config->max_buckets_per_node, map_heap);

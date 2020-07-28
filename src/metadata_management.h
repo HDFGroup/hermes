@@ -246,8 +246,6 @@ void LocalRemoveBlobFromBucketInfo(SharedMemoryContext *context,
                                    BucketID bucket_id, BlobID blob_id);
 void LocalIncrementRefcount(SharedMemoryContext *context, BucketID id);
 void LocalDecrementRefcount(SharedMemoryContext *context, BucketID id);
-void LocalUpdateGlobalSystemViewState(SharedMemoryContext *context,
-                                      i64 adjustment, TierID tier);
 
 u64 LocalGet(MetadataManager *mdm, const char *key, MapType map_type);
 void LocalPut(MetadataManager *mdm, const char *key, u64 val, MapType map_type);
@@ -256,6 +254,14 @@ void LocalDelete(MetadataManager *mdm, const char *key, MapType map_type);
 
 Heap *GetIdHeap(MetadataManager *mdm);
 Heap *GetMapHeap(MetadataManager *mdm);
+
+void LocalUpdateGlobalSystemViewState(SharedMemoryContext *context,
+                                      std::vector<i64> adjustments);
+SystemViewState *GetLocalSystemViewState(SharedMemoryContext *context);
+SystemViewState *GetGlobalSystemViewState(SharedMemoryContext *context);
+std::vector<u64> LocalGetGlobalTierCapacities(SharedMemoryContext *context);
+std::vector<u64> GetGlobalTierCapacities(SharedMemoryContext *context,
+                                          RpcContext *rpc);
 
 } // namespace hermes
 

@@ -9,7 +9,8 @@ namespace hermes {
 class DataPlacementEngine {
 };
 
-TieredSchema CalculatePlacement(SharedMemoryContext *context, size_t blob_size,
+TieredSchema CalculatePlacement(SharedMemoryContext *context, RpcContext *rpc,
+                                size_t blob_size,
                                 const api::Context &api_context);
 
 }  // namespace hermes

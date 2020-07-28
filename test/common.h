@@ -36,7 +36,6 @@ const char buffer_pool_shmem_name[] = "/hermes_buffer_pool_";
 const char rpc_server_name[] = "sockets://localhost:8080";
 
 void InitTestConfig(Config *config) {
-  // TODO(chogan): @configuration This will come from Apollo or a config file
   config->num_tiers = 4;
   assert(config->num_tiers < kMaxTiers);
 
@@ -258,6 +257,11 @@ std::shared_ptr<api::Hermes> InitHermes(const char *config_file=NULL,
                                    ":" + std::to_string(config.rpc_port));
     result->rpc_.start_server(&result->context_, &result->rpc_,
                               rpc_server_addr.c_str(), config.rpc_num_threads);
+  }
+
+  MetadataManager *mdm = GetMetadataManagerFromContext(&result->context_);
+  if (result->rpc_->node_id == mdm->global_system_view_state_node_id) {
+    // TODO(chogan): Start thread that periodically calls UpdateGlobalSystemViewState()
   }
 
   WorldBarrier(&comm);

@@ -9,15 +9,6 @@ namespace hermes {
 
 namespace api {
 
-struct bkt_hdl * Open(const std::string &name, Context &ctx) {
-  (void)ctx;
-  struct bkt_hdl *ret = nullptr;
-
-  LOG(INFO) << "Opening a bucket to" << name << '\n';
-
-  return ret;
-}
-
 Bucket::Bucket(const std::string &initial_name,
                const std::shared_ptr<Hermes> &h, Context ctx)
     : name_(initial_name), hermes_(h) {
@@ -38,17 +29,19 @@ Status Bucket::Put(const std::string &name, const u8 *data, size_t size,
   if (IsValid()) {
     LOG(INFO) << "Attaching blob " << name << " to Bucket " << '\n';
 
-    TieredSchema schema = CalculatePlacement(&hermes_->context_, size, ctx);
+    TieredSchema schema = CalculatePlacement(&hermes_->context_, &hermes_->rpc_,
+                                             size, ctx);
     while (schema.size() == 0) {
       // NOTE(chogan): Keep running the DPE until we get a valid placement
-      schema = CalculatePlacement(&hermes_->context_, size, ctx);
+      schema = CalculatePlacement(&hermes_->context_, &hermes_->rpc_, size,
+                                  ctx);
     }
 
     std::vector<BufferID> buffer_ids = GetBuffers(&hermes_->context_, schema);
     while (buffer_ids.size() == 0) {
       // NOTE(chogan): This loop represents waiting for the BufferOrganizer to
-      // free some buffers if it needs to. It will probably be handled through the
-      // messaging service.
+      // free some buffers if it needs to. It will probably be handled through
+      // the messaging service.
       buffer_ids = GetBuffers(&hermes_->context_, schema);
     }
 
