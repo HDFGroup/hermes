@@ -6,12 +6,15 @@
 
 namespace hermes {
 
+using api::Status;
+
 class DataPlacementEngine {
 };
 
-TieredSchema CalculatePlacement(SharedMemoryContext *context, RpcContext *rpc,
-                                size_t blob_size,
-                                const api::Context &api_context);
+Status CalculatePlacement(SharedMemoryContext *context, RpcContext *rpc,
+                          std::vector<size_t> &blob_size,
+                          std::vector<TieredSchema> &output,
+                          const api::Context &api_context);
 
 }  // namespace hermes
 #endif  // HERMES_DATA_PLACEMENT_ENGINE_H_

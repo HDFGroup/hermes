@@ -27,32 +27,22 @@ Status Bucket::Put(const std::string &name, const u8 *data, size_t size,
   Status ret = 0;
 
   if (IsValid()) {
-    LOG(INFO) << "Attaching blob " << name << " to Bucket " << '\n';
+    std::vector<size_t> sizes(1, size);
+    std::vector<TieredSchema> schemas; 
+    ret = CalculatePlacement(&hermes_->context_, &hermes_->rpc_, sizes, schemas,
+                             ctx);
 
-    TieredSchema schema = CalculatePlacement(&hermes_->context_, &hermes_->rpc_,
-                                             size, ctx);
-    while (schema.size() == 0) {
-      // NOTE(chogan): Keep running the DPE until we get a valid placement
-      schema = CalculatePlacement(&hermes_->context_, &hermes_->rpc_, size,
-                                  ctx);
+    if (ret == 0) {
+      std::vector<std::string> names(1, name);
+      std::vector<std::vector<u8>> blobs(1);
+      blobs[0].resize(size);
+      // TODO(chogan): It would be nice to have a single-blob-Put that doesn't
+      // perform a copy
+      for (size_t i = 0; i < size; ++i) {
+        blobs[0][i] = data[i];
+      }
+      ret = PlaceBlobs(schemas, blobs, names);
     }
-
-    std::vector<BufferID> buffer_ids = GetBuffers(&hermes_->context_, schema);
-    while (buffer_ids.size() == 0) {
-      // NOTE(chogan): This loop represents waiting for the BufferOrganizer to
-      // free some buffers if it needs to. It will probably be handled through
-      // the messaging service.
-      buffer_ids = GetBuffers(&hermes_->context_, schema);
-    }
-
-    hermes::Blob blob = {};
-    blob.data = (u8 *)data;
-    blob.size = size;
-    WriteBlobToBuffers(&hermes_->context_, &hermes_->rpc_, blob, buffer_ids);
-
-    // NOTE(chogan): Update all metadata associated with this Put
-    AttachBlobToBucket(&hermes_->context_, &hermes_->rpc_, name.c_str(), id_,
-                       buffer_ids);
   }
 
   return ret;
