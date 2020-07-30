@@ -23,7 +23,7 @@ void CopyStringToCharArray(const std::string &src, char *dest) {
 
 void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
                             const char *addr, i32 num_rpc_threads) {
-  ThalliumState *state = (ThalliumState *)rpc->state;
+  ThalliumState *state = GetThalliumState(rpc);
   state->engine = new tl::engine(addr, THALLIUM_SERVER_MODE, true,
                                  num_rpc_threads);
 
@@ -242,7 +242,7 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
   function<void(const request&)> rpc_finalize =
     [rpc](const request &req) {
       (void)req;
-      ThalliumState *state = (ThalliumState *)rpc->state;
+      ThalliumState *state = GetThalliumState(rpc);
       state->engine->finalize();
     };
 
@@ -291,6 +291,38 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
   rpc_server->define("RemoteFinalize", rpc_finalize).disable_response();
 }
 
+
+void StartGlobalSystemViewStateUpdateThread(SharedMemoryContext *context,
+                                            RpcContext *rpc, Arena *arena,
+                                            double sleep_ms) {
+
+  struct ThreadArgs {
+    SharedMemoryContext *context;
+    RpcContext *rpc;
+    double sleep_ms;
+  };
+
+  auto update_global_system_view_state = [](void *args) {
+    ThreadArgs *targs = (ThreadArgs *)args;
+    ThalliumState *state = GetThalliumState(targs->rpc);
+    while (!state->kill_requested.load()) {
+      UpdateGlobalSystemViewState(targs->context, targs->rpc);
+      tl::thread::self().sleep(*state->engine, targs->sleep_ms);
+    }
+  };
+
+  ThreadArgs *args = PushStruct<ThreadArgs>(arena);
+  args->context = context;
+  args->rpc = rpc;
+  args->sleep_ms = sleep_ms;
+
+  ThalliumState *state = GetThalliumState(rpc);
+  ABT_xstream_create(ABT_SCHED_NULL, &state->execution_stream);
+  ABT_thread_create_on_xstream(state->execution_stream,
+                               update_global_system_view_state, args,
+                               ABT_THREAD_ATTR_NULL, NULL);
+}
+
 void InitRpcContext(RpcContext *rpc, u32 num_nodes, u32 node_id,
                      Config *config) {
   rpc->num_nodes = num_nodes;
@@ -310,13 +342,17 @@ void *CreateRpcState(Arena *arena) {
 }
 
 void FinalizeRpcContext(RpcContext *rpc, bool is_daemon) {
-  ThalliumState *state = (ThalliumState *)rpc->state;
+  ThalliumState *state = GetThalliumState(rpc);
+  state->kill_requested.store(true);
+  ABT_xstream_join(state->execution_stream);
+  ABT_xstream_free(&state->execution_stream);
 
   if (is_daemon) {
     state->engine->wait_for_finalize();
   } else {
     state->engine->finalize();
   }
+
   delete state->engine;
 }
 

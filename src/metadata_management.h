@@ -262,6 +262,12 @@ SystemViewState *GetGlobalSystemViewState(SharedMemoryContext *context);
 std::vector<u64> LocalGetGlobalTierCapacities(SharedMemoryContext *context);
 std::vector<u64> GetGlobalTierCapacities(SharedMemoryContext *context,
                                           RpcContext *rpc);
+void UpdateGlobalSystemViewState(SharedMemoryContext *context,
+                                 RpcContext *rpc);
+
+void StartGlobalSystemViewStateUpdateThread(SharedMemoryContext *context,
+                                            RpcContext *rpc, Arena *arena,
+                                            double slepp_ms);
 
 } // namespace hermes
 

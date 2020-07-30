@@ -257,11 +257,10 @@ std::shared_ptr<api::Hermes> InitHermes(const char *config_file=NULL,
                                    ":" + std::to_string(config.rpc_port));
     result->rpc_.start_server(&result->context_, &result->rpc_,
                               rpc_server_addr.c_str(), config.rpc_num_threads);
-  }
-
-  MetadataManager *mdm = GetMetadataManagerFromContext(&result->context_);
-  if (result->rpc_->node_id == mdm->global_system_view_state_node_id) {
-    // TODO(chogan): Start thread that periodically calls UpdateGlobalSystemViewState()
+    double sleep_ms = config.system_view_state_update_interval_ms;
+    StartGlobalSystemViewStateUpdateThread(&result->context_, &result->rpc_,
+                                           &result->trans_arena_,
+                                           sleep_ms);
   }
 
   WorldBarrier(&comm);
