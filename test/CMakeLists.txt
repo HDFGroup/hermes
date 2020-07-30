@@ -78,3 +78,14 @@ add_test(NAME TestMemoryManagement COMMAND mem)
 add_executable(stb_map stb_map_test.cc)
 target_link_libraries(stb_map hermes ${LIBRT} MPI::MPI_CXX)
 add_test(NAME TestSTBMapWithHeap COMMAND stb_map)
+
+#------------------------------------------------------------------------------
+# Custom Targets
+#------------------------------------------------------------------------------
+
+add_custom_target(ares
+  COMMAND LSAN_OPTIONS=suppressions=${CMAKE_CURRENT_SOURCE_DIR}/data/asan.supp
+  ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4 -ppn 2
+  "${CMAKE_BINARY_DIR}/bin/end_to_end_test"
+  "${CMAKE_CURRENT_SOURCE_DIR}/data/ares.conf"
+)

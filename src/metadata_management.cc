@@ -889,12 +889,16 @@ SystemViewState *GetGlobalSystemViewState(SharedMemoryContext *context) {
   return result;
 }
 
-void LocalUpdateGlobalSystemViewState(SharedMemoryContext *context, 
+void LocalUpdateGlobalSystemViewState(SharedMemoryContext *context,
                                       std::vector<i64> adjustments) {
 
   for (size_t i = 0; i < adjustments.size(); ++i) {
     SystemViewState *state = GetGlobalSystemViewState(context);
-    state->bytes_available[i].fetch_add(adjustments[i]);
+    if (adjustments[i]) {
+      state->bytes_available[i].fetch_add(adjustments[i]);
+      DLOG(INFO) << "TierID " << i << " adjusted by " << adjustments[i]
+                 << " bytes\n";
+    }
   }
 }
 
