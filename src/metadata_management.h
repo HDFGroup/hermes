@@ -149,6 +149,48 @@ struct MetadataManager {
 
 struct RpcContext;
 
+// MetadataStorage interface
+
+/**
+ *
+ */
+void StorageInit(MetadataManager *mdm, Arena *arena, Config *config);
+
+/**
+ *
+ */
+void StoragePut(MetadataManager *mdm, const char *key, u64 val,
+                MapType map_type);
+
+/**
+ *
+ */
+u64 StorageGet(MetadataManager *mdm, const char *key, MapType map_type);
+
+/**
+ *
+ */
+char *StorageReverseGet(MetadataManager *mdm, u64 id, MapType map_type);
+/**
+ *
+ */
+void StorageDelete(MetadataManager *mdm, const char *key, MapType map_type);
+
+/**
+ *
+ */
+u32 StorageHashString(MetadataManager *mdm, RpcContext *rpc, const char *str);
+
+/**
+ *
+ */
+void StorageSeedHash(size_t seed);
+
+/**
+ *
+ */
+size_t StorageSize(MetadataManager *mdm, MapType map_type);
+
 /**
  *
  */
@@ -226,6 +268,8 @@ void LocalAddBlobIdToBucket(MetadataManager *mdm, BucketID bucket_id,
                             BlobID blob_id);
 std::vector<BufferID> LocalGetBufferIdList(MetadataManager *mdm,
                                            BlobID blob_id);
+void LocalGetBufferIdList(Arena *arena, MetadataManager *mdm, BlobID blob_id,
+                          BufferIdArray *buffer_ids);
 void LocalFreeBufferIdList(SharedMemoryContext *context, BlobID blob_id);
 void LocalDestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
                         const char *bucket_name, BucketID bucket_id);
