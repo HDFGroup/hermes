@@ -100,11 +100,6 @@ struct VBucketInfo {
   Stats stats;
 };
 
-struct IdMap {
-  char *key;
-  u64 value;
-};
-
 struct SystemViewState {
   std::atomic<u64> bytes_available[kMaxTiers];
   int num_tiers;
@@ -294,10 +289,6 @@ void LocalDecrementRefcount(SharedMemoryContext *context, BucketID id);
 u64 LocalGet(MetadataManager *mdm, const char *key, MapType map_type);
 void LocalPut(MetadataManager *mdm, const char *key, u64 val, MapType map_type);
 void LocalDelete(MetadataManager *mdm, const char *key, MapType map_type);
-
-
-Heap *GetIdHeap(MetadataManager *mdm);
-Heap *GetMapHeap(MetadataManager *mdm);
 
 void LocalUpdateGlobalSystemViewState(SharedMemoryContext *context,
                                       std::vector<i64> adjustments);

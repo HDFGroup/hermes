@@ -8,6 +8,11 @@
 #include "metadata_management.h"
 #include "debug_state.h"
 
+namespace hermes {
+Heap *GetIdHeap(MetadataManager *mdm);
+Heap *GetMapHeap(MetadataManager *mdm);
+}  // namespace hermes
+
 using namespace hermes;
 
 enum Color {

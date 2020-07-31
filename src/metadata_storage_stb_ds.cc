@@ -9,6 +9,11 @@
 
 namespace hermes {
 
+struct IdMap {
+  char *key;
+  u64 value;
+};
+
 static IdMap *GetMapByOffset(MetadataManager *mdm, u32 offset) {
   IdMap *result =(IdMap *)((u8 *)mdm + offset);
 
