@@ -4,6 +4,11 @@ GitHub.
 We follow the [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html).
 (I'm open to other suggestions.)
 
+# Google ORTOOLS Usage
+  * Download OR-Tools binary distributions for C++ from 
+    https://developers.google.com/optimization/install/cpp.
+  * Setup ORTOOLS_DIR as cmake environment variable.
+
 # Notes
 
   * I abandoned the term 'vBucket' and replaced it by 'trait.' I find it too

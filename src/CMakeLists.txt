@@ -10,16 +10,18 @@ include_directories(
 #------------------------------------------------------------------------------
 # External dependencies
 #------------------------------------------------------------------------------
-# google log
-find_package(GLOG REQUIRED)
-if(GLOG_FOUND)
-  message(STATUS "found glog, glog dir is ${GLOG_DIR}")
-  set(HERMES_EXT_INCLUDE_DEPENDENCIES ${GLOG_INCLUDE_DIR}
+# google ortools
+find_package(ortools REQUIRED)
+if(ORTOOLS_FOUND)
+  include_directories(${ORTOOLS_INCLUDE_DIRS})
+  message(STATUS "Found ortools")
+  set(HERMES_EXT_INCLUDE_DEPENDENCIES ${ORTOOLS_INCLUDE_DIRS}
       ${HERMES_EXT_INCLUDE_DEPENDENCIES}
   )
-  set(HERMES_EXT_LIB_DEPENDENCIES glog::glog ${HERMES_EXT_LIB_DEPENDENCIES})
+  set(HERMES_EXT_LIB_DEPENDENCIES
+      ${ORTOOLS_LIBRARIES} ${HERMES_EXT_LIB_DEPENDENCIES})
 else()
-  message(STATUS, "GLOG not found")
+  message(STATUS, "ortools not found")
 endif()
 
 #------------------------------------------------------------------------------
@@ -51,7 +53,7 @@ target_include_directories(hermes
 )
 
 target_link_libraries(hermes
-  PUBLIC glog::glog
+  PUBLIC ${ORTOOLS_LIBRARIES}
   PRIVATE thallium
   PUBLIC "$<$<BOOL:${HERMES_INTERCEPT_IO}>:${GOTCHA_MODULE_LIBS}>"
   PRIVATE $<$<BOOL:${HERMES_COMMUNICATION_MPI}>:MPI::MPI_CXX>
