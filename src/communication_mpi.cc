@@ -190,7 +190,8 @@ void MpiFinalize(void *state) {
 }
 
 size_t InitCommunication(CommunicationContext *comm, Arena *arena,
-                         size_t trans_arena_size_per_node, bool is_daemon) {
+                         size_t trans_arena_size_per_node, bool is_daemon,
+                         bool is_adapter) {
   comm->world_barrier = MpiWorldBarrier;
   comm->sub_barrier = MpiSubBarrier;
   comm->finalize = MpiFinalize;
@@ -204,11 +205,16 @@ size_t InitCommunication(CommunicationContext *comm, Arena *arena,
   size_t trans_arena_size_for_rank =
     MpiAssignIDsToNodes(comm, trans_arena_size_per_node);
 
-  if (is_daemon) {
+  if (is_daemon || is_adapter) {
     mpi_state->sub_comm = mpi_state->world_comm;
     comm->sub_proc_id = comm->world_proc_id;
-    comm->hermes_size = comm->world_size;
-    comm->proc_kind = ProcessKind::kHermes;
+    if (is_daemon) {
+      comm->hermes_size = comm->world_size;
+      comm->proc_kind = ProcessKind::kHermes;
+    } else {
+      comm->app_size = comm->world_size;
+      comm->proc_kind = ProcessKind::kApp;
+    }
     comm->first_on_node = MpiFirstOnNode(mpi_state->world_comm);
   } else {
     int color = (int)comm->proc_kind;

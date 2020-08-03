@@ -22,6 +22,7 @@
 #include <mpi.h>
 
 #include "metadata_management.h"
+#include "rpc.h"
 
 #include "debug_state.cc"
 #include "memory_management.cc"
@@ -55,13 +56,19 @@
 namespace hermes {
 
 void Finalize(SharedMemoryContext *context, CommunicationContext *comm,
-              const char *shmem_name, Arena *trans_arena,
+              RpcContext *rpc, const char *shmem_name, Arena *trans_arena,
               bool is_application_core) {
   WorldBarrier(comm);
   if (is_application_core) {
     ReleaseSharedMemoryContext(context);
     HERMES_DEBUG_CLIENT_CLOSE();
-  } else {
+  }
+  WorldBarrier(comm);
+  if (!is_application_core) {
+    if (comm->first_on_node) {
+      bool is_daemon = comm->world_size == comm->num_nodes;
+      FinalizeRpcContext(rpc, is_daemon);
+    }
     UnmapSharedMemory(context);
     shm_unlink(shmem_name);
     HERMES_DEBUG_SERVER_CLOSE();
@@ -112,7 +119,7 @@ BufferHeader *GetHeadersBase(SharedMemoryContext *context) {
 }
 
 inline BufferHeader *GetHeaderByIndex(SharedMemoryContext *context, u32 index) {
-  BufferPool *pool = GetBufferPoolFromContext(context);
+  [[maybe_unused]] BufferPool *pool = GetBufferPoolFromContext(context);
   BufferHeader *headers = GetHeadersBase(context);
   assert(index < pool->total_headers);
   BufferHeader *result = headers + index;
@@ -333,7 +340,7 @@ void ReleaseBuffer(SharedMemoryContext *context, RpcContext *rpc,
   if (target_node == rpc->node_id) {
     LocalReleaseBuffer(context, buffer_id);
   } else {
-    RpcCall<void>(rpc, target_node, "ReleaseBuffer", buffer_id);
+    RpcCall<void>(rpc, target_node, "RemoteReleaseBuffer", buffer_id);
   }
 }
 
@@ -419,17 +426,31 @@ std::vector<BufferID> GetBuffers(SharedMemoryContext *context,
   return result;
 }
 
-size_t GetBlobSize(SharedMemoryContext *context, CommunicationContext *comm,
+u32 LocalGetBufferSize(SharedMemoryContext *context, BufferID id) {
+  BufferHeader *header = GetHeaderByBufferId(context, id);
+  u32 result = header->used;
+
+  return result;
+}
+
+u32 GetBufferSize(SharedMemoryContext *context, RpcContext *rpc, BufferID id) {
+  u32 result = 0;
+  if (BufferIsRemote(rpc, id)) {
+    result = RpcCall<u32>(rpc, id.bits.node_id, "RemoteGetBufferSize", id);
+  } else {
+    result = LocalGetBufferSize(context, id);
+  }
+
+  return result;
+}
+
+size_t GetBlobSize(SharedMemoryContext *context, RpcContext *rpc,
                    BufferIdArray *buffer_ids) {
   size_t result = 0;
+  // TODO(chogan): @optimization Combine all ids on same node into 1 RPC
   for (u32 i = 0; i < buffer_ids->length; ++i) {
-    if (BufferIsRemote(comm, buffer_ids->ids[i])) {
-      // TODO(chogan):
-      // RpcCall(rpc, buffer_ids->ids[i].node_id, ...);
-    } else {
-      BufferHeader *header = GetHeaderByBufferId(context, buffer_ids->ids[i]);
-      result += header->used;
-    }
+    u32 size = GetBufferSize(context, rpc, buffer_ids->ids[i]);
+    result += size;
   }
 
   return result;
@@ -470,17 +491,17 @@ void PartitionRamBuffers(Arena *arena, i32 buffer_size, i32 buffer_count,
                          int block_size) {
   for (int i = 0; i < buffer_count; ++i) {
     int num_blocks_needed = buffer_size / block_size;
-    u8 *first_buffer = PushArray<u8>(arena, block_size);
+    [[maybe_unused]] u8 *first_buffer = PushArray<u8>(arena, block_size);
 
     for (int block = 0; block < num_blocks_needed - 1; ++block) {
       // NOTE(chogan): @optimization Since we don't have to store these
       // pointers, the only effect of this loop is that the arena will end up
       // with the correct "next free" address. This function isn't really
       // necessary; it's mainly just testing that everything adds up correctly.
-      u8 *buffer = PushArray<u8>(arena, block_size);
+      [[maybe_unused]] u8 *buffer = PushArray<u8>(arena, block_size);
       // NOTE(chogan): Make sure the buffers are perfectly aligned (no holes or
       // padding is introduced)
-      i32 buffer_block_offset = (block + 1) * block_size;
+      [[maybe_unused]] i32 buffer_block_offset = (block + 1) * block_size;
       assert((u8 *)first_buffer == ((u8 *)buffer) - buffer_block_offset);
     }
   }
@@ -983,7 +1004,7 @@ void MakeFullShmemName(char *dest, const char *base) {
   char *username = getenv("USER");
   if (username) {
     size_t username_length = strlen(username);
-    size_t total_length = base_name_length + username_length + 1;
+    [[maybe_unused]] size_t total_length = base_name_length + username_length + 1;
     // TODO(chogan): @errorhandling
     assert(total_length < kMaxBufferPoolShmemNameLength);
     snprintf(dest + base_name_length, username_length + 1, "%s", username);
@@ -1025,9 +1046,11 @@ void InitFilesForBuffering(SharedMemoryContext *context, bool make_space) {
         // and some are shared (burst buffers) and only require one rank to
         // initialize them
 
-        // TODO(chogan): Use posix_fallocate when it is
-        // available
-        ftruncate(fileno(buffering_file), tier->capacity);
+        // TODO(chogan): Use posix_fallocate when it is available
+        [[maybe_unused]] int ftruncate_result =
+          ftruncate(fileno(buffering_file), tier->capacity);
+        // TODO(chogan): @errorhandling
+        assert(ftruncate_result == 0);
       }
       context->open_streams[tier_id][slab] = buffering_file;
     }
@@ -1039,7 +1062,10 @@ u8 *InitSharedMemory(const char *shmem_name, size_t total_size) {
   int shmem_fd = shm_open(shmem_name, O_CREAT | O_RDWR | O_TRUNC, S_IRUSR | S_IWUSR);
 
   if (shmem_fd >= 0) {
-    ftruncate(shmem_fd, total_size);
+    [[maybe_unused]] int ftruncate_result = ftruncate(shmem_fd, total_size);
+    // TODO(chogan): @errorhandling
+    assert(ftruncate_result == 0);
+
     result = (u8 *)mmap(0, total_size, PROT_READ | PROT_WRITE, MAP_SHARED,
                         shmem_fd, 0);
     // TODO(chogan): @errorhandling
@@ -1116,108 +1142,147 @@ void ReleaseSharedMemoryContext(SharedMemoryContext *context) {
 
 // IO clients
 
-void WriteBlobToBuffers(SharedMemoryContext *context, const Blob &blob,
+size_t LocalWriteBufferById(SharedMemoryContext *context, BufferID id,
+                            const Blob &blob, size_t bytes_left_to_write,
+                            size_t offset) {
+  BufferHeader *header = GetHeaderByIndex(context, id.bits.header_index);
+  Tier *tier = GetTierFromHeader(context, header);
+  size_t write_size = header->capacity;
+
+  if (bytes_left_to_write > header->capacity) {
+    header->used = header->capacity;
+    bytes_left_to_write -= header->capacity;
+  } else {
+    header->used = bytes_left_to_write;
+    write_size = bytes_left_to_write;
+  }
+
+  // TODO(chogan): Should this be a TicketMutex? It seems that at any
+  // given time, only the DataOrganizer and an application core will
+  // be trying to write to/from the same BufferID. In that case, it's
+  // first come first serve. However, if it turns out that more
+  // threads will be trying to lock the buffer, we may need to enforce
+  // ordering.
+  LockBuffer(header);
+
+  u8 *at = (u8 *)blob.data + offset;
+  if (tier->is_ram) {
+    u8 *dest = GetRamBufferPtr(context, header->id);
+    memcpy(dest, at, write_size);
+  } else {
+    int slab_index = GetSlabIndexFromHeader(context, header);
+    FILE *file = context->open_streams[tier->id][slab_index];
+    if (!file) {
+      // TODO(chogan): Check number of opened files against maximum allowed.
+      // May have to close something.
+      const char *filename =
+        context->buffering_filenames[tier->id][slab_index].c_str();
+      file = fopen(filename, "r+");
+      context->open_streams[tier->id][slab_index] = file;
+    }
+    fseek(file, header->data_offset, SEEK_SET);
+    [[maybe_unused]] size_t items_written = fwrite(at, write_size, 1, file);
+    // TODO(chogan): @errorhandling
+    assert(items_written == 1);
+    // fflush(file);
+    // fsync(fileno(file));
+  }
+  UnlockBuffer(header);
+
+  return write_size;
+}
+
+void WriteBlobToBuffers(SharedMemoryContext *context, RpcContext *rpc,
+                        const Blob &blob,
                         const std::vector<BufferID> &buffer_ids) {
   size_t bytes_left_to_write = blob.size;
-  u8 *at = blob.data;
+  size_t offset = 0;
   // TODO(chogan): @optimization Handle sequential buffers as one I/O operation
+  // TODO(chogan): @optimization Aggregate multiple RPCs into one
   for (const auto &id : buffer_ids) {
-    if (false /* TODO(chogan): BufferIsRemote(context, id) */) {
-      // TODO(chogan): RPC. Probably RDMA (Thallium bulk transfer)
+    size_t bytes_written = 0;
+    if (BufferIsRemote(rpc, id)) {
+      // TODO(chogan): @optimization Set up bulk transfer if blob.size is > 4K
+      // TODO(chogan): @optimization Only send the portion of the blob we have
+      // to write.
+      // TODO(chogan): @optimization Avoid copy
+      std::vector<u8> data(blob.size);
+      memcpy(data.data(), blob.data, blob.size);
+      bytes_written = RpcCall<size_t>(rpc, id.bits.node_id,
+                                      "RemoteWriteBufferById", id, data,
+                                      bytes_left_to_write, offset);
     } else {
-      BufferHeader *header = GetHeaderByIndex(context, id.bits.header_index);
-      Tier *tier = GetTierFromHeader(context, header);
-      size_t write_size = header->capacity;
-
-      if (bytes_left_to_write > header->capacity) {
-        header->used = header->capacity;
-        bytes_left_to_write -= header->capacity;
-      } else {
-        header->used = bytes_left_to_write;
-        write_size = bytes_left_to_write;
-      }
-
-      // TODO(chogan): Should this be a TicketMutex? It seems that at any
-      // given time, only the DataOrganizer and an application core will
-      // be trying to write to/from the same BufferID. In that case, it's
-      // first come first serve. However, if it turns out that more
-      // threads will be trying to lock the buffer, we may need to enforce
-      // ordering.
-      LockBuffer(header);
-
-      if (tier->is_ram) {
-        u8 *dest = GetRamBufferPtr(context, header->id);
-        memcpy(dest, at, write_size);
-      } else {
-        int slab_index = GetSlabIndexFromHeader(context, header);
-        FILE *file = context->open_streams[tier->id][slab_index];
-        if (!file) {
-          // TODO(chogan): Check number of opened files against maximum allowed.
-          // May have to close something.
-          const char *filename =
-            context->buffering_filenames[tier->id][slab_index].c_str();
-          file = fopen(filename, "r+");
-          context->open_streams[tier->id][slab_index] = file;
-        }
-        fseek(file, header->data_offset, SEEK_SET);
-        size_t items_written = fwrite(at, write_size, 1, file);
-        // TODO(chogan): @errorhandling
-        assert(items_written == 1);
-        // fflush(file);
-        // fsync(fileno(file));
-      }
-      at += write_size;
-      UnlockBuffer(header);
+      bytes_written = LocalWriteBufferById(context, id, blob,
+                                           bytes_left_to_write, offset);
     }
+    bytes_left_to_write -= bytes_written;
+    offset += bytes_written;
   }
-  assert(at == blob.data + blob.size);
+  assert(offset == blob.size);
+  assert(bytes_left_to_write == 0);
+}
+
+size_t LocalReadBufferById(SharedMemoryContext *context, BufferID id,
+                           Blob *blob, size_t read_offset) {
+  // TODO(chogan): Do we even need the read_offset?
+  BufferHeader *header = GetHeaderByIndex(context, id.bits.header_index);
+  Tier *tier = GetTierFromHeader(context, header);
+  size_t read_size = header->used;
+
+  // TODO(chogan): Should this be a TicketMutex? It seems that at any
+  // given time, only the DataOrganizer and an application core will
+  // be trying to write to/from the same BufferID. In that case, it's
+  // first come first serve. However, if it turns out that more
+  // threads will be trying to lock the buffer, we may need to enforce
+  // ordering.
+  LockBuffer(header);
+
+  size_t result = 0;
+  if (tier->is_ram) {
+    u8 *src = GetRamBufferPtr(context, header->id);
+    memcpy(blob->data, src, read_size);
+    result = read_size;
+  } else {
+    int slab_index = GetSlabIndexFromHeader(context, header);
+    FILE *file = context->open_streams[tier->id][slab_index];
+    if (!file) {
+      // TODO(chogan): Check number of opened files against maximum allowed.
+      // May have to close something.
+      const char *filename =
+        context->buffering_filenames[tier->id][slab_index].c_str();
+      file = fopen(filename, "r+");
+    }
+    fseek(file, header->data_offset, SEEK_SET);
+    size_t items_read = fread((u8 *)blob->data + read_offset, read_size, 1,
+                              file);
+    // TODO(chogan): @errorhandling
+    assert(items_read == 1);
+    result = items_read * read_size;
+  }
+  UnlockBuffer(header);
+
+  return result;
 }
 
 size_t ReadBlobFromBuffers(SharedMemoryContext *context, RpcContext *rpc,
                            Blob *blob, BufferIdArray *buffer_ids) {
-  u8 *at = blob->data;
   size_t total_bytes_read = 0;
   for (u32 i = 0; i < buffer_ids->length; ++i) {
+    size_t bytes_read = 0;
     BufferID id = buffer_ids->ids[i];
     if (BufferIsRemote(rpc, id)) {
-      // TODO(chogan): RPC
-      (void)rpc;
-      // rpc->call();
-    } else {
       BufferHeader *header = GetHeaderByIndex(context, id.bits.header_index);
-      Tier *tier = GetTierFromHeader(context, header);
-      size_t read_size = header->used;
-
-      // TODO(chogan): Should this be a TicketMutex? It seems that at any
-      // given time, only the DataOrganizer and an application core will
-      // be trying to write to/from the same BufferID. In that case, it's
-      // first come first serve. However, if it turns out that more
-      // threads will be trying to lock the buffer, we may need to enforce
-      // ordering.
-      LockBuffer(header);
-
-      if (tier->is_ram) {
-        u8 *src = GetRamBufferPtr(context, header->id);
-        memcpy(blob->data, src, read_size);
-      } else {
-        int slab_index = GetSlabIndexFromHeader(context, header);
-        FILE *file = context->open_streams[tier->id][slab_index];
-        if (!file) {
-          // TODO(chogan): Check number of opened files against maximum allowed.
-          // May have to close something.
-          const char *filename =
-            context->buffering_filenames[tier->id][slab_index].c_str();
-          fopen(filename, "r+");
-        }
-        fseek(file, header->data_offset, SEEK_SET);
-        size_t items_read = fread(at, read_size, 1, file);
-        // TODO(chogan): @errorhandling
-        assert(items_read == 1);
-        at += items_read * read_size;
-        total_bytes_read += items_read * read_size;
-      }
-      UnlockBuffer(header);
+      // TODO(chogan): @optimization Set up bulk transfer if data is > 4K
+      std::vector<u8> data = RpcCall<std::vector<u8>>(rpc, id.bits.node_id,
+                                                      "RemoteReadBufferById",
+                                                      id, header->used);
+      bytes_read = data.size();
+      // TODO(chogan): @optimization Avoid the copy
+      memcpy(blob->data, data.data(), bytes_read);
+    } else {
+      bytes_read = LocalReadBufferById(context, id, blob, total_bytes_read);
     }
+    total_bytes_read += bytes_read;
   }
   assert(total_bytes_read == blob->size);
 

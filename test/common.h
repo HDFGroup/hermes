@@ -60,6 +60,7 @@ void InitTestConfig(Config *config) {
   config->bandwidths[1] = 300.f;
   config->bandwidths[2] = 150.0f;
   config->bandwidths[3] = 70.0f;
+
   config->latencies[0] = 15.0f;
   config->latencies[1] = 250000;
   config->latencies[2] = 500000.0f;
@@ -71,16 +72,25 @@ void InitTestConfig(Config *config) {
   config->arena_percentages[kArenaType_MetaData] = 0.04f;
   config->arena_percentages[kArenaType_TransferWindow] = 0.08f;
   config->arena_percentages[kArenaType_Transient] = 0.03f;
+
   config->mount_points[0] = mem_mount_point;
   config->mount_points[1] = nvme_mount_point;
   config->mount_points[2] = bb_mount_point;
   config->mount_points[3] = pfs_mount_point;
-  config->rpc_server_name = rpc_server_name;
+
+  config->rpc_server_base_name = "localhost";
+  config->rpc_protocol = "ofi+sockets";
+  config->rpc_port = 8080;
+  config->rpc_num_threads = 1;
 
   config->max_buckets_per_node = 16;
   config->max_vbuckets_per_node = 8;
 
-  MakeFullShmemName(config->buffer_pool_shmem_name, buffer_pool_shmem_name);
+  size_t shmem_name_size = strlen(buffer_pool_shmem_name);
+  for (size_t i = 0; i < shmem_name_size; ++i) {
+    config->buffer_pool_shmem_name[i] = buffer_pool_shmem_name[i];
+  }
+  config->buffer_pool_shmem_name[shmem_name_size] = '\0';
 }
 
 ArenaInfo GetArenaInfo(Config *config) {
@@ -109,8 +119,7 @@ ArenaInfo GetArenaInfo(Config *config) {
 // TODO(chogan): Move into library
 SharedMemoryContext InitHermesCore(Config *config, CommunicationContext *comm,
                                    ArenaInfo *arena_info, Arena *arenas,
-                                   bool start_rpc_server, RpcContext *rpc,
-                                   int num_rpc_threads=0) {
+                                   RpcContext *rpc) {
 
   size_t shmem_size = (arena_info->total -
                        arena_info->sizes[kArenaType_Transient]);
@@ -139,6 +148,10 @@ SharedMemoryContext InitHermesCore(Config *config, CommunicationContext *comm,
   MetadataManager *mdm =
     PushClearedStruct<MetadataManager>(&arenas[kArenaType_MetaData]);
   context.metadata_manager_offset = (u8 *)mdm - (u8 *)shmem_base;
+
+  rpc->state = CreateRpcState(&arenas[kArenaType_MetaData]);
+  mdm->rpc_state_offset = (u8 *)rpc->state - shmem_base;
+
   InitMetadataManager(mdm, &arenas[kArenaType_MetaData], config, comm->node_id);
 
   // NOTE(chogan): Store the metadata_manager_offset right after the
@@ -147,17 +160,12 @@ SharedMemoryContext InitHermesCore(Config *config, CommunicationContext *comm,
     (ptrdiff_t *)(shmem_base + sizeof(context.buffer_pool_offset));
   *metadata_manager_offset_location = context.metadata_manager_offset;
 
-  if (start_rpc_server) {
-    rpc->start_server(&context, rpc,
-                      config->rpc_server_name.c_str(), num_rpc_threads);
-  }
-
   return context;
 }
 
 SharedMemoryContext
 BootstrapSharedMemory(Arena *arenas, Config *config, CommunicationContext *comm,
-                      RpcContext *rpc, int num_rpc_threads, bool is_daemon) {
+                      RpcContext *rpc, bool is_daemon, bool is_adapter) {
   size_t bootstrap_size = KILOBYTES(4);
   u8 *bootstrap_memory = (u8 *)malloc(bootstrap_size);
   InitArena(&arenas[kArenaType_Transient], bootstrap_size, bootstrap_memory);
@@ -169,89 +177,47 @@ BootstrapSharedMemory(Arena *arenas, Config *config, CommunicationContext *comm,
 
   size_t trans_arena_size =
     InitCommunication(comm, &arenas[kArenaType_Transient],
-                      arena_info.sizes[kArenaType_Transient], is_daemon);
+                      arena_info.sizes[kArenaType_Transient], is_daemon,
+                      is_adapter);
 
   GrowArena(&arenas[kArenaType_Transient], trans_arena_size);
   comm->state = arenas[kArenaType_Transient].base;
 
-  InitRpcContext(rpc, comm->num_nodes, comm->node_id);
+  InitRpcContext(rpc, comm->num_nodes, comm->node_id, config);
 
   SharedMemoryContext result = {};
-  // TODO(chogan): Always start RPC server (remove is_daemon param)
   if (comm->proc_kind == ProcessKind::kHermes && comm->first_on_node) {
-    result = InitHermesCore(config, comm, &arena_info, arenas, is_daemon,
-                            rpc, num_rpc_threads);
+    result = InitHermesCore(config, comm, &arena_info, arenas, rpc);
   }
 
   return result;
 }
 
 // TODO(chogan): Move into library
-std::shared_ptr<api::Hermes>
-InitDaemon(const std::string &buffering_path,
-           const std::string &rpc_server_name, int num_rpc_threads) {
-  // TODO(chogan): Read Config from a file
+std::shared_ptr<api::Hermes> InitHermes(const char *config_file=NULL,
+                                        bool is_daemon=false,
+                                        bool is_adapter=false) {
   hermes::Config config = {};
-  InitTestConfig(&config);
+  const size_t config_memory_size = KILOBYTES(16);
+  hermes::u8 config_memory[config_memory_size];
 
-  config.rpc_server_name = rpc_server_name.c_str();
-
-  if (buffering_path.size() > 0) {
-    for (int i = 1; i < config.num_tiers; ++i) {
-      config.mount_points[i] = buffering_path.c_str();
-    }
+  if (config_file) {
+    hermes::Arena config_arena = {};
+    hermes::InitArena(&config_arena, config_memory_size, config_memory);
+    hermes::ParseConfig(&config_arena, config_file, &config);
+  } else {
+    InitTestConfig(&config);
   }
-
-  Arena arenas[kArenaType_Count] = {};
-  CommunicationContext comm = {};
-  RpcContext rpc = {};
-  SharedMemoryContext context =
-    BootstrapSharedMemory(arenas, &config, &comm, &rpc, num_rpc_threads, true);
-
-  std::shared_ptr<api::Hermes> result = std::make_shared<api::Hermes>(context);
-  result->shmem_name_ = std::string(config.buffer_pool_shmem_name);
-  result->trans_arena_ = arenas[kArenaType_Transient];
-  // NOTE(chogan): Reset the transient arena since we're done with the data it
-  // contains
-  result->trans_arena_.used = 0;
-
-  rpc.node_id = comm.node_id;
-  rpc.num_nodes = comm.num_nodes;
-
-  result->comm_ = comm;
-  result->context_ = context;
-  result->rpc_ = rpc;
-
-  return result;
-}
-
-// TODO(chogan): Move into library
-SharedMemoryContext InitHermesClient(CommunicationContext *comm,
-                                     char *shmem_name,
-                                     bool init_buffering_files) {
-  SharedMemoryContext context = GetSharedMemoryContext(shmem_name);
-
-  if (init_buffering_files) {
-    InitFilesForBuffering(&context, comm->sub_proc_id == 0);
-  }
-
-  return context;
-}
-
-// TODO(chogan): Move into library
-std::shared_ptr<api::Hermes> InitHermes() {
-  // TODO(chogan): Read Config from a file
-  hermes::Config config = {};
-  InitTestConfig(&config);
+  std::string base_shmem_name(config.buffer_pool_shmem_name);
+  MakeFullShmemName(config.buffer_pool_shmem_name, base_shmem_name.c_str());
 
   // TODO(chogan): Do we need a transfer window arena? We can probably just use
   // the transient arena for this.
   Arena arenas[kArenaType_Count] = {};
   CommunicationContext comm = {};
   RpcContext rpc = {};
-  // TODO(chogan): start RPC server by default, pass num_rpc_threads
   SharedMemoryContext context =
-    BootstrapSharedMemory(arenas, &config, &comm, &rpc, 0, false);
+    BootstrapSharedMemory(arenas, &config, &comm, &rpc, is_daemon, is_adapter);
 
   WorldBarrier(&comm);
   std::shared_ptr<api::Hermes> result = nullptr;
@@ -261,9 +227,13 @@ std::shared_ptr<api::Hermes> InitHermes() {
     result->shmem_name_ = std::string(config.buffer_pool_shmem_name);
   } else {
     context = GetSharedMemoryContext(config.buffer_pool_shmem_name);
-    InitFilesForBuffering(&context, comm.sub_proc_id == 0);
+    InitFilesForBuffering(&context, comm.first_on_node);
     SubBarrier(&comm);
     result = std::make_shared<api::Hermes>(context);
+    // NOTE(chogan): Give every App process a valid pointer to the internal RPC
+    // state in shared memory
+    MetadataManager *mdm = GetMetadataManagerFromContext(&context);
+    rpc.state = (void *)(context.shm_base + mdm->rpc_state_offset);
   }
 
   WorldBarrier(&comm);
@@ -275,6 +245,36 @@ std::shared_ptr<api::Hermes> InitHermes() {
   result->comm_ = comm;
   result->context_ = context;
   result->rpc_ = rpc;
+
+  // NOTE(chogan): The RPC servers have to be started here because they need to
+  // save a reference to the context and rpc instances that are members of the
+  // Hermes instance.
+  if (comm.proc_kind == ProcessKind::kHermes) {
+    std::string host_number = GetHostNumberAsString(&result->rpc_,
+                                                    result->rpc_.node_id);
+    std::string rpc_server_addr = (config.rpc_protocol + "://" +
+                                   config.rpc_server_base_name + host_number +
+                                   ":" + std::to_string(config.rpc_port));
+    result->rpc_.start_server(&result->context_, &result->rpc_,
+                              rpc_server_addr.c_str(), config.rpc_num_threads);
+  }
+
+  WorldBarrier(&comm);
+
+  return result;
+}
+
+// TODO(chogan): Move into library
+std::shared_ptr<api::Hermes> InitHermesClient(const char *config_file=NULL) {
+  std::shared_ptr<api::Hermes> result = InitHermes(config_file, false, true);
+
+  return result;
+}
+
+// TODO(chogan): Move into library
+std::shared_ptr<api::Hermes> InitHermesDaemon(char *config_file=NULL) {
+
+  std::shared_ptr<api::Hermes> result = InitHermes(config_file, true);
 
   return result;
 }

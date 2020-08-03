@@ -59,7 +59,7 @@ int Hermes::GetNumProcesses() {
 }
 
 void Hermes::Finalize() {
-  hermes::Finalize(&context_, &comm_, shmem_name_.c_str(), &trans_arena_,
+  hermes::Finalize(&context_, &comm_, &rpc_, shmem_name_.c_str(), &trans_arena_,
                    IsApplicationCore());
 }
 

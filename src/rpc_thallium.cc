@@ -1,48 +1,45 @@
-#include "rpc.h"
+#include <string>
 
-#include <thallium.hpp>
-#include <thallium/serialization/stl/vector.hpp>
-#include <thallium/serialization/stl/pair.hpp>
+#include "rpc.h"
 
 namespace tl = thallium;
 
 namespace hermes {
 
-struct ThalliumState {
-  char *server_name;
-};
-
-template<typename ReturnType, typename... Ts>
-auto RpcCall(RpcContext *rpc, u32 node_id, const char *func_name, Ts... args) {
-  // TODO(chogan): Store this in the metadata arena
-  ThalliumState *tl_state = (ThalliumState *)rpc->state;
-  (void)tl_state;
-  (void)node_id;
-  const char kServerName[] = "ofi+sockets://localhost:8080";
-  // TODO(chogan): Server must include the node_id
-  tl::engine engine("tcp", THALLIUM_CLIENT_MODE);
-  tl::remote_procedure remote_proc = engine.define(func_name);
-  tl::endpoint server = engine.lookup(kServerName);
-
-  if constexpr(std::is_same<ReturnType, void>::value)
-  {
-    remote_proc.on(server)(std::forward<Ts>(args)...);
+std::string GetHostNumberAsString(RpcContext *rpc, u32 node_id) {
+  std::string result = "";
+  if (rpc->host_number_range[0] != 0 && rpc->host_number_range[1] != 0) {
+    result = std::to_string(node_id + rpc->host_number_range[0] - 1);
   }
-  else
-  {
-    ReturnType result = remote_proc.on(server)(std::forward<Ts>(args)...);
 
-    return result;
-  }
+  return result;
 }
 
-// TODO(chogan): addr should be in the RpcContext
+void CopyStringToCharArray(const std::string &src, char *dest) {
+  size_t src_size = src.size();
+  memcpy(dest, src.c_str(), src_size);
+  dest[src_size] = '\0';
+}
+
 void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
                             const char *addr, i32 num_rpc_threads) {
-  tl::engine rpc_server(addr, THALLIUM_SERVER_MODE, false, num_rpc_threads);
+  ThalliumState *state = (ThalliumState *)rpc->state;
+  state->engine = new tl::engine(addr, THALLIUM_SERVER_MODE, true,
+                                 num_rpc_threads);
 
-  LOG(INFO) << "Serving at " << rpc_server.self() << " with "
+  tl::engine *rpc_server = state->engine;
+
+  std::string rpc_server_name = rpc_server->self();
+  LOG(INFO) << "Serving at " << rpc_server_name << " with "
             << num_rpc_threads << " RPC threads" << std::endl;
+
+  size_t end_of_protocol = rpc_server_name.find_first_of(":");
+  std::string server_name_prefix = rpc_server_name.substr(0, end_of_protocol) +
+                                   "://";
+  CopyStringToCharArray(server_name_prefix, state->server_name_prefix);
+
+  std::string server_name_postfix = ":" + std::to_string(rpc->port);
+  CopyStringToCharArray(server_name_postfix, state->server_name_postfix);
 
   using std::function;
   using std::string;
@@ -75,26 +72,62 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
       MergeRamBufferFreeList(context, slab_index);
     };
 
+  function<void(const request&, BufferID)> rpc_get_buffer_size =
+    [context](const request &req, BufferID id) {
+      u32 result = LocalGetBufferSize(context, id);
+
+      req.respond(result);
+    };
+
+  function<void(const request&, BufferID, std::vector<u8>, size_t, size_t)>
+    rpc_write_buffer_by_id = [context](const request &req, BufferID id,
+                                       std::vector<u8> data,
+                                       size_t bytes_left_to_write,
+                                       size_t offset) {
+
+      Blob blob = {};
+      blob.size = data.size();
+      blob.data = data.data();
+      size_t result = LocalWriteBufferById(context, id, blob,
+                                           bytes_left_to_write, offset);
+
+      req.respond(result);
+
+    };
+
+  function<void(const request&, BufferID, size_t)> rpc_read_buffer_by_id =
+    [context](const request &req, BufferID id, size_t size) {
+      std::vector<u8> result(size);
+      Blob blob = {};
+      blob.size = size;
+      blob.data = result.data();
+      [[maybe_unused]] size_t bytes_read = LocalReadBufferById(context, id,
+                                                               &blob, 0);
+      assert(bytes_read == size);
+
+      req.respond(result);
+    };
+
   // Metadata requests
 
-  function<void(const request&, string, MapType)> rpc_map_get =
-    [context](const request &req, string name, MapType map_type) {
+  function<void(const request&, string, const MapType&)> rpc_map_get =
+    [context](const request &req, string name, const MapType &map_type) {
       MetadataManager *mdm = GetMetadataManagerFromContext(context);
       u64 result = LocalGet(mdm, name.c_str(), map_type);
 
       req.respond(result);
     };
 
-  function<void(const request&, const string&, u64, MapType)> rpc_map_put =
+  function<void(const request&, const string&, u64, const MapType&)> rpc_map_put =
     [context](const request &req, const string &name, u64 val,
-              MapType map_type) {
+              const MapType &map_type) {
       (void)req;
       MetadataManager *mdm = GetMetadataManagerFromContext(context);
       LocalPut(mdm, name.c_str(), val, map_type);
     };
 
-  function<void(const request&, string, MapType)> rpc_map_delete =
-    [context](const request &req, string name, MapType map_type) {
+  function<void(const request&, string, const MapType&)> rpc_map_delete =
+    [context](const request &req, string name, const MapType &map_type) {
       (void)req;
       MetadataManager *mdm = GetMetadataManagerFromContext(context);
       LocalDelete(mdm, name.c_str(), map_type);
@@ -152,11 +185,19 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
       LocalRenameBucket(context, rpc, id, old_name.c_str(), new_name.c_str());
     };
 
-  function<void(const request&, const string&, BlobID)> rpc_destroy_blob =
+  function<void(const request&, const string&, BlobID)>
+    rpc_destroy_blob_by_name =
     [context, rpc](const request &req, const string &name, BlobID id) {
       (void)req;
-      LocalDestroyBlob(context, rpc, name.c_str(), id);
+      LocalDestroyBlobByName(context, rpc, name.c_str(), id);
     };
+
+  function<void(const request&, BlobID)>
+    rpc_destroy_blob_by_id = [context, rpc](const request &req, BlobID id) {
+      (void)req;
+      LocalDestroyBlobById(context, rpc, id);
+    };
+
   function<void(const request&, BucketID, BlobID)> rpc_contains_blob =
     [context](const request &req, BucketID bucket_id, BlobID blob_id) {
       bool result = LocalContainsBlob(context, bucket_id, blob_id);
@@ -184,47 +225,80 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
     };
 
   function<void(const request&)> rpc_finalize =
-    [&rpc_server](const request &req) {
+    [rpc](const request &req) {
       (void)req;
-      rpc_server.finalize();
+      ThalliumState *state = (ThalliumState *)rpc->state;
+      state->engine->finalize();
     };
 
-  rpc_server.define("GetBuffers", rpc_get_buffers);
-  rpc_server.define("RemoteReleaseBuffer",
-                    rpc_release_buffer).disable_response();
-  rpc_server.define("SplitBuffers", rpc_split_buffers).disable_response();
-  rpc_server.define("MergeBuffers", rpc_merge_buffers).disable_response();
-  rpc_server.define("RemoteGet", rpc_map_get);
-  rpc_server.define("RemotePut", rpc_map_put).disable_response();
-  rpc_server.define("RemoteDelete", rpc_map_delete).disable_response();
-  rpc_server.define("RemoteAddBlobIdToBucket", rpc_add_blob).disable_response();
-  rpc_server.define("RemoteDestroyBucket",
-                    rpc_destroy_bucket).disable_response();
-  rpc_server.define("RemoteRenameBucket", rpc_rename_bucket).disable_response();
-  rpc_server.define("RemoteDestroyBlob", rpc_destroy_blob).disable_response();
-  rpc_server.define("RemoteContainsBlob", rpc_contains_blob);
-  rpc_server.define("RemoteRemoveBlobFromBucketInfo",
-                    rpc_remove_blob_from_bucket_info).disable_response();
-  rpc_server.define("RemoteGetBufferIdList", rpc_get_buffer_id_list);
-  rpc_server.define("RemoteFreeBufferIdList",
-                    rpc_free_buffer_id_list).disable_response();
-  rpc_server.define("RemoteIncrementRefcount",
-                    rpc_increment_refcount).disable_response();
-  rpc_server.define("RemoteDecrementRefcount",
-                    rpc_decrement_refcount).disable_response();
-  rpc_server.define("Finalize", rpc_finalize).disable_response();
+  // TODO(chogan): Currently these are only used for testing.
+  rpc_server->define("GetBuffers", rpc_get_buffers);
+  rpc_server->define("SplitBuffers", rpc_split_buffers).disable_response();
+  rpc_server->define("MergeBuffers", rpc_merge_buffers).disable_response();
 
-  // TODO(chogan): Currently the calling thread waits for finalize because
-  // that's the way the tests are set up, but once the RPC server is started
-  // from Hermes initialization the calling thread will need to continue
-  // executing.
-  rpc_server.wait_for_finalize();
+  rpc_server->define("RemoteReleaseBuffer",
+                     rpc_release_buffer).disable_response();
+  rpc_server->define("RemoteGetBufferSize", rpc_get_buffer_size);
+
+  rpc_server->define("RemoteReadBufferById", rpc_read_buffer_by_id);
+  rpc_server->define("RemoteWriteBufferById", rpc_write_buffer_by_id);
+
+  rpc_server->define("RemoteGet", rpc_map_get);
+  rpc_server->define("RemotePut", rpc_map_put).disable_response();
+  rpc_server->define("RemoteDelete", rpc_map_delete).disable_response();
+  rpc_server->define("RemoteAddBlobIdToBucket",
+                     rpc_add_blob).disable_response();
+  rpc_server->define("RemoteDestroyBucket",
+                    rpc_destroy_bucket).disable_response();
+  rpc_server->define("RemoteRenameBucket",
+                     rpc_rename_bucket).disable_response();
+  rpc_server->define("RemoteDestroyBlobByName",
+                     rpc_destroy_blob_by_name).disable_response();
+  rpc_server->define("RemoteDestroyBlobById",
+                     rpc_destroy_blob_by_id).disable_response();
+  rpc_server->define("RemoteContainsBlob", rpc_contains_blob);
+  rpc_server->define("RemoteGetNextFreeBucketId", rpc_get_next_free_bucket_id);
+  rpc_server->define("RemoteRemoveBlobFromBucketInfo",
+                    rpc_remove_blob_from_bucket_info).disable_response();
+  rpc_server->define("RemoteAllocateBufferIdList", rpc_allocate_buffer_id_list);
+  rpc_server->define("RemoteGetBufferIdList", rpc_get_buffer_id_list);
+  rpc_server->define("RemoteFreeBufferIdList",
+                    rpc_free_buffer_id_list).disable_response();
+  rpc_server->define("RemoteIncrementRefcount",
+                    rpc_increment_refcount).disable_response();
+  rpc_server->define("RemoteDecrementRefcount",
+                    rpc_decrement_refcount).disable_response();
+
+  rpc_server->define("RemoteFinalize", rpc_finalize).disable_response();
 }
 
-void InitRpcContext(RpcContext *rpc, u32 num_nodes, u32 node_id) {
+void InitRpcContext(RpcContext *rpc, u32 num_nodes, u32 node_id,
+                     Config *config) {
   rpc->num_nodes = num_nodes;
   rpc->node_id = node_id;
   rpc->start_server = ThalliumStartRpcServer;
+  rpc->state_size = sizeof(ThalliumState);
+  rpc->port = config->rpc_port;
+  CopyStringToCharArray(config->rpc_server_base_name, rpc->base_hostname);
+  rpc->host_number_range[0] = config->rpc_host_number_range[0];
+  rpc->host_number_range[1] = config->rpc_host_number_range[1];
+}
+
+void *CreateRpcState(Arena *arena) {
+  ThalliumState *result = PushClearedStruct<ThalliumState>(arena);
+
+  return result;
+}
+
+void FinalizeRpcContext(RpcContext *rpc, bool is_daemon) {
+  ThalliumState *state = (ThalliumState *)rpc->state;
+
+  if (is_daemon) {
+    state->engine->wait_for_finalize();
+  } else {
+    state->engine->finalize();
+  }
+  delete state->engine;
 }
 
 }  // namespace hermes

@@ -31,17 +31,17 @@ bool Bucket::IsValid() const {
   return result;
 }
 
-Status Bucket::Put(const std::string &name, const Blob &data, Context &ctx) {
-  (void)ctx;
+Status Bucket::Put(const std::string &name, const u8 *data, size_t size,
+                   Context &ctx) {
   Status ret = 0;
 
   if (IsValid()) {
     LOG(INFO) << "Attaching blob " << name << " to Bucket " << '\n';
 
-    TieredSchema schema = CalculatePlacement(data.size(), ctx);
+    TieredSchema schema = CalculatePlacement(size, ctx);
     while (schema.size() == 0) {
       // NOTE(chogan): Keep running the DPE until we get a valid placement
-      schema = CalculatePlacement(data.size(), ctx);
+      schema = CalculatePlacement(size, ctx);
     }
 
     std::vector<BufferID> buffer_ids = GetBuffers(&hermes_->context_, schema);
@@ -53,9 +53,9 @@ Status Bucket::Put(const std::string &name, const Blob &data, Context &ctx) {
     }
 
     hermes::Blob blob = {};
-    blob.data = (u8 *)data.data();
-    blob.size = data.size();
-    WriteBlobToBuffers(&hermes_->context_, blob, buffer_ids);
+    blob.data = (u8 *)data;
+    blob.size = size;
+    WriteBlobToBuffers(&hermes_->context_, &hermes_->rpc_, blob, buffer_ids);
 
     // NOTE(chogan): Update all metadata associated with this Put
     AttachBlobToBucket(&hermes_->context_, &hermes_->rpc_, name.c_str(), id_,
@@ -79,7 +79,7 @@ size_t Bucket::Get(const std::string &name, Blob& user_blob, Context &ctx) {
     if (user_blob.size() == 0) {
       LOG(INFO) << "Getting Blob " << name << " size from bucket "
                 << name_ << '\n';
-      ret = GetBlobSize(&hermes_->context_, &hermes_->comm_, &buffer_ids);
+      ret = GetBlobSize(&hermes_->context_, &hermes_->rpc_, &buffer_ids);
     } else {
       LOG(INFO) << "Getting Blob " << name << " from bucket " << name_ << '\n';
       hermes::Blob blob = {};
@@ -110,7 +110,7 @@ Status Bucket::DeleteBlob(const std::string &name, Context &ctx) {
   Status ret = 0;
 
   LOG(INFO) << "Deleting Blob " << name << " from bucket " << name_ << '\n';
-  DestroyBlob(&hermes_->context_, &hermes_->rpc_, id_, name);
+  DestroyBlobByName(&hermes_->context_, &hermes_->rpc_, id_, name);
 
   return ret;
 }

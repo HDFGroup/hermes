@@ -52,7 +52,15 @@ class Bucket {
   bool IsValid() const;
 
 	/** put a blob on this bucket */
-  Status Put(const std::string &name, const Blob &data, Context &ctx);
+  template<typename T>
+  Status Put(const std::string &name, const std::vector<T> &data,
+             Context &ctx) {
+    Status result = Put(name, (u8 *)data.data(), data.size() * sizeof(T), ctx);
+
+    return result;
+  }
+  Status Put(const std::string &name, const u8 *data, size_t size,
+             Context &ctx);
 
   /** get a blob on this bucket */
 	/** - if user_blob.size() == 0 => return the minimum buffer size needed */

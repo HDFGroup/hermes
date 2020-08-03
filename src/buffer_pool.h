@@ -224,7 +224,7 @@ struct BufferIdArray;
 /**
  *
  */
-size_t GetBlobSize(SharedMemoryContext *context, CommunicationContext *comm,
+size_t GetBlobSize(SharedMemoryContext *context, RpcContext *rpc,
                    BufferIdArray *buffer_ids);
 
 /**
@@ -316,8 +316,7 @@ void ReleaseBuffers(SharedMemoryContext *context, RpcContext *rpc,
  *
  * @param context The shared memory context where the BufferPool lives.
  * @param addr The address and port where the RPC server will listen.
- * Currently, this is a Thallium compatible address. For example,
- * tcp://127.1.1.1:8080
+ * This address must be a compatible with whatever the RPC implementation is.
  */
 void StartBufferPoolRpcServer(SharedMemoryContext *context, const char *addr,
                               i32 num_rpc_threads);
@@ -327,12 +326,13 @@ void StartBufferPoolRpcServer(SharedMemoryContext *context, const char *addr,
  *
  * @param context The Hermes instance's shared memory context.
  * @param comm The Hermes instance's communication context.
+ * @param rpc The Hermes instance's RPC context.
  * @param shmem_name The name of the shared memory.
  * @param trans_arena The instance's transient arena.
  * @param is_application_core Whether or not this rank is an app rank.
  */
 void Finalize(SharedMemoryContext *context, CommunicationContext *comm,
-              const char *shmem_name, Arena *trans_arena,
+              RpcContext *rpc, const char *shmem_name, Arena *trans_arena,
               bool is_application_core);
 
 // I/O Clients
@@ -358,7 +358,8 @@ struct Blob {
  * @param blob The data to write.
  * @param buffer_ids The collection of BufferIDs that should buffer the blob.
  */
-void WriteBlobToBuffers(SharedMemoryContext *context, const Blob &blob,
+void WriteBlobToBuffers(SharedMemoryContext *context, RpcContext *rpc,
+                        const Blob &blob,
                         const std::vector<BufferID> &buffer_ids);
 
 /**
@@ -378,6 +379,11 @@ void WriteBlobToBuffers(SharedMemoryContext *context, const Blob &blob,
 size_t ReadBlobFromBuffers(SharedMemoryContext *context, RpcContext *rpc,
                            Blob *blob, BufferIdArray *buffer_ids);
 
+size_t LocalWriteBufferById(SharedMemoryContext *context, BufferID id,
+                            const Blob &blob, size_t bytes_left_to_write,
+                            size_t offset);
+size_t LocalReadBufferById(SharedMemoryContext *context, BufferID id,
+                           Blob *blob, size_t offset);
 }  // namespace hermes
 
 #endif  // HERMES_BUFFER_POOL_H_

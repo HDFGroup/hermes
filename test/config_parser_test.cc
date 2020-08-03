@@ -25,8 +25,8 @@ int main(int argc, char **argv) {
 
   Assert(config.num_tiers == 4);
   for (int i = 0; i < config.num_tiers; ++i) {
-    Assert(config.capacities[i] == 50);
-    Assert(config.block_sizes[i] == 4);
+    Assert(config.capacities[i] == MEGABYTES(50));
+    Assert(config.block_sizes[i] == KILOBYTES(4));
     Assert(config.num_slabs[i] == 4);
 
     Assert(config.slab_unit_sizes[i][0] == 1);
@@ -59,8 +59,17 @@ int main(int argc, char **argv) {
   Assert(config.mount_points[2] == "./");
   Assert(config.mount_points[3] == "./");
 
-  const char expected_rpc_server_name[] = "sockets://localhost:8080";
-  Assert(config.rpc_server_name == expected_rpc_server_name);
+  Assert(config.max_buckets_per_node == 16);
+  Assert(config.max_vbuckets_per_node == 8);
+
+  Assert(config.rpc_protocol == "ofi+sockets");
+  Assert(config.rpc_port == 8080);
+  Assert(config.rpc_host_number_range[0] == 0 &&
+         config.rpc_host_number_range[1] == 0);
+  Assert(config.rpc_num_threads == 1);
+
+  const char expected_rpc_server_name[] = "localhost";
+  Assert(config.rpc_server_base_name == expected_rpc_server_name);
 
   const char expected_shm_name[] = "/hermes_buffer_pool_";
   Assert(strncmp(config.buffer_pool_shmem_name, expected_shm_name,

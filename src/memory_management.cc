@@ -229,7 +229,7 @@ Heap *InitHeapInArena(Arena *arena, bool grows_up, u16 alignment) {
   } else {
     result = (Heap *)((arena->base + arena->capacity) - sizeof(Heap));
     heap_size = arena->capacity - arena->used - sizeof(Heap);
-    memset(result, 0, sizeof(Heap));
+    memset((void *)result, 0, sizeof(Heap));
   }
 
   HERMES_DEBUG_SERVER_INIT(grows_up);

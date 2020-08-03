@@ -90,10 +90,14 @@ struct Config {
    * empty string.
    */
   std::string mount_points[kMaxTiers];
-  /** The IP address and port number of the BufferPool RPC server in a format
-   * that Thallium understands. For example, tcp://172.20.101.25:8080.
-   */
-  std::string rpc_server_name;
+  /** The hostname of the RPC server, minus any numbers that Hermes may
+   * auto-generate when the rpc_hostNumber_range is specified. */
+  std::string rpc_server_base_name;
+  std::string rpc_protocol;
+  int rpc_port;
+  int rpc_host_number_range[2];
+  int rpc_num_threads;
+
   /** A base name for the BufferPool shared memory segement. Hermes appends the
    * value of the USER environment variable to this string.
    */

@@ -13,10 +13,10 @@ namespace hermes {
 
 struct RpcContext;
 
-enum class MapType {
-  kBucket,
-  kVBucket,
-  kBlob,
+enum MapType {
+  kMapType_Bucket,
+  kMapType_VBucket,
+  kMapType_Blob,
 };
 
 union BucketID {
@@ -113,6 +113,8 @@ struct MetadataManager {
   ptrdiff_t vbucket_info_offset;
   VBucketID first_free_vbucket;
 
+  ptrdiff_t rpc_state_offset;
+
   ptrdiff_t id_heap_offset;
   ptrdiff_t map_heap_offset;
 
@@ -155,8 +157,8 @@ void DestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
 /**
  *
  */
-void DestroyBlob(SharedMemoryContext *context, RpcContext *rpc,
-                 BucketID bucket_id, const std::string &blob_name);
+void DestroyBlobByName(SharedMemoryContext *context, RpcContext *rpc,
+                       BucketID bucket_id, const std::string &blob_name);
 
 /**
  *
@@ -220,8 +222,10 @@ std::vector<BufferID> LocalGetBufferIdList(MetadataManager *mdm,
 void LocalFreeBufferIdList(SharedMemoryContext *context, BlobID blob_id);
 void LocalDestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
                         const char *bucket_name, BucketID bucket_id);
-void LocalDestroyBlob(SharedMemoryContext *context, RpcContext *rpc,
-                      const char *blob_name, BlobID blob_id);
+void LocalDestroyBlobById(SharedMemoryContext *context, RpcContext *rpc,
+                          BlobID blob_id);
+void LocalDestroyBlobByName(SharedMemoryContext *context, RpcContext *rpc,
+                            const char *blob_name, BlobID blob_id);
 BucketID LocalGetNextFreeBucketId(SharedMemoryContext *context, RpcContext *rpc,
                                   const std::string &name);
 u32 LocalAllocateBufferIdList(MetadataManager *mdm,
@@ -243,45 +247,6 @@ void LocalDelete(MetadataManager *mdm, const char *key, MapType map_type);
 
 Heap *GetIdHeap(MetadataManager *mdm);
 Heap *GetMapHeap(MetadataManager *mdm);
-
-/**
- *  Lets Thallium know how to serialize a BucketID.
- *
- * This function is called implicitly by Thallium.
- *
- * @param ar An archive provided by Thallium.
- * @param bucket_id The BucketID to serialize.
- */
-template<typename A>
-void serialize(A &ar, BucketID &bucket_id) {
-  ar & bucket_id.as_int;
-}
-
-/**
- *  Lets Thallium know how to serialize a BlobID.
- *
- * This function is called implicitly by Thallium.
- *
- * @param ar An archive provided by Thallium.
- * @param blob_id The BlobID to serialize.
- */
-template<typename A>
-void serialize(A &ar, BlobID &blob_id) {
-  ar & blob_id.as_int;
-}
-
-/**
- *  Lets Thallium know how to serialize a MapType.
- *
- * This function is called implicitly by Thallium.
- *
- * @param ar An archive provided by Thallium.
- * @param map_type The MapType to serialize.
- */
-template<typename A>
-void serialize(A &ar, MapType map_type) {
-  ar & (int)map_type;
-}
 
 } // namespace hermes
 
