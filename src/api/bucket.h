@@ -25,7 +25,7 @@ class Bucket {
   std::shared_ptr<Hermes> hermes_;
 
   // TODO: Think about the Big Three
-	Bucket() : name_(""), id_{0, 0}, hermes_(nullptr) {
+  Bucket() : name_(""), id_{0, 0}, hermes_(nullptr) {
     LOG(INFO) << "Create NULL Bucket " << std::endl;
   }
 
@@ -49,7 +49,7 @@ class Bucket {
   /** returns true if this Bucket has been created but not yet destroyed */
   bool IsValid() const;
 
-	/** put a blob on this bucket */
+  /** put a blob on this bucket */
   template<typename T>
   Status Put(const std::string &name, const std::vector<T> &data, Context &ctx);
 
@@ -75,18 +75,18 @@ class Bucket {
              std::vector<std::vector<T>> &blobs, Context &ctx);
 
   /** get a blob on this bucket */
-	/** - if user_blob.size() == 0 => return the minimum buffer size needed */
-	/** - if user_blob.size() > 0 => copy user_blob.size() bytes */
-	/** to user_blob and return user_blob.size() */
-	/** use provides buffer */
+  /** - if user_blob.size() == 0 => return the minimum buffer size needed */
+  /** - if user_blob.size() > 0 => copy user_blob.size() bytes */
+  /** to user_blob and return user_blob.size() */
+  /** use provides buffer */
   size_t Get(const std::string &name, Blob& user_blob, Context &ctx);
 
-	/** get blob(s) on this bucket according to predicate */
-	/** use provides buffer */
-	template<class Predicate>
-	Status GetV(void *user_blob, Predicate pred, Context &ctx);
+  /** get blob(s) on this bucket according to predicate */
+  /** use provides buffer */
+  template<class Predicate>
+  Status GetV(void *user_blob, Predicate pred, Context &ctx);
 
-	/** delete a blob from this bucket */
+  /** delete a blob from this bucket */
   Status DeleteBlob(const std::string &name, Context &ctx);
 
   /** rename a blob on this bucket */
@@ -96,22 +96,22 @@ class Bucket {
   /** Returns true if the Bucket contains a Blob called `name` */
   bool ContainsBlob(const std::string &name);
 
-	/** get a list of blob names filtered by pred */
-	template<class Predicate>
-	std::vector<std::string> GetBlobNames(Predicate pred, Context &ctx);
+  /** get a list of blob names filtered by pred */
+  template<class Predicate>
+  std::vector<std::string> GetBlobNames(Predicate pred, Context &ctx);
 
-	/** get information from the bucket at level-of-detail  */
-	struct bkt_info * GetInfo(Context &ctx);
+  /** get information from the bucket at level-of-detail  */
+  struct bkt_info * GetInfo(Context &ctx);
 
-	/** rename this bucket */
+  /** rename this bucket */
   Status Rename(const std::string& new_name, Context &ctx);
 
-	/** close this bucket and free its associated resources (?) */
-	/** Invalidates handle */
+  /** close this bucket and free its associated resources (?) */
+  /** Invalidates handle */
   Status Close(Context &ctx);
 
-	/** destroy this bucket */
-	/** ctx controls "aggressiveness */
+  /** destroy this bucket */
+  /** ctx controls "aggressiveness */
   Status Destroy(Context &ctx);
 }; // Bucket class
 
