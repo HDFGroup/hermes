@@ -94,6 +94,7 @@ endif()
 
 set(HERMES_CMAKE_DIR "${HERMES_SOURCE_DIR}/CMake")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${HERMES_CMAKE_DIR})
+set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} ${ORTOOLS_DIR} ${ORTOOLS_ROOT})
 
 #------------------------------------------------------------------------------
 # Disallow in-source build

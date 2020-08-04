@@ -27,7 +27,7 @@ jobs:
       - name: Get Sources
         uses: actions/checkout@v2
         
-      - name: Install Spack Dependencies
+      - name: Install Dependencies
         run: |
           npm install
           sudo apt-get install build-essential
@@ -36,8 +36,9 @@ jobs:
           sudo apt-get install automake
           sudo apt-get install libboost-all-dev
           sudo apt-get install -y mpich
+          sudo apt-get -y install build-essential zlib1g-dev 
           
-      - name: Build and Test
+      - name: Install Spack Related Dependency Packages
         run: |
           git clone https://github.com/spack/spack ${{ runner.workspace }}/spack
           . ${{ runner.workspace }}/spack/share/spack/setup-env.sh
@@ -48,6 +49,11 @@ jobs:
           spack repo add sds-repo
           spack install mochi-thallium~cereal
           
+      - name: Install Other Dependency Packages
+        run: |
+          wget -P ${{ runner.workspace }} https://github.com/google/or-tools/releases/download/v7.7/or-tools_ubuntu-18.04_v7.7.7810.tar.gz
+          tar -xvf ${{ runner.workspace }}/or-tools_ubuntu-18.04_v7.7.7810.tar.gz -C ${{ runner.workspace }}
+          
       - name: Build and Test
         run: |
           . ${{ runner.workspace }}/spack/share/spack/setup-env.sh
@@ -56,7 +62,7 @@ jobs:
           spack load -r mochi-thallium~cereal
           mkdir "${{ runner.workspace }}/build"
           cd "${{ runner.workspace }}/build"
-          cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCMAKE_CXX_COMPILER=`which mpicxx` -DCMAKE_C_COMPILER=`which mpicc` -DBUILD_SHARED_LIBS=ON -DHERMES_INTERCEPT_IO=ON -DHERMES_COMMUNICATION_MPI=ON -DBUILD_BUFFER_POOL_VISUALIZER=OFF -DUSE_ADDRESS_SANITIZER=OFF -DUSE_THREAD_SANITIZER=ON -DHERMES_USE_TCP=ON -DHERMES_RPC_THALLIUM=ON -DHERMES_DEBUG_HEAP=OFF $GITHUB_WORKSPACE
+          cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCMAKE_CXX_COMPILER=`which mpicxx` -DCMAKE_C_COMPILER=`which mpicc` -DBUILD_SHARED_LIBS=ON -DORTOOLS_DIR="${{ runner.workspace }}/or-tools_Ubuntu-18.04-64bit_v7.7.7810" -DHERMES_INTERCEPT_IO=ON -DHERMES_COMMUNICATION_MPI=ON -DBUILD_BUFFER_POOL_VISUALIZER=OFF -DUSE_ADDRESS_SANITIZER=OFF -DUSE_THREAD_SANITIZER=ON -DHERMES_USE_TCP=ON -DHERMES_RPC_THALLIUM=ON -DHERMES_DEBUG_HEAP=OFF $GITHUB_WORKSPACE
           cmake --build . -- -j4
           ctest -C $BUILD_TYPE -VV
         shell: bash
