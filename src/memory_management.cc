@@ -83,7 +83,7 @@ TemporaryMemory BeginTemporaryMemory(Arena *arena) {
   result.arena = arena;
   result.used = arena->used;
   if (++arena->temp_count > 1) {
-    assert(!"ScopedTemporaryMemory is not threadsafe yet\n");
+    HERMES_NOT_IMPLEMENTED_YET;
   }
 
   return result;

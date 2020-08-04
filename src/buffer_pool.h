@@ -56,7 +56,7 @@ struct Tier {
    * Tier
    */
   bool has_fallocate;
-  /** The directory where buffering files can be created. */
+  /** The directory where buffering files can be created. Zero terminated. */
   char mount_point[kMaxPathLength];
 };
 
@@ -172,6 +172,9 @@ struct BufferPool {
    * TODO(chogan): @optimization One mutex per free list.
    */
   TicketMutex ticket_mutex;
+
+  std::atomic<i64> capacity_adjustments[kMaxTiers];
+
   /** The block size for each Tier. */
   i32 block_sizes[kMaxTiers];
   /** The number of slabs for each Tier. */

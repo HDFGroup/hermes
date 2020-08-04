@@ -331,6 +331,9 @@ void LocalReleaseBuffer(SharedMemoryContext *context, BufferID buffer_id) {
                                                      slab_index);
     SetFirstFreeBufferId(context, tier_id, slab_index, buffer_id);
     EndTicketMutex(&pool->ticket_mutex);
+
+    i64 adjustment = header_to_free->capacity;
+    pool->capacity_adjustments[header_to_free->tier_id] += adjustment;
   }
 }
 
@@ -421,6 +424,14 @@ std::vector<BufferID> GetBuffers(SharedMemoryContext *context,
     // we didn't get all we asked for
     LocalReleaseBuffers(context, result);
     result.clear();
+  } else {
+    // NOTE(chogan): Update local capacities, which will eventually be reflected
+    // in the global SystemViewState.
+    for (size_t i = 0; i < result.size(); ++i) {
+      BufferHeader *header = GetHeaderByBufferId(context, result[i]);
+      i64 adjustment = header->capacity;
+      pool->capacity_adjustments[header->tier_id] -= adjustment;
+    }
   }
 
   return result;
@@ -466,7 +477,7 @@ ptrdiff_t BufferIdToOffset(SharedMemoryContext *context, BufferID id) {
       break;
     }
     default:
-      assert(!"Not implemented yet");
+      HERMES_NOT_IMPLEMENTED_YET;
   }
 
   return result;

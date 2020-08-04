@@ -95,7 +95,7 @@ Heap *GetIdHeap(MetadataManager *mdm) {
   return result;
 }
 
-char *GetKey(MetadataManager *mdm, IdMap *map, u32 index) {
+static char *GetKey(MetadataManager *mdm, IdMap *map, u32 index) {
   u32 key_offset = (u64)map[index].key;
   Heap *map_heap = GetMapHeap(mdm);
   char *result = (char *)HeapOffsetToPtr(map_heap, key_offset);
@@ -836,6 +836,114 @@ void DecrementRefcount(SharedMemoryContext *context, RpcContext *rpc,
   }
 }
 
+SystemViewState *GetLocalSystemViewState(MetadataManager *mdm) {
+  SystemViewState *result =
+    (SystemViewState *)((u8 *)mdm + mdm->system_view_state_offset);
+
+  return result;
+}
+
+SystemViewState *GetLocalSystemViewState(SharedMemoryContext *context) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  SystemViewState *result = GetLocalSystemViewState(mdm);
+
+  return result;
+}
+
+std::vector<u64> LocalGetGlobalTierCapacities(SharedMemoryContext *context) {
+
+  SystemViewState *global_svs = GetGlobalSystemViewState(context);
+
+  std::vector<u64> result(global_svs->num_tiers);
+  for (size_t i = 0; i < result.size(); ++i) {
+    result[i] = global_svs->bytes_available[i].load();
+  }
+
+  return result;
+}
+
+std::vector<u64> GetGlobalTierCapacities(SharedMemoryContext *context,
+                                         RpcContext *rpc) {
+
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  u32 target_node = mdm->global_system_view_state_node_id;
+
+  std::vector<u64> result;
+
+  if (target_node == rpc->node_id) {
+    result = LocalGetGlobalTierCapacities(context);
+  } else {
+    result = RpcCall<std::vector<u64>>(rpc, target_node,
+                                       "RemoteGetGlobalTierCapacities");
+  }
+
+  return result;
+}
+
+SystemViewState *GetGlobalSystemViewState(SharedMemoryContext *context) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  SystemViewState *result = 
+    (SystemViewState *)((u8 *)mdm + mdm->global_system_view_state_offset);
+  assert((u8 *)result != (u8 *)mdm);
+
+  return result;
+}
+
+void LocalUpdateGlobalSystemViewState(SharedMemoryContext *context,
+                                      std::vector<i64> adjustments) {
+
+  for (size_t i = 0; i < adjustments.size(); ++i) {
+    SystemViewState *state = GetGlobalSystemViewState(context);
+    if (adjustments[i]) {
+      state->bytes_available[i].fetch_add(adjustments[i]);
+      DLOG(INFO) << "TierID " << i << " adjusted by " << adjustments[i]
+                 << " bytes\n";
+    }
+  }
+}
+
+void UpdateGlobalSystemViewState(SharedMemoryContext *context,
+                                 RpcContext *rpc) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  BufferPool *pool = GetBufferPoolFromContext(context);
+
+  bool update_needed = false;
+  std::vector<i64> adjustments(pool->num_tiers);
+  for (size_t i = 0; i < adjustments.size(); ++i) {
+    adjustments[i] = pool->capacity_adjustments[i].exchange(0);
+    if (adjustments[i] != 0) {
+      update_needed = true;
+    }
+  }
+
+  if (update_needed) {
+    u32 target_node = mdm->global_system_view_state_node_id;
+    if (target_node == rpc->node_id) {
+      LocalUpdateGlobalSystemViewState(context, adjustments);
+    } else {
+      RpcCall<void>(rpc, target_node, "RemoteUpdateGlobalSystemViewState",
+                    adjustments);
+    }
+  }
+}
+
+static ptrdiff_t GetOffsetFromMdm(MetadataManager *mdm, void *ptr) {
+  assert((u8 *)ptr >= (u8 *)mdm);
+  ptrdiff_t result = (u8 *)ptr - (u8 *)mdm;
+
+  return result;
+}
+
+SystemViewState *CreateSystemViewState(Arena *arena, Config *config) {
+  SystemViewState *result = PushClearedStruct<SystemViewState>(arena);
+  result->num_tiers = config->num_tiers;
+  for (int i = 0; i < result->num_tiers; ++i) {
+    result->bytes_available[i] = config->capacities[i];
+  }
+
+  return result;
+}
+
 void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
                          int node_id) {
 
@@ -847,11 +955,28 @@ void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
   mdm->map_seed = 0x4E58E5DF;
   stbds_rand_seed(mdm->map_seed);
 
+  mdm->system_view_state_update_interval_ms =
+    config->system_view_state_update_interval_ms;
+
+  // Initialize SystemViewState
+
+  SystemViewState *sv_state = CreateSystemViewState(arena, config);
+  mdm->system_view_state_offset = GetOffsetFromMdm(mdm, sv_state);
+
+  // Initialize Global SystemViewState
+
+  if (node_id == 1) {
+    // NOTE(chogan): Only Node 1 has the Global SystemViewState
+    SystemViewState *global_state = CreateSystemViewState(arena, config);
+    mdm->global_system_view_state_offset = GetOffsetFromMdm(mdm, global_state);
+  }
+  mdm->global_system_view_state_node_id = 1;
+
   // Initialize BucketInfo array
 
   BucketInfo *buckets = PushArray<BucketInfo>(arena,
                                               config->max_buckets_per_node);
-  mdm->bucket_info_offset = (u8 *)buckets - (u8 *)mdm;
+  mdm->bucket_info_offset = GetOffsetFromMdm(mdm, buckets);
   mdm->first_free_bucket.bits.node_id = (u32)node_id;
   mdm->first_free_bucket.bits.index = 0;
   mdm->num_buckets = 0;
@@ -873,7 +998,7 @@ void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
 
   VBucketInfo *vbuckets = PushArray<VBucketInfo>(arena,
                                                  config->max_vbuckets_per_node);
-  mdm->vbucket_info_offset = (u8 *)vbuckets - (u8 *)mdm;
+  mdm->vbucket_info_offset = GetOffsetFromMdm(mdm, vbuckets);
   mdm->first_free_vbucket.bits.node_id = (u32)node_id;
   mdm->first_free_vbucket.bits.index = 0;
   mdm->num_vbuckets = 0;
@@ -895,12 +1020,12 @@ void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
 
   u32 heap_alignment = 8;
   Heap *map_heap = InitHeapInArena(arena, true, heap_alignment);
-  mdm->map_heap_offset = (u8 *)map_heap - (u8 *)mdm;
+  mdm->map_heap_offset = GetOffsetFromMdm(mdm, map_heap);
 
   // NOTE(chogan): This Heap is constructed at the end of the Metadata Arena and
   // will grow towards smaller addresses.
   Heap *id_heap = InitHeapInArena(arena, false, heap_alignment);
-  mdm->id_heap_offset = (u8 *)id_heap - (u8 *)mdm;
+  mdm->id_heap_offset = GetOffsetFromMdm(mdm, id_heap);
 
   // ID Maps
 
@@ -908,12 +1033,12 @@ void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
 
   IdMap *bucket_map = 0;
   // TODO(chogan): We can either calculate an average expected size here, or
-  // make HeapRealloc acutally use realloc semantics so it can grow as big as
+  // make HeapRealloc actually use realloc semantics so it can grow as big as
   // needed. But that requires updating offsets for the map and the heap's free
   // list
   sh_new_strdup(bucket_map, config->max_buckets_per_node, map_heap);
   shdefault(bucket_map, 0, map_heap);
-  mdm->bucket_map_offset = (u8 *)bucket_map - (u8 *)mdm;
+  mdm->bucket_map_offset = GetOffsetFromMdm(mdm, bucket_map);
   u32 bucket_map_num_bytes = map_heap->extent;
   total_map_capacity -= bucket_map_num_bytes;
 
@@ -923,7 +1048,7 @@ void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
   IdMap *vbucket_map = 0;
   sh_new_strdup(vbucket_map, config->max_vbuckets_per_node, map_heap);
   shdefault(vbucket_map, 0, map_heap);
-  mdm->vbucket_map_offset = (u8 *)vbucket_map - (u8 *)mdm;
+  mdm->vbucket_map_offset = GetOffsetFromMdm(mdm, vbucket_map);
   u32 vbucket_map_num_bytes = map_heap->extent - bucket_map_num_bytes;
   total_map_capacity -= vbucket_map_num_bytes;
 
@@ -932,7 +1057,7 @@ void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
   size_t blob_map_capacity = total_map_capacity / (2 * sizeof(IdMap));
   sh_new_strdup(blob_map, blob_map_capacity, map_heap);
   shdefault(blob_map, 0, map_heap);
-  mdm->blob_map_offset = (u8 *)blob_map - (u8 *)mdm;
+  mdm->blob_map_offset = GetOffsetFromMdm(mdm, blob_map);
 }
 
 }  // namespace hermes

@@ -20,6 +20,7 @@
 // it.
 // 4. Add a case to ParseTokens for the new variable.
 // 5. Add the new variable to the Config struct.
+// 6. Add an Assert to config_parser_test.cc to test the functionality.
 
 namespace hermes {
 
@@ -53,6 +54,7 @@ enum ConfigVariable {
   ConfigVariable_MountPoints,
   ConfigVariable_MaxBucketsPerNode,
   ConfigVariable_MaxVBucketsPerNode,
+  ConfigVariable_SystemViewStateUpdateInterval,
   ConfigVariable_RpcServerBaseName,
   ConfigVariable_BufferPoolShmemName,
   ConfigVariable_RpcProtocol,
@@ -81,6 +83,7 @@ static const char *kConfigVariableStrings[ConfigVariable_Count] = {
   "mount_points",
   "max_buckets_per_node",
   "max_vbuckets_per_node",
+  "system_view_state_update_interval_ms",
   "rpc_server_base_name",
   "buffer_pool_shmem_name",
   "rpc_protocol",
@@ -728,6 +731,10 @@ void ParseTokens(TokenList *tokens, Config *config) {
       }
       case ConfigVariable_MaxVBucketsPerNode: {
         config->max_vbuckets_per_node = ParseInt(&tok);
+        break;
+      }
+      case ConfigVariable_SystemViewStateUpdateInterval: {
+        config->system_view_state_update_interval_ms = ParseInt(&tok);
         break;
       }
       case ConfigVariable_RpcServerBaseName: {

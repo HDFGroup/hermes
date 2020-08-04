@@ -131,7 +131,7 @@ struct ScopedTemporaryMemory {
     // TODO(chogan): Currently not threadsafe unless each thread has a different
     // `backing_arena`
     if (++backing_arena->temp_count > 1) {
-      assert(!"ScopedTemporaryMemory is not threadsafe yet\n");
+      HERMES_NOT_IMPLEMENTED_YET;
     }
   }
 

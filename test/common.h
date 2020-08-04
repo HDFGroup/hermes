@@ -36,7 +36,6 @@ const char buffer_pool_shmem_name[] = "/hermes_buffer_pool_";
 const char rpc_server_name[] = "sockets://localhost:8080";
 
 void InitTestConfig(Config *config) {
-  // TODO(chogan): @configuration This will come from Apollo or a config file
   config->num_tiers = 4;
   assert(config->num_tiers < kMaxTiers);
 
@@ -85,6 +84,7 @@ void InitTestConfig(Config *config) {
 
   config->max_buckets_per_node = 16;
   config->max_vbuckets_per_node = 8;
+  config->system_view_state_update_interval_ms = 1000;
 
   size_t shmem_name_size = strlen(buffer_pool_shmem_name);
   for (size_t i = 0; i < shmem_name_size; ++i) {
@@ -257,6 +257,10 @@ std::shared_ptr<api::Hermes> InitHermes(const char *config_file=NULL,
                                    ":" + std::to_string(config.rpc_port));
     result->rpc_.start_server(&result->context_, &result->rpc_,
                               rpc_server_addr.c_str(), config.rpc_num_threads);
+    double sleep_ms = config.system_view_state_update_interval_ms;
+    StartGlobalSystemViewStateUpdateThread(&result->context_, &result->rpc_,
+                                           &result->trans_arena_,
+                                           sleep_ms);
   }
 
   WorldBarrier(&comm);

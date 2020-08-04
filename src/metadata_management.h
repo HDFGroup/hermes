@@ -105,6 +105,11 @@ struct IdMap {
   u64 value;
 };
 
+struct SystemViewState {
+  std::atomic<u64> bytes_available[kMaxTiers];
+  int num_tiers;
+};
+
 struct MetadataManager {
   // All offsets are relative to the beginning of the MDM
   ptrdiff_t bucket_info_offset;
@@ -114,6 +119,8 @@ struct MetadataManager {
   VBucketID first_free_vbucket;
 
   ptrdiff_t rpc_state_offset;
+  ptrdiff_t system_view_state_offset;
+  ptrdiff_t global_system_view_state_offset;
 
   ptrdiff_t id_heap_offset;
   ptrdiff_t map_heap_offset;
@@ -132,12 +139,12 @@ struct MetadataManager {
 
   size_t map_seed;
 
+  u32 system_view_state_update_interval_ms;
+  u32 global_system_view_state_node_id;
   u32 num_buckets;
   u32 max_buckets;
   u32 num_vbuckets;
   u32 max_vbuckets;
-
-  u32 rpc_server_name_offset;
 };
 
 struct RpcContext;
@@ -247,6 +254,20 @@ void LocalDelete(MetadataManager *mdm, const char *key, MapType map_type);
 
 Heap *GetIdHeap(MetadataManager *mdm);
 Heap *GetMapHeap(MetadataManager *mdm);
+
+void LocalUpdateGlobalSystemViewState(SharedMemoryContext *context,
+                                      std::vector<i64> adjustments);
+SystemViewState *GetLocalSystemViewState(SharedMemoryContext *context);
+SystemViewState *GetGlobalSystemViewState(SharedMemoryContext *context);
+std::vector<u64> LocalGetGlobalTierCapacities(SharedMemoryContext *context);
+std::vector<u64> GetGlobalTierCapacities(SharedMemoryContext *context,
+                                          RpcContext *rpc);
+void UpdateGlobalSystemViewState(SharedMemoryContext *context,
+                                 RpcContext *rpc);
+
+void StartGlobalSystemViewStateUpdateThread(SharedMemoryContext *context,
+                                            RpcContext *rpc, Arena *arena,
+                                            double slepp_ms);
 
 } // namespace hermes
 

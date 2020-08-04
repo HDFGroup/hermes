@@ -17,7 +17,9 @@ namespace hermes {
 struct ThalliumState {
   char server_name_prefix[16];
   char server_name_postfix[8];
+  std::atomic<bool> kill_requested;
   tl::engine *engine;
+  ABT_xstream execution_stream;
 };
 
 /**
@@ -90,9 +92,15 @@ void load(A &ar, MapType &map_type) {
 }
 #endif
 
+static inline ThalliumState *GetThalliumState(RpcContext *rpc) {
+  ThalliumState *result = (ThalliumState *)rpc->state;
+
+  return result;
+}
+
 template<typename ReturnType, typename... Ts>
 ReturnType RpcCall(RpcContext *rpc, u32 node_id, const char *func_name, Ts... args) {
-  ThalliumState *tl_state = (ThalliumState *)rpc->state;
+  ThalliumState *tl_state = GetThalliumState(rpc);
 
   std::string host_number = GetHostNumberAsString(rpc, node_id);
   std::string host_name = std::string(rpc->base_hostname) + host_number;
