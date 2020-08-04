@@ -168,6 +168,11 @@ struct BufferPool {
    * block size.
    */
   ptrdiff_t slab_buffer_sizes_offsets[kMaxTiers];
+  /** The offset from the base of shared memory where each Tier's list of
+   * available buffers per slab is stored. Each offset can be converted to a
+   * pointer to an arry of N (num_slabs[tier_id]) u32.
+   */
+  ptrdiff_t buffers_available_offsets[kMaxTiers];
   /** A ticket lock to syncrhonize access to free lists
    * TODO(chogan): @optimization One mutex per free list.
    */
@@ -179,11 +184,11 @@ struct BufferPool {
   i32 block_sizes[kMaxTiers];
   /** The number of slabs for each Tier. */
   i32 num_slabs[kMaxTiers];
-  /* The number of BufferHeaders for each Tier. */
+  /** The number of BufferHeaders for each Tier. */
   u32 num_headers[kMaxTiers];
-  /* The total number of Tiers. */
+  /** The total number of Tiers. */
   i32 num_tiers;
-  /* The total number of BufferHeaders in the header array. */
+  /** The total number of BufferHeaders in the header array. */
   u32 total_headers;
 };
 

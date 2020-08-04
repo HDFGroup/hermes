@@ -590,7 +590,7 @@ std::vector<u64> GetGlobalTierCapacities(SharedMemoryContext *context,
 
 SystemViewState *GetGlobalSystemViewState(SharedMemoryContext *context) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
-  SystemViewState *result = 
+  SystemViewState *result =
     (SystemViewState *)((u8 *)mdm + mdm->global_system_view_state_offset);
   assert((u8 *)result != (u8 *)mdm);
 

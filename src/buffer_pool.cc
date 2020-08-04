@@ -325,6 +325,44 @@ void SetFirstFreeBufferId(SharedMemoryContext *context, TierID tier_id,
   }
 }
 
+static u32 *GetAvailableBuffersArray(SharedMemoryContext *context,
+                                     TierID tier_id) {
+  BufferPool *pool = GetBufferPoolFromContext(context);
+  u32 *result =
+    (u32 *)(context->shm_base + pool->buffers_available_offsets[tier_id]);
+
+  return result;
+}
+
+#if 0
+static u32 GetNumBuffersAvailable(SharedMemoryContext *context, TierID tier_id,
+                                  int slab_index) {
+  u32 *buffers_available = GetAvailableBuffersArray(context, tier_id);
+  u32 result = 0;
+  if (buffers_available) {
+    result = buffers_available[slab_index];
+  }
+
+  return result;
+}
+#endif
+
+static void DecrementAvailableBuffers(SharedMemoryContext *context,
+                                      TierID tier_id, int slab_index) {
+  u32 *buffers_available = GetAvailableBuffersArray(context, tier_id);
+  if (buffers_available) {
+    buffers_available[slab_index]--;
+  }
+}
+
+static void IncrementAvailableBuffers(SharedMemoryContext *context,
+                                      TierID tier_id, int slab_index) {
+  u32 *buffers_available = GetAvailableBuffersArray(context, tier_id);
+  if (buffers_available) {
+    buffers_available[slab_index]++;
+  }
+}
+
 void LocalReleaseBuffer(SharedMemoryContext *context, BufferID buffer_id) {
   BufferPool *pool = GetBufferPoolFromContext(context);
   BufferHeader *header_to_free = GetHeaderByIndex(context,
@@ -338,10 +376,13 @@ void LocalReleaseBuffer(SharedMemoryContext *context, BufferID buffer_id) {
     header_to_free->next_free = PeekFirstFreeBufferId(context, tier_id,
                                                      slab_index);
     SetFirstFreeBufferId(context, tier_id, slab_index, buffer_id);
-    EndTicketMutex(&pool->ticket_mutex);
+    IncrementAvailableBuffers(context, tier_id, slab_index);
 
+    // NOTE(chogan): Update local capacities, which will eventually be reflected
+    // in the global SystemViewState.
     i64 adjustment = header_to_free->capacity;
     pool->capacity_adjustments[header_to_free->tier_id] += adjustment;
+    EndTicketMutex(&pool->ticket_mutex);
   }
 }
 
@@ -382,6 +423,12 @@ BufferID GetFreeBuffer(SharedMemoryContext *context, TierID tier_id,
     header->in_use = true;
     result = header->id;
     SetFirstFreeBufferId(context, tier_id, slab_index, header->next_free);
+    DecrementAvailableBuffers(context, tier_id, slab_index);
+
+    // NOTE(chogan): Update local capacities, which will eventually be reflected
+    // in the global SystemViewState.
+    i64 adjustment = header->capacity;
+    pool->capacity_adjustments[header->tier_id] -= adjustment;
   }
   EndTicketMutex(&pool->ticket_mutex);
 
@@ -404,6 +451,36 @@ std::vector<BufferID> GetBuffers(SharedMemoryContext *context,
     // buffers first
     for (int i = pool->num_slabs[tier_id] - 1; i >= 0; --i) {
       size_t buffer_size = GetSlabBufferSize(context, tier_id, i);
+      size_t num_buffers = buffer_size ? size_left / buffer_size : 0;
+
+      while (num_buffers > 0) {
+        BufferID id = GetFreeBuffer(context, tier_id, i);
+        if (id.as_int) {
+          result.push_back(id);
+          size_left -= buffer_size;
+        } else {
+          // NOTE(chogan): Out of buffers in this slab. Go to next slab.
+          break;
+        }
+      }
+    }
+
+    if (size_left > 0) {
+      size_t buffer_size = GetSlabBufferSize(context, tier_id, 0);
+      BufferID id = GetFreeBuffer(context, tier_id, 0);
+      size_left -= std::min(buffer_size, size_left);
+      if (id.as_int && size_left == 0) {
+        result.push_back(id);
+      } else {
+        failed = true;
+        DLOG(INFO) << "Not enough buffers to fulfill request" << std::endl;
+      }
+    }
+#if 0
+    // NOTE(chogan): naive buffer selection algorithm: fill with largest
+    // buffers first
+    for (int i = pool->num_slabs[tier_id] - 1; i >= 0; --i) {
+      size_t buffer_size = GetSlabBufferSize(context, tier_id, i);
       size_t buffers = buffer_size ? size_left / buffer_size : 0;
       num_buffers[i] = buffers;
       size_left -= buffers * buffer_size;
@@ -421,10 +498,29 @@ std::vector<BufferID> GetBuffers(SharedMemoryContext *context,
         if (id.as_int) {
           result.push_back(id);
         } else {
-          failed = true;
+          // NOTE(chogan): Out of buffers at slab i. Redistributed the remaining
+          // buffers to the next lowest slab.
+          if (i == 0) {
+            failed = true;
+            DLOG(INFO) << "Requested " << num_buffers[i] << " buffers from Tier "
+                       << tier_id << " slab " << i << " but only " << j
+                       << " are available" << std::endl;
+          } else {
+            size_t buffer_size = GetSlabBufferSize(context, tier_id, i);
+            size_t remaining_buffers = num_buffers[i] - (j + 1);
+            size_t bytes_left = remaining_buffers * buffer_size;
+            size_t lower_buffer_size = GetSlabBufferSize(context, tier_id,
+                                                         i - 1);
+            if (lower_buffer_size) {
+              size_t lower_buffers_to_add = bytes_left / lower_buffer_size;
+            }
+            num_buffers[i - 1] += lower_buffers_to_add;
+            break;
+          }
         }
       }
     }
+#endif
   }
 
   if (failed) {
@@ -432,14 +528,6 @@ std::vector<BufferID> GetBuffers(SharedMemoryContext *context,
     // we didn't get all we asked for
     LocalReleaseBuffers(context, result);
     result.clear();
-  } else {
-    // NOTE(chogan): Update local capacities, which will eventually be reflected
-    // in the global SystemViewState.
-    for (size_t i = 0; i < result.size(); ++i) {
-      BufferHeader *header = GetHeaderByBufferId(context, result[i]);
-      i64 adjustment = header->capacity;
-      pool->capacity_adjustments[header->tier_id] -= adjustment;
-    }
   }
 
   return result;
@@ -868,6 +956,8 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
     // NOTE(chogan): The '* 2' is because we have an i32 for both slab unit size
     // and slab buffer size
     slab_metadata_size += config->num_slabs[tier] * sizeof(i32) * 2;
+    // NOTE(chogan): buffers_available array
+    slab_metadata_size += config->num_slabs[tier] * sizeof(u32);
   }
 
   size_t headers_size = max_headers_needed * sizeof(BufferHeader);
@@ -893,6 +983,11 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
   buffer_counts[0][0] -= num_blocks_reserved_for_metadata;
   // NOTE(chogan): We need fewer headers because we have fewer buffers now
   header_counts[0] -= num_blocks_reserved_for_metadata;
+  // NOTE(chogan): Adjust the config capacity for RAM to reflect the actual
+  // capacity for buffering (excluding BufferPool metadata).
+  assert(config->capacities[0] > required_bytes_for_metadata_rounded);
+  config->capacities[0] -= required_bytes_for_metadata_rounded;
+
   u32 total_headers = max_headers_needed - num_blocks_reserved_for_metadata;
 
   int *num_buffers = PushArray<int>(scratch_arena, config->num_tiers);
@@ -986,14 +1081,20 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
                                           config->num_slabs[tier]);
     i32 *slab_buffer_sizes_for_tier = PushArray<i32>(buffer_pool_arena,
                                             config->num_slabs[tier]);
+    u32 *available_buffers = PushArray<u32>(buffer_pool_arena,
+                                            config->num_slabs[tier]);
+
     for (int slab = 0; slab < config->num_slabs[tier]; ++slab) {
       free_list[slab] = free_lists[tier][slab];
       slab_unit_sizes[slab] = config->slab_unit_sizes[tier][slab];
       slab_buffer_sizes_for_tier[slab] = slab_buffer_sizes[tier][slab];
+      available_buffers[slab] = buffer_counts[tier][slab];
     }
     pool->free_list_offsets[tier] = (u8 *)free_list - shmem_base;
     pool->slab_unit_sizes_offsets[tier] = (u8 *)slab_unit_sizes - shmem_base;
     pool->slab_buffer_sizes_offsets[tier] = ((u8 *)slab_buffer_sizes_for_tier -
+                                             shmem_base);
+    pool->buffers_available_offsets[tier] = ((u8 *)available_buffers -
                                              shmem_base);
   }
 
