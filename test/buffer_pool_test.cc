@@ -65,11 +65,13 @@ int main(int argc, char **argv) {
   int option = -1;
   char *config_file = 0;
   bool test_get_buffers = false;
+  bool force_shutdown_rpc_server = false;
 
   while ((option = getopt(argc, argv, "bf:")) != -1) {
     switch (option) {
       case 'b': {
         test_get_buffers = true;
+        force_shutdown_rpc_server = true;
         break;
       }
       case 'f': {
@@ -102,10 +104,9 @@ int main(int argc, char **argv) {
   if (test_get_buffers) {
     InitFilesForBuffering(&hermes->context_, hermes->comm_.first_on_node);
     TestGetBuffers(hermes.get());
-    hermes::RpcCall<void>(&hermes->rpc_, hermes->rpc_.node_id, "RemoteFinalize");
   }
 
-  hermes->Finalize();
+  hermes->Finalize(force_shutdown_rpc_server);
 
   MPI_Finalize();
 

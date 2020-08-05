@@ -65,7 +65,7 @@ namespace hermes {
 
 void Finalize(SharedMemoryContext *context, CommunicationContext *comm,
               RpcContext *rpc, const char *shmem_name, Arena *trans_arena,
-              bool is_application_core) {
+              bool is_application_core, bool force_rpc_shutdown) {
   WorldBarrier(comm);
   if (is_application_core) {
     ReleaseSharedMemoryContext(context);
@@ -74,7 +74,8 @@ void Finalize(SharedMemoryContext *context, CommunicationContext *comm,
   WorldBarrier(comm);
   if (!is_application_core) {
     if (comm->first_on_node) {
-      bool is_daemon = comm->world_size == comm->num_nodes;
+      bool is_daemon =
+        (comm->world_size == comm->num_nodes) && !force_rpc_shutdown;
       FinalizeRpcContext(rpc, is_daemon);
     }
     UnmapSharedMemory(context);
@@ -458,6 +459,7 @@ std::vector<BufferID> GetBuffers(SharedMemoryContext *context,
         if (id.as_int) {
           result.push_back(id);
           size_left -= buffer_size;
+          num_buffers--;
         } else {
           // NOTE(chogan): Out of buffers in this slab. Go to next slab.
           break;
@@ -476,51 +478,6 @@ std::vector<BufferID> GetBuffers(SharedMemoryContext *context,
         DLOG(INFO) << "Not enough buffers to fulfill request" << std::endl;
       }
     }
-#if 0
-    // NOTE(chogan): naive buffer selection algorithm: fill with largest
-    // buffers first
-    for (int i = pool->num_slabs[tier_id] - 1; i >= 0; --i) {
-      size_t buffer_size = GetSlabBufferSize(context, tier_id, i);
-      size_t buffers = buffer_size ? size_left / buffer_size : 0;
-      num_buffers[i] = buffers;
-      size_left -= buffers * buffer_size;
-    }
-
-    if (size_left > 0) {
-      num_buffers[0] += 1;
-    }
-
-    // NOTE(chogan): Push the buffers on in "biggest first" order so that a Get
-    // will reassemble the buffers into the correct original order
-    for (int i = pool->num_slabs[tier_id] - 1; i >= 0; --i) {
-      for (size_t j = 0; j < num_buffers[i]; ++j) {
-        BufferID id = GetFreeBuffer(context, tier_id, i);
-        if (id.as_int) {
-          result.push_back(id);
-        } else {
-          // NOTE(chogan): Out of buffers at slab i. Redistributed the remaining
-          // buffers to the next lowest slab.
-          if (i == 0) {
-            failed = true;
-            DLOG(INFO) << "Requested " << num_buffers[i] << " buffers from Tier "
-                       << tier_id << " slab " << i << " but only " << j
-                       << " are available" << std::endl;
-          } else {
-            size_t buffer_size = GetSlabBufferSize(context, tier_id, i);
-            size_t remaining_buffers = num_buffers[i] - (j + 1);
-            size_t bytes_left = remaining_buffers * buffer_size;
-            size_t lower_buffer_size = GetSlabBufferSize(context, tier_id,
-                                                         i - 1);
-            if (lower_buffer_size) {
-              size_t lower_buffers_to_add = bytes_left / lower_buffer_size;
-            }
-            num_buffers[i - 1] += lower_buffers_to_add;
-            break;
-          }
-        }
-      }
-    }
-#endif
   }
 
   if (failed) {

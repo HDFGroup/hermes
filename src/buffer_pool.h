@@ -341,7 +341,7 @@ void StartBufferPoolRpcServer(SharedMemoryContext *context, const char *addr,
  */
 void Finalize(SharedMemoryContext *context, CommunicationContext *comm,
               RpcContext *rpc, const char *shmem_name, Arena *trans_arena,
-              bool is_application_core);
+              bool is_application_core, bool force_rpc_shutdown);
 
 // I/O Clients
 
