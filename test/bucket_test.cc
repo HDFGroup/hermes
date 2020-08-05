@@ -46,9 +46,8 @@ int compress_blob(hermes::api::Blob &blob, void *trait) {
   return return_value;
 }
 
-namespace hapi = hermes::api;
 
-int main(int argc, char **argv)
+int main()
 {
   int mpi_threads_provided;
   MPI_Init_thread(NULL, NULL, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
@@ -57,12 +56,7 @@ int main(int argc, char **argv)
     return 1;
   }
 
-  char *config_file = 0;
-  if (argc == 2) {
-    config_file = argv[1];
-  }
-
-  std::shared_ptr<hapi::Hermes> hermes_app = hermes::InitHermes(config_file);
+  std::shared_ptr<hermes::api::Hermes> hermes_app = hermes::InitHermes();
 
   if (hermes_app->IsApplicationCore()) {
     hermes::api::Context ctx;
