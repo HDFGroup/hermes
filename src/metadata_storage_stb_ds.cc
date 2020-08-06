@@ -273,8 +273,8 @@ void LocalDestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
   EndTicketMutex(&mdm->bucket_mutex);
 }
 
-void StoragePut(MetadataManager *mdm, const char *key, u64 val,
-                MapType map_type) {
+void PutToStorage(MetadataManager *mdm, const char *key, u64 val,
+                  MapType map_type) {
   Heap *heap = GetMapHeap(mdm);
   TicketMutex *mutex = GetMapMutex(mdm, map_type);
 
@@ -287,7 +287,7 @@ void StoragePut(MetadataManager *mdm, const char *key, u64 val,
   CheckHeapOverlap(mdm);
 }
 
-u64 StorageGet(MetadataManager *mdm, const char *key, MapType map_type) {
+u64 GetFromStorage(MetadataManager *mdm, const char *key, MapType map_type) {
   Heap *heap = GetMapHeap(mdm);
   TicketMutex *mutex = GetMapMutex(mdm, map_type);
 
@@ -299,13 +299,13 @@ u64 StorageGet(MetadataManager *mdm, const char *key, MapType map_type) {
   return result;
 }
 
-char *StorageReverseGet(MetadataManager *mdm, u64 id,
-                        MapType map_type) {
+char *ReverseGetFromStorage(MetadataManager *mdm, u64 id,
+                            MapType map_type) {
   IdMap *map = GetMap(mdm, map_type);
   char *result = 0;
 
   // TODO(chogan): @optimization This could be more efficient if necessary
-  for (size_t i = 0; i < StorageSize(mdm, map_type); ++i) {
+  for (size_t i = 0; i < GetStoredMapSize(mdm, map_type); ++i) {
     if (map[i].value == id) {
       result = GetKey(mdm, map, i);
       break;
@@ -315,7 +315,8 @@ char *StorageReverseGet(MetadataManager *mdm, u64 id,
   return result;
 }
 
-void StorageDelete(MetadataManager *mdm, const char *key, MapType map_type) {
+void DeleteFromStorage(MetadataManager *mdm, const char *key,
+                       MapType map_type) {
   Heap *heap = GetMapHeap(mdm);
   TicketMutex *mutex = GetMapMutex(mdm, map_type);
 
@@ -328,25 +329,26 @@ void StorageDelete(MetadataManager *mdm, const char *key, MapType map_type) {
   CheckHeapOverlap(mdm);
 }
 
-size_t StorageSize(MetadataManager *mdm, MapType map_type) {
+size_t GetStoredMapSize(MetadataManager *mdm, MapType map_type) {
   IdMap *map = GetMap(mdm, map_type);
   size_t result = shlen(map);
 
   return result;
 }
 
-u32 StorageHashString(MetadataManager *mdm, RpcContext *rpc, const char *str) {
+u32 HashStringForStorage(MetadataManager *mdm, RpcContext *rpc,
+                         const char *str) {
   int result =
     (stbds_hash_string((char *)str, mdm->map_seed) % rpc->num_nodes) + 1;
 
   return result;
 }
 
-void StorageSeedHash(size_t seed) {
+void SeedHashForStorage(size_t seed) {
   stbds_rand_seed(seed);
 }
 
-void StorageInit(MetadataManager *mdm, Arena *arena, Config *config) {
+void InitMetadataStorage(MetadataManager *mdm, Arena *arena, Config *config) {
   // Heaps
 
   u32 heap_alignment = 8;

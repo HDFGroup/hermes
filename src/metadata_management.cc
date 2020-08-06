@@ -10,6 +10,7 @@
 #include "buffer_pool.h"
 #include "buffer_pool_internal.h"
 #include "rpc.h"
+#include "metadata_storage.h"
 
 namespace tl = thallium;
 
@@ -52,17 +53,17 @@ TicketMutex *GetMapMutex(MetadataManager *mdm, MapType map_type) {
 
 void LocalPut(MetadataManager *mdm, const char *key, u64 val,
               MapType map_type) {
-  StoragePut(mdm, key, val, map_type);
+  PutToStorage(mdm, key, val, map_type);
 }
 
 u64 LocalGet(MetadataManager *mdm, const char *key, MapType map_type) {
-  u64 result = StorageGet(mdm, key, map_type);
+  u64 result = GetFromStorage(mdm, key, map_type);
 
   return result;
 }
 
 void LocalDelete(MetadataManager *mdm, const char *key, MapType map_type) {
-  StorageDelete(mdm, key, map_type);
+  DeleteFromStorage(mdm, key, map_type);
 }
 
 MetadataManager *GetMetadataManagerFromContext(SharedMemoryContext *context) {
@@ -79,7 +80,7 @@ static void MetadataArenaErrorHandler() {
 }
 
 u32 HashString(MetadataManager *mdm, RpcContext *rpc, const char *str) {
-  u32 result = StorageHashString(mdm, rpc, str);
+  u32 result = HashStringForStorage(mdm, rpc, str);
 
   return result;
 }
@@ -408,7 +409,7 @@ void LocalDestroyBlobById(SharedMemoryContext *context, RpcContext *rpc,
   FreeBufferIdList(context, rpc, blob_id);
 
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
-  char * blob_name = StorageReverseGet(mdm, blob_id.as_int, kMapType_Blob);
+  char * blob_name = ReverseGetFromStorage(mdm, blob_id.as_int, kMapType_Blob);
 
   if (blob_name) {
     DeleteId(mdm, rpc, blob_name, kMapType_Blob);
@@ -660,7 +661,7 @@ void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
   arena->error_handler = MetadataArenaErrorHandler;
 
   mdm->map_seed = 0x4E58E5DF;
-  StorageSeedHash(mdm->map_seed);
+  SeedHashForStorage(mdm->map_seed);
 
   mdm->system_view_state_update_interval_ms =
     config->system_view_state_update_interval_ms;
@@ -723,7 +724,7 @@ void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
     }
   }
 
-  StorageInit(mdm, arena, config);
+  InitMetadataStorage(mdm, arena, config);
 }
 
 }  // namespace hermes
