@@ -6,15 +6,19 @@
 
 using namespace hermes;
 
+namespace hermes {
+namespace testing {
 struct SystemViewState {
   u64 bytes_capacity[kMaxTiers];
   u64 bytes_available[kMaxTiers];
   u64 bandwidth[kMaxTiers];
   int num_tiers;
 };
+}  // namespace hermes
+}  // namespace testing
 
-SystemViewState InitSystemViewState() {
-  SystemViewState result = {};
+testing::SystemViewState InitSystemViewState() {
+  testing::SystemViewState result = {};
   result.num_tiers = 4;
   u64 one_mb = 1024 * 1024;
 
@@ -36,10 +40,10 @@ SystemViewState InitSystemViewState() {
   return result;
 }
 
-static SystemViewState globalSystemViewState {InitSystemViewState()};
+static testing::SystemViewState globalSystemViewState {InitSystemViewState()};
 
-SystemViewState GetSystemViewState() {
-  SystemViewState result = {};
+testing::SystemViewState GetSystemViewState() {
+  testing::SystemViewState result = {};
 
   for (int i {0}; i < globalSystemViewState.num_tiers; ++i) {
     result.num_tiers = globalSystemViewState.num_tiers;
@@ -64,7 +68,7 @@ TieredSchema PerfOrientedPlacement(std::vector<hermes::api::Blob> blobs) {
 
   TieredSchema result;
   // TODO (KIMMY): use kernel function of system view
-  SystemViewState state {GetSystemViewState()};
+  testing::SystemViewState state {GetSystemViewState()};
 
   std::vector<MPConstraint*> blob_constrt(blobs.size()+state.num_tiers*3-1);
   std::vector<std::vector<MPVariable*>> blob_fraction (blobs.size());
