@@ -100,42 +100,19 @@ static inline ThalliumState *GetThalliumState(RpcContext *rpc) {
 
 template<typename ReturnType, typename... Ts>
 ReturnType RpcCall(RpcContext *rpc, u32 node_id, const char *func_name, Ts... args) {
-  ThalliumState *tl_state = GetThalliumState(rpc);
-
-  std::string host_number = GetHostNumberAsString(rpc, node_id);
-  std::string host_name = std::string(rpc->base_hostname) + host_number;
-
-  const int max_ip_address_size = 16;
-  char ip_address[max_ip_address_size];
-  // TODO(chogan): @errorhandling
-  // TODO(chogan): @optimization Could cache the last N hostname->IP mappings to
-  // avoid excessive syscalls. Should profile first.
-  struct hostent *hostname_info = gethostbyname(host_name.c_str());
-  in_addr **addr_list = (struct in_addr **)hostname_info->h_addr_list;
-  // TODO(chogan): @errorhandling
-  strncpy(ip_address, inet_ntoa(*addr_list[0]), max_ip_address_size);
-
-  std::string server_name = (std::string(tl_state->server_name_prefix) +
-                             std::string(ip_address) +
-                             std::string(tl_state->server_name_postfix));
-
-  std::string prefix = std::string(tl_state->server_name_prefix);
-  // NOTE(chogan): Chop "://" off the end of the server_name_prefix to get the
-  // protocol
-  std::string protocol = prefix.substr(0, prefix.length() - 3);
+  std::string server_name = GetServerName(rpc, node_id);
+  std::string protocol = GetProtocol(rpc);
 
   // TODO(chogan): Save connections instead of creating them for every rpc
+  // TODO(chogan): Do we really need the progress tread in a separate thread?
   tl::engine engine(protocol, THALLIUM_CLIENT_MODE, true);
   tl::remote_procedure remote_proc = engine.define(func_name);
   tl::endpoint server = engine.lookup(server_name);
 
-  if constexpr(std::is_same<ReturnType, void>::value)
-  {
+  if constexpr(std::is_same<ReturnType, void>::value) {
     remote_proc.disable_response();
     remote_proc.on(server)(std::forward<Ts>(args)...);
-  }
-  else
-  {
+  } else {
     ReturnType result = remote_proc.on(server)(std::forward<Ts>(args)...);
 
     return result;

@@ -1356,13 +1356,17 @@ size_t ReadBlobFromBuffers(SharedMemoryContext *context, RpcContext *rpc,
     BufferID id = buffer_ids->ids[i];
     if (BufferIsRemote(rpc, id)) {
       BufferHeader *header = GetHeaderByIndex(context, id.bits.header_index);
-      // TODO(chogan): @optimization Set up bulk transfer if data is > 4K
-      std::vector<u8> data = RpcCall<std::vector<u8>>(rpc, id.bits.node_id,
-                                                      "RemoteReadBufferById",
-                                                      id, header->used);
-      bytes_read = data.size();
-      // TODO(chogan): @optimization Avoid the copy
-      memcpy(blob->data, data.data(), bytes_read);
+      if (header->used > (4 * 1024)) {
+        BulkTransfer(rpc, id.bits.node_id, "RemoteBulkReadBufferById",
+                     blob->data, blob->size);
+      } else {
+        std::vector<u8> data = RpcCall<std::vector<u8>>(rpc, id.bits.node_id,
+                                                        "RemoteReadBufferById",
+                                                        id, header->used);
+        bytes_read = data.size();
+        // TODO(chogan): @optimization Avoid the copy
+        memcpy(blob->data, data.data(), bytes_read);
+      }
     } else {
       bytes_read = LocalReadBufferById(context, id, blob, total_bytes_read);
     }

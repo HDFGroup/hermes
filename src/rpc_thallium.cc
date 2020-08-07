@@ -105,6 +105,23 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
       req.respond(result);
     };
 
+  function<void(const request&, tl::bulk&, BufferID, size_t)>
+    rpc_bulk_read_buffer_by_id =
+    [context, rpc_server](const request &req, tl::bulk &bulk, BufferID id,
+                          size_t size) {
+      tl::endpoint endpoint = req.get_endpoint();
+      BufferHeader *header = GetHeaderByBufferId(context, id);
+      // TODO(chogan): This only works with RAM buffers
+      u8 *buffer_data = GetRamBufferPtr(context, header->id);
+
+      std::vector<std::pair<void*, size_t>> segments(1);
+      segments[0].first  = buffer_data;
+      segments[0].second = size;
+      tl::bulk local_bulk = rpc_server->expose(segments,
+                                               tl::bulk_mode::read_only);
+      local_bulk >> bulk.on(endpoint);
+    };
+
   // Metadata requests
 
   function<void(const request&, string, const MapType&)> rpc_map_get =
@@ -115,9 +132,9 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
       req.respond(result);
     };
 
-  function<void(const request&, const string&, u64, const MapType&)> rpc_map_put =
-    [context](const request &req, const string &name, u64 val,
-              const MapType &map_type) {
+  function<void(const request&, const string&, u64, const MapType&)>
+    rpc_map_put = [context](const request &req, const string &name, u64 val,
+                            const MapType &map_type) {
       (void)req;
       MetadataManager *mdm = GetMetadataManagerFromContext(context);
       LocalPut(mdm, name.c_str(), val, map_type);
@@ -255,6 +272,8 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
 
   rpc_server->define("RemoteReadBufferById", rpc_read_buffer_by_id);
   rpc_server->define("RemoteWriteBufferById", rpc_write_buffer_by_id);
+  rpc_server->define("RemoteBulkReadBufferById",
+                     rpc_bulk_read_buffer_by_id).disable_response();
 
   rpc_server->define("RemoteGet", rpc_map_get);
   rpc_server->define("RemotePut", rpc_map_put).disable_response();
@@ -351,6 +370,58 @@ void FinalizeRpcContext(RpcContext *rpc, bool is_daemon) {
   }
 
   delete state->engine;
+}
+
+std::string GetServerName(RpcContext *rpc, u32 node_id) {
+  ThalliumState *tl_state = GetThalliumState(rpc);
+
+  std::string host_number = GetHostNumberAsString(rpc, node_id);
+  std::string host_name = std::string(rpc->base_hostname) + host_number;
+  const int max_ip_address_size = 16;
+  char ip_address[max_ip_address_size];
+  // TODO(chogan): @errorhandling
+  // TODO(chogan): @optimization Could cache the last N hostname->IP mappings to
+  // avoid excessive syscalls. Should profile first.
+  struct hostent *hostname_info = gethostbyname(host_name.c_str());
+  in_addr **addr_list = (struct in_addr **)hostname_info->h_addr_list;
+  // TODO(chogan): @errorhandling
+  strncpy(ip_address, inet_ntoa(*addr_list[0]), max_ip_address_size);
+
+  std::string result = (std::string(tl_state->server_name_prefix) +
+                        std::string(ip_address) +
+                        std::string(tl_state->server_name_postfix));
+
+  return result;
+}
+
+std::string GetProtocol(RpcContext *rpc) {
+  ThalliumState *tl_state = GetThalliumState(rpc);
+
+  std::string prefix = std::string(tl_state->server_name_prefix);
+  // NOTE(chogan): Chop "://" off the end of the server_name_prefix to get the
+  // protocol
+  std::string result = prefix.substr(0, prefix.length() - 3);
+
+  return result;
+}
+
+void BulkTransfer(RpcContext *rpc, u32 node_id, const char *func_name,
+                  u8 *data, size_t size) {
+  std::string server_name = GetServerName(rpc, node_id);
+  std::string protocol = GetProtocol(rpc);
+
+  tl::engine engine(protocol, THALLIUM_CLIENT_MODE, true);
+  tl::remote_procedure remote_proc =
+    engine.define(func_name).disable_response();
+  tl::endpoint server = engine.lookup(server_name);
+
+  std::vector<std::pair<void*, size_t>> segments(1);
+  segments[0].first  = data;
+  segments[0].second = size;
+
+  tl::bulk bulk = engine.expose(segments, tl::bulk_mode::write_only);
+
+  remote_proc.on(server)(bulk);
 }
 
 }  // namespace hermes

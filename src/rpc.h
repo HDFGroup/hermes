@@ -45,6 +45,8 @@ void InitRpcContext(RpcContext *rpc, u32 num_nodes, u32 node_id,
 void *CreateRpcState(Arena *arena);
 void FinalizeRpcContext(RpcContext *rpc, bool is_daemon);
 std::string GetHostNumberAsString(RpcContext *rpc, u32 node_id);
+std::string GetServerName(RpcContext *rpc, u32 node_id);
+std::string GetProtocol(RpcContext *rpc);
 
 }  // namespace hermes
 

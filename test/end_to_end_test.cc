@@ -10,9 +10,9 @@
 namespace hapi = hermes::api;
 
 void TestPutGetBucket(hapi::Bucket &bucket, int app_rank, int app_size) {
-  size_t bytes_per_rank = KILOBYTES(4);
+  size_t bytes_per_rank = KILOBYTES(8);
   if (app_size) {
-    size_t data_size = KILOBYTES(4);
+    size_t data_size = KILOBYTES(8);
     bytes_per_rank = data_size / app_size ;
     size_t remaining_bytes = data_size % app_size;
 
