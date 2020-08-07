@@ -1308,7 +1308,6 @@ void WriteBlobToBuffers(SharedMemoryContext *context, RpcContext *rpc,
 
 size_t LocalReadBufferById(SharedMemoryContext *context, BufferID id,
                            Blob *blob, size_t read_offset) {
-  // TODO(chogan): Do we even need the read_offset?
   BufferHeader *header = GetHeaderByIndex(context, id.bits.header_index);
   Tier *tier = GetTierFromHeader(context, header);
   size_t read_size = header->used;
@@ -1324,7 +1323,7 @@ size_t LocalReadBufferById(SharedMemoryContext *context, BufferID id,
   size_t result = 0;
   if (tier->is_ram) {
     u8 *src = GetRamBufferPtr(context, header->id);
-    memcpy(blob->data + read_offset, src, read_size);
+    memcpy((u8 *)blob->data + read_offset, src, read_size);
     result = read_size;
   } else {
     int slab_index = GetSlabIndexFromHeader(context, header);

@@ -11,9 +11,10 @@
 namespace hermes {
 namespace testing {
 
-void Assert(bool expr, int lineno, const char *message) {
+void Assert(bool expr, const char *file, int lineno, const char *message) {
   if (!expr) {
-    fprintf(stderr, "Assertion failed on line %d: %s\n", lineno, message);
+    fprintf(stderr, "Assertion failed at %s: line %d: %s\n", file, lineno,
+            message);
     exit(-1);
   }
 }
@@ -21,6 +22,6 @@ void Assert(bool expr, int lineno, const char *message) {
 }  // namespace testing
 }  // namespace hermes
 
-#define Assert(expr) hermes::testing::Assert((expr), __LINE__, #expr)
+#define Assert(expr) hermes::testing::Assert((expr), __FILE__, __LINE__, #expr)
 
 #endif  // HERMES_TEST_UTILS_H_
