@@ -92,34 +92,38 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
 
     };
 
-  function<void(const request&, BufferID, size_t)> rpc_read_buffer_by_id =
-    [context](const request &req, BufferID id, size_t size) {
-      std::vector<u8> result(size);
+  function<void(const request&, BufferID)> rpc_read_buffer_by_id =
+    [context](const request &req, BufferID id) {
+      BufferHeader *header = GetHeaderByBufferId(context, id);
+      std::vector<u8> result(header->used);
       Blob blob = {};
-      blob.size = size;
+      blob.size = result.size();
       blob.data = result.data();
       [[maybe_unused]] size_t bytes_read = LocalReadBufferById(context, id,
                                                                &blob, 0);
-      assert(bytes_read == size);
+      assert(bytes_read == result.size());
 
       req.respond(result);
     };
 
-  function<void(const request&, tl::bulk&, BufferID, size_t)>
+  function<void(const request&, tl::bulk&, BufferID)>
     rpc_bulk_read_buffer_by_id =
-    [context, rpc_server](const request &req, tl::bulk &bulk, BufferID id,
-                          size_t size) {
+    [context, rpc_server](const request &req, tl::bulk &bulk, BufferID id) {
       tl::endpoint endpoint = req.get_endpoint();
       BufferHeader *header = GetHeaderByBufferId(context, id);
       // TODO(chogan): This only works with RAM buffers
       u8 *buffer_data = GetRamBufferPtr(context, header->id);
+      size_t size = header->used;
 
       std::vector<std::pair<void*, size_t>> segments(1);
       segments[0].first  = buffer_data;
       segments[0].second = size;
       tl::bulk local_bulk = rpc_server->expose(segments,
                                                tl::bulk_mode::read_only);
+      // TODO(chogan): Should only read 'size' bytes
       local_bulk >> bulk.on(endpoint);
+
+      req.respond(size);
     };
 
   // Metadata requests
@@ -272,8 +276,7 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
 
   rpc_server->define("RemoteReadBufferById", rpc_read_buffer_by_id);
   rpc_server->define("RemoteWriteBufferById", rpc_write_buffer_by_id);
-  rpc_server->define("RemoteBulkReadBufferById",
-                     rpc_bulk_read_buffer_by_id).disable_response();
+  rpc_server->define("RemoteBulkReadBufferById", rpc_bulk_read_buffer_by_id);
 
   rpc_server->define("RemoteGet", rpc_map_get);
   rpc_server->define("RemotePut", rpc_map_put).disable_response();
@@ -405,8 +408,8 @@ std::string GetProtocol(RpcContext *rpc) {
   return result;
 }
 
-void BulkTransfer(RpcContext *rpc, u32 node_id, const char *func_name,
-                  u8 *data, size_t size) {
+size_t BulkTransfer(RpcContext *rpc, u32 node_id, const char *func_name,
+                  u8 *data, size_t max_size) {
   std::string server_name = GetServerName(rpc, node_id);
   std::string protocol = GetProtocol(rpc);
 
@@ -417,11 +420,12 @@ void BulkTransfer(RpcContext *rpc, u32 node_id, const char *func_name,
 
   std::vector<std::pair<void*, size_t>> segments(1);
   segments[0].first  = data;
-  segments[0].second = size;
+  segments[0].second = max_size;
 
   tl::bulk bulk = engine.expose(segments, tl::bulk_mode::write_only);
+  size_t result = remote_proc.on(server)(bulk);
 
-  remote_proc.on(server)(bulk);
+  return result;
 }
 
 }  // namespace hermes
