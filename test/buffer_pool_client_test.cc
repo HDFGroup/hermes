@@ -125,56 +125,73 @@ double TestMergeBuffers(SharedMemoryContext *context, RpcContext *rpc,
   return result;
 }
 
-void TestFileBuffering(SharedMemoryContext *context, RpcContext *rpc,
-                       int rank) {
-  Blob blob = {};
-  TierID tier_id = 1;
+struct FileMapper {
 
-  const char test_file[] = "bp_viz/bpm_snapshot_0.bmp";
-  FILE *f = fopen(test_file, "r");
-  if (f) {
-    fseek(f, 0, SEEK_END);
-    blob.size = ftell(f);
-    blob.data =  (u8 *)mmap(0, blob.size, PROT_READ, MAP_PRIVATE, fileno(f), 0);
-    fclose(f);
-    if (blob.data) {
-      TieredSchema schema{std::make_pair(blob.size, tier_id)};
-      std::vector<BufferID> buffer_ids(0);
+  Blob blob;
 
-      while (buffer_ids.size() == 0) {
-        buffer_ids = GetBuffers(context, schema);
-      }
-
-      WriteBlobToBuffers(context, rpc, blob, buffer_ids);
-
-      std::vector<u8> data(blob.size);
-      Blob result = {};
-      result.size = blob.size;
-      result.data = data.data();
-
-      BufferIdArray buffer_id_arr = {};
-      buffer_id_arr.ids = buffer_ids.data();
-      buffer_id_arr.length = buffer_ids.size();
-      ReadBlobFromBuffers(context,  rpc, &result, &buffer_id_arr);
-
-      std::stringstream out_filename_stream;
-      out_filename_stream << "TestfileBuffering_rank" << std::to_string(rank)
-                          << ".bmp";
-      std::string out_filename = out_filename_stream.str();
-      FILE *out_file = fopen(out_filename.c_str(), "w");
-      [[maybe_unused]] size_t items_written = fwrite(result.data, result.size,
-                                                     1, out_file);
-      assert(items_written == 1);
-      fclose(out_file);
-
-      LocalReleaseBuffers(context, buffer_ids);
+  FileMapper(const char *path) {
+    FILE *f = fopen(path, "r");
+    if (f) {
+      fseek(f, 0, SEEK_END);
+      blob.size = ftell(f);
+      blob.data =  (u8 *)mmap(0, blob.size, PROT_READ, MAP_PRIVATE, fileno(f),
+                              0);
+      fclose(f);
     } else {
       perror(0);
     }
+  }
+
+  ~FileMapper() {
+    munmap(blob.data, blob.size);
+  }
+};
+
+void TestFileBuffering(SharedMemoryContext *context, RpcContext *rpc,
+                       int rank, const char *test_file) {
+  TierID tier_id = 1;
+
+  FileMapper mapper(test_file);
+  Blob blob = mapper.blob;
+
+  if (blob.data) {
+    TieredSchema schema{std::make_pair(blob.size, tier_id)};
+    std::vector<BufferID> buffer_ids(0);
+
+    while (buffer_ids.size() == 0) {
+      buffer_ids = GetBuffers(context, schema);
+    }
+
+    WriteBlobToBuffers(context, rpc, blob, buffer_ids);
+
+    std::vector<u8> data(blob.size);
+    Blob result = {};
+    result.size = blob.size;
+    result.data = data.data();
+
+    BufferIdArray buffer_id_arr = {};
+    buffer_id_arr.ids = buffer_ids.data();
+    buffer_id_arr.length = buffer_ids.size();
+    ReadBlobFromBuffers(context,  rpc, &result, &buffer_id_arr);
+
+    std::stringstream out_filename_stream;
+    out_filename_stream << "TestfileBuffering_rank" << std::to_string(rank)
+                        << ".bmp";
+    std::string out_filename = out_filename_stream.str();
+    FILE *out_file = fopen(out_filename.c_str(), "w");
+    size_t items_written = fwrite(result.data, result.size, 1, out_file);
+    Assert(items_written == 1);
+    fclose(out_file);
+
+    LocalReleaseBuffers(context, buffer_ids);
+
+    FileMapper result_mapper(out_filename.c_str());
+    Blob result_blob = result_mapper.blob;
+    Assert(blob.size == result_blob.size);
+    Assert(memcmp(blob.data, result_blob.data, blob.size) == 0);
   } else {
     perror(0);
   }
-  munmap(blob.data, blob.size);
 }
 
 void PrintUsage(char *program) {
@@ -183,8 +200,8 @@ void PrintUsage(char *program) {
   fprintf(stderr, "     Run GetBuffers test.\n");
   fprintf(stderr, "  -c <path>\n");
   fprintf(stderr, "     Path to a Hermes configuration file.\n");
-  fprintf(stderr, "  -f\n");
-  fprintf(stderr, "     Run FileBuffering test.\n");
+  fprintf(stderr, "  -f <path>\n");
+  fprintf(stderr, "     Run FileBuffering test on file at <path>.\n");
   fprintf(stderr, "  -h\n");
   fprintf(stderr, "     Print help message and exit.\n");
   fprintf(stderr, "  -i <num>\n");
@@ -209,11 +226,12 @@ int main(int argc, char **argv) {
   bool test_split = false;
   bool test_merge = false;
   bool test_file_buffering = false;
+  char *test_file = 0;
   bool kill_server = false;
   int slab_index = 0;
   int iters = 100000;
 
-  while ((option = getopt(argc, argv, "bc:fhi:km:rs:")) != -1) {
+  while ((option = getopt(argc, argv, "bc:f:hi:km:rs:")) != -1) {
     switch (option) {
       case 'b': {
         test_get_release = true;
@@ -226,6 +244,7 @@ int main(int argc, char **argv) {
       case 'f': {
         test_file_buffering = true;
         test_get_release = false;
+        test_file = optarg;
         break;
       }
       case 'h': {
@@ -314,7 +333,8 @@ int main(int argc, char **argv) {
     printf("%f\n", seconds_for_merge);
   }
   if (test_file_buffering) {
-    TestFileBuffering(context, rpc, app_rank);
+    Assert(test_file);
+    TestFileBuffering(context, rpc, app_rank, test_file);
   }
 
   if (app_rank == 0 && kill_server) {
