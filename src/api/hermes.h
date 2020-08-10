@@ -50,7 +50,6 @@ class Hermes {
 
   bool IsApplicationCore();
   void AppBarrier();
-  void MakeInstanceStandalone();
   int GetProcessRank();
   int GetNumProcesses();
   void Finalize(bool force_rpc_shutdown=false);
