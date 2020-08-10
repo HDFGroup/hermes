@@ -33,16 +33,24 @@
 #elif defined(HERMES_COMMUNICATION_ZMQ)
 #include "communication_zmq.cc"
 #else
-#error Communication implementation required (e.g., -DHERMES_COMMUNICATION_MPI).
+#error "Communication implementation required " \
+  "(e.g., -DHERMES_COMMUNICATION_MPI)."
 #endif
 
 #if defined(HERMES_RPC_THALLIUM)
 #include "rpc_thallium.cc"
 #else
-#error RPC implementation required (e.g., -DHERMES_RPC_THALLIUM).
+#error "RPC implementation required (e.g., -DHERMES_RPC_THALLIUM)."
 #endif
 
 #include "metadata_management.cc"
+
+#if defined(HERMES_MDM_STORAGE_STBDS)
+#include "metadata_storage_stb_ds.cc"
+#else
+#error "Metadata storage implementation required" \
+  "(e.g., -DHERMES_MDM_STORAGE_STBDS)."
+#endif
 
 /**
  * @file buffer_pool.cc
