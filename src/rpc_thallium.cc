@@ -122,8 +122,6 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
                                                tl::bulk_mode::read_only);
       // TODO(chogan): Should only read 'size' bytes
       local_bulk >> bulk.on(endpoint);
-
-      req.respond(size);
     };
 
   // Metadata requests
@@ -276,7 +274,8 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
 
   rpc_server->define("RemoteReadBufferById", rpc_read_buffer_by_id);
   rpc_server->define("RemoteWriteBufferById", rpc_write_buffer_by_id);
-  rpc_server->define("RemoteBulkReadBufferById", rpc_bulk_read_buffer_by_id);
+  rpc_server->define("RemoteBulkReadBufferById",
+                     rpc_bulk_read_buffer_by_id).disable_response();
 
   rpc_server->define("RemoteGet", rpc_map_get);
   rpc_server->define("RemotePut", rpc_map_put).disable_response();

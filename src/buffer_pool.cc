@@ -1347,13 +1347,83 @@ size_t LocalReadBufferById(SharedMemoryContext *context, BufferID id,
   return result;
 }
 
+bool BuffersAreOnSameNode(BufferID b1, BufferID b2) {
+  bool result = b1.bits.node_id == b2.bits.node_id;
+
+  return result;
+}
+
+bool BuffersAreContiguous(BufferID b1, BufferID b2) {
+  bool result = true;
+
+  if (IsNullBufferId(b1) || IsNullBufferId(b2)) {
+    result = false;
+  }
+
+  if (!BuffersAreOnSameNode(b1, b2)) {
+    // TODO(chogan): This is only valid for private resources like local ram and
+    // NVMe. Shared resources like burst buffers could be stored off of the node
+    // where the BufferID is stored, so two BufferIDs on different nodes could
+    // still represent a contiguous region in a burst buffer file.
+    result = false;
+  }
+
+  if (std::abs((i64)b1.bits.header_index - (i64)b2.bits.header_index) != 1) {
+    // TODO(chogan): It's possible that two buffers could have contiguous
+    // header_index values but the data could be split between two different
+    // files. Need to verify that they're part of the same file (for block-based
+    // Tiers).
+    result = false;
+  }
+
+  return result;
+}
+
+struct IoOp {
+  BufferID starting_id;
+  size_t offset;
+  size_t size;
+  u32 node;
+};
+
 size_t ReadBlobFromBuffers(SharedMemoryContext *context, RpcContext *rpc,
                            Blob *blob, BufferIdArray *buffer_ids) {
+
+  // TODO(chogan): Go through buffer_ids and come up with a plan to minimize
+  // rpcs and memcpys.
+  // TODO(chogan): Need sizes of each BufferID's used portion
+  std::vector<IoOp> ops;
+  IoOp prev_op = {};
+  BufferID prev_id = {};
+  for (u32 i = 0; i < buffer_ids->length; ++i) {
+    bool push_this_op = true;
+    IoOp op = {};
+    op.offset = prev_op.offset + prev_op.size;
+
+    BufferID id = buffer_ids->ids[i];
+
+    if (BuffersAreContiguous(prev_id, id)) {
+      push_this_op = false;
+    }
+
+    if (BufferIsRemote(rpc, id)) {
+    }
+
+    if (push_this_op) {
+      ops.push_back(op);
+    }
+
+    prev_op = op;
+    prev_id = id;
+  }
+
   size_t total_bytes_read = 0;
+  // TODO(chogan): @optimization Handle sequential buffers as one I/O operation
   for (u32 i = 0; i < buffer_ids->length; ++i) {
     size_t bytes_read = 0;
     BufferID id = buffer_ids->ids[i];
     if (BufferIsRemote(rpc, id)) {
+      // TODO(chogan): @optimization Aggregate multiple RPCs into one
       size_t max_size = blob->size - total_bytes_read;
       bytes_read =
         BulkTransfer(rpc, id.bits.node_id, "RemoteBulkReadBufferById",
