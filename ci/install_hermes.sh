@@ -18,7 +18,6 @@ cmake                                                      \
     -DBUILD_BUFFER_POOL_VISUALIZER=OFF                     \
     -DUSE_ADDRESS_SANITIZER=ON                             \
     -DUSE_THREAD_SANITIZER=OFF                             \
-    -DHERMES_USE_TCP=ON                                    \
     -DHERMES_RPC_THALLIUM=ON                               \
     -DHERMES_DEBUG_HEAP=OFF                                \
     ..
