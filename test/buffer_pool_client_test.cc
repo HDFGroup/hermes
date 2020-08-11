@@ -44,7 +44,7 @@ TimingResult TestGetBuffersRpc(RpcContext *rpc, int iters) {
   for (int i = 0; i < iters; ++i) {
     get_timer.resumeTime();
     std::vector<BufferID> ret =
-      RpcCall<std::vector<BufferID>>(rpc, rpc->node_id, "GetBuffers", schema);
+      hermes::RpcCall<std::vector<BufferID>>(rpc, rpc->node_id, "GetBuffers", schema);
     get_timer.pauseTime();
 
     if (ret.size() == 0) {

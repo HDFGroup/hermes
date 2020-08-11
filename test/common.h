@@ -84,7 +84,7 @@ void InitTestConfig(Config *config) {
 
   config->max_buckets_per_node = 16;
   config->max_vbuckets_per_node = 8;
-  config->system_view_state_update_interval_ms = 1000;
+  config->system_view_state_update_interval_ms = 100;
 
   size_t shmem_name_size = strlen(buffer_pool_shmem_name);
   for (size_t i = 0; i < shmem_name_size; ++i) {
@@ -277,7 +277,6 @@ std::shared_ptr<api::Hermes> InitHermesClient(const char *config_file=NULL) {
 
 // TODO(chogan): Move into library
 std::shared_ptr<api::Hermes> InitHermesDaemon(char *config_file=NULL) {
-
   std::shared_ptr<api::Hermes> result = InitHermes(config_file, true);
 
   return result;

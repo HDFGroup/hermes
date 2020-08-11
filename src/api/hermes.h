@@ -52,7 +52,7 @@ class Hermes {
   void AppBarrier();
   int GetProcessRank();
   int GetNumProcesses();
-  void Finalize();
+  void Finalize(bool force_rpc_shutdown=false);
 
   // MPI comms.
   // proxy/reference to Hermes core
