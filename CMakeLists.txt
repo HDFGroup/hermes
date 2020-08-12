@@ -146,7 +146,6 @@ option(HERMES_COMMUNICATION_MPI "Use MPI as the communication layer." ON)
 option(BUILD_BUFFER_POOL_VISUALIZER "Build the BufferPool visualizer" OFF)
 option(USE_ADDRESS_SANITIZER "Enable -fsanitize=address in Debug builds" ON)
 option(USE_THREAD_SANITIZER "Enable -fsanitize=thread in Debug builds" OFF)
-option(HERMES_USE_TCP "Use TCP as the transport layer for RPC." ON)
 option(HERMES_RPC_THALLIUM "Use Thallium as the RPC library." ON)
 option(HERMES_MDM_STORAGE_STBDS
   "Use the STB library and shared memory to store metadata" ON)
@@ -162,8 +161,6 @@ endif()
 
 # TODO(chogan): Expose this once we have more than one communication layer
 mark_as_advanced(HERMES_COMMUNICATION_MPI)
-# TODO(chogan): Eventually expose other transport layers like RoCE and IB
-mark_as_advanced(HERMES_USE_TCP)
 # TODO(chogan): Expose this once we support more than one RPC layer
 mark_as_advanced(HERMES_RPC_THALLIUM)
 mark_as_advanced(HERMES_METADATA_STORAGE_STBDS)
