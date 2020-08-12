@@ -52,6 +52,10 @@ target_include_directories(hermes
           $<INSTALL_INTERFACE:${HERMES_INSTALL_INCLUDE_INTERFACE}>
 )
 
+target_include_directories(hermes
+  SYSTEM PUBLIC ${HERMES_EXT_INCLUDE_DEPENDENCIES}
+)
+
 target_link_libraries(hermes
   PUBLIC ${ORTOOLS_LIBRARIES}
   PRIVATE thallium

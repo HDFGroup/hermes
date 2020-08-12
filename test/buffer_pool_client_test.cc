@@ -131,6 +131,7 @@ struct FileMapper {
 
   FileMapper(const char *path) {
     FILE *f = fopen(path, "r");
+    blob = {};
     if (f) {
       fseek(f, 0, SEEK_END);
       blob.size = ftell(f);
