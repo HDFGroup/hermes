@@ -392,6 +392,19 @@ size_t LocalWriteBufferById(SharedMemoryContext *context, BufferID id,
                             size_t offset);
 size_t LocalReadBufferById(SharedMemoryContext *context, BufferID id,
                            Blob *blob, size_t offset);
+
+/**
+ * Returns a vector of bandwidths in MiB per second.
+ *
+ * The returned list can be indexed by TierID to get the bandwidth for a
+ * specific Tier.
+ *
+ * @param context The shared memory context needed to access BufferPool info.
+ *
+ * @return The list of bandwidths, one for each Tier, in MiB/sec.
+ */
+std::vector<f32> GetBandwidths(SharedMemoryContext *context);
+
 }  // namespace hermes
 
 #endif  // HERMES_BUFFER_POOL_H_

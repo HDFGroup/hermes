@@ -111,6 +111,18 @@ Tier *GetTierFromHeader(SharedMemoryContext *context, BufferHeader *header) {
   return result;
 }
 
+std::vector<f32> GetBandwidths(SharedMemoryContext *context) {
+  BufferPool *pool = GetBufferPoolFromContext(context);
+  std::vector<f32> result(pool->num_tiers, 0);
+
+  for (int i = 0; i < pool->num_tiers; i++) {
+    Tier *tier = GetTierById(context, i);
+    result[i] = tier->bandwidth_mbps;
+  }
+
+  return result;
+}
+
 Tier *GetTierById(SharedMemoryContext *context, TierID tier_id) {
   BufferPool *pool = GetBufferPoolFromContext(context);
   Tier *tiers_base = (Tier *)(context->shm_base + pool->tier_storage_offset);
