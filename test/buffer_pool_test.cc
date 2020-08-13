@@ -52,6 +52,17 @@ void TestGetBuffers(hapi::Hermes *hermes) {
   }
 }
 
+void TestGetBandwidths(hermes::SharedMemoryContext *context) {
+  using namespace hermes;
+  std::vector<f32> bandwidths = GetBandwidths(context);
+  Config config;
+  InitTestConfig(&config);
+  for (size_t i = 0; i < bandwidths.size(); ++i) {
+    Assert(bandwidths[i] == config.bandwidths[i]);
+    Assert(bandwidths.size() == (size_t)config.num_tiers);
+  }
+}
+
 void PrintUsage(char *program) {
   fprintf(stderr, "Usage %s -[b] [-f <path>]\n", program);
   fprintf(stderr, "  -b\n");
@@ -104,6 +115,7 @@ int main(int argc, char **argv) {
   if (test_get_buffers) {
     InitFilesForBuffering(&hermes->context_, hermes->comm_.first_on_node);
     TestGetBuffers(hermes.get());
+    TestGetBandwidths(&hermes->context_);
   }
 
   hermes->Finalize(force_shutdown_rpc_server);
