@@ -359,7 +359,6 @@ void InitRpcContext(RpcContext *rpc, u32 num_nodes, u32 node_id,
                         kMaxServerNameSize);
   CopyStringToCharArray(config->rpc_server_suffix, rpc->hostname_suffix,
                         kMaxServerSuffixSize);
-  CopyStringToCharArray(config->rpc_domain, rpc->verbs_domain, kMaxDomainName);
   rpc->host_number_range[0] = config->rpc_host_number_range[0];
   rpc->host_number_range[1] = config->rpc_host_number_range[1];
 }
@@ -403,10 +402,6 @@ std::string GetServerName(RpcContext *rpc, u32 node_id) {
 
   std::string result = std::string(tl_state->server_name_prefix);
 
-  if (result.find("verbs") != std::string::npos) {
-    result += std::string(rpc->verbs_domain) + "/";
-
-  }
   result += std::string(ip_address);
   result += std::string(tl_state->server_name_postfix);
 
