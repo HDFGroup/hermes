@@ -15,10 +15,15 @@ std::string GetHostNumberAsString(RpcContext *rpc, u32 node_id) {
   return result;
 }
 
-void CopyStringToCharArray(const std::string &src, char *dest) {
+void CopyStringToCharArray(const std::string &src, char *dest, size_t max) {
   size_t src_size = src.size();
-  memcpy(dest, src.c_str(), src_size);
-  dest[src_size] = '\0';
+  if (src_size >= max) {
+    LOG(WARNING) << "Can only fit " << max << " characters from the string "
+                 << src << std::endl;
+  }
+  size_t copy_size = std::min(max - 1, src_size);
+  memcpy(dest, src.c_str(), copy_size);
+  dest[copy_size] = '\0';
 }
 
 void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
@@ -36,7 +41,8 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
   size_t end_of_protocol = rpc_server_name.find_first_of(":");
   std::string server_name_prefix =
     rpc_server_name.substr(0, end_of_protocol) + "://";
-  CopyStringToCharArray(server_name_prefix, state->server_name_prefix);
+  CopyStringToCharArray(server_name_prefix, state->server_name_prefix,
+                        kMaxServerNamePrefix);
 
   if (std::string(addr).find("verbs") != std::string::npos) {
     // TODO(chogan): Mercury won't let you choose the port when using a domain
@@ -50,7 +56,8 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
   }
 
   std::string server_name_postfix = ":" + std::to_string(rpc->port);
-  CopyStringToCharArray(server_name_postfix, state->server_name_postfix);
+  CopyStringToCharArray(server_name_postfix, state->server_name_postfix,
+                        kMaxServerNamePostfix);
 
   using std::function;
   using std::string;
@@ -359,7 +366,10 @@ void InitRpcContext(RpcContext *rpc, u32 num_nodes, u32 node_id,
   rpc->start_server = ThalliumStartRpcServer;
   rpc->state_size = sizeof(ThalliumState);
   rpc->port = config->rpc_port;
-  CopyStringToCharArray(config->rpc_server_base_name, rpc->base_hostname);
+  CopyStringToCharArray(config->rpc_server_base_name, rpc->base_hostname,
+                        kMaxServerNameSize);
+  CopyStringToCharArray(config->rpc_server_suffix, rpc->hostname_suffix,
+                        kMaxServerSuffixSize);
   rpc->host_number_range[0] = config->rpc_host_number_range[0];
   rpc->host_number_range[1] = config->rpc_host_number_range[1];
 }
@@ -389,7 +399,8 @@ std::string GetServerName(RpcContext *rpc, u32 node_id) {
   ThalliumState *tl_state = GetThalliumState(rpc);
 
   std::string host_number = GetHostNumberAsString(rpc, node_id);
-  std::string host_name = std::string(rpc->base_hostname) + host_number;
+  std::string host_name = std::string(rpc->base_hostname) + host_number +
+    std::string(rpc->hostname_suffix);
   const int max_ip_address_size = 16;
   char ip_address[max_ip_address_size];
   // TODO(chogan): @errorhandling

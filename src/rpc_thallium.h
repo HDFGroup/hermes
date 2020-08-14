@@ -14,9 +14,12 @@ namespace tl = thallium;
 
 namespace hermes {
 
+const int kMaxServerNamePrefix = 32;
+const int kMaxServerNamePostfix = 8;
+
 struct ThalliumState {
-  char server_name_prefix[32];
-  char server_name_postfix[8];
+  char server_name_prefix[kMaxServerNamePrefix];
+  char server_name_postfix[kMaxServerNamePostfix];
   std::atomic<bool> kill_requested;
   tl::engine *engine;
   ABT_xstream execution_stream;
