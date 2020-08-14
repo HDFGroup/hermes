@@ -78,7 +78,9 @@ void InitTestConfig(Config *config) {
   config->mount_points[3] = pfs_mount_point;
 
   config->rpc_server_base_name = "localhost";
+  config->rpc_server_suffix = "";
   config->rpc_protocol = "ofi+sockets";
+  config->rpc_domain = "";
   config->rpc_port = 8080;
   config->rpc_num_threads = 1;
 
@@ -252,9 +254,18 @@ std::shared_ptr<api::Hermes> InitHermes(const char *config_file=NULL,
   if (comm.proc_kind == ProcessKind::kHermes) {
     std::string host_number = GetHostNumberAsString(&result->rpc_,
                                                     result->rpc_.node_id);
-    std::string rpc_server_addr = (config.rpc_protocol + "://" +
-                                   config.rpc_server_base_name + host_number +
-                                   ":" + std::to_string(config.rpc_port));
+
+    std::string rpc_server_addr;
+
+    if (!config.rpc_domain.empty()) {
+      rpc_server_addr = (config.rpc_protocol + "://" + config.rpc_domain);
+    } else {
+      rpc_server_addr = (config.rpc_protocol + "://" +
+                         config.rpc_server_base_name + host_number +
+                         config.rpc_server_suffix + ":" +
+                         std::to_string(config.rpc_port));
+    }
+
     result->rpc_.start_server(&result->context_, &result->rpc_,
                               rpc_server_addr.c_str(), config.rpc_num_threads);
     double sleep_ms = config.system_view_state_update_interval_ms;

@@ -34,9 +34,20 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
             << num_rpc_threads << " RPC threads" << std::endl;
 
   size_t end_of_protocol = rpc_server_name.find_first_of(":");
-  std::string server_name_prefix = rpc_server_name.substr(0, end_of_protocol) +
-                                   "://";
+  std::string server_name_prefix =
+    rpc_server_name.substr(0, end_of_protocol) + "://";
   CopyStringToCharArray(server_name_prefix, state->server_name_prefix);
+
+  if (std::string(addr).find("verbs") != std::string::npos) {
+    // TODO(chogan): Mercury won't let you choose the port when using a domain
+    // with the verbs protocol, and it doesn't work with an IP address, so we
+    // have to use the domain and store the new port it chooses.
+    std::string::size_type start_of_port = rpc_server_name.find_last_of(":");
+    std::string port_str = rpc_server_name.substr(start_of_port + 1);
+    int port = 0;
+    std::istringstream(port_str) >> port;
+    rpc->port = port;
+  }
 
   std::string server_name_postfix = ":" + std::to_string(rpc->port);
   CopyStringToCharArray(server_name_postfix, state->server_name_postfix);

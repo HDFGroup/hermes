@@ -99,7 +99,9 @@ struct Config {
   /** The hostname of the RPC server, minus any numbers that Hermes may
    * auto-generate when the rpc_hostNumber_range is specified. */
   std::string rpc_server_base_name;
+  std::string rpc_server_suffix;
   std::string rpc_protocol;
+  std::string rpc_domain;
   int rpc_port;
   int rpc_host_number_range[2];
   int rpc_num_threads;
