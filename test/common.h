@@ -255,16 +255,14 @@ std::shared_ptr<api::Hermes> InitHermes(const char *config_file=NULL,
     std::string host_number = GetHostNumberAsString(&result->rpc_,
                                                     result->rpc_.node_id);
 
-    std::string rpc_server_addr;
+    std::string rpc_server_addr = config.rpc_protocol + "://";
 
     if (!config.rpc_domain.empty()) {
-      rpc_server_addr = (config.rpc_protocol + "://" + config.rpc_domain);
-    } else {
-      rpc_server_addr = (config.rpc_protocol + "://" +
-                         config.rpc_server_base_name + host_number +
-                         config.rpc_server_suffix + ":" +
-                         std::to_string(config.rpc_port));
+      rpc_server_addr += config.rpc_domain + "/";
     }
+    rpc_server_addr += (config.rpc_server_base_name + host_number +
+                        config.rpc_server_suffix + ":" +
+                        std::to_string(config.rpc_port));
 
     result->rpc_.start_server(&result->context_, &result->rpc_,
                               rpc_server_addr.c_str(), config.rpc_num_threads);
