@@ -78,17 +78,20 @@ size_t Bucket::Get(const std::string &name, Blob& user_blob, Context &ctx) {
     // TODO(chogan): Do this in iterations if scratch isn't big enough to hold
     // everything
     ScopedTemporaryMemory scratch(&hermes_->trans_arena_);
-    u32 *buffer_sizes = 0;
-    BufferIdArray buffer_ids =
-      GetBufferIdsFromBlobName(scratch, &hermes_->context_, &hermes_->rpc_,
-                               name.c_str(), &buffer_sizes);
 
     if (user_blob.size() == 0) {
       LOG(INFO) << "Getting Blob " << name << " size from bucket "
                 << name_ << '\n';
+      BufferIdArray buffer_ids =
+        GetBufferIdsFromBlobName(scratch, &hermes_->context_, &hermes_->rpc_,
+                                 name.c_str(), NULL);
       ret = GetBlobSize(&hermes_->context_, &hermes_->rpc_, &buffer_ids);
     } else {
       LOG(INFO) << "Getting Blob " << name << " from bucket " << name_ << '\n';
+      u32 *buffer_sizes = 0;
+      BufferIdArray buffer_ids =
+        GetBufferIdsFromBlobName(scratch, &hermes_->context_, &hermes_->rpc_,
+                                 name.c_str(), &buffer_sizes);
       hermes::Blob blob = {};
       blob.data = user_blob.data();
       blob.size = user_blob.size();
