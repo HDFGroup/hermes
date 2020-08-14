@@ -48,6 +48,7 @@ Status Bucket::Put(const std::string &name, const u8 *data, size_t size,
   return ret;
 }
 
+#if 0
 size_t Bucket::GetBlobSize(const std::string &name, Context &ctx) {
   (void)ctx;
 
@@ -66,6 +67,7 @@ size_t Bucket::GetBlobSize(const std::string &name, Context &ctx) {
 
   return ret;
 }
+#endif
 
 size_t Bucket::Get(const std::string &name, Blob& user_blob, Context &ctx) {
   (void)ctx;
