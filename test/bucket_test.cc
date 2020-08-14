@@ -47,7 +47,7 @@ int compress_blob(hermes::api::Blob &blob, void *trait) {
 }
 
 
-int main()
+int main(int argc, char **argv)
 {
   int mpi_threads_provided;
   MPI_Init_thread(NULL, NULL, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
@@ -56,14 +56,20 @@ int main()
     return 1;
   }
 
-  std::shared_ptr<hermes::api::Hermes> hermes_app = hermes::InitHermes();
+  char *config_file = 0;
+  if (argc == 2) {
+    config_file = argv[1];
+  }
+
+  std::shared_ptr<hermes::api::Hermes> hermes_app =
+                                       hermes::InitHermes(config_file);
 
   if (hermes_app->IsApplicationCore()) {
     hermes::api::Context ctx;
 
     hermes::api::Bucket my_bucket("compression", hermes_app, ctx);
     hermes_app->Display_bucket();
-    hermes::api::Blob p1 (1024, 255);
+    hermes::api::Blob p1 (1024*1024*400, 255);
     hermes::api::Blob p2 (p1);
     my_bucket.Put("Blob1", p1, ctx);
     my_bucket.Put("Blob2", p2, ctx);

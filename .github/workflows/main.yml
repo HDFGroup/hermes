@@ -6,7 +6,7 @@ name: GitHub Actions
 # events but only for the master branch
 on:
   push:
-    branches: [ master, chogan/** ]
+    branches: [ master, chogan/**, kimmy/** ]
   pull_request:
     branches: [ master ]
  

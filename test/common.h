@@ -104,8 +104,15 @@ ArenaInfo GetArenaInfo(Config *config) {
   ArenaInfo result = {};
 
   for (int i = 0; i < kArenaType_Count; ++i) {
-    size_t pages = std::floor(config->arena_percentages[i] * total_pages);
-    pages_left -= pages;
+    size_t pages {0};
+    if (i < kArenaType_Count-1) {
+      pages = std::floor(config->arena_percentages[i] * total_pages);
+      pages_left -= pages;
+    }
+    else {
+      pages = pages_left;
+      pages_left = 0;
+    }
     size_t num_bytes = pages * page_size;
     result.sizes[i] = num_bytes;
     result.total += num_bytes;
