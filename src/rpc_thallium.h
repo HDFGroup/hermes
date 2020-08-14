@@ -15,7 +15,7 @@ namespace tl = thallium;
 namespace hermes {
 
 struct ThalliumState {
-  char server_name_prefix[16];
+  char server_name_prefix[32];
   char server_name_postfix[8];
   std::atomic<bool> kill_requested;
   tl::engine *engine;
