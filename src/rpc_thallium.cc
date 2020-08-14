@@ -44,17 +44,6 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
   CopyStringToCharArray(server_name_prefix, state->server_name_prefix,
                         kMaxServerNamePrefix);
 
-  if (std::string(addr).find("verbs") != std::string::npos) {
-    // TODO(chogan): Mercury won't let you choose the port when using a domain
-    // with the verbs protocol, and it doesn't work with an IP address, so we
-    // have to use the domain and store the new port it chooses.
-    std::string::size_type start_of_port = rpc_server_name.find_last_of(":");
-    std::string port_str = rpc_server_name.substr(start_of_port + 1);
-    int port = 0;
-    std::istringstream(port_str) >> port;
-    rpc->port = port;
-  }
-
   std::string server_name_postfix = ":" + std::to_string(rpc->port);
   CopyStringToCharArray(server_name_postfix, state->server_name_postfix,
                         kMaxServerNamePostfix);
@@ -370,6 +359,7 @@ void InitRpcContext(RpcContext *rpc, u32 num_nodes, u32 node_id,
                         kMaxServerNameSize);
   CopyStringToCharArray(config->rpc_server_suffix, rpc->hostname_suffix,
                         kMaxServerSuffixSize);
+  CopyStringToCharArray(config->rpc_domain, rpc->verbs_domain, kMaxDomainName);
   rpc->host_number_range[0] = config->rpc_host_number_range[0];
   rpc->host_number_range[1] = config->rpc_host_number_range[1];
 }
@@ -399,8 +389,8 @@ std::string GetServerName(RpcContext *rpc, u32 node_id) {
   ThalliumState *tl_state = GetThalliumState(rpc);
 
   std::string host_number = GetHostNumberAsString(rpc, node_id);
-  std::string host_name = std::string(rpc->base_hostname) + host_number +
-    std::string(rpc->hostname_suffix);
+  std::string host_name = (std::string(rpc->base_hostname) + host_number +
+                           std::string(rpc->hostname_suffix));
   const int max_ip_address_size = 16;
   char ip_address[max_ip_address_size];
   // TODO(chogan): @errorhandling
@@ -411,9 +401,14 @@ std::string GetServerName(RpcContext *rpc, u32 node_id) {
   // TODO(chogan): @errorhandling
   strncpy(ip_address, inet_ntoa(*addr_list[0]), max_ip_address_size);
 
-  std::string result = (std::string(tl_state->server_name_prefix) +
-                        std::string(ip_address) +
-                        std::string(tl_state->server_name_postfix));
+  std::string result = std::string(tl_state->server_name_prefix);
+
+  if (result.find("verbs") != std::string::npos) {
+    result += std::string(rpc->verbs_domain) + "/";
+
+  }
+  result += std::string(ip_address);
+  result += std::string(tl_state->server_name_postfix);
 
   return result;
 }

@@ -13,6 +13,7 @@ struct RpcContext;
 
 const int kMaxServerNameSize = 128;
 const int kMaxServerSuffixSize = 16;
+const int kMaxDomainName = 16;
 
 typedef void (*StartFunc)(SharedMemoryContext*, RpcContext*, const char*, int);
 
@@ -34,6 +35,8 @@ struct RpcContext {
   char base_hostname[kMaxServerNameSize];
 
   char hostname_suffix[kMaxServerSuffixSize];
+
+  char verbs_domain[kMaxDomainName];
 
   // TODO(chogan): Also allow reading hostnames from a file for heterogeneous or
   // non-contiguous hostnames (e.g., compute-node-20, compute-node-30,
