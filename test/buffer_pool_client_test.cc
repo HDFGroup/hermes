@@ -29,6 +29,7 @@
  */
 
 using namespace hermes;
+namespace hapi = hermes::api;
 
 struct TimingResult {
   double get_buffers_time;
@@ -148,9 +149,13 @@ struct FileMapper {
   }
 };
 
-void TestFileBuffering(SharedMemoryContext *context, RpcContext *rpc,
-                       int rank, const char *test_file) {
+void TestFileBuffering(std::shared_ptr<hapi::Hermes> hermes, int rank,
+                       const char *test_file) {
+  SharedMemoryContext *context = &hermes->context_;
+  RpcContext *rpc = &hermes->rpc_;
   TierID tier_id = 1;
+
+  ScopedTemporaryMemory scratch(&hermes->trans_arena_);
 
   FileMapper mapper(test_file);
   Blob blob = mapper.blob;
@@ -163,6 +168,12 @@ void TestFileBuffering(SharedMemoryContext *context, RpcContext *rpc,
       buffer_ids = GetBuffers(context, schema);
     }
 
+    size_t num_buffers = buffer_ids.size();
+    u32 *buffer_sizes = PushArray<u32>(scratch, num_buffers);
+    for (u32 i = 0; i < num_buffers; ++i) {
+      buffer_sizes[i] = GetBufferSize(context, rpc, buffer_ids[i]);
+    }
+
     WriteBlobToBuffers(context, rpc, blob, buffer_ids);
 
     std::vector<u8> data(blob.size);
@@ -173,7 +184,7 @@ void TestFileBuffering(SharedMemoryContext *context, RpcContext *rpc,
     BufferIdArray buffer_id_arr = {};
     buffer_id_arr.ids = buffer_ids.data();
     buffer_id_arr.length = buffer_ids.size();
-    ReadBlobFromBuffers(context,  rpc, &result, &buffer_id_arr);
+    ReadBlobFromBuffers(context,  rpc, &result, &buffer_id_arr, buffer_sizes);
 
     std::stringstream out_filename_stream;
     out_filename_stream << "TestfileBuffering_rank" << std::to_string(rank)
@@ -216,8 +227,6 @@ void PrintUsage(char *program) {
   fprintf(stderr, "  -s <num>\n");
   fprintf(stderr, "     Run SplitBuffers test on slab <num>.\n");
 }
-
-namespace hapi = hermes::api;
 
 int main(int argc, char **argv) {
   int option = -1;
@@ -335,7 +344,7 @@ int main(int argc, char **argv) {
   }
   if (test_file_buffering) {
     Assert(test_file);
-    TestFileBuffering(context, rpc, app_rank, test_file);
+    TestFileBuffering(hermes, app_rank, test_file);
   }
 
   if (app_rank == 0 && kill_server) {

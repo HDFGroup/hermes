@@ -358,10 +358,17 @@ std::vector<BufferID> GetBufferIdList(SharedMemoryContext *context,
 BufferIdArray GetBufferIdsFromBlobName(Arena *arena,
                                        SharedMemoryContext *context,
                                        RpcContext *rpc,
-                                       const char *blob_name) {
+                                       const char *blob_name,
+                                       u32 **sizes) {
   BufferIdArray result = {};
   BlobID blob_id = GetBlobIdByName(context, rpc, blob_name);
   GetBufferIdList(arena, context, rpc, blob_id, &result);
+
+  u32 *buffer_sizes = PushArray<u32>(arena, result.length);
+  for (u32 i = 0; i < result.length; ++i) {
+    buffer_sizes[i] = GetBufferSize(context, rpc, result.ids[i]);
+  }
+  *sizes = buffer_sizes;
 
   return result;
 }

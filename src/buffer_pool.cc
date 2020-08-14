@@ -1387,11 +1387,11 @@ struct IoOp {
 };
 
 size_t ReadBlobFromBuffers(SharedMemoryContext *context, RpcContext *rpc,
-                           Blob *blob, BufferIdArray *buffer_ids) {
+                           Blob *blob, BufferIdArray *buffer_ids,
+                           u32 *buffer_sizes) {
 
   // TODO(chogan): Go through buffer_ids and come up with a plan to minimize
   // rpcs and memcpys.
-  // TODO(chogan): Need sizes of each BufferID's used portion
   std::vector<IoOp> ops;
   IoOp prev_op = {};
   BufferID prev_id = {};
@@ -1424,10 +1424,9 @@ size_t ReadBlobFromBuffers(SharedMemoryContext *context, RpcContext *rpc,
     BufferID id = buffer_ids->ids[i];
     if (BufferIsRemote(rpc, id)) {
       // TODO(chogan): @optimization Aggregate multiple RPCs into one
-      size_t max_size = blob->size - total_bytes_read;
-      bytes_read =
-        BulkTransfer(rpc, id.bits.node_id, "RemoteBulkReadBufferById",
-                     blob->data + total_bytes_read, max_size);
+      BulkTransfer(rpc, id.bits.node_id, "RemoteBulkReadBufferById",
+                   blob->data + total_bytes_read, buffer_sizes[i]);
+      bytes_read += buffer_sizes[i];
     } else {
       bytes_read = LocalReadBufferById(context, id, blob, total_bytes_read);
     }

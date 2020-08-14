@@ -127,8 +127,10 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
       segments[0].second = size;
       tl::bulk local_bulk = rpc_server->expose(segments,
                                                tl::bulk_mode::read_only);
-      // TODO(chogan): Should only read 'size' bytes
-      local_bulk >> bulk.on(endpoint);
+
+      size_t bytes_read = local_bulk >> bulk.on(endpoint);
+      // TODO(chogan): @errorhandling
+      assert(bytes_read == size);
     };
 
   // Metadata requests
@@ -419,7 +421,7 @@ std::string GetProtocol(RpcContext *rpc) {
   return result;
 }
 
-size_t BulkTransfer(RpcContext *rpc, u32 node_id, const char *func_name,
+void BulkTransfer(RpcContext *rpc, u32 node_id, const char *func_name,
                   u8 *data, size_t max_size) {
   std::string server_name = GetServerName(rpc, node_id);
   std::string protocol = GetProtocol(rpc);
@@ -434,9 +436,7 @@ size_t BulkTransfer(RpcContext *rpc, u32 node_id, const char *func_name,
   segments[0].second = max_size;
 
   tl::bulk bulk = engine.expose(segments, tl::bulk_mode::write_only);
-  size_t result = remote_proc.on(server)(bulk);
-
-  return result;
+  remote_proc.on(server)(bulk);
 }
 
 }  // namespace hermes
