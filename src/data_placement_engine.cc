@@ -226,7 +226,7 @@ Status CalculatePlacement(SharedMemoryContext *context, RpcContext *rpc,
   // a set of N Tiers and a blob, while satisfying a policy P.
 
   // TODO(chogan): This should be part of the Context
-  PlacementPolicy policy = PlacementPolicy::kRandom;
+  PlacementPolicy policy = PlacementPolicy::kPerformance;
 
   switch (policy) {
     case PlacementPolicy::kRandom: {
