@@ -42,7 +42,7 @@ target_compile_definitions(bucket_test
 add_test(NAME "Testbucket_test"
   COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
   "${CMAKE_BINARY_DIR}/bin/bucket_test"
-  "${CMAKE_CURRENT_SOURCE_DIR}/data/hermes.conf")
+  "${CMAKE_CURRENT_SOURCE_DIR}/data/bucket_test.conf")
 set_tests_properties("Testbucket_test" PROPERTIES ENVIRONMENT
   LSAN_OPTIONS=suppressions=${CMAKE_CURRENT_SOURCE_DIR}/data/asan.supp)
 
