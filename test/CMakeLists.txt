@@ -21,7 +21,8 @@ foreach(program ${API_TESTS})
     PRIVATE $<$<BOOL:${HERMES_RPC_THALLIUM}>:HERMES_RPC_THALLIUM>)
   add_test(NAME "Test${program}"
     COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
-    "${CMAKE_BINARY_DIR}/bin/${program}")
+    "${CMAKE_BINARY_DIR}/bin/${program}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/data/hermes.conf")
   set_tests_properties("Test${program}" PROPERTIES ENVIRONMENT
     LSAN_OPTIONS=suppressions=${CMAKE_CURRENT_SOURCE_DIR}/data/asan.supp)
 endforeach()
