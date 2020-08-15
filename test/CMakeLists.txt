@@ -21,8 +21,7 @@ foreach(program ${API_TESTS})
     PRIVATE $<$<BOOL:${HERMES_RPC_THALLIUM}>:HERMES_RPC_THALLIUM>)
   add_test(NAME "Test${program}"
     COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
-    "${CMAKE_BINARY_DIR}/bin/${program}"
-    "${CMAKE_CURRENT_SOURCE_DIR}/data/hermes.conf")
+    "${CMAKE_BINARY_DIR}/bin/${program}")
   set_tests_properties("Test${program}" PROPERTIES ENVIRONMENT
     LSAN_OPTIONS=suppressions=${CMAKE_CURRENT_SOURCE_DIR}/data/asan.supp)
 endforeach()
@@ -42,7 +41,8 @@ target_compile_definitions(bucket_test
   PRIVATE $<$<BOOL:${HERMES_RPC_THALLIUM}>:HERMES_RPC_THALLIUM>)
 add_test(NAME "Testbucket_test"
   COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
-  "${CMAKE_BINARY_DIR}/bin/bucket_test")
+  "${CMAKE_BINARY_DIR}/bin/bucket_test"
+  "${CMAKE_CURRENT_SOURCE_DIR}/data/hermes.conf")
 set_tests_properties("Testbucket_test" PROPERTIES ENVIRONMENT
   LSAN_OPTIONS=suppressions=${CMAKE_CURRENT_SOURCE_DIR}/data/asan.supp)
 
