@@ -388,8 +388,7 @@ size_t ReadBlobFromBuffers(SharedMemoryContext *context, RpcContext *rpc,
                            Blob *blob, BufferIdArray *buffer_ids);
 
 size_t LocalWriteBufferById(SharedMemoryContext *context, BufferID id,
-                            const Blob &blob, size_t bytes_left_to_write,
-                            size_t offset);
+                            const Blob &blob, size_t offset);
 size_t LocalReadBufferById(SharedMemoryContext *context, BufferID id,
                            Blob *blob, size_t offset);
 

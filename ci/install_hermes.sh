@@ -17,7 +17,7 @@ cmake                                                      \
     -DCMAKE_PREFIX_PATH=${LOCAL}                           \
     -DCMAKE_BUILD_RPATH="${LOCAL}/lib"                     \
     -DCMAKE_INSTALL_RPATH="${LOCAL}/lib"                   \
-    -DCMAKE_BUILD_TYPE=Release                             \
+    -DCMAKE_BUILD_TYPE=${BUILD_TYPE}                       \
     -DCMAKE_CXX_COMPILER=`which mpicxx`                    \
     -DCMAKE_C_COMPILER=`which mpicc`                       \
     -DBUILD_SHARED_LIBS=ON                                 \

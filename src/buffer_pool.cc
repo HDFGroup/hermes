@@ -470,6 +470,8 @@ std::vector<BufferID> GetBuffers(SharedMemoryContext *context,
         BufferID id = GetFreeBuffer(context, tier_id, i);
         if (id.as_int) {
           result.push_back(id);
+          BufferHeader *header = GetHeaderByBufferId(context, id);
+          header->used = buffer_size;
           size_left -= buffer_size;
           num_buffers--;
         } else {
@@ -482,9 +484,12 @@ std::vector<BufferID> GetBuffers(SharedMemoryContext *context,
     if (size_left > 0) {
       size_t buffer_size = GetSlabBufferSize(context, tier_id, 0);
       BufferID id = GetFreeBuffer(context, tier_id, 0);
-      size_left -= std::min(buffer_size, size_left);
+      size_t used = std::min(buffer_size, size_left);
+      size_left -= used;
       if (id.as_int && size_left == 0) {
         result.push_back(id);
+        BufferHeader *header = GetHeaderByBufferId(context, id);
+        header->used = used;
       } else {
         failed = true;
         DLOG(INFO) << "Not enough buffers to fulfill request" << std::endl;
@@ -1232,19 +1237,10 @@ void ReleaseSharedMemoryContext(SharedMemoryContext *context) {
 // IO clients
 
 size_t LocalWriteBufferById(SharedMemoryContext *context, BufferID id,
-                            const Blob &blob, size_t bytes_left_to_write,
-                            size_t offset) {
+                            const Blob &blob, size_t offset) {
   BufferHeader *header = GetHeaderByIndex(context, id.bits.header_index);
   Tier *tier = GetTierFromHeader(context, header);
-  size_t write_size = header->capacity;
-
-  if (bytes_left_to_write > header->capacity) {
-    header->used = header->capacity;
-    bytes_left_to_write -= header->capacity;
-  } else {
-    header->used = bytes_left_to_write;
-    write_size = bytes_left_to_write;
-  }
+  size_t write_size = header->used;
 
   // TODO(chogan): Should this be a TicketMutex? It seems that at any
   // given time, only the DataOrganizer and an application core will
@@ -1299,10 +1295,9 @@ void WriteBlobToBuffers(SharedMemoryContext *context, RpcContext *rpc,
       memcpy(data.data(), blob.data, blob.size);
       bytes_written = RpcCall<size_t>(rpc, id.bits.node_id,
                                       "RemoteWriteBufferById", id, data,
-                                      bytes_left_to_write, offset);
+                                      offset);
     } else {
-      bytes_written = LocalWriteBufferById(context, id, blob,
-                                           bytes_left_to_write, offset);
+      bytes_written = LocalWriteBufferById(context, id, blob, offset);
     }
     bytes_left_to_write -= bytes_written;
     offset += bytes_written;
@@ -1329,7 +1324,7 @@ size_t LocalReadBufferById(SharedMemoryContext *context, BufferID id,
   size_t result = 0;
   if (tier->is_ram) {
     u8 *src = GetRamBufferPtr(context, header->id);
-    memcpy(blob->data, src, read_size);
+    memcpy(blob->data + read_offset, src, read_size);
     result = read_size;
   } else {
     int slab_index = GetSlabIndexFromHeader(context, header);
