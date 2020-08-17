@@ -131,6 +131,8 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
       size_t bytes_read = local_bulk >> bulk.on(endpoint);
       // TODO(chogan): @errorhandling
       assert(bytes_read == size);
+
+      req.respond(bytes_read);
     };
 
   // Metadata requests
@@ -283,8 +285,7 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
 
   rpc_server->define("RemoteReadBufferById", rpc_read_buffer_by_id);
   rpc_server->define("RemoteWriteBufferById", rpc_write_buffer_by_id);
-  rpc_server->define("RemoteBulkReadBufferById",
-                     rpc_bulk_read_buffer_by_id).disable_response();
+  rpc_server->define("RemoteBulkReadBufferById", rpc_bulk_read_buffer_by_id);
 
   rpc_server->define("RemoteGet", rpc_map_get);
   rpc_server->define("RemotePut", rpc_map_put).disable_response();
@@ -427,8 +428,7 @@ void BulkTransfer(RpcContext *rpc, u32 node_id, const char *func_name,
   std::string protocol = GetProtocol(rpc);
 
   tl::engine engine(protocol, THALLIUM_CLIENT_MODE, true);
-  tl::remote_procedure remote_proc =
-    engine.define(func_name).disable_response();
+  tl::remote_procedure remote_proc = engine.define(func_name);
   tl::endpoint server = engine.lookup(server_name);
 
   std::vector<std::pair<void*, size_t>> segments(1);
@@ -436,7 +436,7 @@ void BulkTransfer(RpcContext *rpc, u32 node_id, const char *func_name,
   segments[0].second = max_size;
 
   tl::bulk bulk = engine.expose(segments, tl::bulk_mode::write_only);
-  remote_proc.on(server)(bulk, id);
+  size_t bytes_read = remote_proc.on(server)(bulk, id);
 }
 
 }  // namespace hermes
