@@ -1,13 +1,10 @@
 #!/bin/bash
 
 set -x
+set -e
+set -o pipefail
 
-if [[ "$#" -ne 1 ]]; then
-   echo "$0 Expected the workspace directory as its first argument"
-   exit 1
-fi
-
-INSTALL_DIR=${1}
+INSTALL_DIR="${HOME}/${LOCAL}"
 SPACK_DIR=${INSTALL_DIR}/spack
 SDS_REPO_DIR=${INSTALL_DIR}/sds-repo
 THALLIUM_VERSION=0.8.3
