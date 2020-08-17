@@ -1324,7 +1324,7 @@ size_t LocalReadBufferById(SharedMemoryContext *context, BufferID id,
   size_t result = 0;
   if (tier->is_ram) {
     u8 *src = GetRamBufferPtr(context, header->id);
-    memcpy(blob->data /*+ read_offset*/, src, read_size);
+    memcpy(blob->data + read_offset, src, read_size);
     result = read_size;
   } else {
     int slab_index = GetSlabIndexFromHeader(context, header);
