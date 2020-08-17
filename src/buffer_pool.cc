@@ -1425,7 +1425,7 @@ size_t ReadBlobFromBuffers(SharedMemoryContext *context, RpcContext *rpc,
     if (BufferIsRemote(rpc, id)) {
       // TODO(chogan): @optimization Aggregate multiple RPCs into one
       BulkTransfer(rpc, id.bits.node_id, "RemoteBulkReadBufferById",
-                   blob->data + total_bytes_read, buffer_sizes[i]);
+                   blob->data + total_bytes_read, buffer_sizes[i], id);
       bytes_read += buffer_sizes[i];
     } else {
       bytes_read = LocalReadBufferById(context, id, blob, total_bytes_read);
