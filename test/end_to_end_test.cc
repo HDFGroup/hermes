@@ -35,6 +35,39 @@ void TestPutGetBucket(hapi::Bucket &bucket, int app_rank, int app_size) {
   Assert(put_data == get_result);
 }
 
+void TestBulkTransfer(std::shared_ptr<hapi::Hermes> hermes, int app_rank) {
+  size_t transfer_size = KILOBYTES(8);
+
+  hapi::Context ctx;
+  hapi::Bucket bucket(std::string("test_bucket"), hermes, ctx);
+  std::string blob_name = "1";
+
+  hapi::Blob put_data(transfer_size, 'x');
+
+  if (app_rank == 0) {
+    bucket.Put(blob_name, put_data, ctx);
+  }
+
+  hermes->AppBarrier();
+
+  if (app_rank != 0) {
+    hapi::Blob get_result;
+    size_t blob_size = bucket.Get(blob_name, get_result, ctx);
+    get_result.resize(blob_size);
+    blob_size = bucket.Get(blob_name, get_result, ctx);
+
+    Assert(get_result == put_data);
+
+    bucket.Close(ctx);
+  }
+
+  hermes->AppBarrier();
+
+  if (app_rank == 0) {
+    bucket.Destroy(ctx);
+  }
+}
+
 int main(int argc, char **argv) {
 
   int mpi_threads_provided;
@@ -78,6 +111,8 @@ int main(int argc, char **argv) {
                             std::to_string(app_rank), hermes, ctx);
     TestPutGetBucket(own_bucket, app_rank, 0);
     own_bucket.Destroy(ctx);
+
+    TestBulkTransfer(hermes, app_rank);
   } else {
     // Hermes core. No user code here.
   }
