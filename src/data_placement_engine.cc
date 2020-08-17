@@ -17,7 +17,7 @@ using hermes::api::Status;
 enum class PlacementPolicy {
   kRandom,
   kTopDown,
-  kPerformance,
+  kMinimizeIoTime,
 };
 
 // TODO(chogan): Unfinished sketch
