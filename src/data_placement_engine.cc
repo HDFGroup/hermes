@@ -83,7 +83,7 @@ Status RandomPlacement(SharedMemoryContext *context, RpcContext *rpc,
   return result;
 }
 
-Status PerformancePlacement(SharedMemoryContext *context, RpcContext *rpc,
+Status MinimizeIoTimePlacement(SharedMemoryContext *context, RpcContext *rpc,
                             std::vector<size_t> &blob_sizes,
                             std::vector<TieredSchema> &output) {
   using operations_research::MPSolver;
@@ -94,6 +94,7 @@ Status PerformancePlacement(SharedMemoryContext *context, RpcContext *rpc,
   Status result = 0;
   std::vector<u64> global_state = GetGlobalTierCapacities(context, rpc);
   std::vector<f32> bandwidths = GetBandwidths(context);
+  // TODO (KIMMY): size of constraints should be from context
   std::vector<MPConstraint*> blob_constrt(blob_sizes.size() +
                                           global_state.size()*3-1);
   std::vector<std::vector<MPVariable*>> blob_fraction (blob_sizes.size());
@@ -101,7 +102,7 @@ Status PerformancePlacement(SharedMemoryContext *context, RpcContext *rpc,
   int num_constrts {0};
 
   u64 avail_cap {0};
-  // Apply Remaining Capacity Change Threshold 20%
+  // TODO (KIMY): Remaining Capacity Change Threshold 20% (consigurable)
   for (size_t j {0}; j < global_state.size(); ++j) {
     avail_cap += static_cast<u64>(global_state[j]*0.2);
   }
@@ -237,8 +238,8 @@ Status CalculatePlacement(SharedMemoryContext *context, RpcContext *rpc,
       result = TopDownPlacement(context, rpc, blob_sizes, output);
       break;
     }
-    case PlacementPolicy::kPerformance: {
-      result = PerformancePlacement(context, rpc, blob_sizes, output);
+    case PlacementPolicy::kMinimizeIoTime: {
+      result = MinimizeIoTimePlacement(context, rpc, blob_sizes, output);
       break;
     }
   }
