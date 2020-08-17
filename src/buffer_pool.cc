@@ -1390,6 +1390,7 @@ size_t ReadBlobFromBuffers(SharedMemoryContext *context, RpcContext *rpc,
                            Blob *blob, BufferIdArray *buffer_ids,
                            u32 *buffer_sizes) {
 
+#if 0
   // TODO(chogan): Go through buffer_ids and come up with a plan to minimize
   // rpcs and memcpys.
   std::vector<IoOp> ops;
@@ -1416,6 +1417,7 @@ size_t ReadBlobFromBuffers(SharedMemoryContext *context, RpcContext *rpc,
     prev_op = op;
     prev_id = id;
   }
+#endif
 
   size_t total_bytes_read = 0;
   // TODO(chogan): @optimization Handle sequential buffers as one I/O operation
@@ -1424,14 +1426,19 @@ size_t ReadBlobFromBuffers(SharedMemoryContext *context, RpcContext *rpc,
     BufferID id = buffer_ids->ids[i];
     if (BufferIsRemote(rpc, id)) {
       // TODO(chogan): @optimization Aggregate multiple RPCs into one
-      BulkTransfer(rpc, id.bits.node_id, "RemoteBulkReadBufferById",
-                   blob->data + total_bytes_read, buffer_sizes[i], id);
-      bytes_read += buffer_sizes[i];
+      size_t bytes_transferred = BulkTransfer(rpc, id.bits.node_id,
+                                              "RemoteBulkReadBufferById",
+                                              blob->data + total_bytes_read,
+                                              buffer_sizes[i], id);
+      // TODO(chogan): @errorhandling
+      assert(bytes_transferred == buffer_sizes[i]);
+      bytes_read += bytes_transferred;
     } else {
       bytes_read = LocalReadBufferById(context, id, blob, total_bytes_read);
     }
     total_bytes_read += bytes_read;
   }
+  // TODO(chogan): @errorhandling
   assert(total_bytes_read == blob->size);
 
   return total_bytes_read;

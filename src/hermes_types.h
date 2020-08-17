@@ -33,7 +33,7 @@ constexpr int kMaxBufferPoolShmemNameLength = 64;
 constexpr int kMaxTiers = 8;
 
 #define HERMES_NOT_IMPLEMENTED_YET \
-  LOG(FATAL) << __func__ << "not implemented yet\n"
+  LOG(FATAL) << __func__ << " not implemented yet\n"
 
 /**
  * A TieredSchema is a vector of (size, tier) pairs where size is the number of

@@ -422,7 +422,7 @@ std::string GetProtocol(RpcContext *rpc) {
   return result;
 }
 
-void BulkTransfer(RpcContext *rpc, u32 node_id, const char *func_name,
+size_t BulkTransfer(RpcContext *rpc, u32 node_id, const char *func_name,
                   u8 *data, size_t max_size, BufferID id) {
   std::string server_name = GetServerName(rpc, node_id);
   std::string protocol = GetProtocol(rpc);
@@ -436,7 +436,9 @@ void BulkTransfer(RpcContext *rpc, u32 node_id, const char *func_name,
   segments[0].second = max_size;
 
   tl::bulk bulk = engine.expose(segments, tl::bulk_mode::write_only);
-  size_t bytes_read = remote_proc.on(server)(bulk, id);
+  size_t result = remote_proc.on(server)(bulk, id);
+
+  return result;
 }
 
 }  // namespace hermes
