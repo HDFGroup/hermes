@@ -79,17 +79,14 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
       req.respond(result);
     };
 
-  function<void(const request&, BufferID, std::vector<u8>, size_t, size_t)>
+  function<void(const request&, BufferID, std::vector<u8>, size_t)>
     rpc_write_buffer_by_id = [context](const request &req, BufferID id,
-                                       std::vector<u8> data,
-                                       size_t bytes_left_to_write,
-                                       size_t offset) {
+                                       std::vector<u8> data, size_t offset) {
 
       Blob blob = {};
       blob.size = data.size();
       blob.data = data.data();
-      size_t result = LocalWriteBufferById(context, id, blob,
-                                           bytes_left_to_write, offset);
+      size_t result = LocalWriteBufferById(context, id, blob, offset);
 
       req.respond(result);
 
