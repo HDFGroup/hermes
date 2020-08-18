@@ -11,16 +11,11 @@ include_directories(
 #------------------------------------------------------------------------------
 # API tests
 #------------------------------------------------------------------------------
-set(API_TESTS bucket_test dpe_test end_to_end_test)
-
-find_package(ZLIB)
-if(ZLIB_FOUND)
-  message(STATUS "found zlib")
-endif()
+set(API_TESTS dpe_test end_to_end_test)
 
 foreach(program ${API_TESTS})
   add_executable(${program} ${program}.cc)
-  target_link_libraries(${program} ${LIBRT} hermes MPI::MPI_CXX ZLIB::ZLIB
+  target_link_libraries(${program} ${LIBRT} hermes MPI::MPI_CXX
    $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium>)
   target_compile_definitions(${program}
     PRIVATE $<$<BOOL:${HERMES_RPC_THALLIUM}>:HERMES_RPC_THALLIUM>)
@@ -30,6 +25,26 @@ foreach(program ${API_TESTS})
   set_tests_properties("Test${program}" PROPERTIES ENVIRONMENT
     LSAN_OPTIONS=suppressions=${CMAKE_CURRENT_SOURCE_DIR}/data/asan.supp)
 endforeach()
+
+#------------------------------------------------------------------------------
+# Bucket test
+#------------------------------------------------------------------------------
+find_package(ZLIB)
+if(ZLIB_FOUND)
+  message(STATUS "found zlib")
+endif()
+
+add_executable(bucket_test bucket_test.cc)
+target_link_libraries(bucket_test ${LIBRT} hermes MPI::MPI_CXX ZLIB::ZLIB
+  $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium>)
+target_compile_definitions(bucket_test
+  PRIVATE $<$<BOOL:${HERMES_RPC_THALLIUM}>:HERMES_RPC_THALLIUM>)
+add_test(NAME "Testbucket_test"
+  COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+  "${CMAKE_BINARY_DIR}/bin/bucket_test"
+  "${CMAKE_CURRENT_SOURCE_DIR}/data/bucket_test.conf")
+set_tests_properties("Testbucket_test" PROPERTIES ENVIRONMENT
+  LSAN_OPTIONS=suppressions=${CMAKE_CURRENT_SOURCE_DIR}/data/asan.supp)
 
 #------------------------------------------------------------------------------
 # POSIX GOTCHA test
