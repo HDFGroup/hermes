@@ -47,11 +47,7 @@ struct Tier {
   /** True if the Tier is a RAM Tier (or other byte addressable, local or
    * remote)
    */
-  bool is_ram;
-  /** True if the Tier represents a remote resource. (e.g., remote RAM or
-   * NVMe).
-   */
-  bool is_remote;
+  bool is_byte_addressable;
   /** True if the functionality of `posix_fallocate` is available on this
    * Tier
    */
@@ -408,6 +404,7 @@ size_t LocalReadBufferById(SharedMemoryContext *context, BufferID id,
 std::vector<f32> GetBandwidths(SharedMemoryContext *context);
 
 u32 GetBufferSize(SharedMemoryContext *context, RpcContext *rpc, BufferID id);
+bool BufferIsByteAddressable(SharedMemoryContext *context, BufferID id);
 
 }  // namespace hermes
 

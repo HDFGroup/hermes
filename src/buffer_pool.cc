@@ -317,6 +317,14 @@ bool IsNullBufferId(BufferID id) {
   return result;
 }
 
+bool BufferIsByteAddressable(SharedMemoryContext *context, BufferID id) {
+  BufferHeader *header = GetHeaderByBufferId(context, id);
+  Tier *tier = GetTierFromHeader(context, header);
+  bool result = tier->is_byte_addressable;
+
+  return result;
+}
+
 BufferID PeekFirstFreeBufferId(SharedMemoryContext *context, TierID tier_id,
                               int slab_index) {
   BufferPool *pool = GetBufferPoolFromContext(context);
@@ -652,14 +660,12 @@ Tier *InitTiers(Arena *arena, Config *config) {
     tier->capacity = config->capacities[i];
     tier->latency_ns = config->latencies[i];
     tier->id = i;
-    // TODO(chogan): @configuration Get this from config.
-    tier->is_remote = false;
     // TODO(chogan): @configuration Get this from cmake.
     tier->has_fallocate = true;
     size_t path_length = config->mount_points[i].size();
 
     if (path_length == 0) {
-      tier->is_ram = true;
+      tier->is_byte_addressable = true;
     } else {
       // TODO(chogan): @errorhandling
       assert(path_length < kMaxPathLength);
@@ -1251,7 +1257,7 @@ size_t LocalWriteBufferById(SharedMemoryContext *context, BufferID id,
   LockBuffer(header);
 
   u8 *at = (u8 *)blob.data + offset;
-  if (tier->is_ram) {
+  if (tier->is_byte_addressable) {
     u8 *dest = GetRamBufferPtr(context, header->id);
     memcpy(dest, at, write_size);
   } else {
@@ -1321,7 +1327,7 @@ size_t LocalReadBufferById(SharedMemoryContext *context, BufferID id,
   LockBuffer(header);
 
   size_t result = 0;
-  if (tier->is_ram) {
+  if (tier->is_byte_addressable) {
     u8 *src = GetRamBufferPtr(context, header->id);
     memcpy((u8 *)blob->data + read_offset, src, read_size);
     result = read_size;

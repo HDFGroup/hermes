@@ -118,9 +118,16 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
     [context, rpc_server](const request &req, tl::bulk &bulk, BufferID id) {
       tl::endpoint endpoint = req.get_endpoint();
       BufferHeader *header = GetHeaderByBufferId(context, id);
-      // TODO(chogan): This only works with RAM buffers
-      u8 *buffer_data = GetRamBufferPtr(context, header->id);
-      size_t size = header->used;
+
+      u8 *buffer_data = 0;
+      size_t size = 0;
+
+      if (BufferIsByteAddressable(context, id)) {
+        buffer_data = GetRamBufferPtr(context, id);
+        size = header->used;
+      } else {
+        HERMES_NOT_IMPLEMENTED_YET;
+      }
 
       std::vector<std::pair<void*, size_t>> segments(1);
       segments[0].first  = buffer_data;
