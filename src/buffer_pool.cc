@@ -1289,8 +1289,6 @@ void WriteBlobToBuffers(SharedMemoryContext *context, RpcContext *rpc,
   // TODO(chogan): @optimization Handle sequential buffers as one I/O operation
   // TODO(chogan): @optimization Aggregate multiple RPCs into one
   for (const auto &id : buffer_ids) {
-    if (!bytes_left_to_write)
-      return;
     size_t bytes_written = 0;
     if (BufferIsRemote(rpc, id)) {
       // TODO(chogan): @optimization Set up bulk transfer if blob.size is > 4K
