@@ -229,7 +229,6 @@ std::shared_ptr<api::Hermes> InitHermes(const char *config_file=NULL,
     result->shmem_name_ = std::string(config.buffer_pool_shmem_name);
   } else {
     context = GetSharedMemoryContext(config.buffer_pool_shmem_name);
-    InitFilesForBuffering(&context, comm.first_on_node);
     SubBarrier(&comm);
     result = std::make_shared<api::Hermes>(context);
     // NOTE(chogan): Give every App process a valid pointer to the internal RPC
@@ -237,6 +236,9 @@ std::shared_ptr<api::Hermes> InitHermes(const char *config_file=NULL,
     MetadataManager *mdm = GetMetadataManagerFromContext(&context);
     rpc.state = (void *)(context.shm_base + mdm->rpc_state_offset);
   }
+  bool create_shared_files = (result->comm_.proc_kind == ProcessKind::kHermes &&
+                              result->comm_.first_on_node);
+  InitFilesForBuffering(&result->context_, create_shared_files);
 
   WorldBarrier(&comm);
 

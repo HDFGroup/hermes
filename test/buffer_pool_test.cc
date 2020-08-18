@@ -113,7 +113,6 @@ int main(int argc, char **argv) {
   std::shared_ptr<hapi::Hermes> hermes = hermes::InitHermesDaemon(config_file);
 
   if (test_get_buffers) {
-    InitFilesForBuffering(&hermes->context_, hermes->comm_.first_on_node);
     TestGetBuffers(hermes.get());
     TestGetBandwidths(&hermes->context_);
   }
