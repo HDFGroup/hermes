@@ -27,7 +27,8 @@ void CopyStringToCharArray(const std::string &src, char *dest, size_t max) {
 }
 
 void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
-                            const char *addr, i32 num_rpc_threads) {
+                            Arena *arena, const char *addr,
+                            i32 num_rpc_threads) {
   ThalliumState *state = GetThalliumState(rpc);
   state->engine = new tl::engine(addr, THALLIUM_SERVER_MODE, true,
                                  num_rpc_threads);
@@ -115,18 +116,31 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
 
   function<void(const request&, tl::bulk&, BufferID)>
     rpc_bulk_read_buffer_by_id =
-    [context, rpc_server](const request &req, tl::bulk &bulk, BufferID id) {
+    [context, rpc_server, arena](const request &req, tl::bulk &bulk,
+                                 BufferID id) {
       tl::endpoint endpoint = req.get_endpoint();
       BufferHeader *header = GetHeaderByBufferId(context, id);
+      ScopedTemporaryMemory temp_memory(arena);
 
       u8 *buffer_data = 0;
-      size_t size = 0;
+      size_t size = header->used;
 
+      // TODO(chogan): Lock
       if (BufferIsByteAddressable(context, id)) {
         buffer_data = GetRamBufferPtr(context, id);
-        size = header->used;
       } else {
-        HERMES_NOT_IMPLEMENTED_YET;
+        // TODO(chogan): Lock arena
+        if (size > GetRemainingCapacity(temp_memory)) {
+          // TODO(chogan): Need to transfer in a loop if we don't have enough
+          // temporary memory available
+          HERMES_NOT_IMPLEMENTED_YET;
+        }
+        buffer_data = PushSize(temp_memory, size);
+        Blob blob = {};
+        blob.data = buffer_data;
+        blob.size = size;
+        size_t read_offset = 0;
+        LocalReadBufferById(context, id, &blob, read_offset);
       }
 
       std::vector<std::pair<void*, size_t>> segments(1);

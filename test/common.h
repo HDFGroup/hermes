@@ -265,7 +265,8 @@ std::shared_ptr<api::Hermes> InitHermes(const char *config_file=NULL,
                         std::to_string(config.rpc_port));
 
     result->rpc_.start_server(&result->context_, &result->rpc_,
-                              rpc_server_addr.c_str(), config.rpc_num_threads);
+                              &result->trans_arena_, rpc_server_addr.c_str(),
+                              config.rpc_num_threads);
     double sleep_ms = config.system_view_state_update_interval_ms;
     StartGlobalSystemViewStateUpdateThread(&result->context_, &result->rpc_,
                                            &result->trans_arena_,

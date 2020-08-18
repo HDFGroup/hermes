@@ -545,24 +545,15 @@ size_t GetBlobSize(SharedMemoryContext *context, RpcContext *rpc,
   return result;
 }
 
-ptrdiff_t BufferIdToOffset(SharedMemoryContext *context, BufferID id) {
-  ptrdiff_t result = 0;
+ptrdiff_t GetBufferOffset(SharedMemoryContext *context, BufferID id) {
   BufferHeader *header = GetHeaderByIndex(context, id.bits.header_index);
-
-  switch (header->tier_id) {
-    case 0: {
-      result = header->data_offset;
-      break;
-    }
-    default:
-      HERMES_NOT_IMPLEMENTED_YET;
-  }
+  ptrdiff_t result = header->data_offset;
 
   return result;
 }
 
 u8 *GetRamBufferPtr(SharedMemoryContext *context, BufferID buffer_id) {
-  ptrdiff_t data_offset = BufferIdToOffset(context, buffer_id);
+  ptrdiff_t data_offset = GetBufferOffset(context, buffer_id);
   u8 *result = context->shm_base + data_offset;
 
   return result;

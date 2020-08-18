@@ -199,6 +199,15 @@ Arena InitArenaAndAllocate(size_t bytes);
 void DestroyArena(Arena *arena);
 
 /**
+ * Returns the amount of free space left in an Arena.
+ *
+ * @param[in] arena The Arena to query.
+ *
+ * @return The number of free bytes remaining
+ */
+size_t GetRemainingCapacity(Arena *arena);
+
+/**
  * Expands the backing memory for an arena to be `new_size` bytes.
  *
  * Becuase this function uses `realloc`, it will only work for Arenas whose
