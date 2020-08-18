@@ -13,7 +13,7 @@ on:
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: Debug
-  LOCAL: ~/local
+  LOCAL: local
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -32,7 +32,7 @@ jobs:
         uses: actions/cache@v2
         id: spack-cache
         with:
-          path: ${{ env.LOCAL }}
+          path: ~/${{ env.LOCAL }}
           key: ${{ runner.os }}-${{ hashFiles('ci/install_deps.sh') }}
 
       - name: Install APT Dependencies
@@ -46,7 +46,7 @@ jobs:
           
       - name: Build And Install Dependencies
         if: steps.spack-cache.outputs.cache-hit != 'true'
-        run: ci/install_deps.sh ${{ env.LOCAL }}
+        run: ci/install_deps.sh
           
       - name: Build and Test
-        run: ci/install_hermes.sh ${{ env.LOCAL }}
+        run: ci/install_hermes.sh

@@ -1,22 +1,20 @@
 #!/bin/bash
 
 set -x
+set -e
+set -o pipefail
 
-if [[ "$#" -ne 1 ]]; then
-   echo "$0 Expected the dependencies directory as its first argument"
-   exit 1
-fi
-
-LOCAL=${1}
 mkdir build
 pushd build
 
+INSTALL_PREFIX="${HOME}/${LOCAL}"
+
 export CXXFLAGS="${CXXFLAGS} -std=c++17"
 cmake                                                      \
-    -DCMAKE_INSTALL_PREFIX=${LOCAL}                        \
-    -DCMAKE_PREFIX_PATH=${LOCAL}                           \
-    -DCMAKE_BUILD_RPATH="${LOCAL}/lib"                     \
-    -DCMAKE_INSTALL_RPATH="${LOCAL}/lib"                   \
+    -DCMAKE_INSTALL_PREFIX=${INSTALL_PREFIX}               \
+    -DCMAKE_PREFIX_PATH=${INSTALL_PREFIX}                  \
+    -DCMAKE_BUILD_RPATH=${INSTALL_PREFIX}/lib              \
+    -DCMAKE_INSTALL_RPATH=${INSTALL_PREFIX}/lib            \
     -DCMAKE_BUILD_TYPE=${BUILD_TYPE}                       \
     -DCMAKE_CXX_COMPILER=`which mpicxx`                    \
     -DCMAKE_C_COMPILER=`which mpicc`                       \
@@ -24,7 +22,7 @@ cmake                                                      \
     -DHERMES_INTERCEPT_IO=ON                               \
     -DHERMES_COMMUNICATION_MPI=ON                          \
     -DBUILD_BUFFER_POOL_VISUALIZER=ON                      \
-    -DORTOOLS_DIR=${LOCAL}                                 \
+    -DORTOOLS_DIR=${INSTALL_PREFIX}                        \
     -DUSE_ADDRESS_SANITIZER=ON                             \
     -DUSE_THREAD_SANITIZER=OFF                             \
     -DHERMES_RPC_THALLIUM=ON                               \
