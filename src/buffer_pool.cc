@@ -1347,38 +1347,6 @@ size_t LocalReadBufferById(SharedMemoryContext *context, BufferID id,
   return result;
 }
 
-bool BuffersAreOnSameNode(BufferID b1, BufferID b2) {
-  bool result = b1.bits.node_id == b2.bits.node_id;
-
-  return result;
-}
-
-bool BuffersAreContiguous(BufferID b1, BufferID b2) {
-  bool result = true;
-
-  if (IsNullBufferId(b1) || IsNullBufferId(b2)) {
-    result = false;
-  }
-
-  if (!BuffersAreOnSameNode(b1, b2)) {
-    // TODO(chogan): This is only valid for private resources like local ram and
-    // NVMe. Shared resources like burst buffers could be stored off of the node
-    // where the BufferID is stored, so two BufferIDs on different nodes could
-    // still represent a contiguous region in a burst buffer file.
-    result = false;
-  }
-
-  if (std::abs((i64)b1.bits.header_index - (i64)b2.bits.header_index) != 1) {
-    // TODO(chogan): It's possible that two buffers could have contiguous
-    // header_index values but the data could be split between two different
-    // files. Need to verify that they're part of the same file (for block-based
-    // Tiers).
-    result = false;
-  }
-
-  return result;
-}
-
 size_t ReadBlobFromBuffers(SharedMemoryContext *context, RpcContext *rpc,
                            Blob *blob, BufferIdArray *buffer_ids,
                            u32 *buffer_sizes) {
