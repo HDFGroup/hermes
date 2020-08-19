@@ -48,27 +48,6 @@ Status Bucket::Put(const std::string &name, const u8 *data, size_t size,
   return ret;
 }
 
-#if 0
-size_t Bucket::GetBlobSize(const std::string &name, Context &ctx) {
-  (void)ctx;
-
-  size_t ret = 0;
-
-  if (IsValid()) {
-    ScopedTemporaryMemory scratch(&hermes_->trans_arena_);
-    BufferIdArray buffer_ids =
-      GetBufferIdsFromBlobName(scratch, &hermes_->context_, &hermes_->rpc_,
-                               name.c_str());
-
-    LOG(INFO) << "Getting Blob " << name << " size from bucket "
-              << name_ << '\n';
-    ret = GetBlobSize(&hermes_->context_, &hermes_->rpc_, &buffer_ids);
-  }
-
-  return ret;
-}
-#endif
-
 size_t Bucket::Get(const std::string &name, Blob& user_blob, Context &ctx) {
   (void)ctx;
 
