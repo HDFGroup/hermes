@@ -1266,7 +1266,10 @@ size_t LocalWriteBufferById(SharedMemoryContext *context, BufferID id,
     [[maybe_unused]] size_t items_written = fwrite(at, write_size, 1, file);
     // TODO(chogan): @errorhandling
     assert(items_written == 1);
-    // fflush(file);
+    if (fflush(file)) {
+      // TODO(chogan): @errorhandling
+      LOG(WARNING) << "fflush failed\n";
+    }
     // fsync(fileno(file));
   }
   UnlockBuffer(header);
