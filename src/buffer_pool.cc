@@ -1379,60 +1379,33 @@ bool BuffersAreContiguous(BufferID b1, BufferID b2) {
   return result;
 }
 
-struct IoOp {
-  BufferID starting_id;
-  size_t offset;
-  size_t size;
-  u32 node;
-};
-
 size_t ReadBlobFromBuffers(SharedMemoryContext *context, RpcContext *rpc,
                            Blob *blob, BufferIdArray *buffer_ids,
                            u32 *buffer_sizes) {
-
-#if 0
-  // TODO(chogan): Go through buffer_ids and come up with a plan to minimize
-  // rpcs and memcpys.
-  std::vector<IoOp> ops;
-  IoOp prev_op = {};
-  BufferID prev_id = {};
-  for (u32 i = 0; i < buffer_ids->length; ++i) {
-    bool push_this_op = true;
-    IoOp op = {};
-    op.offset = prev_op.offset + prev_op.size;
-
-    BufferID id = buffer_ids->ids[i];
-
-    if (BuffersAreContiguous(prev_id, id)) {
-      push_this_op = false;
-    }
-
-    if (BufferIsRemote(rpc, id)) {
-    }
-
-    if (push_this_op) {
-      ops.push_back(op);
-    }
-
-    prev_op = op;
-    prev_id = id;
-  }
-#endif
-
   size_t total_bytes_read = 0;
   // TODO(chogan): @optimization Handle sequential buffers as one I/O operation
   for (u32 i = 0; i < buffer_ids->length; ++i) {
     size_t bytes_read = 0;
     BufferID id = buffer_ids->ids[i];
     if (BufferIsRemote(rpc, id)) {
-      // TODO(chogan): @optimization Aggregate multiple RPCs into one
-      size_t bytes_transferred = BulkTransfer(rpc, id.bits.node_id,
-                                              "RemoteBulkReadBufferById",
-                                              blob->data + total_bytes_read,
-                                              buffer_sizes[i], id);
-      // TODO(chogan): @errorhandling
-      assert(bytes_transferred == buffer_sizes[i]);
-      bytes_read += bytes_transferred;
+      // TODO(chogan): @optimization Aggregate multiple RPCs to same node into
+      // one RPC.
+      if (buffer_sizes[i] > KILOBYTES(4)) {
+        size_t bytes_transferred = BulkTransfer(rpc, id.bits.node_id,
+                                                "RemoteBulkReadBufferById",
+                                                blob->data + total_bytes_read,
+                                                buffer_sizes[i], id);
+        // TODO(chogan): @errorhandling
+        assert(bytes_transferred == buffer_sizes[i]);
+        bytes_read += bytes_transferred;
+      } else {
+        std::vector<u8> data = RpcCall<std::vector<u8>>(rpc, id.bits.node_id,
+                                                        "RemoteReadBufferById",
+                                                        id, buffer_sizes[i]);
+        bytes_read = data.size();
+        // TODO(chogan): @optimization Avoid the copy
+        memcpy(blob->data, data.data(), bytes_read);
+      }
     } else {
       bytes_read = LocalReadBufferById(context, id, blob, total_bytes_read);
     }
