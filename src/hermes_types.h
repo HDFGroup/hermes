@@ -9,6 +9,10 @@
 
 #include "glog/logging.h"
 
+#define KILOBYTES(n) ((n) * 1024)
+#define MEGABYTES(n) ((n) * 1024 * 1024)
+#define GIGABYTES(n) ((n) * 1024UL * 1024UL * 1024UL)
+
 namespace hermes {
 
 typedef uint8_t u8;
@@ -33,7 +37,7 @@ constexpr int kMaxBufferPoolShmemNameLength = 64;
 constexpr int kMaxTiers = 8;
 
 #define HERMES_NOT_IMPLEMENTED_YET \
-  LOG(FATAL) << __func__ << "not implemented yet\n"
+  LOG(FATAL) << __func__ << " not implemented yet\n"
 
 /**
  * A TieredSchema is a vector of (size, tier) pairs where size is the number of
@@ -99,7 +103,9 @@ struct Config {
   /** The hostname of the RPC server, minus any numbers that Hermes may
    * auto-generate when the rpc_hostNumber_range is specified. */
   std::string rpc_server_base_name;
+  std::string rpc_server_suffix;
   std::string rpc_protocol;
+  std::string rpc_domain;
   int rpc_port;
   int rpc_host_number_range[2];
   int rpc_num_threads;

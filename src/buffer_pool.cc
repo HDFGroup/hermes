@@ -317,6 +317,14 @@ bool IsNullBufferId(BufferID id) {
   return result;
 }
 
+bool BufferIsByteAddressable(SharedMemoryContext *context, BufferID id) {
+  BufferHeader *header = GetHeaderByBufferId(context, id);
+  Tier *tier = GetTierFromHeader(context, header);
+  bool result = tier->is_byte_addressable;
+
+  return result;
+}
+
 BufferID PeekFirstFreeBufferId(SharedMemoryContext *context, TierID tier_id,
                               int slab_index) {
   BufferPool *pool = GetBufferPoolFromContext(context);
@@ -537,24 +545,15 @@ size_t GetBlobSize(SharedMemoryContext *context, RpcContext *rpc,
   return result;
 }
 
-ptrdiff_t BufferIdToOffset(SharedMemoryContext *context, BufferID id) {
-  ptrdiff_t result = 0;
+ptrdiff_t GetBufferOffset(SharedMemoryContext *context, BufferID id) {
   BufferHeader *header = GetHeaderByIndex(context, id.bits.header_index);
-
-  switch (header->tier_id) {
-    case 0: {
-      result = header->data_offset;
-      break;
-    }
-    default:
-      HERMES_NOT_IMPLEMENTED_YET;
-  }
+  ptrdiff_t result = header->data_offset;
 
   return result;
 }
 
 u8 *GetRamBufferPtr(SharedMemoryContext *context, BufferID buffer_id) {
-  ptrdiff_t data_offset = BufferIdToOffset(context, buffer_id);
+  ptrdiff_t data_offset = GetBufferOffset(context, buffer_id);
   u8 *result = context->shm_base + data_offset;
 
   return result;
@@ -652,14 +651,12 @@ Tier *InitTiers(Arena *arena, Config *config) {
     tier->capacity = config->capacities[i];
     tier->latency_ns = config->latencies[i];
     tier->id = i;
-    // TODO(chogan): @configuration Get this from config.
-    tier->is_remote = false;
     // TODO(chogan): @configuration Get this from cmake.
     tier->has_fallocate = true;
     size_t path_length = config->mount_points[i].size();
 
     if (path_length == 0) {
-      tier->is_ram = true;
+      tier->is_byte_addressable = true;
     } else {
       // TODO(chogan): @errorhandling
       assert(path_length < kMaxPathLength);
@@ -1251,7 +1248,7 @@ size_t LocalWriteBufferById(SharedMemoryContext *context, BufferID id,
   LockBuffer(header);
 
   u8 *at = (u8 *)blob.data + offset;
-  if (tier->is_ram) {
+  if (tier->is_byte_addressable) {
     u8 *dest = GetRamBufferPtr(context, header->id);
     memcpy(dest, at, write_size);
   } else {
@@ -1269,7 +1266,10 @@ size_t LocalWriteBufferById(SharedMemoryContext *context, BufferID id,
     [[maybe_unused]] size_t items_written = fwrite(at, write_size, 1, file);
     // TODO(chogan): @errorhandling
     assert(items_written == 1);
-    // fflush(file);
+    if (fflush(file) != 0) {
+      // TODO(chogan): @errorhandling
+      LOG(WARNING) << "fflush failed\n";
+    }
     // fsync(fileno(file));
   }
   UnlockBuffer(header);
@@ -1308,7 +1308,6 @@ void WriteBlobToBuffers(SharedMemoryContext *context, RpcContext *rpc,
 
 size_t LocalReadBufferById(SharedMemoryContext *context, BufferID id,
                            Blob *blob, size_t read_offset) {
-  // TODO(chogan): Do we even need the read_offset?
   BufferHeader *header = GetHeaderByIndex(context, id.bits.header_index);
   Tier *tier = GetTierFromHeader(context, header);
   size_t read_size = header->used;
@@ -1322,9 +1321,9 @@ size_t LocalReadBufferById(SharedMemoryContext *context, BufferID id,
   LockBuffer(header);
 
   size_t result = 0;
-  if (tier->is_ram) {
+  if (tier->is_byte_addressable) {
     u8 *src = GetRamBufferPtr(context, header->id);
-    memcpy(blob->data + read_offset, src, read_size);
+    memcpy((u8 *)blob->data + read_offset, src, read_size);
     result = read_size;
   } else {
     int slab_index = GetSlabIndexFromHeader(context, header);
@@ -1349,25 +1348,38 @@ size_t LocalReadBufferById(SharedMemoryContext *context, BufferID id,
 }
 
 size_t ReadBlobFromBuffers(SharedMemoryContext *context, RpcContext *rpc,
-                           Blob *blob, BufferIdArray *buffer_ids) {
+                           Blob *blob, BufferIdArray *buffer_ids,
+                           u32 *buffer_sizes) {
   size_t total_bytes_read = 0;
+  // TODO(chogan): @optimization Handle sequential buffers as one I/O operation
   for (u32 i = 0; i < buffer_ids->length; ++i) {
     size_t bytes_read = 0;
     BufferID id = buffer_ids->ids[i];
     if (BufferIsRemote(rpc, id)) {
-      BufferHeader *header = GetHeaderByIndex(context, id.bits.header_index);
-      // TODO(chogan): @optimization Set up bulk transfer if data is > 4K
-      std::vector<u8> data = RpcCall<std::vector<u8>>(rpc, id.bits.node_id,
-                                                      "RemoteReadBufferById",
-                                                      id, header->used);
-      bytes_read = data.size();
-      // TODO(chogan): @optimization Avoid the copy
-      memcpy(blob->data, data.data(), bytes_read);
+      // TODO(chogan): @optimization Aggregate multiple RPCs to same node into
+      // one RPC.
+      if (buffer_sizes[i] > KILOBYTES(4)) {
+        size_t bytes_transferred = BulkRead(rpc, id.bits.node_id,
+                                            "RemoteBulkReadBufferById",
+                                            blob->data + total_bytes_read,
+                                            buffer_sizes[i], id);
+        // TODO(chogan): @errorhandling
+        assert(bytes_transferred == buffer_sizes[i]);
+        bytes_read += bytes_transferred;
+      } else {
+        std::vector<u8> data = RpcCall<std::vector<u8>>(rpc, id.bits.node_id,
+                                                        "RemoteReadBufferById",
+                                                        id, buffer_sizes[i]);
+        bytes_read = data.size();
+        // TODO(chogan): @optimization Avoid the copy
+        memcpy(blob->data, data.data(), bytes_read);
+      }
     } else {
       bytes_read = LocalReadBufferById(context, id, blob, total_bytes_read);
     }
     total_bytes_read += bytes_read;
   }
+  // TODO(chogan): @errorhandling
   assert(total_bytes_read == blob->size);
 
   return total_bytes_read;

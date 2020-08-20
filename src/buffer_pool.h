@@ -47,11 +47,7 @@ struct Tier {
   /** True if the Tier is a RAM Tier (or other byte addressable, local or
    * remote)
    */
-  bool is_ram;
-  /** True if the Tier represents a remote resource. (e.g., remote RAM or
-   * NVMe).
-   */
-  bool is_remote;
+  bool is_byte_addressable;
   /** True if the functionality of `posix_fallocate` is available on this
    * Tier
    */
@@ -381,11 +377,14 @@ void WriteBlobToBuffers(SharedMemoryContext *context, RpcContext *rpc,
  * @param rpc The RPC context needed to make a remote call if necessary.
  * @param blob A place to store the read data.
  * @param buffer_ids The collection of BufferIDs that hold the buffered blob.
+ * @param buffer_sizes A list of sizes that correspond to each buffer in
+ *        @p buffer_ids. Its length is the length of @p buffer_ids
  *
  * @return The total number of bytes read
  */
 size_t ReadBlobFromBuffers(SharedMemoryContext *context, RpcContext *rpc,
-                           Blob *blob, BufferIdArray *buffer_ids);
+                           Blob *blob, BufferIdArray *buffer_ids,
+                           u32 *buffer_sizes);
 
 size_t LocalWriteBufferById(SharedMemoryContext *context, BufferID id,
                             const Blob &blob, size_t offset);
@@ -403,6 +402,9 @@ size_t LocalReadBufferById(SharedMemoryContext *context, BufferID id,
  * @return The list of bandwidths, one for each Tier, in MiB/sec.
  */
 std::vector<f32> GetBandwidths(SharedMemoryContext *context);
+
+u32 GetBufferSize(SharedMemoryContext *context, RpcContext *rpc, BufferID id);
+bool BufferIsByteAddressable(SharedMemoryContext *context, BufferID id);
 
 }  // namespace hermes
 

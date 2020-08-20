@@ -64,6 +64,7 @@ int main(int argc, char **argv) {
   Assert(config.system_view_state_update_interval_ms == 1000);
 
   Assert(config.rpc_protocol == "ofi+sockets");
+  Assert(config.rpc_domain.empty());
   Assert(config.rpc_port == 8080);
   Assert(config.rpc_host_number_range[0] == 0 &&
          config.rpc_host_number_range[1] == 0);
@@ -71,6 +72,7 @@ int main(int argc, char **argv) {
 
   const char expected_rpc_server_name[] = "localhost";
   Assert(config.rpc_server_base_name == expected_rpc_server_name);
+  Assert(config.rpc_server_suffix.empty());
 
   const char expected_shm_name[] = "/hermes_buffer_pool_";
   Assert(strncmp(config.buffer_pool_shmem_name, expected_shm_name,

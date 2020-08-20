@@ -12,8 +12,10 @@ namespace hermes {
 struct RpcContext;
 
 const int kMaxServerNameSize = 128;
+const int kMaxServerSuffixSize = 16;
 
-typedef void (*StartFunc)(SharedMemoryContext*, RpcContext*, const char*, int);
+typedef void (*StartFunc)(SharedMemoryContext*, RpcContext*, Arena*,
+                          const char*, int);
 
 struct RpcContext {
   void *state;
@@ -32,6 +34,8 @@ struct RpcContext {
    * storing extra copies of the base hostname.*/
   char base_hostname[kMaxServerNameSize];
 
+  char hostname_suffix[kMaxServerSuffixSize];
+
   // TODO(chogan): Also allow reading hostnames from a file for heterogeneous or
   // non-contiguous hostnames (e.g., compute-node-20, compute-node-30,
   // storage-node-16, storage-node-24)
@@ -45,6 +49,8 @@ void InitRpcContext(RpcContext *rpc, u32 num_nodes, u32 node_id,
 void *CreateRpcState(Arena *arena);
 void FinalizeRpcContext(RpcContext *rpc, bool is_daemon);
 std::string GetHostNumberAsString(RpcContext *rpc, u32 node_id);
+std::string GetServerName(RpcContext *rpc, u32 node_id);
+std::string GetProtocol(RpcContext *rpc);
 
 }  // namespace hermes
 

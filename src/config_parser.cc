@@ -56,8 +56,10 @@ enum ConfigVariable {
   ConfigVariable_MaxVBucketsPerNode,
   ConfigVariable_SystemViewStateUpdateInterval,
   ConfigVariable_RpcServerBaseName,
+  ConfigVariable_RpcServerSuffix,
   ConfigVariable_BufferPoolShmemName,
   ConfigVariable_RpcProtocol,
+  ConfigVariable_RpcDomain,
   ConfigVariable_RpcPort,
   ConfigVariable_RpcHostNumberRange,
   ConfigVariable_RpcNumThreads,
@@ -85,8 +87,10 @@ static const char *kConfigVariableStrings[ConfigVariable_Count] = {
   "max_vbuckets_per_node",
   "system_view_state_update_interval_ms",
   "rpc_server_base_name",
+  "rpc_server_suffix",
   "buffer_pool_shmem_name",
   "rpc_protocol",
+  "rpc_domain",
   "rpc_port",
   "rpc_host_number_range",
   "rpc_num_threads",
@@ -631,6 +635,13 @@ Token *EndStatement(Token *tok) {
   return tok;
 }
 
+void CheckConstraints(Config *config) {
+  if (config->rpc_protocol.find("verbs") != std::string::npos &&
+      config->rpc_domain.empty()) {
+    PrintExpectedAndFail("a non-empty value for rpc_domain");
+  }
+}
+
 void ParseTokens(TokenList *tokens, Config *config) {
 
   Token *tok = tokens->head;
@@ -741,12 +752,20 @@ void ParseTokens(TokenList *tokens, Config *config) {
         config->rpc_server_base_name = ParseString(&tok);
         break;
       }
+      case ConfigVariable_RpcServerSuffix: {
+        config->rpc_server_suffix = ParseString(&tok);
+        break;
+      }
       case ConfigVariable_BufferPoolShmemName: {
         tok = ParseCharArrayString(tok, config->buffer_pool_shmem_name);
         break;
       }
       case ConfigVariable_RpcProtocol: {
         config->rpc_protocol = ParseString(&tok);
+        break;
+      }
+      case ConfigVariable_RpcDomain: {
+        config->rpc_domain = ParseString(&tok);
         break;
       }
       case ConfigVariable_RpcPort: {
@@ -768,6 +787,7 @@ void ParseTokens(TokenList *tokens, Config *config) {
     }
     tok = EndStatement(tok);
   }
+  CheckConstraints(config);
 }
 
 void ParseConfig(Arena *arena, const char *path, Config *config) {

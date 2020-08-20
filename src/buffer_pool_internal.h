@@ -222,5 +222,11 @@ void ParseConfig(Arena *arena, const char *path, Config *config);
  */
 u8 *InitSharedMemory(const char *shmem_name, size_t total_size);
 
+/**
+ *
+ */
+u8 *GetRamBufferPtr(SharedMemoryContext *context, BufferID buffer_id);
+
 }  // namespace hermes
+
 #endif  // HERMES_BUFFER_POOL_INTERNAL_H_

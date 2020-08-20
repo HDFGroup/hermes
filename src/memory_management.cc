@@ -67,6 +67,12 @@ void DestroyArena(Arena *arena) {
   arena->capacity = 0;
 }
 
+size_t GetRemainingCapacity(Arena *arena) {
+  size_t result = arena->capacity - arena->used;
+
+  return result;
+}
+
 void GrowArena(Arena *arena, size_t new_size) {
   void *new_base = (u8 *)realloc(arena->base, new_size);
   if (new_base != arena->base) {
@@ -225,10 +231,10 @@ Heap *InitHeapInArena(Arena *arena, bool grows_up, u16 alignment) {
   size_t heap_size = 0;
   if (grows_up) {
     result = PushClearedStruct<Heap>(arena);
-    heap_size = arena->capacity - arena->used;
+    heap_size = GetRemainingCapacity(arena);
   } else {
     result = (Heap *)((arena->base + arena->capacity) - sizeof(Heap));
-    heap_size = arena->capacity - arena->used - sizeof(Heap);
+    heap_size = GetRemainingCapacity(arena) - sizeof(Heap);
     memset((void *)result, 0, sizeof(Heap));
   }
 

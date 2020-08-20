@@ -15,14 +15,20 @@ std::string GetHostNumberAsString(RpcContext *rpc, u32 node_id) {
   return result;
 }
 
-void CopyStringToCharArray(const std::string &src, char *dest) {
+void CopyStringToCharArray(const std::string &src, char *dest, size_t max) {
   size_t src_size = src.size();
-  memcpy(dest, src.c_str(), src_size);
-  dest[src_size] = '\0';
+  if (src_size >= max) {
+    LOG(WARNING) << "Can only fit " << max << " characters from the string "
+                 << src << std::endl;
+  }
+  size_t copy_size = std::min(max - 1, src_size);
+  memcpy(dest, src.c_str(), copy_size);
+  dest[copy_size] = '\0';
 }
 
 void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
-                            const char *addr, i32 num_rpc_threads) {
+                            Arena *arena, const char *addr,
+                            i32 num_rpc_threads) {
   ThalliumState *state = GetThalliumState(rpc);
   state->engine = new tl::engine(addr, THALLIUM_SERVER_MODE, true,
                                  num_rpc_threads);
@@ -34,12 +40,14 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
             << num_rpc_threads << " RPC threads" << std::endl;
 
   size_t end_of_protocol = rpc_server_name.find_first_of(":");
-  std::string server_name_prefix = rpc_server_name.substr(0, end_of_protocol) +
-                                   "://";
-  CopyStringToCharArray(server_name_prefix, state->server_name_prefix);
+  std::string server_name_prefix =
+    rpc_server_name.substr(0, end_of_protocol) + "://";
+  CopyStringToCharArray(server_name_prefix, state->server_name_prefix,
+                        kMaxServerNamePrefix);
 
   std::string server_name_postfix = ":" + std::to_string(rpc->port);
-  CopyStringToCharArray(server_name_postfix, state->server_name_postfix);
+  CopyStringToCharArray(server_name_postfix, state->server_name_postfix,
+                        kMaxServerNamePostfix);
 
   using std::function;
   using std::string;
@@ -92,17 +100,60 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
 
     };
 
-  function<void(const request&, BufferID, size_t)> rpc_read_buffer_by_id =
-    [context](const request &req, BufferID id, size_t size) {
-      std::vector<u8> result(size);
+  function<void(const request&, BufferID)> rpc_read_buffer_by_id =
+    [context](const request &req, BufferID id) {
+      BufferHeader *header = GetHeaderByBufferId(context, id);
+      std::vector<u8> result(header->used);
       Blob blob = {};
-      blob.size = size;
+      blob.size = result.size();
       blob.data = result.data();
       [[maybe_unused]] size_t bytes_read = LocalReadBufferById(context, id,
                                                                &blob, 0);
-      assert(bytes_read == size);
+      assert(bytes_read == result.size());
 
       req.respond(result);
+    };
+
+  function<void(const request&, tl::bulk&, BufferID)>
+    rpc_bulk_read_buffer_by_id =
+    [context, rpc_server, arena](const request &req, tl::bulk &bulk,
+                                 BufferID id) {
+      tl::endpoint endpoint = req.get_endpoint();
+      BufferHeader *header = GetHeaderByBufferId(context, id);
+      ScopedTemporaryMemory temp_memory(arena);
+
+      u8 *buffer_data = 0;
+      size_t size = header->used;
+
+      if (BufferIsByteAddressable(context, id)) {
+        buffer_data = GetRamBufferPtr(context, id);
+      } else {
+        // TODO(chogan): Probably need a way to lock the trans_arena. Currently
+        // an assertion will fire if multiple threads try to use it at once.
+        if (size > GetRemainingCapacity(temp_memory)) {
+          // TODO(chogan): Need to transfer in a loop if we don't have enough
+          // temporary memory available
+          HERMES_NOT_IMPLEMENTED_YET;
+        }
+        buffer_data = PushSize(temp_memory, size);
+        Blob blob = {};
+        blob.data = buffer_data;
+        blob.size = size;
+        size_t read_offset = 0;
+        LocalReadBufferById(context, id, &blob, read_offset);
+      }
+
+      std::vector<std::pair<void*, size_t>> segments(1);
+      segments[0].first  = buffer_data;
+      segments[0].second = size;
+      tl::bulk local_bulk = rpc_server->expose(segments,
+                                               tl::bulk_mode::read_only);
+
+      size_t bytes_read = local_bulk >> bulk.on(endpoint);
+      // TODO(chogan): @errorhandling
+      assert(bytes_read == size);
+
+      req.respond(bytes_read);
     };
 
   // Metadata requests
@@ -115,9 +166,9 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
       req.respond(result);
     };
 
-  function<void(const request&, const string&, u64, const MapType&)> rpc_map_put =
-    [context](const request &req, const string &name, u64 val,
-              const MapType &map_type) {
+  function<void(const request&, const string&, u64, const MapType&)>
+    rpc_map_put = [context](const request &req, const string &name, u64 val,
+                            const MapType &map_type) {
       (void)req;
       MetadataManager *mdm = GetMetadataManagerFromContext(context);
       LocalPut(mdm, name.c_str(), val, map_type);
@@ -255,6 +306,7 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
 
   rpc_server->define("RemoteReadBufferById", rpc_read_buffer_by_id);
   rpc_server->define("RemoteWriteBufferById", rpc_write_buffer_by_id);
+  rpc_server->define("RemoteBulkReadBufferById", rpc_bulk_read_buffer_by_id);
 
   rpc_server->define("RemoteGet", rpc_map_get);
   rpc_server->define("RemotePut", rpc_map_put).disable_response();
@@ -327,7 +379,10 @@ void InitRpcContext(RpcContext *rpc, u32 num_nodes, u32 node_id,
   rpc->start_server = ThalliumStartRpcServer;
   rpc->state_size = sizeof(ThalliumState);
   rpc->port = config->rpc_port;
-  CopyStringToCharArray(config->rpc_server_base_name, rpc->base_hostname);
+  CopyStringToCharArray(config->rpc_server_base_name, rpc->base_hostname,
+                        kMaxServerNameSize);
+  CopyStringToCharArray(config->rpc_server_suffix, rpc->hostname_suffix,
+                        kMaxServerSuffixSize);
   rpc->host_number_range[0] = config->rpc_host_number_range[0];
   rpc->host_number_range[1] = config->rpc_host_number_range[1];
 }
@@ -351,6 +406,60 @@ void FinalizeRpcContext(RpcContext *rpc, bool is_daemon) {
   }
 
   delete state->engine;
+}
+
+std::string GetServerName(RpcContext *rpc, u32 node_id) {
+  ThalliumState *tl_state = GetThalliumState(rpc);
+
+  std::string host_number = GetHostNumberAsString(rpc, node_id);
+  std::string host_name = (std::string(rpc->base_hostname) + host_number +
+                           std::string(rpc->hostname_suffix));
+  const int max_ip_address_size = 16;
+  char ip_address[max_ip_address_size];
+  // TODO(chogan): @errorhandling
+  // TODO(chogan): @optimization Could cache the last N hostname->IP mappings to
+  // avoid excessive syscalls. Should profile first.
+  struct hostent *hostname_info = gethostbyname(host_name.c_str());
+  in_addr **addr_list = (struct in_addr **)hostname_info->h_addr_list;
+  // TODO(chogan): @errorhandling
+  strncpy(ip_address, inet_ntoa(*addr_list[0]), max_ip_address_size);
+
+  std::string result = std::string(tl_state->server_name_prefix);
+
+  result += std::string(ip_address);
+  result += std::string(tl_state->server_name_postfix);
+
+  return result;
+}
+
+std::string GetProtocol(RpcContext *rpc) {
+  ThalliumState *tl_state = GetThalliumState(rpc);
+
+  std::string prefix = std::string(tl_state->server_name_prefix);
+  // NOTE(chogan): Chop "://" off the end of the server_name_prefix to get the
+  // protocol
+  std::string result = prefix.substr(0, prefix.length() - 3);
+
+  return result;
+}
+
+size_t BulkRead(RpcContext *rpc, u32 node_id, const char *func_name,
+                u8 *data, size_t max_size, BufferID id) {
+  std::string server_name = GetServerName(rpc, node_id);
+  std::string protocol = GetProtocol(rpc);
+
+  tl::engine engine(protocol, THALLIUM_CLIENT_MODE, true);
+  tl::remote_procedure remote_proc = engine.define(func_name);
+  tl::endpoint server = engine.lookup(server_name);
+
+  std::vector<std::pair<void*, size_t>> segments(1);
+  segments[0].first  = data;
+  segments[0].second = max_size;
+
+  tl::bulk bulk = engine.expose(segments, tl::bulk_mode::write_only);
+  size_t result = remote_proc.on(server)(bulk, id);
+
+  return result;
 }
 
 }  // namespace hermes
