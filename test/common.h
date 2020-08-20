@@ -36,23 +36,23 @@ const char buffer_pool_shmem_name[] = "/hermes_buffer_pool_";
 const char rpc_server_name[] = "sockets://localhost:8080";
 
 void InitTestConfig(Config *config) {
-  config->num_tiers = 4;
-  assert(config->num_tiers < kMaxTiers);
+  config->num_devices = 4;
+  assert(config->num_devices < kMaxDevices);
 
-  for (int tier = 0; tier < config->num_tiers; ++tier) {
-    config->capacities[tier] = MEGABYTES(50);
-    config->block_sizes[tier] = KILOBYTES(4);
-    config->num_slabs[tier] = 4;
+  for (int dev = 0; dev < config->num_devices; ++dev) {
+    config->capacities[dev] = MEGABYTES(50);
+    config->block_sizes[dev] = KILOBYTES(4);
+    config->num_slabs[dev] = 4;
 
-    config->slab_unit_sizes[tier][0] = 1;
-    config->slab_unit_sizes[tier][1] = 4;
-    config->slab_unit_sizes[tier][2] = 16;
-    config->slab_unit_sizes[tier][3] = 32;
+    config->slab_unit_sizes[dev][0] = 1;
+    config->slab_unit_sizes[dev][1] = 4;
+    config->slab_unit_sizes[dev][2] = 16;
+    config->slab_unit_sizes[dev][3] = 32;
 
-    config->desired_slab_percentages[tier][0] = 0.25f;
-    config->desired_slab_percentages[tier][1] = 0.25f;
-    config->desired_slab_percentages[tier][2] = 0.25f;
-    config->desired_slab_percentages[tier][3] = 0.25f;
+    config->desired_slab_percentages[dev][0] = 0.25f;
+    config->desired_slab_percentages[dev][1] = 0.25f;
+    config->desired_slab_percentages[dev][2] = 0.25f;
+    config->desired_slab_percentages[dev][3] = 0.25f;
   }
 
   config->bandwidths[0] = 6000.0f;
@@ -97,7 +97,7 @@ void InitTestConfig(Config *config) {
 
 ArenaInfo GetArenaInfo(Config *config) {
   size_t page_size = sysconf(_SC_PAGESIZE);
-  // NOTE(chogan): Assumes first Tier is RAM
+  // NOTE(chogan): Assumes first Device is RAM
   size_t total_hermes_memory = RoundDownToMultiple(config->capacities[0],
                                                    page_size);
   size_t total_pages = total_hermes_memory / page_size;
@@ -180,7 +180,7 @@ BootstrapSharedMemory(Arena *arenas, Config *config, CommunicationContext *comm,
   InitArena(&arenas[kArenaType_Transient], bootstrap_size, bootstrap_memory);
 
   ArenaInfo arena_info = GetArenaInfo(config);
-  // NOTE(chogan): The buffering capacity for the RAM Tier is the size of the
+  // NOTE(chogan): The buffering capacity for the RAM Device is the size of the
   // BufferPool Arena
   config->capacities[0] = arena_info.sizes[kArenaType_BufferPool];
 

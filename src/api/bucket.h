@@ -63,7 +63,7 @@ class Bucket {
    *
    */
   template<typename T>
-  Status PlaceBlobs(std::vector<TieredSchema> &schemas,
+  Status PlaceBlobs(std::vector<PlacementSchema> &schemas,
                     const std::vector<std::vector<T>> &blobs,
                     const std::vector<std::string> &names);
 
@@ -124,13 +124,13 @@ Status Bucket::Put(const std::string &name, const std::vector<T> &data,
 }
 
 template<typename T>
-Status Bucket::PlaceBlobs(std::vector<TieredSchema> &schemas,
+Status Bucket::PlaceBlobs(std::vector<PlacementSchema> &schemas,
                           const std::vector<std::vector<T>> &blobs,
                           const std::vector<std::string> &names) {
   Status result = 0;
 
   for (size_t i = 0; i < schemas.size(); ++i) {
-    TieredSchema &schema = schemas[i];
+    PlacementSchema &schema = schemas[i];
     if (schema.size()) {
       std::vector<BufferID> buffer_ids = GetBuffers(&hermes_->context_, schema);
       if (buffer_ids.size()) {
@@ -169,7 +169,7 @@ Status Bucket::Put(std::vector<std::string> &names,
     for (size_t i = 0; i < num_blobs; ++i) {
       sizes[i] = blobs[i].size();
     }
-    std::vector<TieredSchema> schemas;
+    std::vector<PlacementSchema> schemas;
     ret = CalculatePlacement(&hermes_->context_, &hermes_->rpc_, sizes,
                              schemas, ctx);
 

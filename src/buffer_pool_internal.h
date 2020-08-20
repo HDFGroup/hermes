@@ -57,7 +57,7 @@ size_t RoundDownToMultiple(size_t val, size_t multiple);
  * Divides the shared memory segment pointed to by hermes_memory into
  * 1) An array of RAM buffers.
  * 2) An array of BufferHeaders.
- * 3) An array of Tiers.
+ * 3) An array of Devices.
  * 4) The BufferPool struct, which contains pointers (really offsets) to the
  *    data above.
  *
@@ -65,7 +65,7 @@ size_t RoundDownToMultiple(size_t val, size_t multiple);
  * Each BufferHeader is initialized to point to a specfic offset. In the case of
  * a RAM buffer, this offset is from the beginning of the shared memory. In the
  * case of a file buffer, the offset is from the beginning of a file. Free lists
- * for each slab in each Tier are also constructed.
+ * for each slab in each Device are also constructed.
  *
  * @param hermes_memory The base pointer to a shared memory segment.
  * @param buffer_pool_arena An Arena backed by the shared memory segment pointed
@@ -95,19 +95,19 @@ ptrdiff_t InitBufferPool(u8 *hermes_memory, Arena *buffer_pool_arena,
 BufferPool *GetBufferPoolFromContext(SharedMemoryContext *context);
 
 /**
- * Returns a pointer to the Tier with index tier_id in the shared memory
+ * Returns a pointer to the Device with index device_id in the shared memory
  * context.
  *
  * This pointer should never be freed, since it lives in shared memory and is
  * managed by the Hermes core.
  *
- * @param context The shared memory context where the Tiers are stored.
- * @param tier_id An identifier for the desired Tier. This is an index into an
- * array of Tiers.
+ * @param context The shared memory context where the Devices are stored.
+ * @param device_id An identifier for the desired Device. This is an index into an
+ * array of Devices.
  *
- * @return A pointer to the Tier with ID tier_id.
+ * @return A pointer to the Device with ID device_id.
  */
-Tier *GetTierById(SharedMemoryContext *context, TierID tier_id);
+Device *GetDeviceById(SharedMemoryContext *context, DeviceID device_id);
 
 /**
  * Returns a pointer to the first BufferHeader in the array of BufferHeaders
@@ -120,7 +120,7 @@ Tier *GetTierById(SharedMemoryContext *context, TierID tier_id);
  * Example:
  * ```cpp
  * BufferHeader *headers = GetHeadersBase(context);
- * for (u32 i = 0; i < pool->num_headers[tier_id]; ++i) {
+ * for (u32 i = 0; i < pool->num_headers[device_id]; ++i) {
  *   BufferHeader *header = headers + i;
  *   // ...
  * }
@@ -178,7 +178,7 @@ void MergeRamBufferFreeList(SharedMemoryContext *context, int slab_index);
 /**
  *
  */
-BufferID PeekFirstFreeBufferId(SharedMemoryContext *context, TierID tier_id,
+BufferID PeekFirstFreeBufferId(SharedMemoryContext *context, DeviceID device_id,
                                int slab_index);
 
 /**
@@ -194,7 +194,7 @@ void LocalReleaseBuffers(SharedMemoryContext *context,
 /**
  *
  */
-i32 GetSlabUnitSize(SharedMemoryContext *context, TierID tier_id,
+i32 GetSlabUnitSize(SharedMemoryContext *context, DeviceID device_id,
                     int slab_index);
 
 /**
@@ -204,7 +204,7 @@ u32 LocalGetBufferSize(SharedMemoryContext *context, BufferID id);
 /**
  *
  */
-i32 GetSlabBufferSize(SharedMemoryContext *context, TierID tier_id,
+i32 GetSlabBufferSize(SharedMemoryContext *context, DeviceID device_id,
                       int slab_index);
 
 /**

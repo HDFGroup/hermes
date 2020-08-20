@@ -563,11 +563,11 @@ SystemViewState *GetLocalSystemViewState(SharedMemoryContext *context) {
   return result;
 }
 
-std::vector<u64> LocalGetGlobalTierCapacities(SharedMemoryContext *context) {
+std::vector<u64> LocalGetGlobalDeviceCapacities(SharedMemoryContext *context) {
 
   SystemViewState *global_svs = GetGlobalSystemViewState(context);
 
-  std::vector<u64> result(global_svs->num_tiers);
+  std::vector<u64> result(global_svs->num_devices);
   for (size_t i = 0; i < result.size(); ++i) {
     result[i] = global_svs->bytes_available[i].load();
   }
@@ -575,7 +575,7 @@ std::vector<u64> LocalGetGlobalTierCapacities(SharedMemoryContext *context) {
   return result;
 }
 
-std::vector<u64> GetGlobalTierCapacities(SharedMemoryContext *context,
+std::vector<u64> GetGlobalDeviceCapacities(SharedMemoryContext *context,
                                          RpcContext *rpc) {
 
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
@@ -584,10 +584,10 @@ std::vector<u64> GetGlobalTierCapacities(SharedMemoryContext *context,
   std::vector<u64> result;
 
   if (target_node == rpc->node_id) {
-    result = LocalGetGlobalTierCapacities(context);
+    result = LocalGetGlobalDeviceCapacities(context);
   } else {
     result = RpcCall<std::vector<u64>>(rpc, target_node,
-                                       "RemoteGetGlobalTierCapacities");
+                                       "RemoteGetGlobalDeviceCapacities");
   }
 
   return result;
@@ -609,7 +609,7 @@ void LocalUpdateGlobalSystemViewState(SharedMemoryContext *context,
     SystemViewState *state = GetGlobalSystemViewState(context);
     if (adjustments[i]) {
       state->bytes_available[i].fetch_add(adjustments[i]);
-      DLOG(INFO) << "TierID " << i << " adjusted by " << adjustments[i]
+      DLOG(INFO) << "DeviceID " << i << " adjusted by " << adjustments[i]
                  << " bytes\n";
     }
   }
@@ -621,7 +621,7 @@ void UpdateGlobalSystemViewState(SharedMemoryContext *context,
   BufferPool *pool = GetBufferPoolFromContext(context);
 
   bool update_needed = false;
-  std::vector<i64> adjustments(pool->num_tiers);
+  std::vector<i64> adjustments(pool->num_devices);
   for (size_t i = 0; i < adjustments.size(); ++i) {
     adjustments[i] = pool->capacity_adjustments[i].exchange(0);
     if (adjustments[i] != 0) {
@@ -649,8 +649,8 @@ static ptrdiff_t GetOffsetFromMdm(MetadataManager *mdm, void *ptr) {
 
 SystemViewState *CreateSystemViewState(Arena *arena, Config *config) {
   SystemViewState *result = PushClearedStruct<SystemViewState>(arena);
-  result->num_tiers = config->num_tiers;
-  for (int i = 0; i < result->num_tiers; ++i) {
+  result->num_devices = config->num_devices;
+  for (int i = 0; i < result->num_devices; ++i) {
     result->bytes_available[i] = config->capacities[i];
   }
 

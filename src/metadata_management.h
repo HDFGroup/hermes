@@ -101,8 +101,8 @@ struct VBucketInfo {
 };
 
 struct SystemViewState {
-  std::atomic<u64> bytes_available[kMaxTiers];
-  int num_tiers;
+  std::atomic<u64> bytes_available[kMaxDevices];
+  int num_devices;
 };
 
 struct MetadataManager {
@@ -253,8 +253,8 @@ void LocalUpdateGlobalSystemViewState(SharedMemoryContext *context,
                                       std::vector<i64> adjustments);
 SystemViewState *GetLocalSystemViewState(SharedMemoryContext *context);
 SystemViewState *GetGlobalSystemViewState(SharedMemoryContext *context);
-std::vector<u64> LocalGetGlobalTierCapacities(SharedMemoryContext *context);
-std::vector<u64> GetGlobalTierCapacities(SharedMemoryContext *context,
+std::vector<u64> LocalGetGlobalDeviceCapacities(SharedMemoryContext *context);
+std::vector<u64> GetGlobalDeviceCapacities(SharedMemoryContext *context,
                                           RpcContext *rpc);
 void UpdateGlobalSystemViewState(SharedMemoryContext *context,
                                  RpcContext *rpc);

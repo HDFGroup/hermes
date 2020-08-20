@@ -9,17 +9,17 @@ using namespace hermes;
 namespace hermes {
 namespace testing {
 struct SystemViewState {
-  u64 bytes_capacity[kMaxTiers];
-  u64 bytes_available[kMaxTiers];
-  u64 bandwidth[kMaxTiers];
-  int num_tiers;
+  u64 bytes_capacity[kMaxDevices];
+  u64 bytes_available[kMaxDevices];
+  u64 bandwidth[kMaxDevices];
+  int num_devices;
 };
 }  // namespace hermes
 }  // namespace testing
 
 testing::SystemViewState InitSystemViewState() {
   testing::SystemViewState result = {};
-  result.num_tiers = 4;
+  result.num_devices = 4;
   u64 one_mb = 1024 * 1024;
 
   result.bytes_available[0] = 5 * one_mb;
@@ -45,8 +45,8 @@ static testing::SystemViewState globalSystemViewState {InitSystemViewState()};
 testing::SystemViewState GetSystemViewState() {
   testing::SystemViewState result = {};
 
-  for (int i {0}; i < globalSystemViewState.num_tiers; ++i) {
-    result.num_tiers = globalSystemViewState.num_tiers;
+  for (int i {0}; i < globalSystemViewState.num_devices; ++i) {
+    result.num_devices = globalSystemViewState.num_devices;
     result.bytes_available[i] = globalSystemViewState.bytes_available[i];
     result.bandwidth[i] = globalSystemViewState.bandwidth[i];
   }
@@ -54,23 +54,23 @@ testing::SystemViewState GetSystemViewState() {
   return result;
 }
 
-void UpdateSystemViewState(TieredSchema schema) {
-  for (auto [size, tier] : schema) {
-    globalSystemViewState.bytes_available[tier] -= size;
+void UpdateSystemViewState(PlacementSchema schema) {
+  for (auto [size, device] : schema) {
+    globalSystemViewState.bytes_available[device] -= size;
   }
 }
 
-TieredSchema PerfOrientedPlacement(std::vector<hermes::api::Blob> blobs) {
+PlacementSchema PerfOrientedPlacement(std::vector<hermes::api::Blob> blobs) {
   using operations_research::MPSolver;
   using operations_research::MPVariable;
   using operations_research::MPConstraint;
   using operations_research::MPObjective;
 
-  TieredSchema result;
+  PlacementSchema result;
   // TODO (KIMMY): use kernel function of system view
   testing::SystemViewState state {GetSystemViewState()};
 
-  std::vector<MPConstraint*> blob_constrt(blobs.size()+state.num_tiers*3-1);
+  std::vector<MPConstraint*> blob_constrt(blobs.size()+state.num_devices*3-1);
   std::vector<std::vector<MPVariable*>> blob_fraction (blobs.size());
   MPSolver solver("LinearOpt", MPSolver::GLOP_LINEAR_PROGRAMMING);
   int num_constrts {0};
@@ -79,7 +79,7 @@ TieredSchema PerfOrientedPlacement(std::vector<hermes::api::Blob> blobs) {
 
   u64 avail_cap {0};
   // Apply Remaining Capacity Change Threshold 20%
-  for (int j {0}; j < state.num_tiers; ++j) {
+  for (int j {0}; j < state.num_devices; ++j) {
     avail_cap += static_cast<u64>(state.bytes_available[j]*0.2);
   }
 
@@ -96,10 +96,10 @@ TieredSchema PerfOrientedPlacement(std::vector<hermes::api::Blob> blobs) {
   // Sum of fraction of each blob is 1
   for (size_t i {0}; i < blobs.size(); ++i) {
     blob_constrt[num_constrts+i] = solver.MakeRowConstraint(1, 1);
-    blob_fraction[i].resize(state.num_tiers);
+    blob_fraction[i].resize(state.num_devices);
 
     // TODO (KIMMY): consider remote nodes?
-    for (int j {0}; j < state.num_tiers; ++j) {
+    for (int j {0}; j < state.num_devices; ++j) {
       std::string var_name {"blob_dst_" + std::to_string(i) + "_" +
                             std::to_string(j)};
       blob_fraction[i][j] = solver.MakeNumVar(0.0, 1, var_name);
@@ -109,7 +109,7 @@ TieredSchema PerfOrientedPlacement(std::vector<hermes::api::Blob> blobs) {
 
   // Minimum Remaining Capacity Constraint
   num_constrts += blobs.size();
-  for (int j {0}; j < state.num_tiers; ++j) {
+  for (int j {0}; j < state.num_devices; ++j) {
     blob_constrt[num_constrts+j] = solver.MakeRowConstraint(
       0, (static_cast<double>(state.bytes_available[j])-
       0.1*static_cast<double>(state.bytes_capacity[j])));
@@ -120,8 +120,8 @@ TieredSchema PerfOrientedPlacement(std::vector<hermes::api::Blob> blobs) {
   }
 
   // Remaining Capacity Change Threshold 20%
-  num_constrts += state.num_tiers;
-  for (int j {0}; j < state.num_tiers; ++j) {
+  num_constrts += state.num_devices;
+  for (int j {0}; j < state.num_devices; ++j) {
     blob_constrt[num_constrts+j] =
       solver.MakeRowConstraint(0, 0.2*state.bytes_available[j]);
     for (size_t i {0}; i < blobs.size(); ++i) {
@@ -131,8 +131,8 @@ TieredSchema PerfOrientedPlacement(std::vector<hermes::api::Blob> blobs) {
   }
 
   // Placement Ratio
-  num_constrts += state.num_tiers;
-  for (int j {0}; j < state.num_tiers-1; ++j) {
+  num_constrts += state.num_devices;
+  for (int j {0}; j < state.num_devices-1; ++j) {
     blob_constrt[num_constrts+j] =
       solver.MakeRowConstraint(0, solver.infinity());
     for (size_t i {0}; i < blobs.size(); ++i) {
@@ -147,7 +147,7 @@ TieredSchema PerfOrientedPlacement(std::vector<hermes::api::Blob> blobs) {
   // Objective to minimize IO time
   MPObjective* const objective = solver.MutableObjective();
   for (size_t i {0}; i < blobs.size(); ++i) {
-    for (int j {0}; j < state.num_tiers; ++j) {
+    for (int j {0}; j < state.num_devices; ++j) {
       objective->SetCoefficient(blob_fraction[i][j],
         static_cast<double>(blobs[i].size())/state.bandwidth[j]);
     }
@@ -161,16 +161,16 @@ TieredSchema PerfOrientedPlacement(std::vector<hermes::api::Blob> blobs) {
   }
 
   for (size_t i {0}; i < blobs.size(); ++i) {
-    int tier_pos {0}; // to track the tier with most data
+    int device_pos {0}; // to track the device with most data
     auto largest_bulk{blob_fraction[i][0]->solution_value()*blobs[i].size()};
-    // NOTE: could be inefficient if there are hundreds of tiers
-    for (int j {1}; j < state.num_tiers; ++j) {
+    // NOTE: could be inefficient if there are hundreds of devices
+    for (int j {1}; j < state.num_devices; ++j) {
       if (blob_fraction[i][j]->solution_value()*blobs[i].size() > largest_bulk)
-        tier_pos = j;
+        device_pos = j;
     }
     size_t blob_partial_sum {0};
-    for (int j {0}; j < state.num_tiers; ++j) {
-      if (j == tier_pos)
+    for (int j {0}; j < state.num_devices; ++j) {
+      if (j == device_pos)
         continue;
       double check_frac_size {blob_fraction[i][j]->solution_value()*
                               blobs[i].size()}; // blob fraction size
@@ -181,8 +181,8 @@ TieredSchema PerfOrientedPlacement(std::vector<hermes::api::Blob> blobs) {
         blob_partial_sum += frac_size_cast;
       }
     }
-    // Push the rest data to tier tier_pos
-    result.push_back(std::make_pair(blobs[i].size()-blob_partial_sum, tier_pos));
+    // Push the rest data to device_pos
+    result.push_back(std::make_pair(blobs[i].size()-blob_partial_sum, device_pos));
   }
 
   return result;
@@ -202,15 +202,15 @@ int main()
 
   InitSystemViewState();
 
-  TieredSchema schema1 = PerfOrientedPlacement(input_blobs);
+  PlacementSchema schema1 = PerfOrientedPlacement(input_blobs);
 
   UpdateSystemViewState(schema1);
 
-  for (auto [size, tier] : schema1) {
-    std::cout << "placing " << size << " at tier " << tier << '\n' << std::flush;
+  for (auto [size, device] : schema1) {
+    std::cout << "placing " << size << " at device " << device << '\n' << std::flush;
   }
-  for(int i {0}; i < globalSystemViewState.num_tiers; ++i) {
-    std::cout << "tier[" << i << "]: " << globalSystemViewState.bytes_available[i]
+  for(int i {0}; i < globalSystemViewState.num_devices; ++i) {
+    std::cout << "device[" << i << "]: " << globalSystemViewState.bytes_available[i]
               << '\n' << std::flush;
     std::cout << "available ratio["<< i << "]: "
               << static_cast<double>(globalSystemViewState.bytes_available[i])/
@@ -226,15 +226,15 @@ int main()
   input_blobs.push_back(p5);
   input_blobs.push_back(p6);
   input_blobs.push_back(p7);
-  TieredSchema schema2 = PerfOrientedPlacement(input_blobs);
+  PlacementSchema schema2 = PerfOrientedPlacement(input_blobs);
 
   UpdateSystemViewState(schema2);
 
-  for (auto [size, tier] : schema2) {
-    std::cout << "placing " << size << " at tier " << tier << '\n' << std::flush;
+  for (auto [size, device] : schema2) {
+    std::cout << "placing " << size << " at device " << device << '\n' << std::flush;
   }
-  for(int i {0}; i < globalSystemViewState.num_tiers; ++i) {
-    std::cout << "tier[" << i << "]: " << globalSystemViewState.bytes_available[i]
+  for(int i {0}; i < globalSystemViewState.num_devices; ++i) {
+    std::cout << "device[" << i << "]: " << globalSystemViewState.bytes_available[i]
               << '\n' << std::flush;
     std::cout << "available ratio["<< i << "]: "
               << static_cast<double>(globalSystemViewState.bytes_available[i])/
@@ -254,15 +254,15 @@ int main()
   input_blobs.push_back(p10);
   input_blobs.push_back(p11);
   input_blobs.push_back(p12);
-  TieredSchema schema3 = PerfOrientedPlacement(input_blobs);
+  PlacementSchema schema3 = PerfOrientedPlacement(input_blobs);
 
   UpdateSystemViewState(schema3);
 
-  for (auto [size, tier] : schema3) {
-    std::cout << "placing " << size << " at tier " << tier << '\n' << std::flush;
+  for (auto [size, device] : schema3) {
+    std::cout << "placing " << size << " at device " << device << '\n' << std::flush;
   }
-  for(int i {0}; i < globalSystemViewState.num_tiers; ++i) {
-    std::cout << "tier[" << i << "]: " << globalSystemViewState.bytes_available[i]
+  for(int i {0}; i < globalSystemViewState.num_devices; ++i) {
+    std::cout << "device[" << i << "]: " << globalSystemViewState.bytes_available[i]
               << '\n' << std::flush;
     std::cout << "available ratio["<< i << "]: "
               << static_cast<double>(globalSystemViewState.bytes_available[i])/
