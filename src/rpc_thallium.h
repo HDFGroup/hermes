@@ -107,7 +107,7 @@ ReturnType RpcCall(RpcContext *rpc, u32 node_id, const char *func_name, Ts... ar
   std::string protocol = GetProtocol(rpc);
 
   // TODO(chogan): Save connections instead of creating them for every rpc
-  // TODO(chogan): Do we really need the progress tread in a separate thread?
+  // TODO(chogan): Do we really need the progress thread in a separate thread?
   tl::engine engine(protocol, THALLIUM_CLIENT_MODE, true);
   tl::remote_procedure remote_proc = engine.define(func_name);
   tl::endpoint server = engine.lookup(server_name);

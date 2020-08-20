@@ -1359,10 +1359,10 @@ size_t ReadBlobFromBuffers(SharedMemoryContext *context, RpcContext *rpc,
       // TODO(chogan): @optimization Aggregate multiple RPCs to same node into
       // one RPC.
       if (buffer_sizes[i] > KILOBYTES(4)) {
-        size_t bytes_transferred = BulkTransfer(rpc, id.bits.node_id,
-                                                "RemoteBulkReadBufferById",
-                                                blob->data + total_bytes_read,
-                                                buffer_sizes[i], id);
+        size_t bytes_transferred = BulkRead(rpc, id.bits.node_id,
+                                            "RemoteBulkReadBufferById",
+                                            blob->data + total_bytes_read,
+                                            buffer_sizes[i], id);
         // TODO(chogan): @errorhandling
         assert(bytes_transferred == buffer_sizes[i]);
         bytes_read += bytes_transferred;

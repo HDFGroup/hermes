@@ -125,11 +125,11 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
       u8 *buffer_data = 0;
       size_t size = header->used;
 
-      // TODO(chogan): Lock
       if (BufferIsByteAddressable(context, id)) {
         buffer_data = GetRamBufferPtr(context, id);
       } else {
-        // TODO(chogan): Lock arena
+        // TODO(chogan): Probably need a way to lock the trans_arena. Currently
+        // an assertion will fire if multiple threads try to use it at once.
         if (size > GetRemainingCapacity(temp_memory)) {
           // TODO(chogan): Need to transfer in a loop if we don't have enough
           // temporary memory available
@@ -443,8 +443,8 @@ std::string GetProtocol(RpcContext *rpc) {
   return result;
 }
 
-size_t BulkTransfer(RpcContext *rpc, u32 node_id, const char *func_name,
-                  u8 *data, size_t max_size, BufferID id) {
+size_t BulkRead(RpcContext *rpc, u32 node_id, const char *func_name,
+                u8 *data, size_t max_size, BufferID id) {
   std::string server_name = GetServerName(rpc, node_id);
   std::string protocol = GetProtocol(rpc);
 
