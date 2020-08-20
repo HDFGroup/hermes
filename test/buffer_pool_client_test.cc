@@ -9,10 +9,6 @@
 
 #include <mpi.h>
 
-#include <thallium.hpp>
-#include <thallium/serialization/stl/vector.hpp>
-#include <thallium/serialization/stl/pair.hpp>
-
 #include "common.h"
 #include "buffer_pool.h"
 #include "buffer_pool_internal.h"
