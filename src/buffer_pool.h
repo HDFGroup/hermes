@@ -56,6 +56,17 @@ struct Device {
   char mount_point[kMaxPathLength];
 };
 
+struct Device_ {
+  /** True if the Device is byte addressable */
+  bool is_byte_addressable;
+  /** True if the functionality of `posix_fallocate` is available on this
+   * Device
+   */
+  bool has_fallocate;
+  /** The directory where buffering files can be created. Zero terminated. */
+  char mount_point[kMaxPathLength];
+};
+
 /**
  * A unique identifier for any buffer in the system.
  *

@@ -46,6 +46,22 @@ union BlobID {
   u64 as_int;
 };
 
+union TargetID {
+  struct {
+    u32 node_id;
+    u16 device_id;
+    u16 index;
+  } bits;
+
+  u64 as_int;
+};
+
+struct Target {
+  u64 capacity;
+  u64 remaining_space;
+  u64 speed;
+};
+
 enum class TraitID : u8 {
   None,
   Placement,
