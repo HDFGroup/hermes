@@ -37,6 +37,7 @@ const char rpc_server_name[] = "sockets://localhost:8080";
 
 void InitTestConfig(Config *config) {
   config->num_devices = 4;
+  config->num_targets = 4;
   assert(config->num_devices < kMaxDevices);
 
   for (int dev = 0; dev < config->num_devices; ++dev) {

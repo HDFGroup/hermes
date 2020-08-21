@@ -365,8 +365,7 @@ static void DrawEndOfRamBuffers(SharedMemoryContext *context,
   int pad = 2;
   f32 memory_offset_to_pixels = (f32)(block_width) / (f32)(block_size);
 
-  int pixel_offset = (int)(pool->header_storage_offset *
-                           memory_offset_to_pixels);
+  int pixel_offset = (int)(pool->headers_offset * memory_offset_to_pixels);
   int x = pixel_offset % window_width;
   int y = (pixel_offset / window_width) * h;
 

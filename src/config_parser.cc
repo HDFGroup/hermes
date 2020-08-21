@@ -21,6 +21,7 @@
 // 4. Add a case to ParseTokens for the new variable.
 // 5. Add the new variable to the Config struct.
 // 6. Add an Assert to config_parser_test.cc to test the functionality.
+// 7. Set a default value in InitTestConfig
 
 namespace hermes {
 
@@ -40,6 +41,7 @@ enum class TokenType {
 enum ConfigVariable {
   ConfigVariable_Unkown,
   ConfigVariable_NumDevices,
+  ConfigVariable_NumTargets,
   ConfigVariable_Capacities,
   ConfigVariable_BlockSizes,
   ConfigVariable_NumSlabs,
@@ -71,6 +73,7 @@ enum ConfigVariable {
 static const char *kConfigVariableStrings[ConfigVariable_Count] = {
   "unknown",
   "num_devices",
+  "num_targets",
   "capacities_mb",
   "block_sizes_kb",
   "num_slabs",
@@ -662,6 +665,11 @@ void ParseTokens(TokenList *tokens, Config *config) {
       case ConfigVariable_NumDevices: {
         int val = ParseInt(&tok);
         config->num_devices = val;
+        break;
+      }
+      case ConfigVariable_NumTargets: {
+        int val = ParseInt(&tok);
+        config->num_targets = val;
         break;
       }
       case ConfigVariable_Capacities: {
