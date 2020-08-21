@@ -146,21 +146,28 @@ void LocalAddBlobIdToBucket(MetadataManager *mdm, BucketID bucket_id,
   CheckHeapOverlap(mdm);
 }
 
+IdList *AllocateIdList(MetadataManager *mdm, u32 length) {
+  static_assert(sizeof(IdList) == sizeof(u64));
+  Heap *id_heap = GetIdHeap(mdm);
+  // NOTE(chogan): Add 1 extra for the embedded BufferIdList
+  u64 *id_list_memory = HeapPushArray<u64>(id_heap, length + 1);
+  IdList *result = (IdList *)id_list_memory;
+  result->length = length;
+  result->head_offset = GetHeapOffset(id_heap, (u8 *)(result + 1));
+  CheckHeapOverlap(mdm);
+
+  return result;
+}
+
 u32 LocalAllocateBufferIdList(MetadataManager *mdm,
                               const std::vector<BufferID> &buffer_ids) {
   static_assert(sizeof(IdList) == sizeof(BufferID));
-  Heap *id_heap = GetIdHeap(mdm);
   u32 length = (u32)buffer_ids.size();
-  // NOTE(chogan): Add 1 extra for the embedded BufferIdList
-  BufferID *id_list_memory = HeapPushArray<BufferID>(id_heap, length + 1);
-  IdList *id_list = (IdList *)id_list_memory;
-  id_list->length = length;
-  id_list->head_offset = GetHeapOffset(id_heap, (u8 *)(id_list + 1));
+  IdList *id_list = AllocateIdList(mdm, length);
   CopyIds((u64 *)(id_list + 1), (u64 *)buffer_ids.data(), length);
 
+  Heap *id_heap = GetIdHeap(mdm);
   u32 result = GetHeapOffset(id_heap, (u8 *)id_list);
-
-  CheckHeapOverlap(mdm);
 
   return result;
 }
@@ -359,6 +366,10 @@ void InitMetadataStorage(MetadataManager *mdm, Arena *arena, Config *config) {
   // will grow towards smaller addresses.
   Heap *id_heap = InitHeapInArena(arena, false, heap_alignment);
   mdm->id_heap_offset = GetOffsetFromMdm(mdm, id_heap);
+
+  // NOTE(chogan): Rank Targets default to one Target per Device
+  IdList *node_targets = AllocateIdList(mdm, config->num_devices);
+  mdm->node_targets = *node_targets;
 
   // ID Maps
 
