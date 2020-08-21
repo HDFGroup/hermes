@@ -27,29 +27,29 @@ namespace hermes {
 struct RpcContext;
 
 /**
- * Information about a specific hardware Tier.
+ * Information about a specific hardware Device.
  *
  * This could represent local RAM, remote RAM, NVMe, burst buffers, a parallel
- * file system, etc. The Tiers are initialized when the BufferPool is
+ * file system, etc. The Devices are initialized when the BufferPool is
  * initialized, and they remain throughout a Hermes run.
  */
-struct Tier {
-  /** The total capacity of the Tier. */
+struct Device {
+  /** The total capacity of the Device. */
   u64 capacity;
   /** The theoretical (or perceived by Apollo?) bandwidth in MiB/second. */
   f32 bandwidth_mbps;
   /** The theoretical (or perceived by Apollo?) latency in nanoseconds. */
   f32 latency_ns;
-  /** The Tier's identifier. This is an index into the array of Tiers stored in
+  /** The Device's identifier. This is an index into the array of Devices stored in
    * the BufferPool.
    */
-  TierID id;
-  /** True if the Tier is a RAM Tier (or other byte addressable, local or
+  DeviceID id;
+  /** True if the Device is a RAM Device (or other byte addressable, local or
    * remote)
    */
   bool is_byte_addressable;
   /** True if the functionality of `posix_fallocate` is available on this
-   * Tier
+   * Device
    */
   bool has_fallocate;
   /** The directory where buffering files can be created. Zero terminated. */
@@ -84,8 +84,8 @@ union BufferID {
  * Metadata for a Hermes buffer.
  *
  * An array of BufferHeaders is initialized during BufferPool initialization.
- * For a RAM Tier, one BufferHeader is created for each block. This is to
- * facilitate splitting and merging. For non-RAM Tiers, we only need one
+ * For a RAM Device, one BufferHeader is created for each block. This is to
+ * facilitate splitting and merging. For non-RAM Devices, we only need one
  * BufferHeader per buffer. A typical workflow is to retrieve a BufferHeader
  * from a BufferID using the GetHeaderByBufferId function.
  */
@@ -102,10 +102,10 @@ struct BufferHeader {
   u32 used;
   /** The total capacity of this buffer. */
   u32 capacity;
-  /** An index into the array of Tiers in the BufferPool that represents this
-   * buffer's Tier.
+  /** An index into the array of Devices in the BufferPool that represents this
+   * buffer's Device.
    */
-  TierID tier_id;
+  DeviceID device_id;
   /** True if this buffer is being used by Hermes to buffer data, false if it is
    * free.
    */
@@ -118,12 +118,12 @@ struct BufferHeader {
 
 /**
  * Contains information about the layout of the buffers, BufferHeaders, and
- * Tiers in shared memory.
+ * Devices in shared memory.
  *
  * Some terminology:
  *   block - A contiguous range of buffer space of the smallest unit for a given
- *           Tier. The size for each Tier is specified by
- *           Config::block_sizes[tier_id]. RAM is typically 4K, for example.
+ *           Device. The size for each Device is specified by
+ *           Config::block_sizes[device_id]. RAM is typically 4K, for example.
  *   buffer - Made up of 1 or more blocks: 1-block buffer, 4-block buffer, etc.
  *   slab - The collection of all buffers of a particular size. e.g., the
  *          4-block slab is made up of all the 4-block buffers.
@@ -143,47 +143,47 @@ struct BufferPool {
    * begins.
    */
   ptrdiff_t header_storage_offset;
-  /** The offset from the base of shared memory where the Tier array begins.
+  /** The offset from the base of shared memory where the Device array begins.
    */
-  ptrdiff_t tier_storage_offset;
-  /** The offset from the base of shared memory where each Tier's free list is
+  ptrdiff_t device_storage_offset;
+  /** The offset from the base of shared memory where each Device's free list is
    * stored. Converting the offset to a pointer results in a pointer to an array
-   * of N BufferIDs where N is the number of slabs in that Tier.
+   * of N BufferIDs where N is the number of slabs in that Device.
    */
-  ptrdiff_t free_list_offsets[kMaxTiers];
-  /** The offset from the base of shared memory where each Tier's list of slab
+  ptrdiff_t free_list_offsets[kMaxDevices];
+  /** The offset from the base of shared memory where each Device's list of slab
    * unit sizes is stored. Each offset can be converted to a pointer to an array
-   * of N ints where N is the number of slabs in that Tier. Each slab has its
+   * of N ints where N is the number of slabs in that Device. Each slab has its
    * own unit size x, where x is the number of blocks that make up a buffer.
    */
-  ptrdiff_t slab_unit_sizes_offsets[kMaxTiers];
-  /** The offset from the base of shared memory where each Tier's list of slab
+  ptrdiff_t slab_unit_sizes_offsets[kMaxDevices];
+  /** The offset from the base of shared memory where each Device's list of slab
    * buffer sizes is stored. Each offset can be converted to a pointer to an
-   * array of N ints where N is the number of slabs in that Tier. A slab's
-   * buffer size (in bytes) is the slab's unit size multiplied by the Tier's
+   * array of N ints where N is the number of slabs in that Device. A slab's
+   * buffer size (in bytes) is the slab's unit size multiplied by the Device's
    * block size.
    */
-  ptrdiff_t slab_buffer_sizes_offsets[kMaxTiers];
-  /** The offset from the base of shared memory where each Tier's list of
+  ptrdiff_t slab_buffer_sizes_offsets[kMaxDevices];
+  /** The offset from the base of shared memory where each Device's list of
    * available buffers per slab is stored. Each offset can be converted to a
-   * pointer to an arry of N (num_slabs[tier_id]) u32.
+   * pointer to an arry of N (num_slabs[device_id]) u32.
    */
-  ptrdiff_t buffers_available_offsets[kMaxTiers];
+  ptrdiff_t buffers_available_offsets[kMaxDevices];
   /** A ticket lock to syncrhonize access to free lists
    * TODO(chogan): @optimization One mutex per free list.
    */
   TicketMutex ticket_mutex;
 
-  std::atomic<i64> capacity_adjustments[kMaxTiers];
+  std::atomic<i64> capacity_adjustments[kMaxDevices];
 
-  /** The block size for each Tier. */
-  i32 block_sizes[kMaxTiers];
-  /** The number of slabs for each Tier. */
-  i32 num_slabs[kMaxTiers];
-  /** The number of BufferHeaders for each Tier. */
-  u32 num_headers[kMaxTiers];
-  /** The total number of Tiers. */
-  i32 num_tiers;
+  /** The block size for each Device. */
+  i32 block_sizes[kMaxDevices];
+  /** The number of slabs for each Device. */
+  i32 num_slabs[kMaxDevices];
+  /** The number of BufferHeaders for each Device. */
+  u32 num_headers[kMaxDevices];
+  /** The total number of Devices. */
+  i32 num_devices;
   /** The total number of BufferHeaders in the header array. */
   u32 total_headers;
 };
@@ -220,7 +220,7 @@ struct SharedMemoryContext {
 
   // TODO(chogan): Move these into a FileBufferingContext
   std::vector<std::vector<std::string>> buffering_filenames;
-  FILE *open_streams[kMaxTiers][kMaxBufferPoolSlabs];
+  FILE *open_streams[kMaxDevices][kMaxBufferPoolSlabs];
 };
 
 struct BufferIdArray;
@@ -246,7 +246,7 @@ void MakeFullShmemName(char *dest, const char *base);
 /**
  * Creates and opens all files that will be used for buffering. Stores open FILE
  * pointers in the @p context. The file buffering paradaigm uses one file per
- * slab for each Tier. If `posix_fallocate` is available, and `make_space` is
+ * slab for each Device. If `posix_fallocate` is available, and `make_space` is
  * `true`, each file's capacity is reserved. Otherwise, the files will be
  * initialized with 0 size.
  *
@@ -293,17 +293,17 @@ void UnmapSharedMemory(SharedMemoryContext *context);
  *
  * If a request cannot be fulfilled, an empty list is returned. GetBuffers will
  * never partially satisfy a request. It is all or nothing. If @p schema
- * includes a remote Tier, this function will make an RPC call to get BufferIDs
+ * includes a remote Device, this function will make an RPC call to get BufferIDs
  * from a remote node.
  *
  * @param context The shared memory context for the BufferPool.
- * @param schema A description of the amount and Tier of storage requested.
+ * @param schema A description of the amount and Device of storage requested.
  *
  * @return A vector of BufferIDs that can be used for storage, and that satisfy
  * @p schema, or an empty vector if the request could not be fulfilled.
  */
 std::vector<BufferID> GetBuffers(SharedMemoryContext *context,
-                                 const TieredSchema &schema);
+                                 const PlacementSchema &schema);
 /**
  * Returns buffer_ids to the BufferPool free lists so that they can be used
  * again. Data in the buffers is considered abandonded, and can be overwritten.
@@ -356,7 +356,7 @@ struct Blob {
  *
  * Writes the blob to the collection of buffer_ids. The BufferIDs inform the
  * call whether it is writing locally, remotely, to RAM (or a byte addressable
- * Tier) or to a file (block addressable Tier).
+ * Device) or to a file (block addressable Device).
  *
  * @param context The shared memory context needed to access BufferPool info.
  * @param blob The data to write.
@@ -371,7 +371,7 @@ void WriteBlobToBuffers(SharedMemoryContext *context, RpcContext *rpc,
  *
  * Reads the collection of buffer_ids into blob. The BufferIDs inform the
  * call whether it is reading locally, remotely, from RAM (or a byte addressable
- * Tier) or to a file (block addressable Tier).
+ * Device) or to a file (block addressable Device).
  *
  * @param context The shared memory context needed to access BufferPool info.
  * @param rpc The RPC context needed to make a remote call if necessary.
@@ -394,12 +394,12 @@ size_t LocalReadBufferById(SharedMemoryContext *context, BufferID id,
 /**
  * Returns a vector of bandwidths in MiB per second.
  *
- * The returned list can be indexed by TierID to get the bandwidth for a
- * specific Tier.
+ * The returned list can be indexed by DeviceID to get the bandwidth for a
+ * specific Device.
  *
  * @param context The shared memory context needed to access BufferPool info.
  *
- * @return The list of bandwidths, one for each Tier, in MiB/sec.
+ * @return The list of bandwidths, one for each Device, in MiB/sec.
  */
 std::vector<f32> GetBandwidths(SharedMemoryContext *context);
 

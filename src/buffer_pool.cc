@@ -103,30 +103,30 @@ BufferPool *GetBufferPoolFromContext(SharedMemoryContext *context) {
   return result;
 }
 
-Tier *GetTierFromHeader(SharedMemoryContext *context, BufferHeader *header) {
+Device *GetDeviceFromHeader(SharedMemoryContext *context, BufferHeader *header) {
   BufferPool *pool = GetBufferPoolFromContext(context);
-  Tier *tiers_base = (Tier *)(context->shm_base + pool->tier_storage_offset);
-  Tier *result = tiers_base + header->tier_id;
+  Device *devices_base = (Device *)(context->shm_base + pool->device_storage_offset);
+  Device *result = devices_base + header->device_id;
 
   return result;
 }
 
 std::vector<f32> GetBandwidths(SharedMemoryContext *context) {
   BufferPool *pool = GetBufferPoolFromContext(context);
-  std::vector<f32> result(pool->num_tiers, 0);
+  std::vector<f32> result(pool->num_devices, 0);
 
-  for (int i = 0; i < pool->num_tiers; i++) {
-    Tier *tier = GetTierById(context, i);
-    result[i] = tier->bandwidth_mbps;
+  for (int i = 0; i < pool->num_devices; i++) {
+    Device *device = GetDeviceById(context, i);
+    result[i] = device->bandwidth_mbps;
   }
 
   return result;
 }
 
-Tier *GetTierById(SharedMemoryContext *context, TierID tier_id) {
+Device *GetDeviceById(SharedMemoryContext *context, DeviceID device_id) {
   BufferPool *pool = GetBufferPoolFromContext(context);
-  Tier *tiers_base = (Tier *)(context->shm_base + pool->tier_storage_offset);
-  Tier *result = tiers_base + tier_id;
+  Device *devices_base = (Device *)(context->shm_base + pool->device_storage_offset);
+  Device *result = devices_base + device_id;
 
   return result;
 }
@@ -162,7 +162,7 @@ void ResetHeader(BufferHeader *header) {
     // NOTE(chogan): Keep `data_offset` because splitting/merging may reuse it
     header->used = 0;
     header->capacity = 0;
-    header->tier_id = 0;
+    header->device_id = 0;
     header->in_use = 0;
     header->locked = 0;
   }
@@ -230,16 +230,16 @@ f32 ComputeFragmentationScore(SharedMemoryContext *context) {
 }
 #endif
 
-i32 GetSlabUnitSize(SharedMemoryContext *context, TierID tier_id,
+i32 GetSlabUnitSize(SharedMemoryContext *context, DeviceID device_id,
                     int slab_index) {
   BufferPool *pool = GetBufferPoolFromContext(context);
   i32 result = 0;
   i32 *slab_unit_sizes = nullptr;
 
-  if (tier_id < pool->num_tiers) {
+  if (device_id < pool->num_devices) {
     slab_unit_sizes = (i32 *)(context->shm_base +
-                              pool->slab_unit_sizes_offsets[tier_id]);
-    if (slab_index < pool->num_slabs[tier_id]) {
+                              pool->slab_unit_sizes_offsets[device_id]);
+    if (slab_index < pool->num_slabs[device_id]) {
       result = slab_unit_sizes[slab_index];
     } else {
       // TODO(chogan): @logging
@@ -251,16 +251,16 @@ i32 GetSlabUnitSize(SharedMemoryContext *context, TierID tier_id,
   return result;
 }
 
-i32 GetSlabBufferSize(SharedMemoryContext *context, TierID tier_id,
+i32 GetSlabBufferSize(SharedMemoryContext *context, DeviceID device_id,
                        int slab_index) {
   BufferPool *pool = GetBufferPoolFromContext(context);
   i32 *slab_sizes = nullptr;
   i32 result = 0;
 
-  if (tier_id < pool->num_tiers) {
+  if (device_id < pool->num_devices) {
     slab_sizes = (i32 *)(context->shm_base +
-                         pool->slab_buffer_sizes_offsets[tier_id]);
-    if (slab_index < pool->num_slabs[tier_id]) {
+                         pool->slab_buffer_sizes_offsets[device_id]);
+    if (slab_index < pool->num_slabs[device_id]) {
       result = slab_sizes[slab_index];
     } else {
       // TODO(chogan): @logging
@@ -272,12 +272,12 @@ i32 GetSlabBufferSize(SharedMemoryContext *context, TierID tier_id,
   return result;
 }
 
-BufferID *GetFreeListPtr(SharedMemoryContext *context, TierID tier_id) {
+BufferID *GetFreeListPtr(SharedMemoryContext *context, DeviceID device_id) {
   BufferPool *pool = GetBufferPoolFromContext(context);
   BufferID *result = nullptr;
 
-  if (tier_id < pool->num_tiers) {
-    result = (BufferID *)(context->shm_base + pool->free_list_offsets[tier_id]);
+  if (device_id < pool->num_devices) {
+    result = (BufferID *)(context->shm_base + pool->free_list_offsets[device_id]);
   }
 
   return result;
@@ -285,12 +285,12 @@ BufferID *GetFreeListPtr(SharedMemoryContext *context, TierID tier_id) {
 
 int GetSlabIndexFromHeader(SharedMemoryContext *context, BufferHeader *header) {
   BufferPool *pool = GetBufferPoolFromContext(context);
-  TierID tier_id = header->tier_id;
-  i32 units = header->capacity / pool->block_sizes[tier_id];
+  DeviceID device_id = header->device_id;
+  i32 units = header->capacity / pool->block_sizes[device_id];
   int result = 0;
 
-  for (int i = 0; i < pool->num_slabs[tier_id]; ++i) {
-    if (GetSlabUnitSize(context, tier_id, i) == units) {
+  for (int i = 0; i < pool->num_slabs[device_id]; ++i) {
+    if (GetSlabUnitSize(context, device_id, i) == units) {
       result = i;
       break;
     }
@@ -319,46 +319,46 @@ bool IsNullBufferId(BufferID id) {
 
 bool BufferIsByteAddressable(SharedMemoryContext *context, BufferID id) {
   BufferHeader *header = GetHeaderByBufferId(context, id);
-  Tier *tier = GetTierFromHeader(context, header);
-  bool result = tier->is_byte_addressable;
+  Device *device = GetDeviceFromHeader(context, header);
+  bool result = device->is_byte_addressable;
 
   return result;
 }
 
-BufferID PeekFirstFreeBufferId(SharedMemoryContext *context, TierID tier_id,
-                              int slab_index) {
+BufferID PeekFirstFreeBufferId(SharedMemoryContext *context, DeviceID device_id,
+                               int slab_index) {
   BufferPool *pool = GetBufferPoolFromContext(context);
   BufferID result = {};
-  BufferID *free_list = GetFreeListPtr(context, tier_id);
-  if (slab_index < pool->num_slabs[tier_id]) {
+  BufferID *free_list = GetFreeListPtr(context, device_id);
+  if (slab_index < pool->num_slabs[device_id]) {
     result = free_list[slab_index];
   }
 
   return result;
 }
 
-void SetFirstFreeBufferId(SharedMemoryContext *context, TierID tier_id,
+void SetFirstFreeBufferId(SharedMemoryContext *context, DeviceID device_id,
                           int slab_index, BufferID new_id) {
   BufferPool *pool = GetBufferPoolFromContext(context);
-  BufferID *free_list = GetFreeListPtr(context, tier_id);
-  if (slab_index < pool->num_slabs[tier_id]) {
+  BufferID *free_list = GetFreeListPtr(context, device_id);
+  if (slab_index < pool->num_slabs[device_id]) {
     free_list[slab_index] = new_id;
   }
 }
 
 static u32 *GetAvailableBuffersArray(SharedMemoryContext *context,
-                                     TierID tier_id) {
+                                     DeviceID device_id) {
   BufferPool *pool = GetBufferPoolFromContext(context);
   u32 *result =
-    (u32 *)(context->shm_base + pool->buffers_available_offsets[tier_id]);
+    (u32 *)(context->shm_base + pool->buffers_available_offsets[device_id]);
 
   return result;
 }
 
 #if 0
-static u32 GetNumBuffersAvailable(SharedMemoryContext *context, TierID tier_id,
+static u32 GetNumBuffersAvailable(SharedMemoryContext *context, DeviceID device_id,
                                   int slab_index) {
-  u32 *buffers_available = GetAvailableBuffersArray(context, tier_id);
+  u32 *buffers_available = GetAvailableBuffersArray(context, device_id);
   u32 result = 0;
   if (buffers_available) {
     result = buffers_available[slab_index];
@@ -369,16 +369,16 @@ static u32 GetNumBuffersAvailable(SharedMemoryContext *context, TierID tier_id,
 #endif
 
 static void DecrementAvailableBuffers(SharedMemoryContext *context,
-                                      TierID tier_id, int slab_index) {
-  u32 *buffers_available = GetAvailableBuffersArray(context, tier_id);
+                                      DeviceID device_id, int slab_index) {
+  u32 *buffers_available = GetAvailableBuffersArray(context, device_id);
   if (buffers_available) {
     buffers_available[slab_index]--;
   }
 }
 
 static void IncrementAvailableBuffers(SharedMemoryContext *context,
-                                      TierID tier_id, int slab_index) {
-  u32 *buffers_available = GetAvailableBuffersArray(context, tier_id);
+                                      DeviceID device_id, int slab_index) {
+  u32 *buffers_available = GetAvailableBuffersArray(context, device_id);
   if (buffers_available) {
     buffers_available[slab_index]++;
   }
@@ -393,16 +393,16 @@ void LocalReleaseBuffer(SharedMemoryContext *context, BufferID buffer_id) {
     header_to_free->used = 0;
     header_to_free->in_use = false;
     int slab_index = GetSlabIndexFromHeader(context, header_to_free);
-    TierID tier_id = header_to_free->tier_id;
-    header_to_free->next_free = PeekFirstFreeBufferId(context, tier_id,
+    DeviceID device_id = header_to_free->device_id;
+    header_to_free->next_free = PeekFirstFreeBufferId(context, device_id,
                                                      slab_index);
-    SetFirstFreeBufferId(context, tier_id, slab_index, buffer_id);
-    IncrementAvailableBuffers(context, tier_id, slab_index);
+    SetFirstFreeBufferId(context, device_id, slab_index, buffer_id);
+    IncrementAvailableBuffers(context, device_id, slab_index);
 
     // NOTE(chogan): Update local capacities, which will eventually be reflected
     // in the global SystemViewState.
     i64 adjustment = header_to_free->capacity;
-    pool->capacity_adjustments[header_to_free->tier_id] += adjustment;
+    pool->capacity_adjustments[header_to_free->device_id] += adjustment;
     EndTicketMutex(&pool->ticket_mutex);
   }
 }
@@ -431,25 +431,25 @@ void LocalReleaseBuffers(SharedMemoryContext *context,
   }
 }
 
-BufferID GetFreeBuffer(SharedMemoryContext *context, TierID tier_id,
+BufferID GetFreeBuffer(SharedMemoryContext *context, DeviceID device_id,
                        int slab_index) {
   BufferPool *pool = GetBufferPoolFromContext(context);
   BufferID result = {};
 
   BeginTicketMutex(&pool->ticket_mutex);
-  BufferID id = PeekFirstFreeBufferId(context, tier_id, slab_index);
+  BufferID id = PeekFirstFreeBufferId(context, device_id, slab_index);
   if (!IsNullBufferId(id)) {
     u32 header_index = id.bits.header_index;
     BufferHeader *header = GetHeaderByIndex(context, header_index);
     header->in_use = true;
     result = header->id;
-    SetFirstFreeBufferId(context, tier_id, slab_index, header->next_free);
-    DecrementAvailableBuffers(context, tier_id, slab_index);
+    SetFirstFreeBufferId(context, device_id, slab_index, header->next_free);
+    DecrementAvailableBuffers(context, device_id, slab_index);
 
     // NOTE(chogan): Update local capacities, which will eventually be reflected
     // in the global SystemViewState.
     i64 adjustment = header->capacity;
-    pool->capacity_adjustments[header->tier_id] -= adjustment;
+    pool->capacity_adjustments[header->device_id] -= adjustment;
   }
   EndTicketMutex(&pool->ticket_mutex);
 
@@ -457,25 +457,25 @@ BufferID GetFreeBuffer(SharedMemoryContext *context, TierID tier_id,
 }
 
 std::vector<BufferID> GetBuffers(SharedMemoryContext *context,
-                                 const TieredSchema &schema) {
+                                 const PlacementSchema &schema) {
   BufferPool *pool = GetBufferPoolFromContext(context);
 
   bool failed = false;
   std::vector<BufferID> result;
-  for (auto &size_and_tier : schema) {
-    TierID tier_id = size_and_tier.second;
+  for (auto &size_and_device : schema) {
+    DeviceID device_id = size_and_device.second;
 
-    size_t size_left = size_and_tier.first;
-    std::vector<size_t> num_buffers(pool->num_slabs[tier_id], 0);
+    size_t size_left = size_and_device.first;
+    std::vector<size_t> num_buffers(pool->num_slabs[device_id], 0);
 
     // NOTE(chogan): naive buffer selection algorithm: fill with largest
     // buffers first
-    for (int i = pool->num_slabs[tier_id] - 1; i >= 0; --i) {
-      size_t buffer_size = GetSlabBufferSize(context, tier_id, i);
+    for (int i = pool->num_slabs[device_id] - 1; i >= 0; --i) {
+      size_t buffer_size = GetSlabBufferSize(context, device_id, i);
       size_t num_buffers = buffer_size ? size_left / buffer_size : 0;
 
       while (num_buffers > 0) {
-        BufferID id = GetFreeBuffer(context, tier_id, i);
+        BufferID id = GetFreeBuffer(context, device_id, i);
         if (id.as_int) {
           result.push_back(id);
           BufferHeader *header = GetHeaderByBufferId(context, id);
@@ -490,8 +490,8 @@ std::vector<BufferID> GetBuffers(SharedMemoryContext *context,
     }
 
     if (size_left > 0) {
-      size_t buffer_size = GetSlabBufferSize(context, tier_id, 0);
-      BufferID id = GetFreeBuffer(context, tier_id, 0);
+      size_t buffer_size = GetSlabBufferSize(context, device_id, 0);
+      BufferID id = GetFreeBuffer(context, device_id, 0);
       size_t used = std::min(buffer_size, size_left);
       size_left -= used;
       if (id.as_int && size_left == 0) {
@@ -588,7 +588,7 @@ void PartitionRamBuffers(Arena *arena, i32 buffer_size, i32 buffer_count,
 }
 
 BufferID MakeBufferHeaders(Arena *arena, int buffer_size, u32 start_index,
-                           u32 end_index, int node_id, TierID tier_id,
+                           u32 end_index, int node_id, DeviceID device_id,
                            ptrdiff_t initial_offset, u8 **header_begin) {
   BufferHeader dummy = {};
   BufferHeader *previous = &dummy;
@@ -597,7 +597,7 @@ BufferID MakeBufferHeaders(Arena *arena, int buffer_size, u32 start_index,
     BufferHeader *header = PushClearedStruct<BufferHeader>(arena);
     header->id = MakeBufferId(node_id, i);
     header->capacity = buffer_size;
-    header->tier_id = tier_id;
+    header->device_id = device_id;
 
     // NOTE(chogan): Stored as offset from base address of shared memory
     header->data_offset = buffer_size * j + initial_offset;
@@ -642,25 +642,25 @@ size_t RoundDownToMultiple(size_t val, size_t multiple) {
   return result;
 }
 
-Tier *InitTiers(Arena *arena, Config *config) {
-  Tier *result = PushArray<Tier>(arena, config->num_tiers);
+Device *InitDevices(Arena *arena, Config *config) {
+  Device *result = PushArray<Device>(arena, config->num_devices);
 
-  for (int i = 0; i < config->num_tiers; ++i) {
-    Tier *tier = result + i;
-    tier->bandwidth_mbps = config->bandwidths[i];
-    tier->capacity = config->capacities[i];
-    tier->latency_ns = config->latencies[i];
-    tier->id = i;
+  for (int i = 0; i < config->num_devices; ++i) {
+    Device *device = result + i;
+    device->bandwidth_mbps = config->bandwidths[i];
+    device->capacity = config->capacities[i];
+    device->latency_ns = config->latencies[i];
+    device->id = i;
     // TODO(chogan): @configuration Get this from cmake.
-    tier->has_fallocate = true;
+    device->has_fallocate = true;
     size_t path_length = config->mount_points[i].size();
 
     if (path_length == 0) {
-      tier->is_byte_addressable = true;
+      device->is_byte_addressable = true;
     } else {
       // TODO(chogan): @errorhandling
       assert(path_length < kMaxPathLength);
-      snprintf(tier->mount_point, path_length + 1, "%s",
+      snprintf(device->mount_point, path_length + 1, "%s",
                config->mount_points[i].c_str());
     }
   }
@@ -678,7 +678,7 @@ void MergeRamBufferFreeList(SharedMemoryContext *context, int slab_index) {
     return;
   }
 
-  // TODO(chogan): @configuration Assumes RAM is first Tier
+  // TODO(chogan): @configuration Assumes RAM is first Device
   int this_slab_unit_size = GetSlabUnitSize(context, 0, slab_index);
   int bigger_slab_unit_size = GetSlabUnitSize(context, 0, slab_index + 1);
 
@@ -694,9 +694,9 @@ void MergeRamBufferFreeList(SharedMemoryContext *context, int slab_index) {
   int old_slab_size_in_bytes = this_slab_unit_size * pool->block_sizes[0];
 
   BeginTicketMutex(&pool->ticket_mutex);
-  // TODO(chogan): Assuming first Tier is RAM
-  TierID tier_id = 0;
-  BufferID id = PeekFirstFreeBufferId(context, tier_id, slab_index);
+  // TODO(chogan): Assuming first Device is RAM
+  DeviceID device_id = 0;
+  BufferID id = PeekFirstFreeBufferId(context, device_id, slab_index);
 
   while (id.as_int != 0) {
     BufferHeader *header_to_merge = GetHeaderByIndex(context,
@@ -745,23 +745,23 @@ void MergeRamBufferFreeList(SharedMemoryContext *context, int slab_index) {
         BufferHeader *header = GetHeaderByBufferId(context, id_copy);
 
         while (header->id.as_int !=
-               PeekFirstFreeBufferId(context, tier_id, slab_index).as_int) {
+               PeekFirstFreeBufferId(context, device_id, slab_index).as_int) {
           // NOTE(chogan): It's possible that the buffer we're trying to pop
           // from the free list is not at the beginning of the list. In that
           // case, we have to pop and save all the free buffers before the one
           // we're interested in, and then restore them to the free list later.
           assert(saved_free_list_count < max_saved_entries);
           saved_free_list_entries[saved_free_list_count++] =
-            PeekFirstFreeBufferId(context, tier_id, slab_index);
+            PeekFirstFreeBufferId(context, device_id, slab_index);
 
-          BufferID first_id = PeekFirstFreeBufferId(context, tier_id,
+          BufferID first_id = PeekFirstFreeBufferId(context, device_id,
                                                    slab_index);
           BufferHeader *first_free = GetHeaderByBufferId(context, first_id);
-          SetFirstFreeBufferId(context, tier_id, slab_index,
+          SetFirstFreeBufferId(context, device_id, slab_index,
                                first_free->next_free);
         }
 
-        SetFirstFreeBufferId(context, tier_id, slab_index, header->next_free);
+        SetFirstFreeBufferId(context, device_id, slab_index, header->next_free);
         id_copy = header->next_free;
         MakeHeaderDormant(header);
       }
@@ -779,18 +779,18 @@ void MergeRamBufferFreeList(SharedMemoryContext *context, int slab_index) {
       header_to_merge->capacity = new_slab_size_in_bytes;
 
       // NOTE(chogan): Add the new header to the next size up's free list
-      header_to_merge->next_free = PeekFirstFreeBufferId(context, tier_id,
+      header_to_merge->next_free = PeekFirstFreeBufferId(context, device_id,
                                                          slab_index + 1);
-      SetFirstFreeBufferId(context, tier_id, slab_index + 1,
+      SetFirstFreeBufferId(context, device_id, slab_index + 1,
                            header_to_merge->id);
 
       while (saved_free_list_count > 0) {
         // NOTE(chogan): Restore headers that we popped and saved.
         BufferID saved_id = saved_free_list_entries[--saved_free_list_count];
         BufferHeader *saved_header = GetHeaderByBufferId(context, saved_id);
-        saved_header->next_free = PeekFirstFreeBufferId(context, tier_id,
+        saved_header->next_free = PeekFirstFreeBufferId(context, device_id,
                                                         slab_index);
-        SetFirstFreeBufferId(context, tier_id, slab_index, saved_header->id);
+        SetFirstFreeBufferId(context, device_id, slab_index, saved_header->id);
       }
 
       id = id_copy;
@@ -828,9 +828,9 @@ void SplitRamBufferFreeList(SharedMemoryContext *context, int slab_index) {
   // on the ticket mutex. If we need to split, we want to stop the world and do
   // it immediately.
   BeginTicketMutex(&pool->ticket_mutex);
-  // TODO(chogan): Assuming first Tier is RAM
-  TierID tier_id = 0;
-  BufferID id = PeekFirstFreeBufferId(context, tier_id, slab_index);
+  // TODO(chogan): Assuming first Device is RAM
+  DeviceID device_id = 0;
+  BufferID id = PeekFirstFreeBufferId(context, device_id, slab_index);
   u32 unused_header_index = 0;
   BufferHeader *headers = GetHeadersBase(context);
   BufferHeader *next_unused_header = &headers[unused_header_index];
@@ -839,7 +839,7 @@ void SplitRamBufferFreeList(SharedMemoryContext *context, int slab_index) {
     BufferHeader *header_to_split = GetHeaderByIndex(context,
                                                      id.bits.header_index);
     ptrdiff_t old_data_offset = header_to_split->data_offset;
-    SetFirstFreeBufferId(context, tier_id, slab_index,
+    SetFirstFreeBufferId(context, device_id, slab_index,
                          header_to_split->next_free);
     id = header_to_split->next_free;
 
@@ -854,7 +854,7 @@ void SplitRamBufferFreeList(SharedMemoryContext *context, int slab_index) {
         next_unused_header = header_to_split;
       } else {
         while (!HeaderIsDormant(next_unused_header)) {
-          // NOTE(chogan): Assumes first Tier is RAM
+          // NOTE(chogan): Assumes first Device is RAM
           if (++unused_header_index >= pool->num_headers[0]) {
             unused_header_index = 0;
           }
@@ -866,9 +866,9 @@ void SplitRamBufferFreeList(SharedMemoryContext *context, int slab_index) {
       next_unused_header->data_offset = old_data_offset;
       next_unused_header->capacity = new_slab_size_in_bytes;
 
-      next_unused_header->next_free = PeekFirstFreeBufferId(context, tier_id,
+      next_unused_header->next_free = PeekFirstFreeBufferId(context, device_id,
                                                             slab_index - 1);
-      SetFirstFreeBufferId(context, tier_id, slab_index - 1,
+      SetFirstFreeBufferId(context, device_id, slab_index - 1,
                            next_unused_header->id);
 
       old_data_offset += new_slab_size_in_bytes;
@@ -881,35 +881,35 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
                          Arena *scratch_arena, i32 node_id, Config *config) {
   ScopedTemporaryMemory scratch(scratch_arena);
 
-  i32 **buffer_counts = PushArray<i32*>(scratch, config->num_tiers);
-  i32 **slab_buffer_sizes = PushArray<i32*>(scratch, config->num_tiers);
-  i32 *header_counts = PushArray<i32>(scratch, config->num_tiers);
+  i32 **buffer_counts = PushArray<i32*>(scratch, config->num_devices);
+  i32 **slab_buffer_sizes = PushArray<i32*>(scratch, config->num_devices);
+  i32 *header_counts = PushArray<i32>(scratch, config->num_devices);
 
-  for (int tier = 0; tier < config->num_tiers; ++tier) {
-    slab_buffer_sizes[tier] = PushArray<i32>(scratch, config->num_slabs[tier]);
-    buffer_counts[tier] = PushArray<i32>(scratch, config->num_slabs[tier]);
+  for (int device = 0; device < config->num_devices; ++device) {
+    slab_buffer_sizes[device] = PushArray<i32>(scratch, config->num_slabs[device]);
+    buffer_counts[device] = PushArray<i32>(scratch, config->num_slabs[device]);
 
-    for (int slab = 0; slab < config->num_slabs[tier]; ++slab) {
-      slab_buffer_sizes[tier][slab] = (config->block_sizes[tier] *
-                                       config->slab_unit_sizes[tier][slab]);
-      f32 slab_percentage = config->desired_slab_percentages[tier][slab];
-      size_t bytes_for_slab = (size_t)((f32)config->capacities[tier] *
+    for (int slab = 0; slab < config->num_slabs[device]; ++slab) {
+      slab_buffer_sizes[device][slab] = (config->block_sizes[device] *
+                                       config->slab_unit_sizes[device][slab]);
+      f32 slab_percentage = config->desired_slab_percentages[device][slab];
+      size_t bytes_for_slab = (size_t)((f32)config->capacities[device] *
                                        slab_percentage);
-      buffer_counts[tier][slab] = (bytes_for_slab /
-                                   slab_buffer_sizes[tier][slab]);
+      buffer_counts[device][slab] = (bytes_for_slab /
+                                   slab_buffer_sizes[device][slab]);
     }
   }
 
   // NOTE(chogan): One header per RAM block to allow for splitting and merging
-  // TODO(chogan): @configuration Assumes first Tier is RAM
-  // TODO(chogan): Allow splitting and merging for every Tier
+  // TODO(chogan): @configuration Assumes first Device is RAM
+  // TODO(chogan): Allow splitting and merging for every Device
   assert(config->capacities[0] % config->block_sizes[0] == 0);
   header_counts[0] = config->capacities[0] / config->block_sizes[0];
 
-  for (int tier = 1; tier < config->num_tiers; ++tier) {
-    header_counts[tier] = 0;
-    for (int slab = 0; slab < config->num_slabs[tier]; ++slab) {
-      header_counts[tier] += buffer_counts[tier][slab];
+  for (int device = 1; device < config->num_devices; ++device) {
+    header_counts[device] = 0;
+    for (int slab = 0; slab < config->num_slabs[device]; ++slab) {
+      header_counts[device] += buffer_counts[device][slab];
     }
   }
 
@@ -921,18 +921,18 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
   i32 max_headers_needed = 0;
   size_t free_lists_size = 0;
   size_t slab_metadata_size = 0;
-  for (int tier = 0; tier < config->num_tiers; ++tier) {
-    max_headers_needed += header_counts[tier];
-    free_lists_size += config->num_slabs[tier] * sizeof(BufferID);
+  for (int device = 0; device < config->num_devices; ++device) {
+    max_headers_needed += header_counts[device];
+    free_lists_size += config->num_slabs[device] * sizeof(BufferID);
     // NOTE(chogan): The '* 2' is because we have an i32 for both slab unit size
     // and slab buffer size
-    slab_metadata_size += config->num_slabs[tier] * sizeof(i32) * 2;
+    slab_metadata_size += config->num_slabs[device] * sizeof(i32) * 2;
     // NOTE(chogan): buffers_available array
-    slab_metadata_size += config->num_slabs[tier] * sizeof(u32);
+    slab_metadata_size += config->num_slabs[device] * sizeof(u32);
   }
 
   size_t headers_size = max_headers_needed * sizeof(BufferHeader);
-  size_t tiers_size = config->num_tiers * sizeof(Tier);
+  size_t devices_size = config->num_devices * sizeof(Device);
   size_t buffer_pool_size = (sizeof(BufferPool) + free_lists_size +
                              slab_metadata_size);
 
@@ -943,7 +943,7 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
   // In the future it would be nice to have a programatic way to account for
   // alignment padding.
   size_t required_bytes_for_metadata = (headers_size + buffer_pool_size +
-                                        tiers_size);
+                                        devices_size);
 
   size_t required_bytes_for_metadata_rounded =
     RoundUpToMultiple(required_bytes_for_metadata, config->block_sizes[0]);
@@ -961,41 +961,41 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
 
   u32 total_headers = max_headers_needed - num_blocks_reserved_for_metadata;
 
-  int *num_buffers = PushArray<int>(scratch_arena, config->num_tiers);
+  int *num_buffers = PushArray<int>(scratch_arena, config->num_devices);
   int total_buffers = 0;
-  for (int tier = 0; tier < config->num_tiers; ++tier) {
-    fprintf(stderr, "Tier %d:\n", tier);
-    num_buffers[tier] = 0;
-    for (int slab = 0; slab < config->num_slabs[tier]; ++slab) {
+  for (int device = 0; device < config->num_devices; ++device) {
+    fprintf(stderr, "Device %d:\n", device);
+    num_buffers[device] = 0;
+    for (int slab = 0; slab < config->num_slabs[device]; ++slab) {
       // TODO(chogan): @logging Switch to DLOG
-      fprintf(stderr, "    %d-Buffers: %d\n", slab, buffer_counts[tier][slab]);
-      num_buffers[tier] += buffer_counts[tier][slab];
+      fprintf(stderr, "    %d-Buffers: %d\n", slab, buffer_counts[device][slab]);
+      num_buffers[device] += buffer_counts[device][slab];
     }
-    total_buffers += num_buffers[tier];
-    fprintf(stderr, "    Num Headers: %d\n", header_counts[tier]);
-    fprintf(stderr, "    Num Buffers: %d\n", num_buffers[tier]);
+    total_buffers += num_buffers[device];
+    fprintf(stderr, "    Num Headers: %d\n", header_counts[device]);
+    fprintf(stderr, "    Num Buffers: %d\n", num_buffers[device]);
   }
   fprintf(stderr, "Total Buffers: %d\n", total_buffers);
 
   // Build RAM buffers.
 
-  // TODO(chogan): @configuration Assumes the first Tier is RAM
+  // TODO(chogan): @configuration Assumes the first Device is RAM
   for (int slab = 0; slab < config->num_slabs[0]; ++slab) {
     PartitionRamBuffers(buffer_pool_arena, slab_buffer_sizes[0][slab],
                         buffer_counts[0][slab], config->block_sizes[slab]);
   }
 
-  // Build Tiers
+  // Build Devices
 
-  Tier *tiers = InitTiers(buffer_pool_arena, config);
+  Device *devices = InitDevices(buffer_pool_arena, config);
 
   // Create Free Lists
 
   BufferID **free_lists = PushArray<BufferID*>(scratch_arena,
-                                               config->num_tiers);
-  for (int tier = 0; tier < config->num_tiers; ++tier) {
-    free_lists[tier] = PushArray<BufferID>(scratch_arena,
-                                           config->num_slabs[tier]);
+                                               config->num_devices);
+  for (int device = 0; device < config->num_devices; ++device) {
+    free_lists[device] = PushArray<BufferID>(scratch_arena,
+                                           config->num_slabs[device]);
   }
 
   // Build BufferHeaders
@@ -1003,13 +1003,13 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
   u32 start = 0;
   u8 *header_begin = 0;
   ptrdiff_t initial_offset = 0;
-  // TODO(chogan): @configuration Assumes first Tier is RAM
+  // TODO(chogan): @configuration Assumes first Device is RAM
   for (i32 i = 0; i < config->num_slabs[0]; ++i) {
     u32 end = start + buffer_counts[0][i];
-    TierID ram_tier_id = 0;
-    free_lists[ram_tier_id][i] =
+    DeviceID ram_device_id = 0;
+    free_lists[ram_device_id][i] =
       MakeBufferHeaders(buffer_pool_arena, slab_buffer_sizes[0][i], start, end,
-                        node_id, ram_tier_id, initial_offset, &header_begin);
+                        node_id, ram_device_id, initial_offset, &header_begin);
     start = end;
     initial_offset += buffer_counts[0][i] * slab_buffer_sizes[0][i];
   }
@@ -1021,14 +1021,14 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
     start += 1;
   }
 
-  // NOTE(chogan): Add headers for the other Tiers
-  for (int tier = 1; tier < config->num_tiers; ++tier) {
-    for (int slab = 0; slab < config->num_slabs[tier]; ++slab) {
-      // NOTE(chogan): File buffering scheme is one file per slab per Tier
-      u32 end = start + buffer_counts[tier][slab];
-      free_lists[tier][slab] = MakeBufferHeaders(buffer_pool_arena,
-                                                 slab_buffer_sizes[tier][slab],
-                                                 start, end, node_id, tier, 0,
+  // NOTE(chogan): Add headers for the other Devices
+  for (int device = 1; device < config->num_devices; ++device) {
+    for (int slab = 0; slab < config->num_slabs[device]; ++slab) {
+      // NOTE(chogan): File buffering scheme is one file per slab per Device
+      u32 end = start + buffer_counts[device][slab];
+      free_lists[device][slab] = MakeBufferHeaders(buffer_pool_arena,
+                                                 slab_buffer_sizes[device][slab],
+                                                 start, end, node_id, device, 0,
                                                  0);
       start = end;
     }
@@ -1038,34 +1038,34 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
 
   BufferPool *pool = PushClearedStruct<BufferPool>(buffer_pool_arena);
   pool->header_storage_offset = header_begin - shmem_base;
-  pool->tier_storage_offset = (u8 *)tiers - shmem_base;
-  pool->num_tiers = config->num_tiers;
+  pool->device_storage_offset = (u8 *)devices - shmem_base;
+  pool->num_devices = config->num_devices;
   pool->total_headers = total_headers;
 
-  for (int tier = 0; tier < config->num_tiers; ++tier) {
-    pool->block_sizes[tier] = config->block_sizes[tier];
-    pool->num_headers[tier] = header_counts[tier];
-    pool->num_slabs[tier] = config->num_slabs[tier];
+  for (int device = 0; device < config->num_devices; ++device) {
+    pool->block_sizes[device] = config->block_sizes[device];
+    pool->num_headers[device] = header_counts[device];
+    pool->num_slabs[device] = config->num_slabs[device];
     BufferID *free_list = PushArray<BufferID>(buffer_pool_arena,
-                                              config->num_slabs[tier]);
+                                              config->num_slabs[device]);
     i32 *slab_unit_sizes = PushArray<i32>(buffer_pool_arena,
-                                          config->num_slabs[tier]);
-    i32 *slab_buffer_sizes_for_tier = PushArray<i32>(buffer_pool_arena,
-                                            config->num_slabs[tier]);
+                                          config->num_slabs[device]);
+    i32 *slab_buffer_sizes_for_device = PushArray<i32>(buffer_pool_arena,
+                                            config->num_slabs[device]);
     u32 *available_buffers = PushArray<u32>(buffer_pool_arena,
-                                            config->num_slabs[tier]);
+                                            config->num_slabs[device]);
 
-    for (int slab = 0; slab < config->num_slabs[tier]; ++slab) {
-      free_list[slab] = free_lists[tier][slab];
-      slab_unit_sizes[slab] = config->slab_unit_sizes[tier][slab];
-      slab_buffer_sizes_for_tier[slab] = slab_buffer_sizes[tier][slab];
-      available_buffers[slab] = buffer_counts[tier][slab];
+    for (int slab = 0; slab < config->num_slabs[device]; ++slab) {
+      free_list[slab] = free_lists[device][slab];
+      slab_unit_sizes[slab] = config->slab_unit_sizes[device][slab];
+      slab_buffer_sizes_for_device[slab] = slab_buffer_sizes[device][slab];
+      available_buffers[slab] = buffer_counts[device][slab];
     }
-    pool->free_list_offsets[tier] = (u8 *)free_list - shmem_base;
-    pool->slab_unit_sizes_offsets[tier] = (u8 *)slab_unit_sizes - shmem_base;
-    pool->slab_buffer_sizes_offsets[tier] = ((u8 *)slab_buffer_sizes_for_tier -
+    pool->free_list_offsets[device] = (u8 *)free_list - shmem_base;
+    pool->slab_unit_sizes_offsets[device] = (u8 *)slab_unit_sizes - shmem_base;
+    pool->slab_buffer_sizes_offsets[device] = ((u8 *)slab_buffer_sizes_for_device -
                                              shmem_base);
-    pool->buffers_available_offsets[tier] = ((u8 *)available_buffers -
+    pool->buffers_available_offsets[device] = ((u8 *)available_buffers -
                                              shmem_base);
   }
 
@@ -1104,46 +1104,46 @@ void MakeFullShmemName(char *dest, const char *base) {
 
 void InitFilesForBuffering(SharedMemoryContext *context, bool make_space) {
   BufferPool *pool = GetBufferPoolFromContext(context);
-  context->buffering_filenames.resize(pool->num_tiers);
+  context->buffering_filenames.resize(pool->num_devices);
 
   // TODO(chogan): Check the limit for open files via getrlimit. We might have
   // to do some smarter opening and closing to stay under the limit. Could also
   // increase the soft limit to the hard limit.
-  for (int tier_id = 0; tier_id < pool->num_tiers; ++tier_id) {
-    Tier *tier = GetTierById(context, tier_id);
-    char *mount_point = &tier->mount_point[0];
+  for (int device_id = 0; device_id < pool->num_devices; ++device_id) {
+    Device *device = GetDeviceById(context, device_id);
+    char *mount_point = &device->mount_point[0];
 
     if (strlen(mount_point) == 0) {
-      // NOTE(chogan): RAM Tier. No need for a file.
+      // NOTE(chogan): RAM Device. No need for a file.
       continue;
     }
 
     bool ends_in_slash = mount_point[strlen(mount_point) - 1] == '/';
-    context->buffering_filenames[tier_id].resize(pool->num_slabs[tier_id]);
+    context->buffering_filenames[device_id].resize(pool->num_slabs[device_id]);
 
-    for (int slab = 0; slab < pool->num_slabs[tier_id]; ++slab) {
+    for (int slab = 0; slab < pool->num_slabs[device_id]; ++slab) {
       // TODO(chogan): Where does memory for filenames come from? Probably need
       // persistent memory for each application core.
-      context->buffering_filenames[tier_id][slab] =
+      context->buffering_filenames[device_id][slab] =
         std::string(std::string(mount_point) + (ends_in_slash ? "" : "/") +
-                    "tier" + std::to_string(tier_id) + "_slab" +
+                    "device" + std::to_string(device_id) + "_slab" +
                     std::to_string(slab) + ".hermes");
 
       const char *buffering_fname =
-        context->buffering_filenames[tier_id][slab].c_str();
+        context->buffering_filenames[device_id][slab].c_str();
       FILE *buffering_file = fopen(buffering_fname, "w+");
-      if (make_space && tier->has_fallocate) {
-        // TODO(chogan): Some Tiers require file initialization on each node,
+      if (make_space && device->has_fallocate) {
+        // TODO(chogan): Some Devices require file initialization on each node,
         // and some are shared (burst buffers) and only require one rank to
         // initialize them
 
         // TODO(chogan): Use posix_fallocate when it is available
         [[maybe_unused]] int ftruncate_result =
-          ftruncate(fileno(buffering_file), tier->capacity);
+          ftruncate(fileno(buffering_file), device->capacity);
         // TODO(chogan): @errorhandling
         assert(ftruncate_result == 0);
       }
-      context->open_streams[tier_id][slab] = buffering_file;
+      context->open_streams[device_id][slab] = buffering_file;
     }
   }
 }
@@ -1218,10 +1218,10 @@ void UnmapSharedMemory(SharedMemoryContext *context) {
 void ReleaseSharedMemoryContext(SharedMemoryContext *context) {
   BufferPool *pool = GetBufferPoolFromContext(context);
 
-  for (int tier_id = 0; tier_id < pool->num_tiers; ++tier_id) {
-    for (int slab = 0; slab < pool->num_slabs[tier_id]; ++slab) {
-      if (context->open_streams[tier_id][slab]) {
-        int fclose_result = fclose(context->open_streams[tier_id][slab]);
+  for (int device_id = 0; device_id < pool->num_devices; ++device_id) {
+    for (int slab = 0; slab < pool->num_slabs[device_id]; ++slab) {
+      if (context->open_streams[device_id][slab]) {
+        int fclose_result = fclose(context->open_streams[device_id][slab]);
         if (fclose_result != 0) {
           // TODO(chogan): @errorhandling
         }
@@ -1236,7 +1236,7 @@ void ReleaseSharedMemoryContext(SharedMemoryContext *context) {
 size_t LocalWriteBufferById(SharedMemoryContext *context, BufferID id,
                             const Blob &blob, size_t offset) {
   BufferHeader *header = GetHeaderByIndex(context, id.bits.header_index);
-  Tier *tier = GetTierFromHeader(context, header);
+  Device *device = GetDeviceFromHeader(context, header);
   size_t write_size = header->used;
 
   // TODO(chogan): Should this be a TicketMutex? It seems that at any
@@ -1248,19 +1248,19 @@ size_t LocalWriteBufferById(SharedMemoryContext *context, BufferID id,
   LockBuffer(header);
 
   u8 *at = (u8 *)blob.data + offset;
-  if (tier->is_byte_addressable) {
+  if (device->is_byte_addressable) {
     u8 *dest = GetRamBufferPtr(context, header->id);
     memcpy(dest, at, write_size);
   } else {
     int slab_index = GetSlabIndexFromHeader(context, header);
-    FILE *file = context->open_streams[tier->id][slab_index];
+    FILE *file = context->open_streams[device->id][slab_index];
     if (!file) {
       // TODO(chogan): Check number of opened files against maximum allowed.
       // May have to close something.
       const char *filename =
-        context->buffering_filenames[tier->id][slab_index].c_str();
+        context->buffering_filenames[device->id][slab_index].c_str();
       file = fopen(filename, "r+");
-      context->open_streams[tier->id][slab_index] = file;
+      context->open_streams[device->id][slab_index] = file;
     }
     fseek(file, header->data_offset, SEEK_SET);
     [[maybe_unused]] size_t items_written = fwrite(at, write_size, 1, file);
@@ -1309,7 +1309,7 @@ void WriteBlobToBuffers(SharedMemoryContext *context, RpcContext *rpc,
 size_t LocalReadBufferById(SharedMemoryContext *context, BufferID id,
                            Blob *blob, size_t read_offset) {
   BufferHeader *header = GetHeaderByIndex(context, id.bits.header_index);
-  Tier *tier = GetTierFromHeader(context, header);
+  Device *device = GetDeviceFromHeader(context, header);
   size_t read_size = header->used;
 
   // TODO(chogan): Should this be a TicketMutex? It seems that at any
@@ -1321,18 +1321,18 @@ size_t LocalReadBufferById(SharedMemoryContext *context, BufferID id,
   LockBuffer(header);
 
   size_t result = 0;
-  if (tier->is_byte_addressable) {
+  if (device->is_byte_addressable) {
     u8 *src = GetRamBufferPtr(context, header->id);
     memcpy((u8 *)blob->data + read_offset, src, read_size);
     result = read_size;
   } else {
     int slab_index = GetSlabIndexFromHeader(context, header);
-    FILE *file = context->open_streams[tier->id][slab_index];
+    FILE *file = context->open_streams[device->id][slab_index];
     if (!file) {
       // TODO(chogan): Check number of opened files against maximum allowed.
       // May have to close something.
       const char *filename =
-        context->buffering_filenames[tier->id][slab_index].c_str();
+        context->buffering_filenames[device->id][slab_index].c_str();
       file = fopen(filename, "r+");
     }
     fseek(file, header->data_offset, SEEK_SET);

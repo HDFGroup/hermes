@@ -39,7 +39,7 @@ enum class TokenType {
 
 enum ConfigVariable {
   ConfigVariable_Unkown,
-  ConfigVariable_NumTiers,
+  ConfigVariable_NumDevices,
   ConfigVariable_Capacities,
   ConfigVariable_BlockSizes,
   ConfigVariable_NumSlabs,
@@ -70,7 +70,7 @@ enum ConfigVariable {
 // TODO(chogan): Make this work independent of declaration order
 static const char *kConfigVariableStrings[ConfigVariable_Count] = {
   "unknown",
-  "num_tiers",
+  "num_devices",
   "capacities_mb",
   "block_sizes_kb",
   "num_slabs",
@@ -596,9 +596,9 @@ Token *ParseCharArrayString(Token *tok, char *arr) {
   return tok;
 }
 
-void RequireNumTiers(Config *config) {
-  if (config->num_tiers == 0) {
-    LOG(FATAL) << "The configuration variable 'num_tiers' must be defined first"
+void RequireNumDevices(Config *config) {
+  if (config->num_devices == 0) {
+    LOG(FATAL) << "The configuration variable 'num_devices' must be defined first"
                << std::endl;
   }
 }
@@ -659,56 +659,56 @@ void ParseTokens(TokenList *tokens, Config *config) {
     tok = BeginStatement(tok);
 
     switch (var) {
-      case ConfigVariable_NumTiers: {
+      case ConfigVariable_NumDevices: {
         int val = ParseInt(&tok);
-        config->num_tiers = val;
+        config->num_devices = val;
         break;
       }
       case ConfigVariable_Capacities: {
-        RequireNumTiers(config);
-        tok = ParseSizetList(tok, config->capacities, config->num_tiers);
+        RequireNumDevices(config);
+        tok = ParseSizetList(tok, config->capacities, config->num_devices);
         // NOTE(chogan): Convert from MB to bytes
-        for (int i = 0; i < config->num_tiers; ++i) {
+        for (int i = 0; i < config->num_devices; ++i) {
           config->capacities[i] *= 1024 * 1024;
         }
         break;
       }
       case ConfigVariable_BlockSizes: {
-        RequireNumTiers(config);
-        tok = ParseIntList(tok, config->block_sizes, config->num_tiers);
+        RequireNumDevices(config);
+        tok = ParseIntList(tok, config->block_sizes, config->num_devices);
         // NOTE(chogan): Convert from KB to bytes
-        for (int i = 0; i < config->num_tiers; ++i) {
+        for (int i = 0; i < config->num_devices; ++i) {
           config->block_sizes[i] *= 1024;
         }
         break;
       }
       case ConfigVariable_NumSlabs: {
-        RequireNumTiers(config);
-        tok = ParseIntList(tok, config->num_slabs, config->num_tiers);
+        RequireNumDevices(config);
+        tok = ParseIntList(tok, config->num_slabs, config->num_devices);
         break;
       }
       case ConfigVariable_SlabUnitSizes: {
-        RequireNumTiers(config);
+        RequireNumDevices(config);
         RequireNumSlabs(config);
-        tok = ParseIntListList(tok, config->slab_unit_sizes, config->num_tiers,
+        tok = ParseIntListList(tok, config->slab_unit_sizes, config->num_devices,
                                config->num_slabs);
         break;
       }
       case ConfigVariable_DesiredSlabPercentages: {
-        RequireNumTiers(config);
+        RequireNumDevices(config);
         RequireNumSlabs(config);
         tok = ParseFloatListList(tok, config->desired_slab_percentages,
-                                 config->num_tiers, config->num_slabs);
+                                 config->num_devices, config->num_slabs);
         break;
       }
       case ConfigVariable_BandwidthsMbps: {
-        RequireNumTiers(config);
-        tok = ParseFloatList(tok, config->bandwidths, config->num_tiers);
+        RequireNumDevices(config);
+        tok = ParseFloatList(tok, config->bandwidths, config->num_devices);
         break;
       }
       case ConfigVariable_LatenciesUs: {
-        RequireNumTiers(config);
-        tok = ParseFloatList(tok, config->latencies, config->num_tiers);
+        RequireNumDevices(config);
+        tok = ParseFloatList(tok, config->latencies, config->num_devices);
         break;
       }
       case ConfigVariable_BufferPoolArenaPercentage: {
@@ -732,8 +732,8 @@ void ParseTokens(TokenList *tokens, Config *config) {
         break;
       }
       case ConfigVariable_MountPoints: {
-        RequireNumTiers(config);
-        tok = ParseStringList(tok, config->mount_points, config->num_tiers);
+        RequireNumDevices(config);
+        tok = ParseStringList(tok, config->mount_points, config->num_devices);
         break;
       }
       case ConfigVariable_MaxBucketsPerNode: {

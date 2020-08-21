@@ -13,7 +13,7 @@ class DataPlacementEngine {
 
 Status CalculatePlacement(SharedMemoryContext *context, RpcContext *rpc,
                           std::vector<size_t> &blob_size,
-                          std::vector<TieredSchema> &output,
+                          std::vector<PlacementSchema> &output,
                           const api::Context &api_context);
 
 }  // namespace hermes

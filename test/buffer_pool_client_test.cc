@@ -34,7 +34,7 @@ struct TimingResult {
 
 TimingResult TestGetBuffersRpc(RpcContext *rpc, int iters) {
   TimingResult result = {};
-  TieredSchema schema{std::make_pair(4096, 0)};
+  PlacementSchema schema{std::make_pair(4096, 0)};
 
   Timer get_timer;
   Timer release_timer;
@@ -63,7 +63,7 @@ TimingResult TestGetBuffersRpc(RpcContext *rpc, int iters) {
 
 TimingResult TestGetBuffers(SharedMemoryContext *context, int iters) {
   TimingResult result = {};
-  TieredSchema schema{std::make_pair(4096, 0)};
+  PlacementSchema schema{std::make_pair(4096, 0)};
 
   Timer get_timer;
   Timer release_timer;
@@ -149,7 +149,7 @@ void TestFileBuffering(std::shared_ptr<hapi::Hermes> hermes, int rank,
                        const char *test_file) {
   SharedMemoryContext *context = &hermes->context_;
   RpcContext *rpc = &hermes->rpc_;
-  TierID tier_id = 1;
+  DeviceID device_id = 1;
 
   ScopedTemporaryMemory scratch(&hermes->trans_arena_);
 
@@ -157,7 +157,7 @@ void TestFileBuffering(std::shared_ptr<hapi::Hermes> hermes, int rank,
   Blob blob = mapper.blob;
 
   if (blob.data) {
-    TieredSchema schema{std::make_pair(blob.size, tier_id)};
+    PlacementSchema schema{std::make_pair(blob.size, device_id)};
     std::vector<BufferID> buffer_ids(0);
 
     while (buffer_ids.size() == 0) {
