@@ -71,7 +71,7 @@ struct BlobIdList {
   u32 capacity;
 };
 
-struct BufferIdList {
+struct IdList {
   u32 head_offset;
   u32 length;
 };

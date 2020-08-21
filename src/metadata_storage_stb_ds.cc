@@ -148,12 +148,12 @@ void LocalAddBlobIdToBucket(MetadataManager *mdm, BucketID bucket_id,
 
 u32 LocalAllocateBufferIdList(MetadataManager *mdm,
                               const std::vector<BufferID> &buffer_ids) {
-  static_assert(sizeof(BufferIdList) == sizeof(BufferID));
+  static_assert(sizeof(IdList) == sizeof(BufferID));
   Heap *id_heap = GetIdHeap(mdm);
   u32 length = (u32)buffer_ids.size();
   // NOTE(chogan): Add 1 extra for the embedded BufferIdList
   BufferID *id_list_memory = HeapPushArray<BufferID>(id_heap, length + 1);
-  BufferIdList *id_list = (BufferIdList *)id_list_memory;
+  IdList *id_list = (IdList *)id_list_memory;
   id_list->length = length;
   id_list->head_offset = GetHeapOffset(id_heap, (u8 *)(id_list + 1));
   CopyIds((u64 *)(id_list + 1), (u64 *)buffer_ids.data(), length);
@@ -168,8 +168,8 @@ u32 LocalAllocateBufferIdList(MetadataManager *mdm,
 std::vector<BufferID> LocalGetBufferIdList(MetadataManager *mdm,
                                            BlobID blob_id) {
   Heap *id_heap = GetIdHeap(mdm);
-  BufferIdList *id_list =
-    (BufferIdList *)HeapOffsetToPtr(id_heap, blob_id.bits.buffer_ids_offset);
+  IdList *id_list =
+    (IdList *)HeapOffsetToPtr(id_heap, blob_id.bits.buffer_ids_offset);
   BufferID *ids = (BufferID *)HeapOffsetToPtr(id_heap, id_list->head_offset);
   std::vector<BufferID> result(id_list->length);
   CopyIds((u64 *)result.data(), (u64 *)ids, id_list->length);
@@ -180,8 +180,8 @@ std::vector<BufferID> LocalGetBufferIdList(MetadataManager *mdm,
 void LocalGetBufferIdList(Arena *arena, MetadataManager *mdm, BlobID blob_id,
                           BufferIdArray *buffer_ids) {
   Heap *id_heap = GetIdHeap(mdm);
-  BufferIdList *id_list =
-    (BufferIdList *)HeapOffsetToPtr(id_heap, blob_id.bits.buffer_ids_offset);
+  IdList *id_list =
+    (IdList *)HeapOffsetToPtr(id_heap, blob_id.bits.buffer_ids_offset);
   BufferID *ids = (BufferID *)HeapOffsetToPtr(id_heap, id_list->head_offset);
   buffer_ids->ids = PushArray<BufferID>(arena, id_list->length);
   buffer_ids->length = id_list->length;
