@@ -686,7 +686,7 @@ Target *InitTargets(Arena *arena, Config *config, Device *devices,
   for (int i = 0; i < config->num_targets; ++i) {
     TargetID id = {};
     id.bits.node_id = node_id;
-    id.bits.device_id = (u16)i;
+    id.bits.device_id = (DeviceID)i;
     id.bits.index = i;
     Target *target = result + i;
     target->id = id;
