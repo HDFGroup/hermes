@@ -100,7 +100,7 @@ static char *GetKey(MetadataManager *mdm, IdMap *map, u32 index) {
   return result;
 }
 
-void AllocateOrGrowBlobIdList(MetadataManager *mdm, BlobIdList *blobs) {
+void AllocateOrGrowBlobIdList(MetadataManager *mdm, ChunkedIdList *blobs) {
   Heap *id_heap = GetIdHeap(mdm);
   BeginTicketMutex(&mdm->id_mutex);
   if (blobs->capacity == 0) {
@@ -133,7 +133,7 @@ void LocalAddBlobIdToBucket(MetadataManager *mdm, BucketID bucket_id,
   // TODO(chogan): Think about lock granularity
   BeginTicketMutex(&mdm->bucket_mutex);
   BucketInfo *info = LocalGetBucketInfoById(mdm, bucket_id);
-  BlobIdList *blobs = &info->blobs;
+  ChunkedIdList *blobs = &info->blobs;
 
   if (blobs->length >= blobs->capacity) {
     AllocateOrGrowBlobIdList(mdm, blobs);
@@ -201,7 +201,7 @@ void LocalRemoveBlobFromBucketInfo(SharedMemoryContext *context,
                                    BucketID bucket_id, BlobID blob_id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   BucketInfo *info = LocalGetBucketInfoById(mdm, bucket_id);
-  BlobIdList *blobs = &info->blobs;
+  ChunkedIdList *blobs = &info->blobs;
   Heap *id_heap = GetIdHeap(mdm);
 
   BeginTicketMutex(&mdm->bucket_mutex);
@@ -219,7 +219,7 @@ bool LocalContainsBlob(SharedMemoryContext *context, BucketID bucket_id,
                        BlobID blob_id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   BucketInfo *info = LocalGetBucketInfoById(mdm, bucket_id);
-  BlobIdList *blobs = &info->blobs;
+  ChunkedIdList *blobs = &info->blobs;
   Heap *id_heap = GetIdHeap(mdm);
   BlobID *blob_id_arr = (BlobID *)HeapOffsetToPtr(id_heap, blobs->head_offset);
 

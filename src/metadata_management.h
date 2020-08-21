@@ -65,7 +65,7 @@ struct Stats {
 
 const int kIdListChunkSize = 10;
 
-struct BlobIdList {
+struct ChunkedIdList {
   u32 head_offset;
   u32 length;
   u32 capacity;
@@ -83,7 +83,7 @@ struct BufferIdArray {
 
 struct BucketInfo {
   BucketID next_free;
-  BlobIdList blobs;
+  ChunkedIdList blobs;
   std::atomic<int> ref_count;
   bool active;
   Stats stats;
@@ -93,7 +93,7 @@ static constexpr int kMaxTraitsPerVBucket = 8;
 
 struct VBucketInfo {
   VBucketID next_free;
-  BlobIdList blobs;
+  ChunkedIdList blobs;
   std::atomic<int> ref_count;
   TraitID traits[kMaxTraitsPerVBucket];
   bool active;
