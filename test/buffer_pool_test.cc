@@ -18,12 +18,12 @@ void TestGetBuffers(hapi::Hermes *hermes) {
   using namespace hermes;
   SharedMemoryContext *context = &hermes->context_;
   BufferPool *pool = GetBufferPoolFromContext(context);
-  TierID tier_id = 0;
-  i32 block_size = pool->block_sizes[tier_id];
+  DeviceID device_id = 0;
+  i32 block_size = pool->block_sizes[device_id];
 
   {
     // A request smaller than the block size should return 1 buffer
-    TieredSchema schema{std::make_pair(block_size / 2, tier_id)};
+    PlacementSchema schema{std::make_pair(block_size / 2, device_id)};
     std::vector<BufferID> ret = GetBuffers(context, schema);
     Assert(ret.size() == 1);
     LocalReleaseBuffers(context, ret);
@@ -31,21 +31,21 @@ void TestGetBuffers(hapi::Hermes *hermes) {
 
   {
     // A request larger than the available space should return no buffers
-    TieredSchema schema{std::make_pair(GIGABYTES(3), tier_id)};
+    PlacementSchema schema{std::make_pair(GIGABYTES(3), device_id)};
     std::vector<BufferID> ret = GetBuffers(context, schema);
     Assert(ret.size() == 0);
   }
 
   {
-    // Get all buffers in the tier
+    // Get all buffers on the device
     UpdateGlobalSystemViewState(context, &hermes->rpc_);
-    std::vector<u64> global_state = GetGlobalTierCapacities(context,
-                                                            &hermes->rpc_);
-    TieredSchema schema{std::make_pair(global_state[tier_id], tier_id)};
+    std::vector<u64> global_state = GetGlobalDeviceCapacities(context,
+                                                              &hermes->rpc_);
+    PlacementSchema schema{std::make_pair(global_state[device_id], device_id)};
     std::vector<BufferID> ret = GetBuffers(context, schema);
     Assert(ret.size());
     // The next request should fail
-    TieredSchema failed_schema{std::make_pair(1, tier_id)};
+    PlacementSchema failed_schema{std::make_pair(1, device_id)};
     std::vector<BufferID> failed_request = GetBuffers(context, failed_schema);
     Assert(failed_request.size() == 0);
     LocalReleaseBuffers(context, ret);
@@ -59,7 +59,7 @@ void TestGetBandwidths(hermes::SharedMemoryContext *context) {
   InitTestConfig(&config);
   for (size_t i = 0; i < bandwidths.size(); ++i) {
     Assert(bandwidths[i] == config.bandwidths[i]);
-    Assert(bandwidths.size() == (size_t)config.num_tiers);
+    Assert(bandwidths.size() == (size_t)config.num_devices);
   }
 }
 

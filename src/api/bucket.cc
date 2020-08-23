@@ -28,7 +28,7 @@ Status Bucket::Put(const std::string &name, const u8 *data, size_t size,
 
   if (IsValid()) {
     std::vector<size_t> sizes(1, size);
-    std::vector<TieredSchema> schemas; 
+    std::vector<PlacementSchema> schemas;
     ret = CalculatePlacement(&hermes_->context_, &hermes_->rpc_, sizes, schemas,
                              ctx);
 

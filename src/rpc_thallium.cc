@@ -56,8 +56,8 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
 
   // BufferPool requests
 
-  function<void(const request&, const TieredSchema&)> rpc_get_buffers =
-    [context](const request &req, const TieredSchema &schema) {
+  function<void(const request&, const PlacementSchema&)> rpc_get_buffers =
+    [context](const request &req, const PlacementSchema &schema) {
       std::vector<BufferID> result = GetBuffers(context, schema);
       req.respond(result);
     };
@@ -272,9 +272,9 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
       LocalDecrementRefcount(context, id);
     };
 
-  function<void(const request&)> rpc_get_global_tier_capacities =
+  function<void(const request&)> rpc_get_global_device_capacities =
     [context](const request &req) {
-      std::vector<u64> result = LocalGetGlobalTierCapacities(context);
+      std::vector<u64> result = LocalGetGlobalDeviceCapacities(context);
 
       req.respond(result);
     };
@@ -335,8 +335,8 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
                     rpc_decrement_refcount).disable_response();
   rpc_server->define("RemoteUpdateGlobalSystemViewState",
                      rpc_update_global_system_view_state).disable_response();
-  rpc_server->define("RemoteGetGlobalTierCapacities",
-                     rpc_get_global_tier_capacities);
+  rpc_server->define("RemoteGetGlobalDeviceCapacities",
+                     rpc_get_global_device_capacities);
   rpc_server->define("RemoteFinalize", rpc_finalize).disable_response();
 }
 

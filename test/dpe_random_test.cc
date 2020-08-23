@@ -11,17 +11,17 @@ using namespace hermes;
 namespace hermes {
 namespace testing {
 struct SystemViewState {
-  u64 bytes_capacity[kMaxTiers];
-  u64 bytes_available[kMaxTiers];
-  u64 bandwidth[kMaxTiers];
-  int num_tiers;
+  u64 bytes_capacity[kMaxDevices];
+  u64 bytes_available[kMaxDevices];
+  u64 bandwidth[kMaxDevices];
+  int num_devices;
 };
 }  // namespace hermes
 }  // namespace testing
 
 testing::SystemViewState InitSystemViewState() {
   testing::SystemViewState result = {};
-  result.num_tiers = 4;
+  result.num_devices = 4;
   u64 one_mb = 1024 * 1024;
 
   result.bytes_available[0] = 5 * one_mb;
@@ -47,8 +47,8 @@ static testing::SystemViewState globalSystemViewState {InitSystemViewState()};
 testing::SystemViewState GetSystemViewState() {
   testing::SystemViewState result = {};
 
-  for (int i {0}; i < globalSystemViewState.num_tiers; ++i) {
-    result.num_tiers = globalSystemViewState.num_tiers;
+  for (int i {0}; i < globalSystemViewState.num_devices; ++i) {
+    result.num_devices = globalSystemViewState.num_devices;
     result.bytes_available[i] = globalSystemViewState.bytes_available[i];
     result.bandwidth[i] = globalSystemViewState.bandwidth[i];
   }
@@ -56,20 +56,20 @@ testing::SystemViewState GetSystemViewState() {
   return result;
 }
 
-void UpdateSystemViewState(TieredSchema schema) {
-  for (auto [size, tier] : schema) {
-    globalSystemViewState.bytes_available[tier] -= size;
+void UpdateSystemViewState(PlacementSchema schema) {
+  for (auto [size, device] : schema) {
+    globalSystemViewState.bytes_available[device] -= size;
   }
 }
 
-TieredSchema RandomPlacement(std::vector<hermes::api::Blob> blobs) {
-  TieredSchema result;
+PlacementSchema RandomPlacement(std::vector<hermes::api::Blob> blobs) {
+  PlacementSchema result;
   // TODO (KIMMY): use kernel function of system view
   testing::SystemViewState state {GetSystemViewState()};
   std::multimap<u64, int> ordered_cap;
 
   u64 avail_cap {0};
-  for (int j {0}; j < state.num_tiers; ++j) {
+  for (int j {0}; j < state.num_devices; ++j) {
     avail_cap += state.bytes_available[j];
     ordered_cap.insert(std::pair<u64, int>(state.bytes_available[j], j));
   }
@@ -130,7 +130,7 @@ TieredSchema RandomPlacement(std::vector<hermes::api::Blob> blobs) {
                              bolb_each_portion*(split_num-1));
 
      for (size_t k {0}; k<new_blob_size.size(); ++k) {
-       int dst {state.num_tiers};
+       int dst {state.num_devices};
        auto itlow = ordered_cap.lower_bound (new_blob_size[k]);
        if (itlow == ordered_cap.end()) {
          std::cerr << "No target has enough capacity (max " << ordered_cap.rbegin()->first
@@ -138,7 +138,7 @@ TieredSchema RandomPlacement(std::vector<hermes::api::Blob> blobs) {
        }
 
        std::uniform_int_distribution<std::mt19937::result_type>
-         dst_distribution((*itlow).second, state.num_tiers-1);
+         dst_distribution((*itlow).second, state.num_devices-1);
        dst = dst_distribution(rng);
        result.push_back(std::make_pair(new_blob_size[k], dst));
        for (auto it=itlow; it!=ordered_cap.end(); ++it) {
@@ -154,7 +154,7 @@ TieredSchema RandomPlacement(std::vector<hermes::api::Blob> blobs) {
    // Blob size is less than 64KB or do not split
    else {
      std::cout << "blob size is " << blobs[i].size() << '\n' << std::flush;
-     int dst {state.num_tiers};
+     int dst {state.num_devices};
      auto itlow = ordered_cap.lower_bound (blobs[i].size());
      if (itlow == ordered_cap.end()) {
        std::cerr << "No target has enough capacity (max "
@@ -163,7 +163,7 @@ TieredSchema RandomPlacement(std::vector<hermes::api::Blob> blobs) {
      }
 
      std::uniform_int_distribution<std::mt19937::result_type>
-       dst_distribution((*itlow).second, state.num_tiers-1);
+       dst_distribution((*itlow).second, state.num_devices-1);
      dst = dst_distribution(rng);
      for (auto it=itlow; it!=ordered_cap.end(); ++it) {
        if ((*it).second == dst) {
@@ -194,8 +194,8 @@ int main()
 
   InitSystemViewState();
   
-  for(int i {0}; i < globalSystemViewState.num_tiers; ++i) {
-    std::cout << "tier[" << i << "]: " << globalSystemViewState.bytes_available[i]
+  for(int i {0}; i < globalSystemViewState.num_devices; ++i) {
+    std::cout << "device[" << i << "]: " << globalSystemViewState.bytes_available[i]
               << '\n' << std::flush;
     std::cout << "available ratio["<< i << "]: "
               << static_cast<double>(globalSystemViewState.bytes_available[i])/
@@ -204,11 +204,11 @@ int main()
   }
   std::cout << '\n' << '\n' << std::flush;
 
-  TieredSchema schema1 = RandomPlacement(input_blobs);
+  PlacementSchema schema1 = RandomPlacement(input_blobs);
 
   UpdateSystemViewState(schema1);
-  for(int i {0}; i < globalSystemViewState.num_tiers; ++i) {
-    std::cout << "tier[" << i << "]: " << globalSystemViewState.bytes_available[i]
+  for(int i {0}; i < globalSystemViewState.num_devices; ++i) {
+    std::cout << "device[" << i << "]: " << globalSystemViewState.bytes_available[i]
               << '\n' << std::flush;
     std::cout << "available ratio["<< i << "]: "
               << static_cast<double>(globalSystemViewState.bytes_available[i])/
@@ -224,11 +224,11 @@ int main()
   input_blobs.push_back(p5);
   input_blobs.push_back(p6);
   input_blobs.push_back(p7);
-  TieredSchema schema2 = RandomPlacement(input_blobs);
+  PlacementSchema schema2 = RandomPlacement(input_blobs);
 
   UpdateSystemViewState(schema2);
-  for(int i {0}; i < globalSystemViewState.num_tiers; ++i) {
-    std::cout << "tier[" << i << "]: " << globalSystemViewState.bytes_available[i]
+  for(int i {0}; i < globalSystemViewState.num_devices; ++i) {
+    std::cout << "device[" << i << "]: " << globalSystemViewState.bytes_available[i]
               << '\n' << std::flush;
     std::cout << "available ratio["<< i << "]: "
               << static_cast<double>(globalSystemViewState.bytes_available[i])/
@@ -248,11 +248,11 @@ int main()
   input_blobs.push_back(p10);
   input_blobs.push_back(p11);
   input_blobs.push_back(p12);
-  TieredSchema schema3 = RandomPlacement(input_blobs);
+  PlacementSchema schema3 = RandomPlacement(input_blobs);
 
   UpdateSystemViewState(schema3);
-  for(int i {0}; i < globalSystemViewState.num_tiers; ++i) {
-    std::cout << "tier[" << i << "]: " << globalSystemViewState.bytes_available[i]
+  for(int i {0}; i < globalSystemViewState.num_devices; ++i) {
+    std::cout << "device[" << i << "]: " << globalSystemViewState.bytes_available[i]
               << '\n' << std::flush;
     std::cout << "available ratio["<< i << "]: "
               << static_cast<double>(globalSystemViewState.bytes_available[i])/

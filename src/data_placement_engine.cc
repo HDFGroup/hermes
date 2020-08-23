@@ -26,29 +26,29 @@ enum class PlacementPolicy {
 // TODO(chogan): Unfinished sketch
 Status TopDownPlacement(SharedMemoryContext *context, RpcContext *rpc,
                         std::vector<size_t> blob_sizes,
-                        std::vector<TieredSchema> &output) {
+                        std::vector<PlacementSchema> &output) {
   HERMES_NOT_IMPLEMENTED_YET;
 
   Status result = 0;
-  std::vector<u64> global_state = GetGlobalTierCapacities(context, rpc);
+  std::vector<u64> global_state = GetGlobalDeviceCapacities(context, rpc);
 
   for (auto &blob_size : blob_sizes) {
-    TieredSchema schema;
+    PlacementSchema schema;
     size_t size_left = blob_size;
-    TierID current_tier = 0;
+    DeviceID current_device = 0;
 
-    while (size_left > 0 && current_tier < global_state.size()) {
+    while (size_left > 0 && current_device < global_state.size()) {
       size_t bytes_used = 0;
-      if (global_state[current_tier] > size_left) {
+      if (global_state[current_device] > size_left) {
         bytes_used = size_left;
       } else {
-        bytes_used = global_state[current_tier];
-        current_tier++;
+        bytes_used = global_state[current_device];
+        current_device++;
       }
 
       if (bytes_used) {
         size_left -= bytes_used;
-        schema.push_back(std::make_pair(current_tier, bytes_used));
+        schema.push_back(std::make_pair(current_device, bytes_used));
       }
     }
 
@@ -66,8 +66,8 @@ Status TopDownPlacement(SharedMemoryContext *context, RpcContext *rpc,
 
 Status RandomPlacement(SharedMemoryContext *context, RpcContext *rpc,
                        std::vector<size_t> &blob_sizes,
-                       std::vector<TieredSchema> &output) {
-  std::vector<u64> global_state = GetGlobalTierCapacities(context, rpc);
+                       std::vector<PlacementSchema> &output) {
+  std::vector<u64> global_state = GetGlobalDeviceCapacities(context, rpc);
   std::multimap<u64, size_t> ordered_cap;
   Status result = 0;
 
@@ -93,7 +93,7 @@ Status RandomPlacement(SharedMemoryContext *context, RpcContext *rpc,
     std::random_device dev;
     std::mt19937 rng(dev());
     int number {0};
-    TieredSchema schema;
+    PlacementSchema schema;
 
     // If size is greater than 64KB
     // Split the blob or not
@@ -158,7 +158,7 @@ Status RandomPlacement(SharedMemoryContext *context, RpcContext *rpc,
     }
     // Blob size is less than 64KB or do not split
     else {
-      TieredSchema schema;
+      PlacementSchema schema;
       size_t dst {global_state.size()};
       auto itlow = ordered_cap.lower_bound(blob_sizes[i]);
       if (itlow == ordered_cap.end()) {
@@ -187,14 +187,14 @@ Status RandomPlacement(SharedMemoryContext *context, RpcContext *rpc,
 
 Status MinimizeIoTimePlacement(SharedMemoryContext *context, RpcContext *rpc,
                             std::vector<size_t> &blob_sizes,
-                            std::vector<TieredSchema> &output) {
+                            std::vector<PlacementSchema> &output) {
   using operations_research::MPSolver;
   using operations_research::MPVariable;
   using operations_research::MPConstraint;
   using operations_research::MPObjective;
 
   Status result = 0;
-  std::vector<u64> global_state = GetGlobalTierCapacities(context, rpc);
+  std::vector<u64> global_state = GetGlobalDeviceCapacities(context, rpc);
   std::vector<f32> bandwidths = GetBandwidths(context);
   // TODO (KIMMY): size of constraints should be from context
   std::vector<MPConstraint*> blob_constrt(blob_sizes.size() +
@@ -289,17 +289,17 @@ Status MinimizeIoTimePlacement(SharedMemoryContext *context, RpcContext *rpc,
   }
 
   for (size_t i {0}; i < blob_sizes.size(); ++i) {
-    TieredSchema schema;
-    size_t tier_pos {0}; // to track the tier with most data
+    PlacementSchema schema;
+    size_t device_pos {0}; // to track the device with most data
     auto largest_bulk{blob_fraction[i][0]->solution_value()*blob_sizes[i]};
-    // NOTE: could be inefficient if there are hundreds of tiers
+    // NOTE: could be inefficient if there are hundreds of devices
     for (size_t j {1}; j < global_state.size(); ++j) {
       if (blob_fraction[i][j]->solution_value()*blob_sizes[i] > largest_bulk)
-        tier_pos = j;
+        device_pos = j;
     }
     size_t blob_partial_sum {0};
     for (size_t j {0}; j < global_state.size(); ++j) {
-      if (j == tier_pos)
+      if (j == device_pos)
         continue;
       double check_frac_size {blob_fraction[i][j]->solution_value()*
                               blob_sizes[i]}; // blob fraction size
@@ -310,8 +310,8 @@ Status MinimizeIoTimePlacement(SharedMemoryContext *context, RpcContext *rpc,
         blob_partial_sum += frac_size_cast;
       }
     }
-    // Push the rest data to tier tier_pos
-    schema.push_back(std::make_pair(blob_sizes[i]-blob_partial_sum, tier_pos));
+    // Push the rest data to device device_pos
+    schema.push_back(std::make_pair(blob_sizes[i]-blob_partial_sum, device_pos));
     output.push_back(schema);
   }
 
@@ -320,13 +320,13 @@ Status MinimizeIoTimePlacement(SharedMemoryContext *context, RpcContext *rpc,
 
 Status CalculatePlacement(SharedMemoryContext *context, RpcContext *rpc,
                           std::vector<size_t> &blob_sizes,
-                          std::vector<TieredSchema> &output,
+                          std::vector<PlacementSchema> &output,
                           const api::Context &api_context) {
   (void)api_context;
   Status result = 0;
 
-  // TODO(chogan): Return a TieredSchema that minimizes a cost function F given
-  // a set of N Tiers and a blob, while satisfying a policy P.
+  // TODO(chogan): Return a PlacementSchema that minimizes a cost function F given
+  // a set of N Devices and a blob, while satisfying a policy P.
 
   // TODO(chogan): This should be part of the Context
   PlacementPolicy policy = PlacementPolicy::kRandom;

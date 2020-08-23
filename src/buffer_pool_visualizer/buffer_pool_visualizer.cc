@@ -43,7 +43,7 @@ enum class ActiveHeap {
 
 static u32 global_colors[kColor_Count];
 static int global_bitmap_index;
-static TierID global_active_tier;
+static DeviceID global_active_device;
 static ActiveSegment global_active_segment;
 static ActiveHeap global_active_heap;
 static u32 global_color_counter;
@@ -154,24 +154,24 @@ void DrawWrappingRect(SDL_Rect *rect, int width, int pad, SDL_Surface *surface,
 // NOTE(chogan): This won't work if we allow non-ram headers to be dormant
 // because getting the next dormant header can swap headers out of their preset
 // index range
-static Range GetHeaderIndexRange(SharedMemoryContext *context, TierID tier_id) {
+static Range GetHeaderIndexRange(SharedMemoryContext *context, DeviceID device_id) {
   Range result = {};
   BufferPool *pool = GetBufferPoolFromContext(context);
 
-  for (int i = 0; i < tier_id; ++i) {
+  for (int i = 0; i < device_id; ++i) {
     result.start += pool->num_headers[i];
   }
-  result.end = result.start + pool->num_headers[tier_id];
+  result.end = result.start + pool->num_headers[device_id];
 
   return result;
 }
 
 static int DrawBufferPool(SharedMemoryContext *context,
                           SDL_Surface *surface, int window_width,
-                          int window_height, TierID tier_id) {
+                          int window_height, DeviceID device_id) {
   BufferPool *pool = GetBufferPoolFromContext(context);
   BufferHeader *headers = GetHeadersBase(context);
-  size_t block_size = pool->block_sizes[tier_id];
+  size_t block_size = pool->block_sizes[device_id];
   int block_width_pixels = 5;
   f32 memory_offset_to_pixels = (f32)(block_width_pixels) / (f32)(block_size);
   int pad = 2;
@@ -183,7 +183,7 @@ static int DrawBufferPool(SharedMemoryContext *context,
 
   std::unordered_map<std::string, int> block_refs;
 
-  Range header_range = GetHeaderIndexRange(context, tier_id);
+  Range header_range = GetHeaderIndexRange(context, device_id);
 
   for (int i = header_range.start; i < header_range.end; ++i) {
     BufferHeader *header = headers + i;
@@ -216,8 +216,8 @@ static int DrawBufferPool(SharedMemoryContext *context,
     }
 
     int color_index = -1;
-    for (int j = 0; j < pool->num_slabs[tier_id]; ++j) {
-      if (num_blocks == GetSlabUnitSize(context, tier_id, j)) {
+    for (int j = 0; j < pool->num_slabs[device_id]; ++j) {
+      if (num_blocks == GetSlabUnitSize(context, device_id, j)) {
         color_index = j;
         break;
       }
@@ -245,7 +245,7 @@ static int DrawBufferPool(SharedMemoryContext *context,
   // NOTE(chogan): Ensure that we are not drawing any portion of a buffer in
   // more than one place (i.e, no headers point to overlapping buffers)
   for (auto iter = block_refs.begin(); iter != block_refs.end(); ++iter) {
-    if (tier_id == 0) {
+    if (device_id == 0) {
       assert(iter->second <= 1);
     } else {
       // TODO(chogan): Data offsets for file buffers are allowed to overlap
@@ -258,10 +258,10 @@ static int DrawBufferPool(SharedMemoryContext *context,
 
 static int DrawFileBuffers(SharedMemoryContext *context, SDL_Surface *surface,
                            int window_width, int window_height,
-                           TierID tier_id) {
+                           DeviceID device_id) {
   BufferPool *pool = GetBufferPoolFromContext(context);
   BufferHeader *headers = GetHeadersBase(context);
-  size_t block_size = pool->block_sizes[tier_id];
+  size_t block_size = pool->block_sizes[device_id];
   int block_width_pixels = 5;
   f32 memory_offset_to_pixels = (f32)(block_width_pixels) / (f32)(block_size);
   int pad = 2;
@@ -273,10 +273,10 @@ static int DrawFileBuffers(SharedMemoryContext *context, SDL_Surface *surface,
   int starting_y_offset = 0;
 
   using BlockMap = std::unordered_map<std::string, int>;
-  std::vector<BlockMap> block_refs(pool->num_slabs[tier_id]);
+  std::vector<BlockMap> block_refs(pool->num_slabs[device_id]);
   int block_refs_index = 0;
 
-  Range header_range = GetHeaderIndexRange(context, tier_id);
+  Range header_range = GetHeaderIndexRange(context, device_id);
 
   for (int i = header_range.start; i < header_range.end; ++i) {
     BufferHeader *header = headers + i;
@@ -314,8 +314,8 @@ static int DrawFileBuffers(SharedMemoryContext *context, SDL_Surface *surface,
     }
 
     int color_index = -1;
-    for (int j = 0; j < pool->num_slabs[tier_id]; ++j) {
-      if (num_blocks == GetSlabUnitSize(context, tier_id, j)) {
+    for (int j = 0; j < pool->num_slabs[device_id]; ++j) {
+      if (num_blocks == GetSlabUnitSize(context, device_id, j)) {
         color_index = j;
         break;
       }
@@ -379,7 +379,7 @@ static void DrawEndOfRamBuffers(SharedMemoryContext *context,
 
 static void DrawHeaders(SharedMemoryContext *context, SDL_Surface *surface,
                         int window_width, int window_height, int starting_y,
-                        TierID tier_id) {
+                        DeviceID device_id) {
   [[maybe_unused]] BufferPool *pool = GetBufferPoolFromContext(context);
   BufferHeader *headers = GetHeadersBase(context);
   int pad = 1;
@@ -389,7 +389,7 @@ static void DrawHeaders(SharedMemoryContext *context, SDL_Surface *surface,
   int y = starting_y;
 
 
-  Range index_range = GetHeaderIndexRange(context, tier_id);
+  Range index_range = GetHeaderIndexRange(context, device_id);
 
   for (int i = index_range.start; i < index_range.end; ++i) {
     BufferHeader *header = headers + i;
@@ -429,12 +429,12 @@ static void ReloadSharedMemory(SharedMemoryContext *context, char *shmem_name) {
   *context = new_context;
 }
 
-static void PrintBufferCounts(SharedMemoryContext *context, TierID tier_id) {
+static void PrintBufferCounts(SharedMemoryContext *context, DeviceID device_id) {
   BufferPool *pool = GetBufferPoolFromContext(context);
   BufferHeader *headers = GetHeadersBase(context);
-  std::vector<int> buffer_counts(pool->num_slabs[tier_id], 0);
+  std::vector<int> buffer_counts(pool->num_slabs[device_id], 0);
 
-  Range index_range = GetHeaderIndexRange(context, tier_id);
+  Range index_range = GetHeaderIndexRange(context, device_id);
 
   for (int header_index = index_range.start;
        header_index < index_range.end;
@@ -445,7 +445,7 @@ static void PrintBufferCounts(SharedMemoryContext *context, TierID tier_id) {
     }
 
     for (size_t i = 0; i < buffer_counts.size(); ++i) {
-      if (header->capacity == (u32)GetSlabBufferSize(context, tier_id, i)) {
+      if (header->capacity == (u32)GetSlabBufferSize(context, device_id, i)) {
         buffer_counts[i]++;
       }
     }
@@ -460,12 +460,12 @@ static void PrintBufferCounts(SharedMemoryContext *context, TierID tier_id) {
   SDL_Log("Total live headers: %d\n", total_headers);
 }
 
-static void PrintFreeListSizes(SharedMemoryContext *context, TierID tier_id) {
+static void PrintFreeListSizes(SharedMemoryContext *context, DeviceID device_id) {
   BufferPool *pool = GetBufferPoolFromContext(context);
   int total_free_headers = 0;
 
-  for (int slab = 0; slab < pool->num_slabs[tier_id]; ++slab) {
-    BufferID next_free = PeekFirstFreeBufferId(context, tier_id, slab);
+  for (int slab = 0; slab < pool->num_slabs[device_id]; ++slab) {
+    BufferID next_free = PeekFirstFreeBufferId(context, device_id, slab);
     int this_slab_free = 0;
     while (next_free.as_int != 0) {
       BufferHeader *header = GetHeaderByBufferId(context, next_free);
@@ -487,11 +487,11 @@ static void SaveBitmap(SDL_Surface *surface) {
   SDL_Log("Saved bitmap %s\n", fname);
 }
 
-static void SetActiveTier(SharedMemoryContext *context, TierID tier_id) {
+static void SetActiveDevice(SharedMemoryContext *context, DeviceID device_id) {
   BufferPool *pool = GetBufferPoolFromContext(context);
-  if (tier_id < pool->num_tiers) {
-    global_active_tier = tier_id;
-    SDL_Log("Viewing Tier %u\n", tier_id);
+  if (device_id < pool->num_devices) {
+    global_active_device = device_id;
+    SDL_Log("Viewing Device %u\n", device_id);
   }
 }
 
@@ -520,7 +520,7 @@ static void HandleInput(SharedMemoryContext *context, bool *running,
         switch (event.key.keysym.scancode) {
           case SDL_SCANCODE_0: {
             if (global_active_segment == ActiveSegment::BufferPool) {
-              SetActiveTier(context, 0);
+              SetActiveDevice(context, 0);
             } else {
               global_active_heap = ActiveHeap::Id;
             }
@@ -528,34 +528,34 @@ static void HandleInput(SharedMemoryContext *context, bool *running,
           }
           case SDL_SCANCODE_1: {
             if (global_active_segment == ActiveSegment::BufferPool) {
-              SetActiveTier(context, 1);
+              SetActiveDevice(context, 1);
             } else {
               global_active_heap = ActiveHeap::Map;
             }
             break;
           }
           case SDL_SCANCODE_2: {
-            SetActiveTier(context, 2);
+            SetActiveDevice(context, 2);
             break;
           }
           case SDL_SCANCODE_3: {
-            SetActiveTier(context, 3);
+            SetActiveDevice(context, 3);
             break;
           }
           case SDL_SCANCODE_4: {
-            SetActiveTier(context, 4);
+            SetActiveDevice(context, 4);
             break;
           }
           case SDL_SCANCODE_5: {
-            SetActiveTier(context, 5);
+            SetActiveDevice(context, 5);
             break;
           }
           case SDL_SCANCODE_6: {
-            SetActiveTier(context, 6);
+            SetActiveDevice(context, 6);
             break;
           }
           case SDL_SCANCODE_7: {
-            SetActiveTier(context, 7);
+            SetActiveDevice(context, 7);
             break;
           }
           case SDL_SCANCODE_B: {
@@ -564,11 +564,11 @@ static void HandleInput(SharedMemoryContext *context, bool *running,
             break;
           }
           case SDL_SCANCODE_C: {
-            PrintBufferCounts(context, global_active_tier);
+            PrintBufferCounts(context, global_active_device);
             break;
           }
           case SDL_SCANCODE_F: {
-            PrintFreeListSizes(context, global_active_tier);
+            PrintFreeListSizes(context, global_active_device);
             break;
           }
           case SDL_SCANCODE_M: {
@@ -612,13 +612,13 @@ static void InitColors(SDL_PixelFormat *format) {
 void DisplayBufferPoolSegment(SharedMemoryContext *context,
                               SDL_Surface *back_buffer, int width, int height) {
   int ending_y = 0;
-  if (global_active_tier == 0) {
+  if (global_active_device == 0) {
     ending_y = DrawBufferPool(context, back_buffer, width, height,
-                              global_active_tier);
+                              global_active_device);
     DrawEndOfRamBuffers(context, back_buffer, width, height);
   } else {
     ending_y = DrawFileBuffers(context, back_buffer, width, height,
-                               global_active_tier);
+                               global_active_device);
   }
 
   ending_y += 2;
@@ -626,7 +626,7 @@ void DisplayBufferPoolSegment(SharedMemoryContext *context,
   SDL_FillRect(back_buffer, &dividing_line,
                global_colors[kColor_Magenta]);
   DrawHeaders(context, back_buffer, width, height,
-              ending_y + 5, global_active_tier);
+              ending_y + 5, global_active_device);
 }
 
 

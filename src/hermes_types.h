@@ -26,24 +26,24 @@ typedef int64_t i64;
 typedef float f32;
 typedef double f64;
 
-typedef u16 TierID;
+typedef u16 DeviceID;
 
-// TODO(chogan): These constants impose limits on the number of slabs, tiers,
+// TODO(chogan): These constants impose limits on the number of slabs, devices,
 // file path lengths, and shared memory name lengths, but eventually we should
 // allow arbitrary sizes of each.
 static constexpr int kMaxBufferPoolSlabs = 8;
 constexpr int kMaxPathLength = 256;
 constexpr int kMaxBufferPoolShmemNameLength = 64;
-constexpr int kMaxTiers = 8;
+constexpr int kMaxDevices = 8;
 
 #define HERMES_NOT_IMPLEMENTED_YET \
   LOG(FATAL) << __func__ << " not implemented yet\n"
 
 /**
- * A TieredSchema is a vector of (size, tier) pairs where size is the number of
- * bytes to buffer and tier is the Tier ID where to buffer those bytes.
+ * A PlacementSchema is a vector of (size, device) pairs where size is the number of
+ * bytes to buffer and device is the Device ID where to buffer those bytes.
  */
-using TieredSchema = std::vector<std::pair<size_t, TierID>>;
+using PlacementSchema = std::vector<std::pair<size_t, DeviceID>>;
 
 /**
  * Distinguishes whether the process (or rank) is part of the application cores
@@ -69,37 +69,37 @@ enum ArenaType {
  * System and user configuration that is used to initialize Hermes.
  */
 struct Config {
-  /** The total capacity of each buffering Tier */
-  size_t capacities[kMaxTiers];
-  /** The block sizes of each Tier */
-  int block_sizes[kMaxTiers];
-  /** The number of slabs that each Tier has */
-  int num_slabs[kMaxTiers];
-  /** The unit of each slab, which is a multiplier of the Tier's block size */
-  int slab_unit_sizes[kMaxTiers][kMaxBufferPoolSlabs];
-  /** The percentage of space each slab should occupy per Tier. The values for
-   * each Tier should add up to 1.0.
+  /** The total capacity of each buffering Device */
+  size_t capacities[kMaxDevices];
+  /** The block sizes of each Device */
+  int block_sizes[kMaxDevices];
+  /** The number of slabs that each Device has */
+  int num_slabs[kMaxDevices];
+  /** The unit of each slab, which is a multiplier of the Device's block size */
+  int slab_unit_sizes[kMaxDevices][kMaxBufferPoolSlabs];
+  /** The percentage of space each slab should occupy per Device. The values for
+   * each Device should add up to 1.0.
    */
-  f32 desired_slab_percentages[kMaxTiers][kMaxBufferPoolSlabs];
-  /** The bandwidth of each Tier */
-  f32 bandwidths[kMaxTiers];
-  /** The latency of each Tier */
-  f32 latencies[kMaxTiers];
+  f32 desired_slab_percentages[kMaxDevices][kMaxBufferPoolSlabs];
+  /** The bandwidth of each Device */
+  f32 bandwidths[kMaxDevices];
+  /** The latency of each Device */
+  f32 latencies[kMaxDevices];
   /** The percentages of the total available Hermes memory allotted for each
    *  `ArenaType`
    */
   f32 arena_percentages[kArenaType_Count];
-  /** The number of Tiers */
-  int num_tiers;
+  /** The number of Devices */
+  int num_devices;
 
   u32 max_buckets_per_node;
   u32 max_vbuckets_per_node;
   u32 system_view_state_update_interval_ms;
 
-  /** The mount point or desired directory for each Tier. RAM Tier should be the
+  /** The mount point or desired directory for each Device. RAM Device should be the
    * empty string.
    */
-  std::string mount_points[kMaxTiers];
+  std::string mount_points[kMaxDevices];
   /** The hostname of the RPC server, minus any numbers that Hermes may
    * auto-generate when the rpc_hostNumber_range is specified. */
   std::string rpc_server_base_name;
