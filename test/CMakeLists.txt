@@ -11,7 +11,7 @@ include_directories(
 #------------------------------------------------------------------------------
 # API tests
 #------------------------------------------------------------------------------
-set(API_TESTS dpe_test end_to_end_test)
+set(API_TESTS dpe_optimization_test dpe_random_test end_to_end_test)
 
 foreach(program ${API_TESTS})
   add_executable(${program} ${program}.cc)
