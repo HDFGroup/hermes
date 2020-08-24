@@ -6,6 +6,7 @@
 
 #define STB_DS_IMPLEMENTATION
 #include "stb_ds.h"
+#include "buffer_pool_internal.h"
 
 namespace hermes {
 
@@ -159,12 +160,19 @@ IdList *AllocateIdList(MetadataManager *mdm, u32 length) {
   return result;
 }
 
+u64 *GetIdsPtr(MetadataManager *mdm, IdList id_list) {
+  Heap *id_heap = GetIdHeap(mdm);
+  u64 *result = (u64 *)HeapOffsetToPtr(id_heap, id_list.head_offset);
+
+  return result;
+}
+
 u32 LocalAllocateBufferIdList(MetadataManager *mdm,
                               const std::vector<BufferID> &buffer_ids) {
   static_assert(sizeof(IdList) == sizeof(BufferID));
   u32 length = (u32)buffer_ids.size();
   IdList *id_list = AllocateIdList(mdm, length);
-  CopyIds((u64 *)(id_list + 1), (u64 *)buffer_ids.data(), length);
+  CopyIds(GetIdsPtr(mdm, *id_list), (u64 *)buffer_ids.data(), length);
 
   Heap *id_heap = GetIdHeap(mdm);
   u32 result = GetHeapOffset(id_heap, (u8 *)id_list);
@@ -355,7 +363,8 @@ void SeedHashForStorage(size_t seed) {
   stbds_rand_seed(seed);
 }
 
-void InitMetadataStorage(MetadataManager *mdm, Arena *arena, Config *config) {
+void InitMetadataStorage(SharedMemoryContext *context, MetadataManager *mdm,
+                         Arena *arena, Config *config) {
   // Heaps
 
   u32 heap_alignment = 8;
@@ -369,7 +378,13 @@ void InitMetadataStorage(MetadataManager *mdm, Arena *arena, Config *config) {
 
   // NOTE(chogan): Rank Targets default to one Target per Device
   IdList *node_targets = AllocateIdList(mdm, config->num_devices);
+  TargetID *target_ids = (TargetID *)GetIdsPtr(mdm, *node_targets);
+  for (u32 i = 0; i < node_targets->length; ++i) {
+    Target *target = GetTarget(context, i);
+    target_ids[i] = target->id;
+  }
   mdm->node_targets = *node_targets;
+
 
   // ID Maps
 

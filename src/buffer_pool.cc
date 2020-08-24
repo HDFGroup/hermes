@@ -1072,6 +1072,7 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
   BufferPool *pool = PushClearedStruct<BufferPool>(buffer_pool_arena);
   pool->headers_offset = header_begin - shmem_base;
   pool->devices_offset = (u8 *)devices - shmem_base;
+  pool->targets_offset = (u8 *)targets - shmem_base;
   pool->num_devices = config->num_devices;
   pool->total_headers = total_headers;
 

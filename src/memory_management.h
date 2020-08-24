@@ -303,6 +303,23 @@ inline T *PushArray(Arena *arena, int count, size_t alignment=8) {
   return result;
 }
 
+/**
+ * Reserves space for @p count `T` objects, clears them to zero, and returns a
+ * pointer to the first one.
+ *
+ * @param[in,out] arena The backing Arena from which to reserve space.
+ * @param[in] count The number of objects to allocate.
+ * @param[in] alignment Align the result to a desired multiple.
+ *
+ * @return A pointer to the first `T` instance in the array.
+ */
+template<typename T>
+inline T *PushClearedArray(Arena *arena, int count, size_t alignment=8) {
+  T *result = reinterpret_cast<T *>(PushSizeAndClear(arena, sizeof(T) * count,
+                                                     alignment));
+
+  return result;
+}
 u8 *HeapPushSize(Heap *heap, u32 size);
 
 template<typename T>

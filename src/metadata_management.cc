@@ -728,8 +728,6 @@ void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
       info->next_free.bits.index = i + 1;
     }
   }
-
-  InitMetadataStorage(mdm, arena, config);
 }
 
 }  // namespace hermes

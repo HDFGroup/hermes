@@ -265,6 +265,10 @@ void StartGlobalSystemViewStateUpdateThread(SharedMemoryContext *context,
                                             RpcContext *rpc, Arena *arena,
                                             double slepp_ms);
 
+void InitMetadataStorage(SharedMemoryContext *context, MetadataManager *mdm,
+                         Arena *arena, Config *config);
+
+
 } // namespace hermes
 
 #endif  // HERMES_METADATA_MANAGEMENT_H_
