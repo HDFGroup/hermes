@@ -183,7 +183,7 @@ struct BufferPool {
   ptrdiff_t slab_buffer_sizes_offsets[kMaxDevices];
   /** The offset from the base of shared memory where each Device's list of
    * available buffers per slab is stored. Each offset can be converted to a
-   * pointer to an arry of N (num_slabs[device_id]) u32.
+   * pointer to an arry of N (num_slabs[device_id]) std::atomic<u32>.
    */
   ptrdiff_t buffers_available_offsets[kMaxDevices];
   /** A ticket lock to syncrhonize access to free lists

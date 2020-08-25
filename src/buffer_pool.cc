@@ -354,21 +354,23 @@ void SetFirstFreeBufferId(SharedMemoryContext *context, DeviceID device_id,
   }
 }
 
-static u32 *GetAvailableBuffersArray(SharedMemoryContext *context,
-                                     DeviceID device_id) {
+static std::atomic<u32> *GetAvailableBuffersArray(SharedMemoryContext *context,
+                                                  DeviceID device_id) {
   BufferPool *pool = GetBufferPoolFromContext(context);
-  u32 *result =
-    (u32 *)(context->shm_base + pool->buffers_available_offsets[device_id]);
+  std::atomic<u32> *result =
+    (std::atomic<u32> *)(context->shm_base +
+                         pool->buffers_available_offsets[device_id]);
 
   return result;
 }
 
 static u32 GetNumBuffersAvailable(SharedMemoryContext *context, DeviceID device_id,
                                   int slab_index) {
-  u32 *buffers_available = GetAvailableBuffersArray(context, device_id);
+  std::atomic<u32> *buffers_available = GetAvailableBuffersArray(context,
+                                                                 device_id);
   u32 result = 0;
   if (buffers_available) {
-    result = buffers_available[slab_index];
+    result = buffers_available[slab_index].load();
   }
 
   return result;
@@ -395,17 +397,19 @@ static u64 GetNumBytesRemaining(SharedMemoryContext *context, DeviceID id) {
 
 static void DecrementAvailableBuffers(SharedMemoryContext *context,
                                       DeviceID device_id, int slab_index) {
-  u32 *buffers_available = GetAvailableBuffersArray(context, device_id);
+  std::atomic<u32> *buffers_available = GetAvailableBuffersArray(context,
+                                                                 device_id);
   if (buffers_available) {
-    buffers_available[slab_index]--;
+    buffers_available[slab_index].fetch_sub(1);
   }
 }
 
 static void IncrementAvailableBuffers(SharedMemoryContext *context,
                                       DeviceID device_id, int slab_index) {
-  u32 *buffers_available = GetAvailableBuffersArray(context, device_id);
+  std::atomic<u32> *buffers_available = GetAvailableBuffersArray(context,
+                                                                 device_id);
   if (buffers_available) {
-    buffers_available[slab_index]++;
+    buffers_available[slab_index].fetch_add(1);
   }
 }
 
@@ -1103,8 +1107,8 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
                                           config->num_slabs[device]);
     i32 *slab_buffer_sizes_for_device = PushArray<i32>(buffer_pool_arena,
                                             config->num_slabs[device]);
-    u32 *available_buffers = PushArray<u32>(buffer_pool_arena,
-                                            config->num_slabs[device]);
+    std::atomic<u32> *available_buffers =
+      PushArray<std::atomic<u32>>(buffer_pool_arena, config->num_slabs[device]);
 
     for (int slab = 0; slab < config->num_slabs[device]; ++slab) {
       free_list[slab] = free_lists[device][slab];
