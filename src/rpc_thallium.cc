@@ -279,6 +279,13 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
       req.respond(result);
     };
 
+  function<void(const request&, TargetID id)> rpc_get_remaining_capacity =
+    [context](const request &req, TargetID id) {
+      u64 result = LocalGetRemainingCapacity(context, id);
+
+      req.respond(result);
+    };
+
   // TODO(chogan): Only need this on mdm->global_system_view_state_node_id.
   // Probably should move it to a completely separate tl::engine.
   function<void(const request&, std::vector<i64>)> rpc_update_global_system_view_state =
@@ -333,6 +340,7 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
                     rpc_increment_refcount).disable_response();
   rpc_server->define("RemoteDecrementRefcount",
                     rpc_decrement_refcount).disable_response();
+  rpc_server->define("RemoteGetRemainingCapacity", rpc_get_remaining_capacity);
   rpc_server->define("RemoteUpdateGlobalSystemViewState",
                      rpc_update_global_system_view_state).disable_response();
   rpc_server->define("RemoteGetGlobalDeviceCapacities",

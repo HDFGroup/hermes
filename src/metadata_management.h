@@ -251,6 +251,7 @@ u64 LocalGet(MetadataManager *mdm, const char *key, MapType map_type);
 void LocalPut(MetadataManager *mdm, const char *key, u64 val, MapType map_type);
 void LocalDelete(MetadataManager *mdm, const char *key, MapType map_type);
 
+u64 LocalGetRemainingCapacity(SharedMemoryContext *context, TargetID id);
 void LocalUpdateGlobalSystemViewState(SharedMemoryContext *context,
                                       std::vector<i64> adjustments);
 SystemViewState *GetLocalSystemViewState(SharedMemoryContext *context);

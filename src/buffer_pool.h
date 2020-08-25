@@ -68,8 +68,8 @@ struct Target {
   TargetID id;
   /** The total capacity of the Target. */
   u64 capacity;
-  u64 remaining_space;
-  u64 speed;
+  std::atomic<u64> remaining_space;
+  std::atomic<u64> speed;
 };
 
 /**

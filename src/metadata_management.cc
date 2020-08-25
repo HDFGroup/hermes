@@ -549,6 +549,27 @@ void DecrementRefcount(SharedMemoryContext *context, RpcContext *rpc,
   }
 }
 
+u64 LocalGetRemainingCapacity(SharedMemoryContext *context, TargetID id) {
+  Target *target = GetTarget(context, id.bits.index);
+  u64 result = target->remaining_space.load();
+
+  return result;
+}
+
+u64 GetRemainingCapacity(SharedMemoryContext *context, RpcContext *rpc,
+                         TargetID id) {
+  u32 target_node = id.bits.node_id;
+
+  u64 result = 0;
+  if (target_node == rpc->node_id) {
+    result = LocalGetRemainingCapacity(context, id);
+  } else {
+    result = RpcCall<u64>(rpc, target_node, "RemoteGetRemainingCapacity", id);
+  }
+
+  return result;
+}
+
 SystemViewState *GetLocalSystemViewState(MetadataManager *mdm) {
   SystemViewState *result =
     (SystemViewState *)((u8 *)mdm + mdm->system_view_state_offset);

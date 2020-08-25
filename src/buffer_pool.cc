@@ -363,7 +363,6 @@ static u32 *GetAvailableBuffersArray(SharedMemoryContext *context,
   return result;
 }
 
-#if 0
 static u32 GetNumBuffersAvailable(SharedMemoryContext *context, DeviceID device_id,
                                   int slab_index) {
   u32 *buffers_available = GetAvailableBuffersArray(context, device_id);
@@ -374,7 +373,25 @@ static u32 GetNumBuffersAvailable(SharedMemoryContext *context, DeviceID device_
 
   return result;
 }
-#endif
+
+static u64 GetNumBytesRemaining(SharedMemoryContext *context,
+                                DeviceID device_id, int slab_index) {
+  u32 num_free_buffers = GetNumBuffersAvailable(context, device_id, slab_index);
+  u32 buffer_size = GetSlabBufferSize(context, device_id, slab_index);
+  u64 result = num_free_buffers * buffer_size;
+
+  return result;
+}
+
+static u64 GetNumBytesRemaining(SharedMemoryContext *context, DeviceID id) {
+  BufferPool *pool = GetBufferPoolFromContext(context);
+  u64 result = 0;
+  for (int i = 0; i < pool->num_slabs[id]; ++i) {
+    result += GetNumBytesRemaining(context, id, i);
+  }
+
+  return result;
+}
 
 static void DecrementAvailableBuffers(SharedMemoryContext *context,
                                       DeviceID device_id, int slab_index) {
@@ -692,8 +709,8 @@ Target *InitTargets(Arena *arena, Config *config, Device *devices,
     target->id = id;
     // TODO(chogan): Distinguish between per-node capacity and shared capacity
     target->capacity = config->capacities[i];
-    target->remaining_space = config->capacities[i];
-    target->speed = devices[i].bandwidth_mbps;
+    target->remaining_space.store(config->capacities[i]);
+    target->speed.store(devices[i].bandwidth_mbps);
   }
 
   return result;
@@ -1174,7 +1191,6 @@ void InitFilesForBuffering(SharedMemoryContext *context, bool make_space) {
           // and some are shared (burst buffers) and only require one rank to
           // initialize them
 
-          // TEMP(chogan): Figure out correct capacity
           Target *target = GetTarget(context, device_id);
           [[maybe_unused]] int ftruncate_result =
             ftruncate(fileno(buffering_file), target->capacity);
