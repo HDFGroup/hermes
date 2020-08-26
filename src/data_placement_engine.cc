@@ -163,7 +163,7 @@ Status RandomPlacement(SharedMemoryContext *context, RpcContext *rpc,
       auto itlow = ordered_cap.lower_bound(blob_sizes[i]);
       if (itlow == ordered_cap.end()) {
         HERMES_NOT_IMPLEMENTED_YET;
-        assert(!"No target has enough capacity\n");
+        assert(!"No buffer device has enough capacity! Go to PFS.\n");
       }
 
       std::uniform_int_distribution<std::mt19937::result_type>
