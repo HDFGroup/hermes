@@ -30,19 +30,19 @@ Status TopDownPlacement(SharedMemoryContext *context, RpcContext *rpc,
   HERMES_NOT_IMPLEMENTED_YET;
 
   Status result = 0;
-  std::vector<u64> global_state = GetGlobalDeviceCapacities(context, rpc);
+  std::vector<u64> node_state = GetRemainingNodeCapacities(context);
 
   for (auto &blob_size : blob_sizes) {
     PlacementSchema schema;
     size_t size_left = blob_size;
     DeviceID current_device = 0;
 
-    while (size_left > 0 && current_device < global_state.size()) {
+    while (size_left > 0 && current_device < node_state.size()) {
       size_t bytes_used = 0;
-      if (global_state[current_device] > size_left) {
+      if (node_state[current_device] > size_left) {
         bytes_used = size_left;
       } else {
-        bytes_used = global_state[current_device];
+        bytes_used = node_state[current_device];
         current_device++;
       }
 
@@ -67,14 +67,16 @@ Status TopDownPlacement(SharedMemoryContext *context, RpcContext *rpc,
 Status RandomPlacement(SharedMemoryContext *context, RpcContext *rpc,
                        std::vector<size_t> &blob_sizes,
                        std::vector<PlacementSchema> &output) {
-  std::vector<u64> global_state = GetGlobalDeviceCapacities(context, rpc);
+  // TODO(chogan): For now we just look at the node level. Eventually we will
+  // need the ability to escalate to neighborhoods, and the entire cluster.
+  std::vector<u64> node_state = GetRemainingNodeCapacities(context);
   std::multimap<u64, size_t> ordered_cap;
   Status result = 0;
 
   u64 avail_cap {0};
-  for (size_t j {0}; j < global_state.size(); ++j) {
-    avail_cap += global_state[j];
-    ordered_cap.insert(std::pair<u64, size_t>(global_state[j], j));
+  for (size_t j {0}; j < node_state.size(); ++j) {
+    avail_cap += node_state[j];
+    ordered_cap.insert(std::pair<u64, size_t>(node_state[j], j));
   }
 
   u64 total_blob_size {0};
@@ -133,7 +135,7 @@ Status RandomPlacement(SharedMemoryContext *context, RpcContext *rpc,
                               blob_each_portion*(split_num-1));
 
       for (size_t k {0}; k<new_blob_size.size(); ++k) {
-        size_t dst {global_state.size()};
+        size_t dst {node_state.size()};
         auto itlow = ordered_cap.lower_bound (new_blob_size[k]);
         if (itlow == ordered_cap.end()) {
           HERMES_NOT_IMPLEMENTED_YET;
@@ -141,7 +143,7 @@ Status RandomPlacement(SharedMemoryContext *context, RpcContext *rpc,
         }
 
         std::uniform_int_distribution<std::mt19937::result_type>
-          dst_distribution((*itlow).second, global_state.size()-1);
+          dst_distribution((*itlow).second, node_state.size()-1);
         dst = dst_distribution(rng);
         schema.push_back(std::make_pair(new_blob_size[k], dst));
 
@@ -159,7 +161,7 @@ Status RandomPlacement(SharedMemoryContext *context, RpcContext *rpc,
     // Blob size is less than 64KB or do not split
     else {
       PlacementSchema schema;
-      size_t dst {global_state.size()};
+      size_t dst {node_state.size()};
       auto itlow = ordered_cap.lower_bound(blob_sizes[i]);
       if (itlow == ordered_cap.end()) {
         HERMES_NOT_IMPLEMENTED_YET;
@@ -167,7 +169,7 @@ Status RandomPlacement(SharedMemoryContext *context, RpcContext *rpc,
       }
 
       std::uniform_int_distribution<std::mt19937::result_type>
-        dst_distribution((*itlow).second, global_state.size()-1);
+        dst_distribution((*itlow).second, node_state.size()-1);
       dst = dst_distribution(rng);
       for (auto it=itlow; it!=ordered_cap.end(); ++it) {
         if ((*it).second == dst) {
@@ -194,19 +196,21 @@ Status MinimizeIoTimePlacement(SharedMemoryContext *context, RpcContext *rpc,
   using operations_research::MPObjective;
 
   Status result = 0;
-  std::vector<u64> global_state = GetGlobalDeviceCapacities(context, rpc);
+  // TODO(chogan): For now we just look at the node level targets. Eventually we
+  // will need the ability to escalate to neighborhoods, and the entire cluster.
+  std::vector<u64> node_state = GetRemainingNodeCapacities(context);
   std::vector<f32> bandwidths = GetBandwidths(context);
   // TODO (KIMMY): size of constraints should be from context
   std::vector<MPConstraint*> blob_constrt(blob_sizes.size() +
-                                          global_state.size()*3-1);
+                                          node_state.size()*3-1);
   std::vector<std::vector<MPVariable*>> blob_fraction (blob_sizes.size());
   MPSolver solver("LinearOpt", MPSolver::GLOP_LINEAR_PROGRAMMING);
   int num_constrts {0};
 
   u64 avail_cap {0};
   // TODO (KIMY): Remaining Capacity Change Threshold 20% (consigurable)
-  for (size_t j {0}; j < global_state.size(); ++j) {
-    avail_cap += static_cast<u64>(global_state[j]*0.2);
+  for (size_t j {0}; j < node_state.size(); ++j) {
+    avail_cap += static_cast<u64>(node_state[j]*0.2);
   }
 
   u64 total_blob_size {0};
@@ -222,10 +226,10 @@ Status MinimizeIoTimePlacement(SharedMemoryContext *context, RpcContext *rpc,
   // Sum of fraction of each blob is 1
   for (size_t i {0}; i < blob_sizes.size(); ++i) {
     blob_constrt[num_constrts+i] = solver.MakeRowConstraint(1, 1);
-    blob_fraction[i].resize(global_state.size());
+    blob_fraction[i].resize(node_state.size());
 
     // TODO (KIMMY): consider remote nodes?
-    for (size_t j {0}; j < global_state.size(); ++j) {
+    for (size_t j {0}; j < node_state.size(); ++j) {
       std::string var_name {"blob_dst_" + std::to_string(i) + "_" +
                             std::to_string(j)};
       blob_fraction[i][j] = solver.MakeNumVar(0.0, 1, var_name);
@@ -235,10 +239,10 @@ Status MinimizeIoTimePlacement(SharedMemoryContext *context, RpcContext *rpc,
 
   // Minimum Remaining Capacity Constraint
   num_constrts += blob_sizes.size();
-  for (size_t j {0}; j < global_state.size(); ++j) {
+  for (size_t j {0}; j < node_state.size(); ++j) {
     blob_constrt[num_constrts+j] = solver.MakeRowConstraint(
-      0, (static_cast<double>(global_state[j])-
-      0.1*static_cast<double>(global_state[j])));
+      0, (static_cast<double>(node_state[j])-
+      0.1*static_cast<double>(node_state[j])));
     for (size_t i {0}; i < blob_sizes.size(); ++i) {
       blob_constrt[num_constrts+j]->SetCoefficient(
         blob_fraction[i][j], static_cast<double>(blob_sizes[i]));
@@ -246,10 +250,10 @@ Status MinimizeIoTimePlacement(SharedMemoryContext *context, RpcContext *rpc,
   }
 
   // Remaining Capacity Change Threshold 20%
-  num_constrts += global_state.size();
-  for (size_t j {0}; j < global_state.size(); ++j) {
+  num_constrts += node_state.size();
+  for (size_t j {0}; j < node_state.size(); ++j) {
     blob_constrt[num_constrts+j] =
-      solver.MakeRowConstraint(0, 0.2*global_state[j]);
+      solver.MakeRowConstraint(0, 0.2*node_state[j]);
     for (size_t i {0}; i < blob_sizes.size(); ++i) {
       blob_constrt[num_constrts+j]->SetCoefficient(
         blob_fraction[i][j], static_cast<double>(blob_sizes[i]));
@@ -257,15 +261,15 @@ Status MinimizeIoTimePlacement(SharedMemoryContext *context, RpcContext *rpc,
   }
 
   // Placement Ratio
-  num_constrts += global_state.size();
-  for (size_t j {0}; j < global_state.size()-1; ++j) {
+  num_constrts += node_state.size();
+  for (size_t j {0}; j < node_state.size()-1; ++j) {
     blob_constrt[num_constrts+j] =
       solver.MakeRowConstraint(0, solver.infinity());
     for (size_t i {0}; i < blob_sizes.size(); ++i) {
       blob_constrt[num_constrts+j]->SetCoefficient(
         blob_fraction[i][j+1], static_cast<double>(blob_sizes[i]));
-      double placement_ratio = static_cast<double>(global_state[j+1])/
-                                                   global_state[j];
+      double placement_ratio = static_cast<double>(node_state[j+1])/
+                                                   node_state[j];
       blob_constrt[num_constrts+j]->SetCoefficient(
         blob_fraction[i][j],
         static_cast<double>(blob_sizes[i])*(0-placement_ratio));
@@ -275,7 +279,7 @@ Status MinimizeIoTimePlacement(SharedMemoryContext *context, RpcContext *rpc,
   // Objective to minimize IO time
   MPObjective* const objective = solver.MutableObjective();
   for (size_t i {0}; i < blob_sizes.size(); ++i) {
-    for (size_t j {0}; j < global_state.size(); ++j) {
+    for (size_t j {0}; j < node_state.size(); ++j) {
       objective->SetCoefficient(blob_fraction[i][j],
         static_cast<double>(blob_sizes[i])/bandwidths[j]);
     }
@@ -293,12 +297,12 @@ Status MinimizeIoTimePlacement(SharedMemoryContext *context, RpcContext *rpc,
     size_t device_pos {0}; // to track the device with most data
     auto largest_bulk{blob_fraction[i][0]->solution_value()*blob_sizes[i]};
     // NOTE: could be inefficient if there are hundreds of devices
-    for (size_t j {1}; j < global_state.size(); ++j) {
+    for (size_t j {1}; j < node_state.size(); ++j) {
       if (blob_fraction[i][j]->solution_value()*blob_sizes[i] > largest_bulk)
         device_pos = j;
     }
     size_t blob_partial_sum {0};
-    for (size_t j {0}; j < global_state.size(); ++j) {
+    for (size_t j {0}; j < node_state.size(); ++j) {
       if (j == device_pos)
         continue;
       double check_frac_size {blob_fraction[i][j]->solution_value()*

@@ -39,6 +39,11 @@ void SeedHashForStorage(size_t seed);
  */
 size_t GetStoredMapSize(MetadataManager *mdm, MapType map_type);
 
+/**
+ *
+ */
+std::vector<u64> GetNodeTargets(SharedMemoryContext *context);
+
 }  // namespace hermes
 
 #endif  // HERMES_METADATA_STORAGE_H_

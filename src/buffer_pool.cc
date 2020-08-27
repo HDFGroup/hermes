@@ -711,7 +711,6 @@ Target *InitTargets(Arena *arena, Config *config, Device *devices,
     id.bits.index = i;
     Target *target = result + i;
     target->id = id;
-    // TODO(chogan): Distinguish between per-node capacity and shared capacity
     target->capacity = config->capacities[i];
     target->remaining_space.store(config->capacities[i]);
     target->speed.store(devices[i].bandwidth_mbps);

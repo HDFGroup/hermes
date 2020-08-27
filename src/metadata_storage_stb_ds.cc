@@ -288,6 +288,20 @@ void LocalDestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
   EndTicketMutex(&mdm->bucket_mutex);
 }
 
+std::vector<u64> GetNodeTargets(SharedMemoryContext *context) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  Heap *id_heap = GetIdHeap(mdm);
+  u64 *targets = (u64 *)HeapOffsetToPtr(id_heap, mdm->node_targets.head_offset);
+  u32 length = mdm->node_targets.length;
+  std::vector<u64> result(length);
+
+  for (u32 i = 0; i < length; ++i) {
+    result[i] = targets[i];
+  }
+
+  return result;
+}
+
 void PutToStorage(MetadataManager *mdm, const char *key, u64 val,
                   MapType map_type) {
   Heap *heap = GetMapHeap(mdm);

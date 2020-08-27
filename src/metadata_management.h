@@ -258,7 +258,7 @@ SystemViewState *GetLocalSystemViewState(SharedMemoryContext *context);
 SystemViewState *GetGlobalSystemViewState(SharedMemoryContext *context);
 std::vector<u64> LocalGetGlobalDeviceCapacities(SharedMemoryContext *context);
 std::vector<u64> GetGlobalDeviceCapacities(SharedMemoryContext *context,
-                                          RpcContext *rpc);
+                                           RpcContext *rpc);
 void UpdateGlobalSystemViewState(SharedMemoryContext *context,
                                  RpcContext *rpc);
 
@@ -269,6 +269,7 @@ void StartGlobalSystemViewStateUpdateThread(SharedMemoryContext *context,
 void InitMetadataStorage(SharedMemoryContext *context, MetadataManager *mdm,
                          Arena *arena, Config *config);
 
+std::vector<u64> GetRemainingNodeCapacities(SharedMemoryContext *context);
 
 } // namespace hermes
 
