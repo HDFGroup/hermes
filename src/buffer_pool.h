@@ -36,7 +36,7 @@ struct RpcContext;
 struct Device {
   /** The device's theoretical bandwidth in MiB/second. */
   f32 bandwidth_mbps;
-  /** The devices's theoretical latency in nanoseconds. */
+  /** The device's theoretical latency in nanoseconds. */
   f32 latency_ns;
   /** The Device's identifier. This is an index into the array of Devices stored in
    * the BufferPool.

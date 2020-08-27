@@ -42,7 +42,7 @@ size_t GetStoredMapSize(MetadataManager *mdm, MapType map_type);
 /**
  *
  */
-std::vector<u64> GetNodeTargets(SharedMemoryContext *context);
+std::vector<TargetID> GetNodeTargets(SharedMemoryContext *context);
 
 }  // namespace hermes
 

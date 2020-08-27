@@ -550,20 +550,18 @@ void DecrementRefcount(SharedMemoryContext *context, RpcContext *rpc,
 }
 
 u64 LocalGetRemainingCapacity(SharedMemoryContext *context, TargetID id) {
-  Target *target = GetTarget(context, id.bits.index);
+  Target *target = GetTargetFromId(context, id);
   u64 result = target->remaining_space.load();
 
   return result;
 }
 
 std::vector<u64> GetRemainingNodeCapacities(SharedMemoryContext *context) {
-  std::vector<u64> targets = GetNodeTargets(context);
+  std::vector<TargetID> targets = GetNodeTargets(context);
   std::vector<u64> result(targets.size());
 
   for (size_t i = 0; i < targets.size(); ++i) {
-    TargetID id = {};
-    id.as_int = targets[i];
-    result[i] = LocalGetRemainingCapacity(context, id);
+    result[i] = LocalGetRemainingCapacity(context, targets[i]);
   }
 
   return result;

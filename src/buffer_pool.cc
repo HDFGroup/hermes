@@ -119,6 +119,12 @@ Target *GetTarget(SharedMemoryContext *context, int index) {
   return result;
 }
 
+Target *GetTargetFromId(SharedMemoryContext *context, TargetID id) {
+  Target *result = GetTarget(context, id.bits.index);
+
+  return result;
+}
+
 std::vector<f32> GetBandwidths(SharedMemoryContext *context) {
   BufferPool *pool = GetBufferPoolFromContext(context);
   std::vector<f32> result(pool->num_devices, 0);
