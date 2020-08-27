@@ -4,10 +4,13 @@
 #include <math.h>
 
 #include <utility>
+#include <random>
+#include <map>
 
 #include "ortools/linear_solver/linear_solver.h"
 
 #include "hermes.h"
+#include "hermes_types.h"
 #include "metadata_management.h"
 
 namespace hermes {
@@ -65,19 +68,118 @@ Status RandomPlacement(SharedMemoryContext *context, RpcContext *rpc,
                        std::vector<size_t> &blob_sizes,
                        std::vector<PlacementSchema> &output) {
   std::vector<u64> global_state = GetGlobalDeviceCapacities(context, rpc);
+  std::multimap<u64, size_t> ordered_cap;
   Status result = 0;
-  for (auto &blob_size : blob_sizes) {
-    PlacementSchema schema;
-    DeviceID device_id = rand() % global_state.size();
 
-    if (global_state[device_id] > blob_size) {
-      schema.push_back(std::make_pair(blob_size, device_id));
-    } else {
-      HERMES_NOT_IMPLEMENTED_YET;
-      // TODO(chogan): Trigger BufferOrganizer
-      // EvictBuffers(eviction_schema);
+  u64 avail_cap {0};
+  for (size_t j {0}; j < global_state.size(); ++j) {
+    avail_cap += global_state[j];
+    ordered_cap.insert(std::pair<u64, size_t>(global_state[j], j));
+  }
+
+  u64 total_blob_size {0};
+  for (size_t i {0}; i < blob_sizes.size(); ++i) {
+    total_blob_size += blob_sizes[i];
+  }
+
+  if (total_blob_size > avail_cap) {
+    HERMES_NOT_IMPLEMENTED_YET;
+    // TODO(chogan): Trigger BufferOrganizer??
+    // EvictBuffers(eviction_schema);
+    assert(!"Available capacity is not enough for data placement\n");
+  }
+
+  for (size_t i {0}; i < blob_sizes.size(); ++i) {
+    std::random_device dev;
+    std::mt19937 rng(dev());
+    int number {0};
+    PlacementSchema schema;
+
+    // If size is greater than 64KB
+    // Split the blob or not
+    if (blob_sizes[i] > KILOBYTES(64)) {
+      std::uniform_int_distribution<std::mt19937::result_type> distribution(0,1);
+      number = distribution(rng);
     }
-    output.push_back(schema);
+
+    // Split the blob
+    if (number) {
+      int split_option {1};
+      // Split the blob if size is greater than 64KB
+      if (blob_sizes[i] > KILOBYTES(64) && blob_sizes[i] <= KILOBYTES(256))
+        split_option = 2;
+      else if (blob_sizes[i] > KILOBYTES(256) && blob_sizes[i] <= MEGABYTES(1))
+        split_option = 5;
+      else if (blob_sizes[i] > MEGABYTES(1) && blob_sizes[i] <= MEGABYTES(4))
+        split_option = 8;
+      else
+        split_option = 10;
+
+      int split_range[] = { 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024 };
+      std::vector<int> split_choice(split_range, split_range+split_option-1);
+
+      // Random pickup a number from split_choice to split the blob
+      std::uniform_int_distribution<std::mt19937::result_type>
+        position(0, split_choice.size()-1);
+      int split_num = split_choice[position(rng)];
+
+      // Construct the vector for the splitted blob
+      std::vector<size_t> new_blob_size;
+      size_t blob_each_portion {blob_sizes[i]/split_num};
+      for (int j {0}; j<split_num-1; ++j) {
+        new_blob_size.push_back(blob_each_portion);
+      }
+      new_blob_size.push_back(blob_sizes[i] -
+                              blob_each_portion*(split_num-1));
+
+      for (size_t k {0}; k<new_blob_size.size(); ++k) {
+        size_t dst {global_state.size()};
+        auto itlow = ordered_cap.lower_bound (new_blob_size[k]);
+        if (itlow == ordered_cap.end()) {
+          HERMES_NOT_IMPLEMENTED_YET;
+          assert(!"No buffer device has enough capacity! Go to PFS.\n");
+        }
+
+        std::uniform_int_distribution<std::mt19937::result_type>
+          dst_distribution((*itlow).second, global_state.size()-1);
+        dst = dst_distribution(rng);
+        schema.push_back(std::make_pair(new_blob_size[k], dst));
+
+        for (auto it=itlow; it!=ordered_cap.end(); ++it) {
+          if ((*it).second == dst) {
+            ordered_cap.insert(std::pair<u64, size_t>(
+                               (*it).first-new_blob_size[k], (*it).second));
+            ordered_cap.erase(it);
+            break;
+          }
+        }
+      }
+      output.push_back(schema);
+    }
+    // Blob size is less than 64KB or do not split
+    else {
+      PlacementSchema schema;
+      size_t dst {global_state.size()};
+      auto itlow = ordered_cap.lower_bound(blob_sizes[i]);
+      if (itlow == ordered_cap.end()) {
+        HERMES_NOT_IMPLEMENTED_YET;
+        assert(!"No buffer device has enough capacity! Go to PFS.\n");
+      }
+
+      std::uniform_int_distribution<std::mt19937::result_type>
+        dst_distribution((*itlow).second, global_state.size()-1);
+      dst = dst_distribution(rng);
+      for (auto it=itlow; it!=ordered_cap.end(); ++it) {
+        if ((*it).second == dst) {
+          ordered_cap.insert(std::pair<u64, size_t>(
+                             (*it).first-blob_sizes[i], (*it).second));
+          ordered_cap.erase(it);
+          break;
+        }
+      }
+      schema.push_back(std::make_pair(blob_sizes[i], dst));
+      output.push_back(schema);
+    }
   }
 
   return result;
@@ -227,7 +329,7 @@ Status CalculatePlacement(SharedMemoryContext *context, RpcContext *rpc,
   // a set of N Devices and a blob, while satisfying a policy P.
 
   // TODO(chogan): This should be part of the Context
-  PlacementPolicy policy = PlacementPolicy::kMinimizeIoTime;
+  PlacementPolicy policy = PlacementPolicy::kRandom;
 
   switch (policy) {
     case PlacementPolicy::kRandom: {
