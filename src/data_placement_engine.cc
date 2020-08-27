@@ -125,12 +125,12 @@ Status RandomPlacement(SharedMemoryContext *context, RpcContext *rpc,
 
       // Construct the vector for the splitted blob
       std::vector<size_t> new_blob_size;
-      size_t bolb_each_portion {blob_sizes[i]/split_num};
+      size_t blob_each_portion {blob_sizes[i]/split_num};
       for (int j {0}; j<split_num-1; ++j) {
-        new_blob_size.push_back(bolb_each_portion);
+        new_blob_size.push_back(blob_each_portion);
       }
       new_blob_size.push_back(blob_sizes[i] -
-                              bolb_each_portion*(split_num-1));
+                              blob_each_portion*(split_num-1));
 
       for (size_t k {0}; k<new_blob_size.size(); ++k) {
         size_t dst {global_state.size()};
