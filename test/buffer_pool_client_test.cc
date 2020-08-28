@@ -34,6 +34,7 @@ struct TimingResult {
 };
 
 TimingResult TestGetBuffersRpc(RpcContext *rpc, int iters) {
+
   TimingResult result = {};
   PlacementSchema schema{std::make_pair(4096, 0)};
 
