@@ -1,7 +1,11 @@
 #include <string>
 #include <vector>
 
-#include "common.h"
+#include <mpi.h>
+
+#include "hermes.h"
+#include "buffer_pool_internal.h"
+#include "utils.h"
 #include "test_utils.h"
 
 /**
@@ -56,7 +60,7 @@ void TestGetBandwidths(hermes::SharedMemoryContext *context) {
   using namespace hermes;
   std::vector<f32> bandwidths = GetBandwidths(context);
   Config config;
-  InitTestConfig(&config);
+  InitDefaultConfig(&config);
   for (size_t i = 0; i < bandwidths.size(); ++i) {
     Assert(bandwidths[i] == config.bandwidths[i]);
     Assert(bandwidths.size() == (size_t)config.num_devices);

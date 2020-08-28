@@ -27,6 +27,7 @@
 #include "debug_state.cc"
 #include "memory_management.cc"
 #include "config_parser.cc"
+#include "utils.cc"
 
 #if defined(HERMES_COMMUNICATION_MPI)
 #include "communication_mpi.cc"
@@ -648,33 +649,6 @@ BufferID MakeBufferHeaders(Arena *arena, int buffer_size, u32 start_index,
   }
 
   return dummy.next_free;
-}
-
-size_t RoundUpToMultiple(size_t val, size_t multiple) {
-  if (multiple == 0) {
-    return val;
-  }
-
-  size_t result = val;
-  size_t remainder = val % multiple;
-
-  if (remainder != 0) {
-    result += multiple - remainder;
-  }
-
-  return result;
-}
-
-size_t RoundDownToMultiple(size_t val, size_t multiple) {
-  if (multiple == 0) {
-    return val;
-  }
-
-  size_t result = val;
-  size_t remainder = val % multiple;
-  result -= remainder;
-
-  return result;
 }
 
 Device *InitDevices(Arena *arena, Config *config) {

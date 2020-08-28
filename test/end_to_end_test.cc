@@ -5,7 +5,6 @@
 #include "hermes.h"
 #include "bucket.h"
 #include "test_utils.h"
-#include "common.h"
 
 namespace hapi = hermes::api;
 
@@ -82,7 +81,7 @@ int main(int argc, char **argv) {
     config_file = argv[1];
   }
 
-  std::shared_ptr<hapi::Hermes> hermes = hermes::InitHermes(config_file);
+  std::shared_ptr<hapi::Hermes> hermes = hapi::InitHermes(config_file);
 
   if (hermes->IsApplicationCore()) {
     int app_rank = hermes->GetProcessRank();

@@ -4,8 +4,31 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <chrono>
+
 namespace hermes {
 namespace testing {
+
+// TODO(chogan): Keep time in generic units and only convert the duration at the
+// end
+class Timer {
+public:
+  Timer():elapsed_time(0) {}
+  void resumeTime() {
+    t1 = std::chrono::high_resolution_clock::now();
+  }
+  double pauseTime() {
+    auto t2 = std::chrono::high_resolution_clock::now();
+    elapsed_time += std::chrono::duration<double>(t2 - t1).count();
+    return elapsed_time;
+  }
+  double getElapsedTime() {
+    return elapsed_time;
+  }
+private:
+  std::chrono::high_resolution_clock::time_point t1;
+  double elapsed_time;
+};
 
 void Assert(bool expr, const char *file, int lineno, const char *message) {
   if (!expr) {

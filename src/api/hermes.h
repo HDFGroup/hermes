@@ -85,7 +85,16 @@ Status TransferBlob(const Bucket &src_bkt,
                     const std::string &dst_blob_name,
                     Context &ctx);
 
+std::shared_ptr<api::Hermes> InitHermes(const char *config_file=NULL,
+                                        bool is_daemon=false,
+                                        bool is_adapter=false);
+
 }  // api namespace
+
+
+std::shared_ptr<api::Hermes> InitHermesDaemon(char *config_file=NULL);
+std::shared_ptr<api::Hermes> InitHermesClient(const char *config_file=NULL);
+
 }  // hermes namespace
 
 #endif  // HERMES_H_

@@ -9,11 +9,11 @@
 
 #include <mpi.h>
 
-#include "common.h"
+#include "hermes.h"
 #include "buffer_pool.h"
 #include "buffer_pool_internal.h"
 #include "utils.h"
-
+#include "test_utils.h"
 /**
  * @file buffer_pool_client_test.cc
  *
@@ -25,6 +25,7 @@
  */
 
 using namespace hermes;
+using hermes::testing::Timer;
 namespace hapi = hermes::api;
 
 struct TimingResult {
