@@ -17,12 +17,6 @@ namespace hermes {
 
 using hermes::api::Status;
 
-enum class PlacementPolicy {
-  kRandom,
-  kTopDown,
-  kMinimizeIoTime,
-};
-
 // TODO(chogan): Unfinished sketch
 Status TopDownPlacement(SharedMemoryContext *context, RpcContext *rpc,
                         std::vector<size_t> blob_sizes,
@@ -332,19 +326,16 @@ Status CalculatePlacement(SharedMemoryContext *context, RpcContext *rpc,
   // TODO(chogan): Return a PlacementSchema that minimizes a cost function F given
   // a set of N Devices and a blob, while satisfying a policy P.
 
-  // TODO(chogan): This should be part of the Context
-  PlacementPolicy policy = PlacementPolicy::kRandom;
-
-  switch (policy) {
-    case PlacementPolicy::kRandom: {
+  switch (api_context.policy) {
+    case api::PlacementPolicy::kRandom: {
       result = RandomPlacement(context, rpc, blob_sizes, output);
       break;
     }
-    case PlacementPolicy::kTopDown: {
+    case api::PlacementPolicy::kTopDown: {
       result = TopDownPlacement(context, rpc, blob_sizes, output);
       break;
     }
-    case PlacementPolicy::kMinimizeIoTime: {
+    case api::PlacementPolicy::kMinimizeIoTime: {
       result = MinimizeIoTimePlacement(context, rpc, blob_sizes, output);
       break;
     }

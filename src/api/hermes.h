@@ -64,7 +64,16 @@ class Bucket;
 
 typedef std::vector<unsigned char> Blob;
 
-class Context {
+enum class PlacementPolicy {
+  kRandom,
+  kTopDown,
+  kMinimizeIoTime,
+};
+
+struct Context {
+  PlacementPolicy policy;
+
+  Context() : policy(PlacementPolicy::kRandom) {}
 };
 
 struct TraitTag{};
