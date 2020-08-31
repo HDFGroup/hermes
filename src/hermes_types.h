@@ -91,6 +91,8 @@ struct Config {
   f32 arena_percentages[kArenaType_Count];
   /** The number of Devices */
   int num_devices;
+  /** The number of Targets */
+  int num_targets;
 
   u32 max_buckets_per_node;
   u32 max_vbuckets_per_node;

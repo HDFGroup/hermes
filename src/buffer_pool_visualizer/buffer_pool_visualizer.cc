@@ -47,6 +47,9 @@ static DeviceID global_active_device;
 static ActiveSegment global_active_segment;
 static ActiveHeap global_active_heap;
 static u32 global_color_counter;
+static DebugState *id_debug_state;
+static DebugState *map_debug_state;
+
 
 struct Range {
   int start;
@@ -365,8 +368,7 @@ static void DrawEndOfRamBuffers(SharedMemoryContext *context,
   int pad = 2;
   f32 memory_offset_to_pixels = (f32)(block_width) / (f32)(block_size);
 
-  int pixel_offset = (int)(pool->header_storage_offset *
-                           memory_offset_to_pixels);
+  int pixel_offset = (int)(pool->headers_offset * memory_offset_to_pixels);
   int x = pixel_offset % window_width;
   int y = (pixel_offset / window_width) * h;
 
@@ -572,8 +574,12 @@ static void HandleInput(SharedMemoryContext *context, bool *running,
             break;
           }
           case SDL_SCANCODE_M: {
-            global_active_segment =  ActiveSegment::Metadata;
-            SDL_Log("Viewing Metadata segment\n");
+            if (id_debug_state == 0 || map_debug_state == 0) {
+              SDL_Log("Must enable HERMES_DEBUG_HEAP to inspect metadata\n");
+            } else {
+              global_active_segment =  ActiveSegment::Metadata;
+              SDL_Log("Viewing Metadata segment\n");
+            }
             break;
           }
           case SDL_SCANCODE_R: {
@@ -848,9 +854,6 @@ int main() {
     GetSharedMemoryContext(global_debug_id_name);
   SharedMemoryContext map_debug_context =
     GetSharedMemoryContext(global_debug_map_name);
-
-  DebugState *id_debug_state = 0;
-  DebugState *map_debug_state = 0;
 
   if (id_debug_context.shm_base) {
     id_debug_state = (DebugState *)id_debug_context.shm_base;

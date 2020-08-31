@@ -24,6 +24,7 @@ int main(int argc, char **argv) {
   hermes::ParseConfig(&arena, argv[1], &config);
 
   Assert(config.num_devices == 4);
+  Assert(config.num_targets == 4);
   for (int i = 0; i < config.num_devices; ++i) {
     Assert(config.capacities[i] == MEGABYTES(50));
     Assert(config.block_sizes[i] == KILOBYTES(4));

@@ -65,13 +65,13 @@ struct Stats {
 
 const int kIdListChunkSize = 10;
 
-struct BlobIdList {
+struct ChunkedIdList {
   u32 head_offset;
   u32 length;
   u32 capacity;
 };
 
-struct BufferIdList {
+struct IdList {
   u32 head_offset;
   u32 length;
 };
@@ -83,7 +83,7 @@ struct BufferIdArray {
 
 struct BucketInfo {
   BucketID next_free;
-  BlobIdList blobs;
+  ChunkedIdList blobs;
   std::atomic<int> ref_count;
   bool active;
   Stats stats;
@@ -93,7 +93,7 @@ static constexpr int kMaxTraitsPerVBucket = 8;
 
 struct VBucketInfo {
   VBucketID next_free;
-  BlobIdList blobs;
+  ChunkedIdList blobs;
   std::atomic<int> ref_count;
   TraitID traits[kMaxTraitsPerVBucket];
   bool active;
@@ -133,6 +133,8 @@ struct MetadataManager {
   TicketMutex id_mutex;
 
   size_t map_seed;
+
+  IdList node_targets;
 
   u32 system_view_state_update_interval_ms;
   u32 global_system_view_state_node_id;
@@ -249,19 +251,25 @@ u64 LocalGet(MetadataManager *mdm, const char *key, MapType map_type);
 void LocalPut(MetadataManager *mdm, const char *key, u64 val, MapType map_type);
 void LocalDelete(MetadataManager *mdm, const char *key, MapType map_type);
 
+u64 LocalGetRemainingCapacity(SharedMemoryContext *context, TargetID id);
 void LocalUpdateGlobalSystemViewState(SharedMemoryContext *context,
                                       std::vector<i64> adjustments);
 SystemViewState *GetLocalSystemViewState(SharedMemoryContext *context);
 SystemViewState *GetGlobalSystemViewState(SharedMemoryContext *context);
 std::vector<u64> LocalGetGlobalDeviceCapacities(SharedMemoryContext *context);
 std::vector<u64> GetGlobalDeviceCapacities(SharedMemoryContext *context,
-                                          RpcContext *rpc);
+                                           RpcContext *rpc);
 void UpdateGlobalSystemViewState(SharedMemoryContext *context,
                                  RpcContext *rpc);
 
 void StartGlobalSystemViewStateUpdateThread(SharedMemoryContext *context,
                                             RpcContext *rpc, Arena *arena,
                                             double slepp_ms);
+
+void InitMetadataStorage(SharedMemoryContext *context, MetadataManager *mdm,
+                         Arena *arena, Config *config);
+
+std::vector<u64> GetRemainingNodeCapacities(SharedMemoryContext *context);
 
 } // namespace hermes
 

@@ -415,8 +415,7 @@ void *HeapRealloc(Heap *heap, void *ptr, size_t size) {
     // map uses STBDS_REALLOC for its malloc style allocations. We just give the
     // initial map a large enough size so that it never needs to realloc.
 
-    // TODO(chogan): @errorhandling
-    assert(!"Can't realloc in Heap\n");
+    HERMES_NOT_IMPLEMENTED_YET;
   }
 
   void *result = HeapPushSize(heap, size);

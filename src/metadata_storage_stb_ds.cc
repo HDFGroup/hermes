@@ -6,6 +6,7 @@
 
 #define STB_DS_IMPLEMENTATION
 #include "stb_ds.h"
+#include "buffer_pool_internal.h"
 
 namespace hermes {
 
@@ -100,7 +101,7 @@ static char *GetKey(MetadataManager *mdm, IdMap *map, u32 index) {
   return result;
 }
 
-void AllocateOrGrowBlobIdList(MetadataManager *mdm, BlobIdList *blobs) {
+void AllocateOrGrowBlobIdList(MetadataManager *mdm, ChunkedIdList *blobs) {
   Heap *id_heap = GetIdHeap(mdm);
   BeginTicketMutex(&mdm->id_mutex);
   if (blobs->capacity == 0) {
@@ -133,7 +134,7 @@ void LocalAddBlobIdToBucket(MetadataManager *mdm, BucketID bucket_id,
   // TODO(chogan): Think about lock granularity
   BeginTicketMutex(&mdm->bucket_mutex);
   BucketInfo *info = LocalGetBucketInfoById(mdm, bucket_id);
-  BlobIdList *blobs = &info->blobs;
+  ChunkedIdList *blobs = &info->blobs;
 
   if (blobs->length >= blobs->capacity) {
     AllocateOrGrowBlobIdList(mdm, blobs);
@@ -146,21 +147,35 @@ void LocalAddBlobIdToBucket(MetadataManager *mdm, BucketID bucket_id,
   CheckHeapOverlap(mdm);
 }
 
+IdList *AllocateIdList(MetadataManager *mdm, u32 length) {
+  static_assert(sizeof(IdList) == sizeof(u64));
+  Heap *id_heap = GetIdHeap(mdm);
+  // NOTE(chogan): Add 1 extra for the embedded BufferIdList
+  u64 *id_list_memory = HeapPushArray<u64>(id_heap, length + 1);
+  IdList *result = (IdList *)id_list_memory;
+  result->length = length;
+  result->head_offset = GetHeapOffset(id_heap, (u8 *)(result + 1));
+  CheckHeapOverlap(mdm);
+
+  return result;
+}
+
+u64 *GetIdsPtr(MetadataManager *mdm, IdList id_list) {
+  Heap *id_heap = GetIdHeap(mdm);
+  u64 *result = (u64 *)HeapOffsetToPtr(id_heap, id_list.head_offset);
+
+  return result;
+}
+
 u32 LocalAllocateBufferIdList(MetadataManager *mdm,
                               const std::vector<BufferID> &buffer_ids) {
-  static_assert(sizeof(BufferIdList) == sizeof(BufferID));
-  Heap *id_heap = GetIdHeap(mdm);
+  static_assert(sizeof(IdList) == sizeof(BufferID));
   u32 length = (u32)buffer_ids.size();
-  // NOTE(chogan): Add 1 extra for the embedded BufferIdList
-  BufferID *id_list_memory = HeapPushArray<BufferID>(id_heap, length + 1);
-  BufferIdList *id_list = (BufferIdList *)id_list_memory;
-  id_list->length = length;
-  id_list->head_offset = GetHeapOffset(id_heap, (u8 *)(id_list + 1));
-  CopyIds((u64 *)(id_list + 1), (u64 *)buffer_ids.data(), length);
+  IdList *id_list = AllocateIdList(mdm, length);
+  CopyIds(GetIdsPtr(mdm, *id_list), (u64 *)buffer_ids.data(), length);
 
+  Heap *id_heap = GetIdHeap(mdm);
   u32 result = GetHeapOffset(id_heap, (u8 *)id_list);
-
-  CheckHeapOverlap(mdm);
 
   return result;
 }
@@ -168,8 +183,8 @@ u32 LocalAllocateBufferIdList(MetadataManager *mdm,
 std::vector<BufferID> LocalGetBufferIdList(MetadataManager *mdm,
                                            BlobID blob_id) {
   Heap *id_heap = GetIdHeap(mdm);
-  BufferIdList *id_list =
-    (BufferIdList *)HeapOffsetToPtr(id_heap, blob_id.bits.buffer_ids_offset);
+  IdList *id_list =
+    (IdList *)HeapOffsetToPtr(id_heap, blob_id.bits.buffer_ids_offset);
   BufferID *ids = (BufferID *)HeapOffsetToPtr(id_heap, id_list->head_offset);
   std::vector<BufferID> result(id_list->length);
   CopyIds((u64 *)result.data(), (u64 *)ids, id_list->length);
@@ -180,8 +195,8 @@ std::vector<BufferID> LocalGetBufferIdList(MetadataManager *mdm,
 void LocalGetBufferIdList(Arena *arena, MetadataManager *mdm, BlobID blob_id,
                           BufferIdArray *buffer_ids) {
   Heap *id_heap = GetIdHeap(mdm);
-  BufferIdList *id_list =
-    (BufferIdList *)HeapOffsetToPtr(id_heap, blob_id.bits.buffer_ids_offset);
+  IdList *id_list =
+    (IdList *)HeapOffsetToPtr(id_heap, blob_id.bits.buffer_ids_offset);
   BufferID *ids = (BufferID *)HeapOffsetToPtr(id_heap, id_list->head_offset);
   buffer_ids->ids = PushArray<BufferID>(arena, id_list->length);
   buffer_ids->length = id_list->length;
@@ -201,7 +216,7 @@ void LocalRemoveBlobFromBucketInfo(SharedMemoryContext *context,
                                    BucketID bucket_id, BlobID blob_id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   BucketInfo *info = LocalGetBucketInfoById(mdm, bucket_id);
-  BlobIdList *blobs = &info->blobs;
+  ChunkedIdList *blobs = &info->blobs;
   Heap *id_heap = GetIdHeap(mdm);
 
   BeginTicketMutex(&mdm->bucket_mutex);
@@ -219,7 +234,7 @@ bool LocalContainsBlob(SharedMemoryContext *context, BucketID bucket_id,
                        BlobID blob_id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   BucketInfo *info = LocalGetBucketInfoById(mdm, bucket_id);
-  BlobIdList *blobs = &info->blobs;
+  ChunkedIdList *blobs = &info->blobs;
   Heap *id_heap = GetIdHeap(mdm);
   BlobID *blob_id_arr = (BlobID *)HeapOffsetToPtr(id_heap, blobs->head_offset);
 
@@ -271,6 +286,22 @@ void LocalDestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
     LocalDelete(mdm, bucket_name, kMapType_Bucket);
   }
   EndTicketMutex(&mdm->bucket_mutex);
+}
+
+std::vector<TargetID> GetNodeTargets(SharedMemoryContext *context) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  Heap *id_heap = GetIdHeap(mdm);
+  u64 *targets = (u64 *)HeapOffsetToPtr(id_heap, mdm->node_targets.head_offset);
+  u32 length = mdm->node_targets.length;
+  std::vector<TargetID> result(length);
+
+  for (u32 i = 0; i < length; ++i) {
+    TargetID id = {};
+    id.as_int = targets[i];
+    result[i] = id;
+  }
+
+  return result;
 }
 
 void PutToStorage(MetadataManager *mdm, const char *key, u64 val,
@@ -348,7 +379,8 @@ void SeedHashForStorage(size_t seed) {
   stbds_rand_seed(seed);
 }
 
-void InitMetadataStorage(MetadataManager *mdm, Arena *arena, Config *config) {
+void InitMetadataStorage(SharedMemoryContext *context, MetadataManager *mdm,
+                         Arena *arena, Config *config) {
   // Heaps
 
   u32 heap_alignment = 8;
@@ -359,6 +391,16 @@ void InitMetadataStorage(MetadataManager *mdm, Arena *arena, Config *config) {
   // will grow towards smaller addresses.
   Heap *id_heap = InitHeapInArena(arena, false, heap_alignment);
   mdm->id_heap_offset = GetOffsetFromMdm(mdm, id_heap);
+
+  // NOTE(chogan): Rank Targets default to one Target per Device
+  IdList *node_targets = AllocateIdList(mdm, config->num_devices);
+  TargetID *target_ids = (TargetID *)GetIdsPtr(mdm, *node_targets);
+  for (u32 i = 0; i < node_targets->length; ++i) {
+    Target *target = GetTarget(context, i);
+    target_ids[i] = target->id;
+  }
+  mdm->node_targets = *node_targets;
+
 
   // ID Maps
 

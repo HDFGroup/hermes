@@ -37,6 +37,7 @@ const char rpc_server_name[] = "sockets://localhost:8080";
 
 void InitTestConfig(Config *config) {
   config->num_devices = 4;
+  config->num_targets = 4;
   assert(config->num_devices < kMaxDevices);
 
   for (int dev = 0; dev < config->num_devices; ++dev) {
@@ -162,6 +163,7 @@ SharedMemoryContext InitHermesCore(Config *config, CommunicationContext *comm,
   mdm->rpc_state_offset = (u8 *)rpc->state - shmem_base;
 
   InitMetadataManager(mdm, &arenas[kArenaType_MetaData], config, comm->node_id);
+  InitMetadataStorage(&context, mdm, &arenas[kArenaType_MetaData], config);
 
   // NOTE(chogan): Store the metadata_manager_offset right after the
   // buffer_pool_offset so other processes can pick it up.

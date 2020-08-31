@@ -105,8 +105,22 @@ BufferPool *GetBufferPoolFromContext(SharedMemoryContext *context) {
 
 Device *GetDeviceFromHeader(SharedMemoryContext *context, BufferHeader *header) {
   BufferPool *pool = GetBufferPoolFromContext(context);
-  Device *devices_base = (Device *)(context->shm_base + pool->device_storage_offset);
+  Device *devices_base = (Device *)(context->shm_base + pool->devices_offset);
   Device *result = devices_base + header->device_id;
+
+  return result;
+}
+
+Target *GetTarget(SharedMemoryContext *context, int index) {
+  BufferPool *pool = GetBufferPoolFromContext(context);
+  Target *targets_base = (Target *)(context->shm_base + pool->targets_offset);
+  Target *result = targets_base + index;
+
+  return result;
+}
+
+Target *GetTargetFromId(SharedMemoryContext *context, TargetID id) {
+  Target *result = GetTarget(context, id.bits.index);
 
   return result;
 }
@@ -125,7 +139,7 @@ std::vector<f32> GetBandwidths(SharedMemoryContext *context) {
 
 Device *GetDeviceById(SharedMemoryContext *context, DeviceID device_id) {
   BufferPool *pool = GetBufferPoolFromContext(context);
-  Device *devices_base = (Device *)(context->shm_base + pool->device_storage_offset);
+  Device *devices_base = (Device *)(context->shm_base + pool->devices_offset);
   Device *result = devices_base + device_id;
 
   return result;
@@ -134,7 +148,7 @@ Device *GetDeviceById(SharedMemoryContext *context, DeviceID device_id) {
 BufferHeader *GetHeadersBase(SharedMemoryContext *context) {
   BufferPool *pool = GetBufferPoolFromContext(context);
   BufferHeader *result = (BufferHeader *)(context->shm_base +
-                                          pool->header_storage_offset);
+                                          pool->headers_offset);
 
   return result;
 }
@@ -346,41 +360,62 @@ void SetFirstFreeBufferId(SharedMemoryContext *context, DeviceID device_id,
   }
 }
 
-static u32 *GetAvailableBuffersArray(SharedMemoryContext *context,
-                                     DeviceID device_id) {
+static std::atomic<u32> *GetAvailableBuffersArray(SharedMemoryContext *context,
+                                                  DeviceID device_id) {
   BufferPool *pool = GetBufferPoolFromContext(context);
-  u32 *result =
-    (u32 *)(context->shm_base + pool->buffers_available_offsets[device_id]);
+  std::atomic<u32> *result =
+    (std::atomic<u32> *)(context->shm_base +
+                         pool->buffers_available_offsets[device_id]);
 
   return result;
 }
 
-#if 0
 static u32 GetNumBuffersAvailable(SharedMemoryContext *context, DeviceID device_id,
                                   int slab_index) {
-  u32 *buffers_available = GetAvailableBuffersArray(context, device_id);
+  std::atomic<u32> *buffers_available = GetAvailableBuffersArray(context,
+                                                                 device_id);
   u32 result = 0;
   if (buffers_available) {
-    result = buffers_available[slab_index];
+    result = buffers_available[slab_index].load();
   }
 
   return result;
 }
-#endif
+
+static u64 GetNumBytesRemaining(SharedMemoryContext *context,
+                                DeviceID device_id, int slab_index) {
+  u32 num_free_buffers = GetNumBuffersAvailable(context, device_id, slab_index);
+  u32 buffer_size = GetSlabBufferSize(context, device_id, slab_index);
+  u64 result = num_free_buffers * buffer_size;
+
+  return result;
+}
+
+static u64 GetNumBytesRemaining(SharedMemoryContext *context, DeviceID id) {
+  BufferPool *pool = GetBufferPoolFromContext(context);
+  u64 result = 0;
+  for (int i = 0; i < pool->num_slabs[id]; ++i) {
+    result += GetNumBytesRemaining(context, id, i);
+  }
+
+  return result;
+}
 
 static void DecrementAvailableBuffers(SharedMemoryContext *context,
                                       DeviceID device_id, int slab_index) {
-  u32 *buffers_available = GetAvailableBuffersArray(context, device_id);
+  std::atomic<u32> *buffers_available = GetAvailableBuffersArray(context,
+                                                                 device_id);
   if (buffers_available) {
-    buffers_available[slab_index]--;
+    buffers_available[slab_index].fetch_sub(1);
   }
 }
 
 static void IncrementAvailableBuffers(SharedMemoryContext *context,
                                       DeviceID device_id, int slab_index) {
-  u32 *buffers_available = GetAvailableBuffersArray(context, device_id);
+  std::atomic<u32> *buffers_available = GetAvailableBuffersArray(context,
+                                                                 device_id);
   if (buffers_available) {
-    buffers_available[slab_index]++;
+    buffers_available[slab_index].fetch_add(1);
   }
 }
 
@@ -606,7 +641,7 @@ BufferID MakeBufferHeaders(Arena *arena, int buffer_size, u32 start_index,
     previous = header;
 
     // NOTE(chogan): Store the address of the first header so we can later
-    // compute the `header_storage_offset`
+    // compute the `headers_offset`
     if (i == 0 && header_begin) {
       *header_begin = (u8 *)header;
     }
@@ -648,11 +683,10 @@ Device *InitDevices(Arena *arena, Config *config) {
   for (int i = 0; i < config->num_devices; ++i) {
     Device *device = result + i;
     device->bandwidth_mbps = config->bandwidths[i];
-    device->capacity = config->capacities[i];
     device->latency_ns = config->latencies[i];
     device->id = i;
     // TODO(chogan): @configuration Get this from cmake.
-    device->has_fallocate = true;
+    device->has_fallocate = false;
     size_t path_length = config->mount_points[i].size();
 
     if (path_length == 0) {
@@ -663,6 +697,29 @@ Device *InitDevices(Arena *arena, Config *config) {
       snprintf(device->mount_point, path_length + 1, "%s",
                config->mount_points[i].c_str());
     }
+  }
+
+  return result;
+}
+
+Target *InitTargets(Arena *arena, Config *config, Device *devices,
+                    int node_id) {
+  Target *result = PushArray<Target>(arena, config->num_targets);
+
+  if (config->num_targets != config->num_devices) {
+    HERMES_NOT_IMPLEMENTED_YET;
+  }
+
+  for (int i = 0; i < config->num_targets; ++i) {
+    TargetID id = {};
+    id.bits.node_id = node_id;
+    id.bits.device_id = (DeviceID)i;
+    id.bits.index = i;
+    Target *target = result + i;
+    target->id = id;
+    target->capacity = config->capacities[i];
+    target->remaining_space.store(config->capacities[i]);
+    target->speed.store(devices[i].bandwidth_mbps);
   }
 
   return result;
@@ -985,9 +1042,11 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
                         buffer_counts[0][slab], config->block_sizes[slab]);
   }
 
-  // Build Devices
+  // Init Devices and Targets
 
   Device *devices = InitDevices(buffer_pool_arena, config);
+
+  Target *targets = InitTargets(buffer_pool_arena, config, devices, node_id);
 
   // Create Free Lists
 
@@ -1037,8 +1096,9 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
   // Build BufferPool
 
   BufferPool *pool = PushClearedStruct<BufferPool>(buffer_pool_arena);
-  pool->header_storage_offset = header_begin - shmem_base;
-  pool->device_storage_offset = (u8 *)devices - shmem_base;
+  pool->headers_offset = header_begin - shmem_base;
+  pool->devices_offset = (u8 *)devices - shmem_base;
+  pool->targets_offset = (u8 *)targets - shmem_base;
   pool->num_devices = config->num_devices;
   pool->total_headers = total_headers;
 
@@ -1052,8 +1112,8 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
                                           config->num_slabs[device]);
     i32 *slab_buffer_sizes_for_device = PushArray<i32>(buffer_pool_arena,
                                             config->num_slabs[device]);
-    u32 *available_buffers = PushArray<u32>(buffer_pool_arena,
-                                            config->num_slabs[device]);
+    std::atomic<u32> *available_buffers =
+      PushArray<std::atomic<u32>>(buffer_pool_arena, config->num_slabs[device]);
 
     for (int slab = 0; slab < config->num_slabs[device]; ++slab) {
       free_list[slab] = free_lists[device][slab];
@@ -1132,16 +1192,20 @@ void InitFilesForBuffering(SharedMemoryContext *context, bool make_space) {
       const char *buffering_fname =
         context->buffering_filenames[device_id][slab].c_str();
       FILE *buffering_file = fopen(buffering_fname, "w+");
-      if (make_space && device->has_fallocate) {
-        // TODO(chogan): Some Devices require file initialization on each node,
-        // and some are shared (burst buffers) and only require one rank to
-        // initialize them
+      if (make_space) {
+        if (device->has_fallocate) {
+          // TODO(chogan): Use posix_fallocate when it is available
+        } else {
+          // TODO(chogan): Some Devices require file initialization on each node,
+          // and some are shared (burst buffers) and only require one rank to
+          // initialize them
 
-        // TODO(chogan): Use posix_fallocate when it is available
-        [[maybe_unused]] int ftruncate_result =
-          ftruncate(fileno(buffering_file), device->capacity);
-        // TODO(chogan): @errorhandling
-        assert(ftruncate_result == 0);
+          Target *target = GetTarget(context, device_id);
+          [[maybe_unused]] int ftruncate_result =
+            ftruncate(fileno(buffering_file), target->capacity);
+          // TODO(chogan): @errorhandling
+          assert(ftruncate_result == 0);
+        }
       }
       context->open_streams[device_id][slab] = buffering_file;
     }

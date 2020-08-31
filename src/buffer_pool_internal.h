@@ -227,6 +227,16 @@ u8 *InitSharedMemory(const char *shmem_name, size_t total_size);
  */
 u8 *GetRamBufferPtr(SharedMemoryContext *context, BufferID buffer_id);
 
+/**
+ *
+ */
+Target *GetTarget(SharedMemoryContext *context, int index);
+
+/**
+ *
+ */
+Target *GetTargetFromId(SharedMemoryContext *context, TargetID id);
+
 }  // namespace hermes
 
 #endif  // HERMES_BUFFER_POOL_INTERNAL_H_

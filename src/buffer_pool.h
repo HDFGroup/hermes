@@ -34,11 +34,9 @@ struct RpcContext;
  * initialized, and they remain throughout a Hermes run.
  */
 struct Device {
-  /** The total capacity of the Device. */
-  u64 capacity;
-  /** The theoretical (or perceived by Apollo?) bandwidth in MiB/second. */
+  /** The device's theoretical bandwidth in MiB/second. */
   f32 bandwidth_mbps;
-  /** The theoretical (or perceived by Apollo?) latency in nanoseconds. */
+  /** The device's theoretical latency in nanoseconds. */
   f32 latency_ns;
   /** The Device's identifier. This is an index into the array of Devices stored in
    * the BufferPool.
@@ -54,6 +52,24 @@ struct Device {
   bool has_fallocate;
   /** The directory where buffering files can be created. Zero terminated. */
   char mount_point[kMaxPathLength];
+};
+
+union TargetID {
+  struct {
+    u32 node_id;
+    u16 device_id;
+    u16 index;
+  } bits;
+
+  u64 as_int;
+};
+
+struct Target {
+  TargetID id;
+  /** The total capacity of the Target. */
+  u64 capacity;
+  std::atomic<u64> remaining_space;
+  std::atomic<u64> speed;
 };
 
 /**
@@ -142,10 +158,11 @@ struct BufferPool {
   /** The offset from the base of shared memory where the BufferHeader array
    * begins.
    */
-  ptrdiff_t header_storage_offset;
+  ptrdiff_t headers_offset;
   /** The offset from the base of shared memory where the Device array begins.
    */
-  ptrdiff_t device_storage_offset;
+  ptrdiff_t devices_offset;
+  ptrdiff_t targets_offset;
   /** The offset from the base of shared memory where each Device's free list is
    * stored. Converting the offset to a pointer results in a pointer to an array
    * of N BufferIDs where N is the number of slabs in that Device.
@@ -166,7 +183,7 @@ struct BufferPool {
   ptrdiff_t slab_buffer_sizes_offsets[kMaxDevices];
   /** The offset from the base of shared memory where each Device's list of
    * available buffers per slab is stored. Each offset can be converted to a
-   * pointer to an arry of N (num_slabs[device_id]) u32.
+   * pointer to an arry of N (num_slabs[device_id]) std::atomic<u32>.
    */
   ptrdiff_t buffers_available_offsets[kMaxDevices];
   /** A ticket lock to syncrhonize access to free lists
@@ -184,6 +201,7 @@ struct BufferPool {
   u32 num_headers[kMaxDevices];
   /** The total number of Devices. */
   i32 num_devices;
+  i32 num_targets;
   /** The total number of BufferHeaders in the header array. */
   u32 total_headers;
 };

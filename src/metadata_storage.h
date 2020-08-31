@@ -6,11 +6,6 @@ namespace hermes {
 /**
  *
  */
-void InitMetadataStorage(MetadataManager *mdm, Arena *arena, Config *config);
-
-/**
- *
- */
 void PutToStorage(MetadataManager *mdm, const char *key, u64 val,
                 MapType map_type);
 
@@ -43,6 +38,11 @@ void SeedHashForStorage(size_t seed);
  *
  */
 size_t GetStoredMapSize(MetadataManager *mdm, MapType map_type);
+
+/**
+ *
+ */
+std::vector<TargetID> GetNodeTargets(SharedMemoryContext *context);
 
 }  // namespace hermes
 

@@ -549,6 +549,38 @@ void DecrementRefcount(SharedMemoryContext *context, RpcContext *rpc,
   }
 }
 
+u64 LocalGetRemainingCapacity(SharedMemoryContext *context, TargetID id) {
+  Target *target = GetTargetFromId(context, id);
+  u64 result = target->remaining_space.load();
+
+  return result;
+}
+
+std::vector<u64> GetRemainingNodeCapacities(SharedMemoryContext *context) {
+  std::vector<TargetID> targets = GetNodeTargets(context);
+  std::vector<u64> result(targets.size());
+
+  for (size_t i = 0; i < targets.size(); ++i) {
+    result[i] = LocalGetRemainingCapacity(context, targets[i]);
+  }
+
+  return result;
+}
+
+u64 GetRemainingCapacity(SharedMemoryContext *context, RpcContext *rpc,
+                         TargetID id) {
+  u32 target_node = id.bits.node_id;
+
+  u64 result = 0;
+  if (target_node == rpc->node_id) {
+    result = LocalGetRemainingCapacity(context, id);
+  } else {
+    result = RpcCall<u64>(rpc, target_node, "RemoteGetRemainingCapacity", id);
+  }
+
+  return result;
+}
+
 SystemViewState *GetLocalSystemViewState(MetadataManager *mdm) {
   SystemViewState *result =
     (SystemViewState *)((u8 *)mdm + mdm->system_view_state_offset);
@@ -728,8 +760,6 @@ void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
       info->next_free.bits.index = i + 1;
     }
   }
-
-  InitMetadataStorage(mdm, arena, config);
 }
 
 }  // namespace hermes
