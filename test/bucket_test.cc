@@ -1,12 +1,12 @@
 #include <iostream>
 #include <unordered_map>
 
+#include <mpi.h>
 #include "zlib.h"
 
 #include "hermes.h"
 #include "bucket.h"
 #include "vbucket.h"
-#include "common.h"
 
 struct MyTrait {
   int compress_level;
@@ -62,7 +62,7 @@ int main(int argc, char **argv)
   }
 
   std::shared_ptr<hermes::api::Hermes> hermes_app =
-                                       hermes::InitHermes(config_file);
+    hermes::api::InitHermes(config_file);
 
   if (hermes_app->IsApplicationCore()) {
     hermes::api::Context ctx;

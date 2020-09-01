@@ -16,42 +16,6 @@
 namespace hermes {
 
 /**
- * Rounds a value up to the next given multiple.
- *
- * Returns the original value if it is already divisible by multiple.
- *
- * Example:
- * ```cpp
- * size_t result = RoundUpToMultiple(2000, 4096);
- * assert(result == 4096);
- * ```
- *
- * @param val The initial value to round.
- * @param multiple The multiple to round up to.
- *
- * @return The next multiple of multiple that is greater than or equal to val.
- */
-size_t RoundUpToMultiple(size_t val, size_t multiple);
-
-/**
- * Rounds a value down to the previous given multiple.
- *
- * Returns the original value if it is already divisible by multiple.
- *
- * Example:
- * ```cpp
- *   size_t result = RoundDownToMultiple(4097, 4096);
- *   assert(result == 4096);
- * ```
- *
- * @param val The initial value to round.
- * @param multiple The multiple to round down to.
- *
- * @return The previous multiple of multiple that is less than or equal to val.
- */
-size_t RoundDownToMultiple(size_t val, size_t multiple);
-
-/**
  * Initializes a BufferPool inside an existing shared memory segment.
  *
  * Divides the shared memory segment pointed to by hermes_memory into

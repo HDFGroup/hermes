@@ -7,6 +7,7 @@
 #include "buffer_pool_internal.h"
 #include "metadata_management.h"
 #include "debug_state.h"
+#include "utils.h"
 
 namespace hermes {
 Heap *GetIdHeap(MetadataManager *mdm);

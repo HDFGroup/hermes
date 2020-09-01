@@ -1,9 +1,14 @@
-#include "sys/mman.h"
+#include <sys/mman.h>
+
+#include <cmath>
 
 #include "glog/logging.h"
 
+#include "utils.h"
 #include "hermes.h"
 #include "bucket.h"
+#include "buffer_pool.h"
+#include "buffer_pool_internal.h"
 
 namespace hermes {
 
@@ -63,5 +68,212 @@ void Hermes::Finalize(bool force_rpc_shutdown) {
                    IsApplicationCore(), force_rpc_shutdown);
 }
 
-} // api namepsace
-} // hermes namespace
+} // namespace api
+
+ArenaInfo GetArenaInfo(Config *config) {
+  size_t page_size = sysconf(_SC_PAGESIZE);
+  // NOTE(chogan): Assumes first Device is RAM
+  size_t total_hermes_memory = RoundDownToMultiple(config->capacities[0],
+                                                   page_size);
+  size_t total_pages = total_hermes_memory / page_size;
+  size_t pages_left = total_pages;
+
+  ArenaInfo result = {};
+
+  for (int i = 0; i < kArenaType_Count; ++i) {
+    size_t pages {0};
+    if (i < kArenaType_Count-1) {
+      pages = std::floor(config->arena_percentages[i] * total_pages);
+      pages_left -= pages;
+    }
+    else {
+      pages = pages_left;
+      pages_left = 0;
+    }
+    size_t num_bytes = pages * page_size;
+    result.sizes[i] = num_bytes;
+    result.total += num_bytes;
+  }
+
+  assert(pages_left == 0);
+
+  return result;
+}
+
+SharedMemoryContext InitHermesCore(Config *config, CommunicationContext *comm,
+                                   ArenaInfo *arena_info, Arena *arenas,
+                                   RpcContext *rpc) {
+
+  size_t shmem_size = (arena_info->total -
+                       arena_info->sizes[kArenaType_Transient]);
+  u8 *shmem_base = InitSharedMemory(config->buffer_pool_shmem_name, shmem_size);
+
+  // NOTE(chogan): Initialize shared arenas
+  ptrdiff_t base_offset = 0;
+  for (int i = 0; i < kArenaType_Count; ++i) {
+    if (i == kArenaType_Transient) {
+      // NOTE(chogan): Transient arena exists per rank, not in shared memory
+      continue;
+    }
+    size_t arena_size = arena_info->sizes[i];
+    InitArena(&arenas[i], arena_size, shmem_base + base_offset);
+    base_offset += arena_size;
+  }
+
+  SharedMemoryContext context = {};
+  context.shm_base = shmem_base;
+  context.shm_size = shmem_size;
+  context.buffer_pool_offset = InitBufferPool(context.shm_base,
+                                              &arenas[kArenaType_BufferPool],
+                                              &arenas[kArenaType_Transient],
+                                              comm->node_id, config);
+
+  MetadataManager *mdm =
+    PushClearedStruct<MetadataManager>(&arenas[kArenaType_MetaData]);
+  context.metadata_manager_offset = (u8 *)mdm - (u8 *)shmem_base;
+
+  rpc->state = CreateRpcState(&arenas[kArenaType_MetaData]);
+  mdm->rpc_state_offset = (u8 *)rpc->state - shmem_base;
+
+  InitMetadataManager(mdm, &arenas[kArenaType_MetaData], config, comm->node_id);
+  InitMetadataStorage(&context, mdm, &arenas[kArenaType_MetaData], config);
+
+  // NOTE(chogan): Store the metadata_manager_offset right after the
+  // buffer_pool_offset so other processes can pick it up.
+  ptrdiff_t *metadata_manager_offset_location =
+    (ptrdiff_t *)(shmem_base + sizeof(context.buffer_pool_offset));
+  *metadata_manager_offset_location = context.metadata_manager_offset;
+
+  return context;
+}
+
+SharedMemoryContext
+BootstrapSharedMemory(Arena *arenas, Config *config, CommunicationContext *comm,
+                      RpcContext *rpc, bool is_daemon, bool is_adapter) {
+  size_t bootstrap_size = KILOBYTES(4);
+  u8 *bootstrap_memory = (u8 *)malloc(bootstrap_size);
+  InitArena(&arenas[kArenaType_Transient], bootstrap_size, bootstrap_memory);
+
+  ArenaInfo arena_info = GetArenaInfo(config);
+  // NOTE(chogan): The buffering capacity for the RAM Device is the size of the
+  // BufferPool Arena
+  config->capacities[0] = arena_info.sizes[kArenaType_BufferPool];
+
+  size_t trans_arena_size =
+    InitCommunication(comm, &arenas[kArenaType_Transient],
+                      arena_info.sizes[kArenaType_Transient], is_daemon,
+                      is_adapter);
+
+  GrowArena(&arenas[kArenaType_Transient], trans_arena_size);
+  comm->state = arenas[kArenaType_Transient].base;
+
+  InitRpcContext(rpc, comm->num_nodes, comm->node_id, config);
+
+  SharedMemoryContext result = {};
+  if (comm->proc_kind == ProcessKind::kHermes && comm->first_on_node) {
+    result = InitHermesCore(config, comm, &arena_info, arenas, rpc);
+  }
+
+  return result;
+}
+
+namespace api {
+
+std::shared_ptr<api::Hermes> InitHermes(const char *config_file, bool is_daemon,
+                                        bool is_adapter) {
+  hermes::Config config = {};
+  const size_t config_memory_size = KILOBYTES(16);
+  hermes::u8 config_memory[config_memory_size];
+
+  if (config_file) {
+    hermes::Arena config_arena = {};
+    hermes::InitArena(&config_arena, config_memory_size, config_memory);
+    hermes::ParseConfig(&config_arena, config_file, &config);
+  } else {
+    InitDefaultConfig(&config);
+  }
+  std::string base_shmem_name(config.buffer_pool_shmem_name);
+  MakeFullShmemName(config.buffer_pool_shmem_name, base_shmem_name.c_str());
+
+  // TODO(chogan): Do we need a transfer window arena? We can probably just use
+  // the transient arena for this.
+  Arena arenas[kArenaType_Count] = {};
+  CommunicationContext comm = {};
+  RpcContext rpc = {};
+  SharedMemoryContext context =
+    BootstrapSharedMemory(arenas, &config, &comm, &rpc, is_daemon, is_adapter);
+
+  WorldBarrier(&comm);
+  std::shared_ptr<api::Hermes> result = nullptr;
+
+  if (comm.proc_kind == ProcessKind::kHermes) {
+    result = std::make_shared<api::Hermes>(context);
+    result->shmem_name_ = std::string(config.buffer_pool_shmem_name);
+  } else {
+    context = GetSharedMemoryContext(config.buffer_pool_shmem_name);
+    SubBarrier(&comm);
+    result = std::make_shared<api::Hermes>(context);
+    // NOTE(chogan): Give every App process a valid pointer to the internal RPC
+    // state in shared memory
+    MetadataManager *mdm = GetMetadataManagerFromContext(&context);
+    rpc.state = (void *)(context.shm_base + mdm->rpc_state_offset);
+  }
+  bool create_shared_files = (comm.proc_kind == ProcessKind::kHermes &&
+                              comm.first_on_node);
+  InitFilesForBuffering(&context, create_shared_files);
+
+  WorldBarrier(&comm);
+
+  rpc.node_id = comm.node_id;
+  rpc.num_nodes = comm.num_nodes;
+
+  result->trans_arena_ = arenas[kArenaType_Transient];
+  result->comm_ = comm;
+  result->context_ = context;
+  result->rpc_ = rpc;
+
+  // NOTE(chogan): The RPC servers have to be started here because they need to
+  // save a reference to the context and rpc instances that are members of the
+  // Hermes instance.
+  if (comm.proc_kind == ProcessKind::kHermes) {
+    std::string host_number = GetHostNumberAsString(&result->rpc_,
+                                                    result->rpc_.node_id);
+
+    std::string rpc_server_addr = config.rpc_protocol + "://";
+
+    if (!config.rpc_domain.empty()) {
+      rpc_server_addr += config.rpc_domain + "/";
+    }
+    rpc_server_addr += (config.rpc_server_base_name + host_number +
+                        config.rpc_server_suffix + ":" +
+                        std::to_string(config.rpc_port));
+
+    result->rpc_.start_server(&result->context_, &result->rpc_,
+                              &result->trans_arena_, rpc_server_addr.c_str(),
+                              config.rpc_num_threads);
+    double sleep_ms = config.system_view_state_update_interval_ms;
+    StartGlobalSystemViewStateUpdateThread(&result->context_, &result->rpc_,
+                                           &result->trans_arena_,
+                                           sleep_ms);
+  }
+
+  WorldBarrier(&comm);
+
+  return result;
+}
+}  // namespace api
+
+std::shared_ptr<api::Hermes> InitHermesClient(const char *config_file) {
+  std::shared_ptr<api::Hermes> result =
+    api::InitHermes(config_file, false, true);
+
+  return result;
+}
+
+std::shared_ptr<api::Hermes> InitHermesDaemon(char *config_file) {
+  std::shared_ptr<api::Hermes> result = api::InitHermes(config_file, true);
+
+  return result;
+}
+
+}  // namespace hermes
