@@ -12,7 +12,7 @@ void TestPutGetBucket(hapi::Bucket &bucket, int app_rank, int app_size) {
   size_t bytes_per_rank = KILOBYTES(8);
   if (app_size) {
     size_t data_size = KILOBYTES(8);
-    bytes_per_rank = data_size / app_size ;
+    bytes_per_rank = data_size / app_size;
     size_t remaining_bytes = data_size % app_size;
 
     if (app_rank == app_size - 1) {
@@ -68,7 +68,6 @@ void TestBulkTransfer(std::shared_ptr<hapi::Hermes> hermes, int app_rank) {
 }
 
 int main(int argc, char **argv) {
-
   int mpi_threads_provided;
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
   if (mpi_threads_provided < MPI_THREAD_MULTIPLE) {

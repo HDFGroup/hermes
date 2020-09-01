@@ -8,11 +8,11 @@ namespace hermes {
 namespace api {
 
 template<class Tag, class T, T default_value>
-  
+
 class ID {
  private:
   T m_val_;
-    
+
  public:
   static ID Invalid() { return ID(); }
 
@@ -27,9 +27,9 @@ class ID {
 
   friend bool operator==(ID a, ID b) { return a.m_val == b.m_val; }
   friend bool operator!=(ID a, ID b) { return a.m_val != b.m_val; }
-}; // class ID
+};
 
-}  // api namespace
-}  // hermes namespace
+}  // namespace api
+}  // namespace hermes
 
 #endif  // ID_H_

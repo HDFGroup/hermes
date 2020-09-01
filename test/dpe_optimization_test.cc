@@ -4,7 +4,7 @@
 
 #include "hermes.h"
 
-using namespace hermes;
+using namespace hermes;  // NOLINT(*)
 
 namespace hermes {
 namespace testing {
@@ -14,8 +14,8 @@ struct SystemViewState {
   u64 bandwidth[kMaxDevices];
   int num_devices;
 };
-}  // namespace hermes
 }  // namespace testing
+}  // namespace hermes
 
 testing::SystemViewState InitSystemViewState() {
   testing::SystemViewState result = {};
@@ -67,14 +67,14 @@ PlacementSchema PerfOrientedPlacement(std::vector<hermes::api::Blob> blobs) {
   using operations_research::MPObjective;
 
   PlacementSchema result;
-  // TODO (KIMMY): use kernel function of system view
+  // TODO(KIMMY): use kernel function of system view
   testing::SystemViewState state {GetSystemViewState()};
 
   std::vector<MPConstraint*> blob_constrt(blobs.size()+state.num_devices*3-1);
-  std::vector<std::vector<MPVariable*>> blob_fraction (blobs.size());
+  std::vector<std::vector<MPVariable*>> blob_fraction(blobs.size());
   MPSolver solver("LinearOpt", MPSolver::GLOP_LINEAR_PROGRAMMING);
   int num_constrts {0};
-  // TODO (KIMMY): placement ratio number will be from policy in the future
+  // TODO(KIMMY): placement ratio number will be from policy in the future
   const int placement_ratio {-10};
 
   // Sum of fraction of each blob is 1
@@ -82,7 +82,7 @@ PlacementSchema PerfOrientedPlacement(std::vector<hermes::api::Blob> blobs) {
     blob_constrt[num_constrts+i] = solver.MakeRowConstraint(1, 1);
     blob_fraction[i].resize(state.num_devices);
 
-    // TODO (KIMMY): consider remote nodes?
+    // TODO(KIMMY): consider remote nodes?
     for (int j {0}; j < state.num_devices; ++j) {
       std::string var_name {"blob_dst_" + std::to_string(i) + "_" +
                             std::to_string(j)};
@@ -123,7 +123,7 @@ PlacementSchema PerfOrientedPlacement(std::vector<hermes::api::Blob> blobs) {
       blob_constrt[num_constrts+j]->SetCoefficient(
         blob_fraction[i][j+1], static_cast<double>(blobs[i].size()));
       blob_constrt[num_constrts+j]->SetCoefficient(
-        blob_fraction[i][j], 
+        blob_fraction[i][j],
         static_cast<double>(blobs[i].size())*placement_ratio);
     }
   }
@@ -145,7 +145,7 @@ PlacementSchema PerfOrientedPlacement(std::vector<hermes::api::Blob> blobs) {
   }
 
   for (size_t i {0}; i < blobs.size(); ++i) {
-    int device_pos {0}; // to track the device with most data
+    int device_pos {0};  // to track the device with most data
     auto largest_bulk{blob_fraction[i][0]->solution_value()*blobs[i].size()};
     // NOTE: could be inefficient if there are hundreds of devices
     for (int j {1}; j < state.num_devices; ++j) {
@@ -157,7 +157,7 @@ PlacementSchema PerfOrientedPlacement(std::vector<hermes::api::Blob> blobs) {
       if (j == device_pos)
         continue;
       double check_frac_size {blob_fraction[i][j]->solution_value()*
-                              blobs[i].size()}; // blob fraction size
+                              blobs[i].size()};  // blob fraction size
       size_t frac_size_cast = static_cast<size_t>(check_frac_size);
       // If size to this destination is not 0, push to result
       if (frac_size_cast != 0) {
@@ -166,18 +166,18 @@ PlacementSchema PerfOrientedPlacement(std::vector<hermes::api::Blob> blobs) {
       }
     }
     // Push the rest data to device_pos
-    result.push_back(std::make_pair(blobs[i].size()-blob_partial_sum, device_pos));
+    result.push_back(std::make_pair(blobs[i].size()-blob_partial_sum,
+                                    device_pos));
   }
 
   return result;
 }
 
-int main()
-{
-  hermes::api::Blob p1 (1024*1024, 255);
-  hermes::api::Blob p2 (1024*1024*2, 255);
-  hermes::api::Blob p3 (1024*1024*4, 255);
-  hermes::api::Blob p4 (1024*1024*7, 255);
+int main() {
+  hermes::api::Blob p1(1024*1024, 255);
+  hermes::api::Blob p2(1024*1024*2, 255);
+  hermes::api::Blob p3(1024*1024*4, 255);
+  hermes::api::Blob p4(1024*1024*7, 255);
   std::vector<hermes::api::Blob> input_blobs;
   input_blobs.push_back(p1);
   input_blobs.push_back(p2);
@@ -191,10 +191,12 @@ int main()
   UpdateSystemViewState(schema1);
 
   for (auto [size, device] : schema1) {
-    std::cout << "placing " << size << " at device " << device << '\n' << std::flush;
+    std::cout << "placing " << size << " at device " << device << '\n'
+              << std::flush;
   }
-  for(int i {0}; i < globalSystemViewState.num_devices; ++i) {
-    std::cout << "device[" << i << "]: " << globalSystemViewState.bytes_available[i]
+  for (int i {0}; i < globalSystemViewState.num_devices; ++i) {
+    std::cout << "device[" << i << "]: "
+              << globalSystemViewState.bytes_available[i]
               << '\n' << std::flush;
     std::cout << "available ratio["<< i << "]: "
               << static_cast<double>(globalSystemViewState.bytes_available[i])/
@@ -203,9 +205,9 @@ int main()
   }
   std::cout << '\n' << '\n' << '\n'<< std::flush;
 
-  hermes::api::Blob p5 (1024*1024*0.5, 255);
-  hermes::api::Blob p6 (1024*1024*20, 255);
-  hermes::api::Blob p7 (1024*1024*4, 255);
+  hermes::api::Blob p5(1024*1024*0.5, 255);
+  hermes::api::Blob p6(1024*1024*20, 255);
+  hermes::api::Blob p7(1024*1024*4, 255);
   input_blobs.clear();
   input_blobs.push_back(p5);
   input_blobs.push_back(p6);
@@ -215,10 +217,12 @@ int main()
   UpdateSystemViewState(schema2);
 
   for (auto [size, device] : schema2) {
-    std::cout << "placing " << size << " at device " << device << '\n' << std::flush;
+    std::cout << "placing " << size << " at device " << device << '\n'
+              << std::flush;
   }
-  for(int i {0}; i < globalSystemViewState.num_devices; ++i) {
-    std::cout << "device[" << i << "]: " << globalSystemViewState.bytes_available[i]
+  for (int i {0}; i < globalSystemViewState.num_devices; ++i) {
+    std::cout << "device[" << i << "]: "
+              << globalSystemViewState.bytes_available[i]
               << '\n' << std::flush;
     std::cout << "available ratio["<< i << "]: "
               << static_cast<double>(globalSystemViewState.bytes_available[i])/
@@ -227,11 +231,11 @@ int main()
   }
   std::cout << '\n' << '\n' << '\n'<< std::flush;
 
-  hermes::api::Blob p8 (1024*1024*0.5, 255);
-  hermes::api::Blob p9 (1024*1024*20, 255);
-  hermes::api::Blob p10 (1024*1024*1, 255);
-  hermes::api::Blob p11 (1024*1024*4, 255);
-  hermes::api::Blob p12 (1024*1024*10, 255);
+  hermes::api::Blob p8(1024*1024*0.5, 255);
+  hermes::api::Blob p9(1024*1024*20, 255);
+  hermes::api::Blob p10(1024*1024*1, 255);
+  hermes::api::Blob p11(1024*1024*4, 255);
+  hermes::api::Blob p12(1024*1024*10, 255);
   input_blobs.clear();
   input_blobs.push_back(p8);
   input_blobs.push_back(p9);
@@ -243,10 +247,12 @@ int main()
   UpdateSystemViewState(schema3);
 
   for (auto [size, device] : schema3) {
-    std::cout << "placing " << size << " at device " << device << '\n' << std::flush;
+    std::cout << "placing " << size << " at device " << device << '\n'
+              << std::flush;
   }
-  for(int i {0}; i < globalSystemViewState.num_devices; ++i) {
-    std::cout << "device[" << i << "]: " << globalSystemViewState.bytes_available[i]
+  for (int i {0}; i < globalSystemViewState.num_devices; ++i) {
+    std::cout << "device[" << i << "]: "
+              << globalSystemViewState.bytes_available[i]
               << '\n' << std::flush;
     std::cout << "available ratio["<< i << "]: "
               << static_cast<double>(globalSystemViewState.bytes_available[i])/

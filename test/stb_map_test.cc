@@ -12,10 +12,9 @@
 #define STB_DS_IMPLEMENTATION
 #include "stb_ds.h"
 
-using namespace hermes;
+using namespace hermes;  // NOLINT(*)
 
 int main() {
-
   Arena arena = InitArenaAndAllocate(MEGABYTES(32));
   TemporaryMemory temp_memory = BeginTemporaryMemory(&arena);
   Heap *heap = InitHeapInArena(&arena, true, 8);

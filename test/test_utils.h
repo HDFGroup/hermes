@@ -12,7 +12,7 @@ namespace testing {
 // TODO(chogan): Keep time in generic units and only convert the duration at the
 // end
 class Timer {
-public:
+ public:
   Timer():elapsed_time(0) {}
   void resumeTime() {
     t1 = std::chrono::high_resolution_clock::now();
@@ -25,7 +25,7 @@ public:
   double getElapsedTime() {
     return elapsed_time;
   }
-private:
+ private:
   std::chrono::high_resolution_clock::time_point t1;
   double elapsed_time;
 };

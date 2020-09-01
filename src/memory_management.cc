@@ -310,15 +310,16 @@ FreeBlock *FindFirstFit(Heap *heap, u32 desired_size) {
 }
 
 #if 0
-FreeBlock *FindBestFit(FreeBlock *head, size_t desired_size, u32 threshold=0) {
+FreeBlock *FindBestFit(FreeBlock *head, size_t desired_size,
+                       u32 threshold = 0) {
   FreeBlock *result = 0;
   FreeBlock *prev = head;
   FreeBlock *smallest_prev = head;
   u32 smallest_wasted = 0xFFFFFFFF;
 
-  while(head && smallest_wasted > threshold) {
+  while (head && smallest_wasted > threshold) {
     if (head->size >= desired_size) {
-      u32 wasted_space = head->size - desired_size ;
+      u32 wasted_space = head->size - desired_size;
       if (wasted_space < smallest_wasted) {
         smallest_wasted = wasted_space;
         result = head;
@@ -359,8 +360,9 @@ u8 *HeapPushSize(Heap *heap, u32 size) {
       header->size = actual_size;
       result = (u8 *)(header + 1);
 
-      HERMES_DEBUG_TRACK_ALLOCATION(header, header->size + sizeof(FreeBlockHeader),
-                             heap->grows_up);
+      HERMES_DEBUG_TRACK_ALLOCATION(header,
+                                    header->size + sizeof(FreeBlockHeader),
+                                    heap->grows_up);
 
       u32 extent_adustment = heap->grows_up ? 0 : sizeof(FreeBlock);
 
@@ -389,7 +391,8 @@ void HeapFree(Heap *heap, void *ptr) {
     if (heap->grows_up) {
       new_block = (FreeBlock *)header;
     } else {
-      new_block = (FreeBlock *)((u8 *)(header + 1) + header->size - sizeof(FreeBlock));
+      new_block =
+        (FreeBlock *)((u8 *)(header + 1) + header->size - sizeof(FreeBlock));
     }
     new_block->size = size + sizeof(FreeBlockHeader);
 
@@ -409,7 +412,6 @@ void HeapFree(Heap *heap, void *ptr) {
 }
 
 void *HeapRealloc(Heap *heap, void *ptr, size_t size) {
-
   if (ptr) {
     // NOTE(chogan): We only support malloc behavior for now. The stb_ds.h hash
     // map uses STBDS_REALLOC for its malloc style allocations. We just give the

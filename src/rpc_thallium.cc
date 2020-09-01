@@ -90,14 +90,12 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
   function<void(const request&, BufferID, std::vector<u8>, size_t)>
     rpc_write_buffer_by_id = [context](const request &req, BufferID id,
                                        std::vector<u8> data, size_t offset) {
-
       Blob blob = {};
       blob.size = data.size();
       blob.data = data.data();
       size_t result = LocalWriteBufferById(context, id, blob, offset);
 
       req.respond(result);
-
     };
 
   function<void(const request&, BufferID)> rpc_read_buffer_by_id =
@@ -288,7 +286,8 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
 
   // TODO(chogan): Only need this on mdm->global_system_view_state_node_id.
   // Probably should move it to a completely separate tl::engine.
-  function<void(const request&, std::vector<i64>)> rpc_update_global_system_view_state =
+  function<void(const request&, std::vector<i64>)>
+    rpc_update_global_system_view_state =
     [context](const request &req, std::vector<i64> adjustments) {
       (void)req;
       LocalUpdateGlobalSystemViewState(context, adjustments);
@@ -352,7 +351,6 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
 void StartGlobalSystemViewStateUpdateThread(SharedMemoryContext *context,
                                             RpcContext *rpc, Arena *arena,
                                             double sleep_ms) {
-
   struct ThreadArgs {
     SharedMemoryContext *context;
     RpcContext *rpc;
@@ -422,15 +420,15 @@ std::string GetServerName(RpcContext *rpc, u32 node_id) {
   std::string host_number = GetHostNumberAsString(rpc, node_id);
   std::string host_name = (std::string(rpc->base_hostname) + host_number +
                            std::string(rpc->hostname_suffix));
-  const int max_ip_address_size = 16;
-  char ip_address[max_ip_address_size];
+  const int kMaxIpAddressSize = 16;
+  char ip_address[kMaxIpAddressSize];
   // TODO(chogan): @errorhandling
   // TODO(chogan): @optimization Could cache the last N hostname->IP mappings to
   // avoid excessive syscalls. Should profile first.
   struct hostent *hostname_info = gethostbyname(host_name.c_str());
   in_addr **addr_list = (struct in_addr **)hostname_info->h_addr_list;
   // TODO(chogan): @errorhandling
-  strncpy(ip_address, inet_ntoa(*addr_list[0]), max_ip_address_size);
+  strncpy(ip_address, inet_ntoa(*addr_list[0]), kMaxIpAddressSize);
 
   std::string result = std::string(tl_state->server_name_prefix);
 

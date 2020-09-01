@@ -116,7 +116,8 @@ static inline ThalliumState *GetThalliumState(RpcContext *rpc) {
 }
 
 template<typename ReturnType, typename... Ts>
-ReturnType RpcCall(RpcContext *rpc, u32 node_id, const char *func_name, Ts... args) {
+ReturnType RpcCall(RpcContext *rpc, u32 node_id, const char *func_name,
+                   Ts... args) {
   std::string server_name = GetServerName(rpc, node_id);
   std::string protocol = GetProtocol(rpc);
 

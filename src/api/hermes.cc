@@ -20,7 +20,8 @@ Status RenameBucket(const std::string &old_name,
   (void)ctx;
   Status ret = 0;
 
-  LOG(INFO) << "Renaming Bucket from " << old_name << " to " << new_name << '\n';
+  LOG(INFO) << "Renaming Bucket from " << old_name << " to "
+            << new_name << '\n';
 
   return ret;
 }
@@ -68,7 +69,7 @@ void Hermes::Finalize(bool force_rpc_shutdown) {
                    IsApplicationCore(), force_rpc_shutdown);
 }
 
-} // namespace api
+}  // namespace api
 
 ArenaInfo GetArenaInfo(Config *config) {
   size_t page_size = sysconf(_SC_PAGESIZE);
@@ -85,8 +86,7 @@ ArenaInfo GetArenaInfo(Config *config) {
     if (i < kArenaType_Count-1) {
       pages = std::floor(config->arena_percentages[i] * total_pages);
       pages_left -= pages;
-    }
-    else {
+    } else {
       pages = pages_left;
       pages_left = 0;
     }
@@ -103,7 +103,6 @@ ArenaInfo GetArenaInfo(Config *config) {
 SharedMemoryContext InitHermesCore(Config *config, CommunicationContext *comm,
                                    ArenaInfo *arena_info, Arena *arenas,
                                    RpcContext *rpc) {
-
   size_t shmem_size = (arena_info->total -
                        arena_info->sizes[kArenaType_Transient]);
   u8 *shmem_base = InitSharedMemory(config->buffer_pool_shmem_name, shmem_size);

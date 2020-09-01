@@ -50,7 +50,7 @@ struct CommunicationContext {
 
 size_t InitCommunication(CommunicationContext *comm, Arena *arena,
                          size_t trans_arena_size_per_node,
-                         bool is_daemon=false, bool is_adapter=false);
+                         bool is_daemon = false, bool is_adapter = false);
 
 inline void WorldBarrier(CommunicationContext *comm) {
   comm->world_barrier(comm->state);

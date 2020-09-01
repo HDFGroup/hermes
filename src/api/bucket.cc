@@ -1,9 +1,12 @@
 #include "bucket.h"
+
+#include <iostream>
+#include <vector>
+
 #include "buffer_pool.h"
 #include "metadata_management.h"
 #include "data_placement_engine.h"
 
-#include <iostream>
 
 namespace hermes {
 
@@ -176,5 +179,5 @@ Status Bucket::Destroy(Context &ctx) {
   return ret;
 }
 
-} // api namespace
-} // hermes namespace
+}  // namespace api
+}  // namespace hermes

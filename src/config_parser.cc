@@ -127,11 +127,11 @@ EntireFile ReadEntireFile(Arena *arena, const char *path) {
       long file_size = ftell(fstream);
 
       if (file_size > 0) {
-
         if ((u32)file_size <= arena->capacity) {
           fseek(fstream, 0, SEEK_SET);
           result.data = PushArray<u8>(arena, file_size);
-          [[maybe_unused]] int items_read = fread(result.data, file_size, 1, fstream);
+          [[maybe_unused]] int items_read = fread(result.data, file_size, 1,
+                                                  fstream);
           assert(items_read == 1);
           result.size = file_size;
         } else {
@@ -175,7 +175,7 @@ inline bool BeginsComment(char c) {
 }
 
 inline bool EndOfComment(char c) {
-  bool result = (c == '\n') || ( c == '\r' );
+  bool result = (c == '\n') || (c == '\r');
 
   return result;
 }
@@ -601,8 +601,8 @@ Token *ParseCharArrayString(Token *tok, char *arr) {
 
 void RequireNumDevices(Config *config) {
   if (config->num_devices == 0) {
-    LOG(FATAL) << "The configuration variable 'num_devices' must be defined first"
-               << std::endl;
+    LOG(FATAL) << "The configuration variable 'num_devices' must be defined "
+               << "first" << std::endl;
   }
 }
 
@@ -646,7 +646,6 @@ void CheckConstraints(Config *config) {
 }
 
 void ParseTokens(TokenList *tokens, Config *config) {
-
   Token *tok = tokens->head;
   while (tok) {
     ConfigVariable var = GetConfigVariable(tok);
@@ -698,8 +697,8 @@ void ParseTokens(TokenList *tokens, Config *config) {
       case ConfigVariable_SlabUnitSizes: {
         RequireNumDevices(config);
         RequireNumSlabs(config);
-        tok = ParseIntListList(tok, config->slab_unit_sizes, config->num_devices,
-                               config->num_slabs);
+        tok = ParseIntListList(tok, config->slab_unit_sizes,
+                               config->num_devices, config->num_slabs);
         break;
       }
       case ConfigVariable_DesiredSlabPercentages: {

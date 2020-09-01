@@ -8,11 +8,11 @@ struct DebugHeapAllocation {
   u32 size;
 };
 
-const int global_debug_max_allocations = 256;
+const int kGlobalDebugMaxAllocations = 256;
 
 struct DebugState {
   u8 *shmem_base;
-  DebugHeapAllocation allocations[global_debug_max_allocations];
+  DebugHeapAllocation allocations[kGlobalDebugMaxAllocations];
   TicketMutex mutex;
   u32 allocation_count;
 };

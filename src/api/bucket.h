@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 #include "glog/logging.h"
 
@@ -24,7 +25,7 @@ class Bucket {
   /** internal Hermes object owned by Bucket */
   std::shared_ptr<Hermes> hermes_;
 
-  // TODO: Think about the Big Three
+  // TODO(chogan): Think about the Big Three
   Bucket() : name_(""), id_{0, 0}, hermes_(nullptr) {
     LOG(INFO) << "Create NULL Bucket " << std::endl;
   }
@@ -113,7 +114,7 @@ class Bucket {
   /** destroy this bucket */
   /** ctx controls "aggressiveness */
   Status Destroy(Context &ctx);
-}; // Bucket class
+};
 
 template<typename T>
 Status Bucket::Put(const std::string &name, const std::vector<T> &data,
@@ -184,7 +185,7 @@ Status Bucket::Put(std::vector<std::string> &names,
   return ret;
 }
 
-}  // api namespace
-}  // hermes namespace
+}  // namespace api
+}  // namespace hermes
 
 #endif  // BUCKET_H_

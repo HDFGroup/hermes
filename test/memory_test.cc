@@ -1,7 +1,7 @@
 #include "test_utils.h"
 #include "memory_management.h"
 
-using namespace hermes;
+using namespace hermes;  // NOLINT(*)
 
 const int kNumVals = 8;
 
@@ -21,7 +21,6 @@ void CheckArrayU64(SixtyFourBytes *s, u64 val) {
   }
 }
 void TestFillFreeBlocks(Heap *heap) {
-
   SixtyFourBytes *s1 = HeapPushStruct<SixtyFourBytes>(heap);
   FillArrayU64(s1, 1);
   SixtyFourBytes *s2 = HeapPushStruct<SixtyFourBytes>(heap);
@@ -68,8 +67,6 @@ void TestFillFreeBlocks(Heap *heap) {
 }
 
 int main() {
-
-
   Arena arena = InitArenaAndAllocate(KILOBYTES(4));
 
   TemporaryMemory temporary_memory = BeginTemporaryMemory(&arena);

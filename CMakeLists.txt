@@ -359,3 +359,8 @@ install(
   DESTINATION
     ${HERMES_INSTALL_DATA_DIR}/cmake/hermes
 )
+
+add_custom_target(lint
+  COMMAND cpplint --recursive --exclude=${CMAKE_CURRENT_SOURCE_DIR}/src/stb_ds.h
+  --exclude=${CMAKE_CURRENT_SOURCE_DIR}/build ${CMAKE_CURRENT_SOURCE_DIR}
+)

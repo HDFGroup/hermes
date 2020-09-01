@@ -59,7 +59,7 @@ std::string GetProtocol(RpcContext *rpc);
 #if defined(HERMES_RPC_THALLIUM)
 #include "rpc_thallium.h"
 #else
-#error RPC implementation required (e.g., -DHERMES_RPC_THALLIUM).
+#error "RPC implementation required (e.g., -DHERMES_RPC_THALLIUM)."
 #endif
 
 #endif  // HERMES_RPC_H_
