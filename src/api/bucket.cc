@@ -45,6 +45,9 @@ Status Bucket::Put(const std::string &name, const u8 *data, size_t size,
         blobs[0][i] = data[i];
       }
       ret = PlaceBlobs(schemas, blobs, names);
+    } else {
+      // TODO(chogan): Trigger BufferOrganizer
+      // TODO(chogan): Set Status
     }
   }
 

@@ -225,18 +225,18 @@ std::shared_ptr<api::Hermes> InitHermes(Config *config, bool is_daemon,
     std::string host_number = GetHostNumberAsString(&result->rpc_,
                                                     result->rpc_.node_id);
 
-    std::string rpc_server_addr = config->rpc_protocol + "://";
-
-    if (!config->rpc_domain.empty()) {
-      rpc_server_addr += config->rpc_domain + "/";
-    }
-    rpc_server_addr += (config->rpc_server_base_name + host_number +
-                        config->rpc_server_suffix + ":" +
-                        std::to_string(config->rpc_port));
-
+    std::string rpc_server_addr = GetRpcAddress(config, host_number,
+                                                config->rpc_port);
     result->rpc_.start_server(&result->context_, &result->rpc_,
                               &result->trans_arena_, rpc_server_addr.c_str(),
                               config->rpc_num_threads);
+
+    std::string bo_address = GetRpcAddress(config, host_number,
+                                           config->buffer_organizer_port);
+    int bo_threads = 1;
+    StartBufferOrganizer(&result->context_, &result->rpc_, bo_address.c_str(),
+                         bo_threads);
+
     double sleep_ms = config->system_view_state_update_interval_ms;
     StartGlobalSystemViewStateUpdateThread(&result->context_, &result->rpc_,
                                            &result->trans_arena_,

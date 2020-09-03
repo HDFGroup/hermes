@@ -66,6 +66,7 @@ int main(int argc, char **argv) {
   Assert(config.rpc_protocol == "ofi+sockets");
   Assert(config.rpc_domain.empty());
   Assert(config.rpc_port == 8080);
+  Assert(config.buffer_organizer_port == 8081);
   Assert(config.rpc_host_number_range[0] == 0 &&
          config.rpc_host_number_range[1] == 0);
   Assert(config.rpc_num_threads == 1);

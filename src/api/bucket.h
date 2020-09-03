@@ -176,6 +176,9 @@ Status Bucket::Put(std::vector<std::string> &names,
 
     if (ret == 0) {
       ret = PlaceBlobs(schemas, blobs, names);
+    } else {
+      // TODO(chogan): Trigger BufferOrganizer
+      // TODO(chogan): Set Status
     }
   } else {
     // TODO(chogan): @errorhandling

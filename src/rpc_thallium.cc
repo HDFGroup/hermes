@@ -347,6 +347,24 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
   rpc_server->define("RemoteFinalize", rpc_finalize).disable_response();
 }
 
+void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
+                          const char *addr, int num_threads) {
+  ThalliumState *state = GetThalliumState(rpc);
+
+  state->bo_engine = new tl::engine(addr, THALLIUM_SERVER_MODE, true,
+                                    num_threads);
+  tl::engine *rpc_server = state->bo_engine;
+
+  std::string rpc_server_name = rpc_server->self();
+  LOG(INFO) << "Buffer organizer serving at " << rpc_server_name << " with "
+            << num_threads << " RPC threads" << std::endl;
+
+  auto rpc_handle_event = [context](const tl::request &req) {
+    (void)req;
+  };
+
+  rpc_server->define("RemoteHandleEvent", rpc_handle_event).disable_response();
+}
 
 void StartGlobalSystemViewStateUpdateThread(SharedMemoryContext *context,
                                             RpcContext *rpc, Arena *arena,
@@ -407,11 +425,27 @@ void FinalizeRpcContext(RpcContext *rpc, bool is_daemon) {
 
   if (is_daemon) {
     state->engine->wait_for_finalize();
+    state->bo_engine->wait_for_finalize();
   } else {
     state->engine->finalize();
+    state->bo_engine->finalize();
   }
 
   delete state->engine;
+  delete state->bo_engine;
+}
+
+std::string GetRpcAddress(Config *config, const std::string &host_number,
+                          int port) {
+  std::string result = config->rpc_protocol + "://";
+
+  if (!config->rpc_domain.empty()) {
+    result += config->rpc_domain + "/";
+  }
+  result += (config->rpc_server_base_name + host_number +
+             config->rpc_server_suffix + ":" + std::to_string(port));
+
+  return result;
 }
 
 std::string GetServerName(RpcContext *rpc, u32 node_id) {

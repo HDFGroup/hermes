@@ -109,6 +109,7 @@ struct Config {
   std::string rpc_protocol;
   std::string rpc_domain;
   int rpc_port;
+  int buffer_organizer_port;
   int rpc_host_number_range[2];
   int rpc_num_threads;
 

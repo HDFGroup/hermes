@@ -51,7 +51,8 @@ void FinalizeRpcContext(RpcContext *rpc, bool is_daemon);
 std::string GetHostNumberAsString(RpcContext *rpc, u32 node_id);
 std::string GetServerName(RpcContext *rpc, u32 node_id);
 std::string GetProtocol(RpcContext *rpc);
-
+void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
+                          const char *addr, int num_threads);
 }  // namespace hermes
 
 // TODO(chogan): I don't like that code similar to this is in buffer_pool.cc.

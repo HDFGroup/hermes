@@ -23,6 +23,7 @@ struct ThalliumState {
   char server_name_postfix[kMaxServerNamePostfix];
   std::atomic<bool> kill_requested;
   tl::engine *engine;
+  tl::engine *bo_engine;
   ABT_xstream execution_stream;
 };
 
@@ -108,6 +109,9 @@ void load(A &ar, MapType &map_type) {
   map_type = (MapType)val;
 }
 #endif
+
+std::string GetRpcAddress(Config *config, const std::string &host_number,
+                          int port);
 
 static inline ThalliumState *GetThalliumState(RpcContext *rpc) {
   ThalliumState *result = (ThalliumState *)rpc->state;

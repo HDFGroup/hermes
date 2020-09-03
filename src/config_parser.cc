@@ -21,7 +21,7 @@
 // 4. Add a case to ParseTokens for the new variable.
 // 5. Add the new variable to the Config struct.
 // 6. Add an Assert to config_parser_test.cc to test the functionality.
-// 7. Set a default value in InitTestConfig
+// 7. Set a default value in InitDefaultConfig
 
 namespace hermes {
 
@@ -63,6 +63,7 @@ enum ConfigVariable {
   ConfigVariable_RpcProtocol,
   ConfigVariable_RpcDomain,
   ConfigVariable_RpcPort,
+  ConfigVariable_BufferOrganizerPort,
   ConfigVariable_RpcHostNumberRange,
   ConfigVariable_RpcNumThreads,
 
@@ -95,6 +96,7 @@ static const char *kConfigVariableStrings[ConfigVariable_Count] = {
   "rpc_protocol",
   "rpc_domain",
   "rpc_port",
+  "buffer_organizer_port",
   "rpc_host_number_range",
   "rpc_num_threads",
 };
@@ -777,6 +779,10 @@ void ParseTokens(TokenList *tokens, Config *config) {
       }
       case ConfigVariable_RpcPort: {
         config->rpc_port = ParseInt(&tok);
+        break;
+      }
+      case ConfigVariable_BufferOrganizerPort: {
+        config->buffer_organizer_port = ParseInt(&tok);
         break;
       }
       case ConfigVariable_RpcHostNumberRange: {

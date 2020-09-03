@@ -77,6 +77,7 @@ void InitDefaultConfig(Config *config) {
   config->rpc_protocol = "ofi+sockets";
   config->rpc_domain = "";
   config->rpc_port = 8080;
+  config->buffer_organizer_port = 8081;
   config->rpc_num_threads = 1;
 
   config->max_buckets_per_node = 16;
