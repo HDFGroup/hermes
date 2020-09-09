@@ -557,9 +557,11 @@ u64 LocalGetRemainingCapacity(SharedMemoryContext *context, TargetID id) {
 
 std::vector<u64> GetRemainingNodeCapacities(SharedMemoryContext *context) {
   std::vector<TargetID> targets = GetNodeTargets(context);
-  std::vector<u64> result(targets.size());
+  // NOTE(chogan): The last target is reserved as the "dumping ground"
+  size_t valid_targets = targets.size() - 1;
+  std::vector<u64> result(valid_targets);
 
-  for (size_t i = 0; i < targets.size(); ++i) {
+  for (size_t i = 0; i < valid_targets; ++i) {
     result[i] = LocalGetRemainingCapacity(context, targets[i]);
   }
 
