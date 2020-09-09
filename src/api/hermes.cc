@@ -252,14 +252,13 @@ namespace api {
 
 std::shared_ptr<Hermes> InitHermes(const char *config_file, bool is_daemon,
                                    bool is_adapter) {
-
   hermes::Config config = {};
-  const size_t config_memory_size = KILOBYTES(16);
-  hermes::u8 config_memory[config_memory_size];
+  const size_t kConfigMemorySize = KILOBYTES(16);
+  hermes::u8 config_memory[kConfigMemorySize];
 
   if (config_file) {
     hermes::Arena config_arena = {};
-    hermes::InitArena(&config_arena, config_memory_size, config_memory);
+    hermes::InitArena(&config_arena, kConfigMemorySize, config_memory);
     hermes::ParseConfig(&config_arena, config_file, &config);
   } else {
     InitDefaultConfig(&config);
@@ -268,7 +267,6 @@ std::shared_ptr<Hermes> InitHermes(const char *config_file, bool is_daemon,
   std::shared_ptr<Hermes> result = InitHermes(&config, is_daemon, is_adapter);
 
   return result;
-
 }
 
 }  // namespace api
