@@ -66,6 +66,7 @@ typedef std::vector<unsigned char> Blob;
 
 enum class PlacementPolicy {
   kRandom,
+  kRoundRobin,
   kTopDown,
   kMinimizeIoTime,
 };
@@ -73,7 +74,7 @@ enum class PlacementPolicy {
 struct Context {
   PlacementPolicy policy;
 
-  Context() : policy(PlacementPolicy::kRandom) {}
+  Context() : policy(PlacementPolicy::kRoundRobin) {}
 };
 
 struct TraitTag{};

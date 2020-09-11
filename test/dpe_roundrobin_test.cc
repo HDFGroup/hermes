@@ -10,6 +10,8 @@ using namespace hermes;
 
 namespace hermes {
 namespace testing {
+static size_t COUNT_DEVICE;
+
 struct SystemViewState {
   u64 bytes_capacity[kMaxDevices];
   u64 bytes_available[kMaxDevices];
@@ -62,7 +64,7 @@ void UpdateSystemViewState(PlacementSchema schema) {
   }
 }
 
-PlacementSchema RandomPlacement(std::vector<hermes::api::Blob> blobs) {
+PlacementSchema RoundRobinPlacement(std::vector<hermes::api::Blob> blobs) {
   PlacementSchema result;
   // TODO (KIMMY): use kernel function of system view
   testing::SystemViewState state {GetSystemViewState()};
@@ -106,58 +108,48 @@ PlacementSchema RandomPlacement(std::vector<hermes::api::Blob> blobs) {
 
      // Construct the vector for the splitted blob
      std::vector<size_t> new_blob_size;
-     size_t blob_each_portion {blobs[i].size()/split_num};
+     size_t bolb_each_portion {blobs[i].size()/split_num};
      for (int j {0}; j<split_num-1; ++j) {
-       new_blob_size.push_back(blob_each_portion);
+       new_blob_size.push_back(bolb_each_portion);
      }
      new_blob_size.push_back(blobs[i].size() -
-                             blob_each_portion*(split_num-1));
+                             bolb_each_portion*(split_num-1));
 
      for (size_t k {0}; k<new_blob_size.size(); ++k) {
        int dst {state.num_devices};
-       auto itlow = ordered_cap.lower_bound (new_blob_size[k]);
-       if (itlow == ordered_cap.end()) {
-         std::cerr << "No target has enough capacity (max " << ordered_cap.rbegin()->first
-                   << ") for the blob with size " << new_blob_size[k] << '\n' << std::flush;
-       }
-
-       std::uniform_int_distribution<std::mt19937::result_type>
-         dst_distribution((*itlow).second, state.num_devices-1);
-       dst = dst_distribution(rng);
-       result.push_back(std::make_pair(new_blob_size[k], dst));
-       for (auto it=itlow; it!=ordered_cap.end(); ++it) {
-         if ((*it).second == dst) {
-           ordered_cap.insert(std::pair<size_t, size_t>(
-                              (*it).first-new_blob_size[k], (*it).second));
-           ordered_cap.erase(it);
+       size_t device_pos {hermes::testing::COUNT_DEVICE};
+       for (int j {0}; j < state.num_devices; ++j) {
+         size_t adjust_pos {(j+device_pos)%state.num_devices};
+         if (state.bytes_available[adjust_pos] >= new_blob_size[k]) {
+           hermes::testing::COUNT_DEVICE = (j+device_pos+1)%state.num_devices;
+           dst = adjust_pos;
+           state.bytes_available[adjust_pos] -= new_blob_size[k];
+           result.push_back(std::make_pair(new_blob_size[k], dst));
            break;
          }
+       }
+       if (dst == state.num_devices) {
+         std::cerr << "Device not found for the splitted blob!\n";
        }
      }
    }
    // Blob size is less than 64KB or do not split
    else {
-     std::cout << "blob size is " << blobs[i].size() << '\n' << std::flush;
      int dst {state.num_devices};
-     auto itlow = ordered_cap.lower_bound (blobs[i].size());
-     if (itlow == ordered_cap.end()) {
-       std::cerr << "No target has enough capacity (max "
-                 << ordered_cap.rbegin()->first << " for the blob with size "
-                 << blobs[i].size() << '\n' << std::flush;
-     }
-
-     std::uniform_int_distribution<std::mt19937::result_type>
-       dst_distribution((*itlow).second, state.num_devices-1);
-     dst = dst_distribution(rng);
-     for (auto it=itlow; it!=ordered_cap.end(); ++it) {
-       if ((*it).second == dst) {
-         ordered_cap.insert(std::pair<size_t, size_t>(
-                            (*it).first-blobs[i].size(), (*it).second));
-         ordered_cap.erase(it);
+     size_t device_pos {hermes::testing::COUNT_DEVICE};
+     for (int j {0}; j < state.num_devices; ++j) {
+       size_t adjust_pos {(j+device_pos)%state.num_devices};
+       if (state.bytes_available[adjust_pos] >= blobs[i].size()) {
+         hermes::testing::COUNT_DEVICE = (j+device_pos+1)%state.num_devices;
+         dst = adjust_pos;
+         state.bytes_available[adjust_pos] -= blobs[i].size();
+         result.push_back(std::make_pair(blobs[i].size(), dst));
          break;
        }
      }
-     result.push_back(std::make_pair(blobs[i].size(), dst));
+     if (dst == state.num_devices) {
+       std::cerr << "Device not found for the splitted blob!\n";
+     }
     }
   }
 
@@ -188,7 +180,7 @@ int main()
   }
   std::cout << '\n' << '\n' << std::flush;
 
-  PlacementSchema schema1 = RandomPlacement(input_blobs);
+  PlacementSchema schema1 = RoundRobinPlacement(input_blobs);
 
   UpdateSystemViewState(schema1);
   for(int i {0}; i < globalSystemViewState.num_devices; ++i) {
@@ -208,7 +200,7 @@ int main()
   input_blobs.push_back(p5);
   input_blobs.push_back(p6);
   input_blobs.push_back(p7);
-  PlacementSchema schema2 = RandomPlacement(input_blobs);
+  PlacementSchema schema2 = RoundRobinPlacement(input_blobs);
 
   UpdateSystemViewState(schema2);
   for(int i {0}; i < globalSystemViewState.num_devices; ++i) {
@@ -232,7 +224,7 @@ int main()
   input_blobs.push_back(p10);
   input_blobs.push_back(p11);
   input_blobs.push_back(p12);
-  PlacementSchema schema3 = RandomPlacement(input_blobs);
+  PlacementSchema schema3 = RoundRobinPlacement(input_blobs);
 
   UpdateSystemViewState(schema3);
   for(int i {0}; i < globalSystemViewState.num_devices; ++i) {
