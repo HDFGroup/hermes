@@ -11,7 +11,7 @@ using api::Status;
 class DataPlacementEngine {
   static inline size_t count_device_ {};
 
-public:
+ public:
   size_t getCountDevice() const {return count_device_;}
   void setCountDevice(size_t new_count_device) {
     count_device_ = new_count_device;

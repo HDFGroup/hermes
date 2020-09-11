@@ -73,7 +73,8 @@ Status RoundRobinPlacement(SharedMemoryContext *context, RpcContext *rpc,
     // If size is greater than 64KB
     // Split the blob or not
     if (blob_sizes[i] > KILOBYTES(64)) {
-      std::uniform_int_distribution<std::mt19937::result_type> distribution(0,1);
+      std::uniform_int_distribution<std::mt19937::result_type>
+        distribution(0, 1);
       number = distribution(rng);
     }
 
@@ -101,13 +102,13 @@ Status RoundRobinPlacement(SharedMemoryContext *context, RpcContext *rpc,
       // Construct the vector for the splitted blob
       std::vector<size_t> new_blob_size;
       size_t blob_each_portion {blob_sizes[i]/split_num};
-      for (int j {0}; j<split_num-1; ++j) {
+      for (int j {0}; j < split_num - 1; ++j) {
         new_blob_size.push_back(blob_each_portion);
       }
       new_blob_size.push_back(blob_sizes[i] -
                               blob_each_portion*(split_num-1));
 
-      for (size_t k {0}; k<new_blob_size.size(); ++k) {
+      for (size_t k {0}; k < new_blob_size.size(); ++k) {
         size_t dst {global_state.size()};
         DataPlacementEngine dpe;
         size_t device_pos {dpe.getCountDevice()};
@@ -123,13 +124,13 @@ Status RoundRobinPlacement(SharedMemoryContext *context, RpcContext *rpc,
         }
         if (dst == global_state.size()) {
           HERMES_NOT_IMPLEMENTED_YET;
-          std::cerr << "Buffer device not found for splitted blob! Go to PFS.\n";
+          std::cerr
+            << "Buffer device not found for splitted blob! Go to PFS.\n";
         }
       }
       output.push_back(schema);
-    }
+    } else {
     // Blob size is less than 64KB or do not split
-    else {
       size_t dst {global_state.size()};
       DataPlacementEngine dpe;
       size_t device_pos {dpe.getCountDevice()};

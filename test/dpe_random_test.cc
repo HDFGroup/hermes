@@ -114,15 +114,15 @@ PlacementSchema RandomPlacement(std::vector<hermes::api::Blob> blobs) {
       // Construct the vector for the splitted blob
       std::vector<size_t> new_blob_size;
       size_t blob_each_portion {blobs[i].size()/split_num};
-      for (int j {0}; j<split_num-1; ++j) {
+      for (int j {0}; j < split_num - 1; ++j) {
         new_blob_size.push_back(blob_each_portion);
       }
       new_blob_size.push_back(blobs[i].size() -
                               blob_each_portion*(split_num-1));
 
-      for (size_t k {0}; k<new_blob_size.size(); ++k) {
+      for (size_t k {0}; k < new_blob_size.size(); ++k) {
         int dst {state.num_devices};
-        auto itlow = ordered_cap.lower_bound (new_blob_size[k]);
+        auto itlow = ordered_cap.lower_bound(new_blob_size[k]);
         if (itlow == ordered_cap.end()) {
           std::cerr << "No target has enough capacity (max "
                     << ordered_cap.rbegin()->first
@@ -134,7 +134,7 @@ PlacementSchema RandomPlacement(std::vector<hermes::api::Blob> blobs) {
           dst_distribution((*itlow).second, state.num_devices-1);
         dst = dst_distribution(rng);
         result.push_back(std::make_pair(new_blob_size[k], dst));
-        for (auto it=itlow; it!=ordered_cap.end(); ++it) {
+        for (auto it = itlow; it != ordered_cap.end(); ++it) {
           if ((*it).second == dst) {
             ordered_cap.insert(std::pair<size_t, size_t>(
                                  (*it).first-new_blob_size[k], (*it).second));
@@ -143,9 +143,8 @@ PlacementSchema RandomPlacement(std::vector<hermes::api::Blob> blobs) {
           }
         }
       }
-    }
-    // Blob size is less than 64KB or do not split
-    else {
+    } else {
+      // Blob size is less than 64KB or do not split
       std::cout << "blob size is " << blobs[i].size() << '\n' << std::flush;
       int dst {state.num_devices};
       auto itlow = ordered_cap.lower_bound(blobs[i].size());
