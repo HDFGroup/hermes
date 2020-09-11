@@ -68,6 +68,10 @@ PlacementSchema RandomPlacement(std::vector<hermes::api::Blob> blobs) {
   testing::SystemViewState state {GetSystemViewState()};
   std::multimap<u64, int> ordered_cap;
 
+  for (int j {0}; j < state.num_devices; ++j) {
+    ordered_cap.insert(std::pair<u64, int>(state.bytes_available[j], j));
+  }
+
   for (size_t i {0}; i < blobs.size(); ++i) {
     // Split the blob or not
     std::random_device dev;
@@ -117,8 +121,10 @@ PlacementSchema RandomPlacement(std::vector<hermes::api::Blob> blobs) {
        int dst {state.num_devices};
        auto itlow = ordered_cap.lower_bound (new_blob_size[k]);
        if (itlow == ordered_cap.end()) {
-         std::cerr << "No target has enough capacity (max " << ordered_cap.rbegin()->first
-                   << ") for the blob with size " << new_blob_size[k] << '\n' << std::flush;
+         std::cerr << "No target has enough capacity (max "
+                   << ordered_cap.rbegin()->first
+                   << ") for the blob with size " << new_blob_size[k] << ")\n"
+                   << std::flush;
        }
 
        std::uniform_int_distribution<std::mt19937::result_type>
