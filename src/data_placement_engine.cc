@@ -58,6 +58,102 @@ Status TopDownPlacement(SharedMemoryContext *context, RpcContext *rpc,
   return result;
 }
 
+Status RoundRobinPlacement(SharedMemoryContext *context, RpcContext *rpc,
+                        std::vector<size_t> blob_sizes,
+                        std::vector<PlacementSchema> &output) {
+  std::vector<u64> global_state = GetGlobalDeviceCapacities(context, rpc);
+  Status result = 0;
+
+  for (size_t i {0}; i < blob_sizes.size(); ++i) {
+    std::random_device dev;
+    std::mt19937 rng(dev());
+    int number {0};
+    PlacementSchema schema;
+
+    // If size is greater than 64KB
+    // Split the blob or not
+    if (blob_sizes[i] > KILOBYTES(64)) {
+      std::uniform_int_distribution<std::mt19937::result_type> distribution(0,1);
+      number = distribution(rng);
+    }
+
+    // Split the blob
+    if (number) {
+      int split_option {1};
+      // Split the blob if size is greater than 64KB
+      if (blob_sizes[i] > KILOBYTES(64) && blob_sizes[i] <= KILOBYTES(256))
+        split_option = 2;
+      else if (blob_sizes[i] > KILOBYTES(256) && blob_sizes[i] <= MEGABYTES(1))
+        split_option = 5;
+      else if (blob_sizes[i] > MEGABYTES(1) && blob_sizes[i] <= MEGABYTES(4))
+        split_option = 8;
+      else
+        split_option = 10;
+
+      int split_range[] = { 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024 };
+      std::vector<int> split_choice(split_range, split_range+split_option-1);
+
+      // Random pickup a number from split_choice to split the blob
+      std::uniform_int_distribution<std::mt19937::result_type>
+        position(0, split_choice.size()-1);
+      int split_num = split_choice[position(rng)];
+
+      // Construct the vector for the splitted blob
+      std::vector<size_t> new_blob_size;
+      size_t blob_each_portion {blob_sizes[i]/split_num};
+      for (int j {0}; j<split_num-1; ++j) {
+        new_blob_size.push_back(blob_each_portion);
+      }
+      new_blob_size.push_back(blob_sizes[i] -
+                              blob_each_portion*(split_num-1));
+
+      for (size_t k {0}; k<new_blob_size.size(); ++k) {
+        size_t dst {global_state.size()};
+        DataPlacementEngine dpe;
+        size_t device_pos {dpe.getCountDevice()};
+        for (size_t j {0}; j < global_state.size(); ++j) {
+          size_t adjust_pos {(j+device_pos)%global_state.size()};
+          if (global_state[adjust_pos] >= new_blob_size[k]) {
+            dpe.setCountDevice((j+device_pos+1)%global_state.size());
+            dst = adjust_pos;
+            global_state[adjust_pos] -= new_blob_size[k];
+            schema.push_back(std::make_pair(new_blob_size[k], dst));
+            break;
+          }
+        }
+        if (dst == global_state.size()) {
+          HERMES_NOT_IMPLEMENTED_YET;
+          std::cerr << "Buffer device not found for splitted blob! Go to PFS.\n";
+        }
+      }
+      output.push_back(schema);
+    }
+    // Blob size is less than 64KB or do not split
+    else {
+      size_t dst {global_state.size()};
+      DataPlacementEngine dpe;
+      size_t device_pos {dpe.getCountDevice()};
+      for (size_t j {0}; j < global_state.size(); ++j) {
+        size_t adjust_pos {(j+device_pos)%global_state.size()};
+        if (global_state[adjust_pos] >= blob_sizes[i]) {
+          dpe.setCountDevice((j+device_pos+1)%global_state.size());
+          dst = adjust_pos;
+          global_state[adjust_pos] -= blob_sizes[i];
+          schema.push_back(std::make_pair(blob_sizes[i], dst));
+          output.push_back(schema);
+          break;
+        }
+      }
+      if (dst == global_state.size()) {
+        HERMES_NOT_IMPLEMENTED_YET;
+        std::cerr << "Buffer device not found for the blob! Go to PFS.\n";
+      }
+    }
+  }
+
+  return result;
+}
+
 Status RandomPlacement(SharedMemoryContext *context, RpcContext *rpc,
                        std::vector<size_t> &blob_sizes,
                        std::vector<PlacementSchema> &output) {
@@ -66,24 +162,6 @@ Status RandomPlacement(SharedMemoryContext *context, RpcContext *rpc,
   std::vector<u64> node_state = GetRemainingNodeCapacities(context);
   std::multimap<u64, size_t> ordered_cap;
   Status result = 0;
-
-  u64 avail_cap {0};
-  for (size_t j {0}; j < node_state.size(); ++j) {
-    avail_cap += node_state[j];
-    ordered_cap.insert(std::pair<u64, size_t>(node_state[j], j));
-  }
-
-  u64 total_blob_size {0};
-  for (size_t i {0}; i < blob_sizes.size(); ++i) {
-    total_blob_size += blob_sizes[i];
-  }
-
-  if (total_blob_size > avail_cap) {
-    HERMES_NOT_IMPLEMENTED_YET;
-    // TODO(chogan): Trigger BufferOrganizer??
-    // EvictBuffers(eviction_schema);
-    assert(!"Available capacity is not enough for data placement\n");
-  }
 
   for (size_t i {0}; i < blob_sizes.size(); ++i) {
     std::random_device dev;
@@ -201,22 +279,6 @@ Status MinimizeIoTimePlacement(SharedMemoryContext *context, RpcContext *rpc,
   MPSolver solver("LinearOpt", MPSolver::GLOP_LINEAR_PROGRAMMING);
   int num_constrts {0};
 
-  u64 avail_cap {0};
-  // TODO (KIMY): Remaining Capacity Change Threshold 20% (consigurable)
-  for (size_t j {0}; j < node_state.size(); ++j) {
-    avail_cap += static_cast<u64>(node_state[j]*0.2);
-  }
-
-  u64 total_blob_size {0};
-  for (size_t i {0}; i < blob_sizes.size(); ++i) {
-    total_blob_size += blob_sizes[i];
-  }
-
-  if( total_blob_size > avail_cap) {
-    HERMES_NOT_IMPLEMENTED_YET;
-    assert(!"Available capacity is not enough for data placement\n");
-  }
-
   // Sum of fraction of each blob is 1
   for (size_t i {0}; i < blob_sizes.size(); ++i) {
     blob_constrt[num_constrts+i] = solver.MakeRowConstraint(1, 1);
@@ -327,8 +389,13 @@ Status CalculatePlacement(SharedMemoryContext *context, RpcContext *rpc,
   // a set of N Devices and a blob, while satisfying a policy P.
 
   switch (api_context.policy) {
+    // TODO(KIMMY): check device capacity against blob size
     case api::PlacementPolicy::kRandom: {
       result = RandomPlacement(context, rpc, blob_sizes, output);
+      break;
+    }
+    case api::PlacementPolicy::kRoundRobin: {
+      result = RoundRobinPlacement(context, rpc, blob_sizes, output);
       break;
     }
     case api::PlacementPolicy::kTopDown: {

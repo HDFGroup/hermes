@@ -77,22 +77,6 @@ PlacementSchema PerfOrientedPlacement(std::vector<hermes::api::Blob> blobs) {
   // TODO (KIMMY): placement ratio number will be from policy in the future
   const int placement_ratio {-10};
 
-  u64 avail_cap {0};
-  // Apply Remaining Capacity Change Threshold 20%
-  for (int j {0}; j < state.num_devices; ++j) {
-    avail_cap += static_cast<u64>(state.bytes_available[j]*0.2);
-  }
-
-  u64 total_blob_size {0};
-  for (size_t i {0}; i < blobs.size(); ++i) {
-    total_blob_size += blobs[i].size();
-  }
-
-  if(total_blob_size > avail_cap) {
-    // TODO (KIMMY): @errorhandling 
-    assert(!"Available capacity is not enough for data placement\n");
-  }
-
   // Sum of fraction of each blob is 1
   for (size_t i {0}; i < blobs.size(); ++i) {
     blob_constrt[num_constrts+i] = solver.MakeRowConstraint(1, 1);
