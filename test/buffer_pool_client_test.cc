@@ -24,7 +24,7 @@
  * node).
  */
 
-using namespace hermes;
+using namespace hermes;  // NOLINT(*)
 using hermes::testing::Timer;
 namespace hapi = hermes::api;
 
@@ -42,7 +42,8 @@ TimingResult TestGetBuffersRpc(RpcContext *rpc, int iters) {
   for (int i = 0; i < iters; ++i) {
     get_timer.resumeTime();
     std::vector<BufferID> ret =
-      hermes::RpcCall<std::vector<BufferID>>(rpc, rpc->node_id, "GetBuffers", schema);
+      hermes::RpcCall<std::vector<BufferID>>(rpc, rpc->node_id, "GetBuffers",
+                                             schema);
     get_timer.pauseTime();
 
     if (ret.size() == 0) {
@@ -124,10 +125,9 @@ double TestMergeBuffers(SharedMemoryContext *context, RpcContext *rpc,
 }
 
 struct FileMapper {
-
   Blob blob;
 
-  FileMapper(const char *path) {
+  explicit FileMapper(const char *path) {
     FILE *f = fopen(path, "r");
     blob = {};
     if (f) {

@@ -11,11 +11,13 @@ extern "C" {
 #define FUNC_COUNT(wraps) ((sizeof(wraps) / sizeof(wraps[0])))
 
 gotcha_wrappee_handle_t orig_pwrite_handle;
-typedef ssize_t (hermes_pwrite_fp)(int fd, const void *buf, size_t count, off_t offset);
+typedef ssize_t (hermes_pwrite_fp)(int fd, const void *buf, size_t count,
+                                   off_t offset);
 ssize_t hermes_pwrite(int fd, const void *buf, size_t count, off_t offset);
 
 gotcha_wrappee_handle_t orig_pread_handle;
-typedef ssize_t (hermes_pread_fp)(int fd, void *buf, size_t count, off_t offset);
+typedef ssize_t (hermes_pread_fp)(int fd, void *buf, size_t count,
+                                  off_t offset);
 ssize_t hermes_pread(int fd, void *buf, size_t count, off_t offset);
 
 gotcha_wrappee_handle_t orig_lseek_handle;
@@ -30,7 +32,7 @@ gotcha_wrappee_handle_t orig_read_handle;
 typedef ssize_t (hermes_read_fp)(int fd, void *buf, size_t count);
 ssize_t hermes_read(int fd, void *buf, size_t count);
 
-struct gotcha_binding_t wrap_posix [] = {
+struct gotcha_binding_t wrap_posix[] = {
         { "pwrite", (void *)hermes_pwrite, &orig_pwrite_handle },
         { "pread", (void *)hermes_pread, &orig_pread_handle },
         { "lseek", (void *)hermes_lseek, &orig_lseek_handle },
@@ -38,7 +40,7 @@ struct gotcha_binding_t wrap_posix [] = {
         { "read", (void *)hermes_read, &orig_read_handle },
 };
 
-void init_gotcha_posix () {
+void init_gotcha_posix() {
   gotcha_wrap(wrap_posix, FUNC_COUNT(wrap_posix), "hermes");
 }
 
@@ -55,7 +57,7 @@ ssize_t hermes_pwrite(int fd, const void *buf, size_t count, off_t offset) {
     fflush(stdout);
   }
 
-  hermes_pwrite_fp *orig_pwrite = 
+  hermes_pwrite_fp *orig_pwrite =
     (hermes_pwrite_fp *)gotcha_get_wrappee(orig_pwrite_handle);
   ret = orig_pwrite(fd, buf, count, offset);
 
@@ -75,7 +77,7 @@ ssize_t hermes_pread(int fd, void *buf, size_t count, off_t offset) {
     fflush(stdout);
   }
 
-  hermes_pread_fp *orig_pread = 
+  hermes_pread_fp *orig_pread =
     (hermes_pread_fp *)gotcha_get_wrappee(orig_pread_handle);
   ret = orig_pread(fd, buf, count, offset);
 
@@ -83,7 +85,7 @@ ssize_t hermes_pread(int fd, void *buf, size_t count, off_t offset) {
 }
 
 off_t hermes_lseek(int fd, off_t offset, int whence) {
-   /** check if path matches prefix */
+  /** check if path matches prefix */
   bool path_match = 1;
   off_t ret = 0;
 
@@ -95,7 +97,7 @@ off_t hermes_lseek(int fd, off_t offset, int whence) {
     fflush(stdout);
   }
 
-  hermes_lseek_fp *orig_lseek = 
+  hermes_lseek_fp *orig_lseek =
     (hermes_lseek_fp *)gotcha_get_wrappee(orig_lseek_handle);
   ret = orig_lseek(fd, offset, whence);
 
@@ -114,7 +116,7 @@ ssize_t hermes_write(int fd, const void *buf, size_t count) {
     printf("Intercepting function write()\n");
     fflush(stdout);
   }
-  hermes_write_fp *orig_write = 
+  hermes_write_fp *orig_write =
     (hermes_write_fp *)gotcha_get_wrappee(orig_write_handle);
   ret = orig_write(fd, buf, count);
 
@@ -134,10 +136,9 @@ ssize_t hermes_read(int fd, void *buf, size_t count) {
     fflush(stdout);
   }
 
-  hermes_read_fp *orig_read = 
+  hermes_read_fp *orig_read =
     (hermes_read_fp *)gotcha_get_wrappee(orig_read_handle);
   ret = orig_read(fd, buf, count);
 
   return ret;
 }
-

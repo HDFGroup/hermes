@@ -1,10 +1,14 @@
 #include "vbucket.h"
 
+#include <utility>
+#include <vector>
+
 namespace hermes {
 
 namespace api {
 
-Status VBucket::Link(std::string blob_name, std::string bucket_name, Context& ctx) {
+Status VBucket::Link(std::string blob_name, std::string bucket_name,
+                     Context& ctx) {
   (void)ctx;
   Status ret = 0;
 
@@ -17,7 +21,8 @@ Status VBucket::Link(std::string blob_name, std::string bucket_name, Context& ct
   return ret;
 }
 
-Status VBucket::Unlink(std::string blob_name, std::string bucket_name, Context& ctx) {
+Status VBucket::Unlink(std::string blob_name, std::string bucket_name,
+                       Context& ctx) {
   (void)ctx;
   Status ret = 0;
 
@@ -91,8 +96,8 @@ template<class Predicate>
 std::vector<std::string> VBucket::GetTraits(Predicate pred, Context& ctx) {
   (void)ctx;
 
-  LOG(INFO) << "Getting the subset of attached traits satisfying pred in VBucket "
-            << name_ << '\n';
+  LOG(INFO) << "Getting the subset of attached traits satisfying pred in "
+            << "VBucket " << name_ << '\n';
   return std::vector<std::string>();
 }
 
@@ -103,5 +108,5 @@ Status VBucket::Delete(Context& ctx) {
   return Status();
 }
 
-} // api namepsace
-} // hermes namespace
+}  // namespace api
+}  // namespace hermes

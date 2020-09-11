@@ -398,7 +398,6 @@ void FreeBufferIdList(SharedMemoryContext *context, RpcContext *rpc,
 
 void LocalDestroyBlobByName(SharedMemoryContext *context, RpcContext *rpc,
                             const char *blob_name, BlobID blob_id) {
-
   std::vector<BufferID> buffer_ids = GetBufferIdList(context, rpc, blob_id);
   ReleaseBuffers(context, rpc, buffer_ids);
   FreeBufferIdList(context, rpc, blob_id);
@@ -596,7 +595,6 @@ SystemViewState *GetLocalSystemViewState(SharedMemoryContext *context) {
 }
 
 std::vector<u64> LocalGetGlobalDeviceCapacities(SharedMemoryContext *context) {
-
   SystemViewState *global_svs = GetGlobalSystemViewState(context);
 
   std::vector<u64> result(global_svs->num_devices);
@@ -609,7 +607,6 @@ std::vector<u64> LocalGetGlobalDeviceCapacities(SharedMemoryContext *context) {
 
 std::vector<u64> GetGlobalDeviceCapacities(SharedMemoryContext *context,
                                          RpcContext *rpc) {
-
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   u32 target_node = mdm->global_system_view_state_node_id;
 
@@ -636,7 +633,6 @@ SystemViewState *GetGlobalSystemViewState(SharedMemoryContext *context) {
 
 void LocalUpdateGlobalSystemViewState(SharedMemoryContext *context,
                                       std::vector<i64> adjustments) {
-
   for (size_t i = 0; i < adjustments.size(); ++i) {
     SystemViewState *state = GetGlobalSystemViewState(context);
     if (adjustments[i]) {
@@ -691,7 +687,6 @@ SystemViewState *CreateSystemViewState(Arena *arena, Config *config) {
 
 void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
                          int node_id) {
-
   // NOTE(chogan): All MetadataManager offsets are relative to the address of
   // the MDM itself.
 

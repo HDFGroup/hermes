@@ -19,7 +19,7 @@
 namespace hapi = hermes::api;
 
 void TestGetBuffers(hapi::Hermes *hermes) {
-  using namespace hermes;
+  using namespace hermes;  // NOLINT(*)
   SharedMemoryContext *context = &hermes->context_;
   BufferPool *pool = GetBufferPoolFromContext(context);
   DeviceID device_id = 0;
@@ -57,7 +57,7 @@ void TestGetBuffers(hapi::Hermes *hermes) {
 }
 
 void TestGetBandwidths(hermes::SharedMemoryContext *context) {
-  using namespace hermes;
+  using namespace hermes;  // NOLINT(*)
   std::vector<f32> bandwidths = GetBandwidths(context);
   Config config;
   InitDefaultConfig(&config);
@@ -76,7 +76,6 @@ void PrintUsage(char *program) {
 }
 
 int main(int argc, char **argv) {
-
   int option = -1;
   char *config_file = 0;
   bool test_get_buffers = false;

@@ -6,7 +6,7 @@
 
 #include "hermes.h"
 
-using namespace hermes;
+using namespace hermes;  // NOLINT(*)
 
 namespace hermes {
 namespace testing {
@@ -18,8 +18,8 @@ struct SystemViewState {
   u64 bandwidth[kMaxDevices];
   int num_devices;
 };
-}  // namespace hermes
 }  // namespace testing
+}  // namespace hermes
 
 testing::SystemViewState InitSystemViewState() {
   testing::SystemViewState result = {};
@@ -66,7 +66,7 @@ void UpdateSystemViewState(PlacementSchema schema) {
 
 PlacementSchema RoundRobinPlacement(std::vector<hermes::api::Blob> blobs) {
   PlacementSchema result;
-  // TODO (KIMMY): use kernel function of system view
+  // TODO(KIMMY): use kernel function of system view
   testing::SystemViewState state {GetSystemViewState()};
   std::multimap<u64, int> ordered_cap;
 
@@ -75,11 +75,12 @@ PlacementSchema RoundRobinPlacement(std::vector<hermes::api::Blob> blobs) {
     std::random_device dev;
     std::mt19937 rng(dev());
     int number {0};
-    
+
     // If size is greater than 64KB
     // Decision about split the blob or not
     if (blobs[i].size() > KILOBYTES(64)) {
-      std::uniform_int_distribution<std::mt19937::result_type> distribution(0,1);
+      std::uniform_int_distribution<std::mt19937::result_type>
+        distribution(0, 1);
       number = distribution(rng);
     }
 
@@ -90,9 +91,11 @@ PlacementSchema RoundRobinPlacement(std::vector<hermes::api::Blob> blobs) {
       // Not split the blob if size is less than 64KB
       if (blobs[i].size() > KILOBYTES(64) && blobs[i].size() <= KILOBYTES(256))
         split_option = 2;
-      else if (blobs[i].size() > KILOBYTES(256) && blobs[i].size() <= MEGABYTES(1))
+      else if (blobs[i].size() > KILOBYTES(256) &&
+               blobs[i].size() <= MEGABYTES(1))
         split_option = 5;
-      else if (blobs[i].size() > MEGABYTES(1) && blobs[i].size() <= MEGABYTES(4))
+      else if (blobs[i].size() > MEGABYTES(1) &&
+               blobs[i].size() <= MEGABYTES(4))
         split_option = 8;
       else
         split_option = 10;
@@ -109,13 +112,13 @@ PlacementSchema RoundRobinPlacement(std::vector<hermes::api::Blob> blobs) {
      // Construct the vector for the splitted blob
      std::vector<size_t> new_blob_size;
      size_t blob_each_portion {blobs[i].size()/split_num};
-     for (int j {0}; j<split_num-1; ++j) {
+     for (int j {0}; j < split_num - 1; ++j) {
        new_blob_size.push_back(blob_each_portion);
      }
      new_blob_size.push_back(blobs[i].size() -
                              blob_each_portion*(split_num-1));
 
-     for (size_t k {0}; k<new_blob_size.size(); ++k) {
+     for (size_t k {0}; k < new_blob_size.size(); ++k) {
        int dst {state.num_devices};
        size_t device_pos {hermes::testing::COUNT_DEVICE};
        for (int j {0}; j < state.num_devices; ++j) {
@@ -132,9 +135,8 @@ PlacementSchema RoundRobinPlacement(std::vector<hermes::api::Blob> blobs) {
          std::cerr << "Device not found for the splitted blob!\n";
        }
      }
-   }
-   // Blob size is less than 64KB or do not split
-   else {
+    } else {
+     // Blob size is less than 64KB or do not split
      int dst {state.num_devices};
      size_t device_pos {hermes::testing::COUNT_DEVICE};
      for (int j {0}; j < state.num_devices; ++j) {
@@ -156,12 +158,11 @@ PlacementSchema RoundRobinPlacement(std::vector<hermes::api::Blob> blobs) {
   return result;
 }
 
-int main()
-{
-  hermes::api::Blob p1 (1024*1024, 255);
-  hermes::api::Blob p2 (1024*1024*2, 255);
-  hermes::api::Blob p3 (1024*1024*4, 255);
-  hermes::api::Blob p4 (1024*1024*7, 255);
+int main() {
+  hermes::api::Blob p1(1024*1024, 255);
+  hermes::api::Blob p2(1024*1024*2, 255);
+  hermes::api::Blob p3(1024*1024*4, 255);
+  hermes::api::Blob p4(1024*1024*7, 255);
   std::vector<hermes::api::Blob> input_blobs;
   input_blobs.push_back(p1);
   input_blobs.push_back(p2);
@@ -169,9 +170,10 @@ int main()
   input_blobs.push_back(p4);
 
   InitSystemViewState();
-  
-  for(int i {0}; i < globalSystemViewState.num_devices; ++i) {
-    std::cout << "device[" << i << "]: " << globalSystemViewState.bytes_available[i]
+
+  for (int i {0}; i < globalSystemViewState.num_devices; ++i) {
+    std::cout << "device[" << i << "]: "
+              << globalSystemViewState.bytes_available[i]
               << '\n' << std::flush;
     std::cout << "available ratio["<< i << "]: "
               << static_cast<double>(globalSystemViewState.bytes_available[i])/
@@ -183,8 +185,9 @@ int main()
   PlacementSchema schema1 = RoundRobinPlacement(input_blobs);
 
   UpdateSystemViewState(schema1);
-  for(int i {0}; i < globalSystemViewState.num_devices; ++i) {
-    std::cout << "device[" << i << "]: " << globalSystemViewState.bytes_available[i]
+  for (int i {0}; i < globalSystemViewState.num_devices; ++i) {
+    std::cout << "device[" << i << "]: "
+              << globalSystemViewState.bytes_available[i]
               << '\n' << std::flush;
     std::cout << "available ratio["<< i << "]: "
               << static_cast<double>(globalSystemViewState.bytes_available[i])/
@@ -193,9 +196,9 @@ int main()
   }
   std::cout << '\n' << '\n' << std::flush;
 
-  hermes::api::Blob p5 (1024*1024*0.5, 255);
-  hermes::api::Blob p6 (1024*1024*20, 255);
-  hermes::api::Blob p7 (1024*1024*4, 255);
+  hermes::api::Blob p5(1024*1024*0.5, 255);
+  hermes::api::Blob p6(1024*1024*20, 255);
+  hermes::api::Blob p7(1024*1024*4, 255);
   input_blobs.clear();
   input_blobs.push_back(p5);
   input_blobs.push_back(p6);
@@ -203,8 +206,9 @@ int main()
   PlacementSchema schema2 = RoundRobinPlacement(input_blobs);
 
   UpdateSystemViewState(schema2);
-  for(int i {0}; i < globalSystemViewState.num_devices; ++i) {
-    std::cout << "device[" << i << "]: " << globalSystemViewState.bytes_available[i]
+  for (int i {0}; i < globalSystemViewState.num_devices; ++i) {
+    std::cout << "device[" << i << "]: "
+              << globalSystemViewState.bytes_available[i]
               << '\n' << std::flush;
     std::cout << "available ratio["<< i << "]: "
               << static_cast<double>(globalSystemViewState.bytes_available[i])/
@@ -213,11 +217,11 @@ int main()
   }
   std::cout << '\n' << '\n' << std::flush;
 
-  hermes::api::Blob p8 (1024*1024*0.5, 255);
-  hermes::api::Blob p9 (1024*1024*20, 255);
-  hermes::api::Blob p10 (1024*1024*1, 255);
-  hermes::api::Blob p11 (1024*1024*4, 255);
-  hermes::api::Blob p12 (1024*1024*10, 255);
+  hermes::api::Blob p8(1024*1024*0.5, 255);
+  hermes::api::Blob p9(1024*1024*20, 255);
+  hermes::api::Blob p10(1024*1024*1, 255);
+  hermes::api::Blob p11(1024*1024*4, 255);
+  hermes::api::Blob p12(1024*1024*10, 255);
   input_blobs.clear();
   input_blobs.push_back(p8);
   input_blobs.push_back(p9);
@@ -227,8 +231,9 @@ int main()
   PlacementSchema schema3 = RoundRobinPlacement(input_blobs);
 
   UpdateSystemViewState(schema3);
-  for(int i {0}; i < globalSystemViewState.num_devices; ++i) {
-    std::cout << "device[" << i << "]: " << globalSystemViewState.bytes_available[i]
+  for (int i {0}; i < globalSystemViewState.num_devices; ++i) {
+    std::cout << "device[" << i << "]: "
+              << globalSystemViewState.bytes_available[i]
               << '\n' << std::flush;
     std::cout << "available ratio["<< i << "]: "
               << static_cast<double>(globalSystemViewState.bytes_available[i])/

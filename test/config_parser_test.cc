@@ -8,7 +8,6 @@
 #include "test_utils.h"
 
 int main(int argc, char **argv) {
-
   if (argc < 2) {
     fprintf(stderr, "Expected a path to a hermes.conf file\n");
     exit(-1);
@@ -16,10 +15,10 @@ int main(int argc, char **argv) {
 
   hermes::Config config = {};
 
-  const size_t config_memory_size = KILOBYTES(7);
-  hermes::u8 config_memory[config_memory_size];
+  const size_t kConfigMemorySize = KILOBYTES(7);
+  hermes::u8 config_memory[kConfigMemorySize];
   hermes::Arena arena = {};
-  hermes::InitArena(&arena, config_memory_size, config_memory);
+  hermes::InitArena(&arena, kConfigMemorySize, config_memory);
 
   hermes::ParseConfig(&arena, argv[1], &config);
 

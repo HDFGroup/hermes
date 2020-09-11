@@ -60,7 +60,6 @@ enum class TraitID : u8 {
 };
 
 struct Stats {
-
 };
 
 const int kIdListChunkSize = 10;
@@ -271,6 +270,6 @@ void InitMetadataStorage(SharedMemoryContext *context, MetadataManager *mdm,
 
 std::vector<u64> GetRemainingNodeCapacities(SharedMemoryContext *context);
 
-} // namespace hermes
+}  // namespace hermes
 
 #endif  // HERMES_METADATA_MANAGEMENT_H_

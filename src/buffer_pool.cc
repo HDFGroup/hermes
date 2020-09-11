@@ -18,8 +18,8 @@
 #include <utility>
 #include <vector>
 
-#include <glog/logging.h>
-#include <mpi.h>
+#include "glog/logging.h"
+#include "mpi.h"
 
 #include "metadata_management.h"
 #include "rpc.h"
@@ -104,7 +104,8 @@ BufferPool *GetBufferPoolFromContext(SharedMemoryContext *context) {
   return result;
 }
 
-Device *GetDeviceFromHeader(SharedMemoryContext *context, BufferHeader *header) {
+Device *GetDeviceFromHeader(SharedMemoryContext *context,
+                            BufferHeader *header) {
   BufferPool *pool = GetBufferPoolFromContext(context);
   Device *devices_base = (Device *)(context->shm_base + pool->devices_offset);
   Device *result = devices_base + header->device_id;
@@ -292,7 +293,8 @@ BufferID *GetFreeListPtr(SharedMemoryContext *context, DeviceID device_id) {
   BufferID *result = nullptr;
 
   if (device_id < pool->num_devices) {
-    result = (BufferID *)(context->shm_base + pool->free_list_offsets[device_id]);
+    result =
+      (BufferID *)(context->shm_base + pool->free_list_offsets[device_id]);
   }
 
   return result;
@@ -371,8 +373,8 @@ static std::atomic<u32> *GetAvailableBuffersArray(SharedMemoryContext *context,
   return result;
 }
 
-static u32 GetNumBuffersAvailable(SharedMemoryContext *context, DeviceID device_id,
-                                  int slab_index) {
+static u32 GetNumBuffersAvailable(SharedMemoryContext *context,
+                                  DeviceID device_id, int slab_index) {
   std::atomic<u32> *buffers_available = GetAvailableBuffersArray(context,
                                                                  device_id);
   u32 result = 0;
@@ -715,7 +717,8 @@ void MergeRamBufferFreeList(SharedMemoryContext *context, int slab_index) {
 
   // TODO(chogan): Currently just handling the case where the next slab size is
   // perfectly divisible by this slab's size
-  if (this_slab_unit_size == 0 || bigger_slab_unit_size % this_slab_unit_size != 0) {
+  if (this_slab_unit_size == 0 ||
+      bigger_slab_unit_size % this_slab_unit_size != 0) {
     // TODO(chogan): @logging
     return;
   }
@@ -917,7 +920,8 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
   i32 *header_counts = PushArray<i32>(scratch, config->num_devices);
 
   for (int device = 0; device < config->num_devices; ++device) {
-    slab_buffer_sizes[device] = PushArray<i32>(scratch, config->num_slabs[device]);
+    slab_buffer_sizes[device] = PushArray<i32>(scratch,
+                                               config->num_slabs[device]);
     buffer_counts[device] = PushArray<i32>(scratch, config->num_slabs[device]);
 
     for (int slab = 0; slab < config->num_slabs[device]; ++slab) {
@@ -999,7 +1003,8 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
     num_buffers[device] = 0;
     for (int slab = 0; slab < config->num_slabs[device]; ++slab) {
       // TODO(chogan): @logging Switch to DLOG
-      fprintf(stderr, "    %d-Buffers: %d\n", slab, buffer_counts[device][slab]);
+      fprintf(stderr, "    %d-Buffers: %d\n", slab,
+              buffer_counts[device][slab]);
       num_buffers[device] += buffer_counts[device][slab];
     }
     total_buffers += num_buffers[device];
@@ -1059,10 +1064,9 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
     for (int slab = 0; slab < config->num_slabs[device]; ++slab) {
       // NOTE(chogan): File buffering scheme is one file per slab per Device
       u32 end = start + buffer_counts[device][slab];
-      free_lists[device][slab] = MakeBufferHeaders(buffer_pool_arena,
-                                                 slab_buffer_sizes[device][slab],
-                                                 start, end, node_id, device, 0,
-                                                 0);
+      free_lists[device][slab] =
+        MakeBufferHeaders(buffer_pool_arena, slab_buffer_sizes[device][slab],
+                          start, end, node_id, device, 0, 0);
       start = end;
     }
   }
@@ -1097,10 +1101,10 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
     }
     pool->free_list_offsets[device] = (u8 *)free_list - shmem_base;
     pool->slab_unit_sizes_offsets[device] = (u8 *)slab_unit_sizes - shmem_base;
-    pool->slab_buffer_sizes_offsets[device] = ((u8 *)slab_buffer_sizes_for_device -
-                                             shmem_base);
-    pool->buffers_available_offsets[device] = ((u8 *)available_buffers -
-                                             shmem_base);
+    pool->slab_buffer_sizes_offsets[device] =
+      ((u8 *)slab_buffer_sizes_for_device - shmem_base);
+    pool->buffers_available_offsets[device] =
+      ((u8 *)available_buffers - shmem_base);
   }
 
   // NOTE(chogan): The buffer pool offset is stored at the beginning of shared
@@ -1129,7 +1133,8 @@ void MakeFullShmemName(char *dest, const char *base) {
   char *username = getenv("USER");
   if (username) {
     size_t username_length = strlen(username);
-    [[maybe_unused]] size_t total_length = base_name_length + username_length + 1;
+    [[maybe_unused]] size_t total_length =
+      base_name_length + username_length + 1;
     // TODO(chogan): @errorhandling
     assert(total_length < kMaxBufferPoolShmemNameLength);
     snprintf(dest + base_name_length, username_length + 1, "%s", username);
@@ -1170,9 +1175,9 @@ void InitFilesForBuffering(SharedMemoryContext *context, bool make_space) {
         if (device->has_fallocate) {
           // TODO(chogan): Use posix_fallocate when it is available
         } else {
-          // TODO(chogan): Some Devices require file initialization on each node,
-          // and some are shared (burst buffers) and only require one rank to
-          // initialize them
+          // TODO(chogan): Some Devices require file initialization on each
+          // node, and some are shared (burst buffers) and only require one rank
+          // to initialize them
 
           Target *target = GetTarget(context, device_id);
           [[maybe_unused]] int ftruncate_result =
@@ -1188,7 +1193,8 @@ void InitFilesForBuffering(SharedMemoryContext *context, bool make_space) {
 
 u8 *InitSharedMemory(const char *shmem_name, size_t total_size) {
   u8 *result = 0;
-  int shmem_fd = shm_open(shmem_name, O_CREAT | O_RDWR | O_TRUNC, S_IRUSR | S_IWUSR);
+  int shmem_fd =
+    shm_open(shmem_name, O_CREAT | O_RDWR | O_TRUNC, S_IRUSR | S_IWUSR);
 
   if (shmem_fd >= 0) {
     [[maybe_unused]] int ftruncate_result = ftruncate(shmem_fd, total_size);

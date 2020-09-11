@@ -5,6 +5,7 @@
 #include <string>
 #include <set>
 #include <iostream>
+#include <vector>
 
 #include "glog/logging.h"
 
@@ -34,7 +35,7 @@ class Hermes {
 
   Hermes() {}
 
-  Hermes(SharedMemoryContext context) : context_(context) {}
+  explicit Hermes(SharedMemoryContext context) : context_(context) {}
 
   void Display_bucket() {
     for (auto it = bucket_list_.begin(); it != bucket_list_.end(); ++it)
@@ -52,7 +53,7 @@ class Hermes {
   void AppBarrier();
   int GetProcessRank();
   int GetNumProcesses();
-  void Finalize(bool force_rpc_shutdown=false);
+  void Finalize(bool force_rpc_shutdown = false);
 
   // MPI comms.
   // proxy/reference to Hermes core
@@ -95,16 +96,15 @@ Status TransferBlob(const Bucket &src_bkt,
                     const std::string &dst_blob_name,
                     Context &ctx);
 
-std::shared_ptr<api::Hermes> InitHermes(const char *config_file=NULL,
-                                        bool is_daemon=false,
-                                        bool is_adapter=false);
+std::shared_ptr<api::Hermes> InitHermes(const char *config_file = NULL,
+                                        bool is_daemon = false,
+                                        bool is_adapter = false);
 
-}  // api namespace
+}  // namespace api
 
+std::shared_ptr<api::Hermes> InitHermesDaemon(char *config_file = NULL);
+std::shared_ptr<api::Hermes> InitHermesClient(const char *config_file = NULL);
 
-std::shared_ptr<api::Hermes> InitHermesDaemon(char *config_file=NULL);
-std::shared_ptr<api::Hermes> InitHermesClient(const char *config_file=NULL);
-
-}  // hermes namespace
+}  // namespace hermes
 
 #endif  // HERMES_H_

@@ -177,7 +177,8 @@ size_t MpiAssignIDsToNodes(CommunicationContext *comm,
   MPI_Allreduce(ranks_per_node_local.data(), ranks_per_node.data(),
                 comm->num_nodes, MPI_INT, MPI_SUM, mpi_state->world_comm);
 
-  size_t result = trans_arena_size_per_node / (size_t)ranks_per_node[comm->node_id - 1];
+  size_t result =
+    trans_arena_size_per_node / (size_t)ranks_per_node[comm->node_id - 1];
 
   DestroyArena(&scratch_arena);
 

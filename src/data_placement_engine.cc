@@ -73,7 +73,8 @@ Status RoundRobinPlacement(SharedMemoryContext *context, RpcContext *rpc,
     // If size is greater than 64KB
     // Split the blob or not
     if (blob_sizes[i] > KILOBYTES(64)) {
-      std::uniform_int_distribution<std::mt19937::result_type> distribution(0,1);
+      std::uniform_int_distribution<std::mt19937::result_type>
+        distribution(0, 1);
       number = distribution(rng);
     }
 
@@ -101,13 +102,13 @@ Status RoundRobinPlacement(SharedMemoryContext *context, RpcContext *rpc,
       // Construct the vector for the splitted blob
       std::vector<size_t> new_blob_size;
       size_t blob_each_portion {blob_sizes[i]/split_num};
-      for (int j {0}; j<split_num-1; ++j) {
+      for (int j {0}; j < split_num - 1; ++j) {
         new_blob_size.push_back(blob_each_portion);
       }
       new_blob_size.push_back(blob_sizes[i] -
                               blob_each_portion*(split_num-1));
 
-      for (size_t k {0}; k<new_blob_size.size(); ++k) {
+      for (size_t k {0}; k < new_blob_size.size(); ++k) {
         size_t dst {global_state.size()};
         DataPlacementEngine dpe;
         size_t device_pos {dpe.getCountDevice()};
@@ -123,13 +124,13 @@ Status RoundRobinPlacement(SharedMemoryContext *context, RpcContext *rpc,
         }
         if (dst == global_state.size()) {
           HERMES_NOT_IMPLEMENTED_YET;
-          std::cerr << "Buffer device not found for splitted blob! Go to PFS.\n";
+          std::cerr
+            << "Buffer device not found for splitted blob! Go to PFS.\n";
         }
       }
       output.push_back(schema);
-    }
+    } else {
     // Blob size is less than 64KB or do not split
-    else {
       size_t dst {global_state.size()};
       DataPlacementEngine dpe;
       size_t device_pos {dpe.getCountDevice()};
@@ -172,7 +173,8 @@ Status RandomPlacement(SharedMemoryContext *context, RpcContext *rpc,
     // If size is greater than 64KB
     // Split the blob or not
     if (blob_sizes[i] > KILOBYTES(64)) {
-      std::uniform_int_distribution<std::mt19937::result_type> distribution(0,1);
+      std::uniform_int_distribution<std::mt19937::result_type>
+        distribution(0, 1);
       number = distribution(rng);
     }
 
@@ -200,15 +202,15 @@ Status RandomPlacement(SharedMemoryContext *context, RpcContext *rpc,
       // Construct the vector for the splitted blob
       std::vector<size_t> new_blob_size;
       size_t blob_each_portion {blob_sizes[i]/split_num};
-      for (int j {0}; j<split_num-1; ++j) {
+      for (int j {0}; j < split_num - 1; ++j) {
         new_blob_size.push_back(blob_each_portion);
       }
       new_blob_size.push_back(blob_sizes[i] -
                               blob_each_portion*(split_num-1));
 
-      for (size_t k {0}; k<new_blob_size.size(); ++k) {
+      for (size_t k {0}; k < new_blob_size.size(); ++k) {
         size_t dst {node_state.size()};
-        auto itlow = ordered_cap.lower_bound (new_blob_size[k]);
+        auto itlow = ordered_cap.lower_bound(new_blob_size[k]);
         if (itlow == ordered_cap.end()) {
           HERMES_NOT_IMPLEMENTED_YET;
           assert(!"No buffer device has enough capacity! Go to PFS.\n");
@@ -219,7 +221,7 @@ Status RandomPlacement(SharedMemoryContext *context, RpcContext *rpc,
         dst = dst_distribution(rng);
         schema.push_back(std::make_pair(new_blob_size[k], dst));
 
-        for (auto it=itlow; it!=ordered_cap.end(); ++it) {
+        for (auto it = itlow; it != ordered_cap.end(); ++it) {
           if ((*it).second == dst) {
             ordered_cap.insert(std::pair<u64, size_t>(
                                (*it).first-new_blob_size[k], (*it).second));
@@ -229,9 +231,8 @@ Status RandomPlacement(SharedMemoryContext *context, RpcContext *rpc,
         }
       }
       output.push_back(schema);
-    }
-    // Blob size is less than 64KB or do not split
-    else {
+    } else {
+      // Blob size is less than 64KB or do not split
       PlacementSchema schema;
       size_t dst {node_state.size()};
       auto itlow = ordered_cap.lower_bound(blob_sizes[i]);
@@ -243,7 +244,7 @@ Status RandomPlacement(SharedMemoryContext *context, RpcContext *rpc,
       std::uniform_int_distribution<std::mt19937::result_type>
         dst_distribution((*itlow).second, node_state.size()-1);
       dst = dst_distribution(rng);
-      for (auto it=itlow; it!=ordered_cap.end(); ++it) {
+      for (auto it = itlow; it != ordered_cap.end(); ++it) {
         if ((*it).second == dst) {
           ordered_cap.insert(std::pair<u64, size_t>(
                              (*it).first-blob_sizes[i], (*it).second));
@@ -272,10 +273,10 @@ Status MinimizeIoTimePlacement(SharedMemoryContext *context, RpcContext *rpc,
   // will need the ability to escalate to neighborhoods, and the entire cluster.
   std::vector<u64> node_state = GetRemainingNodeCapacities(context);
   std::vector<f32> bandwidths = GetBandwidths(context);
-  // TODO (KIMMY): size of constraints should be from context
+  // TODO(KIMMY): size of constraints should be from context
   std::vector<MPConstraint*> blob_constrt(blob_sizes.size() +
                                           node_state.size()*3-1);
-  std::vector<std::vector<MPVariable*>> blob_fraction (blob_sizes.size());
+  std::vector<std::vector<MPVariable*>> blob_fraction(blob_sizes.size());
   MPSolver solver("LinearOpt", MPSolver::GLOP_LINEAR_PROGRAMMING);
   int num_constrts {0};
 
@@ -284,7 +285,7 @@ Status MinimizeIoTimePlacement(SharedMemoryContext *context, RpcContext *rpc,
     blob_constrt[num_constrts+i] = solver.MakeRowConstraint(1, 1);
     blob_fraction[i].resize(node_state.size());
 
-    // TODO (KIMMY): consider remote nodes?
+    // TODO(KIMMY): consider remote nodes?
     for (size_t j {0}; j < node_state.size(); ++j) {
       std::string var_name {"blob_dst_" + std::to_string(i) + "_" +
                             std::to_string(j)};
@@ -350,7 +351,7 @@ Status MinimizeIoTimePlacement(SharedMemoryContext *context, RpcContext *rpc,
 
   for (size_t i {0}; i < blob_sizes.size(); ++i) {
     PlacementSchema schema;
-    size_t device_pos {0}; // to track the device with most data
+    size_t device_pos {0};  // to track the device with most data
     auto largest_bulk{blob_fraction[i][0]->solution_value()*blob_sizes[i]};
     // NOTE: could be inefficient if there are hundreds of devices
     for (size_t j {1}; j < node_state.size(); ++j) {
@@ -362,7 +363,7 @@ Status MinimizeIoTimePlacement(SharedMemoryContext *context, RpcContext *rpc,
       if (j == device_pos)
         continue;
       double check_frac_size {blob_fraction[i][j]->solution_value()*
-                              blob_sizes[i]}; // blob fraction size
+                              blob_sizes[i]};  // blob fraction size
       size_t frac_size_cast = static_cast<size_t>(check_frac_size);
       // If size to this destination is not 0, push to result
       if (frac_size_cast != 0) {
@@ -371,7 +372,8 @@ Status MinimizeIoTimePlacement(SharedMemoryContext *context, RpcContext *rpc,
       }
     }
     // Push the rest data to device device_pos
-    schema.push_back(std::make_pair(blob_sizes[i]-blob_partial_sum, device_pos));
+    schema.push_back(std::make_pair(blob_sizes[i]-blob_partial_sum,
+                                    device_pos));
     output.push_back(schema);
   }
 
@@ -385,8 +387,8 @@ Status CalculatePlacement(SharedMemoryContext *context, RpcContext *rpc,
   (void)api_context;
   Status result = 0;
 
-  // TODO(chogan): Return a PlacementSchema that minimizes a cost function F given
-  // a set of N Devices and a blob, while satisfying a policy P.
+  // TODO(chogan): Return a PlacementSchema that minimizes a cost function F
+  // given a set of N Devices and a blob, while satisfying a policy P.
 
   switch (api_context.policy) {
     // TODO(KIMMY): check device capacity against blob size

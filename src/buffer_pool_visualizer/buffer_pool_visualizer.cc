@@ -14,7 +14,7 @@ Heap *GetIdHeap(MetadataManager *mdm);
 Heap *GetMapHeap(MetadataManager *mdm);
 }  // namespace hermes
 
-using namespace hermes;
+using namespace hermes;  // NOLINT(*)
 
 enum Color {
   kColor_Red,
@@ -158,7 +158,8 @@ void DrawWrappingRect(SDL_Rect *rect, int width, int pad, SDL_Surface *surface,
 // NOTE(chogan): This won't work if we allow non-ram headers to be dormant
 // because getting the next dormant header can swap headers out of their preset
 // index range
-static Range GetHeaderIndexRange(SharedMemoryContext *context, DeviceID device_id) {
+static Range GetHeaderIndexRange(SharedMemoryContext *context,
+                                 DeviceID device_id) {
   Range result = {};
   BufferPool *pool = GetBufferPoolFromContext(context);
 
@@ -355,7 +356,6 @@ static int DrawFileBuffers(SharedMemoryContext *context, SDL_Surface *surface,
   }
 
   return final_y + h;
-
 }
 
 static void DrawEndOfRamBuffers(SharedMemoryContext *context,
@@ -432,7 +432,8 @@ static void ReloadSharedMemory(SharedMemoryContext *context, char *shmem_name) {
   *context = new_context;
 }
 
-static void PrintBufferCounts(SharedMemoryContext *context, DeviceID device_id) {
+static void PrintBufferCounts(SharedMemoryContext *context,
+                              DeviceID device_id) {
   BufferPool *pool = GetBufferPoolFromContext(context);
   BufferHeader *headers = GetHeadersBase(context);
   std::vector<int> buffer_counts(pool->num_slabs[device_id], 0);
@@ -463,7 +464,8 @@ static void PrintBufferCounts(SharedMemoryContext *context, DeviceID device_id) 
   SDL_Log("Total live headers: %d\n", total_headers);
 }
 
-static void PrintFreeListSizes(SharedMemoryContext *context, DeviceID device_id) {
+static void PrintFreeListSizes(SharedMemoryContext *context,
+                               DeviceID device_id) {
   BufferPool *pool = GetBufferPoolFromContext(context);
   int total_free_headers = 0;
 
