@@ -54,6 +54,7 @@ enum ConfigVariable {
   ConfigVariable_TransferWindowArenaPercentage,
   ConfigVariable_TransientArenaPercentage,
   ConfigVariable_MountPoints,
+  ConfigVariable_SwapMount,
   ConfigVariable_MaxBucketsPerNode,
   ConfigVariable_MaxVBucketsPerNode,
   ConfigVariable_SystemViewStateUpdateInterval,
@@ -87,6 +88,7 @@ static const char *kConfigVariableStrings[ConfigVariable_Count] = {
   "transfer_window_arena_percentage",
   "transient_arena_percentage",
   "mount_points",
+  "swap_mount",
   "max_buckets_per_node",
   "max_vbuckets_per_node",
   "system_view_state_update_interval_ms",
@@ -743,6 +745,10 @@ void ParseTokens(TokenList *tokens, Config *config) {
       case ConfigVariable_MountPoints: {
         RequireNumDevices(config);
         tok = ParseStringList(tok, config->mount_points, config->num_devices);
+        break;
+      }
+      case ConfigVariable_SwapMount: {
+        config->swap_mount = ParseString(&tok);
         break;
       }
       case ConfigVariable_MaxBucketsPerNode: {

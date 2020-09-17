@@ -58,6 +58,7 @@ int main(int argc, char **argv) {
   Assert(config.mount_points[1] == "./");
   Assert(config.mount_points[2] == "./");
   Assert(config.mount_points[3] == "./");
+  Assert(config.swap_mount == "./");
 
   Assert(config.max_buckets_per_node == 16);
   Assert(config.max_vbuckets_per_node == 8);

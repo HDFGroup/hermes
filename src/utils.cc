@@ -71,6 +71,7 @@ void InitDefaultConfig(Config *config) {
   config->mount_points[1] = "./";
   config->mount_points[2] = "./";
   config->mount_points[3] = "./";
+  config->swap_mount = "./";
 
   config->rpc_server_base_name = "localhost";
   config->rpc_server_suffix = "";
