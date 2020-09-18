@@ -380,9 +380,8 @@ void SeedHashForStorage(size_t seed) {
 }
 
 void InitSwapSpaceFilename(SharedMemoryContext *context, MetadataManager *mdm,
-                           Arena *arena, Config *config) {
-  // TODO(chogan): Make this name unique?
-  std::string swap_filename("swap.hermes");
+                           Arena *arena, Config *config, i32 node_id) {
+  std::string swap_filename("swap" + std::to_string(node_id) + ".hermes");
   size_t swap_mount_length = config->swap_mount.size();
   bool ends_in_slash = config->swap_mount[swap_mount_length - 1] == '/';
   std::string full_swap_path = (config->swap_mount + (ends_in_slash ? "" : "/")
@@ -397,8 +396,8 @@ void InitSwapSpaceFilename(SharedMemoryContext *context, MetadataManager *mdm,
 }
 
 void InitMetadataStorage(SharedMemoryContext *context, MetadataManager *mdm,
-                         Arena *arena, Config *config) {
-  InitSwapSpaceFilename(context, mdm, arena, config);
+                         Arena *arena, Config *config, i32 node_id) {
+  InitSwapSpaceFilename(context, mdm, arena, config, node_id);
 
   // Heaps
 

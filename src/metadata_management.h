@@ -268,7 +268,7 @@ void StartGlobalSystemViewStateUpdateThread(SharedMemoryContext *context,
                                             double slepp_ms);
 
 void InitMetadataStorage(SharedMemoryContext *context, MetadataManager *mdm,
-                         Arena *arena, Config *config);
+                         Arena *arena, Config *config, i32 node_id);
 
 std::vector<u64> GetRemainingNodeCapacities(SharedMemoryContext *context);
 const char *GetSwapFilename(MetadataManager *mdm);
