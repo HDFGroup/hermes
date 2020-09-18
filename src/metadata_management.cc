@@ -685,6 +685,12 @@ SystemViewState *CreateSystemViewState(Arena *arena, Config *config) {
   return result;
 }
 
+const char *GetSwapFilename(MetadataManager *mdm) {
+  const char *result = (const char *)((u8 *)mdm + mdm->swap_filename_offset);
+
+  return result;
+}
+
 void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
                          int node_id) {
   // NOTE(chogan): All MetadataManager offsets are relative to the address of

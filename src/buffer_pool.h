@@ -239,6 +239,7 @@ struct SharedMemoryContext {
   // TODO(chogan): Move these into a FileBufferingContext
   std::vector<std::vector<std::string>> buffering_filenames;
   FILE *open_streams[kMaxDevices][kMaxBufferPoolSlabs];
+  FILE *swap_file;
 };
 
 struct BufferIdArray;

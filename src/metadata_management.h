@@ -123,6 +123,8 @@ struct MetadataManager {
   ptrdiff_t vbucket_map_offset;
   ptrdiff_t blob_map_offset;
 
+  ptrdiff_t swap_filename_offset;
+
   TicketMutex bucket_mutex;
   TicketMutex vbucket_mutex;
 
@@ -269,6 +271,7 @@ void InitMetadataStorage(SharedMemoryContext *context, MetadataManager *mdm,
                          Arena *arena, Config *config);
 
 std::vector<u64> GetRemainingNodeCapacities(SharedMemoryContext *context);
+const char *GetSwapFilename(MetadataManager *mdm);
 
 }  // namespace hermes
 

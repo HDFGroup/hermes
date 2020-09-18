@@ -379,8 +379,27 @@ void SeedHashForStorage(size_t seed) {
   stbds_rand_seed(seed);
 }
 
+void InitSwapSpaceFilename(SharedMemoryContext *context, MetadataManager *mdm,
+                           Arena *arena, Config *config) {
+  // TODO(chogan): Make this name unique?
+  std::string swap_filename("swap.hermes");
+  size_t swap_mount_length = config->swap_mount.size();
+  bool ends_in_slash = config->swap_mount[swap_mount_length - 1] == '/';
+  std::string full_swap_path = (config->swap_mount + (ends_in_slash ? "" : "/")
+                                + swap_filename);
+  size_t full_swap_path_size = full_swap_path.size() + 1;
+
+  char *swap_filename_memory = PushArray<char>(arena, full_swap_path_size);
+  memcpy(swap_filename_memory, full_swap_path.c_str(), full_swap_path.size());
+  swap_filename_memory[full_swap_path.size()] = '\0';
+
+  mdm->swap_filename_offset = GetOffsetFromMdm(mdm, swap_filename_memory);
+}
+
 void InitMetadataStorage(SharedMemoryContext *context, MetadataManager *mdm,
                          Arena *arena, Config *config) {
+  InitSwapSpaceFilename(context, mdm, arena, config);
+
   // Heaps
 
   u32 heap_alignment = 8;
