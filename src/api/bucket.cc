@@ -46,8 +46,15 @@ Status Bucket::Put(const std::string &name, const u8 *data, size_t size,
       }
       ret = PlaceBlobs(schemas, blobs, names);
     } else {
-      // TODO(chogan): Trigger BufferOrganizer
-      // TODO(chogan): Set Status
+      hermes::Blob blob = {};
+      blob.data = (u8 *)data;
+      blob.size = size;
+      SwapBlob swap_blob =  WriteToSwap(&hermes_->context_, blob, name,
+                                        hermes_->rpc_.node_id);
+      UpdateSwapMetadata(&hermes_->context_, (char *)name.c_str(), swap_blob);
+      // TODO(chogan): TriggerBufferOrganizer(swap_blob);
+      // TODO(chogan): Signify in Status that the Blob went to swap space
+      ret = 0;
     }
   }
 

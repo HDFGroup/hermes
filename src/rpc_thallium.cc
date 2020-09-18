@@ -359,7 +359,8 @@ void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
   LOG(INFO) << "Buffer organizer serving at " << rpc_server_name << " with "
             << num_threads << " RPC threads" << std::endl;
 
-  auto rpc_handle_event = [context](const tl::request &req) {
+  auto rpc_handle_event = [context](const tl::request &req, u32 node_id,
+                                    u64 offset, u64 size) {
     (void)req;
   };
 

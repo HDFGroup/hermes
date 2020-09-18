@@ -1268,10 +1268,19 @@ void ReleaseSharedMemoryContext(SharedMemoryContext *context) {
         int fclose_result = fclose(context->open_streams[device_id][slab]);
         if (fclose_result != 0) {
           // TODO(chogan): @errorhandling
+          HERMES_NOT_IMPLEMENTED_YET;
         }
       }
     }
   }
+
+  if (context->swap_file) {
+    if (fclose(context->swap_file) != 0) {
+      // TODO(chogan): @errorhandling
+      HERMES_NOT_IMPLEMENTED_YET;
+    }
+  }
+
   UnmapSharedMemory(context);
 }
 
@@ -1427,6 +1436,48 @@ size_t ReadBlobFromBuffers(SharedMemoryContext *context, RpcContext *rpc,
   assert(total_bytes_read == blob->size);
 
   return total_bytes_read;
+}
+
+SwapBlob WriteToSwap(SharedMemoryContext *context, Blob blob,
+                     const std::string &name, u32 node_id) {
+  SwapBlob result = {};
+
+  if (!context->swap_file) {
+    MetadataManager *mdm = GetMetadataManagerFromContext(context);
+    const char *swap_path = GetSwapFilename(mdm);
+    context->swap_file = fopen(swap_path, "a+");
+
+    if (!context->swap_file) {
+      // TODO(chogan): @errorhandling
+      HERMES_NOT_IMPLEMENTED_YET;
+    }
+  }
+  if (fseek(context->swap_file, 0, SEEK_END) != 0) {
+    // TODO(chogan): @errorhandling
+    HERMES_NOT_IMPLEMENTED_YET;
+  }
+
+  result.offset = ftell(context->swap_file);
+  if (result.offset == -1) {
+    // TODO(chogan): @errorhandling
+    HERMES_NOT_IMPLEMENTED_YET;
+  }
+
+  // TODO(chogan): write data
+  if (fwrite(blob.data, 1, blob.size, context->swap_file) != blob.size) {
+    // TODO(chogan): @errorhandling
+    HERMES_NOT_IMPLEMENTED_YET;
+  }
+
+  if (fflush(context->swap_file) != 0) {
+    // TODO(chogan): @errorhandling
+    HERMES_NOT_IMPLEMENTED_YET;
+  }
+
+  result.size = blob.size;
+  result.node_id = node_id;
+
+  return result;
 }
 
 }  // namespace hermes

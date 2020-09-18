@@ -316,11 +316,23 @@ u32 AllocateBufferIdList(SharedMemoryContext *context, RpcContext *rpc,
   return result;
 }
 
+u32 GetBlobNodeId(BlobID id) {
+  u32 result = (u32)abs(id.bits.node_id);
+
+  return result;
+}
+
+bool BlobIsInSwap(BlobID id) {
+  bool result = id.bits.node_id < 0;
+
+  return result;
+}
+
 void GetBufferIdList(Arena *arena, SharedMemoryContext *context,
                      RpcContext *rpc, BlobID blob_id,
                      BufferIdArray *buffer_ids) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
-  u32 target_node = blob_id.bits.node_id;
+  u32 target_node = GetBlobNodeId(blob_id);
 
   if (target_node == rpc->node_id) {
     LocalGetBufferIdList(arena, mdm, blob_id, buffer_ids);
@@ -337,7 +349,7 @@ void GetBufferIdList(Arena *arena, SharedMemoryContext *context,
 std::vector<BufferID> GetBufferIdList(SharedMemoryContext *context,
                                       RpcContext *rpc, BlobID blob_id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
-  u32 target_node = blob_id.bits.node_id;
+  u32 target_node = GetBlobNodeId(blob_id);
 
   std::vector<BufferID> result;
 
@@ -388,7 +400,7 @@ void AttachBlobToBucket(SharedMemoryContext *context, RpcContext *rpc,
 
 void FreeBufferIdList(SharedMemoryContext *context, RpcContext *rpc,
                       BlobID blob_id) {
-  u32 target_node = blob_id.bits.node_id;
+  u32 target_node = GetBlobNodeId(blob_id);
   if (target_node == rpc->node_id) {
     LocalFreeBufferIdList(context, blob_id);
   } else {
@@ -439,7 +451,7 @@ void DestroyBlobByName(SharedMemoryContext *context, RpcContext *rpc,
                        BucketID bucket_id, const std::string &blob_name) {
   BlobID blob_id = GetBlobIdByName(context, rpc, blob_name.c_str());
 
-  u32 blob_id_target_node = blob_id.bits.node_id;
+  u32 blob_id_target_node = GetBlobNodeId(blob_id);
 
   if (blob_id_target_node == rpc->node_id) {
     LocalDestroyBlobByName(context, rpc, blob_name.c_str(), blob_id);
@@ -477,7 +489,7 @@ bool ContainsBlob(SharedMemoryContext *context, RpcContext *rpc,
 }
 
 void DestroyBlobById(SharedMemoryContext *context, RpcContext *rpc, BlobID id) {
-  u32 target_node = id.bits.node_id;
+  u32 target_node = GetBlobNodeId(id);
   if (target_node == rpc->node_id) {
     LocalDestroyBlobById(context, rpc, id);
   } else {
@@ -689,6 +701,13 @@ const char *GetSwapFilename(MetadataManager *mdm) {
   const char *result = (const char *)((u8 *)mdm + mdm->swap_filename_offset);
 
   return result;
+}
+
+void UpdateSwapMetadata(SharedMemoryContext *context, char *blob_name,
+                        SwapBlob swap_blob) {
+  // TODO(chogan): BlobID has negative node_id
+  // TODO(chogan): put name -> blobID in map
+  // TODO(chogan): blobID.buffer_id_list is offset and size
 }
 
 void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,

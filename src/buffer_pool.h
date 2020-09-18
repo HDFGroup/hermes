@@ -370,6 +370,15 @@ struct Blob {
   u64 size;
 };
 
+struct SwapBlob {
+  u32 node_id;
+  u64 offset;
+  u64 size;
+};
+
+SwapBlob WriteToSwap(SharedMemoryContext *context, Blob blob,
+                     const std::string &name, u32 node_id);
+
 /**
  * Sketch of how an I/O client might write.
  *

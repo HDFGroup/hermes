@@ -40,7 +40,7 @@ union VBucketID {
 union BlobID {
   struct {
     u32 buffer_ids_offset;
-    u32 node_id;
+    i32 node_id;
   } bits;
 
   u64 as_int;
@@ -272,6 +272,8 @@ void InitMetadataStorage(SharedMemoryContext *context, MetadataManager *mdm,
 
 std::vector<u64> GetRemainingNodeCapacities(SharedMemoryContext *context);
 const char *GetSwapFilename(MetadataManager *mdm);
+void UpdateSwapMetadata(SharedMemoryContext *context, char *blob_name,
+                        SwapBlob swap_blob);
 
 }  // namespace hermes
 
