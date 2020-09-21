@@ -123,9 +123,8 @@ Status RoundRobinPlacement(SharedMemoryContext *context, RpcContext *rpc,
           }
         }
         if (dst == global_state.size()) {
-          HERMES_NOT_IMPLEMENTED_YET;
-          std::cerr
-            << "Buffer device not found for splitted blob! Go to PFS.\n";
+          result = 1;
+          // TODO(chogan): @errorhandling Set error type in Status
         }
       }
       output.push_back(schema);
@@ -146,8 +145,8 @@ Status RoundRobinPlacement(SharedMemoryContext *context, RpcContext *rpc,
         }
       }
       if (dst == global_state.size()) {
-        HERMES_NOT_IMPLEMENTED_YET;
-        std::cerr << "Buffer device not found for the blob! Go to PFS.\n";
+        result = 1;
+        // TODO(chogan): @errorhandling Set error type in Status
       }
     }
   }
@@ -212,48 +211,48 @@ Status RandomPlacement(SharedMemoryContext *context, RpcContext *rpc,
         size_t dst {node_state.size()};
         auto itlow = ordered_cap.lower_bound(new_blob_size[k]);
         if (itlow == ordered_cap.end()) {
-          HERMES_NOT_IMPLEMENTED_YET;
-          assert(!"No buffer device has enough capacity! Go to PFS.\n");
-        }
+          result = 1;
+          // TODO(chogan): @errorhandling Set error type in Status
+        } else {
+          std::uniform_int_distribution<std::mt19937::result_type>
+            dst_distribution((*itlow).second, node_state.size()-1);
+          dst = dst_distribution(rng);
+          schema.push_back(std::make_pair(new_blob_size[k], dst));
 
-        std::uniform_int_distribution<std::mt19937::result_type>
-          dst_distribution((*itlow).second, node_state.size()-1);
-        dst = dst_distribution(rng);
-        schema.push_back(std::make_pair(new_blob_size[k], dst));
-
-        for (auto it = itlow; it != ordered_cap.end(); ++it) {
-          if ((*it).second == dst) {
-            ordered_cap.insert(std::pair<u64, size_t>(
-                               (*it).first-new_blob_size[k], (*it).second));
-            ordered_cap.erase(it);
-            break;
+          for (auto it = itlow; it != ordered_cap.end(); ++it) {
+            if ((*it).second == dst) {
+              ordered_cap.insert(std::pair<u64, size_t>(
+                                   (*it).first-new_blob_size[k], (*it).second));
+              ordered_cap.erase(it);
+              break;
+            }
           }
         }
+        output.push_back(schema);
       }
-      output.push_back(schema);
     } else {
       // Blob size is less than 64KB or do not split
       PlacementSchema schema;
       size_t dst {node_state.size()};
       auto itlow = ordered_cap.lower_bound(blob_sizes[i]);
       if (itlow == ordered_cap.end()) {
-        HERMES_NOT_IMPLEMENTED_YET;
-        assert(!"No buffer device has enough capacity! Go to PFS.\n");
-      }
-
-      std::uniform_int_distribution<std::mt19937::result_type>
-        dst_distribution((*itlow).second, node_state.size()-1);
-      dst = dst_distribution(rng);
-      for (auto it = itlow; it != ordered_cap.end(); ++it) {
-        if ((*it).second == dst) {
-          ordered_cap.insert(std::pair<u64, size_t>(
-                             (*it).first-blob_sizes[i], (*it).second));
-          ordered_cap.erase(it);
-          break;
+        result = 1;
+        // TODO(chogan): @errorhandling Set error type in Status
+      } else {
+        std::uniform_int_distribution<std::mt19937::result_type>
+          dst_distribution((*itlow).second, node_state.size()-1);
+        dst = dst_distribution(rng);
+        for (auto it = itlow; it != ordered_cap.end(); ++it) {
+          if ((*it).second == dst) {
+            ordered_cap.insert(std::pair<u64, size_t>(
+                                 (*it).first-blob_sizes[i], (*it).second));
+            ordered_cap.erase(it);
+            break;
+          }
         }
+        schema.push_back(std::make_pair(blob_sizes[i], dst));
+        output.push_back(schema);
       }
-      schema.push_back(std::make_pair(blob_sizes[i], dst));
-      output.push_back(schema);
     }
   }
 

@@ -57,7 +57,7 @@ enum class ProcessKind {
 };
 
 enum ArenaType {
-  kArenaType_BufferPool,
+  kArenaType_BufferPool,  // This must always be first
   kArenaType_MetaData,
   kArenaType_Transient,
   kArenaType_TransferWindow,

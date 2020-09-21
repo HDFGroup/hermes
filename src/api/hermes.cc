@@ -81,21 +81,25 @@ ArenaInfo GetArenaInfo(Config *config) {
 
   ArenaInfo result = {};
 
-  for (int i = 0; i < kArenaType_Count; ++i) {
-    size_t pages {0};
-    if (i < kArenaType_Count-1) {
-      pages = std::floor(config->arena_percentages[i] * total_pages);
-      pages_left -= pages;
-    } else {
-      pages = pages_left;
-      pages_left = 0;
-    }
+  for (int i = kArenaType_Count - 1; i > kArenaType_BufferPool; --i) {
+    size_t desired_pages =
+      std::floor(config->arena_percentages[i] * total_pages);
+    // NOTE(chogan): Each arena gets 1 page at minimum
+    size_t pages = std::max(desired_pages, 1UL);
+    pages_left -= pages;
     size_t num_bytes = pages * page_size;
     result.sizes[i] = num_bytes;
     result.total += num_bytes;
   }
 
-  assert(pages_left == 0);
+  if (pages_left == 0) {
+    // TODO(chogan): @errorhandling
+    HERMES_NOT_IMPLEMENTED_YET;
+  }
+
+  // NOTE(chogan): BufferPool Arena gets remainder of pages
+  result.sizes[kArenaType_BufferPool] = pages_left * page_size;
+  result.total += result.sizes[kArenaType_BufferPool];
 
   return result;
 }
@@ -281,6 +285,12 @@ std::shared_ptr<api::Hermes> InitHermesClient(const char *config_file) {
 
 std::shared_ptr<api::Hermes> InitHermesDaemon(char *config_file) {
   std::shared_ptr<api::Hermes> result = api::InitHermes(config_file, true);
+
+  return result;
+}
+
+std::shared_ptr<api::Hermes> InitHermesDaemon(Config *config) {
+  std::shared_ptr<api::Hermes> result = InitHermes(config, true, false);
 
   return result;
 }

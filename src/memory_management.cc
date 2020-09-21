@@ -74,6 +74,10 @@ size_t GetRemainingCapacity(Arena *arena) {
 }
 
 void GrowArena(Arena *arena, size_t new_size) {
+  if (new_size == 0) {
+    // TODO(chogan): @errorhandling
+    HERMES_NOT_IMPLEMENTED_YET;
+  }
   void *new_base = (u8 *)realloc(arena->base, new_size);
   if (new_base != arena->base) {
     arena->base = (u8 *)new_base;

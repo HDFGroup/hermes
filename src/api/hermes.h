@@ -103,6 +103,7 @@ std::shared_ptr<api::Hermes> InitHermes(const char *config_file = NULL,
 }  // namespace api
 
 std::shared_ptr<api::Hermes> InitHermesDaemon(char *config_file = NULL);
+std::shared_ptr<api::Hermes> InitHermesDaemon(Config *config);
 std::shared_ptr<api::Hermes> InitHermesClient(const char *config_file = NULL);
 
 }  // namespace hermes
