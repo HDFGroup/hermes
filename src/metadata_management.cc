@@ -697,17 +697,32 @@ SystemViewState *CreateSystemViewState(Arena *arena, Config *config) {
   return result;
 }
 
-const char *GetSwapFilename(MetadataManager *mdm) {
-  const char *result = (const char *)((u8 *)mdm + mdm->swap_filename_offset);
+std::string GetSwapFilename(MetadataManager *mdm, u32 node_id) {
+  char *prefix = (char *)((u8 *)mdm + mdm->swap_filename_prefix_offset);
+  char *suffix = (char *)((u8 *)mdm + mdm->swap_filename_suffix_offset);
+  std::string result = (prefix + std::to_string(node_id) + suffix);
 
   return result;
 }
 
-void UpdateSwapMetadata(SharedMemoryContext *context, char *blob_name,
-                        SwapBlob swap_blob) {
-  // TODO(chogan): BlobID has negative node_id
-  // TODO(chogan): put name -> blobID in map
-  // TODO(chogan): blobID.buffer_id_list is offset and size
+void UpdateSwapMetadata(SharedMemoryContext *context, RpcContext *rpc,
+                        const char *blob_name, SwapBlob swap_blob) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+
+  // NOTE(chogan): For a swap entry, the two BufferIDs represent the offset into
+  // the swap file and the size in bytes of the blob.
+  std::vector<BufferID> buffer_ids(2);
+  buffer_ids[0].as_int = swap_blob.offset;
+  buffer_ids[1].as_int = swap_blob.size;
+
+  BlobID blob_id = {};
+  blob_id.bits.node_id = -swap_blob.node_id;
+  // TODO(chogan): @optimization These are potentially two consecutive RPC calls
+  // to the same node. We could combine them into one.
+  blob_id.bits.buffer_ids_offset = AllocateBufferIdList(context, rpc,
+                                                        swap_blob.node_id,
+                                                        buffer_ids);
+  PutBlobId(mdm, rpc, blob_name, blob_id);
 }
 
 void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,

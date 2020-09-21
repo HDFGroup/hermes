@@ -123,7 +123,8 @@ struct MetadataManager {
   ptrdiff_t vbucket_map_offset;
   ptrdiff_t blob_map_offset;
 
-  ptrdiff_t swap_filename_offset;
+  ptrdiff_t swap_filename_prefix_offset;
+  ptrdiff_t swap_filename_suffix_offset;
 
   TicketMutex bucket_mutex;
   TicketMutex vbucket_mutex;
@@ -217,6 +218,7 @@ void DecrementRefcount(SharedMemoryContext *context, RpcContext *rpc,
                        BucketID id);
 
 // internal
+u32 HashString(MetadataManager *mdm, RpcContext *rpc, const char *str);
 MetadataManager *GetMetadataManagerFromContext(SharedMemoryContext *context);
 BucketInfo *LocalGetBucketInfoByIndex(MetadataManager *mdm, u32 index);
 VBucketInfo *GetVBucketInfoByIndex(MetadataManager *mdm, u32 index);
@@ -271,9 +273,9 @@ void InitMetadataStorage(SharedMemoryContext *context, MetadataManager *mdm,
                          Arena *arena, Config *config, i32 node_id);
 
 std::vector<u64> GetRemainingNodeCapacities(SharedMemoryContext *context);
-const char *GetSwapFilename(MetadataManager *mdm);
-void UpdateSwapMetadata(SharedMemoryContext *context, char *blob_name,
-                        SwapBlob swap_blob);
+std::string GetSwapFilename(MetadataManager *mdm, u32 node_id);
+void UpdateSwapMetadata(SharedMemoryContext *context, RpcContext *rpc,
+                        const char *blob_name, SwapBlob swap_blob);
 
 }  // namespace hermes
 

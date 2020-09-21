@@ -1438,14 +1438,13 @@ size_t ReadBlobFromBuffers(SharedMemoryContext *context, RpcContext *rpc,
   return total_bytes_read;
 }
 
-SwapBlob WriteToSwap(SharedMemoryContext *context, Blob blob,
-                     const std::string &name, u32 node_id) {
+SwapBlob WriteToSwap(SharedMemoryContext *context, Blob blob, u32 node_id) {
   SwapBlob result = {};
 
   if (!context->swap_file) {
     MetadataManager *mdm = GetMetadataManagerFromContext(context);
-    const char *swap_path = GetSwapFilename(mdm);
-    context->swap_file = fopen(swap_path, "a+");
+    std::string swap_path = GetSwapFilename(mdm, node_id);
+    context->swap_file = fopen(swap_path.c_str(), "a+");
 
     if (!context->swap_file) {
       // TODO(chogan): @errorhandling
