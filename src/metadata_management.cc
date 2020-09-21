@@ -24,6 +24,12 @@ bool IsNullVBucketId(VBucketID id) {
   return result;
 }
 
+bool IsNullBlobId(BlobID id) {
+  bool result = id.as_int == 0;
+
+  return result;
+}
+
 TicketMutex *GetMapMutex(MetadataManager *mdm, MapType map_type) {
   TicketMutex *mutex = 0;
   switch (map_type) {
@@ -410,6 +416,10 @@ void FreeBufferIdList(SharedMemoryContext *context, RpcContext *rpc,
 
 void LocalDestroyBlobByName(SharedMemoryContext *context, RpcContext *rpc,
                             const char *blob_name, BlobID blob_id) {
+  if (BlobIsInSwap(blob_id)) {
+    HERMES_NOT_IMPLEMENTED_YET;
+  }
+
   std::vector<BufferID> buffer_ids = GetBufferIdList(context, rpc, blob_id);
   ReleaseBuffers(context, rpc, buffer_ids);
   FreeBufferIdList(context, rpc, blob_id);
@@ -420,6 +430,10 @@ void LocalDestroyBlobByName(SharedMemoryContext *context, RpcContext *rpc,
 
 void LocalDestroyBlobById(SharedMemoryContext *context, RpcContext *rpc,
                           BlobID blob_id) {
+  if (BlobIsInSwap(blob_id)) {
+    HERMES_NOT_IMPLEMENTED_YET;
+  }
+
   std::vector<BufferID> buffer_ids = GetBufferIdList(context, rpc, blob_id);
   ReleaseBuffers(context, rpc, buffer_ids);
   FreeBufferIdList(context, rpc, blob_id);
@@ -450,26 +464,27 @@ void RemoveBlobFromBucketInfo(SharedMemoryContext *context, RpcContext *rpc,
 void DestroyBlobByName(SharedMemoryContext *context, RpcContext *rpc,
                        BucketID bucket_id, const std::string &blob_name) {
   BlobID blob_id = GetBlobIdByName(context, rpc, blob_name.c_str());
+  if (!IsNullBlobId(blob_id) && !BlobIsInSwap(blob_id)) {
+    u32 blob_id_target_node = GetBlobNodeId(blob_id);
 
-  u32 blob_id_target_node = GetBlobNodeId(blob_id);
-
-  if (blob_id_target_node == rpc->node_id) {
-    LocalDestroyBlobByName(context, rpc, blob_name.c_str(), blob_id);
-  } else {
-    RpcCall<void>(rpc, blob_id_target_node, "RemoteDestroyBlobByName",
-                  blob_name, blob_id);
+    if (blob_id_target_node == rpc->node_id) {
+      LocalDestroyBlobByName(context, rpc, blob_name.c_str(), blob_id);
+    } else {
+      RpcCall<void>(rpc, blob_id_target_node, "RemoteDestroyBlobByName",
+                    blob_name, blob_id);
+    }
+    RemoveBlobFromBucketInfo(context, rpc, bucket_id, blob_id);
   }
-
-  RemoveBlobFromBucketInfo(context, rpc, bucket_id, blob_id);
 }
 
 void RenameBlob(SharedMemoryContext *context, RpcContext *rpc,
                 const std::string &old_name, const std::string &new_name) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   BlobID blob_id = GetBlobIdByName(context, rpc, old_name.c_str());
-
-  DeleteId(mdm, rpc, old_name, kMapType_Blob);
-  PutBlobId(mdm, rpc, new_name, blob_id);
+  if (!IsNullBlobId(blob_id) && !BlobIsInSwap(blob_id)) {
+    DeleteId(mdm, rpc, old_name, kMapType_Blob);
+    PutBlobId(mdm, rpc, new_name, blob_id);
+  }
 }
 
 bool ContainsBlob(SharedMemoryContext *context, RpcContext *rpc,
@@ -477,12 +492,14 @@ bool ContainsBlob(SharedMemoryContext *context, RpcContext *rpc,
   BlobID blob_id = GetBlobIdByName(context, rpc, blob_name.c_str());
   bool result = false;
 
-  u32 target_node = bucket_id.bits.node_id;
-  if (target_node == rpc->node_id) {
-    result = LocalContainsBlob(context, bucket_id, blob_id);
-  } else {
-    result = RpcCall<bool>(rpc, target_node, "RemoteContainsBlob", bucket_id,
-                           blob_name);
+  if (!IsNullBlobId(blob_id) && !BlobIsInSwap(blob_id)) {
+    u32 target_node = bucket_id.bits.node_id;
+    if (target_node == rpc->node_id) {
+      result = LocalContainsBlob(context, bucket_id, blob_id);
+    } else {
+      result = RpcCall<bool>(rpc, target_node, "RemoteContainsBlob", bucket_id,
+                             blob_name);
+    }
   }
 
   return result;
