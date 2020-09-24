@@ -74,7 +74,11 @@ void TestSwap(std::shared_ptr<Hermes> hermes) {
   ctx.policy = hapi::PlacementPolicy::kRandom;
   hapi::Bucket bucket(std::string("swap_bucket"), hermes, ctx);
   hapi::Blob data(MEGABYTES(1), 'x');
-  bucket.Put(std::string("swap_blob"), data, ctx);
+  std::string blob_name("swap_blob");
+  bucket.Put(blob_name, data, ctx);
+
+  Assert(bucket.ContainsBlob(blob_name));
+
   bucket.Destroy(ctx);
 }
 
@@ -146,6 +150,8 @@ int main(int argc, char **argv) {
   if (test_swap) {
     hermes::Config config = {};
     InitDefaultConfig(&config);
+    // NOTE(chogan): Make capacities small so that a Put of 1MB will go to swap
+    // space
     config.capacities[0] = KILOBYTES(50);
     config.capacities[1] = 8;
     config.capacities[2] = 8;

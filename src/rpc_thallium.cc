@@ -362,9 +362,23 @@ void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
   auto rpc_handle_event = [context](const tl::request &req, u32 node_id,
                                     u64 offset, u64 size) {
     (void)req;
+    // TODO(chogan):
   };
 
-  rpc_server->define("RemoteHandleEvent", rpc_handle_event).disable_response();
+  rpc_server->define("BufferOrganizerHandleEvent",
+                     rpc_handle_event).disable_response();
+}
+
+void TriggerBufferOrganizer(RpcContext *rpc, const char *func_name,
+                            SwapBlob swap_blob) {
+  // TEMP(chogan):
+  std::string server_name = "";
+  std::string protocol = GetProtocol(rpc);
+  tl::engine engine(protocol, THALLIUM_CLIENT_MODE, true);
+  tl::remote_procedure remote_proc = engine.define(func_name);
+  tl::endpoint server = engine.lookup(server_name);
+  remote_proc.disable_response();
+  remote_proc.on(server)(swap_blob.node_id, swap_blob.offset, swap_blob.size);
 }
 
 void StartGlobalSystemViewStateUpdateThread(SharedMemoryContext *context,

@@ -203,7 +203,8 @@ BucketID GetOrCreateBucketId(SharedMemoryContext *context, RpcContext *rpc,
  */
 void AttachBlobToBucket(SharedMemoryContext *context, RpcContext *rpc,
                         const char *blob_name, BucketID bucket_id,
-                        const std::vector<BufferID> &buffer_ids);
+                        const std::vector<BufferID> &buffer_ids,
+                        bool is_swap_blob = false);
 
 /**
  *
@@ -216,6 +217,16 @@ void IncrementRefcount(SharedMemoryContext *context, RpcContext *rpc,
  */
 void DecrementRefcount(SharedMemoryContext *context, RpcContext *rpc,
                        BucketID id);
+
+/**
+ *
+ */
+std::vector<BufferID> SwapBlobToVec(SwapBlob swap_blob);
+
+/**
+ *
+ */
+SwapBlob VecToSwapBlob(std::vector<BufferID> &vec);
 
 // internal
 u32 HashString(MetadataManager *mdm, RpcContext *rpc, const char *str);
@@ -274,8 +285,6 @@ void InitMetadataStorage(SharedMemoryContext *context, MetadataManager *mdm,
 
 std::vector<u64> GetRemainingNodeCapacities(SharedMemoryContext *context);
 std::string GetSwapFilename(MetadataManager *mdm, u32 node_id);
-void UpdateSwapMetadata(SharedMemoryContext *context, RpcContext *rpc,
-                        const char *blob_name, SwapBlob swap_blob);
 
 }  // namespace hermes
 

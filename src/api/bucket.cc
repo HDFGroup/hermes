@@ -50,14 +50,15 @@ Status Bucket::Put(const std::string &name, const u8 *data, size_t size,
       blob.data = (u8 *)data;
       blob.size = size;
 
-      MetadataManager *mdm = GetMetadataManagerFromContext(&hermes_->context_);
-      u32 target_node = HashString(mdm, &hermes_->rpc_, name.c_str());
+      u32 target_node = hermes_->rpc_.node_id;
       SwapBlob swap_blob =  WriteToSwap(&hermes_->context_, blob, target_node);
-      UpdateSwapMetadata(&hermes_->context_, &hermes_->rpc_, name.c_str(),
-                         swap_blob);
-      // TODO(chogan): TriggerBufferOrganizer(swap_blob);
-      // TODO(chogan): Signify in Status that the Blob went to swap space
+      std::vector<BufferID> buffer_ids = SwapBlobToVec(swap_blob);
+      AttachBlobToBucket(&hermes_->context_, &hermes_->rpc_, name.c_str(),
+                         id_, buffer_ids, true);
+      // TriggerBufferOrganizer(&hermes_->rpc_, swap_blob);
       ret = 0;
+      // TODO(chogan): @errorhandling Signify in Status that the Blob went to
+      // swap space
     }
   }
 

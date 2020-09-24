@@ -391,12 +391,14 @@ BufferIdArray GetBufferIdsFromBlobName(Arena *arena,
 
 void AttachBlobToBucket(SharedMemoryContext *context, RpcContext *rpc,
                         const char *blob_name, BucketID bucket_id,
-                        const std::vector<BufferID> &buffer_ids) {
+                        const std::vector<BufferID> &buffer_ids,
+                        bool is_swap_blob) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
 
-  u32 target_node = HashString(mdm, rpc, blob_name);
+  int target_node = HashString(mdm, rpc, blob_name);
   BlobID blob_id = {};
-  blob_id.bits.node_id = target_node;
+  // NOTE(chogan): A negative node_id indicates a swap blob
+  blob_id.bits.node_id = is_swap_blob ? -target_node : target_node;
   blob_id.bits.buffer_ids_offset = AllocateBufferIdList(context, rpc,
                                                         target_node,
                                                         buffer_ids);
@@ -416,12 +418,14 @@ void FreeBufferIdList(SharedMemoryContext *context, RpcContext *rpc,
 
 void LocalDestroyBlobByName(SharedMemoryContext *context, RpcContext *rpc,
                             const char *blob_name, BlobID blob_id) {
-  if (BlobIsInSwap(blob_id)) {
-    HERMES_NOT_IMPLEMENTED_YET;
+  std::vector<BufferID> buffer_ids = GetBufferIdList(context, rpc, blob_id);
+
+  if (!BlobIsInSwap(blob_id)) {
+    ReleaseBuffers(context, rpc, buffer_ids);
+  } else {
+    // TODO(chogan): Invalidate swap region
   }
 
-  std::vector<BufferID> buffer_ids = GetBufferIdList(context, rpc, blob_id);
-  ReleaseBuffers(context, rpc, buffer_ids);
   FreeBufferIdList(context, rpc, blob_id);
 
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
@@ -430,16 +434,18 @@ void LocalDestroyBlobByName(SharedMemoryContext *context, RpcContext *rpc,
 
 void LocalDestroyBlobById(SharedMemoryContext *context, RpcContext *rpc,
                           BlobID blob_id) {
-  if (BlobIsInSwap(blob_id)) {
-    HERMES_NOT_IMPLEMENTED_YET;
+  std::vector<BufferID> buffer_ids = GetBufferIdList(context, rpc, blob_id);
+
+  if (!BlobIsInSwap(blob_id)) {
+    ReleaseBuffers(context, rpc, buffer_ids);
+  } else {
+    // TODO(chogan): Invalidate swap region
   }
 
-  std::vector<BufferID> buffer_ids = GetBufferIdList(context, rpc, blob_id);
-  ReleaseBuffers(context, rpc, buffer_ids);
   FreeBufferIdList(context, rpc, blob_id);
 
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
-  char * blob_name = ReverseGetFromStorage(mdm, blob_id.as_int, kMapType_Blob);
+  char *blob_name = ReverseGetFromStorage(mdm, blob_id.as_int, kMapType_Blob);
 
   if (blob_name) {
     DeleteId(mdm, rpc, blob_name, kMapType_Blob);
@@ -464,7 +470,7 @@ void RemoveBlobFromBucketInfo(SharedMemoryContext *context, RpcContext *rpc,
 void DestroyBlobByName(SharedMemoryContext *context, RpcContext *rpc,
                        BucketID bucket_id, const std::string &blob_name) {
   BlobID blob_id = GetBlobIdByName(context, rpc, blob_name.c_str());
-  if (!IsNullBlobId(blob_id) && !BlobIsInSwap(blob_id)) {
+  if (!IsNullBlobId(blob_id)) {
     u32 blob_id_target_node = GetBlobNodeId(blob_id);
 
     if (blob_id_target_node == rpc->node_id) {
@@ -481,7 +487,7 @@ void RenameBlob(SharedMemoryContext *context, RpcContext *rpc,
                 const std::string &old_name, const std::string &new_name) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   BlobID blob_id = GetBlobIdByName(context, rpc, old_name.c_str());
-  if (!IsNullBlobId(blob_id) && !BlobIsInSwap(blob_id)) {
+  if (!IsNullBlobId(blob_id)) {
     DeleteId(mdm, rpc, old_name, kMapType_Blob);
     PutBlobId(mdm, rpc, new_name, blob_id);
   }
@@ -492,7 +498,7 @@ bool ContainsBlob(SharedMemoryContext *context, RpcContext *rpc,
   BlobID blob_id = GetBlobIdByName(context, rpc, blob_name.c_str());
   bool result = false;
 
-  if (!IsNullBlobId(blob_id) && !BlobIsInSwap(blob_id)) {
+  if (!IsNullBlobId(blob_id)) {
     u32 target_node = bucket_id.bits.node_id;
     if (target_node == rpc->node_id) {
       result = LocalContainsBlob(context, bucket_id, blob_id);
@@ -722,24 +728,22 @@ std::string GetSwapFilename(MetadataManager *mdm, u32 node_id) {
   return result;
 }
 
-void UpdateSwapMetadata(SharedMemoryContext *context, RpcContext *rpc,
-                        const char *blob_name, SwapBlob swap_blob) {
-  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+std::vector<BufferID> SwapBlobToVec(SwapBlob swap_blob) {
+  std::vector<BufferID> result(3);
+  result[0].as_int = swap_blob.node_id;
+  result[1].as_int = swap_blob.offset;
+  result[2].as_int = swap_blob.size;
 
-  // NOTE(chogan): For a swap entry, the two BufferIDs represent the offset into
-  // the swap file and the size in bytes of the blob.
-  std::vector<BufferID> buffer_ids(2);
-  buffer_ids[0].as_int = swap_blob.offset;
-  buffer_ids[1].as_int = swap_blob.size;
+  return result;
+}
 
-  BlobID blob_id = {};
-  blob_id.bits.node_id = -swap_blob.node_id;
-  // TODO(chogan): @optimization These are potentially two consecutive RPC calls
-  // to the same node. We could combine them into one.
-  blob_id.bits.buffer_ids_offset = AllocateBufferIdList(context, rpc,
-                                                        swap_blob.node_id,
-                                                        buffer_ids);
-  PutBlobId(mdm, rpc, blob_name, blob_id);
+SwapBlob VecToSwapBlob(std::vector<BufferID> &vec) {
+  SwapBlob result = {};
+  result.node_id = (int)vec[0].as_int;
+  result.offset = vec[1].as_int;
+  result.size = vec[2].as_int;
+
+  return result;
 }
 
 void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
