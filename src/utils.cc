@@ -73,6 +73,8 @@ void InitDefaultConfig(Config *config) {
   config->mount_points[3] = "./";
   config->swap_mount = "./";
 
+  config->num_buffer_organizer_retries = 3;
+
   config->rpc_server_base_name = "localhost";
   config->rpc_server_suffix = "";
   config->rpc_protocol = "ofi+sockets";

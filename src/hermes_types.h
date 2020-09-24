@@ -104,6 +104,10 @@ struct Config {
   std::string mount_points[kMaxDevices];
   /** The mount point of the swap target. */
   std::string swap_mount;
+  /** The number of times the BufferOrganizer will attempt to place a swap blob
+   * into the hierarchy before giving up.*/
+  int num_buffer_organizer_retries;
+
   /** The hostname of the RPC server, minus any numbers that Hermes may
    * auto-generate when the rpc_hostNumber_range is specified. */
   std::string rpc_server_base_name;
