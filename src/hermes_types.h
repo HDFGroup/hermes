@@ -125,5 +125,14 @@ struct Config {
   char buffer_pool_shmem_name[kMaxBufferPoolShmemNameLength];
 };
 
+union BucketID {
+  struct {
+    u32 index;
+    u32 node_id;
+  } bits;
+
+  u64 as_int;
+};
+
 }  // namespace hermes
 #endif  // HERMES_TYPES_H_

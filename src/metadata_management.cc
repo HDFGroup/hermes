@@ -418,12 +418,11 @@ void FreeBufferIdList(SharedMemoryContext *context, RpcContext *rpc,
 
 void LocalDestroyBlobByName(SharedMemoryContext *context, RpcContext *rpc,
                             const char *blob_name, BlobID blob_id) {
-  std::vector<BufferID> buffer_ids = GetBufferIdList(context, rpc, blob_id);
-
   if (!BlobIsInSwap(blob_id)) {
+    std::vector<BufferID> buffer_ids = GetBufferIdList(context, rpc, blob_id);
     ReleaseBuffers(context, rpc, buffer_ids);
   } else {
-    // TODO(chogan): Invalidate swap region
+    // TODO(chogan): Invalidate swap region once we have a SwapManager
   }
 
   FreeBufferIdList(context, rpc, blob_id);
@@ -434,12 +433,11 @@ void LocalDestroyBlobByName(SharedMemoryContext *context, RpcContext *rpc,
 
 void LocalDestroyBlobById(SharedMemoryContext *context, RpcContext *rpc,
                           BlobID blob_id) {
-  std::vector<BufferID> buffer_ids = GetBufferIdList(context, rpc, blob_id);
-
   if (!BlobIsInSwap(blob_id)) {
+    std::vector<BufferID> buffer_ids = GetBufferIdList(context, rpc, blob_id);
     ReleaseBuffers(context, rpc, buffer_ids);
   } else {
-    // TODO(chogan): Invalidate swap region
+    // TODO(chogan): Invalidate swap region once we have a SwapManager
   }
 
   FreeBufferIdList(context, rpc, blob_id);

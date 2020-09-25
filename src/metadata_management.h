@@ -19,15 +19,6 @@ enum MapType {
   kMapType_Blob,
 };
 
-union BucketID {
-  struct {
-    u32 index;
-    u32 node_id;
-  } bits;
-
-  u64 as_int;
-};
-
 union VBucketID {
   struct {
     u32 index;

@@ -1479,4 +1479,20 @@ SwapBlob WriteToSwap(SharedMemoryContext *context, Blob blob, u32 node_id) {
   return result;
 }
 
+void PutToSwap(SharedMemoryContext *context, RpcContext *rpc,
+               const std::string &name, BucketID bucket_id, const u8 *data,
+               size_t size) {
+  hermes::Blob blob = {};
+  blob.data = (u8 *)data;
+  blob.size = size;
+
+  u32 target_node = rpc->node_id;
+  SwapBlob swap_blob =  WriteToSwap(context, blob, target_node);
+  std::vector<BufferID> buffer_ids = SwapBlobToVec(swap_blob);
+  AttachBlobToBucket(context, rpc, name.c_str(), bucket_id, buffer_ids, true);
+}
+
+void ReadFromSwap(SharedMemoryContext *context, Blob *blob, SwapBlob swap_blob) {
+}
+
 }  // namespace hermes

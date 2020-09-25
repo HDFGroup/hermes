@@ -7,7 +7,6 @@
 #include "metadata_management.h"
 #include "data_placement_engine.h"
 
-
 namespace hermes {
 
 namespace api {
@@ -46,15 +45,7 @@ Status Bucket::Put(const std::string &name, const u8 *data, size_t size,
       }
       ret = PlaceBlobs(schemas, blobs, names);
     } else {
-      hermes::Blob blob = {};
-      blob.data = (u8 *)data;
-      blob.size = size;
-
-      u32 target_node = hermes_->rpc_.node_id;
-      SwapBlob swap_blob =  WriteToSwap(&hermes_->context_, blob, target_node);
-      std::vector<BufferID> buffer_ids = SwapBlobToVec(swap_blob);
-      AttachBlobToBucket(&hermes_->context_, &hermes_->rpc_, name.c_str(),
-                         id_, buffer_ids, true);
+      PutToSwap(&hermes_->context_, &hermes_->rpc_, name, id_, data, size);
       // TriggerBufferOrganizer(&hermes_->rpc_, swap_blob);
       ret = 0;
       // TODO(chogan): @errorhandling Signify in Status that the Blob went to

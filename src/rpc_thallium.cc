@@ -362,7 +362,7 @@ void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
   auto rpc_handle_event = [context](const tl::request &req, u32 node_id,
                                     u64 offset, u64 size) {
     (void)req;
-    // TODO(chogan):
+    // TODO(chogan): Pass config.num_buffer_organizer_retries
   };
 
   rpc_server->define("BufferOrganizerHandleEvent",

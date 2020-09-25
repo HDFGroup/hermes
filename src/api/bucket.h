@@ -177,8 +177,15 @@ Status Bucket::Put(std::vector<std::string> &names,
     if (ret == 0) {
       ret = PlaceBlobs(schemas, blobs, names);
     } else {
-      // TODO(chogan): Trigger BufferOrganizer
-      // TODO(chogan): Set Status
+      std::vector<SwapBlob> swapped_blobs =
+        PutToSwap(&hermes_->context_, &hermes_->rpc_, id_, blobs, names);
+
+      for (int i = 0; i < swapped_blobs.size(); ++i) {
+        // TODO(chogan): TriggerBufferOrganizer()
+      }
+      ret = 0;
+      // TODO(chogan): @errorhandling Signify in Status that the Blobs went to
+      // swap space
     }
   } else {
     // TODO(chogan): @errorhandling

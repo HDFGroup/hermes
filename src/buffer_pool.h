@@ -418,6 +418,10 @@ size_t LocalWriteBufferById(SharedMemoryContext *context, BufferID id,
 size_t LocalReadBufferById(SharedMemoryContext *context, BufferID id,
                            Blob *blob, size_t offset);
 
+void PutToSwap(SharedMemoryContext *context, RpcContext *rpc,
+               const std::string &name, BucketID bucket_id, const u8 *data,
+               size_t size);
+
 /**
  * Returns a vector of bandwidths in MiB per second.
  *
