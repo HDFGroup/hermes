@@ -75,6 +75,9 @@ class Bucket {
   Status Put(std::vector<std::string> &names,
              std::vector<std::vector<T>> &blobs, Context &ctx);
 
+  /** Get the size in bytes of the Blob referred to by `name` */
+  size_t GetBlobSize(Arena *arena, const std::string &name, Context &ctx);
+
   /** get a blob on this bucket */
   /** - if user_blob.size() == 0 => return the minimum buffer size needed */
   /** - if user_blob.size() > 0 => copy user_blob.size() bytes */

@@ -56,7 +56,34 @@ Status Bucket::Put(const std::string &name, const u8 *data, size_t size,
   return ret;
 }
 
-size_t Bucket::Get(const std::string &name, Blob& user_blob, Context &ctx) {
+size_t Bucket::GetBlobSize(Arena *arena, const std::string &name,
+                           Context &ctx) {
+  (void)ctx;
+  size_t result = 0;
+
+  if (IsValid()) {
+    LOG(INFO) << "Getting Blob " << name << " size from bucket "
+              << name_ << '\n';
+    BufferIdArray buffer_ids =
+      GetBufferIdsFromBlobName(arena, &hermes_->context_, &hermes_->rpc_,
+                               name.c_str(), NULL);
+
+    BlobID blob_id = GetBlobIdByName(&hermes_->context_, &hermes_->rpc_,
+                                     name.c_str());
+
+    if (BlobIsInSwap(blob_id)) {
+      SwapBlob swap_blob = IdArrayToSwapBlob(buffer_ids);
+      result = swap_blob.size;
+    } else {
+      result = hermes::GetBlobSize(&hermes_->context_, &hermes_->rpc_,
+                                   &buffer_ids);
+    }
+  }
+
+  return result;
+}
+
+size_t Bucket::Get(const std::string &name, Blob &user_blob, Context &ctx) {
   (void)ctx;
 
   size_t ret = 0;
@@ -66,12 +93,7 @@ size_t Bucket::Get(const std::string &name, Blob& user_blob, Context &ctx) {
     ScopedTemporaryMemory scratch(&hermes_->trans_arena_);
 
     if (user_blob.size() == 0) {
-      LOG(INFO) << "Getting Blob " << name << " size from bucket "
-                << name_ << '\n';
-      BufferIdArray buffer_ids =
-        GetBufferIdsFromBlobName(scratch, &hermes_->context_, &hermes_->rpc_,
-                                 name.c_str(), NULL);
-      ret = GetBlobSize(&hermes_->context_, &hermes_->rpc_, &buffer_ids);
+      ret = GetBlobSize(scratch, name, ctx);
     } else {
       LOG(INFO) << "Getting Blob " << name << " from bucket " << name_ << '\n';
       u32 *buffer_sizes = 0;

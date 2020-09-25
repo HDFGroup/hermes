@@ -186,6 +186,17 @@ BufferIdArray GetBufferIdsFromBlobName(Arena *arena,
 /**
  *
  */
+BlobID GetBlobIdByName(SharedMemoryContext *context, RpcContext *rpc,
+                       const char *name);
+
+/**
+ *
+ */
+bool BlobIsInSwap(BlobID id);
+
+/**
+ *
+ */
 BucketID GetOrCreateBucketId(SharedMemoryContext *context, RpcContext *rpc,
                              const std::string &name);
 
@@ -218,6 +229,11 @@ std::vector<BufferID> SwapBlobToVec(SwapBlob swap_blob);
  *
  */
 SwapBlob VecToSwapBlob(std::vector<BufferID> &vec);
+
+/**
+ *
+ */
+SwapBlob IdArrayToSwapBlob(BufferIdArray ids);
 
 // internal
 u32 HashString(MetadataManager *mdm, RpcContext *rpc, const char *str);

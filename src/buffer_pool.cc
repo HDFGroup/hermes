@@ -1492,7 +1492,8 @@ void PutToSwap(SharedMemoryContext *context, RpcContext *rpc,
   AttachBlobToBucket(context, rpc, name.c_str(), bucket_id, buffer_ids, true);
 }
 
-void ReadFromSwap(SharedMemoryContext *context, Blob *blob, SwapBlob swap_blob) {
+void ReadFromSwap(SharedMemoryContext *context, Blob *blob,
+                  SwapBlob swap_blob) {
 }
 
 }  // namespace hermes

@@ -737,9 +737,31 @@ std::vector<BufferID> SwapBlobToVec(SwapBlob swap_blob) {
 
 SwapBlob VecToSwapBlob(std::vector<BufferID> &vec) {
   SwapBlob result = {};
-  result.node_id = (int)vec[0].as_int;
-  result.offset = vec[1].as_int;
-  result.size = vec[2].as_int;
+  // TODO(chogan): @metaprogramming count the members of the SwapBlob structure
+  if (vec.size() >= 3) {
+    result.node_id = (int)vec[0].as_int;
+    result.offset = vec[1].as_int;
+    result.size = vec[2].as_int;
+  } else {
+    // TODO(chogan): @errorhandling
+    HERMES_NOT_IMPLEMENTED_YET;
+  }
+
+  return result;
+}
+
+SwapBlob IdArrayToSwapBlob(BufferIdArray ids) {
+  SwapBlob result = {};
+
+  // TODO(chogan): @metaprogramming count the members of the SwapBlob structure
+  if (ids.length >= 3) {
+    result.node_id = (int)ids.ids[0].as_int;
+    result.offset = ids.ids[1].as_int;
+    result.size = ids.ids[2].as_int;
+  } else {
+    // TODO(chogan): @errorhandling
+    HERMES_NOT_IMPLEMENTED_YET;
+  }
 
   return result;
 }
