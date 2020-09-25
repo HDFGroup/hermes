@@ -1438,8 +1438,8 @@ size_t ReadBlobFromBuffers(SharedMemoryContext *context, RpcContext *rpc,
   return total_bytes_read;
 }
 
-SwapBlob WriteToSwap(SharedMemoryContext *context, Blob blob, u32 node_id) {
-  SwapBlob result = {};
+int OpenSwapFile(SharedMemoryContext *context, u32 node_id) {
+  int result = 0;
 
   if (!context->swap_file) {
     MetadataManager *mdm = GetMetadataManagerFromContext(context);
@@ -1448,27 +1448,38 @@ SwapBlob WriteToSwap(SharedMemoryContext *context, Blob blob, u32 node_id) {
 
     if (!context->swap_file) {
       // TODO(chogan): @errorhandling
-      HERMES_NOT_IMPLEMENTED_YET;
+      result = 1;
     }
   }
-  if (fseek(context->swap_file, 0, SEEK_END) != 0) {
-    // TODO(chogan): @errorhandling
-    HERMES_NOT_IMPLEMENTED_YET;
-  }
 
-  result.offset = ftell(context->swap_file);
-  if (result.offset == -1) {
-    // TODO(chogan): @errorhandling
-    HERMES_NOT_IMPLEMENTED_YET;
-  }
+  return result;
+}
 
-  // TODO(chogan): write data
-  if (fwrite(blob.data, 1, blob.size, context->swap_file) != blob.size) {
-    // TODO(chogan): @errorhandling
-    HERMES_NOT_IMPLEMENTED_YET;
-  }
+SwapBlob WriteToSwap(SharedMemoryContext *context, Blob blob, u32 node_id) {
+  SwapBlob result = {};
 
-  if (fflush(context->swap_file) != 0) {
+  if (OpenSwapFile(context, node_id) == 0) {
+    if (fseek(context->swap_file, 0, SEEK_END) != 0) {
+      // TODO(chogan): @errorhandling
+      HERMES_NOT_IMPLEMENTED_YET;
+    }
+
+    result.offset = ftell(context->swap_file);
+    if (result.offset == -1) {
+      // TODO(chogan): @errorhandling
+      HERMES_NOT_IMPLEMENTED_YET;
+    }
+
+    if (fwrite(blob.data, 1, blob.size, context->swap_file) != blob.size) {
+      // TODO(chogan): @errorhandling
+      HERMES_NOT_IMPLEMENTED_YET;
+    }
+
+    if (fflush(context->swap_file) != 0) {
+      // TODO(chogan): @errorhandling
+      HERMES_NOT_IMPLEMENTED_YET;
+    }
+  } else {
     // TODO(chogan): @errorhandling
     HERMES_NOT_IMPLEMENTED_YET;
   }
@@ -1492,8 +1503,27 @@ void PutToSwap(SharedMemoryContext *context, RpcContext *rpc,
   AttachBlobToBucket(context, rpc, name.c_str(), bucket_id, buffer_ids, true);
 }
 
-void ReadFromSwap(SharedMemoryContext *context, Blob *blob,
+size_t ReadFromSwap(SharedMemoryContext *context, Blob blob,
                   SwapBlob swap_blob) {
+
+  if (OpenSwapFile(context, swap_blob.node_id)) {
+    if (fseek(context->swap_file, swap_blob.offset, SEEK_SET) != 0) {
+      // TODO(chogan): @errorhandling
+      HERMES_NOT_IMPLEMENTED_YET;
+    }
+
+    if (fread(blob.data, 1, swap_blob.size, context->swap_file) !=
+        swap_blob.size) {
+      // TODO(chogan): @errorhandling
+      HERMES_NOT_IMPLEMENTED_YET;
+    }
+
+  } else {
+    // TODO(chogan): @errorhandling
+    HERMES_NOT_IMPLEMENTED_YET;
+  }
+
+  return swap_blob.size;
 }
 
 }  // namespace hermes

@@ -376,8 +376,6 @@ struct SwapBlob {
   u64 size;
 };
 
-SwapBlob WriteToSwap(SharedMemoryContext *context, Blob blob, u32 node_id);
-
 /**
  * Sketch of how an I/O client might write.
  *
@@ -421,6 +419,9 @@ size_t LocalReadBufferById(SharedMemoryContext *context, BufferID id,
 void PutToSwap(SharedMemoryContext *context, RpcContext *rpc,
                const std::string &name, BucketID bucket_id, const u8 *data,
                size_t size);
+
+SwapBlob WriteToSwap(SharedMemoryContext *context, Blob blob, u32 node_id);
+size_t ReadFromSwap(SharedMemoryContext *context, Blob blob, SwapBlob swap_blob);
 
 /**
  * Returns a vector of bandwidths in MiB per second.

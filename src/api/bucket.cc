@@ -100,12 +100,20 @@ size_t Bucket::Get(const std::string &name, Blob &user_blob, Context &ctx) {
       BufferIdArray buffer_ids =
         GetBufferIdsFromBlobName(scratch, &hermes_->context_, &hermes_->rpc_,
                                  name.c_str(), &buffer_sizes);
+
+      BlobID blob_id = GetBlobIdByName(&hermes_->context_, &hermes_->rpc_,
+                                       name.c_str());
       hermes::Blob blob = {};
       blob.data = user_blob.data();
       blob.size = user_blob.size();
 
-      ret = ReadBlobFromBuffers(&hermes_->context_, &hermes_->rpc_, &blob,
-                                &buffer_ids, buffer_sizes);
+      if (BlobIsInSwap(blob_id)) {
+        SwapBlob swap_blob = IdArrayToSwapBlob(buffer_ids);
+        ret = ReadFromSwap(&hermes_->context_, blob, swap_blob);
+      } else {
+        ret = ReadBlobFromBuffers(&hermes_->context_, &hermes_->rpc_, &blob,
+                                  &buffer_ids, buffer_sizes);
+      }
     }
   }
 

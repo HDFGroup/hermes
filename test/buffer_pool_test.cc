@@ -79,6 +79,13 @@ void TestSwap(std::shared_ptr<Hermes> hermes) {
 
   Assert(bucket.ContainsBlob(blob_name));
 
+  hapi::Blob get_result;
+  size_t blob_size = bucket.Get(blob_name, get_result, ctx);
+  get_result.resize(blob_size);
+  blob_size = bucket.Get(blob_name, get_result, ctx);
+
+  Assert(get_result == data);
+
   bucket.Destroy(ctx);
 }
 
