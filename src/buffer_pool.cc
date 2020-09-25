@@ -1505,7 +1505,6 @@ void PutToSwap(SharedMemoryContext *context, RpcContext *rpc,
 
 size_t ReadFromSwap(SharedMemoryContext *context, Blob blob,
                   SwapBlob swap_blob) {
-
   if (OpenSwapFile(context, swap_blob.node_id)) {
     if (fseek(context->swap_file, swap_blob.offset, SEEK_SET) != 0) {
       // TODO(chogan): @errorhandling
