@@ -38,15 +38,22 @@ Status Bucket::Put(const std::string &name, const u8 *data, size_t size,
       std::vector<std::string> names(1, name);
       std::vector<std::vector<u8>> blobs(1);
       blobs[0].resize(size);
-      // TODO(chogan): It would be nice to have a single-blob-Put that doesn't
-      // perform a copy
+      // TODO(chogan): Create a PreallocatedMemory allocator for std::vector so
+      // that a single-blob-Put doesn't perform a copy
       for (size_t i = 0; i < size; ++i) {
         blobs[0][i] = data[i];
       }
       ret = PlaceBlobs(schemas, blobs, names);
     } else {
-      PutToSwap(&hermes_->context_, &hermes_->rpc_, name, id_, data, size);
-      // TriggerBufferOrganizer(&hermes_->rpc_, swap_blob);
+      SwapBlob swap_blob = PutToSwap(&hermes_->context_, &hermes_->rpc_, name,
+                                     id_, data, size);
+      int retries = Context::default_buffer_organizer_retries;
+      if (ctx.buffer_organizer_retries != retries) {
+        retries = ctx.buffer_organizer_retries;
+      }
+
+      TriggerBufferOrganizer(&hermes_->rpc_, kPlaceInHierarchy, swap_blob,
+                             retries);
       ret = 0;
       // TODO(chogan): @errorhandling Signify in Status that the Blob went to
       // swap space

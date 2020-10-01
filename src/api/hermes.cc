@@ -14,6 +14,8 @@ namespace hermes {
 
 namespace api {
 
+int Context::default_buffer_organizer_retries = 3;
+
 Status RenameBucket(const std::string &old_name,
                     const std::string &new_name,
                     Context &ctx) {
@@ -247,6 +249,9 @@ std::shared_ptr<api::Hermes> InitHermes(Config *config, bool is_daemon,
                                            &result->trans_arena_,
                                            sleep_ms);
   }
+
+  api::Context::default_buffer_organizer_retries =
+    config->num_buffer_organizer_retries;
 
   WorldBarrier(&comm);
 

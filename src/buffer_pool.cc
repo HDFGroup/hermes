@@ -45,6 +45,7 @@
 #endif
 
 #include "metadata_management.cc"
+#include "buffer_organizer.cc"
 
 #if defined(HERMES_MDM_STORAGE_STBDS)
 #include "metadata_storage_stb_ds.cc"
@@ -1490,9 +1491,9 @@ SwapBlob WriteToSwap(SharedMemoryContext *context, Blob blob, u32 node_id) {
   return result;
 }
 
-void PutToSwap(SharedMemoryContext *context, RpcContext *rpc,
-               const std::string &name, BucketID bucket_id, const u8 *data,
-               size_t size) {
+SwapBlob PutToSwap(SharedMemoryContext *context, RpcContext *rpc,
+                   const std::string &name, BucketID bucket_id, const u8 *data,
+                   size_t size) {
   hermes::Blob blob = {};
   blob.data = (u8 *)data;
   blob.size = size;
@@ -1501,6 +1502,8 @@ void PutToSwap(SharedMemoryContext *context, RpcContext *rpc,
   SwapBlob swap_blob =  WriteToSwap(context, blob, target_node);
   std::vector<BufferID> buffer_ids = SwapBlobToVec(swap_blob);
   AttachBlobToBucket(context, rpc, name.c_str(), bucket_id, buffer_ids, true);
+
+  return swap_blob;
 }
 
 size_t ReadFromSwap(SharedMemoryContext *context, Blob blob,

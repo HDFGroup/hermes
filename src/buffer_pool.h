@@ -374,6 +374,7 @@ struct SwapBlob {
   u32 node_id;
   u64 offset;
   u64 size;
+  BucketID bucket_id;
 };
 
 /**
@@ -416,9 +417,27 @@ size_t LocalWriteBufferById(SharedMemoryContext *context, BufferID id,
 size_t LocalReadBufferById(SharedMemoryContext *context, BufferID id,
                            Blob *blob, size_t offset);
 
-void PutToSwap(SharedMemoryContext *context, RpcContext *rpc,
-               const std::string &name, BucketID bucket_id, const u8 *data,
-               size_t size);
+SwapBlob PutToSwap(SharedMemoryContext *context, RpcContext *rpc,
+                   const std::string &name, BucketID bucket_id, const u8 *data,
+                   size_t size);
+
+template<typename T>
+std::vector<SwapBlob> PutToSwap(SharedMemoryContext *context, RpcContext *rpc,
+                                BucketID id,
+                                std::vector<std::vector<T>> &blobs,
+                                std::vector<std::string> &names) {
+  size_t num_blobs = blobs.size();
+  std::vector<SwapBlob> result(num_blobs);
+
+  for (size_t i = 0; i < num_blobs; ++i) {
+    SwapBlob swap_blob = PutToSwap(context, rpc, names[i], id,
+                                   (const u8*)blobs[i].data(),
+                                   blobs[i].size() * sizeof(T));
+    result.push_back(swap_blob);
+  }
+
+  return result;
+}
 
 SwapBlob WriteToSwap(SharedMemoryContext *context, Blob blob, u32 node_id);
 size_t ReadFromSwap(SharedMemoryContext *context, Blob blob,
@@ -438,6 +457,8 @@ std::vector<f32> GetBandwidths(SharedMemoryContext *context);
 
 u32 GetBufferSize(SharedMemoryContext *context, RpcContext *rpc, BufferID id);
 bool BufferIsByteAddressable(SharedMemoryContext *context, BufferID id);
+int PlaceInHierarchy(SharedMemoryContext *context, RpcContext *rpc,
+                     SwapBlob swap_blob);
 
 }  // namespace hermes
 

@@ -53,6 +53,8 @@ std::string GetServerName(RpcContext *rpc, u32 node_id);
 std::string GetProtocol(RpcContext *rpc);
 void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
                           const char *addr, int num_threads);
+void TriggerBufferOrganizer(RpcContext *rpc, const char *func_name,
+                            SwapBlob swap_blob, int retries);
 }  // namespace hermes
 
 // TODO(chogan): I don't like that code similar to this is in buffer_pool.cc.

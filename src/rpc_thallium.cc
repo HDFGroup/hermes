@@ -359,18 +359,49 @@ void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
   LOG(INFO) << "Buffer organizer serving at " << rpc_server_name << " with "
             << num_threads << " RPC threads" << std::endl;
 
-  auto rpc_handle_event = [context](const tl::request &req, u32 node_id,
-                                    u64 offset, u64 size) {
+  auto rpc_place_in_hierarchy = [context, rpc](const tl::request &req,
+                                               u32 node_id, u64 offset,
+                                               u64 size, int retries) {
     (void)req;
-    // TODO(chogan): Pass config.num_buffer_organizer_retries
+    SwapBlob swap_blob = {};
+    swap_blob.node_id = node_id;
+    swap_blob.offset = offset;
+    swap_blob.size = size;
+
+    for (int i = 0; i < retries; ++i) {
+      int result = PlaceInHierarchy(context, rpc, swap_blob);
+      if (result == 0) {
+        break;
+      }
+    }
   };
 
-  rpc_server->define("BufferOrganizerHandleEvent",
-                     rpc_handle_event).disable_response();
+  auto rpc_move_to_target = [context, rpc](const tl::request &req, u32 node_id,
+                                           u64 offset, u64 size,
+                                           TargetID target_id, int retries) {
+    (void)req;
+    SwapBlob swap_blob = {};
+    swap_blob.node_id = node_id;
+    swap_blob.offset = offset;
+    swap_blob.size = size;
+
+    for (int i = 0; i < retries; ++i) {
+      // TODO(chogan): MoveToTarget(context, rpc, target_id, swap_blob);
+      int result = 0;
+      if (result == 0) {
+        break;
+      }
+    }
+  };
+
+  rpc_server->define("PlaceInHierarchy",
+                     rpc_place_in_hierarchy).disable_response();
+  rpc_server->define("MoveToTarget",
+                     rpc_move_to_target).disable_response();
 }
 
 void TriggerBufferOrganizer(RpcContext *rpc, const char *func_name,
-                            SwapBlob swap_blob) {
+                            SwapBlob swap_blob, int retries) {
   // TEMP(chogan):
   std::string server_name = "";
   std::string protocol = GetProtocol(rpc);
@@ -378,7 +409,8 @@ void TriggerBufferOrganizer(RpcContext *rpc, const char *func_name,
   tl::remote_procedure remote_proc = engine.define(func_name);
   tl::endpoint server = engine.lookup(server_name);
   remote_proc.disable_response();
-  remote_proc.on(server)(swap_blob.node_id, swap_blob.offset, swap_blob.size);
+  remote_proc.on(server)(swap_blob.node_id, swap_blob.offset, swap_blob.size,
+                         retries);
 }
 
 void StartGlobalSystemViewStateUpdateThread(SharedMemoryContext *context,

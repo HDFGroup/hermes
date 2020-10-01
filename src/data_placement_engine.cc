@@ -47,7 +47,7 @@ Status TopDownPlacement(SharedMemoryContext *context, RpcContext *rpc,
     }
 
     if (size_left > 0) {
-      // TODO(chogan): Trigger BufferOrganizer
+      // TODO(chogan): TriggerBufferOrganizer
       // EvictBuffers(eviction_schema);
       schema.clear();
     }

@@ -73,9 +73,13 @@ enum class PlacementPolicy {
 };
 
 struct Context {
-  PlacementPolicy policy;
+  static int default_buffer_organizer_retries;
 
-  Context() : policy(PlacementPolicy::kRoundRobin) {}
+  PlacementPolicy policy;
+  int buffer_organizer_retries;
+
+  Context() : policy(PlacementPolicy::kRoundRobin),
+              buffer_organizer_retries(default_buffer_organizer_retries) {}
 };
 
 struct TraitTag{};

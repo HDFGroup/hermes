@@ -36,6 +36,8 @@ constexpr int kMaxPathLength = 256;
 constexpr int kMaxBufferPoolShmemNameLength = 64;
 constexpr int kMaxDevices = 8;
 
+constexpr char kPlaceInHierarchy[] = "PlaceInHierarchy";
+
 #define HERMES_NOT_IMPLEMENTED_YET \
   LOG(FATAL) << __func__ << " not implemented yet\n"
 

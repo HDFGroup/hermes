@@ -184,7 +184,8 @@ Status Bucket::Put(std::vector<std::string> &names,
         PutToSwap(&hermes_->context_, &hermes_->rpc_, id_, blobs, names);
 
       for (int i = 0; i < swapped_blobs.size(); ++i) {
-        // TODO(chogan): TriggerBufferOrganizer()
+        TriggerBufferOrganizer(&hermes_->rpc_, kPlaceInHierarchy,
+                               swapped_blobs[i], ctx.buffer_organizer_retries);
       }
       ret = 0;
       // TODO(chogan): @errorhandling Signify in Status that the Blobs went to
