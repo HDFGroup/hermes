@@ -136,23 +136,12 @@ Status Bucket::PlaceBlobs(std::vector<PlacementSchema> &schemas,
   for (size_t i = 0; i < schemas.size(); ++i) {
     PlacementSchema &schema = schemas[i];
     if (schema.size()) {
-      std::vector<BufferID> buffer_ids = GetBuffers(&hermes_->context_, schema);
-      if (buffer_ids.size()) {
-        LOG(INFO) << "Attaching blob " << names[i] << " to Bucket "
-                  << name_ << std::endl;
-        hermes::Blob blob = {};
-        blob.data = (u8 *)blobs[i].data();
-        blob.size = blobs[i].size() * sizeof(T);
-        WriteBlobToBuffers(&hermes_->context_, &hermes_->rpc_, blob,
-                           buffer_ids);
-
-        // NOTE(chogan): Update all metadata associated with this Put
-        AttachBlobToBucket(&hermes_->context_, &hermes_->rpc_, names[i].c_str(),
-                           id_, buffer_ids);
-      } else {
-        // TODO(chogan): @errorhandling
-        result = 1;
-      }
+      hermes::Blob blob = {};
+      blob.data = (u8 *)blobs[i].data();
+      blob.size = blobs[i].size() * sizeof(T);
+      // TODO(chogan): @errorhandling What about partial failure?
+      result = PlaceBlob(&hermes_->context_, &hermes_->rpc_, schema, blob,
+                         names[i].c_str(), id_);
     } else {
       // TODO(chogan): @errorhandling
       result = 1;

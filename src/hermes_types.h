@@ -28,6 +28,10 @@ typedef double f64;
 
 typedef u16 DeviceID;
 
+namespace api {
+typedef int Status;
+}  // namespace api
+
 // TODO(chogan): These constants impose limits on the number of slabs, devices,
 // file path lengths, and shared memory name lengths, but eventually we should
 // allow arbitrary sizes of each.

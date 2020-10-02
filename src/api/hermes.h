@@ -17,8 +17,6 @@
 namespace hermes {
 namespace api {
 
-typedef int Status;
-
 class Hermes {
  public:
   std::set<std::string> bucket_list_;

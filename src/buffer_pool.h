@@ -460,6 +460,9 @@ u32 GetBufferSize(SharedMemoryContext *context, RpcContext *rpc, BufferID id);
 bool BufferIsByteAddressable(SharedMemoryContext *context, BufferID id);
 int PlaceInHierarchy(SharedMemoryContext *context, RpcContext *rpc,
                      SwapBlob swap_blob);
+api::Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
+                      PlacementSchema &schema, Blob blob, const char *name,
+                      BucketID bucket_id);
 
 }  // namespace hermes
 

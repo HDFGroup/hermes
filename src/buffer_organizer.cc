@@ -3,29 +3,6 @@
 
 namespace hermes {
 
-Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
-                 PlacementSchema &schema, Blob blob, char *name,
-                 BucketID bucket_id) {
-  Status result = 0;
-  std::vector<BufferID> buffer_ids = GetBuffers(context, schema);
-  if (buffer_ids.size()) {
-    MetadataManager *mdm = GetMetadataManagerFromContext(context);
-    char *bucket_name = ReverseGetFromStorage(mdm, bucket_id.as_int,
-                                              kMapType_Bucket);
-    LOG(INFO) << "Attaching blob " << name << " to Bucket "
-              << bucket_name << std::endl;
-    WriteBlobToBuffers(context, rpc, blob, buffer_ids);
-
-    // NOTE(chogan): Update all metadata associated with this Put
-    AttachBlobToBucket(context, rpc, name, bucket_id, buffer_ids);
-  } else {
-    // TODO(chogan): @errorhandling
-    result = 1;
-  }
-
-  return result;
-}
-
 int PlaceInHierarchy(SharedMemoryContext *context, RpcContext *rpc,
                       SwapBlob swap_blob) {
   int result = 0;
@@ -38,7 +15,7 @@ int PlaceInHierarchy(SharedMemoryContext *context, RpcContext *rpc,
   std::vector<PlacementSchema> schemas;
   std::vector<size_t> sizes(1, blob.size);
   api::Context ctx;
-  api::Status ret = CalculatePlacement(context, rpc, sizes, schemas, ctx);
+  Status ret = CalculatePlacement(context, rpc, sizes, schemas, ctx);
   if (ret == 0) {
     MetadataManager *mdm = GetMetadataManagerFromContext(context);
     char *name = ReverseGetFromStorage(mdm, swap_blob.blob_id.as_int,

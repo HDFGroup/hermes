@@ -1528,4 +1528,27 @@ size_t ReadFromSwap(SharedMemoryContext *context, Blob blob,
   return swap_blob.size;
 }
 
+Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
+                 PlacementSchema &schema, Blob blob, const char *name,
+                 BucketID bucket_id) {
+  Status result = 0;
+  std::vector<BufferID> buffer_ids = GetBuffers(context, schema);
+  if (buffer_ids.size()) {
+    MetadataManager *mdm = GetMetadataManagerFromContext(context);
+    char *bucket_name = ReverseGetFromStorage(mdm, bucket_id.as_int,
+                                              kMapType_Bucket);
+    LOG(INFO) << "Attaching blob " << std::string(name) << " to Bucket "
+              << bucket_name << std::endl;
+    WriteBlobToBuffers(context, rpc, blob, buffer_ids);
+
+    // NOTE(chogan): Update all metadata associated with this Put
+    AttachBlobToBucket(context, rpc, name, bucket_id, buffer_ids);
+  } else {
+    // TODO(chogan): @errorhandling
+    result = 1;
+  }
+
+  return result;
+}
+
 }  // namespace hermes
