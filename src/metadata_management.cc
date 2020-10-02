@@ -726,22 +726,29 @@ std::string GetSwapFilename(MetadataManager *mdm, u32 node_id) {
   return result;
 }
 
+// TEMP(chogan):
+const int kNumSwapBlobMembers = 5;
+
 std::vector<BufferID> SwapBlobToVec(SwapBlob swap_blob) {
-  std::vector<BufferID> result(3);
+  static_assert((sizeof(swap_blob) / 8) == kNumSwapBlobMembers);
+  std::vector<BufferID> result(kNumSwapBlobMembers);
   result[0].as_int = swap_blob.node_id;
   result[1].as_int = swap_blob.offset;
   result[2].as_int = swap_blob.size;
+  result[3].as_int = swap_blob.blob_id.as_int;
+  result[4].as_int = swap_blob.bucket_id.as_int;
 
   return result;
 }
 
 SwapBlob VecToSwapBlob(std::vector<BufferID> &vec) {
   SwapBlob result = {};
-  // TODO(chogan): @metaprogramming count the members of the SwapBlob structure
-  if (vec.size() >= 3) {
+  if (vec.size() >= kNumSwapBlobMembers) {
     result.node_id = (int)vec[0].as_int;
     result.offset = vec[1].as_int;
     result.size = vec[2].as_int;
+    result.blob_id.as_int = vec[3].as_int;
+    result.bucket_id.as_int = vec[4].as_int;
   } else {
     // TODO(chogan): @errorhandling
     HERMES_NOT_IMPLEMENTED_YET;
