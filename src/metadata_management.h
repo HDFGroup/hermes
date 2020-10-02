@@ -28,15 +28,6 @@ union VBucketID {
   u64 as_int;
 };
 
-union BlobID {
-  struct {
-    u32 buffer_ids_offset;
-    i32 node_id;
-  } bits;
-
-  u64 as_int;
-};
-
 enum class TraitID : u8 {
   None,
   Placement,

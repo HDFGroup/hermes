@@ -136,5 +136,14 @@ union BucketID {
   u64 as_int;
 };
 
+union BlobID {
+  struct {
+    u32 buffer_ids_offset;
+    i32 node_id;
+  } bits;
+
+  u64 as_int;
+};
+
 }  // namespace hermes
 #endif  // HERMES_TYPES_H_

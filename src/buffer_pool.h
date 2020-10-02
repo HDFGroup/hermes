@@ -374,6 +374,7 @@ struct SwapBlob {
   u32 node_id;
   u64 offset;
   u64 size;
+  BlobID blob_id;
   BucketID bucket_id;
 };
 
