@@ -360,14 +360,9 @@ void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
             << num_threads << " RPC threads" << std::endl;
 
   auto rpc_place_in_hierarchy = [context, rpc](const tl::request &req,
-                                               u32 node_id, u64 offset,
-                                               u64 size, int retries) {
+                                               SwapBlob swap_blob,
+                                               int retries) {
     (void)req;
-    SwapBlob swap_blob = {};
-    swap_blob.node_id = node_id;
-    swap_blob.offset = offset;
-    swap_blob.size = size;
-
     for (int i = 0; i < retries; ++i) {
       int result = PlaceInHierarchy(context, rpc, swap_blob);
       if (result == 0) {
@@ -376,15 +371,10 @@ void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
     }
   };
 
-  auto rpc_move_to_target = [context, rpc](const tl::request &req, u32 node_id,
-                                           u64 offset, u64 size,
+  auto rpc_move_to_target = [context, rpc](const tl::request &req,
+                                           SwapBlob swap_blob,
                                            TargetID target_id, int retries) {
     (void)req;
-    SwapBlob swap_blob = {};
-    swap_blob.node_id = node_id;
-    swap_blob.offset = offset;
-    swap_blob.size = size;
-
     for (int i = 0; i < retries; ++i) {
       // TODO(chogan): MoveToTarget(context, rpc, target_id, swap_blob);
       int result = 0;
@@ -409,8 +399,8 @@ void TriggerBufferOrganizer(RpcContext *rpc, const char *func_name,
   tl::remote_procedure remote_proc = engine.define(func_name);
   tl::endpoint server = engine.lookup(server_name);
   remote_proc.disable_response();
-  remote_proc.on(server)(swap_blob.node_id, swap_blob.offset, swap_blob.size,
-                         retries);
+  // TODO(chogan): Templatize?
+  remote_proc.on(server)(swap_blob, retries);
 }
 
 void StartGlobalSystemViewStateUpdateThread(SharedMemoryContext *context,

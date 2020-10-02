@@ -371,7 +371,6 @@ struct Blob {
 };
 
 struct SwapBlob {
-  u32 node_id;
   u64 offset;
   u64 size;
   BlobID blob_id;
@@ -440,7 +439,8 @@ std::vector<SwapBlob> PutToSwap(SharedMemoryContext *context, RpcContext *rpc,
   return result;
 }
 
-SwapBlob WriteToSwap(SharedMemoryContext *context, Blob blob, u32 node_id);
+SwapBlob WriteToSwap(SharedMemoryContext *context, Blob blob, BlobID blob_id,
+                     BucketID bucket_id);
 size_t ReadFromSwap(SharedMemoryContext *context, Blob blob,
                     SwapBlob swap_blob);
 

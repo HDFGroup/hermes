@@ -1456,8 +1456,11 @@ int OpenSwapFile(SharedMemoryContext *context, u32 node_id) {
   return result;
 }
 
-SwapBlob WriteToSwap(SharedMemoryContext *context, Blob blob, u32 node_id) {
+SwapBlob WriteToSwap(SharedMemoryContext *context, Blob blob, BlobID blob_id,
+                     BucketID bucket_id) {
   SwapBlob result = {};
+
+  u32 node_id = GetBlobNodeId(blob_id);
 
   if (OpenSwapFile(context, node_id) == 0) {
     if (fseek(context->swap_file, 0, SEEK_END) != 0) {
@@ -1485,8 +1488,9 @@ SwapBlob WriteToSwap(SharedMemoryContext *context, Blob blob, u32 node_id) {
     HERMES_NOT_IMPLEMENTED_YET;
   }
 
+  result.blob_id = blob_id;
+  result.bucket_id = bucket_id;
   result.size = blob.size;
-  result.node_id = node_id;
 
   return result;
 }
@@ -1508,7 +1512,8 @@ SwapBlob PutToSwap(SharedMemoryContext *context, RpcContext *rpc,
 
 size_t ReadFromSwap(SharedMemoryContext *context, Blob blob,
                   SwapBlob swap_blob) {
-  if (OpenSwapFile(context, swap_blob.node_id)) {
+  u32 node_id = GetBlobNodeId(swap_blob.blob_id);
+  if (OpenSwapFile(context, node_id)) {
     if (fseek(context->swap_file, swap_blob.offset, SEEK_SET) != 0) {
       // TODO(chogan): @errorhandling
       HERMES_NOT_IMPLEMENTED_YET;

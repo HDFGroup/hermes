@@ -726,29 +726,33 @@ std::string GetSwapFilename(MetadataManager *mdm, u32 node_id) {
   return result;
 }
 
-// TEMP(chogan):
-const int kNumSwapBlobMembers = 5;
+enum SwapBlobMembers {
+  SwapBlobMembers_Offset,
+  SwapBlobMembers_Size,
+  SwapBlobMembers_BlobId,
+  SwapBlobMembers_BucketId,
+
+  SwapBlobMembers_Count
+};
 
 std::vector<BufferID> SwapBlobToVec(SwapBlob swap_blob) {
-  static_assert((sizeof(swap_blob) / 8) == kNumSwapBlobMembers);
-  std::vector<BufferID> result(kNumSwapBlobMembers);
-  result[0].as_int = swap_blob.node_id;
-  result[1].as_int = swap_blob.offset;
-  result[2].as_int = swap_blob.size;
-  result[3].as_int = swap_blob.blob_id.as_int;
-  result[4].as_int = swap_blob.bucket_id.as_int;
+  static_assert((sizeof(swap_blob) / 8) == SwapBlobMembers_Count);
+  std::vector<BufferID> result(SwapBlobMembers_Count);
+  result[SwapBlobMembers_Offset].as_int = swap_blob.offset;
+  result[SwapBlobMembers_Size].as_int = swap_blob.size;
+  result[SwapBlobMembers_BlobId].as_int = swap_blob.blob_id.as_int;
+  result[SwapBlobMembers_BucketId].as_int = swap_blob.bucket_id.as_int;
 
   return result;
 }
 
 SwapBlob VecToSwapBlob(std::vector<BufferID> &vec) {
   SwapBlob result = {};
-  if (vec.size() >= kNumSwapBlobMembers) {
-    result.node_id = (int)vec[0].as_int;
-    result.offset = vec[1].as_int;
-    result.size = vec[2].as_int;
-    result.blob_id.as_int = vec[3].as_int;
-    result.bucket_id.as_int = vec[4].as_int;
+  if (vec.size() >= SwapBlobMembers_Count) {
+    result.offset = vec[SwapBlobMembers_Offset].as_int;
+    result.size = vec[SwapBlobMembers_Size].as_int;
+    result.blob_id.as_int = vec[SwapBlobMembers_BlobId].as_int;
+    result.bucket_id.as_int = vec[SwapBlobMembers_BucketId].as_int;
   } else {
     // TODO(chogan): @errorhandling
     HERMES_NOT_IMPLEMENTED_YET;
@@ -760,11 +764,12 @@ SwapBlob VecToSwapBlob(std::vector<BufferID> &vec) {
 SwapBlob IdArrayToSwapBlob(BufferIdArray ids) {
   SwapBlob result = {};
 
-  // TODO(chogan): @metaprogramming count the members of the SwapBlob structure
-  if (ids.length >= 3) {
-    result.node_id = (int)ids.ids[0].as_int;
-    result.offset = ids.ids[1].as_int;
-    result.size = ids.ids[2].as_int;
+  static_assert((sizeof(result) / 8) == SwapBlobMembers_Count);
+  if (ids.length >= SwapBlobMembers_Count) {
+    result.offset = ids.ids[SwapBlobMembers_Offset].as_int;
+    result.size = ids.ids[SwapBlobMembers_Size].as_int;
+    result.blob_id.as_int = ids.ids[SwapBlobMembers_BlobId].as_int;
+    result.bucket_id.as_int = ids.ids[SwapBlobMembers_BucketId].as_int;
   } else {
     // TODO(chogan): @errorhandling
     HERMES_NOT_IMPLEMENTED_YET;
