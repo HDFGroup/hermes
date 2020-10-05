@@ -726,17 +726,11 @@ std::string GetSwapFilename(MetadataManager *mdm, u32 node_id) {
   return result;
 }
 
-enum SwapBlobMembers {
-  SwapBlobMembers_NodeId,
-  SwapBlobMembers_Offset,
-  SwapBlobMembers_Size,
-  SwapBlobMembers_BucketId,
-
-  SwapBlobMembers_Count
-};
-
 std::vector<BufferID> SwapBlobToVec(SwapBlob swap_blob) {
-  static_assert((sizeof(swap_blob) / 8) == SwapBlobMembers_Count);
+  // TODO(chogan): @metaprogramming Improve this, since it currently only works
+  // if each member in SwapBlob (plus padding) is eight bytes.
+  static_assert((sizeof(SwapBlob) / 8) == SwapBlobMembers_Count);
+
   std::vector<BufferID> result(SwapBlobMembers_Count);
   result[SwapBlobMembers_NodeId].as_int = swap_blob.node_id;
   result[SwapBlobMembers_Offset].as_int = swap_blob.offset;
@@ -748,6 +742,7 @@ std::vector<BufferID> SwapBlobToVec(SwapBlob swap_blob) {
 
 SwapBlob VecToSwapBlob(std::vector<BufferID> &vec) {
   SwapBlob result = {};
+
   if (vec.size() == SwapBlobMembers_Count) {
     result.node_id = (u32)vec[SwapBlobMembers_NodeId].as_int;
     result.offset = vec[SwapBlobMembers_Offset].as_int;
@@ -764,7 +759,6 @@ SwapBlob VecToSwapBlob(std::vector<BufferID> &vec) {
 SwapBlob IdArrayToSwapBlob(BufferIdArray ids) {
   SwapBlob result = {};
 
-  static_assert((sizeof(result) / 8) == SwapBlobMembers_Count);
   if (ids.length == SwapBlobMembers_Count) {
     result.node_id = (u32)ids.ids[SwapBlobMembers_NodeId].as_int;
     result.offset = ids.ids[SwapBlobMembers_Offset].as_int;

@@ -370,11 +370,23 @@ struct Blob {
   u64 size;
 };
 
+// NOTE(chogan): When adding members to this struct, it is important to also add
+// an entry to the SwapBlobMembers enum below.
 struct SwapBlob {
   u32 node_id;
   u64 offset;
   u64 size;
   BucketID bucket_id;
+};
+
+// TODO(chogan): @metaprogramming Generate this
+enum SwapBlobMembers {
+  SwapBlobMembers_NodeId,
+  SwapBlobMembers_Offset,
+  SwapBlobMembers_Size,
+  SwapBlobMembers_BucketId,
+
+  SwapBlobMembers_Count
 };
 
 /**
