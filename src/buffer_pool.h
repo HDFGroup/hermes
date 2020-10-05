@@ -371,9 +371,9 @@ struct Blob {
 };
 
 struct SwapBlob {
+  u32 node_id;
   u64 offset;
   u64 size;
-  BlobID blob_id;
   BucketID bucket_id;
 };
 
@@ -459,7 +459,7 @@ std::vector<f32> GetBandwidths(SharedMemoryContext *context);
 u32 GetBufferSize(SharedMemoryContext *context, RpcContext *rpc, BufferID id);
 bool BufferIsByteAddressable(SharedMemoryContext *context, BufferID id);
 int PlaceInHierarchy(SharedMemoryContext *context, RpcContext *rpc,
-                     SwapBlob swap_blob);
+                     SwapBlob swap_blob, const std::string &blob_name);
 api::Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
                       PlacementSchema &schema, Blob blob, const char *name,
                       BucketID bucket_id);

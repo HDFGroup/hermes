@@ -1456,11 +1456,9 @@ int OpenSwapFile(SharedMemoryContext *context, u32 node_id) {
   return result;
 }
 
-SwapBlob WriteToSwap(SharedMemoryContext *context, Blob blob, BlobID blob_id,
+SwapBlob WriteToSwap(SharedMemoryContext *context, Blob blob, u32 node_id,
                      BucketID bucket_id) {
   SwapBlob result = {};
-
-  u32 node_id = GetBlobNodeId(blob_id);
 
   if (OpenSwapFile(context, node_id) == 0) {
     if (fseek(context->swap_file, 0, SEEK_END) != 0) {
@@ -1488,7 +1486,7 @@ SwapBlob WriteToSwap(SharedMemoryContext *context, Blob blob, BlobID blob_id,
     HERMES_NOT_IMPLEMENTED_YET;
   }
 
-  result.blob_id = blob_id;
+  result.node_id = node_id;
   result.bucket_id = bucket_id;
   result.size = blob.size;
 
@@ -1503,7 +1501,7 @@ SwapBlob PutToSwap(SharedMemoryContext *context, RpcContext *rpc,
   blob.size = size;
 
   u32 target_node = rpc->node_id;
-  SwapBlob swap_blob =  WriteToSwap(context, blob, target_node);
+  SwapBlob swap_blob =  WriteToSwap(context, blob, target_node, bucket_id);
   std::vector<BufferID> buffer_ids = SwapBlobToVec(swap_blob);
   AttachBlobToBucket(context, rpc, name.c_str(), bucket_id, buffer_ids, true);
 
@@ -1512,7 +1510,7 @@ SwapBlob PutToSwap(SharedMemoryContext *context, RpcContext *rpc,
 
 size_t ReadFromSwap(SharedMemoryContext *context, Blob blob,
                   SwapBlob swap_blob) {
-  u32 node_id = GetBlobNodeId(swap_blob.blob_id);
+  u32 node_id = swap_blob.node_id;
   if (OpenSwapFile(context, node_id)) {
     if (fseek(context->swap_file, swap_blob.offset, SEEK_SET) != 0) {
       // TODO(chogan): @errorhandling

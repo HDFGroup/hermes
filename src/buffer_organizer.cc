@@ -4,7 +4,7 @@
 namespace hermes {
 
 int PlaceInHierarchy(SharedMemoryContext *context, RpcContext *rpc,
-                      SwapBlob swap_blob) {
+                     SwapBlob swap_blob, const std::string &name) {
   int result = 0;
   std::vector<u8> blob_mem(swap_blob.size);
   Blob blob = {};
@@ -17,10 +17,8 @@ int PlaceInHierarchy(SharedMemoryContext *context, RpcContext *rpc,
   api::Context ctx;
   Status ret = CalculatePlacement(context, rpc, sizes, schemas, ctx);
   if (ret == 0) {
-    MetadataManager *mdm = GetMetadataManagerFromContext(context);
-    char *name = ReverseGetFromStorage(mdm, swap_blob.blob_id.as_int,
-                                       kMapType_Blob);
-    ret = PlaceBlob(context, rpc, schemas[0], blob, name, swap_blob.bucket_id);
+    ret = PlaceBlob(context, rpc, schemas[0], blob, name.c_str(),
+                    swap_blob.bucket_id);
   } else {
     // TODO(chogan): @errorhandling
     result = 1;

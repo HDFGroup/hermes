@@ -221,7 +221,7 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
         u32 result = LocalAllocateBufferIdList(mdm, buffer_ids);
 
         req.respond(result);
-    };
+      };
 
   function<void(const request&, BucketID, const string&, const string&)>
     rpc_rename_bucket = [context, rpc](const request &req, BucketID id,
@@ -361,10 +361,11 @@ void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
 
   auto rpc_place_in_hierarchy = [context, rpc](const tl::request &req,
                                                SwapBlob swap_blob,
+                                               const std::string name,
                                                int retries) {
     (void)req;
     for (int i = 0; i < retries; ++i) {
-      int result = PlaceInHierarchy(context, rpc, swap_blob);
+      int result = PlaceInHierarchy(context, rpc, swap_blob, name);
       if (result == 0) {
         break;
       }
@@ -391,7 +392,8 @@ void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
 }
 
 void TriggerBufferOrganizer(RpcContext *rpc, const char *func_name,
-                            SwapBlob swap_blob, int retries) {
+                            const std::string &blob_name, SwapBlob swap_blob,
+                            int retries) {
   // TEMP(chogan):
   std::string server_name = "";
   std::string protocol = GetProtocol(rpc);
@@ -400,7 +402,7 @@ void TriggerBufferOrganizer(RpcContext *rpc, const char *func_name,
   tl::endpoint server = engine.lookup(server_name);
   remote_proc.disable_response();
   // TODO(chogan): Templatize?
-  remote_proc.on(server)(swap_blob, retries);
+  remote_proc.on(server)(swap_blob, blob_name, retries);
 }
 
 void StartGlobalSystemViewStateUpdateThread(SharedMemoryContext *context,

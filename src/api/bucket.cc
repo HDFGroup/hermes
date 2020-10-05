@@ -52,7 +52,7 @@ Status Bucket::Put(const std::string &name, const u8 *data, size_t size,
         retries = ctx.buffer_organizer_retries;
       }
 
-      TriggerBufferOrganizer(&hermes_->rpc_, kPlaceInHierarchy, swap_blob,
+      TriggerBufferOrganizer(&hermes_->rpc_, kPlaceInHierarchy, name, swap_blob,
                              retries);
       ret = 0;
       // TODO(chogan): @errorhandling Signify in Status that the Blob went to

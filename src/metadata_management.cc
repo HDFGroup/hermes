@@ -727,9 +727,9 @@ std::string GetSwapFilename(MetadataManager *mdm, u32 node_id) {
 }
 
 enum SwapBlobMembers {
+  SwapBlobMembers_NodeId,
   SwapBlobMembers_Offset,
   SwapBlobMembers_Size,
-  SwapBlobMembers_BlobId,
   SwapBlobMembers_BucketId,
 
   SwapBlobMembers_Count
@@ -738,9 +738,9 @@ enum SwapBlobMembers {
 std::vector<BufferID> SwapBlobToVec(SwapBlob swap_blob) {
   static_assert((sizeof(swap_blob) / 8) == SwapBlobMembers_Count);
   std::vector<BufferID> result(SwapBlobMembers_Count);
+  result[SwapBlobMembers_NodeId].as_int = swap_blob.node_id;
   result[SwapBlobMembers_Offset].as_int = swap_blob.offset;
   result[SwapBlobMembers_Size].as_int = swap_blob.size;
-  result[SwapBlobMembers_BlobId].as_int = swap_blob.blob_id.as_int;
   result[SwapBlobMembers_BucketId].as_int = swap_blob.bucket_id.as_int;
 
   return result;
@@ -748,10 +748,10 @@ std::vector<BufferID> SwapBlobToVec(SwapBlob swap_blob) {
 
 SwapBlob VecToSwapBlob(std::vector<BufferID> &vec) {
   SwapBlob result = {};
-  if (vec.size() >= SwapBlobMembers_Count) {
+  if (vec.size() == SwapBlobMembers_Count) {
+    result.node_id = (u32)vec[SwapBlobMembers_NodeId].as_int;
     result.offset = vec[SwapBlobMembers_Offset].as_int;
     result.size = vec[SwapBlobMembers_Size].as_int;
-    result.blob_id.as_int = vec[SwapBlobMembers_BlobId].as_int;
     result.bucket_id.as_int = vec[SwapBlobMembers_BucketId].as_int;
   } else {
     // TODO(chogan): @errorhandling
@@ -765,10 +765,10 @@ SwapBlob IdArrayToSwapBlob(BufferIdArray ids) {
   SwapBlob result = {};
 
   static_assert((sizeof(result) / 8) == SwapBlobMembers_Count);
-  if (ids.length >= SwapBlobMembers_Count) {
+  if (ids.length == SwapBlobMembers_Count) {
+    result.node_id = (u32)ids.ids[SwapBlobMembers_NodeId].as_int;
     result.offset = ids.ids[SwapBlobMembers_Offset].as_int;
     result.size = ids.ids[SwapBlobMembers_Size].as_int;
-    result.blob_id.as_int = ids.ids[SwapBlobMembers_BlobId].as_int;
     result.bucket_id.as_int = ids.ids[SwapBlobMembers_BucketId].as_int;
   } else {
     // TODO(chogan): @errorhandling

@@ -81,9 +81,9 @@ void serialize(A &ar, TargetID &target_id) {
 
 template<typename A>
 void serialize(A &ar, SwapBlob &swap_blob) {
+  ar & swap_blob.node_id;
   ar & swap_blob.offset;
   ar & swap_blob.size;
-  ar & swap_blob.blob_id;
   ar & swap_blob.bucket_id;
 }
 

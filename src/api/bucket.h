@@ -173,7 +173,7 @@ Status Bucket::Put(std::vector<std::string> &names,
         PutToSwap(&hermes_->context_, &hermes_->rpc_, id_, blobs, names);
 
       for (int i = 0; i < swapped_blobs.size(); ++i) {
-        TriggerBufferOrganizer(&hermes_->rpc_, kPlaceInHierarchy,
+        TriggerBufferOrganizer(&hermes_->rpc_, kPlaceInHierarchy, names[i],
                                swapped_blobs[i], ctx.buffer_organizer_retries);
       }
       ret = 0;
