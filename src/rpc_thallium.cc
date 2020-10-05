@@ -348,7 +348,7 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
 }
 
 void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
-                          const char *addr, int num_threads) {
+                          const char *addr, int num_threads, int port) {
   ThalliumState *state = GetThalliumState(rpc);
 
   state->bo_engine = new tl::engine(addr, THALLIUM_SERVER_MODE, true,
@@ -359,15 +359,31 @@ void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
   LOG(INFO) << "Buffer organizer serving at " << rpc_server_name << " with "
             << num_threads << " RPC threads" << std::endl;
 
+  std::string server_name_postfix = ":" + std::to_string(port);
+  CopyStringToCharArray(server_name_postfix, state->bo_server_name_postfix,
+                        kMaxServerNamePostfix);
+
   auto rpc_place_in_hierarchy = [context, rpc](const tl::request &req,
                                                SwapBlob swap_blob,
                                                const std::string name,
                                                int retries) {
     (void)req;
     for (int i = 0; i < retries; ++i) {
+      LOG(INFO) << "Buffer Organizer placing blob '" << name
+                << "' in hierarchy. Attempt " << i + 1 << " of " << retries
+                << std::endl;
       int result = PlaceInHierarchy(context, rpc, swap_blob, name);
       if (result == 0) {
         break;
+      } else {
+        // TODO(chogan): We probably don't want to sleep here, but for now this
+        // enables testing.
+        double sleep_ms = 2000;
+        ThalliumState *state = GetThalliumState(rpc);
+
+        if (state && state->bo_engine) {
+          tl::thread::self().sleep(*state->bo_engine, sleep_ms);
+        }
       }
     }
   };
@@ -394,8 +410,7 @@ void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
 void TriggerBufferOrganizer(RpcContext *rpc, const char *func_name,
                             const std::string &blob_name, SwapBlob swap_blob,
                             int retries) {
-  // TEMP(chogan):
-  std::string server_name = "";
+  std::string server_name = GetServerName(rpc, rpc->node_id, true);
   std::string protocol = GetProtocol(rpc);
   tl::engine engine(protocol, THALLIUM_CLIENT_MODE, true);
   tl::remote_procedure remote_proc = engine.define(func_name);
@@ -487,7 +502,8 @@ std::string GetRpcAddress(Config *config, const std::string &host_number,
   return result;
 }
 
-std::string GetServerName(RpcContext *rpc, u32 node_id) {
+std::string GetServerName(RpcContext *rpc, u32 node_id,
+                          bool is_buffer_organizer) {
   ThalliumState *tl_state = GetThalliumState(rpc);
 
   std::string host_number = GetHostNumberAsString(rpc, node_id);
@@ -506,7 +522,12 @@ std::string GetServerName(RpcContext *rpc, u32 node_id) {
   std::string result = std::string(tl_state->server_name_prefix);
 
   result += std::string(ip_address);
-  result += std::string(tl_state->server_name_postfix);
+
+  if (is_buffer_organizer) {
+    result += std::string(tl_state->bo_server_name_postfix);
+  } else {
+    result += std::string(tl_state->server_name_postfix);
+  }
 
   return result;
 }

@@ -1,4 +1,6 @@
+#include <chrono>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include <mpi.h>
@@ -89,6 +91,45 @@ void TestSwap(std::shared_ptr<Hermes> hermes) {
   bucket.Destroy(ctx);
 }
 
+void TestBufferOrganizer(std::shared_ptr<Hermes> hermes) {
+  namespace hapi = hermes::api;
+  hapi::Context ctx;
+  ctx.policy = hapi::PlacementPolicy::kRandom;
+  hapi::Bucket bucket(std::string("bo_bucket"), hermes, ctx);
+
+  // NOTE(chogan): Fill our single buffer with a blob.
+  hapi::Blob data1(KILOBYTES(4), 'x');
+  std::string blob1_name("bo_blob1");
+  bucket.Put(blob1_name, data1, ctx);
+  Assert(bucket.ContainsBlob(blob1_name));
+
+  // NOTE(chogan): Try to put another blob, which will go to the swap space
+  // since the hierarchy is full.
+  hapi::Blob data2(KILOBYTES(4), 'y');
+  std::string blob2_name("bo_blob2");
+  bucket.Put(blob2_name, data2, ctx);
+  Assert(bucket.BlobIsInSwap(blob2_name));
+
+  // NOTE(chogan): Delete the first blob, which will make room for the second,
+  // and the buffer organizer should move it from swap space to the hierarchy.
+  bucket.DeleteBlob(blob1_name, ctx);
+
+  // NOTE(chogan): Give the BufferOrganizer time to finish.
+  std::this_thread::sleep_for(std::chrono::seconds(2));
+
+  Assert(bucket.ContainsBlob(blob2_name));
+  Assert(!bucket.BlobIsInSwap(blob2_name));
+
+  hapi::Blob get_result;
+  size_t blob_size = bucket.Get(blob2_name, get_result, ctx);
+  get_result.resize(blob_size);
+  blob_size = bucket.Get(blob2_name, get_result, ctx);
+
+  Assert(get_result == data2);
+
+  bucket.Destroy(ctx);
+}
+
 void PrintUsage(char *program) {
   fprintf(stderr, "Usage %s -[b] [-f <path>]\n", program);
   fprintf(stderr, "  -b\n");
@@ -158,16 +199,21 @@ int main(int argc, char **argv) {
     hermes::Config config = {};
     InitDefaultConfig(&config);
     // NOTE(chogan): Make capacities small so that a Put of 1MB will go to swap
-    // space
-    config.capacities[0] = KILOBYTES(50);
+    // space. After metadata, this configuration gives us 1 4KB RAM buffer.
+    config.capacities[0] = KILOBYTES(32);
     config.capacities[1] = 8;
     config.capacities[2] = 8;
     config.capacities[3] = 8;
-    config.arena_percentages[hermes::kArenaType_BufferPool] = 0.7;
-    config.arena_percentages[hermes::kArenaType_MetaData] = 0.19;
+    config.desired_slab_percentages[0][0] = 1;
+    config.desired_slab_percentages[0][1] = 0;
+    config.desired_slab_percentages[0][2] = 0;
+    config.desired_slab_percentages[0][3] = 0;
+    config.arena_percentages[hermes::kArenaType_BufferPool] = 0.5;
+    config.arena_percentages[hermes::kArenaType_MetaData] = 0.5;
 
     std::shared_ptr<Hermes> hermes = hermes::InitHermesDaemon(&config);
-    TestSwap(hermes);
+    // TestSwap(hermes);
+    TestBufferOrganizer(hermes);
     hermes->Finalize(true);
   }
 

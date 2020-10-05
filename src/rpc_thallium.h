@@ -21,6 +21,7 @@ const int kMaxServerNamePostfix = 8;
 struct ThalliumState {
   char server_name_prefix[kMaxServerNamePrefix];
   char server_name_postfix[kMaxServerNamePostfix];
+  char bo_server_name_postfix[kMaxServerNamePostfix];
   std::atomic<bool> kill_requested;
   tl::engine *engine;
   tl::engine *bo_engine;

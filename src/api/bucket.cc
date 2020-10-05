@@ -78,7 +78,7 @@ size_t Bucket::GetBlobSize(Arena *arena, const std::string &name,
     BlobID blob_id = GetBlobIdByName(&hermes_->context_, &hermes_->rpc_,
                                      name.c_str());
 
-    if (BlobIsInSwap(blob_id)) {
+    if (hermes::BlobIsInSwap(blob_id)) {
       SwapBlob swap_blob = IdArrayToSwapBlob(buffer_ids);
       result = swap_blob.size;
     } else {
@@ -103,23 +103,27 @@ size_t Bucket::Get(const std::string &name, Blob &user_blob, Context &ctx) {
       ret = GetBlobSize(scratch, name, ctx);
     } else {
       LOG(INFO) << "Getting Blob " << name << " from bucket " << name_ << '\n';
-      u32 *buffer_sizes = 0;
-      BufferIdArray buffer_ids =
-        GetBufferIdsFromBlobName(scratch, &hermes_->context_, &hermes_->rpc_,
-                                 name.c_str(), &buffer_sizes);
-
       BlobID blob_id = GetBlobIdByName(&hermes_->context_, &hermes_->rpc_,
                                        name.c_str());
       hermes::Blob blob = {};
       blob.data = user_blob.data();
       blob.size = user_blob.size();
 
-      if (BlobIsInSwap(blob_id)) {
+      BufferIdArray buffer_ids = {};
+      if (hermes::BlobIsInSwap(blob_id)) {
+        buffer_ids = GetBufferIdsFromBlobName(scratch, &hermes_->context_,
+                                              &hermes_->rpc_, name.c_str(),
+                                              NULL);
         SwapBlob swap_blob = IdArrayToSwapBlob(buffer_ids);
         ret = ReadFromSwap(&hermes_->context_, blob, swap_blob);
       } else {
+        u32 *buffer_sizes = 0;
+        buffer_ids = GetBufferIdsFromBlobName(scratch, &hermes_->context_,
+                                              &hermes_->rpc_, name.c_str(),
+                                              &buffer_sizes);
         ret = ReadBlobFromBuffers(&hermes_->context_, &hermes_->rpc_, &blob,
                                   &buffer_ids, buffer_sizes);
+
       }
     }
   }
@@ -163,6 +167,14 @@ Status Bucket::RenameBlob(const std::string &old_name,
 bool Bucket::ContainsBlob(const std::string &name) {
   bool result = hermes::ContainsBlob(&hermes_->context_, &hermes_->rpc_, id_,
                                      name);
+
+  return result;
+}
+
+bool Bucket::BlobIsInSwap(const std::string &name) {
+  BlobID blob_id = GetBlobIdByName(&hermes_->context_, &hermes_->rpc_,
+                                   name.c_str());
+  bool result = hermes::BlobIsInSwap(blob_id);
 
   return result;
 }

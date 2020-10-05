@@ -1511,7 +1511,7 @@ SwapBlob PutToSwap(SharedMemoryContext *context, RpcContext *rpc,
 size_t ReadFromSwap(SharedMemoryContext *context, Blob blob,
                   SwapBlob swap_blob) {
   u32 node_id = swap_blob.node_id;
-  if (OpenSwapFile(context, node_id)) {
+  if (OpenSwapFile(context, node_id) == 0) {
     if (fseek(context->swap_file, swap_blob.offset, SEEK_SET) != 0) {
       // TODO(chogan): @errorhandling
       HERMES_NOT_IMPLEMENTED_YET;

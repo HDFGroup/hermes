@@ -100,6 +100,9 @@ class Bucket {
   /** Returns true if the Bucket contains a Blob called `name` */
   bool ContainsBlob(const std::string &name);
 
+  /** Returns true if the Blob called `name` in this bucket is in swap space */
+  bool BlobIsInSwap(const std::string &name);
+
   /** get a list of blob names filtered by pred */
   template<class Predicate>
   std::vector<std::string> GetBlobNames(Predicate pred, Context &ctx);

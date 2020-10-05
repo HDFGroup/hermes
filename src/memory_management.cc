@@ -78,13 +78,16 @@ void GrowArena(Arena *arena, size_t new_size) {
     // TODO(chogan): @errorhandling
     HERMES_NOT_IMPLEMENTED_YET;
   }
-  void *new_base = (u8 *)realloc(arena->base, new_size);
-  if (new_base != arena->base) {
-    arena->base = (u8 *)new_base;
-    arena->capacity = new_size;
-  } else {
-    // TODO(chogan): @errorhandling
-    assert(!"GrowArena failed\n");
+
+  if (arena->capacity != new_size) {
+    void *new_base = (u8 *)realloc(arena->base, new_size);
+    if (new_base != arena->base) {
+      arena->base = (u8 *)new_base;
+      arena->capacity = new_size;
+    } else {
+      // TODO(chogan): @errorhandling
+      assert(!"GrowArena failed\n");
+    }
   }
 }
 
