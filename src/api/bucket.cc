@@ -47,13 +47,8 @@ Status Bucket::Put(const std::string &name, const u8 *data, size_t size,
     } else {
       SwapBlob swap_blob = PutToSwap(&hermes_->context_, &hermes_->rpc_, name,
                                      id_, data, size);
-      int retries = Context::default_buffer_organizer_retries;
-      if (ctx.buffer_organizer_retries != retries) {
-        retries = ctx.buffer_organizer_retries;
-      }
-
       TriggerBufferOrganizer(&hermes_->rpc_, kPlaceInHierarchy, name, swap_blob,
-                             retries);
+                             ctx.buffer_organizer_retries);
       ret = 0;
       // TODO(chogan): @errorhandling Signify in Status that the Blob went to
       // swap space

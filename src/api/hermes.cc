@@ -14,7 +14,7 @@ namespace hermes {
 
 namespace api {
 
-int Context::default_buffer_organizer_retries = 3;
+int Context::default_buffer_organizer_retries;
 
 Status RenameBucket(const std::string &old_name,
                     const std::string &new_name,
@@ -240,6 +240,7 @@ std::shared_ptr<api::Hermes> InitHermes(Config *config, bool is_daemon,
 
     std::string bo_address = GetRpcAddress(config, host_number,
                                            config->buffer_organizer_port);
+    // TODO(chogan): @config Probably want a configuration variable for this.
     int bo_threads = 1;
     StartBufferOrganizer(&result->context_, &result->rpc_, bo_address.c_str(),
                          bo_threads, config->buffer_organizer_port);

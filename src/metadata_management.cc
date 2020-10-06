@@ -485,10 +485,8 @@ void RenameBlob(SharedMemoryContext *context, RpcContext *rpc,
                 const std::string &old_name, const std::string &new_name) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   BlobID blob_id = GetBlobIdByName(context, rpc, old_name.c_str());
-  if (!IsNullBlobId(blob_id)) {
-    DeleteId(mdm, rpc, old_name, kMapType_Blob);
-    PutBlobId(mdm, rpc, new_name, blob_id);
-  }
+  DeleteId(mdm, rpc, old_name, kMapType_Blob);
+  PutBlobId(mdm, rpc, new_name, blob_id);
 }
 
 bool ContainsBlob(SharedMemoryContext *context, RpcContext *rpc,
@@ -496,14 +494,12 @@ bool ContainsBlob(SharedMemoryContext *context, RpcContext *rpc,
   BlobID blob_id = GetBlobIdByName(context, rpc, blob_name.c_str());
   bool result = false;
 
-  if (!IsNullBlobId(blob_id)) {
-    u32 target_node = bucket_id.bits.node_id;
-    if (target_node == rpc->node_id) {
-      result = LocalContainsBlob(context, bucket_id, blob_id);
-    } else {
-      result = RpcCall<bool>(rpc, target_node, "RemoteContainsBlob", bucket_id,
-                             blob_name);
-    }
+  u32 target_node = bucket_id.bits.node_id;
+  if (target_node == rpc->node_id) {
+    result = LocalContainsBlob(context, bucket_id, blob_id);
+  } else {
+    result = RpcCall<bool>(rpc, target_node, "RemoteContainsBlob", bucket_id,
+                           blob_name);
   }
 
   return result;
