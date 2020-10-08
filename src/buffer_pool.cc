@@ -1000,19 +1000,18 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
   int *num_buffers = PushArray<int>(scratch_arena, config->num_devices);
   int total_buffers = 0;
   for (int device = 0; device < config->num_devices; ++device) {
-    fprintf(stderr, "Device %d:\n", device);
+    DLOG(INFO) << "Device: " << device << std::endl;
     num_buffers[device] = 0;
     for (int slab = 0; slab < config->num_slabs[device]; ++slab) {
-      // TODO(chogan): @logging Switch to DLOG
-      fprintf(stderr, "    %d-Buffers: %d\n", slab,
-              buffer_counts[device][slab]);
+      DLOG(INFO) << "    " << slab << "-Buffers: "
+                 << buffer_counts[device][slab] << std::endl;
       num_buffers[device] += buffer_counts[device][slab];
     }
     total_buffers += num_buffers[device];
-    fprintf(stderr, "    Num Headers: %d\n", header_counts[device]);
-    fprintf(stderr, "    Num Buffers: %d\n", num_buffers[device]);
+    DLOG(INFO) << "    Num Headers: " << header_counts[device] << std::endl;
+    DLOG(INFO) << "    Num Buffers: " << num_buffers[device] << std::endl;
   }
-  fprintf(stderr, "Total Buffers: %d\n", total_buffers);
+  DLOG(INFO) << "Total Buffers: " << total_buffers << std::endl;;
 
   // Build RAM buffers.
 

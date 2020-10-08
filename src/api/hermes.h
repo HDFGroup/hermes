@@ -51,6 +51,7 @@ class Hermes {
   void AppBarrier();
   int GetProcessRank();
   int GetNumProcesses();
+  void *GetAppCommunicator();
   void Finalize(bool force_rpc_shutdown = false);
 
   // MPI comms.
@@ -104,6 +105,8 @@ std::shared_ptr<api::Hermes> InitHermes(const char *config_file = NULL,
 
 }  // namespace api
 
+std::shared_ptr<api::Hermes> InitHermes(Config *config, bool is_daemon = false,
+                                        bool is_adapter = false);
 std::shared_ptr<api::Hermes> InitHermesDaemon(char *config_file = NULL);
 std::shared_ptr<api::Hermes> InitHermesDaemon(Config *config);
 std::shared_ptr<api::Hermes> InitHermesClient(const char *config_file = NULL);

@@ -155,7 +155,8 @@ IdList *AllocateIdList(MetadataManager *mdm, u32 length) {
   IdList *result = (IdList *)id_list_memory;
   result->length = length;
   result->head_offset = GetHeapOffset(id_heap, (u8 *)(result + 1));
-  CheckHeapOverlap(mdm);
+  // TEMP(chogan):
+  // CheckHeapOverlap(mdm);
 
   return result;
 }

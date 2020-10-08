@@ -60,6 +60,8 @@ inline void SubBarrier(CommunicationContext *comm) {
   comm->sub_barrier(comm->state);
 }
 
+void *GetAppCommunicator(CommunicationContext *comm);
+
 }  // namespace hermes
 
 #endif  // HERMES_COMMUNICATION_H_

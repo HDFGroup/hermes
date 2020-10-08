@@ -66,6 +66,12 @@ int Hermes::GetNumProcesses() {
   return result;
 }
 
+void *Hermes::GetAppCommunicator() {
+  void *result = hermes::GetAppCommunicator(&comm_);
+
+  return result;
+}
+
 void Hermes::Finalize(bool force_rpc_shutdown) {
   hermes::Finalize(&context_, &comm_, &rpc_, shmem_name_.c_str(), &trans_arena_,
                    IsApplicationCore(), force_rpc_shutdown);

@@ -17,6 +17,12 @@ struct MPIState {
   MPI_Comm sub_comm;
 };
 
+void *GetAppCommunicator(CommunicationContext *comm) {
+  MPIState *mpi_state = (MPIState *)comm->state;
+
+  return &mpi_state->sub_comm;
+}
+
 inline int MpiGetProcId(MPI_Comm comm) {
   int result;
   MPI_Comm_rank(comm, &result);
