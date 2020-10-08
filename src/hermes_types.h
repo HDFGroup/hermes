@@ -28,6 +28,10 @@ typedef double f64;
 
 typedef u16 DeviceID;
 
+namespace api {
+typedef int Status;
+}  // namespace api
+
 // TODO(chogan): These constants impose limits on the number of slabs, devices,
 // file path lengths, and shared memory name lengths, but eventually we should
 // allow arbitrary sizes of each.
@@ -35,6 +39,8 @@ static constexpr int kMaxBufferPoolSlabs = 8;
 constexpr int kMaxPathLength = 256;
 constexpr int kMaxBufferPoolShmemNameLength = 64;
 constexpr int kMaxDevices = 8;
+
+constexpr char kPlaceInHierarchy[] = "PlaceInHierarchy";
 
 #define HERMES_NOT_IMPLEMENTED_YET \
   LOG(FATAL) << __func__ << " not implemented yet\n"
@@ -57,7 +63,7 @@ enum class ProcessKind {
 };
 
 enum ArenaType {
-  kArenaType_BufferPool,
+  kArenaType_BufferPool,  // This must always be first
   kArenaType_MetaData,
   kArenaType_Transient,
   kArenaType_TransferWindow,
@@ -102,6 +108,12 @@ struct Config {
    * empty string.
    */
   std::string mount_points[kMaxDevices];
+  /** The mount point of the swap target. */
+  std::string swap_mount;
+  /** The number of times the BufferOrganizer will attempt to place a swap blob
+   * into the hierarchy before giving up.*/
+  int num_buffer_organizer_retries;
+
   /** The hostname of the RPC server, minus any numbers that Hermes may
    * auto-generate when the rpc_hostNumber_range is specified. */
   std::string rpc_server_base_name;
@@ -109,6 +121,7 @@ struct Config {
   std::string rpc_protocol;
   std::string rpc_domain;
   int rpc_port;
+  int buffer_organizer_port;
   int rpc_host_number_range[2];
   int rpc_num_threads;
 
@@ -116,6 +129,24 @@ struct Config {
    * value of the USER environment variable to this string.
    */
   char buffer_pool_shmem_name[kMaxBufferPoolShmemNameLength];
+};
+
+union BucketID {
+  struct {
+    u32 index;
+    u32 node_id;
+  } bits;
+
+  u64 as_int;
+};
+
+union BlobID {
+  struct {
+    u32 buffer_ids_offset;
+    i32 node_id;
+  } bits;
+
+  u64 as_int;
 };
 
 }  // namespace hermes

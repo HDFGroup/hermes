@@ -21,8 +21,10 @@ const int kMaxServerNamePostfix = 8;
 struct ThalliumState {
   char server_name_prefix[kMaxServerNamePrefix];
   char server_name_postfix[kMaxServerNamePostfix];
+  char bo_server_name_postfix[kMaxServerNamePostfix];
   std::atomic<bool> kill_requested;
   tl::engine *engine;
+  tl::engine *bo_engine;
   ABT_xstream execution_stream;
 };
 
@@ -78,6 +80,14 @@ void serialize(A &ar, TargetID &target_id) {
   ar & target_id.as_int;
 }
 
+template<typename A>
+void serialize(A &ar, SwapBlob &swap_blob) {
+  ar & swap_blob.node_id;
+  ar & swap_blob.offset;
+  ar & swap_blob.size;
+  ar & swap_blob.bucket_id;
+}
+
 #ifndef THALLIUM_USE_CEREAL
 /**
  *  Lets Thallium know how to serialize a MapType.
@@ -108,6 +118,9 @@ void load(A &ar, MapType &map_type) {
   map_type = (MapType)val;
 }
 #endif
+
+std::string GetRpcAddress(Config *config, const std::string &host_number,
+                          int port);
 
 static inline ThalliumState *GetThalliumState(RpcContext *rpc) {
   ThalliumState *result = (ThalliumState *)rpc->state;

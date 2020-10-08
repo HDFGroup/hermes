@@ -45,6 +45,7 @@
 #endif
 
 #include "metadata_management.cc"
+#include "buffer_organizer.cc"
 
 #if defined(HERMES_MDM_STORAGE_STBDS)
 #include "metadata_storage_stb_ds.cc"
@@ -1268,10 +1269,19 @@ void ReleaseSharedMemoryContext(SharedMemoryContext *context) {
         int fclose_result = fclose(context->open_streams[device_id][slab]);
         if (fclose_result != 0) {
           // TODO(chogan): @errorhandling
+          HERMES_NOT_IMPLEMENTED_YET;
         }
       }
     }
   }
+
+  if (context->swap_file) {
+    if (fclose(context->swap_file) != 0) {
+      // TODO(chogan): @errorhandling
+      HERMES_NOT_IMPLEMENTED_YET;
+    }
+  }
+
   UnmapSharedMemory(context);
 }
 
@@ -1427,6 +1437,121 @@ size_t ReadBlobFromBuffers(SharedMemoryContext *context, RpcContext *rpc,
   assert(total_bytes_read == blob->size);
 
   return total_bytes_read;
+}
+
+int OpenSwapFile(SharedMemoryContext *context, u32 node_id) {
+  int result = 0;
+
+  if (!context->swap_file) {
+    MetadataManager *mdm = GetMetadataManagerFromContext(context);
+    std::string swap_path = GetSwapFilename(mdm, node_id);
+    context->swap_file = fopen(swap_path.c_str(), "a+");
+
+    if (!context->swap_file) {
+      // TODO(chogan): @errorhandling
+      result = 1;
+    }
+  }
+
+  return result;
+}
+
+SwapBlob WriteToSwap(SharedMemoryContext *context, Blob blob, u32 node_id,
+                     BucketID bucket_id) {
+  SwapBlob result = {};
+
+  if (OpenSwapFile(context, node_id) == 0) {
+    if (fseek(context->swap_file, 0, SEEK_END) != 0) {
+      // TODO(chogan): @errorhandling
+      HERMES_NOT_IMPLEMENTED_YET;
+    }
+
+    result.offset = ftell(context->swap_file);
+    if (result.offset == -1) {
+      // TODO(chogan): @errorhandling
+      HERMES_NOT_IMPLEMENTED_YET;
+    }
+
+    if (fwrite(blob.data, 1, blob.size, context->swap_file) != blob.size) {
+      // TODO(chogan): @errorhandling
+      HERMES_NOT_IMPLEMENTED_YET;
+    }
+
+    if (fflush(context->swap_file) != 0) {
+      // TODO(chogan): @errorhandling
+      HERMES_NOT_IMPLEMENTED_YET;
+    }
+  } else {
+    // TODO(chogan): @errorhandling
+    HERMES_NOT_IMPLEMENTED_YET;
+  }
+
+  result.node_id = node_id;
+  result.bucket_id = bucket_id;
+  result.size = blob.size;
+
+  return result;
+}
+
+SwapBlob PutToSwap(SharedMemoryContext *context, RpcContext *rpc,
+                   const std::string &name, BucketID bucket_id, const u8 *data,
+                   size_t size) {
+  hermes::Blob blob = {};
+  blob.data = (u8 *)data;
+  blob.size = size;
+
+  u32 target_node = rpc->node_id;
+  SwapBlob swap_blob =  WriteToSwap(context, blob, target_node, bucket_id);
+  std::vector<BufferID> buffer_ids = SwapBlobToVec(swap_blob);
+  AttachBlobToBucket(context, rpc, name.c_str(), bucket_id, buffer_ids, true);
+
+  return swap_blob;
+}
+
+size_t ReadFromSwap(SharedMemoryContext *context, Blob blob,
+                  SwapBlob swap_blob) {
+  u32 node_id = swap_blob.node_id;
+  if (OpenSwapFile(context, node_id) == 0) {
+    if (fseek(context->swap_file, swap_blob.offset, SEEK_SET) != 0) {
+      // TODO(chogan): @errorhandling
+      HERMES_NOT_IMPLEMENTED_YET;
+    }
+
+    if (fread(blob.data, 1, swap_blob.size, context->swap_file) !=
+        swap_blob.size) {
+      // TODO(chogan): @errorhandling
+      HERMES_NOT_IMPLEMENTED_YET;
+    }
+
+  } else {
+    // TODO(chogan): @errorhandling
+    HERMES_NOT_IMPLEMENTED_YET;
+  }
+
+  return swap_blob.size;
+}
+
+Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
+                 PlacementSchema &schema, Blob blob, const char *name,
+                 BucketID bucket_id) {
+  Status result = 0;
+  std::vector<BufferID> buffer_ids = GetBuffers(context, schema);
+  if (buffer_ids.size()) {
+    MetadataManager *mdm = GetMetadataManagerFromContext(context);
+    char *bucket_name = ReverseGetFromStorage(mdm, bucket_id.as_int,
+                                              kMapType_Bucket);
+    LOG(INFO) << "Attaching blob " << std::string(name) << " to Bucket "
+              << bucket_name << std::endl;
+    WriteBlobToBuffers(context, rpc, blob, buffer_ids);
+
+    // NOTE(chogan): Update all metadata associated with this Put
+    AttachBlobToBucket(context, rpc, name, bucket_id, buffer_ids);
+  } else {
+    // TODO(chogan): @errorhandling
+    result = 1;
+  }
+
+  return result;
 }
 
 }  // namespace hermes

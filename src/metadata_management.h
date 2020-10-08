@@ -19,27 +19,9 @@ enum MapType {
   kMapType_Blob,
 };
 
-union BucketID {
-  struct {
-    u32 index;
-    u32 node_id;
-  } bits;
-
-  u64 as_int;
-};
-
 union VBucketID {
   struct {
     u32 index;
-    u32 node_id;
-  } bits;
-
-  u64 as_int;
-};
-
-union BlobID {
-  struct {
-    u32 buffer_ids_offset;
     u32 node_id;
   } bits;
 
@@ -123,6 +105,9 @@ struct MetadataManager {
   ptrdiff_t vbucket_map_offset;
   ptrdiff_t blob_map_offset;
 
+  ptrdiff_t swap_filename_prefix_offset;
+  ptrdiff_t swap_filename_suffix_offset;
+
   TicketMutex bucket_mutex;
   TicketMutex vbucket_mutex;
 
@@ -192,6 +177,17 @@ BufferIdArray GetBufferIdsFromBlobName(Arena *arena,
 /**
  *
  */
+BlobID GetBlobIdByName(SharedMemoryContext *context, RpcContext *rpc,
+                       const char *name);
+
+/**
+ *
+ */
+bool BlobIsInSwap(BlobID id);
+
+/**
+ *
+ */
 BucketID GetOrCreateBucketId(SharedMemoryContext *context, RpcContext *rpc,
                              const std::string &name);
 
@@ -200,7 +196,8 @@ BucketID GetOrCreateBucketId(SharedMemoryContext *context, RpcContext *rpc,
  */
 void AttachBlobToBucket(SharedMemoryContext *context, RpcContext *rpc,
                         const char *blob_name, BucketID bucket_id,
-                        const std::vector<BufferID> &buffer_ids);
+                        const std::vector<BufferID> &buffer_ids,
+                        bool is_swap_blob = false);
 
 /**
  *
@@ -214,7 +211,23 @@ void IncrementRefcount(SharedMemoryContext *context, RpcContext *rpc,
 void DecrementRefcount(SharedMemoryContext *context, RpcContext *rpc,
                        BucketID id);
 
+/**
+ *
+ */
+std::vector<BufferID> SwapBlobToVec(SwapBlob swap_blob);
+
+/**
+ *
+ */
+SwapBlob VecToSwapBlob(std::vector<BufferID> &vec);
+
+/**
+ *
+ */
+SwapBlob IdArrayToSwapBlob(BufferIdArray ids);
+
 // internal
+u32 HashString(MetadataManager *mdm, RpcContext *rpc, const char *str);
 MetadataManager *GetMetadataManagerFromContext(SharedMemoryContext *context);
 BucketInfo *LocalGetBucketInfoByIndex(MetadataManager *mdm, u32 index);
 VBucketInfo *GetVBucketInfoByIndex(MetadataManager *mdm, u32 index);
@@ -266,9 +279,10 @@ void StartGlobalSystemViewStateUpdateThread(SharedMemoryContext *context,
                                             double slepp_ms);
 
 void InitMetadataStorage(SharedMemoryContext *context, MetadataManager *mdm,
-                         Arena *arena, Config *config);
+                         Arena *arena, Config *config, i32 node_id);
 
 std::vector<u64> GetRemainingNodeCapacities(SharedMemoryContext *context);
+std::string GetSwapFilename(MetadataManager *mdm, u32 node_id);
 
 }  // namespace hermes
 

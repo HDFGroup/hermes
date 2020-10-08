@@ -379,8 +379,34 @@ void SeedHashForStorage(size_t seed) {
   stbds_rand_seed(seed);
 }
 
+void InitSwapSpaceFilename(SharedMemoryContext *context, MetadataManager *mdm,
+                           Arena *arena, Config *config) {
+  std::string swap_filename_prefix("swap");
+  size_t swap_mount_length = config->swap_mount.size();
+  bool ends_in_slash = config->swap_mount[swap_mount_length - 1] == '/';
+  std::string full_swap_path = (config->swap_mount + (ends_in_slash ? "" : "/")
+                                + swap_filename_prefix);
+  size_t full_swap_path_size = full_swap_path.size() + 1;
+
+  char *swap_filename_memory = PushArray<char>(arena, full_swap_path_size);
+  memcpy(swap_filename_memory, full_swap_path.c_str(), full_swap_path.size());
+  swap_filename_memory[full_swap_path.size()] = '\0';
+  mdm->swap_filename_prefix_offset =
+    GetOffsetFromMdm(mdm, swap_filename_memory);
+
+  const char swap_file_suffix[] = ".hermes";
+  char *swap_file_suffix_memory = PushArray<char>(arena,
+                                                  sizeof(swap_file_suffix));
+  memcpy(swap_file_suffix_memory, swap_file_suffix,
+         sizeof(swap_file_suffix));
+  mdm->swap_filename_suffix_offset =
+    GetOffsetFromMdm(mdm, swap_file_suffix_memory);
+}
+
 void InitMetadataStorage(SharedMemoryContext *context, MetadataManager *mdm,
-                         Arena *arena, Config *config) {
+                         Arena *arena, Config *config, i32 node_id) {
+  InitSwapSpaceFilename(context, mdm, arena, config);
+
   // Heaps
 
   u32 heap_alignment = 8;
@@ -416,6 +442,7 @@ void InitMetadataStorage(SharedMemoryContext *context, MetadataManager *mdm,
   mdm->bucket_map_offset = GetOffsetFromMdm(mdm, bucket_map);
   u32 bucket_map_num_bytes = map_heap->extent;
   total_map_capacity -= bucket_map_num_bytes;
+  assert(total_map_capacity > 0);
 
   // TODO(chogan): Just one map means better size estimate, but it's probably
   // slower because they'll all share a lock.
@@ -426,6 +453,7 @@ void InitMetadataStorage(SharedMemoryContext *context, MetadataManager *mdm,
   mdm->vbucket_map_offset = GetOffsetFromMdm(mdm, vbucket_map);
   u32 vbucket_map_num_bytes = map_heap->extent - bucket_map_num_bytes;
   total_map_capacity -= vbucket_map_num_bytes;
+  assert(total_map_capacity > 0);
 
   IdMap *blob_map = 0;
   // NOTE(chogan): Each map element requires twice its size for storage.

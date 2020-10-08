@@ -21,7 +21,7 @@
 // 4. Add a case to ParseTokens for the new variable.
 // 5. Add the new variable to the Config struct.
 // 6. Add an Assert to config_parser_test.cc to test the functionality.
-// 7. Set a default value in InitTestConfig
+// 7. Set a default value in InitDefaultConfig
 
 namespace hermes {
 
@@ -54,6 +54,8 @@ enum ConfigVariable {
   ConfigVariable_TransferWindowArenaPercentage,
   ConfigVariable_TransientArenaPercentage,
   ConfigVariable_MountPoints,
+  ConfigVariable_SwapMount,
+  ConfigVariable_NumBufferOrganizerRetries,
   ConfigVariable_MaxBucketsPerNode,
   ConfigVariable_MaxVBucketsPerNode,
   ConfigVariable_SystemViewStateUpdateInterval,
@@ -63,6 +65,7 @@ enum ConfigVariable {
   ConfigVariable_RpcProtocol,
   ConfigVariable_RpcDomain,
   ConfigVariable_RpcPort,
+  ConfigVariable_BufferOrganizerPort,
   ConfigVariable_RpcHostNumberRange,
   ConfigVariable_RpcNumThreads,
 
@@ -86,6 +89,8 @@ static const char *kConfigVariableStrings[ConfigVariable_Count] = {
   "transfer_window_arena_percentage",
   "transient_arena_percentage",
   "mount_points",
+  "swap_mount",
+  "num_buffer_organizer_retries",
   "max_buckets_per_node",
   "max_vbuckets_per_node",
   "system_view_state_update_interval_ms",
@@ -95,6 +100,7 @@ static const char *kConfigVariableStrings[ConfigVariable_Count] = {
   "rpc_protocol",
   "rpc_domain",
   "rpc_port",
+  "buffer_organizer_port",
   "rpc_host_number_range",
   "rpc_num_threads",
 };
@@ -743,6 +749,14 @@ void ParseTokens(TokenList *tokens, Config *config) {
         tok = ParseStringList(tok, config->mount_points, config->num_devices);
         break;
       }
+      case ConfigVariable_SwapMount: {
+        config->swap_mount = ParseString(&tok);
+        break;
+      }
+      case ConfigVariable_NumBufferOrganizerRetries: {
+        config->num_buffer_organizer_retries = ParseInt(&tok);
+        break;
+      }
       case ConfigVariable_MaxBucketsPerNode: {
         config->max_buckets_per_node = ParseInt(&tok);
         break;
@@ -777,6 +791,10 @@ void ParseTokens(TokenList *tokens, Config *config) {
       }
       case ConfigVariable_RpcPort: {
         config->rpc_port = ParseInt(&tok);
+        break;
+      }
+      case ConfigVariable_BufferOrganizerPort: {
+        config->buffer_organizer_port = ParseInt(&tok);
         break;
       }
       case ConfigVariable_RpcHostNumberRange: {

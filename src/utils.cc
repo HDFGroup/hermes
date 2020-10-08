@@ -71,12 +71,16 @@ void InitDefaultConfig(Config *config) {
   config->mount_points[1] = "./";
   config->mount_points[2] = "./";
   config->mount_points[3] = "./";
+  config->swap_mount = "./";
+
+  config->num_buffer_organizer_retries = 3;
 
   config->rpc_server_base_name = "localhost";
   config->rpc_server_suffix = "";
   config->rpc_protocol = "ofi+sockets";
   config->rpc_domain = "";
   config->rpc_port = 8080;
+  config->buffer_organizer_port = 8081;
   config->rpc_num_threads = 1;
 
   config->max_buckets_per_node = 16;

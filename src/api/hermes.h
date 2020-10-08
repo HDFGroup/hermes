@@ -17,8 +17,6 @@
 namespace hermes {
 namespace api {
 
-typedef int Status;
-
 class Hermes {
  public:
   std::set<std::string> bucket_list_;
@@ -73,9 +71,13 @@ enum class PlacementPolicy {
 };
 
 struct Context {
-  PlacementPolicy policy;
+  static int default_buffer_organizer_retries;
 
-  Context() : policy(PlacementPolicy::kRoundRobin) {}
+  PlacementPolicy policy;
+  int buffer_organizer_retries;
+
+  Context() : policy(PlacementPolicy::kRoundRobin),
+              buffer_organizer_retries(default_buffer_organizer_retries) {}
 };
 
 struct TraitTag{};
@@ -103,6 +105,7 @@ std::shared_ptr<api::Hermes> InitHermes(const char *config_file = NULL,
 }  // namespace api
 
 std::shared_ptr<api::Hermes> InitHermesDaemon(char *config_file = NULL);
+std::shared_ptr<api::Hermes> InitHermesDaemon(Config *config);
 std::shared_ptr<api::Hermes> InitHermesClient(const char *config_file = NULL);
 
 }  // namespace hermes

@@ -75,6 +75,9 @@ class Bucket {
   Status Put(std::vector<std::string> &names,
              std::vector<std::vector<T>> &blobs, Context &ctx);
 
+  /** Get the size in bytes of the Blob referred to by `name` */
+  size_t GetBlobSize(Arena *arena, const std::string &name, Context &ctx);
+
   /** get a blob on this bucket */
   /** - if user_blob.size() == 0 => return the minimum buffer size needed */
   /** - if user_blob.size() > 0 => copy user_blob.size() bytes */
@@ -96,6 +99,9 @@ class Bucket {
 
   /** Returns true if the Bucket contains a Blob called `name` */
   bool ContainsBlob(const std::string &name);
+
+  /** Returns true if the Blob called `name` in this bucket is in swap space */
+  bool BlobIsInSwap(const std::string &name);
 
   /** get a list of blob names filtered by pred */
   template<class Predicate>
@@ -133,23 +139,12 @@ Status Bucket::PlaceBlobs(std::vector<PlacementSchema> &schemas,
   for (size_t i = 0; i < schemas.size(); ++i) {
     PlacementSchema &schema = schemas[i];
     if (schema.size()) {
-      std::vector<BufferID> buffer_ids = GetBuffers(&hermes_->context_, schema);
-      if (buffer_ids.size()) {
-        LOG(INFO) << "Attaching blob " << names[i] << " to Bucket "
-                  << name_ << std::endl;
-        hermes::Blob blob = {};
-        blob.data = (u8 *)blobs[i].data();
-        blob.size = blobs[i].size() * sizeof(T);
-        WriteBlobToBuffers(&hermes_->context_, &hermes_->rpc_, blob,
-                           buffer_ids);
-
-        // NOTE(chogan): Update all metadata associated with this Put
-        AttachBlobToBucket(&hermes_->context_, &hermes_->rpc_, names[i].c_str(),
-                           id_, buffer_ids);
-      } else {
-        // TODO(chogan): @errorhandling
-        result = 1;
-      }
+      hermes::Blob blob = {};
+      blob.data = (u8 *)blobs[i].data();
+      blob.size = blobs[i].size() * sizeof(T);
+      // TODO(chogan): @errorhandling What about partial failure?
+      result = PlaceBlob(&hermes_->context_, &hermes_->rpc_, schema, blob,
+                         names[i].c_str(), id_);
     } else {
       // TODO(chogan): @errorhandling
       result = 1;
@@ -176,6 +171,17 @@ Status Bucket::Put(std::vector<std::string> &names,
 
     if (ret == 0) {
       ret = PlaceBlobs(schemas, blobs, names);
+    } else {
+      std::vector<SwapBlob> swapped_blobs =
+        PutToSwap(&hermes_->context_, &hermes_->rpc_, id_, blobs, names);
+
+      for (int i = 0; i < swapped_blobs.size(); ++i) {
+        TriggerBufferOrganizer(&hermes_->rpc_, kPlaceInHierarchy, names[i],
+                               swapped_blobs[i], ctx.buffer_organizer_retries);
+      }
+      ret = 0;
+      // TODO(chogan): @errorhandling Signify in Status that the Blobs went to
+      // swap space
     }
   } else {
     // TODO(chogan): @errorhandling

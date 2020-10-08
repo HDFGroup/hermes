@@ -14,6 +14,8 @@ namespace hermes {
 
 namespace api {
 
+int Context::default_buffer_organizer_retries;
+
 Status RenameBucket(const std::string &old_name,
                     const std::string &new_name,
                     Context &ctx) {
@@ -81,21 +83,25 @@ ArenaInfo GetArenaInfo(Config *config) {
 
   ArenaInfo result = {};
 
-  for (int i = 0; i < kArenaType_Count; ++i) {
-    size_t pages {0};
-    if (i < kArenaType_Count-1) {
-      pages = std::floor(config->arena_percentages[i] * total_pages);
-      pages_left -= pages;
-    } else {
-      pages = pages_left;
-      pages_left = 0;
-    }
+  for (int i = kArenaType_Count - 1; i > kArenaType_BufferPool; --i) {
+    size_t desired_pages =
+      std::floor(config->arena_percentages[i] * total_pages);
+    // NOTE(chogan): Each arena gets 1 page at minimum
+    size_t pages = std::max(desired_pages, 1UL);
+    pages_left -= pages;
     size_t num_bytes = pages * page_size;
     result.sizes[i] = num_bytes;
     result.total += num_bytes;
   }
 
-  assert(pages_left == 0);
+  if (pages_left == 0) {
+    // TODO(chogan): @errorhandling
+    HERMES_NOT_IMPLEMENTED_YET;
+  }
+
+  // NOTE(chogan): BufferPool Arena gets remainder of pages
+  result.sizes[kArenaType_BufferPool] = pages_left * page_size;
+  result.total += result.sizes[kArenaType_BufferPool];
 
   return result;
 }
@@ -135,7 +141,8 @@ SharedMemoryContext InitHermesCore(Config *config, CommunicationContext *comm,
   mdm->rpc_state_offset = (u8 *)rpc->state - shmem_base;
 
   InitMetadataManager(mdm, &arenas[kArenaType_MetaData], config, comm->node_id);
-  InitMetadataStorage(&context, mdm, &arenas[kArenaType_MetaData], config);
+  InitMetadataStorage(&context, mdm, &arenas[kArenaType_MetaData], config,
+                      comm->node_id);
 
   // NOTE(chogan): Store the metadata_manager_offset right after the
   // buffer_pool_offset so other processes can pick it up.
@@ -225,23 +232,27 @@ std::shared_ptr<api::Hermes> InitHermes(Config *config, bool is_daemon,
     std::string host_number = GetHostNumberAsString(&result->rpc_,
                                                     result->rpc_.node_id);
 
-    std::string rpc_server_addr = config->rpc_protocol + "://";
-
-    if (!config->rpc_domain.empty()) {
-      rpc_server_addr += config->rpc_domain + "/";
-    }
-    rpc_server_addr += (config->rpc_server_base_name + host_number +
-                        config->rpc_server_suffix + ":" +
-                        std::to_string(config->rpc_port));
-
+    std::string rpc_server_addr = GetRpcAddress(config, host_number,
+                                                config->rpc_port);
     result->rpc_.start_server(&result->context_, &result->rpc_,
                               &result->trans_arena_, rpc_server_addr.c_str(),
                               config->rpc_num_threads);
+
+    std::string bo_address = GetRpcAddress(config, host_number,
+                                           config->buffer_organizer_port);
+    // TODO(chogan): @config Probably want a configuration variable for this.
+    int bo_threads = 1;
+    StartBufferOrganizer(&result->context_, &result->rpc_, bo_address.c_str(),
+                         bo_threads, config->buffer_organizer_port);
+
     double sleep_ms = config->system_view_state_update_interval_ms;
     StartGlobalSystemViewStateUpdateThread(&result->context_, &result->rpc_,
                                            &result->trans_arena_,
                                            sleep_ms);
   }
+
+  api::Context::default_buffer_organizer_retries =
+    config->num_buffer_organizer_retries;
 
   WorldBarrier(&comm);
 
@@ -280,6 +291,12 @@ std::shared_ptr<api::Hermes> InitHermesClient(const char *config_file) {
 
 std::shared_ptr<api::Hermes> InitHermesDaemon(char *config_file) {
   std::shared_ptr<api::Hermes> result = api::InitHermes(config_file, true);
+
+  return result;
+}
+
+std::shared_ptr<api::Hermes> InitHermesDaemon(Config *config) {
+  std::shared_ptr<api::Hermes> result = InitHermes(config, true, false);
 
   return result;
 }

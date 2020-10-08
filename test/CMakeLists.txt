@@ -66,7 +66,7 @@ target_link_libraries(bp ${LIBRT} hermes MPI::MPI_CXX
     $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium>)
 target_compile_definitions(bp
   PRIVATE $<$<BOOL:${HERMES_RPC_THALLIUM}>:HERMES_RPC_THALLIUM>)
-add_test(NAME "TestBufferPool" COMMAND "${CMAKE_BINARY_DIR}/bin/bp" "-b")
+add_test(NAME "TestBufferPool" COMMAND "${CMAKE_BINARY_DIR}/bin/bp" "-b" "-s")
 set_tests_properties("TestBufferPool" PROPERTIES ENVIRONMENT
   LSAN_OPTIONS=suppressions=${CMAKE_CURRENT_SOURCE_DIR}/data/asan.supp)
 

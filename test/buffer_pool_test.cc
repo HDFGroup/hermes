@@ -1,9 +1,12 @@
+#include <chrono>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include <mpi.h>
 
 #include "hermes.h"
+#include "bucket.h"
 #include "buffer_pool_internal.h"
 #include "utils.h"
 #include "test_utils.h"
@@ -16,9 +19,9 @@
  * node.
  */
 
-namespace hapi = hermes::api;
+using hermes::api::Hermes;
 
-void TestGetBuffers(hapi::Hermes *hermes) {
+void TestGetBuffers(Hermes *hermes) {
   using namespace hermes;  // NOLINT(*)
   SharedMemoryContext *context = &hermes->context_;
   BufferPool *pool = GetBufferPoolFromContext(context);
@@ -67,29 +70,101 @@ void TestGetBandwidths(hermes::SharedMemoryContext *context) {
   }
 }
 
+void TestSwap(std::shared_ptr<Hermes> hermes) {
+  namespace hapi = hermes::api;
+  hapi::Context ctx;
+  ctx.policy = hapi::PlacementPolicy::kRandom;
+  hapi::Bucket bucket(std::string("swap_bucket"), hermes, ctx);
+  hapi::Blob data(MEGABYTES(1), 'x');
+  std::string blob_name("swap_blob");
+  bucket.Put(blob_name, data, ctx);
+
+  Assert(bucket.ContainsBlob(blob_name));
+
+  hapi::Blob get_result;
+  size_t blob_size = bucket.Get(blob_name, get_result, ctx);
+  get_result.resize(blob_size);
+  blob_size = bucket.Get(blob_name, get_result, ctx);
+
+  Assert(get_result == data);
+
+  bucket.Destroy(ctx);
+}
+
+void TestBufferOrganizer(std::shared_ptr<Hermes> hermes) {
+  namespace hapi = hermes::api;
+  hapi::Context ctx;
+  ctx.policy = hapi::PlacementPolicy::kRandom;
+  hapi::Bucket bucket(std::string("bo_bucket"), hermes, ctx);
+
+  // NOTE(chogan): Fill our single buffer with a blob.
+  hapi::Blob data1(KILOBYTES(4), 'x');
+  std::string blob1_name("bo_blob1");
+  bucket.Put(blob1_name, data1, ctx);
+  Assert(bucket.ContainsBlob(blob1_name));
+
+  // NOTE(chogan): Try to put another blob, which will go to the swap space
+  // since the hierarchy is full.
+  hapi::Blob data2(KILOBYTES(4), 'y');
+  std::string blob2_name("bo_blob2");
+  bucket.Put(blob2_name, data2, ctx);
+  Assert(bucket.BlobIsInSwap(blob2_name));
+
+  // NOTE(chogan): Delete the first blob, which will make room for the second,
+  // and the buffer organizer should move it from swap space to the hierarchy.
+  bucket.DeleteBlob(blob1_name, ctx);
+
+  // NOTE(chogan): Give the BufferOrganizer time to finish.
+  std::this_thread::sleep_for(std::chrono::seconds(2));
+
+  Assert(bucket.ContainsBlob(blob2_name));
+  Assert(!bucket.BlobIsInSwap(blob2_name));
+
+  hapi::Blob get_result;
+  size_t blob_size = bucket.Get(blob2_name, get_result, ctx);
+  get_result.resize(blob_size);
+  blob_size = bucket.Get(blob2_name, get_result, ctx);
+
+  Assert(get_result == data2);
+
+  bucket.Destroy(ctx);
+}
+
 void PrintUsage(char *program) {
   fprintf(stderr, "Usage %s -[b] [-f <path>]\n", program);
   fprintf(stderr, "  -b\n");
   fprintf(stderr, "     Run GetBuffers test.\n");
   fprintf(stderr, "  -f <path>\n");
   fprintf(stderr, "     Path to a Hermes configuration file.\n");
+  fprintf(stderr, "  -s\n");
+  fprintf(stderr, "     Test the functionality of the swap target.\n");
+  fprintf(stderr, "  -x\n");
+  fprintf(stderr, "     Start a Hermes server as a daemon.\n");
 }
 
 int main(int argc, char **argv) {
   int option = -1;
   char *config_file = 0;
   bool test_get_buffers = false;
-  bool force_shutdown_rpc_server = false;
+  bool test_swap = false;
+  bool start_server = false;
 
-  while ((option = getopt(argc, argv, "bf:")) != -1) {
+  while ((option = getopt(argc, argv, "bf:s")) != -1) {
     switch (option) {
       case 'b': {
         test_get_buffers = true;
-        force_shutdown_rpc_server = true;
         break;
       }
       case 'f': {
         config_file = optarg;
+        break;
+      }
+      case 's': {
+        test_swap = true;
+        break;
+      }
+      case 'x': {
+        start_server = true;
         break;
       }
       default:
@@ -113,14 +188,39 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  std::shared_ptr<hapi::Hermes> hermes = hermes::InitHermesDaemon(config_file);
-
   if (test_get_buffers) {
+    std::shared_ptr<Hermes> hermes = hermes::InitHermesDaemon(config_file);
     TestGetBuffers(hermes.get());
     TestGetBandwidths(&hermes->context_);
+    hermes->Finalize(true);
   }
 
-  hermes->Finalize(force_shutdown_rpc_server);
+  if (test_swap) {
+    hermes::Config config = {};
+    InitDefaultConfig(&config);
+    // NOTE(chogan): Make capacities small so that a Put of 1MB will go to swap
+    // space. After metadata, this configuration gives us 1 4KB RAM buffer.
+    config.capacities[0] = KILOBYTES(32);
+    config.capacities[1] = 8;
+    config.capacities[2] = 8;
+    config.capacities[3] = 8;
+    config.desired_slab_percentages[0][0] = 1;
+    config.desired_slab_percentages[0][1] = 0;
+    config.desired_slab_percentages[0][2] = 0;
+    config.desired_slab_percentages[0][3] = 0;
+    config.arena_percentages[hermes::kArenaType_BufferPool] = 0.5;
+    config.arena_percentages[hermes::kArenaType_MetaData] = 0.5;
+
+    std::shared_ptr<Hermes> hermes = hermes::InitHermesDaemon(&config);
+    // TestSwap(hermes);
+    TestBufferOrganizer(hermes);
+    hermes->Finalize(true);
+  }
+
+  if (start_server) {
+    std::shared_ptr<Hermes> hermes = hermes::InitHermesDaemon(config_file);
+    hermes->Finalize();
+  }
 
   MPI_Finalize();
 

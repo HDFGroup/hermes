@@ -221,7 +221,7 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
         u32 result = LocalAllocateBufferIdList(mdm, buffer_ids);
 
         req.respond(result);
-    };
+      };
 
   function<void(const request&, BucketID, const string&, const string&)>
     rpc_rename_bucket = [context, rpc](const request &req, BucketID id,
@@ -347,6 +347,79 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
   rpc_server->define("RemoteFinalize", rpc_finalize).disable_response();
 }
 
+void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
+                          const char *addr, int num_threads, int port) {
+  ThalliumState *state = GetThalliumState(rpc);
+
+  state->bo_engine = new tl::engine(addr, THALLIUM_SERVER_MODE, true,
+                                    num_threads);
+  tl::engine *rpc_server = state->bo_engine;
+
+  std::string rpc_server_name = rpc_server->self();
+  LOG(INFO) << "Buffer organizer serving at " << rpc_server_name << " with "
+            << num_threads << " RPC threads" << std::endl;
+
+  std::string server_name_postfix = ":" + std::to_string(port);
+  CopyStringToCharArray(server_name_postfix, state->bo_server_name_postfix,
+                        kMaxServerNamePostfix);
+
+  auto rpc_place_in_hierarchy = [context, rpc](const tl::request &req,
+                                               SwapBlob swap_blob,
+                                               const std::string name,
+                                               int retries) {
+    (void)req;
+    for (int i = 0; i < retries; ++i) {
+      LOG(INFO) << "Buffer Organizer placing blob '" << name
+                << "' in hierarchy. Attempt " << i + 1 << " of " << retries
+                << std::endl;
+      int result = PlaceInHierarchy(context, rpc, swap_blob, name);
+      if (result == 0) {
+        break;
+      } else {
+        // TODO(chogan): We probably don't want to sleep here, but for now this
+        // enables testing.
+        double sleep_ms = 2000;
+        ThalliumState *state = GetThalliumState(rpc);
+
+        if (state && state->bo_engine) {
+          tl::thread::self().sleep(*state->bo_engine, sleep_ms);
+        }
+      }
+    }
+  };
+
+  auto rpc_move_to_target = [context, rpc](const tl::request &req,
+                                           SwapBlob swap_blob,
+                                           TargetID target_id, int retries) {
+    (void)req;
+    for (int i = 0; i < retries; ++i) {
+      // TODO(chogan): MoveToTarget(context, rpc, target_id, swap_blob);
+      HERMES_NOT_IMPLEMENTED_YET;
+      int result = 0;
+      if (result == 0) {
+        break;
+      }
+    }
+  };
+
+  rpc_server->define("PlaceInHierarchy",
+                     rpc_place_in_hierarchy).disable_response();
+  rpc_server->define("MoveToTarget",
+                     rpc_move_to_target).disable_response();
+}
+
+void TriggerBufferOrganizer(RpcContext *rpc, const char *func_name,
+                            const std::string &blob_name, SwapBlob swap_blob,
+                            int retries) {
+  std::string server_name = GetServerName(rpc, rpc->node_id, true);
+  std::string protocol = GetProtocol(rpc);
+  tl::engine engine(protocol, THALLIUM_CLIENT_MODE, true);
+  tl::remote_procedure remote_proc = engine.define(func_name);
+  tl::endpoint server = engine.lookup(server_name);
+  remote_proc.disable_response();
+  // TODO(chogan): Templatize?
+  remote_proc.on(server)(swap_blob, blob_name, retries);
+}
 
 void StartGlobalSystemViewStateUpdateThread(SharedMemoryContext *context,
                                             RpcContext *rpc, Arena *arena,
@@ -407,14 +480,31 @@ void FinalizeRpcContext(RpcContext *rpc, bool is_daemon) {
 
   if (is_daemon) {
     state->engine->wait_for_finalize();
+    state->bo_engine->wait_for_finalize();
   } else {
     state->engine->finalize();
+    state->bo_engine->finalize();
   }
 
   delete state->engine;
+  delete state->bo_engine;
 }
 
-std::string GetServerName(RpcContext *rpc, u32 node_id) {
+std::string GetRpcAddress(Config *config, const std::string &host_number,
+                          int port) {
+  std::string result = config->rpc_protocol + "://";
+
+  if (!config->rpc_domain.empty()) {
+    result += config->rpc_domain + "/";
+  }
+  result += (config->rpc_server_base_name + host_number +
+             config->rpc_server_suffix + ":" + std::to_string(port));
+
+  return result;
+}
+
+std::string GetServerName(RpcContext *rpc, u32 node_id,
+                          bool is_buffer_organizer) {
   ThalliumState *tl_state = GetThalliumState(rpc);
 
   std::string host_number = GetHostNumberAsString(rpc, node_id);
@@ -433,7 +523,12 @@ std::string GetServerName(RpcContext *rpc, u32 node_id) {
   std::string result = std::string(tl_state->server_name_prefix);
 
   result += std::string(ip_address);
-  result += std::string(tl_state->server_name_postfix);
+
+  if (is_buffer_organizer) {
+    result += std::string(tl_state->bo_server_name_postfix);
+  } else {
+    result += std::string(tl_state->server_name_postfix);
+  }
 
   return result;
 }
