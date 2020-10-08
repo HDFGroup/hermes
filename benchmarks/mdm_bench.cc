@@ -42,9 +42,22 @@ int main(int argc, char **argv) {
         id.bits.header_index = j;
         buffer_ids[j] = id;
       }
+
       auto start = now();
       hermes::u32 location = LocalAllocateBufferIdList(mdm, buffer_ids);
       auto end = now();
+
+      if (i == 1) {
+        // NOTE(chogan): Prime the cache
+        hermes::BlobID blob_id = {};
+        blob_id.bits.node_id = app_rank;
+        blob_id.bits.buffer_ids_offset = location;
+        LocalFreeBufferIdList(&hermes->context_, blob_id);
+
+        start = now();
+        location = LocalAllocateBufferIdList(mdm, buffer_ids);
+        end = now();
+      }
 
       hermes::BlobID blob_id = {};
       blob_id.bits.node_id = app_rank;
