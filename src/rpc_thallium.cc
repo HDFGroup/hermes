@@ -392,6 +392,8 @@ void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
                                            SwapBlob swap_blob,
                                            TargetID target_id, int retries) {
     (void)req;
+    (void)swap_blob;
+    (void)target_id;
     for (int i = 0; i < retries; ++i) {
       // TODO(chogan): MoveToTarget(context, rpc, target_id, swap_blob);
       HERMES_NOT_IMPLEMENTED_YET;

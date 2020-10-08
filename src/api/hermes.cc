@@ -147,8 +147,7 @@ SharedMemoryContext InitHermesCore(Config *config, CommunicationContext *comm,
   mdm->rpc_state_offset = (u8 *)rpc->state - shmem_base;
 
   InitMetadataManager(mdm, &arenas[kArenaType_MetaData], config, comm->node_id);
-  InitMetadataStorage(&context, mdm, &arenas[kArenaType_MetaData], config,
-                      comm->node_id);
+  InitMetadataStorage(&context, mdm, &arenas[kArenaType_MetaData], config);
 
   // NOTE(chogan): Store the metadata_manager_offset right after the
   // buffer_pool_offset so other processes can pick it up.

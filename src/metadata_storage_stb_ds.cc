@@ -380,8 +380,7 @@ void SeedHashForStorage(size_t seed) {
   stbds_rand_seed(seed);
 }
 
-void InitSwapSpaceFilename(SharedMemoryContext *context, MetadataManager *mdm,
-                           Arena *arena, Config *config) {
+void InitSwapSpaceFilename(MetadataManager *mdm, Arena *arena, Config *config) {
   std::string swap_filename_prefix("swap");
   size_t swap_mount_length = config->swap_mount.size();
   bool ends_in_slash = config->swap_mount[swap_mount_length - 1] == '/';
@@ -405,8 +404,8 @@ void InitSwapSpaceFilename(SharedMemoryContext *context, MetadataManager *mdm,
 }
 
 void InitMetadataStorage(SharedMemoryContext *context, MetadataManager *mdm,
-                         Arena *arena, Config *config, i32 node_id) {
-  InitSwapSpaceFilename(context, mdm, arena, config);
+                         Arena *arena, Config *config) {
+  InitSwapSpaceFilename(mdm, arena, config);
 
   // Heaps
 

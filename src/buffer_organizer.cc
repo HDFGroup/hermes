@@ -17,6 +17,10 @@ int PlaceInHierarchy(SharedMemoryContext *context, RpcContext *rpc,
     blob.data = blob_mem.data();
     blob.size = blob_mem.size();
     size_t bytes_read = ReadFromSwap(context, blob, swap_blob);
+    if (bytes_read != swap_blob.size) {
+      // TODO(chogan): @errorhandling
+      result = 1;
+    }
 
     ret = PlaceBlob(context, rpc, schemas[0], blob, name.c_str(),
                     swap_blob.bucket_id);
@@ -30,6 +34,10 @@ int PlaceInHierarchy(SharedMemoryContext *context, RpcContext *rpc,
 
 int MoveToTarget(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id,
                  TargetID dest) {
+  (void)(context);
+  (void)(rpc);
+  (void)(blob_id);
+  (void)(dest);
 // TODO(chogan): Move blob from current location to Target dest
   HERMES_NOT_IMPLEMENTED_YET;
   int result = 0;

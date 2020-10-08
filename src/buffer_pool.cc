@@ -374,6 +374,7 @@ static std::atomic<u32> *GetAvailableBuffersArray(SharedMemoryContext *context,
   return result;
 }
 
+#if 0
 static u32 GetNumBuffersAvailable(SharedMemoryContext *context,
                                   DeviceID device_id, int slab_index) {
   std::atomic<u32> *buffers_available = GetAvailableBuffersArray(context,
@@ -404,6 +405,7 @@ static u64 GetNumBytesRemaining(SharedMemoryContext *context, DeviceID id) {
 
   return result;
 }
+#endif
 
 static void DecrementAvailableBuffers(SharedMemoryContext *context,
                                       DeviceID device_id, int slab_index) {
@@ -1465,11 +1467,12 @@ SwapBlob WriteToSwap(SharedMemoryContext *context, Blob blob, u32 node_id,
       HERMES_NOT_IMPLEMENTED_YET;
     }
 
-    result.offset = ftell(context->swap_file);
-    if (result.offset == -1) {
+    long int file_position = ftell(context->swap_file);
+    if (file_position == -1) {
       // TODO(chogan): @errorhandling
       HERMES_NOT_IMPLEMENTED_YET;
     }
+    result.offset = file_position;
 
     if (fwrite(blob.data, 1, blob.size, context->swap_file) != blob.size) {
       // TODO(chogan): @errorhandling
