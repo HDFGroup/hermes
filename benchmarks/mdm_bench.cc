@@ -47,18 +47,6 @@ int main(int argc, char **argv) {
       hermes::u32 location = LocalAllocateBufferIdList(mdm, buffer_ids);
       auto end = now();
 
-      if (i == 1) {
-        // NOTE(chogan): Prime the cache
-        hermes::BlobID blob_id = {};
-        blob_id.bits.node_id = app_rank;
-        blob_id.bits.buffer_ids_offset = location;
-        LocalFreeBufferIdList(&hermes->context_, blob_id);
-
-        start = now();
-        location = LocalAllocateBufferIdList(mdm, buffer_ids);
-        end = now();
-      }
-
       hermes::BlobID blob_id = {};
       blob_id.bits.node_id = app_rank;
       blob_id.bits.buffer_ids_offset = location;
@@ -72,7 +60,7 @@ int main(int argc, char **argv) {
       MPI_Reduce(&seconds, &max_seconds, 1, MPI_DOUBLE, MPI_MAX, 0, *app_comm);
 
       if (hermes->comm_.first_on_node) {
-        printf("local,1,%d,%d,%f\n", app_size, payload_bytes, max_seconds);
+        printf("put,local,1,%d,%d,%f\n", app_size, payload_bytes, max_seconds);
       }
     }
 
