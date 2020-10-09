@@ -210,7 +210,8 @@ void LocalFreeBufferIdList(SharedMemoryContext *context, BlobID blob_id) {
   u8 *to_free = HeapOffsetToPtr(id_heap, blob_id.bits.buffer_ids_offset);
 
   HeapFree(id_heap, to_free);
-  CheckHeapOverlap(mdm);
+  // TEMP(chogan):
+  // CheckHeapOverlap(mdm);
 }
 
 void LocalRemoveBlobFromBucketInfo(SharedMemoryContext *context,
