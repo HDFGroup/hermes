@@ -231,6 +231,11 @@ u32 HashString(MetadataManager *mdm, RpcContext *rpc, const char *str);
 MetadataManager *GetMetadataManagerFromContext(SharedMemoryContext *context);
 BucketInfo *LocalGetBucketInfoByIndex(MetadataManager *mdm, u32 index);
 VBucketInfo *GetVBucketInfoByIndex(MetadataManager *mdm, u32 index);
+u32 AllocateBufferIdList(SharedMemoryContext *context, RpcContext *rpc,
+                         u32 target_node,
+                         const std::vector<BufferID> &buffer_ids);
+void FreeBufferIdList(SharedMemoryContext *context, RpcContext *rpc,
+                      BlobID blob_id);
 
 void LocalAddBlobIdToBucket(MetadataManager *mdm, BucketID bucket_id,
                             BlobID blob_id);

@@ -50,12 +50,24 @@ bool Hermes::IsApplicationCore() {
   return result;
 }
 
+bool Hermes::IsFirstRankOnNode() {
+  bool result = comm_.first_on_node;
+
+  return result;
+}
+
 void Hermes::AppBarrier() {
   hermes::SubBarrier(&comm_);
 }
 
 int Hermes::GetProcessRank() {
   int result = comm_.sub_proc_id;
+
+  return result;
+}
+
+int Hermes::GetNodeId() {
+  int result = comm_.node_id;
 
   return result;
 }

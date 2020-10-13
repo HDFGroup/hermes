@@ -48,8 +48,10 @@ class Hermes {
   }
 
   bool IsApplicationCore();
+  bool IsFirstRankOnNode();
   void AppBarrier();
   int GetProcessRank();
+  int GetNodeId();
   int GetNumProcesses();
   void *GetAppCommunicator();
   void Finalize(bool force_rpc_shutdown = false);
