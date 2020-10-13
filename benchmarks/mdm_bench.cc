@@ -140,6 +140,9 @@ void BenchRemote(const char *config_file) {
         printf("del,remote,1,1,%d,%.8f\n", payload_bytes, del_seconds);
       }
     }
+
+    hermes->AppBarrier();
+
   } else {
     // Hermes core. No user code here.
   }
