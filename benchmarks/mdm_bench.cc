@@ -98,7 +98,6 @@ void BenchRemote(const char *config_file) {
 
   if (hermes->IsApplicationCore()) {
     int app_rank = hermes->GetProcessRank();
-    int app_size = hermes->GetNumProcesses();
 
     if (app_rank == 0) {
       for (hermes::u32 i = 1; i <= KILOBYTES(4) / sizeof_id; i *= 2) {
@@ -130,24 +129,19 @@ void BenchRemote(const char *config_file) {
         FreeBufferIdList(&hermes->context_, &hermes->rpc_, blob_id);
         time_point end_del = now();
 
-        hermes->AppBarrier();
+        double put_seconds =
+          std::chrono::duration<double>(end_put - start_put).count();
+        double del_seconds =
+          std::chrono::duration<double>(end_del - start_del).count();
 
-        double max_put_seconds = GetMaxSeconds(start_put, end_put, hermes.get());
-        // double max_get_seconds = GetMaxSeconds(start_get, end_get, hermes.get());
-        double max_del_seconds = GetMaxSeconds(start_del, end_del, hermes.get());
-
-        if (hermes->IsFirstRankOnNode()) {
-          printf("put,local,1,%d,%d,%.8f\n", app_size, payload_bytes,
-                 max_put_seconds);
-          // printf("get,local,1,%d,%d,%.8f\n", app_size, payload_bytes,
-          //        max_get_seconds);
-          printf("del,local,1,%d,%d,%.8f\n", app_size, payload_bytes,
-                 max_del_seconds);
-        }
+        printf("put,remote,1,1,%d,%.8f\n", payload_bytes, put_seconds);
+        // printf("get,local,1,%d,%d,%.8f\n", app_size, payload_bytes,
+        //        max_get_seconds);
+        printf("del,remote,1,1,%d,%.8f\n", payload_bytes, del_seconds);
       }
     }
   } else {
-    // Hermes core. No user code here. 
+    // Hermes core. No user code here.
   }
 
   hermes->Finalize();
@@ -164,7 +158,6 @@ void PrintUsage(char *program) {
 }
 
 int main(int argc, char **argv) {
-
   int option = -1;
   bool bench_local = false;
   bool bench_remote = false;
