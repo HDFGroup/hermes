@@ -115,18 +115,25 @@ void BenchRemote(const char *config_file) {
           buffer_ids[j] = id;
         }
 
+        const int kRepeats = 64;
+
         time_point start_put = now();
-        hermes::u32 id_list_offset =
-          hermes::AllocateBufferIdList(&hermes->context_, &hermes->rpc_,
-                                       target_node, buffer_ids);
+        hermes::u32 id_list_offsets[kRepeats] = {0};
+
+        for (int i = 0; i < kRepeats; ++i) {
+          id_list_offsets[i] =
+            hermes::AllocateBufferIdList(&hermes->context_, &hermes->rpc_,
+                                         target_node, buffer_ids);
+        }
         time_point end_put = now();
 
-        hermes::BlobID blob_id = {};
-        blob_id.bits.node_id = target_node;
-        blob_id.bits.buffer_ids_offset = id_list_offset;
-
         time_point start_del = now();
-        FreeBufferIdList(&hermes->context_, &hermes->rpc_, blob_id);
+        for (int i = 0; i < kRepeats; ++i) {
+          hermes::BlobID blob_id = {};
+          blob_id.bits.node_id = target_node;
+          blob_id.bits.buffer_ids_offset = id_list_offsets[i];
+          FreeBufferIdList(&hermes->context_, &hermes->rpc_, blob_id);
+        }
         time_point end_del = now();
 
         double put_seconds =
@@ -134,10 +141,12 @@ void BenchRemote(const char *config_file) {
         double del_seconds =
           std::chrono::duration<double>(end_del - start_del).count();
 
-        printf("put,remote,1,1,%d,%.8f\n", payload_bytes, put_seconds);
+        printf("%d,%f\n", payload_bytes, put_seconds / kRepeats);
+        printf("%d,%f\n", payload_bytes, del_seconds / kRepeats);
+        // printf("put,remote,1,1,%d,%.8f\n", payload_bytes, put_seconds);
         // printf("get,local,1,%d,%d,%.8f\n", app_size, payload_bytes,
         //        max_get_seconds);
-        printf("del,remote,1,1,%d,%.8f\n", payload_bytes, del_seconds);
+        // printf("del,remote,1,1,%d,%.8f\n", payload_bytes, del_seconds);
       }
     }
 
@@ -206,7 +215,6 @@ int main(int argc, char **argv) {
     fprintf(stderr, "Didn't receive appropriate MPI threading specification\n");
     return 1;
   }
-
 
   if (bench_local) {
     BenchLocal();
