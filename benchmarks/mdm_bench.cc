@@ -98,6 +98,7 @@ void BenchRemote(const char *config_file) {
 
   if (hermes->IsApplicationCore()) {
     int app_rank = hermes->GetProcessRank();
+    int app_size = hermes->GetNumProcesses();
 
     if (app_rank == 0) {
       for (hermes::u32 i = 1; i <= KILOBYTES(4) / sizeof_id; i *= 2) {
@@ -115,7 +116,7 @@ void BenchRemote(const char *config_file) {
           buffer_ids[j] = id;
         }
 
-        const int kRepeats = 64;
+        const int kRepeats = 1024;
 
         time_point start_put = now();
         hermes::u32 id_list_offsets[kRepeats] = {0};
@@ -141,8 +142,8 @@ void BenchRemote(const char *config_file) {
         double del_seconds =
           std::chrono::duration<double>(end_del - start_del).count();
 
-        printf("%d,%f\n", payload_bytes, kRepeats / put_seconds);
-        printf("%d,%f\n", payload_bytes, kRepeats / del_seconds);
+        printf("put,%d,%d,%f\n", app_size, payload_bytes, kRepeats / put_seconds);
+        printf("del,%d,%d,%f\n", app_size, payload_bytes, kRepeats / del_seconds);
         // printf("put,remote,1,1,%d,%.8f\n", payload_bytes, put_seconds);
         // printf("get,local,1,%d,%d,%.8f\n", app_size, payload_bytes,
         //        max_get_seconds);
