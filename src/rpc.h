@@ -47,6 +47,9 @@ struct RpcContext {
 void InitRpcContext(RpcContext *rpc, u32 num_nodes, u32 node_id,
                     Config *config);
 void *CreateRpcState(Arena *arena);
+void InitRpcClients(RpcContext *rpc);
+void ShutdownRpcClients(RpcContext *rpc);
+
 void FinalizeRpcContext(RpcContext *rpc, bool is_daemon);
 std::string GetHostNumberAsString(RpcContext *rpc, u32 node_id);
 std::string GetServerName(RpcContext *rpc, u32 node_id,

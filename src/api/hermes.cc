@@ -268,10 +268,14 @@ std::shared_ptr<api::Hermes> InitHermes(Config *config, bool is_daemon,
                                            sleep_ms);
   }
 
+  WorldBarrier(&comm);
+
   api::Context::default_buffer_organizer_retries =
     config->num_buffer_organizer_retries;
 
-  WorldBarrier(&comm);
+  if (comm.proc_kind == ProcessKind::kApp) {
+    InitRpcClients(&result->rpc_);
+  }
 
   return result;
 }

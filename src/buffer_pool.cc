@@ -70,6 +70,7 @@ void Finalize(SharedMemoryContext *context, CommunicationContext *comm,
               bool is_application_core, bool force_rpc_shutdown) {
   WorldBarrier(comm);
   if (is_application_core) {
+    ShutdownRpcClients(rpc);
     ReleaseSharedMemoryContext(context);
     HERMES_DEBUG_CLIENT_CLOSE();
   }

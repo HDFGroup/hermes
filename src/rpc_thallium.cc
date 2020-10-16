@@ -480,6 +480,28 @@ void *CreateRpcState(Arena *arena) {
   return result;
 }
 
+std::string GetProtocol(RpcContext *rpc) {
+  ThalliumState *tl_state = GetThalliumState(rpc);
+
+  std::string prefix = std::string(tl_state->server_name_prefix);
+  // NOTE(chogan): Chop "://" off the end of the server_name_prefix to get the
+  // protocol
+  std::string result = prefix.substr(0, prefix.length() - 3);
+
+  return result;
+}
+
+void InitRpcClients(RpcContext *rpc) {
+  ThalliumState *state = GetThalliumState(rpc);
+  std::string protocol = GetProtocol(rpc);
+  state->client_engine = new tl::engine(protocol, THALLIUM_CLIENT_MODE, true);
+}
+
+void ShutdownRpcClients(RpcContext *rpc) {
+  ThalliumState *state = GetThalliumState(rpc);
+  delete state->client_engine;
+}
+
 void FinalizeRpcContext(RpcContext *rpc, bool is_daemon) {
   ThalliumState *state = GetThalliumState(rpc);
   state->kill_requested.store(true);
@@ -537,17 +559,6 @@ std::string GetServerName(RpcContext *rpc, u32 node_id,
   } else {
     result += std::string(tl_state->server_name_postfix);
   }
-
-  return result;
-}
-
-std::string GetProtocol(RpcContext *rpc) {
-  ThalliumState *tl_state = GetThalliumState(rpc);
-
-  std::string prefix = std::string(tl_state->server_name_prefix);
-  // NOTE(chogan): Chop "://" off the end of the server_name_prefix to get the
-  // protocol
-  std::string result = prefix.substr(0, prefix.length() - 3);
 
   return result;
 }
