@@ -301,7 +301,7 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
     };
 
   function<void(const request&, int)> rpc_test =
-    [](const reqeust &req, int val) {
+    [](const request &req, int val) {
       req.respond(val + 1);
   };
 
