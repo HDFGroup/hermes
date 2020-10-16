@@ -300,10 +300,16 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
       state->engine->finalize();
     };
 
+  function<void(const request&, int)> rpc_test =
+    [](const reqeust &req, int val) {
+      req.respond(val + 1);
+  };
+
   // TODO(chogan): Currently these three are only used for testing.
   rpc_server->define("GetBuffers", rpc_get_buffers);
   rpc_server->define("SplitBuffers", rpc_split_buffers).disable_response();
   rpc_server->define("MergeBuffers", rpc_merge_buffers).disable_response();
+  rpc_server->define("RpcTest", rpc_test);
   //
 
   rpc_server->define("RemoteReleaseBuffer",
