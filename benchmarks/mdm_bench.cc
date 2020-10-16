@@ -142,8 +142,11 @@ void BenchRemote(const char *config_file) {
         double del_seconds =
           std::chrono::duration<double>(end_del - start_del).count();
 
-        printf("put,%d,%d,%f\n", app_size, payload_bytes, kRepeats / put_seconds);
-        printf("del,%d,%d,%f\n", app_size, payload_bytes, kRepeats / del_seconds);
+        double payload_megabytes = (payload_bytes * kRepeats) / 1024.0 / 1024.0;
+        printf("put,%d,%d,%f,%f\n", app_size, payload_bytes, kRepeats / put_seconds,
+               payload_megabytes / put_seconds);
+        printf("del,%d,%d,%f,%f\n", app_size, payload_bytes, kRepeats / del_seconds,
+               payload_megabytes / del_seconds);
         // printf("put,remote,1,1,%d,%.8f\n", payload_bytes, put_seconds);
         // printf("get,local,1,%d,%d,%.8f\n", app_size, payload_bytes,
         //        max_get_seconds);
