@@ -17,7 +17,13 @@ const int kMaxServerSuffixSize = 16;
 typedef void (*StartFunc)(SharedMemoryContext*, RpcContext*, Arena*,
                           const char*, int);
 
+struct ClientRpcContext {
+  void *state;
+  size_t state_size;
+};
+
 struct RpcContext {
+  ClientRpcContext client_rpc;
   void *state;
   /** The size of the internal rpc state. */
   size_t state_size;

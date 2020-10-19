@@ -24,8 +24,12 @@ double GetMaxSeconds(time_point<std::chrono::high_resolution_clock> start,
 }
 
 void BenchLocal() {
+  constexpr int sizeof_id = sizeof(hermes::BufferID);
+
   hermes::Config config = {};
   hermes::InitDefaultConfig(&config);
+  config.arena_percentages[hermes::kArenaType_BufferPool] = 0.55;
+  config.arena_percentages[hermes::kArenaType_MetaData] = 0.34;
 
   std::shared_ptr<hapi::Hermes> hermes = hermes::InitHermes(&config);
 
@@ -35,8 +39,6 @@ void BenchLocal() {
 
     hermes::MetadataManager *mdm =
       GetMetadataManagerFromContext(&hermes->context_);
-
-    constexpr int sizeof_id = sizeof(hermes::BufferID);
 
     for (hermes::u32 i = 1; i <= KILOBYTES(4) / sizeof_id; i *= 2) {
       int num_ids = i;
@@ -50,38 +52,52 @@ void BenchLocal() {
         buffer_ids[j] = id;
       }
 
+      const int kRepeats = 64;
+      hermes::u32 id_list_offsets[kRepeats] = {0};
+
       time_point start_put = now();
-      hermes::u32 location = LocalAllocateBufferIdList(mdm, buffer_ids);
+      for (int j = 0; j < kRepeats; ++j) {
+        id_list_offsets[j] = LocalAllocateBufferIdList(mdm, buffer_ids);
+      }
       time_point end_put = now();
 
       hermes::BlobID blob_id = {};
       blob_id.bits.node_id = app_rank;
-      blob_id.bits.buffer_ids_offset = location;
 
-      hermes::ScopedTemporaryMemory scratch(&hermes->trans_arena_);
       hermes::BufferIdArray buffer_id_arr = {};
 
       time_point start_get = now();
-      hermes::LocalGetBufferIdList(scratch, mdm, blob_id, &buffer_id_arr);
+      for (int j = 0; j < kRepeats; ++j) {
+        {
+          hermes::ScopedTemporaryMemory scratch(&hermes->trans_arena_);
+          blob_id.bits.buffer_ids_offset = id_list_offsets[j];
+          hermes::LocalGetBufferIdList(scratch, mdm, blob_id, &buffer_id_arr);
+        }
+      }
       time_point end_get = now();
 
       time_point start_del = now();
-      LocalFreeBufferIdList(&hermes->context_, blob_id);
+      for (int j = 0; j < kRepeats; ++j) {
+        blob_id.bits.buffer_ids_offset = id_list_offsets[j];
+        LocalFreeBufferIdList(&hermes->context_, blob_id);
+      }
       time_point end_del = now();
 
       hermes->AppBarrier();
 
+      // TODO(chogan): Avg?
       double max_put_seconds = GetMaxSeconds(start_put, end_put, hermes.get());
       double max_get_seconds = GetMaxSeconds(start_get, end_get, hermes.get());
       double max_del_seconds = GetMaxSeconds(start_del, end_del, hermes.get());
 
       if (hermes->IsFirstRankOnNode()) {
-        printf("put,local,1,%d,%d,%.8f\n", app_size, payload_bytes,
-               max_put_seconds);
-        printf("get,local,1,%d,%d,%.8f\n", app_size, payload_bytes,
-               max_get_seconds);
-        printf("del,local,1,%d,%d,%.8f\n", app_size, payload_bytes,
-               max_del_seconds);
+        double payload_megabytes = (payload_bytes * kRepeats) / 1024.0 / 1024.0;
+        printf("put,local,1,%d,%d,%f,%f\n", app_size, payload_bytes,
+               kRepeats / max_put_seconds, payload_megabytes / max_put_seconds);
+        printf("get,local,1,%d,%d,%f,%f\n", app_size, payload_bytes,
+               kRepeats / max_get_seconds, payload_megabytes / max_get_seconds);
+        printf("del,local,1,%d,%d,%f\n", app_size, payload_bytes,
+                kRepeats / max_del_seconds);
       }
     }
 
@@ -116,35 +132,47 @@ void BenchRemote(const char *config_file) {
           buffer_ids[j] = id;
         }
 
-        const int kRepeats = 1024;
-
-        time_point start_put = now();
+        const int kRepeats = 512;
         hermes::u32 id_list_offsets[kRepeats] = {0};
 
-        for (int i = 0; i < kRepeats; ++i) {
-          id_list_offsets[i] =
+        time_point start_put = now();
+        for (int j = 0; j < kRepeats; ++j) {
+          id_list_offsets[j] =
             hermes::AllocateBufferIdList(&hermes->context_, &hermes->rpc_,
                                          target_node, buffer_ids);
         }
         time_point end_put = now();
 
+        hermes::BlobID blob_id = {};
+        blob_id.bits.node_id = target_node;
+
+        time_point start_get = now();
+        for (int j = 0; j < kRepeats; ++j) {
+          blob_id.bits.buffer_ids_offset = id_list_offsets[j];
+          std::vector<hermes::BufferID> ids =
+            hermes::GetBufferIdList(&hermes->context_, &hermes->rpc_,blob_id);
+        }
+        time_point end_get = now();
+
         time_point start_del = now();
-        for (int i = 0; i < kRepeats; ++i) {
-          hermes::BlobID blob_id = {};
-          blob_id.bits.node_id = target_node;
-          blob_id.bits.buffer_ids_offset = id_list_offsets[i];
+        for (int j = 0; j < kRepeats; ++j) {
+          blob_id.bits.buffer_ids_offset = id_list_offsets[j];
           FreeBufferIdList(&hermes->context_, &hermes->rpc_, blob_id);
         }
         time_point end_del = now();
 
         double put_seconds =
           std::chrono::duration<double>(end_put - start_put).count();
+        double get_seconds =
+          std::chrono::duration<double>(end_get - start_get).count();
         double del_seconds =
           std::chrono::duration<double>(end_del - start_del).count();
 
         double payload_megabytes = (payload_bytes * kRepeats) / 1024.0 / 1024.0;
         printf("put,%d,%d,%f,%f\n", app_size, payload_bytes,
                kRepeats / put_seconds, payload_megabytes / put_seconds);
+        printf("get,%d,%d,%f,%f\n", app_size, payload_bytes,
+               kRepeats / get_seconds, payload_megabytes / get_seconds);
         printf("del,%d,%d,%f\n", app_size, payload_bytes,
                kRepeats / del_seconds);
         // printf("put,remote,1,1,%d,%.8f\n", payload_bytes, put_seconds);

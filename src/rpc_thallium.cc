@@ -472,6 +472,8 @@ void InitRpcContext(RpcContext *rpc, u32 num_nodes, u32 node_id,
                         kMaxServerSuffixSize);
   rpc->host_number_range[0] = config->rpc_host_number_range[0];
   rpc->host_number_range[1] = config->rpc_host_number_range[1];
+
+  rpc->client_rpc.state_size = sizeof(ClientThalliumState);
 }
 
 void *CreateRpcState(Arena *arena) {
@@ -492,14 +494,24 @@ std::string GetProtocol(RpcContext *rpc) {
 }
 
 void InitRpcClients(RpcContext *rpc) {
-  ThalliumState *state = GetThalliumState(rpc);
+  // TODO(chogan): Need a per-client persistent arena
+  ClientThalliumState *state =
+    (ClientThalliumState *)malloc(sizeof(ClientThalliumState));
   std::string protocol = GetProtocol(rpc);
-  state->client_engine = new tl::engine(protocol, THALLIUM_CLIENT_MODE, true);
+  // TODO(chogan): This should go in a per-client persistent arena
+  state->engine = new tl::engine(protocol, THALLIUM_CLIENT_MODE, true);
+
+  rpc->client_rpc.state = state;
 }
 
 void ShutdownRpcClients(RpcContext *rpc) {
-  ThalliumState *state = GetThalliumState(rpc);
-  delete state->client_engine;
+  ClientThalliumState *state = GetClientThalliumState(rpc);
+  if (state) {
+    if (state->engine) {
+      delete state->engine;
+    }
+    free(state);
+  }
 }
 
 void FinalizeRpcContext(RpcContext *rpc, bool is_daemon) {

@@ -21,6 +21,8 @@ class Hermes {
  public:
   std::set<std::string> bucket_list_;
   std::set<std::string> vbucket_list_;
+
+  // TODO(chogan): Temporarily public to facilitate iterative development.
   hermes::SharedMemoryContext context_;
   hermes::CommunicationContext comm_;
   hermes::RpcContext rpc_;

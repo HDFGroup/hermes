@@ -25,8 +25,11 @@ struct ThalliumState {
   std::atomic<bool> kill_requested;
   tl::engine *engine;
   tl::engine *bo_engine;
-  tl::engine *client_engine;
   ABT_xstream execution_stream;
+};
+
+struct ClientThalliumState {
+  tl::engine *engine;
 };
 
 /**
@@ -129,15 +132,22 @@ static inline ThalliumState *GetThalliumState(RpcContext *rpc) {
   return result;
 }
 
+static inline
+ClientThalliumState *GetClientThalliumState(RpcContext *rpc) {
+  ClientThalliumState *result = (ClientThalliumState *)rpc->client_rpc.state;
+
+  return result;
+}
+
 template<typename ReturnType, typename... Ts>
 ReturnType RpcCall(RpcContext *rpc, u32 node_id, const char *func_name,
                    Ts... args) {
-  ThalliumState *state = GetThalliumState(rpc);
+  ClientThalliumState *state = GetClientThalliumState(rpc);
   std::string server_name = GetServerName(rpc, node_id);
-  tl::remote_procedure remote_proc = state->client_engine->define(func_name);
+  tl::remote_procedure remote_proc = state->engine->define(func_name);
   // TODO(chogan): @optimization We can save a little work by storing the
   // endpoint instead of looking it up on every call
-  tl::endpoint server = state->client_engine->lookup(server_name);
+  tl::endpoint server = state->engine->lookup(server_name);
 
   if constexpr(std::is_same<ReturnType, void>::value) {
     remote_proc.disable_response();

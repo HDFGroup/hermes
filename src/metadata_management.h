@@ -234,6 +234,8 @@ VBucketInfo *GetVBucketInfoByIndex(MetadataManager *mdm, u32 index);
 u32 AllocateBufferIdList(SharedMemoryContext *context, RpcContext *rpc,
                          u32 target_node,
                          const std::vector<BufferID> &buffer_ids);
+std::vector<BufferID> GetBufferIdList(SharedMemoryContext *context,
+                                      RpcContext *rpc, BlobID blob_id);
 void FreeBufferIdList(SharedMemoryContext *context, RpcContext *rpc,
                       BlobID blob_id);
 
