@@ -187,9 +187,8 @@ void BenchRemote(const char *config_file) {
           std::chrono::duration<double>(end_del - start_del).count();
 
         double total_get_seconds;
-        // TODO(chogan): Correct rank and comm
         MPI_Reduce(&local_get_seconds, &total_get_seconds, 1,
-                   MPI_DOUBLE, MPI_SUM, 0, *app_comm);
+                   MPI_DOUBLE, MPI_SUM, 0, client_comm);
         double avg_get_seconds = total_get_seconds / client_comm_size;
 
         // double payload_megabytes =
