@@ -91,11 +91,14 @@ void BenchLocal() {
       double max_del_seconds = GetMaxSeconds(start_del, end_del, hermes.get());
 
       if (hermes->IsFirstRankOnNode()) {
-        double payload_megabytes = (payload_bytes * kNumRequests) / 1024.0 / 1024.0;
+        double payload_megabytes =
+          (payload_bytes * kNumRequests) / 1024.0 / 1024.0;
         printf("put,local,1,%d,%d,%f,%f\n", app_size, payload_bytes,
-               kNumRequests / max_put_seconds, payload_megabytes / max_put_seconds);
+               kNumRequests / max_put_seconds,
+               payload_megabytes / max_put_seconds);
         printf("get,local,1,%d,%d,%f,%f\n", app_size, payload_bytes,
-               kNumRequests / max_get_seconds, payload_megabytes / max_get_seconds);
+               kNumRequests / max_get_seconds,
+               payload_megabytes / max_get_seconds);
         printf("del,local,1,%d,%d,%f\n", app_size, payload_bytes,
                 kNumRequests / max_del_seconds);
       }
@@ -121,16 +124,21 @@ void BenchRemote(const char *config_file) {
     // NOTE(chogan): Create a communicator for app ranks not on node 1 so that
     // all requests are remote.
     MPI_Comm client_comm;
-    MPI_Comm_split(*app_comm, hermes->rpc_.node_id != 1, app_rank, &client_comm);
+    MPI_Comm_split(*app_comm, hermes->rpc_.node_id != 1, app_rank,
+                   &client_comm);
     int client_comm_size;
+    int client_rank;
     MPI_Comm_size(client_comm, &client_comm_size);
+    MPI_Comm_rank(client_comm, &client_rank);
     printf("client_comm size: %d\n", client_comm_size);
     printf("app_comm size: %d\n", app_size);
 
     if (hermes->rpc_.node_id != 1) {
       int target_node = 1;
 
-      for (hermes::u32 num_bytes = 8; num_bytes <= KILOBYTES(4); num_bytes *= 2) {
+      for (hermes::u32 num_bytes = 8;
+           num_bytes <= KILOBYTES(4);
+           num_bytes *= 2) {
         int num_ids = num_bytes / sizeof_id;
 
         std::vector<hermes::BufferID> buffer_ids(num_ids);
@@ -154,7 +162,7 @@ void BenchRemote(const char *config_file) {
         hermes::BlobID blob_id = {};
         blob_id.bits.node_id = target_node;
 
-        // TODO(chogan): Barrier on non-node 1 comm
+        MPI_Barrier(client_comm);
         time_point start_get = now();
         for (int j = 0; j < kNumRequests; ++j) {
           blob_id.bits.buffer_ids_offset = id_list_offsets[j];
@@ -162,7 +170,7 @@ void BenchRemote(const char *config_file) {
             hermes::GetBufferIdList(&hermes->context_, &hermes->rpc_, blob_id);
         }
         time_point end_get = now();
-        // TODO(chogan): Barrier on non-node 1 comm
+        MPI_Barrier(client_comm);
 
         time_point start_del = now();
         for (int j = 0; j < kNumRequests; ++j) {
@@ -180,14 +188,17 @@ void BenchRemote(const char *config_file) {
 
         double total_get_seconds;
         // TODO(chogan): Correct rank and comm
-        MPI_Reduce(&local_get_seconds, &total_get_seconds, 1, MPI_DOUBLE, MPI_SUM, 0, *app_comm);
+        MPI_Reduce(&local_get_seconds, &total_get_seconds, 1,
+                   MPI_DOUBLE, MPI_SUM, 0, *app_comm);
         double avg_get_seconds = total_get_seconds / client_comm_size;
 
-        // double payload_megabytes = (num_bytes * kNumRequests) / 1024.0 / 1024.0;
+        // double payload_megabytes =
+        //   (num_bytes * kNumRequests) / 1024.0 / 1024.0;
         // printf("put,%d,%d,%f,%f\n", client_comm_size, num_bytes,
         //        kNumRequests / put_seconds, payload_megabytes / put_seconds);
-        if (app_rank == 0) {
-          printf("%d,%d,%f\n", client_comm_size, (int)num_bytes, kNumRequests / avg_get_seconds);
+        if (client_rank == 0) {
+          printf("%d,%d,%f\n", client_comm_size, (int)num_bytes,
+                 kNumRequests / avg_get_seconds);
         }
         // printf("del,%d,%d,%f\n", client_comm_size, num_bytes,
         //        kNumRequests / del_seconds);
