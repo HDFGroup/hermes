@@ -12,25 +12,29 @@ namespace hapi = hermes::api;
 using std::chrono::time_point;
 const auto now = std::chrono::high_resolution_clock::now;
 const int kNumRequests = 1024;
+constexpr int sizeof_id = sizeof(hermes::BufferID);
 
-double GetMaxSeconds(time_point<std::chrono::high_resolution_clock> start,
+double GetAvgSeconds(time_point<std::chrono::high_resolution_clock> start,
                      time_point<std::chrono::high_resolution_clock> end,
                      hapi::Hermes *hermes) {
-  double seconds = std::chrono::duration<double>(end - start).count();
-  double max_seconds = 0;
+  double local_seconds = std::chrono::duration<double>(end - start).count();
+  double total_seconds = 0;
   MPI_Comm *app_comm = (MPI_Comm *)hermes->GetAppCommunicator();
-  MPI_Reduce(&seconds, &max_seconds, 1, MPI_DOUBLE, MPI_MAX, 0, *app_comm);
+  MPI_Reduce(&local_seconds, &total_seconds, 1, MPI_DOUBLE, MPI_SUM, 0,
+             *app_comm);
+  double avg_seconds = total_seconds / hermes->GetNumProcesses();
 
-  return max_seconds;
+  return avg_seconds;
 }
 
 void BenchLocal() {
-  constexpr int sizeof_id = sizeof(hermes::BufferID);
+  const int kTargetNode = 1;
 
   hermes::Config config = {};
   hermes::InitDefaultConfig(&config);
-  config.arena_percentages[hermes::kArenaType_BufferPool] = 0.55;
-  config.arena_percentages[hermes::kArenaType_MetaData] = 0.34;
+  config.capacities[0] = GIGABYTES(2);
+  config.arena_percentages[hermes::kArenaType_BufferPool] = 0.15;
+  config.arena_percentages[hermes::kArenaType_MetaData] = 0.74;
 
   std::shared_ptr<hapi::Hermes> hermes = hermes::InitHermes(&config);
 
@@ -41,16 +45,19 @@ void BenchLocal() {
     hermes::MetadataManager *mdm =
       GetMetadataManagerFromContext(&hermes->context_);
 
-    for (hermes::u32 i = 1; i <= KILOBYTES(4) / sizeof_id; i *= 2) {
-      int num_ids = i;
-      int payload_bytes = sizeof_id * num_ids;
+    for (hermes::u32 num_bytes = 8;
+         num_bytes <= KILOBYTES(4);
+         num_bytes *= 2) {
+      int num_ids = num_bytes / sizeof_id;
 
-      std::vector<hermes::BufferID> buffer_ids(i);
-      for (hermes::u32 j = 0; j < i; ++j) {
+      std::vector<hermes::BufferID> buffer_ids(num_ids);
+      for (hermes::u32 i = 0; i < num_ids; ++i) {
         hermes::BufferID id = {};
-        id.bits.node_id = app_rank;
-        id.bits.header_index = j;
-        buffer_ids[j] = id;
+        // NOTE(chogan): The target node doesn't matter, since everything is
+        // local
+        id.bits.node_id = kTargetNode;
+        id.bits.header_index = i;
+        buffer_ids[i] = id;
       }
 
       hermes::u32 id_list_offsets[kNumRequests] = {0};
@@ -60,6 +67,8 @@ void BenchLocal() {
         id_list_offsets[j] = LocalAllocateBufferIdList(mdm, buffer_ids);
       }
       time_point end_put = now();
+
+      hermes->AppBarrier();
 
       hermes::BlobID blob_id = {};
       blob_id.bits.node_id = app_rank;
@@ -76,6 +85,8 @@ void BenchLocal() {
       }
       time_point end_get = now();
 
+      hermes->AppBarrier();
+
       time_point start_del = now();
       for (int j = 0; j < kNumRequests; ++j) {
         blob_id.bits.buffer_ids_offset = id_list_offsets[j];
@@ -85,22 +96,17 @@ void BenchLocal() {
 
       hermes->AppBarrier();
 
-      // TODO(chogan): Avg?
-      double max_put_seconds = GetMaxSeconds(start_put, end_put, hermes.get());
-      double max_get_seconds = GetMaxSeconds(start_get, end_get, hermes.get());
-      double max_del_seconds = GetMaxSeconds(start_del, end_del, hermes.get());
+      double avg_put_seconds = GetAvgSeconds(start_put, end_put, hermes.get());
+      double avg_get_seconds = GetAvgSeconds(start_get, end_get, hermes.get());
+      double avg_del_seconds = GetAvgSeconds(start_del, end_del, hermes.get());
 
       if (hermes->IsFirstRankOnNode()) {
-        double payload_megabytes =
-          (payload_bytes * kNumRequests) / 1024.0 / 1024.0;
-        printf("put,local,1,%d,%d,%f,%f\n", app_size, payload_bytes,
-               kNumRequests / max_put_seconds,
-               payload_megabytes / max_put_seconds);
-        printf("get,local,1,%d,%d,%f,%f\n", app_size, payload_bytes,
-               kNumRequests / max_get_seconds,
-               payload_megabytes / max_get_seconds);
-        printf("del,local,1,%d,%d,%f\n", app_size, payload_bytes,
-                kNumRequests / max_del_seconds);
+        printf("put,%d,%d,%f\n", app_size, (int)num_bytes,
+               kNumRequests / avg_put_seconds);
+        printf("get,%d,%d,%f\n", app_size, num_bytes,
+               kNumRequests / avg_get_seconds);
+        printf("del,%d,%d,%f\n", app_size, num_bytes,
+               kNumRequests / avg_del_seconds);
       }
     }
 
@@ -111,7 +117,7 @@ void BenchLocal() {
 }
 
 void BenchRemote(const char *config_file) {
-  constexpr int sizeof_id = sizeof(hermes::BufferID);
+  const int kTargetNode = 1;
 
   std::shared_ptr<hapi::Hermes> hermes = hapi::InitHermes(config_file);
 
@@ -134,7 +140,6 @@ void BenchRemote(const char *config_file) {
     printf("app_comm size: %d\n", app_size);
 
     if (hermes->rpc_.node_id != 1) {
-      int target_node = 1;
 
       for (hermes::u32 num_bytes = 8;
            num_bytes <= KILOBYTES(4);
@@ -144,7 +149,7 @@ void BenchRemote(const char *config_file) {
         std::vector<hermes::BufferID> buffer_ids(num_ids);
         for (hermes::u32 i = 0; i < num_ids; ++i) {
           hermes::BufferID id = {};
-          id.bits.node_id = target_node;
+          id.bits.node_id = kTargetNode;
           id.bits.header_index = i;
           buffer_ids[i] = id;
         }
@@ -155,12 +160,12 @@ void BenchRemote(const char *config_file) {
         for (int j = 0; j < kNumRequests; ++j) {
           id_list_offsets[j] =
             hermes::AllocateBufferIdList(&hermes->context_, &hermes->rpc_,
-                                         target_node, buffer_ids);
+                                         kTargetNode, buffer_ids);
         }
         time_point end_put = now();
 
         hermes::BlobID blob_id = {};
-        blob_id.bits.node_id = target_node;
+        blob_id.bits.node_id = kTargetNode;
 
         MPI_Barrier(client_comm);
         time_point start_get = now();
