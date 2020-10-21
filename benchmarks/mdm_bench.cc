@@ -140,7 +140,6 @@ void BenchRemote(const char *config_file) {
     printf("app_comm size: %d\n", app_size);
 
     if (hermes->rpc_.node_id != 1) {
-
       for (hermes::u32 num_bytes = 8;
            num_bytes <= KILOBYTES(4);
            num_bytes *= 2) {
