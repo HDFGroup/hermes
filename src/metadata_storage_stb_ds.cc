@@ -155,8 +155,7 @@ IdList *AllocateIdList(MetadataManager *mdm, u32 length) {
   IdList *result = (IdList *)id_list_memory;
   result->length = length;
   result->head_offset = GetHeapOffset(id_heap, (u8 *)(result + 1));
-  // TEMP(chogan):
-  // CheckHeapOverlap(mdm);
+  CheckHeapOverlap(mdm);
 
   return result;
 }
@@ -210,8 +209,7 @@ void LocalFreeBufferIdList(SharedMemoryContext *context, BlobID blob_id) {
   u8 *to_free = HeapOffsetToPtr(id_heap, blob_id.bits.buffer_ids_offset);
 
   HeapFree(id_heap, to_free);
-  // TEMP(chogan):
-  // CheckHeapOverlap(mdm);
+  CheckHeapOverlap(mdm);
 }
 
 void LocalRemoveBlobFromBucketInfo(SharedMemoryContext *context,
