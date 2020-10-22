@@ -11,25 +11,74 @@
 namespace hapi = hermes::api;
 using std::chrono::time_point;
 const auto now = std::chrono::high_resolution_clock::now;
-const int kNumRequests = 1024;
+const int kNumRequests = 512;
 constexpr int sizeof_id = sizeof(hermes::BufferID);
+
+struct Options {
+  bool bench_local;
+  bool bench_remote;
+  bool bench_server_scalability;
+  char *config_file;
+};
 
 double GetAvgSeconds(time_point<std::chrono::high_resolution_clock> start,
                      time_point<std::chrono::high_resolution_clock> end,
-                     hapi::Hermes *hermes) {
+                     hapi::Hermes *hermes, MPI_Comm comm) {
   double local_seconds = std::chrono::duration<double>(end - start).count();
   double total_seconds = 0;
-  MPI_Comm *app_comm = (MPI_Comm *)hermes->GetAppCommunicator();
-  MPI_Reduce(&local_seconds, &total_seconds, 1, MPI_DOUBLE, MPI_SUM, 0,
-             *app_comm);
+  MPI_Reduce(&local_seconds, &total_seconds, 1, MPI_DOUBLE, MPI_SUM, 0, comm);
   double avg_seconds = total_seconds / hermes->GetNumProcesses();
 
   return avg_seconds;
 }
 
-void BenchLocal() {
-  const int kTargetNode = 1;
+void Run(int target_node, int rank, int comm_size, int num_requests,
+         MPI_Comm comm, hapi::Hermes *hermes) {
+  for (hermes::u32 num_bytes = 8;
+       num_bytes <= KILOBYTES(4);
+       num_bytes *= 2) {
+    int num_ids = num_bytes / sizeof_id;
 
+    std::vector<hermes::BufferID> buffer_ids(num_ids);
+    for (hermes::u32 i = 0; i < num_ids; ++i) {
+      hermes::BufferID id = {};
+      id.bits.node_id = target_node;
+      id.bits.header_index = i;
+      buffer_ids[i] = id;
+    }
+
+    hermes::u32 id_list_offset =
+      hermes::AllocateBufferIdList(&hermes->context_, &hermes->rpc_,
+                                   target_node, buffer_ids);
+
+    MPI_Barrier(comm);
+
+    hermes::BlobID blob_id = {};
+    blob_id.bits.node_id = target_node;
+    blob_id.bits.buffer_ids_offset = id_list_offset;
+
+    time_point start_get = now();
+    for (int j = 0; j < num_requests; ++j) {
+      std::vector<hermes::BufferID> ids =
+        hermes::GetBufferIdList(&hermes->context_, &hermes->rpc_, blob_id);
+    }
+    time_point end_get = now();
+    MPI_Barrier(comm);
+
+    FreeBufferIdList(&hermes->context_, &hermes->rpc_, blob_id);
+
+    // TODO(chogan): Time 'put' and 'delete' once they are optimized. For now they
+    // are too slow so we just time 'get'.
+    double avg_get_seconds = GetAvgSeconds(start_get, end_get, hermes, comm);
+
+    if (rank == 0) {
+      printf("Hermes,%d,%d,%d,%f\n", comm_size, hermes->comm_.num_nodes,
+             (int)num_bytes, num_requests / avg_get_seconds);
+    }
+  }
+}
+
+void BenchLocal() {
   hermes::Config config = {};
   hermes::InitDefaultConfig(&config);
   config.capacities[0] = GIGABYTES(2);
@@ -41,75 +90,11 @@ void BenchLocal() {
   if (hermes->IsApplicationCore()) {
     int app_rank = hermes->GetProcessRank();
     int app_size = hermes->GetNumProcesses();
+    int target_node = hermes->rpc_.node_id;
 
-    hermes::MetadataManager *mdm =
-      GetMetadataManagerFromContext(&hermes->context_);
-
-    for (hermes::u32 num_bytes = 8;
-         num_bytes <= KILOBYTES(4);
-         num_bytes *= 2) {
-      int num_ids = num_bytes / sizeof_id;
-
-      std::vector<hermes::BufferID> buffer_ids(num_ids);
-      for (hermes::u32 i = 0; i < num_ids; ++i) {
-        hermes::BufferID id = {};
-        // NOTE(chogan): The target node doesn't matter, since everything is
-        // local
-        id.bits.node_id = kTargetNode;
-        id.bits.header_index = i;
-        buffer_ids[i] = id;
-      }
-
-      hermes::u32 id_list_offsets[kNumRequests] = {0};
-
-      time_point start_put = now();
-      for (int j = 0; j < kNumRequests; ++j) {
-        id_list_offsets[j] = LocalAllocateBufferIdList(mdm, buffer_ids);
-      }
-      time_point end_put = now();
-
-      hermes->AppBarrier();
-
-      hermes::BlobID blob_id = {};
-      blob_id.bits.node_id = app_rank;
-
-      hermes::BufferIdArray buffer_id_arr = {};
-
-      time_point start_get = now();
-      for (int j = 0; j < kNumRequests; ++j) {
-        {
-          hermes::ScopedTemporaryMemory scratch(&hermes->trans_arena_);
-          blob_id.bits.buffer_ids_offset = id_list_offsets[j];
-          hermes::LocalGetBufferIdList(scratch, mdm, blob_id, &buffer_id_arr);
-        }
-      }
-      time_point end_get = now();
-
-      hermes->AppBarrier();
-
-      time_point start_del = now();
-      for (int j = 0; j < kNumRequests; ++j) {
-        blob_id.bits.buffer_ids_offset = id_list_offsets[j];
-        LocalFreeBufferIdList(&hermes->context_, blob_id);
-      }
-      time_point end_del = now();
-
-      hermes->AppBarrier();
-
-      double avg_put_seconds = GetAvgSeconds(start_put, end_put, hermes.get());
-      double avg_get_seconds = GetAvgSeconds(start_get, end_get, hermes.get());
-      double avg_del_seconds = GetAvgSeconds(start_del, end_del, hermes.get());
-
-      if (hermes->IsFirstRankOnNode()) {
-        printf("put,%d,%d,%f\n", app_size, (int)num_bytes,
-               kNumRequests / avg_put_seconds);
-        printf("get,%d,%d,%f\n", app_size, num_bytes,
-               kNumRequests / avg_get_seconds);
-        printf("del,%d,%d,%f\n", app_size, num_bytes,
-               kNumRequests / avg_del_seconds);
-      }
-    }
-
+    MPI_Comm *comm = (MPI_Comm *)hermes->GetAppCommunicator();
+    Run(target_node, app_rank, app_size, kNumRequests, *comm, hermes.get());
+    hermes->AppBarrier();
   } else {
     // Hermes core. No user code.
   }
@@ -117,8 +102,6 @@ void BenchLocal() {
 }
 
 void BenchRemote(const char *config_file) {
-  const int kTargetNode = 1;
-
   std::shared_ptr<hapi::Hermes> hermes = hapi::InitHermes(config_file);
 
   if (hermes->IsApplicationCore()) {
@@ -136,84 +119,37 @@ void BenchRemote(const char *config_file) {
     int client_rank;
     MPI_Comm_size(client_comm, &client_comm_size);
     MPI_Comm_rank(client_comm, &client_rank);
-    printf("client_comm size: %d\n", client_comm_size);
-    printf("app_comm size: %d\n", app_size);
 
     if (hermes->rpc_.node_id != 1) {
-      for (hermes::u32 num_bytes = 8;
-           num_bytes <= KILOBYTES(4);
-           num_bytes *= 2) {
-        int num_ids = num_bytes / sizeof_id;
+      const int kTargetNode = 1;
+      Run(kTargetNode, client_rank, client_comm_size, kNumRequests, client_comm,
+          hermes.get());
+    }
+    hermes->AppBarrier();
+  } else {
+    // Hermes core. No user code here.
+  }
 
-        std::vector<hermes::BufferID> buffer_ids(num_ids);
-        for (hermes::u32 i = 0; i < num_ids; ++i) {
-          hermes::BufferID id = {};
-          id.bits.node_id = kTargetNode;
-          id.bits.header_index = i;
-          buffer_ids[i] = id;
-        }
+  hermes->Finalize();
+}
 
-        hermes::u32 id_list_offsets[kNumRequests] = {0};
+void BenchServerScalability(const char *config_file) {
+  std::shared_ptr<hapi::Hermes> hermes = hapi::InitHermes(config_file);
 
-        time_point start_put = now();
-        for (int j = 0; j < kNumRequests; ++j) {
-          id_list_offsets[j] =
-            hermes::AllocateBufferIdList(&hermes->context_, &hermes->rpc_,
-                                         kTargetNode, buffer_ids);
-        }
-        time_point end_put = now();
+  if (hermes->IsApplicationCore()) {
+    int app_rank = hermes->GetProcessRank();
+    int app_size = hermes->GetNumProcesses();
+    int num_nodes = hermes->comm_.num_nodes;
+    // NOTE(chogan): A node_id of 0 is the NULL node, so we add 1.
+    int target_node = (app_rank % num_nodes) + 1;
 
-        hermes::BlobID blob_id = {};
-        blob_id.bits.node_id = kTargetNode;
-
-        MPI_Barrier(client_comm);
-        time_point start_get = now();
-        for (int j = 0; j < kNumRequests; ++j) {
-          blob_id.bits.buffer_ids_offset = id_list_offsets[j];
-          std::vector<hermes::BufferID> ids =
-            hermes::GetBufferIdList(&hermes->context_, &hermes->rpc_, blob_id);
-        }
-        time_point end_get = now();
-        MPI_Barrier(client_comm);
-
-        time_point start_del = now();
-        for (int j = 0; j < kNumRequests; ++j) {
-          blob_id.bits.buffer_ids_offset = id_list_offsets[j];
-          FreeBufferIdList(&hermes->context_, &hermes->rpc_, blob_id);
-        }
-        time_point end_del = now();
-
-        double put_seconds =
-          std::chrono::duration<double>(end_put - start_put).count();
-        double local_get_seconds =
-          std::chrono::duration<double>(end_get - start_get).count();
-        double del_seconds =
-          std::chrono::duration<double>(end_del - start_del).count();
-
-        double total_get_seconds;
-        MPI_Reduce(&local_get_seconds, &total_get_seconds, 1,
-                   MPI_DOUBLE, MPI_SUM, 0, client_comm);
-        double avg_get_seconds = total_get_seconds / client_comm_size;
-
-        // double payload_megabytes =
-        //   (num_bytes * kNumRequests) / 1024.0 / 1024.0;
-        // printf("put,%d,%d,%f,%f\n", client_comm_size, num_bytes,
-        //        kNumRequests / put_seconds, payload_megabytes / put_seconds);
-        if (client_rank == 0) {
-          printf("%d,%d,%f\n", client_comm_size, (int)num_bytes,
-                 kNumRequests / avg_get_seconds);
-        }
-        // printf("del,%d,%d,%f\n", client_comm_size, num_bytes,
-        //        kNumRequests / del_seconds);
-        // printf("put,remote,1,1,%d,%.8f\n", payload_bytes, put_seconds);
-        // printf("get,local,1,%d,%d,%.8f\n", client_comm_size, payload_bytes,
-        //        max_get_seconds);
-        // printf("del,remote,1,1,%d,%.8f\n", payload_bytes, del_seconds);
-      }
+    if (app_rank == 0) {
+      printf("Library,Clients,Servers,BytesTransferred,Ops/sec\n");
     }
 
+    MPI_Comm *comm = (MPI_Comm *)hermes->GetAppCommunicator();
+    Run(target_node, app_rank, app_size, kNumRequests, *comm, hermes.get());
     hermes->AppBarrier();
-
   } else {
     // Hermes core. No user code here.
   }
@@ -222,45 +158,50 @@ void BenchRemote(const char *config_file) {
 }
 
 void PrintUsage(char *program) {
-  fprintf(stderr, "Usage: %s -[rs]\n", program);
+  fprintf(stderr, "Usage: %s -[rsx] [-f config_file]\n", program);
   fprintf(stderr, "  -f\n");
   fprintf(stderr, "     Name of configuration file.\n");
   fprintf(stderr, "  -r\n");
   fprintf(stderr, "     Bench remote operations only.\n");
   fprintf(stderr, "  -s\n");
   fprintf(stderr, "     Bench local performance on a single node.\n");
+  fprintf(stderr, "  -x\n");
+  fprintf(stderr, "     Bench server scalability.\n");
 }
 
-int main(int argc, char **argv) {
+Options HandleArgs(int argc, char **argv) {
+  Options result = {};
   int option = -1;
-  bool bench_local = false;
-  bool bench_remote = false;
-  char *config_file = 0;
 
-  while ((option = getopt(argc, argv, "f:rs")) != -1) {
+  while ((option = getopt(argc, argv, "f:rsx")) != -1) {
     switch (option) {
       case 'f': {
-        config_file = optarg;
+        result.config_file = optarg;
         break;
       }
       case 'r': {
-        bench_remote = true;
+        result.bench_remote = true;
         break;
       }
       case 's': {
-        bench_local = true;
+        result.bench_local = true;
+        break;
+      }
+      case 'x': {
+        result.bench_server_scalability = true;
         break;
       }
       default:
         PrintUsage(argv[0]);
-        return 1;
+        exit(1);
     }
   }
 
-  if (bench_remote && !config_file) {
+  if ((result.bench_remote || result.bench_server_scalability) &&
+      !result.config_file) {
     fprintf(stderr, "Remote configuration option -r requires a config file name"
             "with the -f option.\n");
-    return 1;
+    exit(1);
   }
 
   if (optind < argc) {
@@ -271,6 +212,12 @@ int main(int argc, char **argv) {
     fprintf(stderr, "\n");
   }
 
+  return result;
+}
+
+int main(int argc, char **argv) {
+  Options opts = HandleArgs(argc, argv);
+
   int mpi_threads_provided;
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
   if (mpi_threads_provided < MPI_THREAD_MULTIPLE) {
@@ -278,11 +225,14 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  if (bench_local) {
+  if (opts.bench_local) {
     BenchLocal();
   }
-  if (bench_remote) {
-    BenchRemote(config_file);
+  if (opts.bench_remote) {
+    BenchRemote(opts.config_file);
+  }
+  if (opts.bench_server_scalability) {
+    BenchServerScalability(opts.config_file);
   }
 
   MPI_Finalize();
