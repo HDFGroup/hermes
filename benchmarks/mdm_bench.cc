@@ -67,8 +67,8 @@ void Run(int target_node, int rank, int comm_size, int num_requests,
 
     FreeBufferIdList(&hermes->context_, &hermes->rpc_, blob_id);
 
-    // TODO(chogan): Time 'put' and 'delete' once they are optimized. For now they
-    // are too slow so we just time 'get'.
+    // TODO(chogan): Time 'put' and 'delete' once they are optimized. For now
+    // they are too slow so we just time 'get'.
     double avg_get_seconds = GetAvgSeconds(start_get, end_get, hermes, comm);
 
     if (rank == 0) {
