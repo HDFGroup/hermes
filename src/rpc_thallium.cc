@@ -392,6 +392,8 @@ void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
                                            SwapBlob swap_blob,
                                            TargetID target_id, int retries) {
     (void)req;
+    (void)swap_blob;
+    (void)target_id;
     for (int i = 0; i < retries; ++i) {
       // TODO(chogan): MoveToTarget(context, rpc, target_id, swap_blob);
       HERMES_NOT_IMPLEMENTED_YET;
@@ -464,12 +466,46 @@ void InitRpcContext(RpcContext *rpc, u32 num_nodes, u32 node_id,
                         kMaxServerSuffixSize);
   rpc->host_number_range[0] = config->rpc_host_number_range[0];
   rpc->host_number_range[1] = config->rpc_host_number_range[1];
+
+  rpc->client_rpc.state_size = sizeof(ClientThalliumState);
 }
 
 void *CreateRpcState(Arena *arena) {
   ThalliumState *result = PushClearedStruct<ThalliumState>(arena);
 
   return result;
+}
+
+std::string GetProtocol(RpcContext *rpc) {
+  ThalliumState *tl_state = GetThalliumState(rpc);
+
+  std::string prefix = std::string(tl_state->server_name_prefix);
+  // NOTE(chogan): Chop "://" off the end of the server_name_prefix to get the
+  // protocol
+  std::string result = prefix.substr(0, prefix.length() - 3);
+
+  return result;
+}
+
+void InitRpcClients(RpcContext *rpc) {
+  // TODO(chogan): Need a per-client persistent arena
+  ClientThalliumState *state =
+    (ClientThalliumState *)malloc(sizeof(ClientThalliumState));
+  std::string protocol = GetProtocol(rpc);
+  // TODO(chogan): This should go in a per-client persistent arena
+  state->engine = new tl::engine(protocol, THALLIUM_CLIENT_MODE, true);
+
+  rpc->client_rpc.state = state;
+}
+
+void ShutdownRpcClients(RpcContext *rpc) {
+  ClientThalliumState *state = GetClientThalliumState(rpc);
+  if (state) {
+    if (state->engine) {
+      delete state->engine;
+    }
+    free(state);
+  }
 }
 
 void FinalizeRpcContext(RpcContext *rpc, bool is_daemon) {
@@ -529,17 +565,6 @@ std::string GetServerName(RpcContext *rpc, u32 node_id,
   } else {
     result += std::string(tl_state->server_name_postfix);
   }
-
-  return result;
-}
-
-std::string GetProtocol(RpcContext *rpc) {
-  ThalliumState *tl_state = GetThalliumState(rpc);
-
-  std::string prefix = std::string(tl_state->server_name_prefix);
-  // NOTE(chogan): Chop "://" off the end of the server_name_prefix to get the
-  // protocol
-  std::string result = prefix.substr(0, prefix.length() - 3);
 
   return result;
 }

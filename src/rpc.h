@@ -17,7 +17,13 @@ const int kMaxServerSuffixSize = 16;
 typedef void (*StartFunc)(SharedMemoryContext*, RpcContext*, Arena*,
                           const char*, int);
 
+struct ClientRpcContext {
+  void *state;
+  size_t state_size;
+};
+
 struct RpcContext {
+  ClientRpcContext client_rpc;
   void *state;
   /** The size of the internal rpc state. */
   size_t state_size;
@@ -47,6 +53,9 @@ struct RpcContext {
 void InitRpcContext(RpcContext *rpc, u32 num_nodes, u32 node_id,
                     Config *config);
 void *CreateRpcState(Arena *arena);
+void InitRpcClients(RpcContext *rpc);
+void ShutdownRpcClients(RpcContext *rpc);
+
 void FinalizeRpcContext(RpcContext *rpc, bool is_daemon);
 std::string GetHostNumberAsString(RpcContext *rpc, u32 node_id);
 std::string GetServerName(RpcContext *rpc, u32 node_id,

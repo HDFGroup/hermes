@@ -28,6 +28,10 @@ struct ThalliumState {
   ABT_xstream execution_stream;
 };
 
+struct ClientThalliumState {
+  tl::engine *engine;
+};
+
 /**
  *  Lets Thallium know how to serialize a BufferID.
  *
@@ -128,17 +132,22 @@ static inline ThalliumState *GetThalliumState(RpcContext *rpc) {
   return result;
 }
 
+static inline
+ClientThalliumState *GetClientThalliumState(RpcContext *rpc) {
+  ClientThalliumState *result = (ClientThalliumState *)rpc->client_rpc.state;
+
+  return result;
+}
+
 template<typename ReturnType, typename... Ts>
 ReturnType RpcCall(RpcContext *rpc, u32 node_id, const char *func_name,
                    Ts... args) {
+  ClientThalliumState *state = GetClientThalliumState(rpc);
   std::string server_name = GetServerName(rpc, node_id);
-  std::string protocol = GetProtocol(rpc);
-
-  // TODO(chogan): Save connections instead of creating them for every rpc
-  // TODO(chogan): Do we really need the progress thread in a separate thread?
-  tl::engine engine(protocol, THALLIUM_CLIENT_MODE, true);
-  tl::remote_procedure remote_proc = engine.define(func_name);
-  tl::endpoint server = engine.lookup(server_name);
+  tl::remote_procedure remote_proc = state->engine->define(func_name);
+  // TODO(chogan): @optimization We can save a little work by storing the
+  // endpoint instead of looking it up on every call
+  tl::endpoint server = state->engine->lookup(server_name);
 
   if constexpr(std::is_same<ReturnType, void>::value) {
     remote_proc.disable_response();

@@ -21,6 +21,7 @@ using hermes::api::Status;
 Status TopDownPlacement(SharedMemoryContext *context, RpcContext *rpc,
                         std::vector<size_t> blob_sizes,
                         std::vector<PlacementSchema> &output) {
+  (void)rpc;
   HERMES_NOT_IMPLEMENTED_YET;
 
   Status result = 0;
@@ -157,6 +158,7 @@ Status RoundRobinPlacement(SharedMemoryContext *context, RpcContext *rpc,
 Status RandomPlacement(SharedMemoryContext *context, RpcContext *rpc,
                        std::vector<size_t> &blob_sizes,
                        std::vector<PlacementSchema> &output) {
+  (void)rpc;
   // TODO(chogan): For now we just look at the node level. Eventually we will
   // need the ability to escalate to neighborhoods, and the entire cluster.
   std::vector<u64> node_state = GetRemainingNodeCapacities(context);
@@ -262,6 +264,7 @@ Status RandomPlacement(SharedMemoryContext *context, RpcContext *rpc,
 Status MinimizeIoTimePlacement(SharedMemoryContext *context, RpcContext *rpc,
                             std::vector<size_t> &blob_sizes,
                             std::vector<PlacementSchema> &output) {
+  (void)rpc;
   using operations_research::MPSolver;
   using operations_research::MPVariable;
   using operations_research::MPConstraint;

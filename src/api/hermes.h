@@ -21,6 +21,8 @@ class Hermes {
  public:
   std::set<std::string> bucket_list_;
   std::set<std::string> vbucket_list_;
+
+  // TODO(chogan): Temporarily public to facilitate iterative development.
   hermes::SharedMemoryContext context_;
   hermes::CommunicationContext comm_;
   hermes::RpcContext rpc_;
@@ -48,9 +50,12 @@ class Hermes {
   }
 
   bool IsApplicationCore();
+  bool IsFirstRankOnNode();
   void AppBarrier();
   int GetProcessRank();
+  int GetNodeId();
   int GetNumProcesses();
+  void *GetAppCommunicator();
   void Finalize(bool force_rpc_shutdown = false);
 
   // MPI comms.
@@ -104,6 +109,8 @@ std::shared_ptr<api::Hermes> InitHermes(const char *config_file = NULL,
 
 }  // namespace api
 
+std::shared_ptr<api::Hermes> InitHermes(Config *config, bool is_daemon = false,
+                                        bool is_adapter = false);
 std::shared_ptr<api::Hermes> InitHermesDaemon(char *config_file = NULL);
 std::shared_ptr<api::Hermes> InitHermesDaemon(Config *config);
 std::shared_ptr<api::Hermes> InitHermesClient(const char *config_file = NULL);

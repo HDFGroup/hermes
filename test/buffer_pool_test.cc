@@ -149,7 +149,7 @@ int main(int argc, char **argv) {
   bool test_swap = false;
   bool start_server = false;
 
-  while ((option = getopt(argc, argv, "bf:s")) != -1) {
+  while ((option = getopt(argc, argv, "bf:sx")) != -1) {
     switch (option) {
       case 'b': {
         test_get_buffers = true;

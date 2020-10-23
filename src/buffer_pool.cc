@@ -70,6 +70,7 @@ void Finalize(SharedMemoryContext *context, CommunicationContext *comm,
               bool is_application_core, bool force_rpc_shutdown) {
   WorldBarrier(comm);
   if (is_application_core) {
+    ShutdownRpcClients(rpc);
     ReleaseSharedMemoryContext(context);
     HERMES_DEBUG_CLIENT_CLOSE();
   }
@@ -374,6 +375,7 @@ static std::atomic<u32> *GetAvailableBuffersArray(SharedMemoryContext *context,
   return result;
 }
 
+#if 0
 static u32 GetNumBuffersAvailable(SharedMemoryContext *context,
                                   DeviceID device_id, int slab_index) {
   std::atomic<u32> *buffers_available = GetAvailableBuffersArray(context,
@@ -404,6 +406,7 @@ static u64 GetNumBytesRemaining(SharedMemoryContext *context, DeviceID id) {
 
   return result;
 }
+#endif
 
 static void DecrementAvailableBuffers(SharedMemoryContext *context,
                                       DeviceID device_id, int slab_index) {
@@ -1000,19 +1003,18 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
   int *num_buffers = PushArray<int>(scratch_arena, config->num_devices);
   int total_buffers = 0;
   for (int device = 0; device < config->num_devices; ++device) {
-    fprintf(stderr, "Device %d:\n", device);
+    DLOG(INFO) << "Device: " << device << std::endl;
     num_buffers[device] = 0;
     for (int slab = 0; slab < config->num_slabs[device]; ++slab) {
-      // TODO(chogan): @logging Switch to DLOG
-      fprintf(stderr, "    %d-Buffers: %d\n", slab,
-              buffer_counts[device][slab]);
+      DLOG(INFO) << "    " << slab << "-Buffers: "
+                 << buffer_counts[device][slab] << std::endl;
       num_buffers[device] += buffer_counts[device][slab];
     }
     total_buffers += num_buffers[device];
-    fprintf(stderr, "    Num Headers: %d\n", header_counts[device]);
-    fprintf(stderr, "    Num Buffers: %d\n", num_buffers[device]);
+    DLOG(INFO) << "    Num Headers: " << header_counts[device] << std::endl;
+    DLOG(INFO) << "    Num Buffers: " << num_buffers[device] << std::endl;
   }
-  fprintf(stderr, "Total Buffers: %d\n", total_buffers);
+  DLOG(INFO) << "Total Buffers: " << total_buffers << std::endl;;
 
   // Build RAM buffers.
 
@@ -1466,11 +1468,12 @@ SwapBlob WriteToSwap(SharedMemoryContext *context, Blob blob, u32 node_id,
       HERMES_NOT_IMPLEMENTED_YET;
     }
 
-    result.offset = ftell(context->swap_file);
-    if (result.offset == -1) {
+    long int file_position = ftell(context->swap_file);
+    if (file_position == -1) {
       // TODO(chogan): @errorhandling
       HERMES_NOT_IMPLEMENTED_YET;
     }
+    result.offset = file_position;
 
     if (fwrite(blob.data, 1, blob.size, context->swap_file) != blob.size) {
       // TODO(chogan): @errorhandling

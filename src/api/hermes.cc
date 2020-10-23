@@ -50,6 +50,12 @@ bool Hermes::IsApplicationCore() {
   return result;
 }
 
+bool Hermes::IsFirstRankOnNode() {
+  bool result = comm_.first_on_node;
+
+  return result;
+}
+
 void Hermes::AppBarrier() {
   hermes::SubBarrier(&comm_);
 }
@@ -60,8 +66,20 @@ int Hermes::GetProcessRank() {
   return result;
 }
 
+int Hermes::GetNodeId() {
+  int result = comm_.node_id;
+
+  return result;
+}
+
 int Hermes::GetNumProcesses() {
   int result = comm_.app_size;
+
+  return result;
+}
+
+void *Hermes::GetAppCommunicator() {
+  void *result = hermes::GetAppCommunicator(&comm_);
 
   return result;
 }
@@ -141,8 +159,7 @@ SharedMemoryContext InitHermesCore(Config *config, CommunicationContext *comm,
   mdm->rpc_state_offset = (u8 *)rpc->state - shmem_base;
 
   InitMetadataManager(mdm, &arenas[kArenaType_MetaData], config, comm->node_id);
-  InitMetadataStorage(&context, mdm, &arenas[kArenaType_MetaData], config,
-                      comm->node_id);
+  InitMetadataStorage(&context, mdm, &arenas[kArenaType_MetaData], config);
 
   // NOTE(chogan): Store the metadata_manager_offset right after the
   // buffer_pool_offset so other processes can pick it up.
@@ -251,10 +268,14 @@ std::shared_ptr<api::Hermes> InitHermes(Config *config, bool is_daemon,
                                            sleep_ms);
   }
 
+  WorldBarrier(&comm);
+
   api::Context::default_buffer_organizer_retries =
     config->num_buffer_organizer_retries;
 
-  WorldBarrier(&comm);
+  if (comm.proc_kind == ProcessKind::kApp) {
+    InitRpcClients(&result->rpc_);
+  }
 
   return result;
 }
