@@ -289,7 +289,7 @@ if(NOT APPLE)
 endif()
 
 # sdl2
-if(BUILD_BUFFER_POOL_VISUALIZER)
+if(HERMES_BUILD_BUFFER_POOL_VISUALIZER)
   find_package(SDL2 CONFIG REQUIRED)
   if(SDL2_FOUND)
     message(STATUS "found SDL2 at ${SDL2_DIR}")
@@ -307,7 +307,7 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src)
 #add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/mpi_io_adapter)
 #add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/hermes_vol)
 
-if(BUILD_BUFFER_POOL_VISUALIZER AND SDL2_FOUND)
+if(HERMES_BUILD_BUFFER_POOL_VISUALIZER AND SDL2_FOUND)
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/buffer_pool_visualizer)
 endif()
 
