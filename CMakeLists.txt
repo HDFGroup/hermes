@@ -143,9 +143,9 @@ endif()
 option(BUILD_SHARED_LIBS "Build with shared libraries." ON)
 option(HERMES_INTERCEPT_IO "Use GOTCHA as IO interception tool" ON)
 option(HERMES_COMMUNICATION_MPI "Use MPI as the communication layer." ON)
-option(BUILD_BUFFER_POOL_VISUALIZER "Build the BufferPool visualizer" OFF)
-option(USE_ADDRESS_SANITIZER "Enable -fsanitize=address in Debug builds" ON)
-option(USE_THREAD_SANITIZER "Enable -fsanitize=thread in Debug builds" OFF)
+option(HERMES_BUILD_BUFFER_POOL_VISUALIZER "Build the BufferPool visualizer" OFF)
+option(HERMES_USE_ADDRESS_SANITIZER "Enable -fsanitize=address in Debug builds" ON)
+option(HERMES_USE_THREAD_SANITIZER "Enable -fsanitize=thread in Debug builds" OFF)
 option(HERMES_RPC_THALLIUM "Use Thallium as the RPC library." ON)
 option(HERMES_MDM_STORAGE_STBDS
   "Use the STB library and shared memory to store metadata" ON)
@@ -164,7 +164,7 @@ endif()
 mark_as_advanced(HERMES_COMMUNICATION_MPI)
 # TODO(chogan): Expose this once we support more than one RPC layer
 mark_as_advanced(HERMES_RPC_THALLIUM)
-mark_as_advanced(HERMES_METADATA_STORAGE_STBDS)
+mark_as_advanced(HERMES_MDM_STORAGE_STBDS)
 mark_as_advanced(HERMES_DEBUG_HEAP)
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -173,7 +173,7 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
         CACHE STRING "" FORCE)
   endif()
 
-  if (USE_ADDRESS_SANITIZER AND
+  if (HERMES_USE_ADDRESS_SANITIZER AND
       NOT "${CMAKE_CXX_FLAGS_DEBUG}" MATCHES ".*-fsanitize=address.*")
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address"
         CACHE STRING "" FORCE)
@@ -183,11 +183,11 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(CMAKE_CXX_FLAGS_DEBUG "${FLAGS_NO_SANITIZE}" CACHE STRING "" FORCE)
   endif()
 
-  if (USE_THREAD_SANITIZER AND USE_ADDRESS_SANITIZER)
+  if (HERMES_USE_THREAD_SANITIZER AND HERMES_USE_ADDRESS_SANITIZER)
     message(FATAL_ERROR "Cannont use -fsanitize=address and -fsanitize=thread "
                         "at the same time")
   else()
-    if (USE_THREAD_SANITIZER AND
+    if (HERMES_USE_THREAD_SANITIZER AND
         NOT "${CMAKE_CXX_FLAGS_DEBUG}" MATCHES ".*-fsanitize=thread.*")
       set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=thread"
         CACHE STRING "" FORCE)
