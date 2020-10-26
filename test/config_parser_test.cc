@@ -15,7 +15,7 @@ int main(int argc, char **argv) {
 
   hermes::Config config = {};
 
-  const size_t kConfigMemorySize = KILOBYTES(7);
+  const size_t kConfigMemorySize = KILOBYTES(16);
   hermes::u8 config_memory[kConfigMemorySize];
   hermes::Arena arena = {};
   hermes::InitArena(&arena, kConfigMemorySize, config_memory);
