@@ -21,10 +21,10 @@ cmake                                                      \
     -DBUILD_SHARED_LIBS=ON                                 \
     -DHERMES_INTERCEPT_IO=ON                               \
     -DHERMES_COMMUNICATION_MPI=ON                          \
-    -DBUILD_BUFFER_POOL_VISUALIZER=ON                      \
+    -DHERMES_BUILD_BUFFER_POOL_VISUALIZER=ON               \
     -DORTOOLS_DIR=${INSTALL_PREFIX}                        \
-    -DUSE_ADDRESS_SANITIZER=ON                             \
-    -DUSE_THREAD_SANITIZER=OFF                             \
+    -DHERMES_USE_ADDRESS_SANITIZER=ON                      \
+    -DHERMES_USE_THREAD_SANITIZER=OFF                      \
     -DHERMES_RPC_THALLIUM=ON                               \
     -DHERMES_DEBUG_HEAP=OFF                                \
     ..

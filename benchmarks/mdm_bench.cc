@@ -40,7 +40,7 @@ void Run(int target_node, int rank, int comm_size, int num_requests,
     int num_ids = num_bytes / sizeof_id;
 
     std::vector<hermes::BufferID> buffer_ids(num_ids);
-    for (hermes::u32 i = 0; i < num_ids; ++i) {
+    for (int i = 0; i < num_ids; ++i) {
       hermes::BufferID id = {};
       id.bits.node_id = target_node;
       id.bits.header_index = i;
@@ -106,7 +106,6 @@ void BenchRemote(const char *config_file) {
 
   if (hermes->IsApplicationCore()) {
     int app_rank = hermes->GetProcessRank();
-    int app_size = hermes->GetNumProcesses();
 
     MPI_Comm *app_comm = (MPI_Comm *)hermes->GetAppCommunicator();
 
