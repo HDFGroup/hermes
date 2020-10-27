@@ -2,7 +2,7 @@
 
 Hermes is a heterogeneous aware, multi-tiered, dynamic, and distributed I/O buffering system that aims to significantly accelerate I/O performance. See the [official site](http://www.cs.iit.edu/~scs/assets/projects/Hermes/Hermes.html) for more information. For design documents, architecture description, performance data, and individual component design, see the [wiki](https://hermes.page/index.php/Main_Page).
 
-![Build](https://github.com/HDFGroup/hermes/workflows/Github%20Actions/badge.svg)
+![Build](https://github.com/HDFGroup/hermes/workflows/GitHub%20Actions/badge.svg)
 
 ## Dependencies
 * A C++ compiler that supports C++ 17.
