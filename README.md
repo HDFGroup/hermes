@@ -6,12 +6,12 @@ Hermes is a heterogeneous aware, multi-tiered, dynamic, and distributed I/O buff
 
 ## Dependencies
 * A C++ compiler that supports C++ 17.
-* [Thallium](https://mochi.readthedocs.io/en/latest/installing.html).
-* [GLOG](https://github.com/google/glog). (If you install the ORTOOLS binary, GLOG is included)
-* Google ORTOOLS
+* [Thallium](https://mochi.readthedocs.io/en/latest/installing.html) - RPC library for HPC. Use a version greater than `0.5` for RoCE support.
+* [GLOG](https://github.com/google/glog) - The Google logging library (`v0.4.0`). (If you install the ORTOOLS binary, GLOG is included).
+* Google ORTOOLS for constraint optimization (tested with `v7.7.7810`).
   * Download the [OR-Tools binary distribution for C++](https://developers.google.com/optimization/install/cpp).
   * Setup `ORTOOLS_DIR` as a cmake environment variable.
-* MPI
+* MPI (tested with MPICH `3.3.2` and OpenMPI `4.0.3`).
 
 ## Building
 
