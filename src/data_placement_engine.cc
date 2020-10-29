@@ -60,7 +60,7 @@ Status TopDownPlacement(SharedMemoryContext *context, RpcContext *rpc,
 }
 
 Status RoundRobinPlacement(SharedMemoryContext *context, RpcContext *rpc,
-                        std::vector<size_t> blob_sizes,
+                        std::vector<size_t> &blob_sizes,
                         std::vector<PlacementSchema> &output) {
   std::vector<u64> global_state = GetGlobalDeviceCapacities(context, rpc);
   Status result = 0;
@@ -157,12 +157,12 @@ Status RoundRobinPlacement(SharedMemoryContext *context, RpcContext *rpc,
 
 Status RandomPlacement(SharedMemoryContext *context, RpcContext *rpc,
                        std::vector<size_t> &blob_sizes,
+                       std::multimap<u64, size_t> &ordered_cap,
                        std::vector<PlacementSchema> &output) {
   (void)rpc;
   // TODO(chogan): For now we just look at the node level. Eventually we will
   // need the ability to escalate to neighborhoods, and the entire cluster.
   std::vector<u64> node_state = GetRemainingNodeCapacities(context);
-  std::multimap<u64, size_t> ordered_cap;
   Status result = 0;
 
   for (size_t i {0}; i < blob_sizes.size(); ++i) {
@@ -395,7 +395,11 @@ Status CalculatePlacement(SharedMemoryContext *context, RpcContext *rpc,
   switch (api_context.policy) {
     // TODO(KIMMY): check device capacity against blob size
     case api::PlacementPolicy::kRandom: {
-      result = RandomPlacement(context, rpc, blob_sizes, output);
+      std::multimap<u64, size_t> ordered_cap;
+      std::vector<u64> global_state = GetGlobalDeviceCapacities(context, rpc);
+      for (size_t i {0}; i < global_state.size(); ++i) 
+        ordered_cap.insert(std::pair<u64, size_t>(global_state[i], i));
+      result = RandomPlacement(context, rpc, blob_sizes, ordered_cap, output);
       break;
     }
     case api::PlacementPolicy::kRoundRobin: {
