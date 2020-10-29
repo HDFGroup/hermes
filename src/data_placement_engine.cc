@@ -397,7 +397,7 @@ Status CalculatePlacement(SharedMemoryContext *context, RpcContext *rpc,
     case api::PlacementPolicy::kRandom: {
       std::multimap<u64, size_t> ordered_cap;
       std::vector<u64> global_state = GetGlobalDeviceCapacities(context, rpc);
-      for (size_t i {0}; i < global_state.size(); ++i) 
+      for (size_t i {0}; i < global_state.size(); ++i)
         ordered_cap.insert(std::pair<u64, size_t>(global_state[i], i));
       result = RandomPlacement(context, rpc, blob_sizes, ordered_cap, output);
       break;
