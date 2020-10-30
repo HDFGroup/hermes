@@ -64,11 +64,9 @@ std::vector<int> GetValidSplitChoices(size_t blob_size) {
   // Split the blob if size is greater than 64KB
   if (blob_size > KILOBYTES(64) && blob_size <= KILOBYTES(256)) {
     split_option = 2;
-  }
-  else if (blob_size > KILOBYTES(256) && blob_size <= MEGABYTES(1)) {
+  } else if (blob_size > KILOBYTES(256) && blob_size <= MEGABYTES(1)) {
     split_option = 5;
-  }
-  else if (blob_size > MEGABYTES(1) && blob_size <= MEGABYTES(4)) {
+  } else if (blob_size > MEGABYTES(1) && blob_size <= MEGABYTES(4)) {
     split_option = 8;
   }
 
