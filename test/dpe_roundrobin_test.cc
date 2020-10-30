@@ -5,6 +5,7 @@
 #include "ortools/linear_solver/linear_solver.h"
 
 #include "hermes.h"
+#include "data_placement_engine.h"
 
 using namespace hermes;  // NOLINT(*)
 
@@ -86,22 +87,8 @@ PlacementSchema RoundRobinPlacement(std::vector<hermes::api::Blob> blobs) {
 
     // Split the blob
     if (number) {
-      int split_option {1};
       std::cout << "blob size is " << blobs[i].size() << '\n' << std::flush;
-      // Not split the blob if size is less than 64KB
-      if (blobs[i].size() > KILOBYTES(64) && blobs[i].size() <= KILOBYTES(256))
-        split_option = 2;
-      else if (blobs[i].size() > KILOBYTES(256) &&
-               blobs[i].size() <= MEGABYTES(1))
-        split_option = 5;
-      else if (blobs[i].size() > MEGABYTES(1) &&
-               blobs[i].size() <= MEGABYTES(4))
-        split_option = 8;
-      else
-        split_option = 10;
-
-      int split_range[] = { 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024 };
-      std::vector<int> split_choice(split_range, split_range+split_option-1);
+      std::vector<int> split_choice = GetValidSplitChoices(blobs[i].size());
 
      // Random pickup a number from split_choice to split the blob
      std::uniform_int_distribution<std::mt19937::result_type>

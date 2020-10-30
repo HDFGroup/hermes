@@ -23,5 +23,8 @@ Status CalculatePlacement(SharedMemoryContext *context, RpcContext *rpc,
                           std::vector<PlacementSchema> &output,
                           const api::Context &api_context);
 
+// internal
+std::vector<int> GetValidSplitChoices(size_t blob_size);
+
 }  // namespace hermes
 #endif  // HERMES_DATA_PLACEMENT_ENGINE_H_
