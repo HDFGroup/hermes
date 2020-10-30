@@ -28,7 +28,8 @@ Status CalculatePlacement(SharedMemoryContext *context, RpcContext *rpc,
 // internal
 std::vector<int> GetValidSplitChoices(size_t blob_size);
 Status AddRandomSchema(std::multimap<u64, size_t> &ordered_cap,
-                       size_t blob_size, std::vector<PlacementSchema> &output);
+                       size_t blob_size, std::vector<PlacementSchema> &output,
+                       std::vector<u64> &node_state);
 
 }  // namespace hermes
 #endif  // HERMES_DATA_PLACEMENT_ENGINE_H_

@@ -162,7 +162,8 @@ Status RoundRobinPlacement(SharedMemoryContext *context, RpcContext *rpc,
 }
 
 Status AddRandomSchema(std::multimap<u64, size_t> &ordered_cap,
-                       size_t blob_size, std::vector<PlacementSchema> &output) {
+                       size_t blob_size, std::vector<PlacementSchema> &output,
+                       std::vector<u64> &node_state) {
   std::random_device rd;
   std::mt19937 gen(rd());
   Status result = 0;
@@ -184,6 +185,7 @@ Status AddRandomSchema(std::multimap<u64, size_t> &ordered_cap,
         ordered_cap.insert(std::pair<u64, size_t>(
                              (*it).first-blob_size, (*it).second));
         ordered_cap.erase(it);
+        node_state[dst] -= blob_size;
         break;
       }
     }
@@ -241,11 +243,12 @@ Status RandomPlacement(SharedMemoryContext *context, RpcContext *rpc,
                               blob_each_portion*(split_num-1));
 
       for (size_t k {0}; k < new_blob_size.size(); ++k) {
-        result = AddRandomSchema(ordered_cap, new_blob_size[k], output);
+        result = AddRandomSchema(ordered_cap, new_blob_size[k], output,
+                                 node_state);
       }
     } else {
       // Blob size is less than 64KB or do not split
-      result = AddRandomSchema(ordered_cap, blob_sizes[i], output);
+      result = AddRandomSchema(ordered_cap, blob_sizes[i], output, node_state);
     }
   }
 

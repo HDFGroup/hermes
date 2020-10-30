@@ -68,10 +68,13 @@ std::vector<PlacementSchema> RandomPlacement(std::vector<hapi::Blob> blobs) {
   std::vector<PlacementSchema> result;
   // TODO(KIMMY): use kernel function of system view
   testing::SystemViewState state {GetSystemViewState()};
+  std::vector<u64> node_state(state.num_devices);
   std::multimap<u64, size_t> ordered_cap;
+
 
   for (int j {0}; j < state.num_devices; ++j) {
     ordered_cap.insert(std::pair<u64, size_t>(state.bytes_available[j], j));
+    node_state[j] = state.bytes_available[j];
   }
 
   for (size_t i {0}; i < blobs.size(); ++i) {
@@ -109,12 +112,12 @@ std::vector<PlacementSchema> RandomPlacement(std::vector<hapi::Blob> blobs) {
                               blob_each_portion*(split_num-1));
 
       for (size_t k {0}; k < new_blob_size.size(); ++k) {
-        AddRandomSchema(ordered_cap, new_blob_size[k], result);
+        AddRandomSchema(ordered_cap, new_blob_size[k], result, node_state);
       }
     } else {
       // Blob size is less than 64KB or do not split
       std::cout << "blob size is " << blobs[i].size() << '\n' << std::flush;
-      AddRandomSchema(ordered_cap, blobs[i].size(), result);
+      AddRandomSchema(ordered_cap, blobs[i].size(), result, node_state);
     }
   }
 
