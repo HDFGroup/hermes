@@ -60,7 +60,7 @@ Status TopDownPlacement(SharedMemoryContext *context, RpcContext *rpc,
 }
 
 std::vector<int> GetValidSplitChoices(size_t blob_size) {
-  int split_option {1};
+  int split_option = 10;
   // Split the blob if size is greater than 64KB
   if (blob_size > KILOBYTES(64) && blob_size <= KILOBYTES(256)) {
     split_option = 2;
@@ -70,9 +70,6 @@ std::vector<int> GetValidSplitChoices(size_t blob_size) {
   }
   else if (blob_size > MEGABYTES(1) && blob_size <= MEGABYTES(4)) {
     split_option = 8;
-  }
-  else {
-    split_option = 10;
   }
 
   constexpr int split_range[] = { 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024 };
