@@ -8,6 +8,7 @@
 #include "data_placement_engine.h"
 
 using namespace hermes;  // NOLINT(*)
+namespace hapi = hermes::api;
 
 namespace hermes {
 namespace testing {
@@ -63,7 +64,7 @@ void UpdateSystemViewState(PlacementSchema schema) {
   }
 }
 
-std::vector<PlacementSchema> RandomPlacement(std::vector<hermes::api::Blob> blobs) {
+std::vector<PlacementSchema> RandomPlacement(std::vector<hapi::Blob> blobs) {
   std::vector<PlacementSchema> result;
   // TODO(KIMMY): use kernel function of system view
   testing::SystemViewState state {GetSystemViewState()};
