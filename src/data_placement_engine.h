@@ -1,6 +1,8 @@
 #ifndef HERMES_DATA_PLACEMENT_ENGINE_H_
 #define HERMES_DATA_PLACEMENT_ENGINE_H_
 
+#include <map>
+
 #include "hermes_types.h"
 #include "hermes.h"
 

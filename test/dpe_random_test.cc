@@ -63,14 +63,14 @@ void UpdateSystemViewState(PlacementSchema schema) {
   }
 }
 
-PlacementSchema RandomPlacement(std::vector<hermes::api::Blob> blobs) {
-  PlacementSchema result;
+std::vector<PlacementSchema> RandomPlacement(std::vector<hermes::api::Blob> blobs) {
+  std::vector<PlacementSchema> result;
   // TODO(KIMMY): use kernel function of system view
   testing::SystemViewState state {GetSystemViewState()};
-  std::multimap<u64, int> ordered_cap;
+  std::multimap<u64, size_t> ordered_cap;
 
   for (int j {0}; j < state.num_devices; ++j) {
-    ordered_cap.insert(std::pair<u64, int>(state.bytes_available[j], j));
+    ordered_cap.insert(std::pair<u64, size_t>(state.bytes_available[j], j));
   }
 
   for (size_t i {0}; i < blobs.size(); ++i) {
@@ -108,51 +108,12 @@ PlacementSchema RandomPlacement(std::vector<hermes::api::Blob> blobs) {
                               blob_each_portion*(split_num-1));
 
       for (size_t k {0}; k < new_blob_size.size(); ++k) {
-        int dst {state.num_devices};
-        auto itlow = ordered_cap.lower_bound(new_blob_size[k]);
-        if (itlow == ordered_cap.end()) {
-          std::cerr << "No target has enough capacity (max "
-                    << ordered_cap.rbegin()->first
-                    << ") for the blob with size " << new_blob_size[k] << ")\n"
-                    << std::flush;
-        }
-
-        std::uniform_int_distribution<std::mt19937::result_type>
-          dst_distribution((*itlow).second, state.num_devices-1);
-        dst = dst_distribution(rng);
-        result.push_back(std::make_pair(new_blob_size[k], dst));
-        for (auto it = itlow; it != ordered_cap.end(); ++it) {
-          if ((*it).second == dst) {
-            ordered_cap.insert(std::pair<size_t, size_t>(
-                                 (*it).first-new_blob_size[k], (*it).second));
-            ordered_cap.erase(it);
-            break;
-          }
-        }
+        AddRandomSchema(ordered_cap, new_blob_size[k], result);
       }
     } else {
       // Blob size is less than 64KB or do not split
       std::cout << "blob size is " << blobs[i].size() << '\n' << std::flush;
-      int dst {state.num_devices};
-      auto itlow = ordered_cap.lower_bound(blobs[i].size());
-      if (itlow == ordered_cap.end()) {
-        std::cerr << "No target has enough capacity (max "
-                  << ordered_cap.rbegin()->first << " for the blob with size "
-                  << blobs[i].size() << '\n' << std::flush;
-      }
-
-      std::uniform_int_distribution<std::mt19937::result_type>
-        dst_distribution((*itlow).second, state.num_devices-1);
-      dst = dst_distribution(rng);
-      for (auto it=itlow; it != ordered_cap.end(); ++it) {
-        if ((*it).second == dst) {
-          ordered_cap.insert(std::pair<size_t, size_t>(
-                               (*it).first-blobs[i].size(), (*it).second));
-          ordered_cap.erase(it);
-          break;
-        }
-      }
-      result.push_back(std::make_pair(blobs[i].size(), dst));
+      AddRandomSchema(ordered_cap, blobs[i].size(), result);
     }
   }
 
@@ -183,9 +144,11 @@ int main() {
   }
   std::cout << '\n' << '\n' << std::flush;
 
-  PlacementSchema schema1 = RandomPlacement(input_blobs);
+  std::vector<PlacementSchema> schemas1 = RandomPlacement(input_blobs);
+  for (auto schema : schemas1) {
+    UpdateSystemViewState(schema);
+  }
 
-  UpdateSystemViewState(schema1);
   for (int i {0}; i < globalSystemViewState.num_devices; ++i) {
     std::cout << "device[" << i << "]: "
               << globalSystemViewState.bytes_available[i]
@@ -204,9 +167,11 @@ int main() {
   input_blobs.push_back(p5);
   input_blobs.push_back(p6);
   input_blobs.push_back(p7);
-  PlacementSchema schema2 = RandomPlacement(input_blobs);
+  std::vector<PlacementSchema> schemas2 = RandomPlacement(input_blobs);
+  for (auto schema : schemas2) {
+    UpdateSystemViewState(schema);
+  }
 
-  UpdateSystemViewState(schema2);
   for (int i {0}; i < globalSystemViewState.num_devices; ++i) {
     std::cout << "device[" << i << "]: "
               << globalSystemViewState.bytes_available[i]
@@ -229,9 +194,11 @@ int main() {
   input_blobs.push_back(p10);
   input_blobs.push_back(p11);
   input_blobs.push_back(p12);
-  PlacementSchema schema3 = RandomPlacement(input_blobs);
+  std::vector<PlacementSchema> schemas3 = RandomPlacement(input_blobs);
+  for (auto schema : schemas3) {
+    UpdateSystemViewState(schema);
+  }
 
-  UpdateSystemViewState(schema3);
   for (int i {0}; i < globalSystemViewState.num_devices; ++i) {
     std::cout << "device[" << i << "]: "
               << globalSystemViewState.bytes_available[i]
