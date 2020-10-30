@@ -161,6 +161,40 @@ Status RoundRobinPlacement(SharedMemoryContext *context, RpcContext *rpc,
   return result;
 }
 
+Status AddRandomSchema(std::multimap<u64, size_t> &ordered_cap,
+                       size_t blob_size, std::vector<PlacementSchema> &output) {
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  Status result = 0;
+
+  auto itlow = ordered_cap.lower_bound(blob_size);
+  if (itlow == ordered_cap.end()) {
+    result = 1;
+    // TODO(chogan): @errorhandling Set error type in Status
+  } else {
+    std::vector<DeviceID> valid_devices;
+    for (auto it = itlow; it != ordered_cap.end(); ++it) {
+      valid_devices.push_back(it->second);
+    }
+    std::uniform_int_distribution<> dst_dist(0, valid_devices.size() - 1);
+    size_t dst_index = dst_dist(gen);
+    DeviceID dst = valid_devices[dst_index];
+    for (auto it = itlow; it != ordered_cap.end(); ++it) {
+      if ((*it).second == dst) {
+        ordered_cap.insert(std::pair<u64, size_t>(
+                             (*it).first-blob_size, (*it).second));
+        ordered_cap.erase(it);
+        break;
+      }
+    }
+    PlacementSchema schema;
+    schema.push_back(std::make_pair(blob_size, dst));
+    output.push_back(schema);
+  }
+
+  return result;
+}
+
 Status RandomPlacement(SharedMemoryContext *context, RpcContext *rpc,
                        std::vector<size_t> &blob_sizes,
                        std::vector<PlacementSchema> &output) {
@@ -179,7 +213,6 @@ Status RandomPlacement(SharedMemoryContext *context, RpcContext *rpc,
     std::random_device dev;
     std::mt19937 rng(dev());
     int number {0};
-    PlacementSchema schema;
 
     // If size is greater than 64KB
     // Split the blob or not
@@ -208,55 +241,11 @@ Status RandomPlacement(SharedMemoryContext *context, RpcContext *rpc,
                               blob_each_portion*(split_num-1));
 
       for (size_t k {0}; k < new_blob_size.size(); ++k) {
-        size_t dst {node_state.size()};
-        auto itlow = ordered_cap.lower_bound(new_blob_size[k]);
-        if (itlow == ordered_cap.end()) {
-          result = 1;
-          // TODO(chogan): @errorhandling Set error type in Status
-        } else {
-          std::uniform_int_distribution<std::mt19937::result_type>
-            dst_distribution((*itlow).second, node_state.size()-1);
-          dst = dst_distribution(rng);
-          schema.push_back(std::make_pair(new_blob_size[k], dst));
-
-          for (auto it = itlow; it != ordered_cap.end(); ++it) {
-            if ((*it).second == dst) {
-              ordered_cap.insert(std::pair<u64, size_t>(
-                                   (*it).first-new_blob_size[k], (*it).second));
-              ordered_cap.erase(it);
-              break;
-            }
-          }
-        }
-        output.push_back(schema);
+        result = AddRandomSchema(ordered_cap, new_blob_size[k], output);
       }
     } else {
       // Blob size is less than 64KB or do not split
-      PlacementSchema schema;
-      auto itlow = ordered_cap.lower_bound(blob_sizes[i]);
-      if (itlow == ordered_cap.end()) {
-        result = 1;
-        // TODO(chogan): @errorhandling Set error type in Status
-      } else {
-        std::vector<DeviceID> valid_devices;
-        for (auto it = itlow; it != ordered_cap.end(); ++it) {
-          valid_devices.push_back(it->second);
-        }
-        std::uniform_int_distribution<std::mt19937::result_type>
-          dst_distribution(0, valid_devices.size() - 1);
-        size_t dst_index = dst_distribution(rng);
-        DeviceID dst = valid_devices[dst_index];
-        for (auto it = itlow; it != ordered_cap.end(); ++it) {
-          if ((*it).second == dst) {
-            ordered_cap.insert(std::pair<u64, size_t>(
-                                 (*it).first-blob_sizes[i], (*it).second));
-            ordered_cap.erase(it);
-            break;
-          }
-        }
-        schema.push_back(std::make_pair(blob_sizes[i], dst));
-        output.push_back(schema);
-      }
+      result = AddRandomSchema(ordered_cap, blob_sizes[i], output);
     }
   }
 
