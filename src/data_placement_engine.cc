@@ -173,25 +173,18 @@ Status AddRandomSchema(std::multimap<u64, size_t> &ordered_cap,
     result = 1;
     // TODO(chogan): @errorhandling Set error type in Status
   } else {
-    std::vector<DeviceID> valid_devices;
-    for (auto it = itlow; it != ordered_cap.end(); ++it) {
-      valid_devices.push_back(it->second);
-    }
-    std::uniform_int_distribution<> dst_dist(0, valid_devices.size() - 1);
-    size_t dst_index = dst_dist(gen);
-    DeviceID dst = valid_devices[dst_index];
-    for (auto it = itlow; it != ordered_cap.end(); ++it) {
-      if ((*it).second == dst) {
-        ordered_cap.insert(std::pair<u64, size_t>(
-                             (*it).first-blob_size, (*it).second));
-        ordered_cap.erase(it);
-        node_state[dst] -= blob_size;
-        break;
-      }
-    }
+    // distance from lower bound to the end
+    std::uniform_int_distribution<>
+      dst_dist(1, std::distance(itlow, ordered_cap.end()));
+    size_t dst_relative = dst_dist(gen);
+    std::advance(itlow, dst_relative-1);
+    ordered_cap.insert(std::pair<u64, size_t>(
+                         (*itlow).first-blob_size, (*itlow).second));
+
     PlacementSchema schema;
-    schema.push_back(std::make_pair(blob_size, dst));
+    schema.push_back(std::make_pair(blob_size, (*itlow).second));
     output.push_back(schema);
+    ordered_cap.erase(itlow);
   }
 
   return result;
