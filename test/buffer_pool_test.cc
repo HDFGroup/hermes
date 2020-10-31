@@ -212,7 +212,7 @@ int main(int argc, char **argv) {
     config.arena_percentages[hermes::kArenaType_MetaData] = 0.5;
 
     std::shared_ptr<Hermes> hermes = hermes::InitHermesDaemon(&config);
-    // TestSwap(hermes);
+    TestSwap(hermes);
     TestBufferOrganizer(hermes);
     hermes->Finalize(true);
   }

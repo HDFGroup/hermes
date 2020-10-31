@@ -426,6 +426,24 @@ static void IncrementAvailableBuffers(SharedMemoryContext *context,
   }
 }
 
+void UpdateBufferingCapacities(SharedMemoryContext *context, i64 adjustment,
+                               DeviceID device_id) {
+  BufferPool *pool = GetBufferPoolFromContext(context);
+
+  // NOTE(chogan): Update local capacities, which will eventually be reflected
+  // in the global SystemViewState.
+  // TODO(chogan): I think Target capacities will supercede the global system
+  // view state once we have topologies. For now we track both node capacities
+  // and global capacities.
+  pool->capacity_adjustments[device_id].fetch_add(adjustment);
+
+  // TODO(chogan): DeviceID is currently equal to TargetID, but that will change
+  // once we have topologies. This function will need to support TargetIDs
+  // instead of DeviceID.
+  Target *target = GetTarget(context, device_id);
+  target->remaining_space.fetch_add(adjustment);
+}
+
 void LocalReleaseBuffer(SharedMemoryContext *context, BufferID buffer_id) {
   BufferPool *pool = GetBufferPoolFromContext(context);
   BufferHeader *header_to_free = GetHeaderByIndex(context,
@@ -441,10 +459,9 @@ void LocalReleaseBuffer(SharedMemoryContext *context, BufferID buffer_id) {
     SetFirstFreeBufferId(context, device_id, slab_index, buffer_id);
     IncrementAvailableBuffers(context, device_id, slab_index);
 
-    // NOTE(chogan): Update local capacities, which will eventually be reflected
-    // in the global SystemViewState.
-    i64 adjustment = header_to_free->capacity;
-    pool->capacity_adjustments[header_to_free->device_id] += adjustment;
+    i64 capacity_adjustment = header_to_free->capacity;
+    UpdateBufferingCapacities(context, capacity_adjustment, device_id);
+
     EndTicketMutex(&pool->ticket_mutex);
   }
 }
@@ -488,10 +505,8 @@ BufferID GetFreeBuffer(SharedMemoryContext *context, DeviceID device_id,
     SetFirstFreeBufferId(context, device_id, slab_index, header->next_free);
     DecrementAvailableBuffers(context, device_id, slab_index);
 
-    // NOTE(chogan): Update local capacities, which will eventually be reflected
-    // in the global SystemViewState.
-    i64 adjustment = header->capacity;
-    pool->capacity_adjustments[header->device_id] -= adjustment;
+    i64 capacity_adjustment = -(i64)header->capacity;
+    UpdateBufferingCapacities(context, capacity_adjustment, device_id);
   }
   EndTicketMutex(&pool->ticket_mutex);
 
