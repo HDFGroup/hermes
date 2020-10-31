@@ -78,9 +78,9 @@ std::vector<int> GetValidSplitChoices(size_t blob_size) {
 
 Status RoundRobinPlacement(SharedMemoryContext *context, RpcContext *rpc,
                         std::vector<size_t> &blob_sizes,
+                        std::vector<u64> &node_state,
                         std::vector<PlacementSchema> &output) {
   (void)rpc;
-  std::vector<u64> node_state = GetRemainingNodeCapacities(context);
   Status result = 0;
 
   for (size_t i {0}; i < blob_sizes.size(); ++i) {
@@ -199,17 +199,11 @@ Status AddRandomSchema(std::multimap<u64, size_t> &ordered_cap,
 
 Status RandomPlacement(SharedMemoryContext *context, RpcContext *rpc,
                        std::vector<size_t> &blob_sizes,
+                       std::vector<u64> &node_state,
+                       std::multimap<u64, size_t> &ordered_cap,
                        std::vector<PlacementSchema> &output) {
   (void)rpc;
   Status result = 0;
-
-  // TODO(chogan): For now we just look at the node level. Eventually we will
-  // need the ability to escalate to neighborhoods, and the entire cluster.
-  std::vector<u64> node_state = GetRemainingNodeCapacities(context);
-  std::multimap<u64, size_t> ordered_cap;
-  for (size_t i = 0; i < node_state.size(); ++i) {
-    ordered_cap.insert(std::pair<u64, size_t>(node_state[i], i));
-  }
 
   for (size_t i {0}; i < blob_sizes.size(); ++i) {
     std::random_device dev;
@@ -257,6 +251,8 @@ Status RandomPlacement(SharedMemoryContext *context, RpcContext *rpc,
 
 Status MinimizeIoTimePlacement(SharedMemoryContext *context, RpcContext *rpc,
                             std::vector<size_t> &blob_sizes,
+                            std::vector<u64> &node_state,
+                            std::vector<f32> &bandwidths,
                             std::vector<PlacementSchema> &output) {
   (void)rpc;
   using operations_research::MPSolver;
@@ -265,10 +261,6 @@ Status MinimizeIoTimePlacement(SharedMemoryContext *context, RpcContext *rpc,
   using operations_research::MPObjective;
 
   Status result = 0;
-  // TODO(chogan): For now we just look at the node level targets. Eventually we
-  // will need the ability to escalate to neighborhoods, and the entire cluster.
-  std::vector<u64> node_state = GetRemainingNodeCapacities(context);
-  std::vector<f32> bandwidths = GetBandwidths(context);
   // TODO(KIMMY): size of constraints should be from context
   std::vector<MPConstraint*> blob_constrt(blob_sizes.size() +
                                           node_state.size()*3-1);
@@ -386,14 +378,25 @@ Status CalculatePlacement(SharedMemoryContext *context, RpcContext *rpc,
   // TODO(chogan): Return a PlacementSchema that minimizes a cost function F
   // given a set of N Devices and a blob, while satisfying a policy P.
 
+  // TODO(chogan): For now we just look at the node level targets. Eventually we
+  // will need the ability to escalate to neighborhoods, and the entire cluster.
+  std::vector<u64> node_state = GetRemainingNodeCapacities(context);
+
   switch (api_context.policy) {
     // TODO(KIMMY): check device capacity against blob size
     case api::PlacementPolicy::kRandom: {
-      result = RandomPlacement(context, rpc, blob_sizes, output);
+      std::multimap<u64, size_t> ordered_cap;
+      for (size_t i = 0; i < node_state.size(); ++i) {
+        ordered_cap.insert(std::pair<u64, size_t>(node_state[i], i));
+      }
+
+      result = RandomPlacement(context, rpc, blob_sizes, node_state,
+                               ordered_cap, output);
       break;
     }
     case api::PlacementPolicy::kRoundRobin: {
-      result = RoundRobinPlacement(context, rpc, blob_sizes, output);
+      result = RoundRobinPlacement(context, rpc, blob_sizes, node_state,
+                                   output);
       break;
     }
     case api::PlacementPolicy::kTopDown: {
@@ -401,7 +404,10 @@ Status CalculatePlacement(SharedMemoryContext *context, RpcContext *rpc,
       break;
     }
     case api::PlacementPolicy::kMinimizeIoTime: {
-      result = MinimizeIoTimePlacement(context, rpc, blob_sizes, output);
+      std::vector<f32> bandwidths = GetBandwidths(context);
+
+      result = MinimizeIoTimePlacement(context, rpc, blob_sizes, node_state, 
+                                       bandwidths, output);
       break;
     }
   }
