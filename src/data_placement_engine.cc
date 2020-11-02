@@ -18,14 +18,12 @@ namespace hermes {
 using hermes::api::Status;
 
 // TODO(chogan): Unfinished sketch
-Status TopDownPlacement(SharedMemoryContext *context, RpcContext *rpc,
-                        std::vector<size_t> blob_sizes,
+Status TopDownPlacement(std::vector<size_t> blob_sizes,
+                        std::vector<u64> &node_state,
                         std::vector<PlacementSchema> &output) {
-  (void)rpc;
   HERMES_NOT_IMPLEMENTED_YET;
 
   Status result = 0;
-  std::vector<u64> node_state = GetRemainingNodeCapacities(context);
 
   for (auto &blob_size : blob_sizes) {
     PlacementSchema schema;
@@ -76,11 +74,9 @@ std::vector<int> GetValidSplitChoices(size_t blob_size) {
   return result;
 }
 
-Status RoundRobinPlacement(SharedMemoryContext *context, RpcContext *rpc,
-                        std::vector<size_t> &blob_sizes,
+Status RoundRobinPlacement(std::vector<size_t> &blob_sizes,
                         std::vector<u64> &node_state,
                         std::vector<PlacementSchema> &output) {
-  (void)rpc;
   Status result = 0;
 
   for (size_t i {0}; i < blob_sizes.size(); ++i) {
@@ -190,12 +186,10 @@ Status AddRandomSchema(std::multimap<u64, size_t> &ordered_cap,
   return result;
 }
 
-Status RandomPlacement(SharedMemoryContext *context, RpcContext *rpc,
-                       std::vector<size_t> &blob_sizes,
+Status RandomPlacement(std::vector<size_t> &blob_sizes,
                        std::vector<u64> &node_state,
                        std::multimap<u64, size_t> &ordered_cap,
                        std::vector<PlacementSchema> &output) {
-  (void)rpc;
   Status result = 0;
 
   for (size_t i {0}; i < blob_sizes.size(); ++i) {
@@ -242,12 +236,10 @@ Status RandomPlacement(SharedMemoryContext *context, RpcContext *rpc,
   return result;
 }
 
-Status MinimizeIoTimePlacement(SharedMemoryContext *context, RpcContext *rpc,
-                            std::vector<size_t> &blob_sizes,
+Status MinimizeIoTimePlacement(std::vector<size_t> &blob_sizes,
                             std::vector<u64> &node_state,
                             std::vector<f32> &bandwidths,
                             std::vector<PlacementSchema> &output) {
-  (void)rpc;
   using operations_research::MPSolver;
   using operations_research::MPVariable;
   using operations_research::MPConstraint;
@@ -383,23 +375,23 @@ Status CalculatePlacement(SharedMemoryContext *context, RpcContext *rpc,
         ordered_cap.insert(std::pair<u64, size_t>(node_state[i], i));
       }
 
-      result = RandomPlacement(context, rpc, blob_sizes, node_state,
+      result = RandomPlacement(blob_sizes, node_state,
                                ordered_cap, output);
       break;
     }
     case api::PlacementPolicy::kRoundRobin: {
-      result = RoundRobinPlacement(context, rpc, blob_sizes, node_state,
+      result = RoundRobinPlacement(blob_sizes, node_state,
                                    output);
       break;
     }
     case api::PlacementPolicy::kTopDown: {
-      result = TopDownPlacement(context, rpc, blob_sizes, output);
+      result = TopDownPlacement(blob_sizes, node_state, output);
       break;
     }
     case api::PlacementPolicy::kMinimizeIoTime: {
       std::vector<f32> bandwidths = GetBandwidths(context);
 
-      result = MinimizeIoTimePlacement(context, rpc, blob_sizes, node_state, 
+      result = MinimizeIoTimePlacement(blob_sizes, node_state, 
                                        bandwidths, output);
       break;
     }
