@@ -39,7 +39,7 @@ testing::TargetViewState InitDeviceState() {
   result.bandwidth.push_back(300);
   result.bandwidth.push_back(150);
   result.bandwidth.push_back(70);
- 
+
   result.ordered_cap.insert(std::pair<u64, size_t>(MEGABYTES(5), 0));
   result.ordered_cap.insert(std::pair<u64, size_t>(MEGABYTES(20), 1));
   result.ordered_cap.insert(std::pair<u64, size_t>(MEGABYTES(50), 2));
@@ -58,7 +58,7 @@ hermes::testing::TargetViewState GetNodeViewState() {
     result.bytes_available.push_back(NodeViewState.bytes_available[i]);
     result.bandwidth.push_back(NodeViewState.bandwidth[i]);
     result.ordered_cap.insert(std::pair<u64, size_t>
-                              (NodeViewState.bytes_available[i], i)); 
+                              (NodeViewState.bytes_available[i], i));
   }
 
   return result;
@@ -74,12 +74,12 @@ u64 UpdateDeviceState(PlacementSchema schema) {
     NodeViewState.ordered_cap.insert(std::pair<u64, size_t>
                               (NodeViewState.bytes_available[device], device));
   }
-  
+ 
   return result;
 }
 
 int main() {
-  std::vector<size_t> blob_sizes1 (1, MEGABYTES(10));
+  std::vector<size_t> blob_sizes1(1, MEGABYTES(10));
   InitDeviceState();
 
   std::cout << "Device Initial State:\n";
@@ -95,7 +95,8 @@ int main() {
   std::cout << "\nStart to place 10MB blob to targets\n" << std::flush;
 
   std::vector<PlacementSchema> schemas;
-  Status result = MinimizeIoTimePlacement(blob_sizes1, NodeViewState.bytes_available,
+  Status result = MinimizeIoTimePlacement(blob_sizes1,
+                                          NodeViewState.bytes_available,
                                           NodeViewState.bandwidth, schemas);
   if (result) {
     std::cout << "\nMinimizeIoTimePlacement failed\n" << std::flush;
@@ -122,7 +123,7 @@ int main() {
   std::cout << "\nMinimizeIoTimePlacement to place 1MB blob to targets\n"
             << std::flush;
 
-  std::vector<size_t> blob_sizes2 (1, MEGABYTES(1)); 
+  std::vector<size_t> blob_sizes2(1, MEGABYTES(1)); 
   schemas.clear();
   result = MinimizeIoTimePlacement(blob_sizes2, NodeViewState.bytes_available,
                                    NodeViewState.bandwidth, schemas);

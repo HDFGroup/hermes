@@ -78,7 +78,7 @@ Status RoundRobinPlacement(std::vector<size_t> &blob_sizes,
                         std::vector<u64> &node_state,
                         std::vector<PlacementSchema> &output) {
   Status result = 0;
-  std::vector<u64> ns_local (node_state.begin(), node_state.end());
+  std::vector<u64> ns_local(node_state.begin(), node_state.end());
 
   for (size_t i {0}; i < blob_sizes.size(); ++i) {
     std::random_device dev;
@@ -388,7 +388,7 @@ Status CalculatePlacement(SharedMemoryContext *context, RpcContext *rpc,
     case api::PlacementPolicy::kMinimizeIoTime: {
       std::vector<f32> bandwidths = GetBandwidths(context);
 
-      result = MinimizeIoTimePlacement(blob_sizes, node_state, 
+      result = MinimizeIoTimePlacement(blob_sizes, node_state,
                                        bandwidths, output);
       break;
     }
