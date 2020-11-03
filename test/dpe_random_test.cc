@@ -95,8 +95,7 @@ int main() {
   std::cout << "\nStart to place 10MB blob to targets\n" << std::flush;
 
   std::vector<PlacementSchema> schemas;
-  Status result = RandomPlacement(blob_sizes1, NodeViewState.bytes_available, 
-                                  NodeViewState.ordered_cap, schemas);
+  Status result = RandomPlacement(blob_sizes1, NodeViewState.ordered_cap, schemas);
   if (result) {
     std::cout << "\nFirst RandomPlacement failed\n" << std::flush;
     exit(1);
@@ -123,8 +122,7 @@ int main() {
 
   std::vector<size_t> blob_sizes2 (1, MEGABYTES(1)); 
   schemas.clear();
-  result = RandomPlacement(blob_sizes2, NodeViewState.bytes_available,
-                           NodeViewState.ordered_cap, schemas);
+  result = RandomPlacement(blob_sizes2, NodeViewState.ordered_cap, schemas);
   if (result) {
     std::cout << "\n\nSecond RandomPlacement failed\n" << std::flush;
     exit(1);

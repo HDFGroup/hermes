@@ -25,7 +25,6 @@ Status RoundRobinPlacement(std::vector<size_t> &blob_sizes,
                         std::vector<PlacementSchema> &output);
 
 Status RandomPlacement(std::vector<size_t> &blob_sizes,
-                       std::vector<u64> &node_state,
                        std::multimap<u64, size_t> &ordered_cap,
                        std::vector<PlacementSchema> &output);
 

@@ -187,7 +187,6 @@ Status AddRandomSchema(std::multimap<u64, size_t> &ordered_cap,
 }
 
 Status RandomPlacement(std::vector<size_t> &blob_sizes,
-                       std::vector<u64> &node_state,
                        std::multimap<u64, size_t> &ordered_cap,
                        std::vector<PlacementSchema> &output) {
   Status result = 0;
@@ -374,8 +373,7 @@ Status CalculatePlacement(SharedMemoryContext *context, RpcContext *rpc,
         ordered_cap.insert(std::pair<u64, size_t>(node_state[i], i));
       }
 
-      result = RandomPlacement(blob_sizes, node_state,
-                               ordered_cap, output);
+      result = RandomPlacement(blob_sizes, ordered_cap, output);
       break;
     }
     case api::PlacementPolicy::kRoundRobin: {
