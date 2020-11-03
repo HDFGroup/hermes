@@ -5,7 +5,6 @@
 
 #include "buffer_pool.h"
 #include "metadata_management.h"
-#include "data_placement_engine.h"
 
 namespace hermes {
 
