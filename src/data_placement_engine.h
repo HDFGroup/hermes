@@ -20,6 +20,20 @@ class DataPlacementEngine {
   }
 };
 
+Status RoundRobinPlacement(std::vector<size_t> &blob_sizes,
+                        std::vector<u64> &node_state,
+                        std::vector<PlacementSchema> &output);
+
+Status RandomPlacement(std::vector<size_t> &blob_sizes,
+                       std::vector<u64> &node_state,
+                       std::multimap<u64, size_t> &ordered_cap,
+                       std::vector<PlacementSchema> &output);
+
+Status MinimizeIoTimePlacement(std::vector<size_t> &blob_sizes,
+                               std::vector<u64> &node_state,
+                               std::vector<f32> &bandwidths,
+                               std::vector<PlacementSchema> &output);
+
 Status CalculatePlacement(SharedMemoryContext *context, RpcContext *rpc,
                           std::vector<size_t> &blob_size,
                           std::vector<PlacementSchema> &output,

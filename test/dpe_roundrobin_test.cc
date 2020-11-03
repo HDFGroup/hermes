@@ -2,232 +2,150 @@
 #include <random>
 #include <map>
 
-#include "ortools/linear_solver/linear_solver.h"
-
 #include "hermes.h"
 #include "data_placement_engine.h"
+#include "test_utils.h"
 
 using namespace hermes;  // NOLINT(*)
+namespace hapi = hermes::api;
 
 namespace hermes {
 namespace testing {
-static size_t COUNT_DEVICE;
-
-struct SystemViewState {
-  u64 bytes_capacity[kMaxDevices];
-  u64 bytes_available[kMaxDevices];
-  u64 bandwidth[kMaxDevices];
+struct TargetViewState {
+  std::vector<u64> bytes_capacity;
+  std::vector<u64> bytes_available;
+  std::vector<f32> bandwidth;
+  std::multimap<u64, size_t> ordered_cap;
   int num_devices;
 };
 }  // namespace testing
 }  // namespace hermes
 
-testing::SystemViewState InitSystemViewState() {
-  testing::SystemViewState result = {};
+testing::TargetViewState InitDeviceState() {
+  testing::TargetViewState result = {};
   result.num_devices = 4;
-  u64 one_mb = 1024 * 1024;
 
-  result.bytes_available[0] = 5 * one_mb;
-  result.bytes_available[1] = 20 * one_mb;
-  result.bytes_available[2] = 50 * one_mb;
-  result.bytes_available[3] = 200 * one_mb;
+  result.bytes_available.push_back(MEGABYTES(5));
+  result.bytes_available.push_back(MEGABYTES(20));
+  result.bytes_available.push_back(MEGABYTES(50));
+  result.bytes_available.push_back(MEGABYTES(200));
 
-  result.bytes_capacity[0] = 5 * one_mb;
-  result.bytes_capacity[1] = 20 * one_mb;
-  result.bytes_capacity[2] = 50 * one_mb;
-  result.bytes_capacity[3] = 200 * one_mb;
+  result.bytes_capacity.push_back(MEGABYTES(5));
+  result.bytes_capacity.push_back(MEGABYTES(20));
+  result.bytes_capacity.push_back(MEGABYTES(50));
+  result.bytes_capacity.push_back(MEGABYTES(200));
 
-  result.bandwidth[0] = 6000;
-  result.bandwidth[1] = 300;
-  result.bandwidth[2] = 150;
-  result.bandwidth[3] = 70;
+  result.bandwidth.push_back(6000);
+  result.bandwidth.push_back(300);
+  result.bandwidth.push_back(150);
+  result.bandwidth.push_back(70);
+ 
+  result.ordered_cap.insert(std::pair<u64, size_t>(MEGABYTES(5), 0));
+  result.ordered_cap.insert(std::pair<u64, size_t>(MEGABYTES(20), 1));
+  result.ordered_cap.insert(std::pair<u64, size_t>(MEGABYTES(50), 2));
+  result.ordered_cap.insert(std::pair<u64, size_t>(MEGABYTES(200), 3));
 
   return result;
 }
 
-static testing::SystemViewState globalSystemViewState {InitSystemViewState()};
+static hermes::testing::TargetViewState NodeViewState {InitDeviceState()};
 
-testing::SystemViewState GetSystemViewState() {
-  testing::SystemViewState result = {};
+hermes::testing::TargetViewState GetNodeViewState() {
+  testing::TargetViewState result = {};
 
-  for (int i {0}; i < globalSystemViewState.num_devices; ++i) {
-    result.num_devices = globalSystemViewState.num_devices;
-    result.bytes_available[i] = globalSystemViewState.bytes_available[i];
-    result.bandwidth[i] = globalSystemViewState.bandwidth[i];
+  result.num_devices = NodeViewState.num_devices;
+  for (int i {0}; i < NodeViewState.num_devices; ++i) {
+    result.bytes_available.push_back(NodeViewState.bytes_available[i]);
+    result.bandwidth.push_back(NodeViewState.bandwidth[i]);
+    result.ordered_cap.insert(std::pair<u64, size_t>
+                              (NodeViewState.bytes_available[i], i)); 
   }
 
   return result;
 }
 
-void UpdateSystemViewState(PlacementSchema schema) {
+u64 UpdateDeviceState(PlacementSchema schema) {
+  u64 result {0};
+  NodeViewState.ordered_cap.clear();
+
   for (auto [size, device] : schema) {
-    globalSystemViewState.bytes_available[device] -= size;
+    result += size;
+    NodeViewState.bytes_available[device] -= size;
+    NodeViewState.ordered_cap.insert(std::pair<u64, size_t>
+                              (NodeViewState.bytes_available[device], device));
   }
-}
-
-PlacementSchema RoundRobinPlacement(std::vector<hermes::api::Blob> blobs) {
-  PlacementSchema result;
-  // TODO(KIMMY): use kernel function of system view
-  testing::SystemViewState state {GetSystemViewState()};
-  std::multimap<u64, int> ordered_cap;
-
-  for (size_t i {0}; i < blobs.size(); ++i) {
-    // Split the blob or not
-    std::random_device dev;
-    std::mt19937 rng(dev());
-    int number {0};
-
-    // If size is greater than 64KB
-    // Decision about split the blob or not
-    if (blobs[i].size() > KILOBYTES(64)) {
-      std::uniform_int_distribution<std::mt19937::result_type>
-        distribution(0, 1);
-      number = distribution(rng);
-    }
-
-    // Split the blob
-    if (number) {
-      std::cout << "blob size is " << blobs[i].size() << '\n' << std::flush;
-      std::vector<int> split_choice = GetValidSplitChoices(blobs[i].size());
-
-     // Random pickup a number from split_choice to split the blob
-     std::uniform_int_distribution<std::mt19937::result_type>
-       position(0, split_choice.size()-1);
-     int split_num = split_choice[position(rng)];
-     std::cout << "split blob into " << split_num << '\n' << std::flush;
-
-     // Construct the vector for the splitted blob
-     std::vector<size_t> new_blob_size;
-     size_t blob_each_portion {blobs[i].size()/split_num};
-     for (int j {0}; j < split_num - 1; ++j) {
-       new_blob_size.push_back(blob_each_portion);
-     }
-     new_blob_size.push_back(blobs[i].size() -
-                             blob_each_portion*(split_num-1));
-
-     for (size_t k {0}; k < new_blob_size.size(); ++k) {
-       int dst {state.num_devices};
-       size_t device_pos {hermes::testing::COUNT_DEVICE};
-       for (int j {0}; j < state.num_devices; ++j) {
-         size_t adjust_pos {(j+device_pos)%state.num_devices};
-         if (state.bytes_available[adjust_pos] >= new_blob_size[k]) {
-           hermes::testing::COUNT_DEVICE = (j+device_pos+1)%state.num_devices;
-           dst = adjust_pos;
-           state.bytes_available[adjust_pos] -= new_blob_size[k];
-           result.push_back(std::make_pair(new_blob_size[k], dst));
-           break;
-         }
-       }
-       if (dst == state.num_devices) {
-         std::cerr << "Device not found for the splitted blob!\n";
-       }
-     }
-    } else {
-     // Blob size is less than 64KB or do not split
-     int dst {state.num_devices};
-     size_t device_pos {hermes::testing::COUNT_DEVICE};
-     for (int j {0}; j < state.num_devices; ++j) {
-       size_t adjust_pos {(j+device_pos)%state.num_devices};
-       if (state.bytes_available[adjust_pos] >= blobs[i].size()) {
-         hermes::testing::COUNT_DEVICE = (j+device_pos+1)%state.num_devices;
-         dst = adjust_pos;
-         state.bytes_available[adjust_pos] -= blobs[i].size();
-         result.push_back(std::make_pair(blobs[i].size(), dst));
-         break;
-       }
-     }
-     if (dst == state.num_devices) {
-       std::cerr << "Device not found for the splitted blob!\n";
-     }
-    }
-  }
-
+  
   return result;
 }
 
 int main() {
-  hermes::api::Blob p1(1024*1024, 255);
-  hermes::api::Blob p2(1024*1024*2, 255);
-  hermes::api::Blob p3(1024*1024*4, 255);
-  hermes::api::Blob p4(1024*1024*7, 255);
-  std::vector<hermes::api::Blob> input_blobs;
-  input_blobs.push_back(p1);
-  input_blobs.push_back(p2);
-  input_blobs.push_back(p3);
-  input_blobs.push_back(p4);
+  std::vector<size_t> blob_sizes1 (1, MEGABYTES(10));
+  InitDeviceState();
 
-  InitSystemViewState();
-
-  for (int i {0}; i < globalSystemViewState.num_devices; ++i) {
-    std::cout << "device[" << i << "]: "
-              << globalSystemViewState.bytes_available[i]
+  std::cout << "Device Initial State:\n";
+  for (int i {0}; i < NodeViewState.num_devices; ++i) {
+    std::cout << "capacity of device[" << i << "]: "
+              << NodeViewState.bytes_available[i]
               << '\n' << std::flush;
-    std::cout << "available ratio["<< i << "]: "
-              << static_cast<double>(globalSystemViewState.bytes_available[i])/
-                 globalSystemViewState.bytes_capacity[i]
+    std::cout << "available ratio of device["<< i << "]: "
+              << static_cast<double>(NodeViewState.bytes_available[i])/
+                 NodeViewState.bytes_capacity[i]
               << '\n' << std::flush;
   }
-  std::cout << '\n' << '\n' << std::flush;
+  std::cout << "\nStart to place 10MB blob to targets\n" << std::flush;
 
-  PlacementSchema schema1 = RoundRobinPlacement(input_blobs);
+  std::vector<PlacementSchema> schemas;
+  Status result = RoundRobinPlacement(blob_sizes1, NodeViewState.bytes_available, 
+                                      schemas);
+  if (result) {
+    std::cout << "\nFirst RoundRobinPlacement failed\n" << std::flush;
+    exit(1);
+  }
 
-  UpdateSystemViewState(schema1);
-  for (int i {0}; i < globalSystemViewState.num_devices; ++i) {
-    std::cout << "device[" << i << "]: "
-              << globalSystemViewState.bytes_available[i]
+  u64 placed_size {0};
+  for (auto schema : schemas) {
+    placed_size += UpdateDeviceState(schema);
+  }
+
+  std::cout << "\nUpdate Device State:\n";
+  for (int i {0}; i < NodeViewState.num_devices; ++i) {
+    std::cout << "capacity of device[" << i << "]: "
+              << NodeViewState.bytes_available[i]
               << '\n' << std::flush;
-    std::cout << "available ratio["<< i << "]: "
-              << static_cast<double>(globalSystemViewState.bytes_available[i])/
-                 globalSystemViewState.bytes_capacity[i]
+    std::cout << "available ratio of device["<< i << "]: "
+              << static_cast<double>(NodeViewState.bytes_available[i])/
+                 NodeViewState.bytes_capacity[i]
               << '\n' << std::flush;
   }
-  std::cout << '\n' << '\n' << std::flush;
+  Assert(placed_size == MEGABYTES(10));
 
-  hermes::api::Blob p5(1024*1024*0.5, 255);
-  hermes::api::Blob p6(1024*1024*20, 255);
-  hermes::api::Blob p7(1024*1024*4, 255);
-  input_blobs.clear();
-  input_blobs.push_back(p5);
-  input_blobs.push_back(p6);
-  input_blobs.push_back(p7);
-  PlacementSchema schema2 = RoundRobinPlacement(input_blobs);
+  std::cout << "\nStart to place 1MB blob to targets\n" << std::flush;
 
-  UpdateSystemViewState(schema2);
-  for (int i {0}; i < globalSystemViewState.num_devices; ++i) {
-    std::cout << "device[" << i << "]: "
-              << globalSystemViewState.bytes_available[i]
+  std::vector<size_t> blob_sizes2 (1, MEGABYTES(1)); 
+  schemas.clear();
+  result = RoundRobinPlacement(blob_sizes2, NodeViewState.bytes_available,
+                               schemas);
+  if (result) {
+    std::cout << "\n\nSecond RoundRobinPlacement failed\n" << std::flush;
+    exit(1);
+  }
+
+  placed_size = 0;
+  for (auto schema : schemas) {
+    placed_size += UpdateDeviceState(schema);
+  }
+
+  std::cout << "\nUpdate Device State:\n";
+  for (int i {0}; i < NodeViewState.num_devices; ++i) {
+    std::cout << "capacity of device[" << i << "]: "
+              << NodeViewState.bytes_available[i]
               << '\n' << std::flush;
-    std::cout << "available ratio["<< i << "]: "
-              << static_cast<double>(globalSystemViewState.bytes_available[i])/
-                 globalSystemViewState.bytes_capacity[i]
+    std::cout << "available ratio of device["<< i << "]: "
+              << static_cast<double>(NodeViewState.bytes_available[i])/
+                 NodeViewState.bytes_capacity[i]
               << '\n' << std::flush;
   }
-  std::cout << '\n' << '\n' << std::flush;
-
-  hermes::api::Blob p8(1024*1024*0.5, 255);
-  hermes::api::Blob p9(1024*1024*20, 255);
-  hermes::api::Blob p10(1024*1024*1, 255);
-  hermes::api::Blob p11(1024*1024*4, 255);
-  hermes::api::Blob p12(1024*1024*10, 255);
-  input_blobs.clear();
-  input_blobs.push_back(p8);
-  input_blobs.push_back(p9);
-  input_blobs.push_back(p10);
-  input_blobs.push_back(p11);
-  input_blobs.push_back(p12);
-  PlacementSchema schema3 = RoundRobinPlacement(input_blobs);
-
-  UpdateSystemViewState(schema3);
-  for (int i {0}; i < globalSystemViewState.num_devices; ++i) {
-    std::cout << "device[" << i << "]: "
-              << globalSystemViewState.bytes_available[i]
-              << '\n' << std::flush;
-    std::cout << "available ratio["<< i << "]: "
-              << static_cast<double>(globalSystemViewState.bytes_available[i])/
-                 globalSystemViewState.bytes_capacity[i]
-              << '\n' << std::flush;
-  }
-  std::cout << '\n' << '\n' << std::flush;
+  Assert(placed_size == MEGABYTES(1));
 
   return 0;
 }

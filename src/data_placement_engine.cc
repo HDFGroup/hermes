@@ -78,6 +78,7 @@ Status RoundRobinPlacement(std::vector<size_t> &blob_sizes,
                         std::vector<u64> &node_state,
                         std::vector<PlacementSchema> &output) {
   Status result = 0;
+  std::vector<u64> ns_local (node_state.begin(), node_state.end());
 
   for (size_t i {0}; i < blob_sizes.size(); ++i) {
     std::random_device dev;
@@ -112,20 +113,20 @@ Status RoundRobinPlacement(std::vector<size_t> &blob_sizes,
                               blob_each_portion*(split_num-1));
 
       for (size_t k {0}; k < new_blob_size.size(); ++k) {
-        size_t dst {node_state.size()};
+        size_t dst {ns_local.size()};
         DataPlacementEngine dpe;
         size_t device_pos {dpe.getCountDevice()};
-        for (size_t j {0}; j < node_state.size(); ++j) {
-          size_t adjust_pos {(j+device_pos)%node_state.size()};
-          if (node_state[adjust_pos] >= new_blob_size[k]) {
-            dpe.setCountDevice((j+device_pos+1)%node_state.size());
+        for (size_t j {0}; j < ns_local.size(); ++j) {
+          size_t adjust_pos {(j+device_pos)%ns_local.size()};
+          if (ns_local[adjust_pos] >= new_blob_size[k]) {
+            dpe.setCountDevice((j+device_pos+1)%ns_local.size());
             dst = adjust_pos;
-            node_state[adjust_pos] -= new_blob_size[k];
             schema.push_back(std::make_pair(new_blob_size[k], dst));
+            ns_local[dst] -= new_blob_size[k];
             break;
           }
         }
-        if (dst == node_state.size()) {
+        if (dst == ns_local.size()) {
           result = 1;
           // TODO(chogan): @errorhandling Set error type in Status
         }
@@ -133,21 +134,21 @@ Status RoundRobinPlacement(std::vector<size_t> &blob_sizes,
       output.push_back(schema);
     } else {
     // Blob size is less than 64KB or do not split
-      size_t dst {node_state.size()};
+      size_t dst {ns_local.size()};
       DataPlacementEngine dpe;
       size_t device_pos {dpe.getCountDevice()};
-      for (size_t j {0}; j < node_state.size(); ++j) {
-        size_t adjust_pos {(j+device_pos)%node_state.size()};
-        if (node_state[adjust_pos] >= blob_sizes[i]) {
-          dpe.setCountDevice((j+device_pos+1)%node_state.size());
+      for (size_t j {0}; j < ns_local.size(); ++j) {
+        size_t adjust_pos {(j+device_pos)%ns_local.size()};
+        if (ns_local[adjust_pos] >= blob_sizes[i]) {
+          dpe.setCountDevice((j+device_pos+1)%ns_local.size());
           dst = adjust_pos;
-          node_state[adjust_pos] -= blob_sizes[i];
           schema.push_back(std::make_pair(blob_sizes[i], dst));
+          ns_local[dst] -= blob_sizes[i];
           output.push_back(schema);
           break;
         }
       }
-      if (dst == node_state.size()) {
+      if (dst == ns_local.size()) {
         result = 1;
         // TODO(chogan): @errorhandling Set error type in Status
       }
@@ -158,8 +159,7 @@ Status RoundRobinPlacement(std::vector<size_t> &blob_sizes,
 }
 
 Status AddRandomSchema(std::multimap<u64, size_t> &ordered_cap,
-                       size_t blob_size, std::vector<PlacementSchema> &output,
-                       std::vector<u64> &node_state) {
+                       size_t blob_size, std::vector<PlacementSchema> &output) {
   std::random_device rd;
   std::mt19937 gen(rd());
   Status result = 0;
@@ -224,12 +224,11 @@ Status RandomPlacement(std::vector<size_t> &blob_sizes,
                               blob_each_portion*(split_num-1));
 
       for (size_t k {0}; k < new_blob_size.size(); ++k) {
-        result = AddRandomSchema(ordered_cap, new_blob_size[k], output,
-                                 node_state);
+        result = AddRandomSchema(ordered_cap, new_blob_size[k], output);
       }
     } else {
       // Blob size is less than 64KB or do not split
-      result = AddRandomSchema(ordered_cap, blob_sizes[i], output, node_state);
+      result = AddRandomSchema(ordered_cap, blob_sizes[i], output);
     }
   }
 
