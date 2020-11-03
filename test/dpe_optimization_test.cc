@@ -74,7 +74,7 @@ u64 UpdateDeviceState(PlacementSchema schema) {
     NodeViewState.ordered_cap.insert(std::pair<u64, size_t>
                               (NodeViewState.bytes_available[device], device));
   }
- 
+
   return result;
 }
 
@@ -123,7 +123,7 @@ int main() {
   std::cout << "\nMinimizeIoTimePlacement to place 1MB blob to targets\n"
             << std::flush;
 
-  std::vector<size_t> blob_sizes2(1, MEGABYTES(1)); 
+  std::vector<size_t> blob_sizes2(1, MEGABYTES(1));
   schemas.clear();
   result = MinimizeIoTimePlacement(blob_sizes2, NodeViewState.bytes_available,
                                    NodeViewState.bandwidth, schemas);

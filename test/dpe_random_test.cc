@@ -39,7 +39,7 @@ testing::TargetViewState InitDeviceState() {
   result.bandwidth.push_back(300);
   result.bandwidth.push_back(150);
   result.bandwidth.push_back(70);
- 
+
   result.ordered_cap.insert(std::pair<u64, size_t>(MEGABYTES(5), 0));
   result.ordered_cap.insert(std::pair<u64, size_t>(MEGABYTES(20), 1));
   result.ordered_cap.insert(std::pair<u64, size_t>(MEGABYTES(50), 2));
@@ -74,7 +74,7 @@ u64 UpdateDeviceState(PlacementSchema schema) {
     NodeViewState.ordered_cap.insert(std::pair<u64, size_t>
                               (NodeViewState.bytes_available[device], device));
   }
- 
+
   return result;
 }
 

@@ -74,7 +74,7 @@ u64 UpdateDeviceState(PlacementSchema schema) {
     NodeViewState.ordered_cap.insert(std::pair<u64, size_t>
                               (NodeViewState.bytes_available[device], device));
   }
- 
+
   return result;
 }
 
