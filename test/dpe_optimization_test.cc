@@ -7,46 +7,6 @@
 #include "test_utils.h"
 
 using namespace hermes;  // NOLINT(*)
-namespace hapi = hermes::api;
-
-namespace hermes {
-namespace testing {
-struct TargetViewState {
-  std::vector<u64> bytes_capacity;
-  std::vector<u64> bytes_available;
-  std::vector<f32> bandwidth;
-  std::multimap<u64, size_t> ordered_cap;
-  int num_devices;
-};
-}  // namespace testing
-}  // namespace hermes
-
-testing::TargetViewState InitDeviceState() {
-  testing::TargetViewState result = {};
-  result.num_devices = 4;
-
-  result.bytes_available.push_back(MEGABYTES(5));
-  result.bytes_available.push_back(MEGABYTES(20));
-  result.bytes_available.push_back(MEGABYTES(50));
-  result.bytes_available.push_back(MEGABYTES(200));
-
-  result.bytes_capacity.push_back(MEGABYTES(5));
-  result.bytes_capacity.push_back(MEGABYTES(20));
-  result.bytes_capacity.push_back(MEGABYTES(50));
-  result.bytes_capacity.push_back(MEGABYTES(200));
-
-  result.bandwidth.push_back(6000);
-  result.bandwidth.push_back(300);
-  result.bandwidth.push_back(150);
-  result.bandwidth.push_back(70);
-
-  result.ordered_cap.insert(std::pair<u64, size_t>(MEGABYTES(5), 0));
-  result.ordered_cap.insert(std::pair<u64, size_t>(MEGABYTES(20), 1));
-  result.ordered_cap.insert(std::pair<u64, size_t>(MEGABYTES(50), 2));
-  result.ordered_cap.insert(std::pair<u64, size_t>(MEGABYTES(200), 3));
-
-  return result;
-}
 
 static hermes::testing::TargetViewState NodeViewState {InitDeviceState()};
 
