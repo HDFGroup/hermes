@@ -8,54 +8,44 @@
 
 using namespace hermes;  // NOLINT(*)
 
-static hermes::testing::TargetViewState NodeViewState {InitDeviceState()};
+static hermes::testing::TargetViewState node_state {InitDeviceState()};
 
-hermes::testing::TargetViewState GetNodeViewState() {
-  testing::TargetViewState result = {};
+u64 UpdateDeviceState(PlacementSchema schema) {
+  u64 result {0};
+  node_state.ordered_cap.clear();
 
-  result.num_devices = NodeViewState.num_devices;
-  for (int i {0}; i < NodeViewState.num_devices; ++i) {
-    result.bytes_available.push_back(NodeViewState.bytes_available[i]);
-    result.bandwidth.push_back(NodeViewState.bandwidth[i]);
-    result.ordered_cap.insert(std::pair<u64, size_t>
-                              (NodeViewState.bytes_available[i], i));
+  for (auto [size, device] : schema) {
+    result += size;
+    node_state.bytes_available[device] -= size;
+    node_state.ordered_cap.insert(std::pair<u64, size_t>
+                              (node_state.bytes_available[device], device));
   }
 
   return result;
 }
 
-u64 UpdateDeviceState(PlacementSchema schema) {
-  u64 result {0};
-  NodeViewState.ordered_cap.clear();
-
-  for (auto [size, device] : schema) {
-    result += size;
-    NodeViewState.bytes_available[device] -= size;
-    NodeViewState.ordered_cap.insert(std::pair<u64, size_t>
-                              (NodeViewState.bytes_available[device], device));
+void PrintNodeState(testing::TargetViewState &node_state) {
+  for (int i {0}; i < node_state.num_devices; ++i) {
+    std::cout << "capacity of device[" << i << "]: "
+              << node_state.bytes_available[i]
+              << '\n' << std::flush;
+    std::cout << "available ratio of device["<< i << "]: "
+              << static_cast<double>(node_state.bytes_available[i])/
+                 node_state.bytes_capacity[i]
+              << '\n' << std::flush;
   }
-
-  return result;
 }
 
 int main() {
   std::vector<size_t> blob_sizes1(1, MEGABYTES(10));
-  InitDeviceState();
 
+  Assert(node_state.num_devices==4);
   std::cout << "Device Initial State:\n";
-  for (int i {0}; i < NodeViewState.num_devices; ++i) {
-    std::cout << "capacity of device[" << i << "]: "
-              << NodeViewState.bytes_available[i]
-              << '\n' << std::flush;
-    std::cout << "available ratio of device["<< i << "]: "
-              << static_cast<double>(NodeViewState.bytes_available[i])/
-                 NodeViewState.bytes_capacity[i]
-              << '\n' << std::flush;
-  }
+  PrintNodeState(node_state);
   std::cout << "\nStart to place 10MB blob to targets\n" << std::flush;
 
   std::vector<PlacementSchema> schemas;
-  Status result = RandomPlacement(blob_sizes1, NodeViewState.ordered_cap,
+  Status result = RandomPlacement(blob_sizes1, node_state.ordered_cap,
                                   schemas);
   if (result) {
     std::cout << "\nFirst RandomPlacement failed\n" << std::flush;
@@ -68,22 +58,14 @@ int main() {
   }
 
   std::cout << "\nUpdate Device State:\n";
-  for (int i {0}; i < NodeViewState.num_devices; ++i) {
-    std::cout << "capacity of device[" << i << "]: "
-              << NodeViewState.bytes_available[i]
-              << '\n' << std::flush;
-    std::cout << "available ratio of device["<< i << "]: "
-              << static_cast<double>(NodeViewState.bytes_available[i])/
-                 NodeViewState.bytes_capacity[i]
-              << '\n' << std::flush;
-  }
+  PrintNodeState(node_state);
   Assert(placed_size == MEGABYTES(10));
 
   std::cout << "\nStart to place 1MB blob to targets\n" << std::flush;
 
   std::vector<size_t> blob_sizes2(1, MEGABYTES(1));
   schemas.clear();
-  result = RandomPlacement(blob_sizes2, NodeViewState.ordered_cap, schemas);
+  result = RandomPlacement(blob_sizes2, node_state.ordered_cap, schemas);
   if (result) {
     std::cout << "\n\nSecond RandomPlacement failed\n" << std::flush;
     exit(1);
@@ -95,15 +77,7 @@ int main() {
   }
 
   std::cout << "\nUpdate Device State:\n";
-  for (int i {0}; i < NodeViewState.num_devices; ++i) {
-    std::cout << "capacity of device[" << i << "]: "
-              << NodeViewState.bytes_available[i]
-              << '\n' << std::flush;
-    std::cout << "available ratio of device["<< i << "]: "
-              << static_cast<double>(NodeViewState.bytes_available[i])/
-                 NodeViewState.bytes_capacity[i]
-              << '\n' << std::flush;
-  }
+  PrintNodeState(node_state);
   Assert(placed_size == MEGABYTES(1));
 
   return 0;
