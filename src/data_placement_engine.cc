@@ -159,7 +159,7 @@ Status RoundRobinPlacement(std::vector<size_t> &blob_sizes,
 }
 
 Status AddRandomSchema(std::multimap<u64, size_t> &ordered_cap,
-                       size_t blob_size, std::vector<PlacementSchema> &output) {
+                       size_t blob_size, PlacementSchema &schema) {
   std::random_device rd;
   std::mt19937 gen(rd());
   Status result = 0;
@@ -177,9 +177,7 @@ Status AddRandomSchema(std::multimap<u64, size_t> &ordered_cap,
     ordered_cap.insert(std::pair<u64, size_t>(
                          (*itlow).first-blob_size, (*itlow).second));
 
-    PlacementSchema schema;
     schema.push_back(std::make_pair(blob_size, (*itlow).second));
-    output.push_back(schema);
     ordered_cap.erase(itlow);
   }
 
@@ -192,6 +190,7 @@ Status RandomPlacement(std::vector<size_t> &blob_sizes,
   Status result = 0;
 
   for (size_t i {0}; i < blob_sizes.size(); ++i) {
+    PlacementSchema schema;
     std::random_device dev;
     std::mt19937 rng(dev());
     int number {0};
@@ -223,14 +222,16 @@ Status RandomPlacement(std::vector<size_t> &blob_sizes,
                               blob_each_portion*(split_num-1));
 
       for (size_t k {0}; k < new_blob_size.size(); ++k) {
-        result = AddRandomSchema(ordered_cap, new_blob_size[k], output);
+        result = AddRandomSchema(ordered_cap, new_blob_size[k], schema);
       }
     } else {
       // Blob size is less than 64KB or do not split
-      result = AddRandomSchema(ordered_cap, blob_sizes[i], output);
+      result = AddRandomSchema(ordered_cap, blob_sizes[i], schema);
     }
+    output.push_back(schema);
   }
 
+std::cout << "output size is " << output.size() << '\n' << std::flush;
   return result;
 }
 
@@ -356,6 +357,7 @@ Status CalculatePlacement(SharedMemoryContext *context, RpcContext *rpc,
                           std::vector<PlacementSchema> &output,
                           const api::Context &api_context) {
   (void)api_context;
+  (void)rpc;
   Status result = 0;
 
   // TODO(chogan): Return a PlacementSchema that minimizes a cost function F
