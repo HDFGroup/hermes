@@ -36,19 +36,14 @@ void PrintNodeState(testing::TargetViewState &node_state) {
   }
 }
 
-int main() {
-  std::vector<size_t> blob_sizes1(1, MEGABYTES(10));
-
-  Assert(node_state.num_devices==4);
-  std::cout << "Device Initial State:\n";
-  PrintNodeState(node_state);
-  std::cout << "\nStart to place 10MB blob to targets\n" << std::flush;
-
-  std::vector<PlacementSchema> schemas;
-  Status result = RandomPlacement(blob_sizes1, node_state.ordered_cap,
+void RandomPlaceBlob(std::vector<size_t> &blob_sizes,
+                     std::vector<PlacementSchema> &schemas) {
+  std::cout << "\nRandomPlacement to place blob of size " << blob_sizes[0]
+            << " to targets\n" << std::flush;
+  Status result = RandomPlacement(blob_sizes, node_state.ordered_cap,
                                   schemas);
   if (result) {
-    std::cout << "\nFirst RandomPlacement failed\n" << std::flush;
+    std::cout << "\nRandomPlacement failed\n" << std::flush;
     exit(1);
   }
 
@@ -59,26 +54,24 @@ int main() {
 
   std::cout << "\nUpdate Device State:\n";
   PrintNodeState(node_state);
-  Assert(placed_size == MEGABYTES(10));
+  u64 total_sizes = std::accumulate(blob_sizes.begin(), blob_sizes.end(), 0);
+  Assert(placed_size == total_sizes);
+}
 
-  std::cout << "\nStart to place 1MB blob to targets\n" << std::flush;
+int main() {
+  Assert(node_state.num_devices == 4);
+  std::cout << "Device Initial State:\n";
+  PrintNodeState(node_state);
+  
+  std::vector<size_t> blob_sizes1(1, MEGABYTES(10));
+  std::vector<PlacementSchema> schemas1;
+  RandomPlaceBlob(blob_sizes1, schemas1);
+  Assert(schemas1.size() == blob_sizes1.size());
 
   std::vector<size_t> blob_sizes2(1, MEGABYTES(1));
-  schemas.clear();
-  result = RandomPlacement(blob_sizes2, node_state.ordered_cap, schemas);
-  if (result) {
-    std::cout << "\n\nSecond RandomPlacement failed\n" << std::flush;
-    exit(1);
-  }
-
-  placed_size = 0;
-  for (auto schema : schemas) {
-    placed_size += UpdateDeviceState(schema);
-  }
-
-  std::cout << "\nUpdate Device State:\n";
-  PrintNodeState(node_state);
-  Assert(placed_size == MEGABYTES(1));
+  std::vector<PlacementSchema> schemas2;
+  RandomPlaceBlob(blob_sizes2, schemas2);
+  Assert(schemas2.size() == blob_sizes1.size());
 
   return 0;
 }
