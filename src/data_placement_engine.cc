@@ -351,8 +351,8 @@ Status MinimizeIoTimePlacement(std::vector<size_t> &blob_sizes,
   return result;
 }
 
-PlacementSchema AggregateBlobSchema(size_t num_target, PlacementSchema &schema)
-{
+PlacementSchema AggregateBlobSchema(size_t num_target,
+                                    PlacementSchema &schema) {
   std::vector<u64> place_size(num_target, 0);
   PlacementSchema result;
 
@@ -360,7 +360,7 @@ PlacementSchema AggregateBlobSchema(size_t num_target, PlacementSchema &schema)
     place_size[device] += size;
   }
   for (size_t i = 0; i < num_target; ++i) {
-    if(place_size[i])
+    if (place_size[i])
       result.push_back(std::make_pair(place_size[i], i));
   }
 
@@ -411,13 +411,13 @@ Status CalculatePlacement(SharedMemoryContext *context, RpcContext *rpc,
       break;
     }
   }
-  
+
   // Aggregate placement schemas from the same target
-  for(auto it = output_tmp.begin(); it != output_tmp.end(); ++it) {
+  for (auto it = output_tmp.begin(); it != output_tmp.end(); ++it) {
     PlacementSchema schema = AggregateBlobSchema(node_state.size(), (*it));
     output.push_back(schema);
   }
-  
+
   return result;
 }
 

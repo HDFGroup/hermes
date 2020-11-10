@@ -50,7 +50,7 @@ void MinimizeIoTimePlaceBlob(std::vector<size_t> &blob_sizes,
     exit(1);
   }
 
-  for(auto it = schemas_tmp.begin(); it != schemas_tmp.end(); ++it) {
+  for (auto it = schemas_tmp.begin(); it != schemas_tmp.end(); ++it) {
     PlacementSchema schema = AggregateBlobSchema(node_state.num_devices, (*it));
     Assert(schemas.size() <= static_cast<size_t>(node_state.num_devices));
     schemas.push_back(schema);

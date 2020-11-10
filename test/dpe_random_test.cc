@@ -49,7 +49,7 @@ void RandomPlaceBlob(std::vector<size_t> &blob_sizes,
     exit(1);
   }
 
-  for(auto it = schemas_tmp.begin(); it != schemas_tmp.end(); ++it) {
+  for (auto it = schemas_tmp.begin(); it != schemas_tmp.end(); ++it) {
     PlacementSchema schema = AggregateBlobSchema(node_state.num_devices, (*it));
     Assert(schemas.size() <= static_cast<size_t>(node_state.num_devices));
     schemas.push_back(schema);
@@ -70,7 +70,7 @@ int main() {
   Assert(node_state.num_devices == 4);
   std::cout << "Device Initial State:\n";
   PrintNodeState(node_state);
-  
+
   std::vector<size_t> blob_sizes1(1, MEGABYTES(10));
   std::vector<PlacementSchema> schemas1;
   RandomPlaceBlob(blob_sizes1, schemas1);
