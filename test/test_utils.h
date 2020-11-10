@@ -5,6 +5,10 @@
 #include <stdlib.h>
 
 #include <chrono>
+#include <vector>
+#include <map>
+
+#include "hermes_types.h"
 
 namespace hermes {
 namespace testing {
@@ -38,8 +42,43 @@ void Assert(bool expr, const char *file, int lineno, const char *message) {
   }
 }
 
+struct TargetViewState {
+  std::vector<hermes::u64> bytes_capacity;
+  std::vector<hermes::u64> bytes_available;
+  std::vector<hermes::f32> bandwidth;
+  std::multimap<hermes::u64, size_t> ordered_cap;
+  int num_devices;
+};
+
 }  // namespace testing
 }  // namespace hermes
+
+hermes::testing::TargetViewState InitDeviceState() {
+  hermes::testing::TargetViewState result = {};
+  result.num_devices = 4;
+
+  result.bytes_available.push_back(MEGABYTES(5));
+  result.bytes_available.push_back(MEGABYTES(20));
+  result.bytes_available.push_back(MEGABYTES(50));
+  result.bytes_available.push_back(MEGABYTES(200));
+
+  result.bytes_capacity.push_back(MEGABYTES(5));
+  result.bytes_capacity.push_back(MEGABYTES(20));
+  result.bytes_capacity.push_back(MEGABYTES(50));
+  result.bytes_capacity.push_back(MEGABYTES(200));
+
+  result.bandwidth.push_back(6000);
+  result.bandwidth.push_back(300);
+  result.bandwidth.push_back(150);
+  result.bandwidth.push_back(70);
+
+  result.ordered_cap.insert(std::pair<hermes::u64, size_t>(MEGABYTES(5), 0));
+  result.ordered_cap.insert(std::pair<hermes::u64, size_t>(MEGABYTES(20), 1));
+  result.ordered_cap.insert(std::pair<hermes::u64, size_t>(MEGABYTES(50), 2));
+  result.ordered_cap.insert(std::pair<hermes::u64, size_t>(MEGABYTES(200), 3));
+
+  return result;
+}
 
 #define Assert(expr) hermes::testing::Assert((expr), __FILE__, __LINE__, #expr)
 

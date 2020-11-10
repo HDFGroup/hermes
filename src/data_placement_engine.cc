@@ -18,14 +18,12 @@ namespace hermes {
 using hermes::api::Status;
 
 // TODO(chogan): Unfinished sketch
-Status TopDownPlacement(SharedMemoryContext *context, RpcContext *rpc,
-                        std::vector<size_t> blob_sizes,
+Status TopDownPlacement(std::vector<size_t> blob_sizes,
+                        std::vector<u64> &node_state,
                         std::vector<PlacementSchema> &output) {
-  (void)rpc;
   HERMES_NOT_IMPLEMENTED_YET;
 
   Status result = 0;
-  std::vector<u64> node_state = GetRemainingNodeCapacities(context);
 
   for (auto &blob_size : blob_sizes) {
     PlacementSchema schema;
@@ -76,12 +74,11 @@ std::vector<int> GetValidSplitChoices(size_t blob_size) {
   return result;
 }
 
-Status RoundRobinPlacement(SharedMemoryContext *context, RpcContext *rpc,
-                        std::vector<size_t> &blob_sizes,
+Status RoundRobinPlacement(std::vector<size_t> &blob_sizes,
+                        std::vector<u64> &node_state,
                         std::vector<PlacementSchema> &output) {
-  (void)rpc;
-  std::vector<u64> node_state = GetRemainingNodeCapacities(context);
   Status result = 0;
+  std::vector<u64> ns_local(node_state.begin(), node_state.end());
 
   for (size_t i {0}; i < blob_sizes.size(); ++i) {
     std::random_device dev;
@@ -116,20 +113,20 @@ Status RoundRobinPlacement(SharedMemoryContext *context, RpcContext *rpc,
                               blob_each_portion*(split_num-1));
 
       for (size_t k {0}; k < new_blob_size.size(); ++k) {
-        size_t dst {node_state.size()};
+        size_t dst {ns_local.size()};
         DataPlacementEngine dpe;
         size_t device_pos {dpe.getCountDevice()};
-        for (size_t j {0}; j < node_state.size(); ++j) {
-          size_t adjust_pos {(j+device_pos)%node_state.size()};
-          if (node_state[adjust_pos] >= new_blob_size[k]) {
-            dpe.setCountDevice((j+device_pos+1)%node_state.size());
+        for (size_t j {0}; j < ns_local.size(); ++j) {
+          size_t adjust_pos {(j+device_pos)%ns_local.size()};
+          if (ns_local[adjust_pos] >= new_blob_size[k]) {
+            dpe.setCountDevice((j+device_pos+1)%ns_local.size());
             dst = adjust_pos;
-            node_state[adjust_pos] -= new_blob_size[k];
             schema.push_back(std::make_pair(new_blob_size[k], dst));
+            ns_local[dst] -= new_blob_size[k];
             break;
           }
         }
-        if (dst == node_state.size()) {
+        if (dst == ns_local.size()) {
           result = 1;
           // TODO(chogan): @errorhandling Set error type in Status
         }
@@ -137,21 +134,21 @@ Status RoundRobinPlacement(SharedMemoryContext *context, RpcContext *rpc,
       output.push_back(schema);
     } else {
     // Blob size is less than 64KB or do not split
-      size_t dst {node_state.size()};
+      size_t dst {ns_local.size()};
       DataPlacementEngine dpe;
       size_t device_pos {dpe.getCountDevice()};
-      for (size_t j {0}; j < node_state.size(); ++j) {
-        size_t adjust_pos {(j+device_pos)%node_state.size()};
-        if (node_state[adjust_pos] >= blob_sizes[i]) {
-          dpe.setCountDevice((j+device_pos+1)%node_state.size());
+      for (size_t j {0}; j < ns_local.size(); ++j) {
+        size_t adjust_pos {(j+device_pos)%ns_local.size()};
+        if (ns_local[adjust_pos] >= blob_sizes[i]) {
+          dpe.setCountDevice((j+device_pos+1)%ns_local.size());
           dst = adjust_pos;
-          node_state[adjust_pos] -= blob_sizes[i];
           schema.push_back(std::make_pair(blob_sizes[i], dst));
+          ns_local[dst] -= blob_sizes[i];
           output.push_back(schema);
           break;
         }
       }
-      if (dst == node_state.size()) {
+      if (dst == ns_local.size()) {
         result = 1;
         // TODO(chogan): @errorhandling Set error type in Status
       }
@@ -162,8 +159,7 @@ Status RoundRobinPlacement(SharedMemoryContext *context, RpcContext *rpc,
 }
 
 Status AddRandomSchema(std::multimap<u64, size_t> &ordered_cap,
-                       size_t blob_size, std::vector<PlacementSchema> &output,
-                       std::vector<u64> &node_state) {
+                       size_t blob_size, PlacementSchema &schema) {
   std::random_device rd;
   std::mt19937 gen(rd());
   Status result = 0;
@@ -173,45 +169,28 @@ Status AddRandomSchema(std::multimap<u64, size_t> &ordered_cap,
     result = 1;
     // TODO(chogan): @errorhandling Set error type in Status
   } else {
-    std::vector<DeviceID> valid_devices;
-    for (auto it = itlow; it != ordered_cap.end(); ++it) {
-      valid_devices.push_back(it->second);
-    }
-    std::uniform_int_distribution<> dst_dist(0, valid_devices.size() - 1);
-    size_t dst_index = dst_dist(gen);
-    DeviceID dst = valid_devices[dst_index];
-    for (auto it = itlow; it != ordered_cap.end(); ++it) {
-      if ((*it).second == dst) {
-        ordered_cap.insert(std::pair<u64, size_t>(
-                             (*it).first-blob_size, (*it).second));
-        ordered_cap.erase(it);
-        node_state[dst] -= blob_size;
-        break;
-      }
-    }
-    PlacementSchema schema;
-    schema.push_back(std::make_pair(blob_size, dst));
-    output.push_back(schema);
+    // distance from lower bound to the end
+    std::uniform_int_distribution<>
+      dst_dist(1, std::distance(itlow, ordered_cap.end()));
+    size_t dst_relative = dst_dist(gen);
+    std::advance(itlow, dst_relative-1);
+    ordered_cap.insert(std::pair<u64, size_t>(
+                         (*itlow).first-blob_size, (*itlow).second));
+
+    schema.push_back(std::make_pair(blob_size, (*itlow).second));
+    ordered_cap.erase(itlow);
   }
 
   return result;
 }
 
-Status RandomPlacement(SharedMemoryContext *context, RpcContext *rpc,
-                       std::vector<size_t> &blob_sizes,
+Status RandomPlacement(std::vector<size_t> &blob_sizes,
+                       std::multimap<u64, size_t> &ordered_cap,
                        std::vector<PlacementSchema> &output) {
-  (void)rpc;
   Status result = 0;
 
-  // TODO(chogan): For now we just look at the node level. Eventually we will
-  // need the ability to escalate to neighborhoods, and the entire cluster.
-  std::vector<u64> node_state = GetRemainingNodeCapacities(context);
-  std::multimap<u64, size_t> ordered_cap;
-  for (size_t i = 0; i < node_state.size(); ++i) {
-    ordered_cap.insert(std::pair<u64, size_t>(node_state[i], i));
-  }
-
   for (size_t i {0}; i < blob_sizes.size(); ++i) {
+    PlacementSchema schema;
     std::random_device dev;
     std::mt19937 rng(dev());
     int number {0};
@@ -243,32 +222,28 @@ Status RandomPlacement(SharedMemoryContext *context, RpcContext *rpc,
                               blob_each_portion*(split_num-1));
 
       for (size_t k {0}; k < new_blob_size.size(); ++k) {
-        result = AddRandomSchema(ordered_cap, new_blob_size[k], output,
-                                 node_state);
+        result = AddRandomSchema(ordered_cap, new_blob_size[k], schema);
       }
     } else {
       // Blob size is less than 64KB or do not split
-      result = AddRandomSchema(ordered_cap, blob_sizes[i], output, node_state);
+      result = AddRandomSchema(ordered_cap, blob_sizes[i], schema);
     }
+    output.push_back(schema);
   }
 
   return result;
 }
 
-Status MinimizeIoTimePlacement(SharedMemoryContext *context, RpcContext *rpc,
-                            std::vector<size_t> &blob_sizes,
+Status MinimizeIoTimePlacement(std::vector<size_t> &blob_sizes,
+                            std::vector<u64> &node_state,
+                            std::vector<f32> &bandwidths,
                             std::vector<PlacementSchema> &output) {
-  (void)rpc;
   using operations_research::MPSolver;
   using operations_research::MPVariable;
   using operations_research::MPConstraint;
   using operations_research::MPObjective;
 
   Status result = 0;
-  // TODO(chogan): For now we just look at the node level targets. Eventually we
-  // will need the ability to escalate to neighborhoods, and the entire cluster.
-  std::vector<u64> node_state = GetRemainingNodeCapacities(context);
-  std::vector<f32> bandwidths = GetBandwidths(context);
   // TODO(KIMMY): size of constraints should be from context
   std::vector<MPConstraint*> blob_constrt(blob_sizes.size() +
                                           node_state.size()*3-1);
@@ -376,34 +351,71 @@ Status MinimizeIoTimePlacement(SharedMemoryContext *context, RpcContext *rpc,
   return result;
 }
 
+PlacementSchema AggregateBlobSchema(size_t num_target,
+                                    PlacementSchema &schema) {
+  std::vector<u64> place_size(num_target, 0);
+  PlacementSchema result;
+
+  for (auto [size, device] : schema) {
+    place_size[device] += size;
+  }
+  for (size_t i = 0; i < num_target; ++i) {
+    if (place_size[i])
+      result.push_back(std::make_pair(place_size[i], i));
+  }
+
+  return result;
+}
+
 Status CalculatePlacement(SharedMemoryContext *context, RpcContext *rpc,
                           std::vector<size_t> &blob_sizes,
                           std::vector<PlacementSchema> &output,
                           const api::Context &api_context) {
   (void)api_context;
+  (void)rpc;
+  std::vector<PlacementSchema> output_tmp;
   Status result = 0;
 
   // TODO(chogan): Return a PlacementSchema that minimizes a cost function F
   // given a set of N Devices and a blob, while satisfying a policy P.
 
+  // TODO(chogan): For now we just look at the node level targets. Eventually we
+  // will need the ability to escalate to neighborhoods, and the entire cluster.
+  std::vector<u64> node_state = GetRemainingNodeCapacities(context);
+
   switch (api_context.policy) {
     // TODO(KIMMY): check device capacity against blob size
     case api::PlacementPolicy::kRandom: {
-      result = RandomPlacement(context, rpc, blob_sizes, output);
+      std::multimap<u64, size_t> ordered_cap;
+      for (size_t i = 0; i < node_state.size(); ++i) {
+        ordered_cap.insert(std::pair<u64, size_t>(node_state[i], i));
+      }
+
+      result = RandomPlacement(blob_sizes, ordered_cap, output_tmp);
       break;
     }
     case api::PlacementPolicy::kRoundRobin: {
-      result = RoundRobinPlacement(context, rpc, blob_sizes, output);
+      result = RoundRobinPlacement(blob_sizes, node_state,
+                                   output_tmp);
       break;
     }
     case api::PlacementPolicy::kTopDown: {
-      result = TopDownPlacement(context, rpc, blob_sizes, output);
+      result = TopDownPlacement(blob_sizes, node_state, output_tmp);
       break;
     }
     case api::PlacementPolicy::kMinimizeIoTime: {
-      result = MinimizeIoTimePlacement(context, rpc, blob_sizes, output);
+      std::vector<f32> bandwidths = GetBandwidths(context);
+
+      result = MinimizeIoTimePlacement(blob_sizes, node_state,
+                                       bandwidths, output_tmp);
       break;
     }
+  }
+
+  // Aggregate placement schemas from the same target
+  for (auto it = output_tmp.begin(); it != output_tmp.end(); ++it) {
+    PlacementSchema schema = AggregateBlobSchema(node_state.size(), (*it));
+    output.push_back(schema);
   }
 
   return result;
