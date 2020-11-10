@@ -38,14 +38,22 @@ void PrintNodeState(testing::TargetViewState &node_state) {
 
 void MinimizeIoTimePlaceBlob(std::vector<size_t> &blob_sizes,
                              std::vector<PlacementSchema> &schemas) {
+  std::vector<PlacementSchema> schemas_tmp;
+
   std::cout << "\nMinimizeIoTimePlacement to place blob of size "
             << blob_sizes[0] << " to targets\n" << std::flush;
   Status result = MinimizeIoTimePlacement(blob_sizes,
                                           node_state.bytes_available,
-                                          node_state.bandwidth, schemas);
+                                          node_state.bandwidth, schemas_tmp);
   if (result) {
     std::cout << "\nMinimizeIoTimePlacement failed\n" << std::flush;
     exit(1);
+  }
+
+  for(auto it = schemas_tmp.begin(); it != schemas_tmp.end(); ++it) {
+    PlacementSchema schema = AggregateBlobSchema(node_state.num_devices, (*it));
+    Assert(schemas.size() <= static_cast<size_t>(node_state.num_devices));
+    schemas.push_back(schema);
   }
 
   u64 placed_size {0};

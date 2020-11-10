@@ -38,13 +38,21 @@ void PrintNodeState(testing::TargetViewState &node_state) {
 
 void RandomPlaceBlob(std::vector<size_t> &blob_sizes,
                      std::vector<PlacementSchema> &schemas) {
+  std::vector<PlacementSchema> schemas_tmp;
+
   std::cout << "\nRandomPlacement to place blob of size " << blob_sizes[0]
             << " to targets\n" << std::flush;
   Status result = RandomPlacement(blob_sizes, node_state.ordered_cap,
-                                  schemas);
+                                  schemas_tmp);
   if (result) {
     std::cout << "\nRandomPlacement failed\n" << std::flush;
     exit(1);
+  }
+
+  for(auto it = schemas_tmp.begin(); it != schemas_tmp.end(); ++it) {
+    PlacementSchema schema = AggregateBlobSchema(node_state.num_devices, (*it));
+    Assert(schemas.size() <= static_cast<size_t>(node_state.num_devices));
+    schemas.push_back(schema);
   }
 
   u64 placed_size {0};

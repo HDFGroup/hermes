@@ -38,6 +38,8 @@ Status CalculatePlacement(SharedMemoryContext *context, RpcContext *rpc,
                           std::vector<PlacementSchema> &output,
                           const api::Context &api_context);
 
+PlacementSchema AggregateBlobSchema(size_t num_target, PlacementSchema &schema);
+
 // internal
 std::vector<int> GetValidSplitChoices(size_t blob_size);
 Status AddRandomSchema(std::multimap<u64, size_t> &ordered_cap,

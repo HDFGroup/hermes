@@ -231,7 +231,6 @@ Status RandomPlacement(std::vector<size_t> &blob_sizes,
     output.push_back(schema);
   }
 
-std::cout << "output size is " << output.size() << '\n' << std::flush;
   return result;
 }
 
@@ -352,12 +351,29 @@ Status MinimizeIoTimePlacement(std::vector<size_t> &blob_sizes,
   return result;
 }
 
+PlacementSchema AggregateBlobSchema(size_t num_target, PlacementSchema &schema)
+{
+  std::vector<u64> place_size(num_target, 0);
+  PlacementSchema result;
+
+  for (auto [size, device] : schema) {
+    place_size[device] += size;
+  }
+  for (size_t i = 0; i < num_target; ++i) {
+    if(place_size[i])
+      result.push_back(std::make_pair(place_size[i], i));
+  }
+
+  return result;
+}
+
 Status CalculatePlacement(SharedMemoryContext *context, RpcContext *rpc,
                           std::vector<size_t> &blob_sizes,
                           std::vector<PlacementSchema> &output,
                           const api::Context &api_context) {
   (void)api_context;
   (void)rpc;
+  std::vector<PlacementSchema> output_tmp;
   Status result = 0;
 
   // TODO(chogan): Return a PlacementSchema that minimizes a cost function F
@@ -375,27 +391,33 @@ Status CalculatePlacement(SharedMemoryContext *context, RpcContext *rpc,
         ordered_cap.insert(std::pair<u64, size_t>(node_state[i], i));
       }
 
-      result = RandomPlacement(blob_sizes, ordered_cap, output);
+      result = RandomPlacement(blob_sizes, ordered_cap, output_tmp);
       break;
     }
     case api::PlacementPolicy::kRoundRobin: {
       result = RoundRobinPlacement(blob_sizes, node_state,
-                                   output);
+                                   output_tmp);
       break;
     }
     case api::PlacementPolicy::kTopDown: {
-      result = TopDownPlacement(blob_sizes, node_state, output);
+      result = TopDownPlacement(blob_sizes, node_state, output_tmp);
       break;
     }
     case api::PlacementPolicy::kMinimizeIoTime: {
       std::vector<f32> bandwidths = GetBandwidths(context);
 
       result = MinimizeIoTimePlacement(blob_sizes, node_state,
-                                       bandwidths, output);
+                                       bandwidths, output_tmp);
       break;
     }
   }
-
+  
+  // Aggregate placement schemas from the same target
+  for(auto it = output_tmp.begin(); it != output_tmp.end(); ++it) {
+    PlacementSchema schema = AggregateBlobSchema(node_state.size(), (*it));
+    output.push_back(schema);
+  }
+  
   return result;
 }
 
