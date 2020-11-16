@@ -161,12 +161,12 @@ Status Bucket::Put(std::vector<std::string> &names,
 
   if (IsValid()) {
     size_t num_blobs = blobs.size();
-    std::vector<size_t> sizes(num_blobs);
+    std::vector<size_t> sizes_in_bytes(num_blobs);
     for (size_t i = 0; i < num_blobs; ++i) {
-      sizes[i] = blobs[i].size();
+      sizes_in_bytes[i] = blobs[i].size() * sizeof(T);
     }
     std::vector<PlacementSchema> schemas;
-    ret = CalculatePlacement(&hermes_->context_, &hermes_->rpc_, sizes,
+    ret = CalculatePlacement(&hermes_->context_, &hermes_->rpc_, sizes_in_bytes,
                              schemas, ctx);
 
     if (ret == 0) {
@@ -175,7 +175,7 @@ Status Bucket::Put(std::vector<std::string> &names,
       std::vector<SwapBlob> swapped_blobs =
         PutToSwap(&hermes_->context_, &hermes_->rpc_, id_, blobs, names);
 
-      for (int i = 0; i < swapped_blobs.size(); ++i) {
+      for (size_t i = 0; i < swapped_blobs.size(); ++i) {
         TriggerBufferOrganizer(&hermes_->rpc_, kPlaceInHierarchy, names[i],
                                swapped_blobs[i], ctx.buffer_organizer_retries);
       }
