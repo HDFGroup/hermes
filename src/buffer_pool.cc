@@ -1036,7 +1036,7 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
   // TODO(chogan): @configuration Assumes the first Device is RAM
   for (int slab = 0; slab < config->num_slabs[0]; ++slab) {
     PartitionRamBuffers(buffer_pool_arena, slab_buffer_sizes[0][slab],
-                        buffer_counts[0][slab], config->block_sizes[slab]);
+                        buffer_counts[0][slab], config->block_sizes[0]);
   }
 
   // Init Devices and Targets
