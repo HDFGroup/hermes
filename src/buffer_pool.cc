@@ -1553,14 +1553,20 @@ Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
                  PlacementSchema &schema, Blob blob, const char *name,
                  BucketID bucket_id) {
   Status result = 0;
+  HERMES_BEGIN_TIMED_BLOCK("GetBuffers");
   std::vector<BufferID> buffer_ids = GetBuffers(context, schema);
+  HERMES_END_TIMED_BLOCK();
+
   if (buffer_ids.size()) {
     MetadataManager *mdm = GetMetadataManagerFromContext(context);
     char *bucket_name = ReverseGetFromStorage(mdm, bucket_id.as_int,
                                               kMapType_Bucket);
     LOG(INFO) << "Attaching blob " << std::string(name) << " to Bucket "
               << bucket_name << std::endl;
+
+    HERMES_BEGIN_TIMED_BLOCK("WriteBlobToBuffers");
     WriteBlobToBuffers(context, rpc, blob, buffer_ids);
+    HERMES_END_TIMED_BLOCK();
 
     // NOTE(chogan): Update all metadata associated with this Put
     AttachBlobToBucket(context, rpc, name, bucket_id, buffer_ids);

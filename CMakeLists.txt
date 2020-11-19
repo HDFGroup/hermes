@@ -151,6 +151,7 @@ option(HERMES_MDM_STORAGE_STBDS
   "Use the STB library and shared memory to store metadata" ON)
 option(HERMES_DEBUG_HEAP "Store Heap debug information for visualization." OFF)
 option(HERMES_BUILD_BENCHMARKS "Build the Hermes benchmark suite." OFF)
+option(HERMES_ENABLE_TIMING "Turn on timing of selected functions." OFF)
 
 if(BUILD_SHARED_LIBS)
   set(HERMES_BUILD_SHARED_LIBS 1)
