@@ -1,6 +1,7 @@
 #include <string>
 
 #include "rpc.h"
+#include "metadata_management_internal.h"
 
 namespace tl = thallium;
 

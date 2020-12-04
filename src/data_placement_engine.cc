@@ -12,6 +12,7 @@
 #include "hermes.h"
 #include "hermes_types.h"
 #include "metadata_management.h"
+#include "metadata_management_internal.h"
 
 namespace hermes {
 
