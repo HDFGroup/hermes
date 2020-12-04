@@ -80,6 +80,8 @@ IdMap *GetMap(MetadataManager *mdm, MapType map_type) {
       result = GetBlobMap(mdm);
       break;
     }
+    default:
+      assert(!"Invalid code path.\n");
   }
 
   return result;
@@ -436,7 +438,13 @@ void InitMetadataStorage(SharedMemoryContext *context, MetadataManager *mdm,
   // make HeapRealloc actually use realloc semantics so it can grow as big as
   // needed. But that requires updating offsets for the map and the heap's free
   // list
-  sh_new_strdup(bucket_map, config->max_buckets_per_node, map_heap);
+
+  // NOTE(chogan): Make the capacity one larger than necessary because the
+  // stb_ds map tries to grow when it reaches capacity.
+  u32 max_buckets = config->max_buckets_per_node + 1;
+  u32 max_vbuckets = config->max_vbuckets_per_node + 1;
+
+  sh_new_strdup(bucket_map, max_buckets, map_heap);
   shdefault(bucket_map, 0, map_heap);
   mdm->bucket_map_offset = GetOffsetFromMdm(mdm, bucket_map);
   u32 bucket_map_num_bytes = map_heap->extent;
@@ -447,7 +455,7 @@ void InitMetadataStorage(SharedMemoryContext *context, MetadataManager *mdm,
   // slower because they'll all share a lock.
 
   IdMap *vbucket_map = 0;
-  sh_new_strdup(vbucket_map, config->max_vbuckets_per_node, map_heap);
+  sh_new_strdup(vbucket_map, max_vbuckets, map_heap);
   shdefault(vbucket_map, 0, map_heap);
   mdm->vbucket_map_offset = GetOffsetFromMdm(mdm, vbucket_map);
   u32 vbucket_map_num_bytes = map_heap->extent - bucket_map_num_bytes;

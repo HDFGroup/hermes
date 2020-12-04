@@ -47,6 +47,11 @@ class Bucket {
     return this->name_;
   }
 
+  /** get the internal ID of the bucket */
+  BucketID GetId() const {
+    return id_;
+  }
+
   /** returns true if this Bucket has been created but not yet destroyed */
   bool IsValid() const;
 

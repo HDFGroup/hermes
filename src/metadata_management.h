@@ -17,6 +17,8 @@ enum MapType {
   kMapType_Bucket,
   kMapType_VBucket,
   kMapType_Blob,
+
+  kMapType_Count
 };
 
 union VBucketID {

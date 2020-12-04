@@ -5,6 +5,12 @@
 
 namespace hermes {
 
+bool IsNullBucketId(BucketID id);
+bool IsNullVBucketId(VBucketID id);
+bool IsNullBlobId(BlobID id);
+TicketMutex *GetMapMutex(MetadataManager *mdm, MapType map_type);
+VBucketID GetVBucketIdByName(SharedMemoryContext *context, RpcContext *rpc,
+                             const char *name);
 u32 HashString(MetadataManager *mdm, RpcContext *rpc, const char *str);
 MetadataManager *GetMetadataManagerFromContext(SharedMemoryContext *context);
 BucketInfo *LocalGetBucketInfoByIndex(MetadataManager *mdm, u32 index);
