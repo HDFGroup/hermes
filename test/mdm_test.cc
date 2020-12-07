@@ -77,7 +77,6 @@ static bool TestPutVBucketId() {
   return result;
 }
 static bool TestGetVBucketInfoByIndex() {
-  
   bool result = false;
 
   return result;
@@ -85,7 +84,6 @@ static bool TestGetVBucketInfoByIndex() {
 #endif
 
 static bool TestLocalGetNextFreeBucketId(HermesPtr hermes) {
-
   // NOTE(chogan): Test that the app doesn't fail when creating more buckets
   // than the maximum allowed by the configuration.
 
@@ -117,34 +115,29 @@ static bool TestLocalGetNextFreeBucketId(HermesPtr hermes) {
 }
 
 static bool TestGetOrCreateBucketId(HermesPtr hermes) {
-  
   bool result = false;
 
   return result;
 }
 
 static bool TestGetNextFreeVBucketId() {
-  
   bool result = false;
 
   return result;
 }
 static bool TestRenameBlob() {
-  
   bool result = false;
 
   return result;
 }
 
 static bool TestLocalRenameBucket() {
-  
   bool result = false;
 
   return result;
 }
 
 static bool TestRenameBucket() {
-  
   bool result = false;
 
   return result;
@@ -208,18 +201,18 @@ int main(int argc, char **argv) {
   // Assert(TestPutVBucketId());
   // Assert(TestGetVBucketInfoByIndex());
   Assert(TestLocalGetNextFreeBucketId(hermes));
-  Assert(TestGetOrCreateBucketId(hermes));
-  Assert(TestGetNextFreeVBucketId());
-  Assert(TestRenameBlob());
-  Assert(TestLocalRenameBucket());
-  Assert(TestRenameBucket());
-  Assert(TestLocalIncrementRefcount());
-  Assert(TestIncrementRefcount());
-  Assert(TestLocalDecrementRefcount());
-  Assert(TestDecrementRefcount());
-  Assert(TestGetRemainingCapacity());
-  Assert(TestGetLocalSystemViewState());
-  Assert(TestVecToSwapBlob());
+  // Assert(TestGetOrCreateBucketId(hermes));
+  // Assert(TestGetNextFreeVBucketId());
+  // Assert(TestRenameBlob());
+  // Assert(TestLocalRenameBucket());
+  // Assert(TestRenameBucket());
+  // Assert(TestLocalIncrementRefcount());
+  // Assert(TestIncrementRefcount());
+  // Assert(TestLocalDecrementRefcount());
+  // Assert(TestDecrementRefcount());
+  // Assert(TestGetRemainingCapacity());
+  // Assert(TestGetLocalSystemViewState());
+  // Assert(TestVecToSwapBlob());
 
   hermes->Finalize(true);
 
