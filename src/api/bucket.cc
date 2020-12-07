@@ -3,6 +3,7 @@
 #include <iostream>
 #include <vector>
 
+#include "utils.h"
 #include "buffer_pool.h"
 #include "metadata_management.h"
 
@@ -30,8 +31,10 @@ Status Bucket::Put(const std::string &name, const u8 *data, size_t size,
   if (IsValid()) {
     std::vector<size_t> sizes(1, size);
     std::vector<PlacementSchema> schemas;
+    HERMES_BEGIN_TIMED_BLOCK("CalculatePlacement");
     ret = CalculatePlacement(&hermes_->context_, &hermes_->rpc_, sizes, schemas,
                              ctx);
+    HERMES_END_TIMED_BLOCK();
 
     if (ret == 0) {
       std::vector<std::string> names(1, name);

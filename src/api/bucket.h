@@ -11,6 +11,7 @@
 #include "hermes.h"
 #include "data_placement_engine.h"
 #include "metadata_management.h"
+#include "utils.h"
 
 namespace hermes {
 
@@ -166,8 +167,10 @@ Status Bucket::Put(std::vector<std::string> &names,
       sizes_in_bytes[i] = blobs[i].size() * sizeof(T);
     }
     std::vector<PlacementSchema> schemas;
+    HERMES_BEGIN_TIMED_BLOCK("CalculatePlacement");
     ret = CalculatePlacement(&hermes_->context_, &hermes_->rpc_, sizes_in_bytes,
                              schemas, ctx);
+    HERMES_END_TIMED_BLOCK();
 
     if (ret == 0) {
       ret = PlaceBlobs(schemas, blobs, names);
