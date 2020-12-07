@@ -12,175 +12,157 @@ using namespace hermes;  // NOLINT(*)
 namespace hapi = hermes::api;
 using HermesPtr = std::shared_ptr<hapi::Hermes>;
 
-static bool TestIsNullBucketId() {
-  BucketID id = {};
-  bool result = IsNullBucketId(id);
+static void TestNullIds() {
+  BucketID bkt_id = {};
+  VBucketID vbkt_id = {};
+  BlobID blob_id = {};
 
-  return result;
+  Assert(IsNullBucketId(bkt_id));
+  Assert(IsNullVBucketId(vbkt_id));
+  Assert(IsNullBlobId(blob_id));
 }
 
-static bool TestIsNullVBucketId() {
-  VBucketID id = {};
-  bool result = IsNullVBucketId(id);
-
-  return result;
-}
-
-static bool TestIsNullBlobId() {
-  BlobID id = {};
-  bool result = IsNullBlobId(id);
-
-  return result;
-}
-
-static bool TestGetMapMutex() {
-  bool result = true;
+static void TestGetMapMutex() {
   MetadataManager mdm = {};
 
   for (int i = 0; i < kMapType_Count; ++i) {
-    if (GetMapMutex(&mdm, (MapType)i) == 0) {
-      result = false;
-    }
+    Assert(GetMapMutex(&mdm, (MapType)i));
   }
-
-  return result;
 }
 
 // TODO(chogan): Need to spawn a process and check its exit code.
 #if 0
-static bool TestMetadataArenaErrorHandler() {
-  bool result = false;
-
-  return result;
+static void TestMetadataArenaErrorHandler() {
 }
 #endif
 
-// TODO(chogan): Not implemented yet
+// TODO(chogan): VBucket functionality not implemented yet
 #if 0
-static bool TestGetVBucketIdByName(HermesPtr hermes) {
+static void TestGetVBucketIdByName(HermesPtr hermes) {
   std::string vbucket_name("my_vbucket");
   hapi::VBucket vbucket(vbucket_name, hermes);
   VBucketID id = GetVBucketIdByName(&hermes->context_, &hermes->rpc_,
                                     vbucket_name.c_str());
-  bool result = true;
-
-  if (IsNullVBucketId(id)) {
-    result = false;
-  }
-
-  return result;
+  Assert(!IsNullVBucketId(id));
 }
 
-static bool TestPutVBucketId() {
-  bool result = false;
-
-  return result;
+static void TestPutVBucketId() {
 }
-static bool TestGetVBucketInfoByIndex() {
-  bool result = false;
 
-  return result;
+static void TestGetVBucketInfoByIndex() {
 }
 #endif
 
-static bool TestLocalGetNextFreeBucketId(HermesPtr hermes) {
+static void TestLocalGetNextFreeBucketId(HermesPtr hermes) {
   // NOTE(chogan): Test that the app doesn't fail when creating more buckets
   // than the maximum allowed by the configuration.
 
   hapi::Context ctx;
   MetadataManager *mdm = GetMetadataManagerFromContext(&hermes->context_);
-  bool result = true;
-
-  ScopedTemporaryMemory scratch(&hermes->trans_arena_);
-  BucketID *ids = PushArray<BucketID>(scratch, mdm->max_buckets);
 
   for (u32 i = 0; i < mdm->max_buckets; ++i) {
     std::string bucket_name = "bucket" + std::to_string(i);
     hapi::Bucket bucket(bucket_name, hermes, ctx);
-    ids[i] = bucket.GetId();
+    bucket.Close(ctx);
   }
 
   std::string fail_name = "this_should_fail";
   hapi::Bucket bucket(fail_name, hermes, ctx);
-
-  if (bucket.IsValid()) {
-    result = false;
-  }
+  Assert(!bucket.IsValid());
 
   for (u32 i = 0; i < mdm->max_buckets; ++i) {
     std::string name = "bucket" + std::to_string(i);
-    LocalDestroyBucket(&hermes->context_, &hermes->rpc_, name.c_str(), ids[i]);
+    hapi::Bucket bucket(name, hermes, ctx);
+    bucket.Destroy(ctx);
   }
-  return result;
 }
 
-static bool TestGetOrCreateBucketId(HermesPtr hermes) {
-  bool result = false;
+static void TestGetOrCreateBucketId(HermesPtr hermes) {
+  // NOTE(chogan): Create a bucket, close it, then open it again and ensure the
+  // IDs are the same.
+  hapi::Context ctx;
+  std::string bucket_name = "bucket";
+  hapi::Bucket new_bucket(bucket_name, hermes, ctx);
+  BucketID id = new_bucket.GetId();
+  new_bucket.Close(ctx);
 
-  return result;
+  hapi::Bucket existing_bucket(bucket_name, hermes, ctx);
+  Assert(existing_bucket.GetId().as_int == id.as_int);
+  existing_bucket.Destroy(ctx);
 }
 
-static bool TestGetNextFreeVBucketId() {
-  bool result = false;
+static void TestRenameBlob(HermesPtr hermes) {
+  hapi::Context ctx;
+  std::string bucket_name = "rename_blob_test";
+  hapi::Bucket bucket(bucket_name, hermes, ctx);
 
-  return result;
-}
-static bool TestRenameBlob() {
-  bool result = false;
+  u8 data[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+  static_assert(sizeof(data[0]) == sizeof(u8));
 
-  return result;
-}
+  std::string old_blob_name = "old_blob_name";
+  Assert(bucket.Put(old_blob_name, data, sizeof(data), ctx) == 0);
 
-static bool TestLocalRenameBucket() {
-  bool result = false;
+  std::string new_blob_name = "new_blob_name";
+  bucket.RenameBlob(old_blob_name, new_blob_name, ctx);
+  Assert(!bucket.ContainsBlob(old_blob_name));
 
-  return result;
-}
+  size_t blob_size = bucket.GetBlobSize(&hermes->trans_arena_, new_blob_name,
+                                        ctx);
+  Assert(blob_size == sizeof(data));
 
-static bool TestRenameBucket() {
-  bool result = false;
+  hapi::Blob retrieved_data(blob_size);
+  bucket.Get(new_blob_name, retrieved_data, ctx);
 
-  return result;
-}
-
-static bool TestLocalIncrementRefcount() {
-  bool result = false;
-
-  return result;
-}
-static bool TestIncrementRefcount() {
-  bool result = false;
-
-  return result;
-}
-static bool TestLocalDecrementRefcount() {
-  bool result = false;
-
-  return result;
-}
-static bool TestDecrementRefcount() {
-  bool result = false;
-
-  return result;
+  for (size_t i = 0; i < retrieved_data.size(); ++i) {
+    Assert(retrieved_data[i] == data[i]);
+  }
+  bucket.Destroy(ctx);
 }
 
-static bool TestGetRemainingCapacity() {
-  bool result = false;
+static void TestRenameBucket(HermesPtr hermes) {
+  hapi::Context ctx;
+  std::string old_bucket_name = "old_bucket";
+  hapi::Bucket bucket(old_bucket_name, hermes, ctx);
 
-  return result;
+  u8 data[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+  static_assert(sizeof(data[0]) == sizeof(u8));
+  std::string blob_name = "renamed_bucket_blob";
+  bucket.Put(blob_name, data, sizeof(data), ctx);
+
+  std::string new_bucket_name = "new_bucket";
+  bucket.Rename(new_bucket_name, ctx);
+  bucket.Close(ctx);
+
+  hapi::Bucket renamed_bucket(new_bucket_name, hermes, ctx);
+  size_t blob_size = renamed_bucket.GetBlobSize(&hermes->trans_arena_,
+                                                blob_name, ctx);
+  Assert(blob_size == sizeof(data));
+
+  hapi::Blob retrieved_data(blob_size);
+  renamed_bucket.Get(blob_name, retrieved_data, ctx);
+
+  for (size_t i = 0; i < retrieved_data.size(); ++i) {
+    Assert(retrieved_data[i] == data[i]);
+  }
+  renamed_bucket.Destroy(ctx);
 }
 
-static bool TestGetLocalSystemViewState() {
-  bool result = false;
-
-  return result;
+#if 0
+static void TestLocalIncrementRefcount() {
 }
-
-static bool TestVecToSwapBlob() {
-  bool result = false;
-
-  return result;
+static void TestIncrementRefcount() {
 }
+static void TestLocalDecrementRefcount() {
+}
+static void TestDecrementRefcount() {
+}
+static void TestGetRemainingCapacity() {
+}
+static void TestGetLocalSystemViewState() {
+}
+static void TestVecToSwapBlob() {
+}
+#endif
 
 int main(int argc, char **argv) {
   int mpi_threads_provided;
@@ -192,20 +174,16 @@ int main(int argc, char **argv) {
 
   HermesPtr hermes = hapi::InitHermes(NULL, true);
 
-  Assert(TestIsNullBucketId());
-  Assert(TestIsNullVBucketId());
-  Assert(TestIsNullBlobId());
-  Assert(TestGetMapMutex());
-  // Assert(TestMetadataArenaErrorHandler());
-  // Assert(TestGetVBucketIdByName(hermes));
-  // Assert(TestPutVBucketId());
-  // Assert(TestGetVBucketInfoByIndex());
-  Assert(TestLocalGetNextFreeBucketId(hermes));
-  // Assert(TestGetOrCreateBucketId(hermes));
-  // Assert(TestGetNextFreeVBucketId());
-  // Assert(TestRenameBlob());
-  // Assert(TestLocalRenameBucket());
-  // Assert(TestRenameBucket());
+  TestNullIds();
+  TestGetMapMutex();
+  // TestMetadataArenaErrorHandler();
+  // TestGetVBucketIdByName(hermes);
+  // TestPutVBucketId();
+  // TestGetVBucketInfoByIndex();
+  TestLocalGetNextFreeBucketId(hermes);
+  TestGetOrCreateBucketId(hermes);
+  TestRenameBlob(hermes);
+  TestRenameBucket(hermes);
   // Assert(TestLocalIncrementRefcount());
   // Assert(TestIncrementRefcount());
   // Assert(TestLocalDecrementRefcount());

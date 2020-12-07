@@ -485,8 +485,12 @@ void RenameBlob(SharedMemoryContext *context, RpcContext *rpc,
                 const std::string &old_name, const std::string &new_name) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   BlobID blob_id = GetBlobIdByName(context, rpc, old_name.c_str());
-  DeleteId(mdm, rpc, old_name, kMapType_Blob);
-  PutBlobId(mdm, rpc, new_name, blob_id);
+  if (!IsNullBlobId(blob_id)) {
+    DeleteId(mdm, rpc, old_name, kMapType_Blob);
+    PutBlobId(mdm, rpc, new_name, blob_id);
+  } else {
+    // TODO(chogan): @errorhandling
+  }
 }
 
 bool ContainsBlob(SharedMemoryContext *context, RpcContext *rpc,
