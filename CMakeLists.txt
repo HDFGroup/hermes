@@ -169,7 +169,7 @@ mark_as_advanced(HERMES_DEBUG_HEAP)
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
   if (NOT "${CMAKE_CXX_FLAGS_DEBUG}" MATCHES ".*-g3.*")
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3 -fprofile-arcs -ftest-coverage "
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3"
         CACHE STRING "" FORCE)
   endif()
 
