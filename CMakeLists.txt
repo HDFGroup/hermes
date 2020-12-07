@@ -303,7 +303,7 @@ if(HERMES_HAVE_GOTCHA)
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gotcha_intercept)
 endif()
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src)
-#add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/posix_adapter)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/adapter/posix)
 #add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/mpi_io_adapter)
 #add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/hermes_vol)
 
