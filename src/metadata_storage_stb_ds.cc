@@ -251,6 +251,12 @@ bool LocalContainsBlob(SharedMemoryContext *context, BucketID bucket_id,
   return result;
 }
 
+static inline bool HasAllocatedBlobs(BucketInfo *info) {
+  bool result = info->blobs.capacity > 0;
+
+  return result;
+}
+
 void LocalDestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
                         const char *bucket_name, BucketID bucket_id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
@@ -263,13 +269,15 @@ void LocalDestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
   BeginTicketMutex(&mdm->bucket_mutex);
   int ref_count = info->ref_count.load();
   if (ref_count == 1) {
-    for (u32 i = 0; i < info->blobs.length; ++i) {
-      BlobID blob_id = *(blobs + i);
-      DestroyBlobById(context, rpc, blob_id);
-    }
+    if (HasAllocatedBlobs(info)) {
+      for (u32 i = 0; i < info->blobs.length; ++i) {
+        BlobID blob_id = *(blobs + i);
+        DestroyBlobById(context, rpc, blob_id);
+      }
 
-    // Delete BlobId list
-    HeapFree(id_heap, blobs);
+      // Delete BlobId list
+      HeapFree(id_heap, blobs);
+    }
 
     info->blobs.length = 0;
     info->blobs.capacity = 0;
