@@ -225,6 +225,7 @@ Status Bucket::Destroy(Context &ctx) {
     if (destroyed) {
       id_.as_int = 0;
     } else {
+      // TODO(chogan): @errorhandling
       result = 1;
     }
   }

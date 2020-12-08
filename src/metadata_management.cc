@@ -519,7 +519,7 @@ void DestroyBlobById(SharedMemoryContext *context, RpcContext *rpc, BlobID id) {
 }
 
 bool DestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
-                          const char *name, BucketID bucket_id) {
+                   const char *name, BucketID bucket_id) {
   u32 target_node = bucket_id.bits.node_id;
   bool destroyed = false;
   if (target_node == rpc->node_id) {
