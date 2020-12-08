@@ -48,8 +48,8 @@ class Bucket {
   }
 
   /** get the internal ID of the bucket */
-  BucketID GetId() const {
-    return id_;
+  u64 GetId() const {
+    return id_.as_int;
   }
 
   /** returns true if this Bucket has been created but not yet destroyed */

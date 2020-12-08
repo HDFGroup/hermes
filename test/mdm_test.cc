@@ -60,11 +60,11 @@ static void TestGetOrCreateBucketId(HermesPtr hermes) {
   hapi::Context ctx;
   std::string bucket_name = "bucket";
   hapi::Bucket new_bucket(bucket_name, hermes, ctx);
-  BucketID id = new_bucket.GetId();
+  u64 id = new_bucket.GetId();
   new_bucket.Close(ctx);
 
   hapi::Bucket existing_bucket(bucket_name, hermes, ctx);
-  Assert(existing_bucket.GetId().as_int == id.as_int);
+  Assert(existing_bucket.GetId() == id);
   existing_bucket.Destroy(ctx);
 }
 
