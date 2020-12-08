@@ -208,6 +208,7 @@ Status Bucket::Close(Context &ctx) {
   if (IsValid()) {
     LOG(INFO) << "Closing bucket '" << name_ << "'" << std::endl;
     DecrementRefcount(&hermes_->context_, &hermes_->rpc_, id_);
+    id_.as_int = 0;
   }
 
   return ret;
