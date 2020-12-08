@@ -30,29 +30,6 @@ static void TestGetMapMutex() {
   }
 }
 
-// TODO(chogan): Need to spawn a process and check its exit code.
-#if 0
-static void TestMetadataArenaErrorHandler() {
-}
-#endif
-
-// TODO(chogan): VBucket functionality not implemented yet
-#if 0
-static void TestGetVBucketIdByName(HermesPtr hermes) {
-  std::string vbucket_name("my_vbucket");
-  hapi::VBucket vbucket(vbucket_name, hermes);
-  VBucketID id = GetVBucketIdByName(&hermes->context_, &hermes->rpc_,
-                                    vbucket_name.c_str());
-  Assert(!IsNullVBucketId(id));
-}
-
-static void TestPutVBucketId() {
-}
-
-static void TestGetVBucketInfoByIndex() {
-}
-#endif
-
 static void TestLocalGetNextFreeBucketId(HermesPtr hermes) {
   // NOTE(chogan): Test that the app doesn't fail when creating more buckets
   // than the maximum allowed by the configuration.
@@ -169,15 +146,6 @@ static void TestBucketRefCounting(HermesPtr hermes) {
   Assert(!bucket1.IsValid());
 }
 
-#if 0
-static void TestGetRemainingCapacity() {
-}
-static void TestGetLocalSystemViewState() {
-}
-static void TestVecToSwapBlob() {
-}
-#endif
-
 int main(int argc, char **argv) {
   int mpi_threads_provided;
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
@@ -190,18 +158,11 @@ int main(int argc, char **argv) {
 
   TestNullIds();
   TestGetMapMutex();
-  // TestMetadataArenaErrorHandler();
-  // TestGetVBucketIdByName(hermes);
-  // TestPutVBucketId();
-  // TestGetVBucketInfoByIndex();
   TestLocalGetNextFreeBucketId(hermes);
   TestGetOrCreateBucketId(hermes);
   TestRenameBlob(hermes);
   TestRenameBucket(hermes);
   TestBucketRefCounting(hermes);
-  // Assert(TestGetRemainingCapacity());
-  // Assert(TestGetLocalSystemViewState());
-  // Assert(TestVecToSwapBlob());
 
   hermes->Finalize(true);
 
