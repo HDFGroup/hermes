@@ -257,12 +257,13 @@ static inline bool HasAllocatedBlobs(BucketInfo *info) {
   return result;
 }
 
-void LocalDestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
+bool LocalDestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
                         const char *bucket_name, BucketID bucket_id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   BucketInfo *info = LocalGetBucketInfoById(mdm, bucket_id);
   Heap *id_heap = GetIdHeap(mdm);
   BlobID *blobs = (BlobID *)HeapOffsetToPtr(id_heap, info->blobs.head_offset);
+  bool destroyed = false;
 
   // TODO(chogan): @optimization Lock granularity can probably be relaxed if
   // this is slow
@@ -294,8 +295,14 @@ void LocalDestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
 
     // Remove (name -> bucket_id) map entry
     LocalDelete(mdm, bucket_name, kMapType_Bucket);
+    destroyed = true;
+  } else {
+    LOG(INFO) << "Cannot destroy bucket " << bucket_name
+              << ". It's refcount is " << ref_count << std::endl;
   }
   EndTicketMutex(&mdm->bucket_mutex);
+
+  return destroyed;
 }
 
 std::vector<TargetID> GetNodeTargets(SharedMemoryContext *context) {

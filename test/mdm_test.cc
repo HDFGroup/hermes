@@ -147,15 +147,29 @@ static void TestRenameBucket(HermesPtr hermes) {
   renamed_bucket.Destroy(ctx);
 }
 
+static void TestBucketRefCounting(HermesPtr hermes) {
+  hapi::Context ctx;
+  std::string name = "refcounted_bucket";
+
+  hapi::Bucket bucket1(name, hermes, ctx);
+  hapi::Bucket bucket2(name, hermes, ctx);
+
+  // Refcount of "refcounted_bucket" is 2
+  bucket1.Destroy(ctx);
+
+  // Bucket should not have been destroyed
+  Assert(bucket1.IsValid());
+
+  bucket1.Close(ctx);
+  // Refcount is 1
+
+  bucket2.Destroy(ctx);
+
+  Assert(!bucket2.IsValid());
+  Assert(!bucket1.IsValid());
+}
+
 #if 0
-static void TestLocalIncrementRefcount() {
-}
-static void TestIncrementRefcount() {
-}
-static void TestLocalDecrementRefcount() {
-}
-static void TestDecrementRefcount() {
-}
 static void TestGetRemainingCapacity() {
 }
 static void TestGetLocalSystemViewState() {
@@ -184,10 +198,7 @@ int main(int argc, char **argv) {
   TestGetOrCreateBucketId(hermes);
   TestRenameBlob(hermes);
   TestRenameBucket(hermes);
-  // Assert(TestLocalIncrementRefcount());
-  // Assert(TestIncrementRefcount());
-  // Assert(TestLocalDecrementRefcount());
-  // Assert(TestDecrementRefcount());
+  TestBucketRefCounting(hermes);
   // Assert(TestGetRemainingCapacity());
   // Assert(TestGetLocalSystemViewState());
   // Assert(TestVecToSwapBlob());

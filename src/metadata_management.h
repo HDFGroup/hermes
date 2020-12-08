@@ -141,7 +141,7 @@ void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
 /**
  *
  */
-void DestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
+bool DestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
                    const char *name, BucketID bucket_id);
 
 /**

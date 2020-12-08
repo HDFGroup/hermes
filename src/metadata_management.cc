@@ -518,15 +518,18 @@ void DestroyBlobById(SharedMemoryContext *context, RpcContext *rpc, BlobID id) {
   }
 }
 
-void DestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
-                   const char *name, BucketID bucket_id) {
+bool DestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
+                          const char *name, BucketID bucket_id) {
   u32 target_node = bucket_id.bits.node_id;
+  bool destroyed = false;
   if (target_node == rpc->node_id) {
-    LocalDestroyBucket(context, rpc, name, bucket_id);
+    destroyed = LocalDestroyBucket(context, rpc, name, bucket_id);
   } else {
-    RpcCall<void>(rpc, target_node, "RemoteDestroyBucket", std::string(name),
-                  bucket_id);
+    destroyed = RpcCall<bool>(rpc, target_node, "RemoteDestroyBucket",
+                              std::string(name), bucket_id);
   }
+
+  return destroyed;
 }
 
 void LocalRenameBucket(SharedMemoryContext *context, RpcContext *rpc,
