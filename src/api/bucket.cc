@@ -211,6 +211,7 @@ Status Bucket::Close(Context &ctx) {
   if (IsValid()) {
     LOG(INFO) << "Closing bucket '" << name_ << "'" << std::endl;
     DecrementRefcount(&hermes_->context_, &hermes_->rpc_, id_);
+    id_.as_int = 0;
   }
 
   return ret;
@@ -218,15 +219,21 @@ Status Bucket::Close(Context &ctx) {
 
 Status Bucket::Destroy(Context &ctx) {
   (void)ctx;
-  Status ret = 0;
+  Status result = 0;
 
   if (IsValid()) {
     LOG(INFO) << "Destroying bucket '" << name_ << "'" << std::endl;
-    DestroyBucket(&hermes_->context_, &hermes_->rpc_, name_.c_str(), id_);
-    id_.as_int = 0;
+    bool destroyed = DestroyBucket(&hermes_->context_, &hermes_->rpc_,
+                                   name_.c_str(), id_);
+    if (destroyed) {
+      id_.as_int = 0;
+    } else {
+      // TODO(chogan): @errorhandling
+      result = 1;
+    }
   }
 
-  return ret;
+  return result;
 }
 
 }  // namespace api

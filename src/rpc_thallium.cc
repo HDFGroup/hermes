@@ -1,6 +1,7 @@
 #include <string>
 
 #include "rpc.h"
+#include "metadata_management_internal.h"
 
 namespace tl = thallium;
 
@@ -202,8 +203,9 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
 
   function<void(const request&, const string&, BucketID)> rpc_destroy_bucket =
     [context, rpc](const request &req, const string &name, BucketID id) {
-      (void)req;
-      LocalDestroyBucket(context, rpc, name.c_str(), id);
+      bool result = LocalDestroyBucket(context, rpc, name.c_str(), id);
+
+      req.respond(result);
     };
 
   function<void(const request&, const string&)>
@@ -319,8 +321,7 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
   rpc_server->define("RemoteDelete", rpc_map_delete).disable_response();
   rpc_server->define("RemoteAddBlobIdToBucket",
                      rpc_add_blob).disable_response();
-  rpc_server->define("RemoteDestroyBucket",
-                    rpc_destroy_bucket).disable_response();
+  rpc_server->define("RemoteDestroyBucket", rpc_destroy_bucket);
   rpc_server->define("RemoteRenameBucket",
                      rpc_rename_bucket).disable_response();
   rpc_server->define("RemoteDestroyBlobByName",

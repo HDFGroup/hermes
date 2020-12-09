@@ -9,6 +9,7 @@
 #include "bucket.h"
 #include "buffer_pool.h"
 #include "buffer_pool_internal.h"
+#include "metadata_management_internal.h"
 
 namespace hermes {
 

@@ -8,6 +8,7 @@
 #include "hermes.h"
 #include "bucket.h"
 #include "buffer_pool_internal.h"
+#include "metadata_management_internal.h"
 #include "utils.h"
 #include "test_utils.h"
 

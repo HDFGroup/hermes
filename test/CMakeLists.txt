@@ -99,6 +99,19 @@ target_link_libraries(stb_map hermes ${LIBRT} MPI::MPI_CXX)
 add_test(NAME TestSTBMapWithHeap COMMAND stb_map)
 
 #------------------------------------------------------------------------------
+# Metadata Manager tests
+#------------------------------------------------------------------------------
+
+add_executable(mdm mdm_test.cc)
+target_link_libraries(mdm hermes ${LIBRT}
+  $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium> MPI::MPI_CXX)
+target_compile_definitions(mdm
+  PRIVATE $<$<BOOL:${HERMES_RPC_THALLIUM}>:HERMES_RPC_THALLIUM>)
+add_test(NAME TestMDM COMMAND mdm)
+set_tests_properties("TestMDM" PROPERTIES ENVIRONMENT
+  LSAN_OPTIONS=suppressions=${CMAKE_CURRENT_SOURCE_DIR}/data/asan.supp)
+
+#------------------------------------------------------------------------------
 # Custom Targets
 #------------------------------------------------------------------------------
 
