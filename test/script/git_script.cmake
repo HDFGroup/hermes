@@ -1,0 +1,111 @@
+# Usage:
+#     ctest -S ares_script.cmake -VV
+
+# This script takes in optional environment variables.
+#   HERMES_BUILD_CONFIGURATION=Debug | Release
+#   HERMES_DASHBOARD_MODEL=Experimental | Nightly | Continuous
+#   HERMES_DO_COVERAGE
+
+# Modify dashboard_cache as needed.
+
+cmake_minimum_required (VERSION 3.10)
+
+set(CTEST_PROJECT_NAME "HERMES")
+
+# Checkout is done by git
+set(dashboard_do_checkout 0)
+set(dashboard_do_update 0)
+
+if(NOT DEFINED CTEST_TEST_TIMEOUT)
+  set(CTEST_TEST_TIMEOUT 180)
+endif()
+
+if(NOT DEFINED CTEST_SUBMIT_NOTES)
+  set(CTEST_SUBMIT_NOTES TRUE)
+endif()
+
+# Give a site name
+set(CTEST_SITE "")
+
+set (CTEST_BINARY_NAME "build")
+set (CTEST_DASHBOARD_ROOT "${CTEST_SCRIPT_DIRECTORY}")
+
+set (CTEST_SOURCE_DIRECTORY "$GITHUB_WORKSPACE")
+set (CTEST_BINARY_DIRECTORY "${CTEST_SOURCE_DIRECTORY}/build")
+
+# HERMES_BUILD_CONFIGURATION = Debug | Release
+set(HERMES_BUILD_CONFIGURATION "$ENV{HERMES_BUILD_CONFIGURATION}")
+if(NOT HERMES_BUILD_CONFIGURATION)
+  set(HERMES_BUILD_CONFIGURATION "Release")
+endif()
+set(CTEST_BUILD_CONFIGURATION ${HERMES_BUILD_CONFIGURATION})
+
+# HERMES_DASHBOARD_MODEL=Experimental | Nightly | Continuous
+set(HERMES_DASHBOARD_MODEL "$ENV{HERMES_DASHBOARD_MODEL}")
+if(NOT HERMES_DASHBOARD_MODEL)
+  set(HERMES_DASHBOARD_MODEL "Experimental")
+endif()
+set(dashboard_model ${HERMES_DASHBOARD_MODEL})
+
+# Number of jobs to build
+set(CTEST_BUILD_FLAGS "-j4")
+
+# Build name referenced in cdash
+set(CTEST_BUILD_NAME "test-x64-${HERMES_BUILD_CONFIGURATION}")
+
+set(CTEST_CMAKE_GENERATOR "Unix Makefiles")
+# Must point to the root where we can checkout/build/run the tests
+#set(CTEST_DASHBOARD_ROOT "$ENV{HOME}/workspace/Testing/${HERMES_DASHBOARD_MODEL}")
+set(CTEST_DASHBOARD_ROOT "${CTEST_SCRIPT_DIRECTORY}")
+
+# Give a site name
+set(CTEST_SITE "$ENV{HOSTNAME}")
+set(CTEST_TEST_TIMEOUT 180) # 3 minute timeout
+
+# Optional coverage options
+set(HERMES_DO_COVERAGE $ENV{HERMES_DO_COVERAGE})
+if(NOT HERMES_DO_COVERAGE)
+  set(HERMES_DO_COVERAGE OFF)
+endif()
+if(HERMES_DO_COVERAGE)
+  message("Enabling Coverage")
+  find_program (CTEST_COVERAGE_COMMAND NAMES gcov)
+  set(CTEST_BUILD_NAME "${CTEST_BUILD_NAME}-coverage")
+  # don't run parallel coverage tests, no matter what.
+  set(CTEST_TEST_ARGS PARALLEL_LEVEL 1)
+
+  # needed by hermes_common.cmake
+  set(dashboard_do_coverage TRUE)
+
+  # add Coverage dir to the root so that we don't mess the non-coverage
+  # dashboard.
+  set(CTEST_DASHBOARD_ROOT "${CTEST_DASHBOARD_ROOT}/Coverage")
+endif()
+
+set(dashboard_source_name hermes)
+set(dashboard_binary_name hermes-${HERMES_BUILD_CONFIGURATION})
+
+# Initial cache used to build hermes, options can be modified here
+set(dashboard_cache "
+CMAKE_CXX_FLAGS:STRING=${CXXFLAGS} -std=c++17 -Werror -Wall -Wextra
+
+CMAKE_INSTALL_PREFIX:PATH=${INSTALL_PREFIX}
+BUILD_SHARED_LIBS:BOOL=ON
+BUILD_TESTING:BOOL=ON
+HERMES_ENABLE_COVERAGE:BOOL=${dashboard_do_coverage}
+HERMES_INTERCEPT_IO:BOOL=OFF
+HERMES_COMMUNICATION_MPI:BOOL=ON
+HERMES_BUILD_BUFFER_POOL_VISUALIZER:BOOL=OFF
+HERMES_USE_ADDRESS_SANITIZER:BOOL=ON
+HERMES_USE_THREAD_SANITIZER:BOOL=OFF
+HERMES_RPC_THALLIUM:BOOL=ON
+HERMES_MDM_STORAGE_STBDS:BOOL=ON
+HERMES_DEBUG_HEAP:BOOL=OFF
+HERMES_BUILD_BENCHMARKS:BOOL=OFF
+CMAKE_CXX_COMPILER:STRING=`which mpicxx`
+CMAKE_C_COMPILER:STRING=`which mpicc`
+MPIEXEC_EXECUTABLE:STRING=/usr/bin/mpiexec
+ORTOOLS_ROOT:STRING=${INSTALL_DIR}/or-tools_ubuntu-18.04_${ORTOOLS_VERSION}.${ORTOOLS_MINOR_VERSION}
+")
+
+include(${CTEST_SOURCE_DIRECTORY}/test/scripthermes_common.cmake)

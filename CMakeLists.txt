@@ -141,7 +141,8 @@ endif()
 # Build options
 #------------------------------------------------------------------------------
 option(BUILD_SHARED_LIBS "Build with shared libraries." ON)
-option(HERMES_INTERCEPT_IO "Use GOTCHA as IO interception tool" ON)
+option(BUILD_TESTING "Build testing." ON)
+option(HERMES_INTERCEPT_IO "Use GOTCHA as IO interception tool" OFF)
 option(HERMES_COMMUNICATION_MPI "Use MPI as the communication layer." ON)
 option(HERMES_BUILD_BUFFER_POOL_VISUALIZER "Build the BufferPool visualizer" OFF)
 option(HERMES_USE_ADDRESS_SANITIZER "Enable -fsanitize=address in Debug builds" ON)
@@ -152,6 +153,10 @@ option(HERMES_MDM_STORAGE_STBDS
 option(HERMES_DEBUG_HEAP "Store Heap debug information for visualization." OFF)
 option(HERMES_BUILD_BENCHMARKS "Build the Hermes benchmark suite." OFF)
 option(HERMES_ENABLE_TIMING "Turn on timing of selected functions." OFF)
+
+if(NOT HERMES_EXTERNALLY_CONFIGURED)
+  option(HERMES_ENABLE_COVERAGE "Enable coverage." OFF)
+endif()
 
 if(BUILD_SHARED_LIBS)
   set(HERMES_BUILD_SHARED_LIBS 1)
@@ -298,15 +303,31 @@ if(HERMES_BUILD_BUFFER_POOL_VISUALIZER)
 endif()
 
 #-----------------------------------------------------------------------------
+# Coverage
+#-----------------------------------------------------------------------------
+if(HERMES_ENABLE_COVERAGE)
+  set(COVERAGE_FLAGS "-fprofile-arcs -ftest-coverage" CACHE STRING
+    "Flags to the coverage program that CTest uses to perform coverage inspection"
+  )
+  mark_as_advanced(COVERAGE_FLAGS)
+endif()
+
+macro(set_coverage_flags target)
+  set_target_properties(${target}
+    PROPERTIES
+      COMPILE_FLAGS ${COVERAGE_FLAGS}
+      LINK_FLAGS ${COVERAGE_FLAGS}
+  )
+endmacro()
+
+#-----------------------------------------------------------------------------
 # Source
 #-----------------------------------------------------------------------------
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src)
+
 if(HERMES_HAVE_GOTCHA)
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gotcha_intercept)
 endif()
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src)
-#add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/posix_adapter)
-#add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/mpi_io_adapter)
-#add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/hermes_vol)
 
 if(HERMES_BUILD_BUFFER_POOL_VISUALIZER AND SDL2_FOUND)
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/buffer_pool_visualizer)
@@ -316,11 +337,9 @@ endif()
 #-----------------------------------------------------------------------------
 # Testing
 #-----------------------------------------------------------------------------
-if(CMAKE_PROJECT_NAME STREQUAL HERMES)
+if(NOT HERMES_EXTERNALLY_CONFIGURED AND BUILD_TESTING)
+  enable_testing()
   include(CTest)
-endif()
-
-if(CMAKE_PROJECT_NAME STREQUAL HERMES AND BUILD_TESTING)
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test)
 endif()
 

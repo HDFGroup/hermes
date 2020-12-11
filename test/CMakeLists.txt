@@ -11,6 +11,7 @@ include_directories(
 #------------------------------------------------------------------------------
 # API tests
 #------------------------------------------------------------------------------
+
 set(API_TESTS dpe_optimization_test dpe_random_test
     dpe_roundrobin_test end_to_end_test)
 
@@ -25,11 +26,15 @@ foreach(program ${API_TESTS})
     "${CMAKE_BINARY_DIR}/bin/${program}")
   set_tests_properties("Test${program}" PROPERTIES ENVIRONMENT
     LSAN_OPTIONS=suppressions=${CMAKE_CURRENT_SOURCE_DIR}/data/asan.supp)
+  if(HERMES_ENABLE_COVERAGE)
+    set_coverage_flags(${program})
+  endif()
 endforeach()
 
 #------------------------------------------------------------------------------
 # Bucket test
 #------------------------------------------------------------------------------
+
 find_package(ZLIB)
 if(ZLIB_FOUND)
   message(STATUS "found zlib")
@@ -46,10 +51,14 @@ add_test(NAME "Testbucket_test"
   "${CMAKE_CURRENT_SOURCE_DIR}/data/bucket_test.conf")
 set_tests_properties("Testbucket_test" PROPERTIES ENVIRONMENT
   LSAN_OPTIONS=suppressions=${CMAKE_CURRENT_SOURCE_DIR}/data/asan.supp)
+if(HERMES_ENABLE_COVERAGE)
+  set_coverage_flags(bucket_test)
+endif()
 
 #------------------------------------------------------------------------------
 # POSIX GOTCHA test
 #------------------------------------------------------------------------------
+
 if(HERMES_HAVE_GOTCHA)
   add_executable(stdio_test stdio_test.c)
   target_link_libraries(stdio_test hermes)
@@ -69,6 +78,9 @@ target_compile_definitions(bp
 add_test(NAME "TestBufferPool" COMMAND "${CMAKE_BINARY_DIR}/bin/bp" "-b" "-s")
 set_tests_properties("TestBufferPool" PROPERTIES ENVIRONMENT
   LSAN_OPTIONS=suppressions=${CMAKE_CURRENT_SOURCE_DIR}/data/asan.supp)
+if(HERMES_ENABLE_COVERAGE)
+  set_coverage_flags(bp)
+endif()
 
 add_executable(bp_test buffer_pool_client_test.cc)
 target_link_libraries(bp_test hermes MPI::MPI_CXX
@@ -86,6 +98,10 @@ target_link_libraries(config_parser_test hermes)
 add_test(NAME TestConfigParser
   COMMAND config_parser_test ${CMAKE_CURRENT_SOURCE_DIR}/data/hermes.conf)
 
+if(HERMES_ENABLE_COVERAGE)
+  set_coverage_flags(config_parser_test)
+endif()
+
 #------------------------------------------------------------------------------
 # Memory Management tests
 #------------------------------------------------------------------------------
@@ -93,10 +109,16 @@ add_test(NAME TestConfigParser
 add_executable(mem memory_test.cc)
 target_link_libraries(mem hermes)
 add_test(NAME TestMemoryManagement COMMAND mem)
+if(HERMES_ENABLE_COVERAGE)
+  set_coverage_flags(mem)
+endif()
 
 add_executable(stb_map stb_map_test.cc)
 target_link_libraries(stb_map hermes ${LIBRT} MPI::MPI_CXX)
 add_test(NAME TestSTBMapWithHeap COMMAND stb_map)
+if(HERMES_ENABLE_COVERAGE)
+  set_coverage_flags(stb_map)
+endif()
 
 #------------------------------------------------------------------------------
 # Metadata Manager tests
@@ -110,6 +132,9 @@ target_compile_definitions(mdm
 add_test(NAME TestMDM COMMAND mdm)
 set_tests_properties("TestMDM" PROPERTIES ENVIRONMENT
   LSAN_OPTIONS=suppressions=${CMAKE_CURRENT_SOURCE_DIR}/data/asan.supp)
+if(HERMES_ENABLE_COVERAGE)
+  set_coverage_flags(mdm)
+endif()
 
 #------------------------------------------------------------------------------
 # Custom Targets
