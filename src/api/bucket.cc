@@ -15,7 +15,12 @@ Bucket::Bucket(const std::string &initial_name,
                const std::shared_ptr<Hermes> &h, Context ctx)
     : name_(initial_name), hermes_(h) {
   (void)ctx;
-  id_ = GetOrCreateBucketId(&hermes_->context_, &hermes_->rpc_, name_);
+
+  if (IsNameTooLong(name_)) {
+    id_.as_int = 0;
+  } else {
+    id_ = GetOrCreateBucketId(&hermes_->context_, &hermes_->rpc_, name_);
+  }
 }
 
 bool Bucket::IsValid() const {
@@ -28,7 +33,12 @@ Status Bucket::Put(const std::string &name, const u8 *data, size_t size,
                    Context &ctx) {
   Status ret = 0;
 
-  if (IsValid()) {
+  if (IsNameTooLong(name)) {
+    // TODO(chogan): @errorhandling
+    ret = 1;
+  }
+
+  if (IsValid() && ret == 0) {
     std::vector<size_t> sizes(1, size);
     std::vector<PlacementSchema> schemas;
     HERMES_BEGIN_TIMED_BLOCK("CalculatePlacement");
@@ -154,8 +164,13 @@ Status Bucket::RenameBlob(const std::string &old_name,
   (void)ctx;
   Status ret = 0;
 
-  LOG(INFO) << "Renaming Blob " << old_name << " to " << new_name << '\n';
-  hermes::RenameBlob(&hermes_->context_, &hermes_->rpc_, old_name, new_name);
+  if (IsNameTooLong(new_name)) {
+    ret = 1;
+    // TODO(chogan): @errorhandling
+  } else {
+    LOG(INFO) << "Renaming Blob " << old_name << " to " << new_name << '\n';
+    hermes::RenameBlob(&hermes_->context_, &hermes_->rpc_, old_name, new_name);
+  }
 
   return ret;
 }
@@ -198,8 +213,13 @@ Status Bucket::Rename(const std::string &new_name, Context &ctx) {
   (void)ctx;
   Status ret = 0;
 
-  LOG(INFO) << "Renaming a bucket to" << new_name << '\n';
-  RenameBucket(&hermes_->context_, &hermes_->rpc_, id_, name_, new_name);
+  if (IsNameTooLong(new_name)) {
+    ret = 1;
+    // TODO(chogan): @errorhandling
+  } else {
+    LOG(INFO) << "Renaming a bucket to" << new_name << '\n';
+    RenameBucket(&hermes_->context_, &hermes_->rpc_, id_, name_, new_name);
+  }
 
   return ret;
 }

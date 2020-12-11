@@ -146,6 +146,37 @@ static void TestBucketRefCounting(HermesPtr hermes) {
   Assert(!bucket1.IsValid());
 }
 
+static void TestMaxNameLength(HermesPtr hermes) {
+  // Bucket with a name that's too large is invalid.
+  hapi::Context ctx;
+  std::string long_name(kMaxNameSize + 1, 'x');
+  hapi::Bucket invalid_bucket(long_name, hermes, ctx);
+  Assert(!invalid_bucket.IsValid());
+
+  // Put fails when a blob name is too long
+  std::string name = "b1";
+  hapi::Bucket bucket(name, hermes, ctx);
+  hapi::Blob blob('x');
+  Status status = bucket.Put(long_name, blob, ctx);
+  Assert(status != 0);
+  Assert(!bucket.ContainsBlob(long_name));
+
+  // Vector Put fails if one name is too long
+  std::string a = "a";
+  std::string b = "b";
+  std::string c = "c";
+  std::vector<std::string> blob_names = {a, b, long_name, c};
+  std::vector<hapi::Blob> blobs = {blob, blob, blob, blob};
+  status = bucket.Put(blob_names, blobs, ctx);
+  Assert(status != 0);
+  Assert(!bucket.ContainsBlob(long_name));
+  Assert(!bucket.ContainsBlob(a));
+  Assert(!bucket.ContainsBlob(b));
+  Assert(!bucket.ContainsBlob(c));
+
+  bucket.Destroy(ctx);
+}
+
 int main(int argc, char **argv) {
   int mpi_threads_provided;
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
@@ -163,6 +194,7 @@ int main(int argc, char **argv) {
   TestRenameBlob(hermes);
   TestRenameBucket(hermes);
   TestBucketRefCounting(hermes);
+  TestMaxNameLength(hermes);
 
   hermes->Finalize(true);
 

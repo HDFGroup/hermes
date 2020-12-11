@@ -228,6 +228,11 @@ SwapBlob VecToSwapBlob(std::vector<BufferID> &vec);
  */
 SwapBlob IdArrayToSwapBlob(BufferIdArray ids);
 
+/**
+ *
+ */
+bool IsNameTooLong(const std::string &name);
+
 }  // namespace hermes
 
 #endif  // HERMES_METADATA_MANAGEMENT_H_

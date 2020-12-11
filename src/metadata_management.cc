@@ -12,6 +12,17 @@
 
 namespace hermes {
 
+bool IsNameTooLong(const std::string &name) {
+  bool result = false;
+  if (name.size() + 1 >= kMaxNameSize) {
+    LOG(WARNING) << "Name '" << name << "' exceeds the maximum name size of "
+                 << kMaxNameSize << " bytes." << std::endl;
+    result = true;
+  }
+
+  return result;
+}
+
 bool IsNullBucketId(BucketID id) {
   bool result = id.as_int == 0;
 
