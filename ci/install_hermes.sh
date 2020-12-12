@@ -19,7 +19,7 @@ cmake                                                      \
     -DCMAKE_CXX_COMPILER=`which mpicxx`                    \
     -DCMAKE_C_COMPILER=`which mpicc`                       \
     -DBUILD_SHARED_LIBS=ON                                 \
-    -DHERMES_INTERCEPT_IO=ON                               \
+    -DHERMES_INTERCEPT_IO=OFF                              \
     -DHERMES_COMMUNICATION_MPI=ON                          \
     -DHERMES_BUILD_BUFFER_POOL_VISUALIZER=ON               \
     -DORTOOLS_DIR=${INSTALL_PREFIX}                        \
