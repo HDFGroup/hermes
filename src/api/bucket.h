@@ -165,7 +165,15 @@ Status Bucket::Put(std::vector<std::string> &names,
                    std::vector<std::vector<T>> &blobs, Context &ctx) {
   Status ret = 0;
 
-  if (IsValid()) {
+  for (auto &name : names) {
+    if (IsNameTooLong(name)) {
+      // TODO(chogan): @errorhandling
+      ret = 1;
+      break;
+    }
+  }
+
+  if (IsValid() && ret == 0) {
     size_t num_blobs = blobs.size();
     std::vector<size_t> sizes_in_bytes(num_blobs);
     for (size_t i = 0; i < num_blobs; ++i) {
