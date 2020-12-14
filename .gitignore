@@ -8,3 +8,5 @@ GTAGS
 
 /cmake-build-debug/
 /.idea/
+/cmake-build-debug-system/
+/src/adapter/posix/cmake-build-debug-system/CMakeFiles/clion-log.txt

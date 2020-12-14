@@ -108,5 +108,3 @@ add_custom_target(ares
   "${CMAKE_BINARY_DIR}/bin/end_to_end_test"
   "${CMAKE_CURRENT_SOURCE_DIR}/data/ares.conf"
 )
-
-add_subdirectory(adapter/posix)
