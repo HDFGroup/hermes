@@ -24,10 +24,7 @@ endif()
 # Give a site name
 set(CTEST_SITE "github.com")
 
-set (CTEST_BINARY_NAME "build")
-
 set (CTEST_SOURCE_DIRECTORY ".")
-
 set (CTEST_BINARY_DIRECTORY "${CTEST_SOURCE_DIRECTORY}/build")
 
 # HERMES_DASHBOARD_MODEL=Experimental | Nightly | Continuous
