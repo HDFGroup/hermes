@@ -5,11 +5,13 @@
 #ifndef HERMES_ADAPTER_POSIX_H
 #define HERMES_ADAPTER_POSIX_H
 
-namespace hermes::adapter{
+namespace hermes::adapter {
     class Posix {
-
+        /**
+         *
+         */
+        Posix() = default;
     };
 }
 
-
-#endif //HERMES_ADAPTER_POSIX_H
+#endif  // HERMES_ADAPTER_POSIX_H

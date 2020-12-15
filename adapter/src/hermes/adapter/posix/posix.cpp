@@ -3,3 +3,6 @@
 //
 
 #include <hermes/adapter/posix.h>
+
+hermes::adapter::Posix::Posix() {
+}
