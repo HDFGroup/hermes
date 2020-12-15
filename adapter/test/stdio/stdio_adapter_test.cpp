@@ -35,7 +35,7 @@ cl::Parser define_options() {
                    ("Request size used for performing I/O");
 }
 
-TEST_CASE("Open", "[process=1][operation=single_open]") {
+TEST_CASE("Open", "[process=1][operation=single_open][repetition=1]") {
     fs::path fullpath = args.directory;
     fullpath /= args.filename;
     std::string new_file = fullpath.string() + "_new";
@@ -94,8 +94,9 @@ TEST_CASE("Open", "[process=1][operation=single_open]") {
     fs::remove(fullpath);
 }
 
-TEST_CASE("Write",
-          "[process=1][operation=single_write][request_size=type-fixed]") {
+TEST_CASE("SingleWrite",
+          "[process=1][operation=single_write]"
+          "[request_size=type-fixed][repetition=1]") {
     fs::path fullpath = args.directory;
     fullpath /= args.filename;
     std::string new_file = fullpath.string() + "_new";
@@ -164,4 +165,68 @@ TEST_CASE("Write",
         REQUIRE(fs::file_size(new_file) == size_written);
     }
     fs::remove(fullpath);
+}
+
+TEST_CASE("BatchedWrite",
+          "[process=1][operation=batched_write]"
+          "[request_size=type-fixed][repetition=100][pattern=sequential]") {
+    fs::path fullpath = args.directory;
+    fullpath /= args.filename;
+    std::string new_file = fullpath.string() + "_new";
+    if (fs::exists(new_file)) fs::remove(new_file);
+    long num_iterations = 100;
+
+    SECTION("write to existing file") {
+        FILE* fd = fopen(new_file.c_str(), "w+");
+        REQUIRE(fd != nullptr);
+
+        for (int i = 0; i < num_iterations; ++i) {
+            long size_written = fwrite(info.data.c_str(),
+                                       sizeof(char), args.request_size, fd);
+            REQUIRE(size_written == args.request_size);
+        }
+        int status = fclose(fd);
+        REQUIRE(status == 0);
+        REQUIRE(fs::file_size(new_file) == num_iterations * args.request_size);
+    }
+    fs::remove(new_file);
+}
+
+
+TEST_CASE("BatchedWrite",
+          "[process=1][operation=batched_write]"
+          "[request_size=type-fixed][repetition=100][pattern=sequential]") {
+    fs::path fullpath = args.directory;
+    fullpath /= args.filename;
+    std::string existing_file = fullpath.string();
+    if (fs::exists(existing_file)) fs::remove(existing_file);
+    long num_iterations = 100;
+    if (!fs::exists(existing_file)) {
+        size_t cmd_size = snprintf(NULL, sizeof(NULL),
+                     "dd if=/dev/zero of=%s bs=1 count=0 seek=%ld",
+                     existing_file.c_str(),
+                     args.request_size*num_iterations);
+        char* cmd = new char[cmd_size];
+        snprintf(cmd, cmd_size, "dd if=/dev/zero of=%s bs=1 count=0 seek=%ld",
+                existing_file.c_str(),
+                args.request_size*num_iterations);
+        system(cmd);
+        delete(cmd);
+        REQUIRE(fs::file_size(existing_file)
+                == num_iterations * args.request_size);
+    }
+
+    SECTION("read from existing file") {
+        FILE* fd = fopen(existing_file.c_str(), "r+");
+        REQUIRE(fd != nullptr);
+
+        for (int i = 0; i < num_iterations; ++i) {
+            long size_written = fwrite(info.data.c_str(),
+                                       sizeof(char), args.request_size, fd);
+            REQUIRE(size_written == args.request_size);
+        }
+        int status = fclose(fd);
+        REQUIRE(status == 0);
+    }
+    fs::remove(existing_file);
 }
