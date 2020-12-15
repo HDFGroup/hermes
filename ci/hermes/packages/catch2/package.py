@@ -30,7 +30,6 @@ class Catch2(CMakePackage):
 
     version('2.13.3', sha256='fedc5b008f7eb574f45098e7c7138211c543f0f8ad04792090e790511697a877')
     
-    depends_on('cmake@3.17.3')
     def url_for_version(self, version):
         url = "https://github.com/catchorg/Catch2/archive/v{0}.tar.gz"
         return url.format(version)
