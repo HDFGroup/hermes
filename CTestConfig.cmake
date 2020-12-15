@@ -9,6 +9,6 @@ set(CTEST_PROJECT_NAME "HERMES")
 set(CTEST_NIGHTLY_START_TIME "00:00:00 CST")
 
 set(CTEST_DROP_METHOD "https")
-set(CTEST_DROP_SITE "hermes-cdash.hdfgroup.org")
+set(CTEST_DROP_SITE "cdash.hdfgroup.org")
 set(CTEST_DROP_LOCATION "/submit.php?project=${CTEST_PROJECT_NAME}")
 set(CTEST_DROP_SITE_CDASH TRUE)

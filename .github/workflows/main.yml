@@ -55,4 +55,4 @@ jobs:
         run: ci/install_deps.sh
           
       - name: Build and Test
-        run: ci/install_hermes.sh
+        run: ctest -S $GITHUB_WORKSPACE/test/script/git_script.cmake -VV

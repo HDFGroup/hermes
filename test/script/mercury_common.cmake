@@ -13,7 +13,7 @@
 #   set(CTEST_BUILD_NAME "Platform-Compiler")
 #   set(CTEST_BUILD_CONFIGURATION Debug)
 #   set(CTEST_CMAKE_GENERATOR "Unix Makefiles")
-#   include(${CTEST_SCRIPT_DIRECTORY}/hermes_common.cmake)
+#   include(${CTEST_SCRIPT_DIRECTORY}/mercury_common.cmake)
 #
 # Then run a scheduled task (cron job) with a command line such as
 #
@@ -27,8 +27,8 @@
 #
 #   dashboard_model          = Nightly | Experimental | Continuous
 #   dashboard_root_name      = Change name of "My Tests" directory
-#   dashboard_source_name    = Name of source directory (hermes)
-#   dashboard_binary_name    = Name of binary directory (hermes-build)
+#   dashboard_source_name    = Name of source directory (Mercury)
+#   dashboard_binary_name    = Name of binary directory (Mercury-build)
 #   dashboard_cache          = Initial CMakeCache.txt file content
 #   dashboard_track          = The name of the CDash "Track" to submit to
 #
@@ -116,6 +116,10 @@ if(NOT DEFINED dashboard_do_submit)
   set(dashboard_do_submit TRUE)
 endif()
 
+if(NOT DEFINED CTEST_PROJECT_NAME)
+  message(FATAL_ERROR "project-specific script including '***_common.cmake' should set CTEST_PROJECT_NAME")
+endif()
+
 # Select the top dashboard directory.
 if(NOT DEFINED dashboard_root_name)
   set(dashboard_root_name "My Tests")
@@ -159,7 +163,7 @@ if(NOT CTEST_TEST_TIMEOUT)
 endif()
 
 # Select Git source to use.
-if(dashboard_do_checkout AND NOT DEFINED dashboard_git_url)
+if(NOT DEFINED dashboard_git_url)
   message(FATAL_ERROR "project-specific script including '***_common.cmake' should set dashboard_git_url")
 endif()
 if(NOT DEFINED dashboard_git_branch)
@@ -199,7 +203,7 @@ if(NOT DEFINED CTEST_SOURCE_DIRECTORY)
   if(DEFINED dashboard_source_name)
     set(CTEST_SOURCE_DIRECTORY ${CTEST_DASHBOARD_ROOT}/${dashboard_source_name})
   else()
-    message(FATAL_ERROR "CTEST_SOURCE_DIRECTORY not available!")
+    set(CTEST_SOURCE_DIRECTORY ${CTEST_DASHBOARD_ROOT}/${CTEST_PROJECT_NAME})
   endif()
 endif()
 
@@ -296,8 +300,6 @@ endif()"
     endif()
   endif()
 endif()
-
-set ($ENV{LC_MESSAGES}  "en_EN")
 
 #-----------------------------------------------------------------------------
 
@@ -509,7 +511,6 @@ endif()
 if(COMMAND dashboard_hook_end)
   dashboard_hook_end()
 endif()
-# Use this part if cmake version >= 3.14
 if(dashboard_do_submit)
   ctest_submit(PARTS Done)
 endif()
