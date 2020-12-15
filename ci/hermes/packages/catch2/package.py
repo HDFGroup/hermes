@@ -11,11 +11,11 @@
 # next to all the things you'll want to change. Once you've handled
 # them, you can save this file and test your package like this:
 #
-#     spack install catch2-git
+#     spack install catch2
 #
 # You can edit this file again by typing:
 #
-#     spack edit catch2-git
+#     spack edit catch2
 #
 # See the Spack documentation for more information on packaging.
 # ----------------------------------------------------------------------------
