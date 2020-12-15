@@ -6,14 +6,14 @@
 namespace fs = std::experimental::filesystem;
 
 namespace hermes::adapter::stdio::test {
-    struct Arguments {
-        std::string filename = "test.dat";
-        std::string directory = "/tmp";
-        long request_size = 4096;
-    };
-    struct Info {
-        std::string data;
-    };
+struct Arguments {
+    std::string filename = "test.dat";
+    std::string directory = "/tmp";
+    long request_size = 4096;
+};
+struct Info {
+    std::string data;
+};
 }
 hermes::adapter::stdio::test::Arguments args;
 hermes::adapter::stdio::test::Info info;
@@ -145,7 +145,8 @@ TEST_CASE("Write",
         auto existing_size = fs::file_size(existing_file);
         FILE* fd = fopen(existing_file.c_str(), "a+");
         REQUIRE(fd != nullptr);
-        long size_written = fwrite(info.data.c_str(), sizeof(char), args.request_size, fd);
+        long size_written = fwrite(info.data.c_str(),
+                                   sizeof(char), args.request_size, fd);
         REQUIRE(size_written == args.request_size);
         int status = fclose(fd);
         REQUIRE(status == 0);
