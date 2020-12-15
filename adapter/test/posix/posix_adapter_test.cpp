@@ -13,6 +13,7 @@ namespace hermes::adapter::posix::test{
         std::string filename = "test.dat";
         std::string directory = "/tmp";
         long request_size = 4096;
+        
     };
     struct Info{
         std::string data;
