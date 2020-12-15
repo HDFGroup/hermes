@@ -6,12 +6,12 @@
 #define HERMES_ADAPTER_POSIX_H
 
 namespace hermes::adapter {
-    class Posix {
-        /**
-         *
-         */
-        Posix();
-    };
+class Posix {
+    /**
+     *
+     */
+    Posix();
+};
 }
 
 #endif  // HERMES_ADAPTER_POSIX_H
