@@ -40,8 +40,8 @@ TEST_CASE("Simple", "[process=1][operation=single_write][request_size=type-fixed
     fullpath /= args.filename;
     std::string new_file = fullpath.string() + "_new";
     std::string existing_file = fullpath.string() + "_ext";
-    std::cout << new_file << std::endl;
     if(fs::exists(new_file)) fs::remove(new_file);
+    if(fs::exists(existing_file)) fs::remove(existing_file);
     if(!fs::exists(existing_file)){
         std::ofstream ofs(existing_file);
         ofs.close();
@@ -74,6 +74,7 @@ TEST_CASE("Simple", "[process=1][operation=single_write][request_size=type-fixed
     SECTION( "write to existing file" ) {
         int fd = open(existing_file.c_str(),O_WRONLY);
         REQUIRE( fd != -1 );
+        long offset = lseek(fd,0,SEEK_SET);
         long size_written = write(fd,info.data.c_str(),args.request_size);
         REQUIRE( size_written == args.request_size );
         int status = close(fd);
@@ -105,7 +106,7 @@ TEST_CASE("Simple", "[process=1][operation=single_write][request_size=type-fixed
 
     SECTION( "append to existing file" ) {
         auto existing_size = fs::file_size(existing_file);
-        int fd = open(existing_file.c_str(),O_APPEND, S_IRWXU | S_IRWXG | S_IRWXO);
+        int fd = open(existing_file.c_str(),O_WRONLY|O_APPEND);
         REQUIRE( fd != -1 );
         long size_written = write(fd,info.data.c_str(),args.request_size);
         REQUIRE( size_written == args.request_size );
@@ -114,9 +115,8 @@ TEST_CASE("Simple", "[process=1][operation=single_write][request_size=type-fixed
         REQUIRE(fs::file_size(existing_file) == existing_size + size_written);
     }
 
-    fs::remove(fullpath);
     SECTION( "append to new file" ) {
-        int fd = open(new_file.c_str(),O_APPEND | O_CREAT);
+        int fd = open(new_file.c_str(),O_WRONLY| O_APPEND | O_CREAT);
         REQUIRE( fd != -1 );
         long size_written = write(fd,info.data.c_str(),args.request_size);
         REQUIRE( size_written == args.request_size );
