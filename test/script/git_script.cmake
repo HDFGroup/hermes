@@ -22,7 +22,7 @@ if(NOT DEFINED CTEST_SUBMIT_NOTES)
 endif()
 
 # Give a site name
-set(CTEST_SITE "github.com")
+set(CTEST_SITE "github.com/HDFGroup/hermes/actions")
 
 set (CTEST_SOURCE_DIRECTORY ".")
 set (CTEST_BINARY_DIRECTORY "${CTEST_SOURCE_DIRECTORY}/build")
