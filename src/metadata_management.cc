@@ -12,13 +12,25 @@
 
 namespace hermes {
 
-bool IsNameTooLong(const std::string &name) {
+bool IsNameTooLong(const std::string &name, size_t max) {
   bool result = false;
-  if (name.size() + 1 >= kMaxNameSize) {
+  if (name.size() + 1 >= max) {
     LOG(WARNING) << "Name '" << name << "' exceeds the maximum name size of "
-                 << kMaxNameSize << " bytes." << std::endl;
+                 << max << " bytes." << std::endl;
     result = true;
   }
+
+  return result;
+}
+
+bool IsBlobNameTooLong(const std::string &name) {
+  bool result = IsNameTooLong(name, kMaxBlobNameSize);
+
+  return result;
+}
+
+bool IsBucketNameTooLong(const std::string &name) {
+  bool result = IsNameTooLong(name, kMaxBucketNameSize);
 
   return result;
 }

@@ -231,7 +231,12 @@ SwapBlob IdArrayToSwapBlob(BufferIdArray ids);
 /**
  *
  */
-bool IsNameTooLong(const std::string &name);
+bool IsBlobNameTooLong(const std::string &name);
+
+/**
+ *
+ */
+bool IsBucketNameTooLong(const std::string &name);
 
 }  // namespace hermes
 

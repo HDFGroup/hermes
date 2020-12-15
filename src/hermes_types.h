@@ -39,7 +39,8 @@ static constexpr int kMaxBufferPoolSlabs = 8;
 constexpr int kMaxPathLength = 256;
 constexpr int kMaxBufferPoolShmemNameLength = 64;
 constexpr int kMaxDevices = 8;
-constexpr int kMaxNameSize = 128;
+constexpr int kMaxBucketNameSize = 256;
+constexpr int kMaxBlobNameSize = 64;
 
 constexpr char kPlaceInHierarchy[] = "PlaceInHierarchy";
 
