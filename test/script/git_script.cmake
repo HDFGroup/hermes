@@ -25,7 +25,6 @@ endif()
 set(CTEST_SITE "github.com")
 
 set (CTEST_BINARY_NAME "build")
-set (CTEST_DASHBOARD_ROOT "${CTEST_SOURCE_DIRECTORY}")
 
 set (CTEST_SOURCE_DIRECTORY ".")
 
@@ -54,8 +53,6 @@ set(CTEST_BUILD_FLAGS "-j4")
 set(CTEST_BUILD_NAME "test-x64-${HERMES_BUILD_CONFIGURATION}")
 
 set(CTEST_CMAKE_GENERATOR "Unix Makefiles")
-# Must point to the root where we can checkout/build/run the tests
-#set(CTEST_DASHBOARD_ROOT "${CTEST_SCRIPT_DIRECTORY}")
 
 # Optional coverage options
 set(HERMES_DO_COVERAGE $ENV{HERMES_DO_COVERAGE})
