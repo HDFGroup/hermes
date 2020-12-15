@@ -8,17 +8,18 @@
 
 using namespace hermes;  // NOLINT(*)
 
-static hermes::testing::TargetViewState node_state {InitDeviceState()};
+static hermes::testing::TargetViewState node_state {testing::InitDeviceState()};
 
 u64 UpdateDeviceState(PlacementSchema schema) {
   u64 result {0};
   node_state.ordered_cap.clear();
 
-  for (auto [size, device] : schema) {
+  for (auto [size, target] : schema) {
     result += size;
-    node_state.bytes_available[device] -= size;
-    node_state.ordered_cap.insert(std::pair<u64, size_t>
-                              (node_state.bytes_available[device], device));
+    node_state.bytes_available[target.bits.device_id] -= size;
+    node_state.ordered_cap.insert(
+      std::pair<u64, TargetID>(
+        node_state.bytes_available[target.bits.device_id], target));
   }
 
   return result;
@@ -42,6 +43,9 @@ void RandomPlaceBlob(std::vector<size_t> &blob_sizes,
 
   std::cout << "\nRandomPlacement to place blob of size " << blob_sizes[0]
             << " to targets\n" << std::flush;
+
+  std::vector<TargetID> targets =
+    testing::GetDefaultTargets(node_state.num_devices);
   Status result = RandomPlacement(blob_sizes, node_state.ordered_cap,
                                   schemas_tmp);
   if (result) {
@@ -50,7 +54,7 @@ void RandomPlaceBlob(std::vector<size_t> &blob_sizes,
   }
 
   for (auto it = schemas_tmp.begin(); it != schemas_tmp.end(); ++it) {
-    PlacementSchema schema = AggregateBlobSchema(node_state.num_devices, (*it));
+    PlacementSchema schema = AggregateBlobSchema((*it));
     Assert(schemas.size() <= static_cast<size_t>(node_state.num_devices));
     schemas.push_back(schema);
   }

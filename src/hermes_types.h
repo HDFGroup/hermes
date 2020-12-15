@@ -46,11 +46,22 @@ constexpr char kPlaceInHierarchy[] = "PlaceInHierarchy";
 #define HERMES_NOT_IMPLEMENTED_YET \
   LOG(FATAL) << __func__ << " not implemented yet\n"
 
+union TargetID {
+  struct {
+    u32 node_id;
+    u16 device_id;
+    u16 index;
+  } bits;
+
+  u64 as_int;
+};
+
 /**
- * A PlacementSchema is a vector of (size, device) pairs where size is the number of
- * bytes to buffer and device is the Device ID where to buffer those bytes.
+ * A PlacementSchema is a vector of (size, target) pairs where size is the
+ * number of bytes to buffer and target is the TargetID where to buffer those
+ * bytes.
  */
-using PlacementSchema = std::vector<std::pair<size_t, DeviceID>>;
+using PlacementSchema = std::vector<std::pair<size_t, TargetID>>;
 
 /**
  * Distinguishes whether the process (or rank) is part of the application cores

@@ -233,6 +233,12 @@ SwapBlob IdArrayToSwapBlob(BufferIdArray ids);
  */
 bool IsNameTooLong(const std::string &name);
 
+/**
+ *
+ */
+TargetID FindTargetIdFromDeviceId(const std::vector<TargetID> &targets,
+                                  DeviceID device_id);
+
 }  // namespace hermes
 
 #endif  // HERMES_METADATA_MANAGEMENT_H_

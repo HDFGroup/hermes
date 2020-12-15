@@ -54,16 +54,6 @@ struct Device {
   char mount_point[kMaxPathLength];
 };
 
-union TargetID {
-  struct {
-    u32 node_id;
-    u16 device_id;
-    u16 index;
-  } bits;
-
-  u64 as_int;
-};
-
 struct Target {
   TargetID id;
   /** The total capacity of the Target. */
