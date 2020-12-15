@@ -35,7 +35,7 @@ Parser define_options() {
            | Opt( args.request_size, "request_size" )["-s"]["--request_size"]("Request size used for performing I/O");
 }
 
-TEST_CASE("Open", "[process=1][operation=single_write][request_size=type-fixed]") {
+TEST_CASE("Open", "[process=1][operation=single_open]") {
     fs::path fullpath = args.directory;
     fullpath /= args.filename;
     std::string new_file = fullpath.string() + "_new";
