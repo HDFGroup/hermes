@@ -16,7 +16,7 @@ Bucket::Bucket(const std::string &initial_name,
     : name_(initial_name), hermes_(h) {
   (void)ctx;
 
-  if (IsNameTooLong(name_)) {
+  if (IsBucketNameTooLong(name_)) {
     id_.as_int = 0;
   } else {
     id_ = GetOrCreateBucketId(&hermes_->context_, &hermes_->rpc_, name_);
@@ -33,7 +33,7 @@ Status Bucket::Put(const std::string &name, const u8 *data, size_t size,
                    Context &ctx) {
   Status ret = 0;
 
-  if (IsNameTooLong(name)) {
+  if (IsBlobNameTooLong(name)) {
     // TODO(chogan): @errorhandling
     ret = 1;
   }
@@ -164,7 +164,7 @@ Status Bucket::RenameBlob(const std::string &old_name,
   (void)ctx;
   Status ret = 0;
 
-  if (IsNameTooLong(new_name)) {
+  if (IsBlobNameTooLong(new_name)) {
     ret = 1;
     // TODO(chogan): @errorhandling
   } else {
@@ -213,7 +213,7 @@ Status Bucket::Rename(const std::string &new_name, Context &ctx) {
   (void)ctx;
   Status ret = 0;
 
-  if (IsNameTooLong(new_name)) {
+  if (IsBucketNameTooLong(new_name)) {
     ret = 1;
     // TODO(chogan): @errorhandling
   } else {

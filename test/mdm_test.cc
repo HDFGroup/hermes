@@ -149,27 +149,28 @@ static void TestBucketRefCounting(HermesPtr hermes) {
 static void TestMaxNameLength(HermesPtr hermes) {
   // Bucket with a name that's too large is invalid.
   hapi::Context ctx;
-  std::string long_name(kMaxNameSize + 1, 'x');
-  hapi::Bucket invalid_bucket(long_name, hermes, ctx);
+  std::string long_bucket_name(kMaxBucketNameSize + 1, 'x');
+  hapi::Bucket invalid_bucket(long_bucket_name, hermes, ctx);
   Assert(!invalid_bucket.IsValid());
 
   // Put fails when a blob name is too long
   std::string name = "b1";
+  std::string long_blob_name(kMaxBlobNameSize + 1, 'x');
   hapi::Bucket bucket(name, hermes, ctx);
   hapi::Blob blob('x');
-  Status status = bucket.Put(long_name, blob, ctx);
+  Status status = bucket.Put(long_blob_name, blob, ctx);
   Assert(status != 0);
-  Assert(!bucket.ContainsBlob(long_name));
+  Assert(!bucket.ContainsBlob(long_blob_name));
 
   // Vector Put fails if one name is too long
   std::string a = "a";
   std::string b = "b";
   std::string c = "c";
-  std::vector<std::string> blob_names = {a, b, long_name, c};
+  std::vector<std::string> blob_names = {a, b, long_blob_name, c};
   std::vector<hapi::Blob> blobs = {blob, blob, blob, blob};
   status = bucket.Put(blob_names, blobs, ctx);
   Assert(status != 0);
-  Assert(!bucket.ContainsBlob(long_name));
+  Assert(!bucket.ContainsBlob(long_blob_name));
   Assert(!bucket.ContainsBlob(a));
   Assert(!bucket.ContainsBlob(b));
   Assert(!bucket.ContainsBlob(c));

@@ -166,7 +166,7 @@ Status Bucket::Put(std::vector<std::string> &names,
   Status ret = 0;
 
   for (auto &name : names) {
-    if (IsNameTooLong(name)) {
+    if (IsBlobNameTooLong(name)) {
       // TODO(chogan): @errorhandling
       ret = 1;
       break;
