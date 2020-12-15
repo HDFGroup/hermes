@@ -35,7 +35,7 @@ Parser define_options() {
            | Opt( args.request_size, "request_size" )["-s"]["--request_size"]("Request size used for performing I/O");
 }
 
-TEST_CASE("Simple", "[process=1][operation=single_write][request_size=type-fixed]") {
+TEST_CASE("Open", "[process=1][operation=single_write][request_size=type-fixed]") {
     fs::path fullpath = args.directory;
     fullpath /= args.filename;
     std::string new_file = fullpath.string() + "_new";
@@ -70,6 +70,20 @@ TEST_CASE("Simple", "[process=1][operation=single_write][request_size=type-fixed
         int fd = open(existing_file.c_str(),O_CREAT | O_EXCL);
         REQUIRE( fd == -1 );
     }
+    fs::remove(fullpath);
+}
+
+TEST_CASE("Write", "[process=1][operation=single_write][request_size=type-fixed]") {
+    fs::path fullpath = args.directory;
+    fullpath /= args.filename;
+    std::string new_file = fullpath.string() + "_new";
+    std::string existing_file = fullpath.string() + "_ext";
+    if(fs::exists(new_file)) fs::remove(new_file);
+    if(fs::exists(existing_file)) fs::remove(existing_file);
+    if(!fs::exists(existing_file)){
+        std::ofstream ofs(existing_file);
+        ofs.close();
+    }
 
     SECTION( "write to existing file" ) {
         int fd = open(existing_file.c_str(),O_WRONLY);
@@ -81,8 +95,6 @@ TEST_CASE("Simple", "[process=1][operation=single_write][request_size=type-fixed
         REQUIRE( status == 0 );
         REQUIRE(fs::file_size(existing_file) == size_written);
     }
-
-    fs::remove(fullpath);
 
     SECTION( "write to new  file" ) {
         int fd = open(new_file.c_str(),O_WRONLY | O_CREAT);
