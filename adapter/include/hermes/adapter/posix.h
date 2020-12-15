@@ -10,7 +10,7 @@ namespace hermes::adapter {
         /**
          *
          */
-        Posix() = default;
+        Posix();
     };
 }
 

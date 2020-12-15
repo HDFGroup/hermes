@@ -27,12 +27,12 @@ int finalize() {
     return 0;
 }
 
-Parser define_options() {
-    return Opt(args.filename, "filename")["-f"]["--filename"]
+cl::Parser define_options() {
+    return cl::Opt(args.filename, "filename")["-f"]["--filename"]
                     ("Filename used for performing I/O")
-           | Opt(args.directory, "dir")["-d"]["--directory"]
+           | cl::Opt(args.directory, "dir")["-d"]["--directory"]
                     ("Directory used for performing I/O")
-           | Opt(args.request_size, "request_size")["-s"]["--request_size"]
+           | cl::Opt(args.request_size, "request_size")["-s"]["--request_size"]
                     ("Request size used for performing I/O");
 }
 
