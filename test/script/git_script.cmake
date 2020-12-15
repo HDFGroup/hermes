@@ -60,7 +60,7 @@ set(CTEST_CMAKE_GENERATOR "Unix Makefiles")
 # Optional coverage options
 set(HERMES_DO_COVERAGE $ENV{HERMES_DO_COVERAGE})
 if(NOT HERMES_DO_COVERAGE)
-  set(HERMES_DO_COVERAGE OFF)
+  set(HERMES_DO_COVERAGE ON)
 endif()
 if(HERMES_DO_COVERAGE)
   message("Enabling Coverage")
@@ -71,10 +71,6 @@ if(HERMES_DO_COVERAGE)
 
   # needed by hermes_common.cmake
   set(dashboard_do_coverage TRUE)
-
-  # add Coverage dir to the root so that we don't mess the non-coverage
-  # dashboard.
-  set(CTEST_DASHBOARD_ROOT "${CTEST_DASHBOARD_ROOT}/Coverage")
 endif()
 
 set(dashboard_source_name hermes)
