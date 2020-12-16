@@ -59,7 +59,7 @@ jobs:
         run: |
           ci/install_hermes.sh
           mkdir -p coverage
-          pushd build/CMakeFiles/src/hermes.dir
+          pushd build/src/CMakeFiles/hermes.dir
           gcov -r buffer_pool.cc.gcno
           lcov -c -d . -o "${{ env.GITHUB_WORKSPACE }}/coverage/lcov.info"
 
