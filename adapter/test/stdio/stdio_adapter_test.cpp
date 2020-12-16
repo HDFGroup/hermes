@@ -265,7 +265,7 @@ TEST_CASE("BatchedReadRandom",
     fs::remove(existing_file);
 }
 
-TEST_CASE("BatchedWriteRandom",
+TEST_CASE("BatchedUpdateRandom",
           "[process=1][operation=batched_write]"
           "[request_size=type-fixed][repetition=100][pattern=random]") {
     fs::path fullpath = args.directory;
