@@ -193,8 +193,8 @@ TEST_CASE("BatchedWrite",
 }
 
 
-TEST_CASE("BatchedWrite",
-          "[process=1][operation=batched_write]"
+TEST_CASE("BatchedRead",
+          "[process=1][operation=batched_read]"
           "[request_size=type-fixed][repetition=100][pattern=sequential]") {
     fs::path fullpath = args.directory;
     fullpath /= args.filename;
@@ -202,16 +202,11 @@ TEST_CASE("BatchedWrite",
     if (fs::exists(existing_file)) fs::remove(existing_file);
     long num_iterations = 100;
     if (!fs::exists(existing_file)) {
-        size_t cmd_size = snprintf(NULL, sizeof(NULL),
-                     "dd if=/dev/zero of=%s bs=1 count=0 seek=%ld",
-                     existing_file.c_str(),
-                     args.request_size*num_iterations);
-        char* cmd = new char[cmd_size];
-        snprintf(cmd, cmd_size, "dd if=/dev/zero of=%s bs=1 count=0 seek=%ld",
-                existing_file.c_str(),
-                args.request_size*num_iterations);
-        system(cmd);
-        delete(cmd);
+        std::string cmd = "dd if=/dev/zero of="+existing_file+
+                        " bs=1 count=0 seek="+
+                        std::to_string(args.request_size*num_iterations)
+                        + " > /dev/null 2>&1";
+        system(cmd.c_str());
         REQUIRE(fs::file_size(existing_file)
                 == num_iterations * args.request_size);
     }
@@ -219,11 +214,11 @@ TEST_CASE("BatchedWrite",
     SECTION("read from existing file") {
         FILE* fd = fopen(existing_file.c_str(), "r+");
         REQUIRE(fd != nullptr);
-
+        std::string data(args.request_size,'1');
         for (int i = 0; i < num_iterations; ++i) {
-            long size_written = fwrite(info.data.c_str(),
+            long size_read = fread(data.data(),
                                        sizeof(char), args.request_size, fd);
-            REQUIRE(size_written == args.request_size);
+            REQUIRE(size_read == args.request_size);
         }
         int status = fclose(fd);
         REQUIRE(status == 0);
