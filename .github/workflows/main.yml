@@ -53,15 +53,15 @@ jobs:
           
       - name: Build And Install Dependencies
         if: steps.spack-cache.outputs.cache-hit != 'true'
-        run: |
-            ci/install_deps.sh
-            mkdir -p coverage
-            pushd build/CMakeFiles/src/hermes.dir
-            gcov -r buffer_pool.cc.gcno
-            lcov -c -d . -o "${{ env.GITHUB_WORKSPACE }}/coverage/lcov.info"
+        run: ci/install_deps.sh
           
       - name: Build and Test
-        run: ci/install_hermes.sh
+        run: |
+          ci/install_hermes.sh
+          mkdir -p coverage
+          pushd build/CMakeFiles/src/hermes.dir
+          gcov -r buffer_pool.cc.gcno
+          lcov -c -d . -o "${{ env.GITHUB_WORKSPACE }}/coverage/lcov.info"
 
       - name: Coveralls
         uses: coverallsapp/github-action@master
