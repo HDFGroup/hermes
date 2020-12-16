@@ -106,8 +106,13 @@ TEST_CASE("SingleWrite",
     if (fs::exists(new_file)) fs::remove(new_file);
     if (fs::exists(existing_file)) fs::remove(existing_file);
     if (!fs::exists(existing_file)) {
-        std::ofstream ofs(existing_file);
-        ofs.close();
+        std::string cmd = "dd if=/dev/zero of="+existing_file+
+                          " bs=1 count=0 seek="+
+                          std::to_string(args.request_size)
+                          + " > /dev/null 2>&1";
+        system(cmd.c_str());
+        REQUIRE(fs::file_size(existing_file)
+                == args.request_size);
     }
 
     SECTION("write to existing file") {
@@ -144,6 +149,21 @@ TEST_CASE("SingleWrite",
         REQUIRE(fs::file_size(existing_file) == size_written);
     }
 
+    SECTION("write to existing file at the end") {
+        FILE* fd = fopen(existing_file.c_str(), "r+");
+        REQUIRE(fd != nullptr);
+        int status = fseek(fd, 0, SEEK_END);
+        REQUIRE(status == 0);
+        long offset = ftell(fd);
+        REQUIRE(offset == args.request_size);
+        long size_written = fwrite(info.data.c_str(), sizeof(char),
+                                   args.request_size, fd);
+        REQUIRE(size_written == args.request_size);
+        status = fclose(fd);
+        REQUIRE(status == 0);
+        REQUIRE(fs::file_size(existing_file) == size_written + offset);
+    }
+
     SECTION("append to existing file") {
         auto existing_size = fs::file_size(existing_file);
         FILE* fd = fopen(existing_file.c_str(), "a+");
@@ -167,6 +187,58 @@ TEST_CASE("SingleWrite",
         REQUIRE(fs::file_size(new_file) == size_written);
     }
     fs::remove(fullpath);
+}
+
+TEST_CASE("SingleRead",
+          "[process=1][operation=single_read]"
+          "[request_size=type-fixed][repetition=1]"
+          "[file=1]") {
+    fs::path fullpath = args.directory;
+    fullpath /= args.filename;
+    std::string new_file = fullpath.string() + "_new";
+    std::string existing_file = fullpath.string() + "_ext";
+    if (fs::exists(new_file)) fs::remove(new_file);
+    if (fs::exists(existing_file)) fs::remove(existing_file);
+    if (!fs::exists(existing_file)) {
+        std::string cmd = "dd if=/dev/zero of="+existing_file+
+                          " bs=1 count=0 seek="+
+                          std::to_string(args.request_size)
+                          + " > /dev/null 2>&1";
+        system(cmd.c_str());
+        REQUIRE(fs::file_size(existing_file)
+                == args.request_size);
+    }
+    SECTION("read from non-existing file") {
+        FILE* fd = fopen(new_file.c_str(), "r");
+        REQUIRE(fd == nullptr);
+    }
+
+    SECTION("read from existing file") {
+        FILE* fd = fopen(existing_file.c_str(), "r");
+        REQUIRE(fd != nullptr);
+        long offset = ftell(fd);
+        REQUIRE(offset == 0);
+        long size_read = fread(info.data.data(), sizeof(char),
+                                   args.request_size, fd);
+        REQUIRE(size_read == args.request_size);
+        int status = fclose(fd);
+        REQUIRE(status == 0);
+    }
+    SECTION("read at the end of existing file") {
+        FILE* fd = fopen(existing_file.c_str(), "r");
+        REQUIRE(fd != nullptr);
+        int status = fseek(fd, 0, SEEK_END);
+        REQUIRE(status == 0);
+        long offset = ftell(fd);
+        REQUIRE(offset == args.request_size);
+        long size_read = fread(info.data.data(), sizeof(char),
+                               args.request_size, fd);
+        REQUIRE(size_read == 0);
+        status = fclose(fd);
+        REQUIRE(status == 0);
+    }
+    fs::remove(existing_file);
+
 }
 
 TEST_CASE("BatchedWrite",
