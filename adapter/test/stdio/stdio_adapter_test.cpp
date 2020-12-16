@@ -214,7 +214,7 @@ TEST_CASE("BatchedReadSequential",
     SECTION("read from existing file") {
         FILE* fd = fopen(existing_file.c_str(), "r+");
         REQUIRE(fd != nullptr);
-        std::string data(args.request_size,'1');
+        std::string data(args.request_size, '1');
         for (int i = 0; i < num_iterations; ++i) {
             long size_read = fread(data.data(),
                                        sizeof(char), args.request_size, fd);
@@ -289,13 +289,91 @@ TEST_CASE("BatchedUpdateRandom",
     SECTION("read from existing file") {
         FILE* fd = fopen(existing_file.c_str(), "r+");
         REQUIRE(fd != nullptr);
-        std::string data(args.request_size,'1');
+        std::string data(args.request_size, '1');
         for (int i = 0; i < num_iterations; ++i) {
             auto offset = rand_r(&seed) % (total_size - args.request_size);
             auto status = fseek(fd, offset, SEEK_SET);
             REQUIRE(status == 0);
             long size_read = fwrite(data.data(),
                                    sizeof(char), args.request_size, fd);
+            REQUIRE(size_read == args.request_size);
+        }
+        int status = fclose(fd);
+        REQUIRE(status == 0);
+    }
+    fs::remove(existing_file);
+}
+
+TEST_CASE("BatchedReadStrided",
+          "[process=1][operation=batched_read]"
+          "[request_size=type-fixed][repetition=100][pattern=strided_fixed]") {
+    fs::path fullpath = args.directory;
+    fullpath /= args.filename;
+    std::string existing_file = fullpath.string();
+    if (fs::exists(existing_file)) fs::remove(existing_file);
+    long num_iterations = 100;
+    long stride_size = 4*1024;
+
+    if (!fs::exists(existing_file)) {
+        std::string cmd = "dd if=/dev/zero of="+existing_file+
+                          " bs=1 count=0 seek="+
+                          std::to_string(args.request_size*num_iterations)
+                          + " > /dev/null 2>&1";
+        system(cmd.c_str());
+        REQUIRE(fs::file_size(existing_file)
+                == num_iterations * args.request_size);
+    }
+    long total_size = fs::file_size(existing_file);
+
+    SECTION("read from existing file") {
+        FILE* fd = fopen(existing_file.c_str(), "r+");
+        REQUIRE(fd != nullptr);
+        std::string data(args.request_size, '1');
+        for (int i = 0; i < num_iterations; ++i) {
+            auto offset = (i * stride_size) % total_size;
+            auto status = fseek(fd, offset, SEEK_SET);
+            REQUIRE(status == 0);
+            long size_read = fread(data.data(),
+                                   sizeof(char), args.request_size, fd);
+            REQUIRE(size_read == args.request_size);
+        }
+        int status = fclose(fd);
+        REQUIRE(status == 0);
+    }
+    fs::remove(existing_file);
+}
+
+TEST_CASE("BatchedUpdateStrided",
+          "[process=1][operation=batched_write]"
+          "[request_size=type-fixed][repetition=100][pattern=strided]") {
+    fs::path fullpath = args.directory;
+    fullpath /= args.filename;
+    std::string existing_file = fullpath.string();
+    if (fs::exists(existing_file)) fs::remove(existing_file);
+    long num_iterations = 100;
+    long stride_size = 4*1024;
+
+    if (!fs::exists(existing_file)) {
+        std::string cmd = "dd if=/dev/zero of="+existing_file+
+                          " bs=1 count=0 seek="+
+                          std::to_string(args.request_size*num_iterations)
+                          + " > /dev/null 2>&1";
+        system(cmd.c_str());
+        REQUIRE(fs::file_size(existing_file)
+                == num_iterations * args.request_size);
+    }
+    long total_size = fs::file_size(existing_file);
+
+    SECTION("read from existing file") {
+        FILE* fd = fopen(existing_file.c_str(), "r+");
+        REQUIRE(fd != nullptr);
+        std::string data(args.request_size, '1');
+        for (int i = 0; i < num_iterations; ++i) {
+            auto offset = (i * stride_size) % total_size;
+            auto status = fseek(fd, offset, SEEK_SET);
+            REQUIRE(status == 0);
+            long size_read = fwrite(data.data(),
+                                    sizeof(char), args.request_size, fd);
             REQUIRE(size_read == args.request_size);
         }
         int status = fclose(fd);
