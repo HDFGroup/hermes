@@ -256,6 +256,24 @@ TEST_CASE("BatchedWrite",
         REQUIRE(fd != nullptr);
 
         for (int i = 0; i < num_iterations; ++i) {
+            int status = fseek(fd, 0, SEEK_SET);
+            REQUIRE(status == 0);
+            long offset = ftell(fd);
+            REQUIRE(offset == 0);
+            long size_written = fwrite(info.data.c_str(),
+                                       sizeof(char), args.request_size, fd);
+            REQUIRE(size_written == args.request_size);
+        }
+        int status = fclose(fd);
+        REQUIRE(status == 0);
+        REQUIRE(fs::file_size(new_file) == args.request_size);
+    }
+
+    SECTION("write to new file always at start") {
+        FILE* fd = fopen(new_file.c_str(), "w+");
+        REQUIRE(fd != nullptr);
+
+        for (int i = 0; i < num_iterations; ++i) {
             long size_written = fwrite(info.data.c_str(),
                                        sizeof(char), args.request_size, fd);
             REQUIRE(size_written == args.request_size);
@@ -295,6 +313,23 @@ TEST_CASE("BatchedReadSequential",
             long size_read = fread(data.data(),
                                        sizeof(char), args.request_size, fd);
             REQUIRE(size_read == args.request_size);
+        }
+        int status = fclose(fd);
+        REQUIRE(status == 0);
+    }
+
+    SECTION("read from existing file always at start") {
+        FILE* fd = fopen(existing_file.c_str(), "w+");
+        REQUIRE(fd != nullptr);
+
+        for (int i = 0; i < num_iterations; ++i) {
+            int status = fseek(fd, 0, SEEK_SET);
+            REQUIRE(status == 0);
+            long offset = ftell(fd);
+            REQUIRE(offset == 0);
+            long size_written = fwrite(info.data.c_str(),
+                                       sizeof(char), args.request_size, fd);
+            REQUIRE(size_written == args.request_size);
         }
         int status = fclose(fd);
         REQUIRE(status == 0);
