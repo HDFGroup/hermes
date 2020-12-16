@@ -58,10 +58,10 @@ jobs:
       - name: Build and Test
         run: |
           ci/install_hermes.sh
-          mkdir -p coverage
+          mkdir -p "${GITHUB_WORKSPACE}/coverage"
           pushd build/src/CMakeFiles/hermes.dir
           gcov -r buffer_pool.cc.gcno
-          lcov -c -d . -o "${{ env.GITHUB_WORKSPACE }}/coverage/lcov.info"
+          lcov -c -d . -o "${GITHUB_WORKSPACE}/coverage/lcov.info"
 
       - name: Coveralls
         uses: coverallsapp/github-action@master
