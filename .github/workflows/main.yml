@@ -46,6 +46,7 @@ jobs:
           sudo apt update
           sudo apt-get install -y autoconf
           sudo apt-get install -y automake
+          sudo apt-get install -y lcov
           sudo apt-get install -y mpich
           sudo apt-get install -y zlib1g-dev 
           sudo apt-get install -y libsdl2-dev
@@ -55,4 +56,14 @@ jobs:
         run: ci/install_deps.sh
           
       - name: Build and Test
-        run: ci/install_hermes.sh
+        run: |
+          ci/install_hermes.sh
+          mkdir -p "${GITHUB_WORKSPACE}/coverage"
+          pushd build/src/CMakeFiles/hermes.dir
+          gcov -r buffer_pool.cc.gcno
+          lcov -c -d . -o "${GITHUB_WORKSPACE}/coverage/lcov.info"
+
+      - name: Coveralls
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
