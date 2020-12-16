@@ -343,7 +343,7 @@ TEST_CASE("BatchedReadStrided",
     fs::remove(existing_file);
 }
 
-TEST_CASE("BatchedUpdateStrided",
+TEST_CASE("BatchedUpdateStride",
           "[process=1][operation=batched_write]"
           "[request_size=type-fixed][repetition=100][pattern=strided]") {
     fs::path fullpath = args.directory;
