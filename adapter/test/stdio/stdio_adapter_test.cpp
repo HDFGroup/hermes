@@ -35,7 +35,8 @@ cl::Parser define_options() {
                    ("Request size used for performing I/O");
 }
 
-TEST_CASE("Open", "[process=1][operation=single_open][repetition=1]") {
+TEST_CASE("Open", "[process=1][operation=single_open]"
+                  "[repetition=1][file=1]") {
     fs::path fullpath = args.directory;
     fullpath /= args.filename;
     std::string new_file = fullpath.string() + "_new";
@@ -96,7 +97,8 @@ TEST_CASE("Open", "[process=1][operation=single_open][repetition=1]") {
 
 TEST_CASE("SingleWrite",
           "[process=1][operation=single_write]"
-          "[request_size=type-fixed][repetition=1]") {
+          "[request_size=type-fixed][repetition=1]"
+          "[file=1]") {
     fs::path fullpath = args.directory;
     fullpath /= args.filename;
     std::string new_file = fullpath.string() + "_new";
@@ -169,7 +171,8 @@ TEST_CASE("SingleWrite",
 
 TEST_CASE("BatchedWrite",
           "[process=1][operation=batched_write]"
-          "[request_size=type-fixed][repetition=100][pattern=sequential]") {
+          "[request_size=type-fixed][repetition=100]"
+          "[pattern=sequential][file=1]") {
     fs::path fullpath = args.directory;
     fullpath /= args.filename;
     std::string new_file = fullpath.string() + "_new";
@@ -195,7 +198,8 @@ TEST_CASE("BatchedWrite",
 
 TEST_CASE("BatchedReadSequential",
           "[process=1][operation=batched_read]"
-          "[request_size=type-fixed][repetition=100][pattern=sequential]") {
+          "[request_size=type-fixed][repetition=100]"
+          "[pattern=sequential][file=1]") {
     fs::path fullpath = args.directory;
     fullpath /= args.filename;
     std::string existing_file = fullpath.string();
@@ -228,7 +232,8 @@ TEST_CASE("BatchedReadSequential",
 
 TEST_CASE("BatchedReadRandom",
           "[process=1][operation=batched_read]"
-          "[request_size=type-fixed][repetition=100][pattern=random]") {
+          "[request_size=type-fixed]"
+          "[repetition=100][pattern=random][file=1]") {
     fs::path fullpath = args.directory;
     fullpath /= args.filename;
     std::string existing_file = fullpath.string();
@@ -267,7 +272,8 @@ TEST_CASE("BatchedReadRandom",
 
 TEST_CASE("BatchedUpdateRandom",
           "[process=1][operation=batched_write]"
-          "[request_size=type-fixed][repetition=100][pattern=random]") {
+          "[request_size=type-fixed][repetition=100]"
+          "[pattern=random][file=1]") {
     fs::path fullpath = args.directory;
     fullpath /= args.filename;
     std::string existing_file = fullpath.string();
@@ -306,7 +312,8 @@ TEST_CASE("BatchedUpdateRandom",
 
 TEST_CASE("BatchedReadStrideFixed",
           "[process=1][operation=batched_read]"
-          "[request_size=type-fixed][repetition=100][pattern=stride_fixed]") {
+          "[request_size=type-fixed][repetition=100]"
+          "[pattern=stride_fixed][file=1]") {
     fs::path fullpath = args.directory;
     fullpath /= args.filename;
     std::string existing_file = fullpath.string();
@@ -345,7 +352,8 @@ TEST_CASE("BatchedReadStrideFixed",
 
 TEST_CASE("BatchedUpdateStrideFixed",
           "[process=1][operation=batched_write]"
-          "[request_size=type-fixed][repetition=100][pattern=stride_fixed]") {
+          "[request_size=type-fixed][repetition=100]"
+          "[pattern=stride_fixed][file=1]") {
     fs::path fullpath = args.directory;
     fullpath /= args.filename;
     std::string existing_file = fullpath.string();
@@ -384,7 +392,8 @@ TEST_CASE("BatchedUpdateStrideFixed",
 
 TEST_CASE("BatchedReadStrideDynamic",
           "[process=1][operation=batched_read]"
-          "[request_size=type-fixed][repetition=100][pattern=stride_dynamic]") {
+          "[request_size=type-fixed][repetition=100]"
+          "[pattern=stride_dynamic][file=1]") {
     fs::path fullpath = args.directory;
     fullpath /= args.filename;
     std::string existing_file = fullpath.string();
@@ -424,7 +433,8 @@ TEST_CASE("BatchedReadStrideDynamic",
 
 TEST_CASE("BatchedUpdateStrideDynamic",
           "[process=1][operation=batched_write]"
-          "[request_size=type-fixed][repetition=100][pattern=stride_dynamic]") {
+          "[request_size=type-fixed][repetition=100]"
+          "[pattern=stride_dynamic][file=1]") {
     fs::path fullpath = args.directory;
     fullpath /= args.filename;
     std::string existing_file = fullpath.string();
