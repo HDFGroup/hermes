@@ -304,9 +304,9 @@ TEST_CASE("BatchedUpdateRandom",
     fs::remove(existing_file);
 }
 
-TEST_CASE("BatchedReadStrided",
+TEST_CASE("BatchedReadStride",
           "[process=1][operation=batched_read]"
-          "[request_size=type-fixed][repetition=100][pattern=strided_fixed]") {
+          "[request_size=type-fixed][repetition=100][pattern=stride_fixed]") {
     fs::path fullpath = args.directory;
     fullpath /= args.filename;
     std::string existing_file = fullpath.string();
@@ -345,7 +345,7 @@ TEST_CASE("BatchedReadStrided",
 
 TEST_CASE("BatchedUpdateStride",
           "[process=1][operation=batched_write]"
-          "[request_size=type-fixed][repetition=100][pattern=strided]") {
+          "[request_size=type-fixed][repetition=100][pattern=stride]") {
     fs::path fullpath = args.directory;
     fullpath /= args.filename;
     std::string existing_file = fullpath.string();
