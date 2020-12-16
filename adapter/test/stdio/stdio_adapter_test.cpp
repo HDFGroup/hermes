@@ -193,7 +193,7 @@ TEST_CASE("BatchedWrite",
 }
 
 
-TEST_CASE("BatchedRead",
+TEST_CASE("BatchedReadSequential",
           "[process=1][operation=batched_read]"
           "[request_size=type-fixed][repetition=100][pattern=sequential]") {
     fs::path fullpath = args.directory;
@@ -218,6 +218,84 @@ TEST_CASE("BatchedRead",
         for (int i = 0; i < num_iterations; ++i) {
             long size_read = fread(data.data(),
                                        sizeof(char), args.request_size, fd);
+            REQUIRE(size_read == args.request_size);
+        }
+        int status = fclose(fd);
+        REQUIRE(status == 0);
+    }
+    fs::remove(existing_file);
+}
+
+TEST_CASE("BatchedReadRandom",
+          "[process=1][operation=batched_read]"
+          "[request_size=type-fixed][repetition=100][pattern=random]") {
+    fs::path fullpath = args.directory;
+    fullpath /= args.filename;
+    std::string existing_file = fullpath.string();
+    if (fs::exists(existing_file)) fs::remove(existing_file);
+    long num_iterations = 100;
+    unsigned int seed = 100;
+
+    if (!fs::exists(existing_file)) {
+        std::string cmd = "dd if=/dev/zero of="+existing_file+
+                          " bs=1 count=0 seek="+
+                          std::to_string(args.request_size*num_iterations)
+                          + " > /dev/null 2>&1";
+        system(cmd.c_str());
+        REQUIRE(fs::file_size(existing_file)
+                == num_iterations * args.request_size);
+    }
+    long total_size = fs::file_size(existing_file);
+
+    SECTION("read from existing file") {
+        FILE* fd = fopen(existing_file.c_str(), "r+");
+        REQUIRE(fd != nullptr);
+        std::string data(args.request_size, '1');
+        for (int i = 0; i < num_iterations; ++i) {
+            auto offset = rand_r(&seed) % (total_size - args.request_size);
+            auto status = fseek(fd, offset, SEEK_SET);
+            REQUIRE(status == 0);
+            long size_read = fread(data.data(),
+                                   sizeof(char), args.request_size, fd);
+            REQUIRE(size_read == args.request_size);
+        }
+        int status = fclose(fd);
+        REQUIRE(status == 0);
+    }
+    fs::remove(existing_file);
+}
+
+TEST_CASE("BatchedWriteRandom",
+          "[process=1][operation=batched_write]"
+          "[request_size=type-fixed][repetition=100][pattern=random]") {
+    fs::path fullpath = args.directory;
+    fullpath /= args.filename;
+    std::string existing_file = fullpath.string();
+    if (fs::exists(existing_file)) fs::remove(existing_file);
+    long num_iterations = 100;
+    unsigned int seed = 100;
+
+    if (!fs::exists(existing_file)) {
+        std::string cmd = "dd if=/dev/zero of="+existing_file+
+                          " bs=1 count=0 seek="+
+                          std::to_string(args.request_size*num_iterations)
+                          + " > /dev/null 2>&1";
+        system(cmd.c_str());
+        REQUIRE(fs::file_size(existing_file)
+                == num_iterations * args.request_size);
+    }
+    long total_size = fs::file_size(existing_file);
+
+    SECTION("read from existing file") {
+        FILE* fd = fopen(existing_file.c_str(), "r+");
+        REQUIRE(fd != nullptr);
+        std::string data(args.request_size,'1');
+        for (int i = 0; i < num_iterations; ++i) {
+            auto offset = rand_r(&seed) % (total_size - args.request_size);
+            auto status = fseek(fd, offset, SEEK_SET);
+            REQUIRE(status == 0);
+            long size_read = fwrite(data.data(),
+                                   sizeof(char), args.request_size, fd);
             REQUIRE(size_read == args.request_size);
         }
         int status = fclose(fd);
