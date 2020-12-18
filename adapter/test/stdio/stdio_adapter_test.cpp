@@ -3115,3 +3115,218 @@ TEST_CASE("BatchedUpdateStride2DRSRangeRequest",
     }
     fs::remove(existing_file);
 }
+
+/**
+ * Temporal Fixed
+ */
+
+TEST_CASE("BatchedWriteTemporalFixed",
+          "[process=1][operation=batched_write]"
+          "[request_size=type-fixed][repetition=1024]"
+          "[pattern=sequential][file=1][temporal=fixed]") {
+    fs::path fullpath = args.directory;
+    fullpath /= args.filename;
+    std::string new_file = fullpath.string() + "_new";
+    if (fs::exists(new_file)) fs::remove(new_file);
+    long num_iterations = 1024;
+    long temporal_interval_ms = 100;
+
+    SECTION("write to existing file") {
+        FILE* fd = fopen(new_file.c_str(), "w+");
+        REQUIRE(fd != nullptr);
+
+        for (int i = 0; i < num_iterations; ++i) {
+            usleep(temporal_interval_ms * 1000);
+            int status = fseek(fd, 0, SEEK_SET);
+            REQUIRE(status == 0);
+            long offset = ftell(fd);
+            REQUIRE(offset == 0);
+            long size_written = fwrite(info.data.c_str(),
+                                       sizeof(char), args.request_size, fd);
+            REQUIRE(size_written == args.request_size);
+        }
+        int status = fclose(fd);
+        REQUIRE(status == 0);
+        REQUIRE(fs::file_size(new_file) == args.request_size);
+    }
+
+    SECTION("write to new file always at start") {
+        FILE* fd = fopen(new_file.c_str(), "w+");
+        REQUIRE(fd != nullptr);
+
+        for (int i = 0; i < num_iterations; ++i) {
+            usleep(temporal_interval_ms * 1000);
+            long size_written = fwrite(info.data.c_str(),
+                                       sizeof(char), args.request_size, fd);
+            REQUIRE(size_written == args.request_size);
+        }
+        int status = fclose(fd);
+        REQUIRE(status == 0);
+        REQUIRE(fs::file_size(new_file) == num_iterations * args.request_size);
+    }
+    fs::remove(new_file);
+}
+
+TEST_CASE("BatchedReadSequentialTemporalFixed",
+          "[process=1][operation=batched_read]"
+          "[request_size=type-fixed][repetition=1024]"
+          "[pattern=sequential][file=1][temporal=fixed]") {
+    fs::path fullpath = args.directory;
+    fullpath /= args.filename;
+    std::string existing_file = fullpath.string();
+    if (fs::exists(existing_file)) fs::remove(existing_file);
+    long num_iterations = 1024;
+    long temporal_interval_ms = 100;
+    if (!fs::exists(existing_file)) {
+        std::string cmd = "dd if=/dev/zero of="+existing_file+
+                          " bs=1 count=0 seek="+
+                          std::to_string(args.request_size*num_iterations)
+                          + " > /dev/null 2>&1";
+        system(cmd.c_str());
+        REQUIRE(fs::file_size(existing_file)
+                == num_iterations * args.request_size);
+    }
+
+    SECTION("read from existing file") {
+        FILE* fd = fopen(existing_file.c_str(), "r+");
+        REQUIRE(fd != nullptr);
+        std::string data(args.request_size, '1');
+        for (int i = 0; i < num_iterations; ++i) {
+            usleep(temporal_interval_ms * 1000);
+            long size_read = fread(data.data(),
+                                   sizeof(char), args.request_size, fd);
+            REQUIRE(size_read == args.request_size);
+        }
+        int status = fclose(fd);
+        REQUIRE(status == 0);
+    }
+
+    SECTION("read from existing file always at start") {
+        FILE* fd = fopen(existing_file.c_str(), "w+");
+        REQUIRE(fd != nullptr);
+
+        for (int i = 0; i < num_iterations; ++i) {
+            usleep(temporal_interval_ms * 1000);
+            int status = fseek(fd, 0, SEEK_SET);
+            REQUIRE(status == 0);
+            long offset = ftell(fd);
+            REQUIRE(offset == 0);
+            long size_written = fwrite(info.data.c_str(),
+                                       sizeof(char), args.request_size, fd);
+            REQUIRE(size_written == args.request_size);
+        }
+        int status = fclose(fd);
+        REQUIRE(status == 0);
+    }
+    fs::remove(existing_file);
+}
+
+TEST_CASE("BatchedWriteTemporalVariable",
+          "[process=1][operation=batched_write]"
+          "[request_size=type-fixed][repetition=1024]"
+          "[pattern=sequential][file=1][temporal=variable]") {
+    fs::path fullpath = args.directory;
+    fullpath /= args.filename;
+    std::string new_file = fullpath.string() + "_new";
+    if (fs::exists(new_file)) fs::remove(new_file);
+    long num_iterations = 1024;
+
+    unsigned int temporal_interval_seed = 100;
+
+    SECTION("write to existing file") {
+        FILE* fd = fopen(new_file.c_str(), "w+");
+        REQUIRE(fd != nullptr);
+
+        for (int i = 0; i < num_iterations; ++i) {
+            long temporal_interval_ms = rand_r(&temporal_interval_seed)
+                    % 100 + 1;
+            usleep(temporal_interval_ms * 1000);
+            int status = fseek(fd, 0, SEEK_SET);
+            REQUIRE(status == 0);
+            long offset = ftell(fd);
+            REQUIRE(offset == 0);
+            long size_written = fwrite(info.data.c_str(),
+                                       sizeof(char), args.request_size, fd);
+            REQUIRE(size_written == args.request_size);
+        }
+        int status = fclose(fd);
+        REQUIRE(status == 0);
+        REQUIRE(fs::file_size(new_file) == args.request_size);
+    }
+
+    SECTION("write to new file always at start") {
+        FILE* fd = fopen(new_file.c_str(), "w+");
+        REQUIRE(fd != nullptr);
+
+        for (int i = 0; i < num_iterations; ++i) {
+            long temporal_interval_ms = rand_r(&temporal_interval_seed)
+                                        % 100 + 1;
+            usleep(temporal_interval_ms * 1000);
+            long size_written = fwrite(info.data.c_str(),
+                                       sizeof(char), args.request_size, fd);
+            REQUIRE(size_written == args.request_size);
+        }
+        int status = fclose(fd);
+        REQUIRE(status == 0);
+        REQUIRE(fs::file_size(new_file) == num_iterations * args.request_size);
+    }
+    fs::remove(new_file);
+}
+
+TEST_CASE("BatchedReadSequentialTemporalVariable",
+          "[process=1][operation=batched_read]"
+          "[request_size=type-fixed][repetition=1024]"
+          "[pattern=sequential][file=1][temporal=variable]") {
+    fs::path fullpath = args.directory;
+    fullpath /= args.filename;
+    std::string existing_file = fullpath.string();
+    if (fs::exists(existing_file)) fs::remove(existing_file);
+    long num_iterations = 1024;
+    unsigned int temporal_interval_seed = 100;
+    if (!fs::exists(existing_file)) {
+        std::string cmd = "dd if=/dev/zero of="+existing_file+
+                          " bs=1 count=0 seek="+
+                          std::to_string(args.request_size*num_iterations)
+                          + " > /dev/null 2>&1";
+        system(cmd.c_str());
+        REQUIRE(fs::file_size(existing_file)
+                == num_iterations * args.request_size);
+    }
+
+    SECTION("read from existing file") {
+        FILE* fd = fopen(existing_file.c_str(), "r+");
+        REQUIRE(fd != nullptr);
+        std::string data(args.request_size, '1');
+        for (int i = 0; i < num_iterations; ++i) {
+            long temporal_interval_ms = rand_r(&temporal_interval_seed)
+                                        % 100 + 1;
+            usleep(temporal_interval_ms * 1000);
+            long size_read = fread(data.data(),
+                                   sizeof(char), args.request_size, fd);
+            REQUIRE(size_read == args.request_size);
+        }
+        int status = fclose(fd);
+        REQUIRE(status == 0);
+    }
+
+    SECTION("read from existing file always at start") {
+        FILE* fd = fopen(existing_file.c_str(), "w+");
+        REQUIRE(fd != nullptr);
+
+        for (int i = 0; i < num_iterations; ++i) {
+            long temporal_interval_ms = rand_r(&temporal_interval_seed)
+                                        % 100 + 1;
+            usleep(temporal_interval_ms * 1000);
+            int status = fseek(fd, 0, SEEK_SET);
+            REQUIRE(status == 0);
+            long offset = ftell(fd);
+            REQUIRE(offset == 0);
+            long size_written = fwrite(info.data.c_str(),
+                                       sizeof(char), args.request_size, fd);
+            REQUIRE(size_written == args.request_size);
+        }
+        int status = fclose(fd);
+        REQUIRE(status == 0);
+    }
+    fs::remove(existing_file);
+}
