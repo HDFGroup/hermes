@@ -35,6 +35,33 @@ std::vector<int> GetValidSplitChoices(size_t blob_size) {
 
   return result;
 }
+Status AddRoundRobinSchema(size_t index, std::vector<u64> &node_state,
+                           const std::vector<size_t> &blob_sizes,
+                           const std::vector<TargetID> &targets,
+                           PlacementSchema &output) {
+  Status result = 0;
+  TargetID dst = {};
+  DataPlacementEngine dpe;
+  size_t num_targets = node_state.size();
+  size_t device_pos {dpe.getCountDevice()};
+
+  for (size_t j {0}; j < num_targets; ++j) {
+    size_t adjust_pos = {(j+device_pos)%num_targets};
+    if (node_state[adjust_pos] >= blob_sizes[index]) {
+      dpe.setCountDevice((j+device_pos+1)%num_targets);
+      dst = FindTargetIdFromDeviceId(targets, adjust_pos);
+      output.push_back(std::make_pair(blob_sizes[index], dst));
+      node_state[adjust_pos] -= blob_sizes[index];
+      break;
+    }
+  }
+  if (IsNullTargetId(dst)) {
+    result = 1;
+    // TODO(chogan): @errorhandling Set error type in Status
+  }
+
+  return result;
+}
 
 Status RoundRobinPlacement(std::vector<size_t> &blob_sizes,
                            std::vector<u64> &node_state,
@@ -76,46 +103,16 @@ Status RoundRobinPlacement(std::vector<size_t> &blob_sizes,
                               blob_each_portion*(split_num-1));
 
       for (size_t k {0}; k < new_blob_size.size(); ++k) {
-        TargetID dst = {};
-        DataPlacementEngine dpe;
-        size_t device_pos {dpe.getCountDevice()};
-        for (size_t j {0}; j < ns_local.size(); ++j) {
-          size_t adjust_pos {(j+device_pos)%ns_local.size()};
-          if (ns_local[adjust_pos] >= new_blob_size[k]) {
-            dpe.setCountDevice((j+device_pos+1)%ns_local.size());
-            dst = FindTargetIdFromDeviceId(targets, adjust_pos);
-            schema.push_back(std::make_pair(new_blob_size[k], dst));
-            ns_local[adjust_pos] -= new_blob_size[k];
-            break;
-          }
-        }
-        if (IsNullTargetId(dst)) {
-          result = 1;
-          // TODO(chogan): @errorhandling Set error type in Status
-        }
-      }
-      output.push_back(schema);
-    } else {
-    // Blob size is less than 64KB or do not split
-      TargetID dst = {};
-      DataPlacementEngine dpe;
-      size_t device_pos {dpe.getCountDevice()};
-      for (size_t j {0}; j < ns_local.size(); ++j) {
-        size_t adjust_pos {(j+device_pos)%ns_local.size()};
-        if (ns_local[adjust_pos] >= blob_sizes[i]) {
-          dpe.setCountDevice((j+device_pos+1)%ns_local.size());
-          dst = FindTargetIdFromDeviceId(targets, adjust_pos);
-          schema.push_back(std::make_pair(blob_sizes[i], dst));
-          ns_local[adjust_pos] -= blob_sizes[i];
-          output.push_back(schema);
+        result = AddRoundRobinSchema(k, ns_local, new_blob_size, targets,
+                                     schema);
+        if (result != 0) {
           break;
         }
       }
-      if (IsNullTargetId(dst)) {
-        result = 1;
-        // TODO(chogan): @errorhandling Set error type in Status
-      }
+    } else {
+      result = AddRoundRobinSchema(i, ns_local, blob_sizes, targets, schema);
     }
+    output.push_back(schema);
   }
 
   return result;
