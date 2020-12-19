@@ -1,3 +1,6 @@
+#ifndef HERMES_CATCH_CONFIG_H
+#define HERMES_CATCH_CONFIG_H
+
 #define CATCH_CONFIG_RUNNER
 #include <catch2/catch.hpp>
 namespace cl = Catch::clara;
@@ -20,3 +23,5 @@ int main(int argc, char* argv[]) {
     if (returnCode != 0) return returnCode;
     return test_return_code;
 }
+
+#endif
