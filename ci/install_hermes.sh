@@ -32,8 +32,4 @@ cmake                                                      \
 
 cmake --build . -- -j4 && ctest -VV
 
-./bin/posix_adapter_test -s
-
-./bin/stdio_adapter_test -s
-
 popd
