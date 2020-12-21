@@ -10,3 +10,4 @@ GTAGS
 /.idea/
 /cmake-build-debug-system/
 /src/adapter/posix/cmake-build-debug-system/CMakeFiles/clion-log.txt
+/adapter/test/posix/Testing/Temporary/LastTest.log
