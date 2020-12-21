@@ -28,7 +28,7 @@ struct Info {
     long large_min = 256 * 1024 + 1,
                 large_max = 4 * 1024 * 1024;
 };
-}
+}  // namespace hermes::adapter::stdio::test
 hermes::adapter::stdio::test::Arguments args;
 hermes::adapter::stdio::test::Info info;
 
