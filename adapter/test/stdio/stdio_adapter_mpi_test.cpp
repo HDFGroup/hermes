@@ -8,9 +8,11 @@ namespace hermes::adapter::stdio::test {
 struct Arguments {
     std::string filename = "test.dat";
     std::string directory = "/tmp";
-    long request_size = 65536;
+    long request_size = 16384;
 };
 struct Info {
+    int rank = 0;
+    int comm_size = 1;
     std::string write_data;
     std::string read_data;
     std::string new_file;
@@ -18,15 +20,15 @@ struct Info {
     long num_iterations = 1024;
     unsigned int offset_seed = 1;
     unsigned int rs_seed = 1;
-    unsigned int temporal_interval_seed = 5;
+    unsigned int temporal_interval_seed = 1;
     long total_size;
-    long stride_size = 1024;
-    unsigned int temporal_interval_ms = 1;
+    long stride_size = 4 * 1024;
+    unsigned int temporal_interval_ms = 5;
     long small_min = 1, small_max = 4 * 1024;
     long medium_min = 4 * 1024 + 1,
-            medium_max = 256 * 1024;
-    long large_min = 256 * 1024 + 1,
-                large_max = 4 * 1024 * 1024;
+            medium_max = 512 * 1024;
+    long large_min = 512 * 1024 + 1,
+            large_max = 4 * 1024 * 1024;
 };
 }
 hermes::adapter::stdio::test::Arguments args;
@@ -35,6 +37,8 @@ hermes::adapter::stdio::test::Info info;
 int init() {
     info.write_data = std::string(args.request_size, 'w');
     info.read_data = std::string(args.request_size, 'r');
+    MPI_Comm_rank(MPI_COMM_WORLD, &info.rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &info.comm_size);
     return 0;
 }
 int finalize() {
@@ -42,17 +46,22 @@ int finalize() {
 }
 
 int pretest() {
+    REQUIRE(info.comm_size > 1);
     fs::path fullpath = args.directory;
     fullpath /= args.filename;
-    info.new_file = fullpath.string() + "_new";
-    info.existing_file = fullpath.string() + "_ext";
+    info.new_file = fullpath.string() + "_new_" +
+                    std::to_string(info.rank) + "_of_" +
+                    std::to_string(info.comm_size);
+    info.existing_file = fullpath.string() + "_ext_" +
+                         std::to_string(info.rank) + "_of_" +
+                         std::to_string(info.comm_size);
     if (fs::exists(info.new_file)) fs::remove(info.new_file);
     if (fs::exists(info.existing_file)) fs::remove(info.existing_file);
     if (!fs::exists(info.existing_file)) {
         std::string cmd = "dd if=/dev/zero of="+info.existing_file+
                           " bs=1 count=0 seek="+
                           std::to_string(args.request_size
-                          * info.num_iterations)
+                                         * info.num_iterations)
                           + " > /dev/null 2>&1";
         system(cmd.c_str());
         REQUIRE(fs::file_size(info.existing_file)
