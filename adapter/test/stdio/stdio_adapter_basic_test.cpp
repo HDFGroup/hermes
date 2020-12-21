@@ -204,7 +204,7 @@ TEST_CASE("SingleRead",
     fs::remove(existing_file);
 }
 
-TEST_CASE("BatchedWrite",
+TEST_CASE("BatchedWriteSequential",
           "[process=1][operation=batched_write]"
           "[request_size=type-fixed][repetition=1024]"
           "[pattern=sequential][file=1]") {
@@ -1522,6 +1522,197 @@ TEST_CASE("BatchedReadSequentialTemporalVariable",
             REQUIRE(size_written == args.request_size);
         }
         int status = fclose(fd);
+        REQUIRE(status == 0);
+    }
+    fs::remove(existing_file);
+}
+
+TEST_CASE("BatchedMixedSequential",
+          "[process=1][operation=batched_mixed]"
+          "[request_size=type-fixed][repetition=1024]"
+          "[pattern=sequential][file=1]") {
+    fs::path fullpath = args.directory;
+    fullpath /= args.filename;
+    std::string existing_file = fullpath.string() + "_ext";
+    std::string new_file = fullpath.string() + "_new";
+    if (fs::exists(existing_file)) fs::remove(existing_file);
+    if (fs::exists(new_file)) fs::remove(new_file);
+    long num_iterations = 1024;
+    if (!fs::exists(existing_file)) {
+        std::string cmd = "dd if=/dev/zero of="+existing_file+
+                          " bs=1 count=0 seek="+
+                          std::to_string(args.request_size*num_iterations)
+                          + " > /dev/null 2>&1";
+        system(cmd.c_str());
+        REQUIRE(fs::file_size(existing_file)
+                == num_iterations * args.request_size);
+    }
+    std::string write_data(args.request_size, '1');
+    std::string read_data(args.request_size, '0');
+    SECTION("read after write on new file") {
+        FILE* fd = fopen(new_file.c_str(), "w+");
+        REQUIRE(fd != nullptr);
+        long last_offset = 0;
+        for (int i = 0; i < num_iterations; ++i) {
+            long size_written = fwrite(write_data.data(),
+                                       sizeof(char), args.request_size, fd);
+            REQUIRE(size_written == args.request_size);
+            auto status = fseek(fd, last_offset, SEEK_SET);
+            REQUIRE(status == 0);
+            long size_read = fread(read_data.data(),
+                                   sizeof(char), args.request_size, fd);
+            REQUIRE(size_read == args.request_size);
+            last_offset += args.request_size;
+        }
+        int status = fclose(fd);
+        REQUIRE(status == 0);
+    }
+
+    SECTION("write and read alternative existing file") {
+        FILE* fd = fopen(existing_file.c_str(), "r+");
+        REQUIRE(fd != nullptr);
+        for (int i = 0; i < num_iterations; ++i) {
+            if (i % 2 == 0) {
+                long size_written = fwrite(write_data.data(),
+                                           sizeof(char), args.request_size, fd);
+                REQUIRE(size_written == args.request_size);
+            } else {
+                long size_read = fread(read_data.data(),
+                                       sizeof(char), args.request_size, fd);
+                REQUIRE(size_read == args.request_size);
+            }
+        }
+        int status = fclose(fd);
+        REQUIRE(status == 0);
+    }
+    SECTION("update after read existing file") {
+        FILE* fd = fopen(existing_file.c_str(), "r+");
+        REQUIRE(fd != nullptr);
+        for (int i = 0; i < num_iterations; ++i) {
+            long last_offset = 0;
+            for (int i = 0; i < num_iterations; ++i) {
+                long size_read = fread(read_data.data(),
+                                       sizeof(char), args.request_size, fd);
+                REQUIRE(size_read == args.request_size);
+                auto status = fseek(fd, last_offset, SEEK_SET);
+                REQUIRE(status == 0);
+                long size_written = fwrite(write_data.data(),
+                                           sizeof(char), args.request_size, fd);
+                REQUIRE(size_written == args.request_size);
+                last_offset += args.request_size;
+            }
+        }
+        int status = fclose(fd);
+        REQUIRE(status == 0);
+    }
+    SECTION("read all after write all on new file in single open") {
+        FILE* fd = fopen(new_file.c_str(), "w+");
+        REQUIRE(fd != nullptr);
+        for (int i = 0; i < num_iterations; ++i) {
+            long size_written = fwrite(write_data.data(),
+                                       sizeof(char), args.request_size, fd);
+            REQUIRE(size_written == args.request_size);
+        }
+        int status = fseek(fd, 0, SEEK_SET);
+        REQUIRE(status == 0);
+        for (int i = 0; i < num_iterations; ++i) {
+            long size_read = fread(read_data.data(),
+                                   sizeof(char), args.request_size, fd);
+            REQUIRE(size_read == args.request_size);
+        }
+        status = fclose(fd);
+        REQUIRE(status == 0);
+    }
+    SECTION("read all after write all on new file in different open") {
+        FILE* fd = fopen(new_file.c_str(), "w+");
+        REQUIRE(fd != nullptr);
+        for (int i = 0; i < num_iterations; ++i) {
+            long size_written = fwrite(write_data.data(),
+                                       sizeof(char), args.request_size, fd);
+            REQUIRE(size_written == args.request_size);
+        }
+        auto status = fclose(fd);
+        REQUIRE(status == 0);
+        FILE* fd2 = fopen(new_file.c_str(), "r");
+        for (int i = 0; i < num_iterations; ++i) {
+            long size_read = fread(read_data.data(),
+                                   sizeof(char), args.request_size, fd2);
+            REQUIRE(size_read == args.request_size);
+        }
+        status = fclose(fd2);
+        REQUIRE(status == 0);
+    }
+    fs::remove(existing_file);
+    fs::remove(new_file);
+}
+
+TEST_CASE("SingleMixed",
+          "[process=1][operation=single_mixed]"
+          "[request_size=type-fixed][repetition=1]"
+          "[file=1]") {
+    fs::path fullpath = args.directory;
+    fullpath /= args.filename;
+    std::string new_file = fullpath.string() + "_new";
+    std::string existing_file = fullpath.string() + "_ext";
+    if (fs::exists(new_file)) fs::remove(new_file);
+    if (fs::exists(existing_file)) fs::remove(existing_file);
+    if (!fs::exists(existing_file)) {
+        std::string cmd = "dd if=/dev/zero of="+existing_file+
+                          " bs=1 count=0 seek="+
+                          std::to_string(args.request_size)
+                          + " > /dev/null 2>&1";
+        system(cmd.c_str());
+        REQUIRE(fs::file_size(existing_file)
+                == args.request_size);
+    }
+    SECTION("read after write from new file") {
+        FILE* fd = fopen(new_file.c_str(), "w+");
+        REQUIRE(fd != nullptr);
+        long offset = ftell(fd);
+        REQUIRE(offset == 0);
+        long size_write = fwrite(info.data.data(), sizeof(char),
+                               args.request_size, fd);
+        REQUIRE(size_write == args.request_size);
+        int status = fseek(fd, 0, SEEK_SET);
+        REQUIRE(status == 0);
+        long size_read = fread(info.data.data(), sizeof(char),
+                               args.request_size, fd);
+        REQUIRE(size_read == args.request_size);
+        status = fclose(fd);
+        REQUIRE(status == 0);
+    }
+    SECTION("update after read from existing file") {
+        FILE* fd = fopen(existing_file.c_str(), "r+");
+        REQUIRE(fd != nullptr);
+        long offset = ftell(fd);
+        REQUIRE(offset == 0);
+        long size_read = fread(info.data.data(), sizeof(char),
+                               args.request_size, fd);
+        REQUIRE(size_read == args.request_size);
+        int status = fseek(fd, 0, SEEK_SET);
+        REQUIRE(status == 0);
+        long size_write = fwrite(info.data.data(), sizeof(char),
+                                 args.request_size, fd);
+        REQUIRE(size_write == args.request_size);
+
+        status = fclose(fd);
+        REQUIRE(status == 0);
+    }
+    SECTION("read after write from new file different opens") {
+        FILE* fd = fopen(new_file.c_str(), "w+");
+        REQUIRE(fd != nullptr);
+        long offset = ftell(fd);
+        REQUIRE(offset == 0);
+        long size_write = fwrite(info.data.data(), sizeof(char),
+                                 args.request_size, fd);
+        REQUIRE(size_write == args.request_size);
+        int status = fclose(fd);
+        REQUIRE(status == 0);
+        FILE* fd2 = fopen(existing_file.c_str(), "r+");
+        long size_read = fread(info.data.data(), sizeof(char),
+                               args.request_size, fd2);
+        REQUIRE(size_read == args.request_size);
+        status = fclose(fd2);
         REQUIRE(status == 0);
     }
     fs::remove(existing_file);
