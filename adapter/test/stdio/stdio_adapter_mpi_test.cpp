@@ -31,6 +31,7 @@ struct Info {
             large_max = 4 * 1024 * 1024;
 };
 }
+
 hermes::adapter::stdio::test::Arguments args;
 hermes::adapter::stdio::test::Info info;
 

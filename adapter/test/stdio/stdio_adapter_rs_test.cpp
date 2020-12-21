@@ -885,7 +885,7 @@ TEST_CASE("BatchedReadRandomRSRangeLarge",
             long request_size = (info.large_min +
                                 (rand_r(&info.rs_seed)
                                  % info.large_max))
-                                % (info.total_size - info.large_max);;
+                                % (info.total_size - offset);;
             std::string data(request_size, '1');
             long size_read = fread(data.data(),
                                    sizeof(char), request_size, fd);
