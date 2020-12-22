@@ -1,6 +1,8 @@
 #include <iostream>
 #include <experimental/filesystem>
 #include <stdio.h>
+#include <unistd.h>
+#include <fcntl.h>
 #include <catch_config.h>
 namespace fs = std::experimental::filesystem;
 
@@ -82,3 +84,4 @@ cl::Parser define_options() {
 
 #include "stdio_adapter_basic_test.cpp"
 #include "stdio_adapter_rs_test.cpp"
+#include "stdio_adapter_func_test.cpp"
