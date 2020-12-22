@@ -1260,7 +1260,8 @@ TEST_CASE("BatchedReadSequentialTemporalVariable",
 
 
 TEST_CASE("BatchedMixedSequential",
-          "[process="+std::to_string(info.comm_size)+"][operation=batched_mixed]"
+          "[process="+std::to_string(info.comm_size)+"]"
+          "[operation=batched_mixed]"
           "[request_size=type-fixed][repetition=1024]"
           "[pattern=sequential][file=1]") {
     pretest();
