@@ -155,7 +155,10 @@ option(HERMES_ENABLE_TIMING "Turn on timing of selected functions." OFF)
 option(HERMES_ENABLE_COVERAGE "Enable codecode  coverage." OFF)
 # Calculate code coverage with debug mode
 if(HERMES_ENABLE_COVERAGE)
-  set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "" FORCE)
+  if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+    message(STATUS "Use code coverage with debug mode")
+    set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "" FORCE)
+  endif()
 endif()
 
 if(BUILD_SHARED_LIBS)
