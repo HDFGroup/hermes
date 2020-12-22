@@ -89,5 +89,7 @@ cl::Parser define_options() {
                    ("Request size used for performing I/O");
 }
 
+
+#include "posix_adapter_shared_test.cpp"
 #include "posix_adapter_basic_test.cpp"
 #include "posix_adapter_rs_test.cpp"

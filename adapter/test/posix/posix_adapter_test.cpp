@@ -17,6 +17,8 @@ struct Arguments {
     long request_size = 65536;
 };
 struct Info {
+    int rank = 0;
+    int comm_size = 1;
     std::string write_data;
     std::string read_data;
     std::string new_file;

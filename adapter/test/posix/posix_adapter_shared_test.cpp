@@ -1,0 +1,58 @@
+TEST_CASE("SharedFile",
+          "[process="+std::to_string(info.comm_size)+"]"
+          "[operation=batched_write]"
+          "[request_size=range-small][repetition=1024]"
+          "[pattern=sequential][file=1]") {
+    pretest();
+    REQUIRE(info.comm_size == 2);
+    SECTION("producer-consumer") {
+        bool producer = info.rank % 2 == 0;
+        struct flock lock;
+        lock.l_type = F_WRLCK;
+        lock.l_whence = SEEK_SET;
+        lock.l_start = 0;
+        lock.l_len = 0;
+        lock.l_pid = getpid();
+        if (producer) {
+            int fd = open(info.new_file.c_str(), O_RDWR | O_CREAT, 0666);
+            REQUIRE(fd != -1);
+            int status = -1;
+            for (int i = 0; i < info.num_iterations; ++i) {
+                status = fcntl(fd, F_SETLKW, &lock);
+                REQUIRE(status != -1);
+                auto write_bytes = write(fd, info.write_data.c_str(),
+                                         args.request_size);
+                REQUIRE(write_bytes == args.request_size);
+                lock.l_type = F_UNLCK;
+                status = fcntl(fd, F_SETLK, &lock);
+                REQUIRE(status != -1);
+            }
+            status = close(fd);
+            REQUIRE(status != -1);
+        } else {
+            MPI_Barrier(MPI_COMM_WORLD);
+            int fd = open(info.new_file.c_str(), O_RDONLY);
+            REQUIRE(fd != -1);
+            int status = -1;
+            long bytes_read = 0;
+            for (int i = 0; i < info.num_iterations; ++i) {
+                lock.l_type = F_RDLCK;
+                status = fcntl(fd, F_SETLKW, &lock);
+                REQUIRE(status != -1);
+                long offset = lseek(fd, 0, SEEK_END);
+                if (offset > bytes_read) {
+                    auto read_bytes = read(fd, info.read_data.data(),
+                                           args.request_size);
+                    REQUIRE(read_bytes == args.request_size);
+                    bytes_read += read_bytes;
+                }
+                lock.l_type = F_UNLCK;
+                status = fcntl(fd, F_SETLK, &lock);
+                REQUIRE(status != -1);
+            }
+            status = close(fd);
+            REQUIRE(status != -1);
+        }
+    }
+    posttest();
+}

@@ -1,4 +1,4 @@
-TEST_CASE("Open", "[process=1][operation=single_open]"
+TEST_CASE("Open", "[process="+std::to_string(info.comm_size)+"][operation=single_open]"
                   "[repetition=1][file=1]") {
     pretest();
     SECTION("open non-existant file") {
@@ -49,7 +49,7 @@ TEST_CASE("Open", "[process=1][operation=single_open]"
 }
 
 TEST_CASE("SingleWrite",
-          "[process=1][operation=single_write]"
+          "[process="+std::to_string(info.comm_size)+"][operation=single_write]"
           "[request_size=type-fixed][repetition=1]"
           "[file=1]") {
     pretest();
@@ -128,7 +128,7 @@ TEST_CASE("SingleWrite",
 }
 
 TEST_CASE("SingleRead",
-          "[process=1][operation=single_read]"
+          "[process="+std::to_string(info.comm_size)+"][operation=single_read]"
           "[request_size=type-fixed][repetition=1]"
           "[file=1]") {
     pretest();
@@ -165,7 +165,7 @@ TEST_CASE("SingleRead",
 }
 
 TEST_CASE("BatchedWriteSequential",
-          "[process=1][operation=batched_write]"
+          "[process="+std::to_string(info.comm_size)+"][operation=batched_write]"
           "[request_size=type-fixed][repetition=1024]"
           "[pattern=sequential][file=1]") {
     pretest();
@@ -206,7 +206,7 @@ TEST_CASE("BatchedWriteSequential",
 
 
 TEST_CASE("BatchedReadSequential",
-          "[process=1][operation=batched_read]"
+          "[process="+std::to_string(info.comm_size)+"][operation=batched_read]"
           "[request_size=type-fixed][repetition=1024]"
           "[pattern=sequential][file=1]") {
     pretest();
@@ -244,7 +244,7 @@ TEST_CASE("BatchedReadSequential",
 }
 
 TEST_CASE("BatchedReadRandom",
-          "[process=1][operation=batched_read]"
+          "[process="+std::to_string(info.comm_size)+"][operation=batched_read]"
           "[request_size=type-fixed]"
           "[repetition=1024][pattern=random][file=1]") {
     pretest();
@@ -268,7 +268,7 @@ TEST_CASE("BatchedReadRandom",
 }
 
 TEST_CASE("BatchedUpdateRandom",
-          "[process=1][operation=batched_write]"
+          "[process="+std::to_string(info.comm_size)+"][operation=batched_write]"
           "[request_size=type-fixed][repetition=1024]"
           "[pattern=random][file=1]") {
     pretest();
@@ -292,7 +292,7 @@ TEST_CASE("BatchedUpdateRandom",
 }
 
 TEST_CASE("BatchedReadStrideFixed",
-          "[process=1][operation=batched_read]"
+          "[process="+std::to_string(info.comm_size)+"][operation=batched_read]"
           "[request_size=type-fixed][repetition=1024]"
           "[pattern=stride_fixed][file=1]") {
     pretest();
@@ -316,7 +316,7 @@ TEST_CASE("BatchedReadStrideFixed",
 }
 
 TEST_CASE("BatchedUpdateStrideFixed",
-          "[process=1][operation=batched_write]"
+          "[process="+std::to_string(info.comm_size)+"][operation=batched_write]"
           "[request_size=type-fixed][repetition=1024]"
           "[pattern=stride_fixed][file=1]") {
     pretest();
@@ -340,7 +340,7 @@ TEST_CASE("BatchedUpdateStrideFixed",
 }
 
 TEST_CASE("BatchedReadStrideDynamic",
-          "[process=1][operation=batched_read]"
+          "[process="+std::to_string(info.comm_size)+"][operation=batched_read]"
           "[request_size=type-fixed][repetition=1024]"
           "[pattern=stride_dynamic][file=1]") {
     pretest();
@@ -365,7 +365,7 @@ TEST_CASE("BatchedReadStrideDynamic",
 }
 
 TEST_CASE("BatchedUpdateStrideDynamic",
-          "[process=1][operation=batched_write]"
+          "[process="+std::to_string(info.comm_size)+"][operation=batched_write]"
           "[request_size=type-fixed][repetition=1024]"
           "[pattern=stride_dynamic][file=1]") {
     pretest();
@@ -389,7 +389,7 @@ TEST_CASE("BatchedUpdateStrideDynamic",
 }
 
 TEST_CASE("BatchedWriteRSVariable",
-          "[process=1][operation=batched_write]"
+          "[process="+std::to_string(info.comm_size)+"][operation=batched_write]"
           "[request_size=type-variable][repetition=1024]"
           "[pattern=sequential][file=1]") {
     pretest();
@@ -439,7 +439,7 @@ TEST_CASE("BatchedWriteRSVariable",
 
 
 TEST_CASE("BatchedReadSequentialRSVariable",
-          "[process=1][operation=batched_read]"
+          "[process="+std::to_string(info.comm_size)+"][operation=batched_read]"
           "[request_size=type-variable][repetition=1024]"
           "[pattern=sequential][file=1]") {
     pretest();
@@ -485,7 +485,7 @@ TEST_CASE("BatchedReadSequentialRSVariable",
 }
 
 TEST_CASE("BatchedReadRandomRSVariable",
-          "[process=1][operation=batched_read]"
+          "[process="+std::to_string(info.comm_size)+"][operation=batched_read]"
           "[request_size=type-variable]"
           "[repetition=1024][pattern=random][file=1]") {
     pretest();
@@ -515,7 +515,7 @@ TEST_CASE("BatchedReadRandomRSVariable",
 }
 
 TEST_CASE("BatchedUpdateRandomRSVariable",
-          "[process=1][operation=batched_write]"
+          "[process="+std::to_string(info.comm_size)+"][operation=batched_write]"
           "[request_size=type-variable][repetition=1024]"
           "[pattern=random][file=1]") {
     pretest();
@@ -544,7 +544,7 @@ TEST_CASE("BatchedUpdateRandomRSVariable",
 }
 
 TEST_CASE("BatchedReadStrideFixedRSVariable",
-          "[process=1][operation=batched_read]"
+          "[process="+std::to_string(info.comm_size)+"][operation=batched_read]"
           "[request_size=type-variable][repetition=1024]"
           "[pattern=stride_fixed][file=1]") {
     pretest();
@@ -572,7 +572,7 @@ TEST_CASE("BatchedReadStrideFixedRSVariable",
 }
 
 TEST_CASE("BatchedUpdateStrideFixedRSVariable",
-          "[process=1][operation=batched_write]"
+          "[process="+std::to_string(info.comm_size)+"][operation=batched_write]"
           "[request_size=type-variable][repetition=1024]"
           "[pattern=stride_fixed][file=1]") {
     pretest();
@@ -600,7 +600,7 @@ TEST_CASE("BatchedUpdateStrideFixedRSVariable",
 }
 
 TEST_CASE("BatchedReadStrideDynamicRSVariable",
-          "[process=1][operation=batched_read]"
+          "[process="+std::to_string(info.comm_size)+"][operation=batched_read]"
           "[request_size=type-variable][repetition=1024]"
           "[pattern=stride_dynamic][file=1]") {
     pretest();
@@ -628,7 +628,7 @@ TEST_CASE("BatchedReadStrideDynamicRSVariable",
 }
 
 TEST_CASE("BatchedUpdateStrideDynamicRSVariable",
-          "[process=1][operation=batched_write]"
+          "[process="+std::to_string(info.comm_size)+"][operation=batched_write]"
           "[request_size=type-variable][repetition=1024]"
           "[pattern=stride_dynamic][file=1]") {
     pretest();
@@ -655,7 +655,7 @@ TEST_CASE("BatchedUpdateStrideDynamicRSVariable",
 }
 
 TEST_CASE("BatchedReadStrideNegative",
-          "[process=1][operation=batched_read]"
+          "[process="+std::to_string(info.comm_size)+"][operation=batched_read]"
           "[request_size=type-fixed][repetition=1024]"
           "[pattern=stride_negative][file=1]") {
     pretest();
@@ -683,7 +683,7 @@ TEST_CASE("BatchedReadStrideNegative",
 }
 
 TEST_CASE("BatchedUpdateStrideNegative",
-          "[process=1][operation=batched_write]"
+          "[process="+std::to_string(info.comm_size)+"][operation=batched_write]"
           "[request_size=type-fixed][repetition=1024]"
           "[pattern=stride_negative][file=1]") {
     pretest();
@@ -707,7 +707,7 @@ TEST_CASE("BatchedUpdateStrideNegative",
 }
 
 TEST_CASE("BatchedReadStrideNegativeRSVariable",
-          "[process=1][operation=batched_read]"
+          "[process="+std::to_string(info.comm_size)+"][operation=batched_read]"
           "[request_size=type-variable][repetition=1024]"
           "[pattern=stride_negative][file=1]") {
     pretest();
@@ -736,7 +736,7 @@ TEST_CASE("BatchedReadStrideNegativeRSVariable",
 }
 
 TEST_CASE("BatchedUpdateStrideNegativeRSVariable",
-          "[process=1][operation=batched_write]"
+          "[process="+std::to_string(info.comm_size)+"][operation=batched_write]"
           "[request_size=type-variable][repetition=1024]"
           "[pattern=stride_negative][file=1]") {
     pretest();
@@ -765,7 +765,7 @@ TEST_CASE("BatchedUpdateStrideNegativeRSVariable",
 }
 
 TEST_CASE("BatchedReadStride2D",
-          "[process=1][operation=batched_read]"
+          "[process="+std::to_string(info.comm_size)+"][operation=batched_read]"
           "[request_size=type-fixed][repetition=1024]"
           "[pattern=stride_2d][file=1]") {
     pretest();
@@ -799,7 +799,7 @@ TEST_CASE("BatchedReadStride2D",
 }
 
 TEST_CASE("BatchedUpdateStride2D",
-          "[process=1][operation=batched_write]"
+          "[process="+std::to_string(info.comm_size)+"][operation=batched_write]"
           "[request_size=type-fixed][repetition=1024]"
           "[pattern=stride_2d][file=1]") {
     pretest();
@@ -834,7 +834,7 @@ TEST_CASE("BatchedUpdateStride2D",
 }
 
 TEST_CASE("BatchedReadStride2DRSVariable",
-          "[process=1][operation=batched_read]"
+          "[process="+std::to_string(info.comm_size)+"][operation=batched_read]"
           "[request_size=type-variable][repetition=1024]"
           "[pattern=stride_2d][file=1]") {
     pretest();
@@ -872,7 +872,7 @@ TEST_CASE("BatchedReadStride2DRSVariable",
 }
 
 TEST_CASE("BatchedUpdateStride2DRSVariable",
-          "[process=1][operation=batched_write]"
+          "[process="+std::to_string(info.comm_size)+"][operation=batched_write]"
           "[request_size=type-variable][repetition=1024]"
           "[pattern=stride_2d][file=1]") {
     pretest();
@@ -916,7 +916,7 @@ TEST_CASE("BatchedUpdateStride2DRSVariable",
 
 
 TEST_CASE("BatchedWriteTemporalFixed",
-          "[process=1][operation=batched_write]"
+          "[process="+std::to_string(info.comm_size)+"][operation=batched_write]"
           "[request_size=type-fixed][repetition=1024]"
           "[pattern=sequential][file=1][temporal=fixed]") {
     pretest();
@@ -959,7 +959,7 @@ TEST_CASE("BatchedWriteTemporalFixed",
 }
 
 TEST_CASE("BatchedReadSequentialTemporalFixed",
-          "[process=1][operation=batched_read]"
+          "[process="+std::to_string(info.comm_size)+"][operation=batched_read]"
           "[request_size=type-fixed][repetition=1024]"
           "[pattern=sequential][file=1][temporal=fixed]") {
     pretest();
@@ -999,7 +999,7 @@ TEST_CASE("BatchedReadSequentialTemporalFixed",
 }
 
 TEST_CASE("BatchedWriteTemporalVariable",
-          "[process=1][operation=batched_write]"
+          "[process="+std::to_string(info.comm_size)+"][operation=batched_write]"
           "[request_size=type-fixed][repetition=1024]"
           "[pattern=sequential][file=1][temporal=variable]") {
     pretest();
@@ -1046,7 +1046,7 @@ TEST_CASE("BatchedWriteTemporalVariable",
 }
 
 TEST_CASE("BatchedReadSequentialTemporalVariable",
-          "[process=1][operation=batched_read]"
+          "[process="+std::to_string(info.comm_size)+"][operation=batched_read]"
           "[request_size=type-fixed][repetition=1024]"
           "[pattern=sequential][file=1][temporal=variable]") {
     pretest();
@@ -1091,7 +1091,7 @@ TEST_CASE("BatchedReadSequentialTemporalVariable",
 
 
 TEST_CASE("BatchedMixedSequential",
-          "[process=1][operation=batched_mixed]"
+          "[process="+std::to_string(info.comm_size)+"][operation=batched_mixed]"
           "[request_size=type-fixed][repetition=1024]"
           "[pattern=sequential][file=1]") {
     pretest();
@@ -1191,7 +1191,7 @@ TEST_CASE("BatchedMixedSequential",
 }
 
 TEST_CASE("SingleMixed",
-          "[process=1][operation=single_mixed]"
+          "[process="+std::to_string(info.comm_size)+"][operation=single_mixed]"
           "[request_size=type-fixed][repetition=1]"
           "[file=1]") {
     pretest();
