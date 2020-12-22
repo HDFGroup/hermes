@@ -13,7 +13,7 @@ TEST_CASE("BatchedWriteRSRangeSmall",
             long request_size = info.small_min +
                                 (rand_r(&info.rs_seed) % info.small_max);
             std::string data(request_size, '1');
-            long size_written = write(fd, data.c_str(), 
+            long size_written = write(fd, data.c_str(),
                         request_size);
             REQUIRE(size_written == request_size);
             if (biggest_size_written < request_size)
@@ -32,7 +32,7 @@ TEST_CASE("BatchedWriteRSRangeSmall",
             long request_size = info.small_min +
                                 (rand_r(&info.rs_seed) % info.small_max);
             std::string data(request_size, '1');
-            long size_written = write(fd, data.c_str(), 
+            long size_written = write(fd, data.c_str(),
                         request_size);
             REQUIRE(size_written == request_size);
             total_size_written += size_written;
@@ -132,7 +132,7 @@ TEST_CASE("BatchedUpdateRandomRSRangeSmall",
             long request_size = info.small_min +
                                 (rand_r(&info.rs_seed) % info.small_max);
             std::string data(request_size, '1');
-            long size_written = write(fd, data.c_str(), 
+            long size_written = write(fd, data.c_str(),
                         request_size);
             REQUIRE(size_written == request_size);
         }
@@ -185,7 +185,7 @@ TEST_CASE("BatchedUpdateStrideFixedRSRangeSmall",
             long request_size = info.small_min +
                                 (rand_r(&info.rs_seed) % info.small_max);
             std::string data(request_size, '1');
-            long size_written = write(fd, data.c_str(), 
+            long size_written = write(fd, data.c_str(),
                         request_size);
             REQUIRE(size_written == request_size);
         }
@@ -239,7 +239,7 @@ TEST_CASE("BatchedUpdateStrideDynamicRSRangeSmall",
             long request_size = info.small_min +
                                 (rand_r(&info.rs_seed) % info.small_max);
             std::string data(request_size, '1');
-            long size_written = write(fd, data.c_str(), 
+            long size_written = write(fd, data.c_str(),
                         request_size);
             REQUIRE(size_written == request_size);
         }
@@ -291,7 +291,7 @@ TEST_CASE("BatchedUpdateStrideNegativeRSRangeSmall",
             long request_size = info.small_min +
                                 (rand_r(&info.rs_seed) % info.small_max);
             std::string data(request_size, '1');
-            long size_written = write(fd, data.c_str(), 
+            long size_written = write(fd, data.c_str(),
                         request_size);
             REQUIRE(size_written == request_size);
         }
@@ -367,7 +367,7 @@ TEST_CASE("BatchedUpdateStride2DRSRangeSmall",
                                 (rand_r(&info.rs_seed)
                                  % info.small_max);
             std::string data(request_size, '1');
-            long size_written = write(fd, data.c_str(), 
+            long size_written = write(fd, data.c_str(),
                         request_size);
             REQUIRE(size_written == request_size);
         }
@@ -395,7 +395,7 @@ TEST_CASE("BatchedWriteRSRangeMedium",
             long request_size = info.medium_min +
                                 (rand_r(&info.rs_seed) % info.medium_max);
             std::string data(request_size, '1');
-            long size_written = write(fd, data.c_str(), 
+            long size_written = write(fd, data.c_str(),
                         request_size);
             REQUIRE(size_written == request_size);
             if (biggest_size_written < request_size)
@@ -414,7 +414,7 @@ TEST_CASE("BatchedWriteRSRangeMedium",
             long request_size = info.medium_min +
                                 (rand_r(&info.rs_seed) % info.medium_max);
             std::string data(request_size, '1');
-            long size_written = write(fd, data.c_str(), 
+            long size_written = write(fd, data.c_str(),
                         request_size);
             REQUIRE(size_written == request_size);
             total_size_written += size_written;
@@ -516,7 +516,7 @@ TEST_CASE("BatchedUpdateRandomRSRangeMedium",
             long request_size = info.medium_min +
                                 (rand_r(&info.rs_seed) % info.medium_max);
             std::string data(request_size, '1');
-            long size_written = write(fd, data.c_str(), 
+            long size_written = write(fd, data.c_str(),
                         request_size);
             REQUIRE(size_written == request_size);
         }
@@ -569,7 +569,7 @@ TEST_CASE("BatchedUpdateStrideFixedRSRangeMedium",
             long request_size = info.medium_min +
                                 (rand_r(&info.rs_seed) % info.medium_max);
             std::string data(request_size, '1');
-            long size_written = write(fd, data.c_str(), 
+            long size_written = write(fd, data.c_str(),
                         request_size);
             REQUIRE(size_written == request_size);
         }
@@ -623,7 +623,7 @@ TEST_CASE("BatchedUpdateStrideDynamicRSRangeMedium",
             long request_size = info.medium_min +
                                 (rand_r(&info.rs_seed) % info.medium_max);
             std::string data(request_size, '1');
-            long size_written = write(fd, data.c_str(), 
+            long size_written = write(fd, data.c_str(),
                         request_size);
             REQUIRE(size_written == request_size);
         }
@@ -675,7 +675,7 @@ TEST_CASE("BatchedUpdateStrideNegativeRSRangeMedium",
             long request_size = info.medium_min +
                                 (rand_r(&info.rs_seed) % info.medium_max);
             std::string data(request_size, '1');
-            long size_written = write(fd, data.c_str(), 
+            long size_written = write(fd, data.c_str(),
                         request_size);
             REQUIRE(size_written == request_size);
         }
@@ -751,7 +751,7 @@ TEST_CASE("BatchedUpdateStride2DRSRangeMedium",
                                 (rand_r(&info.rs_seed)
                                  % info.medium_max);
             std::string data(request_size, '1');
-            long size_written = write(fd, data.c_str(), 
+            long size_written = write(fd, data.c_str(),
                         request_size);
             REQUIRE(size_written == request_size);
         }
@@ -779,7 +779,7 @@ TEST_CASE("BatchedWriteRSRangeLarge",
             long request_size = info.large_min +
                                 (rand_r(&info.rs_seed) % info.large_max);
             std::string data(request_size, '1');
-            long size_written = write(fd, data.c_str(), 
+            long size_written = write(fd, data.c_str(),
                         request_size);
             REQUIRE(size_written == request_size);
             if (biggest_size_written < request_size)
@@ -798,7 +798,7 @@ TEST_CASE("BatchedWriteRSRangeLarge",
             long request_size = info.large_min +
                                 (rand_r(&info.rs_seed) % info.large_max);
             std::string data(request_size, '1');
-            long size_written = write(fd, data.c_str(), 
+            long size_written = write(fd, data.c_str(),
                         request_size);
             REQUIRE(size_written == request_size);
             total_size_written += size_written;
@@ -901,7 +901,7 @@ TEST_CASE("BatchedUpdateRandomRSRangeLarge",
             long request_size = info.large_min +
                                 (rand_r(&info.rs_seed) % info.large_max);
             std::string data(request_size, '1');
-            long size_written = write(fd, data.c_str(), 
+            long size_written = write(fd, data.c_str(),
                         request_size);
             REQUIRE(size_written == request_size);
         }
@@ -954,7 +954,7 @@ TEST_CASE("BatchedUpdateStrideFixedRSRangeLarge",
             long request_size = info.large_min +
                                 (rand_r(&info.rs_seed) % info.large_max);
             std::string data(request_size, '1');
-            long size_written = write(fd, data.c_str(), 
+            long size_written = write(fd, data.c_str(),
                         request_size);
             REQUIRE(size_written == request_size);
         }
@@ -1008,7 +1008,7 @@ TEST_CASE("BatchedUpdateStrideDynamicRSRangeLarge",
             long request_size = info.large_min +
                                 (rand_r(&info.rs_seed) % info.large_max);
             std::string data(request_size, '1');
-            long size_written = write(fd, data.c_str(), 
+            long size_written = write(fd, data.c_str(),
                         request_size);
             REQUIRE(size_written == request_size);
         }
@@ -1061,7 +1061,7 @@ TEST_CASE("BatchedUpdateStrideNegativeRSRangeLarge",
             long request_size = info.large_min +
                                 (rand_r(&info.rs_seed) % info.large_max);
             std::string data(request_size, '1');
-            long size_written = write(fd, data.c_str(), 
+            long size_written = write(fd, data.c_str(),
                         request_size);
             REQUIRE(size_written == request_size);
         }
@@ -1137,7 +1137,7 @@ TEST_CASE("BatchedUpdateStride2DRSRangeLarge",
                                 (rand_r(&info.rs_seed)
                                  % info.large_max);
             std::string data(request_size, '1');
-            long size_written = write(fd, data.c_str(), 
+            long size_written = write(fd, data.c_str(),
                         request_size);
             REQUIRE(size_written == request_size);
         }

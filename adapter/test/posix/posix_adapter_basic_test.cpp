@@ -215,7 +215,7 @@ TEST_CASE("SingleWrite",
         int fd = open(info.existing_file.c_str(), O_RDWR);
         REQUIRE(fd != -1);
         long offset = lseek(fd, 0, SEEK_SET);
-        long size_written = write(fd, info.write_data.c_str(), 
+        long size_written = write(fd, info.write_data.c_str(),
                                   args.request_size);
         REQUIRE(size_written == args.request_size);
         int status = close(fd);
@@ -225,7 +225,7 @@ TEST_CASE("SingleWrite",
     SECTION("write to new  file") {
         int fd = open(info.new_file.c_str(), O_WRONLY | O_CREAT | O_EXCL);
         REQUIRE(fd != -1);
-        long size_written = write(fd, info.write_data.c_str(), 
+        long size_written = write(fd, info.write_data.c_str(),
                                   args.request_size);
         REQUIRE(size_written == args.request_size);
         int status = close(fd);
@@ -236,7 +236,7 @@ TEST_CASE("SingleWrite",
     SECTION("write to existing file with truncate") {
         int fd = open(info.existing_file.c_str(), O_WRONLY | O_TRUNC);
         REQUIRE(fd != -1);
-        long size_written = write(fd, info.write_data.c_str(), 
+        long size_written = write(fd, info.write_data.c_str(),
                                   args.request_size);
         REQUIRE(size_written == args.request_size);
         int status = close(fd);
@@ -249,7 +249,7 @@ TEST_CASE("SingleWrite",
         REQUIRE(fd != -1);
         long offset = lseek(fd, 0, SEEK_END);
         REQUIRE(offset == args.request_size * info.num_iterations);
-        long size_written = write(fd, info.write_data.c_str(), 
+        long size_written = write(fd, info.write_data.c_str(),
                                   args.request_size);
         REQUIRE(size_written == args.request_size);
         int status = close(fd);
@@ -261,7 +261,7 @@ TEST_CASE("SingleWrite",
         auto existing_size = fs::file_size(info.existing_file);
         int fd = open(info.existing_file.c_str(), O_RDWR | O_APPEND);
         REQUIRE(fd != -1);
-        long size_written = write(fd, info.write_data.c_str(), 
+        long size_written = write(fd, info.write_data.c_str(),
                                   args.request_size);
         REQUIRE(size_written == args.request_size);
         int status = close(fd);
@@ -298,7 +298,7 @@ TEST_CASE("SingleRead",
         REQUIRE(fd != -1);
         long offset = lseek(fd, 0, SEEK_CUR);
         REQUIRE(offset == 0);
-        long size_read = read(fd, info.read_data.data(), 
+        long size_read = read(fd, info.read_data.data(),
                                    args.request_size);
         REQUIRE(size_read == args.request_size);
         int status = close(fd);
@@ -309,7 +309,7 @@ TEST_CASE("SingleRead",
         REQUIRE(fd != -1);
         int offset = lseek(fd, 0, SEEK_END);
         REQUIRE(offset == args.request_size * info.num_iterations);
-        long size_read = read(fd, info.read_data.data(), 
+        long size_read = read(fd, info.read_data.data(),
                                    args.request_size);
         REQUIRE(size_read == 0);
         int status = close(fd);
