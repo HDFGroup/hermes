@@ -366,4 +366,150 @@ TEST_CASE("fputs", "[process="+std::to_string(info.comm_size)+"]"
     posttest();
 }
 
+TEST_CASE("fseek", "[process="+std::to_string(info.comm_size)+"]"
+                   "[operation=single_fseek]"
+                   "[repetition=1][file=1]") {
+    pretest();
+    SECTION("test all seek modes") {
+        FILE* fh = fopen(info.existing_file.c_str(), "r");
+        REQUIRE(fh != nullptr);
+        int status = fseek(fh, 0, SEEK_SET);
+        REQUIRE(status == 0);
+        long offset = ftell(fh);
+        REQUIRE(offset == 0);
 
+        status = fseek(fh, 0, SEEK_CUR);
+        REQUIRE(status == 0);
+        offset = ftell(fh);
+        REQUIRE(offset == 0);
+
+        status = fseek(fh, 0, SEEK_END);
+        REQUIRE(status == 0);
+        offset = ftell(fh);
+        REQUIRE(offset == info.total_size);
+
+        status = fseek(fh, 0, SEEK_CUR);
+        REQUIRE(status == 0);
+        offset = ftell(fh);
+        REQUIRE(offset == info.total_size);
+
+        status = fclose(fh);
+        REQUIRE(status == 0);
+    }
+    posttest();
+}
+
+TEST_CASE("fseeko", "[process="+std::to_string(info.comm_size)+"]"
+                  "[operation=single_fseeko]"
+                  "[repetition=1][file=1]") {
+    pretest();
+    SECTION("test all seek modes") {
+        FILE* fh = fopen(info.existing_file.c_str(), "r");
+        REQUIRE(fh != nullptr);
+        int status = fseeko(fh, 0, SEEK_SET);
+        REQUIRE(status == 0);
+        long offset = ftell(fh);
+        REQUIRE(offset == 0);
+
+        status = fseeko(fh, 0, SEEK_CUR);
+        REQUIRE(status == 0);
+        offset = ftell(fh);
+        REQUIRE(offset == 0);
+
+        status = fseeko(fh, 0, SEEK_END);
+        REQUIRE(status == 0);
+        offset = ftell(fh);
+        REQUIRE(offset == info.total_size);
+
+        status = fseeko(fh, 0, SEEK_CUR);
+        REQUIRE(status == 0);
+        offset = ftell(fh);
+        REQUIRE(offset == info.total_size);
+
+        status = fclose(fh);
+        REQUIRE(status == 0);
+    }
+    posttest();
+}
+
+TEST_CASE("rewind", "[process="+std::to_string(info.comm_size)+"]"
+                   "[operation=single_rewind]"
+                   "[repetition=1][file=1]") {
+    pretest();
+    SECTION("test all seek modes") {
+        FILE* fh = fopen(info.existing_file.c_str(), "r");
+        REQUIRE(fh != nullptr);
+        int status = fseeko(fh, 0, SEEK_SET);
+        REQUIRE(status == 0);
+        long offset = ftell(fh);
+        REQUIRE(offset == 0);
+        rewind(fh);
+        offset = ftell(fh);
+        REQUIRE(offset == 0);
+
+        status = fseeko(fh, 0, SEEK_END);
+        REQUIRE(status == 0);
+        offset = ftell(fh);
+        REQUIRE(offset == info.total_size);
+        rewind(fh);
+        offset = ftell(fh);
+        REQUIRE(offset == 0);
+
+        status = fclose(fh);
+        REQUIRE(status == 0);
+    }
+    posttest();
+}
+
+TEST_CASE("fsetpos", "[process="+std::to_string(info.comm_size)+"]"
+                   "[operation=single_fsetpos]"
+                   "[repetition=1][file=1]") {
+    pretest();
+    SECTION("test all seek modes") {
+        FILE* fh = fopen(info.existing_file.c_str(), "r");
+        REQUIRE(fh != nullptr);
+        fpos_t position;
+        fgetpos(fh, &position);
+
+        position.__pos = 0;
+        int status = fsetpos(fh, &position);
+        REQUIRE(status == 0);
+        long offset = ftell(fh);
+        REQUIRE(offset == 0);
+
+        position.__pos = info.total_size;
+        status = fsetpos(fh, &position);
+        REQUIRE(status == 0);
+        offset = ftell(fh);
+        REQUIRE(offset == info.total_size);
+
+        status = fclose(fh);
+        REQUIRE(status == 0);
+    }
+    posttest();
+}
+
+TEST_CASE("fgetpos", "[process="+std::to_string(info.comm_size)+"]"
+                  "[operation=single_fgetpos]"
+                  "[repetition=1][file=1]") {
+    pretest();
+    SECTION("test all seek modes") {
+        FILE* fh = fopen(info.existing_file.c_str(), "r");
+        REQUIRE(fh != nullptr);
+        fpos_t position;
+
+        int status = fseek(fh, 0, SEEK_SET);
+        REQUIRE(status == 0);
+        status = fgetpos(fh, &position);
+        REQUIRE(position.__pos == 0);
+
+        status = fseek(fh, 0, SEEK_END);
+        REQUIRE(status == 0);
+        status = fgetpos(fh, &position);
+        REQUIRE(position.__pos == info.total_size);
+
+        status = fclose(fh);
+        REQUIRE(status == 0);
+    }
+    posttest();
+}
