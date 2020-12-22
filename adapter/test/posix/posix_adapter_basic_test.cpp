@@ -53,10 +53,14 @@ TEST_CASE("Open", "[process="+std::to_string(info.comm_size)+"]"
         REQUIRE(fd != -1);
         int status = close(fd);
         REQUIRE(status == 0);
+        fs::remove(info.new_file);
+
         fd = open(info.new_file.c_str(), O_RDONLY  | O_CREAT);
         REQUIRE(fd != -1);
         status = close(fd);
         REQUIRE(status == 0);
+        fs::remove(info.new_file);
+
         fd = open(info.new_file.c_str(), O_RDWR | O_CREAT);
         REQUIRE(fd != -1);
         status = close(fd);
