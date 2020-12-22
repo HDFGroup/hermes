@@ -65,7 +65,8 @@ int pretest() {
                          std::to_string(info.comm_size);
     if (info.rank == 0) {
         if (fs::exists(info.shared_new_file)) fs::remove(info.shared_new_file);
-        if (fs::exists(info.shared_existing_file)) fs::remove(info.shared_existing_file);
+        if (fs::exists(info.shared_existing_file))
+            fs::remove(info.shared_existing_file);
         if (!fs::exists(info.shared_existing_file)) {
             std::string cmd = "dd if=/dev/zero of="+info.shared_existing_file+
                               " bs=1 count=0 seek="+
