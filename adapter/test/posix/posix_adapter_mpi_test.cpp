@@ -18,6 +18,8 @@ struct Info {
     std::string read_data;
     std::string new_file;
     std::string existing_file;
+    std::string shared_new_file;
+    std::string shared_existing_file;
     long num_iterations = 1024;
     unsigned int offset_seed = 1;
     unsigned int rs_seed = 1;
@@ -51,12 +53,31 @@ int pretest() {
     REQUIRE(info.comm_size > 1);
     fs::path fullpath = args.directory;
     fullpath /= args.filename;
+    info.shared_new_file = fullpath.string() + "_new_" +
+                    std::to_string(info.comm_size);
+    info.shared_existing_file = fullpath.string() + "_ext_" +
+                         std::to_string(info.comm_size);
     info.new_file = fullpath.string() + "_new_" +
-                    std::to_string(info.rank) + "_of_" +
+                    std::to_string(info.rank+1) + "_of_" +
                     std::to_string(info.comm_size);
     info.existing_file = fullpath.string() + "_ext_" +
-                         std::to_string(info.rank) + "_of_" +
+                         std::to_string(info.rank+1) + "_of_" +
                          std::to_string(info.comm_size);
+    if (info.rank == 0) {
+        if (fs::exists(info.shared_new_file)) fs::remove(info.shared_new_file);
+        if (fs::exists(info.shared_existing_file)) fs::remove(info.shared_existing_file);
+        if (!fs::exists(info.shared_existing_file)) {
+            std::string cmd = "dd if=/dev/zero of="+info.shared_existing_file+
+                              " bs=1 count=0 seek="+
+                              std::to_string(args.request_size
+                                             * info.num_iterations)
+                              + " > /dev/null 2>&1";
+            system(cmd.c_str());
+            REQUIRE(fs::file_size(info.shared_existing_file)
+                    == args.request_size * info.num_iterations);
+        }
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
     if (fs::exists(info.new_file)) fs::remove(info.new_file);
     if (fs::exists(info.existing_file)) fs::remove(info.existing_file);
     if (!fs::exists(info.existing_file)) {
@@ -68,8 +89,9 @@ int pretest() {
         system(cmd.c_str());
         REQUIRE(fs::file_size(info.existing_file)
                 == args.request_size * info.num_iterations);
-        info.total_size = fs::file_size(info.existing_file);
     }
+
+    info.total_size = fs::file_size(info.existing_file);
     REQUIRE(info.total_size > 0);
     return 0;
 }
