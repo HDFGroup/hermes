@@ -44,8 +44,10 @@ TEST_CASE("SharedFile",
                 long cur_offset = lseek(fd, bytes_read, SEEK_SET);
                 REQUIRE(cur_offset == bytes_read);
                 if (file_size > bytes_read) {
-                    long read_size = args.request_size < file_size - bytes_read ?
-                                     args.request_size : file_size - bytes_read;
+                    long read_size = args.request_size
+                                     < file_size - bytes_read
+                                     ? args.request_size
+                                     : file_size - bytes_read;
                     auto read_bytes = read(fd, info.read_data.data(),
                                            read_size);
                     REQUIRE(read_bytes == read_size);
