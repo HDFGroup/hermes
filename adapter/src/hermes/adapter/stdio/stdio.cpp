@@ -90,8 +90,9 @@ size_t write_internal(std::pair<AdapterStat, bool> existing, const void *ptr,
   auto mapping = mapper->map(FileStruct(existing.first.st_ptr, total_size));
   for (const auto &item : mapping) {
     hapi::Context ctx;
+    hapi::Blob temp(0);
     auto exiting_blob_size =
-        existing.first.st_bkid->Get(item.second.blob_name_, hapi::Blob(), ctx);
+        existing.first.st_bkid->Get(item.second.blob_name_, temp, ctx);
     hapi::Blob put_data((unsigned char *)ptr + item.first.offset_,
                         (unsigned char *)ptr + item.first.offset_ + total_size);
     if (exiting_blob_size == 0) {
@@ -109,7 +110,7 @@ size_t write_internal(std::pair<AdapterStat, bool> existing, const void *ptr,
                                       ctx);
         }
       } else {
-        auto new_size = item.second.offset_ + item.second.size;
+        auto new_size = item.second.offset_ + item.second.size_;
         hapi::Blob existing_data(exiting_blob_size);
         existing.first.st_bkid->Get(item.second.blob_name_, existing_data, ctx);
         if (new_size < exiting_blob_size) {
