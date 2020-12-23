@@ -5,11 +5,11 @@
 #ifndef HERMES_METADATA_MANAGER_H
 #define HERMES_METADATA_MANAGER_H
 
+#include <ftw.h>
 #include <hermes/adapter/stdio/common/datastructures.h>
 
 #include <cstdio>
 #include <unordered_map>
-#include <ftw.h>
 
 namespace hermes::adapter::stdio {
 class MetadataManager {
@@ -23,7 +23,7 @@ class MetadataManager {
 
   bool IsTracked(FILE* fh);
 
-  bool Create(FILE* fh, const AdapterStat &stat);
+  bool Create(FILE* fh, const AdapterStat& stat);
 
   bool Update(FILE* fh, const AdapterStat& stat);
 

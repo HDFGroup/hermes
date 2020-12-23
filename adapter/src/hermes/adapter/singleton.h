@@ -13,7 +13,7 @@
  * @tparam T
  */
 namespace hermes::adapter {
-template<typename T>
+template <typename T>
 class Singleton {
  public:
   /**
@@ -34,10 +34,10 @@ class Singleton {
   /**
    * Operators
    */
-  Singleton& operator= (const Singleton) = delete; /* deleting = operatos*/
-  /**
-   * Constructor
-   */
+  Singleton& operator=(const Singleton) = delete; /* deleting = operatos*/
+                                                  /**
+                                                   * Constructor
+                                                   */
  public:
   Singleton(const Singleton&) = delete; /* deleting copy constructor. */
 
@@ -46,7 +46,7 @@ class Singleton {
   Singleton() {} /* hidden default constructor. */
 };
 
-template<typename T>
+template <typename T>
 std::shared_ptr<T> Singleton<T>::instance = nullptr;
-}
+}  // namespace hermes::adapter
 #endif  // HERMES_SINGLETON_H

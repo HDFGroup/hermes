@@ -7,11 +7,11 @@
 
 namespace hermes::adapter {
 class Posix {
-    /**
-     *
-     */
-    Posix();
+  /**
+   *
+   */
+  Posix();
 };
-}
+}  // namespace hermes::adapter
 
 #endif  // HERMES_ADAPTER_POSIX_H
