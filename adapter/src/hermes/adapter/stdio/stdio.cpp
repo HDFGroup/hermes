@@ -39,12 +39,16 @@ FILE *open_internal(const std::string &path_str, const char *mode) {
       stat.st_atim = ts;
       stat.st_mtim = ts;
       stat.st_ctim = ts;
+      if (stat.st_mode & O_APPEND) {
+        /* FIXME: get current size of bucket from Hermes*/
+        stat.st_ptr = stat.st_size;
+      }
       /* FIXME(hari) check if this initialization is correct. */
-      std::shared_ptr<hapi::Hermes> hermes =
-          hapi::InitHermes(NULL, false, true);
+      mdm->hermes = hapi::InitHermes(NULL, false, true);
       hapi::Context ctx;
-      /* TODO(hari) how to pass to hermes to make a private bucket */
-      stat.st_bkid = std::make_shared<hapi::Bucket>(path_str, hermes, ctx);
+      /* TODO(hari) how to pass to hermes to make a private bucket
+       * also add how to handle existing buckets of same name */
+      stat.st_bkid = std::make_shared<hapi::Bucket>(path_str, mdm->hermes, ctx);
       mdm->Create(ret, stat);
     } else {
       existing.first.ref_count++;
@@ -241,10 +245,20 @@ int HERMES_DECL(fclose)(FILE *fp) {
   int ret;
   auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
   auto existing = mdm->Find(fp);
-  if (existing.second && existing.first.ref_count == 1) {
-    hapi::Context ctx;
-    existing.first.st_bkid->Close(ctx);
-    mdm->Delete(fp);
+  if (existing.second) {
+    if (existing.first.ref_count == 1) {
+      hapi::Context ctx;
+      existing.first.st_bkid->Close(ctx);
+      mdm->Delete(fp);
+      mdm->hermes->Finalize();
+    } else {
+      existing.first.ref_count--;
+      struct timespec ts;
+      timespec_get(&ts, TIME_UTC);
+      existing.first.st_atim = ts;
+      existing.first.st_ctim = ts;
+      mdm->Update(fp, existing.first);
+    }
   }
   MAP_OR_FAIL(fclose);
   ret = __real_fclose(fp);
@@ -395,8 +409,10 @@ void HERMES_DECL(rewind)(FILE *stream) {
   auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
   auto existing = mdm->Find(stream);
   if (existing.second) {
-    existing.first.st_ptr = 0;
-    mdm->Update(stream, existing.first);
+    if (!(existing.first.st_mode & O_APPEND)) {
+      existing.first.st_ptr = 0;
+      mdm->Update(stream, existing.first);
+    }
   } else {
     MAP_OR_FAIL(rewind);
     __real_rewind(stream);
@@ -409,25 +425,28 @@ int HERMES_DECL(fseek)(FILE *stream, long offset, int whence) {
   auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
   auto existing = mdm->Find(stream);
   if (existing.second) {
-    switch (whence) {
-      case SEEK_SET: {
-        existing.first.st_ptr = offset;
-        break;
+    if (!(existing.first.st_mode & O_APPEND)) {
+      switch (whence) {
+        case SEEK_SET: {
+          existing.first.st_ptr = offset;
+          break;
+        }
+        case SEEK_CUR: {
+          existing.first.st_ptr += offset;
+          break;
+        }
+        case SEEK_END: {
+          existing.first.st_ptr = existing.first.st_size + offset;
+          break;
+        }
+        default: {
+          // TODO(hari): throw not implemented error.
+        }
       }
-      case SEEK_CUR: {
-        existing.first.st_ptr += offset;
-        break;
-      }
-      case SEEK_END: {
-        existing.first.st_ptr = existing.first.st_size + offset;
-        break;
-      }
-      default: {
-        // TODO(hari): throw not implemented error.
-      }
-    }
-    mdm->Update(stream, existing.first);
-    ret = 0;
+      mdm->Update(stream, existing.first);
+      ret = 0;
+    } else
+      ret = -1;
   } else {
     MAP_OR_FAIL(fseek);
     ret = __real_fseek(stream, offset, whence);
@@ -440,25 +459,28 @@ int HERMES_DECL(fseeko)(FILE *stream, off_t offset, int whence) {
   auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
   auto existing = mdm->Find(stream);
   if (existing.second) {
-    switch (whence) {
-      case SEEK_SET: {
-        existing.first.st_ptr = offset;
-        break;
+    if (!(existing.first.st_mode & O_APPEND)) {
+      switch (whence) {
+        case SEEK_SET: {
+          existing.first.st_ptr = offset;
+          break;
+        }
+        case SEEK_CUR: {
+          existing.first.st_ptr += offset;
+          break;
+        }
+        case SEEK_END: {
+          existing.first.st_ptr = existing.first.st_size + offset;
+          break;
+        }
+        default: {
+          // TODO(hari): throw not implemented error.
+        }
       }
-      case SEEK_CUR: {
-        existing.first.st_ptr += offset;
-        break;
-      }
-      case SEEK_END: {
-        existing.first.st_ptr = existing.first.st_size + offset;
-        break;
-      }
-      default: {
-        // TODO(hari): throw not implemented error.
-      }
-    }
-    mdm->Update(stream, existing.first);
-    ret = 0;
+      mdm->Update(stream, existing.first);
+      ret = 0;
+    } else
+      ret = -1;
   } else {
     MAP_OR_FAIL(fseeko);
     ret = __real_fseeko(stream, offset, whence);
@@ -471,25 +493,28 @@ int HERMES_DECL(fseeko64)(FILE *stream, off64_t offset, int whence) {
   auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
   auto existing = mdm->Find(stream);
   if (existing.second) {
-    switch (whence) {
-      case SEEK_SET: {
-        existing.first.st_ptr = offset;
-        break;
+    if (!(existing.first.st_mode & O_APPEND)) {
+      switch (whence) {
+        case SEEK_SET: {
+          existing.first.st_ptr = offset;
+          break;
+        }
+        case SEEK_CUR: {
+          existing.first.st_ptr += offset;
+          break;
+        }
+        case SEEK_END: {
+          existing.first.st_ptr = existing.first.st_size + offset;
+          break;
+        }
+        default: {
+          // TODO(hari): throw not implemented error.
+        }
       }
-      case SEEK_CUR: {
-        existing.first.st_ptr += offset;
-        break;
-      }
-      case SEEK_END: {
-        existing.first.st_ptr = existing.first.st_size + offset;
-        break;
-      }
-      default: {
-        // TODO(hari): throw not implemented error.
-      }
-    }
-    mdm->Update(stream, existing.first);
-    ret = 0;
+      mdm->Update(stream, existing.first);
+      ret = 0;
+    } else
+      ret = -1;
   } else {
     MAP_OR_FAIL(fseeko64);
     ret = __real_fseeko64(stream, offset, whence);
@@ -502,9 +527,13 @@ int HERMES_DECL(fsetpos)(FILE *stream, const fpos_t *pos) {
   auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
   auto existing = mdm->Find(stream);
   if (existing.second) {
-    existing.first.st_ptr = pos->__pos;
-    mdm->Update(stream, existing.first);
-    ret = 0;
+    if (!(existing.first.st_mode & O_APPEND)) {
+      existing.first.st_ptr = pos->__pos;
+      mdm->Update(stream, existing.first);
+      ret = 0;
+    } else
+      ret = -1;
+
   } else {
     MAP_OR_FAIL(fsetpos);
     ret = __real_fsetpos(stream, pos);

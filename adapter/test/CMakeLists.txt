@@ -19,5 +19,7 @@ function(mpi exec mpi_proc args)
             COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${mpi_proc}
             "${CMAKE_BINARY_DIR}/bin/${exec}" ${args})
 endfunction()
+
+
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/posix)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/stdio)

@@ -19,6 +19,8 @@ class MetadataManager {
   FileID convert(FILE* fh);
 
  public:
+  std::shared_ptr<hapi::Hermes> hermes;
+
   MetadataManager() : metadata() {}
 
   bool IsTracked(FILE* fh);
