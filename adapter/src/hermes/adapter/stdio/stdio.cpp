@@ -474,8 +474,9 @@ int HERMES_DECL(fseek)(FILE *stream, long offset, int whence) {
         }
         mdm->Update(stream, existing.first);
         ret = 0;
-      } else
+      } else {
         ret = -1;
+      }
     }
   } else {
     MAP_OR_FAIL(fseek);
@@ -510,8 +511,9 @@ int HERMES_DECL(fseeko)(FILE *stream, off_t offset, int whence) {
         }
         mdm->Update(stream, existing.first);
         ret = 0;
-      } else
+      } else {
         ret = -1;
+      }
     }
   } else {
     MAP_OR_FAIL(fseeko);
@@ -546,8 +548,9 @@ int HERMES_DECL(fseeko64)(FILE *stream, off64_t offset, int whence) {
         }
         mdm->Update(stream, existing.first);
         ret = 0;
-      } else
+      } else {
         ret = -1;
+      }
     }
   } else {
     MAP_OR_FAIL(fseeko64);
@@ -566,8 +569,9 @@ int HERMES_DECL(fsetpos)(FILE *stream, const fpos_t *pos) {
         existing.first.st_ptr = pos->__pos;
         mdm->Update(stream, existing.first);
         ret = 0;
-      } else
+      } else {
         ret = -1;
+      }
     }
   } else {
     MAP_OR_FAIL(fsetpos);
