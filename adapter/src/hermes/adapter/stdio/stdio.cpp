@@ -43,8 +43,9 @@ FILE *open_internal(const std::string &path_str, const char *mode) {
         /* FIXME: get current size of bucket from Hermes*/
         stat.st_ptr = stat.st_size;
       }
+      char *hermes_config = getenv(HERMES_CONF);
       /* FIXME(hari) check if this initialization is correct. */
-      mdm->hermes = hapi::InitHermes(NULL, false, true);
+      mdm->hermes = hapi::InitHermes(hermes_config, false, true);
       hapi::Context ctx;
       /* TODO(hari) how to pass to hermes to make a private bucket
        * also add how to handle existing buckets of same name */
@@ -95,14 +96,16 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
       FileStruct(mdm->convert(fp), existing.first.st_ptr, total_size));
   for (const auto &item : mapping) {
     hapi::Context ctx;
-    hapi::Blob temp(0);
-    auto exiting_blob_size =
-        existing.first.st_bkid->Get(item.second.blob_name_, temp, ctx);
+    auto blob_exists =
+        existing.first.st_bkid->ContainsBlob(item.second.blob_name_);
     hapi::Blob put_data((unsigned char *)ptr + item.first.offset_,
                         (unsigned char *)ptr + item.first.offset_ + total_size);
-    if (exiting_blob_size == 0) {
+    if (!blob_exists) {
       existing.first.st_bkid->Put(item.second.blob_name_, put_data, ctx);
     } else {
+      hapi::Blob temp(0);
+      auto exiting_blob_size =
+          existing.first.st_bkid->Get(item.second.blob_name_, temp, ctx);
       if (item.second.offset_ == 0) {
         if (item.second.size_ >= exiting_blob_size) {
           existing.first.st_bkid->Put(item.second.blob_name_, put_data, ctx);

@@ -21,6 +21,7 @@ target_link_libraries(stdio_adapter_test Catch2::Catch2 -lstdc++fs -lc)
 add_dependencies(stdio_adapter_test hermes_stdio)
 gcc(stdio_adapter_test "")
 gcc_hermes(stdio_adapter_test open "[operation=single_open]")
+gcc_hermes(stdio_adapter_test single_write "[operation=single_write]")
 
 
 add_executable(stdio_adapter_mpi_test stdio_adapter_mpi_test.cpp ${ADAPTER_COMMON})

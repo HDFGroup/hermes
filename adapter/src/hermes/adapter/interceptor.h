@@ -5,8 +5,12 @@
 #ifndef HERMES_INTERCEPTOR_H
 #define HERMES_INTERCEPTOR_H
 
+#include <utils.h>
+
+#include <fstream>
 #include <string>
 #include <vector>
+
 namespace hermes::adapter {
 /**
  * Exclusion lists
@@ -26,12 +30,17 @@ static std::vector<std::string> path_inclusions = {"/var/opt/cray/dws/mounts/"};
 // allow users to override the path exclusions
 std::vector<std::string> user_path_exclusions;
 
+// allow users to override the path exclusions
+std::vector<std::string> buffering_paths_exclusion;
+
 }  // namespace hermes::adapter
 
 #ifdef HERMES_PRELOAD
+#include <buffer_pool_internal.h>
 #include <dlfcn.h>
 #include <stdlib.h>
 
+#include "constants.h"
 #include "singleton.h"
 #define HERMES_FORWARD_DECL(__func, __ret, __args) \
   typedef __ret(*__real_t_##__func) __args;        \
@@ -47,7 +56,34 @@ std::vector<std::string> user_path_exclusions;
     }                                                                \
   }
 
+bool PopulateBufferingPath() {
+  char* hermes_config = getenv(HERMES_CONF);
+  hermes::Config config = {};
+  const size_t kConfigMemorySize = KILOBYTES(16);
+  hermes::u8 config_memory[kConfigMemorySize];
+  if (hermes_config && strlen(hermes_config) > 0) {
+    hermes::Arena config_arena = {};
+    hermes::InitArena(&config_arena, kConfigMemorySize, config_memory);
+    hermes::ParseConfig(&config_arena, hermes_config, &config);
+  } else {
+    InitDefaultConfig(&config);
+  }
+  for (const auto& item : config.mount_points) {
+    if (!item.empty()) {
+      hermes::adapter::buffering_paths_exclusion.push_back(item);
+    }
+  }
+}
+
 bool IsTracked(const std::string& path) {
+  if (hermes::adapter::buffering_paths_exclusion.empty()) {
+    PopulateBufferingPath();
+  }
+  for (const auto& pth : hermes::adapter::buffering_paths_exclusion) {
+    if (path.find(pth) == 0) {
+      return false;
+    }
+  }
   if (hermes::adapter::user_path_exclusions.empty()) {
     for (const auto& pth : hermes::adapter::path_inclusions) {
       if (path.find(pth) == 0) {
