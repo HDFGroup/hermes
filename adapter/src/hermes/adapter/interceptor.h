@@ -12,23 +12,27 @@ namespace hermes::adapter {
  * Exclusion lists
  */
 // Paths prefixed with the following directories are not tracked in Hermes
-// Exclusion list used by darshan at darshan/darshan-runtime/lib/darshan-core.c
-std::vector<std::string> path_exclusions = {
+// Exclusion list used by darshan at
+// darshan/darshan-runtime/lib/darshan-core.c
+static std::vector<std::string> path_exclusions = {
     "/bin/",  "/boot/", "/dev/", "/etc/", "/lib/", "/opt/",
     "/proc/", "/sbin/", "/sys/", "/usr/", "/var/",
 };
 
 // paths prefixed with the following directories are tracked by Hermes even if
 // they share a root with a path listed in path_exclusions
-std::vector<std::string> path_inclusions = {"/var/opt/cray/dws/mounts/"};
+static std::vector<std::string> path_inclusions = {"/var/opt/cray/dws/mounts/"};
 
 // allow users to override the path exclusions
 std::vector<std::string> user_path_exclusions;
+
 }  // namespace hermes::adapter
 
 #ifdef HERMES_PRELOAD
 #include <dlfcn.h>
 #include <stdlib.h>
+
+#include "singleton.h"
 #define HERMES_FORWARD_DECL(__func, __ret, __args) \
   typedef __ret(*__real_t_##__func) __args;        \
   __ret(*__real_##__func) __args = NULL;
@@ -45,24 +49,38 @@ std::vector<std::string> user_path_exclusions;
 
 bool IsTracked(const std::string& path) {
   if (hermes::adapter::user_path_exclusions.empty()) {
-    for (auto& pth : hermes::adapter::path_inclusions) {
+    for (const auto& pth : hermes::adapter::path_inclusions) {
       if (path.find(pth) == 0) {
         return true;
       }
     }
-    for (auto& pth : hermes::adapter::path_exclusions) {
+    for (const auto& pth : hermes::adapter::path_exclusions) {
       if (path.find(pth) == 0) {
         return false;
       }
     }
   } else {
-    for (auto& pth : hermes::adapter::user_path_exclusions) {
+    for (const auto& pth : hermes::adapter::user_path_exclusions) {
       if (path.find(pth) == 0) {
         return false;
       }
     }
   }
   return true;
+}
+
+bool IsTracked(FILE* fh) {
+  int MAXSIZE = 0xFFF;
+  char proclnk[0xFFF];
+  char filename[0xFFF];
+  int fno = fileno(fh);
+  sprintf(proclnk, "/proc/self/fd/%d", fno);
+  size_t r = readlink(proclnk, filename, MAXSIZE);
+  if (r > 0) {
+    std::string file_str(filename);
+    return IsTracked(file_str);
+  }
+  return false;
 }
 
 #else

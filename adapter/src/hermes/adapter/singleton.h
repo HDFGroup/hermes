@@ -27,7 +27,7 @@ class Singleton {
   template <typename... Args>
   static std::shared_ptr<T> GetInstance(Args... args) {
     if (instance == nullptr)
-      instance = std::shared_ptr<T>(new T(std::forward<Args>(args)...));
+      instance = std::make_shared<T>(std::forward<Args>(args)...);
     return instance;
   }
 

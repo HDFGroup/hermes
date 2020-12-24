@@ -10,6 +10,6 @@ set(STDIO_ADAPTER_PRIVATE_HEADER    metadata_manager.h
                                     mapper/abstract_mapper.h
                                     mapper/balanced_mapper.h common/datastructures.h common/enumerations.h ../singleton.h common/constants.h)
 
-add_library(hermes_stdio ${STDIO_ADAPTER_PRIVATE_HEADER} ${STDIO_ADAPTER_PUBLIC_HEADER} ${STDIO_ADAPTER_SRC})
+add_library(hermes_stdio SHARED ${STDIO_ADAPTER_PRIVATE_HEADER} ${STDIO_ADAPTER_PUBLIC_HEADER} ${STDIO_ADAPTER_SRC})
 add_dependencies(hermes_stdio hermes)
 target_link_libraries(hermes_stdio hermes MPI::MPI_CXX)

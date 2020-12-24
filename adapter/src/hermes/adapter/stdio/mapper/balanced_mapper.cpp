@@ -21,7 +21,10 @@ MapperReturnType BalancedMapper::map(const FileStruct& file_op) {
     file.offset_ = file_op.offset_ + size_mapped;
     size_t page_index = file.offset_ / PAGE_SIZE;
     hermes.offset_ = file.offset_ % PAGE_SIZE;
-    hermes.size_ = (page_index + 1) * PAGE_SIZE - hermes.offset_;
+    auto left_size_page = PAGE_SIZE - hermes.offset_;
+    hermes.size_ = left_size_page < file_op.size_ - size_mapped
+                       ? left_size_page
+                       : file_op.size_ - size_mapped;
 
     file.size_ = hermes.size_;
     hermes.blob_name_ =
