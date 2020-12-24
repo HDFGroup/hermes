@@ -14,16 +14,46 @@
 namespace hapi = hermes::api;
 
 namespace hermes::adapter::stdio {
+
+struct FileID {
+  dev_t dev_id_;
+  ino_t inode_num_;
+  FileID() : dev_id_(), inode_num_() {}
+  FileID(dev_t dev_id, ino_t inode_num)
+      : dev_id_(dev_id), inode_num_(inode_num) {}
+  FileID(const FileID &other)
+      : dev_id_(other.dev_id_),
+        inode_num_(other.inode_num_) {} /* copy constructor*/
+  FileID(FileID &&other)
+      : dev_id_(other.dev_id_),
+        inode_num_(other.inode_num_) {} /* move constructor*/
+  FileID &operator=(const FileID &other) {
+    dev_id_ = other.dev_id_;
+    inode_num_ = other.inode_num_;
+    return *this;
+  }
+  bool operator==(const FileID &o) const {
+    return dev_id_ == o.dev_id_ && inode_num_ == o.inode_num_;
+  }
+};
+
 struct FileStruct {
+  FileID file_id_;
   size_t offset_;
   size_t size_;
-  FileStruct() : offset_(0), size_(0) {}
-  FileStruct(size_t offset, size_t size) : offset_(offset), size_(size) {}
+  FileStruct() : file_id_(), offset_(0), size_(0) {}
+  FileStruct(FileID file_id, size_t offset, size_t size)
+      : file_id_(file_id), offset_(offset), size_(size) {}
   FileStruct(const FileStruct &other)
-      : offset_(other.offset_), size_(other.size_) {} /* copy constructor*/
+      : file_id_(other.file_id_),
+        offset_(other.offset_),
+        size_(other.size_) {} /* copy constructor*/
   FileStruct(FileStruct &&other)
-      : offset_(other.offset_), size_(other.size_) {} /* move constructor*/
+      : file_id_(other.file_id_),
+        offset_(other.offset_),
+        size_(other.size_) {} /* move constructor*/
   FileStruct &operator=(const FileStruct &other) {
+    file_id_ = other.file_id_;
     offset_ = other.offset_;
     size_ = other.size_;
     return *this;
@@ -48,17 +78,6 @@ struct HermesStruct {
     offset_ = other.offset_;
     size_ = other.size_;
     return *this;
-  }
-};
-
-struct FileID {
-  dev_t dev_id_;
-  ino_t inode_num_;
-  FileID() : dev_id_(), inode_num_() {}
-  FileID(dev_t dev_id, ino_t inode_num)
-      : dev_id_(dev_id), inode_num_(inode_num) {}
-  bool operator==(const FileID &o) const {
-    return dev_id_ == o.dev_id_ && inode_num_ == o.inode_num_;
   }
 };
 

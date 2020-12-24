@@ -9,5 +9,6 @@
 using hermes::adapter::stdio::MapperType;
 
 const MapperType MAPPER_TYPE = MapperType::BALANCED;
+const size_t PAGE_SIZE = 1024 * 1024;
 
 #endif  // HERMES_CONSTANTS_H

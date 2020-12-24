@@ -91,7 +91,8 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
   size_t ret;
   auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
   auto mapper = MapperFactory().Get(MAPPER_TYPE);
-  auto mapping = mapper->map(FileStruct(existing.first.st_ptr, total_size));
+  auto mapping = mapper->map(
+      FileStruct(mdm->convert(fp), existing.first.st_ptr, total_size));
   for (const auto &item : mapping) {
     hapi::Context ctx;
     hapi::Blob temp(0);
@@ -150,7 +151,8 @@ size_t read_internal(std::pair<AdapterStat, bool> &existing, void *ptr,
   size_t ret;
   auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
   auto mapper = MapperFactory().Get(MAPPER_TYPE);
-  auto mapping = mapper->map(FileStruct(existing.first.st_ptr, total_size));
+  auto mapping = mapper->map(
+      FileStruct(mdm->convert(fp), existing.first.st_ptr, total_size));
   size_t total_read_size = 0;
   for (const auto &item : mapping) {
     hapi::Context ctx;
