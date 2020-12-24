@@ -94,12 +94,13 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
   auto mapper = MapperFactory().Get(MAPPER_TYPE);
   auto mapping = mapper->map(
       FileStruct(mdm->convert(fp), existing.first.st_ptr, total_size));
+  size_t data_offset = 0;
   for (const auto &item : mapping) {
     hapi::Context ctx;
     auto blob_exists =
         existing.first.st_bkid->ContainsBlob(item.second.blob_name_);
-    hapi::Blob put_data((unsigned char *)ptr + item.first.offset_,
-                        (unsigned char *)ptr + item.first.offset_ + total_size);
+    hapi::Blob put_data((unsigned char *)ptr + data_offset,
+                        (unsigned char *)ptr + data_offset + item.first.size_);
     if (!blob_exists) {
       existing.first.st_bkid->Put(item.second.blob_name_, put_data, ctx);
     } else {
@@ -138,6 +139,7 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
         }
       }
     }
+    data_offset += item.first.size_;
   }
   existing.first.st_ptr += total_size;
   struct timespec ts;

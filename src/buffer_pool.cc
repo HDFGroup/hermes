@@ -1334,7 +1334,7 @@ size_t LocalWriteBufferById(SharedMemoryContext *context, BufferID id,
       context->open_streams[device->id][slab_index] = file;
     }
     fseek(file, header->data_offset, SEEK_SET);
-    [[maybe_unused]] size_t items_written = fwrite(at, write_size, 1, file);
+    size_t items_written = fwrite(at, write_size, 1, file);
     // TODO(chogan): @errorhandling
     assert(items_written == 1);
     if (fflush(file) != 0) {

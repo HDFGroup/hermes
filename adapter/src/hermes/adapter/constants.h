@@ -2,5 +2,6 @@
 #define HERMES_ADAPTER_CONSTANTS_H
 
 const char* HERMES_CONF = "HERMES_CONF";
+const char* HERMES_EXT = ".hermes";
 
 #endif  // HERMES_ADAPTER_CONSTANTS_H

@@ -31,7 +31,7 @@ static std::vector<std::string> path_inclusions = {"/var/opt/cray/dws/mounts/"};
 std::vector<std::string> user_path_exclusions;
 
 // allow users to override the path exclusions
-std::vector<std::string> buffering_paths_exclusion;
+std::vector<std::string> hermes_paths_exclusion;
 
 }  // namespace hermes::adapter
 
@@ -62,6 +62,7 @@ bool PopulateBufferingPath() {
   const size_t kConfigMemorySize = KILOBYTES(16);
   hermes::u8 config_memory[kConfigMemorySize];
   if (hermes_config && strlen(hermes_config) > 0) {
+    hermes::adapter::hermes_paths_exclusion.push_back(hermes_config);
     hermes::Arena config_arena = {};
     hermes::InitArena(&config_arena, kConfigMemorySize, config_memory);
     hermes::ParseConfig(&config_arena, hermes_config, &config);
@@ -70,17 +71,20 @@ bool PopulateBufferingPath() {
   }
   for (const auto& item : config.mount_points) {
     if (!item.empty()) {
-      hermes::adapter::buffering_paths_exclusion.push_back(item);
+      hermes::adapter::hermes_paths_exclusion.push_back(item);
     }
   }
+  hermes::adapter::hermes_paths_exclusion.push_back(
+      config.buffer_pool_shmem_name);
+  hermes::adapter::hermes_paths_exclusion.push_back(HERMES_EXT);
 }
 
 bool IsTracked(const std::string& path) {
-  if (hermes::adapter::buffering_paths_exclusion.empty()) {
+  if (hermes::adapter::hermes_paths_exclusion.empty()) {
     PopulateBufferingPath();
   }
-  for (const auto& pth : hermes::adapter::buffering_paths_exclusion) {
-    if (path.find(pth) == 0) {
+  for (const auto& pth : hermes::adapter::hermes_paths_exclusion) {
+    if (path.find(pth) != std::string::npos || pth.find(path) != std::string::npos) {
       return false;
     }
   }
