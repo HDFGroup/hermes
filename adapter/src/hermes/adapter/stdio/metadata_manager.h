@@ -15,6 +15,7 @@ namespace hermes::adapter::stdio {
 class MetadataManager {
  private:
   std::unordered_map<FileID, AdapterStat> metadata;
+
  public:
   FileID convert(FILE* fh);
 
