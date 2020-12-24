@@ -82,7 +82,7 @@ FILE *reopen_internal(const std::string &path_str, const char *mode,
   return ret;
 }
 
-size_t write_internal(std::pair<AdapterStat, bool> existing, const void *ptr,
+size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
                       size_t total_size, FILE *fp) {
   size_t ret;
   auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
@@ -138,6 +138,35 @@ size_t write_internal(std::pair<AdapterStat, bool> existing, const void *ptr,
   existing.first.st_ctim = ts;
   mdm->Update(fp, existing.first);
   ret = total_size;
+  return ret;
+}
+
+size_t read_internal(std::pair<AdapterStat, bool> &existing, void *ptr,
+                     size_t total_size, FILE *fp) {
+  size_t ret;
+  auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+  auto mapper = MapperFactory().Get(MAPPER_TYPE);
+  auto mapping = mapper->map(FileStruct(existing.first.st_ptr, total_size));
+  size_t total_read_size = 0;
+  for (const auto &item : mapping) {
+    hapi::Context ctx;
+    hapi::Blob read_data(0);
+    auto exiting_blob_size =
+        existing.first.st_bkid->Get(item.second.blob_name_, read_data, ctx);
+    read_data.resize(exiting_blob_size);
+    auto read_size =
+        existing.first.st_bkid->Get(item.second.blob_name_, read_data, ctx);
+    memcpy((char *)ptr + total_read_size,
+           read_data.data() + item.second.offset_, item.second.size_);
+    total_read_size += read_size;
+  }
+  existing.first.st_ptr += total_read_size;
+  struct timespec ts;
+  timespec_get(&ts, TIME_UTC);
+  existing.first.st_atim = ts;
+  existing.first.st_ctim = ts;
+  mdm->Update(fp, existing.first);
+  ret = total_read_size;
   return ret;
 }
 
@@ -277,93 +306,236 @@ int HERMES_DECL(fputs)(const char *s, FILE *stream) {
 
 size_t HERMES_DECL(fread)(void *ptr, size_t size, size_t nmemb, FILE *stream) {
   size_t ret;
-  MAP_OR_FAIL(fread);
-  ret = __real_fread(ptr, size, nmemb, stream);
+  auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+  auto existing = mdm->Find(stream);
+  if (existing.second) {
+    ret = read_internal(existing, ptr, size * nmemb, stream);
+  } else {
+    MAP_OR_FAIL(fread);
+    ret = __real_fread(ptr, size, nmemb, stream);
+  }
   return (ret);
 }
 
 int HERMES_DECL(fgetc)(FILE *stream) {
   int ret;
-  MAP_OR_FAIL(fgetc);
-  ret = __real_fgetc(stream);
+  auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+  auto existing = mdm->Find(stream);
+  if (existing.second) {
+    int value;
+    auto ret_size = read_internal(existing, &value, 1, stream);
+    ret = value;
+  } else {
+    MAP_OR_FAIL(fgetc);
+    ret = __real_fgetc(stream);
+  }
   return (ret);
 }
 
 /* NOTE: stdio.h typically implements getc() as a macro pointing to _IO_getc */
 int HERMES_DECL(_IO_getc)(FILE *stream) {
   int ret;
-  MAP_OR_FAIL(_IO_getc);
-  ret = __real__IO_getc(stream);
+  auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+  auto existing = mdm->Find(stream);
+  if (existing.second) {
+    int value;
+    auto ret_size = read_internal(existing, &value, 1, stream);
+    ret = value;
+  } else {
+    MAP_OR_FAIL(_IO_getc);
+    ret = __real__IO_getc(stream);
+  }
   return (ret);
 }
 
 /* NOTE: stdio.h typically implements putc() as a macro pointing to _IO_putc */
 int HERMES_DECL(_IO_putc)(int c, FILE *stream) {
   int ret;
-  MAP_OR_FAIL(_IO_putc);
-  ret = __real__IO_putc(c, stream);
+  auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+  auto existing = mdm->Find(stream);
+  if (existing.second) {
+    ret = write_internal(existing, &c, 1, stream);
+  } else {
+    MAP_OR_FAIL(_IO_putc);
+    ret = __real__IO_putc(c, stream);
+  }
   return (ret);
 }
 
 int HERMES_DECL(getw)(FILE *stream) {
   int ret;
-  MAP_OR_FAIL(getw);
-  ret = __real_getw(stream);
+  auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+  auto existing = mdm->Find(stream);
+  if (existing.second) {
+    int value;
+    auto ret_size = read_internal(existing, &value, 1, stream);
+    ret = value;
+  } else {
+    MAP_OR_FAIL(getw);
+    ret = __real_getw(stream);
+  }
   return (ret);
 }
 
 char *HERMES_DECL(fgets)(char *s, int size, FILE *stream) {
   char *ret;
-  MAP_OR_FAIL(fgets);
-  ret = __real_fgets(s, size, stream);
+  auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+  auto existing = mdm->Find(stream);
+  if (existing.second) {
+    auto ret_size = read_internal(existing, s, 1, stream);
+    ret = s;
+  } else {
+    MAP_OR_FAIL(fgets);
+    ret = __real_fgets(s, size, stream);
+  }
   return (ret);
 }
 
 void HERMES_DECL(rewind)(FILE *stream) {
-  MAP_OR_FAIL(rewind);
-  __real_rewind(stream);
+  auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+  auto existing = mdm->Find(stream);
+  if (existing.second) {
+    existing.first.st_ptr = 0;
+    mdm->Update(stream, existing.first);
+  } else {
+    MAP_OR_FAIL(rewind);
+    __real_rewind(stream);
+  }
   return;
 }
 
 int HERMES_DECL(fseek)(FILE *stream, long offset, int whence) {
   int ret;
-  MAP_OR_FAIL(fseek);
-  ret = __real_fseek(stream, offset, whence);
+  auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+  auto existing = mdm->Find(stream);
+  if (existing.second) {
+    switch (whence) {
+      case SEEK_SET: {
+        existing.first.st_ptr = offset;
+        break;
+      }
+      case SEEK_CUR: {
+        existing.first.st_ptr += offset;
+        break;
+      }
+      case SEEK_END: {
+        existing.first.st_ptr = existing.first.st_size + offset;
+        break;
+      }
+      default: {
+        // TODO(hari): throw not implemented error.
+      }
+    }
+    mdm->Update(stream, existing.first);
+    ret = 0;
+  } else {
+    MAP_OR_FAIL(fseek);
+    ret = __real_fseek(stream, offset, whence);
+  }
   return (ret);
 }
 
 int HERMES_DECL(fseeko)(FILE *stream, off_t offset, int whence) {
   int ret;
-  MAP_OR_FAIL(fseeko);
-  ret = __real_fseeko(stream, offset, whence);
+  auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+  auto existing = mdm->Find(stream);
+  if (existing.second) {
+    switch (whence) {
+      case SEEK_SET: {
+        existing.first.st_ptr = offset;
+        break;
+      }
+      case SEEK_CUR: {
+        existing.first.st_ptr += offset;
+        break;
+      }
+      case SEEK_END: {
+        existing.first.st_ptr = existing.first.st_size + offset;
+        break;
+      }
+      default: {
+        // TODO(hari): throw not implemented error.
+      }
+    }
+    mdm->Update(stream, existing.first);
+    ret = 0;
+  } else {
+    MAP_OR_FAIL(fseeko);
+    ret = __real_fseeko(stream, offset, whence);
+  }
   return (ret);
 }
 
 int HERMES_DECL(fseeko64)(FILE *stream, off64_t offset, int whence) {
   int ret;
-  MAP_OR_FAIL(fseeko64);
-  ret = __real_fseeko64(stream, offset, whence);
+  auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+  auto existing = mdm->Find(stream);
+  if (existing.second) {
+    switch (whence) {
+      case SEEK_SET: {
+        existing.first.st_ptr = offset;
+        break;
+      }
+      case SEEK_CUR: {
+        existing.first.st_ptr += offset;
+        break;
+      }
+      case SEEK_END: {
+        existing.first.st_ptr = existing.first.st_size + offset;
+        break;
+      }
+      default: {
+        // TODO(hari): throw not implemented error.
+      }
+    }
+    mdm->Update(stream, existing.first);
+    ret = 0;
+  } else {
+    MAP_OR_FAIL(fseeko64);
+    ret = __real_fseeko64(stream, offset, whence);
+  }
   return (ret);
 }
 
 int HERMES_DECL(fsetpos)(FILE *stream, const fpos_t *pos) {
   int ret;
-  MAP_OR_FAIL(fsetpos);
-  ret = __real_fsetpos(stream, pos);
+  auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+  auto existing = mdm->Find(stream);
+  if (existing.second) {
+    existing.first.st_ptr = pos->__pos;
+    mdm->Update(stream, existing.first);
+    ret = 0;
+  } else {
+    MAP_OR_FAIL(fsetpos);
+    ret = __real_fsetpos(stream, pos);
+  }
   return (ret);
 }
 
 int HERMES_DECL(fsetpos64)(FILE *stream, const fpos64_t *pos) {
   int ret;
-  MAP_OR_FAIL(fsetpos64);
-  ret = __real_fsetpos64(stream, pos);
+  auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+  auto existing = mdm->Find(stream);
+  if (existing.second) {
+    existing.first.st_ptr = pos->__pos;
+    mdm->Update(stream, existing.first);
+    ret = 0;
+  } else {
+    MAP_OR_FAIL(fsetpos64);
+    ret = __real_fsetpos64(stream, pos);
+  }
   return (ret);
 }
 
 long int HERMES_DECL(ftell)(FILE *fp) {
   long int ret;
   MAP_OR_FAIL(ftell);
-
-  ret = __real_ftell(fp);
+  auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+  auto existing = mdm->Find(fp);
+  if (existing.second) {
+    ret = existing.first.st_ptr;
+  } else {
+    ret = __real_ftell(fp);
+  }
   return (ret);
 }

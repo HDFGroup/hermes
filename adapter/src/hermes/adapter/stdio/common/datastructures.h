@@ -86,7 +86,7 @@ struct AdapterStat {
         st_atim(),
         st_mtim(),
         st_ctim() {}
-  AdapterStat(const struct stat &st)
+  explicit AdapterStat(const struct stat &st)
       : st_bkid(),
         ref_count(1),
         st_mode(st.st_mode),

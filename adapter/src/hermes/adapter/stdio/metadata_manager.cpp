@@ -55,6 +55,7 @@ bool MetadataManager::Delete(FILE *fh) {
   if (iter != metadata.end()) {
     metadata.erase(iter);
     return true;
-  } else
+  } else {
     return false;
+  }
 }
