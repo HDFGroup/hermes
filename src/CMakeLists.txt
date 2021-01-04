@@ -73,6 +73,10 @@ target_compile_definitions(hermes
 
 hermes_set_lib_options(hermes "hermes" ${HERMES_LIBTYPE})
 
+if(HERMES_ENABLE_COVERAGE)
+  set_coverage_flags(hermes)
+endif()
+
 set(HERMES_EXPORTED_LIBS hermes ${HERMES_EXPORTED_LIBS})
 
 #-----------------------------------------------------------------------------
