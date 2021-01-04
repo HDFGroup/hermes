@@ -46,10 +46,17 @@ constexpr char kPlaceInHierarchy[] = "PlaceInHierarchy";
 #define HERMES_NOT_IMPLEMENTED_YET \
   LOG(FATAL) << __func__ << " not implemented yet\n"
 
+/** A TargetID uniquely identifies a buffering target within the system. */
 union TargetID {
   struct {
+    /** The ID of the node in charge of this target. */
     u32 node_id;
+    /** The ID of the virtual device that backs this target. It is an index into
+     * the Device array starting at BufferPool::devices_offset (on the node with
+     * ID node_id). */
     u16 device_id;
+    /** The index into the Target array starting at BufferPool::targets_offset
+     * (on the node with ID node_id). */
     u16 index;
   } bits;
 
