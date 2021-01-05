@@ -241,6 +241,12 @@ size_t GetBlobSize(SharedMemoryContext *context, RpcContext *rpc,
                    BufferIdArray *buffer_ids);
 
 /**
+ *
+ */
+size_t GetBlobSizeById(SharedMemoryContext *context, RpcContext *rpc,
+                       Arena *arena, BlobID blob_id);
+
+/**
  * Constructs a unique (among users) shared memory name from a base name.
  *
  * Copies the base name into the dest buffer and appends the value of the USER
@@ -414,6 +420,9 @@ size_t ReadBlobFromBuffers(SharedMemoryContext *context, RpcContext *rpc,
                            Blob *blob, BufferIdArray *buffer_ids,
                            u32 *buffer_sizes);
 
+size_t ReadBlobById(SharedMemoryContext *context, RpcContext *rpc, Arena *arena,
+                    api::Blob &dest, BlobID blob_id);
+
 size_t LocalWriteBufferById(SharedMemoryContext *context, BufferID id,
                             const Blob &blob, size_t offset);
 size_t LocalReadBufferById(SharedMemoryContext *context, BufferID id,
@@ -465,6 +474,9 @@ int PlaceInHierarchy(SharedMemoryContext *context, RpcContext *rpc,
 api::Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
                       PlacementSchema &schema, Blob blob, const char *name,
                       BucketID bucket_id);
+api::Status StdIoPersistBucket(SharedMemoryContext *context, RpcContext *rpc,
+                               Arena *arena, BucketID bucket_id,
+                               const std::string &file_name);
 
 }  // namespace hermes
 

@@ -295,6 +295,13 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
       LocalUpdateGlobalSystemViewState(context, adjustments);
     };
 
+  function<void(const request&, BucketID)> rpc_get_blob_ids =
+    [context](const request &req, BucketID bucket_id) {
+      std::vector<BlobID> result = LocalGetBlobIds(context, bucket_id);
+
+      req.respond(result);
+    };
+
   function<void(const request&)> rpc_finalize =
     [rpc](const request &req) {
       (void)req;
@@ -345,6 +352,7 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
                      rpc_update_global_system_view_state).disable_response();
   rpc_server->define("RemoteGetGlobalDeviceCapacities",
                      rpc_get_global_device_capacities);
+  rpc_server->define("RemoteGetBlobIds", rpc_get_blob_ids);
   rpc_server->define("RemoteFinalize", rpc_finalize).disable_response();
 }
 

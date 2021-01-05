@@ -7,6 +7,9 @@
 #include "hermes.h"
 #include "bucket.h"
 #include "vbucket.h"
+#include "test_utils.h"
+
+namespace hapi = hermes::api;
 
 struct MyTrait {
   int compress_level;
@@ -50,6 +53,60 @@ int compress_blob(hermes::api::Blob &blob, void *trait) {
   return return_value;
 }
 
+
+void TestBucketPersist(std::shared_ptr<hapi::Hermes> hermes) {
+  constexpr int bytes_per_blob = KILOBYTES(3);
+  constexpr int num_blobs = 3;
+  constexpr int total_bytes = num_blobs * bytes_per_blob;
+
+  hapi::Context ctx;
+  hapi::Blob blobx(bytes_per_blob, 'x');
+  hapi::Blob bloby(bytes_per_blob, 'y');
+  hapi::Blob blobz(bytes_per_blob, 'z');
+  hapi::Bucket bkt("persistent_bucket", hermes, ctx);
+  bkt.Put("blobx", blobx, ctx);
+  bkt.Put("bloby", bloby, ctx);
+  bkt.Put("blobz", blobz, ctx);
+
+  std::string saved_file("blobsxyz.txt");
+  bkt.Persist(saved_file, ctx);
+  bkt.Destroy(ctx);
+  Assert(!bkt.IsValid());
+
+  FILE *bkt_file = fopen(saved_file.c_str(), "r");
+  Assert(bkt_file);
+
+  hermes::u8 read_buffer[total_bytes] = {};
+  Assert(fread(read_buffer, 1, total_bytes, bkt_file) == total_bytes);
+
+  for (int offset = 0; offset < num_blobs; ++offset) {
+    for (int i = offset * bytes_per_blob;
+         i < bytes_per_blob * (offset + 1);
+         ++i) {
+      char expected = '\0';
+      switch (offset) {
+        case 0: {
+          expected = 'x';
+          break;
+        }
+        case 1: {
+          expected = 'y';
+          break;
+        }
+        case 2: {
+          expected = 'z';
+          break;
+        }
+        default: {
+          Assert(!"Invalid code path\n.");
+        }
+      }
+      Assert(read_buffer[i] == expected);
+    }
+  }
+
+  Assert(std::remove(saved_file.c_str()) == 0);
+}
 
 int main(int argc, char **argv) {
   int mpi_threads_provided;
@@ -102,6 +159,8 @@ int main(int argc, char **argv) {
     // compression level
     struct MyTrait trait {6};
     my_vb.Attach(&trait, compress_blob, ctx);  // compress action to data starts
+
+    TestBucketPersist(hermes_app);
 
     ///////
     my_vb.Unlink("Blob1", "VB1", ctx);

@@ -66,8 +66,6 @@ class VBucket;
 
 class Bucket;
 
-typedef std::vector<unsigned char> Blob;
-
 enum class PlacementPolicy {
   kRandom,
   kRoundRobin,

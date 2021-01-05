@@ -119,6 +119,9 @@ class Bucket {
   /** rename this bucket */
   Status Rename(const std::string& new_name, Context &ctx);
 
+  /** Save this bucket's blobs to persistent storage. */
+  Status Persist(const std::string &file_name, Context &ctx);
+
   /** close this bucket and free its associated resources (?) */
   /** Invalidates handle */
   Status Close(Context &ctx);

@@ -1,5 +1,6 @@
 #include "bucket.h"
 
+#include <cstdio>
 #include <iostream>
 #include <vector>
 
@@ -78,20 +79,22 @@ size_t Bucket::GetBlobSize(Arena *arena, const std::string &name,
   if (IsValid()) {
     LOG(INFO) << "Getting Blob " << name << " size from bucket "
               << name_ << '\n';
-    BufferIdArray buffer_ids =
-      GetBufferIdsFromBlobName(arena, &hermes_->context_, &hermes_->rpc_,
-                               name.c_str(), NULL);
-
     BlobID blob_id = GetBlobIdByName(&hermes_->context_, &hermes_->rpc_,
                                      name.c_str());
 
-    if (hermes::BlobIsInSwap(blob_id)) {
-      SwapBlob swap_blob = IdArrayToSwapBlob(buffer_ids);
-      result = swap_blob.size;
-    } else {
-      result = hermes::GetBlobSize(&hermes_->context_, &hermes_->rpc_,
-                                   &buffer_ids);
-    }
+    result = GetBlobSizeById(&hermes_->context_, &hermes_->rpc_, arena,
+                             blob_id);
+    // BufferIdArray buffer_ids =
+    //   GetBufferIdsFromBlobId(arena, &hermes_->context_, &hermes_->rpc_,
+    //                          blob_id, NULL);
+
+    // if (hermes::BlobIsInSwap(blob_id)) {
+    //   SwapBlob swap_blob = IdArrayToSwapBlob(buffer_ids);
+    //   result = swap_blob.size;
+    // } else {
+    //   result = hermes::GetBlobSize(&hermes_->context_, &hermes_->rpc_,
+    //                                &buffer_ids);
+    // }
   }
 
   return result;
@@ -112,25 +115,28 @@ size_t Bucket::Get(const std::string &name, Blob &user_blob, Context &ctx) {
       LOG(INFO) << "Getting Blob " << name << " from bucket " << name_ << '\n';
       BlobID blob_id = GetBlobIdByName(&hermes_->context_, &hermes_->rpc_,
                                        name.c_str());
-      hermes::Blob blob = {};
-      blob.data = user_blob.data();
-      blob.size = user_blob.size();
 
-      BufferIdArray buffer_ids = {};
-      if (hermes::BlobIsInSwap(blob_id)) {
-        buffer_ids = GetBufferIdsFromBlobName(scratch, &hermes_->context_,
-                                              &hermes_->rpc_, name.c_str(),
-                                              NULL);
-        SwapBlob swap_blob = IdArrayToSwapBlob(buffer_ids);
-        ret = ReadFromSwap(&hermes_->context_, blob, swap_blob);
-      } else {
-        u32 *buffer_sizes = 0;
-        buffer_ids = GetBufferIdsFromBlobName(scratch, &hermes_->context_,
-                                              &hermes_->rpc_, name.c_str(),
-                                              &buffer_sizes);
-        ret = ReadBlobFromBuffers(&hermes_->context_, &hermes_->rpc_, &blob,
-                                  &buffer_ids, buffer_sizes);
-      }
+      ret = ReadBlobById(&hermes_->context_, &hermes_->rpc_,
+                         &hermes_->trans_arena_, user_blob, blob_id);
+      // hermes::Blob blob = {};
+      // blob.data = user_blob.data();
+      // blob.size = user_blob.size();
+
+      // BufferIdArray buffer_ids = {};
+      // if (hermes::BlobIsInSwap(blob_id)) {
+      //   buffer_ids = GetBufferIdsFromBlobName(scratch, &hermes_->context_,
+      //                                         &hermes_->rpc_, name.c_str(),
+      //                                         NULL);
+      //   SwapBlob swap_blob = IdArrayToSwapBlob(buffer_ids);
+      //   ret = ReadFromSwap(&hermes_->context_, blob, swap_blob);
+      // } else {
+      //   u32 *buffer_sizes = 0;
+      //   buffer_ids = GetBufferIdsFromBlobName(scratch, &hermes_->context_,
+      //                                         &hermes_->rpc_, name.c_str(),
+      //                                         &buffer_sizes);
+      //   ret = ReadBlobFromBuffers(&hermes_->context_, &hermes_->rpc_, &blob,
+      //                             &buffer_ids, buffer_sizes);
+      // }
     }
   }
 
@@ -222,6 +228,16 @@ Status Bucket::Rename(const std::string &new_name, Context &ctx) {
   }
 
   return ret;
+}
+
+Status Bucket::Persist(const std::string &file_name, Context &ctx) {
+  (void)ctx;
+
+  // TODO(chogan): Support other storage backends
+  Status result = StdIoPersistBucket(&hermes_->context_, &hermes_->rpc_,
+                                     &hermes_->trans_arena_, id_, file_name);
+
+  return result;
 }
 
 Status Bucket::Close(Context &ctx) {

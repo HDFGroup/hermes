@@ -171,6 +171,13 @@ bool ContainsBlob(SharedMemoryContext *context, RpcContext *rpc,
 /**
  *
  */
+BufferIdArray GetBufferIdsFromBlobId(Arena *arena,
+                                     SharedMemoryContext *context,
+                                     RpcContext *rpc, BlobID blob_id,
+                                     u32 **sizes);
+/**
+ *
+ */
 BufferIdArray GetBufferIdsFromBlobName(Arena *arena,
                                        SharedMemoryContext *context,
                                        RpcContext *rpc, const char *blob_name,
@@ -243,6 +250,12 @@ bool IsBucketNameTooLong(const std::string &name);
  */
 TargetID FindTargetIdFromDeviceId(const std::vector<TargetID> &targets,
                                   DeviceID device_id);
+
+/**
+ *
+ */
+std::vector<BlobID> GetBlobIds(SharedMemoryContext *context, RpcContext *rpc,
+                               BucketID bucket_id);
 
 }  // namespace hermes
 
