@@ -80,6 +80,8 @@ IdMap *GetMap(MetadataManager *mdm, MapType map_type) {
       result = GetBlobMap(mdm);
       break;
     }
+    default:
+      assert(!"Invalid code path.\n");
   }
 
   return result;
@@ -249,25 +251,34 @@ bool LocalContainsBlob(SharedMemoryContext *context, BucketID bucket_id,
   return result;
 }
 
-void LocalDestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
+static inline bool HasAllocatedBlobs(BucketInfo *info) {
+  bool result = info->blobs.capacity > 0;
+
+  return result;
+}
+
+bool LocalDestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
                         const char *bucket_name, BucketID bucket_id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   BucketInfo *info = LocalGetBucketInfoById(mdm, bucket_id);
   Heap *id_heap = GetIdHeap(mdm);
   BlobID *blobs = (BlobID *)HeapOffsetToPtr(id_heap, info->blobs.head_offset);
+  bool destroyed = false;
 
   // TODO(chogan): @optimization Lock granularity can probably be relaxed if
   // this is slow
   BeginTicketMutex(&mdm->bucket_mutex);
   int ref_count = info->ref_count.load();
   if (ref_count == 1) {
-    for (u32 i = 0; i < info->blobs.length; ++i) {
-      BlobID blob_id = *(blobs + i);
-      DestroyBlobById(context, rpc, blob_id);
-    }
+    if (HasAllocatedBlobs(info)) {
+      for (u32 i = 0; i < info->blobs.length; ++i) {
+        BlobID blob_id = *(blobs + i);
+        DestroyBlobById(context, rpc, blob_id);
+      }
 
-    // Delete BlobId list
-    HeapFree(id_heap, blobs);
+      // Delete BlobId list
+      HeapFree(id_heap, blobs);
+    }
 
     info->blobs.length = 0;
     info->blobs.capacity = 0;
@@ -284,21 +295,24 @@ void LocalDestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
 
     // Remove (name -> bucket_id) map entry
     LocalDelete(mdm, bucket_name, kMapType_Bucket);
+    destroyed = true;
+  } else {
+    LOG(INFO) << "Cannot destroy bucket " << bucket_name
+              << ". It's refcount is " << ref_count << std::endl;
   }
   EndTicketMutex(&mdm->bucket_mutex);
+
+  return destroyed;
 }
 
 std::vector<TargetID> GetNodeTargets(SharedMemoryContext *context) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
-  Heap *id_heap = GetIdHeap(mdm);
-  u64 *targets = (u64 *)HeapOffsetToPtr(id_heap, mdm->node_targets.head_offset);
+  u64 *target_ids = GetIdsPtr(mdm, mdm->node_targets);
   u32 length = mdm->node_targets.length;
   std::vector<TargetID> result(length);
 
   for (u32 i = 0; i < length; ++i) {
-    TargetID id = {};
-    id.as_int = targets[i];
-    result[i] = id;
+    result[i].as_int = target_ids[i];
   }
 
   return result;
@@ -367,6 +381,18 @@ size_t GetStoredMapSize(MetadataManager *mdm, MapType map_type) {
   return result;
 }
 
+std::vector<u64>
+GetRemainingNodeCapacities(SharedMemoryContext *context,
+                           const std::vector<TargetID> &targets) {
+  std::vector<u64> result(targets.size());
+
+  for (size_t i = 0; i < targets.size(); ++i) {
+    result[i] = LocalGetRemainingCapacity(context, targets[i]);
+  }
+
+  return result;
+}
+
 u32 HashStringForStorage(MetadataManager *mdm, RpcContext *rpc,
                          const char *str) {
   int result =
@@ -417,7 +443,7 @@ void InitMetadataStorage(SharedMemoryContext *context, MetadataManager *mdm,
   Heap *id_heap = InitHeapInArena(arena, false, heap_alignment);
   mdm->id_heap_offset = GetOffsetFromMdm(mdm, id_heap);
 
-  // NOTE(chogan): Rank Targets default to one Target per Device
+  // NOTE(chogan): Local Targets default to one Target per Device
   IdList *node_targets = AllocateIdList(mdm, config->num_devices);
   TargetID *target_ids = (TargetID *)GetIdsPtr(mdm, *node_targets);
   for (u32 i = 0; i < node_targets->length; ++i) {
@@ -436,7 +462,13 @@ void InitMetadataStorage(SharedMemoryContext *context, MetadataManager *mdm,
   // make HeapRealloc actually use realloc semantics so it can grow as big as
   // needed. But that requires updating offsets for the map and the heap's free
   // list
-  sh_new_strdup(bucket_map, config->max_buckets_per_node, map_heap);
+
+  // NOTE(chogan): Make the capacity one larger than necessary because the
+  // stb_ds map tries to grow when it reaches capacity.
+  u32 max_buckets = config->max_buckets_per_node + 1;
+  u32 max_vbuckets = config->max_vbuckets_per_node + 1;
+
+  sh_new_strdup(bucket_map, max_buckets, map_heap);
   shdefault(bucket_map, 0, map_heap);
   mdm->bucket_map_offset = GetOffsetFromMdm(mdm, bucket_map);
   u32 bucket_map_num_bytes = map_heap->extent;
@@ -447,7 +479,7 @@ void InitMetadataStorage(SharedMemoryContext *context, MetadataManager *mdm,
   // slower because they'll all share a lock.
 
   IdMap *vbucket_map = 0;
-  sh_new_strdup(vbucket_map, config->max_vbuckets_per_node, map_heap);
+  sh_new_strdup(vbucket_map, max_vbuckets, map_heap);
   shdefault(vbucket_map, 0, map_heap);
   mdm->vbucket_map_offset = GetOffsetFromMdm(mdm, vbucket_map);
   u32 vbucket_map_num_bytes = map_heap->extent - bucket_map_num_bytes;

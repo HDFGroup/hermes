@@ -8,6 +8,7 @@
 #include "hermes.h"
 #include "bucket.h"
 #include "buffer_pool_internal.h"
+#include "metadata_management_internal.h"
 #include "utils.h"
 #include "test_utils.h"
 
@@ -25,12 +26,12 @@ void TestGetBuffers(Hermes *hermes) {
   using namespace hermes;  // NOLINT(*)
   SharedMemoryContext *context = &hermes->context_;
   BufferPool *pool = GetBufferPoolFromContext(context);
-  DeviceID device_id = 0;
-  i32 block_size = pool->block_sizes[device_id];
+  TargetID ram_target = testing::DefaultRamTargetId();
+  i32 block_size = pool->block_sizes[ram_target.bits.device_id];
 
   {
     // A request smaller than the block size should return 1 buffer
-    PlacementSchema schema{std::make_pair(block_size / 2, device_id)};
+    PlacementSchema schema{std::make_pair(block_size / 2, ram_target)};
     std::vector<BufferID> ret = GetBuffers(context, schema);
     Assert(ret.size() == 1);
     LocalReleaseBuffers(context, ret);
@@ -38,7 +39,7 @@ void TestGetBuffers(Hermes *hermes) {
 
   {
     // A request larger than the available space should return no buffers
-    PlacementSchema schema{std::make_pair(GIGABYTES(3), device_id)};
+    PlacementSchema schema{std::make_pair(GIGABYTES(3), ram_target)};
     std::vector<BufferID> ret = GetBuffers(context, schema);
     Assert(ret.size() == 0);
   }
@@ -48,11 +49,12 @@ void TestGetBuffers(Hermes *hermes) {
     UpdateGlobalSystemViewState(context, &hermes->rpc_);
     std::vector<u64> global_state = GetGlobalDeviceCapacities(context,
                                                               &hermes->rpc_);
-    PlacementSchema schema{std::make_pair(global_state[device_id], device_id)};
+    PlacementSchema schema{
+      std::make_pair(global_state[ram_target.bits.device_id], ram_target)};
     std::vector<BufferID> ret = GetBuffers(context, schema);
     Assert(ret.size());
     // The next request should fail
-    PlacementSchema failed_schema{std::make_pair(1, device_id)};
+    PlacementSchema failed_schema{std::make_pair(1, ram_target)};
     std::vector<BufferID> failed_request = GetBuffers(context, failed_schema);
     Assert(failed_request.size() == 0);
     LocalReleaseBuffers(context, ret);

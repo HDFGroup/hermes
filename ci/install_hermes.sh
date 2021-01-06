@@ -9,7 +9,7 @@ pushd build
 
 INSTALL_PREFIX="${HOME}/${LOCAL}"
 
-export CXXFLAGS="${CXXFLAGS} -std=c++17"
+export CXXFLAGS="${CXXFLAGS} -std=c++17 -Werror -Wall -Wextra"
 cmake                                                      \
     -DCMAKE_INSTALL_PREFIX=${INSTALL_PREFIX}               \
     -DCMAKE_PREFIX_PATH=${INSTALL_PREFIX}                  \
@@ -30,6 +30,7 @@ cmake                                                      \
     -DBUILD_TESTING=ON                                     \
     ..
 
-cmake --build . -- -j4 && ctest -VV
+cmake --build . -- -j4
+ctest -VV
 
 popd

@@ -12,6 +12,29 @@
 
 namespace hermes {
 
+bool IsNameTooLong(const std::string &name, size_t max) {
+  bool result = false;
+  if (name.size() + 1 >= max) {
+    LOG(WARNING) << "Name '" << name << "' exceeds the maximum name size of "
+                 << max << " bytes." << std::endl;
+    result = true;
+  }
+
+  return result;
+}
+
+bool IsBlobNameTooLong(const std::string &name) {
+  bool result = IsNameTooLong(name, kMaxBlobNameSize);
+
+  return result;
+}
+
+bool IsBucketNameTooLong(const std::string &name) {
+  bool result = IsNameTooLong(name, kMaxBucketNameSize);
+
+  return result;
+}
+
 bool IsNullBucketId(BucketID id) {
   bool result = id.as_int == 0;
 
@@ -25,6 +48,12 @@ bool IsNullVBucketId(VBucketID id) {
 }
 
 bool IsNullBlobId(BlobID id) {
+  bool result = id.as_int == 0;
+
+  return result;
+}
+
+bool IsNullTargetId(TargetID id) {
   bool result = id.as_int == 0;
 
   return result;
@@ -485,8 +514,12 @@ void RenameBlob(SharedMemoryContext *context, RpcContext *rpc,
                 const std::string &old_name, const std::string &new_name) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   BlobID blob_id = GetBlobIdByName(context, rpc, old_name.c_str());
-  DeleteId(mdm, rpc, old_name, kMapType_Blob);
-  PutBlobId(mdm, rpc, new_name, blob_id);
+  if (!IsNullBlobId(blob_id)) {
+    DeleteId(mdm, rpc, old_name, kMapType_Blob);
+    PutBlobId(mdm, rpc, new_name, blob_id);
+  } else {
+    // TODO(chogan): @errorhandling
+  }
 }
 
 bool ContainsBlob(SharedMemoryContext *context, RpcContext *rpc,
@@ -514,15 +547,18 @@ void DestroyBlobById(SharedMemoryContext *context, RpcContext *rpc, BlobID id) {
   }
 }
 
-void DestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
+bool DestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
                    const char *name, BucketID bucket_id) {
   u32 target_node = bucket_id.bits.node_id;
+  bool destroyed = false;
   if (target_node == rpc->node_id) {
-    LocalDestroyBucket(context, rpc, name, bucket_id);
+    destroyed = LocalDestroyBucket(context, rpc, name, bucket_id);
   } else {
-    RpcCall<void>(rpc, target_node, "RemoteDestroyBucket", std::string(name),
-                  bucket_id);
+    destroyed = RpcCall<bool>(rpc, target_node, "RemoteDestroyBucket",
+                              std::string(name), bucket_id);
   }
+
+  return destroyed;
 }
 
 void LocalRenameBucket(SharedMemoryContext *context, RpcContext *rpc,
@@ -580,17 +616,6 @@ void DecrementRefcount(SharedMemoryContext *context, RpcContext *rpc,
 u64 LocalGetRemainingCapacity(SharedMemoryContext *context, TargetID id) {
   Target *target = GetTargetFromId(context, id);
   u64 result = target->remaining_space.load();
-
-  return result;
-}
-
-std::vector<u64> GetRemainingNodeCapacities(SharedMemoryContext *context) {
-  std::vector<TargetID> targets = GetNodeTargets(context);
-  std::vector<u64> result(targets.size());
-
-  for (size_t i = 0; i < targets.size(); ++i) {
-    result[i] = LocalGetRemainingCapacity(context, targets[i]);
-  }
 
   return result;
 }
@@ -695,6 +720,22 @@ void UpdateGlobalSystemViewState(SharedMemoryContext *context,
                     adjustments);
     }
   }
+}
+
+TargetID FindTargetIdFromDeviceId(const std::vector<TargetID> &targets,
+                                  DeviceID device_id) {
+  TargetID result = {};
+  // TODO(chogan): @optimization Inefficient O(n)
+  for (size_t target_index = 0;
+       target_index < targets.size();
+       ++target_index) {
+    if (targets[target_index].bits.device_id == device_id) {
+      result = targets[target_index];
+      break;
+    }
+  }
+
+  return result;
 }
 
 static ptrdiff_t GetOffsetFromMdm(MetadataManager *mdm, void *ptr) {

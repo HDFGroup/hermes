@@ -11,6 +11,7 @@
 #include "hermes.h"
 #include "data_placement_engine.h"
 #include "metadata_management.h"
+#include "utils.h"
 
 namespace hermes {
 
@@ -45,6 +46,11 @@ class Bucket {
   /** get the name of bucket */
   std::string GetName() const {
     return this->name_;
+  }
+
+  /** get the internal ID of the bucket */
+  u64 GetId() const {
+    return id_.as_int;
   }
 
   /** returns true if this Bucket has been created but not yet destroyed */
@@ -159,15 +165,25 @@ Status Bucket::Put(std::vector<std::string> &names,
                    std::vector<std::vector<T>> &blobs, Context &ctx) {
   Status ret = 0;
 
-  if (IsValid()) {
+  for (auto &name : names) {
+    if (IsBlobNameTooLong(name)) {
+      // TODO(chogan): @errorhandling
+      ret = 1;
+      break;
+    }
+  }
+
+  if (IsValid() && ret == 0) {
     size_t num_blobs = blobs.size();
     std::vector<size_t> sizes_in_bytes(num_blobs);
     for (size_t i = 0; i < num_blobs; ++i) {
       sizes_in_bytes[i] = blobs[i].size() * sizeof(T);
     }
     std::vector<PlacementSchema> schemas;
+    HERMES_BEGIN_TIMED_BLOCK("CalculatePlacement");
     ret = CalculatePlacement(&hermes_->context_, &hermes_->rpc_, sizes_in_bytes,
                              schemas, ctx);
+    HERMES_END_TIMED_BLOCK();
 
     if (ret == 0) {
       ret = PlaceBlobs(schemas, blobs, names);

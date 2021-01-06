@@ -149,6 +149,12 @@ Device *GetDeviceById(SharedMemoryContext *context, DeviceID device_id) {
   return result;
 }
 
+DeviceID GetDeviceIdFromTargetId(TargetID target_id) {
+  DeviceID result = target_id.bits.device_id;
+
+  return result;
+}
+
 BufferHeader *GetHeadersBase(SharedMemoryContext *context) {
   BufferPool *pool = GetBufferPoolFromContext(context);
   BufferHeader *result = (BufferHeader *)(context->shm_base +
@@ -519,10 +525,8 @@ std::vector<BufferID> GetBuffers(SharedMemoryContext *context,
 
   bool failed = false;
   std::vector<BufferID> result;
-  for (auto &size_and_device : schema) {
-    DeviceID device_id = size_and_device.second;
-
-    size_t size_left = size_and_device.first;
+  for (auto [size_left, target] : schema) {
+    DeviceID device_id = GetDeviceIdFromTargetId(target);
     std::vector<size_t> num_buffers(pool->num_slabs[device_id], 0);
 
     // NOTE(chogan): naive buffer selection algorithm: fill with largest
@@ -1553,14 +1557,20 @@ Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
                  PlacementSchema &schema, Blob blob, const char *name,
                  BucketID bucket_id) {
   Status result = 0;
+  HERMES_BEGIN_TIMED_BLOCK("GetBuffers");
   std::vector<BufferID> buffer_ids = GetBuffers(context, schema);
+  HERMES_END_TIMED_BLOCK();
+
   if (buffer_ids.size()) {
     MetadataManager *mdm = GetMetadataManagerFromContext(context);
     char *bucket_name = ReverseGetFromStorage(mdm, bucket_id.as_int,
                                               kMapType_Bucket);
     LOG(INFO) << "Attaching blob " << std::string(name) << " to Bucket "
               << bucket_name << std::endl;
+
+    HERMES_BEGIN_TIMED_BLOCK("WriteBlobToBuffers");
     WriteBlobToBuffers(context, rpc, blob, buffer_ids);
+    HERMES_END_TIMED_BLOCK();
 
     // NOTE(chogan): Update all metadata associated with this Put
     AttachBlobToBucket(context, rpc, name, bucket_id, buffer_ids);

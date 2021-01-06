@@ -39,17 +39,37 @@ static constexpr int kMaxBufferPoolSlabs = 8;
 constexpr int kMaxPathLength = 256;
 constexpr int kMaxBufferPoolShmemNameLength = 64;
 constexpr int kMaxDevices = 8;
+constexpr int kMaxBucketNameSize = 256;
+constexpr int kMaxBlobNameSize = 64;
 
 constexpr char kPlaceInHierarchy[] = "PlaceInHierarchy";
 
 #define HERMES_NOT_IMPLEMENTED_YET \
   LOG(FATAL) << __func__ << " not implemented yet\n"
 
+/** A TargetID uniquely identifies a buffering target within the system. */
+union TargetID {
+  struct {
+    /** The ID of the node in charge of this target. */
+    u32 node_id;
+    /** The ID of the virtual device that backs this target. It is an index into
+     * the Device array starting at BufferPool::devices_offset (on the node with
+     * ID node_id). */
+    u16 device_id;
+    /** The index into the Target array starting at BufferPool::targets_offset
+     * (on the node with ID node_id). */
+    u16 index;
+  } bits;
+
+  u64 as_int;
+};
+
 /**
- * A PlacementSchema is a vector of (size, device) pairs where size is the number of
- * bytes to buffer and device is the Device ID where to buffer those bytes.
+ * A PlacementSchema is a vector of (size, target) pairs where size is the
+ * number of bytes to buffer and target is the TargetID where to buffer those
+ * bytes.
  */
-using PlacementSchema = std::vector<std::pair<size_t, DeviceID>>;
+using PlacementSchema = std::vector<std::pair<size_t, TargetID>>;
 
 /**
  * Distinguishes whether the process (or rank) is part of the application cores

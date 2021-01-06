@@ -6,6 +6,7 @@
 #include "buffer_pool.h"
 #include "buffer_pool_internal.h"
 #include "metadata_management.h"
+#include "metadata_management_internal.h"
 #include "debug_state.h"
 #include "utils.h"
 

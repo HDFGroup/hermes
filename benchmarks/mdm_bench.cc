@@ -7,6 +7,7 @@
 
 #include "hermes.h"
 #include "utils.h"
+#include "metadata_management_internal.h"
 
 namespace hapi = hermes::api;
 using std::chrono::time_point;
