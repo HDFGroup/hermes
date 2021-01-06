@@ -3,6 +3,7 @@
 #include <iostream>
 #include <vector>
 
+#include "utils.h"
 #include "buffer_pool.h"
 #include "metadata_management.h"
 
@@ -14,7 +15,12 @@ Bucket::Bucket(const std::string &initial_name,
                const std::shared_ptr<Hermes> &h, Context ctx)
     : name_(initial_name), hermes_(h) {
   (void)ctx;
-  id_ = GetOrCreateBucketId(&hermes_->context_, &hermes_->rpc_, name_);
+
+  if (IsBucketNameTooLong(name_)) {
+    id_.as_int = 0;
+  } else {
+    id_ = GetOrCreateBucketId(&hermes_->context_, &hermes_->rpc_, name_);
+  }
 }
 
 bool Bucket::IsValid() const {
@@ -27,11 +33,18 @@ Status Bucket::Put(const std::string &name, const u8 *data, size_t size,
                    Context &ctx) {
   Status ret = 0;
 
-  if (IsValid()) {
+  if (IsBlobNameTooLong(name)) {
+    // TODO(chogan): @errorhandling
+    ret = 1;
+  }
+
+  if (IsValid() && ret == 0) {
     std::vector<size_t> sizes(1, size);
     std::vector<PlacementSchema> schemas;
+    HERMES_BEGIN_TIMED_BLOCK("CalculatePlacement");
     ret = CalculatePlacement(&hermes_->context_, &hermes_->rpc_, sizes, schemas,
                              ctx);
+    HERMES_END_TIMED_BLOCK();
 
     if (ret == 0) {
       std::vector<std::string> names(1, name);
@@ -151,8 +164,13 @@ Status Bucket::RenameBlob(const std::string &old_name,
   (void)ctx;
   Status ret = 0;
 
-  LOG(INFO) << "Renaming Blob " << old_name << " to " << new_name << '\n';
-  hermes::RenameBlob(&hermes_->context_, &hermes_->rpc_, old_name, new_name);
+  if (IsBlobNameTooLong(new_name)) {
+    ret = 1;
+    // TODO(chogan): @errorhandling
+  } else {
+    LOG(INFO) << "Renaming Blob " << old_name << " to " << new_name << '\n';
+    hermes::RenameBlob(&hermes_->context_, &hermes_->rpc_, old_name, new_name);
+  }
 
   return ret;
 }
@@ -195,8 +213,13 @@ Status Bucket::Rename(const std::string &new_name, Context &ctx) {
   (void)ctx;
   Status ret = 0;
 
-  LOG(INFO) << "Renaming a bucket to" << new_name << '\n';
-  RenameBucket(&hermes_->context_, &hermes_->rpc_, id_, name_, new_name);
+  if (IsBucketNameTooLong(new_name)) {
+    ret = 1;
+    // TODO(chogan): @errorhandling
+  } else {
+    LOG(INFO) << "Renaming a bucket to" << new_name << '\n';
+    RenameBucket(&hermes_->context_, &hermes_->rpc_, id_, name_, new_name);
+  }
 
   return ret;
 }
@@ -208,6 +231,7 @@ Status Bucket::Close(Context &ctx) {
   if (IsValid()) {
     LOG(INFO) << "Closing bucket '" << name_ << "'" << std::endl;
     DecrementRefcount(&hermes_->context_, &hermes_->rpc_, id_);
+    id_.as_int = 0;
   }
 
   return ret;
@@ -215,15 +239,21 @@ Status Bucket::Close(Context &ctx) {
 
 Status Bucket::Destroy(Context &ctx) {
   (void)ctx;
-  Status ret = 0;
+  Status result = 0;
 
   if (IsValid()) {
     LOG(INFO) << "Destroying bucket '" << name_ << "'" << std::endl;
-    DestroyBucket(&hermes_->context_, &hermes_->rpc_, name_.c_str(), id_);
-    id_.as_int = 0;
+    bool destroyed = DestroyBucket(&hermes_->context_, &hermes_->rpc_,
+                                   name_.c_str(), id_);
+    if (destroyed) {
+      id_.as_int = 0;
+    } else {
+      // TODO(chogan): @errorhandling
+      result = 1;
+    }
   }
 
-  return ret;
+  return result;
 }
 
 }  // namespace api

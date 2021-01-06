@@ -27,6 +27,7 @@
 using namespace hermes;  // NOLINT(*)
 using hermes::testing::Timer;
 namespace hapi = hermes::api;
+const size_t kFourKiB = KILOBYTES(4);
 
 struct TimingResult {
   double get_buffers_time;
@@ -35,7 +36,8 @@ struct TimingResult {
 
 TimingResult TestGetBuffersRpc(RpcContext *rpc, int iters) {
   TimingResult result = {};
-  PlacementSchema schema{std::make_pair(4096, 0)};
+  TargetID ram_target = testing::DefaultRamTargetId();
+  PlacementSchema schema{std::make_pair(kFourKiB, ram_target)};
 
   Timer get_timer;
   Timer release_timer;
@@ -65,7 +67,8 @@ TimingResult TestGetBuffersRpc(RpcContext *rpc, int iters) {
 
 TimingResult TestGetBuffers(SharedMemoryContext *context, int iters) {
   TimingResult result = {};
-  PlacementSchema schema{std::make_pair(4096, 0)};
+  TargetID ram_target = testing::DefaultRamTargetId();
+  PlacementSchema schema{std::make_pair(kFourKiB, ram_target)};
 
   Timer get_timer;
   Timer release_timer;
@@ -150,15 +153,14 @@ void TestFileBuffering(std::shared_ptr<hapi::Hermes> hermes, int rank,
                        const char *test_file) {
   SharedMemoryContext *context = &hermes->context_;
   RpcContext *rpc = &hermes->rpc_;
-  DeviceID device_id = 1;
-
+  TargetID file_target = testing::DefaultFileTargetId();
   ScopedTemporaryMemory scratch(&hermes->trans_arena_);
 
   FileMapper mapper(test_file);
   Blob blob = mapper.blob;
 
   if (blob.data) {
-    PlacementSchema schema{std::make_pair(blob.size, device_id)};
+    PlacementSchema schema{std::make_pair(blob.size, file_target)};
     std::vector<BufferID> buffer_ids(0);
 
     while (buffer_ids.size() == 0) {

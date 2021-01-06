@@ -71,7 +71,6 @@ typedef std::vector<unsigned char> Blob;
 enum class PlacementPolicy {
   kRandom,
   kRoundRobin,
-  kTopDown,
   kMinimizeIoTime,
 };
 
