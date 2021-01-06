@@ -1623,11 +1623,11 @@ Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
 
 Status StdIoPersistBucket(SharedMemoryContext *context, RpcContext *rpc,
                           Arena *arena, BucketID bucket_id,
-                          const std::string &file_name) {
+                          const std::string &file_name,
+                          const std::string &open_mode) {
   Status result = 0;
   // TODO(chogan): Is there any reason this should be a parameter?
-  const char *open_mode = "w";
-  FILE *file = fopen(file_name.c_str(), open_mode);
+  FILE *file = fopen(file_name.c_str(), open_mode.c_str());
 
   if (file) {
     std::vector<BlobID> blob_ids = GetBlobIds(context, rpc, bucket_id);

@@ -119,7 +119,9 @@ class Bucket {
   /** rename this bucket */
   Status Rename(const std::string& new_name, Context &ctx);
 
-  /** Save this bucket's blobs to persistent storage. */
+  /** Save this bucket's blobs to persistent storage.
+   *
+   * The blobs are written in the same order in which they are `Put`. */
   Status Persist(const std::string &file_name, Context &ctx);
 
   /** close this bucket and free its associated resources (?) */

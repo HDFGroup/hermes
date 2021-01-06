@@ -476,7 +476,8 @@ api::Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
                       BucketID bucket_id);
 api::Status StdIoPersistBucket(SharedMemoryContext *context, RpcContext *rpc,
                                Arena *arena, BucketID bucket_id,
-                               const std::string &file_name);
+                               const std::string &file_name,
+                               const std::string &open_mode);
 
 }  // namespace hermes
 
