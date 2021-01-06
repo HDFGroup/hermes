@@ -8,6 +8,7 @@ namespace hermes {
 bool IsNullBucketId(BucketID id);
 bool IsNullVBucketId(VBucketID id);
 bool IsNullBlobId(BlobID id);
+bool IsNullTargetId(TargetID id);
 TicketMutex *GetMapMutex(MetadataManager *mdm, MapType map_type);
 VBucketID GetVBucketIdByName(SharedMemoryContext *context, RpcContext *rpc,
                              const char *name);
@@ -72,7 +73,9 @@ void StartGlobalSystemViewStateUpdateThread(SharedMemoryContext *context,
 void InitMetadataStorage(SharedMemoryContext *context, MetadataManager *mdm,
                          Arena *arena, Config *config);
 
-std::vector<u64> GetRemainingNodeCapacities(SharedMemoryContext *context);
+std::vector<u64>
+GetRemainingNodeCapacities(SharedMemoryContext *context,
+                           const std::vector<TargetID> &targets);
 std::string GetSwapFilename(MetadataManager *mdm, u32 node_id);
 
 }  // namespace hermes

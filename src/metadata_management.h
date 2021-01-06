@@ -238,6 +238,12 @@ bool IsBlobNameTooLong(const std::string &name);
  */
 bool IsBucketNameTooLong(const std::string &name);
 
+/**
+ *
+ */
+TargetID FindTargetIdFromDeviceId(const std::vector<TargetID> &targets,
+                                  DeviceID device_id);
+
 }  // namespace hermes
 
 #endif  // HERMES_METADATA_MANAGEMENT_H_

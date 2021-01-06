@@ -149,6 +149,12 @@ Device *GetDeviceById(SharedMemoryContext *context, DeviceID device_id) {
   return result;
 }
 
+DeviceID GetDeviceIdFromTargetId(TargetID target_id) {
+  DeviceID result = target_id.bits.device_id;
+
+  return result;
+}
+
 BufferHeader *GetHeadersBase(SharedMemoryContext *context) {
   BufferPool *pool = GetBufferPoolFromContext(context);
   BufferHeader *result = (BufferHeader *)(context->shm_base +
@@ -519,10 +525,8 @@ std::vector<BufferID> GetBuffers(SharedMemoryContext *context,
 
   bool failed = false;
   std::vector<BufferID> result;
-  for (auto &size_and_device : schema) {
-    DeviceID device_id = size_and_device.second;
-
-    size_t size_left = size_and_device.first;
+  for (auto [size_left, target] : schema) {
+    DeviceID device_id = GetDeviceIdFromTargetId(target);
     std::vector<size_t> num_buffers(pool->num_slabs[device_id], 0);
 
     // NOTE(chogan): naive buffer selection algorithm: fill with largest

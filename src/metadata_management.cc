@@ -53,6 +53,12 @@ bool IsNullBlobId(BlobID id) {
   return result;
 }
 
+bool IsNullTargetId(TargetID id) {
+  bool result = id.as_int == 0;
+
+  return result;
+}
+
 TicketMutex *GetMapMutex(MetadataManager *mdm, MapType map_type) {
   TicketMutex *mutex = 0;
   switch (map_type) {
@@ -614,17 +620,6 @@ u64 LocalGetRemainingCapacity(SharedMemoryContext *context, TargetID id) {
   return result;
 }
 
-std::vector<u64> GetRemainingNodeCapacities(SharedMemoryContext *context) {
-  std::vector<TargetID> targets = GetNodeTargets(context);
-  std::vector<u64> result(targets.size());
-
-  for (size_t i = 0; i < targets.size(); ++i) {
-    result[i] = LocalGetRemainingCapacity(context, targets[i]);
-  }
-
-  return result;
-}
-
 u64 GetRemainingCapacity(SharedMemoryContext *context, RpcContext *rpc,
                          TargetID id) {
   u32 target_node = id.bits.node_id;
@@ -725,6 +720,22 @@ void UpdateGlobalSystemViewState(SharedMemoryContext *context,
                     adjustments);
     }
   }
+}
+
+TargetID FindTargetIdFromDeviceId(const std::vector<TargetID> &targets,
+                                  DeviceID device_id) {
+  TargetID result = {};
+  // TODO(chogan): @optimization Inefficient O(n)
+  for (size_t target_index = 0;
+       target_index < targets.size();
+       ++target_index) {
+    if (targets[target_index].bits.device_id == device_id) {
+      result = targets[target_index];
+      break;
+    }
+  }
+
+  return result;
 }
 
 static ptrdiff_t GetOffsetFromMdm(MetadataManager *mdm, void *ptr) {

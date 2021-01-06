@@ -307,15 +307,12 @@ bool LocalDestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
 
 std::vector<TargetID> GetNodeTargets(SharedMemoryContext *context) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
-  Heap *id_heap = GetIdHeap(mdm);
-  u64 *targets = (u64 *)HeapOffsetToPtr(id_heap, mdm->node_targets.head_offset);
+  u64 *target_ids = GetIdsPtr(mdm, mdm->node_targets);
   u32 length = mdm->node_targets.length;
   std::vector<TargetID> result(length);
 
   for (u32 i = 0; i < length; ++i) {
-    TargetID id = {};
-    id.as_int = targets[i];
-    result[i] = id;
+    result[i].as_int = target_ids[i];
   }
 
   return result;
@@ -384,6 +381,18 @@ size_t GetStoredMapSize(MetadataManager *mdm, MapType map_type) {
   return result;
 }
 
+std::vector<u64>
+GetRemainingNodeCapacities(SharedMemoryContext *context,
+                           const std::vector<TargetID> &targets) {
+  std::vector<u64> result(targets.size());
+
+  for (size_t i = 0; i < targets.size(); ++i) {
+    result[i] = LocalGetRemainingCapacity(context, targets[i]);
+  }
+
+  return result;
+}
+
 u32 HashStringForStorage(MetadataManager *mdm, RpcContext *rpc,
                          const char *str) {
   int result =
@@ -434,7 +443,7 @@ void InitMetadataStorage(SharedMemoryContext *context, MetadataManager *mdm,
   Heap *id_heap = InitHeapInArena(arena, false, heap_alignment);
   mdm->id_heap_offset = GetOffsetFromMdm(mdm, id_heap);
 
-  // NOTE(chogan): Rank Targets default to one Target per Device
+  // NOTE(chogan): Local Targets default to one Target per Device
   IdList *node_targets = AllocateIdList(mdm, config->num_devices);
   TargetID *target_ids = (TargetID *)GetIdsPtr(mdm, *node_targets);
   for (u32 i = 0; i < node_targets->length; ++i) {

@@ -13,50 +13,11 @@
 #include "hermes_types.h"
 #include "metadata_management.h"
 #include "metadata_management_internal.h"
+#include "metadata_storage.h"
 
 namespace hermes {
 
 using hermes::api::Status;
-
-// TODO(chogan): Unfinished sketch
-Status TopDownPlacement(std::vector<size_t> blob_sizes,
-                        std::vector<u64> &node_state,
-                        std::vector<PlacementSchema> &output) {
-  HERMES_NOT_IMPLEMENTED_YET;
-
-  Status result = 0;
-
-  for (auto &blob_size : blob_sizes) {
-    PlacementSchema schema;
-    size_t size_left = blob_size;
-    DeviceID current_device = 0;
-
-    while (size_left > 0 && current_device < node_state.size()) {
-      size_t bytes_used = 0;
-      if (node_state[current_device] > size_left) {
-        bytes_used = size_left;
-      } else {
-        bytes_used = node_state[current_device];
-        current_device++;
-      }
-
-      if (bytes_used) {
-        size_left -= bytes_used;
-        schema.push_back(std::make_pair(current_device, bytes_used));
-      }
-    }
-
-    if (size_left > 0) {
-      // TODO(chogan): TriggerBufferOrganizer
-      // EvictBuffers(eviction_schema);
-      schema.clear();
-    }
-
-    output.push_back(schema);
-  }
-
-  return result;
-}
 
 std::vector<int> GetValidSplitChoices(size_t blob_size) {
   int split_option = 10;
@@ -76,8 +37,9 @@ std::vector<int> GetValidSplitChoices(size_t blob_size) {
 }
 
 Status RoundRobinPlacement(std::vector<size_t> &blob_sizes,
-                        std::vector<u64> &node_state,
-                        std::vector<PlacementSchema> &output) {
+                           std::vector<u64> &node_state,
+                           std::vector<PlacementSchema> &output,
+                           const std::vector<TargetID> &targets) {
   Status result = 0;
   std::vector<u64> ns_local(node_state.begin(), node_state.end());
 
@@ -114,20 +76,20 @@ Status RoundRobinPlacement(std::vector<size_t> &blob_sizes,
                               blob_each_portion*(split_num-1));
 
       for (size_t k {0}; k < new_blob_size.size(); ++k) {
-        size_t dst {ns_local.size()};
+        TargetID dst = {};
         DataPlacementEngine dpe;
         size_t device_pos {dpe.getCountDevice()};
         for (size_t j {0}; j < ns_local.size(); ++j) {
           size_t adjust_pos {(j+device_pos)%ns_local.size()};
           if (ns_local[adjust_pos] >= new_blob_size[k]) {
             dpe.setCountDevice((j+device_pos+1)%ns_local.size());
-            dst = adjust_pos;
+            dst = FindTargetIdFromDeviceId(targets, adjust_pos);
             schema.push_back(std::make_pair(new_blob_size[k], dst));
-            ns_local[dst] -= new_blob_size[k];
+            ns_local[adjust_pos] -= new_blob_size[k];
             break;
           }
         }
-        if (dst == ns_local.size()) {
+        if (IsNullTargetId(dst)) {
           result = 1;
           // TODO(chogan): @errorhandling Set error type in Status
         }
@@ -135,21 +97,21 @@ Status RoundRobinPlacement(std::vector<size_t> &blob_sizes,
       output.push_back(schema);
     } else {
     // Blob size is less than 64KB or do not split
-      size_t dst {ns_local.size()};
+      TargetID dst = {};
       DataPlacementEngine dpe;
       size_t device_pos {dpe.getCountDevice()};
       for (size_t j {0}; j < ns_local.size(); ++j) {
         size_t adjust_pos {(j+device_pos)%ns_local.size()};
         if (ns_local[adjust_pos] >= blob_sizes[i]) {
           dpe.setCountDevice((j+device_pos+1)%ns_local.size());
-          dst = adjust_pos;
+          dst = FindTargetIdFromDeviceId(targets, adjust_pos);
           schema.push_back(std::make_pair(blob_sizes[i], dst));
-          ns_local[dst] -= blob_sizes[i];
+          ns_local[adjust_pos] -= blob_sizes[i];
           output.push_back(schema);
           break;
         }
       }
-      if (dst == ns_local.size()) {
+      if (IsNullTargetId(dst)) {
         result = 1;
         // TODO(chogan): @errorhandling Set error type in Status
       }
@@ -159,7 +121,7 @@ Status RoundRobinPlacement(std::vector<size_t> &blob_sizes,
   return result;
 }
 
-Status AddRandomSchema(std::multimap<u64, size_t> &ordered_cap,
+Status AddRandomSchema(std::multimap<u64, TargetID> &ordered_cap,
                        size_t blob_size, PlacementSchema &schema) {
   std::random_device rd;
   std::mt19937 gen(rd());
@@ -175,8 +137,8 @@ Status AddRandomSchema(std::multimap<u64, size_t> &ordered_cap,
       dst_dist(1, std::distance(itlow, ordered_cap.end()));
     size_t dst_relative = dst_dist(gen);
     std::advance(itlow, dst_relative-1);
-    ordered_cap.insert(std::pair<u64, size_t>(
-                         (*itlow).first-blob_size, (*itlow).second));
+    ordered_cap.insert(std::pair<u64, TargetID>((*itlow).first-blob_size,
+                                                (*itlow).second));
 
     schema.push_back(std::make_pair(blob_size, (*itlow).second));
     ordered_cap.erase(itlow);
@@ -186,7 +148,7 @@ Status AddRandomSchema(std::multimap<u64, size_t> &ordered_cap,
 }
 
 Status RandomPlacement(std::vector<size_t> &blob_sizes,
-                       std::multimap<u64, size_t> &ordered_cap,
+                       std::multimap<u64, TargetID> &ordered_cap,
                        std::vector<PlacementSchema> &output) {
   Status result = 0;
 
@@ -235,66 +197,77 @@ Status RandomPlacement(std::vector<size_t> &blob_sizes,
   return result;
 }
 
-Status MinimizeIoTimePlacement(std::vector<size_t> &blob_sizes,
-                            std::vector<u64> &node_state,
-                            std::vector<f32> &bandwidths,
-                            std::vector<PlacementSchema> &output) {
+Status MinimizeIoTimePlacement(const std::vector<size_t> &blob_sizes,
+                               const std::vector<u64> &node_state,
+                               const std::vector<f32> &bandwidths,
+                               const std::vector<TargetID> &targets,
+                               std::vector<PlacementSchema> &output) {
   using operations_research::MPSolver;
   using operations_research::MPVariable;
   using operations_research::MPConstraint;
   using operations_research::MPObjective;
 
   Status result = 0;
+  const size_t num_targets = targets.size();
+  const size_t num_blobs = blob_sizes.size();
+
   // TODO(KIMMY): size of constraints should be from context
-  std::vector<MPConstraint*> blob_constrt(blob_sizes.size() +
-                                          node_state.size()*3-1);
-  std::vector<std::vector<MPVariable*>> blob_fraction(blob_sizes.size());
+  const size_t constraints_per_target = 3;
+  const size_t total_constraints =
+    num_blobs + (num_targets * constraints_per_target) - 1;
+  std::vector<MPConstraint*> blob_constrt(total_constraints);
+  std::vector<std::vector<MPVariable*>> blob_fraction(num_blobs);
   MPSolver solver("LinearOpt", MPSolver::GLOP_LINEAR_PROGRAMMING);
   int num_constrts {0};
 
-  // Sum of fraction of each blob is 1
-  for (size_t i {0}; i < blob_sizes.size(); ++i) {
+  // Constraint #1: Sum of fraction of each blob is 1
+  for (size_t i {0}; i < num_blobs; ++i) {
     blob_constrt[num_constrts+i] = solver.MakeRowConstraint(1, 1);
-    blob_fraction[i].resize(node_state.size());
+    blob_fraction[i].resize(num_targets);
 
     // TODO(KIMMY): consider remote nodes?
-    for (size_t j {0}; j < node_state.size(); ++j) {
+    for (size_t j {0}; j < num_targets; ++j) {
       std::string var_name {"blob_dst_" + std::to_string(i) + "_" +
                             std::to_string(j)};
       blob_fraction[i][j] = solver.MakeNumVar(0.0, 1, var_name);
       blob_constrt[num_constrts+i]->SetCoefficient(blob_fraction[i][j], 1);
     }
   }
+  num_constrts += num_blobs;
 
-  // Minimum Remaining Capacity Constraint
-  num_constrts += blob_sizes.size();
-  for (size_t j {0}; j < node_state.size(); ++j) {
+  // Constraint #2: Minimum Remaining Capacity Constraint
+  // TODO(chogan): Get this number from the api::Context
+  const double minimum_remaining_capacity = 0.1;
+  for (size_t j {0}; j < num_targets; ++j) {
+    double remaining_capacity_threshold =
+      static_cast<double>(node_state[j]) * minimum_remaining_capacity;
     blob_constrt[num_constrts+j] = solver.MakeRowConstraint(
-      0, (static_cast<double>(node_state[j])-
-      0.1*static_cast<double>(node_state[j])));
-    for (size_t i {0}; i < blob_sizes.size(); ++i) {
+      0, static_cast<double>(node_state[j]) - remaining_capacity_threshold);
+    for (size_t i {0}; i < num_blobs; ++i) {
       blob_constrt[num_constrts+j]->SetCoefficient(
         blob_fraction[i][j], static_cast<double>(blob_sizes[i]));
     }
   }
+  num_constrts += num_targets;
 
-  // Remaining Capacity Change Threshold 20%
-  num_constrts += node_state.size();
-  for (size_t j {0}; j < node_state.size(); ++j) {
+  // Constraint #3: Remaining Capacity Change Threshold
+  // TODO(chogan): Get this number from the api::Context
+  const double capacity_change_threshold = 0.2;
+  for (size_t j {0}; j < num_targets; ++j) {
     blob_constrt[num_constrts+j] =
-      solver.MakeRowConstraint(0, 0.2*node_state[j]);
-    for (size_t i {0}; i < blob_sizes.size(); ++i) {
+      solver.MakeRowConstraint(0, capacity_change_threshold * node_state[j]);
+    for (size_t i {0}; i < num_blobs; ++i) {
       blob_constrt[num_constrts+j]->SetCoefficient(
         blob_fraction[i][j], static_cast<double>(blob_sizes[i]));
     }
   }
+  num_constrts += num_targets;
 
   // Placement Ratio
-  num_constrts += node_state.size();
-  for (size_t j {0}; j < node_state.size()-1; ++j) {
+  for (size_t j {0}; j < num_targets-1; ++j) {
     blob_constrt[num_constrts+j] =
       solver.MakeRowConstraint(0, solver.infinity());
-    for (size_t i {0}; i < blob_sizes.size(); ++i) {
+    for (size_t i {0}; i < num_blobs; ++i) {
       blob_constrt[num_constrts+j]->SetCoefficient(
         blob_fraction[i][j+1], static_cast<double>(blob_sizes[i]));
       double placement_ratio = static_cast<double>(node_state[j+1])/
@@ -307,8 +280,8 @@ Status MinimizeIoTimePlacement(std::vector<size_t> &blob_sizes,
 
   // Objective to minimize IO time
   MPObjective* const objective = solver.MutableObjective();
-  for (size_t i {0}; i < blob_sizes.size(); ++i) {
-    for (size_t j {0}; j < node_state.size(); ++j) {
+  for (size_t i {0}; i < num_blobs; ++i) {
+    for (size_t j {0}; j < num_targets; ++j) {
       objective->SetCoefficient(blob_fraction[i][j],
         static_cast<double>(blob_sizes[i])/bandwidths[j]);
     }
@@ -318,51 +291,53 @@ Status MinimizeIoTimePlacement(std::vector<size_t> &blob_sizes,
   const MPSolver::ResultStatus result_status = solver.Solve();
   // Check if the problem has an optimal solution.
   if (result_status != MPSolver::OPTIMAL) {
-    std::cerr << "The problem does not have an optimal solution!\n";
+    LOG(WARNING) << "The problem does not have an optimal solution!\n";
   }
 
-  for (size_t i {0}; i < blob_sizes.size(); ++i) {
+  for (size_t i {0}; i < num_blobs; ++i) {
     PlacementSchema schema;
-    size_t device_pos {0};  // to track the device with most data
+    size_t target_pos {0};  // to track the target with most data
     auto largest_bulk{blob_fraction[i][0]->solution_value()*blob_sizes[i]};
-    // NOTE: could be inefficient if there are hundreds of devices
-    for (size_t j {1}; j < node_state.size(); ++j) {
+    // NOTE: could be inefficient if there are hundreds of targets
+    for (size_t j {1}; j < num_targets; ++j) {
       if (blob_fraction[i][j]->solution_value()*blob_sizes[i] > largest_bulk)
-        device_pos = j;
+        target_pos = j;
     }
     size_t blob_partial_sum {0};
-    for (size_t j {0}; j < node_state.size(); ++j) {
-      if (j == device_pos)
+    for (size_t j {0}; j < num_targets; ++j) {
+      if (j == target_pos) {
         continue;
+      }
       double check_frac_size {blob_fraction[i][j]->solution_value()*
                               blob_sizes[i]};  // blob fraction size
       size_t frac_size_cast = static_cast<size_t>(check_frac_size);
       // If size to this destination is not 0, push to result
       if (frac_size_cast != 0) {
-        schema.push_back(std::make_pair(frac_size_cast, j));
+        schema.push_back(std::make_pair(frac_size_cast, targets[j]));
         blob_partial_sum += frac_size_cast;
       }
     }
-    // Push the rest data to device device_pos
+    // Push the rest data to target at target_pos
     schema.push_back(std::make_pair(blob_sizes[i]-blob_partial_sum,
-                                    device_pos));
+                                    targets[target_pos]));
     output.push_back(schema);
   }
 
   return result;
 }
 
-PlacementSchema AggregateBlobSchema(size_t num_target,
-                                    PlacementSchema &schema) {
-  std::vector<u64> place_size(num_target, 0);
+PlacementSchema AggregateBlobSchema(PlacementSchema &schema) {
+  std::unordered_map<u64, u64> place_size;
   PlacementSchema result;
 
-  for (auto [size, device] : schema) {
-    place_size[device] += size;
+  for (auto [size, target] : schema) {
+    place_size.insert({target.as_int, 0});
+    place_size[target.as_int] += size;
   }
-  for (size_t i = 0; i < num_target; ++i) {
-    if (place_size[i])
-      result.push_back(std::make_pair(place_size[i], i));
+  for (auto [target, size] : place_size) {
+    TargetID id = {};
+    id.as_int = target;
+    result.push_back(std::make_pair(size, id));
   }
 
   return result;
@@ -372,24 +347,26 @@ Status CalculatePlacement(SharedMemoryContext *context, RpcContext *rpc,
                           std::vector<size_t> &blob_sizes,
                           std::vector<PlacementSchema> &output,
                           const api::Context &api_context) {
-  (void)api_context;
   (void)rpc;
   std::vector<PlacementSchema> output_tmp;
   Status result = 0;
 
-  // TODO(chogan): Return a PlacementSchema that minimizes a cost function F
-  // given a set of N Devices and a blob, while satisfying a policy P.
+  // TODO(chogan): For now we just look at the node level targets as the default
+  // path. Eventually we will need the ability to escalate to neighborhoods, and
+  // the entire cluster.
 
-  // TODO(chogan): For now we just look at the node level targets. Eventually we
-  // will need the ability to escalate to neighborhoods, and the entire cluster.
-  std::vector<u64> node_state = GetRemainingNodeCapacities(context);
+  // TODO(chogan): @optimization We can avoid the copy here when getting local
+  // targets by just getting a pointer and length. I went with a vector just to
+  // make the interface nicer when we need neighborhood or global targets.
+  std::vector<TargetID> targets = GetNodeTargets(context);
+  std::vector<u64> node_state = GetRemainingNodeCapacities(context, targets);
 
   switch (api_context.policy) {
     // TODO(KIMMY): check device capacity against blob size
     case api::PlacementPolicy::kRandom: {
-      std::multimap<u64, size_t> ordered_cap;
+      std::multimap<u64, TargetID> ordered_cap;
       for (size_t i = 0; i < node_state.size(); ++i) {
-        ordered_cap.insert(std::pair<u64, size_t>(node_state[i], i));
+        ordered_cap.insert(std::pair<u64, TargetID>(node_state[i], targets[i]));
       }
 
       result = RandomPlacement(blob_sizes, ordered_cap, output_tmp);
@@ -397,25 +374,21 @@ Status CalculatePlacement(SharedMemoryContext *context, RpcContext *rpc,
     }
     case api::PlacementPolicy::kRoundRobin: {
       result = RoundRobinPlacement(blob_sizes, node_state,
-                                   output_tmp);
-      break;
-    }
-    case api::PlacementPolicy::kTopDown: {
-      result = TopDownPlacement(blob_sizes, node_state, output_tmp);
+                                   output_tmp, targets);
       break;
     }
     case api::PlacementPolicy::kMinimizeIoTime: {
       std::vector<f32> bandwidths = GetBandwidths(context);
 
-      result = MinimizeIoTimePlacement(blob_sizes, node_state,
-                                       bandwidths, output_tmp);
+      result = MinimizeIoTimePlacement(blob_sizes, node_state, bandwidths,
+                                       targets, output_tmp);
       break;
     }
   }
 
   // Aggregate placement schemas from the same target
   for (auto it = output_tmp.begin(); it != output_tmp.end(); ++it) {
-    PlacementSchema schema = AggregateBlobSchema(node_state.size(), (*it));
+    PlacementSchema schema = AggregateBlobSchema((*it));
     output.push_back(schema);
   }
 
