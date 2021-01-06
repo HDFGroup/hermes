@@ -1626,7 +1626,6 @@ Status StdIoPersistBucket(SharedMemoryContext *context, RpcContext *rpc,
                           const std::string &file_name,
                           const std::string &open_mode) {
   Status result = 0;
-  // TODO(chogan): Is there any reason this should be a parameter?
   FILE *file = fopen(file_name.c_str(), open_mode.c_str());
 
   if (file) {
