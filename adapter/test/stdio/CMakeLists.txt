@@ -10,14 +10,14 @@ endfunction()
 #------------------------------------------------------------------------------
 add_executable(stdio_adapter_mapper_test stdio_adapter_mapper_test.cpp ${ADAPTER_COMMON})
 target_link_libraries(stdio_adapter_mapper_test
-                        hermes_stdio Catch2::Catch2 -lstdc++fs -ldl -lc)
+                        hermes_stdio Catch2::Catch2 -lstdc++fs -ldl -lc MPI::MPI_CXX)
 add_dependencies(stdio_adapter_mapper_test hermes_stdio)
 
 #------------------------------------------------------------------------------
 # Posix Adapter End to End tests
 #------------------------------------------------------------------------------
 add_executable(stdio_adapter_test stdio_adapter_test.cpp ${ADAPTER_COMMON})
-target_link_libraries(stdio_adapter_test Catch2::Catch2 -lstdc++fs -lc -fsanitize=address -lasan)
+target_link_libraries(stdio_adapter_test Catch2::Catch2 -lstdc++fs -lc -fsanitize=address -lasan MPI::MPI_CXX)
 add_dependencies(stdio_adapter_test hermes_stdio)
 gcc(stdio_adapter_test "")
 gcc_hermes(stdio_adapter_test open "[operation=single_open]")

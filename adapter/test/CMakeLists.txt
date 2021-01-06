@@ -1,4 +1,4 @@
-
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DHERMES_PRELOAD -DHERMES_RPC_THALLIUM")
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 set(ADAPTER_COMMON ${CMAKE_CURRENT_SOURCE_DIR}/catch_config.h)
 #------------------------------------------------------------------------------
@@ -6,7 +6,7 @@ set(ADAPTER_COMMON ${CMAKE_CURRENT_SOURCE_DIR}/catch_config.h)
 #------------------------------------------------------------------------------
 include_directories(
         ${CMAKE_SOURCE_DIR}/adapter/include
-)
+        ${CMAKE_SOURCE_DIR}/adapter/src)
 
 find_package(Catch2 REQUIRED)
 
