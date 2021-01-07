@@ -177,12 +177,11 @@ std::vector<BlobID> LocalGetBlobIds(SharedMemoryContext *context,
   u32 num_blobs = info->blobs.length;
   std::vector<BlobID> result(num_blobs);
 
-  // TODO(chogan): Take mdm->id_mutex
   BlobID *blob_ids = (BlobID *)GetIdsPtr(mdm, info->blobs);
   for (u32 i = 0; i < num_blobs; ++i) {
     result[i] = blob_ids[i];
   }
-  // TODO(chogan): ReleaseIdsPtr
+
   return result;
 }
 
