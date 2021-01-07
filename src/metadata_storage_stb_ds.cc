@@ -93,7 +93,7 @@ IdMap *GetMap(MetadataManager *mdm, MapType map_type) {
  * strings, but rather offsets into the shared memory Heap where the strings are
  * stored. This function converts the key at @p index from an offset to a char*.
  * This produces the equivalent of:
- *   char *result = map[index].key; 
+ *   char *result = map[index].key;
  */
 static char *GetKey(MetadataManager *mdm, IdMap *map, u32 index) {
   u32 key_offset = (u64)map[index].key;
