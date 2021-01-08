@@ -116,6 +116,19 @@ u32 HashString(MetadataManager *mdm, RpcContext *rpc, const char *str) {
   return result;
 }
 
+BucketInfo *LocalGetBucketInfoByIndex(MetadataManager *mdm, u32 index) {
+  BucketInfo *info_array = (BucketInfo *)((u8 *)mdm + mdm->bucket_info_offset);
+  BucketInfo *result = info_array + index;
+
+  return result;
+}
+
+BucketInfo *LocalGetBucketInfoById(MetadataManager *mdm, BucketID id) {
+  BucketInfo *result = LocalGetBucketInfoByIndex(mdm, id.bits.index);
+
+  return result;
+}
+
 u64 GetIdByName(SharedMemoryContext *context, RpcContext *rpc, const char *name,
                 MapType map_type) {
   u64 result = 0;
@@ -157,6 +170,20 @@ BlobID GetBlobIdByName(SharedMemoryContext *context, RpcContext *rpc,
   return result;
 }
 
+std::vector<BlobID> GetBlobIds(SharedMemoryContext *context, RpcContext *rpc,
+                               BucketID bucket_id) {
+  std::vector<BlobID> result;
+  u32 target_node = bucket_id.bits.node_id;
+  if (target_node == rpc->node_id) {
+    result = LocalGetBlobIds(context, bucket_id);
+  } else {
+    result = RpcCall<std::vector<BlobID>>(rpc, target_node, "RemoteGetBlobIds",
+                                          bucket_id);
+  }
+
+  return result;
+}
+
 void PutId(MetadataManager *mdm, RpcContext *rpc, const std::string &name,
            u64 id, MapType map_type) {
   u32 target_node = HashString(mdm, rpc, name.c_str());
@@ -191,19 +218,6 @@ void PutVBucketId(MetadataManager *mdm, RpcContext *rpc,
 void PutBlobId(MetadataManager *mdm, RpcContext *rpc, const std::string &name,
                BlobID id) {
   PutId(mdm, rpc, name, id.as_int, kMapType_Blob);
-}
-
-BucketInfo *LocalGetBucketInfoByIndex(MetadataManager *mdm, u32 index) {
-  BucketInfo *info_array = (BucketInfo *)((u8 *)mdm + mdm->bucket_info_offset);
-  BucketInfo *result = info_array + index;
-
-  return result;
-}
-
-BucketInfo *LocalGetBucketInfoById(MetadataManager *mdm, BucketID id) {
-  BucketInfo *result = LocalGetBucketInfoByIndex(mdm, id.bits.index);
-
-  return result;
 }
 
 VBucketInfo *GetVBucketInfoByIndex(MetadataManager *mdm, u32 index) {
@@ -398,13 +412,11 @@ std::vector<BufferID> GetBufferIdList(SharedMemoryContext *context,
   return result;
 }
 
-BufferIdArray GetBufferIdsFromBlobName(Arena *arena,
-                                       SharedMemoryContext *context,
-                                       RpcContext *rpc,
-                                       const char *blob_name,
-                                       u32 **sizes) {
+BufferIdArray GetBufferIdsFromBlobId(Arena *arena,
+                                     SharedMemoryContext *context,
+                                     RpcContext *rpc, BlobID blob_id,
+                                     u32 **sizes) {
   BufferIdArray result = {};
-  BlobID blob_id = GetBlobIdByName(context, rpc, blob_name);
   GetBufferIdList(arena, context, rpc, blob_id, &result);
 
   if (sizes) {
@@ -414,6 +426,18 @@ BufferIdArray GetBufferIdsFromBlobName(Arena *arena,
     }
     *sizes = buffer_sizes;
   }
+
+  return result;
+}
+
+BufferIdArray GetBufferIdsFromBlobName(Arena *arena,
+                                       SharedMemoryContext *context,
+                                       RpcContext *rpc,
+                                       const char *blob_name,
+                                       u32 **sizes) {
+  BlobID blob_id = GetBlobIdByName(context, rpc, blob_name);
+  BufferIdArray result = GetBufferIdsFromBlobId(arena, context, rpc, blob_id,
+                                                sizes);
 
   return result;
 }
