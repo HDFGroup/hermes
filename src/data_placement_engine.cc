@@ -381,6 +381,7 @@ Status CalculatePlacement(SharedMemoryContext *context, RpcContext *rpc,
   // Aggregate placement schemas from the same target
   for (auto it = output_tmp.begin(); it != output_tmp.end(); ++it) {
     PlacementSchema schema = AggregateBlobSchema((*it));
+    CHECK(schema.size() > 0) << "PlacementSchema is empty";
     output.push_back(schema);
   }
 
