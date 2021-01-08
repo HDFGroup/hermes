@@ -386,6 +386,7 @@ Status CalculatePlacement(SharedMemoryContext *context, RpcContext *rpc,
       output.push_back(schema);
     }
   }
+
   return result;
 }
 
