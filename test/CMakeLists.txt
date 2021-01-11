@@ -54,7 +54,7 @@ if(HERMES_HAVE_GOTCHA)
   add_executable(stdio_test stdio_test.c)
   target_link_libraries(stdio_test hermes)
   add_executable(mpi_test mpi_test.c)
-  target_link_libraries(mpi_test hermes)
+  target_link_libraries(mpi_test hermes MPI::MPI_CXX)
 endif()
 
 #------------------------------------------------------------------------------

@@ -6,3 +6,5 @@ GTAGS
 
 .gdb_history
 
+/cmake-build-debug/
+/.idea/
