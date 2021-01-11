@@ -6,6 +6,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <functional>
 
 #include "glog/logging.h"
 
@@ -169,6 +170,23 @@ union BlobID {
 
   u64 as_int;
 };
+
+/**
+ * Trait types
+ */
+typedef u64 TraitID;
+
+enum class TraitType : u8 {
+    META = 0,
+    DATA = 1
+};
+
+struct TraitIdArray {
+    TraitID *ids;
+    u32 length;
+};
+
+
 
 }  // namespace hermes
 #endif  // HERMES_TYPES_H_

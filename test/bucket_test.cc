@@ -1,19 +1,25 @@
+#include "bucket.h"
+
+#include <mpi.h>
+
 #include <cstdio>
 #include <iostream>
 #include <unordered_map>
 
-#include <mpi.h>
+#include "hermes.h"
+#include "test_utils.h"
+#include "vbucket.h"
 #include "zlib.h"
 
-#include "hermes.h"
-#include "bucket.h"
-#include "vbucket.h"
-#include "test_utils.h"
-
 namespace hapi = hermes::api;
-
-struct MyTrait {
+int compress_blob(hermes::api::TraitInput &input, void *trait);
+struct MyTrait : public hapi::Trait {
   int compress_level;
+  MyTrait() : Trait(10001, hermes::TraitIdArray(), hermes::TraitType::META) {
+    onAttachFn =
+        std::bind(&compress_blob, std::placeholders::_1, std::placeholders::_2);
+  }
+
   // optional function pointer if only known at runtime
 };
 
@@ -28,32 +34,30 @@ void add_buffer_to_vector(hermes::api::Blob &vector, const char *buffer,
 
 // The Trait implementer must define callbacks that match the VBucket::TraitFunc
 // type.
-int compress_blob(hermes::api::Blob &blob, void *trait) {
+int compress_blob(hermes::api::TraitInput &input, void *trait) {
   MyTrait *my_trait = (MyTrait *)trait;
 
   // If Hermes is already linked with a compression library, you can call the
   // function directly here. If not, the symbol will have to be dynamically
   // loaded and probably stored as a pointer in the Trait.
-  uLongf source_length = blob.size();
+  uLongf source_length = input.blob.size();
   uLongf destination_length = compressBound(source_length);
   char *destination_data = new char[destination_length];
 
   LOG(INFO) << "Compressing blob\n";
 
-  if (destination_data == nullptr)
-    return Z_MEM_ERROR;
+  if (destination_data == nullptr) return Z_MEM_ERROR;
 
-  int return_value = compress2((Bytef *) destination_data,
-                               &destination_length, (Bytef *) blob.data(),
-                               source_length, my_trait->compress_level);
-  hermes::api::Blob destination {0};
+  int return_value = compress2((Bytef *)destination_data, &destination_length,
+                               (Bytef *)input.blob.data(), source_length,
+                               my_trait->compress_level);
+  hermes::api::Blob destination{0};
   // TODO(KIMMY): where to store compressed data
   add_buffer_to_vector(destination, destination_data, destination_length);
-  delete [] destination_data;
+  delete[] destination_data;
 
   return return_value;
 }
-
 
 void TestBucketPersist(std::shared_ptr<hapi::Hermes> hermes) {
   constexpr int bytes_per_blob = KILOBYTES(3);
@@ -81,8 +85,7 @@ void TestBucketPersist(std::shared_ptr<hapi::Hermes> hermes) {
   Assert(fread(read_buffer, 1, total_bytes, bkt_file) == total_bytes);
 
   for (int offset = 0; offset < num_blobs; ++offset) {
-    for (int i = offset * bytes_per_blob;
-         i < bytes_per_blob * (offset + 1);
+    for (int i = offset * bytes_per_blob; i < bytes_per_blob * (offset + 1);
          ++i) {
       char expected = '\0';
       switch (offset) {
@@ -123,26 +126,26 @@ int main(int argc, char **argv) {
   }
 
   std::shared_ptr<hermes::api::Hermes> hermes_app =
-    hermes::api::InitHermes(config_file);
+      hermes::api::InitHermes(config_file);
 
   if (hermes_app->IsApplicationCore()) {
     hermes::api::Context ctx;
 
     hermes::api::Bucket my_bucket("compression", hermes_app, ctx);
     hermes_app->Display_bucket();
-    hermes::api::Blob p1(1024*1024*400, 255);
+    hermes::api::Blob p1(1024 * 1024 * 400, 255);
     hermes::api::Blob p2(p1);
     my_bucket.Put("Blob1", p1, ctx);
     my_bucket.Put("Blob2", p2, ctx);
 
     if (my_bucket.ContainsBlob("Blob1"))
-      std::cout<< "Found Blob1\n";
+      std::cout << "Found Blob1\n";
     else
-      std::cout<< "Not found Blob1\n";
+      std::cout << "Not found Blob1\n";
     if (my_bucket.ContainsBlob("Blob2"))
-      std::cout<< "Found Blob2\n";
+      std::cout << "Found Blob2\n";
     else
-      std::cout<< "Not found Blob2\n";
+      std::cout << "Not found Blob2\n";
 
     hermes::api::VBucket my_vb("VB1", hermes_app);
     hermes_app->Display_vbucket();
@@ -158,8 +161,9 @@ int main(int argc, char **argv) {
       std::cout << "Not found Blob2 from compression bucket in VBucket VB1\n";
 
     // compression level
-    struct MyTrait trait {6};
-    my_vb.Attach(&trait, compress_blob, ctx);  // compress action to data starts
+    MyTrait trait;
+    trait.compress_level = 6;
+    my_vb.Attach(&trait, ctx);  // compress action to data starts
 
     TestBucketPersist(hermes_app);
 

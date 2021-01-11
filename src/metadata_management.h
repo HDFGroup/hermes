@@ -30,19 +30,6 @@ union VBucketID {
   u64 as_int;
 };
 
-enum class TraitID : u8 {
-  None,
-  Placement,
-  Flush,
-  Replication,
-  Checksum,
-  BlobSort,
-  BlobFilter,
-  Index,
-
-  Count,
-};
-
 struct Stats {
 };
 
@@ -256,6 +243,11 @@ TargetID FindTargetIdFromDeviceId(const std::vector<TargetID> &targets,
  */
 std::vector<BlobID> GetBlobIds(SharedMemoryContext *context, RpcContext *rpc,
                                BucketID bucket_id);
+/**
+ *
+ */
+BucketID GetBucketIdByName(SharedMemoryContext *context, RpcContext *rpc,
+                           const char *name);
 
 }  // namespace hermes
 
