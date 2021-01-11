@@ -30,6 +30,7 @@ typedef u16 DeviceID;
 
 namespace api {
 typedef int Status;
+typedef std::vector<unsigned char> Blob;
 }  // namespace api
 
 // TODO(chogan): These constants impose limits on the number of slabs, devices,

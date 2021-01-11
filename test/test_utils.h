@@ -5,6 +5,7 @@
 #include <stdlib.h>
 
 #include <chrono>
+#include <iostream>
 #include <vector>
 #include <map>
 
@@ -112,6 +113,34 @@ TargetViewState InitDeviceState() {
                                                              targets[3]));
 
   return result;
+}
+
+u64 UpdateDeviceState(PlacementSchema &schema,
+                      TargetViewState &node_state) {
+  u64 result {0};
+  node_state.ordered_cap.clear();
+
+  for (auto [size, target] : schema) {
+    result += size;
+    node_state.bytes_available[target.bits.device_id] -= size;
+    node_state.ordered_cap.insert(
+      std::pair<u64, TargetID>(
+        node_state.bytes_available[target.bits.device_id], target));
+  }
+
+  return result;
+}
+
+void PrintNodeState(TargetViewState &node_state) {
+  for (int i {0}; i < node_state.num_devices; ++i) {
+    std::cout << "capacity of device[" << i << "]: "
+              << node_state.bytes_available[i]
+              << '\n' << std::flush;
+    std::cout << "available ratio of device["<< i << "]: "
+              << static_cast<double>(node_state.bytes_available[i])/
+      node_state.bytes_capacity[i]
+              << '\n' << std::flush;
+  }
 }
 
 }  // namespace testing

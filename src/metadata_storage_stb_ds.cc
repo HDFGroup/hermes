@@ -93,7 +93,7 @@ IdMap *GetMap(MetadataManager *mdm, MapType map_type) {
  * strings, but rather offsets into the shared memory Heap where the strings are
  * stored. This function converts the key at @p index from an offset to a char*.
  * This produces the equivalent of:
- *   char *result = map[index].key; 
+ *   char *result = map[index].key;
  */
 static char *GetKey(MetadataManager *mdm, IdMap *map, u32 index) {
   u32 key_offset = (u64)map[index].key;
@@ -162,9 +162,25 @@ IdList *AllocateIdList(MetadataManager *mdm, u32 length) {
   return result;
 }
 
-u64 *GetIdsPtr(MetadataManager *mdm, IdList id_list) {
+template<typename T>
+u64 *GetIdsPtr(MetadataManager *mdm, T id_list) {
   Heap *id_heap = GetIdHeap(mdm);
   u64 *result = (u64 *)HeapOffsetToPtr(id_heap, id_list.head_offset);
+
+  return result;
+}
+
+std::vector<BlobID> LocalGetBlobIds(SharedMemoryContext *context,
+                                    BucketID bucket_id) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  BucketInfo *info = LocalGetBucketInfoById(mdm, bucket_id);
+  u32 num_blobs = info->blobs.length;
+  std::vector<BlobID> result(num_blobs);
+
+  BlobID *blob_ids = (BlobID *)GetIdsPtr(mdm, info->blobs);
+  for (u32 i = 0; i < num_blobs; ++i) {
+    result[i] = blob_ids[i];
+  }
 
   return result;
 }

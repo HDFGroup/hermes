@@ -606,6 +606,22 @@ size_t GetBlobSize(SharedMemoryContext *context, RpcContext *rpc,
   return result;
 }
 
+size_t GetBlobSizeById(SharedMemoryContext *context, RpcContext *rpc,
+                       Arena *arena, BlobID blob_id) {
+  size_t result = 0;
+  BufferIdArray buffer_ids =
+    GetBufferIdsFromBlobId(arena, context, rpc, blob_id, NULL);
+
+  if (BlobIsInSwap(blob_id)) {
+    SwapBlob swap_blob = IdArrayToSwapBlob(buffer_ids);
+    result = swap_blob.size;
+  } else {
+    result = GetBlobSize(context, rpc, &buffer_ids);
+  }
+
+  return result;
+}
+
 ptrdiff_t GetBufferOffset(SharedMemoryContext *context, BufferID id) {
   BufferHeader *header = GetHeaderByIndex(context, id.bits.header_index);
   ptrdiff_t result = header->data_offset;
@@ -1460,6 +1476,29 @@ size_t ReadBlobFromBuffers(SharedMemoryContext *context, RpcContext *rpc,
   return total_bytes_read;
 }
 
+size_t ReadBlobById(SharedMemoryContext *context, RpcContext *rpc, Arena *arena,
+                    api::Blob &dest, BlobID blob_id) {
+  size_t result = 0;
+  hermes::Blob blob = {};
+  blob.data = dest.data();
+  blob.size = dest.size();
+
+  BufferIdArray buffer_ids = {};
+  if (hermes::BlobIsInSwap(blob_id)) {
+    buffer_ids = GetBufferIdsFromBlobId(arena, context, rpc, blob_id, NULL);
+    SwapBlob swap_blob = IdArrayToSwapBlob(buffer_ids);
+    result = ReadFromSwap(context, blob, swap_blob);
+  } else {
+    u32 *buffer_sizes = 0;
+    buffer_ids = GetBufferIdsFromBlobId(arena, context, rpc, blob_id,
+                                          &buffer_sizes);
+    result = ReadBlobFromBuffers(context, rpc, &blob, &buffer_ids,
+                                 buffer_sizes);
+  }
+
+  return result;
+}
+
 int OpenSwapFile(SharedMemoryContext *context, u32 node_id) {
   int result = 0;
 
@@ -1574,6 +1613,51 @@ Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
 
     // NOTE(chogan): Update all metadata associated with this Put
     AttachBlobToBucket(context, rpc, name, bucket_id, buffer_ids);
+  } else {
+    // TODO(chogan): @errorhandling
+    result = 1;
+  }
+
+  return result;
+}
+
+Status StdIoPersistBucket(SharedMemoryContext *context, RpcContext *rpc,
+                          Arena *arena, BucketID bucket_id,
+                          const std::string &file_name,
+                          const std::string &open_mode) {
+  Status result = 0;
+  FILE *file = fopen(file_name.c_str(), open_mode.c_str());
+
+  if (file) {
+    std::vector<BlobID> blob_ids = GetBlobIds(context, rpc, bucket_id);
+    for (size_t i = 0; i < blob_ids.size(); ++i) {
+      ScopedTemporaryMemory scratch(arena);
+      size_t blob_size = GetBlobSizeById(context, rpc, arena, blob_ids[i]);
+      // TODO(chogan): @optimization We could use the actual Hermes buffers as
+      // the write buffer rather than collecting the whole blob into memory. For
+      // now we pay the cost of data copy in order to only do one I/O call.
+      api::Blob data(blob_size);
+      size_t num_bytes = blob_size > 0 ? sizeof(data[0]) * blob_size : 0;
+      if (ReadBlobById(context, rpc, arena, data, blob_ids[i]) == blob_size) {
+        // TODO(chogan): For now we just write the blobs in the order in which
+        // they were `Put`, but once we have a Trait that represents a file
+        // mapping, we'll need pwrite and offsets.
+        if (fwrite(data.data(), 1, num_bytes, file) != num_bytes) {
+          // TODO(chogan): @errorhandling
+          result = 1;
+          break;
+        }
+      } else {
+        // TODO(chogan): @errorhandling
+        result = 1;
+        break;
+      }
+    }
+
+    if (fclose(file) != 0) {
+      // TODO(chogan): @errorhandling
+      result = 1;
+    }
   } else {
     // TODO(chogan): @errorhandling
     result = 1;
