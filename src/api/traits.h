@@ -33,8 +33,8 @@ struct Trait {
 struct FileBackedTrait : public Trait {
  private:
   bool flush;
-  bool load;
   TraitCallback flush_cb;
+  bool load;
   TraitCallback load_cb;
 
  public:

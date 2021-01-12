@@ -33,10 +33,10 @@ cl::Parser define_options() {
              "Directory used for performing I/O") |
          cl::Opt(args.config,
                  "config")["-c"]["--config"]("Configuration file for hermes") |
-         cl::Opt(args.request_size, "request_size")["-r"]["--request_size"](
+         cl::Opt(args.request_size, "request_size")["-s"]["--request_size"](
              "Request size for each operation") |
          cl::Opt(args.iterations,
-                 "iterations")["-i"]["--iterations"]("Number of iterations");
+                 "iterations")["-z"]["--iterations"]("Number of iterations");
 }
 
 int init() {
