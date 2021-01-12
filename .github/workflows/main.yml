@@ -61,7 +61,6 @@ jobs:
           ci/install_hermes.sh
           mkdir -p "${GITHUB_WORKSPACE}/coverage"
           pushd build/src/CMakeFiles/hermes.dir
-          gcov -r buffer_pool.cc.gcno
           lcov -c -d . -o "${GITHUB_WORKSPACE}/coverage/lcov.info"
 
       - name: Coveralls
