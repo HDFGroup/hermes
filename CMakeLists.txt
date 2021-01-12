@@ -152,7 +152,7 @@ option(HERMES_MDM_STORAGE_STBDS
 option(HERMES_DEBUG_HEAP "Store Heap debug information for visualization." OFF)
 option(HERMES_BUILD_BENCHMARKS "Build the Hermes benchmark suite." OFF)
 option(HERMES_ENABLE_TIMING "Turn on timing of selected functions." OFF)
-option(HERMES_ENABLE_COVERAGE "Enable codecode  coverage." OFF)
+option(HERMES_ENABLE_COVERAGE "Enable code coverage." OFF)
 # Calculate code coverage with debug mode
 if(HERMES_ENABLE_COVERAGE)
   if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
