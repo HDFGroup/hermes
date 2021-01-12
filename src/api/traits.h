@@ -15,7 +15,8 @@ struct BlobInfo {
 typedef BlobInfo TraitInput;
 // typedef void* TraitCallback;
 // typedef void(*TraitCallback)(hermes::api::Blob &blob, void *trait);
-typedef std::function<void(TraitInput &, void *)> TraitCallback;
+struct Trait;
+typedef std::function<void(TraitInput &, Trait *)> TraitCallback;
 struct Trait {
   TraitID id;
   TraitIdArray conflict_traits;
@@ -25,31 +26,31 @@ struct Trait {
   TraitCallback onLinkFn;
   TraitCallback onUnlinkFn;
   Trait(TraitID id, TraitIdArray conflict_traits, TraitType type);
-  void onAttach(TraitInput &blob, void *trait) {}
-  void onDetach(TraitInput &blob, void *trait) {}
-  void onLink(TraitInput &blob, void *trait) {}
-  void onUnlink(TraitInput &blob, void *trait) {}
+  void onAttach(TraitInput &blob, Trait *trait) {}
+  void onDetach(TraitInput &blob, Trait *trait) {}
+  void onLink(TraitInput &blob, Trait *trait) {}
+  void onUnlink(TraitInput &blob, Trait *trait) {}
 };
 
 #define FILE_TRAIT 10
 
 struct FileBackedTrait : public Trait {
  private:
-  std::string filename;
-  std::unordered_map<std::string, u64> offset_map;
   bool flush;
   bool load;
   TraitCallback flush_cb;
   TraitCallback load_cb;
 
  public:
+  std::string filename;
+  std::unordered_map<std::string, u64> offset_map;
   FileBackedTrait(std::string &filename,
                   std::unordered_map<std::string, u64> &offset_map, bool flush,
                   TraitCallback flush_cb, bool load, TraitCallback load_cb);
-  void onAttach(TraitInput &blob, void *trait);
-  void onDetach(TraitInput &blob, void *trait);
-  void onLink(TraitInput &blob, void *trait);
-  void onUnlink(TraitInput &blob, void *trait);
+  void onAttach(TraitInput &blob, Trait *trait);
+  void onDetach(TraitInput &blob, Trait *trait);
+  void onLink(TraitInput &blob, Trait *trait);
+  void onUnlink(TraitInput &blob, Trait *trait);
 };
 }  // namespace api
 }  // namespace hermes

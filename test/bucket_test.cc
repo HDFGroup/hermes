@@ -12,7 +12,7 @@
 #include "zlib.h"
 
 namespace hapi = hermes::api;
-int compress_blob(hermes::api::TraitInput &input, void *trait);
+int compress_blob(hermes::api::TraitInput &input, hermes::api::Trait *trait);
 struct MyTrait : public hapi::Trait {
   int compress_level;
   MyTrait() : Trait(10001, hermes::TraitIdArray(), hermes::TraitType::META) {
@@ -34,7 +34,7 @@ void add_buffer_to_vector(hermes::api::Blob &vector, const char *buffer,
 
 // The Trait implementer must define callbacks that match the VBucket::TraitFunc
 // type.
-int compress_blob(hermes::api::TraitInput &input, void *trait) {
+int compress_blob(hermes::api::TraitInput &input, hermes::api::Trait *trait) {
   MyTrait *my_trait = (MyTrait *)trait;
 
   // If Hermes is already linked with a compression library, you can call the
@@ -147,7 +147,7 @@ int main(int argc, char **argv) {
     else
       std::cout << "Not found Blob2\n";
 
-    hermes::api::VBucket my_vb("VB1", hermes_app);
+    hermes::api::VBucket my_vb("VB1", hermes_app, ctx);
     hermes_app->Display_vbucket();
     my_vb.Link("Blob1", "compression", ctx);
     my_vb.Link("Blob2", "compression", ctx);

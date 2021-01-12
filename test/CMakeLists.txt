@@ -117,10 +117,11 @@ set_tests_properties("TestMDM" PROPERTIES ENVIRONMENT
 
 add_executable(trait trait_test.cc)
 target_link_libraries(trait ${LIBRT} hermes MPI::MPI_CXX
-$<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium> Catch2::Catch2)
+$<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium> Catch2::Catch2 -lstdc++fs)
 target_compile_definitions(trait
 PRIVATE $<$<BOOL:${HERMES_RPC_THALLIUM}>:HERMES_RPC_THALLIUM>)
-add_test(NAME "TestTrait" COMMAND "${CMAKE_BINARY_DIR}/bin/trait" "-s" "--reporter" "compact")
+add_test(NAME "TestTrait" COMMAND "${CMAKE_BINARY_DIR}/bin/trait" "-s" "--reporter" "compact"
+        "-c" "${CMAKE_CURRENT_SOURCE_DIR}/data/bucket_test.conf")
 set_tests_properties("TestTrait" PROPERTIES ENVIRONMENT
 LSAN_OPTIONS=suppressions=${CMAKE_CURRENT_SOURCE_DIR}/data/asan.supp)
 

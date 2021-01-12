@@ -32,23 +32,22 @@ FileBackedTrait::FileBackedTrait(
   this->onUnlinkFn = std::bind(&FileBackedTrait::onUnlink, this,
                                std::placeholders::_1, std::placeholders::_2);
 }
-void FileBackedTrait::onAttach(TraitInput &input, void *trait) {
+void FileBackedTrait::onAttach(TraitInput &input, Trait *trait) {
   if (load) {
     load_cb(input, trait);
     // TODO(hari): @errorhandling Check if load was successful
-    load = false;
   }
 }
-void FileBackedTrait::onDetach(TraitInput &input, void *trait) {
+void FileBackedTrait::onDetach(TraitInput &input, Trait *trait) {
   if (flush) {
     flush_cb(input, trait);
     // TODO(hari): @errorhandling Check if flush was successful
   }
 }
-void FileBackedTrait::onLink(TraitInput &input, void *trait) {
+void FileBackedTrait::onLink(TraitInput &input, Trait *trait) {
   onAttach(input, trait);
 }
-void FileBackedTrait::onUnlink(TraitInput &input, void *trait) {
+void FileBackedTrait::onUnlink(TraitInput &input, Trait *trait) {
   onDetach(input, trait);
 }
 }  // namespace api

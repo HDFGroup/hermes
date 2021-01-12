@@ -128,14 +128,15 @@ Status VBucket::Attach(Trait* trait, Context& ctx) {
       Trait* t = static_cast<Trait*>(trait);
       Blob& blob = GetBlob(ci->second, ci->first);
       TraitInput input;
-      input.bucket_name = ci->second;
-      input.blob_name = ci->first;
+      input.bucket_name = ci->first;
+      input.blob_name = ci->second;
       input.blob = std::move(blob);
       if (t->onAttachFn != nullptr) {
         t->onAttachFn(input, trait);
         // TODO(hari): @errorhandling Check if attach was successful
       }
     }
+    attached_traits_.push_back(trait);
   } else {
     // TODO(hari): @errorhandling throw trait already exists.
   }
@@ -149,11 +150,16 @@ Status VBucket::Detach(Trait* trait, Context& ctx) {
 
   LOG(INFO) << "Detaching trait from VBucket " << name_ << '\n';
 
+  auto trait_iter = attached_traits_.begin();
   Trait* selected_trait = NULL;
-  for (const auto& t : attached_traits_) {
-    if (t->id == trait->id) {
-      selected_trait = t;
+  auto selected_trait_iter = attached_traits_.begin();
+  while (trait_iter != attached_traits_.end()) {
+    selected_trait = reinterpret_cast<Trait*>(&*trait_iter);;
+    if (selected_trait->id == trait->id) {
+      selected_trait_iter = trait_iter;
       break;
+    }else{
+      trait_iter++;
     }
   }
   if (selected_trait) {
@@ -161,14 +167,15 @@ Status VBucket::Detach(Trait* trait, Context& ctx) {
       Trait* t = static_cast<Trait*>(trait);
       Blob& blob = GetBlob(ci->second, ci->first);
       TraitInput input;
-      input.bucket_name = ci->second;
-      input.blob_name = ci->first;
+      input.bucket_name = ci->first;
+      input.blob_name = ci->second;
       input.blob = std::move(blob);
       if (t->onDetachFn != nullptr) {
         t->onDetachFn(input, trait);
         // TODO(hari): @errorhandling Check if detach was successful
       }
     }
+    attached_traits_.erase(selected_trait_iter);
   } else {
     // TODO(hari): @errorhandling throw trait not valid.
   }
@@ -193,26 +200,26 @@ Status VBucket::Delete(Context& ctx) {
 
   LOG(INFO) << "Deleting VBucket " << name_ << '\n';
   for (auto ci = linked_blobs_.begin(); ci != linked_blobs_.end(); ++ci) {
-    Blob& blob = GetBlob(ci->second, ci->first);
-    TraitInput input;
-    input.bucket_name = ci->second;
-    input.blob_name = ci->first;
-    input.blob = std::move(blob);
-    for (const auto& t : attached_traits_) {
-      if (t->onDetachFn != nullptr) {
-        t->onDetachFn(input, t);
-        // TODO(hari): @errorhandling Check if detach was successful
-      }
-      if (t->onUnlinkFn != nullptr) {
-        t->onUnlinkFn(input, t);
-        // TODO(hari): @errorhandling Check if unlinking was successful
+    if (attached_traits_.size() > 0) {
+      Blob& blob = GetBlob(ci->second, ci->first);
+      TraitInput input;
+      input.bucket_name = ci->first;
+      input.blob_name = ci->second;
+      input.blob = std::move(blob);
+      for (const auto& t : attached_traits_) {
+        if (t->onDetachFn != nullptr) {
+          t->onDetachFn(input, t);
+          // TODO(hari): @errorhandling Check if detach was successful
+        }
+        if (t->onUnlinkFn != nullptr) {
+          t->onUnlinkFn(input, t);
+          // TODO(hari): @errorhandling Check if unlinking was successful
+        }
       }
     }
-    linked_blobs_.erase(ci);
   }
-  for (auto ci = attached_traits_.begin(); ci != attached_traits_.end(); ++ci) {
-    attached_traits_.erase(ci);
-  }
+  linked_blobs_.clear();
+  attached_traits_.clear();
   return Status();
 }
 
