@@ -17,12 +17,12 @@ FileBackedTrait::FileBackedTrait(
     std::string &filename, std::unordered_map<std::string, u64> &offset_map,
     bool flush, TraitCallback flush_cb, bool load, TraitCallback load_cb)
     : Trait(FILE_TRAIT, TraitIdArray(), TraitType::META),
-      filename(filename),
-      offset_map(offset_map),
       flush(flush),
       flush_cb(flush_cb),
       load(load),
-      load_cb(load_cb) {
+      load_cb(load_cb),
+      filename(filename),
+      offset_map(offset_map) {
   this->onAttachFn = std::bind(&FileBackedTrait::onAttach, this,
                                std::placeholders::_1, std::placeholders::_2);
   this->onDetachFn = std::bind(&FileBackedTrait::onDetach, this,
