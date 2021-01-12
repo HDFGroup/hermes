@@ -47,10 +47,11 @@ int init() {
 
 int finalize() { return 0; }
 
-int pretest() { info.write_blob = hermes::api::Blob(args.request_size, '1'); }
-int posttest() {}
-
-int flush_blob(hermes::api::TraitInput &input, void *trait) {}
+int pretest() {
+  info.write_blob = hermes::api::Blob(args.request_size, '1');
+  return 0;
+}
+int posttest() { return 0; }
 
 TEST_CASE("CustomTrait",
           "[module=trait][type=meta][trait=FileBacked]"
@@ -108,7 +109,7 @@ TEST_CASE("CustomTrait",
     auto trait = hermes::api::FileBackedTrait(fullpath_str, offset_map, true,
                                               flush_blob, true, load_blob);
     file_vbucket.Attach(&trait, ctx);
-    for (int i = 0; i < args.iterations; ++i) {
+    for (size_t i = 0; i < args.iterations; ++i) {
       file_bucket.Put(std::to_string(i), info.write_blob, ctx);
       file_vbucket.Link(std::to_string(i), args.filename, ctx);
     }
