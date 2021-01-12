@@ -59,7 +59,8 @@ class Hermes {
   void *GetAppCommunicator();
   void Finalize(bool force_rpc_shutdown = false);
 
-  bool BucketContainsBlob(const std::string &bucket_name, const std::string &blob_name);
+  bool BucketContainsBlob(const std::string &bucket_name,
+                          const std::string &blob_name);
 
   // MPI comms.
   // proxy/reference to Hermes core
