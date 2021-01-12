@@ -154,11 +154,12 @@ Status VBucket::Detach(Trait* trait, Context& ctx) {
   Trait* selected_trait = NULL;
   auto selected_trait_iter = attached_traits_.begin();
   while (trait_iter != attached_traits_.end()) {
-    selected_trait = reinterpret_cast<Trait*>(&*trait_iter);;
+    selected_trait = reinterpret_cast<Trait*>(&*trait_iter);
+    ;
     if (selected_trait->id == trait->id) {
       selected_trait_iter = trait_iter;
       break;
-    }else{
+    } else {
       trait_iter++;
     }
   }
