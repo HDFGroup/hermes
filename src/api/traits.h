@@ -26,10 +26,6 @@ struct Trait {
   TraitCallback onLinkFn;
   TraitCallback onUnlinkFn;
   Trait(TraitID id, TraitIdArray conflict_traits, TraitType type);
-  void onAttach(TraitInput &blob, Trait *trait) {}
-  void onDetach(TraitInput &blob, Trait *trait) {}
-  void onLink(TraitInput &blob, Trait *trait) {}
-  void onUnlink(TraitInput &blob, Trait *trait) {}
 };
 
 #define FILE_TRAIT 10
