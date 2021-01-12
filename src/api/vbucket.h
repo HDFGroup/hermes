@@ -26,7 +26,8 @@ class VBucket {
   /** internal Hermes object owned by vbucket */
   std::shared_ptr<Hermes> hermes_;
 
-  VBucket(std::string initial_name, std::shared_ptr<Hermes> const &h, Context ctx)
+  VBucket(std::string initial_name, std::shared_ptr<Hermes> const &h,
+          Context ctx)
       : name_(initial_name), hermes_(h), attached_traits_() {
     LOG(INFO) << "Create VBucket " << initial_name << std::endl;
     if (hermes_->vbucket_list_.find(initial_name) ==
