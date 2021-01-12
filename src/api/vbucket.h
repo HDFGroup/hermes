@@ -28,8 +28,13 @@ class VBucket {
 
   VBucket(std::string initial_name, std::shared_ptr<Hermes> const &h,
           Context ctx)
-      : name_(initial_name), hermes_(h), attached_traits_() {
+      : name_(initial_name),
+        linked_blobs_(),
+        attached_traits_(),
+        local_blob(),
+        hermes_(h) {
     LOG(INFO) << "Create VBucket " << initial_name << std::endl;
+    (void)ctx;
     if (hermes_->vbucket_list_.find(initial_name) ==
         hermes_->vbucket_list_.end())
       hermes_->vbucket_list_.insert(initial_name);
