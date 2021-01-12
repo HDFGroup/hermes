@@ -806,7 +806,7 @@ void ParseTokens(TokenList *tokens, Config *config) {
         break;
       }
       default: {
-        assert(!"Invalid code path\n");
+        HERMES_INVALID_CODE_PATH;
         break;
       }
     }

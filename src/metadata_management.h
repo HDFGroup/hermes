@@ -88,12 +88,23 @@ struct MetadataManager {
   ptrdiff_t swap_filename_prefix_offset;
   ptrdiff_t swap_filename_suffix_offset;
 
+  // TODO(chogan): @optimization Should the TicketMutexes here be reader/writer
+  // locks?
+
+  /** Lock for accessing `BucketInfo` structures located at
+   * `bucket_info_offset` */
   TicketMutex bucket_mutex;
+  /** Lock for accessing `VBucketInfo` structures located at
+   * `vbucket_info_offset` */
   TicketMutex vbucket_mutex;
 
+  /** Lock for accessing the `IdMap` located at `bucket_map_offset` */
   TicketMutex bucket_map_mutex;
+  /** Lock for accessing the `IdMap` located at `vbucket_map_offset` */
   TicketMutex vbucket_map_mutex;
+  /** Lock for accessing the `IdMap` located at `blob_map_offset` */
   TicketMutex blob_map_mutex;
+  /** Lock for accessing `IdList`s and `ChunkedIdList`s */
   TicketMutex id_mutex;
 
   size_t map_seed;

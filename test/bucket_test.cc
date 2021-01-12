@@ -113,7 +113,7 @@ void TestBucketPersist(std::shared_ptr<hapi::Hermes> hermes) {
           break;
         }
         default: {
-          Assert(!"Invalid code path\n.");
+          HERMES_INVALID_CODE_PATH;
         }
       }
       Assert(read_buffer[i] == expected);

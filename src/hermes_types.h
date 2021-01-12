@@ -50,6 +50,9 @@ constexpr char kPlaceInHierarchy[] = "PlaceInHierarchy";
 #define HERMES_NOT_IMPLEMENTED_YET \
   LOG(FATAL) << __func__ << " not implemented yet\n"
 
+#define HERMES_INVALID_CODE_PATH \
+  LOG(FATAL) << "Invalid code path." << std::endl
+
 /** A TargetID uniquely identifies a buffering target within the system. */
 union TargetID {
   struct {
