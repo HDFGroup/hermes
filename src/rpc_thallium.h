@@ -53,9 +53,9 @@ void serialize(A &ar, BufferID &buffer_id) {
  * @param ar An archive provided by Thallium.
  * @param bucket_id The BucketID to serialize.
  */
-template <typename A>
+template<typename A>
 void serialize(A &ar, BucketID &bucket_id) {
-  ar &bucket_id.as_int;
+  ar & bucket_id.as_int;
 }
 
 /**
@@ -79,7 +79,7 @@ void serialize(A &ar, VBucketID &vbucket_id) {
  * @param ar An archive provided by Thallium.
  * @param blob_id The BlobID to serialize.
  */
-template <typename A>
+template<typename A>
 void serialize(A &ar, BlobID &blob_id) {
   ar & blob_id.as_int;
 }

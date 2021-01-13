@@ -1,15 +1,14 @@
-#include "bucket.h"
-
-#include <mpi.h>
-
 #include <cstdio>
 #include <iostream>
 #include <unordered_map>
 
-#include "hermes.h"
-#include "test_utils.h"
-#include "vbucket.h"
+#include <mpi.h>
 #include "zlib.h"
+
+#include "hermes.h"
+#include "bucket.h"
+#include "vbucket.h"
+#include "test_utils.h"
 
 namespace hapi = hermes::api;
 std::shared_ptr<hermes::api::Hermes> hermes_app;
@@ -55,18 +54,20 @@ int compress_blob(hermes::api::TraitInput &input, hermes::api::Trait *trait) {
 
   LOG(INFO) << "Compressing blob\n";
 
-  if (destination_data == nullptr) return Z_MEM_ERROR;
+  if (destination_data == nullptr)
+    return Z_MEM_ERROR;
 
-  int return_value =
-      compress2((Bytef *)destination_data, &destination_length,
-                (Bytef *)blob.data(), source_length, my_trait->compress_level);
-  hermes::api::Blob destination{0};
+  int return_value = compress2((Bytef *) destination_data,
+                               &destination_length, (Bytef *) blob.data(),
+                               source_length, my_trait->compress_level);
+  hermes::api::Blob destination {0};
   // TODO(KIMMY): where to store compressed data
   add_buffer_to_vector(destination, destination_data, destination_length);
-  delete[] destination_data;
+  delete [] destination_data;
 
   return return_value;
 }
+
 
 void TestBucketPersist(std::shared_ptr<hapi::Hermes> hermes) {
   constexpr int bytes_per_blob = KILOBYTES(3);
@@ -94,7 +95,8 @@ void TestBucketPersist(std::shared_ptr<hapi::Hermes> hermes) {
   Assert(fread(read_buffer, 1, total_bytes, bkt_file) == total_bytes);
 
   for (int offset = 0; offset < num_blobs; ++offset) {
-    for (int i = offset * bytes_per_blob; i < bytes_per_blob * (offset + 1);
+    for (int i = offset * bytes_per_blob;
+         i < bytes_per_blob * (offset + 1);
          ++i) {
       char expected = '\0';
       switch (offset) {
@@ -141,19 +143,19 @@ int main(int argc, char **argv) {
 
     hermes::api::Bucket my_bucket("compression", hermes_app, ctx);
     hermes_app->Display_bucket();
-    hermes::api::Blob p1(1024 * 1024 * 400, 255);
+    hermes::api::Blob p1(1024*1024*400, 255);
     hermes::api::Blob p2(p1);
     my_bucket.Put("Blob1", p1, ctx);
     my_bucket.Put("Blob2", p2, ctx);
 
     if (my_bucket.ContainsBlob("Blob1"))
-      std::cout << "Found Blob1\n";
+      std::cout<< "Found Blob1\n";
     else
-      std::cout << "Not found Blob1\n";
+      std::cout<< "Not found Blob1\n";
     if (my_bucket.ContainsBlob("Blob2"))
-      std::cout << "Found Blob2\n";
+      std::cout<< "Found Blob2\n";
     else
-      std::cout << "Not found Blob2\n";
+      std::cout<< "Not found Blob2\n";
 
     hermes::api::VBucket my_vb("VB1", hermes_app, false, ctx);
     hermes_app->Display_vbucket();
