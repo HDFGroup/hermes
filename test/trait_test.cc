@@ -81,8 +81,8 @@ TEST_CASE("CustomTrait",
       file_vbucket.Link(blob_name, args.filename, ctx);
       offset_map.emplace(blob_name, std::stol(blob_name) * info.FILE_PAGE);
     }
-    auto trait = hermes::api::FileMappingTrait(fullpath_str, offset_map, false,
-                                               NULL, false, NULL);
+    auto trait =
+        hermes::api::FileMappingTrait(fullpath_str, offset_map, NULL, NULL);
     file_vbucket.Attach(&trait, ctx);
     file_vbucket.Delete(ctx);
     file_bucket.Destroy(ctx);

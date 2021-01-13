@@ -15,7 +15,7 @@ Trait::Trait(TraitID id, TraitIdArray conflict_traits, TraitType type)
 
 FileMappingTrait::FileMappingTrait(
     std::string &filename, std::unordered_map<std::string, u64> &offset_map,
-    bool flush, TraitCallback flush_cb, bool load, TraitCallback load_cb)
+    TraitCallback flush_cb, TraitCallback load_cb)
     : Trait(FILE_TRAIT, TraitIdArray(), TraitType::FILE_MAPPING),
       flush_cb(flush_cb),
       load_cb(load_cb),

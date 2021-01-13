@@ -37,8 +37,8 @@ struct FileMappingTrait : public Trait {
   std::string filename;
   std::unordered_map<std::string, u64> offset_map;
   FileMappingTrait(std::string &filename,
-                   std::unordered_map<std::string, u64> &offset_map, bool flush,
-                   TraitCallback flush_cb, bool load, TraitCallback load_cb);
+                   std::unordered_map<std::string, u64> &offset_map,
+                   TraitCallback flush_cb, TraitCallback load_cb);
   void onAttach(TraitInput &blob, Trait *trait);
   void onDetach(TraitInput &blob, Trait *trait);
   void onLink(TraitInput &blob, Trait *trait);
