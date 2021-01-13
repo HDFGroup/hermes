@@ -9,3 +9,4 @@ GTAGS
 /cmake-build-debug/
 /.idea/
 /.clang-format
+__pycache__/
