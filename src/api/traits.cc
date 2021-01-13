@@ -13,41 +13,39 @@ Trait::Trait(TraitID id, TraitIdArray conflict_traits, TraitType type)
       onLinkFn(nullptr),
       onUnlinkFn(nullptr) {}
 
-FileBackedTrait::FileBackedTrait(
+FileMappingTrait::FileMappingTrait(
     std::string &filename, std::unordered_map<std::string, u64> &offset_map,
     bool flush, TraitCallback flush_cb, bool load, TraitCallback load_cb)
-    : Trait(FILE_TRAIT, TraitIdArray(), TraitType::META),
-      flush(flush),
+    : Trait(FILE_TRAIT, TraitIdArray(), TraitType::FILE_MAPPING),
       flush_cb(flush_cb),
-      load(load),
       load_cb(load_cb),
       filename(filename),
       offset_map(offset_map) {
-  this->onAttachFn = std::bind(&FileBackedTrait::onAttach, this,
+  this->onAttachFn = std::bind(&FileMappingTrait::onAttach, this,
                                std::placeholders::_1, std::placeholders::_2);
-  this->onDetachFn = std::bind(&FileBackedTrait::onDetach, this,
+  this->onDetachFn = std::bind(&FileMappingTrait::onDetach, this,
                                std::placeholders::_1, std::placeholders::_2);
-  this->onLinkFn = std::bind(&FileBackedTrait::onLink, this,
+  this->onLinkFn = std::bind(&FileMappingTrait::onLink, this,
                              std::placeholders::_1, std::placeholders::_2);
-  this->onUnlinkFn = std::bind(&FileBackedTrait::onUnlink, this,
+  this->onUnlinkFn = std::bind(&FileMappingTrait::onUnlink, this,
                                std::placeholders::_1, std::placeholders::_2);
 }
-void FileBackedTrait::onAttach(TraitInput &input, Trait *trait) {
-  if (load) {
+void FileMappingTrait::onAttach(TraitInput &input, Trait *trait) {
+  if (load_cb) {
     load_cb(input, trait);
     // TODO(hari): @errorhandling Check if load was successful
   }
 }
-void FileBackedTrait::onDetach(TraitInput &input, Trait *trait) {
-  if (flush) {
+void FileMappingTrait::onDetach(TraitInput &input, Trait *trait) {
+  if (flush_cb) {
     flush_cb(input, trait);
     // TODO(hari): @errorhandling Check if flush was successful
   }
 }
-void FileBackedTrait::onLink(TraitInput &input, Trait *trait) {
+void FileMappingTrait::onLink(TraitInput &input, Trait *trait) {
   onAttach(input, trait);
 }
-void FileBackedTrait::onUnlink(TraitInput &input, Trait *trait) {
+void FileMappingTrait::onUnlink(TraitInput &input, Trait *trait) {
   onDetach(input, trait);
 }
 }  // namespace api

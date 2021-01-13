@@ -24,11 +24,9 @@ Status VBucket::Link(std::string blob_name, std::string bucket_name,
   if (blob_exists) {
     // inserting value by insert function
     linked_blobs_.push_back(make_pair(bucket_name, blob_name));
-    Blob& blob = GetBlob(blob_name, bucket_name);
     TraitInput input;
     input.bucket_name = bucket_name;
     input.blob_name = blob_name;
-    input.blob = std::move(blob);
     for (const auto& t : attached_traits_) {
       if (t->onLinkFn != nullptr) {
         t->onLinkFn(input, t);
@@ -51,11 +49,9 @@ Status VBucket::Unlink(std::string blob_name, std::string bucket_name,
   bool found = false;
   for (auto ci = linked_blobs_.begin(); ci != linked_blobs_.end(); ++ci) {
     if (ci->first == bucket_name && ci->second == blob_name) {
-      Blob& blob = GetBlob(blob_name, bucket_name);
       TraitInput input;
       input.bucket_name = bucket_name;
       input.blob_name = blob_name;
-      input.blob = std::move(blob);
       for (const auto& t : attached_traits_) {
         if (t->onUnlinkFn != nullptr) {
           t->onUnlinkFn(input, t);
@@ -126,11 +122,9 @@ Status VBucket::Attach(Trait* trait, Context& ctx) {
   if (!selected_trait) {
     for (auto ci = linked_blobs_.begin(); ci != linked_blobs_.end(); ++ci) {
       Trait* t = static_cast<Trait*>(trait);
-      Blob& blob = GetBlob(ci->second, ci->first);
       TraitInput input;
       input.bucket_name = ci->first;
       input.blob_name = ci->second;
-      input.blob = std::move(blob);
       if (t->onAttachFn != nullptr) {
         t->onAttachFn(input, trait);
         // TODO(hari): @errorhandling Check if attach was successful
@@ -165,11 +159,9 @@ Status VBucket::Detach(Trait* trait, Context& ctx) {
   if (selected_trait) {
     for (auto ci = linked_blobs_.begin(); ci != linked_blobs_.end(); ++ci) {
       Trait* t = static_cast<Trait*>(trait);
-      Blob& blob = GetBlob(ci->second, ci->first);
       TraitInput input;
       input.bucket_name = ci->first;
       input.blob_name = ci->second;
-      input.blob = std::move(blob);
       if (t->onDetachFn != nullptr) {
         t->onDetachFn(input, trait);
         // TODO(hari): @errorhandling Check if detach was successful
@@ -189,6 +181,7 @@ std::vector<TraitID> VBucket::GetTraits(Predicate pred, Context& ctx) {
   LOG(INFO) << "Getting the subset of attached traits satisfying pred in "
             << "VBucket " << name_ << '\n';
   auto attached_traits = std::vector<TraitID>();
+  // TODO(hari): add filtering based on predicate.
   for (const auto& t : this->attached_traits_) {
     attached_traits.push_back(t->id);
   }
@@ -201,12 +194,43 @@ Status VBucket::Delete(Context& ctx) {
   LOG(INFO) << "Deleting VBucket " << name_ << '\n';
   for (auto ci = linked_blobs_.begin(); ci != linked_blobs_.end(); ++ci) {
     if (attached_traits_.size() > 0) {
-      Blob& blob = GetBlob(ci->second, ci->first);
       TraitInput input;
       input.bucket_name = ci->first;
       input.blob_name = ci->second;
-      input.blob = std::move(blob);
       for (const auto& t : attached_traits_) {
+        if (this->persist) {
+          if (t->type == TraitType::FILE_MAPPING) {
+            FileMappingTrait* fileBackedTrait = (FileMappingTrait*)t;
+            // if callback defined by user
+            if (fileBackedTrait->flush_cb) {
+              fileBackedTrait->flush_cb(input, fileBackedTrait);
+            } else {
+              if (!fileBackedTrait->offset_map.empty()) {
+                auto iter = fileBackedTrait->offset_map.find(ci->second);
+                if (iter != fileBackedTrait->offset_map.end()) {
+                  auto blob_id = GetBlobIdByName(
+                      &hermes_->context_, &hermes_->rpc_, ci->second.c_str());
+
+                  std::string open_mode;
+                  if (access(fileBackedTrait->filename.c_str(), F_OK) == 0) {
+                    open_mode = "r+";
+                  } else {
+                    open_mode = "w+";
+                  }
+                  StdIoPersistBlob(&hermes_->context_, &hermes_->rpc_,
+                                   &hermes_->trans_arena_, blob_id,
+                                   fileBackedTrait->filename, iter->second,
+                                   open_mode);
+                } else {
+                  // TODO(hari): @errorhandling map doesnt have the blob linked.
+                }
+
+              } else {
+                // TODO(hari): @errorhandling offset_map should not be empty
+              }
+            }
+          }
+        }
         if (t->onDetachFn != nullptr) {
           t->onDetachFn(input, t);
           // TODO(hari): @errorhandling Check if detach was successful

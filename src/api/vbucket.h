@@ -18,28 +18,31 @@ namespace api {
 class VBucket {
  private:
   std::string name_;
+  VBucketID id_;
   std::list<std::pair<std::string, std::string>> linked_blobs_;
   std::list<Trait *> attached_traits_;
   Blob local_blob;
+  bool persist;
+  std::shared_ptr<Hermes> hermes_;
 
  public:
   /** internal Hermes object owned by vbucket */
-  std::shared_ptr<Hermes> hermes_;
-
   VBucket(std::string initial_name, std::shared_ptr<Hermes> const &h,
-          Context ctx)
+          bool persist, Context ctx)
       : name_(initial_name),
+        id_({0, 0}),
         linked_blobs_(),
         attached_traits_(),
         local_blob(),
+        persist(persist),
         hermes_(h) {
     LOG(INFO) << "Create VBucket " << initial_name << std::endl;
     (void)ctx;
-    if (hermes_->vbucket_list_.find(initial_name) ==
-        hermes_->vbucket_list_.end())
-      hermes_->vbucket_list_.insert(initial_name);
-    else
-      std::cerr << "VBucket " << initial_name << " exists\n";
+    if (IsBucketNameTooLong(name_)) {
+      id_.as_int = 0;
+    } else {
+      id_ = GetOrCreateVBucketId(&hermes_->context_, &hermes_->rpc_, name_);
+    }
   }
 
   ~VBucket() {

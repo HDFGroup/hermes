@@ -21,15 +21,6 @@ enum MapType {
   kMapType_Count
 };
 
-union VBucketID {
-  struct {
-    u32 index;
-    u32 node_id;
-  } bits;
-
-  u64 as_int;
-};
-
 struct Stats {
 };
 
@@ -190,6 +181,12 @@ BucketID GetOrCreateBucketId(SharedMemoryContext *context, RpcContext *rpc,
 /**
  *
  */
+VBucketID GetOrCreateVBucketId(SharedMemoryContext *context, RpcContext *rpc,
+                               const std::string &name);
+
+/**
+ *
+ */
 void AttachBlobToBucket(SharedMemoryContext *context, RpcContext *rpc,
                         const char *blob_name, BucketID bucket_id,
                         const std::vector<BufferID> &buffer_ids,
@@ -235,6 +232,11 @@ bool IsBucketNameTooLong(const std::string &name);
 /**
  *
  */
+bool IsVBucketNameTooLong(const std::string &name);
+
+/**
+ *
+ */
 TargetID FindTargetIdFromDeviceId(const std::vector<TargetID> &targets,
                                   DeviceID device_id);
 
@@ -248,7 +250,17 @@ std::vector<BlobID> GetBlobIds(SharedMemoryContext *context, RpcContext *rpc,
  */
 BucketID GetBucketIdByName(SharedMemoryContext *context, RpcContext *rpc,
                            const char *name);
+/**
+ *
+ */
+void IncrementRefcount(SharedMemoryContext *context, RpcContext *rpc,
+                       VBucketID id);
 
+/**
+ *
+ */
+void DecrementRefcount(SharedMemoryContext *context, RpcContext *rpc,
+                       VBucketID id);
 }  // namespace hermes
 
 #endif  // HERMES_METADATA_MANAGEMENT_H_

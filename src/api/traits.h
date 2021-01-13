@@ -10,13 +10,13 @@ namespace api {
 struct BlobInfo {
   std::string bucket_name;
   std::string blob_name;
-  Blob blob;
 };
 typedef BlobInfo TraitInput;
 // typedef void* TraitCallback;
-// typedef void(*TraitCallback)(hermes::api::Blob &blob, void *trait);
+
 struct Trait;
 typedef std::function<void(TraitInput &, Trait *)> TraitCallback;
+// typedef void(*TraitCallback)(TraitInput &, Trait *);
 struct Trait {
   TraitID id;
   TraitIdArray conflict_traits;
@@ -30,19 +30,15 @@ struct Trait {
 
 #define FILE_TRAIT 10
 
-struct FileBackedTrait : public Trait {
- private:
-  bool flush;
-  TraitCallback flush_cb;
-  bool load;
-  TraitCallback load_cb;
-
+struct FileMappingTrait : public Trait {
  public:
+  TraitCallback flush_cb;
+  TraitCallback load_cb;
   std::string filename;
   std::unordered_map<std::string, u64> offset_map;
-  FileBackedTrait(std::string &filename,
-                  std::unordered_map<std::string, u64> &offset_map, bool flush,
-                  TraitCallback flush_cb, bool load, TraitCallback load_cb);
+  FileMappingTrait(std::string &filename,
+                   std::unordered_map<std::string, u64> &offset_map, bool flush,
+                   TraitCallback flush_cb, bool load, TraitCallback load_cb);
   void onAttach(TraitInput &blob, Trait *trait);
   void onDetach(TraitInput &blob, Trait *trait);
   void onLink(TraitInput &blob, Trait *trait);

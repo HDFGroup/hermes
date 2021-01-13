@@ -4,11 +4,11 @@
 
 #include <string>
 
-#include "memory_management.h"
 #include "buffer_pool.h"
 #include "buffer_pool_internal.h"
-#include "rpc.h"
+#include "memory_management.h"
 #include "metadata_storage.h"
+#include "rpc.h"
 
 namespace hermes {
 
@@ -32,6 +32,11 @@ bool IsBlobNameTooLong(const std::string &name) {
 bool IsBucketNameTooLong(const std::string &name) {
   bool result = IsNameTooLong(name, kMaxBucketNameSize);
 
+  return result;
+}
+
+bool IsVBucketNameTooLong(const std::string &name) {
+  bool result = IsNameTooLong(name, kMaxVBucketNameSize);
   return result;
 }
 
@@ -99,7 +104,7 @@ void LocalDelete(MetadataManager *mdm, const char *key, MapType map_type) {
 
 MetadataManager *GetMetadataManagerFromContext(SharedMemoryContext *context) {
   MetadataManager *result =
-    (MetadataManager *)(context->shm_base + context->metadata_manager_offset);
+      (MetadataManager *)(context->shm_base + context->metadata_manager_offset);
 
   return result;
 }
@@ -222,14 +227,14 @@ void PutBlobId(MetadataManager *mdm, RpcContext *rpc, const std::string &name,
 
 VBucketInfo *GetVBucketInfoByIndex(MetadataManager *mdm, u32 index) {
   VBucketInfo *info_array =
-    (VBucketInfo *)((u8 *)mdm + mdm->vbucket_info_offset);
+      (VBucketInfo *)((u8 *)mdm + mdm->vbucket_info_offset);
   VBucketInfo *result = info_array + index;
 
   return result;
 }
 
 BucketID LocalGetNextFreeBucketId(SharedMemoryContext *context, RpcContext *rpc,
-                             const std::string &name) {
+                                  const std::string &name) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   BucketID result = {};
 
@@ -270,8 +275,8 @@ BucketID GetNextFreeBucketId(SharedMemoryContext *context, RpcContext *rpc,
   if (target_node == rpc->node_id) {
     result = LocalGetNextFreeBucketId(context, rpc, name);
   } else {
-    result = RpcCall<BucketID>(rpc, target_node, "RemoteGetNextFreeBucketId",
-                               name);
+    result =
+        RpcCall<BucketID>(rpc, target_node, "RemoteGetNextFreeBucketId", name);
   }
 
   return result;
@@ -301,8 +306,6 @@ VBucketID GetNextFreeVBucketId(SharedMemoryContext *context, RpcContext *rpc,
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   VBucketID result = {};
 
-  // TODO(chogan): Could replace this with lock-free version if/when it matters
-  BeginTicketMutex(&mdm->vbucket_mutex);
   if (mdm->num_vbuckets < mdm->max_vbuckets) {
     result = mdm->first_free_vbucket;
     if (!IsNullVBucketId(result)) {
@@ -321,12 +324,29 @@ VBucketID GetNextFreeVBucketId(SharedMemoryContext *context, RpcContext *rpc,
               << "Increase max_vbuckets_per_node in the Hermes configuration."
               << std::endl;
   }
-  EndTicketMutex(&mdm->vbucket_mutex);
 
   if (!IsNullVBucketId(result)) {
     PutVBucketId(mdm, rpc, name, result);
   }
 
+  return result;
+}
+
+VBucketID GetOrCreateVBucketId(SharedMemoryContext *context, RpcContext *rpc,
+                               const std::string &name) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+
+  BeginTicketMutex(&mdm->vbucket_mutex);
+  VBucketID result = GetVBucketIdByName(context, rpc, name.c_str());
+
+  if (result.as_int != 0) {
+    LOG(INFO) << "Opening Bucket '" << name << "'" << std::endl;
+    IncrementRefcount(context, rpc, result);
+  } else {
+    LOG(INFO) << "Creating Bucket '" << name << "'" << std::endl;
+    result = GetNextFreeVBucketId(context, rpc, name);
+  }
+  EndTicketMutex(&mdm->vbucket_mutex);
   return result;
 }
 
@@ -345,6 +365,18 @@ void AddBlobIdToBucket(MetadataManager *mdm, RpcContext *rpc, BlobID blob_id,
     LocalAddBlobIdToBucket(mdm, bucket_id, blob_id);
   } else {
     RpcCall<void>(rpc, target_node, "RemoteAddBlobIdToBucket", bucket_id,
+                  blob_id);
+  }
+}
+
+void AddBlobIdToVBucket(MetadataManager *mdm, RpcContext *rpc, BlobID blob_id,
+                        VBucketID vbucket_id) {
+  u32 target_node = vbucket_id.bits.node_id;
+
+  if (target_node == rpc->node_id) {
+    LocalAddBlobIdToVBucket(mdm, vbucket_id, blob_id);
+  } else {
+    RpcCall<void>(rpc, target_node, "RemoteAddBlobIdToVBucket", vbucket_id,
                   blob_id);
   }
 }
@@ -386,9 +418,8 @@ void GetBufferIdList(Arena *arena, SharedMemoryContext *context,
   if (target_node == rpc->node_id) {
     LocalGetBufferIdList(arena, mdm, blob_id, buffer_ids);
   } else {
-    std::vector<BufferID> result =
-      RpcCall<std::vector<BufferID>>(rpc, target_node, "RemoteGetBufferIdList",
-                                     blob_id);
+    std::vector<BufferID> result = RpcCall<std::vector<BufferID>>(
+        rpc, target_node, "RemoteGetBufferIdList", blob_id);
     buffer_ids->ids = PushArray<BufferID>(arena, result.size());
     buffer_ids->length = (u32)result.size();
     CopyIds((u64 *)buffer_ids->ids, (u64 *)result.data(), result.size());
@@ -412,8 +443,7 @@ std::vector<BufferID> GetBufferIdList(SharedMemoryContext *context,
   return result;
 }
 
-BufferIdArray GetBufferIdsFromBlobId(Arena *arena,
-                                     SharedMemoryContext *context,
+BufferIdArray GetBufferIdsFromBlobId(Arena *arena, SharedMemoryContext *context,
                                      RpcContext *rpc, BlobID blob_id,
                                      u32 **sizes) {
   BufferIdArray result = {};
@@ -432,12 +462,11 @@ BufferIdArray GetBufferIdsFromBlobId(Arena *arena,
 
 BufferIdArray GetBufferIdsFromBlobName(Arena *arena,
                                        SharedMemoryContext *context,
-                                       RpcContext *rpc,
-                                       const char *blob_name,
+                                       RpcContext *rpc, const char *blob_name,
                                        u32 **sizes) {
   BlobID blob_id = GetBlobIdByName(context, rpc, blob_name);
-  BufferIdArray result = GetBufferIdsFromBlobId(arena, context, rpc, blob_id,
-                                                sizes);
+  BufferIdArray result =
+      GetBufferIdsFromBlobId(arena, context, rpc, blob_id, sizes);
 
   return result;
 }
@@ -452,9 +481,8 @@ void AttachBlobToBucket(SharedMemoryContext *context, RpcContext *rpc,
   BlobID blob_id = {};
   // NOTE(chogan): A negative node_id indicates a swap blob
   blob_id.bits.node_id = is_swap_blob ? -target_node : target_node;
-  blob_id.bits.buffer_ids_offset = AllocateBufferIdList(context, rpc,
-                                                        target_node,
-                                                        buffer_ids);
+  blob_id.bits.buffer_ids_offset =
+      AllocateBufferIdList(context, rpc, target_node, buffer_ids);
   PutBlobId(mdm, rpc, blob_name, blob_id);
   AddBlobIdToBucket(mdm, rpc, blob_id, bucket_id);
 }
@@ -660,7 +688,7 @@ u64 GetRemainingCapacity(SharedMemoryContext *context, RpcContext *rpc,
 
 SystemViewState *GetLocalSystemViewState(MetadataManager *mdm) {
   SystemViewState *result =
-    (SystemViewState *)((u8 *)mdm + mdm->system_view_state_offset);
+      (SystemViewState *)((u8 *)mdm + mdm->system_view_state_offset);
 
   return result;
 }
@@ -684,7 +712,7 @@ std::vector<u64> LocalGetGlobalDeviceCapacities(SharedMemoryContext *context) {
 }
 
 std::vector<u64> GetGlobalDeviceCapacities(SharedMemoryContext *context,
-                                         RpcContext *rpc) {
+                                           RpcContext *rpc) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   u32 target_node = mdm->global_system_view_state_node_id;
 
@@ -703,7 +731,7 @@ std::vector<u64> GetGlobalDeviceCapacities(SharedMemoryContext *context,
 SystemViewState *GetGlobalSystemViewState(SharedMemoryContext *context) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   SystemViewState *result =
-    (SystemViewState *)((u8 *)mdm + mdm->global_system_view_state_offset);
+      (SystemViewState *)((u8 *)mdm + mdm->global_system_view_state_offset);
   assert((u8 *)result != (u8 *)mdm);
 
   return result;
@@ -750,9 +778,7 @@ TargetID FindTargetIdFromDeviceId(const std::vector<TargetID> &targets,
                                   DeviceID device_id) {
   TargetID result = {};
   // TODO(chogan): @optimization Inefficient O(n)
-  for (size_t target_index = 0;
-       target_index < targets.size();
-       ++target_index) {
+  for (size_t target_index = 0; target_index < targets.size(); ++target_index) {
     if (targets[target_index].bits.device_id == device_id) {
       result = targets[target_index];
       break;
@@ -844,7 +870,7 @@ void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
   SeedHashForStorage(mdm->map_seed);
 
   mdm->system_view_state_update_interval_ms =
-    config->system_view_state_update_interval_ms;
+      config->system_view_state_update_interval_ms;
 
   // Initialize SystemViewState
 
@@ -862,8 +888,8 @@ void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
 
   // Initialize BucketInfo array
 
-  BucketInfo *buckets = PushArray<BucketInfo>(arena,
-                                              config->max_buckets_per_node);
+  BucketInfo *buckets =
+      PushArray<BucketInfo>(arena, config->max_buckets_per_node);
   mdm->bucket_info_offset = GetOffsetFromMdm(mdm, buckets);
   mdm->first_free_bucket.bits.node_id = (u32)node_id;
   mdm->first_free_bucket.bits.index = 0;
@@ -884,8 +910,8 @@ void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
 
   // Initialize VBucketInfo array
 
-  VBucketInfo *vbuckets = PushArray<VBucketInfo>(arena,
-                                                 config->max_vbuckets_per_node);
+  VBucketInfo *vbuckets =
+      PushArray<VBucketInfo>(arena, config->max_vbuckets_per_node);
   mdm->vbucket_info_offset = GetOffsetFromMdm(mdm, vbuckets);
   mdm->first_free_vbucket.bits.node_id = (u32)node_id;
   mdm->first_free_vbucket.bits.index = 0;
@@ -902,6 +928,51 @@ void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
       info->next_free.bits.node_id = (u32)node_id;
       info->next_free.bits.index = i + 1;
     }
+  }
+}
+
+VBucketInfo *LocalGetVBucketInfoByIndex(MetadataManager *mdm, u32 index) {
+  VBucketInfo *info_array =
+      (VBucketInfo *)((u8 *)mdm + mdm->bucket_info_offset);
+  VBucketInfo *result = info_array + index;
+  return result;
+}
+
+VBucketInfo *LocalGetVBucketInfoById(MetadataManager *mdm, VBucketID id) {
+  VBucketInfo *result = LocalGetVBucketInfoByIndex(mdm, id.bits.index);
+  return result;
+}
+
+void LocalIncrementRefcount(SharedMemoryContext *context, VBucketID id) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  VBucketInfo *info = LocalGetVBucketInfoById(mdm, id);
+  info->ref_count.fetch_add(1);
+}
+
+void IncrementRefcount(SharedMemoryContext *context, RpcContext *rpc,
+                       VBucketID id) {
+  u32 target_node = id.bits.node_id;
+  if (target_node == rpc->node_id) {
+    LocalIncrementRefcount(context, id);
+  } else {
+    RpcCall<void>(rpc, target_node, "RemoteIncrementRefcountVBucket", id);
+  }
+}
+
+void LocalDecrementRefcount(SharedMemoryContext *context, VBucketID id) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  VBucketInfo *info = LocalGetVBucketInfoById(mdm, id);
+  info->ref_count.fetch_sub(1);
+  assert(info->ref_count.load() >= 0);
+}
+
+void DecrementRefcount(SharedMemoryContext *context, RpcContext *rpc,
+                       VBucketID id) {
+  u32 target_node = id.bits.node_id;
+  if (target_node == rpc->node_id) {
+    LocalDecrementRefcount(context, id);
+  } else {
+    RpcCall<void>(rpc, target_node, "RemoteDecrementRefcountVBucket", id);
   }
 }
 

@@ -1666,4 +1666,43 @@ Status StdIoPersistBucket(SharedMemoryContext *context, RpcContext *rpc,
   return result;
 }
 
+api::Status StdIoPersistBlob(SharedMemoryContext *context, RpcContext *rpc,
+                             Arena *arena, BlobID blob_id,
+                             const std::string &file_name, const i32 &offset,
+                             const std::string &open_mode) {
+  Status result = 0;
+  FILE *file = fopen(file_name.c_str(), open_mode.c_str());
+
+  if (file) {
+    ScopedTemporaryMemory scratch(arena);
+    size_t blob_size = GetBlobSizeById(context, rpc, arena, blob_id);
+    // TODO(chogan): @optimization We could use the actual Hermes buffers as
+    // the write buffer rather than collecting the whole blob into memory. For
+    // now we pay the cost of data copy in order to only do one I/O call.
+    api::Blob data(blob_size);
+    size_t num_bytes = blob_size > 0 ? sizeof(data[0]) * blob_size : 0;
+    if (ReadBlobById(context, rpc, arena, data, blob_id) == blob_size) {
+      // TODO(chogan): For now we just write the blobs in the order in which
+      // they were `Put`, but once we have a Trait that represents a file
+      // mapping, we'll need pwrite and offsets.
+      if (offset == -1 || fseek(file, offset, SEEK_SET) == 0) {
+        if (fwrite(data.data(), 1, num_bytes, file) != num_bytes) {
+          // TODO(chogan): @errorhandling
+          result = 1;
+        }
+      } else {
+        // TODO(chogan): @errorhandling
+      }
+    }
+    if (fclose(file) != 0) {
+      // TODO(chogan): @errorhandling
+      result = 1;
+    }
+  } else {
+    // TODO(chogan): @errorhandling
+    result = 1;
+  }
+  return result;
+}
+
 }  // namespace hermes

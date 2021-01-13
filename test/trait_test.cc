@@ -66,54 +66,24 @@ TEST_CASE("CustomTrait",
   fullpath /= args.filename;
   std::string fullpath_str = fullpath.string();
   SECTION("Basic") {
-    auto flush_blob = [](hermes::api::TraitInput &input,
-                         hermes::api::Trait *trait) {
-      hermes::api::FileBackedTrait *t =
-          static_cast<hermes::api::FileBackedTrait *>(trait);
-      FILE *fh = fopen(t->filename.c_str(), "r+");
-      REQUIRE(fh != nullptr);
-      size_t offset = std::stoi(input.blob_name) * info.FILE_PAGE;
-      if (offset > 0) {
-        int status = fseek(fh, offset, SEEK_SET);
-        REQUIRE(status == 0);
-      }
-      auto items =
-          fwrite(input.blob.data(), input.blob.size(), sizeof(char), fh);
-      REQUIRE(items == sizeof(char));
-      int status = fclose(fh);
-      REQUIRE(status == 0);
-      return 0;
-    };
-    auto load_blob = [](hermes::api::TraitInput &input,
-                        hermes::api::Trait *trait) {
-      hermes::api::FileBackedTrait *t =
-          static_cast<hermes::api::FileBackedTrait *>(trait);
-      size_t required_file_size =
-          std::stoi(input.blob_name) * info.FILE_PAGE + info.FILE_PAGE;
-      size_t current_file_size = 0;
-      if (fs::exists(t->filename)) {
-        current_file_size = fs::file_size(t->filename);
-      }
-      if (current_file_size < required_file_size) {
-        std::ofstream ofs(t->filename, std::ios::binary | std::ios::out);
-        ofs.seekp(required_file_size - 1);
-        ofs.write("", 1);
-      }
-      current_file_size = fs::file_size(t->filename);
-      REQUIRE(current_file_size >= required_file_size);
-      return 0;
-    };
     hermes::api::Bucket file_bucket(args.filename, hermes_app, ctx);
-    hermes::api::VBucket file_vbucket(args.filename, hermes_app, ctx);
+    hermes::api::VBucket file_vbucket(args.filename, hermes_app, true, ctx);
     auto offset_map = std::unordered_map<std::string, hermes::u64>();
-    auto trait = hermes::api::FileBackedTrait(fullpath_str, offset_map, true,
-                                              flush_blob, true, load_blob);
-    file_vbucket.Attach(&trait, ctx);
+    auto blob_cmp = [](std::string a, std::string b) {
+      return std::stol(a) < std::stol(b);
+    };
+    auto blob_names = std::set<std::string, decltype(blob_cmp)>(blob_cmp);
     for (size_t i = 0; i < args.iterations; ++i) {
       file_bucket.Put(std::to_string(i), info.write_blob, ctx);
-      file_vbucket.Link(std::to_string(i), args.filename, ctx);
+      blob_names.insert(std::to_string(i));
     }
-    file_vbucket.Detach(&trait, ctx);
+    for (const auto &blob_name : blob_names) {
+      file_vbucket.Link(blob_name, args.filename, ctx);
+      offset_map.emplace(blob_name, std::stol(blob_name) * info.FILE_PAGE);
+    }
+    auto trait = hermes::api::FileMappingTrait(fullpath_str, offset_map, false,
+                                               NULL, false, NULL);
+    file_vbucket.Attach(&trait, ctx);
     file_vbucket.Delete(ctx);
     file_bucket.Destroy(ctx);
   }

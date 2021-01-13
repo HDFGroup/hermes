@@ -3,9 +3,9 @@
 #include <iostream>
 #include <vector>
 
-#include "utils.h"
 #include "buffer_pool.h"
 #include "metadata_management.h"
+#include "utils.h"
 
 namespace hermes {
 
@@ -57,8 +57,8 @@ Status Bucket::Put(const std::string &name, const u8 *data, size_t size,
       }
       ret = PlaceBlobs(schemas, blobs, names);
     } else {
-      SwapBlob swap_blob = PutToSwap(&hermes_->context_, &hermes_->rpc_, name,
-                                     id_, data, size);
+      SwapBlob swap_blob =
+          PutToSwap(&hermes_->context_, &hermes_->rpc_, name, id_, data, size);
       TriggerBufferOrganizer(&hermes_->rpc_, kPlaceInHierarchy, name, swap_blob,
                              ctx.buffer_organizer_retries);
       ret = 0;
@@ -76,12 +76,12 @@ size_t Bucket::GetBlobSize(Arena *arena, const std::string &name,
   size_t result = 0;
 
   if (IsValid()) {
-    LOG(INFO) << "Getting Blob " << name << " size from bucket "
-              << name_ << '\n';
-    BlobID blob_id = GetBlobIdByName(&hermes_->context_, &hermes_->rpc_,
-                                     name.c_str());
-    result = GetBlobSizeById(&hermes_->context_, &hermes_->rpc_, arena,
-                             blob_id);
+    LOG(INFO) << "Getting Blob " << name << " size from bucket " << name_
+              << '\n';
+    BlobID blob_id =
+        GetBlobIdByName(&hermes_->context_, &hermes_->rpc_, name.c_str());
+    result =
+        GetBlobSizeById(&hermes_->context_, &hermes_->rpc_, arena, blob_id);
   }
 
   return result;
@@ -100,8 +100,8 @@ size_t Bucket::Get(const std::string &name, Blob &user_blob, Context &ctx) {
       ret = GetBlobSize(scratch, name, ctx);
     } else {
       LOG(INFO) << "Getting Blob " << name << " from bucket " << name_ << '\n';
-      BlobID blob_id = GetBlobIdByName(&hermes_->context_, &hermes_->rpc_,
-                                       name.c_str());
+      BlobID blob_id =
+          GetBlobIdByName(&hermes_->context_, &hermes_->rpc_, name.c_str());
       ret = ReadBlobById(&hermes_->context_, &hermes_->rpc_,
                          &hermes_->trans_arena_, user_blob, blob_id);
     }
@@ -110,7 +110,7 @@ size_t Bucket::Get(const std::string &name, Blob &user_blob, Context &ctx) {
   return ret;
 }
 
-template<class Predicate>
+template <class Predicate>
 Status Bucket::GetV(void *user_blob, Predicate pred, Context &ctx) {
   (void)user_blob;
   (void)ctx;
@@ -132,8 +132,7 @@ Status Bucket::DeleteBlob(const std::string &name, Context &ctx) {
 }
 
 Status Bucket::RenameBlob(const std::string &old_name,
-                          const std::string &new_name,
-                          Context &ctx) {
+                          const std::string &new_name, Context &ctx) {
   (void)ctx;
   Status ret = 0;
 
@@ -149,31 +148,30 @@ Status Bucket::RenameBlob(const std::string &old_name,
 }
 
 bool Bucket::ContainsBlob(const std::string &name) {
-  bool result = hermes::ContainsBlob(&hermes_->context_, &hermes_->rpc_, id_,
-                                     name);
+  bool result =
+      hermes::ContainsBlob(&hermes_->context_, &hermes_->rpc_, id_, name);
 
   return result;
 }
 
 bool Bucket::BlobIsInSwap(const std::string &name) {
-  BlobID blob_id = GetBlobIdByName(&hermes_->context_, &hermes_->rpc_,
-                                   name.c_str());
+  BlobID blob_id =
+      GetBlobIdByName(&hermes_->context_, &hermes_->rpc_, name.c_str());
   bool result = hermes::BlobIsInSwap(blob_id);
 
   return result;
 }
 
-template<class Predicate>
-std::vector<std::string> Bucket::GetBlobNames(Predicate pred,
-                                              Context &ctx) {
+template <class Predicate>
+std::vector<std::string> Bucket::GetBlobNames(Predicate pred, Context &ctx) {
   (void)ctx;
 
   LOG(INFO) << "Getting blob names by predicate from bucket " << name_ << '\n';
-
-  return std::vector<std::string>();
+  auto blob_names = std::vector<std::string>();
+  return blob_names;
 }
 
-struct bkt_info * Bucket::GetInfo(Context &ctx) {
+struct bkt_info *Bucket::GetInfo(Context &ctx) {
   (void)ctx;
   struct bkt_info *ret = nullptr;
 
@@ -205,9 +203,9 @@ Status Bucket::Persist(const std::string &file_name, Context &ctx) {
   std::string open_mode = "w";
 
   // TODO(chogan): Support other storage backends
-  Status result = StdIoPersistBucket(&hermes_->context_, &hermes_->rpc_,
-                                     &hermes_->trans_arena_, id_, file_name,
-                                     open_mode);
+  Status result =
+      StdIoPersistBucket(&hermes_->context_, &hermes_->rpc_,
+                         &hermes_->trans_arena_, id_, file_name, open_mode);
 
   return result;
 }
@@ -231,8 +229,8 @@ Status Bucket::Destroy(Context &ctx) {
 
   if (IsValid()) {
     LOG(INFO) << "Destroying bucket '" << name_ << "'" << std::endl;
-    bool destroyed = DestroyBucket(&hermes_->context_, &hermes_->rpc_,
-                                   name_.c_str(), id_);
+    bool destroyed =
+        DestroyBucket(&hermes_->context_, &hermes_->rpc_, name_.c_str(), id_);
     if (destroyed) {
       id_.as_int = 0;
     } else {
