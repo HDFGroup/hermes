@@ -7,16 +7,16 @@
 
 namespace hermes {
 namespace api {
+
 struct BlobInfo {
   std::string bucket_name;
   std::string blob_name;
 };
-typedef BlobInfo TraitInput;
-// typedef void* TraitCallback;
 
+typedef BlobInfo TraitInput;
 struct Trait;
 typedef std::function<void(TraitInput &, Trait *)> TraitCallback;
-// typedef void(*TraitCallback)(TraitInput &, Trait *);
+
 struct Trait {
   TraitID id;
   TraitIdArray conflict_traits;

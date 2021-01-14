@@ -28,6 +28,7 @@
 #include "memory_management.cc"
 #include "config_parser.cc"
 #include "utils.cc"
+#include "traits.cc"
 
 #if defined(HERMES_COMMUNICATION_MPI)
 #include "communication_mpi.cc"
