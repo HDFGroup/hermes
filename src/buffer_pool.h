@@ -479,6 +479,11 @@ api::Status StdIoPersistBucket(SharedMemoryContext *context, RpcContext *rpc,
                                const std::string &file_name,
                                const std::string &open_mode);
 
+api::Status StdIoPersistBlob(SharedMemoryContext *context, RpcContext *rpc,
+                             Arena *arena, BlobID blob_id,
+                             const std::string &file_name, const i32 &offset,
+                             const std::string &open_mode);
+
 }  // namespace hermes
 
 #endif  // HERMES_BUFFER_POOL_H_

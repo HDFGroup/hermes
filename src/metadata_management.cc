@@ -35,6 +35,11 @@ bool IsBucketNameTooLong(const std::string &name) {
   return result;
 }
 
+bool IsVBucketNameTooLong(const std::string &name) {
+  bool result = IsNameTooLong(name, kMaxVBucketNameSize);
+  return result;
+}
+
 bool IsNullBucketId(BucketID id) {
   bool result = id.as_int == 0;
 
@@ -302,7 +307,7 @@ VBucketID GetNextFreeVBucketId(SharedMemoryContext *context, RpcContext *rpc,
   VBucketID result = {};
 
   // TODO(chogan): Could replace this with lock-free version if/when it matters
-  BeginTicketMutex(&mdm->vbucket_mutex);
+
   if (mdm->num_vbuckets < mdm->max_vbuckets) {
     result = mdm->first_free_vbucket;
     if (!IsNullVBucketId(result)) {
@@ -321,12 +326,28 @@ VBucketID GetNextFreeVBucketId(SharedMemoryContext *context, RpcContext *rpc,
               << "Increase max_vbuckets_per_node in the Hermes configuration."
               << std::endl;
   }
-  EndTicketMutex(&mdm->vbucket_mutex);
-
   if (!IsNullVBucketId(result)) {
     PutVBucketId(mdm, rpc, name, result);
   }
 
+  return result;
+}
+
+VBucketID GetOrCreateVBucketId(SharedMemoryContext *context, RpcContext *rpc,
+                               const std::string &name) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+
+  BeginTicketMutex(&mdm->vbucket_mutex);
+  VBucketID result = GetVBucketIdByName(context, rpc, name.c_str());
+
+  if (result.as_int != 0) {
+    LOG(INFO) << "Opening VBucket '" << name << "'" << std::endl;
+    IncrementRefcount(context, rpc, result);
+  } else {
+    LOG(INFO) << "Creating VBucket '" << name << "'" << std::endl;
+    result = GetNextFreeVBucketId(context, rpc, name);
+  }
+  EndTicketMutex(&mdm->vbucket_mutex);
   return result;
 }
 
@@ -345,6 +366,18 @@ void AddBlobIdToBucket(MetadataManager *mdm, RpcContext *rpc, BlobID blob_id,
     LocalAddBlobIdToBucket(mdm, bucket_id, blob_id);
   } else {
     RpcCall<void>(rpc, target_node, "RemoteAddBlobIdToBucket", bucket_id,
+                  blob_id);
+  }
+}
+
+void AddBlobIdToVBucket(MetadataManager *mdm, RpcContext *rpc, BlobID blob_id,
+                        VBucketID vbucket_id) {
+  u32 target_node = vbucket_id.bits.node_id;
+
+  if (target_node == rpc->node_id) {
+    LocalAddBlobIdToVBucket(mdm, vbucket_id, blob_id);
+  } else {
+    RpcCall<void>(rpc, target_node, "RemoteAddBlobIdToVBucket", vbucket_id,
                   blob_id);
   }
 }
@@ -902,6 +935,51 @@ void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
       info->next_free.bits.node_id = (u32)node_id;
       info->next_free.bits.index = i + 1;
     }
+  }
+}
+
+VBucketInfo *LocalGetVBucketInfoByIndex(MetadataManager *mdm, u32 index) {
+  VBucketInfo *info_array =
+      (VBucketInfo *)((u8 *)mdm + mdm->bucket_info_offset);
+  VBucketInfo *result = info_array + index;
+  return result;
+}
+
+VBucketInfo *LocalGetVBucketInfoById(MetadataManager *mdm, VBucketID id) {
+  VBucketInfo *result = LocalGetVBucketInfoByIndex(mdm, id.bits.index);
+  return result;
+}
+
+void LocalIncrementRefcount(SharedMemoryContext *context, VBucketID id) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  VBucketInfo *info = LocalGetVBucketInfoById(mdm, id);
+  info->ref_count.fetch_add(1);
+}
+
+void IncrementRefcount(SharedMemoryContext *context, RpcContext *rpc,
+                       VBucketID id) {
+  u32 target_node = id.bits.node_id;
+  if (target_node == rpc->node_id) {
+    LocalIncrementRefcount(context, id);
+  } else {
+    RpcCall<void>(rpc, target_node, "RemoteIncrementRefcountVBucket", id);
+  }
+}
+
+void LocalDecrementRefcount(SharedMemoryContext *context, VBucketID id) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  VBucketInfo *info = LocalGetVBucketInfoById(mdm, id);
+  info->ref_count.fetch_sub(1);
+  assert(info->ref_count.load() >= 0);
+}
+
+void DecrementRefcount(SharedMemoryContext *context, RpcContext *rpc,
+                       VBucketID id) {
+  u32 target_node = id.bits.node_id;
+  if (target_node == rpc->node_id) {
+    LocalDecrementRefcount(context, id);
+  } else {
+    RpcCall<void>(rpc, target_node, "RemoteDecrementRefcountVBucket", id);
   }
 }
 
