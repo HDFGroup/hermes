@@ -28,7 +28,7 @@ struct Trait {
   Trait(TraitID id, TraitIdArray conflict_traits, TraitType type);
 };
 
-#define FILE_TRAIT 10
+#define HERMES_FILE_TRAIT 10
 
 struct FileMappingTrait : public Trait {
  public:
