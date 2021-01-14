@@ -38,7 +38,7 @@ class VBucket {
         hermes_(h) {
     LOG(INFO) << "Create VBucket " << initial_name << std::endl;
     (void)ctx;
-    if (IsBucketNameTooLong(name_)) {
+    if (IsVBucketNameTooLong(name_)) {
       id_.as_int = 0;
     } else {
       id_ = GetOrCreateVBucketId(&hermes_->context_, &hermes_->rpc_, name_);

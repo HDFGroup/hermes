@@ -341,10 +341,10 @@ VBucketID GetOrCreateVBucketId(SharedMemoryContext *context, RpcContext *rpc,
   VBucketID result = GetVBucketIdByName(context, rpc, name.c_str());
 
   if (result.as_int != 0) {
-    LOG(INFO) << "Opening Bucket '" << name << "'" << std::endl;
+    LOG(INFO) << "Opening VBucket '" << name << "'" << std::endl;
     IncrementRefcount(context, rpc, result);
   } else {
-    LOG(INFO) << "Creating Bucket '" << name << "'" << std::endl;
+    LOG(INFO) << "Creating VBucket '" << name << "'" << std::endl;
     result = GetNextFreeVBucketId(context, rpc, name);
   }
   EndTicketMutex(&mdm->vbucket_mutex);

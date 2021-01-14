@@ -77,7 +77,7 @@ TEST_CASE("CustomTrait",
       file_bucket.Put(std::to_string(i), info.write_blob, ctx);
       blob_names.insert(std::to_string(i));
     }
-    for (const auto &blob_name : blob_names) {
+    for (const auto& blob_name : blob_names) {
       file_vbucket.Link(blob_name, args.filename, ctx);
       offset_map.emplace(blob_name, std::stol(blob_name) * info.FILE_PAGE);
     }
@@ -86,6 +86,20 @@ TEST_CASE("CustomTrait",
     file_vbucket.Attach(&trait, ctx);
     file_vbucket.Delete(ctx);
     file_bucket.Destroy(ctx);
+    REQUIRE(fs::exists(fullpath_str));
+    REQUIRE(fs::file_size(fullpath_str) == args.iterations * args.request_size);
+    info.write_blob =
+        hermes::api::Blob(args.iterations * args.request_size, '1');
+    auto read_blob =
+        hermes::api::Blob(args.iterations * args.request_size, '0');
+    FILE* fh = fopen(fullpath_str.c_str(), "r+");
+    REQUIRE(fh != nullptr);
+    auto read_size =
+        fread(read_blob.data(), args.iterations * args.request_size, 1, fh);
+    REQUIRE(read_size == 1);
+    REQUIRE(read_blob == info.write_blob);
+    auto status = fclose(fh);
+    REQUIRE(status == 0);
   }
   hermes_app->Finalize(true);
   posttest();
