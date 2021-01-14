@@ -19,7 +19,6 @@ Status VBucket::Link(std::string blob_name, std::string bucket_name,
   LOG(INFO) << "Linking blob " << blob_name << " in bucket " << bucket_name
             << " to VBucket " << name_ << '\n';
 
-  // FIXME(hari): to use both bucket name and blob name
   bool blob_exists = hermes_->BucketContainsBlob(bucket_name, blob_name);
   if (blob_exists) {
     // inserting value by insert function
