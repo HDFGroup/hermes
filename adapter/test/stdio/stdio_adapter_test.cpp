@@ -23,13 +23,13 @@ struct Info {
     unsigned int offset_seed = 1;
     unsigned int rs_seed = 1;
     unsigned int temporal_interval_seed = 5;
-    long total_size;
-    long stride_size = 1024;
+    size_t total_size;
+    size_t stride_size = 1024;
     unsigned int temporal_interval_ms = 1;
-    long small_min = 1, small_max = 4 * 1024;
-    long medium_min = 4 * 1024 + 1,
+    size_t small_min = 1, small_max = 4 * 1024;
+    size_t medium_min = 4 * 1024 + 1,
             medium_max = 256 * 1024;
-    long large_min = 256 * 1024 + 1,
+    size_t large_min = 256 * 1024 + 1,
                 large_max = 4 * 1024 * 1024;
 };
 }  // namespace hermes::adapter::stdio::test
