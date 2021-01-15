@@ -97,7 +97,8 @@ TEST_CASE("CustomTrait",
     auto read_size =
         fread(read_blob.data(), args.iterations * args.request_size, 1, fh);
     REQUIRE(read_size == 1);
-    REQUIRE(read_blob == info.write_blob);
+    bool is_same = read_blob == info.write_blob;
+    REQUIRE(is_same);
     auto status = fclose(fh);
     REQUIRE(status == 0);
   }
