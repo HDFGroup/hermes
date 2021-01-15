@@ -11,6 +11,7 @@
 
 #include "hermes_types.h"
 #include "buffer_pool.h"
+#include "metadata_management.h"
 #include "rpc.h"
 #include "id.h"
 
@@ -58,6 +59,9 @@ class Hermes {
   void *GetAppCommunicator();
   void Finalize(bool force_rpc_shutdown = false);
 
+  bool BucketContainsBlob(const std::string &bucket_name,
+                          const std::string &blob_name);
+
   // MPI comms.
   // proxy/reference to Hermes core
 };
@@ -65,8 +69,6 @@ class Hermes {
 class VBucket;
 
 class Bucket;
-
-typedef std::vector<unsigned char> Blob;
 
 enum class PlacementPolicy {
   kRandom,

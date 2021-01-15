@@ -59,6 +59,19 @@ void serialize(A &ar, BucketID &bucket_id) {
 }
 
 /**
+ *  Lets Thallium know how to serialize a VBucketID.
+ *
+ * This function is called implicitly by Thallium.
+ *
+ * @param ar An archive provided by Thallium.
+ * @param bucket_id The VBucketID to serialize.
+ */
+template <typename A>
+void serialize(A &ar, VBucketID &vbucket_id) {
+  ar &vbucket_id.as_int;
+}
+
+/**
  *  Lets Thallium know how to serialize a BlobID.
  *
  * This function is called implicitly by Thallium.

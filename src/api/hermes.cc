@@ -61,6 +61,14 @@ void Hermes::AppBarrier() {
   hermes::SubBarrier(&comm_);
 }
 
+bool Hermes::BucketContainsBlob(const std::string &bucket_name,
+                                const std::string &blob_name) {
+  BucketID bucket_id = GetBucketIdByName(&context_, &rpc_, bucket_name.c_str());
+  bool result = hermes::ContainsBlob(&context_, &rpc_, bucket_id, blob_name);
+
+  return result;
+}
+
 int Hermes::GetProcessRank() {
   int result = comm_.sub_proc_id;
 

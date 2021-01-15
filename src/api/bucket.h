@@ -119,6 +119,11 @@ class Bucket {
   /** rename this bucket */
   Status Rename(const std::string& new_name, Context &ctx);
 
+  /** Save this bucket's blobs to persistent storage.
+   *
+   * The blobs are written in the same order in which they are `Put`. */
+  Status Persist(const std::string &file_name, Context &ctx);
+
   /** close this bucket and free its associated resources (?) */
   /** Invalidates handle */
   Status Close(Context &ctx);
@@ -144,17 +149,12 @@ Status Bucket::PlaceBlobs(std::vector<PlacementSchema> &schemas,
 
   for (size_t i = 0; i < schemas.size(); ++i) {
     PlacementSchema &schema = schemas[i];
-    if (schema.size()) {
-      hermes::Blob blob = {};
-      blob.data = (u8 *)blobs[i].data();
-      blob.size = blobs[i].size() * sizeof(T);
-      // TODO(chogan): @errorhandling What about partial failure?
-      result = PlaceBlob(&hermes_->context_, &hermes_->rpc_, schema, blob,
-                         names[i].c_str(), id_);
-    } else {
-      // TODO(chogan): @errorhandling
-      result = 1;
-    }
+    hermes::Blob blob = {};
+    blob.data = (u8 *)blobs[i].data();
+    blob.size = blobs[i].size() * sizeof(T);
+    // TODO(chogan): @errorhandling What about partial failure?
+    result = PlaceBlob(&hermes_->context_, &hermes_->rpc_, schema, blob,
+                       names[i].c_str(), id_);
   }
 
   return result;

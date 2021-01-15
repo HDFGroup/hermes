@@ -35,6 +35,66 @@ std::vector<int> GetValidSplitChoices(size_t blob_size) {
 
   return result;
 }
+Status AddRoundRobinSchema(size_t index, std::vector<u64> &node_state,
+                           const std::vector<size_t> &blob_sizes,
+                           const std::vector<TargetID> &targets,
+                           PlacementSchema &output) {
+  Status result = 0;
+  TargetID dst = {};
+  DataPlacementEngine dpe;
+  size_t num_targets = node_state.size();
+  size_t device_pos {dpe.getCountDevice()};
+
+  for (size_t j {0}; j < num_targets; ++j) {
+    size_t adjust_pos = {(j+device_pos)%num_targets};
+    if (node_state[adjust_pos] >= blob_sizes[index]) {
+      dpe.setCountDevice((j+device_pos+1)%num_targets);
+      dst = FindTargetIdFromDeviceId(targets, adjust_pos);
+      output.push_back(std::make_pair(blob_sizes[index], dst));
+      node_state[adjust_pos] -= blob_sizes[index];
+      break;
+    }
+  }
+  if (IsNullTargetId(dst)) {
+    result = 1;
+    // TODO(chogan): @errorhandling Set error type in Status
+  }
+
+  return result;
+}
+
+bool SplitBlob(size_t blob_size) {
+  bool result = false;
+  std::random_device dev;
+  std::mt19937 rng(dev());
+
+  if (blob_size > KILOBYTES(64)) {
+    std::uniform_int_distribution<std::mt19937::result_type> distribution(0, 1);
+    if (distribution(rng) == 1) {
+      result = true;
+    }
+  }
+
+  return result;
+}
+
+void GetSplitSizes(size_t blob_size, std::vector<size_t> &output) {
+  std::random_device dev;
+  std::mt19937 rng(dev());
+
+  std::vector<int> split_choice = GetValidSplitChoices(blob_size);
+
+  // Random pickup a number from split_choice to split the blob
+  std::uniform_int_distribution<std::mt19937::result_type>
+    position(0, split_choice.size()-1);
+  int split_num = split_choice[position(rng)];
+
+  size_t blob_each_portion {blob_size/split_num};
+  for (int j {0}; j < split_num - 1; ++j) {
+    output.push_back(blob_each_portion);
+  }
+  output.push_back(blob_size - blob_each_portion*(split_num-1));
+}
 
 Status RoundRobinPlacement(std::vector<size_t> &blob_sizes,
                            std::vector<u64> &node_state,
@@ -46,76 +106,25 @@ Status RoundRobinPlacement(std::vector<size_t> &blob_sizes,
   for (size_t i {0}; i < blob_sizes.size(); ++i) {
     std::random_device dev;
     std::mt19937 rng(dev());
-    int number {0};
     PlacementSchema schema;
 
-    // If size is greater than 64KB
-    // Split the blob or not
-    if (blob_sizes[i] > KILOBYTES(64)) {
-      std::uniform_int_distribution<std::mt19937::result_type>
-        distribution(0, 1);
-      number = distribution(rng);
-    }
-
     // Split the blob
-    if (number) {
-      std::vector<int> split_choice = GetValidSplitChoices(blob_sizes[i]);
-
-      // Random pickup a number from split_choice to split the blob
-      std::uniform_int_distribution<std::mt19937::result_type>
-        position(0, split_choice.size()-1);
-      int split_num = split_choice[position(rng)];
-
+    if (SplitBlob(blob_sizes[i])) {
       // Construct the vector for the splitted blob
       std::vector<size_t> new_blob_size;
-      size_t blob_each_portion {blob_sizes[i]/split_num};
-      for (int j {0}; j < split_num - 1; ++j) {
-        new_blob_size.push_back(blob_each_portion);
-      }
-      new_blob_size.push_back(blob_sizes[i] -
-                              blob_each_portion*(split_num-1));
+      GetSplitSizes(blob_sizes[i], new_blob_size);
 
       for (size_t k {0}; k < new_blob_size.size(); ++k) {
-        TargetID dst = {};
-        DataPlacementEngine dpe;
-        size_t device_pos {dpe.getCountDevice()};
-        for (size_t j {0}; j < ns_local.size(); ++j) {
-          size_t adjust_pos {(j+device_pos)%ns_local.size()};
-          if (ns_local[adjust_pos] >= new_blob_size[k]) {
-            dpe.setCountDevice((j+device_pos+1)%ns_local.size());
-            dst = FindTargetIdFromDeviceId(targets, adjust_pos);
-            schema.push_back(std::make_pair(new_blob_size[k], dst));
-            ns_local[adjust_pos] -= new_blob_size[k];
-            break;
-          }
-        }
-        if (IsNullTargetId(dst)) {
-          result = 1;
-          // TODO(chogan): @errorhandling Set error type in Status
-        }
-      }
-      output.push_back(schema);
-    } else {
-    // Blob size is less than 64KB or do not split
-      TargetID dst = {};
-      DataPlacementEngine dpe;
-      size_t device_pos {dpe.getCountDevice()};
-      for (size_t j {0}; j < ns_local.size(); ++j) {
-        size_t adjust_pos {(j+device_pos)%ns_local.size()};
-        if (ns_local[adjust_pos] >= blob_sizes[i]) {
-          dpe.setCountDevice((j+device_pos+1)%ns_local.size());
-          dst = FindTargetIdFromDeviceId(targets, adjust_pos);
-          schema.push_back(std::make_pair(blob_sizes[i], dst));
-          ns_local[adjust_pos] -= blob_sizes[i];
-          output.push_back(schema);
+        result = AddRoundRobinSchema(k, ns_local, new_blob_size, targets,
+                                     schema);
+        if (result != 0) {
           break;
         }
       }
-      if (IsNullTargetId(dst)) {
-        result = 1;
-        // TODO(chogan): @errorhandling Set error type in Status
-      }
+    } else {
+      result = AddRoundRobinSchema(i, ns_local, blob_sizes, targets, schema);
     }
+    output.push_back(schema);
   }
 
   return result;
@@ -156,36 +165,19 @@ Status RandomPlacement(std::vector<size_t> &blob_sizes,
     PlacementSchema schema;
     std::random_device dev;
     std::mt19937 rng(dev());
-    int number {0};
-
-    // If size is greater than 64KB
-    // Split the blob or not
-    if (blob_sizes[i] > KILOBYTES(64)) {
-      std::uniform_int_distribution<std::mt19937::result_type>
-        distribution(0, 1);
-      number = distribution(rng);
-    }
 
     // Split the blob
-    if (number) {
-      std::vector<int> split_choice = GetValidSplitChoices(blob_sizes[i]);
-
-      // Random pickup a number from split_choice to split the blob
-      std::uniform_int_distribution<std::mt19937::result_type>
-        position(0, split_choice.size()-1);
-      int split_num = split_choice[position(rng)];
-
+    if (SplitBlob(blob_sizes[i])) {
       // Construct the vector for the splitted blob
       std::vector<size_t> new_blob_size;
-      size_t blob_each_portion {blob_sizes[i]/split_num};
-      for (int j {0}; j < split_num - 1; ++j) {
-        new_blob_size.push_back(blob_each_portion);
-      }
-      new_blob_size.push_back(blob_sizes[i] -
-                              blob_each_portion*(split_num-1));
+      GetSplitSizes(blob_sizes[i], new_blob_size);
 
       for (size_t k {0}; k < new_blob_size.size(); ++k) {
         result = AddRandomSchema(ordered_cap, new_blob_size[k], schema);
+
+        if (result != 0) {
+          break;
+        }
       }
     } else {
       // Blob size is less than 64KB or do not split
@@ -387,9 +379,12 @@ Status CalculatePlacement(SharedMemoryContext *context, RpcContext *rpc,
   }
 
   // Aggregate placement schemas from the same target
-  for (auto it = output_tmp.begin(); it != output_tmp.end(); ++it) {
-    PlacementSchema schema = AggregateBlobSchema((*it));
-    output.push_back(schema);
+  if (!result) {
+    for (auto it = output_tmp.begin(); it != output_tmp.end(); ++it) {
+      PlacementSchema schema = AggregateBlobSchema((*it));
+      CHECK(schema.size() > 0) << "PlacementSchema is empty";
+      output.push_back(schema);
+    }
   }
 
   return result;

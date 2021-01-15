@@ -1,3 +1,4 @@
+#include <cstdio>
 #include <iostream>
 #include <unordered_map>
 
@@ -7,9 +8,19 @@
 #include "hermes.h"
 #include "bucket.h"
 #include "vbucket.h"
+#include "test_utils.h"
 
-struct MyTrait {
+namespace hapi = hermes::api;
+std::shared_ptr<hermes::api::Hermes> hermes_app;
+
+int compress_blob(hermes::api::TraitInput &input, hermes::api::Trait *trait);
+struct MyTrait : public hapi::Trait {
   int compress_level;
+  MyTrait() : Trait(10001, hermes::TraitIdArray(), hermes::TraitType::META) {
+    onAttachFn =
+        std::bind(&compress_blob, std::placeholders::_1, std::placeholders::_2);
+  }
+
   // optional function pointer if only known at runtime
 };
 
@@ -24,9 +35,16 @@ void add_buffer_to_vector(hermes::api::Blob &vector, const char *buffer,
 
 // The Trait implementer must define callbacks that match the VBucket::TraitFunc
 // type.
-int compress_blob(hermes::api::Blob &blob, void *trait) {
+int compress_blob(hermes::api::TraitInput &input, hermes::api::Trait *trait) {
   MyTrait *my_trait = (MyTrait *)trait;
 
+  hapi::Context ctx;
+  hapi::Bucket bkt(input.bucket_name, hermes_app, ctx);
+  hapi::Blob blob = {};
+  size_t blob_size = bkt.Get(input.blob_name, blob, ctx);
+  blob.resize(blob_size);
+  bkt.Get(input.blob_name, blob, ctx);
+  bkt.Close(ctx);
   // If Hermes is already linked with a compression library, you can call the
   // function directly here. If not, the symbol will have to be dynamically
   // loaded and probably stored as a pointer in the Trait.
@@ -51,6 +69,60 @@ int compress_blob(hermes::api::Blob &blob, void *trait) {
 }
 
 
+void TestBucketPersist(std::shared_ptr<hapi::Hermes> hermes) {
+  constexpr int bytes_per_blob = KILOBYTES(3);
+  constexpr int num_blobs = 3;
+  constexpr int total_bytes = num_blobs * bytes_per_blob;
+
+  hapi::Context ctx;
+  hapi::Blob blobx(bytes_per_blob, 'x');
+  hapi::Blob bloby(bytes_per_blob, 'y');
+  hapi::Blob blobz(bytes_per_blob, 'z');
+  hapi::Bucket bkt("persistent_bucket", hermes, ctx);
+  bkt.Put("blobx", blobx, ctx);
+  bkt.Put("bloby", bloby, ctx);
+  bkt.Put("blobz", blobz, ctx);
+
+  std::string saved_file("blobsxyz.txt");
+  bkt.Persist(saved_file, ctx);
+  bkt.Destroy(ctx);
+  Assert(!bkt.IsValid());
+
+  FILE *bkt_file = fopen(saved_file.c_str(), "r");
+  Assert(bkt_file);
+
+  hermes::u8 read_buffer[total_bytes] = {};
+  Assert(fread(read_buffer, 1, total_bytes, bkt_file) == total_bytes);
+
+  for (int offset = 0; offset < num_blobs; ++offset) {
+    for (int i = offset * bytes_per_blob;
+         i < bytes_per_blob * (offset + 1);
+         ++i) {
+      char expected = '\0';
+      switch (offset) {
+        case 0: {
+          expected = 'x';
+          break;
+        }
+        case 1: {
+          expected = 'y';
+          break;
+        }
+        case 2: {
+          expected = 'z';
+          break;
+        }
+        default: {
+          Assert(!"Invalid code path\n.");
+        }
+      }
+      Assert(read_buffer[i] == expected);
+    }
+  }
+
+  Assert(std::remove(saved_file.c_str()) == 0);
+}
+
 int main(int argc, char **argv) {
   int mpi_threads_provided;
   MPI_Init_thread(NULL, NULL, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
@@ -64,8 +136,7 @@ int main(int argc, char **argv) {
     config_file = argv[1];
   }
 
-  std::shared_ptr<hermes::api::Hermes> hermes_app =
-    hermes::api::InitHermes(config_file);
+  hermes_app = hermes::api::InitHermes(config_file);
 
   if (hermes_app->IsApplicationCore()) {
     hermes::api::Context ctx;
@@ -86,7 +157,7 @@ int main(int argc, char **argv) {
     else
       std::cout<< "Not found Blob2\n";
 
-    hermes::api::VBucket my_vb("VB1", hermes_app);
+    hermes::api::VBucket my_vb("VB1", hermes_app, false, ctx);
     hermes_app->Display_vbucket();
     my_vb.Link("Blob1", "compression", ctx);
     my_vb.Link("Blob2", "compression", ctx);
@@ -100,8 +171,11 @@ int main(int argc, char **argv) {
       std::cout << "Not found Blob2 from compression bucket in VBucket VB1\n";
 
     // compression level
-    struct MyTrait trait {6};
-    my_vb.Attach(&trait, compress_blob, ctx);  // compress action to data starts
+    MyTrait trait;
+    trait.compress_level = 6;
+    my_vb.Attach(&trait, ctx);  // compress action to data starts
+
+    TestBucketPersist(hermes_app);
 
     ///////
     my_vb.Unlink("Blob1", "VB1", ctx);

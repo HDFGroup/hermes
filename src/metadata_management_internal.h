@@ -26,6 +26,8 @@ void FreeBufferIdList(SharedMemoryContext *context, RpcContext *rpc,
 
 void LocalAddBlobIdToBucket(MetadataManager *mdm, BucketID bucket_id,
                             BlobID blob_id);
+void LocalAddBlobIdToVBucket(MetadataManager *mdm, VBucketID vbucket_id,
+                             BlobID blob_id);
 std::vector<BufferID> LocalGetBufferIdList(MetadataManager *mdm,
                                            BlobID blob_id);
 void LocalGetBufferIdList(Arena *arena, MetadataManager *mdm, BlobID blob_id,
@@ -50,6 +52,8 @@ void LocalRemoveBlobFromBucketInfo(SharedMemoryContext *context,
                                    BucketID bucket_id, BlobID blob_id);
 void LocalIncrementRefcount(SharedMemoryContext *context, BucketID id);
 void LocalDecrementRefcount(SharedMemoryContext *context, BucketID id);
+void LocalIncrementRefcount(SharedMemoryContext *context, VBucketID id);
+void LocalDecrementRefcount(SharedMemoryContext *context, VBucketID id);
 
 u64 LocalGet(MetadataManager *mdm, const char *key, MapType map_type);
 void LocalPut(MetadataManager *mdm, const char *key, u64 val, MapType map_type);
@@ -77,6 +81,8 @@ std::vector<u64>
 GetRemainingNodeCapacities(SharedMemoryContext *context,
                            const std::vector<TargetID> &targets);
 std::string GetSwapFilename(MetadataManager *mdm, u32 node_id);
+std::vector<BlobID> LocalGetBlobIds(SharedMemoryContext *context,
+                                    BucketID bucket_id);
 
 }  // namespace hermes
 #endif  // HERMES_METADATA_MANAGEMENT_INTERNAL_H_

@@ -37,7 +37,6 @@ SPACK_STAGING_DIR=~/spack_staging
 mkdir -p ${SPACK_STAGING_DIR}
 spack view --verbose symlink ${SPACK_STAGING_DIR} ${THALLIUM_SPEC} ${GOTCHA_SPEC} ${CATCH2_SPEC}
 
-
 set -x
 
 ORTOOLS_VERSION=v7.7
