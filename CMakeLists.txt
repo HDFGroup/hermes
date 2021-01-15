@@ -124,8 +124,7 @@ if(NOT "${CMAKE_CXX_STANDARD}")
 endif()
 
 if(NOT CMAKE_CXX_FLAGS)
-#TODO: add -Werror
- set (CMAKE_CXX_FLAGS "-Wall -Wextra ${CMAKE_CXX_FLAGS} -DCATCH_CONFIG_FAST_COMPILE")
+ set (CMAKE_CXX_FLAGS "-Wall -Wextra -Werror ${CMAKE_CXX_FLAGS}")
  message (STATUS "Warnings Configuration: default: ${CMAKE_CXX_FLAGS}")
 endif()
 
