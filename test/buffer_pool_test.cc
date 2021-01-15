@@ -21,6 +21,7 @@
  */
 
 using hermes::api::Hermes;
+namespace hapi = hermes::api;
 
 void TestGetBuffers(Hermes *hermes) {
   using namespace hermes;  // NOLINT(*)
@@ -72,15 +73,34 @@ void TestGetBandwidths(hermes::SharedMemoryContext *context) {
   }
 }
 
+hapi::Status ForceBlobToSwap(Hermes *hermes, hermes::u64 id, hapi::Blob &blob,
+                             const char *blob_name) {
+  using namespace hermes;  // NOLINT(*)
+  PlacementSchema schema;
+  schema.push_back({blob.size(), testing::DefaultRamTargetId()});
+  Blob internal_blob = {};
+  internal_blob.data = blob.data();
+  internal_blob.size = blob.size();
+  hermes::BucketID bucket_id = {};
+  bucket_id.as_int = id;
+  int retries = 3;
+  hapi::Status result = PlaceBlob(&hermes->context_, &hermes->rpc_, schema,
+                                  internal_blob, blob_name, bucket_id, retries);
+
+  return result;
+}
+
 void TestSwap(std::shared_ptr<Hermes> hermes) {
-  namespace hapi = hermes::api;
   hapi::Context ctx;
   ctx.policy = hapi::PlacementPolicy::kRandom;
   hapi::Bucket bucket(std::string("swap_bucket"), hermes, ctx);
-  hapi::Blob data(MEGABYTES(1), 'x');
+  size_t data_size = MEGABYTES(1);
+  hapi::Blob data(data_size, 'x');
   std::string blob_name("swap_blob");
-  bucket.Put(blob_name, data, ctx);
-
+  hapi::Status status = ForceBlobToSwap(hermes.get(), bucket.GetId(), data,
+                                        blob_name.c_str());
+  Assert(status == 0);
+  // NOTE(chogan): The Blob is in the swap space, but the API behaves as normal.
   Assert(bucket.ContainsBlob(blob_name));
 
   hapi::Blob get_result;
@@ -94,7 +114,6 @@ void TestSwap(std::shared_ptr<Hermes> hermes) {
 }
 
 void TestBufferOrganizer(std::shared_ptr<Hermes> hermes) {
-  namespace hapi = hermes::api;
   hapi::Context ctx;
   ctx.policy = hapi::PlacementPolicy::kRandom;
   hapi::Bucket bucket(std::string("bo_bucket"), hermes, ctx);
@@ -102,14 +121,16 @@ void TestBufferOrganizer(std::shared_ptr<Hermes> hermes) {
   // NOTE(chogan): Fill our single buffer with a blob.
   hapi::Blob data1(KILOBYTES(4), 'x');
   std::string blob1_name("bo_blob1");
-  bucket.Put(blob1_name, data1, ctx);
+  hapi::Status status = bucket.Put(blob1_name, data1, ctx);
+  Assert(status == 0);
   Assert(bucket.ContainsBlob(blob1_name));
 
-  // NOTE(chogan): Try to put another blob, which will go to the swap space
-  // since the hierarchy is full.
+  // NOTE(chogan): Force a second Blob to the swap space.
   hapi::Blob data2(KILOBYTES(4), 'y');
   std::string blob2_name("bo_blob2");
-  bucket.Put(blob2_name, data2, ctx);
+  status = ForceBlobToSwap(hermes.get(), bucket.GetId(), data2,
+                           blob2_name.c_str());
+  Assert(status == 0);
   Assert(bucket.BlobIsInSwap(blob2_name));
 
   // NOTE(chogan): Delete the first blob, which will make room for the second,
