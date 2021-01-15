@@ -123,6 +123,41 @@ void TestBucketPersist(std::shared_ptr<hapi::Hermes> hermes) {
   Assert(std::remove(saved_file.c_str()) == 0);
 }
 
+void TestPutOverwrite(std::shared_ptr<hapi::Hermes> hermes) {
+  hapi::Context ctx;
+  hapi::Bucket bucket("overwrite", hermes, ctx);
+
+  std::string blob_name("1");
+  size_t blob_size = KILOBYTES(6);
+  hapi::Blob blob(blob_size, 'x');
+  hapi::Status status = bucket.Put(blob_name, blob, ctx);
+  Assert(status == 0);
+
+  hapi::Blob retrieved_blob;
+  size_t retrieved_size = bucket.Get(blob_name, retrieved_blob, ctx);
+  Assert(blob_size == retrieved_size);
+  retrieved_blob.resize(retrieved_size);
+  retrieved_size = bucket.Get(blob_name, retrieved_blob, ctx);
+  Assert(blob_size == retrieved_size);
+  Assert(retrieved_blob == blob);
+
+  retrieved_blob.clear();
+
+  // NOTE(chogan): Overwrite the data
+  size_t new_size = KILOBYTES(9);
+  hapi::Blob new_blob(new_size, 'z');
+  status = bucket.Put(blob_name, new_blob, ctx);
+
+  retrieved_size = bucket.Get(blob_name, retrieved_blob, ctx);
+  Assert(retrieved_size == new_size);
+  retrieved_blob.resize(retrieved_size);
+  retrieved_size = bucket.Get(blob_name, retrieved_blob, ctx);
+  Assert(retrieved_size == new_size);
+  Assert(retrieved_blob == new_blob);
+
+  bucket.Destroy(ctx);
+}
+
 int main(int argc, char **argv) {
   int mpi_threads_provided;
   MPI_Init_thread(NULL, NULL, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
@@ -176,6 +211,7 @@ int main(int argc, char **argv) {
     my_vb.Attach(&trait, ctx);  // compress action to data starts
 
     TestBucketPersist(hermes_app);
+    TestPutOverwrite(hermes_app);
 
     ///////
     my_vb.Unlink("Blob1", "VB1", ctx);
