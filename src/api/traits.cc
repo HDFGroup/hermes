@@ -14,14 +14,14 @@ Trait::Trait(TraitID id, TraitIdArray conflict_traits, TraitType type)
       onUnlinkFn(nullptr) {}
 
 FileMappingTrait::FileMappingTrait(
-    std::string &filename, std::unordered_map<std::string, u64> &offset_map, FILE* fh,
-    TraitCallback flush_cb, TraitCallback load_cb)
+    std::string &filename, std::unordered_map<std::string, u64> &offset_map,
+    FILE *fh, TraitCallback flush_cb, TraitCallback load_cb)
     : Trait(HERMES_FILE_TRAIT, TraitIdArray(), TraitType::FILE_MAPPING),
       flush_cb(flush_cb),
       load_cb(load_cb),
       filename(filename),
       offset_map(offset_map),
-      fh(fh){
+      fh(fh) {
   this->onAttachFn = std::bind(&FileMappingTrait::onAttach, this,
                                std::placeholders::_1, std::placeholders::_2);
   this->onDetachFn = std::bind(&FileMappingTrait::onDetach, this,

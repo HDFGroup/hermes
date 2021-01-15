@@ -229,8 +229,8 @@ Status VBucket::Delete(Context& ctx) {
                   auto blob_id = GetBlobIdByName(
                       &hermes_->context_, &hermes_->rpc_, ci->second.c_str());
                   StdIoPersistBlob(&hermes_->context_, &hermes_->rpc_,
-                                   &hermes_->trans_arena_, blob_id,
-                                   file, iter->second);
+                                   &hermes_->trans_arena_, blob_id, file,
+                                   iter->second);
                 } else {
                   // TODO(hari): @errorhandling map doesnt have the blob linked.
                 }
@@ -252,7 +252,7 @@ Status VBucket::Delete(Context& ctx) {
       }
     }
     if (persist) {
-      if (file != nullptr ) {
+      if (file != nullptr) {
         if (fclose(file) != 0) {
           // TODO(chogan): @errorhandling
         }
