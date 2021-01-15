@@ -4,6 +4,8 @@ Hermes is a heterogeneous aware, multi-tiered, dynamic, and distributed I/O buff
 
 ![Build](https://github.com/HDFGroup/hermes/workflows/GitHub%20Actions/badge.svg)
 
+[![Coverage Status](https://coveralls.io/repos/github/HDFGroup/hermes/badge.svg?branch=master)](https://coveralls.io/github/HDFGroup/hermes?branch=master)
+
 ## Dependencies
 * A C++ compiler that supports C++ 17.
 * [Thallium](https://mochi.readthedocs.io/en/latest/installing.html) - RPC library for HPC. Use a version greater than `0.5` for RoCE support.

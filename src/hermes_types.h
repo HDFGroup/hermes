@@ -6,6 +6,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <functional>
 
 #include "glog/logging.h"
 
@@ -42,6 +43,7 @@ constexpr int kMaxBufferPoolShmemNameLength = 64;
 constexpr int kMaxDevices = 8;
 constexpr int kMaxBucketNameSize = 256;
 constexpr int kMaxBlobNameSize = 64;
+constexpr int kMaxVBucketNameSize = 256;
 
 constexpr char kPlaceInHierarchy[] = "PlaceInHierarchy";
 
@@ -161,6 +163,15 @@ union BucketID {
   u64 as_int;
 };
 
+union VBucketID {
+  struct {
+    u32 index;
+    u32 node_id;
+  } bits;
+
+  u64 as_int;
+};
+
 union BlobID {
   struct {
     u32 buffer_ids_offset;
@@ -169,6 +180,20 @@ union BlobID {
 
   u64 as_int;
 };
+
+/**
+ * Trait types
+ */
+typedef u64 TraitID;
+
+enum class TraitType : u8 { META = 0, DATA = 1, FILE_MAPPING = 2 };
+
+struct TraitIdArray {
+    TraitID *ids;
+    u32 length;
+};
+
+
 
 }  // namespace hermes
 #endif  // HERMES_TYPES_H_

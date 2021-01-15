@@ -149,6 +149,26 @@ void LocalAddBlobIdToBucket(MetadataManager *mdm, BucketID bucket_id,
   CheckHeapOverlap(mdm);
 }
 
+void LocalAddBlobIdToVBucket(MetadataManager *mdm, VBucketID vbucket_id,
+                             BlobID blob_id) {
+  Heap *id_heap = GetIdHeap(mdm);
+
+  // TODO(chogan): Think about lock granularity
+  BeginTicketMutex(&mdm->vbucket_mutex);
+  VBucketInfo *info = LocalGetVBucketInfoById(mdm, vbucket_id);
+  ChunkedIdList *blobs = &info->blobs;
+
+  if (blobs->length >= blobs->capacity) {
+    AllocateOrGrowBlobIdList(mdm, blobs);
+  }
+
+  BlobID *head = (BlobID *)HeapOffsetToPtr(id_heap, blobs->head_offset);
+  head[blobs->length++] = blob_id;
+  EndTicketMutex(&mdm->vbucket_mutex);
+
+  CheckHeapOverlap(mdm);
+}
+
 IdList *AllocateIdList(MetadataManager *mdm, u32 length) {
   static_assert(sizeof(IdList) == sizeof(u64));
   Heap *id_heap = GetIdHeap(mdm);

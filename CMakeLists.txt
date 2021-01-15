@@ -125,7 +125,7 @@ endif()
 
 if(NOT CMAKE_CXX_FLAGS)
 #TODO: add -Werror
- set (CMAKE_CXX_FLAGS "-Wall -Wextra ${CMAKE_CXX_FLAGS}")
+ set (CMAKE_CXX_FLAGS "-Wall -Wextra ${CMAKE_CXX_FLAGS} -DCATCH_CONFIG_FAST_COMPILE")
  message (STATUS "Warnings Configuration: default: ${CMAKE_CXX_FLAGS}")
 endif()
 
@@ -152,7 +152,7 @@ option(HERMES_MDM_STORAGE_STBDS
 option(HERMES_DEBUG_HEAP "Store Heap debug information for visualization." OFF)
 option(HERMES_BUILD_BENCHMARKS "Build the Hermes benchmark suite." OFF)
 option(HERMES_ENABLE_TIMING "Turn on timing of selected functions." OFF)
-option(HERMES_ENABLE_COVERAGE "Enable codecode  coverage." OFF)
+option(HERMES_ENABLE_COVERAGE "Enable code coverage." OFF)
 # Calculate code coverage with debug mode
 if(HERMES_ENABLE_COVERAGE)
   if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -347,6 +347,7 @@ if(CMAKE_PROJECT_NAME STREQUAL HERMES)
 endif()
 
 if(CMAKE_PROJECT_NAME STREQUAL HERMES AND BUILD_TESTING)
+  find_package(Catch2 REQUIRED)
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test)
 endif()
 

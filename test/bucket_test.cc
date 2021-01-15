@@ -11,9 +11,16 @@
 #include "test_utils.h"
 
 namespace hapi = hermes::api;
+std::shared_ptr<hermes::api::Hermes> hermes_app;
 
-struct MyTrait {
+int compress_blob(hermes::api::TraitInput &input, hermes::api::Trait *trait);
+struct MyTrait : public hapi::Trait {
   int compress_level;
+  MyTrait() : Trait(10001, hermes::TraitIdArray(), hermes::TraitType::META) {
+    onAttachFn =
+        std::bind(&compress_blob, std::placeholders::_1, std::placeholders::_2);
+  }
+
   // optional function pointer if only known at runtime
 };
 
@@ -28,9 +35,16 @@ void add_buffer_to_vector(hermes::api::Blob &vector, const char *buffer,
 
 // The Trait implementer must define callbacks that match the VBucket::TraitFunc
 // type.
-int compress_blob(hermes::api::Blob &blob, void *trait) {
+int compress_blob(hermes::api::TraitInput &input, hermes::api::Trait *trait) {
   MyTrait *my_trait = (MyTrait *)trait;
 
+  hapi::Context ctx;
+  hapi::Bucket bkt(input.bucket_name, hermes_app, ctx);
+  hapi::Blob blob = {};
+  size_t blob_size = bkt.Get(input.blob_name, blob, ctx);
+  blob.resize(blob_size);
+  bkt.Get(input.blob_name, blob, ctx);
+  bkt.Close(ctx);
   // If Hermes is already linked with a compression library, you can call the
   // function directly here. If not, the symbol will have to be dynamically
   // loaded and probably stored as a pointer in the Trait.
@@ -122,8 +136,7 @@ int main(int argc, char **argv) {
     config_file = argv[1];
   }
 
-  std::shared_ptr<hermes::api::Hermes> hermes_app =
-    hermes::api::InitHermes(config_file);
+  hermes_app = hermes::api::InitHermes(config_file);
 
   if (hermes_app->IsApplicationCore()) {
     hermes::api::Context ctx;
@@ -144,7 +157,7 @@ int main(int argc, char **argv) {
     else
       std::cout<< "Not found Blob2\n";
 
-    hermes::api::VBucket my_vb("VB1", hermes_app);
+    hermes::api::VBucket my_vb("VB1", hermes_app, false, ctx);
     hermes_app->Display_vbucket();
     my_vb.Link("Blob1", "compression", ctx);
     my_vb.Link("Blob2", "compression", ctx);
@@ -158,8 +171,9 @@ int main(int argc, char **argv) {
       std::cout << "Not found Blob2 from compression bucket in VBucket VB1\n";
 
     // compression level
-    struct MyTrait trait {6};
-    my_vb.Attach(&trait, compress_blob, ctx);  // compress action to data starts
+    MyTrait trait;
+    trait.compress_level = 6;
+    my_vb.Attach(&trait, ctx);  // compress action to data starts
 
     TestBucketPersist(hermes_app);
 
