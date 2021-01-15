@@ -2,14 +2,10 @@
 // Created by manihariharan on 12/15/20.
 //
 
-#include <bucket.h>
-#include <hermes.h>
-#include <hermes/adapter/singleton.h>
 #include <hermes/adapter/stdio.h>
-#include <hermes/adapter/stdio/common/constants.h>
-#include <hermes/adapter/stdio/common/datastructures.h>
-#include <hermes/adapter/stdio/mapper/mapper_factory.h>
-#include <hermes/adapter/stdio/metadata_manager.h>
+
+#include <hermes/adapter/stdio/metadata_manager.cpp>
+#include <hermes/adapter/stdio/mapper/balanced_mapper.cpp>
 
 using hermes::adapter::stdio::AdapterStat;
 using hermes::adapter::stdio::FileID;
@@ -18,6 +14,7 @@ using hermes::adapter::stdio::MapperFactory;
 using hermes::adapter::stdio::MetadataManager;
 
 namespace hapi = hermes::api;
+namespace fs = std::experimental::filesystem;
 
 FILE *open_internal(const std::string &path_str, const char *mode) {
   FILE *ret;
@@ -43,13 +40,12 @@ FILE *open_internal(const std::string &path_str, const char *mode) {
         /* FIXME: get current size of bucket from Hermes*/
         stat.st_ptr = stat.st_size;
       }
-      char *hermes_config = getenv(HERMES_CONF);
       /* FIXME(hari) check if this initialization is correct. */
-      mdm->hermes = hapi::InitHermes(hermes_config, false, true);
+      mdm->InitializeHermes();
       hapi::Context ctx;
       /* TODO(hari) how to pass to hermes to make a private bucket
        * also add how to handle existing buckets of same name */
-      stat.st_bkid = std::make_shared<hapi::Bucket>(path_str, mdm->hermes, ctx);
+      stat.st_bkid = std::make_shared<hapi::Bucket>(path_str, mdm->GetHermes(), ctx);
       mdm->Create(ret, stat);
     } else {
       existing.first.ref_count++;
@@ -101,6 +97,7 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
         existing.first.st_bkid->ContainsBlob(item.second.blob_name_);
     hapi::Blob put_data((unsigned char *)ptr + data_offset,
                         (unsigned char *)ptr + data_offset + item.first.size_);
+    existing.first.st_blobs.emplace(item.second.blob_name_);
     if (!blob_exists) {
       existing.first.st_bkid->Put(item.second.blob_name_, put_data, ctx);
     } else {
@@ -159,14 +156,32 @@ size_t read_internal(std::pair<AdapterStat, bool> &existing, void *ptr,
   auto mapping = mapper->map(
       FileStruct(mdm->convert(fp), existing.first.st_ptr, total_size));
   size_t total_read_size = 0;
+  auto filename = existing.first.st_bkid->GetName();
   for (const auto &item : mapping) {
     hapi::Context ctx;
+    auto blob_exists =
+        existing.first.st_bkid->ContainsBlob(item.second.blob_name_);
     hapi::Blob read_data(0);
-    auto exiting_blob_size =
-        existing.first.st_bkid->Get(item.second.blob_name_, read_data, ctx);
-    read_data.resize(exiting_blob_size);
-    auto read_size =
-        existing.first.st_bkid->Get(item.second.blob_name_, read_data, ctx);
+    size_t read_size = 0;
+    if (blob_exists) {
+      auto exiting_blob_size =
+          existing.first.st_bkid->Get(item.second.blob_name_, read_data, ctx);
+      read_data.resize(exiting_blob_size);
+      read_size =
+          existing.first.st_bkid->Get(item.second.blob_name_, read_data, ctx);
+    } else if (fs::exists(filename) &&
+               fs::file_size(filename) >=
+                   item.first.offset_ + item.first.size_) {
+      FILE *fh = fopen(filename.c_str(), "r+");
+      if (fh != nullptr) {
+        int status = fseek(fh, item.first.offset_, SEEK_SET);
+        if (status == 0) {
+          read_size =
+              fread(read_data.data(), item.first.size_, sizeof(char), fh);
+        }
+        status = fclose(fh);
+      }
+    }
     memcpy((char *)ptr + total_read_size,
            read_data.data() + item.second.offset_, item.second.size_);
     total_read_size += read_size;
@@ -258,9 +273,21 @@ int HERMES_DECL(fclose)(FILE *fp) {
     if (existing.second) {
       if (existing.first.ref_count == 1) {
         hapi::Context ctx;
+        auto filename = existing.first.st_bkid->GetName();
+        const auto &blob_names = existing.first.st_blobs;
+        hermes::api::VBucket file_vbucket(filename, mdm->GetHermes(), true, ctx);
+        auto offset_map = std::unordered_map<std::string, hermes::u64>();
+        for (const auto &blob_name : blob_names) {
+          file_vbucket.Link(blob_name, filename, ctx);
+          offset_map.emplace(blob_name, std::stol(blob_name) * PAGE_SIZE);
+        }
+        auto trait =
+            hermes::api::FileMappingTrait(filename, offset_map, NULL, NULL);
+        file_vbucket.Attach(&trait, ctx);
+        file_vbucket.Delete(ctx);
         existing.first.st_bkid->Close(ctx);
         mdm->Delete(fp);
-        mdm->hermes->Finalize();
+        mdm->FinalizeHermes();
       } else {
         existing.first.ref_count--;
         struct timespec ts;

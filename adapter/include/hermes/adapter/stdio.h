@@ -1,11 +1,21 @@
-#ifndef HERMES_STDIO_H
-#define HERMES_STDIO_H
+#ifndef HERMES_ADAPTER_STDIO_H
+#define HERMES_ADAPTER_STDIO_H
 
+#include <bucket.h>
 #include <fcntl.h>
+#include <hermes.h>
 #include <hermes/adapter/interceptor.h>
+#include <hermes/adapter/singleton.h>
+#include <hermes/adapter/stdio/common/constants.h>
+#include <hermes/adapter/stdio/common/datastructures.h>
+#include <hermes/adapter/stdio/mapper/mapper_factory.h>
+#include <hermes/adapter/stdio/metadata_manager.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <vbucket.h>
+
+#include <experimental/filesystem>
 
 /**
  * Function declarations
@@ -45,4 +55,4 @@ HERMES_FORWARD_DECL(fsetpos, int, (FILE * stream, const fpos_t *pos));
 HERMES_FORWARD_DECL(fsetpos64, int, (FILE * stream, const fpos64_t *pos));
 HERMES_FORWARD_DECL(rewind, void, (FILE * stream));
 
-#endif
+#endif  // HERMES_ADAPTER_STDIO_H

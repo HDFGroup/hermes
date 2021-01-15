@@ -6,9 +6,9 @@
 #define HERMES_DATASTRUCTURES_H
 #include <bucket.h>
 #include <buffer_pool.h>
-#include <ftw.h>
 #include <hermes_types.h>
 
+#include <ftw.h>
 #include <string>
 
 namespace hapi = hermes::api;
@@ -81,8 +81,13 @@ struct HermesStruct {
   }
 };
 
+
+
 struct AdapterStat {
   std::shared_ptr<hapi::Bucket> st_bkid; /* bucket associated with the file */
+  std::set<std::string,
+      bool (*)(const std::string&,
+         const std::string&)> st_blobs;  /* Blobs access in the bucket */
   i32 ref_count;                         /* # of time process opens a file */
   mode_t st_mode;                        /* protection */
   uid_t st_uid;                          /* user ID of owner */
@@ -95,6 +100,7 @@ struct AdapterStat {
   timespec st_ctim;                      /* time of last status change */
   AdapterStat()
       : st_bkid(),
+        st_blobs(CompareBlobs),
         ref_count(),
         st_mode(),
         st_uid(),
@@ -107,6 +113,7 @@ struct AdapterStat {
         st_ctim() {}
   explicit AdapterStat(const struct stat &st)
       : st_bkid(),
+        st_blobs(CompareBlobs),
         ref_count(1),
         st_mode(st.st_mode),
         st_uid(st.st_uid),
@@ -117,6 +124,11 @@ struct AdapterStat {
         st_atim(st.st_atim),
         st_mtim(st.st_mtim),
         st_ctim(st.st_ctim) {}
+
+  static bool CompareBlobs(const std::string& a, const std::string& b) {
+    return std::stol(a) < std::stol(b);
+  }
+
 };
 
 }  // namespace hermes::adapter::stdio

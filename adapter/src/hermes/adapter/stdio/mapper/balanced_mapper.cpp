@@ -4,7 +4,7 @@
 
 #include "balanced_mapper.h"
 
-#include <hermes/adapter/stdio/common/constants.h>
+
 
 using hermes::adapter::stdio::BalancedMapper;
 using hermes::adapter::stdio::FileStruct;

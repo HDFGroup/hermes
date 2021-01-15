@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "abstract_mapper.h"
+#include <hermes/adapter/stdio/common/constants.h>
 
 namespace hermes::adapter::stdio {
 class BalancedMapper : public AbstractMapper {
