@@ -58,7 +58,8 @@ TEST_CASE("SingleWrite",
     SECTION("write to existing file") {
         FILE* fd = fopen(info.existing_file.c_str(), "r+");
         REQUIRE(fd != nullptr);
-        size_t offset = fseek(fd, 0, SEEK_SET);
+        int offset = fseek(fd, 0, SEEK_SET);
+        REQUIRE(offset == 0);
         size_t size_written = fwrite(info.write_data.c_str(),
                                    sizeof(char), args.request_size, fd);
         REQUIRE(size_written == args.request_size);

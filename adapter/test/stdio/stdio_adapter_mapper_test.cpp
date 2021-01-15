@@ -174,7 +174,6 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
     auto mapping =
         mapper->map(FileStruct(mdm->convert(fp), offset, total_size));
     REQUIRE(mapping.size() == 1);
-    size_t mapped_offset = 0;
     REQUIRE(mapping[0].first.offset_ == offset);
     REQUIRE(mapping[0].first.size_ == total_size);
     REQUIRE(mapping[0].second.offset_ == 1);

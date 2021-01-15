@@ -506,7 +506,7 @@ TEST_CASE("fgetpos", "[process="+std::to_string(info.comm_size)+"]"
         status = fseek(fh, 0, SEEK_END);
         REQUIRE(status == 0);
         status = fgetpos(fh, &position);
-        REQUIRE(position.__pos == info.total_size);
+        REQUIRE(position.__pos == (long int)info.total_size);
 
         status = fclose(fh);
         REQUIRE(status == 0);
