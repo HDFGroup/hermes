@@ -330,7 +330,7 @@ if(HERMES_HAVE_GOTCHA)
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gotcha_intercept)
 endif()
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src)
-#add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/posix_adapter)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/adapter)
 #add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/mpi_io_adapter)
 #add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/hermes_vol)
 
@@ -349,6 +349,7 @@ endif()
 if(CMAKE_PROJECT_NAME STREQUAL HERMES AND BUILD_TESTING)
   find_package(Catch2 REQUIRED)
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test)
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/adapter/test)
 endif()
 
 #-----------------------------------------------------------------------------
