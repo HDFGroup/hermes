@@ -14,7 +14,7 @@ namespace hermes::adapter::posix::test {
 struct Arguments {
     std::string filename = "test.dat";
     std::string directory = "/tmp";
-    long request_size = 65536;
+    size_t request_size = 65536;
 };
 struct Info {
     int rank = 0;
@@ -23,7 +23,7 @@ struct Info {
     std::string read_data;
     std::string new_file;
     std::string existing_file;
-    long num_iterations = 1024;
+    size_t num_iterations = 1024;
     unsigned int offset_seed = 1;
     unsigned int rs_seed = 1;
     unsigned int temporal_interval_seed = 5;
