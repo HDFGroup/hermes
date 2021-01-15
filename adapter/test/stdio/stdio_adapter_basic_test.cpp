@@ -58,8 +58,8 @@ TEST_CASE("SingleWrite",
     SECTION("write to existing file") {
         FILE* fd = fopen(info.existing_file.c_str(), "r+");
         REQUIRE(fd != nullptr);
-        long offset = fseek(fd, 0, SEEK_SET);
-        long size_written = fwrite(info.write_data.c_str(),
+        size_t offset = fseek(fd, 0, SEEK_SET);
+        size_t size_written = fwrite(info.write_data.c_str(),
                                    sizeof(char), args.request_size, fd);
         REQUIRE(size_written == args.request_size);
         int status = fclose(fd);
@@ -69,7 +69,7 @@ TEST_CASE("SingleWrite",
     SECTION("write to new  file") {
         FILE* fd = fopen(info.new_file.c_str(), "w+");
         REQUIRE(fd != nullptr);
-        long size_written = fwrite(info.write_data.c_str(), sizeof(char),
+        size_t size_written = fwrite(info.write_data.c_str(), sizeof(char),
                                    args.request_size, fd);
         REQUIRE(size_written == args.request_size);
         int status = fclose(fd);
@@ -80,7 +80,7 @@ TEST_CASE("SingleWrite",
     SECTION("write to existing file with truncate") {
         FILE* fd = fopen(info.existing_file.c_str(), "w");
         REQUIRE(fd != nullptr);
-        long size_written = fwrite(info.write_data.c_str(), sizeof(char),
+        size_t size_written = fwrite(info.write_data.c_str(), sizeof(char),
                                    args.request_size, fd);
         REQUIRE(size_written == args.request_size);
         int status = fclose(fd);
@@ -93,9 +93,9 @@ TEST_CASE("SingleWrite",
         REQUIRE(fd != nullptr);
         int status = fseek(fd, 0, SEEK_END);
         REQUIRE(status == 0);
-        long offset = ftell(fd);
+        size_t offset = ftell(fd);
         REQUIRE(offset == args.request_size * info.num_iterations);
-        long size_written = fwrite(info.write_data.c_str(), sizeof(char),
+        size_t size_written = fwrite(info.write_data.c_str(), sizeof(char),
                                    args.request_size, fd);
         REQUIRE(size_written == args.request_size);
         status = fclose(fd);
@@ -107,7 +107,7 @@ TEST_CASE("SingleWrite",
         auto existing_size = fs::file_size(info.existing_file);
         FILE* fd = fopen(info.existing_file.c_str(), "a+");
         REQUIRE(fd != nullptr);
-        long size_written = fwrite(info.write_data.c_str(),
+        size_t size_written = fwrite(info.write_data.c_str(),
                                    sizeof(char), args.request_size, fd);
         REQUIRE(size_written == args.request_size);
         int status = fclose(fd);
@@ -119,7 +119,7 @@ TEST_CASE("SingleWrite",
     SECTION("append to new file") {
         FILE* fd = fopen(info.new_file.c_str(), "w+");
         REQUIRE(fd != nullptr);
-        long size_written = fwrite(info.write_data.c_str(), sizeof(char),
+        size_t size_written = fwrite(info.write_data.c_str(), sizeof(char),
                                    args.request_size, fd);
         REQUIRE(size_written == args.request_size);
         int status = fclose(fd);
@@ -143,9 +143,9 @@ TEST_CASE("SingleRead",
     SECTION("read from existing file") {
         FILE* fd = fopen(info.existing_file.c_str(), "r");
         REQUIRE(fd != nullptr);
-        long offset = ftell(fd);
+        size_t offset = ftell(fd);
         REQUIRE(offset == 0);
-        long size_read = fread(info.read_data.data(), sizeof(char),
+        size_t size_read = fread(info.read_data.data(), sizeof(char),
                                    args.request_size, fd);
         REQUIRE(size_read == args.request_size);
         int status = fclose(fd);
@@ -156,9 +156,9 @@ TEST_CASE("SingleRead",
         REQUIRE(fd != nullptr);
         int status = fseek(fd, 0, SEEK_END);
         REQUIRE(status == 0);
-        long offset = ftell(fd);
+        size_t offset = ftell(fd);
         REQUIRE(offset == args.request_size * info.num_iterations);
-        long size_read = fread(info.read_data.data(), sizeof(char),
+        size_t size_read = fread(info.read_data.data(), sizeof(char),
                                args.request_size, fd);
         REQUIRE(size_read == 0);
         status = fclose(fd);
@@ -177,12 +177,12 @@ TEST_CASE("BatchedWriteSequential",
         FILE* fd = fopen(info.new_file.c_str(), "w+");
         REQUIRE(fd != nullptr);
 
-        for (int i = 0; i < info.num_iterations; ++i) {
+        for (size_t i = 0; i < info.num_iterations; ++i) {
             int status = fseek(fd, 0, SEEK_SET);
             REQUIRE(status == 0);
-            long offset = ftell(fd);
+            size_t offset = ftell(fd);
             REQUIRE(offset == 0);
-            long size_written = fwrite(info.write_data.c_str(),
+            size_t size_written = fwrite(info.write_data.c_str(),
                                        sizeof(char), args.request_size, fd);
             REQUIRE(size_written == args.request_size);
         }
@@ -195,8 +195,8 @@ TEST_CASE("BatchedWriteSequential",
         FILE* fd = fopen(info.new_file.c_str(), "w+");
         REQUIRE(fd != nullptr);
 
-        for (int i = 0; i < info.num_iterations; ++i) {
-            long size_written = fwrite(info.write_data.c_str(),
+        for (size_t i = 0; i < info.num_iterations; ++i) {
+            size_t size_written = fwrite(info.write_data.c_str(),
                                        sizeof(char), args.request_size, fd);
             REQUIRE(size_written == args.request_size);
         }
@@ -220,8 +220,8 @@ TEST_CASE("BatchedReadSequential",
         FILE* fd = fopen(info.existing_file.c_str(), "r+");
         REQUIRE(fd != nullptr);
         std::string data(args.request_size, '1');
-        for (int i = 0; i < info.num_iterations; ++i) {
-            long size_read = fread(data.data(),
+        for (size_t i = 0; i < info.num_iterations; ++i) {
+            size_t size_read = fread(data.data(),
                                        sizeof(char), args.request_size, fd);
             REQUIRE(size_read == args.request_size);
         }
@@ -233,12 +233,12 @@ TEST_CASE("BatchedReadSequential",
         FILE* fd = fopen(info.existing_file.c_str(), "w+");
         REQUIRE(fd != nullptr);
 
-        for (int i = 0; i < info.num_iterations; ++i) {
+        for (size_t i = 0; i < info.num_iterations; ++i) {
             int status = fseek(fd, 0, SEEK_SET);
             REQUIRE(status == 0);
-            long offset = ftell(fd);
+            size_t offset = ftell(fd);
             REQUIRE(offset == 0);
-            long size_written = fwrite(info.write_data.c_str(),
+            size_t size_written = fwrite(info.write_data.c_str(),
                                        sizeof(char), args.request_size, fd);
             REQUIRE(size_written == args.request_size);
         }
@@ -258,12 +258,12 @@ TEST_CASE("BatchedReadRandom",
         FILE* fd = fopen(info.existing_file.c_str(), "r+");
         REQUIRE(fd != nullptr);
         std::string data(args.request_size, '1');
-        for (int i = 0; i < info.num_iterations; ++i) {
+        for (size_t i = 0; i < info.num_iterations; ++i) {
             auto offset = rand_r(&info.offset_seed)
                     % (info.total_size - args.request_size);
             auto status = fseek(fd, offset, SEEK_SET);
             REQUIRE(status == 0);
-            long size_read = fread(data.data(),
+            size_t size_read = fread(data.data(),
                                    sizeof(char), args.request_size, fd);
             REQUIRE(size_read == args.request_size);
         }
@@ -283,12 +283,12 @@ TEST_CASE("BatchedUpdateRandom",
         FILE* fd = fopen(info.existing_file.c_str(), "r+");
         REQUIRE(fd != nullptr);
         std::string data(args.request_size, '1');
-        for (int i = 0; i < info.num_iterations; ++i) {
+        for (size_t i = 0; i < info.num_iterations; ++i) {
             auto offset = rand_r(&info.offset_seed)
                     % (info.total_size - args.request_size);
             auto status = fseek(fd, offset, SEEK_SET);
             REQUIRE(status == 0);
-            long size_read = fwrite(data.data(),
+            size_t size_read = fwrite(data.data(),
                                    sizeof(char), args.request_size, fd);
             REQUIRE(size_read == args.request_size);
         }
@@ -309,11 +309,11 @@ TEST_CASE("BatchedReadStrideFixed",
         FILE* fd = fopen(info.existing_file.c_str(), "r+");
         REQUIRE(fd != nullptr);
         std::string data(args.request_size, '1');
-        for (int i = 0; i < info.num_iterations; ++i) {
+        for (size_t i = 0; i < info.num_iterations; ++i) {
             auto offset = (i * info.stride_size) % info.total_size;
             auto status = fseek(fd, offset, SEEK_SET);
             REQUIRE(status == 0);
-            long size_read = fread(data.data(),
+            size_t size_read = fread(data.data(),
                                    sizeof(char), args.request_size, fd);
             REQUIRE(size_read == args.request_size);
         }
@@ -334,11 +334,11 @@ TEST_CASE("BatchedUpdateStrideFixed",
         FILE* fd = fopen(info.existing_file.c_str(), "r+");
         REQUIRE(fd != nullptr);
         std::string data(args.request_size, '1');
-        for (int i = 0; i < info.num_iterations; ++i) {
+        for (size_t i = 0; i < info.num_iterations; ++i) {
             auto offset = (i * info.stride_size) % info.total_size;
             auto status = fseek(fd, offset, SEEK_SET);
             REQUIRE(status == 0);
-            long size_read = fwrite(data.data(),
+            size_t size_read = fwrite(data.data(),
                                     sizeof(char), args.request_size, fd);
             REQUIRE(size_read == args.request_size);
         }
@@ -359,12 +359,12 @@ TEST_CASE("BatchedReadStrideDynamic",
         FILE* fd = fopen(info.existing_file.c_str(), "r+");
         REQUIRE(fd != nullptr);
         std::string data(args.request_size, '1');
-        for (int i = 0; i < info.num_iterations; ++i) {
+        for (size_t i = 0; i < info.num_iterations; ++i) {
             auto offset = abs(((i * rand_r(&info.offset_seed))
                     % info.stride_size) % info.total_size);
             auto status = fseek(fd, offset, SEEK_SET);
             REQUIRE(status == 0);
-            long size_read = fread(data.data(),
+            size_t size_read = fread(data.data(),
                                    sizeof(char), args.request_size, fd);
             REQUIRE(size_read == args.request_size);
         }
@@ -384,12 +384,12 @@ TEST_CASE("BatchedUpdateStrideDynamic",
         FILE* fd = fopen(info.existing_file.c_str(), "r+");
         REQUIRE(fd != nullptr);
         std::string data(args.request_size, '1');
-        for (int i = 0; i < info.num_iterations; ++i) {
+        for (size_t i = 0; i < info.num_iterations; ++i) {
             auto offset = abs(((i * rand_r(&info.offset_seed))
                     % info.stride_size) % info.total_size);
             auto status = fseek(fd, offset, SEEK_SET);
             REQUIRE(status == 0);
-            long size_read = fwrite(data.data(),
+            size_t size_read = fwrite(data.data(),
                                     sizeof(char), args.request_size, fd);
             REQUIRE(size_read == args.request_size);
         }
@@ -409,16 +409,16 @@ TEST_CASE("BatchedWriteRSVariable",
     SECTION("write to new file always at the start") {
         FILE* fd = fopen(info.new_file.c_str(), "w+");
         REQUIRE(fd != nullptr);
-        long biggest_size_written = 0;
-        for (int i = 0; i < info.num_iterations; ++i) {
+        size_t biggest_size_written = 0;
+        for (size_t i = 0; i < info.num_iterations; ++i) {
             int status = fseek(fd, 0, SEEK_SET);
             REQUIRE(status == 0);
-            long offset = ftell(fd);
+            size_t offset = ftell(fd);
             REQUIRE(offset == 0);
-            long request_size = args.request_size +
+            size_t request_size = args.request_size +
                                 (rand_r(&info.offset_seed) % args.request_size);
             std::string data(request_size, '1');
-            long size_written = fwrite(data.c_str(),
+            size_t size_written = fwrite(data.c_str(),
                                        sizeof(char), request_size, fd);
             REQUIRE(size_written == request_size);
             if (biggest_size_written < request_size)
@@ -432,12 +432,12 @@ TEST_CASE("BatchedWriteRSVariable",
     SECTION("write to new file") {
         FILE* fd = fopen(info.new_file.c_str(), "w+");
         REQUIRE(fd != nullptr);
-        long total_size_written = 0;
-        for (int i = 0; i < info.num_iterations; ++i) {
-            long request_size = args.request_size +
+        size_t total_size_written = 0;
+        for (size_t i = 0; i < info.num_iterations; ++i) {
+            size_t request_size = args.request_size +
                                 (rand_r(&info.offset_seed) % args.request_size);
             std::string data(request_size, '1');
-            long size_written = fwrite(data.c_str(),
+            size_t size_written = fwrite(data.c_str(),
                                        sizeof(char), request_size, fd);
             REQUIRE(size_written == request_size);
             total_size_written += size_written;
@@ -460,13 +460,13 @@ TEST_CASE("BatchedReadSequentialRSVariable",
         FILE* fd = fopen(info.existing_file.c_str(), "r");
         REQUIRE(fd != nullptr);
         std::string data(args.request_size, '1');
-        long current_offset = 0;
-        for (int i = 0; i < info.num_iterations; ++i) {
-            long request_size = (args.request_size +
+        size_t current_offset = 0;
+        for (size_t i = 0; i < info.num_iterations; ++i) {
+            size_t request_size = (args.request_size +
                                 (rand_r(&info.offset_seed) % args.request_size))
                                         % (info.total_size - current_offset);
             std::string data(request_size, '1');
-            long size_read = fread(data.data(),
+            size_t size_read = fread(data.data(),
                                    sizeof(char), request_size, fd);
             REQUIRE(size_read == request_size);
             current_offset += size_read;
@@ -479,15 +479,15 @@ TEST_CASE("BatchedReadSequentialRSVariable",
         FILE* fd = fopen(info.existing_file.c_str(), "r");
         REQUIRE(fd != nullptr);
 
-        for (int i = 0; i < info.num_iterations; ++i) {
+        for (size_t i = 0; i < info.num_iterations; ++i) {
             int status = fseek(fd, 0, SEEK_SET);
             REQUIRE(status == 0);
-            long offset = ftell(fd);
+            size_t offset = ftell(fd);
             REQUIRE(offset == 0);
-            long request_size = args.request_size +
+            size_t request_size = args.request_size +
                                 (rand_r(&info.offset_seed) % args.request_size);
             std::string data(request_size, '1');
-            long size_read = fread(data.data(),
+            size_t size_read = fread(data.data(),
                                    sizeof(char), request_size, fd);
             REQUIRE(size_read == request_size);
         }
@@ -508,17 +508,17 @@ TEST_CASE("BatchedReadRandomRSVariable",
         FILE* fd = fopen(info.existing_file.c_str(), "r+");
         REQUIRE(fd != nullptr);
         std::string data(args.request_size, '1');
-        for (int i = 0; i < info.num_iterations; ++i) {
+        for (size_t i = 0; i < info.num_iterations; ++i) {
             auto offset = rand_r(&info.offset_seed)
                     % (info.total_size - args.request_size);
             auto status = fseek(fd, offset, SEEK_SET);
             REQUIRE(status == 0);
-            long request_size = (args.request_size +
+            size_t request_size = (args.request_size +
                                 (rand_r(&info.rs_seed)
                                 % args.request_size))
                                 % (info.total_size - offset);
             std::string data(request_size, '1');
-            long size_read = fread(data.data(),
+            size_t size_read = fread(data.data(),
                                    sizeof(char), request_size, fd);
             REQUIRE(size_read == request_size);
         }
@@ -539,16 +539,16 @@ TEST_CASE("BatchedUpdateRandomRSVariable",
         FILE* fd = fopen(info.existing_file.c_str(), "r+");
         REQUIRE(fd != nullptr);
         std::string data(args.request_size, '1');
-        for (int i = 0; i < info.num_iterations; ++i) {
+        for (size_t i = 0; i < info.num_iterations; ++i) {
             auto offset = rand_r(&info.offset_seed)
                     % (info.total_size - args.request_size);
             auto status = fseek(fd, offset, SEEK_SET);
             REQUIRE(status == 0);
-            long request_size = args.request_size +
+            size_t request_size = args.request_size +
                                 (rand_r(&info.rs_seed)
                                 % args.request_size);
             std::string data(request_size, '1');
-            long size_written = fwrite(data.c_str(),
+            size_t size_written = fwrite(data.c_str(),
                                        sizeof(char), request_size, fd);
             REQUIRE(size_written == request_size);
         }
@@ -568,16 +568,16 @@ TEST_CASE("BatchedReadStrideFixedRSVariable",
     SECTION("read from existing file") {
         FILE* fd = fopen(info.existing_file.c_str(), "r+");
         REQUIRE(fd != nullptr);
-        for (int i = 0; i < info.num_iterations; ++i) {
+        for (size_t i = 0; i < info.num_iterations; ++i) {
             auto offset = (i * info.stride_size) % info.total_size;
             auto status = fseek(fd, offset, SEEK_SET);
             REQUIRE(status == 0);
-            long request_size = (args.request_size +
+            size_t request_size = (args.request_size +
                                 (rand_r(&info.rs_seed)
                                 % args.request_size))
                                         % (info.total_size - offset);
             std::string data(request_size, '1');
-            long size_read = fread(data.data(),
+            size_t size_read = fread(data.data(),
                                    sizeof(char), request_size, fd);
             REQUIRE(size_read == request_size);
         }
@@ -598,15 +598,15 @@ TEST_CASE("BatchedUpdateStrideFixedRSVariable",
         FILE* fd = fopen(info.existing_file.c_str(), "r+");
         REQUIRE(fd != nullptr);
         std::string data(args.request_size, '1');
-        for (int i = 0; i < info.num_iterations; ++i) {
+        for (size_t i = 0; i < info.num_iterations; ++i) {
             auto offset = (i * info.stride_size) % info.total_size;
             auto status = fseek(fd, offset, SEEK_SET);
             REQUIRE(status == 0);
-            long request_size = args.request_size +
+            size_t request_size = args.request_size +
                                 (rand_r(&info.rs_seed)
                                 % args.request_size);
             std::string data(request_size, '1');
-            long size_written = fwrite(data.c_str(),
+            size_t size_written = fwrite(data.c_str(),
                                        sizeof(char), request_size, fd);
             REQUIRE(size_written == request_size);
         }
@@ -626,16 +626,16 @@ TEST_CASE("BatchedReadStrideDynamicRSVariable",
     SECTION("read from existing file") {
         FILE* fd = fopen(info.existing_file.c_str(), "r+");
         REQUIRE(fd != nullptr);
-        for (int i = 0; i < info.num_iterations; ++i) {
+        for (size_t i = 0; i < info.num_iterations; ++i) {
             auto offset = abs(((i * rand_r(&info.offset_seed))
                     % info.stride_size) % info.total_size);
             auto status = fseek(fd, offset, SEEK_SET);
             REQUIRE(status == 0);
-            long request_size = args.request_size +
+            size_t request_size = args.request_size +
                                 (rand_r(&info.rs_seed)
                                 % args.request_size);
             std::string data(request_size, '1');
-            long size_read = fread(data.data(),
+            size_t size_read = fread(data.data(),
                                    sizeof(char), request_size, fd);
             REQUIRE(size_read == request_size);
         }
@@ -654,16 +654,16 @@ TEST_CASE("BatchedUpdateStrideDynamicRSVariable",
     SECTION("read from existing file") {
         FILE* fd = fopen(info.existing_file.c_str(), "r+");
         REQUIRE(fd != nullptr);
-        for (int i = 0; i < info.num_iterations; ++i) {
+        for (size_t i = 0; i < info.num_iterations; ++i) {
             auto offset = abs(((i * rand_r(&info.offset_seed))
                     % info.stride_size) % info.total_size);
             auto status = fseek(fd, offset, SEEK_SET);
             REQUIRE(status == 0);
-            long request_size = args.request_size +
+            size_t request_size = args.request_size +
                                 (rand_r(&info.rs_seed)
                                  % args.request_size);
             std::string data(request_size, '1');
-            long size_written = fwrite(data.c_str(),
+            size_t size_written = fwrite(data.c_str(),
                                        sizeof(char), request_size, fd);
             REQUIRE(size_written == request_size);
         }
@@ -683,8 +683,8 @@ TEST_CASE("BatchedReadStrideNegative",
         FILE* fd = fopen(info.existing_file.c_str(), "r+");
         REQUIRE(fd != nullptr);
         std::string data(args.request_size, '1');
-        long prev_offset = info.total_size + 1;
-        for (int i = 0; i < info.num_iterations; ++i) {
+        size_t prev_offset = info.total_size + 1;
+        for (size_t i = 0; i < info.num_iterations; ++i) {
             auto stride_offset = info.total_size - i * info.stride_size;
             REQUIRE(prev_offset > stride_offset);
             prev_offset = stride_offset;
@@ -692,7 +692,7 @@ TEST_CASE("BatchedReadStrideNegative",
                         % (info.total_size - args.request_size);
             auto status = fseek(fd, offset, SEEK_SET);
             REQUIRE(status == 0);
-            long size_read = fread(data.data(),
+            size_t size_read = fread(data.data(),
                                    sizeof(char), args.request_size, fd);
             REQUIRE(size_read == args.request_size);
         }
@@ -712,12 +712,12 @@ TEST_CASE("BatchedUpdateStrideNegative",
         FILE* fd = fopen(info.existing_file.c_str(), "r+");
         REQUIRE(fd != nullptr);
         std::string data(args.request_size, '1');
-        for (int i = 0; i < info.num_iterations; ++i) {
+        for (size_t i = 0; i < info.num_iterations; ++i) {
             auto offset = info.total_size - ((i * info.stride_size)
                     % info.total_size);
             auto status = fseek(fd, offset, SEEK_SET);
             REQUIRE(status == 0);
-            long size_read = fwrite(data.data(),
+            size_t size_read = fwrite(data.data(),
                                     sizeof(char), args.request_size, fd);
             REQUIRE(size_read == args.request_size);
         }
@@ -737,17 +737,17 @@ TEST_CASE("BatchedReadStrideNegativeRSVariable",
     SECTION("read from existing file") {
         FILE* fd = fopen(info.existing_file.c_str(), "r+");
         REQUIRE(fd != nullptr);
-        for (int i = 0; i < info.num_iterations; ++i) {
+        for (size_t i = 0; i < info.num_iterations; ++i) {
             auto offset = (info.total_size - i * info.stride_size)
                         % (info.total_size - 2*args.request_size);
             auto status = fseek(fd, offset, SEEK_SET);
             REQUIRE(status == 0);
-            long request_size = (args.request_size +
+            size_t request_size = (args.request_size +
                                  (rand_r(&info.rs_seed)
                                   % args.request_size))
                                 % (info.total_size - offset);
             std::string data(request_size, '1');
-            long size_read = fread(data.data(),
+            size_t size_read = fread(data.data(),
                                    sizeof(char), request_size, fd);
             REQUIRE(size_read == request_size);
         }
@@ -768,16 +768,16 @@ TEST_CASE("BatchedUpdateStrideNegativeRSVariable",
         FILE* fd = fopen(info.existing_file.c_str(), "r+");
         REQUIRE(fd != nullptr);
         std::string data(args.request_size, '1');
-        for (int i = 0; i < info.num_iterations; ++i) {
+        for (size_t i = 0; i < info.num_iterations; ++i) {
             auto offset = info.total_size - ((i * info.stride_size)
                     % info.total_size);
             auto status = fseek(fd, offset, SEEK_SET);
             REQUIRE(status == 0);
-            long request_size = args.request_size +
+            size_t request_size = args.request_size +
                                 (rand_r(&info.rs_seed)
                                  % args.request_size);
             std::string data(request_size, '1');
-            long size_written = fwrite(data.c_str(),
+            size_t size_written = fwrite(data.c_str(),
                                        sizeof(char), request_size, fd);
             REQUIRE(size_written == request_size);
         }
@@ -793,26 +793,26 @@ TEST_CASE("BatchedReadStride2D",
           "[request_size=type-fixed][repetition=1024]"
           "[pattern=stride_2d][file=1]") {
     pretest();
-    long rows = sqrt(info.total_size);
-    long cols = rows;
+    size_t rows = sqrt(info.total_size);
+    size_t cols = rows;
     REQUIRE(rows * cols == info.total_size);
-    long cell_size = 128;
-    long cell_stride = rows * cols/ cell_size / info.num_iterations;
+    size_t cell_size = 128;
+    size_t cell_stride = rows * cols/ cell_size / info.num_iterations;
     SECTION("read from existing file") {
         FILE* fd = fopen(info.existing_file.c_str(), "r+");
         REQUIRE(fd != nullptr);
         std::string data(args.request_size, '1');
-        long prev_cell_col = 0, prev_cell_row = 0;
-        for (int i = 0; i < info.num_iterations; ++i) {
-            long current_cell_col = (prev_cell_col +  cell_stride) % cols;
-            long current_cell_row = prev_cell_col + cell_stride > cols ?
+        size_t prev_cell_col = 0, prev_cell_row = 0;
+        for (size_t i = 0; i < info.num_iterations; ++i) {
+            size_t current_cell_col = (prev_cell_col +  cell_stride) % cols;
+            size_t current_cell_row = prev_cell_col + cell_stride > cols ?
                     prev_cell_row + 1: prev_cell_row;
             prev_cell_row = current_cell_row;
             auto offset = (current_cell_col*cell_stride + prev_cell_row*cols)
                           % (info.total_size - args.request_size);
             auto status = fseek(fd, offset, SEEK_SET);
             REQUIRE(status == 0);
-            long size_read = fread(data.data(),
+            size_t size_read = fread(data.data(),
                                    sizeof(char), args.request_size, fd);
             REQUIRE(size_read == args.request_size);
         }
@@ -829,26 +829,26 @@ TEST_CASE("BatchedUpdateStride2D",
           "[pattern=stride_2d][file=1]") {
     pretest();
 
-    long rows = sqrt(info.total_size);
-    long cols = rows;
+    size_t rows = sqrt(info.total_size);
+    size_t cols = rows;
     REQUIRE(rows * cols == info.total_size);
-    long cell_size = 128;
-    long cell_stride = rows * cols/ cell_size / info.num_iterations;
+    size_t cell_size = 128;
+    size_t cell_stride = rows * cols/ cell_size / info.num_iterations;
     SECTION("read from existing file") {
         FILE* fd = fopen(info.existing_file.c_str(), "r+");
         REQUIRE(fd != nullptr);
         std::string data(args.request_size, '1');
-        long prev_cell_col = 0, prev_cell_row = 0;
-        for (int i = 0; i < info.num_iterations; ++i) {
-            long current_cell_col = (prev_cell_col +  cell_stride) % cols;
-            long current_cell_row = prev_cell_col + cell_stride > cols ?
+        size_t prev_cell_col = 0, prev_cell_row = 0;
+        for (size_t i = 0; i < info.num_iterations; ++i) {
+            size_t current_cell_col = (prev_cell_col +  cell_stride) % cols;
+            size_t current_cell_row = prev_cell_col + cell_stride > cols ?
                                     prev_cell_row + 1: prev_cell_row;
             prev_cell_row = current_cell_row;
             auto offset = (current_cell_col*cell_stride + prev_cell_row*cols)
                           % (info.total_size - args.request_size);
             auto status = fseek(fd, offset, SEEK_SET);
             REQUIRE(status == 0);
-            long size_read = fwrite(data.data(),
+            size_t size_read = fwrite(data.data(),
                                     sizeof(char), args.request_size, fd);
             REQUIRE(size_read == args.request_size);
         }
@@ -865,30 +865,30 @@ TEST_CASE("BatchedReadStride2DRSVariable",
           "[request_size=type-variable][repetition=1024]"
           "[pattern=stride_2d][file=1]") {
     pretest();
-    long rows = sqrt(info.total_size);
-    long cols = rows;
+    size_t rows = sqrt(info.total_size);
+    size_t cols = rows;
     REQUIRE(rows * cols == info.total_size);
-    long cell_size = 128;
-    long cell_stride = rows * cols/ cell_size / info.num_iterations;
+    size_t cell_size = 128;
+    size_t cell_stride = rows * cols/ cell_size / info.num_iterations;
     SECTION("read from existing file") {
         FILE* fd = fopen(info.existing_file.c_str(), "r+");
         REQUIRE(fd != nullptr);
-        long prev_cell_col = 0, prev_cell_row = 0;
-        for (int i = 0; i < info.num_iterations; ++i) {
-            long current_cell_col = (prev_cell_col +  cell_stride) % cols;
-            long current_cell_row = prev_cell_col + cell_stride > cols ?
+        size_t prev_cell_col = 0, prev_cell_row = 0;
+        for (size_t i = 0; i < info.num_iterations; ++i) {
+            size_t current_cell_col = (prev_cell_col +  cell_stride) % cols;
+            size_t current_cell_row = prev_cell_col + cell_stride > cols ?
                                     prev_cell_row + 1: prev_cell_row;
             prev_cell_row = current_cell_row;
             auto offset = (current_cell_col*cell_stride + prev_cell_row*cols)
                           % (info.total_size - 2*args.request_size);
             auto status = fseek(fd, offset, SEEK_SET);
             REQUIRE(status == 0);
-            long request_size = (args.request_size +
+            size_t request_size = (args.request_size +
                                  (rand_r(&info.rs_seed)
                                   % args.request_size))
                                 % (info.total_size - offset);
             std::string data(request_size, '1');
-            long size_read = fread(data.data(),
+            size_t size_read = fread(data.data(),
                                    sizeof(char), request_size, fd);
             REQUIRE(size_read == request_size);
         }
@@ -904,30 +904,30 @@ TEST_CASE("BatchedUpdateStride2DRSVariable",
           "[request_size=type-variable][repetition=1024]"
           "[pattern=stride_2d][file=1]") {
     pretest();
-    long rows = sqrt(info.total_size);
-    long cols = rows;
+    size_t rows = sqrt(info.total_size);
+    size_t cols = rows;
     REQUIRE(rows * cols == info.total_size);
-    long cell_size = 128;
-    long cell_stride = rows * cols/ cell_size / info.num_iterations;
+    size_t cell_size = 128;
+    size_t cell_stride = rows * cols/ cell_size / info.num_iterations;
     SECTION("write to existing file") {
         FILE* fd = fopen(info.existing_file.c_str(), "r+");
         REQUIRE(fd != nullptr);
         std::string data(args.request_size, '1');
-        long prev_cell_col = 0, prev_cell_row = 0;
-        for (int i = 0; i < info.num_iterations; ++i) {
-            long current_cell_col = (prev_cell_col +  cell_stride) % cols;
-            long current_cell_row = prev_cell_col + cell_stride > cols ?
+        size_t prev_cell_col = 0, prev_cell_row = 0;
+        for (size_t i = 0; i < info.num_iterations; ++i) {
+            size_t current_cell_col = (prev_cell_col +  cell_stride) % cols;
+            size_t current_cell_row = prev_cell_col + cell_stride > cols ?
                                     prev_cell_row + 1: prev_cell_row;
             prev_cell_row = current_cell_row;
             auto offset = (current_cell_col*cell_stride + prev_cell_row*cols)
                           % (info.total_size - 2*args.request_size);
             auto status = fseek(fd, offset, SEEK_SET);
             REQUIRE(status == 0);
-            long request_size = args.request_size +
+            size_t request_size = args.request_size +
                                 (rand_r(&info.rs_seed)
                                  % args.request_size);
             std::string data(request_size, '1');
-            long size_written = fwrite(data.c_str(),
+            size_t size_written = fwrite(data.c_str(),
                                        sizeof(char), request_size, fd);
             REQUIRE(size_written == request_size);
         }
@@ -954,13 +954,13 @@ TEST_CASE("BatchedWriteTemporalFixed",
         FILE* fd = fopen(info.new_file.c_str(), "w+");
         REQUIRE(fd != nullptr);
 
-        for (int i = 0; i < info.num_iterations; ++i) {
+        for (size_t i = 0; i < info.num_iterations; ++i) {
             usleep(info.temporal_interval_ms * 1000);
             int status = fseek(fd, 0, SEEK_SET);
             REQUIRE(status == 0);
-            long offset = ftell(fd);
+            size_t offset = ftell(fd);
             REQUIRE(offset == 0);
-            long size_written = fwrite(info.write_data.c_str(),
+            size_t size_written = fwrite(info.write_data.c_str(),
                                        sizeof(char), args.request_size, fd);
             REQUIRE(size_written == args.request_size);
         }
@@ -973,9 +973,9 @@ TEST_CASE("BatchedWriteTemporalFixed",
         FILE* fd = fopen(info.new_file.c_str(), "w+");
         REQUIRE(fd != nullptr);
 
-        for (int i = 0; i < info.num_iterations; ++i) {
+        for (size_t i = 0; i < info.num_iterations; ++i) {
             usleep(info.temporal_interval_ms * 1000);
-            long size_written = fwrite(info.write_data.c_str(),
+            size_t size_written = fwrite(info.write_data.c_str(),
                                        sizeof(char), args.request_size, fd);
             REQUIRE(size_written == args.request_size);
         }
@@ -998,9 +998,9 @@ TEST_CASE("BatchedReadSequentialTemporalFixed",
         FILE* fd = fopen(info.existing_file.c_str(), "r+");
         REQUIRE(fd != nullptr);
         std::string data(args.request_size, '1');
-        for (int i = 0; i < info.num_iterations; ++i) {
+        for (size_t i = 0; i < info.num_iterations; ++i) {
             usleep(info.temporal_interval_ms * 1000);
-            long size_read = fread(data.data(),
+            size_t size_read = fread(data.data(),
                                    sizeof(char), args.request_size, fd);
             REQUIRE(size_read == args.request_size);
         }
@@ -1012,13 +1012,13 @@ TEST_CASE("BatchedReadSequentialTemporalFixed",
         FILE* fd = fopen(info.existing_file.c_str(), "w+");
         REQUIRE(fd != nullptr);
 
-        for (int i = 0; i < info.num_iterations; ++i) {
+        for (size_t i = 0; i < info.num_iterations; ++i) {
             usleep(info.temporal_interval_ms * 1000);
             int status = fseek(fd, 0, SEEK_SET);
             REQUIRE(status == 0);
-            long offset = ftell(fd);
+            size_t offset = ftell(fd);
             REQUIRE(offset == 0);
-            long size_written = fwrite(info.write_data.c_str(),
+            size_t size_written = fwrite(info.write_data.c_str(),
                                        sizeof(char), args.request_size, fd);
             REQUIRE(size_written == args.request_size);
         }
@@ -1039,15 +1039,15 @@ TEST_CASE("BatchedWriteTemporalVariable",
         FILE* fd = fopen(info.new_file.c_str(), "w+");
         REQUIRE(fd != nullptr);
 
-        for (int i = 0; i < info.num_iterations; ++i) {
+        for (size_t i = 0; i < info.num_iterations; ++i) {
             info.temporal_interval_ms = rand_r(&info.temporal_interval_seed)
                     % info.temporal_interval_ms + 1;
             usleep(info.temporal_interval_ms * 1000);
             int status = fseek(fd, 0, SEEK_SET);
             REQUIRE(status == 0);
-            long offset = ftell(fd);
+            size_t offset = ftell(fd);
             REQUIRE(offset == 0);
-            long size_written = fwrite(info.write_data.c_str(),
+            size_t size_written = fwrite(info.write_data.c_str(),
                                        sizeof(char), args.request_size, fd);
             REQUIRE(size_written == args.request_size);
         }
@@ -1060,11 +1060,11 @@ TEST_CASE("BatchedWriteTemporalVariable",
         FILE* fd = fopen(info.new_file.c_str(), "w+");
         REQUIRE(fd != nullptr);
 
-        for (int i = 0; i < info.num_iterations; ++i) {
+        for (size_t i = 0; i < info.num_iterations; ++i) {
             info.temporal_interval_ms = rand_r(&info.temporal_interval_seed)
                                         % info.temporal_interval_ms + 1;
             usleep(info.temporal_interval_ms * 1000);
-            long size_written = fwrite(info.write_data.c_str(),
+            size_t size_written = fwrite(info.write_data.c_str(),
                                        sizeof(char), args.request_size, fd);
             REQUIRE(size_written == args.request_size);
         }
@@ -1087,11 +1087,11 @@ TEST_CASE("BatchedReadSequentialTemporalVariable",
         FILE* fd = fopen(info.existing_file.c_str(), "r+");
         REQUIRE(fd != nullptr);
         std::string data(args.request_size, '1');
-        for (int i = 0; i < info.num_iterations; ++i) {
+        for (size_t i = 0; i < info.num_iterations; ++i) {
             info.temporal_interval_ms = rand_r(&info.temporal_interval_seed)
                                         % info.temporal_interval_ms + 1;
             usleep(info.temporal_interval_ms * 1000);
-            long size_read = fread(data.data(),
+            size_t size_read = fread(data.data(),
                                    sizeof(char), args.request_size, fd);
             REQUIRE(size_read == args.request_size);
         }
@@ -1103,15 +1103,15 @@ TEST_CASE("BatchedReadSequentialTemporalVariable",
         FILE* fd = fopen(info.existing_file.c_str(), "w+");
         REQUIRE(fd != nullptr);
 
-        for (int i = 0; i < info.num_iterations; ++i) {
+        for (size_t i = 0; i < info.num_iterations; ++i) {
             info.temporal_interval_ms = rand_r(&info.temporal_interval_seed)
                                         % info.temporal_interval_ms + 1;
             usleep(info.temporal_interval_ms * 1000);
             int status = fseek(fd, 0, SEEK_SET);
             REQUIRE(status == 0);
-            long offset = ftell(fd);
+            size_t offset = ftell(fd);
             REQUIRE(offset == 0);
-            long size_written = fwrite(info.write_data.c_str(),
+            size_t size_written = fwrite(info.write_data.c_str(),
                                        sizeof(char), args.request_size, fd);
             REQUIRE(size_written == args.request_size);
         }
@@ -1131,14 +1131,14 @@ TEST_CASE("BatchedMixedSequential",
     SECTION("read after write on new file") {
         FILE* fd = fopen(info.new_file.c_str(), "w+");
         REQUIRE(fd != nullptr);
-        long last_offset = 0;
-        for (int i = 0; i < info.num_iterations; ++i) {
-            long size_written = fwrite(info.write_data.data(),
+        size_t last_offset = 0;
+        for (size_t i = 0; i < info.num_iterations; ++i) {
+            size_t size_written = fwrite(info.write_data.data(),
                                        sizeof(char), args.request_size, fd);
             REQUIRE(size_written == args.request_size);
             auto status = fseek(fd, last_offset, SEEK_SET);
             REQUIRE(status == 0);
-            long size_read = fread(info.read_data.data(),
+            size_t size_read = fread(info.read_data.data(),
                                    sizeof(char), args.request_size, fd);
             REQUIRE(size_read == args.request_size);
             last_offset += args.request_size;
@@ -1150,13 +1150,13 @@ TEST_CASE("BatchedMixedSequential",
     SECTION("write and read alternative existing file") {
         FILE* fd = fopen(info.existing_file.c_str(), "r+");
         REQUIRE(fd != nullptr);
-        for (int i = 0; i < info.num_iterations; ++i) {
+        for (size_t i = 0; i < info.num_iterations; ++i) {
             if (i % 2 == 0) {
-                long size_written = fwrite(info.write_data.data(),
+                size_t size_written = fwrite(info.write_data.data(),
                                            sizeof(char), args.request_size, fd);
                 REQUIRE(size_written == args.request_size);
             } else {
-                long size_read = fread(info.read_data.data(),
+                size_t size_read = fread(info.read_data.data(),
                                        sizeof(char), args.request_size, fd);
                 REQUIRE(size_read == args.request_size);
             }
@@ -1167,14 +1167,14 @@ TEST_CASE("BatchedMixedSequential",
     SECTION("update after read existing file") {
         FILE* fd = fopen(info.existing_file.c_str(), "r+");
         REQUIRE(fd != nullptr);
-        long last_offset = 0;
-        for (int i = 0; i < info.num_iterations; ++i) {
-            long size_read = fread(info.read_data.data(),
+        size_t last_offset = 0;
+        for (size_t i = 0; i < info.num_iterations; ++i) {
+            size_t size_read = fread(info.read_data.data(),
                                    sizeof(char), args.request_size, fd);
             REQUIRE(size_read == args.request_size);
             auto status = fseek(fd, last_offset, SEEK_SET);
             REQUIRE(status == 0);
-            long size_written = fwrite(info.write_data.data(),
+            size_t size_written = fwrite(info.write_data.data(),
                                        sizeof(char), args.request_size, fd);
             REQUIRE(size_written == args.request_size);
             last_offset += args.request_size;
@@ -1186,15 +1186,15 @@ TEST_CASE("BatchedMixedSequential",
     SECTION("read all after write all on new file in single open") {
         FILE* fd = fopen(info.new_file.c_str(), "w+");
         REQUIRE(fd != nullptr);
-        for (int i = 0; i < info.num_iterations; ++i) {
-            long size_written = fwrite(info.write_data.data(),
+        for (size_t i = 0; i < info.num_iterations; ++i) {
+            size_t size_written = fwrite(info.write_data.data(),
                                        sizeof(char), args.request_size, fd);
             REQUIRE(size_written == args.request_size);
         }
         int status = fseek(fd, 0, SEEK_SET);
         REQUIRE(status == 0);
-        for (int i = 0; i < info.num_iterations; ++i) {
-            long size_read = fread(info.read_data.data(),
+        for (size_t i = 0; i < info.num_iterations; ++i) {
+            size_t size_read = fread(info.read_data.data(),
                                    sizeof(char), args.request_size, fd);
             REQUIRE(size_read == args.request_size);
         }
@@ -1204,16 +1204,16 @@ TEST_CASE("BatchedMixedSequential",
     SECTION("read all after write all on new file in different open") {
         FILE* fd = fopen(info.new_file.c_str(), "w+");
         REQUIRE(fd != nullptr);
-        for (int i = 0; i < info.num_iterations; ++i) {
-            long size_written = fwrite(info.write_data.data(),
+        for (size_t i = 0; i < info.num_iterations; ++i) {
+            size_t size_written = fwrite(info.write_data.data(),
                                        sizeof(char), args.request_size, fd);
             REQUIRE(size_written == args.request_size);
         }
         auto status = fclose(fd);
         REQUIRE(status == 0);
         FILE* fd2 = fopen(info.new_file.c_str(), "r");
-        for (int i = 0; i < info.num_iterations; ++i) {
-            long size_read = fread(info.read_data.data(),
+        for (size_t i = 0; i < info.num_iterations; ++i) {
+            size_t size_read = fread(info.read_data.data(),
                                    sizeof(char), args.request_size, fd2);
             REQUIRE(size_read == args.request_size);
         }
@@ -1231,14 +1231,14 @@ TEST_CASE("SingleMixed",
     SECTION("read after write from new file") {
         FILE* fd = fopen(info.new_file.c_str(), "w+");
         REQUIRE(fd != nullptr);
-        long offset = ftell(fd);
+        size_t offset = ftell(fd);
         REQUIRE(offset == 0);
-        long size_write = fwrite(info.write_data.data(), sizeof(char),
+        size_t size_write = fwrite(info.write_data.data(), sizeof(char),
                                args.request_size, fd);
         REQUIRE(size_write == args.request_size);
         int status = fseek(fd, 0, SEEK_SET);
         REQUIRE(status == 0);
-        long size_read = fread(info.read_data.data(), sizeof(char),
+        size_t size_read = fread(info.read_data.data(), sizeof(char),
                                args.request_size, fd);
         REQUIRE(size_read == args.request_size);
         status = fclose(fd);
@@ -1247,14 +1247,14 @@ TEST_CASE("SingleMixed",
     SECTION("update after read from existing file") {
         FILE* fd = fopen(info.existing_file.c_str(), "r+");
         REQUIRE(fd != nullptr);
-        long offset = ftell(fd);
+        size_t offset = ftell(fd);
         REQUIRE(offset == 0);
-        long size_read = fread(info.read_data.data(), sizeof(char),
+        size_t size_read = fread(info.read_data.data(), sizeof(char),
                                args.request_size, fd);
         REQUIRE(size_read == args.request_size);
         int status = fseek(fd, 0, SEEK_SET);
         REQUIRE(status == 0);
-        long size_write = fwrite(info.write_data.data(), sizeof(char),
+        size_t size_write = fwrite(info.write_data.data(), sizeof(char),
                                  args.request_size, fd);
         REQUIRE(size_write == args.request_size);
 
@@ -1264,15 +1264,15 @@ TEST_CASE("SingleMixed",
     SECTION("read after write from new file different opens") {
         FILE* fd = fopen(info.new_file.c_str(), "w+");
         REQUIRE(fd != nullptr);
-        long offset = ftell(fd);
+        size_t offset = ftell(fd);
         REQUIRE(offset == 0);
-        long size_write = fwrite(info.write_data.data(), sizeof(char),
+        size_t size_write = fwrite(info.write_data.data(), sizeof(char),
                                  args.request_size, fd);
         REQUIRE(size_write == args.request_size);
         int status = fclose(fd);
         REQUIRE(status == 0);
         FILE* fd2 = fopen(info.existing_file.c_str(), "r+");
-        long size_read = fread(info.read_data.data(), sizeof(char),
+        size_t size_read = fread(info.read_data.data(), sizeof(char),
                                args.request_size, fd2);
         REQUIRE(size_read == args.request_size);
         status = fclose(fd2);

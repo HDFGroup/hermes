@@ -63,7 +63,7 @@ TEST_CASE("Fdopen", "[process="+std::to_string(info.comm_size)+"]"
 
         FILE *fh = fdopen(fd, "r");
         REQUIRE(fh != nullptr);
-        long read_size = fread(info.read_data.data(),
+        size_t read_size = fread(info.read_data.data(),
                                sizeof(char), args.request_size, fh);
         REQUIRE(read_size == args.request_size);
         int status = fclose(fh);
@@ -81,7 +81,7 @@ TEST_CASE("Fdopen", "[process="+std::to_string(info.comm_size)+"]"
 
         FILE* fh = fdopen(fd, "w");
         REQUIRE(fh != nullptr);
-        long write_size = fwrite(info.write_data.c_str(),
+        size_t write_size = fwrite(info.write_data.c_str(),
                               sizeof(char), args.request_size, fh);
         REQUIRE(write_size == args.request_size);
         int status = fclose(fh);
@@ -96,7 +96,7 @@ TEST_CASE("Fdopen", "[process="+std::to_string(info.comm_size)+"]"
 
         FILE *fh = fdopen(fd, "r");
         REQUIRE(fh != nullptr);
-        long read_size = fread(info.read_data.data(),
+        size_t read_size = fread(info.read_data.data(),
                                sizeof(char), args.request_size, fh);
         REQUIRE(read_size == args.request_size);
         int status = fclose(fh);
@@ -114,7 +114,7 @@ TEST_CASE("Fdopen", "[process="+std::to_string(info.comm_size)+"]"
 
         FILE* fh = fdopen(fd, "w+");
         REQUIRE(fh != nullptr);
-        long write_size = fwrite(info.write_data.c_str(),
+        size_t write_size = fwrite(info.write_data.c_str(),
                                  sizeof(char), args.request_size, fh);
         REQUIRE(write_size == args.request_size);
         int status = fclose(fh);
@@ -132,7 +132,7 @@ TEST_CASE("Fdopen", "[process="+std::to_string(info.comm_size)+"]"
 
         FILE* fh = fdopen(fd, "a");
         REQUIRE(fh != nullptr);
-        long write_size = fwrite(info.write_data.c_str(),
+        size_t write_size = fwrite(info.write_data.c_str(),
                             sizeof(char), args.request_size, fh);
         REQUIRE(write_size == args.request_size);
         int status = fclose(fh);
@@ -150,7 +150,7 @@ TEST_CASE("Fdopen", "[process="+std::to_string(info.comm_size)+"]"
 
         FILE* fh = fdopen(fd, "a+");
         REQUIRE(fh != nullptr);
-        long write_size = fwrite(info.write_data.c_str(),
+        size_t write_size = fwrite(info.write_data.c_str(),
                             sizeof(char), args.request_size, fh);
         REQUIRE(write_size == args.request_size);
         int status = fclose(fh);
@@ -168,7 +168,7 @@ TEST_CASE("Fdopen", "[process="+std::to_string(info.comm_size)+"]"
 
         FILE *fh = fdopen(fd, "r");
         REQUIRE(fh != nullptr);
-        long read_size = fread(info.read_data.data(),
+        size_t read_size = fread(info.read_data.data(),
                                sizeof(char), args.request_size, fh);
         REQUIRE(read_size == args.request_size);
 
@@ -193,7 +193,7 @@ TEST_CASE("Fdopen", "[process="+std::to_string(info.comm_size)+"]"
 
         FILE *fh = fdopen(fd, "r");
         REQUIRE(fh != nullptr);
-        long read_size = fread(info.read_data.data(),
+        size_t read_size = fread(info.read_data.data(),
                                sizeof(char), args.request_size, fh);
         REQUIRE(read_size == args.request_size);
 
@@ -223,7 +223,7 @@ TEST_CASE("Freopen", "[process="+std::to_string(info.comm_size)+"]"
 
         FILE* fhw = freopen(info.new_file.c_str(), "w", fhr);
         REQUIRE(fhw != nullptr);
-        long write_size = fwrite(info.write_data.c_str(),
+        size_t write_size = fwrite(info.write_data.c_str(),
                                  sizeof(char), args.request_size, fhw);
         REQUIRE(write_size == args.request_size);
 
@@ -258,7 +258,7 @@ TEST_CASE("fgetc", "[process="+std::to_string(info.comm_size)+"]"
     SECTION("iterate and get all characters") {
         FILE* fh = fopen(info.existing_file.c_str(), "r");
         REQUIRE(fh != nullptr);
-        long total_chars = 0;
+        size_t total_chars = 0;
         int c = '1', v = 0;
         do {
             c = fgetc(fh);
@@ -279,7 +279,7 @@ TEST_CASE("getc", "[process="+std::to_string(info.comm_size)+"]"
     SECTION("iterate and get all characters") {
         FILE* fh = fopen(info.existing_file.c_str(), "r");
         REQUIRE(fh != nullptr);
-        long total_chars = 0;
+        size_t total_chars = 0;
         int c = '1', v = 0;
         do {
             c = getc(fh);
@@ -318,10 +318,10 @@ TEST_CASE("fputc", "[process="+std::to_string(info.comm_size)+"]"
     SECTION("iterate and get all characters") {
         FILE* fh = fopen(info.new_file.c_str(), "w+");
         REQUIRE(fh != nullptr);
-        long total_chars = info.num_iterations
+        size_t total_chars = info.num_iterations
                 * args.request_size;
         char c = 0;
-        for (int i = 0; i < total_chars; ++i) {
+        for (size_t i = 0; i < total_chars; ++i) {
             int ret_char = fputc(c, fh);
             REQUIRE(ret_char == 0);
         }
@@ -338,10 +338,10 @@ TEST_CASE("putc", "[process="+std::to_string(info.comm_size)+"]"
     SECTION("iterate and get all characters") {
         FILE* fh = fopen(info.new_file.c_str(), "w+");
         REQUIRE(fh != nullptr);
-        long total_chars = info.num_iterations
+        size_t total_chars = info.num_iterations
                            * args.request_size;
         char c = 0;
-        for (int i = 0; i < total_chars; ++i) {
+        for (size_t i = 0; i < total_chars; ++i) {
             int ret_char = putc(c, fh);
             REQUIRE(ret_char == 0);
         }
@@ -375,7 +375,7 @@ TEST_CASE("fseek", "[process="+std::to_string(info.comm_size)+"]"
         REQUIRE(fh != nullptr);
         int status = fseek(fh, 0, SEEK_SET);
         REQUIRE(status == 0);
-        long offset = ftell(fh);
+        size_t offset = ftell(fh);
         REQUIRE(offset == 0);
 
         status = fseek(fh, 0, SEEK_CUR);
@@ -408,7 +408,7 @@ TEST_CASE("fseeko", "[process="+std::to_string(info.comm_size)+"]"
         REQUIRE(fh != nullptr);
         int status = fseeko(fh, 0, SEEK_SET);
         REQUIRE(status == 0);
-        long offset = ftell(fh);
+        size_t offset = ftell(fh);
         REQUIRE(offset == 0);
 
         status = fseeko(fh, 0, SEEK_CUR);
@@ -441,7 +441,7 @@ TEST_CASE("rewind", "[process="+std::to_string(info.comm_size)+"]"
         REQUIRE(fh != nullptr);
         int status = fseeko(fh, 0, SEEK_SET);
         REQUIRE(status == 0);
-        long offset = ftell(fh);
+        size_t offset = ftell(fh);
         REQUIRE(offset == 0);
         rewind(fh);
         offset = ftell(fh);
@@ -474,7 +474,7 @@ TEST_CASE("fsetpos", "[process="+std::to_string(info.comm_size)+"]"
         position.__pos = 0;
         int status = fsetpos(fh, &position);
         REQUIRE(status == 0);
-        long offset = ftell(fh);
+        size_t offset = ftell(fh);
         REQUIRE(offset == 0);
 
         position.__pos = info.total_size;
