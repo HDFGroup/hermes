@@ -1,7 +1,6 @@
 TEST_CASE("Open", "[process="+std::to_string(info.comm_size)+"]"
                   "[operation=single_open]"
                   "[repetition=1][file=1]") {
-    printf("hello");
     pretest();
     SECTION("open non-existant file") {
         FILE* fd = fopen(info.new_file.c_str(), "r");
