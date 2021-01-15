@@ -125,7 +125,7 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
         }
         hapi::Blob final_data(new_size);
         std::copy(existing_data.begin(),
-                  existing_data.begin() + item.second.offset_ + 1,
+                  existing_data.begin() + item.second.offset_,
                   final_data.begin());
         std::copy(put_data.begin(), put_data.end(),
                   final_data.begin() + item.second.offset_ + 1);
@@ -135,6 +135,8 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
               existing_data.end(),
               final_data.begin() + total_size + item.second.offset_ + 1);
         }
+        existing.first.st_bkid->Put(item.second.blob_name_, final_data,
+                                    ctx);
       }
     }
     data_offset += item.first.size_;
@@ -278,6 +280,7 @@ int HERMES_DECL(fclose)(FILE *fp) {
         hermes::adapter::hermes_flush_exclusion.insert(filename);
         hapi::Context ctx;
         const auto &blob_names = existing.first.st_blobs;
+        const auto &num_blobs = blob_names.size();
         hermes::api::VBucket file_vbucket(filename, mdm->GetHermes(), true,
                                           ctx);
         auto offset_map = std::unordered_map<std::string, hermes::u64>();

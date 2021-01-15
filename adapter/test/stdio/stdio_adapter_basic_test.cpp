@@ -275,11 +275,11 @@ TEST_CASE("BatchedReadRandom",
 
 TEST_CASE("BatchedUpdateRandom",
           "[process="+std::to_string(info.comm_size)+"]"
-          "[operation=batched_write]"
+          "[operation=batched_update]"
           "[request_size=type-fixed][repetition=1024]"
           "[pattern=random][file=1]") {
     pretest();
-    SECTION("read from existing file") {
+    SECTION("update into existing file") {
         FILE* fd = fopen(info.existing_file.c_str(), "r+");
         REQUIRE(fd != nullptr);
         std::string data(args.request_size, '1');
@@ -325,12 +325,12 @@ TEST_CASE("BatchedReadStrideFixed",
 
 TEST_CASE("BatchedUpdateStrideFixed",
           "[process="+std::to_string(info.comm_size)+"]"
-          "[operation=batched_write]"
+          "[operation=batched_update]"
           "[request_size=type-fixed][repetition=1024]"
           "[pattern=stride_fixed][file=1]") {
     pretest();
 
-    SECTION("read from existing file") {
+    SECTION("update from existing file") {
         FILE* fd = fopen(info.existing_file.c_str(), "r+");
         REQUIRE(fd != nullptr);
         std::string data(args.request_size, '1');
@@ -376,11 +376,11 @@ TEST_CASE("BatchedReadStrideDynamic",
 
 TEST_CASE("BatchedUpdateStrideDynamic",
           "[process="+std::to_string(info.comm_size)+"]"
-          "[operation=batched_write]"
+          "[operation=batched_update]"
           "[request_size=type-fixed][repetition=1024]"
           "[pattern=stride_dynamic][file=1]") {
     pretest();
-    SECTION("read from existing file") {
+    SECTION("update from existing file") {
         FILE* fd = fopen(info.existing_file.c_str(), "r+");
         REQUIRE(fd != nullptr);
         std::string data(args.request_size, '1');
@@ -530,7 +530,7 @@ TEST_CASE("BatchedReadRandomRSVariable",
 
 TEST_CASE("BatchedUpdateRandomRSVariable",
           "[process="+std::to_string(info.comm_size)+"]"
-          "[operation=batched_write]"
+          "[operation=batched_update]"
           "[request_size=type-variable][repetition=1024]"
           "[pattern=random][file=1]") {
     pretest();
@@ -589,7 +589,7 @@ TEST_CASE("BatchedReadStrideFixedRSVariable",
 
 TEST_CASE("BatchedUpdateStrideFixedRSVariable",
           "[process="+std::to_string(info.comm_size)+"]"
-          "[operation=batched_write]"
+          "[operation=batched_update]"
           "[request_size=type-variable][repetition=1024]"
           "[pattern=stride_fixed][file=1]") {
     pretest();
@@ -647,7 +647,7 @@ TEST_CASE("BatchedReadStrideDynamicRSVariable",
 
 TEST_CASE("BatchedUpdateStrideDynamicRSVariable",
           "[process="+std::to_string(info.comm_size)+"]"
-          "[operation=batched_write]"
+          "[operation=batched_update]"
           "[request_size=type-variable][repetition=1024]"
           "[pattern=stride_dynamic][file=1]") {
     pretest();
@@ -704,7 +704,7 @@ TEST_CASE("BatchedReadStrideNegative",
 
 TEST_CASE("BatchedUpdateStrideNegative",
           "[process="+std::to_string(info.comm_size)+"]"
-          "[operation=batched_write]"
+          "[operation=batched_update]"
           "[request_size=type-fixed][repetition=1024]"
           "[pattern=stride_negative][file=1]") {
     pretest();
@@ -759,7 +759,7 @@ TEST_CASE("BatchedReadStrideNegativeRSVariable",
 
 TEST_CASE("BatchedUpdateStrideNegativeRSVariable",
           "[process="+std::to_string(info.comm_size)+"]"
-          "[operation=batched_write]"
+          "[operation=batched_update]"
           "[request_size=type-variable][repetition=1024]"
           "[pattern=stride_negative][file=1]") {
     pretest();
@@ -824,7 +824,7 @@ TEST_CASE("BatchedReadStride2D",
 
 TEST_CASE("BatchedUpdateStride2D",
           "[process="+std::to_string(info.comm_size)+"]"
-          "[operation=batched_write]"
+          "[operation=batched_update]"
           "[request_size=type-fixed][repetition=1024]"
           "[pattern=stride_2d][file=1]") {
     pretest();
@@ -900,7 +900,7 @@ TEST_CASE("BatchedReadStride2DRSVariable",
 
 TEST_CASE("BatchedUpdateStride2DRSVariable",
           "[process="+std::to_string(info.comm_size)+"]"
-          "[operation=batched_write]"
+          "[operation=batched_update]"
           "[request_size=type-variable][repetition=1024]"
           "[pattern=stride_2d][file=1]") {
     pretest();
