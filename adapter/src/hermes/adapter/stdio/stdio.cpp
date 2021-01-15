@@ -280,7 +280,6 @@ int HERMES_DECL(fclose)(FILE *fp) {
         hermes::adapter::hermes_flush_exclusion.insert(filename);
         hapi::Context ctx;
         const auto &blob_names = existing.first.st_blobs;
-        const auto &num_blobs = blob_names.size();
         hermes::api::VBucket file_vbucket(filename, mdm->GetHermes(), true,
                                           ctx);
         auto offset_map = std::unordered_map<std::string, hermes::u64>();
