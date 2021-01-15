@@ -410,9 +410,9 @@ TEST_CASE("BatchedReadRandom",
     REQUIRE(fd != -1);
     std::string data(args.request_size, '1');
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      auto offset =
+      size_t offset =
           rand_r(&info.offset_seed) % (info.total_size - args.request_size);
-      auto status = lseek(fd, offset, SEEK_SET);
+      size_t status = lseek(fd, offset, SEEK_SET);
       REQUIRE(status == offset);
       size_t size_read = read(fd, data.data(), args.request_size);
       REQUIRE(size_read == args.request_size);
@@ -461,8 +461,8 @@ TEST_CASE("BatchedReadStrideFixed",
     REQUIRE(fd != -1);
     std::string data(args.request_size, '1');
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      auto offset = (i * info.stride_size) % info.total_size;
-      auto status = lseek(fd, offset, SEEK_SET);
+      size_t offset = (i * info.stride_size) % info.total_size;
+      size_t status = lseek(fd, offset, SEEK_SET);
       REQUIRE(status == offset);
       size_t size_read = read(fd, data.data(), args.request_size);
       REQUIRE(size_read == args.request_size);
@@ -486,8 +486,8 @@ TEST_CASE("BatchedUpdateStrideFixed",
     REQUIRE(fd != -1);
     std::string data(args.request_size, '1');
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      auto offset = (i * info.stride_size) % info.total_size;
-      auto status = lseek(fd, offset, SEEK_SET);
+      size_t offset = (i * info.stride_size) % info.total_size;
+      size_t status = lseek(fd, offset, SEEK_SET);
       REQUIRE(status == offset);
       size_t size_read = write(fd, data.data(), args.request_size);
       REQUIRE(size_read == args.request_size);
@@ -511,9 +511,9 @@ TEST_CASE("BatchedReadStrideDynamic",
     REQUIRE(fd != -1);
     std::string data(args.request_size, '1');
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      auto offset = abs(((i * rand_r(&info.offset_seed)) % info.stride_size) %
+      size_t offset = abs(((i * rand_r(&info.offset_seed)) % info.stride_size) %
                         info.total_size);
-      auto status = lseek(fd, offset, SEEK_SET);
+      size_t status = lseek(fd, offset, SEEK_SET);
       REQUIRE(status == offset);
       size_t size_read = read(fd, data.data(), args.request_size);
       REQUIRE(size_read == args.request_size);
@@ -536,9 +536,9 @@ TEST_CASE("BatchedUpdateStrideDynamic",
     REQUIRE(fd != -1);
     std::string data(args.request_size, '1');
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      auto offset = abs(((i * rand_r(&info.offset_seed)) % info.stride_size) %
+      size_t offset = abs(((i * rand_r(&info.offset_seed)) % info.stride_size) %
                         info.total_size);
-      auto status = lseek(fd, offset, SEEK_SET);
+      size_t status = lseek(fd, offset, SEEK_SET);
       REQUIRE(status == offset);
       size_t size_read = write(fd, data.data(), args.request_size);
       REQUIRE(size_read == args.request_size);
@@ -560,11 +560,11 @@ TEST_CASE("BatchedWriteRSVariable",
   SECTION("write to new file always at the start") {
     int fd = open(info.new_file.c_str(), O_WRONLY | O_CREAT | O_EXCL);
     REQUIRE(fd != -1);
-    long biggest_size_written = 0;
+    size_t biggest_size_written = 0;
     for (size_t i = 0; i < info.num_iterations; ++i) {
       int offset = lseek(fd, 0, SEEK_SET);
       REQUIRE(offset == 0);
-      long request_size =
+      size_t request_size =
           args.request_size + (rand_r(&info.offset_seed) % args.request_size);
       std::string data(request_size, '1');
       size_t size_written = write(fd, data.c_str(), request_size);
@@ -580,9 +580,9 @@ TEST_CASE("BatchedWriteRSVariable",
   SECTION("write to new file") {
     int fd = open(info.new_file.c_str(), O_WRONLY | O_CREAT | O_EXCL);
     REQUIRE(fd != -1);
-    long total_size_written = 0;
+    size_t total_size_written = 0;
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      long request_size =
+      size_t request_size =
           args.request_size + (rand_r(&info.offset_seed) % args.request_size);
       std::string data(request_size, '1');
       size_t size_written = write(fd, data.c_str(), request_size);
@@ -609,7 +609,7 @@ TEST_CASE("BatchedReadSequentialRSVariable",
     std::string data(args.request_size, '1');
     long current_offset = 0;
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      long request_size = (args.request_size +
+      size_t request_size = (args.request_size +
                            (rand_r(&info.offset_seed) % args.request_size)) %
                           (info.total_size - current_offset);
       std::string data(request_size, '1');
@@ -628,7 +628,7 @@ TEST_CASE("BatchedReadSequentialRSVariable",
     for (size_t i = 0; i < info.num_iterations; ++i) {
       int offset = lseek(fd, 0, SEEK_SET);
       REQUIRE(offset == 0);
-      long request_size =
+      size_t request_size =
           args.request_size + (rand_r(&info.offset_seed) % args.request_size);
       std::string data(request_size, '1');
       size_t size_read = read(fd, data.data(), request_size);
@@ -653,11 +653,11 @@ TEST_CASE("BatchedReadRandomRSVariable",
     REQUIRE(fd != -1);
     std::string data(args.request_size, '1');
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      auto offset =
+      size_t offset =
           rand_r(&info.offset_seed) % (info.total_size - args.request_size);
-      auto status = lseek(fd, offset, SEEK_SET);
+      size_t status = lseek(fd, offset, SEEK_SET);
       REQUIRE(status == offset);
-      long request_size =
+      size_t request_size =
           (args.request_size + (rand_r(&info.rs_seed) % args.request_size)) %
           (info.total_size - offset);
       std::string data(request_size, '1');
@@ -683,11 +683,11 @@ TEST_CASE("BatchedUpdateRandomRSVariable",
     REQUIRE(fd != -1);
     std::string data(args.request_size, '1');
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      auto offset =
+      size_t offset =
           rand_r(&info.offset_seed) % (info.total_size - args.request_size);
-      auto status = lseek(fd, offset, SEEK_SET);
+      size_t status = lseek(fd, offset, SEEK_SET);
       REQUIRE(status == offset);
-      long request_size =
+      size_t request_size =
           args.request_size + (rand_r(&info.rs_seed) % args.request_size);
       std::string data(request_size, '1');
       size_t size_written = write(fd, data.c_str(), request_size);
@@ -711,10 +711,10 @@ TEST_CASE("BatchedReadStrideFixedRSVariable",
     int fd = open(info.existing_file.c_str(), O_RDWR);
     REQUIRE(fd != -1);
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      auto offset = (i * info.stride_size) % info.total_size;
-      auto status = lseek(fd, offset, SEEK_SET);
+      size_t offset = (i * info.stride_size) % info.total_size;
+      size_t status = lseek(fd, offset, SEEK_SET);
       REQUIRE(status == offset);
-      long request_size =
+      size_t request_size =
           (args.request_size + (rand_r(&info.rs_seed) % args.request_size)) %
           (info.total_size - offset);
       std::string data(request_size, '1');
@@ -740,10 +740,10 @@ TEST_CASE("BatchedUpdateStrideFixedRSVariable",
     REQUIRE(fd != -1);
     std::string data(args.request_size, '1');
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      auto offset = (i * info.stride_size) % info.total_size;
-      auto status = lseek(fd, offset, SEEK_SET);
+      size_t offset = (i * info.stride_size) % info.total_size;
+      size_t status = lseek(fd, offset, SEEK_SET);
       REQUIRE(status == offset);
-      long request_size =
+      size_t request_size =
           args.request_size + (rand_r(&info.rs_seed) % args.request_size);
       std::string data(request_size, '1');
       size_t size_written = write(fd, data.c_str(), request_size);
@@ -767,11 +767,11 @@ TEST_CASE("BatchedReadStrideDynamicRSVariable",
     int fd = open(info.existing_file.c_str(), O_RDWR);
     REQUIRE(fd != -1);
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      auto offset = abs(((i * rand_r(&info.offset_seed)) % info.stride_size) %
+      size_t offset = abs(((i * rand_r(&info.offset_seed)) % info.stride_size) %
                         info.total_size);
-      auto status = lseek(fd, offset, SEEK_SET);
+      size_t status = lseek(fd, offset, SEEK_SET);
       REQUIRE(status == offset);
-      long request_size =
+      size_t request_size =
           args.request_size + (rand_r(&info.rs_seed) % args.request_size);
       std::string data(request_size, '1');
       size_t size_read = read(fd, data.data(), request_size);
@@ -794,11 +794,11 @@ TEST_CASE("BatchedUpdateStrideDynamicRSVariable",
     int fd = open(info.existing_file.c_str(), O_RDWR);
     REQUIRE(fd != -1);
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      auto offset = abs(((i * rand_r(&info.offset_seed)) % info.stride_size) %
+      size_t offset = abs(((i * rand_r(&info.offset_seed)) % info.stride_size) %
                         info.total_size);
-      auto status = lseek(fd, offset, SEEK_SET);
+      size_t status = lseek(fd, offset, SEEK_SET);
       REQUIRE(status == offset);
-      long request_size =
+      size_t request_size =
           args.request_size + (rand_r(&info.rs_seed) % args.request_size);
       std::string data(request_size, '1');
       size_t size_written = write(fd, data.c_str(), request_size);
@@ -826,8 +826,8 @@ TEST_CASE("BatchedReadStrideNegative",
       auto stride_offset = info.total_size - i * info.stride_size;
       REQUIRE(prev_offset > stride_offset);
       prev_offset = stride_offset;
-      auto offset = (stride_offset) % (info.total_size - args.request_size);
-      auto status = lseek(fd, offset, SEEK_SET);
+      size_t offset = (stride_offset) % (info.total_size - args.request_size);
+      size_t status = lseek(fd, offset, SEEK_SET);
       REQUIRE(status == offset);
       size_t size_read = read(fd, data.data(), args.request_size);
       REQUIRE(size_read == args.request_size);
@@ -850,9 +850,9 @@ TEST_CASE("BatchedUpdateStrideNegative",
     REQUIRE(fd != -1);
     std::string data(args.request_size, '1');
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      auto offset =
+      size_t offset =
           info.total_size - ((i * info.stride_size) % info.total_size);
-      auto status = lseek(fd, offset, SEEK_SET);
+      size_t status = lseek(fd, offset, SEEK_SET);
       REQUIRE(status == offset);
       size_t size_read = write(fd, data.data(), args.request_size);
       REQUIRE(size_read == args.request_size);
@@ -875,11 +875,11 @@ TEST_CASE("BatchedReadStrideNegativeRSVariable",
     int fd = open(info.existing_file.c_str(), O_RDWR);
     REQUIRE(fd != -1);
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      auto offset = (info.total_size - i * info.stride_size) %
+      size_t offset = (info.total_size - i * info.stride_size) %
                     (info.total_size - 2 * args.request_size);
-      auto status = lseek(fd, offset, SEEK_SET);
+      size_t status = lseek(fd, offset, SEEK_SET);
       REQUIRE(status == offset);
-      long request_size =
+      size_t request_size =
           (args.request_size + (rand_r(&info.rs_seed) % args.request_size)) %
           (info.total_size - offset);
       std::string data(request_size, '1');
@@ -905,11 +905,11 @@ TEST_CASE("BatchedUpdateStrideNegativeRSVariable",
     REQUIRE(fd != -1);
     std::string data(args.request_size, '1');
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      auto offset =
+      size_t offset =
           info.total_size - ((i * info.stride_size) % info.total_size);
-      auto status = lseek(fd, offset, SEEK_SET);
+      size_t status = lseek(fd, offset, SEEK_SET);
       REQUIRE(status == offset);
-      long request_size =
+      size_t request_size =
           args.request_size + (rand_r(&info.rs_seed) % args.request_size);
       std::string data(request_size, '1');
       size_t size_written = write(fd, data.c_str(), request_size);
@@ -944,9 +944,9 @@ TEST_CASE("BatchedReadStride2D",
                                   ? prev_cell_row + 1
                                   : prev_cell_row;
       prev_cell_row = current_cell_row;
-      auto offset = (current_cell_col * cell_stride + prev_cell_row * cols) %
+      size_t offset = (current_cell_col * cell_stride + prev_cell_row * cols) %
                     (info.total_size - args.request_size);
-      auto status = lseek(fd, offset, SEEK_SET);
+      size_t status = lseek(fd, offset, SEEK_SET);
       REQUIRE(status == offset);
       size_t size_read = read(fd, data.data(), args.request_size);
       REQUIRE(size_read == args.request_size);
@@ -981,9 +981,9 @@ TEST_CASE("BatchedUpdateStride2D",
                                   ? prev_cell_row + 1
                                   : prev_cell_row;
       prev_cell_row = current_cell_row;
-      auto offset = (current_cell_col * cell_stride + prev_cell_row * cols) %
+      size_t offset = (current_cell_col * cell_stride + prev_cell_row * cols) %
                     (info.total_size - args.request_size);
-      auto status = lseek(fd, offset, SEEK_SET);
+      size_t status = lseek(fd, offset, SEEK_SET);
       REQUIRE(status == offset);
       size_t size_read = write(fd, data.data(), args.request_size);
       REQUIRE(size_read == args.request_size);
@@ -1016,11 +1016,11 @@ TEST_CASE("BatchedReadStride2DRSVariable",
                                   ? prev_cell_row + 1
                                   : prev_cell_row;
       prev_cell_row = current_cell_row;
-      auto offset = (current_cell_col * cell_stride + prev_cell_row * cols) %
+      size_t offset = (current_cell_col * cell_stride + prev_cell_row * cols) %
                     (info.total_size - 2 * args.request_size);
-      auto status = lseek(fd, offset, SEEK_SET);
+      size_t status = lseek(fd, offset, SEEK_SET);
       REQUIRE(status == offset);
-      long request_size =
+      size_t request_size =
           (args.request_size + (rand_r(&info.rs_seed) % args.request_size)) %
           (info.total_size - offset);
       std::string data(request_size, '1');
@@ -1056,11 +1056,11 @@ TEST_CASE("BatchedUpdateStride2DRSVariable",
                                   ? prev_cell_row + 1
                                   : prev_cell_row;
       prev_cell_row = current_cell_row;
-      auto offset = (current_cell_col * cell_stride + prev_cell_row * cols) %
+      size_t offset = (current_cell_col * cell_stride + prev_cell_row * cols) %
                     (info.total_size - 2 * args.request_size);
-      auto status = lseek(fd, offset, SEEK_SET);
+      size_t status = lseek(fd, offset, SEEK_SET);
       REQUIRE(status == offset);
-      long request_size =
+      size_t request_size =
           args.request_size + (rand_r(&info.rs_seed) % args.request_size);
       std::string data(request_size, '1');
       size_t size_written = write(fd, data.c_str(), request_size);
@@ -1263,7 +1263,7 @@ TEST_CASE("BatchedMixedSequential",
       size_t size_written =
           write(fd, info.write_data.data(), args.request_size);
       REQUIRE(size_written == args.request_size);
-      auto status = lseek(fd, last_offset, SEEK_SET);
+      size_t status = lseek(fd, last_offset, SEEK_SET);
       REQUIRE(status == last_offset);
       size_t size_read = read(fd, info.read_data.data(), args.request_size);
       REQUIRE(size_read == args.request_size);
@@ -1296,7 +1296,7 @@ TEST_CASE("BatchedMixedSequential",
     for (size_t i = 0; i < info.num_iterations; ++i) {
       size_t size_read = read(fd, info.read_data.data(), args.request_size);
       REQUIRE(size_read == args.request_size);
-      auto status = lseek(fd, last_offset, SEEK_SET);
+      size_t status = lseek(fd, last_offset, SEEK_SET);
       REQUIRE(status == last_offset);
       size_t size_written =
           write(fd, info.write_data.data(), args.request_size);
