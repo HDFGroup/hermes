@@ -4,8 +4,8 @@
 
 #include <hermes/adapter/stdio.h>
 
-#include <hermes/adapter/stdio/metadata_manager.cpp>
 #include <hermes/adapter/stdio/mapper/balanced_mapper.cpp>
+#include <hermes/adapter/stdio/metadata_manager.cpp>
 
 using hermes::adapter::stdio::AdapterStat;
 using hermes::adapter::stdio::FileID;
@@ -45,7 +45,8 @@ FILE *open_internal(const std::string &path_str, const char *mode) {
       hapi::Context ctx;
       /* TODO(hari) how to pass to hermes to make a private bucket
        * also add how to handle existing buckets of same name */
-      stat.st_bkid = std::make_shared<hapi::Bucket>(path_str, mdm->GetHermes(), ctx);
+      stat.st_bkid =
+          std::make_shared<hapi::Bucket>(path_str, mdm->GetHermes(), ctx);
       mdm->Create(ret, stat);
     } else {
       existing.first.ref_count++;
@@ -277,14 +278,15 @@ int HERMES_DECL(fclose)(FILE *fp) {
         hermes::adapter::hermes_flush_exclusion.insert(filename);
         hapi::Context ctx;
         const auto &blob_names = existing.first.st_blobs;
-        hermes::api::VBucket file_vbucket(filename, mdm->GetHermes(), true, ctx);
+        hermes::api::VBucket file_vbucket(filename, mdm->GetHermes(), true,
+                                          ctx);
         auto offset_map = std::unordered_map<std::string, hermes::u64>();
         for (const auto &blob_name : blob_names) {
           file_vbucket.Link(blob_name, filename, ctx);
           offset_map.emplace(blob_name, std::stol(blob_name) * PAGE_SIZE);
         }
-        auto trait =
-            hermes::api::FileMappingTrait(filename, offset_map, nullptr, NULL, NULL);
+        auto trait = hermes::api::FileMappingTrait(filename, offset_map,
+                                                   nullptr, NULL, NULL);
         file_vbucket.Attach(&trait, ctx);
         file_vbucket.Delete(ctx);
         existing.first.st_bkid->Close(ctx);
