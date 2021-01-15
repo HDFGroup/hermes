@@ -392,7 +392,7 @@ int HERMES_DECL(fgetc)(FILE *stream) {
     if (existing.second) {
       int value;
       auto ret_size = read_internal(existing, &value, 1, stream);
-      ret = value;
+      ret = value * ret_size;
     }
   } else {
     MAP_OR_FAIL(fgetc);
@@ -410,7 +410,7 @@ int HERMES_DECL(_IO_getc)(FILE *stream) {
     if (existing.second) {
       int value;
       auto ret_size = read_internal(existing, &value, 1, stream);
-      ret = value;
+      ret = value * ret_size;
     }
   } else {
     MAP_OR_FAIL(_IO_getc);
@@ -443,7 +443,7 @@ int HERMES_DECL(getw)(FILE *stream) {
     if (existing.second) {
       int value;
       auto ret_size = read_internal(existing, &value, 1, stream);
-      ret = value;
+      ret = value * ret_size;
     }
   } else {
     MAP_OR_FAIL(getw);
@@ -458,7 +458,7 @@ char *HERMES_DECL(fgets)(char *s, int size, FILE *stream) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(stream);
     if (existing.second) {
-      auto ret_size = read_internal(existing, s, 1, stream);
+      read_internal(existing, s, 1, stream);
       ret = s;
     }
   } else {

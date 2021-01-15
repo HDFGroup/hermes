@@ -27,7 +27,7 @@ bool MetadataManager::Update(FILE *fh, const AdapterStat &stat) {
   if (iter != metadata.end()) {
     metadata.erase(iter);
     auto ret = metadata.emplace(fileId, stat);
-    return true;
+    return ret.second;
   } else {
     return false;
   }

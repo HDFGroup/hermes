@@ -60,7 +60,7 @@ std::unordered_set<std::string> hermes_flush_exclusion;
     }                                                                \
   }
 
-bool PopulateBufferingPath() {
+void PopulateBufferingPath() {
   char* hermes_config = getenv(HERMES_CONF);
   hermes::Config config = {};
   const size_t kConfigMemorySize = KILOBYTES(16);

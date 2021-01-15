@@ -13,8 +13,6 @@ using hermes::adapter::stdio::HermesStruct;
 MapperReturnType BalancedMapper::map(const FileStruct& file_op) {
   auto mapper_return = MapperReturnType();
   size_t size_mapped = 0;
-  std::hash<FileID> file_hash_t;
-  size_t file_hash = file_hash_t(file_op.file_id_);
   while (file_op.size_ > size_mapped) {
     FileStruct file;
     HermesStruct hermes;
