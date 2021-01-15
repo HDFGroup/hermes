@@ -9,6 +9,7 @@
 
 #include <fstream>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 namespace hermes::adapter {
@@ -32,6 +33,9 @@ std::vector<std::string> user_path_exclusions;
 
 // allow users to override the path exclusions
 std::vector<std::string> hermes_paths_exclusion;
+
+// allow users to override the flush operations
+std::unordered_set<std::string> hermes_flush_exclusion;
 
 }  // namespace hermes::adapter
 
@@ -82,6 +86,12 @@ bool PopulateBufferingPath() {
 bool IsTracked(const std::string& path) {
   if (hermes::adapter::hermes_paths_exclusion.empty()) {
     PopulateBufferingPath();
+  }
+  for (const auto& pth : hermes::adapter::hermes_flush_exclusion) {
+    if (path.find(pth) != std::string::npos ||
+        pth.find(path) != std::string::npos) {
+      return false;
+    }
   }
   for (const auto& pth : hermes::adapter::hermes_paths_exclusion) {
     if (path.find(pth) != std::string::npos ||

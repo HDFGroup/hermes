@@ -36,7 +36,7 @@ FILE *open_internal(const std::string &path_str, const char *mode) {
       stat.st_atim = ts;
       stat.st_mtim = ts;
       stat.st_ctim = ts;
-      if (stat.st_mode & O_APPEND) {
+      if (strcmp(mode, "a") == 0 || strcmp(mode, "a+") == 0) {
         /* FIXME: get current size of bucket from Hermes*/
         stat.st_ptr = stat.st_size;
       }
@@ -272,8 +272,10 @@ int HERMES_DECL(fclose)(FILE *fp) {
     auto existing = mdm->Find(fp);
     if (existing.second) {
       if (existing.first.ref_count == 1) {
-        hapi::Context ctx;
+        mdm->Delete(fp);
         auto filename = existing.first.st_bkid->GetName();
+        hermes::adapter::hermes_flush_exclusion.insert(filename);
+        hapi::Context ctx;
         const auto &blob_names = existing.first.st_blobs;
         hermes::api::VBucket file_vbucket(filename, mdm->GetHermes(), true, ctx);
         auto offset_map = std::unordered_map<std::string, hermes::u64>();
@@ -282,11 +284,11 @@ int HERMES_DECL(fclose)(FILE *fp) {
           offset_map.emplace(blob_name, std::stol(blob_name) * PAGE_SIZE);
         }
         auto trait =
-            hermes::api::FileMappingTrait(filename, offset_map, NULL, NULL);
+            hermes::api::FileMappingTrait(filename, offset_map, nullptr, NULL, NULL);
         file_vbucket.Attach(&trait, ctx);
         file_vbucket.Delete(ctx);
         existing.first.st_bkid->Close(ctx);
-        mdm->Delete(fp);
+        hermes::adapter::hermes_flush_exclusion.erase(filename);
         mdm->FinalizeHermes();
       } else {
         existing.first.ref_count--;
@@ -298,6 +300,7 @@ int HERMES_DECL(fclose)(FILE *fp) {
       }
     }
   }
+
   MAP_OR_FAIL(fclose);
   ret = __real_fclose(fp);
   return (ret);
