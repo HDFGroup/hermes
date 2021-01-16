@@ -130,7 +130,7 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
                 ? item.second.offset_ + 1
                 : existing_data.size();
         memcpy(final_data.data(), existing_data.data(), existing_data_cp_size);
-        // TODO: There is a gap in the blob, either do I/O from PFS or map
+        // TODO(hari): There is a gap in the blob, either do I/O from PFS or map
         // existing file metadata already.
         memcpy(final_data.data() + item.second.offset_, put_data.data(),
                put_data.size());
