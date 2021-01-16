@@ -256,20 +256,20 @@ FILE *HERMES_DECL(freopen64)(const char *path, const char *mode, FILE *stream) {
   return (ret);
 }
 
-// int HERMES_DECL(fflush)(FILE *fp) {
-//  int ret;
-//  if (IsTracked(fp)) {
-//    auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
-//    auto existing = mdm->Find(fp);
-//    if (existing.second) {
-//      /* existing.first.st_bkid-> TODO(hari): which is the flush api*/
-//    }
-//  } else {
-//    MAP_OR_FAIL(fflush);
-//    ret = __real_fflush(fp);
-//  }
-//  return (ret);
-//}
+ int HERMES_DECL(fflush)(FILE *fp) {
+  int ret;
+  if (IsTracked(fp)) {
+    auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+    auto existing = mdm->Find(fp);
+    if (existing.second) {
+      /* existing.first.st_bkid-> TODO(hari): which is the flush api*/
+    }
+  } else {
+    MAP_OR_FAIL(fflush);
+    ret = __real_fflush(fp);
+  }
+  return (ret);
+}
 
 int HERMES_DECL(fclose)(FILE *fp) {
   int ret;

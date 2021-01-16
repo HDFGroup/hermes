@@ -30,7 +30,7 @@ HERMES_FORWARD_DECL(freopen, FILE *,
 HERMES_FORWARD_DECL(freopen64, FILE *,
                     (const char *path, const char *mode, FILE *stream));
 HERMES_FORWARD_DECL(fclose, int, (FILE * fp));
-// HERMES_FORWARD_DECL(fflush, int, (FILE * fp));
+HERMES_FORWARD_DECL(fflush, int, (FILE * fp));
 HERMES_FORWARD_DECL(fwrite, size_t,
                     (const void *ptr, size_t size, size_t nmemb, FILE *stream));
 HERMES_FORWARD_DECL(fputc, int, (int c, FILE *stream));
