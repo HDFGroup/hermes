@@ -1,6 +1,10 @@
 #include "interceptor.h"
 
 hermes::adapter::InterceptorList list;
+namespace hermes::adapter{
+bool exit = false;
+}  //hermes::adapter
+
 
 void PopulateBufferingPath() {
   char* hermes_config = getenv(HERMES_CONF);
@@ -24,6 +28,8 @@ void PopulateBufferingPath() {
   list.hermes_paths_exclusion.push_back(HERMES_EXT);
 }
 bool IsTracked(const std::string& path) {
+  if (hermes::adapter::exit) return false;
+  atexit (OnExit);
   if (list.hermes_paths_exclusion.empty()) {
     PopulateBufferingPath();
   }
@@ -59,6 +65,8 @@ bool IsTracked(const std::string& path) {
   return true;
 }
 bool IsTracked(FILE* fh) {
+  if (hermes::adapter::exit) return false;
+  atexit (OnExit);
   int MAXSIZE = 0xFFF;
   char proclnk[0xFFF];
   char filename[0xFFF];
@@ -70,4 +78,8 @@ bool IsTracked(FILE* fh) {
     return IsTracked(file_str);
   }
   return false;
+}
+void OnExit(void) {
+  printf ("Exit function \n");
+  hermes::adapter::exit = true;
 }

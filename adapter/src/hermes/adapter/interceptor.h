@@ -51,6 +51,8 @@ struct InterceptorList {
 };
 }  // namespace hermes::adapter
 
+void OnExit (void);
+
 #ifdef HERMES_PRELOAD
 #include <buffer_pool_internal.h>
 #include <dlfcn.h>
