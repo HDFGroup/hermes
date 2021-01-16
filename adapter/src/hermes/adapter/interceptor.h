@@ -29,13 +29,13 @@ static std::vector<std::string> path_exclusions = {
 static std::vector<std::string> path_inclusions = {"/var/opt/cray/dws/mounts/"};
 
 // allow users to override the path exclusions
-std::vector<std::string> user_path_exclusions;
+static std::vector<std::string> user_path_exclusions;
 
 // allow users to override the path exclusions
-std::vector<std::string> hermes_paths_exclusion;
+static std::vector<std::string> hermes_paths_exclusion;
 
 // allow users to override the flush operations
-std::unordered_set<std::string> hermes_flush_exclusion;
+static std::unordered_set<std::string> hermes_flush_exclusion;
 
 }  // namespace hermes::adapter
 
