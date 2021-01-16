@@ -6,6 +6,7 @@
 
 #include <hermes/adapter/stdio/mapper/balanced_mapper.cpp>
 #include <hermes/adapter/stdio/metadata_manager.cpp>
+#include <hermes/adapter/interceptor.cc>
 
 using hermes::adapter::stdio::AdapterStat;
 using hermes::adapter::stdio::FileID;
@@ -277,7 +278,7 @@ int HERMES_DECL(fclose)(FILE *fp) {
       if (existing.first.ref_count == 1) {
         mdm->Delete(fp);
         auto filename = existing.first.st_bkid->GetName();
-        hermes::adapter::hermes_flush_exclusion.insert(filename);
+        list.hermes_flush_exclusion.insert(filename);
         hapi::Context ctx;
         const auto &blob_names = existing.first.st_blobs;
         hermes::api::VBucket file_vbucket(filename, mdm->GetHermes(), true,
@@ -292,7 +293,7 @@ int HERMES_DECL(fclose)(FILE *fp) {
         file_vbucket.Attach(&trait, ctx);
         file_vbucket.Delete(ctx);
         existing.first.st_bkid->Close(ctx);
-        hermes::adapter::hermes_flush_exclusion.erase(filename);
+        list.hermes_flush_exclusion.erase(filename);
         mdm->FinalizeHermes();
       } else {
         existing.first.ref_count--;
