@@ -1,7 +1,7 @@
 function(gcc_hermes exec tag_name tags)
     add_test(NAME TestHermes_${exec}_${tag_name} COMMAND "${CMAKE_BINARY_DIR}/bin/${exec}" ${tags} -s --reporter compact)
-    #set_property(TEST TestHermes_${exec}_${tag_name} APPEND
-    #        PROPERTY ENVIRONMENT LSAN_OPTIONS=suppressions=${CMAKE_SOURCE_DIR}/test/data/asan.supp)
+    set_property(TEST TestHermes_${exec}_${tag_name} APPEND
+            PROPERTY ENVIRONMENT LSAN_OPTIONS=suppressions=${CMAKE_SOURCE_DIR}/test/data/asan.supp)
 endfunction()
 #------------------------------------------------------------------------------
 # Posix Adapter Internal tests

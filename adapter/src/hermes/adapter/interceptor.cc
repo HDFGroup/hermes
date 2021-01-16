@@ -79,6 +79,5 @@ bool IsTracked(FILE* fh) {
   return false;
 }
 void OnExit(void) {
-  printf("Exit function \n");
   hermes::adapter::exit = true;
 }
