@@ -125,14 +125,19 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
           new_size = exiting_blob_size;
         }
         hapi::Blob final_data(new_size);
-        memcpy(final_data.data(), existing_data.data(),
-               item.second.offset_ + 1);
-        memcpy(final_data.data() + item.second.offset_ + 1, put_data.data(),
+        auto existing_data_cp_size =
+            existing_data.size() >= item.second.offset_ + 1
+                ? item.second.offset_ + 1
+                : existing_data.size();
+        memcpy(final_data.data(), existing_data.data(), existing_data_cp_size);
+        // TODO: There is a gap in the blob, either do I/O from PFS or map
+        // existing file metadata already.
+        memcpy(final_data.data() + item.second.offset_, put_data.data(),
                put_data.size());
         if (new_size < exiting_blob_size) {
-          auto off_t = total_size + item.second.offset_ + 1;
+          auto off_t = total_size + item.second.offset_;
           memcpy(final_data.data() + off_t, existing_data.data() + off_t,
-                 existing_data.size() - off_t);
+                 existing_data.size() - off_t + 1);
         }
         existing.first.st_bkid->Put(item.second.blob_name_, final_data, ctx);
       }
