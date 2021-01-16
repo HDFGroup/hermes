@@ -32,6 +32,6 @@ cmake                                                      \
     ..
 
 cmake --build . -- -j4
-ctest -VV -R TestHermes_hermes
+ctest -VV
 
 popd
