@@ -24,9 +24,9 @@ target_link_libraries(hermes_stdio_adapter_test hermes_stdio)
 add_dependencies(hermes_stdio_adapter_test hermes_stdio)
 gcc(stdio_adapter_test "")
 
-#gcc_hermes(hermes_stdio_adapter_test open "[operation=single_open]")
-#gcc_hermes(hermes_stdio_adapter_test single_write "[operation=single_write]")
-#gcc_hermes(hermes_stdio_adapter_test batched_fixed_write "[operation=batched_write][request_size=type-fixed]")
+gcc_hermes(hermes_stdio_adapter_test open "[operation=single_open]")
+gcc_hermes(hermes_stdio_adapter_test single_write "[operation=single_write]")
+gcc_hermes(hermes_stdio_adapter_test batched_fixed_write "[operation=batched_write][request_size=type-fixed]")
 
 add_executable(stdio_adapter_mpi_test stdio_adapter_mpi_test.cpp ${ADAPTER_COMMON})
 target_link_libraries(stdio_adapter_mpi_test Catch2::Catch2 -lstdc++fs -lc MPI::MPI_CXX)
