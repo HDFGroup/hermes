@@ -28,8 +28,7 @@ bool IsTracked(const std::string& path) {
     PopulateBufferingPath();
   }
   for (const auto& pth : list.hermes_flush_exclusion) {
-    if (path.find(pth) != std::string::npos ||
-        pth.find(path) != std::string::npos) {
+    if (path.find(pth) != std::string::npos) {
       return false;
     }
   }
