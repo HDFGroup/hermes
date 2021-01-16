@@ -4,9 +4,9 @@
 
 #include <hermes/adapter/stdio.h>
 
+#include <hermes/adapter/interceptor.cc>
 #include <hermes/adapter/stdio/mapper/balanced_mapper.cpp>
 #include <hermes/adapter/stdio/metadata_manager.cpp>
-#include <hermes/adapter/interceptor.cc>
 
 using hermes::adapter::stdio::AdapterStat;
 using hermes::adapter::stdio::FileID;
@@ -125,19 +125,16 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
           new_size = exiting_blob_size;
         }
         hapi::Blob final_data(new_size);
-        std::copy(existing_data.begin(),
-                  existing_data.begin() + item.second.offset_,
-                  final_data.begin());
-        std::copy(put_data.begin(), put_data.end(),
-                  final_data.begin() + item.second.offset_ + 1);
+        memcpy(final_data.data(), existing_data.data(),
+               item.second.offset_ + 1);
+        memcpy(final_data.data() + item.second.offset_ + 1, put_data.data(),
+               put_data.size());
         if (new_size < exiting_blob_size) {
-          std::copy(
-              existing_data.begin() + item.second.offset_ + total_size + 1,
-              existing_data.end(),
-              final_data.begin() + total_size + item.second.offset_ + 1);
+          auto off_t = total_size + item.second.offset_ + 1;
+          memcpy(final_data.data() + off_t, existing_data.data() + off_t,
+                 existing_data.size() - off_t);
         }
-        existing.first.st_bkid->Put(item.second.blob_name_, final_data,
-                                    ctx);
+        existing.first.st_bkid->Put(item.second.blob_name_, final_data, ctx);
       }
     }
     data_offset += item.first.size_;
