@@ -256,7 +256,7 @@ FILE *HERMES_DECL(freopen64)(const char *path, const char *mode, FILE *stream) {
   return (ret);
 }
 
- int HERMES_DECL(fflush)(FILE *fp) {
+int HERMES_DECL(fflush)(FILE *fp) {
   int ret;
   if (IsTracked(fp)) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
