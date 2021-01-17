@@ -26,6 +26,7 @@ RUN mkdir -p $INSTALL_DIR
 
 RUN git clone https://github.com/spack/spack ${SPACK_DIR}
 RUN git clone https://xgitlab.cels.anl.gov/sds/sds-repo.git ${SDS_DIR}
+RUN git clone --branch hariharan/posix_adapter https://github.com/hariharan-devarajan/hermes ${PROJECT}
 
 ENV spack=${SPACK_DIR}/bin/spack
 
