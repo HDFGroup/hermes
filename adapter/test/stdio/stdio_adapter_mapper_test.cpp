@@ -17,8 +17,8 @@ namespace hermes::adapter::stdio::test {
 struct Arguments {
   std::string filename = "test.dat";
   std::string directory = "/tmp";
-  long request_size = 65536;
-  long num_iterations = 1024;
+  size_t request_size = 65536;
+  size_t num_iterations = 1024;
 };
 struct Info {
   int rank = 0;
@@ -27,11 +27,11 @@ struct Info {
   std::string existing_file;
   unsigned int offset_seed = 1;
   unsigned int rs_seed = 1;
-  long total_size;
-  long stride_size = 1024;
-  long small_min = 1, small_max = 4 * 1024;
-  long medium_min = 4 * 1024 + 1, medium_max = 256 * 1024;
-  long large_min = 256 * 1024 + 1, large_max = 4 * 1024 * 1024;
+  size_t total_size;
+  size_t stride_size = 1024;
+  size_t small_min = 1, small_max = 4 * 1024;
+  size_t medium_min = 4 * 1024 + 1, medium_max = 256 * 1024;
+  size_t large_min = 256 * 1024 + 1, large_max = 4 * 1024 * 1024;
 };
 }  // namespace hermes::adapter::stdio::test
 hermes::adapter::stdio::test::Arguments args;
@@ -174,7 +174,6 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
     auto mapping =
         mapper->map(FileStruct(mdm->convert(fp), offset, total_size));
     REQUIRE(mapping.size() == 1);
-    size_t mapped_offset = 0;
     REQUIRE(mapping[0].first.offset_ == offset);
     REQUIRE(mapping[0].first.size_ == total_size);
     REQUIRE(mapping[0].second.offset_ == 1);

@@ -83,18 +83,21 @@ struct HermesStruct {
 
 struct AdapterStat {
   std::shared_ptr<hapi::Bucket> st_bkid; /* bucket associated with the file */
-  i32 ref_count;                         /* # of time process opens a file */
-  mode_t st_mode;                        /* protection */
-  uid_t st_uid;                          /* user ID of owner */
-  gid_t st_gid;                          /* group ID of owner */
-  off_t st_size;                         /* total size, in bytes */
-  off_t st_ptr;                          /* Current ptr of FILE */
-  blksize_t st_blksize;                  /* blocksize for blob within bucket */
-  timespec st_atim;                      /* time of last access */
-  timespec st_mtim;                      /* time of last modification */
-  timespec st_ctim;                      /* time of last status change */
+  std::set<std::string, bool (*)(const std::string &, const std::string &)>
+      st_blobs;         /* Blobs access in the bucket */
+  i32 ref_count;        /* # of time process opens a file */
+  mode_t st_mode;       /* protection */
+  uid_t st_uid;         /* user ID of owner */
+  gid_t st_gid;         /* group ID of owner */
+  off_t st_size;        /* total size, in bytes */
+  off_t st_ptr;         /* Current ptr of FILE */
+  blksize_t st_blksize; /* blocksize for blob within bucket */
+  timespec st_atim;     /* time of last access */
+  timespec st_mtim;     /* time of last modification */
+  timespec st_ctim;     /* time of last status change */
   AdapterStat()
       : st_bkid(),
+        st_blobs(CompareBlobs),
         ref_count(),
         st_mode(),
         st_uid(),
@@ -107,6 +110,7 @@ struct AdapterStat {
         st_ctim() {}
   explicit AdapterStat(const struct stat &st)
       : st_bkid(),
+        st_blobs(CompareBlobs),
         ref_count(1),
         st_mode(st.st_mode),
         st_uid(st.st_uid),
@@ -117,6 +121,10 @@ struct AdapterStat {
         st_atim(st.st_atim),
         st_mtim(st.st_mtim),
         st_ctim(st.st_ctim) {}
+
+  static bool CompareBlobs(const std::string &a, const std::string &b) {
+    return std::stol(a) < std::stol(b);
+  }
 };
 
 }  // namespace hermes::adapter::stdio

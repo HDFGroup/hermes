@@ -9,7 +9,7 @@ namespace hermes::adapter::posix::test {
 struct Arguments {
     std::string filename = "test.dat";
     std::string directory = "/tmp";
-    long request_size = 16384;
+    size_t request_size = 16384;
 };
 struct Info {
     int rank = 0;
@@ -20,17 +20,17 @@ struct Info {
     std::string existing_file;
     std::string shared_new_file;
     std::string shared_existing_file;
-    long num_iterations = 1024;
+    size_t num_iterations = 1024;
     unsigned int offset_seed = 1;
     unsigned int rs_seed = 1;
     unsigned int temporal_interval_seed = 1;
-    long total_size;
-    long stride_size = 4 * 1024;
+    size_t total_size;
+    size_t stride_size = 4 * 1024;
     unsigned int temporal_interval_ms = 5;
-    long small_min = 1, small_max = 4 * 1024;
-    long medium_min = 4 * 1024 + 1,
+    size_t small_min = 1, small_max = 4 * 1024;
+    size_t medium_min = 4 * 1024 + 1,
             medium_max = 512 * 1024;
-    long large_min = 512 * 1024 + 1,
+    size_t large_min = 512 * 1024 + 1,
             large_max = 4 * 1024 * 1024;
 };
 }  // namespace hermes::adapter::posix::test

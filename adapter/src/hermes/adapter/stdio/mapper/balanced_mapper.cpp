@@ -4,7 +4,7 @@
 
 #include "balanced_mapper.h"
 
-#include <hermes/adapter/stdio/common/constants.h>
+
 
 using hermes::adapter::stdio::BalancedMapper;
 using hermes::adapter::stdio::FileStruct;
@@ -13,8 +13,6 @@ using hermes::adapter::stdio::HermesStruct;
 MapperReturnType BalancedMapper::map(const FileStruct& file_op) {
   auto mapper_return = MapperReturnType();
   size_t size_mapped = 0;
-  std::hash<FileID> file_hash_t;
-  size_t file_hash = file_hash_t(file_op.file_id_);
   while (file_op.size_ > size_mapped) {
     FileStruct file;
     HermesStruct hermes;
@@ -27,8 +25,7 @@ MapperReturnType BalancedMapper::map(const FileStruct& file_op) {
                        : file_op.size_ - size_mapped;
 
     file.size_ = hermes.size_;
-    hermes.blob_name_ =
-        std::to_string(file_hash) + "_" + std::to_string(page_index);
+    hermes.blob_name_ = std::to_string(page_index);
     mapper_return.emplace_back(file, hermes);
     size_mapped += hermes.size_;
   }

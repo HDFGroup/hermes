@@ -18,6 +18,7 @@ class MapperFactory {
         // TODO(hari) throw: Mapper not implemented
       }
     }
+    return NULL;
   }
 };
 }  // namespace hermes::adapter::stdio
