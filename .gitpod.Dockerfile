@@ -4,7 +4,7 @@ USER gitpod
 RUN sudo apt-get update -q && \
     sudo apt-get install -yq gcc g++
 
-RUN apt-get install -y --no-install-recommends \
+RUN sudo apt-get install -y --no-install-recommends \
     autoconf \
     ca-certificates \
     curl \
