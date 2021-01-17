@@ -14,7 +14,8 @@ RUN sudo apt-get install -y --no-install-recommends \
     python \
     nano \
     sudo \
-    unzip
+    unzip \
+    cmake
 
 ENV LOCAL=$HOME
 ENV PROJECT=$LOCAL/hermes
