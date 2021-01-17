@@ -16,7 +16,7 @@ RUN sudo apt-get install -y --no-install-recommends \
     sudo \
     unzip
 
-ENV LOCAL=/workspace
+ENV LOCAL=$HOME
 ENV PROJECT=$LOCAL/hermes
 ENV INSTALL_DIR=$LOCAL/install
 ENV SPACK_DIR=$LOCAL/spack
