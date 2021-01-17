@@ -15,7 +15,8 @@ RUN sudo apt-get install -y --no-install-recommends \
     nano \
     sudo \
     unzip \
-    cmake
+    cmake \
+    mpich
 
 ENV LOCAL=$HOME
 ENV PROJECT=$LOCAL/hermes
