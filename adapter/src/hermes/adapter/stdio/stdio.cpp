@@ -93,6 +93,7 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
   auto mapping = mapper->map(
       FileStruct(mdm->convert(fp), existing.first.st_ptr, total_size));
   size_t data_offset = 0;
+  auto filename = existing.first.st_bkid->GetName();
   for (const auto &item : mapping) {
     hapi::Context ctx;
     auto blob_exists =
@@ -100,7 +101,7 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
     hapi::Blob put_data((unsigned char *)ptr + data_offset,
                         (unsigned char *)ptr + data_offset + item.first.size_);
     existing.first.st_blobs.emplace(item.second.blob_name_);
-    if (!blob_exists) {
+    if (!blob_exists || item.second.size_ == PAGE_SIZE) {
       existing.first.st_bkid->Put(item.second.blob_name_, put_data, ctx);
     } else {
       hapi::Blob temp(0);
@@ -113,7 +114,7 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
           hapi::Blob existing_data(exiting_blob_size);
           existing.first.st_bkid->Get(item.second.blob_name_, existing_data,
                                       ctx);
-          std::copy(put_data.begin(), put_data.end(), existing_data.begin());
+          memcpy(existing_data.data(), put_data.data(), put_data.size());
           existing.first.st_bkid->Put(item.second.blob_name_, existing_data,
                                       ctx);
         }
@@ -130,8 +131,36 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
                 ? item.second.offset_ + 1
                 : existing_data.size();
         memcpy(final_data.data(), existing_data.data(), existing_data_cp_size);
-        // TODO(hari): There is a gap in the blob, either do I/O from PFS or map
-        // existing file metadata already.
+
+        if (exiting_blob_size < item.second.offset_ + 1 &&
+            fs::exists(filename) &&
+            fs::file_size(filename) >=
+                item.second.offset_ + 1 + item.second.size_) {
+          size_t size_to_read = item.second.offset_ + 1 - exiting_blob_size;
+          // There is a gap in blob update and existing file has data.
+          list.hermes_flush_exclusion.insert(filename);
+          FILE *fh = fopen(filename.c_str(), "r");
+          if (fh != nullptr) {
+            if (fseek(fh, item.first.offset_ + 1, SEEK_SET) == 0) {
+              size_t items_read =
+                  fread(final_data.data() + existing_data_cp_size - 1,
+                        size_to_read, sizeof(char), fh);
+              if (items_read != 1) {
+                // TODO(hari) @errorhandling read failed.
+              }
+              if (fclose(fh) != 0) {
+                // TODO(hari) @errorhandling fclose failed.
+              }
+            } else {
+              // TODO(hari) @errorhandling fseek failed.
+            }
+          } else {
+            // TODO(hari) @errorhandling FILE cannot be opened
+          }
+
+          list.hermes_flush_exclusion.erase(filename);
+        }
+
         memcpy(final_data.data() + item.second.offset_, put_data.data(),
                put_data.size());
         if (new_size < exiting_blob_size) {
@@ -144,13 +173,13 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
     }
     data_offset += item.first.size_;
   }
-  existing.first.st_ptr += total_size;
+  existing.first.st_ptr += data_offset;
   struct timespec ts;
   timespec_get(&ts, TIME_UTC);
   existing.first.st_mtim = ts;
   existing.first.st_ctim = ts;
   mdm->Update(fp, existing.first);
-  ret = total_size;
+  ret = data_offset;
   return ret;
 }
 
@@ -262,7 +291,24 @@ int HERMES_DECL(fflush)(FILE *fp) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(fp);
     if (existing.second) {
-      /* existing.first.st_bkid-> TODO(hari): which is the flush api*/
+      auto filename = existing.first.st_bkid->GetName();
+      list.hermes_flush_exclusion.insert(filename);
+      hapi::Context ctx;
+      const auto &blob_names = existing.first.st_blobs;
+      hermes::api::VBucket file_vbucket(filename, mdm->GetHermes(), true,
+                                        ctx);
+      auto offset_map = std::unordered_map<std::string, hermes::u64>();
+      for (const auto &blob_name : blob_names) {
+        file_vbucket.Link(blob_name, filename, ctx);
+        offset_map.emplace(blob_name, std::stol(blob_name) * PAGE_SIZE);
+      }
+      auto trait = hermes::api::FileMappingTrait(filename, offset_map,
+                                                 nullptr, NULL, NULL);
+      file_vbucket.Attach(&trait, ctx);
+      file_vbucket.Delete(ctx);
+      existing.first.st_blobs.clear();
+      list.hermes_flush_exclusion.erase(filename);
+      ret = 0;
     }
   } else {
     MAP_OR_FAIL(fflush);
@@ -295,6 +341,7 @@ int HERMES_DECL(fclose)(FILE *fp) {
         file_vbucket.Attach(&trait, ctx);
         file_vbucket.Delete(ctx);
         existing.first.st_bkid->Close(ctx);
+        existing.first.st_blobs.clear();
         list.hermes_flush_exclusion.erase(filename);
         mdm->FinalizeHermes();
       } else {

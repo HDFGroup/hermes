@@ -253,6 +253,7 @@ Status VBucket::Delete(Context& ctx) {
     }
     if (persist) {
       if (file != nullptr) {
+        fflush(file);
         if (fclose(file) != 0) {
           // TODO(chogan): @errorhandling
         }
