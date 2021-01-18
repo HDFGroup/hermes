@@ -19,7 +19,7 @@ struct Info {
     std::string read_data;
     std::string new_file;
     std::string existing_file;
-    size_t num_iterations = 128;
+    size_t num_iterations = 64;
     unsigned int offset_seed = 1;
     unsigned int rs_seed = 1;
     unsigned int temporal_interval_seed = 5;
