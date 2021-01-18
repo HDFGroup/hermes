@@ -835,9 +835,6 @@ TEST_CASE("BatchedWriteRSRangeLarge",
           fwrite(data.c_str(), sizeof(char), request_size, fd);
       REQUIRE(size_written == request_size);
       total_size_written += size_written;
-      int status = fflush(fd);
-      REQUIRE(status == 0);
-      REQUIRE(fs::file_size(info.new_file) == total_size_written);
     }
     int status = fclose(fd);
     REQUIRE(status == 0);
