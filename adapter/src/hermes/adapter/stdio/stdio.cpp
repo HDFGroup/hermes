@@ -201,25 +201,37 @@ size_t read_internal(std::pair<AdapterStat, bool> &existing, void *ptr,
     if (blob_exists) {
       auto exiting_blob_size =
           existing.first.st_bkid->Get(item.second.blob_name_, read_data, ctx);
+
       read_data.resize(exiting_blob_size);
       read_size =
           existing.first.st_bkid->Get(item.second.blob_name_, read_data, ctx);
+      if (item.second.offset_ < read_data.size()) {
+        read_size = read_data.size() < item.second.offset_ + item.second.size_
+                        ? read_data.size() - item.second.offset_
+                        : item.second.size_;
+        memcpy((char *)ptr + total_read_size,
+               read_data.data() + item.second.offset_, read_size);
+      }
+
     } else if (fs::exists(filename) &&
                fs::file_size(filename) >=
                    item.first.offset_ + item.first.size_) {
+      read_data.resize(item.first.size_);
+      list.hermes_flush_exclusion.insert(filename);
       FILE *fh = fopen(filename.c_str(), "r+");
       if (fh != nullptr) {
         int status = fseek(fh, item.first.offset_, SEEK_SET);
         if (status == 0) {
-          read_size =
-              fread(read_data.data(), item.first.size_, sizeof(char), fh);
+          read_size = fread((char *)ptr + total_read_size, sizeof(char),
+                            item.first.size_, fh);
         }
         status = fclose(fh);
       }
+      list.hermes_flush_exclusion.erase(filename);
     }
-    memcpy((char *)ptr + total_read_size,
-           read_data.data() + item.second.offset_, item.second.size_);
-    total_read_size += read_size;
+    if (read_size > 0) {
+      total_read_size += read_size;
+    }
   }
   existing.first.st_ptr += total_read_size;
   struct timespec ts;
@@ -295,15 +307,14 @@ int HERMES_DECL(fflush)(FILE *fp) {
       list.hermes_flush_exclusion.insert(filename);
       hapi::Context ctx;
       const auto &blob_names = existing.first.st_blobs;
-      hermes::api::VBucket file_vbucket(filename, mdm->GetHermes(), true,
-                                        ctx);
+      hermes::api::VBucket file_vbucket(filename, mdm->GetHermes(), true, ctx);
       auto offset_map = std::unordered_map<std::string, hermes::u64>();
       for (const auto &blob_name : blob_names) {
         file_vbucket.Link(blob_name, filename, ctx);
         offset_map.emplace(blob_name, std::stol(blob_name) * PAGE_SIZE);
       }
-      auto trait = hermes::api::FileMappingTrait(filename, offset_map,
-                                                 nullptr, NULL, NULL);
+      auto trait = hermes::api::FileMappingTrait(filename, offset_map, nullptr,
+                                                 NULL, NULL);
       file_vbucket.Attach(&trait, ctx);
       file_vbucket.Delete(ctx);
       existing.first.st_blobs.clear();
@@ -325,24 +336,26 @@ int HERMES_DECL(fclose)(FILE *fp) {
     if (existing.second) {
       if (existing.first.ref_count == 1) {
         mdm->Delete(fp);
-        auto filename = existing.first.st_bkid->GetName();
-        list.hermes_flush_exclusion.insert(filename);
         hapi::Context ctx;
         const auto &blob_names = existing.first.st_blobs;
-        hermes::api::VBucket file_vbucket(filename, mdm->GetHermes(), true,
-                                          ctx);
-        auto offset_map = std::unordered_map<std::string, hermes::u64>();
-        for (const auto &blob_name : blob_names) {
-          file_vbucket.Link(blob_name, filename, ctx);
-          offset_map.emplace(blob_name, std::stol(blob_name) * PAGE_SIZE);
+        if (!blob_names.empty()) {
+          auto filename = existing.first.st_bkid->GetName();
+          list.hermes_flush_exclusion.insert(filename);
+          hermes::api::VBucket file_vbucket(filename, mdm->GetHermes(), true,
+                                            ctx);
+          auto offset_map = std::unordered_map<std::string, hermes::u64>();
+          for (const auto &blob_name : blob_names) {
+            file_vbucket.Link(blob_name, filename, ctx);
+            offset_map.emplace(blob_name, std::stol(blob_name) * PAGE_SIZE);
+          }
+          auto trait = hermes::api::FileMappingTrait(filename, offset_map,
+                                                     nullptr, NULL, NULL);
+          file_vbucket.Attach(&trait, ctx);
+          file_vbucket.Delete(ctx);
+          existing.first.st_blobs.clear();
+          list.hermes_flush_exclusion.erase(filename);
         }
-        auto trait = hermes::api::FileMappingTrait(filename, offset_map,
-                                                   nullptr, NULL, NULL);
-        file_vbucket.Attach(&trait, ctx);
-        file_vbucket.Delete(ctx);
         existing.first.st_bkid->Close(ctx);
-        existing.first.st_blobs.clear();
-        list.hermes_flush_exclusion.erase(filename);
         mdm->FinalizeHermes();
       } else {
         existing.first.ref_count--;
