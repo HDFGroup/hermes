@@ -32,6 +32,8 @@ gcc_hermes(hermes_stdio_adapter_test batched_write "[operation=batched_write]")
 gcc_hermes(hermes_stdio_adapter_test batched_update "[operation=batched_update]")
 gcc_hermes(hermes_stdio_adapter_test single_read "[operation=single_read]")
 gcc_hermes(hermes_stdio_adapter_test batched_read "[operation=batched_read]")
+gcc_hermes(hermes_stdio_adapter_test single_mixed "[operation=single_mixed]")
+gcc_hermes(hermes_stdio_adapter_test batched_mixed "[operation=batched_mixed]")
 
 add_executable(stdio_adapter_mpi_test stdio_adapter_mpi_test.cpp ${ADAPTER_COMMON})
 target_link_libraries(stdio_adapter_mpi_test Catch2::Catch2 -lstdc++fs -lc MPI::MPI_CXX)

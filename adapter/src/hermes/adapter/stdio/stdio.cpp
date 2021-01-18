@@ -183,6 +183,22 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
   return ret;
 }
 
+size_t perform_file_read(const char *filename, size_t file_offset, void *ptr,
+                         size_t ptr_offset, size_t size) {
+  list.hermes_flush_exclusion.insert(filename);
+  FILE *fh = fopen(filename, "r");
+  size_t read_size = 0;
+  if (fh != nullptr) {
+    int status = fseek(fh, file_offset, SEEK_SET);
+    if (status == 0) {
+      read_size = fread((char *)ptr + ptr_offset, sizeof(char), size, fh);
+    }
+    status = fclose(fh);
+  }
+  list.hermes_flush_exclusion.erase(filename);
+  return read_size;
+}
+
 size_t read_internal(std::pair<AdapterStat, bool> &existing, void *ptr,
                      size_t total_size, FILE *fp) {
   size_t ret;
@@ -203,31 +219,34 @@ size_t read_internal(std::pair<AdapterStat, bool> &existing, void *ptr,
           existing.first.st_bkid->Get(item.second.blob_name_, read_data, ctx);
 
       read_data.resize(exiting_blob_size);
-      read_size =
-          existing.first.st_bkid->Get(item.second.blob_name_, read_data, ctx);
-      if (item.second.offset_ < read_data.size()) {
+      existing.first.st_bkid->Get(item.second.blob_name_, read_data, ctx);
+      size_t left_size = exiting_blob_size - item.second.offset_;
+      if (left_size > 0) {
         read_size = read_data.size() < item.second.offset_ + item.second.size_
                         ? read_data.size() - item.second.offset_
                         : item.second.size_;
         memcpy((char *)ptr + total_read_size,
                read_data.data() + item.second.offset_, read_size);
+        left_size -= read_size;
+      } else {
+        auto file_read_size =
+            perform_file_read(filename.c_str(), item.first.offset_, ptr,
+                              total_read_size, item.second.size_);
+        read_size += file_read_size;
       }
-
+      if (left_size > 0 && fs::exists(filename) &&
+          fs::file_size(filename) >= item.first.offset_ + item.first.size_) {
+        auto new_read_size =
+            perform_file_read(filename.c_str(), item.first.offset_, ptr,
+                              total_read_size + read_size, left_size);
+        left_size -= new_read_size;
+        read_size += new_read_size;
+      }
     } else if (fs::exists(filename) &&
                fs::file_size(filename) >=
                    item.first.offset_ + item.first.size_) {
-      read_data.resize(item.first.size_);
-      list.hermes_flush_exclusion.insert(filename);
-      FILE *fh = fopen(filename.c_str(), "r+");
-      if (fh != nullptr) {
-        int status = fseek(fh, item.first.offset_, SEEK_SET);
-        if (status == 0) {
-          read_size = fread((char *)ptr + total_read_size, sizeof(char),
-                            item.first.size_, fh);
-        }
-        status = fclose(fh);
-      }
-      list.hermes_flush_exclusion.erase(filename);
+      read_size = perform_file_read(filename.c_str(), item.first.offset_, ptr,
+                        total_read_size, item.first.size_);
     }
     if (read_size > 0) {
       total_read_size += read_size;
