@@ -30,7 +30,7 @@ struct Info {
     size_t medium_min = 4 * 1024 + 1,
             medium_max = 256 * 1024;
     size_t large_min = 256 * 1024 + 1,
-                large_max = 4 * 1024 * 1024;
+                large_max = 3 * 1024 * 1024;
 };
 }  // namespace hermes::adapter::stdio::test
 hermes::adapter::stdio::test::Arguments args;
