@@ -322,15 +322,14 @@ size_t read_internal(std::pair<AdapterStat, bool> &existing, void *ptr,
 }
 
 FILE *HERMES_DECL(fopen)(const char *path, const char *mode) {
-  LOG(INFO) << "Intercept fopen for filename: " << path << " and mode: " << mode
-            << "." << std::endl;
   FILE *ret;
   std::string path_str(path);
   if (IsTracked(path)) {
+    LOG(INFO) << "Intercept fopen for filename: " << path
+              << " and mode: " << mode << "." << std::endl;
     LOG(INFO) << "Filename: " << path << " is tracked." << std::endl;
     ret = open_internal(path, mode);
   } else {
-    LOG(INFO) << "Filename: " << path << " is not tracked." << std::endl;
     MAP_OR_FAIL(fopen);
     ret = __real_fopen(path, mode);
   }
@@ -338,15 +337,14 @@ FILE *HERMES_DECL(fopen)(const char *path, const char *mode) {
 }
 
 FILE *HERMES_DECL(fopen64)(const char *path, const char *mode) {
-  LOG(INFO) << "Intercept fopen64 for filename: " << path
-            << " and mode: " << mode << "." << std::endl;
   FILE *ret;
   std::string path_str(path);
   if (IsTracked(path)) {
+    LOG(INFO) << "Intercept fopen64 for filename: " << path
+              << " and mode: " << mode << "." << std::endl;
     LOG(INFO) << "Filename: " << path << " is tracked." << std::endl;
     ret = open_internal(path, mode);
   } else {
-    LOG(INFO) << "Filename: " << path << " is not tracked." << std::endl;
     MAP_OR_FAIL(fopen64);
     ret = __real_fopen(path, mode);
   }
@@ -354,12 +352,12 @@ FILE *HERMES_DECL(fopen64)(const char *path, const char *mode) {
 }
 
 FILE *HERMES_DECL(fdopen)(int fd, const char *mode) {
-  LOG(INFO) << "Intercept fdopen for file descriptor: " << fd
-            << " and mode: " << mode << "." << std::endl;
   FILE *ret;
   MAP_OR_FAIL(fdopen);
   ret = __real_fdopen(fd, mode);
   if (ret && IsTracked(ret)) {
+    LOG(INFO) << "Intercept fdopen for file descriptor: " << fd
+              << " and mode: " << mode << "." << std::endl;
     LOG(INFO) << "Intercept is tracked." << std::endl;
     int MAXSIZE = 0xFFF;
     char proclnk[0xFFF];
@@ -368,21 +366,18 @@ FILE *HERMES_DECL(fdopen)(int fd, const char *mode) {
     size_t r = readlink(proclnk, filename, MAXSIZE);
     filename[r] = '\0';
     ret = simple_open(ret, filename, mode);
-  } else {
-    LOG(INFO) << "Intercept is not tracked." << std::endl;
   }
   return (ret);
 }
 
 FILE *HERMES_DECL(freopen)(const char *path, const char *mode, FILE *stream) {
-  LOG(INFO) << "Intercept freopen for filename: " << path
-            << " and mode: " << mode << "." << std::endl;
   FILE *ret;
   if (IsTracked(path)) {
+    LOG(INFO) << "Intercept freopen for filename: " << path
+              << " and mode: " << mode << "." << std::endl;
     LOG(INFO) << "Filename: " << path << " is tracked." << std::endl;
     ret = reopen_internal(path, mode, stream);
   } else {
-    LOG(INFO) << "Filename: " << path << " is not tracked." << std::endl;
     MAP_OR_FAIL(freopen);
     ret = __real_freopen(path, mode, stream);
   }
@@ -397,7 +392,6 @@ FILE *HERMES_DECL(freopen64)(const char *path, const char *mode, FILE *stream) {
     LOG(INFO) << "Filename: " << path << " is tracked." << std::endl;
     ret = reopen_internal(path, mode, stream);
   } else {
-    LOG(INFO) << "Filename: " << path << " is not tracked." << std::endl;
     MAP_OR_FAIL(freopen64);
     ret = __real_freopen64(path, mode, stream);
   }
@@ -437,7 +431,6 @@ int HERMES_DECL(fflush)(FILE *fp) {
       ret = 0;
     }
   } else {
-    LOG(INFO) << "File handler is not tracked." << std::endl;
     MAP_OR_FAIL(fflush);
     ret = __real_fflush(fp);
   }
@@ -489,8 +482,6 @@ int HERMES_DECL(fclose)(FILE *fp) {
         mdm->Update(fp, existing.first);
       }
     }
-  } else {
-    LOG(INFO) << "File handler is not tracked." << std::endl;
   }
 
   MAP_OR_FAIL(fclose);
@@ -500,9 +491,9 @@ int HERMES_DECL(fclose)(FILE *fp) {
 
 size_t HERMES_DECL(fwrite)(const void *ptr, size_t size, size_t nmemb,
                            FILE *fp) {
-  LOG(INFO) << "Intercept fwrite." << std::endl;
   size_t ret;
   if (IsTracked(fp)) {
+    LOG(INFO) << "Intercept fwrite." << std::endl;
     LOG(INFO) << "File handler is tracked." << std::endl;
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(fp);
@@ -510,12 +501,10 @@ size_t HERMES_DECL(fwrite)(const void *ptr, size_t size, size_t nmemb,
       LOG(INFO) << "File handler is opened by adapter." << std::endl;
       ret = write_internal(existing, ptr, size * nmemb, fp);
     } else {
-      LOG(INFO) << "File handler is not opened by adapter." << std::endl;
       MAP_OR_FAIL(fwrite);
       ret = __real_fwrite(ptr, size, nmemb, fp);
     }
   } else {
-    LOG(INFO) << "File handler is not tracked." << std::endl;
     MAP_OR_FAIL(fwrite);
     ret = __real_fwrite(ptr, size, nmemb, fp);
   }
@@ -534,12 +523,10 @@ int HERMES_DECL(fputc)(int c, FILE *fp) {
       write_internal(existing, &c, 1, fp);
       ret = c;
     } else {
-      LOG(INFO) << "File handler is not opened by adapter." << std::endl;
       MAP_OR_FAIL(fputc);
       ret = __real_fputc(c, fp);
     }
   } else {
-    LOG(INFO) << "File handler is not tracked." << std::endl;
     MAP_OR_FAIL(fputc);
     ret = __real_fputc(c, fp);
   }
@@ -582,7 +569,6 @@ int HERMES_DECL(putc)(int c, FILE *fp) {
       write_internal(existing, &c, 1, fp);
       ret = c;
     } else {
-      LOG(INFO) << "File handler is not opened by adapter." << std::endl;
       MAP_OR_FAIL(fputc);
       ret = __real_fputc(c, fp);
     }
@@ -605,7 +591,6 @@ int HERMES_DECL(putw)(int w, FILE *fp) {
       LOG(INFO) << "File handler is opened by adapter." << std::endl;
       ret = write_internal(existing, &w, 1, fp);
     } else {
-      LOG(INFO) << "File handler is not opened by adapter." << std::endl;
       MAP_OR_FAIL(putw);
       ret = __real_putw(w, fp);
     }
@@ -628,7 +613,6 @@ int HERMES_DECL(fputs)(const char *s, FILE *stream) {
       LOG(INFO) << "File handler is opened by adapter." << std::endl;
       ret = write_internal(existing, s, strlen(s), stream);
     } else {
-      LOG(INFO) << "File handler is not opened by adapter." << std::endl;
       MAP_OR_FAIL(fputs);
       ret = __real_fputs(s, stream);
     }
@@ -651,7 +635,6 @@ size_t HERMES_DECL(fread)(void *ptr, size_t size, size_t nmemb, FILE *stream) {
       LOG(INFO) << "File handler is opened by adapter." << std::endl;
       ret = read_internal(existing, ptr, size * nmemb, stream);
     } else {
-      LOG(INFO) << "File handler is not opened by adapter." << std::endl;
       MAP_OR_FAIL(fread);
       ret = __real_fread(ptr, size, nmemb, stream);
     }
@@ -678,7 +661,6 @@ int HERMES_DECL(fgetc)(FILE *stream) {
         ret = value;
       }
     } else {
-      LOG(INFO) << "File handler is not opened by adapter." << std::endl;
       MAP_OR_FAIL(fgetc);
       ret = __real_fgetc(stream);
     }
@@ -705,7 +687,6 @@ int HERMES_DECL(getc)(FILE *stream) {
         ret = value;
       }
     } else {
-      LOG(INFO) << "File handler is not opened by adapter." << std::endl;
       MAP_OR_FAIL(fgetc);
       ret = __real_fgetc(stream);
     }
@@ -733,7 +714,6 @@ int HERMES_DECL(_IO_getc)(FILE *stream) {
         ret = value;
       }
     } else {
-      LOG(INFO) << "File handler is not opened by adapter." << std::endl;
       MAP_OR_FAIL(_IO_getc);
       ret = __real__IO_getc(stream);
     }
@@ -757,7 +737,6 @@ int HERMES_DECL(_IO_putc)(int c, FILE *stream) {
       LOG(INFO) << "File handler is opened by adapter." << std::endl;
       ret = write_internal(existing, &c, 1, stream);
     } else {
-      LOG(INFO) << "File handler is not opened by adapter." << std::endl;
       MAP_OR_FAIL(_IO_putc);
       ret = __real__IO_putc(c, stream);
     }
@@ -782,7 +761,6 @@ int HERMES_DECL(getw)(FILE *stream) {
       auto ret_size = read_internal(existing, &value, sizeof(value), stream);
       if (ret_size == 1) ret = value;
     } else {
-      LOG(INFO) << "File handler is not opened by adapter." << std::endl;
       MAP_OR_FAIL(getw);
       ret = __real_getw(stream);
     }
@@ -806,7 +784,6 @@ char *HERMES_DECL(fgets)(char *s, int size, FILE *stream) {
       read_internal(existing, s, size, stream);
       ret = s;
     } else {
-      LOG(INFO) << "File handler is not opened by adapter." << std::endl;
       MAP_OR_FAIL(fgets);
       ret = __real_fgets(s, size, stream);
     }
@@ -835,7 +812,6 @@ void HERMES_DECL(rewind)(FILE *stream) {
             << std::endl;
       }
     } else {
-      LOG(INFO) << "File handler is not opened by adapter." << std::endl;
       MAP_OR_FAIL(rewind);
       __real_rewind(stream);
     }
@@ -884,7 +860,6 @@ int HERMES_DECL(fseek)(FILE *stream, long offset, int whence) {
         ret = -1;
       }
     } else {
-      LOG(INFO) << "File handler is not opened by adapter." << std::endl;
       MAP_OR_FAIL(fseek);
       ret = __real_fseek(stream, offset, whence);
     }
@@ -933,7 +908,6 @@ int HERMES_DECL(fseeko)(FILE *stream, off_t offset, int whence) {
         ret = -1;
       }
     } else {
-      LOG(INFO) << "File handler is not opened by adapter." << std::endl;
       MAP_OR_FAIL(fseeko);
       ret = __real_fseeko(stream, offset, whence);
     }
@@ -982,7 +956,6 @@ int HERMES_DECL(fseeko64)(FILE *stream, off64_t offset, int whence) {
         ret = -1;
       }
     } else {
-      LOG(INFO) << "File handler is not opened by adapter." << std::endl;
       MAP_OR_FAIL(fseeko64);
       ret = __real_fseeko64(stream, offset, whence);
     }
@@ -1014,7 +987,6 @@ int HERMES_DECL(fsetpos)(FILE *stream, const fpos_t *pos) {
         ret = -1;
       }
     } else {
-      LOG(INFO) << "File handler is not opened by adapter." << std::endl;
       MAP_OR_FAIL(fsetpos);
       ret = __real_fsetpos(stream, pos);
     }
@@ -1046,7 +1018,6 @@ int HERMES_DECL(fsetpos64)(FILE *stream, const fpos64_t *pos) {
         ret = -1;
       }
     } else {
-      LOG(INFO) << "File handler is not opened by adapter." << std::endl;
       MAP_OR_FAIL(fsetpos64);
       ret = __real_fsetpos64(stream, pos);
     }
@@ -1069,7 +1040,6 @@ long int HERMES_DECL(ftell)(FILE *fp) {
       LOG(INFO) << "File handler is opened by adapter." << std::endl;
       ret = existing.first.st_ptr;
     } else {
-      LOG(INFO) << "File handler is not opened by adapter." << std::endl;
       MAP_OR_FAIL(ftell);
       ret = __real_ftell(fp);
     }
