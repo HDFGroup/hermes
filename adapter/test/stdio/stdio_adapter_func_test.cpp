@@ -325,7 +325,7 @@ TEST_CASE("fputc", "[process=" + std::to_string(info.comm_size) +
     char c = 'w';
     for (size_t i = 0; i < total_chars; ++i) {
       int ret_char = fputc(c, fh);
-      REQUIRE(ret_char == 0);
+      REQUIRE(ret_char == c);
     }
     int status = fclose(fh);
     REQUIRE(status == 0);
@@ -345,7 +345,7 @@ TEST_CASE("putc", "[process=" + std::to_string(info.comm_size) +
     char c = 'w';
     for (size_t i = 0; i < total_chars; ++i) {
       int ret_char = putc(c, fh);
-      REQUIRE(ret_char == 0);
+      REQUIRE(ret_char == c);
     }
     int status = fclose(fh);
     REQUIRE(status == 0);
