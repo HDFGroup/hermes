@@ -566,7 +566,6 @@ int HERMES_DECL(_IO_getc)(FILE *stream) {
       if (ret_size == 1) {
         ret = value;
       }
-
     }
   } else {
     MAP_OR_FAIL(_IO_getc);
@@ -599,8 +598,7 @@ int HERMES_DECL(getw)(FILE *stream) {
     if (existing.second) {
       unsigned char value;
       auto ret_size = read_internal(existing, &value, sizeof(value), stream);
-      if (ret_size == 1)
-        ret = value;
+      if (ret_size == 1) ret = value;
     }
   } else {
     MAP_OR_FAIL(getw);
