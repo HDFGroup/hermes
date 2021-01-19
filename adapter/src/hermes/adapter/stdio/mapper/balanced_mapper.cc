@@ -1,11 +1,8 @@
-//
-// Created by manihariharan on 12/23/20.
-//
-
 #include "balanced_mapper.h"
 
-
-
+/**
+ * Namespace declaration for cleaner code.
+ */
 using hermes::adapter::stdio::BalancedMapper;
 using hermes::adapter::stdio::FileStruct;
 using hermes::adapter::stdio::HermesStruct;

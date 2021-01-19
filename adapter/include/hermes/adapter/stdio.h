@@ -1,8 +1,25 @@
 #ifndef HERMES_ADAPTER_STDIO_H
 #define HERMES_ADAPTER_STDIO_H
 
-#include <bucket.h>
+/**
+ * Standard header
+ */
 #include <fcntl.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <unistd.h>
+
+#include <experimental/filesystem>
+
+/**
+ * Dependent library headers
+ */
+#include "glog/logging.h"
+
+/**
+ * Internal headers
+ */
+#include <bucket.h>
 #include <hermes.h>
 #include <hermes/adapter/interceptor.h>
 #include <hermes/adapter/singleton.h>
@@ -10,17 +27,11 @@
 #include <hermes/adapter/stdio/common/datastructures.h>
 #include <hermes/adapter/stdio/mapper/mapper_factory.h>
 #include <hermes/adapter/stdio/metadata_manager.h>
-#include <stdarg.h>
-#include <stdio.h>
-#include <unistd.h>
 #include <vbucket.h>
-
-#include <experimental/filesystem>
 
 /**
  * Function declarations
  */
-
 HERMES_FORWARD_DECL(ftell, long int, (FILE * fp));
 HERMES_FORWARD_DECL(fopen, FILE *, (const char *path, const char *mode));
 HERMES_FORWARD_DECL(fopen64, FILE *, (const char *path, const char *mode));

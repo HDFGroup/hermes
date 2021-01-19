@@ -1,7 +1,17 @@
+/**
+ * Internal headers
+ */
 #include "interceptor.h"
 
+/**
+ * Define Interceptor list for adapter.
+ */
 hermes::adapter::InterceptorList list;
+
 namespace hermes::adapter {
+/**
+ * is exit by program called.
+ */
 bool exit = false;
 }  // namespace hermes::adapter
 

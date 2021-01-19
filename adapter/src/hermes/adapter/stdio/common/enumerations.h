@@ -1,10 +1,13 @@
-//
-// Created by manihariharan on 12/23/20.
-//
-
-#ifndef HERMES_ENUMERATIONS_H
-#define HERMES_ENUMERATIONS_H
+#ifndef HERMES_STDIO_COMMON_ENUMERATIONS_H
+#define HERMES_STDIO_COMMON_ENUMERATIONS_H
+/**
+ * Enumeration for STDIO adapter.
+ */
 namespace hermes::adapter::stdio {
-enum MapperType { BALANCED = 0 };
+/**
+ * Define different types of mappers supported by STDIO Adapter.
+ * Also define its construction in the MapperFactory.
+ */
+enum MapperType { BALANCED = 0 /* Balanced Mapping */ };
 }  // namespace hermes::adapter::stdio
-#endif  // HERMES_ENUMERATIONS_H
+#endif  // HERMES_STDIO_COMMON_ENUMERATIONS_H

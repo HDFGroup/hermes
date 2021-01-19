@@ -94,7 +94,7 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
     size_t offset = 0;
     REQUIRE(PAGE_SIZE > total_size + offset);
     auto mapping =
-        mapper->map(FileStruct(mdm->convert(fp), offset, total_size));
+        mapper->map(FileStruct(mdm->Convert(fp), offset, total_size));
     REQUIRE(mapping.size() == 1);
     REQUIRE(mapping[0].first.offset_ == offset);
     REQUIRE(mapping[0].first.size_ == total_size);
@@ -112,7 +112,7 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(fp != nullptr);
     size_t offset = 0;
     auto mapping =
-        mapper->map(FileStruct(mdm->convert(fp), offset, total_size));
+        mapper->map(FileStruct(mdm->Convert(fp), offset, total_size));
     REQUIRE(mapping.size() == ceil((double)total_size / PAGE_SIZE));
     for (const auto& item : mapping) {
       size_t mapped_size =
@@ -134,7 +134,7 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(fp != nullptr);
     size_t offset = 1;
     auto mapping =
-        mapper->map(FileStruct(mdm->convert(fp), offset, total_size));
+        mapper->map(FileStruct(mdm->Convert(fp), offset, total_size));
     bool has_rem = (total_size + offset) % PAGE_SIZE != 0;
     if (has_rem) {
       REQUIRE(mapping.size() == ceil((double)total_size / PAGE_SIZE) + 1);
@@ -172,7 +172,7 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
     size_t offset = 1;
     REQUIRE(PAGE_SIZE > total_size + offset);
     auto mapping =
-        mapper->map(FileStruct(mdm->convert(fp), offset, total_size));
+        mapper->map(FileStruct(mdm->Convert(fp), offset, total_size));
     REQUIRE(mapping.size() == 1);
     REQUIRE(mapping[0].first.offset_ == offset);
     REQUIRE(mapping[0].first.size_ == total_size);

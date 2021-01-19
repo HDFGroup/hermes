@@ -3,8 +3,8 @@
 #include <limits.h>
 
 #include <hermes/adapter/interceptor.cc>
-#include <hermes/adapter/stdio/mapper/balanced_mapper.cpp>
-#include <hermes/adapter/stdio/metadata_manager.cpp>
+#include <hermes/adapter/stdio/mapper/balanced_mapper.cc>
+#include <hermes/adapter/stdio/metadata_manager.cc>
 
 using hermes::adapter::stdio::AdapterStat;
 using hermes::adapter::stdio::FileID;
@@ -93,7 +93,7 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
   auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
   auto mapper = MapperFactory().Get(MAPPER_TYPE);
   auto mapping = mapper->map(
-      FileStruct(mdm->convert(fp), existing.first.st_ptr, total_size));
+      FileStruct(mdm->Convert(fp), existing.first.st_ptr, total_size));
   size_t data_offset = 0;
   auto filename = existing.first.st_bkid->GetName();
   for (const auto &item : mapping) {
@@ -207,7 +207,7 @@ size_t read_internal(std::pair<AdapterStat, bool> &existing, void *ptr,
   auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
   auto mapper = MapperFactory().Get(MAPPER_TYPE);
   auto mapping = mapper->map(
-      FileStruct(mdm->convert(fp), existing.first.st_ptr, total_size));
+      FileStruct(mdm->Convert(fp), existing.first.st_ptr, total_size));
   size_t total_read_size = 0;
   auto filename = existing.first.st_bkid->GetName();
   for (const auto &item : mapping) {

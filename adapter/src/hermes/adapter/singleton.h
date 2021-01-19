@@ -1,9 +1,6 @@
-//
-// Created by manihariharan on 12/23/20.
-//
+#ifndef HERMES_ADAPTER_SINGLETON_H
+#define HERMES_ADAPTER_SINGLETON_H
 
-#ifndef HERMES_SINGLETON_H
-#define HERMES_SINGLETON_H
 #include <iostream>
 #include <memory>
 #include <utility>
@@ -16,9 +13,6 @@ namespace hermes::adapter {
 template <typename T>
 class Singleton {
  public:
-  /**
-   * Members of Singleton Class
-   */
   /**
    * Uses unique pointer to build a static global instance of variable.
    * @tparam T
@@ -34,14 +28,18 @@ class Singleton {
   /**
    * Operators
    */
-  Singleton& operator=(const Singleton) = delete; /* deleting = operatos*/
-                                                  /**
-                                                   * Constructor
-                                                   */
+  Singleton& operator=(const Singleton) = delete; /* deleting = operators*/
+
  public:
+  /**
+   * Constructor
+   */
   Singleton(const Singleton&) = delete; /* deleting copy constructor. */
 
  protected:
+  /**
+   * static instance.
+   */
   static std::shared_ptr<T> instance;
   Singleton() {} /* hidden default constructor. */
 };
@@ -49,4 +47,4 @@ class Singleton {
 template <typename T>
 std::shared_ptr<T> Singleton<T>::instance = nullptr;
 }  // namespace hermes::adapter
-#endif  // HERMES_SINGLETON_H
+#endif  // HERMES_ADAPTER_SINGLETON_H
