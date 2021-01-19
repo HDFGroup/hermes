@@ -64,9 +64,10 @@ int pretest() {
     if (fs::exists(info.shared_existing_file))
       fs::remove(info.shared_existing_file);
     if (!fs::exists(info.shared_existing_file)) {
-      std::string cmd = "dd if=/dev/zero of=" + info.existing_file + " bs=" +
-                        std::to_string(args.request_size * info.num_iterations) +
-                        " count=1  > /dev/null 2>&1";
+      std::string cmd =
+          "dd if=/dev/zero of=" + info.existing_file +
+          " bs=" + std::to_string(args.request_size * info.num_iterations) +
+          " count=1  > /dev/null 2>&1";
       system(cmd.c_str());
       REQUIRE(fs::file_size(info.shared_existing_file) ==
               args.request_size * info.num_iterations);
