@@ -545,12 +545,10 @@ int HERMES_DECL(fgetpos)(FILE *fp, fpos_t *pos) {
       pos->__pos = existing.first.st_ptr;
       ret = 0;
     } else {
-      LOG(INFO) << "File handler is opened by adapter." << std::endl;
       MAP_OR_FAIL(fgetpos);
       ret = __real_fgetpos(fp, pos);
     }
   } else {
-    LOG(INFO) << "File handler is not tracked." << std::endl;
     MAP_OR_FAIL(fgetpos);
     ret = __real_fgetpos(fp, pos);
   }
@@ -573,7 +571,6 @@ int HERMES_DECL(putc)(int c, FILE *fp) {
       ret = __real_fputc(c, fp);
     }
   } else {
-    LOG(INFO) << "File handler is not tracked." << std::endl;
     MAP_OR_FAIL(fputc);
     ret = __real_fputc(c, fp);
   }
@@ -595,7 +592,6 @@ int HERMES_DECL(putw)(int w, FILE *fp) {
       ret = __real_putw(w, fp);
     }
   } else {
-    LOG(INFO) << "File handler is not tracked." << std::endl;
     MAP_OR_FAIL(putw);
     ret = __real_putw(w, fp);
   }
@@ -617,7 +613,6 @@ int HERMES_DECL(fputs)(const char *s, FILE *stream) {
       ret = __real_fputs(s, stream);
     }
   } else {
-    LOG(INFO) << "File handler is not tracked." << std::endl;
     MAP_OR_FAIL(fputs);
     ret = __real_fputs(s, stream);
   }
@@ -639,7 +634,6 @@ size_t HERMES_DECL(fread)(void *ptr, size_t size, size_t nmemb, FILE *stream) {
       ret = __real_fread(ptr, size, nmemb, stream);
     }
   } else {
-    LOG(INFO) << "File handler is not tracked." << std::endl;
     MAP_OR_FAIL(fread);
     ret = __real_fread(ptr, size, nmemb, stream);
   }
@@ -665,7 +659,6 @@ int HERMES_DECL(fgetc)(FILE *stream) {
       ret = __real_fgetc(stream);
     }
   } else {
-    LOG(INFO) << "File handler is not tracked." << std::endl;
     MAP_OR_FAIL(fgetc);
     ret = __real_fgetc(stream);
   }
@@ -691,7 +684,6 @@ int HERMES_DECL(getc)(FILE *stream) {
       ret = __real_fgetc(stream);
     }
   } else {
-    LOG(INFO) << "File handler is not tracked." << std::endl;
     MAP_OR_FAIL(fgetc);
     ret = __real_fgetc(stream);
   }
@@ -718,7 +710,6 @@ int HERMES_DECL(_IO_getc)(FILE *stream) {
       ret = __real__IO_getc(stream);
     }
   } else {
-    LOG(INFO) << "File handler is not tracked." << std::endl;
     MAP_OR_FAIL(_IO_getc);
     ret = __real__IO_getc(stream);
   }
@@ -741,7 +732,6 @@ int HERMES_DECL(_IO_putc)(int c, FILE *stream) {
       ret = __real__IO_putc(c, stream);
     }
   } else {
-    LOG(INFO) << "File handler is not tracked." << std::endl;
     MAP_OR_FAIL(_IO_putc);
     ret = __real__IO_putc(c, stream);
   }
@@ -765,7 +755,6 @@ int HERMES_DECL(getw)(FILE *stream) {
       ret = __real_getw(stream);
     }
   } else {
-    LOG(INFO) << "File handler is not tracked." << std::endl;
     MAP_OR_FAIL(getw);
     ret = __real_getw(stream);
   }
@@ -788,7 +777,6 @@ char *HERMES_DECL(fgets)(char *s, int size, FILE *stream) {
       ret = __real_fgets(s, size, stream);
     }
   } else {
-    LOG(INFO) << "File handler is not tracked." << std::endl;
     MAP_OR_FAIL(fgets);
     ret = __real_fgets(s, size, stream);
   }
@@ -816,7 +804,6 @@ void HERMES_DECL(rewind)(FILE *stream) {
       __real_rewind(stream);
     }
   } else {
-    LOG(INFO) << "File handler is not tracked." << std::endl;
     MAP_OR_FAIL(rewind);
     __real_rewind(stream);
   }
@@ -864,7 +851,6 @@ int HERMES_DECL(fseek)(FILE *stream, long offset, int whence) {
       ret = __real_fseek(stream, offset, whence);
     }
   } else {
-    LOG(INFO) << "File handler is not tracked." << std::endl;
     MAP_OR_FAIL(fseek);
     ret = __real_fseek(stream, offset, whence);
   }
@@ -912,7 +898,6 @@ int HERMES_DECL(fseeko)(FILE *stream, off_t offset, int whence) {
       ret = __real_fseeko(stream, offset, whence);
     }
   } else {
-    LOG(INFO) << "File handler is not tracked." << std::endl;
     MAP_OR_FAIL(fseeko);
     ret = __real_fseeko(stream, offset, whence);
   }
@@ -960,7 +945,6 @@ int HERMES_DECL(fseeko64)(FILE *stream, off64_t offset, int whence) {
       ret = __real_fseeko64(stream, offset, whence);
     }
   } else {
-    LOG(INFO) << "File handler is not tracked." << std::endl;
     MAP_OR_FAIL(fseeko64);
     ret = __real_fseeko64(stream, offset, whence);
   }
@@ -991,7 +975,6 @@ int HERMES_DECL(fsetpos)(FILE *stream, const fpos_t *pos) {
       ret = __real_fsetpos(stream, pos);
     }
   } else {
-    LOG(INFO) << "File handler is not tracked." << std::endl;
     MAP_OR_FAIL(fsetpos);
     ret = __real_fsetpos(stream, pos);
   }
@@ -1022,7 +1005,6 @@ int HERMES_DECL(fsetpos64)(FILE *stream, const fpos64_t *pos) {
       ret = __real_fsetpos64(stream, pos);
     }
   } else {
-    LOG(INFO) << "File handler is not tracked." << std::endl;
     MAP_OR_FAIL(fsetpos64);
     ret = __real_fsetpos64(stream, pos);
   }
@@ -1044,7 +1026,6 @@ long int HERMES_DECL(ftell)(FILE *fp) {
       ret = __real_ftell(fp);
     }
   } else {
-    LOG(INFO) << "File handler is not tracked." << std::endl;
     MAP_OR_FAIL(ftell);
     ret = __real_ftell(fp);
   }
