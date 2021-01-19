@@ -427,10 +427,8 @@ int HERMES_DECL(fputc)(int c, FILE *fp) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(fp);
     if (existing.second) {
-      ret = write_internal(existing, &c, 1, fp);
-      if (ret == 1) {
-        ret = 0;
-      }
+      write_internal(existing, &c, 1, fp);
+      ret = 0;
     }
   } else {
     MAP_OR_FAIL(fputc);
@@ -461,10 +459,8 @@ int HERMES_DECL(putc)(int c, FILE *fp) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(fp);
     if (existing.second) {
-      ret = write_internal(existing, &c, 1, fp);
-      if (ret == 1) {
-        ret = 0;
-      }
+      write_internal(existing, &c, 1, fp);
+      ret = 0;
     }
   } else {
     MAP_OR_FAIL(fputc);
