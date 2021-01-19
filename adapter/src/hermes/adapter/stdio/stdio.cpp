@@ -1,8 +1,6 @@
-//
-// Created by manihariharan on 12/15/20.
-//
-
+#include <fcntl.h>
 #include <hermes/adapter/stdio.h>
+#include <limits.h>
 
 #include <hermes/adapter/interceptor.cc>
 #include <hermes/adapter/stdio/mapper/balanced_mapper.cpp>
@@ -17,11 +15,8 @@ using hermes::adapter::stdio::MetadataManager;
 namespace hapi = hermes::api;
 namespace fs = std::experimental::filesystem;
 
-FILE *open_internal(const std::string &path_str, const char *mode) {
-  FILE *ret;
-  MAP_OR_FAIL(fopen);
+FILE *simple_open(FILE *ret, const std::string &path_str, const char *mode) {
   auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
-  ret = __real_fopen(path_str.c_str(), mode);
   if (!ret) {
     return ret;
   } else {
@@ -58,7 +53,14 @@ FILE *open_internal(const std::string &path_str, const char *mode) {
       mdm->Update(ret, existing.first);
     }
   }
+  return ret;
+}
 
+FILE *open_internal(const std::string &path_str, const char *mode) {
+  FILE *ret;
+  MAP_OR_FAIL(fopen);
+  ret = __real_fopen(path_str.c_str(), mode);
+  ret = simple_open(ret, path_str.c_str(), mode);
   return ret;
 }
 
@@ -220,33 +222,36 @@ size_t read_internal(std::pair<AdapterStat, bool> &existing, void *ptr,
 
       read_data.resize(exiting_blob_size);
       existing.first.st_bkid->Get(item.second.blob_name_, read_data, ctx);
-      size_t left_size = exiting_blob_size - item.second.offset_;
-      if (left_size > 0) {
+      bool contains_blob = exiting_blob_size > item.second.offset_;
+      if (contains_blob) {
         read_size = read_data.size() < item.second.offset_ + item.second.size_
-                        ? read_data.size() - item.second.offset_
+                        ? exiting_blob_size - item.second.offset_
                         : item.second.size_;
         memcpy((char *)ptr + total_read_size,
                read_data.data() + item.second.offset_, read_size);
-        left_size -= read_size;
+        if (read_size < item.second.size_) {
+          contains_blob = true;
+        } else {
+          contains_blob = false;
+        }
       } else {
         auto file_read_size =
             perform_file_read(filename.c_str(), item.first.offset_, ptr,
                               total_read_size, item.second.size_);
         read_size += file_read_size;
       }
-      if (left_size > 0 && fs::exists(filename) &&
+      if (contains_blob && fs::exists(filename) &&
           fs::file_size(filename) >= item.first.offset_ + item.first.size_) {
-        auto new_read_size =
-            perform_file_read(filename.c_str(), item.first.offset_, ptr,
-                              total_read_size + read_size, left_size);
-        left_size -= new_read_size;
+        auto new_read_size = perform_file_read(
+            filename.c_str(), item.first.offset_, ptr,
+            total_read_size + read_size, item.second.size_ - read_size);
         read_size += new_read_size;
       }
     } else if (fs::exists(filename) &&
                fs::file_size(filename) >=
                    item.first.offset_ + item.first.size_) {
       read_size = perform_file_read(filename.c_str(), item.first.offset_, ptr,
-                        total_read_size, item.first.size_);
+                                    total_read_size, item.first.size_);
     }
     if (read_size > 0) {
       total_read_size += read_size;
@@ -289,8 +294,17 @@ FILE *HERMES_DECL(fopen64)(const char *path, const char *mode) {
 FILE *HERMES_DECL(fdopen)(int fd, const char *mode) {
   FILE *ret;
   MAP_OR_FAIL(fdopen);
-  /* FIXME(hari): implement fdopen */
   ret = __real_fdopen(fd, mode);
+  if (ret && IsTracked(ret)) {
+    int MAXSIZE = 0xFFF;
+    char proclnk[0xFFF];
+    char filename[0xFFF];
+    char filePath[PATH_MAX];
+    snprintf(proclnk, MAXSIZE, "/proc/self/fd/%d", fd);
+    size_t r = readlink(proclnk, filename, MAXSIZE);
+    filename[r] = '\0';
+    ret = simple_open(ret, filename, mode);
+  }
   return (ret);
 }
 
@@ -318,7 +332,7 @@ FILE *HERMES_DECL(freopen64)(const char *path, const char *mode, FILE *stream) {
 
 int HERMES_DECL(fflush)(FILE *fp) {
   int ret;
-  if (IsTracked(fp)) {
+  if (fp && IsTracked(fp)) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(fp);
     if (existing.second) {
@@ -415,6 +429,43 @@ int HERMES_DECL(fputc)(int c, FILE *fp) {
     auto existing = mdm->Find(fp);
     if (existing.second) {
       ret = write_internal(existing, &c, 1, fp);
+      if (ret == 1) {
+        ret = 0;
+      }
+    }
+  } else {
+    MAP_OR_FAIL(fputc);
+    ret = __real_fputc(c, fp);
+  }
+  return (ret);
+}
+
+int HERMES_DECL(fgetpos)(FILE *fp, fpos_t * pos) {
+  int ret;
+  if (IsTracked(fp) && pos) {
+    auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+    auto existing = mdm->Find(fp);
+    if (existing.second) {
+      pos->__pos = existing.first.st_ptr;
+      ret = 0;
+    }
+  }else{
+    MAP_OR_FAIL(fgetpos);
+    ret = __real_fgetpos(fp, pos);
+  }
+  return ret;
+}
+
+int HERMES_DECL(putc)(int c, FILE *fp) {
+  int ret;
+  if (IsTracked(fp)) {
+    auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+    auto existing = mdm->Find(fp);
+    if (existing.second) {
+      ret = write_internal(existing, &c, 1, fp);
+      if (ret == 1) {
+        ret = 0;
+      }
     }
   } else {
     MAP_OR_FAIL(fputc);
@@ -469,14 +520,31 @@ size_t HERMES_DECL(fread)(void *ptr, size_t size, size_t nmemb, FILE *stream) {
 }
 
 int HERMES_DECL(fgetc)(FILE *stream) {
-  int ret;
+  int ret = -1;
   if (IsTracked(stream)) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(stream);
     if (existing.second) {
-      int value;
-      auto ret_size = read_internal(existing, &value, 1, stream);
-      ret = value * ret_size;
+      unsigned char value;
+      auto ret_size = read_internal(existing, &value, sizeof(value), stream);
+      ret = value;
+    }
+  } else {
+    MAP_OR_FAIL(fgetc);
+    ret = __real_fgetc(stream);
+  }
+  return (ret);
+}
+
+int HERMES_DECL(getc)(FILE *stream) {
+  int ret = -1;
+  if (IsTracked(stream)) {
+    auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+    auto existing = mdm->Find(stream);
+    if (existing.second) {
+      unsigned char value;
+      auto ret_size = read_internal(existing, &value, sizeof(value), stream);
+      ret = value;
     }
   } else {
     MAP_OR_FAIL(fgetc);
@@ -492,9 +560,9 @@ int HERMES_DECL(_IO_getc)(FILE *stream) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(stream);
     if (existing.second) {
-      int value;
-      auto ret_size = read_internal(existing, &value, 1, stream);
-      ret = value * ret_size;
+      unsigned char value;
+      auto ret_size = read_internal(existing, &value, sizeof(value), stream);
+      ret = value;
     }
   } else {
     MAP_OR_FAIL(_IO_getc);
@@ -525,9 +593,9 @@ int HERMES_DECL(getw)(FILE *stream) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(stream);
     if (existing.second) {
-      int value;
-      auto ret_size = read_internal(existing, &value, 1, stream);
-      ret = value * ret_size;
+      unsigned char value;
+      auto ret_size = read_internal(existing, &value, sizeof(value), stream);
+      ret = value;
     }
   } else {
     MAP_OR_FAIL(getw);
@@ -542,7 +610,7 @@ char *HERMES_DECL(fgets)(char *s, int size, FILE *stream) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(stream);
     if (existing.second) {
-      read_internal(existing, s, 1, stream);
+      read_internal(existing, s, size, stream);
       ret = s;
     }
   } else {

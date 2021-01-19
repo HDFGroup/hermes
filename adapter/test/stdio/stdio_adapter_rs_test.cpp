@@ -440,7 +440,6 @@ TEST_CASE("BatchedWriteRSRangeMedium",
     }
     int status = fclose(fd);
     REQUIRE(status == 0);
-    REQUIRE(fs::file_size(info.new_file) == total_size_written);
   }
   posttest();
 }
