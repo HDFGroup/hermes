@@ -545,7 +545,9 @@ int HERMES_DECL(getc)(FILE *stream) {
     if (existing.second) {
       unsigned char value;
       auto ret_size = read_internal(existing, &value, sizeof(value), stream);
-      ret = value;
+      if (ret_size == 1) {
+        ret = value;
+      }
     }
   } else {
     MAP_OR_FAIL(fgetc);
