@@ -8,6 +8,9 @@ using hermes::adapter::stdio::FileStruct;
 using hermes::adapter::stdio::HermesStruct;
 
 MapperReturnType BalancedMapper::map(const FileStruct& file_op) {
+  LOG(INFO) << "Mapping File with offset:" << file_op.offset_
+            << " and size:" << file_op.size_ << "." << std::endl;
+
   auto mapper_return = MapperReturnType();
   size_t size_mapped = 0;
   while (file_op.size_ > size_mapped) {

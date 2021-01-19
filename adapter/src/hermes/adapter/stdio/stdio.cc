@@ -16,12 +16,15 @@ namespace hapi = hermes::api;
 namespace fs = std::experimental::filesystem;
 
 FILE *simple_open(FILE *ret, const std::string &path_str, const char *mode) {
+  LOG(INFO) << "Open file for filename " << path_str << " in mode " << mode
+            << std::endl;
   auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
   if (!ret) {
     return ret;
   } else {
     auto existing = mdm->Find(ret);
     if (!existing.second) {
+      LOG(INFO) << "File not opened before by adapter" << std::endl;
       struct stat st;
       int fd = fileno(ret);
       fstat(fd, &st);
@@ -45,6 +48,7 @@ FILE *simple_open(FILE *ret, const std::string &path_str, const char *mode) {
           std::make_shared<hapi::Bucket>(path_str, mdm->GetHermes(), ctx);
       mdm->Create(ret, stat);
     } else {
+      LOG(INFO) << "File opened before by adapter" << std::endl;
       existing.first.ref_count++;
       struct timespec ts;
       timespec_get(&ts, TIME_UTC);
@@ -66,6 +70,8 @@ FILE *open_internal(const std::string &path_str, const char *mode) {
 
 FILE *reopen_internal(const std::string &path_str, const char *mode,
                       FILE *stream) {
+  LOG(INFO) << "Reopen file for filename " << path_str << " in mode " << mode
+            << std::endl;
   FILE *ret;
   MAP_OR_FAIL(freopen);
   auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
@@ -75,8 +81,10 @@ FILE *reopen_internal(const std::string &path_str, const char *mode,
   } else {
     auto existing = mdm->Find(ret);
     if (!existing.second) {
+      LOG(INFO) << "File not opened before by adapter" << std::endl;
       return nullptr;
     } else {
+      LOG(INFO) << "File opened before by adapter" << std::endl;
       struct timespec ts;
       timespec_get(&ts, TIME_UTC);
       existing.first.st_atim = ts;
@@ -89,6 +97,10 @@ FILE *reopen_internal(const std::string &path_str, const char *mode,
 
 size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
                       size_t total_size, FILE *fp) {
+  LOG(INFO) << "Write called for filename: "
+            << existing.first.st_bkid->GetName()
+            << " on offset: " << existing.first.st_ptr
+            << " and size: " << total_size << std::endl;
   size_t ret;
   auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
   auto mapper = MapperFactory().Get(MAPPER_TYPE);
@@ -96,6 +108,8 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
       FileStruct(mdm->Convert(fp), existing.first.st_ptr, total_size));
   size_t data_offset = 0;
   auto filename = existing.first.st_bkid->GetName();
+  LOG(INFO) << "Mapping for read has " << mapping.size() << " mapping."
+            << std::endl;
   for (const auto &item : mapping) {
     hapi::Context ctx;
     auto blob_exists =
@@ -104,15 +118,24 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
                         (unsigned char *)ptr + data_offset + item.first.size_);
     existing.first.st_blobs.emplace(item.second.blob_name_);
     if (!blob_exists || item.second.size_ == PAGE_SIZE) {
+      LOG(INFO) << "Overwrite blob " << item.second.blob_name_
+                << " of size:" << item.second.size_ << "." << std::endl;
       existing.first.st_bkid->Put(item.second.blob_name_, put_data, ctx);
     } else {
+      LOG(INFO) << "Blob " << item.second.blob_name_
+                << " of size:" << item.second.size_ << " exists." << std::endl;
       hapi::Blob temp(0);
       auto exiting_blob_size =
           existing.first.st_bkid->Get(item.second.blob_name_, temp, ctx);
       if (item.second.offset_ == 0) {
+        LOG(INFO) << "Blob offset is 0" << std::endl;
         if (item.second.size_ >= exiting_blob_size) {
+          LOG(INFO) << "Overwrite blob " << item.second.blob_name_
+                    << " of size:" << item.second.size_ << "." << std::endl;
           existing.first.st_bkid->Put(item.second.blob_name_, put_data, ctx);
         } else {
+          LOG(INFO) << "Update blob " << item.second.blob_name_
+                    << " of size:" << exiting_blob_size << "." << std::endl;
           hapi::Blob existing_data(exiting_blob_size);
           existing.first.st_bkid->Get(item.second.blob_name_, existing_data,
                                       ctx);
@@ -121,6 +144,7 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
                                       ctx);
         }
       } else {
+        LOG(INFO) << "Blob offset: " << item.second.offset_ << "." << std::endl;
         auto new_size = item.second.offset_ + item.second.size_;
         hapi::Blob existing_data(exiting_blob_size);
         existing.first.st_bkid->Get(item.second.blob_name_, existing_data, ctx);
@@ -139,7 +163,8 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
             fs::file_size(filename) >=
                 item.second.offset_ + 1 + item.second.size_) {
           size_t size_to_read = item.second.offset_ + 1 - exiting_blob_size;
-          // There is a gap in blob update and existing file has data.
+          LOG(INFO) << "Blob has a gap in update read gap from original file."
+                    << std::endl;
           list.hermes_flush_exclusion.insert(filename);
           FILE *fh = fopen(filename.c_str(), "r");
           if (fh != nullptr) {
@@ -159,13 +184,14 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
           } else {
             // TODO(hari) @errorhandling FILE cannot be opened
           }
-
           list.hermes_flush_exclusion.erase(filename);
         }
-
         memcpy(final_data.data() + item.second.offset_, put_data.data(),
                put_data.size());
         if (new_size < exiting_blob_size) {
+          LOG(INFO) << "Retain last portion of blob as Blob is bigger than the "
+                       "update."
+                    << std::endl;
           auto off_t = total_size + item.second.offset_;
           memcpy(final_data.data() + off_t, existing_data.data() + off_t,
                  existing_data.size() - off_t + 1);
@@ -187,6 +213,9 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
 
 size_t perform_file_read(const char *filename, size_t file_offset, void *ptr,
                          size_t ptr_offset, size_t size) {
+  LOG(INFO) << "Read called for filename from destination: " << filename
+            << " on offset: " << file_offset << " and size: " << size
+            << std::endl;
   list.hermes_flush_exclusion.insert(filename);
   FILE *fh = fopen(filename, "r");
   size_t read_size = 0;
@@ -203,6 +232,10 @@ size_t perform_file_read(const char *filename, size_t file_offset, void *ptr,
 
 size_t read_internal(std::pair<AdapterStat, bool> &existing, void *ptr,
                      size_t total_size, FILE *fp) {
+  LOG(INFO) << "Write called for filename: "
+            << existing.first.st_bkid->GetName()
+            << " on offset: " << existing.first.st_ptr
+            << " and size: " << total_size << std::endl;
   size_t ret;
   auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
   auto mapper = MapperFactory().Get(MAPPER_TYPE);
@@ -210,6 +243,8 @@ size_t read_internal(std::pair<AdapterStat, bool> &existing, void *ptr,
       FileStruct(mdm->Convert(fp), existing.first.st_ptr, total_size));
   size_t total_read_size = 0;
   auto filename = existing.first.st_bkid->GetName();
+  LOG(INFO) << "Mapping for read has " << mapping.size() << " mapping."
+            << std::endl;
   for (const auto &item : mapping) {
     hapi::Context ctx;
     auto blob_exists =
@@ -217,6 +252,8 @@ size_t read_internal(std::pair<AdapterStat, bool> &existing, void *ptr,
     hapi::Blob read_data(0);
     size_t read_size = 0;
     if (blob_exists) {
+      LOG(INFO) << "Blob exists and need to read from Hermes from blob: "
+                << item.second.blob_name_ << "." << std::endl;
       auto exiting_blob_size =
           existing.first.st_bkid->Get(item.second.blob_name_, read_data, ctx);
 
@@ -227,6 +264,10 @@ size_t read_internal(std::pair<AdapterStat, bool> &existing, void *ptr,
         read_size = read_data.size() < item.second.offset_ + item.second.size_
                         ? exiting_blob_size - item.second.offset_
                         : item.second.size_;
+        LOG(INFO) << "Blob have data and need to read from hemes "
+                     "blob: "
+                  << item.second.blob_name_ << " offset:" << item.second.offset_
+                  << " size:" << read_size << "." << std::endl;
         memcpy((char *)ptr + total_read_size,
                read_data.data() + item.second.offset_, read_size);
         if (read_size < item.second.size_) {
@@ -235,6 +276,10 @@ size_t read_internal(std::pair<AdapterStat, bool> &existing, void *ptr,
           contains_blob = false;
         }
       } else {
+        LOG(INFO) << "Blob does not have data and need to read from original "
+                     "filename: "
+                  << filename << " offset:" << item.first.offset_
+                  << " size:" << item.first.size_ << "." << std::endl;
         auto file_read_size =
             perform_file_read(filename.c_str(), item.first.offset_, ptr,
                               total_read_size, item.second.size_);
@@ -242,6 +287,11 @@ size_t read_internal(std::pair<AdapterStat, bool> &existing, void *ptr,
       }
       if (contains_blob && fs::exists(filename) &&
           fs::file_size(filename) >= item.first.offset_ + item.first.size_) {
+        LOG(INFO) << "Blob does not have data and need to read from original "
+                     "filename: "
+                  << filename << " offset:" << item.first.offset_ + read_size
+                  << " size:" << item.second.size_ - read_size << "."
+                  << std::endl;
         auto new_read_size = perform_file_read(
             filename.c_str(), item.first.offset_, ptr,
             total_read_size + read_size, item.second.size_ - read_size);
@@ -250,6 +300,10 @@ size_t read_internal(std::pair<AdapterStat, bool> &existing, void *ptr,
     } else if (fs::exists(filename) &&
                fs::file_size(filename) >=
                    item.first.offset_ + item.first.size_) {
+      LOG(INFO)
+          << "Blob does not exists and need to read from original filename: "
+          << filename << " offset:" << item.first.offset_
+          << " size:" << item.first.size_ << "." << std::endl;
       read_size = perform_file_read(filename.c_str(), item.first.offset_, ptr,
                                     total_read_size, item.first.size_);
     }
@@ -268,11 +322,15 @@ size_t read_internal(std::pair<AdapterStat, bool> &existing, void *ptr,
 }
 
 FILE *HERMES_DECL(fopen)(const char *path, const char *mode) {
+  LOG(INFO) << "Intercept fopen for filename: " << path << " and mode: " << mode
+            << "." << std::endl;
   FILE *ret;
   std::string path_str(path);
   if (IsTracked(path)) {
+    LOG(INFO) << "Filename: " << path << " is tracked." << std::endl;
     ret = open_internal(path, mode);
   } else {
+    LOG(INFO) << "Filename: " << path << " is not tracked." << std::endl;
     MAP_OR_FAIL(fopen);
     ret = __real_fopen(path, mode);
   }
@@ -280,11 +338,15 @@ FILE *HERMES_DECL(fopen)(const char *path, const char *mode) {
 }
 
 FILE *HERMES_DECL(fopen64)(const char *path, const char *mode) {
+  LOG(INFO) << "Intercept fopen64 for filename: " << path
+            << " and mode: " << mode << "." << std::endl;
   FILE *ret;
   std::string path_str(path);
   if (IsTracked(path)) {
+    LOG(INFO) << "Filename: " << path << " is tracked." << std::endl;
     ret = open_internal(path, mode);
   } else {
+    LOG(INFO) << "Filename: " << path << " is not tracked." << std::endl;
     MAP_OR_FAIL(fopen64);
     ret = __real_fopen(path, mode);
   }
@@ -292,10 +354,13 @@ FILE *HERMES_DECL(fopen64)(const char *path, const char *mode) {
 }
 
 FILE *HERMES_DECL(fdopen)(int fd, const char *mode) {
+  LOG(INFO) << "Intercept fdopen for file descriptor: " << fd
+            << " and mode: " << mode << "." << std::endl;
   FILE *ret;
   MAP_OR_FAIL(fdopen);
   ret = __real_fdopen(fd, mode);
   if (ret && IsTracked(ret)) {
+    LOG(INFO) << "Intercept is tracked." << std::endl;
     int MAXSIZE = 0xFFF;
     char proclnk[0xFFF];
     char filename[0xFFF];
@@ -303,15 +368,21 @@ FILE *HERMES_DECL(fdopen)(int fd, const char *mode) {
     size_t r = readlink(proclnk, filename, MAXSIZE);
     filename[r] = '\0';
     ret = simple_open(ret, filename, mode);
+  } else {
+    LOG(INFO) << "Intercept is not tracked." << std::endl;
   }
   return (ret);
 }
 
 FILE *HERMES_DECL(freopen)(const char *path, const char *mode, FILE *stream) {
+  LOG(INFO) << "Intercept freopen for filename: " << path
+            << " and mode: " << mode << "." << std::endl;
   FILE *ret;
   if (IsTracked(path)) {
+    LOG(INFO) << "Filename: " << path << " is tracked." << std::endl;
     ret = reopen_internal(path, mode, stream);
   } else {
+    LOG(INFO) << "Filename: " << path << " is not tracked." << std::endl;
     MAP_OR_FAIL(freopen);
     ret = __real_freopen(path, mode, stream);
   }
@@ -319,10 +390,14 @@ FILE *HERMES_DECL(freopen)(const char *path, const char *mode, FILE *stream) {
 }
 
 FILE *HERMES_DECL(freopen64)(const char *path, const char *mode, FILE *stream) {
+  LOG(INFO) << "Intercept freopen64 for filename: " << path
+            << " and mode: " << mode << "." << std::endl;
   FILE *ret;
   if (IsTracked(path)) {
+    LOG(INFO) << "Filename: " << path << " is tracked." << std::endl;
     ret = reopen_internal(path, mode, stream);
   } else {
+    LOG(INFO) << "Filename: " << path << " is not tracked." << std::endl;
     MAP_OR_FAIL(freopen64);
     ret = __real_freopen64(path, mode, stream);
   }
@@ -330,30 +405,39 @@ FILE *HERMES_DECL(freopen64)(const char *path, const char *mode, FILE *stream) {
 }
 
 int HERMES_DECL(fflush)(FILE *fp) {
+  LOG(INFO) << "Intercept fflush." << std::endl;
   int ret;
   if (fp && IsTracked(fp)) {
+    LOG(INFO) << "File handler is tracked." << std::endl;
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(fp);
     if (existing.second) {
       auto filename = existing.first.st_bkid->GetName();
-      list.hermes_flush_exclusion.insert(filename);
-      hapi::Context ctx;
       const auto &blob_names = existing.first.st_blobs;
-      hermes::api::VBucket file_vbucket(filename, mdm->GetHermes(), true, ctx);
-      auto offset_map = std::unordered_map<std::string, hermes::u64>();
-      for (const auto &blob_name : blob_names) {
-        file_vbucket.Link(blob_name, filename, ctx);
-        offset_map.emplace(blob_name, std::stol(blob_name) * PAGE_SIZE);
+      if (!blob_names.empty()) {
+        list.hermes_flush_exclusion.insert(filename);
+        LOG(INFO) << "File handler is opened by adapter." << std::endl;
+        hapi::Context ctx;
+        LOG(INFO) << "Adapter flushes " << blob_names.size()
+                  << " blobs to filename:" << filename << "." << std::endl;
+        hermes::api::VBucket file_vbucket(filename, mdm->GetHermes(), true,
+                                          ctx);
+        auto offset_map = std::unordered_map<std::string, hermes::u64>();
+        for (const auto &blob_name : blob_names) {
+          file_vbucket.Link(blob_name, filename, ctx);
+          offset_map.emplace(blob_name, std::stol(blob_name) * PAGE_SIZE);
+        }
+        auto trait = hermes::api::FileMappingTrait(filename, offset_map,
+                                                   nullptr, NULL, NULL);
+        file_vbucket.Attach(&trait, ctx);
+        file_vbucket.Delete(ctx);
+        existing.first.st_blobs.clear();
+        list.hermes_flush_exclusion.erase(filename);
       }
-      auto trait = hermes::api::FileMappingTrait(filename, offset_map, nullptr,
-                                                 NULL, NULL);
-      file_vbucket.Attach(&trait, ctx);
-      file_vbucket.Delete(ctx);
-      existing.first.st_blobs.clear();
-      list.hermes_flush_exclusion.erase(filename);
       ret = 0;
     }
   } else {
+    LOG(INFO) << "File handler is not tracked." << std::endl;
     MAP_OR_FAIL(fflush);
     ret = __real_fflush(fp);
   }
@@ -361,17 +445,22 @@ int HERMES_DECL(fflush)(FILE *fp) {
 }
 
 int HERMES_DECL(fclose)(FILE *fp) {
+  LOG(INFO) << "Intercept fclose." << std::endl;
   int ret;
   if (IsTracked(fp)) {
+    LOG(INFO) << "File handler is tracked." << std::endl;
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(fp);
     if (existing.second) {
+      LOG(INFO) << "File handler is opened by adapter." << std::endl;
       if (existing.first.ref_count == 1) {
         mdm->Delete(fp);
         hapi::Context ctx;
         const auto &blob_names = existing.first.st_blobs;
         if (!blob_names.empty()) {
           auto filename = existing.first.st_bkid->GetName();
+          LOG(INFO) << "Adapter flushes " << blob_names.size()
+                    << " blobs to filename:" << filename << "." << std::endl;
           list.hermes_flush_exclusion.insert(filename);
           hermes::api::VBucket file_vbucket(filename, mdm->GetHermes(), true,
                                             ctx);
@@ -390,6 +479,8 @@ int HERMES_DECL(fclose)(FILE *fp) {
         existing.first.st_bkid->Close(ctx);
         mdm->FinalizeHermes();
       } else {
+        LOG(INFO) << "File handler is opened by more than one fopen."
+                  << std::endl;
         existing.first.ref_count--;
         struct timespec ts;
         timespec_get(&ts, TIME_UTC);
@@ -398,6 +489,8 @@ int HERMES_DECL(fclose)(FILE *fp) {
         mdm->Update(fp, existing.first);
       }
     }
+  } else {
+    LOG(INFO) << "File handler is not tracked." << std::endl;
   }
 
   MAP_OR_FAIL(fclose);
@@ -407,14 +500,22 @@ int HERMES_DECL(fclose)(FILE *fp) {
 
 size_t HERMES_DECL(fwrite)(const void *ptr, size_t size, size_t nmemb,
                            FILE *fp) {
+  LOG(INFO) << "Intercept fwrite." << std::endl;
   size_t ret;
   if (IsTracked(fp)) {
+    LOG(INFO) << "File handler is tracked." << std::endl;
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(fp);
     if (existing.second) {
+      LOG(INFO) << "File handler is opened by adapter." << std::endl;
       ret = write_internal(existing, ptr, size * nmemb, fp);
+    } else {
+      LOG(INFO) << "File handler is not opened by adapter." << std::endl;
+      MAP_OR_FAIL(fwrite);
+      ret = __real_fwrite(ptr, size, nmemb, fp);
     }
   } else {
+    LOG(INFO) << "File handler is not tracked." << std::endl;
     MAP_OR_FAIL(fwrite);
     ret = __real_fwrite(ptr, size, nmemb, fp);
   }
@@ -422,15 +523,23 @@ size_t HERMES_DECL(fwrite)(const void *ptr, size_t size, size_t nmemb,
 }
 
 int HERMES_DECL(fputc)(int c, FILE *fp) {
+  LOG(INFO) << "Intercept fputc." << std::endl;
   int ret;
   if (IsTracked(fp)) {
+    LOG(INFO) << "File handler is tracked." << std::endl;
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(fp);
     if (existing.second) {
+      LOG(INFO) << "File handler is opened by adapter." << std::endl;
       write_internal(existing, &c, 1, fp);
       ret = c;
+    } else {
+      LOG(INFO) << "File handler is not opened by adapter." << std::endl;
+      MAP_OR_FAIL(fputc);
+      ret = __real_fputc(c, fp);
     }
   } else {
+    LOG(INFO) << "File handler is not tracked." << std::endl;
     MAP_OR_FAIL(fputc);
     ret = __real_fputc(c, fp);
   }
@@ -438,15 +547,23 @@ int HERMES_DECL(fputc)(int c, FILE *fp) {
 }
 
 int HERMES_DECL(fgetpos)(FILE *fp, fpos_t *pos) {
+  LOG(INFO) << "Intercept fgetpos." << std::endl;
   int ret;
   if (IsTracked(fp) && pos) {
+    LOG(INFO) << "File handler is tracked." << std::endl;
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(fp);
     if (existing.second) {
+      LOG(INFO) << "File handler is opened by adapter." << std::endl;
       pos->__pos = existing.first.st_ptr;
       ret = 0;
+    } else {
+      LOG(INFO) << "File handler is opened by adapter." << std::endl;
+      MAP_OR_FAIL(fgetpos);
+      ret = __real_fgetpos(fp, pos);
     }
   } else {
+    LOG(INFO) << "File handler is not tracked." << std::endl;
     MAP_OR_FAIL(fgetpos);
     ret = __real_fgetpos(fp, pos);
   }
@@ -454,15 +571,23 @@ int HERMES_DECL(fgetpos)(FILE *fp, fpos_t *pos) {
 }
 
 int HERMES_DECL(putc)(int c, FILE *fp) {
+  LOG(INFO) << "Intercept putc." << std::endl;
   int ret;
   if (IsTracked(fp)) {
+    LOG(INFO) << "File handler is tracked." << std::endl;
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(fp);
     if (existing.second) {
+      LOG(INFO) << "File handler is opened by adapter." << std::endl;
       write_internal(existing, &c, 1, fp);
       ret = c;
+    } else {
+      LOG(INFO) << "File handler is not opened by adapter." << std::endl;
+      MAP_OR_FAIL(fputc);
+      ret = __real_fputc(c, fp);
     }
   } else {
+    LOG(INFO) << "File handler is not tracked." << std::endl;
     MAP_OR_FAIL(fputc);
     ret = __real_fputc(c, fp);
   }
@@ -470,14 +595,22 @@ int HERMES_DECL(putc)(int c, FILE *fp) {
 }
 
 int HERMES_DECL(putw)(int w, FILE *fp) {
+  LOG(INFO) << "Intercept putw." << std::endl;
   int ret;
   if (IsTracked(fp)) {
+    LOG(INFO) << "File handler is tracked." << std::endl;
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(fp);
     if (existing.second) {
+      LOG(INFO) << "File handler is opened by adapter." << std::endl;
       ret = write_internal(existing, &w, 1, fp);
+    } else {
+      LOG(INFO) << "File handler is not opened by adapter." << std::endl;
+      MAP_OR_FAIL(putw);
+      ret = __real_putw(w, fp);
     }
   } else {
+    LOG(INFO) << "File handler is not tracked." << std::endl;
     MAP_OR_FAIL(putw);
     ret = __real_putw(w, fp);
   }
@@ -485,14 +618,22 @@ int HERMES_DECL(putw)(int w, FILE *fp) {
 }
 
 int HERMES_DECL(fputs)(const char *s, FILE *stream) {
+  LOG(INFO) << "Intercept fputs." << std::endl;
   int ret;
   if (IsTracked(stream)) {
+    LOG(INFO) << "File handler is tracked." << std::endl;
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(stream);
     if (existing.second) {
+      LOG(INFO) << "File handler is opened by adapter." << std::endl;
       ret = write_internal(existing, s, strlen(s), stream);
+    } else {
+      LOG(INFO) << "File handler is not opened by adapter." << std::endl;
+      MAP_OR_FAIL(fputs);
+      ret = __real_fputs(s, stream);
     }
   } else {
+    LOG(INFO) << "File handler is not tracked." << std::endl;
     MAP_OR_FAIL(fputs);
     ret = __real_fputs(s, stream);
   }
@@ -500,14 +641,22 @@ int HERMES_DECL(fputs)(const char *s, FILE *stream) {
 }
 
 size_t HERMES_DECL(fread)(void *ptr, size_t size, size_t nmemb, FILE *stream) {
+  LOG(INFO) << "Intercept fread with size: " << size << "." << std::endl;
   size_t ret;
   if (IsTracked(stream)) {
+    LOG(INFO) << "File handler is tracked." << std::endl;
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(stream);
     if (existing.second) {
+      LOG(INFO) << "File handler is opened by adapter." << std::endl;
       ret = read_internal(existing, ptr, size * nmemb, stream);
+    } else {
+      LOG(INFO) << "File handler is not opened by adapter." << std::endl;
+      MAP_OR_FAIL(fread);
+      ret = __real_fread(ptr, size, nmemb, stream);
     }
   } else {
+    LOG(INFO) << "File handler is not tracked." << std::endl;
     MAP_OR_FAIL(fread);
     ret = __real_fread(ptr, size, nmemb, stream);
   }
@@ -515,18 +664,26 @@ size_t HERMES_DECL(fread)(void *ptr, size_t size, size_t nmemb, FILE *stream) {
 }
 
 int HERMES_DECL(fgetc)(FILE *stream) {
+  LOG(INFO) << "Intercept fgetc." << std::endl;
   int ret = -1;
   if (IsTracked(stream)) {
+    LOG(INFO) << "File handler is tracked." << std::endl;
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(stream);
     if (existing.second) {
+      LOG(INFO) << "File handler is opened by adapter." << std::endl;
       unsigned char value;
       auto ret_size = read_internal(existing, &value, sizeof(value), stream);
       if (ret_size == 1) {
         ret = value;
       }
+    } else {
+      LOG(INFO) << "File handler is not opened by adapter." << std::endl;
+      MAP_OR_FAIL(fgetc);
+      ret = __real_fgetc(stream);
     }
   } else {
+    LOG(INFO) << "File handler is not tracked." << std::endl;
     MAP_OR_FAIL(fgetc);
     ret = __real_fgetc(stream);
   }
@@ -534,18 +691,26 @@ int HERMES_DECL(fgetc)(FILE *stream) {
 }
 
 int HERMES_DECL(getc)(FILE *stream) {
+  LOG(INFO) << "Intercept getc." << std::endl;
   int ret = -1;
   if (IsTracked(stream)) {
+    LOG(INFO) << "File handler is tracked." << std::endl;
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(stream);
     if (existing.second) {
+      LOG(INFO) << "File handler is opened by adapter." << std::endl;
       unsigned char value;
       auto ret_size = read_internal(existing, &value, sizeof(value), stream);
       if (ret_size == 1) {
         ret = value;
       }
+    } else {
+      LOG(INFO) << "File handler is not opened by adapter." << std::endl;
+      MAP_OR_FAIL(fgetc);
+      ret = __real_fgetc(stream);
     }
   } else {
+    LOG(INFO) << "File handler is not tracked." << std::endl;
     MAP_OR_FAIL(fgetc);
     ret = __real_fgetc(stream);
   }
@@ -554,18 +719,26 @@ int HERMES_DECL(getc)(FILE *stream) {
 
 /* NOTE: stdio.h typically implements getc() as a macro pointing to _IO_getc */
 int HERMES_DECL(_IO_getc)(FILE *stream) {
+  LOG(INFO) << "Intercept _IO_getc." << std::endl;
   int ret;
   if (IsTracked(stream)) {
+    LOG(INFO) << "File handler is tracked." << std::endl;
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(stream);
     if (existing.second) {
+      LOG(INFO) << "File handler is opened by adapter." << std::endl;
       unsigned char value;
       auto ret_size = read_internal(existing, &value, sizeof(value), stream);
       if (ret_size == 1) {
         ret = value;
       }
+    } else {
+      LOG(INFO) << "File handler is not opened by adapter." << std::endl;
+      MAP_OR_FAIL(_IO_getc);
+      ret = __real__IO_getc(stream);
     }
   } else {
+    LOG(INFO) << "File handler is not tracked." << std::endl;
     MAP_OR_FAIL(_IO_getc);
     ret = __real__IO_getc(stream);
   }
@@ -574,14 +747,22 @@ int HERMES_DECL(_IO_getc)(FILE *stream) {
 
 /* NOTE: stdio.h typically implements putc() as a macro pointing to _IO_putc */
 int HERMES_DECL(_IO_putc)(int c, FILE *stream) {
+  LOG(INFO) << "Intercept _IO_putc char:" << (char *)&c << "." << std::endl;
   int ret;
   if (IsTracked(stream)) {
+    LOG(INFO) << "File handler is tracked." << std::endl;
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(stream);
     if (existing.second) {
+      LOG(INFO) << "File handler is opened by adapter." << std::endl;
       ret = write_internal(existing, &c, 1, stream);
+    } else {
+      LOG(INFO) << "File handler is not opened by adapter." << std::endl;
+      MAP_OR_FAIL(_IO_putc);
+      ret = __real__IO_putc(c, stream);
     }
   } else {
+    LOG(INFO) << "File handler is not tracked." << std::endl;
     MAP_OR_FAIL(_IO_putc);
     ret = __real__IO_putc(c, stream);
   }
@@ -589,16 +770,24 @@ int HERMES_DECL(_IO_putc)(int c, FILE *stream) {
 }
 
 int HERMES_DECL(getw)(FILE *stream) {
+  LOG(INFO) << "Intercept getw." << std::endl;
   int ret;
   if (IsTracked(stream)) {
+    LOG(INFO) << "File handler is tracked." << std::endl;
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(stream);
     if (existing.second) {
+      LOG(INFO) << "File handler is opened by adapter." << std::endl;
       unsigned char value;
       auto ret_size = read_internal(existing, &value, sizeof(value), stream);
       if (ret_size == 1) ret = value;
+    } else {
+      LOG(INFO) << "File handler is not opened by adapter." << std::endl;
+      MAP_OR_FAIL(getw);
+      ret = __real_getw(stream);
     }
   } else {
+    LOG(INFO) << "File handler is not tracked." << std::endl;
     MAP_OR_FAIL(getw);
     ret = __real_getw(stream);
   }
@@ -606,15 +795,23 @@ int HERMES_DECL(getw)(FILE *stream) {
 }
 
 char *HERMES_DECL(fgets)(char *s, int size, FILE *stream) {
+  LOG(INFO) << "Intercept fgets." << std::endl;
   char *ret;
   if (IsTracked(stream)) {
+    LOG(INFO) << "File handler is tracked." << std::endl;
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(stream);
     if (existing.second) {
+      LOG(INFO) << "File handler is opened by adapter." << std::endl;
       read_internal(existing, s, size, stream);
       ret = s;
+    } else {
+      LOG(INFO) << "File handler is not opened by adapter." << std::endl;
+      MAP_OR_FAIL(fgets);
+      ret = __real_fgets(s, size, stream);
     }
   } else {
+    LOG(INFO) << "File handler is not tracked." << std::endl;
     MAP_OR_FAIL(fgets);
     ret = __real_fgets(s, size, stream);
   }
@@ -622,16 +819,28 @@ char *HERMES_DECL(fgets)(char *s, int size, FILE *stream) {
 }
 
 void HERMES_DECL(rewind)(FILE *stream) {
+  LOG(INFO) << "Intercept rewind." << std::endl;
   if (IsTracked(stream)) {
+    LOG(INFO) << "File handler is tracked." << std::endl;
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(stream);
     if (existing.second) {
+      LOG(INFO) << "File handler is opened by adapter." << std::endl;
       if (!(existing.first.st_mode & O_APPEND)) {
         existing.first.st_ptr = 0;
         mdm->Update(stream, existing.first);
+      } else {
+        LOG(INFO)
+            << "File pointer not updating as file was opened in append mode."
+            << std::endl;
       }
+    } else {
+      LOG(INFO) << "File handler is not opened by adapter." << std::endl;
+      MAP_OR_FAIL(rewind);
+      __real_rewind(stream);
     }
   } else {
+    LOG(INFO) << "File handler is not tracked." << std::endl;
     MAP_OR_FAIL(rewind);
     __real_rewind(stream);
   }
@@ -639,11 +848,15 @@ void HERMES_DECL(rewind)(FILE *stream) {
 }
 
 int HERMES_DECL(fseek)(FILE *stream, long offset, int whence) {
+  LOG(INFO) << "Intercept fseek offset:" << offset << " whence:" << whence
+            << "." << std::endl;
   int ret;
   if (IsTracked(stream)) {
+    LOG(INFO) << "File handler is tracked." << std::endl;
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(stream);
     if (existing.second) {
+      LOG(INFO) << "File handler is opened by adapter." << std::endl;
       if (!(existing.first.st_mode & O_APPEND)) {
         switch (whence) {
           case SEEK_SET: {
@@ -665,10 +878,18 @@ int HERMES_DECL(fseek)(FILE *stream, long offset, int whence) {
         mdm->Update(stream, existing.first);
         ret = 0;
       } else {
+        LOG(INFO)
+            << "File pointer not updating as file was opened in append mode."
+            << std::endl;
         ret = -1;
       }
+    } else {
+      LOG(INFO) << "File handler is not opened by adapter." << std::endl;
+      MAP_OR_FAIL(fseek);
+      ret = __real_fseek(stream, offset, whence);
     }
   } else {
+    LOG(INFO) << "File handler is not tracked." << std::endl;
     MAP_OR_FAIL(fseek);
     ret = __real_fseek(stream, offset, whence);
   }
@@ -676,11 +897,15 @@ int HERMES_DECL(fseek)(FILE *stream, long offset, int whence) {
 }
 
 int HERMES_DECL(fseeko)(FILE *stream, off_t offset, int whence) {
+  LOG(INFO) << "Intercept fseeko offset:" << offset << " whence:" << whence
+            << "." << std::endl;
   int ret;
   if (IsTracked(stream)) {
+    LOG(INFO) << "File handler is tracked." << std::endl;
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(stream);
     if (existing.second) {
+      LOG(INFO) << "File handler is opened by adapter." << std::endl;
       if (!(existing.first.st_mode & O_APPEND)) {
         switch (whence) {
           case SEEK_SET: {
@@ -702,10 +927,18 @@ int HERMES_DECL(fseeko)(FILE *stream, off_t offset, int whence) {
         mdm->Update(stream, existing.first);
         ret = 0;
       } else {
+        LOG(INFO)
+            << "File pointer not updating as file was opened in append mode."
+            << std::endl;
         ret = -1;
       }
+    } else {
+      LOG(INFO) << "File handler is not opened by adapter." << std::endl;
+      MAP_OR_FAIL(fseeko);
+      ret = __real_fseeko(stream, offset, whence);
     }
   } else {
+    LOG(INFO) << "File handler is not tracked." << std::endl;
     MAP_OR_FAIL(fseeko);
     ret = __real_fseeko(stream, offset, whence);
   }
@@ -713,11 +946,15 @@ int HERMES_DECL(fseeko)(FILE *stream, off_t offset, int whence) {
 }
 
 int HERMES_DECL(fseeko64)(FILE *stream, off64_t offset, int whence) {
+  LOG(INFO) << "Intercept fseeko64 offset:" << offset << " whence:" << whence
+            << "." << std::endl;
   int ret;
   if (IsTracked(stream)) {
+    LOG(INFO) << "File handler is tracked." << std::endl;
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(stream);
     if (existing.second) {
+      LOG(INFO) << "File handler is opened by adapter." << std::endl;
       if (!(existing.first.st_mode & O_APPEND)) {
         switch (whence) {
           case SEEK_SET: {
@@ -739,10 +976,18 @@ int HERMES_DECL(fseeko64)(FILE *stream, off64_t offset, int whence) {
         mdm->Update(stream, existing.first);
         ret = 0;
       } else {
+        LOG(INFO)
+            << "File pointer not updating as file was opened in append mode."
+            << std::endl;
         ret = -1;
       }
+    } else {
+      LOG(INFO) << "File handler is not opened by adapter." << std::endl;
+      MAP_OR_FAIL(fseeko64);
+      ret = __real_fseeko64(stream, offset, whence);
     }
   } else {
+    LOG(INFO) << "File handler is not tracked." << std::endl;
     MAP_OR_FAIL(fseeko64);
     ret = __real_fseeko64(stream, offset, whence);
   }
@@ -750,20 +995,31 @@ int HERMES_DECL(fseeko64)(FILE *stream, off64_t offset, int whence) {
 }
 
 int HERMES_DECL(fsetpos)(FILE *stream, const fpos_t *pos) {
+  LOG(INFO) << "Intercept fsetpos offset:" << pos->__pos << "." << std::endl;
   int ret;
   if (IsTracked(stream)) {
+    LOG(INFO) << "File handler is tracked." << std::endl;
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(stream);
     if (existing.second) {
+      LOG(INFO) << "File handler is opened by adapter." << std::endl;
       if (!(existing.first.st_mode & O_APPEND)) {
         existing.first.st_ptr = pos->__pos;
         mdm->Update(stream, existing.first);
         ret = 0;
       } else {
+        LOG(INFO)
+            << "File pointer not updating as file was opened in append mode."
+            << std::endl;
         ret = -1;
       }
+    } else {
+      LOG(INFO) << "File handler is not opened by adapter." << std::endl;
+      MAP_OR_FAIL(fsetpos);
+      ret = __real_fsetpos(stream, pos);
     }
   } else {
+    LOG(INFO) << "File handler is not tracked." << std::endl;
     MAP_OR_FAIL(fsetpos);
     ret = __real_fsetpos(stream, pos);
   }
@@ -771,16 +1027,31 @@ int HERMES_DECL(fsetpos)(FILE *stream, const fpos_t *pos) {
 }
 
 int HERMES_DECL(fsetpos64)(FILE *stream, const fpos64_t *pos) {
+  LOG(INFO) << "Intercept fsetpos64 offset:" << pos->__pos << "." << std::endl;
   int ret;
   if (IsTracked(stream)) {
+    LOG(INFO) << "File handler is tracked." << std::endl;
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(stream);
     if (existing.second) {
-      existing.first.st_ptr = pos->__pos;
-      mdm->Update(stream, existing.first);
-      ret = 0;
+      LOG(INFO) << "File handler is opened by adapter." << std::endl;
+      if (!(existing.first.st_mode & O_APPEND)) {
+        existing.first.st_ptr = pos->__pos;
+        mdm->Update(stream, existing.first);
+        ret = 0;
+      } else {
+        LOG(INFO)
+            << "File pointer not updating as file was opened in append mode."
+            << std::endl;
+        ret = -1;
+      }
+    } else {
+      LOG(INFO) << "File handler is not opened by adapter." << std::endl;
+      MAP_OR_FAIL(fsetpos64);
+      ret = __real_fsetpos64(stream, pos);
     }
   } else {
+    LOG(INFO) << "File handler is not tracked." << std::endl;
     MAP_OR_FAIL(fsetpos64);
     ret = __real_fsetpos64(stream, pos);
   }
@@ -788,14 +1059,22 @@ int HERMES_DECL(fsetpos64)(FILE *stream, const fpos64_t *pos) {
 }
 
 long int HERMES_DECL(ftell)(FILE *fp) {
+  LOG(INFO) << "Intercept ftell." << std::endl;
   long int ret;
   if (IsTracked(fp)) {
+    LOG(INFO) << "File handler is tracked." << std::endl;
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(fp);
     if (existing.second) {
+      LOG(INFO) << "File handler is opened by adapter." << std::endl;
       ret = existing.first.st_ptr;
+    } else {
+      LOG(INFO) << "File handler is not opened by adapter." << std::endl;
+      MAP_OR_FAIL(ftell);
+      ret = __real_ftell(fp);
     }
   } else {
+    LOG(INFO) << "File handler is not tracked." << std::endl;
     MAP_OR_FAIL(ftell);
     ret = __real_ftell(fp);
   }
