@@ -173,17 +173,8 @@ TEST_CASE("Fdopen", "[process=" + std::to_string(info.comm_size) +
         fread(info.read_data.data(), sizeof(char), args.request_size, fh);
     REQUIRE(read_size == args.request_size);
 
-    int status = fcntl(fd, F_GETFD);
-    REQUIRE(fd != -1);
-
-    FILE* fh2 = fdopen(fd, "r");
-    REQUIRE(fh2 != nullptr);
-
-    status = fclose(fh2);
+    int status = fclose(fh);
     REQUIRE(status == 0);
-
-    status = fclose(fh);
-    REQUIRE(status == -1);
 
     status = close(fd);
     REQUIRE(status == -1);
