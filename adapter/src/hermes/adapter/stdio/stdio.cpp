@@ -440,7 +440,7 @@ int HERMES_DECL(fputc)(int c, FILE *fp) {
   return (ret);
 }
 
-int HERMES_DECL(fgetpos)(FILE *fp, fpos_t * pos) {
+int HERMES_DECL(fgetpos)(FILE *fp, fpos_t *pos) {
   int ret;
   if (IsTracked(fp) && pos) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
@@ -449,7 +449,7 @@ int HERMES_DECL(fgetpos)(FILE *fp, fpos_t * pos) {
       pos->__pos = existing.first.st_ptr;
       ret = 0;
     }
-  }else{
+  } else {
     MAP_OR_FAIL(fgetpos);
     ret = __real_fgetpos(fp, pos);
   }

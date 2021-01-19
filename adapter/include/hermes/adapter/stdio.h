@@ -35,7 +35,7 @@ HERMES_FORWARD_DECL(fwrite, size_t,
                     (const void *ptr, size_t size, size_t nmemb, FILE *stream));
 HERMES_FORWARD_DECL(fputc, int, (int c, FILE *stream));
 HERMES_FORWARD_DECL(putc, int, (int c, FILE *stream));
-HERMES_FORWARD_DECL(fgetpos, int, (FILE *stream, fpos_t * pos));
+HERMES_FORWARD_DECL(fgetpos, int, (FILE * stream, fpos_t *pos));
 HERMES_FORWARD_DECL(putw, int, (int w, FILE *stream));
 HERMES_FORWARD_DECL(fputs, int, (const char *s, FILE *stream));
 HERMES_FORWARD_DECL(fprintf, int, (FILE * stream, const char *format, ...));
