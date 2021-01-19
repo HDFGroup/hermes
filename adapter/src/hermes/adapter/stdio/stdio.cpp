@@ -460,7 +460,7 @@ int HERMES_DECL(putc)(int c, FILE *fp) {
     auto existing = mdm->Find(fp);
     if (existing.second) {
       write_internal(existing, &c, 1, fp);
-      ret = 0;
+      ret = c;
     }
   } else {
     MAP_OR_FAIL(fputc);
