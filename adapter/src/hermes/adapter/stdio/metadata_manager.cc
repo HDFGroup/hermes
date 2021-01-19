@@ -27,7 +27,6 @@ bool MetadataManager::Update(FILE *fh, const AdapterStat &stat) {
 }
 
 std::pair<AdapterStat, bool> MetadataManager::Find(FILE *fh) {
-  LOG(INFO) << "Find metadata for file handler." << std::endl;
   auto fileId = Convert(fh);
   typedef std::pair<AdapterStat, bool> MetadataReturn;
   auto iter = metadata.find(fileId);
@@ -38,7 +37,6 @@ std::pair<AdapterStat, bool> MetadataManager::Find(FILE *fh) {
 }
 
 FileID MetadataManager::Convert(FILE *fh) {
-  LOG(INFO) << "Convert file handler into FileID." << std::endl;
   struct stat st;
   int fd = fileno(fh);
   fstat(fd, &st);
