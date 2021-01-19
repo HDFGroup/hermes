@@ -92,5 +92,4 @@ bool IsTracked(FILE* fh) {
 }
 void OnExit(void) {
   hermes::adapter::exit = true;
-  LOG(INFO) << "Program exiting." << std::endl;
 }
