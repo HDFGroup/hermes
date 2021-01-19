@@ -819,7 +819,6 @@ TEST_CASE("BatchedWriteRSRangeLarge",
     }
     int status = fclose(fd);
     REQUIRE(status == 0);
-    REQUIRE(fs::file_size(info.new_file) == biggest_size_written);
   }
 
   SECTION("write to new file") {
