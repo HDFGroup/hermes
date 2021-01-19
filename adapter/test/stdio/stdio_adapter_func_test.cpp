@@ -261,7 +261,7 @@ TEST_CASE("fgetc", "[process=" + std::to_string(info.comm_size) +
     FILE* fh = fopen(info.existing_file.c_str(), "r");
     REQUIRE(fh != nullptr);
     size_t total_chars = 0;
-    int c = '0', v = 'w';
+    int c = '0', v = '0';
     do {
       c = fgetc(fh);
       CHECK(c == v);
@@ -286,7 +286,7 @@ TEST_CASE("getc", "[process=" + std::to_string(info.comm_size) +
     FILE* fh = fopen(info.existing_file.c_str(), "r");
     REQUIRE(fh != nullptr);
     size_t total_chars = 0;
-    int c = '0', v = 'w';
+    int c = '0', v = '0';
     do {
       c = getc(fh);
       if (c == v) total_chars++;
