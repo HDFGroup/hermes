@@ -299,7 +299,6 @@ FILE *HERMES_DECL(fdopen)(int fd, const char *mode) {
     int MAXSIZE = 0xFFF;
     char proclnk[0xFFF];
     char filename[0xFFF];
-    char filePath[PATH_MAX];
     snprintf(proclnk, MAXSIZE, "/proc/self/fd/%d", fd);
     size_t r = readlink(proclnk, filename, MAXSIZE);
     filename[r] = '\0';
@@ -527,7 +526,9 @@ int HERMES_DECL(fgetc)(FILE *stream) {
     if (existing.second) {
       unsigned char value;
       auto ret_size = read_internal(existing, &value, sizeof(value), stream);
-      ret = value;
+      if (ret_size == 1) {
+        ret = value;
+      }
     }
   } else {
     MAP_OR_FAIL(fgetc);
@@ -562,7 +563,10 @@ int HERMES_DECL(_IO_getc)(FILE *stream) {
     if (existing.second) {
       unsigned char value;
       auto ret_size = read_internal(existing, &value, sizeof(value), stream);
-      ret = value;
+      if (ret_size == 1) {
+        ret = value;
+      }
+
     }
   } else {
     MAP_OR_FAIL(_IO_getc);
@@ -595,7 +599,8 @@ int HERMES_DECL(getw)(FILE *stream) {
     if (existing.second) {
       unsigned char value;
       auto ret_size = read_internal(existing, &value, sizeof(value), stream);
-      ret = value;
+      if (ret_size == 1)
+        ret = value;
     }
   } else {
     MAP_OR_FAIL(getw);
