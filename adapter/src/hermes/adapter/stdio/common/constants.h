@@ -23,10 +23,10 @@ using hermes::adapter::stdio::MapperType;
 /**
  * Which mapper to be used by STDIO adapter.
  */
-const MapperType MAPPER_TYPE = MapperType::BALANCED;
+const MapperType kMapperType = MapperType::BALANCED;
 /**
- * Define PAGE_SIZE for balanced mapping.
+ * Define kPageSize for balanced mapping.
  */
-const size_t PAGE_SIZE = 1024 * 1024;
+const size_t kPageSize = 1024 * 1024;
 
 #endif  // HERMES_STDIO_COMMON_CONSTANTS_H

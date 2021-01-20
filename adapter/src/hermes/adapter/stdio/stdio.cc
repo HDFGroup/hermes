@@ -103,7 +103,7 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
             << " and size: " << total_size << std::endl;
   size_t ret;
   auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
-  auto mapper = MapperFactory().Get(MAPPER_TYPE);
+  auto mapper = MapperFactory().Get(kMapperType);
   auto mapping = mapper->map(
       FileStruct(mdm->Convert(fp), existing.first.st_ptr, total_size));
   size_t data_offset = 0;
@@ -117,7 +117,7 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
     hapi::Blob put_data((unsigned char *)ptr + data_offset,
                         (unsigned char *)ptr + data_offset + item.first.size_);
     existing.first.st_blobs.emplace(item.second.blob_name_);
-    if (!blob_exists || item.second.size_ == PAGE_SIZE) {
+    if (!blob_exists || item.second.size_ == kPageSize) {
       LOG(INFO) << "Overwrite blob " << item.second.blob_name_
                 << " of size:" << item.second.size_ << "." << std::endl;
       existing.first.st_bkid->Put(item.second.blob_name_, put_data, ctx);
@@ -238,7 +238,7 @@ size_t read_internal(std::pair<AdapterStat, bool> &existing, void *ptr,
             << " and size: " << total_size << std::endl;
   size_t ret;
   auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
-  auto mapper = MapperFactory().Get(MAPPER_TYPE);
+  auto mapper = MapperFactory().Get(kMapperType);
   auto mapping = mapper->map(
       FileStruct(mdm->Convert(fp), existing.first.st_ptr, total_size));
   size_t total_read_size = 0;
@@ -413,7 +413,7 @@ int HERMES_DECL(fflush)(FILE *fp) {
         auto offset_map = std::unordered_map<std::string, hermes::u64>();
         for (const auto &blob_name : blob_names) {
           file_vbucket.Link(blob_name, filename, ctx);
-          offset_map.emplace(blob_name, std::stol(blob_name) * PAGE_SIZE);
+          offset_map.emplace(blob_name, std::stol(blob_name) * kPageSize);
         }
         auto trait = hermes::api::FileMappingTrait(filename, offset_map,
                                                    nullptr, NULL, NULL);
@@ -453,7 +453,7 @@ int HERMES_DECL(fclose)(FILE *fp) {
           auto offset_map = std::unordered_map<std::string, hermes::u64>();
           for (const auto &blob_name : blob_names) {
             file_vbucket.Link(blob_name, filename, ctx);
-            offset_map.emplace(blob_name, std::stol(blob_name) * PAGE_SIZE);
+            offset_map.emplace(blob_name, std::stol(blob_name) * kPageSize);
           }
           auto trait = hermes::api::FileMappingTrait(filename, offset_map,
                                                      nullptr, NULL, NULL);

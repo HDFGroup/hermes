@@ -16,7 +16,7 @@ bool exit = false;
 }  // namespace hermes::adapter
 
 void PopulateBufferingPath() {
-  char* hermes_config = getenv(HERMES_CONF);
+  char* hermes_config = getenv(kHermesConf);
   hermes::Config config = {};
   const size_t kConfigMemorySize = KILOBYTES(16);
   hermes::u8 config_memory[kConfigMemorySize];
@@ -36,7 +36,7 @@ void PopulateBufferingPath() {
     }
   }
   list.hermes_paths_exclusion.push_back(config.buffer_pool_shmem_name);
-  list.hermes_paths_exclusion.push_back(HERMES_EXT);
+  list.hermes_paths_exclusion.push_back(kHermesExtension);
 }
 bool IsTracked(const std::string& path) {
   if (hermes::adapter::exit) return false;

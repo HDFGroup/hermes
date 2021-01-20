@@ -87,12 +87,12 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
   MAP_OR_FAIL(fopen);
   SECTION("Map a one request") {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
-    auto mapper = MapperFactory().Get(MAPPER_TYPE);
+    auto mapper = MapperFactory().Get(kMapperType);
     size_t total_size = args.request_size;
     FILE* fp = __real_fopen(info.new_file.c_str(), "w+");
     REQUIRE(fp != nullptr);
     size_t offset = 0;
-    REQUIRE(PAGE_SIZE > total_size + offset);
+    REQUIRE(kPageSize > total_size + offset);
     auto mapping =
         mapper->map(FileStruct(mdm->Convert(fp), offset, total_size));
     REQUIRE(mapping.size() == 1);
@@ -106,20 +106,20 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
   }
   SECTION("Map a one big request") {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
-    auto mapper = MapperFactory().Get(MAPPER_TYPE);
+    auto mapper = MapperFactory().Get(kMapperType);
     size_t total_size = args.request_size * args.num_iterations;
     FILE* fp = __real_fopen(info.new_file.c_str(), "w+");
     REQUIRE(fp != nullptr);
     size_t offset = 0;
     auto mapping =
         mapper->map(FileStruct(mdm->Convert(fp), offset, total_size));
-    REQUIRE(mapping.size() == ceil((double)total_size / PAGE_SIZE));
+    REQUIRE(mapping.size() == ceil((double)total_size / kPageSize));
     for (const auto& item : mapping) {
       size_t mapped_size =
-          total_size - offset > PAGE_SIZE ? PAGE_SIZE : total_size - offset;
+          total_size - offset > kPageSize ? kPageSize : total_size - offset;
       REQUIRE(item.first.offset_ == offset);
       REQUIRE(item.first.size_ == mapped_size);
-      REQUIRE(item.second.offset_ == offset % PAGE_SIZE);
+      REQUIRE(item.second.offset_ == offset % kPageSize);
       REQUIRE(item.second.size_ == mapped_size);
       offset += mapped_size;
     }
@@ -128,18 +128,18 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
   }
   SECTION("Map a one large unaligned request") {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
-    auto mapper = MapperFactory().Get(MAPPER_TYPE);
+    auto mapper = MapperFactory().Get(kMapperType);
     size_t total_size = args.request_size * args.num_iterations;
     FILE* fp = __real_fopen(info.new_file.c_str(), "w+");
     REQUIRE(fp != nullptr);
     size_t offset = 1;
     auto mapping =
         mapper->map(FileStruct(mdm->Convert(fp), offset, total_size));
-    bool has_rem = (total_size + offset) % PAGE_SIZE != 0;
+    bool has_rem = (total_size + offset) % kPageSize != 0;
     if (has_rem) {
-      REQUIRE(mapping.size() == ceil((double)total_size / PAGE_SIZE) + 1);
+      REQUIRE(mapping.size() == ceil((double)total_size / kPageSize) + 1);
     } else {
-      REQUIRE(mapping.size() == ceil((double)total_size / PAGE_SIZE));
+      REQUIRE(mapping.size() == ceil((double)total_size / kPageSize));
     }
 
     size_t i = 0;
@@ -147,15 +147,15 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
     for (const auto& item : mapping) {
       size_t mapped_size = 0;
       if (i == 0) {
-        mapped_size = PAGE_SIZE - offset;
+        mapped_size = kPageSize - offset;
       } else if (i == mapping.size() - 1) {
         mapped_size = offset;
       } else {
-        mapped_size = PAGE_SIZE;
+        mapped_size = kPageSize;
       }
       REQUIRE(item.first.offset_ == current_offset);
       REQUIRE(item.first.size_ == mapped_size);
-      REQUIRE(item.second.offset_ == current_offset % PAGE_SIZE);
+      REQUIRE(item.second.offset_ == current_offset % kPageSize);
       REQUIRE(item.second.size_ == mapped_size);
       current_offset += mapped_size;
       i++;
@@ -165,12 +165,12 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
   }
   SECTION("Map a one small unaligned request") {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
-    auto mapper = MapperFactory().Get(MAPPER_TYPE);
+    auto mapper = MapperFactory().Get(kMapperType);
     size_t total_size = args.request_size;
     FILE* fp = __real_fopen(info.new_file.c_str(), "w+");
     REQUIRE(fp != nullptr);
     size_t offset = 1;
-    REQUIRE(PAGE_SIZE > total_size + offset);
+    REQUIRE(kPageSize > total_size + offset);
     auto mapping =
         mapper->map(FileStruct(mdm->Convert(fp), offset, total_size));
     REQUIRE(mapping.size() == 1);

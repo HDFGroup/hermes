@@ -48,14 +48,14 @@ class MetadataManager {
   std::shared_ptr<hapi::Hermes>& GetHermes() { return hermes; }
 
   /**
-   * Initialize hermes. Get the HERMES_CONF from environment else get_env
+   * Initialize hermes. Get the kHermesConf from environment else get_env
    * returns NULL which is handled internally by hermes. Initialize hermes in
    * daemon mode. Keep a reference of how many times Initialize is called.
    * Within the adapter, Initialize is called from fopen.
    */
   void InitializeHermes() {
     if (ref == 0) {
-      char* hermes_config = getenv(HERMES_CONF);
+      char* hermes_config = getenv(kHermesConf);
       hermes = hapi::InitHermes(hermes_config, true);
     }
     ref++;
