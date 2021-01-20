@@ -27,11 +27,10 @@ void PopulateBufferingPath() {
   } else {
     InitDefaultConfig(&config);
   }
-  if (!config.mount_points->empty()) {
-    for (const auto& item : config.mount_points) {
-      if (!item.empty()) {
-        list.hermes_paths_exclusion.push_back(item);
-      }
+
+  for (const auto& item : config.mount_points) {
+    if (!item.empty()) {
+      list.hermes_paths_exclusion.push_back(item);
     }
   }
   list.hermes_paths_exclusion.push_back(config.buffer_pool_shmem_name);
