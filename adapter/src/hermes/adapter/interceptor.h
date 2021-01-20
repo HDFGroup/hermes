@@ -100,7 +100,7 @@ void OnExit(void);
 
 #define HERMES_DECL(func_) func_
 /**
- * The input function is remained as __real_<func_name>. And a ptr to function
+ * The input function is renamed as real_<func_name>_. And a ptr to function
  * is obtained using dlsym.
  */
 #define MAP_OR_FAIL(func_)                                                  \
