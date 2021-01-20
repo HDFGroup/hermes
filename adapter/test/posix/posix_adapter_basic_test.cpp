@@ -48,42 +48,42 @@ TEST_CASE("Open", "[process=" + std::to_string(info.comm_size) +
   }
 
   SECTION("create a new file") {
-    int fd = open(info.new_file.c_str(), O_WRONLY | O_CREAT);
+    int fd = open(info.new_file.c_str(), O_WRONLY | O_CREAT, 0600);
     REQUIRE(fd != -1);
     int status = close(fd);
     REQUIRE(status == 0);
     fs::remove(info.new_file);
 
-    fd = open(info.new_file.c_str(), O_RDONLY | O_CREAT);
+    fd = open(info.new_file.c_str(), O_RDONLY | O_CREAT, 0600);
     REQUIRE(fd != -1);
     status = close(fd);
     REQUIRE(status == 0);
     fs::remove(info.new_file);
 
-    fd = open(info.new_file.c_str(), O_RDWR | O_CREAT);
+    fd = open(info.new_file.c_str(), O_RDWR | O_CREAT, 0600);
     REQUIRE(fd != -1);
     status = close(fd);
     REQUIRE(status == 0);
   }
   SECTION("create a existing file") {
-    int fd = open(info.existing_file.c_str(), O_WRONLY | O_CREAT);
+    int fd = open(info.existing_file.c_str(), O_WRONLY | O_CREAT, 0600);
     REQUIRE(fd != -1);
     int status = close(fd);
     REQUIRE(status == 0);
-    fd = open(info.existing_file.c_str(), O_RDONLY | O_CREAT);
+    fd = open(info.existing_file.c_str(), O_RDONLY | O_CREAT, 0600);
     REQUIRE(fd != -1);
     status = close(fd);
     REQUIRE(status == 0);
-    fd = open(info.existing_file.c_str(), O_RDWR | O_CREAT);
+    fd = open(info.existing_file.c_str(), O_RDWR | O_CREAT, 0600);
     REQUIRE(fd != -1);
     status = close(fd);
     REQUIRE(status == 0);
 
-    fd = open(info.existing_file.c_str(), O_WRONLY | O_CREAT | O_EXCL);
+    fd = open(info.existing_file.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0600);
     REQUIRE(fd == -1);
-    fd = open(info.existing_file.c_str(), O_RDONLY | O_CREAT | O_EXCL);
+    fd = open(info.existing_file.c_str(), O_RDONLY | O_CREAT | O_EXCL, 0600);
     REQUIRE(fd == -1);
-    fd = open(info.existing_file.c_str(), O_RDWR | O_CREAT | O_EXCL);
+    fd = open(info.existing_file.c_str(), O_RDWR | O_CREAT | O_EXCL, 0600);
     REQUIRE(fd == -1);
   }
   SECTION("Async I/O") {
@@ -233,7 +233,7 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
   }
 
   SECTION("write to new  file") {
-    int fd = open(info.new_file.c_str(), O_WRONLY | O_CREAT | O_EXCL);
+    int fd = open(info.new_file.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0600);
     REQUIRE(fd != -1);
     size_t size_written = write(fd, info.write_data.c_str(), args.request_size);
     REQUIRE(size_written == args.request_size);
@@ -276,7 +276,7 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
   }
 
   SECTION("append to new file") {
-    int fd = open(info.new_file.c_str(), O_WRONLY | O_CREAT | O_EXCL);
+    int fd = open(info.new_file.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0600);
     REQUIRE(fd != -1);
     size_t size_written = write(fd, info.write_data.c_str(), args.request_size);
     REQUIRE(size_written == args.request_size);
@@ -329,7 +329,7 @@ TEST_CASE("BatchedWriteSequential",
               "[pattern=sequential][file=1]") {
   pretest();
   SECTION("write to existing file") {
-    int fd = open(info.new_file.c_str(), O_WRONLY | O_CREAT | O_EXCL);
+    int fd = open(info.new_file.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0600);
     REQUIRE(fd != -1);
 
     for (size_t i = 0; i < info.num_iterations; ++i) {
@@ -345,7 +345,7 @@ TEST_CASE("BatchedWriteSequential",
   }
 
   SECTION("write to new file always at start") {
-    int fd = open(info.new_file.c_str(), O_WRONLY | O_CREAT | O_EXCL);
+    int fd = open(info.new_file.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0600);
     REQUIRE(fd != -1);
 
     for (size_t i = 0; i < info.num_iterations; ++i) {
@@ -558,7 +558,7 @@ TEST_CASE("BatchedWriteRSVariable",
   pretest();
 
   SECTION("write to new file always at the start") {
-    int fd = open(info.new_file.c_str(), O_WRONLY | O_CREAT | O_EXCL);
+    int fd = open(info.new_file.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0600);
     REQUIRE(fd != -1);
     size_t biggest_size_written = 0;
     for (size_t i = 0; i < info.num_iterations; ++i) {
@@ -578,7 +578,7 @@ TEST_CASE("BatchedWriteRSVariable",
   }
 
   SECTION("write to new file") {
-    int fd = open(info.new_file.c_str(), O_WRONLY | O_CREAT | O_EXCL);
+    int fd = open(info.new_file.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0600);
     REQUIRE(fd != -1);
     size_t total_size_written = 0;
     for (size_t i = 0; i < info.num_iterations; ++i) {
@@ -1085,7 +1085,7 @@ TEST_CASE("BatchedWriteTemporalFixed",
   pretest();
 
   SECTION("write to existing file") {
-    int fd = open(info.new_file.c_str(), O_WRONLY | O_CREAT | O_EXCL);
+    int fd = open(info.new_file.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0600);
     REQUIRE(fd != -1);
 
     for (size_t i = 0; i < info.num_iterations; ++i) {
@@ -1102,7 +1102,7 @@ TEST_CASE("BatchedWriteTemporalFixed",
   }
 
   SECTION("write to new file always at start") {
-    int fd = open(info.new_file.c_str(), O_WRONLY | O_CREAT | O_EXCL);
+    int fd = open(info.new_file.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0600);
     REQUIRE(fd != -1);
 
     for (size_t i = 0; i < info.num_iterations; ++i) {
@@ -1167,7 +1167,7 @@ TEST_CASE("BatchedWriteTemporalVariable",
   pretest();
 
   SECTION("write to existing file") {
-    int fd = open(info.new_file.c_str(), O_WRONLY | O_CREAT | O_EXCL);
+    int fd = open(info.new_file.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0600);
     REQUIRE(fd != -1);
 
     for (size_t i = 0; i < info.num_iterations; ++i) {
@@ -1186,7 +1186,7 @@ TEST_CASE("BatchedWriteTemporalVariable",
   }
 
   SECTION("write to new file always at start") {
-    int fd = open(info.new_file.c_str(), O_WRONLY | O_CREAT | O_EXCL);
+    int fd = open(info.new_file.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0600);
     REQUIRE(fd != -1);
 
     for (size_t i = 0; i < info.num_iterations; ++i) {
@@ -1256,7 +1256,7 @@ TEST_CASE("BatchedMixedSequential",
               "[pattern=sequential][file=1]") {
   pretest();
   SECTION("read after write on new file") {
-    int fd = open(info.new_file.c_str(), O_RDWR | O_CREAT | O_EXCL);
+    int fd = open(info.new_file.c_str(), O_RDWR | O_CREAT | O_EXCL, 0600);
     REQUIRE(fd != -1);
     size_t last_offset = 0;
     for (size_t i = 0; i < info.num_iterations; ++i) {
@@ -1308,7 +1308,7 @@ TEST_CASE("BatchedMixedSequential",
     REQUIRE(status == 0);
   }
   SECTION("read all after write all on new file in single open") {
-    int fd = open(info.new_file.c_str(), O_RDWR | O_CREAT | O_EXCL);
+    int fd = open(info.new_file.c_str(), O_RDWR | O_CREAT | O_EXCL, 0600);
     REQUIRE(fd != -1);
     for (size_t i = 0; i < info.num_iterations; ++i) {
       size_t size_written =
@@ -1325,7 +1325,8 @@ TEST_CASE("BatchedMixedSequential",
     REQUIRE(status == 0);
   }
   SECTION("read all after write all on new file in different open") {
-    int fd = open(info.new_file.c_str(), O_RDWR | O_CREAT, S_IRWXU | S_IRWXG);
+    int fd =
+        open(info.new_file.c_str(), O_RDWR | O_CREAT, S_IRWXU | S_IRWXG, 0600);
     REQUIRE(fd != -1);
     for (size_t i = 0; i < info.num_iterations; ++i) {
       size_t size_written =
@@ -1352,7 +1353,7 @@ TEST_CASE("SingleMixed", "[process=" + std::to_string(info.comm_size) +
                              "[file=1]") {
   pretest();
   SECTION("read after write from new file") {
-    int fd = open(info.new_file.c_str(), O_RDWR | O_CREAT | O_EXCL);
+    int fd = open(info.new_file.c_str(), O_RDWR | O_CREAT | O_EXCL, 0600);
     REQUIRE(fd != -1);
     size_t size_write = write(fd, info.write_data.data(), args.request_size);
     REQUIRE(size_write == args.request_size);
@@ -1377,7 +1378,7 @@ TEST_CASE("SingleMixed", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(status == 0);
   }
   SECTION("read after write from new file different opens") {
-    int fd = open(info.new_file.c_str(), O_RDWR | O_CREAT | O_EXCL);
+    int fd = open(info.new_file.c_str(), O_RDWR | O_CREAT | O_EXCL, 0600);
     REQUIRE(fd != -1);
     size_t size_write = write(fd, info.write_data.data(), args.request_size);
     REQUIRE(size_write == args.request_size);

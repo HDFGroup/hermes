@@ -5,8 +5,8 @@ TEST_CASE("BatchedWriteRSRangeSmall",
           "[pattern=sequential][file=1]") {
     pretest();
     SECTION("write to new file always at the start") {
-        int fd = open(info.new_file.c_str(), O_WRONLY | O_CREAT);
-        REQUIRE(fd != -1);
+      int fd = open(info.new_file.c_str(), O_WRONLY | O_CREAT, 0600);
+      REQUIRE(fd != -1);
         size_t biggest_size_written = 0;
         for (size_t i = 0; i < info.num_iterations; ++i) {
             size_t offset = lseek(fd, 0, SEEK_SET);
@@ -26,8 +26,8 @@ TEST_CASE("BatchedWriteRSRangeSmall",
     }
 
     SECTION("write to new file") {
-        int fd = open(info.new_file.c_str(), O_WRONLY | O_CREAT);
-        REQUIRE(fd != -1);
+      int fd = open(info.new_file.c_str(), O_WRONLY | O_CREAT, 0600);
+      REQUIRE(fd != -1);
         size_t total_size_written = 0;
         for (size_t i = 0; i < info.num_iterations; ++i) {
             size_t request_size = info.small_min +
@@ -399,8 +399,8 @@ TEST_CASE("BatchedWriteRSRangeMedium",
           "[pattern=sequential][file=1]") {
     pretest();
     SECTION("write to new file always at the start") {
-        int fd = open(info.new_file.c_str(), O_WRONLY | O_CREAT);
-        REQUIRE(fd != -1);
+      int fd = open(info.new_file.c_str(), O_WRONLY | O_CREAT, 0600);
+      REQUIRE(fd != -1);
         size_t biggest_size_written = 0;
         for (size_t i = 0; i < info.num_iterations; ++i) {
             size_t offset = lseek(fd, 0, SEEK_SET);
@@ -420,8 +420,8 @@ TEST_CASE("BatchedWriteRSRangeMedium",
     }
 
     SECTION("write to new file") {
-        int fd = open(info.new_file.c_str(), O_WRONLY | O_CREAT);
-        REQUIRE(fd != -1);
+      int fd = open(info.new_file.c_str(), O_WRONLY | O_CREAT, 0600);
+      REQUIRE(fd != -1);
         size_t total_size_written = 0;
         for (size_t i = 0; i < info.num_iterations; ++i) {
             size_t request_size = info.medium_min +
@@ -795,8 +795,8 @@ TEST_CASE("BatchedWriteRSRangeLarge",
           "[pattern=sequential][file=1]") {
     pretest();
     SECTION("write to new file always at the start") {
-        int fd = open(info.new_file.c_str(), O_WRONLY | O_CREAT);
-        REQUIRE(fd != -1);
+      int fd = open(info.new_file.c_str(), O_WRONLY | O_CREAT, 0600);
+      REQUIRE(fd != -1);
         size_t biggest_size_written = 0;
         for (size_t i = 0; i < info.num_iterations; ++i) {
             size_t offset = lseek(fd, 0, SEEK_SET);
@@ -816,8 +816,8 @@ TEST_CASE("BatchedWriteRSRangeLarge",
     }
 
     SECTION("write to new file") {
-        int fd = open(info.new_file.c_str(), O_WRONLY | O_CREAT);
-        REQUIRE(fd != -1);
+      int fd = open(info.new_file.c_str(), O_WRONLY | O_CREAT, 0600);
+      REQUIRE(fd != -1);
         size_t total_size_written = 0;
         for (size_t i = 0; i < info.num_iterations; ++i) {
             size_t request_size = info.large_min +
