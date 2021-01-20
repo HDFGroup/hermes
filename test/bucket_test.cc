@@ -133,27 +133,14 @@ void TestPutOverwrite(std::shared_ptr<hapi::Hermes> hermes) {
   hapi::Status status = bucket.Put(blob_name, blob, ctx);
   Assert(status == 0);
 
-  hapi::Blob retrieved_blob;
-  size_t retrieved_size = bucket.Get(blob_name, retrieved_blob, ctx);
-  Assert(blob_size == retrieved_size);
-  retrieved_blob.resize(retrieved_size);
-  retrieved_size = bucket.Get(blob_name, retrieved_blob, ctx);
-  Assert(blob_size == retrieved_size);
-  Assert(retrieved_blob == blob);
-
-  retrieved_blob.clear();
+  hermes::testing::GetAndVerifyBlob(bucket, blob_name, blob);
 
   // NOTE(chogan): Overwrite the data
   size_t new_size = KILOBYTES(9);
   hapi::Blob new_blob(new_size, 'z');
   status = bucket.Put(blob_name, new_blob, ctx);
 
-  retrieved_size = bucket.Get(blob_name, retrieved_blob, ctx);
-  Assert(retrieved_size == new_size);
-  retrieved_blob.resize(retrieved_size);
-  retrieved_size = bucket.Get(blob_name, retrieved_blob, ctx);
-  Assert(retrieved_size == new_size);
-  Assert(retrieved_blob == new_blob);
+  hermes::testing::GetAndVerifyBlob(bucket, blob_name, new_blob);
 
   bucket.Destroy(ctx);
 }

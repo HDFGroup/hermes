@@ -10,6 +10,7 @@
 #include <map>
 
 #include "hermes_types.h"
+#include "bucket.h"
 
 namespace hermes {
 namespace testing {
@@ -42,6 +43,8 @@ void Assert(bool expr, const char *file, int lineno, const char *message) {
     exit(-1);
   }
 }
+
+#define Assert(expr) hermes::testing::Assert((expr), __FILE__, __LINE__, #expr)
 
 struct TargetViewState {
   std::vector<hermes::u64> bytes_capacity;
@@ -143,9 +146,20 @@ void PrintNodeState(TargetViewState &node_state) {
   }
 }
 
+void GetAndVerifyBlob(api::Bucket &bucket, const std::string &blob_name,
+                      const api::Blob &expected) {
+  api::Context ctx;
+  api::Blob retrieved_blob;
+  size_t expected_size = expected.size();
+  size_t retrieved_size = bucket.Get(blob_name, retrieved_blob, ctx);
+  Assert(expected_size == retrieved_size);
+  retrieved_blob.resize(retrieved_size);
+  retrieved_size = bucket.Get(blob_name, retrieved_blob, ctx);
+  Assert(expected_size == retrieved_size);
+  Assert(retrieved_blob == expected);
+}
+
 }  // namespace testing
 }  // namespace hermes
-
-#define Assert(expr) hermes::testing::Assert((expr), __FILE__, __LINE__, #expr)
 
 #endif  // HERMES_TEST_UTILS_H_

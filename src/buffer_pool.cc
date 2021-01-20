@@ -373,7 +373,7 @@ void SetFirstFreeBufferId(SharedMemoryContext *context, DeviceID device_id,
 }
 
 std::atomic<u32> *GetAvailableBuffersArray(SharedMemoryContext *context,
-                                                  DeviceID device_id) {
+                                           DeviceID device_id) {
   BufferPool *pool = GetBufferPoolFromContext(context);
   std::atomic<u32> *result =
     (std::atomic<u32> *)(context->shm_base +
