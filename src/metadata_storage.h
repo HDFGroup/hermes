@@ -17,7 +17,9 @@ u64 GetFromStorage(MetadataManager *mdm, const char *key, MapType map_type);
 /**
  *
  */
-char *ReverseGetFromStorage(MetadataManager *mdm, u64 id, MapType map_type);
+std::string ReverseGetFromStorage(MetadataManager *mdm, u64 id,
+                                  MapType map_type);
+
 /**
  *
  */

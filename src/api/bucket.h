@@ -152,6 +152,8 @@ Status Bucket::PlaceBlobs(std::vector<PlacementSchema> &schemas,
     hermes::Blob blob = {};
     blob.data = (u8 *)blobs[i].data();
     blob.size = blobs[i].size() * sizeof(T);
+    LOG(INFO) << "Attaching blob '" << names[i] << "' to Bucket '" << name_
+              << "'" << std::endl;
     // TODO(chogan): @errorhandling What about partial failure?
     result = PlaceBlob(&hermes_->context_, &hermes_->rpc_, schema, blob,
                        names[i].c_str(), id_);

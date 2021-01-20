@@ -1602,12 +1602,6 @@ Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
   HERMES_END_TIMED_BLOCK();
 
   if (buffer_ids.size()) {
-    MetadataManager *mdm = GetMetadataManagerFromContext(context);
-    char *bucket_name = ReverseGetFromStorage(mdm, bucket_id.as_int,
-                                              kMapType_Bucket);
-    LOG(INFO) << "Attaching blob " << std::string(name) << " to Bucket "
-              << bucket_name << std::endl;
-
     HERMES_BEGIN_TIMED_BLOCK("WriteBlobToBuffers");
     WriteBlobToBuffers(context, rpc, blob, buffer_ids);
     HERMES_END_TIMED_BLOCK();
