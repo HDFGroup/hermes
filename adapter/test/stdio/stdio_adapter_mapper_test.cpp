@@ -52,7 +52,8 @@ int pretest() {
                       " bs=1 count=0 seek=" +
                       std::to_string(args.request_size * args.num_iterations) +
                       " > /dev/null 2>&1";
-    system(cmd.c_str());
+    int status = system(cmd.c_str());
+    REQUIRE(status != -1);
     REQUIRE(fs::file_size(info.existing_file) ==
             args.request_size * args.num_iterations);
     info.total_size = fs::file_size(info.existing_file);

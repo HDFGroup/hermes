@@ -59,7 +59,8 @@ int pretest() {
     std::string cmd = "dd if=/dev/zero of=" + info.existing_file + " bs=" +
                       std::to_string(args.request_size * info.num_iterations) +
                       " count=1  > /dev/null 2>&1";
-    system(cmd.c_str());
+    int status = system(cmd.c_str());
+    REQUIRE(status != -1);
     REQUIRE(fs::file_size(info.existing_file) ==
             args.request_size * info.num_iterations);
     info.total_size = fs::file_size(info.existing_file);
