@@ -76,12 +76,12 @@ bool IsTracked(const std::string& path) {
 bool IsTracked(FILE* fh) {
   if (hermes::adapter::exit) return false;
   atexit(OnExit);
-  int MAXSIZE = 0xFFF;
-  char proclnk[0xFFF];
-  char filename[0xFFF];
+  const int kMaxSize = 0xFFF;
+  char proclnk[kMaxSize];
+  char filename[kMaxSize];
   int fno = fileno(fh);
-  snprintf(proclnk, MAXSIZE, "/proc/self/fd/%d", fno);
-  size_t r = readlink(proclnk, filename, MAXSIZE);
+  snprintf(proclnk, kMaxSize, "/proc/self/fd/%d", fno);
+  size_t r = readlink(proclnk, filename, kMaxSize);
   if (r > 0) {
     std::string file_str(filename);
     return IsTracked(file_str);
