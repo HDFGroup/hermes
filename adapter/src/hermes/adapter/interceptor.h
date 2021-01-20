@@ -94,22 +94,22 @@ void OnExit(void);
 /**
  * Typedef and function declaration for intercepted functions.
  */
-#define HERMES_FORWARD_DECL(__func, __ret, __args) \
-  typedef __ret(*__real_t_##__func) __args;        \
-  __ret(*__real_##__func) __args = NULL;
+#define HERMES_FORWARD_DECL(func_, ret_, args_) \
+  typedef ret_(*real_t_##func_##_) args_;       \
+  ret_(*real_##func_##_) args_ = NULL;
 
-#define HERMES_DECL(__func) __func
+#define HERMES_DECL(func_) func_
 /**
  * The input function is remained as __real_<func_name>. And a ptr to function
  * is obtained using dlsym.
  */
-#define MAP_OR_FAIL(__func)                                                  \
-  if (!(__real_##__func)) {                                                  \
-    __real_##__func = (__real_t_##__func)dlsym(RTLD_NEXT, #__func);          \
-    if (!(__real_##__func)) {                                                \
-      fprintf(stderr, "HERMES Adapter failed to map symbol: %s\n", #__func); \
-      exit(1);                                                               \
-    }                                                                        \
+#define MAP_OR_FAIL(func_)                                                  \
+  if (!(real_##func_##_)) {                                                 \
+    real_##func_##_ = (real_t_##func_##_)dlsym(RTLD_NEXT, #func_);          \
+    if (!(real_##func_##_)) {                                               \
+      fprintf(stderr, "HERMES Adapter failed to map symbol: %s\n", #func_); \
+      exit(1);                                                              \
+    }                                                                       \
   }
 
 /**
@@ -143,9 +143,9 @@ bool IsTracked(FILE* fh);
 /**
  * Do not intercept if HERMES_PRELOAD is not defined.
  */
-#define HERMES_FORWARD_DECL(__name, __ret, __args) \
-  extern __ret __real_##__name __args;
-#define HERMES_DECL(__name) __wrap_##__name
-#define MAP_OR_FAIL(__func)
+#define HERMES_FORWARD_DECL(name_, ret_, args_) \
+  extern ret_ real_##name_##_ args_;
+#define HERMES_DECL(name_) wrap_##name_##_
+#define MAP_OR_FAIL(func_)
 #endif
 #endif  // HERMES_INTERCEPTOR_H

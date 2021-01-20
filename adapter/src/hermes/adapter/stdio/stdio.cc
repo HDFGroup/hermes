@@ -63,7 +63,7 @@ FILE *simple_open(FILE *ret, const std::string &path_str, const char *mode) {
 FILE *open_internal(const std::string &path_str, const char *mode) {
   FILE *ret;
   MAP_OR_FAIL(fopen);
-  ret = __real_fopen(path_str.c_str(), mode);
+  ret = real_fopen_(path_str.c_str(), mode);
   ret = simple_open(ret, path_str.c_str(), mode);
   return ret;
 }
@@ -73,7 +73,7 @@ FILE *reopen_internal(const std::string &path_str, const char *mode,
   FILE *ret;
   MAP_OR_FAIL(freopen);
   auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
-  ret = __real_freopen(path_str.c_str(), mode, stream);
+  ret = real_freopen_(path_str.c_str(), mode, stream);
   if (!ret) {
     return ret;
   } else {
@@ -330,7 +330,7 @@ FILE *HERMES_DECL(fopen)(const char *path, const char *mode) {
     ret = open_internal(path, mode);
   } else {
     MAP_OR_FAIL(fopen);
-    ret = __real_fopen(path, mode);
+    ret = real_fopen_(path, mode);
   }
   return (ret);
 }
@@ -344,7 +344,7 @@ FILE *HERMES_DECL(fopen64)(const char *path, const char *mode) {
     ret = open_internal(path, mode);
   } else {
     MAP_OR_FAIL(fopen64);
-    ret = __real_fopen(path, mode);
+    ret = real_fopen_(path, mode);
   }
   return (ret);
 }
@@ -352,7 +352,7 @@ FILE *HERMES_DECL(fopen64)(const char *path, const char *mode) {
 FILE *HERMES_DECL(fdopen)(int fd, const char *mode) {
   FILE *ret;
   MAP_OR_FAIL(fdopen);
-  ret = __real_fdopen(fd, mode);
+  ret = real_fdopen_(fd, mode);
   if (ret && IsTracked(ret)) {
     LOG(INFO) << "Intercept fdopen for file descriptor: " << fd
               << " and mode: " << mode << " tracked." << std::endl;
@@ -375,7 +375,7 @@ FILE *HERMES_DECL(freopen)(const char *path, const char *mode, FILE *stream) {
     ret = reopen_internal(path, mode, stream);
   } else {
     MAP_OR_FAIL(freopen);
-    ret = __real_freopen(path, mode, stream);
+    ret = real_freopen_(path, mode, stream);
   }
   return (ret);
 }
@@ -388,7 +388,7 @@ FILE *HERMES_DECL(freopen64)(const char *path, const char *mode, FILE *stream) {
     ret = reopen_internal(path, mode, stream);
   } else {
     MAP_OR_FAIL(freopen64);
-    ret = __real_freopen64(path, mode, stream);
+    ret = real_freopen64_(path, mode, stream);
   }
   return (ret);
 }
@@ -426,7 +426,7 @@ int HERMES_DECL(fflush)(FILE *fp) {
     }
   } else {
     MAP_OR_FAIL(fflush);
-    ret = __real_fflush(fp);
+    ret = real_fflush_(fp);
   }
   return (ret);
 }
@@ -478,7 +478,7 @@ int HERMES_DECL(fclose)(FILE *fp) {
   }
 
   MAP_OR_FAIL(fclose);
-  ret = __real_fclose(fp);
+  ret = real_fclose_(fp);
   return (ret);
 }
 
@@ -493,11 +493,11 @@ size_t HERMES_DECL(fwrite)(const void *ptr, size_t size, size_t nmemb,
       ret = write_internal(existing, ptr, size * nmemb, fp);
     } else {
       MAP_OR_FAIL(fwrite);
-      ret = __real_fwrite(ptr, size, nmemb, fp);
+      ret = real_fwrite_(ptr, size, nmemb, fp);
     }
   } else {
     MAP_OR_FAIL(fwrite);
-    ret = __real_fwrite(ptr, size, nmemb, fp);
+    ret = real_fwrite_(ptr, size, nmemb, fp);
   }
   return (ret);
 }
@@ -513,11 +513,11 @@ int HERMES_DECL(fputc)(int c, FILE *fp) {
       ret = c;
     } else {
       MAP_OR_FAIL(fputc);
-      ret = __real_fputc(c, fp);
+      ret = real_fputc_(c, fp);
     }
   } else {
     MAP_OR_FAIL(fputc);
-    ret = __real_fputc(c, fp);
+    ret = real_fputc_(c, fp);
   }
   return (ret);
 }
@@ -533,11 +533,11 @@ int HERMES_DECL(fgetpos)(FILE *fp, fpos_t *pos) {
       ret = 0;
     } else {
       MAP_OR_FAIL(fgetpos);
-      ret = __real_fgetpos(fp, pos);
+      ret = real_fgetpos_(fp, pos);
     }
   } else {
     MAP_OR_FAIL(fgetpos);
-    ret = __real_fgetpos(fp, pos);
+    ret = real_fgetpos_(fp, pos);
   }
   return ret;
 }
@@ -553,11 +553,11 @@ int HERMES_DECL(putc)(int c, FILE *fp) {
       ret = c;
     } else {
       MAP_OR_FAIL(fputc);
-      ret = __real_fputc(c, fp);
+      ret = real_fputc_(c, fp);
     }
   } else {
     MAP_OR_FAIL(fputc);
-    ret = __real_fputc(c, fp);
+    ret = real_fputc_(c, fp);
   }
   return (ret);
 }
@@ -572,11 +572,11 @@ int HERMES_DECL(putw)(int w, FILE *fp) {
       ret = write_internal(existing, &w, 1, fp);
     } else {
       MAP_OR_FAIL(putw);
-      ret = __real_putw(w, fp);
+      ret = real_putw_(w, fp);
     }
   } else {
     MAP_OR_FAIL(putw);
-    ret = __real_putw(w, fp);
+    ret = real_putw_(w, fp);
   }
   return (ret);
 }
@@ -591,11 +591,11 @@ int HERMES_DECL(fputs)(const char *s, FILE *stream) {
       ret = write_internal(existing, s, strlen(s), stream);
     } else {
       MAP_OR_FAIL(fputs);
-      ret = __real_fputs(s, stream);
+      ret = real_fputs_(s, stream);
     }
   } else {
     MAP_OR_FAIL(fputs);
-    ret = __real_fputs(s, stream);
+    ret = real_fputs_(s, stream);
   }
   return (ret);
 }
@@ -610,11 +610,11 @@ size_t HERMES_DECL(fread)(void *ptr, size_t size, size_t nmemb, FILE *stream) {
       ret = read_internal(existing, ptr, size * nmemb, stream);
     } else {
       MAP_OR_FAIL(fread);
-      ret = __real_fread(ptr, size, nmemb, stream);
+      ret = real_fread_(ptr, size, nmemb, stream);
     }
   } else {
     MAP_OR_FAIL(fread);
-    ret = __real_fread(ptr, size, nmemb, stream);
+    ret = real_fread_(ptr, size, nmemb, stream);
   }
   return (ret);
 }
@@ -633,11 +633,11 @@ int HERMES_DECL(fgetc)(FILE *stream) {
       }
     } else {
       MAP_OR_FAIL(fgetc);
-      ret = __real_fgetc(stream);
+      ret = real_fgetc_(stream);
     }
   } else {
     MAP_OR_FAIL(fgetc);
-    ret = __real_fgetc(stream);
+    ret = real_fgetc_(stream);
   }
   return (ret);
 }
@@ -656,11 +656,11 @@ int HERMES_DECL(getc)(FILE *stream) {
       }
     } else {
       MAP_OR_FAIL(fgetc);
-      ret = __real_fgetc(stream);
+      ret = real_fgetc_(stream);
     }
   } else {
     MAP_OR_FAIL(fgetc);
-    ret = __real_fgetc(stream);
+    ret = real_fgetc_(stream);
   }
   return (ret);
 }
@@ -680,11 +680,11 @@ int HERMES_DECL(_IO_getc)(FILE *stream) {
       }
     } else {
       MAP_OR_FAIL(_IO_getc);
-      ret = __real__IO_getc(stream);
+      ret = real__IO_getc_(stream);
     }
   } else {
     MAP_OR_FAIL(_IO_getc);
-    ret = __real__IO_getc(stream);
+    ret = real__IO_getc_(stream);
   }
   return (ret);
 }
@@ -700,11 +700,11 @@ int HERMES_DECL(_IO_putc)(int c, FILE *stream) {
       ret = write_internal(existing, &c, 1, stream);
     } else {
       MAP_OR_FAIL(_IO_putc);
-      ret = __real__IO_putc(c, stream);
+      ret = real__IO_putc_(c, stream);
     }
   } else {
     MAP_OR_FAIL(_IO_putc);
-    ret = __real__IO_putc(c, stream);
+    ret = real__IO_putc_(c, stream);
   }
   return (ret);
 }
@@ -721,11 +721,11 @@ int HERMES_DECL(getw)(FILE *stream) {
       if (ret_size == 1) ret = value;
     } else {
       MAP_OR_FAIL(getw);
-      ret = __real_getw(stream);
+      ret = real_getw_(stream);
     }
   } else {
     MAP_OR_FAIL(getw);
-    ret = __real_getw(stream);
+    ret = real_getw_(stream);
   }
   return (ret);
 }
@@ -741,11 +741,11 @@ char *HERMES_DECL(fgets)(char *s, int size, FILE *stream) {
       ret = s;
     } else {
       MAP_OR_FAIL(fgets);
-      ret = __real_fgets(s, size, stream);
+      ret = real_fgets_(s, size, stream);
     }
   } else {
     MAP_OR_FAIL(fgets);
-    ret = __real_fgets(s, size, stream);
+    ret = real_fgets_(s, size, stream);
   }
   return (ret);
 }
@@ -766,11 +766,11 @@ void HERMES_DECL(rewind)(FILE *stream) {
       }
     } else {
       MAP_OR_FAIL(rewind);
-      __real_rewind(stream);
+      real_rewind_(stream);
     }
   } else {
     MAP_OR_FAIL(rewind);
-    __real_rewind(stream);
+    real_rewind_(stream);
   }
   return;
 }
@@ -811,11 +811,11 @@ int HERMES_DECL(fseek)(FILE *stream, long offset, int whence) {
       }
     } else {
       MAP_OR_FAIL(fseek);
-      ret = __real_fseek(stream, offset, whence);
+      ret = real_fseek_(stream, offset, whence);
     }
   } else {
     MAP_OR_FAIL(fseek);
-    ret = __real_fseek(stream, offset, whence);
+    ret = real_fseek_(stream, offset, whence);
   }
   return (ret);
 }
@@ -856,11 +856,11 @@ int HERMES_DECL(fseeko)(FILE *stream, off_t offset, int whence) {
       }
     } else {
       MAP_OR_FAIL(fseeko);
-      ret = __real_fseeko(stream, offset, whence);
+      ret = real_fseeko_(stream, offset, whence);
     }
   } else {
     MAP_OR_FAIL(fseeko);
-    ret = __real_fseeko(stream, offset, whence);
+    ret = real_fseeko_(stream, offset, whence);
   }
   return (ret);
 }
@@ -901,11 +901,11 @@ int HERMES_DECL(fseeko64)(FILE *stream, off64_t offset, int whence) {
       }
     } else {
       MAP_OR_FAIL(fseeko64);
-      ret = __real_fseeko64(stream, offset, whence);
+      ret = real_fseeko64_(stream, offset, whence);
     }
   } else {
     MAP_OR_FAIL(fseeko64);
-    ret = __real_fseeko64(stream, offset, whence);
+    ret = real_fseeko64_(stream, offset, whence);
   }
   return (ret);
 }
@@ -930,11 +930,11 @@ int HERMES_DECL(fsetpos)(FILE *stream, const fpos_t *pos) {
       }
     } else {
       MAP_OR_FAIL(fsetpos);
-      ret = __real_fsetpos(stream, pos);
+      ret = real_fsetpos_(stream, pos);
     }
   } else {
     MAP_OR_FAIL(fsetpos);
-    ret = __real_fsetpos(stream, pos);
+    ret = real_fsetpos_(stream, pos);
   }
   return (ret);
 }
@@ -959,11 +959,11 @@ int HERMES_DECL(fsetpos64)(FILE *stream, const fpos64_t *pos) {
       }
     } else {
       MAP_OR_FAIL(fsetpos64);
-      ret = __real_fsetpos64(stream, pos);
+      ret = real_fsetpos64_(stream, pos);
     }
   } else {
     MAP_OR_FAIL(fsetpos64);
-    ret = __real_fsetpos64(stream, pos);
+    ret = real_fsetpos64_(stream, pos);
   }
   return (ret);
 }
@@ -978,11 +978,11 @@ long int HERMES_DECL(ftell)(FILE *fp) {
       ret = existing.first.st_ptr;
     } else {
       MAP_OR_FAIL(ftell);
-      ret = __real_ftell(fp);
+      ret = real_ftell_(fp);
     }
   } else {
     MAP_OR_FAIL(ftell);
-    ret = __real_ftell(fp);
+    ret = real_ftell_(fp);
   }
   return (ret);
 }
