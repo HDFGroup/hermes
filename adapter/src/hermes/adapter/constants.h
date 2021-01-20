@@ -10,7 +10,7 @@
  * kHermesConf env variable is used to define path to kHermesConf in adapters.
  * This is used for initialization of Hermes.
  */
-const char* kHermesConf = "kHermesConf";
+const char* kHermesConf = "HERMES_CONF";
 /**
  * kHermesExtension is the extension of hermes files. These are buffered files
  * from I/O. This is needed as we should not intercept these files.
