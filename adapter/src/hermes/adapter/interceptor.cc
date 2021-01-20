@@ -27,7 +27,7 @@ void PopulateBufferingPath() {
   } else {
     InitDefaultConfig(&config);
   }
-  if (config.mount_points->empty()) {
+  if (!config.mount_points->empty()) {
     for (const auto& item : config.mount_points) {
       if (!item.empty()) {
         list.hermes_paths_exclusion.push_back(item);
