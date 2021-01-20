@@ -324,7 +324,7 @@ size_t read_internal(std::pair<AdapterStat, bool> &existing, void *ptr,
 FILE *HERMES_DECL(fopen)(const char *path, const char *mode) {
   FILE *ret;
   std::string path_str(path);
-  if (IsTracked(path)) {
+  if (hermes::adapter::IsTracked(path)) {
     LOG(INFO) << "Intercept fopen for filename: " << path
               << " and mode: " << mode << " is tracked." << std::endl;
     ret = open_internal(path, mode);
@@ -338,7 +338,7 @@ FILE *HERMES_DECL(fopen)(const char *path, const char *mode) {
 FILE *HERMES_DECL(fopen64)(const char *path, const char *mode) {
   FILE *ret;
   std::string path_str(path);
-  if (IsTracked(path)) {
+  if (hermes::adapter::IsTracked(path)) {
     LOG(INFO) << "Intercept fopen64 for filename: " << path
               << " and mode: " << mode << " is tracked." << std::endl;
     ret = open_internal(path, mode);
@@ -353,7 +353,7 @@ FILE *HERMES_DECL(fdopen)(int fd, const char *mode) {
   FILE *ret;
   MAP_OR_FAIL(fdopen);
   ret = real_fdopen_(fd, mode);
-  if (ret && IsTracked(ret)) {
+  if (ret && hermes::adapter::IsTracked(ret)) {
     LOG(INFO) << "Intercept fdopen for file descriptor: " << fd
               << " and mode: " << mode << " tracked." << std::endl;
     int MAXSIZE = 0xFFF;
@@ -369,7 +369,7 @@ FILE *HERMES_DECL(fdopen)(int fd, const char *mode) {
 
 FILE *HERMES_DECL(freopen)(const char *path, const char *mode, FILE *stream) {
   FILE *ret;
-  if (IsTracked(path)) {
+  if (hermes::adapter::IsTracked(path)) {
     LOG(INFO) << "Intercept freopen for filename: " << path
               << " and mode: " << mode << " tracked." << std::endl;
     ret = reopen_internal(path, mode, stream);
@@ -382,7 +382,7 @@ FILE *HERMES_DECL(freopen)(const char *path, const char *mode, FILE *stream) {
 
 FILE *HERMES_DECL(freopen64)(const char *path, const char *mode, FILE *stream) {
   FILE *ret;
-  if (IsTracked(path)) {
+  if (hermes::adapter::IsTracked(path)) {
     LOG(INFO) << "Intercept freopen64 for filename: " << path
               << " and mode: " << mode << " tracked." << std::endl;
     ret = reopen_internal(path, mode, stream);
@@ -395,7 +395,7 @@ FILE *HERMES_DECL(freopen64)(const char *path, const char *mode, FILE *stream) {
 
 int HERMES_DECL(fflush)(FILE *fp) {
   int ret;
-  if (fp && IsTracked(fp)) {
+  if (fp && hermes::adapter::IsTracked(fp)) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(fp);
     if (existing.second) {
@@ -433,7 +433,7 @@ int HERMES_DECL(fflush)(FILE *fp) {
 
 int HERMES_DECL(fclose)(FILE *fp) {
   int ret;
-  if (IsTracked(fp)) {
+  if (hermes::adapter::IsTracked(fp)) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(fp);
     if (existing.second) {
@@ -485,7 +485,7 @@ int HERMES_DECL(fclose)(FILE *fp) {
 size_t HERMES_DECL(fwrite)(const void *ptr, size_t size, size_t nmemb,
                            FILE *fp) {
   size_t ret;
-  if (IsTracked(fp)) {
+  if (hermes::adapter::IsTracked(fp)) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(fp);
     if (existing.second) {
@@ -504,7 +504,7 @@ size_t HERMES_DECL(fwrite)(const void *ptr, size_t size, size_t nmemb,
 
 int HERMES_DECL(fputc)(int c, FILE *fp) {
   int ret;
-  if (IsTracked(fp)) {
+  if (hermes::adapter::IsTracked(fp)) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(fp);
     if (existing.second) {
@@ -524,7 +524,7 @@ int HERMES_DECL(fputc)(int c, FILE *fp) {
 
 int HERMES_DECL(fgetpos)(FILE *fp, fpos_t *pos) {
   int ret;
-  if (IsTracked(fp) && pos) {
+  if (hermes::adapter::IsTracked(fp) && pos) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(fp);
     if (existing.second) {
@@ -544,7 +544,7 @@ int HERMES_DECL(fgetpos)(FILE *fp, fpos_t *pos) {
 
 int HERMES_DECL(putc)(int c, FILE *fp) {
   int ret;
-  if (IsTracked(fp)) {
+  if (hermes::adapter::IsTracked(fp)) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(fp);
     if (existing.second) {
@@ -564,7 +564,7 @@ int HERMES_DECL(putc)(int c, FILE *fp) {
 
 int HERMES_DECL(putw)(int w, FILE *fp) {
   int ret;
-  if (IsTracked(fp)) {
+  if (hermes::adapter::IsTracked(fp)) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(fp);
     if (existing.second) {
@@ -583,7 +583,7 @@ int HERMES_DECL(putw)(int w, FILE *fp) {
 
 int HERMES_DECL(fputs)(const char *s, FILE *stream) {
   int ret;
-  if (IsTracked(stream)) {
+  if (hermes::adapter::IsTracked(stream)) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(stream);
     if (existing.second) {
@@ -602,7 +602,7 @@ int HERMES_DECL(fputs)(const char *s, FILE *stream) {
 
 size_t HERMES_DECL(fread)(void *ptr, size_t size, size_t nmemb, FILE *stream) {
   size_t ret;
-  if (IsTracked(stream)) {
+  if (hermes::adapter::IsTracked(stream)) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(stream);
     if (existing.second) {
@@ -621,7 +621,7 @@ size_t HERMES_DECL(fread)(void *ptr, size_t size, size_t nmemb, FILE *stream) {
 
 int HERMES_DECL(fgetc)(FILE *stream) {
   int ret = -1;
-  if (IsTracked(stream)) {
+  if (hermes::adapter::IsTracked(stream)) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(stream);
     if (existing.second) {
@@ -644,7 +644,7 @@ int HERMES_DECL(fgetc)(FILE *stream) {
 
 int HERMES_DECL(getc)(FILE *stream) {
   int ret = -1;
-  if (IsTracked(stream)) {
+  if (hermes::adapter::IsTracked(stream)) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(stream);
     if (existing.second) {
@@ -668,7 +668,7 @@ int HERMES_DECL(getc)(FILE *stream) {
 /* NOTE: stdio.h typically implements getc() as a macro pointing to _IO_getc */
 int HERMES_DECL(_IO_getc)(FILE *stream) {
   int ret;
-  if (IsTracked(stream)) {
+  if (hermes::adapter::IsTracked(stream)) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(stream);
     if (existing.second) {
@@ -692,7 +692,7 @@ int HERMES_DECL(_IO_getc)(FILE *stream) {
 /* NOTE: stdio.h typically implements putc() as a macro pointing to _IO_putc */
 int HERMES_DECL(_IO_putc)(int c, FILE *stream) {
   int ret;
-  if (IsTracked(stream)) {
+  if (hermes::adapter::IsTracked(stream)) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(stream);
     if (existing.second) {
@@ -711,7 +711,7 @@ int HERMES_DECL(_IO_putc)(int c, FILE *stream) {
 
 int HERMES_DECL(getw)(FILE *stream) {
   int ret;
-  if (IsTracked(stream)) {
+  if (hermes::adapter::IsTracked(stream)) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(stream);
     if (existing.second) {
@@ -732,7 +732,7 @@ int HERMES_DECL(getw)(FILE *stream) {
 
 char *HERMES_DECL(fgets)(char *s, int size, FILE *stream) {
   char *ret;
-  if (IsTracked(stream)) {
+  if (hermes::adapter::IsTracked(stream)) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(stream);
     if (existing.second) {
@@ -751,7 +751,7 @@ char *HERMES_DECL(fgets)(char *s, int size, FILE *stream) {
 }
 
 void HERMES_DECL(rewind)(FILE *stream) {
-  if (IsTracked(stream)) {
+  if (hermes::adapter::IsTracked(stream)) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(stream);
     if (existing.second) {
@@ -777,7 +777,7 @@ void HERMES_DECL(rewind)(FILE *stream) {
 
 int HERMES_DECL(fseek)(FILE *stream, long offset, int whence) {
   int ret;
-  if (IsTracked(stream)) {
+  if (hermes::adapter::IsTracked(stream)) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(stream);
     if (existing.second) {
@@ -822,7 +822,7 @@ int HERMES_DECL(fseek)(FILE *stream, long offset, int whence) {
 
 int HERMES_DECL(fseeko)(FILE *stream, off_t offset, int whence) {
   int ret;
-  if (IsTracked(stream)) {
+  if (hermes::adapter::IsTracked(stream)) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(stream);
     if (existing.second) {
@@ -867,7 +867,7 @@ int HERMES_DECL(fseeko)(FILE *stream, off_t offset, int whence) {
 
 int HERMES_DECL(fseeko64)(FILE *stream, off64_t offset, int whence) {
   int ret;
-  if (IsTracked(stream)) {
+  if (hermes::adapter::IsTracked(stream)) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(stream);
     if (existing.second) {
@@ -912,7 +912,7 @@ int HERMES_DECL(fseeko64)(FILE *stream, off64_t offset, int whence) {
 
 int HERMES_DECL(fsetpos)(FILE *stream, const fpos_t *pos) {
   int ret;
-  if (IsTracked(stream)) {
+  if (hermes::adapter::IsTracked(stream)) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(stream);
     if (existing.second) {
@@ -941,7 +941,7 @@ int HERMES_DECL(fsetpos)(FILE *stream, const fpos_t *pos) {
 
 int HERMES_DECL(fsetpos64)(FILE *stream, const fpos64_t *pos) {
   int ret;
-  if (IsTracked(stream)) {
+  if (hermes::adapter::IsTracked(stream)) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(stream);
     if (existing.second) {
@@ -970,7 +970,7 @@ int HERMES_DECL(fsetpos64)(FILE *stream, const fpos64_t *pos) {
 
 long int HERMES_DECL(ftell)(FILE *fp) {
   long int ret;
-  if (IsTracked(fp)) {
+  if (hermes::adapter::IsTracked(fp)) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(fp);
     if (existing.second) {

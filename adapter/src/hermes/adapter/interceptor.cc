@@ -13,7 +13,6 @@ namespace hermes::adapter {
  * is exit by program called.
  */
 bool exit = false;
-}  // namespace hermes::adapter
 
 void PopulateBufferingPath() {
   char* hermes_config = getenv(kHermesConf);
@@ -90,6 +89,7 @@ bool IsTracked(FILE* fh) {
   }
   return false;
 }
-void OnExit(void) {
-  hermes::adapter::exit = true;
-}
+
+void OnExit(void) { hermes::adapter::exit = true; }
+
+}  // namespace hermes::adapter

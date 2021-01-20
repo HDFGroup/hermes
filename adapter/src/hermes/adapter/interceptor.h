@@ -76,7 +76,6 @@ struct InterceptorList {
         hermes_paths_exclusion(),
         hermes_flush_exclusion() {}
 };
-}  // namespace hermes::adapter
 
 /**
  * This method is bind in the runtime of the application. It is called during
@@ -86,6 +85,8 @@ struct InterceptorList {
  * deallocated structures within adapter.
  */
 void OnExit(void);
+
+}  // namespace hermes::adapter
 
 /**
  * HERMES_PRELOAD variable defines if adapter layer should intercept.
@@ -113,6 +114,7 @@ void OnExit(void);
     }                                                                 \
   }
 
+namespace hermes::adapter {
 /**
  * Loads the buffering paths for Hermes Adapter to exclude. It inserts the
  * buffering mount points in the InclusionsList.hermes_paths_exclusion.
@@ -139,7 +141,7 @@ bool IsTracked(const std::string& path);
  *         false, if file should not be intercepted.
  */
 bool IsTracked(FILE* fh);
-
+}  // namespace hermes::adapter
 #else
 /**
  * Do not intercept if HERMES_PRELOAD is not defined.
