@@ -6,7 +6,7 @@ function(gcc_hermes exec tag_name tags)
             PROPERTY ENVIRONMENT LSAN_OPTIONS=suppressions=${CMAKE_SOURCE_DIR}/test/data/asan.supp)
 endfunction()
 #------------------------------------------------------------------------------
-# Posix Adapter Internal tests
+# STDIO Adapter Internal tests
 #------------------------------------------------------------------------------
 add_executable(stdio_adapter_mapper_test stdio_adapter_mapper_test.cpp ${ADAPTER_COMMON})
 target_link_libraries(stdio_adapter_mapper_test
@@ -14,7 +14,7 @@ target_link_libraries(stdio_adapter_mapper_test
 add_dependencies(stdio_adapter_mapper_test hermes_stdio)
 
 #------------------------------------------------------------------------------
-# Posix Adapter End to End tests
+# STDIO Adapter End to End tests
 #------------------------------------------------------------------------------
 add_executable(stdio_adapter_test stdio_adapter_test.cpp ${ADAPTER_COMMON})
 target_link_libraries(stdio_adapter_test Catch2::Catch2 -lstdc++fs -lc MPI::MPI_CXX)
