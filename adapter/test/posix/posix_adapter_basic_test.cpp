@@ -1325,8 +1325,7 @@ TEST_CASE("BatchedMixedSequential",
     REQUIRE(status == 0);
   }
   SECTION("read all after write all on new file in different open") {
-    int fd =
-        open(info.new_file.c_str(), O_RDWR | O_CREAT, S_IRWXU | S_IRWXG, 0600);
+    int fd = open(info.new_file.c_str(), O_RDWR | O_CREAT, S_IRWXU | S_IRWXG);
     REQUIRE(fd != -1);
     for (size_t i = 0; i < info.num_iterations; ++i) {
       size_t size_written =
