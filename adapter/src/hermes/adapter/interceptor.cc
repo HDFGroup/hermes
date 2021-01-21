@@ -54,12 +54,12 @@ bool IsTracked(const std::string& path) {
     }
   }
   if (list.user_path_exclusions.empty()) {
-    for (const auto& pth : list.path_inclusions) {
+    for (const auto& pth : kPathInclusions) {
       if (path.find(pth) == 0) {
         return true;
       }
     }
-    for (const auto& pth : list.path_exclusions) {
+    for (const auto& pth : kPathExclusions) {
       if (path.find(pth) == 0) {
         return false;
       }

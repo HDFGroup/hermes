@@ -26,21 +26,24 @@
 
 namespace hermes::adapter {
 /**
+ * Paths prefixed with the following directories are not tracked in Hermes
+ * Exclusion list used by darshan at
+ * darshan/darshan-runtime/lib/darshan-core.c
+ */
+const std::vector<std::string> kPathExclusions = {
+    "/bin/",  "/boot/", "/dev/", "/etc/", "/lib/", "/opt/",
+    "/proc/", "/sbin/", "/sys/", "/usr/", "/var/",
+};
+/**
+ * Paths prefixed with the following directories are tracked by Hermes even if
+ * they share a root with a path listed in path_exclusions
+ */
+const std::vector<std::string> kPathInclusions = {"/var/opt/cray/dws/mounts/"};
+/**
  * Interceptor list defines files and directory that should be either excluded
  * or included for interceptions.
  */
 struct InterceptorList {
-  /**
-   * Paths prefixed with the following directories are not tracked in Hermes
-   * Exclusion list used by darshan at
-   * darshan/darshan-runtime/lib/darshan-core.c
-   */
-  std::vector<std::string> path_exclusions;
-  /**
-   * Paths prefixed with the following directories are tracked by Hermes even if
-   * they share a root with a path listed in path_exclusions
-   */
-  std::vector<std::string> path_inclusions;
   /**
    * Allow users to override the path exclusions
    */
@@ -58,21 +61,7 @@ struct InterceptorList {
    * Default constructor
    */
   InterceptorList()
-      : path_exclusions({
-            "/bin/",
-            "/boot/",
-            "/dev/",
-            "/etc/",
-            "/lib/",
-            "/opt/",
-            "/proc/",
-            "/sbin/",
-            "/sys/",
-            "/usr/",
-            "/var/",
-        }),
-        path_inclusions({"/var/opt/cray/dws/mounts/"}),
-        user_path_exclusions(),
+      : user_path_exclusions(),
         hermes_paths_exclusion(),
         hermes_flush_exclusion() {}
 };
