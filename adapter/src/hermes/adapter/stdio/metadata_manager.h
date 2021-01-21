@@ -35,7 +35,7 @@ class MetadataManager {
   /**
    * references of how many times hermes was tried to initialize.
    */
-  size_t ref;
+  std::atomic<size_t> ref;
 
  public:
   /**
