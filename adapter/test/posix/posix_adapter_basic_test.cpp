@@ -194,22 +194,22 @@ TEST_CASE("Open", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(status == 0);
   }
   SECTION("Temporary file") {
-    int fd = open("/tmp", O_WRONLY | O_TMPFILE);
+    int fd = open("/tmp", O_WRONLY | O_TMPFILE, 0600);
     REQUIRE(fd != -1);
     int status = close(fd);
     REQUIRE(status == 0);
-    fd = open(info.new_file.c_str(), O_RDONLY | O_TMPFILE);
+    fd = open(info.new_file.c_str(), O_RDONLY | O_TMPFILE, 0600);
     REQUIRE(fd == -1);
-    fd = open(info.new_file.c_str(), O_RDWR | O_TMPFILE);
+    fd = open(info.new_file.c_str(), O_RDWR | O_TMPFILE, 0600);
     REQUIRE(fd == -1);
-    fd = open(info.new_file.c_str(), O_APPEND | O_TMPFILE);
+    fd = open(info.new_file.c_str(), O_APPEND | O_TMPFILE, 0600);
     REQUIRE(fd == -1);
 
-    fd = open(info.existing_file.c_str(), O_WRONLY | O_TMPFILE);
+    fd = open(info.existing_file.c_str(), O_WRONLY | O_TMPFILE, 0600);
     REQUIRE(fd == -1);
-    fd = open(info.existing_file.c_str(), O_RDONLY | O_TMPFILE);
+    fd = open(info.existing_file.c_str(), O_RDONLY | O_TMPFILE, 0600);
     REQUIRE(fd == -1);
-    fd = open(info.existing_file.c_str(), O_RDWR | O_TMPFILE);
+    fd = open(info.existing_file.c_str(), O_RDWR | O_TMPFILE, 0600);
     REQUIRE(fd == -1);
   }
   posttest();
