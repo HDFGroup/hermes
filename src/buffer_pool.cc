@@ -1595,7 +1595,8 @@ size_t ReadFromSwap(SharedMemoryContext *context, Blob blob,
 
 Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
                  PlacementSchema &schema, Blob blob, const char *name,
-                 BucketID bucket_id) {
+                 BucketID bucket_id, int retries,
+                 bool called_from_buffer_organizer) {
   Status result = 0;
   HERMES_BEGIN_TIMED_BLOCK("GetBuffers");
   std::vector<BufferID> buffer_ids = GetBuffers(context, schema);
@@ -1609,8 +1610,15 @@ Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
     // NOTE(chogan): Update all metadata associated with this Put
     AttachBlobToBucket(context, rpc, name, bucket_id, buffer_ids);
   } else {
-    // TODO(chogan): @errorhandling
-    result = 1;
+    if (called_from_buffer_organizer) {
+      // TODO(chogan): @errorhandling The BufferOrganizer failed to place a blob
+      // from swap space into the hierarchy.
+      result = 1;
+    } else {
+      SwapBlob swap_blob = PutToSwap(context, rpc, name, bucket_id, blob.data,
+                                     blob.size);
+      TriggerBufferOrganizer(rpc, kPlaceInHierarchy, name, swap_blob, retries);
+    }
   }
 
   return result;

@@ -23,7 +23,7 @@ int PlaceInHierarchy(SharedMemoryContext *context, RpcContext *rpc,
     }
 
     ret = PlaceBlob(context, rpc, schemas[0], blob, name.c_str(),
-                    swap_blob.bucket_id);
+                    swap_blob.bucket_id, 0, true);
   } else {
     // TODO(chogan): @errorhandling
     result = 1;

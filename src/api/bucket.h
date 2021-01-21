@@ -72,7 +72,7 @@ class Bucket {
   template<typename T>
   Status PlaceBlobs(std::vector<PlacementSchema> &schemas,
                     const std::vector<std::vector<T>> &blobs,
-                    const std::vector<std::string> &names);
+                    const std::vector<std::string> &names, int retries);
 
   /**
    *
@@ -144,7 +144,7 @@ Status Bucket::Put(const std::string &name, const std::vector<T> &data,
 template<typename T>
 Status Bucket::PlaceBlobs(std::vector<PlacementSchema> &schemas,
                           const std::vector<std::vector<T>> &blobs,
-                          const std::vector<std::string> &names) {
+                          const std::vector<std::string> &names, int retries) {
   Status result = 0;
 
   for (size_t i = 0; i < schemas.size(); ++i) {
@@ -154,9 +154,8 @@ Status Bucket::PlaceBlobs(std::vector<PlacementSchema> &schemas,
     blob.size = blobs[i].size() * sizeof(T);
     LOG(INFO) << "Attaching blob '" << names[i] << "' to Bucket '" << name_
               << "'" << std::endl;
-    // TODO(chogan): @errorhandling What about partial failure?
     result = PlaceBlob(&hermes_->context_, &hermes_->rpc_, schema, blob,
-                       names[i].c_str(), id_);
+                       names[i].c_str(), id_, retries);
   }
 
   return result;
@@ -188,18 +187,10 @@ Status Bucket::Put(std::vector<std::string> &names,
     HERMES_END_TIMED_BLOCK();
 
     if (ret == 0) {
-      ret = PlaceBlobs(schemas, blobs, names);
+      ret = PlaceBlobs(schemas, blobs, names, ctx.buffer_organizer_retries);
     } else {
-      std::vector<SwapBlob> swapped_blobs =
-        PutToSwap(&hermes_->context_, &hermes_->rpc_, id_, blobs, names);
-
-      for (size_t i = 0; i < swapped_blobs.size(); ++i) {
-        TriggerBufferOrganizer(&hermes_->rpc_, kPlaceInHierarchy, names[i],
-                               swapped_blobs[i], ctx.buffer_organizer_retries);
-      }
-      ret = 0;
-      // TODO(chogan): @errorhandling Signify in Status that the Blobs went to
-      // swap space
+      // TODO(chogan): @errorhandling No space left or contraints unsatisfiable.
+      ret = 1;
     }
   } else {
     // TODO(chogan): @errorhandling
