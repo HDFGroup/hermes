@@ -39,8 +39,13 @@ std::pair<AdapterStat, bool> MetadataManager::Find(FILE *fh) {
 FileID MetadataManager::Convert(FILE *fh) {
   struct stat st;
   int fd = fileno(fh);
-  fstat(fd, &st);
-  return FileID(st.st_dev, st.st_ino);
+  int status = fstat(fd, &st);
+  if (status == 0) {
+    return FileID(st.st_dev, st.st_ino);
+  } else {
+    // TODO(hari) @error_handling fstat failed invalid fh.
+    return FileID();
+  }
 }
 
 bool MetadataManager::Delete(FILE *fh) {

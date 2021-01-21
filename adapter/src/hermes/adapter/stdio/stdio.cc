@@ -27,26 +27,31 @@ FILE *simple_open(FILE *ret, const std::string &path_str, const char *mode) {
       LOG(INFO) << "File not opened before by adapter" << std::endl;
       struct stat st;
       int fd = fileno(ret);
-      fstat(fd, &st);
-      AdapterStat stat(st);
-      stat.ref_count = 1;
-      struct timespec ts;
-      timespec_get(&ts, TIME_UTC);
-      stat.st_atim = ts;
-      stat.st_mtim = ts;
-      stat.st_ctim = ts;
-      if (strcmp(mode, "a") == 0 || strcmp(mode, "a+") == 0) {
-        /* FIXME: get current size of bucket from Hermes*/
-        stat.st_ptr = stat.st_size;
+      int status = fstat(fd, &st);
+      if (status == 0) {
+        AdapterStat stat(st);
+        stat.ref_count = 1;
+        struct timespec ts;
+        timespec_get(&ts, TIME_UTC);
+        stat.st_atim = ts;
+        stat.st_mtim = ts;
+        stat.st_ctim = ts;
+        if (strcmp(mode, "a") == 0 || strcmp(mode, "a+") == 0) {
+          /* FIXME: get current size of bucket from Hermes*/
+          stat.st_ptr = stat.st_size;
+        }
+        /* FIXME(hari) check if this initialization is correct. */
+        mdm->InitializeHermes();
+        hapi::Context ctx;
+        /* TODO(hari) how to pass to hermes to make a private bucket
+         * also add how to handle existing buckets of same name */
+        stat.st_bkid =
+            std::make_shared<hapi::Bucket>(path_str, mdm->GetHermes(), ctx);
+        mdm->Create(ret, stat);
+      } else {
+        // TODO(hari): @error_handling invalid fh.
+        ret = nullptr;
       }
-      /* FIXME(hari) check if this initialization is correct. */
-      mdm->InitializeHermes();
-      hapi::Context ctx;
-      /* TODO(hari) how to pass to hermes to make a private bucket
-       * also add how to handle existing buckets of same name */
-      stat.st_bkid =
-          std::make_shared<hapi::Bucket>(path_str, mdm->GetHermes(), ctx);
-      mdm->Create(ret, stat);
     } else {
       LOG(INFO) << "File opened before by adapter" << std::endl;
       existing.first.ref_count++;
