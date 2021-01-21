@@ -40,7 +40,7 @@ TEST_CASE("Open", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(status == 0);
   }
 
-  SECTION("append write new file") {
+  SECTION("append write existing file") {
     int fd = open(info.existing_file.c_str(), O_APPEND);
     REQUIRE(fd != -1);
     int status = close(fd);
@@ -1384,7 +1384,7 @@ TEST_CASE("SingleMixed", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(size_write == args.request_size);
     int status = close(fd);
     REQUIRE(status == 0);
-    int fd2 = open(info.existing_file.c_str(), O_RDWR);
+    int fd2 = open(info.new_file.c_str(), O_RDWR);
     size_t size_read = read(fd2, info.read_data.data(), args.request_size);
     REQUIRE(size_read == args.request_size);
     status = close(fd2);

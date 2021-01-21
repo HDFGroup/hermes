@@ -34,14 +34,14 @@ TEST_CASE("Open", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(status == 0);
   }
 
-  SECTION("append write new file") {
+  SECTION("append write existing file") {
     FILE* fd = fopen(info.existing_file.c_str(), "a");
     REQUIRE(fd != nullptr);
     int status = fclose(fd);
     REQUIRE(status == 0);
   }
 
-  SECTION("append write and read new file") {
+  SECTION("append write and read existing file") {
     FILE* fd = fopen(info.existing_file.c_str(), "a+");
     REQUIRE(fd != nullptr);
     int status = fclose(fd);
@@ -1282,7 +1282,7 @@ TEST_CASE("SingleMixed", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(size_write == args.request_size);
     int status = fclose(fd);
     REQUIRE(status == 0);
-    FILE* fd2 = fopen(info.existing_file.c_str(), "r+");
+    FILE* fd2 = fopen(info.new_file.c_str(), "r+");
     size_t size_read =
         fread(info.read_data.data(), sizeof(char), args.request_size, fd2);
     REQUIRE(size_read == args.request_size);
