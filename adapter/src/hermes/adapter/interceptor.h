@@ -30,15 +30,14 @@ namespace hermes::adapter {
  * Exclusion list used by darshan at
  * darshan/darshan-runtime/lib/darshan-core.c
  */
-const std::vector<std::string> kPathExclusions = {
-    "/bin/",  "/boot/", "/dev/", "/etc/", "/lib/", "/opt/",
-    "/proc/", "/sbin/", "/sys/", "/usr/", "/var/",
-};
+const char* kPathExclusions[] = {"/bin/", "/boot/", "/dev/",  "/etc/",
+                                 "/lib/", "/opt/",  "/proc/", "/sbin/",
+                                 "/sys/", "/usr/",  "/var/",  "/run/"};
 /**
  * Paths prefixed with the following directories are tracked by Hermes even if
  * they share a root with a path listed in path_exclusions
  */
-const std::vector<std::string> kPathInclusions = {"/var/opt/cray/dws/mounts/"};
+const char* kPathInclusions[] = {"/var/opt/cray/dws/mounts/"};
 /**
  * Interceptor list defines files and directory that should be either excluded
  * or included for interceptions.
