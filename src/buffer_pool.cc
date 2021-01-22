@@ -372,8 +372,8 @@ void SetFirstFreeBufferId(SharedMemoryContext *context, DeviceID device_id,
   }
 }
 
-static std::atomic<u32> *GetAvailableBuffersArray(SharedMemoryContext *context,
-                                                  DeviceID device_id) {
+std::atomic<u32> *GetAvailableBuffersArray(SharedMemoryContext *context,
+                                           DeviceID device_id) {
   BufferPool *pool = GetBufferPoolFromContext(context);
   std::atomic<u32> *result =
     (std::atomic<u32> *)(context->shm_base +
@@ -1594,10 +1594,18 @@ size_t ReadFromSwap(SharedMemoryContext *context, Blob blob,
 }
 
 Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
-                 PlacementSchema &schema, Blob blob, const char *name,
+                 PlacementSchema &schema, Blob blob, const std::string &name,
                  BucketID bucket_id, int retries,
                  bool called_from_buffer_organizer) {
   Status result = 0;
+
+  if (ContainsBlob(context, rpc, bucket_id, name)) {
+    // TODO(chogan) @optimization If the existing buffers are already large
+    // enough to hold the new Blob, then we don't need to release them.
+    // Additionally, no metadata operations would be required.
+    DestroyBlobByName(context, rpc, bucket_id, name);
+  }
+
   HERMES_BEGIN_TIMED_BLOCK("GetBuffers");
   std::vector<BufferID> buffer_ids = GetBuffers(context, schema);
   HERMES_END_TIMED_BLOCK();
@@ -1608,7 +1616,7 @@ Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
     HERMES_END_TIMED_BLOCK();
 
     // NOTE(chogan): Update all metadata associated with this Put
-    AttachBlobToBucket(context, rpc, name, bucket_id, buffer_ids);
+    AttachBlobToBucket(context, rpc, name.c_str(), bucket_id, buffer_ids);
   } else {
     if (called_from_buffer_organizer) {
       // TODO(chogan): @errorhandling The BufferOrganizer failed to place a blob

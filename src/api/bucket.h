@@ -155,7 +155,7 @@ Status Bucket::PlaceBlobs(std::vector<PlacementSchema> &schemas,
     LOG(INFO) << "Attaching blob '" << names[i] << "' to Bucket '" << name_
               << "'" << std::endl;
     result = PlaceBlob(&hermes_->context_, &hermes_->rpc_, schema, blob,
-                       names[i].c_str(), id_, retries);
+                       names[i], id_, retries);
   }
 
   return result;

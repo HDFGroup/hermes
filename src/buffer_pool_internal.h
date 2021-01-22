@@ -201,6 +201,11 @@ Target *GetTarget(SharedMemoryContext *context, int index);
  */
 Target *GetTargetFromId(SharedMemoryContext *context, TargetID id);
 
+/**
+ *
+ */
+std::atomic<u32> *GetAvailableBuffersArray(SharedMemoryContext *context,
+                                           DeviceID device_id);
 }  // namespace hermes
 
 #endif  // HERMES_BUFFER_POOL_INTERNAL_H_

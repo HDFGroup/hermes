@@ -123,6 +123,28 @@ void TestBucketPersist(std::shared_ptr<hapi::Hermes> hermes) {
   Assert(std::remove(saved_file.c_str()) == 0);
 }
 
+void TestPutOverwrite(std::shared_ptr<hapi::Hermes> hermes) {
+  hapi::Context ctx;
+  hapi::Bucket bucket("overwrite", hermes, ctx);
+
+  std::string blob_name("1");
+  size_t blob_size = KILOBYTES(6);
+  hapi::Blob blob(blob_size, 'x');
+  hapi::Status status = bucket.Put(blob_name, blob, ctx);
+  Assert(status == 0);
+
+  hermes::testing::GetAndVerifyBlob(bucket, blob_name, blob);
+
+  // NOTE(chogan): Overwrite the data
+  size_t new_size = KILOBYTES(9);
+  hapi::Blob new_blob(new_size, 'z');
+  status = bucket.Put(blob_name, new_blob, ctx);
+
+  hermes::testing::GetAndVerifyBlob(bucket, blob_name, new_blob);
+
+  bucket.Destroy(ctx);
+}
+
 int main(int argc, char **argv) {
   int mpi_threads_provided;
   MPI_Init_thread(NULL, NULL, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
@@ -176,6 +198,7 @@ int main(int argc, char **argv) {
     my_vb.Attach(&trait, ctx);  // compress action to data starts
 
     TestBucketPersist(hermes_app);
+    TestPutOverwrite(hermes_app);
 
     ///////
     my_vb.Unlink("Blob1", "VB1", ctx);

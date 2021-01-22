@@ -562,12 +562,14 @@ bool ContainsBlob(SharedMemoryContext *context, RpcContext *rpc,
   BlobID blob_id = GetBlobIdByName(context, rpc, blob_name.c_str());
   bool result = false;
 
-  u32 target_node = bucket_id.bits.node_id;
-  if (target_node == rpc->node_id) {
-    result = LocalContainsBlob(context, bucket_id, blob_id);
-  } else {
-    result = RpcCall<bool>(rpc, target_node, "RemoteContainsBlob", bucket_id,
-                           blob_name);
+  if (!IsNullBlobId(blob_id)) {
+    u32 target_node = bucket_id.bits.node_id;
+    if (target_node == rpc->node_id) {
+      result = LocalContainsBlob(context, bucket_id, blob_id);
+    } else {
+      result = RpcCall<bool>(rpc, target_node, "RemoteContainsBlob", bucket_id,
+                             blob_name);
+    }
   }
 
   return result;
