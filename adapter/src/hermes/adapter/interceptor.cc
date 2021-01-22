@@ -6,7 +6,7 @@
 /**
  * Define Interceptor list for adapter.
  */
-#define LIST \
+#define INTERCEPTOR_LIST \
   hermes::adapter::Singleton<hermes::adapter::InterceptorList>::GetInstance()
 
 namespace hermes::adapter {
@@ -21,7 +21,7 @@ void PopulateBufferingPath() {
   const size_t kConfigMemorySize = KILOBYTES(16);
   hermes::u8 config_memory[kConfigMemorySize];
   if (hermes_config && strlen(hermes_config) > 0) {
-    LIST->hermes_paths_exclusion.push_back(hermes_config);
+    INTERCEPTOR_LIST->hermes_paths_exclusion.push_back(hermes_config);
     hermes::Arena config_arena = {};
     hermes::InitArena(&config_arena, kConfigMemorySize, config_memory);
     hermes::ParseConfig(&config_arena, hermes_config, &config);
@@ -31,30 +31,31 @@ void PopulateBufferingPath() {
 
   for (const auto& item : config.mount_points) {
     if (!item.empty()) {
-      LIST->hermes_paths_exclusion.push_back(item);
+      INTERCEPTOR_LIST->hermes_paths_exclusion.push_back(item);
     }
   }
-  LIST->hermes_paths_exclusion.push_back(config.buffer_pool_shmem_name);
-  LIST->hermes_paths_exclusion.push_back(kHermesExtension);
+  INTERCEPTOR_LIST->hermes_paths_exclusion.push_back(
+      config.buffer_pool_shmem_name);
+  INTERCEPTOR_LIST->hermes_paths_exclusion.push_back(kHermesExtension);
 }
 bool IsTracked(const std::string& path) {
   if (hermes::adapter::exit) return false;
   atexit(OnExit);
-  if (LIST->hermes_paths_exclusion.empty()) {
+  if (INTERCEPTOR_LIST->hermes_paths_exclusion.empty()) {
     PopulateBufferingPath();
   }
-  for (const auto& pth : LIST->hermes_flush_exclusion) {
+  for (const auto& pth : INTERCEPTOR_LIST->hermes_flush_exclusion) {
     if (path.find(pth) != std::string::npos) {
       return false;
     }
   }
-  for (const auto& pth : LIST->hermes_paths_exclusion) {
+  for (const auto& pth : INTERCEPTOR_LIST->hermes_paths_exclusion) {
     if (path.find(pth) != std::string::npos ||
         pth.find(path) != std::string::npos) {
       return false;
     }
   }
-  if (LIST->user_path_exclusions.empty()) {
+  if (INTERCEPTOR_LIST->user_path_exclusions.empty()) {
     for (const auto& pth : kPathInclusions) {
       if (path.find(pth) == 0) {
         return true;
@@ -66,7 +67,7 @@ bool IsTracked(const std::string& path) {
       }
     }
   } else {
-    for (const auto& pth : LIST->user_path_exclusions) {
+    for (const auto& pth : INTERCEPTOR_LIST->user_path_exclusions) {
       if (path.find(pth) == 0) {
         return false;
       }

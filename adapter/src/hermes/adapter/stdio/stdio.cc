@@ -170,7 +170,7 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
           size_t size_to_read = item.second.offset_ + 1 - exiting_blob_size;
           LOG(INFO) << "Blob has a gap in update read gap from original file."
                     << std::endl;
-          LIST->hermes_flush_exclusion.insert(filename);
+          INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
           FILE *fh = fopen(filename.c_str(), "r");
           if (fh != nullptr) {
             if (fseek(fh, item.first.offset_ + 1, SEEK_SET) == 0) {
@@ -189,7 +189,7 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
           } else {
             // TODO(hari) @errorhandling FILE cannot be opened
           }
-          LIST->hermes_flush_exclusion.erase(filename);
+          INTERCEPTOR_LIST->hermes_flush_exclusion.erase(filename);
         }
         memcpy(final_data.data() + item.second.offset_, put_data.data(),
                put_data.size());
@@ -221,7 +221,7 @@ size_t perform_file_read(const char *filename, size_t file_offset, void *ptr,
   LOG(INFO) << "Read called for filename from destination: " << filename
             << " on offset: " << file_offset << " and size: " << size
             << std::endl;
-  LIST->hermes_flush_exclusion.insert(filename);
+  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
   FILE *fh = fopen(filename, "r");
   size_t read_size = 0;
   if (fh != nullptr) {
@@ -231,7 +231,7 @@ size_t perform_file_read(const char *filename, size_t file_offset, void *ptr,
     }
     status = fclose(fh);
   }
-  LIST->hermes_flush_exclusion.erase(filename);
+  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(filename);
   return read_size;
 }
 
@@ -408,7 +408,7 @@ int HERMES_DECL(fflush)(FILE *fp) {
       auto filename = existing.first.st_bkid->GetName();
       const auto &blob_names = existing.first.st_blobs;
       if (!blob_names.empty()) {
-        LIST->hermes_flush_exclusion.insert(filename);
+        INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
         LOG(INFO) << "File handler is opened by adapter." << std::endl;
         hapi::Context ctx;
         LOG(INFO) << "Adapter flushes " << blob_names.size()
@@ -425,7 +425,7 @@ int HERMES_DECL(fflush)(FILE *fp) {
         file_vbucket.Attach(&trait, ctx);
         file_vbucket.Delete(ctx);
         existing.first.st_blobs.clear();
-        LIST->hermes_flush_exclusion.erase(filename);
+        INTERCEPTOR_LIST->hermes_flush_exclusion.erase(filename);
       }
       ret = 0;
     }
@@ -452,7 +452,7 @@ int HERMES_DECL(fclose)(FILE *fp) {
           auto filename = existing.first.st_bkid->GetName();
           LOG(INFO) << "Adapter flushes " << blob_names.size()
                     << " blobs to filename:" << filename << "." << std::endl;
-          LIST->hermes_flush_exclusion.insert(filename);
+          INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
           hermes::api::VBucket file_vbucket(filename, mdm->GetHermes(), true,
                                             ctx);
           auto offset_map = std::unordered_map<std::string, hermes::u64>();
@@ -465,7 +465,7 @@ int HERMES_DECL(fclose)(FILE *fp) {
           file_vbucket.Attach(&trait, ctx);
           file_vbucket.Delete(ctx);
           existing.first.st_blobs.clear();
-          LIST->hermes_flush_exclusion.erase(filename);
+          INTERCEPTOR_LIST->hermes_flush_exclusion.erase(filename);
         }
         existing.first.st_bkid->Close(ctx);
         mdm->FinalizeHermes();
