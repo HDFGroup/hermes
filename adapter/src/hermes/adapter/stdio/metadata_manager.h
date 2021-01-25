@@ -14,6 +14,7 @@
  */
 #include <hermes/adapter/stdio/common/constants.h>
 #include <hermes/adapter/stdio/common/datastructures.h>
+#include <mpi.h>
 
 namespace hermes::adapter::stdio {
 /**
@@ -36,12 +37,19 @@ class MetadataManager {
    * references of how many times hermes was tried to initialize.
    */
   std::atomic<size_t> ref;
+  /**
+   * MPI attributes
+   */
+  bool is_mpi;
+  int rank;
+  int comm_size;
 
  public:
   /**
    * Constructor
    */
-  MetadataManager() : metadata(), ref(0) {}
+  MetadataManager()
+      : metadata(), ref(0), is_mpi(false), rank(0), comm_size(1) {}
   /**
    * Get the instance of hermes.
    */
@@ -55,8 +63,15 @@ class MetadataManager {
    */
   void InitializeHermes(bool is_mpi = false) {
     if (ref == 0) {
+      this->is_mpi = is_mpi;
       char* hermes_config = getenv(kHermesConf);
-      hermes = hapi::InitHermes(hermes_config, !is_mpi);
+      if (this->is_mpi) {
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+        MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
+        hermes = hermes::InitHermesClient(hermes_config);
+      } else {
+        hermes = hermes::InitHermesDaemon(hermes_config);
+      }
     }
     ref++;
   }
@@ -66,7 +81,14 @@ class MetadataManager {
    */
   void FinalizeHermes() {
     if (ref == 1) {
-      hermes->Finalize(true);
+      if (this->is_mpi) {
+        if (this->rank == 0) {
+          hermes->RemoteFinalize();
+        }
+        hermes->Finalize();
+      } else {
+        hermes->Finalize(true);
+      }
     }
     ref--;
   }

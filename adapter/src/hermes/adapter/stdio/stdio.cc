@@ -18,21 +18,23 @@ namespace fs = std::experimental::filesystem;
 /**
  * MPI
  */
-int HERMES_DECL(PMPI_Init)(int *argc, char ***argv) {
-  MAP_OR_FAIL(PMPI_Init);
-  int status = real_PMPI_Init_(argc, argv);
+int HERMES_DECL(MPI_Init)(int *argc, char ***argv) {
+  MAP_OR_FAIL(MPI_Init);
+  int status = real_MPI_Init_(argc, argv);
   if (status == 0) {
+    LOG(INFO) << "MPI Init intercepted." << std::endl;
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
-    mdm->InitializeHermes();
+    mdm->InitializeHermes(true);
   }
   return status;
 }
 
-int HERMES_DECL(PMPI_Finalize)(void) {
+int HERMES_DECL(MPI_Finalize)(void) {
+  LOG(INFO) << "MPI Finalize intercepted." << std::endl;
   auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
   mdm->FinalizeHermes();
   MAP_OR_FAIL(MPI_Finalize);
-  int status = real_PMPI_Finalize_();
+  int status = real_MPI_Finalize_();
   return status;
 }
 /**
