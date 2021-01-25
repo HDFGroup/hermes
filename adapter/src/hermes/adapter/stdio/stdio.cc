@@ -24,7 +24,7 @@ int HERMES_DECL(MPI_Init)(int *argc, char ***argv) {
   if (status == 0) {
     LOG(INFO) << "MPI Init intercepted." << std::endl;
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
-    mdm->InitializeHermes(false);
+    mdm->InitializeHermes(true);
   }
   return status;
 }
@@ -227,6 +227,14 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
                  existing_data.size() - off_t + 1);
         }
         existing.first.st_bkid->Put(item.second.blob_name_, final_data, ctx);
+        hapi::Blob temp(0);
+        auto written_blob_size =
+            existing.first.st_bkid->Get(item.second.blob_name_, temp, ctx);
+        if (new_size != written_blob_size) {
+          LOG(INFO) << "Write of blob failed written:" << written_blob_size
+                    << " of " << new_size << " bytes." << std::endl;
+          return 0;
+        }
       }
     }
     data_offset += item.first.size_;

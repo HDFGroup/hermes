@@ -41,11 +41,6 @@ int init() {
   info.read_data = std::string(args.request_size, 'r');
   MPI_Comm_rank(MPI_COMM_WORLD, &info.rank);
   MPI_Comm_size(MPI_COMM_WORLD, &info.comm_size);
-  if (info.rank == 0) {
-    printf("%d ready for attach\n", info.comm_size);
-    getchar();
-  }
-  MPI_Barrier(MPI_COMM_WORLD);
   return 0;
 }
 int finalize() { return 0; }
