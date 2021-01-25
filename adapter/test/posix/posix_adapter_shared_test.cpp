@@ -1,9 +1,7 @@
 TEST_CASE("SharedFile", "[process=" + std::to_string(info.comm_size) +
                             "]"
                             "[operation=batched_write]"
-                            "[request_size=range-small][repetition=" +
-                            std::to_string(info.num_iterations) +
-                            "]"
+                            "[request_size=range-small][repetition=1024]"
                             "[pattern=sequential][file=1]") {
   pretest();
   REQUIRE(info.comm_size == 2);

@@ -3,9 +3,7 @@ TEST_CASE("BatchedWriteRSRangeSmall",
               "]"
               ""
               "[operation=batched_write]"
-              "[request_size=range-small][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=range-small][repetition=1024]"
               "[pattern=sequential][file=1]") {
   pretest();
   SECTION("write to new file always at the start") {
@@ -55,9 +53,7 @@ TEST_CASE("BatchedReadSequentialRSRangeSmall",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_read]"
-              "[request_size=range-small][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=range-small][repetition=1024]"
               "[pattern=sequential][file=1]") {
   pretest();
   SECTION("read from existing file") {
@@ -103,9 +99,7 @@ TEST_CASE("BatchedReadRandomRSRangeSmall",
               "]"
               "[operation=batched_read]"
               "[request_size=range-small]"
-              "[repetition=" +
-              std::to_string(info.num_iterations) +
-              "][pattern=random][file=1]") {
+              "[repetition=1024][pattern=random][file=1]") {
   pretest();
 
   SECTION("read from existing file") {
@@ -132,9 +126,7 @@ TEST_CASE("BatchedUpdateRandomRSRangeSmall",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_write]"
-              "[request_size=range-small][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=range-small][repetition=1024]"
               "[pattern=random][file=1]") {
   pretest();
 
@@ -163,9 +155,7 @@ TEST_CASE("BatchedReadStrideFixedRSRangeSmall",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_read]"
-              "[request_size=range-small][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=range-small][repetition=1024]"
               "[pattern=stride_fixed][file=1]") {
   pretest();
   SECTION("read from existing file") {
@@ -191,9 +181,7 @@ TEST_CASE("BatchedUpdateStrideFixedRSRangeSmall",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_write]"
-              "[request_size=range-small][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=range-small][repetition=1024]"
               "[pattern=stride_fixed][file=1]") {
   pretest();
   SECTION("write to existing file") {
@@ -220,9 +208,7 @@ TEST_CASE("BatchedReadStrideDynamicRSRangeSmall",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_read]"
-              "[request_size=range-small][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=range-small][repetition=1024]"
               "[pattern=stride_dynamic][file=1]") {
   pretest();
   SECTION("read from existing file") {
@@ -249,9 +235,7 @@ TEST_CASE("BatchedUpdateStrideDynamicRSRangeSmall",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_write]"
-              "[request_size=range-small][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=range-small][repetition=1024]"
               "[pattern=stride_dynamic][file=1]") {
   pretest();
   SECTION("read from existing file") {
@@ -279,9 +263,7 @@ TEST_CASE("BatchedReadStrideNegativeRSRangeSmall",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_read]"
-              "[request_size=range-small][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=range-small][repetition=1024]"
               "[pattern=stride_negative][file=1]") {
   pretest();
   SECTION("read from existing file") {
@@ -309,9 +291,7 @@ TEST_CASE("BatchedUpdateStrideNegativeRSRangeSmall",
               "]"
               ""
               "[operation=batched_write]"
-              "[request_size=range-small][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=range-small][repetition=1024]"
               "[pattern=stride_negative][file=1]") {
   pretest();
   SECTION("write to existing file") {
@@ -339,9 +319,7 @@ TEST_CASE("BatchedReadStride2DRSRangeSmall",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_read]"
-              "[request_size=range-small][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=range-small][repetition=1024]"
               "[pattern=stride_2d][file=1]") {
   pretest();
   size_t rows = sqrt(info.total_size);
@@ -379,9 +357,7 @@ TEST_CASE("BatchedUpdateStride2DRSRangeSmall",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_write]"
-              "[request_size=range-small][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=range-small][repetition=1024]"
               "[pattern=stride_2d][file=1]") {
   pretest();
   size_t rows = sqrt(info.total_size);
@@ -423,9 +399,7 @@ TEST_CASE("BatchedWriteRSRangeMedium",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_write]"
-              "[request_size=range-medium][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=range-medium][repetition=1024]"
               "[pattern=sequential][file=1]") {
   pretest();
   SECTION("write to new file always at the start") {
@@ -474,9 +448,7 @@ TEST_CASE("BatchedReadSequentialRSRangeMedium",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_read]"
-              "[request_size=range-medium][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=range-medium][repetition=1024]"
               "[pattern=sequential][file=1]") {
   pretest();
   SECTION("read from existing file") {
@@ -523,9 +495,7 @@ TEST_CASE("BatchedReadRandomRSRangeMedium",
               "]"
               "[operation=batched_read]"
               "[request_size=range-medium]"
-              "[repetition=" +
-              std::to_string(info.num_iterations) +
-              "][pattern=random][file=1]") {
+              "[repetition=1024][pattern=random][file=1]") {
   pretest();
 
   SECTION("read from existing file") {
@@ -552,9 +522,7 @@ TEST_CASE("BatchedUpdateRandomRSRangeMedium",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_write]"
-              "[request_size=range-medium][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=range-medium][repetition=1024]"
               "[pattern=random][file=1]") {
   pretest();
 
@@ -583,9 +551,7 @@ TEST_CASE("BatchedReadStrideFixedRSRangeMedium",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_read]"
-              "[request_size=range-medium][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=range-medium][repetition=1024]"
               "[pattern=stride_fixed][file=1]") {
   pretest();
   SECTION("read from existing file") {
@@ -612,9 +578,7 @@ TEST_CASE("BatchedUpdateStrideFixedRSRangeMedium",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_write]"
-              "[request_size=range-medium][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=range-medium][repetition=1024]"
               "[pattern=stride_fixed][file=1]") {
   pretest();
   SECTION("write to existing file") {
@@ -642,9 +606,7 @@ TEST_CASE("BatchedReadStrideDynamicRSRangeMedium",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_read]"
-              "[request_size=range-medium][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=range-medium][repetition=1024]"
               "[pattern=stride_dynamic][file=1]") {
   pretest();
   SECTION("read from existing file") {
@@ -671,9 +633,7 @@ TEST_CASE("BatchedUpdateStrideDynamicRSRangeMedium",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_write]"
-              "[request_size=range-medium][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=range-medium][repetition=1024]"
               "[pattern=stride_dynamic][file=1]") {
   pretest();
   SECTION("read from existing file") {
@@ -701,9 +661,7 @@ TEST_CASE("BatchedReadStrideNegativeRSRangeMedium",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_read]"
-              "[request_size=range-medium][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=range-medium][repetition=1024]"
               "[pattern=stride_negative][file=1]") {
   pretest();
   SECTION("read from existing file") {
@@ -730,9 +688,7 @@ TEST_CASE("BatchedUpdateStrideNegativeRSRangeMedium",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_write]"
-              "[request_size=range-medium][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=range-medium][repetition=1024]"
               "[pattern=stride_negative][file=1]") {
   pretest();
   SECTION("write to existing file") {
@@ -760,9 +716,7 @@ TEST_CASE("BatchedReadStride2DRSRangeMedium",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_read]"
-              "[request_size=range-medium][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=range-medium][repetition=1024]"
               "[pattern=stride_2d][file=1]") {
   pretest();
   size_t rows = sqrt(info.total_size);
@@ -800,9 +754,7 @@ TEST_CASE("BatchedUpdateStride2DRSRangeMedium",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_write]"
-              "[request_size=range-medium][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=range-medium][repetition=1024]"
               "[pattern=stride_2d][file=1]") {
   pretest();
   size_t rows = sqrt(info.total_size);
@@ -844,9 +796,7 @@ TEST_CASE("BatchedWriteRSRangeLarge",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_write]"
-              "[request_size=range-large][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=range-large][repetition=1024]"
               "[pattern=sequential][file=1]") {
   pretest();
   SECTION("write to new file always at the start") {
@@ -895,9 +845,7 @@ TEST_CASE("BatchedReadSequentialRSRangeLarge",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_read]"
-              "[request_size=range-large][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=range-large][repetition=1024]"
               "[pattern=sequential][file=1]") {
   pretest();
   SECTION("read from existing file") {
@@ -944,9 +892,7 @@ TEST_CASE("BatchedReadRandomRSRangeLarge",
               "]"
               "[operation=batched_read]"
               "[request_size=range-large]"
-              "[repetition=" +
-              std::to_string(info.num_iterations) +
-              "][pattern=random][file=1]") {
+              "[repetition=1024][pattern=random][file=1]") {
   pretest();
 
   SECTION("read from existing file") {
@@ -974,9 +920,7 @@ TEST_CASE("BatchedUpdateRandomRSRangeLarge",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_write]"
-              "[request_size=range-large][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=range-large][repetition=1024]"
               "[pattern=random][file=1]") {
   pretest();
 
@@ -1005,9 +949,7 @@ TEST_CASE("BatchedReadStrideFixedRSRangeLarge",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_read]"
-              "[request_size=range-large][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=range-large][repetition=1024]"
               "[pattern=stride_fixed][file=1]") {
   pretest();
   SECTION("read from existing file") {
@@ -1033,9 +975,7 @@ TEST_CASE("BatchedUpdateStrideFixedRSRangeLarge",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_write]"
-              "[request_size=range-large][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=range-large][repetition=1024]"
               "[pattern=stride_fixed][file=1]") {
   pretest();
   SECTION("write to existing file") {
@@ -1062,9 +1002,7 @@ TEST_CASE("BatchedReadStrideDynamicRSRangeLarge",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_read]"
-              "[request_size=range-large][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=range-large][repetition=1024]"
               "[pattern=stride_dynamic][file=1]") {
   pretest();
   SECTION("read from existing file") {
@@ -1091,9 +1029,7 @@ TEST_CASE("BatchedUpdateStrideDynamicRSRangeLarge",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_write]"
-              "[request_size=range-large][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=range-large][repetition=1024]"
               "[pattern=stride_dynamic][file=1]") {
   pretest();
   SECTION("read from existing file") {
@@ -1121,9 +1057,7 @@ TEST_CASE("BatchedReadStrideNegativeRSRangeLarge",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_read]"
-              "[request_size=range-large][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=range-large][repetition=1024]"
               "[pattern=stride_negative][file=1]") {
   pretest();
   SECTION("read from existing file") {
@@ -1151,9 +1085,7 @@ TEST_CASE("BatchedUpdateStrideNegativeRSRangeLarge",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_write]"
-              "[request_size=range-large][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=range-large][repetition=1024]"
               "[pattern=stride_negative][file=1]") {
   pretest();
   SECTION("write to existing file") {
@@ -1181,9 +1113,7 @@ TEST_CASE("BatchedReadStride2DRSRangeLarge",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_read]"
-              "[request_size=range-large][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=range-large][repetition=1024]"
               "[pattern=stride_2d][file=1]") {
   pretest();
   size_t rows = sqrt(info.total_size);
@@ -1222,9 +1152,7 @@ TEST_CASE("BatchedUpdateStride2DRSRangeLarge",
               "]"
               ""
               "[operation=batched_write]"
-              "[request_size=range-large][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=range-large][repetition=1024]"
               "[pattern=stride_2d][file=1]") {
   pretest();
   size_t rows = sqrt(info.total_size);

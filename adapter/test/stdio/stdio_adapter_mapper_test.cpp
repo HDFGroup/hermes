@@ -85,12 +85,12 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
                              "[request_size=type-fixed][repetition=1]"
                              "[pattern=sequential][file=1]") {
   pretest();
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.new_file);
+  MAP_OR_FAIL(fopen);
   SECTION("Map a one request") {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto mapper = MapperFactory().Get(kMapperType);
     size_t total_size = args.request_size;
-    FILE* fp = fopen(info.new_file.c_str(), "w+");
+    FILE* fp = real_fopen_(info.new_file.c_str(), "w+");
     REQUIRE(fp != nullptr);
     size_t offset = 0;
     REQUIRE(kPageSize > total_size + offset);
@@ -102,14 +102,14 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(mapping[0].second.offset_ == offset);
     REQUIRE(mapping[0].second.size_ == total_size);
 
-    int status = fclose(fp);
+    int status = real_fclose_(fp);
     REQUIRE(status == 0);
   }
   SECTION("Map a one big request") {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto mapper = MapperFactory().Get(kMapperType);
     size_t total_size = args.request_size * args.num_iterations;
-    FILE* fp = fopen(info.new_file.c_str(), "w+");
+    FILE* fp = real_fopen_(info.new_file.c_str(), "w+");
     REQUIRE(fp != nullptr);
     size_t offset = 0;
     auto mapping =
@@ -124,14 +124,14 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
       REQUIRE(item.second.size_ == mapped_size);
       offset += mapped_size;
     }
-    int status = fclose(fp);
+    int status = real_fclose_(fp);
     REQUIRE(status == 0);
   }
   SECTION("Map a one large unaligned request") {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto mapper = MapperFactory().Get(kMapperType);
     size_t total_size = args.request_size * args.num_iterations;
-    FILE* fp = fopen(info.new_file.c_str(), "w+");
+    FILE* fp = real_fopen_(info.new_file.c_str(), "w+");
     REQUIRE(fp != nullptr);
     size_t offset = 1;
     auto mapping =
@@ -161,14 +161,14 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
       current_offset += mapped_size;
       i++;
     }
-    int status = fclose(fp);
+    int status = real_fclose_(fp);
     REQUIRE(status == 0);
   }
   SECTION("Map a one small unaligned request") {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto mapper = MapperFactory().Get(kMapperType);
     size_t total_size = args.request_size;
-    FILE* fp = fopen(info.new_file.c_str(), "w+");
+    FILE* fp = real_fopen_(info.new_file.c_str(), "w+");
     REQUIRE(fp != nullptr);
     size_t offset = 1;
     REQUIRE(kPageSize > total_size + offset);
@@ -179,9 +179,8 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(mapping[0].first.size_ == total_size);
     REQUIRE(mapping[0].second.offset_ == 1);
     REQUIRE(mapping[0].second.size_ == total_size);
-    int status = fclose(fp);
+    int status = real_fclose_(fp);
     REQUIRE(status == 0);
   }
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.new_file);
   posttest();
 }
