@@ -15,6 +15,29 @@ using hermes::adapter::stdio::MetadataManager;
 namespace hapi = hermes::api;
 namespace fs = std::experimental::filesystem;
 
+/**
+ * MPI
+ */
+int HERMES_DECL(PMPI_Init)(int *argc, char ***argv) {
+  MAP_OR_FAIL(PMPI_Init);
+  int status = real_PMPI_Init_(argc, argv);
+  if (status == 0) {
+    auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+    mdm->InitializeHermes();
+  }
+  return status;
+}
+
+int HERMES_DECL(PMPI_Finalize)(void) {
+  auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+  mdm->FinalizeHermes();
+  MAP_OR_FAIL(MPI_Finalize);
+  int status = real_PMPI_Finalize_();
+  return status;
+}
+/**
+ * STDIO
+ */
 FILE *simple_open(FILE *ret, const std::string &path_str, const char *mode) {
   LOG(INFO) << "Open file for filename " << path_str << " in mode " << mode
             << std::endl;

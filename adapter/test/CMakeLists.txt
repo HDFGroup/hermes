@@ -18,6 +18,10 @@ function(mpi exec mpi_proc args)
     add_test(NAME Test${exec}_${mpi_proc}
             COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${mpi_proc}
             "${CMAKE_BINARY_DIR}/bin/${exec}" ${args})
+    set_property(TEST Test${exec}_${mpi_proc}
+            PROPERTY ENVIRONMENT HERMES_CONF=${CMAKE_SOURCE_DIR}/adapter/test/data/hermes.conf)
+    set_property(TEST Test${exec}_${mpi_proc} APPEND
+            PROPERTY ENVIRONMENT LSAN_OPTIONS=suppressions=${CMAKE_SOURCE_DIR}/test/data/asan.supp)
 endfunction()
 
 

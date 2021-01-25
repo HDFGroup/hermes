@@ -53,10 +53,10 @@ class MetadataManager {
    * daemon mode. Keep a reference of how many times Initialize is called.
    * Within the adapter, Initialize is called from fopen.
    */
-  void InitializeHermes() {
+  void InitializeHermes(bool is_mpi = false) {
     if (ref == 0) {
       char* hermes_config = getenv(kHermesConf);
-      hermes = hapi::InitHermes(hermes_config, true);
+      hermes = hapi::InitHermes(hermes_config, !is_mpi);
     }
     ref++;
   }
