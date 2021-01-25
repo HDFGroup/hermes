@@ -9,8 +9,9 @@ include_directories(
         ${CMAKE_SOURCE_DIR}/adapter/src)
 
 find_package(Catch2 REQUIRED)
+find_package(glog 0.4.0 REQUIRED)
 add_executable(hermes_daemon hermes_daemon.cc)
-target_link_libraries(hermes_daemon -ldl -lc MPI::MPI_CXX)
+target_link_libraries(hermes_daemon -ldl -lc MPI::MPI_CXX glog::glog)
 target_link_libraries(hermes_daemon hermes)
 add_dependencies(hermes_daemon hermes)
 

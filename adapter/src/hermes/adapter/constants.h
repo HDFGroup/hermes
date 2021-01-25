@@ -16,5 +16,9 @@ const char* kHermesConf = "HERMES_CONF";
  * from I/O. This is needed as we should not intercept these files.
  */
 const char* kHermesExtension = ".hermes";
+/**
+ * Log file extensions
+ */
+const char* kLogExtension = ".log";
 
 #endif  // HERMES_ADAPTER_CONSTANTS_H

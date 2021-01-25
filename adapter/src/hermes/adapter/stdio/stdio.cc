@@ -24,7 +24,7 @@ int HERMES_DECL(MPI_Init)(int *argc, char ***argv) {
   if (status == 0) {
     LOG(INFO) << "MPI Init intercepted." << std::endl;
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
-    mdm->InitializeHermes(true);
+    mdm->InitializeHermes(false);
   }
   return status;
 }
@@ -232,6 +232,9 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
     data_offset += item.first.size_;
   }
   existing.first.st_ptr += data_offset;
+  existing.first.st_size = existing.first.st_size >= existing.first.st_ptr
+                               ? existing.first.st_size
+                               : existing.first.st_ptr;
   struct timespec ts;
   timespec_get(&ts, TIME_UTC);
   existing.first.st_mtim = ts;
@@ -266,6 +269,7 @@ size_t read_internal(std::pair<AdapterStat, bool> &existing, void *ptr,
             << existing.first.st_bkid->GetName()
             << " on offset: " << existing.first.st_ptr
             << " and size: " << total_size << std::endl;
+  if (existing.first.st_ptr >= existing.first.st_size) return 0;
   size_t ret;
   auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
   auto mapper = MapperFactory().Get(kMapperType);
