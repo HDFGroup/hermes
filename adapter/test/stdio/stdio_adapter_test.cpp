@@ -2,6 +2,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <unistd.h>
+#include "glog/logging.h"
 
 #include <experimental/filesystem>
 #include <iostream>

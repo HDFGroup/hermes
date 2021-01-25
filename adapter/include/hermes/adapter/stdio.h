@@ -30,7 +30,7 @@
 #include <vbucket.h>
 
 /**
- * Function declarations
+ * STDIO Function declarations
  */
 HERMES_FORWARD_DECL(ftell, long int, (FILE * fp));
 HERMES_FORWARD_DECL(fopen, FILE *, (const char *path, const char *mode));
@@ -68,5 +68,11 @@ HERMES_FORWARD_DECL(fseeko64, int, (FILE * stream, off64_t offset, int whence));
 HERMES_FORWARD_DECL(fsetpos, int, (FILE * stream, const fpos_t *pos));
 HERMES_FORWARD_DECL(fsetpos64, int, (FILE * stream, const fpos64_t *pos));
 HERMES_FORWARD_DECL(rewind, void, (FILE * stream));
+
+/**
+ * MPI functions declarations
+ */
+HERMES_FORWARD_DECL(MPI_Init, int, (int *argc, char ***argv));
+HERMES_FORWARD_DECL(MPI_Finalize, int, (void));
 
 #endif  // HERMES_ADAPTER_STDIO_H
