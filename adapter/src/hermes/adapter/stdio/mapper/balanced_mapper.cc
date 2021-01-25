@@ -15,7 +15,6 @@ MapperReturnType BalancedMapper::map(const FileStruct& file_op) {
   size_t size_mapped = 0;
   while (file_op.size_ > size_mapped) {
     FileStruct file;
-    file.file_id_ = file_op.file_id_;
     HermesStruct hermes;
     file.offset_ = file_op.offset_ + size_mapped;
     size_t page_index = file.offset_ / kPageSize;

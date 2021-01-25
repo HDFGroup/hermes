@@ -325,9 +325,7 @@ TEST_CASE("BatchedWriteSequential",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_write]"
-              "[request_size=type-fixed][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=type-fixed][repetition=1024]"
               "[pattern=sequential][file=1]") {
   pretest();
   SECTION("write to existing file") {
@@ -367,9 +365,7 @@ TEST_CASE("BatchedReadSequential",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_read]"
-              "[request_size=type-fixed][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=type-fixed][repetition=1024]"
               "[pattern=sequential][file=1]") {
   pretest();
 
@@ -402,13 +398,12 @@ TEST_CASE("BatchedReadSequential",
   posttest();
 }
 
-TEST_CASE("BatchedReadRandom", "[process=" + std::to_string(info.comm_size) +
-                                   "]"
-                                   "[operation=batched_read]"
-                                   "[request_size=type-fixed]"
-                                   "[repetition=" +
-                                   std::to_string(info.num_iterations) +
-                                   "][pattern=random][file=1]") {
+TEST_CASE("BatchedReadRandom",
+          "[process=" + std::to_string(info.comm_size) +
+              "]"
+              "[operation=batched_read]"
+              "[request_size=type-fixed]"
+              "[repetition=1024][pattern=random][file=1]") {
   pretest();
   SECTION("read from existing file") {
     int fd = open(info.existing_file.c_str(), O_RDWR);
@@ -428,13 +423,12 @@ TEST_CASE("BatchedReadRandom", "[process=" + std::to_string(info.comm_size) +
   posttest();
 }
 
-TEST_CASE("BatchedUpdateRandom", "[process=" + std::to_string(info.comm_size) +
-                                     "]"
-                                     "[operation=batched_write]"
-                                     "[request_size=type-fixed][repetition=" +
-                                     std::to_string(info.num_iterations) +
-                                     "]"
-                                     "[pattern=random][file=1]") {
+TEST_CASE("BatchedUpdateRandom",
+          "[process=" + std::to_string(info.comm_size) +
+              "]"
+              "[operation=batched_write]"
+              "[request_size=type-fixed][repetition=1024]"
+              "[pattern=random][file=1]") {
   pretest();
   SECTION("read from existing file") {
     int fd = open(info.existing_file.c_str(), O_RDWR);
@@ -458,9 +452,7 @@ TEST_CASE("BatchedReadStrideFixed",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_read]"
-              "[request_size=type-fixed][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=type-fixed][repetition=1024]"
               "[pattern=stride_fixed][file=1]") {
   pretest();
 
@@ -485,9 +477,7 @@ TEST_CASE("BatchedUpdateStrideFixed",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_write]"
-              "[request_size=type-fixed][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=type-fixed][repetition=1024]"
               "[pattern=stride_fixed][file=1]") {
   pretest();
 
@@ -512,9 +502,7 @@ TEST_CASE("BatchedReadStrideDynamic",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_read]"
-              "[request_size=type-fixed][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=type-fixed][repetition=1024]"
               "[pattern=stride_dynamic][file=1]") {
   pretest();
 
@@ -524,7 +512,7 @@ TEST_CASE("BatchedReadStrideDynamic",
     std::string data(args.request_size, '1');
     for (size_t i = 0; i < info.num_iterations; ++i) {
       size_t offset = abs(((i * rand_r(&info.offset_seed)) % info.stride_size) %
-                          info.total_size);
+                        info.total_size);
       size_t status = lseek(fd, offset, SEEK_SET);
       REQUIRE(status == offset);
       size_t size_read = read(fd, data.data(), args.request_size);
@@ -540,9 +528,7 @@ TEST_CASE("BatchedUpdateStrideDynamic",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_write]"
-              "[request_size=type-fixed][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=type-fixed][repetition=1024]"
               "[pattern=stride_dynamic][file=1]") {
   pretest();
   SECTION("read from existing file") {
@@ -551,7 +537,7 @@ TEST_CASE("BatchedUpdateStrideDynamic",
     std::string data(args.request_size, '1');
     for (size_t i = 0; i < info.num_iterations; ++i) {
       size_t offset = abs(((i * rand_r(&info.offset_seed)) % info.stride_size) %
-                          info.total_size);
+                        info.total_size);
       size_t status = lseek(fd, offset, SEEK_SET);
       REQUIRE(status == offset);
       size_t size_read = write(fd, data.data(), args.request_size);
@@ -567,9 +553,7 @@ TEST_CASE("BatchedWriteRSVariable",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_write]"
-              "[request_size=type-variable][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=type-variable][repetition=1024]"
               "[pattern=sequential][file=1]") {
   pretest();
 
@@ -616,9 +600,7 @@ TEST_CASE("BatchedReadSequentialRSVariable",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_read]"
-              "[request_size=type-variable][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=type-variable][repetition=1024]"
               "[pattern=sequential][file=1]") {
   pretest();
   SECTION("read from existing file") {
@@ -628,8 +610,8 @@ TEST_CASE("BatchedReadSequentialRSVariable",
     size_t current_offset = 0;
     for (size_t i = 0; i < info.num_iterations; ++i) {
       size_t request_size = (args.request_size +
-                             (rand_r(&info.offset_seed) % args.request_size)) %
-                            (info.total_size - current_offset);
+                           (rand_r(&info.offset_seed) % args.request_size)) %
+                          (info.total_size - current_offset);
       std::string data(request_size, '1');
       size_t size_read = read(fd, data.data(), request_size);
       REQUIRE(size_read == request_size);
@@ -663,9 +645,7 @@ TEST_CASE("BatchedReadRandomRSVariable",
               "]"
               "[operation=batched_read]"
               "[request_size=type-variable]"
-              "[repetition=" +
-              std::to_string(info.num_iterations) +
-              "][pattern=random][file=1]") {
+              "[repetition=1024][pattern=random][file=1]") {
   pretest();
 
   SECTION("read from existing file") {
@@ -694,9 +674,7 @@ TEST_CASE("BatchedUpdateRandomRSVariable",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_write]"
-              "[request_size=type-variable][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=type-variable][repetition=1024]"
               "[pattern=random][file=1]") {
   pretest();
 
@@ -725,9 +703,7 @@ TEST_CASE("BatchedReadStrideFixedRSVariable",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_read]"
-              "[request_size=type-variable][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=type-variable][repetition=1024]"
               "[pattern=stride_fixed][file=1]") {
   pretest();
 
@@ -755,9 +731,7 @@ TEST_CASE("BatchedUpdateStrideFixedRSVariable",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_write]"
-              "[request_size=type-variable][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=type-variable][repetition=1024]"
               "[pattern=stride_fixed][file=1]") {
   pretest();
 
@@ -785,9 +759,7 @@ TEST_CASE("BatchedReadStrideDynamicRSVariable",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_read]"
-              "[request_size=type-variable][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=type-variable][repetition=1024]"
               "[pattern=stride_dynamic][file=1]") {
   pretest();
 
@@ -796,7 +768,7 @@ TEST_CASE("BatchedReadStrideDynamicRSVariable",
     REQUIRE(fd != -1);
     for (size_t i = 0; i < info.num_iterations; ++i) {
       size_t offset = abs(((i * rand_r(&info.offset_seed)) % info.stride_size) %
-                          info.total_size);
+                        info.total_size);
       size_t status = lseek(fd, offset, SEEK_SET);
       REQUIRE(status == offset);
       size_t request_size =
@@ -815,9 +787,7 @@ TEST_CASE("BatchedUpdateStrideDynamicRSVariable",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_write]"
-              "[request_size=type-variable][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=type-variable][repetition=1024]"
               "[pattern=stride_dynamic][file=1]") {
   pretest();
   SECTION("read from existing file") {
@@ -825,7 +795,7 @@ TEST_CASE("BatchedUpdateStrideDynamicRSVariable",
     REQUIRE(fd != -1);
     for (size_t i = 0; i < info.num_iterations; ++i) {
       size_t offset = abs(((i * rand_r(&info.offset_seed)) % info.stride_size) %
-                          info.total_size);
+                        info.total_size);
       size_t status = lseek(fd, offset, SEEK_SET);
       REQUIRE(status == offset);
       size_t request_size =
@@ -844,9 +814,7 @@ TEST_CASE("BatchedReadStrideNegative",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_read]"
-              "[request_size=type-fixed][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=type-fixed][repetition=1024]"
               "[pattern=stride_negative][file=1]") {
   pretest();
   SECTION("read from existing file") {
@@ -874,9 +842,7 @@ TEST_CASE("BatchedUpdateStrideNegative",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_write]"
-              "[request_size=type-fixed][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=type-fixed][repetition=1024]"
               "[pattern=stride_negative][file=1]") {
   pretest();
   SECTION("read from existing file") {
@@ -901,9 +867,7 @@ TEST_CASE("BatchedReadStrideNegativeRSVariable",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_read]"
-              "[request_size=type-variable][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=type-variable][repetition=1024]"
               "[pattern=stride_negative][file=1]") {
   pretest();
 
@@ -912,7 +876,7 @@ TEST_CASE("BatchedReadStrideNegativeRSVariable",
     REQUIRE(fd != -1);
     for (size_t i = 0; i < info.num_iterations; ++i) {
       size_t offset = (info.total_size - i * info.stride_size) %
-                      (info.total_size - 2 * args.request_size);
+                    (info.total_size - 2 * args.request_size);
       size_t status = lseek(fd, offset, SEEK_SET);
       REQUIRE(status == offset);
       size_t request_size =
@@ -932,9 +896,7 @@ TEST_CASE("BatchedUpdateStrideNegativeRSVariable",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_write]"
-              "[request_size=type-variable][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=type-variable][repetition=1024]"
               "[pattern=stride_negative][file=1]") {
   pretest();
 
@@ -959,13 +921,12 @@ TEST_CASE("BatchedUpdateStrideNegativeRSVariable",
   posttest();
 }
 
-TEST_CASE("BatchedReadStride2D", "[process=" + std::to_string(info.comm_size) +
-                                     "]"
-                                     "[operation=batched_read]"
-                                     "[request_size=type-fixed][repetition=" +
-                                     std::to_string(info.num_iterations) +
-                                     "]"
-                                     "[pattern=stride_2d][file=1]") {
+TEST_CASE("BatchedReadStride2D",
+          "[process=" + std::to_string(info.comm_size) +
+              "]"
+              "[operation=batched_read]"
+              "[request_size=type-fixed][repetition=1024]"
+              "[pattern=stride_2d][file=1]") {
   pretest();
   size_t rows = sqrt(info.total_size);
   size_t cols = rows;
@@ -980,11 +941,11 @@ TEST_CASE("BatchedReadStride2D", "[process=" + std::to_string(info.comm_size) +
     for (size_t i = 0; i < info.num_iterations; ++i) {
       size_t current_cell_col = (prev_cell_col + cell_stride) % cols;
       size_t current_cell_row = prev_cell_col + cell_stride > cols
-                                    ? prev_cell_row + 1
-                                    : prev_cell_row;
+                                  ? prev_cell_row + 1
+                                  : prev_cell_row;
       prev_cell_row = current_cell_row;
       size_t offset = (current_cell_col * cell_stride + prev_cell_row * cols) %
-                      (info.total_size - args.request_size);
+                    (info.total_size - args.request_size);
       size_t status = lseek(fd, offset, SEEK_SET);
       REQUIRE(status == offset);
       size_t size_read = read(fd, data.data(), args.request_size);
@@ -1000,9 +961,7 @@ TEST_CASE("BatchedUpdateStride2D",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_write]"
-              "[request_size=type-fixed][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=type-fixed][repetition=1024]"
               "[pattern=stride_2d][file=1]") {
   pretest();
 
@@ -1019,11 +978,11 @@ TEST_CASE("BatchedUpdateStride2D",
     for (size_t i = 0; i < info.num_iterations; ++i) {
       size_t current_cell_col = (prev_cell_col + cell_stride) % cols;
       size_t current_cell_row = prev_cell_col + cell_stride > cols
-                                    ? prev_cell_row + 1
-                                    : prev_cell_row;
+                                  ? prev_cell_row + 1
+                                  : prev_cell_row;
       prev_cell_row = current_cell_row;
       size_t offset = (current_cell_col * cell_stride + prev_cell_row * cols) %
-                      (info.total_size - args.request_size);
+                    (info.total_size - args.request_size);
       size_t status = lseek(fd, offset, SEEK_SET);
       REQUIRE(status == offset);
       size_t size_read = write(fd, data.data(), args.request_size);
@@ -1039,9 +998,7 @@ TEST_CASE("BatchedReadStride2DRSVariable",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_read]"
-              "[request_size=type-variable][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=type-variable][repetition=1024]"
               "[pattern=stride_2d][file=1]") {
   pretest();
   size_t rows = sqrt(info.total_size);
@@ -1056,11 +1013,11 @@ TEST_CASE("BatchedReadStride2DRSVariable",
     for (size_t i = 0; i < info.num_iterations; ++i) {
       size_t current_cell_col = (prev_cell_col + cell_stride) % cols;
       size_t current_cell_row = prev_cell_col + cell_stride > cols
-                                    ? prev_cell_row + 1
-                                    : prev_cell_row;
+                                  ? prev_cell_row + 1
+                                  : prev_cell_row;
       prev_cell_row = current_cell_row;
       size_t offset = (current_cell_col * cell_stride + prev_cell_row * cols) %
-                      (info.total_size - 2 * args.request_size);
+                    (info.total_size - 2 * args.request_size);
       size_t status = lseek(fd, offset, SEEK_SET);
       REQUIRE(status == offset);
       size_t request_size =
@@ -1080,9 +1037,7 @@ TEST_CASE("BatchedUpdateStride2DRSVariable",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_write]"
-              "[request_size=type-variable][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=type-variable][repetition=1024]"
               "[pattern=stride_2d][file=1]") {
   pretest();
   size_t rows = sqrt(info.total_size);
@@ -1098,11 +1053,11 @@ TEST_CASE("BatchedUpdateStride2DRSVariable",
     for (size_t i = 0; i < info.num_iterations; ++i) {
       size_t current_cell_col = (prev_cell_col + cell_stride) % cols;
       size_t current_cell_row = prev_cell_col + cell_stride > cols
-                                    ? prev_cell_row + 1
-                                    : prev_cell_row;
+                                  ? prev_cell_row + 1
+                                  : prev_cell_row;
       prev_cell_row = current_cell_row;
       size_t offset = (current_cell_col * cell_stride + prev_cell_row * cols) %
-                      (info.total_size - 2 * args.request_size);
+                    (info.total_size - 2 * args.request_size);
       size_t status = lseek(fd, offset, SEEK_SET);
       REQUIRE(status == offset);
       size_t request_size =
@@ -1125,9 +1080,7 @@ TEST_CASE("BatchedWriteTemporalFixed",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_write]"
-              "[request_size=type-fixed][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=type-fixed][repetition=1024]"
               "[pattern=sequential][file=1][temporal=fixed]") {
   pretest();
 
@@ -1170,9 +1123,7 @@ TEST_CASE("BatchedReadSequentialTemporalFixed",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_read]"
-              "[request_size=type-fixed][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=type-fixed][repetition=1024]"
               "[pattern=sequential][file=1][temporal=fixed]") {
   pretest();
 
@@ -1211,9 +1162,7 @@ TEST_CASE("BatchedWriteTemporalVariable",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_write]"
-              "[request_size=type-fixed][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=type-fixed][repetition=1024]"
               "[pattern=sequential][file=1][temporal=variable]") {
   pretest();
 
@@ -1260,9 +1209,7 @@ TEST_CASE("BatchedReadSequentialTemporalVariable",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_read]"
-              "[request_size=type-fixed][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=type-fixed][repetition=1024]"
               "[pattern=sequential][file=1][temporal=variable]") {
   pretest();
 
@@ -1305,9 +1252,7 @@ TEST_CASE("BatchedMixedSequential",
           "[process=" + std::to_string(info.comm_size) +
               "]"
               "[operation=batched_mixed]"
-              "[request_size=type-fixed][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
+              "[request_size=type-fixed][repetition=1024]"
               "[pattern=sequential][file=1]") {
   pretest();
   SECTION("read after write on new file") {

@@ -23,11 +23,6 @@
 #include <buffer_pool_internal.h>
 #include <hermes/adapter/constants.h>
 #include <hermes/adapter/singleton.h>
-/**
- * Define Interceptor list for adapter.
- */
-#define INTERCEPTOR_LIST \
-  hermes::adapter::Singleton<hermes::adapter::InterceptorList>::GetInstance()
 
 namespace hermes::adapter {
 /**
