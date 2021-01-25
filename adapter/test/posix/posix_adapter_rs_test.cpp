@@ -884,7 +884,6 @@ TEST_CASE("BatchedReadSequentialRSRangeLarge",
       size_t request_size =
           (info.large_min + (rand_r(&info.rs_seed) % info.large_max)) %
           (info.total_size - current_offset);
-      ;
       std::string data(request_size, '1');
       size_t size_read = read(fd, data.data(), request_size);
       REQUIRE(size_read == request_size);
@@ -934,7 +933,6 @@ TEST_CASE("BatchedReadRandomRSRangeLarge",
       size_t request_size =
           (info.large_min + (rand_r(&info.rs_seed) % info.large_max)) %
           (info.total_size - offset);
-      ;
       std::string data(request_size, '1');
       size_t size_read = read(fd, data.data(), request_size);
       REQUIRE(size_read == request_size);
