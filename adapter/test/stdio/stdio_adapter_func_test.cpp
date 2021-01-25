@@ -243,10 +243,12 @@ TEST_CASE("Freopen", "[process=" + std::to_string(info.comm_size) +
   posttest();
 }
 
-TEST_CASE("fgetc", "[process=" + std::to_string(info.comm_size) +
-                       "]"
-                       "[operation=batched_fgetc]"
-                       "[repetition=1][file=1]") {
+TEST_CASE("fgetc",
+          "[process=" + std::to_string(info.comm_size) +
+              "]"
+              "[operation=batched_fgetc]"
+              "[repetition=\" + std::to_string(info.num_iterations) +\n"
+              "              \"][file=1]") {
   pretest();
   SECTION("iterate and get all characters") {
     FILE* fh = fopen(info.existing_file.c_str(), "r");
@@ -268,7 +270,8 @@ TEST_CASE("fgetc", "[process=" + std::to_string(info.comm_size) +
 TEST_CASE("getc", "[process=" + std::to_string(info.comm_size) +
                       "]"
                       "[operation=batched_getc]"
-                      "[repetition=1][file=1]") {
+                      "[repetition=" +
+                      std::to_string(info.num_iterations) + "][file=1]") {
   pretest();
   SECTION("iterate and get all characters") {
     FILE* fh = fopen(info.existing_file.c_str(), "r");
@@ -304,10 +307,12 @@ TEST_CASE("fgets", "[process=" + std::to_string(info.comm_size) +
   posttest();
 }
 
-TEST_CASE("fputc", "[process=" + std::to_string(info.comm_size) +
-                       "]"
-                       "[operation=batched_fputc]"
-                       "[repetition=1][file=1]") {
+TEST_CASE("fputc",
+          "[process=" + std::to_string(info.comm_size) +
+              "]"
+              "[operation=batched_fputc]"
+              "[repetition=\" + std::to_string(info.num_iterations) +\n"
+              "              \"][file=1]") {
   pretest();
   SECTION("iterate and get all characters") {
     FILE* fh = fopen(info.new_file.c_str(), "w+");
@@ -327,7 +332,8 @@ TEST_CASE("fputc", "[process=" + std::to_string(info.comm_size) +
 TEST_CASE("putc", "[process=" + std::to_string(info.comm_size) +
                       "]"
                       "[operation=batched_putc]"
-                      "[repetition=1][file=1]") {
+                      "[repetition=" +
+                      std::to_string(info.num_iterations) + "][file=1]") {
   pretest();
   SECTION("iterate and get all characters") {
     FILE* fh = fopen(info.new_file.c_str(), "w+");
