@@ -237,8 +237,7 @@ size_t perform_file_read(const char *filename, size_t file_offset, void *ptr,
 
 size_t read_internal(std::pair<AdapterStat, bool> &existing, void *ptr,
                      size_t total_size, FILE *fp) {
-  LOG(INFO) << "Write called for filename: "
-            << existing.first.st_bkid->GetName()
+  LOG(INFO) << "Read called for filename: " << existing.first.st_bkid->GetName()
             << " on offset: " << existing.first.st_ptr
             << " and size: " << total_size << std::endl;
   size_t ret;
