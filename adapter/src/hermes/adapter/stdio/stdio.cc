@@ -15,31 +15,6 @@ using hermes::adapter::stdio::MetadataManager;
 namespace hapi = hermes::api;
 namespace fs = std::experimental::filesystem;
 
-/**
- * MPI
- */
-int HERMES_DECL(MPI_Init)(int *argc, char ***argv) {
-  MAP_OR_FAIL(MPI_Init);
-  int status = real_MPI_Init_(argc, argv);
-  if (status == 0) {
-    LOG(INFO) << "MPI Init intercepted." << std::endl;
-    auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
-    mdm->InitializeHermes(true);
-  }
-  return status;
-}
-
-int HERMES_DECL(MPI_Finalize)(void) {
-  LOG(INFO) << "MPI Finalize intercepted." << std::endl;
-  auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
-  mdm->FinalizeHermes();
-  MAP_OR_FAIL(MPI_Finalize);
-  int status = real_MPI_Finalize_();
-  return status;
-}
-/**
- * STDIO
- */
 FILE *simple_open(FILE *ret, const std::string &path_str, const char *mode) {
   LOG(INFO) << "Open file for filename " << path_str << " in mode " << mode
             << std::endl;
@@ -227,22 +202,11 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
                  existing_data.size() - off_t + 1);
         }
         existing.first.st_bkid->Put(item.second.blob_name_, final_data, ctx);
-        hapi::Blob temp(0);
-        auto written_blob_size =
-            existing.first.st_bkid->Get(item.second.blob_name_, temp, ctx);
-        if (new_size != written_blob_size) {
-          LOG(INFO) << "Write of blob failed written:" << written_blob_size
-                    << " of " << new_size << " bytes." << std::endl;
-          return 0;
-        }
       }
     }
     data_offset += item.first.size_;
   }
   existing.first.st_ptr += data_offset;
-  existing.first.st_size = existing.first.st_size >= existing.first.st_ptr
-                               ? existing.first.st_size
-                               : existing.first.st_ptr;
   struct timespec ts;
   timespec_get(&ts, TIME_UTC);
   existing.first.st_mtim = ts;
@@ -277,7 +241,6 @@ size_t read_internal(std::pair<AdapterStat, bool> &existing, void *ptr,
             << existing.first.st_bkid->GetName()
             << " on offset: " << existing.first.st_ptr
             << " and size: " << total_size << std::endl;
-  if (existing.first.st_ptr >= existing.first.st_size) return 0;
   size_t ret;
   auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
   auto mapper = MapperFactory().Get(kMapperType);
