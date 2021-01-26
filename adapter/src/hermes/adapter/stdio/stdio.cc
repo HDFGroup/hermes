@@ -348,7 +348,7 @@ FILE *HERMES_DECL(fopen64)(const char *path, const char *mode) {
     ret = open_internal(path, mode);
   } else {
     MAP_OR_FAIL(fopen64);
-    ret = real_fopen_(path, mode);
+    ret = real_fopen64_(path, mode);
   }
   return (ret);
 }
@@ -360,11 +360,11 @@ FILE *HERMES_DECL(fdopen)(int fd, const char *mode) {
   if (ret && hermes::adapter::IsTracked(ret)) {
     LOG(INFO) << "Intercept fdopen for file descriptor: " << fd
               << " and mode: " << mode << " tracked." << std::endl;
-    int MAXSIZE = 0xFFF;
-    char proclnk[0xFFF];
-    char filename[0xFFF];
-    snprintf(proclnk, MAXSIZE, "/proc/self/fd/%d", fd);
-    size_t r = readlink(proclnk, filename, MAXSIZE);
+    const int kMaxSize = 0xFFF;
+    char proclnk[kMaxSize];
+    char filename[kMaxSize];
+    snprintf(proclnk, kMaxSize, "/proc/self/fd/%d", fd);
+    size_t r = readlink(proclnk, filename, kMaxSize);
     filename[r] = '\0';
     ret = simple_open(ret, filename, mode);
   }
