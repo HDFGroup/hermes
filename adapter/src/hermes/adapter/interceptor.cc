@@ -37,7 +37,6 @@ void PopulateBufferingPath() {
   INTERCEPTOR_LIST->hermes_paths_exclusion.push_back(
       config.buffer_pool_shmem_name);
   INTERCEPTOR_LIST->hermes_paths_exclusion.push_back(kHermesExtension);
-  INTERCEPTOR_LIST->hermes_paths_exclusion.push_back(kLogExtension);
 }
 bool IsTracked(const std::string& path) {
   if (hermes::adapter::exit) return false;

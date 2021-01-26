@@ -38,11 +38,6 @@ function(mpi_daemon test_exec test_mpi_proc test_args daemon_procs)
             ${CMAKE_BINARY_DIR}/bin/${test_exec} ${test_mpi_proc}
             ${CMAKE_BINARY_DIR}/bin/hermes_daemon ${daemon_procs}
             ${CMAKE_SOURCE_DIR}/adapter/test/data/hermes.conf)
-    #    add_test(NAME Test${test_exec}_${test_mpi_proc}
-    #            COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${test_mpi_proc}
-    #            "${CMAKE_BINARY_DIR}/bin/${exec}" ${args}
-    #            ":" ${MPIEXEC_NUMPROC_FLAG} ${daemon_procs}
-    #            $<TARGET_FILE:hermes_daemon> ${CMAKE_SOURCE_DIR}/adapter/test/data/hermes.conf)
     set_property(TEST Test${test_exec}_${test_mpi_proc}
             PROPERTY ENVIRONMENT HERMES_CONF=${CMAKE_SOURCE_DIR}/adapter/test/data/hermes.conf)
     set_property(TEST Test${test_exec}_${test_mpi_proc} APPEND
