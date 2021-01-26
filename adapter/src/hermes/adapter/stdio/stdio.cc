@@ -82,10 +82,10 @@ FILE *reopen_internal(const std::string &path_str, const char *mode,
   if (!ret) {
     return ret;
   } else {
+    LOG(INFO) << "Reopen file for filename " << path_str << " in mode " << mode
+              << std::endl;
     auto existing = mdm->Find(ret);
     if (!existing.second) {
-      LOG(INFO) << "Reopen file for filename " << path_str << " in mode "
-                << mode << std::endl;
       LOG(INFO) << "File not opened before by adapter" << std::endl;
       return nullptr;
     } else {
@@ -123,25 +123,25 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
                         (unsigned char *)ptr + data_offset + item.first.size_);
     existing.first.st_blobs.emplace(item.second.blob_name_);
     if (!blob_exists || item.second.size_ == kPageSize) {
-      LOG(INFO) << "Overwrite blob " << item.second.blob_name_
+      LOG(INFO) << "Create or Overwrite blob " << item.second.blob_name_
                 << " of size:" << item.second.size_ << "." << std::endl;
       existing.first.st_bkid->Put(item.second.blob_name_, put_data, ctx);
     } else {
       LOG(INFO) << "Blob " << item.second.blob_name_
                 << " of size:" << item.second.size_ << " exists." << std::endl;
       hapi::Blob temp(0);
-      auto exiting_blob_size =
+      auto existing_blob_size =
           existing.first.st_bkid->Get(item.second.blob_name_, temp, ctx);
       if (item.second.offset_ == 0) {
         LOG(INFO) << "Blob offset is 0" << std::endl;
-        if (item.second.size_ >= exiting_blob_size) {
+        if (item.second.size_ >= existing_blob_size) {
           LOG(INFO) << "Overwrite blob " << item.second.blob_name_
                     << " of size:" << item.second.size_ << "." << std::endl;
           existing.first.st_bkid->Put(item.second.blob_name_, put_data, ctx);
         } else {
           LOG(INFO) << "Update blob " << item.second.blob_name_
-                    << " of size:" << exiting_blob_size << "." << std::endl;
-          hapi::Blob existing_data(exiting_blob_size);
+                    << " of size:" << existing_blob_size << "." << std::endl;
+          hapi::Blob existing_data(existing_blob_size);
           existing.first.st_bkid->Get(item.second.blob_name_, existing_data,
                                       ctx);
           memcpy(existing_data.data(), put_data.data(), put_data.size());
@@ -151,10 +151,10 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
       } else {
         LOG(INFO) << "Blob offset: " << item.second.offset_ << "." << std::endl;
         auto new_size = item.second.offset_ + item.second.size_;
-        hapi::Blob existing_data(exiting_blob_size);
+        hapi::Blob existing_data(existing_blob_size);
         existing.first.st_bkid->Get(item.second.blob_name_, existing_data, ctx);
-        if (new_size < exiting_blob_size) {
-          new_size = exiting_blob_size;
+        if (new_size < existing_blob_size) {
+          new_size = existing_blob_size;
         }
         hapi::Blob final_data(new_size);
         auto existing_data_cp_size =
@@ -163,11 +163,11 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
                 : existing_data.size();
         memcpy(final_data.data(), existing_data.data(), existing_data_cp_size);
 
-        if (exiting_blob_size < item.second.offset_ + 1 &&
+        if (existing_blob_size < item.second.offset_ + 1 &&
             fs::exists(filename) &&
             fs::file_size(filename) >=
                 item.second.offset_ + 1 + item.second.size_) {
-          size_t size_to_read = item.second.offset_ + 1 - exiting_blob_size;
+          size_t size_to_read = item.second.offset_ + 1 - existing_blob_size;
           LOG(INFO) << "Blob has a gap in update read gap from original file."
                     << std::endl;
           INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
@@ -193,7 +193,7 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
         }
         memcpy(final_data.data() + item.second.offset_, put_data.data(),
                put_data.size());
-        if (new_size < exiting_blob_size) {
+        if (new_size < existing_blob_size) {
           LOG(INFO) << "Retain last portion of blob as Blob is bigger than the "
                        "update."
                     << std::endl;
