@@ -83,6 +83,7 @@ class MetadataManager {
   void FinalizeHermes() {
     if (ref == 1) {
       if (this->is_mpi) {
+        MPI_Barrier(MPI_COMM_WORLD);
         if (this->rank == 0) {
           hermes->RemoteFinalize();
         }
