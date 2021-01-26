@@ -744,7 +744,26 @@ char *HERMES_DECL(fgets)(char *s, int size, FILE *stream) {
     auto existing = mdm->Find(stream);
     if (existing.second) {
       LOG(INFO) << "Intercept fgets." << std::endl;
-      read_internal(existing, s, size, stream);
+      size_t read_size = size - 1;
+      size_t ret_size = read_internal(existing, s, read_size, stream);
+      if (ret_size < read_size) {
+        /* FILE ended */
+        read_size = ret_size;
+      }
+      /* Check if \0 or \n in s.*/
+      size_t copy_pos = 0;
+      for (size_t i = 0; i < read_size; ++i) {
+        if (s[i] == '\0' || s[i] == '\n') {
+          copy_pos = i;
+          break;
+        }
+      }
+      if (copy_pos > 0) {
+        /* \n and \0 was found. */
+        s[copy_pos + 1] = '\0';
+      } else {
+        s[read_size] = '\0';
+      }
       ret = s;
     } else {
       MAP_OR_FAIL(fgets);

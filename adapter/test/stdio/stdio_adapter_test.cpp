@@ -50,9 +50,9 @@ int pretest() {
   if (fs::exists(info.new_file)) fs::remove(info.new_file);
   if (fs::exists(info.existing_file)) fs::remove(info.existing_file);
   if (!fs::exists(info.existing_file)) {
-    std::string cmd = "dd if=/dev/zero of=" + info.existing_file + " bs=" +
+    std::string cmd = "{ tr -dc '[:alnum:]' < /dev/urandom | head -c " +
                       std::to_string(args.request_size * info.num_iterations) +
-                      " count=1  > /dev/null 2>&1";
+                      "; } > " + info.existing_file;
     int status = system(cmd.c_str());
     REQUIRE(status != -1);
     REQUIRE(fs::file_size(info.existing_file) ==

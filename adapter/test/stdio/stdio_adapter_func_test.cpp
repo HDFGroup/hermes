@@ -299,7 +299,7 @@ TEST_CASE("fgets", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(fh != nullptr);
     auto ret_str = fgets(info.read_data.data(), args.request_size, fh);
     REQUIRE(ret_str != NULL);
-    REQUIRE(info.read_data.size() == args.request_size);
+    REQUIRE(strlen(ret_str) == args.request_size - 1);
     int status = fclose(fh);
     REQUIRE(status == 0);
   }
