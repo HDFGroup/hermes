@@ -11,23 +11,24 @@ SLEEP_TIME=3
 
 error_ct=0
 if [[ ! -f "$MPI_EXEC" ]]; then
-  echo "MPI_EXEC ${MPI_EXEC} does not exists."
+  echo "MPI_EXEC ${MPI_EXEC} does not exists." >&2
   error_ct=$((error_ct + 1))
 fi
 if [[ ! -f "${TEST_EXEC}" ]]; then
-  echo "TEST_EXEC ${TEST_EXEC} does not exists."
+  echo "TEST_EXEC ${TEST_EXEC} does not exists." >&2
   error_ct=$((error_ct + 1))
 fi
 if [[ ! -f "${HERMES_EXEC}" ]]; then
-  echo "HERMES_EXEC ${HERMES_EXEC} does not exists."
+  echo "HERMES_EXEC ${HERMES_EXEC} does not exists." >&2
   error_ct=$((error_ct + 1))
 fi
 if [[ ! -f "${HERMES_CONF}" ]]; then
-  echo "HERMES_CONF ${HERMES_CONF} does not exists."
+  echo "HERMES_CONF ${HERMES_CONF} does not exists." >&2
   error_ct=$((error_ct + 1))
 fi
 if [ $error_ct -gt 0 ]; then
-  raise error "Arguments are wrong !!!"
+  echo "Arguments are wrong !!!" >&2
+  exit $error_ct
 fi
 
 echo "${MPI_EXEC} -n ${HERMES_PROCS} ${HERMES_EXEC} ${HERMES_CONF} &"
@@ -40,7 +41,12 @@ sleep ${SLEEP_TIME}
 
 echo "${MPI_EXEC} -n ${TEST_PROCS} ${TEST_EXEC} ${TEST_ARGS}"
 ${MPI_EXEC} -n ${TEST_PROCS} ${TEST_EXEC} ${TEST_ARGS}
-
+status=$?
 echo "Killing Hermes daemon with PID ${HERMES_EXEC_PID}"
 kill ${HERMES_EXEC_PID}
+if [ $status -gt 0 ]; then
+  echo "Test failed with code $status!" >&2
+  exit $status
+fi
 echo "Finishing test."
+exit 0

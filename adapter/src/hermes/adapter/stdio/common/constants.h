@@ -12,7 +12,6 @@
 /**
  * Internal header
  */
-#include <hermes/adapter/constants.h>
 #include <hermes/adapter/stdio/common/enumerations.h>
 
 /**

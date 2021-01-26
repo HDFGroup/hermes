@@ -12,6 +12,7 @@
 /**
  * Internal headers
  */
+#include <hermes/adapter/constants.h>
 #include <hermes/adapter/stdio/common/constants.h>
 #include <hermes/adapter/stdio/common/datastructures.h>
 #include <mpi.h>
