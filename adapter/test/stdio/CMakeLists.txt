@@ -14,23 +14,26 @@ target_link_libraries(stdio_adapter_mapper_test
 add_dependencies(stdio_adapter_mapper_test hermes_stdio)
 gcc(stdio_adapter_mapper_test "")
 
+
 #------------------------------------------------------------------------------
 # STDIO Adapter End to End tests
 #------------------------------------------------------------------------------
 add_executable(stdio_adapter_test stdio_adapter_test.cpp ${ADAPTER_COMMON})
 target_link_libraries(stdio_adapter_test Catch2::Catch2 -lstdc++fs -lc MPI::MPI_CXX)
 add_dependencies(stdio_adapter_test hermes_stdio)
+add_dependencies(stdio_adapter_test hermes_daemon)
 
 add_executable(hermes_stdio_adapter_test stdio_adapter_test.cpp ${ADAPTER_COMMON})
 target_link_libraries(hermes_stdio_adapter_test Catch2::Catch2 -lstdc++fs -lc MPI::MPI_CXX)
 target_link_libraries(hermes_stdio_adapter_test hermes_stdio)
 add_dependencies(hermes_stdio_adapter_test hermes_stdio)
-gcc(stdio_adapter_test "")
+add_dependencies(hermes_stdio_adapter_test hermes_daemon)
 gcc_hermes(hermes_stdio_adapter_test "" "")
 
 add_executable(stdio_adapter_mpi_test stdio_adapter_mpi_test.cpp ${ADAPTER_COMMON})
 target_link_libraries(stdio_adapter_mpi_test Catch2::Catch2 -lstdc++fs -lc MPI::MPI_CXX)
 add_dependencies(stdio_adapter_mpi_test hermes_stdio)
+add_dependencies(stdio_adapter_mpi_test hermes_daemon)
 mpi(stdio_adapter_mpi_test 2 "")
 
 

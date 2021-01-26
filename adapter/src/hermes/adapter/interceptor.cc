@@ -3,6 +3,12 @@
  */
 #include "interceptor.h"
 
+/**
+ * Define Interceptor list for adapter.
+ */
+#define INTERCEPTOR_LIST \
+  hermes::adapter::Singleton<hermes::adapter::InterceptorList>::GetInstance()
+
 namespace hermes::adapter {
 /**
  * is exit by program called.
