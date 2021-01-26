@@ -3,7 +3,9 @@ TEST_CASE("BatchedWriteRSRangeSmall",
               "]"
               ""
               "[operation=batched_write]"
-              "[request_size=range-small][repetition=1024]"
+              "[request_size=range-small][repetition=" +
+              std::to_string(info.num_iterations) +
+              "]"
               "[pattern=sequential][file=1]") {
   pretest();
   SECTION("write to new file always at the start") {

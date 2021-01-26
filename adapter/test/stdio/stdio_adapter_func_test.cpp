@@ -246,7 +246,8 @@ TEST_CASE("Freopen", "[process=" + std::to_string(info.comm_size) +
 TEST_CASE("fgetc", "[process=" + std::to_string(info.comm_size) +
                        "]"
                        "[operation=batched_fgetc]"
-                       "[repetition=1][file=1]") {
+                       "[repetition=" +
+                       std::to_string(info.num_iterations) + "][file=1]") {
   pretest();
   SECTION("iterate and get all characters") {
     FILE* fh = fopen(info.existing_file.c_str(), "r");

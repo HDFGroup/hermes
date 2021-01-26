@@ -14,7 +14,6 @@ target_link_libraries(stdio_adapter_mapper_test
 add_dependencies(stdio_adapter_mapper_test hermes_stdio)
 gcc(stdio_adapter_mapper_test "")
 
-
 #------------------------------------------------------------------------------
 # STDIO Adapter End to End tests
 #------------------------------------------------------------------------------
