@@ -1679,10 +1679,8 @@ Status StdIoPersistBucket(SharedMemoryContext *context, RpcContext *rpc,
 
 api::Status StdIoPersistBlob(SharedMemoryContext *context, RpcContext *rpc,
                              Arena *arena, BlobID blob_id,
-                             const std::string &file_name, const i32 &offset,
-                             const std::string &open_mode) {
+                             FILE *file , const i32 &offset) {
   Status result = 0;
-  FILE *file = fopen(file_name.c_str(), open_mode.c_str());
 
   if (file) {
     ScopedTemporaryMemory scratch(arena);
@@ -1705,10 +1703,7 @@ api::Status StdIoPersistBlob(SharedMemoryContext *context, RpcContext *rpc,
         // TODO(chogan): @errorhandling
       }
     }
-    if (fclose(file) != 0) {
-      // TODO(chogan): @errorhandling
-      result = 1;
-    }
+
   } else {
     // TODO(chogan): @errorhandling
     result = 1;

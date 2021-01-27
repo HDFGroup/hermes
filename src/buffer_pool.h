@@ -482,8 +482,7 @@ api::Status StdIoPersistBucket(SharedMemoryContext *context, RpcContext *rpc,
 
 api::Status StdIoPersistBlob(SharedMemoryContext *context, RpcContext *rpc,
                              Arena *arena, BlobID blob_id,
-                             const std::string &file_name, const i32 &offset,
-                             const std::string &open_mode);
+                             FILE* file, const i32 &offset);
 
 }  // namespace hermes
 
