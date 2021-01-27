@@ -631,9 +631,10 @@ int HERMES_DECL(fgetc)(FILE *stream) {
     auto existing = mdm->Find(stream);
     if (existing.second) {
       LOG(INFO) << "Intercept fgetc." << std::endl;
-      int value;
-      auto ret_size = read_internal(existing, &value, sizeof(int), stream);
-      if (ret_size == sizeof(int)) {
+      unsigned char value;
+      auto ret_size =
+          read_internal(existing, &value, sizeof(unsigned char), stream);
+      if (ret_size == sizeof(unsigned char)) {
         ret = value;
       }
     } else {
@@ -654,9 +655,10 @@ int HERMES_DECL(getc)(FILE *stream) {
     auto existing = mdm->Find(stream);
     if (existing.second) {
       LOG(INFO) << "Intercept getc." << std::endl;
-      int value;
-      auto ret_size = read_internal(existing, &value, sizeof(int), stream);
-      if (ret_size == sizeof(int)) {
+      unsigned char value;
+      auto ret_size =
+          read_internal(existing, &value, sizeof(unsigned char), stream);
+      if (ret_size == sizeof(unsigned char)) {
         ret = value;
       }
     } else {
@@ -678,9 +680,10 @@ int HERMES_DECL(_IO_getc)(FILE *stream) {
     auto existing = mdm->Find(stream);
     if (existing.second) {
       LOG(INFO) << "Intercept _IO_getc." << std::endl;
-      uint value;
-      auto ret_size = read_internal(existing, &value, sizeof(int), stream);
-      if (ret_size == sizeof(int)) {
+      unsigned char value;
+      auto ret_size =
+          read_internal(existing, &value, sizeof(unsigned char), stream);
+      if (ret_size == sizeof(unsigned char)) {
         ret = value;
       }
     } else {
