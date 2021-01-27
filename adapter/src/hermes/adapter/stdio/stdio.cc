@@ -534,6 +534,11 @@ int HERMES_DECL(fgetpos)(FILE *fp, fpos_t *pos) {
     auto existing = mdm->Find(fp);
     if (existing.second) {
       LOG(INFO) << "Intercept fgetpos." << std::endl;
+      // TODO(chogan): @portability In the GNU C Library, fpos_t is an opaque
+      // data structure that contains internal data to represent file offset and
+      // conversion state information. In other systems, it might have a
+      // different internal representation. This will need to change to support
+      // other compilers.
       pos->__pos = existing.first.st_ptr;
       ret = 0;
     } else {
@@ -948,6 +953,11 @@ int HERMES_DECL(fsetpos)(FILE *stream, const fpos_t *pos) {
       LOG(INFO) << "Intercept fsetpos offset:" << pos->__pos << "."
                 << std::endl;
       if (!(existing.first.st_mode & O_APPEND)) {
+        // TODO(chogan): @portability In the GNU C Library, fpos_t is an opaque
+        // data structure that contains internal data to represent file offset
+        // and conversion state information. In other systems, it might have a
+        // different internal representation. This will need to change to
+        // support other compilers.
         existing.first.st_ptr = pos->__pos;
         mdm->Update(stream, existing.first);
         ret = 0;
@@ -977,6 +987,11 @@ int HERMES_DECL(fsetpos64)(FILE *stream, const fpos64_t *pos) {
       LOG(INFO) << "Intercept fsetpos64 offset:" << pos->__pos << "."
                 << std::endl;
       if (!(existing.first.st_mode & O_APPEND)) {
+        // TODO(chogan): @portability In the GNU C Library, fpos_t is an opaque
+        // data structure that contains internal data to represent file offset
+        // and conversion state information. In other systems, it might have a
+        // different internal representation. This will need to change to
+        // support other compilers.
         existing.first.st_ptr = pos->__pos;
         mdm->Update(stream, existing.first);
         ret = 0;
