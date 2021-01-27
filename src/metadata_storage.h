@@ -7,7 +7,7 @@ namespace hermes {
  *
  */
 void PutToStorage(MetadataManager *mdm, const char *key, u64 val,
-                  MapType map_type);
+                MapType map_type);
 
 /**
  *
