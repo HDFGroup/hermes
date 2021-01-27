@@ -27,7 +27,7 @@ class Hermes(CMakePackage):
     homepage = "https://hermes.page/"
     url = "https://github.com/HDFGroup/hermes/tarball/master"
     git = "https://github.com/HDFGroup/hermes.git"
-    version('master', branch='master')
+    version('master', sha256='26b19cc37c9bd2aa9b5729ce41a6664aed32e2eeb300b4e3dc69cd2825fbca5c')
     depends_on('gcc')
     depends_on('mpich')
     depends_on('cmake')
