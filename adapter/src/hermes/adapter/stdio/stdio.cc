@@ -456,6 +456,8 @@ int HERMES_DECL(fflush)(FILE *fp) {
         std::size_t pos = 0;
         for (const auto &blob_name : blob_names) {
           file_vbucket.Link(blob_name, filename, ctx);
+          /* FIXME(hari): change this once we have blob namespace separated per
+           * bucket.*/
           if (pos == 0) {
             pos = blob_name.find(kStringDelimiter) + 1;
           }
@@ -501,6 +503,8 @@ int HERMES_DECL(fclose)(FILE *fp) {
           std::size_t pos = 0;
           for (const auto &blob_name : blob_names) {
             file_vbucket.Link(blob_name, filename, ctx);
+            /* FIXME(hari): change this once we have blob namespace separated
+             * per bucket.*/
             if (pos == 0) {
               pos = blob_name.find(kStringDelimiter) + 1;
             }

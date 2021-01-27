@@ -192,6 +192,8 @@ struct AdapterStat {
    * Comparator for comparing two blobs.
    */
   static bool CompareBlobs(const std::string &a, const std::string &b) {
+    /* FIXME(hari): change this once we have blob namespace separated per
+     * bucket.*/
     size_t pos = a.find(kStringDelimiter) + 1;
     return std::stol(a.substr(pos)) < std::stol(b.substr(pos));
   }
