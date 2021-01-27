@@ -81,7 +81,7 @@ void LocalDelete(MetadataManager *mdm, const char *key, MapType map_type) {
 
 MetadataManager *GetMetadataManagerFromContext(SharedMemoryContext *context) {
   MetadataManager *result =
-      (MetadataManager *)(context->shm_base + context->metadata_manager_offset);
+    (MetadataManager *)(context->shm_base + context->metadata_manager_offset);
 
   return result;
 }
@@ -204,14 +204,14 @@ void PutBlobId(MetadataManager *mdm, RpcContext *rpc, const std::string &name,
 
 VBucketInfo *GetVBucketInfoByIndex(MetadataManager *mdm, u32 index) {
   VBucketInfo *info_array =
-      (VBucketInfo *)((u8 *)mdm + mdm->vbucket_info_offset);
+    (VBucketInfo *)((u8 *)mdm + mdm->vbucket_info_offset);
   VBucketInfo *result = info_array + index;
 
   return result;
 }
 
 BucketID LocalGetNextFreeBucketId(SharedMemoryContext *context, RpcContext *rpc,
-                                  const std::string &name) {
+                             const std::string &name) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   BucketID result = {};
 
@@ -397,8 +397,8 @@ void GetBufferIdList(Arena *arena, SharedMemoryContext *context,
     LocalGetBufferIdList(arena, mdm, blob_id, buffer_ids);
   } else {
     std::vector<BufferID> result =
-        RpcCall<std::vector<BufferID>>(rpc, target_node, "RemoteGetBufferIdList",
-                                       blob_id);
+      RpcCall<std::vector<BufferID>>(rpc, target_node, "RemoteGetBufferIdList",
+                                     blob_id);
     buffer_ids->ids = PushArray<BufferID>(arena, result.size());
     buffer_ids->length = (u32)result.size();
     CopyIds((u64 *)buffer_ids->ids, (u64 *)result.data(), result.size());
@@ -673,7 +673,7 @@ u64 GetRemainingCapacity(SharedMemoryContext *context, RpcContext *rpc,
 
 SystemViewState *GetLocalSystemViewState(MetadataManager *mdm) {
   SystemViewState *result =
-      (SystemViewState *)((u8 *)mdm + mdm->system_view_state_offset);
+    (SystemViewState *)((u8 *)mdm + mdm->system_view_state_offset);
 
   return result;
 }
@@ -697,7 +697,7 @@ std::vector<u64> LocalGetGlobalDeviceCapacities(SharedMemoryContext *context) {
 }
 
 std::vector<u64> GetGlobalDeviceCapacities(SharedMemoryContext *context,
-                                           RpcContext *rpc) {
+                                         RpcContext *rpc) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   u32 target_node = mdm->global_system_view_state_node_id;
 
@@ -716,7 +716,7 @@ std::vector<u64> GetGlobalDeviceCapacities(SharedMemoryContext *context,
 SystemViewState *GetGlobalSystemViewState(SharedMemoryContext *context) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   SystemViewState *result =
-      (SystemViewState *)((u8 *)mdm + mdm->global_system_view_state_offset);
+    (SystemViewState *)((u8 *)mdm + mdm->global_system_view_state_offset);
   assert((u8 *)result != (u8 *)mdm);
 
   return result;
@@ -857,7 +857,7 @@ void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
   SeedHashForStorage(mdm->map_seed);
 
   mdm->system_view_state_update_interval_ms =
-      config->system_view_state_update_interval_ms;
+    config->system_view_state_update_interval_ms;
 
   // Initialize SystemViewState
 
