@@ -316,7 +316,7 @@ u32 AllocateEmbeddedIdList(MetadataManager *mdm, u32 length) {
   IdList *embedded_id_list = (IdList *)id_list_memory;
   embedded_id_list->length = length;
   embedded_id_list->head_offset =
-      GetHeapOffset(id_heap, (u8 *)(embedded_id_list + 1));
+    GetHeapOffset(id_heap, (u8 *)(embedded_id_list + 1));
   u32 result = GetHeapOffset(id_heap, (u8 *)embedded_id_list);
   EndTicketMutex(&mdm->id_mutex);
   CheckHeapOverlap(mdm);
@@ -571,7 +571,7 @@ GetRemainingNodeCapacities(SharedMemoryContext *context,
 u32 HashStringForStorage(MetadataManager *mdm, RpcContext *rpc,
                          const char *str) {
   int result =
-      (stbds_hash_string((char *)str, mdm->map_seed) % rpc->num_nodes) + 1;
+    (stbds_hash_string((char *)str, mdm->map_seed) % rpc->num_nodes) + 1;
 
   return result;
 }
@@ -592,7 +592,7 @@ void InitSwapSpaceFilename(MetadataManager *mdm, Arena *arena, Config *config) {
   memcpy(swap_filename_memory, full_swap_path.c_str(), full_swap_path.size());
   swap_filename_memory[full_swap_path.size()] = '\0';
   mdm->swap_filename_prefix_offset =
-      GetOffsetFromMdm(mdm, swap_filename_memory);
+    GetOffsetFromMdm(mdm, swap_filename_memory);
 
   const char swap_file_suffix[] = ".hermes";
   char *swap_file_suffix_memory = PushArray<char>(arena,
@@ -600,7 +600,7 @@ void InitSwapSpaceFilename(MetadataManager *mdm, Arena *arena, Config *config) {
   memcpy(swap_file_suffix_memory, swap_file_suffix,
          sizeof(swap_file_suffix));
   mdm->swap_filename_suffix_offset =
-      GetOffsetFromMdm(mdm, swap_file_suffix_memory);
+    GetOffsetFromMdm(mdm, swap_file_suffix_memory);
 }
 
 void InitMetadataStorage(SharedMemoryContext *context, MetadataManager *mdm,
@@ -644,8 +644,8 @@ void InitMetadataStorage(SharedMemoryContext *context, MetadataManager *mdm,
   u32 max_buckets = config->max_buckets_per_node + 1;
   u32 max_vbuckets = config->max_vbuckets_per_node + 1;
 
-      sh_new_strdup(bucket_map, max_buckets, map_heap);
-      shdefault(bucket_map, 0, map_heap);
+  sh_new_strdup(bucket_map, max_buckets, map_heap);
+  shdefault(bucket_map, 0, map_heap);
   mdm->bucket_map_offset = GetOffsetFromMdm(mdm, bucket_map);
   u32 bucket_map_num_bytes = map_heap->extent;
   total_map_capacity -= bucket_map_num_bytes;
@@ -655,8 +655,8 @@ void InitMetadataStorage(SharedMemoryContext *context, MetadataManager *mdm,
   // slower because they'll all share a lock.
 
   IdMap *vbucket_map = 0;
-      sh_new_strdup(vbucket_map, max_vbuckets, map_heap);
-      shdefault(vbucket_map, 0, map_heap);
+  sh_new_strdup(vbucket_map, max_vbuckets, map_heap);
+  shdefault(vbucket_map, 0, map_heap);
   mdm->vbucket_map_offset = GetOffsetFromMdm(mdm, vbucket_map);
   u32 vbucket_map_num_bytes = map_heap->extent - bucket_map_num_bytes;
   total_map_capacity -= vbucket_map_num_bytes;
@@ -665,8 +665,8 @@ void InitMetadataStorage(SharedMemoryContext *context, MetadataManager *mdm,
   IdMap *blob_map = 0;
   // NOTE(chogan): Each map element requires twice its size for storage.
   size_t blob_map_capacity = total_map_capacity / (2 * sizeof(IdMap));
-      sh_new_strdup(blob_map, blob_map_capacity, map_heap);
-      shdefault(blob_map, 0, map_heap);
+  sh_new_strdup(blob_map, blob_map_capacity, map_heap);
+  shdefault(blob_map, 0, map_heap);
   mdm->blob_map_offset = GetOffsetFromMdm(mdm, blob_map);
 }
 
