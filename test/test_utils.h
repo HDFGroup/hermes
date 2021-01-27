@@ -6,11 +6,11 @@
 
 #include <chrono>
 #include <iostream>
-#include <map>
 #include <vector>
+#include <map>
 
-#include "bucket.h"
 #include "hermes_types.h"
+#include "bucket.h"
 
 namespace hermes {
 namespace testing {
@@ -127,8 +127,8 @@ u64 UpdateDeviceState(PlacementSchema &schema,
     result += size;
     node_state.bytes_available[target.bits.device_id] -= size;
     node_state.ordered_cap.insert(
-      std::pair<u64, TargetID>(
-        node_state.bytes_available[target.bits.device_id], target));
+        std::pair<u64, TargetID>(
+            node_state.bytes_available[target.bits.device_id], target));
   }
 
   return result;
@@ -136,14 +136,13 @@ u64 UpdateDeviceState(PlacementSchema &schema,
 
 void PrintNodeState(TargetViewState &node_state) {
   for (int i {0}; i < node_state.num_devices; ++i) {
-    std::cout << "capacity of device[" << i
-              << "]: " << node_state.bytes_available[i] << '\n'
-              << std::flush;
-    std::cout << "available ratio of device[" << i << "]: "
-              << static_cast<double>(node_state.bytes_available[i]) /
-                     node_state.bytes_capacity[i]
-              << '\n'
-              << std::flush;
+    std::cout << "capacity of device[" << i << "]: "
+              << node_state.bytes_available[i]
+              << '\n' << std::flush;
+    std::cout << "available ratio of device["<< i << "]: "
+              << static_cast<double>(node_state.bytes_available[i])/
+                 node_state.bytes_capacity[i]
+              << '\n' << std::flush;
   }
 }
 

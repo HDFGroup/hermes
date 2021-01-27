@@ -1,16 +1,16 @@
-#include <mpi.h>
-
 #include <chrono>
 #include <string>
 #include <thread>
 #include <vector>
 
+#include <mpi.h>
+
+#include "hermes.h"
 #include "bucket.h"
 #include "buffer_pool_internal.h"
-#include "hermes.h"
 #include "metadata_management_internal.h"
-#include "test_utils.h"
 #include "utils.h"
+#include "test_utils.h"
 
 /**
  * @file buffer_pool_test.cc
@@ -51,7 +51,7 @@ void TestGetBuffers(Hermes *hermes) {
     std::vector<u64> global_state = GetGlobalDeviceCapacities(context,
                                                               &hermes->rpc_);
     PlacementSchema schema{
-      std::make_pair(global_state[ram_target.bits.device_id], ram_target)};
+        std::make_pair(global_state[ram_target.bits.device_id], ram_target)};
     std::vector<BufferID> ret = GetBuffers(context, schema);
     Assert(ret.size());
     // The next request should fail
@@ -146,8 +146,8 @@ void TestSwap(std::shared_ptr<Hermes> hermes) {
   size_t data_size = MEGABYTES(1);
   hapi::Blob data(data_size, 'x');
   std::string blob_name("swap_blob");
-  hapi::Status status =
-      ForceBlobToSwap(hermes.get(), bucket.GetId(), data, blob_name.c_str());
+  hapi::Status status = ForceBlobToSwap(hermes.get(), bucket.GetId(), data,
+                                        blob_name.c_str());
   Assert(status == 0);
   // NOTE(chogan): The Blob is in the swap space, but the API behaves as normal.
   Assert(bucket.ContainsBlob(blob_name));
@@ -177,8 +177,8 @@ void TestBufferOrganizer(std::shared_ptr<Hermes> hermes) {
   // NOTE(chogan): Force a second Blob to the swap space.
   hapi::Blob data2(KILOBYTES(4), 'y');
   std::string blob2_name("bo_blob2");
-  status =
-      ForceBlobToSwap(hermes.get(), bucket.GetId(), data2, blob2_name.c_str());
+  status = ForceBlobToSwap(hermes.get(), bucket.GetId(), data2,
+                           blob2_name.c_str());
   Assert(status == 0);
   Assert(bucket.BlobIsInSwap(blob2_name));
 

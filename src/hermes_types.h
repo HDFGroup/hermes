@@ -50,7 +50,8 @@ constexpr char kPlaceInHierarchy[] = "PlaceInHierarchy";
 #define HERMES_NOT_IMPLEMENTED_YET \
   LOG(FATAL) << __func__ << " not implemented yet\n"
 
-#define HERMES_INVALID_CODE_PATH LOG(FATAL) << "Invalid code path." << std::endl
+#define HERMES_INVALID_CODE_PATH \
+  LOG(FATAL) << "Invalid code path." << std::endl
 
 /** A TargetID uniquely identifies a buffering target within the system. */
 union TargetID {
@@ -191,8 +192,8 @@ typedef u64 TraitID;
 enum class TraitType : u8 { META = 0, DATA = 1, FILE_MAPPING = 2 };
 
 struct TraitIdArray {
-    TraitID *ids;
-    u32 length;
+  TraitID *ids;
+  u32 length;
 };
 
 
