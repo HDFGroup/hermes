@@ -51,7 +51,7 @@ void TestGetBuffers(Hermes *hermes) {
     std::vector<u64> global_state = GetGlobalDeviceCapacities(context,
                                                               &hermes->rpc_);
     PlacementSchema schema{
-        std::make_pair(global_state[ram_target.bits.device_id], ram_target)};
+      std::make_pair(global_state[ram_target.bits.device_id], ram_target)};
     std::vector<BufferID> ret = GetBuffers(context, schema);
     Assert(ret.size());
     // The next request should fail
@@ -115,7 +115,7 @@ void TestBlobOverwrite() {
   DeviceID ram_id = 0;
   int slab_index = 0;
   std::atomic<u32> *buffers_available =
-      GetAvailableBuffersArray(context, ram_id);
+    GetAvailableBuffersArray(context, ram_id);
   Assert(buffers_available[slab_index] == 2);
 
   hapi::Context ctx;
