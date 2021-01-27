@@ -453,9 +453,14 @@ int HERMES_DECL(fflush)(FILE *fp) {
         hermes::api::VBucket file_vbucket(filename, mdm->GetHermes(), true,
                                           ctx);
         auto offset_map = std::unordered_map<std::string, hermes::u64>();
+        std::size_t pos = 0;
         for (const auto &blob_name : blob_names) {
           file_vbucket.Link(blob_name, filename, ctx);
-          offset_map.emplace(blob_name, std::stol(blob_name) * kPageSize);
+          if (pos == 0) {
+            pos = blob_name.find(kStringDelimiter) + 1;
+          }
+          auto offset = std::stol(blob_name.substr(pos));
+          offset_map.emplace(blob_name, offset * kPageSize);
         }
         auto trait = hermes::api::FileMappingTrait(filename, offset_map,
                                                    nullptr, NULL, NULL);
@@ -476,14 +481,14 @@ int HERMES_DECL(fflush)(FILE *fp) {
 int HERMES_DECL(fclose)(FILE *fp) {
   int ret;
   if (hermes::adapter::IsTracked(fp)) {
+    LOG(INFO) << "Intercept fclose." << std::endl;
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(fp);
     if (existing.second) {
-      LOG(INFO) << "Intercept fclose." << std::endl;
       LOG(INFO) << "File handler is opened by adapter." << std::endl;
+      hapi::Context ctx;
       if (existing.first.ref_count == 1) {
         mdm->Delete(fp);
-        hapi::Context ctx;
         const auto &blob_names = existing.first.st_blobs;
         if (!blob_names.empty()) {
           auto filename = existing.first.st_bkid->GetName();
@@ -493,9 +498,15 @@ int HERMES_DECL(fclose)(FILE *fp) {
           hermes::api::VBucket file_vbucket(filename, mdm->GetHermes(), true,
                                             ctx);
           auto offset_map = std::unordered_map<std::string, hermes::u64>();
+          std::size_t pos = 0;
           for (const auto &blob_name : blob_names) {
             file_vbucket.Link(blob_name, filename, ctx);
-            offset_map.emplace(blob_name, std::stol(blob_name) * kPageSize);
+            if (pos == 0) {
+              pos = blob_name.find(kStringDelimiter) + 1;
+            }
+            auto offset_str = blob_name.substr(pos);
+            auto offset = std::stol(offset_str);
+            offset_map.emplace(blob_name, offset * kPageSize);
           }
           auto trait = hermes::api::FileMappingTrait(filename, offset_map,
                                                      nullptr, NULL, NULL);
@@ -504,7 +515,7 @@ int HERMES_DECL(fclose)(FILE *fp) {
           existing.first.st_blobs.clear();
           INTERCEPTOR_LIST->hermes_flush_exclusion.erase(filename);
         }
-        existing.first.st_bkid->Close(ctx);
+        existing.first.st_bkid->Destroy(ctx);
         mdm->FinalizeHermes();
       } else {
         LOG(INFO) << "File handler is opened by more than one fopen."
@@ -515,6 +526,7 @@ int HERMES_DECL(fclose)(FILE *fp) {
         existing.first.st_atim = ts;
         existing.first.st_ctim = ts;
         mdm->Update(fp, existing.first);
+        existing.first.st_bkid->Close(ctx);
       }
     }
   }

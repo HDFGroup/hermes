@@ -195,7 +195,7 @@ TEST_CASE("BatchedWriteSequential",
     REQUIRE(fs::file_size(info.new_file) == args.request_size);
   }
 
-  SECTION("write to new file always at start") {
+  SECTION("write to new file always at end") {
     FILE* fd = fopen(info.new_file.c_str(), "w+");
     REQUIRE(fd != nullptr);
 

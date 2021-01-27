@@ -192,7 +192,8 @@ struct AdapterStat {
    * Comparator for comparing two blobs.
    */
   static bool CompareBlobs(const std::string &a, const std::string &b) {
-    return std::stol(a) < std::stol(b);
+    size_t pos = a.find(kStringDelimiter) + 1;
+    return std::stol(a.substr(pos)) < std::stol(b.substr(pos));
   }
 };
 

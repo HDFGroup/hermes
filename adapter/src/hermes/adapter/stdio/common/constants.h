@@ -27,5 +27,9 @@ const MapperType kMapperType = MapperType::BALANCED;
  * Define kPageSize for balanced mapping.
  */
 const size_t kPageSize = 1024 * 1024;
+/**
+ * String delimiter
+ */
+const char kStringDelimiter = '#';
 
 #endif  // HERMES_STDIO_COMMON_CONSTANTS_H
