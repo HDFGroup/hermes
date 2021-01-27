@@ -81,21 +81,29 @@ target_compile_definitions(bp_test
 #------------------------------------------------------------------------------
 
 add_executable(config_parser_test config_parser_test.cc)
-target_link_libraries(config_parser_test hermes)
+target_link_libraries(config_parser_test hermes
+        $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium>)
 
 add_test(NAME TestConfigParser
-  COMMAND config_parser_test ${CMAKE_CURRENT_SOURCE_DIR}/data/hermes.conf)
+        COMMAND config_parser_test ${CMAKE_CURRENT_SOURCE_DIR}/data/hermes.conf)
+target_compile_definitions(config_parser_test
+        PRIVATE $<$<BOOL:${HERMES_RPC_THALLIUM}>:HERMES_RPC_THALLIUM>)
 
 #------------------------------------------------------------------------------
 # Memory Management tests
 #------------------------------------------------------------------------------
 
 add_executable(mem memory_test.cc)
-target_link_libraries(mem hermes)
+target_link_libraries(mem hermes $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium>)
 add_test(NAME TestMemoryManagement COMMAND mem)
+target_compile_definitions(mem
+        PRIVATE $<$<BOOL:${HERMES_RPC_THALLIUM}>:HERMES_RPC_THALLIUM>)
 
 add_executable(stb_map stb_map_test.cc)
-target_link_libraries(stb_map hermes ${LIBRT} MPI::MPI_CXX)
+target_link_libraries(stb_map hermes ${LIBRT}
+        $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium> MPI::MPI_CXX)
+target_compile_definitions(stb_map
+        PRIVATE $<$<BOOL:${HERMES_RPC_THALLIUM}>:HERMES_RPC_THALLIUM>)
 add_test(NAME TestSTBMapWithHeap COMMAND stb_map)
 
 #------------------------------------------------------------------------------
@@ -104,7 +112,7 @@ add_test(NAME TestSTBMapWithHeap COMMAND stb_map)
 
 add_executable(mdm mdm_test.cc)
 target_link_libraries(mdm hermes ${LIBRT}
-  $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium> MPI::MPI_CXX)
+        $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium> MPI::MPI_CXX)
 target_compile_definitions(mdm
   PRIVATE $<$<BOOL:${HERMES_RPC_THALLIUM}>:HERMES_RPC_THALLIUM>)
 add_test(NAME TestMDM COMMAND mdm)

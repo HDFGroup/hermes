@@ -1,11 +1,10 @@
 function(gcc_hermes exec tag_name tags)
-    add_test(NAME Test${exec}_${tag_name} COMMAND "${CMAKE_BINARY_DIR}/bin/${exec}" ${tags})
+    add_test(NAME Test${exec}_${tag_name} COMMAND "${CMAKE_BINARY_DIR}/bin/${exec}" ${tags} -s --reporter compact)
     set_property(TEST Test${exec}_${tag_name}
             PROPERTY ENVIRONMENT HERMES_CONF=${CMAKE_SOURCE_DIR}/adapter/test/data/hermes.conf)
     set_property(TEST Test${exec}_${tag_name} APPEND
             PROPERTY ENVIRONMENT LSAN_OPTIONS=suppressions=${CMAKE_SOURCE_DIR}/test/data/asan.supp)
 endfunction()
-
 #------------------------------------------------------------------------------
 # STDIO Adapter Internal tests
 #------------------------------------------------------------------------------

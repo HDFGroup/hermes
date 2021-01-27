@@ -15,31 +15,6 @@ using hermes::adapter::stdio::MetadataManager;
 namespace hapi = hermes::api;
 namespace fs = std::experimental::filesystem;
 
-/**
- * MPI
- */
-int HERMES_DECL(MPI_Init)(int *argc, char ***argv) {
-  MAP_OR_FAIL(MPI_Init);
-  int status = real_MPI_Init_(argc, argv);
-  if (status == 0) {
-    LOG(INFO) << "MPI Init intercepted." << std::endl;
-    auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
-    mdm->InitializeHermes(true);
-  }
-  return status;
-}
-
-int HERMES_DECL(MPI_Finalize)(void) {
-  LOG(INFO) << "MPI Finalize intercepted." << std::endl;
-  auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
-  mdm->FinalizeHermes();
-  MAP_OR_FAIL(MPI_Finalize);
-  int status = real_MPI_Finalize_();
-  return status;
-}
-/**
- * STDIO
- */
 FILE *simple_open(FILE *ret, const std::string &path_str, const char *mode) {
   LOG(INFO) << "Open file for filename " << path_str << " in mode " << mode
             << std::endl;
@@ -107,10 +82,10 @@ FILE *reopen_internal(const std::string &path_str, const char *mode,
   if (!ret) {
     return ret;
   } else {
+    LOG(INFO) << "Reopen file for filename " << path_str << " in mode " << mode
+              << std::endl;
     auto existing = mdm->Find(ret);
     if (!existing.second) {
-      LOG(INFO) << "Reopen file for filename " << path_str << " in mode "
-                << mode << std::endl;
       LOG(INFO) << "File not opened before by adapter" << std::endl;
       return nullptr;
     } else {
@@ -148,25 +123,25 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
                         (unsigned char *)ptr + data_offset + item.first.size_);
     existing.first.st_blobs.emplace(item.second.blob_name_);
     if (!blob_exists || item.second.size_ == kPageSize) {
-      LOG(INFO) << "Overwrite blob " << item.second.blob_name_
+      LOG(INFO) << "Create or Overwrite blob " << item.second.blob_name_
                 << " of size:" << item.second.size_ << "." << std::endl;
       existing.first.st_bkid->Put(item.second.blob_name_, put_data, ctx);
     } else {
       LOG(INFO) << "Blob " << item.second.blob_name_
                 << " of size:" << item.second.size_ << " exists." << std::endl;
       hapi::Blob temp(0);
-      auto exiting_blob_size =
+      auto existing_blob_size =
           existing.first.st_bkid->Get(item.second.blob_name_, temp, ctx);
       if (item.second.offset_ == 0) {
         LOG(INFO) << "Blob offset is 0" << std::endl;
-        if (item.second.size_ >= exiting_blob_size) {
+        if (item.second.size_ >= existing_blob_size) {
           LOG(INFO) << "Overwrite blob " << item.second.blob_name_
                     << " of size:" << item.second.size_ << "." << std::endl;
           existing.first.st_bkid->Put(item.second.blob_name_, put_data, ctx);
         } else {
           LOG(INFO) << "Update blob " << item.second.blob_name_
-                    << " of size:" << exiting_blob_size << "." << std::endl;
-          hapi::Blob existing_data(exiting_blob_size);
+                    << " of size:" << existing_blob_size << "." << std::endl;
+          hapi::Blob existing_data(existing_blob_size);
           existing.first.st_bkid->Get(item.second.blob_name_, existing_data,
                                       ctx);
           memcpy(existing_data.data(), put_data.data(), put_data.size());
@@ -176,10 +151,10 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
       } else {
         LOG(INFO) << "Blob offset: " << item.second.offset_ << "." << std::endl;
         auto new_size = item.second.offset_ + item.second.size_;
-        hapi::Blob existing_data(exiting_blob_size);
+        hapi::Blob existing_data(existing_blob_size);
         existing.first.st_bkid->Get(item.second.blob_name_, existing_data, ctx);
-        if (new_size < exiting_blob_size) {
-          new_size = exiting_blob_size;
+        if (new_size < existing_blob_size) {
+          new_size = existing_blob_size;
         }
         hapi::Blob final_data(new_size);
         auto existing_data_cp_size =
@@ -188,11 +163,11 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
                 : existing_data.size();
         memcpy(final_data.data(), existing_data.data(), existing_data_cp_size);
 
-        if (exiting_blob_size < item.second.offset_ + 1 &&
+        if (existing_blob_size < item.second.offset_ + 1 &&
             fs::exists(filename) &&
             fs::file_size(filename) >=
                 item.second.offset_ + 1 + item.second.size_) {
-          size_t size_to_read = item.second.offset_ + 1 - exiting_blob_size;
+          size_t size_to_read = item.second.offset_ + 1 - existing_blob_size;
           LOG(INFO) << "Blob has a gap in update read gap from original file."
                     << std::endl;
           INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
@@ -218,7 +193,7 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
         }
         memcpy(final_data.data() + item.second.offset_, put_data.data(),
                put_data.size());
-        if (new_size < exiting_blob_size) {
+        if (new_size < existing_blob_size) {
           LOG(INFO) << "Retain last portion of blob as Blob is bigger than the "
                        "update."
                     << std::endl;
@@ -227,22 +202,11 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
                  existing_data.size() - off_t + 1);
         }
         existing.first.st_bkid->Put(item.second.blob_name_, final_data, ctx);
-        hapi::Blob temp(0);
-        auto written_blob_size =
-            existing.first.st_bkid->Get(item.second.blob_name_, temp, ctx);
-        if (new_size != written_blob_size) {
-          LOG(INFO) << "Write of blob failed written:" << written_blob_size
-                    << " of " << new_size << " bytes." << std::endl;
-          return 0;
-        }
       }
     }
     data_offset += item.first.size_;
   }
   existing.first.st_ptr += data_offset;
-  existing.first.st_size = existing.first.st_size >= existing.first.st_ptr
-                               ? existing.first.st_size
-                               : existing.first.st_ptr;
   struct timespec ts;
   timespec_get(&ts, TIME_UTC);
   existing.first.st_mtim = ts;
@@ -273,11 +237,9 @@ size_t perform_file_read(const char *filename, size_t file_offset, void *ptr,
 
 size_t read_internal(std::pair<AdapterStat, bool> &existing, void *ptr,
                      size_t total_size, FILE *fp) {
-  LOG(INFO) << "Write called for filename: "
-            << existing.first.st_bkid->GetName()
+  LOG(INFO) << "Read called for filename: " << existing.first.st_bkid->GetName()
             << " on offset: " << existing.first.st_ptr
             << " and size: " << total_size << std::endl;
-  if (existing.first.st_ptr >= existing.first.st_size) return 0;
   size_t ret;
   auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
   auto mapper = MapperFactory().Get(kMapperType);
@@ -386,7 +348,7 @@ FILE *HERMES_DECL(fopen64)(const char *path, const char *mode) {
     ret = open_internal(path, mode);
   } else {
     MAP_OR_FAIL(fopen64);
-    ret = real_fopen_(path, mode);
+    ret = real_fopen64_(path, mode);
   }
   return (ret);
 }
@@ -398,11 +360,11 @@ FILE *HERMES_DECL(fdopen)(int fd, const char *mode) {
   if (ret && hermes::adapter::IsTracked(ret)) {
     LOG(INFO) << "Intercept fdopen for file descriptor: " << fd
               << " and mode: " << mode << " tracked." << std::endl;
-    int MAXSIZE = 0xFFF;
-    char proclnk[0xFFF];
-    char filename[0xFFF];
-    snprintf(proclnk, MAXSIZE, "/proc/self/fd/%d", fd);
-    size_t r = readlink(proclnk, filename, MAXSIZE);
+    const int kMaxSize = 0xFFF;
+    char proclnk[kMaxSize];
+    char filename[kMaxSize];
+    snprintf(proclnk, kMaxSize, "/proc/self/fd/%d", fd);
+    size_t r = readlink(proclnk, filename, kMaxSize);
     filename[r] = '\0';
     ret = simple_open(ret, filename, mode);
   }
@@ -587,6 +549,11 @@ int HERMES_DECL(fgetpos)(FILE *fp, fpos_t *pos) {
     auto existing = mdm->Find(fp);
     if (existing.second) {
       LOG(INFO) << "Intercept fgetpos." << std::endl;
+      // TODO(chogan): @portability In the GNU C Library, fpos_t is an opaque
+      // data structure that contains internal data to represent file offset and
+      // conversion state information. In other systems, it might have a
+      // different internal representation. This will need to change to support
+      // other compilers.
       pos->__pos = existing.first.st_ptr;
       ret = 0;
     } else {
@@ -685,8 +652,9 @@ int HERMES_DECL(fgetc)(FILE *stream) {
     if (existing.second) {
       LOG(INFO) << "Intercept fgetc." << std::endl;
       unsigned char value;
-      auto ret_size = read_internal(existing, &value, sizeof(value), stream);
-      if (ret_size == 1) {
+      auto ret_size =
+          read_internal(existing, &value, sizeof(unsigned char), stream);
+      if (ret_size == sizeof(unsigned char)) {
         ret = value;
       }
     } else {
@@ -708,8 +676,9 @@ int HERMES_DECL(getc)(FILE *stream) {
     if (existing.second) {
       LOG(INFO) << "Intercept getc." << std::endl;
       unsigned char value;
-      auto ret_size = read_internal(existing, &value, sizeof(value), stream);
-      if (ret_size == 1) {
+      auto ret_size =
+          read_internal(existing, &value, sizeof(unsigned char), stream);
+      if (ret_size == sizeof(unsigned char)) {
         ret = value;
       }
     } else {
@@ -732,8 +701,9 @@ int HERMES_DECL(_IO_getc)(FILE *stream) {
     if (existing.second) {
       LOG(INFO) << "Intercept _IO_getc." << std::endl;
       unsigned char value;
-      auto ret_size = read_internal(existing, &value, sizeof(value), stream);
-      if (ret_size == 1) {
+      auto ret_size =
+          read_internal(existing, &value, sizeof(unsigned char), stream);
+      if (ret_size == sizeof(unsigned char)) {
         ret = value;
       }
     } else {
@@ -774,9 +744,11 @@ int HERMES_DECL(getw)(FILE *stream) {
     auto existing = mdm->Find(stream);
     if (existing.second) {
       LOG(INFO) << "Intercept getw." << std::endl;
-      unsigned char value;
-      auto ret_size = read_internal(existing, &value, sizeof(value), stream);
-      if (ret_size == 1) ret = value;
+      int value;
+      auto ret_size = read_internal(existing, &value, sizeof(int), stream);
+      if (ret_size == sizeof(int)) {
+        ret = value;
+      }
     } else {
       MAP_OR_FAIL(getw);
       ret = real_getw_(stream);
@@ -795,7 +767,26 @@ char *HERMES_DECL(fgets)(char *s, int size, FILE *stream) {
     auto existing = mdm->Find(stream);
     if (existing.second) {
       LOG(INFO) << "Intercept fgets." << std::endl;
-      read_internal(existing, s, size, stream);
+      size_t read_size = size - 1;
+      size_t ret_size = read_internal(existing, s, read_size, stream);
+      if (ret_size < read_size) {
+        /* FILE ended */
+        read_size = ret_size;
+      }
+      /* Check if \0 or \n in s.*/
+      size_t copy_pos = 0;
+      for (size_t i = 0; i < read_size; ++i) {
+        if (s[i] == '\0' || s[i] == '\n') {
+          copy_pos = i;
+          break;
+        }
+      }
+      if (copy_pos > 0) {
+        /* \n and \0 was found. */
+        s[copy_pos + 1] = '\0';
+      } else {
+        s[read_size] = '\0';
+      }
       ret = s;
     } else {
       MAP_OR_FAIL(fgets);
@@ -977,6 +968,11 @@ int HERMES_DECL(fsetpos)(FILE *stream, const fpos_t *pos) {
       LOG(INFO) << "Intercept fsetpos offset:" << pos->__pos << "."
                 << std::endl;
       if (!(existing.first.st_mode & O_APPEND)) {
+        // TODO(chogan): @portability In the GNU C Library, fpos_t is an opaque
+        // data structure that contains internal data to represent file offset
+        // and conversion state information. In other systems, it might have a
+        // different internal representation. This will need to change to
+        // support other compilers.
         existing.first.st_ptr = pos->__pos;
         mdm->Update(stream, existing.first);
         ret = 0;
@@ -1006,6 +1002,11 @@ int HERMES_DECL(fsetpos64)(FILE *stream, const fpos64_t *pos) {
       LOG(INFO) << "Intercept fsetpos64 offset:" << pos->__pos << "."
                 << std::endl;
       if (!(existing.first.st_mode & O_APPEND)) {
+        // TODO(chogan): @portability In the GNU C Library, fpos_t is an opaque
+        // data structure that contains internal data to represent file offset
+        // and conversion state information. In other systems, it might have a
+        // different internal representation. This will need to change to
+        // support other compilers.
         existing.first.st_ptr = pos->__pos;
         mdm->Update(stream, existing.first);
         ret = 0;

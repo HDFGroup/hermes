@@ -241,7 +241,7 @@ size_t InitCommunication(CommunicationContext *comm, Arena *arena,
         break;
       }
       default: {
-        assert(!"Invalid code path\n");
+        HERMES_INVALID_CODE_PATH;
         break;
       }
     }

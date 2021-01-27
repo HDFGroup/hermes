@@ -141,10 +141,10 @@ Status Bucket::Put(const std::string &name, const std::vector<T> &data,
   return result;
 }
 
-template<typename T>
+template <typename T>
 Status Bucket::PlaceBlobs(std::vector<PlacementSchema> &schemas,
                           const std::vector<std::vector<T>> &blobs,
-                          const std::vector<std::string> &names) {
+                          const std::vector<std::string> &names, int retries) {
   Status result = 0;
 
   for (size_t i = 0; i < schemas.size(); ++i) {
@@ -152,9 +152,10 @@ Status Bucket::PlaceBlobs(std::vector<PlacementSchema> &schemas,
     hermes::Blob blob = {};
     blob.data = (u8 *)blobs[i].data();
     blob.size = blobs[i].size() * sizeof(T);
-    // TODO(chogan): @errorhandling What about partial failure?
+    LOG(INFO) << "Attaching blob '" << names[i] << "' to Bucket '" << name_
+              << "'" << std::endl;
     result = PlaceBlob(&hermes_->context_, &hermes_->rpc_, schema, blob,
-                       names[i].c_str(), id_);
+                       names[i], id_, retries);
   }
 
   return result;

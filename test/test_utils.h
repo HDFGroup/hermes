@@ -6,9 +6,10 @@
 
 #include <chrono>
 #include <iostream>
-#include <vector>
 #include <map>
+#include <vector>
 
+#include "bucket.h"
 #include "hermes_types.h"
 
 namespace hermes {
@@ -42,6 +43,8 @@ void Assert(bool expr, const char *file, int lineno, const char *message) {
     exit(-1);
   }
 }
+
+#define Assert(expr) hermes::testing::Assert((expr), __FILE__, __LINE__, #expr)
 
 struct TargetViewState {
   std::vector<hermes::u64> bytes_capacity;
@@ -133,19 +136,31 @@ u64 UpdateDeviceState(PlacementSchema &schema,
 
 void PrintNodeState(TargetViewState &node_state) {
   for (int i {0}; i < node_state.num_devices; ++i) {
-    std::cout << "capacity of device[" << i << "]: "
-              << node_state.bytes_available[i]
-              << '\n' << std::flush;
-    std::cout << "available ratio of device["<< i << "]: "
-              << static_cast<double>(node_state.bytes_available[i])/
-      node_state.bytes_capacity[i]
-              << '\n' << std::flush;
+    std::cout << "capacity of device[" << i
+              << "]: " << node_state.bytes_available[i] << '\n'
+              << std::flush;
+    std::cout << "available ratio of device[" << i << "]: "
+              << static_cast<double>(node_state.bytes_available[i]) /
+                     node_state.bytes_capacity[i]
+              << '\n'
+              << std::flush;
   }
+}
+
+void GetAndVerifyBlob(api::Bucket &bucket, const std::string &blob_name,
+                      const api::Blob &expected) {
+  api::Context ctx;
+  api::Blob retrieved_blob;
+  size_t expected_size = expected.size();
+  size_t retrieved_size = bucket.Get(blob_name, retrieved_blob, ctx);
+  Assert(expected_size == retrieved_size);
+  retrieved_blob.resize(retrieved_size);
+  retrieved_size = bucket.Get(blob_name, retrieved_blob, ctx);
+  Assert(expected_size == retrieved_size);
+  Assert(retrieved_blob == expected);
 }
 
 }  // namespace testing
 }  // namespace hermes
-
-#define Assert(expr) hermes::testing::Assert((expr), __FILE__, __LINE__, #expr)
 
 #endif  // HERMES_TEST_UTILS_H_
