@@ -33,16 +33,16 @@ endfunction()
 
 find_program(BASH_PROGRAM bash)
 
-function(mpi_daemon test_exec test_mpi_proc test_args daemon_procs)
+function(mpi_daemon test_exec test_mpi_proc test_args arg_name daemon_procs)
     #MPI_EXEC=$1 TEST_EXEC=$2 TEST_PROCS=$3 HERMES_EXEC=$4 HERMES_PROCS=$5 HERMES_CONF=$6
-    add_test(Test${test_exec}_${test_mpi_proc} ${BASH_PROGRAM}
+    add_test(Test${test_exec}_${test_mpi_proc}_${arg_name} ${BASH_PROGRAM}
             ${CMAKE_SOURCE_DIR}/adapter/test/run_hermes.sh ${MPIEXEC_EXECUTABLE}
             ${CMAKE_BINARY_DIR}/bin/${test_exec} ${test_mpi_proc}
             ${CMAKE_BINARY_DIR}/bin/hermes_daemon ${daemon_procs}
             ${CMAKE_SOURCE_DIR}/adapter/test/data/hermes.conf)
-    set_property(TEST Test${test_exec}_${test_mpi_proc}
+    set_property(TEST Test${test_exec}_${test_mpi_proc}_${arg_name}
             PROPERTY ENVIRONMENT HERMES_CONF=${CMAKE_SOURCE_DIR}/adapter/test/data/hermes.conf)
-    set_property(TEST Test${test_exec}_${test_mpi_proc} APPEND
+    set_property(TEST Test${test_exec}_${test_mpi_proc}_${arg_name} APPEND
             PROPERTY ENVIRONMENT LSAN_OPTIONS=suppressions=${CMAKE_SOURCE_DIR}/test/data/asan.supp)
 endfunction()
 

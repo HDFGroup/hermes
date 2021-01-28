@@ -42,7 +42,8 @@ add_dependencies(hermes_stdio_adapter_mpi_test hermes_stdio)
 add_dependencies(hermes_stdio_adapter_mpi_test hermes_daemon)
 set_target_properties(hermes_stdio_adapter_mpi_test PROPERTIES COMPILE_FLAGS "-DHERMES_INTERCEPT=1")
 
-mpi_daemon(hermes_stdio_adapter_mpi_test 2 "" 1)
+mpi_daemon(hermes_stdio_adapter_mpi_test 2 "~[request_size=range-large]" "" 1)
+mpi_daemon(hermes_stdio_adapter_mpi_test 2 "[request_size=range-large]" "large" 1)
 
 
 
