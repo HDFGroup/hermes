@@ -978,7 +978,6 @@ TEST_CASE("BatchedUpdateRandomRSRangeLarge",
       std::string data = gen_random(request_size);
       test::test_fwrite(data.data(), request_size);
       REQUIRE(test::size_written_orig == request_size);
-      fflush(test::fh_orig);
     }
     test::test_fclose();
     REQUIRE(test::status_orig == 0);
