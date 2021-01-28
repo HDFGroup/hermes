@@ -222,8 +222,8 @@ void test_fwrite(const void* ptr, size_t size) {
 }
 void test_fread(char* ptr, size_t size) {
   size_read_orig = fread(ptr, sizeof(char), size, fh_orig);
-  char* read_data = (char*)malloc(size);
-  size_t size_read = fread(read_data, sizeof(char), size, fh_cmp);
+  std::vector<unsigned char> read_data(size,'r');
+  size_t size_read = fread(read_data.data(), sizeof(char), size, fh_cmp);
   REQUIRE(size_read == size_read_orig);
   if (size_read > 0) {
     size_t unmatching_chars = 0;
