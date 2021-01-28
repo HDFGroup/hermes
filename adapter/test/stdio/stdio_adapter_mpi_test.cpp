@@ -112,9 +112,8 @@ void test_fread(char* ptr, size_t size) {
   size_t size_read = fread(read_data, sizeof(char), size, fh_cmp);
   REQUIRE(size_read == size_read_orig);
   size_t unmatching_chars = 0;
-  for (size_t i = 0;i<size;++i){
-    if (read_data[i] !=ptr[i])
-      unmatching_chars++;
+  for (size_t i = 0; i < size; ++i) {
+    if (read_data[i] != ptr[i]) unmatching_chars++;
   }
   REQUIRE(unmatching_chars == 0);
 }
@@ -124,7 +123,6 @@ void test_fseek(long offset, int whence) {
   REQUIRE(status == status_orig);
 }
 }  // namespace test
-
 
 int pretest() {
   REQUIRE(info.comm_size > 1);
@@ -197,19 +195,16 @@ int posttest(bool compare_data = true) {
       REQUIRE(status == 0);
 
       size_t char_mismatch = 0;
-      for (size_t pos =0; pos<size; ++pos){
-        if (d1[pos] != d2[pos])
-          char_mismatch++;
+      for (size_t pos = 0; pos < size; ++pos) {
+        if (d1[pos] != d2[pos]) char_mismatch++;
       }
       REQUIRE(char_mismatch == 0);
     }
   }
   if (compare_data && fs::exists(info.existing_file) &&
       fs::exists(info.existing_file_cmp)) {
-
     size_t size = fs::file_size(info.existing_file);
-    if (size != fs::file_size(info.existing_file_cmp))
-      sleep(1);
+    if (size != fs::file_size(info.existing_file_cmp)) sleep(1);
     REQUIRE(size == fs::file_size(info.existing_file_cmp));
     if (size > 0) {
       std::vector<unsigned char> d1(size, '0');
@@ -229,9 +224,8 @@ int posttest(bool compare_data = true) {
       status = fclose(fh2);
       REQUIRE(status == 0);
       size_t char_mismatch = 0;
-      for (size_t pos =0; pos<size; ++pos){
-        if (d1[pos] != d2[pos])
-          char_mismatch++;
+      for (size_t pos = 0; pos < size; ++pos) {
+        if (d1[pos] != d2[pos]) char_mismatch++;
       }
       REQUIRE(char_mismatch == 0);
     }
