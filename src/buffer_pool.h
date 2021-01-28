@@ -472,8 +472,9 @@ bool BufferIsByteAddressable(SharedMemoryContext *context, BufferID id);
 int PlaceInHierarchy(SharedMemoryContext *context, RpcContext *rpc,
                      SwapBlob swap_blob, const std::string &blob_name);
 api::Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
-                      PlacementSchema &schema, Blob blob, const char *name,
-                      BucketID bucket_id);
+                      PlacementSchema &schema, Blob blob,
+                      const std::string &name, BucketID bucket_id, int retries,
+                      bool called_from_buffer_organizer = false);
 api::Status StdIoPersistBucket(SharedMemoryContext *context, RpcContext *rpc,
                                Arena *arena, BucketID bucket_id,
                                const std::string &file_name,

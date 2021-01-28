@@ -50,7 +50,7 @@ TEST_CASE("FFlush", "[process=" + std::to_string(info.comm_size) +
     int status = fflush(nullptr);
     REQUIRE(status == 0);
   }
-  posttest();
+  posttest(false);
 }
 
 TEST_CASE("Fdopen", "[process=" + std::to_string(info.comm_size) +
@@ -201,7 +201,7 @@ TEST_CASE("Fdopen", "[process=" + std::to_string(info.comm_size) +
     status = close(fd);
     REQUIRE(status == -1);
   }
-  posttest();
+  posttest(false);
 }
 
 TEST_CASE("Freopen", "[process=" + std::to_string(info.comm_size) +
@@ -240,15 +240,14 @@ TEST_CASE("Freopen", "[process=" + std::to_string(info.comm_size) +
     int status = fclose(fhap);
     REQUIRE(status == 0);
   }
-  posttest();
+  posttest(false);
 }
 
-TEST_CASE("fgetc",
-          "[process=" + std::to_string(info.comm_size) +
-              "]"
-              "[operation=batched_fgetc]"
-              "[repetition=\" + std::to_string(info.num_iterations) +\n"
-              "              \"][file=1]") {
+TEST_CASE("fgetc", "[process=" + std::to_string(info.comm_size) +
+                       "]"
+                       "[operation=batched_fgetc]"
+                       "[repetition=" +
+                       std::to_string(info.num_iterations) + "][file=1]") {
   pretest();
   SECTION("iterate and get all characters") {
     FILE* fh = fopen(info.existing_file.c_str(), "r");
@@ -264,7 +263,7 @@ TEST_CASE("fgetc",
     int status = fclose(fh);
     REQUIRE(status == 0);
   }
-  posttest();
+  posttest(false);
 }
 
 TEST_CASE("getc", "[process=" + std::to_string(info.comm_size) +
@@ -287,7 +286,7 @@ TEST_CASE("getc", "[process=" + std::to_string(info.comm_size) +
     int status = fclose(fh);
     REQUIRE(status == 0);
   }
-  posttest();
+  posttest(false);
 }
 
 TEST_CASE("fgets", "[process=" + std::to_string(info.comm_size) +
@@ -300,19 +299,18 @@ TEST_CASE("fgets", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(fh != nullptr);
     auto ret_str = fgets(info.read_data.data(), args.request_size, fh);
     REQUIRE(ret_str != NULL);
-    REQUIRE(info.read_data.size() == args.request_size);
+    REQUIRE(strlen(ret_str) == args.request_size - 1);
     int status = fclose(fh);
     REQUIRE(status == 0);
   }
-  posttest();
+  posttest(false);
 }
 
-TEST_CASE("fputc",
-          "[process=" + std::to_string(info.comm_size) +
-              "]"
-              "[operation=batched_fputc]"
-              "[repetition=\" + std::to_string(info.num_iterations) +\n"
-              "              \"][file=1]") {
+TEST_CASE("fputc", "[process=" + std::to_string(info.comm_size) +
+                       "]"
+                       "[operation=batched_fputc]"
+                       "[repetition=" +
+                       std::to_string(info.num_iterations) + "][file=1]") {
   pretest();
   SECTION("iterate and get all characters") {
     FILE* fh = fopen(info.new_file.c_str(), "w+");
@@ -326,7 +324,7 @@ TEST_CASE("fputc",
     int status = fclose(fh);
     REQUIRE(status == 0);
   }
-  posttest();
+  posttest(false);
 }
 
 TEST_CASE("putc", "[process=" + std::to_string(info.comm_size) +
@@ -347,7 +345,7 @@ TEST_CASE("putc", "[process=" + std::to_string(info.comm_size) +
     int status = fclose(fh);
     REQUIRE(status == 0);
   }
-  posttest();
+  posttest(false);
 }
 
 TEST_CASE("fputs", "[process=" + std::to_string(info.comm_size) +
@@ -363,7 +361,7 @@ TEST_CASE("fputs", "[process=" + std::to_string(info.comm_size) +
     status = fclose(fh);
     REQUIRE(status == 0);
   }
-  posttest();
+  posttest(false);
 }
 
 TEST_CASE("fseek", "[process=" + std::to_string(info.comm_size) +
@@ -397,7 +395,7 @@ TEST_CASE("fseek", "[process=" + std::to_string(info.comm_size) +
     status = fclose(fh);
     REQUIRE(status == 0);
   }
-  posttest();
+  posttest(false);
 }
 
 TEST_CASE("fseeko", "[process=" + std::to_string(info.comm_size) +
@@ -431,7 +429,7 @@ TEST_CASE("fseeko", "[process=" + std::to_string(info.comm_size) +
     status = fclose(fh);
     REQUIRE(status == 0);
   }
-  posttest();
+  posttest(false);
 }
 
 TEST_CASE("rewind", "[process=" + std::to_string(info.comm_size) +
@@ -461,7 +459,7 @@ TEST_CASE("rewind", "[process=" + std::to_string(info.comm_size) +
     status = fclose(fh);
     REQUIRE(status == 0);
   }
-  posttest();
+  posttest(false);
 }
 
 TEST_CASE("fsetpos", "[process=" + std::to_string(info.comm_size) +
@@ -490,7 +488,7 @@ TEST_CASE("fsetpos", "[process=" + std::to_string(info.comm_size) +
     status = fclose(fh);
     REQUIRE(status == 0);
   }
-  posttest();
+  posttest(false);
 }
 
 TEST_CASE("fgetpos", "[process=" + std::to_string(info.comm_size) +
@@ -516,5 +514,5 @@ TEST_CASE("fgetpos", "[process=" + std::to_string(info.comm_size) +
     status = fclose(fh);
     REQUIRE(status == 0);
   }
-  posttest();
+  posttest(false);
 }

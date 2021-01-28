@@ -64,29 +64,6 @@ bool IsNullTargetId(TargetID id) {
   return result;
 }
 
-TicketMutex *GetMapMutex(MetadataManager *mdm, MapType map_type) {
-  TicketMutex *mutex = 0;
-  switch (map_type) {
-    case kMapType_Bucket: {
-      mutex = &mdm->bucket_map_mutex;
-      break;
-    }
-    case kMapType_VBucket: {
-      mutex = &mdm->vbucket_map_mutex;
-      break;
-    }
-    case kMapType_Blob: {
-      mutex = &mdm->blob_map_mutex;
-      break;
-    }
-    default: {
-      assert(!"Invalid code path\n");
-    }
-  }
-
-  return mutex;
-}
-
 void LocalPut(MetadataManager *mdm, const char *key, u64 val,
               MapType map_type) {
   PutToStorage(mdm, key, val, map_type);
@@ -529,10 +506,11 @@ void LocalDestroyBlobById(SharedMemoryContext *context, RpcContext *rpc,
   FreeBufferIdList(context, rpc, blob_id);
 
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
-  char *blob_name = ReverseGetFromStorage(mdm, blob_id.as_int, kMapType_Blob);
+  std::string blob_name = ReverseGetFromStorage(mdm, blob_id.as_int,
+                                                kMapType_Blob);
 
-  if (blob_name) {
-    DeleteId(mdm, rpc, blob_name, kMapType_Blob);
+  if (blob_name.size() > 0) {
+    DeleteId(mdm, rpc, blob_name.c_str(), kMapType_Blob);
   } else {
     // TODO(chogan): @errorhandling
     DLOG(INFO) << "Expected to find blob_id " << blob_id.as_int
@@ -584,12 +562,14 @@ bool ContainsBlob(SharedMemoryContext *context, RpcContext *rpc,
   BlobID blob_id = GetBlobIdByName(context, rpc, blob_name.c_str());
   bool result = false;
 
-  u32 target_node = bucket_id.bits.node_id;
-  if (target_node == rpc->node_id) {
-    result = LocalContainsBlob(context, bucket_id, blob_id);
-  } else {
-    result = RpcCall<bool>(rpc, target_node, "RemoteContainsBlob", bucket_id,
-                           blob_name);
+  if (!IsNullBlobId(blob_id)) {
+    u32 target_node = bucket_id.bits.node_id;
+    if (target_node == rpc->node_id) {
+      result = LocalContainsBlob(context, bucket_id, blob_id);
+    } else {
+      result = RpcCall<bool>(rpc, target_node, "RemoteContainsBlob", bucket_id,
+                             blob_name);
+    }
   }
 
   return result;

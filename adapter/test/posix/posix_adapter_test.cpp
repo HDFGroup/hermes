@@ -39,7 +39,7 @@ struct Info {
 hermes::adapter::posix::test::Arguments args;
 hermes::adapter::posix::test::Info info;
 
-int init() {
+int init(int* argc, char*** argv) {
   info.write_data = std::string(args.request_size, 'w');
   info.read_data = std::string(args.request_size, 'r');
   return 0;
