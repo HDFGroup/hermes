@@ -82,7 +82,7 @@ void Finalize(SharedMemoryContext *context, CommunicationContext *comm,
         (comm->world_size == comm->num_nodes) && !force_rpc_shutdown;
       FinalizeRpcContext(rpc, is_daemon);
     }
-    UnmapSharedMemory(context);
+    ReleaseSharedMemoryContext(context);
     shm_unlink(shmem_name);
     HERMES_DEBUG_SERVER_CLOSE();
   }
@@ -1298,7 +1298,7 @@ void UnmapSharedMemory(SharedMemoryContext *context) {
   munmap(context->shm_base, context->shm_size);
 }
 
-void ReleaseSharedMemoryContext(SharedMemoryContext *context) {
+void CloseBufferingFiles(SharedMemoryContext *context) {
   BufferPool *pool = GetBufferPoolFromContext(context);
 
   for (int device_id = 0; device_id < pool->num_devices; ++device_id) {
@@ -1319,7 +1319,10 @@ void ReleaseSharedMemoryContext(SharedMemoryContext *context) {
       HERMES_NOT_IMPLEMENTED_YET;
     }
   }
+}
 
+void ReleaseSharedMemoryContext(SharedMemoryContext *context) {
+  CloseBufferingFiles(context);
   UnmapSharedMemory(context);
 }
 
