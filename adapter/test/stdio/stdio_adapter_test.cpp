@@ -228,8 +228,8 @@ void test_fread(char* ptr, size_t size) {
   if (size_read > 0) {
     size_t unmatching_chars = 0;
     for (size_t i = 0; i < size; ++i) {
-      if (read_data[i] != ptr[i]){
-        unmatching_chars=i;
+      if (read_data[i] != ptr[i]) {
+        unmatching_chars = i;
         break;
       }
     }
