@@ -44,6 +44,3 @@ set_target_properties(hermes_stdio_adapter_mpi_test PROPERTIES COMPILE_FLAGS "-D
 
 mpi_daemon(hermes_stdio_adapter_mpi_test 2 "~[request_size=range-large]" "" 1)
 mpi_daemon(hermes_stdio_adapter_mpi_test 2 "[request_size=range-large]" "large" 1)
-
-
-

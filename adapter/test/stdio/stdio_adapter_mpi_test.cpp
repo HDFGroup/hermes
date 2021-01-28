@@ -67,7 +67,7 @@ int init(int* argc, char*** argv) {
   if (info.debug && info.rank == 0) {
     printf("%d ready for attach\n", info.comm_size);
     fflush(stdout);
-    getchar();
+    sleep(10);
   }
   MPI_Barrier(MPI_COMM_WORLD);
   return 0;
