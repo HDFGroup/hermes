@@ -69,7 +69,12 @@ class MetadataManager {
       if (this->is_mpi) {
         MPI_Comm_rank(MPI_COMM_WORLD, &rank);
         MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
-        hermes = hermes::InitHermesClient(hermes_config);
+        if (comm_size > 1) {
+          hermes = hermes::InitHermesClient(hermes_config);
+        } else {
+          this->is_mpi = false;
+          hermes = hermes::InitHermesDaemon(hermes_config);
+        }
       } else {
         hermes = hermes::InitHermesDaemon(hermes_config);
       }

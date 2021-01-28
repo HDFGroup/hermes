@@ -5,6 +5,9 @@
 
 #include <experimental/filesystem>
 #include <iostream>
+#if HERMES_INTERCEPT == 1
+#include <hermes/adapter/stdio.h>
+#endif
 namespace fs = std::experimental::filesystem;
 
 namespace hermes::adapter::stdio::test {
@@ -21,6 +24,8 @@ struct Info {
   std::string read_data;
   std::string new_file;
   std::string existing_file;
+  std::string new_file_cmp;
+  std::string existing_file_cmp;
   size_t num_iterations = 64;
   unsigned int offset_seed = 1;
   unsigned int rs_seed = 1;
@@ -37,8 +42,25 @@ struct Info {
 hermes::adapter::stdio::test::Arguments args;
 hermes::adapter::stdio::test::Info info;
 
-int init() {
-  info.write_data = std::string(args.request_size, 'w');
+std::string gen_random(const int len) {
+  std::string tmp_s;
+  static const char alphanum[] =
+      "0123456789"
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+      "abcdefghijklmnopqrstuvwxyz";
+
+  srand((unsigned)time(NULL) * getpid());
+
+  tmp_s.reserve(len);
+
+  for (int i = 0; i < len; ++i)
+    tmp_s += alphanum[rand() % (sizeof(alphanum) - 1)];
+
+  return tmp_s;
+}
+int init(int* argc, char*** argv) {
+  MPI_Init(argc, argv);
+  info.write_data = gen_random(args.request_size);
   info.read_data = std::string(args.request_size, 'r');
   MPI_Comm_rank(MPI_COMM_WORLD, &info.rank);
   MPI_Comm_size(MPI_COMM_WORLD, &info.comm_size);
@@ -50,7 +72,45 @@ int init() {
   MPI_Barrier(MPI_COMM_WORLD);
   return 0;
 }
-int finalize() { return 0; }
+int finalize() {
+  MPI_Finalize();
+  return 0;
+}
+
+namespace test {
+FILE* fh_orig;
+FILE* fh_cmp;
+int status_orig;
+size_t size_read_orig;
+size_t size_written_orig;
+void test_fopen(const char* path, const char* mode) {
+  std::string cmp_path = std::string(path) + "_cmp";
+  fh_orig = fopen(path, mode);
+  fh_cmp = fopen(cmp_path.c_str(), mode);
+  REQUIRE(fh_cmp == fh_orig);
+}
+void test_fclose() {
+  status_orig = fclose(fh_orig);
+  fflush(fh_cmp);
+  int status = fclose(fh_cmp);
+  REQUIRE(status == status_orig);
+}
+void test_fwrite(const void* ptr, size_t size) {
+  size_written_orig = fwrite(ptr, sizeof(char), size, fh_orig);
+  size_t size_written = fwrite(ptr, sizeof(char), size, fh_cmp);
+  REQUIRE(size_written == size_written_orig);
+}
+void test_fread(void* ptr, size_t size) {
+  size_read_orig = fread(ptr, sizeof(char), size, fh_orig);
+  size_t size_read = fread(ptr, sizeof(char), size, fh_cmp);
+  REQUIRE(size_read == size_read_orig);
+}
+void test_fseek(long offset, int whence) {
+  status_orig = fseek(fh_orig, offset, whence);
+  int status = fseek(fh_cmp, offset, whence);
+  REQUIRE(status == status_orig);
+}
+}  // namespace test
 
 int pretest() {
   REQUIRE(info.comm_size > 1);
@@ -60,6 +120,12 @@ int pretest() {
                   "_of_" + std::to_string(info.comm_size);
   info.existing_file = fullpath.string() + "_ext_" + std::to_string(info.rank) +
                        "_of_" + std::to_string(info.comm_size);
+  info.new_file_cmp = fullpath.string() + "_new_cmp_" +
+                      std::to_string(info.rank) + "_of_" +
+                      std::to_string(info.comm_size);
+  info.existing_file_cmp = fullpath.string() + "_ext_cmp_" +
+                           std::to_string(info.rank) + "_of_" +
+                           std::to_string(info.comm_size);
   if (fs::exists(info.new_file)) fs::remove(info.new_file);
   if (fs::exists(info.existing_file)) fs::remove(info.existing_file);
   if (!fs::exists(info.existing_file)) {
@@ -71,14 +137,31 @@ int pretest() {
     REQUIRE(fs::file_size(info.existing_file) ==
             args.request_size * info.num_iterations);
     info.total_size = fs::file_size(info.existing_file);
+    cmd = "{ tr -dc '[:alnum:]' < /dev/urandom | head -c " +
+          std::to_string(args.request_size * info.num_iterations) + "; } > " +
+          info.existing_file_cmp;
+    status = system(cmd.c_str());
+    REQUIRE(status != -1);
+    REQUIRE(fs::file_size(info.existing_file_cmp) ==
+            args.request_size * info.num_iterations);
   }
   REQUIRE(info.total_size > 0);
+#if HERMES_INTERCEPT == 1
+  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.existing_file_cmp);
+  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.new_file_cmp);
+#endif
   return 0;
 }
 
-int posttest() {
+int posttest(bool compare_data = true) {
+#if HERMES_INTERCEPT == 1
+  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_file_cmp);
+  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.new_file_cmp);
+#endif
   if (fs::exists(info.new_file)) fs::remove(info.new_file);
   if (fs::exists(info.existing_file)) fs::remove(info.existing_file);
+  if (fs::exists(info.new_file_cmp)) fs::remove(info.new_file_cmp);
+  if (fs::exists(info.existing_file_cmp)) fs::remove(info.existing_file_cmp);
   return 0;
 }
 

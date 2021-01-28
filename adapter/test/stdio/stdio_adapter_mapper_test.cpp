@@ -36,7 +36,7 @@ struct Info {
 hermes::adapter::stdio::test::Arguments args;
 hermes::adapter::stdio::test::Info info;
 
-int init() { return 0; }
+int init(int* argc, char*** argv) { return 0; }
 int finalize() { return 0; }
 
 int pretest() {
