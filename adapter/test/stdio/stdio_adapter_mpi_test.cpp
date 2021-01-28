@@ -84,14 +84,20 @@ int status_orig;
 size_t size_read_orig;
 size_t size_written_orig;
 void test_fopen(const char* path, const char* mode) {
-  std::string cmp_path = std::string(path) + "_cmp";
+  std::string cmp_path;
+  if (strcmp(path, info.new_file.c_str()) == 0) {
+    cmp_path = info.new_file_cmp;
+  } else {
+    cmp_path = info.existing_file_cmp;
+  }
   fh_orig = fopen(path, mode);
   fh_cmp = fopen(cmp_path.c_str(), mode);
-  REQUIRE(fh_cmp == fh_orig);
+  bool is_same = (fh_cmp != nullptr && fh_orig != nullptr) ||
+                 (fh_cmp == nullptr && fh_orig == nullptr);
+  REQUIRE(is_same);
 }
 void test_fclose() {
   status_orig = fclose(fh_orig);
-  fflush(fh_cmp);
   int status = fclose(fh_cmp);
   REQUIRE(status == status_orig);
 }
@@ -100,10 +106,17 @@ void test_fwrite(const void* ptr, size_t size) {
   size_t size_written = fwrite(ptr, sizeof(char), size, fh_cmp);
   REQUIRE(size_written == size_written_orig);
 }
-void test_fread(void* ptr, size_t size) {
+void test_fread(char* ptr, size_t size) {
   size_read_orig = fread(ptr, sizeof(char), size, fh_orig);
-  size_t size_read = fread(ptr, sizeof(char), size, fh_cmp);
+  char* read_data = (char*)malloc(size);
+  size_t size_read = fread(read_data, sizeof(char), size, fh_cmp);
   REQUIRE(size_read == size_read_orig);
+  size_t unmatching_chars = 0;
+  for (size_t i = 0;i<size;++i){
+    if (read_data[i] !=ptr[i])
+      unmatching_chars++;
+  }
+  REQUIRE(unmatching_chars == 0);
 }
 void test_fseek(long offset, int whence) {
   status_orig = fseek(fh_orig, offset, whence);
@@ -111,6 +124,7 @@ void test_fseek(long offset, int whence) {
   REQUIRE(status == status_orig);
 }
 }  // namespace test
+
 
 int pretest() {
   REQUIRE(info.comm_size > 1);
@@ -128,19 +142,21 @@ int pretest() {
                            std::to_string(info.comm_size);
   if (fs::exists(info.new_file)) fs::remove(info.new_file);
   if (fs::exists(info.existing_file)) fs::remove(info.existing_file);
+  if (fs::exists(info.existing_file)) fs::remove(info.existing_file);
+  if (fs::exists(info.existing_file_cmp)) fs::remove(info.existing_file_cmp);
   if (!fs::exists(info.existing_file)) {
     std::string cmd = "{ tr -dc '[:alnum:]' < /dev/urandom | head -c " +
                       std::to_string(args.request_size * info.num_iterations) +
-                      "; } > " + info.existing_file;
+                      "; } > " + info.existing_file + " 2> /dev/null";
     int status = system(cmd.c_str());
     REQUIRE(status != -1);
     REQUIRE(fs::file_size(info.existing_file) ==
             args.request_size * info.num_iterations);
     info.total_size = fs::file_size(info.existing_file);
-    cmd = "{ tr -dc '[:alnum:]' < /dev/urandom | head -c " +
-          std::to_string(args.request_size * info.num_iterations) + "; } > " +
-          info.existing_file_cmp;
-    status = system(cmd.c_str());
+  }
+  if (!fs::exists(info.existing_file_cmp)) {
+    std::string cmd = "cp " + info.existing_file + " " + info.existing_file_cmp;
+    int status = system(cmd.c_str());
     REQUIRE(status != -1);
     REQUIRE(fs::file_size(info.existing_file_cmp) ==
             args.request_size * info.num_iterations);
@@ -155,13 +171,83 @@ int pretest() {
 
 int posttest(bool compare_data = true) {
 #if HERMES_INTERCEPT == 1
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_file_cmp);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.new_file_cmp);
+  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.existing_file);
+  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.new_file);
 #endif
+  if (compare_data && fs::exists(info.new_file) &&
+      fs::exists(info.new_file_cmp)) {
+    size_t size = fs::file_size(info.new_file);
+    REQUIRE(size == fs::file_size(info.new_file_cmp));
+    if (size > 0) {
+      std::vector<unsigned char> d1(size, '0');
+      std::vector<unsigned char> d2(size, '1');
+
+      FILE* fh1 = fopen(info.new_file.c_str(), "r");
+      REQUIRE(fh1 != nullptr);
+      size_t read_d1 = fread(d1.data(), size, sizeof(unsigned char), fh1);
+      REQUIRE(read_d1 == sizeof(unsigned char));
+      int status = fclose(fh1);
+      REQUIRE(status == 0);
+
+      FILE* fh2 = fopen(info.new_file_cmp.c_str(), "r");
+      REQUIRE(fh2 != nullptr);
+      size_t read_d2 = fread(d2.data(), size, sizeof(unsigned char), fh2);
+      REQUIRE(read_d2 == sizeof(unsigned char));
+      status = fclose(fh2);
+      REQUIRE(status == 0);
+
+      size_t char_mismatch = 0;
+      for (size_t pos =0; pos<size; ++pos){
+        if (d1[pos] != d2[pos])
+          char_mismatch++;
+      }
+      REQUIRE(char_mismatch == 0);
+    }
+  }
+  if (compare_data && fs::exists(info.existing_file) &&
+      fs::exists(info.existing_file_cmp)) {
+
+    size_t size = fs::file_size(info.existing_file);
+    if (size != fs::file_size(info.existing_file_cmp))
+      sleep(1);
+    REQUIRE(size == fs::file_size(info.existing_file_cmp));
+    if (size > 0) {
+      std::vector<unsigned char> d1(size, '0');
+      std::vector<unsigned char> d2(size, '1');
+
+      FILE* fh1 = fopen(info.existing_file.c_str(), "r");
+      REQUIRE(fh1 != nullptr);
+      size_t read_d1 = fread(d1.data(), size, sizeof(unsigned char), fh1);
+      REQUIRE(read_d1 == sizeof(unsigned char));
+      int status = fclose(fh1);
+      REQUIRE(status == 0);
+
+      FILE* fh2 = fopen(info.existing_file_cmp.c_str(), "r");
+      REQUIRE(fh2 != nullptr);
+      size_t read_d2 = fread(d2.data(), size, sizeof(unsigned char), fh2);
+      REQUIRE(read_d2 == sizeof(unsigned char));
+      status = fclose(fh2);
+      REQUIRE(status == 0);
+      size_t char_mismatch = 0;
+      for (size_t pos =0; pos<size; ++pos){
+        if (d1[pos] != d2[pos])
+          char_mismatch++;
+      }
+      REQUIRE(char_mismatch == 0);
+    }
+  }
+  /* Clean up. */
   if (fs::exists(info.new_file)) fs::remove(info.new_file);
   if (fs::exists(info.existing_file)) fs::remove(info.existing_file);
   if (fs::exists(info.new_file_cmp)) fs::remove(info.new_file_cmp);
   if (fs::exists(info.existing_file_cmp)) fs::remove(info.existing_file_cmp);
+
+#if HERMES_INTERCEPT == 1
+  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_file_cmp);
+  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.new_file_cmp);
+  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.new_file);
+  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_file);
+#endif
   return 0;
 }
 

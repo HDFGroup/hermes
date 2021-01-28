@@ -224,10 +224,17 @@ void test_fwrite(const void* ptr, size_t size) {
   size_t size_written = fwrite(ptr, sizeof(char), size, fh_cmp);
   REQUIRE(size_written == size_written_orig);
 }
-void test_fread(void* ptr, size_t size) {
+void test_fread(char* ptr, size_t size) {
   size_read_orig = fread(ptr, sizeof(char), size, fh_orig);
-  size_t size_read = fread(ptr, sizeof(char), size, fh_cmp);
+  char* read_data = (char*)malloc(size);
+  size_t size_read = fread(read_data, sizeof(char), size, fh_cmp);
   REQUIRE(size_read == size_read_orig);
+  size_t unmatching_chars = 0;
+  for (size_t i = 0;i<size;++i){
+    if (read_data[i] !=ptr[i])
+      unmatching_chars++;
+  }
+  REQUIRE(unmatching_chars == 0);
 }
 void test_fseek(long offset, int whence) {
   status_orig = fseek(fh_orig, offset, whence);
