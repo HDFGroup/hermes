@@ -493,7 +493,7 @@ bool LocalDestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
   return destroyed;
 }
 
-std::vector<TargetID> GetNodeTargets(SharedMemoryContext *context) {
+std::vector<TargetID> LocalGetNodeTargets(SharedMemoryContext *context) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   u32 length = mdm->node_targets.length;
   std::vector<TargetID> result(length);
@@ -614,6 +614,21 @@ void InitSwapSpaceFilename(MetadataManager *mdm, Arena *arena, Config *config) {
     GetOffsetFromMdm(mdm, swap_file_suffix_memory);
 }
 
+void InitNeighborhoodTargets(SharedMemoryContext *context, RpcContext *rpc) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  std::vector<TargetID> neighborhood_targets =
+    GetNeighborhoodTargets(context, rpc);
+  size_t num_targets = neighborhood_targets.size();
+  IdList targets = AllocateIdList(mdm, num_targets);
+  TargetID *ids = (TargetID *)GetIdsPtr(mdm, targets);
+  for (size_t i = 0; i < num_targets; ++i) {
+    ids[i] = neighborhood_targets[i];
+  }
+  ReleaseIdsPtr(mdm);
+
+  mdm->neighborhood_targets = targets;
+}
+
 void InitMetadataStorage(SharedMemoryContext *context, MetadataManager *mdm,
                          Arena *arena, Config *config) {
   InitSwapSpaceFilename(mdm, arena, config);
@@ -638,7 +653,6 @@ void InitMetadataStorage(SharedMemoryContext *context, MetadataManager *mdm,
   }
   ReleaseIdsPtr(mdm);
   mdm->node_targets = node_targets;
-
 
   // ID Maps
 

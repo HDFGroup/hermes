@@ -122,6 +122,7 @@ struct MetadataManager {
   size_t map_seed;
 
   IdList node_targets;
+  IdList neighborhood_targets;
 
   u32 system_view_state_update_interval_ms;
   u32 global_system_view_state_node_id;

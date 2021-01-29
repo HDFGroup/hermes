@@ -975,4 +975,76 @@ void DecrementRefcount(SharedMemoryContext *context, RpcContext *rpc,
   }
 }
 
+u32 GetRelativeNodeId(RpcContext *rpc, int offset) {
+  int result = rpc->node_id + offset;
+  CHECK_GE(result, 0);
+  CHECK_LE(result, rpc->num_nodes + 1);
+
+  if (result > (int)rpc->num_nodes) {
+    result = 1;
+  } else if (result == 0) {
+    result = rpc->num_nodes;
+  }
+
+  return (u32)result;
+}
+
+u32 GetNextNode(RpcContext *rpc) {
+  u32 result = GetRelativeNodeId(rpc, 1);
+
+  return result;
+}
+
+u32 GetPreviousNode(RpcContext *rpc) {
+  u32 result = GetRelativeNodeId(rpc, -1);
+
+  return result;
+}
+
+std::vector<TargetID> GetNodeTargets(SharedMemoryContext *context,
+                                     RpcContext *rpc, u32 target_node) {
+  std::vector<TargetID> result;
+
+  if (target_node == rpc->node_id) {
+    result = LocalGetNodeTargets(context);
+  } else {
+    result = RpcCall<std::vector<TargetID>>(rpc, target_node,
+                                            "RemoteGetNodeTargets");
+  }
+
+  return result;
+}
+
+std::vector<TargetID> GetNeighborhoodTargets(SharedMemoryContext *context,
+                                             RpcContext *rpc) {
+  // TODO(chogan): Inform the concept of "neighborhood" with a network topology
+  // NOTE(chogan): For now, each node has 2 neighbors, NodeID-1 and NodeID+1
+  // (wrapping around for nodes 1 and N).
+  std::vector<TargetID> result;
+
+  switch (rpc->num_nodes) {
+    case 1: {
+      // No neighbors
+      break;
+    }
+    case 2: {
+      // One neighbor
+      u32 next_node = GetNextNode(rpc);
+      result = GetNodeTargets(context, rpc, next_node);
+      break;
+    }
+    default: {
+      // Two neighbors
+      u32 next_node = GetNextNode(rpc);
+      std::vector<TargetID> next_targets = GetNodeTargets(context, rpc,
+                                                          next_node);
+      u32 prev_node = GetPreviousNode(rpc);
+      std::vector<TargetID> prev_targets = GetNodeTargets(context, rpc,
+                                                          prev_node);
+    }
+  }
+
+  return result;
+}
+
 }  // namespace hermes

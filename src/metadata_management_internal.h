@@ -95,6 +95,7 @@ GetRemainingNodeCapacities(SharedMemoryContext *context,
 std::string GetSwapFilename(MetadataManager *mdm, u32 node_id);
 std::vector<BlobID> LocalGetBlobIds(SharedMemoryContext *context,
                                     BucketID bucket_id);
+std::vector<TargetID> LocalGetNodeTargets(SharedMemoryContext *context);
 
 }  // namespace hermes
 #endif  // HERMES_METADATA_MANAGEMENT_INTERNAL_H_

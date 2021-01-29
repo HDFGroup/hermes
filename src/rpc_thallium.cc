@@ -333,6 +333,13 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
       req.respond(result);
     };
 
+  function<void(const request&)> rpc_get_node_targets =
+    [context](const request &req) {
+      std::vector<TargetID> result = LocalGetNodeTargets(context);
+
+      req.respond(result);
+    };
+
   function<void(const request&)> rpc_finalize =
     [rpc](const request &req) {
       (void)req;
@@ -381,6 +388,7 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
   rpc_server->define("RemoteGetGlobalDeviceCapacities",
                      rpc_get_global_device_capacities);
   rpc_server->define("RemoteGetBlobIds", rpc_get_blob_ids);
+  rpc_server->define("RemoteGetNodeTargets", rpc_get_node_targets);
   rpc_server->define("RemoteFinalize", rpc_finalize).disable_response();
 }
 
