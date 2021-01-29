@@ -1041,6 +1041,10 @@ std::vector<TargetID> GetNeighborhoodTargets(SharedMemoryContext *context,
       u32 prev_node = GetPreviousNode(rpc);
       std::vector<TargetID> prev_targets = GetNodeTargets(context, rpc,
                                                           prev_node);
+
+      result.reserve(next_targets.size() + prev_targets.size());
+      result.insert(result.end(), next_targets.begin(), next_targets.end());
+      result.insert(result.end(), prev_targets.begin(), prev_targets.end());
     }
   }
 
