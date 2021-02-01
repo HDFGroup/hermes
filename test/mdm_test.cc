@@ -190,18 +190,18 @@ static void TestMaxNameLength(HermesPtr hermes) {
   bucket.Destroy(ctx);
 }
 
-// void TestGetRelativeNodeId() {
-//   RpcContext rpc = {};
-//   rpc.num_nodes = 10;
-//   rpc.node_id = 1;
+void TestGetRelativeNodeId() {
+  RpcContext rpc = {};
+  rpc.num_nodes = 10;
+  rpc.node_id = 1;
 
-//   Assert(GetNextNode(&rpc) == 2);
-//   Assert(GetPreviousNode(&rpc) == 10);
+  Assert(GetNextNode(&rpc) == 2);
+  Assert(GetPreviousNode(&rpc) == 10);
 
-//   rpc.node_id = 10;
-//   Assert(GetNextNode(&rpc) == 1);
-//   Assert(GetPreviousNode(&rpc) == 9);
-// }
+  rpc.node_id = 10;
+  Assert(GetNextNode(&rpc) == 1);
+  Assert(GetPreviousNode(&rpc) == 9);
+}
 
 int main(int argc, char **argv) {
   int mpi_threads_provided;
@@ -221,7 +221,7 @@ int main(int argc, char **argv) {
   TestRenameBucket(hermes);
   TestBucketRefCounting(hermes);
   TestMaxNameLength(hermes);
-  // TestGetRelativeNodeId();
+  TestGetRelativeNodeId();
 
   hermes->Finalize(true);
 

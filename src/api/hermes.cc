@@ -296,6 +296,10 @@ std::shared_ptr<api::Hermes> InitHermes(Config *config, bool is_daemon,
 
   InitRpcClients(&result->rpc_);
 
+  // NOTE(chogan): Can only initialize the neighborhood Targets once the RPC
+  // clients have been initialized.
+  InitNeighborhoodTargets(&result->context_, &result->rpc_);
+
   return result;
 }
 

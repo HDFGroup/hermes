@@ -96,6 +96,8 @@ std::string GetSwapFilename(MetadataManager *mdm, u32 node_id);
 std::vector<BlobID> LocalGetBlobIds(SharedMemoryContext *context,
                                     BucketID bucket_id);
 std::vector<TargetID> LocalGetNodeTargets(SharedMemoryContext *context);
+u32 GetNextNode(RpcContext *rpc);
+u32 GetPreviousNode(RpcContext *rpc);
 
 }  // namespace hermes
 #endif  // HERMES_METADATA_MANAGEMENT_INTERNAL_H_
