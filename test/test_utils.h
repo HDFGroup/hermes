@@ -1,3 +1,15 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+* Distributed under BSD 3-Clause license.                                   *
+* Copyright by The HDF Group.                                               *
+* Copyright by the Illinois Institute of Technology.                        *
+* All rights reserved.                                                      *
+*                                                                           *
+* This file is part of Hermes. The full Hermes copyright notice, including  *
+* terms governing use, modification, and redistribution, is contained in    *
+* the COPYFILE, which can be found at the top directory. If you do not have *
+* access to either file, you may request a copy from help@hdfgroup.org.     *
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
 #ifndef HERMES_TEST_UTILS_H_
 #define HERMES_TEST_UTILS_H_
 
@@ -10,6 +22,7 @@
 #include <map>
 
 #include "hermes_types.h"
+#include "bucket.h"
 
 namespace hermes {
 namespace testing {
@@ -42,6 +55,8 @@ void Assert(bool expr, const char *file, int lineno, const char *message) {
     exit(-1);
   }
 }
+
+#define Assert(expr) hermes::testing::Assert((expr), __FILE__, __LINE__, #expr)
 
 struct TargetViewState {
   std::vector<hermes::u64> bytes_capacity;
@@ -143,9 +158,20 @@ void PrintNodeState(TargetViewState &node_state) {
   }
 }
 
+void GetAndVerifyBlob(api::Bucket &bucket, const std::string &blob_name,
+                      const api::Blob &expected) {
+  api::Context ctx;
+  api::Blob retrieved_blob;
+  size_t expected_size = expected.size();
+  size_t retrieved_size = bucket.Get(blob_name, retrieved_blob, ctx);
+  Assert(expected_size == retrieved_size);
+  retrieved_blob.resize(retrieved_size);
+  retrieved_size = bucket.Get(blob_name, retrieved_blob, ctx);
+  Assert(expected_size == retrieved_size);
+  Assert(retrieved_blob == expected);
+}
+
 }  // namespace testing
 }  // namespace hermes
-
-#define Assert(expr) hermes::testing::Assert((expr), __FILE__, __LINE__, #expr)
 
 #endif  // HERMES_TEST_UTILS_H_

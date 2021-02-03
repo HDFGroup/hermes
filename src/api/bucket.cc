@@ -1,3 +1,15 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * Distributed under BSD 3-Clause license.                                   *
+ * Copyright by The HDF Group.                                               *
+ * Copyright by the Illinois Institute of Technology.                        *
+ * All rights reserved.                                                      *
+ *                                                                           *
+ * This file is part of Hermes. The full Hermes copyright notice, including  *
+ * terms governing use, modification, and redistribution, is contained in    *
+ * the COPYFILE, which can be found at the top directory. If you do not have *
+ * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
 #include "bucket.h"
 
 #include <iostream>
@@ -55,15 +67,10 @@ Status Bucket::Put(const std::string &name, const u8 *data, size_t size,
       for (size_t i = 0; i < size; ++i) {
         blobs[0][i] = data[i];
       }
-      ret = PlaceBlobs(schemas, blobs, names);
+      ret = PlaceBlobs(schemas, blobs, names, ctx.buffer_organizer_retries);
     } else {
-      SwapBlob swap_blob = PutToSwap(&hermes_->context_, &hermes_->rpc_, name,
-                                     id_, data, size);
-      TriggerBufferOrganizer(&hermes_->rpc_, kPlaceInHierarchy, name, swap_blob,
-                             ctx.buffer_organizer_retries);
-      ret = 0;
-      // TODO(chogan): @errorhandling Signify in Status that the Blob went to
-      // swap space
+      // TODO(chogan): @errorhandling No space left or contraints unsatisfiable.
+      ret = 1;
     }
   }
 

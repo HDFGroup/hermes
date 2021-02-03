@@ -1,3 +1,15 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+* Distributed under BSD 3-Clause license.                                   *
+* Copyright by The HDF Group.                                               *
+* Copyright by the Illinois Institute of Technology.                        *
+* All rights reserved.                                                      *
+*                                                                           *
+* This file is part of Hermes. The full Hermes copyright notice, including  *
+* terms governing use, modification, and redistribution, is contained in    *
+* the COPYFILE, which can be found at the top directory. If you do not have *
+* access to either file, you may request a copy from help@hdfgroup.org.     *
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
 #ifndef HERMES_BUFFER_POOL_H_
 #define HERMES_BUFFER_POOL_H_
 
@@ -472,8 +484,9 @@ bool BufferIsByteAddressable(SharedMemoryContext *context, BufferID id);
 int PlaceInHierarchy(SharedMemoryContext *context, RpcContext *rpc,
                      SwapBlob swap_blob, const std::string &blob_name);
 api::Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
-                      PlacementSchema &schema, Blob blob, const char *name,
-                      BucketID bucket_id);
+                      PlacementSchema &schema, Blob blob,
+                      const std::string &name, BucketID bucket_id, int retries,
+                      bool called_from_buffer_organizer = false);
 api::Status StdIoPersistBucket(SharedMemoryContext *context, RpcContext *rpc,
                                Arena *arena, BucketID bucket_id,
                                const std::string &file_name,
@@ -481,8 +494,7 @@ api::Status StdIoPersistBucket(SharedMemoryContext *context, RpcContext *rpc,
 
 api::Status StdIoPersistBlob(SharedMemoryContext *context, RpcContext *rpc,
                              Arena *arena, BlobID blob_id,
-                             const std::string &file_name, const i32 &offset,
-                             const std::string &open_mode);
+                             FILE* file, const i32 &offset);
 
 }  // namespace hermes
 

@@ -1,15 +1,23 @@
 project(StdioAdapter VERSION 0.1.0)
 
+# include directories for stdio headers
 include_directories(${CMAKE_SOURCE_DIR}/adapter/include)
 
-set(STDIO_ADAPTER_SRC stdio.cpp     metadata_manager.cpp
-                                    mapper/balanced_mapper.cpp)
-set(STDIO_ADAPTER_PUBLIC_HEADER ${CMAKE_SOURCE_DIR}/adapter/include/hermes/adapter/stdio.h)
-set(STDIO_ADAPTER_PRIVATE_HEADER    metadata_manager.h
-                                    mapper/mapper_factory.h
-                                    mapper/abstract_mapper.h
-                                    mapper/balanced_mapper.h common/datastructures.h common/enumerations.h ../singleton.h common/constants.h)
+# STDIO src code. We only include stdio.cc as it includes other cc to reduce compilation time.
+set(STDIO_ADAPTER_SRC stdio.cc)
 
+# Only stdio.h is the public adapter.
+set(STDIO_ADAPTER_PUBLIC_HEADER ${CMAKE_SOURCE_DIR}/adapter/include/hermes/adapter/stdio.h)
+# Private headers
+set(STDIO_ADAPTER_PRIVATE_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/metadata_manager.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/mapper/mapper_factory.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/mapper/abstract_mapper.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/mapper/balanced_mapper.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/common/datastructures.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/common/enumerations.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/common/constants.h)
+
+# Add library hermes_stdio
 add_library(hermes_stdio SHARED ${STDIO_ADAPTER_PRIVATE_HEADER} ${STDIO_ADAPTER_PUBLIC_HEADER} ${STDIO_ADAPTER_SRC})
 add_dependencies(hermes_stdio hermes)
 target_link_libraries(hermes_stdio hermes MPI::MPI_CXX)

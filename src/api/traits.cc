@@ -1,3 +1,15 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+* Distributed under BSD 3-Clause license.                                   *
+* Copyright by The HDF Group.                                               *
+* Copyright by the Illinois Institute of Technology.                        *
+* All rights reserved.                                                      *
+*                                                                           *
+* This file is part of Hermes. The full Hermes copyright notice, including  *
+* terms governing use, modification, and redistribution, is contained in    *
+* the COPYFILE, which can be found at the top directory. If you do not have *
+* access to either file, you may request a copy from help@hdfgroup.org.     *
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
 #include "traits.h"
 
 #include <functional>
@@ -15,12 +27,13 @@ Trait::Trait(TraitID id, TraitIdArray conflict_traits, TraitType type)
 
 FileMappingTrait::FileMappingTrait(
     std::string &filename, std::unordered_map<std::string, u64> &offset_map,
-    TraitCallback flush_cb, TraitCallback load_cb)
+    FILE *fh, TraitCallback flush_cb, TraitCallback load_cb)
     : Trait(HERMES_FILE_TRAIT, TraitIdArray(), TraitType::FILE_MAPPING),
       flush_cb(flush_cb),
       load_cb(load_cb),
       filename(filename),
-      offset_map(offset_map) {
+      offset_map(offset_map),
+      fh(fh) {
   this->onAttachFn = std::bind(&FileMappingTrait::onAttach, this,
                                std::placeholders::_1, std::placeholders::_2);
   this->onDetachFn = std::bind(&FileMappingTrait::onDetach, this,

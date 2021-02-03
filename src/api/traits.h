@@ -1,3 +1,15 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+* Distributed under BSD 3-Clause license.                                   *
+* Copyright by The HDF Group.                                               *
+* Copyright by the Illinois Institute of Technology.                        *
+* All rights reserved.                                                      *
+*                                                                           *
+* This file is part of Hermes. The full Hermes copyright notice, including  *
+* terms governing use, modification, and redistribution, is contained in    *
+* the COPYFILE, which can be found at the top directory. If you do not have *
+* access to either file, you may request a copy from help@hdfgroup.org.     *
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
 #ifndef HERMES_TRAITS_H
 #define HERMES_TRAITS_H
 
@@ -36,8 +48,9 @@ struct FileMappingTrait : public Trait {
   TraitCallback load_cb;
   std::string filename;
   std::unordered_map<std::string, u64> offset_map;
+  FILE *fh;
   FileMappingTrait(std::string &filename,
-                   std::unordered_map<std::string, u64> &offset_map,
+                   std::unordered_map<std::string, u64> &offset_map, FILE *fh,
                    TraitCallback flush_cb, TraitCallback load_cb);
   void onAttach(TraitInput &blob, Trait *trait);
   void onDetach(TraitInput &blob, Trait *trait);

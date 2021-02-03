@@ -1,3 +1,15 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+* Distributed under BSD 3-Clause license.                                   *
+* Copyright by The HDF Group.                                               *
+* Copyright by the Illinois Institute of Technology.                        *
+* All rights reserved.                                                      *
+*                                                                           *
+* This file is part of Hermes. The full Hermes copyright notice, including  *
+* terms governing use, modification, and redistribution, is contained in    *
+* the COPYFILE, which can be found at the top directory. If you do not have *
+* access to either file, you may request a copy from help@hdfgroup.org.     *
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
 #include "buffer_pool.h"
 #include "buffer_pool_internal.h"
 
@@ -82,7 +94,7 @@ void Finalize(SharedMemoryContext *context, CommunicationContext *comm,
         (comm->world_size == comm->num_nodes) && !force_rpc_shutdown;
       FinalizeRpcContext(rpc, is_daemon);
     }
-    UnmapSharedMemory(context);
+    ReleaseSharedMemoryContext(context);
     shm_unlink(shmem_name);
     HERMES_DEBUG_SERVER_CLOSE();
   }
@@ -372,8 +384,8 @@ void SetFirstFreeBufferId(SharedMemoryContext *context, DeviceID device_id,
   }
 }
 
-static std::atomic<u32> *GetAvailableBuffersArray(SharedMemoryContext *context,
-                                                  DeviceID device_id) {
+std::atomic<u32> *GetAvailableBuffersArray(SharedMemoryContext *context,
+                                           DeviceID device_id) {
   BufferPool *pool = GetBufferPoolFromContext(context);
   std::atomic<u32> *result =
     (std::atomic<u32> *)(context->shm_base +
@@ -1298,7 +1310,7 @@ void UnmapSharedMemory(SharedMemoryContext *context) {
   munmap(context->shm_base, context->shm_size);
 }
 
-void ReleaseSharedMemoryContext(SharedMemoryContext *context) {
+void CloseBufferingFiles(SharedMemoryContext *context) {
   BufferPool *pool = GetBufferPoolFromContext(context);
 
   for (int device_id = 0; device_id < pool->num_devices; ++device_id) {
@@ -1319,7 +1331,10 @@ void ReleaseSharedMemoryContext(SharedMemoryContext *context) {
       HERMES_NOT_IMPLEMENTED_YET;
     }
   }
+}
 
+void ReleaseSharedMemoryContext(SharedMemoryContext *context) {
+  CloseBufferingFiles(context);
   UnmapSharedMemory(context);
 }
 
@@ -1355,7 +1370,7 @@ size_t LocalWriteBufferById(SharedMemoryContext *context, BufferID id,
       context->open_streams[device->id][slab_index] = file;
     }
     fseek(file, header->data_offset, SEEK_SET);
-    size_t items_written = fwrite(at, write_size, 1, file);
+    [[maybe_unused]] size_t items_written = fwrite(at, write_size, 1, file);
     // TODO(chogan): @errorhandling
     assert(items_written == 1);
     if (fflush(file) != 0) {
@@ -1594,29 +1609,39 @@ size_t ReadFromSwap(SharedMemoryContext *context, Blob blob,
 }
 
 Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
-                 PlacementSchema &schema, Blob blob, const char *name,
-                 BucketID bucket_id) {
+                 PlacementSchema &schema, Blob blob, const std::string &name,
+                 BucketID bucket_id, int retries,
+                 bool called_from_buffer_organizer) {
   Status result = 0;
+
+  if (ContainsBlob(context, rpc, bucket_id, name)) {
+    // TODO(chogan) @optimization If the existing buffers are already large
+    // enough to hold the new Blob, then we don't need to release them.
+    // Additionally, no metadata operations would be required.
+    DestroyBlobByName(context, rpc, bucket_id, name);
+  }
+
   HERMES_BEGIN_TIMED_BLOCK("GetBuffers");
   std::vector<BufferID> buffer_ids = GetBuffers(context, schema);
   HERMES_END_TIMED_BLOCK();
 
   if (buffer_ids.size()) {
-    MetadataManager *mdm = GetMetadataManagerFromContext(context);
-    char *bucket_name = ReverseGetFromStorage(mdm, bucket_id.as_int,
-                                              kMapType_Bucket);
-    LOG(INFO) << "Attaching blob " << std::string(name) << " to Bucket "
-              << bucket_name << std::endl;
-
     HERMES_BEGIN_TIMED_BLOCK("WriteBlobToBuffers");
     WriteBlobToBuffers(context, rpc, blob, buffer_ids);
     HERMES_END_TIMED_BLOCK();
 
     // NOTE(chogan): Update all metadata associated with this Put
-    AttachBlobToBucket(context, rpc, name, bucket_id, buffer_ids);
+    AttachBlobToBucket(context, rpc, name.c_str(), bucket_id, buffer_ids);
   } else {
-    // TODO(chogan): @errorhandling
-    result = 1;
+    if (called_from_buffer_organizer) {
+      // TODO(chogan): @errorhandling The BufferOrganizer failed to place a blob
+      // from swap space into the hierarchy.
+      result = 1;
+    } else {
+      SwapBlob swap_blob = PutToSwap(context, rpc, name, bucket_id, blob.data,
+                                     blob.size);
+      TriggerBufferOrganizer(rpc, kPlaceInHierarchy, name, swap_blob, retries);
+    }
   }
 
   return result;
@@ -1669,10 +1694,8 @@ Status StdIoPersistBucket(SharedMemoryContext *context, RpcContext *rpc,
 
 api::Status StdIoPersistBlob(SharedMemoryContext *context, RpcContext *rpc,
                              Arena *arena, BlobID blob_id,
-                             const std::string &file_name, const i32 &offset,
-                             const std::string &open_mode) {
+                             FILE *file , const i32 &offset) {
   Status result = 0;
-  FILE *file = fopen(file_name.c_str(), open_mode.c_str());
 
   if (file) {
     ScopedTemporaryMemory scratch(arena);
@@ -1695,10 +1718,7 @@ api::Status StdIoPersistBlob(SharedMemoryContext *context, RpcContext *rpc,
         // TODO(chogan): @errorhandling
       }
     }
-    if (fclose(file) != 0) {
-      // TODO(chogan): @errorhandling
-      result = 1;
-    }
+
   } else {
     // TODO(chogan): @errorhandling
     result = 1;

@@ -1,3 +1,15 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+* Distributed under BSD 3-Clause license.                                   *
+* Copyright by The HDF Group.                                               *
+* Copyright by the Illinois Institute of Technology.                        *
+* All rights reserved.                                                      *
+*                                                                           *
+* This file is part of Hermes. The full Hermes copyright notice, including  *
+* terms governing use, modification, and redistribution, is contained in    *
+* the COPYFILE, which can be found at the top directory. If you do not have *
+* access to either file, you may request a copy from help@hdfgroup.org.     *
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
 #include "vbucket.h"
 
 #include <metadata_management_internal.h>
@@ -191,12 +203,31 @@ Status VBucket::Delete(Context& ctx) {
   (void)ctx;
 
   LOG(INFO) << "Deleting VBucket " << name_ << '\n';
-  for (auto ci = linked_blobs_.begin(); ci != linked_blobs_.end(); ++ci) {
-    if (attached_traits_.size() > 0) {
-      TraitInput input;
-      input.bucket_name = ci->first;
-      input.blob_name = ci->second;
-      for (const auto& t : attached_traits_) {
+
+  for (const auto& t : attached_traits_) {
+    FILE* file;
+    if (this->persist) {
+      if (t->type == TraitType::FILE_MAPPING) {
+        FileMappingTrait* fileBackedTrait = (FileMappingTrait*)t;
+        if (fileBackedTrait->fh != nullptr) {
+          file = fileBackedTrait->fh;
+        } else {
+          std::string open_mode;
+          if (access(fileBackedTrait->filename.c_str(), F_OK) == 0) {
+            open_mode = "r+";
+          } else {
+            open_mode = "w+";
+          }
+          file = fopen(fileBackedTrait->filename.c_str(), open_mode.c_str());
+        }
+      }
+    }
+    for (auto ci = linked_blobs_.begin(); ci != linked_blobs_.end(); ++ci) {
+      if (attached_traits_.size() > 0) {
+        TraitInput input;
+        input.bucket_name = ci->first;
+        input.blob_name = ci->second;
+
         if (this->persist) {
           if (t->type == TraitType::FILE_MAPPING) {
             FileMappingTrait* fileBackedTrait = (FileMappingTrait*)t;
@@ -209,17 +240,9 @@ Status VBucket::Delete(Context& ctx) {
                 if (iter != fileBackedTrait->offset_map.end()) {
                   auto blob_id = GetBlobIdByName(
                       &hermes_->context_, &hermes_->rpc_, ci->second.c_str());
-
-                  std::string open_mode;
-                  if (access(fileBackedTrait->filename.c_str(), F_OK) == 0) {
-                    open_mode = "r+";
-                  } else {
-                    open_mode = "w+";
-                  }
                   StdIoPersistBlob(&hermes_->context_, &hermes_->rpc_,
-                                   &hermes_->trans_arena_, blob_id,
-                                   fileBackedTrait->filename, iter->second,
-                                   open_mode);
+                                   &hermes_->trans_arena_, blob_id, file,
+                                   iter->second);
                 } else {
                   // TODO(hari): @errorhandling map doesnt have the blob linked.
                 }
@@ -237,6 +260,14 @@ Status VBucket::Delete(Context& ctx) {
         if (t->onUnlinkFn != nullptr) {
           t->onUnlinkFn(input, t);
           // TODO(hari): @errorhandling Check if unlinking was successful
+        }
+      }
+    }
+    if (persist) {
+      if (file != nullptr) {
+        fflush(file);
+        if (fclose(file) != 0) {
+          // TODO(chogan): @errorhandling
         }
       }
     }
