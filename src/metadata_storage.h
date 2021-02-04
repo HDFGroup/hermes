@@ -61,6 +61,11 @@ std::vector<TargetID> LocalGetNodeTargets(SharedMemoryContext *context);
 /**
  *
  */
+std::vector<TargetID> LocalGetNeighborhoodTargets(SharedMemoryContext *context);
+
+/**
+ *
+ */
 std::vector<BlobID> LocalGetBlobIds(SharedMemoryContext *context,
                                     BucketID bucket_id);
 }  // namespace hermes
