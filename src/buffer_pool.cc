@@ -82,8 +82,9 @@ void Finalize(SharedMemoryContext *context, CommunicationContext *comm,
               RpcContext *rpc, const char *shmem_name, Arena *trans_arena,
               bool is_application_core, bool force_rpc_shutdown) {
   WorldBarrier(comm);
+  ShutdownRpcClients(rpc);
+
   if (is_application_core) {
-    ShutdownRpcClients(rpc);
     ReleaseSharedMemoryContext(context);
     HERMES_DEBUG_CLIENT_CLOSE();
   }
@@ -491,7 +492,7 @@ void ReleaseBuffer(SharedMemoryContext *context, RpcContext *rpc,
   if (target_node == rpc->node_id) {
     LocalReleaseBuffer(context, buffer_id);
   } else {
-    RpcCall<void>(rpc, target_node, "RemoteReleaseBuffer", buffer_id);
+    RpcCall<bool>(rpc, target_node, "RemoteReleaseBuffer", buffer_id);
   }
 }
 
@@ -1474,12 +1475,13 @@ size_t ReadBlobFromBuffers(SharedMemoryContext *context, RpcContext *rpc,
         assert(bytes_transferred == buffer_sizes[i]);
         bytes_read += bytes_transferred;
       } else {
-        std::vector<u8> data = RpcCall<std::vector<u8>>(rpc, id.bits.node_id,
-                                                        "RemoteReadBufferById",
-                                                        id, buffer_sizes[i]);
+        std::vector<u8> data =
+          RpcCall<std::vector<u8>>(rpc, id.bits.node_id, "RemoteReadBufferById",
+                                   id);
         bytes_read = data.size();
         // TODO(chogan): @optimization Avoid the copy
-        memcpy(blob->data, data.data(), bytes_read);
+        u8 *read_dest = (u8 *)blob->data + total_bytes_read;
+        memcpy(read_dest, data.data(), bytes_read);
       }
     } else {
       bytes_read = LocalReadBufferById(context, id, blob, total_bytes_read);

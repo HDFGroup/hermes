@@ -284,6 +284,12 @@ void IncrementRefcount(SharedMemoryContext *context, RpcContext *rpc,
  */
 void DecrementRefcount(SharedMemoryContext *context, RpcContext *rpc,
                        VBucketID id);
+
+/**
+ *
+ */
+bool IsNullBlobId(BlobID id);
+
 }  // namespace hermes
 
 #endif  // HERMES_METADATA_MANAGEMENT_H_

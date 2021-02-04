@@ -87,8 +87,10 @@ size_t Bucket::GetBlobSize(Arena *arena, const std::string &name,
               << name_ << '\n';
     BlobID blob_id = GetBlobIdByName(&hermes_->context_, &hermes_->rpc_,
                                      name.c_str());
-    result = GetBlobSizeById(&hermes_->context_, &hermes_->rpc_, arena,
-                             blob_id);
+    if (!IsNullBlobId(blob_id)) {
+      result = GetBlobSizeById(&hermes_->context_, &hermes_->rpc_, arena,
+                               blob_id);
+    }
   }
 
   return result;
