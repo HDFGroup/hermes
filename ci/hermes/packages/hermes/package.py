@@ -1,25 +1,3 @@
-# Copyright 2013-2020 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
-#
-# SPDX-License-Identifier: (Apache-2.0 OR MIT)
-
-# ----------------------------------------------------------------------------
-# If you submit this package back to Spack as a pull request,
-# please first remove this boilerplate and all FIXME comments.
-#
-# This is a template package file for Spack.  We've put "FIXME"
-# next to all the things you'll want to change. Once you've handled
-# them, you can save this file and test your package like this:
-#
-#     spack install rpclib
-#
-# You can edit this file again by typing:
-#
-#     spack edit rpclib
-#
-# See the Spack documentation for more information on packaging.
-# ----------------------------------------------------------------------------
-
 from spack import *
 
 
@@ -27,22 +5,17 @@ class Hermes(CMakePackage):
     homepage = "https://hermes.page/"
     url = "https://github.com/HDFGroup/hermes/tarball/master"
     git = "https://github.com/HDFGroup/hermes.git"
-    version('master', sha256='26b19cc37c9bd2aa9b5729ce41a6664aed32e2eeb300b4e3dc69cd2825fbca5c')
-    depends_on('gcc')
-    depends_on('mpich')
-    depends_on('cmake')
+    version('master', branch='master')
     depends_on('gotcha@develop')
-    depends_on('mochi-thallium~cereal@0.8.3 ^mercury~boostsys')
+    depends_on('mochi-thallium~cereal@0.8.3')
     depends_on('catch2@2.13.3')
     depends_on('gortools@7.7')
-
-    def url_for_version(self, version):
-        url = "https://github.com/HDFGroup/hermes/tarball/{0}"
-        return url.format(version.dashed)
+    depends_on('mpich@3.3.2')
 
     def cmake_args(self):
         args = ['-DCMAKE_INSTALL_PREFIX={}'.format(self.prefix),
                 '-DHERMES_RPC_THALLIUM=ON',
+                '-DHERMES_INSTALL_TESTS=ON',
                 '-DBUILD_TESTING=ON']
         return args
 
