@@ -1,14 +1,14 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-* Distributed under BSD 3-Clause license.                                   *
-* Copyright by The HDF Group.                                               *
-* Copyright by the Illinois Institute of Technology.                        *
-* All rights reserved.                                                      *
-*                                                                           *
-* This file is part of Hermes. The full Hermes copyright notice, including  *
-* terms governing use, modification, and redistribution, is contained in    *
-* the COPYFILE, which can be found at the top directory. If you do not have *
-* access to either file, you may request a copy from help@hdfgroup.org.     *
-* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+ * Distributed under BSD 3-Clause license.                                   *
+ * Copyright by The HDF Group.                                               *
+ * Copyright by the Illinois Institute of Technology.                        *
+ * All rights reserved.                                                      *
+ *                                                                           *
+ * This file is part of Hermes. The full Hermes copyright notice, including  *
+ * terms governing use, modification, and redistribution, is contained in    *
+ * the COPYFILE, which can be found at the top directory. If you do not have *
+ * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include <catch_config.h>
 #include <fcntl.h>
@@ -57,8 +57,8 @@ int finalize() { return 0; }
 int pretest() {
   fs::path fullpath = args.directory;
   fullpath /= args.filename;
-  info.new_file = fullpath.string() + "_new";
-  info.existing_file = fullpath.string() + "_ext";
+  info.new_file = fullpath.string() + "_new_" + std::to_string(getpid());
+  info.existing_file = fullpath.string() + "_ext_" + std::to_string(getpid());
   if (fs::exists(info.new_file)) fs::remove(info.new_file);
   if (fs::exists(info.existing_file)) fs::remove(info.existing_file);
   if (!fs::exists(info.existing_file)) {

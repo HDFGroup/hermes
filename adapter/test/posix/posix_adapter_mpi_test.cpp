@@ -1,14 +1,14 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-* Distributed under BSD 3-Clause license.                                   *
-* Copyright by The HDF Group.                                               *
-* Copyright by the Illinois Institute of Technology.                        *
-* All rights reserved.                                                      *
-*                                                                           *
-* This file is part of Hermes. The full Hermes copyright notice, including  *
-* terms governing use, modification, and redistribution, is contained in    *
-* the COPYFILE, which can be found at the top directory. If you do not have *
-* access to either file, you may request a copy from help@hdfgroup.org.     *
-* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+ * Distributed under BSD 3-Clause license.                                   *
+ * Copyright by The HDF Group.                                               *
+ * Copyright by the Illinois Institute of Technology.                        *
+ * All rights reserved.                                                      *
+ *                                                                           *
+ * This file is part of Hermes. The full Hermes copyright notice, including  *
+ * terms governing use, modification, and redistribution, is contained in    *
+ * the COPYFILE, which can be found at the top directory. If you do not have *
+ * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include <catch_config.h>
 #include <fcntl.h>
@@ -67,10 +67,11 @@ int pretest() {
   info.shared_existing_file =
       fullpath.string() + "_ext_" + std::to_string(info.comm_size);
   info.new_file = fullpath.string() + "_new_" + std::to_string(info.rank + 1) +
-                  "_of_" + std::to_string(info.comm_size);
-  info.existing_file = fullpath.string() + "_ext_" +
-                       std::to_string(info.rank + 1) + "_of_" +
-                       std::to_string(info.comm_size);
+                  "_of_" + std::to_string(info.comm_size) + "_" +
+                  std::to_string(getpid());
+  info.existing_file =
+      fullpath.string() + "_ext_" + std::to_string(info.rank + 1) + "_of_" +
+      std::to_string(info.comm_size) + "_" + std::to_string(getpid());
   if (info.rank == 0) {
     if (fs::exists(info.shared_new_file)) fs::remove(info.shared_new_file);
     if (fs::exists(info.shared_existing_file))
