@@ -24,7 +24,6 @@ from spack import *
 
 
 class Gortools(Package):
-    
     homepage = "https://developers.google.com/optimization/install/cpp"
     version('8.0', sha256='ac01d7ebde157daaeb0e21ce54923a48e4f1d21faebd0b08a54979f150f909ee')
     version('7.1', sha256='c4c65cb3351554d207d5bb212601ca4e9d352563cda35a283d75963739d16bbd')
@@ -37,33 +36,35 @@ class Gortools(Package):
     version('7.8', sha256='d93a9502b18af51902abd130ff5f23768fcf47e266e6d1f34b3586387aa2de68')
     version('7.0', sha256='379c13c9a5ae70bf0e876763005b2d2d51fcf966882b28b1a65344f2d3d2c589')
     depends_on('gflags')
-    depends_on('cmake')
-    depends_on('gcc@8.3.0')
-    
+    depends_on('cmake@3.0.2:', '@7.7:')
+
     def url_for_version(self, version):
         url = "https://github.com/google/or-tools/archive/v{}.tar.gz"
         return url.format(version)
-    #def cmake_args(self):
-    #    args = ['-DCMAKE_INSTALL_PREFIX={}'.format(self.prefix),'-DBUILD_DEPS:BOOL=ON']
-    #    return args
+
     def install(self, spec, prefix):
         options = ['prefix=%s' % prefix]
-        #with working_dir('spack-build', create=True):
+        # with working_dir('spack-build', create=True):
         make('third_party')
         make('cc')
         make('install_cc', *options)
-    def set_include(self,env,path):
+
+    def set_include(self, env, path):
         env.append_flags('CFLAGS', '-I{}'.format(path))
         env.append_flags('CXXFLAGS', '-I{}'.format(path))
-    def set_lib(self,env,path):
+
+    def set_lib(self, env, path):
         env.prepend_path('LD_LIBRARY_PATH', path)
         env.append_flags('LDFLAGS', '-L{}'.format(path))
-    def set_flags(self,env):
-        self.set_include(env,'{}/include'.format(self.prefix))
-        self.set_include(env,'{}/include'.format(self.prefix))
-        self.set_lib(env,'{}/lib'.format(self.prefix))
-        self.set_lib(env,'{}/lib64'.format(self.prefix))
+
+    def set_flags(self, env):
+        self.set_include(env, '{}/include'.format(self.prefix))
+        self.set_include(env, '{}/include'.format(self.prefix))
+        self.set_lib(env, '{}/lib'.format(self.prefix))
+        self.set_lib(env, '{}/lib64'.format(self.prefix))
+
     def setup_dependent_environment(self, spack_env, run_env, dependent_spec):
         self.set_flags(spack_env)
+
     def setup_run_environment(self, env):
         self.set_flags(env)

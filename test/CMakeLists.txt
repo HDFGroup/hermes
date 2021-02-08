@@ -27,6 +27,8 @@ foreach(program ${API_TESTS})
     LSAN_OPTIONS=suppressions=${CMAKE_CURRENT_SOURCE_DIR}/data/asan.supp)
 endforeach()
 
+
+
 #------------------------------------------------------------------------------
 # Bucket test
 #------------------------------------------------------------------------------
@@ -143,3 +145,19 @@ add_custom_target(ares
   "${CMAKE_BINARY_DIR}/bin/end_to_end_test"
   "${CMAKE_CURRENT_SOURCE_DIR}/data/ares.conf"
 )
+if(HERMES_INSTALL_TESTS)
+  set(TEST_EXECS dpe_optimization_test dpe_random_test
+          dpe_roundrobin_test end_to_end_test
+          bucket_test stdio_test bp bp_test config_parser_test stb_map mdm trait)
+  foreach(program ${TEST_EXECS})
+    install(
+            TARGETS
+            ${program}
+            EXPORT
+            ${HERMES_EXPORTED_TARGETS}
+            LIBRARY DESTINATION ${HERMES_INSTALL_LIB_DIR}
+            ARCHIVE DESTINATION ${HERMES_INSTALL_LIB_DIR}
+            RUNTIME DESTINATION ${HERMES_INSTALL_BIN_DIR}
+    )
+  endforeach()
+endif()

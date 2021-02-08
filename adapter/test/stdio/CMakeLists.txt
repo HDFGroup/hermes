@@ -44,3 +44,17 @@ set_target_properties(hermes_stdio_adapter_mpi_test PROPERTIES COMPILE_FLAGS "-D
 
 mpi_daemon(hermes_stdio_adapter_mpi_test 2 "~[request_size=range-large]" "" 1)
 mpi_daemon(hermes_stdio_adapter_mpi_test 2 "[request_size=range-large]" "large" 1)
+if(HERMES_INSTALL_TESTS)
+    set(STDIO_TESTS stdio_adapter_mapper_test stdio_adapter_mapper_test stdio_adapter_test hermes_stdio_adapter_test stdio_adapter_mpi_test hermes_stdio_adapter_mpi_test)
+    foreach(program ${API_TESTS})
+        install(
+                TARGETS
+                ${program}
+                EXPORT
+                ${HERMES_EXPORTED_TARGETS}
+                LIBRARY DESTINATION ${HERMES_INSTALL_LIB_DIR}
+                ARCHIVE DESTINATION ${HERMES_INSTALL_LIB_DIR}
+                RUNTIME DESTINATION ${HERMES_INSTALL_BIN_DIR}
+        )
+    endforeach()
+endif()

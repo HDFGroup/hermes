@@ -49,3 +49,15 @@ endfunction()
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/posix)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/stdio)
+
+if(HERMES_INSTALL_TESTS)
+    install(
+            TARGETS
+            hermes_daemon
+            EXPORT
+            ${HERMES_EXPORTED_TARGETS}
+            LIBRARY DESTINATION ${HERMES_INSTALL_LIB_DIR}
+            ARCHIVE DESTINATION ${HERMES_INSTALL_LIB_DIR}
+            RUNTIME DESTINATION ${HERMES_INSTALL_BIN_DIR}
+    )
+endif()
