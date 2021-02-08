@@ -920,7 +920,7 @@ void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
 
 VBucketInfo *LocalGetVBucketInfoByIndex(MetadataManager *mdm, u32 index) {
   VBucketInfo *info_array =
-      (VBucketInfo *)((u8 *)mdm + mdm->bucket_info_offset);
+      (VBucketInfo *)((u8 *)mdm + mdm->vbucket_info_offset);
   VBucketInfo *result = info_array + index;
   return result;
 }

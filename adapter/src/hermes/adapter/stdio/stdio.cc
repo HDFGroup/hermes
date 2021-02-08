@@ -552,17 +552,9 @@ int HERMES_DECL(fclose)(FILE *fp) {
                                                      nullptr, NULL, NULL);
           file_vbucket.Attach(&trait, ctx);
           file_vbucket.Delete(ctx);
-          /**
-           * This is needed as destroy of bucket on line 565 doesn't delete the
-           * blobs.
-           */
-          for (const auto &blob_name : blob_names) {
-            existing.first.st_bkid->DeleteBlob(blob_name, ctx);
-          }
           existing.first.st_blobs.clear();
           INTERCEPTOR_LIST->hermes_flush_exclusion.erase(filename);
         }
-        existing.first.st_bkid->Close(ctx);
         existing.first.st_bkid->Destroy(ctx);
         mdm->FinalizeHermes();
       } else {
@@ -776,7 +768,7 @@ int HERMES_DECL(getc)(FILE *stream) {
 
 /* NOTE: stdio.h typically implements getc() as a macro pointing to _IO_getc */
 int HERMES_DECL(_IO_getc)(FILE *stream) {
-  int ret;
+  int ret = -1;
   if (hermes::adapter::IsTracked(stream)) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(stream);
@@ -820,7 +812,7 @@ int HERMES_DECL(_IO_putc)(int c, FILE *stream) {
 }
 
 int HERMES_DECL(getw)(FILE *stream) {
-  int ret;
+  int ret = -1;
   if (hermes::adapter::IsTracked(stream)) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(stream);
@@ -843,7 +835,7 @@ int HERMES_DECL(getw)(FILE *stream) {
 }
 
 char *HERMES_DECL(fgets)(char *s, int size, FILE *stream) {
-  char *ret;
+  char *ret = nullptr;
   if (hermes::adapter::IsTracked(stream)) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(stream);
