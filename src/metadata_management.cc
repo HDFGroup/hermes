@@ -1,14 +1,14 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-* Distributed under BSD 3-Clause license.                                   *
-* Copyright by The HDF Group.                                               *
-* Copyright by the Illinois Institute of Technology.                        *
-* All rights reserved.                                                      *
-*                                                                           *
-* This file is part of Hermes. The full Hermes copyright notice, including  *
-* terms governing use, modification, and redistribution, is contained in    *
-* the COPYFILE, which can be found at the top directory. If you do not have *
-* access to either file, you may request a copy from help@hdfgroup.org.     *
-* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+ * Distributed under BSD 3-Clause license.                                   *
+ * Copyright by The HDF Group.                                               *
+ * Copyright by the Illinois Institute of Technology.                        *
+ * All rights reserved.                                                      *
+ *                                                                           *
+ * This file is part of Hermes. The full Hermes copyright notice, including  *
+ * terms governing use, modification, and redistribution, is contained in    *
+ * the COPYING file, which can be found at the top directory. If you do not  *
+ * have access to the file, you may request a copy from help@hdfgroup.org.   *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "metadata_management.h"
 
@@ -184,7 +184,7 @@ void PutId(MetadataManager *mdm, RpcContext *rpc, const std::string &name,
   if (target_node == rpc->node_id) {
     LocalPut(mdm, name.c_str(), id, map_type);
   } else {
-    RpcCall<void>(rpc, target_node, "RemotePut", name, id, map_type);
+    RpcCall<bool>(rpc, target_node, "RemotePut", name, id, map_type);
   }
 }
 
@@ -195,7 +195,7 @@ void DeleteId(MetadataManager *mdm, RpcContext *rpc, const std::string &name,
   if (target_node == rpc->node_id) {
     LocalDelete(mdm, name.c_str(), map_type);
   } else {
-    RpcCall<void>(rpc, target_node, "RemoteDelete", name, map_type);
+    RpcCall<bool>(rpc, target_node, "RemoteDelete", name, map_type);
   }
 }
 
@@ -354,7 +354,7 @@ void AddBlobIdToBucket(MetadataManager *mdm, RpcContext *rpc, BlobID blob_id,
   if (target_node == rpc->node_id) {
     LocalAddBlobIdToBucket(mdm, bucket_id, blob_id);
   } else {
-    RpcCall<void>(rpc, target_node, "RemoteAddBlobIdToBucket", bucket_id,
+    RpcCall<bool>(rpc, target_node, "RemoteAddBlobIdToBucket", bucket_id,
                   blob_id);
   }
 }
@@ -366,7 +366,7 @@ void AddBlobIdToVBucket(MetadataManager *mdm, RpcContext *rpc, BlobID blob_id,
   if (target_node == rpc->node_id) {
     LocalAddBlobIdToVBucket(mdm, vbucket_id, blob_id);
   } else {
-    RpcCall<void>(rpc, target_node, "RemoteAddBlobIdToVBucket", vbucket_id,
+    RpcCall<bool>(rpc, target_node, "RemoteAddBlobIdToVBucket", vbucket_id,
                   blob_id);
   }
 }
@@ -487,7 +487,7 @@ void FreeBufferIdList(SharedMemoryContext *context, RpcContext *rpc,
   if (target_node == rpc->node_id) {
     LocalFreeBufferIdList(context, blob_id);
   } else {
-    RpcCall<void>(rpc, target_node, "RemoteFreeBufferIdList", blob_id);
+    RpcCall<bool>(rpc, target_node, "RemoteFreeBufferIdList", blob_id);
   }
 }
 
@@ -536,7 +536,7 @@ void RemoveBlobFromBucketInfo(SharedMemoryContext *context, RpcContext *rpc,
   if (target_node == rpc->node_id) {
     LocalRemoveBlobFromBucketInfo(context, bucket_id, blob_id);
   } else {
-    RpcCall<void>(rpc, target_node, "RemoteRemoveBlobFromBucketInfo", bucket_id,
+    RpcCall<bool>(rpc, target_node, "RemoteRemoveBlobFromBucketInfo", bucket_id,
                   blob_id);
   }
 }
@@ -550,7 +550,7 @@ void DestroyBlobByName(SharedMemoryContext *context, RpcContext *rpc,
     if (blob_id_target_node == rpc->node_id) {
       LocalDestroyBlobByName(context, rpc, blob_name.c_str(), blob_id);
     } else {
-      RpcCall<void>(rpc, blob_id_target_node, "RemoteDestroyBlobByName",
+      RpcCall<bool>(rpc, blob_id_target_node, "RemoteDestroyBlobByName",
                     blob_name, blob_id);
     }
     RemoveBlobFromBucketInfo(context, rpc, bucket_id, blob_id);
@@ -592,7 +592,7 @@ void DestroyBlobById(SharedMemoryContext *context, RpcContext *rpc, BlobID id) {
   if (target_node == rpc->node_id) {
     LocalDestroyBlobById(context, rpc, id);
   } else {
-    RpcCall<void>(rpc, target_node, "RemoteDestroyBlobById", id);
+    RpcCall<bool>(rpc, target_node, "RemoteDestroyBlobById", id);
   }
 }
 
@@ -624,7 +624,7 @@ void RenameBucket(SharedMemoryContext *context, RpcContext *rpc, BucketID id,
   if (target_node == rpc->node_id) {
     LocalRenameBucket(context, rpc, id, old_name.c_str(), new_name.c_str());
   } else {
-    RpcCall<void>(rpc, target_node, "RemoteRenameBucket", id, old_name,
+    RpcCall<bool>(rpc, target_node, "RemoteRenameBucket", id, old_name,
                   new_name);
   }
 }
@@ -641,7 +641,7 @@ void IncrementRefcount(SharedMemoryContext *context, RpcContext *rpc,
   if (target_node == rpc->node_id) {
     LocalIncrementRefcount(context, id);
   } else {
-    RpcCall<void>(rpc, target_node, "RemoteIncrementRefcount", id);
+    RpcCall<bool>(rpc, target_node, "RemoteIncrementRefcount", id);
   }
 }
 
@@ -658,7 +658,7 @@ void DecrementRefcount(SharedMemoryContext *context, RpcContext *rpc,
   if (target_node == rpc->node_id) {
     LocalDecrementRefcount(context, id);
   } else {
-    RpcCall<void>(rpc, target_node, "RemoteDecrementRefcount", id);
+    RpcCall<bool>(rpc, target_node, "RemoteDecrementRefcount", id);
   }
 }
 
@@ -765,7 +765,7 @@ void UpdateGlobalSystemViewState(SharedMemoryContext *context,
     if (target_node == rpc->node_id) {
       LocalUpdateGlobalSystemViewState(context, adjustments);
     } else {
-      RpcCall<void>(rpc, target_node, "RemoteUpdateGlobalSystemViewState",
+      RpcCall<bool>(rpc, target_node, "RemoteUpdateGlobalSystemViewState",
                     adjustments);
     }
   }
@@ -932,7 +932,7 @@ void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
 
 VBucketInfo *LocalGetVBucketInfoByIndex(MetadataManager *mdm, u32 index) {
   VBucketInfo *info_array =
-      (VBucketInfo *)((u8 *)mdm + mdm->bucket_info_offset);
+      (VBucketInfo *)((u8 *)mdm + mdm->vbucket_info_offset);
   VBucketInfo *result = info_array + index;
   return result;
 }
@@ -954,7 +954,7 @@ void IncrementRefcount(SharedMemoryContext *context, RpcContext *rpc,
   if (target_node == rpc->node_id) {
     LocalIncrementRefcount(context, id);
   } else {
-    RpcCall<void>(rpc, target_node, "RemoteIncrementRefcountVBucket", id);
+    RpcCall<bool>(rpc, target_node, "RemoteIncrementRefcountVBucket", id);
   }
 }
 
@@ -971,7 +971,7 @@ void DecrementRefcount(SharedMemoryContext *context, RpcContext *rpc,
   if (target_node == rpc->node_id) {
     LocalDecrementRefcount(context, id);
   } else {
-    RpcCall<void>(rpc, target_node, "RemoteDecrementRefcountVBucket", id);
+    RpcCall<bool>(rpc, target_node, "RemoteDecrementRefcountVBucket", id);
   }
 }
 

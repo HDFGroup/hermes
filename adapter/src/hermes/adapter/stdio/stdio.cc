@@ -1,14 +1,14 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-* Distributed under BSD 3-Clause license.                                   *
-* Copyright by The HDF Group.                                               *
-* Copyright by the Illinois Institute of Technology.                        *
-* All rights reserved.                                                      *
-*                                                                           *
-* This file is part of Hermes. The full Hermes copyright notice, including  *
-* terms governing use, modification, and redistribution, is contained in    *
-* the COPYFILE, which can be found at the top directory. If you do not have *
-* access to either file, you may request a copy from help@hdfgroup.org.     *
-* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+ * Distributed under BSD 3-Clause license.                                   *
+ * Copyright by The HDF Group.                                               *
+ * Copyright by the Illinois Institute of Technology.                        *
+ * All rights reserved.                                                      *
+ *                                                                           *
+ * This file is part of Hermes. The full Hermes copyright notice, including  *
+ * terms governing use, modification, and redistribution, is contained in    *
+ * the COPYING file, which can be found at the top directory. If you do not  *
+ * have access to the file, you may request a copy from help@hdfgroup.org.   *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include <fcntl.h>
 #include <hermes/adapter/stdio.h>
@@ -27,6 +27,31 @@ using hermes::adapter::stdio::MetadataManager;
 namespace hapi = hermes::api;
 namespace fs = std::experimental::filesystem;
 
+/**
+ * MPI
+ */
+int HERMES_DECL(MPI_Init)(int *argc, char ***argv) {
+  MAP_OR_FAIL(MPI_Init);
+  int status = real_MPI_Init_(argc, argv);
+  if (status == 0) {
+    LOG(INFO) << "MPI Init intercepted." << std::endl;
+    auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+    mdm->InitializeHermes(true);
+  }
+  return status;
+}
+
+int HERMES_DECL(MPI_Finalize)(void) {
+  LOG(INFO) << "MPI Finalize intercepted." << std::endl;
+  auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+  mdm->FinalizeHermes();
+  MAP_OR_FAIL(MPI_Finalize);
+  int status = real_MPI_Finalize_();
+  return status;
+}
+/**
+ * STDIO
+ */
 FILE *simple_open(FILE *ret, const std::string &path_str, const char *mode) {
   LOG(INFO) << "Open file for filename " << path_str << " in mode " << mode
             << std::endl;
@@ -129,6 +154,8 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
             << std::endl;
   for (const auto &item : mapping) {
     hapi::Context ctx;
+    size_t pos = item.second.blob_name_.find(kStringDelimiter) + 1;
+    auto index = std::stol(item.second.blob_name_.substr(pos));
     auto blob_exists =
         existing.first.st_bkid->ContainsBlob(item.second.blob_name_);
     hapi::Blob put_data((unsigned char *)ptr + data_offset,
@@ -137,7 +164,41 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
     if (!blob_exists || item.second.size_ == kPageSize) {
       LOG(INFO) << "Create or Overwrite blob " << item.second.blob_name_
                 << " of size:" << item.second.size_ << "." << std::endl;
-      existing.first.st_bkid->Put(item.second.blob_name_, put_data, ctx);
+      if (item.second.size_ == kPageSize) {
+        existing.first.st_bkid->Put(item.second.blob_name_, put_data, ctx);
+      } else if (item.second.offset_ == 0) {
+        existing.first.st_bkid->Put(item.second.blob_name_, put_data, ctx);
+      } else {
+        hapi::Blob final_data(item.second.offset_ + item.second.size_);
+        if (fs::exists(filename) &&
+            fs::file_size(filename) >= item.second.offset_) {
+          LOG(INFO) << "Blob has a gap in write. read gap from original file."
+                    << std::endl;
+          INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
+          FILE *fh = fopen(filename.c_str(), "r");
+          if (fh != nullptr) {
+            if (fseek(fh, index * kPageSize, SEEK_SET) == 0) {
+              size_t items_read = fread(final_data.data(), item.second.offset_,
+                                        sizeof(char), fh);
+              if (items_read != 1) {
+                // TODO(hari) @errorhandling read failed.
+              }
+              if (fclose(fh) != 0) {
+                // TODO(hari) @errorhandling fclose failed.
+              }
+            } else {
+              // TODO(hari) @errorhandling fseek failed.
+            }
+          } else {
+            // TODO(hari) @errorhandling FILE cannot be opened
+          }
+          INTERCEPTOR_LIST->hermes_flush_exclusion.erase(filename);
+        }
+        memcpy(final_data.data() + item.second.offset_, put_data.data(),
+               put_data.size());
+        existing.first.st_bkid->Put(item.second.blob_name_, final_data, ctx);
+      }
+
     } else {
       LOG(INFO) << "Blob " << item.second.blob_name_
                 << " of size:" << item.second.size_ << " exists." << std::endl;
@@ -165,30 +226,31 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
         auto new_size = item.second.offset_ + item.second.size_;
         hapi::Blob existing_data(existing_blob_size);
         existing.first.st_bkid->Get(item.second.blob_name_, existing_data, ctx);
+        existing.first.st_bkid->DeleteBlob(item.second.blob_name_, ctx);
         if (new_size < existing_blob_size) {
           new_size = existing_blob_size;
         }
         hapi::Blob final_data(new_size);
-        auto existing_data_cp_size =
-            existing_data.size() >= item.second.offset_ + 1
-                ? item.second.offset_ + 1
-                : existing_data.size();
+        auto existing_data_cp_size = existing_data.size() >= item.second.offset_
+                                         ? item.second.offset_
+                                         : existing_data.size();
         memcpy(final_data.data(), existing_data.data(), existing_data_cp_size);
 
         if (existing_blob_size < item.second.offset_ + 1 &&
             fs::exists(filename) &&
             fs::file_size(filename) >=
-                item.second.offset_ + 1 + item.second.size_) {
-          size_t size_to_read = item.second.offset_ + 1 - existing_blob_size;
+                item.second.offset_ + item.second.size_) {
+          size_t size_to_read = item.second.offset_ - existing_blob_size;
           LOG(INFO) << "Blob has a gap in update read gap from original file."
                     << std::endl;
           INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
           FILE *fh = fopen(filename.c_str(), "r");
           if (fh != nullptr) {
-            if (fseek(fh, item.first.offset_ + 1, SEEK_SET) == 0) {
+            if (fseek(fh, index * kPageSize + existing_data_cp_size,
+                      SEEK_SET) == 0) {
               size_t items_read =
-                  fread(final_data.data() + existing_data_cp_size - 1,
-                        size_to_read, sizeof(char), fh);
+                  fread(final_data.data() + existing_data_cp_size, size_to_read,
+                        sizeof(char), fh);
               if (items_read != 1) {
                 // TODO(hari) @errorhandling read failed.
               }
@@ -205,20 +267,31 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
         }
         memcpy(final_data.data() + item.second.offset_, put_data.data(),
                put_data.size());
-        if (new_size < existing_blob_size) {
+        if (item.second.offset_ + item.second.size_ < existing_blob_size) {
           LOG(INFO) << "Retain last portion of blob as Blob is bigger than the "
                        "update."
                     << std::endl;
-          auto off_t = total_size + item.second.offset_;
+          auto off_t = item.second.offset_ + item.second.size_;
           memcpy(final_data.data() + off_t, existing_data.data() + off_t,
-                 existing_data.size() - off_t + 1);
+                 existing_blob_size - off_t);
         }
         existing.first.st_bkid->Put(item.second.blob_name_, final_data, ctx);
+        hapi::Blob temp(0);
+        auto written_blob_size =
+            existing.first.st_bkid->Get(item.second.blob_name_, temp, ctx);
+        if (new_size != written_blob_size) {
+          LOG(INFO) << "Write of blob failed written:" << written_blob_size
+                    << " of " << new_size << " bytes." << std::endl;
+          return 0;
+        }
       }
     }
     data_offset += item.first.size_;
   }
   existing.first.st_ptr += data_offset;
+  existing.first.st_size = existing.first.st_size >= existing.first.st_ptr
+                               ? existing.first.st_size
+                               : existing.first.st_ptr;
   struct timespec ts;
   timespec_get(&ts, TIME_UTC);
   existing.first.st_mtim = ts;
@@ -252,6 +325,7 @@ size_t read_internal(std::pair<AdapterStat, bool> &existing, void *ptr,
   LOG(INFO) << "Read called for filename: " << existing.first.st_bkid->GetName()
             << " on offset: " << existing.first.st_ptr
             << " and size: " << total_size << std::endl;
+  if (existing.first.st_ptr >= existing.first.st_size) return 0;
   size_t ret;
   auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
   auto mapper = MapperFactory().Get(kMapperType);
@@ -427,9 +501,16 @@ int HERMES_DECL(fflush)(FILE *fp) {
         hermes::api::VBucket file_vbucket(filename, mdm->GetHermes(), true,
                                           ctx);
         auto offset_map = std::unordered_map<std::string, hermes::u64>();
+        std::size_t pos = 0;
         for (const auto &blob_name : blob_names) {
           file_vbucket.Link(blob_name, filename, ctx);
-          offset_map.emplace(blob_name, std::stol(blob_name) * kPageSize);
+          /* FIXME(hari): change this once we have blob namespace separated per
+           * bucket.*/
+          if (pos == 0) {
+            pos = blob_name.find(kStringDelimiter) + 1;
+          }
+          auto offset = std::stol(blob_name.substr(pos));
+          offset_map.emplace(blob_name, offset * kPageSize);
         }
         auto trait = hermes::api::FileMappingTrait(filename, offset_map,
                                                    nullptr, NULL, NULL);
@@ -450,10 +531,10 @@ int HERMES_DECL(fflush)(FILE *fp) {
 int HERMES_DECL(fclose)(FILE *fp) {
   int ret;
   if (hermes::adapter::IsTracked(fp)) {
+    LOG(INFO) << "Intercept fclose." << std::endl;
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(fp);
     if (existing.second) {
-      LOG(INFO) << "Intercept fclose." << std::endl;
       LOG(INFO) << "File handler is opened by adapter." << std::endl;
       hapi::Context ctx;
       if (existing.first.ref_count == 1) {
@@ -467,9 +548,17 @@ int HERMES_DECL(fclose)(FILE *fp) {
           hermes::api::VBucket file_vbucket(filename, mdm->GetHermes(), true,
                                             ctx);
           auto offset_map = std::unordered_map<std::string, hermes::u64>();
+          std::size_t pos = 0;
           for (const auto &blob_name : blob_names) {
             file_vbucket.Link(blob_name, filename, ctx);
-            offset_map.emplace(blob_name, std::stol(blob_name) * kPageSize);
+            /* FIXME(hari): change this once we have blob namespace separated
+             * per bucket.*/
+            if (pos == 0) {
+              pos = blob_name.find(kStringDelimiter) + 1;
+            }
+            auto offset_str = blob_name.substr(pos);
+            auto offset = std::stol(offset_str);
+            offset_map.emplace(blob_name, offset * kPageSize);
           }
           auto trait = hermes::api::FileMappingTrait(filename, offset_map,
                                                      nullptr, NULL, NULL);
@@ -691,7 +780,7 @@ int HERMES_DECL(getc)(FILE *stream) {
 
 /* NOTE: stdio.h typically implements getc() as a macro pointing to _IO_getc */
 int HERMES_DECL(_IO_getc)(FILE *stream) {
-  int ret;
+  int ret = -1;
   if (hermes::adapter::IsTracked(stream)) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(stream);
@@ -735,7 +824,7 @@ int HERMES_DECL(_IO_putc)(int c, FILE *stream) {
 }
 
 int HERMES_DECL(getw)(FILE *stream) {
-  int ret;
+  int ret = -1;
   if (hermes::adapter::IsTracked(stream)) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(stream);
@@ -758,7 +847,7 @@ int HERMES_DECL(getw)(FILE *stream) {
 }
 
 char *HERMES_DECL(fgets)(char *s, int size, FILE *stream) {
-  char *ret;
+  char *ret = nullptr;
   if (hermes::adapter::IsTracked(stream)) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(stream);

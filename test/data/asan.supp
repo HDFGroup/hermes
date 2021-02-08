@@ -4,4 +4,4 @@ leak:libabt.so
 leak:libmargo.so
 leak:libmpi.so
 leak:librdmacm.so
-
+leak:libhwloc.so
