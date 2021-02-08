@@ -1,14 +1,14 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-* Distributed under BSD 3-Clause license.                                   *
-* Copyright by The HDF Group.                                               *
-* Copyright by the Illinois Institute of Technology.                        *
-* All rights reserved.                                                      *
-*                                                                           *
-* This file is part of Hermes. The full Hermes copyright notice, including  *
-* terms governing use, modification, and redistribution, is contained in    *
-* the COPYFILE, which can be found at the top directory. If you do not have *
-* access to either file, you may request a copy from help@hdfgroup.org.     *
-* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+ * Distributed under BSD 3-Clause license.                                   *
+ * Copyright by The HDF Group.                                               *
+ * Copyright by the Illinois Institute of Technology.                        *
+ * All rights reserved.                                                      *
+ *                                                                           *
+ * This file is part of Hermes. The full Hermes copyright notice, including  *
+ * terms governing use, modification, and redistribution, is contained in    *
+ * the COPYING file, which can be found at the top directory. If you do not  *
+ * have access to the file, you may request a copy from help@hdfgroup.org.   *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 TEST_CASE("FFlush", "[process=" + std::to_string(info.comm_size) +
                         "]"
@@ -62,7 +62,7 @@ TEST_CASE("FFlush", "[process=" + std::to_string(info.comm_size) +
     int status = fflush(nullptr);
     REQUIRE(status == 0);
   }
-  posttest();
+  posttest(false);
 }
 
 TEST_CASE("Fdopen", "[process=" + std::to_string(info.comm_size) +
@@ -213,7 +213,7 @@ TEST_CASE("Fdopen", "[process=" + std::to_string(info.comm_size) +
     status = close(fd);
     REQUIRE(status == -1);
   }
-  posttest();
+  posttest(false);
 }
 
 TEST_CASE("Freopen", "[process=" + std::to_string(info.comm_size) +
@@ -252,7 +252,7 @@ TEST_CASE("Freopen", "[process=" + std::to_string(info.comm_size) +
     int status = fclose(fhap);
     REQUIRE(status == 0);
   }
-  posttest();
+  posttest(false);
 }
 
 TEST_CASE("fgetc", "[process=" + std::to_string(info.comm_size) +
@@ -275,7 +275,7 @@ TEST_CASE("fgetc", "[process=" + std::to_string(info.comm_size) +
     int status = fclose(fh);
     REQUIRE(status == 0);
   }
-  posttest();
+  posttest(false);
 }
 
 TEST_CASE("getc", "[process=" + std::to_string(info.comm_size) +
@@ -298,7 +298,7 @@ TEST_CASE("getc", "[process=" + std::to_string(info.comm_size) +
     int status = fclose(fh);
     REQUIRE(status == 0);
   }
-  posttest();
+  posttest(false);
 }
 
 TEST_CASE("fgets", "[process=" + std::to_string(info.comm_size) +
@@ -315,15 +315,14 @@ TEST_CASE("fgets", "[process=" + std::to_string(info.comm_size) +
     int status = fclose(fh);
     REQUIRE(status == 0);
   }
-  posttest();
+  posttest(false);
 }
 
-TEST_CASE("fputc",
-          "[process=" + std::to_string(info.comm_size) +
-              "]"
-              "[operation=batched_fputc]"
-              "[repetition=" + std::to_string(info.num_iterations) +
-              "][file=1]") {
+TEST_CASE("fputc", "[process=" + std::to_string(info.comm_size) +
+                       "]"
+                       "[operation=batched_fputc]"
+                       "[repetition=" +
+                       std::to_string(info.num_iterations) + "][file=1]") {
   pretest();
   SECTION("iterate and get all characters") {
     FILE* fh = fopen(info.new_file.c_str(), "w+");
@@ -337,7 +336,7 @@ TEST_CASE("fputc",
     int status = fclose(fh);
     REQUIRE(status == 0);
   }
-  posttest();
+  posttest(false);
 }
 
 TEST_CASE("putc", "[process=" + std::to_string(info.comm_size) +
@@ -358,7 +357,7 @@ TEST_CASE("putc", "[process=" + std::to_string(info.comm_size) +
     int status = fclose(fh);
     REQUIRE(status == 0);
   }
-  posttest();
+  posttest(false);
 }
 
 TEST_CASE("fputs", "[process=" + std::to_string(info.comm_size) +
@@ -374,7 +373,7 @@ TEST_CASE("fputs", "[process=" + std::to_string(info.comm_size) +
     status = fclose(fh);
     REQUIRE(status == 0);
   }
-  posttest();
+  posttest(false);
 }
 
 TEST_CASE("fseek", "[process=" + std::to_string(info.comm_size) +
@@ -408,7 +407,7 @@ TEST_CASE("fseek", "[process=" + std::to_string(info.comm_size) +
     status = fclose(fh);
     REQUIRE(status == 0);
   }
-  posttest();
+  posttest(false);
 }
 
 TEST_CASE("fseeko", "[process=" + std::to_string(info.comm_size) +
@@ -442,7 +441,7 @@ TEST_CASE("fseeko", "[process=" + std::to_string(info.comm_size) +
     status = fclose(fh);
     REQUIRE(status == 0);
   }
-  posttest();
+  posttest(false);
 }
 
 TEST_CASE("rewind", "[process=" + std::to_string(info.comm_size) +
@@ -472,7 +471,7 @@ TEST_CASE("rewind", "[process=" + std::to_string(info.comm_size) +
     status = fclose(fh);
     REQUIRE(status == 0);
   }
-  posttest();
+  posttest(false);
 }
 
 TEST_CASE("fsetpos", "[process=" + std::to_string(info.comm_size) +
@@ -501,7 +500,7 @@ TEST_CASE("fsetpos", "[process=" + std::to_string(info.comm_size) +
     status = fclose(fh);
     REQUIRE(status == 0);
   }
-  posttest();
+  posttest(false);
 }
 
 TEST_CASE("fgetpos", "[process=" + std::to_string(info.comm_size) +
@@ -527,5 +526,5 @@ TEST_CASE("fgetpos", "[process=" + std::to_string(info.comm_size) +
     status = fclose(fh);
     REQUIRE(status == 0);
   }
-  posttest();
+  posttest(false);
 }

@@ -1,14 +1,14 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-* Distributed under BSD 3-Clause license.                                   *
-* Copyright by The HDF Group.                                               *
-* Copyright by the Illinois Institute of Technology.                        *
-* All rights reserved.                                                      *
-*                                                                           *
-* This file is part of Hermes. The full Hermes copyright notice, including  *
-* terms governing use, modification, and redistribution, is contained in    *
-* the COPYFILE, which can be found at the top directory. If you do not have *
-* access to either file, you may request a copy from help@hdfgroup.org.     *
-* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+ * Distributed under BSD 3-Clause license.                                   *
+ * Copyright by The HDF Group.                                               *
+ * Copyright by the Illinois Institute of Technology.                        *
+ * All rights reserved.                                                      *
+ *                                                                           *
+ * This file is part of Hermes. The full Hermes copyright notice, including  *
+ * terms governing use, modification, and redistribution, is contained in    *
+ * the COPYING file, which can be found at the top directory. If you do not  *
+ * have access to the file, you may request a copy from help@hdfgroup.org.   *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #ifndef HERMES_ADAPTER_STDIO_H
 #define HERMES_ADAPTER_STDIO_H
@@ -80,5 +80,11 @@ HERMES_FORWARD_DECL(fseeko64, int, (FILE * stream, off64_t offset, int whence));
 HERMES_FORWARD_DECL(fsetpos, int, (FILE * stream, const fpos_t *pos));
 HERMES_FORWARD_DECL(fsetpos64, int, (FILE * stream, const fpos64_t *pos));
 HERMES_FORWARD_DECL(rewind, void, (FILE * stream));
+
+/**
+ * MPI functions declarations
+ */
+HERMES_FORWARD_DECL(MPI_Init, int, (int *argc, char ***argv));
+HERMES_FORWARD_DECL(MPI_Finalize, int, (void));
 
 #endif  // HERMES_ADAPTER_STDIO_H

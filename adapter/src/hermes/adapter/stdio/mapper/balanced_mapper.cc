@@ -1,14 +1,14 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-* Distributed under BSD 3-Clause license.                                   *
-* Copyright by The HDF Group.                                               *
-* Copyright by the Illinois Institute of Technology.                        *
-* All rights reserved.                                                      *
-*                                                                           *
-* This file is part of Hermes. The full Hermes copyright notice, including  *
-* terms governing use, modification, and redistribution, is contained in    *
-* the COPYFILE, which can be found at the top directory. If you do not have *
-* access to either file, you may request a copy from help@hdfgroup.org.     *
-* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+ * Distributed under BSD 3-Clause license.                                   *
+ * Copyright by The HDF Group.                                               *
+ * Copyright by the Illinois Institute of Technology.                        *
+ * All rights reserved.                                                      *
+ *                                                                           *
+ * This file is part of Hermes. The full Hermes copyright notice, including  *
+ * terms governing use, modification, and redistribution, is contained in    *
+ * the COPYING file, which can be found at the top directory. If you do not  *
+ * have access to the file, you may request a copy from help@hdfgroup.org.   *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "balanced_mapper.h"
 
@@ -25,6 +25,8 @@ MapperReturnType BalancedMapper::map(const FileStruct& file_op) {
 
   auto mapper_return = MapperReturnType();
   size_t size_mapped = 0;
+  std::hash<FileID> file_hash_t;
+  size_t file_hash = file_hash_t(file_op.file_id_);
   while (file_op.size_ > size_mapped) {
     FileStruct file;
     file.file_id_ = file_op.file_id_;
@@ -38,7 +40,10 @@ MapperReturnType BalancedMapper::map(const FileStruct& file_op) {
                        : file_op.size_ - size_mapped;
 
     file.size_ = hermes.size_;
-    hermes.blob_name_ = std::to_string(page_index);
+    /* FIXME(hari): change this once we have blob namespace separated per
+     * bucket.*/
+    hermes.blob_name_ = std::to_string(file_hash) + kStringDelimiter +
+                        std::to_string(page_index);
     mapper_return.emplace_back(file, hermes);
     size_mapped += hermes.size_;
   }

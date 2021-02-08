@@ -1,14 +1,14 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-* Distributed under BSD 3-Clause license.                                   *
-* Copyright by The HDF Group.                                               *
-* Copyright by the Illinois Institute of Technology.                        *
-* All rights reserved.                                                      *
-*                                                                           *
-* This file is part of Hermes. The full Hermes copyright notice, including  *
-* terms governing use, modification, and redistribution, is contained in    *
-* the COPYFILE, which can be found at the top directory. If you do not have *
-* access to either file, you may request a copy from help@hdfgroup.org.     *
-* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+ * Distributed under BSD 3-Clause license.                                   *
+ * Copyright by The HDF Group.                                               *
+ * Copyright by the Illinois Institute of Technology.                        *
+ * All rights reserved.                                                      *
+ *                                                                           *
+ * This file is part of Hermes. The full Hermes copyright notice, including  *
+ * terms governing use, modification, and redistribution, is contained in    *
+ * the COPYING file, which can be found at the top directory. If you do not  *
+ * have access to the file, you may request a copy from help@hdfgroup.org.   *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include <catch_config.h>
 #include <fcntl.h>
@@ -51,12 +51,16 @@ struct Info {
 hermes::adapter::posix::test::Arguments args;
 hermes::adapter::posix::test::Info info;
 
-int init() {
+int init(int* argc, char*** argv) {
+  MPI_Init(argc, argv);
   info.write_data = std::string(args.request_size, 'w');
   info.read_data = std::string(args.request_size, 'r');
   return 0;
 }
-int finalize() { return 0; }
+int finalize() {
+  MPI_Finalize();
+  return 0;
+}
 
 int pretest() {
   fs::path fullpath = args.directory;
