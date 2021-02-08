@@ -64,9 +64,7 @@ Status Bucket::Put(const std::string &name, const u8 *data, size_t size,
       blobs[0].resize(size);
       // TODO(chogan): Create a PreallocatedMemory allocator for std::vector so
       // that a single-blob-Put doesn't perform a copy
-      for (size_t i = 0; i < size; ++i) {
-        blobs[0][i] = data[i];
-      }
+      memcpy(blobs[0].data(), data, size);
       ret = PlaceBlobs(schemas, blobs, names, ctx.buffer_organizer_retries);
     } else {
       // TODO(chogan): @errorhandling No space left or contraints unsatisfiable.

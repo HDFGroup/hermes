@@ -49,14 +49,18 @@ struct Info {
 hermes::adapter::posix::test::Arguments args;
 hermes::adapter::posix::test::Info info;
 
-int init() {
+int init(int* argc, char*** argv) {
+  MPI_Init(argc, argv);
   info.write_data = std::string(args.request_size, 'w');
   info.read_data = std::string(args.request_size, 'r');
   MPI_Comm_rank(MPI_COMM_WORLD, &info.rank);
   MPI_Comm_size(MPI_COMM_WORLD, &info.comm_size);
   return 0;
 }
-int finalize() { return 0; }
+int finalize() {
+  MPI_Finalize();
+  return 0;
+}
 
 int pretest() {
   REQUIRE(info.comm_size > 1);

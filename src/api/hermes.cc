@@ -110,6 +110,10 @@ void Hermes::Finalize(bool force_rpc_shutdown) {
                    IsApplicationCore(), force_rpc_shutdown);
 }
 
+void Hermes::RemoteFinalize() {
+  hermes::RpcCall<void>(&rpc_, rpc_.node_id, "RemoteFinalize");
+}
+
 }  // namespace api
 
 ArenaInfo GetArenaInfo(Config *config) {

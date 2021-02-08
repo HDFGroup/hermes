@@ -90,6 +90,7 @@ bool IsTracked(FILE* fh) {
   int fno = fileno(fh);
   snprintf(proclnk, kMaxSize, "/proc/self/fd/%d", fno);
   size_t r = readlink(proclnk, filename, kMaxSize);
+  filename[r] = '\0';
   if (r > 0) {
     std::string file_str(filename);
     return IsTracked(file_str);

@@ -593,7 +593,7 @@ std::string GetServerName(RpcContext *rpc, u32 node_id,
   struct hostent *hostname_info = gethostbyname(host_name.c_str());
   in_addr **addr_list = (struct in_addr **)hostname_info->h_addr_list;
   // TODO(chogan): @errorhandling
-  strncpy(ip_address, inet_ntoa(*addr_list[0]), kMaxIpAddressSize);
+  strncpy(ip_address, inet_ntoa(*addr_list[0]), kMaxIpAddressSize - 1);
 
   std::string result = std::string(tl_state->server_name_prefix);
 

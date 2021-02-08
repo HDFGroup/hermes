@@ -21,14 +21,13 @@ namespace cl = Catch::clara;
 
 cl::Parser define_options();
 
-int init();
+int init(int *argc, char*** argv);
 int finalize();
 
 int main(int argc, char* argv[]) {
-    MPI_Init(&argc, &argv);
     Catch::Session session;
     auto cli = session.cli() | define_options();
-    int returnCode = init();
+    int returnCode = init(&argc, &argv);
     if (returnCode != 0) return returnCode;
     session.cli(cli);
     returnCode = session.applyCommandLine(argc, argv);
@@ -36,7 +35,6 @@ int main(int argc, char* argv[]) {
     int test_return_code = session.run();
     returnCode = finalize();
     if (returnCode != 0) return returnCode;
-    MPI_Finalize();
     return test_return_code;
 }
 

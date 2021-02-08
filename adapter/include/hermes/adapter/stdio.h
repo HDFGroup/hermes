@@ -81,4 +81,10 @@ HERMES_FORWARD_DECL(fsetpos, int, (FILE * stream, const fpos_t *pos));
 HERMES_FORWARD_DECL(fsetpos64, int, (FILE * stream, const fpos64_t *pos));
 HERMES_FORWARD_DECL(rewind, void, (FILE * stream));
 
+/**
+ * MPI functions declarations
+ */
+HERMES_FORWARD_DECL(MPI_Init, int, (int *argc, char ***argv));
+HERMES_FORWARD_DECL(MPI_Finalize, int, (void));
+
 #endif  // HERMES_ADAPTER_STDIO_H
