@@ -547,17 +547,9 @@ int HERMES_DECL(fclose)(FILE *fp) {
                                                      nullptr, NULL, NULL);
           file_vbucket.Attach(&trait, ctx);
           file_vbucket.Delete(ctx);
-          /**
-           * This is needed as destroy of bucket on line 565 doesn't delete the
-           * blobs.
-           */
-          for (const auto &blob_name : blob_names) {
-            existing.first.st_bkid->DeleteBlob(blob_name, ctx);
-          }
           existing.first.st_blobs.clear();
           INTERCEPTOR_LIST->hermes_flush_exclusion.erase(filename);
         }
-        existing.first.st_bkid->Close(ctx);
         existing.first.st_bkid->Destroy(ctx);
         mdm->FinalizeHermes();
       } else {

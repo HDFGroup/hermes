@@ -13,6 +13,7 @@ RUN echo "user ALL=(root) NOPASSWD:ALL" > /etc/sudoers.d/$USER && \
 
 RUN DEBIAN_FRONTEND="noninteractive" apt-get install -y --no-install-recommends \
     autoconf \
+    automake \
     ca-certificates \
     curl \
     environment-modules \
@@ -22,7 +23,11 @@ RUN DEBIAN_FRONTEND="noninteractive" apt-get install -y --no-install-recommends 
     nano \
     sudo \
     unzip \
-    cmake
+    cmake \
+    lcov \
+    zlib1g-dev \
+    libsdl2-dev \
+    gfortran
 
 CMD ["su", "-", "$USER", "-c", "/bin/bash"]
 
@@ -39,7 +44,7 @@ RUN echo $INSTALL_DIR && mkdir -p $INSTALL_DIR
 
 RUN git clone https://github.com/spack/spack ${SPACK_DIR}
 RUN git clone https://xgitlab.cels.anl.gov/sds/sds-repo.git ${SDS_DIR}
-RUN git clone https://github.com/HDFGroup/hermes ${PROJECT}
+RUN git clone -b hariharan/cluster_test https://github.com/hariharan-devarajan/hermes ${PROJECT}
 
 ENV spack=${SPACK_DIR}/bin/spack
 
@@ -55,6 +60,10 @@ RUN $spack compiler find
 RUN $spack compiler list
 
 ENV HERMES_VERSION=master
+
+RUN $spack install "mpich@3.3.2~fortran"
+
+RUN $spack install "gortools@7.7"
 
 ENV HERMES_SPEC="hermes@master"
 RUN $spack install ${HERMES_SPEC}
