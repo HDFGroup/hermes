@@ -1,3 +1,15 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * Distributed under BSD 3-Clause license.                                   *
+ * Copyright by The HDF Group.                                               *
+ * Copyright by the Illinois Institute of Technology.                        *
+ * All rights reserved.                                                      *
+ *                                                                           *
+ * This file is part of Hermes. The full Hermes copyright notice, including  *
+ * terms governing use, modification, and redistribution, is contained in    *
+ * the COPYING file, which can be found at the top directory. If you do not  *
+ * have access to the file, you may request a copy from help@hdfgroup.org.   *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
 #include <string>
 
 #include "rpc.h"
@@ -65,8 +77,8 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
 
   function<void(const request&, BufferID)> rpc_release_buffer =
     [context](const request &req, BufferID id) {
-      (void)req;
       LocalReleaseBuffer(context, id);
+      req.respond(true);
     };
 
   function<void(const request&, int)> rpc_split_buffers =
@@ -168,31 +180,32 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
   function<void(const request&, const string&, u64, const MapType&)>
     rpc_map_put = [context](const request &req, const string &name, u64 val,
                             const MapType &map_type) {
-      (void)req;
       MetadataManager *mdm = GetMetadataManagerFromContext(context);
       LocalPut(mdm, name.c_str(), val, map_type);
+      req.respond(true);
     };
 
   function<void(const request&, string, const MapType&)> rpc_map_delete =
     [context](const request &req, string name, const MapType &map_type) {
-      (void)req;
       MetadataManager *mdm = GetMetadataManagerFromContext(context);
       LocalDelete(mdm, name.c_str(), map_type);
+      req.respond(true);
     };
 
   function<void(const request &, BucketID, BlobID)> rpc_add_blob_bucket =
       [context](const request &req, BucketID bucket_id, BlobID blob_id) {
-        (void)req;
         MetadataManager *mdm = GetMetadataManagerFromContext(context);
         LocalAddBlobIdToBucket(mdm, bucket_id, blob_id);
+        req.respond(true);
       };
 
   function<void(const request &, VBucketID, BlobID)> rpc_add_blob_vbucket =
       [context](const request &req, VBucketID vbucket_id, BlobID blob_id) {
-        (void)req;
         MetadataManager *mdm = GetMetadataManagerFromContext(context);
         LocalAddBlobIdToVBucket(mdm, vbucket_id, blob_id);
+        req.respond(true);
       };
+
   function<void(const request &, BlobID)> rpc_get_buffer_id_list =
       [context](const request &req, BlobID blob_id) {
         MetadataManager *mdm = GetMetadataManagerFromContext(context);
@@ -203,8 +216,8 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
 
   function<void(const request&, BlobID)> rpc_free_buffer_id_list =
     [context](const request &req, BlobID blob_id) {
-      (void)req;
       LocalFreeBufferIdList(context, blob_id);
+      req.respond(true);
     };
 
   function<void(const request&, const string&, BucketID)> rpc_destroy_bucket =
@@ -235,21 +248,21 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
     rpc_rename_bucket = [context, rpc](const request &req, BucketID id,
                                        const string &old_name,
                                        const string &new_name) {
-      (void)req;
       LocalRenameBucket(context, rpc, id, old_name.c_str(), new_name.c_str());
+      req.respond(true);
     };
 
   function<void(const request&, const string&, BlobID)>
     rpc_destroy_blob_by_name =
     [context, rpc](const request &req, const string &name, BlobID id) {
-      (void)req;
       LocalDestroyBlobByName(context, rpc, name.c_str(), id);
+        req.respond(true);
     };
 
   function<void(const request&, BlobID)>
     rpc_destroy_blob_by_id = [context, rpc](const request &req, BlobID id) {
-      (void)req;
       LocalDestroyBlobById(context, rpc, id);
+      req.respond(true);
     };
 
   function<void(const request&, BucketID, BlobID)> rpc_contains_blob =
@@ -262,32 +275,32 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
     rpc_remove_blob_from_bucket_info = [context](const request &req,
                                                  BucketID bucket_id,
                                                  BlobID blob_id) {
-      (void)req;
       LocalRemoveBlobFromBucketInfo(context, bucket_id, blob_id);
+      req.respond(true);
     };
 
   function<void(const request &, BucketID)> rpc_increment_refcount_bucket =
       [context](const request &req, BucketID id) {
-        (void)req;
         LocalIncrementRefcount(context, id);
+        req.respond(true);
       };
 
   function<void(const request &, BucketID)> rpc_decrement_refcount_bucket =
       [context](const request &req, BucketID id) {
-        (void)req;
         LocalDecrementRefcount(context, id);
+        req.respond(true);
       };
 
   function<void(const request &, VBucketID)> rpc_increment_refcount_vbucket =
       [context](const request &req, VBucketID id) {
-        (void)req;
         LocalIncrementRefcount(context, id);
+        req.respond(true);
       };
 
   function<void(const request &, VBucketID)> rpc_decrement_refcount_vbucket =
       [context](const request &req, VBucketID id) {
-        (void)req;
         LocalDecrementRefcount(context, id);
+        req.respond(true);
       };
 
   function<void(const request &)> rpc_get_global_device_capacities =
@@ -309,8 +322,8 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
   function<void(const request&, std::vector<i64>)>
     rpc_update_global_system_view_state =
     [context](const request &req, std::vector<i64> adjustments) {
-      (void)req;
       LocalUpdateGlobalSystemViewState(context, adjustments);
+      req.respond(true);
     };
 
   function<void(const request&, BucketID)> rpc_get_blob_ids =
@@ -333,8 +346,7 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
   rpc_server->define("MergeBuffers", rpc_merge_buffers).disable_response();
   //
 
-  rpc_server->define("RemoteReleaseBuffer",
-                     rpc_release_buffer).disable_response();
+  rpc_server->define("RemoteReleaseBuffer", rpc_release_buffer);
   rpc_server->define("RemoteGetBufferSize", rpc_get_buffer_size);
 
   rpc_server->define("RemoteReadBufferById", rpc_read_buffer_by_id);
@@ -342,40 +354,30 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
   rpc_server->define("RemoteBulkReadBufferById", rpc_bulk_read_buffer_by_id);
 
   rpc_server->define("RemoteGet", rpc_map_get);
-  rpc_server->define("RemotePut", rpc_map_put).disable_response();
-  rpc_server->define("RemoteDelete", rpc_map_delete).disable_response();
-  rpc_server->define("RemoteAddBlobIdToBucket",
-                     rpc_add_blob_bucket).disable_response();
-  rpc_server->define("RemoteAddBlobIdToVBucket",
-                     rpc_add_blob_vbucket).disable_response();
+  rpc_server->define("RemotePut", rpc_map_put);
+  rpc_server->define("RemoteDelete", rpc_map_delete);
+  rpc_server->define("RemoteAddBlobIdToBucket", rpc_add_blob_bucket);
+  rpc_server->define("RemoteAddBlobIdToVBucket", rpc_add_blob_vbucket);
   rpc_server->define("RemoteDestroyBucket", rpc_destroy_bucket);
-  rpc_server->define("RemoteRenameBucket",
-                     rpc_rename_bucket).disable_response();
-  rpc_server->define("RemoteDestroyBlobByName",
-                     rpc_destroy_blob_by_name).disable_response();
-  rpc_server->define("RemoteDestroyBlobById",
-                     rpc_destroy_blob_by_id).disable_response();
+  rpc_server->define("RemoteRenameBucket", rpc_rename_bucket);
+  rpc_server->define("RemoteDestroyBlobByName", rpc_destroy_blob_by_name);
+  rpc_server->define("RemoteDestroyBlobById", rpc_destroy_blob_by_id);
   rpc_server->define("RemoteContainsBlob", rpc_contains_blob);
   rpc_server->define("RemoteGetNextFreeBucketId", rpc_get_next_free_bucket_id);
   rpc_server->define("RemoteRemoveBlobFromBucketInfo",
-                    rpc_remove_blob_from_bucket_info).disable_response();
+                    rpc_remove_blob_from_bucket_info);
   rpc_server->define("RemoteAllocateBufferIdList", rpc_allocate_buffer_id_list);
   rpc_server->define("RemoteGetBufferIdList", rpc_get_buffer_id_list);
-  rpc_server->define("RemoteFreeBufferIdList",
-                     rpc_free_buffer_id_list).disable_response();
-  rpc_server->define("RemoteIncrementRefcount",
-                     rpc_increment_refcount_bucket).disable_response();
-  rpc_server->define("RemoteDecrementRefcount",
-                     rpc_decrement_refcount_bucket).disable_response();
-  rpc_server
-      ->define("RemoteIncrementRefcountVBucket",
-               rpc_increment_refcount_vbucket).disable_response();
-  rpc_server
-      ->define("RemoteDecrementRefcountVBucket",
-               rpc_decrement_refcount_vbucket).disable_response();
+  rpc_server->define("RemoteFreeBufferIdList", rpc_free_buffer_id_list);
+  rpc_server->define("RemoteIncrementRefcount", rpc_increment_refcount_bucket);
+  rpc_server->define("RemoteDecrementRefcount", rpc_decrement_refcount_bucket);
+  rpc_server->define("RemoteIncrementRefcountVBucket",
+                     rpc_increment_refcount_vbucket);
+  rpc_server->define("RemoteDecrementRefcountVBucket",
+                     rpc_decrement_refcount_vbucket);
   rpc_server->define("RemoteGetRemainingCapacity", rpc_get_remaining_capacity);
   rpc_server->define("RemoteUpdateGlobalSystemViewState",
-                     rpc_update_global_system_view_state).disable_response();
+                     rpc_update_global_system_view_state);
   rpc_server->define("RemoteGetGlobalDeviceCapacities",
                      rpc_get_global_device_capacities);
   rpc_server->define("RemoteGetBlobIds", rpc_get_blob_ids);
@@ -528,7 +530,7 @@ void InitRpcClients(RpcContext *rpc) {
     (ClientThalliumState *)malloc(sizeof(ClientThalliumState));
   std::string protocol = GetProtocol(rpc);
   // TODO(chogan): This should go in a per-client persistent arena
-  state->engine = new tl::engine(protocol, THALLIUM_CLIENT_MODE, true);
+  state->engine = new tl::engine(protocol, THALLIUM_CLIENT_MODE, true, 1);
 
   rpc->client_rpc.state = state;
 }
@@ -538,8 +540,10 @@ void ShutdownRpcClients(RpcContext *rpc) {
   if (state) {
     if (state->engine) {
       delete state->engine;
+      state->engine = 0;
     }
     free(state);
+    state = 0;
   }
 }
 
