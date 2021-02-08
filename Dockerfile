@@ -61,10 +61,6 @@ RUN $spack compiler list
 
 ENV HERMES_VERSION=master
 
-RUN $spack install "mpich@3.3.2~fortran"
-
-RUN $spack install "gortools@7.7"
-
 ENV HERMES_SPEC="hermes@master"
 RUN $spack install ${HERMES_SPEC}
 
@@ -95,7 +91,7 @@ RUN cd $PROJECT/build && \
         ..
 
 RUN cd $PROJECT/build && \
-    cmake --build . -- -j4
+    cmake --build . -- -j
 RUN cd $PROJECT/build && \
     ctest -VV
 
