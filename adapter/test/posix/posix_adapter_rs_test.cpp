@@ -233,8 +233,9 @@ TEST_CASE("BatchedReadStrideDynamicRSRangeSmall",
     int fd = open(info.existing_file.c_str(), O_RDWR);
     REQUIRE(fd != -1);
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      size_t offset = abs((int)(((i * rand_r(&info.offset_seed)) % info.stride_size) %
-                          (info.total_size - info.small_max)));
+      size_t offset =
+          abs((int)(((i * rand_r(&info.offset_seed)) % info.stride_size) %
+                    (info.total_size - info.small_max)));
       size_t status = lseek(fd, offset, SEEK_SET);
       REQUIRE(status == offset);
       size_t request_size =
@@ -262,8 +263,9 @@ TEST_CASE("BatchedUpdateStrideDynamicRSRangeSmall",
     int fd = open(info.existing_file.c_str(), O_RDWR);
     REQUIRE(fd != -1);
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      size_t offset = abs((int)(((i * rand_r(&info.offset_seed)) % info.stride_size) %
-                          (info.total_size - info.small_max)));
+      size_t offset =
+          abs((int)(((i * rand_r(&info.offset_seed)) % info.stride_size) %
+                    (info.total_size - info.small_max)));
       size_t status = lseek(fd, offset, SEEK_SET);
       REQUIRE(status == offset);
       size_t request_size =
@@ -644,8 +646,9 @@ TEST_CASE("BatchedReadStrideDynamicRSRangeMedium",
     int fd = open(info.existing_file.c_str(), O_RDWR);
     REQUIRE(fd != -1);
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      size_t offset = abs((int)(((i * rand_r(&info.offset_seed)) % info.stride_size) %
-                          (info.total_size - info.medium_max)));
+      size_t offset =
+          abs((int)(((i * rand_r(&info.offset_seed)) % info.stride_size) %
+                    (info.total_size - info.medium_max)));
       size_t status = lseek(fd, offset, SEEK_SET);
       REQUIRE(status == offset);
       size_t request_size =
@@ -673,8 +676,9 @@ TEST_CASE("BatchedUpdateStrideDynamicRSRangeMedium",
     int fd = open(info.existing_file.c_str(), O_RDWR);
     REQUIRE(fd != -1);
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      size_t offset = abs((int)(((i * rand_r(&info.offset_seed)) % info.stride_size) %
-                          (info.total_size - info.medium_max)));
+      size_t offset =
+          abs((int)(((i * rand_r(&info.offset_seed)) % info.stride_size) %
+                    (info.total_size - info.medium_max)));
       size_t status = lseek(fd, offset, SEEK_SET);
       REQUIRE(status == offset);
       size_t request_size =
@@ -1056,8 +1060,9 @@ TEST_CASE("BatchedReadStrideDynamicRSRangeLarge",
     int fd = open(info.existing_file.c_str(), O_RDWR);
     REQUIRE(fd != -1);
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      size_t offset = abs((int)(((i * rand_r(&info.offset_seed)) % info.stride_size) %
-                          (info.total_size - info.large_max)));
+      size_t offset =
+          abs((int)(((i * rand_r(&info.offset_seed)) % info.stride_size) %
+                    (info.total_size - info.large_max)));
       size_t status = lseek(fd, offset, SEEK_SET);
       REQUIRE(status == offset);
       size_t request_size =
@@ -1085,8 +1090,9 @@ TEST_CASE("BatchedUpdateStrideDynamicRSRangeLarge",
     int fd = open(info.existing_file.c_str(), O_RDWR);
     REQUIRE(fd != -1);
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      size_t offset = abs((int)(((i * rand_r(&info.offset_seed)) % info.stride_size) %
-                          (info.total_size - info.large_max)));
+      size_t offset =
+          abs((int)(((i * rand_r(&info.offset_seed)) % info.stride_size) %
+                    (info.total_size - info.large_max)));
       size_t status = lseek(fd, offset, SEEK_SET);
       REQUIRE(status == offset);
       size_t request_size =
