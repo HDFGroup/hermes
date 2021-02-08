@@ -144,10 +144,24 @@ int pretest() {
   if (fs::exists(info.existing_file)) fs::remove(info.existing_file);
   if (fs::exists(info.existing_file)) fs::remove(info.existing_file);
   if (fs::exists(info.existing_file_cmp)) fs::remove(info.existing_file_cmp);
-  if (!fs::exists(info.existing_file)) {
+  fs::path temp_fullpath = "/tmp";
+  temp_fullpath /= args.filename;
+  std::string temp_ext_file = temp_fullpath.string() + "_temp_" +
+                              std::to_string(info.rank) + "_of_" +
+                              std::to_string(info.comm_size);
+  if (fs::exists(temp_ext_file)) fs::remove(temp_ext_file);
+  if (!fs::exists(temp_ext_file)) {
     std::string cmd = "{ tr -dc '[:alnum:]' < /dev/urandom | head -c " +
                       std::to_string(args.request_size * info.num_iterations) +
-                      "; } > " + info.existing_file + " 2> /dev/null";
+        "; } > " + temp_ext_file + " 2> /dev/null";
+    int status = system(cmd.c_str());
+    REQUIRE(status != -1);
+    REQUIRE(fs::file_size(temp_ext_file) ==
+            args.request_size * info.num_iterations);
+    info.total_size = fs::file_size(temp_ext_file);
+  }
+  if (!fs::exists(info.existing_file)) {
+    std::string cmd = "cp " + temp_ext_file + " " + info.existing_file;
     int status = system(cmd.c_str());
     REQUIRE(status != -1);
     REQUIRE(fs::file_size(info.existing_file) ==
@@ -161,6 +175,7 @@ int pretest() {
     REQUIRE(fs::file_size(info.existing_file_cmp) ==
             args.request_size * info.num_iterations);
   }
+  if (fs::exists(temp_ext_file)) fs::remove(temp_ext_file);
   REQUIRE(info.total_size > 0);
 #if HERMES_INTERCEPT == 1
   INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.existing_file_cmp);

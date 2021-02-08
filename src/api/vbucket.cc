@@ -193,7 +193,7 @@ Status VBucket::Delete(Context& ctx) {
   LOG(INFO) << "Deleting VBucket " << name_ << '\n';
 
   for (const auto& t : attached_traits_) {
-    FILE* file;
+    FILE* file = nullptr;
     if (this->persist) {
       if (t->type == TraitType::FILE_MAPPING) {
         FileMappingTrait* fileBackedTrait = (FileMappingTrait*)t;

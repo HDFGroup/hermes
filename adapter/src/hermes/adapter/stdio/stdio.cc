@@ -146,16 +146,18 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
     auto index = std::stol(item.second.blob_name_.substr(pos));
     auto blob_exists =
         existing.first.st_bkid->ContainsBlob(item.second.blob_name_);
-    hapi::Blob put_data((unsigned char *)ptr + data_offset,
-                        (unsigned char *)ptr + data_offset + item.first.size_);
+    unsigned char *put_data_ptr = (unsigned char *)ptr + data_offset;
+    size_t put_data_ptr_size = item.first.size_;
     existing.first.st_blobs.emplace(item.second.blob_name_);
     if (!blob_exists || item.second.size_ == kPageSize) {
       LOG(INFO) << "Create or Overwrite blob " << item.second.blob_name_
                 << " of size:" << item.second.size_ << "." << std::endl;
       if (item.second.size_ == kPageSize) {
-        existing.first.st_bkid->Put(item.second.blob_name_, put_data, ctx);
+        existing.first.st_bkid->Put(item.second.blob_name_, put_data_ptr,
+                                    put_data_ptr_size, ctx);
       } else if (item.second.offset_ == 0) {
-        existing.first.st_bkid->Put(item.second.blob_name_, put_data, ctx);
+        existing.first.st_bkid->Put(item.second.blob_name_, put_data_ptr,
+                                    put_data_ptr_size, ctx);
       } else {
         hapi::Blob final_data(item.second.offset_ + item.second.size_);
         if (fs::exists(filename) &&
@@ -182,8 +184,8 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
           }
           INTERCEPTOR_LIST->hermes_flush_exclusion.erase(filename);
         }
-        memcpy(final_data.data() + item.second.offset_, put_data.data(),
-               put_data.size());
+        memcpy(final_data.data() + item.second.offset_, put_data_ptr,
+               put_data_ptr_size);
         existing.first.st_bkid->Put(item.second.blob_name_, final_data, ctx);
       }
 
@@ -198,14 +200,15 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
         if (item.second.size_ >= existing_blob_size) {
           LOG(INFO) << "Overwrite blob " << item.second.blob_name_
                     << " of size:" << item.second.size_ << "." << std::endl;
-          existing.first.st_bkid->Put(item.second.blob_name_, put_data, ctx);
+          existing.first.st_bkid->Put(item.second.blob_name_, put_data_ptr,
+                                      put_data_ptr_size, ctx);
         } else {
           LOG(INFO) << "Update blob " << item.second.blob_name_
                     << " of size:" << existing_blob_size << "." << std::endl;
           hapi::Blob existing_data(existing_blob_size);
           existing.first.st_bkid->Get(item.second.blob_name_, existing_data,
                                       ctx);
-          memcpy(existing_data.data(), put_data.data(), put_data.size());
+          memcpy(existing_data.data(), put_data_ptr, put_data_ptr_size);
           existing.first.st_bkid->Put(item.second.blob_name_, existing_data,
                                       ctx);
         }
@@ -253,8 +256,8 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
           }
           INTERCEPTOR_LIST->hermes_flush_exclusion.erase(filename);
         }
-        memcpy(final_data.data() + item.second.offset_, put_data.data(),
-               put_data.size());
+        memcpy(final_data.data() + item.second.offset_, put_data_ptr,
+               put_data_ptr_size);
         if (item.second.offset_ + item.second.size_ < existing_blob_size) {
           LOG(INFO) << "Retain last portion of blob as Blob is bigger than the "
                        "update."
@@ -264,14 +267,6 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
                  existing_blob_size - off_t);
         }
         existing.first.st_bkid->Put(item.second.blob_name_, final_data, ctx);
-        hapi::Blob temp(0);
-        auto written_blob_size =
-            existing.first.st_bkid->Get(item.second.blob_name_, temp, ctx);
-        if (new_size != written_blob_size) {
-          LOG(INFO) << "Write of blob failed written:" << written_blob_size
-                    << " of " << new_size << " bytes." << std::endl;
-          return 0;
-        }
       }
     }
     data_offset += item.first.size_;
@@ -776,7 +771,7 @@ int HERMES_DECL(getc)(FILE *stream) {
 
 /* NOTE: stdio.h typically implements getc() as a macro pointing to _IO_getc */
 int HERMES_DECL(_IO_getc)(FILE *stream) {
-  int ret;
+  int ret = -1;
   if (hermes::adapter::IsTracked(stream)) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(stream);
@@ -820,7 +815,7 @@ int HERMES_DECL(_IO_putc)(int c, FILE *stream) {
 }
 
 int HERMES_DECL(getw)(FILE *stream) {
-  int ret;
+  int ret = -1;
   if (hermes::adapter::IsTracked(stream)) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(stream);
@@ -843,7 +838,7 @@ int HERMES_DECL(getw)(FILE *stream) {
 }
 
 char *HERMES_DECL(fgets)(char *s, int size, FILE *stream) {
-  char *ret;
+  char *ret = nullptr;
   if (hermes::adapter::IsTracked(stream)) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(stream);
@@ -907,7 +902,7 @@ void HERMES_DECL(rewind)(FILE *stream) {
 }
 
 int HERMES_DECL(fseek)(FILE *stream, long offset, int whence) {
-  int ret;
+  int ret = -1;
   if (hermes::adapter::IsTracked(stream)) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(stream);
