@@ -580,6 +580,35 @@ TEST_CASE("fsetpos", "[process=" + std::to_string(info.comm_size) +
   posttest(false);
 }
 
+TEST_CASE("fsetpos64", "[process=" + std::to_string(info.comm_size) +
+                     "]"
+                     "[operation=single_fsetpos64]"
+                     "[repetition=1][file=1]") {
+  pretest();
+  SECTION("test all seek modes") {
+    FILE* fh = fopen(info.existing_file.c_str(), "r");
+    REQUIRE(fh != nullptr);
+    fpos64_t position;
+    fgetpos64(fh, &position);
+
+    position.__pos = 0;
+    int status = fsetpos64(fh, &position);
+    REQUIRE(status == 0);
+    size_t offset = ftell(fh);
+    REQUIRE(offset == 0);
+
+    position.__pos = info.total_size;
+    status = fsetpos64(fh, &position);
+    REQUIRE(status == 0);
+    offset = ftell(fh);
+    REQUIRE(offset == info.total_size);
+
+    status = fclose(fh);
+    REQUIRE(status == 0);
+  }
+  posttest(false);
+}
+
 TEST_CASE("fgetpos", "[process=" + std::to_string(info.comm_size) +
                          "]"
                          "[operation=single_fgetpos]"

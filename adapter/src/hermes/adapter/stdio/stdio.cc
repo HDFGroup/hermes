@@ -648,6 +648,31 @@ int HERMES_DECL(fgetpos)(FILE *fp, fpos_t *pos) {
   return ret;
 }
 
+int HERMES_DECL(fgetpos64)(FILE *fp, fpos64_t *pos) {
+  int ret;
+  if (hermes::adapter::IsTracked(fp) && pos) {
+    auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+    auto existing = mdm->Find(fp);
+    if (existing.second) {
+      LOG(INFO) << "Intercept fgetpos64." << std::endl;
+      // TODO(chogan): @portability In the GNU C Library, fpos_t is an opaque
+      // data structure that contains internal data to represent file offset and
+      // conversion state information. In other systems, it might have a
+      // different internal representation. This will need to change to support
+      // other compilers.
+      pos->__pos = existing.first.st_ptr;
+      ret = 0;
+    } else {
+      MAP_OR_FAIL(fgetpos64);
+      ret = real_fgetpos64_(fp, pos);
+    }
+  } else {
+    MAP_OR_FAIL(fgetpos64);
+    ret = real_fgetpos64_(fp, pos);
+  }
+  return ret;
+}
+
 int HERMES_DECL(putc)(int c, FILE *fp) {
   int ret;
   if (hermes::adapter::IsTracked(fp)) {
