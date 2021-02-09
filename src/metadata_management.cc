@@ -977,8 +977,8 @@ void DecrementRefcount(SharedMemoryContext *context, RpcContext *rpc,
 
 u32 GetRelativeNodeId(RpcContext *rpc, int offset) {
   int result = rpc->node_id + offset;
-  CHECK_GE(result, 0);
-  CHECK_LE(result, rpc->num_nodes + 1);
+  assert(result >= 0);
+  assert(result <= (int)(rpc->num_nodes + 1));
 
   if (result > (int)rpc->num_nodes) {
     result = 1;
