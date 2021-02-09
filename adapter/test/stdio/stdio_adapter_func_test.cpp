@@ -578,5 +578,5 @@ TEST_CASE("Open64", "[process=" + std::to_string(info.comm_size) +
     int status = fclose(fh);
     REQUIRE(status == 0);
   }
-  posttest();
+  posttest(false);
 }
