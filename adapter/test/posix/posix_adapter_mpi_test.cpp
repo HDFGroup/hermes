@@ -10,6 +10,7 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+#include <adapter_utils.h>
 #include <catch_config.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -71,10 +72,11 @@ int pretest() {
   info.shared_existing_file =
       fullpath.string() + "_ext_" + std::to_string(info.comm_size);
   info.new_file = fullpath.string() + "_new_" + std::to_string(info.rank + 1) +
-                  "_of_" + std::to_string(info.comm_size);
-  info.existing_file = fullpath.string() + "_ext_" +
-                       std::to_string(info.rank + 1) + "_of_" +
-                       std::to_string(info.comm_size);
+                  "_of_" + std::to_string(info.comm_size) + "_" +
+                  std::to_string(getpid());
+  info.existing_file =
+      fullpath.string() + "_ext_" + std::to_string(info.rank + 1) + "_of_" +
+      std::to_string(info.comm_size) + "_" + std::to_string(getpid());
   if (info.rank == 0) {
     if (fs::exists(info.shared_new_file)) fs::remove(info.shared_new_file);
     if (fs::exists(info.shared_existing_file))

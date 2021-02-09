@@ -359,6 +359,26 @@ TEST_CASE("putc", "[process=" + std::to_string(info.comm_size) +
   }
   posttest(false);
 }
+TEST_CASE("putw", "[process=" + std::to_string(info.comm_size) +
+                  "]"
+                  "[operation=batched_putw]"
+                  "[repetition=" +
+                  std::to_string(info.num_iterations) + "][file=1]") {
+  pretest();
+  SECTION("iterate and get all characters") {
+    FILE* fh = fopen(info.new_file.c_str(), "w+");
+    REQUIRE(fh != nullptr);
+    size_t total_chars = info.num_iterations;
+    int c = 'w';
+    for (size_t i = 0; i < total_chars; ++i) {
+      int ret = putw(c, fh);
+      REQUIRE(ret == 0);
+    }
+    int status = fclose(fh);
+    REQUIRE(status == 0);
+  }
+  posttest(false);
+}
 
 TEST_CASE("fputs", "[process=" + std::to_string(info.comm_size) +
                        "]"
@@ -524,6 +544,97 @@ TEST_CASE("fgetpos", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(position.__pos == (long int)info.total_size);
 
     status = fclose(fh);
+    REQUIRE(status == 0);
+  }
+  posttest(false);
+}
+
+TEST_CASE("Open64", "[process=" + std::to_string(info.comm_size) +
+                  "]"
+                  "[operation=single_open]"
+                  "[repetition=1][file=1]") {
+  pretest();
+  SECTION("open non-existant file") {
+    FILE* fh = fopen64(info.new_file.c_str(), "r");
+    REQUIRE(fh == nullptr);
+    fh = fopen64(info.new_file.c_str(), "r+");
+    REQUIRE(fh == nullptr);
+  }
+
+  SECTION("truncate existing file and write-only") {
+    FILE* fh = fopen64(info.existing_file.c_str(), "w");
+    REQUIRE(fh != nullptr);
+    int status = fclose(fh);
+    REQUIRE(status == 0);
+  }
+  SECTION("truncate existing file and read/write") {
+    FILE* fh = fopen64(info.existing_file.c_str(), "w+");
+    REQUIRE(fh != nullptr);
+    int status = fclose(fh);
+    REQUIRE(status == 0);
+  }
+
+  SECTION("open existing file") {
+    FILE* fh = fopen64(info.existing_file.c_str(), "r+");
+    REQUIRE(fh != nullptr);
+    int status = fclose(fh);
+    REQUIRE(status == 0);
+    fh = fopen64(info.existing_file.c_str(), "r");
+    REQUIRE(fh != nullptr);
+    status = fclose(fh);
+    REQUIRE(status == 0);
+  }
+
+  SECTION("append write existing file") {
+    FILE* fh = fopen64(info.existing_file.c_str(), "a");
+    REQUIRE(fh != nullptr);
+    int status = fclose(fh);
+    REQUIRE(status == 0);
+  }
+
+  SECTION("append write and read existing file") {
+    FILE* fh = fopen64(info.existing_file.c_str(), "a+");
+    REQUIRE(fh != nullptr);
+    int status = fclose(fh);
+    REQUIRE(status == 0);
+  }
+  posttest(false);
+}
+
+TEST_CASE("Freopen64", "[process=" + std::to_string(info.comm_size) +
+                     "]"
+                     "[operation=single_freopen]"
+                     "[repetition=1][file=1]") {
+  pretest();
+  SECTION("change different modes") {
+    FILE* fhr = fopen(info.existing_file.c_str(), "r");
+    REQUIRE(fhr != nullptr);
+
+    FILE* fhw = freopen64(info.existing_file.c_str(), "w", fhr);
+    REQUIRE(fhw != nullptr);
+    size_t write_size =
+        fwrite(info.write_data.c_str(), sizeof(char), args.request_size, fhw);
+    REQUIRE(write_size == args.request_size);
+
+    FILE* fhwp = freopen64(info.existing_file.c_str(), "w+", fhw);
+    REQUIRE(fhwp != nullptr);
+    write_size =
+        fwrite(info.write_data.c_str(), sizeof(char), args.request_size, fhwp);
+    REQUIRE(write_size == args.request_size);
+
+    FILE* fha = freopen64(info.existing_file.c_str(), "a", fhwp);
+    REQUIRE(fha != nullptr);
+    write_size =
+        fwrite(info.write_data.c_str(), sizeof(char), args.request_size, fhwp);
+    REQUIRE(write_size == args.request_size);
+
+    FILE* fhap = freopen64(info.existing_file.c_str(), "a+", fha);
+    REQUIRE(fhap != nullptr);
+    write_size =
+        fwrite(info.write_data.c_str(), sizeof(char), args.request_size, fhap);
+    REQUIRE(write_size == args.request_size);
+
+    int status = fclose(fhap);
     REQUIRE(status == 0);
   }
   posttest(false);

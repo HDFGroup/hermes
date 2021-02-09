@@ -10,6 +10,7 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+#include <adapter_utils.h>
 #include <catch_config.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -83,10 +84,12 @@ int finalize() {
 int pretest() {
   fs::path fullpath = args.directory;
   fullpath /= args.filename;
-  info.new_file = fullpath.string() + "_new";
-  info.existing_file = fullpath.string() + "_ext";
-  info.new_file_cmp = fullpath.string() + "_new_cmp";
-  info.existing_file_cmp = fullpath.string() + "_ext_cmp";
+  info.new_file = fullpath.string() + "_new_" + std::to_string(getpid());
+  info.existing_file = fullpath.string() + "_ext_" + std::to_string(getpid());
+  info.new_file_cmp = fullpath.string() + "_new_cmp" + "_" +
+                      std::to_string(getpid());
+  info.existing_file_cmp = fullpath.string() + "_ext_cmp" + "_" +
+                           std::to_string(getpid());
   if (fs::exists(info.new_file)) fs::remove(info.new_file);
   if (fs::exists(info.new_file_cmp)) fs::remove(info.new_file_cmp);
   if (fs::exists(info.existing_file)) fs::remove(info.existing_file);

@@ -3,10 +3,8 @@ from spack import *
 
 class Hermes(CMakePackage):
     homepage = "https://hermes.page/"
-    #url = "https://github.com/HDFGroup/hermes/tarball/master"
-    #git = "https://github.com/HDFGroup/hermes.git"
-    url = "https://github.com/hariharan-devarajan/hermes/tarball/master"
-    git = "https://github.com/hariharan-devarajan/hermes.git"
+    url = "https://github.com/HDFGroup/hermes/tarball/master"
+    git = "https://github.com/HDFGroup/hermes.git"
     version('master', branch='master')
     depends_on('gotcha@develop')
     depends_on('mochi-thallium~cereal@0.8.3')
