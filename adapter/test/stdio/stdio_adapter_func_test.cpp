@@ -359,6 +359,26 @@ TEST_CASE("putc", "[process=" + std::to_string(info.comm_size) +
   }
   posttest(false);
 }
+TEST_CASE("putw", "[process=" + std::to_string(info.comm_size) +
+                  "]"
+                  "[operation=batched_putw]"
+                  "[repetition=" +
+                  std::to_string(info.num_iterations) + "][file=1]") {
+  pretest();
+  SECTION("iterate and get all characters") {
+    FILE* fh = fopen(info.new_file.c_str(), "w+");
+    REQUIRE(fh != nullptr);
+    size_t total_chars = info.num_iterations;
+    int c = 'w';
+    for (size_t i = 0; i < total_chars; ++i) {
+      int ret = putw(c, fh);
+      REQUIRE(ret == 0);
+    }
+    int status = fclose(fh);
+    REQUIRE(status == 0);
+  }
+  posttest(false);
+}
 
 TEST_CASE("fputs", "[process=" + std::to_string(info.comm_size) +
                        "]"
