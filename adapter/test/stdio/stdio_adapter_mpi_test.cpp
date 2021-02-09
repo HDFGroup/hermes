@@ -158,14 +158,14 @@ int pretest() {
   if (fs::exists(info.existing_file_cmp)) fs::remove(info.existing_file_cmp);
   fs::path temp_fullpath = "/tmp";
   temp_fullpath /= args.filename;
-  std::string temp_ext_file = temp_fullpath.string() + "_temp_" +
-                              std::to_string(info.rank) + "_of_" +
-                              std::to_string(info.comm_size);
+  std::string temp_ext_file =
+      temp_fullpath.string() + "_temp_" + std::to_string(info.rank) + "_of_" +
+      std::to_string(info.comm_size) + "_" + std::to_string(getpid());
   if (fs::exists(temp_ext_file)) fs::remove(temp_ext_file);
   if (!fs::exists(temp_ext_file)) {
     std::string cmd = "{ tr -dc '[:alnum:]' < /dev/urandom | head -c " +
                       std::to_string(args.request_size * info.num_iterations) +
-        "; } > " + temp_ext_file + " 2> /dev/null";
+                      "; } > " + temp_ext_file + " 2> /dev/null";
     int status = system(cmd.c_str());
     REQUIRE(status != -1);
     REQUIRE(fs::file_size(temp_ext_file) ==
@@ -284,8 +284,8 @@ cl::Parser define_options() {
 }
 
 size_t GetRandomOffset(size_t i, size_t total_size) {
-  return abs((int)(((i * rand_r(&info.offset_seed)) % info.stride_size) %
-                   total_size));
+  return abs(
+      (int)(((i * rand_r(&info.offset_seed)) % info.stride_size) % total_size));
 }
 
 #include "stdio_adapter_basic_test.cpp"
