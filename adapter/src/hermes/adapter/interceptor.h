@@ -34,7 +34,9 @@
  */
 #include <buffer_pool_internal.h>
 #include <hermes/adapter/constants.h>
+#include <hermes/adapter/enumerations.h>
 #include <hermes/adapter/singleton.h>
+
 /**
  * Define Interceptor list for adapter.
  */
@@ -56,10 +58,41 @@ const char* kPathExclusions[] = {"/bin/", "/boot/", "/dev/",  "/etc/",
  */
 const char* kPathInclusions[] = {"/var/opt/cray/dws/mounts/"};
 /**
+ * Splits a string given a delimiter
+ */
+std::vector<std::string> StringSplit(char* str, char delimiter) {
+  std::stringstream ss(str);
+  std::vector<std::string> v;
+  while (ss.good()) {
+    std::string substr;
+    getline(ss, substr, delimiter);
+    v.push_back(substr);
+  }
+  return v;
+}
+std::string GetFilenameFromFP(FILE* fh) {
+  const int kMaxSize = 0xFFF;
+  char proclnk[kMaxSize];
+  char filename[kMaxSize];
+  int fno = fileno(fh);
+  snprintf(proclnk, kMaxSize, "/proc/self/fd/%d", fno);
+  size_t r = readlink(proclnk, filename, kMaxSize);
+  filename[r] = '\0';
+  return filename;
+}
+/**
  * Interceptor list defines files and directory that should be either excluded
  * or included for interceptions.
  */
 struct InterceptorList {
+  /**
+   * hermes buffering mode.
+   */
+  BufferMode buffer_mode;
+  /**
+   * Scratch paths
+   */
+  std::vector<std::string> paths;
   /**
    * Allow users to override the path exclusions
    */
@@ -77,9 +110,64 @@ struct InterceptorList {
    * Default constructor
    */
   InterceptorList()
-      : user_path_exclusions(),
+      : buffer_mode(BufferMode::PERSISTENT),
+        paths(),
+        user_path_exclusions(),
         hermes_paths_exclusion(),
         hermes_flush_exclusion() {}
+  void SetupBufferingMode() {
+    char* hermes_buffering_mode = getenv(kHermesBufferMode);
+    if (hermes_buffering_mode == nullptr) {
+      // default is kPersistentHermesBufferMode
+      buffer_mode = BufferMode::PERSISTENT;
+    } else {
+      if (strcmp(kPersistentHermesBufferMode, hermes_buffering_mode) == 0) {
+        buffer_mode = BufferMode::PERSISTENT;
+      } else if (strcmp(kBypassHermesBufferMode, hermes_buffering_mode) == 0) {
+        buffer_mode = BufferMode::BYPASS;
+      } else if (strcmp(kScratchHermesBufferMode, hermes_buffering_mode) == 0) {
+        buffer_mode = BufferMode::SCRATCH;
+      } else {
+        // TODO(hari): @error_handling throw error.
+        return;
+      }
+    }
+    char* hermes_buffering_paths = getenv(kHermesBufferModeInfo);
+    std::vector<std::string> paths_local;
+    if (hermes_buffering_paths) {
+      paths_local = StringSplit(hermes_buffering_paths, kHermesPathDelimiter);
+    }
+    paths = paths_local;
+  }
+
+  bool Persists(FILE* fh) { return Persists(GetFilenameFromFP(fh)); }
+
+  bool Persists(std::string path) {
+    if (buffer_mode == BufferMode::PERSISTENT) {
+      if (paths.empty())
+        return true;
+      else {
+        for (const auto& pth : paths) {
+          if (path.find(pth) == 0) {
+            return true;
+          }
+        }
+        return false;
+      }
+    } else if (buffer_mode == BufferMode::SCRATCH) {
+      if (paths.empty())
+        return false;
+      else {
+        for (const auto& pth : paths) {
+          if (path.find(pth) == 0) {
+            return false;
+          }
+        }
+        return true;
+      }
+    }
+    return true;
+  }
 };
 
 /**

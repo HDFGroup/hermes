@@ -79,23 +79,29 @@ bool IsTracked(const std::string& path) {
       }
     }
   }
+  auto list = INTERCEPTOR_LIST;
+  auto buffer_mode = INTERCEPTOR_LIST->buffer_mode;
+  if (buffer_mode == BufferMode::BYPASS) {
+    if (list->paths.empty()) {
+      return false;
+    } else {
+      for (const auto& pth : list->paths) {
+        if (path.find(pth) == 0) {
+          return false;
+        }
+      }
+      return true;
+    }
+  } else {
+    return true;
+  }
   return true;
 }
+
 bool IsTracked(FILE* fh) {
   if (hermes::adapter::exit) return false;
   atexit(OnExit);
-  const int kMaxSize = 0xFFF;
-  char proclnk[kMaxSize];
-  char filename[kMaxSize];
-  int fno = fileno(fh);
-  snprintf(proclnk, kMaxSize, "/proc/self/fd/%d", fno);
-  size_t r = readlink(proclnk, filename, kMaxSize);
-  filename[r] = '\0';
-  if (r > 0) {
-    std::string file_str(filename);
-    return IsTracked(file_str);
-  }
-  return false;
+  return IsTracked(GetFilenameFromFP(fh));
 }
 
 void OnExit(void) { hermes::adapter::exit = true; }

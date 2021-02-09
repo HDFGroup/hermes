@@ -487,7 +487,7 @@ int HERMES_DECL(fflush)(FILE *fp) {
       LOG(INFO) << "Intercept fflush." << std::endl;
       auto filename = existing.first.st_bkid->GetName();
       const auto &blob_names = existing.first.st_blobs;
-      if (!blob_names.empty()) {
+      if (!blob_names.empty() && INTERCEPTOR_LIST->Persists(fp)) {
         INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
         LOG(INFO) << "File handler is opened by adapter." << std::endl;
         hapi::Context ctx;
@@ -533,10 +533,11 @@ int HERMES_DECL(fclose)(FILE *fp) {
       LOG(INFO) << "File handler is opened by adapter." << std::endl;
       hapi::Context ctx;
       if (existing.first.ref_count == 1) {
+        auto persist =  INTERCEPTOR_LIST->Persists(fp);
+        auto filename = existing.first.st_bkid->GetName();
         mdm->Delete(fp);
         const auto &blob_names = existing.first.st_blobs;
-        if (!blob_names.empty()) {
-          auto filename = existing.first.st_bkid->GetName();
+        if (!blob_names.empty()  && persist) {
           LOG(INFO) << "Adapter flushes " << blob_names.size()
                     << " blobs to filename:" << filename << "." << std::endl;
           INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);

@@ -43,4 +43,14 @@ const char* kHermesBufferMode = "HERMES_BUFFERING_MODE";
  * files to bypass.
  */
 const char* kHermesBufferModeInfo = "HERMES_BUFFERING_MODE_INFO";
+/**
+ * Path delimiter used for defining multiple file paths in Hermes.
+ */
+const char kHermesPathDelimiter = ',';
+/**
+ * Constants for supported buffering modes in Hermes
+ */
+const char* kPersistentHermesBufferMode = "PERSISTENT";
+const char* kBypassHermesBufferMode = "BYPASS";
+const char* kScratchHermesBufferMode = "SCRATCH";
 #endif  // HERMES_ADAPTER_CONSTANTS_H
