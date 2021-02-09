@@ -66,8 +66,8 @@ int finalize() {
 int pretest() {
   fs::path fullpath = args.directory;
   fullpath /= args.filename;
-  info.new_file = fullpath.string() + "_new";
-  info.existing_file = fullpath.string() + "_ext";
+  info.new_file = fullpath.string() + "_new_" + std::to_string(getpid());
+  info.existing_file = fullpath.string() + "_ext_" + std::to_string(getpid());
   if (fs::exists(info.new_file)) fs::remove(info.new_file);
   if (fs::exists(info.existing_file)) fs::remove(info.existing_file);
   if (!fs::exists(info.existing_file)) {

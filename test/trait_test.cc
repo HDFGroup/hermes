@@ -77,6 +77,7 @@ std::string gen_random(const int len) {
 }
 
 int pretest() {
+  args.filename += "_" + std::to_string(getpid());
   auto str = gen_random(args.request_size);
   info.write_blob = hermes::api::Blob(str.begin(), str.end());
   return 0;
