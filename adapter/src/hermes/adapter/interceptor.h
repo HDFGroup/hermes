@@ -144,9 +144,9 @@ struct InterceptorList {
 
   bool Persists(std::string path) {
     if (buffer_mode == BufferMode::PERSISTENT) {
-      if (paths.empty())
+      if (paths.empty()) {
         return true;
-      else {
+      } else {
         for (const auto& pth : paths) {
           if (path.find(pth) == 0) {
             return true;
@@ -155,9 +155,9 @@ struct InterceptorList {
         return false;
       }
     } else if (buffer_mode == BufferMode::SCRATCH) {
-      if (paths.empty())
+      if (paths.empty()) {
         return false;
-      else {
+      } else {
         for (const auto& pth : paths) {
           if (path.find(pth) == 0) {
             return false;
