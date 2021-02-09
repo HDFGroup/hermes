@@ -302,10 +302,10 @@ TEST_CASE("getc", "[process=" + std::to_string(info.comm_size) +
 }
 
 TEST_CASE("getw", "[process=" + std::to_string(info.comm_size) +
-                  "]"
-                  "[operation=batched_getw]"
-                  "[repetition=" +
-                  std::to_string(info.num_iterations) + "][file=1]") {
+                      "]"
+                      "[operation=batched_getw]"
+                      "[repetition=" +
+                      std::to_string(info.num_iterations) + "][file=1]") {
   pretest();
   SECTION("iterate and get all characters") {
     FILE* fh = fopen(info.existing_file.c_str(), "r");
@@ -383,10 +383,10 @@ TEST_CASE("putc", "[process=" + std::to_string(info.comm_size) +
   posttest(false);
 }
 TEST_CASE("putw", "[process=" + std::to_string(info.comm_size) +
-                  "]"
-                  "[operation=batched_putw]"
-                  "[repetition=" +
-                  std::to_string(info.num_iterations) + "][file=1]") {
+                      "]"
+                      "[operation=batched_putw]"
+                      "[repetition=" +
+                      std::to_string(info.num_iterations) + "][file=1]") {
   pretest();
   SECTION("iterate and get all characters") {
     FILE* fh = fopen(info.new_file.c_str(), "w+");
@@ -488,9 +488,9 @@ TEST_CASE("fseeko", "[process=" + std::to_string(info.comm_size) +
 }
 
 TEST_CASE("fseeko64", "[process=" + std::to_string(info.comm_size) +
-                    "]"
-                    "[operation=single_fseeko64]"
-                    "[repetition=1][file=1]") {
+                          "]"
+                          "[operation=single_fseeko64]"
+                          "[repetition=1][file=1]") {
   pretest();
   SECTION("test all seek modes") {
     FILE* fh = fopen(info.existing_file.c_str(), "r");
@@ -581,9 +581,9 @@ TEST_CASE("fsetpos", "[process=" + std::to_string(info.comm_size) +
 }
 
 TEST_CASE("fsetpos64", "[process=" + std::to_string(info.comm_size) +
-                     "]"
-                     "[operation=single_fsetpos64]"
-                     "[repetition=1][file=1]") {
+                           "]"
+                           "[operation=single_fsetpos64]"
+                           "[repetition=1][file=1]") {
   pretest();
   SECTION("test all seek modes") {
     FILE* fh = fopen(info.existing_file.c_str(), "r");
@@ -636,9 +636,9 @@ TEST_CASE("fgetpos", "[process=" + std::to_string(info.comm_size) +
 }
 
 TEST_CASE("fgetpos64", "[process=" + std::to_string(info.comm_size) +
-                     "]"
-                     "[operation=single_fgetpos64]"
-                     "[repetition=1][file=1]") {
+                           "]"
+                           "[operation=single_fgetpos64]"
+                           "[repetition=1][file=1]") {
   pretest();
   SECTION("test all seek modes") {
     FILE* fh = fopen(info.existing_file.c_str(), "r");
@@ -662,9 +662,9 @@ TEST_CASE("fgetpos64", "[process=" + std::to_string(info.comm_size) +
 }
 
 TEST_CASE("Open64", "[process=" + std::to_string(info.comm_size) +
-                  "]"
-                  "[operation=single_open]"
-                  "[repetition=1][file=1]") {
+                        "]"
+                        "[operation=single_open]"
+                        "[repetition=1][file=1]") {
   pretest();
   SECTION("open non-existant file") {
     FILE* fh = fopen64(info.new_file.c_str(), "r");
@@ -714,9 +714,9 @@ TEST_CASE("Open64", "[process=" + std::to_string(info.comm_size) +
 }
 
 TEST_CASE("Freopen64", "[process=" + std::to_string(info.comm_size) +
-                     "]"
-                     "[operation=single_freopen]"
-                     "[repetition=1][file=1]") {
+                           "]"
+                           "[operation=single_freopen]"
+                           "[repetition=1][file=1]") {
   pretest();
   SECTION("change different modes") {
     FILE* fhr = fopen(info.existing_file.c_str(), "r");
@@ -753,9 +753,9 @@ TEST_CASE("Freopen64", "[process=" + std::to_string(info.comm_size) +
 }
 
 TEST_CASE("MultiOpen", "[process=" + std::to_string(info.comm_size) +
-                       "]"
-                       "[operation=multi_open]"
-                       "[repetition=1][file=1]"){
+                           "]"
+                           "[operation=multi_open]"
+                           "[repetition=1][file=1]") {
   pretest();
   SECTION("Open same file twice and then close both fps") {
     FILE* fh1 = fopen(info.existing_file.c_str(), "r");
