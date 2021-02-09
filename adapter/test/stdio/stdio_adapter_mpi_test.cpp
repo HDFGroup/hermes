@@ -283,6 +283,11 @@ cl::Parser define_options() {
              "Request size used for performing I/O");
 }
 
+size_t GetRandomOffset(size_t i, size_t total_size) {
+  return abs((int)(((i * rand_r(&info.offset_seed)) % info.stride_size) %
+                   total_size));
+}
+
 #include "stdio_adapter_basic_test.cpp"
 #include "stdio_adapter_func_test.cpp"
 #include "stdio_adapter_rs_test.cpp"

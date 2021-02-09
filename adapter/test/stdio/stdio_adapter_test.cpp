@@ -255,6 +255,11 @@ void test_fseek(long offset, int whence) {
 }
 }  // namespace test
 
+size_t GetRandomOffset(size_t i, size_t total_size) {
+  return abs((int)(((i * rand_r(&info.offset_seed)) % info.stride_size) %
+                   total_size));
+}
+
 #include "stdio_adapter_basic_test.cpp"
 #include "stdio_adapter_func_test.cpp"
 #include "stdio_adapter_rs_test.cpp"
