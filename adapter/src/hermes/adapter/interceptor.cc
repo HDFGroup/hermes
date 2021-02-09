@@ -95,7 +95,6 @@ bool IsTracked(const std::string& path) {
   } else {
     return true;
   }
-  return true;
 }
 
 bool IsTracked(FILE* fh) {
