@@ -59,7 +59,7 @@ RUN $spack compiler list
 
 ENV HERMES_VERSION=master
 
-ENV HERMES_SPEC="hermes@cluster"
+ENV HERMES_SPEC="hermes@${HERMES_VERSION}"
 RUN $spack install ${HERMES_SPEC}
 
 RUN $spack view --verbose symlink -i ${INSTALL_DIR} ${HERMES_SPEC}
