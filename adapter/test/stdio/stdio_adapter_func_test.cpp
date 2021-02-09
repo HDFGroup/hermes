@@ -528,3 +528,55 @@ TEST_CASE("fgetpos", "[process=" + std::to_string(info.comm_size) +
   }
   posttest(false);
 }
+
+TEST_CASE("Open64", "[process=" + std::to_string(info.comm_size) +
+                  "]"
+                  "[operation=single_open]"
+                  "[repetition=1][file=1]") {
+  pretest();
+  SECTION("open non-existant file") {
+    FILE* fh = fopen64(info.new_file.c_str(), "r");
+    REQUIRE(fh == nullptr);
+    fh = fopen64(info.new_file.c_str(), "r+");
+    REQUIRE(fh == nullptr);
+  }
+
+  SECTION("truncate existing file and write-only") {
+    FILE* fh = fopen64(info.existing_file.c_str(), "w");
+    REQUIRE(fh != nullptr);
+    int status = fclose(fh);
+    REQUIRE(status == 0);
+  }
+  SECTION("truncate existing file and read/write") {
+    FILE* fh = fopen64(info.existing_file.c_str(), "w+");
+    REQUIRE(fh != nullptr);
+    int status = fclose(fh);
+    REQUIRE(status == 0);
+  }
+
+  SECTION("open existing file") {
+    FILE* fh = fopen64(info.existing_file.c_str(), "r+");
+    REQUIRE(fh != nullptr);
+    int status = fclose(fh);
+    REQUIRE(status == 0);
+    fh = fopen64(info.existing_file.c_str(), "r");
+    REQUIRE(fh != nullptr);
+    status = fclose(fh);
+    REQUIRE(status == 0);
+  }
+
+  SECTION("append write existing file") {
+    FILE* fh = fopen64(info.existing_file.c_str(), "a");
+    REQUIRE(fh != nullptr);
+    int status = fclose(fh);
+    REQUIRE(status == 0);
+  }
+
+  SECTION("append write and read existing file") {
+    FILE* fh = fopen64(info.existing_file.c_str(), "a+");
+    REQUIRE(fh != nullptr);
+    int status = fclose(fh);
+    REQUIRE(status == 0);
+  }
+  posttest();
+}
