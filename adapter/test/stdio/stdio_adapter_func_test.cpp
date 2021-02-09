@@ -487,6 +487,40 @@ TEST_CASE("fseeko", "[process=" + std::to_string(info.comm_size) +
   posttest(false);
 }
 
+TEST_CASE("fseeko64", "[process=" + std::to_string(info.comm_size) +
+                    "]"
+                    "[operation=single_fseeko64]"
+                    "[repetition=1][file=1]") {
+  pretest();
+  SECTION("test all seek modes") {
+    FILE* fh = fopen(info.existing_file.c_str(), "r");
+    REQUIRE(fh != nullptr);
+    int status = fseeko64(fh, 0, SEEK_SET);
+    REQUIRE(status == 0);
+    size_t offset = ftell(fh);
+    REQUIRE(offset == 0);
+
+    status = fseeko64(fh, 0, SEEK_CUR);
+    REQUIRE(status == 0);
+    offset = ftell(fh);
+    REQUIRE(offset == 0);
+
+    status = fseeko64(fh, 0, SEEK_END);
+    REQUIRE(status == 0);
+    offset = ftell(fh);
+    REQUIRE(offset == info.total_size);
+
+    status = fseeko64(fh, 0, SEEK_CUR);
+    REQUIRE(status == 0);
+    offset = ftell(fh);
+    REQUIRE(offset == info.total_size);
+
+    status = fclose(fh);
+    REQUIRE(status == 0);
+  }
+  posttest(false);
+}
+
 TEST_CASE("rewind", "[process=" + std::to_string(info.comm_size) +
                         "]"
                         "[operation=single_rewind]"
