@@ -62,7 +62,8 @@ jobs:
           mkdir -p "${GITHUB_WORKSPACE}/coverage"
           pushd build/src/CMakeFiles/hermes.dir
           lcov -c -d . -o "${GITHUB_WORKSPACE}/coverage/lcov.info"
-
+          pushd build/adapter/src/hermes/adapter/stdio/CMakeFiles/hermes_stdio.dir
+          lcov -c -d . -o "${GITHUB_WORKSPACE}/coverage/lcov.info"
       - name: Coveralls
         uses: coverallsapp/github-action@master
         with:
