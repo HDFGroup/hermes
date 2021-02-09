@@ -751,3 +751,21 @@ TEST_CASE("Freopen64", "[process=" + std::to_string(info.comm_size) +
   }
   posttest(false);
 }
+
+TEST_CASE("MultiOpen", "[process=" + std::to_string(info.comm_size) +
+                       "]"
+                       "[operation=multi_open]"
+                       "[repetition=1][file=1]"){
+  pretest();
+  SECTION("Open same file twice and then close both fps") {
+    FILE* fh1 = fopen(info.existing_file.c_str(), "r");
+    REQUIRE(fh1 != nullptr);
+    FILE* fh2 = fopen(info.existing_file.c_str(), "r");
+    REQUIRE(fh2 != nullptr);
+    int status = fclose(fh1);
+    REQUIRE(status == 0);
+    status = fclose(fh2);
+    REQUIRE(status == 0);
+  }
+  posttest(false);
+}
