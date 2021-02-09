@@ -301,6 +301,29 @@ TEST_CASE("getc", "[process=" + std::to_string(info.comm_size) +
   posttest(false);
 }
 
+TEST_CASE("getw", "[process=" + std::to_string(info.comm_size) +
+                  "]"
+                  "[operation=batched_getw]"
+                  "[repetition=" +
+                  std::to_string(info.num_iterations) + "][file=1]") {
+  pretest();
+  SECTION("iterate and get all characters") {
+    FILE* fh = fopen(info.existing_file.c_str(), "r");
+    REQUIRE(fh != nullptr);
+    size_t total_chars = 0;
+    int c = '0';
+    do {
+      c = getw(fh);
+      total_chars++;
+      if (total_chars >= info.num_iterations) break;
+    } while (c != EOF);
+    REQUIRE(total_chars == info.num_iterations);
+    int status = fclose(fh);
+    REQUIRE(status == 0);
+  }
+  posttest(false);
+}
+
 TEST_CASE("fgets", "[process=" + std::to_string(info.comm_size) +
                        "]"
                        "[operation=single_fgets]"
