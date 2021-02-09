@@ -28,4 +28,19 @@ const char* kHermesConf = "HERMES_CONF";
  * from I/O. This is needed as we should not intercept these files.
  */
 const char* kHermesExtension = ".hermes";
+/**
+ * kHermesBufferMode env variable is used to define the mode in which Hermes'
+ * STDIO adapter operates.
+ *
+ * It supports 3 Values: PERSISTENT/BYPASS/SCRATCH
+ */
+const char* kHermesBufferMode = "HERMES_BUFFERING_MODE";
+/**
+ * kHermesBufferModeInfo env variable is used to define the additional
+ * information for the selected mode @see kHermesBufferMode.
+ *
+ * Currently it supports info for only BYPASS mode where users can define which
+ * files to bypass.
+ */
+const char* kHermesBufferModeInfo = "HERMES_BUFFERING_MODE_INFO";
 #endif  // HERMES_ADAPTER_CONSTANTS_H
