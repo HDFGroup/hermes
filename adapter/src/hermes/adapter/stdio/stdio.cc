@@ -803,51 +803,6 @@ int HERMES_DECL(getc)(FILE *stream) {
   return (ret);
 }
 
-/* NOTE: stdio.h typically implements getc() as a macro pointing to _IO_getc */
-int HERMES_DECL(_IO_getc)(FILE *stream) {
-  int ret = -1;
-  if (hermes::adapter::IsTracked(stream)) {
-    auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
-    auto existing = mdm->Find(stream);
-    if (existing.second) {
-      LOG(INFO) << "Intercept _IO_getc." << std::endl;
-      unsigned char value;
-      auto ret_size =
-          read_internal(existing, &value, sizeof(unsigned char), stream);
-      if (ret_size == sizeof(unsigned char)) {
-        ret = value;
-      }
-    } else {
-      MAP_OR_FAIL(_IO_getc);
-      ret = real__IO_getc_(stream);
-    }
-  } else {
-    MAP_OR_FAIL(_IO_getc);
-    ret = real__IO_getc_(stream);
-  }
-  return (ret);
-}
-
-/* NOTE: stdio.h typically implements putc() as a macro pointing to _IO_putc */
-int HERMES_DECL(_IO_putc)(int c, FILE *stream) {
-  int ret;
-  if (hermes::adapter::IsTracked(stream)) {
-    auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
-    auto existing = mdm->Find(stream);
-    if (existing.second) {
-      LOG(INFO) << "Intercept _IO_putc char:" << (char *)&c << "." << std::endl;
-      ret = write_internal(existing, &c, 1, stream);
-    } else {
-      MAP_OR_FAIL(_IO_putc);
-      ret = real__IO_putc_(c, stream);
-    }
-  } else {
-    MAP_OR_FAIL(_IO_putc);
-    ret = real__IO_putc_(c, stream);
-  }
-  return (ret);
-}
-
 int HERMES_DECL(getw)(FILE *stream) {
   int ret = -1;
   if (hermes::adapter::IsTracked(stream)) {
