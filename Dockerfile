@@ -20,7 +20,7 @@ RUN DEBIAN_FRONTEND="noninteractive" apt-get install -y --no-install-recommends 
     git \
     build-essential \
     python \
-    nano \
+    vi \
     sudo \
     unzip \
     cmake \
@@ -28,8 +28,6 @@ RUN DEBIAN_FRONTEND="noninteractive" apt-get install -y --no-install-recommends 
     zlib1g-dev \
     libsdl2-dev \
     gfortran
-
-CMD ["su", "-", "$USER", "-c", "/bin/bash"]
 
 USER $USER
 
@@ -44,7 +42,7 @@ RUN echo $INSTALL_DIR && mkdir -p $INSTALL_DIR
 
 RUN git clone https://github.com/spack/spack ${SPACK_DIR}
 RUN git clone https://xgitlab.cels.anl.gov/sds/sds-repo.git ${SDS_DIR}
-RUN git clone -b hariharan/cluster_test https://github.com/hariharan-devarajan/hermes ${PROJECT}
+RUN git clone https://github.com/HDFGroup/hermes ${PROJECT}
 
 ENV spack=${SPACK_DIR}/bin/spack
 
@@ -61,10 +59,10 @@ RUN $spack compiler list
 
 ENV HERMES_VERSION=master
 
-ENV HERMES_SPEC="hermes@master"
+ENV HERMES_SPEC="hermes@${HERMES_VERSION}"
 RUN $spack install ${HERMES_SPEC}
 
-RUN $spack view --verbose symlink ${INSTALL_DIR} ${HERMES_SPEC}
+RUN $spack view --verbose symlink -i ${INSTALL_DIR} ${HERMES_SPEC}
 
 RUN mkdir $PROJECT/build
 ENV CXXFLAGS="${CXXFLAGS} -std=c++17 -Werror -Wall -Wextra"
@@ -92,7 +90,13 @@ RUN cd $PROJECT/build && \
 
 RUN cd $PROJECT/build && \
     cmake --build . -- -j
-RUN cd $PROJECT/build && \
-    ctest -VV
 
 WORKDIR $HOME
+
+RUN echo "export PATH=${SPACK_DIR}/bin:$PATH" >> /home/$USER/.bashrc
+RUN echo ". ${SPACK_DIR}/share/spack/setup-env.sh" >> /home/$USER/.bashrc
+RUN echo "export CFLAGS=-I${INSTALL_DIR}/include" >> /home/$USER/.bashrc
+RUN echo "export CXXFLAGS=-I${INSTALL_DIR}/include" >> /home/$USER/.bashrc
+RUN echo "export LDFLAGS=-L${INSTALL_DIR}/lib" >> /home/$USER/.bashrc
+RUN echo "export LD_LIBRARY_PATH=${INSTALL_DIR}/lib:\$LD_LIBRARY_PATH" >> /home/$USER/.bashrc
+

@@ -10,6 +10,7 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+#include <adapter_utils.h>
 #include <catch_config.h>
 #include <fcntl.h>
 #include <stdio.h>
