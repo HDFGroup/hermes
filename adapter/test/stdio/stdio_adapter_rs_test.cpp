@@ -236,7 +236,8 @@ TEST_CASE("BatchedReadStrideDynamicRSRangeSmall",
     test::test_fopen(info.existing_file.c_str(), "r+");
     REQUIRE(test::fh_orig != nullptr);
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      auto offset = GetRandomOffset(i, info.total_size - info.small_max);
+      auto offset = GetRandomOffset(i, info.offset_seed, info.stride_size,
+                                    info.total_size - info.small_max);
       test::test_fseek(offset, SEEK_SET);
       REQUIRE(test::status_orig == 0);
       size_t request_size =
@@ -264,7 +265,8 @@ TEST_CASE("BatchedUpdateStrideDynamicRSRangeSmall",
     test::test_fopen(info.existing_file.c_str(), "r+");
     REQUIRE(test::fh_orig != nullptr);
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      auto offset = GetRandomOffset(i, info.total_size - info.small_max);
+      auto offset = GetRandomOffset(i, info.offset_seed, info.stride_size,
+                                    info.total_size - info.small_max);
       test::test_fseek(offset, SEEK_SET);
       REQUIRE(test::status_orig == 0);
       size_t request_size =
@@ -648,7 +650,8 @@ TEST_CASE("BatchedReadStrideDynamicRSRangeMedium",
     test::test_fopen(info.existing_file.c_str(), "r+");
     REQUIRE(test::fh_orig != nullptr);
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      auto offset = GetRandomOffset(i, info.total_size - info.medium_max);
+      auto offset = GetRandomOffset(i, info.offset_seed, info.stride_size,
+                                    info.total_size - info.medium_max);
       test::test_fseek(offset, SEEK_SET);
       REQUIRE(test::status_orig == 0);
       size_t request_size =
@@ -676,7 +679,8 @@ TEST_CASE("BatchedUpdateStrideDynamicRSRangeMedium",
     test::test_fopen(info.existing_file.c_str(), "r+");
     REQUIRE(test::fh_orig != nullptr);
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      auto offset = GetRandomOffset(i, info.total_size - info.medium_max);
+      auto offset = GetRandomOffset(i, info.offset_seed, info.stride_size,
+                                    info.total_size - info.medium_max);
       test::test_fseek(offset, SEEK_SET);
       REQUIRE(test::status_orig == 0);
       size_t request_size =
@@ -1058,7 +1062,8 @@ TEST_CASE("BatchedReadStrideDynamicRSRangeLarge",
     test::test_fopen(info.existing_file.c_str(), "r+");
     REQUIRE(test::fh_orig != nullptr);
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      auto offset = GetRandomOffset(i, info.total_size - info.large_max);
+      auto offset = GetRandomOffset(i, info.offset_seed, info.stride_size,
+                                    info.total_size - info.large_max);
       test::test_fseek(offset, SEEK_SET);
       REQUIRE(test::status_orig == 0);
       size_t request_size =
@@ -1086,7 +1091,8 @@ TEST_CASE("BatchedUpdateStrideDynamicRSRangeLarge",
     test::test_fopen(info.existing_file.c_str(), "r+");
     REQUIRE(test::fh_orig != nullptr);
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      auto offset = GetRandomOffset(i, info.total_size - info.large_max);
+      auto offset = GetRandomOffset(i, info.offset_seed, info.stride_size,
+                                    info.total_size - info.large_max);
       test::test_fseek(offset, SEEK_SET);
       REQUIRE(test::status_orig == 0);
       size_t request_size =

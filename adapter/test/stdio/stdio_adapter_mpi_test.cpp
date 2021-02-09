@@ -10,6 +10,7 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+#include <adapter_utils.h>
 #include <catch_config.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -281,11 +282,6 @@ cl::Parser define_options() {
              "Directory used for performing I/O") |
          cl::Opt(args.request_size, "request_size")["-s"]["--request_size"](
              "Request size used for performing I/O");
-}
-
-size_t GetRandomOffset(size_t i, size_t total_size) {
-  return abs(
-      (int)(((i * rand_r(&info.offset_seed)) % info.stride_size) % total_size));
 }
 
 #include "stdio_adapter_basic_test.cpp"
