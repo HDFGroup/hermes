@@ -1,7 +1,3 @@
-//
-// Created by hdevarajan on 2/9/21.
-//
-
 #ifndef HERMES_ADAPTER_ENUMERATIONS_H
 #define HERMES_ADAPTER_ENUMERATIONS_H
 enum BufferMode {
