@@ -377,9 +377,8 @@ TEST_CASE("BatchedReadStrideDynamic",
     REQUIRE(test::fh_orig != nullptr);
     std::string data(args.request_size, '1');
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      auto offset =
-          abs((int)(((i * rand_r(&info.offset_seed)) % info.stride_size) %
-                    info.total_size));
+      auto offset = GetRandomOffset(i, info.offset_seed, info.stride_size,
+                                    info.total_size);
       test::test_fseek(offset, SEEK_SET);
       REQUIRE(test::status_orig == 0);
       test::test_fread(data.data(), args.request_size);
@@ -405,9 +404,8 @@ TEST_CASE("BatchedUpdateStrideDynamic",
     REQUIRE(test::fh_orig != nullptr);
     std::string data(args.request_size, '1');
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      auto offset =
-          abs((int)(((i * rand_r(&info.offset_seed)) % info.stride_size) %
-                    info.total_size));
+      auto offset = GetRandomOffset(i, info.offset_seed, info.stride_size,
+                                    info.total_size);
       test::test_fseek(offset, SEEK_SET);
       REQUIRE(test::status_orig == 0);
       test::test_fwrite(data.data(), args.request_size);
@@ -654,9 +652,8 @@ TEST_CASE("BatchedReadStrideDynamicRSVariable",
     test::test_fopen(info.existing_file.c_str(), "r+");
     REQUIRE(test::fh_orig != nullptr);
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      auto offset =
-          abs((int)(((i * rand_r(&info.offset_seed)) % info.stride_size) %
-                    info.total_size));
+      auto offset = GetRandomOffset(i, info.offset_seed, info.stride_size,
+                                    info.total_size);
       test::test_fseek(offset, SEEK_SET);
       REQUIRE(test::status_orig == 0);
       size_t request_size =
@@ -684,9 +681,8 @@ TEST_CASE("BatchedUpdateStrideDynamicRSVariable",
     test::test_fopen(info.existing_file.c_str(), "r+");
     REQUIRE(test::fh_orig != nullptr);
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      auto offset =
-          abs((int)(((i * rand_r(&info.offset_seed)) % info.stride_size) %
-                    info.total_size));
+      auto offset = GetRandomOffset(i, info.offset_seed, info.stride_size,
+                                    info.total_size);
       test::test_fseek(offset, SEEK_SET);
       REQUIRE(test::status_orig == 0);
       size_t request_size =

@@ -10,6 +10,7 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+#include <adapter_utils.h>
 #include <catch_config.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -158,14 +159,14 @@ int pretest() {
   if (fs::exists(info.existing_file_cmp)) fs::remove(info.existing_file_cmp);
   fs::path temp_fullpath = "/tmp";
   temp_fullpath /= args.filename;
-  std::string temp_ext_file = temp_fullpath.string() + "_temp_" +
-                              std::to_string(info.rank) + "_of_" +
-                              std::to_string(info.comm_size);
+  std::string temp_ext_file =
+      temp_fullpath.string() + "_temp_" + std::to_string(info.rank) + "_of_" +
+      std::to_string(info.comm_size) + "_" + std::to_string(getpid());
   if (fs::exists(temp_ext_file)) fs::remove(temp_ext_file);
   if (!fs::exists(temp_ext_file)) {
     std::string cmd = "{ tr -dc '[:alnum:]' < /dev/urandom | head -c " +
                       std::to_string(args.request_size * info.num_iterations) +
-        "; } > " + temp_ext_file + " 2> /dev/null";
+                      "; } > " + temp_ext_file + " 2> /dev/null";
     int status = system(cmd.c_str());
     REQUIRE(status != -1);
     REQUIRE(fs::file_size(temp_ext_file) ==

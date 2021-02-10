@@ -676,7 +676,12 @@ int HERMES_DECL(putw)(int w, FILE *fp) {
     auto existing = mdm->Find(fp);
     if (existing.second) {
       LOG(INFO) << "Intercept putw." << std::endl;
-      ret = write_internal(existing, &w, 1, fp);
+      ret = write_internal(existing, &w, sizeof(w), fp);
+      if (ret == sizeof(w)) {
+        ret = 0;
+      } else {
+        ret = EOF;
+      }
     } else {
       MAP_OR_FAIL(putw);
       ret = real_putw_(w, fp);

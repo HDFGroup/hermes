@@ -535,9 +535,8 @@ TEST_CASE("BatchedReadStrideDynamic",
     REQUIRE(fd != -1);
     std::string data(args.request_size, '1');
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      size_t offset =
-          abs((int)(((i * rand_r(&info.offset_seed)) % info.stride_size) %
-                    info.total_size));
+      size_t offset = GetRandomOffset(i, info.offset_seed, info.stride_size,
+                                      info.total_size);
       size_t status = lseek(fd, offset, SEEK_SET);
       REQUIRE(status == offset);
       size_t size_read = read(fd, data.data(), args.request_size);
@@ -563,9 +562,8 @@ TEST_CASE("BatchedUpdateStrideDynamic",
     REQUIRE(fd != -1);
     std::string data(args.request_size, '1');
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      size_t offset =
-          abs((int)(((i * rand_r(&info.offset_seed)) % info.stride_size) %
-                    info.total_size));
+      size_t offset = GetRandomOffset(i, info.offset_seed, info.stride_size,
+                                      info.total_size);
       size_t status = lseek(fd, offset, SEEK_SET);
       REQUIRE(status == offset);
       size_t size_read = write(fd, data.data(), args.request_size);
@@ -809,9 +807,8 @@ TEST_CASE("BatchedReadStrideDynamicRSVariable",
     int fd = open(info.existing_file.c_str(), O_RDWR);
     REQUIRE(fd != -1);
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      size_t offset =
-          abs((int)(((i * rand_r(&info.offset_seed)) % info.stride_size) %
-                    info.total_size));
+      size_t offset = GetRandomOffset(i, info.offset_seed, info.stride_size,
+                                      info.total_size);
       size_t status = lseek(fd, offset, SEEK_SET);
       REQUIRE(status == offset);
       size_t request_size =
@@ -839,9 +836,8 @@ TEST_CASE("BatchedUpdateStrideDynamicRSVariable",
     int fd = open(info.existing_file.c_str(), O_RDWR);
     REQUIRE(fd != -1);
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      size_t offset =
-          abs((int)(((i * rand_r(&info.offset_seed)) % info.stride_size) %
-                    info.total_size));
+      size_t offset = GetRandomOffset(i, info.offset_seed, info.stride_size,
+                                      info.total_size);
       size_t status = lseek(fd, offset, SEEK_SET);
       REQUIRE(status == offset);
       size_t request_size =
