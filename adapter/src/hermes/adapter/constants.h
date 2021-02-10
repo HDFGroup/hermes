@@ -34,7 +34,7 @@ const char* kHermesExtension = ".hermes";
  *
  * It supports 3 Values: PERSISTENT/BYPASS/SCRATCH
  */
-const char* kHermesBufferMode = "HERMES_BUFFERING_MODE";
+const char* kAdapterMode = "ADAPTER_MODE";
 /**
  * kHermesBufferModeInfo env variable is used to define the additional
  * information for the selected mode @see kHermesBufferMode.
@@ -42,15 +42,15 @@ const char* kHermesBufferMode = "HERMES_BUFFERING_MODE";
  * Currently it supports info for only BYPASS mode where users can define which
  * files to bypass.
  */
-const char* kHermesBufferModeInfo = "HERMES_BUFFERING_MODE_INFO";
+const char* kAdapterModeInfo = "ADAPTER_MODE_INFO";
 /**
  * Path delimiter used for defining multiple file paths in Hermes.
  */
-const char kHermesPathDelimiter = ',';
+const char kPathDelimiter = ',';
 /**
  * Constants for supported buffering modes in Hermes
  */
-const char* kPersistentHermesBufferMode = "PERSISTENT";
-const char* kBypassHermesBufferMode = "BYPASS";
-const char* kScratchHermesBufferMode = "SCRATCH";
+const char* kAdapterDefaultMode = "DEFAULT";
+const char* kAdapterBypassMode = "BYPASS";
+const char* kAdapterScratchMode = "SCRATCH";
 #endif  // HERMES_ADAPTER_CONSTANTS_H

@@ -79,7 +79,7 @@ int init(int* argc, char*** argv) {
   char* set_path = getenv("SET_PATH");
   if (set_path && strcmp(set_path, "1") == 0) {
     auto paths = info.new_file + "," + info.existing_file;
-    setenv(kHermesBufferModeInfo, paths.c_str(), 1);
+    setenv(kAdapterModeInfo, paths.c_str(), 1);
   }
   MPI_Init(argc, argv);
   info.write_data = gen_random(args.request_size);
@@ -269,10 +269,10 @@ TEST_CASE("BatchedWriteSequentialPersistent",
               std::to_string(info.num_iterations) +
               "]"
               "[pattern=sequential][file=1]") {
-  char* hermes_buffering_mode = getenv(kHermesBufferMode);
-  REQUIRE(hermes_buffering_mode != nullptr);
+  char* adapter_mode = getenv(kAdapterMode);
+  REQUIRE(adapter_mode != nullptr);
   bool is_same =
-      strcmp(kPersistentHermesBufferMode, hermes_buffering_mode) == 0;
+      strcmp(kAdapterDefaultMode, adapter_mode) == 0;
   REQUIRE(is_same);
   pretest();
   SECTION("write to new file always at end") {
@@ -300,9 +300,9 @@ TEST_CASE("BatchedWriteSequentialBypass",
               std::to_string(info.num_iterations) +
               "]"
               "[pattern=sequential][file=1]") {
-  char* hermes_buffering_mode = getenv(kHermesBufferMode);
-  REQUIRE(hermes_buffering_mode != nullptr);
-  bool is_same = strcmp(kBypassHermesBufferMode, hermes_buffering_mode) == 0;
+  char* adapter_mode = getenv(kAdapterMode);
+  REQUIRE(adapter_mode != nullptr);
+  bool is_same = strcmp(kAdapterBypassMode, adapter_mode) == 0;
   REQUIRE(is_same);
   pretest();
   SECTION("write to new file always at end") {
@@ -330,9 +330,9 @@ TEST_CASE("BatchedWriteSequentialScratch",
               std::to_string(info.num_iterations) +
               "]"
               "[pattern=sequential][file=1]") {
-  char* hermes_buffering_mode = getenv(kHermesBufferMode);
-  REQUIRE(hermes_buffering_mode != nullptr);
-  bool is_same = strcmp(kScratchHermesBufferMode, hermes_buffering_mode) == 0;
+  char* adapter_mode = getenv(kAdapterMode);
+  REQUIRE(adapter_mode != nullptr);
+  bool is_same = strcmp(kAdapterScratchMode, adapter_mode) == 0;
   REQUIRE(is_same);
   pretest();
   SECTION("write to new file always at end") {

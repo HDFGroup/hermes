@@ -13,7 +13,7 @@ function(gcc_hermes_mode exec tag_name tags mode path)
     set_property(TEST ${test_name} APPEND
             PROPERTY ENVIRONMENT LSAN_OPTIONS=suppressions=${CMAKE_SOURCE_DIR}/test/data/asan.supp)
     set_property(TEST ${test_name} APPEND
-            PROPERTY ENVIRONMENT HERMES_BUFFERING_MODE=${mode})
+            PROPERTY ENVIRONMENT ADAPTER_MODE=${mode})
     set_property(TEST ${test_name} APPEND
             PROPERTY ENVIRONMENT SET_PATH=${path})
 endfunction()
@@ -50,10 +50,10 @@ add_dependencies(hermes_stdio_adapter_mode_test hermes_stdio)
 add_dependencies(hermes_stdio_adapter_mode_test hermes_daemon)
 set_target_properties(hermes_stdio_adapter_mode_test PROPERTIES COMPILE_FLAGS "-DHERMES_INTERCEPT=1")
 
-gcc_hermes_mode(hermes_stdio_adapter_mode_test "persistent" "[hermes_mode=persistent]" "PERSISTENT" "0")
+gcc_hermes_mode(hermes_stdio_adapter_mode_test "persistent" "[hermes_mode=persistent]" "DEFAULT" "0")
 gcc_hermes_mode(hermes_stdio_adapter_mode_test "scratch" "[hermes_mode=scratch]" "SCRATCH" "0")
 gcc_hermes_mode(hermes_stdio_adapter_mode_test "bypass" "[hermes_mode=bypass]" "BYPASS" "0")
-gcc_hermes_mode(hermes_stdio_adapter_mode_test "persistent" "[hermes_mode=persistent]" "PERSISTENT" "1")
+gcc_hermes_mode(hermes_stdio_adapter_mode_test "persistent" "[hermes_mode=persistent]" "DEFAULT" "1")
 gcc_hermes_mode(hermes_stdio_adapter_mode_test "scratch" "[hermes_mode=scratch]" "SCRATCH" "1")
 gcc_hermes_mode(hermes_stdio_adapter_mode_test "bypass" "[hermes_mode=bypass]" "BYPASS" "1")
 

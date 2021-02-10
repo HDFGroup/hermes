@@ -96,7 +96,7 @@ class MetadataManager {
       } else {
         hermes = hermes::InitHermesDaemon(hermes_config);
       }
-      INTERCEPTOR_LIST->SetupBufferingMode();
+      INTERCEPTOR_LIST->SetupAdapterMode();
     }
     ref++;
   }

@@ -88,11 +88,11 @@ struct InterceptorList {
   /**
    * hermes buffering mode.
    */
-  BufferMode buffer_mode;
+  AdapterMode adapter_mode;
   /**
    * Scratch paths
    */
-  std::vector<std::string> paths;
+  std::vector<std::string> adapter_paths;
   /**
    * Allow users to override the path exclusions
    */
@@ -110,55 +110,55 @@ struct InterceptorList {
    * Default constructor
    */
   InterceptorList()
-      : buffer_mode(BufferMode::PERSISTENT),
-        paths(),
+      : adapter_mode(AdapterMode::DEFAULT),
+        adapter_paths(),
         user_path_exclusions(),
         hermes_paths_exclusion(),
         hermes_flush_exclusion() {}
-  void SetupBufferingMode() {
-    char* hermes_buffering_mode = getenv(kHermesBufferMode);
-    if (hermes_buffering_mode == nullptr) {
-      // default is kPersistentHermesBufferMode
-      buffer_mode = BufferMode::PERSISTENT;
+  void SetupAdapterMode() {
+    char* adapter_mode_str = getenv(kAdapterMode);
+    if (adapter_mode_str == nullptr) {
+      // default is Persistent mode
+      adapter_mode = AdapterMode::DEFAULT;
     } else {
-      if (strcmp(kPersistentHermesBufferMode, hermes_buffering_mode) == 0) {
-        buffer_mode = BufferMode::PERSISTENT;
-      } else if (strcmp(kBypassHermesBufferMode, hermes_buffering_mode) == 0) {
-        buffer_mode = BufferMode::BYPASS;
-      } else if (strcmp(kScratchHermesBufferMode, hermes_buffering_mode) == 0) {
-        buffer_mode = BufferMode::SCRATCH;
+      if (strcmp(kAdapterDefaultMode, adapter_mode_str) == 0) {
+        adapter_mode = AdapterMode::DEFAULT;
+      } else if (strcmp(kAdapterBypassMode, adapter_mode_str) == 0) {
+        adapter_mode = AdapterMode::BYPASS;
+      } else if (strcmp(kAdapterScratchMode, adapter_mode_str) == 0) {
+        adapter_mode = AdapterMode::SCRATCH;
       } else {
         // TODO(hari): @error_handling throw error.
         return;
       }
     }
-    char* hermes_buffering_paths = getenv(kHermesBufferModeInfo);
+    char* adapter_paths_str = getenv(kAdapterModeInfo);
     std::vector<std::string> paths_local;
-    if (hermes_buffering_paths) {
-      paths_local = StringSplit(hermes_buffering_paths, kHermesPathDelimiter);
+    if (adapter_paths_str) {
+      paths_local = StringSplit(adapter_paths_str, kPathDelimiter);
     }
-    paths = paths_local;
+    adapter_paths = paths_local;
   }
 
   bool Persists(FILE* fh) { return Persists(GetFilenameFromFP(fh)); }
 
   bool Persists(std::string path) {
-    if (buffer_mode == BufferMode::PERSISTENT) {
-      if (paths.empty()) {
+    if (adapter_mode == AdapterMode::DEFAULT) {
+      if (adapter_paths.empty()) {
         return true;
       } else {
-        for (const auto& pth : paths) {
+        for (const auto& pth : adapter_paths) {
           if (path.find(pth) == 0) {
             return true;
           }
         }
         return false;
       }
-    } else if (buffer_mode == BufferMode::SCRATCH) {
-      if (paths.empty()) {
+    } else if (adapter_mode == AdapterMode::SCRATCH) {
+      if (adapter_paths.empty()) {
         return false;
       } else {
-        for (const auto& pth : paths) {
+        for (const auto& pth : adapter_paths) {
           if (path.find(pth) == 0) {
             return false;
           }

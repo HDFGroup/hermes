@@ -80,12 +80,12 @@ bool IsTracked(const std::string& path) {
     }
   }
   auto list = INTERCEPTOR_LIST;
-  auto buffer_mode = INTERCEPTOR_LIST->buffer_mode;
-  if (buffer_mode == BufferMode::BYPASS) {
-    if (list->paths.empty()) {
+  auto buffer_mode = INTERCEPTOR_LIST->adapter_mode;
+  if (buffer_mode == AdapterMode::BYPASS) {
+    if (list->adapter_paths.empty()) {
       return false;
     } else {
-      for (const auto& pth : list->paths) {
+      for (const auto& pth : list->adapter_paths) {
         if (path.find(pth) == 0) {
           return false;
         }
