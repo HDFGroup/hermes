@@ -61,22 +61,14 @@ bool IsTracked(const std::string& path) {
       return false;
     }
   }
-  if (INTERCEPTOR_LIST->user_path_exclusions.empty()) {
-    for (const auto& pth : kPathInclusions) {
-      if (path.find(pth) == 0) {
-        return true;
-      }
+  for (const auto& pth : kPathInclusions) {
+    if (path.find(pth) == 0) {
+      return true;
     }
-    for (const auto& pth : kPathExclusions) {
-      if (path.find(pth) == 0) {
-        return false;
-      }
-    }
-  } else {
-    for (const auto& pth : INTERCEPTOR_LIST->user_path_exclusions) {
-      if (path.find(pth) == 0) {
-        return false;
-      }
+  }
+  for (const auto& pth : kPathExclusions) {
+    if (path.find(pth) == 0) {
+      return false;
     }
   }
   auto list = INTERCEPTOR_LIST;

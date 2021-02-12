@@ -649,6 +649,31 @@ int HERMES_DECL(fgetpos)(FILE *fp, fpos_t *pos) {
   return ret;
 }
 
+int HERMES_DECL(fgetpos64)(FILE *fp, fpos64_t *pos) {
+  int ret;
+  if (hermes::adapter::IsTracked(fp) && pos) {
+    auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+    auto existing = mdm->Find(fp);
+    if (existing.second) {
+      LOG(INFO) << "Intercept fgetpos64." << std::endl;
+      // TODO(chogan): @portability In the GNU C Library, fpos_t is an opaque
+      // data structure that contains internal data to represent file offset and
+      // conversion state information. In other systems, it might have a
+      // different internal representation. This will need to change to support
+      // other compilers.
+      pos->__pos = existing.first.st_ptr;
+      ret = 0;
+    } else {
+      MAP_OR_FAIL(fgetpos64);
+      ret = real_fgetpos64_(fp, pos);
+    }
+  } else {
+    MAP_OR_FAIL(fgetpos64);
+    ret = real_fgetpos64_(fp, pos);
+  }
+  return ret;
+}
+
 int HERMES_DECL(putc)(int c, FILE *fp) {
   int ret;
   if (hermes::adapter::IsTracked(fp)) {
@@ -775,51 +800,6 @@ int HERMES_DECL(getc)(FILE *stream) {
   } else {
     MAP_OR_FAIL(fgetc);
     ret = real_fgetc_(stream);
-  }
-  return (ret);
-}
-
-/* NOTE: stdio.h typically implements getc() as a macro pointing to _IO_getc */
-int HERMES_DECL(_IO_getc)(FILE *stream) {
-  int ret = -1;
-  if (hermes::adapter::IsTracked(stream)) {
-    auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
-    auto existing = mdm->Find(stream);
-    if (existing.second) {
-      LOG(INFO) << "Intercept _IO_getc." << std::endl;
-      unsigned char value;
-      auto ret_size =
-          read_internal(existing, &value, sizeof(unsigned char), stream);
-      if (ret_size == sizeof(unsigned char)) {
-        ret = value;
-      }
-    } else {
-      MAP_OR_FAIL(_IO_getc);
-      ret = real__IO_getc_(stream);
-    }
-  } else {
-    MAP_OR_FAIL(_IO_getc);
-    ret = real__IO_getc_(stream);
-  }
-  return (ret);
-}
-
-/* NOTE: stdio.h typically implements putc() as a macro pointing to _IO_putc */
-int HERMES_DECL(_IO_putc)(int c, FILE *stream) {
-  int ret;
-  if (hermes::adapter::IsTracked(stream)) {
-    auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
-    auto existing = mdm->Find(stream);
-    if (existing.second) {
-      LOG(INFO) << "Intercept _IO_putc char:" << (char *)&c << "." << std::endl;
-      ret = write_internal(existing, &c, 1, stream);
-    } else {
-      MAP_OR_FAIL(_IO_putc);
-      ret = real__IO_putc_(c, stream);
-    }
-  } else {
-    MAP_OR_FAIL(_IO_putc);
-    ret = real__IO_putc_(c, stream);
   }
   return (ret);
 }

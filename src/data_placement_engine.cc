@@ -362,7 +362,7 @@ Status CalculatePlacement(SharedMemoryContext *context, RpcContext *rpc,
   // TODO(chogan): @optimization We can avoid the copy here when getting local
   // targets by just getting a pointer and length. I went with a vector just to
   // make the interface nicer when we need neighborhood or global targets.
-  std::vector<TargetID> targets = GetNodeTargets(context);
+  std::vector<TargetID> targets = LocalGetNodeTargets(context);
   std::vector<u64> node_state = GetRemainingNodeCapacities(context, targets);
 
   switch (api_context.policy) {

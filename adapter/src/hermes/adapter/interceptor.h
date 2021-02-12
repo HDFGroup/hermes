@@ -86,6 +86,7 @@ std::string GetFilenameFromFP(FILE* fh) {
  */
 struct InterceptorList {
   /**
+
    * hermes buffering mode.
    */
   AdapterMode adapter_mode;
@@ -93,10 +94,6 @@ struct InterceptorList {
    * Scratch paths
    */
   std::vector<std::string> adapter_paths;
-  /**
-   * Allow users to override the path exclusions
-   */
-  std::vector<std::string> user_path_exclusions;
   /**
    * Allow adapter to exclude hermes specific files.
    */
@@ -112,7 +109,6 @@ struct InterceptorList {
   InterceptorList()
       : adapter_mode(AdapterMode::DEFAULT),
         adapter_paths(),
-        user_path_exclusions(),
         hermes_paths_exclusion(),
         hermes_flush_exclusion() {}
   void SetupAdapterMode() {
