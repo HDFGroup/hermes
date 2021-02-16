@@ -43,12 +43,12 @@ done
 
 # Run the Hermes tests on the cluster
 # TODO: Send the output of this to our Github action
-docker-compose exec -e GLOG_vmodule=rpc_thallium=1 \
+docker-compose exec -t -e GLOG_vmodule=rpc_thallium=1 \
                -e LSAN_OPTONS=suppressions=../test/data/asan.supp \
                --user ${docker_user} --privileged \
                -w ${hermes_build_dir} ${node_names[0]} \
                mpirun -n 4 -ppn 2 -hosts ${hosts} bin/end_to_end_test ${cluster_conf}
 
 # Stop the cluster
-docker-compose down --rmi
+docker-compose down
 
