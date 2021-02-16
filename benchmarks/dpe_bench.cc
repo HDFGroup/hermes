@@ -45,8 +45,7 @@ void PrintUsage(char *program) {
   fprintf(stderr, "     Blob size option: 4KB, 64KB, 1MB, 4MB, 64MB.\n");
 }
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
   PlacementPolicy policy {PlacementPolicy::kRandom};
   bool fixed_total_num_blobs {true}, fixed_total_blob_size {false};
   int option = -1;
@@ -91,22 +90,26 @@ int main(int argc, char **argv)
     std::cout << "DPE benchmark uses fixed total blob size\n"
               << "or fixed total number of blbs.\n"
               << "Use default fixed total number of blbs now\n\n";
-     
+
   std::vector<size_t> blob_sizes;
   if (fixed_total_blob_size) {
     testing::BlobSizeRange blob_range;
 
-    if (rvalue[0] == 's' || rvalue[0] == 'S')
+    if (rvalue[0] == 's' || rvalue[0] == 'S') {
       blob_range = testing::BlobSizeRange::kSmall;
-    else if (rvalue[0] == 'm' || rvalue[0] == 'M')
+    }
+    else if (rvalue[0] == 'm' || rvalue[0] == 'M') {
       blob_range = testing::BlobSizeRange::kMedium;
-    else if (rvalue[0] == 'l' || rvalue[0] == 'L')
+    }
+    else if (rvalue[0] == 'l' || rvalue[0] == 'L') {
       blob_range = testing::BlobSizeRange::kLarge;
-    else if (rvalue[0] == 'x' || rvalue[0] == 'X')
+    }
+    else if (rvalue[0] == 'x' || rvalue[0] == 'X') {
       blob_range = testing::BlobSizeRange::kXLarge;
-    else if (rvalue[0] == 'h' || rvalue[0] == 'H')
+    }
+    else if (rvalue[0] == 'h' || rvalue[0] == 'H') {
       blob_range = testing::BlobSizeRange::kHuge;
-    else {
+    } else {
       blob_range = testing::BlobSizeRange::kSmall;
       std::cout << "No blob range is setup.\n"
                 << "Choose small blob size range (0, 64KB] to test.\n\n";
@@ -165,13 +168,13 @@ int main(int argc, char **argv)
       break;
     }
   }
-    
+
   u64 placed_size {0};
   for (auto schema : output_tmp) {
     placed_size += testing::UpdateDeviceState(schema, tgt_state);
   }
   assert(placed_size == total_placed_size);
-  
+
   // Aggregate placement schemas from the same target
   if (!result) {
     for (auto it = output_tmp.begin(); it != output_tmp.end(); ++it) {

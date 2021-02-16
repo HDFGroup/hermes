@@ -127,7 +127,7 @@ TargetViewState InitDeviceState(u64 total_target, bool homo_dist) {
   TargetViewState result = {};
   result.num_devices = total_target;
   std::vector<double> tgt_fraction;
-  
+
   if (homo_dist)
     tgt_fraction = tgt_homo_dist;
   else
@@ -141,7 +141,7 @@ TargetViewState InitDeviceState(u64 total_target, bool homo_dist) {
     used_tgt += used_tgt_tmp;
   }
   tgt_num_per_type.push_back(total_target - used_tgt);
-  
+
   using hermes::TargetID;
   std::vector<TargetID> targets = GetDefaultTargets(total_target);
 
@@ -187,7 +187,6 @@ void PrintNodeState(TargetViewState &node_state) {
                  node_state.bytes_capacity[i]
               << "\n\n" << std::flush;
   }
-  
 }
 
 std::vector<TargetID> GetDefaultTargets(size_t n) {
@@ -223,26 +222,24 @@ std::vector<size_t> GenFixedTotalBlobSize(size_t total_size,
   size_t size {};
   std::random_device dev;
   std::mt19937 rng(dev());
-  
+
   std::pair bound = GetBlobBound(range);
   size_t lo_bound  = bound.first;
   size_t hi_bound = bound.second;
 
   while (used_size < total_size) {
-     std::vector<hermes::api::Blob> input_blobs;
-     if (total_size - used_size > hi_bound) {
-       std::uniform_int_distribution<std::mt19937::result_type>
-         distribution(lo_bound, hi_bound);
-       size = distribution(rng);
-       used_size += size;
-     }
-     else {
-       size = total_size - used_size;
-       used_size = total_size;
-     }
-     result.push_back(size);
-
-   }
+    std::vector<hermes::api::Blob> input_blobs;
+    if (total_size - used_size > hi_bound) {
+      std::uniform_int_distribution<std::mt19937::result_type>
+        distribution(lo_bound, hi_bound);
+      size = distribution(rng);
+      used_size += size;
+    } else {
+      size = total_size - used_size;
+      used_size = total_size;
+    }
+    result.push_back(size);
+  }
   return result;
 }
 

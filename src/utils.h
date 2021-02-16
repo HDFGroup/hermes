@@ -121,7 +121,7 @@ struct TargetViewState {
  *
  * @return The TargetViewState struct with device information.
  */
-TargetViewState InitDeviceState(u64 total_target=4, bool homo_dist=true);
+TargetViewState InitDeviceState(u64 total_target = 4, bool homo_dist = true);
 
 /**
  * Update device state.
