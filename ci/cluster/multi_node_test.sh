@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -x -e
+set -x
 
 docker_user=mpirun
 docker_home=/home/${docker_user}
@@ -12,6 +12,9 @@ host1=${project_name}_${node_names[0]}_1
 host2=${project_name}_${node_names[1]}_1
 hosts=${host1},${host2}
 hermes_build_dir=${GITHUB_WORKSPACE}/build
+
+# Create ssh keys for the cluster to use
+echo -e 'y\n' | ssh-keygen -q -t rsa -N "" -f ~/.ssh/id_rsa
 
 # Start the cluster
 docker-compose up -d --scale ${node_names[0]}=1 --scale ${node_names[1]}=1 --no-recreate
