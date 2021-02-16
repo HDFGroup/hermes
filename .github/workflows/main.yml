@@ -58,6 +58,9 @@ jobs:
       - name: Build and Test
         run: ci/install_hermes.sh
 
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v2
+
       - name: Multi-node Test
         run: pushd ci/cluster && ./multi_node_test.sh
 
