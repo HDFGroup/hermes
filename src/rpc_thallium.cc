@@ -498,6 +498,13 @@ void StartGlobalSystemViewStateUpdateThread(SharedMemoryContext *context,
                                ABT_THREAD_ATTR_NULL, NULL);
 }
 
+void StopGlobalSystemViewStateUpdateThread(RpcContext *rpc) {
+  ThalliumState *state = GetThalliumState(rpc);
+  state->kill_requested.store(true);
+  ABT_xstream_join(state->execution_stream);
+  ABT_xstream_free(&state->execution_stream);
+}
+
 void InitRpcContext(RpcContext *rpc, u32 num_nodes, u32 node_id,
                      Config *config) {
   rpc->num_nodes = num_nodes;
@@ -557,9 +564,6 @@ void ShutdownRpcClients(RpcContext *rpc) {
 
 void FinalizeRpcContext(RpcContext *rpc, bool is_daemon) {
   ThalliumState *state = GetThalliumState(rpc);
-  state->kill_requested.store(true);
-  ABT_xstream_join(state->execution_stream);
-  ABT_xstream_free(&state->execution_stream);
 
   if (is_daemon) {
     state->engine->wait_for_finalize();

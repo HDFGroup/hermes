@@ -82,6 +82,10 @@ void Finalize(SharedMemoryContext *context, CommunicationContext *comm,
               RpcContext *rpc, const char *shmem_name, Arena *trans_arena,
               bool is_application_core, bool force_rpc_shutdown) {
   WorldBarrier(comm);
+  if (!is_application_core && comm->first_on_node) {
+      StopGlobalSystemViewStateUpdateThread(rpc);
+  }
+  WorldBarrier(comm);
   ShutdownRpcClients(rpc);
 
   if (is_application_core) {
