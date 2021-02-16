@@ -29,8 +29,6 @@ void RandomPlaceBlob(std::vector<size_t> &blob_sizes,
   std::cout << "\nRandomPlacement to place blob of size " << blob_sizes[0]
             << " to targets\n" << std::flush;
 
-  std::vector<TargetID> targets =
-    testing::GetDefaultTargets(node_state.num_devices);
   Status result = RandomPlacement(blob_sizes, node_state.ordered_cap,
                                   schemas_tmp);
   if (result) {
