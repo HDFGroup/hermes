@@ -2,6 +2,8 @@
 
 set -x
 
+export COMPOSE_INTERACTIVE_NO_CLI=1
+
 docker_user=mpirun
 docker_home=/home/${docker_user}
 conf_path=${GITHUB_WORKSPACE}/test/data/hermes.conf
@@ -39,11 +41,8 @@ for h in ${host1} ${host2}; do
     docker exec ${h} chown -R ${docker_user}:${docker_user} ${docker_home}/.ssh
 done
 
-
-
 # Run the Hermes tests on the cluster
-# TODO: Send the output of this to our Github action
-docker-compose exec -t -e GLOG_vmodule=rpc_thallium=1 \
+docker-compose exec -e GLOG_vmodule=rpc_thallium=1 \
                -e LSAN_OPTONS=suppressions=../test/data/asan.supp \
                --user ${docker_user} --privileged \
                -w ${hermes_build_dir} ${node_names[0]} \
