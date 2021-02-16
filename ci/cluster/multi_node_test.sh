@@ -16,6 +16,12 @@ hermes_build_dir=${GITHUB_WORKSPACE}/build
 # Create ssh keys for the cluster to use
 echo -e 'y\n' | ssh-keygen -q -t rsa -N "" -f ~/.ssh/id_rsa
 
+# Build the images, passing our user id and group id so the container user can
+# modify the .gcda coverage files
+for n in "${node_names[@]}"; do
+    docker-compose build --build-arg GROUP_ID=$(id -g) --build-arg USER_ID=$(id -u) ${n}
+done
+
 # Start the cluster
 docker-compose up -d --scale ${node_names[0]}=1 --scale ${node_names[1]}=1 --no-recreate
 

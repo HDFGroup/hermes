@@ -34,7 +34,11 @@ RUN echo "export VISIBLE=now" >> /etc/profile
 # Add an 'mpirun' user
 # ------------------------------------------------------------
 
-RUN adduser --disabled-password --gecos "" ${USER} && \
+ARG USER_ID
+ARG GROUP_ID
+
+RUN addgroup --gid ${GROUP_ID} ${USER}
+RUN adduser --disabled-password --gecos "" --uid ${USER_ID} --gid ${GROUP_ID} ${USER} && \
     echo "${USER} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
 # ------------------------------------------------------------
