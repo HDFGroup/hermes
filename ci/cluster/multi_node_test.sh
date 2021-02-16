@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -x
+set -x -e
 
 docker_user=mpirun
 docker_home=/home/${docker_user}
@@ -41,7 +41,7 @@ done
 
 # Run the Hermes tests on the cluster
 docker-compose exec -T -e GLOG_vmodule=rpc_thallium=1 \
-               -e LSAN_OPTONS=suppressions=../test/data/asan.supp \
+               -e LSAN_OPTIONS=suppressions=../test/data/asan.supp \
                --user ${docker_user} --privileged \
                -w ${hermes_build_dir} ${node_names[0]} \
                mpirun -n 4 -ppn 2 -hosts ${hosts} bin/end_to_end_test ${cluster_conf}
