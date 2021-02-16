@@ -213,6 +213,10 @@ std::pair<size_t, size_t> GetBlobBound(BlobSizeRange blob_size_range) {
     return {MEGABYTES(4), MEGABYTES(64)};
   else if (blob_size_range == BlobSizeRange::kHuge)
     return {GIGABYTES(1), GIGABYTES(1)};
+  
+  std::cout << "No specified blob range is found.\n"
+            << "Use small blob range (0, 64KB].";
+  return {0, KILOBYTES(64)};
 }
 
 std::vector<size_t> GenFixedTotalBlobSize(size_t total_size,
