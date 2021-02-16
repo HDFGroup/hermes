@@ -135,7 +135,7 @@ TargetViewState InitDeviceState(u64 total_target, bool homo_dist) {
 
   std::vector<u64> tgt_num_per_type;
   u64 used_tgt {0};
-  for (auto i {0}; i < tgt_fraction.size()-1; ++i) {
+  for (size_t i {0}; i < tgt_fraction.size()-1; ++i) {
     u64 used_tgt_tmp {static_cast<u64>(tgt_fraction[i] * total_target)};
     tgt_num_per_type.push_back(used_tgt_tmp);
     used_tgt += used_tgt_tmp;
@@ -146,8 +146,8 @@ TargetViewState InitDeviceState(u64 total_target, bool homo_dist) {
   std::vector<TargetID> targets = GetDefaultTargets(total_target);
 
   u64 target_position {0};
-  for (auto i {0}; i < tgt_num_per_type.size(); ++i) {
-    for (auto j {0}; j < tgt_num_per_type[i]; ++j) {
+  for (size_t i {0}; i < tgt_num_per_type.size(); ++i) {
+    for (size_t j {0}; j < tgt_num_per_type[i]; ++j) {
       result.bandwidth.push_back(device_bandwidth[i]);
 
       result.bytes_available.push_back(MEGABYTES(device_size[i]));
