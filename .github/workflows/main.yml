@@ -64,7 +64,7 @@ jobs:
       - name: Generate coverage file
         run: |
           mkdir -p "${GITHUB_WORKSPACE}/coverage"
-          pushd build/
+          pushd ${GITHUB_WORKSPACE}/build/
           lcov -c -d . -o "${GITHUB_WORKSPACE}/coverage/lcov.info"
 
       - name: Coveralls
