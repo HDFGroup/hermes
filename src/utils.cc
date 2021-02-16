@@ -12,6 +12,11 @@
 
 #include "utils.h"
 
+#include <iostream>
+#include <vector>
+#include <random>
+#include <utility>
+
 namespace hermes {
 
 size_t RoundUpToMultiple(size_t val, size_t multiple) {
@@ -106,4 +111,150 @@ void InitDefaultConfig(Config *config) {
   }
   config->buffer_pool_shmem_name[shmem_name_size] = '\0';
 }
+
+namespace testing {
+
+/** Use Megabytes */
+std::vector<i64> device_size {128, 1024, 4096, 16384};
+
+/** Use Megabytes/Sec */
+std::vector<double> device_bandwidth {8192, 3072, 550, 120};
+
+std::vector<double> tgt_homo_dist {0.25, 0.25, 0.25, 0.25};
+std::vector<double> tgt_heto_dist {0.1, 0.2, 0.3, 0.4};
+
+TargetViewState InitDeviceState(u64 total_target, bool homo_dist) {
+  TargetViewState result = {};
+  result.num_devices = total_target;
+  std::vector<double> tgt_fraction;
+  
+  if (homo_dist)
+    tgt_fraction = tgt_homo_dist;
+  else
+    tgt_fraction = tgt_heto_dist;
+
+  std::vector<u64> tgt_num_per_type;
+  u64 used_tgt {0};
+  for (auto i {0}; i < tgt_fraction.size()-1; ++i) {
+    u64 used_tgt_tmp {static_cast<u64>(tgt_fraction[i] * total_target)};
+    tgt_num_per_type.push_back(used_tgt_tmp);
+    used_tgt += used_tgt_tmp;
+  }
+  tgt_num_per_type.push_back(total_target - used_tgt);
+  
+  using hermes::TargetID;
+  std::vector<TargetID> targets = GetDefaultTargets(total_target);
+
+  u64 target_position {0};
+  for (auto i {0}; i < tgt_num_per_type.size(); ++i) {
+    for (auto j {0}; j < tgt_num_per_type[i]; ++j) {
+      result.bandwidth.push_back(device_bandwidth[i]);
+
+      result.bytes_available.push_back(MEGABYTES(device_size[i]));
+      result.bytes_capacity.push_back(MEGABYTES(device_size[i]));
+      result.ordered_cap.insert(std::pair<hermes::u64, TargetID>(
+                                MEGABYTES(device_size[i]),
+                                targets[target_position]));
+    }
+  }
+
+  return result;
+}
+
+u64 UpdateDeviceState(PlacementSchema &schema,
+                      TargetViewState &node_state) {
+  u64 result {0};
+  node_state.ordered_cap.clear();
+
+  for (auto [size, target] : schema) {
+    result += size;
+    node_state.bytes_available[target.bits.device_id] -= size;
+    node_state.ordered_cap.insert(
+      std::pair<u64, TargetID>(
+        node_state.bytes_available[target.bits.device_id], target));
+  }
+
+  return result;
+}
+
+void PrintNodeState(TargetViewState &node_state) {
+  for (int i {0}; i < node_state.num_devices; ++i) {
+    std::cout << "  capacity of device[" << i << "]: "
+              << node_state.bytes_available[i]
+              << '\n' << std::flush;
+    std::cout << "  available ratio of device["<< i << "]: "
+              << static_cast<double>(node_state.bytes_available[i])/
+                 node_state.bytes_capacity[i]
+              << "\n\n" << std::flush;
+  }
+  
+}
+
+std::vector<TargetID> GetDefaultTargets(size_t n) {
+  std::vector<TargetID> result(n);
+  for (size_t i = 0; i < n; ++i) {
+    TargetID id = {};
+    id.bits.node_id = 1;
+    id.bits.device_id = (DeviceID)i;
+    id.bits.index = i;
+    result[i] = id;
+  }
+
+  return result;
+}
+
+std::pair<size_t, size_t> GetBlobBound(BlobSizeRange blob_size_range) {
+  if (blob_size_range == BlobSizeRange::kSmall)
+    return {0, KILOBYTES(64)};
+  else if (blob_size_range == BlobSizeRange::kMedium)
+    return {KILOBYTES(64), MEGABYTES(1)};
+  else if (blob_size_range == BlobSizeRange::kLarge)
+    return {MEGABYTES(1), MEGABYTES(4)};
+  else if (blob_size_range == BlobSizeRange::kXLarge)
+    return {MEGABYTES(4), MEGABYTES(64)};
+  else if (blob_size_range == BlobSizeRange::kHuge)
+    return {GIGABYTES(1), GIGABYTES(1)};
+}
+
+std::vector<size_t> GenFixedTotalBlobSize(size_t total_size,
+                                          BlobSizeRange range) {
+  std::vector<size_t> result;
+  size_t used_size {};
+  size_t size {};
+  std::random_device dev;
+  std::mt19937 rng(dev());
+  
+  std::pair bound = GetBlobBound(range);
+  size_t lo_bound  = bound.first;
+  size_t hi_bound = bound.second;
+
+  while (used_size < total_size) {
+     std::vector<hermes::api::Blob> input_blobs;
+     if (total_size - used_size > hi_bound) {
+       std::uniform_int_distribution<std::mt19937::result_type>
+         distribution(lo_bound, hi_bound);
+       size = distribution(rng);
+       used_size += size;
+     }
+     else {
+       size = total_size - used_size;
+       used_size = total_size;
+     }
+     result.push_back(size);
+
+   }
+  return result;
+}
+
+std::vector<size_t> GenFixedNumberOfBlobs(int num,
+                                          size_t each_blob_size) {
+  std::vector<size_t> result;
+
+  for (auto i {0}; i < num; ++i) {
+     result.push_back(each_blob_size);
+   }
+  return result;
+}
+
+}  // namespace testing
 }  // namespace hermes
