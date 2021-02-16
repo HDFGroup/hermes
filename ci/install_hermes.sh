@@ -33,6 +33,6 @@ cmake                                                      \
     ..
 
 cmake --build . -- -j4
-# ctest -VV
+ctest -VV
 
 popd
