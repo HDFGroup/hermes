@@ -248,8 +248,8 @@ std::vector<size_t> GenFixedNumberOfBlobs(int num,
   std::vector<size_t> result;
 
   for (auto i {0}; i < num; ++i) {
-     result.push_back(each_blob_size);
-   }
+    result.push_back(each_blob_size);
+  }
   return result;
 }
 

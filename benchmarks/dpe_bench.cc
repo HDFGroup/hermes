@@ -7,9 +7,9 @@
 #include "utils.h"
 #include "data_placement_engine.h"
 
-/* ./bin/dpe_bench -o -s 4096 */
+/* example usage: ./bin/dpe_bench -m -s 4096 */
 
-using namespace hermes;
+using namespace hermes;  // NOLINT(*)
 using std::chrono::time_point;
 const auto now = std::chrono::high_resolution_clock::now;
 
@@ -97,17 +97,13 @@ int main(int argc, char **argv) {
 
     if (rvalue[0] == 's' || rvalue[0] == 'S') {
       blob_range = testing::BlobSizeRange::kSmall;
-    }
-    else if (rvalue[0] == 'm' || rvalue[0] == 'M') {
+    } else if (rvalue[0] == 'm' || rvalue[0] == 'M') {
       blob_range = testing::BlobSizeRange::kMedium;
-    }
-    else if (rvalue[0] == 'l' || rvalue[0] == 'L') {
+    } else if (rvalue[0] == 'l' || rvalue[0] == 'L') {
       blob_range = testing::BlobSizeRange::kLarge;
-    }
-    else if (rvalue[0] == 'x' || rvalue[0] == 'X') {
+    } else if (rvalue[0] == 'x' || rvalue[0] == 'X') {
       blob_range = testing::BlobSizeRange::kXLarge;
-    }
-    else if (rvalue[0] == 'h' || rvalue[0] == 'H') {
+    } else if (rvalue[0] == 'h' || rvalue[0] == 'H') {
       blob_range = testing::BlobSizeRange::kHuge;
     } else {
       blob_range = testing::BlobSizeRange::kSmall;
