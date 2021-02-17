@@ -58,14 +58,14 @@ jobs:
       - name: Build and Test
         run: ci/install_hermes.sh
 
-      # - name: Multi-node Test
-      #   run: pushd ci/cluster && ./multi_node_test.sh
+      - name: Multi-node Test
+        run: pushd ci/cluster && ./multi_node_test.sh
 
       - name: Generate coverage file
         run: |
           mkdir -p "${GITHUB_WORKSPACE}/coverage"
           pushd ${GITHUB_WORKSPACE}/build
-          lcov -c -d . --no-external -o "${GITHUB_WORKSPACE}/coverage/lcov.info"
+          lcov -c -d . -o "${GITHUB_WORKSPACE}/coverage/lcov.info"
 
       - name: Coveralls
         uses: coverallsapp/github-action@master
