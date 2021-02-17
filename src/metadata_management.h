@@ -224,6 +224,14 @@ void AttachBlobToBucket(SharedMemoryContext *context, RpcContext *rpc,
 /**
  *
  */
+void AttachBlobToVBucket(SharedMemoryContext *context,
+                         RpcContext *rpc,
+                         const char *blob_name,
+                         VBucketID vbucket_id);
+
+/**
+ *
+ */
 void IncrementRefcount(SharedMemoryContext *context, RpcContext *rpc,
                        BucketID id);
 
@@ -296,6 +304,24 @@ void DecrementRefcount(SharedMemoryContext *context, RpcContext *rpc,
  */
 bool IsNullBlobId(BlobID id);
 
+/**
+ *
+ */
+void RemoveBlobFromVBucketInfo(SharedMemoryContext *context, RpcContext *rpc,
+                               VBucketID vbucket_name, const char* blob_name);
+
+/**
+ *
+ */
+std::vector<BlobID> GetBlobsFromVBucketInfo(SharedMemoryContext *context,
+                                            RpcContext *rpc,
+                                            VBucketID vbucket_id);
+
+/**
+ *
+ */
+std::string GetBlobNameById(SharedMemoryContext *context, RpcContext *rpc,
+                            BlobID id);
 }  // namespace hermes
 
 #endif  // HERMES_METADATA_MANAGEMENT_H_

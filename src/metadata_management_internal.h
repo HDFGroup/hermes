@@ -62,6 +62,8 @@ bool LocalContainsBlob(SharedMemoryContext *context, BucketID bucket_id,
                        BlobID blob_id);
 void LocalRemoveBlobFromBucketInfo(SharedMemoryContext *context,
                                    BucketID bucket_id, BlobID blob_id);
+void LocalRemoveBlobFromVBucketInfo(SharedMemoryContext *context,
+                                    VBucketID vbucket_id, BlobID blob_id);
 void LocalIncrementRefcount(SharedMemoryContext *context, BucketID id);
 void LocalDecrementRefcount(SharedMemoryContext *context, BucketID id);
 void LocalIncrementRefcount(SharedMemoryContext *context, VBucketID id);
@@ -98,6 +100,9 @@ std::vector<BlobID> LocalGetBlobIds(SharedMemoryContext *context,
 std::vector<TargetID> LocalGetNodeTargets(SharedMemoryContext *context);
 u32 GetNextNode(RpcContext *rpc);
 u32 GetPreviousNode(RpcContext *rpc);
+std::vector<BlobID> LocalGetBlobsFromVBucketInfo(SharedMemoryContext *context,
+                                     VBucketID vbucket_id);
+std::string LocalGetBlobNameById(SharedMemoryContext *context, BlobID blob_id);
 
 }  // namespace hermes
 #endif  // HERMES_METADATA_MANAGEMENT_INTERNAL_H_

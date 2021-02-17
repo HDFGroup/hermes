@@ -279,6 +279,14 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
       req.respond(true);
     };
 
+  function<void(const request&, VBucketID, BlobID)>
+      rpc_remove_blob_from_vbucket_info = [context](const request &req,
+                                                   VBucketID vbucket_id,
+                                                   BlobID blob_id) {
+    LocalRemoveBlobFromVBucketInfo(context, vbucket_id, blob_id);
+    req.respond(true);
+  };
+
   function<void(const request &, BucketID)> rpc_increment_refcount_bucket =
       [context](const request &req, BucketID id) {
         LocalIncrementRefcount(context, id);
@@ -347,6 +355,18 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
       state->engine->finalize();
     };
 
+  function<void(const request&, VBucketID)>
+      rpc_get_blobs_from_vbucket_info = [context](const request &req,
+                                                   VBucketID vbucket_id) {
+    auto ret = LocalGetBlobsFromVBucketInfo(context, vbucket_id);
+    req.respond(ret);
+  };
+  function<void(const request &, BlobID)> rpc_get_blob_name_by_id =
+      [context](const request &req, BlobID id) {
+        auto ret = LocalGetBlobNameById(context, id);
+        req.respond(ret);
+      };
+
   // TODO(chogan): Currently these three are only used for testing.
   rpc_server->define("GetBuffers", rpc_get_buffers);
   rpc_server->define("SplitBuffers", rpc_split_buffers).disable_response();
@@ -373,6 +393,8 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
   rpc_server->define("RemoteGetNextFreeBucketId", rpc_get_next_free_bucket_id);
   rpc_server->define("RemoteRemoveBlobFromBucketInfo",
                     rpc_remove_blob_from_bucket_info);
+  rpc_server->define("RemoteRemoveBlobFromVBucketInfo",
+                     rpc_remove_blob_from_vbucket_info);
   rpc_server->define("RemoteAllocateBufferIdList", rpc_allocate_buffer_id_list);
   rpc_server->define("RemoteGetBufferIdList", rpc_get_buffer_id_list);
   rpc_server->define("RemoteFreeBufferIdList", rpc_free_buffer_id_list);
@@ -390,6 +412,10 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
   rpc_server->define("RemoteGetBlobIds", rpc_get_blob_ids);
   rpc_server->define("RemoteGetNodeTargets", rpc_get_node_targets);
   rpc_server->define("RemoteFinalize", rpc_finalize).disable_response();
+  rpc_server->define("RemoteGetBlobsFromVBucketInfo",
+                     rpc_get_blobs_from_vbucket_info);
+  rpc_server->define("RemoteGetBlobNameById",
+                     rpc_get_blob_name_by_id);
 }
 
 void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
