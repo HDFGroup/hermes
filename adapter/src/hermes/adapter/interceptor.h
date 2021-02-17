@@ -61,10 +61,6 @@ const char* kPathInclusions[] = {"/var/opt/cray/dws/mounts/"};
  */
 struct InterceptorList {
   /**
-   * Allow users to override the path exclusions
-   */
-  std::vector<std::string> user_path_exclusions;
-  /**
    * Allow adapter to exclude hermes specific files.
    */
   std::vector<std::string> hermes_paths_exclusion;
@@ -77,8 +73,7 @@ struct InterceptorList {
    * Default constructor
    */
   InterceptorList()
-      : user_path_exclusions(),
-        hermes_paths_exclusion(),
+      : hermes_paths_exclusion(),
         hermes_flush_exclusion() {}
 };
 

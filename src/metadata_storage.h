@@ -56,7 +56,12 @@ size_t GetStoredMapSize(MetadataManager *mdm, MapType map_type);
 /**
  *
  */
-std::vector<TargetID> GetNodeTargets(SharedMemoryContext *context);
+std::vector<TargetID> LocalGetNodeTargets(SharedMemoryContext *context);
+
+/**
+ *
+ */
+std::vector<TargetID> LocalGetNeighborhoodTargets(SharedMemoryContext *context);
 
 /**
  *
