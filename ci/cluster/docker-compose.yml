@@ -3,26 +3,10 @@ version: "3"
 services:
   node1:
     build: .
-    # image: ubuntu-20.04-mpich
-    ports: 
-      - "22"
-    links: 
-      - node2
-    networks:
-      - net
     volumes:
       - $HOME:$HOME
-    hostname: node1
 
   node2:
     build: .
-    # image: ubuntu-20.04-mpich
-    networks:
-      - net
     volumes:
       - $HOME:$HOME
-    hostname: node2
-
-networks:
-  net:
-    driver: bridge
