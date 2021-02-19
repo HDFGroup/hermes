@@ -13,17 +13,9 @@ using namespace hermes;  // NOLINT(*)
 using std::chrono::time_point;
 const auto now = std::chrono::high_resolution_clock::now;
 
-enum class PlacementPolicy {
-  kRandom,
-  kRoundRobin,
-  kMinimizeIoTime,
-};
-
-#define TOTAL_TARGETS 10
-#define BLOB_RANGE testing::BlobSizeRange::kHuge
-
-#define TOTAL_NUM_BLOBS 10
-#define TOTAL_BLOB_SIZE GIGABYTES(10)
+const u64 dpe_total_targets = 10;
+const size_t dpe_total_num_blobs = 10;
+const size_t dpe_total_blob_size = GIGABYTES(10);
 
 void PrintUsage(char *program) {
   fprintf(stderr, "Usage %s [-r]\n", program);
@@ -46,7 +38,7 @@ void PrintUsage(char *program) {
 }
 
 int main(int argc, char **argv) {
-  PlacementPolicy policy {PlacementPolicy::kRandom};
+  api::PlacementPolicy policy {api::PlacementPolicy::kRandom};
   bool fixed_total_num_blobs {true}, fixed_total_blob_size {false};
   int option = -1;
   char *rvalue = NULL;
@@ -58,13 +50,13 @@ int main(int argc, char **argv) {
   while ((option = getopt(argc, argv, "mnor:s:")) != -1) {
     switch (option) {
       case 'm':
-        policy = PlacementPolicy::kRandom;
+        policy = api::PlacementPolicy::kRandom;
         break;
       case 'n':
-        policy = PlacementPolicy::kRoundRobin;
+        policy = api::PlacementPolicy::kRoundRobin;
         break;
       case 'o':
-        policy = PlacementPolicy::kMinimizeIoTime;
+        policy = api::PlacementPolicy::kMinimizeIoTime;
         break;
       case 'r':
         fixed_total_blob_size = true;
@@ -78,7 +70,7 @@ int main(int argc, char **argv) {
         break;
       default:
         PrintUsage(argv[0]);
-        policy = PlacementPolicy::kRandom;
+        policy = api::PlacementPolicy::kRandom;
         fixed_total_blob_size = true;
         each_blob_size = 4096;
         std::cout << "Using Random policy for data placement engine.\n"
@@ -86,10 +78,11 @@ int main(int argc, char **argv) {
     }
   }
 
-  if (fixed_total_num_blobs && fixed_total_blob_size)
+  if (fixed_total_num_blobs && fixed_total_blob_size) {
     std::cout << "DPE benchmark uses fixed total blob size\n"
               << "or fixed total number of blbs.\n"
               << "Use default fixed total number of blbs now\n\n";
+  }
 
   std::vector<size_t> blob_sizes;
   if (fixed_total_blob_size) {
@@ -111,26 +104,24 @@ int main(int argc, char **argv) {
                 << "Choose small blob size range (0, 64KB] to test.\n\n";
     }
 
-    blob_sizes = testing::GenFixedTotalBlobSize(TOTAL_BLOB_SIZE, blob_range);
-    total_placed_size = TOTAL_BLOB_SIZE;
+    blob_sizes = testing::GenFixedTotalBlobSize(dpe_total_blob_size, blob_range);
+    total_placed_size = dpe_total_blob_size;
   } else {
-    blob_sizes = testing::GenFixedNumberOfBlobs(TOTAL_NUM_BLOBS,
-                                                each_blob_size);
-    total_placed_size = each_blob_size * TOTAL_NUM_BLOBS;
+    blob_sizes.resize(dpe_total_blob_size);
+    fill(blob_sizes.begin(), blob_sizes.end(), each_blob_size);
+    total_placed_size = each_blob_size * dpe_total_num_blobs;
   }
 
-  testing::TargetViewState tgt_state = testing::InitDeviceState(TOTAL_TARGETS);
+  testing::TargetViewState tgt_state = testing::InitDeviceState(dpe_total_targets);
 
-  assert(tgt_state.num_targets == TOTAL_TARGETS);
-  std::cout << "Initialize Device State.\n";
-  /* testing::PrintNodeState(tgt_state); */
+  assert(tgt_state.num_targets == dpe_total_targets);
 
   std::vector<PlacementSchema> output_tmp, schemas;
   std::vector<TargetID> targets =
                         testing::GetDefaultTargets(tgt_state.num_devices);
 
   switch (policy) {
-    case PlacementPolicy::kRandom: {
+    case api::PlacementPolicy::kRandom: {
       std::multimap<u64, TargetID> ordered_cap;
       for (auto i = 0; i < tgt_state.num_devices; ++i) {
         ordered_cap.insert(std::pair<u64, TargetID>(
@@ -144,7 +135,7 @@ int main(int argc, char **argv) {
       dpe_seconds = std::chrono::duration<double>(end_tm - start_tm).count();
       break;
     }
-    case PlacementPolicy::kRoundRobin: {
+    case api::PlacementPolicy::kRoundRobin: {
       time_point start_tm = now();
       result = RoundRobinPlacement(blob_sizes, tgt_state.bytes_available,
                                    output_tmp, targets);
@@ -153,7 +144,7 @@ int main(int argc, char **argv) {
       dpe_seconds = std::chrono::duration<double>(end_tm - start_tm).count();
       break;
     }
-    case PlacementPolicy::kMinimizeIoTime: {
+    case api::PlacementPolicy::kMinimizeIoTime: {
       std::cout << "DPE benchmark uses MinimizeIoTime placement.\n\n";
       time_point start_tm = now();
       result = MinimizeIoTimePlacement(blob_sizes, tgt_state.bytes_available,
@@ -179,9 +170,6 @@ int main(int argc, char **argv) {
       schemas.push_back(schema);
     }
   }
-
-  std::cout << "Blob placement is done.\n";
-  /* testing::PrintNodeState(tgt_state); */
 
   std::cout << "Total DPE time: " << dpe_seconds << '\n';
 

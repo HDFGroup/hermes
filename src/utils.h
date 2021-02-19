@@ -117,7 +117,7 @@ struct TargetViewState {
  *
  * @param total_target Total number of target.
  *
- * @param even_dist The device distribution is homogeneous or not.
+ * @param homo_dist The device distribution is homogeneous or not.
  *
  * @return The TargetViewState struct with device information.
  */
@@ -163,18 +163,6 @@ std::vector<TargetID> GetDefaultTargets(size_t n);
  */
 std::vector<size_t> GenFixedTotalBlobSize(size_t total_size,
                                           BlobSizeRange range);
-
-/**
-* Generate a vector of blob size with fixed total number of blobs.
-*
-* @param num The total number of blobs.
-*
-* @param range The size of each blob.
-*
-* @ @return The vector blob size.
-*/
-std::vector<size_t> GenFixedNumberOfBlobs(int num,
-                                          size_t each_blob_size);
 
 }  // namespace testing
 }  // namespace hermes

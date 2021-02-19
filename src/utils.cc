@@ -114,19 +114,16 @@ void InitDefaultConfig(Config *config) {
 
 namespace testing {
 
-/** Use Megabytes */
-std::vector<i64> device_size {128, 1024, 4096, 16384};
-
-/** Use Megabytes/Sec */
-std::vector<double> device_bandwidth {8192, 3072, 550, 120};
-
-std::vector<double> tgt_homo_dist {0.25, 0.25, 0.25, 0.25};
-std::vector<double> tgt_heto_dist {0.1, 0.2, 0.3, 0.4};
-
 TargetViewState InitDeviceState(u64 total_target, bool homo_dist) {
   TargetViewState result = {};
   result.num_devices = total_target;
   std::vector<double> tgt_fraction;
+  std::vector<double> tgt_homo_dist {0.25, 0.25, 0.25, 0.25};
+  std::vector<double> tgt_heto_dist {0.1, 0.2, 0.3, 0.4};
+  /** Use Megabytes */
+  std::vector<i64> device_size {128, 1024, 4096, 16384};
+  /** Use Megabytes/Sec */
+  std::vector<double> device_bandwidth {8192, 3072, 550, 120};
 
   if (homo_dist)
     tgt_fraction = tgt_homo_dist;
@@ -243,16 +240,6 @@ std::vector<size_t> GenFixedTotalBlobSize(size_t total_size,
       used_size = total_size;
     }
     result.push_back(size);
-  }
-  return result;
-}
-
-std::vector<size_t> GenFixedNumberOfBlobs(int num,
-                                          size_t each_blob_size) {
-  std::vector<size_t> result;
-
-  for (auto i {0}; i < num; ++i) {
-    result.push_back(each_blob_size);
   }
   return result;
 }
