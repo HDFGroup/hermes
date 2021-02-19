@@ -17,6 +17,7 @@
 #include "hermes.h"
 #include "data_placement_engine.h"
 #include "test_utils.h"
+#include "utils.h"
 
 using namespace hermes;  // NOLINT(*)
 
