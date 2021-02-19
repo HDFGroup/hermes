@@ -53,8 +53,6 @@ ENV spack=${SPACK_DIR}/bin/spack
 
 RUN . ${SPACK_DIR}/share/spack/setup-env.sh
 
-RUN echo $GITPOD_REPO_ROOT
-
 RUN $spack repo add ${SDS_DIR}
 RUN $spack repo add $PROJECT/ci/hermes
 
