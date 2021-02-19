@@ -104,7 +104,8 @@ int main(int argc, char **argv) {
                 << "Choose small blob size range (0, 64KB] to test.\n\n";
     }
 
-    blob_sizes = testing::GenFixedTotalBlobSize(dpe_total_blob_size, blob_range);
+    blob_sizes = testing::GenFixedTotalBlobSize(dpe_total_blob_size,
+                                                blob_range);
     total_placed_size = dpe_total_blob_size;
   } else {
     blob_sizes.resize(dpe_total_blob_size);
@@ -112,7 +113,8 @@ int main(int argc, char **argv) {
     total_placed_size = each_blob_size * dpe_total_num_blobs;
   }
 
-  testing::TargetViewState tgt_state = testing::InitDeviceState(dpe_total_targets);
+  testing::TargetViewState tgt_state =
+                           testing::InitDeviceState(dpe_total_targets);
 
   assert(tgt_state.num_targets == dpe_total_targets);
 
