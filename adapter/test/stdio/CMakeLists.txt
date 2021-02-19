@@ -45,7 +45,7 @@ set_target_properties(hermes_stdio_adapter_mpi_test PROPERTIES COMPILE_FLAGS "-D
 mpi_daemon(hermes_stdio_adapter_mpi_test 2 "~[request_size=range-large]" "" 1)
 mpi_daemon(hermes_stdio_adapter_mpi_test 2 "[request_size=range-large]" "large" 1)
 if(HERMES_INSTALL_TESTS)
-    set(STDIO_TESTS stdio_adapter_mapper_test stdio_adapter_mapper_test stdio_adapter_test hermes_stdio_adapter_test stdio_adapter_mpi_test hermes_stdio_adapter_mpi_test)
+    set(STDIO_TESTS stdio_adapter_mapper_test stdio_adapter_test hermes_stdio_adapter_test stdio_adapter_mpi_test hermes_stdio_adapter_mpi_test)
     foreach(program ${STDIO_TESTS})
         install(
                 TARGETS
