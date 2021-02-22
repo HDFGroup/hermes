@@ -4,8 +4,8 @@
 namespace hermes {
 
 #define RETURN_CODES(X)                                          \
-  X(2,   HERMES_OK_MAX,              "Maximum supported HERMES success with \
-                                      caveat.") \
+  X(2,   HERMES_OK_MAX,              R"(Maximum supported HERMES success with \
+                                      caveat.)") \
   X(1,   PLACE_BLOB_TO_SWAP,         "Place blob to swap.") \
   X(0,   HERMES_SUCCESS,             "No error!")         \
   X(-1,  INVALID_BUCKET,             "Bucket ID is invalid.") \
@@ -49,8 +49,8 @@ typedef enum {
 class Status {
  public:
   /** Create an object representing success status. */
-  Status(FuncStatus ret_code = HERMES_SUCCESS) {
-    status_ = ret_code ;
+  explicit Status(FuncStatus ret_code = HERMES_SUCCESS) {
+    status_ = ret_code;
   }
 
   /** Returns true if the call did exactly what the user expected */
@@ -70,7 +70,7 @@ class Status {
 
   bool operator==(FuncStatus code) {
     return (status_ == code);
-  };
+  }
 
   FuncStatus GetStatus() const {return status_;}
 

@@ -199,7 +199,7 @@ Status Bucket::Put(std::vector<std::string> &names,
       return ret;
     }
   }
-  
+
   if (blobs.size() == 0) {
     ret = INVALID_BLOB;
     LOG(ERROR) << ret.Msg();

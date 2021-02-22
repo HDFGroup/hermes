@@ -129,8 +129,7 @@ Status RoundRobinPlacement(std::vector<size_t> &blob_sizes,
                                      schema);
         if (result.Succeeded()) {
           break;
-        }
-        else {
+        } else {
           return result;
         }
       }
@@ -192,8 +191,7 @@ Status RandomPlacement(std::vector<size_t> &blob_sizes,
 
         if (result.Succeeded()) {
           break;
-        }
-        else {
+        } else {
           return result;
         }
       }
@@ -406,7 +404,7 @@ Status CalculatePlacement(SharedMemoryContext *context, RpcContext *rpc,
   if (result.Succeeded()) {
     for (auto it = output_tmp.begin(); it != output_tmp.end(); ++it) {
       PlacementSchema schema = AggregateBlobSchema((*it));
-      if(schema.size() == 0) {
+      if (schema.size() == 0) {
         result = DPE_PLACEMENTSCHEMA_EMPTY;
         LOG(ERROR) << result.Msg();
         return result;

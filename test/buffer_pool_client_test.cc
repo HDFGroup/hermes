@@ -306,8 +306,8 @@ int main(int argc, char **argv) {
     int mpi_threads_provided;
     MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
     if (mpi_threads_provided < MPI_THREAD_MULTIPLE) {
-      fprintf(stderr, "Didn't receive appropriate MPI threading \
-                       specification\n");
+      fprintf(stderr, "Didn't receive appropriate MPI threading specification\n"
+             );
       return 1;
     }
 
@@ -378,6 +378,6 @@ int main(int argc, char **argv) {
   catch ( ... ) {
     std::cout << "Catch exception\n";
   }
-  
+
   return 0;
 }
