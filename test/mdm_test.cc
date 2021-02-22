@@ -89,7 +89,7 @@ static void TestRenameBlob(HermesPtr hermes) {
   static_assert(sizeof(data[0]) == sizeof(u8));
 
   std::string old_blob_name = "old_blob_name";
-  Assert(bucket.Put(old_blob_name, data, sizeof(data), ctx) == 0);
+  Assert(bucket.Put(old_blob_name, data, sizeof(data), ctx).Succeeded());
 
   std::string new_blob_name = "new_blob_name";
   bucket.RenameBlob(old_blob_name, new_blob_name, ctx);
@@ -171,7 +171,7 @@ static void TestMaxNameLength(HermesPtr hermes) {
   hapi::Bucket bucket(name, hermes, ctx);
   hapi::Blob blob('x');
   Status status = bucket.Put(long_blob_name, blob, ctx);
-  Assert(status != 0);
+  Assert(!status.Succeeded());
   Assert(!bucket.ContainsBlob(long_blob_name));
 
   // Vector Put fails if one name is too long
@@ -181,7 +181,7 @@ static void TestMaxNameLength(HermesPtr hermes) {
   std::vector<std::string> blob_names = {a, b, long_blob_name, c};
   std::vector<hapi::Blob> blobs = {blob, blob, blob, blob};
   status = bucket.Put(blob_names, blobs, ctx);
-  Assert(status != 0);
+  Assert(!status.Succeeded());
   Assert(!bucket.ContainsBlob(long_blob_name));
   Assert(!bucket.ContainsBlob(a));
   Assert(!bucket.ContainsBlob(b));
@@ -191,27 +191,39 @@ static void TestMaxNameLength(HermesPtr hermes) {
 }
 
 int main(int argc, char **argv) {
-  int mpi_threads_provided;
-  MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
-  if (mpi_threads_provided < MPI_THREAD_MULTIPLE) {
-    fprintf(stderr, "Didn't receive appropriate MPI threading specification\n");
-    return 1;
+  try {
+    int mpi_threads_provided;
+    MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
+    if (mpi_threads_provided < MPI_THREAD_MULTIPLE) {
+      fprintf(stderr, "Didn't receive appropriate MPI threading \
+                       specification\n");
+      return 1;
+    }
+
+    HermesPtr hermes = hapi::InitHermes(NULL, true);
+
+    TestNullIds();
+    TestGetMapMutex();
+    TestLocalGetNextFreeBucketId(hermes);
+    TestGetOrCreateBucketId(hermes);
+    TestRenameBlob(hermes);
+    TestRenameBucket(hermes);
+    TestBucketRefCounting(hermes);
+    TestMaxNameLength(hermes);
+
+    hermes->Finalize(true);
+
+    MPI_Finalize();
   }
-
-  HermesPtr hermes = hapi::InitHermes(NULL, true);
-
-  TestNullIds();
-  TestGetMapMutex();
-  TestLocalGetNextFreeBucketId(hermes);
-  TestGetOrCreateBucketId(hermes);
-  TestRenameBlob(hermes);
-  TestRenameBucket(hermes);
-  TestBucketRefCounting(hermes);
-  TestMaxNameLength(hermes);
-
-  hermes->Finalize(true);
-
-  MPI_Finalize();
+  catch (const std::runtime_error& e) {
+    std::cout << "Standard exception: " << e.what() << std::endl;
+  }
+  catch (const std::length_error& e) {
+    std::cout << "Standard exception: " << e.what() << std::endl;
+  }
+  catch ( ... ) {
+    std::cout << "Catch exception\n";
+  }
 
   return 0;
 }

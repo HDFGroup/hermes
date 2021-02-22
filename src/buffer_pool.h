@@ -23,6 +23,7 @@
 #include <vector>
 
 #include "hermes_types.h"
+#include "hermes_status.h"
 #include "memory_management.h"
 #include "communication.h"
 
@@ -483,16 +484,16 @@ u32 GetBufferSize(SharedMemoryContext *context, RpcContext *rpc, BufferID id);
 bool BufferIsByteAddressable(SharedMemoryContext *context, BufferID id);
 int PlaceInHierarchy(SharedMemoryContext *context, RpcContext *rpc,
                      SwapBlob swap_blob, const std::string &blob_name);
-api::Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
+Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
                       PlacementSchema &schema, Blob blob,
                       const std::string &name, BucketID bucket_id, int retries,
                       bool called_from_buffer_organizer = false);
-api::Status StdIoPersistBucket(SharedMemoryContext *context, RpcContext *rpc,
+Status StdIoPersistBucket(SharedMemoryContext *context, RpcContext *rpc,
                                Arena *arena, BucketID bucket_id,
                                const std::string &file_name,
                                const std::string &open_mode);
 
-api::Status StdIoPersistBlob(SharedMemoryContext *context, RpcContext *rpc,
+Status StdIoPersistBlob(SharedMemoryContext *context, RpcContext *rpc,
                              Arena *arena, BlobID blob_id,
                              FILE* file, const i32 &offset);
 

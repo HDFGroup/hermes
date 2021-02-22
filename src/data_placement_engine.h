@@ -16,11 +16,10 @@
 #include <map>
 
 #include "hermes_types.h"
+#include "hermes_status.h"
 #include "hermes.h"
 
 namespace hermes {
-
-using api::Status;
 
 class DataPlacementEngine {
   static inline size_t count_device_ {};

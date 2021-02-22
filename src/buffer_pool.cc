@@ -23,6 +23,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdio.h>
+#include <errno.h>
 
 #include <cmath>
 #include <iostream>
@@ -1612,7 +1614,7 @@ Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
                  PlacementSchema &schema, Blob blob, const std::string &name,
                  BucketID bucket_id, int retries,
                  bool called_from_buffer_organizer) {
-  Status result = 0;
+  Status result;
 
   if (ContainsBlob(context, rpc, bucket_id, name)) {
     // TODO(chogan) @optimization If the existing buffers are already large
@@ -1636,10 +1638,13 @@ Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
     if (called_from_buffer_organizer) {
       // TODO(chogan): @errorhandling The BufferOrganizer failed to place a blob
       // from swap space into the hierarchy.
-      result = 1;
+      result = PLACE_SWAP_BLOB_TO_BUF_FAILED;
+      LOG(ERROR) << result.Msg();
     } else {
       SwapBlob swap_blob = PutToSwap(context, rpc, name, bucket_id, blob.data,
                                      blob.size);
+      result = PLACE_BLOB_TO_SWAP;
+      LOG(WARNING) << result.Msg();
       TriggerBufferOrganizer(rpc, kPlaceInHierarchy, name, swap_blob, retries);
     }
   }
@@ -1651,7 +1656,7 @@ Status StdIoPersistBucket(SharedMemoryContext *context, RpcContext *rpc,
                           Arena *arena, BucketID bucket_id,
                           const std::string &file_name,
                           const std::string &open_mode) {
-  Status result = 0;
+  Status result;
   FILE *file = fopen(file_name.c_str(), open_mode.c_str());
 
   if (file) {
@@ -1670,32 +1675,36 @@ Status StdIoPersistBucket(SharedMemoryContext *context, RpcContext *rpc,
         // mapping, we'll need pwrite and offsets.
         if (fwrite(data.data(), 1, num_bytes, file) != num_bytes) {
           // TODO(chogan): @errorhandling
-          result = 1;
+          result = STDIO_FWRITE_FAILED;
+          LOG(ERROR) << result.Msg() << strerror(errno);
           break;
         }
       } else {
         // TODO(chogan): @errorhandling
-        result = 1;
+        result = READ_BLOB_FAILED;
+        LOG(ERROR) << result.Msg();
         break;
       }
     }
 
     if (fclose(file) != 0) {
       // TODO(chogan): @errorhandling
-      result = 1;
+      result = STDIO_FCLOSE_FAILED;
+      LOG(ERROR) << result.Msg() << strerror(errno);
     }
   } else {
     // TODO(chogan): @errorhandling
-    result = 1;
+    result = STDIO_FOPEN_FAILED;
+    LOG(ERROR) << result.Msg() << strerror(errno);
   }
 
   return result;
 }
 
-api::Status StdIoPersistBlob(SharedMemoryContext *context, RpcContext *rpc,
+Status StdIoPersistBlob(SharedMemoryContext *context, RpcContext *rpc,
                              Arena *arena, BlobID blob_id,
                              FILE *file , const i32 &offset) {
-  Status result = 0;
+  Status result;
 
   if (file) {
     ScopedTemporaryMemory scratch(arena);
@@ -1712,16 +1721,19 @@ api::Status StdIoPersistBlob(SharedMemoryContext *context, RpcContext *rpc,
       if (offset == -1 || fseek(file, offset, SEEK_SET) == 0) {
         if (fwrite(data.data(), 1, num_bytes, file) != num_bytes) {
           // TODO(chogan): @errorhandling
-          result = 1;
+          result = STDIO_FWRITE_FAILED;
+          LOG(ERROR) << result.Msg() << strerror(errno);
         }
       } else {
         // TODO(chogan): @errorhandling
+        result = STDIO_OFFSET_ERROR;
+        LOG(ERROR) << result.Msg() << strerror(errno);
       }
     }
 
   } else {
     // TODO(chogan): @errorhandling
-    result = 1;
+    result = INVALID_FILE;
   }
   return result;
 }

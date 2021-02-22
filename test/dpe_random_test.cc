@@ -32,7 +32,7 @@ void RandomPlaceBlob(std::vector<size_t> &blob_sizes,
     testing::GetDefaultTargets(node_state.num_devices);
   Status result = RandomPlacement(blob_sizes, node_state.ordered_cap,
                                   schemas_tmp);
-  if (result) {
+  if (!result.Succeeded()) {
     std::cout << "\nRandomPlacement failed\n" << std::flush;
     exit(1);
   }

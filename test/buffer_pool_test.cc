@@ -85,7 +85,7 @@ void TestGetBandwidths(hermes::SharedMemoryContext *context) {
   }
 }
 
-hapi::Status ForceBlobToSwap(Hermes *hermes, hermes::u64 id, hapi::Blob &blob,
+hermes::Status ForceBlobToSwap(Hermes *hermes, hermes::u64 id, hapi::Blob &blob,
                              const char *blob_name) {
   using namespace hermes;  // NOLINT(*)
   PlacementSchema schema;
@@ -96,7 +96,7 @@ hapi::Status ForceBlobToSwap(Hermes *hermes, hermes::u64 id, hapi::Blob &blob,
   hermes::BucketID bucket_id = {};
   bucket_id.as_int = id;
   int retries = 3;
-  hapi::Status result = PlaceBlob(&hermes->context_, &hermes->rpc_, schema,
+  hermes::Status result = PlaceBlob(&hermes->context_, &hermes->rpc_, schema,
                                   internal_blob, blob_name, bucket_id, retries);
 
   return result;
@@ -137,8 +137,8 @@ void TestBlobOverwrite() {
   std::string blob_name("1");
   size_t blob_size = KILOBYTES(2);
   hapi::Blob blob(blob_size, '1');
-  hapi::Status status = bucket.Put(blob_name, blob, ctx);
-  Assert(status == 0);
+  hermes::Status status = bucket.Put(blob_name, blob, ctx);
+  Assert(status.Succeeded());
 
   Assert(buffers_available[slab_index] == 1);
 
@@ -158,9 +158,9 @@ void TestSwap(std::shared_ptr<Hermes> hermes) {
   size_t data_size = MEGABYTES(1);
   hapi::Blob data(data_size, 'x');
   std::string blob_name("swap_blob");
-  hapi::Status status = ForceBlobToSwap(hermes.get(), bucket.GetId(), data,
+  hermes::Status status = ForceBlobToSwap(hermes.get(), bucket.GetId(), data,
                                         blob_name.c_str());
-  Assert(status == 0);
+  Assert(status.Succeeded());
   // NOTE(chogan): The Blob is in the swap space, but the API behaves as normal.
   Assert(bucket.ContainsBlob(blob_name));
 
@@ -182,8 +182,8 @@ void TestBufferOrganizer(std::shared_ptr<Hermes> hermes) {
   // NOTE(chogan): Fill our single buffer with a blob.
   hapi::Blob data1(KILOBYTES(4), 'x');
   std::string blob1_name("bo_blob1");
-  hapi::Status status = bucket.Put(blob1_name, data1, ctx);
-  Assert(status == 0);
+  hermes::Status status = bucket.Put(blob1_name, data1, ctx);
+  Assert(status.Succeeded());
   Assert(bucket.ContainsBlob(blob1_name));
 
   // NOTE(chogan): Force a second Blob to the swap space.
@@ -191,7 +191,7 @@ void TestBufferOrganizer(std::shared_ptr<Hermes> hermes) {
   std::string blob2_name("bo_blob2");
   status = ForceBlobToSwap(hermes.get(), bucket.GetId(), data2,
                            blob2_name.c_str());
-  Assert(status == 0);
+  Assert(status.Succeeded());
   Assert(bucket.BlobIsInSwap(blob2_name));
 
   // NOTE(chogan): Delete the first blob, which will make room for the second,
