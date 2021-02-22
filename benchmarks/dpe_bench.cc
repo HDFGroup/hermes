@@ -116,7 +116,7 @@ int main(int argc, char **argv) {
   testing::TargetViewState tgt_state =
                            testing::InitDeviceState(dpe_total_targets);
 
-  assert(tgt_state.num_targets == dpe_total_targets);
+  assert(tgt_state.num_devices == dpe_total_targets);
 
   std::vector<PlacementSchema> output_tmp, schemas;
   std::vector<TargetID> targets =
