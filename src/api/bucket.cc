@@ -56,7 +56,7 @@ Status Bucket::Put(const std::string &name, const u8 *data, size_t size,
     return ret;
   }
 
-  if ((size > 0 && nullptr == data) || size < 0) {
+  if (size > 0 && nullptr == data) {
     ret = INVALID_BLOB;
     LOG(ERROR) << ret.Msg();
     return ret;
