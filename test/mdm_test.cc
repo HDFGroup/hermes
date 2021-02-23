@@ -54,10 +54,17 @@ static void TestLocalGetNextFreeBucketId(HermesPtr hermes) {
     hapi::Bucket bucket(bucket_name, hermes, ctx);
     bucket.Close(ctx);
   }
-
-  std::string fail_name = "this_should_fail";
-  hapi::Bucket bucket(fail_name, hermes, ctx);
-  Assert(!bucket.IsValid());
+  
+  try {
+    std::string fail_name = "this_should_fail";
+    hapi::Bucket bucket(fail_name, hermes, ctx);
+  }
+  catch (const std::runtime_error& e) {
+    std::cout << "Standard exception: " << e.what() << std::endl;
+  }
+  catch (const std::length_error& e) {
+    std::cout << "Standard exception: " << e.what() << std::endl;
+  }
 
   for (u32 i = 0; i < mdm->max_buckets; ++i) {
     std::string name = "bucket" + std::to_string(i);
@@ -159,13 +166,21 @@ static void TestBucketRefCounting(HermesPtr hermes) {
 }
 
 static void TestMaxNameLength(HermesPtr hermes) {
+  // Bucket with a name that's too large is invalid.
+  hapi::Context ctx;
   try {
-    // Bucket with a name that's too large is invalid.
-    hapi::Context ctx;
     std::string long_bucket_name(kMaxBucketNameSize + 1, 'x');
     hapi::Bucket invalid_bucket(long_bucket_name, hermes, ctx);
+  }
+  catch (const std::runtime_error& e) {
+    std::cout << "Standard exception: " << e.what() << std::endl;
+  }
+  catch (const std::length_error& e) {
+    std::cout << "Standard exception: " << e.what() << std::endl;
+  }
 
-    // Put fails when a blob name is too long
+  // Put fails when a blob name is too long
+  try {
     std::string name = "b1";
     std::string long_blob_name(kMaxBlobNameSize + 1, 'x');
     hapi::Bucket bucket(name, hermes, ctx);
