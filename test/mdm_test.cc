@@ -54,7 +54,7 @@ static void TestLocalGetNextFreeBucketId(HermesPtr hermes) {
     hapi::Bucket bucket(bucket_name, hermes, ctx);
     bucket.Close(ctx);
   }
-  
+
   try {
     std::string fail_name = "this_should_fail";
     hapi::Bucket bucket(fail_name, hermes, ctx);
