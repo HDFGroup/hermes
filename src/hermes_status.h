@@ -69,10 +69,10 @@ class Status {
   bool operator == (FuncStatus code) {
     return (status_ == code);
   }
-  
+
   Status operator = (FuncStatus code) {
     Status ret(code);
-    
+
     return ret;
   }
 
