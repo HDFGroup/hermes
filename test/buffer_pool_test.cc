@@ -160,7 +160,7 @@ void TestSwap(std::shared_ptr<Hermes> hermes) {
   std::string blob_name("swap_blob");
   hermes::Status status = ForceBlobToSwap(hermes.get(), bucket.GetId(), data,
                                         blob_name.c_str());
-  Assert(status.Succeeded());
+  Assert(status == hermes::BLOB_IN_SWAP_PLACE);
   // NOTE(chogan): The Blob is in the swap space, but the API behaves as normal.
   Assert(bucket.ContainsBlob(blob_name));
 
@@ -191,7 +191,7 @@ void TestBufferOrganizer(std::shared_ptr<Hermes> hermes) {
   std::string blob2_name("bo_blob2");
   status = ForceBlobToSwap(hermes.get(), bucket.GetId(), data2,
                            blob2_name.c_str());
-  Assert(status.Succeeded());
+  Assert(status == hermes::BLOB_IN_SWAP_PLACE);
   Assert(bucket.BlobIsInSwap(blob2_name));
 
   // NOTE(chogan): Delete the first blob, which will make room for the second,

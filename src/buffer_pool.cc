@@ -1643,7 +1643,7 @@ Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
     } else {
       SwapBlob swap_blob = PutToSwap(context, rpc, name, bucket_id, blob.data,
                                      blob.size);
-      result = PLACE_BLOB_TO_SWAP;
+      result = BLOB_IN_SWAP_PLACE;
       LOG(WARNING) << result.Msg();
       TriggerBufferOrganizer(rpc, kPlaceInHierarchy, name, swap_blob, retries);
     }

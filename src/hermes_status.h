@@ -1,12 +1,13 @@
 #ifndef HERMES_STATUS_H_
 #define HERMES_STATUS_H_
 
+#include <iostream>
 namespace hermes {
 
 #define RETURN_CODES(X)                                          \
   X(2,   HERMES_OK_MAX,              R"(Maximum supported HERMES success with \
                                       caveat.)") \
-  X(1,   PLACE_BLOB_TO_SWAP,         "Place blob to swap.") \
+  X(1,   BLOB_IN_SWAP_PLACE,         "Blob is placed into swap place.") \
   X(0,   HERMES_SUCCESS,             "No error!")         \
   X(-1,  INVALID_BUCKET,             "Bucket ID is invalid.") \
   X(-2,  BUCKET_NAME_TOO_LONG,       "Bucket name exceeds max length (256).") \
@@ -70,10 +71,8 @@ class Status {
     return (status_ == code);
   }
 
-  Status operator = (FuncStatus code) {
-    Status ret(code);
-
-    return ret;
+  void operator = (FuncStatus code) {
+    status_ = code;
   }
 
   FuncStatus GetStatus() const {return status_;}

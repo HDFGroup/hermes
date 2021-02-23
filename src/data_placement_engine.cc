@@ -127,11 +127,9 @@ Status RoundRobinPlacement(std::vector<size_t> &blob_sizes,
       for (size_t k {0}; k < new_blob_size.size(); ++k) {
         result = AddRoundRobinSchema(k, ns_local, new_blob_size, targets,
                                      schema);
-        if (result.Succeeded()) {
+        if (!result.Succeeded()) {
           break;
-        } else {
-          return result;
-        }
+        } 
       }
     } else {
       result = AddRoundRobinSchema(i, ns_local, blob_sizes, targets, schema);
@@ -189,10 +187,8 @@ Status RandomPlacement(std::vector<size_t> &blob_sizes,
       for (size_t k {0}; k < new_blob_size.size(); ++k) {
         result = AddRandomSchema(ordered_cap, new_blob_size[k], schema);
 
-        if (result.Succeeded()) {
+        if (!result.Succeeded()) {
           break;
-        } else {
-          return result;
         }
       }
     } else {
@@ -335,9 +331,6 @@ Status MinimizeIoTimePlacement(const std::vector<size_t> &blob_sizes,
     output.push_back(schema);
   }
 
-//  return result;
-  result = INVALID_BUCKET;
-  LOG(ERROR) << result.Msg();
   return result;
 }
 
