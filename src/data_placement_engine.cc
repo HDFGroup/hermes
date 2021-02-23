@@ -129,7 +129,7 @@ Status RoundRobinPlacement(std::vector<size_t> &blob_sizes,
                                      schema);
         if (!result.Succeeded()) {
           break;
-        } 
+        }
       }
     } else {
       result = AddRoundRobinSchema(i, ns_local, blob_sizes, targets, schema);
