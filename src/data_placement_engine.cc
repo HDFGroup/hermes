@@ -67,7 +67,7 @@ Status AddRoundRobinSchema(size_t index, std::vector<u64> &node_state,
     }
   }
   if (IsNullTargetId(dst)) {
-    return DPE_GET_INVALID_TGT;
+    result = DPE_GET_INVALID_TGT;
   }
 
   return result;
@@ -302,7 +302,8 @@ Status MinimizeIoTimePlacement(const std::vector<size_t> &blob_sizes,
   const MPSolver::ResultStatus result_status = solver.Solve();
   // Check if the problem has an optimal solution.
   if (result_status != MPSolver::OPTIMAL) {
-    return DPE_ORTOOLS_NO_SOLUTION;
+    result = DPE_ORTOOLS_NO_SOLUTION;
+    return result;
   }
 
   for (size_t i {0}; i < num_blobs; ++i) {

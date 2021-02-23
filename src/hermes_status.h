@@ -49,7 +49,7 @@ typedef enum {
 class Status {
  public:
   /** Create an object representing success status. */
-  Status(FuncStatus ret_code = HERMES_SUCCESS) : status_(ret_code) {}
+  explicit Status(FuncStatus ret_code = HERMES_SUCCESS) : status_(ret_code) {}
 
   /** Returns true if the call did exactly what the user expected */
   bool Succeeded() const {
@@ -66,8 +66,14 @@ class Status {
     return (status_ < HERMES_SUCCESS && status_ > HERMES_ERROR_MAX);
   }
 
-  bool operator==(FuncStatus code) {
+  bool operator == (FuncStatus code) {
     return (status_ == code);
+  }
+  
+  Status operator = (FuncStatus code) {
+    Status ret(code);
+    
+    return ret;
   }
 
   FuncStatus GetStatus() const {return status_;}
