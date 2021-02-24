@@ -45,7 +45,7 @@ int main(int argc, char **argv) {
   size_t each_blob_size;
   size_t total_placed_size;
   double dpe_seconds;
-  hermes::api::Status result;
+  hermes::Status result;
 
   while ((option = getopt(argc, argv, "mnor:s:")) != -1) {
     switch (option) {
@@ -165,7 +165,7 @@ int main(int argc, char **argv) {
   assert(placed_size == total_placed_size);
 
   // Aggregate placement schemas from the same target
-  if (!result) {
+  if (!result.Succeeded()) {
     for (auto it = output_tmp.begin(); it != output_tmp.end(); ++it) {
       PlacementSchema schema = AggregateBlobSchema((*it));
       assert(schema.size() > 0);
