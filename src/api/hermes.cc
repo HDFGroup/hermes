@@ -1,14 +1,14 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-* Distributed under BSD 3-Clause license.                                   *
-* Copyright by The HDF Group.                                               *
-* Copyright by the Illinois Institute of Technology.                        *
-* All rights reserved.                                                      *
-*                                                                           *
-* This file is part of Hermes. The full Hermes copyright notice, including  *
-* terms governing use, modification, and redistribution, is contained in    *
-* the COPYFILE, which can be found at the top directory. If you do not have *
-* access to either file, you may request a copy from help@hdfgroup.org.     *
-* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+ * Distributed under BSD 3-Clause license.                                   *
+ * Copyright by The HDF Group.                                               *
+ * Copyright by the Illinois Institute of Technology.                        *
+ * All rights reserved.                                                      *
+ *                                                                           *
+ * This file is part of Hermes. The full Hermes copyright notice, including  *
+ * terms governing use, modification, and redistribution, is contained in    *
+ * the COPYING file, which can be found at the top directory. If you do not  *
+ * have access to the file, you may request a copy from help@hdfgroup.org.   *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include <sys/mman.h>
 
@@ -108,6 +108,10 @@ void *Hermes::GetAppCommunicator() {
 void Hermes::Finalize(bool force_rpc_shutdown) {
   hermes::Finalize(&context_, &comm_, &rpc_, shmem_name_.c_str(), &trans_arena_,
                    IsApplicationCore(), force_rpc_shutdown);
+}
+
+void Hermes::RemoteFinalize() {
+  hermes::RpcCall<void>(&rpc_, rpc_.node_id, "RemoteFinalize");
 }
 
 }  // namespace api
@@ -294,9 +298,11 @@ std::shared_ptr<api::Hermes> InitHermes(Config *config, bool is_daemon,
   api::Context::default_buffer_organizer_retries =
     config->num_buffer_organizer_retries;
 
-  if (comm.proc_kind == ProcessKind::kApp) {
-    InitRpcClients(&result->rpc_);
-  }
+  InitRpcClients(&result->rpc_);
+
+  // NOTE(chogan): Can only initialize the neighborhood Targets once the RPC
+  // clients have been initialized.
+  InitNeighborhoodTargets(&result->context_, &result->rpc_);
 
   return result;
 }

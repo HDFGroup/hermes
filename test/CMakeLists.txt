@@ -27,6 +27,8 @@ foreach(program ${API_TESTS})
     LSAN_OPTIONS=suppressions=${CMAKE_CURRENT_SOURCE_DIR}/data/asan.supp)
 endforeach()
 
+
+
 #------------------------------------------------------------------------------
 # Bucket test
 #------------------------------------------------------------------------------
@@ -123,15 +125,15 @@ set_tests_properties("TestMDM" PROPERTIES ENVIRONMENT
 # Trait tests
 #------------------------------------------------------------------------------
 
-#add_executable(trait trait_test.cc)
-#target_link_libraries(trait ${LIBRT} hermes MPI::MPI_CXX
-#$<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium> Catch2::Catch2 -lstdc++fs)
-#target_compile_definitions(trait
-#PRIVATE $<$<BOOL:${HERMES_RPC_THALLIUM}>:HERMES_RPC_THALLIUM>)
-#add_test(NAME "TestTrait" COMMAND "${CMAKE_BINARY_DIR}/bin/trait" "-s" "--reporter" "compact"
-#        "--config" "${CMAKE_CURRENT_SOURCE_DIR}/data/bucket_test.conf")
-#set_tests_properties("TestTrait" PROPERTIES ENVIRONMENT
-#LSAN_OPTIONS=suppressions=${CMAKE_CURRENT_SOURCE_DIR}/data/asan.supp)
+add_executable(trait trait_test.cc)
+target_link_libraries(trait ${LIBRT} hermes MPI::MPI_CXX
+$<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium> Catch2::Catch2 -lstdc++fs)
+target_compile_definitions(trait
+PRIVATE $<$<BOOL:${HERMES_RPC_THALLIUM}>:HERMES_RPC_THALLIUM>)
+add_test(NAME "TestTrait" COMMAND "${CMAKE_BINARY_DIR}/bin/trait" "-s" "--reporter" "compact"
+        "--config" "${CMAKE_CURRENT_SOURCE_DIR}/data/bucket_test.conf")
+set_tests_properties("TestTrait" PROPERTIES ENVIRONMENT
+LSAN_OPTIONS=suppressions=${CMAKE_CURRENT_SOURCE_DIR}/data/asan.supp)
 
 #------------------------------------------------------------------------------
 # Custom Targets
@@ -143,3 +145,19 @@ add_custom_target(ares
   "${CMAKE_BINARY_DIR}/bin/end_to_end_test"
   "${CMAKE_CURRENT_SOURCE_DIR}/data/ares.conf"
 )
+if(HERMES_INSTALL_TESTS)
+  set(TEST_EXECS dpe_optimization_test dpe_random_test
+          dpe_roundrobin_test end_to_end_test
+          bucket_test stdio_test bp bp_test config_parser_test stb_map mdm trait)
+  foreach(program ${TEST_EXECS})
+    install(
+            TARGETS
+            ${program}
+            EXPORT
+            ${HERMES_EXPORTED_TARGETS}
+            LIBRARY DESTINATION ${HERMES_INSTALL_LIB_DIR}
+            ARCHIVE DESTINATION ${HERMES_INSTALL_LIB_DIR}
+            RUNTIME DESTINATION ${HERMES_INSTALL_BIN_DIR}
+    )
+  endforeach()
+endif()

@@ -1,14 +1,14 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-* Distributed under BSD 3-Clause license.                                   *
-* Copyright by The HDF Group.                                               *
-* Copyright by the Illinois Institute of Technology.                        *
-* All rights reserved.                                                      *
-*                                                                           *
-* This file is part of Hermes. The full Hermes copyright notice, including  *
-* terms governing use, modification, and redistribution, is contained in    *
-* the COPYFILE, which can be found at the top directory. If you do not have *
-* access to either file, you may request a copy from help@hdfgroup.org.     *
-* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+ * Distributed under BSD 3-Clause license.                                   *
+ * Copyright by The HDF Group.                                               *
+ * Copyright by the Illinois Institute of Technology.                        *
+ * All rights reserved.                                                      *
+ *                                                                           *
+ * This file is part of Hermes. The full Hermes copyright notice, including  *
+ * terms governing use, modification, and redistribution, is contained in    *
+ * the COPYING file, which can be found at the top directory. If you do not  *
+ * have access to the file, you may request a copy from help@hdfgroup.org.   *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #ifndef HERMES_ADAPTER_STDIO_H
 #define HERMES_ADAPTER_STDIO_H
@@ -59,6 +59,7 @@ HERMES_FORWARD_DECL(fwrite, size_t,
 HERMES_FORWARD_DECL(fputc, int, (int c, FILE *stream));
 HERMES_FORWARD_DECL(putc, int, (int c, FILE *stream));
 HERMES_FORWARD_DECL(fgetpos, int, (FILE * stream, fpos_t *pos));
+HERMES_FORWARD_DECL(fgetpos64, int, (FILE * stream, fpos64_t *pos));
 HERMES_FORWARD_DECL(putw, int, (int w, FILE *stream));
 HERMES_FORWARD_DECL(fputs, int, (const char *s, FILE *stream));
 HERMES_FORWARD_DECL(fprintf, int, (FILE * stream, const char *format, ...));
@@ -71,8 +72,6 @@ HERMES_FORWARD_DECL(fread, size_t,
 HERMES_FORWARD_DECL(fgetc, int, (FILE * stream));
 HERMES_FORWARD_DECL(getc, int, (FILE * stream));
 HERMES_FORWARD_DECL(getw, int, (FILE * stream));
-HERMES_FORWARD_DECL(_IO_getc, int, (FILE * stream));
-HERMES_FORWARD_DECL(_IO_putc, int, (int, FILE *stream));
 HERMES_FORWARD_DECL(fgets, char *, (char *s, int size, FILE *stream));
 HERMES_FORWARD_DECL(fseek, int, (FILE * stream, long offset, int whence));
 HERMES_FORWARD_DECL(fseeko, int, (FILE * stream, off_t offset, int whence));
@@ -80,5 +79,11 @@ HERMES_FORWARD_DECL(fseeko64, int, (FILE * stream, off64_t offset, int whence));
 HERMES_FORWARD_DECL(fsetpos, int, (FILE * stream, const fpos_t *pos));
 HERMES_FORWARD_DECL(fsetpos64, int, (FILE * stream, const fpos64_t *pos));
 HERMES_FORWARD_DECL(rewind, void, (FILE * stream));
+
+/**
+ * MPI functions declarations
+ */
+HERMES_FORWARD_DECL(MPI_Init, int, (int *argc, char ***argv));
+HERMES_FORWARD_DECL(MPI_Finalize, int, (void));
 
 #endif  // HERMES_ADAPTER_STDIO_H

@@ -1,14 +1,14 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-* Distributed under BSD 3-Clause license.                                   *
-* Copyright by The HDF Group.                                               *
-* Copyright by the Illinois Institute of Technology.                        *
-* All rights reserved.                                                      *
-*                                                                           *
-* This file is part of Hermes. The full Hermes copyright notice, including  *
-* terms governing use, modification, and redistribution, is contained in    *
-* the COPYFILE, which can be found at the top directory. If you do not have *
-* access to either file, you may request a copy from help@hdfgroup.org.     *
-* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+ * Distributed under BSD 3-Clause license.                                   *
+ * Copyright by The HDF Group.                                               *
+ * Copyright by the Illinois Institute of Technology.                        *
+ * All rights reserved.                                                      *
+ *                                                                           *
+ * This file is part of Hermes. The full Hermes copyright notice, including  *
+ * terms governing use, modification, and redistribution, is contained in    *
+ * the COPYING file, which can be found at the top directory. If you do not  *
+ * have access to the file, you may request a copy from help@hdfgroup.org.   *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include <iostream>
 #include <random>
@@ -17,6 +17,7 @@
 #include "hermes.h"
 #include "data_placement_engine.h"
 #include "test_utils.h"
+#include "utils.h"
 
 using namespace hermes;  // NOLINT(*)
 
@@ -28,8 +29,6 @@ void RandomPlaceBlob(std::vector<size_t> &blob_sizes,
   std::cout << "\nRandomPlacement to place blob of size " << blob_sizes[0]
             << " to targets\n" << std::flush;
 
-  std::vector<TargetID> targets =
-    testing::GetDefaultTargets(node_state.num_devices);
   Status result = RandomPlacement(blob_sizes, node_state.ordered_cap,
                                   schemas_tmp);
   if (!result.Succeeded()) {

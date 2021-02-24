@@ -1,14 +1,14 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-* Distributed under BSD 3-Clause license.                                   *
-* Copyright by The HDF Group.                                               *
-* Copyright by the Illinois Institute of Technology.                        *
-* All rights reserved.                                                      *
-*                                                                           *
-* This file is part of Hermes. The full Hermes copyright notice, including  *
-* terms governing use, modification, and redistribution, is contained in    *
-* the COPYFILE, which can be found at the top directory. If you do not have *
-* access to either file, you may request a copy from help@hdfgroup.org.     *
-* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+ * Distributed under BSD 3-Clause license.                                   *
+ * Copyright by The HDF Group.                                               *
+ * Copyright by the Illinois Institute of Technology.                        *
+ * All rights reserved.                                                      *
+ *                                                                           *
+ * This file is part of Hermes. The full Hermes copyright notice, including  *
+ * terms governing use, modification, and redistribution, is contained in    *
+ * the COPYING file, which can be found at the top directory. If you do not  *
+ * have access to the file, you may request a copy from help@hdfgroup.org.   *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 TEST_CASE("Open", "[process=" + std::to_string(info.comm_size) +
                       "]"
@@ -535,8 +535,8 @@ TEST_CASE("BatchedReadStrideDynamic",
     REQUIRE(fd != -1);
     std::string data(args.request_size, '1');
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      size_t offset = abs(((i * rand_r(&info.offset_seed)) % info.stride_size) %
-                          info.total_size);
+      size_t offset = GetRandomOffset(i, info.offset_seed, info.stride_size,
+                                      info.total_size);
       size_t status = lseek(fd, offset, SEEK_SET);
       REQUIRE(status == offset);
       size_t size_read = read(fd, data.data(), args.request_size);
@@ -562,8 +562,8 @@ TEST_CASE("BatchedUpdateStrideDynamic",
     REQUIRE(fd != -1);
     std::string data(args.request_size, '1');
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      size_t offset = abs(((i * rand_r(&info.offset_seed)) % info.stride_size) %
-                          info.total_size);
+      size_t offset = GetRandomOffset(i, info.offset_seed, info.stride_size,
+                                      info.total_size);
       size_t status = lseek(fd, offset, SEEK_SET);
       REQUIRE(status == offset);
       size_t size_read = write(fd, data.data(), args.request_size);
@@ -807,8 +807,8 @@ TEST_CASE("BatchedReadStrideDynamicRSVariable",
     int fd = open(info.existing_file.c_str(), O_RDWR);
     REQUIRE(fd != -1);
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      size_t offset = abs(((i * rand_r(&info.offset_seed)) % info.stride_size) %
-                          info.total_size);
+      size_t offset = GetRandomOffset(i, info.offset_seed, info.stride_size,
+                                      info.total_size);
       size_t status = lseek(fd, offset, SEEK_SET);
       REQUIRE(status == offset);
       size_t request_size =
@@ -836,8 +836,8 @@ TEST_CASE("BatchedUpdateStrideDynamicRSVariable",
     int fd = open(info.existing_file.c_str(), O_RDWR);
     REQUIRE(fd != -1);
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      size_t offset = abs(((i * rand_r(&info.offset_seed)) % info.stride_size) %
-                          info.total_size);
+      size_t offset = GetRandomOffset(i, info.offset_seed, info.stride_size,
+                                      info.total_size);
       size_t status = lseek(fd, offset, SEEK_SET);
       REQUIRE(status == offset);
       size_t request_size =

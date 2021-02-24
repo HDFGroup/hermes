@@ -6,8 +6,8 @@
  *                                                                           *
  * This file is part of Hermes. The full Hermes copyright notice, including  *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYFILE, which can be found at the top directory. If you do not have *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * the COPYING file, which can be found at the top directory. If you do not  *
+ * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "bucket.h"
@@ -76,9 +76,7 @@ Status Bucket::Put(const std::string &name, const u8 *data, size_t size,
       blobs[0].resize(size);
       // TODO(chogan): Create a PreallocatedMemory allocator for std::vector so
       // that a single-blob-Put doesn't perform a copy
-      for (size_t i = 0; i < size; ++i) {
-        blobs[0][i] = data[i];
-      }
+      memcpy(blobs[0].data(), data, size);
       ret = PlaceBlobs(schemas, blobs, names, ctx.buffer_organizer_retries);
     } else {
       // TODO(chogan): @errorhandling No space left or contraints unsatisfiable.
@@ -104,8 +102,10 @@ size_t Bucket::GetBlobSize(Arena *arena, const std::string &name,
               << name_ << '\n';
     BlobID blob_id = GetBlobIdByName(&hermes_->context_, &hermes_->rpc_,
                                      name.c_str());
-    result = GetBlobSizeById(&hermes_->context_, &hermes_->rpc_, arena,
-                             blob_id);
+    if (!IsNullBlobId(blob_id)) {
+      result = GetBlobSizeById(&hermes_->context_, &hermes_->rpc_, arena,
+                               blob_id);
+    }
   }
 
   return result;

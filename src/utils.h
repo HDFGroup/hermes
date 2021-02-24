@@ -1,14 +1,14 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-* Distributed under BSD 3-Clause license.                                   *
-* Copyright by The HDF Group.                                               *
-* Copyright by the Illinois Institute of Technology.                        *
-* All rights reserved.                                                      *
-*                                                                           *
-* This file is part of Hermes. The full Hermes copyright notice, including  *
-* terms governing use, modification, and redistribution, is contained in    *
-* the COPYFILE, which can be found at the top directory. If you do not have *
-* access to either file, you may request a copy from help@hdfgroup.org.     *
-* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+ * Distributed under BSD 3-Clause license.                                   *
+ * Copyright by The HDF Group.                                               *
+ * Copyright by the Illinois Institute of Technology.                        *
+ * All rights reserved.                                                      *
+ *                                                                           *
+ * This file is part of Hermes. The full Hermes copyright notice, including  *
+ * terms governing use, modification, and redistribution, is contained in    *
+ * the COPYING file, which can be found at the top directory. If you do not  *
+ * have access to the file, you may request a copy from help@hdfgroup.org.   *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #ifndef HERMES_UTILS_H_
 #define HERMES_UTILS_H_
@@ -16,6 +16,7 @@
 #include <assert.h>
 
 #include <chrono>
+#include <map>
 
 #include "hermes_types.h"
 
@@ -93,5 +94,76 @@ size_t RoundDownToMultiple(size_t val, size_t multiple);
  */
 void InitDefaultConfig(Config *config);
 
+namespace testing {
+
+enum class BlobSizeRange {
+  kSmall,
+  kMedium,
+  kLarge,
+  kXLarge,
+  kHuge,
+};
+
+struct TargetViewState {
+  std::vector<hermes::u64> bytes_capacity;
+  std::vector<hermes::u64> bytes_available;
+  std::vector<hermes::f32> bandwidth;
+  std::multimap<hermes::u64, TargetID> ordered_cap;
+  int num_devices;
+};
+
+/**
+ * Initialize device state with default values.
+ *
+ * @param total_target Total number of target.
+ *
+ * @param homo_dist The device distribution is homogeneous or not.
+ *
+ * @return The TargetViewState struct with device information.
+ */
+TargetViewState InitDeviceState(u64 total_target = 4, bool homo_dist = true);
+
+/**
+ * Update device state.
+ *
+ * @param schema The PlacementSchema return from a data placement
+ *               engine calculation.
+ *
+ * @param node_state The device status after schema is placed.
+ *
+ * @return Total size of placed blobs.
+ */
+u64 UpdateDeviceState(PlacementSchema &schema,
+                      TargetViewState &node_state);
+
+/**
+ * Print device state.
+ *
+ * @param The TargetViewState with current state.
+ */
+void PrintNodeState(TargetViewState &node_state);
+
+/**
+ * Get default targets.
+ *
+ * @param n The number of target type.
+ *
+ @ @return The vector of default targets.
+ */
+std::vector<TargetID> GetDefaultTargets(size_t n);
+
+/**
+ * Generate a vector of blob size with fixed total blob size.
+ *
+ * @param total_size The number of target type.
+ *
+ * @param range The blob size range for test.
+ *
+ * @ @return The vector blob size.
+ */
+std::vector<size_t> GenFixedTotalBlobSize(size_t total_size,
+                                          BlobSizeRange range);
+
+}  // namespace testing
 }  // namespace hermes
 #endif  // HERMES_UTILS_H_

@@ -1,17 +1,16 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-* Distributed under BSD 3-Clause license.                                   *
-* Copyright by The HDF Group.                                               *
-* Copyright by the Illinois Institute of Technology.                        *
-* All rights reserved.                                                      *
-*                                                                           *
-* This file is part of Hermes. The full Hermes copyright notice, including  *
-* terms governing use, modification, and redistribution, is contained in    *
-* the COPYFILE, which can be found at the top directory. If you do not have *
-* access to either file, you may request a copy from help@hdfgroup.org.     *
-* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+ * Distributed under BSD 3-Clause license.                                   *
+ * Copyright by The HDF Group.                                               *
+ * Copyright by the Illinois Institute of Technology.                        *
+ * All rights reserved.                                                      *
+ *                                                                           *
+ * This file is part of Hermes. The full Hermes copyright notice, including  *
+ * terms governing use, modification, and redistribution, is contained in    *
+ * the COPYING file, which can be found at the top directory. If you do not  *
+ * have access to the file, you may request a copy from help@hdfgroup.org.   *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include <catch_config.h>
-#include <hermes/adapter/stdio.h>
 #include <hermes/adapter/stdio/common/constants.h>
 #include <hermes/adapter/stdio/common/datastructures.h>
 #include <hermes/adapter/stdio/mapper/mapper_factory.h>
@@ -49,7 +48,11 @@ struct Info {
 hermes::adapter::stdio::test::Arguments args;
 hermes::adapter::stdio::test::Info info;
 
-int init() { return 0; }
+int init(int* argc, char*** argv) {
+  (void)argc;
+  (void)argv;
+  return 0;
+}
 int finalize() { return 0; }
 
 int pretest() {
@@ -97,7 +100,6 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
                              "[request_size=type-fixed][repetition=1]"
                              "[pattern=sequential][file=1]") {
   pretest();
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.new_file);
   SECTION("Map a one request") {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto mapper = MapperFactory().Get(kMapperType);
@@ -194,6 +196,5 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
     int status = fclose(fp);
     REQUIRE(status == 0);
   }
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.new_file);
   posttest();
 }

@@ -1,14 +1,14 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-* Distributed under BSD 3-Clause license.                                   *
-* Copyright by The HDF Group.                                               *
-* Copyright by the Illinois Institute of Technology.                        *
-* All rights reserved.                                                      *
-*                                                                           *
-* This file is part of Hermes. The full Hermes copyright notice, including  *
-* terms governing use, modification, and redistribution, is contained in    *
-* the COPYFILE, which can be found at the top directory. If you do not have *
-* access to either file, you may request a copy from help@hdfgroup.org.     *
-* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+ * Distributed under BSD 3-Clause license.                                   *
+ * Copyright by The HDF Group.                                               *
+ * Copyright by the Illinois Institute of Technology.                        *
+ * All rights reserved.                                                      *
+ *                                                                           *
+ * This file is part of Hermes. The full Hermes copyright notice, including  *
+ * terms governing use, modification, and redistribution, is contained in    *
+ * the COPYING file, which can be found at the top directory. If you do not  *
+ * have access to the file, you may request a copy from help@hdfgroup.org.   *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include <string>
 
@@ -210,6 +210,19 @@ static void TestMaxNameLength(HermesPtr hermes) {
   catch (const std::length_error& e) {
     std::cout << "Standard exception: " << e.what() << std::endl;
   }
+}
+
+void TestGetRelativeNodeId() {
+  RpcContext rpc = {};
+  rpc.num_nodes = 10;
+  rpc.node_id = 1;
+
+  Assert(GetNextNode(&rpc) == 2);
+  Assert(GetPreviousNode(&rpc) == 10);
+
+  rpc.node_id = 10;
+  Assert(GetNextNode(&rpc) == 1);
+  Assert(GetPreviousNode(&rpc) == 9);
 }
 
 int main(int argc, char **argv) {

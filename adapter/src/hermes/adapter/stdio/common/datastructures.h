@@ -1,14 +1,14 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-* Distributed under BSD 3-Clause license.                                   *
-* Copyright by The HDF Group.                                               *
-* Copyright by the Illinois Institute of Technology.                        *
-* All rights reserved.                                                      *
-*                                                                           *
-* This file is part of Hermes. The full Hermes copyright notice, including  *
-* terms governing use, modification, and redistribution, is contained in    *
-* the COPYFILE, which can be found at the top directory. If you do not have *
-* access to either file, you may request a copy from help@hdfgroup.org.     *
-* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+ * Distributed under BSD 3-Clause license.                                   *
+ * Copyright by The HDF Group.                                               *
+ * Copyright by the Illinois Institute of Technology.                        *
+ * All rights reserved.                                                      *
+ *                                                                           *
+ * This file is part of Hermes. The full Hermes copyright notice, including  *
+ * terms governing use, modification, and redistribution, is contained in    *
+ * the COPYING file, which can be found at the top directory. If you do not  *
+ * have access to the file, you may request a copy from help@hdfgroup.org.   *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #ifndef HERMES_STDIO_ADAPTER_DATASTRUCTURES_H
 #define HERMES_STDIO_ADAPTER_DATASTRUCTURES_H
@@ -204,7 +204,10 @@ struct AdapterStat {
    * Comparator for comparing two blobs.
    */
   static bool CompareBlobs(const std::string &a, const std::string &b) {
-    return std::stol(a) < std::stol(b);
+    /* FIXME(hari): change this once we have blob namespace separated per
+     * bucket.*/
+    size_t pos = a.find(kStringDelimiter) + 1;
+    return std::stol(a.substr(pos)) < std::stol(b.substr(pos));
   }
 };
 

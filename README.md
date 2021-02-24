@@ -17,6 +17,7 @@ Hermes is a heterogeneous aware, multi-tiered, dynamic, and distributed I/O buff
 
 ## Building
 
+### CMake
 Hermes makes use of the CMake build system and requires an out of source build.
 
 ```
@@ -39,6 +40,24 @@ Type 'c' to configure until there are no errors, then generate the makefile with
 -DORTOOLS_DIR=/path/to/ortools
 ```
 After the makefile has been generated, you can type `make -j 4` or `cmake --build . -- -j 4`. Add `VERBOSE=1` to see detailed compiler output.
+
+### spack
+```bash
+# set location of current spack to SPACK_DIR or clone it.
+SPACK_DIR=~/spack
+git clone https://github.com/spack/spack ${SPACK_DIR}
+# set location of hermes_file_staging
+STAGE_DIR=~/hermes_stage
+# no change from this point
+SDS_REPO=${STAGE_DIR}/sds
+HERMES_REPO=${STAGE_DIR}/hermes
+git clone https://xgitlab.cels.anl.gov/sds/sds-repo.git ${SDS_REPO}
+git clone https://github.com/HDFGroup/hermes ${HERMES_REPO}
+. ${SPACK_DIR}/share/spack/setup-env.sh
+spack repo add ${SDS_REPO}
+spack repo add ${HERMES_REPO}/ci/hermes
+spack install hermes
+```
 
 ### Testing and Installation
 

@@ -1,14 +1,14 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-* Distributed under BSD 3-Clause license.                                   *
-* Copyright by The HDF Group.                                               *
-* Copyright by the Illinois Institute of Technology.                        *
-* All rights reserved.                                                      *
-*                                                                           *
-* This file is part of Hermes. The full Hermes copyright notice, including  *
-* terms governing use, modification, and redistribution, is contained in    *
-* the COPYFILE, which can be found at the top directory. If you do not have *
-* access to either file, you may request a copy from help@hdfgroup.org.     *
-* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+ * Distributed under BSD 3-Clause license.                                   *
+ * Copyright by The HDF Group.                                               *
+ * Copyright by the Illinois Institute of Technology.                        *
+ * All rights reserved.                                                      *
+ *                                                                           *
+ * This file is part of Hermes. The full Hermes copyright notice, including  *
+ * terms governing use, modification, and redistribution, is contained in    *
+ * the COPYING file, which can be found at the top directory. If you do not  *
+ * have access to the file, you may request a copy from help@hdfgroup.org.   *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 TEST_CASE("FFlush", "[process=" + std::to_string(info.comm_size) +
                         "]"
@@ -62,7 +62,7 @@ TEST_CASE("FFlush", "[process=" + std::to_string(info.comm_size) +
     int status = fflush(nullptr);
     REQUIRE(status == 0);
   }
-  posttest();
+  posttest(false);
 }
 
 TEST_CASE("Fdopen", "[process=" + std::to_string(info.comm_size) +
@@ -213,7 +213,7 @@ TEST_CASE("Fdopen", "[process=" + std::to_string(info.comm_size) +
     status = close(fd);
     REQUIRE(status == -1);
   }
-  posttest();
+  posttest(false);
 }
 
 TEST_CASE("Freopen", "[process=" + std::to_string(info.comm_size) +
@@ -252,7 +252,7 @@ TEST_CASE("Freopen", "[process=" + std::to_string(info.comm_size) +
     int status = fclose(fhap);
     REQUIRE(status == 0);
   }
-  posttest();
+  posttest(false);
 }
 
 TEST_CASE("fgetc", "[process=" + std::to_string(info.comm_size) +
@@ -275,7 +275,7 @@ TEST_CASE("fgetc", "[process=" + std::to_string(info.comm_size) +
     int status = fclose(fh);
     REQUIRE(status == 0);
   }
-  posttest();
+  posttest(false);
 }
 
 TEST_CASE("getc", "[process=" + std::to_string(info.comm_size) +
@@ -298,7 +298,30 @@ TEST_CASE("getc", "[process=" + std::to_string(info.comm_size) +
     int status = fclose(fh);
     REQUIRE(status == 0);
   }
-  posttest();
+  posttest(false);
+}
+
+TEST_CASE("getw", "[process=" + std::to_string(info.comm_size) +
+                      "]"
+                      "[operation=batched_getw]"
+                      "[repetition=" +
+                      std::to_string(info.num_iterations) + "][file=1]") {
+  pretest();
+  SECTION("iterate and get all characters") {
+    FILE* fh = fopen(info.existing_file.c_str(), "r");
+    REQUIRE(fh != nullptr);
+    size_t total_chars = 0;
+    int c = '0';
+    do {
+      c = getw(fh);
+      total_chars++;
+      if (total_chars >= info.num_iterations) break;
+    } while (c != EOF);
+    REQUIRE(total_chars == info.num_iterations);
+    int status = fclose(fh);
+    REQUIRE(status == 0);
+  }
+  posttest(false);
 }
 
 TEST_CASE("fgets", "[process=" + std::to_string(info.comm_size) +
@@ -315,15 +338,14 @@ TEST_CASE("fgets", "[process=" + std::to_string(info.comm_size) +
     int status = fclose(fh);
     REQUIRE(status == 0);
   }
-  posttest();
+  posttest(false);
 }
 
-TEST_CASE("fputc",
-          "[process=" + std::to_string(info.comm_size) +
-              "]"
-              "[operation=batched_fputc]"
-              "[repetition=" + std::to_string(info.num_iterations) +
-              "][file=1]") {
+TEST_CASE("fputc", "[process=" + std::to_string(info.comm_size) +
+                       "]"
+                       "[operation=batched_fputc]"
+                       "[repetition=" +
+                       std::to_string(info.num_iterations) + "][file=1]") {
   pretest();
   SECTION("iterate and get all characters") {
     FILE* fh = fopen(info.new_file.c_str(), "w+");
@@ -337,7 +359,7 @@ TEST_CASE("fputc",
     int status = fclose(fh);
     REQUIRE(status == 0);
   }
-  posttest();
+  posttest(false);
 }
 
 TEST_CASE("putc", "[process=" + std::to_string(info.comm_size) +
@@ -358,7 +380,27 @@ TEST_CASE("putc", "[process=" + std::to_string(info.comm_size) +
     int status = fclose(fh);
     REQUIRE(status == 0);
   }
-  posttest();
+  posttest(false);
+}
+TEST_CASE("putw", "[process=" + std::to_string(info.comm_size) +
+                      "]"
+                      "[operation=batched_putw]"
+                      "[repetition=" +
+                      std::to_string(info.num_iterations) + "][file=1]") {
+  pretest();
+  SECTION("iterate and get all characters") {
+    FILE* fh = fopen(info.new_file.c_str(), "w+");
+    REQUIRE(fh != nullptr);
+    size_t total_chars = info.num_iterations;
+    int c = 'w';
+    for (size_t i = 0; i < total_chars; ++i) {
+      int ret = putw(c, fh);
+      REQUIRE(ret == 0);
+    }
+    int status = fclose(fh);
+    REQUIRE(status == 0);
+  }
+  posttest(false);
 }
 
 TEST_CASE("fputs", "[process=" + std::to_string(info.comm_size) +
@@ -374,7 +416,7 @@ TEST_CASE("fputs", "[process=" + std::to_string(info.comm_size) +
     status = fclose(fh);
     REQUIRE(status == 0);
   }
-  posttest();
+  posttest(false);
 }
 
 TEST_CASE("fseek", "[process=" + std::to_string(info.comm_size) +
@@ -408,7 +450,7 @@ TEST_CASE("fseek", "[process=" + std::to_string(info.comm_size) +
     status = fclose(fh);
     REQUIRE(status == 0);
   }
-  posttest();
+  posttest(false);
 }
 
 TEST_CASE("fseeko", "[process=" + std::to_string(info.comm_size) +
@@ -442,7 +484,41 @@ TEST_CASE("fseeko", "[process=" + std::to_string(info.comm_size) +
     status = fclose(fh);
     REQUIRE(status == 0);
   }
-  posttest();
+  posttest(false);
+}
+
+TEST_CASE("fseeko64", "[process=" + std::to_string(info.comm_size) +
+                          "]"
+                          "[operation=single_fseeko64]"
+                          "[repetition=1][file=1]") {
+  pretest();
+  SECTION("test all seek modes") {
+    FILE* fh = fopen(info.existing_file.c_str(), "r");
+    REQUIRE(fh != nullptr);
+    int status = fseeko64(fh, 0, SEEK_SET);
+    REQUIRE(status == 0);
+    size_t offset = ftell(fh);
+    REQUIRE(offset == 0);
+
+    status = fseeko64(fh, 0, SEEK_CUR);
+    REQUIRE(status == 0);
+    offset = ftell(fh);
+    REQUIRE(offset == 0);
+
+    status = fseeko64(fh, 0, SEEK_END);
+    REQUIRE(status == 0);
+    offset = ftell(fh);
+    REQUIRE(offset == info.total_size);
+
+    status = fseeko64(fh, 0, SEEK_CUR);
+    REQUIRE(status == 0);
+    offset = ftell(fh);
+    REQUIRE(offset == info.total_size);
+
+    status = fclose(fh);
+    REQUIRE(status == 0);
+  }
+  posttest(false);
 }
 
 TEST_CASE("rewind", "[process=" + std::to_string(info.comm_size) +
@@ -472,7 +548,7 @@ TEST_CASE("rewind", "[process=" + std::to_string(info.comm_size) +
     status = fclose(fh);
     REQUIRE(status == 0);
   }
-  posttest();
+  posttest(false);
 }
 
 TEST_CASE("fsetpos", "[process=" + std::to_string(info.comm_size) +
@@ -501,7 +577,36 @@ TEST_CASE("fsetpos", "[process=" + std::to_string(info.comm_size) +
     status = fclose(fh);
     REQUIRE(status == 0);
   }
-  posttest();
+  posttest(false);
+}
+
+TEST_CASE("fsetpos64", "[process=" + std::to_string(info.comm_size) +
+                           "]"
+                           "[operation=single_fsetpos64]"
+                           "[repetition=1][file=1]") {
+  pretest();
+  SECTION("test all seek modes") {
+    FILE* fh = fopen(info.existing_file.c_str(), "r");
+    REQUIRE(fh != nullptr);
+    fpos64_t position;
+    fgetpos64(fh, &position);
+
+    position.__pos = 0;
+    int status = fsetpos64(fh, &position);
+    REQUIRE(status == 0);
+    size_t offset = ftell(fh);
+    REQUIRE(offset == 0);
+
+    position.__pos = info.total_size;
+    status = fsetpos64(fh, &position);
+    REQUIRE(status == 0);
+    offset = ftell(fh);
+    REQUIRE(offset == info.total_size);
+
+    status = fclose(fh);
+    REQUIRE(status == 0);
+  }
+  posttest(false);
 }
 
 TEST_CASE("fgetpos", "[process=" + std::to_string(info.comm_size) +
@@ -527,5 +632,140 @@ TEST_CASE("fgetpos", "[process=" + std::to_string(info.comm_size) +
     status = fclose(fh);
     REQUIRE(status == 0);
   }
-  posttest();
+  posttest(false);
+}
+
+TEST_CASE("fgetpos64", "[process=" + std::to_string(info.comm_size) +
+                           "]"
+                           "[operation=single_fgetpos64]"
+                           "[repetition=1][file=1]") {
+  pretest();
+  SECTION("test all seek modes") {
+    FILE* fh = fopen(info.existing_file.c_str(), "r");
+    REQUIRE(fh != nullptr);
+    fpos64_t position;
+
+    int status = fseek(fh, 0, SEEK_SET);
+    REQUIRE(status == 0);
+    status = fgetpos64(fh, &position);
+    REQUIRE(position.__pos == 0);
+
+    status = fseek(fh, 0, SEEK_END);
+    REQUIRE(status == 0);
+    status = fgetpos64(fh, &position);
+    REQUIRE(position.__pos == (long int)info.total_size);
+
+    status = fclose(fh);
+    REQUIRE(status == 0);
+  }
+  posttest(false);
+}
+
+TEST_CASE("Open64", "[process=" + std::to_string(info.comm_size) +
+                        "]"
+                        "[operation=single_open]"
+                        "[repetition=1][file=1]") {
+  pretest();
+  SECTION("open non-existant file") {
+    FILE* fh = fopen64(info.new_file.c_str(), "r");
+    REQUIRE(fh == nullptr);
+    fh = fopen64(info.new_file.c_str(), "r+");
+    REQUIRE(fh == nullptr);
+  }
+
+  SECTION("truncate existing file and write-only") {
+    FILE* fh = fopen64(info.existing_file.c_str(), "w");
+    REQUIRE(fh != nullptr);
+    int status = fclose(fh);
+    REQUIRE(status == 0);
+  }
+  SECTION("truncate existing file and read/write") {
+    FILE* fh = fopen64(info.existing_file.c_str(), "w+");
+    REQUIRE(fh != nullptr);
+    int status = fclose(fh);
+    REQUIRE(status == 0);
+  }
+
+  SECTION("open existing file") {
+    FILE* fh = fopen64(info.existing_file.c_str(), "r+");
+    REQUIRE(fh != nullptr);
+    int status = fclose(fh);
+    REQUIRE(status == 0);
+    fh = fopen64(info.existing_file.c_str(), "r");
+    REQUIRE(fh != nullptr);
+    status = fclose(fh);
+    REQUIRE(status == 0);
+  }
+
+  SECTION("append write existing file") {
+    FILE* fh = fopen64(info.existing_file.c_str(), "a");
+    REQUIRE(fh != nullptr);
+    int status = fclose(fh);
+    REQUIRE(status == 0);
+  }
+
+  SECTION("append write and read existing file") {
+    FILE* fh = fopen64(info.existing_file.c_str(), "a+");
+    REQUIRE(fh != nullptr);
+    int status = fclose(fh);
+    REQUIRE(status == 0);
+  }
+  posttest(false);
+}
+
+TEST_CASE("Freopen64", "[process=" + std::to_string(info.comm_size) +
+                           "]"
+                           "[operation=single_freopen]"
+                           "[repetition=1][file=1]") {
+  pretest();
+  SECTION("change different modes") {
+    FILE* fhr = fopen(info.existing_file.c_str(), "r");
+    REQUIRE(fhr != nullptr);
+
+    FILE* fhw = freopen64(info.existing_file.c_str(), "w", fhr);
+    REQUIRE(fhw != nullptr);
+    size_t write_size =
+        fwrite(info.write_data.c_str(), sizeof(char), args.request_size, fhw);
+    REQUIRE(write_size == args.request_size);
+
+    FILE* fhwp = freopen64(info.existing_file.c_str(), "w+", fhw);
+    REQUIRE(fhwp != nullptr);
+    write_size =
+        fwrite(info.write_data.c_str(), sizeof(char), args.request_size, fhwp);
+    REQUIRE(write_size == args.request_size);
+
+    FILE* fha = freopen64(info.existing_file.c_str(), "a", fhwp);
+    REQUIRE(fha != nullptr);
+    write_size =
+        fwrite(info.write_data.c_str(), sizeof(char), args.request_size, fhwp);
+    REQUIRE(write_size == args.request_size);
+
+    FILE* fhap = freopen64(info.existing_file.c_str(), "a+", fha);
+    REQUIRE(fhap != nullptr);
+    write_size =
+        fwrite(info.write_data.c_str(), sizeof(char), args.request_size, fhap);
+    REQUIRE(write_size == args.request_size);
+
+    int status = fclose(fhap);
+    REQUIRE(status == 0);
+  }
+  posttest(false);
+}
+
+TEST_CASE("MultiOpen", "[process=" + std::to_string(info.comm_size) +
+                           "]"
+                           "[operation=multi_open]"
+                           "[repetition=1][file=1]") {
+  pretest();
+  SECTION("Open same file twice and then close both fps") {
+    FILE* fh1 = fopen(info.existing_file.c_str(), "r");
+    REQUIRE(fh1 != nullptr);
+    FILE* fh2 = fopen(info.existing_file.c_str(), "r");
+    REQUIRE(fh2 != nullptr);
+    int status = fclose(fh1);
+    REQUIRE(status == 0);
+    status = fclose(fh2);
+    REQUIRE(status == 0);
+  }
+  posttest(false);
 }
