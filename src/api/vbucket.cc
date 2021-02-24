@@ -86,7 +86,7 @@ Status VBucket::Unlink(std::string blob_name, std::string bucket_name,
   return ret;
 }
 
-bool VBucket::Contain_blob(std::string blob_name, std::string &bucket_name) {
+bool VBucket::Contain_blob(std::string blob_name, std::string bucket_name) {
   bool ret = false;
   std::string bk_tmp, blob_tmp;
 

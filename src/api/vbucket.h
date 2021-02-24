@@ -72,7 +72,7 @@ class VBucket {
   Status Unlink(std::string blob_name, std::string bucket_name, Context &ctx);
 
   /** check if blob is in this vbucket */
-  bool Contain_blob(std::string blob_name, std::string &bucket_name);
+  bool Contain_blob(std::string blob_name, std::string bucket_name);
 
   /** get a blob linked to this vbucket */
   Blob &GetBlob(std::string blob_name, std::string bucket_name);
