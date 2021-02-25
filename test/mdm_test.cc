@@ -56,14 +56,14 @@ static void TestLocalGetNextFreeBucketId(HermesPtr hermes) {
   }
 
   std::string fail_name = "this_should_fail";
-  bool threw_length_error = false;
+  bool threw_runtime_error = false;
   try {
     hapi::Bucket bucket(fail_name, hermes, ctx);
   }
-  catch (const std::length_error& e) {
-      threw_length_error = true;
+  catch (const std::runtime_error& e) {
+      threw_runtime_error = true;
   }
-  Assert(threw_length_error);
+  Assert(threw_runtime_error);
 
   for (u32 i = 0; i < mdm->max_buckets; ++i) {
     std::string name = "bucket" + std::to_string(i);

@@ -158,82 +158,70 @@ void TestPutOverwrite(std::shared_ptr<hapi::Hermes> hermes) {
 }
 
 int main(int argc, char **argv) {
-  try {
-    int mpi_threads_provided;
-    MPI_Init_thread(NULL, NULL, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
-    if (mpi_threads_provided < MPI_THREAD_MULTIPLE) {
-      fprintf(stderr, R"(Didn't receive appropriate MPI threading \
-              specification\n)");
-      return 1;
-    }
+  int mpi_threads_provided;
+  MPI_Init_thread(NULL, NULL, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
+  if (mpi_threads_provided < MPI_THREAD_MULTIPLE) {
+    fprintf(stderr, "Didn't receive appropriate MPI threading specification\n");
+    return 1;
+  }
 
-    char *config_file = 0;
-    if (argc == 2) {
-      config_file = argv[1];
-    }
+  char *config_file = 0;
+  if (argc == 2) {
+    config_file = argv[1];
+  }
 
-    hermes_app = hermes::api::InitHermes(config_file);
+  hermes_app = hermes::api::InitHermes(config_file);
 
-    if (hermes_app->IsApplicationCore()) {
-      hermes::api::Context ctx;
+  if (hermes_app->IsApplicationCore()) {
+    hermes::api::Context ctx;
 
-      hermes::api::Bucket my_bucket("compression", hermes_app, ctx);
-      hermes_app->Display_bucket();
-      hermes::api::Blob p1(1024*1024*400, 255);
-      hermes::api::Blob p2(p1);
-      my_bucket.Put("Blob1", p1, ctx);
-      my_bucket.Put("Blob2", p2, ctx);
+    hermes::api::Bucket my_bucket("compression", hermes_app, ctx);
+    hermes_app->Display_bucket();
+    hermes::api::Blob p1(1024*1024*400, 255);
+    hermes::api::Blob p2(p1);
+    my_bucket.Put("Blob1", p1, ctx);
+    my_bucket.Put("Blob2", p2, ctx);
 
-      if (my_bucket.ContainsBlob("Blob1"))
-        std::cout<< "Found Blob1\n";
-      else
-        std::cout<< "Not found Blob1\n";
-      if (my_bucket.ContainsBlob("Blob2"))
-        std::cout<< "Found Blob2\n";
-      else
-        std::cout<< "Not found Blob2\n";
+    if (my_bucket.ContainsBlob("Blob1"))
+      std::cout<< "Found Blob1\n";
+    else
+      std::cout<< "Not found Blob1\n";
+    if (my_bucket.ContainsBlob("Blob2"))
+      std::cout<< "Found Blob2\n";
+    else
+      std::cout<< "Not found Blob2\n";
 
-      hermes::api::VBucket my_vb("VB1", hermes_app, false, ctx);
-      hermes_app->Display_vbucket();
-      my_vb.Link("Blob1", "compression", ctx);
-      my_vb.Link("Blob2", "compression", ctx);
-      if (my_vb.Contain_blob("Blob1", "compression") == 1)
-        std::cout << "Found Blob1 from compression bucket in VBucket VB1\n";
-      else
-        std::cout << "Not found Blob1 from compression bucket in VBucket VB1\n";
-      if (my_vb.Contain_blob("Blob2", "compression") == 1)
-        std::cout << "Found Blob2 from compression bucket in VBucket VB1\n";
-      else
-        std::cout << "Not found Blob2 from compression bucket in VBucket VB1\n";
+    hermes::api::VBucket my_vb("VB1", hermes_app, false, ctx);
+    hermes_app->Display_vbucket();
+    my_vb.Link("Blob1", "compression", ctx);
+    my_vb.Link("Blob2", "compression", ctx);
+    if (my_vb.Contain_blob("Blob1", "compression") == 1)
+      std::cout << "Found Blob1 from compression bucket in VBucket VB1\n";
+    else
+      std::cout << "Not found Blob1 from compression bucket in VBucket VB1\n";
+    if (my_vb.Contain_blob("Blob2", "compression") == 1)
+      std::cout << "Found Blob2 from compression bucket in VBucket VB1\n";
+    else
+      std::cout << "Not found Blob2 from compression bucket in VBucket VB1\n";
 
-      // compression level
-      MyTrait trait;
-      trait.compress_level = 6;
-      my_vb.Attach(&trait, ctx);  // compress action to data starts
+    // compression level
+    MyTrait trait;
+    trait.compress_level = 6;
+    my_vb.Attach(&trait, ctx);  // compress action to data starts
 
-      TestBucketPersist(hermes_app);
-      TestPutOverwrite(hermes_app);
+    TestBucketPersist(hermes_app);
+    TestPutOverwrite(hermes_app);
 
     ///////
-      my_vb.Unlink("Blob1", "VB1", ctx);
-      my_vb.Detach(&trait, ctx);
-    } else {
-      // Hermes core. No user code here.
-    }
+    my_vb.Unlink("Blob1", "VB1", ctx);
+    my_vb.Detach(&trait, ctx);
+  } else {
+    // Hermes core. No user code here.
+  }
 
-    hermes_app->Finalize();
+  hermes_app->Finalize();
 
-    MPI_Finalize();
-  }
-  catch (const std::runtime_error& e) {
-    std::cout << "Standard exception: " << e.what() << std::endl;
-  }
-  catch (const std::length_error& e) {
-    std::cout << "Standard exception: " << e.what() << std::endl;
-  }
-  catch ( ... ) {
-    std::cout << "Catch exception\n";
-  }
+  MPI_Finalize();
 
   return 0;
 }
