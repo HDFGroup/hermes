@@ -72,10 +72,11 @@ std::string gen_random(const int len) {
 int init(int* argc, char*** argv) {
   fs::path fullpath = args.directory;
   fullpath /= args.filename;
-  info.new_file = fullpath.string() + "_new";
-  info.existing_file = fullpath.string() + "_ext";
-  info.new_file_cmp = fullpath.string() + "_new_cmp";
-  info.existing_file_cmp = fullpath.string() + "_ext_cmp";
+  info.new_file = fullpath.string() + "_new" + std::to_string(getpid());
+  info.existing_file = fullpath.string() + "_ext" + std::to_string(getpid());
+  info.new_file_cmp = fullpath.string() + "_new_cmp" + std::to_string(getpid());
+  info.existing_file_cmp =
+      fullpath.string() + "_ext_cmp" + std::to_string(getpid());
   char* set_path = getenv("SET_PATH");
   if (set_path && strcmp(set_path, "1") == 0) {
     auto paths = info.new_file + "," + info.existing_file;

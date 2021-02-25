@@ -20,7 +20,7 @@ RUN DEBIAN_FRONTEND="noninteractive" apt-get install -y --no-install-recommends 
     git \
     build-essential \
     python \
-    vim \
+    vi \
     sudo \
     unzip \
     cmake \
