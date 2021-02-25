@@ -29,6 +29,8 @@
 
 namespace hermes {
 
+using hermes::api::Status;
+
 std::vector<int> GetValidSplitChoices(size_t blob_size) {
   int split_option = 10;
   // Split the blob if size is greater than 64KB

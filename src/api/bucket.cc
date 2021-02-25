@@ -30,7 +30,8 @@ Bucket::Bucket(const std::string &initial_name,
 
   if (IsBucketNameTooLong(name_)) {
     id_.as_int = 0;
-    throw std::length_error("Bucket name is too long (max length 256).");
+    throw std::length_error("Bucket name is too long: " +
+                            std::to_string(kMaxBucketNameSize));
   } else {
     id_ = GetOrCreateBucketId(&hermes_->context_, &hermes_->rpc_, name_);
     if (!Bucket::IsValid()) {

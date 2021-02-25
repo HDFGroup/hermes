@@ -302,82 +302,70 @@ int main(int argc, char **argv) {
     }
   }
 
-  try {
-    int mpi_threads_provided;
-    MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
-    if (mpi_threads_provided < MPI_THREAD_MULTIPLE) {
-      fprintf(stderr, R"(Didn't receive appropriate MPI threading \
-              specification\n)");
-      return 1;
-    }
-
-    std::shared_ptr<hapi::Hermes> hermes =
-                                  hermes::InitHermesClient(config_file);
-    int app_rank = hermes->GetProcessRank();
-    int app_size = hermes->GetNumProcesses();
-    SharedMemoryContext *context = &hermes->context_;
-    RpcContext *rpc = &hermes->rpc_;
-
-    if (test_get_release) {
-      TimingResult timing = {};
-
-      if (use_rpc) {
-        timing = TestGetBuffersRpc(rpc, iters);
-      } else {
-        timing = TestGetBuffers(context, iters);
-      }
-
-      int total_iters = iters * app_size;
-      double total_get_seconds = 0;
-      double total_release_seconds = 0;
-      MPI_Reduce(&timing.get_buffers_time, &total_get_seconds, 1, MPI_DOUBLE,
-                 MPI_SUM, 0, MPI_COMM_WORLD);
-      MPI_Reduce(&timing.release_buffers_time, &total_release_seconds, 1,
-                 MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-
-      if (app_rank == 0) {
-        double avg_get_seconds = total_get_seconds / app_size;
-        double avg_release_seconds = total_release_seconds / app_size;
-        double gets_per_second = total_iters / avg_get_seconds;
-        double releases_per_second = total_iters / avg_release_seconds;
-        printf("%f %f ", gets_per_second, releases_per_second);
-      }
-    }
-
-    if (test_split) {
-      assert(app_size == 1);
-      double seconds_for_split = TestSplitBuffers(context, rpc, slab_index,
-                                                  use_rpc);
-      printf("%f\n", seconds_for_split);
-    }
-    if (test_merge) {
-      assert(app_size == 1);
-      double seconds_for_merge = TestMergeBuffers(context, rpc, slab_index,
-                                                  use_rpc);
-      printf("%f\n", seconds_for_merge);
-    }
-    if (test_file_buffering) {
-      Assert(test_file);
-      TestFileBuffering(hermes, app_rank, test_file);
-    }
-
-    if (app_rank == 0 && kill_server) {
-      hermes::RpcCall<void>(rpc, rpc->node_id, "RemoteFinalize");
-    }
-
-    hermes->Finalize();
-
-    MPI_Finalize();
+  int mpi_threads_provided;
+  MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
+  if (mpi_threads_provided < MPI_THREAD_MULTIPLE) {
+    fprintf(stderr, "Didn't receive appropriate MPI threading specification\n");
+    return 1;
   }
-  catch (const std::runtime_error& e) {
-    std::cout << "Standard exception: " << e.what() << std::endl;
+
+  std::shared_ptr<hapi::Hermes> hermes =
+                                hermes::InitHermesClient(config_file);
+  int app_rank = hermes->GetProcessRank();
+  int app_size = hermes->GetNumProcesses();
+  SharedMemoryContext *context = &hermes->context_;
+  RpcContext *rpc = &hermes->rpc_;
+
+  if (test_get_release) {
+    TimingResult timing = {};
+
+    if (use_rpc) {
+      timing = TestGetBuffersRpc(rpc, iters);
+    } else {
+      timing = TestGetBuffers(context, iters);
+    }
+
+    int total_iters = iters * app_size;
+    double total_get_seconds = 0;
+    double total_release_seconds = 0;
+    MPI_Reduce(&timing.get_buffers_time, &total_get_seconds, 1, MPI_DOUBLE,
+               MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&timing.release_buffers_time, &total_release_seconds, 1,
+               MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+
+    if (app_rank == 0) {
+      double avg_get_seconds = total_get_seconds / app_size;
+      double avg_release_seconds = total_release_seconds / app_size;
+      double gets_per_second = total_iters / avg_get_seconds;
+      double releases_per_second = total_iters / avg_release_seconds;
+      printf("%f %f ", gets_per_second, releases_per_second);
+    }
   }
-  catch (const std::length_error& e) {
-    std::cout << "Standard exception: " << e.what() << std::endl;
+
+  if (test_split) {
+    assert(app_size == 1);
+    double seconds_for_split = TestSplitBuffers(context, rpc, slab_index,
+                                                use_rpc);
+    printf("%f\n", seconds_for_split);
   }
-  catch ( ... ) {
-    std::cout << "Catch exception\n";
+  if (test_merge) {
+    assert(app_size == 1);
+    double seconds_for_merge = TestMergeBuffers(context, rpc, slab_index,
+                                                use_rpc);
+    printf("%f\n", seconds_for_merge);
   }
+  if (test_file_buffering) {
+    Assert(test_file);
+    TestFileBuffering(hermes, app_rank, test_file);
+  }
+
+  if (app_rank == 0 && kill_server) {
+    hermes::RpcCall<void>(rpc, rpc->node_id, "RemoteFinalize");
+  }
+
+  hermes->Finalize();
+
+  MPI_Finalize();
 
   return 0;
 }

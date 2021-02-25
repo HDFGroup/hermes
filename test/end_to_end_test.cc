@@ -80,68 +80,56 @@ void TestBulkTransfer(std::shared_ptr<hapi::Hermes> hermes, int app_rank) {
 }
 
 int main(int argc, char **argv) {
-  try {
-    int mpi_threads_provided;
-    MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
-    if (mpi_threads_provided < MPI_THREAD_MULTIPLE) {
-      fprintf(stderr, R"(Didn't receive appropriate MPI threading \
-              specification\n)");
-      return 1;
+  int mpi_threads_provided;
+  MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
+  if (mpi_threads_provided < MPI_THREAD_MULTIPLE) {
+    fprintf(stderr, "Didn't receive appropriate MPI threading specification\n");
+    return 1;
+  }
+
+  char *config_file = 0;
+  if (argc == 2) {
+    config_file = argv[1];
+  }
+
+  std::shared_ptr<hapi::Hermes> hermes = hapi::InitHermes(config_file);
+
+  if (hermes->IsApplicationCore()) {
+    int app_rank = hermes->GetProcessRank();
+    int app_size = hermes->GetNumProcesses();
+
+    hapi::Context ctx;
+
+    // Each rank puts and gets its portion of a blob to a shared bucket
+    hapi::Bucket shared_bucket(std::string("test_bucket"), hermes, ctx);
+    TestPutGetBucket(shared_bucket, app_rank, app_size);
+
+    if (app_rank != 0) {
+      shared_bucket.Close(ctx);
     }
 
-    char *config_file = 0;
-    if (argc == 2) {
-      config_file = argv[1];
+    hermes->AppBarrier();
+
+    if (app_rank == 0) {
+      shared_bucket.Destroy(ctx);
     }
 
-    std::shared_ptr<hapi::Hermes> hermes = hapi::InitHermes(config_file);
+    hermes->AppBarrier();
 
-    if (hermes->IsApplicationCore()) {
-      int app_rank = hermes->GetProcessRank();
-      int app_size = hermes->GetNumProcesses();
+    // Each rank puts a whole blob to its own bucket
+    hapi::Bucket own_bucket(std::string("test_bucket_") +
+                            std::to_string(app_rank), hermes, ctx);
+    TestPutGetBucket(own_bucket, app_rank, 0);
+    own_bucket.Destroy(ctx);
 
-      hapi::Context ctx;
-
-      // Each rank puts and gets its portion of a blob to a shared bucket
-      hapi::Bucket shared_bucket(std::string("test_bucket"), hermes, ctx);
-      TestPutGetBucket(shared_bucket, app_rank, app_size);
-
-      if (app_rank != 0) {
-        shared_bucket.Close(ctx);
-      }
-
-      hermes->AppBarrier();
-
-      if (app_rank == 0) {
-        shared_bucket.Destroy(ctx);
-      }
-
-      hermes->AppBarrier();
-
-      // Each rank puts a whole blob to its own bucket
-      hapi::Bucket own_bucket(std::string("test_bucket_") +
-                              std::to_string(app_rank), hermes, ctx);
-      TestPutGetBucket(own_bucket, app_rank, 0);
-      own_bucket.Destroy(ctx);
-
-      TestBulkTransfer(hermes, app_rank);
-    } else {
-      // Hermes core. No user code here.
-    }
-
-    hermes->Finalize();
-
-    MPI_Finalize();
+    TestBulkTransfer(hermes, app_rank);
+  } else {
+    // Hermes core. No user code here.
   }
-  catch (const std::runtime_error& e) {
-    std::cout << "Standard exception: " << e.what() << std::endl;
-  }
-  catch (const std::length_error& e) {
-    std::cout << "Standard exception: " << e.what() << std::endl;
-  }
-  catch ( ... ) {
-    std::cout << "Catch exception\n";
-  }
+
+  hermes->Finalize();
+
+  MPI_Finalize();
 
   return 0;
 }

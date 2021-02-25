@@ -165,7 +165,7 @@ int main(int argc, char **argv) {
   assert(placed_size == total_placed_size);
 
   // Aggregate placement schemas from the same target
-  if (!result.Succeeded()) {
+  if (result.Succeeded()) {
     for (auto it = output_tmp.begin(); it != output_tmp.end(); ++it) {
       PlacementSchema schema = AggregateBlobSchema((*it));
       assert(schema.size() > 0);

@@ -43,21 +43,23 @@ namespace hermes {
 #define RETURN_ENUM(ID, NAME, TEXT) NAME = ID,
 #define RETURN_TEXT(ID, NAME, TEXT) case ID: return TEXT;
 
-typedef enum {
+enum StatusCode {
     RETURN_CODES(RETURN_ENUM)
-} FuncStatus;
+};
+
+namespace api {
 
 class Status {
  public:
   /** Create an object representing success status. */
-  explicit Status(FuncStatus ret_code = HERMES_SUCCESS) : status_(ret_code) {}
+  explicit Status(StatusCode ret_code = HERMES_SUCCESS) : status_(ret_code) {}
 
   /** Returns true if the call did exactly what the user expected */
   bool Succeeded() const {
     return (status_ == HERMES_SUCCESS);
   }
 
-  /** Returns true if the call was success with ccateat. */
+  /** Returns true if the call was success with cateat. */
   bool Acceptable() const {
     return (status_ > HERMES_SUCCESS && status_ < HERMES_OK_MAX);
   }
@@ -67,15 +69,15 @@ class Status {
     return (status_ < HERMES_SUCCESS && status_ > HERMES_ERROR_MAX);
   }
 
-  bool operator == (FuncStatus code) {
+  bool operator == (StatusCode code) {
     return (status_ == code);
   }
 
-  void operator = (FuncStatus code) {
+  void operator = (StatusCode code) {
     status_ = code;
   }
 
-  FuncStatus GetStatus() const {return status_;}
+  StatusCode GetStatus() const {return status_;}
 
   /** Returns  message */
   std::string Msg() const {
@@ -87,8 +89,10 @@ class Status {
   }
 
  private:
-  FuncStatus status_;
+  StatusCode status_;
 };
+
+}  // namespace api
 
 }  // namespace hermes
 #endif  // HERMES_STATUS_H_

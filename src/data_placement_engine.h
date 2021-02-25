@@ -21,6 +21,8 @@
 
 namespace hermes {
 
+using api::Status;
+
 class DataPlacementEngine {
   static inline size_t count_device_ {};
 

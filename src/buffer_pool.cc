@@ -1612,11 +1612,11 @@ size_t ReadFromSwap(SharedMemoryContext *context, Blob blob,
   return swap_blob.size;
 }
 
-Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
+api::Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
                  PlacementSchema &schema, Blob blob, const std::string &name,
                  BucketID bucket_id, int retries,
                  bool called_from_buffer_organizer) {
-  Status result;
+  api::Status result;
 
   if (ContainsBlob(context, rpc, bucket_id, name)) {
     // TODO(chogan) @optimization If the existing buffers are already large
@@ -1654,11 +1654,11 @@ Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
   return result;
 }
 
-Status StdIoPersistBucket(SharedMemoryContext *context, RpcContext *rpc,
+api::Status StdIoPersistBucket(SharedMemoryContext *context, RpcContext *rpc,
                           Arena *arena, BucketID bucket_id,
                           const std::string &file_name,
                           const std::string &open_mode) {
-  Status result;
+  api::Status result;
   FILE *file = fopen(file_name.c_str(), open_mode.c_str());
 
   if (file) {
@@ -1703,10 +1703,10 @@ Status StdIoPersistBucket(SharedMemoryContext *context, RpcContext *rpc,
   return result;
 }
 
-Status StdIoPersistBlob(SharedMemoryContext *context, RpcContext *rpc,
+api::Status StdIoPersistBlob(SharedMemoryContext *context, RpcContext *rpc,
                              Arena *arena, BlobID blob_id,
                              FILE *file , const i32 &offset) {
-  Status result;
+  api::Status result;
 
   if (file) {
     ScopedTemporaryMemory scratch(arena);

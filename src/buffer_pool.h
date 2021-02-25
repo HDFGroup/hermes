@@ -484,16 +484,16 @@ u32 GetBufferSize(SharedMemoryContext *context, RpcContext *rpc, BufferID id);
 bool BufferIsByteAddressable(SharedMemoryContext *context, BufferID id);
 int PlaceInHierarchy(SharedMemoryContext *context, RpcContext *rpc,
                      SwapBlob swap_blob, const std::string &blob_name);
-Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
+api::Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
                       PlacementSchema &schema, Blob blob,
                       const std::string &name, BucketID bucket_id, int retries,
                       bool called_from_buffer_organizer = false);
-Status StdIoPersistBucket(SharedMemoryContext *context, RpcContext *rpc,
+api::Status StdIoPersistBucket(SharedMemoryContext *context, RpcContext *rpc,
                                Arena *arena, BucketID bucket_id,
                                const std::string &file_name,
                                const std::string &open_mode);
 
-Status StdIoPersistBlob(SharedMemoryContext *context, RpcContext *rpc,
+api::Status StdIoPersistBlob(SharedMemoryContext *context, RpcContext *rpc,
                              Arena *arena, BlobID blob_id,
                              FILE* file, const i32 &offset);
 
