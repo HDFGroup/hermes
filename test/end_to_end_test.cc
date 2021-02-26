@@ -102,7 +102,6 @@ int main(int argc, char **argv) {
 
     // Each rank puts and gets its portion of a blob to a shared bucket
     hapi::Bucket shared_bucket(std::string("test_bucket"), hermes, ctx);
-
     TestPutGetBucket(shared_bucket, app_rank, app_size);
 
     if (app_rank != 0) {

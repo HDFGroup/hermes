@@ -296,6 +296,16 @@ void DecrementRefcount(SharedMemoryContext *context, RpcContext *rpc,
  */
 bool IsNullBlobId(BlobID id);
 
+/**
+ *
+ */
+void BeginGlobalTicketMutex(RpcContext *rpc);
+
+/**
+ *
+ */
+void EndGlobalTicketMutex(RpcContext *rpc);
+
 }  // namespace hermes
 
 #endif  // HERMES_METADATA_MANAGEMENT_H_

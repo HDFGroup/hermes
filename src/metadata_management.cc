@@ -24,6 +24,8 @@
 
 namespace hermes {
 
+const u32 kGlobalMutexNode = 1;
+
 bool IsNameTooLong(const std::string &name, size_t max) {
   bool result = false;
   if (name.size() + 1 >= max) {
@@ -275,6 +277,7 @@ BucketID GetOrCreateBucketId(SharedMemoryContext *context, RpcContext *rpc,
                              const std::string &name) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
 
+  BeginGlobalTicketMutex(rpc);
   BeginTicketMutex(&mdm->bucket_mutex);
   BucketID result = GetBucketIdByName(context, rpc, name.c_str());
 
@@ -286,6 +289,7 @@ BucketID GetOrCreateBucketId(SharedMemoryContext *context, RpcContext *rpc,
     result = GetNextFreeBucketId(context, rpc, name);
   }
   EndTicketMutex(&mdm->bucket_mutex);
+  EndGlobalTicketMutex(rpc);
 
   return result;
 }
@@ -614,10 +618,8 @@ void LocalRenameBucket(SharedMemoryContext *context, RpcContext *rpc,
                        BucketID id, const std::string &old_name,
                        const std::string &new_name) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
-  BeginTicketMutex(&mdm->bucket_mutex);
   DeleteId(mdm, rpc, old_name, kMapType_Bucket);
   PutBucketId(mdm, rpc, new_name, id);
-  EndTicketMutex(&mdm->bucket_mutex);
 }
 
 void RenameBucket(SharedMemoryContext *context, RpcContext *rpc, BucketID id,
@@ -1053,4 +1055,13 @@ std::vector<TargetID> GetNeighborhoodTargets(SharedMemoryContext *context,
   return result;
 }
 
+void BeginGlobalTicketMutex(RpcContext *rpc) {
+  [[maybe_unused]]
+  bool result = RpcCall<bool>(rpc, kGlobalMutexNode, "BeginGlobalTicketMutex");
+}
+
+void EndGlobalTicketMutex(RpcContext *rpc) {
+  [[maybe_unused]]
+  bool result = RpcCall<bool>(rpc, kGlobalMutexNode, "EndGlobalTicketMutex");
+}
 }  // namespace hermes

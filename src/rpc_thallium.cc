@@ -347,6 +347,24 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
       state->engine->finalize();
     };
 
+  // TEMP(chogan): Only one node needs this
+  auto rpc_begin_global_ticket_mutex = [context, rpc](const tl::request &req) {
+    ThalliumState *state = GetThalliumState(rpc);
+    BeginTicketMutex(&state->global_mutex);
+
+    req.respond(true);
+  };
+
+  auto rpc_end_global_ticket_mutex = [context, rpc](const tl::request &req) {
+    ThalliumState *state = GetThalliumState(rpc);
+    EndTicketMutex(&state->global_mutex);
+
+    req.respond(true);
+  };
+  rpc_server->define("BeginGlobalTicketMutex", rpc_begin_global_ticket_mutex);
+  rpc_server->define("EndGlobalTicketMutex", rpc_end_global_ticket_mutex);
+  //
+
   // TODO(chogan): Currently these three are only used for testing.
   rpc_server->define("GetBuffers", rpc_get_buffers);
   rpc_server->define("SplitBuffers", rpc_split_buffers).disable_response();
