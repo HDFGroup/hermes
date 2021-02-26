@@ -48,11 +48,7 @@ RUN adduser --disabled-password --gecos "" --uid ${USER_ID} --gid ${GROUP_ID} ${
 ENV SSHDIR ${HOME}/.ssh/
 
 RUN mkdir -p ${SSHDIR}
-
-ADD config ${SSHDIR}/config
-# ADD ssh/id_rsa.mpi ${SSHDIR}/id_rsa
-# ADD ssh/id_rsa.mpi.pub ${SSHDIR}/id_rsa.pub
-# ADD ssh/id_rsa.mpi.pub ${SSHDIR}/authorized_keys
+RUN echo "StrictHostKeyChecking no" > ${SSHDIR}/config
 
 RUN chmod -R 600 ${SSHDIR}* && \
     chown -R ${USER}:${USER} ${SSHDIR}

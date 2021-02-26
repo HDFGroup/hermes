@@ -614,8 +614,10 @@ void LocalRenameBucket(SharedMemoryContext *context, RpcContext *rpc,
                        BucketID id, const std::string &old_name,
                        const std::string &new_name) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  BeginTicketMutex(&mdm->bucket_mutex);
   DeleteId(mdm, rpc, old_name, kMapType_Bucket);
   PutBucketId(mdm, rpc, new_name, id);
+  EndTicketMutex(&mdm->bucket_mutex);
 }
 
 void RenameBucket(SharedMemoryContext *context, RpcContext *rpc, BucketID id,

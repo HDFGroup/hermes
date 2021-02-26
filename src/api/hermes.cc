@@ -75,7 +75,11 @@ void Hermes::AppBarrier() {
 
 bool Hermes::BucketContainsBlob(const std::string &bucket_name,
                                 const std::string &blob_name) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(&context_);
+  BeginTicketMutex(&mdm->bucket_mutex);
   BucketID bucket_id = GetBucketIdByName(&context_, &rpc_, bucket_name.c_str());
+  EndTicketMutex(&mdm->bucket_mutex);
+
   bool result = hermes::ContainsBlob(&context_, &rpc_, bucket_id, blob_name);
 
   return result;

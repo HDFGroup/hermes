@@ -101,15 +101,7 @@ int main(int argc, char **argv) {
     hapi::Context ctx;
 
     // Each rank puts and gets its portion of a blob to a shared bucket
-    hermes->AppBarrier();
     hapi::Bucket shared_bucket(std::string("test_bucket"), hermes, ctx);
-
-    std::vector<hermes::u64> ids(app_size, 0);
-    hermes::u64 my_id = shared_bucket.GetId();
-    MPI_Comm *app_comm = (MPI_Comm *)hermes->GetAppCommunicator();
-    MPI_Allgather(&my_id, 1, MPI_UINT64_T, ids.data(), 1, MPI_UINT64_T, *app_comm);
-    assert(ids.size() == 2);
-    assert(ids[0] == ids[1]);
 
     TestPutGetBucket(shared_bucket, app_rank, app_size);
 
@@ -126,12 +118,12 @@ int main(int argc, char **argv) {
     hermes->AppBarrier();
 
     // Each rank puts a whole blob to its own bucket
-    // hapi::Bucket own_bucket(std::string("test_bucket_") +
-    //                         std::to_string(app_rank), hermes, ctx);
-    // TestPutGetBucket(own_bucket, app_rank, 0);
-    // own_bucket.Destroy(ctx);
+    hapi::Bucket own_bucket(std::string("test_bucket_") +
+                            std::to_string(app_rank), hermes, ctx);
+    TestPutGetBucket(own_bucket, app_rank, 0);
+    own_bucket.Destroy(ctx);
 
-    // TestBulkTransfer(hermes, app_rank);
+    TestBulkTransfer(hermes, app_rank);
   } else {
     // Hermes core. No user code here.
   }

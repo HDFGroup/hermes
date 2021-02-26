@@ -108,8 +108,11 @@ TicketMutex *GetMapMutex(MetadataManager *mdm, MapType map_type) {
  */
 IdMap *GetMap(MetadataManager *mdm, MapType map_type) {
   IdMap *result = 0;
-  TicketMutex *mutex = GetMapMutex(mdm, map_type);
-  BeginTicketMutex(mutex);
+
+  if (map_type != kMapType_Bucket) {
+    TicketMutex *mutex = GetMapMutex(mdm, map_type);
+    BeginTicketMutex(mutex);
+  }
 
   switch (map_type) {
     case kMapType_Bucket: {
@@ -138,7 +141,6 @@ void ReleaseMap(MetadataManager *mdm, MapType map_type) {
   TicketMutex *mutex = 0;
   switch (map_type) {
     case kMapType_Bucket: {
-      mutex = &mdm->bucket_map_mutex;
       break;
     }
     case kMapType_VBucket: {
@@ -154,7 +156,9 @@ void ReleaseMap(MetadataManager *mdm, MapType map_type) {
     }
   }
 
-  EndTicketMutex(mutex);
+  if (mutex) {
+    EndTicketMutex(mutex);
+  }
 }
 
 /**
@@ -536,18 +540,10 @@ void PutToStorage(MetadataManager *mdm, const char *key, u64 val,
 
 u64 GetFromStorage(MetadataManager *mdm, const char *key, MapType map_type) {
   Heap *heap = GetMapHeap(mdm);
-  // TEMP(chogan):
-  if (map_type == kMapType_Bucket) {
-    BeginTicketMutex(&mdm->bucket_mutex);
-  }
   IdMap *map = GetMap(mdm, map_type);
   u64 result = shget(map, key, heap);
   ReleaseMap(mdm, map_type);
 
-  // TEMP(chogan):
-  if (map_type == kMapType_Bucket) {
-    EndTicketMutex(&mdm->bucket_mutex);
-  }
   return result;
 }
 
