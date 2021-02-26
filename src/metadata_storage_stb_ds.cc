@@ -536,10 +536,18 @@ void PutToStorage(MetadataManager *mdm, const char *key, u64 val,
 
 u64 GetFromStorage(MetadataManager *mdm, const char *key, MapType map_type) {
   Heap *heap = GetMapHeap(mdm);
+  // TEMP(chogan):
+  if (map_type == kMapType_Bucket) {
+    BeginTicketMutex(&mdm->bucket_mutex);
+  }
   IdMap *map = GetMap(mdm, map_type);
   u64 result = shget(map, key, heap);
   ReleaseMap(mdm, map_type);
 
+  // TEMP(chogan):
+  if (map_type == kMapType_Bucket) {
+    EndTicketMutex(&mdm->bucket_mutex);
+  }
   return result;
 }
 

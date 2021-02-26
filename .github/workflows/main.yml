@@ -59,7 +59,7 @@ jobs:
         run: ci/install_hermes.sh
 
       - name: Multi-node Test
-        run: pushd ci/cluster && ./multi_node_test.sh
+        run: pushd ci/cluster && ./multi_node_ci_test.sh
 
       - name: Generate coverage file
         run: |
