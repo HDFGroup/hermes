@@ -233,6 +233,7 @@ int main(int argc, char **argv) {
   TestRenameBucket(hermes);
   TestBucketRefCounting(hermes);
   TestMaxNameLength(hermes);
+  TestGetRelativeNodeId();
 
   hermes->Finalize(true);
 
