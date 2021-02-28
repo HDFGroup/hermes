@@ -45,7 +45,7 @@ int main(int argc, char **argv) {
   size_t each_blob_size;
   size_t total_placed_size;
   double dpe_seconds;
-  hermes::Status result;
+  api::Status result;
 
   while ((option = getopt(argc, argv, "mnor:s:")) != -1) {
     switch (option) {

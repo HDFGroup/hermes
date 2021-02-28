@@ -85,7 +85,7 @@ void TestGetBandwidths(hermes::SharedMemoryContext *context) {
   }
 }
 
-hermes::Status ForceBlobToSwap(Hermes *hermes, hermes::u64 id, hapi::Blob &blob,
+hapi::Status ForceBlobToSwap(Hermes *hermes, hermes::u64 id, hapi::Blob &blob,
                              const char *blob_name) {
   using namespace hermes;  // NOLINT(*)
   PlacementSchema schema;
@@ -96,7 +96,7 @@ hermes::Status ForceBlobToSwap(Hermes *hermes, hermes::u64 id, hapi::Blob &blob,
   hermes::BucketID bucket_id = {};
   bucket_id.as_int = id;
   int retries = 3;
-  hermes::Status result = PlaceBlob(&hermes->context_, &hermes->rpc_, schema,
+  hapi::Status result = PlaceBlob(&hermes->context_, &hermes->rpc_, schema,
                                   internal_blob, blob_name, bucket_id, retries);
 
   return result;
@@ -137,7 +137,7 @@ void TestBlobOverwrite() {
   std::string blob_name("1");
   size_t blob_size = KILOBYTES(2);
   hapi::Blob blob(blob_size, '1');
-  hermes::Status status = bucket.Put(blob_name, blob, ctx);
+  hapi::Status status = bucket.Put(blob_name, blob, ctx);
   Assert(status.Succeeded());
 
   Assert(buffers_available[slab_index] == 1);
@@ -158,7 +158,7 @@ void TestSwap(std::shared_ptr<Hermes> hermes) {
   size_t data_size = MEGABYTES(1);
   hapi::Blob data(data_size, 'x');
   std::string blob_name("swap_blob");
-  hermes::Status status = ForceBlobToSwap(hermes.get(), bucket.GetId(), data,
+  hapi::Status status = ForceBlobToSwap(hermes.get(), bucket.GetId(), data,
                                         blob_name.c_str());
   Assert(status == hermes::BLOB_IN_SWAP_PLACE);
   // NOTE(chogan): The Blob is in the swap space, but the API behaves as normal.
@@ -182,7 +182,7 @@ void TestBufferOrganizer(std::shared_ptr<Hermes> hermes) {
   // NOTE(chogan): Fill our single buffer with a blob.
   hapi::Blob data1(KILOBYTES(4), 'x');
   std::string blob1_name("bo_blob1");
-  hermes::Status status = bucket.Put(blob1_name, data1, ctx);
+  hapi::Status status = bucket.Put(blob1_name, data1, ctx);
   Assert(status.Succeeded());
   Assert(bucket.ContainsBlob(blob1_name));
 

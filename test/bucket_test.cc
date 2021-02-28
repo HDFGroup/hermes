@@ -142,7 +142,7 @@ void TestPutOverwrite(std::shared_ptr<hapi::Hermes> hermes) {
   std::string blob_name("1");
   size_t blob_size = KILOBYTES(6);
   hapi::Blob blob(blob_size, 'x');
-  hermes::Status status = bucket.Put(blob_name, blob, ctx);
+  hapi::Status status = bucket.Put(blob_name, blob, ctx);
   Assert(status.Succeeded());
 
   hermes::testing::GetAndVerifyBlob(bucket, blob_name, blob);
