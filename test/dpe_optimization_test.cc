@@ -34,7 +34,7 @@ void MinimizeIoTimePlaceBlob(std::vector<size_t> &blob_sizes,
                                           node_state.bytes_available,
                                           node_state.bandwidth, targets,
                                           schemas_tmp);
-  if (result) {
+  if (result.Failed()) {
     std::cout << "\nMinimizeIoTimePlacement failed\n" << std::flush;
     exit(1);
   }
