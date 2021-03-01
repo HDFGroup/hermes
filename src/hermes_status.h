@@ -59,7 +59,7 @@ class Status {
     return (status_ == HERMES_SUCCESS);
   }
 
-  /** Returns true if the call was success with cateat. */
+  /** Returns true if the call was success with caveat. */
   bool Acceptable() const {
     return (status_ > HERMES_SUCCESS && status_ < HERMES_OK_MAX);
   }
