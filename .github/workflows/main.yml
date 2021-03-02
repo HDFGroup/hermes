@@ -67,7 +67,11 @@ jobs:
           mkdir -p ${COVERAGE_DIR}
           pushd ${GITHUB_WORKSPACE}/build
           lcov -c -d . -o "${COVERAGE_DIR}/tmp.info"
-          lcov --remove "${COVERAGE_DIR}/tmp.info" "/usr/include/*" "${HOME}/${LOCAL}/*" -o ${COVERAGE_DIR}/lcov.info
+          lcov --remove "${COVERAGE_DIR}/tmp.info"   \
+                        "/usr/include/*"             \
+                        "${HOME}/${LOCAL}/*"         \
+                        "*/stb_ds.h"                 \
+                        -o ${COVERAGE_DIR}/lcov.info
 
       - name: Coveralls
         uses: coverallsapp/github-action@master
