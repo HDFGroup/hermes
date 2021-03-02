@@ -24,8 +24,6 @@
 
 namespace hermes {
 
-const u32 kGlobalMutexNode = 1;
-
 bool IsNameTooLong(const std::string &name, size_t max) {
   bool result = false;
   if (name.size() + 1 >= max) {
@@ -277,7 +275,7 @@ BucketID GetOrCreateBucketId(SharedMemoryContext *context, RpcContext *rpc,
                              const std::string &name) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
 
-  BeginGlobalTicketMutex(rpc);
+  BeginGlobalTicketMutex(context, rpc);
   BeginTicketMutex(&mdm->bucket_mutex);
   BucketID result = GetBucketIdByName(context, rpc, name.c_str());
 
@@ -289,7 +287,7 @@ BucketID GetOrCreateBucketId(SharedMemoryContext *context, RpcContext *rpc,
     result = GetNextFreeBucketId(context, rpc, name);
   }
   EndTicketMutex(&mdm->bucket_mutex);
-  EndGlobalTicketMutex(rpc);
+  EndGlobalTicketMutex(context, rpc);
 
   return result;
 }
@@ -1055,13 +1053,33 @@ std::vector<TargetID> GetNeighborhoodTargets(SharedMemoryContext *context,
   return result;
 }
 
-void BeginGlobalTicketMutex(RpcContext *rpc) {
-  [[maybe_unused]]
-  bool result = RpcCall<bool>(rpc, kGlobalMutexNode, "BeginGlobalTicketMutex");
+void LocalBeginGlobalTicketMutex(MetadataManager *mdm) {
+  BeginTicketMutex(&mdm->global_mutex);
 }
 
-void EndGlobalTicketMutex(RpcContext *rpc) {
-  [[maybe_unused]]
-  bool result = RpcCall<bool>(rpc, kGlobalMutexNode, "EndGlobalTicketMutex");
+void LocalEndGlobalTicketMutex(MetadataManager *mdm) {
+  EndTicketMutex(&mdm->global_mutex);
+}
+
+void BeginGlobalTicketMutex(SharedMemoryContext *context, RpcContext *rpc) {
+  if (rpc->node_id == kGlobalMutexNodeId) {
+    MetadataManager *mdm = GetMetadataManagerFromContext(context);
+    LocalBeginGlobalTicketMutex(mdm);
+  } else {
+    [[maybe_unused]]
+    bool result = RpcCall<bool>(rpc, kGlobalMutexNodeId,
+                                "RemoteBeginGlobalTicketMutex");
+  }
+}
+
+void EndGlobalTicketMutex(SharedMemoryContext *context, RpcContext *rpc) {
+  if (rpc->node_id == kGlobalMutexNodeId) {
+    MetadataManager *mdm = GetMetadataManagerFromContext(context);
+    LocalEndGlobalTicketMutex(mdm);
+  } else {
+    [[maybe_unused]]
+    bool result = RpcCall<bool>(rpc, kGlobalMutexNodeId,
+                                "RemoteEndGlobalTicketMutex");
+  }
 }
 }  // namespace hermes

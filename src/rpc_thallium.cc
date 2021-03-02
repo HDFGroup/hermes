@@ -347,22 +347,26 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
       state->engine->finalize();
     };
 
-  // TEMP(chogan): Only one node needs this
+  // TODO(chogan): Only one node needs this. Separate RPC server?
   auto rpc_begin_global_ticket_mutex = [context, rpc](const tl::request &req) {
-    ThalliumState *state = GetThalliumState(rpc);
-    BeginTicketMutex(&state->global_mutex);
+    DLOG_ASSERT(rpc->node_id == kGlobalMutexNodeId);
+    MetadataManager *mdm = GetMetadataManagerFromContext(context);
+    LocalBeginGlobalTicketMutex(mdm);
 
     req.respond(true);
   };
 
   auto rpc_end_global_ticket_mutex = [context, rpc](const tl::request &req) {
-    ThalliumState *state = GetThalliumState(rpc);
-    EndTicketMutex(&state->global_mutex);
+    DLOG_ASSERT(rpc->node_id == kGlobalMutexNodeId);
+    MetadataManager *mdm = GetMetadataManagerFromContext(context);
+    LocalEndGlobalTicketMutex(mdm);
 
     req.respond(true);
   };
-  rpc_server->define("BeginGlobalTicketMutex", rpc_begin_global_ticket_mutex);
-  rpc_server->define("EndGlobalTicketMutex", rpc_end_global_ticket_mutex);
+  rpc_server->define("RemoteBeginGlobalTicketMutex",
+                     rpc_begin_global_ticket_mutex);
+  rpc_server->define("RemoteEndGlobalTicketMutex",
+                     rpc_end_global_ticket_mutex);
   //
 
   // TODO(chogan): Currently these three are only used for testing.

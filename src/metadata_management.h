@@ -23,6 +23,8 @@
 
 namespace hermes {
 
+static const u32 kGlobalMutexNodeId = 1;
+
 struct RpcContext;
 
 enum MapType {
@@ -102,6 +104,15 @@ struct MetadataManager {
 
   // TODO(chogan): @optimization Should the TicketMutexes here be reader/writer
   // locks?
+
+  // TODO(chogan): @optimization Hopefully this is used rarely. If it becomes
+  // something that's commonly used, we need to come up with something smarter.
+  /** Mutex shared by all nodes for operations that require synchronization.
+   *
+   *  Should only be accessed via BeginGlobalTicketMutex() and
+   *  EndGlobalTicketMutex().
+   */
+  TicketMutex global_mutex;
 
   /** Lock for accessing `BucketInfo` structures located at
    * `bucket_info_offset` */
@@ -299,12 +310,22 @@ bool IsNullBlobId(BlobID id);
 /**
  *
  */
-void BeginGlobalTicketMutex(RpcContext *rpc);
+void BeginGlobalTicketMutex(SharedMemoryContext *context, RpcContext *rpc);
 
 /**
  *
  */
-void EndGlobalTicketMutex(RpcContext *rpc);
+void EndGlobalTicketMutex(SharedMemoryContext *context, RpcContext *rpc);
+
+/**
+ *
+ */
+void LocalBeginGlobalTicketMutex(MetadataManager *mdm);
+
+/**
+ *
+ */
+void LocalEndGlobalTicketMutex(MetadataManager *mdm);
 
 }  // namespace hermes
 
