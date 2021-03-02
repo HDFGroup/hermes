@@ -108,11 +108,8 @@ TicketMutex *GetMapMutex(MetadataManager *mdm, MapType map_type) {
  */
 IdMap *GetMap(MetadataManager *mdm, MapType map_type) {
   IdMap *result = 0;
-
-  if (map_type != kMapType_Bucket) {
-    TicketMutex *mutex = GetMapMutex(mdm, map_type);
-    BeginTicketMutex(mutex);
-  }
+  TicketMutex *mutex = GetMapMutex(mdm, map_type);
+  BeginTicketMutex(mutex);
 
   switch (map_type) {
     case kMapType_Bucket: {
@@ -141,6 +138,7 @@ void ReleaseMap(MetadataManager *mdm, MapType map_type) {
   TicketMutex *mutex = 0;
   switch (map_type) {
     case kMapType_Bucket: {
+      mutex = &mdm->bucket_map_mutex;
       break;
     }
     case kMapType_VBucket: {
@@ -156,9 +154,7 @@ void ReleaseMap(MetadataManager *mdm, MapType map_type) {
     }
   }
 
-  if (mutex) {
-    EndTicketMutex(mutex);
-  }
+  EndTicketMutex(mutex);
 }
 
 /**

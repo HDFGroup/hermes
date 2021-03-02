@@ -38,7 +38,6 @@ struct ThalliumState {
   tl::engine *engine;
   tl::engine *bo_engine;
   ABT_xstream execution_stream;
-  TicketMutex global_mutex;
 };
 
 struct ClientThalliumState {
