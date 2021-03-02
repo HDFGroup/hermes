@@ -51,10 +51,12 @@ function hermes_cluster_test() {
     local allocate_tty=${1:-}
     local hosts=${host1},${host2}
 
-    docker-compose exec ${allocate_tty} -e GLOG_vmodule=rpc_thallium=1 \
+    docker-compose exec ${allocate_tty}                                \
+                   -e GLOG_vmodule=rpc_thallium=1                      \
                    -e LSAN_OPTIONS=suppressions=../test/data/asan.supp \
-                   --user ${docker_user} --privileged \
-                   -w ${hermes_build_dir} ${node_names[0]} \
+                   --user ${docker_user}                               \
+                   -w ${hermes_build_dir}                              \
+                   ${node_names[0]}                                    \
                    mpirun -n 4 -ppn 2 -hosts ${hosts} bin/end_to_end_test ${cluster_conf}
 }
 
