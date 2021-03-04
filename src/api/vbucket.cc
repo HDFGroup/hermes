@@ -26,7 +26,7 @@ namespace api {
 Status VBucket::Link(std::string blob_name, std::string bucket_name,
                      Context& ctx) {
   (void)ctx;
-  Status ret = 0;
+  Status ret;
 
   LOG(INFO) << "Linking blob " << blob_name << " in bucket " << bucket_name
             << " to VBucket " << name_ << '\n';
@@ -48,14 +48,17 @@ Status VBucket::Link(std::string blob_name, std::string bucket_name,
                         id_);
   } else {
     // TODO(hari): @errorhandling
+    ret = BLOB_NOT_IN_BUCKET;
+    LOG(ERROR) << ret.Msg();
   }
+
   return ret;
 }
 
 Status VBucket::Unlink(std::string blob_name, std::string bucket_name,
                        Context& ctx) {
   (void)ctx;
-  Status ret = 0;
+  Status ret;
 
   LOG(INFO) << "Unlinking blob " << blob_name << " in bucket " << bucket_name
             << " from VBucket " << name_ << '\n';
@@ -84,12 +87,15 @@ Status VBucket::Unlink(std::string blob_name, std::string bucket_name,
   }
   if (!found) {
     // TODO(hari): @errorhandling
+    ret = BLOB_NOT_LINKED_TO_VBUCKET;
+    LOG(ERROR) << ret.Msg();
   }
+
   return ret;
 }
 
-Status VBucket::Contain_blob(std::string blob_name, std::string bucket_name) {
-  Status ret = 0;
+bool VBucket::Contain_blob(std::string blob_name, std::string bucket_name) {
+  bool ret = false;
   std::string bk_tmp, blob_tmp;
 
   LOG(INFO) << "Checking if blob " << blob_name << " from bucket "
@@ -99,7 +105,7 @@ Status VBucket::Contain_blob(std::string blob_name, std::string bucket_name) {
   auto selected_blob_id =
       GetBlobIdByName(&hermes_->context_, &hermes_->rpc_, blob_name.c_str());
   for (const auto& blob_id : blob_ids) {
-    if (selected_blob_id.as_int == blob_id.as_int) ret = 1;
+    if (selected_blob_id.as_int == blob_id.as_int) ret = true;
   }
 
   return ret;
@@ -129,7 +135,7 @@ std::vector<std::string> VBucket::GetLinks(Predicate pred, Context& ctx) {
 Status VBucket::Attach(Trait* trait, Context& ctx) {
   (void)ctx;
   (void)trait;
-  Status ret = 0;
+  Status ret;
 
   LOG(INFO) << "Attaching trait to VBucket " << name_ << '\n';
   Trait* selected_trait = NULL;
@@ -157,14 +163,17 @@ Status VBucket::Attach(Trait* trait, Context& ctx) {
     attached_traits_.push_back(trait);
   } else {
     // TODO(hari): @errorhandling throw trait already exists.
+    ret = TRAIT_EXISTS_ALREADY;
+    LOG(ERROR) << ret.Msg();
   }
+
   return ret;
 }
 
 Status VBucket::Detach(Trait* trait, Context& ctx) {
   (void)ctx;
   (void)trait;
-  Status ret = 0;
+  Status ret;
 
   LOG(INFO) << "Detaching trait from VBucket " << name_ << '\n';
 
@@ -198,7 +207,10 @@ Status VBucket::Detach(Trait* trait, Context& ctx) {
     attached_traits_.erase(selected_trait_iter);
   } else {
     // TODO(hari): @errorhandling throw trait not valid.
+    ret = TRAIT_NOT_VALID;
+    LOG(ERROR) << ret.Msg();
   }
+
   return ret;
 }
 
@@ -218,6 +230,7 @@ std::vector<TraitID> VBucket::GetTraits(Predicate pred, Context& ctx) {
 
 Status VBucket::Delete(Context& ctx) {
   (void)ctx;
+  Status ret;
 
   LOG(INFO) << "Deleting VBucket " << name_ << '\n';
 
@@ -264,10 +277,14 @@ Status VBucket::Delete(Context& ctx) {
                                    iter->second);
                 } else {
                   // TODO(hari): @errorhandling map doesnt have the blob linked.
+                  ret = BLOB_NOT_LINKED_IN_MAP;
+                  LOG(ERROR) << ret.Msg();
                 }
 
               } else {
                 // TODO(hari): @errorhandling offset_map should not be empty
+                ret = OFFSET_MAP_EMPTY;
+                LOG(ERROR) << ret.Msg();
               }
             }
           }
@@ -287,6 +304,8 @@ Status VBucket::Delete(Context& ctx) {
         fflush(file);
         if (fclose(file) != 0) {
           // TODO(chogan): @errorhandling
+          ret = FCLOSE_FAILED;
+          LOG(ERROR) << ret.Msg() << strerror(errno);
         }
       }
     }
