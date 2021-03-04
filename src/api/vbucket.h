@@ -31,7 +31,7 @@ class VBucket {
  private:
   std::string name_;
   VBucketID id_;
-  std::list<std::pair<std::string, std::string>> linked_blobs_;
+  // std::list<std::pair<std::string, std::string>> linked_blobs_;
   std::list<Trait *> attached_traits_;
   Blob local_blob;
   bool persist;
@@ -42,8 +42,8 @@ class VBucket {
   VBucket(std::string initial_name, std::shared_ptr<Hermes> const &h,
           bool persist, Context ctx)
       : name_(initial_name),
-        id_({0, 0}),
-        linked_blobs_(),
+        id_({{0, 0}}),
+//        linked_blobs_(),
         attached_traits_(),
         local_blob(),
         persist(persist),
@@ -59,7 +59,7 @@ class VBucket {
 
   ~VBucket() {
     name_.clear();
-    linked_blobs_.clear();
+//    linked_blobs_.clear();
   }
 
   /** get the name of vbucket */
