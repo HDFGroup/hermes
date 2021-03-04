@@ -42,7 +42,6 @@ typedef double f64;
 typedef u16 DeviceID;
 
 namespace api {
-typedef int Status;
 typedef std::vector<unsigned char> Blob;
 }  // namespace api
 
