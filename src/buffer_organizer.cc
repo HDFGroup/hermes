@@ -23,7 +23,7 @@ int PlaceInHierarchy(SharedMemoryContext *context, RpcContext *rpc,
   api::Context ctx;
   Status ret = CalculatePlacement(context, rpc, sizes, schemas, ctx);
 
-  if (ret == 0) {
+  if (ret.Succeeded()) {
     std::vector<u8> blob_mem(swap_blob.size);
     Blob blob = {};
     blob.data = blob_mem.data();

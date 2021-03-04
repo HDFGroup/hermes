@@ -16,6 +16,7 @@
 #include <map>
 
 #include "hermes_types.h"
+#include "hermes_status.h"
 #include "hermes.h"
 
 namespace hermes {

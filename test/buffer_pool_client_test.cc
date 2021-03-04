@@ -309,7 +309,8 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  std::shared_ptr<hapi::Hermes> hermes = hermes::InitHermesClient(config_file);
+  std::shared_ptr<hapi::Hermes> hermes =
+                                hermes::InitHermesClient(config_file);
   int app_rank = hermes->GetProcessRank();
   int app_size = hermes->GetNumProcesses();
   SharedMemoryContext *context = &hermes->context_;

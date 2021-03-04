@@ -33,7 +33,7 @@ Status RenameBucket(const std::string &old_name,
                     const std::string &new_name,
                     Context &ctx) {
   (void)ctx;
-  Status ret = 0;
+  Status ret;
 
   LOG(INFO) << "Renaming Bucket from " << old_name << " to "
             << new_name << '\n';
@@ -49,7 +49,7 @@ Status TransferBlob(const Bucket &src_bkt,
   (void)src_bkt;
   (void)dst_bkt;
   (void)ctx;
-  Status ret = 0;
+  Status ret;
 
   LOG(INFO) << "Transferring Blob from " << src_blob_name << " to "
             << dst_blob_name << '\n';

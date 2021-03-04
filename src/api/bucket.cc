@@ -30,8 +30,13 @@ Bucket::Bucket(const std::string &initial_name,
 
   if (IsBucketNameTooLong(name_)) {
     id_.as_int = 0;
+    throw std::length_error("Bucket name is too long: " +
+                            std::to_string(kMaxBucketNameSize));
   } else {
     id_ = GetOrCreateBucketId(&hermes_->context_, &hermes_->rpc_, name_);
+    if (!Bucket::IsValid()) {
+      throw std::runtime_error("Bucket id is invalid.");
+    }
   }
 }
 
@@ -43,14 +48,22 @@ bool Bucket::IsValid() const {
 
 Status Bucket::Put(const std::string &name, const u8 *data, size_t size,
                    Context &ctx) {
-  Status ret = 0;
+  Status ret;
 
   if (IsBlobNameTooLong(name)) {
     // TODO(chogan): @errorhandling
-    ret = 1;
+    ret = BLOB_NAME_TOO_LONG;
+    LOG(ERROR) << ret.Msg();
+    return ret;
   }
 
-  if (IsValid() && ret == 0) {
+  if (size > 0 && nullptr == data) {
+    ret = INVALID_BLOB;
+    LOG(ERROR) << ret.Msg();
+    return ret;
+  }
+
+  if (IsValid()) {
     std::vector<size_t> sizes(1, size);
     std::vector<PlacementSchema> schemas;
     HERMES_BEGIN_TIMED_BLOCK("CalculatePlacement");
@@ -58,7 +71,7 @@ Status Bucket::Put(const std::string &name, const u8 *data, size_t size,
                              ctx);
     HERMES_END_TIMED_BLOCK();
 
-    if (ret == 0) {
+    if (ret.Succeeded()) {
       std::vector<std::string> names(1, name);
       std::vector<std::vector<u8>> blobs(1);
       blobs[0].resize(size);
@@ -68,8 +81,13 @@ Status Bucket::Put(const std::string &name, const u8 *data, size_t size,
       ret = PlaceBlobs(schemas, blobs, names, ctx.buffer_organizer_retries);
     } else {
       // TODO(chogan): @errorhandling No space left or contraints unsatisfiable.
-      ret = 1;
+      LOG(ERROR) << ret.Msg();
+      return ret;
     }
+  } else {
+    ret = INVALID_BUCKET;
+    LOG(ERROR) << ret.Msg();
+    return ret;
   }
 
   return ret;
@@ -121,7 +139,7 @@ template<class Predicate>
 Status Bucket::GetV(void *user_blob, Predicate pred, Context &ctx) {
   (void)user_blob;
   (void)ctx;
-  Status ret = 0;
+  Status ret;
 
   LOG(INFO) << "Getting blobs by predicate from bucket " << name_ << '\n';
 
@@ -130,7 +148,7 @@ Status Bucket::GetV(void *user_blob, Predicate pred, Context &ctx) {
 
 Status Bucket::DeleteBlob(const std::string &name, Context &ctx) {
   (void)ctx;
-  Status ret = 0;
+  Status ret;
 
   LOG(INFO) << "Deleting Blob " << name << " from bucket " << name_ << '\n';
   DestroyBlobByName(&hermes_->context_, &hermes_->rpc_, id_, name);
@@ -142,11 +160,13 @@ Status Bucket::RenameBlob(const std::string &old_name,
                           const std::string &new_name,
                           Context &ctx) {
   (void)ctx;
-  Status ret = 0;
+  Status ret;
 
   if (IsBlobNameTooLong(new_name)) {
-    ret = 1;
     // TODO(chogan): @errorhandling
+    ret = BLOB_NAME_TOO_LONG;
+    LOG(ERROR) << ret.Msg();
+    return ret;
   } else {
     LOG(INFO) << "Renaming Blob " << old_name << " to " << new_name << '\n';
     hermes::RenameBlob(&hermes_->context_, &hermes_->rpc_, old_name, new_name);
@@ -191,11 +211,13 @@ struct bkt_info * Bucket::GetInfo(Context &ctx) {
 
 Status Bucket::Rename(const std::string &new_name, Context &ctx) {
   (void)ctx;
-  Status ret = 0;
+  Status ret;
 
   if (IsBucketNameTooLong(new_name)) {
-    ret = 1;
     // TODO(chogan): @errorhandling
+    ret = BUCKET_NAME_TOO_LONG;
+    LOG(ERROR) << ret.Msg();
+    return ret;
   } else {
     LOG(INFO) << "Renaming a bucket to" << new_name << '\n';
     RenameBucket(&hermes_->context_, &hermes_->rpc_, id_, name_, new_name);
@@ -221,7 +243,7 @@ Status Bucket::Persist(const std::string &file_name, Context &ctx) {
 
 Status Bucket::Close(Context &ctx) {
   (void)ctx;
-  Status ret = 0;
+  Status ret;
 
   if (IsValid()) {
     LOG(INFO) << "Closing bucket '" << name_ << "'" << std::endl;
@@ -234,7 +256,7 @@ Status Bucket::Close(Context &ctx) {
 
 Status Bucket::Destroy(Context &ctx) {
   (void)ctx;
-  Status result = 0;
+  Status result;
 
   if (IsValid()) {
     LOG(INFO) << "Destroying bucket '" << name_ << "'" << std::endl;
@@ -244,7 +266,8 @@ Status Bucket::Destroy(Context &ctx) {
       id_.as_int = 0;
     } else {
       // TODO(chogan): @errorhandling
-      result = 1;
+      result = BUCKET_IN_USE;
+      LOG(ERROR) << result.Msg();
     }
   }
 

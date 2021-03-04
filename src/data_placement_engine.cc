@@ -47,11 +47,12 @@ std::vector<int> GetValidSplitChoices(size_t blob_size) {
 
   return result;
 }
+
 Status AddRoundRobinSchema(size_t index, std::vector<u64> &node_state,
                            const std::vector<size_t> &blob_sizes,
                            const std::vector<TargetID> &targets,
                            PlacementSchema &output) {
-  Status result = 0;
+  Status result;
   TargetID dst = {};
   DataPlacementEngine dpe;
   size_t num_targets = node_state.size();
@@ -68,8 +69,7 @@ Status AddRoundRobinSchema(size_t index, std::vector<u64> &node_state,
     }
   }
   if (IsNullTargetId(dst)) {
-    result = 1;
-    // TODO(chogan): @errorhandling Set error type in Status
+    result = DPE_GET_INVALID_TGT;
   }
 
   return result;
@@ -112,7 +112,7 @@ Status RoundRobinPlacement(std::vector<size_t> &blob_sizes,
                            std::vector<u64> &node_state,
                            std::vector<PlacementSchema> &output,
                            const std::vector<TargetID> &targets) {
-  Status result = 0;
+  Status result;
   std::vector<u64> ns_local(node_state.begin(), node_state.end());
 
   for (size_t i {0}; i < blob_sizes.size(); ++i) {
@@ -129,12 +129,15 @@ Status RoundRobinPlacement(std::vector<size_t> &blob_sizes,
       for (size_t k {0}; k < new_blob_size.size(); ++k) {
         result = AddRoundRobinSchema(k, ns_local, new_blob_size, targets,
                                      schema);
-        if (result != 0) {
+        if (!result.Succeeded()) {
           break;
         }
       }
     } else {
       result = AddRoundRobinSchema(i, ns_local, blob_sizes, targets, schema);
+      if (!result.Succeeded()) {
+        return result;
+      }
     }
     output.push_back(schema);
   }
@@ -146,12 +149,11 @@ Status AddRandomSchema(std::multimap<u64, TargetID> &ordered_cap,
                        size_t blob_size, PlacementSchema &schema) {
   std::random_device rd;
   std::mt19937 gen(rd());
-  Status result = 0;
+  Status result;
 
   auto itlow = ordered_cap.lower_bound(blob_size);
   if (itlow == ordered_cap.end()) {
-    result = 1;
-    // TODO(chogan): @errorhandling Set error type in Status
+    result = DPE_RANDOM_FOUND_NO_TGT;
   } else {
     // distance from lower bound to the end
     std::uniform_int_distribution<>
@@ -171,7 +173,7 @@ Status AddRandomSchema(std::multimap<u64, TargetID> &ordered_cap,
 Status RandomPlacement(std::vector<size_t> &blob_sizes,
                        std::multimap<u64, TargetID> &ordered_cap,
                        std::vector<PlacementSchema> &output) {
-  Status result = 0;
+  Status result;
 
   for (size_t i {0}; i < blob_sizes.size(); ++i) {
     PlacementSchema schema;
@@ -187,13 +189,16 @@ Status RandomPlacement(std::vector<size_t> &blob_sizes,
       for (size_t k {0}; k < new_blob_size.size(); ++k) {
         result = AddRandomSchema(ordered_cap, new_blob_size[k], schema);
 
-        if (result != 0) {
+        if (!result.Succeeded()) {
           break;
         }
       }
     } else {
       // Blob size is less than 64KB or do not split
       result = AddRandomSchema(ordered_cap, blob_sizes[i], schema);
+      if (!result.Succeeded()) {
+        return result;
+      }
     }
     output.push_back(schema);
   }
@@ -211,7 +216,7 @@ Status MinimizeIoTimePlacement(const std::vector<size_t> &blob_sizes,
   using operations_research::MPConstraint;
   using operations_research::MPObjective;
 
-  Status result = 0;
+  Status result;
   const size_t num_targets = targets.size();
   const size_t num_blobs = blob_sizes.size();
 
@@ -295,7 +300,8 @@ Status MinimizeIoTimePlacement(const std::vector<size_t> &blob_sizes,
   const MPSolver::ResultStatus result_status = solver.Solve();
   // Check if the problem has an optimal solution.
   if (result_status != MPSolver::OPTIMAL) {
-    LOG(WARNING) << "The problem does not have an optimal solution!\n";
+    result = DPE_ORTOOLS_NO_SOLUTION;
+    return result;
   }
 
   for (size_t i {0}; i < num_blobs; ++i) {
@@ -353,7 +359,7 @@ Status CalculatePlacement(SharedMemoryContext *context, RpcContext *rpc,
                           const api::Context &api_context) {
   (void)rpc;
   std::vector<PlacementSchema> output_tmp;
-  Status result = 0;
+  Status result;
 
   // TODO(chogan): For now we just look at the node level targets as the default
   // path. Eventually we will need the ability to escalate to neighborhoods, and
@@ -391,10 +397,14 @@ Status CalculatePlacement(SharedMemoryContext *context, RpcContext *rpc,
   }
 
   // Aggregate placement schemas from the same target
-  if (!result) {
+  if (result.Succeeded()) {
     for (auto it = output_tmp.begin(); it != output_tmp.end(); ++it) {
       PlacementSchema schema = AggregateBlobSchema((*it));
-      CHECK(schema.size() > 0) << "PlacementSchema is empty";
+      if (schema.size() == 0) {
+        result = DPE_PLACEMENTSCHEMA_EMPTY;
+        LOG(ERROR) << result.Msg();
+        return result;
+      }
       output.push_back(schema);
     }
   }
