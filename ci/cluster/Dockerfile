@@ -1,5 +1,3 @@
-# Build this image:  docker build -t mpi .
-
 FROM ubuntu:20.04
 
 ENV USER mpirun
