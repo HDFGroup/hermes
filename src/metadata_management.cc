@@ -218,8 +218,8 @@ void DeleteVBucketId(MetadataManager *mdm, RpcContext *rpc,
   DeleteId(mdm, rpc, name, kMapType_VBucket);
 }
 
-void DeleteBlobId(MetadataManager *mdm, RpcContext *rpc, const std::string &name,
-                  BucketID bucket_id) {
+void DeleteBlobId(MetadataManager *mdm, RpcContext *rpc,
+                  const std::string &name, BucketID bucket_id) {
   std::string internal_name = MakeInternalBlobName(name, bucket_id);
   DeleteId(mdm, rpc, internal_name, kMapType_Blob);
 }
@@ -235,7 +235,8 @@ BucketInfo *LocalGetBucketInfoByIndex(MetadataManager *mdm, u32 index) {
 std::string GetBlobNameFromId(MetadataManager *mdm, BlobID blob_id) {
   std::string blob_name = ReverseGetFromStorage(mdm, blob_id.as_int,
                                                 kMapType_Blob);
-  std::string result = blob_name.substr(sizeof(BucketID) * 2, std::string::npos);
+  std::string result =
+    blob_name.substr(sizeof(BucketID) * 2, std::string::npos);
 
   return result;
 }
@@ -250,7 +251,6 @@ BucketID GetBucketIdFromBlobId(SharedMemoryContext *context, RpcContext *rpc,
   result.as_int = (u64)std::stoull(blob_name, nullptr, base);
 
   return result;
-  
 }
 
 BucketInfo *LocalGetBucketInfoById(MetadataManager *mdm, BucketID id) {
