@@ -188,7 +188,8 @@ BufferIdArray GetBufferIdsFromBlobId(Arena *arena,
  */
 // BufferIdArray GetBufferIdsFromBlobName(Arena *arena,
 //                                        SharedMemoryContext *context,
-//                                        RpcContext *rpc, const char *blob_name,
+//                                        RpcContext *rpc,
+//                                        const char *blob_name,
 //                                        u32 **sizes);
 
 /**

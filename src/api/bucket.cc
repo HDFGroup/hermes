@@ -169,7 +169,8 @@ Status Bucket::RenameBlob(const std::string &old_name,
     return ret;
   } else {
     LOG(INFO) << "Renaming Blob " << old_name << " to " << new_name << '\n';
-    hermes::RenameBlob(&hermes_->context_, &hermes_->rpc_, old_name, new_name, id_);
+    hermes::RenameBlob(&hermes_->context_, &hermes_->rpc_, old_name,
+                       new_name, id_);
   }
 
   return ret;
