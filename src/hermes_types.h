@@ -53,7 +53,6 @@ constexpr int kMaxPathLength = 256;
 constexpr int kMaxBufferPoolShmemNameLength = 64;
 constexpr int kMaxDevices = 8;
 constexpr int kMaxBucketNameSize = 256;
-constexpr int kMaxBlobNameSize = 64;
 constexpr int kMaxVBucketNameSize = 256;
 
 constexpr char kPlaceInHierarchy[] = "PlaceInHierarchy";
@@ -176,6 +175,10 @@ union BucketID {
 
   u64 as_int;
 };
+
+// NOTE(chogan): We reserve sizeof(BucketID) bytes in order to embed the
+// BucketID into the Blob name.
+constexpr int kMaxBlobNameSize = 64 - (sizeof(BucketID) * 2);
 
 union VBucketID {
   struct {

@@ -161,7 +161,8 @@ void DestroyBlobByName(SharedMemoryContext *context, RpcContext *rpc,
  *
  */
 void RenameBlob(SharedMemoryContext *context, RpcContext *rpc,
-                const std::string &old_name, const std::string &new_name);
+                const std::string &old_name, const std::string &new_name,
+                BucketID bucket_id);
 
 /**
  *
@@ -185,16 +186,16 @@ BufferIdArray GetBufferIdsFromBlobId(Arena *arena,
 /**
  *
  */
-BufferIdArray GetBufferIdsFromBlobName(Arena *arena,
-                                       SharedMemoryContext *context,
-                                       RpcContext *rpc, const char *blob_name,
-                                       u32 **sizes);
+// BufferIdArray GetBufferIdsFromBlobName(Arena *arena,
+//                                        SharedMemoryContext *context,
+//                                        RpcContext *rpc, const char *blob_name,
+//                                        u32 **sizes);
 
 /**
  *
  */
-BlobID GetBlobIdByName(SharedMemoryContext *context, RpcContext *rpc,
-                       const char *name);
+BlobID GetBlobId(SharedMemoryContext *context, RpcContext *rpc,
+                       const std::string &name, BucketID bucket_id);
 
 /**
  *
@@ -277,7 +278,7 @@ std::vector<BlobID> GetBlobIds(SharedMemoryContext *context, RpcContext *rpc,
 /**
  *
  */
-BucketID GetBucketIdByName(SharedMemoryContext *context, RpcContext *rpc,
+BucketID GetBucketId(SharedMemoryContext *context, RpcContext *rpc,
                            const char *name);
 /**
  *

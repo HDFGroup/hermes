@@ -22,7 +22,7 @@ bool IsNullVBucketId(VBucketID id);
 bool IsNullBlobId(BlobID id);
 bool IsNullTargetId(TargetID id);
 TicketMutex *GetMapMutex(MetadataManager *mdm, MapType map_type);
-VBucketID GetVBucketIdByName(SharedMemoryContext *context, RpcContext *rpc,
+VBucketID GetVBucketId(SharedMemoryContext *context, RpcContext *rpc,
                              const char *name);
 u32 HashString(MetadataManager *mdm, RpcContext *rpc, const char *str);
 MetadataManager *GetMetadataManagerFromContext(SharedMemoryContext *context);
@@ -48,9 +48,10 @@ void LocalFreeBufferIdList(SharedMemoryContext *context, BlobID blob_id);
 bool LocalDestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
                                const char *bucket_name, BucketID bucket_id);
 void LocalDestroyBlobById(SharedMemoryContext *context, RpcContext *rpc,
-                          BlobID blob_id);
+                          BlobID blob_id, BucketID bucket_id);
 void LocalDestroyBlobByName(SharedMemoryContext *context, RpcContext *rpc,
-                            const char *blob_name, BlobID blob_id);
+                            const char *blob_name, BlobID blob_id,
+                            BucketID bucket_id);
 BucketID LocalGetNextFreeBucketId(SharedMemoryContext *context, RpcContext *rpc,
                                   const std::string &name);
 u32 LocalAllocateBufferIdList(MetadataManager *mdm,
