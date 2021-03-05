@@ -50,7 +50,7 @@ void TestBulkTransfer(std::shared_ptr<hapi::Hermes> hermes, int app_rank) {
   size_t transfer_size = KILOBYTES(8);
 
   hapi::Context ctx;
-  hapi::Bucket bucket(std::string("test_bucket"), hermes, ctx);
+  hapi::Bucket bucket(std::string("bulk_bucket"), hermes, ctx);
   std::string blob_name = "1";
 
   hapi::Blob put_data(transfer_size, 'x');

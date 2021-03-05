@@ -167,6 +167,8 @@ ClientThalliumState *GetClientThalliumState(RpcContext *rpc) {
 template<typename ReturnType, typename... Ts>
 ReturnType RpcCall(RpcContext *rpc, u32 node_id, const char *func_name,
                    Ts... args) {
+  VLOG(1) << "Calling " << func_name << " on node " << node_id
+          << " from node " << rpc->node_id << std::endl;
   ClientThalliumState *state = GetClientThalliumState(rpc);
   std::string server_name = GetServerName(rpc, node_id);
   tl::remote_procedure remote_proc = state->engine->define(func_name);

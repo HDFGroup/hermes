@@ -347,6 +347,28 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
       state->engine->finalize();
     };
 
+  // TODO(chogan): Only one node needs this. Separate RPC server?
+  auto rpc_begin_global_ticket_mutex = [context, rpc](const tl::request &req) {
+    DLOG_ASSERT(rpc->node_id == kGlobalMutexNodeId);
+    MetadataManager *mdm = GetMetadataManagerFromContext(context);
+    LocalBeginGlobalTicketMutex(mdm);
+
+    req.respond(true);
+  };
+
+  auto rpc_end_global_ticket_mutex = [context, rpc](const tl::request &req) {
+    DLOG_ASSERT(rpc->node_id == kGlobalMutexNodeId);
+    MetadataManager *mdm = GetMetadataManagerFromContext(context);
+    LocalEndGlobalTicketMutex(mdm);
+
+    req.respond(true);
+  };
+  rpc_server->define("RemoteBeginGlobalTicketMutex",
+                     rpc_begin_global_ticket_mutex);
+  rpc_server->define("RemoteEndGlobalTicketMutex",
+                     rpc_end_global_ticket_mutex);
+  //
+
   // TODO(chogan): Currently these three are only used for testing.
   rpc_server->define("GetBuffers", rpc_get_buffers);
   rpc_server->define("SplitBuffers", rpc_split_buffers).disable_response();
@@ -498,6 +520,13 @@ void StartGlobalSystemViewStateUpdateThread(SharedMemoryContext *context,
                                ABT_THREAD_ATTR_NULL, NULL);
 }
 
+void StopGlobalSystemViewStateUpdateThread(RpcContext *rpc) {
+  ThalliumState *state = GetThalliumState(rpc);
+  state->kill_requested.store(true);
+  ABT_xstream_join(state->execution_stream);
+  ABT_xstream_free(&state->execution_stream);
+}
+
 void InitRpcContext(RpcContext *rpc, u32 num_nodes, u32 node_id,
                      Config *config) {
   rpc->num_nodes = num_nodes;
@@ -557,9 +586,6 @@ void ShutdownRpcClients(RpcContext *rpc) {
 
 void FinalizeRpcContext(RpcContext *rpc, bool is_daemon) {
   ThalliumState *state = GetThalliumState(rpc);
-  state->kill_requested.store(true);
-  ABT_xstream_join(state->execution_stream);
-  ABT_xstream_free(&state->execution_stream);
 
   if (is_daemon) {
     state->engine->wait_for_finalize();
