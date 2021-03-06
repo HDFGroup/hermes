@@ -49,6 +49,18 @@ add_test(NAME "Testbucket_test"
 set_tests_properties("Testbucket_test" PROPERTIES ENVIRONMENT
   LSAN_OPTIONS=suppressions=${CMAKE_CURRENT_SOURCE_DIR}/data/asan.supp)
 
+add_executable(swap_test swap_test.cc)
+target_link_libraries(swap_test ${LIBRT} hermes MPI::MPI_CXX ZLIB::ZLIB
+        $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium>)
+target_compile_definitions(swap_test
+        PRIVATE $<$<BOOL:${HERMES_RPC_THALLIUM}>:HERMES_RPC_THALLIUM>)
+add_test(NAME "Testswap_test"
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+        "${CMAKE_BINARY_DIR}/bin/swap_test"
+        "${CMAKE_CURRENT_SOURCE_DIR}/data/swap_test.conf")
+set_tests_properties("Testswap_test" PROPERTIES ENVIRONMENT
+        LSAN_OPTIONS=suppressions=${CMAKE_CURRENT_SOURCE_DIR}/data/asan.supp)
+
 #------------------------------------------------------------------------------
 # POSIX GOTCHA test
 #------------------------------------------------------------------------------
