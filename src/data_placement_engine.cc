@@ -54,6 +54,7 @@ Status AddRoundRobinSchema(size_t index, std::vector<u64> &node_state,
                            PlacementSchema &output) {
   Status result;
   TargetID dst = {};
+  bool found_target {false};
   DataPlacementEngine dpe;
   size_t num_targets = node_state.size();
   size_t device_pos {dpe.getCountDevice()};
@@ -61,6 +62,7 @@ Status AddRoundRobinSchema(size_t index, std::vector<u64> &node_state,
   for (size_t j {0}; j < num_targets; ++j) {
     size_t adjust_pos = {(j+device_pos)%num_targets};
     if (node_state[adjust_pos] >= blob_sizes[index]) {
+      found_target = true;
       dpe.setCountDevice((j+device_pos+1)%num_targets);
       dst = FindTargetIdFromDeviceId(targets, adjust_pos);
       output.push_back(std::make_pair(blob_sizes[index], dst));
@@ -68,8 +70,13 @@ Status AddRoundRobinSchema(size_t index, std::vector<u64> &node_state,
       break;
     }
   }
-  if (IsNullTargetId(dst)) {
+  if (!found_target) {
+    result = DPE_RR_FIND_TGT_FAILED;
+    LOG(ERROR) << result.Msg();
+  }
+  else if (IsNullTargetId(dst)) {
     result = DPE_GET_INVALID_TGT;
+    LOG(ERROR) << result.Msg();
   }
 
   return result;
@@ -154,6 +161,7 @@ Status AddRandomSchema(std::multimap<u64, TargetID> &ordered_cap,
   auto itlow = ordered_cap.lower_bound(blob_size);
   if (itlow == ordered_cap.end()) {
     result = DPE_RANDOM_FOUND_NO_TGT;
+    LOG(ERROR) << result.Msg();
   } else {
     // distance from lower bound to the end
     std::uniform_int_distribution<>
@@ -301,6 +309,7 @@ Status MinimizeIoTimePlacement(const std::vector<size_t> &blob_sizes,
   // Check if the problem has an optimal solution.
   if (result_status != MPSolver::OPTIMAL) {
     result = DPE_ORTOOLS_NO_SOLUTION;
+    LOG(ERROR) << result.Msg();
     return result;
   }
 

@@ -1740,6 +1740,7 @@ api::Status StdIoPersistBlob(SharedMemoryContext *context, RpcContext *rpc,
   } else {
     // TODO(chogan): @errorhandling
     result = INVALID_FILE;
+    LOG(ERROR) << result.Msg();
   }
   return result;
 }
