@@ -254,8 +254,9 @@ Status VBucket::Delete(Context& ctx) {
                   BucketID bucket_id =
                     GetBucketId(&hermes_->context_, &hermes_->rpc_,
                                       ci->first.c_str());
-                  auto blob_id = GetBlobId(
-                    &hermes_->context_, &hermes_->rpc_, ci->second, bucket_id);
+                  auto blob_id =
+                    GetBlobId(&hermes_->context_, &hermes_->rpc_, ci->second,
+                              bucket_id);
                   // TODO(hari): @errorhandling check return of StdIoPersistBlob
                   ret = StdIoPersistBlob(&hermes_->context_, &hermes_->rpc_,
                                          &hermes_->trans_arena_, blob_id, file,

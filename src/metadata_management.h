@@ -194,20 +194,20 @@ BufferIdArray GetBufferIdsFromBlobId(Arena *arena,
                                      SharedMemoryContext *context,
                                      RpcContext *rpc, BlobID blob_id,
                                      u32 **sizes);
-/**
- *
- */
-// BufferIdArray GetBufferIdsFromBlobName(Arena *arena,
-//                                        SharedMemoryContext *context,
-//                                        RpcContext *rpc,
-//                                        const char *blob_name,
-//                                        u32 **sizes);
 
 /**
  *
  */
 BlobID GetBlobId(SharedMemoryContext *context, RpcContext *rpc,
                        const std::string &name, BucketID bucket_id);
+
+
+
+/**
+ *
+ */
+std::string GetBlobNameFromId(MetadataManager *mdm, RpcContext *rpc,
+                              BlobID blob_id);
 
 /**
  *
@@ -287,11 +287,19 @@ TargetID FindTargetIdFromDeviceId(const std::vector<TargetID> &targets,
  */
 std::vector<BlobID> GetBlobIds(SharedMemoryContext *context, RpcContext *rpc,
                                BucketID bucket_id);
+
 /**
  *
  */
 BucketID GetBucketId(SharedMemoryContext *context, RpcContext *rpc,
                            const char *name);
+
+/**
+ *
+ */
+BucketID GetBucketIdFromBlobId(SharedMemoryContext *context, RpcContext *rpc,
+                               BlobID blob_id);
+
 /**
  *
  */
