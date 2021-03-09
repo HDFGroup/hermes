@@ -99,6 +99,9 @@ std::vector<BlobID> LocalGetBlobIds(SharedMemoryContext *context,
 std::vector<TargetID> LocalGetNodeTargets(SharedMemoryContext *context);
 u32 GetNextNode(RpcContext *rpc);
 u32 GetPreviousNode(RpcContext *rpc);
+BucketID LocalGetBucketIdFromBlobId(SharedMemoryContext *context, BlobID id);
+std::string LocalGetBlobNameFromId(SharedMemoryContext *context,
+                                   BlobID blob_id);
 
 }  // namespace hermes
 #endif  // HERMES_METADATA_MANAGEMENT_INTERNAL_H_

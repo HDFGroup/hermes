@@ -215,6 +215,31 @@ void TestGetRelativeNodeId() {
   Assert(GetPreviousNode(&rpc) == 9);
 }
 
+void TestDuplicateBlobNames(HermesPtr hermes) {
+  hapi::Context ctx;
+  const size_t blob_size = 8;
+  hapi::Bucket b1("b1", hermes, ctx);
+  hapi::Bucket b2("b2", hermes, ctx);
+  std::string blob_name("duplicate");
+  hapi::Blob blob1(blob_size, 'x');
+  hapi::Blob blob2(blob_size, 'z');
+
+  Assert(b1.Put(blob_name, blob1, ctx).Succeeded());
+  Assert(b2.Put(blob_name, blob2, ctx).Succeeded());
+
+  Assert(b1.ContainsBlob(blob_name));
+  Assert(b2.ContainsBlob(blob_name));
+
+  hapi::Blob result(blob_size, '0');
+  Assert(b1.Get(blob_name, result, ctx) == blob_size);
+  Assert(result == blob1);
+  Assert(b2.Get(blob_name, result, ctx) == blob_size);
+  Assert(result == blob2);
+
+  Assert(b1.Destroy(ctx).Succeeded());
+  Assert(b2.Destroy(ctx).Succeeded());
+}
+
 int main(int argc, char **argv) {
   int mpi_threads_provided;
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &mpi_threads_provided);

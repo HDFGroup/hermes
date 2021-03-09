@@ -176,8 +176,9 @@ union BucketID {
   u64 as_int;
 };
 
-// NOTE(chogan): We reserve sizeof(BucketID) bytes in order to embed the
-// BucketID into the Blob name.
+// NOTE(chogan): We reserve sizeof(BucketID) * 2 bytes in order to embed the
+// BucketID into the Blob name. See MakeInternalBlobName() for a description of
+// why we need double the bytes of a BucketID.
 constexpr int kMaxBlobNameSize = 64 - (sizeof(BucketID) * 2);
 
 union VBucketID {
