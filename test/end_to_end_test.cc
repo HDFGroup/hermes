@@ -36,7 +36,8 @@ void TestPutGetBucket(hapi::Bucket &bucket, int app_rank, int app_size) {
 
   hapi::Context ctx;
   std::string blob_name = "test_blob" + std::to_string(app_rank);
-  bucket.Put(blob_name, put_data, ctx);
+  hermes::api::Status status = bucket.Put(blob_name, put_data, ctx);
+  Assert(status.Succeeded());
 
   hapi::Blob get_result;
   size_t blob_size = bucket.Get(blob_name, get_result, ctx);
@@ -56,7 +57,8 @@ void TestBulkTransfer(std::shared_ptr<hapi::Hermes> hermes, int app_rank) {
   hapi::Blob put_data(transfer_size, 'x');
 
   if (app_rank == 0) {
-    bucket.Put(blob_name, put_data, ctx);
+    hermes::api::Status status = bucket.Put(blob_name, put_data, ctx);
+    Assert(status.Succeeded());
   }
 
   hermes->AppBarrier();

@@ -122,7 +122,7 @@ static void TestRenameBucket(HermesPtr hermes) {
   u8 data[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
   static_assert(sizeof(data[0]) == sizeof(u8));
   std::string blob_name = "renamed_bucket_blob";
-  bucket.Put(blob_name, data, sizeof(data), ctx);
+  Assert(bucket.Put(blob_name, data, sizeof(data), ctx).Succeeded());
 
   std::string new_bucket_name = "new_bucket";
   bucket.Rename(new_bucket_name, ctx);
