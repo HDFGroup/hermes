@@ -73,8 +73,7 @@ Status AddRoundRobinSchema(size_t index, std::vector<u64> &node_state,
   if (!found_target) {
     result = DPE_RR_FIND_TGT_FAILED;
     LOG(ERROR) << result.Msg();
-  }
-  else if (IsNullTargetId(dst)) {
+  } else if (IsNullTargetId(dst)) {
     result = DPE_GET_INVALID_TGT;
     LOG(ERROR) << result.Msg();
   }
