@@ -151,19 +151,17 @@ VBucketID GetVBucketId(SharedMemoryContext *context, RpcContext *rpc,
 }
 
 std::string MakeInternalBlobName(const std::string &name, BucketID id) {
-  static_assert(sizeof(BucketID) <= sizeof(unsigned long long));
-
-  unsigned long long id_as_uint = id.as_int;
   std::stringstream ss;
 
-  // NOTE(chogan): Store the bytes of the blob_id at the beginning of the name.
-  // We can't just stick the raw bytes in there because the Blob name will
-  // eventually treated as a C string, which means a null byte will be treated
-  // as a null terminator. Instead, we store the string representation of each
-  // byte, which means we need two bytes to represent one byte.
-  for (int i = sizeof(unsigned long long) - 1; i >= 0 ; --i) {
-    // TODO(chogan): May require an endian swap
-    u8 *byte = (u8 *)&id_as_uint + i;
+  // NOTE(chogan): Store the bytes of \p id at the beginning of the name. We
+  // can't just stick the raw bytes in there because the Blob name will
+  // eventually be treated as a C string, which means a null byte will be
+  // treated as a null terminator. Instead, we store the string representation
+  // of each byte in hex, which means we need two bytes to represent one byte.
+  for (int i = sizeof(BucketID) - 1; i >= 0 ; --i) {
+    // TODO(chogan): @portability Need to perform this loop in reverse on a
+    // big-endian platform
+    u8 *byte = ((u8 *)&id.as_int) + i;
     ss << std::hex << std::setw(2) << std::setfill('0') << (int)(*byte);
   }
   ss << name;
@@ -267,13 +265,39 @@ std::string GetBlobNameFromId(SharedMemoryContext *context, RpcContext *rpc,
   return result;
 }
 
+// NOTE(chogan): Lookup table for HexStringToU64()
+static const u64 hextable[] = {
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 0, 0, 0, 0, 0, 0, 10, 11, 12,
+  13, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 10, 11, 12, 13, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0
+};
+
+u64 HexStringToU64(const std::string &s) {
+  u64 result = 0;
+  for (size_t i = 0; i < kBucketIdStringSize; ++i) {
+    result = (result << 4) | hextable[(int)s[i]];
+  }
+
+  return result;
+}
+
 BucketID LocalGetBucketIdFromBlobId(SharedMemoryContext *context, BlobID id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   std::string internal_name = ReverseGetFromStorage(mdm, id.as_int,
                                                     kMapType_Blob);
   BucketID result = {};
-  int base = 16;
-  result.as_int = (u64)std::stoull(internal_name, nullptr, base);
+  if (internal_name.size() > kBucketIdStringSize) {
+    result.as_int = HexStringToU64(internal_name);
+  }
 
   return result;
 }
