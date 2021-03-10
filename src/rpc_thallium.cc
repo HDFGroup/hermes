@@ -348,9 +348,8 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
     req.respond(result);
   };
 
-  auto rpc_get_blob_name_from_id = [context](const request &req, BlobID
-                                             blob_id) {
-    std::string result = LocalGetBlobNameFromId(context, blob_id);
+  auto rpc_get_blob_name_from_id = [context](const request &req, BlobID id) {
+    std::string result = LocalGetBlobNameFromId(context, id);
 
     req.respond(result);
   };

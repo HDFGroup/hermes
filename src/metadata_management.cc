@@ -245,8 +245,11 @@ std::string LocalGetBlobNameFromId(SharedMemoryContext *context,
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   std::string blob_name = ReverseGetFromStorage(mdm, blob_id.as_int,
                                                 kMapType_Blob);
-  std::string result =
-    blob_name.substr(sizeof(BucketID) * 2, std::string::npos);
+
+  std::string result;
+  if (blob_name.size() > kBucketIdStringSize) {
+    result = blob_name.substr(kBucketIdStringSize, std::string::npos);
+  }
 
   return result;
 }
@@ -688,7 +691,7 @@ bool ContainsBlob(SharedMemoryContext *context, RpcContext *rpc,
       result = LocalContainsBlob(context, bucket_id, blob_id);
     } else {
       result = RpcCall<bool>(rpc, target_node, "RemoteContainsBlob", bucket_id,
-                             blob_name);
+                             blob_id);
     }
   }
 
