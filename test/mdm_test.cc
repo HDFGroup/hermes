@@ -202,7 +202,7 @@ static void TestMaxNameLength(HermesPtr hermes) {
   bucket.Destroy(ctx);
 }
 
-void TestGetRelativeNodeId() {
+static void TestGetRelativeNodeId() {
   RpcContext rpc = {};
   rpc.num_nodes = 10;
   rpc.node_id = 1;
@@ -215,7 +215,7 @@ void TestGetRelativeNodeId() {
   Assert(GetPreviousNode(&rpc) == 9);
 }
 
-void TestDuplicateBlobNames(HermesPtr hermes) {
+static void TestDuplicateBlobNames(HermesPtr hermes) {
   hapi::Context ctx;
   const size_t blob_size = 8;
   hapi::Bucket b1("b1", hermes, ctx);
@@ -225,6 +225,8 @@ void TestDuplicateBlobNames(HermesPtr hermes) {
   hapi::Blob blob2(blob_size, 'z');
 
   Assert(b1.Put(blob_name, blob1, ctx).Succeeded());
+  Assert(!b2.ContainsBlob(blob_name));
+
   Assert(b2.Put(blob_name, blob2, ctx).Succeeded());
 
   Assert(b1.ContainsBlob(blob_name));
@@ -238,6 +240,56 @@ void TestDuplicateBlobNames(HermesPtr hermes) {
 
   Assert(b1.Destroy(ctx).Succeeded());
   Assert(b2.Destroy(ctx).Succeeded());
+}
+
+static void TestGetBucketIdFromBlobId(HermesPtr hermes) {
+  hapi::Context ctx;
+  const size_t blob_size = 8;
+  hapi::Bucket b1("b1", hermes, ctx);
+  std::string blob_name("blob1");
+  hapi::Blob blob1(blob_size, 'x');
+  Assert(b1.Put(blob_name, blob1, ctx).Succeeded());
+
+  BucketID b1_id = {};
+  b1_id.as_int = b1.GetId();
+  BlobID blob_id =
+    hermes::GetBlobId(&hermes->context_, &hermes->rpc_, blob_name, b1_id);
+
+  BucketID bucket_id =
+    hermes::GetBucketIdFromBlobId(&hermes->context_, &hermes->rpc_, blob_id);
+
+  Assert(bucket_id.as_int == b1.GetId());
+  Assert(b1.Destroy(ctx).Succeeded());
+}
+
+static void TestHexStringToU64() {
+  std::string zero1("0");
+  std::string zero2 = zero1 + zero1;
+  std::string zero4 = zero2 + zero2;
+  std::string zero8 = zero4 + zero4;
+
+  std::string one_str = zero8 + zero4 + zero2 + "01";
+  std::string ff_str = zero8 + zero4 + zero2 + "ff";
+  std::string all_f_str("ffffffffffffffff");
+  std::string bucket_id_str = zero4 + zero2 + "01" + zero4 + zero2 + "0e";
+  std::string count_str("123456789abcdef0");
+
+  u64 one = 0x1ULL;
+  u64 ff = 0xffULL;
+  u64 bucket_id = 0x10000000eULL;
+  u64 all_f = 0xffffffffffffffffULL;
+  u64 count = 0x123456789abcdef0ULL;
+
+  BucketID id = {};
+  id.as_int = 1311768467463790320;
+  std::string blob_name = MakeInternalBlobName(std::string("my_blob"), id);
+
+  Assert(HexStringToU64(one_str) == one);
+  Assert(HexStringToU64(ff_str) == ff);
+  Assert(HexStringToU64(bucket_id_str) == bucket_id);
+  Assert(HexStringToU64(all_f_str) == all_f);
+  Assert(HexStringToU64(count_str) == count);
+  Assert(HexStringToU64(blob_name) == count);
 }
 
 int main(int argc, char **argv) {
@@ -259,6 +311,9 @@ int main(int argc, char **argv) {
   TestBucketRefCounting(hermes);
   TestMaxNameLength(hermes);
   TestGetRelativeNodeId();
+  TestDuplicateBlobNames(hermes);
+  TestGetBucketIdFromBlobId(hermes);
+  TestHexStringToU64();
 
   hermes->Finalize(true);
 

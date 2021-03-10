@@ -311,6 +311,12 @@ namespace api {
 
 std::shared_ptr<Hermes> InitHermes(const char *config_file, bool is_daemon,
                                    bool is_adapter) {
+  u16 endian_test = 0x1;
+  char *endian_ptr = (char *)&endian_test;
+  if (endian_ptr[0] != 1) {
+    LOG(FATAL) << "Big endian machines not supported yet." << std::endl;
+  }
+
   hermes::Config config = {};
   const size_t kConfigMemorySize = KILOBYTES(16);
   hermes::u8 config_memory[kConfigMemorySize];
