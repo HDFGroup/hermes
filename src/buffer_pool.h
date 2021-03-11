@@ -23,6 +23,7 @@
 #include <vector>
 
 #include "hermes_types.h"
+#include "hermes_status.h"
 #include "memory_management.h"
 #include "communication.h"
 

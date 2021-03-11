@@ -73,6 +73,19 @@ class Bucket {
   Status Put(const std::string &name, const std::vector<T> &data, Context &ctx);
 
   /**
+   * \brief Puts a blob to a bucket
+   *
+   * \param name A blob name
+   * \param data A blob buffer
+   * \param size The number of blob bytes in buffer
+   * \param ctx A Hermes context
+   *
+   * \return The return code/status
+   *
+   * \pre The bucket must be valid.
+   * \pre The blob name \p name length (as byte array) must not exceed #kMaxBlobName.
+   * \pre The blob buffer \p data must not be \c nullptr unless \p size is 0.
+   * \pre If \p size is positive \p data must not be \c nullptr.
    *
    */
   Status Put(const std::string &name, const u8 *data, size_t size,
@@ -157,7 +170,7 @@ template<typename T>
 Status Bucket::PlaceBlobs(std::vector<PlacementSchema> &schemas,
                           const std::vector<std::vector<T>> &blobs,
                           const std::vector<std::string> &names, int retries) {
-  Status result = 0;
+  Status result;
 
   for (size_t i = 0; i < schemas.size(); ++i) {
     PlacementSchema &schema = schemas[i];
@@ -176,17 +189,24 @@ Status Bucket::PlaceBlobs(std::vector<PlacementSchema> &schemas,
 template<typename T>
 Status Bucket::Put(std::vector<std::string> &names,
                    std::vector<std::vector<T>> &blobs, Context &ctx) {
-  Status ret = 0;
+  Status ret;
 
   for (auto &name : names) {
     if (IsBlobNameTooLong(name)) {
       // TODO(chogan): @errorhandling
-      ret = 1;
-      break;
+      ret = BLOB_NAME_TOO_LONG;
+      LOG(ERROR) << ret.Msg();
+      return ret;
     }
   }
 
-  if (IsValid() && ret == 0) {
+  if (blobs.size() == 0) {
+    ret = INVALID_BLOB;
+    LOG(ERROR) << ret.Msg();
+    return ret;
+  }
+
+  if (IsValid()) {
     size_t num_blobs = blobs.size();
     std::vector<size_t> sizes_in_bytes(num_blobs);
     for (size_t i = 0; i < num_blobs; ++i) {
@@ -198,15 +218,18 @@ Status Bucket::Put(std::vector<std::string> &names,
                              schemas, ctx);
     HERMES_END_TIMED_BLOCK();
 
-    if (ret == 0) {
+    if (ret.Succeeded()) {
       ret = PlaceBlobs(schemas, blobs, names, ctx.buffer_organizer_retries);
     } else {
       // TODO(chogan): @errorhandling No space left or contraints unsatisfiable.
-      ret = 1;
+      LOG(ERROR) << ret.Msg();
+      return ret;
     }
   } else {
     // TODO(chogan): @errorhandling
-    ret = 1;
+    ret = INVALID_BUCKET;
+    LOG(ERROR) << ret.Msg();
+    return ret;
   }
 
   return ret;

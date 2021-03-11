@@ -17,7 +17,6 @@
  * Standard headers
  */
 #include <ftw.h>
-
 #include <cstdio>
 #include <unordered_map>
 
@@ -25,6 +24,8 @@
  * Internal headers
  */
 #include <hermes/adapter/constants.h>
+#include <hermes/adapter/enumerations.h>
+#include <hermes/adapter/interceptor.h>
 #include <hermes/adapter/stdio/common/constants.h>
 #include <hermes/adapter/stdio/common/datastructures.h>
 #include <mpi.h>
@@ -62,11 +63,16 @@ class MetadataManager {
    * Constructor
    */
   MetadataManager()
-      : metadata(), ref(0), is_mpi(false), rank(0), comm_size(1) {}
+      : metadata(),
+        ref(0),
+        is_mpi(false),
+        rank(0),
+        comm_size(1) {}
   /**
    * Get the instance of hermes.
    */
   std::shared_ptr<hapi::Hermes>& GetHermes() { return hermes; }
+
 
   /**
    * Initialize hermes. Get the kHermesConf from environment else get_env
@@ -90,6 +96,7 @@ class MetadataManager {
       } else {
         hermes = hermes::InitHermesDaemon(hermes_config);
       }
+      INTERCEPTOR_LIST->SetupAdapterMode();
     }
     ref++;
   }

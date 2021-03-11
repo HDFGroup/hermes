@@ -10,13 +10,14 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include <bucket.h>
-#include <hermes.h>
-#include <vbucket.h>
-
 #include <experimental/filesystem>
 
 #include "catch_config.h"
+
+#include "bucket.h"
+#include "hermes.h"
+#include "vbucket.h"
+#include "test_utils.h"
 
 namespace fs = std::experimental::filesystem;
 
@@ -106,7 +107,9 @@ TEST_CASE("CustomTrait",
     auto blob_names = std::set<std::string, decltype(blob_cmp)>(blob_cmp);
     auto check_write = hermes::api::Blob();
     for (size_t i = 0; i < args.iterations; ++i) {
-      file_bucket.Put(std::to_string(i), info.write_blob, ctx);
+      hermes::api::Status status =
+        file_bucket.Put(std::to_string(i), info.write_blob, ctx);
+      Assert(status.Succeeded());
       blob_names.insert(std::to_string(i));
       check_write.insert(check_write.end(), info.write_blob.begin(),
                          info.write_blob.end());

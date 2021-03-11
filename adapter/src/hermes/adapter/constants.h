@@ -28,4 +28,34 @@ const char* kHermesConf = "HERMES_CONF";
  * from I/O. This is needed as we should not intercept these files.
  */
 const char* kHermesExtension = ".hermes";
+/**
+ * ADAPTER_MODE env variable is used to define the mode in which Hermes'
+ * STDIO adapter operates.
+ *
+ * It supports 3 Values: DEFAULT/BYPASS/SCRATCH
+ *
+ * DEFAULT: by default adapter operates in Persistent mode.
+ * BYPASS: the adapter will bypass hermes.
+ * SCRATCH: the adapter will discard the data operation on close.
+ */
+const char* kAdapterMode = "ADAPTER_MODE";
+/**
+ * ADAPTER_MODE_INFO env variable is used to define the additional
+ * information for the selected mode @see kAdapterMode.
+ *
+ * for DEFAULT: which files should be persisted.
+ * for BYPASS: which files should be bypassed.
+ * for SCRATCH: which files will be opened in scratch model.
+ */
+const char* kAdapterModeInfo = "ADAPTER_MODE_INFO";
+/**
+ * Path delimiter used for defining multiple file paths in Hermes' Adapter.
+ */
+const char kPathDelimiter = ',';
+/**
+ * Constants for supported buffering modes in Hermes
+ */
+const char* kAdapterDefaultMode = "DEFAULT";
+const char* kAdapterBypassMode = "BYPASS";
+const char* kAdapterScratchMode = "SCRATCH";
 #endif  // HERMES_ADAPTER_CONSTANTS_H

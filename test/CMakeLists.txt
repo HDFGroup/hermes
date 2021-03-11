@@ -27,8 +27,6 @@ foreach(program ${API_TESTS})
     LSAN_OPTIONS=suppressions=${CMAKE_CURRENT_SOURCE_DIR}/data/asan.supp)
 endforeach()
 
-
-
 #------------------------------------------------------------------------------
 # Bucket test
 #------------------------------------------------------------------------------
@@ -62,7 +60,6 @@ endif()
 #------------------------------------------------------------------------------
 # BufferPool tests
 #------------------------------------------------------------------------------
-
 add_executable(bp buffer_pool_test.cc)
 target_link_libraries(bp ${LIBRT} hermes MPI::MPI_CXX
     $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium>)
@@ -81,7 +78,6 @@ target_compile_definitions(bp_test
 #------------------------------------------------------------------------------
 # Config Parser tests
 #------------------------------------------------------------------------------
-
 add_executable(config_parser_test config_parser_test.cc)
 target_link_libraries(config_parser_test hermes
   $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium>)
@@ -94,7 +90,6 @@ target_compile_definitions(config_parser_test
 #------------------------------------------------------------------------------
 # Memory Management tests
 #------------------------------------------------------------------------------
-
 add_executable(mem memory_test.cc)
 target_link_libraries(mem hermes $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium>)
 add_test(NAME TestMemoryManagement COMMAND mem)
@@ -111,7 +106,6 @@ add_test(NAME TestSTBMapWithHeap COMMAND stb_map)
 #------------------------------------------------------------------------------
 # Metadata Manager tests
 #------------------------------------------------------------------------------
-
 add_executable(mdm mdm_test.cc)
 target_link_libraries(mdm hermes ${LIBRT}
   $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium> MPI::MPI_CXX)
@@ -124,7 +118,6 @@ set_tests_properties("TestMDM" PROPERTIES ENVIRONMENT
 #------------------------------------------------------------------------------
 # Trait tests
 #------------------------------------------------------------------------------
-
 add_executable(trait trait_test.cc)
 target_link_libraries(trait ${LIBRT} hermes MPI::MPI_CXX
 $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium> Catch2::Catch2 -lstdc++fs)
@@ -138,7 +131,6 @@ LSAN_OPTIONS=suppressions=${CMAKE_CURRENT_SOURCE_DIR}/data/asan.supp)
 #------------------------------------------------------------------------------
 # Custom Targets
 #------------------------------------------------------------------------------
-
 add_custom_target(ares
   COMMAND LSAN_OPTIONS=suppressions=${CMAKE_CURRENT_SOURCE_DIR}/data/asan.supp
   ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4 -ppn 2
