@@ -25,7 +25,7 @@
 
 namespace hermes {
 
-bool IsNameTooLong(const std::string &name, size_t max) {
+static bool IsNameTooLong(const std::string &name, size_t max) {
   bool result = false;
   if (name.size() + 1 >= max) {
     LOG(WARNING) << "Name '" << name << "' exceeds the maximum name size of "
@@ -53,31 +53,29 @@ bool IsVBucketNameTooLong(const std::string &name) {
   return result;
 }
 
-bool IsNullBucketId(BucketID id) {
-  bool result = id.as_int == 0;
+static inline bool IsNullId(u64 id) {
+  bool result = id == 0;
 
   return result;
+}
+
+bool IsNullBucketId(BucketID id) {
+  return IsNullId(id.as_int);
 }
 
 bool IsNullVBucketId(VBucketID id) {
-  bool result = id.as_int == 0;
-
-  return result;
+  return IsNullId(id.as_int);
 }
 
 bool IsNullBlobId(BlobID id) {
-  bool result = id.as_int == 0;
-
-  return result;
+  return IsNullId(id.as_int);
 }
 
 bool IsNullTargetId(TargetID id) {
-  bool result = id.as_int == 0;
-
-  return result;
+  return IsNullId(id.as_int);
 }
 
-u32 GetBlobNodeId(BlobID id) {
+static u32 GetBlobNodeId(BlobID id) {
   u32 result = (u32)abs(id.bits.node_id);
 
   return result;
@@ -142,10 +140,26 @@ BucketID GetBucketId(SharedMemoryContext *context, RpcContext *rpc,
   return result;
 }
 
+BucketID LocalGetBucketId(SharedMemoryContext *context, const char *name) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  BucketID result = {};
+  result.as_int = LocalGet(mdm, name, kMapType_Bucket);
+
+  return result;
+}
+
 VBucketID GetVBucketId(SharedMemoryContext *context, RpcContext *rpc,
                        const char *name) {
   VBucketID result = {};
   result.as_int = GetId(context, rpc, name, kMapType_VBucket);
+
+  return result;
+}
+
+VBucketID LocalGetVBucketId(SharedMemoryContext *context, const char *name) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  VBucketID result = {};
+  result.as_int = LocalGet(mdm, name, kMapType_VBucket);
 
   return result;
 }
@@ -195,9 +209,19 @@ void PutBucketId(MetadataManager *mdm, RpcContext *rpc, const std::string &name,
   PutId(mdm, rpc, name, id.as_int, kMapType_Bucket);
 }
 
+void LocalPutBucketId(MetadataManager *mdm, const std::string &name,
+                      BucketID id) {
+  LocalPut(mdm, name.c_str(), id.as_int, kMapType_Bucket);
+}
+
 void PutVBucketId(MetadataManager *mdm, RpcContext *rpc,
                   const std::string &name, VBucketID id) {
   PutId(mdm, rpc, name, id.as_int, kMapType_VBucket);
+}
+
+void LocalPutVBucketId(MetadataManager *mdm, const std::string &name,
+                       VBucketID id) {
+  LocalPut(mdm, name.c_str(), id.as_int, kMapType_VBucket);
 }
 
 void PutBlobId(MetadataManager *mdm, RpcContext *rpc, const std::string &name,
@@ -347,14 +371,18 @@ VBucketInfo *GetVBucketInfoByIndex(MetadataManager *mdm, u32 index) {
   return result;
 }
 
-BucketID LocalGetNextFreeBucketId(SharedMemoryContext *context, RpcContext *rpc,
-                             const std::string &name) {
+/**
+ * Returns an available BucketID and marks it as in use in the MDM.
+ *
+ * Assumes MetadataManager::bucket_mutex is already held by the caller.
+ */
+BucketID LocalGetNextFreeBucketId(SharedMemoryContext *context,
+                                  const std::string &name) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   BucketID result = {};
 
   if (mdm->num_buckets < mdm->max_buckets) {
     result = mdm->first_free_bucket;
-    assert(result.bits.node_id == rpc->node_id);
 
     if (!IsNullBucketId(result)) {
       BucketInfo *info = LocalGetBucketInfoByIndex(mdm, result.bits.index);
@@ -366,32 +394,33 @@ BucketID LocalGetNextFreeBucketId(SharedMemoryContext *context, RpcContext *rpc,
       mdm->num_buckets++;
     }
   } else {
-    // TODO(chogan): @errorhandling
-    LOG(INFO) << "Exceeded max allowed buckets. "
-              << "Increase max_buckets_per_node in the Hermes configuration."
-              << std::endl;
+    LOG(ERROR) << "Exceeded max allowed buckets. "
+               << "Increase max_buckets_per_node in the Hermes configuration."
+               << std::endl;
   }
 
   if (!IsNullBucketId(result)) {
     // NOTE(chogan): Add metadata entry
-    PutBucketId(mdm, rpc, name, result);
+    LocalPutBucketId(mdm, name, result);
   }
 
   return result;
 }
 
-BucketID GetNextFreeBucketId(SharedMemoryContext *context, RpcContext *rpc,
-                             const std::string &name) {
+BucketID LocalGetOrCreateBucketId(SharedMemoryContext *context,
+                                  const std::string &name) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
-  u32 target_node = HashString(mdm, rpc, name.c_str());
-  BucketID result = {};
+  BeginTicketMutex(&mdm->bucket_mutex);
+  BucketID result = LocalGetBucketId(context, name.c_str());
 
-  if (target_node == rpc->node_id) {
-    result = LocalGetNextFreeBucketId(context, rpc, name);
+  if (result.as_int != 0) {
+    LOG(INFO) << "Opening Bucket '" << name << "'" << std::endl;
+    LocalIncrementRefcount(context, result);
   } else {
-    result = RpcCall<BucketID>(rpc, target_node, "RemoteGetNextFreeBucketId",
-                               name);
+    LOG(INFO) << "Creating Bucket '" << name << "'" << std::endl;
+    result = LocalGetNextFreeBucketId(context, name);
   }
+  EndTicketMutex(&mdm->bucket_mutex);
 
   return result;
 }
@@ -399,26 +428,25 @@ BucketID GetNextFreeBucketId(SharedMemoryContext *context, RpcContext *rpc,
 BucketID GetOrCreateBucketId(SharedMemoryContext *context, RpcContext *rpc,
                              const std::string &name) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
-
-  BeginGlobalTicketMutex(context, rpc);
-  BeginTicketMutex(&mdm->bucket_mutex);
-  BucketID result = GetBucketId(context, rpc, name.c_str());
-
-  if (result.as_int != 0) {
-    LOG(INFO) << "Opening Bucket '" << name << "'" << std::endl;
-    IncrementRefcount(context, rpc, result);
+  u32 target_node = HashString(mdm, rpc, name.c_str());
+  BucketID result = {};
+  if (target_node == rpc->node_id) {
+    result = LocalGetOrCreateBucketId(context, name);
   } else {
-    LOG(INFO) << "Creating Bucket '" << name << "'" << std::endl;
-    result = GetNextFreeBucketId(context, rpc, name);
+    result = RpcCall<BucketID>(rpc, target_node, "RemoteGetOrCreateBucketId",
+                               name);
   }
-  EndTicketMutex(&mdm->bucket_mutex);
-  EndGlobalTicketMutex(context, rpc);
 
   return result;
 }
 
-VBucketID GetNextFreeVBucketId(SharedMemoryContext *context, RpcContext *rpc,
-                               const std::string &name) {
+/**
+ * Returns an available VBucketID and marks it as in use in the MDM.
+ *
+ * Assumes MetadataManager::vbucket_mutex is already held by the caller.
+ */
+VBucketID LocalGetNextFreeVBucketId(SharedMemoryContext *context,
+                                    const std::string &name) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   VBucketID result = {};
 
@@ -437,33 +465,48 @@ VBucketID GetNextFreeVBucketId(SharedMemoryContext *context, RpcContext *rpc,
       mdm->num_vbuckets++;
     }
   } else {
-    // TODO(chogan): @errorhandling
-    LOG(INFO) << "Exceeded max allowed vbuckets. "
-              << "Increase max_vbuckets_per_node in the Hermes configuration."
-              << std::endl;
+    LOG(ERROR) << "Exceeded max allowed vbuckets. "
+               << "Increase max_vbuckets_per_node in the Hermes configuration."
+               << std::endl;
   }
   if (!IsNullVBucketId(result)) {
-    PutVBucketId(mdm, rpc, name, result);
+    LocalPutVBucketId(mdm, name, result);
   }
+
+  return result;
+}
+
+VBucketID LocalGetOrCreateVBucketId(SharedMemoryContext *context,
+                                    const std::string &name) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+
+  BeginTicketMutex(&mdm->vbucket_mutex);
+  VBucketID result = LocalGetVBucketId(context, name.c_str());
+
+  if (result.as_int != 0) {
+    LOG(INFO) << "Opening VBucket '" << name << "'" << std::endl;
+    LocalIncrementRefcount(context, result);
+  } else {
+    LOG(INFO) << "Creating VBucket '" << name << "'" << std::endl;
+    result = LocalGetNextFreeVBucketId(context, name);
+  }
+  EndTicketMutex(&mdm->vbucket_mutex);
 
   return result;
 }
 
 VBucketID GetOrCreateVBucketId(SharedMemoryContext *context, RpcContext *rpc,
                                const std::string &name) {
+  VBucketID result = {};
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
-
-  BeginTicketMutex(&mdm->vbucket_mutex);
-  VBucketID result = GetVBucketId(context, rpc, name.c_str());
-
-  if (result.as_int != 0) {
-    LOG(INFO) << "Opening VBucket '" << name << "'" << std::endl;
-    IncrementRefcount(context, rpc, result);
+  u32 target_node = HashString(mdm, rpc, name.c_str());
+  if (target_node == rpc->node_id) {
+    result = LocalGetOrCreateVBucketId(context, name);
   } else {
-    LOG(INFO) << "Creating VBucket '" << name << "'" << std::endl;
-    result = GetNextFreeVBucketId(context, rpc, name);
+    result = RpcCall<VBucketID>(rpc, target_node, "RemoteGetOrCreateVBucketId",
+                                name);
   }
-  EndTicketMutex(&mdm->vbucket_mutex);
+
   return result;
 }
 
@@ -745,16 +788,6 @@ void LocalIncrementRefcount(SharedMemoryContext *context, BucketID id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   BucketInfo *info = LocalGetBucketInfoById(mdm, id);
   info->ref_count.fetch_add(1);
-}
-
-void IncrementRefcount(SharedMemoryContext *context, RpcContext *rpc,
-                       BucketID id) {
-  u32 target_node = id.bits.node_id;
-  if (target_node == rpc->node_id) {
-    LocalIncrementRefcount(context, id);
-  } else {
-    RpcCall<bool>(rpc, target_node, "RemoteIncrementRefcount", id);
-  }
 }
 
 void LocalDecrementRefcount(SharedMemoryContext *context, BucketID id) {
@@ -1060,16 +1093,6 @@ void LocalIncrementRefcount(SharedMemoryContext *context, VBucketID id) {
   info->ref_count.fetch_add(1);
 }
 
-void IncrementRefcount(SharedMemoryContext *context, RpcContext *rpc,
-                       VBucketID id) {
-  u32 target_node = id.bits.node_id;
-  if (target_node == rpc->node_id) {
-    LocalIncrementRefcount(context, id);
-  } else {
-    RpcCall<bool>(rpc, target_node, "RemoteIncrementRefcountVBucket", id);
-  }
-}
-
 void LocalDecrementRefcount(SharedMemoryContext *context, VBucketID id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   VBucketInfo *info = LocalGetVBucketInfoById(mdm, id);
@@ -1161,35 +1184,5 @@ std::vector<TargetID> GetNeighborhoodTargets(SharedMemoryContext *context,
   }
 
   return result;
-}
-
-void LocalBeginGlobalTicketMutex(MetadataManager *mdm) {
-  BeginTicketMutex(&mdm->global_mutex);
-}
-
-void LocalEndGlobalTicketMutex(MetadataManager *mdm) {
-  EndTicketMutex(&mdm->global_mutex);
-}
-
-void BeginGlobalTicketMutex(SharedMemoryContext *context, RpcContext *rpc) {
-  if (rpc->node_id == kGlobalMutexNodeId) {
-    MetadataManager *mdm = GetMetadataManagerFromContext(context);
-    LocalBeginGlobalTicketMutex(mdm);
-  } else {
-    [[maybe_unused]]
-    bool result = RpcCall<bool>(rpc, kGlobalMutexNodeId,
-                                "RemoteBeginGlobalTicketMutex");
-  }
-}
-
-void EndGlobalTicketMutex(SharedMemoryContext *context, RpcContext *rpc) {
-  if (rpc->node_id == kGlobalMutexNodeId) {
-    MetadataManager *mdm = GetMetadataManagerFromContext(context);
-    LocalEndGlobalTicketMutex(mdm);
-  } else {
-    [[maybe_unused]]
-    bool result = RpcCall<bool>(rpc, kGlobalMutexNodeId,
-                                "RemoteEndGlobalTicketMutex");
-  }
 }
 }  // namespace hermes

@@ -34,16 +34,14 @@ Bucket::Bucket(const std::string &initial_name,
                             std::to_string(kMaxBucketNameSize));
   } else {
     id_ = GetOrCreateBucketId(&hermes_->context_, &hermes_->rpc_, name_);
-    if (!Bucket::IsValid()) {
+    if (!IsValid()) {
       throw std::runtime_error("Bucket id is invalid.");
     }
   }
 }
 
 bool Bucket::IsValid() const {
-  bool result = id_.as_int != 0;
-
-  return result;
+  return !IsNullBucketId(id_);
 }
 
 Status Bucket::Put(const std::string &name, const u8 *data, size_t size,

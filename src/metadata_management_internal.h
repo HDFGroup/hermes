@@ -52,7 +52,7 @@ void LocalDestroyBlobById(SharedMemoryContext *context, RpcContext *rpc,
 void LocalDestroyBlobByName(SharedMemoryContext *context, RpcContext *rpc,
                             const char *blob_name, BlobID blob_id,
                             BucketID bucket_id);
-BucketID LocalGetNextFreeBucketId(SharedMemoryContext *context, RpcContext *rpc,
+BucketID LocalGetNextFreeBucketId(SharedMemoryContext *context,
                                   const std::string &name);
 u32 LocalAllocateBufferIdList(MetadataManager *mdm,
                               const std::vector<BufferID> &buffer_ids);
@@ -102,6 +102,10 @@ u32 GetPreviousNode(RpcContext *rpc);
 BucketID LocalGetBucketIdFromBlobId(SharedMemoryContext *context, BlobID id);
 std::string LocalGetBlobNameFromId(SharedMemoryContext *context,
                                    BlobID blob_id);
+BucketID LocalGetOrCreateBucketId(SharedMemoryContext *context,
+                                  const std::string &name);
+VBucketID LocalGetOrCreateVBucketId(SharedMemoryContext *context,
+                                    const std::string &name);
 
 /**
  * Faster version of std::stoull.
