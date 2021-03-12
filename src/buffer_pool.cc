@@ -1725,6 +1725,8 @@ api::Status StdIoPersistBlob(SharedMemoryContext *context, RpcContext *rpc,
       // they were `Put`, but once we have a Trait that represents a file
       // mapping, we'll need pwrite and offsets.
       if (offset == -1 || fseek(file, offset, SEEK_SET) == 0) {
+        LOG(INFO) << "STDIO Flush to file: " << " offset: " << offset
+                  << " of size:" << num_bytes << "." << std::endl;
         if (fwrite(data.data(), 1, num_bytes, file) != num_bytes) {
           // TODO(chogan): @errorhandling
           result = STDIO_FWRITE_FAILED;

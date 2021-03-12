@@ -1,7 +1,7 @@
-function(gcc_hermes exec tag_name tags)
+function(gcc_hermes exec tag_name tags conf)
     add_test(NAME Test${exec}_${tag_name} COMMAND "${CMAKE_BINARY_DIR}/bin/${exec}" ${tags} -s --reporter compact)
     set_property(TEST Test${exec}_${tag_name}
-            PROPERTY ENVIRONMENT HERMES_CONF=${CMAKE_SOURCE_DIR}/adapter/test/data/hermes.conf)
+            PROPERTY ENVIRONMENT HERMES_CONF=${CMAKE_SOURCE_DIR}/adapter/test/data/${conf}.conf)
     set_property(TEST Test${exec}_${tag_name} APPEND
             PROPERTY ENVIRONMENT LSAN_OPTIONS=suppressions=${CMAKE_SOURCE_DIR}/test/data/asan.supp)
 endfunction()
@@ -40,8 +40,17 @@ target_link_libraries(hermes_stdio_adapter_test hermes_stdio)
 add_dependencies(hermes_stdio_adapter_test hermes_stdio)
 add_dependencies(hermes_stdio_adapter_test hermes_daemon)
 set_target_properties(hermes_stdio_adapter_test PROPERTIES COMPILE_FLAGS "-DHERMES_INTERCEPT=1")
-gcc_hermes(hermes_stdio_adapter_test "" "~[request_size=range-large]")
-gcc_hermes(hermes_stdio_adapter_test "large" "[request_size=range-large]")
+gcc_hermes(hermes_stdio_adapter_test "" "~[request_size=range-large]" hermes)
+gcc_hermes(hermes_stdio_adapter_test "large" "[request_size=range-large]" hermes)
+
+add_executable(hermes_stdio_low_buf_adapter_test stdio_adapter_low_buffer_space_test.cpp ${ADAPTER_COMMON})
+target_link_libraries(hermes_stdio_low_buf_adapter_test Catch2::Catch2 -lstdc++fs -lc MPI::MPI_CXX)
+target_link_libraries(hermes_stdio_low_buf_adapter_test hermes_stdio)
+add_dependencies(hermes_stdio_low_buf_adapter_test hermes_stdio)
+add_dependencies(hermes_stdio_low_buf_adapter_test hermes_daemon)
+set_target_properties(hermes_stdio_low_buf_adapter_test PROPERTIES COMPILE_FLAGS "-DHERMES_INTERCEPT=1")
+gcc_hermes(hermes_stdio_low_buf_adapter_test "" "" hermes_small)
+
 
 add_executable(hermes_stdio_adapter_mode_test stdio_adapter_mode_test.cpp ${ADAPTER_COMMON})
 target_link_libraries(hermes_stdio_adapter_mode_test Catch2::Catch2 -lstdc++fs -lc MPI::MPI_CXX)
