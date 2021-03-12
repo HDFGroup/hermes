@@ -292,6 +292,35 @@ static void TestHexStringToU64() {
   Assert(HexStringToU64(blob_name) == count);
 }
 
+void TestSwapBlobsExistInBucket() {
+  hermes::Config config = {};
+  hermes::InitDefaultConfig(&config);
+  const int kNumDevices = 4;
+  for (int i = 0; i < kNumDevices; ++i) {
+    // NOTE(chogan): Restrict buffering capacity so blobs go to swap
+    config.capacities[i] = MEGABYTES(1);
+  }
+  std::shared_ptr<hapi::Hermes> hermes = hermes::InitHermes(&config, true);
+
+  hapi::Context ctx;
+  hermes::api::Bucket swap_bucket("swap_test", hermes, ctx);
+  hermes::api::Blob blob(128*1024, 255);
+  auto success_blob_names = std::vector<std::string>();
+  for (int i = 0; i < 32; i++) {
+    std::string blob_name = "Blob" + std::to_string(i);
+    hapi::Status status = swap_bucket.Put(blob_name, blob, ctx);
+    if (!status.Failed()) {
+      success_blob_names.push_back(blob_name);
+    }
+  }
+  for (const auto &blob_name : success_blob_names) {
+    bool exists = swap_bucket.ContainsBlob(blob_name);
+    Assert(exists);
+  }
+
+  hermes->Finalize(true);
+}
+
 int main(int argc, char **argv) {
   int mpi_threads_provided;
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
@@ -316,6 +345,8 @@ int main(int argc, char **argv) {
   TestHexStringToU64();
 
   hermes->Finalize(true);
+
+  TestSwapBlobsExistInBucket();
 
   MPI_Finalize();
 
