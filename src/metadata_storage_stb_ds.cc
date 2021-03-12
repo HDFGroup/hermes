@@ -462,7 +462,7 @@ bool LocalDestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
       ReleaseIdsPtr(mdm);
 
       for (auto blob_id : blobs_to_destroy) {
-        DestroyBlobById(context, rpc, blob_id);
+        DestroyBlobById(context, rpc, blob_id, bucket_id);
       }
       // Delete BlobId list
       FreeIdList(mdm, info->blobs);

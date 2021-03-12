@@ -252,16 +252,18 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
       req.respond(true);
     };
 
-  function<void(const request&, const string&, BlobID)>
+  function<void(const request&, const string&, BlobID, BucketID)>
     rpc_destroy_blob_by_name =
-    [context, rpc](const request &req, const string &name, BlobID id) {
-      LocalDestroyBlobByName(context, rpc, name.c_str(), id);
-        req.respond(true);
+    [context, rpc](const request &req, const string &name, BlobID id,
+                   BucketID bucket_id) {
+      LocalDestroyBlobByName(context, rpc, name.c_str(), id, bucket_id);
+      req.respond(true);
     };
 
-  function<void(const request&, BlobID)>
-    rpc_destroy_blob_by_id = [context, rpc](const request &req, BlobID id) {
-      LocalDestroyBlobById(context, rpc, id);
+  function<void(const request&, BlobID, BucketID)>
+    rpc_destroy_blob_by_id = [context, rpc](const request &req, BlobID id,
+                                            BucketID bucket_id) {
+      LocalDestroyBlobById(context, rpc, id, bucket_id);
       req.respond(true);
     };
 
@@ -339,6 +341,18 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
 
       req.respond(result);
     };
+  auto rpc_get_bucket_id_from_blob_id = [context](const request &req,
+                                                  BlobID id) {
+    BucketID result = LocalGetBucketIdFromBlobId(context, id);
+
+    req.respond(result);
+  };
+
+  auto rpc_get_blob_name_from_id = [context](const request &req, BlobID id) {
+    std::string result = LocalGetBlobNameFromId(context, id);
+
+    req.respond(result);
+  };
 
   function<void(const request&)> rpc_finalize =
     [rpc](const request &req) {
@@ -411,6 +425,9 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
                      rpc_get_global_device_capacities);
   rpc_server->define("RemoteGetBlobIds", rpc_get_blob_ids);
   rpc_server->define("RemoteGetNodeTargets", rpc_get_node_targets);
+  rpc_server->define("RemoteGetBucketIdFromBlobId",
+                     rpc_get_bucket_id_from_blob_id);
+  rpc_server->define("RemoteGetBlobNameFromId", rpc_get_blob_name_from_id);
   rpc_server->define("RemoteFinalize", rpc_finalize).disable_response();
 }
 
