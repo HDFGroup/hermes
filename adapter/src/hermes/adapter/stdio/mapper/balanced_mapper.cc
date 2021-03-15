@@ -25,8 +25,6 @@ MapperReturnType BalancedMapper::map(const FileStruct& file_op) {
 
   auto mapper_return = MapperReturnType();
   size_t size_mapped = 0;
-  std::hash<FileID> file_hash_t;
-  size_t file_hash = file_hash_t(file_op.file_id_);
   while (file_op.size_ > size_mapped) {
     FileStruct file;
     file.file_id_ = file_op.file_id_;
@@ -40,10 +38,7 @@ MapperReturnType BalancedMapper::map(const FileStruct& file_op) {
                        : file_op.size_ - size_mapped;
 
     file.size_ = hermes.size_;
-    /* FIXME(hari): change this once we have blob namespace separated per
-     * bucket.*/
-    hermes.blob_name_ = std::to_string(file_hash) + kStringDelimiter +
-                        std::to_string(page_index);
+    hermes.blob_name_ = std::to_string(page_index);
     mapper_return.emplace_back(file, hermes);
     size_mapped += hermes.size_;
   }

@@ -565,16 +565,10 @@ int HERMES_DECL(fflush)(FILE *fp) {
         hermes::api::VBucket file_vbucket(filename, mdm->GetHermes(), true,
                                           ctx);
         auto offset_map = std::unordered_map<std::string, hermes::u64>();
-        std::size_t pos = 0;
         for (const auto &blob_name : blob_names) {
           file_vbucket.Link(blob_name, filename, ctx);
-          /* FIXME(hari): change this once we have blob namespace separated per
-           * bucket.*/
-          if (pos == 0) {
-            pos = blob_name.find(kStringDelimiter) + 1;
-          }
-          auto offset = std::stol(blob_name.substr(pos));
-          offset_map.emplace(blob_name, offset * kPageSize);
+          auto page_index = std::stol(blob_name);
+          offset_map.emplace(blob_name, page_index * kPageSize);
         }
         auto trait = hermes::api::FileMappingTrait(filename, offset_map,
                                                    nullptr, NULL, NULL);
@@ -613,18 +607,12 @@ int HERMES_DECL(fclose)(FILE *fp) {
           hermes::api::VBucket file_vbucket(filename, mdm->GetHermes(), true,
                                             ctx);
           auto offset_map = std::unordered_map<std::string, hermes::u64>();
-          std::size_t pos = 0;
+
           for (const auto &blob_name : blob_names) {
             auto status = file_vbucket.Link(blob_name, filename, ctx);
             if (!status.Failed()) {
-              /* FIXME(hari): change this once we have blob namespace separated
-               * per bucket.*/
-              if (pos == 0) {
-                pos = blob_name.find(kStringDelimiter) + 1;
-              }
-              auto offset_str = blob_name.substr(pos);
-              auto offset = std::stol(offset_str);
-              offset_map.emplace(blob_name, offset * kPageSize);
+              auto page_index = std::stol(blob_name);
+              offset_map.emplace(blob_name, page_index * kPageSize);
             }
           }
           auto trait = hermes::api::FileMappingTrait(filename, offset_map,
