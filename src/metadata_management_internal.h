@@ -62,8 +62,6 @@ bool LocalContainsBlob(SharedMemoryContext *context, BucketID bucket_id,
                        BlobID blob_id);
 void LocalRemoveBlobFromBucketInfo(SharedMemoryContext *context,
                                    BucketID bucket_id, BlobID blob_id);
-void LocalRemoveBlobFromVBucketInfo(SharedMemoryContext *context,
-                                    VBucketID vbucket_id, BlobID blob_id);
 void LocalIncrementRefcount(SharedMemoryContext *context, BucketID id);
 void LocalDecrementRefcount(SharedMemoryContext *context, BucketID id);
 void LocalIncrementRefcount(SharedMemoryContext *context, VBucketID id);
@@ -100,8 +98,32 @@ std::vector<BlobID> LocalGetBlobIds(SharedMemoryContext *context,
 std::vector<TargetID> LocalGetNodeTargets(SharedMemoryContext *context);
 u32 GetNextNode(RpcContext *rpc);
 u32 GetPreviousNode(RpcContext *rpc);
+BucketID LocalGetBucketIdFromBlobId(SharedMemoryContext *context, BlobID id);
+std::string LocalGetBlobNameFromId(SharedMemoryContext *context,
+                                   BlobID blob_id);
+
+/**
+ * Faster version of std::stoull.
+ *
+ * This is 4.1x faster than std::stoull. Since we generate all the numbers that
+ * we use this function on, we can guarantee the following:
+ *   - The size will always be kBucketIdStringSize.
+ *   - The number will always be unsigned and within the range of a u64.
+ *   - There will never be invalid characters passed in (only 0-9 and a-f).
+ *
+ * Avoiding all this input sanitization and error checking is how we can get a
+ * 4.1x speedup.
+ *
+ * \param s A string with size at least kBucketIdStringSize, where the first
+ *          kBucketIdStringSize characters consist only of 0-9 and a-f.
+ *
+ * \return The u64 representation of the first kBucketIdStringSize characters of
+ *         \p s.
+ */
+u64 HexStringToU64(const std::string &s);
+std::string MakeInternalBlobName(const std::string &name, BucketID id);
 std::vector<BlobID> LocalGetBlobsFromVBucketInfo(SharedMemoryContext *context,
-                                     VBucketID vbucket_id);
+                                                 VBucketID vbucket_id);
 std::string LocalGetBlobNameById(SharedMemoryContext *context, BlobID blob_id);
 
 }  // namespace hermes

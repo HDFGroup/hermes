@@ -101,8 +101,8 @@ size_t Bucket::GetBlobSize(Arena *arena, const std::string &name,
   if (IsValid()) {
     LOG(INFO) << "Getting Blob " << name << " size from bucket "
               << name_ << '\n';
-    BlobID blob_id = GetBlobIdByName(&hermes_->context_, &hermes_->rpc_,
-                                     name.c_str());
+    BlobID blob_id = GetBlobId(&hermes_->context_, &hermes_->rpc_, name,
+                                     id_);
     if (!IsNullBlobId(blob_id)) {
       result = GetBlobSizeById(&hermes_->context_, &hermes_->rpc_, arena,
                                blob_id);
@@ -125,8 +125,8 @@ size_t Bucket::Get(const std::string &name, Blob &user_blob, Context &ctx) {
       ret = GetBlobSize(scratch, name, ctx);
     } else {
       LOG(INFO) << "Getting Blob " << name << " from bucket " << name_ << '\n';
-      BlobID blob_id = GetBlobIdByName(&hermes_->context_, &hermes_->rpc_,
-                                       name.c_str());
+      BlobID blob_id = GetBlobId(&hermes_->context_, &hermes_->rpc_,
+                                       name, id_);
       ret = ReadBlobById(&hermes_->context_, &hermes_->rpc_,
                          &hermes_->trans_arena_, user_blob, blob_id);
     }
@@ -169,7 +169,8 @@ Status Bucket::RenameBlob(const std::string &old_name,
     return ret;
   } else {
     LOG(INFO) << "Renaming Blob " << old_name << " to " << new_name << '\n';
-    hermes::RenameBlob(&hermes_->context_, &hermes_->rpc_, old_name, new_name);
+    hermes::RenameBlob(&hermes_->context_, &hermes_->rpc_, old_name,
+                       new_name, id_);
   }
 
   return ret;
@@ -183,8 +184,8 @@ bool Bucket::ContainsBlob(const std::string &name) {
 }
 
 bool Bucket::BlobIsInSwap(const std::string &name) {
-  BlobID blob_id = GetBlobIdByName(&hermes_->context_, &hermes_->rpc_,
-                                   name.c_str());
+  BlobID blob_id = GetBlobId(&hermes_->context_, &hermes_->rpc_, name,
+                                   id_);
   bool result = hermes::BlobIsInSwap(blob_id);
 
   return result;

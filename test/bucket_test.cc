@@ -87,13 +87,17 @@ void TestBucketPersist(std::shared_ptr<hapi::Hermes> hermes) {
   constexpr int total_bytes = num_blobs * bytes_per_blob;
 
   hapi::Context ctx;
+  hapi::Status status;
   hapi::Blob blobx(bytes_per_blob, 'x');
   hapi::Blob bloby(bytes_per_blob, 'y');
   hapi::Blob blobz(bytes_per_blob, 'z');
   hapi::Bucket bkt("persistent_bucket", hermes, ctx);
-  bkt.Put("blobx", blobx, ctx);
-  bkt.Put("bloby", bloby, ctx);
-  bkt.Put("blobz", blobz, ctx);
+  status = bkt.Put("blobx", blobx, ctx);
+  Assert(status.Succeeded());
+  status = bkt.Put("bloby", bloby, ctx);
+  Assert(status.Succeeded());
+  status = bkt.Put("blobz", blobz, ctx);
+  Assert(status.Succeeded());
 
   std::string saved_file("blobsxyz.txt");
   bkt.Persist(saved_file, ctx);
@@ -151,6 +155,7 @@ void TestPutOverwrite(std::shared_ptr<hapi::Hermes> hermes) {
   size_t new_size = KILOBYTES(9);
   hapi::Blob new_blob(new_size, 'z');
   status = bucket.Put(blob_name, new_blob, ctx);
+  Assert(status.Succeeded());
 
   hermes::testing::GetAndVerifyBlob(bucket, blob_name, new_blob);
 
@@ -174,13 +179,16 @@ int main(int argc, char **argv) {
 
   if (hermes_app->IsApplicationCore()) {
     hermes::api::Context ctx;
+    hermes::api::Status status;
 
     hermes::api::Bucket my_bucket("compression", hermes_app, ctx);
     hermes_app->Display_bucket();
     hermes::api::Blob p1(1024*1024*400, 255);
     hermes::api::Blob p2(p1);
-    my_bucket.Put("Blob1", p1, ctx);
-    my_bucket.Put("Blob2", p2, ctx);
+    status = my_bucket.Put("Blob1", p1, ctx);
+    Assert(status.Succeeded());
+    status = my_bucket.Put("Blob2", p2, ctx);
+    Assert(status.Succeeded());
 
     if (my_bucket.ContainsBlob("Blob1"))
       std::cout<< "Found Blob1\n";

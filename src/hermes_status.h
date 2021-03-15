@@ -38,7 +38,9 @@ namespace hermes {
   X(-23, INVALID_FILE,               "File is not valid.") \
   X(-24, PLACE_SWAP_BLOB_TO_BUF_FAILED, R"(Place blob from swap space into \
                                       buffering system failed.)") \
-  X(-25, HERMES_ERROR_MAX,           "Maximum supported HERMES errors.") \
+  X(-25, DPE_RR_FIND_TGT_FAILED,     R"(DPE round-robin failed to find \
+                                      proper target for blob.)") \
+  X(-26, HERMES_ERROR_MAX,           "Maximum supported HERMES errors.") \
 
 #define RETURN_ENUM(ID, NAME, TEXT) NAME = ID,
 #define RETURN_TEXT(ID, NAME, TEXT) case ID: return TEXT;
