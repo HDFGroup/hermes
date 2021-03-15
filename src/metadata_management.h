@@ -337,6 +337,32 @@ void LocalBeginGlobalTicketMutex(MetadataManager *mdm);
  */
 void LocalEndGlobalTicketMutex(MetadataManager *mdm);
 
+/**
+ *
+ */
+void AttachBlobToVBucket(SharedMemoryContext *context, RpcContext *rpc,
+                         const char *blob_name, const char *bucket_name,
+                         VBucketID vbucket_id);
+
+/**
+ *
+ */
+void RemoveBlobFromVBucketInfo(SharedMemoryContext *context, RpcContext *rpc,
+                               VBucketID vbucket_id, const char *blob_name,
+                               const char *bucket_name);
+
+/**
+ *
+ */
+std::vector<BlobID> GetBlobsFromVBucketInfo(SharedMemoryContext *context,
+                                            RpcContext *rpc,
+                                            VBucketID vbucket_id);
+
+/**
+ *
+ */
+std::string GetBlobNameById(SharedMemoryContext *context, RpcContext *rpc,
+                            BlobID id);
 }  // namespace hermes
 
 #endif  // HERMES_METADATA_MANAGEMENT_H_

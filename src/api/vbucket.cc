@@ -34,7 +34,6 @@ Status VBucket::Link(std::string blob_name, std::string bucket_name,
   bool blob_exists = hermes_->BucketContainsBlob(bucket_name, blob_name);
   if (blob_exists) {
     // inserting value by insert function
-    linked_blobs_.push_back(make_pair(bucket_name, blob_name));
     TraitInput input;
     input.bucket_name = bucket_name;
     input.blob_name = blob_name;
@@ -44,6 +43,8 @@ Status VBucket::Link(std::string blob_name, std::string bucket_name,
         // TODO(hari): @errorhandling Check if linking was successful
       }
     }
+    AttachBlobToVBucket(&hermes_->context_, &hermes_->rpc_, blob_name.data(),
+                        bucket_name.data(), id_);
   } else {
     // TODO(hari): @errorhandling
     ret = BLOB_NOT_IN_BUCKET;
@@ -61,8 +62,14 @@ Status VBucket::Unlink(std::string blob_name, std::string bucket_name,
   LOG(INFO) << "Unlinking blob " << blob_name << " in bucket " << bucket_name
             << " from VBucket " << name_ << '\n';
   bool found = false;
-  for (auto ci = linked_blobs_.begin(); ci != linked_blobs_.end(); ++ci) {
-    if (ci->first == bucket_name && ci->second == blob_name) {
+  auto blob_ids =
+      GetBlobsFromVBucketInfo(&hermes_->context_, &hermes_->rpc_, id_);
+  auto bucket_id =
+      GetBucketId(&hermes_->context_, &hermes_->rpc_, bucket_name.c_str());
+  auto selected_blob_id = GetBlobId(&hermes_->context_, &hermes_->rpc_,
+                                    blob_name.c_str(), bucket_id);
+  for (hermes::BlobID& blob_id : blob_ids) {
+    if (selected_blob_id.as_int == blob_id.as_int) {
       TraitInput input;
       input.bucket_name = bucket_name;
       input.blob_name = blob_name;
@@ -72,7 +79,8 @@ Status VBucket::Unlink(std::string blob_name, std::string bucket_name,
           // TODO(hari): @errorhandling Check if unlinking was successful
         }
       }
-      linked_blobs_.erase(ci);
+      RemoveBlobFromVBucketInfo(&hermes_->context_, &hermes_->rpc_, id_,
+                                blob_name.c_str(), bucket_name.c_str());
       found = true;
       break;
     }
@@ -93,10 +101,14 @@ bool VBucket::Contain_blob(std::string blob_name, std::string bucket_name) {
   LOG(INFO) << "Checking if blob " << blob_name << " from bucket "
             << bucket_name << " is in this VBucket " << name_ << '\n';
 
-  for (auto ci = linked_blobs_.begin(); ci != linked_blobs_.end(); ++ci) {
-    bk_tmp = ci->first;
-    blob_tmp = ci->second;
-    if (bk_tmp == bucket_name && blob_tmp == blob_name) ret = true;
+  auto blob_ids =
+      GetBlobsFromVBucketInfo(&hermes_->context_, &hermes_->rpc_, id_);
+  auto bucket_id =
+      GetBucketId(&hermes_->context_, &hermes_->rpc_, bucket_name.c_str());
+  auto selected_blob_id = GetBlobId(&hermes_->context_, &hermes_->rpc_,
+                                    blob_name.c_str(), bucket_id);
+  for (const auto& blob_id : blob_ids) {
+    if (selected_blob_id.as_int == blob_id.as_int) ret = false;
   }
 
   return ret;
@@ -137,11 +149,15 @@ Status VBucket::Attach(Trait* trait, Context& ctx) {
     }
   }
   if (!selected_trait) {
-    for (auto ci = linked_blobs_.begin(); ci != linked_blobs_.end(); ++ci) {
+    auto blob_ids =
+        GetBlobsFromVBucketInfo(&hermes_->context_, &hermes_->rpc_, id_);
+    for (const auto& blob_id : blob_ids) {
       Trait* t = static_cast<Trait*>(trait);
       TraitInput input;
-      input.bucket_name = ci->first;
-      input.blob_name = ci->second;
+      // FIXME(hari): this needs to be read from blob_id;
+      // input.bucket_name = ci->first;
+      input.blob_name =
+          GetBlobNameById(&hermes_->context_, &hermes_->rpc_, blob_id);
       if (t->onAttachFn != nullptr) {
         t->onAttachFn(input, trait);
         // TODO(hari): @errorhandling Check if attach was successful
@@ -177,11 +193,15 @@ Status VBucket::Detach(Trait* trait, Context& ctx) {
     }
   }
   if (selected_trait) {
-    for (auto ci = linked_blobs_.begin(); ci != linked_blobs_.end(); ++ci) {
+    auto blob_ids =
+        GetBlobsFromVBucketInfo(&hermes_->context_, &hermes_->rpc_, id_);
+    for (const auto& blob_id : blob_ids) {
       Trait* t = static_cast<Trait*>(trait);
       TraitInput input;
-      input.bucket_name = ci->first;
-      input.blob_name = ci->second;
+      // FIXME(hari): this needs to be read from blob_id;
+      // input.bucket_name = ci->first;
+      input.blob_name =
+          GetBlobNameById(&hermes_->context_, &hermes_->rpc_, blob_id);
       if (t->onDetachFn != nullptr) {
         t->onDetachFn(input, trait);
         // TODO(hari): @errorhandling Check if detach was successful
@@ -235,11 +255,15 @@ Status VBucket::Delete(Context& ctx) {
         }
       }
     }
-    for (auto ci = linked_blobs_.begin(); ci != linked_blobs_.end(); ++ci) {
+    auto blob_ids =
+        GetBlobsFromVBucketInfo(&hermes_->context_, &hermes_->rpc_, id_);
+    for (const auto& blob_id : blob_ids) {
       if (attached_traits_.size() > 0) {
         TraitInput input;
-        input.bucket_name = ci->first;
-        input.blob_name = ci->second;
+        // FIXME(hari): this needs to be read from blob_id;
+        // input.bucket_name = ci->first;
+        input.blob_name =
+            GetBlobNameById(&hermes_->context_, &hermes_->rpc_, blob_id);
 
         if (this->persist) {
           if (t->type == TraitType::FILE_MAPPING) {
@@ -249,20 +273,13 @@ Status VBucket::Delete(Context& ctx) {
               fileBackedTrait->flush_cb(input, fileBackedTrait);
             } else {
               if (!fileBackedTrait->offset_map.empty()) {
-                auto iter = fileBackedTrait->offset_map.find(ci->second);
+                auto iter = fileBackedTrait->offset_map.find(input.blob_name);
                 if (iter != fileBackedTrait->offset_map.end()) {
-                  BucketID bucket_id =
-                    GetBucketId(&hermes_->context_, &hermes_->rpc_,
-                                      ci->first.c_str());
-                  auto blob_id =
-                    GetBlobId(&hermes_->context_, &hermes_->rpc_, ci->second,
-                              bucket_id);
                   // TODO(hari): @errorhandling check return of StdIoPersistBlob
                   ret = StdIoPersistBlob(&hermes_->context_, &hermes_->rpc_,
                                          &hermes_->trans_arena_, blob_id, file,
                                          iter->second);
-                  if (!ret.Succeeded())
-                    LOG(ERROR) << ret.Msg();
+                  if (!ret.Succeeded()) LOG(ERROR) << ret.Msg();
                 } else {
                   // TODO(hari): @errorhandling map doesnt have the blob linked.
                   ret = BLOB_NOT_LINKED_IN_MAP;
@@ -298,7 +315,6 @@ Status VBucket::Delete(Context& ctx) {
       }
     }
   }
-  linked_blobs_.clear();
   attached_traits_.clear();
   return Status();
 }

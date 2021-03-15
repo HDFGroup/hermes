@@ -711,4 +711,34 @@ void InitMetadataStorage(SharedMemoryContext *context, MetadataManager *mdm,
   mdm->blob_map_offset = GetOffsetFromMdm(mdm, blob_map);
 }
 
+std::vector<BlobID> LocalGetBlobsFromVBucketInfo(SharedMemoryContext *context,
+                                                 VBucketID vbucket_id) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  BeginTicketMutex(&mdm->vbucket_mutex);
+  VBucketInfo *info = LocalGetVBucketInfoById(mdm, vbucket_id);
+  ChunkedIdList *blobs = &info->blobs;
+  BlobID *blobs_arr = (BlobID *)GetIdsPtr(mdm, *blobs);
+  std::vector<BlobID> blobids(blobs_arr, blobs_arr + blobs->length);
+  ReleaseIdsPtr(mdm);
+  EndTicketMutex(&mdm->vbucket_mutex);
+  return blobids;
+}
+
+void LocalRemoveBlobFromVBucketInfo(SharedMemoryContext *context,
+                                    VBucketID vbucket_id, BlobID blob_id) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  BeginTicketMutex(&mdm->vbucket_mutex);
+  VBucketInfo *info = LocalGetVBucketInfoById(mdm, vbucket_id);
+  ChunkedIdList *blobs = &info->blobs;
+  BlobID *blobs_arr = (BlobID *)GetIdsPtr(mdm, *blobs);
+  for (u32 i = 0; i < blobs->length; ++i) {
+    if (blobs_arr[i].as_int == blob_id.as_int) {
+      blobs_arr[i] = blobs_arr[--blobs->length];
+      break;
+    }
+  }
+  ReleaseIdsPtr(mdm);
+  EndTicketMutex(&mdm->vbucket_mutex);
+}
+
 }  // namespace hermes

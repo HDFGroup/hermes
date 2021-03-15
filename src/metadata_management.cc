@@ -1192,4 +1192,56 @@ void EndGlobalTicketMutex(SharedMemoryContext *context, RpcContext *rpc) {
                                 "RemoteEndGlobalTicketMutex");
   }
 }
+
+void AttachBlobToVBucket(SharedMemoryContext *context, RpcContext *rpc,
+                         const char *blob_name, const char *bucket_name,
+                         VBucketID vbucket_id) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  BucketID bucket_id = GetBucketId(context, rpc, bucket_name);
+  BlobID blob_id = GetBlobId(context, rpc, blob_name, bucket_id);
+  AddBlobIdToVBucket(mdm, rpc, blob_id, vbucket_id);
+}
+
+std::string LocalGetBlobNameById(SharedMemoryContext *context, BlobID blob_id) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  std::string blob_name =
+      ReverseGetFromStorage(mdm, blob_id.as_int, kMapType_Blob);
+  return blob_name;
+}
+
+std::vector<BlobID> GetBlobsFromVBucketInfo(SharedMemoryContext *context,
+                                            RpcContext *rpc,
+                                            VBucketID vbucket_id) {
+  u32 target_node = vbucket_id.bits.node_id;
+  if (target_node == rpc->node_id) {
+    return LocalGetBlobsFromVBucketInfo(context, vbucket_id);
+  } else {
+    return RpcCall<std::vector<BlobID>>(
+        rpc, target_node, "RemoteGetBlobsFromVBucketInfo", vbucket_id);
+  }
+}
+
+void RemoveBlobFromVBucketInfo(SharedMemoryContext *context, RpcContext *rpc,
+                               VBucketID vbucket_id, const char *blob_name,
+                               const char *bucket_name) {
+  BucketID bucket_id = GetBucketId(context, rpc, bucket_name);
+  BlobID blob_id = GetBlobId(context, rpc, blob_name, bucket_id);
+  u32 target_node = vbucket_id.bits.node_id;
+  if (target_node == rpc->node_id) {
+    LocalRemoveBlobFromVBucketInfo(context, vbucket_id, blob_id);
+  } else {
+    RpcCall<bool>(rpc, target_node, "RemoteRemoveBlobFromVBucketInfo",
+                  vbucket_id, blob_id);
+  }
+}
+
+std::string GetBlobNameById(SharedMemoryContext *context, RpcContext *rpc,
+                            BlobID id) {
+  u32 target_node = GetBlobNodeId(id);
+  if (target_node == rpc->node_id) {
+    return LocalGetBlobNameById(context, id);
+  } else {
+    return RpcCall<std::string>(rpc, target_node, "RemoteGetBlobNameById", id);
+  }
+}
 }  // namespace hermes

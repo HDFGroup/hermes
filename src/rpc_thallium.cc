@@ -377,6 +377,23 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
 
     req.respond(true);
   };
+
+  auto rpc_remove_blob_from_vbucket_info = [context](const request &req,
+                                                    VBucketID vbucket_id,
+                                                    BlobID blob_id) {
+    LocalRemoveBlobFromVBucketInfo(context, vbucket_id, blob_id);
+    req.respond(true);
+  };
+  auto rpc_get_blobs_from_vbucket_info = [context](const request &req,
+                                                  VBucketID vbucket_id) {
+    auto ret = LocalGetBlobsFromVBucketInfo(context, vbucket_id);
+    req.respond(ret);
+  };
+  auto rpc_get_blob_name_by_id = [context](const request &req, BlobID id) {
+        auto ret = LocalGetBlobNameById(context, id);
+        req.respond(ret);
+      };
+
   rpc_server->define("RemoteBeginGlobalTicketMutex",
                      rpc_begin_global_ticket_mutex);
   rpc_server->define("RemoteEndGlobalTicketMutex",
@@ -429,6 +446,12 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
                      rpc_get_bucket_id_from_blob_id);
   rpc_server->define("RemoteGetBlobNameFromId", rpc_get_blob_name_from_id);
   rpc_server->define("RemoteFinalize", rpc_finalize).disable_response();
+  rpc_server->define("RemoteRemoveBlobFromVBucketInfo",
+                     rpc_remove_blob_from_vbucket_info);
+  rpc_server->define("RemoteGetBlobsFromVBucketInfo",
+                     rpc_get_blobs_from_vbucket_info);
+  rpc_server->define("RemoteGetBlobNameById",
+                     rpc_get_blob_name_by_id);
 }
 
 void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
