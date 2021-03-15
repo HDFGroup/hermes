@@ -22,7 +22,7 @@ bool IsNullVBucketId(VBucketID id);
 bool IsNullBlobId(BlobID id);
 bool IsNullTargetId(TargetID id);
 TicketMutex *GetMapMutex(MetadataManager *mdm, MapType map_type);
-VBucketID GetVBucketIdByName(SharedMemoryContext *context, RpcContext *rpc,
+VBucketID GetVBucketId(SharedMemoryContext *context, RpcContext *rpc,
                              const char *name);
 u32 HashString(MetadataManager *mdm, RpcContext *rpc, const char *str);
 MetadataManager *GetMetadataManagerFromContext(SharedMemoryContext *context);
@@ -48,9 +48,10 @@ void LocalFreeBufferIdList(SharedMemoryContext *context, BlobID blob_id);
 bool LocalDestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
                                const char *bucket_name, BucketID bucket_id);
 void LocalDestroyBlobById(SharedMemoryContext *context, RpcContext *rpc,
-                          BlobID blob_id);
+                          BlobID blob_id, BucketID bucket_id);
 void LocalDestroyBlobByName(SharedMemoryContext *context, RpcContext *rpc,
-                            const char *blob_name, BlobID blob_id);
+                            const char *blob_name, BlobID blob_id,
+                            BucketID bucket_id);
 BucketID LocalGetNextFreeBucketId(SharedMemoryContext *context, RpcContext *rpc,
                                   const std::string &name);
 u32 LocalAllocateBufferIdList(MetadataManager *mdm,
@@ -98,6 +99,30 @@ std::vector<BlobID> LocalGetBlobIds(SharedMemoryContext *context,
 std::vector<TargetID> LocalGetNodeTargets(SharedMemoryContext *context);
 u32 GetNextNode(RpcContext *rpc);
 u32 GetPreviousNode(RpcContext *rpc);
+BucketID LocalGetBucketIdFromBlobId(SharedMemoryContext *context, BlobID id);
+std::string LocalGetBlobNameFromId(SharedMemoryContext *context,
+                                   BlobID blob_id);
+
+/**
+ * Faster version of std::stoull.
+ *
+ * This is 4.1x faster than std::stoull. Since we generate all the numbers that
+ * we use this function on, we can guarantee the following:
+ *   - The size will always be kBucketIdStringSize.
+ *   - The number will always be unsigned and within the range of a u64.
+ *   - There will never be invalid characters passed in (only 0-9 and a-f).
+ *
+ * Avoiding all this input sanitization and error checking is how we can get a
+ * 4.1x speedup.
+ *
+ * \param s A string with size at least kBucketIdStringSize, where the first
+ *          kBucketIdStringSize characters consist only of 0-9 and a-f.
+ *
+ * \return The u64 representation of the first kBucketIdStringSize characters of
+ *         \p s.
+ */
+u64 HexStringToU64(const std::string &s);
+std::string MakeInternalBlobName(const std::string &name, BucketID id);
 
 }  // namespace hermes
 #endif  // HERMES_METADATA_MANAGEMENT_INTERNAL_H_

@@ -26,7 +26,57 @@ using hermes::adapter::stdio::MetadataManager;
 
 namespace hapi = hermes::api;
 namespace fs = std::experimental::filesystem;
+/**
+ * Internal Functions
+ */
+void extend_file(std::string &filename, size_t size) {
+  LOG(INFO) << "Extending to file: " << filename << " with size:" << size << "."
+            << std::endl;
+  std::ofstream ofs(filename, std::ios::binary | std::ios::out);
+  ofs.seekp(size - 1);
+  ofs.write("", 1);
+}
 
+size_t perform_file_write(std::string &filename, size_t offset, size_t size,
+                          unsigned char *data_ptr) {
+  LOG(INFO) << "Writing to file: " << filename << " offset: " << offset
+            << " of size:" << size << "." << std::endl;
+  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
+  if (!fs::exists(filename) || fs::file_size(filename) < offset + size) {
+    extend_file(filename, offset + size);
+  }
+  FILE *fh = fopen(filename.c_str(), "r+");
+  size_t write_size = 0;
+  if (fh != nullptr) {
+    auto status = fseek(fh, offset, SEEK_SET);
+    if (status == 0) {
+      write_size = fwrite(data_ptr, sizeof(char), size, fh);
+      fflush(fh);
+      status = fclose(fh);
+    }
+  }
+  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(filename);
+  return write_size;
+}
+
+size_t perform_file_read(const char *filename, size_t file_offset, void *ptr,
+                         size_t ptr_offset, size_t size) {
+  LOG(INFO) << "Read called for filename from destination: " << filename
+            << " on offset: " << file_offset << " and size: " << size
+            << std::endl;
+  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
+  FILE *fh = fopen(filename, "r");
+  size_t read_size = 0;
+  if (fh != nullptr) {
+    int status = fseek(fh, file_offset, SEEK_SET);
+    if (status == 0) {
+      read_size = fread((char *)ptr + ptr_offset, sizeof(char), size, fh);
+    }
+    status = fclose(fh);
+  }
+  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(filename);
+  return read_size;
+}
 /**
  * MPI
  */
@@ -160,16 +210,28 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
         existing.first.st_bkid->ContainsBlob(item.second.blob_name_);
     unsigned char *put_data_ptr = (unsigned char *)ptr + data_offset;
     size_t put_data_ptr_size = item.first.size_;
-    existing.first.st_blobs.emplace(item.second.blob_name_);
+
     if (!blob_exists || item.second.size_ == kPageSize) {
       LOG(INFO) << "Create or Overwrite blob " << item.second.blob_name_
                 << " of size:" << item.second.size_ << "." << std::endl;
       if (item.second.size_ == kPageSize) {
-        existing.first.st_bkid->Put(item.second.blob_name_, put_data_ptr,
-                                    put_data_ptr_size, ctx);
+        auto status = existing.first.st_bkid->Put(
+            item.second.blob_name_, put_data_ptr, put_data_ptr_size, ctx);
+        if (status.Failed()) {
+          perform_file_write(filename, item.first.offset_, put_data_ptr_size,
+                             put_data_ptr);
+        } else {
+          existing.first.st_blobs.emplace(item.second.blob_name_);
+        }
       } else if (item.second.offset_ == 0) {
-        existing.first.st_bkid->Put(item.second.blob_name_, put_data_ptr,
-                                    put_data_ptr_size, ctx);
+        auto status = existing.first.st_bkid->Put(
+            item.second.blob_name_, put_data_ptr, put_data_ptr_size, ctx);
+        if (status.Failed()) {
+          perform_file_write(filename, index * kPageSize, put_data_ptr_size,
+                             put_data_ptr);
+        } else {
+          existing.first.st_blobs.emplace(item.second.blob_name_);
+        }
       } else {
         hapi::Blob final_data(item.second.offset_ + item.second.size_);
         if (fs::exists(filename) &&
@@ -198,7 +260,14 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
         }
         memcpy(final_data.data() + item.second.offset_, put_data_ptr,
                put_data_ptr_size);
-        existing.first.st_bkid->Put(item.second.blob_name_, final_data, ctx);
+        auto status = existing.first.st_bkid->Put(item.second.blob_name_,
+                                                  final_data, ctx);
+        if (status.Failed()) {
+          perform_file_write(filename, index * kPageSize, final_data.size(),
+                             final_data.data());
+        } else {
+          existing.first.st_blobs.emplace(item.second.blob_name_);
+        }
       }
 
     } else {
@@ -212,8 +281,14 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
         if (item.second.size_ >= existing_blob_size) {
           LOG(INFO) << "Overwrite blob " << item.second.blob_name_
                     << " of size:" << item.second.size_ << "." << std::endl;
-          existing.first.st_bkid->Put(item.second.blob_name_, put_data_ptr,
-                                      put_data_ptr_size, ctx);
+          auto status = existing.first.st_bkid->Put(
+              item.second.blob_name_, put_data_ptr, put_data_ptr_size, ctx);
+          if (status.Failed()) {
+            perform_file_write(filename, index * kPageSize, put_data_ptr_size,
+                               put_data_ptr);
+          } else {
+            existing.first.st_blobs.emplace(item.second.blob_name_);
+          }
         } else {
           LOG(INFO) << "Update blob " << item.second.blob_name_
                     << " of size:" << existing_blob_size << "." << std::endl;
@@ -221,8 +296,14 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
           existing.first.st_bkid->Get(item.second.blob_name_, existing_data,
                                       ctx);
           memcpy(existing_data.data(), put_data_ptr, put_data_ptr_size);
-          existing.first.st_bkid->Put(item.second.blob_name_, existing_data,
-                                      ctx);
+          auto status = existing.first.st_bkid->Put(item.second.blob_name_,
+                                                    existing_data, ctx);
+          if (status.Failed()) {
+            perform_file_write(filename, index * kPageSize, existing_blob_size,
+                               existing_data.data());
+          } else {
+            existing.first.st_blobs.emplace(item.second.blob_name_);
+          }
         }
       } else {
         LOG(INFO) << "Blob offset: " << item.second.offset_ << "." << std::endl;
@@ -278,7 +359,14 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
           memcpy(final_data.data() + off_t, existing_data.data() + off_t,
                  existing_blob_size - off_t);
         }
-        existing.first.st_bkid->Put(item.second.blob_name_, final_data, ctx);
+        auto status = existing.first.st_bkid->Put(item.second.blob_name_,
+                                                  final_data, ctx);
+        if (status.Failed()) {
+          perform_file_write(filename, index * kPageSize, new_size,
+                             final_data.data());
+        } else {
+          existing.first.st_blobs.emplace(item.second.blob_name_);
+        }
       }
     }
     data_offset += item.first.size_;
@@ -294,25 +382,6 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
   mdm->Update(fp, existing.first);
   ret = data_offset;
   return ret;
-}
-
-size_t perform_file_read(const char *filename, size_t file_offset, void *ptr,
-                         size_t ptr_offset, size_t size) {
-  LOG(INFO) << "Read called for filename from destination: " << filename
-            << " on offset: " << file_offset << " and size: " << size
-            << std::endl;
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
-  FILE *fh = fopen(filename, "r");
-  size_t read_size = 0;
-  if (fh != nullptr) {
-    int status = fseek(fh, file_offset, SEEK_SET);
-    if (status == 0) {
-      read_size = fread((char *)ptr + ptr_offset, sizeof(char), size, fh);
-    }
-    status = fclose(fh);
-  }
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(filename);
-  return read_size;
 }
 
 size_t read_internal(std::pair<AdapterStat, bool> &existing, void *ptr,
@@ -479,7 +548,7 @@ FILE *HERMES_DECL(freopen64)(const char *path, const char *mode, FILE *stream) {
 }
 
 int HERMES_DECL(fflush)(FILE *fp) {
-  int ret;
+  int ret = -1;
   if (fp && hermes::adapter::IsTracked(fp)) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(fp);
@@ -533,11 +602,11 @@ int HERMES_DECL(fclose)(FILE *fp) {
       LOG(INFO) << "File handler is opened by adapter." << std::endl;
       hapi::Context ctx;
       if (existing.first.ref_count == 1) {
-        auto persist =  INTERCEPTOR_LIST->Persists(fp);
+        auto persist = INTERCEPTOR_LIST->Persists(fp);
         auto filename = existing.first.st_bkid->GetName();
         mdm->Delete(fp);
         const auto &blob_names = existing.first.st_blobs;
-        if (!blob_names.empty()  && persist) {
+        if (!blob_names.empty() && persist) {
           LOG(INFO) << "Adapter flushes " << blob_names.size()
                     << " blobs to filename:" << filename << "." << std::endl;
           INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
@@ -546,15 +615,17 @@ int HERMES_DECL(fclose)(FILE *fp) {
           auto offset_map = std::unordered_map<std::string, hermes::u64>();
           std::size_t pos = 0;
           for (const auto &blob_name : blob_names) {
-            file_vbucket.Link(blob_name, filename, ctx);
-            /* FIXME(hari): change this once we have blob namespace separated
-             * per bucket.*/
-            if (pos == 0) {
-              pos = blob_name.find(kStringDelimiter) + 1;
+            auto status = file_vbucket.Link(blob_name, filename, ctx);
+            if (!status.Failed()) {
+              /* FIXME(hari): change this once we have blob namespace separated
+               * per bucket.*/
+              if (pos == 0) {
+                pos = blob_name.find(kStringDelimiter) + 1;
+              }
+              auto offset_str = blob_name.substr(pos);
+              auto offset = std::stol(offset_str);
+              offset_map.emplace(blob_name, offset * kPageSize);
             }
-            auto offset_str = blob_name.substr(pos);
-            auto offset = std::stol(offset_str);
-            offset_map.emplace(blob_name, offset * kPageSize);
           }
           auto trait = hermes::api::FileMappingTrait(filename, offset_map,
                                                      nullptr, NULL, NULL);

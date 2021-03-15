@@ -1622,7 +1622,8 @@ api::Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
                  bool called_from_buffer_organizer) {
   api::Status result;
 
-  if (ContainsBlob(context, rpc, bucket_id, name)) {
+  if (ContainsBlob(context, rpc, bucket_id, name)
+      && !called_from_buffer_organizer) {
     // TODO(chogan) @optimization If the existing buffers are already large
     // enough to hold the new Blob, then we don't need to release them.
     // Additionally, no metadata operations would be required.
@@ -1725,6 +1726,8 @@ api::Status StdIoPersistBlob(SharedMemoryContext *context, RpcContext *rpc,
       // they were `Put`, but once we have a Trait that represents a file
       // mapping, we'll need pwrite and offsets.
       if (offset == -1 || fseek(file, offset, SEEK_SET) == 0) {
+        LOG(INFO) << "STDIO Flush to file: " << " offset: " << offset
+                  << " of size:" << num_bytes << "." << std::endl;
         if (fwrite(data.data(), 1, num_bytes, file) != num_bytes) {
           // TODO(chogan): @errorhandling
           result = STDIO_FWRITE_FAILED;
