@@ -29,29 +29,18 @@ namespace fs = std::experimental::filesystem;
 /**
  * Internal Functions
  */
-void extend_file(std::string &filename, size_t size) {
-  LOG(INFO) << "Extending to file: " << filename << " with size:" << size << "."
-            << std::endl;
-  std::ofstream ofs(filename, std::ios::binary | std::ios::out);
-  ofs.seekp(size - 1);
-  ofs.write("", 1);
-}
 
 size_t perform_file_write(std::string &filename, size_t offset, size_t size,
                           unsigned char *data_ptr) {
   LOG(INFO) << "Writing to file: " << filename << " offset: " << offset
             << " of size:" << size << "." << std::endl;
   INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
-  if (!fs::exists(filename) || fs::file_size(filename) < offset + size) {
-    extend_file(filename, offset + size);
-  }
   FILE *fh = fopen(filename.c_str(), "r+");
   size_t write_size = 0;
   if (fh != nullptr) {
     auto status = fseek(fh, offset, SEEK_SET);
     if (status == 0) {
       write_size = fwrite(data_ptr, sizeof(char), size, fh);
-      fflush(fh);
       status = fclose(fh);
     }
   }
