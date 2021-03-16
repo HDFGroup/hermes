@@ -46,49 +46,22 @@ bool Bucket::IsValid() const {
 
 Status Bucket::Put(const std::string &name, const u8 *data, size_t size,
                    Context &ctx) {
-  Status ret;
-
-  if (IsBlobNameTooLong(name)) {
-    // TODO(chogan): @errorhandling
-    ret = BLOB_NAME_TOO_LONG;
-    LOG(ERROR) << ret.Msg();
-    return ret;
-  }
+  Status result;
 
   if (size > 0 && nullptr == data) {
-    ret = INVALID_BLOB;
-    LOG(ERROR) << ret.Msg();
-    return ret;
+    result = INVALID_BLOB;
+    LOG(ERROR) << result.Msg();
   }
 
-  if (IsValid()) {
-    std::vector<size_t> sizes(1, size);
-    std::vector<PlacementSchema> schemas;
-    HERMES_BEGIN_TIMED_BLOCK("CalculatePlacement");
-    ret = CalculatePlacement(&hermes_->context_, &hermes_->rpc_, sizes, schemas,
-                             ctx);
-    HERMES_END_TIMED_BLOCK();
-
-    if (ret.Succeeded()) {
-      std::vector<std::string> names(1, name);
-      std::vector<std::vector<u8>> blobs(1);
-      blobs[0].resize(size);
-      // TODO(chogan): Create a PreallocatedMemory allocator for std::vector so
-      // that a single-blob-Put doesn't perform a copy
-      memcpy(blobs[0].data(), data, size);
-      ret = PlaceBlobs(schemas, blobs, names, ctx.buffer_organizer_retries);
-    } else {
-      // TODO(chogan): @errorhandling No space left or contraints unsatisfiable.
-      LOG(ERROR) << ret.Msg();
-      return ret;
-    }
-  } else {
-    ret = INVALID_BUCKET;
-    LOG(ERROR) << ret.Msg();
-    return ret;
+  if (result.Succeeded()) {
+    std::vector<std::string> names{name};
+    // TODO(chogan): Create a PreallocatedMemory allocator for std::vector so
+    // that a single-blob-Put doesn't perform a copy
+    std::vector<Blob> blobs{Blob{data, data + size}};
+    result = Put(names, blobs, ctx);
   }
 
-  return ret;
+  return result;
 }
 
 size_t Bucket::GetBlobSize(Arena *arena, const std::string &name,
