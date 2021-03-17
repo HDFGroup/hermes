@@ -270,6 +270,17 @@ TargetID FindTargetIdFromDeviceId(const std::vector<TargetID> &targets,
 /**
  *
  */
+std::vector<TargetID> GetNeighborhoodTargets(SharedMemoryContext *context,
+                                             RpcContext *rpc);
+/**
+ *
+ */
+std::vector<u64>
+GetRemainingTargetCapacities(SharedMemoryContext *context, RpcContext *rpc,
+                             const std::vector<TargetID> &targets);
+/**
+ *
+ */
 std::vector<BlobID> GetBlobIds(SharedMemoryContext *context, RpcContext *rpc,
                                BucketID bucket_id);
 

@@ -361,45 +361,73 @@ PlacementSchema AggregateBlobSchema(PlacementSchema &schema) {
   return result;
 }
 
+enum Topology {
+  Topology_Local,
+  Topology_Neighborhood,
+  Topology_Global,
+
+  Topology_Count
+};
+
 Status CalculatePlacement(SharedMemoryContext *context, RpcContext *rpc,
                           std::vector<size_t> &blob_sizes,
                           std::vector<PlacementSchema> &output,
                           const api::Context &api_context) {
-  (void)rpc;
   std::vector<PlacementSchema> output_tmp;
   Status result;
 
-  // TODO(chogan): For now we just look at the node level targets as the default
-  // path. Eventually we will need the ability to escalate to neighborhoods, and
-  // the entire cluster.
+  // NOTE(chogan): Start with local targets and gradually expand the target list
+  // until the placement succeeds
+  for (int i = 0; i < Topology_Count; ++i) {
+    std::vector<TargetID> targets;
 
-  // TODO(chogan): @optimization We can avoid the copy here when getting local
-  // targets by just getting a pointer and length. I went with a vector just to
-  // make the interface nicer when we need neighborhood or global targets.
-  std::vector<TargetID> targets = LocalGetNodeTargets(context);
-  std::vector<u64> node_state = GetRemainingNodeCapacities(context, targets);
-
-  switch (api_context.policy) {
-    // TODO(KIMMY): check device capacity against blob size
-    case api::PlacementPolicy::kRandom: {
-      std::multimap<u64, TargetID> ordered_cap;
-      for (size_t i = 0; i < node_state.size(); ++i) {
-        ordered_cap.insert(std::pair<u64, TargetID>(node_state[i], targets[i]));
+    switch (i) {
+      case Topology_Local: {
+        // TODO(chogan): @optimization We can avoid the copy here when getting
+        // local targets by just getting a pointer and length.
+        targets = LocalGetNodeTargets(context);
+        break;
       }
-
-      result = RandomPlacement(blob_sizes, ordered_cap, output_tmp);
-      break;
+      case Topology_Neighborhood: {
+        targets = GetNeighborhoodTargets(context, rpc);
+        break;
+      }
+      case Topology_Global: {
+        // TODO(chogan): GetGlobalTargets(context, rpc);
+        break;
+      }
     }
-    case api::PlacementPolicy::kRoundRobin: {
-      result = RoundRobinPlacement(blob_sizes, node_state,
-                                   output_tmp, targets);
-      break;
-    }
-    case api::PlacementPolicy::kMinimizeIoTime: {
-      std::vector<f32> bandwidths = GetBandwidths(context);
 
-      result = MinimizeIoTimePlacement(blob_sizes, node_state, bandwidths,
-                                       targets, output_tmp);
+    std::vector<u64> node_state =
+      GetRemainingTargetCapacities(context, rpc, targets);
+
+    switch (api_context.policy) {
+      // TODO(KIMMY): check device capacity against blob size
+      case api::PlacementPolicy::kRandom: {
+        std::multimap<u64, TargetID> ordered_cap;
+        for (size_t i = 0; i < node_state.size(); ++i) {
+          ordered_cap.insert(std::pair<u64, TargetID>(node_state[i],
+                                                      targets[i]));
+        }
+
+        result = RandomPlacement(blob_sizes, ordered_cap, output_tmp);
+        break;
+      }
+      case api::PlacementPolicy::kRoundRobin: {
+        result = RoundRobinPlacement(blob_sizes, node_state,
+                                     output_tmp, targets);
+        break;
+      }
+      case api::PlacementPolicy::kMinimizeIoTime: {
+        std::vector<f32> bandwidths = GetBandwidths(context);
+
+        result = MinimizeIoTimePlacement(blob_sizes, node_state, bandwidths,
+                                         targets, output_tmp);
+        break;
+      }
+    }
+
+    if (!result.Failed()) {
       break;
     }
   }
