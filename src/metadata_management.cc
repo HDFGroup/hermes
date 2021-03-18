@@ -807,23 +807,9 @@ void DecrementRefcount(SharedMemoryContext *context, RpcContext *rpc,
   }
 }
 
-u64 LocalGetRemainingCapacity(SharedMemoryContext *context, TargetID id) {
+u64 LocalGetRemainingTargetCapacity(SharedMemoryContext *context, TargetID id) {
   Target *target = GetTargetFromId(context, id);
   u64 result = target->remaining_space.load();
-
-  return result;
-}
-
-u64 GetRemainingCapacity(SharedMemoryContext *context, RpcContext *rpc,
-                         TargetID id) {
-  u32 target_node = id.bits.node_id;
-
-  u64 result = 0;
-  if (target_node == rpc->node_id) {
-    result = LocalGetRemainingCapacity(context, id);
-  } else {
-    result = RpcCall<u64>(rpc, target_node, "RemoteGetRemainingCapacity", id);
-  }
 
   return result;
 }
@@ -1185,4 +1171,32 @@ std::vector<TargetID> GetNeighborhoodTargets(SharedMemoryContext *context,
 
   return result;
 }
+
+u64 GetRemainingTargetCapacity(SharedMemoryContext *context, RpcContext *rpc,
+                               TargetID target_id) {
+  u64 result = 0;
+  u32 target_node = target_id.bits.node_id;
+
+  if (target_node == rpc->node_id) {
+    result = LocalGetRemainingTargetCapacity(context, target_id);
+  } else {
+    result = RpcCall<u64>(rpc, target_node, "RemoteGetRemainingTargetCapacity",
+                          target_id);
+  }
+
+  return result;
+}
+
+std::vector<u64>
+GetRemainingTargetCapacities(SharedMemoryContext *context, RpcContext *rpc,
+                             const std::vector<TargetID> &targets) {
+  std::vector<u64> result(targets.size());
+
+  for (size_t i = 0; i < targets.size(); ++i) {
+    result[i] = GetRemainingTargetCapacity(context, rpc, targets[i]);
+  }
+
+  return result;
+}
+
 }  // namespace hermes

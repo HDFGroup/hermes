@@ -72,7 +72,7 @@ u64 LocalGet(MetadataManager *mdm, const char *key, MapType map_type);
 void LocalPut(MetadataManager *mdm, const char *key, u64 val, MapType map_type);
 void LocalDelete(MetadataManager *mdm, const char *key, MapType map_type);
 
-u64 LocalGetRemainingCapacity(SharedMemoryContext *context, TargetID id);
+u64 LocalGetRemainingTargetCapacity(SharedMemoryContext *context, TargetID id);
 void LocalUpdateGlobalSystemViewState(SharedMemoryContext *context,
                                       std::vector<i64> adjustments);
 SystemViewState *GetLocalSystemViewState(SharedMemoryContext *context);
@@ -90,9 +90,6 @@ void StartGlobalSystemViewStateUpdateThread(SharedMemoryContext *context,
 void InitMetadataStorage(SharedMemoryContext *context, MetadataManager *mdm,
                          Arena *arena, Config *config);
 
-std::vector<u64>
-GetRemainingNodeCapacities(SharedMemoryContext *context,
-                           const std::vector<TargetID> &targets);
 std::string GetSwapFilename(MetadataManager *mdm, u32 node_id);
 std::vector<BlobID> LocalGetBlobIds(SharedMemoryContext *context,
                                     BucketID bucket_id);

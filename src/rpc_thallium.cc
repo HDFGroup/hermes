@@ -293,7 +293,7 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
   };
 
   auto rpc_get_remaining_capacity = [context](const request &req, TargetID id) {
-    u64 result = LocalGetRemainingCapacity(context, id);
+    u64 result = LocalGetRemainingTargetCapacity(context, id);
 
     req.respond(result);
   };
@@ -371,7 +371,8 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
   rpc_server->define("RemoteDecrementRefcount", rpc_decrement_refcount_bucket);
   rpc_server->define("RemoteDecrementRefcountVBucket",
                      rpc_decrement_refcount_vbucket);
-  rpc_server->define("RemoteGetRemainingCapacity", rpc_get_remaining_capacity);
+  rpc_server->define("RemoteGetRemainingTargetCapacity",
+                     rpc_get_remaining_capacity);
   rpc_server->define("RemoteUpdateGlobalSystemViewState",
                      rpc_update_global_system_view_state);
   rpc_server->define("RemoteGetGlobalDeviceCapacities",
