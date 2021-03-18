@@ -69,40 +69,36 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
 
   // BufferPool requests
 
-  function<void(const request&, const PlacementSchema&)> rpc_get_buffers =
+  auto rpc_get_buffers =
     [context](const request &req, const PlacementSchema &schema) {
       std::vector<BufferID> result = GetBuffers(context, schema);
       req.respond(result);
     };
 
-  function<void(const request&, BufferID)> rpc_release_buffer =
-    [context](const request &req, BufferID id) {
-      LocalReleaseBuffer(context, id);
-      req.respond(true);
-    };
+  auto rpc_release_buffer = [context](const request &req, BufferID id) {
+    LocalReleaseBuffer(context, id);
+    req.respond(true);
+  };
 
-  function<void(const request&, int)> rpc_split_buffers =
-    [context](const request &req, int slab_index) {
-      (void)req;
-      SplitRamBufferFreeList(context, slab_index);
-    };
+  auto rpc_split_buffers = [context](const request &req, int slab_index) {
+    (void)req;
+    SplitRamBufferFreeList(context, slab_index);
+  };
 
-  function<void(const request&, int)> rpc_merge_buffers =
-    [context](const request &req, int slab_index) {
-      (void)req;
-      MergeRamBufferFreeList(context, slab_index);
-    };
+  auto rpc_merge_buffers = [context](const request &req, int slab_index) {
+    (void)req;
+    MergeRamBufferFreeList(context, slab_index);
+  };
 
-  function<void(const request&, BufferID)> rpc_get_buffer_size =
-    [context](const request &req, BufferID id) {
-      u32 result = LocalGetBufferSize(context, id);
+  auto rpc_get_buffer_size = [context](const request &req, BufferID id) {
+    u32 result = LocalGetBufferSize(context, id);
 
-      req.respond(result);
-    };
+    req.respond(result);
+  };
 
-  function<void(const request&, BufferID, std::vector<u8>, size_t)>
-    rpc_write_buffer_by_id = [context](const request &req, BufferID id,
-                                       std::vector<u8> data, size_t offset) {
+  auto rpc_write_buffer_by_id =
+    [context](const request &req, BufferID id, std::vector<u8> data,
+              size_t offset) {
       Blob blob = {};
       blob.size = data.size();
       blob.data = data.data();
@@ -111,22 +107,20 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
       req.respond(result);
     };
 
-  function<void(const request&, BufferID)> rpc_read_buffer_by_id =
-    [context](const request &req, BufferID id) {
-      BufferHeader *header = GetHeaderByBufferId(context, id);
-      std::vector<u8> result(header->used);
-      Blob blob = {};
-      blob.size = result.size();
-      blob.data = result.data();
-      [[maybe_unused]] size_t bytes_read = LocalReadBufferById(context, id,
-                                                               &blob, 0);
-      assert(bytes_read == result.size());
+  auto rpc_read_buffer_by_id = [context](const request &req, BufferID id) {
+    BufferHeader *header = GetHeaderByBufferId(context, id);
+    std::vector<u8> result(header->used);
+    Blob blob = {};
+    blob.size = result.size();
+    blob.data = result.data();
+    [[maybe_unused]] size_t bytes_read = LocalReadBufferById(context, id,
+                                                             &blob, 0);
+    assert(bytes_read == result.size());
 
-      req.respond(result);
-    };
+    req.respond(result);
+  };
 
-  function<void(const request&, tl::bulk&, BufferID)>
-    rpc_bulk_read_buffer_by_id =
+  auto rpc_bulk_read_buffer_by_id =
     [context, rpc_server, arena](const request &req, tl::bulk &bulk,
                                  BufferID id) {
       tl::endpoint endpoint = req.get_endpoint();
@@ -169,7 +163,7 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
 
   // Metadata requests
 
-  function<void(const request&, string, const MapType&)> rpc_map_get =
+  auto rpc_map_get =
     [context](const request &req, string name, const MapType &map_type) {
       MetadataManager *mdm = GetMetadataManagerFromContext(context);
       u64 result = LocalGet(mdm, name.c_str(), map_type);
@@ -177,176 +171,159 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
       req.respond(result);
     };
 
-  function<void(const request&, const string&, u64, const MapType&)>
-    rpc_map_put = [context](const request &req, const string &name, u64 val,
-                            const MapType &map_type) {
+  auto rpc_map_put =
+    [context](const request &req, const string &name, u64 val,
+              const MapType &map_type) {
       MetadataManager *mdm = GetMetadataManagerFromContext(context);
       LocalPut(mdm, name.c_str(), val, map_type);
       req.respond(true);
     };
 
-  function<void(const request&, string, const MapType&)> rpc_map_delete =
+  auto rpc_map_delete =
     [context](const request &req, string name, const MapType &map_type) {
       MetadataManager *mdm = GetMetadataManagerFromContext(context);
       LocalDelete(mdm, name.c_str(), map_type);
       req.respond(true);
     };
 
-  function<void(const request &, BucketID, BlobID)> rpc_add_blob_bucket =
-      [context](const request &req, BucketID bucket_id, BlobID blob_id) {
-        MetadataManager *mdm = GetMetadataManagerFromContext(context);
-        LocalAddBlobIdToBucket(mdm, bucket_id, blob_id);
-        req.respond(true);
-      };
+  auto rpc_add_blob_bucket =
+    [context](const request &req, BucketID bucket_id, BlobID blob_id) {
+      MetadataManager *mdm = GetMetadataManagerFromContext(context);
+      LocalAddBlobIdToBucket(mdm, bucket_id, blob_id);
+      req.respond(true);
+    };
 
-  function<void(const request &, VBucketID, BlobID)> rpc_add_blob_vbucket =
-      [context](const request &req, VBucketID vbucket_id, BlobID blob_id) {
-        MetadataManager *mdm = GetMetadataManagerFromContext(context);
-        LocalAddBlobIdToVBucket(mdm, vbucket_id, blob_id);
-        req.respond(true);
-      };
+  auto rpc_add_blob_vbucket =
+    [context](const request &req, VBucketID vbucket_id, BlobID blob_id) {
+      MetadataManager *mdm = GetMetadataManagerFromContext(context);
+      LocalAddBlobIdToVBucket(mdm, vbucket_id, blob_id);
+      req.respond(true);
+    };
 
-  function<void(const request &, BlobID)> rpc_get_buffer_id_list =
-      [context](const request &req, BlobID blob_id) {
-        MetadataManager *mdm = GetMetadataManagerFromContext(context);
-        std::vector<BufferID> result = LocalGetBufferIdList(mdm, blob_id);
+  auto rpc_get_buffer_id_list =
+    [context](const request &req, BlobID blob_id) {
+      MetadataManager *mdm = GetMetadataManagerFromContext(context);
+      std::vector<BufferID> result = LocalGetBufferIdList(mdm, blob_id);
 
       req.respond(result);
     };
 
-  function<void(const request&, BlobID)> rpc_free_buffer_id_list =
-    [context](const request &req, BlobID blob_id) {
-      LocalFreeBufferIdList(context, blob_id);
-      req.respond(true);
-    };
+  auto rpc_free_buffer_id_list = [context](const request &req, BlobID blob_id) {
+    LocalFreeBufferIdList(context, blob_id);
+    req.respond(true);
+  };
 
-  function<void(const request&, const string&, BucketID)> rpc_destroy_bucket =
+  auto rpc_destroy_bucket =
     [context, rpc](const request &req, const string &name, BucketID id) {
       bool result = LocalDestroyBucket(context, rpc, name.c_str(), id);
 
       req.respond(result);
     };
 
-  function<void(const request&, const string&)>
-    rpc_get_next_free_bucket_id = [context, rpc](const request &req,
-                                                 const string &name) {
-      BucketID result = LocalGetNextFreeBucketId(context, rpc, name);
+  auto rpc_get_or_create_bucket_id =
+    [context](const request &req, const std::string &name) {
+      BucketID result = LocalGetOrCreateBucketId(context, name);
+
+      req.respond(result);
+  };
+
+  auto rpc_get_or_create_vbucket_id =
+    [context](const request &req, std::string &name) {
+      VBucketID result = LocalGetOrCreateVBucketId(context, name);
+
+      req.respond(result);
+  };
+
+  auto rpc_allocate_buffer_id_list =
+    [context](const request &req, const vector<BufferID> &buffer_ids) {
+      MetadataManager *mdm = GetMetadataManagerFromContext(context);
+      u32 result = LocalAllocateBufferIdList(mdm, buffer_ids);
 
       req.respond(result);
     };
 
-  function<void(const request&, const vector<BufferID>&)>
-    rpc_allocate_buffer_id_list =
-      [context](const request &req, const vector<BufferID> &buffer_ids) {
-        MetadataManager *mdm = GetMetadataManagerFromContext(context);
-        u32 result = LocalAllocateBufferIdList(mdm, buffer_ids);
-
-        req.respond(result);
-      };
-
-  function<void(const request&, BucketID, const string&, const string&)>
-    rpc_rename_bucket = [context, rpc](const request &req, BucketID id,
-                                       const string &old_name,
-                                       const string &new_name) {
+  auto rpc_rename_bucket =
+    [context, rpc](const request &req, BucketID id, const string &old_name,
+                   const string &new_name) {
       LocalRenameBucket(context, rpc, id, old_name.c_str(), new_name.c_str());
       req.respond(true);
     };
 
-  function<void(const request&, const string&, BlobID, BucketID)>
-    rpc_destroy_blob_by_name =
+  auto rpc_destroy_blob_by_name =
     [context, rpc](const request &req, const string &name, BlobID id,
                    BucketID bucket_id) {
       LocalDestroyBlobByName(context, rpc, name.c_str(), id, bucket_id);
       req.respond(true);
     };
 
-  function<void(const request&, BlobID, BucketID)>
-    rpc_destroy_blob_by_id = [context, rpc](const request &req, BlobID id,
-                                            BucketID bucket_id) {
+  auto rpc_destroy_blob_by_id =
+    [context, rpc](const request &req, BlobID id, BucketID bucket_id) {
       LocalDestroyBlobById(context, rpc, id, bucket_id);
       req.respond(true);
     };
 
-  function<void(const request&, BucketID, BlobID)> rpc_contains_blob =
+  auto rpc_contains_blob =
     [context](const request &req, BucketID bucket_id, BlobID blob_id) {
       bool result = LocalContainsBlob(context, bucket_id, blob_id);
       req.respond(result);
     };
 
-  function<void(const request&, BucketID, BlobID)>
-    rpc_remove_blob_from_bucket_info = [context](const request &req,
-                                                 BucketID bucket_id,
-                                                 BlobID blob_id) {
+  auto rpc_remove_blob_from_bucket_info =
+    [context](const request &req, BucketID bucket_id, BlobID blob_id) {
       LocalRemoveBlobFromBucketInfo(context, bucket_id, blob_id);
       req.respond(true);
     };
 
-  function<void(const request &, BucketID)> rpc_increment_refcount_bucket =
-      [context](const request &req, BucketID id) {
-        LocalIncrementRefcount(context, id);
-        req.respond(true);
-      };
-
-  function<void(const request &, BucketID)> rpc_decrement_refcount_bucket =
-      [context](const request &req, BucketID id) {
-        LocalDecrementRefcount(context, id);
-        req.respond(true);
-      };
-
-  function<void(const request &, VBucketID)> rpc_increment_refcount_vbucket =
-      [context](const request &req, VBucketID id) {
-        LocalIncrementRefcount(context, id);
-        req.respond(true);
-      };
-
-  function<void(const request &, VBucketID)> rpc_decrement_refcount_vbucket =
-      [context](const request &req, VBucketID id) {
-        LocalDecrementRefcount(context, id);
-        req.respond(true);
-      };
-
-  function<void(const request &)> rpc_get_global_device_capacities =
-      [context](const request &req) {
-        std::vector<u64> result = LocalGetGlobalDeviceCapacities(context);
-
-        req.respond(result);
-      };
-
-  function<void(const request &, TargetID id)> rpc_get_remaining_capacity =
-      [context](const request &req, TargetID id) {
-        u64 result = LocalGetRemainingCapacity(context, id);
-
-      req.respond(result);
+  auto rpc_decrement_refcount_bucket =
+    [context](const request &req, BucketID id) {
+      LocalDecrementRefcount(context, id);
+      req.respond(true);
     };
+
+    auto rpc_decrement_refcount_vbucket =
+    [context](const request &req, VBucketID id) {
+      LocalDecrementRefcount(context, id);
+      req.respond(true);
+    };
+
+  auto rpc_get_global_device_capacities = [context](const request &req) {
+    std::vector<u64> result = LocalGetGlobalDeviceCapacities(context);
+
+    req.respond(result);
+  };
+
+  auto rpc_get_remaining_capacity = [context](const request &req, TargetID id) {
+    u64 result = LocalGetRemainingCapacity(context, id);
+
+    req.respond(result);
+  };
 
   // TODO(chogan): Only need this on mdm->global_system_view_state_node_id.
   // Probably should move it to a completely separate tl::engine.
-  function<void(const request&, std::vector<i64>)>
-    rpc_update_global_system_view_state =
+  auto rpc_update_global_system_view_state =
     [context](const request &req, std::vector<i64> adjustments) {
       LocalUpdateGlobalSystemViewState(context, adjustments);
       req.respond(true);
     };
 
-  function<void(const request&, BucketID)> rpc_get_blob_ids =
-    [context](const request &req, BucketID bucket_id) {
-      std::vector<BlobID> result = LocalGetBlobIds(context, bucket_id);
-
-      req.respond(result);
-    };
-
-  function<void(const request&)> rpc_get_node_targets =
-    [context](const request &req) {
-      std::vector<TargetID> result = LocalGetNodeTargets(context);
-
-      req.respond(result);
-    };
-  auto rpc_get_bucket_id_from_blob_id = [context](const request &req,
-                                                  BlobID id) {
-    BucketID result = LocalGetBucketIdFromBlobId(context, id);
+  auto rpc_get_blob_ids = [context](const request &req, BucketID bucket_id) {
+    std::vector<BlobID> result = LocalGetBlobIds(context, bucket_id);
 
     req.respond(result);
   };
+
+  auto rpc_get_node_targets = [context](const request &req) {
+    std::vector<TargetID> result = LocalGetNodeTargets(context);
+
+    req.respond(result);
+  };
+
+  auto rpc_get_bucket_id_from_blob_id =
+    [context](const request &req, BlobID id) {
+      BucketID result = LocalGetBucketIdFromBlobId(context, id);
+
+      req.respond(result);
+    };
 
   auto rpc_get_blob_name_from_id = [context](const request &req, BlobID id) {
     std::string result = LocalGetBlobNameFromId(context, id);
@@ -354,34 +331,11 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
     req.respond(result);
   };
 
-  function<void(const request&)> rpc_finalize =
-    [rpc](const request &req) {
-      (void)req;
-      ThalliumState *state = GetThalliumState(rpc);
-      state->engine->finalize();
-    };
-
-  // TODO(chogan): Only one node needs this. Separate RPC server?
-  auto rpc_begin_global_ticket_mutex = [context, rpc](const tl::request &req) {
-    DLOG_ASSERT(rpc->node_id == kGlobalMutexNodeId);
-    MetadataManager *mdm = GetMetadataManagerFromContext(context);
-    LocalBeginGlobalTicketMutex(mdm);
-
-    req.respond(true);
+  auto rpc_finalize = [rpc](const request &req) {
+    (void)req;
+    ThalliumState *state = GetThalliumState(rpc);
+    state->engine->finalize();
   };
-
-  auto rpc_end_global_ticket_mutex = [context, rpc](const tl::request &req) {
-    DLOG_ASSERT(rpc->node_id == kGlobalMutexNodeId);
-    MetadataManager *mdm = GetMetadataManagerFromContext(context);
-    LocalEndGlobalTicketMutex(mdm);
-
-    req.respond(true);
-  };
-  rpc_server->define("RemoteBeginGlobalTicketMutex",
-                     rpc_begin_global_ticket_mutex);
-  rpc_server->define("RemoteEndGlobalTicketMutex",
-                     rpc_end_global_ticket_mutex);
-  //
 
   // TODO(chogan): Currently these three are only used for testing.
   rpc_server->define("GetBuffers", rpc_get_buffers);
@@ -406,16 +360,15 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
   rpc_server->define("RemoteDestroyBlobByName", rpc_destroy_blob_by_name);
   rpc_server->define("RemoteDestroyBlobById", rpc_destroy_blob_by_id);
   rpc_server->define("RemoteContainsBlob", rpc_contains_blob);
-  rpc_server->define("RemoteGetNextFreeBucketId", rpc_get_next_free_bucket_id);
   rpc_server->define("RemoteRemoveBlobFromBucketInfo",
                     rpc_remove_blob_from_bucket_info);
   rpc_server->define("RemoteAllocateBufferIdList", rpc_allocate_buffer_id_list);
   rpc_server->define("RemoteGetBufferIdList", rpc_get_buffer_id_list);
   rpc_server->define("RemoteFreeBufferIdList", rpc_free_buffer_id_list);
-  rpc_server->define("RemoteIncrementRefcount", rpc_increment_refcount_bucket);
+  rpc_server->define("RemoteGetOrCreateBucketId", rpc_get_or_create_bucket_id);
+  rpc_server->define("RemoteGetOrCreateVBucketId",
+                     rpc_get_or_create_vbucket_id);
   rpc_server->define("RemoteDecrementRefcount", rpc_decrement_refcount_bucket);
-  rpc_server->define("RemoteIncrementRefcountVBucket",
-                     rpc_increment_refcount_vbucket);
   rpc_server->define("RemoteDecrementRefcountVBucket",
                      rpc_decrement_refcount_vbucket);
   rpc_server->define("RemoteGetRemainingCapacity", rpc_get_remaining_capacity);
