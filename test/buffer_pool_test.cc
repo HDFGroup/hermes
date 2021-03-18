@@ -10,6 +10,10 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
 #include <chrono>
 #include <string>
 #include <thread>
@@ -250,6 +254,62 @@ static void TestBufferOrganizer() {
   hermes->Finalize(true);
 }
 
+static void TestBufferingFiles(hermes::Config *config,
+                               size_t *expected_capacities) {
+  const int kNumBlockDevices = 3;
+
+  int num_slabs[] = {
+    config->num_slabs[1],
+    config->num_slabs[2],
+    config->num_slabs[3]
+  };
+
+  HermesPtr hermes = hermes::InitHermesDaemon(config);
+  hermes->Finalize(true);
+
+  for (int i = 0; i < kNumBlockDevices; ++i) {
+    size_t device_total_capacity = 0;
+    for (int j = 0; j < num_slabs[i]; ++j) {
+      std::string buffering_filename = ("device" + std::to_string(i + 1) +
+                                        "_slab" + std::to_string(j) +
+                                        ".hermes");
+
+      struct stat st = {};
+      Assert(stat(buffering_filename.c_str(), &st) == 0);
+      device_total_capacity += st.st_size;
+    }
+    Assert(device_total_capacity == expected_capacities[i]);
+  }
+}
+
+static void TestBufferingFileCorrectness() {
+  using namespace hermes;  // NOLINT(*)
+  {
+    Config config = {};
+    InitDefaultConfig(&config);
+    size_t expected_capacities[] = {
+      config.capacities[1],
+      config.capacities[2],
+      config.capacities[3],
+    };
+    TestBufferingFiles(&config, expected_capacities);
+  }
+
+  {
+    Config config = {};
+    InitDefaultConfig(&config);
+    config.capacities[1] = KILOBYTES(4) * 5;
+    config.capacities[2] = KILOBYTES(4) * 5;
+    config.capacities[3] = KILOBYTES(4) * 5;
+    size_t expected_capacities[] = {
+      KILOBYTES(4),
+      KILOBYTES(4),
+      KILOBYTES(4)
+    };
+    TestBufferingFiles(&config, expected_capacities);
+  }
+}
+
 int main(int argc, char **argv) {
   int mpi_threads_provided;
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
@@ -263,6 +323,7 @@ int main(int argc, char **argv) {
   TestBlobOverwrite();
   TestSwap();
   TestBufferOrganizer();
+  TestBufferingFileCorrectness();
 
   MPI_Finalize();
 

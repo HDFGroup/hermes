@@ -63,6 +63,8 @@ struct Device {
    * Device
    */
   bool has_fallocate;
+  /** True if the device is shared among multiple ranks (e.g., burst buffers) */
+  bool is_shared;
   /** The directory where buffering files can be created. Zero terminated. */
   char mount_point[kMaxPathLength];
 };
