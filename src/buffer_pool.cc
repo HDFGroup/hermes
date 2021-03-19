@@ -307,13 +307,13 @@ i32 GetSlabBufferSize(SharedMemoryContext *context, DeviceID device_id,
     if (slab_index < pool->num_slabs[device_id]) {
       result = slab_sizes[slab_index];
     } else {
-      LOG(WARNING) << "Requested a info for a non-existent slab "
+      LOG(WARNING) << "Requested info for a non-existent slab "
                    << "(requested slab index: " << slab_index
                    << " , max index: " << pool->num_slabs[device_id]
                    << std::endl;
     }
   } else {
-    LOG(WARNING) << "Requested a info for a non-existent Device "
+    LOG(WARNING) << "Requested info for a non-existent Device "
                  << "(requested id: " << device_id << " , max id: "
                  << pool->num_devices << std::endl;
   }
