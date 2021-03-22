@@ -10,6 +10,10 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
 #include <chrono>
 #include <string>
 #include <thread>
@@ -27,16 +31,33 @@
 /**
  * @file buffer_pool_test.cc
  *
- * This is an example of starting a Hermes daemon that will service a FUSE
- * adapter. When run with MPI, it should be configured to run one process per
- * node.
+ * Tests the functionality of the BufferPool
  */
 
 namespace hapi = hermes::api;
-using hapi::Hermes;
+using HermesPtr = std::shared_ptr<hapi::Hermes>;
 
-void TestGetBuffers(Hermes *hermes) {
+static void GetSwapConfig(hermes::Config *config) {
+  InitDefaultConfig(config);
+  // NOTE(chogan): Make capacities small so that a Put of 1MB will go to swap
+  // space. After metadata, this configuration gives us 1 4KB RAM buffer.
+  config->capacities[0] = KILOBYTES(32);
+  config->capacities[1] = 8;
+  config->capacities[2] = 8;
+  config->capacities[3] = 8;
+  config->desired_slab_percentages[0][0] = 1;
+  config->desired_slab_percentages[0][1] = 0;
+  config->desired_slab_percentages[0][2] = 0;
+  config->desired_slab_percentages[0][3] = 0;
+  config->arena_percentages[hermes::kArenaType_BufferPool] = 0.5;
+  config->arena_percentages[hermes::kArenaType_MetaData] = 0.5;
+}
+
+static void TestGetBuffers() {
   using namespace hermes;  // NOLINT(*)
+
+  HermesPtr hermes = InitHermesDaemon();
+
   SharedMemoryContext *context = &hermes->context_;
   BufferPool *pool = GetBufferPoolFromContext(context);
   TargetID ram_target = testing::DefaultRamTargetId();
@@ -72,21 +93,28 @@ void TestGetBuffers(Hermes *hermes) {
     Assert(failed_request.size() == 0);
     LocalReleaseBuffers(context, ret);
   }
+
+  hermes->Finalize(true);
 }
 
-void TestGetBandwidths(hermes::SharedMemoryContext *context) {
+static void TestGetBandwidths() {
   using namespace hermes;  // NOLINT(*)
-  std::vector<f32> bandwidths = GetBandwidths(context);
+
+  HermesPtr hermes = InitHermesDaemon();
+
+  std::vector<f32> bandwidths = GetBandwidths(&hermes->context_);
   Config config;
   InitDefaultConfig(&config);
   for (size_t i = 0; i < bandwidths.size(); ++i) {
     Assert(bandwidths[i] == config.bandwidths[i]);
     Assert(bandwidths.size() == (size_t)config.num_devices);
   }
+
+  hermes->Finalize(true);
 }
 
-hapi::Status ForceBlobToSwap(Hermes *hermes, hermes::u64 id, hapi::Blob &blob,
-                             const char *blob_name) {
+static hapi::Status ForceBlobToSwap(hapi::Hermes *hermes, hermes::u64 id,
+                                    hapi::Blob &blob, const char *blob_name) {
   using namespace hermes;  // NOLINT(*)
   PlacementSchema schema;
   schema.push_back({blob.size(), testing::DefaultRamTargetId()});
@@ -105,7 +133,7 @@ hapi::Status ForceBlobToSwap(Hermes *hermes, hermes::u64 id, hapi::Blob &blob,
 /**
  * Fills out @p config to represent one `Device` (RAM) with 2, 4 KB buffers.
  */
-void MakeTwoBufferRAMConfig(hermes::Config *config) {
+static void MakeTwoBufferRAMConfig(hermes::Config *config) {
   InitDefaultConfig(config);
   config->num_devices = 1;
   config->num_targets = 1;
@@ -118,11 +146,11 @@ void MakeTwoBufferRAMConfig(hermes::Config *config) {
   config->arena_percentages[hermes::kArenaType_MetaData] = 0.5;
 }
 
-void TestBlobOverwrite() {
+static void TestBlobOverwrite() {
   using namespace hermes;  // NOLINT(*)
-  Config config = {};
+  hermes::Config config = {};
   MakeTwoBufferRAMConfig(&config);
-  std::shared_ptr<Hermes> hermes = hermes::InitHermesDaemon(&config);
+  HermesPtr hermes = InitHermesDaemon(&config);
   SharedMemoryContext *context = &hermes->context_;
   DeviceID ram_id = 0;
   int slab_index = 0;
@@ -151,7 +179,11 @@ void TestBlobOverwrite() {
   hermes->Finalize(true);
 }
 
-void TestSwap(std::shared_ptr<Hermes> hermes) {
+static void TestSwap() {
+  hermes::Config config = {};
+  GetSwapConfig(&config);
+  HermesPtr hermes = hermes::InitHermesDaemon(&config);
+
   hapi::Context ctx;
   ctx.policy = hapi::PlacementPolicy::kRandom;
   hapi::Bucket bucket(std::string("swap_bucket"), hermes, ctx);
@@ -172,9 +204,15 @@ void TestSwap(std::shared_ptr<Hermes> hermes) {
   Assert(get_result == data);
 
   bucket.Destroy(ctx);
+
+  hermes->Finalize(true);
 }
 
-void TestBufferOrganizer(std::shared_ptr<Hermes> hermes) {
+static void TestBufferOrganizer() {
+  hermes::Config config = {};
+  GetSwapConfig(&config);
+  HermesPtr hermes = hermes::InitHermesDaemon(&config);
+
   hapi::Context ctx;
   ctx.policy = hapi::PlacementPolicy::kRandom;
   hapi::Bucket bucket(std::string("bo_bucket"), hermes, ctx);
@@ -199,7 +237,7 @@ void TestBufferOrganizer(std::shared_ptr<Hermes> hermes) {
   bucket.DeleteBlob(blob1_name, ctx);
 
   // NOTE(chogan): Give the BufferOrganizer time to finish.
-  std::this_thread::sleep_for(std::chrono::seconds(2));
+  std::this_thread::sleep_for(std::chrono::seconds(3));
 
   Assert(bucket.ContainsBlob(blob2_name));
   Assert(!bucket.BlobIsInSwap(blob2_name));
@@ -212,59 +250,67 @@ void TestBufferOrganizer(std::shared_ptr<Hermes> hermes) {
   Assert(get_result == data2);
 
   bucket.Destroy(ctx);
+
+  hermes->Finalize(true);
 }
 
-void PrintUsage(char *program) {
-  fprintf(stderr, "Usage %s -[b] [-f <path>]\n", program);
-  fprintf(stderr, "  -b\n");
-  fprintf(stderr, "     Run GetBuffers test.\n");
-  fprintf(stderr, "  -f <path>\n");
-  fprintf(stderr, "     Path to a Hermes configuration file.\n");
-  fprintf(stderr, "  -s\n");
-  fprintf(stderr, "     Test the functionality of the swap target.\n");
-  fprintf(stderr, "  -x\n");
-  fprintf(stderr, "     Start a Hermes server as a daemon.\n");
+static void TestBufferingFiles(hermes::Config *config,
+                               size_t *expected_capacities) {
+  const int kNumBlockDevices = 3;
+
+  int num_slabs[] = {
+    config->num_slabs[1],
+    config->num_slabs[2],
+    config->num_slabs[3]
+  };
+
+  HermesPtr hermes = hermes::InitHermesDaemon(config);
+  hermes->Finalize(true);
+
+  for (int i = 0; i < kNumBlockDevices; ++i) {
+    size_t device_total_capacity = 0;
+    for (int j = 0; j < num_slabs[i]; ++j) {
+      std::string buffering_filename = ("device" + std::to_string(i + 1) +
+                                        "_slab" + std::to_string(j) +
+                                        ".hermes");
+
+      struct stat st = {};
+      Assert(stat(buffering_filename.c_str(), &st) == 0);
+      device_total_capacity += st.st_size;
+    }
+    Assert(device_total_capacity == expected_capacities[i]);
+  }
+}
+
+static void TestBufferingFileCorrectness() {
+  using namespace hermes;  // NOLINT(*)
+  {
+    Config config = {};
+    InitDefaultConfig(&config);
+    size_t expected_capacities[] = {
+      config.capacities[1],
+      config.capacities[2],
+      config.capacities[3],
+    };
+    TestBufferingFiles(&config, expected_capacities);
+  }
+
+  {
+    Config config = {};
+    InitDefaultConfig(&config);
+    config.capacities[1] = KILOBYTES(4) * 5;
+    config.capacities[2] = KILOBYTES(4) * 5;
+    config.capacities[3] = KILOBYTES(4) * 5;
+    size_t expected_capacities[] = {
+      KILOBYTES(4),
+      KILOBYTES(4),
+      KILOBYTES(4)
+    };
+    TestBufferingFiles(&config, expected_capacities);
+  }
 }
 
 int main(int argc, char **argv) {
-  int option = -1;
-  char *config_file = 0;
-  bool test_get_buffers = false;
-  bool test_swap = false;
-  bool start_server = false;
-
-  while ((option = getopt(argc, argv, "bf:sx")) != -1) {
-    switch (option) {
-      case 'b': {
-        test_get_buffers = true;
-        break;
-      }
-      case 'f': {
-        config_file = optarg;
-        break;
-      }
-      case 's': {
-        test_swap = true;
-        break;
-      }
-      case 'x': {
-        start_server = true;
-        break;
-      }
-      default:
-        PrintUsage(argv[0]);
-        return 1;
-    }
-  }
-
-  if (optind < argc) {
-    fprintf(stderr, "non-option ARGV-elements: ");
-    while (optind < argc) {
-      fprintf(stderr, "%s ", argv[optind++]);
-    }
-    fprintf(stderr, "\n");
-  }
-
   int mpi_threads_provided;
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
   if (mpi_threads_provided < MPI_THREAD_MULTIPLE) {
@@ -272,41 +318,12 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  if (test_get_buffers) {
-    std::shared_ptr<Hermes> hermes = hermes::InitHermesDaemon(config_file);
-    TestGetBuffers(hermes.get());
-    TestGetBandwidths(&hermes->context_);
-    hermes->Finalize(true);
-
-    TestBlobOverwrite();
-  }
-
-  if (test_swap) {
-    hermes::Config config = {};
-    InitDefaultConfig(&config);
-    // NOTE(chogan): Make capacities small so that a Put of 1MB will go to swap
-    // space. After metadata, this configuration gives us 1 4KB RAM buffer.
-    config.capacities[0] = KILOBYTES(32);
-    config.capacities[1] = 8;
-    config.capacities[2] = 8;
-    config.capacities[3] = 8;
-    config.desired_slab_percentages[0][0] = 1;
-    config.desired_slab_percentages[0][1] = 0;
-    config.desired_slab_percentages[0][2] = 0;
-    config.desired_slab_percentages[0][3] = 0;
-    config.arena_percentages[hermes::kArenaType_BufferPool] = 0.5;
-    config.arena_percentages[hermes::kArenaType_MetaData] = 0.5;
-
-    std::shared_ptr<Hermes> hermes = hermes::InitHermesDaemon(&config);
-    TestSwap(hermes);
-    TestBufferOrganizer(hermes);
-    hermes->Finalize(true);
-  }
-
-  if (start_server) {
-    std::shared_ptr<Hermes> hermes = hermes::InitHermesDaemon(config_file);
-    hermes->Finalize();
-  }
+  TestGetBuffers();
+  TestGetBandwidths();
+  TestBlobOverwrite();
+  TestSwap();
+  TestBufferOrganizer();
+  TestBufferingFileCorrectness();
 
   MPI_Finalize();
 
