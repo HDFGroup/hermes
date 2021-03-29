@@ -132,11 +132,13 @@ Blob& VBucket::GetBlob(std::string blob_name, std::string bucket_name) {
 }
 
 template <class Predicate>
-std::vector<std::string> VBucket::GetLinks(Predicate pred, Context& ctx) {
+std::vector<BlobID> VBucket::GetLinks(Predicate pred, Context& ctx) {
   LOG(INFO) << "Getting subset of links satisfying pred in VBucket " << name_
             << '\n';
-
-  return std::vector<std::string>();
+  auto blob_ids =
+      GetBlobsFromVBucketInfo(&hermes_->context_, &hermes_->rpc_, id_);
+  // TODO(hari): add filtering
+  return blob_ids;
 }
 
 Status VBucket::Attach(Trait* trait, Context& ctx) {
@@ -158,8 +160,10 @@ Status VBucket::Attach(Trait* trait, Context& ctx) {
     for (const auto& blob_id : blob_ids) {
       Trait* t = static_cast<Trait*>(trait);
       TraitInput input;
-      // FIXME(hari): this needs to be read from blob_id;
-      // input.bucket_name = ci->first;
+      auto bucket_id =
+          GetBucketIdFromBlobId(&hermes_->context_, &hermes_->rpc_, blob_id);
+      input.bucket_name =
+          GetBucketNameById(&hermes_->context_, &hermes_->rpc_, bucket_id);
       input.blob_name =
           GetBlobNameById(&hermes_->context_, &hermes_->rpc_, blob_id);
       if (t->onAttachFn != nullptr) {
@@ -202,10 +206,10 @@ Status VBucket::Detach(Trait* trait, Context& ctx) {
     for (const auto& blob_id : blob_ids) {
       Trait* t = static_cast<Trait*>(trait);
       TraitInput input;
-      auto bucket_id = GetBucketIdFromBlobId(&hermes_->context_, &hermes_->rpc_, blob_id);
-
-      // FIXME(hari): this needs to be read from blob_id;
-      input.bucket_name = GetBucket;
+      auto bucket_id =
+          GetBucketIdFromBlobId(&hermes_->context_, &hermes_->rpc_, blob_id);
+      input.bucket_name =
+          GetBucketNameById(&hermes_->context_, &hermes_->rpc_, bucket_id);
       input.blob_name =
           GetBlobNameById(&hermes_->context_, &hermes_->rpc_, blob_id);
       if (t->onDetachFn != nullptr) {
@@ -266,8 +270,10 @@ Status VBucket::Delete(Context& ctx) {
     for (const auto& blob_id : blob_ids) {
       if (attached_traits_.size() > 0) {
         TraitInput input;
-        // FIXME(hari): this needs to be read from blob_id;
-        // input.bucket_name = ci->first;
+        auto bucket_id =
+            GetBucketIdFromBlobId(&hermes_->context_, &hermes_->rpc_, blob_id);
+        input.bucket_name =
+            GetBucketNameById(&hermes_->context_, &hermes_->rpc_, bucket_id);
         input.blob_name =
             GetBlobNameById(&hermes_->context_, &hermes_->rpc_, blob_id);
 

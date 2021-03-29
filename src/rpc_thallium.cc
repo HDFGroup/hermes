@@ -369,7 +369,10 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
         auto ret = LocalGetBlobNameById(context, id);
         req.respond(ret);
       };
-
+  auto rpc_get_bucket_name_by_id = [context](const request &req, BucketID id) {
+    auto ret = LocalGetBucketNameById(context, id);
+    req.respond(ret);
+  };
   rpc_server->define("RemoteBeginGlobalTicketMutex",
                      rpc_begin_global_ticket_mutex);
   rpc_server->define("RemoteEndGlobalTicketMutex",
@@ -428,6 +431,8 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
                      rpc_get_blobs_from_vbucket_info);
   rpc_server->define("RemoteGetBlobNameById",
                      rpc_get_blob_name_by_id);
+  rpc_server->define("RemoteGetBucketNameById",
+                     rpc_get_bucket_name_by_id);
 }
 
 void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,

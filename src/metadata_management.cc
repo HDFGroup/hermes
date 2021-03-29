@@ -1215,6 +1215,13 @@ std::string LocalGetBlobNameById(SharedMemoryContext *context, BlobID blob_id) {
   return blob_name;
 }
 
+std::string LocalGetBucketNameById(SharedMemoryContext *context, BucketID blob_id) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  std::string bucket_name =
+      ReverseGetFromStorage(mdm, blob_id.as_int, kMapType_Bucket);
+  return bucket_name;
+}
+
 std::vector<BlobID> GetBlobsFromVBucketInfo(SharedMemoryContext *context,
                                             RpcContext *rpc,
                                             VBucketID vbucket_id) {
@@ -1253,11 +1260,11 @@ std::string GetBlobNameById(SharedMemoryContext *context, RpcContext *rpc,
 
 std::string GetBucketNameById(SharedMemoryContext *context, RpcContext *rpc,
                             BucketID id) {
-  u32 target_node = GetBucketNodeId(id);
+  auto target_node = id.bits.node_id;
   if (target_node == rpc->node_id) {
-    return LocalGetBlobNameById(context, id);
+    return LocalGetBucketNameById(context, id);
   } else {
-    return RpcCall<std::string>(rpc, target_node, "RemoteGetBlobNameById", id);
+    return RpcCall<std::string>(rpc, target_node, "RemoteGetBucketNameById", id);
   }
 }
 }  // namespace hermes

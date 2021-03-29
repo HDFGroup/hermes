@@ -130,6 +130,8 @@ void LocalRemoveBlobFromVBucketInfo(SharedMemoryContext *context,
 std::vector<BlobID> LocalGetBlobsFromVBucketInfo(SharedMemoryContext *context,
                                                  VBucketID vbucket_id);
 std::string LocalGetBlobNameById(SharedMemoryContext *context, BlobID blob_id);
+std::string LocalGetBucketNameById(SharedMemoryContext *context,
+                                   BucketID blob_id);
 
 }  // namespace hermes
 #endif  // HERMES_METADATA_MANAGEMENT_INTERNAL_H_

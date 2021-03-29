@@ -362,6 +362,11 @@ std::vector<BlobID> GetBlobsFromVBucketInfo(SharedMemoryContext *context,
  */
 std::string GetBlobNameById(SharedMemoryContext *context, RpcContext *rpc,
                             BlobID id);
+/**
+ *
+ */
+std::string GetBucketNameById(SharedMemoryContext *context, RpcContext *rpc,
+                              BucketID id);
 }  // namespace hermes
 
 #endif  // HERMES_METADATA_MANAGEMENT_H_
