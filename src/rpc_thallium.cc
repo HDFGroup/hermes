@@ -337,23 +337,6 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
     state->engine->finalize();
   };
 
-  // TODO(chogan): Only one node needs this. Separate RPC server?
-  auto rpc_begin_global_ticket_mutex = [context, rpc](const tl::request &req) {
-    DLOG_ASSERT(rpc->node_id == kGlobalMutexNodeId);
-    MetadataManager *mdm = GetMetadataManagerFromContext(context);
-    LocalBeginGlobalTicketMutex(mdm);
-
-    req.respond(true);
-  };
-
-  auto rpc_end_global_ticket_mutex = [context, rpc](const tl::request &req) {
-    DLOG_ASSERT(rpc->node_id == kGlobalMutexNodeId);
-    MetadataManager *mdm = GetMetadataManagerFromContext(context);
-    LocalEndGlobalTicketMutex(mdm);
-
-    req.respond(true);
-  };
-
   auto rpc_remove_blob_from_vbucket_info = [context](const request &req,
                                                     VBucketID vbucket_id,
                                                     BlobID blob_id) {
