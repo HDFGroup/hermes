@@ -356,11 +356,6 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
     auto ret = LocalGetBucketNameById(context, id);
     req.respond(ret);
   };
-  rpc_server->define("RemoteBeginGlobalTicketMutex",
-                     rpc_begin_global_ticket_mutex);
-  rpc_server->define("RemoteEndGlobalTicketMutex",
-                     rpc_end_global_ticket_mutex);
-  //
 
   // TODO(chogan): Currently these three are only used for testing.
   rpc_server->define("GetBuffers", rpc_get_buffers);
