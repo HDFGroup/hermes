@@ -583,18 +583,6 @@ size_t GetStoredMapSize(MetadataManager *mdm, MapType map_type) {
   return result;
 }
 
-std::vector<u64>
-GetRemainingNodeCapacities(SharedMemoryContext *context,
-                           const std::vector<TargetID> &targets) {
-  std::vector<u64> result(targets.size());
-
-  for (size_t i = 0; i < targets.size(); ++i) {
-    result[i] = LocalGetRemainingCapacity(context, targets[i]);
-  }
-
-  return result;
-}
-
 u32 HashStringForStorage(MetadataManager *mdm, RpcContext *rpc,
                          const char *str) {
   int result =

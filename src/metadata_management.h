@@ -105,15 +105,6 @@ struct MetadataManager {
   // TODO(chogan): @optimization Should the TicketMutexes here be reader/writer
   // locks?
 
-  // TODO(chogan): @optimization Hopefully this is used rarely. If it becomes
-  // something that's commonly used, we need to come up with something smarter.
-  /** Mutex shared by all nodes for operations that require synchronization.
-   *
-   *  Should only be accessed via BeginGlobalTicketMutex() and
-   *  EndGlobalTicketMutex().
-   */
-  TicketMutex global_mutex;
-
   /** Lock for accessing `BucketInfo` structures located at
    * `bucket_info_offset` */
   TicketMutex bucket_mutex;
@@ -237,12 +228,6 @@ void AttachBlobToBucket(SharedMemoryContext *context, RpcContext *rpc,
 /**
  *
  */
-void IncrementRefcount(SharedMemoryContext *context, RpcContext *rpc,
-                       BucketID id);
-
-/**
- *
- */
 void DecrementRefcount(SharedMemoryContext *context, RpcContext *rpc,
                        BucketID id);
 
@@ -285,6 +270,17 @@ TargetID FindTargetIdFromDeviceId(const std::vector<TargetID> &targets,
 /**
  *
  */
+std::vector<TargetID> GetNeighborhoodTargets(SharedMemoryContext *context,
+                                             RpcContext *rpc);
+/**
+ *
+ */
+std::vector<u64>
+GetRemainingTargetCapacities(SharedMemoryContext *context, RpcContext *rpc,
+                             const std::vector<TargetID> &targets);
+/**
+ *
+ */
 std::vector<BlobID> GetBlobIds(SharedMemoryContext *context, RpcContext *rpc,
                                BucketID bucket_id);
 
@@ -303,14 +299,17 @@ BucketID GetBucketIdFromBlobId(SharedMemoryContext *context, RpcContext *rpc,
 /**
  *
  */
-void IncrementRefcount(SharedMemoryContext *context, RpcContext *rpc,
+void DecrementRefcount(SharedMemoryContext *context, RpcContext *rpc,
                        VBucketID id);
+/**
+ *
+ */
+bool IsNullBucketId(BucketID id);
 
 /**
  *
  */
-void DecrementRefcount(SharedMemoryContext *context, RpcContext *rpc,
-                       VBucketID id);
+bool IsNullVBucketId(VBucketID id);
 
 /**
  *

@@ -34,10 +34,10 @@ class VBucket {
   std::list<Trait *> attached_traits_;
   Blob local_blob;
   bool persist;
+  /** internal Hermes object owned by vbucket */
   std::shared_ptr<Hermes> hermes_;
 
  public:
-  /** internal Hermes object owned by vbucket */
   VBucket(std::string initial_name, std::shared_ptr<Hermes> const &h,
           bool persist, Context ctx)
       : name_(initial_name),
@@ -50,14 +50,21 @@ class VBucket {
     (void)ctx;
     if (IsVBucketNameTooLong(name_)) {
       id_.as_int = 0;
+      throw std::length_error("VBucket name exceeds maximum size of " +
+                              std::to_string(kMaxVBucketNameSize));
     } else {
       id_ = GetOrCreateVBucketId(&hermes_->context_, &hermes_->rpc_, name_);
+      if (!IsValid()) {
+        throw std::runtime_error("Could not open or create VBucket");
+      }
     }
   }
 
   ~VBucket() {
     name_.clear();
   }
+
+  bool IsValid() const;
 
   /** get the name of vbucket */
   std::string GetName() const { return this->name_; }
