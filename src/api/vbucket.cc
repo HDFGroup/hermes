@@ -198,8 +198,10 @@ Status VBucket::Detach(Trait* trait, Context& ctx) {
     for (const auto& blob_id : blob_ids) {
       Trait* t = static_cast<Trait*>(trait);
       TraitInput input;
+      auto bucket_id = GetBucketIdFromBlobId(&hermes_->context_, &hermes_->rpc_, blob_id);
+
       // FIXME(hari): this needs to be read from blob_id;
-      // input.bucket_name = ci->first;
+      input.bucket_name = GetBucket;
       input.blob_name =
           GetBlobNameById(&hermes_->context_, &hermes_->rpc_, blob_id);
       if (t->onDetachFn != nullptr) {

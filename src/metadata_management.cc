@@ -1244,4 +1244,14 @@ std::string GetBlobNameById(SharedMemoryContext *context, RpcContext *rpc,
     return RpcCall<std::string>(rpc, target_node, "RemoteGetBlobNameById", id);
   }
 }
+
+std::string GetBucketNameById(SharedMemoryContext *context, RpcContext *rpc,
+                            BucketID id) {
+  u32 target_node = GetBucketNodeId(id);
+  if (target_node == rpc->node_id) {
+    return LocalGetBlobNameById(context, id);
+  } else {
+    return RpcCall<std::string>(rpc, target_node, "RemoteGetBlobNameById", id);
+  }
+}
 }  // namespace hermes
