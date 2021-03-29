@@ -60,7 +60,7 @@ int main(int argc, char **argv) {
       shared.Link(blob_name, bucket_name, ctx);
     }
     hermes->AppBarrier();
-    if (app_rank == 0){
+    if (app_rank == 0) {
       auto blob_ids = shared.GetLinks(ctx);
       assert(blob_ids.size() == (unsigned long)app_size * num_blobs_per_rank);
       for (int rank = 0; rank < app_size; ++rank) {
