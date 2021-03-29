@@ -112,7 +112,7 @@ bool VBucket::Contain_blob(std::string blob_name, std::string bucket_name) {
   auto selected_blob_id = GetBlobId(&hermes_->context_, &hermes_->rpc_,
                                     blob_name.c_str(), bucket_id);
   for (const auto& blob_id : blob_ids) {
-    if (selected_blob_id.as_int == blob_id.as_int) ret = false;
+    if (selected_blob_id.as_int == blob_id.as_int) ret = true;
   }
 
   return ret;
@@ -131,8 +131,8 @@ Blob& VBucket::GetBlob(std::string blob_name, std::string bucket_name) {
   return local_blob;
 }
 
-template <class Predicate>
-std::vector<BlobID> VBucket::GetLinks(Predicate pred, Context& ctx) {
+std::vector<BlobID> VBucket::GetLinks(Context& ctx) {
+  (void)ctx;
   LOG(INFO) << "Getting subset of links satisfying pred in VBucket " << name_
             << '\n';
   auto blob_ids =

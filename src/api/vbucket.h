@@ -83,8 +83,7 @@ class VBucket {
 
   /** retrieves the subset of blob links satisfying pred */
   /** could return iterator */
-  template <class Predicate>
-  std::vector<BlobID> GetLinks(Predicate pred, Context &ctx);
+  std::vector<BlobID> GetLinks(Context &ctx);
 
   /** attach a trait to this vbucket */
   Status Attach(Trait *trait, Context &ctx);
