@@ -193,7 +193,6 @@ Status Bucket::Put(std::vector<std::string> &names,
 
   for (auto &name : names) {
     if (IsBlobNameTooLong(name)) {
-      // TODO(chogan): @errorhandling
       ret = BLOB_NAME_TOO_LONG;
       LOG(ERROR) << ret.Msg();
       return ret;
@@ -221,12 +220,10 @@ Status Bucket::Put(std::vector<std::string> &names,
     if (ret.Succeeded()) {
       ret = PlaceBlobs(schemas, blobs, names, ctx.buffer_organizer_retries);
     } else {
-      // TODO(chogan): @errorhandling No space left or contraints unsatisfiable.
       LOG(ERROR) << ret.Msg();
       return ret;
     }
   } else {
-    // TODO(chogan): @errorhandling
     ret = INVALID_BUCKET;
     LOG(ERROR) << ret.Msg();
     return ret;

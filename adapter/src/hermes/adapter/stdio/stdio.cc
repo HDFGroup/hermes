@@ -29,29 +29,18 @@ namespace fs = std::experimental::filesystem;
 /**
  * Internal Functions
  */
-void extend_file(std::string &filename, size_t size) {
-  LOG(INFO) << "Extending to file: " << filename << " with size:" << size << "."
-            << std::endl;
-  std::ofstream ofs(filename, std::ios::binary | std::ios::out);
-  ofs.seekp(size - 1);
-  ofs.write("", 1);
-}
 
 size_t perform_file_write(std::string &filename, size_t offset, size_t size,
                           unsigned char *data_ptr) {
   LOG(INFO) << "Writing to file: " << filename << " offset: " << offset
             << " of size:" << size << "." << std::endl;
   INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
-  if (!fs::exists(filename) || fs::file_size(filename) < offset + size) {
-    extend_file(filename, offset + size);
-  }
   FILE *fh = fopen(filename.c_str(), "r+");
   size_t write_size = 0;
   if (fh != nullptr) {
     auto status = fseek(fh, offset, SEEK_SET);
     if (status == 0) {
       write_size = fwrite(data_ptr, sizeof(char), size, fh);
-      fflush(fh);
       status = fclose(fh);
     }
   }
@@ -565,16 +554,10 @@ int HERMES_DECL(fflush)(FILE *fp) {
         hermes::api::VBucket file_vbucket(filename, mdm->GetHermes(), true,
                                           ctx);
         auto offset_map = std::unordered_map<std::string, hermes::u64>();
-        std::size_t pos = 0;
         for (const auto &blob_name : blob_names) {
           file_vbucket.Link(blob_name, filename, ctx);
-          /* FIXME(hari): change this once we have blob namespace separated per
-           * bucket.*/
-          if (pos == 0) {
-            pos = blob_name.find(kStringDelimiter) + 1;
-          }
-          auto offset = std::stol(blob_name.substr(pos));
-          offset_map.emplace(blob_name, offset * kPageSize);
+          auto page_index = std::stol(blob_name);
+          offset_map.emplace(blob_name, page_index * kPageSize);
         }
         auto trait = hermes::api::FileMappingTrait(filename, offset_map,
                                                    nullptr, NULL, NULL);
@@ -613,18 +596,12 @@ int HERMES_DECL(fclose)(FILE *fp) {
           hermes::api::VBucket file_vbucket(filename, mdm->GetHermes(), true,
                                             ctx);
           auto offset_map = std::unordered_map<std::string, hermes::u64>();
-          std::size_t pos = 0;
+
           for (const auto &blob_name : blob_names) {
             auto status = file_vbucket.Link(blob_name, filename, ctx);
             if (!status.Failed()) {
-              /* FIXME(hari): change this once we have blob namespace separated
-               * per bucket.*/
-              if (pos == 0) {
-                pos = blob_name.find(kStringDelimiter) + 1;
-              }
-              auto offset_str = blob_name.substr(pos);
-              auto offset = std::stol(offset_str);
-              offset_map.emplace(blob_name, offset * kPageSize);
+              auto page_index = std::stol(blob_name);
+              offset_map.emplace(blob_name, page_index * kPageSize);
             }
           }
           auto trait = hermes::api::FileMappingTrait(filename, offset_map,

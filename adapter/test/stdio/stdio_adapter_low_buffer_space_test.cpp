@@ -281,5 +281,18 @@ TEST_CASE("BatchedWriteSequential",
     REQUIRE(test::status_orig == 0);
     REQUIRE(fs::file_size(info.new_file) == write_size);
   }
+  SECTION("write to new file multiple write") {
+    test::test_fopen(info.new_file.c_str(), "w+");
+    REQUIRE(test::fh_orig != nullptr);
+    for (size_t i = 0; i <= info.num_iterations; ++i) {
+      test::test_fwrite(info.write_data.c_str(), args.request_size);
+      REQUIRE(test::size_written_orig == args.request_size);
+    }
+    REQUIRE(test::size_written_orig == args.request_size);
+    test::test_fclose();
+    REQUIRE(test::status_orig == 0);
+    REQUIRE(fs::file_size(info.new_file) ==
+            args.request_size * (info.num_iterations + 1));
+  }
   posttest();
 }

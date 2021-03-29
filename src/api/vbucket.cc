@@ -23,6 +23,10 @@ namespace hermes {
 
 namespace api {
 
+bool VBucket::IsValid() const {
+  return !IsNullVBucketId(id_);
+}
+
 Status VBucket::Link(std::string blob_name, std::string bucket_name,
                      Context& ctx) {
   (void)ctx;
