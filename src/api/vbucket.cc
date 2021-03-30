@@ -165,7 +165,7 @@ Status VBucket::Attach(Trait* trait, Context& ctx) {
       input.bucket_name =
           GetBucketNameById(&hermes_->context_, &hermes_->rpc_, bucket_id);
       input.blob_name =
-          GetBlobNameById(&hermes_->context_, &hermes_->rpc_, blob_id);
+          GetBlobNameFromId(&hermes_->context_, &hermes_->rpc_, blob_id);
       if (t->onAttachFn != nullptr) {
         t->onAttachFn(input, trait);
         // TODO(hari): @errorhandling Check if attach was successful
@@ -211,7 +211,7 @@ Status VBucket::Detach(Trait* trait, Context& ctx) {
       input.bucket_name =
           GetBucketNameById(&hermes_->context_, &hermes_->rpc_, bucket_id);
       input.blob_name =
-          GetBlobNameById(&hermes_->context_, &hermes_->rpc_, blob_id);
+          GetBlobNameFromId(&hermes_->context_, &hermes_->rpc_, blob_id);
       if (t->onDetachFn != nullptr) {
         t->onDetachFn(input, trait);
         // TODO(hari): @errorhandling Check if detach was successful
@@ -268,14 +268,15 @@ Status VBucket::Delete(Context& ctx) {
     auto blob_ids =
         GetBlobsFromVBucketInfo(&hermes_->context_, &hermes_->rpc_, id_);
     for (const auto& blob_id : blob_ids) {
+      TraitInput input;
+      auto bucket_id =
+          GetBucketIdFromBlobId(&hermes_->context_, &hermes_->rpc_, blob_id);
+      input.bucket_name =
+          GetBucketNameById(&hermes_->context_, &hermes_->rpc_, bucket_id);
+      input.blob_name =
+          GetBlobNameFromId(&hermes_->context_, &hermes_->rpc_, blob_id);
       if (attached_traits_.size() > 0) {
-        TraitInput input;
-        auto bucket_id =
-            GetBucketIdFromBlobId(&hermes_->context_, &hermes_->rpc_, blob_id);
-        input.bucket_name =
-            GetBucketNameById(&hermes_->context_, &hermes_->rpc_, bucket_id);
-        input.blob_name =
-            GetBlobNameById(&hermes_->context_, &hermes_->rpc_, blob_id);
+
 
         if (this->persist) {
           if (t->type == TraitType::FILE_MAPPING) {
@@ -315,6 +316,8 @@ Status VBucket::Delete(Context& ctx) {
           // TODO(hari): @errorhandling Check if unlinking was successful
         }
       }
+      RemoveBlobFromVBucketInfo(&hermes_->context_, &hermes_->rpc_, id_,
+                                input.blob_name.c_str(), input.bucket_name.c_str());
     }
     if (persist) {
       if (file != nullptr) {

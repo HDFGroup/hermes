@@ -129,7 +129,6 @@ void LocalRemoveBlobFromVBucketInfo(SharedMemoryContext *context,
                                     VBucketID vbucket_id, BlobID blob_id);
 std::vector<BlobID> LocalGetBlobsFromVBucketInfo(SharedMemoryContext *context,
                                                  VBucketID vbucket_id);
-std::string LocalGetBlobNameById(SharedMemoryContext *context, BlobID blob_id);
 std::string LocalGetBucketNameById(SharedMemoryContext *context,
                                    BucketID blob_id);
 

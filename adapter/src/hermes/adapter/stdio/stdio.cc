@@ -193,8 +193,7 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
             << std::endl;
   for (const auto &item : mapping) {
     hapi::Context ctx;
-    size_t pos = item.second.blob_name_.find(kStringDelimiter) + 1;
-    auto index = std::stol(item.second.blob_name_.substr(pos));
+    auto index = std::stol(item.second.blob_name_) - 1;
     auto blob_exists =
         existing.first.st_bkid->ContainsBlob(item.second.blob_name_);
     unsigned char *put_data_ptr = (unsigned char *)ptr + data_offset;
@@ -556,7 +555,7 @@ int HERMES_DECL(fflush)(FILE *fp) {
         auto offset_map = std::unordered_map<std::string, hermes::u64>();
         for (const auto &blob_name : blob_names) {
           file_vbucket.Link(blob_name, filename, ctx);
-          auto page_index = std::stol(blob_name);
+          auto page_index = std::stol(blob_name) - 1;
           offset_map.emplace(blob_name, page_index * kPageSize);
         }
         auto trait = hermes::api::FileMappingTrait(filename, offset_map,
@@ -600,7 +599,7 @@ int HERMES_DECL(fclose)(FILE *fp) {
           for (const auto &blob_name : blob_names) {
             auto status = file_vbucket.Link(blob_name, filename, ctx);
             if (!status.Failed()) {
-              auto page_index = std::stol(blob_name);
+              auto page_index = std::stol(blob_name) - 1;
               offset_map.emplace(blob_name, page_index * kPageSize);
             }
           }

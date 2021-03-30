@@ -38,7 +38,7 @@ MapperReturnType BalancedMapper::map(const FileStruct& file_op) {
                        : file_op.size_ - size_mapped;
 
     file.size_ = hermes.size_;
-    hermes.blob_name_ = std::to_string(page_index);
+    hermes.blob_name_ = std::to_string(page_index + 1);
     mapper_return.emplace_back(file, hermes);
     size_mapped += hermes.size_;
   }

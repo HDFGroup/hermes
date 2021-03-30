@@ -1208,13 +1208,6 @@ void AttachBlobToVBucket(SharedMemoryContext *context, RpcContext *rpc,
   AddBlobIdToVBucket(mdm, rpc, blob_id, vbucket_id);
 }
 
-std::string LocalGetBlobNameById(SharedMemoryContext *context, BlobID blob_id) {
-  MetadataManager *mdm = GetMetadataManagerFromContext(context);
-  std::string blob_name =
-      ReverseGetFromStorage(mdm, blob_id.as_int, kMapType_Blob);
-  return blob_name;
-}
-
 std::string LocalGetBucketNameById(SharedMemoryContext *context,
                                    BucketID blob_id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
@@ -1246,16 +1239,6 @@ void RemoveBlobFromVBucketInfo(SharedMemoryContext *context, RpcContext *rpc,
   } else {
     RpcCall<bool>(rpc, target_node, "RemoteRemoveBlobFromVBucketInfo",
                   vbucket_id, blob_id);
-  }
-}
-
-std::string GetBlobNameById(SharedMemoryContext *context, RpcContext *rpc,
-                            BlobID id) {
-  u32 target_node = GetBlobNodeId(id);
-  if (target_node == rpc->node_id) {
-    return LocalGetBlobNameById(context, id);
-  } else {
-    return RpcCall<std::string>(rpc, target_node, "RemoteGetBlobNameById", id);
   }
 }
 

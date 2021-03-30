@@ -197,7 +197,7 @@ BlobID GetBlobId(SharedMemoryContext *context, RpcContext *rpc,
 /**
  *
  */
-std::string GetBlobNameFromId(MetadataManager *mdm, RpcContext *rpc,
+std::string GetBlobNameFromId(SharedMemoryContext *context, RpcContext *rpc,
                               BlobID blob_id);
 
 /**
@@ -357,11 +357,6 @@ std::vector<BlobID> GetBlobsFromVBucketInfo(SharedMemoryContext *context,
                                             RpcContext *rpc,
                                             VBucketID vbucket_id);
 
-/**
- *
- */
-std::string GetBlobNameById(SharedMemoryContext *context, RpcContext *rpc,
-                            BlobID id);
 /**
  *
  */

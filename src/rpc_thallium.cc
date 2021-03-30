@@ -348,10 +348,6 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
     auto ret = LocalGetBlobsFromVBucketInfo(context, vbucket_id);
     req.respond(ret);
   };
-  auto rpc_get_blob_name_by_id = [context](const request &req, BlobID id) {
-        auto ret = LocalGetBlobNameById(context, id);
-        req.respond(ret);
-      };
   auto rpc_get_bucket_name_by_id = [context](const request &req, BucketID id) {
     auto ret = LocalGetBucketNameById(context, id);
     req.respond(ret);
@@ -407,8 +403,6 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
                      rpc_remove_blob_from_vbucket_info);
   rpc_server->define("RemoteGetBlobsFromVBucketInfo",
                      rpc_get_blobs_from_vbucket_info);
-  rpc_server->define("RemoteGetBlobNameById",
-                     rpc_get_blob_name_by_id);
   rpc_server->define("RemoteGetBucketNameById",
                      rpc_get_bucket_name_by_id);
 }
