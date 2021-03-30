@@ -23,9 +23,7 @@ namespace hermes {
 
 namespace api {
 
-bool VBucket::IsValid() const {
-  return !IsNullVBucketId(id_);
-}
+bool VBucket::IsValid() const { return !IsNullVBucketId(id_); }
 
 Status VBucket::Link(std::string blob_name, std::string bucket_name,
                      Context& ctx) {
@@ -276,8 +274,6 @@ Status VBucket::Delete(Context& ctx) {
       input.blob_name =
           GetBlobNameFromId(&hermes_->context_, &hermes_->rpc_, blob_id);
       if (attached_traits_.size() > 0) {
-
-
         if (this->persist) {
           if (t->type == TraitType::FILE_MAPPING) {
             FileMappingTrait* fileBackedTrait = (FileMappingTrait*)t;
@@ -317,7 +313,8 @@ Status VBucket::Delete(Context& ctx) {
         }
       }
       RemoveBlobFromVBucketInfo(&hermes_->context_, &hermes_->rpc_, id_,
-                                input.blob_name.c_str(), input.bucket_name.c_str());
+                                input.blob_name.c_str(),
+                                input.bucket_name.c_str());
     }
     if (persist) {
       if (file != nullptr) {
