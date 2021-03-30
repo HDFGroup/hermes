@@ -108,6 +108,7 @@ void *Hermes::GetAppCommunicator() {
 void Hermes::Finalize(bool force_rpc_shutdown) {
   hermes::Finalize(&context_, &comm_, &rpc_, shmem_name_.c_str(), &trans_arena_,
                    IsApplicationCore(), force_rpc_shutdown);
+  is_initialized = false;
 }
 
 void Hermes::RemoteFinalize() {
@@ -303,6 +304,8 @@ std::shared_ptr<api::Hermes> InitHermes(Config *config, bool is_daemon,
   // NOTE(chogan): Can only initialize the neighborhood Targets once the RPC
   // clients have been initialized.
   InitNeighborhoodTargets(&result->context_, &result->rpc_);
+
+  result->is_initialized = true;
 
   return result;
 }

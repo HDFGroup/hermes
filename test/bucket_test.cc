@@ -56,7 +56,6 @@ int compress_blob(hermes::api::TraitInput &input, hermes::api::Trait *trait) {
   size_t blob_size = bkt.Get(input.blob_name, blob, ctx);
   blob.resize(blob_size);
   bkt.Get(input.blob_name, blob, ctx);
-  bkt.Close(ctx);
   // If Hermes is already linked with a compression library, you can call the
   // function directly here. If not, the symbol will have to be dynamically
   // loaded and probably stored as a pointer in the Trait.

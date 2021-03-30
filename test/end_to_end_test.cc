@@ -71,7 +71,7 @@ void TestBulkTransfer(std::shared_ptr<hapi::Hermes> hermes, int app_rank) {
 
     Assert(get_result == put_data);
 
-    bucket.Close(ctx);
+    bucket.Release(ctx);
   }
 
   hermes->AppBarrier();
@@ -107,7 +107,7 @@ int main(int argc, char **argv) {
     TestPutGetBucket(shared_bucket, app_rank, app_size);
 
     if (app_rank != 0) {
-      shared_bucket.Close(ctx);
+      shared_bucket.Release(ctx);
     }
 
     hermes->AppBarrier();

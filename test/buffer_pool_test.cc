@@ -176,6 +176,8 @@ static void TestBlobOverwrite() {
 
   Assert(buffers_available[slab_index] == 1);
 
+  bucket.Destroy(ctx);
+
   hermes->Finalize(true);
 }
 

@@ -115,7 +115,6 @@ Blob& VBucket::GetBlob(std::string blob_name, std::string bucket_name) {
   size_t blob_size = bkt.Get(blob_name, local_blob, ctx);
   local_blob.resize(blob_size);
   bkt.Get(blob_name, local_blob, ctx);
-  bkt.Close(ctx);
   return local_blob;
 }
 

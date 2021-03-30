@@ -622,7 +622,7 @@ int HERMES_DECL(fclose)(FILE *fp) {
         existing.first.st_atim = ts;
         existing.first.st_ctim = ts;
         mdm->Update(fp, existing.first);
-        existing.first.st_bkid->Close(ctx);
+        existing.first.st_bkid->Release(ctx);
       }
     }
   }

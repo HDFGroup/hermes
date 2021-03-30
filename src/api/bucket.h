@@ -46,14 +46,13 @@ class Bucket {
   Bucket(const std::string &initial_name, std::shared_ptr<Hermes> const &h,
          Context ctx);
 
-  ~Bucket() {
-    // TODO(chogan): Should we close implicitly by default?
-    // Context ctx;
-    // Close(ctx);
-
-    name_.clear();
-    id_.as_int = 0;
-  }
+  /**
+   * \brief Releases the Bucket, decrementing its reference count
+   *
+   * This does not free any resources. To remove the Bucket from the
+   * MetadataManager and free its stored Blobs, see Bucket::Destroy.
+   */
+  ~Bucket();
 
   /** get the name of bucket */
   std::string GetName() const {
@@ -151,7 +150,7 @@ class Bucket {
 
   /** close this bucket and free its associated resources (?) */
   /** Invalidates handle */
-  Status Close(Context &ctx);
+  Status Release(Context &ctx);
 
   /** destroy this bucket */
   /** ctx controls "aggressiveness */
