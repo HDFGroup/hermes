@@ -148,8 +148,12 @@ class Bucket {
    * The blobs are written in the same order in which they are `Put`. */
   Status Persist(const std::string &file_name, Context &ctx);
 
-  /** close this bucket and free its associated resources (?) */
-  /** Invalidates handle */
+  /**
+   * \brief Release this Bucket
+   *
+   * This simpley decrements the refcount to this Bucket in the Hermes metadata.
+   * To free resources associated with this Bucket, call Bucket::Destroy.
+   */
   Status Release(Context &ctx);
 
   /** destroy this bucket */

@@ -79,6 +79,7 @@ static void TestGetOrCreateBucketId(HermesPtr hermes) {
   hapi::Bucket new_bucket(bucket_name, hermes, ctx);
   u64 id = new_bucket.GetId();
   new_bucket.Release(ctx);
+
   hapi::Bucket existing_bucket(bucket_name, hermes, ctx);
   Assert(existing_bucket.GetId() == id);
   existing_bucket.Destroy(ctx);
@@ -125,6 +126,7 @@ static void TestRenameBucket(HermesPtr hermes) {
   std::string new_bucket_name = "new_bucket";
   bucket.Rename(new_bucket_name, ctx);
   bucket.Release(ctx);
+
   hapi::Bucket renamed_bucket(new_bucket_name, hermes, ctx);
   size_t blob_size = renamed_bucket.GetBlobSize(&hermes->trans_arena_,
                                                 blob_name, ctx);
