@@ -43,6 +43,13 @@ typedef u16 DeviceID;
 
 namespace api {
 typedef std::vector<unsigned char> Blob;
+
+enum class PlacementPolicy {
+  kRandom,
+  kRoundRobin,
+  kMinimizeIoTime,
+};
+
 }  // namespace api
 
 // TODO(chogan): These constants impose limits on the number of slabs, devices,
@@ -160,6 +167,7 @@ struct Config {
   int buffer_organizer_port;
   int rpc_host_number_range[2];
   int rpc_num_threads;
+  api::PlacementPolicy default_placement_policy;
 
   /** A base name for the BufferPool shared memory segement. Hermes appends the
    * value of the USER environment variable to this string.

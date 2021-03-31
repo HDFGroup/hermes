@@ -83,12 +83,6 @@ class VBucket;
 
 class Bucket;
 
-enum class PlacementPolicy {
-  kRandom,
-  kRoundRobin,
-  kMinimizeIoTime,
-};
-
 struct Context {
   static int default_buffer_organizer_retries;
 
