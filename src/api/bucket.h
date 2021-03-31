@@ -38,6 +38,12 @@ class Bucket {
   /** internal Hermes object owned by Bucket */
   std::shared_ptr<Hermes> hermes_;
 
+  /**
+   * The data PlacementPolicy this Bucket will use. Defaults to the value set in
+   * the default_placement_policy parameter of the configuration file.
+   */
+  PlacementPolicy placement_policy;
+
   // TODO(chogan): Think about the Big Three
   Bucket() : name_(""), id_{0, 0}, hermes_(nullptr) {
     LOG(INFO) << "Create NULL Bucket " << std::endl;
