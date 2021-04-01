@@ -50,6 +50,17 @@ enum class PlacementPolicy {
   kMinimizeIoTime,
 };
 
+struct Context {
+  static int default_buffer_organizer_retries;
+  static PlacementPolicy default_placement_policy;
+
+  PlacementPolicy policy;
+  int buffer_organizer_retries;
+
+  Context() : policy(default_placement_policy),
+              buffer_organizer_retries(default_buffer_organizer_retries) {}
+};
+
 }  // namespace api
 
 // TODO(chogan): These constants impose limits on the number of slabs, devices,

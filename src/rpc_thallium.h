@@ -117,6 +117,12 @@ void serialize(A &ar, SwapBlob &swap_blob) {
   ar & swap_blob.bucket_id;
 }
 
+template<typename A>
+void serialize(A &ar, api::Context &ctx) {
+  ar & ctx.buffer_organizer_retries;
+  ar & (int)ctx.policy;
+}
+
 #ifndef THALLIUM_USE_CEREAL
 /**
  *  Lets Thallium know how to serialize a MapType.

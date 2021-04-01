@@ -28,6 +28,7 @@ namespace hermes {
 namespace api {
 
 int Context::default_buffer_organizer_retries;
+PlacementPolicy Context::default_placement_policy;
 
 Status RenameBucket(const std::string &old_name,
                     const std::string &new_name,

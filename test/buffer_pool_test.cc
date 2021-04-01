@@ -318,12 +318,14 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  TestGetBuffers();
-  TestGetBandwidths();
-  TestBlobOverwrite();
-  TestSwap();
-  TestBufferOrganizer();
-  TestBufferingFileCorrectness();
+#define TEST(name) LOG(INFO) << "Running " << #name << std::endl; name();
+
+  // TEST(TestGetBuffers);
+  // TEST(TestGetBandwidths);
+  // TEST(TestBlobOverwrite);
+  TEST(TestSwap);
+  // TEST(TestBufferOrganizer);
+  // TEST(TestBufferingFileCorrectness);
 
   MPI_Finalize();
 

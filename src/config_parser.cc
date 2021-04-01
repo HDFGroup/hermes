@@ -116,7 +116,7 @@ static const char *kConfigVariableStrings[ConfigVariable_Count] = {
   "buffer_organizer_port",
   "rpc_host_number_range",
   "rpc_num_threads",
-  "placement_policy",
+  "default_placement_policy",
 };
 
 struct Token {

@@ -83,23 +83,6 @@ class VBucket;
 
 class Bucket;
 
-struct Context {
-  static int default_buffer_organizer_retries;
-  static PlacementPolicy default_placement_policy;
-
-  PlacementPolicy policy;
-  int buffer_organizer_retries;
-
-  Context() : policy(default_placement_policy),
-              buffer_organizer_retries(default_buffer_organizer_retries) {}
-};
-
-struct TraitTag{};
-typedef ID<TraitTag, int64_t, -1> THnd;
-
-struct BucketTag{};
-typedef ID<BucketTag, int64_t, -1> BHnd;
-
 /** rename a bucket referred to by name only */
 Status RenameBucket(const std::string &old_name,
                     const std::string &new_name,

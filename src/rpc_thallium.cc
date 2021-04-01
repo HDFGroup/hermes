@@ -404,13 +404,13 @@ void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
   auto rpc_place_in_hierarchy = [context, rpc](const tl::request &req,
                                                SwapBlob swap_blob,
                                                const std::string name,
-                                               int retries) {
+                                               api::Context &ctx) {
     (void)req;
-    for (int i = 0; i < retries; ++i) {
+    for (int i = 0; i < ctx.buffer_organizer_retries; ++i) {
       LOG(INFO) << "Buffer Organizer placing blob '" << name
-                << "' in hierarchy. Attempt " << i + 1 << " of " << retries
-                << std::endl;
-      int result = PlaceInHierarchy(context, rpc, swap_blob, name);
+                << "' in hierarchy. Attempt " << i + 1 << " of "
+                << ctx.buffer_organizer_retries << std::endl;
+      int result = PlaceInHierarchy(context, rpc, swap_blob, name, ctx);
       if (result == 0) {
         break;
       } else {
@@ -450,7 +450,7 @@ void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
 
 void TriggerBufferOrganizer(RpcContext *rpc, const char *func_name,
                             const std::string &blob_name, SwapBlob swap_blob,
-                            int retries) {
+                            api::Context &ctx) {
   std::string server_name = GetServerName(rpc, rpc->node_id, true);
   std::string protocol = GetProtocol(rpc);
   tl::engine engine(protocol, THALLIUM_CLIENT_MODE, true);
@@ -458,7 +458,7 @@ void TriggerBufferOrganizer(RpcContext *rpc, const char *func_name,
   tl::endpoint server = engine.lookup(server_name);
   remote_proc.disable_response();
   // TODO(chogan): Templatize?
-  remote_proc.on(server)(swap_blob, blob_name, retries);
+  remote_proc.on(server)(swap_blob, blob_name, ctx);
 }
 
 void StartGlobalSystemViewStateUpdateThread(SharedMemoryContext *context,

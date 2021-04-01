@@ -25,7 +25,7 @@ namespace api {
 
 Bucket::Bucket(const std::string &initial_name,
                const std::shared_ptr<Hermes> &h, Context ctx)
-  : name_(initial_name), hermes_(h), placement_policy(ctx.policy) {
+  : name_(initial_name), hermes_(h), ctx_(ctx) {
 
   if (IsBucketNameTooLong(name_)) {
     id_.as_int = 0;
@@ -59,6 +59,12 @@ Status Bucket::Put(const std::string &name, const u8 *data, size_t size,
     std::vector<Blob> blobs{Blob{data, data + size}};
     result = Put(names, blobs, ctx);
   }
+
+  return result;
+}
+
+Status Bucket::Put(const std::string &name, const u8 *data, size_t size) {
+  Status result = Put(name, data, size, ctx_);
 
   return result;
 }

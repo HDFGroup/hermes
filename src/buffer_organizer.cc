@@ -16,11 +16,11 @@
 namespace hermes {
 
 int PlaceInHierarchy(SharedMemoryContext *context, RpcContext *rpc,
-                     SwapBlob swap_blob, const std::string &name) {
+                     SwapBlob swap_blob, const std::string &name,
+                     api::Context &ctx) {
   int result = 0;
   std::vector<PlacementSchema> schemas;
   std::vector<size_t> sizes(1, swap_blob.size);
-  api::Context ctx;
   Status ret = CalculatePlacement(context, rpc, sizes, schemas, ctx);
 
   if (ret.Succeeded()) {
@@ -35,7 +35,7 @@ int PlaceInHierarchy(SharedMemoryContext *context, RpcContext *rpc,
     }
 
     ret = PlaceBlob(context, rpc, schemas[0], blob, name.c_str(),
-                    swap_blob.bucket_id, 0, true);
+                    swap_blob.bucket_id, ctx, true);
   } else {
     // TODO(chogan): @errorhandling
     result = 1;

@@ -37,12 +37,8 @@ class Bucket {
  public:
   /** internal Hermes object owned by Bucket */
   std::shared_ptr<Hermes> hermes_;
-
-  /**
-   * The data PlacementPolicy this Bucket will use. Defaults to the value set in
-   * the default_placement_policy parameter of the configuration file.
-   */
-  PlacementPolicy placement_policy;
+  /** This Bucket's Context. */
+  Context ctx_;
 
   // TODO(chogan): Think about the Big Three
   Bucket() : name_(""), id_{0, 0}, hermes_(nullptr) {
@@ -79,6 +75,12 @@ class Bucket {
   Status Put(const std::string &name, const std::vector<T> &data, Context &ctx);
 
   /**
+   *
+   */
+  template<typename T>
+  Status Put(const std::string &name, const std::vector<T> &data);
+
+  /**
    * \brief Puts a blob to a bucket
    *
    * \param name A blob name
@@ -100,10 +102,7 @@ class Bucket {
   /**
    *
    */
-  template<typename T>
-  Status PlaceBlobs(std::vector<PlacementSchema> &schemas,
-                    const std::vector<std::vector<T>> &blobs,
-                    const std::vector<std::string> &names, int retries);
+  Status Put(const std::string &name, const u8 *data, size_t size);
 
   /**
    *
@@ -111,6 +110,21 @@ class Bucket {
   template<typename T>
   Status Put(std::vector<std::string> &names,
              std::vector<std::vector<T>> &blobs, Context &ctx);
+
+  /**
+   *
+   */
+  template<typename T>
+  Status Put(std::vector<std::string> &names,
+             std::vector<std::vector<T>> &blobs);
+
+  /**
+   *
+   */
+  template<typename T>
+  Status PlaceBlobs(std::vector<PlacementSchema> &schemas,
+                    const std::vector<std::vector<T>> &blobs,
+                    const std::vector<std::string> &names, Context &ctx);
 
   /** Get the size in bytes of the Blob referred to by `name` */
   size_t GetBlobSize(Arena *arena, const std::string &name, Context &ctx);
@@ -173,9 +187,16 @@ Status Bucket::Put(const std::string &name, const std::vector<T> &data,
 }
 
 template<typename T>
+Status Bucket::Put(const std::string &name, const std::vector<T> &data) {
+  Status result = Put(name, data, ctx_);
+
+  return result;
+}
+
+template<typename T>
 Status Bucket::PlaceBlobs(std::vector<PlacementSchema> &schemas,
                           const std::vector<std::vector<T>> &blobs,
-                          const std::vector<std::string> &names, int retries) {
+                          const std::vector<std::string> &names, Context &ctx) {
   Status result;
 
   for (size_t i = 0; i < schemas.size(); ++i) {
@@ -186,8 +207,16 @@ Status Bucket::PlaceBlobs(std::vector<PlacementSchema> &schemas,
     LOG(INFO) << "Attaching blob '" << names[i] << "' to Bucket '" << name_
               << "'" << std::endl;
     result = PlaceBlob(&hermes_->context_, &hermes_->rpc_, schema, blob,
-                       names[i], id_, retries);
+                       names[i], id_, ctx);
   }
+
+  return result;
+}
+
+template<typename T>
+Status Bucket::Put(std::vector<std::string> &names,
+                   std::vector<std::vector<T>> &blobs) {
+  Status result = Put(names, blobs, ctx_);
 
   return result;
 }
@@ -224,7 +253,7 @@ Status Bucket::Put(std::vector<std::string> &names,
     HERMES_END_TIMED_BLOCK();
 
     if (ret.Succeeded()) {
-      ret = PlaceBlobs(schemas, blobs, names, ctx.buffer_organizer_retries);
+      ret = PlaceBlobs(schemas, blobs, names, ctx);
     } else {
       LOG(ERROR) << ret.Msg();
       return ret;
