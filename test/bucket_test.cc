@@ -161,6 +161,43 @@ void TestPutOverwrite(std::shared_ptr<hapi::Hermes> hermes) {
   bucket.Destroy(ctx);
 }
 
+void TestCompressionTrait(std::shared_ptr<hapi::Hermes> hermes) {
+  hermes::api::Context ctx;
+  hermes::api::Status status;
+
+  const std::string bucket_name = "compression";
+  hermes::api::Bucket my_bucket(bucket_name, hermes, ctx);
+  hermes::api::Blob p1(1024*1024*1, 255);
+  hermes::api::Blob p2(p1);
+
+  const std::string blob1_name = "Blob1";
+  const std::string blob2_name = "Blob2";
+  Assert(my_bucket.Put(blob1_name, p1, ctx).Succeeded());
+  Assert(my_bucket.Put(blob2_name, p2, ctx).Succeeded());
+
+  Assert(my_bucket.ContainsBlob(blob1_name));
+  Assert(my_bucket.ContainsBlob(blob2_name));
+
+  const std::string vbucket_name = "VB1";
+  hermes::api::VBucket my_vb(vbucket_name, hermes, false, ctx);
+  my_vb.Link(blob1_name, bucket_name, ctx);
+  my_vb.Link(blob2_name, bucket_name, ctx);
+
+  Assert(my_vb.Contain_blob(blob1_name, bucket_name) == 1);
+  Assert(my_vb.Contain_blob(blob2_name, bucket_name) == 1);
+
+  MyTrait trait;
+  trait.compress_level = 6;
+  // Compression Trait compresses all blobs on Attach
+  Assert(my_vb.Attach(&trait, ctx).Succeeded());
+
+  Assert(my_vb.Unlink(blob1_name, bucket_name, ctx).Succeeded());
+  Assert(my_vb.Detach(&trait, ctx).Succeeded());
+
+  Assert(my_vb.Delete(ctx).Succeeded());
+  Assert(my_bucket.Destroy(ctx).Succeeded());
+}
+
 int main(int argc, char **argv) {
   int mpi_threads_provided;
   MPI_Init_thread(NULL, NULL, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
@@ -177,51 +214,9 @@ int main(int argc, char **argv) {
   hermes_app = hermes::api::InitHermes(config_file);
 
   if (hermes_app->IsApplicationCore()) {
-    hermes::api::Context ctx;
-    hermes::api::Status status;
-
-    hermes::api::Bucket my_bucket("compression", hermes_app, ctx);
-    hermes_app->Display_bucket();
-    hermes::api::Blob p1(1024*1024*400, 255);
-    hermes::api::Blob p2(p1);
-    status = my_bucket.Put("Blob1", p1, ctx);
-    Assert(status.Succeeded());
-    status = my_bucket.Put("Blob2", p2, ctx);
-    Assert(status.Succeeded());
-
-    if (my_bucket.ContainsBlob("Blob1"))
-      std::cout<< "Found Blob1\n";
-    else
-      std::cout<< "Not found Blob1\n";
-    if (my_bucket.ContainsBlob("Blob2"))
-      std::cout<< "Found Blob2\n";
-    else
-      std::cout<< "Not found Blob2\n";
-
-    hermes::api::VBucket my_vb("VB1", hermes_app, false, ctx);
-    hermes_app->Display_vbucket();
-    my_vb.Link("Blob1", "compression", ctx);
-    my_vb.Link("Blob2", "compression", ctx);
-    if (my_vb.Contain_blob("Blob1", "compression") == 1)
-      std::cout << "Found Blob1 from compression bucket in VBucket VB1\n";
-    else
-      std::cout << "Not found Blob1 from compression bucket in VBucket VB1\n";
-    if (my_vb.Contain_blob("Blob2", "compression") == 1)
-      std::cout << "Found Blob2 from compression bucket in VBucket VB1\n";
-    else
-      std::cout << "Not found Blob2 from compression bucket in VBucket VB1\n";
-
-    // compression level
-    MyTrait trait;
-    trait.compress_level = 6;
-    my_vb.Attach(&trait, ctx);  // compress action to data starts
-
+    TestCompressionTrait(hermes_app);
     TestBucketPersist(hermes_app);
     TestPutOverwrite(hermes_app);
-
-    ///////
-    my_vb.Unlink("Blob1", "VB1", ctx);
-    my_vb.Detach(&trait, ctx);
   } else {
     // Hermes core. No user code here.
   }
