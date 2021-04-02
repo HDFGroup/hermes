@@ -172,7 +172,7 @@ static void TestBlobOverwrite() {
 
   // NOTE(chogan): Overwrite the data
   hapi::Blob new_blob(blob_size, '2');
-  status = bucket.Put(blob_name, new_blob, ctx);
+  Assert(bucket.Put(blob_name, new_blob, ctx).Succeeded());
 
   Assert(buffers_available[slab_index] == 1);
 

@@ -245,7 +245,7 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
   auto rpc_rename_bucket =
     [context, rpc](const request &req, BucketID id, const string &old_name,
                    const string &new_name) {
-      LocalRenameBucket(context, rpc, id, old_name.c_str(), new_name.c_str());
+      LocalRenameBucket(context, rpc, id, old_name, new_name);
       req.respond(true);
     };
 
@@ -410,16 +410,16 @@ void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
       LOG(INFO) << "Buffer Organizer placing blob '" << name
                 << "' in hierarchy. Attempt " << i + 1 << " of "
                 << ctx.buffer_organizer_retries << std::endl;
-      int result = PlaceInHierarchy(context, rpc, swap_blob, name, ctx);
-      if (result == 0) {
+      api::Status result = PlaceInHierarchy(context, rpc, swap_blob, name, ctx);
+      if (result.Succeeded()) {
         break;
       } else {
-        // TODO(chogan): We probably don't want to sleep here, but for now this
-        // enables testing.
-        double sleep_ms = 2000;
         ThalliumState *state = GetThalliumState(rpc);
 
         if (state && state->bo_engine) {
+          // TODO(chogan): We probably don't want to sleep here, but for now
+          // this enables testing.
+          double sleep_ms = 2000;
           tl::thread::self().sleep(*state->bo_engine, sleep_ms);
         }
       }
@@ -435,10 +435,6 @@ void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
     for (int i = 0; i < retries; ++i) {
       // TODO(chogan): MoveToTarget(context, rpc, target_id, swap_blob);
       HERMES_NOT_IMPLEMENTED_YET;
-      int result = 0;
-      if (result == 0) {
-        break;
-      }
     }
   };
 

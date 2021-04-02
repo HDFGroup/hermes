@@ -484,9 +484,9 @@ std::vector<f32> GetBandwidths(SharedMemoryContext *context);
 
 u32 GetBufferSize(SharedMemoryContext *context, RpcContext *rpc, BufferID id);
 bool BufferIsByteAddressable(SharedMemoryContext *context, BufferID id);
-int PlaceInHierarchy(SharedMemoryContext *context, RpcContext *rpc,
-                     SwapBlob swap_blob, const std::string &blob_name,
-                     api::Context &ctx);
+api::Status PlaceInHierarchy(SharedMemoryContext *context, RpcContext *rpc,
+                             SwapBlob swap_blob, const std::string &blob_name,
+                             api::Context &ctx);
 api::Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
                       PlacementSchema &schema, Blob blob,
                       const std::string &name, BucketID bucket_id,
