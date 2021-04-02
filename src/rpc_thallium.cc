@@ -404,7 +404,7 @@ void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
   auto rpc_place_in_hierarchy = [context, rpc](const tl::request &req,
                                                SwapBlob swap_blob,
                                                const std::string name,
-                                               api::Context &ctx) {
+                                               api::Context ctx) {
     (void)req;
     for (int i = 0; i < ctx.buffer_organizer_retries; ++i) {
       LOG(INFO) << "Buffer Organizer placing blob '" << name

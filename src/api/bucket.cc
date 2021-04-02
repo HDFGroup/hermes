@@ -26,7 +26,6 @@ namespace api {
 Bucket::Bucket(const std::string &initial_name,
                const std::shared_ptr<Hermes> &h, Context ctx)
   : name_(initial_name), hermes_(h), ctx_(ctx) {
-
   if (IsBucketNameTooLong(name_)) {
     id_.as_int = 0;
     throw std::length_error("Bucket name is too long: " +
