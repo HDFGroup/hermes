@@ -23,9 +23,11 @@ extern "C" {
 struct BucketClass;
 typedef struct BucketClass BucketClass;
 
-bool HermesInitHermes(char *hermes_config);
+int HermesInitHermes(char *hermes_config);
 
 BucketClass *HermesBucketCreate(const char *name);
+
+void HermesBucketClose(BucketClass *bkt);
 
 void HermesBucketDestroy(BucketClass *bucket_ptr);
 

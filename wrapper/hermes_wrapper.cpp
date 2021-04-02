@@ -20,10 +20,10 @@ extern "C" {
 std::shared_ptr<hermes::api::Hermes> hermes_ptr;
 hermes::api::Context ctx;
 
-bool HermesInitHermes(char *hermes_config) {
-  bool result = true;
+int HermesInitHermes(char *hermes_config) {
+  int result = 0;
 
-  LOG(INFO) << "Initialize Hermes\n";
+  LOG(INFO) << "Wrapper: Initialize Hermes\n";
 
   hermes_ptr = hermes::InitHermesDaemon(hermes_config);
 
@@ -31,7 +31,7 @@ bool HermesInitHermes(char *hermes_config) {
 }
 
 BucketClass *HermesBucketCreate(const char *name) {
-  LOG(INFO) << "Create Bucket " << name << '\n';
+  LOG(INFO) << "Wrapper: Create Bucket " << name << '\n';
 
   try {
     return reinterpret_cast<BucketClass *>(new hermes::api::Bucket(
@@ -47,10 +47,17 @@ BucketClass *HermesBucketCreate(const char *name) {
   }
 }
 
-void HermesBucketDestroy(BucketClass *bucket_ptr) {
+void HermesBucketClose(BucketClass *bkt) {
+  LOG(INFO) << "Wrapper: Close Bucket " <<
+               reinterpret_cast<hermes::api::Bucket *>(bkt)->GetName() << '\n';
+
+  reinterpret_cast<hermes::api::Bucket *>(bkt)->Close(ctx);
+}
+
+void HermesBucketDestroy(BucketClass *bkt_ptr) {
   LOG(INFO) << "Destroy Bucket\n";
 
-  delete reinterpret_cast<hermes::api::Bucket *>(bucket_ptr);
+  delete reinterpret_cast<hermes::api::Bucket *>(bkt_ptr);
 }
 
 }  // extern "C"
