@@ -318,12 +318,12 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  TestGetBuffers;
-  TestGetBandwidths;
-  TestBlobOverwrite;
-  TestSwap;
-  TestBufferOrganizer;
-  TestBufferingFileCorrectness;
+  TestGetBuffers();
+  TestGetBandwidths();
+  TestBlobOverwrite();
+  TestSwap();
+  TestBufferOrganizer();
+  TestBufferingFileCorrectness();
 
   MPI_Finalize();
 
