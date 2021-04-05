@@ -62,19 +62,33 @@ int main(int argc, char **argv) {
     hermes->AppBarrier();
     if (app_rank == 0) {
       auto blob_ids = shared.GetLinks(ctx);
-      assert(blob_ids.size() == (unsigned long)app_size * num_blobs_per_rank);
+      Assert(blob_ids.size() == (unsigned long)app_size * num_blobs_per_rank);
       for (int rank = 0; rank < app_size; ++rank) {
         std::string bucket_name_temp = "test_bucket" + std::to_string(rank);
         for (int i = 0; i < num_blobs_per_rank; ++i) {
           std::string blob_name =
               "Blob_" + std::to_string(rank) + "_" + std::to_string(i);
           auto exists = shared.Contain_blob(blob_name, bucket_name_temp);
-          assert(exists);
+          Assert(exists);
         }
       }
     }
     hermes->AppBarrier();
     rank_bucket.Destroy(ctx);
+    hermes->AppBarrier();
+    if (app_rank == 0) {
+      auto blob_ids = shared.GetLinks(ctx);
+      Assert(blob_ids.size() == (unsigned long)app_size * num_blobs_per_rank);
+      for (int rank = 0; rank < app_size; ++rank) {
+        std::string bucket_name_temp = "test_bucket" + std::to_string(rank);
+        for (int i = 0; i < num_blobs_per_rank; ++i) {
+          std::string blob_name =
+              "Blob_" + std::to_string(rank) + "_" + std::to_string(i);
+          auto exists = shared.Contain_blob(blob_name, bucket_name_temp);
+          Assert(!exists);
+        }
+      }
+    }
     if (app_rank == 0) {
       shared.Delete(ctx);
     }
