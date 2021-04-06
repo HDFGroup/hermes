@@ -117,6 +117,22 @@ size_t Bucket::Get(const std::string &name, Blob &user_blob, Context &ctx) {
   return ret;
 }
 
+std::vector<size_t> Bucket::Get(const std::vector<std::string> &names,
+                                std::vector<Blob> &blobs, Context &ctx) {
+  std::vector<size_t> result(names.size(), 0);
+  if (names.size() == blobs.size()) {
+    for (size_t i = 0; i < result.size(); ++i) {
+      result[i] = Get(names[i], blobs[i], ctx);
+    }
+  } else {
+    LOG(ERROR) << "names.size() != blobs.size() in Bucket::Get ("
+               << names.size() << " != " << blobs.size() << ")"
+               << std::endl;
+  }
+
+  return result;
+}
+
 template<class Predicate>
 Status Bucket::GetV(void *user_blob, Predicate pred, Context &ctx) {
   (void)user_blob;

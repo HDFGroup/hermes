@@ -135,6 +135,18 @@ class Bucket {
   /** use provides buffer */
   size_t Get(const std::string &name, Blob& user_blob, Context &ctx);
 
+  /**
+   * \brief Retrieve multiple Blobs in one call.
+   */
+  std::vector<size_t> Get(const std::vector<std::string> &names,
+                          std::vector<Blob> &blobs, Context &ctx);
+
+  /**
+   * \brief Retrieve a Blob into a user buffer.
+   */
+  size_t Get(const std::string &name, void *user_blob, size_t buffer_size,
+             Context &ctx);
+
   /** get blob(s) on this bucket according to predicate */
   /** use provides buffer */
   template<class Predicate>
