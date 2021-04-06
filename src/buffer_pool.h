@@ -436,6 +436,9 @@ size_t ReadBlobFromBuffers(SharedMemoryContext *context, RpcContext *rpc,
                            u32 *buffer_sizes);
 
 size_t ReadBlobById(SharedMemoryContext *context, RpcContext *rpc, Arena *arena,
+                    Blob blob, BlobID blob_id);
+
+size_t ReadBlobById(SharedMemoryContext *context, RpcContext *rpc, Arena *arena,
                     api::Blob &dest, BlobID blob_id);
 
 size_t LocalWriteBufferById(SharedMemoryContext *context, BufferID id,
