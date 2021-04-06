@@ -110,6 +110,8 @@ void InitDefaultConfig(Config *config) {
     config->buffer_pool_shmem_name[i] = buffer_pool_shmem_name[i];
   }
   config->buffer_pool_shmem_name[shmem_name_size] = '\0';
+
+  config->default_placement_policy = api::PlacementPolicy::kMinimizeIoTime;
 }
 
 namespace testing {

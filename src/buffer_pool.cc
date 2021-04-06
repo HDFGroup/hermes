@@ -1645,9 +1645,9 @@ size_t ReadFromSwap(SharedMemoryContext *context, Blob blob,
 }
 
 api::Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
-                 PlacementSchema &schema, Blob blob, const std::string &name,
-                 BucketID bucket_id, int retries,
-                 bool called_from_buffer_organizer) {
+                      PlacementSchema &schema, Blob blob,
+                      const std::string &name, BucketID bucket_id,
+                      api::Context &ctx, bool called_from_buffer_organizer) {
   api::Status result;
 
   if (ContainsBlob(context, rpc, bucket_id, name)
@@ -1671,8 +1671,6 @@ api::Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
     AttachBlobToBucket(context, rpc, name.c_str(), bucket_id, buffer_ids);
   } else {
     if (called_from_buffer_organizer) {
-      // TODO(chogan): @errorhandling The BufferOrganizer failed to place a blob
-      // from swap space into the hierarchy.
       result = PLACE_SWAP_BLOB_TO_BUF_FAILED;
       LOG(ERROR) << result.Msg();
     } else {
@@ -1680,7 +1678,7 @@ api::Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
                                      blob.size);
       result = BLOB_IN_SWAP_PLACE;
       LOG(WARNING) << result.Msg();
-      TriggerBufferOrganizer(rpc, kPlaceInHierarchy, name, swap_blob, retries);
+      TriggerBufferOrganizer(rpc, kPlaceInHierarchy, name, swap_blob, ctx);
     }
   }
 

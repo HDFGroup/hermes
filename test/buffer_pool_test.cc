@@ -114,7 +114,8 @@ static void TestGetBandwidths() {
 }
 
 static hapi::Status ForceBlobToSwap(hapi::Hermes *hermes, hermes::u64 id,
-                                    hapi::Blob &blob, const char *blob_name) {
+                                    hapi::Blob &blob, const char *blob_name,
+                                    hapi::Context ctx) {
   using namespace hermes;  // NOLINT(*)
   PlacementSchema schema;
   schema.push_back({blob.size(), testing::DefaultRamTargetId()});
@@ -123,9 +124,8 @@ static hapi::Status ForceBlobToSwap(hapi::Hermes *hermes, hermes::u64 id,
   internal_blob.size = blob.size();
   hermes::BucketID bucket_id = {};
   bucket_id.as_int = id;
-  int retries = 3;
   hapi::Status result = PlaceBlob(&hermes->context_, &hermes->rpc_, schema,
-                                  internal_blob, blob_name, bucket_id, retries);
+                                  internal_blob, blob_name, bucket_id, ctx);
 
   return result;
 }
@@ -172,7 +172,7 @@ static void TestBlobOverwrite() {
 
   // NOTE(chogan): Overwrite the data
   hapi::Blob new_blob(blob_size, '2');
-  status = bucket.Put(blob_name, new_blob, ctx);
+  Assert(bucket.Put(blob_name, new_blob, ctx).Succeeded());
 
   Assert(buffers_available[slab_index] == 1);
 
@@ -191,7 +191,7 @@ static void TestSwap() {
   hapi::Blob data(data_size, 'x');
   std::string blob_name("swap_blob");
   hapi::Status status = ForceBlobToSwap(hermes.get(), bucket.GetId(), data,
-                                        blob_name.c_str());
+                                        blob_name.c_str(), ctx);
   Assert(status == hermes::BLOB_IN_SWAP_PLACE);
   // NOTE(chogan): The Blob is in the swap space, but the API behaves as normal.
   Assert(bucket.ContainsBlob(blob_name));
@@ -228,7 +228,7 @@ static void TestBufferOrganizer() {
   hapi::Blob data2(KILOBYTES(4), 'y');
   std::string blob2_name("bo_blob2");
   status = ForceBlobToSwap(hermes.get(), bucket.GetId(), data2,
-                           blob2_name.c_str());
+                           blob2_name.c_str(), ctx);
   Assert(status == hermes::BLOB_IN_SWAP_PLACE);
   Assert(bucket.BlobIsInSwap(blob2_name));
 

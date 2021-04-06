@@ -93,5 +93,8 @@ int main(int argc, char **argv) {
   Assert(strncmp(config.buffer_pool_shmem_name, expected_shm_name,
                  sizeof(expected_shm_name)) == 0);
 
+  Assert(config.default_placement_policy ==
+         hermes::api::PlacementPolicy::kMinimizeIoTime);
+
   return 0;
 }

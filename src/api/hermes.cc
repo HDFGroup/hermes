@@ -28,6 +28,7 @@ namespace hermes {
 namespace api {
 
 int Context::default_buffer_organizer_retries;
+PlacementPolicy Context::default_placement_policy;
 
 Status RenameBucket(const std::string &old_name,
                     const std::string &new_name,
@@ -297,6 +298,7 @@ std::shared_ptr<api::Hermes> InitHermes(Config *config, bool is_daemon,
 
   api::Context::default_buffer_organizer_retries =
     config->num_buffer_organizer_retries;
+  api::Context::default_placement_policy = config->default_placement_policy;
 
   InitRpcClients(&result->rpc_);
 

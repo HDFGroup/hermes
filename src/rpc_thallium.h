@@ -146,7 +146,24 @@ void load(A &ar, MapType &map_type) {
   ar.read(&val, 1);
   map_type = (MapType)val;
 }
-#endif
+#endif  // #ifndef THALLIUM_USE_CEREAL
+
+namespace api {
+template<typename A>
+void save(A &ar, api::Context &ctx) {
+  ar.write(&ctx.buffer_organizer_retries, 1);
+  int val = (int)ctx.policy;
+  ar.write(&val, 1);
+}
+
+template<typename A>
+void load(A &ar, api::Context &ctx) {
+  int val = 0;
+  ar.read(&ctx.buffer_organizer_retries, 1);
+  ar.read(&val, 1);
+  ctx.policy = (PlacementPolicy)val;
+}
+}  // namespace api
 
 std::string GetRpcAddress(Config *config, const std::string &host_number,
                           int port);
