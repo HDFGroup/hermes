@@ -230,6 +230,7 @@ void TestMultiGet(std::shared_ptr<hapi::Hermes> hermes) {
   sizes = bucket.Get(blob_names, retrieved_blobs, ctx);
   for (size_t i = 0; i < num_blobs; ++i) {
     Assert(blobs[i] == retrieved_blobs[i]);
+    Assert(sizes[i] == retrieved_blobs[i].size());
   }
 
   // Test Get into user buffer
