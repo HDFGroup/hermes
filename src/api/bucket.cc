@@ -145,7 +145,6 @@ Status Bucket::RenameBlob(const std::string &old_name,
   Status ret;
 
   if (IsBlobNameTooLong(new_name)) {
-    // TODO(chogan): @errorhandling
     ret = BLOB_NAME_TOO_LONG;
     LOG(ERROR) << ret.Msg();
     return ret;
@@ -197,7 +196,6 @@ Status Bucket::Rename(const std::string &new_name, Context &ctx) {
   Status ret;
 
   if (IsBucketNameTooLong(new_name)) {
-    // TODO(chogan): @errorhandling
     ret = BUCKET_NAME_TOO_LONG;
     LOG(ERROR) << ret.Msg();
     return ret;
@@ -248,7 +246,6 @@ Status Bucket::Destroy(Context &ctx) {
     if (destroyed) {
       id_.as_int = 0;
     } else {
-      // TODO(chogan): @errorhandling
       result = BUCKET_IN_USE;
       LOG(ERROR) << result.Msg();
     }

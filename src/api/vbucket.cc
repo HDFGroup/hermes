@@ -49,7 +49,6 @@ Status VBucket::Link(std::string blob_name, std::string bucket_name,
       }
     }
   } else {
-    // TODO(hari): @errorhandling
     ret = BLOB_NOT_IN_BUCKET;
     LOG(ERROR) << ret.Msg();
   }
@@ -82,7 +81,6 @@ Status VBucket::Unlink(std::string blob_name, std::string bucket_name,
     }
   }
   if (!found) {
-    // TODO(hari): @errorhandling
     ret = BLOB_NOT_LINKED_TO_VBUCKET;
     LOG(ERROR) << ret.Msg();
   }
@@ -152,7 +150,6 @@ Status VBucket::Attach(Trait* trait, Context& ctx) {
     }
     attached_traits_.push_back(trait);
   } else {
-    // TODO(hari): @errorhandling throw trait already exists.
     ret = TRAIT_EXISTS_ALREADY;
     LOG(ERROR) << ret.Msg();
   }
@@ -192,7 +189,6 @@ Status VBucket::Detach(Trait* trait, Context& ctx) {
     }
     attached_traits_.erase(selected_trait_iter);
   } else {
-    // TODO(hari): @errorhandling throw trait not valid.
     ret = TRAIT_NOT_VALID;
     LOG(ERROR) << ret.Msg();
   }
@@ -260,20 +256,18 @@ Status VBucket::Delete(Context& ctx) {
                   auto blob_id =
                     GetBlobId(&hermes_->context_, &hermes_->rpc_, ci->second,
                               bucket_id);
-                  // TODO(hari): @errorhandling check return of StdIoPersistBlob
                   ret = StdIoPersistBlob(&hermes_->context_, &hermes_->rpc_,
                                          &hermes_->trans_arena_, blob_id, file,
                                          iter->second);
-                  if (!ret.Succeeded())
+                  if (!ret.Succeeded()) {
                     LOG(ERROR) << ret.Msg();
+                  }
                 } else {
-                  // TODO(hari): @errorhandling map doesnt have the blob linked.
                   ret = BLOB_NOT_LINKED_IN_MAP;
                   LOG(ERROR) << ret.Msg();
                 }
 
               } else {
-                // TODO(hari): @errorhandling offset_map should not be empty
                 ret = OFFSET_MAP_EMPTY;
                 LOG(ERROR) << ret.Msg();
               }
@@ -294,7 +288,6 @@ Status VBucket::Delete(Context& ctx) {
       if (file != nullptr) {
         fflush(file);
         if (fclose(file) != 0) {
-          // TODO(chogan): @errorhandling
           ret = FCLOSE_FAILED;
           LOG(ERROR) << ret.Msg() << strerror(errno);
         }

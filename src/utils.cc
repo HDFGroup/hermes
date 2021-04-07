@@ -114,6 +114,11 @@ void InitDefaultConfig(Config *config) {
   config->default_placement_policy = api::PlacementPolicy::kMinimizeIoTime;
 }
 
+void FailedLibraryCall(std::string func) {
+  LOG(FATAL) << func << " failed with error: "  << strerror(errno)
+             << std::endl;
+}
+
 namespace testing {
 
 TargetViewState InitDeviceState(u64 total_target, bool homo_dist) {

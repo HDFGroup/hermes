@@ -719,7 +719,7 @@ void RenameBlob(SharedMemoryContext *context, RpcContext *rpc,
     DeleteBlobId(mdm, rpc, old_name, bucket_id);
     PutBlobId(mdm, rpc, new_name, blob_id, bucket_id);
   } else {
-    // TODO(chogan): @errorhandling
+    LOG(ERROR) << "Invalid BlobID for Blob '" << old_name << "'" << std::endl;
   }
 }
 
