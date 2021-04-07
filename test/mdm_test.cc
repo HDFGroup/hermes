@@ -46,18 +46,17 @@ static void TestLocalGetNextFreeBucketId(HermesPtr hermes) {
   // NOTE(chogan): Test that the app doesn't fail when creating more buckets
   // than the maximum allowed by the configuration.
 
-  hapi::Context ctx;
   MetadataManager *mdm = GetMetadataManagerFromContext(&hermes->context_);
 
   for (u32 i = 0; i < mdm->max_buckets; ++i) {
     std::string bucket_name = "bucket" + std::to_string(i);
-    hapi::Bucket bucket(bucket_name, hermes, ctx);
+    hapi::Bucket bucket(bucket_name, hermes);
   }
 
   std::string fail_name = "this_should_fail";
   bool threw_runtime_error = false;
   try {
-    hapi::Bucket bucket(fail_name, hermes, ctx);
+    hapi::Bucket bucket(fail_name, hermes);
   }
   catch (const std::runtime_error& e) {
       threw_runtime_error = true;
@@ -66,98 +65,96 @@ static void TestLocalGetNextFreeBucketId(HermesPtr hermes) {
 
   for (u32 i = 0; i < mdm->max_buckets; ++i) {
     std::string name = "bucket" + std::to_string(i);
-    hapi::Bucket bucket(name, hermes, ctx);
-    bucket.Destroy(ctx);
+    hapi::Bucket bucket(name, hermes);
+    bucket.Destroy();
   }
 }
 
 static void TestGetOrCreateBucketId(HermesPtr hermes) {
   // NOTE(chogan): Create a bucket, close it, then open it again and ensure the
   // IDs are the same.
-  hapi::Context ctx;
   std::string bucket_name = "bucket";
-  hapi::Bucket new_bucket(bucket_name, hermes, ctx);
+  hapi::Bucket new_bucket(bucket_name, hermes);
   u64 id = new_bucket.GetId();
-  new_bucket.Release(ctx);
+  new_bucket.Release();
 
-  hapi::Bucket existing_bucket(bucket_name, hermes, ctx);
+  hapi::Bucket existing_bucket(bucket_name, hermes);
   Assert(existing_bucket.GetId() == id);
-  existing_bucket.Destroy(ctx);
+  existing_bucket.Destroy();
 }
 
 static void TestRenameBlob(HermesPtr hermes) {
-  hapi::Context ctx;
   std::string bucket_name = "rename_blob_test";
-  hapi::Bucket bucket(bucket_name, hermes, ctx);
+  hapi::Bucket bucket(bucket_name, hermes);
 
   u8 data[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
   static_assert(sizeof(data[0]) == sizeof(u8));
 
   std::string old_blob_name = "old_blob_name";
-  Assert(bucket.Put(old_blob_name, data, sizeof(data), ctx).Succeeded());
+  Assert(bucket.Put(old_blob_name, data, sizeof(data)).Succeeded());
 
   std::string new_blob_name = "new_blob_name";
-  bucket.RenameBlob(old_blob_name, new_blob_name, ctx);
+  bucket.RenameBlob(old_blob_name, new_blob_name);
   Assert(!bucket.ContainsBlob(old_blob_name));
 
+  hapi::Context ctx;
   size_t blob_size = bucket.GetBlobSize(&hermes->trans_arena_, new_blob_name,
                                         ctx);
   Assert(blob_size == sizeof(data));
 
   hapi::Blob retrieved_data(blob_size);
-  bucket.Get(new_blob_name, retrieved_data, ctx);
+  bucket.Get(new_blob_name, retrieved_data);
 
   for (size_t i = 0; i < retrieved_data.size(); ++i) {
     Assert(retrieved_data[i] == data[i]);
   }
-  bucket.Destroy(ctx);
+  bucket.Destroy();
 }
 
 static void TestRenameBucket(HermesPtr hermes) {
-  hapi::Context ctx;
   std::string old_bucket_name = "old_bucket";
-  hapi::Bucket bucket(old_bucket_name, hermes, ctx);
+  hapi::Bucket bucket(old_bucket_name, hermes);
 
   u8 data[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
   static_assert(sizeof(data[0]) == sizeof(u8));
   std::string blob_name = "renamed_bucket_blob";
-  Assert(bucket.Put(blob_name, data, sizeof(data), ctx).Succeeded());
+  Assert(bucket.Put(blob_name, data, sizeof(data)).Succeeded());
 
   std::string new_bucket_name = "new_bucket";
-  bucket.Rename(new_bucket_name, ctx);
-  bucket.Release(ctx);
+  bucket.Rename(new_bucket_name);
+  bucket.Release();
 
-  hapi::Bucket renamed_bucket(new_bucket_name, hermes, ctx);
+  hapi::Bucket renamed_bucket(new_bucket_name, hermes);
+  hapi::Context ctx;
   size_t blob_size = renamed_bucket.GetBlobSize(&hermes->trans_arena_,
                                                 blob_name, ctx);
   Assert(blob_size == sizeof(data));
 
   hapi::Blob retrieved_data(blob_size);
-  renamed_bucket.Get(blob_name, retrieved_data, ctx);
+  renamed_bucket.Get(blob_name, retrieved_data);
 
   for (size_t i = 0; i < retrieved_data.size(); ++i) {
     Assert(retrieved_data[i] == data[i]);
   }
-  renamed_bucket.Destroy(ctx);
+  renamed_bucket.Destroy();
 }
 
 static void TestBucketRefCounting(HermesPtr hermes) {
-  hapi::Context ctx;
   std::string name = "refcounted_bucket";
 
-  hapi::Bucket bucket1(name, hermes, ctx);
-  hapi::Bucket bucket2(name, hermes, ctx);
+  hapi::Bucket bucket1(name, hermes);
+  hapi::Bucket bucket2(name, hermes);
 
   // Refcount of "refcounted_bucket" is 2
-  bucket1.Destroy(ctx);
+  bucket1.Destroy();
 
   // Bucket should not have been destroyed
   Assert(bucket1.IsValid());
 
-  bucket1.Release(ctx);
+  bucket1.Release();
   // Refcount is 1
 
-  bucket2.Destroy(ctx);
+  bucket2.Destroy();
 
   Assert(!bucket2.IsValid());
   Assert(!bucket1.IsValid());
@@ -165,11 +162,10 @@ static void TestBucketRefCounting(HermesPtr hermes) {
 
 static void TestMaxNameLength(HermesPtr hermes) {
   // Bucket with a name that's too large is invalid.
-  hapi::Context ctx;
   std::string long_bucket_name(kMaxBucketNameSize + 1, 'x');
   bool threw_length_error = false;
   try {
-    hapi::Bucket invalid_bucket(long_bucket_name, hermes, ctx);
+    hapi::Bucket invalid_bucket(long_bucket_name, hermes);
   }
   catch (const std::length_error& e) {
     threw_length_error = true;
@@ -179,9 +175,9 @@ static void TestMaxNameLength(HermesPtr hermes) {
   // Put fails when a blob name is too long
   std::string name = "b1";
   std::string long_blob_name(kMaxBlobNameSize + 1, 'x');
-  hapi::Bucket bucket(name, hermes, ctx);
+  hapi::Bucket bucket(name, hermes);
   hapi::Blob blob('x');
-  Status status = bucket.Put(long_blob_name, blob, ctx);
+  Status status = bucket.Put(long_blob_name, blob);
   Assert(status.Failed());
   Assert(!bucket.ContainsBlob(long_blob_name));
 
@@ -191,14 +187,14 @@ static void TestMaxNameLength(HermesPtr hermes) {
   std::string c = "c";
   std::vector<std::string> blob_names = {a, b, long_blob_name, c};
   std::vector<hapi::Blob> blobs = {blob, blob, blob, blob};
-  status = bucket.Put(blob_names, blobs, ctx);
+  status = bucket.Put(blob_names, blobs);
   Assert(status.Failed());
   Assert(!bucket.ContainsBlob(long_blob_name));
   Assert(!bucket.ContainsBlob(a));
   Assert(!bucket.ContainsBlob(b));
   Assert(!bucket.ContainsBlob(c));
 
-  bucket.Destroy(ctx);
+  bucket.Destroy();
 }
 
 static void TestGetRelativeNodeId() {
@@ -215,39 +211,37 @@ static void TestGetRelativeNodeId() {
 }
 
 static void TestDuplicateBlobNames(HermesPtr hermes) {
-  hapi::Context ctx;
   const size_t blob_size = 8;
-  hapi::Bucket b1("b1", hermes, ctx);
-  hapi::Bucket b2("b2", hermes, ctx);
+  hapi::Bucket b1("b1", hermes);
+  hapi::Bucket b2("b2", hermes);
   std::string blob_name("duplicate");
   hapi::Blob blob1(blob_size, 'x');
   hapi::Blob blob2(blob_size, 'z');
 
-  Assert(b1.Put(blob_name, blob1, ctx).Succeeded());
+  Assert(b1.Put(blob_name, blob1).Succeeded());
   Assert(!b2.ContainsBlob(blob_name));
 
-  Assert(b2.Put(blob_name, blob2, ctx).Succeeded());
+  Assert(b2.Put(blob_name, blob2).Succeeded());
 
   Assert(b1.ContainsBlob(blob_name));
   Assert(b2.ContainsBlob(blob_name));
 
   hapi::Blob result(blob_size, '0');
-  Assert(b1.Get(blob_name, result, ctx) == blob_size);
+  Assert(b1.Get(blob_name, result) == blob_size);
   Assert(result == blob1);
-  Assert(b2.Get(blob_name, result, ctx) == blob_size);
+  Assert(b2.Get(blob_name, result) == blob_size);
   Assert(result == blob2);
 
-  Assert(b1.Destroy(ctx).Succeeded());
-  Assert(b2.Destroy(ctx).Succeeded());
+  Assert(b1.Destroy().Succeeded());
+  Assert(b2.Destroy().Succeeded());
 }
 
 static void TestGetBucketIdFromBlobId(HermesPtr hermes) {
-  hapi::Context ctx;
   const size_t blob_size = 8;
-  hapi::Bucket b1("b1", hermes, ctx);
+  hapi::Bucket b1("b1", hermes);
   std::string blob_name("blob1");
   hapi::Blob blob1(blob_size, 'x');
-  Assert(b1.Put(blob_name, blob1, ctx).Succeeded());
+  Assert(b1.Put(blob_name, blob1).Succeeded());
 
   BucketID b1_id = {};
   b1_id.as_int = b1.GetId();
@@ -258,7 +252,7 @@ static void TestGetBucketIdFromBlobId(HermesPtr hermes) {
     hermes::GetBucketIdFromBlobId(&hermes->context_, &hermes->rpc_, blob_id);
 
   Assert(bucket_id.as_int == b1.GetId());
-  Assert(b1.Destroy(ctx).Succeeded());
+  Assert(b1.Destroy().Succeeded());
 }
 
 static void TestHexStringToU64() {
@@ -301,13 +295,12 @@ void TestSwapBlobsExistInBucket() {
   }
   std::shared_ptr<hapi::Hermes> hermes = hermes::InitHermes(&config, true);
 
-  hapi::Context ctx;
-  hermes::api::Bucket swap_bucket("swap_test", hermes, ctx);
+  hermes::api::Bucket swap_bucket("swap_test", hermes);
   hermes::api::Blob blob(128*1024, 255);
   auto success_blob_names = std::vector<std::string>();
   for (int i = 0; i < 32; i++) {
     std::string blob_name = "Blob" + std::to_string(i);
-    hapi::Status status = swap_bucket.Put(blob_name, blob, ctx);
+    hapi::Status status = swap_bucket.Put(blob_name, blob);
     if (!status.Failed()) {
       success_blob_names.push_back(blob_name);
     }

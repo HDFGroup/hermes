@@ -93,13 +93,12 @@ TEST_CASE("CustomTrait",
   // REQUIRE(info.comm_size > 1);
   std::shared_ptr<hermes::api::Hermes> hermes_app =
       hermes::api::InitHermes(args.config.c_str(), true);
-  hermes::api::Context ctx;
   fs::path fullpath = args.directory;
   fullpath /= args.filename;
   std::string fullpath_str = fullpath.string();
   SECTION("Basic") {
-    hermes::api::Bucket file_bucket(args.filename, hermes_app, ctx);
-    hermes::api::VBucket file_vbucket(args.filename, hermes_app, true, ctx);
+    hermes::api::Bucket file_bucket(args.filename, hermes_app);
+    hermes::api::VBucket file_vbucket(args.filename, hermes_app, true);
     auto offset_map = std::unordered_map<std::string, hermes::u64>();
     auto blob_cmp = [](std::string a, std::string b) {
       return std::stol(a) < std::stol(b);
@@ -108,21 +107,21 @@ TEST_CASE("CustomTrait",
     auto check_write = hermes::api::Blob();
     for (size_t i = 0; i < args.iterations; ++i) {
       hermes::api::Status status =
-        file_bucket.Put(std::to_string(i), info.write_blob, ctx);
+        file_bucket.Put(std::to_string(i), info.write_blob);
       Assert(status.Succeeded());
       blob_names.insert(std::to_string(i));
       check_write.insert(check_write.end(), info.write_blob.begin(),
                          info.write_blob.end());
     }
     for (const auto& blob_name : blob_names) {
-      file_vbucket.Link(blob_name, args.filename, ctx);
+      file_vbucket.Link(blob_name, args.filename);
       offset_map.emplace(blob_name, std::stol(blob_name) * info.FILE_PAGE);
     }
     auto trait = hermes::api::FileMappingTrait(fullpath_str, offset_map,
                                                nullptr, NULL, NULL);
-    file_vbucket.Attach(&trait, ctx);
-    file_vbucket.Delete(ctx);
-    file_bucket.Destroy(ctx);
+    file_vbucket.Attach(&trait);
+    file_vbucket.Delete();
+    file_bucket.Destroy();
     REQUIRE(fs::exists(fullpath_str));
     REQUIRE(fs::file_size(fullpath_str) == args.iterations * args.request_size);
     auto read_blob =

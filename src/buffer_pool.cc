@@ -1654,7 +1654,8 @@ size_t ReadFromSwap(SharedMemoryContext *context, Blob blob,
 api::Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
                       PlacementSchema &schema, Blob blob,
                       const std::string &name, BucketID bucket_id,
-                      api::Context &ctx, bool called_from_buffer_organizer) {
+                      const api::Context &ctx,
+                      bool called_from_buffer_organizer) {
   api::Status result;
 
   if (ContainsBlob(context, rpc, bucket_id, name)
