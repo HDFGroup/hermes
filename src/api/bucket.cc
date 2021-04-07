@@ -38,6 +38,13 @@ Bucket::Bucket(const std::string &initial_name,
   }
 }
 
+Bucket::~Bucket() {
+  if (IsValid()) {
+    Context ctx;
+    Release(ctx);
+  }
+}
+
 bool Bucket::IsValid() const {
   return !IsNullBucketId(id_);
 }
@@ -217,11 +224,11 @@ Status Bucket::Persist(const std::string &file_name, Context &ctx) {
   return result;
 }
 
-Status Bucket::Close(Context &ctx) {
+Status Bucket::Release(Context &ctx) {
   (void)ctx;
   Status ret;
 
-  if (IsValid()) {
+  if (IsValid() && hermes_->is_initialized) {
     LOG(INFO) << "Closing bucket '" << name_ << "'" << std::endl;
     DecrementRefcount(&hermes_->context_, &hermes_->rpc_, id_);
     id_.as_int = 0;

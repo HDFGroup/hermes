@@ -42,6 +42,7 @@ class Hermes {
   hermes::Arena trans_arena_;
   std::string shmem_name_;
   std::string rpc_server_name_;
+  bool is_initialized;
 
   /** if true will do more checks, warnings, expect slower code */
   const bool debug_mode_ = true;

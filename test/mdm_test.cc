@@ -52,7 +52,6 @@ static void TestLocalGetNextFreeBucketId(HermesPtr hermes) {
   for (u32 i = 0; i < mdm->max_buckets; ++i) {
     std::string bucket_name = "bucket" + std::to_string(i);
     hapi::Bucket bucket(bucket_name, hermes, ctx);
-    bucket.Close(ctx);
   }
 
   std::string fail_name = "this_should_fail";
@@ -79,7 +78,7 @@ static void TestGetOrCreateBucketId(HermesPtr hermes) {
   std::string bucket_name = "bucket";
   hapi::Bucket new_bucket(bucket_name, hermes, ctx);
   u64 id = new_bucket.GetId();
-  new_bucket.Close(ctx);
+  new_bucket.Release(ctx);
 
   hapi::Bucket existing_bucket(bucket_name, hermes, ctx);
   Assert(existing_bucket.GetId() == id);
@@ -126,7 +125,7 @@ static void TestRenameBucket(HermesPtr hermes) {
 
   std::string new_bucket_name = "new_bucket";
   bucket.Rename(new_bucket_name, ctx);
-  bucket.Close(ctx);
+  bucket.Release(ctx);
 
   hapi::Bucket renamed_bucket(new_bucket_name, hermes, ctx);
   size_t blob_size = renamed_bucket.GetBlobSize(&hermes->trans_arena_,
@@ -155,7 +154,7 @@ static void TestBucketRefCounting(HermesPtr hermes) {
   // Bucket should not have been destroyed
   Assert(bucket1.IsValid());
 
-  bucket1.Close(ctx);
+  bucket1.Release(ctx);
   // Refcount is 1
 
   bucket2.Destroy(ctx);
