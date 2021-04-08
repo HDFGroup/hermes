@@ -198,6 +198,54 @@ void TestCompressionTrait(std::shared_ptr<hapi::Hermes> hermes) {
   Assert(my_bucket.Destroy(ctx).Succeeded());
 }
 
+void TestMultiGet(std::shared_ptr<hapi::Hermes> hermes) {
+  const size_t num_blobs = 4;
+  const int blob_size = KILOBYTES(4);
+
+  std::vector<std::string> blob_names(num_blobs);
+  for (size_t i = 0; i < num_blobs; ++i) {
+    blob_names[i]= "Blob" + std::to_string(i);
+  }
+
+  std::vector<hapi::Blob> blobs(num_blobs);
+  for (size_t i = 0; i < num_blobs; ++i) {
+    blobs[i] = hapi::Blob(blob_size, (char)i);
+  }
+
+  hapi::Context ctx;
+  const std::string bucket_name = "b1";
+  hapi::Bucket bucket(bucket_name, hermes, ctx);
+
+  for (size_t i = 0; i < num_blobs; ++i) {
+    Assert(bucket.Put(blob_names[i], blobs[i], ctx).Succeeded());
+  }
+
+  std::vector<hapi::Blob> retrieved_blobs(num_blobs);
+  std::vector<size_t> sizes = bucket.Get(blob_names, retrieved_blobs, ctx);
+
+  for (size_t i = 0; i < num_blobs; ++i) {
+    retrieved_blobs[i].resize(sizes[i]);
+  }
+
+  sizes = bucket.Get(blob_names, retrieved_blobs, ctx);
+  for (size_t i = 0; i < num_blobs; ++i) {
+    Assert(blobs[i] == retrieved_blobs[i]);
+    Assert(sizes[i] == retrieved_blobs[i].size());
+  }
+
+  // Test Get into user buffer
+  hermes::u8 user_buffer[blob_size] = {};
+  size_t b1_size = bucket.Get(blob_names[0], nullptr, 0, ctx);
+  Assert(b1_size == blob_size);
+  b1_size = bucket.Get(blob_names[0], user_buffer, b1_size, ctx);
+
+  for (size_t i = 0; i < b1_size; ++i) {
+    Assert(user_buffer[i] == blobs[0][i]);
+  }
+
+  bucket.Destroy(ctx);
+}
+
 int main(int argc, char **argv) {
   int mpi_threads_provided;
   MPI_Init_thread(NULL, NULL, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
@@ -217,6 +265,7 @@ int main(int argc, char **argv) {
     TestCompressionTrait(hermes_app);
     TestBucketPersist(hermes_app);
     TestPutOverwrite(hermes_app);
+    TestMultiGet(hermes_app);
   } else {
     // Hermes core. No user code here.
   }
