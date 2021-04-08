@@ -46,7 +46,7 @@ class Bucket {
   }
 
   Bucket(const std::string &initial_name, std::shared_ptr<Hermes> const &h,
-         Context ctx);
+         Context ctx = Context());
 
   /**
    * \brief Releases the Bucket, decrementing its reference count
@@ -57,14 +57,10 @@ class Bucket {
   ~Bucket();
 
   /** get the name of bucket */
-  std::string GetName() const {
-    return this->name_;
-  }
+  std::string GetName() const;
 
   /** get the internal ID of the bucket */
-  u64 GetId() const {
-    return id_.as_int;
-  }
+  u64 GetId() const;
 
   /** returns true if this Bucket has been created but not yet destroyed */
   bool IsValid() const;
@@ -96,7 +92,7 @@ class Bucket {
    *
    */
   Status Put(const std::string &name, const u8 *data, size_t size,
-             Context &ctx);
+             const Context &ctx);
 
   /**
    *
@@ -108,7 +104,7 @@ class Bucket {
    */
   template<typename T>
   Status Put(std::vector<std::string> &names,
-             std::vector<std::vector<T>> &blobs, Context &ctx);
+             std::vector<std::vector<T>> &blobs, const Context &ctx);
 
   /**
    *
@@ -123,29 +119,30 @@ class Bucket {
   template<typename T>
   Status PlaceBlobs(std::vector<PlacementSchema> &schemas,
                     const std::vector<std::vector<T>> &blobs,
-                    const std::vector<std::string> &names, Context &ctx);
+                    const std::vector<std::string> &names, const Context &ctx);
 
   /** Get the size in bytes of the Blob referred to by `name` */
-  size_t GetBlobSize(Arena *arena, const std::string &name, Context &ctx);
+  size_t GetBlobSize(Arena *arena, const std::string &name, const Context &ctx);
 
   /** get a blob on this bucket */
   /** - if user_blob.size() == 0 => return the minimum buffer size needed */
   /** - if user_blob.size() > 0 => copy user_blob.size() bytes */
   /** to user_blob and return user_blob.size() */
   /** use provides buffer */
-  size_t Get(const std::string &name, Blob& user_blob, Context &ctx);
+  size_t Get(const std::string &name, Blob& user_blob, const Context &ctx);
+  size_t Get(const std::string &name, Blob& user_blob);
 
   /**
    * \brief Retrieve multiple Blobs in one call.
    */
   std::vector<size_t> Get(const std::vector<std::string> &names,
-                          std::vector<Blob> &blobs, Context &ctx);
+                          std::vector<Blob> &blobs, const Context &ctx);
 
   /**
    * \brief Retrieve a Blob into a user buffer.
    */
   size_t Get(const std::string &name, void *user_blob, size_t blob_size,
-             Context &ctx);
+             const Context &ctx);
 
   /** get blob(s) on this bucket according to predicate */
   /** use provides buffer */
@@ -153,11 +150,13 @@ class Bucket {
   Status GetV(void *user_blob, Predicate pred, Context &ctx);
 
   /** delete a blob from this bucket */
-  Status DeleteBlob(const std::string &name, Context &ctx);
+  Status DeleteBlob(const std::string &name, const Context &ctx);
+  Status DeleteBlob(const std::string &name);
 
   /** rename a blob on this bucket */
   Status RenameBlob(const std::string &old_name, const std::string &new_name,
-                    Context &ctx);
+                    const Context &ctx);
+  Status RenameBlob(const std::string &old_name, const std::string &new_name);
 
   /** Returns true if the Bucket contains a Blob called `name` */
   bool ContainsBlob(const std::string &name);
@@ -169,16 +168,15 @@ class Bucket {
   template<class Predicate>
   std::vector<std::string> GetBlobNames(Predicate pred, Context &ctx);
 
-  /** get information from the bucket at level-of-detail  */
-  struct bkt_info * GetInfo(Context &ctx);
-
   /** rename this bucket */
-  Status Rename(const std::string& new_name, Context &ctx);
+  Status Rename(const std::string& new_name, const Context &ctx);
+  Status Rename(const std::string& new_name);
 
   /** Save this bucket's blobs to persistent storage.
    *
    * The blobs are written in the same order in which they are `Put`. */
-  Status Persist(const std::string &file_name, Context &ctx);
+  Status Persist(const std::string &file_name, const Context &ctx);
+  Status Persist(const std::string &file_name);
 
   /**
    * \brief Release this Bucket
@@ -186,11 +184,13 @@ class Bucket {
    * This simpley decrements the refcount to this Bucket in the Hermes metadata.
    * To free resources associated with this Bucket, call Bucket::Destroy.
    */
-  Status Release(Context &ctx);
+  Status Release(const Context &ctx);
+  Status Release();
 
   /** destroy this bucket */
   /** ctx controls "aggressiveness */
-  Status Destroy(Context &ctx);
+  Status Destroy(const Context &ctx);
+  Status Destroy();
 };
 
 template<typename T>
@@ -211,7 +211,8 @@ Status Bucket::Put(const std::string &name, const std::vector<T> &data) {
 template<typename T>
 Status Bucket::PlaceBlobs(std::vector<PlacementSchema> &schemas,
                           const std::vector<std::vector<T>> &blobs,
-                          const std::vector<std::string> &names, Context &ctx) {
+                          const std::vector<std::string> &names,
+                          const Context &ctx) {
   Status result;
 
   for (size_t i = 0; i < schemas.size(); ++i) {
@@ -238,7 +239,7 @@ Status Bucket::Put(std::vector<std::string> &names,
 
 template<typename T>
 Status Bucket::Put(std::vector<std::string> &names,
-                   std::vector<std::vector<T>> &blobs, Context &ctx) {
+                   std::vector<std::vector<T>> &blobs, const Context &ctx) {
   Status ret;
 
   for (auto &name : names) {

@@ -50,12 +50,11 @@ void add_buffer_to_vector(hermes::api::Blob &vector, const char *buffer,
 int compress_blob(hermes::api::TraitInput &input, hermes::api::Trait *trait) {
   MyTrait *my_trait = (MyTrait *)trait;
 
-  hapi::Context ctx;
-  hapi::Bucket bkt(input.bucket_name, hermes_app, ctx);
+  hapi::Bucket bkt(input.bucket_name, hermes_app);
   hapi::Blob blob = {};
-  size_t blob_size = bkt.Get(input.blob_name, blob, ctx);
+  size_t blob_size = bkt.Get(input.blob_name, blob);
   blob.resize(blob_size);
-  bkt.Get(input.blob_name, blob, ctx);
+  bkt.Get(input.blob_name, blob);
   // If Hermes is already linked with a compression library, you can call the
   // function directly here. If not, the symbol will have to be dynamically
   // loaded and probably stored as a pointer in the Trait.
@@ -85,22 +84,21 @@ void TestBucketPersist(std::shared_ptr<hapi::Hermes> hermes) {
   constexpr int num_blobs = 3;
   constexpr int total_bytes = num_blobs * bytes_per_blob;
 
-  hapi::Context ctx;
   hapi::Status status;
   hapi::Blob blobx(bytes_per_blob, 'x');
   hapi::Blob bloby(bytes_per_blob, 'y');
   hapi::Blob blobz(bytes_per_blob, 'z');
-  hapi::Bucket bkt("persistent_bucket", hermes, ctx);
-  status = bkt.Put("blobx", blobx, ctx);
+  hapi::Bucket bkt("persistent_bucket", hermes);
+  status = bkt.Put("blobx", blobx);
   Assert(status.Succeeded());
-  status = bkt.Put("bloby", bloby, ctx);
+  status = bkt.Put("bloby", bloby);
   Assert(status.Succeeded());
-  status = bkt.Put("blobz", blobz, ctx);
+  status = bkt.Put("blobz", blobz);
   Assert(status.Succeeded());
 
   std::string saved_file("blobsxyz.txt");
-  bkt.Persist(saved_file, ctx);
-  bkt.Destroy(ctx);
+  bkt.Persist(saved_file);
+  bkt.Destroy();
   Assert(!bkt.IsValid());
 
   FILE *bkt_file = fopen(saved_file.c_str(), "r");
@@ -139,13 +137,12 @@ void TestBucketPersist(std::shared_ptr<hapi::Hermes> hermes) {
 }
 
 void TestPutOverwrite(std::shared_ptr<hapi::Hermes> hermes) {
-  hapi::Context ctx;
-  hapi::Bucket bucket("overwrite", hermes, ctx);
+  hapi::Bucket bucket("overwrite", hermes);
 
   std::string blob_name("1");
   size_t blob_size = KILOBYTES(6);
   hapi::Blob blob(blob_size, 'x');
-  hapi::Status status = bucket.Put(blob_name, blob, ctx);
+  hapi::Status status = bucket.Put(blob_name, blob);
   Assert(status.Succeeded());
 
   hermes::testing::GetAndVerifyBlob(bucket, blob_name, blob);
@@ -153,49 +150,48 @@ void TestPutOverwrite(std::shared_ptr<hapi::Hermes> hermes) {
   // NOTE(chogan): Overwrite the data
   size_t new_size = KILOBYTES(9);
   hapi::Blob new_blob(new_size, 'z');
-  status = bucket.Put(blob_name, new_blob, ctx);
+  status = bucket.Put(blob_name, new_blob);
   Assert(status.Succeeded());
 
   hermes::testing::GetAndVerifyBlob(bucket, blob_name, new_blob);
 
-  bucket.Destroy(ctx);
+  bucket.Destroy();
 }
 
 void TestCompressionTrait(std::shared_ptr<hapi::Hermes> hermes) {
-  hermes::api::Context ctx;
   hermes::api::Status status;
 
   const std::string bucket_name = "compression";
-  hermes::api::Bucket my_bucket(bucket_name, hermes, ctx);
+  hermes::api::Bucket my_bucket(bucket_name, hermes);
   hermes::api::Blob p1(1024*1024*1, 255);
   hermes::api::Blob p2(p1);
 
   const std::string blob1_name = "Blob1";
   const std::string blob2_name = "Blob2";
-  Assert(my_bucket.Put(blob1_name, p1, ctx).Succeeded());
-  Assert(my_bucket.Put(blob2_name, p2, ctx).Succeeded());
+  Assert(my_bucket.Put(blob1_name, p1).Succeeded());
+  Assert(my_bucket.Put(blob2_name, p2).Succeeded());
 
   Assert(my_bucket.ContainsBlob(blob1_name));
   Assert(my_bucket.ContainsBlob(blob2_name));
 
   const std::string vbucket_name = "VB1";
-  hermes::api::VBucket my_vb(vbucket_name, hermes, false, ctx);
-  my_vb.Link(blob1_name, bucket_name, ctx);
-  my_vb.Link(blob2_name, bucket_name, ctx);
+  hermes::api::VBucket my_vb(vbucket_name, hermes, false);
+  my_vb.Link(blob1_name, bucket_name);
+  my_vb.Link(blob2_name, bucket_name);
 
-  Assert(my_vb.Contain_blob(blob1_name, bucket_name) == 1);
-  Assert(my_vb.Contain_blob(blob2_name, bucket_name) == 1);
+  Assert(my_vb.ContainsBlob(blob1_name, bucket_name) == 1);
+  Assert(my_vb.ContainsBlob(blob2_name, bucket_name) == 1);
 
   MyTrait trait;
   trait.compress_level = 6;
   // Compression Trait compresses all blobs on Attach
-  Assert(my_vb.Attach(&trait, ctx).Succeeded());
+  Assert(my_vb.Attach(&trait).Succeeded());
 
-  Assert(my_vb.Unlink(blob1_name, bucket_name, ctx).Succeeded());
-  Assert(my_vb.Detach(&trait, ctx).Succeeded());
+  Assert(my_vb.Unlink(blob1_name, bucket_name).Succeeded());
+  Assert(my_vb.Detach(&trait).Succeeded());
 
-  Assert(my_vb.Delete(ctx).Succeeded());
-  Assert(my_bucket.Destroy(ctx).Succeeded());
+  Assert(my_vb.Delete().Succeeded());
+  Assert(my_bucket.Destroy().Succeeded());
 }
 
 void TestMultiGet(std::shared_ptr<hapi::Hermes> hermes) {
