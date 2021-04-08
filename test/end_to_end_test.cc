@@ -34,15 +34,14 @@ void TestPutGetBucket(hapi::Bucket &bucket, int app_rank, int app_size) {
 
   hapi::Blob put_data(bytes_per_rank, rand() % 255);
 
-  hapi::Context ctx;
   std::string blob_name = "test_blob" + std::to_string(app_rank);
-  hermes::api::Status status = bucket.Put(blob_name, put_data, ctx);
+  hermes::api::Status status = bucket.Put(blob_name, put_data);
   Assert(status.Succeeded());
 
   hapi::Blob get_result;
-  size_t blob_size = bucket.Get(blob_name, get_result, ctx);
+  size_t blob_size = bucket.Get(blob_name, get_result);
   get_result.resize(blob_size);
-  blob_size = bucket.Get(blob_name, get_result, ctx);
+  blob_size = bucket.Get(blob_name, get_result);
 
   Assert(put_data == get_result);
 }
@@ -50,14 +49,13 @@ void TestPutGetBucket(hapi::Bucket &bucket, int app_rank, int app_size) {
 void TestBulkTransfer(std::shared_ptr<hapi::Hermes> hermes, int app_rank) {
   size_t transfer_size = KILOBYTES(8);
 
-  hapi::Context ctx;
-  hapi::Bucket bucket(std::string("bulk_bucket"), hermes, ctx);
+  hapi::Bucket bucket(std::string("bulk_bucket"), hermes);
   std::string blob_name = "1";
 
   hapi::Blob put_data(transfer_size, 'x');
 
   if (app_rank == 0) {
-    hermes::api::Status status = bucket.Put(blob_name, put_data, ctx);
+    hermes::api::Status status = bucket.Put(blob_name, put_data);
     Assert(status.Succeeded());
   }
 
@@ -65,19 +63,19 @@ void TestBulkTransfer(std::shared_ptr<hapi::Hermes> hermes, int app_rank) {
 
   if (app_rank != 0) {
     hapi::Blob get_result;
-    size_t blob_size = bucket.Get(blob_name, get_result, ctx);
+    size_t blob_size = bucket.Get(blob_name, get_result);
     get_result.resize(blob_size);
-    blob_size = bucket.Get(blob_name, get_result, ctx);
+    blob_size = bucket.Get(blob_name, get_result);
 
     Assert(get_result == put_data);
 
-    bucket.Release(ctx);
+    bucket.Release();
   }
 
   hermes->AppBarrier();
 
   if (app_rank == 0) {
-    bucket.Destroy(ctx);
+    bucket.Destroy();
   }
 }
 
@@ -100,29 +98,27 @@ int main(int argc, char **argv) {
     int app_rank = hermes->GetProcessRank();
     int app_size = hermes->GetNumProcesses();
 
-    hapi::Context ctx;
-
     // Each rank puts and gets its portion of a blob to a shared bucket
-    hapi::Bucket shared_bucket(std::string("test_bucket"), hermes, ctx);
+    hapi::Bucket shared_bucket(std::string("test_bucket"), hermes);
     TestPutGetBucket(shared_bucket, app_rank, app_size);
 
     if (app_rank != 0) {
-      shared_bucket.Release(ctx);
+      shared_bucket.Release();
     }
 
     hermes->AppBarrier();
 
     if (app_rank == 0) {
-      shared_bucket.Destroy(ctx);
+      shared_bucket.Destroy();
     }
 
     hermes->AppBarrier();
 
     // Each rank puts a whole blob to its own bucket
     hapi::Bucket own_bucket(std::string("test_bucket_") +
-                            std::to_string(app_rank), hermes, ctx);
+                            std::to_string(app_rank), hermes);
     TestPutGetBucket(own_bucket, app_rank, 0);
-    own_bucket.Destroy(ctx);
+    own_bucket.Destroy();
 
     TestBulkTransfer(hermes, app_rank);
   } else {

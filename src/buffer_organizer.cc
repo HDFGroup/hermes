@@ -17,7 +17,7 @@ namespace hermes {
 
 Status PlaceInHierarchy(SharedMemoryContext *context, RpcContext *rpc,
                         SwapBlob swap_blob, const std::string &name,
-                        api::Context &ctx) {
+                        const api::Context &ctx) {
   std::vector<PlacementSchema> schemas;
   std::vector<size_t> sizes(1, swap_blob.size);
   Status result = CalculatePlacement(context, rpc, sizes, schemas, ctx);

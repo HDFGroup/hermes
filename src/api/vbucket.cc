@@ -27,6 +27,12 @@ bool VBucket::IsValid() const {
   return !IsNullVBucketId(id_);
 }
 
+Status VBucket::Link(std::string blob_name, std::string bucket_name) {
+  Status result = Link(blob_name, bucket_name, ctx_);
+
+  return result;
+}
+
 Status VBucket::Link(std::string blob_name, std::string bucket_name,
                      Context& ctx) {
   (void)ctx;
@@ -54,6 +60,12 @@ Status VBucket::Link(std::string blob_name, std::string bucket_name,
   }
 
   return ret;
+}
+
+Status VBucket::Unlink(std::string blob_name, std::string bucket_name) {
+  Status result = Unlink(blob_name, bucket_name, ctx_);
+
+  return result;
 }
 
 Status VBucket::Unlink(std::string blob_name, std::string bucket_name,
@@ -88,7 +100,7 @@ Status VBucket::Unlink(std::string blob_name, std::string bucket_name,
   return ret;
 }
 
-bool VBucket::Contain_blob(std::string blob_name, std::string bucket_name) {
+bool VBucket::ContainsBlob(std::string blob_name, std::string bucket_name) {
   bool ret = false;
   std::string bk_tmp, blob_tmp;
 
@@ -124,6 +136,12 @@ std::vector<std::string> VBucket::GetLinks(Predicate pred, Context& ctx) {
   return std::vector<std::string>();
 }
 
+Status VBucket::Attach(Trait* trait) {
+  Status result = Attach(trait, ctx_);
+
+  return result;
+}
+
 Status VBucket::Attach(Trait* trait, Context& ctx) {
   (void)ctx;
   (void)trait;
@@ -155,6 +173,12 @@ Status VBucket::Attach(Trait* trait, Context& ctx) {
   }
 
   return ret;
+}
+
+Status VBucket::Detach(Trait* trait) {
+  Status result = Detach(trait, ctx_);
+
+  return result;
 }
 
 Status VBucket::Detach(Trait* trait, Context& ctx) {
@@ -208,6 +232,12 @@ std::vector<TraitID> VBucket::GetTraits(Predicate pred, Context& ctx) {
     attached_traits.push_back(t->id);
   }
   return attached_traits;
+}
+
+Status VBucket::Delete() {
+  Status result = Delete(ctx_);
+
+  return result;
 }
 
 Status VBucket::Delete(Context& ctx) {

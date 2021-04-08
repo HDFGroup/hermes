@@ -45,12 +45,20 @@ Bucket::~Bucket() {
   }
 }
 
+std::string Bucket::GetName() const {
+  return name_;
+}
+
+u64 Bucket::GetId() const {
+  return id_.as_int;
+}
+
 bool Bucket::IsValid() const {
   return !IsNullBucketId(id_);
 }
 
 Status Bucket::Put(const std::string &name, const u8 *data, size_t size,
-                   Context &ctx) {
+                   const Context &ctx) {
   Status result;
 
   if (size > 0 && nullptr == data) {
@@ -76,7 +84,7 @@ Status Bucket::Put(const std::string &name, const u8 *data, size_t size) {
 }
 
 size_t Bucket::GetBlobSize(Arena *arena, const std::string &name,
-                           Context &ctx) {
+                           const Context &ctx) {
   (void)ctx;
   size_t result = 0;
 
@@ -94,7 +102,21 @@ size_t Bucket::GetBlobSize(Arena *arena, const std::string &name,
   return result;
 }
 
-size_t Bucket::Get(const std::string &name, Blob &user_blob, Context &ctx) {
+size_t Bucket::Get(const std::string &name, Blob &user_blob,
+                   const Context &ctx) {
+  size_t ret = Get(name, user_blob.data(), user_blob.size(), ctx);
+
+  return ret;
+}
+
+size_t Bucket::Get(const std::string &name, Blob &user_blob) {
+  size_t result = Get(name, user_blob, ctx_);
+
+  return result;
+}
+
+size_t Bucket::Get(const std::string &name, void *user_blob, size_t blob_size,
+                   const Context &ctx) {
   (void)ctx;
 
   size_t ret = 0;
@@ -103,18 +125,37 @@ size_t Bucket::Get(const std::string &name, Blob &user_blob, Context &ctx) {
     // TODO(chogan): Assumes scratch is big enough to hold buffer_ids
     ScopedTemporaryMemory scratch(&hermes_->trans_arena_);
 
-    if (user_blob.size() == 0) {
-      ret = GetBlobSize(scratch, name, ctx);
-    } else {
+    if (user_blob && blob_size != 0) {
+      hermes::Blob blob = {};
+      blob.data = (u8 *)user_blob;
+      blob.size = blob_size;
       LOG(INFO) << "Getting Blob " << name << " from bucket " << name_ << '\n';
       BlobID blob_id = GetBlobId(&hermes_->context_, &hermes_->rpc_,
-                                       name, id_);
+                                 name, id_);
       ret = ReadBlobById(&hermes_->context_, &hermes_->rpc_,
-                         &hermes_->trans_arena_, user_blob, blob_id);
+                         &hermes_->trans_arena_, blob, blob_id);
+    } else {
+      ret = GetBlobSize(scratch, name, ctx);
     }
   }
 
   return ret;
+}
+
+std::vector<size_t> Bucket::Get(const std::vector<std::string> &names,
+                                std::vector<Blob> &blobs, const Context &ctx) {
+  std::vector<size_t> result(names.size(), 0);
+  if (names.size() == blobs.size()) {
+    for (size_t i = 0; i < result.size(); ++i) {
+      result[i] = Get(names[i], blobs[i], ctx);
+    }
+  } else {
+    LOG(ERROR) << "names.size() != blobs.size() in Bucket::Get ("
+               << names.size() << " != " << blobs.size() << ")"
+               << std::endl;
+  }
+
+  return result;
 }
 
 template<class Predicate>
@@ -128,7 +169,13 @@ Status Bucket::GetV(void *user_blob, Predicate pred, Context &ctx) {
   return ret;
 }
 
-Status Bucket::DeleteBlob(const std::string &name, Context &ctx) {
+Status Bucket::DeleteBlob(const std::string &name) {
+  Status result = DeleteBlob(name, ctx_);
+
+  return result;
+}
+
+Status Bucket::DeleteBlob(const std::string &name, const Context &ctx) {
   (void)ctx;
   Status ret;
 
@@ -139,8 +186,15 @@ Status Bucket::DeleteBlob(const std::string &name, Context &ctx) {
 }
 
 Status Bucket::RenameBlob(const std::string &old_name,
+                          const std::string &new_name) {
+  Status result = RenameBlob(old_name, new_name, ctx_);
+
+  return result;
+}
+
+Status Bucket::RenameBlob(const std::string &old_name,
                           const std::string &new_name,
-                          Context &ctx) {
+                          const Context &ctx) {
   (void)ctx;
   Status ret;
 
@@ -182,16 +236,13 @@ std::vector<std::string> Bucket::GetBlobNames(Predicate pred,
   return std::vector<std::string>();
 }
 
-struct bkt_info * Bucket::GetInfo(Context &ctx) {
-  (void)ctx;
-  struct bkt_info *ret = nullptr;
+Status Bucket::Rename(const std::string &new_name) {
+  Status result = Rename(new_name, ctx_);
 
-  LOG(INFO) << "Getting bucket information from bucket " << name_ << '\n';
-
-  return ret;
+  return result;
 }
 
-Status Bucket::Rename(const std::string &new_name, Context &ctx) {
+Status Bucket::Rename(const std::string &new_name, const Context &ctx) {
   (void)ctx;
   Status ret;
 
@@ -207,7 +258,13 @@ Status Bucket::Rename(const std::string &new_name, Context &ctx) {
   return ret;
 }
 
-Status Bucket::Persist(const std::string &file_name, Context &ctx) {
+Status Bucket::Persist(const std::string &file_name) {
+  Status result = Persist(file_name, ctx_);
+
+  return result;
+}
+
+Status Bucket::Persist(const std::string &file_name, const Context &ctx) {
   (void)ctx;
   // TODO(chogan): Once we have Traits, we need to let users control the mode
   // when we're, for example, updating an existing file. For now we just assume
@@ -222,7 +279,13 @@ Status Bucket::Persist(const std::string &file_name, Context &ctx) {
   return result;
 }
 
-Status Bucket::Release(Context &ctx) {
+Status Bucket::Release() {
+  Status result = Release(ctx_);
+
+  return result;
+}
+
+Status Bucket::Release(const Context &ctx) {
   (void)ctx;
   Status ret;
 
@@ -235,7 +298,13 @@ Status Bucket::Release(Context &ctx) {
   return ret;
 }
 
-Status Bucket::Destroy(Context &ctx) {
+Status Bucket::Destroy() {
+  Status result = Destroy(ctx_);
+
+  return result;
+}
+
+Status Bucket::Destroy(const Context &ctx) {
   (void)ctx;
   Status result;
 

@@ -446,7 +446,7 @@ void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
 
 void TriggerBufferOrganizer(RpcContext *rpc, const char *func_name,
                             const std::string &blob_name, SwapBlob swap_blob,
-                            api::Context &ctx) {
+                            const api::Context &ctx) {
   std::string server_name = GetServerName(rpc, rpc->node_id, true);
   std::string protocol = GetProtocol(rpc);
   tl::engine engine(protocol, THALLIUM_CLIENT_MODE, true);

@@ -1543,11 +1543,8 @@ size_t ReadBlobFromBuffers(SharedMemoryContext *context, RpcContext *rpc,
 }
 
 size_t ReadBlobById(SharedMemoryContext *context, RpcContext *rpc, Arena *arena,
-                    api::Blob &dest, BlobID blob_id) {
+                    Blob blob, BlobID blob_id) {
   size_t result = 0;
-  hermes::Blob blob = {};
-  blob.data = dest.data();
-  blob.size = dest.size();
 
   BufferIdArray buffer_ids = {};
   if (hermes::BlobIsInSwap(blob_id)) {
@@ -1557,10 +1554,20 @@ size_t ReadBlobById(SharedMemoryContext *context, RpcContext *rpc, Arena *arena,
   } else {
     u32 *buffer_sizes = 0;
     buffer_ids = GetBufferIdsFromBlobId(arena, context, rpc, blob_id,
-                                          &buffer_sizes);
+                                        &buffer_sizes);
     result = ReadBlobFromBuffers(context, rpc, &blob, &buffer_ids,
                                  buffer_sizes);
   }
+
+  return result;
+}
+
+size_t ReadBlobById(SharedMemoryContext *context, RpcContext *rpc, Arena *arena,
+                    api::Blob &dest, BlobID blob_id) {
+  hermes::Blob blob = {};
+  blob.data = dest.data();
+  blob.size = dest.size();
+  size_t result = ReadBlobById(context, rpc, arena, blob, blob_id);
 
   return result;
 }
@@ -1641,7 +1648,8 @@ size_t ReadFromSwap(SharedMemoryContext *context, Blob blob,
 api::Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
                       PlacementSchema &schema, Blob blob,
                       const std::string &name, BucketID bucket_id,
-                      api::Context &ctx, bool called_from_buffer_organizer) {
+                      const api::Context &ctx,
+                      bool called_from_buffer_organizer) {
   api::Status result;
 
   if (ContainsBlob(context, rpc, bucket_id, name)
