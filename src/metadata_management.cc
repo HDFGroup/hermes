@@ -674,7 +674,7 @@ void LocalDestroyBlobById(SharedMemoryContext *context, RpcContext *rpc,
 
   if (blob_name.size() > 0) {
     MetadataManager *mdm = GetMetadataManagerFromContext(context);
-    DeleteBlobId(mdm, rpc, blob_name.c_str(), bucket_id);
+    DeleteBlobId(mdm, rpc, blob_name, bucket_id);
   } else {
     // TODO(chogan): @errorhandling
     DLOG(INFO) << "Expected to find blob_id " << blob_id.as_int
@@ -777,7 +777,7 @@ void RenameBucket(SharedMemoryContext *context, RpcContext *rpc, BucketID id,
                   const std::string &old_name, const std::string &new_name) {
   u32 target_node = id.bits.node_id;
   if (target_node == rpc->node_id) {
-    LocalRenameBucket(context, rpc, id, old_name.c_str(), new_name.c_str());
+    LocalRenameBucket(context, rpc, id, old_name, new_name);
   } else {
     RpcCall<bool>(rpc, target_node, "RemoteRenameBucket", id, old_name,
                   new_name);
