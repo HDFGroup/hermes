@@ -94,6 +94,8 @@ size_t RoundDownToMultiple(size_t val, size_t multiple);
  */
 void InitDefaultConfig(Config *config);
 
+void FailedLibraryCall(std::string func);
+
 namespace testing {
 
 enum class BlobSizeRange {

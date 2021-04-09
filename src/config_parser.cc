@@ -21,6 +21,7 @@
 #include <glog/logging.h>
 
 #include "hermes_types.h"
+#include "utils.h"
 #include "memory_management.h"
 
 // Steps to add a new configuration variable:
@@ -161,21 +162,17 @@ EntireFile ReadEntireFile(Arena *arena, const char *path) {
         }
 
       } else {
-        // TODO(chogan): @errorhandling
-        assert(!"ftell failed");
       }
     } else {
-      // TODO(chogan): @errorhandling
-      assert(!"fseek failed");
+      FailedLibraryCall("fseek");
     }
 
     if (fclose(fstream) != 0) {
-      // TODO(chogan): @errorhandling
+      FailedLibraryCall("fclose");
     }
 
   } else {
-    // TODO(chogan): @errorhandling
-    assert(!"fopen failed");
+    FailedLibraryCall("fopen");
   }
 
   return result;
