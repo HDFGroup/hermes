@@ -15,6 +15,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdlib.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -30,6 +31,14 @@ BucketClass *HermesBucketCreate(const char *name);
 void HermesBucketClose(BucketClass *bkt);
 
 void HermesBucketDestroy(BucketClass *bucket_ptr);
+
+bool HermesBucketContainsBlob(BucketClass *bkt, char *name);
+
+int HermesBucketPut(BucketClass *bkt, char *name, unsigned char *put_data,
+                    size_t size);
+
+size_t HermesBucketGet(BucketClass *bkt, char *blob_name, void *blob,
+                       size_t kPageSize);
 
 #ifdef __cplusplus
 }

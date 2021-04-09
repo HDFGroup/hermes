@@ -23,7 +23,7 @@ hermes::api::Context ctx;
 int HermesInitHermes(char *hermes_config) {
   int result = 0;
 
-  LOG(INFO) << "Wrapper: Initialize Hermes\n";
+  LOG(INFO) << "Hermes Wrapper: Initializing Hermes\n";
 
   hermes_ptr = hermes::InitHermesDaemon(hermes_config);
 
@@ -31,7 +31,7 @@ int HermesInitHermes(char *hermes_config) {
 }
 
 BucketClass *HermesBucketCreate(const char *name) {
-  LOG(INFO) << "Wrapper: Create Bucket " << name << '\n';
+  LOG(INFO) << "Hermes Wrapper: Creating Bucket " << name << '\n';
 
   try {
     return reinterpret_cast<BucketClass *>(new hermes::api::Bucket(
@@ -48,16 +48,52 @@ BucketClass *HermesBucketCreate(const char *name) {
 }
 
 void HermesBucketClose(BucketClass *bkt) {
-  LOG(INFO) << "Wrapper: Close Bucket " <<
+  LOG(INFO) << "Hermes Wrapper: Closing Bucket " <<
                reinterpret_cast<hermes::api::Bucket *>(bkt)->GetName() << '\n';
 
   reinterpret_cast<hermes::api::Bucket *>(bkt)->Close(ctx);
 }
 
-void HermesBucketDestroy(BucketClass *bkt_ptr) {
-  LOG(INFO) << "Destroy Bucket\n";
+void HermesBucketDestroy(BucketClass *bkt) {
+  LOG(INFO) << "Hermes Wrapper: Destroying Bucket\n";
 
-  delete reinterpret_cast<hermes::api::Bucket *>(bkt_ptr);
+  delete reinterpret_cast<hermes::api::Bucket *>(bkt);
+}
+
+bool HermesBucketContainsBlob(BucketClass *bkt, char *name) {
+  LOG(INFO) << "Hermes Wrapper: Checking if Bucket "
+            << reinterpret_cast<hermes::api::Bucket *>(bkt)->GetName()
+            << " contains Blob " << name << '\n';
+
+  return reinterpret_cast<hermes::api::Bucket *>(bkt)->ContainsBlob(name);
+}
+
+int HermesBucketPut(BucketClass *bkt, char *name, unsigned char *put_data,
+                     size_t size) {
+  LOG(INFO) << "Hermes Wrapper: Putting Blob " << name << " to bucket " <<
+               reinterpret_cast<hermes::api::Bucket *>(bkt)->GetName() << '\n';
+
+  hermes::api::Bucket *bucket = reinterpret_cast<hermes::api::Bucket *>(bkt);
+  hermes::api::Status status = bucket->Put(name, put_data, size, ctx);
+
+  return status.GetStatus();
+}
+
+size_t HermesBucketGet(BucketClass *bkt, char *blob_name, void *blob,
+                       size_t kPageSize) {
+  hermes::api::Blob get_result(kPageSize);
+
+  LOG(INFO) << "Hermes Wrapper: Getting blob " << blob_name << " from Bucket "
+            << reinterpret_cast<hermes::api::Bucket *>(bkt)->GetName();
+
+  hermes::api::Bucket *bucket = reinterpret_cast<hermes::api::Bucket *>(bkt);
+  size_t blob_size = bucket->Get(blob_name, get_result, ctx);
+  if (blob_size != kPageSize)
+    LOG(ERROR) << "Blob size error: expected to get " << kPageSize
+               << ", but only get " << blob_size << '\n';
+  blob = get_result.data();
+
+  return blob_size;
 }
 
 }  // extern "C"
