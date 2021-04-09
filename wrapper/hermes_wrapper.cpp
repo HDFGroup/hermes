@@ -69,7 +69,7 @@ bool HermesBucketContainsBlob(BucketClass *bkt, char *name) {
 }
 
 int HermesBucketPut(BucketClass *bkt, char *name, unsigned char *put_data,
-                     size_t size) {
+                    size_t size) {
   LOG(INFO) << "Hermes Wrapper: Putting Blob " << name << " to bucket " <<
                reinterpret_cast<hermes::api::Bucket *>(bkt)->GetName() << '\n';
 
@@ -79,8 +79,7 @@ int HermesBucketPut(BucketClass *bkt, char *name, unsigned char *put_data,
   return status.GetStatus();
 }
 
-size_t HermesBucketGet(BucketClass *bkt, char *blob_name, void *blob,
-                       size_t kPageSize) {
+void *HermesBucketGet(BucketClass *bkt, char *blob_name, size_t kPageSize) {
   hermes::api::Blob get_result(kPageSize);
 
   LOG(INFO) << "Hermes Wrapper: Getting blob " << blob_name << " from Bucket "
@@ -91,9 +90,7 @@ size_t HermesBucketGet(BucketClass *bkt, char *blob_name, void *blob,
   if (blob_size != kPageSize)
     LOG(ERROR) << "Blob size error: expected to get " << kPageSize
                << ", but only get " << blob_size << '\n';
-  blob = get_result.data();
-
-  return blob_size;
+  return get_result.data();
 }
 
 }  // extern "C"

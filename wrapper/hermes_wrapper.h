@@ -37,8 +37,7 @@ bool HermesBucketContainsBlob(BucketClass *bkt, char *name);
 int HermesBucketPut(BucketClass *bkt, char *name, unsigned char *put_data,
                     size_t size);
 
-size_t HermesBucketGet(BucketClass *bkt, char *blob_name, void *blob,
-                       size_t kPageSize);
+void *HermesBucketGet(BucketClass *bkt, char *blob_name, size_t kPageSize);
 
 #ifdef __cplusplus
 }
