@@ -34,7 +34,7 @@ void HermesBucketDestroy(BucketClass *bucket_ptr);
 
 bool HermesBucketContainsBlob(BucketClass *bkt, char *name);
 
-int HermesBucketPut(BucketClass *bkt, char *name, unsigned char *put_data,
+void HermesBucketPut(BucketClass *bkt, char *name, unsigned char *put_data,
                     size_t size);
 
 unsigned char *HermesBucketGet(BucketClass *bkt, char *blob_name,

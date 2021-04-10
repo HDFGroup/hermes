@@ -68,7 +68,7 @@ bool HermesBucketContainsBlob(BucketClass *bkt, char *name) {
   return reinterpret_cast<hermes::api::Bucket *>(bkt)->ContainsBlob(name);
 }
 
-int HermesBucketPut(BucketClass *bkt, char *name, unsigned char *put_data,
+void HermesBucketPut(BucketClass *bkt, char *name, unsigned char *put_data,
                     size_t size) {
   LOG(INFO) << "Hermes Wrapper: Putting Blob " << name << " to bucket " <<
                reinterpret_cast<hermes::api::Bucket *>(bkt)->GetName() << '\n';
@@ -76,7 +76,8 @@ int HermesBucketPut(BucketClass *bkt, char *name, unsigned char *put_data,
   hermes::api::Bucket *bucket = reinterpret_cast<hermes::api::Bucket *>(bkt);
   hermes::api::Status status = bucket->Put(name, put_data, size, ctx);
 
-  return status.GetStatus();
+  if (!status.Succeeded())
+    LOG(ERROR) << "Hermes Wrapper: HermesBucketPut failed\n";
 }
 
 unsigned char *HermesBucketGet(BucketClass *bkt, char *blob_name,
