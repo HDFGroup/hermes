@@ -92,7 +92,7 @@ void HermesBucketGet(BucketClass *bkt, char *blob_name, size_t kPageSize,
   if (blob_size != kPageSize)
     LOG(ERROR) << "Blob size error: expected to get " << kPageSize
                << ", but only get " << blob_size << '\n';
-  std::copy(get_result.begin(), get_result.end(), buf);
+  std::move(get_result.begin(), get_result.end(), buf);
 }
 
 }  // extern "C"
