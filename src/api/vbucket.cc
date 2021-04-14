@@ -309,7 +309,6 @@ Status VBucket::Delete(Context& ctx) {
               if (!fileBackedTrait->offset_map.empty()) {
                 auto iter = fileBackedTrait->offset_map.find(input.blob_name);
                 if (iter != fileBackedTrait->offset_map.end()) {
-
                   // TODO(hari): @errorhandling check return of StdIoPersistBlob
                   ret = StdIoPersistBlob(&hermes_->context_, &hermes_->rpc_,
                                          &hermes_->trans_arena_, blob_id, file,
