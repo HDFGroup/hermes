@@ -68,7 +68,7 @@ int main(int argc, char **argv) {
         for (int i = 0; i < num_blobs_per_rank; ++i) {
           std::string blob_name =
               "Blob_" + std::to_string(rank) + "_" + std::to_string(i);
-          auto exists = shared.Contain_blob(blob_name, bucket_name_temp);
+          auto exists = shared.ContainsBlob(blob_name, bucket_name_temp);
           Assert(exists);
         }
       }
@@ -84,7 +84,7 @@ int main(int argc, char **argv) {
         for (int i = 0; i < num_blobs_per_rank; ++i) {
           std::string blob_name =
               "Blob_" + std::to_string(rank) + "_" + std::to_string(i);
-          auto exists = shared.Contain_blob(blob_name, bucket_name_temp);
+          auto exists = shared.ContainsBlob(blob_name, bucket_name_temp);
           Assert(!exists);
         }
       }
