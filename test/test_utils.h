@@ -78,13 +78,12 @@ TargetID DefaultFileTargetId() {
 
 void GetAndVerifyBlob(api::Bucket &bucket, const std::string &blob_name,
                       const api::Blob &expected) {
-  api::Context ctx;
   api::Blob retrieved_blob;
   size_t expected_size = expected.size();
-  size_t retrieved_size = bucket.Get(blob_name, retrieved_blob, ctx);
+  size_t retrieved_size = bucket.Get(blob_name, retrieved_blob);
   Assert(expected_size == retrieved_size);
   retrieved_blob.resize(retrieved_size);
-  retrieved_size = bucket.Get(blob_name, retrieved_blob, ctx);
+  retrieved_size = bucket.Get(blob_name, retrieved_blob);
   Assert(expected_size == retrieved_size);
   Assert(retrieved_blob == expected);
 }

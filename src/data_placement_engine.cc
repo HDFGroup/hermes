@@ -398,6 +398,10 @@ Status CalculatePlacement(SharedMemoryContext *context, RpcContext *rpc,
       }
     }
 
+    if (targets.size() == 0) {
+      continue;
+    }
+
     std::vector<u64> node_state =
       GetRemainingTargetCapacities(context, rpc, targets);
 

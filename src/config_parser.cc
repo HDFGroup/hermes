@@ -21,6 +21,7 @@
 #include <glog/logging.h>
 
 #include "hermes_types.h"
+#include "utils.h"
 #include "memory_management.h"
 
 // Steps to add a new configuration variable:
@@ -80,6 +81,7 @@ enum ConfigVariable {
   ConfigVariable_BufferOrganizerPort,
   ConfigVariable_RpcHostNumberRange,
   ConfigVariable_RpcNumThreads,
+  ConfigVariable_PlacementPolicy,
 
   ConfigVariable_Count
 };
@@ -115,6 +117,7 @@ static const char *kConfigVariableStrings[ConfigVariable_Count] = {
   "buffer_organizer_port",
   "rpc_host_number_range",
   "rpc_num_threads",
+  "default_placement_policy",
 };
 
 struct Token {
@@ -159,21 +162,17 @@ EntireFile ReadEntireFile(Arena *arena, const char *path) {
         }
 
       } else {
-        // TODO(chogan): @errorhandling
-        assert(!"ftell failed");
       }
     } else {
-      // TODO(chogan): @errorhandling
-      assert(!"fseek failed");
+      FailedLibraryCall("fseek");
     }
 
     if (fclose(fstream) != 0) {
-      // TODO(chogan): @errorhandling
+      FailedLibraryCall("fclose");
     }
 
   } else {
-    // TODO(chogan): @errorhandling
-    assert(!"fopen failed");
+    FailedLibraryCall("fopen");
   }
 
   return result;
@@ -815,6 +814,22 @@ void ParseTokens(TokenList *tokens, Config *config) {
       }
       case ConfigVariable_RpcNumThreads: {
         config->rpc_num_threads = ParseInt(&tok);
+        break;
+      }
+      case ConfigVariable_PlacementPolicy: {
+        std::string policy = ParseString(&tok);
+
+        if (policy == "MinimizeIoTime") {
+          config->default_placement_policy =
+            api::PlacementPolicy::kMinimizeIoTime;
+        } else if (policy == "Random") {
+          config->default_placement_policy = api::PlacementPolicy::kRandom;
+        } else if (policy == "RoundRobin") {
+          config->default_placement_policy = api::PlacementPolicy::kRoundRobin;
+        } else {
+          LOG(FATAL) << "Unknown default_placement_policy: '" << policy << "'"
+                     << std::endl;
+        }
         break;
       }
       default: {

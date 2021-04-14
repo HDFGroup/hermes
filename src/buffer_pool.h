@@ -436,6 +436,9 @@ size_t ReadBlobFromBuffers(SharedMemoryContext *context, RpcContext *rpc,
                            u32 *buffer_sizes);
 
 size_t ReadBlobById(SharedMemoryContext *context, RpcContext *rpc, Arena *arena,
+                    Blob blob, BlobID blob_id);
+
+size_t ReadBlobById(SharedMemoryContext *context, RpcContext *rpc, Arena *arena,
                     api::Blob &dest, BlobID blob_id);
 
 size_t LocalWriteBufferById(SharedMemoryContext *context, BufferID id,
@@ -484,11 +487,13 @@ std::vector<f32> GetBandwidths(SharedMemoryContext *context);
 
 u32 GetBufferSize(SharedMemoryContext *context, RpcContext *rpc, BufferID id);
 bool BufferIsByteAddressable(SharedMemoryContext *context, BufferID id);
-int PlaceInHierarchy(SharedMemoryContext *context, RpcContext *rpc,
-                     SwapBlob swap_blob, const std::string &blob_name);
+api::Status PlaceInHierarchy(SharedMemoryContext *context, RpcContext *rpc,
+                             SwapBlob swap_blob, const std::string &blob_name,
+                             const api::Context &ctx);
 api::Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
                       PlacementSchema &schema, Blob blob,
-                      const std::string &name, BucketID bucket_id, int retries,
+                      const std::string &name, BucketID bucket_id,
+                      const api::Context &ctx,
                       bool called_from_buffer_organizer = false);
 api::Status StdIoPersistBucket(SharedMemoryContext *context, RpcContext *rpc,
                                Arena *arena, BucketID bucket_id,

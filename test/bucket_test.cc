@@ -50,13 +50,11 @@ void add_buffer_to_vector(hermes::api::Blob &vector, const char *buffer,
 int compress_blob(hermes::api::TraitInput &input, hermes::api::Trait *trait) {
   MyTrait *my_trait = (MyTrait *)trait;
 
-  hapi::Context ctx;
-  hapi::Bucket bkt(input.bucket_name, hermes_app, ctx);
+  hapi::Bucket bkt(input.bucket_name, hermes_app);
   hapi::Blob blob = {};
-  size_t blob_size = bkt.Get(input.blob_name, blob, ctx);
+  size_t blob_size = bkt.Get(input.blob_name, blob);
   blob.resize(blob_size);
-  bkt.Get(input.blob_name, blob, ctx);
-  bkt.Close(ctx);
+  bkt.Get(input.blob_name, blob);
   // If Hermes is already linked with a compression library, you can call the
   // function directly here. If not, the symbol will have to be dynamically
   // loaded and probably stored as a pointer in the Trait.
@@ -86,22 +84,21 @@ void TestBucketPersist(std::shared_ptr<hapi::Hermes> hermes) {
   constexpr int num_blobs = 3;
   constexpr int total_bytes = num_blobs * bytes_per_blob;
 
-  hapi::Context ctx;
   hapi::Status status;
   hapi::Blob blobx(bytes_per_blob, 'x');
   hapi::Blob bloby(bytes_per_blob, 'y');
   hapi::Blob blobz(bytes_per_blob, 'z');
-  hapi::Bucket bkt("persistent_bucket", hermes, ctx);
-  status = bkt.Put("blobx", blobx, ctx);
+  hapi::Bucket bkt("persistent_bucket", hermes);
+  status = bkt.Put("blobx", blobx);
   Assert(status.Succeeded());
-  status = bkt.Put("bloby", bloby, ctx);
+  status = bkt.Put("bloby", bloby);
   Assert(status.Succeeded());
-  status = bkt.Put("blobz", blobz, ctx);
+  status = bkt.Put("blobz", blobz);
   Assert(status.Succeeded());
 
   std::string saved_file("blobsxyz.txt");
-  bkt.Persist(saved_file, ctx);
-  bkt.Destroy(ctx);
+  bkt.Persist(saved_file);
+  bkt.Destroy();
   Assert(!bkt.IsValid());
 
   FILE *bkt_file = fopen(saved_file.c_str(), "r");
@@ -140,13 +137,12 @@ void TestBucketPersist(std::shared_ptr<hapi::Hermes> hermes) {
 }
 
 void TestPutOverwrite(std::shared_ptr<hapi::Hermes> hermes) {
-  hapi::Context ctx;
-  hapi::Bucket bucket("overwrite", hermes, ctx);
+  hapi::Bucket bucket("overwrite", hermes);
 
   std::string blob_name("1");
   size_t blob_size = KILOBYTES(6);
   hapi::Blob blob(blob_size, 'x');
-  hapi::Status status = bucket.Put(blob_name, blob, ctx);
+  hapi::Status status = bucket.Put(blob_name, blob);
   Assert(status.Succeeded());
 
   hermes::testing::GetAndVerifyBlob(bucket, blob_name, blob);
@@ -154,10 +150,94 @@ void TestPutOverwrite(std::shared_ptr<hapi::Hermes> hermes) {
   // NOTE(chogan): Overwrite the data
   size_t new_size = KILOBYTES(9);
   hapi::Blob new_blob(new_size, 'z');
-  status = bucket.Put(blob_name, new_blob, ctx);
+  status = bucket.Put(blob_name, new_blob);
   Assert(status.Succeeded());
 
   hermes::testing::GetAndVerifyBlob(bucket, blob_name, new_blob);
+
+  bucket.Destroy();
+}
+
+void TestCompressionTrait(std::shared_ptr<hapi::Hermes> hermes) {
+  hermes::api::Status status;
+
+  const std::string bucket_name = "compression";
+  hermes::api::Bucket my_bucket(bucket_name, hermes);
+  hermes::api::Blob p1(1024*1024*1, 255);
+  hermes::api::Blob p2(p1);
+
+  const std::string blob1_name = "Blob1";
+  const std::string blob2_name = "Blob2";
+  Assert(my_bucket.Put(blob1_name, p1).Succeeded());
+  Assert(my_bucket.Put(blob2_name, p2).Succeeded());
+
+  Assert(my_bucket.ContainsBlob(blob1_name));
+  Assert(my_bucket.ContainsBlob(blob2_name));
+
+  const std::string vbucket_name = "VB1";
+  hermes::api::VBucket my_vb(vbucket_name, hermes, false);
+  my_vb.Link(blob1_name, bucket_name);
+  my_vb.Link(blob2_name, bucket_name);
+
+  Assert(my_vb.ContainsBlob(blob1_name, bucket_name) == 1);
+  Assert(my_vb.ContainsBlob(blob2_name, bucket_name) == 1);
+
+  MyTrait trait;
+  trait.compress_level = 6;
+  // Compression Trait compresses all blobs on Attach
+  Assert(my_vb.Attach(&trait).Succeeded());
+
+  Assert(my_vb.Unlink(blob1_name, bucket_name).Succeeded());
+  Assert(my_vb.Detach(&trait).Succeeded());
+
+  Assert(my_vb.Delete().Succeeded());
+  Assert(my_bucket.Destroy().Succeeded());
+}
+
+void TestMultiGet(std::shared_ptr<hapi::Hermes> hermes) {
+  const size_t num_blobs = 4;
+  const int blob_size = KILOBYTES(4);
+
+  std::vector<std::string> blob_names(num_blobs);
+  for (size_t i = 0; i < num_blobs; ++i) {
+    blob_names[i]= "Blob" + std::to_string(i);
+  }
+
+  std::vector<hapi::Blob> blobs(num_blobs);
+  for (size_t i = 0; i < num_blobs; ++i) {
+    blobs[i] = hapi::Blob(blob_size, (char)i);
+  }
+
+  hapi::Context ctx;
+  const std::string bucket_name = "b1";
+  hapi::Bucket bucket(bucket_name, hermes, ctx);
+
+  for (size_t i = 0; i < num_blobs; ++i) {
+    Assert(bucket.Put(blob_names[i], blobs[i], ctx).Succeeded());
+  }
+
+  std::vector<hapi::Blob> retrieved_blobs(num_blobs);
+  std::vector<size_t> sizes = bucket.Get(blob_names, retrieved_blobs, ctx);
+
+  for (size_t i = 0; i < num_blobs; ++i) {
+    retrieved_blobs[i].resize(sizes[i]);
+  }
+
+  sizes = bucket.Get(blob_names, retrieved_blobs, ctx);
+  for (size_t i = 0; i < num_blobs; ++i) {
+    Assert(blobs[i] == retrieved_blobs[i]);
+    Assert(sizes[i] == retrieved_blobs[i].size());
+  }
+
+  // Test Get into user buffer
+  hermes::u8 user_buffer[blob_size] = {};
+  size_t b1_size = bucket.Get(blob_names[0], nullptr, 0, ctx);
+  Assert(b1_size == blob_size);
+  b1_size = bucket.Get(blob_names[0], user_buffer, b1_size, ctx);
+
+  for (size_t i = 0; i < b1_size; ++i) {
+    Assert(user_buffer[i] == blobs[0][i]);
+  }
 
   bucket.Destroy(ctx);
 }
@@ -178,51 +258,10 @@ int main(int argc, char **argv) {
   hermes_app = hermes::api::InitHermes(config_file);
 
   if (hermes_app->IsApplicationCore()) {
-    hermes::api::Context ctx;
-    hermes::api::Status status;
-
-    hermes::api::Bucket my_bucket("compression", hermes_app, ctx);
-    hermes_app->Display_bucket();
-    hermes::api::Blob p1(1024*1024*400, 255);
-    hermes::api::Blob p2(p1);
-    status = my_bucket.Put("Blob1", p1, ctx);
-    Assert(status.Succeeded());
-    status = my_bucket.Put("Blob2", p2, ctx);
-    Assert(status.Succeeded());
-
-    if (my_bucket.ContainsBlob("Blob1"))
-      std::cout<< "Found Blob1\n";
-    else
-      std::cout<< "Not found Blob1\n";
-    if (my_bucket.ContainsBlob("Blob2"))
-      std::cout<< "Found Blob2\n";
-    else
-      std::cout<< "Not found Blob2\n";
-
-    hermes::api::VBucket my_vb("VB1", hermes_app, false, ctx);
-    hermes_app->Display_vbucket();
-    my_vb.Link("Blob1", "compression", ctx);
-    my_vb.Link("Blob2", "compression", ctx);
-    if (my_vb.Contain_blob("Blob1", "compression") == 1)
-      std::cout << "Found Blob1 from compression bucket in VBucket VB1\n";
-    else
-      std::cout << "Not found Blob1 from compression bucket in VBucket VB1\n";
-    if (my_vb.Contain_blob("Blob2", "compression") == 1)
-      std::cout << "Found Blob2 from compression bucket in VBucket VB1\n";
-    else
-      std::cout << "Not found Blob2 from compression bucket in VBucket VB1\n";
-
-    // compression level
-    MyTrait trait;
-    trait.compress_level = 6;
-    my_vb.Attach(&trait, ctx);  // compress action to data starts
-
+    TestCompressionTrait(hermes_app);
     TestBucketPersist(hermes_app);
     TestPutOverwrite(hermes_app);
-
-    ///////
-    my_vb.Unlink("Blob1", "VB1", ctx);
-    my_vb.Detach(&trait, ctx);
+    TestMultiGet(hermes_app);
   } else {
     // Hermes core. No user code here.
   }

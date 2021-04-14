@@ -27,6 +27,12 @@ bool VBucket::IsValid() const {
   return !IsNullVBucketId(id_);
 }
 
+Status VBucket::Link(std::string blob_name, std::string bucket_name) {
+  Status result = Link(blob_name, bucket_name, ctx_);
+
+  return result;
+}
+
 Status VBucket::Link(std::string blob_name, std::string bucket_name,
                      Context& ctx) {
   (void)ctx;
@@ -49,12 +55,17 @@ Status VBucket::Link(std::string blob_name, std::string bucket_name,
       }
     }
   } else {
-    // TODO(hari): @errorhandling
     ret = BLOB_NOT_IN_BUCKET;
     LOG(ERROR) << ret.Msg();
   }
 
   return ret;
+}
+
+Status VBucket::Unlink(std::string blob_name, std::string bucket_name) {
+  Status result = Unlink(blob_name, bucket_name, ctx_);
+
+  return result;
 }
 
 Status VBucket::Unlink(std::string blob_name, std::string bucket_name,
@@ -82,7 +93,6 @@ Status VBucket::Unlink(std::string blob_name, std::string bucket_name,
     }
   }
   if (!found) {
-    // TODO(hari): @errorhandling
     ret = BLOB_NOT_LINKED_TO_VBUCKET;
     LOG(ERROR) << ret.Msg();
   }
@@ -90,7 +100,7 @@ Status VBucket::Unlink(std::string blob_name, std::string bucket_name,
   return ret;
 }
 
-bool VBucket::Contain_blob(std::string blob_name, std::string bucket_name) {
+bool VBucket::ContainsBlob(std::string blob_name, std::string bucket_name) {
   bool ret = false;
   std::string bk_tmp, blob_tmp;
 
@@ -115,7 +125,6 @@ Blob& VBucket::GetBlob(std::string blob_name, std::string bucket_name) {
   size_t blob_size = bkt.Get(blob_name, local_blob, ctx);
   local_blob.resize(blob_size);
   bkt.Get(blob_name, local_blob, ctx);
-  bkt.Close(ctx);
   return local_blob;
 }
 
@@ -125,6 +134,12 @@ std::vector<std::string> VBucket::GetLinks(Predicate pred, Context& ctx) {
             << '\n';
 
   return std::vector<std::string>();
+}
+
+Status VBucket::Attach(Trait* trait) {
+  Status result = Attach(trait, ctx_);
+
+  return result;
 }
 
 Status VBucket::Attach(Trait* trait, Context& ctx) {
@@ -153,12 +168,17 @@ Status VBucket::Attach(Trait* trait, Context& ctx) {
     }
     attached_traits_.push_back(trait);
   } else {
-    // TODO(hari): @errorhandling throw trait already exists.
     ret = TRAIT_EXISTS_ALREADY;
     LOG(ERROR) << ret.Msg();
   }
 
   return ret;
+}
+
+Status VBucket::Detach(Trait* trait) {
+  Status result = Detach(trait, ctx_);
+
+  return result;
 }
 
 Status VBucket::Detach(Trait* trait, Context& ctx) {
@@ -193,7 +213,6 @@ Status VBucket::Detach(Trait* trait, Context& ctx) {
     }
     attached_traits_.erase(selected_trait_iter);
   } else {
-    // TODO(hari): @errorhandling throw trait not valid.
     ret = TRAIT_NOT_VALID;
     LOG(ERROR) << ret.Msg();
   }
@@ -213,6 +232,12 @@ std::vector<TraitID> VBucket::GetTraits(Predicate pred, Context& ctx) {
     attached_traits.push_back(t->id);
   }
   return attached_traits;
+}
+
+Status VBucket::Delete() {
+  Status result = Delete(ctx_);
+
+  return result;
 }
 
 Status VBucket::Delete(Context& ctx) {
@@ -261,20 +286,18 @@ Status VBucket::Delete(Context& ctx) {
                   auto blob_id =
                     GetBlobId(&hermes_->context_, &hermes_->rpc_, ci->second,
                               bucket_id);
-                  // TODO(hari): @errorhandling check return of StdIoPersistBlob
                   ret = StdIoPersistBlob(&hermes_->context_, &hermes_->rpc_,
                                          &hermes_->trans_arena_, blob_id, file,
                                          iter->second);
-                  if (!ret.Succeeded())
+                  if (!ret.Succeeded()) {
                     LOG(ERROR) << ret.Msg();
+                  }
                 } else {
-                  // TODO(hari): @errorhandling map doesnt have the blob linked.
                   ret = BLOB_NOT_LINKED_IN_MAP;
                   LOG(ERROR) << ret.Msg();
                 }
 
               } else {
-                // TODO(hari): @errorhandling offset_map should not be empty
                 ret = OFFSET_MAP_EMPTY;
                 LOG(ERROR) << ret.Msg();
               }
@@ -295,7 +318,6 @@ Status VBucket::Delete(Context& ctx) {
       if (file != nullptr) {
         fflush(file);
         if (fclose(file) != 0) {
-          // TODO(chogan): @errorhandling
           ret = FCLOSE_FAILED;
           LOG(ERROR) << ret.Msg() << strerror(errno);
         }
