@@ -36,18 +36,20 @@ class VBucket {
   bool persist;
   /** internal Hermes object owned by vbucket */
   std::shared_ptr<Hermes> hermes_;
+  /** The Context for this VBucket. */
+  Context ctx_;
 
  public:
   VBucket(std::string initial_name, std::shared_ptr<Hermes> const &h,
-          bool persist, Context ctx)
+          bool persist, Context ctx = Context())
       : name_(initial_name),
         id_({{0, 0}}),
         attached_traits_(),
         local_blob(),
         persist(persist),
-        hermes_(h) {
+        hermes_(h),
+        ctx_(ctx) {
     LOG(INFO) << "Create VBucket " << initial_name << std::endl;
-    (void)ctx;
     if (IsVBucketNameTooLong(name_)) {
       id_.as_int = 0;
       throw std::length_error("VBucket name exceeds maximum size of " +
@@ -71,12 +73,14 @@ class VBucket {
 
   /** link a blob to this vbucket */
   Status Link(std::string blob_name, std::string bucket_name, Context &ctx);
+  Status Link(std::string blob_name, std::string bucket_name);
 
   /** unlink a blob from this vbucket */
   Status Unlink(std::string blob_name, std::string bucket_name, Context &ctx);
+  Status Unlink(std::string blob_name, std::string bucket_name);
 
   /** check if blob is in this vbucket */
-  bool Contain_blob(std::string blob_name, std::string bucket_name);
+  bool ContainsBlob(std::string blob_name, std::string bucket_name);
 
   /** get a blob linked to this vbucket */
   Blob &GetBlob(std::string blob_name, std::string bucket_name);
@@ -87,9 +91,11 @@ class VBucket {
 
   /** attach a trait to this vbucket */
   Status Attach(Trait *trait, Context &ctx);
+  Status Attach(Trait *trait);
 
   /** detach a trait to this vbucket */
   Status Detach(Trait *trait, Context &ctx);
+  Status Detach(Trait *trait);
 
   /** retrieves the subset of attached traits satisfying pred */
   template <class Predicate>
@@ -98,6 +104,7 @@ class VBucket {
   /** delete a vBucket */
   /** decrements the links counts of blobs in buckets */
   Status Delete(Context &ctx);
+  Status Delete();
 };  // class VBucket
 
 }  // namespace api

@@ -14,6 +14,7 @@ Hermes is a heterogeneous aware, multi-tiered, dynamic, and distributed I/O buff
   * Download the [OR-Tools binary distribution for C++](https://developers.google.com/optimization/install/cpp).
   * Setup `ORTOOLS_DIR` as a cmake environment variable.
 * MPI (tested with MPICH `3.3.2` and OpenMPI `4.0.3`).
+* The [Catch2](https://github.com/catchorg/Catch2) testing framework (only required if built with `-DBUILD_TESTING=ON`)
 
 ## Building
 

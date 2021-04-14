@@ -114,7 +114,8 @@ static void TestGetBandwidths() {
 }
 
 static hapi::Status ForceBlobToSwap(hapi::Hermes *hermes, hermes::u64 id,
-                                    hapi::Blob &blob, const char *blob_name) {
+                                    hapi::Blob &blob, const char *blob_name,
+                                    hapi::Context &ctx) {
   using namespace hermes;  // NOLINT(*)
   PlacementSchema schema;
   schema.push_back({blob.size(), testing::DefaultRamTargetId()});
@@ -123,9 +124,8 @@ static hapi::Status ForceBlobToSwap(hapi::Hermes *hermes, hermes::u64 id,
   internal_blob.size = blob.size();
   hermes::BucketID bucket_id = {};
   bucket_id.as_int = id;
-  int retries = 3;
   hapi::Status result = PlaceBlob(&hermes->context_, &hermes->rpc_, schema,
-                                  internal_blob, blob_name, bucket_id, retries);
+                                  internal_blob, blob_name, bucket_id, ctx);
 
   return result;
 }
@@ -165,16 +165,18 @@ static void TestBlobOverwrite() {
   std::string blob_name("1");
   size_t blob_size = KILOBYTES(2);
   hapi::Blob blob(blob_size, '1');
-  hapi::Status status = bucket.Put(blob_name, blob, ctx);
+  hapi::Status status = bucket.Put(blob_name, blob);
   Assert(status.Succeeded());
 
   Assert(buffers_available[slab_index] == 1);
 
   // NOTE(chogan): Overwrite the data
   hapi::Blob new_blob(blob_size, '2');
-  status = bucket.Put(blob_name, new_blob, ctx);
+  Assert(bucket.Put(blob_name, new_blob).Succeeded());
 
   Assert(buffers_available[slab_index] == 1);
+
+  bucket.Destroy();
 
   hermes->Finalize(true);
 }
@@ -191,19 +193,19 @@ static void TestSwap() {
   hapi::Blob data(data_size, 'x');
   std::string blob_name("swap_blob");
   hapi::Status status = ForceBlobToSwap(hermes.get(), bucket.GetId(), data,
-                                        blob_name.c_str());
+                                        blob_name.c_str(), ctx);
   Assert(status == hermes::BLOB_IN_SWAP_PLACE);
   // NOTE(chogan): The Blob is in the swap space, but the API behaves as normal.
   Assert(bucket.ContainsBlob(blob_name));
 
   hapi::Blob get_result;
-  size_t blob_size = bucket.Get(blob_name, get_result, ctx);
+  size_t blob_size = bucket.Get(blob_name, get_result);
   get_result.resize(blob_size);
-  blob_size = bucket.Get(blob_name, get_result, ctx);
+  blob_size = bucket.Get(blob_name, get_result);
 
   Assert(get_result == data);
 
-  bucket.Destroy(ctx);
+  bucket.Destroy();
 
   hermes->Finalize(true);
 }
@@ -220,7 +222,7 @@ static void TestBufferOrganizer() {
   // NOTE(chogan): Fill our single buffer with a blob.
   hapi::Blob data1(KILOBYTES(4), 'x');
   std::string blob1_name("bo_blob1");
-  hapi::Status status = bucket.Put(blob1_name, data1, ctx);
+  hapi::Status status = bucket.Put(blob1_name, data1);
   Assert(status.Succeeded());
   Assert(bucket.ContainsBlob(blob1_name));
 
@@ -228,13 +230,13 @@ static void TestBufferOrganizer() {
   hapi::Blob data2(KILOBYTES(4), 'y');
   std::string blob2_name("bo_blob2");
   status = ForceBlobToSwap(hermes.get(), bucket.GetId(), data2,
-                           blob2_name.c_str());
+                           blob2_name.c_str(), ctx);
   Assert(status == hermes::BLOB_IN_SWAP_PLACE);
   Assert(bucket.BlobIsInSwap(blob2_name));
 
   // NOTE(chogan): Delete the first blob, which will make room for the second,
   // and the buffer organizer should move it from swap space to the hierarchy.
-  bucket.DeleteBlob(blob1_name, ctx);
+  bucket.DeleteBlob(blob1_name);
 
   // NOTE(chogan): Give the BufferOrganizer time to finish.
   std::this_thread::sleep_for(std::chrono::seconds(3));
@@ -243,13 +245,13 @@ static void TestBufferOrganizer() {
   Assert(!bucket.BlobIsInSwap(blob2_name));
 
   hapi::Blob get_result;
-  size_t blob_size = bucket.Get(blob2_name, get_result, ctx);
+  size_t blob_size = bucket.Get(blob2_name, get_result);
   get_result.resize(blob_size);
-  blob_size = bucket.Get(blob2_name, get_result, ctx);
+  blob_size = bucket.Get(blob2_name, get_result);
 
   Assert(get_result == data2);
 
-  bucket.Destroy(ctx);
+  bucket.Destroy();
 
   hermes->Finalize(true);
 }
