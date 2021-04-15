@@ -546,8 +546,8 @@ u64 GetFromStorage(MetadataManager *mdm, const char *key, MapType map_type) {
 std::string ReverseGetFromStorage(MetadataManager *mdm, u64 id,
                                   MapType map_type) {
   std::string result;
-  size_t map_size = GetStoredMapSize(mdm, map_type);
   IdMap *map = GetMap(mdm, map_type);
+  size_t map_size = shlen(map);
 
   // TODO(chogan): @optimization This could be more efficient if necessary
   for (size_t i = 0; i < map_size; ++i) {
