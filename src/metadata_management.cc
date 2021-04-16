@@ -622,7 +622,8 @@ void AttachBlobToBucket(SharedMemoryContext *context, RpcContext *rpc,
                         bool is_swap_blob) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
 
-  int target_node = HashString(mdm, rpc, blob_name);
+  std::string internal_name = MakeInternalBlobName(blob_name, bucket_id);
+  int target_node = HashString(mdm, rpc, internal_name.c_str());
   BlobID blob_id = {};
   // NOTE(chogan): A negative node_id indicates a swap blob
   blob_id.bits.node_id = is_swap_blob ? -target_node : target_node;
