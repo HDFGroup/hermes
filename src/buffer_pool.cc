@@ -1670,7 +1670,8 @@ api::Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
     HERMES_END_TIMED_BLOCK();
 
     // NOTE(chogan): Update all metadata associated with this Put
-    AttachBlobToBucket(context, rpc, name.c_str(), bucket_id, buffer_ids);
+    AttachBlobToBucket(context, rpc, name.c_str(), bucket_id, buffer_ids,
+                       false, called_from_buffer_organizer);
   } else {
     if (called_from_buffer_organizer) {
       result = PLACE_SWAP_BLOB_TO_BUF_FAILED;
