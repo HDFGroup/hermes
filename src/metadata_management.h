@@ -197,7 +197,7 @@ BlobID GetBlobId(SharedMemoryContext *context, RpcContext *rpc,
 /**
  *
  */
-std::string GetBlobNameFromId(MetadataManager *mdm, RpcContext *rpc,
+std::string GetBlobNameFromId(SharedMemoryContext *context, RpcContext *rpc,
                               BlobID blob_id);
 
 /**
@@ -336,6 +336,32 @@ void LocalBeginGlobalTicketMutex(MetadataManager *mdm);
  */
 void LocalEndGlobalTicketMutex(MetadataManager *mdm);
 
+/**
+ *
+ */
+void AttachBlobToVBucket(SharedMemoryContext *context, RpcContext *rpc,
+                         const char *blob_name, const char *bucket_name,
+                         VBucketID vbucket_id);
+
+/**
+ *
+ */
+void RemoveBlobFromVBucketInfo(SharedMemoryContext *context, RpcContext *rpc,
+                               VBucketID vbucket_id, const char *blob_name,
+                               const char *bucket_name);
+
+/**
+ *
+ */
+std::vector<BlobID> GetBlobsFromVBucketInfo(SharedMemoryContext *context,
+                                            RpcContext *rpc,
+                                            VBucketID vbucket_id);
+
+/**
+ *
+ */
+std::string GetBucketNameById(SharedMemoryContext *context, RpcContext *rpc,
+                              BucketID id);
 }  // namespace hermes
 
 #endif  // HERMES_METADATA_MANAGEMENT_H_
