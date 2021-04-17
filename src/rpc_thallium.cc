@@ -245,7 +245,7 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
   auto rpc_rename_bucket =
     [context, rpc](const request &req, BucketID id, const string &old_name,
                    const string &new_name) {
-      LocalRenameBucket(context, rpc, id, old_name.c_str(), new_name.c_str());
+      LocalRenameBucket(context, rpc, id, old_name, new_name);
       req.respond(true);
     };
 
@@ -337,6 +337,22 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
     state->engine->finalize();
   };
 
+  auto rpc_remove_blob_from_vbucket_info = [context](const request &req,
+                                                    VBucketID vbucket_id,
+                                                    BlobID blob_id) {
+    LocalRemoveBlobFromVBucketInfo(context, vbucket_id, blob_id);
+    req.respond(true);
+  };
+  auto rpc_get_blobs_from_vbucket_info = [context](const request &req,
+                                                  VBucketID vbucket_id) {
+    auto ret = LocalGetBlobsFromVBucketInfo(context, vbucket_id);
+    req.respond(ret);
+  };
+  auto rpc_get_bucket_name_by_id = [context](const request &req, BucketID id) {
+    auto ret = LocalGetBucketNameById(context, id);
+    req.respond(ret);
+  };
+
   // TODO(chogan): Currently these three are only used for testing.
   rpc_server->define("GetBuffers", rpc_get_buffers);
   rpc_server->define("SplitBuffers", rpc_split_buffers).disable_response();
@@ -383,6 +399,12 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
                      rpc_get_bucket_id_from_blob_id);
   rpc_server->define("RemoteGetBlobNameFromId", rpc_get_blob_name_from_id);
   rpc_server->define("RemoteFinalize", rpc_finalize).disable_response();
+  rpc_server->define("RemoteRemoveBlobFromVBucketInfo",
+                     rpc_remove_blob_from_vbucket_info);
+  rpc_server->define("RemoteGetBlobsFromVBucketInfo",
+                     rpc_get_blobs_from_vbucket_info);
+  rpc_server->define("RemoteGetBucketNameById",
+                     rpc_get_bucket_name_by_id);
 }
 
 void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
@@ -404,22 +426,22 @@ void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
   auto rpc_place_in_hierarchy = [context, rpc](const tl::request &req,
                                                SwapBlob swap_blob,
                                                const std::string name,
-                                               int retries) {
+                                               api::Context ctx) {
     (void)req;
-    for (int i = 0; i < retries; ++i) {
+    for (int i = 0; i < ctx.buffer_organizer_retries; ++i) {
       LOG(INFO) << "Buffer Organizer placing blob '" << name
-                << "' in hierarchy. Attempt " << i + 1 << " of " << retries
-                << std::endl;
-      int result = PlaceInHierarchy(context, rpc, swap_blob, name);
-      if (result == 0) {
+                << "' in hierarchy. Attempt " << i + 1 << " of "
+                << ctx.buffer_organizer_retries << std::endl;
+      api::Status result = PlaceInHierarchy(context, rpc, swap_blob, name, ctx);
+      if (result.Succeeded()) {
         break;
       } else {
-        // TODO(chogan): We probably don't want to sleep here, but for now this
-        // enables testing.
-        double sleep_ms = 2000;
         ThalliumState *state = GetThalliumState(rpc);
 
         if (state && state->bo_engine) {
+          // TODO(chogan): We probably don't want to sleep here, but for now
+          // this enables testing.
+          double sleep_ms = 2000;
           tl::thread::self().sleep(*state->bo_engine, sleep_ms);
         }
       }
@@ -435,10 +457,6 @@ void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
     for (int i = 0; i < retries; ++i) {
       // TODO(chogan): MoveToTarget(context, rpc, target_id, swap_blob);
       HERMES_NOT_IMPLEMENTED_YET;
-      int result = 0;
-      if (result == 0) {
-        break;
-      }
     }
   };
 
@@ -450,7 +468,7 @@ void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
 
 void TriggerBufferOrganizer(RpcContext *rpc, const char *func_name,
                             const std::string &blob_name, SwapBlob swap_blob,
-                            int retries) {
+                            const api::Context &ctx) {
   std::string server_name = GetServerName(rpc, rpc->node_id, true);
   std::string protocol = GetProtocol(rpc);
   tl::engine engine(protocol, THALLIUM_CLIENT_MODE, true);
@@ -458,7 +476,7 @@ void TriggerBufferOrganizer(RpcContext *rpc, const char *func_name,
   tl::endpoint server = engine.lookup(server_name);
   remote_proc.disable_response();
   // TODO(chogan): Templatize?
-  remote_proc.on(server)(swap_blob, blob_name, retries);
+  remote_proc.on(server)(swap_blob, blob_name, ctx);
 }
 
 void StartGlobalSystemViewStateUpdateThread(SharedMemoryContext *context,

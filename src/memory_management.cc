@@ -85,21 +85,22 @@ size_t GetRemainingCapacity(Arena *arena) {
   return result;
 }
 
+/**
+ * \brief The maximum capacity of \p arena becomes \p new_size
+ */
 void GrowArena(Arena *arena, size_t new_size) {
-  if (new_size == 0) {
-    // TODO(chogan): @errorhandling
-    HERMES_NOT_IMPLEMENTED_YET;
-  }
-
-  if (arena->capacity != new_size) {
+  if (new_size > arena->capacity) {
     void *new_base = (u8 *)realloc(arena->base, new_size);
-    if (new_base != arena->base) {
+    if (new_base) {
       arena->base = (u8 *)new_base;
       arena->capacity = new_size;
     } else {
-      // TODO(chogan): @errorhandling
-      assert(!"GrowArena failed\n");
+      LOG(FATAL) << "realloc failed in " << __func__ << std::endl;
     }
+  } else {
+    LOG(WARNING) << __func__ << ": Not growing arena. "
+                 << "Only accepts a size greater than the current arena "
+                 << "capacity." << std::endl;
   }
 }
 
@@ -394,7 +395,6 @@ u8 *HeapPushSize(Heap *heap, u32 size) {
       }
       EndTicketMutex(&heap->mutex);
     } else {
-      // TODO(chogan): @errorhandling
       heap->error_handler();
     }
   }

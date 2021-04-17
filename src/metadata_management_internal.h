@@ -125,5 +125,12 @@ VBucketID LocalGetOrCreateVBucketId(SharedMemoryContext *context,
 u64 HexStringToU64(const std::string &s);
 std::string MakeInternalBlobName(const std::string &name, BucketID id);
 
+void LocalRemoveBlobFromVBucketInfo(SharedMemoryContext *context,
+                                    VBucketID vbucket_id, BlobID blob_id);
+std::vector<BlobID> LocalGetBlobsFromVBucketInfo(SharedMemoryContext *context,
+                                                 VBucketID vbucket_id);
+std::string LocalGetBucketNameById(SharedMemoryContext *context,
+                                   BucketID blob_id);
+
 }  // namespace hermes
 #endif  // HERMES_METADATA_MANAGEMENT_INTERNAL_H_

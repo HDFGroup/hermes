@@ -622,7 +622,8 @@ void AttachBlobToBucket(SharedMemoryContext *context, RpcContext *rpc,
                         bool is_swap_blob) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
 
-  int target_node = HashString(mdm, rpc, blob_name);
+  std::string internal_name = MakeInternalBlobName(blob_name, bucket_id);
+  int target_node = HashString(mdm, rpc, internal_name.c_str());
   BlobID blob_id = {};
   // NOTE(chogan): A negative node_id indicates a swap blob
   blob_id.bits.node_id = is_swap_blob ? -target_node : target_node;
@@ -674,7 +675,7 @@ void LocalDestroyBlobById(SharedMemoryContext *context, RpcContext *rpc,
 
   if (blob_name.size() > 0) {
     MetadataManager *mdm = GetMetadataManagerFromContext(context);
-    DeleteBlobId(mdm, rpc, blob_name.c_str(), bucket_id);
+    DeleteBlobId(mdm, rpc, blob_name, bucket_id);
   } else {
     // TODO(chogan): @errorhandling
     DLOG(INFO) << "Expected to find blob_id " << blob_id.as_int
@@ -719,7 +720,7 @@ void RenameBlob(SharedMemoryContext *context, RpcContext *rpc,
     DeleteBlobId(mdm, rpc, old_name, bucket_id);
     PutBlobId(mdm, rpc, new_name, blob_id, bucket_id);
   } else {
-    // TODO(chogan): @errorhandling
+    LOG(ERROR) << "Invalid BlobID for Blob '" << old_name << "'" << std::endl;
   }
 }
 
@@ -777,7 +778,7 @@ void RenameBucket(SharedMemoryContext *context, RpcContext *rpc, BucketID id,
                   const std::string &old_name, const std::string &new_name) {
   u32 target_node = id.bits.node_id;
   if (target_node == rpc->node_id) {
-    LocalRenameBucket(context, rpc, id, old_name.c_str(), new_name.c_str());
+    LocalRenameBucket(context, rpc, id, old_name, new_name);
   } else {
     RpcCall<bool>(rpc, target_node, "RemoteRenameBucket", id, old_name,
                   new_name);
@@ -1199,4 +1200,57 @@ GetRemainingTargetCapacities(SharedMemoryContext *context, RpcContext *rpc,
   return result;
 }
 
+void AttachBlobToVBucket(SharedMemoryContext *context, RpcContext *rpc,
+                         const char *blob_name, const char *bucket_name,
+                         VBucketID vbucket_id) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  BucketID bucket_id = GetBucketId(context, rpc, bucket_name);
+  BlobID blob_id = GetBlobId(context, rpc, blob_name, bucket_id);
+  AddBlobIdToVBucket(mdm, rpc, blob_id, vbucket_id);
+}
+
+std::string LocalGetBucketNameById(SharedMemoryContext *context,
+                                   BucketID blob_id) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  std::string bucket_name =
+      ReverseGetFromStorage(mdm, blob_id.as_int, kMapType_Bucket);
+  return bucket_name;
+}
+
+std::vector<BlobID> GetBlobsFromVBucketInfo(SharedMemoryContext *context,
+                                            RpcContext *rpc,
+                                            VBucketID vbucket_id) {
+  u32 target_node = vbucket_id.bits.node_id;
+  if (target_node == rpc->node_id) {
+    return LocalGetBlobsFromVBucketInfo(context, vbucket_id);
+  } else {
+    return RpcCall<std::vector<BlobID>>(
+        rpc, target_node, "RemoteGetBlobsFromVBucketInfo", vbucket_id);
+  }
+}
+
+void RemoveBlobFromVBucketInfo(SharedMemoryContext *context, RpcContext *rpc,
+                               VBucketID vbucket_id, const char *blob_name,
+                               const char *bucket_name) {
+  BucketID bucket_id = GetBucketId(context, rpc, bucket_name);
+  BlobID blob_id = GetBlobId(context, rpc, blob_name, bucket_id);
+  u32 target_node = vbucket_id.bits.node_id;
+  if (target_node == rpc->node_id) {
+    LocalRemoveBlobFromVBucketInfo(context, vbucket_id, blob_id);
+  } else {
+    RpcCall<bool>(rpc, target_node, "RemoteRemoveBlobFromVBucketInfo",
+                  vbucket_id, blob_id);
+  }
+}
+
+std::string GetBucketNameById(SharedMemoryContext *context, RpcContext *rpc,
+                              BucketID id) {
+  auto target_node = id.bits.node_id;
+  if (target_node == rpc->node_id) {
+    return LocalGetBucketNameById(context, id);
+  } else {
+    return RpcCall<std::string>(rpc, target_node, "RemoteGetBucketNameById",
+                                id);
+  }
+}
 }  // namespace hermes
