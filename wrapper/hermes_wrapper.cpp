@@ -51,7 +51,7 @@ void HermesBucketClose(BucketClass *bkt) {
   LOG(INFO) << "Hermes Wrapper: Closing Bucket " <<
                reinterpret_cast<hermes::api::Bucket *>(bkt)->GetName() << '\n';
 
-  reinterpret_cast<hermes::api::Bucket *>(bkt)->Close(ctx);
+  reinterpret_cast<hermes::api::Bucket *>(bkt)->Release(ctx);
 }
 
 void HermesBucketDestroy(BucketClass *bkt) {
