@@ -31,7 +31,6 @@ class VBucket {
  private:
   std::string name_;
   VBucketID id_;
-  std::list<std::pair<std::string, std::string>> linked_blobs_;
   std::list<Trait *> attached_traits_;
   Blob local_blob;
   bool persist;
@@ -44,8 +43,7 @@ class VBucket {
   VBucket(std::string initial_name, std::shared_ptr<Hermes> const &h,
           bool persist, Context ctx = Context())
       : name_(initial_name),
-        id_({0, 0}),
-        linked_blobs_(),
+        id_({{0, 0}}),
         attached_traits_(),
         local_blob(),
         persist(persist),
@@ -66,7 +64,6 @@ class VBucket {
 
   ~VBucket() {
     name_.clear();
-    linked_blobs_.clear();
   }
 
   bool IsValid() const;
@@ -88,10 +85,9 @@ class VBucket {
   /** get a blob linked to this vbucket */
   Blob &GetBlob(std::string blob_name, std::string bucket_name);
 
-  /** retrieves the subset of links satisfying pred */
+  /** retrieves the subset of blob links satisfying pred */
   /** could return iterator */
-  template <class Predicate>
-  std::vector<std::string> GetLinks(Predicate pred, Context &ctx);
+  std::vector<BlobID> GetLinks(Context &ctx);
 
   /** attach a trait to this vbucket */
   Status Attach(Trait *trait, Context &ctx);
