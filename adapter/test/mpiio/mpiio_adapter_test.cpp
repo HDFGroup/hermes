@@ -274,9 +274,9 @@ void test_close() {
 }
 void test_write(const void* ptr, size_t count, MPI_Datatype datatype) {
   MPI_Status stat_orig, stat_cmp;
-  auto ret_orig = MPI_File_write(*fh_orig, ptr, count, datatype,&stat_orig);
+  auto ret_orig = MPI_File_write(*fh_orig, ptr, count, datatype, &stat_orig);
   int size_written;
-  auto ret_cmp = MPI_File_write(*fh_cmp, ptr, count, datatype,&stat_cmp);
+  auto ret_cmp = MPI_File_write(*fh_cmp, ptr, count, datatype, &stat_cmp);
   REQUIRE(ret_orig == ret_cmp);
   MPI_Get_count(&stat_orig, datatype, &size_written_orig);
   MPI_Get_count(&stat_cmp, datatype, &size_written);
@@ -290,7 +290,8 @@ void test_read(char* ptr, size_t count, MPI_Datatype datatype) {
   MPI_Type_size(datatype, &type_size);
   std::vector<unsigned char> read_data(count * type_size, 'r');
   int size_read;
-  auto ret_cmp =  MPI_File_read(*fh_cmp, read_data.data(), count, datatype, &stat_cmp);
+  auto ret_cmp =
+      MPI_File_read(*fh_cmp, read_data.data(), count, datatype, &stat_cmp);
   REQUIRE(ret_orig == ret_cmp);
   MPI_Get_count(&stat_orig, datatype, &size_read_orig);
   MPI_Get_count(&stat_cmp, datatype, &size_read);
