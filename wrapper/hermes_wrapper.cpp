@@ -76,7 +76,7 @@ void HermesBucketPut(BucketClass *bkt, char *name, unsigned char *put_data,
   hermes::api::Bucket *bucket = reinterpret_cast<hermes::api::Bucket *>(bkt);
   hermes::api::Status status = bucket->Put(name, put_data, size, ctx);
 
-  if (!status.Acceptable())
+  if (status.Failed())
     LOG(ERROR) << "Hermes Wrapper: HermesBucketPut failed\n";
 }
 
