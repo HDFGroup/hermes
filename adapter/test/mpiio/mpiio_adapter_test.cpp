@@ -282,6 +282,19 @@ void test_write(const void* ptr, size_t count, MPI_Datatype datatype) {
   REQUIRE(size_written == size_written_orig);
 }
 
+void test_iwrite(const void* ptr, size_t count, MPI_Datatype datatype) {
+  MPI_Status stat[2];
+  MPI_Request request[2];
+  auto ret_orig = MPI_File_iwrite(fh_orig, ptr, count, datatype, &request[0]);
+  int size_written;
+  auto ret_cmp = MPI_File_iwrite(fh_cmp, ptr, count, datatype, &request[1]);
+  REQUIRE(ret_orig == ret_cmp);
+  MPI_Waitall(2, request, stat);
+  MPI_Get_count(&stat[0], datatype, &size_written_orig);
+  MPI_Get_count(&stat[1], datatype, &size_written);
+  REQUIRE(size_written == size_written_orig);
+}
+
 void test_write_all(const void* ptr, size_t count, MPI_Datatype datatype) {
   MPI_Status stat_orig, stat_cmp;
   auto ret_orig = MPI_File_write_all(fh_orig, ptr, count, datatype, &stat_orig);
@@ -290,6 +303,20 @@ void test_write_all(const void* ptr, size_t count, MPI_Datatype datatype) {
   REQUIRE(ret_orig == ret_cmp);
   MPI_Get_count(&stat_orig, datatype, &size_written_orig);
   MPI_Get_count(&stat_cmp, datatype, &size_written);
+  REQUIRE(size_written == size_written_orig);
+}
+
+void test_iwrite_all(const void* ptr, size_t count, MPI_Datatype datatype) {
+  MPI_Status stat[2];
+  MPI_Request request[2];
+  auto ret_orig =
+      MPI_File_iwrite_all(fh_orig, ptr, count, datatype, &request[0]);
+  int size_written;
+  auto ret_cmp = MPI_File_iwrite_all(fh_cmp, ptr, count, datatype, &request[1]);
+  REQUIRE(ret_orig == ret_cmp);
+  MPI_Waitall(2, request, stat);
+  MPI_Get_count(&stat[0], datatype, &size_written_orig);
+  MPI_Get_count(&stat[1], datatype, &size_written);
   REQUIRE(size_written == size_written_orig);
 }
 
@@ -304,6 +331,52 @@ void test_write_at(const void* ptr, size_t count, MPI_Datatype datatype,
   REQUIRE(ret_orig == ret_cmp);
   MPI_Get_count(&stat_orig, datatype, &size_written_orig);
   MPI_Get_count(&stat_cmp, datatype, &size_written);
+  REQUIRE(size_written == size_written_orig);
+}
+
+void test_iwrite_at(const void* ptr, size_t count, MPI_Datatype datatype,
+                   MPI_Offset offset) {
+  MPI_Status stat[2];
+  MPI_Request request[2];
+  auto ret_orig =
+      MPI_File_iwrite_at(fh_orig, offset, ptr, count, datatype, &request[0]);
+  int size_written;
+  auto ret_cmp =
+      MPI_File_iwrite_at(fh_cmp, offset, ptr, count, datatype, &request[1]);
+  REQUIRE(ret_orig == ret_cmp);
+  MPI_Waitall(2, request, stat);
+  MPI_Get_count(&stat[0], datatype, &size_written_orig);
+  MPI_Get_count(&stat[0], datatype, &size_written);
+  REQUIRE(size_written == size_written_orig);
+}
+
+void test_write_at_all(const void* ptr, size_t count, MPI_Datatype datatype,
+                       MPI_Offset offset) {
+  MPI_Status stat_orig, stat_cmp;
+  auto ret_orig =
+      MPI_File_write_at_all(fh_orig, offset, ptr, count, datatype, &stat_orig);
+  int size_written;
+  auto ret_cmp =
+      MPI_File_write_at_all(fh_cmp, offset, ptr, count, datatype, &stat_cmp);
+  REQUIRE(ret_orig == ret_cmp);
+  MPI_Get_count(&stat_orig, datatype, &size_written_orig);
+  MPI_Get_count(&stat_cmp, datatype, &size_written);
+  REQUIRE(size_written == size_written_orig);
+}
+
+void test_iwrite_at_all(const void* ptr, size_t count, MPI_Datatype datatype,
+                       MPI_Offset offset) {
+  MPI_Status stat[2];
+  MPI_Request request[2];
+  auto ret_orig =
+      MPI_File_iwrite_at_all(fh_orig, offset, ptr, count, datatype, &request[0]);
+  int size_written;
+  auto ret_cmp =
+      MPI_File_iwrite_at_all(fh_cmp, offset, ptr, count, datatype, &request[1]);
+  REQUIRE(ret_orig == ret_cmp);
+  MPI_Waitall(2, request, stat);
+  MPI_Get_count(&stat[0], datatype, &size_written_orig);
+  MPI_Get_count(&stat[1], datatype, &size_written);
   REQUIRE(size_written == size_written_orig);
 }
 
@@ -345,6 +418,33 @@ void test_read(char* ptr, size_t count, MPI_Datatype datatype) {
   }
 }
 
+void test_iread(char* ptr, size_t count, MPI_Datatype datatype) {
+  MPI_Status stat[2];
+  MPI_Request request[2];
+  auto ret_orig = MPI_File_iread(fh_orig, ptr, count, datatype, &request[0]);
+  int type_size;
+  MPI_Type_size(datatype, &type_size);
+  std::vector<unsigned char> read_data(count * type_size, 'r');
+  int size_read;
+  auto ret_cmp =
+      MPI_File_iread(fh_cmp, read_data.data(), count, datatype, &request[1]);
+  REQUIRE(ret_orig == ret_cmp);
+  MPI_Waitall(2, request, stat);
+  MPI_Get_count(&stat[0], datatype, &size_read_orig);
+  MPI_Get_count(&stat[1], datatype, &size_read);
+  REQUIRE(size_read == size_read_orig);
+  if (size_read > 0) {
+    size_t unmatching_chars = 0;
+    for (size_t i = 0; i < count * type_size; ++i) {
+      if (read_data[i] != ptr[i]) {
+        unmatching_chars = i;
+        break;
+      }
+    }
+    REQUIRE(unmatching_chars == 0);
+  }
+}
+
 void test_read_all(char* ptr, size_t count, MPI_Datatype datatype) {
   MPI_Status stat_orig, stat_cmp;
   auto ret_orig = MPI_File_read_all(fh_orig, ptr, count, datatype, &stat_orig);
@@ -357,6 +457,33 @@ void test_read_all(char* ptr, size_t count, MPI_Datatype datatype) {
   REQUIRE(ret_orig == ret_cmp);
   MPI_Get_count(&stat_orig, datatype, &size_read_orig);
   MPI_Get_count(&stat_cmp, datatype, &size_read);
+  REQUIRE(size_read == size_read_orig);
+  if (size_read > 0) {
+    size_t unmatching_chars = 0;
+    for (size_t i = 0; i < count * type_size; ++i) {
+      if (read_data[i] != ptr[i]) {
+        unmatching_chars = i;
+        break;
+      }
+    }
+    REQUIRE(unmatching_chars == 0);
+  }
+}
+
+void test_iread_all(char* ptr, size_t count, MPI_Datatype datatype) {
+  MPI_Status stat[2];
+  MPI_Request request[2];
+  auto ret_orig = MPI_File_iread_all(fh_orig, ptr, count, datatype, &request[0]);
+  int type_size;
+  MPI_Type_size(datatype, &type_size);
+  std::vector<unsigned char> read_data(count * type_size, 'r');
+  int size_read;
+  auto ret_cmp =
+      MPI_File_iread_all(fh_cmp, read_data.data(), count, datatype, &request[1]);
+  REQUIRE(ret_orig == ret_cmp);
+  MPI_Waitall(2, request, stat);
+  MPI_Get_count(&stat[0], datatype, &size_read_orig);
+  MPI_Get_count(&stat[1], datatype, &size_read);
   REQUIRE(size_read == size_read_orig);
   if (size_read > 0) {
     size_t unmatching_chars = 0;
@@ -422,6 +549,92 @@ void test_read_at(char* ptr, size_t count, MPI_Datatype datatype,
     REQUIRE(unmatching_chars == 0);
   }
 }
+
+void test_iread_at(char* ptr, size_t count, MPI_Datatype datatype,
+                  MPI_Offset offset) {
+  MPI_Status stat[2];
+  MPI_Request request[2];
+  auto ret_orig =
+      MPI_File_iread_at(fh_orig, offset, ptr, count, datatype, &request[0]);
+  int type_size;
+  MPI_Type_size(datatype, &type_size);
+  std::vector<unsigned char> read_data(count * type_size, 'r');
+  int size_read;
+  auto ret_cmp = MPI_File_iread_at(fh_cmp, offset, read_data.data(), count,
+                                  datatype, &request[1]);
+  REQUIRE(ret_orig == ret_cmp);
+  MPI_Waitall(2, request, stat);
+  MPI_Get_count(&stat[0], datatype, &size_read_orig);
+  MPI_Get_count(&stat[1], datatype, &size_read);
+  REQUIRE(size_read == size_read_orig);
+  if (size_read > 0) {
+    size_t unmatching_chars = 0;
+    for (size_t i = 0; i < count * type_size; ++i) {
+      if (read_data[i] != ptr[i]) {
+        unmatching_chars = i;
+        break;
+      }
+    }
+    REQUIRE(unmatching_chars == 0);
+  }
+}
+
+void test_read_at_all(char* ptr, size_t count, MPI_Datatype datatype,
+                  MPI_Offset offset) {
+  MPI_Status stat_orig, stat_cmp;
+  auto ret_orig =
+      MPI_File_read_at_all(fh_orig, offset, ptr, count, datatype, &stat_orig);
+  int type_size;
+  MPI_Type_size(datatype, &type_size);
+  std::vector<unsigned char> read_data(count * type_size, 'r');
+  int size_read;
+  auto ret_cmp = MPI_File_read_at_all(fh_cmp, offset, read_data.data(), count,
+                                  datatype, &stat_cmp);
+  REQUIRE(ret_orig == ret_cmp);
+  MPI_Get_count(&stat_orig, datatype, &size_read_orig);
+  MPI_Get_count(&stat_cmp, datatype, &size_read);
+  REQUIRE(size_read == size_read_orig);
+  if (size_read > 0) {
+    size_t unmatching_chars = 0;
+    for (size_t i = 0; i < count * type_size; ++i) {
+      if (read_data[i] != ptr[i]) {
+        unmatching_chars = i;
+        break;
+      }
+    }
+    REQUIRE(unmatching_chars == 0);
+  }
+}
+
+void test_iread_at_all(char* ptr, size_t count, MPI_Datatype datatype,
+                      MPI_Offset offset) {
+  MPI_Status stat[2];
+  MPI_Request request[2];
+  auto ret_orig =
+      MPI_File_iread_at_all(fh_orig, offset, ptr, count, datatype, &request[0]);
+  int type_size;
+  MPI_Type_size(datatype, &type_size);
+  std::vector<unsigned char> read_data(count * type_size, 'r');
+  int size_read;
+  auto ret_cmp = MPI_File_iread_at_all(fh_cmp, offset, read_data.data(), count,
+                                      datatype, &request[1]);
+  REQUIRE(ret_orig == ret_cmp);
+  MPI_Waitall(2, request, stat);
+  MPI_Get_count(&stat[0], datatype, &size_read_orig);
+  MPI_Get_count(&stat[1], datatype, &size_read);
+  REQUIRE(size_read == size_read_orig);
+  if (size_read > 0) {
+    size_t unmatching_chars = 0;
+    for (size_t i = 0; i < count * type_size; ++i) {
+      if (read_data[i] != ptr[i]) {
+        unmatching_chars = i;
+        break;
+      }
+    }
+    REQUIRE(unmatching_chars == 0);
+  }
+}
+
 
 void test_seek(MPI_Offset offset, int whence) {
   status_orig = MPI_File_seek(fh_orig, offset, whence);
