@@ -76,6 +76,8 @@ int init(int* argc, char*** argv) {
   MPI_Init(argc, argv);
   info.write_data = gen_random(args.request_size);
   info.read_data = std::string(args.request_size, 'r');
+  MPI_Comm_rank(MPI_COMM_WORLD, &info.rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &info.comm_size);
   return 0;
 }
 int finalize() {
@@ -114,6 +116,7 @@ int pretest() {
             args.request_size * info.num_iterations);
     info.total_size = fs::file_size(info.existing_file);
   }
+  MPI_Barrier(MPI_COMM_WORLD);
   if (!fs::exists(info.existing_file_cmp)) {
     std::string cmd = "cp " + info.existing_file + " " + info.existing_file_cmp;
     int status = system(cmd.c_str());
@@ -121,6 +124,7 @@ int pretest() {
     REQUIRE(fs::file_size(info.existing_file_cmp) ==
             args.request_size * info.num_iterations);
   }
+  MPI_Barrier(MPI_COMM_WORLD);
   if (info.rank == 0) {
     if (fs::exists(info.shared_new_file)) fs::remove(info.shared_new_file);
     if (fs::exists(info.shared_existing_file))
@@ -335,7 +339,7 @@ void test_write_at(const void* ptr, size_t count, MPI_Datatype datatype,
 }
 
 void test_iwrite_at(const void* ptr, size_t count, MPI_Datatype datatype,
-                   MPI_Offset offset) {
+                    MPI_Offset offset) {
   MPI_Status stat[2];
   MPI_Request request[2];
   auto ret_orig =
@@ -365,11 +369,11 @@ void test_write_at_all(const void* ptr, size_t count, MPI_Datatype datatype,
 }
 
 void test_iwrite_at_all(const void* ptr, size_t count, MPI_Datatype datatype,
-                       MPI_Offset offset) {
+                        MPI_Offset offset) {
   MPI_Status stat[2];
   MPI_Request request[2];
-  auto ret_orig =
-      MPI_File_iwrite_at_all(fh_orig, offset, ptr, count, datatype, &request[0]);
+  auto ret_orig = MPI_File_iwrite_at_all(fh_orig, offset, ptr, count, datatype,
+                                         &request[0]);
   int size_written;
   auto ret_cmp =
       MPI_File_iwrite_at_all(fh_cmp, offset, ptr, count, datatype, &request[1]);
@@ -473,13 +477,14 @@ void test_read_all(char* ptr, size_t count, MPI_Datatype datatype) {
 void test_iread_all(char* ptr, size_t count, MPI_Datatype datatype) {
   MPI_Status stat[2];
   MPI_Request request[2];
-  auto ret_orig = MPI_File_iread_all(fh_orig, ptr, count, datatype, &request[0]);
+  auto ret_orig =
+      MPI_File_iread_all(fh_orig, ptr, count, datatype, &request[0]);
   int type_size;
   MPI_Type_size(datatype, &type_size);
   std::vector<unsigned char> read_data(count * type_size, 'r');
   int size_read;
-  auto ret_cmp =
-      MPI_File_iread_all(fh_cmp, read_data.data(), count, datatype, &request[1]);
+  auto ret_cmp = MPI_File_iread_all(fh_cmp, read_data.data(), count, datatype,
+                                    &request[1]);
   REQUIRE(ret_orig == ret_cmp);
   MPI_Waitall(2, request, stat);
   MPI_Get_count(&stat[0], datatype, &size_read_orig);
@@ -551,7 +556,7 @@ void test_read_at(char* ptr, size_t count, MPI_Datatype datatype,
 }
 
 void test_iread_at(char* ptr, size_t count, MPI_Datatype datatype,
-                  MPI_Offset offset) {
+                   MPI_Offset offset) {
   MPI_Status stat[2];
   MPI_Request request[2];
   auto ret_orig =
@@ -561,7 +566,7 @@ void test_iread_at(char* ptr, size_t count, MPI_Datatype datatype,
   std::vector<unsigned char> read_data(count * type_size, 'r');
   int size_read;
   auto ret_cmp = MPI_File_iread_at(fh_cmp, offset, read_data.data(), count,
-                                  datatype, &request[1]);
+                                   datatype, &request[1]);
   REQUIRE(ret_orig == ret_cmp);
   MPI_Waitall(2, request, stat);
   MPI_Get_count(&stat[0], datatype, &size_read_orig);
@@ -580,7 +585,7 @@ void test_iread_at(char* ptr, size_t count, MPI_Datatype datatype,
 }
 
 void test_read_at_all(char* ptr, size_t count, MPI_Datatype datatype,
-                  MPI_Offset offset) {
+                      MPI_Offset offset) {
   MPI_Status stat_orig, stat_cmp;
   auto ret_orig =
       MPI_File_read_at_all(fh_orig, offset, ptr, count, datatype, &stat_orig);
@@ -589,7 +594,7 @@ void test_read_at_all(char* ptr, size_t count, MPI_Datatype datatype,
   std::vector<unsigned char> read_data(count * type_size, 'r');
   int size_read;
   auto ret_cmp = MPI_File_read_at_all(fh_cmp, offset, read_data.data(), count,
-                                  datatype, &stat_cmp);
+                                      datatype, &stat_cmp);
   REQUIRE(ret_orig == ret_cmp);
   MPI_Get_count(&stat_orig, datatype, &size_read_orig);
   MPI_Get_count(&stat_cmp, datatype, &size_read);
@@ -607,7 +612,7 @@ void test_read_at_all(char* ptr, size_t count, MPI_Datatype datatype,
 }
 
 void test_iread_at_all(char* ptr, size_t count, MPI_Datatype datatype,
-                      MPI_Offset offset) {
+                       MPI_Offset offset) {
   MPI_Status stat[2];
   MPI_Request request[2];
   auto ret_orig =
@@ -617,7 +622,7 @@ void test_iread_at_all(char* ptr, size_t count, MPI_Datatype datatype,
   std::vector<unsigned char> read_data(count * type_size, 'r');
   int size_read;
   auto ret_cmp = MPI_File_iread_at_all(fh_cmp, offset, read_data.data(), count,
-                                      datatype, &request[1]);
+                                       datatype, &request[1]);
   REQUIRE(ret_orig == ret_cmp);
   MPI_Waitall(2, request, stat);
   MPI_Get_count(&stat[0], datatype, &size_read_orig);
@@ -634,7 +639,6 @@ void test_iread_at_all(char* ptr, size_t count, MPI_Datatype datatype,
     REQUIRE(unmatching_chars == 0);
   }
 }
-
 
 void test_seek(MPI_Offset offset, int whence) {
   status_orig = MPI_File_seek(fh_orig, offset, whence);

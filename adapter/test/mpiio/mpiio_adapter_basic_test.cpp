@@ -177,11 +177,7 @@ TEST_CASE("OpenCollective", "[process=" + std::to_string(info.comm_size) +
         info.new_file.c_str(),
         MPI_MODE_WRONLY | MPI_MODE_CREATE | MPI_MODE_DELETE_ON_CLOSE,
         MPI_COMM_WORLD);
-    REQUIRE(test::status_orig == MPI_SUCCESS);
-    REQUIRE(fs::exists(info.new_file.c_str()));
-    test::test_close();
-    REQUIRE(!fs::exists(info.new_file.c_str()));
-    REQUIRE(test::status_orig == MPI_SUCCESS);
+    REQUIRE(test::status_orig != MPI_SUCCESS);
   }
   posttest();
 }
@@ -199,7 +195,7 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
     test::test_open(info.existing_file.c_str(), MPI_MODE_RDWR, MPI_COMM_SELF);
     REQUIRE(test::status_orig == MPI_SUCCESS);
     test::test_seek(info.rank * args.request_size, MPI_SEEK_SET);
-    REQUIRE(test::status_orig == (int)(info.rank * args.request_size));
+    REQUIRE(test::status_orig == 0);
     test::test_write(info.write_data.c_str(), args.request_size, MPI_CHAR);
     REQUIRE((size_t)test::size_written_orig == args.request_size);
     test::test_close();
@@ -210,8 +206,6 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
     test::test_open(info.new_file.c_str(), MPI_MODE_WRONLY | MPI_MODE_CREATE,
                     MPI_COMM_SELF);
     REQUIRE(test::status_orig == MPI_SUCCESS);
-    test::test_seek(info.rank * args.request_size, MPI_SEEK_SET);
-    REQUIRE(test::status_orig == (int)(info.rank * args.request_size));
     test::test_write(info.write_data.c_str(), args.request_size, MPI_CHAR);
     REQUIRE((size_t)test::size_written_orig == args.request_size);
     test::test_close();
@@ -260,7 +254,7 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
                     MPI_COMM_SELF);
     REQUIRE(test::status_orig == MPI_SUCCESS);
     test::test_write_at(info.write_data.c_str(), args.request_size, MPI_CHAR,
-                        info.rank * args.request_size);
+                        0);
     REQUIRE((size_t)test::size_written_orig == args.request_size);
     test::test_close();
     REQUIRE(test::status_orig == MPI_SUCCESS);
@@ -273,8 +267,8 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
         MPI_MODE_WRONLY | MPI_MODE_CREATE | MPI_MODE_DELETE_ON_CLOSE,
         MPI_COMM_SELF);
     REQUIRE(test::status_orig == MPI_SUCCESS);
-    test::test_seek(info.rank * args.request_size, MPI_SEEK_SET);
-    REQUIRE(test::status_orig == (int)(info.rank * args.request_size));
+    test::test_seek(0, MPI_SEEK_SET);
+    REQUIRE(test::status_orig == 0);
     test::test_write(info.write_data.c_str(), args.request_size, MPI_CHAR);
     REQUIRE((size_t)test::size_written_orig == args.request_size);
     REQUIRE(fs::exists(info.new_file.c_str()));
@@ -291,7 +285,7 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
                     MPI_COMM_SELF);
     REQUIRE(test::status_orig == MPI_SUCCESS);
     test::test_seek(info.rank * args.request_size, MPI_SEEK_SET);
-    REQUIRE(test::status_orig == (int)(info.rank * args.request_size));
+    REQUIRE(test::status_orig == 0);
     test::test_write(info.write_data.c_str(), args.request_size, MPI_CHAR);
     REQUIRE((size_t)test::size_written_orig == args.request_size);
     REQUIRE(fs::exists(info.existing_file.c_str()));
@@ -323,7 +317,7 @@ TEST_CASE("SingleWriteCollective",
                     MPI_COMM_WORLD);
     REQUIRE(test::status_orig == MPI_SUCCESS);
     test::test_seek(info.rank * args.request_size, MPI_SEEK_SET);
-    REQUIRE(test::status_orig == (int)(info.rank * args.request_size));
+    REQUIRE(test::status_orig == 0);
     test::test_write(info.write_data.c_str(), args.request_size, MPI_CHAR);
     REQUIRE((size_t)test::size_written_orig == args.request_size);
     test::test_close();
@@ -334,8 +328,8 @@ TEST_CASE("SingleWriteCollective",
     test::test_open(info.shared_new_file.c_str(),
                     MPI_MODE_WRONLY | MPI_MODE_CREATE, MPI_COMM_WORLD);
     REQUIRE(test::status_orig == MPI_SUCCESS);
-    test::test_seek(info.rank * args.request_size, MPI_SEEK_SET);
-    REQUIRE(test::status_orig == (int)(info.rank * args.request_size));
+    test::test_seek(0, MPI_SEEK_SET);
+    REQUIRE(test::status_orig == 0);
     test::test_write(info.write_data.c_str(), args.request_size, MPI_CHAR);
     REQUIRE((size_t)test::size_written_orig == args.request_size);
     test::test_close();
@@ -347,8 +341,8 @@ TEST_CASE("SingleWriteCollective",
   SECTION("write_at_all to existing file") {
     test::test_open(info.existing_file.c_str(), MPI_MODE_RDWR, MPI_COMM_SELF);
     REQUIRE(test::status_orig == MPI_SUCCESS);
-    test::test_write_at_all(info.write_data.c_str(), args.request_size, MPI_CHAR,
-                        info.rank * args.request_size);
+    test::test_write_at_all(info.write_data.c_str(), args.request_size,
+                            MPI_CHAR, info.rank * args.request_size);
     REQUIRE((size_t)test::size_written_orig == args.request_size);
     test::test_close();
     REQUIRE(test::status_orig == MPI_SUCCESS);
@@ -358,8 +352,8 @@ TEST_CASE("SingleWriteCollective",
     test::test_open(info.new_file.c_str(), MPI_MODE_WRONLY | MPI_MODE_CREATE,
                     MPI_COMM_SELF);
     REQUIRE(test::status_orig == MPI_SUCCESS);
-    test::test_write_at_all(info.write_data.c_str(), args.request_size, MPI_CHAR,
-                        info.rank * args.request_size);
+    test::test_write_at_all(info.write_data.c_str(), args.request_size,
+                            MPI_CHAR, 0);
     REQUIRE((size_t)test::size_written_orig == args.request_size);
     test::test_close();
     REQUIRE(test::status_orig == MPI_SUCCESS);
@@ -420,12 +414,12 @@ TEST_CASE("SingleWriteCollective",
         MPI_COMM_WORLD);
     REQUIRE(test::status_orig == MPI_SUCCESS);
     test::test_seek(info.rank * args.request_size, MPI_SEEK_SET);
-    REQUIRE(test::status_orig == (int)(info.rank * args.request_size));
+    REQUIRE(test::status_orig == 0);
     test::test_write(info.write_data.c_str(), args.request_size, MPI_CHAR);
     REQUIRE((size_t)test::size_written_orig == args.request_size);
     REQUIRE(fs::exists(info.shared_new_file.c_str()));
     REQUIRE(fs::file_size(info.shared_new_file) ==
-            (size_t)test::size_written_orig);
+            (size_t)test::size_written_orig * info.comm_size);
     test::test_close();
     REQUIRE(!fs::exists(info.shared_new_file.c_str()));
     REQUIRE(test::status_orig == MPI_SUCCESS);
@@ -438,7 +432,7 @@ TEST_CASE("SingleWriteCollective",
                     MPI_COMM_WORLD);
     REQUIRE(test::status_orig == MPI_SUCCESS);
     test::test_seek(info.rank * args.request_size, MPI_SEEK_SET);
-    REQUIRE(test::status_orig == (int)(info.rank * args.request_size));
+    REQUIRE(test::status_orig == 0);
     test::test_write(info.write_data.c_str(), args.request_size, MPI_CHAR);
     REQUIRE((size_t)test::size_written_orig == args.request_size);
     REQUIRE(fs::exists(info.shared_existing_file.c_str()));
@@ -455,21 +449,20 @@ TEST_CASE("SingleWriteCollective",
   posttest(check_bytes);
 }
 
-
 TEST_CASE("SingleAsyncWrite", "[process=" + std::to_string(info.comm_size) +
-                         "]"
-                         "[operation=single_write]"
-                         "[coordination=independent]"
-                         "[synchronicity=async]"
-                         "[request_size=type-fixed][repetition=1]"
-                         "[file=1]") {
+                                  "]"
+                                  "[operation=single_write]"
+                                  "[coordination=independent]"
+                                  "[synchronicity=async]"
+                                  "[request_size=type-fixed][repetition=1]"
+                                  "[file=1]") {
   pretest();
   bool check_bytes = true;
   SECTION("write to existing file") {
     test::test_open(info.existing_file.c_str(), MPI_MODE_RDWR, MPI_COMM_SELF);
     REQUIRE(test::status_orig == MPI_SUCCESS);
     test::test_seek(info.rank * args.request_size, MPI_SEEK_SET);
-    REQUIRE(test::status_orig == (int)(info.rank * args.request_size));
+    REQUIRE(test::status_orig == 0);
     test::test_iwrite(info.write_data.c_str(), args.request_size, MPI_CHAR);
     REQUIRE((size_t)test::size_written_orig == args.request_size);
     test::test_close();
@@ -480,8 +473,8 @@ TEST_CASE("SingleAsyncWrite", "[process=" + std::to_string(info.comm_size) +
     test::test_open(info.new_file.c_str(), MPI_MODE_WRONLY | MPI_MODE_CREATE,
                     MPI_COMM_SELF);
     REQUIRE(test::status_orig == MPI_SUCCESS);
-    test::test_seek(info.rank * args.request_size, MPI_SEEK_SET);
-    REQUIRE(test::status_orig == (int)(info.rank * args.request_size));
+    test::test_seek(0, MPI_SEEK_SET);
+    REQUIRE(test::status_orig == 0);
     test::test_iwrite(info.write_data.c_str(), args.request_size, MPI_CHAR);
     REQUIRE((size_t)test::size_written_orig == args.request_size);
     test::test_close();
@@ -519,7 +512,7 @@ TEST_CASE("SingleAsyncWrite", "[process=" + std::to_string(info.comm_size) +
     test::test_open(info.existing_file.c_str(), MPI_MODE_RDWR, MPI_COMM_SELF);
     REQUIRE(test::status_orig == MPI_SUCCESS);
     test::test_iwrite_at(info.write_data.c_str(), args.request_size, MPI_CHAR,
-                        info.rank * args.request_size);
+                         info.rank * args.request_size);
     REQUIRE((size_t)test::size_written_orig == args.request_size);
     test::test_close();
     REQUIRE(test::status_orig == MPI_SUCCESS);
@@ -530,7 +523,7 @@ TEST_CASE("SingleAsyncWrite", "[process=" + std::to_string(info.comm_size) +
                     MPI_COMM_SELF);
     REQUIRE(test::status_orig == MPI_SUCCESS);
     test::test_iwrite_at(info.write_data.c_str(), args.request_size, MPI_CHAR,
-                        info.rank * args.request_size);
+                         0);
     REQUIRE((size_t)test::size_written_orig == args.request_size);
     test::test_close();
     REQUIRE(test::status_orig == MPI_SUCCESS);
@@ -543,8 +536,8 @@ TEST_CASE("SingleAsyncWrite", "[process=" + std::to_string(info.comm_size) +
         MPI_MODE_WRONLY | MPI_MODE_CREATE | MPI_MODE_DELETE_ON_CLOSE,
         MPI_COMM_SELF);
     REQUIRE(test::status_orig == MPI_SUCCESS);
-    test::test_seek(info.rank * args.request_size, MPI_SEEK_SET);
-    REQUIRE(test::status_orig == (int)(info.rank * args.request_size));
+    test::test_seek(0, MPI_SEEK_SET);
+    REQUIRE(test::status_orig == 0);
     test::test_iwrite(info.write_data.c_str(), args.request_size, MPI_CHAR);
     REQUIRE((size_t)test::size_written_orig == args.request_size);
     REQUIRE(fs::exists(info.new_file.c_str()));
@@ -561,14 +554,14 @@ TEST_CASE("SingleAsyncWrite", "[process=" + std::to_string(info.comm_size) +
                     MPI_COMM_SELF);
     REQUIRE(test::status_orig == MPI_SUCCESS);
     test::test_seek(info.rank * args.request_size, MPI_SEEK_SET);
-    REQUIRE(test::status_orig == (int)(info.rank * args.request_size));
+    REQUIRE(test::status_orig == 0);
     test::test_iwrite(info.write_data.c_str(), args.request_size, MPI_CHAR);
     REQUIRE((size_t)test::size_written_orig == args.request_size);
     REQUIRE(fs::exists(info.existing_file.c_str()));
     auto new_size =
         original_size > (size_t)test::size_written_orig * info.comm_size
-        ? original_size
-        : test::size_written_orig * info.comm_size;
+            ? original_size
+            : test::size_written_orig * info.comm_size;
     REQUIRE(fs::file_size(info.existing_file) == (size_t)new_size);
     test::test_close();
     REQUIRE(!fs::exists(info.existing_file.c_str()));
@@ -580,12 +573,12 @@ TEST_CASE("SingleAsyncWrite", "[process=" + std::to_string(info.comm_size) +
 
 TEST_CASE("SingleAsyncWriteCollective",
           "[process=" + std::to_string(info.comm_size) +
-          "]"
-          "[operation=single_write]"
-          "[synchronicity=async]"
-          "[coordination=collective]"
-          "[request_size=type-fixed][repetition=1]"
-          "[file=1]") {
+              "]"
+              "[operation=single_write]"
+              "[synchronicity=async]"
+              "[coordination=collective]"
+              "[request_size=type-fixed][repetition=1]"
+              "[file=1]") {
   pretest();
   bool check_bytes = true;
   SECTION("write to existing file") {
@@ -593,7 +586,7 @@ TEST_CASE("SingleAsyncWriteCollective",
                     MPI_COMM_WORLD);
     REQUIRE(test::status_orig == MPI_SUCCESS);
     test::test_seek(info.rank * args.request_size, MPI_SEEK_SET);
-    REQUIRE(test::status_orig == (int)(info.rank * args.request_size));
+    REQUIRE(test::status_orig == 0);
     test::test_iwrite(info.write_data.c_str(), args.request_size, MPI_CHAR);
     REQUIRE((size_t)test::size_written_orig == args.request_size);
     test::test_close();
@@ -604,8 +597,8 @@ TEST_CASE("SingleAsyncWriteCollective",
     test::test_open(info.shared_new_file.c_str(),
                     MPI_MODE_WRONLY | MPI_MODE_CREATE, MPI_COMM_WORLD);
     REQUIRE(test::status_orig == MPI_SUCCESS);
-    test::test_seek(info.rank * args.request_size, MPI_SEEK_SET);
-    REQUIRE(test::status_orig == (int)(info.rank * args.request_size));
+    test::test_seek(0, MPI_SEEK_SET);
+    REQUIRE(test::status_orig == 0);
     test::test_iwrite(info.write_data.c_str(), args.request_size, MPI_CHAR);
     REQUIRE((size_t)test::size_written_orig == args.request_size);
     test::test_close();
@@ -616,8 +609,8 @@ TEST_CASE("SingleAsyncWriteCollective",
   SECTION("write_at_all to existing file") {
     test::test_open(info.existing_file.c_str(), MPI_MODE_RDWR, MPI_COMM_SELF);
     REQUIRE(test::status_orig == MPI_SUCCESS);
-    test::test_iwrite_at_all(info.write_data.c_str(), args.request_size, MPI_CHAR,
-                            info.rank * args.request_size);
+    test::test_iwrite_at_all(info.write_data.c_str(), args.request_size,
+                             MPI_CHAR, info.rank * args.request_size);
     REQUIRE((size_t)test::size_written_orig == args.request_size);
     test::test_close();
     REQUIRE(test::status_orig == MPI_SUCCESS);
@@ -627,8 +620,8 @@ TEST_CASE("SingleAsyncWriteCollective",
     test::test_open(info.new_file.c_str(), MPI_MODE_WRONLY | MPI_MODE_CREATE,
                     MPI_COMM_SELF);
     REQUIRE(test::status_orig == MPI_SUCCESS);
-    test::test_iwrite_at_all(info.write_data.c_str(), args.request_size, MPI_CHAR,
-                            info.rank * args.request_size);
+    test::test_iwrite_at_all(info.write_data.c_str(), args.request_size,
+                             MPI_CHAR, 0);
     REQUIRE((size_t)test::size_written_orig == args.request_size);
     test::test_close();
     REQUIRE(test::status_orig == MPI_SUCCESS);
@@ -665,8 +658,8 @@ TEST_CASE("SingleAsyncWriteCollective",
         MPI_MODE_WRONLY | MPI_MODE_CREATE | MPI_MODE_DELETE_ON_CLOSE,
         MPI_COMM_WORLD);
     REQUIRE(test::status_orig == MPI_SUCCESS);
-    test::test_seek(info.rank * args.request_size, MPI_SEEK_SET);
-    REQUIRE(test::status_orig == (int)(info.rank * args.request_size));
+    test::test_seek(0, MPI_SEEK_SET);
+    REQUIRE(test::status_orig == 0);
     test::test_iwrite(info.write_data.c_str(), args.request_size, MPI_CHAR);
     REQUIRE((size_t)test::size_written_orig == args.request_size);
     REQUIRE(fs::exists(info.shared_new_file.c_str()));
@@ -684,14 +677,14 @@ TEST_CASE("SingleAsyncWriteCollective",
                     MPI_COMM_WORLD);
     REQUIRE(test::status_orig == MPI_SUCCESS);
     test::test_seek(info.rank * args.request_size, MPI_SEEK_SET);
-    REQUIRE(test::status_orig == (int)(info.rank * args.request_size));
+    REQUIRE(test::status_orig == 0);
     test::test_iwrite(info.write_data.c_str(), args.request_size, MPI_CHAR);
     REQUIRE((size_t)test::size_written_orig == args.request_size);
     REQUIRE(fs::exists(info.shared_existing_file.c_str()));
     auto new_size =
         original_size > (size_t)test::size_written_orig * info.comm_size
-        ? original_size
-        : test::size_written_orig * info.comm_size;
+            ? original_size
+            : test::size_written_orig * info.comm_size;
     REQUIRE(fs::file_size(info.shared_existing_file) == (size_t)new_size);
     test::test_close();
     REQUIRE(!fs::exists(info.shared_existing_file.c_str()));
@@ -719,7 +712,7 @@ TEST_CASE("SingleRead", "[process=" + std::to_string(info.comm_size) +
     test::test_open(info.existing_file.c_str(), MPI_MODE_RDONLY, MPI_COMM_SELF);
     REQUIRE(test::status_orig == MPI_SUCCESS);
     test::test_seek(info.rank * args.request_size, MPI_SEEK_SET);
-    REQUIRE(test::status_orig == (int)(info.rank * args.request_size));
+    REQUIRE(test::status_orig == 0);
     test::test_read(info.read_data.data(), args.request_size, MPI_CHAR);
     REQUIRE((size_t)test::size_read_orig == args.request_size);
     test::test_close();
@@ -772,7 +765,7 @@ TEST_CASE("SingleReadCollective", "[process=" + std::to_string(info.comm_size) +
                     MPI_COMM_WORLD);
     REQUIRE(test::status_orig == MPI_SUCCESS);
     test::test_seek(info.rank * args.request_size, MPI_SEEK_SET);
-    REQUIRE(test::status_orig == (int)(info.rank * args.request_size));
+    REQUIRE(test::status_orig == 0);
     test::test_read_all(info.read_data.data(), args.request_size, MPI_CHAR);
     REQUIRE((size_t)test::size_read_orig == args.request_size);
     test::test_close();
@@ -788,7 +781,7 @@ TEST_CASE("SingleReadCollective", "[process=" + std::to_string(info.comm_size) +
     MPI_File_get_position(test::fh_orig, &offset);
     REQUIRE(offset == (long long)(args.request_size * info.num_iterations));
     test::test_read_all(info.read_data.data(), args.request_size, MPI_CHAR);
-    REQUIRE(test::size_read_orig == 0);
+    REQUIRE((size_t)test::size_read_orig == args.request_size);
     test::test_close();
     REQUIRE(test::status_orig == MPI_SUCCESS);
   }
@@ -797,7 +790,7 @@ TEST_CASE("SingleReadCollective", "[process=" + std::to_string(info.comm_size) +
     test::test_open(info.existing_file.c_str(), MPI_MODE_RDONLY, MPI_COMM_SELF);
     REQUIRE(test::status_orig == MPI_SUCCESS);
     test::test_read_at_all(info.read_data.data(), args.request_size, MPI_CHAR,
-                       info.rank * args.request_size);
+                           info.rank * args.request_size);
     REQUIRE((size_t)test::size_read_orig == args.request_size);
     test::test_close();
     REQUIRE(test::status_orig == MPI_SUCCESS);
@@ -816,12 +809,12 @@ TEST_CASE("SingleReadCollective", "[process=" + std::to_string(info.comm_size) +
 }
 
 TEST_CASE("SingleAsyncRead", "[process=" + std::to_string(info.comm_size) +
-                        "]"
-                        "[operation=single_read]"
-                        "[synchronicity=async]"
-                        "[coordination=independent]"
-                        "[request_size=type-fixed][repetition=1]"
-                        "[file=1]") {
+                                 "]"
+                                 "[operation=single_read]"
+                                 "[synchronicity=async]"
+                                 "[coordination=independent]"
+                                 "[request_size=type-fixed][repetition=1]"
+                                 "[file=1]") {
   pretest();
   SECTION("read from non-existing file") {
     test::test_open(info.new_file.c_str(), MPI_MODE_RDONLY | MPI_MODE_EXCL,
@@ -833,7 +826,7 @@ TEST_CASE("SingleAsyncRead", "[process=" + std::to_string(info.comm_size) +
     test::test_open(info.existing_file.c_str(), MPI_MODE_RDONLY, MPI_COMM_SELF);
     REQUIRE(test::status_orig == MPI_SUCCESS);
     test::test_seek(info.rank * args.request_size, MPI_SEEK_SET);
-    REQUIRE(test::status_orig == (int)(info.rank * args.request_size));
+    REQUIRE(test::status_orig == 0);
     test::test_iread(info.read_data.data(), args.request_size, MPI_CHAR);
     REQUIRE((size_t)test::size_read_orig == args.request_size);
     test::test_close();
@@ -858,7 +851,7 @@ TEST_CASE("SingleAsyncRead", "[process=" + std::to_string(info.comm_size) +
     test::test_open(info.existing_file.c_str(), MPI_MODE_RDONLY, MPI_COMM_SELF);
     REQUIRE(test::status_orig == MPI_SUCCESS);
     test::test_iread_at(info.read_data.data(), args.request_size, MPI_CHAR,
-                       info.rank * args.request_size);
+                        info.rank * args.request_size);
     REQUIRE((size_t)test::size_read_orig == args.request_size);
     test::test_close();
     REQUIRE(test::status_orig == MPI_SUCCESS);
@@ -867,13 +860,14 @@ TEST_CASE("SingleAsyncRead", "[process=" + std::to_string(info.comm_size) +
   posttest();
 }
 
-TEST_CASE("SingleAsyncReadCollective", "[process=" + std::to_string(info.comm_size) +
-                                  "]"
-                                  "[operation=single_read]"
-                                  "[synchronicity=async]"
-                                  "[coordination=collective]"
-                                  "[request_size=type-fixed][repetition=1]"
-                                  "[file=1]") {
+TEST_CASE("SingleAsyncReadCollective",
+          "[process=" + std::to_string(info.comm_size) +
+              "]"
+              "[operation=single_read]"
+              "[synchronicity=async]"
+              "[coordination=collective]"
+              "[request_size=type-fixed][repetition=1]"
+              "[file=1]") {
   pretest();
   SECTION("read from non-existing file") {
     test::test_open(info.shared_new_file.c_str(), MPI_MODE_RDONLY,
@@ -886,7 +880,7 @@ TEST_CASE("SingleAsyncReadCollective", "[process=" + std::to_string(info.comm_si
                     MPI_COMM_WORLD);
     REQUIRE(test::status_orig == MPI_SUCCESS);
     test::test_seek(info.rank * args.request_size, MPI_SEEK_SET);
-    REQUIRE(test::status_orig == (int)(info.rank * args.request_size));
+    REQUIRE(test::status_orig == 0);
     test::test_iread_all(info.read_data.data(), args.request_size, MPI_CHAR);
     REQUIRE((size_t)test::size_read_orig == args.request_size);
     test::test_close();
@@ -911,7 +905,7 @@ TEST_CASE("SingleAsyncReadCollective", "[process=" + std::to_string(info.comm_si
     test::test_open(info.existing_file.c_str(), MPI_MODE_RDONLY, MPI_COMM_SELF);
     REQUIRE(test::status_orig == MPI_SUCCESS);
     test::test_iread_at_all(info.read_data.data(), args.request_size, MPI_CHAR,
-                           info.rank * args.request_size);
+                            info.rank * args.request_size);
     REQUIRE((size_t)test::size_read_orig == args.request_size);
     test::test_close();
     REQUIRE(test::status_orig == MPI_SUCCESS);
