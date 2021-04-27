@@ -418,6 +418,7 @@ TEST_CASE("SingleWriteCollective",
     test::test_write(info.write_data.c_str(), args.request_size, MPI_CHAR);
     REQUIRE((size_t)test::size_written_orig == args.request_size);
     REQUIRE(fs::exists(info.shared_new_file.c_str()));
+    MPI_Barrier(MPI_COMM_WORLD);
     REQUIRE(fs::file_size(info.shared_new_file) ==
             (size_t)test::size_written_orig * info.comm_size);
     test::test_close();
