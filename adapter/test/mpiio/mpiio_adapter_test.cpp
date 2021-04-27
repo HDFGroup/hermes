@@ -485,13 +485,14 @@ void test_iread(char* ptr, size_t count, MPI_Datatype datatype) {
 
 void test_read_shared(char* ptr, size_t count, MPI_Datatype datatype) {
   MPI_Status stat_orig, stat_cmp;
-  auto ret_orig = MPI_File_read_shared(fh_orig, ptr, count, datatype, &stat_orig);
+  auto ret_orig =
+      MPI_File_read_shared(fh_orig, ptr, count, datatype, &stat_orig);
   int type_size;
   MPI_Type_size(datatype, &type_size);
   std::vector<unsigned char> read_data(count * type_size, 'r');
   int size_read;
-  auto ret_cmp =
-      MPI_File_read_shared(fh_cmp, read_data.data(), count, datatype, &stat_cmp);
+  auto ret_cmp = MPI_File_read_shared(fh_cmp, read_data.data(), count, datatype,
+                                      &stat_cmp);
   REQUIRE(ret_orig == ret_cmp);
   MPI_Get_count(&stat_orig, datatype, &size_read_orig);
   MPI_Get_count(&stat_cmp, datatype, &size_read);
@@ -511,13 +512,14 @@ void test_read_shared(char* ptr, size_t count, MPI_Datatype datatype) {
 void test_iread_shared(char* ptr, size_t count, MPI_Datatype datatype) {
   MPI_Status stat[2];
   MPI_Request request[2];
-  auto ret_orig = MPI_File_iread_shared(fh_orig, ptr, count, datatype, &request[0]);
+  auto ret_orig =
+      MPI_File_iread_shared(fh_orig, ptr, count, datatype, &request[0]);
   int type_size;
   MPI_Type_size(datatype, &type_size);
   std::vector<unsigned char> read_data(count * type_size, 'r');
   int size_read;
-  auto ret_cmp =
-      MPI_File_iread_shared(fh_cmp, read_data.data(), count, datatype, &request[1]);
+  auto ret_cmp = MPI_File_iread_shared(fh_cmp, read_data.data(), count,
+                                       datatype, &request[1]);
   REQUIRE(ret_orig == ret_cmp);
   MPI_Waitall(2, request, stat);
   MPI_Get_count(&stat[0], datatype, &size_read_orig);
