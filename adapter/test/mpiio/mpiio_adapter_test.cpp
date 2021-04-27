@@ -275,6 +275,13 @@ void test_close() {
   int status = MPI_File_close(&fh_cmp);
   REQUIRE(status == status_orig);
 }
+
+void test_preallocate(MPI_Offset size) {
+  status_orig = MPI_File_preallocate(fh_orig, size);
+  int status = MPI_File_preallocate(fh_cmp, size);
+  REQUIRE(status == status_orig);
+}
+
 void test_write(const void* ptr, size_t count, MPI_Datatype datatype) {
   MPI_Status stat_orig, stat_cmp;
   auto ret_orig = MPI_File_write(fh_orig, ptr, count, datatype, &stat_orig);

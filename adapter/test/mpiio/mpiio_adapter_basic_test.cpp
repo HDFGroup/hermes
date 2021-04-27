@@ -213,6 +213,23 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(fs::file_size(info.new_file) == (size_t)test::size_written_orig);
   }
 
+  SECTION("write to new file with allocate") {
+    test::test_open(info.shared_new_file.c_str(),
+                    MPI_MODE_WRONLY | MPI_MODE_CREATE, MPI_COMM_WORLD);
+    REQUIRE(test::status_orig == MPI_SUCCESS);
+    test::test_preallocate(args.request_size * info.comm_size);
+    REQUIRE(test::status_orig == MPI_SUCCESS);
+    test::test_seek(args.request_size * info.rank, MPI_SEEK_SET);
+    REQUIRE(test::status_orig == 0);
+    test::test_write(info.write_data.c_str(), args.request_size, MPI_CHAR);
+    REQUIRE((size_t)test::size_written_orig == args.request_size);
+    test::test_close();
+    REQUIRE(test::status_orig == MPI_SUCCESS);
+    MPI_Barrier(MPI_COMM_WORLD);
+    REQUIRE(fs::file_size(info.shared_new_file) ==
+            (size_t)test::size_written_orig * info.comm_size);
+  }
+
   SECTION("append to existing file") {
     auto existing_size = fs::file_size(info.existing_file);
     test::test_open(info.existing_file.c_str(),
@@ -336,6 +353,23 @@ TEST_CASE("SingleWriteCollective",
     REQUIRE(test::status_orig == MPI_SUCCESS);
     REQUIRE(fs::file_size(info.shared_new_file) ==
             (size_t)test::size_written_orig);
+  }
+
+  SECTION("write to new file with allocate") {
+    test::test_open(info.shared_new_file.c_str(),
+                    MPI_MODE_WRONLY | MPI_MODE_CREATE, MPI_COMM_WORLD);
+    REQUIRE(test::status_orig == MPI_SUCCESS);
+    test::test_preallocate(args.request_size * info.comm_size);
+    REQUIRE(test::status_orig == MPI_SUCCESS);
+    test::test_seek(args.request_size * info.rank, MPI_SEEK_SET);
+    REQUIRE(test::status_orig == 0);
+    test::test_write(info.write_data.c_str(), args.request_size, MPI_CHAR);
+    REQUIRE((size_t)test::size_written_orig == args.request_size);
+    test::test_close();
+    REQUIRE(test::status_orig == MPI_SUCCESS);
+    MPI_Barrier(MPI_COMM_WORLD);
+    REQUIRE(fs::file_size(info.shared_new_file) ==
+            (size_t)test::size_written_orig * info.comm_size);
   }
 
   SECTION("write_at_all to existing file") {
@@ -483,6 +517,23 @@ TEST_CASE("SingleAsyncWrite", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(fs::file_size(info.new_file) == (size_t)test::size_written_orig);
   }
 
+  SECTION("write to new file with allocate") {
+    test::test_open(info.shared_new_file.c_str(),
+                    MPI_MODE_WRONLY | MPI_MODE_CREATE, MPI_COMM_WORLD);
+    REQUIRE(test::status_orig == MPI_SUCCESS);
+    test::test_preallocate(args.request_size * info.comm_size);
+    REQUIRE(test::status_orig == MPI_SUCCESS);
+    test::test_seek(args.request_size * info.rank, MPI_SEEK_SET);
+    REQUIRE(test::status_orig == 0);
+    test::test_write(info.write_data.c_str(), args.request_size, MPI_CHAR);
+    REQUIRE((size_t)test::size_written_orig == args.request_size);
+    test::test_close();
+    REQUIRE(test::status_orig == MPI_SUCCESS);
+    MPI_Barrier(MPI_COMM_WORLD);
+    REQUIRE(fs::file_size(info.shared_new_file) ==
+            (size_t)test::size_written_orig * info.comm_size);
+  }
+
   SECTION("append to existing file") {
     auto existing_size = fs::file_size(info.existing_file);
     test::test_open(info.existing_file.c_str(),
@@ -607,6 +658,24 @@ TEST_CASE("SingleAsyncWriteCollective",
     REQUIRE(fs::file_size(info.shared_new_file) ==
             (size_t)test::size_written_orig);
   }
+
+  SECTION("write to new file with allocate") {
+    test::test_open(info.shared_new_file.c_str(),
+                    MPI_MODE_WRONLY | MPI_MODE_CREATE, MPI_COMM_WORLD);
+    REQUIRE(test::status_orig == MPI_SUCCESS);
+    test::test_preallocate(args.request_size * info.comm_size);
+    REQUIRE(test::status_orig == MPI_SUCCESS);
+    test::test_seek(args.request_size * info.rank, MPI_SEEK_SET);
+    REQUIRE(test::status_orig == 0);
+    test::test_iwrite(info.write_data.c_str(), args.request_size, MPI_CHAR);
+    REQUIRE((size_t)test::size_written_orig == args.request_size);
+    test::test_close();
+    REQUIRE(test::status_orig == MPI_SUCCESS);
+    MPI_Barrier(MPI_COMM_WORLD);
+    REQUIRE(fs::file_size(info.shared_new_file) ==
+            (size_t)test::size_written_orig * info.comm_size);
+  }
+
   SECTION("write_at_all to existing file") {
     test::test_open(info.existing_file.c_str(), MPI_MODE_RDWR, MPI_COMM_SELF);
     REQUIRE(test::status_orig == MPI_SUCCESS);
