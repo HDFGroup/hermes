@@ -252,6 +252,20 @@ MPI_File fh_cmp;
 int status_orig;
 int size_read_orig;
 int size_written_orig;
+
+void test_read_data(size_t size_read, size_t count, int type_size, char* read_data, char* ptr){
+  if (size_read > 0) {
+    size_t unmatching_chars = 0;
+    for (size_t i = 0; i < count * type_size; ++i) {
+      if (read_data[i] != ptr[i]) {
+        unmatching_chars = i;
+        break;
+      }
+    }
+    REQUIRE(unmatching_chars == 0);
+  }
+}
+
 void test_open(const char* path, int mode, MPI_Comm comm) {
   std::string cmp_path;
   if (strcmp(path, info.new_file.c_str()) == 0) {
@@ -444,16 +458,8 @@ void test_read(char* ptr, size_t count, MPI_Datatype datatype) {
   MPI_Get_count(&stat_orig, datatype, &size_read_orig);
   MPI_Get_count(&stat_cmp, datatype, &size_read);
   REQUIRE(size_read == size_read_orig);
-  if (size_read > 0) {
-    size_t unmatching_chars = 0;
-    for (size_t i = 0; i < count * type_size; ++i) {
-      if (read_data[i] != ptr[i]) {
-        unmatching_chars = i;
-        break;
-      }
-    }
-    REQUIRE(unmatching_chars == 0);
-  }
+  test_read_data(size_read, count, type_size,
+                 reinterpret_cast<char*>(read_data.data()), ptr);
 }
 
 void test_iread(char* ptr, size_t count, MPI_Datatype datatype) {
@@ -471,16 +477,8 @@ void test_iread(char* ptr, size_t count, MPI_Datatype datatype) {
   MPI_Get_count(&stat[0], datatype, &size_read_orig);
   MPI_Get_count(&stat[1], datatype, &size_read);
   REQUIRE(size_read == size_read_orig);
-  if (size_read > 0) {
-    size_t unmatching_chars = 0;
-    for (size_t i = 0; i < count * type_size; ++i) {
-      if (read_data[i] != ptr[i]) {
-        unmatching_chars = i;
-        break;
-      }
-    }
-    REQUIRE(unmatching_chars == 0);
-  }
+  test_read_data(size_read, count, type_size,
+                 reinterpret_cast<char*>(read_data.data()), ptr);
 }
 
 void test_read_shared(char* ptr, size_t count, MPI_Datatype datatype) {
@@ -497,16 +495,8 @@ void test_read_shared(char* ptr, size_t count, MPI_Datatype datatype) {
   MPI_Get_count(&stat_orig, datatype, &size_read_orig);
   MPI_Get_count(&stat_cmp, datatype, &size_read);
   REQUIRE(size_read == size_read_orig);
-  if (size_read > 0) {
-    size_t unmatching_chars = 0;
-    for (size_t i = 0; i < count * type_size; ++i) {
-      if (read_data[i] != ptr[i]) {
-        unmatching_chars = i;
-        break;
-      }
-    }
-    REQUIRE(unmatching_chars == 0);
-  }
+  test_read_data(size_read, count, type_size,
+                 reinterpret_cast<char*>(read_data.data()), ptr);
 }
 
 void test_iread_shared(char* ptr, size_t count, MPI_Datatype datatype) {
@@ -525,16 +515,8 @@ void test_iread_shared(char* ptr, size_t count, MPI_Datatype datatype) {
   MPI_Get_count(&stat[0], datatype, &size_read_orig);
   MPI_Get_count(&stat[1], datatype, &size_read);
   REQUIRE(size_read == size_read_orig);
-  if (size_read > 0) {
-    size_t unmatching_chars = 0;
-    for (size_t i = 0; i < count * type_size; ++i) {
-      if (read_data[i] != ptr[i]) {
-        unmatching_chars = i;
-        break;
-      }
-    }
-    REQUIRE(unmatching_chars == 0);
-  }
+  test_read_data(size_read, count, type_size,
+                 reinterpret_cast<char*>(read_data.data()), ptr);
 }
 
 void test_read_all(char* ptr, size_t count, MPI_Datatype datatype) {
@@ -550,16 +532,8 @@ void test_read_all(char* ptr, size_t count, MPI_Datatype datatype) {
   MPI_Get_count(&stat_orig, datatype, &size_read_orig);
   MPI_Get_count(&stat_cmp, datatype, &size_read);
   REQUIRE(size_read == size_read_orig);
-  if (size_read > 0) {
-    size_t unmatching_chars = 0;
-    for (size_t i = 0; i < count * type_size; ++i) {
-      if (read_data[i] != ptr[i]) {
-        unmatching_chars = i;
-        break;
-      }
-    }
-    REQUIRE(unmatching_chars == 0);
-  }
+  test_read_data(size_read, count, type_size,
+                 reinterpret_cast<char*>(read_data.data()), ptr);
 }
 
 void test_iread_all(char* ptr, size_t count, MPI_Datatype datatype) {
@@ -578,16 +552,8 @@ void test_iread_all(char* ptr, size_t count, MPI_Datatype datatype) {
   MPI_Get_count(&stat[0], datatype, &size_read_orig);
   MPI_Get_count(&stat[1], datatype, &size_read);
   REQUIRE(size_read == size_read_orig);
-  if (size_read > 0) {
-    size_t unmatching_chars = 0;
-    for (size_t i = 0; i < count * type_size; ++i) {
-      if (read_data[i] != ptr[i]) {
-        unmatching_chars = i;
-        break;
-      }
-    }
-    REQUIRE(unmatching_chars == 0);
-  }
+  test_read_data(size_read, count, type_size,
+                 reinterpret_cast<char*>(read_data.data()), ptr);
 }
 
 void test_read_ordered(char* ptr, size_t count, MPI_Datatype datatype) {
@@ -604,16 +570,8 @@ void test_read_ordered(char* ptr, size_t count, MPI_Datatype datatype) {
   MPI_Get_count(&stat_orig, datatype, &size_read_orig);
   MPI_Get_count(&stat_cmp, datatype, &size_read);
   REQUIRE(size_read == size_read_orig);
-  if (size_read > 0) {
-    size_t unmatching_chars = 0;
-    for (size_t i = 0; i < count * type_size; ++i) {
-      if (read_data[i] != ptr[i]) {
-        unmatching_chars = i;
-        break;
-      }
-    }
-    REQUIRE(unmatching_chars == 0);
-  }
+  test_read_data(size_read, count, type_size,
+                 reinterpret_cast<char*>(read_data.data()), ptr);
 }
 
 void test_read_at(char* ptr, size_t count, MPI_Datatype datatype,
@@ -631,16 +589,8 @@ void test_read_at(char* ptr, size_t count, MPI_Datatype datatype,
   MPI_Get_count(&stat_orig, datatype, &size_read_orig);
   MPI_Get_count(&stat_cmp, datatype, &size_read);
   REQUIRE(size_read == size_read_orig);
-  if (size_read > 0) {
-    size_t unmatching_chars = 0;
-    for (size_t i = 0; i < count * type_size; ++i) {
-      if (read_data[i] != ptr[i]) {
-        unmatching_chars = i;
-        break;
-      }
-    }
-    REQUIRE(unmatching_chars == 0);
-  }
+  test_read_data(size_read, count, type_size,
+                 reinterpret_cast<char*>(read_data.data()), ptr);
 }
 
 void test_iread_at(char* ptr, size_t count, MPI_Datatype datatype,
@@ -660,16 +610,8 @@ void test_iread_at(char* ptr, size_t count, MPI_Datatype datatype,
   MPI_Get_count(&stat[0], datatype, &size_read_orig);
   MPI_Get_count(&stat[1], datatype, &size_read);
   REQUIRE(size_read == size_read_orig);
-  if (size_read > 0) {
-    size_t unmatching_chars = 0;
-    for (size_t i = 0; i < count * type_size; ++i) {
-      if (read_data[i] != ptr[i]) {
-        unmatching_chars = i;
-        break;
-      }
-    }
-    REQUIRE(unmatching_chars == 0);
-  }
+  test_read_data(size_read, count, type_size,
+                 reinterpret_cast<char*>(read_data.data()), ptr);
 }
 
 void test_read_at_all(char* ptr, size_t count, MPI_Datatype datatype,
@@ -687,16 +629,8 @@ void test_read_at_all(char* ptr, size_t count, MPI_Datatype datatype,
   MPI_Get_count(&stat_orig, datatype, &size_read_orig);
   MPI_Get_count(&stat_cmp, datatype, &size_read);
   REQUIRE(size_read == size_read_orig);
-  if (size_read > 0) {
-    size_t unmatching_chars = 0;
-    for (size_t i = 0; i < count * type_size; ++i) {
-      if (read_data[i] != ptr[i]) {
-        unmatching_chars = i;
-        break;
-      }
-    }
-    REQUIRE(unmatching_chars == 0);
-  }
+  test_read_data(size_read, count, type_size,
+                 reinterpret_cast<char*>(read_data.data()), ptr);
 }
 
 void test_iread_at_all(char* ptr, size_t count, MPI_Datatype datatype,
@@ -716,16 +650,8 @@ void test_iread_at_all(char* ptr, size_t count, MPI_Datatype datatype,
   MPI_Get_count(&stat[0], datatype, &size_read_orig);
   MPI_Get_count(&stat[1], datatype, &size_read);
   REQUIRE(size_read == size_read_orig);
-  if (size_read > 0) {
-    size_t unmatching_chars = 0;
-    for (size_t i = 0; i < count * type_size; ++i) {
-      if (read_data[i] != ptr[i]) {
-        unmatching_chars = i;
-        break;
-      }
-    }
-    REQUIRE(unmatching_chars == 0);
-  }
+  test_read_data(size_read, count, type_size,
+                 reinterpret_cast<char*>(read_data.data()), ptr);
 }
 
 void test_seek(MPI_Offset offset, int whence) {
