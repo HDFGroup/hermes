@@ -253,7 +253,8 @@ int status_orig;
 int size_read_orig;
 int size_written_orig;
 
-void test_read_data(size_t size_read, size_t count, int type_size, char* read_data, char* ptr){
+void test_read_data(size_t size_read, size_t count, int type_size,
+                    char* read_data, char* ptr) {
   if (size_read > 0) {
     size_t unmatching_chars = 0;
     for (size_t i = 0; i < count * type_size; ++i) {
