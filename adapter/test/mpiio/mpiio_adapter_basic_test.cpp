@@ -213,9 +213,24 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(fs::file_size(info.new_file) == (size_t)test::size_written_orig);
   }
 
+  SECTION("write to new  file using shared ptr") {
+    test::test_open(info.shared_new_file.c_str(),
+                    MPI_MODE_WRONLY | MPI_MODE_CREATE, MPI_COMM_SELF);
+    REQUIRE(test::status_orig == MPI_SUCCESS);
+    test::test_seek_shared(0, MPI_SEEK_SET);
+    REQUIRE(test::status_orig == 0);
+    test::test_write_shared(info.write_data.c_str(), args.request_size,
+                            MPI_CHAR);
+    REQUIRE((size_t)test::size_written_orig == args.request_size);
+    test::test_close();
+    REQUIRE(test::status_orig == MPI_SUCCESS);
+    REQUIRE(fs::file_size(info.shared_new_file) ==
+            (size_t)test::size_written_orig);
+  }
+
   SECTION("write to new file with allocate") {
     test::test_open(info.shared_new_file.c_str(),
-                    MPI_MODE_WRONLY | MPI_MODE_CREATE, MPI_COMM_WORLD);
+                    MPI_MODE_WRONLY | MPI_MODE_CREATE, MPI_COMM_SELF);
     REQUIRE(test::status_orig == MPI_SUCCESS);
     test::test_preallocate(args.request_size * info.comm_size);
     REQUIRE(test::status_orig == MPI_SUCCESS);
@@ -353,6 +368,21 @@ TEST_CASE("SingleWriteCollective",
     REQUIRE(test::status_orig == MPI_SUCCESS);
     REQUIRE(fs::file_size(info.shared_new_file) ==
             (size_t)test::size_written_orig);
+  }
+
+  SECTION("write to new  file using shared ptr") {
+    test::test_open(info.shared_new_file.c_str(),
+                    MPI_MODE_WRONLY | MPI_MODE_CREATE, MPI_COMM_WORLD);
+    REQUIRE(test::status_orig == MPI_SUCCESS);
+    test::test_seek_shared(0, MPI_SEEK_SET);
+    REQUIRE(test::status_orig == 0);
+    test::test_write_shared(info.write_data.c_str(), args.request_size,
+                            MPI_CHAR);
+    REQUIRE((size_t)test::size_written_orig == args.request_size);
+    test::test_close();
+    REQUIRE(test::status_orig == MPI_SUCCESS);
+    REQUIRE(fs::file_size(info.shared_new_file) ==
+            (size_t)test::size_written_orig * info.comm_size);
   }
 
   SECTION("write to new file with allocate") {
@@ -517,9 +547,24 @@ TEST_CASE("SingleAsyncWrite", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(fs::file_size(info.new_file) == (size_t)test::size_written_orig);
   }
 
+  SECTION("write to new  file using shared ptr") {
+    test::test_open(info.shared_new_file.c_str(),
+                    MPI_MODE_WRONLY | MPI_MODE_CREATE, MPI_COMM_SELF);
+    REQUIRE(test::status_orig == MPI_SUCCESS);
+    test::test_seek_shared(0, MPI_SEEK_SET);
+    REQUIRE(test::status_orig == 0);
+    test::test_iwrite_shared(info.write_data.c_str(), args.request_size,
+                             MPI_CHAR);
+    REQUIRE((size_t)test::size_written_orig == args.request_size);
+    test::test_close();
+    REQUIRE(test::status_orig == MPI_SUCCESS);
+    REQUIRE(fs::file_size(info.shared_new_file) ==
+            (size_t)test::size_written_orig);
+  }
+
   SECTION("write to new file with allocate") {
     test::test_open(info.shared_new_file.c_str(),
-                    MPI_MODE_WRONLY | MPI_MODE_CREATE, MPI_COMM_WORLD);
+                    MPI_MODE_WRONLY | MPI_MODE_CREATE, MPI_COMM_SELF);
     REQUIRE(test::status_orig == MPI_SUCCESS);
     test::test_preallocate(args.request_size * info.comm_size);
     REQUIRE(test::status_orig == MPI_SUCCESS);
@@ -659,6 +704,21 @@ TEST_CASE("SingleAsyncWriteCollective",
             (size_t)test::size_written_orig);
   }
 
+  SECTION("write to new  file using shared ptr") {
+    test::test_open(info.shared_new_file.c_str(),
+                    MPI_MODE_WRONLY | MPI_MODE_CREATE, MPI_COMM_WORLD);
+    REQUIRE(test::status_orig == MPI_SUCCESS);
+    test::test_seek_shared(0, MPI_SEEK_SET);
+    REQUIRE(test::status_orig == 0);
+    test::test_iwrite_shared(info.write_data.c_str(), args.request_size,
+                             MPI_CHAR);
+    REQUIRE((size_t)test::size_written_orig == args.request_size);
+    test::test_close();
+    REQUIRE(test::status_orig == MPI_SUCCESS);
+    REQUIRE(fs::file_size(info.shared_new_file) ==
+            (size_t)test::size_written_orig * info.comm_size);
+  }
+
   SECTION("write to new file with allocate") {
     test::test_open(info.shared_new_file.c_str(),
                     MPI_MODE_WRONLY | MPI_MODE_CREATE, MPI_COMM_WORLD);
@@ -789,6 +849,18 @@ TEST_CASE("SingleRead", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(test::status_orig == MPI_SUCCESS);
   }
 
+  SECTION("read from existing file using shared ptr") {
+    test::test_open(info.shared_existing_file.c_str(), MPI_MODE_RDONLY,
+                    MPI_COMM_SELF);
+    REQUIRE(test::status_orig == MPI_SUCCESS);
+    test::test_seek_shared(0, MPI_SEEK_SET);
+    REQUIRE(test::status_orig == 0);
+    test::test_read_shared(info.read_data.data(), args.request_size, MPI_CHAR);
+    REQUIRE((size_t)test::size_read_orig == args.request_size);
+    test::test_close();
+    REQUIRE(test::status_orig == MPI_SUCCESS);
+  }
+
   SECTION("read at the end of existing file") {
     test::test_open(info.existing_file.c_str(), MPI_MODE_RDONLY, MPI_COMM_SELF);
     REQUIRE(test::status_orig == MPI_SUCCESS);
@@ -841,6 +913,19 @@ TEST_CASE("SingleReadCollective", "[process=" + std::to_string(info.comm_size) +
     test::test_close();
     REQUIRE(test::status_orig == MPI_SUCCESS);
   }
+
+  SECTION("read from existing file using shared ptr") {
+    test::test_open(info.shared_existing_file.c_str(), MPI_MODE_RDONLY,
+                    MPI_COMM_WORLD);
+    REQUIRE(test::status_orig == MPI_SUCCESS);
+    test::test_seek_shared(0, MPI_SEEK_SET);
+    REQUIRE(test::status_orig == 0);
+    test::test_read_shared(info.read_data.data(), args.request_size, MPI_CHAR);
+    REQUIRE((size_t)test::size_read_orig == args.request_size);
+    test::test_close();
+    REQUIRE(test::status_orig == MPI_SUCCESS);
+  }
+
   SECTION("read at the end of existing file") {
     test::test_open(info.shared_existing_file.c_str(), MPI_MODE_RDONLY,
                     MPI_COMM_WORLD);
@@ -903,6 +988,18 @@ TEST_CASE("SingleAsyncRead", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(test::status_orig == MPI_SUCCESS);
   }
 
+  SECTION("read from existing file using shared ptr") {
+    test::test_open(info.shared_existing_file.c_str(), MPI_MODE_RDONLY,
+                    MPI_COMM_SELF);
+    REQUIRE(test::status_orig == MPI_SUCCESS);
+    test::test_seek_shared(0, MPI_SEEK_SET);
+    REQUIRE(test::status_orig == 0);
+    test::test_iread_shared(info.read_data.data(), args.request_size, MPI_CHAR);
+    REQUIRE((size_t)test::size_read_orig == args.request_size);
+    test::test_close();
+    REQUIRE(test::status_orig == MPI_SUCCESS);
+  }
+
   SECTION("read at the end of existing file") {
     test::test_open(info.existing_file.c_str(), MPI_MODE_RDONLY, MPI_COMM_SELF);
     REQUIRE(test::status_orig == MPI_SUCCESS);
@@ -956,6 +1053,19 @@ TEST_CASE("SingleAsyncReadCollective",
     test::test_close();
     REQUIRE(test::status_orig == MPI_SUCCESS);
   }
+
+  SECTION("read from existing file using shared ptr") {
+    test::test_open(info.shared_existing_file.c_str(), MPI_MODE_RDONLY,
+                    MPI_COMM_WORLD);
+    REQUIRE(test::status_orig == MPI_SUCCESS);
+    test::test_seek_shared(0, MPI_SEEK_SET);
+    REQUIRE(test::status_orig == 0);
+    test::test_iread_shared(info.read_data.data(), args.request_size, MPI_CHAR);
+    REQUIRE((size_t)test::size_read_orig == args.request_size);
+    test::test_close();
+    REQUIRE(test::status_orig == MPI_SUCCESS);
+  }
+
   SECTION("read at the end of existing file") {
     test::test_open(info.shared_existing_file.c_str(), MPI_MODE_RDONLY,
                     MPI_COMM_WORLD);
