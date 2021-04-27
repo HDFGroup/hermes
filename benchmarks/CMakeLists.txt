@@ -1,5 +1,6 @@
 include_directories(
   ${PROJECT_SOURCE_DIR}/src/api
+  ${PROJECT_SOURCE_DIR}/test
 )
 
 set(BENCHMARKS mdm_bench dpe_bench vpic_bench)

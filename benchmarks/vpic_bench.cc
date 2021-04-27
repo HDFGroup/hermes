@@ -10,48 +10,63 @@
 #include "mpi.h"
 #include "hermes.h"
 #include "bucket.h"
+#include "test_utils.h"
 
 namespace hapi = hermes::api;
 using u8 = hermes::u8;
+using std::chrono::duration;
+const auto now = std::chrono::high_resolution_clock::now;
+
+const int kNumVariables = 8;
+const int kDefaultIterations = 16;
+const int kXdim = 64;
+const int kYdim = 64;
+const int kZdim = 64;
+
 
 struct Options {
-  int num_buckets;
+  size_t data_size_mb;
+  const char *output_path;
   int num_iterations;
-  size_t num_particles;
+  bool shared_bucket;
   bool do_posix_io;
-  char *output_file;
 };
 
 void PrintUsage(char *program) {
-  fprintf(stderr, "Usage: %s Doc string goes here\n", program);
-  fprintf(stderr, "  -b\n");
-  fprintf(stderr, "    doc\n");
-  fprintf(stderr, "  -i\n");
-  fprintf(stderr, "    doc\n");
-  fprintf(stderr, "  -o\n");
-  fprintf(stderr, "    doc\n");
-  fprintf(stderr, "  -p\n");
-  fprintf(stderr, "    doc\n");
-  fprintf(stderr, "  -x\n");
-  fprintf(stderr, "    doc\n");
+  fprintf(stderr, "Usage: %s [-bhiopx] \n", program);
+  fprintf(stderr, "  -h\n");
+  fprintf(stderr, "     Print help\n");
+  fprintf(stderr, "  -i <num_iterations> (default %d)\n", kDefaultIterations);
+  fprintf(stderr, "     The number of times to run the VPIC I/O kernel.\n");
+  fprintf(stderr, "  -o <output_file> (default ./)\n");
+  fprintf(stderr, "     The path to an output file, which will be called\n"
+                  "     'vpic_<rank>.out\n");
+  fprintf(stderr, "  -p <data_size> (default 8)\n");
+  fprintf(stderr, "     The size of particle data in MiB for each variable.\n");
+  fprintf(stderr, "  -s (default true)\n");
+  fprintf(stderr, "     Boolean flag. Whether to share a single Bucket or \n"
+                  "     give each rank its own Bucket\n");
+  fprintf(stderr, "  -x (default false)\n");
+  fprintf(stderr, "     Boolean flag. If enabled, POSIX I/O is performed\n"
+                  "     instead of going through Hermes.\n");
 }
 
 Options HandleArgs(int argc, char **argv) {
   Options result = {};
-  result.num_buckets = 1;
-  result.num_iterations = 16;
-  result.num_particles = (8 * 1024 * 1024) / sizeof(float);
+  result.shared_bucket = true;
+  result.num_iterations = kDefaultIterations;
+  result.data_size_mb = 8;
   result.output_path = "./";
 
   int option = -1;
-  while ((option = getopt(argc, argv, "b:i:o:p:h")) != -1) {
+  while ((option = getopt(argc, argv, "hi:o:p:sx")) != -1) {
     switch (option) {
       case 'h': {
         PrintUsage(argv[0]);
         exit(0);
       }
       case 'b': {
-        result.num_buckets = atoi(optarg);
+        result.shared_bucket = false;
         break;
       }
       case 'i': {
@@ -59,11 +74,11 @@ Options HandleArgs(int argc, char **argv) {
         break;
       }
       case 'o': {
-        result.output_file = optarg;
+        result.output_path = optarg;
         break;
       }
       case 'p': {
-        result.num_particles = (size_t)std::stoull(optarg);
+        result.data_size_mb = (size_t)std::stoull(optarg);
         break;
       }
       case 'x': {
@@ -76,6 +91,7 @@ Options HandleArgs(int argc, char **argv) {
       }
     }
   }
+
   if (optind < argc) {
     fprintf(stderr, "non-option ARGV-elements: ");
     while (optind < argc) {
@@ -98,6 +114,7 @@ static void DoFwrite(const std::vector<T> &vec, FILE *f) {
   CHECK_EQ(bytes_written, total_bytes);
 }
 
+#if 0
 static void InitParticles(const int x_dim, const int y_dim, const int z_dim,
                           std::vector<int> &id1, std::vector<int> &id2,
                           std::vector<float> &x, std::vector<float> &y,
@@ -135,14 +152,142 @@ static void InitParticles(const int x_dim, const int y_dim, const int z_dim,
     pz[i] = ((double)id2[i] / num_particles) * z_dim;
   }
 }
+#endif
+
+double GetMPIAverage(double rank_seconds, int num_ranks, MPI_Comm comm) {
+  double total_secs = 0;
+  MPI_Reduce(&rank_seconds, &total_secs, 1, MPI_DOUBLE, MPI_SUM, 0, comm);
+  double result = total_secs / num_ranks;
+
+  return result;
+}
+
+double GetMPIAverage(double rank_seconds, int num_ranks, MPI_Comm *comm) {
+  double result = GetMPIAverage(rank_seconds, num_ranks, *comm);
+
+  return result;
+}
+
+void RunHermesBench(const Options &options, const std::vector<float> &x) {
+  hermes::Config config = {};
+  hermes::InitDefaultConfig(&config);
+  config.num_devices = 1;
+  config.num_targets = 1;
+  config.capacities[0] = 128 * 1024 * 1024;
+  // config.default_placement_policy = hapi::PlacementPolicy::kRandom;
+  config.system_view_state_update_interval_ms = 500;
+  std::shared_ptr<hapi::Hermes> hermes = hermes::InitHermes(&config);
+  if (hermes->IsApplicationCore()) {
+    int my_rank = hermes->GetProcessRank();
+    int app_size = hermes->GetNumProcesses();
+
+    if (app_size != 1 && app_size != kNumVariables) {
+      fprintf(stderr, "Must be run with 1 or 8 Application ranks"
+              "(plus 1 Hermes rank)");
+      exit(1);
+    }
+
+    MPI_Comm *comm = (MPI_Comm *)hermes->GetAppCommunicator();
+
+    std::string bucket_name = "vpic_";
+
+    if (options.shared_bucket) {
+      bucket_name += "shared";
+    } else {
+      bucket_name += std::to_string(my_rank);
+    }
+
+    std::string output_file = bucket_name + ".out";
+
+    hapi::Bucket bucket(bucket_name, hermes);
+
+    hermes->AppBarrier();
+
+    for (int i = 0; i < options.num_iterations; ++i) {
+      auto start1 = now();
+      if (app_size == 1) {
+        for (int j = 0; j < kNumVariables; ++j) {
+          std::string blob_name = std::to_string(j);
+          CHECK(bucket.Put(blob_name, x).Succeeded());
+        }
+      } else {
+        CHECK(bucket.Put("x", x).Succeeded());
+      }
+      auto end1 = now();
+
+      double my_write_secs = duration<double>(end1 - start1).count();
+      double avg_write_seconds = GetMPIAverage(my_write_secs, app_size, comm);
+
+      auto start2 = now();
+      CHECK(bucket.DeleteBlob("x").Succeeded());
+      CHECK(bucket.DeleteBlob("y").Succeeded());
+      CHECK(bucket.DeleteBlob("z").Succeeded());
+      CHECK(bucket.DeleteBlob("px").Succeeded());
+      CHECK(bucket.DeleteBlob("py").Succeeded());
+      CHECK(bucket.DeleteBlob("pz").Succeeded());
+      CHECK(bucket.DeleteBlob("id1").Succeeded());
+      CHECK(bucket.DeleteBlob("id2").Succeeded());
+      auto end2 = now();
+
+      double my_flush_del_secs = duration<double>(end2 - start2).count();
+      double avg_flush_del_seconds = GetMPIAverage(my_flush_del_secs, app_size,
+                                                   comm);
+
+      if (my_rank == 0) {
+        printf("%d,%d,%d,%zu,%f,%f\n", options.do_posix_io, options.shared_bucket,
+               options.num_iterations, options.data_size_mb, avg_write_seconds,
+               avg_flush_del_seconds);
+      }
+
+      hermes->AppBarrier();
+    }
+
+    if (options.shared_bucket) {
+      if (my_rank != 0) {
+        bucket.Release();
+      }
+      hermes->AppBarrier();
+      if (my_rank == 0) {
+        bucket.Destroy();
+      }
+    } else {
+      bucket.Destroy();
+    }
+
+  } else {
+    // Hermes core. No user code.
+  }
+
+  hermes->Finalize();
+}
+
+double RunPosixBench(Options &options, const std::vector<float> &x, int rank) {
+  hermes::testing::Timer timer;
+
+  for (int i = 0; i < options.num_iterations; ++i) {
+    std::string output_file = "vpic_posix_" + std::to_string(rank) + ".out";
+    std::string output_path = (options.output_path + std::string("/") +
+                               output_file);
+    FILE *f = fopen(output_path.c_str(), "w");
+    CHECK(f);
+
+    timer.resumeTime();
+    DoFwrite(x, f);
+    timer.pauseTime();
+
+    // CHECK_EQ(fflush(f), 0);
+    // CHECK_EQ(fsync(fileno(f)), 0);
+    CHECK_EQ(fclose(f), 0);
+  }
+
+  double avg_total_seconds = GetMPIAverage(timer.getElapsedTime(), 8, MPI_COMM_WORLD);
+  double total_mb = options.data_size_mb * kNumVariables * options.num_iterations;
+  double bandwidth = total_mb / avg_total_seconds;
+
+  return bandwidth;
+}
 
 int main(int argc, char* argv[]) {
-  const int kNumVariables = 8;
-  const int kXdim = 64;
-  const int kYdim = 64;
-  const int kZdim = 64;
-  const auto now = std::chrono::high_resolution_clock::now;
-
   Options options = HandleArgs(argc, argv);
 
   int mpi_threads_provided;
@@ -152,111 +297,40 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  hermes::Config config = {};
-  hermes::InitDefaultConfig(&config);
-  config.num_devices = 1;
-  config.num_targets = 1;
-  config.capacities[0] = 256 * 1024 * 1024;
-  config.default_placement_policy = hapi::PlacementPolicy::kRandom;
-  config.system_view_state_update_interval_ms = 1;
-  std::shared_ptr<hapi::Hermes> hermes = hermes::InitHermes(&config);
+  int rank = 0;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-  if (hermes->IsApplicationCore()) {
-    int my_rank = hermes->GetProcessRank();
-    int app_size = hermes->GetNumProcesses();
-
-    if (options.num_buckets != 1 || options.num_buckets != kNumVariables ||
-        options.num_buckets != app_size) {
-
-    }
-
-    std::vector<int> id1(options.num_particles);
-    std::vector<int> id2(options.num_particles);
-    std::vector<float> x(options.num_particles);
-    std::vector<float> y(options.num_particles);
-    std::vector<float> z(options.num_particles);
-    std::vector<float> px(options.num_particles);
-    std::vector<float> py(options.num_particles);
-    std::vector<float> pz(options.num_particles);
-    InitParticles(kXdim, kYdim, kZdim, id1, id2, x, y, z, px, py, pz);
-
-    std::string bucket_name = "vpic_" + std::to_string(my_rank);
-    std::string output_file = bucket_name + ".out";
-
-    std::vector<hapi::Bucket> buckets;
-    for (int i = 0; i < options.num_buckets; ++i) {
-      buckets.emplace_back(bucket_name, hermes);
-    }
-    hermes->AppBarrier();
-
-    auto start = now();
-
-    for (int i = 0; i < options.num_iterations; ++i) {
-      FILE *f = NULL;
-
-      auto start1 = now();
-      if (options.do_posix_io) {
-        f = fopen(output_file.c_str(), "w");
-        CHECK(f);
-        DoFwrite(x, f);
-        DoFwrite(y, f);
-        DoFwrite(z, f);
-        DoFwrite(id1, f);
-        DoFwrite(id2, f);
-        DoFwrite(px, f);
-        DoFwrite(py, f);
-        DoFwrite(pz, f);
-      } else {
-        CHECK(bucket.Put("x", x).Succeeded());
-        CHECK(bucket.Put("y", y).Succeeded());
-        CHECK(bucket.Put("z", z).Succeeded());
-        CHECK(bucket.Put("id1", id1).Succeeded());
-        CHECK(bucket.Put("id2", id2).Succeeded());
-        CHECK(bucket.Put("px", px).Succeeded());
-        CHECK(bucket.Put("py", py).Succeeded());
-        CHECK(bucket.Put("pz", pz).Succeeded());
-      }
-      auto end1 = now();
-
-      auto start2 = now();
-      if (options.do_posix_io) {
-        CHECK_EQ(fflush(f), 0);
-        CHECK_EQ(fsync(fileno(f)), 0);
-        CHECK_EQ(fclose(f), 0);
-      } else {
-        CHECK(bucket.DeleteBlob("x").Succeeded());
-        CHECK(bucket.DeleteBlob("y").Succeeded());
-        CHECK(bucket.DeleteBlob("z").Succeeded());
-        CHECK(bucket.DeleteBlob("px").Succeeded());
-        CHECK(bucket.DeleteBlob("py").Succeeded());
-        CHECK(bucket.DeleteBlob("pz").Succeeded());
-        CHECK(bucket.DeleteBlob("id1").Succeeded());
-        CHECK(bucket.DeleteBlob("id2").Succeeded());
-      }
-      auto end2 = now();
-
-      hermes->AppBarrier();
-
-    }
-
-    auto end = now();
-
-    if (my_rank == 0) {
-      printf("num_buckets,num_iterations,num_particles\n");
-      double total_seconds_writing =
-        std::chrono::duration<double>(end1 - start1).count();
-      printf("Seconds spent writing: %f\n", total_seconds_writing);
-      double total_seconds_flushing =
-        std::chrono::duration<double>(end2 - start2).count();
-      printf("Seconds spent flushing: %f\n", total_seconds_flushing);
-      double total_seconds = std::chrono::duration<double>(end - start).count();
-      printf("Total seconds: %f\n", total_seconds);
-    }
-  } else {
-    // Hermes core. No user code.
+  if (rank == 0) {
+    // TODO(chogan): DPE strategy, num Tiers, tier percentage
+    // printf("posix,num_buckets,num_iterations,num_particles,write_seconds,"
+    //        "flush_del_seconds\n");
   }
 
-  hermes->Finalize();
+  size_t num_elements = MEGABYTES(options.data_size_mb) / sizeof(float);
+  std::vector<float> data(num_elements);
+  std::generate(data.begin(), data.end(), []() {
+    return uniform_random_number() * kXdim;
+  });
+
+  // std::vector<float> x(num_elements);
+  // std::vector<float> y(num_elements);
+  // std::vector<float> z(num_elements);
+  // std::vector<int> id1(num_elements);
+  // std::vector<int> id2(num_elements);
+  // std::vector<float> px(num_elements);
+  // std::vector<float> py(num_elements);
+  // std::vector<float> pz(num_elements);
+  // InitParticles(kXdim, kYdim, kZdim, id1, id2, x, y, z, px, py, pz);
+
+  if (options.do_posix_io) {
+    double bandwidth = RunPosixBench(options, data, rank);
+    if (rank == 0) {
+      printf("%d,%d,%d,%zu,%f\n", options.do_posix_io, options.shared_bucket,
+             options.num_iterations, options.data_size_mb, bandwidth);
+    }
+  } else {
+    RunHermesBench(options, data);
+  }
 
   MPI_Finalize();
 
