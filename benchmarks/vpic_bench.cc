@@ -28,6 +28,7 @@ struct Options {
   size_t data_size_mb;
   const char *output_path;
   int num_iterations;
+  int num_nodes;
   bool shared_bucket;
   bool do_posix_io;
 };
@@ -38,6 +39,8 @@ void PrintUsage(char *program) {
   fprintf(stderr, "     Print help\n");
   fprintf(stderr, "  -i <num_iterations> (default %d)\n", kDefaultIterations);
   fprintf(stderr, "     The number of times to run the VPIC I/O kernel.\n");
+  fprintf(stderr, "  -n <num_nodes> (default 1)\n");
+  fprintf(stderr, "     The number of nodes (only required when -x is used)n");
   fprintf(stderr, "  -o <output_file> (default ./)\n");
   fprintf(stderr, "     The path to an output file, which will be called\n"
                   "     'vpic_<rank>.out\n");
@@ -53,13 +56,14 @@ void PrintUsage(char *program) {
 
 Options HandleArgs(int argc, char **argv) {
   Options result = {};
-  result.shared_bucket = true;
-  result.num_iterations = kDefaultIterations;
   result.data_size_mb = 8;
   result.output_path = "./";
+  result.num_iterations = kDefaultIterations;
+  result.num_nodes = 1;
+  result.shared_bucket = true;
 
   int option = -1;
-  while ((option = getopt(argc, argv, "hi:o:p:sx")) != -1) {
+  while ((option = getopt(argc, argv, "hi:n:o:p:sx")) != -1) {
     switch (option) {
       case 'h': {
         PrintUsage(argv[0]);
@@ -71,6 +75,10 @@ Options HandleArgs(int argc, char **argv) {
       }
       case 'i': {
         result.num_iterations = atoi(optarg);
+        break;
+      }
+      case 'n': {
+        result.num_nodes = atoi(optarg);
         break;
       }
       case 'o': {
@@ -234,9 +242,9 @@ void RunHermesBench(const Options &options, const std::vector<float> &x) {
                                                    comm);
 
       if (my_rank == 0) {
-        printf("%d,%d,%d,%zu,%f,%f\n", options.do_posix_io, options.shared_bucket,
-               options.num_iterations, options.data_size_mb, avg_write_seconds,
-               avg_flush_del_seconds);
+        printf("%d,%d,%d,%zu,%f,%f\n", options.do_posix_io,
+               options.shared_bucket, options.num_iterations,
+               options.data_size_mb, avg_write_seconds, avg_flush_del_seconds);
       }
 
       hermes->AppBarrier();
@@ -280,8 +288,10 @@ double RunPosixBench(Options &options, const std::vector<float> &x, int rank) {
     CHECK_EQ(fclose(f), 0);
   }
 
-  double avg_total_seconds = GetMPIAverage(timer.getElapsedTime(), 8, MPI_COMM_WORLD);
-  double total_mb = options.data_size_mb * kNumVariables * options.num_iterations;
+  double avg_total_seconds =
+    GetMPIAverage(timer.getElapsedTime(), 8, MPI_COMM_WORLD);
+  double total_mb =
+    options.data_size_mb * kNumVariables * options.num_iterations;
   double bandwidth = total_mb / avg_total_seconds;
 
   return bandwidth;
@@ -325,8 +335,9 @@ int main(int argc, char* argv[]) {
   if (options.do_posix_io) {
     double bandwidth = RunPosixBench(options, data, rank);
     if (rank == 0) {
-      printf("%d,%d,%d,%zu,%f\n", options.do_posix_io, options.shared_bucket,
-             options.num_iterations, options.data_size_mb, bandwidth);
+      printf("%d,%d,%d,%d,%zu,%f\n", options.do_posix_io, options.num_nodes,
+             options.shared_bucket, options.num_iterations,
+             options.data_size_mb, bandwidth);
     }
   } else {
     RunHermesBench(options, data);
