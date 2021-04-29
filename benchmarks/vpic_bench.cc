@@ -208,8 +208,19 @@ double GetMPIAverage(double rank_seconds, int num_ranks, MPI_Comm *comm) {
   return result;
 }
 
-#if 0
-void RunHermesBench(const Options &options, const std::vector<float> &x) {
+double GetBandwidth(const Options &options, double total_elapsed,
+                    MPI_Comm comm) {
+  double avg_total_seconds = GetMPIAverage(total_elapsed, 8, comm);
+  double total_mb =
+    options.data_size_mb * kNumVariables * options.num_iterations;
+  double result = total_mb / avg_total_seconds;
+
+  return result;
+}
+
+double RunHermesBench(Options &options, float *data) {
+  hermes::testing::Timer timer;
+  double bandwidth = 0;
   hermes::Config config = {};
   hermes::InitDefaultConfig(&config);
   config.num_devices = 1;
@@ -217,18 +228,13 @@ void RunHermesBench(const Options &options, const std::vector<float> &x) {
   config.capacities[0] = 128 * 1024 * 1024;
   // config.default_placement_policy = hapi::PlacementPolicy::kRandom;
   config.system_view_state_update_interval_ms = 500;
+
   std::shared_ptr<hapi::Hermes> hermes = hermes::InitHermes(&config);
+
   if (hermes->IsApplicationCore()) {
     int my_rank = hermes->GetProcessRank();
-    int app_size = hermes->GetNumProcesses();
-
-    if (app_size != 1 && app_size != kNumVariables) {
-      fprintf(stderr, "Must be run with 1 or 8 Application ranks"
-              "(plus 1 Hermes rank)");
-      exit(1);
-    }
-
     MPI_Comm *comm = (MPI_Comm *)hermes->GetAppCommunicator();
+    options.num_nodes = hermes->rpc_.num_nodes;
 
     std::string bucket_name = "vpic_";
 
@@ -238,50 +244,23 @@ void RunHermesBench(const Options &options, const std::vector<float> &x) {
       bucket_name += std::to_string(my_rank);
     }
 
-    std::string output_file = bucket_name + ".out";
-
     hapi::Bucket bucket(bucket_name, hermes);
 
     hermes->AppBarrier();
 
+    std::string blob_name = "data_" + std::to_string(my_rank);
+    size_t total_bytes = MEGABYTES(options.data_size_mb);
+
     for (int i = 0; i < options.num_iterations; ++i) {
-      auto start1 = now();
-      if (app_size == 1) {
-        for (int j = 0; j < kNumVariables; ++j) {
-          std::string blob_name = std::to_string(j);
-          CHECK(bucket.Put(blob_name, x).Succeeded());
-        }
-      } else {
-        CHECK(bucket.Put("x", x).Succeeded());
-      }
-      auto end1 = now();
 
-      double my_write_secs = duration<double>(end1 - start1).count();
-      double avg_write_seconds = GetMPIAverage(my_write_secs, app_size, comm);
+      timer.resumeTime();
+      CHECK(bucket.Put(blob_name, (u8*)data, total_bytes).Succeeded());
+      timer.pauseTime();
 
-      auto start2 = now();
-      CHECK(bucket.DeleteBlob("x").Succeeded());
-      CHECK(bucket.DeleteBlob("y").Succeeded());
-      CHECK(bucket.DeleteBlob("z").Succeeded());
-      CHECK(bucket.DeleteBlob("px").Succeeded());
-      CHECK(bucket.DeleteBlob("py").Succeeded());
-      CHECK(bucket.DeleteBlob("pz").Succeeded());
-      CHECK(bucket.DeleteBlob("id1").Succeeded());
-      CHECK(bucket.DeleteBlob("id2").Succeeded());
-      auto end2 = now();
-
-      double my_flush_del_secs = duration<double>(end2 - start2).count();
-      double avg_flush_del_seconds = GetMPIAverage(my_flush_del_secs, app_size,
-                                                   comm);
-
-      if (my_rank == 0) {
-        printf("%d,%d,%d,%zu,%f,%f\n", options.do_posix_io,
-               options.shared_bucket, options.num_iterations,
-               options.data_size_mb, avg_write_seconds, avg_flush_del_seconds);
-      }
-
-      hermes->AppBarrier();
+      CHECK(bucket.DeleteBlob(blob_name).Succeeded());
     }
+
+    hermes->AppBarrier();
 
     if (options.shared_bucket) {
       if (my_rank != 0) {
@@ -295,13 +274,15 @@ void RunHermesBench(const Options &options, const std::vector<float> &x) {
       bucket.Destroy();
     }
 
+    bandwidth = GetBandwidth(options, timer.getElapsedTime(), *comm);
   } else {
     // Hermes core. No user code.
   }
 
   hermes->Finalize();
+
+  return bandwidth;
 }
-#endif
 
 double RunPosixBench(Options &options, float *x, int rank) {
   hermes::testing::Timer timer;
@@ -337,11 +318,8 @@ double RunPosixBench(Options &options, float *x, int rank) {
     }
   }
 
-  double avg_total_seconds =
-    GetMPIAverage(timer.getElapsedTime(), 8, MPI_COMM_WORLD);
-  double total_mb =
-    options.data_size_mb * kNumVariables * options.num_iterations;
-  double bandwidth = total_mb / avg_total_seconds;
+  double bandwidth = GetBandwidth(options, timer.getElapsedTime(),
+                                  MPI_COMM_WORLD);
 
   return bandwidth;
 }
@@ -375,26 +353,24 @@ int main(int argc, char* argv[]) {
     data[i] = uniform_random_number() * kXdim;
   }
 
-  // std::vector<float> x(num_elements);
-  // std::vector<float> y(num_elements);
-  // std::vector<float> z(num_elements);
-  // std::vector<int> id1(num_elements);
-  // std::vector<int> id2(num_elements);
-  // std::vector<float> px(num_elements);
-  // std::vector<float> py(num_elements);
-  // std::vector<float> pz(num_elements);
-  // InitParticles(kXdim, kYdim, kZdim, id1, id2, x, y, z, px, py, pz);
+  double bandwidth = 0;
+  std::string buffering = "normal";
+  if (options.direct_io) {
+    buffering = "direct";
+  } else if (options.sync) {
+    buffering = "sync";
+  }
 
   if (options.do_posix_io) {
-    double bandwidth = RunPosixBench(options, data, rank);
-    if (rank == 0) {
-      printf("%d,%d,%d,%d,%d,%d,%zu,%f\n", options.do_posix_io,
-             options.direct_io, options.sync, options.num_nodes,
-             options.shared_bucket, options.num_iterations,
-             options.data_size_mb, bandwidth);
-    }
+    bandwidth = RunPosixBench(options, data, rank);
   } else {
-    // RunHermesBench(options, data);
+    bandwidth = RunHermesBench(options, data);
+  }
+
+  if (rank == 0) {
+    printf("%d,%s,%d,%d,%d,%zu,%f\n", options.do_posix_io, buffering.c_str(),
+           options.num_nodes, options.shared_bucket, options.num_iterations,
+           options.data_size_mb, bandwidth);
   }
 
   free(data);
