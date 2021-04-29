@@ -34,12 +34,15 @@ struct Options {
   bool shared_bucket;
   bool do_posix_io;
   bool direct_io;
+  bool sync;
 };
 
 void PrintUsage(char *program) {
   fprintf(stderr, "Usage: %s [-bhiopx] \n", program);
   fprintf(stderr, "  -d (default false)\n");
   fprintf(stderr, "     Boolean flag. Do POSIX I/O with O_DIRECT.\n");
+  fprintf(stderr, "  -f (default false)\n");
+  fprintf(stderr, "     Boolean flag. fflush and fsync after every write\n");
   fprintf(stderr, "  -h\n");
   fprintf(stderr, "     Print help\n");
   fprintf(stderr, "  -i <num_iterations> (default %d)\n", kDefaultIterations);
@@ -68,10 +71,14 @@ Options HandleArgs(int argc, char **argv) {
   result.shared_bucket = true;
 
   int option = -1;
-  while ((option = getopt(argc, argv, "dhi:n:o:p:sx")) != -1) {
+  while ((option = getopt(argc, argv, "dfhi:n:o:p:sx")) != -1) {
     switch (option) {
       case 'd': {
         result.direct_io = true;
+        break;
+      }
+      case 'f': {
+        result.sync = true;
         break;
       }
       case 'h': {
@@ -124,24 +131,24 @@ static inline double uniform_random_number() {
   return (((double)rand())/((double)(RAND_MAX)));
 }
 
-template<typename T>
-static void DoFwrite(const std::vector<T> &vec, FILE *f) {
-  size_t total_bytes = vec.size() * sizeof(T);
-  size_t bytes_written = fwrite(vec.data(), 1, total_bytes, f);
-  CHECK_EQ(bytes_written, total_bytes);
-}
+// template<typename T>
+// static void DoFwrite(const std::vector<T> &vec, FILE *f) {
+//   size_t total_bytes = vec.size() * sizeof(T);
+//   size_t bytes_written = fwrite(vec.data(), 1, total_bytes, f);
+//   CHECK_EQ(bytes_written, total_bytes);
+// }
 
 static void DoFwrite(float *data, size_t size, FILE *f) {
   size_t bytes_written = fwrite(data, 1, size, f);
   CHECK_EQ(bytes_written, size);
 }
 
-template<typename T>
-static void DoWrite(const std::vector<T> &vec, int fd) {
-  size_t total_bytes = vec.size() * sizeof(T);
-  ssize_t bytes_written = write(fd, vec.data(), total_bytes);
-  CHECK_EQ(bytes_written, total_bytes);
-}
+// template<typename T>
+// static void DoWrite(const std::vector<T> &vec, int fd) {
+//   size_t total_bytes = vec.size() * sizeof(T);
+//   ssize_t bytes_written = write(fd, vec.data(), total_bytes);
+//   CHECK_EQ(bytes_written, total_bytes);
+// }
 
 static void DoWrite(float *data, size_t size, int fd) {
   ssize_t bytes_written = write(fd, data, size);
@@ -321,8 +328,11 @@ double RunPosixBench(Options &options, float *x, int rank) {
       DoFwrite(x, MEGABYTES(options.data_size_mb), f);
       timer.pauseTime();
 
-      // CHECK_EQ(fflush(f), 0);
-      // CHECK_EQ(fsync(fileno(f)), 0);
+      if (options.sync) {
+        CHECK_EQ(fflush(f), 0);
+        CHECK_EQ(fsync(fileno(f)), 0);
+      }
+
       CHECK_EQ(fclose(f), 0);
     }
   }
