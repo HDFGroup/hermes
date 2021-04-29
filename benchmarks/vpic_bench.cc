@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cstdlib>
 #include <numeric>
 
 #include "mpi.h"
@@ -131,6 +132,11 @@ static void DoFwrite(const std::vector<T> &vec, FILE *f) {
   CHECK_EQ(bytes_written, total_bytes);
 }
 
+static void DoFwrite(float *data, size_t size, FILE *f) {
+  size_t bytes_written = fwrite(data, 1, size, f);
+  CHECK_EQ(bytes_written, size);
+}
+
 template<typename T>
 static void DoWrite(const std::vector<T> &vec, int fd) {
   size_t total_bytes = vec.size() * sizeof(T);
@@ -138,6 +144,10 @@ static void DoWrite(const std::vector<T> &vec, int fd) {
   CHECK_EQ(bytes_written, total_bytes);
 }
 
+static void DoWrite(float *data, size_t size, int fd) {
+  ssize_t bytes_written = write(fd, data, size);
+  CHECK_EQ(bytes_written, size);
+}
 #if 0
 static void InitParticles(const int x_dim, const int y_dim, const int z_dim,
                           std::vector<int> &id1, std::vector<int> &id2,
@@ -192,6 +202,7 @@ double GetMPIAverage(double rank_seconds, int num_ranks, MPI_Comm *comm) {
   return result;
 }
 
+#if 0
 void RunHermesBench(const Options &options, const std::vector<float> &x) {
   hermes::Config config = {};
   hermes::InitDefaultConfig(&config);
@@ -284,8 +295,9 @@ void RunHermesBench(const Options &options, const std::vector<float> &x) {
 
   hermes->Finalize();
 }
+#endif
 
-double RunPosixBench(Options &options, const std::vector<float> &x, int rank) {
+double RunPosixBench(Options &options, float *x, int rank) {
   hermes::testing::Timer timer;
 
   for (int i = 0; i < options.num_iterations; ++i) {
@@ -293,27 +305,27 @@ double RunPosixBench(Options &options, const std::vector<float> &x, int rank) {
     std::string output_path = (options.output_path + std::string("/") +
                                output_file);
 
-    // int fd = open(output_path.c_str(),
-    //               O_WRONLY | O_CREAT | O_TRUNC | O_DIRECT | O_SYNC,
-    //               S_IRUSR | S_IWUSR);
-    // CHECK(fd > 0);
-    // timer.resumeTime();
-    // DoWrite(x, fd);
-    // timer.pauseTime();
-    // CHECK_EQ(close(fd), 0);
-
-    FILE *f = fopen(output_path.c_str(), "w");
-    CHECK(f);
-
-    timer.resumeTime();
-    DoFwrite(x, f);
-    timer.pauseTime();
-
     if (options.direct_io) {
-      CHECK_EQ(fflush(f), 0);
-      CHECK_EQ(fsync(fileno(f)), 0);
+      int fd = open(output_path.c_str(),
+                    O_WRONLY | O_CREAT | O_TRUNC | O_DIRECT | O_SYNC,
+                    S_IRUSR | S_IWUSR);
+      CHECK(fd > 0);
+      timer.resumeTime();
+      DoWrite(x, MEGABYTES(options.data_size_mb), fd);
+      timer.pauseTime();
+      CHECK_EQ(close(fd), 0);
+    } else {
+      FILE *f = fopen(output_path.c_str(), "w");
+      CHECK(f);
+
+      timer.resumeTime();
+      DoFwrite(x, MEGABYTES(options.data_size_mb), f);
+      timer.pauseTime();
+
+      // CHECK_EQ(fflush(f), 0);
+      // CHECK_EQ(fsync(fileno(f)), 0);
+      CHECK_EQ(fclose(f), 0);
     }
-    CHECK_EQ(fclose(f), 0);
   }
 
   double avg_total_seconds =
@@ -345,10 +357,14 @@ int main(int argc, char* argv[]) {
   }
 
   size_t num_elements = MEGABYTES(options.data_size_mb) / sizeof(float);
-  std::vector<float> data(num_elements);
-  std::generate(data.begin(), data.end(), []() {
-    return uniform_random_number() * kXdim;
-  });
+  // std::vector<float> data(num_elements);
+  const int kSectorSize = 512;
+  float *data = (float *)std::aligned_alloc(kSectorSize,
+                                            num_elements * sizeof(float));
+
+  for (size_t i = 0; i < num_elements; ++i) {
+    data[i] = uniform_random_number() * kXdim;
+  }
 
   // std::vector<float> x(num_elements);
   // std::vector<float> y(num_elements);
@@ -368,8 +384,10 @@ int main(int argc, char* argv[]) {
              options.data_size_mb, bandwidth);
     }
   } else {
-    RunHermesBench(options, data);
+    // RunHermesBench(options, data);
   }
+
+  std::free(data);
 
   MPI_Finalize();
 
