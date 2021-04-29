@@ -388,8 +388,9 @@ int main(int argc, char* argv[]) {
   if (options.do_posix_io) {
     double bandwidth = RunPosixBench(options, data, rank);
     if (rank == 0) {
-      printf("%d,%d,%d,%d,%d,%zu,%f\n", options.do_posix_io, options.direct_io,
-             options.num_nodes, options.shared_bucket, options.num_iterations,
+      printf("%d,%d,%d,%d,%d,%d,%zu,%f\n", options.do_posix_io,
+             options.direct_io, options.sync, options.num_nodes,
+             options.shared_bucket, options.num_iterations,
              options.data_size_mb, bandwidth);
     }
   } else {
