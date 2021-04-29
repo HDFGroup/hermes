@@ -7,7 +7,6 @@
 
 #include <algorithm>
 #include <chrono>
-#include <cstdlib>
 #include <numeric>
 
 #include "mpi.h"
@@ -359,8 +358,8 @@ int main(int argc, char* argv[]) {
   size_t num_elements = MEGABYTES(options.data_size_mb) / sizeof(float);
   // std::vector<float> data(num_elements);
   const int kSectorSize = 512;
-  float *data = (float *)std::aligned_alloc(kSectorSize,
-                                            num_elements * sizeof(float));
+  float *data = (float *)aligned_alloc(kSectorSize,
+                                       num_elements * sizeof(float));
 
   for (size_t i = 0; i < num_elements; ++i) {
     data[i] = uniform_random_number() * kXdim;
@@ -387,7 +386,7 @@ int main(int argc, char* argv[]) {
     // RunHermesBench(options, data);
   }
 
-  std::free(data);
+  free(data);
 
   MPI_Finalize();
 
