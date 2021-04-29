@@ -1,6 +1,8 @@
+#include <fcntl.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 #include <algorithm>
@@ -31,10 +33,13 @@ struct Options {
   int num_nodes;
   bool shared_bucket;
   bool do_posix_io;
+  bool direct_io;
 };
 
 void PrintUsage(char *program) {
   fprintf(stderr, "Usage: %s [-bhiopx] \n", program);
+  fprintf(stderr, "  -d (default false)\n");
+  fprintf(stderr, "     Boolean flag. Do POSIX I/O with O_DIRECT.\n");
   fprintf(stderr, "  -h\n");
   fprintf(stderr, "     Print help\n");
   fprintf(stderr, "  -i <num_iterations> (default %d)\n", kDefaultIterations);
@@ -63,15 +68,15 @@ Options HandleArgs(int argc, char **argv) {
   result.shared_bucket = true;
 
   int option = -1;
-  while ((option = getopt(argc, argv, "hi:n:o:p:sx")) != -1) {
+  while ((option = getopt(argc, argv, "dhi:n:o:p:sx")) != -1) {
     switch (option) {
+      case 'd': {
+        result.direct_io = true;
+        break;
+      }
       case 'h': {
         PrintUsage(argv[0]);
         exit(0);
-      }
-      case 'b': {
-        result.shared_bucket = false;
-        break;
       }
       case 'i': {
         result.num_iterations = atoi(optarg);
@@ -87,6 +92,10 @@ Options HandleArgs(int argc, char **argv) {
       }
       case 'p': {
         result.data_size_mb = (size_t)std::stoull(optarg);
+        break;
+      }
+      case 's': {
+        result.shared_bucket = false;
         break;
       }
       case 'x': {
@@ -119,6 +128,13 @@ template<typename T>
 static void DoFwrite(const std::vector<T> &vec, FILE *f) {
   size_t total_bytes = vec.size() * sizeof(T);
   size_t bytes_written = fwrite(vec.data(), 1, total_bytes, f);
+  CHECK_EQ(bytes_written, total_bytes);
+}
+
+template<typename T>
+static void DoWrite(const std::vector<T> &vec, int fd) {
+  size_t total_bytes = vec.size() * sizeof(T);
+  ssize_t bytes_written = write(fd, vec.data(), total_bytes);
   CHECK_EQ(bytes_written, total_bytes);
 }
 
@@ -276,6 +292,16 @@ double RunPosixBench(Options &options, const std::vector<float> &x, int rank) {
     std::string output_file = "vpic_posix_" + std::to_string(rank) + ".out";
     std::string output_path = (options.output_path + std::string("/") +
                                output_file);
+
+    // int fd = open(output_path.c_str(),
+    //               O_WRONLY | O_CREAT | O_TRUNC | O_DIRECT | O_SYNC,
+    //               S_IRUSR | S_IWUSR);
+    // CHECK(fd > 0);
+    // timer.resumeTime();
+    // DoWrite(x, fd);
+    // timer.pauseTime();
+    // CHECK_EQ(close(fd), 0);
+
     FILE *f = fopen(output_path.c_str(), "w");
     CHECK(f);
 
@@ -283,8 +309,10 @@ double RunPosixBench(Options &options, const std::vector<float> &x, int rank) {
     DoFwrite(x, f);
     timer.pauseTime();
 
-    // CHECK_EQ(fflush(f), 0);
-    // CHECK_EQ(fsync(fileno(f)), 0);
+    if (options.direct_io) {
+      CHECK_EQ(fflush(f), 0);
+      CHECK_EQ(fsync(fileno(f)), 0);
+    }
     CHECK_EQ(fclose(f), 0);
   }
 
@@ -335,8 +363,8 @@ int main(int argc, char* argv[]) {
   if (options.do_posix_io) {
     double bandwidth = RunPosixBench(options, data, rank);
     if (rank == 0) {
-      printf("%d,%d,%d,%d,%zu,%f\n", options.do_posix_io, options.num_nodes,
-             options.shared_bucket, options.num_iterations,
+      printf("%d,%d,%d,%d,%d,%zu,%f\n", options.do_posix_io, options.direct_io,
+             options.num_nodes, options.shared_bucket, options.num_iterations,
              options.data_size_mb, bandwidth);
     }
   } else {
