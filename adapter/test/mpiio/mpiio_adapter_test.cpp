@@ -85,9 +85,11 @@ int finalize() {
   return 0;
 }
 
+const char* kUser = "USER";
+
 int pretest() {
   fs::path fullpath = args.directory;
-  fullpath /= args.filename;
+  fullpath /= args.filename + "_" + std::string(getenv(kUser));
   info.new_file = fullpath.string() + "_new_" + std::to_string(getpid());
   info.existing_file = fullpath.string() + "_ext_" + std::to_string(getpid());
   info.new_file_cmp =
