@@ -326,12 +326,12 @@ double RunPosixBench(Options &options, float *x, int rank) {
 
       timer.resumeTime();
       DoFwrite(x, MEGABYTES(options.data_size_mb), f);
-      timer.pauseTime();
 
       if (options.sync) {
         CHECK_EQ(fflush(f), 0);
         CHECK_EQ(fsync(fileno(f)), 0);
       }
+      timer.pauseTime();
 
       CHECK_EQ(fclose(f), 0);
     }
