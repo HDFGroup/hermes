@@ -49,6 +49,7 @@ endfunction()
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/posix)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/stdio)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/mpiio)
 
 install(
         TARGETS
