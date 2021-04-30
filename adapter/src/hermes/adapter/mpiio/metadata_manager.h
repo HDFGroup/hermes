@@ -17,6 +17,7 @@
  * Standard headers
  */
 #include <ftw.h>
+
 #include <unordered_map>
 
 /**
@@ -41,7 +42,7 @@ class MetadataManager {
   /**
    * Maintain a local metadata FileID structure mapped to Adapter Stats.
    */
-  std::unordered_map<FileID, AdapterStat> metadata;
+  std::unordered_map<MPI_File, AdapterStat> metadata;
   /**
    * hermes attribute to initialize Hermes
    */
@@ -53,7 +54,6 @@ class MetadataManager {
   /**
    * MPI attributes
    */
-  bool is_mpi;
   int rank;
   int comm_size;
 
@@ -62,16 +62,11 @@ class MetadataManager {
    * Constructor
    */
   MetadataManager()
-      : metadata(),
-        ref(0),
-        is_mpi(false),
-        rank(0),
-        comm_size(1) {}
+      : metadata(), ref(0), rank(0), comm_size(1) {}
   /**
    * Get the instance of hermes.
    */
   std::shared_ptr<hapi::Hermes>& GetHermes() { return hermes; }
-
 
   /**
    * Initialize hermes. Get the kHermesConf from environment else get_env
@@ -79,19 +74,13 @@ class MetadataManager {
    * daemon mode. Keep a reference of how many times Initialize is called.
    * Within the adapter, Initialize is called from fopen.
    */
-  void InitializeHermes(bool is_mpi = false) {
+  void InitializeHermes() {
     if (ref == 0) {
-      this->is_mpi = is_mpi;
       char* hermes_config = getenv(kHermesConf);
-      if (this->is_mpi) {
-        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-        MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
-        if (comm_size > 1) {
-          hermes = hermes::InitHermesClient(hermes_config);
-        } else {
-          this->is_mpi = false;
-          hermes = hermes::InitHermesDaemon(hermes_config);
-        }
+      MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+      MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
+      if (comm_size > 1) {
+        hermes = hermes::InitHermesClient(hermes_config);
       } else {
         hermes = hermes::InitHermesDaemon(hermes_config);
       }
@@ -105,7 +94,7 @@ class MetadataManager {
    */
   void FinalizeHermes() {
     if (ref == 1) {
-      if (this->is_mpi) {
+      if (this->comm_size > 1) {
         MPI_Barrier(MPI_COMM_WORLD);
         if (this->rank == 0) {
           hermes->RemoteFinalize();
@@ -117,10 +106,6 @@ class MetadataManager {
     }
     ref--;
   }
-  /**
-   * Convert file handler to FileID using the stat.
-   */
-  FileID Convert(FILE* fh);
 
   /**
    * Create a metadata entry for MPIIO adapter for a given file handler.
@@ -130,7 +115,7 @@ class MetadataManager {
    * @return    true, if operation was successful.
    *            false, if operation was unsuccessful.
    */
-  bool Create(FILE* fh, const AdapterStat& stat);
+  bool Create(MPI_File* fh, const AdapterStat& stat);
 
   /**
    * Update existing metadata entry for MPIIO adapter for a given file handler.
@@ -139,7 +124,7 @@ class MetadataManager {
    * @return    true, if operation was successful.
    *            false, if operation was unsuccessful or entry doesn't exist.
    */
-  bool Update(FILE* fh, const AdapterStat& stat);
+  bool Update(MPI_File* fh, const AdapterStat& stat);
 
   /**
    * Delete existing metadata entry for MPIIO adapter for a given file handler.
@@ -147,7 +132,7 @@ class MetadataManager {
    * @return    true, if operation was successful.
    *            false, if operation was unsuccessful.
    */
-  bool Delete(FILE* fh);
+  bool Delete(MPI_File* fh);
 
   /**
    * Find existing metadata entry for MPIIO adapter for a given file handler.
@@ -155,7 +140,7 @@ class MetadataManager {
    * @return    The metadata entry if exist.
    *            The bool in pair indicated whether metadata entry exists.
    */
-  std::pair<AdapterStat, bool> Find(FILE* fh);
+  std::pair<AdapterStat, bool> Find(MPI_File* fh);
 };
 }  // namespace hermes::adapter::mpiio
 
