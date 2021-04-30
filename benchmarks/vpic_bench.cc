@@ -284,6 +284,7 @@ void RunHermesBench(Options &options, float *data) {
         CHECK(bucket.Put(blob_name, (u8*)data, total_bytes).Succeeded());
         timer.pauseTime();
 
+        // TODO(chogan): Investigate crash when these barriers aren't here
         hermes->AppBarrier();
         CHECK(bucket.DeleteBlob(blob_name).Succeeded());
         hermes->AppBarrier();
@@ -300,6 +301,7 @@ void RunHermesBench(Options &options, float *data) {
           bucket.Destroy();
         }
       } else {
+        // TODO(chogan): Investigate whey refcount is sometimes > 1
         bucket.Destroy();
       }
 
