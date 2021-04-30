@@ -307,6 +307,7 @@ void RunHermesBench(Options &options, float *data) {
         std::string buffering = "hermes";
         PrintResults(options, bandwidth, buffering);
       }
+      hermes->AppBarrier();
     }
   } else {
     // Hermes core. No user code.
