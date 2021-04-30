@@ -284,7 +284,9 @@ void RunHermesBench(Options &options, float *data) {
         CHECK(bucket.Put(blob_name, (u8*)data, total_bytes).Succeeded());
         timer.pauseTime();
 
+        hermes->AppBarrier();
         CHECK(bucket.DeleteBlob(blob_name).Succeeded());
+        hermes->AppBarrier();
       }
 
       hermes->AppBarrier();
