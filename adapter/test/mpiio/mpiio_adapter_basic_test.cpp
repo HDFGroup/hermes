@@ -181,7 +181,6 @@ TEST_CASE("OpenCollective", "[process=" + std::to_string(info.comm_size) +
     test::test_close();
     REQUIRE(test::status_orig == MPI_SUCCESS);
     REQUIRE(!fs::exists(info.shared_new_file.c_str()));
-
   }
   posttest();
 }
