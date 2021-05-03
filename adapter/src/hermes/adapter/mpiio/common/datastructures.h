@@ -46,9 +46,9 @@ struct FileStruct {
   /**
    * attributes
    */
-  MPI_File file_id_;// fileID to identify a file uniquely.
-  size_t offset_;   // file pointer within the file.
-  size_t size_;     // size of data refered in file.
+  MPI_File file_id_;  // fileID to identify a file uniquely.
+  size_t offset_;     // file pointer within the file.
+  size_t size_;       // size of data refered in file.
   /**
    * Constructor
    */
@@ -124,14 +124,14 @@ struct AdapterStat {
    * attributes
    */
   std::shared_ptr<hapi::Bucket> st_bkid; /* bucket associated with the file */
-  BlobSet_t st_blobs;   /* Blobs access in the bucket */
-  i32 ref_count;        /* # of time process opens a file */
-  int a_mode;           /* access mode */
-  MPI_Info info;        /* Info object (handle) */
-  MPI_Comm comm;        /* Communicator for the file.*/
-  MPI_Offset size;      /* total size, in bytes */
-  MPI_Offset ptr;       /* Current ptr of FILE */
-  bool atomicity;       /* Consistency semantics for data-access */
+  BlobSet_t st_blobs;                    /* Blobs access in the bucket */
+  i32 ref_count;                         /* # of time process opens a file */
+  int a_mode;                            /* access mode */
+  MPI_Info info;                         /* Info object (handle) */
+  MPI_Comm comm;                         /* Communicator for the file.*/
+  MPI_Offset size;                       /* total size, in bytes */
+  MPI_Offset ptr;                        /* Current ptr of FILE */
+  bool atomicity; /* Consistency semantics for data-access */
   /**
    * Constructor
    */
