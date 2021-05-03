@@ -19,7 +19,6 @@
 #include <hermes/adapter/stdio/metadata_manager.cc>
 
 using hermes::adapter::stdio::AdapterStat;
-using hermes::adapter::stdio::FileID;
 using hermes::adapter::stdio::FileStruct;
 using hermes::adapter::stdio::MapperFactory;
 using hermes::adapter::stdio::MetadataManager;

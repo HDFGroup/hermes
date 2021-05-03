@@ -124,11 +124,11 @@ struct AdapterStat {
    * attributes
    */
   std::shared_ptr<hapi::Bucket> st_bkid; /* bucket associated with the file */
-  char* filename;       /* associated filename used for lookup */
   BlobSet_t st_blobs;   /* Blobs access in the bucket */
   i32 ref_count;        /* # of time process opens a file */
   int a_mode;           /* access mode */
   MPI_Info info;        /* Info object (handle) */
+  MPI_Comm comm;        /* Communicator for the file.*/
   MPI_Offset size;      /* total size, in bytes */
   MPI_Offset ptr;       /* Current ptr of FILE */
   bool atomicity;       /* Consistency semantics for data-access */
@@ -141,19 +141,10 @@ struct AdapterStat {
         ref_count(),
         a_mode(),
         info(),
+        comm(),
         size(0),
         ptr(0),
         atomicity(true) {} /* default constructor */
-  explicit AdapterStat(const struct stat &st)
-      : st_bkid(),
-        st_blobs(CompareBlobs),
-        ref_count(1),
-        a_mode(st.st_mode),
-        info(st.st_uid),
-        size(st.st_gid),
-        ptr(st.st_size),
-        atomicity(true) {} /* parameterized constructor */
-
   /**
    * Comparator for comparing two blobs.
    */

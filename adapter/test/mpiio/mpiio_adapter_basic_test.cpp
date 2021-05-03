@@ -172,12 +172,16 @@ TEST_CASE("OpenCollective", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(test::status_orig == MPI_SUCCESS);
   }
 
-  SECTION("delete on close mode on shared file") {
+  SECTION("delete on close mode on new file") {
     test::test_open(
-        info.new_file.c_str(),
+        info.shared_new_file.c_str(),
         MPI_MODE_WRONLY | MPI_MODE_CREATE | MPI_MODE_DELETE_ON_CLOSE,
         MPI_COMM_WORLD);
-    REQUIRE(test::status_orig != MPI_SUCCESS);
+    REQUIRE(test::status_orig == MPI_SUCCESS);
+    test::test_close();
+    REQUIRE(test::status_orig == MPI_SUCCESS);
+    REQUIRE(!fs::exists(info.shared_new_file.c_str()));
+
   }
   posttest();
 }
