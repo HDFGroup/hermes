@@ -11,12 +11,7 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include <hermes/adapter/mpiio.h>
-#include <hermes/adapter/mpiio/mapper/mapper_factory.h>
-
-#include <hermes/adapter/interceptor.cc>
-#include <hermes/adapter/mpiio/metadata_manager.cc>
-
-#include "mpio.h"
+#include <hermes/adapter/mpiio/mapper/balanced_mapper.cc>
 /**
  * Namespace declarations
  */
@@ -68,6 +63,225 @@ int open_internal(MPI_Comm &comm, const char *path, int &amode, MPI_Info &info,
   if (ret == MPI_SUCCESS) {
     ret = simple_open(comm, path, amode, info, fh);
   }
+  return ret;
+}
+size_t perform_file_read(const char *filename, size_t file_offset, void *ptr,
+                         size_t ptr_offset, int count, MPI_Datatype datatype) {
+  LOG(INFO) << "Read called for filename from destination: " << filename
+            << " on offset: " << file_offset << " and count: " << count
+            << std::endl;
+  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
+  MPI_File fh;
+  int status = MPI_File_open(MPI_COMM_SELF, filename, MPI_MODE_RDONLY,
+                             MPI_INFO_NULL, &fh);
+  int read_size = 0;
+  if (status == MPI_SUCCESS) {
+    int status = MPI_File_seek(fh, file_offset, MPI_SEEK_SET);
+    if (status == MPI_SUCCESS) {
+      MPI_Status read_status;
+      status = MPI_File_read(fh, (char *)ptr + ptr_offset, count, datatype,
+                             &read_status);
+      MPI_Get_count(&read_status, datatype, &read_size);
+      if (read_size != count) {
+        LOG(ERROR) << "reading failed: read " << read_size << " of " << count
+                   << "." << std::endl;
+      }
+    }
+    status = MPI_File_close(&fh);
+  }
+  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(filename);
+  return read_size;
+}
+
+size_t perform_file_write(std::string &filename, size_t offset, size_t count,
+                          MPI_Datatype datatype, unsigned char *data_ptr) {
+  LOG(INFO) << "Writing to file: " << filename << " offset: " << offset
+            << " of count:" << count << " datatype:" << datatype << "."
+            << std::endl;
+  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
+  MPI_File fh;
+  int status = MPI_File_open(MPI_COMM_SELF, filename.c_str(), MPI_MODE_RDWR,
+                             MPI_INFO_NULL, &fh);
+  int write_size = 0;
+  if (fh != nullptr) {
+    status = MPI_File_seek(fh, offset, MPI_SEEK_SET);
+    if (status == 0) {
+      MPI_Status write_status;
+      status = MPI_File_write(fh, data_ptr, count, datatype, &write_status);
+      MPI_Get_count(&write_status, datatype, &write_size);
+      if (write_size != count) {
+        LOG(ERROR) << "writing failed: wrote " << write_size << " of " << count
+                   << "." << std::endl;
+      }
+      status = MPI_File_close(&fh);
+    }
+  }
+  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(filename);
+  return write_size;
+}
+
+int write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
+                   int count, MPI_Datatype datatype, MPI_File *fp,
+                   MPI_Status *status, bool is_collective = false) {
+  LOG(INFO) << "Write called for filename: "
+            << existing.first.st_bkid->GetName()
+            << " on offset: " << existing.first.ptr << " and count: " << count
+            << std::endl;
+  size_t ret;
+  auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+  auto mapper = MapperFactory().Get(kMapperType);
+  int datatype_size;
+  MPI_Type_size(datatype, &datatype_size);
+  size_t total_size = datatype_size * count;
+  auto mapping = mapper->map(FileStruct(fp, existing.first.ptr, total_size));
+  size_t data_offset = 0;
+  auto filename = existing.first.st_bkid->GetName();
+  LOG(INFO) << "Mapping for read has " << mapping.size() << " mapping."
+            << std::endl;
+  for (const auto &item : mapping) {
+    hapi::Context ctx;
+    auto index = std::stol(item.second.blob_name_) - 1;
+    unsigned char *put_data_ptr = (unsigned char *)ptr + data_offset;
+    size_t put_data_ptr_size = item.first.size_;
+
+    if (item.second.size_ == kPageSize) {
+      LOG(INFO) << "Create or Overwrite blob " << item.second.blob_name_
+                << " of size:" << item.second.size_ << "." << std::endl;
+      if (item.second.size_ == kPageSize) {
+        auto status = existing.first.st_bkid->Put(
+            item.second.blob_name_, put_data_ptr, put_data_ptr_size, ctx);
+        if (status.Failed()) {
+          perform_file_write(filename, item.first.offset_, put_data_ptr_size,
+                             MPI_CHAR, put_data_ptr);
+        } else {
+          existing.first.st_blobs.emplace(item.second.blob_name_);
+        }
+      } else if (item.second.offset_ == 0) {
+        auto status = existing.first.st_bkid->Put(
+            item.second.blob_name_, put_data_ptr, put_data_ptr_size, ctx);
+        if (status.Failed()) {
+          perform_file_write(filename, index * kPageSize, put_data_ptr_size,
+                             MPI_CHAR, put_data_ptr);
+        } else {
+          existing.first.st_blobs.emplace(item.second.blob_name_);
+        }
+      } else {
+        hapi::Blob final_data(item.second.offset_ + item.second.size_);
+        if (fs::exists(filename) &&
+            fs::file_size(filename) >= item.second.offset_) {
+          LOG(INFO) << "Blob has a gap in write. read gap from original file."
+                    << std::endl;
+          perform_file_read(filename.c_str(), index * kPageSize,
+                            final_data.data(), 0, item.second.offset_,
+                            MPI_CHAR);
+        }
+        memcpy(final_data.data() + item.second.offset_, put_data_ptr,
+               put_data_ptr_size);
+        auto status = existing.first.st_bkid->Put(item.second.blob_name_,
+                                                  final_data, ctx);
+        if (status.Failed()) {
+          perform_file_write(filename, index * kPageSize, final_data.size(),
+                             MPI_CHAR, final_data.data());
+        } else {
+          existing.first.st_blobs.emplace(item.second.blob_name_);
+        }
+      }
+      /* TODO(hari): Check if vbucket exists. if so delete it.*/
+    } else {
+      LOG(INFO) << "Writing blob " << item.second.blob_name_
+                << " of size:" << item.second.size_ << "." << std::endl;
+      auto blob_exists =
+          existing.first.st_bkid->ContainsBlob(item.second.blob_name_);
+      hapi::Blob temp(0);
+      auto existing_blob_size =
+          existing.first.st_bkid->Get(item.second.blob_name_, temp, ctx);
+      if (blob_exists) {
+        LOG(INFO) << "blob " << item.second.blob_name_
+                  << " of size:" << existing_blob_size << "." << std::endl;
+        if (existing_blob_size != kPageSize) {
+          LOG(ERROR) << "blob " << item.second.blob_name_
+                     << " has of size:" << existing_blob_size
+                     << " of the overall page." << std::endl;
+        }
+        hapi::Blob existing_data(existing_blob_size);
+        existing.first.st_bkid->Get(item.second.blob_name_, existing_data, ctx);
+        memcpy(existing_data.data() + item.second.offset_, put_data_ptr,
+               put_data_ptr_size);
+        auto status = existing.first.st_bkid->Put(item.second.blob_name_,
+                                                  existing_data, ctx);
+        if (status.Failed()) {
+          perform_file_write(filename, index * kPageSize, existing_blob_size,
+                             MPI_CHAR, existing_data.data());
+        } else {
+          existing.first.st_blobs.emplace(item.second.blob_name_);
+        }
+      } else {
+        std::string process_local_blob_name =
+            mdm->EncodeBlobNameLocal(item.second);
+        auto vbucket =
+            hapi::VBucket(item.second.blob_name_, mdm->GetHermes(), false);
+        hapi::Context ctx;
+        auto blob_names = vbucket.GetLinks(ctx);
+        LOG(INFO) << "vbucket with blobname " << item.second.blob_name_
+                  << " does not exists." << std::endl;
+        auto status = existing.first.st_bkid->Put(
+            process_local_blob_name, put_data_ptr, put_data_ptr_size, ctx);
+        if (status.Failed()) {
+          perform_file_write(filename, item.first.offset_, put_data_ptr_size,
+                             MPI_CHAR, put_data_ptr);
+        } else {
+          existing.first.st_blobs.emplace(process_local_blob_name);
+        }
+        if (!blob_names.empty()) {
+          LOG(INFO) << "vbucket with blobname " << item.second.blob_name_
+                    << " exists." << std::endl;
+          for (auto &blob_name : blob_names) {
+            auto hermes_struct = mdm->DecodeBlobNameLocal(blob_name);
+            if (((hermes_struct.second.offset_ < item.second.offset_) &&
+                 (hermes_struct.second.offset_ + hermes_struct.second.size_ >
+                  item.second.offset_))) {
+              // partially contained second half
+              hapi::Blob existing_data(item.second.offset_ -
+                                       hermes_struct.second.offset_);
+              existing.first.st_bkid->Get(item.second.blob_name_, existing_data,
+                                          ctx);
+              auto status = existing.first.st_bkid->Put(item.second.blob_name_,
+                                                        existing_data, ctx);
+
+            } else if (item.second.offset_ < hermes_struct.second.offset_ &&
+                       item.second.offset_ + item.second.size_ >
+                           hermes_struct.second.offset_) {
+              // partially contained first half
+              hapi::Blob existing_data(hermes_struct.second.size_);
+              existing.first.st_bkid->Get(item.second.blob_name_, existing_data,
+                                          ctx);
+	      existing_data.erase(existing_data.begin(),existing_data.begin()+(hermes_struct.second.offset_ -item.second.offset_));
+	       auto status = existing.first.st_bkid->Put(item.second.blob_name_,
+                                                        existing_data, ctx);
+
+            } else if (hermes_struct.second.offset_ > item.second.offset_ &&
+                       hermes_struct.second.offset_ +
+                               hermes_struct.second.size_ <
+                           item.second.offset_ + item.second.size_) {
+              // fully contained
+              auto status = existing.first.st_bkid->DeleteBlob(
+                  hermes_struct.second.blob_name_);
+              existing.first.st_blobs.erase(hermes_struct.second.blob_name_);
+            } else {
+              // no overlap
+            }
+          }
+        }
+      }
+    }
+    data_offset += item.first.size_;
+  }
+  existing.first.ptr += data_offset;
+  existing.first.size = existing.first.size >= existing.first.ptr
+                               ? existing.first.size
+                               : existing.first.ptr;
+  mdm->Update(fp, existing.first);
+  ret = data_offset;
   return ret;
 }
 /**
@@ -164,18 +378,6 @@ int HERMES_DECL(MPI_File_close)(MPI_File *fh) {
   }
   return (ret);
 }
-int HERMES_DECL(MPI_File_set_view)(MPI_File fh, MPI_Offset disp,
-                                   MPI_Datatype etype, MPI_Datatype filetype,
-                                   const char *datarep, MPI_Info info) {
-  (void)fh;
-  (void)disp;
-  (void)etype;
-  (void)filetype;
-  (void)datarep;
-  (void)info;
-  return 0;
-}
-
 /**
  * Sync Read/Write
  */

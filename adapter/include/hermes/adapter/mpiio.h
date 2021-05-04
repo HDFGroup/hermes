@@ -17,16 +17,16 @@
  * Standard header
  */
 #include <fcntl.h>
-#include <mpi.h>
 #include <stdarg.h>
 #include <unistd.h>
-
 #include <experimental/filesystem>
 
 /**
  * Dependent library headers
  */
 #include "glog/logging.h"
+#include <mpio.h>
+#include <mpi.h>
 
 /**
  * Internal headers
@@ -35,6 +35,10 @@
 #include <hermes.h>
 #include <hermes/adapter/interceptor.h>
 #include <hermes/adapter/singleton.h>
+#include<hermes/adapter/mpiio/mapper/mapper_factory.h>
+#include <hermes/adapter/interceptor.cc>
+#include <hermes/adapter/mpiio/metadata_manager.cc>
+
 #include <vbucket.h>
 
 /**
@@ -87,10 +91,6 @@ HERMES_FORWARD_DECL(MPI_File_read_ordered, int,
 HERMES_FORWARD_DECL(MPI_File_read_shared, int,
                     (MPI_File fh, void *buf, int count, MPI_Datatype datatype,
                      MPI_Status *status));
-HERMES_FORWARD_DECL(MPI_File_set_view, int,
-                    (MPI_File fh, MPI_Offset disp, MPI_Datatype etype,
-                     MPI_Datatype filetype, const char *datarep,
-                     MPI_Info info));
 HERMES_FORWARD_DECL(MPI_File_sync, int, (MPI_File fh));
 HERMES_FORWARD_DECL(MPI_File_write_all_begin, int,
                     (MPI_File fh, const void *buf, int count,
