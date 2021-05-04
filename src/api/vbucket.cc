@@ -138,14 +138,18 @@ Blob& VBucket::GetBlob(std::string blob_name, std::string bucket_name) {
   return local_blob;
 }
 
-std::vector<BlobID> VBucket::GetLinks(Context& ctx) {
+  std::vector<std::string> VBucket::GetLinks(Context& ctx) {
   (void)ctx;
   LOG(INFO) << "Getting subset of links satisfying pred in VBucket " << name_
             << '\n';
   auto blob_ids =
       GetBlobsFromVBucketInfo(&hermes_->context_, &hermes_->rpc_, id_);
+  auto blob_names = std::vector<std::string>();
+  for(const auto& blob_id: blob_ids){
+    blob_names.push_back(GetBlobNameFromId(&hermes_->context_, &hermes_->rpc_, blob_id)); 
+  }
   // TODO(hari): add filtering
-  return blob_ids;
+  return blob_names;
 }
 
 Status VBucket::Attach(Trait* trait) {
