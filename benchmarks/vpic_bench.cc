@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <chrono>
 #include <numeric>
+#include <thread>
 
 #include "mpi.h"
 #include "hermes.h"
@@ -296,6 +297,9 @@ void RunHermesBench(Options &options, float *data) {
         timer.resumeTime();
         CHECK(bucket.Put(blob_name, (u8*)data, total_bytes).Succeeded());
         timer.pauseTime();
+
+        // NOTE(chogan): Simulate computation and let SystemViewState update
+        std::this_thread::sleep_for(std::chrono::duration<hermes::i64, std::milli>(500));
 
         // TODO(chogan): Investigate crash when these barriers aren't here
         hermes->AppBarrier();
