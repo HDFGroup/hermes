@@ -32,6 +32,7 @@ struct Options {
   int num_iterations;
   int num_nodes;
   std::string dpe_policy;
+  std::string config_path;
   bool shared_bucket;
   bool do_posix_io;
   bool direct_io;
@@ -40,6 +41,8 @@ struct Options {
 
 void PrintUsage(char *program) {
   fprintf(stderr, "Usage: %s [-bhiopx] \n", program);
+  fprintf(stderr, "  -c <hermes.conf_path>\n");
+  fprintf(stderr, "     Path to a Hermes configuration file.\n");
   fprintf(stderr, "  -d (default false)\n");
   fprintf(stderr, "     Boolean flag. Do POSIX I/O with O_DIRECT.\n");
   fprintf(stderr, "  -f (default false)\n");
@@ -73,8 +76,12 @@ Options HandleArgs(int argc, char **argv) {
   result.dpe_policy = "none";
 
   int option = -1;
-  while ((option = getopt(argc, argv, "dfhi:n:o:p:sx")) != -1) {
+  while ((option = getopt(argc, argv, "c:dfhi:n:o:p:sx")) != -1) {
     switch (option) {
+      case 'c': {
+        result.config_path = optarg;
+        break;
+      }
       case 'd': {
         result.direct_io = true;
         break;
@@ -230,14 +237,20 @@ void PrintResults(const Options &options, double bandwidth,
 
 void RunHermesBench(Options &options, float *data) {
   double bandwidth = 0;
-  hermes::Config config = {};
-  hermes::InitDefaultConfig(&config);
-  config.num_devices = 1;
-  config.num_targets = 1;
-  config.capacities[0] = 128 * 1024 * 1024;
-  config.system_view_state_update_interval_ms = 500;
+  std::shared_ptr<hapi::Hermes> hermes = nullptr;
 
-  std::shared_ptr<hapi::Hermes> hermes = hermes::InitHermes(&config);
+  if (options.config_path.size() != 0) {
+    hermes = hapi::InitHermes(options.config_path.c_str());
+  } else {
+    hermes::Config config = {};
+    hermes::InitDefaultConfig(&config);
+    config.num_devices = 1;
+    config.num_targets = 1;
+    config.capacities[0] = 128 * 1024 * 1024;
+    config.system_view_state_update_interval_ms = 500;
+
+    hermes = hermes::InitHermes(&config);
+  }
 
   if (hermes->IsApplicationCore()) {
     int my_rank = hermes->GetProcessRank();
@@ -396,7 +409,6 @@ int main(int argc, char* argv[]) {
   for (size_t i = 0; i < num_elements; ++i) {
     data[i] = uniform_random_number() * kXdim;
   }
-
 
   if (options.do_posix_io) {
     RunPosixBench(options, data, rank);
