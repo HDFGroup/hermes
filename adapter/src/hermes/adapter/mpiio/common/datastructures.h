@@ -46,14 +46,14 @@ struct FileStruct {
   /**
    * attributes
    */
-  MPI_File file_id_;  // fileID to identify a file uniquely.
+  MPI_File* file_id_;  // fileID to identify a file uniquely.
   size_t offset_;     // file pointer within the file.
   size_t size_;       // size of data refered in file.
   /**
    * Constructor
    */
   FileStruct() : file_id_(), offset_(0), size_(0) {} /* default constructor */
-  FileStruct(MPI_File file_id, size_t offset, size_t size)
+  FileStruct(MPI_File* file_id, size_t offset, size_t size)
       : file_id_(file_id),
         offset_(offset),
         size_(size) {} /* parameterized constructor */
