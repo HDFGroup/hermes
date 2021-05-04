@@ -12,10 +12,13 @@
 
 #include "metadata_manager.h"
 
+
+
 /**
  * Namespace declarations for cleaner code.
  */
 using hermes::adapter::mpiio::AdapterStat;
+using hermes::adapter::mpiio::HermesStruct;
 using hermes::adapter::mpiio::MetadataManager;
 
 bool MetadataManager::Create(MPI_File *fh, const AdapterStat &stat) {
@@ -54,4 +57,25 @@ bool MetadataManager::Delete(MPI_File *fh) {
   } else {
     return false;
   }
+}
+
+std::string MetadataManager::EncodeBlobNameLocal(HermesStruct hermes_struct) {
+  LOG(INFO) << "Encode Blob:" << hermes_struct.blob_name_
+            << " for hermes blobs." << std::endl;
+  return hermes_struct.blob_name_ + kStringDelimiter +
+         std::to_string(hermes_struct.offset_) + kStringDelimiter +
+         std::to_string(hermes_struct.size_) + kStringDelimiter +
+         std::to_string(rank);
+}
+
+std::pair<int, HermesStruct> MetadataManager::DecodeBlobNameLocal(
+    std::string &encoded_blob_name) {
+  HermesStruct hermes_struct;
+  auto str_split =
+      hermes::adapter::StringSplit(encoded_blob_name.data(), kStringDelimiter);
+  hermes_struct.blob_name_ = encoded_blob_name;
+  hermes_struct.offset_ = std::stoi(str_split[1]);
+  hermes_struct.size_ = std::stoi(str_split[2]);
+  int rank = std::stoi(str_split[3]);
+  return std::pair<int, HermesStruct>(rank, hermes_struct);
 }

@@ -51,18 +51,18 @@ class MetadataManager {
    * references of how many times hermes was tried to initialize.
    */
   std::atomic<size_t> ref;
+
+ public:
   /**
    * MPI attributes
    */
   int rank;
   int comm_size;
 
- public:
   /**
    * Constructor
    */
-  MetadataManager()
-      : metadata(), ref(0), rank(0), comm_size(1) {}
+  MetadataManager() : metadata(), ref(0), rank(0), comm_size(1) {}
   /**
    * Get the instance of hermes.
    */
@@ -141,6 +141,19 @@ class MetadataManager {
    *            The bool in pair indicated whether metadata entry exists.
    */
   std::pair<AdapterStat, bool> Find(MPI_File* fh);
+  /**
+   * Encode a given Hermes Struct from Mapping engine to Local Blob Name.
+   * @param hermes_struct, HermesStruct, structure containing hermes
+   * representatrion of file.
+   * @return string encoded with process local information.
+   */
+  std::string EncodeBlobNameLocal(HermesStruct hermes_struct);
+  /**
+   * Decodes a encoded blob name string into hermesstruct
+   * @param encoded_blob_name, std::string, encoded blob name string.
+   * @return hermes struct with blob_name, rank, offset, and size 
+   */
+  std::pair<int,HermesStruct> DecodeBlobNameLocal(std::string &encoded_blob_name);
 };
 }  // namespace hermes::adapter::mpiio
 
