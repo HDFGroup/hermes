@@ -19,14 +19,16 @@
 #include <fcntl.h>
 #include <stdarg.h>
 #include <unistd.h>
+
 #include <experimental/filesystem>
 
 /**
  * Dependent library headers
  */
-#include "glog/logging.h"
-#include <mpio.h>
 #include <mpi.h>
+#include <mpio.h>
+
+#include "glog/logging.h"
 
 /**
  * Internal headers
@@ -34,12 +36,12 @@
 #include <bucket.h>
 #include <hermes.h>
 #include <hermes/adapter/interceptor.h>
+#include <hermes/adapter/mpiio/mapper/mapper_factory.h>
 #include <hermes/adapter/singleton.h>
-#include<hermes/adapter/mpiio/mapper/mapper_factory.h>
+#include <vbucket.h>
+
 #include <hermes/adapter/interceptor.cc>
 #include <hermes/adapter/mpiio/metadata_manager.cc>
-
-#include <vbucket.h>
 
 /**
  * Function declaration
@@ -66,25 +68,21 @@ HERMES_FORWARD_DECL(MPI_File_iwrite_shared, int,
 HERMES_FORWARD_DECL(MPI_File_open, int,
                     (MPI_Comm comm, const char *filename, int amode,
                      MPI_Info info, MPI_File *fh));
-HERMES_FORWARD_DECL(MPI_File_read_all_begin, int,
-                    (MPI_File fh, void *buf, int count, MPI_Datatype datatype));
+
 HERMES_FORWARD_DECL(MPI_File_read_all, int,
                     (MPI_File fh, void *buf, int count, MPI_Datatype datatype,
                      MPI_Status *status));
 HERMES_FORWARD_DECL(MPI_File_read_at_all, int,
                     (MPI_File fh, MPI_Offset offset, void *buf, int count,
                      MPI_Datatype datatype, MPI_Status *status));
-HERMES_FORWARD_DECL(MPI_File_read_at_all_begin, int,
-                    (MPI_File fh, MPI_Offset offset, void *buf, int count,
-                     MPI_Datatype datatype));
+
 HERMES_FORWARD_DECL(MPI_File_read_at, int,
                     (MPI_File fh, MPI_Offset offset, void *buf, int count,
                      MPI_Datatype datatype, MPI_Status *status));
 HERMES_FORWARD_DECL(MPI_File_read, int,
                     (MPI_File fh, void *buf, int count, MPI_Datatype datatype,
                      MPI_Status *status));
-HERMES_FORWARD_DECL(MPI_File_read_ordered_begin, int,
-                    (MPI_File fh, void *buf, int count, MPI_Datatype datatype));
+
 HERMES_FORWARD_DECL(MPI_File_read_ordered, int,
                     (MPI_File fh, void *buf, int count, MPI_Datatype datatype,
                      MPI_Status *status));
@@ -92,15 +90,9 @@ HERMES_FORWARD_DECL(MPI_File_read_shared, int,
                     (MPI_File fh, void *buf, int count, MPI_Datatype datatype,
                      MPI_Status *status));
 HERMES_FORWARD_DECL(MPI_File_sync, int, (MPI_File fh));
-HERMES_FORWARD_DECL(MPI_File_write_all_begin, int,
-                    (MPI_File fh, const void *buf, int count,
-                     MPI_Datatype datatype));
 HERMES_FORWARD_DECL(MPI_File_write_all, int,
                     (MPI_File fh, const void *buf, int count,
                      MPI_Datatype datatype, MPI_Status *status));
-HERMES_FORWARD_DECL(MPI_File_write_at_all_begin, int,
-                    (MPI_File fh, MPI_Offset offset, const void *buf, int count,
-                     MPI_Datatype datatype));
 HERMES_FORWARD_DECL(MPI_File_write_at_all, int,
                     (MPI_File fh, MPI_Offset offset, const void *buf, int count,
                      MPI_Datatype datatype, MPI_Status *status));
@@ -110,16 +102,14 @@ HERMES_FORWARD_DECL(MPI_File_write_at, int,
 HERMES_FORWARD_DECL(MPI_File_write, int,
                     (MPI_File fh, const void *buf, int count,
                      MPI_Datatype datatype, MPI_Status *status));
-HERMES_FORWARD_DECL(MPI_File_write_ordered_begin, int,
-                    (MPI_File fh, const void *buf, int count,
-                     MPI_Datatype datatype));
 HERMES_FORWARD_DECL(MPI_File_write_ordered, int,
                     (MPI_File fh, const void *buf, int count,
                      MPI_Datatype datatype, MPI_Status *status));
 HERMES_FORWARD_DECL(MPI_File_write_shared, int,
                     (MPI_File fh, const void *buf, int count,
                      MPI_Datatype datatype, MPI_Status *status));
-
+HERMES_FORWARD_DECL(MPI_File_seek, int,
+                    (MPI_File fh, MPI_Offset offset, int whence));
 /**
  * MPI functions declarations
  */
