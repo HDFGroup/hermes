@@ -30,7 +30,7 @@ struct Arguments {
   size_t request_size = 65536;
 };
 struct Info {
-  bool debug = true;
+  bool debug = false;
   int rank = 0;
   int comm_size = 1;
   std::string write_data;

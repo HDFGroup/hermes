@@ -138,7 +138,7 @@ Blob& VBucket::GetBlob(std::string blob_name, std::string bucket_name) {
   return local_blob;
 }
 
-  std::vector<std::string> VBucket::GetLinks(Context& ctx) {
+std::vector<std::string> VBucket::GetLinks(Context& ctx) {
   (void)ctx;
   LOG(INFO) << "Getting subset of links satisfying pred in VBucket " << name_
             << '\n';
@@ -264,12 +264,12 @@ std::vector<TraitID> VBucket::GetTraits(Predicate pred, Context& ctx) {
 }
 
 Status VBucket::Delete() {
-  Status result = Delete(ctx_);
+  Status result = Destroy(ctx_);
 
   return result;
 }
 
-Status VBucket::Delete(Context& ctx) {
+Status VBucket::Destroy(Context& ctx) {
   (void)ctx;
   Status ret;
 
@@ -355,6 +355,7 @@ Status VBucket::Delete(Context& ctx) {
     }
   }
   attached_traits_.clear();
+  DestroyVBucket(&hermes_->context_, &hermes_->rpc_, this->name_.c_str(), id_);
   return Status();
 }
 

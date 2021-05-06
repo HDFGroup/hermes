@@ -554,7 +554,7 @@ int HERMES_DECL(MPI_File_close)(MPI_File *fh) {
           auto trait = hermes::api::FileMappingTrait(filename, offset_map,
                                                      nullptr, NULL, NULL);
           file_vbucket.Attach(&trait, ctx);
-          file_vbucket.Delete(ctx);
+          file_vbucket.Destroy(ctx);
           for (const auto &vbucket : existing.first.st_vbuckets) {
             hermes::api::VBucket blob_vbucket(vbucket, mdm->GetHermes(), false,
                                               ctx);
@@ -563,7 +563,7 @@ int HERMES_DECL(MPI_File_close)(MPI_File *fh) {
               blob_vbucket.Unlink(blob_name, existing.first.st_bkid->GetName());
             }
             auto blob_names_temp = blob_vbucket.GetLinks(ctx);
-            blob_vbucket.Delete(ctx);
+            blob_vbucket.Destroy(ctx);
           }
           for (auto &blob_name : existing.first.st_blobs) {
             existing.first.st_bkid->DeleteBlob(blob_name);
@@ -891,7 +891,7 @@ int HERMES_DECL(MPI_File_write_shared)(MPI_File fh, const void *buf, int count,
                                        MPI_Status *status) {
   int ret;
   if (IsTracked(&fh)) {
-    ret = MPI_File_write(fh, buf, count, datatype, status);
+    ret = MPI_File_write_ordered(fh, buf, count, datatype, status);
   } else {
     MAP_OR_FAIL(MPI_File_write_shared);
     ret = real_MPI_File_write_shared_(fh, buf, count, datatype, status);
@@ -992,7 +992,7 @@ int HERMES_DECL(MPI_File_sync)(MPI_File fh) {
         auto trait = hermes::api::FileMappingTrait(filename, offset_map,
                                                    nullptr, NULL, NULL);
         file_vbucket.Attach(&trait, ctx);
-        file_vbucket.Delete(ctx);
+        file_vbucket.Destroy(ctx);
         existing.first.st_blobs.clear();
         INTERCEPTOR_LIST->hermes_flush_exclusion.erase(filename);
       }

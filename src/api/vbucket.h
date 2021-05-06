@@ -103,7 +103,7 @@ class VBucket {
 
   /** delete a vBucket */
   /** decrements the links counts of blobs in buckets */
-  Status Delete(Context &ctx);
+  Status Destroy(Context &ctx);
   Status Delete();
 };  // class VBucket
 
