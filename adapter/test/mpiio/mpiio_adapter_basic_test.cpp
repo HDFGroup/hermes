@@ -1051,21 +1051,6 @@ TEST_CASE("SingleAsyncReadCollective",
     REQUIRE(test::status_orig == MPI_SUCCESS);
   }
 
-  SECTION("read at the end of existing file") {
-    test::test_open(info.shared_existing_file.c_str(), MPI_MODE_RDONLY,
-                    MPI_COMM_WORLD);
-    REQUIRE(test::status_orig == MPI_SUCCESS);
-    test::test_seek(0, MPI_SEEK_END);
-    REQUIRE(test::status_orig == MPI_SUCCESS);
-    MPI_Offset offset;
-    MPI_File_get_position(test::fh_orig, &offset);
-    REQUIRE(offset == (long long)(args.request_size * info.num_iterations));
-    test::test_iread_all(info.read_data.data(), args.request_size, MPI_CHAR);
-    REQUIRE((size_t)test::size_read_orig == args.request_size);
-    test::test_close();
-    REQUIRE(test::status_orig == MPI_SUCCESS);
-  }
-
   SECTION("read_at_all from existing file") {
     test::test_open(info.existing_file.c_str(), MPI_MODE_RDONLY, MPI_COMM_SELF);
     REQUIRE(test::status_orig == MPI_SUCCESS);
