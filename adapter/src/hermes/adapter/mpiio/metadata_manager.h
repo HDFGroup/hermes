@@ -151,9 +151,10 @@ class MetadataManager {
   /**
    * Decodes a encoded blob name string into hermesstruct
    * @param encoded_blob_name, std::string, encoded blob name string.
-   * @return hermes struct with blob_name, rank, offset, and size 
+   * @return hermes struct with blob_name, rank, offset, and size
    */
-  std::pair<int,HermesStruct> DecodeBlobNameLocal(std::string &encoded_blob_name);
+  std::pair<int, HermesStruct> DecodeBlobNameLocal(
+      std::string& encoded_blob_name);
 };
 }  // namespace hermes::adapter::mpiio
 

@@ -145,8 +145,9 @@ Blob& VBucket::GetBlob(std::string blob_name, std::string bucket_name) {
   auto blob_ids =
       GetBlobsFromVBucketInfo(&hermes_->context_, &hermes_->rpc_, id_);
   auto blob_names = std::vector<std::string>();
-  for(const auto& blob_id: blob_ids){
-    blob_names.push_back(GetBlobNameFromId(&hermes_->context_, &hermes_->rpc_, blob_id)); 
+  for (const auto& blob_id : blob_ids) {
+    blob_names.push_back(
+        GetBlobNameFromId(&hermes_->context_, &hermes_->rpc_, blob_id));
   }
   // TODO(hari): add filtering
   return blob_names;
