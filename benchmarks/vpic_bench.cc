@@ -299,7 +299,8 @@ void RunHermesBench(Options &options, float *data) {
         timer.pauseTime();
 
         // NOTE(chogan): Simulate computation and let SystemViewState update
-        std::this_thread::sleep_for(std::chrono::duration<hermes::i64, std::milli>(500));
+        std::this_thread::sleep_for(std::chrono::duration<hermes::i64,
+                                    std::milli>(500));
 
         // TODO(chogan): Investigate crash when these barriers aren't here
         hermes->AppBarrier();

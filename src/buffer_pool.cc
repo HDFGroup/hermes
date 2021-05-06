@@ -986,11 +986,12 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
   i32 **slab_buffer_sizes = PushArray<i32*>(scratch, config->num_devices);
   i32 *header_counts = PushArray<i32>(scratch, config->num_devices);
 
+  size_t total_ram_bytes = 0;
+
   for (int device = 0; device < config->num_devices; ++device) {
     slab_buffer_sizes[device] = PushArray<i32>(scratch,
                                                config->num_slabs[device]);
     buffer_counts[device] = PushArray<i32>(scratch, config->num_slabs[device]);
-
     for (int slab = 0; slab < config->num_slabs[device]; ++slab) {
       slab_buffer_sizes[device][slab] = (config->block_sizes[device] *
                                        config->slab_unit_sizes[device][slab]);
@@ -999,14 +1000,19 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
                                        slab_percentage);
       buffer_counts[device][slab] = (bytes_for_slab /
                                    slab_buffer_sizes[device][slab]);
+      if (device == 0) {
+        total_ram_bytes += bytes_for_slab;
+      }
     }
   }
 
-  // NOTE(chogan): One header per RAM block to allow for splitting and merging
   // TODO(chogan): @configuration Assumes first Device is RAM
   // TODO(chogan): Allow splitting and merging for every Device
-  assert(config->capacities[0] % config->block_sizes[0] == 0);
-  header_counts[0] = config->capacities[0] / config->block_sizes[0];
+
+  // NOTE(chogan): We need one header per RAM block to allow for splitting and
+  //  merging
+  assert(total_ram_bytes % config->block_sizes[0] == 0);
+  header_counts[0] = total_ram_bytes / config->block_sizes[0];
 
   for (int device = 1; device < config->num_devices; ++device) {
     header_counts[device] = 0;
@@ -1046,16 +1052,26 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
   // alignment padding.
   size_t required_bytes_for_metadata = (headers_size + buffer_pool_size +
                                         devices_size);
+  LOG(INFO) << required_bytes_for_metadata
+            << " bytes required for BufferPool metadata" << std::endl;
 
   size_t required_bytes_for_metadata_rounded =
     RoundUpToMultiple(required_bytes_for_metadata, config->block_sizes[0]);
   i32 num_blocks_reserved_for_metadata = (required_bytes_for_metadata_rounded /
                                           config->block_sizes[0]);
-  // NOTE(chogan): Remove some of the smallest RAM buffers to make room for
-  // metadata
-  buffer_counts[0][0] -= num_blocks_reserved_for_metadata;
-  // NOTE(chogan): We need fewer headers because we have fewer buffers now
-  header_counts[0] -= num_blocks_reserved_for_metadata;
+
+  if (buffer_counts[0][0] >= num_blocks_reserved_for_metadata) {
+    // NOTE(chogan): Remove some of the smallest RAM buffers to make room for
+    // metadata
+    buffer_counts[0][0] -= num_blocks_reserved_for_metadata;
+    // NOTE(chogan): We need fewer headers because we have fewer buffers now
+    header_counts[0] -= num_blocks_reserved_for_metadata;
+  } else {
+    if (required_bytes_for_metadata > config->capacities[0]) {
+      LOG(FATAL) << "Insufficient memory for BufferPool. Increase "
+                 << "capacities_mb[0] or buffer_pool_arena_percentage\n";
+    }
+  }
 
   // NOTE(chogan): Adjust the config capacity for RAM to reflect the actual
   // capacity for buffering (excluding BufferPool metadata).
@@ -1066,7 +1082,10 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
   }
   config->capacities[0] = actual_ram_buffer_capacity;
 
-  u32 total_headers = max_headers_needed - num_blocks_reserved_for_metadata;
+  u32 total_headers = 0;
+  for (DeviceID device = 0; device < config->num_devices; ++device) {
+    total_headers += header_counts[device];
+  }
 
   int *num_buffers = PushArray<int>(scratch_arena, config->num_devices);
   int total_buffers = 0;
@@ -1137,7 +1156,7 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
       u32 end = start + buffer_counts[device][slab];
       free_lists[device][slab] =
         MakeBufferHeaders(buffer_pool_arena, slab_buffer_sizes[device][slab],
-                          start, end, node_id, device, 0, 0);
+                          start, end, node_id, device, 0, &header_begin);
       start = end;
     }
   }

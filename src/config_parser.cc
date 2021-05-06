@@ -499,10 +499,7 @@ Token *ParseIntListList(Token *tok, int out[][hermes::kMaxBufferPoolSlabs],
 f32 ParseFloat(Token **tok) {
   double result = 0;
   if (*tok && IsNumber(*tok)) {
-    result = strtod((*tok)->data, NULL);
-    if (result <= 0 || errno == ERANGE || result > FLT_MAX) {
-      PrintExpectedAndFail("a floating point number between 1 and FLT_MAX");
-    }
+    result = std::stod(std::string((*tok)->data), nullptr);
     *tok = (*tok)->next;
   } else {
     PrintExpectedAndFail("a number");
