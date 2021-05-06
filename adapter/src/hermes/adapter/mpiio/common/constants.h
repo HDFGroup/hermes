@@ -44,4 +44,8 @@ const size_t kPageSize = 1024 * 1024;
  */
 const char kStringDelimiter = '#';
 
+/**
+ * Number of threads for thread pool of async I/O APIs
+ */
+const int kNumThreads = 1;
 #endif  // HERMES_MPIIO_COMMON_CONSTANTS_H

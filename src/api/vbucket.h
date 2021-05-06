@@ -100,11 +100,13 @@ class VBucket {
   /** retrieves the subset of attached traits satisfying pred */
   template <class Predicate>
   std::vector<TraitID> GetTraits(Predicate pred, Context &ctx);
-
+  /** closes a vBucket */
+  Status Release(Context &ctx);
+  Status Release();
   /** delete a vBucket */
   /** decrements the links counts of blobs in buckets */
   Status Destroy(Context &ctx);
-  Status Delete();
+  Status Destroy();
 };  // class VBucket
 
 }  // namespace api

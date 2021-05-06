@@ -519,6 +519,7 @@ bool LocalDestroyVBucket(SharedMemoryContext *context, const char *vbucket_name,
     if (HasAllocatedBlobs(info)) {
       FreeIdList(mdm, info->blobs);
     }
+    ReleaseIdsPtr(mdm);
 
     info->blobs.length = 0;
     info->blobs.capacity = 0;
