@@ -120,7 +120,7 @@ TEST_CASE("CustomTrait",
     auto trait = hermes::api::FileMappingTrait(fullpath_str, offset_map,
                                                nullptr, NULL, NULL);
     file_vbucket.Attach(&trait);
-    file_vbucket.Delete();
+    file_vbucket.Destroy();
     file_bucket.Destroy();
     REQUIRE(fs::exists(fullpath_str));
     REQUIRE(fs::file_size(fullpath_str) == args.iterations * args.request_size);

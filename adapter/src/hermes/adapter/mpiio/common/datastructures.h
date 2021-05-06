@@ -32,6 +32,8 @@
 #include <hermes_types.h>
 #include <mpi.h>
 
+#include <future>
+
 /**
  * Namespace simplification.
  */
@@ -159,6 +161,12 @@ struct AdapterStat {
   static bool CompareBlobs(const std::string &a, const std::string &b) {
     return std::stol(a) < std::stol(b);
   }
+};
+
+
+struct HermesRequest {
+  std::future<int> return_future;
+  MPI_Status status;
 };
 
 }  // namespace hermes::adapter::mpiio
