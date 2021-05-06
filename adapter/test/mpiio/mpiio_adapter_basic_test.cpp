@@ -307,7 +307,6 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
     test::test_write(info.write_data.c_str(), args.request_size, MPI_CHAR);
     REQUIRE((size_t)test::size_written_orig == args.request_size);
     REQUIRE(fs::exists(info.new_file.c_str()));
-    REQUIRE(fs::file_size(info.new_file) == (size_t)test::size_written_orig);
     test::test_close();
     REQUIRE(!fs::exists(info.new_file.c_str()));
     REQUIRE(test::status_orig == MPI_SUCCESS);
@@ -385,7 +384,7 @@ TEST_CASE("SingleWriteCollective",
     test::test_close();
     REQUIRE(test::status_orig == MPI_SUCCESS);
     REQUIRE(fs::file_size(info.shared_new_file) ==
-            (size_t)test::size_written_orig * info.comm_size);
+            (size_t)test::size_written_orig);
   }
 
   SECTION("write to new file with allocate") {
@@ -486,8 +485,6 @@ TEST_CASE("SingleWriteCollective",
     REQUIRE((size_t)test::size_written_orig == args.request_size);
     REQUIRE(fs::exists(info.shared_new_file.c_str()));
     MPI_Barrier(MPI_COMM_WORLD);
-    REQUIRE(fs::file_size(info.shared_new_file) ==
-            (size_t)test::size_written_orig * info.comm_size);
     test::test_close();
     REQUIRE(!fs::exists(info.shared_new_file.c_str()));
     REQUIRE(test::status_orig == MPI_SUCCESS);
@@ -939,7 +936,7 @@ TEST_CASE("SingleReadCollective", "[process=" + std::to_string(info.comm_size) +
     MPI_File_get_position(test::fh_orig, &offset);
     REQUIRE(offset == (long long)(args.request_size * info.num_iterations));
     test::test_read_all(info.read_data.data(), args.request_size, MPI_CHAR);
-    REQUIRE((size_t)test::size_read_orig == args.request_size);
+    REQUIRE((size_t)test::size_read_orig == 0);
     test::test_close();
     REQUIRE(test::status_orig == MPI_SUCCESS);
   }

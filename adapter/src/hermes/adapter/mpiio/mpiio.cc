@@ -31,6 +31,9 @@ namespace fs = std::experimental::filesystem;
 inline std::string GetFilenameFromFP(MPI_File *fh) {
   MPI_Info info_out;
   int status = MPI_File_get_info(*fh, &info_out);
+  if (status != MPI_SUCCESS) {
+    LOG(ERROR) << "MPI_File_get_info on file handler failed." << std::endl;
+  }
   const int kMaxSize = 0xFFF;
   int flag;
   char filename[kMaxSize];
@@ -40,7 +43,9 @@ inline std::string GetFilenameFromFP(MPI_File *fh) {
 
 inline bool IsTracked(MPI_File *fh) {
   if (hermes::adapter::exit) return false;
-  return hermes::adapter::IsTracked(GetFilenameFromFP(fh));
+  auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+  auto existing = mdm->Find(fh);
+  return existing.second;
 }
 
 int simple_open(MPI_Comm &comm, const char *path, int &amode, MPI_Info &info,
@@ -55,8 +60,8 @@ int simple_open(MPI_Comm &comm, const char *path, int &amode, MPI_Info &info,
     AdapterStat stat;
     stat.ref_count = 1;
     stat.a_mode = amode;
+    MPI_File_get_size(*fh, &stat.size);
     if (amode & MPI_MODE_APPEND) {
-      MPI_File_get_size(*fh, &stat.size);
       stat.ptr = stat.size;
     }
     stat.info = info;
@@ -111,7 +116,7 @@ size_t perform_file_read(const char *filename, size_t file_offset, void *ptr,
   return read_size;
 }
 
-size_t perform_file_write(std::string &filename, size_t offset, size_t count,
+size_t perform_file_write(std::string &filename, int offset, int count,
                           MPI_Datatype datatype, unsigned char *data_ptr) {
   LOG(INFO) << "Writing to file: " << filename << " offset: " << offset
             << " of count:" << count << " datatype:" << datatype << "."
@@ -141,8 +146,9 @@ size_t perform_file_write(std::string &filename, size_t offset, size_t count,
 std::pair<int, size_t> write_internal(std::pair<AdapterStat, bool> &existing,
                                       const void *ptr, int count,
                                       MPI_Datatype datatype, MPI_File *fp,
-                                      MPI_Status *status,
+                                      MPI_Status *mpi_status,
                                       bool is_collective = false) {
+  (void)is_collective;
   LOG(INFO) << "Write called for filename: "
             << existing.first.st_bkid->GetName()
             << " on offset: " << existing.first.ptr << " and count: " << count
@@ -240,7 +246,7 @@ std::pair<int, size_t> write_internal(std::pair<AdapterStat, bool> &existing,
             mdm->EncodeBlobNameLocal(item.second);
         auto vbucket =
             hapi::VBucket(item.second.blob_name_, mdm->GetHermes(), false);
-        hapi::Context ctx;
+        existing.first.st_vbuckets.emplace(item.second.blob_name_);
         auto blob_names = vbucket.GetLinks(ctx);
         LOG(INFO) << "vbucket with blobname " << item.second.blob_name_
                   << " does not exists." << std::endl;
@@ -251,6 +257,8 @@ std::pair<int, size_t> write_internal(std::pair<AdapterStat, bool> &existing,
                              MPI_CHAR, put_data_ptr);
         } else {
           existing.first.st_blobs.emplace(process_local_blob_name);
+          vbucket.Link(process_local_blob_name,
+                       existing.first.st_bkid->GetName());
         }
         if (!blob_names.empty()) {
           LOG(INFO) << "vbucket with blobname " << item.second.blob_name_
@@ -265,9 +273,11 @@ std::pair<int, size_t> write_internal(std::pair<AdapterStat, bool> &existing,
                                        hermes_struct.second.offset_);
               existing.first.st_bkid->Get(item.second.blob_name_, existing_data,
                                           ctx);
-              auto status = existing.first.st_bkid->Put(item.second.blob_name_,
-                                                        existing_data, ctx);
-
+              status = existing.first.st_bkid->Put(item.second.blob_name_,
+                                                   existing_data, ctx);
+              if (status.Failed()) {
+                LOG(ERROR) << "Put Failed on adapter." << std::endl;
+              }
             } else if (item.second.offset_ < hermes_struct.second.offset_ &&
                        item.second.offset_ + item.second.size_ >
                            hermes_struct.second.offset_) {
@@ -279,17 +289,22 @@ std::pair<int, size_t> write_internal(std::pair<AdapterStat, bool> &existing,
                   existing_data.begin(),
                   existing_data.begin() +
                       (hermes_struct.second.offset_ - item.second.offset_));
-              auto status = existing.first.st_bkid->Put(item.second.blob_name_,
-                                                        existing_data, ctx);
-
+              status = existing.first.st_bkid->Put(item.second.blob_name_,
+                                                   existing_data, ctx);
+              if (status.Failed()) {
+                LOG(ERROR) << "Put Failed on adapter." << std::endl;
+              }
             } else if (hermes_struct.second.offset_ > item.second.offset_ &&
                        hermes_struct.second.offset_ +
                                hermes_struct.second.size_ <
                            item.second.offset_ + item.second.size_) {
               // fully contained
-              auto status = existing.first.st_bkid->DeleteBlob(
-                  hermes_struct.second.blob_name_);
-              existing.first.st_blobs.erase(hermes_struct.second.blob_name_);
+              status =
+                  existing.first.st_bkid->DeleteBlob(item.second.blob_name_);
+              if (status.Failed()) {
+                LOG(ERROR) << "Delete blob Failed on adapter." << std::endl;
+              }
+              existing.first.st_blobs.erase(item.second.blob_name_);
             } else {
               // no overlap
             }
@@ -305,23 +320,28 @@ std::pair<int, size_t> write_internal(std::pair<AdapterStat, bool> &existing,
                             : existing.first.ptr;
   mdm->Update(fp, existing.first);
   ret = data_offset;
+  mpi_status->count_hi_and_cancelled = 0;
+  mpi_status->count_lo = ret;
   return std::pair<int, size_t>(MPI_SUCCESS, ret);
 }
 
 std::pair<int, size_t> read_internal(std::pair<AdapterStat, bool> &existing,
                                      void *ptr, int count,
                                      MPI_Datatype datatype, MPI_File *fp,
-                                     MPI_Status *status,
+                                     MPI_Status *mpi_status,
                                      bool is_collective = false) {
+  (void)is_collective;
   LOG(INFO) << "Read called for filename: " << existing.first.st_bkid->GetName()
             << " on offset: " << existing.first.ptr << " and size: " << count
             << std::endl;
-  if (existing.first.ptr >= existing.first.size)
-    return std::pair<int, size_t>(-1, 0);
+  if (existing.first.ptr >= existing.first.size) {
+    mpi_status->count_hi_and_cancelled = 0;
+    mpi_status->count_lo = 0;
+    return std::pair<int, size_t>(MPI_SUCCESS, 0);
+  }
   int datatype_size;
   MPI_Type_size(datatype, &datatype_size);
   size_t total_size = datatype_size * count;
-  size_t ret;
   auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
   auto mapper = MapperFactory().Get(kMapperType);
   auto mapping = mapper->map(FileStruct(fp, existing.first.ptr, total_size));
@@ -383,48 +403,54 @@ std::pair<int, size_t> read_internal(std::pair<AdapterStat, bool> &existing,
         read_size += new_read_size;
       }
     } else {
-      hapi::VBucket vbucket(filename, mdm->GetHermes(), false);
+      hapi::VBucket vbucket(item.second.blob_name_, mdm->GetHermes(), false);
       auto blob_names = vbucket.GetLinks(ctx);
       if (!blob_names.empty()) {
         LOG(INFO) << "vbucket with blobname " << item.second.blob_name_
                   << " exists." << std::endl;
         for (auto &blob_name : blob_names) {
           auto hermes_struct = mdm->DecodeBlobNameLocal(blob_name);
-          if (((hermes_struct.second.offset_ < item.second.offset_) &&
-               (hermes_struct.second.offset_ + hermes_struct.second.size_ >
-                item.second.offset_))) {
+          if (((hermes_struct.second.offset_ <= item.second.offset_) &&
+               (hermes_struct.second.offset_ + hermes_struct.second.size_ >=
+                item.second.offset_) &&
+               (hermes_struct.second.size_ - item.second.offset_ -
+                    hermes_struct.second.offset_ >
+                0))) {
             // partially contained second half
-            hapi::Blob existing_data(item.second.offset_ -
-                                     hermes_struct.second.offset_);
-            existing.first.st_bkid->Get(hermes_struct.second.blob_name_,
+            hapi::Blob existing_data(hermes_struct.second.size_);
+            existing.first.st_bkid->Get(hermes_struct.second.encoded_blob_name_,
                                         existing_data, ctx);
             auto offset_to_cp =
                 item.second.offset_ - hermes_struct.second.offset_;
             memcpy((char *)ptr + (item.first.offset_ - existing.first.ptr),
                    existing_data.data() + offset_to_cp,
                    hermes_struct.second.size_ - offset_to_cp);
+            read_size += hermes_struct.second.size_ - offset_to_cp;
           } else if (item.second.offset_ < hermes_struct.second.offset_ &&
                      item.second.offset_ + item.second.size_ >
                          hermes_struct.second.offset_) {
             // partially contained first half
             hapi::Blob existing_data(hermes_struct.second.size_);
-            existing.first.st_bkid->Get(item.second.blob_name_, existing_data,
-                                        ctx);
+            existing.first.st_bkid->Get(hermes_struct.second.encoded_blob_name_,
+                                        existing_data, ctx);
             memcpy((char *)ptr + (item.first.offset_ - existing.first.ptr),
                    existing_data.data(),
                    (hermes_struct.second.offset_ - item.second.offset_));
+            read_size += hermes_struct.second.offset_ - item.second.offset_;
           } else if (hermes_struct.second.offset_ > item.second.offset_ &&
                      hermes_struct.second.offset_ + hermes_struct.second.size_ <
                          item.second.offset_ + item.second.size_) {
             // fully contained
             hapi::Blob existing_data(hermes_struct.second.size_);
-            existing.first.st_bkid->Get(item.second.blob_name_, existing_data,
-                                        ctx);
+            existing.first.st_bkid->Get(hermes_struct.second.encoded_blob_name_,
+                                        existing_data, ctx);
             memcpy((char *)ptr + (item.first.offset_ - existing.first.ptr),
                    existing_data.data(), hermes_struct.second.size_);
+            read_size += hermes_struct.second.size_;
           } else {
             // no overlap
           }
+          if (read_size == item.second.size_) break;
         }
       } else if (fs::exists(filename) &&
                  fs::file_size(filename) >=
@@ -444,10 +470,10 @@ std::pair<int, size_t> read_internal(std::pair<AdapterStat, bool> &existing,
     }
   }
   existing.first.ptr += total_read_size;
-  struct timespec ts;
   mdm->Update(fp, existing.first);
-  ret = total_read_size;
-  return std::pair<int, size_t>(MPI_SUCCESS, ret);
+  mpi_status->count_hi_and_cancelled = 0;
+  mpi_status->count_lo = total_read_size;
+  return std::pair<int, size_t>(MPI_SUCCESS, total_read_size);
 }
 /**
  * MPI
@@ -495,6 +521,7 @@ int HERMES_DECL(MPI_File_close)(MPI_File *fh) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(fh);
     if (existing.second) {
+      MPI_Barrier(existing.first.comm);
       LOG(INFO) << "File handler is opened by adapter." << std::endl;
       hapi::Context ctx;
       if (existing.first.ref_count == 1) {
@@ -510,17 +537,37 @@ int HERMES_DECL(MPI_File_close)(MPI_File *fh) {
                                             ctx);
           auto offset_map = std::unordered_map<std::string, hermes::u64>();
 
-          for (const auto &blob_name : blob_names) {
+          for (auto blob_name : blob_names) {
+            auto h_struct = mdm->DecodeBlobNameLocal(blob_name);
             auto status = file_vbucket.Link(blob_name, filename, ctx);
             if (!status.Failed()) {
-              auto page_index = std::stol(blob_name) - 1;
-              offset_map.emplace(blob_name, page_index * kPageSize);
+              if (h_struct.first == -1) {
+                auto page_index = std::stol(blob_name) - 1;
+                offset_map.emplace(blob_name, page_index * kPageSize);
+              } else {
+                auto page_index = std::stol(h_struct.second.blob_name_) - 1;
+                offset_map.emplace(blob_name, page_index * kPageSize +
+                                                  h_struct.second.offset_);
+              }
             }
           }
           auto trait = hermes::api::FileMappingTrait(filename, offset_map,
                                                      nullptr, NULL, NULL);
           file_vbucket.Attach(&trait, ctx);
           file_vbucket.Delete(ctx);
+          for (const auto &vbucket : existing.first.st_vbuckets) {
+            hermes::api::VBucket blob_vbucket(vbucket, mdm->GetHermes(), false,
+                                              ctx);
+            auto blob_names_v = blob_vbucket.GetLinks(ctx);
+            for (auto &blob_name : blob_names_v) {
+              blob_vbucket.Unlink(blob_name, existing.first.st_bkid->GetName());
+            }
+            auto blob_names_temp = blob_vbucket.GetLinks(ctx);
+            blob_vbucket.Delete(ctx);
+          }
+          for (auto &blob_name : existing.first.st_blobs) {
+            existing.first.st_bkid->DeleteBlob(blob_name);
+          }
           existing.first.st_blobs.clear();
           INTERCEPTOR_LIST->hermes_flush_exclusion.erase(filename);
         }
@@ -529,6 +576,7 @@ int HERMES_DECL(MPI_File_close)(MPI_File *fh) {
         if (existing.first.a_mode & MPI_MODE_DELETE_ON_CLOSE) {
           fs::remove(filename);
         }
+
       } else {
         LOG(INFO) << "File handler is opened by more than one open."
                   << std::endl;
@@ -536,6 +584,7 @@ int HERMES_DECL(MPI_File_close)(MPI_File *fh) {
         mdm->Update(fh, existing.first);
         existing.first.st_bkid->Release(ctx);
       }
+      MPI_Barrier(existing.first.comm);
       ret = MPI_SUCCESS;
     } else {
       MAP_OR_FAIL(MPI_File_close);
@@ -544,6 +593,40 @@ int HERMES_DECL(MPI_File_close)(MPI_File *fh) {
   } else {
     MAP_OR_FAIL(MPI_File_close);
     ret = real_MPI_File_close_(fh);
+  }
+  return (ret);
+}
+
+int HERMES_DECL(MPI_File_seek_shared)(MPI_File fh, MPI_Offset offset,
+                                      int whence) {
+  int ret;
+  if (IsTracked(&fh)) {
+    LOG(INFO) << "Intercept MPI_File_seek_shared offset:" << offset
+              << " whence:" << whence << "." << std::endl;
+    auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+    auto existing = mdm->Find(&fh);
+    MPI_Offset sum_offset;
+    int sum_whence;
+    int comm_participators;
+    MPI_Comm_size(existing.first.comm, &comm_participators);
+    MPI_Allreduce(&offset, &sum_offset, 1, MPI_LONG_LONG_INT, MPI_SUM,
+                  existing.first.comm);
+    MPI_Allreduce(&whence, &sum_whence, 1, MPI_INT, MPI_SUM,
+                  existing.first.comm);
+    if (sum_offset / comm_participators != offset) {
+      LOG(ERROR)
+          << "Same offset should be passed across the opened file communicator."
+          << std::endl;
+    }
+    if (sum_whence / comm_participators != whence) {
+      LOG(ERROR)
+          << "Same whence should be passed across the opened file communicator."
+          << std::endl;
+    }
+    ret = MPI_File_seek(fh, offset, whence);
+  } else {
+    MAP_OR_FAIL(MPI_File_seek_shared);
+    ret = real_MPI_File_seek_shared_(fh, offset, whence);
   }
   return (ret);
 }
@@ -592,6 +675,19 @@ int HERMES_DECL(MPI_File_seek)(MPI_File fh, MPI_Offset offset, int whence) {
   }
   return (ret);
 }
+int HERMES_DECL(MPI_File_get_position)(MPI_File fh, MPI_Offset *offset) {
+  int ret = -1;
+  if (IsTracked(&fh)) {
+    auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+    auto existing = mdm->Find(&fh);
+    *offset = existing.first.ptr;
+    ret = MPI_SUCCESS;
+  } else {
+    MAP_OR_FAIL(MPI_File_get_position);
+    ret = real_MPI_File_get_position_(fh, offset);
+  }
+  return ret;
+}
 /**
  * Sync Read/Write
  */
@@ -602,10 +698,12 @@ int HERMES_DECL(MPI_File_read_all)(MPI_File fh, void *buf, int count,
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(&fh);
     if (existing.second) {
+      MPI_Barrier(existing.first.comm);
       LOG(INFO) << "Intercept MPI_File_read_all." << std::endl;
       auto read_ret =
           read_internal(existing, buf, count, datatype, &fh, status, true);
       ret = read_ret.first;
+      MPI_Barrier(existing.first.comm);
     } else {
       MAP_OR_FAIL(MPI_File_read_all);
       ret = real_MPI_File_read_all_(fh, buf, count, datatype, status);
@@ -670,22 +768,31 @@ int HERMES_DECL(MPI_File_read)(MPI_File fh, void *buf, int count,
 int HERMES_DECL(MPI_File_read_ordered)(MPI_File fh, void *buf, int count,
                                        MPI_Datatype datatype,
                                        MPI_Status *status) {
-  (void)fh;
-  (void)buf;
-  (void)count;
-  (void)datatype;
-  (void)status;
-  return 0;
+  int ret;
+  if (IsTracked(&fh)) {
+    auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+    auto existing = mdm->Find(&fh);
+    int total;
+    MPI_Scan(&count, &total, 1, MPI_INT, MPI_SUM, existing.first.comm);
+    MPI_Offset my_offset = total - count;
+    ret = MPI_File_read_at_all(fh, my_offset, buf, count, datatype, status);
+  } else {
+    MAP_OR_FAIL(MPI_File_read_ordered);
+    ret = real_MPI_File_read_ordered_(fh, buf, count, datatype, status);
+  }
+  return (ret);
 }
 int HERMES_DECL(MPI_File_read_shared)(MPI_File fh, void *buf, int count,
                                       MPI_Datatype datatype,
                                       MPI_Status *status) {
-  (void)fh;
-  (void)buf;
-  (void)count;
-  (void)datatype;
-  (void)status;
-  return 0;
+  int ret;
+  if (IsTracked(&fh)) {
+    ret = MPI_File_read(fh, buf, count, datatype, status);
+  } else {
+    MAP_OR_FAIL(MPI_File_read_shared);
+    ret = real_MPI_File_read_shared_(fh, buf, count, datatype, status);
+  }
+  return ret;
 }
 int HERMES_DECL(MPI_File_write_all)(MPI_File fh, const void *buf, int count,
                                     MPI_Datatype datatype, MPI_Status *status) {
@@ -694,10 +801,12 @@ int HERMES_DECL(MPI_File_write_all)(MPI_File fh, const void *buf, int count,
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(&fh);
     if (existing.second) {
+      MPI_Barrier(existing.first.comm);
       LOG(INFO) << "Intercept MPI_File_write." << std::endl;
       auto write_ret =
           write_internal(existing, buf, count, datatype, &fh, status, true);
       ret = write_ret.first;
+      MPI_Barrier(existing.first.comm);
     } else {
       MAP_OR_FAIL(MPI_File_write);
       ret = real_MPI_File_write_(fh, buf, count, datatype, status);
@@ -763,22 +872,31 @@ int HERMES_DECL(MPI_File_write)(MPI_File fh, const void *buf, int count,
 int HERMES_DECL(MPI_File_write_ordered)(MPI_File fh, const void *buf, int count,
                                         MPI_Datatype datatype,
                                         MPI_Status *status) {
-  (void)fh;
-  (void)buf;
-  (void)count;
-  (void)datatype;
-  (void)status;
-  return 0;
+  int ret;
+  if (IsTracked(&fh)) {
+    auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+    auto existing = mdm->Find(&fh);
+    int total;
+    MPI_Scan(&count, &total, 1, MPI_INT, MPI_SUM, existing.first.comm);
+    MPI_Offset my_offset = total - count;
+    ret = MPI_File_write_at_all(fh, my_offset, buf, count, datatype, status);
+  } else {
+    MAP_OR_FAIL(MPI_File_write_ordered);
+    ret = real_MPI_File_write_ordered_(fh, buf, count, datatype, status);
+  }
+  return (ret);
 }
 int HERMES_DECL(MPI_File_write_shared)(MPI_File fh, const void *buf, int count,
                                        MPI_Datatype datatype,
                                        MPI_Status *status) {
-  (void)fh;
-  (void)buf;
-  (void)count;
-  (void)datatype;
-  (void)status;
-  return 0;
+  int ret;
+  if (IsTracked(&fh)) {
+    ret = MPI_File_write(fh, buf, count, datatype, status);
+  } else {
+    MAP_OR_FAIL(MPI_File_write_shared);
+    ret = real_MPI_File_write_shared_(fh, buf, count, datatype, status);
+  }
+  return ret;
 }
 /**
  * Async Read/Write
@@ -849,7 +967,7 @@ int HERMES_DECL(MPI_File_iwrite_shared)(MPI_File fh, const void *buf, int count,
  * Other functions
  */
 int HERMES_DECL(MPI_File_sync)(MPI_File fh) {
-int ret = -1;
+  int ret = -1;
   if (IsTracked(&fh)) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(&fh);
@@ -886,4 +1004,3 @@ int ret = -1;
   }
   return (ret);
 }
-

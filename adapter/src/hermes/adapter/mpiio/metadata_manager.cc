@@ -73,9 +73,14 @@ std::pair<int, HermesStruct> MetadataManager::DecodeBlobNameLocal(
   HermesStruct hermes_struct;
   auto str_split =
       hermes::adapter::StringSplit(encoded_blob_name.data(), kStringDelimiter);
+  hermes_struct.encoded_blob_name_ = encoded_blob_name;
   hermes_struct.blob_name_ = encoded_blob_name;
-  hermes_struct.offset_ = std::stoi(str_split[1]);
-  hermes_struct.size_ = std::stoi(str_split[2]);
-  int rank = std::stoi(str_split[3]);
-  return std::pair<int, HermesStruct>(rank, hermes_struct);
+  int blob_rank = -1;
+  if (str_split.size() == 4) {
+    hermes_struct.blob_name_ = str_split[0];
+    hermes_struct.offset_ = std::stoi(str_split[1]);
+    hermes_struct.size_ = std::stoi(str_split[2]);
+    blob_rank = std::stoi(str_split[3]);
+  }
+  return std::pair<int, HermesStruct>(blob_rank, hermes_struct);
 }

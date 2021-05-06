@@ -110,6 +110,10 @@ HERMES_FORWARD_DECL(MPI_File_write_shared, int,
                      MPI_Datatype datatype, MPI_Status *status));
 HERMES_FORWARD_DECL(MPI_File_seek, int,
                     (MPI_File fh, MPI_Offset offset, int whence));
+HERMES_FORWARD_DECL(MPI_File_seek_shared, int,
+                    (MPI_File fh, MPI_Offset offset, int whence));
+HERMES_FORWARD_DECL(MPI_File_get_position, int,
+                    (MPI_File fh, MPI_Offset *offset));
 /**
  * MPI functions declarations
  */

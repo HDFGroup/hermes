@@ -46,14 +46,14 @@ struct FileStruct {
   /**
    * attributes
    */
-  MPI_File* file_id_;  // fileID to identify a file uniquely.
-  size_t offset_;     // file pointer within the file.
-  size_t size_;       // size of data refered in file.
+  MPI_File *file_id_;  // fileID to identify a file uniquely.
+  size_t offset_;      // file pointer within the file.
+  size_t size_;        // size of data refered in file.
   /**
    * Constructor
    */
   FileStruct() : file_id_(), offset_(0), size_(0) {} /* default constructor */
-  FileStruct(MPI_File* file_id, size_t offset, size_t size)
+  FileStruct(MPI_File *file_id, size_t offset, size_t size)
       : file_id_(file_id),
         offset_(offset),
         size_(size) {} /* parameterized constructor */
@@ -85,19 +85,25 @@ struct HermesStruct {
    * attributes
    */
   std::string blob_name_;
+  std::string encoded_blob_name_;
   size_t offset_;
   size_t size_;
   /**
    * Constructor
    */
   HermesStruct()
-      : blob_name_(), offset_(0), size_(0) {} /* default constructor */
+      : blob_name_(),
+        encoded_blob_name_(),
+        offset_(0),
+        size_(0) {} /* default constructor */
   HermesStruct(const HermesStruct &other)
       : blob_name_(other.blob_name_),
+        encoded_blob_name_(other.encoded_blob_name_),
         offset_(other.offset_),
         size_(other.size_) {} /* copy constructor*/
   HermesStruct(HermesStruct &&other)
       : blob_name_(other.blob_name_),
+        encoded_blob_name_(other.encoded_blob_name_),
         offset_(other.offset_),
         size_(other.size_) {} /* move constructor*/
   /**
@@ -106,6 +112,7 @@ struct HermesStruct {
   /* Assignment operator. */
   HermesStruct &operator=(const HermesStruct &other) {
     blob_name_ = other.blob_name_;
+    encoded_blob_name_ = other.encoded_blob_name_;
     offset_ = other.offset_;
     size_ = other.size_;
     return *this;
@@ -114,7 +121,7 @@ struct HermesStruct {
 
 typedef std::set<std::string,
                  bool (*)(const std::string &, const std::string &)>
-    BlobSet_t;
+    StringSet_t;
 
 /**
  * Stat which defines File within MPIIO Adapter.
@@ -124,7 +131,8 @@ struct AdapterStat {
    * attributes
    */
   std::shared_ptr<hapi::Bucket> st_bkid; /* bucket associated with the file */
-  BlobSet_t st_blobs;                    /* Blobs access in the bucket */
+  StringSet_t st_blobs;                  /* Blobs access in the bucket */
+  StringSet_t st_vbuckets;               /* vBuckets used in this file */
   i32 ref_count;                         /* # of time process opens a file */
   int a_mode;                            /* access mode */
   MPI_Info info;                         /* Info object (handle) */
