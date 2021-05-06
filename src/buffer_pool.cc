@@ -1056,10 +1056,15 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
   buffer_counts[0][0] -= num_blocks_reserved_for_metadata;
   // NOTE(chogan): We need fewer headers because we have fewer buffers now
   header_counts[0] -= num_blocks_reserved_for_metadata;
+
   // NOTE(chogan): Adjust the config capacity for RAM to reflect the actual
   // capacity for buffering (excluding BufferPool metadata).
-  assert(config->capacities[0] > required_bytes_for_metadata_rounded);
-  config->capacities[0] -= required_bytes_for_metadata_rounded;
+  size_t actual_ram_buffer_capacity = 0;
+  for (int slab = 0; slab < config->num_slabs[0]; ++slab) {
+    size_t slab_bytes = buffer_counts[0][slab] * slab_buffer_sizes[0][slab];
+    actual_ram_buffer_capacity += slab_bytes;
+  }
+  config->capacities[0] = actual_ram_buffer_capacity;
 
   u32 total_headers = max_headers_needed - num_blocks_reserved_for_metadata;
 
