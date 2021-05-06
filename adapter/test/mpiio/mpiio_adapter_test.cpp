@@ -80,7 +80,7 @@ int init(int* argc, char*** argv) {
   MPI_Comm_rank(MPI_COMM_WORLD, &info.rank);
   MPI_Comm_size(MPI_COMM_WORLD, &info.comm_size);
   if (info.debug && info.rank == 0) {
-    printf("%d ready for attach\n", info.comm_size);
+    printf("ready for attach\n");
     fflush(stdout);
     sleep(30);
   }
