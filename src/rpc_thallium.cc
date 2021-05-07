@@ -621,6 +621,10 @@ std::string GetServerName(RpcContext *rpc, u32 node_id,
   // TODO(chogan): @optimization Could cache the last N hostname->IP mappings to
   // avoid excessive syscalls. Should profile first.
   struct hostent *hostname_info = gethostbyname(host_name.c_str());
+  // TEMP(chogan):
+  if (!hostname_info) {
+    LOG(FATAL) << hstrerror(h_errno);
+  }
   in_addr **addr_list = (struct in_addr **)hostname_info->h_addr_list;
   // TODO(chogan): @errorhandling
   strncpy(ip_address, inet_ntoa(*addr_list[0]), kMaxIpAddressSize - 1);
