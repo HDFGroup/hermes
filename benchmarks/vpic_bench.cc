@@ -415,6 +415,14 @@ int main(int argc, char* argv[]) {
     data[i] = uniform_random_number() * kXdim;
   }
 
+  // int gdb_iii = 0;
+  // char gdb_DEBUG_hostname[256];
+  // gethostname(gdb_DEBUG_hostname, sizeof(gdb_DEBUG_hostname));
+  // printf("PID %d on %s ready for attach\n", getpid(), gdb_DEBUG_hostname);
+  // fflush(stdout);
+  // while (0 == gdb_iii)
+  //   sleep(5);
+
   if (options.do_posix_io) {
     RunPosixBench(options, data, rank);
   } else {

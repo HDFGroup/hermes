@@ -620,14 +620,28 @@ std::string GetServerName(RpcContext *rpc, u32 node_id,
   // TODO(chogan): @errorhandling
   // TODO(chogan): @optimization Could cache the last N hostname->IP mappings to
   // avoid excessive syscalls. Should profile first.
-  struct hostent *hostname_info = gethostbyname(host_name.c_str());
+  struct hostent hostname_info = {};
+  struct hostent *hostname_result;
+  int hostname_error = 0;
+  char hostname_buffer[4096] = {};
+  int gethostbyname_result = gethostbyname_r(host_name.c_str(), &hostname_info,
+                                             hostname_buffer, 4096, &hostname_result,
+                                             &hostname_error);
+  // struct hostent *hostname_info = gethostbyname_r(host_name.c_str());
   // TEMP(chogan):
-  if (!hostname_info) {
+  if (gethostbyname_result != 0) {
     LOG(FATAL) << hstrerror(h_errno);
   }
-  in_addr **addr_list = (struct in_addr **)hostname_info->h_addr_list;
+  in_addr **addr_list = (struct in_addr **)hostname_info.h_addr_list;
   // TODO(chogan): @errorhandling
-  strncpy(ip_address, inet_ntoa(*addr_list[0]), kMaxIpAddressSize - 1);
+  if (!addr_list[0]) {
+    LOG(FATAL) << hstrerror(h_errno);
+  }
+  char * inet_result = inet_ntoa(*addr_list[0]);
+  if (!inet_result) {
+    LOG(FATAL) << "Uh oh.";
+  }
+  strncpy(ip_address, inet_result, kMaxIpAddressSize - 1);
 
   std::string result = std::string(tl_state->server_name_prefix);
 
