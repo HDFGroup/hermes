@@ -418,6 +418,16 @@ static u32 GetNumBuffersAvailable(SharedMemoryContext *context,
   return result;
 }
 
+u32 GetNumBuffersAvailable(SharedMemoryContext *context, DeviceID device_id) {
+  BufferPool *pool = GetBufferPoolFromContext(context);
+  u32 result = 0;
+  for (int slab = 0; slab < pool->num_slabs[device_id]; ++slab) {
+    result += GetNumBuffersAvailable(context, device_id, slab);
+  }
+
+  return result;
+}
+
 #if 0
 static u64 GetNumBytesRemaining(SharedMemoryContext *context,
                                 DeviceID device_id, int slab_index) {

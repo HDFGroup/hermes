@@ -485,6 +485,7 @@ size_t ReadFromSwap(SharedMemoryContext *context, Blob blob,
  */
 std::vector<f32> GetBandwidths(SharedMemoryContext *context);
 
+u32 GetNumBuffersAvailable(SharedMemoryContext *context, DeviceID device_id);
 u32 GetBufferSize(SharedMemoryContext *context, RpcContext *rpc, BufferID id);
 bool BufferIsByteAddressable(SharedMemoryContext *context, BufferID id);
 api::Status PlaceInHierarchy(SharedMemoryContext *context, RpcContext *rpc,

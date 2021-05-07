@@ -25,6 +25,8 @@
 
 namespace hermes {
 
+std::vector<DeviceID> DataPlacementEngine::devices_;
+
 namespace api {
 
 int Context::default_buffer_organizer_retries;
@@ -300,6 +302,13 @@ std::shared_ptr<api::Hermes> InitHermes(Config *config, bool is_daemon,
   api::Context::default_buffer_organizer_retries =
     config->num_buffer_organizer_retries;
   api::Context::default_placement_policy = config->default_placement_policy;
+
+  DataPlacementEngine::devices_.reserve(config->num_devices);
+  for (DeviceID id = 0; id < config->num_devices; ++id) {
+    if (GetNumBuffersAvailable(&result->context_, id)) {
+      DataPlacementEngine::devices_.push_back(id);
+    }
+  }
 
   InitRpcClients(&result->rpc_);
 
