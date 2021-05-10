@@ -16,11 +16,11 @@
 /**
  * Standard header
  */
-#include <thread>
-#include <queue>
-#include <mutex>
 #include <condition_variable>
 #include <future>
+#include <mutex>
+#include <queue>
+#include <thread>
 
 namespace hermes::adapter {
 class ThreadPool {
@@ -28,9 +28,9 @@ class ThreadPool {
   ThreadPool(unsigned num_threads = std::thread::hardware_concurrency()) {
     while (num_threads--) {
       threads.emplace_back([this] {
-        while(true) {
+        while (true) {
           std::unique_lock<std::mutex> lock(mutex);
-          condvar.wait(lock, [this] {return !queue.empty();});
+          condvar.wait(lock, [this] { return !queue.empty(); });
           auto task = std::move(queue.front());
           if (task.valid()) {
             queue.pop();
@@ -48,7 +48,7 @@ class ThreadPool {
     }
   }
 
-  template<typename F, typename R = std::result_of_t<F&&()>>
+  template <typename F, typename R = std::result_of_t<F && ()>>
   std::future<R> run(F&& f) const {
     auto task = std::packaged_task<R()>(std::forward<F>(f));
     auto future = task.get_future();
@@ -82,5 +82,5 @@ class ThreadPool {
   mutable std::mutex mutex;
   mutable std::condition_variable condvar;
 };
-} // hermes::adapter
+}  // namespace hermes::adapter
 #endif  // HERMES_ADAPTER_THREAD_POOL_H
