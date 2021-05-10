@@ -58,11 +58,15 @@ class MetadataManager {
    */
   int rank;
   int comm_size;
-
+  /**
+   * Maintain a local metadata MPI_Request and HermesRequest.
+   */
+  std::unordered_map<MPI_Request*, HermesRequest*> request_map;
   /**
    * Constructor
    */
-  MetadataManager() : metadata(), ref(0), rank(0), comm_size(1) {}
+  MetadataManager()
+      : metadata(), ref(0), rank(0), comm_size(1), request_map() {}
   /**
    * Get the instance of hermes.
    */

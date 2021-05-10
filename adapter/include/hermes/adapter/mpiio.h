@@ -119,5 +119,7 @@ HERMES_FORWARD_DECL(MPI_File_get_position, int,
  */
 HERMES_FORWARD_DECL(MPI_Init, int, (int *argc, char ***argv));
 HERMES_FORWARD_DECL(MPI_Finalize, int, (void));
+HERMES_FORWARD_DECL(MPI_Wait, int, (MPI_Request*, MPI_Status*));
+HERMES_FORWARD_DECL(MPI_Waitall, int, (int, MPI_Request*, MPI_Status*))
 
 #endif  // HERMES_MPIIO_H

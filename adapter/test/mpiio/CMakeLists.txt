@@ -14,6 +14,5 @@ add_dependencies(hermes_mpiio_adapter_test hermes_mpiio)
 add_dependencies(hermes_mpiio_adapter_test hermes_daemon)
 set_target_properties(hermes_mpiio_adapter_test PROPERTIES COMPILE_FLAGS "-DHERMES_INTERCEPT=1")
 
-mpi_daemon(hermes_mpiio_adapter_test 2 "[synchronicity=sync][operation=single_read]" "syncread" 1)
-mpi_daemon(hermes_mpiio_adapter_test 2 "[synchronicity=sync][operation=single_write]" "syncwrite" 1)
-mpi_daemon(hermes_mpiio_adapter_test 2 "[operation=single_open]" "open" 1)
+mpi_daemon(hermes_mpiio_adapter_test 2 "[synchronicity=async]" "async" 1)
+mpi_daemon(hermes_mpiio_adapter_test 2 "[synchronicity=sync]" "sync" 1)
