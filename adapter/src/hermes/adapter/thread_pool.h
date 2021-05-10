@@ -25,7 +25,8 @@
 namespace hermes::adapter {
 class ThreadPool {
  public:
-  explicit ThreadPool(unsigned num_threads = std::thread::hardware_concurrency()) {
+  explicit ThreadPool(
+      unsigned num_threads = std::thread::hardware_concurrency()) {
     while (num_threads--) {
       threads.emplace_back([this] {
         while (true) {
