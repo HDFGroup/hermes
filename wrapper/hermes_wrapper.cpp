@@ -30,6 +30,10 @@ int HermesInitHermes(char *hermes_config) {
   return result;
 }
 
+void HermesFinalize() {
+  hermes_ptr->Finalize(true);
+}
+
 BucketClass *HermesBucketCreate(const char *name) {
   LOG(INFO) << "Hermes Wrapper: Creating Bucket " << name << '\n';
 
@@ -82,17 +86,14 @@ void HermesBucketPut(BucketClass *bkt, char *name, unsigned char *put_data,
 
 void HermesBucketGet(BucketClass *bkt, char *blob_name, size_t kPageSize,
                      unsigned char *buf) {
-  hermes::api::Blob get_result(kPageSize);
-
   LOG(INFO) << "Hermes Wrapper: Getting blob " << blob_name << " from Bucket "
             << reinterpret_cast<hermes::api::Bucket *>(bkt)->GetName();
 
   hermes::api::Bucket *bucket = reinterpret_cast<hermes::api::Bucket *>(bkt);
-  size_t blob_size = bucket->Get(blob_name, get_result, ctx);
+  size_t blob_size = bucket->Get(blob_name, buf, kPageSize, ctx);
   if (blob_size != kPageSize)
     LOG(ERROR) << "Blob size error: expected to get " << kPageSize
                << ", but only get " << blob_size << '\n';
-  std::move(get_result.begin(), get_result.end(), buf);
 }
 
 }  // extern "C"

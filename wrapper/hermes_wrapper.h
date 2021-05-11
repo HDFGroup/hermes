@@ -26,6 +26,8 @@ typedef struct BucketClass BucketClass;
 
 int HermesInitHermes(char *hermes_config);
 
+void HermesFinalize();
+
 BucketClass *HermesBucketCreate(const char *name);
 
 void HermesBucketClose(BucketClass *bkt);
