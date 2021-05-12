@@ -38,8 +38,10 @@ BucketClass *HermesBucketCreate(const char *name) {
   LOG(INFO) << "Hermes Wrapper: Creating Bucket " << name << '\n';
 
   try {
-    return reinterpret_cast<BucketClass *>(new hermes::api::Bucket(
-                                           std::string(name), hermes_ptr, ctx));
+    hermes::api::Bucket *new_bucket =
+      new hermes::api::Bucket(std::string(name), hermes_ptr, ctx);
+
+    return (BucketClass *)new_bucket;
   }
   catch (const std::runtime_error& e) {
     LOG(ERROR) << "Blob runtime error\n";
@@ -52,32 +54,38 @@ BucketClass *HermesBucketCreate(const char *name) {
 }
 
 void HermesBucketClose(BucketClass *bkt) {
-  LOG(INFO) << "Hermes Wrapper: Closing Bucket " <<
-               reinterpret_cast<hermes::api::Bucket *>(bkt)->GetName() << '\n';
+  hermes::api::Bucket *my_bkt = (hermes::api::Bucket *)bkt;
 
-  reinterpret_cast<hermes::api::Bucket *>(bkt)->Release(ctx);
+  LOG(INFO) << "Hermes Wrapper: Closing Bucket " << my_bkt->GetName() << '\n';
+
+  my_bkt->Release(ctx);
 }
 
 void HermesBucketDestroy(BucketClass *bkt) {
+  hermes::api::Bucket *my_bkt = (hermes::api::Bucket *)bkt;
+
   LOG(INFO) << "Hermes Wrapper: Destroying Bucket\n";
 
-  delete reinterpret_cast<hermes::api::Bucket *>(bkt);
+  my_bkt->Destroy();
 }
 
 bool HermesBucketContainsBlob(BucketClass *bkt, char *name) {
+  hermes::api::Bucket *bucket = (hermes::api::Bucket *)bkt;
+
   LOG(INFO) << "Hermes Wrapper: Checking if Bucket "
-            << reinterpret_cast<hermes::api::Bucket *>(bkt)->GetName()
+            << bucket->GetName()
             << " contains Blob " << name << '\n';
 
-  return reinterpret_cast<hermes::api::Bucket *>(bkt)->ContainsBlob(name);
+  return bucket->ContainsBlob(name);
 }
 
 void HermesBucketPut(BucketClass *bkt, char *name, unsigned char *put_data,
                     size_t size) {
-  LOG(INFO) << "Hermes Wrapper: Putting Blob " << name << " to bucket " <<
-               reinterpret_cast<hermes::api::Bucket *>(bkt)->GetName() << '\n';
+  hermes::api::Bucket *bucket = (hermes::api::Bucket *)bkt;
 
-  hermes::api::Bucket *bucket = reinterpret_cast<hermes::api::Bucket *>(bkt);
+  LOG(INFO) << "Hermes Wrapper: Putting Blob " << name << " to bucket " <<
+               bucket->GetName() << '\n';
+
   hermes::api::Status status = bucket->Put(name, put_data, size, ctx);
 
   if (status.Failed())
@@ -86,10 +94,11 @@ void HermesBucketPut(BucketClass *bkt, char *name, unsigned char *put_data,
 
 void HermesBucketGet(BucketClass *bkt, char *blob_name, size_t kPageSize,
                      unsigned char *buf) {
-  LOG(INFO) << "Hermes Wrapper: Getting blob " << blob_name << " from Bucket "
-            << reinterpret_cast<hermes::api::Bucket *>(bkt)->GetName();
+  hermes::api::Bucket *bucket = (hermes::api::Bucket *)bkt;
 
-  hermes::api::Bucket *bucket = reinterpret_cast<hermes::api::Bucket *>(bkt);
+  LOG(INFO) << "Hermes Wrapper: Getting blob " << blob_name << " from Bucket "
+            << bucket->GetName();
+
   size_t blob_size = bucket->Get(blob_name, buf, kPageSize, ctx);
   if (blob_size != kPageSize)
     LOG(ERROR) << "Blob size error: expected to get " << kPageSize
