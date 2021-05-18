@@ -114,8 +114,16 @@ void Hermes::Finalize(bool force_rpc_shutdown) {
   is_initialized = false;
 }
 
+void Hermes::FinalizeClient(bool stop_daemon) {
+  hermes::FinalizeClient(&context_, &rpc_, &comm_, &trans_arena_, stop_daemon);
+}
+
 void Hermes::RemoteFinalize() {
   hermes::RpcCall<void>(&rpc_, rpc_.node_id, "RemoteFinalize");
+}
+
+void Hermes::RunDaemon() {
+  hermes::RunDaemon(&context_, &rpc_, &comm_, &trans_arena_, shmem_name_.c_str());
 }
 
 }  // namespace api

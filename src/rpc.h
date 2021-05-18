@@ -67,7 +67,12 @@ void InitRpcContext(RpcContext *rpc, u32 num_nodes, u32 node_id,
 void *CreateRpcState(Arena *arena);
 void InitRpcClients(RpcContext *rpc);
 void ShutdownRpcClients(RpcContext *rpc);
-
+void RunDaemon(SharedMemoryContext *context, RpcContext *rpc,
+               CommunicationContext *comm, Arena *trans_arena,
+               const char *shmem_name);
+void FinalizeClient(SharedMemoryContext *context, RpcContext *rpc,
+                    CommunicationContext *comm, Arena *trans_arena,
+                    bool stop_daemon);
 void FinalizeRpcContext(RpcContext *rpc, bool is_daemon);
 std::string GetHostNumberAsString(RpcContext *rpc, u32 node_id);
 std::string GetServerName(RpcContext *rpc, u32 node_id,

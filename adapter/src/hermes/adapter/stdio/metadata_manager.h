@@ -108,10 +108,14 @@ class MetadataManager {
     if (ref == 1) {
       if (this->is_mpi) {
         MPI_Barrier(MPI_COMM_WORLD);
-        if (this->rank == 0) {
-          hermes->RemoteFinalize();
+        char *stop_daemon = getenv(kStopDaemon);
+        bool shutdown_daemon = true;
+
+        if (stop_daemon && stop_daemon[0] == '0') {
+          shutdown_daemon = false;
         }
-        hermes->Finalize();
+
+        hermes->FinalizeClient(shutdown_daemon);
       } else {
         hermes->Finalize(true);
       }

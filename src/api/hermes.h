@@ -71,7 +71,9 @@ class Hermes {
   int GetNumProcesses();
   void *GetAppCommunicator();
   void Finalize(bool force_rpc_shutdown = false);
+  void FinalizeClient(bool stop_daemon);
   void RemoteFinalize();
+  void RunDaemon();
 
   bool BucketContainsBlob(const std::string &bucket_name,
                           const std::string &blob_name);
