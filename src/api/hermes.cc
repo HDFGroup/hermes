@@ -123,7 +123,8 @@ void Hermes::RemoteFinalize() {
 }
 
 void Hermes::RunDaemon() {
-  hermes::RunDaemon(&context_, &rpc_, &comm_, &trans_arena_, shmem_name_.c_str());
+  hermes::RunDaemon(&context_, &rpc_, &comm_, &trans_arena_,
+                    shmem_name_.c_str());
 }
 
 }  // namespace api

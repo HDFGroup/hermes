@@ -389,13 +389,6 @@ void RunPosixBench(Options &options, float *x, int rank) {
 int main(int argc, char* argv[]) {
   Options options = HandleArgs(argc, argv);
 
-  // int mpi_threads_provided;
-  // MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
-  // if (mpi_threads_provided < MPI_THREAD_MULTIPLE) {
-  //   fprintf(stderr, "Didn't receive appropriate MPI threading specification\n");
-  //   return 1;
-  // }
-
   MPI_Init(&argc, &argv);
 
   int rank = 0;

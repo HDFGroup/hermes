@@ -673,8 +673,8 @@ std::string GetServerName(RpcContext *rpc, u32 node_id,
   int hostname_error = 0;
   char hostname_buffer[4096] = {};
   int gethostbyname_result = gethostbyname_r(host_name.c_str(), &hostname_info,
-                                             hostname_buffer, 4096, &hostname_result,
-                                             &hostname_error);
+                                             hostname_buffer, 4096,
+                                             &hostname_result, &hostname_error);
   // struct hostent *hostname_info = gethostbyname_r(host_name.c_str());
   // TEMP(chogan):
   if (gethostbyname_result != 0) {
