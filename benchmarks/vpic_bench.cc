@@ -53,7 +53,7 @@ void PrintUsage(char *program) {
   fprintf(stderr, "  -i <num_iterations> (default %d)\n", kDefaultIterations);
   fprintf(stderr, "     The number of times to run the VPIC I/O kernel.\n");
   fprintf(stderr, "  -n <num_nodes> (default 1)\n");
-  fprintf(stderr, "     The number of nodes (only required when -x is used)n");
+  fprintf(stderr, "     The number of nodes (only required when -x is used)\n");
   fprintf(stderr, "  -o <output_file> (default ./)\n");
   fprintf(stderr, "     The path to an output file, which will be called\n"
                   "     'vpic_<rank>.out\n");
@@ -389,12 +389,14 @@ void RunPosixBench(Options &options, float *x, int rank) {
 int main(int argc, char* argv[]) {
   Options options = HandleArgs(argc, argv);
 
-  int mpi_threads_provided;
-  MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
-  if (mpi_threads_provided < MPI_THREAD_MULTIPLE) {
-    fprintf(stderr, "Didn't receive appropriate MPI threading specification\n");
-    return 1;
-  }
+  // int mpi_threads_provided;
+  // MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
+  // if (mpi_threads_provided < MPI_THREAD_MULTIPLE) {
+  //   fprintf(stderr, "Didn't receive appropriate MPI threading specification\n");
+  //   return 1;
+  // }
+
+  MPI_Init(&argc, &argv);
 
   int rank = 0;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -414,14 +416,6 @@ int main(int argc, char* argv[]) {
   for (size_t i = 0; i < num_elements; ++i) {
     data[i] = uniform_random_number() * kXdim;
   }
-
-  // int gdb_iii = 0;
-  // char gdb_DEBUG_hostname[256];
-  // gethostname(gdb_DEBUG_hostname, sizeof(gdb_DEBUG_hostname));
-  // printf("PID %d on %s ready for attach\n", getpid(), gdb_DEBUG_hostname);
-  // fflush(stdout);
-  // while (0 == gdb_iii)
-  //   sleep(5);
 
   if (options.do_posix_io) {
     RunPosixBench(options, data, rank);
