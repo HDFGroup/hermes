@@ -370,6 +370,7 @@ void RunPosixBench(Options &options, float *x, int rank) {
       FILE *f = fopen(output_path.c_str(), "w");
       CHECK(f);
 
+      MPI_Barrier(MPI_COMM_WORLD);
       timer.resumeTime();
       DoFwrite(x, MEGABYTES(options.data_size_mb), f);
 
@@ -378,8 +379,11 @@ void RunPosixBench(Options &options, float *x, int rank) {
         CHECK_EQ(fsync(fileno(f)), 0);
       }
       timer.pauseTime();
+      MPI_Barrier(MPI_COMM_WORLD);
+
 
       CHECK_EQ(fclose(f), 0);
+      MPI_Barrier(MPI_COMM_WORLD);
     }
   }
 
@@ -411,14 +415,6 @@ void RunPosixBench(Options &options, float *x, int rank) {
 int main(int argc, char* argv[]) {
   Options options = HandleArgs(argc, argv);
 
-  // int gdb_iii = 0;
-  // char gdb_DEBUG_hostname[256];
-  // gethostname(gdb_DEBUG_hostname, sizeof(gdb_DEBUG_hostname));
-  // printf("PID %d on %s ready for attach\n", getpid(), gdb_DEBUG_hostname);
-  // fflush(stdout);
-  // while (0 == gdb_iii)
-  //   sleep(5);
-
   MPI_Init(&argc, &argv);
 
   int rank = 0;
@@ -439,6 +435,14 @@ int main(int argc, char* argv[]) {
   for (size_t i = 0; i < num_elements; ++i) {
     data[i] = uniform_random_number() * kXdim;
   }
+
+  // int gdb_iii = 0;
+  // char gdb_DEBUG_hostname[256];
+  // gethostname(gdb_DEBUG_hostname, sizeof(gdb_DEBUG_hostname));
+  // printf("PID %d on %s ready for attach\n", getpid(), gdb_DEBUG_hostname);
+  // fflush(stdout);
+  // while (0 == gdb_iii)
+  //   sleep(5);
 
   if (options.do_posix_io) {
     RunPosixBench(options, data, rank);

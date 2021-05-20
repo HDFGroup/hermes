@@ -102,7 +102,8 @@ static void TestGetBandwidths() {
 
   HermesPtr hermes = InitHermesDaemon();
 
-  std::vector<f32> bandwidths = GetBandwidths(&hermes->context_);
+  std::vector<TargetID> targets = LocalGetNodeTargets(&hermes->context_);
+  std::vector<f32> bandwidths = GetBandwidths(&hermes->context_, targets);
   Config config;
   InitDefaultConfig(&config);
   for (size_t i = 0; i < bandwidths.size(); ++i) {

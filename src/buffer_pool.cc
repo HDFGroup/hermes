@@ -149,12 +149,12 @@ Target *GetTargetFromId(SharedMemoryContext *context, TargetID id) {
   return result;
 }
 
-std::vector<f32> GetBandwidths(SharedMemoryContext *context) {
-  BufferPool *pool = GetBufferPoolFromContext(context);
-  std::vector<f32> result(pool->num_devices, 0);
+std::vector<f32> GetBandwidths(SharedMemoryContext *context,
+                               const std::vector<TargetID> &targets) {
+  std::vector<f32> result(targets.size(), 0);
 
-  for (int i = 0; i < pool->num_devices; i++) {
-    Device *device = GetDeviceById(context, i);
+  for (size_t i = 0; i < targets.size(); i++) {
+    Device *device = GetDeviceById(context, targets[i].bits.device_id);
     result[i] = device->bandwidth_mbps;
   }
 
@@ -1304,13 +1304,15 @@ void InitFilesForBuffering(SharedMemoryContext *context, bool make_space) {
           i32 buffer_size = GetSlabBufferSize(context, device_id, slab);
           size_t this_slabs_capacity = num_buffers * buffer_size;
 
-          int ftruncate_result = ftruncate(fileno(buffering_file),
-                                           this_slabs_capacity);
+          // int ftruncate_result = ftruncate(fileno(buffering_file),
+          //                                  this_slabs_capacity);
+          // TODO(chogan):
+          int ftruncate_result = posix_fallocate(fileno(buffering_file),
+                                                 0, this_slabs_capacity);
           if (ftruncate_result) {
             LOG(ERROR) << "Failed to allocate buffering file at "
                        << buffering_fname << ": ";
-            perror(nullptr);
-            LOG(FATAL) << "Terminating...";
+            FailedLibraryCall("ftruncate");
           }
         }
       }

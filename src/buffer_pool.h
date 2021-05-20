@@ -483,7 +483,9 @@ size_t ReadFromSwap(SharedMemoryContext *context, Blob blob,
  *
  * @return The list of bandwidths, one for each Device, in MiB/sec.
  */
-std::vector<f32> GetBandwidths(SharedMemoryContext *context);
+// TEMP(chogan): Docs
+std::vector<f32> GetBandwidths(SharedMemoryContext *context,
+                               const std::vector<TargetID> &targets);
 
 u32 GetNumBuffersAvailable(SharedMemoryContext *context, DeviceID device_id);
 u32 GetBufferSize(SharedMemoryContext *context, RpcContext *rpc, BufferID id);
