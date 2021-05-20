@@ -21,11 +21,12 @@ using std::chrono::duration;
 const auto now = std::chrono::high_resolution_clock::now;
 
 const int kNumVariables = 8;
-const int kDefaultIterations = 16;
+const int kDefaultIterations = 1;
 const int kXdim = 64;
 const int kYdim = 64;
 const int kZdim = 64;
 
+const bool kCollectBandwidthDefault = false;
 
 struct Options {
   size_t data_size_mb;
@@ -38,10 +39,14 @@ struct Options {
   bool do_posix_io;
   bool direct_io;
   bool sync;
+  bool collect_bandwidth;
 };
 
 void PrintUsage(char *program) {
   fprintf(stderr, "Usage: %s [-bhiopx] \n", program);
+  fprintf(stderr, "  -b (default %d)", kCollectBandwidthDefault);
+  fprintf(stderr, "     Boolean flag. If true print bandwidth instead of wall "
+                  "     time\n");
   fprintf(stderr, "  -c <hermes.conf_path>\n");
   fprintf(stderr, "     Path to a Hermes configuration file.\n");
   fprintf(stderr, "  -d (default false)\n");
@@ -62,7 +67,7 @@ void PrintUsage(char *program) {
   fprintf(stderr, "  -s (default true)\n");
   fprintf(stderr, "     Boolean flag. Whether to share a single Bucket or \n"
                   "     give each rank its own Bucket\n");
-  fprintf(stderr, "  -x (default false)\n");
+  fprintf(stderr, "  -x (default true)\n");
   fprintf(stderr, "     Boolean flag. If enabled, POSIX I/O is performed\n"
                   "     instead of going through Hermes.\n");
 }
@@ -74,11 +79,17 @@ Options HandleArgs(int argc, char **argv) {
   result.num_iterations = kDefaultIterations;
   result.num_nodes = 1;
   result.shared_bucket = true;
+  result.do_posix_io = true;
   result.dpe_policy = "none";
+  result.collect_bandwidth = kCollectBandwidthDefault;
 
   int option = -1;
-  while ((option = getopt(argc, argv, "c:dfhi:n:o:p:sx")) != -1) {
+  while ((option = getopt(argc, argv, "bc:dfhi:n:o:p:sx")) != -1) {
     switch (option) {
+      case 'b': {
+        result.collect_bandwidth = true;
+        break;
+      }
       case 'c': {
         result.config_path = optarg;
         break;
@@ -116,7 +127,7 @@ Options HandleArgs(int argc, char **argv) {
         break;
       }
       case 'x': {
-        result.do_posix_io = true;
+        result.do_posix_io = false;
         break;
       }
       default: {
@@ -372,22 +383,41 @@ void RunPosixBench(Options &options, float *x, int rank) {
     }
   }
 
-  double bandwidth = GetBandwidth(options, timer.getElapsedTime(),
-                                  MPI_COMM_WORLD);
+  auto local_elapsed_time = timer.getElapsedTime();
 
-  if (rank == 0) {
-    std::string buffering = "normal";
-    if (options.direct_io) {
-      buffering = "direct";
-    } else if (options.sync) {
-      buffering = "sync";
+  if (options.collect_bandwidth) {
+    double bandwidth = GetBandwidth(options, local_elapsed_time,
+                                    MPI_COMM_WORLD);
+    if (rank == 0) {
+      std::string buffering = "normal";
+      if (options.direct_io) {
+        buffering = "direct";
+      } else if (options.sync) {
+        buffering = "sync";
+      }
+      PrintResults(options, bandwidth, buffering);
     }
-    PrintResults(options, bandwidth, buffering);
+  } else {
+    double max_secs = 0;
+    MPI_Reduce(&local_elapsed_time, &max_secs, 1, MPI_DOUBLE, MPI_MAX, 0,
+               MPI_COMM_WORLD);
+
+    if (rank == 0) {
+      PrintResults(options, max_secs, "normal");
+    }
   }
 }
 
 int main(int argc, char* argv[]) {
   Options options = HandleArgs(argc, argv);
+
+  // int gdb_iii = 0;
+  // char gdb_DEBUG_hostname[256];
+  // gethostname(gdb_DEBUG_hostname, sizeof(gdb_DEBUG_hostname));
+  // printf("PID %d on %s ready for attach\n", getpid(), gdb_DEBUG_hostname);
+  // fflush(stdout);
+  // while (0 == gdb_iii)
+  //   sleep(5);
 
   MPI_Init(&argc, &argv);
 
