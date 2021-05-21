@@ -418,7 +418,8 @@ int main(int argc, char* argv[]) {
   // int gdb_iii = 0;
   // char gdb_DEBUG_hostname[256];
   // gethostname(gdb_DEBUG_hostname, sizeof(gdb_DEBUG_hostname));
-  // fprintf(stderr, "PID %d on %s ready for attach\n", getpid(), gdb_DEBUG_hostname);
+  // fprintf(stderr, "PID %d on %s ready for attach\n", getpid(),
+  //         gdb_DEBUG_hostname);
   // fflush(stderr);
   // while (0 == gdb_iii)
   //   sleep(5);
