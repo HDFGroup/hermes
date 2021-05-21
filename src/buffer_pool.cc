@@ -735,6 +735,7 @@ Device *InitDevices(Arena *arena, Config *config) {
     device->bandwidth_mbps = config->bandwidths[i];
     device->latency_ns = config->latencies[i];
     device->id = i;
+    device->is_shared = config->is_shared_device[i];
     // TODO(chogan): @configuration Get this from cmake.
     device->has_fallocate = false;
     size_t path_length = config->mount_points[i].size();
@@ -1258,7 +1259,8 @@ FILE *FopenOrTerminate(const char *fname, const char *mode) {
   return result;
 }
 
-void InitFilesForBuffering(SharedMemoryContext *context, bool make_space) {
+void InitFilesForBuffering(SharedMemoryContext *context, bool make_space,
+                           u32 node_id, bool first_on_node) {
   BufferPool *pool = GetBufferPoolFromContext(context);
   context->buffering_filenames.resize(pool->num_devices);
 
@@ -1280,35 +1282,40 @@ void InitFilesForBuffering(SharedMemoryContext *context, bool make_space) {
     for (int slab = 0; slab < pool->num_slabs[device_id]; ++slab) {
       // TODO(chogan): Where does memory for filenames come from? Probably need
       // persistent memory for each application core.
+      std::string node = (device->is_shared ? std::string("_node") +
+                          std::to_string(node_id) : "");
       context->buffering_filenames[device_id][slab] =
         std::string(std::string(mount_point) + (ends_in_slash ? "" : "/") +
                     "device" + std::to_string(device_id) + "_slab" +
-                    std::to_string(slab) + ".hermes");
+                    std::to_string(slab) + node + ".hermes");
 
       const char *buffering_fname =
         context->buffering_filenames[device_id][slab].c_str();
       FILE *buffering_file = FopenOrTerminate(buffering_fname, "w+");
 
       if (make_space) {
-        if (device->has_fallocate) {
-          // TODO(chogan): Use posix_fallocate when it is available
-        } else {
-          if (device->is_shared) {
-            // TODO(chogan): Some Devices require file initialization on each
-            // node, and some are shared (burst buffers) and only require one
-            // rank to initialize them
-            HERMES_NOT_IMPLEMENTED_YET;
-          }
+        // TODO(chogan): Use posix_fallocate when it is available
+        // if (device->has_fallocate) {
+        //   int fallocate_result = posix_fallocate(fileno(buffering_file),
+        //                                          0, this_slabs_capacity);
+        // }
 
-          u32 num_buffers = GetNumBuffersAvailable(context, device_id, slab);
-          i32 buffer_size = GetSlabBufferSize(context, device_id, slab);
-          size_t this_slabs_capacity = num_buffers * buffer_size;
+        u32 num_buffers = GetNumBuffersAvailable(context, device_id, slab);
+        i32 buffer_size = GetSlabBufferSize(context, device_id, slab);
+        size_t this_slabs_capacity = num_buffers * buffer_size;
 
+
+        bool do_truncate = true;
+        if (device->is_shared && node_id != 1 && !first_on_node) {
+          // NOTE(chogan): Some Devices require file initialization on each
+          // node, and some are shared (burst buffers) and only require one
+          // rank to initialize them
+          do_truncate = false;
+        }
+
+        if (do_truncate) {
           int ftruncate_result = ftruncate(fileno(buffering_file),
                                            this_slabs_capacity);
-          // // TODO(chogan):
-          // int ftruncate_result = posix_fallocate(fileno(buffering_file),
-          //                                        0, this_slabs_capacity);
           if (ftruncate_result) {
             LOG(ERROR) << "Failed to allocate buffering file at "
                        << buffering_fname << ": ";

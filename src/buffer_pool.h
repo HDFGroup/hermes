@@ -284,8 +284,11 @@ void MakeFullShmemName(char *dest, const char *base);
  * pointers.
  * @param make_space If true, attempts to reserve space on the * filesystem for
  * each file.
+ * @param node_id The node id, used for shared devices.
+ * @param first_on_node True if this rank is sequentially the first on the node
  */
-void InitFilesForBuffering(SharedMemoryContext *context, bool make_space);
+void InitFilesForBuffering(SharedMemoryContext *context, bool make_space,
+                           u32 node_id, bool first_on_node);
 
 /**
  * Retrieves information required for accessing the BufferPool shared memory.
