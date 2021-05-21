@@ -1704,7 +1704,14 @@ api::Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
   }
 
   HERMES_BEGIN_TIMED_BLOCK("GetBuffers");
-  std::vector<BufferID> buffer_ids = GetBuffers(context, schema);
+  std::vector<BufferID> buffer_ids;
+  const int kMaxGetBuffersTries = 10;
+  int num_get_buffers_tries = 0;
+  while (buffer_ids.size() == 0 &&
+         num_get_buffers_tries++ < kMaxGetBuffersTries) {
+    buffer_ids = GetBuffers(context, schema);
+    sleep(1);
+  }
   HERMES_END_TIMED_BLOCK();
 
   if (buffer_ids.size()) {
