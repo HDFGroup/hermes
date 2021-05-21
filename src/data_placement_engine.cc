@@ -88,6 +88,7 @@ Status AddRoundRobinSchema(size_t index, std::vector<u64> &node_state,
           dst = targets[j];
           output.push_back(std::make_pair(blob_sizes[index], dst));
           node_state[j] -= blob_sizes[index];
+          LOG(INFO) << "RR placing " << blob_sizes[index] << " to device " << dev_id << std::endl;
           dpe.SetCurrentDeviceIndex((next_index + 1) % num_devices);
           break;
         }
@@ -153,7 +154,7 @@ Status RoundRobinPlacement(std::vector<size_t> &blob_sizes,
     PlacementSchema schema;
 
     // Split the blob
-    if (SplitBlob(blob_sizes[i])) {
+    if (false) { // (SplitBlob(blob_sizes[i])) {
       // Construct the vector for the splitted blob
       std::vector<size_t> new_blob_size;
       GetSplitSizes(blob_sizes[i], new_blob_size);
@@ -419,11 +420,13 @@ Status CalculatePlacement(SharedMemoryContext *context, RpcContext *rpc,
         break;
       }
       case Topology_Neighborhood: {
+        HERMES_NOT_IMPLEMENTED_YET;
         targets = GetNeighborhoodTargets(context, rpc);
         break;
       }
       case Topology_Global: {
         // TODO(chogan): GetGlobalTargets(context, rpc);
+        HERMES_NOT_IMPLEMENTED_YET;
         break;
       }
     }

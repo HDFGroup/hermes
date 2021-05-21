@@ -1704,14 +1704,7 @@ api::Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
   }
 
   HERMES_BEGIN_TIMED_BLOCK("GetBuffers");
-  std::vector<BufferID> buffer_ids;
-  const int kMaxGetBuffersTries = 10;
-  int num_get_buffers_tries = 0;
-  while (buffer_ids.size() == 0 &&
-         num_get_buffers_tries++ < kMaxGetBuffersTries) {
-    buffer_ids = GetBuffers(context, schema);
-    sleep(1);
-  }
+  std::vector<BufferID> buffer_ids = GetBuffers(context, schema);
   HERMES_END_TIMED_BLOCK();
 
   if (buffer_ids.size()) {
@@ -1723,6 +1716,8 @@ api::Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
     AttachBlobToBucket(context, rpc, name.c_str(), bucket_id, buffer_ids,
                        false, called_from_buffer_organizer);
   } else {
+    result = PLACE_SWAP_BLOB_TO_BUF_FAILED;
+    HERMES_NOT_IMPLEMENTED_YET;
     if (called_from_buffer_organizer) {
       result = PLACE_SWAP_BLOB_TO_BUF_FAILED;
       LOG(ERROR) << result.Msg();
