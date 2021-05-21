@@ -1304,11 +1304,11 @@ void InitFilesForBuffering(SharedMemoryContext *context, bool make_space) {
           i32 buffer_size = GetSlabBufferSize(context, device_id, slab);
           size_t this_slabs_capacity = num_buffers * buffer_size;
 
-          // int ftruncate_result = ftruncate(fileno(buffering_file),
-          //                                  this_slabs_capacity);
-          // TODO(chogan):
-          int ftruncate_result = posix_fallocate(fileno(buffering_file),
-                                                 0, this_slabs_capacity);
+          int ftruncate_result = ftruncate(fileno(buffering_file),
+                                           this_slabs_capacity);
+          // // TODO(chogan):
+          // int ftruncate_result = posix_fallocate(fileno(buffering_file),
+          //                                        0, this_slabs_capacity);
           if (ftruncate_result) {
             LOG(ERROR) << "Failed to allocate buffering file at "
                        << buffering_fname << ": ";
