@@ -1717,17 +1717,16 @@ api::Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
                        false, called_from_buffer_organizer);
   } else {
     result = PLACE_SWAP_BLOB_TO_BUF_FAILED;
-    HERMES_NOT_IMPLEMENTED_YET;
-    if (called_from_buffer_organizer) {
-      result = PLACE_SWAP_BLOB_TO_BUF_FAILED;
-      LOG(ERROR) << result.Msg();
-    } else {
-      SwapBlob swap_blob = PutToSwap(context, rpc, name, bucket_id, blob.data,
-                                     blob.size);
-      result = BLOB_IN_SWAP_PLACE;
-      LOG(WARNING) << result.Msg();
-      TriggerBufferOrganizer(rpc, kPlaceInHierarchy, name, swap_blob, ctx);
-    }
+    // if (called_from_buffer_organizer) {
+    //   result = PLACE_SWAP_BLOB_TO_BUF_FAILED;
+    //   LOG(ERROR) << result.Msg();
+    // } else {
+    //   SwapBlob swap_blob = PutToSwap(context, rpc, name, bucket_id, blob.data,
+    //                                  blob.size);
+    //   result = BLOB_IN_SWAP_PLACE;
+    //   LOG(WARNING) << result.Msg();
+    //   TriggerBufferOrganizer(rpc, kPlaceInHierarchy, name, swap_blob, ctx);
+    // }
   }
 
   return result;

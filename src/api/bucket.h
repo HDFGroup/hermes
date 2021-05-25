@@ -266,9 +266,9 @@ Status Bucket::Put(std::vector<std::string> &names,
       sizes_in_bytes[i] = blobs[i].size() * sizeof(T);
     }
 
-    int num_devices = 2;
+    int num_devices = 3;
     int device = 0;
-    while (ret.Failed() && device++ < num_devices) {
+    while (device < num_devices) {
       std::vector<PlacementSchema> schemas;
       HERMES_BEGIN_TIMED_BLOCK("CalculatePlacement");
       ret = CalculatePlacement(&hermes_->context_, &hermes_->rpc_, sizes_in_bytes,
@@ -286,6 +286,9 @@ Status Bucket::Put(std::vector<std::string> &names,
         DataPlacementEngine dpe;
         int current = dpe.GetCurrentDeviceIndex();
         dpe.SetCurrentDeviceIndex((current + 1) % num_devices);
+        device++;
+      } else {
+        break;
       }
     }
 

@@ -88,7 +88,7 @@ Status AddRoundRobinSchema(size_t index, std::vector<u64> &node_state,
           dst = targets[j];
           output.push_back(std::make_pair(blob_sizes[index], dst));
           node_state[j] -= blob_sizes[index];
-          LOG(INFO) << "RR placing " << blob_sizes[index] << " to device " << dev_id << std::endl;
+          // LOG(INFO) << "RR placing " << blob_sizes[index] << " to device " << dev_id << std::endl;
           dpe.SetCurrentDeviceIndex((next_index + 1) % num_devices);
           break;
         }
