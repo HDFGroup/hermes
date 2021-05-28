@@ -609,8 +609,7 @@ int HERMES_DECL(fclose)(FILE *fp) {
           existing.first.st_blobs.clear();
           INTERCEPTOR_LIST->hermes_flush_exclusion.erase(filename);
         }
-        // TEMP(chogan):
-        // existing.first.st_bkid->Destroy(ctx);
+        existing.first.st_bkid->Destroy(ctx);
         mdm->FinalizeHermes();
       } else {
         LOG(INFO) << "File handler is opened by more than one fopen."

@@ -663,8 +663,6 @@ std::string GetServerName(RpcContext *rpc, u32 node_id,
   std::string host_number = GetHostNumberAsString(rpc, node_id);
   std::string host_name = (std::string(rpc->base_hostname) + host_number +
                            std::string(rpc->hostname_suffix));
-  const int kMaxIpAddressSize = 16;
-  char ip_address[kMaxIpAddressSize];
   // TODO(chogan): @errorhandling
   // TODO(chogan): @optimization Could cache the last N hostname->IP mappings to
   // avoid excessive syscalls. Should profile first.
@@ -675,24 +673,22 @@ std::string GetServerName(RpcContext *rpc, u32 node_id,
   int gethostbyname_result = gethostbyname_r(host_name.c_str(), &hostname_info,
                                              hostname_buffer, 4096,
                                              &hostname_result, &hostname_error);
-  // struct hostent *hostname_info = gethostbyname_r(host_name.c_str());
-  // TEMP(chogan):
   if (gethostbyname_result != 0) {
     LOG(FATAL) << hstrerror(h_errno);
   }
   in_addr **addr_list = (struct in_addr **)hostname_info.h_addr_list;
-  // TODO(chogan): @errorhandling
   if (!addr_list[0]) {
     LOG(FATAL) << hstrerror(h_errno);
   }
-  char * inet_result = inet_ntoa(*addr_list[0]);
+
+  char ip_address[INET_ADDRSTRLEN];
+  const char *inet_result = inet_ntop(AF_INET, addr_list[0], ip_address,
+                                      INET_ADDRSTRLEN);
   if (!inet_result) {
-    LOG(FATAL) << "Uh oh.";
+    FailedLibraryCall("inet_ntop");
   }
-  strncpy(ip_address, inet_result, kMaxIpAddressSize - 1);
 
   std::string result = std::string(tl_state->server_name_prefix);
-
   result += std::string(ip_address);
 
   if (is_buffer_organizer) {

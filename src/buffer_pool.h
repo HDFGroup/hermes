@@ -477,16 +477,17 @@ size_t ReadFromSwap(SharedMemoryContext *context, Blob blob,
                     SwapBlob swap_blob);
 
 /**
- * Returns a vector of bandwidths in MiB per second.
+ * Returns a vector of bandwidths in MiB per second for a given Target list.
  *
- * The returned list can be indexed by DeviceID to get the bandwidth for a
- * specific Device.
+ * Element @c n of the result is the bandwidth of the Device that backs the @c
+ * nth element of @p targets.
  *
  * @param context The shared memory context needed to access BufferPool info.
+ * @param targets The list of targets for which to retrieve bandwidth info.
  *
- * @return The list of bandwidths, one for each Device, in MiB/sec.
+ * @return The list of bandwidths, one for each target in @p targets, in
+ *         MiB/sec.
  */
-// TEMP(chogan): Docs
 std::vector<f32> GetBandwidths(SharedMemoryContext *context,
                                const std::vector<TargetID> &targets);
 

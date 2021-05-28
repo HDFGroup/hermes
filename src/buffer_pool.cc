@@ -1304,7 +1304,6 @@ void InitFilesForBuffering(SharedMemoryContext *context, bool make_space,
         i32 buffer_size = GetSlabBufferSize(context, device_id, slab);
         size_t this_slabs_capacity = num_buffers * buffer_size;
 
-
         bool do_truncate = true;
         if (device->is_shared && node_id != 1 && !first_on_node) {
           // NOTE(chogan): Some Devices require file initialization on each
@@ -1716,17 +1715,16 @@ api::Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
     AttachBlobToBucket(context, rpc, name.c_str(), bucket_id, buffer_ids,
                        false, called_from_buffer_organizer);
   } else {
-    result = PLACE_SWAP_BLOB_TO_BUF_FAILED;
-    // if (called_from_buffer_organizer) {
-    //   result = PLACE_SWAP_BLOB_TO_BUF_FAILED;
-    //   LOG(ERROR) << result.Msg();
-    // } else {
-    //   SwapBlob swap_blob = PutToSwap(context, rpc, name, bucket_id, blob.data,
-    //                                  blob.size);
-    //   result = BLOB_IN_SWAP_PLACE;
-    //   LOG(WARNING) << result.Msg();
-    //   TriggerBufferOrganizer(rpc, kPlaceInHierarchy, name, swap_blob, ctx);
-    // }
+    if (called_from_buffer_organizer) {
+      result = PLACE_SWAP_BLOB_TO_BUF_FAILED;
+      LOG(ERROR) << result.Msg();
+    } else {
+      SwapBlob swap_blob = PutToSwap(context, rpc, name, bucket_id, blob.data,
+                                     blob.size);
+      result = BLOB_IN_SWAP_PLACE;
+      LOG(WARNING) << result.Msg();
+      TriggerBufferOrganizer(rpc, kPlaceInHierarchy, name, swap_blob, ctx);
+    }
   }
 
   return result;

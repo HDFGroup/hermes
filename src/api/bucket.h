@@ -225,6 +225,7 @@ Status Bucket::PlaceBlobs(std::vector<PlacementSchema> &schemas,
     result = PlaceBlob(&hermes_->context_, &hermes_->rpc_, schema, blob,
                        names[i], id_, ctx);
     if (result.Failed()) {
+      // TODO(chogan): Need to return a std::vector<Status>
       break;
     }
   }
@@ -266,30 +267,17 @@ Status Bucket::Put(std::vector<std::string> &names,
       sizes_in_bytes[i] = blobs[i].size() * sizeof(T);
     }
 
-    int num_devices = 3;
-    int device = 0;
-    while (device < num_devices) {
-      std::vector<PlacementSchema> schemas;
-      HERMES_BEGIN_TIMED_BLOCK("CalculatePlacement");
-      ret = CalculatePlacement(&hermes_->context_, &hermes_->rpc_, sizes_in_bytes,
+    std::vector<PlacementSchema> schemas;
+    HERMES_BEGIN_TIMED_BLOCK("CalculatePlacement");
+    ret = CalculatePlacement(&hermes_->context_, &hermes_->rpc_, sizes_in_bytes,
                                schemas, ctx);
-      HERMES_END_TIMED_BLOCK();
+    HERMES_END_TIMED_BLOCK();
 
-      if (ret.Succeeded()) {
-        ret = PlaceBlobs(schemas, blobs, names, ctx);
-      } else {
-        LOG(ERROR) << ret.Msg();
-        return ret;
-      }
-
-      if (ret.Failed()) {
-        DataPlacementEngine dpe;
-        int current = dpe.GetCurrentDeviceIndex();
-        dpe.SetCurrentDeviceIndex((current + 1) % num_devices);
-        device++;
-      } else {
-        break;
-      }
+    if (ret.Succeeded()) {
+      ret = PlaceBlobs(schemas, blobs, names, ctx);
+    } else {
+      LOG(ERROR) << ret.Msg();
+      return ret;
     }
 
   } else {
