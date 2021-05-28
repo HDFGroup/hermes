@@ -18,7 +18,6 @@
 extern "C" {
 
 std::shared_ptr<hermes::api::Hermes> hermes_ptr;
-hermes::api::Context ctx;
 
 int HermesInitHermes(char *hermes_config) {
   int result = 0;
@@ -39,7 +38,7 @@ BucketClass *HermesBucketCreate(const char *name) {
 
   try {
     hermes::api::Bucket *new_bucket =
-      new hermes::api::Bucket(std::string(name), hermes_ptr, ctx);
+      new hermes::api::Bucket(std::string(name), hermes_ptr);
 
     return (BucketClass *)new_bucket;
   }
@@ -58,7 +57,7 @@ void HermesBucketClose(BucketClass *bkt) {
 
   LOG(INFO) << "Hermes Wrapper: Closing Bucket " << my_bkt->GetName() << '\n';
 
-  my_bkt->Release(ctx);
+  my_bkt->Release();
 }
 
 void HermesBucketDestroy(BucketClass *bkt) {
@@ -86,7 +85,7 @@ void HermesBucketPut(BucketClass *bkt, char *name, unsigned char *put_data,
   LOG(INFO) << "Hermes Wrapper: Putting Blob " << name << " to bucket " <<
                bucket->GetName() << '\n';
 
-  hermes::api::Status status = bucket->Put(name, put_data, size, ctx);
+  hermes::api::Status status = bucket->Put(name, put_data, size);
 
   if (status.Failed())
     LOG(ERROR) << "Hermes Wrapper: HermesBucketPut failed\n";
@@ -95,6 +94,7 @@ void HermesBucketPut(BucketClass *bkt, char *name, unsigned char *put_data,
 void HermesBucketGet(BucketClass *bkt, char *blob_name, size_t kPageSize,
                      unsigned char *buf) {
   hermes::api::Bucket *bucket = (hermes::api::Bucket *)bkt;
+  const hermes::api::Context ctx;
 
   LOG(INFO) << "Hermes Wrapper: Getting blob " << blob_name << " from Bucket "
             << bucket->GetName();
