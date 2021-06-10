@@ -11,9 +11,20 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "hermes.h"
+#include "buffer_organizer.h"
 #include "data_placement_engine.h"
 
 namespace hermes {
+
+bool LocalEnqueueBoTask(SharedMemoryContext *context, BoTask task,
+                        BoPriority priority) {
+  (void)context;
+  (void)task;
+  (void)priority;
+  bool result = false;
+
+  return result;
+}
 
 Status PlaceInHierarchy(SharedMemoryContext *context, RpcContext *rpc,
                         SwapBlob swap_blob, const std::string &name,

@@ -13,6 +13,7 @@
 #include <string>
 
 #include "rpc.h"
+#include "buffer_organizer.h"
 #include "metadata_management_internal.h"
 
 namespace tl = thallium;
@@ -416,6 +417,7 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
 
 void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
                           const char *addr, int num_threads, int port) {
+  // TODO(chogan): num_threads can probably be 1
   ThalliumState *state = GetThalliumState(rpc);
 
   state->bo_engine = new tl::engine(addr, THALLIUM_SERVER_MODE, true,
@@ -467,12 +469,21 @@ void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
     }
   };
 
+  auto rpc_enqueue_bo_task = [context](const tl::request &req, BoTask task,
+                                       BoPriority priority) {
+    bool result = LocalEnqueueBoTask(context, task, priority);
+
+    req.respond(result);
+  };
+
   rpc_server->define("PlaceInHierarchy",
                      rpc_place_in_hierarchy).disable_response();
   rpc_server->define("MoveToTarget",
                      rpc_move_to_target).disable_response();
+  rpc_server->define("EnqueueBoTask", rpc_enqueue_bo_task);
 }
 
+#if 0
 void TriggerBufferOrganizer(RpcContext *rpc, const char *func_name,
                             const std::string &blob_name, SwapBlob swap_blob,
                             const api::Context &ctx) {
@@ -485,6 +496,7 @@ void TriggerBufferOrganizer(RpcContext *rpc, const char *func_name,
   // TODO(chogan): Templatize?
   remote_proc.on(server)(swap_blob, blob_name, ctx);
 }
+#endif
 
 void StartGlobalSystemViewStateUpdateThread(SharedMemoryContext *context,
                                             RpcContext *rpc, Arena *arena,
