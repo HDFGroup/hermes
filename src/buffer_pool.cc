@@ -1723,7 +1723,8 @@ api::Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
                                      blob.size);
       result = BLOB_IN_SWAP_PLACE;
       LOG(WARNING) << result.Msg();
-      RpcCall<void>(rpc, rpc->node_id, "BO::PlaceInHierarchy", swap_blob, name, ctx);
+      RpcCall<void>(rpc, rpc->node_id, "BO::PlaceInHierarchy", swap_blob, name,
+                    ctx);
     }
   }
 

@@ -23,6 +23,8 @@
 #include <thallium/serialization/stl/pair.hpp>
 #include <thallium/serialization/stl/string.hpp>
 
+#include "buffer_organizer.h"
+
 namespace tl = thallium;
 
 namespace hermes {
@@ -149,6 +151,44 @@ void load(A &ar, MapType &map_type) {
   map_type = (MapType)val;
 }
 #endif  // #ifndef THALLIUM_USE_CEREAL
+
+template<typename A>
+void save(A &ar, BoPriority &priority) {
+  int val = (int)priority;
+  ar.write(&val, 1);
+}
+
+template<typename A>
+void load(A &ar, BoPriority &priority) {
+  int val = 0;
+  ar.read(&val, 1);
+  priority = (BoPriority)val;
+}
+
+template<typename A>
+void save(A &ar, BoOperation &op) {
+  int val = (int)op;
+  ar.write(&val, 1);
+}
+
+template<typename A>
+void load(A &ar, BoOperation &op) {
+  int val = 0;
+  ar.read(&val, 1);
+  op = (BoOperation)val;
+}
+
+template<typename A>
+void serialize(A &ar, BoArgs &bo_args) {
+  (void)ar;
+  (void)bo_args;
+}
+
+template<typename A>
+void serialize(A &ar, BoTask &bo_task) {
+  (void)ar;
+  (void)bo_task;
+}
 
 namespace api {
 template<typename A>

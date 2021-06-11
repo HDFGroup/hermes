@@ -131,13 +131,13 @@ LSAN_OPTIONS=suppressions=${CMAKE_CURRENT_SOURCE_DIR}/data/asan.supp)
 #------------------------------------------------------------------------------
 # BufferOrganizer tests
 #------------------------------------------------------------------------------
-add_executable(argobots argobots_test.cc)
-target_link_libraries(argobots ${LIBRT} hermes MPI::MPI_CXX
+add_executable(bo buffer_organizer_test.cc)
+target_link_libraries(bo ${LIBRT} hermes MPI::MPI_CXX
   $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium>)
-target_compile_definitions(argobots
+target_compile_definitions(bo
   PRIVATE $<$<BOOL:${HERMES_RPC_THALLIUM}>:HERMES_RPC_THALLIUM>)
-add_test(NAME TestArgobots COMMAND argobots)
-set_tests_properties("TestArgobots" PROPERTIES ENVIRONMENT
+add_test(NAME TestBufferOrganizer COMMAND bo)
+set_tests_properties("TestBufferOrganizer" PROPERTIES ENVIRONMENT
   LSAN_OPTIONS=suppressions=${CMAKE_CURRENT_SOURCE_DIR}/data/asan.supp)
 
 #------------------------------------------------------------------------------
