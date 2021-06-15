@@ -16,12 +16,45 @@
 
 namespace hermes {
 
-bool LocalEnqueueBoTask(SharedMemoryContext *context, BoTask task,
-                        BoPriority priority) {
-  (void)context;
+void BoMove(void*) {
+  printf("%s\n", __func__);
+}
+
+void BoCopy(void*) {
+  printf("%s\n", __func__);
+}
+
+void BoDelete(void*) {
+  printf("%s\n", __func__);
+}
+
+bool LocalEnqueueBoTask(BufferOrganizer *bo, BoTask task, BoPriority priority) {
   (void)task;
-  (void)priority;
   bool result = false;
+
+  switch (task.op) {
+    case BoOperation::kMove: {
+      // TODO(chogan): Task memory
+      hermes::BoTask task = {};
+      task.op = hermes::BoOperation::kMove;
+      task.args.move_args = {};
+      ABT_thread_create(bo->pools[(int)priority], BoMove, (void *)&task,
+                        // TODO(chogan): Which thread?
+                        ABT_THREAD_ATTR_NULL, &bo->threads[i]);
+      break;
+    }
+    case BoOperation::kCopy: {
+      // TODO(chogan):
+      break;
+    }
+    case BoOperation::kDelete: {
+      // TODO(chogan):
+      break;
+    }
+    default: {
+      HERMES_INVALID_CODE_PATH;
+    }
+  }
 
   return result;
 }

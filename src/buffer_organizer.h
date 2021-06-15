@@ -16,20 +16,24 @@
 namespace hermes {
 
 enum class BoOperation {
-  k1,
-  k2,
+  kMove,
+  kCopy,
+  kDelete,
 
   kCount
 };
 
 enum class BoPriority {
-  kHigh,
   kLow,
+  kHigh,
 
   kCount
 };
 
-struct BoArgs {
+union BoArgs {
+  struct {} move_args;
+  struct {} copy_args;
+  struct {} delete_args;
 };
 
 struct BoTask {
@@ -37,7 +41,14 @@ struct BoTask {
   BoArgs args;
 };
 
+const int kNumPools = 2;
+const int kNumXstreams = 2;
+
 struct BufferOrganizer {
+  ABT_xstream xstreams[kNumXstreams];
+  ABT_sched scheds[kNumXstreams];
+  ABT_pool pools[kNumPools];
+  ABT_thread threads[kNumXstreams];
 };
 
 bool LocalEnqueueBoTask(SharedMemoryContext *context, BoTask task,
