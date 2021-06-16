@@ -184,6 +184,7 @@ std::pair<int, size_t> write_internal(std::pair<AdapterStat, bool> &existing,
         }
       // TODO(chogan): The commented out branches are unreachable. Hari needs to
       // take a look at this
+      }
 #if 0
       } else if (item.second.offset_ == 0) {
         auto status = existing.first.st_bkid->Put(
