@@ -162,7 +162,7 @@ std::pair<int, size_t> write_internal(std::pair<AdapterStat, bool> &existing,
   auto mapping = mapper->map(FileStruct(fp, existing.first.ptr, total_size));
   size_t data_offset = 0;
   auto filename = existing.first.st_bkid->GetName();
-  LOG(INFO) << "Mapping for read has " << mapping.size() << " mapping."
+  LOG(INFO) << "Mapping for write has " << mapping.size() << " mapping."
             << std::endl;
   for (const auto &item : mapping) {
     hapi::Context ctx;
@@ -182,7 +182,11 @@ std::pair<int, size_t> write_internal(std::pair<AdapterStat, bool> &existing,
         } else {
           existing.first.st_blobs.emplace(item.second.blob_name_);
         }
-      } else if (item.second.offset_ == 0) {
+      }
+      // TODO(chogan): The commented out branches are unreachable. Hari needs to
+      // take a look at this
+#if 0
+      else if (item.second.offset_ == 0) {
         auto status = existing.first.st_bkid->Put(
             item.second.blob_name_, put_data_ptr, put_data_ptr_size, ctx);
         if (status.Failed()) {
@@ -212,6 +216,7 @@ std::pair<int, size_t> write_internal(std::pair<AdapterStat, bool> &existing,
           existing.first.st_blobs.emplace(item.second.blob_name_);
         }
       }
+#endif
       /* TODO(hari): Check if vbucket exists. if so delete it.*/
     } else {
       LOG(INFO) << "Writing blob " << item.second.blob_name_
@@ -972,7 +977,7 @@ int HERMES_DECL(MPI_File_sync)(MPI_File fh) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(&fh);
     if (existing.second) {
-      LOG(INFO) << "Intercept fflush." << std::endl;
+      LOG(INFO) << "Intercept MPI_File_sync." << std::endl;
       auto filename = existing.first.st_bkid->GetName();
       const auto &blob_names = existing.first.st_blobs;
       if (!blob_names.empty() && INTERCEPTOR_LIST->Persists(filename)) {

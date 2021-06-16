@@ -432,8 +432,20 @@ bool LocalContainsBlob(SharedMemoryContext *context, BucketID bucket_id,
   return result;
 }
 
+static inline bool HasAllocated(ChunkedIdList *list) {
+  bool result = list->capacity > 0;
+
+  return result;
+}
+
+static inline bool HasAllocatedBlobs(VBucketInfo *info) {
+  bool result = HasAllocated(&info->blobs);
+
+  return result;
+}
+
 static inline bool HasAllocatedBlobs(BucketInfo *info) {
-  bool result = info->blobs.capacity > 0;
+  bool result = HasAllocated(&info->blobs);
 
   return result;
 }
@@ -504,13 +516,9 @@ bool LocalDestroyVBucket(SharedMemoryContext *context, const char *vbucket_name,
   // this is slow
   int ref_count = info->ref_count.load();
   if (ref_count == 1) {
-    ChunkedIdList *blobs = &info->blobs;
-    BlobID *blobs_arr = (BlobID *)GetIdsPtr(mdm, *blobs);
-    for (u32 i = 0; i < blobs->length; ++i) {
-      blobs_arr[i] = blobs_arr[--blobs->length];
-      break;
+    if (HasAllocatedBlobs(info)) {
+      FreeIdList(mdm, info->blobs);
     }
-    ReleaseIdsPtr(mdm);
 
     info->blobs.length = 0;
     info->blobs.capacity = 0;
