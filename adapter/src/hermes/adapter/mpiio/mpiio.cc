@@ -182,11 +182,10 @@ std::pair<int, size_t> write_internal(std::pair<AdapterStat, bool> &existing,
         } else {
           existing.first.st_blobs.emplace(item.second.blob_name_);
         }
-      }
       // TODO(chogan): The commented out branches are unreachable. Hari needs to
       // take a look at this
 #if 0
-      else if (item.second.offset_ == 0) {
+      } else if (item.second.offset_ == 0) {
         auto status = existing.first.st_bkid->Put(
             item.second.blob_name_, put_data_ptr, put_data_ptr_size, ctx);
         if (status.Failed()) {
