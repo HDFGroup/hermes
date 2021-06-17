@@ -263,7 +263,25 @@ std::vector<TraitID> VBucket::GetTraits(Predicate pred, Context& ctx) {
   return attached_traits;
 }
 
-Status VBucket::Delete() {
+Status VBucket::Release() {
+  Status result = Release(ctx_);
+
+  return result;
+}
+
+Status VBucket::Release(Context& ctx) {
+  (void)ctx;
+  Status ret;
+
+  if (IsValid() && hermes_->is_initialized) {
+    LOG(INFO) << "Closing vbucket '" << name_ << "'" << std::endl;
+    DecrementRefcount(&hermes_->context_, &hermes_->rpc_, id_);
+    id_.as_int = 0;
+  }
+  return ret;
+}
+
+Status VBucket::Destroy() {
   Status result = Destroy(ctx_);
 
   return result;

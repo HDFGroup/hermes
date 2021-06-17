@@ -190,7 +190,7 @@ void TestCompressionTrait(std::shared_ptr<hapi::Hermes> hermes) {
   Assert(my_vb.Unlink(blob1_name, bucket_name).Succeeded());
   Assert(my_vb.Detach(&trait).Succeeded());
 
-  Assert(my_vb.Delete().Succeeded());
+  Assert(my_vb.Destroy().Succeeded());
   Assert(my_bucket.Destroy().Succeeded());
 }
 
