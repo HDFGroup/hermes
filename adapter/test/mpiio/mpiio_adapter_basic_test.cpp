@@ -172,12 +172,15 @@ TEST_CASE("OpenCollective", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(test::status_orig == MPI_SUCCESS);
   }
 
-  SECTION("delete on close mode on shared file") {
+  SECTION("delete on close mode on new file") {
     test::test_open(
-        info.new_file.c_str(),
+        info.shared_new_file.c_str(),
         MPI_MODE_WRONLY | MPI_MODE_CREATE | MPI_MODE_DELETE_ON_CLOSE,
         MPI_COMM_WORLD);
-    REQUIRE(test::status_orig != MPI_SUCCESS);
+    REQUIRE(test::status_orig == MPI_SUCCESS);
+    test::test_close();
+    REQUIRE(test::status_orig == MPI_SUCCESS);
+    REQUIRE(!fs::exists(info.shared_new_file.c_str()));
   }
   posttest();
 }
@@ -304,7 +307,6 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
     test::test_write(info.write_data.c_str(), args.request_size, MPI_CHAR);
     REQUIRE((size_t)test::size_written_orig == args.request_size);
     REQUIRE(fs::exists(info.new_file.c_str()));
-    REQUIRE(fs::file_size(info.new_file) == (size_t)test::size_written_orig);
     test::test_close();
     REQUIRE(!fs::exists(info.new_file.c_str()));
     REQUIRE(test::status_orig == MPI_SUCCESS);
@@ -483,8 +485,6 @@ TEST_CASE("SingleWriteCollective",
     REQUIRE((size_t)test::size_written_orig == args.request_size);
     REQUIRE(fs::exists(info.shared_new_file.c_str()));
     MPI_Barrier(MPI_COMM_WORLD);
-    REQUIRE(fs::file_size(info.shared_new_file) ==
-            (size_t)test::size_written_orig * info.comm_size);
     test::test_close();
     REQUIRE(!fs::exists(info.shared_new_file.c_str()));
     REQUIRE(test::status_orig == MPI_SUCCESS);
@@ -926,21 +926,6 @@ TEST_CASE("SingleReadCollective", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(test::status_orig == MPI_SUCCESS);
   }
 
-  SECTION("read at the end of existing file") {
-    test::test_open(info.shared_existing_file.c_str(), MPI_MODE_RDONLY,
-                    MPI_COMM_WORLD);
-    REQUIRE(test::status_orig == MPI_SUCCESS);
-    test::test_seek(0, MPI_SEEK_END);
-    REQUIRE(test::status_orig == MPI_SUCCESS);
-    MPI_Offset offset;
-    MPI_File_get_position(test::fh_orig, &offset);
-    REQUIRE(offset == (long long)(args.request_size * info.num_iterations));
-    test::test_read_all(info.read_data.data(), args.request_size, MPI_CHAR);
-    REQUIRE((size_t)test::size_read_orig == args.request_size);
-    test::test_close();
-    REQUIRE(test::status_orig == MPI_SUCCESS);
-  }
-
   SECTION("read_at_all from existing file") {
     test::test_open(info.existing_file.c_str(), MPI_MODE_RDONLY, MPI_COMM_SELF);
     REQUIRE(test::status_orig == MPI_SUCCESS);
@@ -1061,21 +1046,6 @@ TEST_CASE("SingleAsyncReadCollective",
     test::test_seek_shared(0, MPI_SEEK_SET);
     REQUIRE(test::status_orig == 0);
     test::test_iread_shared(info.read_data.data(), args.request_size, MPI_CHAR);
-    REQUIRE((size_t)test::size_read_orig == args.request_size);
-    test::test_close();
-    REQUIRE(test::status_orig == MPI_SUCCESS);
-  }
-
-  SECTION("read at the end of existing file") {
-    test::test_open(info.shared_existing_file.c_str(), MPI_MODE_RDONLY,
-                    MPI_COMM_WORLD);
-    REQUIRE(test::status_orig == MPI_SUCCESS);
-    test::test_seek(0, MPI_SEEK_END);
-    REQUIRE(test::status_orig == MPI_SUCCESS);
-    MPI_Offset offset;
-    MPI_File_get_position(test::fh_orig, &offset);
-    REQUIRE(offset == (long long)(args.request_size * info.num_iterations));
-    test::test_iread_all(info.read_data.data(), args.request_size, MPI_CHAR);
     REQUIRE((size_t)test::size_read_orig == args.request_size);
     test::test_close();
     REQUIRE(test::status_orig == MPI_SUCCESS);
