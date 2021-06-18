@@ -1003,6 +1003,7 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
     slab_buffer_sizes[device] = PushArray<i32>(scratch,
                                                config->num_slabs[device]);
     buffer_counts[device] = PushArray<i32>(scratch, config->num_slabs[device]);
+
     for (int slab = 0; slab < config->num_slabs[device]; ++slab) {
       slab_buffer_sizes[device][slab] = (config->block_sizes[device] *
                                        config->slab_unit_sizes[device][slab]);
@@ -1022,7 +1023,6 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
 
   // NOTE(chogan): We need one header per RAM block to allow for splitting and
   //  merging
-  assert(total_ram_bytes % config->block_sizes[0] == 0);
   header_counts[0] = total_ram_bytes / config->block_sizes[0];
 
   for (int device = 1; device < config->num_devices; ++device) {
@@ -1305,7 +1305,7 @@ void InitFilesForBuffering(SharedMemoryContext *context, bool make_space,
         size_t this_slabs_capacity = num_buffers * buffer_size;
 
         bool do_truncate = true;
-        if (device->is_shared && node_id != 1 && !first_on_node) {
+        if (device->is_shared && !first_on_node) {
           // NOTE(chogan): Some Devices require file initialization on each
           // node, and some are shared (burst buffers) and only require one
           // rank to initialize them

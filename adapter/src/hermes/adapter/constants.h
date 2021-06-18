@@ -60,7 +60,7 @@ const char* kAdapterBypassMode = "BYPASS";
 const char* kAdapterScratchMode = "SCRATCH";
 
 /**
- * If the \c HERMES_STOP_DAEMON environment variable is non-zero, the adapter
+ * If the \c HERMES_STOP_DAEMON environment variable is zero (\c 0), the adapter
  * client will kill the running Hermes daemon when it finishes execution.
  *
  * Default value: \c 1

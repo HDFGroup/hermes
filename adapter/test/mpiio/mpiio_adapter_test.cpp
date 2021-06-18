@@ -534,7 +534,7 @@ void test_read_all(char* ptr, size_t count, MPI_Datatype datatype) {
   auto ret_orig = MPI_File_read_all(fh_orig, ptr, count, datatype, &stat_orig);
   int type_size;
   MPI_Type_size(datatype, &type_size);
-  std::vector<char> read_data(count * type_size, 'r');
+  std::vector<unsigned char> read_data(count * type_size, 'r');
   int size_read;
   auto ret_cmp =
       MPI_File_read_all(fh_cmp, read_data.data(), count, datatype, &stat_cmp);
@@ -542,7 +542,8 @@ void test_read_all(char* ptr, size_t count, MPI_Datatype datatype) {
   MPI_Get_count(&stat_orig, datatype, &size_read_orig);
   MPI_Get_count(&stat_cmp, datatype, &size_read);
   REQUIRE(size_read == size_read_orig);
-  test_read_data(size_read, count, type_size, read_data.data(), ptr);
+  test_read_data(size_read, count, type_size,
+                 reinterpret_cast<char*>read_data.data(), ptr);
 }
 
 void test_iread_all(char* ptr, size_t count, MPI_Datatype datatype) {

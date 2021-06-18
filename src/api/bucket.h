@@ -266,11 +266,10 @@ Status Bucket::Put(std::vector<std::string> &names,
     for (size_t i = 0; i < num_blobs; ++i) {
       sizes_in_bytes[i] = blobs[i].size() * sizeof(T);
     }
-
     std::vector<PlacementSchema> schemas;
     HERMES_BEGIN_TIMED_BLOCK("CalculatePlacement");
     ret = CalculatePlacement(&hermes_->context_, &hermes_->rpc_, sizes_in_bytes,
-                               schemas, ctx);
+                             schemas, ctx);
     HERMES_END_TIMED_BLOCK();
 
     if (ret.Succeeded()) {
@@ -279,7 +278,6 @@ Status Bucket::Put(std::vector<std::string> &names,
       LOG(ERROR) << ret.Msg();
       return ret;
     }
-
   } else {
     ret = INVALID_BUCKET;
     LOG(ERROR) << ret.Msg();

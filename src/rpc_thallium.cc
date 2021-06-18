@@ -663,7 +663,6 @@ std::string GetServerName(RpcContext *rpc, u32 node_id,
   std::string host_number = GetHostNumberAsString(rpc, node_id);
   std::string host_name = (std::string(rpc->base_hostname) + host_number +
                            std::string(rpc->hostname_suffix));
-  // TODO(chogan): @errorhandling
   // TODO(chogan): @optimization Could cache the last N hostname->IP mappings to
   // avoid excessive syscalls. Should profile first.
   struct hostent hostname_info = {};
