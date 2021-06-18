@@ -543,7 +543,7 @@ void test_read_all(char* ptr, size_t count, MPI_Datatype datatype) {
   MPI_Get_count(&stat_cmp, datatype, &size_read);
   REQUIRE(size_read == size_read_orig);
   test_read_data(size_read, count, type_size,
-                 reinterpret_cast<char*>read_data.data(), ptr);
+                 reinterpret_cast<char*>(read_data.data()), ptr);
 }
 
 void test_iread_all(char* ptr, size_t count, MPI_Datatype datatype) {
