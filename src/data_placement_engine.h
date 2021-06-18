@@ -23,14 +23,16 @@ namespace hermes {
 
 using api::Status;
 
-class DataPlacementEngine {
-  // TODO(chogan): This variable needs to be thread safe because the Hermes core
-  // may be running multiple Puts at once via the BO. Alternatively it can be
-  // non-static, and each process can store a DPE instance in persistent memory.
+class RoundRobinState {
   static inline int current_device_index_ {};
+
+  std::mutex device_index_mutex_;
 
  public:
   static std::vector<DeviceID> devices_;
+
+  RoundRobinState();
+  ~RoundRobinState();
 
   size_t GetNumDevices() const;
   int GetCurrentDeviceIndex() const;

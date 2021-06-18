@@ -31,7 +31,7 @@
  *
  * The public structures and functions for interacting with the BufferPool as a
  * client. The interface includes hermes-specific application core
- * intialization, and the API through which the DataPlacementEngine and
+ * intialization, and the API through which the RoundRobinState and
  * BufferOrganizer interact with the BufferPool.
  */
 

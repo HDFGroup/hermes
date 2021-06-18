@@ -25,7 +25,7 @@
 
 namespace hermes {
 
-std::vector<DeviceID> DataPlacementEngine::devices_;
+std::vector<DeviceID> RoundRobinState::devices_;
 
 namespace api {
 
@@ -313,10 +313,10 @@ std::shared_ptr<api::Hermes> InitHermes(Config *config, bool is_daemon,
     config->num_buffer_organizer_retries;
   api::Context::default_placement_policy = config->default_placement_policy;
 
-  DataPlacementEngine::devices_.reserve(config->num_devices);
+  RoundRobinState::devices_.reserve(config->num_devices);
   for (DeviceID id = 0; id < config->num_devices; ++id) {
     if (GetNumBuffersAvailable(&result->context_, id)) {
-      DataPlacementEngine::devices_.push_back(id);
+      RoundRobinState::devices_.push_back(id);
     }
   }
 

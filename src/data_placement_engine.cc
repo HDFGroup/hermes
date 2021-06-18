@@ -31,19 +31,27 @@ namespace hermes {
 
 using hermes::api::Status;
 
-size_t DataPlacementEngine::GetNumDevices() const {
+RoundRobinState::RoundRobinState() : device_index_mutex_() {
+  device_index_mutex_.lock();
+}
+
+RoundRobinState::~RoundRobinState() {
+  device_index_mutex_.unlock();
+}
+
+size_t RoundRobinState::GetNumDevices() const {
   return devices_.size();
 }
 
-DeviceID DataPlacementEngine::GetDeviceByIndex(int i) const {
+DeviceID RoundRobinState::GetDeviceByIndex(int i) const {
   return devices_[i];
 }
 
-int DataPlacementEngine::GetCurrentDeviceIndex() const {
+int RoundRobinState::GetCurrentDeviceIndex() const {
   return current_device_index_;
 }
 
-void DataPlacementEngine::SetCurrentDeviceIndex(int new_device_index) {
+void RoundRobinState::SetCurrentDeviceIndex(int new_device_index) {
   current_device_index_ = new_device_index;
 }
 
@@ -70,7 +78,7 @@ Status AddRoundRobinSchema(size_t index, std::vector<u64> &node_state,
                            PlacementSchema &output) {
   Status result;
   TargetID dst = {};
-  DataPlacementEngine dpe;
+  RoundRobinState dpe;
   size_t num_targets = targets.size();
   int current_device_index {dpe.GetCurrentDeviceIndex()};
   size_t num_devices = dpe.GetNumDevices();
