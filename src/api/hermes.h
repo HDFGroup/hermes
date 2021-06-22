@@ -71,7 +71,7 @@ class Hermes {
   int GetNumProcesses();
   void *GetAppCommunicator();
   void Finalize(bool force_rpc_shutdown = false);
-  void FinalizeClient(bool stop_daemon);
+  void FinalizeClient(bool stop_daemon = true);
   void RemoteFinalize();
   void RunDaemon();
 
