@@ -195,7 +195,8 @@ std::pair<int, size_t> write_internal(std::pair<AdapterStat, bool> &existing,
         auto existing_blob_size =
             existing.first.st_bkid->Get(item.second.blob_name_, temp, ctx);
         LOG(INFO) << "blob " << item.second.blob_name_
-                  << " of size:" << existing_blob_size << " exists." << std::endl;
+                  << " of size:" << existing_blob_size << " exists."
+                  << std::endl;
         hapi::Blob existing_data(existing_blob_size);
         existing.first.st_bkid->Get(item.second.blob_name_, existing_data, ctx);
         memcpy(existing_data.data() + item.second.offset_, put_data_ptr,
@@ -204,8 +205,8 @@ std::pair<int, size_t> write_internal(std::pair<AdapterStat, bool> &existing,
                                                   existing_data, ctx);
         if (status.Failed()) {
           LOG(INFO) << "blob " << item.second.blob_name_
-                     << " put failed for size" << existing_blob_size
-                     << ". Writing to file system directly." << std::endl;
+                    << " put failed for size" << existing_blob_size
+                    << ". Writing to file system directly." << std::endl;
           perform_file_write(filename, index * kPageSize, existing_blob_size,
                              MPI_CHAR, existing_data.data());
         } else {
@@ -213,7 +214,8 @@ std::pair<int, size_t> write_internal(std::pair<AdapterStat, bool> &existing,
         }
       } else {
         LOG(INFO) << "blob " << item.second.blob_name_
-                   << " does not exists and we are writing partial blob." << std::endl;
+                  << " does not exists and we are writing partial blob."
+                  << std::endl;
         std::string process_local_blob_name =
             mdm->EncodeBlobNameLocal(item.second);
         auto vbucket =
