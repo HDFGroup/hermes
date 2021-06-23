@@ -1,5 +1,5 @@
 function(gcc_hermes exec tag_name tags conf)
-    add_test(NAME Test${exec}_${tag_name} COMMAND "${CMAKE_BINARY_DIR}/bin/${exec}" ${tags} -s --reporter compact)
+    add_test(NAME Test${exec}_${tag_name} COMMAND "${CMAKE_BINARY_DIR}/bin/${exec}" ${tags} --reporter compact)
     set_property(TEST Test${exec}_${tag_name}
             PROPERTY ENVIRONMENT HERMES_CONF=${CMAKE_SOURCE_DIR}/adapter/test/data/${conf}.conf)
     set_property(TEST Test${exec}_${tag_name} APPEND
@@ -7,7 +7,7 @@ function(gcc_hermes exec tag_name tags conf)
 endfunction()
 function(gcc_hermes_mode exec tag_name tags mode path)
     set(test_name Test${exec}_${tag_name}_${mode}_${path})
-    add_test(NAME ${test_name} COMMAND "${CMAKE_BINARY_DIR}/bin/${exec}" ${tags} -s --reporter compact)
+    add_test(NAME ${test_name} COMMAND "${CMAKE_BINARY_DIR}/bin/${exec}" ${tags} --reporter compact)
     set_property(TEST ${test_name}
             PROPERTY ENVIRONMENT HERMES_CONF=${CMAKE_SOURCE_DIR}/adapter/test/data/hermes.conf)
     set_property(TEST ${test_name} APPEND

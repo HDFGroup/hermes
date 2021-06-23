@@ -47,6 +47,8 @@ void LocalGetBufferIdList(Arena *arena, MetadataManager *mdm, BlobID blob_id,
 void LocalFreeBufferIdList(SharedMemoryContext *context, BlobID blob_id);
 bool LocalDestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
                                const char *bucket_name, BucketID bucket_id);
+bool LocalDestroyVBucket(SharedMemoryContext *context, const char *vbucket_name,
+                         VBucketID vbucket_id);
 void LocalDestroyBlobById(SharedMemoryContext *context, RpcContext *rpc,
                           BlobID blob_id, BucketID bucket_id);
 void LocalDestroyBlobByName(SharedMemoryContext *context, RpcContext *rpc,

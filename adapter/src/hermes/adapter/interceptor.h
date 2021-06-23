@@ -60,7 +60,7 @@ const char* kPathInclusions[] = {"/var/opt/cray/dws/mounts/"};
 /**
  * Splits a string given a delimiter
  */
-std::vector<std::string> StringSplit(char* str, char delimiter) {
+inline std::vector<std::string> StringSplit(char* str, char delimiter) {
   std::stringstream ss(str);
   std::vector<std::string> v;
   while (ss.good()) {
@@ -70,7 +70,7 @@ std::vector<std::string> StringSplit(char* str, char delimiter) {
   }
   return v;
 }
-std::string GetFilenameFromFP(FILE* fh) {
+inline std::string GetFilenameFromFP(FILE* fh) {
   const int kMaxSize = 0xFFF;
   char proclnk[kMaxSize];
   char filename[kMaxSize];

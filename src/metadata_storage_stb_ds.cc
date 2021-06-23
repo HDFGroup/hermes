@@ -432,8 +432,20 @@ bool LocalContainsBlob(SharedMemoryContext *context, BucketID bucket_id,
   return result;
 }
 
+static inline bool HasAllocated(ChunkedIdList *list) {
+  bool result = list->capacity > 0;
+
+  return result;
+}
+
+static inline bool HasAllocatedBlobs(VBucketInfo *info) {
+  bool result = HasAllocated(&info->blobs);
+
+  return result;
+}
+
 static inline bool HasAllocatedBlobs(BucketInfo *info) {
-  bool result = info->blobs.capacity > 0;
+  bool result = HasAllocated(&info->blobs);
 
   return result;
 }
@@ -490,6 +502,45 @@ bool LocalDestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
   }
   EndTicketMutex(&mdm->bucket_mutex);
 
+  return destroyed;
+}
+
+bool LocalDestroyVBucket(SharedMemoryContext *context, const char *vbucket_name,
+                         VBucketID vbucket_id) {
+  bool destroyed = false;
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  BeginTicketMutex(&mdm->vbucket_mutex);
+  VBucketInfo *info = LocalGetVBucketInfoById(mdm, vbucket_id);
+
+  // TODO(chogan): @optimization Lock granularity can probably be relaxed if
+  // this is slow
+  int ref_count = info->ref_count.load();
+  if (ref_count == 1) {
+    if (HasAllocatedBlobs(info)) {
+      FreeIdList(mdm, info->blobs);
+    }
+
+    info->blobs.length = 0;
+    info->blobs.capacity = 0;
+    info->blobs.head_offset = 0;
+
+    // Reset VBucketInfo to initial values
+    info->ref_count.store(0);
+    info->active = false;
+    info->stats = {};
+
+    mdm->num_vbuckets--;
+    info->next_free = mdm->first_free_vbucket;
+    mdm->first_free_vbucket = vbucket_id;
+
+    // Remove (name -> vbucket_id) map entry
+    LocalDelete(mdm, vbucket_name, kMapType_VBucket);
+    destroyed = true;
+  } else {
+    LOG(INFO) << "Cannot destroy bucket " << vbucket_name
+              << ". It's refcount is " << ref_count << std::endl;
+  }
+  EndTicketMutex(&mdm->vbucket_mutex);
   return destroyed;
 }
 

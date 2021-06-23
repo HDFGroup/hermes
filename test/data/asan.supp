@@ -5,3 +5,4 @@ leak:libmargo.so
 leak:libmpi.so
 leak:librdmacm.so
 leak:libhwloc.so
+leak:libmpich.so
