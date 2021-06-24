@@ -335,7 +335,6 @@ int main(int argc, char **argv) {
   TestDuplicateBlobNames(hermes);
   TestGetBucketIdFromBlobId(hermes);
   TestHexStringToU64();
-  TestIsBoFunction();
 
   hermes->Finalize(true);
 

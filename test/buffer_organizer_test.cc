@@ -13,7 +13,7 @@
 #include "abt.h"
 
 #include "hermes.h"
-
+#include "test_utils.h"
 
 void enqueue(void *task) {
   hermes::BoTask *bo_task = (hermes::BoTask *)task;
@@ -38,6 +38,7 @@ void enqueue(void *task) {
 }
 
 void TestIsBoFunction() {
+  using hermes::IsBoFunction;
   Assert(IsBoFunction("BO::TriggerBufferOrganizer"));
   Assert(IsBoFunction("BO::A"));
   Assert(IsBoFunction("BO::"));

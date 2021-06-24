@@ -28,10 +28,13 @@ void BoDelete(void*) {
   printf("%s\n", __func__);
 }
 
-bool LocalEnqueueBoTask(BufferOrganizer *bo, BoTask task, BoPriority priority) {
+bool LocalEnqueueBoTask(SharedMemoryContext *context, BoTask task,
+                        BoPriority priority) {
   (void)task;
+  (void)context;
+  (void)priority;
   bool result = false;
-
+#if 0
   switch (task.op) {
     case BoOperation::kMove: {
       // TODO(chogan): Task memory
@@ -55,7 +58,7 @@ bool LocalEnqueueBoTask(BufferOrganizer *bo, BoTask task, BoPriority priority) {
       HERMES_INVALID_CODE_PATH;
     }
   }
-
+#endif
   return result;
 }
 

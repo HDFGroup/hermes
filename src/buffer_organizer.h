@@ -54,6 +54,10 @@ struct BufferOrganizer {
 bool LocalEnqueueBoTask(SharedMemoryContext *context, BoTask task,
                         BoPriority priority);
 
+void BoMove(void*);
+void BoCopy(void*);
+void BoDelete(void*);
+
 }  // namespace hermes
 
 #endif  // HERMES_BUFFER_ORGANIZER_H_
