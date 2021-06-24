@@ -13,6 +13,8 @@
 #ifndef HERMES_BUFFER_ORGANIZER_H_
 #define HERMES_BUFFER_ORGANIZER_H_
 
+#include "thread_pool.h"
+
 namespace hermes {
 
 enum class BoOperation {
@@ -31,9 +33,17 @@ enum class BoPriority {
 };
 
 union BoArgs {
-  struct {} move_args;
-  struct {} copy_args;
-  struct {} delete_args;
+  struct {
+    BufferID src;
+    TargetID dest;
+  } move_args;
+  struct {
+    BufferID src;
+    TargetID dest;
+  } copy_args;
+  struct {
+    BufferID src;
+  } delete_args;
 };
 
 struct BoTask {
@@ -45,18 +55,15 @@ const int kNumPools = 2;
 const int kNumXstreams = 2;
 
 struct BufferOrganizer {
-  ABT_xstream xstreams[kNumXstreams];
-  ABT_sched scheds[kNumXstreams];
-  ABT_pool pools[kNumPools];
-  ABT_thread threads[kNumXstreams];
+  ThreadPool pool;
 };
 
 bool LocalEnqueueBoTask(SharedMemoryContext *context, BoTask task,
                         BoPriority priority);
 
-void BoMove(void*);
-void BoCopy(void*);
-void BoDelete(void*);
+void BoMove(BoArgs *args);
+void BoCopy(BoArgs *args);
+void BoDelete(BoArgs *args);
 
 }  // namespace hermes
 

@@ -20,15 +20,15 @@ void enqueue(void *task) {
 
   switch (bo_task->op) {
     case hermes::BoOperation::kMove: {
-      hermes::BoMove(&bo_task->args.move_args);
+      hermes::BoMove(&bo_task->args);
       break;
     }
     case hermes::BoOperation::kCopy: {
-      hermes::BoCopy(&bo_task->args.copy_args);
+      hermes::BoCopy(&bo_task->args);
       break;
     }
     case hermes::BoOperation::kDelete: {
-      hermes::BoDelete(&bo_task->args.delete_args);
+      hermes::BoDelete(&bo_task->args);
       break;
     }
     default: {
@@ -50,62 +50,48 @@ void TestIsBoFunction() {
 }
 
 int main(int argc, char *argv[]) {
+  (void)argc;
+  (void)argv;
   TestIsBoFunction();
 
+  // TODO(chogan): Pass BO threads from config
   hermes::BufferOrganizer bo;
 
-  ABT_init(argc, argv);
+  // TODO(chogan): Need 2 shared pools (high and low priority)
 
-  // Create 2 shared pools (high and low priority)
-  for (int i = 0; i < hermes::kNumPools; ++i) {
-    // TODO(chogan): Should automatic free be ABT_TRUE?
-    ABT_pool_create_basic(ABT_POOL_FIFO, ABT_POOL_ACCESS_MPMC, ABT_TRUE,
-                          &bo.pools[i]);
+  int num_threads = 3;
+  std::vector<std::future<void>> results;
+  std::vector<hermes::BoTask *> tasks(num_threads);
+  for (int i = 0; i < num_threads; ++i) {
+    // TODO(chogan): Task memory
+    tasks[i] = new hermes::BoTask();
+    if (i == 0) {
+      tasks[i]->op = hermes::BoOperation::kMove;
+      hermes::BufferID bid = {};
+      hermes::TargetID tid = {};
+      bid.as_int = 1;
+      tid.as_int = 1;
+      tasks[i]->args.move_args = {bid, tid};
+    } else if (i == 1) {
+      tasks[i]->op = hermes::BoOperation::kCopy;
+      hermes::BufferID bid = {};
+      hermes::TargetID tid = {};
+      bid.as_int = 1;
+      tid.as_int = 1;
+      tasks[i]->args.copy_args = {bid, tid};
+    } else {
+      tasks[i]->op = hermes::BoOperation::kDelete;
+      hermes::BufferID bid = {};
+      bid.as_int = 1;
+      tasks[i]->args.delete_args = {bid};
+    }
+    results.emplace_back(bo.pool.run(std::bind(enqueue, tasks[i])));
   }
 
-  // Create schedulers
-  for (int i = 0; i < hermes::kNumXstreams; i++) {
-    ABT_sched_create_basic(ABT_SCHED_DEFAULT, hermes::kNumPools, bo.pools,
-                           ABT_SCHED_CONFIG_NULL, &bo.scheds[i]);
+  for (int i = 0; i < num_threads; ++i) {
+    results[i].get();
+    delete tasks[i];
   }
-
-  // Create xstreams
-  ABT_xstream_self(&bo.xstreams[0]);
-  ABT_xstream_set_main_sched(bo.xstreams[0], bo.scheds[0]);
-  for (int i = 1; i < hermes::kNumXstreams; i++) {
-    ABT_xstream_create(bo.scheds[i], &bo.xstreams[i]);
-  }
-
-  // TODO(chogan): Task memory?
-  hermes::BoTask task = {};
-
-  // Create ULTs
-  for (int i = 0; i < hermes::kNumXstreams; i++) {
-    task.op = hermes::BoOperation::kMove;
-    task.args.move_args = {};
-    ABT_thread_create(bo.pools[i], enqueue, (void *)&task,
-                      ABT_THREAD_ATTR_NULL, &bo.threads[i]);
-  }
-
-  // Join & Free
-  for (int i = 0; i < hermes::kNumXstreams; i++) {
-    ABT_thread_join(bo.threads[i]);
-    ABT_thread_free(&bo.threads[i]);
-  }
-  for (int i = 1; i < hermes::kNumXstreams; i++) {
-    ABT_xstream_join(bo.xstreams[i]);
-    ABT_xstream_free(&bo.xstreams[i]);
-  }
-
-  // Free schedulers
-  // Note that we do not need to free the scheduler for the primary ES,
-  // i.e., xstreams[0], because its scheduler will be automatically freed in
-  // ABT_finalize(). */
-  for (int i = 1; i < hermes::kNumXstreams; i++) {
-    ABT_sched_free(&bo.scheds[i]);
-  }
-
-  ABT_finalize();
 
   return 0;
 }

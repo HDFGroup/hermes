@@ -16,16 +16,19 @@
 
 namespace hermes {
 
-void BoMove(void*) {
-  printf("%s\n", __func__);
+void BoMove(BoArgs *args) {
+
+  printf("%s(%d, %d)\n", __func__, (int)args->move_args.src.as_int,
+         (int)args->move_args.dest.as_int);
 }
 
-void BoCopy(void*) {
-  printf("%s\n", __func__);
+void BoCopy(BoArgs *args) {
+  printf("%s(%d, %d)\n", __func__, (int)args->copy_args.src.as_int,
+         (int)args->copy_args.dest.as_int);
 }
 
-void BoDelete(void*) {
-  printf("%s\n", __func__);
+void BoDelete(BoArgs *args) {
+  printf("%s(%d)\n", __func__, (int)args->delete_args.src.as_int);
 }
 
 bool LocalEnqueueBoTask(SharedMemoryContext *context, BoTask task,
