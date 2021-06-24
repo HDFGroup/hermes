@@ -471,9 +471,13 @@ void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
 
   auto rpc_enqueue_bo_task = [context](const tl::request &req, BoTask task,
                                        BoPriority priority) {
-    bool result = LocalEnqueueBoTask(context, task, priority);
+    // TODO(chogan):
+    (void)task;
+    (void)req;
+    (void)priority;
+    // bool result = LocalEnqueueBoTask(context, task, priority);
 
-    req.respond(result);
+    // req.respond(result);
   };
 
   rpc_server->define("PlaceInHierarchy",

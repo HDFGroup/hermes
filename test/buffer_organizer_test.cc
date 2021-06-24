@@ -15,28 +15,6 @@
 #include "hermes.h"
 #include "test_utils.h"
 
-void enqueue(void *task) {
-  hermes::BoTask *bo_task = (hermes::BoTask *)task;
-
-  switch (bo_task->op) {
-    case hermes::BoOperation::kMove: {
-      hermes::BoMove(&bo_task->args);
-      break;
-    }
-    case hermes::BoOperation::kCopy: {
-      hermes::BoCopy(&bo_task->args);
-      break;
-    }
-    case hermes::BoOperation::kDelete: {
-      hermes::BoDelete(&bo_task->args);
-      break;
-    }
-    default: {
-      HERMES_INVALID_CODE_PATH;
-    }
-  }
-}
-
 void TestIsBoFunction() {
   using hermes::IsBoFunction;
   Assert(IsBoFunction("BO::TriggerBufferOrganizer"));
@@ -49,49 +27,41 @@ void TestIsBoFunction() {
   Assert(!IsBoFunction("TriggerBufferOrganizer"));
 }
 
+void TestBoTasks() {
+  using hermes::BoTask;
+  using hermes::BufferID;
+  using hermes::TargetID;
+
+  // TODO(chogan): Pass BO threads from config
+  // TODO(chogan): Pool needs to be accessible from context
+  hermes::ThreadPool pool(2);
+
+  const int kNumThreads = 3;
+  for (int i = 0; i < kNumThreads; ++i) {
+    BoTask task = {};
+    BufferID bid = {};
+    TargetID tid = {};
+    bid.as_int = i;
+    tid.as_int = i;
+    if (i == 0) {
+      task.op = hermes::BoOperation::kMove;
+      task.args.move_args = {bid, tid};
+    } else if (i == 1) {
+      task.op = hermes::BoOperation::kCopy;
+      task.args.copy_args = {bid, tid};
+    } else {
+      task.op = hermes::BoOperation::kDelete;
+      task.args.delete_args = {bid};
+    }
+    LocalEnqueueBoTask(NULL, pool, task);
+  }
+}
+
 int main(int argc, char *argv[]) {
   (void)argc;
   (void)argv;
   TestIsBoFunction();
-
-  // TODO(chogan): Pass BO threads from config
-  hermes::BufferOrganizer bo;
-
-  // TODO(chogan): Need 2 shared pools (high and low priority)
-
-  int num_threads = 3;
-  std::vector<std::future<void>> results;
-  std::vector<hermes::BoTask *> tasks(num_threads);
-  for (int i = 0; i < num_threads; ++i) {
-    // TODO(chogan): Task memory
-    tasks[i] = new hermes::BoTask();
-    if (i == 0) {
-      tasks[i]->op = hermes::BoOperation::kMove;
-      hermes::BufferID bid = {};
-      hermes::TargetID tid = {};
-      bid.as_int = 1;
-      tid.as_int = 1;
-      tasks[i]->args.move_args = {bid, tid};
-    } else if (i == 1) {
-      tasks[i]->op = hermes::BoOperation::kCopy;
-      hermes::BufferID bid = {};
-      hermes::TargetID tid = {};
-      bid.as_int = 1;
-      tid.as_int = 1;
-      tasks[i]->args.copy_args = {bid, tid};
-    } else {
-      tasks[i]->op = hermes::BoOperation::kDelete;
-      hermes::BufferID bid = {};
-      bid.as_int = 1;
-      tasks[i]->args.delete_args = {bid};
-    }
-    results.emplace_back(bo.pool.run(std::bind(enqueue, tasks[i])));
-  }
-
-  for (int i = 0; i < num_threads; ++i) {
-    results[i].get();
-    delete tasks[i];
-  }
+  TestBoTasks();
 
   return 0;
 }

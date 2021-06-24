@@ -51,19 +51,16 @@ struct BoTask {
   BoArgs args;
 };
 
-const int kNumPools = 2;
-const int kNumXstreams = 2;
-
 struct BufferOrganizer {
   ThreadPool pool;
 };
 
-bool LocalEnqueueBoTask(SharedMemoryContext *context, BoTask task,
-                        BoPriority priority);
+bool LocalEnqueueBoTask(SharedMemoryContext *context, const ThreadPool &pool,
+                        BoTask task, BoPriority priority = BoPriority::kLow);
 
-void BoMove(BoArgs *args);
-void BoCopy(BoArgs *args);
-void BoDelete(BoArgs *args);
+void BoMove(SharedMemoryContext *context, BoArgs args);
+void BoCopy(SharedMemoryContext *context, BoArgs args);
+void BoDelete(SharedMemoryContext *context, BoArgs args);
 
 }  // namespace hermes
 

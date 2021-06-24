@@ -16,51 +16,50 @@
 
 namespace hermes {
 
-void BoMove(BoArgs *args) {
-  printf("%s(%d, %d)\n", __func__, (int)args->move_args.src.as_int,
-         (int)args->move_args.dest.as_int);
-}
-
-void BoCopy(BoArgs *args) {
-  printf("%s(%d, %d)\n", __func__, (int)args->copy_args.src.as_int,
-         (int)args->copy_args.dest.as_int);
-}
-
-void BoDelete(BoArgs *args) {
-  printf("%s(%d)\n", __func__, (int)args->delete_args.src.as_int);
-}
-
-bool LocalEnqueueBoTask(SharedMemoryContext *context, BoTask task,
-                        BoPriority priority) {
-  (void)task;
+void BoMove(SharedMemoryContext *context, BoArgs args) {
   (void)context;
-  (void)priority;
-  bool result = false;
-#if 0
+  BufferID src = args.move_args.src;
+  TargetID dest = args.move_args.dest;
+  printf("%s(%d, %d)\n", __func__, (int)src.as_int, (int)dest.as_int);
+}
+
+void BoCopy(SharedMemoryContext *context, BoArgs args) {
+  (void)context;
+  BufferID src = args.copy_args.src;
+  TargetID dest = args.copy_args.dest;
+  printf("%s(%d, %d)\n", __func__, (int)src.as_int, (int)dest.as_int);
+}
+
+void BoDelete(SharedMemoryContext *context, BoArgs args) {
+  (void)context;
+  BufferID src = args.delete_args.src;
+  printf("%s(%d)\n", __func__, (int)src.as_int);
+}
+
+bool LocalEnqueueBoTask(SharedMemoryContext *context, const ThreadPool &pool,
+                        BoTask task, BoPriority priority) {
+  // TODO(chogan): Limit queue size and return false when full
+  bool result = true;
+  bool is_high_priority = priority == BoPriority::kHigh;
+
   switch (task.op) {
     case BoOperation::kMove: {
-      // TODO(chogan): Task memory
-      hermes::BoTask task = {};
-      task.op = hermes::BoOperation::kMove;
-      task.args.move_args = {};
-      ABT_thread_create(bo->pools[(int)priority], BoMove, (void *)&task,
-                        // TODO(chogan): Which thread?
-                        ABT_THREAD_ATTR_NULL, &bo->threads[i]);
+      pool.run(std::bind(BoMove, context, task.args), is_high_priority);
       break;
     }
     case BoOperation::kCopy: {
-      // TODO(chogan):
+      pool.run(std::bind(BoCopy, context, task.args), is_high_priority);
       break;
     }
     case BoOperation::kDelete: {
-      // TODO(chogan):
+      pool.run(std::bind(BoDelete, context, task.args), is_high_priority);
       break;
     }
     default: {
       HERMES_INVALID_CODE_PATH;
     }
   }
-#endif
+
   return result;
 }
 
