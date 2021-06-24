@@ -313,17 +313,6 @@ void TestSwapBlobsExistInBucket() {
   hermes->Finalize(true);
 }
 
-void TestIsBoFunction() {
-  Assert(IsBoFunction("BO::TriggerBufferOrganizer"));
-  Assert(IsBoFunction("BO::A"));
-  Assert(IsBoFunction("BO::"));
-  Assert(!IsBoFunction(""));
-  Assert(!IsBoFunction("A"));
-  Assert(!IsBoFunction("BO:"));
-  Assert(!IsBoFunction("BO:A"));
-  Assert(!IsBoFunction("TriggerBufferOrganizer"));
-}
-
 int main(int argc, char **argv) {
   int mpi_threads_provided;
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
