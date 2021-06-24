@@ -10,19 +10,16 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_ADAPTER_THREAD_POOL_H
-#define HERMES_ADAPTER_THREAD_POOL_H
+#ifndef HERMES_THREAD_POOL_H_
+#define HERMES_THREAD_POOL_H_
 
-/**
- * Standard header
- */
 #include <condition_variable>
 #include <future>
 #include <mutex>
 #include <queue>
 #include <thread>
 
-namespace hermes::adapter {
+namespace hermes {
 class ThreadPool {
  public:
   explicit ThreadPool(
@@ -83,5 +80,5 @@ class ThreadPool {
   mutable std::mutex mutex;
   mutable std::condition_variable condvar;
 };
-}  // namespace hermes::adapter
-#endif  // HERMES_ADAPTER_THREAD_POOL_H
+}  // namespace hermes
+#endif  // HERMES_THREAD_POOL_H_
