@@ -17,7 +17,6 @@
 namespace hermes {
 
 void BoMove(BoArgs *args) {
-
   printf("%s(%d, %d)\n", __func__, (int)args->move_args.src.as_int,
          (int)args->move_args.dest.as_int);
 }
