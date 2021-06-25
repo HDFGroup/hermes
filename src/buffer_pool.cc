@@ -33,7 +33,6 @@
 #include <vector>
 
 #include "glog/logging.h"
-#include "mpi.h"
 
 #include "metadata_management.h"
 #include "rpc.h"
@@ -45,6 +44,7 @@
 #include "traits.cc"
 
 #if defined(HERMES_COMMUNICATION_MPI)
+#include "mpi.h"
 #include "communication_mpi.cc"
 #elif defined(HERMES_COMMUNICATION_ZMQ)
 #include "communication_zmq.cc"

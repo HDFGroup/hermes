@@ -302,12 +302,7 @@ int main(int argc, char **argv) {
     }
   }
 
-  int mpi_threads_provided;
-  MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
-  if (mpi_threads_provided < MPI_THREAD_MULTIPLE) {
-    fprintf(stderr, "Didn't receive appropriate MPI threading specification\n");
-    return 1;
-  }
+  hermes::testing::InitMpi(&argc, &argv);
 
   std::shared_ptr<hapi::Hermes> hermes =
                                 hermes::InitHermesClient(config_file);

@@ -80,7 +80,7 @@ target_compile_definitions(bp_test
 #------------------------------------------------------------------------------
 add_executable(config_parser_test config_parser_test.cc)
 target_link_libraries(config_parser_test hermes
-  $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium>)
+  $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium> MPI::MPI_CXX)
 
 add_test(NAME TestConfigParser
   COMMAND config_parser_test ${CMAKE_CURRENT_SOURCE_DIR}/data/hermes.conf)
@@ -91,7 +91,8 @@ target_compile_definitions(config_parser_test
 # Memory Management tests
 #------------------------------------------------------------------------------
 add_executable(mem memory_test.cc)
-target_link_libraries(mem hermes $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium>)
+target_link_libraries(mem hermes $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium>
+  MPI::MPI_CXX)
 add_test(NAME TestMemoryManagement COMMAND mem)
 target_compile_definitions(mem
   PRIVATE $<$<BOOL:${HERMES_RPC_THALLIUM}>:HERMES_RPC_THALLIUM>)
