@@ -19,6 +19,6 @@ int main(int argc, char* argv[]) {
     hermes_config = getenv(kHermesConf);
   }
   auto hermes = hermes::InitHermesDaemon(hermes_config);
-  hermes->Finalize();
+  hermes->RunDaemon();
   MPI_Finalize();
 }

@@ -224,6 +224,10 @@ Status Bucket::PlaceBlobs(std::vector<PlacementSchema> &schemas,
               << "'" << std::endl;
     result = PlaceBlob(&hermes_->context_, &hermes_->rpc_, schema, blob,
                        names[i], id_, ctx);
+    if (result.Failed()) {
+      // TODO(chogan): Need to return a std::vector<Status>
+      break;
+    }
   }
 
   return result;

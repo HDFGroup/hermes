@@ -83,6 +83,8 @@ class MetadataManager {
       char* hermes_config = getenv(kHermesConf);
       MPI_Comm_rank(MPI_COMM_WORLD, &rank);
       MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
+      // TODO(chogan): Need a better way to distinguish between client and
+      // daemon. https://github.com/HDFGroup/hermes/issues/206
       if (comm_size > 1) {
         hermes = hermes::InitHermesClient(hermes_config);
       } else {
@@ -98,15 +100,7 @@ class MetadataManager {
    */
   void FinalizeHermes() {
     if (ref == 1) {
-      if (this->comm_size > 1) {
-        MPI_Barrier(MPI_COMM_WORLD);
-        if (this->rank == 0) {
-          hermes->RemoteFinalize();
-        }
-        hermes->Finalize();
-      } else {
-        hermes->Finalize(true);
-      }
+      hermes->FinalizeClient();
     }
     ref--;
   }

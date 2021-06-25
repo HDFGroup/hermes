@@ -70,7 +70,6 @@ int simple_open(MPI_Comm &comm, const char *path, int &amode, MPI_Info &info,
     }
     stat.info = info;
     stat.comm = comm;
-    mdm->InitializeHermes();
     hapi::Context ctx;
     stat.st_bkid = std::make_shared<hapi::Bucket>(path, mdm->GetHermes(), ctx);
     mdm->Create(fh, stat);
@@ -581,7 +580,6 @@ int HERMES_DECL(MPI_File_close)(MPI_File *fh) {
           INTERCEPTOR_LIST->hermes_flush_exclusion.erase(filename);
         }
         existing.first.st_bkid->Destroy(ctx);
-        mdm->FinalizeHermes();
         if (existing.first.a_mode & MPI_MODE_DELETE_ON_CLOSE) {
           fs::remove(filename);
         }
