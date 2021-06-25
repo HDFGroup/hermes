@@ -16,23 +16,18 @@
 
 namespace hermes {
 
-void BoMove(SharedMemoryContext *context, BoArgs args) {
+void BoMove(SharedMemoryContext *context, BufferID src, TargetID dest) {
   (void)context;
-  BufferID src = args.move_args.src;
-  TargetID dest = args.move_args.dest;
   printf("%s(%d, %d)\n", __func__, (int)src.as_int, (int)dest.as_int);
 }
 
-void BoCopy(SharedMemoryContext *context, BoArgs args) {
+void BoCopy(SharedMemoryContext *context, BufferID src, TargetID dest) {
   (void)context;
-  BufferID src = args.copy_args.src;
-  TargetID dest = args.copy_args.dest;
   printf("%s(%d, %d)\n", __func__, (int)src.as_int, (int)dest.as_int);
 }
 
-void BoDelete(SharedMemoryContext *context, BoArgs args) {
+void BoDelete(SharedMemoryContext *context, BufferID src) {
   (void)context;
-  BufferID src = args.delete_args.src;
   printf("%s(%d)\n", __func__, (int)src.as_int);
 }
 
@@ -44,15 +39,18 @@ bool LocalEnqueueBoTask(SharedMemoryContext *context, const ThreadPool &pool,
 
   switch (task.op) {
     case BoOperation::kMove: {
-      pool.run(std::bind(BoMove, context, task.args), is_high_priority);
+      pool.run(std::bind(BoMove, context, task.args.move_args.src,
+                 task.args.move_args.dest), is_high_priority);
       break;
     }
     case BoOperation::kCopy: {
-      pool.run(std::bind(BoCopy, context, task.args), is_high_priority);
+      pool.run(std::bind(BoCopy, context, task.args.copy_args.src,
+                 task.args.copy_args.dest), is_high_priority);
       break;
     }
     case BoOperation::kDelete: {
-      pool.run(std::bind(BoDelete, context, task.args), is_high_priority);
+      pool.run(std::bind(BoDelete, context, task.args.delete_args.src),
+               is_high_priority);
       break;
     }
     default: {
