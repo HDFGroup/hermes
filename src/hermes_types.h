@@ -168,6 +168,9 @@ struct Config {
    * into the hierarchy before giving up.*/
   int num_buffer_organizer_retries;
 
+  /** If non-zero, the device is shared among all nodes (e.g., burst buffers)*/
+  int is_shared_device[kMaxDevices];
+
   /** The hostname of the RPC server, minus any numbers that Hermes may
    * auto-generate when the rpc_hostNumber_range is specified. */
   std::string rpc_server_base_name;

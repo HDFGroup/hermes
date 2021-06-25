@@ -90,7 +90,7 @@ int main(int argc, char **argv) {
       }
     }
     if (app_rank == 0) {
-      shared.Delete(ctx);
+      shared.Destroy(ctx);
     }
     hermes->AppBarrier();
   } else {

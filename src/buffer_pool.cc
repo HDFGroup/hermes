@@ -149,12 +149,12 @@ Target *GetTargetFromId(SharedMemoryContext *context, TargetID id) {
   return result;
 }
 
-std::vector<f32> GetBandwidths(SharedMemoryContext *context) {
-  BufferPool *pool = GetBufferPoolFromContext(context);
-  std::vector<f32> result(pool->num_devices, 0);
+std::vector<f32> GetBandwidths(SharedMemoryContext *context,
+                               const std::vector<TargetID> &targets) {
+  std::vector<f32> result(targets.size(), 0);
 
-  for (int i = 0; i < pool->num_devices; i++) {
-    Device *device = GetDeviceById(context, i);
+  for (size_t i = 0; i < targets.size(); i++) {
+    Device *device = GetDeviceById(context, targets[i].bits.device_id);
     result[i] = device->bandwidth_mbps;
   }
 
@@ -413,6 +413,16 @@ static u32 GetNumBuffersAvailable(SharedMemoryContext *context,
   u32 result = 0;
   if (buffers_available) {
     result = buffers_available[slab_index].load();
+  }
+
+  return result;
+}
+
+u32 GetNumBuffersAvailable(SharedMemoryContext *context, DeviceID device_id) {
+  BufferPool *pool = GetBufferPoolFromContext(context);
+  u32 result = 0;
+  for (int slab = 0; slab < pool->num_slabs[device_id]; ++slab) {
+    result += GetNumBuffersAvailable(context, device_id, slab);
   }
 
   return result;
@@ -725,6 +735,7 @@ Device *InitDevices(Arena *arena, Config *config) {
     device->bandwidth_mbps = config->bandwidths[i];
     device->latency_ns = config->latencies[i];
     device->id = i;
+    device->is_shared = config->is_shared_device[i];
     // TODO(chogan): @configuration Get this from cmake.
     device->has_fallocate = false;
     size_t path_length = config->mount_points[i].size();
@@ -986,6 +997,8 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
   i32 **slab_buffer_sizes = PushArray<i32*>(scratch, config->num_devices);
   i32 *header_counts = PushArray<i32>(scratch, config->num_devices);
 
+  size_t total_ram_bytes = 0;
+
   for (int device = 0; device < config->num_devices; ++device) {
     slab_buffer_sizes[device] = PushArray<i32>(scratch,
                                                config->num_slabs[device]);
@@ -999,14 +1012,18 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
                                        slab_percentage);
       buffer_counts[device][slab] = (bytes_for_slab /
                                    slab_buffer_sizes[device][slab]);
+      if (device == 0) {
+        total_ram_bytes += bytes_for_slab;
+      }
     }
   }
 
-  // NOTE(chogan): One header per RAM block to allow for splitting and merging
   // TODO(chogan): @configuration Assumes first Device is RAM
   // TODO(chogan): Allow splitting and merging for every Device
-  assert(config->capacities[0] % config->block_sizes[0] == 0);
-  header_counts[0] = config->capacities[0] / config->block_sizes[0];
+
+  // NOTE(chogan): We need one header per RAM block to allow for splitting and
+  //  merging
+  header_counts[0] = total_ram_bytes / config->block_sizes[0];
 
   for (int device = 1; device < config->num_devices; ++device) {
     header_counts[device] = 0;
@@ -1046,22 +1063,40 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
   // alignment padding.
   size_t required_bytes_for_metadata = (headers_size + buffer_pool_size +
                                         devices_size);
+  LOG(INFO) << required_bytes_for_metadata
+            << " bytes required for BufferPool metadata" << std::endl;
 
   size_t required_bytes_for_metadata_rounded =
     RoundUpToMultiple(required_bytes_for_metadata, config->block_sizes[0]);
   i32 num_blocks_reserved_for_metadata = (required_bytes_for_metadata_rounded /
                                           config->block_sizes[0]);
-  // NOTE(chogan): Remove some of the smallest RAM buffers to make room for
-  // metadata
-  buffer_counts[0][0] -= num_blocks_reserved_for_metadata;
-  // NOTE(chogan): We need fewer headers because we have fewer buffers now
-  header_counts[0] -= num_blocks_reserved_for_metadata;
+
+  if (buffer_counts[0][0] >= num_blocks_reserved_for_metadata) {
+    // NOTE(chogan): Remove some of the smallest RAM buffers to make room for
+    // metadata
+    buffer_counts[0][0] -= num_blocks_reserved_for_metadata;
+    // NOTE(chogan): We need fewer headers because we have fewer buffers now
+    header_counts[0] -= num_blocks_reserved_for_metadata;
+  } else {
+    if (required_bytes_for_metadata > config->capacities[0]) {
+      LOG(FATAL) << "Insufficient memory for BufferPool. Increase "
+                 << "capacities_mb[0] or buffer_pool_arena_percentage\n";
+    }
+  }
+
   // NOTE(chogan): Adjust the config capacity for RAM to reflect the actual
   // capacity for buffering (excluding BufferPool metadata).
-  assert(config->capacities[0] > required_bytes_for_metadata_rounded);
-  config->capacities[0] -= required_bytes_for_metadata_rounded;
+  size_t actual_ram_buffer_capacity = 0;
+  for (int slab = 0; slab < config->num_slabs[0]; ++slab) {
+    size_t slab_bytes = buffer_counts[0][slab] * slab_buffer_sizes[0][slab];
+    actual_ram_buffer_capacity += slab_bytes;
+  }
+  config->capacities[0] = actual_ram_buffer_capacity;
 
-  u32 total_headers = max_headers_needed - num_blocks_reserved_for_metadata;
+  u32 total_headers = 0;
+  for (DeviceID device = 0; device < config->num_devices; ++device) {
+    total_headers += header_counts[device];
+  }
 
   int *num_buffers = PushArray<int>(scratch_arena, config->num_devices);
   int total_buffers = 0;
@@ -1132,7 +1167,7 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
       u32 end = start + buffer_counts[device][slab];
       free_lists[device][slab] =
         MakeBufferHeaders(buffer_pool_arena, slab_buffer_sizes[device][slab],
-                          start, end, node_id, device, 0, 0);
+                          start, end, node_id, device, 0, &header_begin);
       start = end;
     }
   }
@@ -1224,7 +1259,8 @@ FILE *FopenOrTerminate(const char *fname, const char *mode) {
   return result;
 }
 
-void InitFilesForBuffering(SharedMemoryContext *context, bool make_space) {
+void InitFilesForBuffering(SharedMemoryContext *context, bool make_space,
+                           u32 node_id, bool first_on_node) {
   BufferPool *pool = GetBufferPoolFromContext(context);
   context->buffering_filenames.resize(pool->num_devices);
 
@@ -1246,37 +1282,43 @@ void InitFilesForBuffering(SharedMemoryContext *context, bool make_space) {
     for (int slab = 0; slab < pool->num_slabs[device_id]; ++slab) {
       // TODO(chogan): Where does memory for filenames come from? Probably need
       // persistent memory for each application core.
+      std::string node = (device->is_shared ? std::string("_node") +
+                          std::to_string(node_id) : "");
       context->buffering_filenames[device_id][slab] =
         std::string(std::string(mount_point) + (ends_in_slash ? "" : "/") +
                     "device" + std::to_string(device_id) + "_slab" +
-                    std::to_string(slab) + ".hermes");
+                    std::to_string(slab) + node + ".hermes");
 
       const char *buffering_fname =
         context->buffering_filenames[device_id][slab].c_str();
       FILE *buffering_file = FopenOrTerminate(buffering_fname, "w+");
 
       if (make_space) {
-        if (device->has_fallocate) {
-          // TODO(chogan): Use posix_fallocate when it is available
-        } else {
-          if (device->is_shared) {
-            // TODO(chogan): Some Devices require file initialization on each
-            // node, and some are shared (burst buffers) and only require one
-            // rank to initialize them
-            HERMES_NOT_IMPLEMENTED_YET;
-          }
+        // TODO(chogan): Use posix_fallocate when it is available
+        // if (device->has_fallocate) {
+        //   int fallocate_result = posix_fallocate(fileno(buffering_file),
+        //                                          0, this_slabs_capacity);
+        // }
 
-          u32 num_buffers = GetNumBuffersAvailable(context, device_id, slab);
-          i32 buffer_size = GetSlabBufferSize(context, device_id, slab);
-          size_t this_slabs_capacity = num_buffers * buffer_size;
+        u32 num_buffers = GetNumBuffersAvailable(context, device_id, slab);
+        i32 buffer_size = GetSlabBufferSize(context, device_id, slab);
+        size_t this_slabs_capacity = num_buffers * buffer_size;
 
+        bool do_truncate = true;
+        if (device->is_shared && !first_on_node) {
+          // NOTE(chogan): Some Devices require file initialization on each
+          // node, and some are shared (burst buffers) and only require one
+          // rank to initialize them
+          do_truncate = false;
+        }
+
+        if (do_truncate) {
           int ftruncate_result = ftruncate(fileno(buffering_file),
                                            this_slabs_capacity);
           if (ftruncate_result) {
             LOG(ERROR) << "Failed to allocate buffering file at "
                        << buffering_fname << ": ";
-            perror(nullptr);
-            LOG(FATAL) << "Terminating...";
+            FailedLibraryCall("ftruncate");
           }
         }
       }
@@ -1670,7 +1712,8 @@ api::Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
     HERMES_END_TIMED_BLOCK();
 
     // NOTE(chogan): Update all metadata associated with this Put
-    AttachBlobToBucket(context, rpc, name.c_str(), bucket_id, buffer_ids);
+    AttachBlobToBucket(context, rpc, name.c_str(), bucket_id, buffer_ids,
+                       false, called_from_buffer_organizer);
   } else {
     if (called_from_buffer_organizer) {
       result = PLACE_SWAP_BLOB_TO_BUF_FAILED;

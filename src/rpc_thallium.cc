@@ -220,6 +220,12 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
       req.respond(result);
     };
 
+  auto rpc_destroy_vbucket =
+      [context](const request &req, const string &name, VBucketID id) {
+        bool result = LocalDestroyVBucket(context, name.c_str(), id);
+        req.respond(result);
+      };
+
   auto rpc_get_or_create_bucket_id =
     [context](const request &req, const std::string &name) {
       BucketID result = LocalGetOrCreateBucketId(context, name);
@@ -372,6 +378,7 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
   rpc_server->define("RemoteAddBlobIdToBucket", rpc_add_blob_bucket);
   rpc_server->define("RemoteAddBlobIdToVBucket", rpc_add_blob_vbucket);
   rpc_server->define("RemoteDestroyBucket", rpc_destroy_bucket);
+  rpc_server->define("RemoteDestroyVBucket", rpc_destroy_vbucket);
   rpc_server->define("RemoteRenameBucket", rpc_rename_bucket);
   rpc_server->define("RemoteDestroyBlobByName", rpc_destroy_blob_by_name);
   rpc_server->define("RemoteDestroyBlobById", rpc_destroy_blob_by_id);
@@ -588,6 +595,54 @@ void FinalizeRpcContext(RpcContext *rpc, bool is_daemon) {
   delete state->bo_engine;
 }
 
+void RunDaemon(SharedMemoryContext *context, RpcContext *rpc,
+               CommunicationContext *comm, Arena *trans_arena,
+               const char *shmem_name) {
+  ThalliumState *state = GetThalliumState(rpc);
+  state->engine->enable_remote_shutdown();
+  state->bo_engine->enable_remote_shutdown();
+
+  auto prefinalize_callback = [rpc, comm]() {
+    SubBarrier(comm);
+    StopGlobalSystemViewStateUpdateThread(rpc);
+    SubBarrier(comm);
+    ShutdownRpcClients(rpc);
+  };
+
+  state->engine->push_prefinalize_callback(prefinalize_callback);
+
+  state->engine->wait_for_finalize();
+  state->bo_engine->wait_for_finalize();
+
+  ReleaseSharedMemoryContext(context);
+  shm_unlink(shmem_name);
+  HERMES_DEBUG_SERVER_CLOSE();
+
+  DestroyArena(trans_arena);
+}
+
+void FinalizeClient(SharedMemoryContext *context, RpcContext *rpc,
+                    CommunicationContext *comm, Arena *trans_arena,
+                    bool stop_daemon) {
+  SubBarrier(comm);
+
+  if (stop_daemon && comm->first_on_node) {
+    ClientThalliumState *state = GetClientThalliumState(rpc);
+    std::string server_name = GetServerName(rpc, rpc->node_id);
+    tl::endpoint server = state->engine->lookup(server_name);
+    state->engine->shutdown_remote_engine(server);
+
+    std::string bo_server_name = GetServerName(rpc, rpc->node_id, true);
+    tl::endpoint bo_server = state->engine->lookup(bo_server_name);
+    state->engine->shutdown_remote_engine(bo_server);
+  }
+
+  ShutdownRpcClients(rpc);
+  ReleaseSharedMemoryContext(context);
+  HERMES_DEBUG_CLIENT_CLOSE();
+  DestroyArena(trans_arena);
+}
+
 std::string GetRpcAddress(Config *config, const std::string &host_number,
                           int port) {
   std::string result = config->rpc_protocol + "://";
@@ -608,18 +663,31 @@ std::string GetServerName(RpcContext *rpc, u32 node_id,
   std::string host_number = GetHostNumberAsString(rpc, node_id);
   std::string host_name = (std::string(rpc->base_hostname) + host_number +
                            std::string(rpc->hostname_suffix));
-  const int kMaxIpAddressSize = 16;
-  char ip_address[kMaxIpAddressSize];
-  // TODO(chogan): @errorhandling
   // TODO(chogan): @optimization Could cache the last N hostname->IP mappings to
   // avoid excessive syscalls. Should profile first.
-  struct hostent *hostname_info = gethostbyname(host_name.c_str());
-  in_addr **addr_list = (struct in_addr **)hostname_info->h_addr_list;
-  // TODO(chogan): @errorhandling
-  strncpy(ip_address, inet_ntoa(*addr_list[0]), kMaxIpAddressSize - 1);
+  struct hostent hostname_info = {};
+  struct hostent *hostname_result;
+  int hostname_error = 0;
+  char hostname_buffer[4096] = {};
+  int gethostbyname_result = gethostbyname_r(host_name.c_str(), &hostname_info,
+                                             hostname_buffer, 4096,
+                                             &hostname_result, &hostname_error);
+  if (gethostbyname_result != 0) {
+    LOG(FATAL) << hstrerror(h_errno);
+  }
+  in_addr **addr_list = (struct in_addr **)hostname_info.h_addr_list;
+  if (!addr_list[0]) {
+    LOG(FATAL) << hstrerror(h_errno);
+  }
+
+  char ip_address[INET_ADDRSTRLEN];
+  const char *inet_result = inet_ntop(AF_INET, addr_list[0], ip_address,
+                                      INET_ADDRSTRLEN);
+  if (!inet_result) {
+    FailedLibraryCall("inet_ntop");
+  }
 
   std::string result = std::string(tl_state->server_name_prefix);
-
   result += std::string(ip_address);
 
   if (is_buffer_organizer) {

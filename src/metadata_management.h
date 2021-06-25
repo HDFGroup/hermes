@@ -156,6 +156,12 @@ bool DestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
 /**
  *
  */
+bool DestroyVBucket(SharedMemoryContext *context, RpcContext *rpc,
+                    const char *name, VBucketID vbucket_id);
+
+/**
+ *
+ */
 void DestroyBlobByName(SharedMemoryContext *context, RpcContext *rpc,
                        BucketID bucket_id, const std::string &blob_name);
 
@@ -223,7 +229,8 @@ VBucketID GetOrCreateVBucketId(SharedMemoryContext *context, RpcContext *rpc,
 void AttachBlobToBucket(SharedMemoryContext *context, RpcContext *rpc,
                         const char *blob_name, BucketID bucket_id,
                         const std::vector<BufferID> &buffer_ids,
-                        bool is_swap_blob = false);
+                        bool is_swap_blob = false,
+                        bool called_from_buffer_organizer = false);
 
 /**
  *
@@ -342,6 +349,12 @@ void LocalEndGlobalTicketMutex(MetadataManager *mdm);
 void AttachBlobToVBucket(SharedMemoryContext *context, RpcContext *rpc,
                          const char *blob_name, const char *bucket_name,
                          VBucketID vbucket_id);
+
+/**
+ *
+ */
+void RemoveBlobFromBucketInfo(SharedMemoryContext *context, RpcContext *rpc,
+                              BucketID bucket_id, BlobID blob_id);
 
 /**
  *

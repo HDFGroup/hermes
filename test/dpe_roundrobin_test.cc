@@ -62,6 +62,10 @@ int main() {
   std::cout << "Device Initial State:\n";
   testing::PrintNodeState(node_state);
 
+  RoundRobinState::devices_ = std::vector<DeviceID>(node_state.num_devices);
+  std::iota(RoundRobinState::devices_.begin(),
+            RoundRobinState::devices_.end(), 0);
+
   std::vector<size_t> blob_sizes1(1, MEGABYTES(10));
   std::vector<PlacementSchema> schemas1;
   RoundRobinPlaceBlob(blob_sizes1, schemas1, node_state);

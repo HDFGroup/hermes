@@ -25,6 +25,8 @@
 
 namespace hermes {
 
+std::vector<DeviceID> RoundRobinState::devices_;
+
 namespace api {
 
 int Context::default_buffer_organizer_retries;
@@ -112,8 +114,17 @@ void Hermes::Finalize(bool force_rpc_shutdown) {
   is_initialized = false;
 }
 
+void Hermes::FinalizeClient(bool stop_daemon) {
+  hermes::FinalizeClient(&context_, &rpc_, &comm_, &trans_arena_, stop_daemon);
+}
+
 void Hermes::RemoteFinalize() {
   hermes::RpcCall<void>(&rpc_, rpc_.node_id, "RemoteFinalize");
+}
+
+void Hermes::RunDaemon() {
+  hermes::RunDaemon(&context_, &rpc_, &comm_, &trans_arena_,
+                    shmem_name_.c_str());
 }
 
 }  // namespace api
@@ -257,7 +268,8 @@ std::shared_ptr<api::Hermes> InitHermes(Config *config, bool is_daemon,
   }
   bool create_shared_files = (comm.proc_kind == ProcessKind::kHermes &&
                               comm.first_on_node);
-  InitFilesForBuffering(&context, create_shared_files);
+  InitFilesForBuffering(&context, create_shared_files, comm.node_id,
+                        comm.first_on_node);
 
   WorldBarrier(&comm);
 
@@ -300,6 +312,13 @@ std::shared_ptr<api::Hermes> InitHermes(Config *config, bool is_daemon,
   api::Context::default_buffer_organizer_retries =
     config->num_buffer_organizer_retries;
   api::Context::default_placement_policy = config->default_placement_policy;
+
+  RoundRobinState::devices_.reserve(config->num_devices);
+  for (DeviceID id = 0; id < config->num_devices; ++id) {
+    if (GetNumBuffersAvailable(&result->context_, id)) {
+      RoundRobinState::devices_.push_back(id);
+    }
+  }
 
   InitRpcClients(&result->rpc_);
 

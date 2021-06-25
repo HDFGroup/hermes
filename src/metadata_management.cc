@@ -619,12 +619,28 @@ BufferIdArray GetBufferIdsFromBlobId(Arena *arena,
 void AttachBlobToBucket(SharedMemoryContext *context, RpcContext *rpc,
                         const char *blob_name, BucketID bucket_id,
                         const std::vector<BufferID> &buffer_ids,
-                        bool is_swap_blob) {
+                        bool is_swap_blob, bool called_from_buffer_organizer) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
 
   std::string internal_name = MakeInternalBlobName(blob_name, bucket_id);
   int target_node = HashString(mdm, rpc, internal_name.c_str());
+
   BlobID blob_id = {};
+  if (called_from_buffer_organizer) {
+    blob_id = GetBlobId(context, rpc, blob_name, bucket_id);
+
+    if (!IsNullBlobId(blob_id)) {
+      // Remove old BlobID from the bucket's list of Blobs
+      RemoveBlobFromBucketInfo(context, rpc, bucket_id, blob_id);
+
+      // Release the IDs that represented the SwapBlob info
+      FreeBufferIdList(context, rpc, blob_id);
+    } else {
+      LOG(WARNING) << "Expected to find BlobID " << blob_id.as_int
+                   << " in Map but didn't." << std::endl;
+    }
+  }
+
   // NOTE(chogan): A negative node_id indicates a swap blob
   blob_id.bits.node_id = is_swap_blob ? -target_node : target_node;
   blob_id.bits.buffer_ids_offset = AllocateBufferIdList(context, rpc,
@@ -761,6 +777,20 @@ bool DestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
   } else {
     destroyed = RpcCall<bool>(rpc, target_node, "RemoteDestroyBucket",
                               std::string(name), bucket_id);
+  }
+
+  return destroyed;
+}
+
+bool DestroyVBucket(SharedMemoryContext *context, RpcContext *rpc,
+                   const char *name, VBucketID vbucket_id) {
+  u32 target_node = vbucket_id.bits.node_id;
+  bool destroyed = false;
+  if (target_node == rpc->node_id) {
+    destroyed = LocalDestroyVBucket(context, name, vbucket_id);
+  } else {
+    destroyed = RpcCall<bool>(rpc, target_node, "RemoteDestroyVBucket",
+                              std::string(name), vbucket_id);
   }
 
   return destroyed;

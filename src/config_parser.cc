@@ -82,6 +82,7 @@ enum ConfigVariable {
   ConfigVariable_RpcHostNumberRange,
   ConfigVariable_RpcNumThreads,
   ConfigVariable_PlacementPolicy,
+  ConfigVariable_IsSharedDevice,
 
   ConfigVariable_Count
 };
@@ -118,6 +119,7 @@ static const char *kConfigVariableStrings[ConfigVariable_Count] = {
   "rpc_host_number_range",
   "rpc_num_threads",
   "default_placement_policy",
+  "is_shared_device",
 };
 
 struct Token {
@@ -499,10 +501,7 @@ Token *ParseIntListList(Token *tok, int out[][hermes::kMaxBufferPoolSlabs],
 f32 ParseFloat(Token **tok) {
   double result = 0;
   if (*tok && IsNumber(*tok)) {
-    result = strtod((*tok)->data, NULL);
-    if (result <= 0 || errno == ERANGE || result > FLT_MAX) {
-      PrintExpectedAndFail("a floating point number between 1 and FLT_MAX");
-    }
+    result = std::stod(std::string((*tok)->data), nullptr);
     *tok = (*tok)->next;
   } else {
     PrintExpectedAndFail("a number");
@@ -830,6 +829,11 @@ void ParseTokens(TokenList *tokens, Config *config) {
           LOG(FATAL) << "Unknown default_placement_policy: '" << policy << "'"
                      << std::endl;
         }
+        break;
+      }
+      case ConfigVariable_IsSharedDevice: {
+        RequireNumDevices(config);
+        tok = ParseIntList(tok, config->is_shared_device, config->num_devices);
         break;
       }
       default: {

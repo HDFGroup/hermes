@@ -19,7 +19,6 @@
 #include <hermes/adapter/stdio/metadata_manager.cc>
 
 using hermes::adapter::stdio::AdapterStat;
-using hermes::adapter::stdio::FileID;
 using hermes::adapter::stdio::FileStruct;
 using hermes::adapter::stdio::MapperFactory;
 using hermes::adapter::stdio::MetadataManager;
@@ -189,7 +188,7 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
       FileStruct(mdm->Convert(fp), existing.first.st_ptr, total_size));
   size_t data_offset = 0;
   auto filename = existing.first.st_bkid->GetName();
-  LOG(INFO) << "Mapping for read has " << mapping.size() << " mapping."
+  LOG(INFO) << "Mapping for write has " << mapping.size() << " mapping."
             << std::endl;
   for (const auto &item : mapping) {
     hapi::Context ctx;
@@ -561,7 +560,7 @@ int HERMES_DECL(fflush)(FILE *fp) {
         auto trait = hermes::api::FileMappingTrait(filename, offset_map,
                                                    nullptr, NULL, NULL);
         file_vbucket.Attach(&trait, ctx);
-        file_vbucket.Delete(ctx);
+        file_vbucket.Destroy(ctx);
         existing.first.st_blobs.clear();
         INTERCEPTOR_LIST->hermes_flush_exclusion.erase(filename);
       }
@@ -606,7 +605,7 @@ int HERMES_DECL(fclose)(FILE *fp) {
           auto trait = hermes::api::FileMappingTrait(filename, offset_map,
                                                      nullptr, NULL, NULL);
           file_vbucket.Attach(&trait, ctx);
-          file_vbucket.Delete(ctx);
+          file_vbucket.Destroy(ctx);
           existing.first.st_blobs.clear();
           INTERCEPTOR_LIST->hermes_flush_exclusion.erase(filename);
         }

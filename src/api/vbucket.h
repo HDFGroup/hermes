@@ -87,7 +87,7 @@ class VBucket {
 
   /** retrieves the subset of blob links satisfying pred */
   /** could return iterator */
-  std::vector<BlobID> GetLinks(Context &ctx);
+  std::vector<std::string> GetLinks(Context &ctx);
 
   /** attach a trait to this vbucket */
   Status Attach(Trait *trait, Context &ctx);
@@ -100,11 +100,13 @@ class VBucket {
   /** retrieves the subset of attached traits satisfying pred */
   template <class Predicate>
   std::vector<TraitID> GetTraits(Predicate pred, Context &ctx);
-
+  /** closes a vBucket */
+  Status Release(Context &ctx);
+  Status Release();
   /** delete a vBucket */
   /** decrements the links counts of blobs in buckets */
-  Status Delete(Context &ctx);
-  Status Delete();
+  Status Destroy(Context &ctx);
+  Status Destroy();
 };  // class VBucket
 
 }  // namespace api
