@@ -181,6 +181,7 @@ struct Config {
   int buffer_organizer_port;
   int rpc_host_number_range[2];
   int rpc_num_threads;
+  int bo_num_threads;
   api::PlacementPolicy default_placement_policy;
 
   /** A base name for the BufferPool shared memory segement. Hermes appends the

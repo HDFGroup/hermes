@@ -471,7 +471,7 @@ void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
 
   auto rpc_enqueue_bo_task = [context](const tl::request &req, BoTask task,
                                        BoPriority priority) {
-    // TODO(chogan):
+    // TODO(chogan): Get ThreadPool from somewhere
     (void)task;
     (void)req;
     (void)priority;

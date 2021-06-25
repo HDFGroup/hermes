@@ -35,6 +35,7 @@
 // 5. Add the new variable to the Config struct.
 // 6. Add an Assert to config_parser_test.cc to test the functionality.
 // 7. Set a default value in InitDefaultConfig
+// 8. Add the variable with documentation to test/data/hermes.conf
 
 namespace hermes {
 
@@ -83,6 +84,7 @@ enum ConfigVariable {
   ConfigVariable_RpcNumThreads,
   ConfigVariable_PlacementPolicy,
   ConfigVariable_IsSharedDevice,
+  ConfigVariable_BoNumThreads,
 
   ConfigVariable_Count
 };
@@ -120,6 +122,7 @@ static const char *kConfigVariableStrings[ConfigVariable_Count] = {
   "rpc_num_threads",
   "default_placement_policy",
   "is_shared_device",
+  "buffer_organizer_num_threads",
 };
 
 struct Token {
@@ -834,6 +837,10 @@ void ParseTokens(TokenList *tokens, Config *config) {
       case ConfigVariable_IsSharedDevice: {
         RequireNumDevices(config);
         tok = ParseIntList(tok, config->is_shared_device, config->num_devices);
+        break;
+      }
+      case ConfigVariable_BoNumThreads: {
+        config->bo_num_threads = ParseInt(&tok);
         break;
       }
       default: {

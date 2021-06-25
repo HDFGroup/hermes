@@ -117,6 +117,8 @@ void InitDefaultConfig(Config *config) {
   config->is_shared_device[1] = 0;
   config->is_shared_device[2] = 0;
   config->is_shared_device[3] = 1;
+
+  config->bo_num_threads = 4;
 }
 
 void FailedLibraryCall(std::string func) {
