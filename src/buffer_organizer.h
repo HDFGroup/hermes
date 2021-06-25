@@ -54,7 +54,7 @@ struct BoTask {
 struct BufferOrganizer {
   ThreadPool pool;
 
-  BufferOrganizer(int num_threads);
+  explicit BufferOrganizer(int num_threads);
 };
 
 bool LocalEnqueueBoTask(SharedMemoryContext *context, BoTask task,
