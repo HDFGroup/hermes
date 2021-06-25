@@ -416,8 +416,11 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
 }
 
 void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
-                          const char *addr, int num_threads, int port) {
-  // TODO(chogan): num_threads can probably be 1
+                          Arena *arena, const char *addr, int num_threads,
+                          int port) {
+  context->bo = PushStruct<BufferOrganizer>(arena);
+  new(context->bo) BufferOrganizer(num_threads);
+
   ThalliumState *state = GetThalliumState(rpc);
 
   state->bo_engine = new tl::engine(addr, THALLIUM_SERVER_MODE, true,
@@ -471,13 +474,9 @@ void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
 
   auto rpc_enqueue_bo_task = [context](const tl::request &req, BoTask task,
                                        BoPriority priority) {
-    // TODO(chogan): Get ThreadPool from somewhere
-    (void)task;
-    (void)req;
-    (void)priority;
-    // bool result = LocalEnqueueBoTask(context, task, priority);
+    bool result = LocalEnqueueBoTask(context, task, priority);
 
-    // req.respond(result);
+    req.respond(result);
   };
 
   rpc_server->define("PlaceInHierarchy",

@@ -100,7 +100,9 @@ void Finalize(SharedMemoryContext *context, CommunicationContext *comm,
       bool is_daemon =
         (comm->world_size == comm->num_nodes) && !force_rpc_shutdown;
       FinalizeRpcContext(rpc, is_daemon);
+      ShutdownBufferOrganizer(context);
     }
+    SubBarrier(comm);
     ReleaseSharedMemoryContext(context);
     shm_unlink(shmem_name);
     HERMES_DEBUG_SERVER_CLOSE();

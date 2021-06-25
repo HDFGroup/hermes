@@ -79,7 +79,8 @@ std::string GetServerName(RpcContext *rpc, u32 node_id,
                           bool is_buffer_organizer = false);
 std::string GetProtocol(RpcContext *rpc);
 void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
-                          const char *addr, int num_threads, int port);
+                          Arena *arena, const char *addr, int num_threads,
+                          int port);
 #if 0
 void TriggerBufferOrganizer(RpcContext *rpc, const char *func_name,
                             const std::string &blob_name, SwapBlob swap_blob,

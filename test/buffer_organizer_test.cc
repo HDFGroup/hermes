@@ -10,10 +10,13 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include "abt.h"
-
 #include "hermes.h"
 #include "test_utils.h"
+
+#include <mpi.h>
+
+namespace hapi = hermes::api;
+using HermesPtr = std::shared_ptr<hapi::Hermes>;
 
 void TestIsBoFunction() {
   using hermes::IsBoFunction;
@@ -32,9 +35,7 @@ void TestBoTasks() {
   using hermes::BufferID;
   using hermes::TargetID;
 
-  // TODO(chogan): Pass BO threads from config
-  // TODO(chogan): Pool needs to be accessible from context
-  hermes::ThreadPool pool(2);
+  HermesPtr hermes = hermes::InitHermesDaemon();
 
   const int kNumThreads = 3;
   for (int i = 0; i < kNumThreads; ++i) {
@@ -53,15 +54,23 @@ void TestBoTasks() {
       task.op = hermes::BoOperation::kDelete;
       task.args.delete_args = {bid};
     }
-    LocalEnqueueBoTask(NULL, pool, task);
+    LocalEnqueueBoTask(&hermes->context_, task);
   }
+
+  hermes->Finalize(true);
 }
 
 int main(int argc, char *argv[]) {
-  (void)argc;
-  (void)argv;
+  int mpi_threads_provided;
+  MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
+  if (mpi_threads_provided < MPI_THREAD_MULTIPLE) {
+    fprintf(stderr, "Didn't receive appropriate MPI threading specification\n");
+    return 1;
+  }
+
   TestIsBoFunction();
   TestBoTasks();
 
+  MPI_Finalize();
   return 0;
 }
