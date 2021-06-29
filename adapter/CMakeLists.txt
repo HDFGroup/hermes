@@ -10,3 +10,6 @@ add_subdirectory(src/hermes/adapter/stdio)
 
 # add posix adapter
 add_subdirectory(src/hermes/adapter/posix)
+
+# add posix adapter
+add_subdirectory(src/hermes/adapter/pubsub)
