@@ -39,7 +39,8 @@ function(mpi_daemon test_exec test_mpi_proc test_args arg_name daemon_procs)
             ${CMAKE_SOURCE_DIR}/adapter/test/run_hermes.sh ${MPIEXEC_EXECUTABLE}
             ${CMAKE_BINARY_DIR}/bin/${test_exec} ${test_mpi_proc}
             ${CMAKE_BINARY_DIR}/bin/hermes_daemon ${daemon_procs}
-            ${CMAKE_SOURCE_DIR}/adapter/test/data/hermes.conf)
+            ${CMAKE_SOURCE_DIR}/adapter/test/data/hermes.conf
+            ${test_args})
     set_property(TEST Test${test_exec}_${test_mpi_proc}_${arg_name}
             PROPERTY ENVIRONMENT HERMES_CONF=${CMAKE_SOURCE_DIR}/adapter/test/data/hermes.conf)
     set_property(TEST Test${test_exec}_${test_mpi_proc}_${arg_name} APPEND

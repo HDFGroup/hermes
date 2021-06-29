@@ -138,14 +138,19 @@ Blob& VBucket::GetBlob(std::string blob_name, std::string bucket_name) {
   return local_blob;
 }
 
-std::vector<BlobID> VBucket::GetLinks(Context& ctx) {
+std::vector<std::string> VBucket::GetLinks(Context& ctx) {
   (void)ctx;
   LOG(INFO) << "Getting subset of links satisfying pred in VBucket " << name_
             << '\n';
   auto blob_ids =
       GetBlobsFromVBucketInfo(&hermes_->context_, &hermes_->rpc_, id_);
+  auto blob_names = std::vector<std::string>();
+  for (const auto& blob_id : blob_ids) {
+    blob_names.push_back(
+        GetBlobNameFromId(&hermes_->context_, &hermes_->rpc_, blob_id));
+  }
   // TODO(hari): add filtering
-  return blob_ids;
+  return blob_names;
 }
 
 Status VBucket::Attach(Trait* trait) {
@@ -258,13 +263,31 @@ std::vector<TraitID> VBucket::GetTraits(Predicate pred, Context& ctx) {
   return attached_traits;
 }
 
-Status VBucket::Delete() {
-  Status result = Delete(ctx_);
+Status VBucket::Release() {
+  Status result = Release(ctx_);
 
   return result;
 }
 
-Status VBucket::Delete(Context& ctx) {
+Status VBucket::Release(Context& ctx) {
+  (void)ctx;
+  Status ret;
+
+  if (IsValid() && hermes_->is_initialized) {
+    LOG(INFO) << "Closing vbucket '" << name_ << "'" << std::endl;
+    DecrementRefcount(&hermes_->context_, &hermes_->rpc_, id_);
+    id_.as_int = 0;
+  }
+  return ret;
+}
+
+Status VBucket::Destroy() {
+  Status result = Destroy(ctx_);
+
+  return result;
+}
+
+Status VBucket::Destroy(Context& ctx) {
   (void)ctx;
   Status ret;
 
@@ -350,6 +373,7 @@ Status VBucket::Delete(Context& ctx) {
     }
   }
   attached_traits_.clear();
+  DestroyVBucket(&hermes_->context_, &hermes_->rpc_, this->name_.c_str(), id_);
   return Status();
 }
 

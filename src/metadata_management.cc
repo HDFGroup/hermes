@@ -782,6 +782,20 @@ bool DestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
   return destroyed;
 }
 
+bool DestroyVBucket(SharedMemoryContext *context, RpcContext *rpc,
+                   const char *name, VBucketID vbucket_id) {
+  u32 target_node = vbucket_id.bits.node_id;
+  bool destroyed = false;
+  if (target_node == rpc->node_id) {
+    destroyed = LocalDestroyVBucket(context, name, vbucket_id);
+  } else {
+    destroyed = RpcCall<bool>(rpc, target_node, "RemoteDestroyVBucket",
+                              std::string(name), vbucket_id);
+  }
+
+  return destroyed;
+}
+
 void LocalRenameBucket(SharedMemoryContext *context, RpcContext *rpc,
                        BucketID id, const std::string &old_name,
                        const std::string &new_name) {

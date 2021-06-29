@@ -220,6 +220,12 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
       req.respond(result);
     };
 
+  auto rpc_destroy_vbucket =
+      [context](const request &req, const string &name, VBucketID id) {
+        bool result = LocalDestroyVBucket(context, name.c_str(), id);
+        req.respond(result);
+      };
+
   auto rpc_get_or_create_bucket_id =
     [context](const request &req, const std::string &name) {
       BucketID result = LocalGetOrCreateBucketId(context, name);
@@ -372,6 +378,7 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
   rpc_server->define("RemoteAddBlobIdToBucket", rpc_add_blob_bucket);
   rpc_server->define("RemoteAddBlobIdToVBucket", rpc_add_blob_vbucket);
   rpc_server->define("RemoteDestroyBucket", rpc_destroy_bucket);
+  rpc_server->define("RemoteDestroyVBucket", rpc_destroy_vbucket);
   rpc_server->define("RemoteRenameBucket", rpc_rename_bucket);
   rpc_server->define("RemoteDestroyBlobByName", rpc_destroy_blob_by_name);
   rpc_server->define("RemoteDestroyBlobById", rpc_destroy_blob_by_id);

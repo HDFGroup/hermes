@@ -19,7 +19,6 @@
 #include <hermes/adapter/stdio/metadata_manager.cc>
 
 using hermes::adapter::stdio::AdapterStat;
-using hermes::adapter::stdio::FileID;
 using hermes::adapter::stdio::FileStruct;
 using hermes::adapter::stdio::MapperFactory;
 using hermes::adapter::stdio::MetadataManager;
@@ -561,7 +560,7 @@ int HERMES_DECL(fflush)(FILE *fp) {
         auto trait = hermes::api::FileMappingTrait(filename, offset_map,
                                                    nullptr, NULL, NULL);
         file_vbucket.Attach(&trait, ctx);
-        file_vbucket.Delete(ctx);
+        file_vbucket.Destroy(ctx);
         existing.first.st_blobs.clear();
         INTERCEPTOR_LIST->hermes_flush_exclusion.erase(filename);
       }
@@ -606,7 +605,7 @@ int HERMES_DECL(fclose)(FILE *fp) {
           auto trait = hermes::api::FileMappingTrait(filename, offset_map,
                                                      nullptr, NULL, NULL);
           file_vbucket.Attach(&trait, ctx);
-          file_vbucket.Delete(ctx);
+          file_vbucket.Destroy(ctx);
           existing.first.st_blobs.clear();
           INTERCEPTOR_LIST->hermes_flush_exclusion.erase(filename);
         }

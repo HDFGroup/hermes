@@ -156,6 +156,12 @@ bool DestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
 /**
  *
  */
+bool DestroyVBucket(SharedMemoryContext *context, RpcContext *rpc,
+                    const char *name, VBucketID vbucket_id);
+
+/**
+ *
+ */
 void DestroyBlobByName(SharedMemoryContext *context, RpcContext *rpc,
                        BucketID bucket_id, const std::string &blob_name);
 
