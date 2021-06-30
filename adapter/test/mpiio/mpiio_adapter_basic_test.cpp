@@ -357,6 +357,8 @@ TEST_CASE("SingleWriteCollective",
             (size_t)test::size_written_orig);
   }
 
+  // TODO(chogan): This test fails intermittently. Needs diagnosis.
+  // https://github.com/HDFGroup/hermes/issues/209
   // SECTION("write to new  file using shared ptr") {
   //   test::test_open(info.shared_new_file.c_str(),
   //                   MPI_MODE_WRONLY | MPI_MODE_CREATE, MPI_COMM_WORLD);
