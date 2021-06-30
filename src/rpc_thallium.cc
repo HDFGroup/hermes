@@ -654,7 +654,6 @@ void FinalizeClient(SharedMemoryContext *context, RpcContext *rpc,
     std::string server_name = GetServerName(rpc, rpc->node_id);
     tl::endpoint server = state->engine->lookup(server_name);
     state->engine->shutdown_remote_engine(server);
-
   }
 
   SubBarrier(comm);
