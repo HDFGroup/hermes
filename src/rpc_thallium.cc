@@ -423,8 +423,9 @@ void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
 
   ThalliumState *state = GetThalliumState(rpc);
 
+  int num_bo_rpc_threads = 1;
   state->bo_engine = new tl::engine(addr, THALLIUM_SERVER_MODE, true,
-                                    num_threads);
+                                    num_bo_rpc_threads);
   tl::engine *rpc_server = state->bo_engine;
 
   std::string rpc_server_name = rpc_server->self();
@@ -485,21 +486,6 @@ void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
                      rpc_move_to_target).disable_response();
   rpc_server->define("EnqueueBoTask", rpc_enqueue_bo_task);
 }
-
-#if 0
-void TriggerBufferOrganizer(RpcContext *rpc, const char *func_name,
-                            const std::string &blob_name, SwapBlob swap_blob,
-                            const api::Context &ctx) {
-  std::string server_name = GetServerName(rpc, rpc->node_id, true);
-  std::string protocol = GetProtocol(rpc);
-  tl::engine engine(protocol, THALLIUM_CLIENT_MODE, true);
-  tl::remote_procedure remote_proc = engine.define(func_name);
-  tl::endpoint server = engine.lookup(server_name);
-  remote_proc.disable_response();
-  // TODO(chogan): Templatize?
-  remote_proc.on(server)(swap_blob, blob_name, ctx);
-}
-#endif
 
 void StartGlobalSystemViewStateUpdateThread(SharedMemoryContext *context,
                                             RpcContext *rpc, Arena *arena,

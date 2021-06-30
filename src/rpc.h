@@ -81,11 +81,6 @@ std::string GetProtocol(RpcContext *rpc);
 void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
                           Arena *arena, const char *addr, int num_threads,
                           int port);
-#if 0
-void TriggerBufferOrganizer(RpcContext *rpc, const char *func_name,
-                            const std::string &blob_name, SwapBlob swap_blob,
-                            int retries);
-#endif
 }  // namespace hermes
 
 // TODO(chogan): I don't like that code similar to this is in buffer_pool.cc.
