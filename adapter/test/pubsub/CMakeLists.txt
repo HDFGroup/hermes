@@ -1,17 +1,17 @@
-set(PUBSUB_TESTS pubsub_connection_test pubsub_metadata_test pubsub_negative_connection_test pubsub_topic_test
+set(PUBSUB_TESTS pubsub_connection_test pubsub_negative_connection_test pubsub_topic_test
         pubsub_end_to_end_test)
 
+
+add_executable(pubsub_metadata_test ${CMAKE_CURRENT_SOURCE_DIR}/pubsub_metadata_test.cc)
+add_test(pubsub_metadata_test pubsub_metadata_test)
+
 foreach(program ${PUBSUB_TESTS})
-    add_executable(${program} ${CMAKE_CURRENT_SOURCE_DIR}/${program}.cc pubsub_metadata_test.cc pubsub_connection_test.cc pubsub_negative_connection_test.cc pubsub_topic_test.cc)
+    add_executable(${program} ${CMAKE_CURRENT_SOURCE_DIR}/${program}.cc)
     target_link_libraries(${program} ${LIBRT} hermes MPI::MPI_CXX
-            $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium>)
+            $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium> hermes_pubsub)
     target_compile_definitions(${program}
             PRIVATE $<$<BOOL:${HERMES_RPC_THALLIUM}>:HERMES_RPC_THALLIUM>)
-    add_test(NAME "Test${program}"
-            COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
-            "${CMAKE_BINARY_DIR}/bin/${program}")
-    set_tests_properties("Test${program}" PROPERTIES ENVIRONMENT
-            LSAN_OPTIONS=suppressions=${CMAKE_CURRENT_SOURCE_DIR}/data/asan.supp)
+    mpi_daemon(${program} 1 "" "" 1)
 endforeach()
 
 #add_custom_target(pubsub_ares
