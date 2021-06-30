@@ -243,7 +243,12 @@ void TestMultiGet(std::shared_ptr<hapi::Hermes> hermes) {
 }
 
 int main(int argc, char **argv) {
-  hermes::testing::InitMpi(&argc, &argv);
+  int mpi_threads_provided;
+  MPI_Init_thread(NULL, NULL, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
+  if (mpi_threads_provided < MPI_THREAD_MULTIPLE) {
+    fprintf(stderr, "Didn't receive appropriate MPI threading specification\n");
+    return 1;
+  }
 
   char *config_file = 0;
   if (argc == 2) {

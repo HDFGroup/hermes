@@ -20,7 +20,6 @@
 #include "hermes.h"
 #include "utils.h"
 #include "metadata_management_internal.h"
-#include "test_utils.h"
 
 namespace hapi = hermes::api;
 using std::chrono::time_point;
@@ -230,7 +229,13 @@ Options HandleArgs(int argc, char **argv) {
 
 int main(int argc, char **argv) {
   Options opts = HandleArgs(argc, argv);
-  hermes::testing::InitMpi(&argc, &argv);
+
+  int mpi_threads_provided;
+  MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
+  if (mpi_threads_provided < MPI_THREAD_MULTIPLE) {
+    fprintf(stderr, "Didn't receive appropriate MPI threading specification\n");
+    return 1;
+  }
 
   if (opts.bench_local) {
     BenchLocal();

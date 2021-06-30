@@ -316,7 +316,12 @@ static void TestBufferingFileCorrectness() {
 }
 
 int main(int argc, char **argv) {
-  hermes::testing::InitMpi(&argc, &argv);
+  int mpi_threads_provided;
+  MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
+  if (mpi_threads_provided < MPI_THREAD_MULTIPLE) {
+    fprintf(stderr, "Didn't receive appropriate MPI threading specification\n");
+    return 1;
+  }
 
   TestGetBuffers();
   TestGetBandwidths();

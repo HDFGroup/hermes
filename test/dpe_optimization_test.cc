@@ -19,7 +19,6 @@
 #include "test_utils.h"
 #include "utils.h"
 
-
 using namespace hermes;  // NOLINT(*)
 
 void MinimizeIoTimePlaceBlob(std::vector<size_t> &blob_sizes,
