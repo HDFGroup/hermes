@@ -20,5 +20,8 @@ int main(int argc, char* argv[]) {
   }
   auto hermes = hermes::InitHermesDaemon(hermes_config);
   hermes->RunDaemon();
+
   MPI_Finalize();
+
+  return 0;
 }

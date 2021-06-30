@@ -626,9 +626,12 @@ void RunDaemon(SharedMemoryContext *context, RpcContext *rpc,
 
   state->engine->push_prefinalize_callback(prefinalize_callback);
 
-  state->engine->wait_for_finalize();
   state->bo_engine->wait_for_finalize();
+  state->engine->wait_for_finalize();
 
+  ShutdownBufferOrganizer(context);
+  delete state->engine;
+  delete state->bo_engine;
   ReleaseSharedMemoryContext(context);
   shm_unlink(shmem_name);
   HERMES_DEBUG_SERVER_CLOSE();
@@ -643,15 +646,18 @@ void FinalizeClient(SharedMemoryContext *context, RpcContext *rpc,
 
   if (stop_daemon && comm->first_on_node) {
     ClientThalliumState *state = GetClientThalliumState(rpc);
-    std::string server_name = GetServerName(rpc, rpc->node_id);
-    tl::endpoint server = state->engine->lookup(server_name);
-    state->engine->shutdown_remote_engine(server);
 
     std::string bo_server_name = GetServerName(rpc, rpc->node_id, true);
     tl::endpoint bo_server = state->engine->lookup(bo_server_name);
     state->engine->shutdown_remote_engine(bo_server);
+
+    std::string server_name = GetServerName(rpc, rpc->node_id);
+    tl::endpoint server = state->engine->lookup(server_name);
+    state->engine->shutdown_remote_engine(server);
+
   }
 
+  SubBarrier(comm);
   ShutdownRpcClients(rpc);
   ReleaseSharedMemoryContext(context);
   HERMES_DEBUG_CLIENT_CLOSE();
