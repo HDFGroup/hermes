@@ -180,14 +180,14 @@ void load(A &ar, BoOperation &op) {
 
 template<typename A>
 void serialize(A &ar, BoArgs &bo_args) {
-  (void)ar;
-  (void)bo_args;
+  ar & bo_args.move_args.src;
+  ar & bo_args.move_args.dest;
 }
 
 template<typename A>
 void serialize(A &ar, BoTask &bo_task) {
-  (void)ar;
-  (void)bo_task;
+  ar & bo_task.op;
+  ar & bo_task.args;
 }
 
 namespace api {
