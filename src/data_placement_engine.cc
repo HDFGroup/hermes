@@ -31,6 +31,30 @@ namespace hermes {
 
 using hermes::api::Status;
 
+RoundRobinState::RoundRobinState() : device_index_mutex_() {
+  device_index_mutex_.lock();
+}
+
+RoundRobinState::~RoundRobinState() {
+  device_index_mutex_.unlock();
+}
+
+size_t RoundRobinState::GetNumDevices() const {
+  return devices_.size();
+}
+
+DeviceID RoundRobinState::GetDeviceByIndex(int i) const {
+  return devices_[i];
+}
+
+int RoundRobinState::GetCurrentDeviceIndex() const {
+  return current_device_index_;
+}
+
+void RoundRobinState::SetCurrentDeviceIndex(int new_device_index) {
+  current_device_index_ = new_device_index;
+}
+
 std::vector<int> GetValidSplitChoices(size_t blob_size) {
   int split_option = 10;
   // Split the blob if size is greater than 64KB
@@ -54,27 +78,37 @@ Status AddRoundRobinSchema(size_t index, std::vector<u64> &node_state,
                            PlacementSchema &output) {
   Status result;
   TargetID dst = {};
-  bool found_target {false};
-  DataPlacementEngine dpe;
-  size_t num_targets = node_state.size();
-  size_t device_pos {dpe.getCountDevice()};
+  RoundRobinState dpe;
+  size_t num_targets = targets.size();
+  int current_device_index {dpe.GetCurrentDeviceIndex()};
+  size_t num_devices = dpe.GetNumDevices();
 
-  for (size_t j {0}; j < num_targets; ++j) {
-    size_t adjust_pos = {(j+device_pos)%num_targets};
-    if (node_state[adjust_pos] >= blob_sizes[index]) {
-      found_target = true;
-      dpe.setCountDevice((j+device_pos+1)%num_targets);
-      dst = FindTargetIdFromDeviceId(targets, adjust_pos);
-      output.push_back(std::make_pair(blob_sizes[index], dst));
-      node_state[adjust_pos] -= blob_sizes[index];
+  // NOTE(chogan): Starting with current_device, loop through all devices until
+  // we either 1) find a matching Target or 2) end up back at the starting
+  // device.
+  for (size_t i = 0; i < num_devices; ++i) {
+    int next_index = (current_device_index + i) % num_devices;
+    DeviceID dev_id = dpe.GetDeviceByIndex(next_index);
+
+    for (size_t j = 0; j < num_targets; ++j) {
+      if (node_state[j] >= blob_sizes[index]) {
+        if (targets[j].bits.device_id == dev_id) {
+          dst = targets[j];
+          output.push_back(std::make_pair(blob_sizes[index], dst));
+          node_state[j] -= blob_sizes[index];
+          dpe.SetCurrentDeviceIndex((next_index + 1) % num_devices);
+          break;
+        }
+      }
+    }
+
+    if (!IsNullTargetId(dst)) {
       break;
     }
   }
-  if (!found_target) {
+
+  if (IsNullTargetId(dst)) {
     result = DPE_RR_FIND_TGT_FAILED;
-    LOG(ERROR) << result.Msg();
-  } else if (IsNullTargetId(dst)) {
-    result = DPE_GET_INVALID_TGT;
     LOG(ERROR) << result.Msg();
   }
 
@@ -423,7 +457,7 @@ Status CalculatePlacement(SharedMemoryContext *context, RpcContext *rpc,
         break;
       }
       case api::PlacementPolicy::kMinimizeIoTime: {
-        std::vector<f32> bandwidths = GetBandwidths(context);
+        std::vector<f32> bandwidths = GetBandwidths(context, targets);
 
         result = MinimizeIoTimePlacement(blob_sizes, node_state, bandwidths,
                                          targets, output_tmp);

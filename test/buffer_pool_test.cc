@@ -102,7 +102,8 @@ static void TestGetBandwidths() {
 
   HermesPtr hermes = InitHermesDaemon();
 
-  std::vector<f32> bandwidths = GetBandwidths(&hermes->context_);
+  std::vector<TargetID> targets = LocalGetNodeTargets(&hermes->context_);
+  std::vector<f32> bandwidths = GetBandwidths(&hermes->context_, targets);
   Config config;
   InitDefaultConfig(&config);
   for (size_t i = 0; i < bandwidths.size(); ++i) {
@@ -271,9 +272,11 @@ static void TestBufferingFiles(hermes::Config *config,
 
   for (int i = 0; i < kNumBlockDevices; ++i) {
     size_t device_total_capacity = 0;
+    std::string node =
+      config->is_shared_device[i + 1] ? std::string("_node1") : "";
     for (int j = 0; j < num_slabs[i]; ++j) {
       std::string buffering_filename = ("device" + std::to_string(i + 1) +
-                                        "_slab" + std::to_string(j) +
+                                        "_slab" + std::to_string(j) + node +
                                         ".hermes");
 
       struct stat st = {};

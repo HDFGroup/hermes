@@ -87,6 +87,8 @@ class MetadataManager {
       if (this->is_mpi) {
         MPI_Comm_rank(MPI_COMM_WORLD, &rank);
         MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
+        // TODO(chogan): Need a better way to distinguish between client and
+        // daemon. https://github.com/HDFGroup/hermes/issues/206
         if (comm_size > 1) {
           hermes = hermes::InitHermesClient(hermes_config);
         } else {
@@ -108,10 +110,17 @@ class MetadataManager {
     if (ref == 1) {
       if (this->is_mpi) {
         MPI_Barrier(MPI_COMM_WORLD);
-        if (this->rank == 0) {
-          hermes->RemoteFinalize();
+        char *stop_daemon = getenv(kStopDaemon);
+        bool shutdown_daemon = true;
+
+        if (stop_daemon && stop_daemon[0] == '0') {
+          HERMES_NOT_IMPLEMENTED_YET;
+          // TODO(chogan): The Hermes core needs a few tweaks before it can
+          // support this feature. https://github.com/HDFGroup/hermes/issues/181
+          shutdown_daemon = false;
         }
-        hermes->Finalize();
+
+        hermes->FinalizeClient(shutdown_daemon);
       } else {
         hermes->Finalize(true);
       }
