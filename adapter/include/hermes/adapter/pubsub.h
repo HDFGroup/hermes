@@ -7,7 +7,6 @@
 
 #include <bucket.h>
 #include <hermes.h>
-#include <hermes_status.h>
 
 #include <hermes/adapter/pubsub/metadata_manager.h>
 #include <hermes/adapter/singleton.h>
