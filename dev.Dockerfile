@@ -1,4 +1,4 @@
-FROM hdfgroup/hermes-dep:latest
+FROM hdfgroup/hermes-deps:latest
 
 RUN sudo apt-get update -q
 
