@@ -857,6 +857,7 @@ void ParseConfig(Arena *arena, const char *path, Config *config) {
   ScopedTemporaryMemory scratch(arena);
   EntireFile config_file = ReadEntireFile(scratch, path);
   TokenList tokens = Tokenize(scratch, config_file);
+  InitDefaultConfig(config);
   ParseTokens(&tokens, config);
 }
 
