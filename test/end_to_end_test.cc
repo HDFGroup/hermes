@@ -121,6 +121,23 @@ int main(int argc, char **argv) {
     own_bucket.Destroy();
 
     TestBulkTransfer(hermes, app_rank);
+
+    if (hermes->rpc_.num_nodes > 1) {
+      if (app_rank == 0) {
+        Assert(hermes->rpc_.node_id == 1);
+        hermes::BoTask task = {};
+        task.op = hermes::BoOperation::kMove;
+        hermes::BufferID b_id = {};
+        b_id.as_int = 1;
+        hermes::TargetID t_id = {};
+        t_id.as_int = 2;
+        task.args.move_args.src = b_id;
+        task.args.move_args.dest = t_id;
+        hermes::RpcCall<bool>(&hermes->rpc_, 2, "BO::EnqueueBoTask", task,
+                              hermes::BoPriority::kLow);
+      }
+    }
+
   } else {
     // Hermes core. No user code here.
   }
