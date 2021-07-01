@@ -430,7 +430,7 @@ void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
 
   std::string rpc_server_name = rpc_server->self();
   LOG(INFO) << "Buffer organizer serving at " << rpc_server_name << " with "
-            << num_threads << " RPC threads" << std::endl;
+            << num_bo_rpc_threads << " RPC threads" << std::endl;
 
   std::string server_name_postfix = ":" + std::to_string(port);
   CopyStringToCharArray(server_name_postfix, state->bo_server_name_postfix,
