@@ -1,7 +1,6 @@
 set(PUBSUB_TESTS pubsub_connection_test pubsub_negative_connection_test pubsub_topic_test
         pubsub_end_to_end_test)
 
-
 add_executable(pubsub_metadata_test ${CMAKE_CURRENT_SOURCE_DIR}/pubsub_metadata_test.cc)
 add_test(pubsub_metadata_test pubsub_metadata_test)
 
