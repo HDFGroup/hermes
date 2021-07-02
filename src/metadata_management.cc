@@ -190,6 +190,7 @@ BlobID GetBlobId(SharedMemoryContext *context, RpcContext *rpc,
   std::string internal_name = MakeInternalBlobName(name, bucket_id);
   BlobID result = {};
   result.as_int = GetId(context, rpc, internal_name.c_str(), kMapType_Blob);
+  IncrementBlobStatsSafely(context, rpc, name, bucket_id, result);
 
   return result;
 }
@@ -457,7 +458,6 @@ VBucketID LocalGetNextFreeVBucketId(SharedMemoryContext *context,
     if (!IsNullVBucketId(result)) {
       VBucketInfo *info = GetVBucketInfoByIndex(mdm, result.bits.index);
       info->blobs = {};
-      info->stats = {};
       memset(info->traits, 0, sizeof(TraitID) * kMaxTraitsPerVBucket);
       info->ref_count.store(1);
       info->active = true;

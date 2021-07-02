@@ -35,7 +35,13 @@ enum MapType {
   kMapType_Count
 };
 
-struct Stats {
+union Stats {
+  struct {
+    u32 recency;
+    u32 frequency;
+  } bits;
+
+  u64 as_int;
 };
 
 const int kIdListChunkSize = 10;
@@ -61,7 +67,8 @@ struct BucketInfo {
   ChunkedIdList blobs;
   std::atomic<int> ref_count;
   bool active;
-  Stats stats;
+  /** stats[i] corresponds to the BlobID at blobs[i]. */
+  ChunkedIdList stats;
 };
 
 static constexpr int kMaxTraitsPerVBucket = 8;
@@ -72,7 +79,6 @@ struct VBucketInfo {
   std::atomic<int> ref_count;
   TraitID traits[kMaxTraitsPerVBucket];
   bool active;
-  Stats stats;
 };
 
 struct SystemViewState {
@@ -132,6 +138,7 @@ struct MetadataManager {
   u32 max_buckets;
   u32 num_vbuckets;
   u32 max_vbuckets;
+  std::atomic<u32> clock;
 };
 
 struct RpcContext;
@@ -375,6 +382,19 @@ std::vector<BlobID> GetBlobsFromVBucketInfo(SharedMemoryContext *context,
  */
 std::string GetBucketNameById(SharedMemoryContext *context, RpcContext *rpc,
                               BucketID id);
+/**
+ *
+ */
+void IncrementBlobStatsSafely(SharedMemoryContext *context, RpcContext *rpc,
+                              const std::string &name, BucketID bucket_id,
+                              BlobID blob_id);
+
+/**
+ *
+ */
+void LocalIncrementBlobStatsSafely(MetadataManager *mdm, BucketID bucket_id,
+                                   BlobID blob_id);
+
 }  // namespace hermes
 
 #endif  // HERMES_METADATA_MANAGEMENT_H_

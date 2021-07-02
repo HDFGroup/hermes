@@ -272,23 +272,107 @@ void AllocateOrGrowIdList(MetadataManager *mdm, ChunkedIdList *id_list) {
 
 /**
  * Assumes the caller has protected @p id_list with a lock.
+ *
+ * @return The index of the appended @p id.
  */
-void AppendToChunkedIdList(MetadataManager *mdm, ChunkedIdList *id_list,
-                           u64 id) {
+u32 AppendToChunkedIdList(MetadataManager *mdm, ChunkedIdList *id_list,
+                          u64 id) {
   if (id_list->length >= id_list->capacity) {
     AllocateOrGrowIdList(mdm, id_list);
   }
 
   u64 *head = GetIdsPtr(mdm, *id_list);
+  u32 result = id_list->length;
   head[id_list->length++] = id;
   ReleaseIdsPtr(mdm);
+
+  return result;
+}
+
+u64 GetChunkedIdListElement(MetadataManager *mdm, ChunkedIdList *id_list,
+                            u32 index) {
+  u64 result = 0;
+  if (index < id_list->length) {
+    u64 *head = GetIdsPtr(mdm, *id_list);
+    result = head[index];
+    ReleaseIdsPtr(mdm);
+  }
+
+  return result;
+}
+
+void SetChunkedIdListElement(MetadataManager *mdm, ChunkedIdList *id_list,
+                             u32 index, u64 value) {
+  while (index >= id_list->capacity) {
+    AllocateOrGrowIdList(mdm, id_list);
+  }
+
+  u64 *head = GetIdsPtr(mdm, *id_list);
+  head[index] = value;
+  ReleaseIdsPtr(mdm);
+}
+
+void LocalIncrementBlobStats(MetadataManager *mdm, ChunkedIdList *stats,
+                             u32 index) {
+  Stats stat = {};
+  stat.as_int = GetChunkedIdListElement(mdm, stats, index);
+  stat.bits.frequency++;
+  stat.bits.recency = mdm->clock++;
+
+  SetChunkedIdListElement(mdm, stats, index, stat.as_int);
+}
+
+i64 GetIndexOfId(MetadataManager *mdm, ChunkedIdList *id_list, u64 id) {
+  i64 result = -1;
+
+  u64 *head = GetIdsPtr(mdm, *id_list);
+  for (i64 i = 0; i < id_list->length; ++i) {
+    if (head[i] == id) {
+      result = i;
+      break;
+    }
+  }
+
+  return result;
+}
+
+/** Protects the @p bucket_id's 'blobs' ChunkedIdList before incrementing its
+ *  Stats.
+ */
+void LocalIncrementBlobStatsSafely(MetadataManager *mdm, BucketID bucket_id,
+                                   BlobID blob_id) {
+  BeginTicketMutex(&mdm->bucket_mutex);
+  BucketInfo *info = LocalGetBucketInfoById(mdm, bucket_id);
+  i64 index = GetIndexOfId(mdm, &info->blobs, blob_id.as_int);
+  if (index < 0) {
+    LOG(WARNING) << "BlobID " << blob_id.as_int << " not found in Bucket "
+                 << bucket_id.as_int << std::endl;
+  } else {
+    LocalIncrementBlobStats(mdm, &info->blobs, (u32)index);
+  }
+  EndTicketMutex(&mdm->bucket_mutex);
+}
+
+void IncrementBlobStatsSafely(SharedMemoryContext *context, RpcContext *rpc,
+                              const std::string &name, BucketID bucket_id,
+                              BlobID blob_id) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  u32 target_node = HashString(mdm, rpc, name.c_str());
+
+  if (target_node == rpc->node_id) {
+    LocalIncrementBlobStatsSafely(mdm, bucket_id, blob_id);
+  } else {
+    RpcCall<bool>(rpc, target_node, "RemoteIncrementBlobStatsSafely", bucket_id,
+                  blob_id);
+  }
 }
 
 void LocalAddBlobIdToBucket(MetadataManager *mdm, BucketID bucket_id,
                             BlobID blob_id) {
   BeginTicketMutex(&mdm->bucket_mutex);
   BucketInfo *info = LocalGetBucketInfoById(mdm, bucket_id);
-  AppendToChunkedIdList(mdm, &info->blobs, blob_id.as_int);
+  u32 index = AppendToChunkedIdList(mdm, &info->blobs, blob_id.as_int);
+  LocalIncrementBlobStats(mdm, &info->blobs, index);
   EndTicketMutex(&mdm->bucket_mutex);
 
   CheckHeapOverlap(mdm);
@@ -527,7 +611,6 @@ bool LocalDestroyVBucket(SharedMemoryContext *context, const char *vbucket_name,
     // Reset VBucketInfo to initial values
     info->ref_count.store(0);
     info->active = false;
-    info->stats = {};
 
     mdm->num_vbuckets--;
     info->next_free = mdm->first_free_vbucket;
