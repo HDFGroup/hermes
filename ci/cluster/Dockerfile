@@ -16,6 +16,7 @@ RUN apt-get update -y && \
   libfabric-dev \
   mpich \
   binutils \
+  libjson-c-dev \
   && apt-get clean && apt-get purge && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 RUN mkdir /var/run/sshd

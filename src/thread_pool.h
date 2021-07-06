@@ -10,19 +10,16 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_ADAPTER_THREAD_POOL_H
-#define HERMES_ADAPTER_THREAD_POOL_H
+#ifndef HERMES_THREAD_POOL_H_
+#define HERMES_THREAD_POOL_H_
 
-/**
- * Standard header
- */
 #include <condition_variable>
 #include <future>
 #include <mutex>
 #include <queue>
 #include <thread>
 
-namespace hermes::adapter {
+namespace hermes {
 class ThreadPool {
  public:
   explicit ThreadPool(
@@ -31,10 +28,18 @@ class ThreadPool {
       threads.emplace_back([this] {
         while (true) {
           std::unique_lock<std::mutex> lock(mutex);
-          condvar.wait(lock, [this] { return !queue.empty(); });
-          auto task = std::move(queue.front());
+          condvar.wait(lock, [this]() {
+            return !queue_high.empty() || !queue_low.empty();
+          });
+          bool high_priority = !queue_high.empty();
+          auto task = high_priority ? std::move(queue_high.front()) :
+            std::move(queue_low.front());
           if (task.valid()) {
-            queue.pop();
+            if (high_priority) {
+              queue_high.pop();
+            } else {
+              queue_low.pop();
+            }
             lock.unlock();
             // run the task - this cannot throw; any exception
             // will be stored in the corresponding future
@@ -50,7 +55,7 @@ class ThreadPool {
   }
 
   template <typename F, typename R = std::result_of_t<F && ()>>
-  std::future<R> run(F&& f) const {
+  std::future<R> run(F&& f, bool high_priority = false) const {
     auto task = std::packaged_task<R()>(std::forward<F>(f));
     auto future = task.get_future();
     {
@@ -58,7 +63,11 @@ class ThreadPool {
       // conversion to packaged_task<void()> erases the return type
       // so it can be stored in the queue. the future will still
       // contain the correct type
-      queue.push(std::packaged_task<void()>(std::move(task)));
+      if (high_priority) {
+        queue_high.push(std::packaged_task<void()>(std::move(task)));
+      } else {
+        queue_low.push(std::packaged_task<void()>(std::move(task)));
+      }
     }
     condvar.notify_one();
     return future;
@@ -69,7 +78,7 @@ class ThreadPool {
     // then wait for them to terminate
     {
       std::lock_guard<std::mutex> lock(mutex);
-      queue.push({});
+      queue_low.push({});
     }
     condvar.notify_all();
     for (auto& thread : threads) {
@@ -79,9 +88,10 @@ class ThreadPool {
 
  private:
   std::vector<std::thread> threads;
-  mutable std::queue<std::packaged_task<void()>> queue;
+  mutable std::queue<std::packaged_task<void()>> queue_low;
+  mutable std::queue<std::packaged_task<void()>> queue_high;
   mutable std::mutex mutex;
   mutable std::condition_variable condvar;
 };
-}  // namespace hermes::adapter
-#endif  // HERMES_ADAPTER_THREAD_POOL_H
+}  // namespace hermes
+#endif  // HERMES_THREAD_POOL_H_

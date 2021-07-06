@@ -13,14 +13,14 @@
 /**
  * Internal headers
  */
+#include <thread_pool.h>
 #include <hermes/adapter/mpiio.h>
-#include <hermes/adapter/thread_pool.h>
 
 #include <hermes/adapter/mpiio/mapper/balanced_mapper.cc>
 /**
  * Namespace declarations
  */
-using hermes::adapter::ThreadPool;
+using hermes::ThreadPool;
 using hermes::adapter::mpiio::AdapterStat;
 using hermes::adapter::mpiio::FileStruct;
 using hermes::adapter::mpiio::HermesRequest;
