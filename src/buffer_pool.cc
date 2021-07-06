@@ -100,7 +100,9 @@ void Finalize(SharedMemoryContext *context, CommunicationContext *comm,
       bool is_daemon =
         (comm->world_size == comm->num_nodes) && !force_rpc_shutdown;
       FinalizeRpcContext(rpc, is_daemon);
+      ShutdownBufferOrganizer(context);
     }
+    SubBarrier(comm);
     ReleaseSharedMemoryContext(context);
     shm_unlink(shmem_name);
     HERMES_DEBUG_SERVER_CLOSE();
@@ -1723,7 +1725,8 @@ api::Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
                                      blob.size);
       result = BLOB_IN_SWAP_PLACE;
       LOG(WARNING) << result.Msg();
-      TriggerBufferOrganizer(rpc, kPlaceInHierarchy, name, swap_blob, ctx);
+      RpcCall<void>(rpc, rpc->node_id, "BO::PlaceInHierarchy", swap_blob, name,
+                    ctx);
     }
   }
 

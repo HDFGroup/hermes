@@ -13,6 +13,7 @@
 #include <string>
 
 #include "rpc.h"
+#include "buffer_organizer.h"
 #include "metadata_management_internal.h"
 
 namespace tl = thallium;
@@ -415,16 +416,22 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
 }
 
 void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
-                          const char *addr, int num_threads, int port) {
+                          Arena *arena, const char *addr, int num_threads,
+                          int port) {
+  context->bo = PushStruct<BufferOrganizer>(arena);
+  new(context->bo) BufferOrganizer(num_threads);
+
   ThalliumState *state = GetThalliumState(rpc);
 
+  int num_bo_rpc_threads = 1;
   state->bo_engine = new tl::engine(addr, THALLIUM_SERVER_MODE, true,
-                                    num_threads);
+                                    num_bo_rpc_threads);
   tl::engine *rpc_server = state->bo_engine;
 
   std::string rpc_server_name = rpc_server->self();
   LOG(INFO) << "Buffer organizer serving at " << rpc_server_name << " with "
-            << num_threads << " RPC threads" << std::endl;
+            << num_bo_rpc_threads << " RPC threads and " << num_threads
+            << " BO worker threads" << std::endl;
 
   std::string server_name_postfix = ":" + std::to_string(port);
   CopyStringToCharArray(server_name_postfix, state->bo_server_name_postfix,
@@ -467,23 +474,18 @@ void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
     }
   };
 
+  auto rpc_enqueue_bo_task = [context](const tl::request &req, BoTask task,
+                                       BoPriority priority) {
+    bool result = LocalEnqueueBoTask(context, task, priority);
+
+    req.respond(result);
+  };
+
   rpc_server->define("PlaceInHierarchy",
                      rpc_place_in_hierarchy).disable_response();
   rpc_server->define("MoveToTarget",
                      rpc_move_to_target).disable_response();
-}
-
-void TriggerBufferOrganizer(RpcContext *rpc, const char *func_name,
-                            const std::string &blob_name, SwapBlob swap_blob,
-                            const api::Context &ctx) {
-  std::string server_name = GetServerName(rpc, rpc->node_id, true);
-  std::string protocol = GetProtocol(rpc);
-  tl::engine engine(protocol, THALLIUM_CLIENT_MODE, true);
-  tl::remote_procedure remote_proc = engine.define(func_name);
-  tl::endpoint server = engine.lookup(server_name);
-  remote_proc.disable_response();
-  // TODO(chogan): Templatize?
-  remote_proc.on(server)(swap_blob, blob_name, ctx);
+  rpc_server->define("EnqueueBoTask", rpc_enqueue_bo_task);
 }
 
 void StartGlobalSystemViewStateUpdateThread(SharedMemoryContext *context,
@@ -611,9 +613,12 @@ void RunDaemon(SharedMemoryContext *context, RpcContext *rpc,
 
   state->engine->push_prefinalize_callback(prefinalize_callback);
 
-  state->engine->wait_for_finalize();
   state->bo_engine->wait_for_finalize();
+  state->engine->wait_for_finalize();
 
+  ShutdownBufferOrganizer(context);
+  delete state->engine;
+  delete state->bo_engine;
   ReleaseSharedMemoryContext(context);
   shm_unlink(shmem_name);
   HERMES_DEBUG_SERVER_CLOSE();
@@ -628,15 +633,17 @@ void FinalizeClient(SharedMemoryContext *context, RpcContext *rpc,
 
   if (stop_daemon && comm->first_on_node) {
     ClientThalliumState *state = GetClientThalliumState(rpc);
-    std::string server_name = GetServerName(rpc, rpc->node_id);
-    tl::endpoint server = state->engine->lookup(server_name);
-    state->engine->shutdown_remote_engine(server);
 
     std::string bo_server_name = GetServerName(rpc, rpc->node_id, true);
     tl::endpoint bo_server = state->engine->lookup(bo_server_name);
     state->engine->shutdown_remote_engine(bo_server);
+
+    std::string server_name = GetServerName(rpc, rpc->node_id);
+    tl::endpoint server = state->engine->lookup(server_name);
+    state->engine->shutdown_remote_engine(server);
   }
 
+  SubBarrier(comm);
   ShutdownRpcClients(rpc);
   ReleaseSharedMemoryContext(context);
   HERMES_DEBUG_CLIENT_CLOSE();

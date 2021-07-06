@@ -231,6 +231,9 @@ struct BufferPool {
  * BufferPool *pool = GetBufferPoolFromContext(context);
  * ```
  */
+
+struct BufferOrganizer;
+
 struct SharedMemoryContext {
   /** A pointer to the beginning of shared memory. */
   u8 *shm_base;
@@ -240,6 +243,8 @@ struct SharedMemoryContext {
   ptrdiff_t metadata_manager_offset;
   /** The total size of the shared memory (needed for munmap). */
   u64 shm_size;
+  /** This will only be valid on Hermes cores, and NULL on client cores. */
+  BufferOrganizer *bo;
 
   // TODO(chogan): Move these into a FileBufferingContext
   std::vector<std::vector<std::string>> buffering_filenames;

@@ -296,10 +296,9 @@ std::shared_ptr<api::Hermes> InitHermes(Config *config, bool is_daemon,
 
     std::string bo_address = GetRpcAddress(config, host_number,
                                            config->buffer_organizer_port);
-    // TODO(chogan): @config Probably want a configuration variable for this.
-    int bo_threads = 1;
-    StartBufferOrganizer(&result->context_, &result->rpc_, bo_address.c_str(),
-                         bo_threads, config->buffer_organizer_port);
+    StartBufferOrganizer(&result->context_, &result->rpc_,
+                         &result->trans_arena_, bo_address.c_str(),
+                         config->bo_num_threads, config->buffer_organizer_port);
 
     double sleep_ms = config->system_view_state_update_interval_ms;
     StartGlobalSystemViewStateUpdateThread(&result->context_, &result->rpc_,
