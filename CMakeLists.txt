@@ -142,6 +142,7 @@ endif()
 option(BUILD_SHARED_LIBS "Build with shared libraries." ON)
 option(HERMES_INTERCEPT_IO "Use GOTCHA as IO interception tool" ON)
 option(HERMES_COMMUNICATION_MPI "Use MPI as the communication layer." ON)
+option(HERMES_ENABLE_DOXYGEN "Enable hermes documentation." OFF)
 option(HERMES_BUILD_BUFFER_POOL_VISUALIZER "Build the BufferPool visualizer" OFF)
 option(HERMES_USE_ADDRESS_SANITIZER "Enable -fsanitize=address in Debug builds" ON)
 option(HERMES_USE_THREAD_SANITIZER "Enable -fsanitize=thread in Debug builds" OFF)
@@ -341,6 +342,24 @@ if(HERMES_BUILD_BUFFER_POOL_VISUALIZER AND SDL2_FOUND)
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/buffer_pool_visualizer)
 endif()
 
+#-----------------------------------------------------------------------------
+# Documentation
+#-----------------------------------------------------------------------------
+
+if(HERMES_ENABLE_DOXYGEN)
+  include(UseDoxygenDoc)
+
+  add_doxygen_doc(
+    BUILD_DIR
+      ${CMAKE_CURRENT_BINARY_DIR}/_build
+    DOXY_FILE
+      ${CMAKE_CURRENT_SOURCE_DIR}/doc/Doxyfile.in
+    TARGET_NAME
+      dox
+    COMMENT
+      "HTML documentation"
+    )
+endif()
 
 #-----------------------------------------------------------------------------
 # Testing
