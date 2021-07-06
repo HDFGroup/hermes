@@ -115,12 +115,12 @@ int main(int argc, char **argv) {
     hermes->AppBarrier();
 
     // Each rank puts a whole blob to its own bucket
-    hapi::Bucket own_bucket(std::string("test_bucket_") +
-                            std::to_string(app_rank), hermes);
-    TestPutGetBucket(own_bucket, app_rank, 0);
-    own_bucket.Destroy();
+    // hapi::Bucket own_bucket(std::string("test_bucket_") +
+    //                         std::to_string(app_rank), hermes);
+    // TestPutGetBucket(own_bucket, app_rank, 0);
+    // own_bucket.Destroy();
 
-    TestBulkTransfer(hermes, app_rank);
+    // TestBulkTransfer(hermes, app_rank);
   } else {
     // Hermes core. No user code here.
   }

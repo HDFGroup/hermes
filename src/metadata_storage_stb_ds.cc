@@ -292,7 +292,7 @@ u32 AppendToChunkedIdList(MetadataManager *mdm, ChunkedIdList *id_list,
 u64 GetChunkedIdListElement(MetadataManager *mdm, ChunkedIdList *id_list,
                             u32 index) {
   u64 result = 0;
-  if (index < id_list->length) {
+  if (id_list->length && index < id_list->length) {
     u64 *head = GetIdsPtr(mdm, *id_list);
     result = head[index];
     ReleaseIdsPtr(mdm);
@@ -303,13 +303,15 @@ u64 GetChunkedIdListElement(MetadataManager *mdm, ChunkedIdList *id_list,
 
 void SetChunkedIdListElement(MetadataManager *mdm, ChunkedIdList *id_list,
                              u32 index, u64 value) {
-  while (index >= id_list->capacity) {
-    AllocateOrGrowIdList(mdm, id_list);
+  if (id_list->length && index >= id_list->length) {
+    LOG(WARNING) << "Attempting to set index " << index
+                 << " on a ChunkedIdList of length " << id_list->length
+                 << std::endl;
+  } else {
+    u64 *head = GetIdsPtr(mdm, *id_list);
+    head[index] = value;
+    ReleaseIdsPtr(mdm);
   }
-
-  u64 *head = GetIdsPtr(mdm, *id_list);
-  head[index] = value;
-  ReleaseIdsPtr(mdm);
 }
 
 void LocalIncrementBlobStats(MetadataManager *mdm, ChunkedIdList *stats,
@@ -332,6 +334,7 @@ i64 GetIndexOfId(MetadataManager *mdm, ChunkedIdList *id_list, u64 id) {
       break;
     }
   }
+  ReleaseIdsPtr(mdm);
 
   return result;
 }
@@ -372,7 +375,8 @@ void LocalAddBlobIdToBucket(MetadataManager *mdm, BucketID bucket_id,
   BeginTicketMutex(&mdm->bucket_mutex);
   BucketInfo *info = LocalGetBucketInfoById(mdm, bucket_id);
   u32 index = AppendToChunkedIdList(mdm, &info->blobs, blob_id.as_int);
-  LocalIncrementBlobStats(mdm, &info->blobs, index);
+  AppendToChunkedIdList(mdm, &info->stats, 0);
+  LocalIncrementBlobStats(mdm, &info->stats, index);
   EndTicketMutex(&mdm->bucket_mutex);
 
   CheckHeapOverlap(mdm);
