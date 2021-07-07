@@ -882,4 +882,39 @@ void LocalRemoveBlobFromVBucketInfo(SharedMemoryContext *context,
   EndTicketMutex(&mdm->vbucket_mutex);
 }
 
+f32 LocalGetBlobScore(SharedMemoryContext *context, BucketID bucket_id,
+                      BlobID blob_id) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  BeginTicketMutex(&mdm->bucket_mutex);
+  BucketInfo *info = LocalGetBucketInfoById(mdm, bucket_id);
+  i64 index = GetIndexOfId(mdm, &info->stats, blob_id.as_int);
+
+  Stats stats = {};
+  if (index < 0) {
+    LOG(WARNING) << "BlobID " << blob_id.as_int << " not found in Stats array "
+                 << " of BucketID " << bucket_id.as_int << std::endl;
+  } else {
+    stats.as_int = GetChunkedIdListElement(mdm, &info->stats, (u32)index);
+  }
+  EndTicketMutex(&mdm->bucket_mutex);
+
+  f32 result = ScoringFunction(mdm, &stats);
+
+  return result;
+}
+
+f32 GetBlobScore(SharedMemoryContext *context, RpcContext *rpc,
+                 BucketID bucket_id, BlobID blob_id) {
+  f32 result = 0;
+  u32 target_node = GetBlobNodeId(blob_id);
+  if (target_node == rpc->node_id) {
+    result = LocalGetBlobScore(context, bucket_id, blob_id);
+  } else {
+    result = RpcCall<f32>(rpc, target_node, "RemoteGetBlobScore", bucket_id,
+                          blob_id);
+  }
+
+  return result;
+}
+
 }  // namespace hermes

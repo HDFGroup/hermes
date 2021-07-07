@@ -368,6 +368,13 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
       req.respond(true);
   };
 
+  auto rpc_get_blob_score =
+    [context](const request &req, BucketID bucket_id, BlobID blob_id) {
+      f32 result = LocalGetBlobScore(context, bucket_id, blob_id);
+
+      req.respond(result);
+  };
+
   // TODO(chogan): Currently these three are only used for testing.
   rpc_server->define("GetBuffers", rpc_get_buffers);
   rpc_server->define("SplitBuffers", rpc_split_buffers).disable_response();
@@ -423,6 +430,7 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
                      rpc_get_bucket_name_by_id);
   rpc_server->define("RemoteIncrementBlobStatsSafely",
                      rpc_increment_blob_stats_safely);
+  rpc_server->define("RemoteGetBlobScore", rpc_get_blob_score);
 }
 
 void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,

@@ -203,7 +203,8 @@ BufferIdArray GetBufferIdsFromBlobId(Arena *arena,
  *
  */
 BlobID GetBlobId(SharedMemoryContext *context, RpcContext *rpc,
-                       const std::string &name, BucketID bucket_id);
+                 const std::string &name, BucketID bucket_id,
+                 bool track_stats = true);
 
 
 
