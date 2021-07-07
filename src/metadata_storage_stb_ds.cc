@@ -351,7 +351,7 @@ void LocalIncrementBlobStatsSafely(MetadataManager *mdm, BucketID bucket_id,
     LOG(WARNING) << "BlobID " << blob_id.as_int << " not found in Bucket "
                  << bucket_id.as_int << std::endl;
   } else {
-    LocalIncrementBlobStats(mdm, &info->blobs, (u32)index);
+    LocalIncrementBlobStats(mdm, &info->stats, (u32)index);
   }
   EndTicketMutex(&mdm->bucket_mutex);
 }
@@ -488,14 +488,22 @@ void LocalRemoveBlobFromBucketInfo(SharedMemoryContext *context,
   BucketInfo *info = LocalGetBucketInfoById(mdm, bucket_id);
   ChunkedIdList *blobs = &info->blobs;
 
+  u32 index = 0;
   BlobID *blobs_arr = (BlobID *)GetIdsPtr(mdm, *blobs);
   for (u32 i = 0; i < blobs->length; ++i) {
     if (blobs_arr[i].as_int == blob_id.as_int) {
       blobs_arr[i] = blobs_arr[--blobs->length];
+      index = i;
       break;
     }
   }
   ReleaseIdsPtr(mdm);
+
+  // Make the same change to the Stats array to maintain the correct order
+  u64 *stats = GetIdsPtr(mdm, info->stats);
+  stats[index] = stats[--info->stats.length];
+  ReleaseIdsPtr(mdm);
+
   EndTicketMutex(&mdm->bucket_mutex);
 }
 
