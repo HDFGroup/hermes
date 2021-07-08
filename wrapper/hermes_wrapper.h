@@ -24,9 +24,18 @@ extern "C" {
 struct BucketClass;
 typedef struct BucketClass BucketClass;
 
+struct VBucketClass;
+typedef struct VBucketClass VBucketClass;
+
 int HermesInitHermes(char *hermes_config);
 
 void HermesFinalize();
+
+VBucketClass *HermesVBucketCreate(const char *name);
+
+void HermesVBucketLink(VBucketClass *vbkt, char *blob_name);
+
+bool HermesVBucketIsValid(VBucketClass *vbkt);
 
 BucketClass *HermesBucketCreate(const char *name);
 
