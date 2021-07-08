@@ -1287,11 +1287,19 @@ std::string GetBucketNameById(SharedMemoryContext *context, RpcContext *rpc,
   }
 }
 
+/**
+ * Returns the score calculated from @p stats.
+ *
+ * A high score indicates a "cold" Blob, or one that has not been accessed very
+ * recently or frequently.
+ *
+ */
 f32 ScoringFunction(MetadataManager *mdm, Stats *stats) {
   f32 recency_weight = 0.5;
   f32 frequency_weight = 0.5;
+  // NOTE(chogan): A high relative_recency corresponds to a "cold" Blob.
   f32 relative_recency = mdm->clock - stats->bits.recency;
-  f32 result = (relative_recency * recency_weight +
+  f32 result = (relative_recency * recency_weight -
                 stats->bits.frequency * frequency_weight);
 
   return result;
