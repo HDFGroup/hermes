@@ -272,23 +272,111 @@ void AllocateOrGrowIdList(MetadataManager *mdm, ChunkedIdList *id_list) {
 
 /**
  * Assumes the caller has protected @p id_list with a lock.
+ *
+ * @return The index of the appended @p id.
  */
-void AppendToChunkedIdList(MetadataManager *mdm, ChunkedIdList *id_list,
-                           u64 id) {
+u32 AppendToChunkedIdList(MetadataManager *mdm, ChunkedIdList *id_list,
+                          u64 id) {
   if (id_list->length >= id_list->capacity) {
     AllocateOrGrowIdList(mdm, id_list);
   }
 
   u64 *head = GetIdsPtr(mdm, *id_list);
+  u32 result = id_list->length;
   head[id_list->length++] = id;
   ReleaseIdsPtr(mdm);
+
+  return result;
+}
+
+u64 GetChunkedIdListElement(MetadataManager *mdm, ChunkedIdList *id_list,
+                            u32 index) {
+  u64 result = 0;
+  if (id_list->length && index < id_list->length) {
+    u64 *head = GetIdsPtr(mdm, *id_list);
+    result = head[index];
+    ReleaseIdsPtr(mdm);
+  }
+
+  return result;
+}
+
+void SetChunkedIdListElement(MetadataManager *mdm, ChunkedIdList *id_list,
+                             u32 index, u64 value) {
+  if (id_list->length && index >= id_list->length) {
+    LOG(WARNING) << "Attempting to set index " << index
+                 << " on a ChunkedIdList of length " << id_list->length
+                 << std::endl;
+  } else {
+    u64 *head = GetIdsPtr(mdm, *id_list);
+    head[index] = value;
+    ReleaseIdsPtr(mdm);
+  }
+}
+
+void LocalIncrementBlobStats(MetadataManager *mdm, ChunkedIdList *stats,
+                             u32 index) {
+  Stats stat = {};
+  stat.as_int = GetChunkedIdListElement(mdm, stats, index);
+  stat.bits.frequency++;
+  stat.bits.recency = mdm->clock++;
+
+  SetChunkedIdListElement(mdm, stats, index, stat.as_int);
+}
+
+i64 GetIndexOfId(MetadataManager *mdm, ChunkedIdList *id_list, u64 id) {
+  i64 result = -1;
+
+  u64 *head = GetIdsPtr(mdm, *id_list);
+  for (i64 i = 0; i < id_list->length; ++i) {
+    if (head[i] == id) {
+      result = i;
+      break;
+    }
+  }
+  ReleaseIdsPtr(mdm);
+
+  return result;
+}
+
+/** Protects the @p bucket_id's 'blobs' ChunkedIdList before incrementing its
+ *  Stats.
+ */
+void LocalIncrementBlobStatsSafely(MetadataManager *mdm, BucketID bucket_id,
+                                   BlobID blob_id) {
+  BeginTicketMutex(&mdm->bucket_mutex);
+  BucketInfo *info = LocalGetBucketInfoById(mdm, bucket_id);
+  i64 index = GetIndexOfId(mdm, &info->blobs, blob_id.as_int);
+  if (index < 0) {
+    LOG(WARNING) << "BlobID " << blob_id.as_int << " not found in Bucket "
+                 << bucket_id.as_int << std::endl;
+  } else {
+    LocalIncrementBlobStats(mdm, &info->stats, (u32)index);
+  }
+  EndTicketMutex(&mdm->bucket_mutex);
+}
+
+void IncrementBlobStatsSafely(SharedMemoryContext *context, RpcContext *rpc,
+                              const std::string &name, BucketID bucket_id,
+                              BlobID blob_id) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  u32 target_node = HashString(mdm, rpc, name.c_str());
+
+  if (target_node == rpc->node_id) {
+    LocalIncrementBlobStatsSafely(mdm, bucket_id, blob_id);
+  } else {
+    RpcCall<bool>(rpc, target_node, "RemoteIncrementBlobStatsSafely", bucket_id,
+                  blob_id);
+  }
 }
 
 void LocalAddBlobIdToBucket(MetadataManager *mdm, BucketID bucket_id,
                             BlobID blob_id) {
   BeginTicketMutex(&mdm->bucket_mutex);
   BucketInfo *info = LocalGetBucketInfoById(mdm, bucket_id);
-  AppendToChunkedIdList(mdm, &info->blobs, blob_id.as_int);
+  u32 index = AppendToChunkedIdList(mdm, &info->blobs, blob_id.as_int);
+  AppendToChunkedIdList(mdm, &info->stats, 0);
+  LocalIncrementBlobStats(mdm, &info->stats, index);
   EndTicketMutex(&mdm->bucket_mutex);
 
   CheckHeapOverlap(mdm);
@@ -400,14 +488,22 @@ void LocalRemoveBlobFromBucketInfo(SharedMemoryContext *context,
   BucketInfo *info = LocalGetBucketInfoById(mdm, bucket_id);
   ChunkedIdList *blobs = &info->blobs;
 
+  u32 index = 0;
   BlobID *blobs_arr = (BlobID *)GetIdsPtr(mdm, *blobs);
   for (u32 i = 0; i < blobs->length; ++i) {
     if (blobs_arr[i].as_int == blob_id.as_int) {
       blobs_arr[i] = blobs_arr[--blobs->length];
+      index = i;
       break;
     }
   }
   ReleaseIdsPtr(mdm);
+
+  // Make the same change to the Stats array to maintain the correct order
+  u64 *stats = GetIdsPtr(mdm, info->stats);
+  stats[index] = stats[--info->stats.length];
+  ReleaseIdsPtr(mdm);
+
   EndTicketMutex(&mdm->bucket_mutex);
 }
 
@@ -527,7 +623,6 @@ bool LocalDestroyVBucket(SharedMemoryContext *context, const char *vbucket_name,
     // Reset VBucketInfo to initial values
     info->ref_count.store(0);
     info->active = false;
-    info->stats = {};
 
     mdm->num_vbuckets--;
     info->next_free = mdm->first_free_vbucket;
@@ -785,6 +880,41 @@ void LocalRemoveBlobFromVBucketInfo(SharedMemoryContext *context,
   }
   ReleaseIdsPtr(mdm);
   EndTicketMutex(&mdm->vbucket_mutex);
+}
+
+f32 LocalGetBlobScore(SharedMemoryContext *context, BucketID bucket_id,
+                      BlobID blob_id) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  BeginTicketMutex(&mdm->bucket_mutex);
+  BucketInfo *info = LocalGetBucketInfoById(mdm, bucket_id);
+  i64 index = GetIndexOfId(mdm, &info->stats, blob_id.as_int);
+
+  Stats stats = {};
+  if (index < 0) {
+    LOG(WARNING) << "BlobID " << blob_id.as_int << " not found in Stats array "
+                 << " of BucketID " << bucket_id.as_int << std::endl;
+  } else {
+    stats.as_int = GetChunkedIdListElement(mdm, &info->stats, (u32)index);
+  }
+  EndTicketMutex(&mdm->bucket_mutex);
+
+  f32 result = ScoringFunction(mdm, &stats);
+
+  return result;
+}
+
+f32 GetBlobScore(SharedMemoryContext *context, RpcContext *rpc,
+                 BucketID bucket_id, BlobID blob_id) {
+  f32 result = 0;
+  u32 target_node = GetBlobNodeId(blob_id);
+  if (target_node == rpc->node_id) {
+    result = LocalGetBlobScore(context, bucket_id, blob_id);
+  } else {
+    result = RpcCall<f32>(rpc, target_node, "RemoteGetBlobScore", bucket_id,
+                          blob_id);
+  }
+
+  return result;
 }
 
 }  // namespace hermes

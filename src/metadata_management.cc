@@ -186,10 +186,14 @@ std::string MakeInternalBlobName(const std::string &name, BucketID id) {
 }
 
 BlobID GetBlobId(SharedMemoryContext *context, RpcContext *rpc,
-                 const std::string &name, BucketID bucket_id) {
+                 const std::string &name, BucketID bucket_id,
+                 bool track_stats) {
   std::string internal_name = MakeInternalBlobName(name, bucket_id);
   BlobID result = {};
   result.as_int = GetId(context, rpc, internal_name.c_str(), kMapType_Blob);
+  if (track_stats) {
+    IncrementBlobStatsSafely(context, rpc, internal_name, bucket_id, result);
+  }
 
   return result;
 }
@@ -457,7 +461,6 @@ VBucketID LocalGetNextFreeVBucketId(SharedMemoryContext *context,
     if (!IsNullVBucketId(result)) {
       VBucketInfo *info = GetVBucketInfoByIndex(mdm, result.bits.index);
       info->blobs = {};
-      info->stats = {};
       memset(info->traits, 0, sizeof(TraitID) * kMaxTraitsPerVBucket);
       info->ref_count.store(1);
       info->active = true;
@@ -1283,4 +1286,23 @@ std::string GetBucketNameById(SharedMemoryContext *context, RpcContext *rpc,
                                 id);
   }
 }
+
+/**
+ * Returns the score calculated from @p stats.
+ *
+ * A high score indicates a "cold" Blob, or one that has not been accessed very
+ * recently or frequently.
+ *
+ */
+f32 ScoringFunction(MetadataManager *mdm, Stats *stats) {
+  f32 recency_weight = 0.5;
+  f32 frequency_weight = 0.5;
+  // NOTE(chogan): A high relative_recency corresponds to a "cold" Blob.
+  f32 relative_recency = mdm->clock - stats->bits.recency;
+  f32 result = (relative_recency * recency_weight -
+                stats->bits.frequency * frequency_weight);
+
+  return result;
+}
+
 }  // namespace hermes

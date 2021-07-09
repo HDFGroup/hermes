@@ -327,6 +327,8 @@ std::shared_ptr<api::Hermes> InitHermes(Config *config, bool is_daemon,
 
   result->is_initialized = true;
 
+  WorldBarrier(&comm);
+
   return result;
 }
 
