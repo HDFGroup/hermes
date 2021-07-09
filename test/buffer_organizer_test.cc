@@ -60,6 +60,31 @@ void TestBoTasks() {
   hermes->Finalize(true);
 }
 
+void TestTrickleDown() {
+  HermesPtr hermes = hermes::InitHermesDaemon();
+  const int io_size = KILOBYTES(4);
+  const int iters = 32;
+  hapi::Bucket bkt("trickle_down", hermes);
+
+  for (int i = 0; i < iters; ++i) {
+    hapi::Blob blob(io_size, rand() % 255);
+    std::string blob_name = std::to_string(i);
+    std::string final_destination = "./test_trickle_down.out";
+    hapi::FlushInfo flush(final_destination, i * io_size);
+    hapi::Context ctx;;
+    ctx.flush = flush;
+
+    bkt.Put(blob_name, blob, ctx);
+    std::this_thread::sleep_for(std::chrono::seconds(3));
+  }
+
+  hermes->Finalize(true);
+
+  // TODO(chogan): Assert file is on disk with correct data
+
+  // delete final_destination
+}
+
 int main(int argc, char *argv[]) {
   int mpi_threads_provided;
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
@@ -70,6 +95,7 @@ int main(int argc, char *argv[]) {
 
   TestIsBoFunction();
   TestBoTasks();
+  TestTrickleDown();
 
   MPI_Finalize();
   return 0;

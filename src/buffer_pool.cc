@@ -1716,6 +1716,12 @@ api::Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
     // NOTE(chogan): Update all metadata associated with this Put
     AttachBlobToBucket(context, rpc, name.c_str(), bucket_id, buffer_ids,
                        false, called_from_buffer_organizer);
+
+    if (ctx.ShouldFlush()) {
+      BlobID blob_id = GetBlobId(context, rpc, name, bucket_id);
+      EnqueueFlushingTask(context, rpc, blob_id, ctx.flush);
+    }
+
   } else {
     if (called_from_buffer_organizer) {
       result = PLACE_SWAP_BLOB_TO_BUF_FAILED;
@@ -1792,9 +1798,6 @@ api::Status StdIoPersistBlob(SharedMemoryContext *context, RpcContext *rpc,
     api::Blob data(blob_size);
     size_t num_bytes = blob_size > 0 ? sizeof(data[0]) * blob_size : 0;
     if (ReadBlobById(context, rpc, arena, data, blob_id) == blob_size) {
-      // TODO(chogan): For now we just write the blobs in the order in which
-      // they were `Put`, but once we have a Trait that represents a file
-      // mapping, we'll need pwrite and offsets.
       if (offset == -1 || fseek(file, offset, SEEK_SET) == 0) {
         LOG(INFO) << "STDIO Flush to file: " << " offset: " << offset
                   << " of size:" << num_bytes << "." << std::endl;

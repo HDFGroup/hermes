@@ -50,15 +50,34 @@ enum class PlacementPolicy {
   kMinimizeIoTime,
 };
 
+struct FlushInfo {
+  std::string fname;
+  u64 offset;
+
+  FlushInfo() {
+  }
+
+  FlushInfo(const std::string &fname, u64 offset)
+    : fname(fname), offset(offset) {
+  }
+};
+
 struct Context {
   static int default_buffer_organizer_retries;
   static PlacementPolicy default_placement_policy;
 
   PlacementPolicy policy;
   int buffer_organizer_retries;
+  FlushInfo flush;
 
   Context() : policy(default_placement_policy),
               buffer_organizer_retries(default_buffer_organizer_retries) {}
+
+  bool ShouldFlush() const {
+    bool result = flush.fname.size() != 0;
+
+    return result;
+  }
 };
 
 }  // namespace api

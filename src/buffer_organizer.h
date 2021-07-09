@@ -14,6 +14,7 @@
 #define HERMES_BUFFER_ORGANIZER_H_
 
 #include "thread_pool.h"
+#include "hermes_types.h"
 
 namespace hermes {
 
@@ -59,6 +60,9 @@ struct BufferOrganizer {
 
 bool LocalEnqueueBoTask(SharedMemoryContext *context, BoTask task,
                         BoPriority priority = BoPriority::kLow);
+
+bool EnqueueFlushingTask(SharedMemoryContext *context, BlobID blob_id,
+                         const api::FlushInfo &flush_info);
 
 void BoMove(SharedMemoryContext *context, BufferID src, TargetID dest);
 void BoCopy(SharedMemoryContext *context, BufferID src, TargetID dest);
