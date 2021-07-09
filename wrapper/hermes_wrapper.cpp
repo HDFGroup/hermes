@@ -14,6 +14,7 @@
 
 #include "hermes.h"
 #include "bucket.h"
+#include "vbucket.h"
 
 extern "C" {
 
@@ -31,6 +32,46 @@ int HermesInitHermes(char *hermes_config) {
 
 void HermesFinalize() {
   hermes_ptr->Finalize(true);
+}
+
+VBucketClass *HermesVBucketCreate(const char *name) {
+  LOG(INFO) << "Hermes Wrapper: Creating VBucket " << name << '\n';
+  hermes::api::Context ctx;
+  try {
+    hermes::api::VBucket *new_vbucket =
+      new hermes::api::VBucket(std::string(name), hermes_ptr, true, ctx);
+
+    return (VBucketClass *)new_vbucket;
+  }
+  catch (const std::runtime_error& e) {
+    LOG(ERROR) << "Blob runtime error\n";
+    return NULL;
+  }
+  catch (const std::length_error& e) {
+    LOG(ERROR) << "Blob length error\n";
+    return NULL;
+  }
+}
+
+void HermesVBucketLink(VBucketClass *vbkt, char *blob_name) {
+  hermes::api::VBucket *vbucket = (hermes::api::VBucket *)vbkt;
+
+  LOG(INFO) << "Hermes Wrapper: Linking Blob " << blob_name << "to VBucket "
+            << vbucket->GetName() << '\n';
+
+  hermes::api::Status status =
+    vbucket->Link(std::string(blob_name), vbucket->GetName());
+
+  if (status.Failed())
+    LOG(ERROR) << "Hermes Wrapper: HermesVBucketLink failed\n";
+}
+
+bool HermesVBucketIsValid(VBucketClass *vbkt) {
+  hermes::api::VBucket *vbucket = (hermes::api::VBucket *)vbkt;
+
+  LOG(INFO) << "Hermes Wrapper: Checking if VBucket is valid\n";
+
+  return vbucket->IsValid();
 }
 
 BucketClass *HermesBucketCreate(const char *name) {
