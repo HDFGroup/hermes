@@ -374,7 +374,8 @@ Status VBucket::Destroy(Context& ctx) {
   }
   attached_traits_.clear();
   DestroyVBucket(&hermes_->context_, &hermes_->rpc_, this->name_.c_str(), id_);
-  return Status();
+
+  return ret;
 }
 
 }  // namespace api
