@@ -63,7 +63,8 @@ void TestBoTasks() {
 void TestTrickleDown() {
   HermesPtr hermes = hermes::InitHermesDaemon();
   const int io_size = KILOBYTES(4);
-  const int iters = 32;
+  const int iters = 16;
+  const int sleep_seconds = 1;
   hapi::Bucket bkt("trickle_down", hermes);
 
   for (int i = 0; i < iters; ++i) {
@@ -75,7 +76,7 @@ void TestTrickleDown() {
     ctx.flush = flush;
 
     bkt.Put(blob_name, blob, ctx);
-    std::this_thread::sleep_for(std::chrono::seconds(3));
+    std::this_thread::sleep_for(std::chrono::seconds(sleep_seconds));
   }
 
   hermes->Finalize(true);

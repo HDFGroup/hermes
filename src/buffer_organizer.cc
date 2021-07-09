@@ -74,9 +74,12 @@ bool LocalEnqueueBoTask(SharedMemoryContext *context, BoTask task,
 void FlushBlob(SharedMemoryContext *context, RpcContext *rpc, Arena *arena,
                BlobID blob_id, api::FlushInfo flush_info) {
   // TODO(chogan): @errorhandling
+  (void)arena;
   FILE *fh = fopen(flush_info.fname.c_str(), "w");
-  StdIoPersistBlob(context, rpc, arena, blob_id, fh, flush_info.offset);
+  Arena local_arena = InitArenaAndAllocate(KILOBYTES(8));
+  StdIoPersistBlob(context, rpc, &local_arena, blob_id, fh, flush_info.offset);
   fclose(fh);
+  DestroyArena(&local_arena);
 }
 
 bool EnqueueFlushingTask(SharedMemoryContext *context, RpcContext *rpc,

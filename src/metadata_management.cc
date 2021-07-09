@@ -191,7 +191,7 @@ BlobID GetBlobId(SharedMemoryContext *context, RpcContext *rpc,
   std::string internal_name = MakeInternalBlobName(name, bucket_id);
   BlobID result = {};
   result.as_int = GetId(context, rpc, internal_name.c_str(), kMapType_Blob);
-  if (track_stats) {
+  if (!IsNullBlobId(result) && track_stats) {
     IncrementBlobStatsSafely(context, rpc, internal_name, bucket_id, result);
   }
 
