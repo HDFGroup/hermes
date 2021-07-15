@@ -47,7 +47,7 @@ Status VBucket::Link(std::string blob_name, std::string bucket_name,
     input.blob_name = blob_name;
     for (const auto& t : attached_traits_) {
       if (t->onLinkFn != nullptr) {
-        t->onLinkFn(input, t);
+        t->onLinkFn(hermes_, input, t);
         // TODO(hari): @errorhandling Check if linking was successful
       }
     }
@@ -88,7 +88,7 @@ Status VBucket::Unlink(std::string blob_name, std::string bucket_name,
       input.blob_name = blob_name;
       for (const auto& t : attached_traits_) {
         if (t->onUnlinkFn != nullptr) {
-          t->onUnlinkFn(input, t);
+          t->onUnlinkFn(hermes_, input, t);
           // TODO(hari): @errorhandling Check if unlinking was successful
         }
       }
@@ -184,7 +184,7 @@ Status VBucket::Attach(Trait* trait, Context& ctx) {
       input.blob_name =
           GetBlobNameFromId(&hermes_->context_, &hermes_->rpc_, blob_id);
       if (t->onAttachFn != nullptr) {
-        t->onAttachFn(input, trait);
+        t->onAttachFn(hermes_, input, trait);
         // TODO(hari): @errorhandling Check if attach was successful
       }
     }
@@ -235,7 +235,7 @@ Status VBucket::Detach(Trait* trait, Context& ctx) {
       input.blob_name =
           GetBlobNameFromId(&hermes_->context_, &hermes_->rpc_, blob_id);
       if (t->onDetachFn != nullptr) {
-        t->onDetachFn(input, trait);
+        t->onDetachFn(hermes_, input, trait);
         // TODO(hari): @errorhandling Check if detach was successful
       }
     }
@@ -326,7 +326,7 @@ Status VBucket::Destroy(Context& ctx) {
             FileMappingTrait* fileBackedTrait = (FileMappingTrait*)t;
             // if callback defined by user
             if (fileBackedTrait->flush_cb) {
-              fileBackedTrait->flush_cb(input, fileBackedTrait);
+              fileBackedTrait->flush_cb(hermes_, input, fileBackedTrait);
             } else {
               if (!fileBackedTrait->offset_map.empty()) {
                 auto iter = fileBackedTrait->offset_map.find(input.blob_name);
@@ -349,11 +349,11 @@ Status VBucket::Destroy(Context& ctx) {
           }
         }
         if (t->onDetachFn != nullptr) {
-          t->onDetachFn(input, t);
+          t->onDetachFn(hermes_, input, t);
           // TODO(hari): @errorhandling Check if detach was successful
         }
         if (t->onUnlinkFn != nullptr) {
-          t->onUnlinkFn(input, t);
+          t->onUnlinkFn(hermes_, input, t);
           // TODO(hari): @errorhandling Check if unlinking was successful
         }
       }
@@ -373,7 +373,8 @@ Status VBucket::Destroy(Context& ctx) {
   }
   attached_traits_.clear();
   DestroyVBucket(&hermes_->context_, &hermes_->rpc_, this->name_.c_str(), id_);
-  return Status();
+
+  return ret;
 }
 
 }  // namespace api

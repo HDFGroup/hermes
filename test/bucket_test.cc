@@ -25,12 +25,14 @@
 namespace hapi = hermes::api;
 std::shared_ptr<hermes::api::Hermes> hermes_app;
 
-int compress_blob(hermes::api::TraitInput &input, hermes::api::Trait *trait);
+int compress_blob(std::shared_ptr<hapi::Hermes> hermes,
+                  hermes::api::TraitInput &input, hermes::api::Trait *trait);
 struct MyTrait : public hapi::Trait {
   int compress_level;
   MyTrait() : Trait(10001, hermes::TraitIdArray(), hermes::TraitType::META) {
     onAttachFn =
-        std::bind(&compress_blob, std::placeholders::_1, std::placeholders::_2);
+      std::bind(&compress_blob, std::placeholders::_1, std::placeholders::_2,
+                std::placeholders::_3);
   }
 
   // optional function pointer if only known at runtime
@@ -47,7 +49,9 @@ void add_buffer_to_vector(hermes::api::Blob &vector, const char *buffer,
 
 // The Trait implementer must define callbacks that match the VBucket::TraitFunc
 // type.
-int compress_blob(hermes::api::TraitInput &input, hermes::api::Trait *trait) {
+int compress_blob(std::shared_ptr<hapi::Hermes> hermes,
+                  hermes::api::TraitInput &input, hermes::api::Trait *trait) {
+  (void)hermes;
   MyTrait *my_trait = (MyTrait *)trait;
 
   hapi::Bucket bkt(input.bucket_name, hermes_app);

@@ -35,31 +35,81 @@ FileMappingTrait::FileMappingTrait(
       offset_map(offset_map),
       fh(fh) {
   this->onAttachFn = std::bind(&FileMappingTrait::onAttach, this,
-                               std::placeholders::_1, std::placeholders::_2);
+                               std::placeholders::_1, std::placeholders::_2,
+                               std::placeholders::_3);
   this->onDetachFn = std::bind(&FileMappingTrait::onDetach, this,
-                               std::placeholders::_1, std::placeholders::_2);
+                               std::placeholders::_1, std::placeholders::_2,
+                               std::placeholders::_3);
   this->onLinkFn = std::bind(&FileMappingTrait::onLink, this,
-                             std::placeholders::_1, std::placeholders::_2);
+                             std::placeholders::_1, std::placeholders::_2,
+                             std::placeholders::_3);
   this->onUnlinkFn = std::bind(&FileMappingTrait::onUnlink, this,
-                               std::placeholders::_1, std::placeholders::_2);
+                               std::placeholders::_1, std::placeholders::_2,
+                               std::placeholders::_3);
 }
-void FileMappingTrait::onAttach(TraitInput &input, Trait *trait) {
+
+void FileMappingTrait::onAttach(HermesPtr hermes, TraitInput &input, Trait *trait) {
   if (load_cb) {
-    load_cb(input, trait);
+    load_cb(hermes, input, trait);
     // TODO(hari): @errorhandling Check if load was successful
   }
 }
-void FileMappingTrait::onDetach(TraitInput &input, Trait *trait) {
+
+void FileMappingTrait::onDetach(HermesPtr hermes, TraitInput &input, Trait *trait) {
   if (flush_cb) {
-    flush_cb(input, trait);
+    flush_cb(hermes, input, trait);
     // TODO(hari): @errorhandling Check if flush was successful
   }
 }
-void FileMappingTrait::onLink(TraitInput &input, Trait *trait) {
-  onAttach(input, trait);
+
+void FileMappingTrait::onLink(HermesPtr hermes, TraitInput &input, Trait *trait) {
+  onAttach(hermes, input, trait);
 }
-void FileMappingTrait::onUnlink(TraitInput &input, Trait *trait) {
-  onDetach(input, trait);
+
+void FileMappingTrait::onUnlink(HermesPtr hermes, TraitInput &input, Trait *trait) {
+  onDetach(hermes, input, trait);
 }
+
+PersistTrait::PersistTrait(const FileMappingTrait& mapping, bool synchronous)
+  : Trait(HERMES_PERSIST_TRAIT, TraitIdArray(), TraitType::PERSIST),
+    file_mapping(mapping), synchronous(synchronous) {
+}
+
+void PersistTrait::onAttach(HermesPtr hermes, TraitInput &input, Trait *trait) {
+  (void)hermes;
+  (void)input;
+  (void)trait;
+
+  SharedMemoryContext *context = &hermes->context_;
+  RpcContext *rpc = &hermes->rpc_;
+  BucketID bucket_id = GetBucketId(context, rpc, input.bucket_name.c_str());
+  BlobID blob_id = GetBlobId(context, rpc, input.blob_name, bucket_id, true);
+
+  if (synchronous) {
+    // FlushBlob(context, rpc, blob_id, flush_info) {
+  } else {
+    // EnqueueFlushingTask(context, rpc, blob_id, flush_info);
+  }
+}
+
+void PersistTrait::onDetach(HermesPtr hermes, TraitInput &input, Trait *trait) {
+  (void)hermes;
+  (void)input;
+  (void)trait;
+}
+
+void PersistTrait::onLink(HermesPtr hermes, TraitInput &input, Trait *trait) {
+  (void)hermes;
+  (void)input;
+  (void)trait;
+  // EnqueueFlushingTask(&hermes->context_, &hermes->rpc_, blob_id, flush_info);
+}
+
+void PersistTrait::onUnlink(HermesPtr hermes, TraitInput &input, Trait *trait) {
+  (void)hermes;
+  (void)input;
+  (void)trait;
+}
+
 }  // namespace api
 }  // namespace hermes
