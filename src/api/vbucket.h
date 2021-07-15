@@ -71,11 +71,30 @@ class VBucket {
   /** get the name of vbucket */
   std::string GetName() const { return this->name_; }
 
-  /** link a blob to this vbucket */
+  /**
+   * Link a Blob to this VBucket.
+   *
+   * Adds Blob @p blob_name in Bucket @p bucket_name to this VBucket's list of
+   * Blobs. Additional calls the Trait::OnLinkFn function on the Blob for each
+   * attached Trait.
+   *
+   * @param blob_name The name of the Blob to link.
+   * @param bucket_name The name of the Bucket containing the Blob to link.
+   * @param ctx Currently unused.
+   *
+   * @return A Status.
+   */
   Status Link(std::string blob_name, std::string bucket_name, Context &ctx);
   Status Link(std::string blob_name, std::string bucket_name);
 
-  /** unlink a blob from this vbucket */
+  /**
+   * Unlink a Blob from this VBucket.
+   *
+   * @param blob_name The name of the Blob to unlink.
+   * @param bucket_name The name of the Bucket containing the Blob to unlink.
+   *
+   * @return A Status.
+   */
   Status Unlink(std::string blob_name, std::string bucket_name, Context &ctx);
   Status Unlink(std::string blob_name, std::string bucket_name);
 
@@ -89,7 +108,17 @@ class VBucket {
   /** could return iterator */
   std::vector<std::string> GetLinks(Context &ctx);
 
-  /** attach a trait to this vbucket */
+  /**
+   * Attach a trait to this VBucket.
+   *
+   * Calls the Trait::onAttachFn function of @p trait on each Blob that's linked
+   * to this VBucket.
+   *
+   * @param trait The Trait to attach.
+   * @param ctx Currently unused.
+   *
+   * @return A Status.
+   */
   Status Attach(Trait *trait, Context &ctx);
   Status Attach(Trait *trait);
 
@@ -100,11 +129,37 @@ class VBucket {
   /** retrieves the subset of attached traits satisfying pred */
   template <class Predicate>
   std::vector<TraitID> GetTraits(Predicate pred, Context &ctx);
-  /** closes a vBucket */
+
+  /**
+   * Release this vBucket.
+   *
+   * This function does not result in any Trait callbacks being invoked or any
+   * Blob links to be deleted. It simply decrements the reference count on this
+   * VBucket. A VBucket can only be destroyed (VBucket::Destroy) when it's
+   * reference count is 1. I.e., each rank that is not destroying the VBucket
+   * must release it.
+   *
+   * @param ctx Currently unused.
+   *
+   * @return A Status.
+   */
   Status Release(Context &ctx);
   Status Release();
-  /** delete a vBucket */
-  /** decrements the links counts of blobs in buckets */
+
+  /**
+   * Destroy this VBucket.
+   *
+   * Releases all resources associated with this VBucket. If it is opened again,
+   * it will be created from scratch. Unlinks all linked Blobs (which will
+   * invoke each attached Trait's Trait::onUnlinkFn function), and detaches all
+   * attached Traits, invoking Trait::onDetachFn. If the VBucket::persist member
+   * is @c true, the linked Blobs will be flushed according to the attached
+   * FileMappingTrait, if any.
+   *
+   * @param ctx Currently unused.
+   *
+   * @return A Status.
+   */
   Status Destroy(Context &ctx);
   Status Destroy();
 };  // class VBucket

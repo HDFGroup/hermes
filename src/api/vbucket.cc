@@ -161,7 +161,6 @@ Status VBucket::Attach(Trait* trait) {
 
 Status VBucket::Attach(Trait* trait, Context& ctx) {
   (void)ctx;
-  (void)trait;
   Status ret;
 
   LOG(INFO) << "Attaching trait to VBucket " << name_ << '\n';
@@ -291,7 +290,7 @@ Status VBucket::Destroy(Context& ctx) {
   (void)ctx;
   Status ret;
 
-  LOG(INFO) << "Deleting VBucket " << name_ << '\n';
+  LOG(INFO) << "Destroying VBucket " << name_ << '\n';
 
   for (const auto& t : attached_traits_) {
     FILE* file = nullptr;
