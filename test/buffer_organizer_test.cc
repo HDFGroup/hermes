@@ -13,6 +13,8 @@
 #include "hermes.h"
 #include "test_utils.h"
 
+#include <numeric>
+
 #include <mpi.h>
 
 namespace hapi = hermes::api;
@@ -61,19 +63,25 @@ void TestBoTasks() {
 }
 
 void TestTrickleDown() {
+  using hermes::u8;
   HermesPtr hermes = hermes::InitHermesDaemon();
   const int io_size = KILOBYTES(4);
-  const int iters = 16;
+  const int iters = 4;
+  const int total_bytes = io_size * iters;
   const int sleep_seconds = 1;
+  std::string final_destination = "./test_trickle_down.out";
   hapi::Bucket bkt("trickle_down", hermes);
 
+  std::vector<u8> data(iters);
+  std::iota(data.begin(), data.end(), 'a');
+
   for (int i = 0; i < iters; ++i) {
-    hapi::Blob blob(io_size, rand() % 255);
+    hapi::Blob blob(io_size, data[i]);
     std::string blob_name = std::to_string(i);
-    std::string final_destination = "./test_trickle_down.out";
     hapi::FlushInfo flush(final_destination, i * io_size);
     hapi::Context ctx;;
     ctx.flush = flush;
+    ctx.policy = hermes::api::PlacementPolicy::kRoundRobin;
 
     bkt.Put(blob_name, blob, ctx);
     std::this_thread::sleep_for(std::chrono::seconds(sleep_seconds));
@@ -81,9 +89,23 @@ void TestTrickleDown() {
 
   hermes->Finalize(true);
 
-  // TODO(chogan): Assert file is on disk with correct data
+  // NOTE(chogan): Verify that file is on disk with correct data
+  FILE *fh = fopen(final_destination.c_str(), "r");
+  Assert(fh);
 
-  // delete final_destination
+  std::vector<u8> result(total_bytes, 0);
+  size_t bytes_read = fread(result.data(), 1, total_bytes, fh);
+  Assert(bytes_read == total_bytes);
+
+  for (int i = 0; i < iters; ++i) {
+    for (int j = 0; j < io_size; ++j) {
+      int index = i * j;
+      Assert(result[index] == data[i]);
+    }
+  }
+
+  Assert(fclose(fh) == 0);
+  Assert(std::remove(final_destination.c_str()) == 0);
 }
 
 int main(int argc, char *argv[]) {

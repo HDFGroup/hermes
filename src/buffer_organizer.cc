@@ -27,16 +27,19 @@ void ShutdownBufferOrganizer(SharedMemoryContext *context) {
 
 void BoMove(SharedMemoryContext *context, BufferID src, TargetID dest) {
   (void)context;
+  // TODO(chogan): Placeholder
   printf("%s(%d, %d)\n", __func__, (int)src.as_int, (int)dest.as_int);
 }
 
 void BoCopy(SharedMemoryContext *context, BufferID src, TargetID dest) {
   (void)context;
+  // TODO(chogan): Placeholder
   printf("%s(%d, %d)\n", __func__, (int)src.as_int, (int)dest.as_int);
 }
 
 void BoDelete(SharedMemoryContext *context, BufferID src) {
   (void)context;
+  // TODO(chogan): Placeholder
   printf("%s(%d)\n", __func__, (int)src.as_int);
 }
 
@@ -78,8 +81,11 @@ void FlushBlob(SharedMemoryContext *context, RpcContext *rpc, Arena *arena,
   FILE *fh = fopen(flush_info.fname.c_str(), "w");
   Arena local_arena = InitArenaAndAllocate(KILOBYTES(8));
   StdIoPersistBlob(context, rpc, &local_arena, blob_id, fh, flush_info.offset);
+  fflush(fh);
   fclose(fh);
+  fsync(fileno(fh));
   DestroyArena(&local_arena);
+  // TODO(chogan): DestroyBlobById();
 }
 
 bool EnqueueFlushingTask(SharedMemoryContext *context, RpcContext *rpc,

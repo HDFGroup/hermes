@@ -1797,18 +1797,21 @@ api::Status StdIoPersistBlob(SharedMemoryContext *context, RpcContext *rpc,
     // now we pay the cost of data copy in order to only do one I/O call.
     api::Blob data(blob_size);
     size_t num_bytes = blob_size > 0 ? sizeof(data[0]) * blob_size : 0;
+    LOG(INFO) << "Reading BlobId " << blob_id.as_int << std::endl;
     if (ReadBlobById(context, rpc, arena, data, blob_id) == blob_size) {
-      if (offset == -1 || fseek(file, offset, SEEK_SET) == 0) {
-        LOG(INFO) << "STDIO Flush to file: " << " offset: " << offset
-                  << " of size:" << num_bytes << "." << std::endl;
-        if (fwrite(data.data(), 1, num_bytes, file) != num_bytes) {
-          result = STDIO_FWRITE_FAILED;
-          LOG(ERROR) << result.Msg() << strerror(errno);
-        }
-      } else {
-        result = STDIO_OFFSET_ERROR;
-        LOG(ERROR) << result.Msg() << strerror(errno);
-      }
+      LOG(INFO) << "Writing " << num_bytes << " bytes of '" << data[0] << "' at offset " << offset << std::endl;
+      assert(pwrite(fileno(file), data.data(), num_bytes, offset) == (ssize_t)num_bytes);
+      // if (offset == -1 || fseek(file, offset, SEEK_SET) == 0) {
+      //   LOG(INFO) << "STDIO Flush to file: " << " offset: " << offset
+      //             << " of size:" << num_bytes << "." << std::endl;
+      //   if (fwrite(data.data(), 1, num_bytes, file) != num_bytes) {
+      //     result = STDIO_FWRITE_FAILED;
+      //     LOG(ERROR) << result.Msg() << strerror(errno);
+      //   }
+      // } else {
+      //   result = STDIO_OFFSET_ERROR;
+      //   LOG(ERROR) << result.Msg() << strerror(errno);
+      // }
     }
 
   } else {
