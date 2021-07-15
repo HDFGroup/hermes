@@ -581,7 +581,6 @@ int HERMES_DECL(fclose)(FILE *fp) {
     auto existing = mdm->Find(fp);
     if (existing.second) {
       LOG(INFO) << "File handler is opened by adapter." << std::endl;
-      hapi::Context ctx;
       if (existing.first.ref_count == 1) {
         auto persist = INTERCEPTOR_LIST->Persists(fp);
         auto filename = existing.first.st_bkid->GetName();
@@ -591,25 +590,26 @@ int HERMES_DECL(fclose)(FILE *fp) {
           LOG(INFO) << "Adapter flushes " << blob_names.size()
                     << " blobs to filename:" << filename << "." << std::endl;
           INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
-          hermes::api::VBucket file_vbucket(filename, mdm->GetHermes(), true,
-                                            ctx);
+          hermes::api::VBucket file_vbucket(filename, mdm->GetHermes(), true);
           auto offset_map = std::unordered_map<std::string, hermes::u64>();
 
           for (const auto &blob_name : blob_names) {
-            auto status = file_vbucket.Link(blob_name, filename, ctx);
+            auto status = file_vbucket.Link(blob_name, filename);
             if (!status.Failed()) {
               auto page_index = std::stol(blob_name) - 1;
               offset_map.emplace(blob_name, page_index * kPageSize);
             }
           }
-          auto trait = hermes::api::FileMappingTrait(filename, offset_map,
-                                                     nullptr, NULL, NULL);
-          file_vbucket.Attach(&trait, ctx);
-          file_vbucket.Destroy(ctx);
+          auto file_mapping =
+            hapi::FileMappingTrait(filename, offset_map, nullptr, NULL, NULL);
+          bool flush_synchronously = true;
+          hapi::PersistTrait persist_trait(file_mapping, flush_synchronously);
+          file_vbucket.Attach(&persist_trait);
+          file_vbucket.Destroy();
           existing.first.st_blobs.clear();
           INTERCEPTOR_LIST->hermes_flush_exclusion.erase(filename);
         }
-        existing.first.st_bkid->Destroy(ctx);
+        existing.first.st_bkid->Destroy();
         mdm->FinalizeHermes();
       } else {
         LOG(INFO) << "File handler is opened by more than one fopen."
@@ -620,7 +620,7 @@ int HERMES_DECL(fclose)(FILE *fp) {
         existing.first.st_atim = ts;
         existing.first.st_ctim = ts;
         mdm->Update(fp, existing.first);
-        existing.first.st_bkid->Release(ctx);
+        existing.first.st_bkid->Release();
       }
     }
   }

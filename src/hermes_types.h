@@ -228,7 +228,12 @@ union BlobID {
  */
 typedef u64 TraitID;
 
-enum class TraitType : u8 { META = 0, DATA = 1, FILE_MAPPING = 2 };
+enum class TraitType : u8 {
+  META = 0,
+  DATA = 1,
+  FILE_MAPPING = 2,
+  PERSIST = 3,
+};
 
 struct TraitIdArray {
     TraitID *ids;
