@@ -179,7 +179,7 @@ void TestCompressionTrait(std::shared_ptr<hapi::Hermes> hermes) {
   Assert(my_bucket.ContainsBlob(blob2_name));
 
   const std::string vbucket_name = "VB1";
-  hermes::api::VBucket my_vb(vbucket_name, hermes, false);
+  hermes::api::VBucket my_vb(vbucket_name, hermes);
   my_vb.Link(blob1_name, bucket_name);
   my_vb.Link(blob2_name, bucket_name);
 

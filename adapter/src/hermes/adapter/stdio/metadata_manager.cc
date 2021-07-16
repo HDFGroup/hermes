@@ -26,7 +26,6 @@ bool MetadataManager::Create(FILE *fh, const AdapterStat &stat) {
 }
 
 bool MetadataManager::Update(FILE *fh, const AdapterStat &stat) {
-  LOG(INFO) << "Update metadata for file handler." << std::endl;
   auto fileId = Convert(fh);
   auto iter = metadata.find(fileId);
   if (iter != metadata.end()) {

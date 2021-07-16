@@ -20,6 +20,7 @@
 #include "test_utils.h"
 
 namespace fs = std::experimental::filesystem;
+namespace hapi = hermes::api;
 
 struct Arguments {
   std::string filename = "test.dat";
@@ -80,7 +81,7 @@ std::string gen_random(const int len) {
 int pretest() {
   args.filename += "_" + std::to_string(getpid());
   auto str = gen_random(args.request_size);
-  info.write_blob = hermes::api::Blob(str.begin(), str.end());
+  info.write_blob = hapi::Blob(str.begin(), str.end());
   return 0;
 }
 int posttest() { return 0; }
@@ -90,23 +91,24 @@ TEST_CASE("CustomTrait",
           "[process=" +
               std::to_string(info.comm_size) + "]") {
   pretest();
-  // REQUIRE(info.comm_size > 1);
-  std::shared_ptr<hermes::api::Hermes> hermes_app =
-      hermes::api::InitHermes(args.config.c_str(), true);
+
+  using HermesPtr = std::shared_ptr<hapi::Hermes>;
+  HermesPtr hermes_app = hapi::InitHermes(args.config.c_str(), true);
   fs::path fullpath = args.directory;
   fullpath /= args.filename;
   std::string fullpath_str = fullpath.string();
+
   SECTION("Basic") {
-    hermes::api::Bucket file_bucket(args.filename, hermes_app);
-    hermes::api::VBucket file_vbucket(args.filename, hermes_app, true);
+    hapi::Bucket file_bucket(args.filename, hermes_app);
+    hapi::VBucket file_vbucket(args.filename, hermes_app);
     auto offset_map = std::unordered_map<std::string, hermes::u64>();
     auto blob_cmp = [](std::string a, std::string b) {
       return std::stol(a) < std::stol(b);
     };
     auto blob_names = std::set<std::string, decltype(blob_cmp)>(blob_cmp);
-    auto check_write = hermes::api::Blob();
+    auto check_write = hapi::Blob();
     for (size_t i = 0; i < args.iterations; ++i) {
-      hermes::api::Status status =
+      hapi::Status status =
         file_bucket.Put(std::to_string(i), info.write_blob);
       Assert(status.Succeeded());
       blob_names.insert(std::to_string(i));
@@ -117,19 +119,21 @@ TEST_CASE("CustomTrait",
       file_vbucket.Link(blob_name, args.filename);
       offset_map.emplace(blob_name, std::stol(blob_name) * info.FILE_PAGE);
     }
-    auto trait = hermes::api::FileMappingTrait(fullpath_str, offset_map,
+    auto fm_trait = hapi::FileMappingTrait(fullpath_str, offset_map,
                                                nullptr, NULL, NULL);
-    file_vbucket.Attach(&trait);
+    bool flush_synchronously = true;
+    hapi::PersistTrait persist_trait(fm_trait, flush_synchronously);
+    file_vbucket.Attach(&persist_trait);
     file_vbucket.Destroy();
     file_bucket.Destroy();
     REQUIRE(fs::exists(fullpath_str));
-    REQUIRE(fs::file_size(fullpath_str) == args.iterations * args.request_size);
-    auto read_blob =
-        hermes::api::Blob(args.iterations * args.request_size, '0');
+
+    size_t total_bytes = args.iterations * args.request_size;
+    REQUIRE(fs::file_size(fullpath_str) == total_bytes);
+    auto read_blob = hapi::Blob(total_bytes, '0');
     FILE* fh = fopen(fullpath_str.c_str(), "r+");
     REQUIRE(fh != nullptr);
-    auto read_size =
-        fread(read_blob.data(), args.iterations * args.request_size, 1, fh);
+    auto read_size = fread(read_blob.data(), total_bytes, 1, fh);
     REQUIRE(read_size == 1);
     bool is_same = read_blob == check_write;
     REQUIRE(is_same);

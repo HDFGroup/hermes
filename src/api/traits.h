@@ -64,7 +64,8 @@ struct PersistTrait : public Trait {
   FileMappingTrait file_mapping;
   bool synchronous;
 
-  PersistTrait(const FileMappingTrait& mapping, bool synchronous = false);
+  explicit PersistTrait(const FileMappingTrait& mapping,
+                        bool synchronous = false);
 
   void onAttach(HermesPtr hermes, TraitInput &blob, Trait *trait);
   void onDetach(HermesPtr hermes, TraitInput &blob, Trait *trait);

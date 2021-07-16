@@ -549,14 +549,14 @@ int HERMES_DECL(fflush)(FILE *fp) {
         hapi::Context ctx;
         LOG(INFO) << "Adapter flushes " << blob_names.size()
                   << " blobs to filename:" << filename << "." << std::endl;
-        hermes::api::VBucket file_vbucket(filename, mdm->GetHermes(), true,
-                                          ctx);
+        hermes::api::VBucket file_vbucket(filename, mdm->GetHermes(), ctx);
         auto offset_map = std::unordered_map<std::string, hermes::u64>();
         for (const auto &blob_name : blob_names) {
           file_vbucket.Link(blob_name, filename, ctx);
           auto page_index = std::stol(blob_name) - 1;
           offset_map.emplace(blob_name, page_index * kPageSize);
         }
+        // TEMP(chogan): PersistTrait
         auto trait = hermes::api::FileMappingTrait(filename, offset_map,
                                                    nullptr, NULL, NULL);
         file_vbucket.Attach(&trait, ctx);
@@ -590,7 +590,7 @@ int HERMES_DECL(fclose)(FILE *fp) {
           LOG(INFO) << "Adapter flushes " << blob_names.size()
                     << " blobs to filename:" << filename << "." << std::endl;
           INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
-          hermes::api::VBucket file_vbucket(filename, mdm->GetHermes(), true);
+          hermes::api::VBucket file_vbucket(filename, mdm->GetHermes());
           auto offset_map = std::unordered_map<std::string, hermes::u64>();
 
           for (const auto &blob_name : blob_names) {

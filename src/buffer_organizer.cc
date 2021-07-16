@@ -71,6 +71,43 @@ bool LocalEnqueueBoTask(SharedMemoryContext *context, BoTask task,
   return result;
 }
 
+void FlushBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id,
+               const std::string &filename, u64 offset) {
+  // TODO(chogan): @errorhandling
+
+  std::string open_mode;
+  if (access(filename.c_str(), F_OK) == 0) {
+    open_mode = "r+";
+  } else {
+    open_mode = "w+";
+  }
+
+  FILE *fh = fopen(filename.c_str(), open_mode.c_str());
+  // TODO(chogan): ScopedArena
+  Arena local_arena = InitArenaAndAllocate(KILOBYTES(8));
+  StdIoPersistBlob(context, rpc, &local_arena, blob_id, fh, offset);
+  fflush(fh);
+  fclose(fh);
+  DestroyArena(&local_arena);
+
+  // TODO(chogan):
+  // if (DONTNEED) {
+  //   DestroyBlobById();
+  // } else {
+  //   ReplaceBlobWithSwapBlob();
+  // }
+}
+
+bool EnqueueFlushingTask(SharedMemoryContext *context, RpcContext *rpc,
+                         BlobID blob_id, const std::string &filename,
+                         u64 offset) {
+  bool result = true;
+  ThreadPool *pool = &context->bo->pool;
+  pool->run(std::bind(FlushBlob, context, rpc, blob_id, filename, offset));
+
+  return result;
+}
+
 Status PlaceInHierarchy(SharedMemoryContext *context, RpcContext *rpc,
                         SwapBlob swap_blob, const std::string &name,
                         const api::Context &ctx) {

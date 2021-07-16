@@ -33,7 +33,6 @@ class VBucket {
   VBucketID id_;
   std::list<Trait *> attached_traits_;
   Blob local_blob;
-  bool persist;
   /** internal Hermes object owned by vbucket */
   std::shared_ptr<Hermes> hermes_;
   /** The Context for this VBucket. */
@@ -41,12 +40,11 @@ class VBucket {
 
  public:
   VBucket(std::string initial_name, std::shared_ptr<Hermes> const &h,
-          bool persist, Context ctx = Context())
+          Context ctx = Context())
       : name_(initial_name),
         id_({{0, 0}}),
         attached_traits_(),
         local_blob(),
-        persist(persist),
         hermes_(h),
         ctx_(ctx) {
     LOG(INFO) << "Create VBucket " << initial_name << std::endl;

@@ -289,90 +289,38 @@ Status VBucket::Destroy() {
 Status VBucket::Destroy(Context& ctx) {
   (void)ctx;
   Status ret;
+  SharedMemoryContext *context = &hermes_->context_;
+  RpcContext *rpc = &hermes_->rpc_;
 
   LOG(INFO) << "Destroying VBucket " << name_ << '\n';
 
-  for (const auto& t : attached_traits_) {
-    FILE* file = nullptr;
-    if (this->persist) {
-      if (t->type == TraitType::FILE_MAPPING) {
-        FileMappingTrait* fileBackedTrait = (FileMappingTrait*)t;
-        if (fileBackedTrait->fh != nullptr) {
-          file = fileBackedTrait->fh;
-        } else {
-          std::string open_mode;
-          if (access(fileBackedTrait->filename.c_str(), F_OK) == 0) {
-            open_mode = "r+";
-          } else {
-            open_mode = "w+";
-          }
-          file = fopen(fileBackedTrait->filename.c_str(), open_mode.c_str());
-        }
-      }
-    }
-    auto blob_ids =
-        GetBlobsFromVBucketInfo(&hermes_->context_, &hermes_->rpc_, id_);
-    for (const auto& blob_id : blob_ids) {
-      TraitInput input;
-      auto bucket_id =
-          GetBucketIdFromBlobId(&hermes_->context_, &hermes_->rpc_, blob_id);
-      input.bucket_name =
-          GetBucketNameById(&hermes_->context_, &hermes_->rpc_, bucket_id);
-      input.blob_name =
-          GetBlobNameFromId(&hermes_->context_, &hermes_->rpc_, blob_id);
-      if (attached_traits_.size() > 0) {
-        if (this->persist) {
-          if (t->type == TraitType::FILE_MAPPING) {
-            FileMappingTrait* fileBackedTrait = (FileMappingTrait*)t;
-            // if callback defined by user
-            if (fileBackedTrait->flush_cb) {
-              fileBackedTrait->flush_cb(hermes_, input, fileBackedTrait);
-            } else {
-              if (!fileBackedTrait->offset_map.empty()) {
-                auto iter = fileBackedTrait->offset_map.find(input.blob_name);
-                if (iter != fileBackedTrait->offset_map.end()) {
-                  // TODO(hari): @errorhandling check return of StdIoPersistBlob
-                  ret = StdIoPersistBlob(&hermes_->context_, &hermes_->rpc_,
-                                         &hermes_->trans_arena_, blob_id, file,
-                                         iter->second);
-                  if (!ret.Succeeded()) LOG(ERROR) << ret.Msg();
-                } else {
-                  ret = BLOB_NOT_LINKED_IN_MAP;
-                  LOG(ERROR) << ret.Msg();
-                }
+  auto blob_ids = GetBlobsFromVBucketInfo(context, rpc, id_);
 
-              } else {
-                ret = OFFSET_MAP_EMPTY;
-                LOG(ERROR) << ret.Msg();
-              }
-            }
-          }
-        }
-        if (t->onDetachFn != nullptr) {
-          t->onDetachFn(hermes_, input, t);
-          // TODO(hari): @errorhandling Check if detach was successful
-        }
-        if (t->onUnlinkFn != nullptr) {
-          t->onUnlinkFn(hermes_, input, t);
-          // TODO(hari): @errorhandling Check if unlinking was successful
-        }
-      }
-      RemoveBlobFromVBucketInfo(&hermes_->context_, &hermes_->rpc_, id_,
-                                input.blob_name.c_str(),
-                                input.bucket_name.c_str());
-    }
-    if (persist) {
-      if (file != nullptr) {
-        fflush(file);
-        if (fclose(file) != 0) {
-          ret = FCLOSE_FAILED;
-          LOG(ERROR) << ret.Msg() << strerror(errno);
-        }
+  // NOTE(chogan): Call each Trait's unlink callback on each Blob
+  for (const auto& t : attached_traits_) {
+    for (const auto& blob_id : blob_ids) {
+      TraitInput input = {};
+      BucketID bucket_id = GetBucketIdFromBlobId(context, rpc, blob_id);
+      input.bucket_name = GetBucketNameById(context, rpc, bucket_id);
+      input.blob_name = GetBlobNameFromId(context, rpc, blob_id);
+      if (t->onUnlinkFn != nullptr) {
+        t->onUnlinkFn(hermes_, input, t);
+        // TODO(hari): @errorhandling Check if unlinking was successful
       }
     }
   }
+
+  // NOTE(chogan): Call each traits detach callback
+  for (const auto& t : attached_traits_) {
+    if (t->onDetachFn != nullptr) {
+      TraitInput input = {};
+      t->onDetachFn(hermes_, input, t);
+      // TODO(hari): @errorhandling Check if detach was successful
+    }
+  }
+
   attached_traits_.clear();
-  DestroyVBucket(&hermes_->context_, &hermes_->rpc_, this->name_.c_str(), id_);
+  DestroyVBucket(context, rpc, name_.c_str(), id_);
 
   return ret;
 }
