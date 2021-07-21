@@ -208,9 +208,8 @@ void OnExit(void);
   if (!(real_##func_##_)) {                                           \
     real_##func_##_ = (real_t_##func_##_)dlsym(RTLD_NEXT, #func_);    \
     if (!(real_##func_##_)) {                                         \
-      LOG(ERROR) << "HERMES Adapter failed to map symbol: " << #func_ \
+      LOG(FATAL) << "HERMES Adapter failed to map symbol: " << #func_ \
                  << std::endl;                                        \
-      exit(1);                                                        \
     }                                                                 \
   }
 

@@ -178,6 +178,33 @@ FILE *reopen_internal(const std::string &path_str, const char *mode,
   return ret;
 }
 
+void ReadGap(const std::string &filename, size_t seek_offset, u8 *read_ptr,
+             size_t read_size, size_t file_bounds) {
+  if (fs::exists(filename) &&
+      fs::file_size(filename) >= file_bounds) {
+    LOG(INFO) << "Blob has a gap in write. read gap from original file."
+              << std::endl;
+    INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
+    FILE *fh = fopen(filename.c_str(), "r");
+    if (fh != nullptr) {
+      if (fseek(fh, seek_offset, SEEK_SET) == 0) {
+        size_t items_read = fread(read_ptr, read_size, sizeof(char), fh);
+        if (items_read != 1) {
+          // TODO(hari) @errorhandling read failed.
+        }
+        if (fclose(fh) != 0) {
+          // TODO(hari) @errorhandling fclose failed.
+        }
+      } else {
+        // TODO(hari) @errorhandling fseek failed.
+      }
+    } else {
+      // TODO(hari) @errorhandling FILE cannot be opened
+    }
+    INTERCEPTOR_LIST->hermes_flush_exclusion.erase(filename);
+  }
+}
+
 void PutWithStdioFallback(AdapterStat &stat, const std::string &blob_name,
                           const std::string &filename, u8 *data, size_t size,
                           size_t offset) {
@@ -227,33 +254,11 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
                              put_data_ptr, put_data_ptr_size, offset);
       } else {
         hapi::Blob final_data(item.second.offset_ + item.second.size_);
-        if (fs::exists(filename) &&
-            fs::file_size(filename) >= item.second.offset_) {
-          LOG(INFO) << "Blob has a gap in write. read gap from original file."
-                    << std::endl;
-          INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
-          FILE *fh = fopen(filename.c_str(), "r");
-          if (fh != nullptr) {
-            if (fseek(fh, index * kPageSize, SEEK_SET) == 0) {
-              size_t items_read = fread(final_data.data(), item.second.offset_,
-                                        sizeof(char), fh);
-              if (items_read != 1) {
-                // TODO(hari) @errorhandling read failed.
-              }
-              if (fclose(fh) != 0) {
-                // TODO(hari) @errorhandling fclose failed.
-              }
-            } else {
-              // TODO(hari) @errorhandling fseek failed.
-            }
-          } else {
-            // TODO(hari) @errorhandling FILE cannot be opened
-          }
-          INTERCEPTOR_LIST->hermes_flush_exclusion.erase(filename);
-        }
+
+        ReadGap(filename, index * kPageSize, final_data.data(),
+                item.second.offset_, item.second.offset_);
         memcpy(final_data.data() + item.second.offset_, put_data_ptr,
                put_data_ptr_size);
-
         PutWithStdioFallback(existing.first, item.second.blob_name_, filename,
                              final_data.data(), final_data.size(), offset);
       }
@@ -296,37 +301,15 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
                                          : existing_data.size();
         memcpy(final_data.data(), existing_data.data(), existing_data_cp_size);
 
-        if (existing_blob_size < item.second.offset_ + 1 &&
-            fs::exists(filename) &&
-            fs::file_size(filename) >=
-                item.second.offset_ + item.second.size_) {
-          size_t size_to_read = item.second.offset_ - existing_blob_size;
-          LOG(INFO) << "Blob has a gap in update read gap from original file."
-                    << std::endl;
-          INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
-          FILE *fh = fopen(filename.c_str(), "r");
-          if (fh != nullptr) {
-            if (fseek(fh, index * kPageSize + existing_data_cp_size,
-                      SEEK_SET) == 0) {
-              size_t items_read =
-                  fread(final_data.data() + existing_data_cp_size, size_to_read,
-                        sizeof(char), fh);
-              if (items_read != 1) {
-                // TODO(hari) @errorhandling read failed.
-              }
-              if (fclose(fh) != 0) {
-                // TODO(hari) @errorhandling fclose failed.
-              }
-            } else {
-              // TODO(hari) @errorhandling fseek failed.
-            }
-          } else {
-            // TODO(hari) @errorhandling FILE cannot be opened
-          }
-          INTERCEPTOR_LIST->hermes_flush_exclusion.erase(filename);
+        if (existing_blob_size < item.second.offset_ + 1) {
+          ReadGap(filename, index * kPageSize + existing_data_cp_size,
+                  final_data.data() + existing_data_cp_size,
+                  item.second.offset_ - existing_blob_size,
+                  item.second.offset_ + item.second.size_);
         }
         memcpy(final_data.data() + item.second.offset_, put_data_ptr,
                put_data_ptr_size);
+
         if (item.second.offset_ + item.second.size_ < existing_blob_size) {
           LOG(INFO) << "Retain last portion of blob as Blob is bigger than the "
                        "update."
