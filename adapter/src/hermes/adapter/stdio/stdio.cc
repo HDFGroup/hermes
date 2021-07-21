@@ -846,7 +846,8 @@ int HERMES_DECL(getw)(FILE *stream) {
     if (existing.second) {
       LOG(INFO) << "Intercept getw." << std::endl;
       int value;
-      auto ret_size = read_internal(existing.first, &value, sizeof(int), stream);
+      auto ret_size = read_internal(existing.first, &value, sizeof(int),
+                                    stream);
       if (ret_size == sizeof(int)) {
         ret = value;
       }
