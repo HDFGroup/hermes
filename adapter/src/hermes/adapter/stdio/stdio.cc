@@ -10,8 +10,9 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include <fcntl.h>
 #include <hermes/adapter/stdio.h>
+
+#include <fcntl.h>
 #include <limits.h>
 
 #include <hermes/adapter/interceptor.cc>
@@ -40,11 +41,16 @@ size_t perform_file_write(const std::string &filename, size_t offset,
   FILE *fh = fopen(filename.c_str(), "r+");
   size_t write_size = 0;
   if (fh != nullptr) {
-    auto status = fseek(fh, offset, SEEK_SET);
-    if (status == 0) {
+    if (fseek(fh, offset, SEEK_SET) == 0) {
       write_size = fwrite(data_ptr, sizeof(char), size, fh);
-      status = fclose(fh);
+      if (fclose(fh) != 0) {
+        hermes::FailedLibraryCall("fclose");
+      }
+    } else {
+      hermes::FailedLibraryCall("fseek");
     }
+  } else {
+    hermes::FailedLibraryCall("fopen");
   }
   INTERCEPTOR_LIST->hermes_flush_exclusion.erase(filename);
   return write_size;
@@ -190,16 +196,16 @@ void ReadGap(const std::string &filename, size_t seek_offset, u8 *read_ptr,
       if (fseek(fh, seek_offset, SEEK_SET) == 0) {
         size_t items_read = fread(read_ptr, read_size, sizeof(char), fh);
         if (items_read != 1) {
-          // TODO(hari) @errorhandling read failed.
+          hermes::FailedLibraryCall("fread");
         }
         if (fclose(fh) != 0) {
-          // TODO(hari) @errorhandling fclose failed.
+          hermes::FailedLibraryCall("fclose");
         }
       } else {
-        // TODO(hari) @errorhandling fseek failed.
+        hermes::FailedLibraryCall("fseek");
       }
     } else {
-      // TODO(hari) @errorhandling FILE cannot be opened
+      hermes::FailedLibraryCall("fopen");
     }
     INTERCEPTOR_LIST->hermes_flush_exclusion.erase(filename);
   }
@@ -301,7 +307,7 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
                                          : existing_data.size();
         memcpy(final_data.data(), existing_data.data(), existing_data_cp_size);
 
-        if (existing_blob_size < item.second.offset_ + 1) {
+        if (existing_blob_size < item.second.offset_) {
           ReadGap(filename, index * kPageSize + existing_data_cp_size,
                   final_data.data() + existing_data_cp_size,
                   item.second.offset_ - existing_blob_size,
