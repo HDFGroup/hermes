@@ -16,15 +16,7 @@
 
 #ifndef HERMES_ABSTRACT_ADAPTER_H
 #define HERMES_ABSTRACT_ADAPTER_H
-/**
- * Standard headers
- */
-/**
- * Dependent library headers
- */
-/**
- * Internal headers
- */
+
 #include <hermes/adapter/stdio/common/datastructures.h>
 
 /**

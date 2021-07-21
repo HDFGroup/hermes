@@ -74,7 +74,7 @@ bool IsTracked(const std::string& path) {
 
   auto list = INTERCEPTOR_LIST;
   auto buffer_mode = INTERCEPTOR_LIST->adapter_mode;
-  if (buffer_mode == AdapterMode::BYPASS) {
+  if (buffer_mode == AdapterMode::kBypass) {
     if (list->adapter_paths.empty()) {
       return false;
     } else {

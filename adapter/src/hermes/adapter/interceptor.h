@@ -107,7 +107,7 @@ struct InterceptorList {
    * Default constructor
    */
   InterceptorList()
-      : adapter_mode(AdapterMode::DEFAULT),
+      : adapter_mode(AdapterMode::kDefault),
         adapter_paths(),
         hermes_paths_exclusion(),
         hermes_flush_exclusion() {}
@@ -115,14 +115,14 @@ struct InterceptorList {
     char* adapter_mode_str = getenv(kAdapterMode);
     if (adapter_mode_str == nullptr) {
       // default is Persistent mode
-      adapter_mode = AdapterMode::DEFAULT;
+      adapter_mode = AdapterMode::kDefault;
     } else {
       if (strcmp(kAdapterDefaultMode, adapter_mode_str) == 0) {
-        adapter_mode = AdapterMode::DEFAULT;
+        adapter_mode = AdapterMode::kDefault;
       } else if (strcmp(kAdapterBypassMode, adapter_mode_str) == 0) {
-        adapter_mode = AdapterMode::BYPASS;
+        adapter_mode = AdapterMode::kBypass;
       } else if (strcmp(kAdapterScratchMode, adapter_mode_str) == 0) {
-        adapter_mode = AdapterMode::SCRATCH;
+        adapter_mode = AdapterMode::kScratch;
       } else {
         // TODO(hari): @errorhandling throw error.
         return;
@@ -140,7 +140,7 @@ struct InterceptorList {
   bool Persists(int fd) { return Persists(GetFilenameFromFD(fd)); }
 
   bool Persists(std::string path) {
-    if (adapter_mode == AdapterMode::DEFAULT) {
+    if (adapter_mode == AdapterMode::kDefault) {
       if (adapter_paths.empty()) {
         return true;
       } else {
@@ -151,7 +151,7 @@ struct InterceptorList {
         }
         return false;
       }
-    } else if (adapter_mode == AdapterMode::SCRATCH) {
+    } else if (adapter_mode == AdapterMode::kScratch) {
       if (adapter_paths.empty()) {
         return false;
       } else {

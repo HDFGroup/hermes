@@ -23,6 +23,7 @@ using hermes::adapter::stdio::AdapterStat;
 using hermes::adapter::stdio::FileStruct;
 using hermes::adapter::stdio::MapperFactory;
 using hermes::adapter::stdio::MetadataManager;
+using hermes::adapter::stdio::global_flushing_mode;
 
 namespace hapi = hermes::api;
 namespace fs = std::experimental::filesystem;
@@ -81,6 +82,13 @@ size_t perform_file_read(const char *filename, size_t file_offset, void *ptr,
   return read_size;
 }
 
+static bool PersistEagerly(const std::string &path_str) {
+  bool result = (INTERCEPTOR_LIST->Persists(path_str) &&
+                 global_flushing_mode == FlushingMode::kAsynchronous);
+
+  return result;
+}
+
 /**
  * MPI
  */
@@ -137,6 +145,12 @@ FILE *simple_open(FILE *ret, const std::string &path_str, const char *mode) {
         stat.st_bkid =
             std::make_shared<hapi::Bucket>(path_str, mdm->GetHermes());
         mdm->Create(ret, stat);
+
+        if (PersistEagerly(path_str)) {
+          hapi::VBucket vbkt(path_str, mdm->GetHermes());
+          hapi::PersistTrait persist_trait(hapi::FileMappingTrait(), false);
+          vbkt.Attach(&persist_trait);
+        }
       } else {
         // TODO(hari): @errorhandling invalid fh.
         ret = nullptr;
@@ -234,6 +248,7 @@ size_t write_internal(AdapterStat &stat, const void *ptr, size_t total_size,
                       FILE *fp) {
   std::shared_ptr<hapi::Bucket> bkt = stat.st_bkid;
   std::string filename = bkt->GetName();
+  // bool persist = INTERCEPTOR_LIST->Persists(fp);
 
   LOG(INFO) << "Write called for filename: " << filename << " on offset: "
             << stat.st_ptr << " and size: " << total_size << std::endl;
