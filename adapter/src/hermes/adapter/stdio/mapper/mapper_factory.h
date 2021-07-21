@@ -45,7 +45,7 @@ class MapperFactory {
         return hermes::adapter::Singleton<BalancedMapper>::GetInstance();
       }
       default: {
-        // TODO(hari): @error_handling Mapper not implemented
+        // TODO(hari): @errorhandling Mapper not implemented
       }
     }
     return NULL;

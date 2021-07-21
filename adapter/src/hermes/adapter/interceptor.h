@@ -13,9 +13,6 @@
 #ifndef HERMES_INTERCEPTOR_H
 #define HERMES_INTERCEPTOR_H
 
-/**
- * Standard headers
- */
 #include <dlfcn.h>
 #include <stdlib.h>
 #include <utils.h>
@@ -25,13 +22,6 @@
 #include <unordered_set>
 #include <vector>
 
-/**
- * Library headers
- */
-
-/**
- * Internal headers
- */
 #include <buffer_pool_internal.h>
 #include <hermes/adapter/constants.h>
 #include <hermes/adapter/enumerations.h>
@@ -134,7 +124,7 @@ struct InterceptorList {
       } else if (strcmp(kAdapterScratchMode, adapter_mode_str) == 0) {
         adapter_mode = AdapterMode::SCRATCH;
       } else {
-        // TODO(hari): @error_handling throw error.
+        // TODO(hari): @errorhandling throw error.
         return;
       }
     }

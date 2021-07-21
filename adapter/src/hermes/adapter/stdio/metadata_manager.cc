@@ -54,7 +54,7 @@ FileID MetadataManager::Convert(FILE *fh) {
   if (status == 0) {
     return FileID(st.st_dev, st.st_ino);
   } else {
-    // TODO(hari) @error_handling fstat failed invalid fh.
+    // TODO(hari) @errorhandling fstat failed invalid fh.
     return FileID();
   }
 }

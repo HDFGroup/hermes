@@ -65,15 +65,22 @@ size_t perform_file_read(const char *filename, size_t file_offset, void *ptr,
   FILE *fh = fopen(filename, "r");
   size_t read_size = 0;
   if (fh != nullptr) {
-    int status = fseek(fh, file_offset, SEEK_SET);
-    if (status == 0) {
+    if (fseek(fh, file_offset, SEEK_SET) == 0) {
       read_size = fread((char *)ptr + ptr_offset, sizeof(char), size, fh);
+      if (fclose(fh) != 0) {
+        hermes::FailedLibraryCall("fclose");
+      }
+    } else {
+      hermes::FailedLibraryCall("fseek");
     }
-    status = fclose(fh);
+  } else {
+    hermes::FailedLibraryCall("fopen");
   }
   INTERCEPTOR_LIST->hermes_flush_exclusion.erase(filename);
+
   return read_size;
 }
+
 /**
  * MPI
  */
@@ -96,6 +103,7 @@ int HERMES_DECL(MPI_Finalize)(void) {
   int status = real_MPI_Finalize_();
   return status;
 }
+
 /**
  * STDIO
  */
@@ -103,9 +111,8 @@ FILE *simple_open(FILE *ret, const std::string &path_str, const char *mode) {
   LOG(INFO) << "Open file for filename " << path_str << " in mode " << mode
             << std::endl;
   auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
-  if (!ret) {
-    return ret;
-  } else {
+
+  if (ret) {
     auto existing = mdm->Find(ret);
     if (!existing.second) {
       LOG(INFO) << "File not opened before by adapter" << std::endl;
@@ -121,19 +128,17 @@ FILE *simple_open(FILE *ret, const std::string &path_str, const char *mode) {
         stat.st_mtim = ts;
         stat.st_ctim = ts;
         if (strcmp(mode, "a") == 0 || strcmp(mode, "a+") == 0) {
-          /* FIXME: get current size of bucket from Hermes*/
+          // FIXME(hari): get current size of bucket from Hermes
           stat.st_ptr = stat.st_size;
         }
-        /* FIXME(hari) check if this initialization is correct. */
+        // FIXME(hari): check if this initialization is correct.
         mdm->InitializeHermes();
-        hapi::Context ctx;
-        /* TODO(hari) how to pass to hermes to make a private bucket
-         * also add how to handle existing buckets of same name */
+        // TODO(hari): how to pass to hermes to make a private bucket
         stat.st_bkid =
-            std::make_shared<hapi::Bucket>(path_str, mdm->GetHermes(), ctx);
+            std::make_shared<hapi::Bucket>(path_str, mdm->GetHermes());
         mdm->Create(ret, stat);
       } else {
-        // TODO(hari): @error_handling invalid fh.
+        // TODO(hari): @errorhandling invalid fh.
         ret = nullptr;
       }
     } else {
@@ -146,6 +151,7 @@ FILE *simple_open(FILE *ret, const std::string &path_str, const char *mode) {
       mdm->Update(ret, existing.first);
     }
   }
+
   return ret;
 }
 
@@ -338,47 +344,46 @@ size_t write_internal(AdapterStat &stat, const void *ptr, size_t total_size,
   return ret;
 }
 
-size_t read_internal(std::pair<AdapterStat, bool> &existing, void *ptr,
-                     size_t total_size, FILE *fp) {
-  LOG(INFO) << "Read called for filename: " << existing.first.st_bkid->GetName()
-            << " on offset: " << existing.first.st_ptr
-            << " and size: " << total_size << std::endl;
-  if (existing.first.st_ptr >= existing.first.st_size) return 0;
+size_t read_internal(AdapterStat &stat, void *ptr, size_t total_size,
+                     FILE *fp) {
+  std::shared_ptr<hapi::Bucket> bkt = stat.st_bkid;
+  auto filename = bkt->GetName();
+  LOG(INFO) << "Read called for filename: " << filename << " on offset: "
+            << stat.st_ptr << " and size: " << total_size << std::endl;
+  if (stat.st_ptr >= stat.st_size) {
+    return 0;
+  }
+
   size_t ret;
   auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
   auto mapper = MapperFactory().Get(kMapperType);
   auto mapping = mapper->map(
-      FileStruct(mdm->Convert(fp), existing.first.st_ptr, total_size));
+      FileStruct(mdm->Convert(fp), stat.st_ptr, total_size));
   size_t total_read_size = 0;
-  auto filename = existing.first.st_bkid->GetName();
   LOG(INFO) << "Mapping for read has " << mapping.size() << " mapping."
             << std::endl;
-  for (const auto &item : mapping) {
-    hapi::Context ctx;
-    auto blob_exists =
-        existing.first.st_bkid->ContainsBlob(item.second.blob_name_);
+  for (const auto& [finfo, hinfo] : mapping) {
+    auto blob_exists = bkt->ContainsBlob(hinfo.blob_name_);
     hapi::Blob read_data(0);
     size_t read_size = 0;
     if (blob_exists) {
       LOG(INFO) << "Blob exists and need to read from Hermes from blob: "
-                << item.second.blob_name_ << "." << std::endl;
-      auto exiting_blob_size =
-          existing.first.st_bkid->Get(item.second.blob_name_, read_data, ctx);
+                << hinfo.blob_name_ << "." << std::endl;
+      auto existing_blob_size = bkt->Get(hinfo.blob_name_, read_data);
 
-      read_data.resize(exiting_blob_size);
-      existing.first.st_bkid->Get(item.second.blob_name_, read_data, ctx);
-      bool contains_blob = exiting_blob_size > item.second.offset_;
+      read_data.resize(existing_blob_size);
+      bkt->Get(hinfo.blob_name_, read_data);
+      bool contains_blob = existing_blob_size > hinfo.offset_;
       if (contains_blob) {
-        read_size = read_data.size() < item.second.offset_ + item.second.size_
-                        ? exiting_blob_size - item.second.offset_
-                        : item.second.size_;
+        read_size = read_data.size() < hinfo.offset_ + hinfo.size_
+                        ? existing_blob_size - hinfo.offset_ : hinfo.size_;
         LOG(INFO) << "Blob have data and need to read from hemes "
                      "blob: "
-                  << item.second.blob_name_ << " offset:" << item.second.offset_
+                  << hinfo.blob_name_ << " offset:" << hinfo.offset_
                   << " size:" << read_size << "." << std::endl;
         memcpy((char *)ptr + total_read_size,
-               read_data.data() + item.second.offset_, read_size);
-        if (read_size < item.second.size_) {
+               read_data.data() + hinfo.offset_, read_size);
+        if (read_size < hinfo.size_) {
           contains_blob = true;
         } else {
           contains_blob = false;
@@ -386,46 +391,47 @@ size_t read_internal(std::pair<AdapterStat, bool> &existing, void *ptr,
       } else {
         LOG(INFO) << "Blob does not have data and need to read from original "
                      "filename: "
-                  << filename << " offset:" << item.first.offset_
-                  << " size:" << item.first.size_ << "." << std::endl;
+                  << filename << " offset:" << finfo.offset_
+                  << " size:" << finfo.size_ << "." << std::endl;
         auto file_read_size =
-            perform_file_read(filename.c_str(), item.first.offset_, ptr,
-                              total_read_size, item.second.size_);
+            perform_file_read(filename.c_str(), finfo.offset_, ptr,
+                              total_read_size, hinfo.size_);
         read_size += file_read_size;
       }
       if (contains_blob && fs::exists(filename) &&
-          fs::file_size(filename) >= item.first.offset_ + item.first.size_) {
+          fs::file_size(filename) >= finfo.offset_ + finfo.size_) {
         LOG(INFO) << "Blob does not have data and need to read from original "
                      "filename: "
-                  << filename << " offset:" << item.first.offset_ + read_size
-                  << " size:" << item.second.size_ - read_size << "."
+                  << filename << " offset:" << finfo.offset_ + read_size
+                  << " size:" << hinfo.size_ - read_size << "."
                   << std::endl;
-        auto new_read_size = perform_file_read(
-            filename.c_str(), item.first.offset_, ptr,
-            total_read_size + read_size, item.second.size_ - read_size);
+        auto new_read_size = perform_file_read(filename.c_str(), finfo.offset_,
+                                               ptr, total_read_size + read_size,
+                                               hinfo.size_ - read_size);
         read_size += new_read_size;
       }
     } else if (fs::exists(filename) &&
-               fs::file_size(filename) >=
-                   item.first.offset_ + item.first.size_) {
+               fs::file_size(filename) >= finfo.offset_ + finfo.size_) {
       LOG(INFO)
           << "Blob does not exists and need to read from original filename: "
-          << filename << " offset:" << item.first.offset_
-          << " size:" << item.first.size_ << "." << std::endl;
-      read_size = perform_file_read(filename.c_str(), item.first.offset_, ptr,
-                                    total_read_size, item.first.size_);
+          << filename << " offset:" << finfo.offset_
+          << " size:" << finfo.size_ << "." << std::endl;
+      read_size = perform_file_read(filename.c_str(), finfo.offset_, ptr,
+                                    total_read_size, finfo.size_);
     }
     if (read_size > 0) {
       total_read_size += read_size;
     }
   }
-  existing.first.st_ptr += total_read_size;
+  stat.st_ptr += total_read_size;
+
   struct timespec ts;
   timespec_get(&ts, TIME_UTC);
-  existing.first.st_atim = ts;
-  existing.first.st_ctim = ts;
-  mdm->Update(fp, existing.first);
+  stat.st_atim = ts;
+  stat.st_ctim = ts;
+  mdm->Update(fp, stat);
   ret = total_read_size;
+
   return ret;
 }
 
@@ -433,28 +439,28 @@ FILE *HERMES_DECL(fopen)(const char *path, const char *mode) {
   FILE *ret;
   std::string path_str(path);
   if (hermes::adapter::IsTracked(path)) {
-    LOG(INFO) << "Intercept fopen for filename: " << path
-              << " and mode: " << mode << " is tracked." << std::endl;
+    LOG(INFO) << "Intercepting fopen(" << path << ", " << mode << ")\n";
     ret = open_internal(path, mode);
   } else {
     MAP_OR_FAIL(fopen);
     ret = real_fopen_(path, mode);
   }
-  return (ret);
+
+  return ret;
 }
 
 FILE *HERMES_DECL(fopen64)(const char *path, const char *mode) {
   FILE *ret;
   std::string path_str(path);
   if (hermes::adapter::IsTracked(path)) {
-    LOG(INFO) << "Intercept fopen64 for filename: " << path
-              << " and mode: " << mode << " is tracked." << std::endl;
+    LOG(INFO) << "Intercepting fopen64(" << path << ", " << mode << ")\n";
     ret = open_internal(path, mode);
   } else {
     MAP_OR_FAIL(fopen64);
     ret = real_fopen64_(path, mode);
   }
-  return (ret);
+
+  return ret;
 }
 
 FILE *HERMES_DECL(fdopen)(int fd, const char *mode) {
@@ -462,8 +468,7 @@ FILE *HERMES_DECL(fdopen)(int fd, const char *mode) {
   MAP_OR_FAIL(fdopen);
   ret = real_fdopen_(fd, mode);
   if (ret && hermes::adapter::IsTracked(ret)) {
-    LOG(INFO) << "Intercept fdopen for file descriptor: " << fd
-              << " and mode: " << mode << " tracked." << std::endl;
+    LOG(INFO) << "Intercepting fdopen(" << fd << ", " << mode << ")\n";
     const int kMaxSize = 0xFFF;
     char proclnk[kMaxSize];
     char filename[kMaxSize];
@@ -472,33 +477,36 @@ FILE *HERMES_DECL(fdopen)(int fd, const char *mode) {
     filename[r] = '\0';
     ret = simple_open(ret, filename, mode);
   }
-  return (ret);
+
+  return ret;
 }
 
 FILE *HERMES_DECL(freopen)(const char *path, const char *mode, FILE *stream) {
   FILE *ret;
   if (hermes::adapter::IsTracked(path)) {
-    LOG(INFO) << "Intercept freopen for filename: " << path
-              << " and mode: " << mode << " tracked." << std::endl;
+    LOG(INFO) << "Intercepting freopen(" << path << ", " << mode << ", "
+              << stream << ")\n";
     ret = reopen_internal(path, mode, stream);
   } else {
     MAP_OR_FAIL(freopen);
     ret = real_freopen_(path, mode, stream);
   }
-  return (ret);
+
+  return ret;
 }
 
 FILE *HERMES_DECL(freopen64)(const char *path, const char *mode, FILE *stream) {
   FILE *ret;
   if (hermes::adapter::IsTracked(path)) {
-    LOG(INFO) << "Intercept freopen64 for filename: " << path
-              << " and mode: " << mode << " tracked." << std::endl;
+    LOG(INFO) << "Intercepting freopen64(" << path << ", " << mode << ", "
+              << stream << ")\n";
     ret = reopen_internal(path, mode, stream);
   } else {
     MAP_OR_FAIL(freopen64);
     ret = real_freopen64_(path, mode, stream);
   }
-  return (ret);
+
+  return ret;
 }
 
 int HERMES_DECL(fflush)(FILE *fp) {
@@ -507,7 +515,7 @@ int HERMES_DECL(fflush)(FILE *fp) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(fp);
     if (existing.second) {
-      LOG(INFO) << "Intercept fflush." << std::endl;
+      LOG(INFO) << "Intercepting fflush(" << fp << ")\n";
       auto filename = existing.first.st_bkid->GetName();
       const auto &blob_names = existing.first.st_blobs;
       if (!blob_names.empty() && INTERCEPTOR_LIST->Persists(fp)) {
@@ -538,13 +546,14 @@ int HERMES_DECL(fflush)(FILE *fp) {
     MAP_OR_FAIL(fflush);
     ret = real_fflush_(fp);
   }
-  return (ret);
+
+  return ret;
 }
 
 int HERMES_DECL(fclose)(FILE *fp) {
   int ret;
   if (hermes::adapter::IsTracked(fp)) {
-    LOG(INFO) << "Intercept fclose." << std::endl;
+    LOG(INFO) << "Intercepting fclose(" << fp << ")\n";
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(fp);
     if (existing.second) {
@@ -580,8 +589,7 @@ int HERMES_DECL(fclose)(FILE *fp) {
         existing.first.st_bkid->Destroy();
         mdm->FinalizeHermes();
       } else {
-        LOG(INFO) << "File handler is opened by more than one fopen."
-                  << std::endl;
+        LOG(INFO) << "File handler is opened by more than one fopen.\n";
         existing.first.ref_count--;
         struct timespec ts;
         timespec_get(&ts, TIME_UTC);
@@ -595,7 +603,8 @@ int HERMES_DECL(fclose)(FILE *fp) {
 
   MAP_OR_FAIL(fclose);
   ret = real_fclose_(fp);
-  return (ret);
+
+  return ret;
 }
 
 size_t HERMES_DECL(fwrite)(const void *ptr, size_t size, size_t nmemb,
@@ -605,7 +614,8 @@ size_t HERMES_DECL(fwrite)(const void *ptr, size_t size, size_t nmemb,
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(fp);
     if (existing.second) {
-      LOG(INFO) << "Intercept fwrite." << std::endl;
+      LOG(INFO) << "Intercepting fwrite(" << ptr << ", " << size << ", "
+                << nmemb << ", " << fp << ")\n";
       ret = write_internal(existing.first, ptr, size * nmemb, fp);
     } else {
       MAP_OR_FAIL(fwrite);
@@ -615,7 +625,8 @@ size_t HERMES_DECL(fwrite)(const void *ptr, size_t size, size_t nmemb,
     MAP_OR_FAIL(fwrite);
     ret = real_fwrite_(ptr, size, nmemb, fp);
   }
-  return (ret);
+
+  return ret;
 }
 
 int HERMES_DECL(fputc)(int c, FILE *fp) {
@@ -624,7 +635,7 @@ int HERMES_DECL(fputc)(int c, FILE *fp) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(fp);
     if (existing.second) {
-      LOG(INFO) << "Intercept fputc." << std::endl;
+      LOG(INFO) << "Intercepting fputc(" << c << ", " << fp << ")\n";
       write_internal(existing.first, &c, 1, fp);
       ret = c;
     } else {
@@ -635,7 +646,8 @@ int HERMES_DECL(fputc)(int c, FILE *fp) {
     MAP_OR_FAIL(fputc);
     ret = real_fputc_(c, fp);
   }
-  return (ret);
+
+  return ret;
 }
 
 int HERMES_DECL(fgetpos)(FILE *fp, fpos_t *pos) {
@@ -660,6 +672,7 @@ int HERMES_DECL(fgetpos)(FILE *fp, fpos_t *pos) {
     MAP_OR_FAIL(fgetpos);
     ret = real_fgetpos_(fp, pos);
   }
+
   return ret;
 }
 
@@ -685,6 +698,7 @@ int HERMES_DECL(fgetpos64)(FILE *fp, fpos64_t *pos) {
     MAP_OR_FAIL(fgetpos64);
     ret = real_fgetpos64_(fp, pos);
   }
+
   return ret;
 }
 
@@ -705,7 +719,8 @@ int HERMES_DECL(putc)(int c, FILE *fp) {
     MAP_OR_FAIL(fputc);
     ret = real_fputc_(c, fp);
   }
-  return (ret);
+
+  return ret;
 }
 
 int HERMES_DECL(putw)(int w, FILE *fp) {
@@ -729,7 +744,8 @@ int HERMES_DECL(putw)(int w, FILE *fp) {
     MAP_OR_FAIL(putw);
     ret = real_putw_(w, fp);
   }
-  return (ret);
+
+  return ret;
 }
 
 int HERMES_DECL(fputs)(const char *s, FILE *stream) {
@@ -748,7 +764,8 @@ int HERMES_DECL(fputs)(const char *s, FILE *stream) {
     MAP_OR_FAIL(fputs);
     ret = real_fputs_(s, stream);
   }
-  return (ret);
+
+  return ret;
 }
 
 size_t HERMES_DECL(fread)(void *ptr, size_t size, size_t nmemb, FILE *stream) {
@@ -758,7 +775,7 @@ size_t HERMES_DECL(fread)(void *ptr, size_t size, size_t nmemb, FILE *stream) {
     auto existing = mdm->Find(stream);
     if (existing.second) {
       LOG(INFO) << "Intercept fread with size: " << size << "." << std::endl;
-      ret = read_internal(existing, ptr, size * nmemb, stream);
+      ret = read_internal(existing.first, ptr, size * nmemb, stream);
     } else {
       MAP_OR_FAIL(fread);
       ret = real_fread_(ptr, size, nmemb, stream);
@@ -767,7 +784,8 @@ size_t HERMES_DECL(fread)(void *ptr, size_t size, size_t nmemb, FILE *stream) {
     MAP_OR_FAIL(fread);
     ret = real_fread_(ptr, size, nmemb, stream);
   }
-  return (ret);
+
+  return ret;
 }
 
 int HERMES_DECL(fgetc)(FILE *stream) {
@@ -779,7 +797,7 @@ int HERMES_DECL(fgetc)(FILE *stream) {
       LOG(INFO) << "Intercept fgetc." << std::endl;
       unsigned char value;
       auto ret_size =
-          read_internal(existing, &value, sizeof(unsigned char), stream);
+          read_internal(existing.first, &value, sizeof(unsigned char), stream);
       if (ret_size == sizeof(unsigned char)) {
         ret = value;
       }
@@ -791,7 +809,8 @@ int HERMES_DECL(fgetc)(FILE *stream) {
     MAP_OR_FAIL(fgetc);
     ret = real_fgetc_(stream);
   }
-  return (ret);
+
+  return ret;
 }
 
 int HERMES_DECL(getc)(FILE *stream) {
@@ -803,7 +822,7 @@ int HERMES_DECL(getc)(FILE *stream) {
       LOG(INFO) << "Intercept getc." << std::endl;
       unsigned char value;
       auto ret_size =
-          read_internal(existing, &value, sizeof(unsigned char), stream);
+          read_internal(existing.first, &value, sizeof(unsigned char), stream);
       if (ret_size == sizeof(unsigned char)) {
         ret = value;
       }
@@ -815,7 +834,8 @@ int HERMES_DECL(getc)(FILE *stream) {
     MAP_OR_FAIL(fgetc);
     ret = real_fgetc_(stream);
   }
-  return (ret);
+
+  return ret;
 }
 
 int HERMES_DECL(getw)(FILE *stream) {
@@ -826,7 +846,7 @@ int HERMES_DECL(getw)(FILE *stream) {
     if (existing.second) {
       LOG(INFO) << "Intercept getw." << std::endl;
       int value;
-      auto ret_size = read_internal(existing, &value, sizeof(int), stream);
+      auto ret_size = read_internal(existing.first, &value, sizeof(int), stream);
       if (ret_size == sizeof(int)) {
         ret = value;
       }
@@ -838,7 +858,8 @@ int HERMES_DECL(getw)(FILE *stream) {
     MAP_OR_FAIL(getw);
     ret = real_getw_(stream);
   }
-  return (ret);
+
+  return ret;
 }
 
 char *HERMES_DECL(fgets)(char *s, int size, FILE *stream) {
@@ -849,7 +870,7 @@ char *HERMES_DECL(fgets)(char *s, int size, FILE *stream) {
     if (existing.second) {
       LOG(INFO) << "Intercept fgets." << std::endl;
       size_t read_size = size - 1;
-      size_t ret_size = read_internal(existing, s, read_size, stream);
+      size_t ret_size = read_internal(existing.first, s, read_size, stream);
       if (ret_size < read_size) {
         /* FILE ended */
         read_size = ret_size;
@@ -877,7 +898,8 @@ char *HERMES_DECL(fgets)(char *s, int size, FILE *stream) {
     MAP_OR_FAIL(fgets);
     ret = real_fgets_(s, size, stream);
   }
-  return (ret);
+
+  return ret;
 }
 
 void HERMES_DECL(rewind)(FILE *stream) {
@@ -902,7 +924,6 @@ void HERMES_DECL(rewind)(FILE *stream) {
     MAP_OR_FAIL(rewind);
     real_rewind_(stream);
   }
-  return;
 }
 
 int HERMES_DECL(fseek)(FILE *stream, long offset, int whence) {
@@ -947,7 +968,8 @@ int HERMES_DECL(fseek)(FILE *stream, long offset, int whence) {
     MAP_OR_FAIL(fseek);
     ret = real_fseek_(stream, offset, whence);
   }
-  return (ret);
+
+  return ret;
 }
 
 int HERMES_DECL(fseeko)(FILE *stream, off_t offset, int whence) {
@@ -973,7 +995,7 @@ int HERMES_DECL(fseeko)(FILE *stream, off_t offset, int whence) {
             break;
           }
           default: {
-            // TODO(hari): @error_handling throw not implemented error.
+            // TODO(hari): @errorhandling throw not implemented error.
           }
         }
         mdm->Update(stream, existing.first);
@@ -992,7 +1014,8 @@ int HERMES_DECL(fseeko)(FILE *stream, off_t offset, int whence) {
     MAP_OR_FAIL(fseeko);
     ret = real_fseeko_(stream, offset, whence);
   }
-  return (ret);
+
+  return ret;
 }
 
 int HERMES_DECL(fseeko64)(FILE *stream, off64_t offset, int whence) {
@@ -1037,7 +1060,8 @@ int HERMES_DECL(fseeko64)(FILE *stream, off64_t offset, int whence) {
     MAP_OR_FAIL(fseeko64);
     ret = real_fseeko64_(stream, offset, whence);
   }
-  return (ret);
+
+  return ret;
 }
 
 int HERMES_DECL(fsetpos)(FILE *stream, const fpos_t *pos) {
@@ -1071,7 +1095,8 @@ int HERMES_DECL(fsetpos)(FILE *stream, const fpos_t *pos) {
     MAP_OR_FAIL(fsetpos);
     ret = real_fsetpos_(stream, pos);
   }
-  return (ret);
+
+  return ret;
 }
 
 int HERMES_DECL(fsetpos64)(FILE *stream, const fpos64_t *pos) {
@@ -1105,7 +1130,8 @@ int HERMES_DECL(fsetpos64)(FILE *stream, const fpos64_t *pos) {
     MAP_OR_FAIL(fsetpos64);
     ret = real_fsetpos64_(stream, pos);
   }
-  return (ret);
+
+  return ret;
 }
 
 long int HERMES_DECL(ftell)(FILE *fp) {
@@ -1124,5 +1150,6 @@ long int HERMES_DECL(ftell)(FILE *fp) {
     MAP_OR_FAIL(ftell);
     ret = real_ftell_(fp);
   }
-  return (ret);
+
+  return ret;
 }
