@@ -224,121 +224,115 @@ void PutWithStdioFallback(AdapterStat &stat, const std::string &blob_name,
   }
 }
 
-size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
-                      size_t total_size, FILE *fp) {
-  LOG(INFO) << "Write called for filename: "
-            << existing.first.st_bkid->GetName()
-            << " on offset: " << existing.first.st_ptr
-            << " and size: " << total_size << std::endl;
+size_t write_internal(AdapterStat &stat, const void *ptr, size_t total_size,
+                      FILE *fp) {
+  std::shared_ptr<hapi::Bucket> bkt = stat.st_bkid;
+  std::string filename = bkt->GetName();
+
+  LOG(INFO) << "Write called for filename: " << filename << " on offset: "
+            << stat.st_ptr << " and size: " << total_size << std::endl;
   size_t ret;
   auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
   auto mapper = MapperFactory().Get(kMapperType);
   auto mapping = mapper->map(
-      FileStruct(mdm->Convert(fp), existing.first.st_ptr, total_size));
+      FileStruct(mdm->Convert(fp), stat.st_ptr, total_size));
   size_t data_offset = 0;
-  auto filename = existing.first.st_bkid->GetName();
   LOG(INFO) << "Mapping for write has " << mapping.size() << " mappings."
             << std::endl;
-  for (const auto &item : mapping) {
-    hapi::Context ctx;
-    auto index = std::stol(item.second.blob_name_) - 1;
+  for (const auto& [finfo, hinfo] : mapping) {
+    auto index = std::stol(hinfo.blob_name_) - 1;
     size_t offset = index * kPageSize;
-    auto blob_exists =
-        existing.first.st_bkid->ContainsBlob(item.second.blob_name_);
-    unsigned char *put_data_ptr = (unsigned char *)ptr + data_offset;
-    size_t put_data_ptr_size = item.first.size_;
+    auto blob_exists = bkt->ContainsBlob(hinfo.blob_name_);
+    u8 *put_data_ptr = (u8 *)ptr + data_offset;
+    size_t put_data_ptr_size = finfo.size_;
 
-    if (!blob_exists || item.second.size_ == kPageSize) {
-      LOG(INFO) << "Create or Overwrite blob " << item.second.blob_name_
-                << " of size:" << item.second.size_ << "." << std::endl;
-      if (item.second.size_ == kPageSize) {
-        PutWithStdioFallback(existing.first, item.second.blob_name_, filename,
+    if (!blob_exists || hinfo.size_ == kPageSize) {
+      LOG(INFO) << "Create or Overwrite blob " << hinfo.blob_name_
+                << " of size:" << hinfo.size_ << "." << std::endl;
+      if (hinfo.size_ == kPageSize) {
+        PutWithStdioFallback(stat, hinfo.blob_name_, filename,
                              put_data_ptr, put_data_ptr_size,
-                             item.first.offset_);
-      } else if (item.second.offset_ == 0) {
-        PutWithStdioFallback(existing.first, item.second.blob_name_, filename,
+                             finfo.offset_);
+      } else if (hinfo.offset_ == 0) {
+        PutWithStdioFallback(stat, hinfo.blob_name_, filename,
                              put_data_ptr, put_data_ptr_size, offset);
       } else {
-        hapi::Blob final_data(item.second.offset_ + item.second.size_);
+        hapi::Blob final_data(hinfo.offset_ + hinfo.size_);
 
         ReadGap(filename, index * kPageSize, final_data.data(),
-                item.second.offset_, item.second.offset_);
-        memcpy(final_data.data() + item.second.offset_, put_data_ptr,
+                hinfo.offset_, hinfo.offset_);
+        memcpy(final_data.data() + hinfo.offset_, put_data_ptr,
                put_data_ptr_size);
-        PutWithStdioFallback(existing.first, item.second.blob_name_, filename,
+        PutWithStdioFallback(stat, hinfo.blob_name_, filename,
                              final_data.data(), final_data.size(), offset);
       }
     } else {
-      LOG(INFO) << "Blob " << item.second.blob_name_
-                << " of size:" << item.second.size_ << " exists." << std::endl;
+      LOG(INFO) << "Blob " << hinfo.blob_name_
+                << " of size:" << hinfo.size_ << " exists." << std::endl;
       hapi::Blob temp(0);
-      auto existing_blob_size =
-          existing.first.st_bkid->Get(item.second.blob_name_, temp, ctx);
-      if (item.second.offset_ == 0) {
+      auto existing_blob_size = bkt->Get(hinfo.blob_name_, temp);
+      if (hinfo.offset_ == 0) {
         LOG(INFO) << "Blob offset is 0" << std::endl;
-        if (item.second.size_ >= existing_blob_size) {
-          LOG(INFO) << "Overwrite blob " << item.second.blob_name_
-                    << " of size:" << item.second.size_ << "." << std::endl;
-          PutWithStdioFallback(existing.first, item.second.blob_name_, filename,
+        if (hinfo.size_ >= existing_blob_size) {
+          LOG(INFO) << "Overwrite blob " << hinfo.blob_name_
+                    << " of size:" << hinfo.size_ << "." << std::endl;
+          PutWithStdioFallback(stat, hinfo.blob_name_, filename,
                                put_data_ptr, put_data_ptr_size, offset);
         } else {
-          LOG(INFO) << "Update blob " << item.second.blob_name_
+          LOG(INFO) << "Update blob " << hinfo.blob_name_
                     << " of size:" << existing_blob_size << "." << std::endl;
           hapi::Blob existing_data(existing_blob_size);
-          existing.first.st_bkid->Get(item.second.blob_name_, existing_data);
+          bkt->Get(hinfo.blob_name_, existing_data);
           memcpy(existing_data.data(), put_data_ptr, put_data_ptr_size);
 
-          PutWithStdioFallback(existing.first, item.second.blob_name_, filename,
+          PutWithStdioFallback(stat, hinfo.blob_name_, filename,
                                existing_data.data(), existing_data.size(),
                                offset);
         }
       } else {
-        LOG(INFO) << "Blob offset: " << item.second.offset_ << "." << std::endl;
-        auto new_size = item.second.offset_ + item.second.size_;
+        LOG(INFO) << "Blob offset: " << hinfo.offset_ << "." << std::endl;
+        auto new_size = hinfo.offset_ + hinfo.size_;
         hapi::Blob existing_data(existing_blob_size);
-        existing.first.st_bkid->Get(item.second.blob_name_, existing_data, ctx);
-        existing.first.st_bkid->DeleteBlob(item.second.blob_name_, ctx);
+        bkt->Get(hinfo.blob_name_, existing_data);
+        bkt->DeleteBlob(hinfo.blob_name_);
         if (new_size < existing_blob_size) {
           new_size = existing_blob_size;
         }
         hapi::Blob final_data(new_size);
-        auto existing_data_cp_size = existing_data.size() >= item.second.offset_
-                                         ? item.second.offset_
-                                         : existing_data.size();
+        auto existing_data_cp_size = existing_data.size() >= hinfo.offset_
+                                         ? hinfo.offset_ : existing_data.size();
         memcpy(final_data.data(), existing_data.data(), existing_data_cp_size);
 
-        if (existing_blob_size < item.second.offset_) {
+        if (existing_blob_size < hinfo.offset_) {
           ReadGap(filename, index * kPageSize + existing_data_cp_size,
                   final_data.data() + existing_data_cp_size,
-                  item.second.offset_ - existing_blob_size,
-                  item.second.offset_ + item.second.size_);
+                  hinfo.offset_ - existing_blob_size,
+                  hinfo.offset_ + hinfo.size_);
         }
-        memcpy(final_data.data() + item.second.offset_, put_data_ptr,
+        memcpy(final_data.data() + hinfo.offset_, put_data_ptr,
                put_data_ptr_size);
 
-        if (item.second.offset_ + item.second.size_ < existing_blob_size) {
+        if (hinfo.offset_ + hinfo.size_ < existing_blob_size) {
           LOG(INFO) << "Retain last portion of blob as Blob is bigger than the "
-                       "update."
-                    << std::endl;
-          auto off_t = item.second.offset_ + item.second.size_;
+                       "update." << std::endl;
+          auto off_t = hinfo.offset_ + hinfo.size_;
           memcpy(final_data.data() + off_t, existing_data.data() + off_t,
                  existing_blob_size - off_t);
         }
-        PutWithStdioFallback(existing.first, item.second.blob_name_, filename,
+        PutWithStdioFallback(stat, hinfo.blob_name_, filename,
                              final_data.data(), final_data.size(), offset);
       }
     }
-    data_offset += item.first.size_;
+    data_offset += finfo.size_;
   }
-  existing.first.st_ptr += data_offset;
-  existing.first.st_size = existing.first.st_size >= existing.first.st_ptr
-                               ? existing.first.st_size
-                               : existing.first.st_ptr;
+  stat.st_ptr += data_offset;
+  stat.st_size = stat.st_size >= stat.st_ptr ? stat.st_size : stat.st_ptr;
+
   struct timespec ts;
   timespec_get(&ts, TIME_UTC);
-  existing.first.st_mtim = ts;
-  existing.first.st_ctim = ts;
-  mdm->Update(fp, existing.first);
+  stat.st_mtim = ts;
+  stat.st_ctim = ts;
+  mdm->Update(fp, stat);
   ret = data_offset;
 
   return ret;
@@ -612,7 +606,7 @@ size_t HERMES_DECL(fwrite)(const void *ptr, size_t size, size_t nmemb,
     auto existing = mdm->Find(fp);
     if (existing.second) {
       LOG(INFO) << "Intercept fwrite." << std::endl;
-      ret = write_internal(existing, ptr, size * nmemb, fp);
+      ret = write_internal(existing.first, ptr, size * nmemb, fp);
     } else {
       MAP_OR_FAIL(fwrite);
       ret = real_fwrite_(ptr, size, nmemb, fp);
@@ -631,7 +625,7 @@ int HERMES_DECL(fputc)(int c, FILE *fp) {
     auto existing = mdm->Find(fp);
     if (existing.second) {
       LOG(INFO) << "Intercept fputc." << std::endl;
-      write_internal(existing, &c, 1, fp);
+      write_internal(existing.first, &c, 1, fp);
       ret = c;
     } else {
       MAP_OR_FAIL(fputc);
@@ -701,7 +695,7 @@ int HERMES_DECL(putc)(int c, FILE *fp) {
     auto existing = mdm->Find(fp);
     if (existing.second) {
       LOG(INFO) << "Intercept putc." << std::endl;
-      write_internal(existing, &c, 1, fp);
+      write_internal(existing.first, &c, 1, fp);
       ret = c;
     } else {
       MAP_OR_FAIL(fputc);
@@ -721,7 +715,7 @@ int HERMES_DECL(putw)(int w, FILE *fp) {
     auto existing = mdm->Find(fp);
     if (existing.second) {
       LOG(INFO) << "Intercept putw." << std::endl;
-      ret = write_internal(existing, &w, sizeof(w), fp);
+      ret = write_internal(existing.first, &w, sizeof(w), fp);
       if (ret == sizeof(w)) {
         ret = 0;
       } else {
@@ -745,7 +739,7 @@ int HERMES_DECL(fputs)(const char *s, FILE *stream) {
     auto existing = mdm->Find(stream);
     if (existing.second) {
       LOG(INFO) << "Intercept fputs." << std::endl;
-      ret = write_internal(existing, s, strlen(s), stream);
+      ret = write_internal(existing.first, s, strlen(s), stream);
     } else {
       MAP_OR_FAIL(fputs);
       ret = real_fputs_(s, stream);
