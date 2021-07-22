@@ -122,9 +122,11 @@ void PersistTrait::onDetach(HermesPtr hermes, TraitInput &input, Trait *trait) {
 }
 
 void PersistTrait::onLink(HermesPtr hermes, TraitInput &input, Trait *trait) {
-  (void)hermes;
-  (void)input;
-  (void)trait;
+  PersistTrait *persist_trait = (PersistTrait *)trait;
+  // TEMP(chogan): Where to get the offset from?
+  u64 offset = 0;
+  persist_trait->file_mapping.offset_map.emplace(input.blob_name, offset);
+  onAttach(hermes, input, trait);
   // EnqueueFlushingTask(&hermes->context_, &hermes->rpc_, blob_id, flush_info);
 }
 

@@ -39,6 +39,8 @@ struct Trait {
   TraitCallback onDetachFn;
   TraitCallback onLinkFn;
   TraitCallback onUnlinkFn;
+
+  Trait() {}
   Trait(TraitID id, TraitIdArray conflict_traits, TraitType type);
 };
 
@@ -51,6 +53,8 @@ struct FileMappingTrait : public Trait {
   std::string filename;
   std::unordered_map<std::string, u64> offset_map;
   FILE *fh;
+
+  FileMappingTrait() {}
   FileMappingTrait(std::string &filename,
                    std::unordered_map<std::string, u64> &offset_map, FILE *fh,
                    TraitCallback flush_cb, TraitCallback load_cb);
@@ -64,6 +68,7 @@ struct PersistTrait : public Trait {
   FileMappingTrait file_mapping;
   bool synchronous;
 
+  explicit PersistTrait(bool synchronous);
   explicit PersistTrait(const FileMappingTrait& mapping,
                         bool synchronous = false);
 
