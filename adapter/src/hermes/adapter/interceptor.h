@@ -31,7 +31,7 @@
  * Define Interceptor list for adapter.
  */
 #define INTERCEPTOR_LIST \
-  hermes::adapter::Singleton<hermes::adapter::InterceptorList>::GetInstance()
+  hermes::adapter::Singleton<hermes::adapter::InterceptorList>::GetInstance<>()
 
 namespace hermes::adapter {
 /**

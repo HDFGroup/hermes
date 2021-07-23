@@ -1126,6 +1126,7 @@ void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
   for (u32 i = 0; i < config->max_vbuckets_per_node; ++i) {
     VBucketInfo *info = vbuckets + i;
     info->active = false;
+    info->async_flush_count.store(0);
 
     if (i == config->max_vbuckets_per_node - 1) {
       info->next_free.as_int = 0;

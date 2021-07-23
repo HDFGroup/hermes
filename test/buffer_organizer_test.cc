@@ -10,7 +10,10 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+#include <numeric>
+
 #include "hermes.h"
+#include "vbucket.h"
 #include "test_utils.h"
 
 #include <mpi.h>
@@ -59,6 +62,72 @@ void TestBoTasks() {
 
   hermes->Finalize(true);
 }
+void TestBackgroundFlush() {
+  using hermes::u8;
+  HermesPtr hermes = hermes::InitHermesDaemon();
+  const int io_size = KILOBYTES(4);
+  const int iters = 4;
+  const int total_bytes = io_size * iters;
+  std::string final_destination = "./test_background_flush.out";
+  std::string bkt_name = "background_flush";
+  hapi::Bucket bkt(bkt_name, hermes);
+  hapi::VBucket vbkt(bkt_name, hermes);
+
+  hapi::FileMappingTrait mapping;
+  mapping.filename = final_destination;
+  hapi::PersistTrait persist_trait(mapping, false);
+  vbkt.Attach(&persist_trait);
+
+  std::vector<u8> data(iters);
+  std::iota(data.begin(), data.end(), 'a');
+
+  for (int i = 0; i < iters; ++i) {
+    hapi::Blob blob(io_size, data[i]);
+    std::string blob_name = std::to_string(i);
+    bkt.Put(blob_name, blob);
+
+    size_t offset = i * io_size;
+    vbkt.Link(blob_name, bkt_name, &offset);
+  }
+
+  // for (int i = 0; i < iters; ++i) {
+  //   hapi::Blob expected(io_size, data[i]);
+  //   std::string blob_name = std::to_string(i);
+
+  //   hapi::Blob result;
+  //   size_t blob_size = bkt.Get(blob_name, result);
+  //   Assert(expected.size() == blob_size);
+
+  //   result.resize(blob_size);
+  //   bkt.Get(blob_name, result);
+
+  //   Assert(result == expected);
+  // }
+
+  vbkt.WaitForBackgroundFlush();
+  vbkt.Destroy();
+  bkt.Destroy();
+
+  hermes->Finalize(true);
+
+  // NOTE(chogan): Verify that file is on disk with correct data
+  FILE *fh = fopen(final_destination.c_str(), "r");
+  Assert(fh);
+
+  std::vector<u8> result(total_bytes, 0);
+  size_t bytes_read = fread(result.data(), 1, total_bytes, fh);
+  Assert(bytes_read == total_bytes);
+
+  for (int i = 0; i < iters; ++i) {
+    for (int j = 0; j < io_size; ++j) {
+      int index = i * io_size + j;
+      Assert(result[index] == data[i]);
+    }
+  }
+
+  Assert(fclose(fh) == 0);
+  Assert(std::remove(final_destination.c_str()) == 0);
+}
 
 int main(int argc, char *argv[]) {
   int mpi_threads_provided;
@@ -70,6 +139,7 @@ int main(int argc, char *argv[]) {
 
   TestIsBoFunction();
   TestBoTasks();
+  TestBackgroundFlush();
 
   MPI_Finalize();
   return 0;

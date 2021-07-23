@@ -75,20 +75,31 @@ void FlushBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id,
                const std::string &filename, u64 offset) {
   // TODO(chogan): @errorhandling
 
-  std::string open_mode;
+  int open_flags = 0;
+  mode_t open_mode = 0;
   if (access(filename.c_str(), F_OK) == 0) {
-    open_mode = "r+";
+    open_flags = O_RDWR;
   } else {
-    open_mode = "w+";
+    open_flags = O_RDWR | O_CREAT | O_TRUNC;
+    open_mode = S_IRWXU;
   }
 
-  FILE *fh = fopen(filename.c_str(), open_mode.c_str());
-  // TODO(chogan): ScopedArena
-  Arena local_arena = InitArenaAndAllocate(KILOBYTES(8));
-  StdIoPersistBlob(context, rpc, &local_arena, blob_id, fh, offset);
-  fflush(fh);
-  fclose(fh);
-  DestroyArena(&local_arena);
+  int fd = open(filename.c_str(), open_flags, open_mode);
+  if (fd != -1) {
+    // TODO(chogan): ScopedArena
+    Arena local_arena = InitArenaAndAllocate(KILOBYTES(4));
+    StdIoPersistBlob(context, rpc, &local_arena, blob_id, fd, offset);
+    DestroyArena(&local_arena);
+
+    DecrementFlushCount(context, rpc, filename);
+
+    if (close(fd) != 0) {
+      FailedLibraryCall("close");
+    }
+
+  } else {
+    FailedLibraryCall("open");
+  }
 
   // TODO(chogan):
   // if (DONTNEED) {
@@ -186,6 +197,19 @@ void DecrementFlushCount(SharedMemoryContext *context, RpcContext *rpc,
   } else {
     RpcCall<bool>(rpc, target_node, "RemoteDecrementFlushCount",
                   vbkt_name);
+  }
+}
+
+void AwaitAsyncFlushingTasks(SharedMemoryContext *context, RpcContext *rpc,
+                             VBucketID id) {
+  auto sleep_time = std::chrono::milliseconds(500);
+  int outstanding_flushes = 0;
+
+  while ((outstanding_flushes =
+          GetNumOutstandingFlushingTasks(context, rpc, id)) != 0) {
+    LOG(INFO) << "Waiting for " << outstanding_flushes
+              << " outstanding flushes" << std::endl;
+    std::this_thread::sleep_for(sleep_time);
   }
 }
 

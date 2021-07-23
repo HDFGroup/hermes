@@ -26,6 +26,7 @@ target_link_libraries(stdio_adapter_mapper_test
         hermes_stdio_internal Catch2::Catch2 -lstdc++fs -ldl -lc MPI::MPI_CXX)
 add_dependencies(stdio_adapter_mapper_test hermes_stdio_internal)
 gcc(stdio_adapter_mapper_test "")
+
 #------------------------------------------------------------------------------
 # STDIO Adapter End to End tests
 #------------------------------------------------------------------------------

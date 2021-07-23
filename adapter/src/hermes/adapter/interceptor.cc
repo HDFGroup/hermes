@@ -45,7 +45,9 @@ void PopulateBufferingPath() {
   INTERCEPTOR_LIST->hermes_paths_exclusion.push_back(kHermesExtension);
 }
 bool IsTracked(const std::string& path) {
-  if (hermes::adapter::exit) return false;
+  if (hermes::adapter::exit) {
+    return false;
+  }
   atexit(OnExit);
   for (const auto& pth : kPathExclusions) {
     if (path.find(pth) == 0) {

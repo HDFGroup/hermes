@@ -29,7 +29,9 @@ struct BlobInfo {
 typedef BlobInfo TraitInput;
 struct Trait;
 using HermesPtr = std::shared_ptr<Hermes>;
-typedef std::function<void(HermesPtr, TraitInput &, Trait *)> TraitCallback;
+
+typedef
+std::function<void(HermesPtr, TraitInput &, Trait *, void *)> TraitCallback;
 
 struct Trait {
   TraitID id;
@@ -58,10 +60,14 @@ struct FileMappingTrait : public Trait {
   FileMappingTrait(std::string &filename,
                    std::unordered_map<std::string, u64> &offset_map, FILE *fh,
                    TraitCallback flush_cb, TraitCallback load_cb);
-  void onAttach(HermesPtr hermes, TraitInput &blob, Trait *trait);
-  void onDetach(HermesPtr hermes, TraitInput &blob, Trait *trait);
-  void onLink(HermesPtr hermes, TraitInput &blob, Trait *trait);
-  void onUnlink(HermesPtr hermes, TraitInput &blob, Trait *trait);
+  void onAttach(HermesPtr hermes, TraitInput &blob, Trait *trait,
+                void *trait_args = nullptr);
+  void onDetach(HermesPtr hermes, TraitInput &blob, Trait *trait,
+                void *trait_args = nullptr);
+  void onLink(HermesPtr hermes, TraitInput &blob, Trait *trait,
+              void *trait_args = nullptr);
+  void onUnlink(HermesPtr hermes, TraitInput &blob, Trait *trait,
+                void *trait_args = nullptr);
 };
 
 struct PersistTrait : public Trait {
@@ -69,13 +75,17 @@ struct PersistTrait : public Trait {
   bool synchronous;
 
   explicit PersistTrait(bool synchronous);
-  explicit PersistTrait(const FileMappingTrait& mapping,
+  explicit PersistTrait(FileMappingTrait mapping,
                         bool synchronous = false);
 
-  void onAttach(HermesPtr hermes, TraitInput &blob, Trait *trait);
-  void onDetach(HermesPtr hermes, TraitInput &blob, Trait *trait);
-  void onLink(HermesPtr hermes, TraitInput &blob, Trait *trait);
-  void onUnlink(HermesPtr hermes, TraitInput &blob, Trait *trait);
+  void onAttach(HermesPtr hermes, TraitInput &blob, Trait *trait,
+                void *trait_args = nullptr);
+  void onDetach(HermesPtr hermes, TraitInput &blob, Trait *trait,
+                void *trait_args = nullptr);
+  void onLink(HermesPtr hermes, TraitInput &blob, Trait *trait,
+              void *trait_args = nullptr);
+  void onUnlink(HermesPtr hermes, TraitInput &blob, Trait *trait,
+                void *trait_args = nullptr);
 };
 
 }  // namespace api

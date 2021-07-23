@@ -61,13 +61,20 @@ class VBucket {
   }
 
   ~VBucket() {
-    name_.clear();
+    if (IsValid()) {
+      Release();
+    }
   }
 
   bool IsValid() const;
 
   /** get the name of vbucket */
   std::string GetName() const { return this->name_; }
+
+  /**
+   *
+   */
+  void WaitForBackgroundFlush();
 
   /**
    * Link a Blob to this VBucket.
@@ -82,8 +89,10 @@ class VBucket {
    *
    * @return A Status.
    */
-  Status Link(std::string blob_name, std::string bucket_name, Context &ctx);
-  Status Link(std::string blob_name, std::string bucket_name);
+  Status Link(std::string blob_name, std::string bucket_name, Context &ctx,
+              void *trait_args = nullptr);
+  Status Link(std::string blob_name, std::string bucket_name,
+              void *trait_args = nullptr);
 
   /**
    * Unlink a Blob from this VBucket.

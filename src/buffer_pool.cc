@@ -17,6 +17,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <assert.h>
+#include <dlfcn.h>
 #include <fcntl.h>
 #include <sched.h>
 #include <stdio.h>
@@ -1507,39 +1508,41 @@ size_t LocalReadBufferById(SharedMemoryContext *context, BufferID id,
   BufferHeader *header = GetHeaderByIndex(context, id.bits.header_index);
   Device *device = GetDeviceFromHeader(context, header);
   size_t read_size = header->used;
-
-  // TODO(chogan): Should this be a TicketMutex? It seems that at any
-  // given time, only the DataOrganizer and an application core will
-  // be trying to write to/from the same BufferID. In that case, it's
-  // first come first serve. However, if it turns out that more
-  // threads will be trying to lock the buffer, we may need to enforce
-  // ordering.
-  LockBuffer(header);
-
   size_t result = 0;
-  if (device->is_byte_addressable) {
-    u8 *src = GetRamBufferPtr(context, header->id);
-    memcpy((u8 *)blob->data + read_offset, src, read_size);
-    result = read_size;
-  } else {
-    int slab_index = GetSlabIndexFromHeader(context, header);
-    FILE *file = context->open_streams[device->id][slab_index];
-    if (!file) {
-      // TODO(chogan): Check number of opened files against maximum allowed.
-      // May have to close something.
-      const char *filename =
-        context->buffering_filenames[device->id][slab_index].c_str();
-      file = fopen(filename, "r+");
+
+  if (read_size > 0) {
+    // TODO(chogan): Should this be a TicketMutex? It seems that at any
+    // given time, only the DataOrganizer and an application core will
+    // be trying to write to/from the same BufferID. In that case, it's
+    // first come first serve. However, if it turns out that more
+    // threads will be trying to lock the buffer, we may need to enforce
+    // ordering.
+    LockBuffer(header);
+
+    if (device->is_byte_addressable) {
+      u8 *src = GetRamBufferPtr(context, header->id);
+      memcpy((u8 *)blob->data + read_offset, src, read_size);
+      result = read_size;
+    } else {
+      int slab_index = GetSlabIndexFromHeader(context, header);
+      FILE *file = context->open_streams[device->id][slab_index];
+      if (!file) {
+        // TODO(chogan): Check number of opened files against maximum allowed.
+        // May have to close something.
+        const char *filename =
+          context->buffering_filenames[device->id][slab_index].c_str();
+        file = fopen(filename, "r+");
+      }
+      fseek(file, header->data_offset, SEEK_SET);
+      size_t items_read = fread((u8 *)blob->data + read_offset, read_size, 1,
+                                file);
+      if (items_read != 1) {
+        FailedLibraryCall("fread");
+      }
+      result = items_read * read_size;
     }
-    fseek(file, header->data_offset, SEEK_SET);
-    size_t items_read = fread((u8 *)blob->data + read_offset, read_size, 1,
-                              file);
-    if (items_read != 1) {
-      FailedLibraryCall("fwrite");
-    }
-    result = items_read * read_size;
+    UnlockBuffer(header);
   }
-  UnlockBuffer(header);
 
   return result;
 }
@@ -1780,12 +1783,35 @@ api::Status StdIoPersistBucket(SharedMemoryContext *context, RpcContext *rpc,
   return result;
 }
 
+#if 0
+typedef size_t (*real_fwrite_)(const void *ptr, size_t size, size_t nmemb,
+                               FILE *stream);
+
+static size_t Fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream) {
+  size_t result = 0;
+  void *libc_handle = dlopen("libc.so.6", RTLD_LAZY);
+
+  if (libc_handle) {
+    real_fwrite_ real_fwrite = (real_fwrite_)dlsym(libc_handle, "fwrite");
+    if (real_fwrite) {
+      result = real_fwrite(ptr, size, nmemb, stream);
+    } else {
+      LOG(FATAL) << "HERMES failed to map symbol fwrite: " << dlerror();
+    }
+  } else {
+    LOG(FATAL) << "HERMES failed to open libc.so.6: " << dlerror();
+  }
+
+  return result;
+}
+#endif
+
 api::Status StdIoPersistBlob(SharedMemoryContext *context, RpcContext *rpc,
-                             Arena *arena, BlobID blob_id,
-                             FILE *file , const i32 &offset) {
+                             Arena *arena, BlobID blob_id, int fd,
+                             const i32 &offset) {
   api::Status result;
 
-  if (file) {
+  if (fd > -1) {
     ScopedTemporaryMemory scratch(arena);
     size_t blob_size = GetBlobSizeById(context, rpc, arena, blob_id);
     // TODO(chogan): @optimization We could use the actual Hermes buffers as
@@ -1794,20 +1820,20 @@ api::Status StdIoPersistBlob(SharedMemoryContext *context, RpcContext *rpc,
     api::Blob data(blob_size);
     size_t num_bytes = blob_size > 0 ? sizeof(data[0]) * blob_size : 0;
     if (ReadBlobById(context, rpc, arena, data, blob_id) == blob_size) {
-      // TODO(chogan): For now we just write the blobs in the order in which
-      // they were `Put`, but once we have a Trait that represents a file
-      // mapping, we'll need pwrite and offsets.
-      if (offset == -1 || fseek(file, offset, SEEK_SET) == 0) {
-        LOG(INFO) << "STDIO Flush to file: " << " offset: " << offset
-                  << " of size:" << num_bytes << "." << std::endl;
-        if (fwrite(data.data(), 1, num_bytes, file) != num_bytes) {
-          result = STDIO_FWRITE_FAILED;
-          LOG(ERROR) << result.Msg() << strerror(errno);
-        }
-      } else {
-        result = STDIO_OFFSET_ERROR;
-        LOG(ERROR) << result.Msg() << strerror(errno);
-      }
+      // LOG(INFO) << "Writing " << num_bytes << " bytes of '" << data[0]
+      //           << "' at offset " << offset << std::endl;
+      assert(pwrite(fd, data.data(), num_bytes, offset) == (ssize_t)num_bytes);
+      // if (offset == -1 || fseek(file, offset, SEEK_SET) == 0) {
+      //   LOG(INFO) << "STDIO Flush to file: " << " offset: " << offset
+      //             << " of size:" << num_bytes << "." << std::endl;
+      //   if (Fwrite(data.data(), 1, num_bytes, file) != num_bytes) {
+      //     result = STDIO_FWRITE_FAILED;
+      //     LOG(ERROR) << result.Msg() << strerror(errno);
+      //   }
+      // } else {
+      //   result = STDIO_OFFSET_ERROR;
+      //   LOG(ERROR) << result.Msg() << strerror(errno);
+      // }
     }
 
   } else {

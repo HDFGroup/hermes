@@ -29,6 +29,7 @@ namespace hapi = hermes::api;
 namespace fs = std::experimental::filesystem;
 
 using hermes::u8;
+using hermes::u64;
 
 /**
  * Internal Functions
@@ -148,7 +149,8 @@ FILE *simple_open(FILE *ret, const std::string &path_str, const char *mode) {
 
         if (PersistEagerly(path_str)) {
           hapi::VBucket vbkt(path_str, mdm->GetHermes());
-          hapi::PersistTrait persist_trait(hapi::FileMappingTrait(), false);
+          hapi::FileMappingTrait mapping_trait;
+          hapi::PersistTrait persist_trait(mapping_trait, false);
           vbkt.Attach(&persist_trait);
         }
       } else {
@@ -248,7 +250,6 @@ size_t write_internal(AdapterStat &stat, const void *ptr, size_t total_size,
                       FILE *fp) {
   std::shared_ptr<hapi::Bucket> bkt = stat.st_bkid;
   std::string filename = bkt->GetName();
-  // bool persist = INTERCEPTOR_LIST->Persists(fp);
 
   LOG(INFO) << "Write called for filename: " << filename << " on offset: "
             << stat.st_ptr << " and size: " << total_size << std::endl;
@@ -345,6 +346,20 @@ size_t write_internal(AdapterStat &stat, const void *ptr, size_t total_size,
       }
     }
     data_offset += finfo.size_;
+
+    if (PersistEagerly(filename)) {
+      hapi::VBucket vbkt(filename, mdm->GetHermes());
+      // TEMP(chogan):
+      hapi::FileMappingTrait file_mapping;
+      hapi::PersistTrait persist_trait(file_mapping, false);
+      vbkt.Attach(&persist_trait);
+
+      // update PersistTrait's mapping
+      persist_trait.file_mapping.filename = filename;
+      persist_trait.file_mapping.offset_map.emplace(hinfo.blob_name_, offset);
+
+      vbkt.Link(hinfo.blob_name_, filename);
+    }
   }
   stat.st_ptr += data_offset;
   stat.st_size = stat.st_size >= stat.st_ptr ? stat.st_size : stat.st_ptr;
@@ -579,27 +594,31 @@ int HERMES_DECL(fclose)(FILE *fp) {
         mdm->Delete(fp);
         const auto &blob_names = existing.first.st_blobs;
         if (!blob_names.empty() && persist) {
-          LOG(INFO) << "Adapter flushes " << blob_names.size()
-                    << " blobs to filename:" << filename << "." << std::endl;
-          INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
           hapi::VBucket file_vbucket(filename, mdm->GetHermes());
-          auto offset_map = std::unordered_map<std::string, hermes::u64>();
+          if (PersistEagerly(filename)) {
+            file_vbucket.WaitForBackgroundFlush();
+          } else {
+            LOG(INFO) << "Adapter flushes " << blob_names.size()
+                      << " blobs to filename:" << filename << "." << std::endl;
+            INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
+            auto offset_map = std::unordered_map<std::string, hermes::u64>();
 
-          for (const auto &blob_name : blob_names) {
-            auto status = file_vbucket.Link(blob_name, filename);
-            if (!status.Failed()) {
-              auto page_index = std::stol(blob_name) - 1;
-              offset_map.emplace(blob_name, page_index * kPageSize);
+            for (const auto &blob_name : blob_names) {
+              auto status = file_vbucket.Link(blob_name, filename);
+              if (!status.Failed()) {
+                auto page_index = std::stol(blob_name) - 1;
+                offset_map.emplace(blob_name, page_index * kPageSize);
+              }
             }
+            auto file_mapping =
+              hapi::FileMappingTrait(filename, offset_map, nullptr, NULL, NULL);
+            bool flush_synchronously = true;
+            hapi::PersistTrait persist_trait(file_mapping, flush_synchronously);
+            file_vbucket.Attach(&persist_trait);
+            existing.first.st_blobs.clear();
+            INTERCEPTOR_LIST->hermes_flush_exclusion.erase(filename);
           }
-          auto file_mapping =
-            hapi::FileMappingTrait(filename, offset_map, nullptr, NULL, NULL);
-          bool flush_synchronously = true;
-          hapi::PersistTrait persist_trait(file_mapping, flush_synchronously);
-          file_vbucket.Attach(&persist_trait);
           file_vbucket.Destroy();
-          existing.first.st_blobs.clear();
-          INTERCEPTOR_LIST->hermes_flush_exclusion.erase(filename);
         }
         existing.first.st_bkid->Destroy();
         mdm->FinalizeHermes();
