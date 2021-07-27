@@ -2,7 +2,7 @@ Demonstrate how to use Hermes VFD with hdf5_iotest
 
 1. Build Hermes
 ```bash
-git clone https://github.com/HDFGroup/hermes.git
+git clone https://github.com/jya-kmu/hdf5.git
 git checkout kimmy/c_wrapper
 git checkout 3d7fd686cefa27d72520f5521afa574332ffc306 .
 ```
