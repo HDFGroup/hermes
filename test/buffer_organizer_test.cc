@@ -86,24 +86,11 @@ void TestBackgroundFlush() {
     std::string blob_name = std::to_string(i);
     bkt.Put(blob_name, blob);
 
-    size_t offset = i * io_size;
-    vbkt.Link(blob_name, bkt_name, &offset);
+    persist_trait.file_mapping.offset_map.emplace(blob_name, i * io_size);
+    vbkt.Link(blob_name, bkt_name);
   }
 
-  // for (int i = 0; i < iters; ++i) {
-  //   hapi::Blob expected(io_size, data[i]);
-  //   std::string blob_name = std::to_string(i);
-
-  //   hapi::Blob result;
-  //   size_t blob_size = bkt.Get(blob_name, result);
-  //   Assert(expected.size() == blob_size);
-
-  //   result.resize(blob_size);
-  //   bkt.Get(blob_name, result);
-
-  //   Assert(result == expected);
-  // }
-
+  // TODO(chogan): Move this to PersistTrait::onDetach
   vbkt.WaitForBackgroundFlush();
   vbkt.Destroy();
   bkt.Destroy();

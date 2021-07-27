@@ -29,15 +29,14 @@ void VBucket::WaitForBackgroundFlush() {
   AwaitAsyncFlushingTasks(&hermes_->context_, &hermes_->rpc_, id_);
 }
 
-Status VBucket::Link(std::string blob_name, std::string bucket_name,
-                     void *trait_args) {
-  Status result = Link(blob_name, bucket_name, ctx_, trait_args);
+Status VBucket::Link(std::string blob_name, std::string bucket_name) {
+  Status result = Link(blob_name, bucket_name, ctx_);
 
   return result;
 }
 
 Status VBucket::Link(std::string blob_name, std::string bucket_name,
-                     Context& ctx, void *trait_args) {
+                     Context& ctx) {
   (void)ctx;
   Status ret;
 
@@ -52,7 +51,7 @@ Status VBucket::Link(std::string blob_name, std::string bucket_name,
     input.blob_name = blob_name;
     for (const auto& t : attached_traits_) {
       if (t->onLinkFn != nullptr) {
-        t->onLinkFn(hermes_, input, t, trait_args);
+        t->onLinkFn(hermes_, input, t);
         // TODO(hari): @errorhandling Check if linking was successful
       }
     }
@@ -93,7 +92,7 @@ Status VBucket::Unlink(std::string blob_name, std::string bucket_name,
       input.blob_name = blob_name;
       for (const auto& t : attached_traits_) {
         if (t->onUnlinkFn != nullptr) {
-          t->onUnlinkFn(hermes_, input, t, nullptr);
+          t->onUnlinkFn(hermes_, input, t);
           // TODO(hari): @errorhandling Check if unlinking was successful
         }
       }
@@ -189,7 +188,7 @@ Status VBucket::Attach(Trait* trait, Context& ctx) {
       input.blob_name =
           GetBlobNameFromId(&hermes_->context_, &hermes_->rpc_, blob_id);
       if (t->onAttachFn != nullptr) {
-        t->onAttachFn(hermes_, input, trait, nullptr);
+        t->onAttachFn(hermes_, input, trait);
         // TODO(hari): @errorhandling Check if attach was successful
       }
     }
@@ -240,7 +239,7 @@ Status VBucket::Detach(Trait* trait, Context& ctx) {
       input.blob_name =
           GetBlobNameFromId(&hermes_->context_, &hermes_->rpc_, blob_id);
       if (t->onDetachFn != nullptr) {
-        t->onDetachFn(hermes_, input, trait, nullptr);
+        t->onDetachFn(hermes_, input, trait);
         // TODO(hari): @errorhandling Check if detach was successful
       }
     }
@@ -251,6 +250,18 @@ Status VBucket::Detach(Trait* trait, Context& ctx) {
   }
 
   return ret;
+}
+
+Trait *VBucket::GetTrait(TraitType type) {
+  Trait *result = 0;
+  for (Trait *trait : attached_traits_) {
+    if (trait && trait->type == type) {
+      result = trait;
+      break;
+    }
+  }
+
+  return result;
 }
 
 template <class Predicate>
@@ -311,17 +322,17 @@ Status VBucket::Destroy(Context& ctx) {
         input.bucket_name = GetBucketNameById(context, rpc, bucket_id);
         input.blob_name = GetBlobNameFromId(context, rpc, blob_id);
         if (t->onUnlinkFn != nullptr) {
-          t->onUnlinkFn(hermes_, input, t, nullptr);
+          t->onUnlinkFn(hermes_, input, t);
           // TODO(hari): @errorhandling Check if unlinking was successful
         }
       }
     }
 
-    // NOTE(chogan): Call each traits detach callback
+    // NOTE(chogan): Call each trait's onDetach callback
     for (const auto& t : attached_traits_) {
       if (t->onDetachFn != nullptr) {
         TraitInput input = {};
-        t->onDetachFn(hermes_, input, t, nullptr);
+        t->onDetachFn(hermes_, input, t);
         // TODO(hari): @errorhandling Check if detach was successful
       }
     }

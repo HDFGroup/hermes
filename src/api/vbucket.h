@@ -89,10 +89,8 @@ class VBucket {
    *
    * @return A Status.
    */
-  Status Link(std::string blob_name, std::string bucket_name, Context &ctx,
-              void *trait_args = nullptr);
-  Status Link(std::string blob_name, std::string bucket_name,
-              void *trait_args = nullptr);
+  Status Link(std::string blob_name, std::string bucket_name, Context &ctx);
+  Status Link(std::string blob_name, std::string bucket_name);
 
   /**
    * Unlink a Blob from this VBucket.
@@ -136,6 +134,15 @@ class VBucket {
   /** retrieves the subset of attached traits satisfying pred */
   template <class Predicate>
   std::vector<TraitID> GetTraits(Predicate pred, Context &ctx);
+
+  /**
+   * Get's an attached Trait that matches @p type.
+   *
+   * @param type The type of Trait to retrieve.
+   *
+   * @return The first attached trait that matches @p type.
+   */
+  Trait *GetTrait(TraitType type);
 
   /**
    * Release this vBucket.

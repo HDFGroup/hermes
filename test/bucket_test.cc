@@ -29,7 +29,7 @@ int compress_blob(std::shared_ptr<hapi::Hermes> hermes,
                   hermes::api::TraitInput &input, hermes::api::Trait *trait);
 struct MyTrait : public hapi::Trait {
   int compress_level;
-  MyTrait() : Trait(10001, hermes::TraitIdArray(), hermes::TraitType::META) {
+  MyTrait() : Trait(10001, hermes::TraitIdArray(), hapi::TraitType::META) {
     onAttachFn =
       std::bind(&compress_blob, std::placeholders::_1, std::placeholders::_2,
                 std::placeholders::_3);

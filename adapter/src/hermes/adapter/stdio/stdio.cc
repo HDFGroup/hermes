@@ -145,14 +145,19 @@ FILE *simple_open(FILE *ret, const std::string &path_str, const char *mode) {
         // TODO(hari): how to pass to hermes to make a private bucket
         stat.st_bkid =
             std::make_shared<hapi::Bucket>(path_str, mdm->GetHermes());
-        mdm->Create(ret, stat);
 
         if (PersistEagerly(path_str)) {
-          hapi::VBucket vbkt(path_str, mdm->GetHermes());
-          hapi::FileMappingTrait mapping_trait;
-          hapi::PersistTrait persist_trait(mapping_trait, false);
-          vbkt.Attach(&persist_trait);
+          stat.st_vbkt =
+            std::make_shared<hapi::VBucket>(path_str, mdm->GetHermes());
+          auto offset_map = std::unordered_map<std::string, u64>();
+          hapi::FileMappingTrait mapping_trait(path_str, offset_map,
+                                               NULL, NULL, NULL);
+          stat.st_persist =
+            std::make_shared<hapi::PersistTrait>(mapping_trait, false);
+          stat.st_vbkt->Attach(stat.st_persist.get());
         }
+
+        mdm->Create(ret, stat);
       } else {
         // TODO(hari): @errorhandling invalid fh.
         ret = nullptr;
@@ -348,17 +353,14 @@ size_t write_internal(AdapterStat &stat, const void *ptr, size_t total_size,
     data_offset += finfo.size_;
 
     if (PersistEagerly(filename)) {
-      hapi::VBucket vbkt(filename, mdm->GetHermes());
-      // TEMP(chogan):
-      hapi::FileMappingTrait file_mapping;
-      hapi::PersistTrait persist_trait(file_mapping, false);
-      vbkt.Attach(&persist_trait);
+      hapi::Trait *trait = stat.st_vbkt->GetTrait(hapi::TraitType::PERSIST);
+      if (trait) {
+        hapi::PersistTrait *persist_trait = (hapi::PersistTrait *)trait;
+        persist_trait->file_mapping.offset_map.emplace(hinfo.blob_name_,
+                                                       offset);
+      }
 
-      // update PersistTrait's mapping
-      persist_trait.file_mapping.filename = filename;
-      persist_trait.file_mapping.offset_map.emplace(hinfo.blob_name_, offset);
-
-      vbkt.Link(hinfo.blob_name_, filename);
+      stat.st_vbkt->Link(hinfo.blob_name_, filename);
     }
   }
   stat.st_ptr += data_offset;
@@ -594,9 +596,8 @@ int HERMES_DECL(fclose)(FILE *fp) {
         mdm->Delete(fp);
         const auto &blob_names = existing.first.st_blobs;
         if (!blob_names.empty() && persist) {
-          hapi::VBucket file_vbucket(filename, mdm->GetHermes());
           if (PersistEagerly(filename)) {
-            file_vbucket.WaitForBackgroundFlush();
+            existing.first.st_vbkt->WaitForBackgroundFlush();
           } else {
             LOG(INFO) << "Adapter flushes " << blob_names.size()
                       << " blobs to filename:" << filename << "." << std::endl;
@@ -604,7 +605,7 @@ int HERMES_DECL(fclose)(FILE *fp) {
             auto offset_map = std::unordered_map<std::string, hermes::u64>();
 
             for (const auto &blob_name : blob_names) {
-              auto status = file_vbucket.Link(blob_name, filename);
+              auto status = existing.first.st_vbkt->Link(blob_name, filename);
               if (!status.Failed()) {
                 auto page_index = std::stol(blob_name) - 1;
                 offset_map.emplace(blob_name, page_index * kPageSize);
@@ -614,11 +615,11 @@ int HERMES_DECL(fclose)(FILE *fp) {
               hapi::FileMappingTrait(filename, offset_map, nullptr, NULL, NULL);
             bool flush_synchronously = true;
             hapi::PersistTrait persist_trait(file_mapping, flush_synchronously);
-            file_vbucket.Attach(&persist_trait);
+            existing.first.st_vbkt->Attach(&persist_trait);
             existing.first.st_blobs.clear();
             INTERCEPTOR_LIST->hermes_flush_exclusion.erase(filename);
           }
-          file_vbucket.Destroy();
+          existing.first.st_vbkt->Destroy();
         }
         existing.first.st_bkid->Destroy();
         mdm->FinalizeHermes();
@@ -631,6 +632,7 @@ int HERMES_DECL(fclose)(FILE *fp) {
         existing.first.st_ctim = ts;
         mdm->Update(fp, existing.first);
         existing.first.st_bkid->Release();
+        existing.first.st_vbkt->Release();
       }
     }
   }

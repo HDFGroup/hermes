@@ -81,7 +81,7 @@ void FlushBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id,
     open_flags = O_RDWR;
   } else {
     open_flags = O_RDWR | O_CREAT | O_TRUNC;
-    open_mode = S_IRWXU;
+    open_mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
   }
 
   int fd = open(filename.c_str(), open_flags, open_mode);
