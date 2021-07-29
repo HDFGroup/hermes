@@ -1505,10 +1505,10 @@ void WriteBlobToBuffers(SharedMemoryContext *context, RpcContext *rpc,
 
 void LockBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id) {
   u32 *buffer_sizes = 0;
-  const size_t arena_memory_size = KILOBYTES(4);
-  u8 arena_memory[arena_memory_size];
+  const size_t kArenaMemorySize = KILOBYTES(4);
+  u8 arena_memory[kArenaMemorySize];
   Arena arena = {};
-  InitArena(&arena, arena_memory_size, arena_memory);
+  InitArena(&arena, kArenaMemorySize, arena_memory);
 
   BufferIdArray buffer_ids = GetBufferIdsFromBlobId(&arena, context, rpc,
                                                     blob_id, &buffer_sizes);
@@ -1520,12 +1520,13 @@ void LockBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id) {
   }
 }
 
-void UnlockBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id ) {
+void UnlockBlob(SharedMemoryContext *context, RpcContext *rpc,
+                BlobID blob_id ) {
   u32 *buffer_sizes = 0;
-  const size_t arena_memory_size = KILOBYTES(4);
-  u8 arena_memory[arena_memory_size];
+  const size_t kArenaMemorySize = KILOBYTES(4);
+  u8 arena_memory[kArenaMemorySize];
   Arena arena = {};
-  InitArena(&arena, arena_memory_size, arena_memory);
+  InitArena(&arena, kArenaMemorySize, arena_memory);
 
   BufferIdArray buffer_ids = GetBufferIdsFromBlobId(&arena, context, rpc,
                                                     blob_id, &buffer_sizes);

@@ -517,7 +517,7 @@ api::Status StdIoPersistBlob(SharedMemoryContext *context, RpcContext *rpc,
                              const i32 &offset);
 
 void LockBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id);
-void UnlockBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id );
+void UnlockBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id);
 
 }  // namespace hermes
 
