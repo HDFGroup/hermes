@@ -517,6 +517,7 @@ void LocalGetBufferIdList(Arena *arena, MetadataManager *mdm, BlobID blob_id,
 
 void LocalFreeBufferIdList(SharedMemoryContext *context, BlobID blob_id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  // NOTE(chogan): Get locks of all BufferIDs
   FreeEmbeddedIdList(mdm, blob_id.bits.buffer_ids_offset);
   CheckHeapOverlap(mdm);
 }

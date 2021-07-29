@@ -551,26 +551,27 @@ int HERMES_DECL(fflush)(FILE *fp) {
       auto filename = existing.first.st_bkid->GetName();
       const auto &blob_names = existing.first.st_blobs;
       if (!blob_names.empty() && INTERCEPTOR_LIST->Persists(fp)) {
-        INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
-        LOG(INFO) << "File handler is opened by adapter." << std::endl;
-        hapi::Context ctx;
-        LOG(INFO) << "Adapter flushes " << blob_names.size()
-                  << " blobs to filename:" << filename << "." << std::endl;
-        hapi::VBucket file_vbucket(filename, mdm->GetHermes(), ctx);
-        auto offset_map = std::unordered_map<std::string, hermes::u64>();
-        for (const auto &blob_name : blob_names) {
-          file_vbucket.Link(blob_name, filename, ctx);
-          auto page_index = std::stol(blob_name) - 1;
-          offset_map.emplace(blob_name, page_index * kPageSize);
+        if (PersistEagerly(filename)) {
+          existing.first.st_vbkt->WaitForBackgroundFlush();
+        } else {
+          LOG(INFO) << "File handler is opened by adapter." << std::endl;
+          hapi::Context ctx;
+          LOG(INFO) << "Adapter flushes " << blob_names.size()
+                    << " blobs to filename:" << filename << "." << std::endl;
+          auto offset_map = std::unordered_map<std::string, hermes::u64>();
+          for (const auto &blob_name : blob_names) {
+            existing.first.st_vbkt->Link(blob_name, filename, ctx);
+            auto page_index = std::stol(blob_name) - 1;
+            offset_map.emplace(blob_name, page_index * kPageSize);
+          }
+          auto file_mapping = hapi::FileMappingTrait(filename, offset_map,
+                                                     nullptr, NULL, NULL);
+          bool flush_synchronously = true;
+          hapi::PersistTrait persist_trait(file_mapping, flush_synchronously);
+          existing.first.st_vbkt->Attach(&persist_trait);
+          existing.first.st_blobs.clear();
         }
-        auto file_mapping = hapi::FileMappingTrait(filename, offset_map,
-                                                          nullptr, NULL, NULL);
-        bool flush_synchronously = true;
-        hapi::PersistTrait persist_trait(file_mapping, flush_synchronously);
-        file_vbucket.Attach(&persist_trait);
-        file_vbucket.Destroy();
-        existing.first.st_blobs.clear();
-        INTERCEPTOR_LIST->hermes_flush_exclusion.erase(filename);
+        existing.first.st_vbkt->Destroy();
       }
       ret = 0;
     }

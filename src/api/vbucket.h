@@ -47,7 +47,6 @@ class VBucket {
         local_blob(),
         hermes_(h),
         ctx_(ctx) {
-    LOG(INFO) << "Create VBucket " << initial_name << std::endl;
     if (IsVBucketNameTooLong(name_)) {
       id_.as_int = 0;
       throw std::length_error("VBucket name exceeds maximum size of " +

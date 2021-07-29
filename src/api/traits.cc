@@ -120,8 +120,8 @@ void PersistTrait::onLink(HermesPtr hermes, TraitInput &input, Trait *trait) {
     if (synchronous) {
       FlushBlob(context, rpc, blob_id, filename, offset);
     } else {
-      EnqueueFlushingTask(context, rpc, blob_id, filename, offset);
       IncrementFlushCount(context, rpc, filename);
+      EnqueueFlushingTask(context, rpc, blob_id, filename, offset);
     }
   }
 }

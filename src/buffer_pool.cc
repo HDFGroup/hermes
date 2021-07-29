@@ -1503,6 +1503,40 @@ void WriteBlobToBuffers(SharedMemoryContext *context, RpcContext *rpc,
   assert(bytes_left_to_write == 0);
 }
 
+void LockBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id) {
+  u32 *buffer_sizes = 0;
+  const size_t arena_memory_size = KILOBYTES(4);
+  u8 arena_memory[arena_memory_size];
+  Arena arena = {};
+  InitArena(&arena, arena_memory_size, arena_memory);
+
+  BufferIdArray buffer_ids = GetBufferIdsFromBlobId(&arena, context, rpc,
+                                                    blob_id, &buffer_sizes);
+
+  for (u32 i = 0; i < buffer_ids.length; ++i) {
+    BufferID id = buffer_ids.ids[i];
+    BufferHeader *header = GetHeaderByBufferId(context, id);
+    LockBuffer(header);
+  }
+}
+
+void UnlockBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id ) {
+  u32 *buffer_sizes = 0;
+  const size_t arena_memory_size = KILOBYTES(4);
+  u8 arena_memory[arena_memory_size];
+  Arena arena = {};
+  InitArena(&arena, arena_memory_size, arena_memory);
+
+  BufferIdArray buffer_ids = GetBufferIdsFromBlobId(&arena, context, rpc,
+                                                    blob_id, &buffer_sizes);
+
+  for (u32 i = 0; i < buffer_ids.length; ++i) {
+    BufferID id = buffer_ids.ids[i];
+    BufferHeader *header = GetHeaderByBufferId(context, id);
+    UnlockBuffer(header);
+  }
+}
+
 size_t LocalReadBufferById(SharedMemoryContext *context, BufferID id,
                            Blob *blob, size_t read_offset) {
   BufferHeader *header = GetHeaderByIndex(context, id.bits.header_index);

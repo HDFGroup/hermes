@@ -726,6 +726,7 @@ void LocalDestroyBlobByName(SharedMemoryContext *context, RpcContext *rpc,
   }
 
   FreeBufferIdList(context, rpc, blob_id);
+  UnlockBlob(context, rpc, blob_id);
 
   LocalDeleteBlobMetadata(mdm, blob_name, blob_id, bucket_id);
 

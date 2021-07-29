@@ -88,10 +88,12 @@ void FlushBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id,
   if (fd != -1) {
     // TODO(chogan): ScopedArena
     Arena local_arena = InitArenaAndAllocate(KILOBYTES(4));
+    LockBlob(context, rpc, blob_id);
     StdIoPersistBlob(context, rpc, &local_arena, blob_id, fd, offset);
     DestroyArena(&local_arena);
 
     DecrementFlushCount(context, rpc, filename);
+    UnlockBlob(context, rpc, blob_id);
 
     if (close(fd) != 0) {
       FailedLibraryCall("close");
@@ -112,9 +114,13 @@ void FlushBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id,
 bool EnqueueFlushingTask(SharedMemoryContext *context, RpcContext *rpc,
                          BlobID blob_id, const std::string &filename,
                          u64 offset) {
-  bool result = true;
-  ThreadPool *pool = &context->bo->pool;
-  pool->run(std::bind(FlushBlob, context, rpc, blob_id, filename, offset));
+  bool result = false;
+
+  if (!BlobIsInSwap(blob_id)) {
+    ThreadPool *pool = &context->bo->pool;
+    pool->run(std::bind(FlushBlob, context, rpc, blob_id, filename, offset));
+    result = true;
+  }
 
   return result;
 }
