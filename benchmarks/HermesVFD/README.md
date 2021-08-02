@@ -32,9 +32,9 @@ sets up the page size for metadata (if `split = 1`). User can modify these param
 for performance test.
 
 ## Config with Hermes
-The `hermes.conf` file is used for Hermes environment setup. And for example in 4KB_1MB is 
-used for metadata and data split test, while 4KB is the setup for metadata page size and
-1MB is for data page size. User can modify `mount_points` and 
+The `hermes.conf` file is used for Hermes environment setup. And the example in `4KB_1MB` 
+is used for metadata and data split test, while 4KB is the setup for metadata page size
+and 1MB is for data page size. User can modify `mount_points` and 
 `swap_mount` in the file according to the executing system configuration.
 
 Set up Herems environment variables by
