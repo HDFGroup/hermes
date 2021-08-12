@@ -6,7 +6,7 @@ set -o pipefail
 
 INSTALL_DIR="${HOME}/${LOCAL}"
 SPACK_DIR=${INSTALL_DIR}/spack
-SDS_REPO_DIR=${INSTALL_DIR}/sds-repo
+SDS_REPO_DIR=${INSTALL_DIR}/mochi-spack-packages
 THALLIUM_VERSION=0.8.3
 GOTCHA_VERSION=develop
 CATCH2_VERSION=2.13.3
@@ -20,7 +20,8 @@ set +x
 set -x
 
 cp ci/packages.yaml ${SPACK_DIR}/etc/spack/packages.yaml
-git clone https://xgitlab.cels.anl.gov/sds/sds-repo.git ${SDS_REPO_DIR}
+SDS_REPO=https://github.com/mochi-hpc/mochi-spack-packages.git
+git clone ${SDS_REPO} ${SDS_REPO_DIR}
 
 set +x
 spack repo add ${SDS_REPO_DIR}
