@@ -42,19 +42,19 @@ ENV HOME=/home/$USER
 ENV PROJECT=$HOME/source
 ENV INSTALL_DIR=$HOME/install
 ENV SPACK_DIR=$HOME/spack
-ENV SDS_DIR=$HOME/sds
+ENV MOCHI_DIR=$HOME/mochi
 
 RUN echo $INSTALL_DIR && mkdir -p $INSTALL_DIR
 
 RUN git clone https://github.com/spack/spack ${SPACK_DIR}
-RUN git clone https://xgitlab.cels.anl.gov/sds/sds-repo.git ${SDS_DIR}
+RUN git clone https://github.com/mochi-hpc/mochi-spack/packages.git ${MOCHI_DIR}
 RUN git clone https://github.com/HDFGroup/hermes ${PROJECT}
 
 ENV spack=${SPACK_DIR}/bin/spack
 
 RUN . ${SPACK_DIR}/share/spack/setup-env.sh
 
-RUN $spack repo add ${SDS_DIR}
+RUN $spack repo add ${MOCHI_DIR}
 RUN $spack repo add $PROJECT/ci/hermes
 
 RUN $spack compiler find
