@@ -1504,38 +1504,16 @@ void WriteBlobToBuffers(SharedMemoryContext *context, RpcContext *rpc,
 }
 
 void LockBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id) {
-  u32 *buffer_sizes = 0;
-  const size_t kArenaMemorySize = KILOBYTES(4);
-  u8 arena_memory[kArenaMemorySize];
-  Arena arena = {};
-  InitArena(&arena, kArenaMemorySize, arena_memory);
-
-  BufferIdArray buffer_ids = GetBufferIdsFromBlobId(&arena, context, rpc,
-                                                    blob_id, &buffer_sizes);
-
-  for (u32 i = 0; i < buffer_ids.length; ++i) {
-    BufferID id = buffer_ids.ids[i];
-    BufferHeader *header = GetHeaderByBufferId(context, id);
-    LockBuffer(header);
-  }
+  (void)context;
+  (void)rpc;
+  (void)blob_id;
 }
 
 void UnlockBlob(SharedMemoryContext *context, RpcContext *rpc,
                 BlobID blob_id ) {
-  u32 *buffer_sizes = 0;
-  const size_t kArenaMemorySize = KILOBYTES(4);
-  u8 arena_memory[kArenaMemorySize];
-  Arena arena = {};
-  InitArena(&arena, kArenaMemorySize, arena_memory);
-
-  BufferIdArray buffer_ids = GetBufferIdsFromBlobId(&arena, context, rpc,
-                                                    blob_id, &buffer_sizes);
-
-  for (u32 i = 0; i < buffer_ids.length; ++i) {
-    BufferID id = buffer_ids.ids[i];
-    BufferHeader *header = GetHeaderByBufferId(context, id);
-    UnlockBuffer(header);
-  }
+  (void)context;
+  (void)rpc;
+  (void)blob_id;
 }
 
 size_t LocalReadBufferById(SharedMemoryContext *context, BufferID id,
@@ -1637,10 +1615,12 @@ size_t ReadBlobById(SharedMemoryContext *context, RpcContext *rpc, Arena *arena,
     result = ReadFromSwap(context, blob, swap_blob);
   } else {
     u32 *buffer_sizes = 0;
+    // LockBlob(context, rpc, blob_id);
     buffer_ids = GetBufferIdsFromBlobId(arena, context, rpc, blob_id,
                                         &buffer_sizes);
     result = ReadBlobFromBuffers(context, rpc, &blob, &buffer_ids,
                                  buffer_sizes);
+    // UnlockBlob(context, rpc, blob_id);
   }
 
   return result;

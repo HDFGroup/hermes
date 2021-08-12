@@ -88,12 +88,10 @@ void FlushBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id,
   if (fd != -1) {
     // TODO(chogan): ScopedArena
     Arena local_arena = InitArenaAndAllocate(KILOBYTES(4));
-    LockBlob(context, rpc, blob_id);
     StdIoPersistBlob(context, rpc, &local_arena, blob_id, fd, offset);
     DestroyArena(&local_arena);
 
     DecrementFlushCount(context, rpc, filename);
-    UnlockBlob(context, rpc, blob_id);
 
     if (close(fd) != 0) {
       FailedLibraryCall("close");
