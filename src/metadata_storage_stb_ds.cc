@@ -730,7 +730,7 @@ void PutToStorage(MetadataManager *mdm, const char *key, u64 val,
   CheckHeapOverlap(mdm);
 }
 
-u64 GetFromStorage(MetadataManager *mdm, const char *key, MapType map_type) {
+u64 GetFromStorageStr(MetadataManager *mdm, const char *key, MapType map_type) {
   Heap *heap = GetMapHeap(mdm);
   IdMap *map = GetMap(mdm, map_type);
   u64 result = shget(map, key, heap);
@@ -739,8 +739,8 @@ u64 GetFromStorage(MetadataManager *mdm, const char *key, MapType map_type) {
   return result;
 }
 
-std::string ReverseGetFromStorage(MetadataManager *mdm, u64 id,
-                                  MapType map_type) {
+std::string ReverseGetFromStorageStr(MetadataManager *mdm, u64 id,
+                                     MapType map_type) {
   std::string result;
   IdMap *map = GetMap(mdm, map_type);
   size_t map_size = shlen(map);
@@ -963,7 +963,7 @@ f32 LocalGetBlobScore(SharedMemoryContext *context, BlobID blob_id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   Stats stats = LocalGetBlobStats(context, blob_id);
 
-  f32 result = ScoringFunction(mdm, &stats);
+  f32 result = ScoringFunction(mdm, &info.stats);
 
   return result;
 }

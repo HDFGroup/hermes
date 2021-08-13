@@ -1503,19 +1503,6 @@ void WriteBlobToBuffers(SharedMemoryContext *context, RpcContext *rpc,
   assert(bytes_left_to_write == 0);
 }
 
-void LockBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id) {
-  (void)context;
-  (void)rpc;
-  (void)blob_id;
-}
-
-void UnlockBlob(SharedMemoryContext *context, RpcContext *rpc,
-                BlobID blob_id ) {
-  (void)context;
-  (void)rpc;
-  (void)blob_id;
-}
-
 size_t LocalReadBufferById(SharedMemoryContext *context, BufferID id,
                            Blob *blob, size_t read_offset) {
   BufferHeader *header = GetHeaderByIndex(context, id.bits.header_index);
@@ -1608,6 +1595,7 @@ size_t ReadBlobById(SharedMemoryContext *context, RpcContext *rpc, Arena *arena,
                     Blob blob, BlobID blob_id) {
   size_t result = 0;
 
+  // LockBlob(context, rpc, blob_id);
   BufferIdArray buffer_ids = {};
   if (hermes::BlobIsInSwap(blob_id)) {
     buffer_ids = GetBufferIdsFromBlobId(arena, context, rpc, blob_id, NULL);
@@ -1615,13 +1603,12 @@ size_t ReadBlobById(SharedMemoryContext *context, RpcContext *rpc, Arena *arena,
     result = ReadFromSwap(context, blob, swap_blob);
   } else {
     u32 *buffer_sizes = 0;
-    // LockBlob(context, rpc, blob_id);
     buffer_ids = GetBufferIdsFromBlobId(arena, context, rpc, blob_id,
                                         &buffer_sizes);
     result = ReadBlobFromBuffers(context, rpc, &blob, &buffer_ids,
                                  buffer_sizes);
-    // UnlockBlob(context, rpc, blob_id);
   }
+  // UnlockBlob(context, rpc, blob_id);
 
   return result;
 }

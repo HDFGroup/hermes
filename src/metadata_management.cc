@@ -83,7 +83,11 @@ static u32 GetBlobNodeId(BlobID id) {
 
 void LocalPut(MetadataManager *mdm, const char *key, u64 val,
               MapType map_type) {
-  PutToStorage(mdm, key, val, map_type);
+  PutToStorageStr(mdm, key, val, map_type);
+}
+
+void LocalPut(MetadataManager *mdm, BlobID key, const BlobInfo &value) {
+  PutToStorage(mdm, key, value);
 }
 
 void LocalPut(MetadataManager *mdm, BlobID key, const BlobInfo &value) {
@@ -91,7 +95,7 @@ void LocalPut(MetadataManager *mdm, BlobID key, const BlobInfo &value) {
 }
 
 u64 LocalGet(MetadataManager *mdm, const char *key, MapType map_type) {
-  u64 result = GetFromStorage(mdm, key, map_type);
+  u64 result = GetFromStorageStr(mdm, key, map_type);
 
   return result;
 }
@@ -101,7 +105,7 @@ void LocalDelete(MetadataManager *mdm, BlobID key) {
 }
 
 void LocalDelete(MetadataManager *mdm, const char *key, MapType map_type) {
-  DeleteFromStorage(mdm, key, map_type);
+  DeleteFromStorageStr(mdm, key, map_type);
 }
 
 MetadataManager *GetMetadataManagerFromContext(SharedMemoryContext *context) {
@@ -278,6 +282,8 @@ void DeleteBlobId(MetadataManager *mdm, RpcContext *rpc,
   std::string internal_name = MakeInternalBlobName(name, bucket_id);
   DeleteId(mdm, rpc, internal_name, kMapType_BlobId);
 }
+
+
 
 BucketInfo *LocalGetBucketInfoByIndex(MetadataManager *mdm, u32 index) {
   BucketInfo *info_array = (BucketInfo *)((u8 *)mdm + mdm->bucket_info_offset);
@@ -726,7 +732,6 @@ void LocalDestroyBlobByName(SharedMemoryContext *context, RpcContext *rpc,
   }
 
   FreeBufferIdList(context, rpc, blob_id);
-  // TODO(chogan): UnlockBlob(context, rpc, blob_id);
 
   LocalDeleteBlobMetadata(mdm, blob_name, blob_id, bucket_id);
 
@@ -1289,7 +1294,7 @@ std::string LocalGetBucketNameById(SharedMemoryContext *context,
                                    BucketID blob_id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   std::string bucket_name =
-      ReverseGetFromStorage(mdm, blob_id.as_int, kMapType_Bucket);
+      ReverseGetFromStorageStr(mdm, blob_id.as_int, kMapType_Bucket);
   return bucket_name;
 }
 

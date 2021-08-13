@@ -516,9 +516,6 @@ api::Status StdIoPersistBlob(SharedMemoryContext *context, RpcContext *rpc,
                              Arena *arena, BlobID blob_id, int fd,
                              const i32 &offset);
 
-void LockBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id);
-void UnlockBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id);
-
 }  // namespace hermes
 
 #endif  // HERMES_BUFFER_POOL_H_
