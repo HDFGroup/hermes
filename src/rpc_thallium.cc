@@ -339,26 +339,30 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
   };
 
   auto rpc_finalize = [rpc](const request &req) {
-    (void)req;
     ThalliumState *state = GetThalliumState(rpc);
     state->engine->finalize();
+
+    req.respond(true);
   };
 
   auto rpc_remove_blob_from_vbucket_info = [context](const request &req,
                                                     VBucketID vbucket_id,
                                                     BlobID blob_id) {
     LocalRemoveBlobFromVBucketInfo(context, vbucket_id, blob_id);
+
     req.respond(true);
   };
 
   auto rpc_get_blobs_from_vbucket_info = [context](const request &req,
                                                   VBucketID vbucket_id) {
     auto ret = LocalGetBlobsFromVBucketInfo(context, vbucket_id);
+
     req.respond(ret);
   };
 
   auto rpc_get_bucket_name_by_id = [context](const request &req, BucketID id) {
     auto ret = LocalGetBucketNameById(context, id);
+
     req.respond(ret);
   };
 
