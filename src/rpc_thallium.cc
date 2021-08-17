@@ -339,40 +339,79 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
   };
 
   auto rpc_finalize = [rpc](const request &req) {
-    (void)req;
     ThalliumState *state = GetThalliumState(rpc);
     state->engine->finalize();
+
+    req.respond(true);
   };
 
   auto rpc_remove_blob_from_vbucket_info = [context](const request &req,
                                                     VBucketID vbucket_id,
                                                     BlobID blob_id) {
     LocalRemoveBlobFromVBucketInfo(context, vbucket_id, blob_id);
+
     req.respond(true);
   };
+
   auto rpc_get_blobs_from_vbucket_info = [context](const request &req,
                                                   VBucketID vbucket_id) {
     auto ret = LocalGetBlobsFromVBucketInfo(context, vbucket_id);
-    req.respond(ret);
-  };
-  auto rpc_get_bucket_name_by_id = [context](const request &req, BucketID id) {
-    auto ret = LocalGetBucketNameById(context, id);
+
     req.respond(ret);
   };
 
-  auto rpc_increment_blob_stats_safely =
-    [context](const request &req, BucketID bucket_id, BlobID blob_id) {
+  auto rpc_get_bucket_name_by_id = [context](const request &req, BucketID id) {
+    auto ret = LocalGetBucketNameById(context, id);
+
+    req.respond(ret);
+  };
+
+  auto rpc_increment_blob_stats =
+    [context](const request &req, BlobID blob_id) {
       MetadataManager *mdm = GetMetadataManagerFromContext(context);
-      LocalIncrementBlobStatsSafely(mdm, bucket_id, blob_id);
+      LocalIncrementBlobStats(mdm, blob_id);
 
       req.respond(true);
   };
 
   auto rpc_get_blob_score =
-    [context](const request &req, BucketID bucket_id, BlobID blob_id) {
-      f32 result = LocalGetBlobScore(context, bucket_id, blob_id);
+    [context](const request &req, BlobID blob_id) {
+      f32 result = LocalGetBlobScore(context, blob_id);
 
       req.respond(result);
+  };
+
+  auto rpc_increment_flush_count = [context](const request &req,
+                                             const std::string &name) {
+    LocalIncrementFlushCount(context, name);
+
+    req.respond(true);
+  };
+
+  auto rpc_decrement_flush_count = [context](const request &req,
+                                             const std::string &name) {
+    LocalDecrementFlushCount(context, name);
+
+    req.respond(true);
+  };
+
+  auto rpc_get_num_outstanding_flushing_tasks =
+    [context](const request &req, VBucketID id) {
+      int result = LocalGetNumOutstandingFlushingTasks(context, id);
+
+      req.respond(result);
+  };
+
+  auto rpc_lock_blob = [context](const request &req, BlobID id) {
+    LocalLockBlob(context, id);
+
+    req.respond(true);
+  };
+
+  auto rpc_unlock_blob = [context](const request &req, BlobID id) {
+    LocalUnlockBlob(context, id);
+
+    req.respond(true);
   };
 
   // TODO(chogan): Currently these three are only used for testing.
@@ -428,9 +467,14 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
                      rpc_get_blobs_from_vbucket_info);
   rpc_server->define("RemoteGetBucketNameById",
                      rpc_get_bucket_name_by_id);
-  rpc_server->define("RemoteIncrementBlobStatsSafely",
-                     rpc_increment_blob_stats_safely);
+  rpc_server->define("RemoteIncrementBlobStats", rpc_increment_blob_stats);
   rpc_server->define("RemoteGetBlobScore", rpc_get_blob_score);
+  rpc_server->define("RemoteIncrementFlushCount", rpc_increment_flush_count);
+  rpc_server->define("RemoteDecrementFlushCount", rpc_decrement_flush_count);
+  rpc_server->define("RemoteGetNumOutstandingFlushingTasks",
+                     rpc_get_num_outstanding_flushing_tasks);
+  rpc_server->define("RemoteLockBlob", rpc_lock_blob);
+  rpc_server->define("RemoteUnlockBlob", rpc_unlock_blob);
 }
 
 void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,

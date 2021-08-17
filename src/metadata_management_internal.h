@@ -105,8 +105,7 @@ BucketID LocalGetOrCreateBucketId(SharedMemoryContext *context,
                                   const std::string &name);
 VBucketID LocalGetOrCreateVBucketId(SharedMemoryContext *context,
                                     const std::string &name);
-f32 LocalGetBlobScore(SharedMemoryContext *context, BucketID bucket_id,
-                      BlobID blob_id);
+f32 LocalGetBlobScore(SharedMemoryContext *context, BlobID blob_id);
 
 /**
  * Faster version of std::stoull.
@@ -135,6 +134,12 @@ std::vector<BlobID> LocalGetBlobsFromVBucketInfo(SharedMemoryContext *context,
                                                  VBucketID vbucket_id);
 std::string LocalGetBucketNameById(SharedMemoryContext *context,
                                    BucketID blob_id);
+
+
+int LocalGetNumOutstandingFlushingTasks(SharedMemoryContext *context,
+                                        VBucketID id);
+int GetNumOutstandingFlushingTasks(SharedMemoryContext *context,
+                                   RpcContext *rpc, VBucketID id);
 
 }  // namespace hermes
 #endif  // HERMES_METADATA_MANAGEMENT_INTERNAL_H_

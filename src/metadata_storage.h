@@ -18,24 +18,30 @@ namespace hermes {
 /**
  *
  */
-void PutToStorage(MetadataManager *mdm, const char *key, u64 val,
-                MapType map_type);
+void PutToStorageStr(MetadataManager *mdm, const char *key, u64 val,
+                     MapType map_type);
 
 /**
  *
  */
-u64 GetFromStorage(MetadataManager *mdm, const char *key, MapType map_type);
+void PutToStorage(MetadataManager *mdm, BlobID key, const BlobInfo &val);
 
 /**
  *
  */
-std::string ReverseGetFromStorage(MetadataManager *mdm, u64 id,
+u64 GetFromStorageStr(MetadataManager *mdm, const char *key, MapType map_type);
+
+/**
+ *
+ */
+std::string ReverseGetFromStorageStr(MetadataManager *mdm, u64 id,
                                   MapType map_type);
 
 /**
  *
  */
-void DeleteFromStorage(MetadataManager *mdm, const char *key, MapType map_type);
+void DeleteFromStorageStr(MetadataManager *mdm, const char *key,
+                          MapType map_type);
 
 /**
  *
@@ -68,6 +74,16 @@ std::vector<TargetID> LocalGetNeighborhoodTargets(SharedMemoryContext *context);
  */
 std::vector<BlobID> LocalGetBlobIds(SharedMemoryContext *context,
                                     BucketID bucket_id);
+/**
+ *
+ */
+BlobInfo *GetBlobInfoPtr(MetadataManager *mdm, BlobID blob_id);
+
+/**
+ *
+ */
+void ReleaseBlobInfoPtr(MetadataManager *mdm);
+
 }  // namespace hermes
 
 #endif  // HERMES_METADATA_STORAGE_H_
