@@ -96,6 +96,10 @@ u64 LocalGet(MetadataManager *mdm, const char *key, MapType map_type) {
   return result;
 }
 
+void LocalDelete(MetadataManager *mdm, BlobID key) {
+  DeleteFromStorage(mdm, key, false);
+}
+
 void LocalDelete(MetadataManager *mdm, const char *key, MapType map_type) {
   DeleteFromStorageStr(mdm, key, map_type);
 }
@@ -259,13 +263,21 @@ void DeleteVBucketId(MetadataManager *mdm, RpcContext *rpc,
   DeleteId(mdm, rpc, name, kMapType_VBucket);
 }
 
+void LocalDeleteBlobInfo(MetadataManager *mdm, BlobID blob_id) {
+  LocalDelete(mdm, blob_id);
+}
+
+void LocalDeleteBlobId(MetadataManager *mdm, const std::string &name,
+                  BucketID bucket_id) {
+  std::string internal_name = MakeInternalBlobName(name, bucket_id);
+  LocalDelete(mdm, name.c_str(), kMapType_BlobId);
+}
+
 void DeleteBlobId(MetadataManager *mdm, RpcContext *rpc,
                   const std::string &name, BucketID bucket_id) {
   std::string internal_name = MakeInternalBlobName(name, bucket_id);
   DeleteId(mdm, rpc, internal_name, kMapType_BlobId);
 }
-
-
 
 BucketInfo *LocalGetBucketInfoByIndex(MetadataManager *mdm, u32 index) {
   BucketInfo *info_array = (BucketInfo *)((u8 *)mdm + mdm->bucket_info_offset);
@@ -690,10 +702,23 @@ void FreeBufferIdList(SharedMemoryContext *context, RpcContext *rpc,
   }
 }
 
+void LocalDeleteBlobMetadata(MetadataManager *mdm, const char *blob_name,
+                             BlobID blob_id, BucketID bucket_id) {
+  LocalDeleteBlobId(mdm, blob_name, bucket_id);
+  LocalDeleteBlobInfo(mdm, blob_id);
+}
+
 void LocalDestroyBlobByName(SharedMemoryContext *context, RpcContext *rpc,
                             const char *blob_name, BlobID blob_id,
                             BucketID bucket_id) {
-  LockBlob(context, rpc, blob_id);
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  BlobInfo *blob_info = GetBlobInfoPtr(mdm, blob_id);
+  // NOTE(chogan): Holding the mdm->blob_info_map_mutex
+  if (blob_info) {
+    // NOTE(chogan): Take the Blob lock to enusre that all outstanding
+    // background operations on the Blob complete before it's deleted.
+    BeginTicketMutex(&blob_info->lock);
+  }
 
   if (!BlobIsInSwap(blob_id)) {
     std::vector<BufferID> buffer_ids = GetBufferIdList(context, rpc, blob_id);
@@ -704,9 +729,9 @@ void LocalDestroyBlobByName(SharedMemoryContext *context, RpcContext *rpc,
 
   FreeBufferIdList(context, rpc, blob_id);
 
-  MetadataManager *mdm = GetMetadataManagerFromContext(context);
-  DeleteBlobId(mdm, rpc, blob_name, bucket_id);
-  // TEMP(chogan): UnlockBlob(context, rpc, blob_id);
+  LocalDeleteBlobMetadata(mdm, blob_name, blob_id, bucket_id);
+
+  ReleaseBlobInfoPtr(mdm);
 }
 
 void LocalDestroyBlobById(SharedMemoryContext *context, RpcContext *rpc,

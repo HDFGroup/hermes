@@ -140,10 +140,16 @@ IdMap *GetMap(MetadataManager *mdm, MapType map_type) {
   return result;
 }
 
+BlobInfoMap *GetBlobInfoMapNoLock(MetadataManager *mdm) {
+  BlobInfoMap *result = (BlobInfoMap *)((u8 *)mdm + mdm->blob_info_map_offset);
+
+  return result;
+}
+
 BlobInfoMap *GetBlobInfoMap(MetadataManager *mdm) {
   TicketMutex *mutex = GetMapMutex(mdm, kMapType_BlobInfo);
   BeginTicketMutex(mutex);
-  BlobInfoMap *result = (BlobInfoMap *)((u8 *)mdm + mdm->blob_info_map_offset);
+  BlobInfoMap *result = GetBlobInfoMapNoLock(mdm);
 
   return result;
 }
@@ -779,6 +785,23 @@ std::string ReverseGetFromStorageStr(MetadataManager *mdm, u64 id,
   return result;
 }
 
+void DeleteFromStorage(MetadataManager *mdm, BlobID key, bool lock) {
+  Heap *heap = GetMapHeap(mdm);
+  BlobInfoMap *map = 0;
+
+  if (lock) {
+    map = GetBlobInfoMap(mdm);
+  } else {
+    map = GetBlobInfoMapNoLock(mdm);
+  }
+
+  hmdel(map, key, heap);
+
+  if (lock) {
+    ReleaseMap(mdm, kMapType_BlobInfo);
+  }
+}
+
 void DeleteFromStorageStr(MetadataManager *mdm, const char *key,
                           MapType map_type) {
   Heap *heap = GetMapHeap(mdm);
@@ -788,6 +811,13 @@ void DeleteFromStorageStr(MetadataManager *mdm, const char *key,
 
   // TODO(chogan): Maybe wrap this in a DEBUG only macro?
   CheckHeapOverlap(mdm);
+}
+
+void DeleteFromStorage(MetadataManager *mdm, BlobID blob_id) {
+  Heap *heap = GetMapHeap(mdm);
+  BlobInfoMap *map = GetBlobInfoMap(mdm);
+  hmdel(map, blob_id, heap);
+  ReleaseMap(mdm, kMapType_BlobInfo);
 }
 
 size_t GetStoredMapSize(MetadataManager *mdm, MapType map_type) {

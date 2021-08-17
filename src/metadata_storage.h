@@ -40,6 +40,11 @@ std::string ReverseGetFromStorageStr(MetadataManager *mdm, u64 id,
 /**
  *
  */
+void DeleteFromStorage(MetadataManager *mdm, BlobID key, bool lock);
+
+/**
+ *
+ */
 void DeleteFromStorageStr(MetadataManager *mdm, const char *key,
                           MapType map_type);
 
