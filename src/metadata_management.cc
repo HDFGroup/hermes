@@ -83,7 +83,7 @@ static u32 GetBlobNodeId(BlobID id) {
 
 void LocalPut(MetadataManager *mdm, const char *key, u64 val,
               MapType map_type) {
-  PutToStorageStr(mdm, key, val, map_type);
+  PutToStorage(mdm, key, val, map_type);
 }
 
 void LocalPut(MetadataManager *mdm, BlobID key, const BlobInfo &value) {
@@ -91,7 +91,7 @@ void LocalPut(MetadataManager *mdm, BlobID key, const BlobInfo &value) {
 }
 
 u64 LocalGet(MetadataManager *mdm, const char *key, MapType map_type) {
-  u64 result = GetFromStorageStr(mdm, key, map_type);
+  u64 result = GetFromStorage(mdm, key, map_type);
 
   return result;
 }
@@ -101,7 +101,7 @@ void LocalDelete(MetadataManager *mdm, BlobID key) {
 }
 
 void LocalDelete(MetadataManager *mdm, const char *key, MapType map_type) {
-  DeleteFromStorageStr(mdm, key, map_type);
+  DeleteFromStorage(mdm, key, map_type);
 }
 
 MetadataManager *GetMetadataManagerFromContext(SharedMemoryContext *context) {
@@ -289,8 +289,8 @@ BucketInfo *LocalGetBucketInfoByIndex(MetadataManager *mdm, u32 index) {
 std::string LocalGetBlobNameFromId(SharedMemoryContext *context,
                                    BlobID blob_id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
-  std::string blob_name = ReverseGetFromStorageStr(mdm, blob_id.as_int,
-                                                   kMapType_BlobId);
+  std::string blob_name = ReverseGetFromStorage(mdm, blob_id.as_int,
+                                                kMapType_BlobId);
 
   std::string result;
   if (blob_name.size() > kBucketIdStringSize) {
@@ -341,8 +341,8 @@ u64 HexStringToU64(const std::string &s) {
 
 BucketID LocalGetBucketIdFromBlobId(SharedMemoryContext *context, BlobID id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
-  std::string internal_name = ReverseGetFromStorageStr(mdm, id.as_int,
-                                                       kMapType_BlobId);
+  std::string internal_name = ReverseGetFromStorage(mdm, id.as_int,
+                                                    kMapType_BlobId);
   BucketID result = {};
   if (internal_name.size() > kBucketIdStringSize) {
     result.as_int = HexStringToU64(internal_name);
@@ -1303,7 +1303,7 @@ std::string LocalGetBucketNameById(SharedMemoryContext *context,
                                    BucketID blob_id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   std::string bucket_name =
-      ReverseGetFromStorageStr(mdm, blob_id.as_int, kMapType_Bucket);
+      ReverseGetFromStorage(mdm, blob_id.as_int, kMapType_Bucket);
   return bucket_name;
 }
 

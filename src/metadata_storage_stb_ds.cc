@@ -744,8 +744,8 @@ void PutToStorage(MetadataManager *mdm, BlobID key, const BlobInfo &val) {
   CheckHeapOverlap(mdm);
 }
 
-void PutToStorageStr(MetadataManager *mdm, const char *key, u64 val,
-                     MapType map_type) {
+void PutToStorage(MetadataManager *mdm, const char *key, u64 val,
+                  MapType map_type) {
   Heap *heap = GetMapHeap(mdm);
   IdMap *map = GetMap(mdm, map_type);
   shput(map, key, val, heap);
@@ -755,7 +755,7 @@ void PutToStorageStr(MetadataManager *mdm, const char *key, u64 val,
   CheckHeapOverlap(mdm);
 }
 
-u64 GetFromStorageStr(MetadataManager *mdm, const char *key, MapType map_type) {
+u64 GetFromStorage(MetadataManager *mdm, const char *key, MapType map_type) {
   Heap *heap = GetMapHeap(mdm);
   IdMap *map = GetMap(mdm, map_type);
   u64 result = shget(map, key, heap);
@@ -764,7 +764,7 @@ u64 GetFromStorageStr(MetadataManager *mdm, const char *key, MapType map_type) {
   return result;
 }
 
-std::string ReverseGetFromStorageStr(MetadataManager *mdm, u64 id,
+std::string ReverseGetFromStorage(MetadataManager *mdm, u64 id,
                                      MapType map_type) {
   std::string result;
   IdMap *map = GetMap(mdm, map_type);
@@ -802,8 +802,8 @@ void DeleteFromStorage(MetadataManager *mdm, BlobID key, bool lock) {
   }
 }
 
-void DeleteFromStorageStr(MetadataManager *mdm, const char *key,
-                          MapType map_type) {
+void DeleteFromStorage(MetadataManager *mdm, const char *key,
+                       MapType map_type) {
   Heap *heap = GetMapHeap(mdm);
   IdMap *map = GetMap(mdm, map_type);
   shdel(map, key, heap);
