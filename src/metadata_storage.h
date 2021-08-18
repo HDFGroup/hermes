@@ -45,8 +45,7 @@ void DeleteFromStorage(MetadataManager *mdm, BlobID key, bool lock);
 /**
  *
  */
-void DeleteFromStorage(MetadataManager *mdm, const char *key,
-                       MapType map_type);
+void DeleteFromStorage(MetadataManager *mdm, const char *key, MapType map_type);
 
 /**
  *

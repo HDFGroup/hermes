@@ -70,11 +70,6 @@ struct BlobInfo {
     lock.serving.store(0);
   }
 
-  BlobInfo(const BlobInfo &other) : stats(other.stats) {
-    lock.ticket.store(other.lock.ticket.load());
-    lock.serving.store(other.lock.serving.load());
-  }
-
   BlobInfo& operator=(const BlobInfo &other) {
     stats = other.stats;
     lock.ticket.store(other.lock.ticket.load());

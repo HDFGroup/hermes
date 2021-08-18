@@ -205,11 +205,16 @@ void ReleaseBlobInfoPtr(MetadataManager *mdm) {
   EndTicketMutex(&mdm->blob_info_map_mutex);
 }
 
-BlobInfo LocalGetBlobInfo(SharedMemoryContext *context, BlobID blob_id) {
+Stats LocalGetBlobStats(SharedMemoryContext *context, BlobID blob_id) {
+  Stats result = {};
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   Heap *map_heap = GetMapHeap(mdm);
   BlobInfoMap *map = GetBlobInfoMap(mdm);
-  BlobInfo result = hmget(map, blob_id, map_heap);
+  BlobInfoMap *info = hmgetp_null(map, blob_id, map_heap);
+  if (info) {
+    result = info->value.stats;
+  }
+  ReleaseMap(mdm, kMapType_BlobInfo);
 
   return result;
 }
@@ -405,37 +410,6 @@ i64 GetIndexOfId(MetadataManager *mdm, ChunkedIdList *id_list, u64 id) {
 
   return result;
 }
-
-/** Protects the @p bucket_id's 'blobs' ChunkedIdList before incrementing its
- *  Stats.
- */
-// void LocalIncrementBlobStatsSafely(MetadataManager *mdm, BucketID bucket_id,
-//                                    BlobID blob_id) {
-//   BeginTicketMutex(&mdm->bucket_mutex);
-//   BucketInfo *info = LocalGetBucketInfoById(mdm, bucket_id);
-//   i64 index = GetIndexOfId(mdm, &info->blobs, blob_id.as_int);
-//   if (index < 0) {
-//     LOG(WARNING) << "BlobID " << blob_id.as_int << " not found in Bucket "
-//                  << bucket_id.as_int << std::endl;
-//   } else {
-//     LocalIncrementBlobStats(mdm, blob_id);
-//   }
-//   EndTicketMutex(&mdm->bucket_mutex);
-// }
-
-// void IncrementBlobStatsSafely(SharedMemoryContext *context, RpcContext *rpc,
-//                               const std::string &name, BucketID bucket_id,
-//                               BlobID blob_id) {
-//   MetadataManager *mdm = GetMetadataManagerFromContext(context);
-//   u32 target_node = HashString(mdm, rpc, name.c_str());
-
-//   if (target_node == rpc->node_id) {
-//     LocalIncrementBlobStatsSafely(mdm, bucket_id, blob_id);
-//   } else {
-//     RpcCall<bool>(rpc, target_node, "RemoteIncrementBlobStatsSafely",
-//                   bucket_id, blob_id);
-//   }
-// }
 
 void LocalAddBlobIdToBucket(MetadataManager *mdm, BucketID bucket_id,
                             BlobID blob_id) {
@@ -765,7 +739,7 @@ u64 GetFromStorage(MetadataManager *mdm, const char *key, MapType map_type) {
 }
 
 std::string ReverseGetFromStorage(MetadataManager *mdm, u64 id,
-                                     MapType map_type) {
+                                  MapType map_type) {
   std::string result;
   IdMap *map = GetMap(mdm, map_type);
   size_t map_size = shlen(map);
@@ -811,13 +785,6 @@ void DeleteFromStorage(MetadataManager *mdm, const char *key,
 
   // TODO(chogan): Maybe wrap this in a DEBUG only macro?
   CheckHeapOverlap(mdm);
-}
-
-void DeleteFromStorage(MetadataManager *mdm, BlobID blob_id) {
-  Heap *heap = GetMapHeap(mdm);
-  BlobInfoMap *map = GetBlobInfoMap(mdm);
-  hmdel(map, blob_id, heap);
-  ReleaseMap(mdm, kMapType_BlobInfo);
 }
 
 size_t GetStoredMapSize(MetadataManager *mdm, MapType map_type) {
@@ -943,8 +910,6 @@ void InitMetadataStorage(SharedMemoryContext *context, MetadataManager *mdm,
   LOG(INFO) << "Metadata can support " << num_blobs_supported
             << " Blobs per node\n";
 
-  // TODO(chogan): Add sizeof(stbds_array_header) to each map
-
   // Create Blob name -> BlobID map
   IdMap *blob_map = 0;
   sh_new_strdup(blob_map, num_blobs_supported, map_heap);
@@ -995,9 +960,9 @@ void LocalRemoveBlobFromVBucketInfo(SharedMemoryContext *context,
 
 f32 LocalGetBlobScore(SharedMemoryContext *context, BlobID blob_id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
-  BlobInfo info = LocalGetBlobInfo(context, blob_id);
+  Stats stats = LocalGetBlobStats(context, blob_id);
 
-  f32 result = ScoringFunction(mdm, &info.stats);
+  f32 result = ScoringFunction(mdm, &stats);
 
   return result;
 }
