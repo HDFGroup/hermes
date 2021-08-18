@@ -736,7 +736,15 @@ void LocalDestroyBlobByName(SharedMemoryContext *context, RpcContext *rpc,
 
 void LocalDestroyBlobById(SharedMemoryContext *context, RpcContext *rpc,
                           BlobID blob_id, BucketID bucket_id) {
-  // TODO(chogan): LockBlob(context, rpc, blob_id);
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  BlobInfo *blob_info = GetBlobInfoPtr(mdm, blob_id);
+  // NOTE(chogan): Holding the mdm->blob_info_map_mutex
+  if (blob_info) {
+    // NOTE(chogan): Take the Blob lock to enusre that all outstanding
+    // background operations on the Blob complete before it's deleted.
+    BeginTicketMutex(&blob_info->lock);
+  }
+
   if (!BlobIsInSwap(blob_id)) {
     std::vector<BufferID> buffer_ids = GetBufferIdList(context, rpc, blob_id);
     ReleaseBuffers(context, rpc, buffer_ids);
@@ -745,18 +753,18 @@ void LocalDestroyBlobById(SharedMemoryContext *context, RpcContext *rpc,
   }
 
   FreeBufferIdList(context, rpc, blob_id);
-  // TODO(chogan): UnlockBlob(context, rpc, blob_id);
 
   std::string blob_name = LocalGetBlobNameFromId(context, blob_id);
 
   if (blob_name.size() > 0) {
-    MetadataManager *mdm = GetMetadataManagerFromContext(context);
-    DeleteBlobId(mdm, rpc, blob_name, bucket_id);
+    LocalDeleteBlobMetadata(mdm, blob_name.c_str(), blob_id, bucket_id);
   } else {
     // TODO(chogan): @errorhandling
     DLOG(INFO) << "Expected to find blob_id " << blob_id.as_int
                << " in Map but didn't" << std::endl;
   }
+
+  ReleaseBlobInfoPtr(mdm);
 }
 
 void RemoveBlobFromBucketInfo(SharedMemoryContext *context, RpcContext *rpc,
