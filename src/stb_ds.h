@@ -599,7 +599,7 @@ extern void * stbds_shmode_func(size_t elemsize, size_t capacity, int mode, Heap
 #define stbds_hmget_ts(t, k, temp,heap)  (stbds_hmgetp_ts(t,k,temp,heap)->value)
 #define stbds_hmlen(t)        ((t) ? (ptrdiff_t) stbds_header((t)-1)->length-1 : 0)
 #define stbds_hmlenu(t)       ((t) ?             stbds_header((t)-1)->length-1 : 0)
-#define stbds_hmgetp_null(t,k,heap)  (stbds_hmgeti(t,k,heap) == -1 ? NULL : &(t)[stbds_temp(t)-1])
+#define stbds_hmgetp_null(t,k,heap)  (stbds_hmgeti(t,k,heap) == -1 ? NULL : &(t)[stbds_temp((t)-1)])
 
 #define stbds_shput(t, k, v, heap)                                           \
   ((t) = stbds_hmput_key_wrapper((t), sizeof *(t), (void*) (k), sizeof (t)->key, STBDS_HM_STRING, heap), \
@@ -649,7 +649,7 @@ extern void * stbds_shmode_func(size_t elemsize, size_t capacity, int mode, Heap
 
 #define stbds_shgets(t, k) (*stbds_shgetp(t,k))
 #define stbds_shget(t, k, heap)  (stbds_shgetp(t,k, heap)->value)
-#define stbds_shgetp_null(t,k)  (stbds_shgeti(t,k) == -1 ? NULL : &(t)[stbds_temp(t)-1])
+#define stbds_shgetp_null(t,k)  (stbds_shgeti(t,k) == -1 ? NULL : &(t)[stbds_temp((t)-1)])
 #define stbds_shlen        stbds_hmlen
 
 typedef struct
@@ -784,6 +784,7 @@ void *stbds_arrgrowf(void *a, size_t elemsize, size_t addlen, size_t min_cap, He
   if (a == NULL) {
     stbds_header(b)->length = 0;
     stbds_header(b)->hash_table_offset = 0;
+    stbds_header(b)->temp = 0;
   } else {
     STBDS_STATS(++stbds_array_grow);
   }
@@ -1736,6 +1737,8 @@ void stbds_unit_tests(Heap *heap)
     else       STBDS_ASSERT(hmget(intmap, i, heap) == i*5);
     if (i & 1) STBDS_ASSERT(hmget_ts(intmap, i, temp, heap) == -2 );
     else       STBDS_ASSERT(hmget_ts(intmap, i, temp, heap) == i*5);
+    if (i & 1) STBDS_ASSERT(hmgetp_null(intmap, i, heap) == NULL);
+    else       STBDS_ASSERT(hmgetp_null(intmap, i, heap));
   }
   for (i=0; i < testsize; i+=2)
     hmput(intmap, i, i*3, heap);
@@ -1757,6 +1760,22 @@ void stbds_unit_tests(Heap *heap)
   for (i=0; i < testsize; i+=2)
     hmput(intmap, i, i*3, heap);
   hmfree(intmap, heap);
+
+  {
+    int val = 1;
+    int key = 0;
+    int nonexistent_key = -1;
+    hmdefault(intmap, -2, heap);
+    hmput(intmap, key, val, heap);
+    STBDS_ASSERT(hmget(intmap, key, heap) == val);
+    STBDS_ASSERT(hmgeti(intmap, key, heap) != -1);
+    TestIntMap *element  = hmgetp_null(intmap, key, heap);
+    STBDS_ASSERT(element);
+    STBDS_ASSERT(element->value == val);
+    element = hmgetp_null(intmap, nonexistent_key, heap);
+    STBDS_ASSERT(element == NULL);
+    hmfree(intmap, heap);
+  }
 
   #if defined(__clang__) || defined(__GNUC__)
   #ifndef __cplusplus

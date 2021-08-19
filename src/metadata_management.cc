@@ -639,11 +639,9 @@ BufferIdArray GetBufferIdsFromBlobId(Arena *arena,
 void LocalCreateBlobMetadata(MetadataManager *mdm, const std::string &blob_name,
                              BlobID blob_id) {
   LocalPut(mdm, blob_name.c_str(), blob_id.as_int, kMapType_BlobId);
-  BlobInfo blob_info;
-  blob_info.stats = {};
-  blob_info.lock.ticket.store(0);
-  blob_info.lock.serving.store(0);
-
+  BlobInfo blob_info = {};
+  blob_info.stats.frequency = 1;
+  blob_info.stats.recency = mdm->clock++;
   LocalPut(mdm, blob_id, blob_info);
 }
 
