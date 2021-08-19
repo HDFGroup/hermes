@@ -270,7 +270,7 @@ void LocalDeleteBlobInfo(MetadataManager *mdm, BlobID blob_id) {
 void LocalDeleteBlobId(MetadataManager *mdm, const std::string &name,
                   BucketID bucket_id) {
   std::string internal_name = MakeInternalBlobName(name, bucket_id);
-  LocalDelete(mdm, name.c_str(), kMapType_BlobId);
+  LocalDelete(mdm, internal_name.c_str(), kMapType_BlobId);
 }
 
 void DeleteBlobId(MetadataManager *mdm, RpcContext *rpc,
