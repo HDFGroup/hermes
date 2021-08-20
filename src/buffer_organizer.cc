@@ -133,7 +133,7 @@ void IncrementFlushCount(SharedMemoryContext *context, RpcContext *rpc,
   if (target_node == rpc->node_id) {
     LocalIncrementFlushCount(context, vbkt_name);
   } else {
-    RpcCall<void>(rpc, target_node, "RemoteIncrementFlushCount",
+    RpcCall<bool>(rpc, target_node, "RemoteIncrementFlushCount",
                   vbkt_name);
   }
 }
@@ -146,7 +146,7 @@ void DecrementFlushCount(SharedMemoryContext *context, RpcContext *rpc,
   if (target_node == rpc->node_id) {
     LocalDecrementFlushCount(context, vbkt_name);
   } else {
-    RpcCall<void>(rpc, target_node, "RemoteDecrementFlushCount",
+    RpcCall<bool>(rpc, target_node, "RemoteDecrementFlushCount",
                   vbkt_name);
   }
 }

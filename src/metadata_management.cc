@@ -1415,7 +1415,7 @@ void LockBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id) {
   if (target_node == rpc->node_id) {
     LocalLockBlob(context, blob_id);
   } else {
-    RpcCall<void>(rpc, target_node, "RemoteLockBlob", blob_id);
+    RpcCall<bool>(rpc, target_node, "RemoteLockBlob", blob_id);
   }
 }
 
@@ -1424,7 +1424,7 @@ void UnlockBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id) {
   if (target_node == rpc->node_id) {
     LocalUnlockBlob(context, blob_id);
   } else {
-    RpcCall<void>(rpc, target_node, "RemoteUnlockBlob", blob_id);
+    RpcCall<bool>(rpc, target_node, "RemoteUnlockBlob", blob_id);
   }
 }
 

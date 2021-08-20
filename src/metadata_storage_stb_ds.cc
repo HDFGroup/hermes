@@ -392,7 +392,7 @@ void IncrementBlobStats(SharedMemoryContext *context, RpcContext *rpc,
     MetadataManager *mdm = GetMetadataManagerFromContext(context);
     LocalIncrementBlobStats(mdm, blob_id);
   } else {
-    RpcCall<void>(rpc, target_node, "RemoteIncrementBlobStats", blob_id);
+    RpcCall<bool>(rpc, target_node, "RemoteIncrementBlobStats", blob_id);
   }
 }
 
