@@ -105,24 +105,25 @@ int MoveToTarget(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id,
   return result;
 }
 
-void LocalIncrementFlushCount(SharedMemoryContext *context,
-                              const std::string &vbkt_name) {
+void LocalAdjustFlushCount(SharedMemoryContext *context,
+                           const std::string &vbkt_name, int adjustment) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   VBucketID id = LocalGetVBucketId(context, vbkt_name.c_str());
   VBucketInfo *info = LocalGetVBucketInfoById(mdm, id);
-  int flush_count = info->async_flush_count.fetch_add(1);
-  VLOG(1) << "Flush count on VBucket " << vbkt_name << " incremented to "
-          << flush_count + 1 << "\n";
+  int flush_count = info->async_flush_count.fetch_add(adjustment);
+  VLOG(1) << "Flush count on VBucket " << vbkt_name
+          << (adjustment > 0 ? "incremented" : "decremented") << " to "
+          << flush_count + adjustment << "\n";
+}
+
+void LocalIncrementFlushCount(SharedMemoryContext *context,
+                              const std::string &vbkt_name) {
+  LocalAdjustFlushCount(context, vbkt_name, 1);
 }
 
 void LocalDecrementFlushCount(SharedMemoryContext *context,
                          const std::string &vbkt_name) {
-  MetadataManager *mdm = GetMetadataManagerFromContext(context);
-  VBucketID id = LocalGetVBucketId(context, vbkt_name.c_str());
-  VBucketInfo *info = LocalGetVBucketInfoById(mdm, id);
-  int flush_count = info->async_flush_count.fetch_sub(1);
-  VLOG(1) << "Flush count on VBucket " << vbkt_name << " decremented to "
-          << flush_count - 1 << "\n";
+  LocalAdjustFlushCount(context, vbkt_name, -1);
 }
 
 void IncrementFlushCount(SharedMemoryContext *context, RpcContext *rpc,
