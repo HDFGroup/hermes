@@ -41,15 +41,6 @@ struct Stats {
   u32 frequency;
 };
 
-union BlobLock {
-  struct {
-    std::atomic<int> lock;
-    u32 unused;
-  } bits;
-
-  u64 as_int;
-};
-
 const int kIdListChunkSize = 10;
 
 struct ChunkedIdList {

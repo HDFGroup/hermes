@@ -29,17 +29,12 @@ void PutToStorage(MetadataManager *mdm, BlobID key, const BlobInfo &val);
 /**
  *
  */
-void PutToStorage(MetadataManager *mdm, BlobID key, const BlobInfo &val);
+u64 GetFromStorage(MetadataManager *mdm, const char *key, MapType map_type);
 
 /**
  *
  */
-u64 GetFromStorageStr(MetadataManager *mdm, const char *key, MapType map_type);
-
-/**
- *
- */
-std::string ReverseGetFromStorageStr(MetadataManager *mdm, u64 id,
+std::string ReverseGetFromStorage(MetadataManager *mdm, u64 id,
                                   MapType map_type);
 
 /**

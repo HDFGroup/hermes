@@ -339,10 +339,9 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
   };
 
   auto rpc_finalize = [rpc](const request &req) {
+    (void)req;
     ThalliumState *state = GetThalliumState(rpc);
     state->engine->finalize();
-
-    req.respond(true);
   };
 
   auto rpc_remove_blob_from_vbucket_info = [context](const request &req,
