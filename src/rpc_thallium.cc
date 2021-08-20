@@ -410,6 +410,15 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
     req.respond(true);
   };
 
+  auto rpc_create_blob_metadata =
+    [context](const request &req, const std::string &blob_name,
+              BlobID blob_id) {
+      MetadataManager *mdm = GetMetadataManagerFromContext(context);
+      LocalCreateBlobMetadata(mdm, blob_name, blob_id);
+
+      req.respond(true);
+  };
+
   // TODO(chogan): Currently these three are only used for testing.
   rpc_server->define("GetBuffers", rpc_get_buffers);
   rpc_server->define("SplitBuffers", rpc_split_buffers).disable_response();
@@ -471,6 +480,7 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
                      rpc_get_num_outstanding_flushing_tasks);
   rpc_server->define("RemoteLockBlob", rpc_lock_blob);
   rpc_server->define("RemoteUnlockBlob", rpc_unlock_blob);
+  rpc_server->define("RemoteCreateBlobMetadata", rpc_create_blob_metadata);
 }
 
 void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,

@@ -651,7 +651,7 @@ void CreateBlobMetadata(MetadataManager *mdm, RpcContext *rpc,
   if (target_node == rpc->node_id) {
     LocalCreateBlobMetadata(mdm, blob_name, blob_id);
   } else {
-    RpcCall<void>(rpc, target_node, "RemoteCreateBlobMetadata", blob_name,
+    RpcCall<bool>(rpc, target_node, "RemoteCreateBlobMetadata", blob_name,
                   blob_id);
   }
 }
@@ -734,35 +734,13 @@ void LocalDestroyBlobByName(SharedMemoryContext *context, RpcContext *rpc,
 
 void LocalDestroyBlobById(SharedMemoryContext *context, RpcContext *rpc,
                           BlobID blob_id, BucketID bucket_id) {
-  MetadataManager *mdm = GetMetadataManagerFromContext(context);
-  BlobInfo *blob_info = GetBlobInfoPtr(mdm, blob_id);
-  // NOTE(chogan): Holding the mdm->blob_info_map_mutex
-  if (blob_info) {
-    // NOTE(chogan): Take the Blob lock to enusre that all outstanding
-    // background operations on the Blob complete before it's deleted.
-    BeginTicketMutex(&blob_info->lock);
-  }
-
-  if (!BlobIsInSwap(blob_id)) {
-    std::vector<BufferID> buffer_ids = GetBufferIdList(context, rpc, blob_id);
-    ReleaseBuffers(context, rpc, buffer_ids);
-  } else {
-    // TODO(chogan): Invalidate swap region once we have a SwapManager
-  }
-
-  FreeBufferIdList(context, rpc, blob_id);
-
   std::string blob_name = LocalGetBlobNameFromId(context, blob_id);
-
   if (blob_name.size() > 0) {
-    LocalDeleteBlobMetadata(mdm, blob_name.c_str(), blob_id, bucket_id);
+    LocalDestroyBlobByName(context, rpc, blob_name.c_str(), blob_id, bucket_id);
   } else {
-    // TODO(chogan): @errorhandling
     DLOG(INFO) << "Expected to find blob_id " << blob_id.as_int
                << " in Map but didn't" << std::endl;
   }
-
-  ReleaseBlobInfoPtr(mdm);
 }
 
 void RemoveBlobFromBucketInfo(SharedMemoryContext *context, RpcContext *rpc,
