@@ -1350,7 +1350,10 @@ int LocalGetNumOutstandingFlushingTasks(SharedMemoryContext *context,
                                         VBucketID id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   VBucketInfo *info = LocalGetVBucketInfoById(mdm, id);
-  int result = info->async_flush_count;
+  int result = 0;
+  if (info) {
+    result = info->async_flush_count;
+  }
 
   return result;
 }
