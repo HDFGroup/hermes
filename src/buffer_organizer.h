@@ -65,7 +65,14 @@ void BoCopy(SharedMemoryContext *context, BufferID src, TargetID dest);
 void BoDelete(SharedMemoryContext *context, BufferID src);
 
 void ShutdownBufferOrganizer(SharedMemoryContext *context);
-
+void IncrementFlushCount(SharedMemoryContext *context, RpcContext *rpc,
+                         const std::string &vbkt_name);
+void DecrementFlushCount(SharedMemoryContext *context, RpcContext *rpc,
+                         const std::string &vbkt_name);
+void LocalIncrementFlushCount(SharedMemoryContext *context,
+                              const std::string &vbkt_name);
+void LocalDecrementFlushCount(SharedMemoryContext *context,
+                              const std::string &vbkt_name);
 }  // namespace hermes
 
 #endif  // HERMES_BUFFER_ORGANIZER_H_

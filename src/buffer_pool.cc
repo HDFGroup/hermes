@@ -111,9 +111,11 @@ void Finalize(SharedMemoryContext *context, CommunicationContext *comm,
 }
 
 void LockBuffer(BufferHeader *header) {
-  bool expected = false;
-  while (header->locked.compare_exchange_weak(expected, true)) {
-    // NOTE(chogan): Spin until we get the lock
+  while (true) {
+    bool expected = false;
+    if (header->locked.compare_exchange_weak(expected, true)) {
+      break;
+    }
   }
 }
 

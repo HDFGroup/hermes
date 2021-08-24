@@ -27,7 +27,7 @@
 using namespace hermes;  // NOLINT(*)
 
 int main() {
-  Arena arena = InitArenaAndAllocate(MEGABYTES(32));
+  Arena arena = InitArenaAndAllocate(MEGABYTES(64));
   TemporaryMemory temp_memory = BeginTemporaryMemory(&arena);
   Heap *heap = InitHeapInArena(&arena, true, 8);
   stbds_unit_tests(heap);

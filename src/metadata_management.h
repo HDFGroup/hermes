@@ -30,18 +30,15 @@ struct RpcContext;
 enum MapType {
   kMapType_Bucket,
   kMapType_VBucket,
-  kMapType_Blob,
+  kMapType_BlobId,
+  kMapType_BlobInfo,
 
   kMapType_Count
 };
 
-union Stats {
-  struct {
-    u32 recency;
-    u32 frequency;
-  } bits;
-
-  u64 as_int;
+struct Stats {
+  u32 recency;
+  u32 frequency;
 };
 
 const int kIdListChunkSize = 10;
@@ -62,13 +59,31 @@ struct BufferIdArray {
   u32 length;
 };
 
+struct BlobInfo {
+  Stats stats;
+  TicketMutex lock;
+
+  BlobInfo() {
+    stats.recency = 0;
+    stats.frequency = 0;
+    lock.ticket.store(0);
+    lock.serving.store(0);
+  }
+
+  BlobInfo& operator=(const BlobInfo &other) {
+    stats = other.stats;
+    lock.ticket.store(other.lock.ticket.load());
+    lock.serving.store(other.lock.serving.load());
+
+    return *this;
+  }
+};
+
 struct BucketInfo {
   BucketID next_free;
   ChunkedIdList blobs;
   std::atomic<int> ref_count;
   bool active;
-  /** stats[i] corresponds to the BlobID at blobs[i]. */
-  ChunkedIdList stats;
 };
 
 static constexpr int kMaxTraitsPerVBucket = 8;
@@ -77,6 +92,7 @@ struct VBucketInfo {
   VBucketID next_free;
   ChunkedIdList blobs;
   std::atomic<int> ref_count;
+  std::atomic<int> async_flush_count;
   TraitID traits[kMaxTraitsPerVBucket];
   bool active;
 };
@@ -103,7 +119,8 @@ struct MetadataManager {
 
   ptrdiff_t bucket_map_offset;
   ptrdiff_t vbucket_map_offset;
-  ptrdiff_t blob_map_offset;
+  ptrdiff_t blob_id_map_offset;
+  ptrdiff_t blob_info_map_offset;
 
   ptrdiff_t swap_filename_prefix_offset;
   ptrdiff_t swap_filename_suffix_offset;
@@ -122,8 +139,10 @@ struct MetadataManager {
   TicketMutex bucket_map_mutex;
   /** Lock for accessing the `IdMap` located at `vbucket_map_offset` */
   TicketMutex vbucket_map_mutex;
-  /** Lock for accessing the `IdMap` located at `blob_map_offset` */
-  TicketMutex blob_map_mutex;
+  /** Lock for accessing the `IdMap` located at `blob_id_map_offset` */
+  TicketMutex blob_id_map_mutex;
+  /** Lock for accessing the `BlobInfoMap` located at `blob_info_map_offset` */
+  TicketMutex blob_info_map_mutex;
   /** Lock for accessing `IdList`s and `ChunkedIdList`s */
   TicketMutex id_mutex;
 
@@ -386,16 +405,33 @@ std::string GetBucketNameById(SharedMemoryContext *context, RpcContext *rpc,
 /**
  *
  */
-void IncrementBlobStatsSafely(SharedMemoryContext *context, RpcContext *rpc,
-                              const std::string &name, BucketID bucket_id,
-                              BlobID blob_id);
+void IncrementBlobStats(SharedMemoryContext *context, RpcContext *rpc,
+                        BlobID blob_id);
 
 /**
  *
  */
-void LocalIncrementBlobStatsSafely(MetadataManager *mdm, BucketID bucket_id,
-                                   BlobID blob_id);
+void LocalIncrementBlobStats(MetadataManager *mdm, BlobID blob_id);
 
+/**
+ *
+ */
+void LockBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id);
+
+/**
+ *
+ */
+void UnlockBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id);
+
+/**
+ *
+ */
+void LocalLockBlob(SharedMemoryContext *context, BlobID blob_id);
+
+/**
+ *
+ */
+void LocalUnlockBlob(SharedMemoryContext *context, BlobID blob_id);
 }  // namespace hermes
 
 #endif  // HERMES_METADATA_MANAGEMENT_H_
