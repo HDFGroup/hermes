@@ -44,8 +44,8 @@ Status VBucket::Link(std::string blob_name, std::string bucket_name,
             << " to VBucket " << name_ << '\n';
 
   bool blob_exists = hermes_->BucketContainsBlob(bucket_name, blob_name);
+
   if (blob_exists) {
-    // inserting value by insert function
     TraitInput input;
     input.bucket_name = bucket_name;
     input.blob_name = blob_name;
@@ -55,8 +55,12 @@ Status VBucket::Link(std::string blob_name, std::string bucket_name,
         // TODO(hari): @errorhandling Check if linking was successful
       }
     }
-    AttachBlobToVBucket(&hermes_->context_, &hermes_->rpc_, blob_name.data(),
-                        bucket_name.data(), id_);
+
+    bool already_linked = ContainsBlob(blob_name, bucket_name);
+    if (!already_linked) {
+      AttachBlobToVBucket(&hermes_->context_, &hermes_->rpc_, blob_name.data(),
+                          bucket_name.data(), id_);
+    }
   } else {
     ret = BLOB_NOT_IN_BUCKET;
     LOG(ERROR) << ret.Msg();
@@ -112,7 +116,6 @@ Status VBucket::Unlink(std::string blob_name, std::string bucket_name,
 
 bool VBucket::ContainsBlob(std::string blob_name, std::string bucket_name) {
   bool ret = false;
-  std::string bk_tmp, blob_tmp;
 
   LOG(INFO) << "Checking if blob " << blob_name << " from bucket "
             << bucket_name << " is in this VBucket " << name_ << '\n';
@@ -124,7 +127,9 @@ bool VBucket::ContainsBlob(std::string blob_name, std::string bucket_name) {
   auto selected_blob_id = GetBlobId(&hermes_->context_, &hermes_->rpc_,
                                     blob_name.c_str(), bucket_id);
   for (const auto& blob_id : blob_ids) {
-    if (selected_blob_id.as_int == blob_id.as_int) ret = true;
+    if (selected_blob_id.as_int == blob_id.as_int) {
+      ret = true;
+    }
   }
 
   return ret;
