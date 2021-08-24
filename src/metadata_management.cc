@@ -713,8 +713,10 @@ void LocalDestroyBlobByName(SharedMemoryContext *context, RpcContext *rpc,
   BlobInfo *blob_info = GetBlobInfoPtr(mdm, blob_id);
   // NOTE(chogan): Holding the mdm->blob_info_map_mutex
   if (blob_info) {
-    // NOTE(chogan): Take the Blob lock to enusre that all outstanding
-    // background operations on the Blob complete before it's deleted.
+    // NOTE(chogan): Take the Blob lock to ensure that all outstanding
+    // background operations on the Blob complete before it's deleted. We would
+    // call LockBlob, but we have to keep ahold of the blob_info_map_mutex so
+    // that other BO tasks don't queue up on the Blob lock.
     BeginTicketMutex(&blob_info->lock);
   }
 

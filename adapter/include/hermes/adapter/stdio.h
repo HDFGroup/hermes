@@ -44,7 +44,7 @@
 namespace hermes::adapter::stdio {
 
 // TODO(chogan): Get from hermes::adapter::stdio::Config
-FlushingMode global_flushing_mode = FlushingMode::kAsynchronous;
+FlushingMode global_flushing_mode = FlushingMode::kSynchronous;
 
 }  // namespace hermes::adapter::stdio
 

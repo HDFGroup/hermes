@@ -1517,7 +1517,7 @@ size_t LocalReadBufferById(SharedMemoryContext *context, BufferID id,
     // first come first serve. However, if it turns out that more
     // threads will be trying to lock the buffer, we may need to enforce
     // ordering.
-    LockBuffer(header);
+    // LockBuffer(header);
 
     if (device->is_byte_addressable) {
       u8 *src = GetRamBufferPtr(context, header->id);
@@ -1541,7 +1541,7 @@ size_t LocalReadBufferById(SharedMemoryContext *context, BufferID id,
       }
       result = items_read * read_size;
     }
-    UnlockBuffer(header);
+    // UnlockBuffer(header);
   }
 
   return result;
@@ -1595,7 +1595,6 @@ size_t ReadBlobById(SharedMemoryContext *context, RpcContext *rpc, Arena *arena,
                     Blob blob, BlobID blob_id) {
   size_t result = 0;
 
-  // LockBlob(context, rpc, blob_id);
   BufferIdArray buffer_ids = {};
   if (hermes::BlobIsInSwap(blob_id)) {
     buffer_ids = GetBufferIdsFromBlobId(arena, context, rpc, blob_id, NULL);
@@ -1608,7 +1607,6 @@ size_t ReadBlobById(SharedMemoryContext *context, RpcContext *rpc, Arena *arena,
     result = ReadBlobFromBuffers(context, rpc, &blob, &buffer_ids,
                                  buffer_sizes);
   }
-  // UnlockBlob(context, rpc, blob_id);
 
   return result;
 }
@@ -1814,6 +1812,7 @@ api::Status StdIoPersistBlob(SharedMemoryContext *context, RpcContext *rpc,
   api::Status result;
 
   if (fd > -1) {
+    LockBlob(context, rpc, blob_id);
     ScopedTemporaryMemory scratch(arena);
     size_t blob_size = GetBlobSizeById(context, rpc, arena, blob_id);
     // TODO(chogan): @optimization We could use the actual Hermes buffers as
@@ -1837,7 +1836,7 @@ api::Status StdIoPersistBlob(SharedMemoryContext *context, RpcContext *rpc,
       //   LOG(ERROR) << result.Msg() << strerror(errno);
       // }
     }
-
+    UnlockBlob(context, rpc, blob_id);
   } else {
     result = INVALID_FILE;
     LOG(ERROR) << result.Msg();

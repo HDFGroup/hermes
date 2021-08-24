@@ -553,14 +553,17 @@ int HERMES_DECL(fflush)(FILE *fp) {
       if (!blob_names.empty() && INTERCEPTOR_LIST->Persists(fp)) {
         if (PersistEagerly(filename)) {
           existing.first.st_vbkt->WaitForBackgroundFlush();
+          existing.first.st_vbkt->Destroy();
         } else {
           LOG(INFO) << "File handler is opened by adapter." << std::endl;
           hapi::Context ctx;
           LOG(INFO) << "Adapter flushes " << blob_names.size()
                     << " blobs to filename:" << filename << "." << std::endl;
+          hermes::api::VBucket file_vbucket(filename, mdm->GetHermes());
           auto offset_map = std::unordered_map<std::string, hermes::u64>();
+
           for (const auto &blob_name : blob_names) {
-            existing.first.st_vbkt->Link(blob_name, filename, ctx);
+            file_vbucket.Link(blob_name, filename, ctx);
             auto page_index = std::stol(blob_name) - 1;
             offset_map.emplace(blob_name, page_index * kPageSize);
           }
@@ -568,10 +571,10 @@ int HERMES_DECL(fflush)(FILE *fp) {
                                                      nullptr, NULL, NULL);
           bool flush_synchronously = true;
           hapi::PersistTrait persist_trait(file_mapping, flush_synchronously);
-          existing.first.st_vbkt->Attach(&persist_trait);
+          file_vbucket.Attach(&persist_trait);
           existing.first.st_blobs.clear();
+          file_vbucket.Destroy();
         }
-        existing.first.st_vbkt->Destroy();
       }
       ret = 0;
     }
@@ -599,14 +602,16 @@ int HERMES_DECL(fclose)(FILE *fp) {
         if (!blob_names.empty() && persist) {
           if (PersistEagerly(filename)) {
             existing.first.st_vbkt->WaitForBackgroundFlush();
+            existing.first.st_vbkt->Destroy();
           } else {
             LOG(INFO) << "Adapter flushes " << blob_names.size()
                       << " blobs to filename:" << filename << "." << std::endl;
             INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
+            hermes::api::VBucket file_vbucket(filename, mdm->GetHermes());
             auto offset_map = std::unordered_map<std::string, hermes::u64>();
 
             for (const auto &blob_name : blob_names) {
-              auto status = existing.first.st_vbkt->Link(blob_name, filename);
+              auto status = file_vbucket.Link(blob_name, filename);
               if (!status.Failed()) {
                 auto page_index = std::stol(blob_name) - 1;
                 offset_map.emplace(blob_name, page_index * kPageSize);
@@ -616,11 +621,11 @@ int HERMES_DECL(fclose)(FILE *fp) {
               hapi::FileMappingTrait(filename, offset_map, nullptr, NULL, NULL);
             bool flush_synchronously = true;
             hapi::PersistTrait persist_trait(file_mapping, flush_synchronously);
-            existing.first.st_vbkt->Attach(&persist_trait);
+            file_vbucket.Attach(&persist_trait);
             existing.first.st_blobs.clear();
             INTERCEPTOR_LIST->hermes_flush_exclusion.erase(filename);
+            file_vbucket.Destroy();
           }
-          existing.first.st_vbkt->Destroy();
         }
         existing.first.st_bkid->Destroy();
         mdm->FinalizeHermes();
@@ -633,7 +638,9 @@ int HERMES_DECL(fclose)(FILE *fp) {
         existing.first.st_ctim = ts;
         mdm->Update(fp, existing.first);
         existing.first.st_bkid->Release();
-        existing.first.st_vbkt->Release();
+        if (existing.first.st_vbkt) {
+          existing.first.st_vbkt->Release();
+        }
       }
     }
   }
