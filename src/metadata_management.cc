@@ -706,19 +706,37 @@ void LocalDeleteBlobMetadata(MetadataManager *mdm, const char *blob_name,
   LocalDeleteBlobInfo(mdm, blob_id);
 }
 
+void WaitForOutstandingBlobOps(MetadataManager *mdm, BlobID blob_id) {
+  Ticket t = {};
+  Ticket *ticket = 0;
+
+  while (!t.acquired) {
+    BlobInfo *blob_info = GetBlobInfoPtr(mdm, blob_id);
+    if (blob_info) {
+      t = TryBeginTicketMutex(&blob_info->lock, ticket);
+    }
+    if (!t.acquired) {
+      ReleaseBlobInfoPtr(mdm);
+    }
+    ticket = &t;
+  }
+}
+
 void LocalDestroyBlobByName(SharedMemoryContext *context, RpcContext *rpc,
                             const char *blob_name, BlobID blob_id,
                             BucketID bucket_id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
-  BlobInfo *blob_info = GetBlobInfoPtr(mdm, blob_id);
-  // NOTE(chogan): Holding the mdm->blob_info_map_mutex
-  if (blob_info) {
-    // NOTE(chogan): Take the Blob lock to ensure that all outstanding
-    // background operations on the Blob complete before it's deleted. We would
-    // call LockBlob, but we have to keep ahold of the blob_info_map_mutex so
-    // that other BO tasks don't queue up on the Blob lock.
-    BeginTicketMutex(&blob_info->lock);
-  }
+  // BlobInfo *blob_info = GetBlobInfoPtr(mdm, blob_id);
+  // // NOTE(chogan): Holding the mdm->blob_info_map_mutex
+  // if (blob_info) {
+  //   // NOTE(chogan): Take the Blob lock to ensure that all outstanding
+  //   // background operations on the Blob complete before it's deleted. We would
+  //   // call LockBlob, but we have to keep ahold of the blob_info_map_mutex so
+  //   // that other BO tasks don't queue up on the Blob lock.
+  //   BeginTicketMutex(&blob_info->lock);
+  // }
+
+  WaitForOutstandingBlobOps(mdm, blob_id);
 
   if (!BlobIsInSwap(blob_id)) {
     std::vector<BufferID> buffer_ids = GetBufferIdList(context, rpc, blob_id);

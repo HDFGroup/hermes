@@ -456,6 +456,18 @@ void CoalesceFreeBlocks(Heap *heap) {
   // |2|/|4|1|6|3|8|X|5|
 }
 
+Ticket TryBeginTicketMutex(TicketMutex *mutex, Ticket *existing_ticket) {
+  Ticket result = {};
+  result.ticket =
+    existing_ticket ? existing_ticket->ticket : mutex->ticket.fetch_add(1);
+
+  if (result.ticket == mutex->serving.load()) {
+    result.acquired = true;
+  }
+
+  return result;
+}
+
 void BeginTicketMutex(TicketMutex *mutex) {
   u32 ticket = mutex->ticket.fetch_add(1);
   while (ticket != mutex->serving.load()) {

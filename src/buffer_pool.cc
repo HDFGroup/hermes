@@ -1783,29 +1783,6 @@ api::Status StdIoPersistBucket(SharedMemoryContext *context, RpcContext *rpc,
   return result;
 }
 
-#if 0
-typedef size_t (*real_fwrite_)(const void *ptr, size_t size, size_t nmemb,
-                               FILE *stream);
-
-static size_t Fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream) {
-  size_t result = 0;
-  void *libc_handle = dlopen("libc.so.6", RTLD_LAZY);
-
-  if (libc_handle) {
-    real_fwrite_ real_fwrite = (real_fwrite_)dlsym(libc_handle, "fwrite");
-    if (real_fwrite) {
-      result = real_fwrite(ptr, size, nmemb, stream);
-    } else {
-      LOG(FATAL) << "HERMES failed to map symbol fwrite: " << dlerror();
-    }
-  } else {
-    LOG(FATAL) << "HERMES failed to open libc.so.6: " << dlerror();
-  }
-
-  return result;
-}
-#endif
-
 api::Status StdIoPersistBlob(SharedMemoryContext *context, RpcContext *rpc,
                              Arena *arena, BlobID blob_id, int fd,
                              const i32 &offset) {

@@ -72,6 +72,7 @@ bool LocalEnqueueBoTask(SharedMemoryContext *context, BoTask task,
 }
 
 void FlushBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id,
+               // const std::string &blob_name,
                const std::string &filename, u64 offset) {
   // TODO(chogan): @errorhandling
 
@@ -86,9 +87,14 @@ void FlushBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id,
 
   int fd = open(filename.c_str(), open_flags, open_mode);
   if (fd != -1) {
+    // VLOG(1) << "Flushing Blob " << blob_name << " to file "
+    //         << filename << " at offset " << offset << "\n";
+
     // TODO(chogan): ScopedArena
     Arena local_arena = InitArenaAndAllocate(KILOBYTES(4));
     StdIoPersistBlob(context, rpc, &local_arena, blob_id, fd, offset);
+    // VLOG(1) << "Flushed Blob " << blob_name << " to file "
+    //         << filename << " at offset " << offset << "\n";
     DestroyArena(&local_arena);
 
     DecrementFlushCount(context, rpc, filename);
@@ -109,13 +115,14 @@ void FlushBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id,
   // }
 }
 
-bool EnqueueFlushingTask(SharedMemoryContext *context, RpcContext *rpc,
-                         BlobID blob_id, const std::string &filename,
-                         u64 offset) {
+bool EnqueueFlushingTask(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id,
+                         // const std::string &blob_name,
+                         const std::string &filename, u64 offset) {
   bool result = false;
 
   if (!BlobIsInSwap(blob_id)) {
     ThreadPool *pool = &context->bo->pool;
+    IncrementFlushCount(context, rpc, filename);
     pool->run(std::bind(FlushBlob, context, rpc, blob_id, filename, offset));
     result = true;
   }
