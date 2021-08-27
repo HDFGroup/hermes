@@ -10,11 +10,16 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-//
-// Created by hdevarajan on 12/7/20.
-//
-
-#include <hermes/adapter/posix.h>
-
-hermes::adapter::Posix::Posix() {
-}
+#ifndef HERMES_POSIX_COMMON_ENUMERATIONS_H
+#define HERMES_POSIX_COMMON_ENUMERATIONS_H
+/**
+ * Enumeration for POSIX adapter.
+ */
+namespace hermes::adapter::posix {
+/**
+ * Define different types of mappers supported by POSIX Adapter.
+ * Also define its construction in the MapperFactory.
+ */
+enum MapperType { BALANCED = 0 /* Balanced Mapping */ };
+}  // namespace hermes::adapter::posix
+#endif  // HERMES_POSIX_COMMON_ENUMERATIONS_H

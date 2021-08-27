@@ -51,7 +51,8 @@ namespace hermes::adapter {
  */
 const char* kPathExclusions[] = {"/bin/", "/boot/", "/dev/",  "/etc/",
                                  "/lib/", "/opt/",  "/proc/", "/sbin/",
-                                 "/sys/", "/usr/",  "/var/",  "/run/"};
+                                 "/sys/", "/usr/",  "/var/",  "/run/",
+                                 "pipe"};
 /**
  * Paths prefixed with the following directories are tracked by Hermes even if
  * they share a root with a path listed in path_exclusions
@@ -76,6 +77,15 @@ inline std::string GetFilenameFromFP(FILE* fh) {
   char filename[kMaxSize];
   int fno = fileno(fh);
   snprintf(proclnk, kMaxSize, "/proc/self/fd/%d", fno);
+  size_t r = readlink(proclnk, filename, kMaxSize);
+  filename[r] = '\0';
+  return filename;
+}
+inline std::string GetFilenameFromFD(int fd) {
+  const int kMaxSize = 0xFFF;
+  char proclnk[kMaxSize];
+  char filename[kMaxSize];
+  snprintf(proclnk, kMaxSize, "/proc/self/fd/%d", fd);
   size_t r = readlink(proclnk, filename, kMaxSize);
   filename[r] = '\0';
   return filename;
@@ -137,6 +147,7 @@ struct InterceptorList {
   }
 
   bool Persists(FILE* fh) { return Persists(GetFilenameFromFP(fh)); }
+  bool Persists(int fd) { return Persists(GetFilenameFromFD(fd)); }
 
   bool Persists(std::string path) {
     if (adapter_mode == AdapterMode::DEFAULT) {

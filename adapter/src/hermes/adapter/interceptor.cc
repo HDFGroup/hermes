@@ -47,13 +47,18 @@ void PopulateBufferingPath() {
 bool IsTracked(const std::string& path) {
   if (hermes::adapter::exit) return false;
   atexit(OnExit);
-  if (INTERCEPTOR_LIST->hermes_paths_exclusion.empty()) {
-    PopulateBufferingPath();
+  for (const auto& pth : kPathExclusions) {
+    if (path.find(pth) == 0) {
+      return false;
+    }
   }
   for (const auto& pth : INTERCEPTOR_LIST->hermes_flush_exclusion) {
     if (path.find(pth) != std::string::npos) {
       return false;
     }
+  }
+  if (INTERCEPTOR_LIST->hermes_paths_exclusion.empty()) {
+    PopulateBufferingPath();
   }
   for (const auto& pth : INTERCEPTOR_LIST->hermes_paths_exclusion) {
     if (path.find(pth) != std::string::npos ||
@@ -66,11 +71,7 @@ bool IsTracked(const std::string& path) {
       return true;
     }
   }
-  for (const auto& pth : kPathExclusions) {
-    if (path.find(pth) == 0) {
-      return false;
-    }
-  }
+
   auto list = INTERCEPTOR_LIST;
   auto buffer_mode = INTERCEPTOR_LIST->adapter_mode;
   if (buffer_mode == AdapterMode::BYPASS) {
@@ -93,6 +94,12 @@ bool IsTracked(FILE* fh) {
   if (hermes::adapter::exit) return false;
   atexit(OnExit);
   return IsTracked(GetFilenameFromFP(fh));
+}
+
+bool IsTracked(int fd) {
+  if (hermes::adapter::exit) return false;
+  atexit(OnExit);
+  return IsTracked(GetFilenameFromFD(fd));
 }
 
 void OnExit(void) { hermes::adapter::exit = true; }
