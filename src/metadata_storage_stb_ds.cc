@@ -665,7 +665,7 @@ bool LocalDestroyVBucket(SharedMemoryContext *context, const char *vbucket_name,
     LocalDelete(mdm, vbucket_name, kMapType_VBucket);
     destroyed = true;
   } else {
-    LOG(INFO) << "Cannot destroy bucket " << vbucket_name
+    LOG(INFO) << "Cannot destroy vbucket " << vbucket_name
               << ". It's refcount is " << ref_count << std::endl;
   }
   EndTicketMutex(&mdm->vbucket_mutex);
