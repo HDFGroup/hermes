@@ -168,6 +168,9 @@ struct Config {
    * into the hierarchy before giving up.*/
   int num_buffer_organizer_retries;
 
+  /** If non-zero, the device is shared among all nodes (e.g., burst buffers)*/
+  int is_shared_device[kMaxDevices];
+
   /** The hostname of the RPC server, minus any numbers that Hermes may
    * auto-generate when the rpc_hostNumber_range is specified. */
   std::string rpc_server_base_name;
@@ -178,6 +181,7 @@ struct Config {
   int buffer_organizer_port;
   int rpc_host_number_range[2];
   int rpc_num_threads;
+  int bo_num_threads;
   api::PlacementPolicy default_placement_policy;
 
   /** A base name for the BufferPool shared memory segement. Hermes appends the

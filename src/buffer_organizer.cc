@@ -11,9 +11,65 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "hermes.h"
+#include "buffer_organizer.h"
 #include "data_placement_engine.h"
 
 namespace hermes {
+
+BufferOrganizer::BufferOrganizer(int num_threads) : pool(num_threads) {
+}
+
+void ShutdownBufferOrganizer(SharedMemoryContext *context) {
+  // NOTE(chogan): ThreadPool destructor needs to be called manually since we
+  // allocated the BO instance with placement new.
+  context->bo->pool.~ThreadPool();
+}
+
+void BoMove(SharedMemoryContext *context, BufferID src, TargetID dest) {
+  (void)context;
+  printf("%s(%d, %d)\n", __func__, (int)src.as_int, (int)dest.as_int);
+}
+
+void BoCopy(SharedMemoryContext *context, BufferID src, TargetID dest) {
+  (void)context;
+  printf("%s(%d, %d)\n", __func__, (int)src.as_int, (int)dest.as_int);
+}
+
+void BoDelete(SharedMemoryContext *context, BufferID src) {
+  (void)context;
+  printf("%s(%d)\n", __func__, (int)src.as_int);
+}
+
+bool LocalEnqueueBoTask(SharedMemoryContext *context, BoTask task,
+                        BoPriority priority) {
+  // TODO(chogan): Limit queue size and return false when full
+  bool result = true;
+  bool is_high_priority = priority == BoPriority::kHigh;
+
+  ThreadPool *pool = &context->bo->pool;
+  switch (task.op) {
+    case BoOperation::kMove: {
+      pool->run(std::bind(BoMove, context, task.args.move_args.src,
+                          task.args.move_args.dest), is_high_priority);
+      break;
+    }
+    case BoOperation::kCopy: {
+      pool->run(std::bind(BoCopy, context, task.args.copy_args.src,
+                          task.args.copy_args.dest), is_high_priority);
+      break;
+    }
+    case BoOperation::kDelete: {
+      pool->run(std::bind(BoDelete, context, task.args.delete_args.src),
+                is_high_priority);
+      break;
+    }
+    default: {
+      HERMES_INVALID_CODE_PATH;
+    }
+  }
+
+  return result;
+}
 
 Status PlaceInHierarchy(SharedMemoryContext *context, RpcContext *rpc,
                         SwapBlob swap_blob, const std::string &name,
@@ -47,6 +103,53 @@ int MoveToTarget(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id,
   HERMES_NOT_IMPLEMENTED_YET;
   int result = 0;
   return result;
+}
+
+void LocalAdjustFlushCount(SharedMemoryContext *context,
+                           const std::string &vbkt_name, int adjustment) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  VBucketID id = LocalGetVBucketId(context, vbkt_name.c_str());
+  VBucketInfo *info = LocalGetVBucketInfoById(mdm, id);
+  int flush_count = info->async_flush_count.fetch_add(adjustment);
+  VLOG(1) << "Flush count on VBucket " << vbkt_name
+          << (adjustment > 0 ? "incremented" : "decremented") << " to "
+          << flush_count + adjustment << "\n";
+}
+
+void LocalIncrementFlushCount(SharedMemoryContext *context,
+                              const std::string &vbkt_name) {
+  LocalAdjustFlushCount(context, vbkt_name, 1);
+}
+
+void LocalDecrementFlushCount(SharedMemoryContext *context,
+                         const std::string &vbkt_name) {
+  LocalAdjustFlushCount(context, vbkt_name, -1);
+}
+
+void IncrementFlushCount(SharedMemoryContext *context, RpcContext *rpc,
+                         const std::string &vbkt_name) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  u32 target_node = HashString(mdm, rpc, vbkt_name.c_str());
+
+  if (target_node == rpc->node_id) {
+    LocalIncrementFlushCount(context, vbkt_name);
+  } else {
+    RpcCall<bool>(rpc, target_node, "RemoteIncrementFlushCount",
+                  vbkt_name);
+  }
+}
+
+void DecrementFlushCount(SharedMemoryContext *context, RpcContext *rpc,
+                         const std::string &vbkt_name) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  u32 target_node = HashString(mdm, rpc, vbkt_name.c_str());
+
+  if (target_node == rpc->node_id) {
+    LocalDecrementFlushCount(context, vbkt_name);
+  } else {
+    RpcCall<bool>(rpc, target_node, "RemoteDecrementFlushCount",
+                  vbkt_name);
+  }
 }
 
 }  // namespace hermes

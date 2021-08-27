@@ -112,6 +112,13 @@ void InitDefaultConfig(Config *config) {
   config->buffer_pool_shmem_name[shmem_name_size] = '\0';
 
   config->default_placement_policy = api::PlacementPolicy::kMinimizeIoTime;
+
+  config->is_shared_device[0] = 0;
+  config->is_shared_device[1] = 0;
+  config->is_shared_device[2] = 0;
+  config->is_shared_device[3] = 1;
+
+  config->bo_num_threads = 4;
 }
 
 void FailedLibraryCall(std::string func) {

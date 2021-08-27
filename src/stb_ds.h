@@ -599,7 +599,7 @@ extern void * stbds_shmode_func(size_t elemsize, size_t capacity, int mode, Heap
 #define stbds_hmget_ts(t, k, temp,heap)  (stbds_hmgetp_ts(t,k,temp,heap)->value)
 #define stbds_hmlen(t)        ((t) ? (ptrdiff_t) stbds_header((t)-1)->length-1 : 0)
 #define stbds_hmlenu(t)       ((t) ?             stbds_header((t)-1)->length-1 : 0)
-#define stbds_hmgetp_null(t,k)  (stbds_hmgeti(t,k) == -1 ? NULL : &(t)[stbds_temp(t)-1])
+#define stbds_hmgetp_null(t,k,heap)  (stbds_hmgeti(t,k,heap) == -1 ? NULL : &(t)[stbds_temp((t)-1)])
 
 #define stbds_shput(t, k, v, heap)                                           \
   ((t) = stbds_hmput_key_wrapper((t), sizeof *(t), (void*) (k), sizeof (t)->key, STBDS_HM_STRING, heap), \
@@ -649,7 +649,7 @@ extern void * stbds_shmode_func(size_t elemsize, size_t capacity, int mode, Heap
 
 #define stbds_shgets(t, k) (*stbds_shgetp(t,k))
 #define stbds_shget(t, k, heap)  (stbds_shgetp(t,k, heap)->value)
-#define stbds_shgetp_null(t,k)  (stbds_shgeti(t,k) == -1 ? NULL : &(t)[stbds_temp(t)-1])
+#define stbds_shgetp_null(t,k)  (stbds_shgeti(t,k) == -1 ? NULL : &(t)[stbds_temp((t)-1)])
 #define stbds_shlen        stbds_hmlen
 
 typedef struct
@@ -784,6 +784,7 @@ void *stbds_arrgrowf(void *a, size_t elemsize, size_t addlen, size_t min_cap, He
   if (a == NULL) {
     stbds_header(b)->length = 0;
     stbds_header(b)->hash_table_offset = 0;
+    stbds_header(b)->temp = 0;
   } else {
     STBDS_STATS(++stbds_array_grow);
   }
@@ -1665,6 +1666,11 @@ struct TestStrMap {
   int value;
 };
 
+struct TestStbdsMap {
+  stbds_struct key;
+  int value;
+};
+
 void stbds_unit_tests(Heap *heap)
 {
 #if defined(_MSC_VER) && _MSC_VER <= 1200 && defined(__cplusplus)
@@ -1678,9 +1684,9 @@ void stbds_unit_tests(Heap *heap)
   // struct { char *key;        int value; }  *strmap  = NULL;
   struct TestIntMap *intmap = NULL;
   struct TestStrMap *strmap = NULL;
-  // struct { stbds_struct key; int value; }  *map     = NULL;
-  // stbds_struct                             *map2    = NULL;
-  // stbds_struct2                            *map3    = NULL;
+  struct TestStbdsMap *map = NULL;
+  stbds_struct                             *map2    = NULL;
+  stbds_struct2                            *map3    = NULL;
   // stbds_string_arena                        sa      = { 0 };
   // int key3[2] = { 1,2 };
   ptrdiff_t temp;
@@ -1731,6 +1737,8 @@ void stbds_unit_tests(Heap *heap)
     else       STBDS_ASSERT(hmget(intmap, i, heap) == i*5);
     if (i & 1) STBDS_ASSERT(hmget_ts(intmap, i, temp, heap) == -2 );
     else       STBDS_ASSERT(hmget_ts(intmap, i, temp, heap) == i*5);
+    if (i & 1) STBDS_ASSERT(hmgetp_null(intmap, i, heap) == NULL);
+    else       STBDS_ASSERT(hmgetp_null(intmap, i, heap));
   }
   for (i=0; i < testsize; i+=2)
     hmput(intmap, i, i*3, heap);
@@ -1752,6 +1760,22 @@ void stbds_unit_tests(Heap *heap)
   for (i=0; i < testsize; i+=2)
     hmput(intmap, i, i*3, heap);
   hmfree(intmap, heap);
+
+  {
+    int val = 1;
+    int key = 0;
+    int nonexistent_key = -1;
+    hmdefault(intmap, -2, heap);
+    hmput(intmap, key, val, heap);
+    STBDS_ASSERT(hmget(intmap, key, heap) == val);
+    STBDS_ASSERT(hmgeti(intmap, key, heap) != -1);
+    TestIntMap *element  = hmgetp_null(intmap, key, heap);
+    STBDS_ASSERT(element);
+    STBDS_ASSERT(element->value == val);
+    element = hmgetp_null(intmap, nonexistent_key, heap);
+    STBDS_ASSERT(element == NULL);
+    hmfree(intmap, heap);
+  }
 
   #if defined(__clang__) || defined(__GNUC__)
   #ifndef __cplusplus
@@ -1797,60 +1821,68 @@ void stbds_unit_tests(Heap *heap)
     shfree(strmap, heap);
   }
 
-  // {
-  //   struct { char *key; char value; } *hash = NULL;
-  //   char name[4] = "jen";
-  //   shput(hash, "bob"   , 'h', heap);
-  //   shput(hash, "sally" , 'e', heap);
-  //   shput(hash, "fred"  , 'l', heap);
-  //   shput(hash, "jen"   , 'x', heap);
-  //   shput(hash, "doug"  , 'o', heap);
+  {
+    struct { char *key; char value; } *hash = NULL;
+    sh_new_strdup(hash, 10, heap);
+    char name[4] = "jen";
+    shput(hash, "bob"   , 'h', heap);
+    shput(hash, "sally" , 'e', heap);
+    shput(hash, "fred"  , 'l', heap);
+    shput(hash, "jen"   , 'x', heap);
+    shput(hash, "doug"  , 'o', heap);
 
-  //   shput(hash, name    , 'l', heap);
-  //   shfree(hash, heap);
-  // }
+    shput(hash, name    , 'l', heap);
+    shfree(hash, heap);
+  }
 
-  // for (i=0; i < testsize; i += 2) {
-  //   stbds_struct s = { i,i*2,i*3,i*4 };
-  //   hmput(map, s, i*5, heap);
-  // }
+  // NOTE(chogan): Preallocate map to avoid realloc
+  map = (TestStbdsMap *)stbds_arrgrowf(map, sizeof(*map), 0, testsize, heap);
+  map = (TestStbdsMap *)STBDS_ARR_TO_HASH(map, sizeof(*map));
+  for (i=0; i < testsize; i += 2) {
+    stbds_struct s = { i,i*2,i*3,i*4 };
+    hmput(map, s, i*5, heap);
+  }
 
-  // for (i=0; i < testsize; i += 1) {
-  //   stbds_struct s = { i,i*2,i*3  ,i*4 };
-  //   stbds_struct t = { i,i*2,i*3+1,i*4 };
-  //   if (i & 1) STBDS_ASSERT(hmget(map, s, heap) == 0);
-  //   else       STBDS_ASSERT(hmget(map, s, heap) == i*5);
-  //   if (i & 1) STBDS_ASSERT(hmget_ts(map, s, temp, heap) == 0);
-  //   else       STBDS_ASSERT(hmget_ts(map, s, temp, heap) == i*5);
-  //   //STBDS_ASSERT(hmget(map, t.key) == 0);
-  // }
+  for (i=0; i < testsize; i += 1) {
+    stbds_struct s = { i,i*2,i*3  ,i*4 };
+    // stbds_struct t = { i,i*2,i*3+1,i*4 };
+    if (i & 1) STBDS_ASSERT(hmget(map, s, heap) == 0);
+    else       STBDS_ASSERT(hmget(map, s, heap) == i*5);
+    if (i & 1) STBDS_ASSERT(hmget_ts(map, s, temp, heap) == 0);
+    else       STBDS_ASSERT(hmget_ts(map, s, temp, heap) == i*5);
+    //STBDS_ASSERT(hmget(map, t.key) == 0);
+  }
+  hmfree(map, heap);
 
-  // for (i=0; i < testsize; i += 2) {
-  //   stbds_struct s = { i,i*2,i*3,i*4 };
-  //   hmputs(map2, s, heap);
-  // }
-  // hmfree(map, heap);
+  map2 = (stbds_struct *)stbds_arrgrowf(map2, sizeof(*map2), 0, testsize, heap);
+  map2 = (stbds_struct *)STBDS_ARR_TO_HASH(map2, sizeof(*map2));
+  for (i=0; i < testsize; i += 2) {
+    stbds_struct s = { i,i*2,i*3,i*4 };
+    hmputs(map2, s, heap);
+  }
 
-  // for (i=0; i < testsize; i += 1) {
-  //   stbds_struct s = { i,i*2,i*3,i*4 };
-  //   stbds_struct t = { i,i*2,i*3+1,i*4 };
-  //   if (i & 1) STBDS_ASSERT(hmgets(map2, s.key, heap).d == 0);
-  //   else       STBDS_ASSERT(hmgets(map2, s.key, heap).d == i*4);
-  //   //STBDS_ASSERT(hmgetp(map2, t.key) == 0);
-  // }
-  // hmfree(map2, heap);
+  for (i=0; i < testsize; i += 1) {
+    stbds_struct s = { i,i*2,i*3,i*4 };
+    // stbds_struct t = { i,i*2,i*3+1,i*4 };
+    if (i & 1) STBDS_ASSERT(hmgets(map2, s.key, heap).d == 0);
+    else       STBDS_ASSERT(hmgets(map2, s.key, heap).d == i*4);
+    //STBDS_ASSERT(hmgetp(map2, t.key) == 0);
+  }
+  hmfree(map2, heap);
 
-  // for (i=0; i < testsize; i += 2) {
-  //   stbds_struct2 s = { { i,i*2 }, i*3,i*4, i*5 };
-  //   hmputs(map3, s, heap);
-  // }
-  // for (i=0; i < testsize; i += 1) {
-  //   stbds_struct2 s = { { i,i*2}, i*3, i*4, i*5 };
-  //   stbds_struct2 t = { { i,i*2}, i*3+1, i*4, i*5 };
-  //   if (i & 1) STBDS_ASSERT(hmgets(map3, s.key, heap).d == 0);
-  //   else       STBDS_ASSERT(hmgets(map3, s.key, heap).d == i*5);
-  //   //STBDS_ASSERT(hmgetp(map3, t.key) == 0);
-  // }
+  map3 = (stbds_struct2 *)stbds_arrgrowf(map3, sizeof(*map3), 0, testsize, heap);
+  map3 = (stbds_struct2 *)STBDS_ARR_TO_HASH(map3, sizeof(*map3));
+  for (i=0; i < testsize; i += 2) {
+    stbds_struct2 s = { { i,i*2 }, i*3,i*4, i*5 };
+    hmputs(map3, s, heap);
+  }
+  for (i=0; i < testsize; i += 1) {
+    stbds_struct2 s = { { i,i*2}, i*3, i*4, i*5 };
+    // stbds_struct2 t = { { i,i*2}, i*3+1, i*4, i*5 };
+    if (i & 1) STBDS_ASSERT(hmgets(map3, s.key, heap).d == 0);
+    else       STBDS_ASSERT(hmgets(map3, s.key, heap).d == i*5);
+    //STBDS_ASSERT(hmgetp(map3, t.key) == 0);
+  }
 #endif
 }
 #endif

@@ -13,14 +13,14 @@
 /**
  * Internal headers
  */
+#include <thread_pool.h>
 #include <hermes/adapter/mpiio.h>
-#include <hermes/adapter/thread_pool.h>
 
 #include <hermes/adapter/mpiio/mapper/balanced_mapper.cc>
 /**
  * Namespace declarations
  */
-using hermes::adapter::ThreadPool;
+using hermes::ThreadPool;
 using hermes::adapter::mpiio::AdapterStat;
 using hermes::adapter::mpiio::FileStruct;
 using hermes::adapter::mpiio::HermesRequest;
@@ -70,7 +70,6 @@ int simple_open(MPI_Comm &comm, const char *path, int &amode, MPI_Info &info,
     }
     stat.info = info;
     stat.comm = comm;
-    mdm->InitializeHermes();
     hapi::Context ctx;
     stat.st_bkid = std::make_shared<hapi::Bucket>(path, mdm->GetHermes(), ctx);
     mdm->Create(fh, stat);
@@ -177,67 +176,26 @@ std::pair<int, size_t> write_internal(std::pair<AdapterStat, bool> &existing,
     if (item.second.size_ == kPageSize) {
       LOG(INFO) << "Create or Overwrite blob " << item.second.blob_name_
                 << " of size:" << item.second.size_ << "." << std::endl;
-      if (item.second.size_ == kPageSize) {
-        auto status = existing.first.st_bkid->Put(
-            item.second.blob_name_, put_data_ptr, put_data_ptr_size, ctx);
-        if (status.Failed()) {
-          perform_file_write(filename, item.first.offset_, put_data_ptr_size,
-                             MPI_CHAR, put_data_ptr);
-        } else {
-          existing.first.st_blobs.emplace(item.second.blob_name_);
-        }
-      // TODO(chogan): The commented out branches are unreachable. Hari needs to
-      // take a look at this
-      }
-#if 0
-      } else if (item.second.offset_ == 0) {
-        auto status = existing.first.st_bkid->Put(
-            item.second.blob_name_, put_data_ptr, put_data_ptr_size, ctx);
-        if (status.Failed()) {
-          perform_file_write(filename, index * kPageSize, put_data_ptr_size,
-                             MPI_CHAR, put_data_ptr);
-        } else {
-          existing.first.st_blobs.emplace(item.second.blob_name_);
-        }
+      auto status = existing.first.st_bkid->Put(
+          item.second.blob_name_, put_data_ptr, put_data_ptr_size, ctx);
+      if (status.Failed()) {
+        perform_file_write(filename, item.first.offset_, put_data_ptr_size,
+                           MPI_CHAR, put_data_ptr);
       } else {
-        hapi::Blob final_data(item.second.offset_ + item.second.size_);
-        if (fs::exists(filename) &&
-            fs::file_size(filename) >= item.second.offset_) {
-          LOG(INFO) << "Blob has a gap in write. read gap from original file."
-                    << std::endl;
-          perform_file_read(filename.c_str(), index * kPageSize,
-                            final_data.data(), 0, item.second.offset_,
-                            MPI_CHAR);
-        }
-        memcpy(final_data.data() + item.second.offset_, put_data_ptr,
-               put_data_ptr_size);
-        auto status = existing.first.st_bkid->Put(item.second.blob_name_,
-                                                  final_data, ctx);
-        if (status.Failed()) {
-          perform_file_write(filename, index * kPageSize, final_data.size(),
-                             MPI_CHAR, final_data.data());
-        } else {
-          existing.first.st_blobs.emplace(item.second.blob_name_);
-        }
+        existing.first.st_blobs.emplace(item.second.blob_name_);
       }
-#endif
-      /* TODO(hari): Check if vbucket exists. if so delete it.*/
     } else {
       LOG(INFO) << "Writing blob " << item.second.blob_name_
                 << " of size:" << item.second.size_ << "." << std::endl;
       auto blob_exists =
           existing.first.st_bkid->ContainsBlob(item.second.blob_name_);
-      hapi::Blob temp(0);
-      auto existing_blob_size =
-          existing.first.st_bkid->Get(item.second.blob_name_, temp, ctx);
       if (blob_exists) {
+        hapi::Blob temp(0);
+        auto existing_blob_size =
+            existing.first.st_bkid->Get(item.second.blob_name_, temp, ctx);
         LOG(INFO) << "blob " << item.second.blob_name_
-                  << " of size:" << existing_blob_size << "." << std::endl;
-        if (existing_blob_size != kPageSize) {
-          LOG(ERROR) << "blob " << item.second.blob_name_
-                     << " has of size:" << existing_blob_size
-                     << " of the overall page." << std::endl;
-        }
+                  << " of size:" << existing_blob_size << " exists."
+                  << std::endl;
         hapi::Blob existing_data(existing_blob_size);
         existing.first.st_bkid->Get(item.second.blob_name_, existing_data, ctx);
         memcpy(existing_data.data() + item.second.offset_, put_data_ptr,
@@ -245,12 +203,18 @@ std::pair<int, size_t> write_internal(std::pair<AdapterStat, bool> &existing,
         auto status = existing.first.st_bkid->Put(item.second.blob_name_,
                                                   existing_data, ctx);
         if (status.Failed()) {
+          LOG(INFO) << "blob " << item.second.blob_name_
+                    << " put failed for size" << existing_blob_size
+                    << ". Writing to file system directly." << std::endl;
           perform_file_write(filename, index * kPageSize, existing_blob_size,
                              MPI_CHAR, existing_data.data());
         } else {
           existing.first.st_blobs.emplace(item.second.blob_name_);
         }
       } else {
+        LOG(INFO) << "blob " << item.second.blob_name_
+                  << " does not exists and we are writing partial blob."
+                  << std::endl;
         std::string process_local_blob_name =
             mdm->EncodeBlobNameLocal(item.second);
         auto vbucket =
@@ -262,6 +226,9 @@ std::pair<int, size_t> write_internal(std::pair<AdapterStat, bool> &existing,
         auto status = existing.first.st_bkid->Put(
             process_local_blob_name, put_data_ptr, put_data_ptr_size, ctx);
         if (status.Failed()) {
+          LOG(INFO) << "blob " << process_local_blob_name
+                    << " put failed for size" << put_data_ptr_size
+                    << ". Writing to file system directly." << std::endl;
           perform_file_write(filename, item.first.offset_, put_data_ptr_size,
                              MPI_CHAR, put_data_ptr);
         } else {
@@ -269,6 +236,7 @@ std::pair<int, size_t> write_internal(std::pair<AdapterStat, bool> &existing,
           vbucket.Link(process_local_blob_name,
                        existing.first.st_bkid->GetName());
         }
+        LOG(INFO) << "clean existing blob list metadata." << std::endl;
         if (!blob_names.empty()) {
           LOG(INFO) << "vbucket with blobname " << item.second.blob_name_
                     << " exists." << std::endl;
@@ -612,7 +580,6 @@ int HERMES_DECL(MPI_File_close)(MPI_File *fh) {
           INTERCEPTOR_LIST->hermes_flush_exclusion.erase(filename);
         }
         existing.first.st_bkid->Destroy(ctx);
-        mdm->FinalizeHermes();
         if (existing.first.a_mode & MPI_MODE_DELETE_ON_CLOSE) {
           fs::remove(filename);
         }

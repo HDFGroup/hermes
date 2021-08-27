@@ -31,7 +31,7 @@
  *
  * The public structures and functions for interacting with the BufferPool as a
  * client. The interface includes hermes-specific application core
- * intialization, and the API through which the DataPlacementEngine and
+ * intialization, and the API through which the RoundRobinState and
  * BufferOrganizer interact with the BufferPool.
  */
 
@@ -231,6 +231,9 @@ struct BufferPool {
  * BufferPool *pool = GetBufferPoolFromContext(context);
  * ```
  */
+
+struct BufferOrganizer;
+
 struct SharedMemoryContext {
   /** A pointer to the beginning of shared memory. */
   u8 *shm_base;
@@ -240,6 +243,8 @@ struct SharedMemoryContext {
   ptrdiff_t metadata_manager_offset;
   /** The total size of the shared memory (needed for munmap). */
   u64 shm_size;
+  /** This will only be valid on Hermes cores, and NULL on client cores. */
+  BufferOrganizer *bo;
 
   // TODO(chogan): Move these into a FileBufferingContext
   std::vector<std::vector<std::string>> buffering_filenames;
@@ -284,8 +289,11 @@ void MakeFullShmemName(char *dest, const char *base);
  * pointers.
  * @param make_space If true, attempts to reserve space on the * filesystem for
  * each file.
+ * @param node_id The node id, used for shared devices.
+ * @param first_on_node True if this rank is sequentially the first on the node
  */
-void InitFilesForBuffering(SharedMemoryContext *context, bool make_space);
+void InitFilesForBuffering(SharedMemoryContext *context, bool make_space,
+                           u32 node_id, bool first_on_node);
 
 /**
  * Retrieves information required for accessing the BufferPool shared memory.
@@ -474,17 +482,21 @@ size_t ReadFromSwap(SharedMemoryContext *context, Blob blob,
                     SwapBlob swap_blob);
 
 /**
- * Returns a vector of bandwidths in MiB per second.
+ * Returns a vector of bandwidths in MiB per second for a given Target list.
  *
- * The returned list can be indexed by DeviceID to get the bandwidth for a
- * specific Device.
+ * Element @c n of the result is the bandwidth of the Device that backs the @c
+ * nth element of @p targets.
  *
  * @param context The shared memory context needed to access BufferPool info.
+ * @param targets The list of targets for which to retrieve bandwidth info.
  *
- * @return The list of bandwidths, one for each Device, in MiB/sec.
+ * @return The list of bandwidths, one for each target in @p targets, in
+ *         MiB/sec.
  */
-std::vector<f32> GetBandwidths(SharedMemoryContext *context);
+std::vector<f32> GetBandwidths(SharedMemoryContext *context,
+                               const std::vector<TargetID> &targets);
 
+u32 GetNumBuffersAvailable(SharedMemoryContext *context, DeviceID device_id);
 u32 GetBufferSize(SharedMemoryContext *context, RpcContext *rpc, BufferID id);
 bool BufferIsByteAddressable(SharedMemoryContext *context, BufferID id);
 api::Status PlaceInHierarchy(SharedMemoryContext *context, RpcContext *rpc,

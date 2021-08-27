@@ -67,17 +67,20 @@ void InitRpcContext(RpcContext *rpc, u32 num_nodes, u32 node_id,
 void *CreateRpcState(Arena *arena);
 void InitRpcClients(RpcContext *rpc);
 void ShutdownRpcClients(RpcContext *rpc);
-
+void RunDaemon(SharedMemoryContext *context, RpcContext *rpc,
+               CommunicationContext *comm, Arena *trans_arena,
+               const char *shmem_name);
+void FinalizeClient(SharedMemoryContext *context, RpcContext *rpc,
+                    CommunicationContext *comm, Arena *trans_arena,
+                    bool stop_daemon);
 void FinalizeRpcContext(RpcContext *rpc, bool is_daemon);
 std::string GetHostNumberAsString(RpcContext *rpc, u32 node_id);
 std::string GetServerName(RpcContext *rpc, u32 node_id,
                           bool is_buffer_organizer = false);
 std::string GetProtocol(RpcContext *rpc);
 void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
-                          const char *addr, int num_threads, int port);
-void TriggerBufferOrganizer(RpcContext *rpc, const char *func_name,
-                            const std::string &blob_name, SwapBlob swap_blob,
-                            int retries);
+                          Arena *arena, const char *addr, int num_threads,
+                          int port);
 }  // namespace hermes
 
 // TODO(chogan): I don't like that code similar to this is in buffer_pool.cc.

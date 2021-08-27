@@ -58,4 +58,13 @@ const char kPathDelimiter = ',';
 const char* kAdapterDefaultMode = "DEFAULT";
 const char* kAdapterBypassMode = "BYPASS";
 const char* kAdapterScratchMode = "SCRATCH";
+
+/**
+ * If the \c HERMES_STOP_DAEMON environment variable is unset or has a non-zero
+ * value, the adapter client will kill the running Hermes daemon when it
+ * finishes execution.
+ *
+ * Default value: \c 1
+ */
+const char* kStopDaemon = "HERMES_STOP_DAEMON";
 #endif  // HERMES_ADAPTER_CONSTANTS_H

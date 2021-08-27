@@ -96,5 +96,12 @@ int main(int argc, char **argv) {
   Assert(config.default_placement_policy ==
          hermes::api::PlacementPolicy::kMinimizeIoTime);
 
+  Assert(config.is_shared_device[0] == 0);
+  Assert(config.is_shared_device[1] == 0);
+  Assert(config.is_shared_device[2] == 0);
+  Assert(config.is_shared_device[3] == 1);
+
+  Assert(config.bo_num_threads == 4);
+
   return 0;
 }

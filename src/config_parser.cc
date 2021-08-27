@@ -35,6 +35,7 @@
 // 5. Add the new variable to the Config struct.
 // 6. Add an Assert to config_parser_test.cc to test the functionality.
 // 7. Set a default value in InitDefaultConfig
+// 8. Add the variable with documentation to test/data/hermes.conf
 
 namespace hermes {
 
@@ -82,6 +83,8 @@ enum ConfigVariable {
   ConfigVariable_RpcHostNumberRange,
   ConfigVariable_RpcNumThreads,
   ConfigVariable_PlacementPolicy,
+  ConfigVariable_IsSharedDevice,
+  ConfigVariable_BoNumThreads,
 
   ConfigVariable_Count
 };
@@ -118,6 +121,8 @@ static const char *kConfigVariableStrings[ConfigVariable_Count] = {
   "rpc_host_number_range",
   "rpc_num_threads",
   "default_placement_policy",
+  "is_shared_device",
+  "buffer_organizer_num_threads",
 };
 
 struct Token {
@@ -499,10 +504,7 @@ Token *ParseIntListList(Token *tok, int out[][hermes::kMaxBufferPoolSlabs],
 f32 ParseFloat(Token **tok) {
   double result = 0;
   if (*tok && IsNumber(*tok)) {
-    result = strtod((*tok)->data, NULL);
-    if (result <= 0 || errno == ERANGE || result > FLT_MAX) {
-      PrintExpectedAndFail("a floating point number between 1 and FLT_MAX");
-    }
+    result = std::stod(std::string((*tok)->data), nullptr);
     *tok = (*tok)->next;
   } else {
     PrintExpectedAndFail("a number");
@@ -832,6 +834,15 @@ void ParseTokens(TokenList *tokens, Config *config) {
         }
         break;
       }
+      case ConfigVariable_IsSharedDevice: {
+        RequireNumDevices(config);
+        tok = ParseIntList(tok, config->is_shared_device, config->num_devices);
+        break;
+      }
+      case ConfigVariable_BoNumThreads: {
+        config->bo_num_threads = ParseInt(&tok);
+        break;
+      }
       default: {
         HERMES_INVALID_CODE_PATH;
         break;
@@ -846,6 +857,7 @@ void ParseConfig(Arena *arena, const char *path, Config *config) {
   ScopedTemporaryMemory scratch(arena);
   EntireFile config_file = ReadEntireFile(scratch, path);
   TokenList tokens = Tokenize(scratch, config_file);
+  InitDefaultConfig(config);
   ParseTokens(&tokens, config);
 }
 
