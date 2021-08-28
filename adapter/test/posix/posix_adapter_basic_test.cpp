@@ -91,11 +91,14 @@ TEST_CASE("Open", "[process=" + std::to_string(info.comm_size) +
     test::test_close();
     REQUIRE(test::status_orig == 0);
 
-    test::test_open(info.existing_file.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0600);
+    test::test_open(info.existing_file.c_str(), O_WRONLY | O_CREAT | O_EXCL,
+                    0600);
     REQUIRE(test::fh_orig == -1);
-    test::test_open(info.existing_file.c_str(), O_RDONLY | O_CREAT | O_EXCL, 0600);
+    test::test_open(info.existing_file.c_str(), O_RDONLY | O_CREAT | O_EXCL,
+                    0600);
     REQUIRE(test::fh_orig == -1);
-    test::test_open(info.existing_file.c_str(), O_RDWR | O_CREAT | O_EXCL, 0600);
+    test::test_open(info.existing_file.c_str(), O_RDWR | O_CREAT | O_EXCL,
+                    0600);
     REQUIRE(test::fh_orig == -1);
   }
   SECTION("Async I/O") {
@@ -273,7 +276,8 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(test::size_written_orig == args.request_size);
     test::test_close();
     REQUIRE(test::status_orig == 0);
-    REQUIRE(fs::file_size(info.existing_file) == test::size_written_orig + args.request_size * info.num_iterations);
+    REQUIRE(fs::file_size(info.existing_file) ==
+            test::size_written_orig + args.request_size * info.num_iterations);
   }
 
   SECTION("append to existing file") {
@@ -284,7 +288,8 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(test::size_written_orig == args.request_size);
     test::test_close();
     REQUIRE(test::status_orig == 0);
-    REQUIRE(fs::file_size(info.existing_file) == existing_size + test::size_written_orig);
+    REQUIRE(fs::file_size(info.existing_file) ==
+            existing_size + test::size_written_orig);
   }
 
   SECTION("append to new file") {
@@ -426,7 +431,7 @@ TEST_CASE("BatchedReadRandom", "[process=" + std::to_string(info.comm_size) +
     for (size_t i = 0; i < info.num_iterations; ++i) {
       size_t offset =
           rand_r(&info.offset_seed) % (info.total_size - args.request_size);
-      test::test_seek( offset, SEEK_SET);
+      test::test_seek(offset, SEEK_SET);
       REQUIRE(test::status_orig == offset);
       test::test_read(data.data(), args.request_size);
       REQUIRE(test::size_read_orig == args.request_size);
@@ -451,7 +456,7 @@ TEST_CASE("BatchedUpdateRandom", "[process=" + std::to_string(info.comm_size) +
     for (size_t i = 0; i < info.num_iterations; ++i) {
       size_t offset =
           rand_r(&info.offset_seed) % (info.total_size - args.request_size - 1);
-      test::test_seek( offset, SEEK_SET);//630978
+      test::test_seek(offset, SEEK_SET);  // 630978
       REQUIRE(test::status_orig == offset);
       test::test_write(info.write_data.data(), args.request_size);
       REQUIRE(test::size_written_orig == args.request_size);
@@ -479,7 +484,7 @@ TEST_CASE("BatchedReadStrideFixed",
     std::string data(args.request_size, '1');
     for (size_t i = 0; i < info.num_iterations; ++i) {
       size_t offset = (i * info.stride_size) % info.total_size;
-      test::test_seek( offset, SEEK_SET);
+      test::test_seek(offset, SEEK_SET);
       REQUIRE(test::status_orig == offset);
       test::test_read(data.data(), args.request_size);
       REQUIRE(test::size_read_orig == args.request_size);
@@ -506,7 +511,7 @@ TEST_CASE("BatchedUpdateStrideFixed",
     std::string data(args.request_size, '1');
     for (size_t i = 0; i < info.num_iterations; ++i) {
       size_t offset = (i * info.stride_size) % info.total_size;
-      test::test_seek( offset, SEEK_SET);
+      test::test_seek(offset, SEEK_SET);
       REQUIRE(test::status_orig == offset);
       test::test_write(data.data(), args.request_size);
       REQUIRE(test::size_read_orig == args.request_size);
@@ -534,7 +539,7 @@ TEST_CASE("BatchedReadStrideDynamic",
     for (size_t i = 0; i < info.num_iterations; ++i) {
       size_t offset = GetRandomOffset(i, info.offset_seed, info.stride_size,
                                       info.total_size);
-      test::test_seek( offset, SEEK_SET);
+      test::test_seek(offset, SEEK_SET);
       REQUIRE(test::status_orig == offset);
       test::test_read(data.data(), args.request_size);
       REQUIRE(test::size_read_orig == args.request_size);
@@ -561,7 +566,7 @@ TEST_CASE("BatchedUpdateStrideDynamic",
     for (size_t i = 0; i < info.num_iterations; ++i) {
       size_t offset = GetRandomOffset(i, info.offset_seed, info.stride_size,
                                       info.total_size);
-      test::test_seek( offset, SEEK_SET);
+      test::test_seek(offset, SEEK_SET);
       REQUIRE(test::status_orig == offset);
       test::test_write(data.data(), args.request_size);
       REQUIRE(test::size_read_orig == args.request_size);
@@ -684,7 +689,7 @@ TEST_CASE("BatchedReadRandomRSVariable",
     for (size_t i = 0; i < info.num_iterations; ++i) {
       size_t offset =
           rand_r(&info.offset_seed) % (info.total_size - args.request_size);
-      test::test_seek( offset, SEEK_SET);
+      test::test_seek(offset, SEEK_SET);
       REQUIRE(test::status_orig == offset);
       size_t request_size =
           (args.request_size + (rand_r(&info.rs_seed) % args.request_size)) %
@@ -716,7 +721,7 @@ TEST_CASE("BatchedUpdateRandomRSVariable",
     for (size_t i = 0; i < info.num_iterations; ++i) {
       size_t offset =
           rand_r(&info.offset_seed) % (info.total_size - args.request_size);
-      test::test_seek( offset, SEEK_SET);
+      test::test_seek(offset, SEEK_SET);
       REQUIRE(test::status_orig == offset);
       size_t request_size =
           args.request_size + (rand_r(&info.rs_seed) % args.request_size);
@@ -745,7 +750,7 @@ TEST_CASE("BatchedReadStrideFixedRSVariable",
     REQUIRE(test::fh_orig != -1);
     for (size_t i = 0; i < info.num_iterations; ++i) {
       size_t offset = (i * info.stride_size) % info.total_size;
-      test::test_seek( offset, SEEK_SET);
+      test::test_seek(offset, SEEK_SET);
       REQUIRE(test::status_orig == offset);
       size_t request_size =
           (args.request_size + (rand_r(&info.rs_seed) % args.request_size)) %
@@ -776,7 +781,7 @@ TEST_CASE("BatchedUpdateStrideFixedRSVariable",
     std::string data(args.request_size, '1');
     for (size_t i = 0; i < info.num_iterations; ++i) {
       size_t offset = (i * info.stride_size) % info.total_size;
-      test::test_seek( offset, SEEK_SET);
+      test::test_seek(offset, SEEK_SET);
       REQUIRE(test::status_orig == offset);
       size_t request_size =
           args.request_size + (rand_r(&info.rs_seed) % args.request_size);
@@ -806,7 +811,7 @@ TEST_CASE("BatchedReadStrideDynamicRSVariable",
     for (size_t i = 0; i < info.num_iterations; ++i) {
       size_t offset = GetRandomOffset(i, info.offset_seed, info.stride_size,
                                       info.total_size);
-      test::test_seek( offset, SEEK_SET);
+      test::test_seek(offset, SEEK_SET);
       REQUIRE(test::status_orig == offset);
       size_t request_size =
           args.request_size + (rand_r(&info.rs_seed) % args.request_size);
@@ -835,7 +840,7 @@ TEST_CASE("BatchedUpdateStrideDynamicRSVariable",
     for (size_t i = 0; i < info.num_iterations; ++i) {
       size_t offset = GetRandomOffset(i, info.offset_seed, info.stride_size,
                                       info.total_size);
-      test::test_seek( offset, SEEK_SET);
+      test::test_seek(offset, SEEK_SET);
       REQUIRE(test::status_orig == offset);
       size_t request_size =
           args.request_size + (rand_r(&info.rs_seed) % args.request_size);
@@ -868,7 +873,7 @@ TEST_CASE("BatchedReadStrideNegative",
       REQUIRE(prev_offset > stride_offset);
       prev_offset = stride_offset;
       size_t offset = (stride_offset) % (info.total_size - args.request_size);
-      test::test_seek( offset, SEEK_SET);
+      test::test_seek(offset, SEEK_SET);
       REQUIRE(test::status_orig == offset);
       test::test_read(data.data(), args.request_size);
       REQUIRE(test::size_read_orig == args.request_size);
@@ -895,7 +900,7 @@ TEST_CASE("BatchedUpdateStrideNegative",
     for (size_t i = 0; i < info.num_iterations; ++i) {
       size_t offset =
           info.total_size - ((i * info.stride_size) % info.total_size);
-      test::test_seek( offset, SEEK_SET);
+      test::test_seek(offset, SEEK_SET);
       REQUIRE(test::status_orig == offset);
       test::test_write(data.data(), args.request_size);
       REQUIRE(test::size_read_orig == args.request_size);
@@ -922,7 +927,7 @@ TEST_CASE("BatchedReadStrideNegativeRSVariable",
     for (size_t i = 0; i < info.num_iterations; ++i) {
       size_t offset = (info.total_size - i * info.stride_size) %
                       (info.total_size - 2 * args.request_size);
-      test::test_seek( offset, SEEK_SET);
+      test::test_seek(offset, SEEK_SET);
       REQUIRE(test::status_orig == offset);
       size_t request_size =
           (args.request_size + (rand_r(&info.rs_seed) % args.request_size)) %
@@ -954,7 +959,7 @@ TEST_CASE("BatchedUpdateStrideNegativeRSVariable",
     for (size_t i = 0; i < info.num_iterations; ++i) {
       size_t offset =
           info.total_size - ((i * info.stride_size) % info.total_size);
-      test::test_seek( offset, SEEK_SET);
+      test::test_seek(offset, SEEK_SET);
       REQUIRE(test::status_orig == offset);
       size_t request_size =
           args.request_size + (rand_r(&info.rs_seed) % args.request_size);
@@ -994,7 +999,7 @@ TEST_CASE("BatchedReadStride2D", "[process=" + std::to_string(info.comm_size) +
       prev_cell_row = current_cell_row;
       size_t offset = (current_cell_col * cell_stride + prev_cell_row * cols) %
                       (info.total_size - args.request_size);
-      test::test_seek( offset, SEEK_SET);
+      test::test_seek(offset, SEEK_SET);
       REQUIRE(test::status_orig == offset);
       test::test_read(data.data(), args.request_size);
       REQUIRE(test::size_read_orig == args.request_size);
@@ -1033,7 +1038,7 @@ TEST_CASE("BatchedUpdateStride2D",
       prev_cell_row = current_cell_row;
       size_t offset = (current_cell_col * cell_stride + prev_cell_row * cols) %
                       (info.total_size - args.request_size);
-      test::test_seek( offset, SEEK_SET);
+      test::test_seek(offset, SEEK_SET);
       REQUIRE(test::status_orig == offset);
       test::test_write(data.data(), args.request_size);
       REQUIRE(test::size_read_orig == args.request_size);
@@ -1070,7 +1075,7 @@ TEST_CASE("BatchedReadStride2DRSVariable",
       prev_cell_row = current_cell_row;
       size_t offset = (current_cell_col * cell_stride + prev_cell_row * cols) %
                       (info.total_size - 2 * args.request_size);
-      test::test_seek( offset, SEEK_SET);
+      test::test_seek(offset, SEEK_SET);
       REQUIRE(test::status_orig == offset);
       size_t request_size =
           (args.request_size + (rand_r(&info.rs_seed) % args.request_size)) %
@@ -1112,7 +1117,7 @@ TEST_CASE("BatchedUpdateStride2DRSVariable",
       prev_cell_row = current_cell_row;
       size_t offset = (current_cell_col * cell_stride + prev_cell_row * cols) %
                       (info.total_size - 2 * args.request_size);
-      test::test_seek( offset, SEEK_SET);
+      test::test_seek(offset, SEEK_SET);
       REQUIRE(test::status_orig == offset);
       size_t request_size =
           args.request_size + (rand_r(&info.rs_seed) % args.request_size);
@@ -1320,7 +1325,7 @@ TEST_CASE("BatchedMixedSequential",
     for (size_t i = 0; i < info.num_iterations; ++i) {
       test::test_write(info.write_data.data(), args.request_size);
       REQUIRE(test::size_written_orig == args.request_size);
-      test::test_seek( last_offset, SEEK_SET);
+      test::test_seek(last_offset, SEEK_SET);
       REQUIRE(test::status_orig == last_offset);
       test::test_read(info.read_data.data(), args.request_size);
       REQUIRE(test::size_read_orig == args.request_size);
@@ -1352,7 +1357,7 @@ TEST_CASE("BatchedMixedSequential",
     for (size_t i = 0; i < info.num_iterations; ++i) {
       test::test_read(info.read_data.data(), args.request_size);
       REQUIRE(test::size_read_orig == args.request_size);
-      test::test_seek( last_offset, SEEK_SET);
+      test::test_seek(last_offset, SEEK_SET);
       REQUIRE(test::status_orig == last_offset);
       test::test_write(info.write_data.data(), args.request_size);
       REQUIRE(test::size_written_orig == args.request_size);
@@ -1409,7 +1414,7 @@ TEST_CASE("SingleMixed", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(test::fh_orig != -1);
     test::test_write(info.write_data.data(), args.request_size);
     REQUIRE(test::size_written_orig == args.request_size);
-    test::test_seek( 0, SEEK_SET);
+    test::test_seek(0, SEEK_SET);
     REQUIRE(test::status_orig == 0);
     test::test_read(info.read_data.data(), args.request_size);
     REQUIRE(test::size_read_orig == args.request_size);
@@ -1421,9 +1426,9 @@ TEST_CASE("SingleMixed", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(test::fh_orig != -1);
     test::test_read(info.read_data.data(), args.request_size);
     REQUIRE(test::size_read_orig == args.request_size);
-    test::test_seek( 0, SEEK_SET);
+    test::test_seek(0, SEEK_SET);
     REQUIRE(test::status_orig == 0);
-    test::test_write( info.write_data.data(), args.request_size);
+    test::test_write(info.write_data.data(), args.request_size);
     REQUIRE(test::size_written_orig == args.request_size);
 
     test::test_close();
@@ -1432,7 +1437,7 @@ TEST_CASE("SingleMixed", "[process=" + std::to_string(info.comm_size) +
   SECTION("read after write from new file different opens") {
     test::test_open(info.new_file.c_str(), O_RDWR | O_CREAT | O_EXCL, 0600);
     REQUIRE(test::fh_orig != -1);
-    test::test_write( info.write_data.data(), args.request_size);
+    test::test_write(info.write_data.data(), args.request_size);
     REQUIRE(test::size_written_orig == args.request_size);
     test::test_close();
     REQUIRE(test::status_orig == 0);

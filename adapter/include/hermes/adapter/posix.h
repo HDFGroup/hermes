@@ -31,11 +31,11 @@
 #include <bucket.h>
 #include <hermes.h>
 #include <hermes/adapter/interceptor.h>
-#include <hermes/adapter/singleton.h>
 #include <hermes/adapter/posix/common/constants.h>
 #include <hermes/adapter/posix/common/datastructures.h>
 #include <hermes/adapter/posix/mapper/mapper_factory.h>
 #include <hermes/adapter/posix/metadata_manager.h>
+#include <hermes/adapter/singleton.h>
 #include <vbucket.h>
 
 /**
@@ -44,14 +44,18 @@
 HERMES_FORWARD_DECL(open, int, (const char *path, int flags, ...));
 HERMES_FORWARD_DECL(open64, int, (const char *path, int flags, ...));
 HERMES_FORWARD_DECL(__open_2, int, (const char *path, int oflag));
-HERMES_FORWARD_DECL(creat, int, (const char* path, mode_t mode));
-HERMES_FORWARD_DECL(creat64, int, (const char* path, mode_t mode));
+HERMES_FORWARD_DECL(creat, int, (const char *path, mode_t mode));
+HERMES_FORWARD_DECL(creat64, int, (const char *path, mode_t mode));
 HERMES_FORWARD_DECL(read, ssize_t, (int fd, void *buf, size_t count));
 HERMES_FORWARD_DECL(write, ssize_t, (int fd, const void *buf, size_t count));
-HERMES_FORWARD_DECL(pread, ssize_t, (int fd, void *buf, size_t count, off_t offset));
-HERMES_FORWARD_DECL(pwrite, ssize_t, (int fd, const void *buf, size_t count, off_t offset));
-HERMES_FORWARD_DECL(pread64, ssize_t, (int fd, void *buf, size_t count, off64_t offset));
-HERMES_FORWARD_DECL(pwrite64, ssize_t, (int fd, const void *buf, size_t count, off64_t offset));
+HERMES_FORWARD_DECL(pread, ssize_t,
+                    (int fd, void *buf, size_t count, off_t offset));
+HERMES_FORWARD_DECL(pwrite, ssize_t,
+                    (int fd, const void *buf, size_t count, off_t offset));
+HERMES_FORWARD_DECL(pread64, ssize_t,
+                    (int fd, void *buf, size_t count, off64_t offset));
+HERMES_FORWARD_DECL(pwrite64, ssize_t,
+                    (int fd, const void *buf, size_t count, off64_t offset));
 HERMES_FORWARD_DECL(lseek, off_t, (int fd, off_t offset, int whence));
 HERMES_FORWARD_DECL(lseek64, off64_t, (int fd, off64_t offset, int whence));
 HERMES_FORWARD_DECL(fsync, int, (int fd));

@@ -13,8 +13,8 @@
 #include <adapter_utils.h>
 #include <catch_config.h>
 #include <fcntl.h>
-#include <unistd.h>
 #include <stdarg.h>
+#include <unistd.h>
 
 #include <experimental/filesystem>
 #include <iostream>
@@ -164,22 +164,22 @@ int posttest(bool compare_data = true) {
 
       FILE* fh1 = fopen(info.existing_file.c_str(), "r");
       REQUIRE(fh1 != nullptr);
-      size_t read_d1 = fread(d1.data(), sizeof(unsigned char),size, fh1);
+      size_t read_d1 = fread(d1.data(), sizeof(unsigned char), size, fh1);
       REQUIRE(read_d1 == size);
       int status = fclose(fh1);
-      int len=strlen(reinterpret_cast<const char*>(d1.data()));
+      int len = strlen(reinterpret_cast<const char*>(d1.data()));
       REQUIRE(status == 0);
 
       FILE* fh2 = fopen(info.existing_file_cmp.c_str(), "r");
       REQUIRE(fh2 != nullptr);
-      size_t read_d2 = fread(d2.data(), sizeof(unsigned char),size,  fh2);
+      size_t read_d2 = fread(d2.data(), sizeof(unsigned char), size, fh2);
       REQUIRE(read_d2 == size);
       status = fclose(fh2);
       REQUIRE(status == 0);
       size_t char_mismatch = 0;
       for (size_t pos = 0; pos < size; ++pos) {
         if (d1[pos] != d2[pos]) {
-            char_mismatch=pos;
+          char_mismatch = pos;
           break;
         }
       }
