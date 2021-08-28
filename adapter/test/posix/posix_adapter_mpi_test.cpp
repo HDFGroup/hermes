@@ -330,7 +330,7 @@ void test_open(const char* path, int flags, ...) {
   std::string cmp_path;
   if (strcmp(path, info.new_file.c_str()) == 0) {
     cmp_path = info.new_file_cmp;
-  } else if (strcmp(path,info.shared_new_file.c_str()) == 0){
+  } else if (strcmp(path, info.shared_new_file.c_str()) == 0) {
     cmp_path = info.shared_new_file_cmp;
   } else if (strcmp(path, "/tmp") == 0) {
     cmp_path = "/tmp";
