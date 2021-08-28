@@ -540,8 +540,9 @@ int HERMES_DECL(MPI_File_close)(MPI_File *fh) {
         if (!blob_names.empty() && persist) {
           LOG(INFO) << "Adapter flushes " << blob_names.size()
                     << " blobs to filename:" << filename << "." << std::endl;
+          auto vbucket_name = filename + "_" + std::to_string(mdm->rank);
           INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
-          hermes::api::VBucket file_vbucket(filename, mdm->GetHermes(), true,
+          hermes::api::VBucket file_vbucket(vbucket_name, mdm->GetHermes(), true,
                                             ctx);
           auto offset_map = std::unordered_map<std::string, hermes::u64>();
 
