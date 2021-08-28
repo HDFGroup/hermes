@@ -52,13 +52,13 @@ bool IsTracked(const std::string& path) {
       return false;
     }
   }
-  if (INTERCEPTOR_LIST->hermes_paths_exclusion.empty()) {
-    PopulateBufferingPath();
-  }
   for (const auto& pth : INTERCEPTOR_LIST->hermes_flush_exclusion) {
     if (path.find(pth) != std::string::npos) {
       return false;
     }
+  }
+  if (INTERCEPTOR_LIST->hermes_paths_exclusion.empty()) {
+    PopulateBufferingPath();
   }
   for (const auto& pth : INTERCEPTOR_LIST->hermes_paths_exclusion) {
     if (path.find(pth) != std::string::npos ||

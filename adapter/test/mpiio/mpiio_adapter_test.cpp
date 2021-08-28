@@ -104,13 +104,13 @@ int pretest() {
   info.existing_file_cmp =
       fullpath.string() + "_ext_cmp" + "_" + std::to_string(getpid());
   info.shared_new_file =
-      fullpath.string() + "_new_" + std::to_string(info.comm_size);
+      fullpath.string() + "_shared_new_" + std::to_string(info.comm_size);
   info.shared_existing_file =
-      fullpath.string() + "_ext_" + std::to_string(info.comm_size);
+      fullpath.string() + "_shared_ext_" + std::to_string(info.comm_size);
   info.shared_new_file_cmp =
-      fullpath.string() + "_new_cmp_" + std::to_string(info.comm_size);
+      fullpath.string() + "_shared_new_cmp_" + std::to_string(info.comm_size);
   info.shared_existing_file_cmp =
-      fullpath.string() + "_ext_cmp_" + std::to_string(info.comm_size);
+      fullpath.string() + "_shared_ext_cmp_" + std::to_string(info.comm_size);
   if (fs::exists(info.new_file)) fs::remove(info.new_file);
   if (fs::exists(info.new_file_cmp)) fs::remove(info.new_file_cmp);
   if (fs::exists(info.existing_file)) fs::remove(info.existing_file);
@@ -164,6 +164,8 @@ int pretest() {
 #if HERMES_INTERCEPT == 1
   INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.existing_file_cmp);
   INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.new_file_cmp);
+  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.shared_new_file_cmp);
+  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.shared_existing_file_cmp);
 #endif
   return 0;
 }
