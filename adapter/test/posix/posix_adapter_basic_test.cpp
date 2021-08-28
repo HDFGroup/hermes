@@ -271,7 +271,8 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
     test::test_open(info.existing_file.c_str(), O_RDWR);
     REQUIRE(test::fh_orig != -1);
     test::test_seek(0, SEEK_END);
-    REQUIRE(((size_t) test::status_orig) == args.request_size * info.num_iterations);
+    REQUIRE(((size_t)test::status_orig) ==
+            args.request_size * info.num_iterations);
     test::test_write(info.write_data.data(), args.request_size);
     REQUIRE(test::size_written_orig == args.request_size);
     test::test_close();
@@ -329,7 +330,8 @@ TEST_CASE("SingleRead", "[process=" + std::to_string(info.comm_size) +
     test::test_open(info.existing_file.c_str(), O_RDONLY);
     REQUIRE(test::fh_orig != -1);
     test::test_seek(0, SEEK_END);
-    REQUIRE(((size_t)test::status_orig) == args.request_size * info.num_iterations);
+    REQUIRE(((size_t)test::status_orig) ==
+            args.request_size * info.num_iterations);
     test::test_read(info.read_data.data(), args.request_size);
     REQUIRE(test::size_read_orig == 0);
     test::test_close();
