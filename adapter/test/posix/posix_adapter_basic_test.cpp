@@ -16,213 +16,213 @@ TEST_CASE("Open", "[process=" + std::to_string(info.comm_size) +
                       "[repetition=1][file=1]") {
   pretest();
   SECTION("open non-existant file") {
-    int fd = open(info.new_file.c_str(), O_WRONLY);
-    REQUIRE(fd == -1);
-    fd = open(info.new_file.c_str(), O_RDONLY);
-    REQUIRE(fd == -1);
-    fd = open(info.new_file.c_str(), O_RDWR);
-    REQUIRE(fd == -1);
+    test::test_open(info.new_file.c_str(), O_WRONLY);
+    REQUIRE(test::fh_orig == -1);
+    test::test_open(info.new_file.c_str(), O_RDONLY);
+    REQUIRE(test::fh_orig == -1);
+    test::test_open(info.new_file.c_str(), O_RDWR);
+    REQUIRE(test::fh_orig == -1);
   }
 
   SECTION("truncate existing file and write-only") {
-    int fd = open(info.existing_file.c_str(), O_WRONLY | O_TRUNC);
-    REQUIRE(fd != -1);
-    int status = close(fd);
-    REQUIRE(status == 0);
+    test::test_open(info.existing_file.c_str(), O_WRONLY | O_TRUNC);
+    REQUIRE(test::fh_orig != -1);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
   }
   SECTION("truncate existing file and read/write") {
-    int fd = open(info.existing_file.c_str(), O_RDWR | O_TRUNC);
-    REQUIRE(fd != -1);
-    int status = close(fd);
-    REQUIRE(status == 0);
+    test::test_open(info.existing_file.c_str(), O_RDWR | O_TRUNC);
+    REQUIRE(test::fh_orig != -1);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
   }
 
   SECTION("open existing file") {
-    int fd = open(info.existing_file.c_str(), O_WRONLY);
-    REQUIRE(fd != -1);
-    int status = close(fd);
-    REQUIRE(status == 0);
-    fd = open(info.existing_file.c_str(), O_RDONLY);
-    REQUIRE(fd != -1);
-    status = close(fd);
-    REQUIRE(status == 0);
-    fd = open(info.existing_file.c_str(), O_RDWR);
-    REQUIRE(fd != -1);
-    status = close(fd);
-    REQUIRE(status == 0);
+    test::test_open(info.existing_file.c_str(), O_WRONLY);
+    REQUIRE(test::fh_orig != -1);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
+    test::test_open(info.existing_file.c_str(), O_RDONLY);
+    REQUIRE(test::fh_orig != -1);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
+    test::test_open(info.existing_file.c_str(), O_RDWR);
+    REQUIRE(test::fh_orig != -1);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
   }
 
   SECTION("append write existing file") {
-    int fd = open(info.existing_file.c_str(), O_APPEND);
-    REQUIRE(fd != -1);
-    int status = close(fd);
-    REQUIRE(status == 0);
+    test::test_open(info.existing_file.c_str(), O_APPEND);
+    REQUIRE(test::fh_orig != -1);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
   }
 
   SECTION("create a new file") {
-    int fd = open(info.new_file.c_str(), O_WRONLY | O_CREAT, 0600);
-    REQUIRE(fd != -1);
-    int status = close(fd);
-    REQUIRE(status == 0);
+    test::test_open(info.new_file.c_str(), O_WRONLY | O_CREAT, 0600);
+    REQUIRE(test::fh_orig != -1);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
     fs::remove(info.new_file);
 
-    fd = open(info.new_file.c_str(), O_RDONLY | O_CREAT, 0600);
-    REQUIRE(fd != -1);
-    status = close(fd);
-    REQUIRE(status == 0);
+    test::test_open(info.new_file.c_str(), O_RDONLY | O_CREAT, 0600);
+    REQUIRE(test::fh_orig != -1);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
     fs::remove(info.new_file);
 
-    fd = open(info.new_file.c_str(), O_RDWR | O_CREAT, 0600);
-    REQUIRE(fd != -1);
-    status = close(fd);
-    REQUIRE(status == 0);
+    test::test_open(info.new_file.c_str(), O_RDWR | O_CREAT, 0600);
+    REQUIRE(test::fh_orig != -1);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
   }
   SECTION("create a existing file") {
-    int fd = open(info.existing_file.c_str(), O_WRONLY | O_CREAT, 0600);
-    REQUIRE(fd != -1);
-    int status = close(fd);
-    REQUIRE(status == 0);
-    fd = open(info.existing_file.c_str(), O_RDONLY | O_CREAT, 0600);
-    REQUIRE(fd != -1);
-    status = close(fd);
-    REQUIRE(status == 0);
-    fd = open(info.existing_file.c_str(), O_RDWR | O_CREAT, 0600);
-    REQUIRE(fd != -1);
-    status = close(fd);
-    REQUIRE(status == 0);
+    test::test_open(info.existing_file.c_str(), O_WRONLY | O_CREAT, 0600);
+    REQUIRE(test::fh_orig != -1);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
+    test::test_open(info.existing_file.c_str(), O_RDONLY | O_CREAT, 0600);
+    REQUIRE(test::fh_orig != -1);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
+    test::test_open(info.existing_file.c_str(), O_RDWR | O_CREAT, 0600);
+    REQUIRE(test::fh_orig != -1);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
 
-    fd = open(info.existing_file.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0600);
-    REQUIRE(fd == -1);
-    fd = open(info.existing_file.c_str(), O_RDONLY | O_CREAT | O_EXCL, 0600);
-    REQUIRE(fd == -1);
-    fd = open(info.existing_file.c_str(), O_RDWR | O_CREAT | O_EXCL, 0600);
-    REQUIRE(fd == -1);
+    test::test_open(info.existing_file.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0600);
+    REQUIRE(test::fh_orig == -1);
+    test::test_open(info.existing_file.c_str(), O_RDONLY | O_CREAT | O_EXCL, 0600);
+    REQUIRE(test::fh_orig == -1);
+    test::test_open(info.existing_file.c_str(), O_RDWR | O_CREAT | O_EXCL, 0600);
+    REQUIRE(test::fh_orig == -1);
   }
   SECTION("Async I/O") {
-    int fd = open(info.existing_file.c_str(), O_WRONLY | O_ASYNC);
-    REQUIRE(fd != -1);
-    int status = close(fd);
-    REQUIRE(status == 0);
-    fd = open(info.existing_file.c_str(), O_RDONLY | O_ASYNC);
-    REQUIRE(fd != -1);
-    status = close(fd);
-    REQUIRE(status == 0);
-    fd = open(info.existing_file.c_str(), O_RDWR | O_ASYNC);
-    REQUIRE(fd != -1);
-    status = close(fd);
-    REQUIRE(status == 0);
-    fd = open(info.existing_file.c_str(), O_APPEND | O_ASYNC);
-    REQUIRE(fd != -1);
-    status = close(fd);
-    REQUIRE(status == 0);
+    test::test_open(info.existing_file.c_str(), O_WRONLY | O_ASYNC);
+    REQUIRE(test::fh_orig != -1);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
+    test::test_open(info.existing_file.c_str(), O_RDONLY | O_ASYNC);
+    REQUIRE(test::fh_orig != -1);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
+    test::test_open(info.existing_file.c_str(), O_RDWR | O_ASYNC);
+    REQUIRE(test::fh_orig != -1);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
+    test::test_open(info.existing_file.c_str(), O_APPEND | O_ASYNC);
+    REQUIRE(test::fh_orig != -1);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
 
-    fd = open(info.existing_file.c_str(), O_WRONLY | O_NONBLOCK);
-    REQUIRE(fd != -1);
-    status = close(fd);
-    REQUIRE(status == 0);
-    fd = open(info.existing_file.c_str(), O_RDONLY | O_NONBLOCK);
-    REQUIRE(fd != -1);
-    status = close(fd);
-    REQUIRE(status == 0);
-    fd = open(info.existing_file.c_str(), O_RDWR | O_NONBLOCK);
-    REQUIRE(fd != -1);
-    status = close(fd);
-    REQUIRE(status == 0);
-    fd = open(info.existing_file.c_str(), O_APPEND | O_NONBLOCK);
-    REQUIRE(fd != -1);
-    status = close(fd);
-    REQUIRE(status == 0);
+    test::test_open(info.existing_file.c_str(), O_WRONLY | O_NONBLOCK);
+    REQUIRE(test::fh_orig != -1);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
+    test::test_open(info.existing_file.c_str(), O_RDONLY | O_NONBLOCK);
+    REQUIRE(test::fh_orig != -1);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
+    test::test_open(info.existing_file.c_str(), O_RDWR | O_NONBLOCK);
+    REQUIRE(test::fh_orig != -1);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
+    test::test_open(info.existing_file.c_str(), O_APPEND | O_NONBLOCK);
+    REQUIRE(test::fh_orig != -1);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
 
-    fd = open(info.existing_file.c_str(), O_WRONLY | O_NDELAY);
-    REQUIRE(fd != -1);
-    status = close(fd);
-    REQUIRE(status == 0);
-    fd = open(info.existing_file.c_str(), O_RDONLY | O_NDELAY);
-    REQUIRE(fd != -1);
-    status = close(fd);
-    REQUIRE(status == 0);
-    fd = open(info.existing_file.c_str(), O_RDWR | O_NDELAY);
-    REQUIRE(fd != -1);
-    status = close(fd);
-    REQUIRE(status == 0);
-    fd = open(info.existing_file.c_str(), O_APPEND | O_NDELAY);
-    REQUIRE(fd != -1);
-    status = close(fd);
-    REQUIRE(status == 0);
+    test::test_open(info.existing_file.c_str(), O_WRONLY | O_NDELAY);
+    REQUIRE(test::fh_orig != -1);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
+    test::test_open(info.existing_file.c_str(), O_RDONLY | O_NDELAY);
+    REQUIRE(test::fh_orig != -1);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
+    test::test_open(info.existing_file.c_str(), O_RDWR | O_NDELAY);
+    REQUIRE(test::fh_orig != -1);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
+    test::test_open(info.existing_file.c_str(), O_APPEND | O_NDELAY);
+    REQUIRE(test::fh_orig != -1);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
   }
   SECTION("Async I/O") {
-    int fd = open(info.existing_file.c_str(), O_WRONLY | O_DIRECT);
-    REQUIRE(fd != -1);
-    int status = close(fd);
-    REQUIRE(status == 0);
-    fd = open(info.existing_file.c_str(), O_RDONLY | O_DIRECT);
-    REQUIRE(fd != -1);
-    status = close(fd);
-    REQUIRE(status == 0);
-    fd = open(info.existing_file.c_str(), O_RDWR | O_DIRECT);
-    REQUIRE(fd != -1);
-    status = close(fd);
-    REQUIRE(status == 0);
-    fd = open(info.existing_file.c_str(), O_APPEND | O_DIRECT);
-    REQUIRE(fd != -1);
-    status = close(fd);
-    REQUIRE(status == 0);
+    test::test_open(info.existing_file.c_str(), O_WRONLY | O_DIRECT);
+    REQUIRE(test::fh_orig != -1);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
+    test::test_open(info.existing_file.c_str(), O_RDONLY | O_DIRECT);
+    REQUIRE(test::fh_orig != -1);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
+    test::test_open(info.existing_file.c_str(), O_RDWR | O_DIRECT);
+    REQUIRE(test::fh_orig != -1);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
+    test::test_open(info.existing_file.c_str(), O_APPEND | O_DIRECT);
+    REQUIRE(test::fh_orig != -1);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
   }
   SECTION("Write Synchronize") {
     /* File synchronicity */
-    int fd = open(info.existing_file.c_str(), O_WRONLY | O_DSYNC);
-    REQUIRE(fd != -1);
-    int status = close(fd);
-    REQUIRE(status == 0);
-    fd = open(info.existing_file.c_str(), O_RDONLY | O_DSYNC);
-    REQUIRE(fd != -1);
-    status = close(fd);
-    REQUIRE(status == 0);
-    fd = open(info.existing_file.c_str(), O_RDWR | O_DSYNC);
-    REQUIRE(fd != -1);
-    status = close(fd);
-    REQUIRE(status == 0);
-    fd = open(info.existing_file.c_str(), O_APPEND | O_DSYNC);
-    REQUIRE(fd != -1);
-    status = close(fd);
-    REQUIRE(status == 0);
+    test::test_open(info.existing_file.c_str(), O_WRONLY | O_DSYNC);
+    REQUIRE(test::fh_orig != -1);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
+    test::test_open(info.existing_file.c_str(), O_RDONLY | O_DSYNC);
+    REQUIRE(test::fh_orig != -1);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
+    test::test_open(info.existing_file.c_str(), O_RDWR | O_DSYNC);
+    REQUIRE(test::fh_orig != -1);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
+    test::test_open(info.existing_file.c_str(), O_APPEND | O_DSYNC);
+    REQUIRE(test::fh_orig != -1);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
 
     /* Write synchronicity */
-    fd = open(info.existing_file.c_str(), O_WRONLY | O_SYNC);
-    REQUIRE(fd != -1);
-    status = close(fd);
-    REQUIRE(status == 0);
-    fd = open(info.existing_file.c_str(), O_RDONLY | O_SYNC);
-    REQUIRE(fd != -1);
-    status = close(fd);
-    REQUIRE(status == 0);
-    fd = open(info.existing_file.c_str(), O_RDWR | O_SYNC);
-    REQUIRE(fd != -1);
-    status = close(fd);
-    REQUIRE(status == 0);
-    fd = open(info.existing_file.c_str(), O_APPEND | O_SYNC);
-    REQUIRE(fd != -1);
-    status = close(fd);
-    REQUIRE(status == 0);
+    test::test_open(info.existing_file.c_str(), O_WRONLY | O_SYNC);
+    REQUIRE(test::fh_orig != -1);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
+    test::test_open(info.existing_file.c_str(), O_RDONLY | O_SYNC);
+    REQUIRE(test::fh_orig != -1);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
+    test::test_open(info.existing_file.c_str(), O_RDWR | O_SYNC);
+    REQUIRE(test::fh_orig != -1);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
+    test::test_open(info.existing_file.c_str(), O_APPEND | O_SYNC);
+    REQUIRE(test::fh_orig != -1);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
   }
   SECTION("Temporary file") {
-    int fd = open("/tmp", O_WRONLY | O_TMPFILE, 0600);
-    REQUIRE(fd != -1);
-    int status = close(fd);
-    REQUIRE(status == 0);
-    fd = open(info.new_file.c_str(), O_RDONLY | O_TMPFILE, 0600);
-    REQUIRE(fd == -1);
-    fd = open(info.new_file.c_str(), O_RDWR | O_TMPFILE, 0600);
-    REQUIRE(fd == -1);
-    fd = open(info.new_file.c_str(), O_APPEND | O_TMPFILE, 0600);
-    REQUIRE(fd == -1);
+    test::test_open("/tmp", O_WRONLY | O_TMPFILE, 0600);
+    REQUIRE(test::fh_orig != -1);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
+    test::test_open(info.new_file.c_str(), O_RDONLY | O_TMPFILE, 0600);
+    REQUIRE(test::fh_orig == -1);
+    test::test_open(info.new_file.c_str(), O_RDWR | O_TMPFILE, 0600);
+    REQUIRE(test::fh_orig == -1);
+    test::test_open(info.new_file.c_str(), O_APPEND | O_TMPFILE, 0600);
+    REQUIRE(test::fh_orig == -1);
 
-    fd = open(info.existing_file.c_str(), O_WRONLY | O_TMPFILE, 0600);
-    REQUIRE(fd == -1);
-    fd = open(info.existing_file.c_str(), O_RDONLY | O_TMPFILE, 0600);
-    REQUIRE(fd == -1);
-    fd = open(info.existing_file.c_str(), O_RDWR | O_TMPFILE, 0600);
-    REQUIRE(fd == -1);
+    test::test_open(info.existing_file.c_str(), O_WRONLY | O_TMPFILE, 0600);
+    REQUIRE(test::fh_orig == -1);
+    test::test_open(info.existing_file.c_str(), O_RDONLY | O_TMPFILE, 0600);
+    REQUIRE(test::fh_orig == -1);
+    test::test_open(info.existing_file.c_str(), O_RDWR | O_TMPFILE, 0600);
+    REQUIRE(test::fh_orig == -1);
   }
   posttest();
 }
@@ -234,67 +234,67 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
                              "[file=1]") {
   pretest();
   SECTION("write to existing file") {
-    int fd = open(info.existing_file.c_str(), O_RDWR);
-    REQUIRE(fd != -1);
-    size_t offset = lseek(fd, 0, SEEK_SET);
-    REQUIRE(offset == 0);
-    size_t size_written = write(fd, info.write_data.c_str(), args.request_size);
-    REQUIRE(size_written == args.request_size);
-    int status = close(fd);
-    REQUIRE(status == 0);
+    test::test_open(info.existing_file.c_str(), O_RDWR);
+    REQUIRE(test::fh_orig != -1);
+    test::test_seek(0, SEEK_SET);
+    REQUIRE(test::status_orig == 0);
+    test::test_write(info.write_data.data(), args.request_size);
+    REQUIRE(test::size_written_orig == args.request_size);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
   }
 
   SECTION("write to new  file") {
-    int fd = open(info.new_file.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0600);
-    REQUIRE(fd != -1);
-    size_t size_written = write(fd, info.write_data.c_str(), args.request_size);
-    REQUIRE(size_written == args.request_size);
-    int status = close(fd);
-    REQUIRE(status == 0);
-    REQUIRE(fs::file_size(info.new_file) == size_written);
+    test::test_open(info.new_file.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0600);
+    REQUIRE(test::fh_orig != -1);
+    test::test_write(info.write_data.data(), args.request_size);
+    REQUIRE(test::size_written_orig == args.request_size);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
+    REQUIRE(fs::file_size(info.new_file) == test::size_written_orig);
   }
 
   SECTION("write to existing file with truncate") {
-    int fd = open(info.existing_file.c_str(), O_WRONLY | O_TRUNC);
-    REQUIRE(fd != -1);
-    size_t size_written = write(fd, info.write_data.c_str(), args.request_size);
-    REQUIRE(size_written == args.request_size);
-    int status = close(fd);
-    REQUIRE(status == 0);
-    REQUIRE(fs::file_size(info.existing_file) == size_written);
+    test::test_open(info.existing_file.c_str(), O_WRONLY | O_TRUNC);
+    REQUIRE(test::fh_orig != -1);
+    test::test_write(info.write_data.data(), args.request_size);
+    REQUIRE(test::size_written_orig == args.request_size);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
+    REQUIRE(fs::file_size(info.existing_file) == test::size_written_orig);
   }
 
   SECTION("write to existing file at the end") {
-    int fd = open(info.existing_file.c_str(), O_RDWR);
-    REQUIRE(fd != -1);
-    size_t offset = lseek(fd, 0, SEEK_END);
-    REQUIRE(offset == args.request_size * info.num_iterations);
-    size_t size_written = write(fd, info.write_data.c_str(), args.request_size);
-    REQUIRE(size_written == args.request_size);
-    int status = close(fd);
-    REQUIRE(status == 0);
-    REQUIRE(fs::file_size(info.existing_file) == size_written + offset);
+    test::test_open(info.existing_file.c_str(), O_RDWR);
+    REQUIRE(test::fh_orig != -1);
+    test::test_seek(0, SEEK_END);
+    REQUIRE(test::status_orig == args.request_size * info.num_iterations);
+    test::test_write(info.write_data.data(), args.request_size);
+    REQUIRE(test::size_written_orig == args.request_size);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
+    REQUIRE(fs::file_size(info.existing_file) == test::size_written_orig + args.request_size * info.num_iterations);
   }
 
   SECTION("append to existing file") {
     auto existing_size = fs::file_size(info.existing_file);
-    int fd = open(info.existing_file.c_str(), O_RDWR | O_APPEND);
-    REQUIRE(fd != -1);
-    size_t size_written = write(fd, info.write_data.c_str(), args.request_size);
-    REQUIRE(size_written == args.request_size);
-    int status = close(fd);
-    REQUIRE(status == 0);
-    REQUIRE(fs::file_size(info.existing_file) == existing_size + size_written);
+    test::test_open(info.existing_file.c_str(), O_RDWR | O_APPEND);
+    REQUIRE(test::fh_orig != -1);
+    test::test_write(info.write_data.data(), args.request_size);
+    REQUIRE(test::size_written_orig == args.request_size);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
+    REQUIRE(fs::file_size(info.existing_file) == existing_size + test::size_written_orig);
   }
 
   SECTION("append to new file") {
-    int fd = open(info.new_file.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0600);
-    REQUIRE(fd != -1);
-    size_t size_written = write(fd, info.write_data.c_str(), args.request_size);
-    REQUIRE(size_written == args.request_size);
-    int status = close(fd);
-    REQUIRE(status == 0);
-    REQUIRE(fs::file_size(info.new_file) == size_written);
+    test::test_open(info.new_file.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0600);
+    REQUIRE(test::fh_orig != -1);
+    test::test_write(info.write_data.data(), args.request_size);
+    REQUIRE(test::size_written_orig == args.request_size);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
+    REQUIRE(fs::file_size(info.new_file) == test::size_written_orig);
   }
   posttest();
 }
@@ -306,29 +306,29 @@ TEST_CASE("SingleRead", "[process=" + std::to_string(info.comm_size) +
                             "[file=1]") {
   pretest();
   SECTION("read from non-existing file") {
-    int fd = open(info.new_file.c_str(), O_RDONLY);
-    REQUIRE(fd == -1);
+    test::test_open(info.new_file.c_str(), O_RDONLY);
+    REQUIRE(test::fh_orig == -1);
   }
 
   SECTION("read from existing file") {
-    int fd = open(info.existing_file.c_str(), O_RDONLY);
-    REQUIRE(fd != -1);
-    size_t offset = lseek(fd, 0, SEEK_CUR);
-    REQUIRE(offset == 0);
-    size_t size_read = read(fd, info.read_data.data(), args.request_size);
-    REQUIRE(size_read == args.request_size);
-    int status = close(fd);
-    REQUIRE(status == 0);
+    test::test_open(info.existing_file.c_str(), O_RDONLY);
+    REQUIRE(test::fh_orig != -1);
+    test::test_seek(0, SEEK_CUR);
+    REQUIRE(test::status_orig == 0);
+    test::test_read(info.read_data.data(), args.request_size);
+    REQUIRE(test::size_read_orig == args.request_size);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
   }
   SECTION("read at the end of existing file") {
-    int fd = open(info.existing_file.c_str(), O_RDONLY);
-    REQUIRE(fd != -1);
-    size_t offset = lseek(fd, 0, SEEK_END);
-    REQUIRE(offset == args.request_size * info.num_iterations);
-    size_t size_read = read(fd, info.read_data.data(), args.request_size);
-    REQUIRE(size_read == 0);
-    int status = close(fd);
-    REQUIRE(status == 0);
+    test::test_open(info.existing_file.c_str(), O_RDONLY);
+    REQUIRE(test::fh_orig != -1);
+    test::test_seek(0, SEEK_END);
+    REQUIRE(test::status_orig == args.request_size * info.num_iterations);
+    test::test_read(info.read_data.data(), args.request_size);
+    REQUIRE(test::size_read_orig == 0);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
   }
   posttest();
 }
@@ -343,32 +343,30 @@ TEST_CASE("BatchedWriteSequential",
               "[pattern=sequential][file=1]") {
   pretest();
   SECTION("write to existing file") {
-    int fd = open(info.new_file.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0600);
-    REQUIRE(fd != -1);
+    test::test_open(info.new_file.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0600);
+    REQUIRE(test::fh_orig != -1);
 
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      size_t offset = lseek(fd, 0, SEEK_SET);
-      REQUIRE(offset == 0);
-      size_t size_written =
-          write(fd, info.write_data.c_str(), args.request_size);
-      REQUIRE(size_written == args.request_size);
+      test::test_seek(0, SEEK_SET);
+      REQUIRE(test::status_orig == 0);
+      test::test_write(info.write_data.data(), args.request_size);
+      REQUIRE(test::size_written_orig == args.request_size);
     }
-    int status = close(fd);
-    REQUIRE(status == 0);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
     REQUIRE(fs::file_size(info.new_file) == args.request_size);
   }
 
   SECTION("write to new file always at start") {
-    int fd = open(info.new_file.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0600);
-    REQUIRE(fd != -1);
+    test::test_open(info.new_file.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0600);
+    REQUIRE(test::fh_orig != -1);
 
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      size_t size_written =
-          write(fd, info.write_data.c_str(), args.request_size);
-      REQUIRE(size_written == args.request_size);
+      test::test_write(info.write_data.data(), args.request_size);
+      REQUIRE(test::size_written_orig == args.request_size);
     }
-    int status = close(fd);
-    REQUIRE(status == 0);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
     REQUIRE(fs::file_size(info.new_file) ==
             info.num_iterations * args.request_size);
   }
@@ -386,30 +384,29 @@ TEST_CASE("BatchedReadSequential",
   pretest();
 
   SECTION("read from existing file") {
-    int fd = open(info.existing_file.c_str(), O_RDWR);
-    REQUIRE(fd != -1);
+    test::test_open(info.existing_file.c_str(), O_RDWR);
+    REQUIRE(test::fh_orig != -1);
     std::string data(args.request_size, '1');
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      size_t size_read = read(fd, data.data(), args.request_size);
-      REQUIRE(size_read == args.request_size);
+      test::test_read(data.data(), args.request_size);
+      REQUIRE(test::size_read_orig == args.request_size);
     }
-    int status = close(fd);
-    REQUIRE(status == 0);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
   }
 
   SECTION("read from existing file always at start") {
-    int fd = open(info.existing_file.c_str(), O_WRONLY);
-    REQUIRE(fd != -1);
+    test::test_open(info.existing_file.c_str(), O_WRONLY);
+    REQUIRE(test::fh_orig != -1);
 
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      size_t offset = lseek(fd, 0, SEEK_SET);
-      REQUIRE(offset == 0);
-      size_t size_written =
-          write(fd, info.write_data.c_str(), args.request_size);
-      REQUIRE(size_written == args.request_size);
+      test::test_seek(0, SEEK_SET);
+      REQUIRE(test::status_orig == 0);
+      test::test_write(info.write_data.data(), args.request_size);
+      REQUIRE(test::size_written_orig == args.request_size);
     }
-    int status = close(fd);
-    REQUIRE(status == 0);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
   }
   posttest();
 }
@@ -423,19 +420,19 @@ TEST_CASE("BatchedReadRandom", "[process=" + std::to_string(info.comm_size) +
                                    "][pattern=random][file=1]") {
   pretest();
   SECTION("read from existing file") {
-    int fd = open(info.existing_file.c_str(), O_RDWR);
-    REQUIRE(fd != -1);
+    test::test_open(info.existing_file.c_str(), O_RDWR);
+    REQUIRE(test::fh_orig != -1);
     std::string data(args.request_size, '1');
     for (size_t i = 0; i < info.num_iterations; ++i) {
       size_t offset =
           rand_r(&info.offset_seed) % (info.total_size - args.request_size);
-      size_t status = lseek(fd, offset, SEEK_SET);
-      REQUIRE(status == offset);
-      size_t size_read = read(fd, data.data(), args.request_size);
-      REQUIRE(size_read == args.request_size);
+      test::test_seek( offset, SEEK_SET);
+      REQUIRE(test::status_orig == offset);
+      test::test_read(data.data(), args.request_size);
+      REQUIRE(test::size_read_orig == args.request_size);
     }
-    int status = close(fd);
-    REQUIRE(status == 0);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
   }
   posttest();
 }
@@ -448,20 +445,20 @@ TEST_CASE("BatchedUpdateRandom", "[process=" + std::to_string(info.comm_size) +
                                      "]"
                                      "[pattern=random][file=1]") {
   pretest();
-  SECTION("read from existing file") {
-    int fd = open(info.existing_file.c_str(), O_RDWR);
-    REQUIRE(fd != -1);
-    std::string data(args.request_size, '1');
+  SECTION("update into existing file") {
+    test::test_open(info.existing_file.c_str(), O_RDWR);
+    REQUIRE(test::fh_orig != -1);
     for (size_t i = 0; i < info.num_iterations; ++i) {
       size_t offset =
-          rand_r(&info.offset_seed) % (info.total_size - args.request_size);
-      size_t status = lseek(fd, offset, SEEK_SET);
-      REQUIRE(status == offset);
-      size_t size_read = write(fd, data.data(), args.request_size);
-      REQUIRE(size_read == args.request_size);
+          rand_r(&info.offset_seed) % (info.total_size - args.request_size - 1);
+      test::test_seek( offset, SEEK_SET);//630978
+      REQUIRE(test::status_orig == offset);
+      test::test_write(info.write_data.data(), args.request_size);
+      REQUIRE(test::size_written_orig == args.request_size);
+      fsync(test::fh_orig);
     }
-    int status = close(fd);
-    REQUIRE(status == 0);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
   }
   posttest();
 }
@@ -477,18 +474,18 @@ TEST_CASE("BatchedReadStrideFixed",
   pretest();
 
   SECTION("read from existing file") {
-    int fd = open(info.existing_file.c_str(), O_RDWR);
-    REQUIRE(fd != -1);
+    test::test_open(info.existing_file.c_str(), O_RDWR);
+    REQUIRE(test::fh_orig != -1);
     std::string data(args.request_size, '1');
     for (size_t i = 0; i < info.num_iterations; ++i) {
       size_t offset = (i * info.stride_size) % info.total_size;
-      size_t status = lseek(fd, offset, SEEK_SET);
-      REQUIRE(status == offset);
-      size_t size_read = read(fd, data.data(), args.request_size);
-      REQUIRE(size_read == args.request_size);
+      test::test_seek( offset, SEEK_SET);
+      REQUIRE(test::status_orig == offset);
+      test::test_read(data.data(), args.request_size);
+      REQUIRE(test::size_read_orig == args.request_size);
     }
-    int status = close(fd);
-    REQUIRE(status == 0);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
   }
   posttest();
 }
@@ -504,18 +501,18 @@ TEST_CASE("BatchedUpdateStrideFixed",
   pretest();
 
   SECTION("read from existing file") {
-    int fd = open(info.existing_file.c_str(), O_RDWR);
-    REQUIRE(fd != -1);
+    test::test_open(info.existing_file.c_str(), O_RDWR);
+    REQUIRE(test::fh_orig != -1);
     std::string data(args.request_size, '1');
     for (size_t i = 0; i < info.num_iterations; ++i) {
       size_t offset = (i * info.stride_size) % info.total_size;
-      size_t status = lseek(fd, offset, SEEK_SET);
-      REQUIRE(status == offset);
-      size_t size_read = write(fd, data.data(), args.request_size);
-      REQUIRE(size_read == args.request_size);
+      test::test_seek( offset, SEEK_SET);
+      REQUIRE(test::status_orig == offset);
+      test::test_write(data.data(), args.request_size);
+      REQUIRE(test::size_read_orig == args.request_size);
     }
-    int status = close(fd);
-    REQUIRE(status == 0);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
   }
   posttest();
 }
@@ -531,19 +528,19 @@ TEST_CASE("BatchedReadStrideDynamic",
   pretest();
 
   SECTION("read from existing file") {
-    int fd = open(info.existing_file.c_str(), O_RDWR);
-    REQUIRE(fd != -1);
+    test::test_open(info.existing_file.c_str(), O_RDWR);
+    REQUIRE(test::fh_orig != -1);
     std::string data(args.request_size, '1');
     for (size_t i = 0; i < info.num_iterations; ++i) {
       size_t offset = GetRandomOffset(i, info.offset_seed, info.stride_size,
                                       info.total_size);
-      size_t status = lseek(fd, offset, SEEK_SET);
-      REQUIRE(status == offset);
-      size_t size_read = read(fd, data.data(), args.request_size);
-      REQUIRE(size_read == args.request_size);
+      test::test_seek( offset, SEEK_SET);
+      REQUIRE(test::status_orig == offset);
+      test::test_read(data.data(), args.request_size);
+      REQUIRE(test::size_read_orig == args.request_size);
     }
-    int status = close(fd);
-    REQUIRE(status == 0);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
   }
   posttest();
 }
@@ -558,19 +555,19 @@ TEST_CASE("BatchedUpdateStrideDynamic",
               "[pattern=stride_dynamic][file=1]") {
   pretest();
   SECTION("read from existing file") {
-    int fd = open(info.existing_file.c_str(), O_RDWR);
-    REQUIRE(fd != -1);
+    test::test_open(info.existing_file.c_str(), O_RDWR);
+    REQUIRE(test::fh_orig != -1);
     std::string data(args.request_size, '1');
     for (size_t i = 0; i < info.num_iterations; ++i) {
       size_t offset = GetRandomOffset(i, info.offset_seed, info.stride_size,
                                       info.total_size);
-      size_t status = lseek(fd, offset, SEEK_SET);
-      REQUIRE(status == offset);
-      size_t size_read = write(fd, data.data(), args.request_size);
-      REQUIRE(size_read == args.request_size);
+      test::test_seek( offset, SEEK_SET);
+      REQUIRE(test::status_orig == offset);
+      test::test_write(data.data(), args.request_size);
+      REQUIRE(test::size_read_orig == args.request_size);
     }
-    int status = close(fd);
-    REQUIRE(status == 0);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
   }
   posttest();
 }
@@ -586,39 +583,39 @@ TEST_CASE("BatchedWriteRSVariable",
   pretest();
 
   SECTION("write to new file always at the start") {
-    int fd = open(info.new_file.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0600);
-    REQUIRE(fd != -1);
+    test::test_open(info.new_file.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0600);
+    REQUIRE(test::fh_orig != -1);
     size_t biggest_size_written = 0;
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      size_t offset = lseek(fd, 0, SEEK_SET);
-      REQUIRE(offset == 0);
+      test::test_seek(0, SEEK_SET);
+      REQUIRE(test::status_orig == 0);
       size_t request_size =
           args.request_size + (rand_r(&info.offset_seed) % args.request_size);
       std::string data(request_size, '1');
-      size_t size_written = write(fd, data.c_str(), request_size);
-      REQUIRE(size_written == request_size);
+      test::test_write(data.c_str(), request_size);
+      REQUIRE(test::size_written_orig == request_size);
       if (biggest_size_written < request_size)
         biggest_size_written = request_size;
     }
-    int status = close(fd);
-    REQUIRE(status == 0);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
     REQUIRE(fs::file_size(info.new_file) == biggest_size_written);
   }
 
   SECTION("write to new file") {
-    int fd = open(info.new_file.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0600);
-    REQUIRE(fd != -1);
+    test::test_open(info.new_file.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0600);
+    REQUIRE(test::fh_orig != -1);
     size_t total_size_written = 0;
     for (size_t i = 0; i < info.num_iterations; ++i) {
       size_t request_size =
           args.request_size + (rand_r(&info.offset_seed) % args.request_size);
       std::string data(request_size, '1');
-      size_t size_written = write(fd, data.c_str(), request_size);
-      REQUIRE(size_written == request_size);
-      total_size_written += size_written;
+      test::test_write(data.c_str(), request_size);
+      REQUIRE(test::size_written_orig == request_size);
+      total_size_written += test::size_written_orig;
     }
-    int status = close(fd);
-    REQUIRE(status == 0);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
     REQUIRE(fs::file_size(info.new_file) == total_size_written);
   }
   posttest();
@@ -634,8 +631,8 @@ TEST_CASE("BatchedReadSequentialRSVariable",
               "[pattern=sequential][file=1]") {
   pretest();
   SECTION("read from existing file") {
-    int fd = open(info.existing_file.c_str(), O_RDONLY);
-    REQUIRE(fd != -1);
+    test::test_open(info.existing_file.c_str(), O_RDONLY);
+    REQUIRE(test::fh_orig != -1);
     std::string data(args.request_size, '1');
     size_t current_offset = 0;
     for (size_t i = 0; i < info.num_iterations; ++i) {
@@ -643,29 +640,29 @@ TEST_CASE("BatchedReadSequentialRSVariable",
                              (rand_r(&info.offset_seed) % args.request_size)) %
                             (info.total_size - current_offset);
       std::string data(request_size, '1');
-      size_t size_read = read(fd, data.data(), request_size);
-      REQUIRE(size_read == request_size);
-      current_offset += size_read;
+      test::test_read(data.data(), request_size);
+      REQUIRE(test::size_read_orig == request_size);
+      current_offset += test::size_read_orig;
     }
-    int status = close(fd);
-    REQUIRE(status == 0);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
   }
 
   SECTION("read from existing file always at start") {
-    int fd = open(info.existing_file.c_str(), O_RDONLY);
-    REQUIRE(fd != -1);
+    test::test_open(info.existing_file.c_str(), O_RDONLY);
+    REQUIRE(test::fh_orig != -1);
 
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      size_t offset = lseek(fd, 0, SEEK_SET);
-      REQUIRE(offset == 0);
+      test::test_seek(0, SEEK_SET);
+      REQUIRE(test::status_orig == 0);
       size_t request_size =
           args.request_size + (rand_r(&info.offset_seed) % args.request_size);
       std::string data(request_size, '1');
-      size_t size_read = read(fd, data.data(), request_size);
-      REQUIRE(size_read == request_size);
+      test::test_read(data.data(), request_size);
+      REQUIRE(test::size_read_orig == request_size);
     }
-    int status = close(fd);
-    REQUIRE(status == 0);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
   }
   posttest();
 }
@@ -681,23 +678,23 @@ TEST_CASE("BatchedReadRandomRSVariable",
   pretest();
 
   SECTION("read from existing file") {
-    int fd = open(info.existing_file.c_str(), O_RDWR);
-    REQUIRE(fd != -1);
+    test::test_open(info.existing_file.c_str(), O_RDWR);
+    REQUIRE(test::fh_orig != -1);
     std::string data(args.request_size, '1');
     for (size_t i = 0; i < info.num_iterations; ++i) {
       size_t offset =
           rand_r(&info.offset_seed) % (info.total_size - args.request_size);
-      size_t status = lseek(fd, offset, SEEK_SET);
-      REQUIRE(status == offset);
+      test::test_seek( offset, SEEK_SET);
+      REQUIRE(test::status_orig == offset);
       size_t request_size =
           (args.request_size + (rand_r(&info.rs_seed) % args.request_size)) %
           (info.total_size - offset);
       std::string data(request_size, '1');
-      size_t size_read = read(fd, data.data(), request_size);
-      REQUIRE(size_read == request_size);
+      test::test_read(data.data(), request_size);
+      REQUIRE(test::size_read_orig == request_size);
     }
-    int status = close(fd);
-    REQUIRE(status == 0);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
   }
   posttest();
 }
@@ -713,22 +710,22 @@ TEST_CASE("BatchedUpdateRandomRSVariable",
   pretest();
 
   SECTION("read from existing file") {
-    int fd = open(info.existing_file.c_str(), O_RDWR);
-    REQUIRE(fd != -1);
+    test::test_open(info.existing_file.c_str(), O_RDWR);
+    REQUIRE(test::fh_orig != -1);
     std::string data(args.request_size, '1');
     for (size_t i = 0; i < info.num_iterations; ++i) {
       size_t offset =
           rand_r(&info.offset_seed) % (info.total_size - args.request_size);
-      size_t status = lseek(fd, offset, SEEK_SET);
-      REQUIRE(status == offset);
+      test::test_seek( offset, SEEK_SET);
+      REQUIRE(test::status_orig == offset);
       size_t request_size =
           args.request_size + (rand_r(&info.rs_seed) % args.request_size);
       std::string data(request_size, '1');
-      size_t size_written = write(fd, data.c_str(), request_size);
-      REQUIRE(size_written == request_size);
+      test::test_write(data.c_str(), request_size);
+      REQUIRE(test::size_written_orig == request_size);
     }
-    int status = close(fd);
-    REQUIRE(status == 0);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
   }
   posttest();
 }
@@ -744,21 +741,21 @@ TEST_CASE("BatchedReadStrideFixedRSVariable",
   pretest();
 
   SECTION("read from existing file") {
-    int fd = open(info.existing_file.c_str(), O_RDWR);
-    REQUIRE(fd != -1);
+    test::test_open(info.existing_file.c_str(), O_RDWR);
+    REQUIRE(test::fh_orig != -1);
     for (size_t i = 0; i < info.num_iterations; ++i) {
       size_t offset = (i * info.stride_size) % info.total_size;
-      size_t status = lseek(fd, offset, SEEK_SET);
-      REQUIRE(status == offset);
+      test::test_seek( offset, SEEK_SET);
+      REQUIRE(test::status_orig == offset);
       size_t request_size =
           (args.request_size + (rand_r(&info.rs_seed) % args.request_size)) %
           (info.total_size - offset);
       std::string data(request_size, '1');
-      size_t size_read = read(fd, data.data(), request_size);
-      REQUIRE(size_read == request_size);
+      test::test_read(data.data(), request_size);
+      REQUIRE(test::size_read_orig == request_size);
     }
-    int status = close(fd);
-    REQUIRE(status == 0);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
   }
   posttest();
 }
@@ -774,21 +771,21 @@ TEST_CASE("BatchedUpdateStrideFixedRSVariable",
   pretest();
 
   SECTION("write to existing file") {
-    int fd = open(info.existing_file.c_str(), O_RDWR);
-    REQUIRE(fd != -1);
+    test::test_open(info.existing_file.c_str(), O_RDWR);
+    REQUIRE(test::fh_orig != -1);
     std::string data(args.request_size, '1');
     for (size_t i = 0; i < info.num_iterations; ++i) {
       size_t offset = (i * info.stride_size) % info.total_size;
-      size_t status = lseek(fd, offset, SEEK_SET);
-      REQUIRE(status == offset);
+      test::test_seek( offset, SEEK_SET);
+      REQUIRE(test::status_orig == offset);
       size_t request_size =
           args.request_size + (rand_r(&info.rs_seed) % args.request_size);
       std::string data(request_size, '1');
-      size_t size_written = write(fd, data.c_str(), request_size);
-      REQUIRE(size_written == request_size);
+      test::test_write(data.c_str(), request_size);
+      REQUIRE(test::size_written_orig == request_size);
     }
-    int status = close(fd);
-    REQUIRE(status == 0);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
   }
   posttest();
 }
@@ -804,21 +801,21 @@ TEST_CASE("BatchedReadStrideDynamicRSVariable",
   pretest();
 
   SECTION("read from existing file") {
-    int fd = open(info.existing_file.c_str(), O_RDWR);
-    REQUIRE(fd != -1);
+    test::test_open(info.existing_file.c_str(), O_RDWR);
+    REQUIRE(test::fh_orig != -1);
     for (size_t i = 0; i < info.num_iterations; ++i) {
       size_t offset = GetRandomOffset(i, info.offset_seed, info.stride_size,
                                       info.total_size);
-      size_t status = lseek(fd, offset, SEEK_SET);
-      REQUIRE(status == offset);
+      test::test_seek( offset, SEEK_SET);
+      REQUIRE(test::status_orig == offset);
       size_t request_size =
           args.request_size + (rand_r(&info.rs_seed) % args.request_size);
       std::string data(request_size, '1');
-      size_t size_read = read(fd, data.data(), request_size);
-      REQUIRE(size_read == request_size);
+      test::test_read(data.data(), request_size);
+      REQUIRE(test::size_read_orig == request_size);
     }
-    int status = close(fd);
-    REQUIRE(status == 0);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
   }
   posttest();
 }
@@ -833,21 +830,21 @@ TEST_CASE("BatchedUpdateStrideDynamicRSVariable",
               "[pattern=stride_dynamic][file=1]") {
   pretest();
   SECTION("read from existing file") {
-    int fd = open(info.existing_file.c_str(), O_RDWR);
-    REQUIRE(fd != -1);
+    test::test_open(info.existing_file.c_str(), O_RDWR);
+    REQUIRE(test::fh_orig != -1);
     for (size_t i = 0; i < info.num_iterations; ++i) {
       size_t offset = GetRandomOffset(i, info.offset_seed, info.stride_size,
                                       info.total_size);
-      size_t status = lseek(fd, offset, SEEK_SET);
-      REQUIRE(status == offset);
+      test::test_seek( offset, SEEK_SET);
+      REQUIRE(test::status_orig == offset);
       size_t request_size =
           args.request_size + (rand_r(&info.rs_seed) % args.request_size);
       std::string data(request_size, '1');
-      size_t size_written = write(fd, data.c_str(), request_size);
-      REQUIRE(size_written == request_size);
+      test::test_write(data.c_str(), request_size);
+      REQUIRE(test::size_written_orig == request_size);
     }
-    int status = close(fd);
-    REQUIRE(status == 0);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
   }
   posttest();
 }
@@ -862,8 +859,8 @@ TEST_CASE("BatchedReadStrideNegative",
               "[pattern=stride_negative][file=1]") {
   pretest();
   SECTION("read from existing file") {
-    int fd = open(info.existing_file.c_str(), O_RDWR);
-    REQUIRE(fd != -1);
+    test::test_open(info.existing_file.c_str(), O_RDWR);
+    REQUIRE(test::fh_orig != -1);
     std::string data(args.request_size, '1');
     size_t prev_offset = info.total_size + 1;
     for (size_t i = 0; i < info.num_iterations; ++i) {
@@ -871,13 +868,13 @@ TEST_CASE("BatchedReadStrideNegative",
       REQUIRE(prev_offset > stride_offset);
       prev_offset = stride_offset;
       size_t offset = (stride_offset) % (info.total_size - args.request_size);
-      size_t status = lseek(fd, offset, SEEK_SET);
-      REQUIRE(status == offset);
-      size_t size_read = read(fd, data.data(), args.request_size);
-      REQUIRE(size_read == args.request_size);
+      test::test_seek( offset, SEEK_SET);
+      REQUIRE(test::status_orig == offset);
+      test::test_read(data.data(), args.request_size);
+      REQUIRE(test::size_read_orig == args.request_size);
     }
-    int status = close(fd);
-    REQUIRE(status == 0);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
   }
   posttest();
 }
@@ -892,19 +889,19 @@ TEST_CASE("BatchedUpdateStrideNegative",
               "[pattern=stride_negative][file=1]") {
   pretest();
   SECTION("read from existing file") {
-    int fd = open(info.existing_file.c_str(), O_RDWR);
-    REQUIRE(fd != -1);
+    test::test_open(info.existing_file.c_str(), O_RDWR);
+    REQUIRE(test::fh_orig != -1);
     std::string data(args.request_size, '1');
     for (size_t i = 0; i < info.num_iterations; ++i) {
       size_t offset =
           info.total_size - ((i * info.stride_size) % info.total_size);
-      size_t status = lseek(fd, offset, SEEK_SET);
-      REQUIRE(status == offset);
-      size_t size_read = write(fd, data.data(), args.request_size);
-      REQUIRE(size_read == args.request_size);
+      test::test_seek( offset, SEEK_SET);
+      REQUIRE(test::status_orig == offset);
+      test::test_write(data.data(), args.request_size);
+      REQUIRE(test::size_read_orig == args.request_size);
     }
-    int status = close(fd);
-    REQUIRE(status == 0);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
   }
   posttest();
 }
@@ -920,22 +917,22 @@ TEST_CASE("BatchedReadStrideNegativeRSVariable",
   pretest();
 
   SECTION("read from existing file") {
-    int fd = open(info.existing_file.c_str(), O_RDWR);
-    REQUIRE(fd != -1);
+    test::test_open(info.existing_file.c_str(), O_RDWR);
+    REQUIRE(test::fh_orig != -1);
     for (size_t i = 0; i < info.num_iterations; ++i) {
       size_t offset = (info.total_size - i * info.stride_size) %
                       (info.total_size - 2 * args.request_size);
-      size_t status = lseek(fd, offset, SEEK_SET);
-      REQUIRE(status == offset);
+      test::test_seek( offset, SEEK_SET);
+      REQUIRE(test::status_orig == offset);
       size_t request_size =
           (args.request_size + (rand_r(&info.rs_seed) % args.request_size)) %
           (info.total_size - offset);
       std::string data(request_size, '1');
-      size_t size_read = read(fd, data.data(), request_size);
-      REQUIRE(size_read == request_size);
+      test::test_read(data.data(), request_size);
+      REQUIRE(test::size_read_orig == request_size);
     }
-    int status = close(fd);
-    REQUIRE(status == 0);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
   }
   posttest();
 }
@@ -951,22 +948,22 @@ TEST_CASE("BatchedUpdateStrideNegativeRSVariable",
   pretest();
 
   SECTION("write to existing file") {
-    int fd = open(info.existing_file.c_str(), O_RDWR);
-    REQUIRE(fd != -1);
+    test::test_open(info.existing_file.c_str(), O_RDWR);
+    REQUIRE(test::fh_orig != -1);
     std::string data(args.request_size, '1');
     for (size_t i = 0; i < info.num_iterations; ++i) {
       size_t offset =
           info.total_size - ((i * info.stride_size) % info.total_size);
-      size_t status = lseek(fd, offset, SEEK_SET);
-      REQUIRE(status == offset);
+      test::test_seek( offset, SEEK_SET);
+      REQUIRE(test::status_orig == offset);
       size_t request_size =
           args.request_size + (rand_r(&info.rs_seed) % args.request_size);
       std::string data(request_size, '1');
-      size_t size_written = write(fd, data.c_str(), request_size);
-      REQUIRE(size_written == request_size);
+      test::test_write(data.c_str(), request_size);
+      REQUIRE(test::size_written_orig == request_size);
     }
-    int status = close(fd);
-    REQUIRE(status == 0);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
   }
   posttest();
 }
@@ -985,8 +982,8 @@ TEST_CASE("BatchedReadStride2D", "[process=" + std::to_string(info.comm_size) +
   size_t cell_size = 128;
   size_t cell_stride = rows * cols / cell_size / info.num_iterations;
   SECTION("read from existing file") {
-    int fd = open(info.existing_file.c_str(), O_RDWR);
-    REQUIRE(fd != -1);
+    test::test_open(info.existing_file.c_str(), O_RDWR);
+    REQUIRE(test::fh_orig != -1);
     std::string data(args.request_size, '1');
     size_t prev_cell_col = 0, prev_cell_row = 0;
     for (size_t i = 0; i < info.num_iterations; ++i) {
@@ -997,13 +994,13 @@ TEST_CASE("BatchedReadStride2D", "[process=" + std::to_string(info.comm_size) +
       prev_cell_row = current_cell_row;
       size_t offset = (current_cell_col * cell_stride + prev_cell_row * cols) %
                       (info.total_size - args.request_size);
-      size_t status = lseek(fd, offset, SEEK_SET);
-      REQUIRE(status == offset);
-      size_t size_read = read(fd, data.data(), args.request_size);
-      REQUIRE(size_read == args.request_size);
+      test::test_seek( offset, SEEK_SET);
+      REQUIRE(test::status_orig == offset);
+      test::test_read(data.data(), args.request_size);
+      REQUIRE(test::size_read_orig == args.request_size);
     }
-    int status = close(fd);
-    REQUIRE(status == 0);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
   }
   posttest();
 }
@@ -1024,8 +1021,8 @@ TEST_CASE("BatchedUpdateStride2D",
   size_t cell_size = 128;
   size_t cell_stride = rows * cols / cell_size / info.num_iterations;
   SECTION("read from existing file") {
-    int fd = open(info.existing_file.c_str(), O_RDWR);
-    REQUIRE(fd != -1);
+    test::test_open(info.existing_file.c_str(), O_RDWR);
+    REQUIRE(test::fh_orig != -1);
     std::string data(args.request_size, '1');
     size_t prev_cell_col = 0, prev_cell_row = 0;
     for (size_t i = 0; i < info.num_iterations; ++i) {
@@ -1036,13 +1033,13 @@ TEST_CASE("BatchedUpdateStride2D",
       prev_cell_row = current_cell_row;
       size_t offset = (current_cell_col * cell_stride + prev_cell_row * cols) %
                       (info.total_size - args.request_size);
-      size_t status = lseek(fd, offset, SEEK_SET);
-      REQUIRE(status == offset);
-      size_t size_read = write(fd, data.data(), args.request_size);
-      REQUIRE(size_read == args.request_size);
+      test::test_seek( offset, SEEK_SET);
+      REQUIRE(test::status_orig == offset);
+      test::test_write(data.data(), args.request_size);
+      REQUIRE(test::size_read_orig == args.request_size);
     }
-    int status = close(fd);
-    REQUIRE(status == 0);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
   }
   posttest();
 }
@@ -1062,8 +1059,8 @@ TEST_CASE("BatchedReadStride2DRSVariable",
   size_t cell_size = 128;
   size_t cell_stride = rows * cols / cell_size / info.num_iterations;
   SECTION("read from existing file") {
-    int fd = open(info.existing_file.c_str(), O_RDWR);
-    REQUIRE(fd != -1);
+    test::test_open(info.existing_file.c_str(), O_RDWR);
+    REQUIRE(test::fh_orig != -1);
     size_t prev_cell_col = 0, prev_cell_row = 0;
     for (size_t i = 0; i < info.num_iterations; ++i) {
       size_t current_cell_col = (prev_cell_col + cell_stride) % cols;
@@ -1073,17 +1070,17 @@ TEST_CASE("BatchedReadStride2DRSVariable",
       prev_cell_row = current_cell_row;
       size_t offset = (current_cell_col * cell_stride + prev_cell_row * cols) %
                       (info.total_size - 2 * args.request_size);
-      size_t status = lseek(fd, offset, SEEK_SET);
-      REQUIRE(status == offset);
+      test::test_seek( offset, SEEK_SET);
+      REQUIRE(test::status_orig == offset);
       size_t request_size =
           (args.request_size + (rand_r(&info.rs_seed) % args.request_size)) %
           (info.total_size - offset);
       std::string data(request_size, '1');
-      size_t size_read = read(fd, data.data(), request_size);
-      REQUIRE(size_read == request_size);
+      test::test_read(data.data(), request_size);
+      REQUIRE(test::size_read_orig == request_size);
     }
-    int status = close(fd);
-    REQUIRE(status == 0);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
   }
   posttest();
 }
@@ -1103,8 +1100,8 @@ TEST_CASE("BatchedUpdateStride2DRSVariable",
   size_t cell_size = 128;
   size_t cell_stride = rows * cols / cell_size / info.num_iterations;
   SECTION("write to existing file") {
-    int fd = open(info.existing_file.c_str(), O_RDWR);
-    REQUIRE(fd != -1);
+    test::test_open(info.existing_file.c_str(), O_RDWR);
+    REQUIRE(test::fh_orig != -1);
     std::string data(args.request_size, '1');
     size_t prev_cell_col = 0, prev_cell_row = 0;
     for (size_t i = 0; i < info.num_iterations; ++i) {
@@ -1115,16 +1112,16 @@ TEST_CASE("BatchedUpdateStride2DRSVariable",
       prev_cell_row = current_cell_row;
       size_t offset = (current_cell_col * cell_stride + prev_cell_row * cols) %
                       (info.total_size - 2 * args.request_size);
-      size_t status = lseek(fd, offset, SEEK_SET);
-      REQUIRE(status == offset);
+      test::test_seek( offset, SEEK_SET);
+      REQUIRE(test::status_orig == offset);
       size_t request_size =
           args.request_size + (rand_r(&info.rs_seed) % args.request_size);
       std::string data(request_size, '1');
-      size_t size_written = write(fd, data.c_str(), request_size);
-      REQUIRE(size_written == request_size);
+      test::test_write(data.c_str(), request_size);
+      REQUIRE(test::size_written_orig == request_size);
     }
-    int status = close(fd);
-    REQUIRE(status == 0);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
   }
   posttest();
 }
@@ -1144,34 +1141,32 @@ TEST_CASE("BatchedWriteTemporalFixed",
   pretest();
 
   SECTION("write to existing file") {
-    int fd = open(info.new_file.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0600);
-    REQUIRE(fd != -1);
+    test::test_open(info.new_file.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0600);
+    REQUIRE(test::fh_orig != -1);
 
     for (size_t i = 0; i < info.num_iterations; ++i) {
       usleep(info.temporal_interval_ms * 1000);
-      size_t offset = lseek(fd, 0, SEEK_SET);
-      REQUIRE(offset == 0);
-      size_t size_written =
-          write(fd, info.write_data.c_str(), args.request_size);
-      REQUIRE(size_written == args.request_size);
+      test::test_seek(0, SEEK_SET);
+      REQUIRE(test::status_orig == 0);
+      test::test_write(info.write_data.data(), args.request_size);
+      REQUIRE(test::size_written_orig == args.request_size);
     }
-    int status = close(fd);
-    REQUIRE(status == 0);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
     REQUIRE(fs::file_size(info.new_file) == args.request_size);
   }
 
   SECTION("write to new file always at start") {
-    int fd = open(info.new_file.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0600);
-    REQUIRE(fd != -1);
+    test::test_open(info.new_file.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0600);
+    REQUIRE(test::fh_orig != -1);
 
     for (size_t i = 0; i < info.num_iterations; ++i) {
       usleep(info.temporal_interval_ms * 1000);
-      size_t size_written =
-          write(fd, info.write_data.c_str(), args.request_size);
-      REQUIRE(size_written == args.request_size);
+      test::test_write(info.write_data.data(), args.request_size);
+      REQUIRE(test::size_written_orig == args.request_size);
     }
-    int status = close(fd);
-    REQUIRE(status == 0);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
     REQUIRE(fs::file_size(info.new_file) ==
             info.num_iterations * args.request_size);
   }
@@ -1189,32 +1184,31 @@ TEST_CASE("BatchedReadSequentialTemporalFixed",
   pretest();
 
   SECTION("read from existing file") {
-    int fd = open(info.existing_file.c_str(), O_RDWR);
-    REQUIRE(fd != -1);
+    test::test_open(info.existing_file.c_str(), O_RDWR);
+    REQUIRE(test::fh_orig != -1);
     std::string data(args.request_size, '1');
     for (size_t i = 0; i < info.num_iterations; ++i) {
       usleep(info.temporal_interval_ms * 1000);
-      size_t size_read = read(fd, data.data(), args.request_size);
-      REQUIRE(size_read == args.request_size);
+      test::test_read(data.data(), args.request_size);
+      REQUIRE(test::size_read_orig == args.request_size);
     }
-    int status = close(fd);
-    REQUIRE(status == 0);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
   }
 
   SECTION("read from existing file always at start") {
-    int fd = open(info.existing_file.c_str(), O_WRONLY);
-    REQUIRE(fd != -1);
+    test::test_open(info.existing_file.c_str(), O_WRONLY);
+    REQUIRE(test::fh_orig != -1);
 
     for (size_t i = 0; i < info.num_iterations; ++i) {
       usleep(info.temporal_interval_ms * 1000);
-      size_t offset = lseek(fd, 0, SEEK_SET);
-      REQUIRE(offset == 0);
-      size_t size_written =
-          write(fd, info.write_data.c_str(), args.request_size);
-      REQUIRE(size_written == args.request_size);
+      test::test_seek(0, SEEK_SET);
+      REQUIRE(test::status_orig == 0);
+      test::test_write(info.write_data.data(), args.request_size);
+      REQUIRE(test::size_written_orig == args.request_size);
     }
-    int status = close(fd);
-    REQUIRE(status == 0);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
   }
   posttest();
 }
@@ -1230,38 +1224,36 @@ TEST_CASE("BatchedWriteTemporalVariable",
   pretest();
 
   SECTION("write to existing file") {
-    int fd = open(info.new_file.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0600);
-    REQUIRE(fd != -1);
+    test::test_open(info.new_file.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0600);
+    REQUIRE(test::fh_orig != -1);
 
     for (size_t i = 0; i < info.num_iterations; ++i) {
       info.temporal_interval_ms =
           rand_r(&info.temporal_interval_seed) % info.temporal_interval_ms + 1;
       usleep(info.temporal_interval_ms * 1000);
-      size_t offset = lseek(fd, 0, SEEK_SET);
-      REQUIRE(offset == 0);
-      size_t size_written =
-          write(fd, info.write_data.c_str(), args.request_size);
-      REQUIRE(size_written == args.request_size);
+      test::test_seek(0, SEEK_SET);
+      REQUIRE(test::status_orig == 0);
+      test::test_write(info.write_data.data(), args.request_size);
+      REQUIRE(test::size_written_orig == args.request_size);
     }
-    int status = close(fd);
-    REQUIRE(status == 0);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
     REQUIRE(fs::file_size(info.new_file) == args.request_size);
   }
 
   SECTION("write to new file always at start") {
-    int fd = open(info.new_file.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0600);
-    REQUIRE(fd != -1);
+    test::test_open(info.new_file.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0600);
+    REQUIRE(test::fh_orig != -1);
 
     for (size_t i = 0; i < info.num_iterations; ++i) {
       info.temporal_interval_ms =
           rand_r(&info.temporal_interval_seed) % info.temporal_interval_ms + 1;
       usleep(info.temporal_interval_ms * 1000);
-      size_t size_written =
-          write(fd, info.write_data.c_str(), args.request_size);
-      REQUIRE(size_written == args.request_size);
+      test::test_write(info.write_data.data(), args.request_size);
+      REQUIRE(test::size_written_orig == args.request_size);
     }
-    int status = close(fd);
-    REQUIRE(status == 0);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
     REQUIRE(fs::file_size(info.new_file) ==
             info.num_iterations * args.request_size);
   }
@@ -1279,36 +1271,35 @@ TEST_CASE("BatchedReadSequentialTemporalVariable",
   pretest();
 
   SECTION("read from existing file") {
-    int fd = open(info.existing_file.c_str(), O_RDWR);
-    REQUIRE(fd != -1);
+    test::test_open(info.existing_file.c_str(), O_RDWR);
+    REQUIRE(test::fh_orig != -1);
     std::string data(args.request_size, '1');
     for (size_t i = 0; i < info.num_iterations; ++i) {
       info.temporal_interval_ms =
           rand_r(&info.temporal_interval_seed) % info.temporal_interval_ms + 1;
       usleep(info.temporal_interval_ms * 1000);
-      size_t size_read = read(fd, data.data(), args.request_size);
-      REQUIRE(size_read == args.request_size);
+      test::test_read(data.data(), args.request_size);
+      REQUIRE(test::size_read_orig == args.request_size);
     }
-    int status = close(fd);
-    REQUIRE(status == 0);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
   }
 
   SECTION("read from existing file always at start") {
-    int fd = open(info.existing_file.c_str(), O_WRONLY);
-    REQUIRE(fd != -1);
+    test::test_open(info.existing_file.c_str(), O_WRONLY);
+    REQUIRE(test::fh_orig != -1);
 
     for (size_t i = 0; i < info.num_iterations; ++i) {
       info.temporal_interval_ms =
           rand_r(&info.temporal_interval_seed) % info.temporal_interval_ms + 1;
       usleep(info.temporal_interval_ms * 1000);
-      size_t offset = lseek(fd, 0, SEEK_SET);
-      REQUIRE(offset == 0);
-      size_t size_written =
-          write(fd, info.write_data.c_str(), args.request_size);
-      REQUIRE(size_written == args.request_size);
+      test::test_seek(0, SEEK_SET);
+      REQUIRE(test::status_orig == 0);
+      test::test_write(info.write_data.data(), args.request_size);
+      REQUIRE(test::size_written_orig == args.request_size);
     }
-    int status = close(fd);
-    REQUIRE(status == 0);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
   }
   posttest();
 }
@@ -1323,92 +1314,87 @@ TEST_CASE("BatchedMixedSequential",
               "[pattern=sequential][file=1]") {
   pretest();
   SECTION("read after write on new file") {
-    int fd = open(info.new_file.c_str(), O_RDWR | O_CREAT | O_EXCL, 0600);
-    REQUIRE(fd != -1);
+    test::test_open(info.new_file.c_str(), O_RDWR | O_CREAT | O_EXCL, 0600);
+    REQUIRE(test::fh_orig != -1);
     size_t last_offset = 0;
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      size_t size_written =
-          write(fd, info.write_data.data(), args.request_size);
-      REQUIRE(size_written == args.request_size);
-      size_t status = lseek(fd, last_offset, SEEK_SET);
-      REQUIRE(status == last_offset);
-      size_t size_read = read(fd, info.read_data.data(), args.request_size);
-      REQUIRE(size_read == args.request_size);
+      test::test_write(info.write_data.data(), args.request_size);
+      REQUIRE(test::size_written_orig == args.request_size);
+      test::test_seek( last_offset, SEEK_SET);
+      REQUIRE(test::status_orig == last_offset);
+      test::test_read(info.read_data.data(), args.request_size);
+      REQUIRE(test::size_read_orig == args.request_size);
       last_offset += args.request_size;
     }
-    int status = close(fd);
-    REQUIRE(status == 0);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
   }
 
   SECTION("write and read alternative existing file") {
-    int fd = open(info.existing_file.c_str(), O_RDWR);
-    REQUIRE(fd != -1);
+    test::test_open(info.existing_file.c_str(), O_RDWR);
+    REQUIRE(test::fh_orig != -1);
     for (size_t i = 0; i < info.num_iterations; ++i) {
       if (i % 2 == 0) {
-        size_t size_written =
-            write(fd, info.write_data.data(), args.request_size);
-        REQUIRE(size_written == args.request_size);
+        test::test_write(info.write_data.data(), args.request_size);
+        REQUIRE(test::size_written_orig == args.request_size);
       } else {
-        size_t size_read = read(fd, info.read_data.data(), args.request_size);
-        REQUIRE(size_read == args.request_size);
+        test::test_read(info.read_data.data(), args.request_size);
+        REQUIRE(test::size_read_orig == args.request_size);
       }
     }
-    int status = close(fd);
-    REQUIRE(status == 0);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
   }
   SECTION("update after read existing file") {
-    int fd = open(info.existing_file.c_str(), O_RDWR);
-    REQUIRE(fd != -1);
+    test::test_open(info.existing_file.c_str(), O_RDWR);
+    REQUIRE(test::fh_orig != -1);
     size_t last_offset = 0;
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      size_t size_read = read(fd, info.read_data.data(), args.request_size);
-      REQUIRE(size_read == args.request_size);
-      size_t status = lseek(fd, last_offset, SEEK_SET);
-      REQUIRE(status == last_offset);
-      size_t size_written =
-          write(fd, info.write_data.data(), args.request_size);
-      REQUIRE(size_written == args.request_size);
+      test::test_read(info.read_data.data(), args.request_size);
+      REQUIRE(test::size_read_orig == args.request_size);
+      test::test_seek( last_offset, SEEK_SET);
+      REQUIRE(test::status_orig == last_offset);
+      test::test_write(info.write_data.data(), args.request_size);
+      REQUIRE(test::size_written_orig == args.request_size);
       last_offset += args.request_size;
     }
 
-    int status = close(fd);
-    REQUIRE(status == 0);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
   }
   SECTION("read all after write all on new file in single open") {
-    int fd = open(info.new_file.c_str(), O_RDWR | O_CREAT | O_EXCL, 0600);
-    REQUIRE(fd != -1);
+    test::test_open(info.new_file.c_str(), O_RDWR | O_CREAT | O_EXCL, 0600);
+    REQUIRE(test::fh_orig != -1);
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      size_t size_written =
-          write(fd, info.write_data.data(), args.request_size);
-      REQUIRE(size_written == args.request_size);
+      test::test_write(info.write_data.data(), args.request_size);
+      REQUIRE(test::size_written_orig == args.request_size);
     }
-    int status = lseek(fd, 0, SEEK_SET);
-    REQUIRE(status == 0);
+    test::test_seek(0, SEEK_SET);
+    REQUIRE(test::status_orig == 0);
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      size_t size_read = read(fd, info.read_data.data(), args.request_size);
-      REQUIRE(size_read == args.request_size);
+      test::test_read(info.read_data.data(), args.request_size);
+      REQUIRE(test::size_read_orig == args.request_size);
     }
-    status = close(fd);
-    REQUIRE(status == 0);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
   }
   SECTION("read all after write all on new file in different open") {
-    int fd = open(info.new_file.c_str(), O_RDWR | O_CREAT, S_IRWXU | S_IRWXG);
-    REQUIRE(fd != -1);
+    test::test_open(info.new_file.c_str(), O_RDWR | O_CREAT, S_IRWXU | S_IRWXG);
+    REQUIRE(test::fh_orig != -1);
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      size_t size_written =
-          write(fd, info.write_data.data(), args.request_size);
-      REQUIRE(size_written == args.request_size);
+      test::test_write(info.write_data.data(), args.request_size);
+      REQUIRE(test::size_written_orig == args.request_size);
     }
-    auto status = close(fd);
-    REQUIRE(status == 0);
-    int fd2 = open(info.new_file.c_str(), O_RDWR);
-    REQUIRE(fd2 != -1);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
+    test::test_open(info.new_file.c_str(), O_RDWR);
+    REQUIRE(test::fh_orig != -1);
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      size_t size_read = read(fd2, info.read_data.data(), args.request_size);
-      REQUIRE(size_read == args.request_size);
+      test::test_read(info.read_data.data(), args.request_size);
+      REQUIRE(test::size_read_orig == args.request_size);
     }
-    status = close(fd2);
-    REQUIRE(status == 0);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
   }
   posttest();
 }
@@ -1419,42 +1405,42 @@ TEST_CASE("SingleMixed", "[process=" + std::to_string(info.comm_size) +
                              "[file=1]") {
   pretest();
   SECTION("read after write from new file") {
-    int fd = open(info.new_file.c_str(), O_RDWR | O_CREAT | O_EXCL, 0600);
-    REQUIRE(fd != -1);
-    size_t size_write = write(fd, info.write_data.data(), args.request_size);
-    REQUIRE(size_write == args.request_size);
-    int status = lseek(fd, 0, SEEK_SET);
-    REQUIRE(status == 0);
-    size_t size_read = read(fd, info.read_data.data(), args.request_size);
-    REQUIRE(size_read == args.request_size);
-    status = close(fd);
-    REQUIRE(status == 0);
+    test::test_open(info.new_file.c_str(), O_RDWR | O_CREAT | O_EXCL, 0600);
+    REQUIRE(test::fh_orig != -1);
+    test::test_write(info.write_data.data(), args.request_size);
+    REQUIRE(test::size_written_orig == args.request_size);
+    test::test_seek( 0, SEEK_SET);
+    REQUIRE(test::status_orig == 0);
+    test::test_read(info.read_data.data(), args.request_size);
+    REQUIRE(test::size_read_orig == args.request_size);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
   }
   SECTION("update after read from existing file") {
-    int fd = open(info.existing_file.c_str(), O_RDWR);
-    REQUIRE(fd != -1);
-    size_t size_read = read(fd, info.read_data.data(), args.request_size);
-    REQUIRE(size_read == args.request_size);
-    int status = lseek(fd, 0, SEEK_SET);
-    REQUIRE(status == 0);
-    size_t size_write = write(fd, info.write_data.data(), args.request_size);
-    REQUIRE(size_write == args.request_size);
+    test::test_open(info.existing_file.c_str(), O_RDWR);
+    REQUIRE(test::fh_orig != -1);
+    test::test_read(info.read_data.data(), args.request_size);
+    REQUIRE(test::size_read_orig == args.request_size);
+    test::test_seek( 0, SEEK_SET);
+    REQUIRE(test::status_orig == 0);
+    test::test_write( info.write_data.data(), args.request_size);
+    REQUIRE(test::size_written_orig == args.request_size);
 
-    status = close(fd);
-    REQUIRE(status == 0);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
   }
   SECTION("read after write from new file different opens") {
-    int fd = open(info.new_file.c_str(), O_RDWR | O_CREAT | O_EXCL, 0600);
-    REQUIRE(fd != -1);
-    size_t size_write = write(fd, info.write_data.data(), args.request_size);
-    REQUIRE(size_write == args.request_size);
-    int status = close(fd);
-    REQUIRE(status == 0);
-    int fd2 = open(info.new_file.c_str(), O_RDWR);
-    size_t size_read = read(fd2, info.read_data.data(), args.request_size);
-    REQUIRE(size_read == args.request_size);
-    status = close(fd2);
-    REQUIRE(status == 0);
+    test::test_open(info.new_file.c_str(), O_RDWR | O_CREAT | O_EXCL, 0600);
+    REQUIRE(test::fh_orig != -1);
+    test::test_write( info.write_data.data(), args.request_size);
+    REQUIRE(test::size_written_orig == args.request_size);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
+    test::test_open(info.new_file.c_str(), O_RDWR);
+    test::test_read(info.read_data.data(), args.request_size);
+    REQUIRE(test::size_read_orig == args.request_size);
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
   }
   posttest();
 }

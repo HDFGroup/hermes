@@ -115,7 +115,7 @@ int simple_open(int ret, const std::string &path_str, int flags) {
 int open_internal(const std::string &path_str, int flags, int mode) {
   int ret;
   MAP_OR_FAIL(open);
-  if (flags & O_CREAT) {
+  if (flags & O_CREAT || flags & O_TMPFILE) {
     ret = real_open_(path_str.c_str(), flags, mode);
   } else {
     ret = real_open_(path_str.c_str(), flags);
@@ -125,7 +125,7 @@ int open_internal(const std::string &path_str, int flags, int mode) {
 }
 
 size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
-                      size_t total_size, int fd) {
+                      size_t total_size, int fp) {
   LOG(INFO) << "Write called for filename: "
             << existing.first.st_bkid->GetName()
             << " on offset: " << existing.first.st_ptr
@@ -134,7 +134,7 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
   auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
   auto mapper = MapperFactory().Get(kMapperType);
   auto mapping = mapper->map(
-      FileStruct(mdm->Convert(fd), existing.first.st_ptr, total_size));
+      FileStruct(mdm->Convert(fp), existing.first.st_ptr, total_size));
   size_t data_offset = 0;
   auto filename = existing.first.st_bkid->GetName();
   LOG(INFO) << "Mapping for write has " << mapping.size() << " mapping."
@@ -175,16 +175,16 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
           LOG(INFO) << "Blob has a gap in write. read gap from original file."
                     << std::endl;
           INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
-          int fd2 = open(filename.c_str(), O_RDONLY);
-          if (fd2 != -1) {
-            if (lseek(fd2, index * kPageSize, SEEK_SET) == 0) {
-              size_t items_read =
-                  read(fd2, final_data.data(), item.second.offset_);
+          FILE *fh = fopen(filename.c_str(), "r");
+          if (fh != nullptr) {
+            if (fseek(fh, index * kPageSize, SEEK_SET) == 0) {
+              size_t items_read = fread(final_data.data(), item.second.offset_,
+                                        sizeof(char), fh);
               if (items_read != 1) {
                 // TODO(hari) @errorhandling read failed.
               }
-              if (close(fd2) != 0) {
-                // TODO(hari) @errorhandling close failed.
+              if (fclose(fh) != 0) {
+                // TODO(hari) @errorhandling fclose failed.
               }
             } else {
               // TODO(hari) @errorhandling fseek failed.
@@ -264,17 +264,18 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
           LOG(INFO) << "Blob has a gap in update read gap from original file."
                     << std::endl;
           INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
-          int fd3 = open(filename.c_str(), O_RDONLY);
-          if (fd3 != -1) {
-            if (lseek(fd3, index * kPageSize + existing_data_cp_size,
+          FILE *fh = fopen(filename.c_str(), "r");
+          if (fh != nullptr) {
+            if (fseek(fh, index * kPageSize + existing_data_cp_size,
                       SEEK_SET) == 0) {
-              size_t items_read = read(
-                  fd3, final_data.data() + existing_data_cp_size, size_to_read);
+              size_t items_read =
+                  fread(final_data.data() + existing_data_cp_size, size_to_read,
+                        sizeof(char), fh);
               if (items_read != 1) {
                 // TODO(hari) @errorhandling read failed.
               }
-              if (close(fd3) != 0) {
-                // TODO(hari) @errorhandling close failed.
+              if (fclose(fh) != 0) {
+                // TODO(hari) @errorhandling fclose failed.
               }
             } else {
               // TODO(hari) @errorhandling fseek failed.
@@ -314,7 +315,7 @@ size_t write_internal(std::pair<AdapterStat, bool> &existing, const void *ptr,
   timespec_get(&ts, TIME_UTC);
   existing.first.st_mtim = ts;
   existing.first.st_ctim = ts;
-  mdm->Update(fd, existing.first);
+  mdm->Update(fp, existing.first);
   ret = data_offset;
   return ret;
 }
@@ -437,7 +438,7 @@ int HERMES_DECL(MPI_Finalize)(void) {
 int HERMES_DECL(open)(const char *path, int flags, ...) {
   int ret;
   int mode = 0;
-  if (flags & O_CREAT) {
+  if (flags & O_CREAT || flags & O_TMPFILE) {
     va_list arg;
     va_start(arg, flags);
     mode = va_arg(arg, int);
@@ -450,7 +451,7 @@ int HERMES_DECL(open)(const char *path, int flags, ...) {
     ret = open_internal(path, flags, mode);
   } else {
     MAP_OR_FAIL(open);
-    if (flags & O_CREAT) {
+    if (flags & O_CREAT || flags & O_TMPFILE) {
       ret = real_open_(path, flags, mode);
     } else {
       ret = real_open_(path, flags);
@@ -735,7 +736,7 @@ off64_t HERMES_DECL(lseek64)(int fd, off64_t offset, int whence) {
 int HERMES_DECL(fsync)(int fd) {
   int ret;
   if (hermes::adapter::IsTracked(fd)) {
-    LOG(INFO) << "Intercept close." << std::endl;
+    LOG(INFO) << "Intercept fsync." << std::endl;
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(fd);
     if (existing.second) {
@@ -766,6 +767,7 @@ int HERMES_DECL(fsync)(int fd) {
           file_vbucket.Destroy(ctx);
           existing.first.st_blobs.clear();
           INTERCEPTOR_LIST->hermes_flush_exclusion.erase(filename);
+          mdm->Update(fd, existing.first);
         }
       } else {
         LOG(INFO) << "File handler is opened by more than one fopen."
