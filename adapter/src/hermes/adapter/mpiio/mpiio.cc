@@ -545,9 +545,10 @@ int HERMES_DECL(MPI_File_close)(MPI_File *fh) {
         if (hash_total == hash_num * comm_size_call) {
           is_file_shared = true;
           LOG(INFO) << "File " << filename << " shared true " << std::endl;
-        } else
+        } else {
           LOG(INFO) << "File " << filename << " shared false " << hash_total
                     << " " << hash_num << std::endl;
+        }
         auto persist = INTERCEPTOR_LIST->Persists(filename);
         mdm->Delete(fh);
         const auto &blob_names = existing.first.st_blobs;
