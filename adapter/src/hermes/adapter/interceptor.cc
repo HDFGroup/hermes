@@ -96,6 +96,12 @@ bool IsTracked(FILE* fh) {
   return IsTracked(GetFilenameFromFP(fh));
 }
 
+bool IsTracked(int fd) {
+  if (hermes::adapter::exit) return false;
+  atexit(OnExit);
+  return IsTracked(GetFilenameFromFD(fd));
+}
+
 void OnExit(void) { hermes::adapter::exit = true; }
 
 }  // namespace hermes::adapter

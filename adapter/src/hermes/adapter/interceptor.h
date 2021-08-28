@@ -81,6 +81,15 @@ inline std::string GetFilenameFromFP(FILE* fh) {
   filename[r] = '\0';
   return filename;
 }
+inline std::string GetFilenameFromFD(int fd) {
+  const int kMaxSize = 0xFFF;
+  char proclnk[kMaxSize];
+  char filename[kMaxSize];
+  snprintf(proclnk, kMaxSize, "/proc/self/fd/%d", fd);
+  size_t r = readlink(proclnk, filename, kMaxSize);
+  filename[r] = '\0';
+  return filename;
+}
 /**
  * Interceptor list defines files and directory that should be either excluded
  * or included for interceptions.
@@ -138,6 +147,7 @@ struct InterceptorList {
   }
 
   bool Persists(FILE* fh) { return Persists(GetFilenameFromFP(fh)); }
+  bool Persists(int fd) { return Persists(GetFilenameFromFD(fd)); }
 
   bool Persists(std::string path) {
     if (adapter_mode == AdapterMode::DEFAULT) {
