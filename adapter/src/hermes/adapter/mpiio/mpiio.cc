@@ -13,8 +13,8 @@
 /**
  * Internal headers
  */
-#include <thread_pool.h>
 #include <hermes/adapter/mpiio.h>
+#include <thread_pool.h>
 
 #include <hermes/adapter/mpiio/mapper/balanced_mapper.cc>
 /**
@@ -218,8 +218,7 @@ std::pair<int, size_t> write_internal(std::pair<AdapterStat, bool> &existing,
         std::string process_local_blob_name =
             mdm->EncodeBlobNameLocal(item.second);
         auto vbucket_name = filename + "#" + item.second.blob_name_;
-        auto vbucket =
-            hapi::VBucket(vbucket_name, mdm->GetHermes(), false);
+        auto vbucket = hapi::VBucket(vbucket_name, mdm->GetHermes(), false);
         existing.first.st_vbuckets.emplace(vbucket_name);
         auto blob_names = vbucket.GetLinks(ctx);
         LOG(INFO) << "vbucket with blobname " << item.second.blob_name_
@@ -537,26 +536,29 @@ int HERMES_DECL(MPI_File_close)(MPI_File *fh) {
       if (existing.first.ref_count == 1) {
         auto filename = existing.first.st_bkid->GetName();
         bool is_file_shared = false;
-        int hash_total=0, hash_num = std::hash<std::string>()(filename) % 100;
-        MPI_Allreduce(&hash_num,&hash_total,1,MPI_INT,MPI_SUM,existing.first.comm);
+        int hash_total = 0, hash_num = std::hash<std::string>()(filename) % 100;
+        MPI_Allreduce(&hash_num, &hash_total, 1, MPI_INT, MPI_SUM,
+                      existing.first.comm);
         int comm_size_call;
 
         MPI_Comm_size(existing.first.comm, &comm_size_call);
-        if(hash_total == hash_num*comm_size_call) {
+        if (hash_total == hash_num * comm_size_call) {
           is_file_shared = true;
           LOG(INFO) << "File " << filename << " shared true " << std::endl;
-        }else LOG(INFO) << "File " << filename << " shared false " << hash_total << " " << hash_num << std::endl;
+        } else
+          LOG(INFO) << "File " << filename << " shared false " << hash_total
+                    << " " << hash_num << std::endl;
         auto persist = INTERCEPTOR_LIST->Persists(filename);
         mdm->Delete(fh);
         const auto &blob_names = existing.first.st_blobs;
-        auto blob_vbucket_vec = std::vector<hermes::api::VBucket*>();
+        auto blob_vbucket_vec = std::vector<hermes::api::VBucket *>();
         if (!blob_names.empty() && persist) {
           LOG(INFO) << "Adapter flushes " << blob_names.size()
                     << " blobs to filename:" << filename << "." << std::endl;
           auto vbucket_name = filename + "_" + std::to_string(mdm->rank);
           INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
-          hermes::api::VBucket file_vbucket(vbucket_name, mdm->GetHermes(), true,
-                                            ctx);
+          hermes::api::VBucket file_vbucket(vbucket_name, mdm->GetHermes(),
+                                            true, ctx);
           auto offset_map = std::unordered_map<std::string, hermes::u64>();
 
           for (auto blob_name : blob_names) {
@@ -579,13 +581,15 @@ int HERMES_DECL(MPI_File_close)(MPI_File *fh) {
           file_vbucket.Destroy(ctx);
 
           for (const auto &vbucket : existing.first.st_vbuckets) {
-             auto blob_vbucket=new hermes::api::VBucket(vbucket, mdm->GetHermes(), false,
-                                              ctx);
+            auto blob_vbucket =
+                new hermes::api::VBucket(vbucket, mdm->GetHermes(), false, ctx);
             auto blob_names_v = blob_vbucket->GetLinks(ctx);
             for (auto &blob_name : blob_names_v) {
-              blob_vbucket->Unlink(blob_name, existing.first.st_bkid->GetName());
+              blob_vbucket->Unlink(blob_name,
+                                   existing.first.st_bkid->GetName());
             }
-            if(is_file_shared && mdm->rank % 2 == 1) blob_vbucket->Release(ctx);
+            if (is_file_shared && mdm->rank % 2 == 1)
+              blob_vbucket->Release(ctx);
             blob_vbucket_vec.push_back(blob_vbucket);
           }
           for (auto &blob_name : existing.first.st_blobs) {
@@ -596,12 +600,11 @@ int HERMES_DECL(MPI_File_close)(MPI_File *fh) {
         }
         MPI_Barrier(existing.first.comm);
         for (const auto &blob_vbucket : blob_vbucket_vec) {
-          if(!is_file_shared || mdm->rank % 2 == 0)
-          blob_vbucket->Destroy();
+          if (!is_file_shared || mdm->rank % 2 == 0) blob_vbucket->Destroy();
           free(blob_vbucket);
         }
         if (is_file_shared) {
-            existing.first.st_bkid->Release(ctx);
+          existing.first.st_bkid->Release(ctx);
         }
         MPI_Barrier(existing.first.comm);
         existing.first.st_bkid->Destroy(ctx);
