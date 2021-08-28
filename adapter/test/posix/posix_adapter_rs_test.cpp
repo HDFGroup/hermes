@@ -117,7 +117,7 @@ TEST_CASE("BatchedReadRandomRSRangeSmall",
       size_t offset =
           rand_r(&info.offset_seed) % (info.total_size - info.small_max);
       test::test_seek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == offset);
+      REQUIRE(((size_t)test::status_orig) == offset);
       size_t request_size =
           info.small_min + (rand_r(&info.rs_seed) % info.small_max);
       std::string data(request_size, '1');
@@ -147,7 +147,7 @@ TEST_CASE("BatchedUpdateRandomRSRangeSmall",
       size_t offset =
           rand_r(&info.offset_seed) % (info.total_size - info.small_max);
       test::test_seek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == offset);
+      REQUIRE(((size_t)test::status_orig) == offset);
       size_t request_size =
           info.small_min + (rand_r(&info.rs_seed) % info.small_max);
       std::string data(request_size, '1');
@@ -176,7 +176,7 @@ TEST_CASE("BatchedReadStrideFixedRSRangeSmall",
       size_t offset =
           (i * info.stride_size) % (info.total_size - info.small_max);
       test::test_seek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == offset);
+      REQUIRE(((size_t)test::status_orig) == offset);
       size_t request_size =
           info.small_min + (rand_r(&info.rs_seed) % info.small_max);
       std::string data(request_size, '1');
@@ -205,7 +205,7 @@ TEST_CASE("BatchedUpdateStrideFixedRSRangeSmall",
       size_t offset =
           (i * info.stride_size) % (info.total_size - info.small_max);
       test::test_seek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == offset);
+      REQUIRE(((size_t)test::status_orig) == offset);
       size_t request_size =
           info.small_min + (rand_r(&info.rs_seed) % info.small_max);
       std::string data(request_size, '1');
@@ -234,7 +234,7 @@ TEST_CASE("BatchedReadStrideDynamicRSRangeSmall",
       size_t offset = GetRandomOffset(i, info.offset_seed, info.stride_size,
                                       info.total_size - info.small_max);
       test::test_seek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == offset);
+      REQUIRE(((size_t)test::status_orig) == offset);
       size_t request_size =
           info.small_min + (rand_r(&info.rs_seed) % info.small_max);
       std::string data(request_size, '1');
@@ -263,7 +263,7 @@ TEST_CASE("BatchedUpdateStrideDynamicRSRangeSmall",
       size_t offset = GetRandomOffset(i, info.offset_seed, info.stride_size,
                                       info.total_size - info.small_max);
       test::test_seek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == offset);
+      REQUIRE(((size_t)test::status_orig) == offset);
       size_t request_size =
           info.small_min + (rand_r(&info.rs_seed) % info.small_max);
       std::string data(request_size, '1');
@@ -292,7 +292,7 @@ TEST_CASE("BatchedReadStrideNegativeRSRangeSmall",
       size_t offset = (info.total_size - i * info.stride_size) %
                       (info.total_size - info.small_max);
       test::test_seek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == offset);
+      REQUIRE(((size_t)test::status_orig) == offset);
       size_t request_size =
           info.small_min + (rand_r(&info.rs_seed) % info.small_max);
       std::string data(request_size, '1');
@@ -321,7 +321,7 @@ TEST_CASE("BatchedUpdateStrideNegativeRSRangeSmall",
       size_t offset = info.total_size - ((i * info.stride_size) %
                                          (info.total_size - info.small_max));
       test::test_seek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == offset);
+      REQUIRE(((size_t)test::status_orig) == offset);
       size_t request_size =
           info.small_min + (rand_r(&info.rs_seed) % info.small_max);
       std::string data(request_size, '1');
@@ -361,7 +361,7 @@ TEST_CASE("BatchedReadStride2DRSRangeSmall",
       size_t offset = (current_cell_col * cell_stride + prev_cell_row * cols) %
                       (info.total_size - info.small_max);
       test::test_seek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == offset);
+      REQUIRE(((size_t)test::status_orig) == offset);
       size_t request_size =
           info.small_min + (rand_r(&info.rs_seed) % info.small_max);
       std::string data(request_size, '1');
@@ -401,7 +401,7 @@ TEST_CASE("BatchedUpdateStride2DRSRangeSmall",
       size_t offset = (current_cell_col * cell_stride + prev_cell_row * cols) %
                       (info.total_size - info.small_max);
       test::test_seek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == offset);
+      REQUIRE(((size_t)test::status_orig) == offset);
       size_t request_size =
           info.small_min + (rand_r(&info.rs_seed) % info.small_max);
       std::string data(request_size, '1');
@@ -528,7 +528,7 @@ TEST_CASE("BatchedReadRandomRSRangeMedium",
       size_t offset =
           rand_r(&info.offset_seed) % (info.total_size - info.medium_max);
       test::test_seek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == offset);
+      REQUIRE(((size_t)test::status_orig) == offset);
       size_t request_size =
           info.medium_min + (rand_r(&info.rs_seed) % info.medium_max);
       std::string data(request_size, '1');
@@ -558,7 +558,7 @@ TEST_CASE("BatchedUpdateRandomRSRangeMedium",
       size_t offset =
           rand_r(&info.offset_seed) % (info.total_size - info.medium_max);
       test::test_seek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == offset);
+      REQUIRE(((size_t)test::status_orig) == offset);
       size_t request_size =
           info.medium_min + (rand_r(&info.rs_seed) % info.medium_max);
       std::string data(request_size, '1');
@@ -587,7 +587,7 @@ TEST_CASE("BatchedReadStrideFixedRSRangeMedium",
       size_t offset =
           (i * info.stride_size) % (info.total_size - info.medium_max);
       test::test_seek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == offset);
+      REQUIRE(((size_t)test::status_orig) == offset);
       size_t request_size =
           info.medium_min + (rand_r(&info.rs_seed) % info.medium_max);
       std::string data(request_size, '1');
@@ -616,7 +616,7 @@ TEST_CASE("BatchedUpdateStrideFixedRSRangeMedium",
       size_t offset =
           (i * info.stride_size) % (info.total_size - info.medium_max);
       test::test_seek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == offset);
+      REQUIRE(((size_t)test::status_orig) == offset);
       size_t request_size =
           info.medium_min + (rand_r(&info.rs_seed) % info.medium_max);
       std::string data(request_size, '1');
@@ -645,7 +645,7 @@ TEST_CASE("BatchedReadStrideDynamicRSRangeMedium",
       size_t offset = GetRandomOffset(i, info.offset_seed, info.stride_size,
                                       info.total_size - info.medium_max);
       test::test_seek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == offset);
+      REQUIRE(((size_t)test::status_orig) == offset);
       size_t request_size =
           info.medium_min + (rand_r(&info.rs_seed) % info.medium_max);
       std::string data(request_size, '1');
@@ -674,7 +674,7 @@ TEST_CASE("BatchedUpdateStrideDynamicRSRangeMedium",
       size_t offset = GetRandomOffset(i, info.offset_seed, info.stride_size,
                                       info.total_size - info.medium_max);
       test::test_seek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == offset);
+      REQUIRE(((size_t)test::status_orig) == offset);
       size_t request_size =
           info.medium_min + (rand_r(&info.rs_seed) % info.medium_max);
       std::string data(request_size, '1');
@@ -703,7 +703,7 @@ TEST_CASE("BatchedReadStrideNegativeRSRangeMedium",
       size_t offset = (info.total_size - i * info.stride_size) %
                       (info.total_size - info.medium_max);
       test::test_seek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == offset);
+      REQUIRE(((size_t)test::status_orig) == offset);
       size_t request_size =
           info.medium_min + (rand_r(&info.rs_seed) % info.medium_max);
       std::string data(request_size, '1');
@@ -732,7 +732,7 @@ TEST_CASE("BatchedUpdateStrideNegativeRSRangeMedium",
       size_t offset = info.total_size - ((i * info.stride_size) %
                                          (info.total_size - info.medium_max));
       test::test_seek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == offset);
+      REQUIRE(((size_t)test::status_orig) == offset);
       size_t request_size =
           info.medium_min + (rand_r(&info.rs_seed) % info.medium_max);
       std::string data(request_size, '1');
@@ -772,7 +772,7 @@ TEST_CASE("BatchedReadStride2DRSRangeMedium",
       size_t offset = (current_cell_col * cell_stride + prev_cell_row * cols) %
                       (info.total_size - info.medium_max);
       test::test_seek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == offset);
+      REQUIRE(((size_t)test::status_orig) == offset);
       size_t request_size =
           info.medium_min + (rand_r(&info.rs_seed) % info.medium_max);
       std::string data(request_size, '1');
@@ -812,7 +812,7 @@ TEST_CASE("BatchedUpdateStride2DRSRangeMedium",
       size_t offset = (current_cell_col * cell_stride + prev_cell_row * cols) %
                       (info.total_size - info.medium_max);
       test::test_seek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == offset);
+      REQUIRE(((size_t)test::status_orig) == offset);
       size_t request_size =
           info.medium_min + (rand_r(&info.rs_seed) % info.medium_max);
       std::string data(request_size, '1');
@@ -939,7 +939,7 @@ TEST_CASE("BatchedReadRandomRSRangeLarge",
       size_t offset =
           rand_r(&info.offset_seed) % (info.total_size - info.large_max);
       test::test_seek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == offset);
+      REQUIRE(((size_t)test::status_orig) == offset);
       size_t request_size =
           (info.large_min + (rand_r(&info.rs_seed) % info.large_max)) %
           (info.total_size - test::status_orig);
@@ -970,7 +970,7 @@ TEST_CASE("BatchedUpdateRandomRSRangeLarge",
       size_t offset =
           rand_r(&info.offset_seed) % (info.total_size - info.large_max);
       test::test_seek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == offset);
+      REQUIRE(((size_t)test::status_orig) == offset);
       size_t request_size =
           info.large_min + (rand_r(&info.rs_seed) % info.large_max);
       std::string data(request_size, '1');
@@ -999,7 +999,7 @@ TEST_CASE("BatchedReadStrideFixedRSRangeLarge",
       size_t offset =
           (i * info.stride_size) % (info.total_size - info.large_max);
       test::test_seek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == offset);
+      REQUIRE(((size_t)test::status_orig) == offset);
       size_t request_size =
           info.large_min + (rand_r(&info.rs_seed) % info.large_max);
       std::string data(request_size, '1');
@@ -1028,7 +1028,7 @@ TEST_CASE("BatchedUpdateStrideFixedRSRangeLarge",
       size_t offset =
           (i * info.stride_size) % (info.total_size - info.large_max);
       test::test_seek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == offset);
+      REQUIRE(((size_t)test::status_orig) == offset);
       size_t request_size =
           info.large_min + (rand_r(&info.rs_seed) % info.large_max);
       std::string data(request_size, '1');
@@ -1057,7 +1057,7 @@ TEST_CASE("BatchedReadStrideDynamicRSRangeLarge",
       size_t offset = GetRandomOffset(i, info.offset_seed, info.stride_size,
                                       info.total_size - info.large_max);
       test::test_seek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == offset);
+      REQUIRE(((size_t)test::status_orig) == offset);
       size_t request_size =
           info.large_min + (rand_r(&info.rs_seed) % info.large_max);
       std::string data(request_size, '1');
@@ -1086,7 +1086,7 @@ TEST_CASE("BatchedUpdateStrideDynamicRSRangeLarge",
       size_t offset = GetRandomOffset(i, info.offset_seed, info.stride_size,
                                       info.total_size - info.large_max);
       test::test_seek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == offset);
+      REQUIRE(((size_t)test::status_orig) == offset);
       size_t request_size =
           info.large_min + (rand_r(&info.rs_seed) % info.large_max);
       std::string data(request_size, '1');
@@ -1115,7 +1115,7 @@ TEST_CASE("BatchedReadStrideNegativeRSRangeLarge",
       size_t offset = (info.total_size - i * info.stride_size) %
                       (info.total_size - info.large_max);
       test::test_seek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == offset);
+      REQUIRE(((size_t)test::status_orig) == offset);
       size_t request_size =
           (info.large_min + (rand_r(&info.rs_seed) % info.large_max)) %
           (info.total_size - info.large_max);
@@ -1145,7 +1145,7 @@ TEST_CASE("BatchedUpdateStrideNegativeRSRangeLarge",
       size_t offset = info.total_size - ((i * info.stride_size) %
                                          (info.total_size - info.large_max));
       test::test_seek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == offset);
+      REQUIRE(((size_t)test::status_orig) == offset);
       size_t request_size =
           info.large_min + (rand_r(&info.rs_seed) % info.large_max);
       std::string data(request_size, '1');
@@ -1185,7 +1185,7 @@ TEST_CASE("BatchedReadStride2DRSRangeLarge",
       size_t offset = (current_cell_col * cell_stride + prev_cell_row * cols) %
                       (info.total_size - info.large_max);
       test::test_seek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == offset);
+      REQUIRE(((size_t)test::status_orig) == offset);
       size_t request_size =
           info.large_min + (rand_r(&info.rs_seed) % info.large_max);
       std::string data(request_size, '1');
@@ -1225,7 +1225,7 @@ TEST_CASE("BatchedUpdateStride2DRSRangeLarge",
       size_t offset = (current_cell_col * cell_stride + prev_cell_row * cols) %
                       (info.total_size - info.large_max);
       test::test_seek(offset, SEEK_SET);
-      REQUIRE(test::status_orig == offset);
+      REQUIRE(((size_t)test::status_orig) == offset);
       size_t request_size =
           info.large_min + (rand_r(&info.rs_seed) % info.large_max);
       std::string data(request_size, '1');

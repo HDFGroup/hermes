@@ -167,7 +167,6 @@ int posttest(bool compare_data = true) {
       size_t read_d1 = fread(d1.data(), sizeof(unsigned char), size, fh1);
       REQUIRE(read_d1 == size);
       int status = fclose(fh1);
-      int len = strlen(reinterpret_cast<const char*>(d1.data()));
       REQUIRE(status == 0);
 
       FILE* fh2 = fopen(info.existing_file_cmp.c_str(), "r");
