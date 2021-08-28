@@ -602,7 +602,7 @@ int HERMES_DECL(MPI_File_close)(MPI_File *fh) {
         MPI_Barrier(existing.first.comm);
         for (const auto &blob_vbucket : blob_vbucket_vec) {
           if (!is_file_shared || mdm->rank % 2 == 0) blob_vbucket->Destroy();
-          free(blob_vbucket);
+          delete(blob_vbucket);
         }
         if (is_file_shared) {
           existing.first.st_bkid->Release(ctx);
