@@ -218,7 +218,7 @@ std::pair<int, size_t> write_internal(std::pair<AdapterStat, bool> &existing,
         std::string process_local_blob_name =
             mdm->EncodeBlobNameLocal(item.second);
         auto vbucket_name = filename + "#" + item.second.blob_name_;
-        auto vbucket = hapi::VBucket(vbucket_name, mdm->GetHermes(), false);
+        auto vbucket = hapi::VBucket(vbucket_name, mdm->GetHermes());
         existing.first.st_vbuckets.emplace(vbucket_name);
         auto blob_names = vbucket.GetLinks(ctx);
         LOG(INFO) << "vbucket with blobname " << item.second.blob_name_
@@ -382,7 +382,7 @@ std::pair<int, size_t> read_internal(std::pair<AdapterStat, bool> &existing,
       }
     } else {
       auto vbucket_name = filename + "#" + item.second.blob_name_;
-      hapi::VBucket vbucket(vbucket_name, mdm->GetHermes(), false);
+      hapi::VBucket vbucket(vbucket_name, mdm->GetHermes());
       auto blob_names = vbucket.GetLinks(ctx);
       if (!blob_names.empty()) {
         LOG(INFO) << "vbucket with blobname " << item.second.blob_name_
@@ -559,7 +559,7 @@ int HERMES_DECL(MPI_File_close)(MPI_File *fh) {
           auto vbucket_name = filename + "_" + std::to_string(mdm->rank);
           INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
           hermes::api::VBucket file_vbucket(vbucket_name, mdm->GetHermes(),
-                                            true, ctx);
+                                            ctx);
           auto offset_map = std::unordered_map<std::string, hermes::u64>();
 
           for (auto blob_name : blob_names) {
@@ -585,7 +585,7 @@ int HERMES_DECL(MPI_File_close)(MPI_File *fh) {
 
           for (const auto &vbucket : existing.first.st_vbuckets) {
             auto blob_vbucket =
-                new hermes::api::VBucket(vbucket, mdm->GetHermes(), false, ctx);
+                new hermes::api::VBucket(vbucket, mdm->GetHermes(), ctx);
             auto blob_names_v = blob_vbucket->GetLinks(ctx);
             for (auto &blob_name : blob_names_v) {
               blob_vbucket->Unlink(blob_name,
