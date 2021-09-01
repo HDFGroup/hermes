@@ -1436,40 +1436,27 @@ size_t LocalWriteBufferById(SharedMemoryContext *context, BufferID id,
   Device *device = GetDeviceFromHeader(context, header);
   size_t write_size = header->used;
 
-  // TODO(chogan): Should this be a TicketMutex? It seems that at any
-  // given time, only the DataOrganizer and an application core will
-  // be trying to write to/from the same BufferID. In that case, it's
-  // first come first serve. However, if it turns out that more
-  // threads will be trying to lock the buffer, we may need to enforce
-  // ordering.
-  LockBuffer(header);
-
   u8 *at = (u8 *)blob.data + offset;
   if (device->is_byte_addressable) {
     u8 *dest = GetRamBufferPtr(context, header->id);
     memcpy(dest, at, write_size);
   } else {
     int slab_index = GetSlabIndexFromHeader(context, header);
-    FILE *file = context->open_streams[device->id][slab_index];
-    if (!file) {
-      // TODO(chogan): Check number of opened files against maximum allowed.
-      // May have to close something.
-      const char *filename =
-        context->buffering_filenames[device->id][slab_index].c_str();
-      file = fopen(filename, "r+");
-      context->open_streams[device->id][slab_index] = file;
-    }
-    fseek(file, header->data_offset, SEEK_SET);
-    size_t items_written = fwrite(at, write_size, 1, file);
-    if (items_written != 1) {
+    const char *filename =
+      context->buffering_filenames[device->id][slab_index].c_str();
+    int fd = open(filename, O_WRONLY);
+    flock(fd, LOCK_EX);
+    ssize_t bytes_written = pwrite(fd, at, write_size, header->data_offset);
+    // TODO(chogan): @errorhandling
+    assert((size_t)bytes_written == write_size);
+    if (bytes_written == -1) {
       FailedLibraryCall("fwrite");
     }
-    if (fflush(file) != 0) {
-      FailedLibraryCall("fflush");
-    }
-    // fsync(fileno(file));
+
+    flock(fd, LOCK_UN);
+    // TODO(chogan): @errorhandling
+    assert(close(fd) == 0);
   }
-  UnlockBuffer(header);
 
   return write_size;
 }
@@ -1511,37 +1498,24 @@ size_t LocalReadBufferById(SharedMemoryContext *context, BufferID id,
   size_t result = 0;
 
   if (read_size > 0) {
-    // TODO(chogan): Should this be a TicketMutex? It seems that at any
-    // given time, only the DataOrganizer and an application core will
-    // be trying to write to/from the same BufferID. In that case, it's
-    // first come first serve. However, if it turns out that more
-    // threads will be trying to lock the buffer, we may need to enforce
-    // ordering.
-    // LockBuffer(header);
-
     if (device->is_byte_addressable) {
       u8 *src = GetRamBufferPtr(context, header->id);
       memcpy((u8 *)blob->data + read_offset, src, read_size);
       result = read_size;
     } else {
       int slab_index = GetSlabIndexFromHeader(context, header);
-      FILE *file = context->open_streams[device->id][slab_index];
-      if (!file) {
-        // TODO(chogan): Check number of opened files against maximum allowed.
-        // May have to close something.
-        const char *filename =
-          context->buffering_filenames[device->id][slab_index].c_str();
-        file = fopen(filename, "r+");
-      }
-      fseek(file, header->data_offset, SEEK_SET);
-      size_t items_read = fread((u8 *)blob->data + read_offset, read_size, 1,
-                                file);
-      if (items_read != 1) {
-        FailedLibraryCall("fread");
-      }
-      result = items_read * read_size;
+      const char *filename =
+        context->buffering_filenames[device->id][slab_index].c_str();
+      int fd = open(filename, O_RDONLY);
+      flock(fd, LOCK_SH);
+      ssize_t bytes_read = pread(fd, (u8 *)blob->data + read_offset, read_size,
+                                 header->data_offset);
+      flock(fd, LOCK_UN);
+      // TODO(chogan): @errorhandling
+      assert(bytes_read == (ssize_t)read_size);
+      assert(close(fd) == 0);
+      result = bytes_read;
     }
-    // UnlockBuffer(header);
   }
 
   return result;
@@ -1789,7 +1763,6 @@ api::Status StdIoPersistBlob(SharedMemoryContext *context, RpcContext *rpc,
   api::Status result;
 
   if (fd > -1) {
-    LockBlob(context, rpc, blob_id);
     ScopedTemporaryMemory scratch(arena);
     size_t blob_size = GetBlobSizeById(context, rpc, arena, blob_id);
     // TODO(chogan): @optimization We could use the actual Hermes buffers as
@@ -1798,9 +1771,17 @@ api::Status StdIoPersistBlob(SharedMemoryContext *context, RpcContext *rpc,
     api::Blob data(blob_size);
     size_t num_bytes = blob_size > 0 ? sizeof(data[0]) * blob_size : 0;
     if (ReadBlobById(context, rpc, arena, data, blob_id) == blob_size) {
-      // LOG(INFO) << "Writing " << num_bytes << " bytes of '" << data[0]
-      //           << "' at offset " << offset << std::endl;
+      // EnsureNoNull(data);
+      LOG(WARNING) << "Writing: "
+                   << "num_bytes=" << num_bytes << ", "
+                   << "fd=" << fd << ", "
+                   << "offset=" << offset << ", "
+                   << "blob_id=" << blob_id.bits.buffer_ids_offset
+                   << std::endl;
+      // assert(lseek(fd, offset, SEEK_SET) == offset);
       assert(pwrite(fd, data.data(), num_bytes, offset) == (ssize_t)num_bytes);
+      // assert(write(fd, data.data(), num_bytes) == (ssize_t)num_bytes);
+      // fsync(fd);
       // if (offset == -1 || fseek(file, offset, SEEK_SET) == 0) {
       //   LOG(INFO) << "STDIO Flush to file: " << " offset: " << offset
       //             << " of size:" << num_bytes << "." << std::endl;
@@ -1813,7 +1794,6 @@ api::Status StdIoPersistBlob(SharedMemoryContext *context, RpcContext *rpc,
       //   LOG(ERROR) << result.Msg() << strerror(errno);
       // }
     }
-    UnlockBlob(context, rpc, blob_id);
   } else {
     result = INVALID_FILE;
     LOG(ERROR) << result.Msg();

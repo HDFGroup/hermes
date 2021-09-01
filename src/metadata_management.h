@@ -416,22 +416,22 @@ void LocalIncrementBlobStats(MetadataManager *mdm, BlobID blob_id);
 /**
  *
  */
-void LockBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id);
+bool LockBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id);
 
 /**
  *
  */
-void UnlockBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id);
+bool UnlockBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id);
 
 /**
  *
  */
-void LocalLockBlob(SharedMemoryContext *context, BlobID blob_id);
+bool LocalLockBlob(SharedMemoryContext *context, BlobID blob_id);
 
 /**
  *
  */
-void LocalUnlockBlob(SharedMemoryContext *context, BlobID blob_id);
+bool LocalUnlockBlob(SharedMemoryContext *context, BlobID blob_id);
 }  // namespace hermes
 
 #endif  // HERMES_METADATA_MANAGEMENT_H_

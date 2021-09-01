@@ -66,9 +66,9 @@ void BoDelete(SharedMemoryContext *context, BufferID src);
 
 void FlushBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id,
                const std::string &filename, u64 offset);
-bool EnqueueFlushingTask(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id,
-                         // const std::string &blob_name,
-                         const std::string &filename, u64 offset);
+bool EnqueueFlushingTask(SharedMemoryContext *context, RpcContext *rpc,
+                         BlobID blob_id, const std::string &filename,
+                         u64 offset);
 void ShutdownBufferOrganizer(SharedMemoryContext *context);
 void IncrementFlushCount(SharedMemoryContext *context, RpcContext *rpc,
                          const std::string &vbkt_name);

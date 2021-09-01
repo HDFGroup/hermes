@@ -10,6 +10,8 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+#include "sys/file.h"
+
 #include "hermes.h"
 #include "buffer_organizer.h"
 #include "data_placement_engine.h"
@@ -72,39 +74,45 @@ bool LocalEnqueueBoTask(SharedMemoryContext *context, BoTask task,
 }
 
 void FlushBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id,
-               // const std::string &blob_name,
                const std::string &filename, u64 offset) {
-  // TODO(chogan): @errorhandling
-
-  int open_flags = 0;
-  mode_t open_mode = 0;
-  if (access(filename.c_str(), F_OK) == 0) {
-    open_flags = O_RDWR;
-  } else {
-    open_flags = O_RDWR | O_CREAT | O_TRUNC;
-    open_mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
-  }
-
-  int fd = open(filename.c_str(), open_flags, open_mode);
-  if (fd != -1) {
-    // VLOG(1) << "Flushing Blob " << blob_name << " to file "
-    //         << filename << " at offset " << offset << "\n";
-
-    // TODO(chogan): ScopedArena
-    Arena local_arena = InitArenaAndAllocate(KILOBYTES(4));
-    StdIoPersistBlob(context, rpc, &local_arena, blob_id, fd, offset);
-    // VLOG(1) << "Flushed Blob " << blob_name << " to file "
-    //         << filename << " at offset " << offset << "\n";
-    DestroyArena(&local_arena);
-
-    DecrementFlushCount(context, rpc, filename);
-
-    if (close(fd) != 0) {
-      FailedLibraryCall("close");
+  if (LockBlob(context, rpc, blob_id)) {
+    int open_flags = 0;
+    mode_t open_mode = 0;
+    if (access(filename.c_str(), F_OK) == 0) {
+      open_flags = O_WRONLY;
+    } else {
+      open_flags = O_WRONLY | O_CREAT | O_TRUNC;
+      open_mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
     }
 
-  } else {
-    FailedLibraryCall("open");
+    int fd = open(filename.c_str(), open_flags, open_mode);
+    if (fd != -1) {
+      VLOG(1) << "Flushing BlobID " << blob_id.as_int << " to file "
+              << filename << " at offset " << offset << "\n";
+
+      // TODO(chogan): ScopedArena
+      Arena local_arena = InitArenaAndAllocate(KILOBYTES(4));
+
+      if (flock(fd, LOCK_EX) != 0) {
+        FailedLibraryCall("flock");
+      }
+
+      StdIoPersistBlob(context, rpc, &local_arena, blob_id, fd, offset);
+
+      if (flock(fd, LOCK_UN) != 0) {
+        FailedLibraryCall("flock");
+      }
+
+      if (close(fd) != 0) {
+        FailedLibraryCall("close");
+      }
+
+      DestroyArena(&local_arena);
+      DecrementFlushCount(context, rpc, filename);
+    } else {
+      FailedLibraryCall("open");
+    }
+    UnlockBlob(context, rpc, blob_id);
   }
 
   // TODO(chogan):
@@ -115,9 +123,9 @@ void FlushBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id,
   // }
 }
 
-bool EnqueueFlushingTask(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id,
-                         // const std::string &blob_name,
-                         const std::string &filename, u64 offset) {
+bool EnqueueFlushingTask(SharedMemoryContext *context, RpcContext *rpc,
+                         BlobID blob_id, const std::string &filename,
+                         u64 offset) {
   bool result = false;
 
   if (!BlobIsInSwap(blob_id)) {

@@ -14,6 +14,7 @@
 
 #include <fcntl.h>
 #include <limits.h>
+#include <sys/file.h>
 
 #include <hermes/adapter/interceptor.cc>
 #include <hermes/adapter/stdio/mapper/balanced_mapper.cc>
@@ -67,8 +68,10 @@ size_t perform_file_read(const char *filename, size_t file_offset, void *ptr,
   FILE *fh = fopen(filename, "r");
   size_t read_size = 0;
   if (fh != nullptr) {
+    flock(fileno(fh), LOCK_SH);
     if (fseek(fh, file_offset, SEEK_SET) == 0) {
       read_size = fread((char *)ptr + ptr_offset, sizeof(char), size, fh);
+      flock(fileno(fh), LOCK_UN);
       if (fclose(fh) != 0) {
         hermes::FailedLibraryCall("fclose");
       }
@@ -218,19 +221,14 @@ void ReadGap(const std::string &filename, size_t seek_offset, u8 *read_ptr,
     LOG(INFO) << "Blob has a gap in write. read gap from original file."
               << std::endl;
     INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
-    FILE *fh = fopen(filename.c_str(), "r");
-    if (fh != nullptr) {
-      if (fseek(fh, seek_offset, SEEK_SET) == 0) {
-        size_t items_read = fread(read_ptr, read_size, sizeof(char), fh);
-        if (items_read != 1) {
-          hermes::FailedLibraryCall("fread");
-        }
-        if (fclose(fh) != 0) {
-          hermes::FailedLibraryCall("fclose");
-        }
-      } else {
-        hermes::FailedLibraryCall("fseek");
-      }
+    int fd = open(filename.c_str(), O_RDONLY);
+    if (fd) {
+      flock(fd, LOCK_SH);
+      ssize_t bytes_read = pread(fd, read_ptr, read_size, seek_offset);
+      // TODO(chogan): @errorhandling
+      assert(bytes_read = (ssize_t)read_size);
+      flock(fd, LOCK_UN);
+      assert(close(fd) == 0);
     } else {
       hermes::FailedLibraryCall("fopen");
     }
@@ -553,7 +551,6 @@ int HERMES_DECL(fflush)(FILE *fp) {
       if (!blob_names.empty() && INTERCEPTOR_LIST->Persists(fp)) {
         if (PersistEagerly(filename)) {
           existing.first.st_vbkt->WaitForBackgroundFlush();
-          existing.first.st_vbkt->Destroy();
         } else {
           LOG(INFO) << "File handler is opened by adapter." << std::endl;
           hapi::Context ctx;

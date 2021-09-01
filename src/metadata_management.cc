@@ -726,16 +726,8 @@ void LocalDestroyBlobByName(SharedMemoryContext *context, RpcContext *rpc,
                             const char *blob_name, BlobID blob_id,
                             BucketID bucket_id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
-  // BlobInfo *blob_info = GetBlobInfoPtr(mdm, blob_id);
-  // // NOTE(chogan): Holding the mdm->blob_info_map_mutex
-  // if (blob_info) {
-  //   // NOTE(chogan): Take the Blob lock to ensure that all outstanding
-  //   // background operations on the Blob complete before it's deleted. We would
-  //   // call LockBlob, but we have to keep ahold of the blob_info_map_mutex so
-  //   // that other BO tasks don't queue up on the Blob lock.
-  //   BeginTicketMutex(&blob_info->lock);
-  // }
 
+  // NOTE(chogan): Holding the mdm->blob_info_map_mutex
   WaitForOutstandingBlobOps(mdm, blob_id);
 
   if (!BlobIsInSwap(blob_id)) {
@@ -1394,40 +1386,58 @@ int GetNumOutstandingFlushingTasks(SharedMemoryContext *context,
   return result;
 }
 
-void LocalLockBlob(SharedMemoryContext *context, BlobID blob_id) {
+bool LocalLockBlob(SharedMemoryContext *context, BlobID blob_id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   BlobInfo *blob_info = GetBlobInfoPtr(mdm, blob_id);
+  bool result = false;
+
   if (blob_info) {
     BeginTicketMutex(&blob_info->lock);
+    result = true;
   }
+
   ReleaseBlobInfoPtr(mdm);
+
+  return result;
 }
 
-void LocalUnlockBlob(SharedMemoryContext *context, BlobID blob_id) {
+bool LocalUnlockBlob(SharedMemoryContext *context, BlobID blob_id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   BlobInfo *blob_info = GetBlobInfoPtr(mdm, blob_id);
+  bool result = false;
+
   if (blob_info) {
     EndTicketMutex(&blob_info->lock);
+    result = true;
   }
+
   ReleaseBlobInfoPtr(mdm);
+
+  return result;
 }
 
-void LockBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id) {
+bool LockBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id) {
   u32 target_node = GetBlobNodeId(blob_id);
+  bool result = false;
   if (target_node == rpc->node_id) {
-    LocalLockBlob(context, blob_id);
+    result = LocalLockBlob(context, blob_id);
   } else {
-    RpcCall<bool>(rpc, target_node, "RemoteLockBlob", blob_id);
+    result = RpcCall<bool>(rpc, target_node, "RemoteLockBlob", blob_id);
   }
+
+  return result;
 }
 
-void UnlockBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id) {
+bool UnlockBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id) {
   u32 target_node = GetBlobNodeId(blob_id);
+  bool result = false;
   if (target_node == rpc->node_id) {
-    LocalUnlockBlob(context, blob_id);
+    result = LocalUnlockBlob(context, blob_id);
   } else {
-    RpcCall<bool>(rpc, target_node, "RemoteUnlockBlob", blob_id);
+    result = RpcCall<bool>(rpc, target_node, "RemoteUnlockBlob", blob_id);
   }
+
+  return result;
 }
 
 }  // namespace hermes
