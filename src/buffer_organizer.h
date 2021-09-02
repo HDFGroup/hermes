@@ -59,6 +59,11 @@ struct BufferOrganizer {
 
 bool LocalEnqueueBoTask(SharedMemoryContext *context, BoTask task,
                         BoPriority priority = BoPriority::kLow);
+bool LocalEnqueueFlushingTask(SharedMemoryContext *context, RpcContext *rpc,
+                              BlobID blob_id, const std::string &filename,
+                              u64 offset);
+bool EnqueueFlushingTask(RpcContext *rpc, BlobID blob_id,
+                         const std::string &filename, u64 offset);
 
 void BoMove(SharedMemoryContext *context, BufferID src, TargetID dest);
 void BoCopy(SharedMemoryContext *context, BufferID src, TargetID dest);
@@ -66,10 +71,8 @@ void BoDelete(SharedMemoryContext *context, BufferID src);
 
 void FlushBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id,
                const std::string &filename, u64 offset);
-bool EnqueueFlushingTask(SharedMemoryContext *context, RpcContext *rpc,
-                         BlobID blob_id, const std::string &filename,
-                         u64 offset);
-void ShutdownBufferOrganizer(SharedMemoryContext *context);
+void LocalShutdownBufferOrganizer(SharedMemoryContext *context);
+void ShutdownBufferOrganizer(RpcContext *rpc);
 void IncrementFlushCount(SharedMemoryContext *context, RpcContext *rpc,
                          const std::string &vbkt_name);
 void DecrementFlushCount(SharedMemoryContext *context, RpcContext *rpc,

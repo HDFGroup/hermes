@@ -21,10 +21,14 @@ namespace hermes {
 BufferOrganizer::BufferOrganizer(int num_threads) : pool(num_threads) {
 }
 
-void ShutdownBufferOrganizer(SharedMemoryContext *context) {
+void LocalShutdownBufferOrganizer(SharedMemoryContext *context) {
   // NOTE(chogan): ThreadPool destructor needs to be called manually since we
   // allocated the BO instance with placement new.
   context->bo->pool.~ThreadPool();
+}
+
+void ShutdownBufferOrganizer(RpcContext *rpc) {
+  RpcCall<bool>(rpc, rpc->node_id, "BO::ShutdownBufferOrganizer");
 }
 
 void BoMove(SharedMemoryContext *context, BufferID src, TargetID dest) {
@@ -123,11 +127,20 @@ void FlushBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id,
   // }
 }
 
-bool EnqueueFlushingTask(SharedMemoryContext *context, RpcContext *rpc,
-                         BlobID blob_id, const std::string &filename,
-                         u64 offset) {
+bool EnqueueFlushingTask(RpcContext *rpc, BlobID blob_id,
+                         const std::string &filename, u64 offset) {
+  bool result = RpcCall<bool>(rpc, rpc->node_id, "BO::EnqueueFlushingTask",
+                              blob_id, filename, offset);
+
+  return result;
+}
+
+bool LocalEnqueueFlushingTask(SharedMemoryContext *context, RpcContext *rpc,
+                              BlobID blob_id, const std::string &filename,
+                              u64 offset) {
   bool result = false;
 
+  // TODO(chogan): Handle Swap Blobs (should work, just needs testing)
   if (!BlobIsInSwap(blob_id)) {
     ThreadPool *pool = &context->bo->pool;
     IncrementFlushCount(context, rpc, filename);
