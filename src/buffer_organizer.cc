@@ -112,12 +112,12 @@ void FlushBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id,
       }
 
       DestroyArena(&local_arena);
-      DecrementFlushCount(context, rpc, filename);
     } else {
       FailedLibraryCall("open");
     }
     UnlockBlob(context, rpc, blob_id);
   }
+  DecrementFlushCount(context, rpc, filename);
 
   // TODO(chogan):
   // if (DONTNEED) {
@@ -190,10 +190,12 @@ void LocalAdjustFlushCount(SharedMemoryContext *context,
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   VBucketID id = LocalGetVBucketId(context, vbkt_name.c_str());
   VBucketInfo *info = LocalGetVBucketInfoById(mdm, id);
-  int flush_count = info->async_flush_count.fetch_add(adjustment);
-  VLOG(1) << "Flush count on VBucket " << vbkt_name
-          << (adjustment > 0 ? "incremented" : "decremented") << " to "
-          << flush_count + adjustment << "\n";
+  if (info) {
+    int flush_count = info->async_flush_count.fetch_add(adjustment);
+    VLOG(1) << "Flush count on VBucket " << vbkt_name
+            << (adjustment > 0 ? "incremented" : "decremented") << " to "
+            << flush_count + adjustment << "\n";
+  }
 }
 
 void LocalIncrementFlushCount(SharedMemoryContext *context,
