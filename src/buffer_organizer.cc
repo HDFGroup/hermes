@@ -78,7 +78,7 @@ bool LocalEnqueueBoTask(SharedMemoryContext *context, BoTask task,
 }
 
 void FlushBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id,
-               const std::string &filename, u64 offset) {
+               const std::string &filename, u64 offset, bool async) {
   if (LockBlob(context, rpc, blob_id)) {
     int open_flags = 0;
     mode_t open_mode = 0;
@@ -119,7 +119,10 @@ void FlushBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id,
   } else {
     FailedLibraryCall("open");
   }
-  DecrementFlushCount(context, rpc, filename);
+
+  if (async) {
+    DecrementFlushCount(context, rpc, filename);
+  }
 
   // TODO(chogan):
   // if (DONTNEED) {
@@ -146,7 +149,9 @@ bool LocalEnqueueFlushingTask(SharedMemoryContext *context, RpcContext *rpc,
   if (!BlobIsInSwap(blob_id)) {
     ThreadPool *pool = &context->bo->pool;
     IncrementFlushCount(context, rpc, filename);
-    pool->run(std::bind(FlushBlob, context, rpc, blob_id, filename, offset));
+    bool async = true;
+    pool->run(std::bind(FlushBlob, context, rpc, blob_id, filename, offset,
+                        async));
     result = true;
   }
 

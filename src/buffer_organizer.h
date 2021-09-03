@@ -70,7 +70,7 @@ void BoCopy(SharedMemoryContext *context, BufferID src, TargetID dest);
 void BoDelete(SharedMemoryContext *context, BufferID src);
 
 void FlushBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id,
-               const std::string &filename, u64 offset);
+               const std::string &filename, u64 offset, bool async = false);
 void LocalShutdownBufferOrganizer(SharedMemoryContext *context);
 void ShutdownBufferOrganizer(RpcContext *rpc);
 void IncrementFlushCount(SharedMemoryContext *context, RpcContext *rpc,
