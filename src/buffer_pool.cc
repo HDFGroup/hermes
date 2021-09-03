@@ -1523,9 +1523,9 @@ size_t LocalReadBufferById(SharedMemoryContext *context, BufferID id,
           FailedLibraryCall("flock");
         }
 
-        ssize_t bytes_read = pread(fd, (u8 *)blob->data + read_offset, read_size,
-                                   header->data_offset);
-        if (bytes_read == -1 || (size_t)bytes_read != (ssize_t)read_size) {
+        ssize_t bytes_read = pread(fd, (u8 *)blob->data + read_offset,
+                                   read_size, header->data_offset);
+        if (bytes_read == -1 || (size_t)bytes_read != read_size) {
           FailedLibraryCall("pread");
         }
 
