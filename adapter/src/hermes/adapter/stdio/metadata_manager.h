@@ -86,7 +86,7 @@ class MetadataManager {
   void InitializeHermes(bool is_mpi = false) {
     if (ref == 0) {
       this->is_mpi = is_mpi;
-      char* async_flush_mode = getenv(kHermesFlushingMode);
+      char* async_flush_mode = getenv(kHermesAsyncFlush);
 
       if (async_flush_mode && async_flush_mode[0] == '1') {
         global_flushing_mode = FlushingMode::kAsynchronous;
