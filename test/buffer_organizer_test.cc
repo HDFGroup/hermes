@@ -90,8 +90,6 @@ void TestBackgroundFlush() {
     vbkt.Link(blob_name, bkt_name);
   }
 
-  // TODO(chogan): Move this to PersistTrait::onDetach
-  vbkt.WaitForBackgroundFlush();
   vbkt.Destroy();
   bkt.Destroy();
 

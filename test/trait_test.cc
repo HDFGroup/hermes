@@ -33,7 +33,7 @@ struct Arguments {
 struct Info {
   int rank;
   int comm_size;
-  hermes::api::Blob write_blob;
+  hapi::Blob write_blob;
   const size_t FILE_PAGE = 16 * 1024;
 };
 

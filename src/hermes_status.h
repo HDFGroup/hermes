@@ -34,7 +34,6 @@ namespace hermes {
   X(-19, STDIO_FWRITE_FAILED,        "Func fwrite failed. System err msg: ") \
   X(-20, STDIO_FOPEN_FAILED,         "Func fopen failed. System err msg: ") \
   X(-21, STDIO_FCLOSE_FAILED,        "Func fclose failed. System err msg: ") \
-  X(-22, FCLOSE_FAILED,              "Func fclose failed. System err msg: ") \
   X(-23, INVALID_FILE,               "File is not valid.") \
   X(-24, PLACE_SWAP_BLOB_TO_BUF_FAILED, "Place blob from swap space into " \
                                      "buffering system failed.") \

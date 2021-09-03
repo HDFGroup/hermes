@@ -12,7 +12,6 @@
 
 #include <hermes/adapter/stdio.h>
 
-#include <fcntl.h>
 #include <limits.h>
 #include <sys/file.h>
 
@@ -26,11 +25,12 @@ using hermes::adapter::stdio::MapperFactory;
 using hermes::adapter::stdio::MetadataManager;
 using hermes::adapter::stdio::global_flushing_mode;
 
+using hermes::u8;
+using hermes::u64;
+
 namespace hapi = hermes::api;
 namespace fs = std::experimental::filesystem;
 
-using hermes::u8;
-using hermes::u64;
 
 /**
  * Internal Functions
@@ -218,19 +218,28 @@ void ReadGap(const std::string &filename, size_t seek_offset, u8 *read_ptr,
              size_t read_size, size_t file_bounds) {
   if (fs::exists(filename) &&
       fs::file_size(filename) >= file_bounds) {
-    LOG(INFO) << "Blob has a gap in write. read gap from original file."
-              << std::endl;
+    LOG(INFO) << "Blob has a gap in write. Read gap from original file.\n";
     INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
     int fd = open(filename.c_str(), O_RDONLY);
     if (fd) {
-      flock(fd, LOCK_SH);
+      if (flock(fd, LOCK_SH) == -1) {
+        hermes::FailedLibraryCall("flock");
+      }
+
       ssize_t bytes_read = pread(fd, read_ptr, read_size, seek_offset);
-      // TODO(chogan): @errorhandling
-      assert(bytes_read = (ssize_t)read_size);
-      flock(fd, LOCK_UN);
-      assert(close(fd) == 0);
+      if (bytes_read == -1 || (size_t)bytes_read != read_size) {
+        hermes::FailedLibraryCall("pread");
+      }
+
+      if (flock(fd, LOCK_UN) == -1) {
+        hermes::FailedLibraryCall("flock");
+      }
+
+      if (close(fd) != 0) {
+        hermes::FailedLibraryCall("close");
+      }
     } else {
-      hermes::FailedLibraryCall("fopen");
+      hermes::FailedLibraryCall("open");
     }
     INTERCEPTOR_LIST->hermes_flush_exclusion.erase(filename);
   }
@@ -556,7 +565,7 @@ int HERMES_DECL(fflush)(FILE *fp) {
           hapi::Context ctx;
           LOG(INFO) << "Adapter flushes " << blob_names.size()
                     << " blobs to filename:" << filename << "." << std::endl;
-          hermes::api::VBucket file_vbucket(filename, mdm->GetHermes());
+          hapi::VBucket file_vbucket(filename, mdm->GetHermes());
           auto offset_map = std::unordered_map<std::string, hermes::u64>();
 
           for (const auto &blob_name : blob_names) {
@@ -604,7 +613,7 @@ int HERMES_DECL(fclose)(FILE *fp) {
             LOG(INFO) << "Adapter flushes " << blob_names.size()
                       << " blobs to filename:" << filename << "." << std::endl;
             INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
-            hermes::api::VBucket file_vbucket(filename, mdm->GetHermes());
+            hapi::VBucket file_vbucket(filename, mdm->GetHermes());
             auto offset_map = std::unordered_map<std::string, hermes::u64>();
 
             for (const auto &blob_name : blob_names) {

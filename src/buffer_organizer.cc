@@ -94,8 +94,10 @@ void FlushBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id,
       VLOG(1) << "Flushing BlobID " << blob_id.as_int << " to file "
               << filename << " at offset " << offset << "\n";
 
-      // TODO(chogan): ScopedArena
-      Arena local_arena = InitArenaAndAllocate(KILOBYTES(4));
+      const int kFlushBufferSize = KILOBYTES(4);
+      u8 flush_buffer[kFlushBufferSize];
+      Arena local_arena = {};
+      InitArena(&local_arena, kFlushBufferSize, flush_buffer);
 
       if (flock(fd, LOCK_EX) != 0) {
         FailedLibraryCall("flock");
@@ -110,12 +112,12 @@ void FlushBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id,
       if (close(fd) != 0) {
         FailedLibraryCall("close");
       }
-
-      DestroyArena(&local_arena);
     } else {
       FailedLibraryCall("open");
     }
     UnlockBlob(context, rpc, blob_id);
+  } else {
+    FailedLibraryCall("open");
   }
   DecrementFlushCount(context, rpc, filename);
 

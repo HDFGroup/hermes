@@ -750,7 +750,7 @@ int HERMES_DECL(fsync)(int fd) {
           LOG(INFO) << "Adapter flushes " << blob_names.size()
                     << " blobs to filename:" << filename << "." << std::endl;
           INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
-          hermes::api::VBucket file_vbucket(filename, mdm->GetHermes(), ctx);
+          hapi::VBucket file_vbucket(filename, mdm->GetHermes(), ctx);
           auto offset_map = std::unordered_map<std::string, hermes::u64>();
 
           for (const auto &blob_name : blob_names) {
@@ -804,7 +804,7 @@ int HERMES_DECL(close)(int fd) {
           LOG(INFO) << "Adapter flushes " << blob_names.size()
                     << " blobs to filename:" << filename << "." << std::endl;
           INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
-          hermes::api::VBucket file_vbucket(filename, mdm->GetHermes(), ctx);
+          hapi::VBucket file_vbucket(filename, mdm->GetHermes(), ctx);
           auto offset_map = std::unordered_map<std::string, hermes::u64>();
 
           for (const auto &blob_name : blob_names) {
@@ -815,7 +815,7 @@ int HERMES_DECL(close)(int fd) {
             }
           }
           auto file_mapping =
-            hermes::api::FileMappingTrait(filename, offset_map, nullptr, NULL,
+            hapi::FileMappingTrait(filename, offset_map, nullptr, NULL,
                                           NULL);
           bool flush_synchronously = true;
           hapi::PersistTrait persist_trait(file_mapping, flush_synchronously);

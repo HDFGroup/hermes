@@ -159,8 +159,10 @@ struct AdapterStat {
    * attributes
    */
   std::shared_ptr<hapi::Bucket> st_bkid; /* bucket associated with the file */
-  std::shared_ptr<hapi::VBucket> st_vbkt; /* VBucket for persisting data */
-  std::shared_ptr<hapi::PersistTrait> st_persist; /* TEMP(chogan): */
+  /** VBucket for persisting data asynchronously. */
+  std::shared_ptr<hapi::VBucket> st_vbkt;
+  /** Used for async flushing. */
+  std::shared_ptr<hapi::PersistTrait> st_persist;
   std::set<std::string, bool (*)(const std::string &, const std::string &)>
       st_blobs;         /* Blobs access in the bucket */
   i32 ref_count;        /* # of time process opens a file */

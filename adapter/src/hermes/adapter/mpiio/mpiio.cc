@@ -27,7 +27,7 @@ using hermes::adapter::mpiio::HermesRequest;
 using hermes::adapter::mpiio::MapperFactory;
 using hermes::adapter::mpiio::MetadataManager;
 
-namespace hapi = hapi;
+namespace hapi = hermes::api;
 namespace fs = std::experimental::filesystem;
 /**
  * Internal Functions.
@@ -552,13 +552,13 @@ int HERMES_DECL(MPI_File_close)(MPI_File *fh) {
         auto persist = INTERCEPTOR_LIST->Persists(filename);
         mdm->Delete(fh);
         const auto &blob_names = existing.first.st_blobs;
-        auto blob_vbucket_vec = std::vector<hermes::api::VBucket *>();
+        auto blob_vbucket_vec = std::vector<hapi::VBucket *>();
         if (!blob_names.empty() && persist) {
           LOG(INFO) << "Adapter flushes " << blob_names.size()
                     << " blobs to filename:" << filename << "." << std::endl;
           auto vbucket_name = filename + "_" + std::to_string(mdm->rank);
           INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
-          hermes::api::VBucket file_vbucket(vbucket_name, mdm->GetHermes(),
+          hapi::VBucket file_vbucket(vbucket_name, mdm->GetHermes(),
                                             ctx);
           auto offset_map = std::unordered_map<std::string, hermes::u64>();
 
@@ -585,7 +585,7 @@ int HERMES_DECL(MPI_File_close)(MPI_File *fh) {
 
           for (const auto &vbucket : existing.first.st_vbuckets) {
             auto blob_vbucket =
-                new hermes::api::VBucket(vbucket, mdm->GetHermes(), ctx);
+                new hapi::VBucket(vbucket, mdm->GetHermes(), ctx);
             auto blob_names_v = blob_vbucket->GetLinks(ctx);
             for (auto &blob_name : blob_names_v) {
               blob_vbucket->Unlink(blob_name,

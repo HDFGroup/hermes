@@ -71,7 +71,8 @@ class VBucket {
   std::string GetName() const { return this->name_; }
 
   /**
-   *
+   * Blocks until all outstanding asynchronous flushing tasks associated with
+   * this VBucket are complete.
    */
   void WaitForBackgroundFlush();
 
@@ -165,9 +166,7 @@ class VBucket {
    * Releases all resources associated with this VBucket. If it is opened again,
    * it will be created from scratch. Unlinks all linked Blobs (which will
    * invoke each attached Trait's Trait::onUnlinkFn function), and detaches all
-   * attached Traits, invoking Trait::onDetachFn. If the VBucket::persist member
-   * is @c true, the linked Blobs will be flushed according to the attached
-   * FileMappingTrait, if any.
+   * attached Traits, invoking Trait::onDetachFn.
    *
    * @param ctx Currently unused.
    *

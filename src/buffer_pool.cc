@@ -1445,17 +1445,27 @@ size_t LocalWriteBufferById(SharedMemoryContext *context, BufferID id,
     const char *filename =
       context->buffering_filenames[device->id][slab_index].c_str();
     int fd = open(filename, O_WRONLY);
-    flock(fd, LOCK_EX);
-    ssize_t bytes_written = pwrite(fd, at, write_size, header->data_offset);
-    // TODO(chogan): @errorhandling
-    assert((size_t)bytes_written == write_size);
-    if (bytes_written == -1) {
-      FailedLibraryCall("fwrite");
-    }
 
-    flock(fd, LOCK_UN);
-    // TODO(chogan): @errorhandling
-    assert(close(fd) == 0);
+    if (fd != -1) {
+      if (flock(fd, LOCK_EX) != 0) {
+        FailedLibraryCall("flock");
+      }
+
+      ssize_t bytes_written = pwrite(fd, at, write_size, header->data_offset);
+      if (bytes_written == -1 || (size_t)bytes_written != write_size) {
+        FailedLibraryCall("pwrite");
+      }
+
+      if (flock(fd, LOCK_UN) != 0) {
+        FailedLibraryCall("flock");
+      }
+
+      if (close(fd) != 0) {
+        FailedLibraryCall("close");
+      }
+    } else {
+      FailedLibraryCall("open");
+    }
   }
 
   return write_size;
@@ -1507,14 +1517,30 @@ size_t LocalReadBufferById(SharedMemoryContext *context, BufferID id,
       const char *filename =
         context->buffering_filenames[device->id][slab_index].c_str();
       int fd = open(filename, O_RDONLY);
-      flock(fd, LOCK_SH);
-      ssize_t bytes_read = pread(fd, (u8 *)blob->data + read_offset, read_size,
-                                 header->data_offset);
-      flock(fd, LOCK_UN);
-      // TODO(chogan): @errorhandling
-      assert(bytes_read == (ssize_t)read_size);
-      assert(close(fd) == 0);
-      result = bytes_read;
+
+      if (fd != -1) {
+        if (flock(fd, LOCK_SH) != 0) {
+          FailedLibraryCall("flock");
+        }
+
+        ssize_t bytes_read = pread(fd, (u8 *)blob->data + read_offset, read_size,
+                                   header->data_offset);
+        if (bytes_read == -1 || (size_t)bytes_read != (ssize_t)read_size) {
+          FailedLibraryCall("pread");
+        }
+
+        if (flock(fd, LOCK_UN) != 0) {
+          FailedLibraryCall("flock");
+        }
+
+        if (close(fd) != 0) {
+          FailedLibraryCall("close");
+        }
+
+        result = bytes_read;
+      } else {
+        FailedLibraryCall("open");
+      }
     }
   }
 
@@ -1772,27 +1798,19 @@ api::Status StdIoPersistBlob(SharedMemoryContext *context, RpcContext *rpc,
     size_t num_bytes = blob_size > 0 ? sizeof(data[0]) * blob_size : 0;
     if (ReadBlobById(context, rpc, arena, data, blob_id) == blob_size) {
       // EnsureNoNull(data);
-      LOG(WARNING) << "Writing: "
-                   << "num_bytes=" << num_bytes << ", "
-                   << "fd=" << fd << ", "
-                   << "offset=" << offset << ", "
-                   << "blob_id=" << blob_id.bits.buffer_ids_offset
-                   << std::endl;
-      // assert(lseek(fd, offset, SEEK_SET) == offset);
-      assert(pwrite(fd, data.data(), num_bytes, offset) == (ssize_t)num_bytes);
-      // assert(write(fd, data.data(), num_bytes) == (ssize_t)num_bytes);
-      // fsync(fd);
-      // if (offset == -1 || fseek(file, offset, SEEK_SET) == 0) {
-      //   LOG(INFO) << "STDIO Flush to file: " << " offset: " << offset
-      //             << " of size:" << num_bytes << "." << std::endl;
-      //   if (Fwrite(data.data(), 1, num_bytes, file) != num_bytes) {
-      //     result = STDIO_FWRITE_FAILED;
-      //     LOG(ERROR) << result.Msg() << strerror(errno);
-      //   }
-      // } else {
-      //   result = STDIO_OFFSET_ERROR;
-      //   LOG(ERROR) << result.Msg() << strerror(errno);
-      // }
+      VLOG(1) << "STDIO flush:"
+              << "num_bytes=" << num_bytes << ", "
+              << "fd=" << fd << ", "
+              << "offset=" << offset << ", "
+              << "blob_id=" << blob_id.bits.buffer_ids_offset
+              << std::endl;
+      ssize_t bytes_written = pwrite(fd, data.data(), num_bytes, offset);
+      if (bytes_written == -1 || (size_t)bytes_written != num_bytes) {
+        // TODO(chogan):
+        // result = POSIX_PWRITE_ERROR;
+        // LOG(ERROR) << result.Msg() << strerror(errno);
+        FailedLibraryCall("pwrite");
+      }
     }
   } else {
     result = INVALID_FILE;
