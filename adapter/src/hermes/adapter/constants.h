@@ -30,9 +30,10 @@ const char* kHermesConf = "HERMES_CONF";
  *
  * When set to "1", each write will first Put the Blob into the buffering
  * system, then trigger a background job to flush the Blob to its file. This is
- * useful for write-only workloads.
+ * useful for write-only workloads. If "0" or unset, normal flushing occurs when
+ * fclose is intercepted.
  */
-const char* kHermesFlushingMode = "HERMES_ASYNC_FLUSH";
+const char* kHermesAsyncFlush = "HERMES_ASYNC_FLUSH";
 
 /**
  * kHermesExtension is the extension of hermes files. These are buffered files
