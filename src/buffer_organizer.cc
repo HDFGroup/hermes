@@ -116,8 +116,6 @@ void FlushBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id,
       FailedLibraryCall("open");
     }
     UnlockBlob(context, rpc, blob_id);
-  } else {
-    FailedLibraryCall("open");
   }
 
   if (async) {
