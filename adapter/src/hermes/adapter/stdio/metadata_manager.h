@@ -31,6 +31,9 @@
 #include <mpi.h>
 
 namespace hermes::adapter::stdio {
+
+FlushingMode global_flushing_mode;
+
 /**
  * Metadata manager for STDIO adapter
  */
@@ -83,7 +86,16 @@ class MetadataManager {
   void InitializeHermes(bool is_mpi = false) {
     if (ref == 0) {
       this->is_mpi = is_mpi;
+      char* async_flush_mode = getenv(kHermesFlushingMode);
+
+      if (async_flush_mode && async_flush_mode[0] == '1') {
+        global_flushing_mode = FlushingMode::kAsynchronous;
+      } else {
+        global_flushing_mode = FlushingMode::kSynchronous;
+      }
+
       char* hermes_config = getenv(kHermesConf);
+
       if (this->is_mpi) {
         MPI_Comm_rank(MPI_COMM_WORLD, &rank);
         MPI_Comm_size(MPI_COMM_WORLD, &comm_size);

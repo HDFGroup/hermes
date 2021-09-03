@@ -41,13 +41,6 @@
 #include <hermes/adapter/stdio/metadata_manager.h>
 #include <vbucket.h>
 
-namespace hermes::adapter::stdio {
-
-// TODO(chogan): Get from hermes::adapter::stdio::Config
-FlushingMode global_flushing_mode = FlushingMode::kAsynchronous;
-
-}  // namespace hermes::adapter::stdio
-
 /**
  * Function declarations
  */
