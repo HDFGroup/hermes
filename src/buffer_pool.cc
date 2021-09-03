@@ -1761,7 +1761,8 @@ api::Status StdIoPersistBucket(SharedMemoryContext *context, RpcContext *rpc,
         // mapping, we'll need pwrite and offsets.
         if (fwrite(data.data(), 1, num_bytes, file) != num_bytes) {
           result = STDIO_FWRITE_FAILED;
-          LOG(ERROR) << result.Msg() << strerror(errno);
+          int saved_errno = errno;
+          LOG(ERROR) << result.Msg() << strerror(saved_errno);
           break;
         }
       } else {
@@ -1773,11 +1774,13 @@ api::Status StdIoPersistBucket(SharedMemoryContext *context, RpcContext *rpc,
 
     if (fclose(file) != 0) {
       result = STDIO_FCLOSE_FAILED;
-      LOG(ERROR) << result.Msg() << strerror(errno);
+      int saved_errno = errno;
+      LOG(ERROR) << result.Msg() << strerror(saved_errno);
     }
   } else {
     result = STDIO_FOPEN_FAILED;
-    LOG(ERROR) << result.Msg() << strerror(errno);
+    int saved_errno = errno;
+    LOG(ERROR) << result.Msg() << strerror(saved_errno);
   }
 
   return result;
