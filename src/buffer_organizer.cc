@@ -27,10 +27,6 @@ void LocalShutdownBufferOrganizer(SharedMemoryContext *context) {
   context->bo->pool.~ThreadPool();
 }
 
-void ShutdownBufferOrganizer(RpcContext *rpc) {
-  RpcCall<bool>(rpc, rpc->node_id, "BO::ShutdownBufferOrganizer");
-}
-
 void BoMove(SharedMemoryContext *context, BufferID src, TargetID dest) {
   (void)context;
   printf("%s(%d, %d)\n", __func__, (int)src.as_int, (int)dest.as_int);
