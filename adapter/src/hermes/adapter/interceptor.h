@@ -13,9 +13,6 @@
 #ifndef HERMES_INTERCEPTOR_H
 #define HERMES_INTERCEPTOR_H
 
-/**
- * Standard headers
- */
 #include <dlfcn.h>
 #include <stdlib.h>
 #include <utils.h>
@@ -25,13 +22,6 @@
 #include <unordered_set>
 #include <vector>
 
-/**
- * Library headers
- */
-
-/**
- * Internal headers
- */
 #include <buffer_pool_internal.h>
 #include <hermes/adapter/constants.h>
 #include <hermes/adapter/enumerations.h>
@@ -41,7 +31,7 @@
  * Define Interceptor list for adapter.
  */
 #define INTERCEPTOR_LIST \
-  hermes::adapter::Singleton<hermes::adapter::InterceptorList>::GetInstance()
+  hermes::adapter::Singleton<hermes::adapter::InterceptorList>::GetInstance<>()
 
 namespace hermes::adapter {
 /**
@@ -117,7 +107,7 @@ struct InterceptorList {
    * Default constructor
    */
   InterceptorList()
-      : adapter_mode(AdapterMode::DEFAULT),
+      : adapter_mode(AdapterMode::kDefault),
         adapter_paths(),
         hermes_paths_exclusion(),
         hermes_flush_exclusion() {}
@@ -125,16 +115,16 @@ struct InterceptorList {
     char* adapter_mode_str = getenv(kAdapterMode);
     if (adapter_mode_str == nullptr) {
       // default is Persistent mode
-      adapter_mode = AdapterMode::DEFAULT;
+      adapter_mode = AdapterMode::kDefault;
     } else {
       if (strcmp(kAdapterDefaultMode, adapter_mode_str) == 0) {
-        adapter_mode = AdapterMode::DEFAULT;
+        adapter_mode = AdapterMode::kDefault;
       } else if (strcmp(kAdapterBypassMode, adapter_mode_str) == 0) {
-        adapter_mode = AdapterMode::BYPASS;
+        adapter_mode = AdapterMode::kBypass;
       } else if (strcmp(kAdapterScratchMode, adapter_mode_str) == 0) {
-        adapter_mode = AdapterMode::SCRATCH;
+        adapter_mode = AdapterMode::kScratch;
       } else {
-        // TODO(hari): @error_handling throw error.
+        // TODO(hari): @errorhandling throw error.
         return;
       }
     }
@@ -150,7 +140,7 @@ struct InterceptorList {
   bool Persists(int fd) { return Persists(GetFilenameFromFD(fd)); }
 
   bool Persists(std::string path) {
-    if (adapter_mode == AdapterMode::DEFAULT) {
+    if (adapter_mode == AdapterMode::kDefault) {
       if (adapter_paths.empty()) {
         return true;
       } else {
@@ -161,7 +151,7 @@ struct InterceptorList {
         }
         return false;
       }
-    } else if (adapter_mode == AdapterMode::SCRATCH) {
+    } else if (adapter_mode == AdapterMode::kScratch) {
       if (adapter_paths.empty()) {
         return false;
       } else {
@@ -208,9 +198,8 @@ void OnExit(void);
   if (!(real_##func_##_)) {                                           \
     real_##func_##_ = (real_t_##func_##_)dlsym(RTLD_NEXT, #func_);    \
     if (!(real_##func_##_)) {                                         \
-      LOG(ERROR) << "HERMES Adapter failed to map symbol: " << #func_ \
+      LOG(FATAL) << "HERMES Adapter failed to map symbol: " << #func_ \
                  << std::endl;                                        \
-      exit(1);                                                        \
     }                                                                 \
   }
 

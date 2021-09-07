@@ -983,7 +983,7 @@ TEST_CASE("BatchedUpdateRandomRSRangeLarge",
       REQUIRE(test::status_orig == 0);
       size_t request_size =
           info.large_min + (rand_r(&info.rs_seed) % info.large_max);
-      std::string data = gen_random(request_size);
+      std::string data = GenRandom(request_size);
       test::test_fwrite(data.data(), request_size);
       REQUIRE(test::size_written_orig == request_size);
     }

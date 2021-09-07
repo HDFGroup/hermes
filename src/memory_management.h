@@ -38,6 +38,11 @@ struct TicketMutex {
   std::atomic<u32> serving;
 };
 
+struct Ticket {
+  u32 ticket;
+  bool acquired;
+};
+
 struct ArenaInfo {
   size_t sizes[kArenaType_Count];
   size_t total;

@@ -17,6 +17,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <assert.h>
+#include <dlfcn.h>
 #include <fcntl.h>
 #include <sched.h>
 #include <stdio.h>
@@ -100,7 +101,7 @@ void Finalize(SharedMemoryContext *context, CommunicationContext *comm,
       bool is_daemon =
         (comm->world_size == comm->num_nodes) && !force_rpc_shutdown;
       FinalizeRpcContext(rpc, is_daemon);
-      ShutdownBufferOrganizer(context);
+      LocalShutdownBufferOrganizer(context);
     }
     SubBarrier(comm);
     ReleaseSharedMemoryContext(context);
@@ -1435,40 +1436,37 @@ size_t LocalWriteBufferById(SharedMemoryContext *context, BufferID id,
   Device *device = GetDeviceFromHeader(context, header);
   size_t write_size = header->used;
 
-  // TODO(chogan): Should this be a TicketMutex? It seems that at any
-  // given time, only the DataOrganizer and an application core will
-  // be trying to write to/from the same BufferID. In that case, it's
-  // first come first serve. However, if it turns out that more
-  // threads will be trying to lock the buffer, we may need to enforce
-  // ordering.
-  LockBuffer(header);
-
   u8 *at = (u8 *)blob.data + offset;
   if (device->is_byte_addressable) {
     u8 *dest = GetRamBufferPtr(context, header->id);
     memcpy(dest, at, write_size);
   } else {
     int slab_index = GetSlabIndexFromHeader(context, header);
-    FILE *file = context->open_streams[device->id][slab_index];
-    if (!file) {
-      // TODO(chogan): Check number of opened files against maximum allowed.
-      // May have to close something.
-      const char *filename =
-        context->buffering_filenames[device->id][slab_index].c_str();
-      file = fopen(filename, "r+");
-      context->open_streams[device->id][slab_index] = file;
+    const char *filename =
+      context->buffering_filenames[device->id][slab_index].c_str();
+    int fd = open(filename, O_WRONLY);
+
+    if (fd != -1) {
+      if (flock(fd, LOCK_EX) != 0) {
+        FailedLibraryCall("flock");
+      }
+
+      ssize_t bytes_written = pwrite(fd, at, write_size, header->data_offset);
+      if (bytes_written == -1 || (size_t)bytes_written != write_size) {
+        FailedLibraryCall("pwrite");
+      }
+
+      if (flock(fd, LOCK_UN) != 0) {
+        FailedLibraryCall("flock");
+      }
+
+      if (close(fd) != 0) {
+        FailedLibraryCall("close");
+      }
+    } else {
+      FailedLibraryCall("open");
     }
-    fseek(file, header->data_offset, SEEK_SET);
-    size_t items_written = fwrite(at, write_size, 1, file);
-    if (items_written != 1) {
-      FailedLibraryCall("fwrite");
-    }
-    if (fflush(file) != 0) {
-      FailedLibraryCall("fflush");
-    }
-    // fsync(fileno(file));
   }
-  UnlockBuffer(header);
 
   return write_size;
 }
@@ -1507,39 +1505,44 @@ size_t LocalReadBufferById(SharedMemoryContext *context, BufferID id,
   BufferHeader *header = GetHeaderByIndex(context, id.bits.header_index);
   Device *device = GetDeviceFromHeader(context, header);
   size_t read_size = header->used;
-
-  // TODO(chogan): Should this be a TicketMutex? It seems that at any
-  // given time, only the DataOrganizer and an application core will
-  // be trying to write to/from the same BufferID. In that case, it's
-  // first come first serve. However, if it turns out that more
-  // threads will be trying to lock the buffer, we may need to enforce
-  // ordering.
-  LockBuffer(header);
-
   size_t result = 0;
-  if (device->is_byte_addressable) {
-    u8 *src = GetRamBufferPtr(context, header->id);
-    memcpy((u8 *)blob->data + read_offset, src, read_size);
-    result = read_size;
-  } else {
-    int slab_index = GetSlabIndexFromHeader(context, header);
-    FILE *file = context->open_streams[device->id][slab_index];
-    if (!file) {
-      // TODO(chogan): Check number of opened files against maximum allowed.
-      // May have to close something.
+
+  if (read_size > 0) {
+    if (device->is_byte_addressable) {
+      u8 *src = GetRamBufferPtr(context, header->id);
+      memcpy((u8 *)blob->data + read_offset, src, read_size);
+      result = read_size;
+    } else {
+      int slab_index = GetSlabIndexFromHeader(context, header);
       const char *filename =
         context->buffering_filenames[device->id][slab_index].c_str();
-      file = fopen(filename, "r+");
+      int fd = open(filename, O_RDONLY);
+
+      if (fd != -1) {
+        if (flock(fd, LOCK_SH) != 0) {
+          FailedLibraryCall("flock");
+        }
+
+        ssize_t bytes_read = pread(fd, (u8 *)blob->data + read_offset,
+                                   read_size, header->data_offset);
+        if (bytes_read == -1 || (size_t)bytes_read != read_size) {
+          FailedLibraryCall("pread");
+        }
+
+        if (flock(fd, LOCK_UN) != 0) {
+          FailedLibraryCall("flock");
+        }
+
+        if (close(fd) != 0) {
+          FailedLibraryCall("close");
+        }
+
+        result = bytes_read;
+      } else {
+        FailedLibraryCall("open");
+      }
     }
-    fseek(file, header->data_offset, SEEK_SET);
-    size_t items_read = fread((u8 *)blob->data + read_offset, read_size, 1,
-                              file);
-    if (items_read != 1) {
-      FailedLibraryCall("fwrite");
-    }
-    result = items_read * read_size;
   }
-  UnlockBuffer(header);
 
   return result;
 }
@@ -1758,7 +1761,8 @@ api::Status StdIoPersistBucket(SharedMemoryContext *context, RpcContext *rpc,
         // mapping, we'll need pwrite and offsets.
         if (fwrite(data.data(), 1, num_bytes, file) != num_bytes) {
           result = STDIO_FWRITE_FAILED;
-          LOG(ERROR) << result.Msg() << strerror(errno);
+          int saved_errno = errno;
+          LOG(ERROR) << result.Msg() << strerror(saved_errno);
           break;
         }
       } else {
@@ -1770,22 +1774,24 @@ api::Status StdIoPersistBucket(SharedMemoryContext *context, RpcContext *rpc,
 
     if (fclose(file) != 0) {
       result = STDIO_FCLOSE_FAILED;
-      LOG(ERROR) << result.Msg() << strerror(errno);
+      int saved_errno = errno;
+      LOG(ERROR) << result.Msg() << strerror(saved_errno);
     }
   } else {
     result = STDIO_FOPEN_FAILED;
-    LOG(ERROR) << result.Msg() << strerror(errno);
+    int saved_errno = errno;
+    LOG(ERROR) << result.Msg() << strerror(saved_errno);
   }
 
   return result;
 }
 
 api::Status StdIoPersistBlob(SharedMemoryContext *context, RpcContext *rpc,
-                             Arena *arena, BlobID blob_id,
-                             FILE *file , const i32 &offset) {
+                             Arena *arena, BlobID blob_id, int fd,
+                             const i32 &offset) {
   api::Status result;
 
-  if (file) {
+  if (fd > -1) {
     ScopedTemporaryMemory scratch(arena);
     size_t blob_size = GetBlobSizeById(context, rpc, arena, blob_id);
     // TODO(chogan): @optimization We could use the actual Hermes buffers as
@@ -1794,22 +1800,21 @@ api::Status StdIoPersistBlob(SharedMemoryContext *context, RpcContext *rpc,
     api::Blob data(blob_size);
     size_t num_bytes = blob_size > 0 ? sizeof(data[0]) * blob_size : 0;
     if (ReadBlobById(context, rpc, arena, data, blob_id) == blob_size) {
-      // TODO(chogan): For now we just write the blobs in the order in which
-      // they were `Put`, but once we have a Trait that represents a file
-      // mapping, we'll need pwrite and offsets.
-      if (offset == -1 || fseek(file, offset, SEEK_SET) == 0) {
-        LOG(INFO) << "STDIO Flush to file: " << " offset: " << offset
-                  << " of size:" << num_bytes << "." << std::endl;
-        if (fwrite(data.data(), 1, num_bytes, file) != num_bytes) {
-          result = STDIO_FWRITE_FAILED;
-          LOG(ERROR) << result.Msg() << strerror(errno);
-        }
-      } else {
-        result = STDIO_OFFSET_ERROR;
-        LOG(ERROR) << result.Msg() << strerror(errno);
+      // EnsureNoNull(data);
+      VLOG(1) << "STDIO flush:"
+              << "num_bytes=" << num_bytes << ", "
+              << "fd=" << fd << ", "
+              << "offset=" << offset << ", "
+              << "blob_id=" << blob_id.bits.buffer_ids_offset
+              << std::endl;
+      ssize_t bytes_written = pwrite(fd, data.data(), num_bytes, offset);
+      if (bytes_written == -1 || (size_t)bytes_written != num_bytes) {
+        // TODO(chogan):
+        // result = POSIX_PWRITE_ERROR;
+        // LOG(ERROR) << result.Msg() << strerror(errno);
+        FailedLibraryCall("pwrite");
       }
     }
-
   } else {
     result = INVALID_FILE;
     LOG(ERROR) << result.Msg();

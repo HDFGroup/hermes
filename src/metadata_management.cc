@@ -706,17 +706,29 @@ void LocalDeleteBlobMetadata(MetadataManager *mdm, const char *blob_name,
   LocalDeleteBlobInfo(mdm, blob_id);
 }
 
+void WaitForOutstandingBlobOps(MetadataManager *mdm, BlobID blob_id) {
+  Ticket t = {};
+  Ticket *ticket = 0;
+
+  while (!t.acquired) {
+    BlobInfo *blob_info = GetBlobInfoPtr(mdm, blob_id);
+    if (blob_info) {
+      t = TryBeginTicketMutex(&blob_info->lock, ticket);
+    }
+    if (!t.acquired) {
+      ReleaseBlobInfoPtr(mdm);
+    }
+    ticket = &t;
+  }
+}
+
 void LocalDestroyBlobByName(SharedMemoryContext *context, RpcContext *rpc,
                             const char *blob_name, BlobID blob_id,
                             BucketID bucket_id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
-  BlobInfo *blob_info = GetBlobInfoPtr(mdm, blob_id);
+
   // NOTE(chogan): Holding the mdm->blob_info_map_mutex
-  if (blob_info) {
-    // NOTE(chogan): Take the Blob lock to enusre that all outstanding
-    // background operations on the Blob complete before it's deleted.
-    BeginTicketMutex(&blob_info->lock);
-  }
+  WaitForOutstandingBlobOps(mdm, blob_id);
 
   if (!BlobIsInSwap(blob_id)) {
     std::vector<BufferID> buffer_ids = GetBufferIdList(context, rpc, blob_id);
@@ -1126,6 +1138,7 @@ void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
   for (u32 i = 0; i < config->max_vbuckets_per_node; ++i) {
     VBucketInfo *info = vbuckets + i;
     info->active = false;
+    info->async_flush_count.store(0);
 
     if (i == config->max_vbuckets_per_node - 1) {
       info->next_free.as_int = 0;
@@ -1373,40 +1386,58 @@ int GetNumOutstandingFlushingTasks(SharedMemoryContext *context,
   return result;
 }
 
-void LocalLockBlob(SharedMemoryContext *context, BlobID blob_id) {
+bool LocalLockBlob(SharedMemoryContext *context, BlobID blob_id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   BlobInfo *blob_info = GetBlobInfoPtr(mdm, blob_id);
+  bool result = false;
+
   if (blob_info) {
     BeginTicketMutex(&blob_info->lock);
+    result = true;
   }
+
   ReleaseBlobInfoPtr(mdm);
+
+  return result;
 }
 
-void LocalUnlockBlob(SharedMemoryContext *context, BlobID blob_id) {
+bool LocalUnlockBlob(SharedMemoryContext *context, BlobID blob_id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   BlobInfo *blob_info = GetBlobInfoPtr(mdm, blob_id);
+  bool result = false;
+
   if (blob_info) {
     EndTicketMutex(&blob_info->lock);
+    result = true;
   }
+
   ReleaseBlobInfoPtr(mdm);
+
+  return result;
 }
 
-void LockBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id) {
+bool LockBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id) {
   u32 target_node = GetBlobNodeId(blob_id);
+  bool result = false;
   if (target_node == rpc->node_id) {
-    LocalLockBlob(context, blob_id);
+    result = LocalLockBlob(context, blob_id);
   } else {
-    RpcCall<bool>(rpc, target_node, "RemoteLockBlob", blob_id);
+    result = RpcCall<bool>(rpc, target_node, "RemoteLockBlob", blob_id);
   }
+
+  return result;
 }
 
-void UnlockBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id) {
+bool UnlockBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id) {
   u32 target_node = GetBlobNodeId(blob_id);
+  bool result = false;
   if (target_node == rpc->node_id) {
-    LocalUnlockBlob(context, blob_id);
+    result = LocalUnlockBlob(context, blob_id);
   } else {
-    RpcCall<bool>(rpc, target_node, "RemoteUnlockBlob", blob_id);
+    result = RpcCall<bool>(rpc, target_node, "RemoteUnlockBlob", blob_id);
   }
+
+  return result;
 }
 
 }  // namespace hermes

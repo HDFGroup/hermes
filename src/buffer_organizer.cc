@@ -10,6 +10,8 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+#include "sys/file.h"
+
 #include "hermes.h"
 #include "buffer_organizer.h"
 #include "data_placement_engine.h"
@@ -19,10 +21,14 @@ namespace hermes {
 BufferOrganizer::BufferOrganizer(int num_threads) : pool(num_threads) {
 }
 
-void ShutdownBufferOrganizer(SharedMemoryContext *context) {
+void LocalShutdownBufferOrganizer(SharedMemoryContext *context) {
   // NOTE(chogan): ThreadPool destructor needs to be called manually since we
   // allocated the BO instance with placement new.
   context->bo->pool.~ThreadPool();
+}
+
+void ShutdownBufferOrganizer(RpcContext *rpc) {
+  RpcCall<bool>(rpc, rpc->node_id, "BO::ShutdownBufferOrganizer");
 }
 
 void BoMove(SharedMemoryContext *context, BufferID src, TargetID dest) {
@@ -71,6 +77,85 @@ bool LocalEnqueueBoTask(SharedMemoryContext *context, BoTask task,
   return result;
 }
 
+void FlushBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id,
+               const std::string &filename, u64 offset, bool async) {
+  if (LockBlob(context, rpc, blob_id)) {
+    int open_flags = 0;
+    mode_t open_mode = 0;
+    if (access(filename.c_str(), F_OK) == 0) {
+      open_flags = O_WRONLY;
+    } else {
+      open_flags = O_WRONLY | O_CREAT | O_TRUNC;
+      open_mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+    }
+
+    int fd = open(filename.c_str(), open_flags, open_mode);
+    if (fd != -1) {
+      VLOG(1) << "Flushing BlobID " << blob_id.as_int << " to file "
+              << filename << " at offset " << offset << "\n";
+
+      const int kFlushBufferSize = KILOBYTES(4);
+      u8 flush_buffer[kFlushBufferSize];
+      Arena local_arena = {};
+      InitArena(&local_arena, kFlushBufferSize, flush_buffer);
+
+      if (flock(fd, LOCK_EX) != 0) {
+        FailedLibraryCall("flock");
+      }
+
+      StdIoPersistBlob(context, rpc, &local_arena, blob_id, fd, offset);
+
+      if (flock(fd, LOCK_UN) != 0) {
+        FailedLibraryCall("flock");
+      }
+
+      if (close(fd) != 0) {
+        FailedLibraryCall("close");
+      }
+    } else {
+      FailedLibraryCall("open");
+    }
+    UnlockBlob(context, rpc, blob_id);
+  }
+
+  if (async) {
+    DecrementFlushCount(context, rpc, filename);
+  }
+
+  // TODO(chogan):
+  // if (DONTNEED) {
+  //   DestroyBlobById();
+  // } else {
+  //   ReplaceBlobWithSwapBlob();
+  // }
+}
+
+bool EnqueueFlushingTask(RpcContext *rpc, BlobID blob_id,
+                         const std::string &filename, u64 offset) {
+  bool result = RpcCall<bool>(rpc, rpc->node_id, "BO::EnqueueFlushingTask",
+                              blob_id, filename, offset);
+
+  return result;
+}
+
+bool LocalEnqueueFlushingTask(SharedMemoryContext *context, RpcContext *rpc,
+                              BlobID blob_id, const std::string &filename,
+                              u64 offset) {
+  bool result = false;
+
+  // TODO(chogan): Handle Swap Blobs (should work, just needs testing)
+  if (!BlobIsInSwap(blob_id)) {
+    ThreadPool *pool = &context->bo->pool;
+    IncrementFlushCount(context, rpc, filename);
+    bool async = true;
+    pool->run(std::bind(FlushBlob, context, rpc, blob_id, filename, offset,
+                        async));
+    result = true;
+  }
+
+  return result;
+}
+
 Status PlaceInHierarchy(SharedMemoryContext *context, RpcContext *rpc,
                         SwapBlob swap_blob, const std::string &name,
                         const api::Context &ctx) {
@@ -110,10 +195,12 @@ void LocalAdjustFlushCount(SharedMemoryContext *context,
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   VBucketID id = LocalGetVBucketId(context, vbkt_name.c_str());
   VBucketInfo *info = LocalGetVBucketInfoById(mdm, id);
-  int flush_count = info->async_flush_count.fetch_add(adjustment);
-  VLOG(1) << "Flush count on VBucket " << vbkt_name
-          << (adjustment > 0 ? "incremented" : "decremented") << " to "
-          << flush_count + adjustment << "\n";
+  if (info) {
+    int flush_count = info->async_flush_count.fetch_add(adjustment);
+    VLOG(1) << "Flush count on VBucket " << vbkt_name
+            << (adjustment > 0 ? "incremented" : "decremented") << " to "
+            << flush_count + adjustment << "\n";
+  }
 }
 
 void LocalIncrementFlushCount(SharedMemoryContext *context,
@@ -149,6 +236,19 @@ void DecrementFlushCount(SharedMemoryContext *context, RpcContext *rpc,
   } else {
     RpcCall<bool>(rpc, target_node, "RemoteDecrementFlushCount",
                   vbkt_name);
+  }
+}
+
+void AwaitAsyncFlushingTasks(SharedMemoryContext *context, RpcContext *rpc,
+                             VBucketID id) {
+  auto sleep_time = std::chrono::milliseconds(500);
+  int outstanding_flushes = 0;
+
+  while ((outstanding_flushes =
+          GetNumOutstandingFlushingTasks(context, rpc, id)) != 0) {
+    LOG(INFO) << "Waiting for " << outstanding_flushes
+              << " outstanding flushes" << std::endl;
+    std::this_thread::sleep_for(sleep_time);
   }
 }
 

@@ -122,7 +122,8 @@ void InitDefaultConfig(Config *config) {
 }
 
 void FailedLibraryCall(std::string func) {
-  LOG(FATAL) << func << " failed with error: "  << strerror(errno)
+  int saved_errno = errno;
+  LOG(FATAL) << func << " failed with error: "  << strerror(saved_errno)
              << std::endl;
 }
 

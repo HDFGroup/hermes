@@ -23,6 +23,8 @@
 #include <hermes/adapter/stdio.h>
 #endif
 
+#include "adapter_utils.h"
+
 namespace fs = std::experimental::filesystem;
 
 namespace hermes::adapter::stdio::test {
@@ -52,30 +54,17 @@ struct Info {
   size_t large_min = 256 * 1024 + 1, large_max = 3 * 1024 * 1024;
 };
 }  // namespace hermes::adapter::stdio::test
+
 hermes::adapter::stdio::test::Arguments args;
 hermes::adapter::stdio::test::Info info;
-std::string gen_random(const int len) {
-  std::string tmp_s;
-  static const char alphanum[] =
-      "0123456789"
-      "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-      "abcdefghijklmnopqrstuvwxyz";
 
-  srand(100);
-
-  tmp_s.reserve(len);
-
-  for (int i = 0; i < len; ++i)
-    tmp_s += alphanum[rand() % (sizeof(alphanum) - 1)];
-
-  return tmp_s;
-}
 int init(int* argc, char*** argv) {
   MPI_Init(argc, argv);
-  info.write_data = gen_random(args.request_size);
+  info.write_data = GenRandom(args.request_size);
   info.read_data = std::string(args.request_size, 'r');
   return 0;
 }
+
 int finalize() {
   MPI_Finalize();
   return 0;
@@ -148,7 +137,9 @@ int posttest(bool compare_data = true) {
 
       size_t char_mismatch = 0;
       for (size_t pos = 0; pos < size; ++pos) {
-        if (d1[pos] != d2[pos]) char_mismatch++;
+        if (d1[pos] != d2[pos]) {
+          char_mismatch++;
+        }
       }
       REQUIRE(char_mismatch == 0);
     }

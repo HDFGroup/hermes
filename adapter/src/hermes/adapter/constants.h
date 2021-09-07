@@ -23,6 +23,18 @@
  * This is used for initialization of Hermes.
  */
 const char* kHermesConf = "HERMES_CONF";
+
+/**
+ * Specifies whether or not Hermes should eagerly and asynchronously flush
+ * writes to their final destinations.
+ *
+ * When set to "1", each write will first Put the Blob into the buffering
+ * system, then trigger a background job to flush the Blob to its file. This is
+ * useful for write-only workloads. If "0" or unset, normal flushing occurs when
+ * fclose is intercepted.
+ */
+const char* kHermesAsyncFlush = "HERMES_ASYNC_FLUSH";
+
 /**
  * kHermesExtension is the extension of hermes files. These are buffered files
  * from I/O. This is needed as we should not intercept these files.

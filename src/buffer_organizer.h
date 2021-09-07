@@ -59,12 +59,20 @@ struct BufferOrganizer {
 
 bool LocalEnqueueBoTask(SharedMemoryContext *context, BoTask task,
                         BoPriority priority = BoPriority::kLow);
+bool LocalEnqueueFlushingTask(SharedMemoryContext *context, RpcContext *rpc,
+                              BlobID blob_id, const std::string &filename,
+                              u64 offset);
+bool EnqueueFlushingTask(RpcContext *rpc, BlobID blob_id,
+                         const std::string &filename, u64 offset);
 
 void BoMove(SharedMemoryContext *context, BufferID src, TargetID dest);
 void BoCopy(SharedMemoryContext *context, BufferID src, TargetID dest);
 void BoDelete(SharedMemoryContext *context, BufferID src);
 
-void ShutdownBufferOrganizer(SharedMemoryContext *context);
+void FlushBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id,
+               const std::string &filename, u64 offset, bool async = false);
+void LocalShutdownBufferOrganizer(SharedMemoryContext *context);
+void ShutdownBufferOrganizer(RpcContext *rpc);
 void IncrementFlushCount(SharedMemoryContext *context, RpcContext *rpc,
                          const std::string &vbkt_name);
 void DecrementFlushCount(SharedMemoryContext *context, RpcContext *rpc,
@@ -73,6 +81,8 @@ void LocalIncrementFlushCount(SharedMemoryContext *context,
                               const std::string &vbkt_name);
 void LocalDecrementFlushCount(SharedMemoryContext *context,
                               const std::string &vbkt_name);
+void AwaitAsyncFlushingTasks(SharedMemoryContext *context, RpcContext *rpc,
+                             VBucketID id);
 }  // namespace hermes
 
 #endif  // HERMES_BUFFER_ORGANIZER_H_

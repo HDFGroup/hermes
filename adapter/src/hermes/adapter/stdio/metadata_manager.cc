@@ -26,7 +26,6 @@ bool MetadataManager::Create(FILE *fh, const AdapterStat &stat) {
 }
 
 bool MetadataManager::Update(FILE *fh, const AdapterStat &stat) {
-  LOG(INFO) << "Update metadata for file handler." << std::endl;
   auto fileId = Convert(fh);
   auto iter = metadata.find(fileId);
   if (iter != metadata.end()) {
@@ -55,7 +54,7 @@ FileID MetadataManager::Convert(FILE *fh) {
   if (status == 0) {
     return FileID(st.st_dev, st.st_ino);
   } else {
-    // TODO(hari) @error_handling fstat failed invalid fh.
+    // TODO(hari) @errorhandling fstat failed invalid fh.
     return FileID();
   }
 }

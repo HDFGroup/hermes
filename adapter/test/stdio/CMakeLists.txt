@@ -1,10 +1,17 @@
-function(gcc_hermes exec tag_name tags conf)
-    add_test(NAME Test${exec}_${tag_name} COMMAND "${CMAKE_BINARY_DIR}/bin/${exec}" ${tags} --reporter compact)
-    set_property(TEST Test${exec}_${tag_name}
-            PROPERTY ENVIRONMENT HERMES_CONF=${CMAKE_SOURCE_DIR}/adapter/test/data/${conf}.conf)
-    set_property(TEST Test${exec}_${tag_name} APPEND
-            PROPERTY ENVIRONMENT LSAN_OPTIONS=suppressions=${CMAKE_SOURCE_DIR}/test/data/asan.supp)
+function(gcc_hermes exec tag_name tags conf async)
+  set(TEST_NAME Test${exec}_${tag_name}_${async})
+  add_test(NAME ${TEST_NAME}
+    COMMAND "${CMAKE_BINARY_DIR}/bin/${exec}" ${tags} --reporter compact)
+  set_property(TEST ${TEST_NAME}
+    PROPERTY ENVIRONMENT HERMES_CONF=${CMAKE_SOURCE_DIR}/adapter/test/data/${conf}.conf)
+  set_property(TEST ${TEST_NAME} APPEND
+    PROPERTY ENVIRONMENT LSAN_OPTIONS=suppressions=${CMAKE_SOURCE_DIR}/test/data/asan.supp)
+
+  if ("${async}" STREQUAL "async")
+    set_property(TEST ${TEST_NAME} APPEND PROPERTY ENVIRONMENT HERMES_ASYNC_FLUSH=1)
+  endif()
 endfunction()
+
 function(gcc_hermes_mode exec tag_name tags mode path)
     set(test_name Test${exec}_${tag_name}_${mode}_${path})
     add_test(NAME ${test_name} COMMAND "${CMAKE_BINARY_DIR}/bin/${exec}" ${tags} --reporter compact)
@@ -26,6 +33,7 @@ target_link_libraries(stdio_adapter_mapper_test
         hermes_stdio_internal Catch2::Catch2 -lstdc++fs -ldl -lc MPI::MPI_CXX)
 add_dependencies(stdio_adapter_mapper_test hermes_stdio_internal)
 gcc(stdio_adapter_mapper_test "")
+
 #------------------------------------------------------------------------------
 # STDIO Adapter End to End tests
 #------------------------------------------------------------------------------
@@ -40,8 +48,10 @@ target_link_libraries(hermes_stdio_adapter_test hermes_stdio)
 add_dependencies(hermes_stdio_adapter_test hermes_stdio)
 add_dependencies(hermes_stdio_adapter_test hermes_daemon)
 set_target_properties(hermes_stdio_adapter_test PROPERTIES COMPILE_FLAGS "-DHERMES_INTERCEPT=1")
-gcc_hermes(hermes_stdio_adapter_test "" "~[request_size=range-large]" hermes)
-gcc_hermes(hermes_stdio_adapter_test "large" "[request_size=range-large]" hermes)
+gcc_hermes(hermes_stdio_adapter_test "" "~[request_size=range-large]" hermes "")
+gcc_hermes(hermes_stdio_adapter_test "large" "[request_size=range-large]" hermes "")
+gcc_hermes(hermes_stdio_adapter_test "" "~[request_size=range-large]" hermes async)
+gcc_hermes(hermes_stdio_adapter_test "large" "[request_size=range-large]" hermes async)
 
 add_executable(hermes_stdio_low_buf_adapter_test stdio_adapter_low_buffer_space_test.cpp ${ADAPTER_COMMON})
 target_link_libraries(hermes_stdio_low_buf_adapter_test Catch2::Catch2 -lstdc++fs -lc MPI::MPI_CXX)
@@ -49,7 +59,8 @@ target_link_libraries(hermes_stdio_low_buf_adapter_test hermes_stdio)
 add_dependencies(hermes_stdio_low_buf_adapter_test hermes_stdio)
 add_dependencies(hermes_stdio_low_buf_adapter_test hermes_daemon)
 set_target_properties(hermes_stdio_low_buf_adapter_test PROPERTIES COMPILE_FLAGS "-DHERMES_INTERCEPT=1")
-gcc_hermes(hermes_stdio_low_buf_adapter_test "" "" hermes_small)
+gcc_hermes(hermes_stdio_low_buf_adapter_test "" "" hermes_small "")
+gcc_hermes(hermes_stdio_low_buf_adapter_test "" "" hermes_small async)
 
 
 add_executable(hermes_stdio_adapter_mode_test stdio_adapter_mode_test.cpp ${ADAPTER_COMMON})

@@ -25,6 +25,10 @@ namespace api {
 
 bool VBucket::IsValid() const { return !IsNullVBucketId(id_); }
 
+void VBucket::WaitForBackgroundFlush() {
+  AwaitAsyncFlushingTasks(&hermes_->context_, &hermes_->rpc_, id_);
+}
+
 Status VBucket::Link(std::string blob_name, std::string bucket_name) {
   Status result = Link(blob_name, bucket_name, ctx_);
 
@@ -40,19 +44,23 @@ Status VBucket::Link(std::string blob_name, std::string bucket_name,
             << " to VBucket " << name_ << '\n';
 
   bool blob_exists = hermes_->BucketContainsBlob(bucket_name, blob_name);
+
   if (blob_exists) {
-    // inserting value by insert function
     TraitInput input;
     input.bucket_name = bucket_name;
     input.blob_name = blob_name;
     for (const auto& t : attached_traits_) {
       if (t->onLinkFn != nullptr) {
-        t->onLinkFn(input, t);
+        t->onLinkFn(hermes_, input, t);
         // TODO(hari): @errorhandling Check if linking was successful
       }
     }
-    AttachBlobToVBucket(&hermes_->context_, &hermes_->rpc_, blob_name.data(),
-                        bucket_name.data(), id_);
+
+    bool already_linked = ContainsBlob(blob_name, bucket_name);
+    if (!already_linked) {
+      AttachBlobToVBucket(&hermes_->context_, &hermes_->rpc_, blob_name.data(),
+                          bucket_name.data(), id_);
+    }
   } else {
     ret = BLOB_NOT_IN_BUCKET;
     LOG(ERROR) << ret.Msg();
@@ -88,7 +96,7 @@ Status VBucket::Unlink(std::string blob_name, std::string bucket_name,
       input.blob_name = blob_name;
       for (const auto& t : attached_traits_) {
         if (t->onUnlinkFn != nullptr) {
-          t->onUnlinkFn(input, t);
+          t->onUnlinkFn(hermes_, input, t);
           // TODO(hari): @errorhandling Check if unlinking was successful
         }
       }
@@ -108,7 +116,6 @@ Status VBucket::Unlink(std::string blob_name, std::string bucket_name,
 
 bool VBucket::ContainsBlob(std::string blob_name, std::string bucket_name) {
   bool ret = false;
-  std::string bk_tmp, blob_tmp;
 
   LOG(INFO) << "Checking if blob " << blob_name << " from bucket "
             << bucket_name << " is in this VBucket " << name_ << '\n';
@@ -120,7 +127,9 @@ bool VBucket::ContainsBlob(std::string blob_name, std::string bucket_name) {
   auto selected_blob_id = GetBlobId(&hermes_->context_, &hermes_->rpc_,
                                     blob_name.c_str(), bucket_id);
   for (const auto& blob_id : blob_ids) {
-    if (selected_blob_id.as_int == blob_id.as_int) ret = true;
+    if (selected_blob_id.as_int == blob_id.as_int) {
+      ret = true;
+    }
   }
 
   return ret;
@@ -161,7 +170,6 @@ Status VBucket::Attach(Trait* trait) {
 
 Status VBucket::Attach(Trait* trait, Context& ctx) {
   (void)ctx;
-  (void)trait;
   Status ret;
 
   LOG(INFO) << "Attaching trait to VBucket " << name_ << '\n';
@@ -185,7 +193,7 @@ Status VBucket::Attach(Trait* trait, Context& ctx) {
       input.blob_name =
           GetBlobNameFromId(&hermes_->context_, &hermes_->rpc_, blob_id);
       if (t->onAttachFn != nullptr) {
-        t->onAttachFn(input, trait);
+        t->onAttachFn(hermes_, input, trait);
         // TODO(hari): @errorhandling Check if attach was successful
       }
     }
@@ -236,7 +244,7 @@ Status VBucket::Detach(Trait* trait, Context& ctx) {
       input.blob_name =
           GetBlobNameFromId(&hermes_->context_, &hermes_->rpc_, blob_id);
       if (t->onDetachFn != nullptr) {
-        t->onDetachFn(input, trait);
+        t->onDetachFn(hermes_, input, trait);
         // TODO(hari): @errorhandling Check if detach was successful
       }
     }
@@ -247,6 +255,18 @@ Status VBucket::Detach(Trait* trait, Context& ctx) {
   }
 
   return ret;
+}
+
+Trait *VBucket::GetTrait(TraitType type) {
+  Trait *result = 0;
+  for (Trait *trait : attached_traits_) {
+    if (trait && trait->type == type) {
+      result = trait;
+      break;
+    }
+  }
+
+  return result;
 }
 
 template <class Predicate>
@@ -289,92 +309,54 @@ Status VBucket::Destroy() {
 
 Status VBucket::Destroy(Context& ctx) {
   (void)ctx;
-  Status ret;
+  Status result;
 
-  LOG(INFO) << "Deleting VBucket " << name_ << '\n';
+  if (IsValid()) {
+    // NOTE(chogan): Let all flusing tasks complete before destroying the
+    // VBucket.
+    WaitForBackgroundFlush();
 
-  for (const auto& t : attached_traits_) {
-    FILE* file = nullptr;
-    if (this->persist) {
-      if (t->type == TraitType::FILE_MAPPING) {
-        FileMappingTrait* fileBackedTrait = (FileMappingTrait*)t;
-        if (fileBackedTrait->fh != nullptr) {
-          file = fileBackedTrait->fh;
-        } else {
-          std::string open_mode;
-          if (access(fileBackedTrait->filename.c_str(), F_OK) == 0) {
-            open_mode = "r+";
-          } else {
-            open_mode = "w+";
-          }
-          file = fopen(fileBackedTrait->filename.c_str(), open_mode.c_str());
-        }
-      }
-    }
-    auto blob_ids =
-        GetBlobsFromVBucketInfo(&hermes_->context_, &hermes_->rpc_, id_);
-    for (const auto& blob_id : blob_ids) {
-      TraitInput input;
-      auto bucket_id =
-          GetBucketIdFromBlobId(&hermes_->context_, &hermes_->rpc_, blob_id);
-      input.bucket_name =
-          GetBucketNameById(&hermes_->context_, &hermes_->rpc_, bucket_id);
-      input.blob_name =
-          GetBlobNameFromId(&hermes_->context_, &hermes_->rpc_, blob_id);
-      if (attached_traits_.size() > 0) {
-        if (this->persist) {
-          if (t->type == TraitType::FILE_MAPPING) {
-            FileMappingTrait* fileBackedTrait = (FileMappingTrait*)t;
-            // if callback defined by user
-            if (fileBackedTrait->flush_cb) {
-              fileBackedTrait->flush_cb(input, fileBackedTrait);
-            } else {
-              if (!fileBackedTrait->offset_map.empty()) {
-                auto iter = fileBackedTrait->offset_map.find(input.blob_name);
-                if (iter != fileBackedTrait->offset_map.end()) {
-                  // TODO(hari): @errorhandling check return of StdIoPersistBlob
-                  ret = StdIoPersistBlob(&hermes_->context_, &hermes_->rpc_,
-                                         &hermes_->trans_arena_, blob_id, file,
-                                         iter->second);
-                  if (!ret.Succeeded()) LOG(ERROR) << ret.Msg();
-                } else {
-                  ret = BLOB_NOT_LINKED_IN_MAP;
-                  LOG(ERROR) << ret.Msg();
-                }
+    SharedMemoryContext *context = &hermes_->context_;
+    RpcContext *rpc = &hermes_->rpc_;
 
-              } else {
-                ret = OFFSET_MAP_EMPTY;
-                LOG(ERROR) << ret.Msg();
-              }
-            }
-          }
-        }
-        if (t->onDetachFn != nullptr) {
-          t->onDetachFn(input, t);
-          // TODO(hari): @errorhandling Check if detach was successful
-        }
+    LOG(INFO) << "Destroying VBucket " << name_ << '\n';
+
+    auto blob_ids = GetBlobsFromVBucketInfo(context, rpc, id_);
+
+    // NOTE(chogan): Call each Trait's unlink callback on each Blob
+    for (const auto& t : attached_traits_) {
+      for (const auto& blob_id : blob_ids) {
+        TraitInput input = {};
+        BucketID bucket_id = GetBucketIdFromBlobId(context, rpc, blob_id);
+        input.bucket_name = GetBucketNameById(context, rpc, bucket_id);
+        input.blob_name = GetBlobNameFromId(context, rpc, blob_id);
         if (t->onUnlinkFn != nullptr) {
-          t->onUnlinkFn(input, t);
+          t->onUnlinkFn(hermes_, input, t);
           // TODO(hari): @errorhandling Check if unlinking was successful
         }
       }
-      RemoveBlobFromVBucketInfo(&hermes_->context_, &hermes_->rpc_, id_,
-                                input.blob_name.c_str(),
-                                input.bucket_name.c_str());
     }
-    if (persist) {
-      if (file != nullptr) {
-        fflush(file);
-        if (fclose(file) != 0) {
-          ret = FCLOSE_FAILED;
-          LOG(ERROR) << ret.Msg() << strerror(errno);
-        }
+
+    // NOTE(chogan): Call each trait's onDetach callback
+    for (const auto& t : attached_traits_) {
+      if (t->onDetachFn != nullptr) {
+        TraitInput input = {};
+        t->onDetachFn(hermes_, input, t);
+        // TODO(hari): @errorhandling Check if detach was successful
       }
     }
+
+    attached_traits_.clear();
+    bool destroyed = DestroyVBucket(context, rpc, name_.c_str(), id_);
+    if (destroyed) {
+      id_.as_int = 0;
+    } else {
+      result = BUCKET_IN_USE;
+      LOG(ERROR) << result.Msg();
+    }
   }
-  attached_traits_.clear();
-  DestroyVBucket(&hermes_->context_, &hermes_->rpc_, this->name_.c_str(), id_);
-  return Status();
+
+  return result;
 }
 
 }  // namespace api

@@ -57,25 +57,9 @@ struct Info {
 hermes::adapter::stdio::test::Arguments args;
 hermes::adapter::stdio::test::Info info;
 
-std::string gen_random(const int len) {
-  std::string tmp_s;
-  static const char alphanum[] =
-      "0123456789"
-      "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-      "abcdefghijklmnopqrstuvwxyz";
-
-  srand((unsigned)time(NULL) * getpid());
-
-  tmp_s.reserve(len);
-
-  for (int i = 0; i < len; ++i)
-    tmp_s += alphanum[rand() % (sizeof(alphanum) - 1)];
-
-  return tmp_s;
-}
 int init(int* argc, char*** argv) {
   MPI_Init(argc, argv);
-  info.write_data = gen_random(args.request_size);
+  info.write_data = GenRandom(args.request_size);
   info.read_data = std::string(args.request_size, 'r');
   MPI_Comm_rank(MPI_COMM_WORLD, &info.rank);
   MPI_Comm_size(MPI_COMM_WORLD, &info.comm_size);
