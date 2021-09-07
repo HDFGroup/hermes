@@ -38,7 +38,7 @@ const MapperType kMapperType = MapperType::BALANCED;
 /**
  * Define kPageSize for balanced mapping.
  */
-const size_t kPageSize = 1024 * 1024;
+const size_t kPageSize = 512ULL * 1024ULL * 1024ULL;
 /**
  * String delimiter
  */

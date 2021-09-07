@@ -161,7 +161,7 @@ Status RoundRobinPlacement(std::vector<size_t> &blob_sizes,
     PlacementSchema schema;
 
     // Split the blob
-    if (SplitBlob(blob_sizes[i])) {
+    if (false) {  // (SplitBlob(blob_sizes[i])) {
       // Construct the vector for the splitted blob
       std::vector<size_t> new_blob_size;
       GetSplitSizes(blob_sizes[i], new_blob_size);
@@ -257,12 +257,16 @@ Status MinimizeIoTimePlacement(const std::vector<size_t> &blob_sizes,
   using operations_research::MPConstraint;
   using operations_research::MPObjective;
 
+  // TEMP(chogan):
+  (void)node_state;
+
   Status result;
   const size_t num_targets = targets.size();
   const size_t num_blobs = blob_sizes.size();
 
   // TODO(KIMMY): size of constraints should be from context
-  const size_t constraints_per_target = 3;
+  // const size_t constraints_per_target = 3;
+  const size_t constraints_per_target = 1;
   const size_t total_constraints =
     num_blobs + (num_targets * constraints_per_target) - 1;
   std::vector<MPConstraint*> blob_constrt(total_constraints);
@@ -287,46 +291,46 @@ Status MinimizeIoTimePlacement(const std::vector<size_t> &blob_sizes,
 
   // Constraint #2: Minimum Remaining Capacity Constraint
   // TODO(chogan): Get this number from the api::Context
-  const double minimum_remaining_capacity = 0.1;
-  for (size_t j {0}; j < num_targets; ++j) {
-    double remaining_capacity_threshold =
-      static_cast<double>(node_state[j]) * minimum_remaining_capacity;
-    blob_constrt[num_constrts+j] = solver.MakeRowConstraint(
-      0, static_cast<double>(node_state[j]) - remaining_capacity_threshold);
-    for (size_t i {0}; i < num_blobs; ++i) {
-      blob_constrt[num_constrts+j]->SetCoefficient(
-        blob_fraction[i][j], static_cast<double>(blob_sizes[i]));
-    }
-  }
-  num_constrts += num_targets;
+  // const double minimum_remaining_capacity = 0.1;
+  // for (size_t j {0}; j < num_targets; ++j) {
+  //   double remaining_capacity_threshold =
+  //     static_cast<double>(node_state[j]) * minimum_remaining_capacity;
+  //   blob_constrt[num_constrts+j] = solver.MakeRowConstraint(
+  //     0, static_cast<double>(node_state[j]) - remaining_capacity_threshold);
+  //   for (size_t i {0}; i < num_blobs; ++i) {
+  //     blob_constrt[num_constrts+j]->SetCoefficient(
+  //       blob_fraction[i][j], static_cast<double>(blob_sizes[i]));
+  //   }
+  // }
+  // num_constrts += num_targets;
 
   // Constraint #3: Remaining Capacity Change Threshold
   // TODO(chogan): Get this number from the api::Context
-  const double capacity_change_threshold = 0.2;
-  for (size_t j {0}; j < num_targets; ++j) {
-    blob_constrt[num_constrts+j] =
-      solver.MakeRowConstraint(0, capacity_change_threshold * node_state[j]);
-    for (size_t i {0}; i < num_blobs; ++i) {
-      blob_constrt[num_constrts+j]->SetCoefficient(
-        blob_fraction[i][j], static_cast<double>(blob_sizes[i]));
-    }
-  }
-  num_constrts += num_targets;
+  // const double capacity_change_threshold = 0.2;
+  // for (size_t j {0}; j < num_targets; ++j) {
+  //   blob_constrt[num_constrts+j] =
+  //     solver.MakeRowConstraint(0, capacity_change_threshold * node_state[j]);
+  //   for (size_t i {0}; i < num_blobs; ++i) {
+  //     blob_constrt[num_constrts+j]->SetCoefficient(
+  //       blob_fraction[i][j], static_cast<double>(blob_sizes[i]));
+  //   }
+  // }
+  // num_constrts += num_targets;
 
   // Placement Ratio
-  for (size_t j {0}; j < num_targets-1; ++j) {
-    blob_constrt[num_constrts+j] =
-      solver.MakeRowConstraint(0, solver.infinity());
-    for (size_t i {0}; i < num_blobs; ++i) {
-      blob_constrt[num_constrts+j]->SetCoefficient(
-        blob_fraction[i][j+1], static_cast<double>(blob_sizes[i]));
-      double placement_ratio = static_cast<double>(node_state[j+1])/
-                                                   node_state[j];
-      blob_constrt[num_constrts+j]->SetCoefficient(
-        blob_fraction[i][j],
-        static_cast<double>(blob_sizes[i])*(0-placement_ratio));
-    }
-  }
+  // for (size_t j {0}; j < num_targets-1; ++j) {
+  //   blob_constrt[num_constrts+j] =
+  //     solver.MakeRowConstraint(0, solver.infinity());
+  //   for (size_t i {0}; i < num_blobs; ++i) {
+  //     blob_constrt[num_constrts+j]->SetCoefficient(
+  //       blob_fraction[i][j+1], static_cast<double>(blob_sizes[i]));
+  //     double placement_ratio = static_cast<double>(node_state[j+1])/
+  //                                                  node_state[j];
+  //     blob_constrt[num_constrts+j]->SetCoefficient(
+  //       blob_fraction[i][j],
+  //       static_cast<double>(blob_sizes[i])*(0-placement_ratio));
+  //   }
+  // }
 
   // Objective to minimize IO time
   MPObjective* const objective = solver.MutableObjective();

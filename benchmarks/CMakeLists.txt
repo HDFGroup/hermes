@@ -3,7 +3,7 @@ include_directories(
   ${PROJECT_SOURCE_DIR}/test
 )
 
-set(BENCHMARKS mdm_bench dpe_bench)
+set(BENCHMARKS mdm_bench dpe_bench vpic_bench)
 
 foreach(benchmark ${BENCHMARKS})
   add_executable(${benchmark} ${benchmark}.cc)
