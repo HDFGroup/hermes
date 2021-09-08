@@ -21,9 +21,8 @@ using std::chrono::duration;
 const auto now = std::chrono::high_resolution_clock::now;
 
 const int kXdim = 64;
-const int kYdim = 64;
-const int kZdim = 64;
 
+const int kDefaultSleepSeconds = 0;
 const int kDefaultNumVariables = 8;
 const size_t kDefaultDataSizeMB = 8;
 const size_t kDefaultIoSizeMB = kDefaultDataSizeMB;
@@ -41,9 +40,10 @@ const bool kDefaultVerifyResults = false;
 struct Options {
   size_t data_size_mb;
   size_t io_size_mb;
-  std::string output_path;
   int num_iterations;
   int num_nodes;
+  int sleep_seconds;
+  std::string output_path;
   std::string dpe_policy;
   std::string config_path;
   bool shared_bucket;
@@ -62,6 +62,7 @@ struct Timing {
 };
 
 void GetDefaultOptions(Options *options) {
+  options->sleep_seconds = kDefaultSleepSeconds;
   options->data_size_mb = kDefaultDataSizeMB;
   options->io_size_mb = kDefaultIoSizeMB;
   options->output_path = kDefaultOutputPath;
@@ -80,6 +81,9 @@ void GetDefaultOptions(Options *options) {
 
 void PrintUsage(char *program) {
   fprintf(stderr, "Usage: %s [-bhiopx] \n", program);
+  fprintf(stderr, "  -a <sleep_seconds> (default %d)", kDefaultSleepSeconds);
+  fprintf(stderr, "     The number of seconds to sleep between each loop\n"
+                  "     iteration to simulate computation.\n");
   fprintf(stderr, "  -b (default %d)", kDefaultCollectBandwidth);
   fprintf(stderr, "     Boolean flag. If true print bandwidth instead of wall "
                   "     time\n");
@@ -124,8 +128,12 @@ Options HandleArgs(int argc, char **argv) {
   bool io_size_provided = false;
   int option = -1;
 
-  while ((option = getopt(argc, argv, "bc:dfhi:n:o:p:st:vx")) != -1) {
+  while ((option = getopt(argc, argv, "a:bc:dfhi:n:o:p:st:vx")) != -1) {
     switch (option) {
+      case 'a': {
+        result.sleep_seconds = atoi(optarg);
+        break;
+      }
       case 'b': {
         result.collect_bandwidth = true;
         break;
@@ -211,29 +219,16 @@ static inline double uniform_random_number() {
   return (((double)rand())/((double)(RAND_MAX)));
 }
 
-// template<typename T>
-// static void DoFwrite(const std::vector<T> &vec, FILE *f) {
-//   size_t total_bytes = vec.size() * sizeof(T);
-//   size_t bytes_written = fwrite(vec.data(), 1, total_bytes, f);
-//   CHECK_EQ(bytes_written, total_bytes);
-// }
-
 static void DoFwrite(void *data, size_t size, FILE *f) {
   size_t bytes_written = fwrite(data, 1, size, f);
   CHECK_EQ(bytes_written, size);
 }
 
-// template<typename T>
-// static void DoWrite(const std::vector<T> &vec, int fd) {
-//   size_t total_bytes = vec.size() * sizeof(T);
-//   ssize_t bytes_written = write(fd, vec.data(), total_bytes);
-//   CHECK_EQ(bytes_written, total_bytes);
-// }
-
 static void DoWrite(float *data, size_t size, int fd) {
   ssize_t bytes_written = write(fd, data, size);
   CHECK_EQ(bytes_written, size);
 }
+
 #if 0
 static void InitParticles(const int x_dim, const int y_dim, const int z_dim,
                           std::vector<int> &id1, std::vector<int> &id2,
@@ -455,6 +450,9 @@ Timing RunPosixBench(Options &options, float *x, int rank) {
       size_t byte_increment = MEGABYTES(options.data_size_mb) / num_ios;
 
       for (size_t iter = 0; iter < num_ios; ++iter) {
+        auto sleep_seconds = std::chrono::seconds(options.sleep_seconds);
+        std::this_thread::sleep_for(sleep_seconds);
+
         fwrite_timer.resumeTime();
         void *write_start = (hermes::u8 *)x + byte_offset;
         DoFwrite(write_start, byte_increment, f);
@@ -517,28 +515,12 @@ void CheckResults(float *data, size_t num_elements,
 int main(int argc, char* argv[]) {
   Options options = HandleArgs(argc, argv);
 
-  // int gdb_iii = 0;
-  // char gdb_DEBUG_hostname[256];
-  // gethostname(gdb_DEBUG_hostname, sizeof(gdb_DEBUG_hostname));
-  // fprintf(stderr, "PID %d on %s ready for attach\n", getpid(),
-  //         gdb_DEBUG_hostname);
-  // fflush(stderr);
-  // while (0 == gdb_iii)
-  //   sleep(5);
-
   MPI_Init(&argc, &argv);
 
   int rank = 0;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-  if (rank == 0) {
-    // TODO(chogan): DPE strategy, num Tiers, tier percentage
-    // printf("posix,num_buckets,num_iterations,num_particles,write_seconds,"
-    //        "flush_del_seconds\n");
-  }
-
   size_t num_elements = MEGABYTES(options.data_size_mb) / sizeof(float);
-  // std::vector<float> data(num_elements);
   const int kSectorSize = 512;
   float *data = (float *)aligned_alloc(kSectorSize,
                                        num_elements * sizeof(float));
