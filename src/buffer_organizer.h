@@ -82,6 +82,8 @@ void LocalDecrementFlushCount(SharedMemoryContext *context,
                               const std::string &vbkt_name);
 void AwaitAsyncFlushingTasks(SharedMemoryContext *context, RpcContext *rpc,
                              VBucketID id);
+
+void LocalOrganize(const std::string &blob_name, double epsilon);
 }  // namespace hermes
 
 #endif  // HERMES_BUFFER_ORGANIZER_H_

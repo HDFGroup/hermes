@@ -21,6 +21,15 @@ namespace hermes {
 BufferOrganizer::BufferOrganizer(int num_threads) : pool(num_threads) {
 }
 
+void LocalOrganize(const std::string &blob_name, double epsilon) {
+  (void)blob_name; (void)epsilon;
+
+
+  // TODO(chogan): Sync or async?
+
+  // Get biggest buffer on slowest tier
+}
+
 void LocalShutdownBufferOrganizer(SharedMemoryContext *context) {
   // NOTE(chogan): ThreadPool destructor needs to be called manually since we
   // allocated the BO instance with placement new.
