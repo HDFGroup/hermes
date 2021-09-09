@@ -35,7 +35,6 @@ const auto now = std::chrono::high_resolution_clock::now;
 const int kXdim = 64;
 
 const int kDefaultSleepSeconds = 0;
-const int kDefaultNumVariables = 8;
 const size_t kDefaultDataSizeMB = 8;
 const size_t kDefaultIoSizeMB = kDefaultDataSizeMB;
 const char *kDefaultOutputPath = "./";
@@ -46,7 +45,6 @@ const bool kDefaultSharedBucket = true;
 const bool kDefaultDoPosixIo = true;
 const bool kDefaultDirectIo = false;
 const bool kDefaultSync = false;
-const bool kDefaultCollectBandwidth = false;
 const bool kDefaultVerifyResults = false;
 
 struct Options {
@@ -62,7 +60,6 @@ struct Options {
   bool do_posix_io;
   bool direct_io;
   bool sync;
-  bool collect_bandwidth;
   bool verify_results;
 };
 
@@ -70,6 +67,7 @@ struct Timing {
   double fopen_time;
   double fwrite_time;
   double fclose_time;
+  double compute_time;
   double total_time;
 };
 
@@ -85,7 +83,6 @@ void GetDefaultOptions(Options *options) {
   options->do_posix_io = kDefaultDoPosixIo;
   options->direct_io = kDefaultDirectIo;
   options->sync = kDefaultSync;
-  options->collect_bandwidth = kDefaultCollectBandwidth;
   options->verify_results = kDefaultVerifyResults;
 }
 
@@ -93,12 +90,9 @@ void GetDefaultOptions(Options *options) {
 
 void PrintUsage(char *program) {
   fprintf(stderr, "Usage: %s [-bhiopx] \n", program);
-  fprintf(stderr, "  -a <sleep_seconds> (default %d)", kDefaultSleepSeconds);
+  fprintf(stderr, "  -a <sleep_seconds> (default %d)\n", kDefaultSleepSeconds);
   fprintf(stderr, "     The number of seconds to sleep between each loop\n"
                   "     iteration to simulate computation.\n");
-  fprintf(stderr, "  -b (default %d)", kDefaultCollectBandwidth);
-  fprintf(stderr, "     Boolean flag. If true print bandwidth instead of wall "
-                  "     time\n");
   fprintf(stderr, "  -c <hermes.conf_path>\n");
   fprintf(stderr, "     Path to a Hermes configuration file.\n");
   fprintf(stderr, "  -d (default %s)\n", HERMES_BOOL_OPTION(kDefaultDirectIo));
@@ -140,14 +134,10 @@ Options HandleArgs(int argc, char **argv) {
   bool io_size_provided = false;
   int option = -1;
 
-  while ((option = getopt(argc, argv, "a:bc:dfhi:n:o:p:st:vx")) != -1) {
+  while ((option = getopt(argc, argv, "a:c:dfhi:n:o:p:st:vx")) != -1) {
     switch (option) {
       case 'a': {
         result.sleep_seconds = atoi(optarg);
-        break;
-      }
-      case 'b': {
-        result.collect_bandwidth = true;
         break;
       }
       case 'c': {
@@ -295,6 +285,7 @@ double GetMPIAverage(double rank_seconds, int num_ranks, MPI_Comm *comm) {
   return result;
 }
 
+#if 0
 double GetBandwidth(const Options &options, double total_elapsed,
                     MPI_Comm comm) {
   double avg_total_seconds = GetMPIAverage(total_elapsed, 8, comm);
@@ -303,20 +294,6 @@ double GetBandwidth(const Options &options, double total_elapsed,
   double result = total_mb / avg_total_seconds;
 
   return result;
-}
-
-void PrintResults(const Options &options, double bandwidth,
-                  const std::string &buffering) {
-  int num_buckets = options.shared_bucket ? 1 : kDefaultNumVariables;
-  printf("%s,%s,%d,%d,%d,%zu,%f\n", buffering.c_str(),
-         options.dpe_policy.c_str(), options.num_nodes, num_buckets,
-         options.num_iterations, options.data_size_mb, bandwidth);
-}
-
-void PrintResults(const Options &options, Timing *timing) {
-  printf("%zu,%zu,%f,%f,%f,%f\n", options.data_size_mb, options.io_size_mb,
-         timing->fopen_time, timing->fwrite_time, timing->fclose_time,
-         timing->total_time);
 }
 
 void RunHermesBench(Options &options, float *data) {
@@ -420,6 +397,16 @@ void RunHermesBench(Options &options, float *data) {
 
   hermes->Finalize();
 }
+#endif
+
+void PrintResults(const Options &options, const Timing &timing,
+                  double bandwidth) {
+  double compute_percentage = timing.compute_time / timing.total_time;
+  printf("%zu,%zu,%f,%f,%f,%f,%f,%f,%f\n", options.data_size_mb,
+         options.io_size_mb, timing.fopen_time, timing.fwrite_time,
+         timing.fclose_time, timing.total_time, timing.compute_time,
+         bandwidth, compute_percentage);
+}
 
 std::string GetOutputPath(const std::string &output_path, int rank) {
   std::string output_file = "vpic_posix_" + std::to_string(rank) + ".out";
@@ -436,24 +423,34 @@ Timing RunPosixBench(Options &options, float *x, int rank) {
   hermes::testing::Timer fopen_timer;
   hermes::testing::Timer fwrite_timer;
   hermes::testing::Timer fclose_timer;
+  hermes::testing::Timer compute_timer;
   hermes::testing::Timer timer;
 
   for (int i = 0; i < options.num_iterations; ++i) {
     std::string output_path = GetOutputPath(options.output_path, rank);
 
     if (options.direct_io) {
+      fopen_timer.resumeTime();
       int fd = open(output_path.c_str(),
                     O_WRONLY | O_CREAT | O_TRUNC | O_DIRECT | O_SYNC,
                     S_IRUSR | S_IWUSR);
+      fopen_timer.pauseTime();
+      MPI_Barrier(MPI_COMM_WORLD);
+
       CHECK_GT(fd, 0);
-      timer.resumeTime();
+      fwrite_timer.resumeTime();
       DoWrite(x, MEGABYTES(options.data_size_mb), fd);
-      timer.pauseTime();
+      fwrite_timer.pauseTime();
+      MPI_Barrier(MPI_COMM_WORLD);
+
+      fclose_timer.resumeTime();
       CHECK_EQ(close(fd), 0);
+      fclose_timer.pauseTime();
+      MPI_Barrier(MPI_COMM_WORLD);
     } else {
       fopen_timer.resumeTime();
       FILE *f = fopen(output_path.c_str(), "w");
-      result.fopen_time = fopen_timer.pauseTime();
+      fopen_timer.pauseTime();
       CHECK(f);
       MPI_Barrier(MPI_COMM_WORLD);
 
@@ -463,7 +460,9 @@ Timing RunPosixBench(Options &options, float *x, int rank) {
 
       for (size_t iter = 0; iter < num_ios; ++iter) {
         auto sleep_seconds = std::chrono::seconds(options.sleep_seconds);
+        compute_timer.resumeTime();
         std::this_thread::sleep_for(sleep_seconds);
+        compute_timer.pauseTime();
 
         fwrite_timer.resumeTime();
         void *write_start = (hermes::u8 *)x + byte_offset;
@@ -478,31 +477,18 @@ Timing RunPosixBench(Options &options, float *x, int rank) {
         MPI_Barrier(MPI_COMM_WORLD);
       }
 
-      result.fwrite_time = fwrite_timer.getElapsedTime();
-
       fclose_timer.resumeTime();
       CHECK_EQ(fclose(f), 0);
-      result.fclose_time = fclose_timer.pauseTime();
+      fclose_timer.pauseTime();
       MPI_Barrier(MPI_COMM_WORLD);
     }
   }
 
-
-  if (options.collect_bandwidth) {
-    auto local_elapsed_time = timer.getElapsedTime();
-    double bandwidth = GetBandwidth(options, local_elapsed_time,
-                                    MPI_COMM_WORLD);
-    if (rank == 0) {
-      std::string buffering = "normal";
-      if (options.direct_io) {
-        buffering = "direct";
-      } else if (options.sync) {
-        buffering = "sync";
-      }
-      PrintResults(options, bandwidth, buffering);
-    }
-  } else {
-  }
+  result.fopen_time = fopen_timer.getElapsedTime();
+  result.fwrite_time = fwrite_timer.getElapsedTime();
+  result.fclose_time = fclose_timer.getElapsedTime();
+  result.compute_time = compute_timer.getElapsedTime();
+  result.total_time = timer.getElapsedTime();
 
   return result;
 }
@@ -530,7 +516,9 @@ int main(int argc, char* argv[]) {
   MPI_Init(&argc, &argv);
 
   int rank = 0;
+  int comm_size = 0;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
 
   size_t num_elements = MEGABYTES(options.data_size_mb) / sizeof(float);
   const int kSectorSize = 512;
@@ -549,7 +537,7 @@ int main(int argc, char* argv[]) {
     local_results = RunPosixBench(options, data, rank);
     local_results.total_time = timer.pauseTime();
   } else {
-    RunHermesBench(options, data);
+    // RunHermesBench(options, data);
   }
 
   if (options.verify_results) {
@@ -565,9 +553,13 @@ int main(int argc, char* argv[]) {
              MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
   MPI_Reduce(&local_results.fclose_time, &combined_results.fclose_time, 1,
              MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+  MPI_Reduce(&local_results.compute_time, &combined_results.compute_time, 1,
+             MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 
   if (rank == 0) {
-    PrintResults(options, &combined_results);
+    double total_mb = options.data_size_mb * options.num_iterations * comm_size;
+    double bandwidth_mbps = total_mb / combined_results.total_time;
+    PrintResults(options, combined_results, bandwidth_mbps);
   }
 
   free(data);
