@@ -633,7 +633,7 @@ int HERMES_DECL(fclose)(FILE *fp) {
             file_vbucket.Destroy();
           }
         }
-        existing.first.st_bkid->Destroy();
+        // existing.first.st_bkid->Destroy();
         mdm->FinalizeHermes();
       } else {
         LOG(INFO) << "File handler is opened by more than one fopen.\n";
