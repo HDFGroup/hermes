@@ -1,4 +1,5 @@
-# Demonstrate how to use Hermes VFD with hdf5_iotest
+# Demonstrate how to use Hermes 
+with hdf5_iotest
 
 ## Build Hermes
 ```bash
@@ -20,18 +21,20 @@ build hdf5 with `HDF5_ENABLE_PARALLEL=ON` and `HDF5_ENABLE_HERMES_VFD=ON`
 ```bash
 git checkout https://github.com/jya-kmu/hdf5-iotest.git
 git checkout hermes-vfd
-git checkout 82667579201fbf615d3ab26eddbb4a2540016b49 .
 ```
 Then copy hermes.conf file to top hdf5-iotest directory, and edit `src/hdf5_iotest.ini`
 file to indicate if split metadata and data is needed (`split = 1`) or not (`split = 0`)
 
-In file `src/hdf5_iotest.c` last parameter in 
+In file `src/hdf5_iotest.c` the last parameter in 
 `status = H5Pset_fapl_hermes(fapl, false, 1048576)` (@line 176)
 sets up the page size for both metadata and data (if `split = 0`) or data page size 
 (if `split = 1`). Default parameter 1048576 indicates 1MiB page size.
-The last parameter in `status = H5Pset_fapl_hermes(fapl_m, false, 4096)` (@line 333)
+We provide two VFD methods for metadata if it is different from raw data. The first  
+method is hermes VFD. The last parameter in
+`status = H5Pset_fapl_hermes(fapl_m, false, 4096)` (@line 333)
 sets up the page size for metadata (if `split = 1`). User can modify these parameter
-for performance test.
+for performance test. The second methods is core VFD, which keeps the metadata in
+memory by the HDF5 API `status = H5Pset_fapl_core(fapl_m, (size_t)0, 0)`.
 
 ## Config with Hermes
 The `hermes.conf` file is used for Hermes environment setup. We provide examples for tests
