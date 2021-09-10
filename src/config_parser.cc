@@ -85,6 +85,7 @@ enum ConfigVariable {
   ConfigVariable_PlacementPolicy,
   ConfigVariable_IsSharedDevice,
   ConfigVariable_BoNumThreads,
+  ConfigVariable_RRSplit,
 
   ConfigVariable_Count
 };
@@ -123,6 +124,7 @@ static const char *kConfigVariableStrings[ConfigVariable_Count] = {
   "default_placement_policy",
   "is_shared_device",
   "buffer_organizer_num_threads",
+  "default_rr_split",
 };
 
 struct Token {
@@ -841,6 +843,10 @@ void ParseTokens(TokenList *tokens, Config *config) {
       }
       case ConfigVariable_BoNumThreads: {
         config->bo_num_threads = ParseInt(&tok);
+        break;
+      }
+      case ConfigVariable_RRSplit: {
+        config->default_rr_split = ParseInt(&tok);
         break;
       }
       default: {

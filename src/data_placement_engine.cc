@@ -151,7 +151,8 @@ void GetSplitSizes(size_t blob_size, std::vector<size_t> &output) {
 Status RoundRobinPlacement(std::vector<size_t> &blob_sizes,
                            std::vector<u64> &node_state,
                            std::vector<PlacementSchema> &output,
-                           const std::vector<TargetID> &targets) {
+                           const std::vector<TargetID> &targets,
+                           bool split) {
   Status result;
   std::vector<u64> ns_local(node_state.begin(), node_state.end());
 
@@ -160,8 +161,7 @@ Status RoundRobinPlacement(std::vector<size_t> &blob_sizes,
     std::mt19937 rng(dev());
     PlacementSchema schema;
 
-    // Split the blob
-    if (false) {  // (SplitBlob(blob_sizes[i])) {
+    if (split) {
       // Construct the vector for the splitted blob
       std::vector<size_t> new_blob_size;
       GetSplitSizes(blob_sizes[i], new_blob_size);
@@ -457,7 +457,7 @@ Status CalculatePlacement(SharedMemoryContext *context, RpcContext *rpc,
       }
       case api::PlacementPolicy::kRoundRobin: {
         result = RoundRobinPlacement(blob_sizes, node_state,
-                                     output_tmp, targets);
+                                     output_tmp, targets, api_context.rr_split);
         break;
       }
       case api::PlacementPolicy::kMinimizeIoTime: {

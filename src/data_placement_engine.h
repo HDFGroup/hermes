@@ -43,7 +43,8 @@ class RoundRobinState {
 Status RoundRobinPlacement(std::vector<size_t> &blob_sizes,
                         std::vector<u64> &node_state,
                            std::vector<PlacementSchema> &output,
-                           const std::vector<TargetID> &targets);
+                           const std::vector<TargetID> &targets,
+                           bool split);
 
 Status RandomPlacement(std::vector<size_t> &blob_sizes,
                        std::multimap<u64, TargetID> &ordered_cap,

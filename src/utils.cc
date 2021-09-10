@@ -119,6 +119,7 @@ void InitDefaultConfig(Config *config) {
   config->is_shared_device[3] = 1;
 
   config->bo_num_threads = 4;
+  config->default_rr_split = false;
 }
 
 void FailedLibraryCall(std::string func) {
