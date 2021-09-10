@@ -244,7 +244,6 @@ void AwaitAsyncFlushingTasks(SharedMemoryContext *context, RpcContext *rpc,
 
   while ((outstanding_flushes =
           GetNumOutstandingFlushingTasks(context, rpc, id)) != 0) {
-
     if (++counter == log_every) {
       LOG(INFO) << "Waiting for " << outstanding_flushes
                 << " outstanding flushes" << std::endl;
