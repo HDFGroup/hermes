@@ -237,7 +237,7 @@ void DecrementFlushCount(SharedMemoryContext *context, RpcContext *rpc,
 
 void AwaitAsyncFlushingTasks(SharedMemoryContext *context, RpcContext *rpc,
                              VBucketID id) {
-  auto sleep_time = std::chrono::milliseconds(500);
+  auto sleep_time = std::chrono::milliseconds(5000);
   int outstanding_flushes = 0;
 
   while ((outstanding_flushes =
