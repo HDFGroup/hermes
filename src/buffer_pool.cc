@@ -1722,6 +1722,10 @@ api::Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
     AttachBlobToBucket(context, rpc, name.c_str(), bucket_id, buffer_ids,
                        false, called_from_buffer_organizer);
   } else {
+    // TEMP(chogan):
+    (void)ctx;
+    result = PLACE_SWAP_BLOB_TO_BUF_FAILED;
+#if 0
     if (called_from_buffer_organizer) {
       result = PLACE_SWAP_BLOB_TO_BUF_FAILED;
       LOG(ERROR) << result.Msg();
@@ -1733,6 +1737,7 @@ api::Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
       RpcCall<void>(rpc, rpc->node_id, "BO::PlaceInHierarchy", swap_blob, name,
                     ctx);
     }
+#endif
   }
 
   return result;
