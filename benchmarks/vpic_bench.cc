@@ -39,7 +39,6 @@ const size_t kDefaultDataSizeMB = 8;
 const size_t kDefaultIoSizeMB = kDefaultDataSizeMB;
 const char *kDefaultOutputPath = "./";
 const int kDefaultIterations = 1;
-const int kDefaultNumNodes = 1;
 const char *kDefaultDpePolicy = "none";
 const bool kDefaultSharedBucket = true;
 const bool kDefaultDoPosixIo = true;
@@ -51,11 +50,9 @@ struct Options {
   size_t data_size_mb;
   size_t io_size_mb;
   int num_iterations;
-  int num_nodes;
   int sleep_seconds;
   std::string output_path;
   std::string dpe_policy;
-  std::string config_path;
   bool shared_bucket;
   bool do_posix_io;
   bool direct_io;
@@ -77,7 +74,6 @@ void GetDefaultOptions(Options *options) {
   options->io_size_mb = kDefaultIoSizeMB;
   options->output_path = kDefaultOutputPath;
   options->num_iterations = kDefaultIterations;
-  options->num_nodes = kDefaultNumNodes;
   options->dpe_policy = kDefaultDpePolicy;
   options->shared_bucket = kDefaultSharedBucket;
   options->do_posix_io = kDefaultDoPosixIo;
@@ -103,7 +99,6 @@ void PrintUsage(char *program) {
   fprintf(stderr, "     Print help\n");
   fprintf(stderr, "  -i <num_iterations> (default %d)\n", kDefaultIterations);
   fprintf(stderr, "     The number of times to run the VPIC I/O kernel.\n");
-  fprintf(stderr, "  -n <num_nodes> (default %d)\n", kDefaultNumNodes);
   fprintf(stderr, "     The number of nodes (only required when -x is used)\n");
   fprintf(stderr, "  -o <output_file> (default %s)\n", kDefaultOutputPath);
   fprintf(stderr, "     The path to an output file, which will be called\n"
@@ -134,14 +129,10 @@ Options HandleArgs(int argc, char **argv) {
   bool io_size_provided = false;
   int option = -1;
 
-  while ((option = getopt(argc, argv, "a:c:dfhi:n:o:p:st:vx")) != -1) {
+  while ((option = getopt(argc, argv, "a:dfhi:o:p:st:vx")) != -1) {
     switch (option) {
       case 'a': {
         result.sleep_seconds = atoi(optarg);
-        break;
-      }
-      case 'c': {
-        result.config_path = optarg;
         break;
       }
       case 'd': {
@@ -158,10 +149,6 @@ Options HandleArgs(int argc, char **argv) {
       }
       case 'i': {
         result.num_iterations = atoi(optarg);
-        break;
-      }
-      case 'n': {
-        result.num_nodes = atoi(optarg);
         break;
       }
       case 'o': {
