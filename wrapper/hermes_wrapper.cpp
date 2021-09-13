@@ -39,7 +39,7 @@ VBucketClass *HermesVBucketCreate(const char *name) {
   hermes::api::Context ctx;
   try {
     hermes::api::VBucket *new_vbucket =
-      new hermes::api::VBucket(std::string(name), hermes_ptr, true, ctx);
+      new hermes::api::VBucket(std::string(name), hermes_ptr, ctx);
 
     return (VBucketClass *)new_vbucket;
   }
