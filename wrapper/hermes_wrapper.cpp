@@ -34,25 +34,6 @@ void HermesFinalize() {
   hermes_ptr->Finalize(true);
 }
 
-VBucketClass *HermesVBucketCreate(const char *name) {
-  LOG(INFO) << "Hermes Wrapper: Creating VBucket " << name << '\n';
-  hermes::api::Context ctx;
-  try {
-    hermes::api::VBucket *new_vbucket =
-      new hermes::api::VBucket(std::string(name), hermes_ptr, ctx);
-
-    return (VBucketClass *)new_vbucket;
-  }
-  catch (const std::runtime_error& e) {
-    LOG(ERROR) << "Blob runtime error\n";
-    return NULL;
-  }
-  catch (const std::length_error& e) {
-    LOG(ERROR) << "Blob length error\n";
-    return NULL;
-  }
-}
-
 void HermesVBucketLink(VBucketClass *vbkt, char *blob_name) {
   hermes::api::VBucket *vbucket = (hermes::api::VBucket *)vbkt;
 
@@ -99,6 +80,7 @@ void HermesBucketClose(BucketClass *bkt) {
   LOG(INFO) << "Hermes Wrapper: Closing Bucket " << my_bkt->GetName() << '\n';
 
   my_bkt->Release();
+  delete my_bkt;
 }
 
 void HermesBucketDestroy(BucketClass *bkt) {
@@ -132,7 +114,7 @@ void HermesBucketPut(BucketClass *bkt, char *name, unsigned char *put_data,
     LOG(ERROR) << "Hermes Wrapper: HermesBucketPut failed\n";
 }
 
-void HermesBucketGet(BucketClass *bkt, char *blob_name, size_t kPageSize,
+void HermesBucketGet(BucketClass *bkt, char *blob_name, size_t page_size,
                      unsigned char *buf) {
   hermes::api::Bucket *bucket = (hermes::api::Bucket *)bkt;
   const hermes::api::Context ctx;
@@ -140,10 +122,31 @@ void HermesBucketGet(BucketClass *bkt, char *blob_name, size_t kPageSize,
   LOG(INFO) << "Hermes Wrapper: Getting blob " << blob_name << " from Bucket "
             << bucket->GetName();
 
-  size_t blob_size = bucket->Get(blob_name, buf, kPageSize, ctx);
-  if (blob_size != kPageSize)
-    LOG(ERROR) << "Blob size error: expected to get " << kPageSize
+  size_t blob_size = bucket->Get(blob_name, buf, page_size, ctx);
+  if (blob_size != page_size)
+    LOG(ERROR) << "Blob size error: expected to get " << page_size
                << ", but only get " << blob_size << '\n';
 }
+  
+  #if 0
+  VBucketClass *HermesVBucketCreate(const char *name) {
+  LOG(INFO) << "Hermes Wrapper: Creating VBucket " << name << '\n';
+  hermes::api::Context ctx;
+  try {
+    hermes::api::VBucket *new_vbucket =
+      new hermes::api::VBucket(std::string(name), hermes_ptr, ctx);
+
+    return (VBucketClass *)new_vbucket;
+  }
+  catch (const std::runtime_error& e) {
+    LOG(ERROR) << "Blob runtime error\n";
+    return NULL;
+  }
+  catch (const std::length_error& e) {
+    LOG(ERROR) << "Blob length error\n";
+    return NULL;
+  }
+}
+#endif
 
 }  // extern "C"
