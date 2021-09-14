@@ -21,8 +21,9 @@ build hdf5 with `HDF5_ENABLE_PARALLEL=ON` and `HDF5_ENABLE_HERMES_VFD=ON`
 git checkout https://github.com/jya-kmu/hdf5-iotest.git
 git checkout hermes-vfd
 ```
-Then copy hermes.conf file to top hdf5-iotest directory, and edit `src/hdf5_iotest.ini`
-file to indicate if split metadata and data is needed (`split = 1`) or not (`split = 0`)
+Then copy hermes.conf file (i.e 1MB/1MB_RAM_NVME_BB/16KB_1MB_random/hermes.conf)
+to top hdf5-iotest directory, and edit file `src/hdf5_iotest.ini` to decide
+if split metadata and data (`split = 1`) or not or not (`split = 0`).
 
 In file `src/hdf5_iotest.c` the last parameter in 
 `status = H5Pset_fapl_hermes(fapl, false, 1048576)` (@line 176)
