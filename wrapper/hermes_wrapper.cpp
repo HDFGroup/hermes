@@ -127,26 +127,5 @@ void HermesBucketGet(BucketClass *bkt, char *blob_name, size_t page_size,
     LOG(ERROR) << "Blob size error: expected to get " << page_size
                << ", but only get " << blob_size << '\n';
 }
-  
-  #if 0
-  VBucketClass *HermesVBucketCreate(const char *name) {
-  LOG(INFO) << "Hermes Wrapper: Creating VBucket " << name << '\n';
-  hermes::api::Context ctx;
-  try {
-    hermes::api::VBucket *new_vbucket =
-      new hermes::api::VBucket(std::string(name), hermes_ptr, ctx);
-
-    return (VBucketClass *)new_vbucket;
-  }
-  catch (const std::runtime_error& e) {
-    LOG(ERROR) << "Blob runtime error\n";
-    return NULL;
-  }
-  catch (const std::length_error& e) {
-    LOG(ERROR) << "Blob length error\n";
-    return NULL;
-  }
-}
-#endif
 
 }  // extern "C"
