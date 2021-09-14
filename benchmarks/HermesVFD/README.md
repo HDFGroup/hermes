@@ -1,5 +1,4 @@
-# Demonstrate how to use Hermes 
-with hdf5_iotest
+# Demonstrate how to use Hermes with hdf5_iotest
 
 ## Build Hermes
 ```bash
