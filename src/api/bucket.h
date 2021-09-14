@@ -297,16 +297,15 @@ Status Bucket::Put(const std::vector<std::string> &names,
     }
 
     if (ctx.rr_retry) {
-      int num_devices = 3;
-      int device = 0;
-      while (device < num_devices) {
+      RoundRobinState rr_state;
+      int num_devices = rr_state.GetNumDevices();
+
+      for (int i = 0; i < num_devices; ++i) {
         ret = PutInternal(names, sizes_in_bytes, blobs, ctx);
 
         if (ret.Failed()) {
-          RoundRobinState rr_state;
           int current = rr_state.GetCurrentDeviceIndex();
           rr_state.SetCurrentDeviceIndex((current + 1) % num_devices);
-          device++;
         } else {
           break;
         }
@@ -314,7 +313,6 @@ Status Bucket::Put(const std::vector<std::string> &names,
     } else {
       ret = PutInternal(names, sizes_in_bytes, blobs, ctx);
     }
-
   } else {
     ret = INVALID_BUCKET;
     LOG(ERROR) << ret.Msg();
