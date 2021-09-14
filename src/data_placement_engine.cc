@@ -148,7 +148,7 @@ void GetSplitSizes(size_t blob_size, std::vector<size_t> &output) {
   output.push_back(blob_size - blob_each_portion*(split_num-1));
 }
 
-Status RoundRobinPlacement(std::vector<size_t> &blob_sizes,
+Status RoundRobinPlacement(const std::vector<size_t> &blob_sizes,
                            std::vector<u64> &node_state,
                            std::vector<PlacementSchema> &output,
                            const std::vector<TargetID> &targets,
@@ -211,7 +211,7 @@ Status AddRandomSchema(std::multimap<u64, TargetID> &ordered_cap,
   return result;
 }
 
-Status RandomPlacement(std::vector<size_t> &blob_sizes,
+Status RandomPlacement(const std::vector<size_t> &blob_sizes,
                        std::multimap<u64, TargetID> &ordered_cap,
                        std::vector<PlacementSchema> &output) {
   Status result;
@@ -404,7 +404,7 @@ enum Topology {
 };
 
 Status CalculatePlacement(SharedMemoryContext *context, RpcContext *rpc,
-                          std::vector<size_t> &blob_sizes,
+                          const std::vector<size_t> &blob_sizes,
                           std::vector<PlacementSchema> &output,
                           const api::Context &api_context) {
   std::vector<PlacementSchema> output_tmp;

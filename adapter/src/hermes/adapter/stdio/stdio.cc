@@ -248,7 +248,16 @@ void ReadGap(const std::string &filename, size_t seek_offset, u8 *read_ptr,
 void PutWithStdioFallback(AdapterStat &stat, const std::string &blob_name,
                           const std::string &filename, u8 *data, size_t size,
                           size_t offset) {
-  hapi::Status status = stat.st_bkid->Put(blob_name, data, size);
+  hapi::Context ctx;
+  const char *hermes_write_only = getenv("HERMES_WRITE_ONLY");
+
+  if (hermes_write_only && hermes_write_only[0] == '1') {
+    // Custom DPE for write-only apps like VPIC
+    ctx.rr_retry = true;
+    ctx.disable_swap = true;
+  }
+
+  hapi::Status status = stat.st_bkid->Put(blob_name, data, size, ctx);
   if (status.Failed()) {
     LOG(WARNING) << "Failed to Put Blob " << blob_name << " to Bucket "
                  << filename << ". Falling back to stdio." << std::endl;
@@ -633,7 +642,7 @@ int HERMES_DECL(fclose)(FILE *fp) {
             file_vbucket.Destroy();
           }
         }
-        // existing.first.st_bkid->Destroy();
+        existing.first.st_bkid->Destroy();
         mdm->FinalizeHermes();
       } else {
         LOG(INFO) << "File handler is opened by more than one fopen.\n";

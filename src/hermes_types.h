@@ -58,10 +58,14 @@ struct Context {
   PlacementPolicy policy;
   int buffer_organizer_retries;
   bool rr_split;
+  bool rr_retry;
+  bool disable_swap;
 
   Context() : policy(default_placement_policy),
               buffer_organizer_retries(default_buffer_organizer_retries),
-              rr_split(default_rr_split) {}
+              rr_split(default_rr_split),
+              rr_retry(false),
+              disable_swap(false) {}
 };
 
 }  // namespace api
