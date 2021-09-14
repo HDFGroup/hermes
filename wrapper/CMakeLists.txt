@@ -1,3 +1,15 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * Distributed under BSD 3-Clause license.                                   *
+ * Copyright by The HDF Group.                                               *
+ * Copyright by the Illinois Institute of Technology.                        *
+ * All rights reserved.                                                      *
+ *                                                                           *
+ * This file is part of Hermes. The full Hermes copyright notice, including  *
+ * terms governing use, modification, and redistribution, is contained in    *
+ * the COPYING file, which can be found at the top directory. If you do not  *
+ * have access to the file, you may request a copy from help@hdfgroup.org.   *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+ 
 #------------------------------------------------------------------------------
 # Include source and build directories
 #------------------------------------------------------------------------------
@@ -14,7 +26,6 @@ add_library(hermes_wrapper hermes_wrapper.cpp)
 target_link_libraries(hermes_wrapper ${LIBRT} hermes)
 target_compile_definitions(hermes_wrapper
     PRIVATE $<$<BOOL:${HERMES_RPC_THALLIUM}>:HERMES_RPC_THALLIUM>)
-#target_link_libraries(hermes_wrapper ${LIBRT} hermes)
     
 set(HERMES_EXPORTED_LIBS hermes_wrapper ${HERMES_EXPORTED_LIBS})
 
