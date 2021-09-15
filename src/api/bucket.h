@@ -297,7 +297,8 @@ Status Bucket::Put(const std::vector<std::string> &names,
     }
 
     if (ctx.rr_retry) {
-      int num_devices = GetLocalSystemViewState(&hermes_->context_)->num_devices;
+      int num_devices =
+        GetLocalSystemViewState(&hermes_->context_)->num_devices;
 
       for (int i = 0; i < num_devices; ++i) {
         ret = PutInternal(names, sizes_in_bytes, blobs, ctx);
