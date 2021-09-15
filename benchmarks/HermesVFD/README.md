@@ -34,11 +34,13 @@ can use different VFD methods or same VFD method with different parameter
 configuration for metadata and data. In the example of hdf5-iotest, function 
 `status = H5Pset_fapl_hermes(fapl, false, 1048576)` (@line 176) in file
 `src/hdf5_iotest.c` will setup the page size for data. And default in this test
-we choose HDF5 core VFD for metadata by HDF5 API `status = H5Pset_fapl_core(fapl_m, (size_t)0, 0)` (@line 334), which will keep
-the metadata in memory. User can use Hermes VFD for metadata with a smaller
-page size by `status = H5Pset_fapl_hermes(fapl_m, false, 4096)` (@line 333).
+we choose HDF5 core VFD for metadata by HDF5 API
+`status = H5Pset_fapl_core(fapl_m, (size_t)0, 0)` (@line 334), which will keep
+the metadata in memory. User can choose Hermes VFD for metadata with a smaller
+page size by `status = H5Pset_fapl_hermes(fapl_m, false, 4096)` (@line 333) 
+instead of core VFD.
 
-We provide the performance results in hdf5-iotest_Hermes_VFD.csv for split and 
+We provide the performance results in hdf5-iotest_Hermes_VFD.csv for splitting and 
 not splitting metadata and data, and further using different methods for metadata
 in the splitting case.
 
