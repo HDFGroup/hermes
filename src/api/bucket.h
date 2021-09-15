@@ -297,13 +297,13 @@ Status Bucket::Put(const std::vector<std::string> &names,
     }
 
     if (ctx.rr_retry) {
-      RoundRobinState rr_state;
-      int num_devices = rr_state.GetNumDevices();
+      int num_devices = GetLocalSystemViewState(&hermes_->context_)->num_devices;
 
       for (int i = 0; i < num_devices; ++i) {
         ret = PutInternal(names, sizes_in_bytes, blobs, ctx);
 
         if (ret.Failed()) {
+          RoundRobinState rr_state;
           int current = rr_state.GetCurrentDeviceIndex();
           rr_state.SetCurrentDeviceIndex((current + 1) % num_devices);
         } else {
