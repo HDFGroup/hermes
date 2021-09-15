@@ -89,6 +89,7 @@ void HermesBucketDestroy(BucketClass *bkt) {
   LOG(INFO) << "Hermes Wrapper: Destroying Bucket\n";
 
   my_bkt->Destroy();
+  delete my_bkt;
 }
 
 bool HermesBucketContainsBlob(BucketClass *bkt, char *name) {
