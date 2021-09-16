@@ -2,13 +2,13 @@
 
 ## Build Hermes
 ```bash
-git clone https://github.com/jya-kmu/hdf5.git
+git clone https://github.com/HDFGroup/hermes.git
 ```
 build with `HERMES_ENABLE_WRAPPER=ON` following the instructions in hermes README file
 
 ## Build hdf5 with Hermes VFD
 ```bash
-git checkout https://github.com/jya-kmu/hdf5.git
+git clone https://github.com/jya-kmu/hdf5.git
 git checkout hermes_vfd
 git checkout 30d224cec2ea21c41ce09083f96885ea4785bbdf .
 ```
