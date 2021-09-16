@@ -1,13 +1,10 @@
-# Demonstrate how to use Hermes 
-with hdf5_iotest
+# Demonstrate how to use Hermes with hdf5_iotest
 
 ## Build Hermes
 ```bash
 git clone https://github.com/jya-kmu/hdf5.git
-git checkout kimmy/c_wrapper
-git checkout 3d7fd686cefa27d72520f5521afa574332ffc306 .
 ```
-build with `HERMES_ENABLE_WRAPPER=ON`
+build with `HERMES_ENABLE_WRAPPER=ON` following the instructions in hermes README file
 
 ## Build hdf5 with Hermes VFD
 ```bash
@@ -22,26 +19,37 @@ build hdf5 with `HDF5_ENABLE_PARALLEL=ON` and `HDF5_ENABLE_HERMES_VFD=ON`
 git checkout https://github.com/jya-kmu/hdf5-iotest.git
 git checkout hermes-vfd
 ```
-Then copy hermes.conf file to top hdf5-iotest directory, and edit `src/hdf5_iotest.ini`
-file to indicate if split metadata and data is needed (`split = 1`) or not (`split = 0`)
+Then copy hermes.conf file (i.e. 1MB/1MB_RAM_NVME_BB/16KB_1MB_random/hermes.conf)
+to top hdf5-iotest directory, and edit file `src/hdf5_iotest.ini` to decide
+if to split metadata and data (`split = 1`) or not or not (`split = 0`).
 
-In file `src/hdf5_iotest.c` the last parameter in 
-`status = H5Pset_fapl_hermes(fapl, false, 1048576)` (@line 176)
-sets up the page size for both metadata and data (if `split = 0`) or data page size 
-(if `split = 1`). Default parameter 1048576 indicates 1MiB page size.
-We provide two VFD methods for metadata if it is different from raw data. The first  
-method is hermes VFD. The last parameter in
-`status = H5Pset_fapl_hermes(fapl_m, false, 4096)` (@line 333)
-sets up the page size for metadata (if `split = 1`). User can modify these parameter
-for performance test. The second methods is core VFD, which keeps the metadata in
-memory by the HDF5 API `status = H5Pset_fapl_core(fapl_m, (size_t)0, 0)`.
+If the user choose not to split metadata and data by setting `split = 0`, the page
+size is the same for metadata and data and can be setup by function 
+`status = H5Pset_fapl_hermes(fapl, false, 1048576)` (@line 176) in file 
+`src/hdf5_iotest.c`. The last parameter in the function is the page size 1MiB in
+this example. Use can modify it for performance test.
+
+If the user choose to split metadata and data by setting `split = 1`, they
+can use different VFD methods or same VFD method with different parameter 
+configuration for metadata and data. In the example of hdf5-iotest, function 
+`status = H5Pset_fapl_hermes(fapl, false, 1048576)` (@line 176) in file
+`src/hdf5_iotest.c` will setup the page size for data. And default in this test
+we choose HDF5 core VFD for metadata by HDF5 API
+`status = H5Pset_fapl_core(fapl_m, (size_t)0, 0)` (@line 334), which will keep
+the metadata in memory. User can choose Hermes VFD for metadata with a smaller
+page size by `status = H5Pset_fapl_hermes(fapl_m, false, 4096)` (@line 333) 
+instead of core VFD.
+
+We provide the performance results in hdf5-iotest_Hermes_VFD.csv for splitting and 
+not splitting metadata and data, and further using different methods for metadata
+in the splitting case.
 
 ## Config with Hermes
-The `hermes.conf` file is used for Hermes environment setup. We provide examples for tests
-using 4KiB page size (in 4KB directory) and 1Mib Page size (in 1MB directory) separately.
-In each of the directory they are further catigarized into not split metadata and data
-test (1MB/128KB_NoSplit), and split metadata and data test (4/8/16KB_128KB/1MB). Each of 
-the them can test with "random" and "round-robin" data placement stratage, provided in the
+The file `hermes.conf` is used for Hermes environment setup. We provide examples for tests
+using 128KiB page size (in 128KB directory) and 1Mib Page size (in 1MB directory) separately.
+In each of the directory they are further catigarized into not splitting metadata and data
+test (1MB/128KB_NoSplit), and splitting metadata and data test (1/4/8/16KB_128KB/1MB). Each
+of them can run with "random" and "round-robin" data placement stratage, provided in the
 examples with name suffix.
 User can modify `mount_points` and `swap_mount` in the file according to the
 executing system configuration.
