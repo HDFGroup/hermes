@@ -51,6 +51,12 @@ struct BoTask {
   BoArgs args;
 };
 
+struct BufferInfo {
+  BufferID id;
+  f32 bandwidth_mbps;
+  size_t size;
+};
+
 struct BufferOrganizer {
   ThreadPool pool;
 

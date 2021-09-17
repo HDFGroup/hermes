@@ -958,7 +958,7 @@ void LocalRemoveBlobFromVBucketInfo(SharedMemoryContext *context,
   EndTicketMutex(&mdm->vbucket_mutex);
 }
 
-f32 LocalGetBlobScore(SharedMemoryContext *context, BlobID blob_id) {
+f32 LocalGetBlobImportanceScore(SharedMemoryContext *context, BlobID blob_id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   Stats stats = LocalGetBlobStats(context, blob_id);
 
@@ -967,14 +967,15 @@ f32 LocalGetBlobScore(SharedMemoryContext *context, BlobID blob_id) {
   return result;
 }
 
-f32 GetBlobScore(SharedMemoryContext *context, RpcContext *rpc,
-                 BlobID blob_id) {
+f32 GetBlobImportanceScore(SharedMemoryContext *context, RpcContext *rpc,
+                           BlobID blob_id) {
   f32 result = 0;
   u32 target_node = GetBlobNodeId(blob_id);
   if (target_node == rpc->node_id) {
-    result = LocalGetBlobScore(context, blob_id);
+    result = LocalGetBlobImportanceScore(context, blob_id);
   } else {
-    result = RpcCall<f32>(rpc, target_node, "RemoteGetBlobScore", blob_id);
+    result = RpcCall<f32>(rpc, target_node, "RemoteGetBlobImportanceScore",
+                          blob_id);
   }
 
   return result;

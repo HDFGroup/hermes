@@ -21,13 +21,89 @@ namespace hermes {
 BufferOrganizer::BufferOrganizer(int num_threads) : pool(num_threads) {
 }
 
-void LocalOrganize(const std::string &blob_name, double epsilon) {
-  (void)blob_name; (void)epsilon;
+BufferInfo LocalGetBufferInfo(SharedMemoryContext *context,
+                              BufferID buffer_id) {
+  (void)context;
+  (void)buffer_id;
+  BufferInfo result = {};
+
+  return result;
+}
+
+BufferInfo GetBufferInfo(SharedMemoryContext *context, RpcContext *rpc,
+                         BufferID buffer_id) {
+  BufferInfo result = {};
+  u32 target_node = buffer_id.bits.node_id;
+
+  if (target_node == rpc->node_id) {
+    result = LocalGetBufferInfo(context, buffer_id);
+  } else {
+    result = RpcCall<BufferInfo>(rpc, target_node, "RemoteGetBufferInfo",
+                                 buffer_id);
+  }
+
+  return result;
+}
+
+f32 ComputeBlobAccessScore(SharedMemoryContext *context, RpcContext *rpc,
+                           const std::vector<BufferID> &buffer_ids) {
+  f32 result = 0;
+
+  std::vector<BufferInfo> buffer_info(buffer_ids.size());
+
+  for (size_t i = 0; i < buffer_ids.size(); ++i) {
+    BufferID id = buffer_ids[i];
+    buffer_info[i] = GetBufferInfo(context, rpc, id);
+  }
+
+  return result;
+}
+
+void LocalOrganizeBlob(SharedMemoryContext *context, RpcContext *rpc,
+                       const std::string &internal_blob_name, double epsilon) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  BlobID blob_id = {};
+  blob_id.as_int = LocalGet(mdm, internal_blob_name.c_str(), kMapType_BlobId);
+
+  // node: internal_blob_name
+  f32 importance_score = LocalGetBlobImportanceScore(context, blob_id);
+
+  // node: internal_blob_name
+  std::vector<BufferID> buffer_ids = LocalGetBufferIdList(mdm, blob_id);
+
+  // node: internal_blob_name
+  // node: each buffer's buffer_id
+  f32 access_score = ComputeBlobAccessScore(context, rpc, buffer_ids);
 
 
-  // TODO(chogan): Sync or async?
+  // Get buffers, sorted by virtual device, then size (or bw?)
+  //  - sizes
+  //  - Virtual devices (bandwidths)
 
-  // Get biggest buffer on slowest tier
+  for (size_t i = 0; i < buffer_ids.size(); ++i) {
+    // check new score
+    // Move if we don't go past epsilon in the opposte direction
+    if (std::abs(importance_score - access_score) < epsilon) {
+      break;
+    }
+  }
+
+  // TODO(chogan): Moves will be async. Need to wait? No.
+}
+
+void OrganizeBlob(SharedMemoryContext *context, RpcContext *rpc,
+                  BucketID bucket_id, const std::string &blob_name,
+                  double epsilon) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  std::string internal_name = MakeInternalBlobName(blob_name, bucket_id);
+  u32 target_node = HashString(mdm, rpc, internal_name.c_str());
+
+  if (target_node == rpc->node_id) {
+    LocalOrganizeBlob(context, rpc, internal_name, epsilon);
+  } else {
+    RpcCall<void>(rpc, target_node, "RemoteOrganizeBlob", internal_name,
+                  epsilon);
+  }
 }
 
 void LocalShutdownBufferOrganizer(SharedMemoryContext *context) {

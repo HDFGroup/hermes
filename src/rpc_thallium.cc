@@ -373,9 +373,9 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
       req.respond(true);
   };
 
-  auto rpc_get_blob_score =
+  auto rpc_get_blob_importance_score =
     [context](const request &req, BlobID blob_id) {
-      f32 result = LocalGetBlobScore(context, blob_id);
+      f32 result = LocalGetBlobImportanceScore(context, blob_id);
 
       req.respond(result);
   };
@@ -476,7 +476,8 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
   rpc_server->define("RemoteGetBucketNameById",
                      rpc_get_bucket_name_by_id);
   rpc_server->define("RemoteIncrementBlobStats", rpc_increment_blob_stats);
-  rpc_server->define("RemoteGetBlobScore", rpc_get_blob_score);
+  rpc_server->define("RemoteGetBlobImportanceScore",
+                     rpc_get_blob_importance_score);
   rpc_server->define("RemoteIncrementFlushCount", rpc_increment_flush_count);
   rpc_server->define("RemoteDecrementFlushCount", rpc_decrement_flush_count);
   rpc_server->define("RemoteGetNumOutstandingFlushingTasks",
