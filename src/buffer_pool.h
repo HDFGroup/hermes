@@ -209,6 +209,8 @@ struct BufferPool {
   i32 num_targets;
   /** The total number of BufferHeaders in the header array. */
   u32 total_headers;
+  f32 min_device_bw_mbps;
+  f32 max_device_bw_mbps;
 };
 
 /**
@@ -516,6 +518,7 @@ api::Status StdIoPersistBlob(SharedMemoryContext *context, RpcContext *rpc,
                              Arena *arena, BlobID blob_id, int fd,
                              const i32 &offset);
 
+Device *GetDeviceFromHeader(SharedMemoryContext *context, BufferHeader *header);
 }  // namespace hermes
 
 #endif  // HERMES_BUFFER_POOL_H_
