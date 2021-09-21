@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 #include <getopt.h>
+#include <string.h>
 
 using std::vector;
 using std::cout;
