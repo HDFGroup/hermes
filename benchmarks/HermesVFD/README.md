@@ -19,9 +19,14 @@ build hdf5 with `HDF5_ENABLE_PARALLEL=ON` and `HDF5_ENABLE_HERMES_VFD=ON`
 git checkout https://github.com/jya-kmu/hdf5-iotest.git
 git checkout hermes-vfd
 ```
-Then copy hermes.conf file (i.e. 1MB/1MB_RAM_NVME_BB/16KB_1MB_random/hermes.conf)
-to top hdf5-iotest directory, and edit file `src/hdf5_iotest.ini` to decide
-if to split metadata and data (`split = 1`) or not or not (`split = 0`).
+Then generate hermes.conf file by ./gen_config with config parameters and
+place to top hdf5-iotest directory. We provide hermes.conf sample file, named
+`hermes.conf_sample`, and associated command to run with it in different directories
+for hdf5_iotest according to different configurations.
+
+User also needs the file `src/hdf5_iotest.ini` to config hdf5_iotest. For our test we
+only modify the `split` option if to split metadata and data (`split = 1`) 
+or not (`split = 0`).
 
 If the user choose not to split metadata and data by setting `split = 0`, the page
 size is the same for metadata and data and can be setup by function 
