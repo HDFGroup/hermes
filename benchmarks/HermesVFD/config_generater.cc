@@ -4,7 +4,6 @@
 #include <vector>
 #include <string>
 #include <getopt.h>
-#include <string.h>
 
 using std::vector;
 using std::cout;
@@ -127,7 +126,7 @@ void FindEntryMulti(string config_file, string entry, char *optarg,
   }
 }
 
-void ReplaceNum(string config_file, string entry, bool num, char *optarg) {
+void ReplaceSingle(string config_file, string entry, char *optarg) {
   fstream examplefile(config_file, ios::in | ios::out);
   if (examplefile.is_open()) {
     string line;
@@ -137,10 +136,7 @@ void ReplaceNum(string config_file, string entry, bool num, char *optarg) {
         size_t line_size = line.size();
         pos = line.find("=");
         size_t pos_end = line.find(";");
-        if (num)
-          line.replace(pos+2, pos_end-pos-2, optarg);
-        else
-          line.replace(pos+2+1, pos_end-pos-2-2, optarg);
+        line.replace(pos+2, pos_end-pos-2, optarg);
         line.append(line_size-line.size(), ' ');
 
         streamoff off = examplefile.tellg();
@@ -189,30 +185,7 @@ int main(int argc, char **argv) {
 
     switch (opt) {
       case 'a': {
-        ReplaceNum(config_file, "metadata_arena_percentage", true, optarg);
-        /*
-        fstream examplefile(config_file, ios::in | ios::out);
-        if (examplefile.is_open()) {
-          string line;
-          while (getline(examplefile, line)) {
-            size_t pos = line.find("metadata_arena_percentage");
-            if (pos != string::npos) {
-              size_t line_size = line.size();
-              pos = line.find("=");
-              size_t pos_end = line.find(";");
-              line.replace(pos+2+0, pos_end-pos-2-0, optarg);
-              cout << "new line: " << line << endl;
-              line.append(line_size-line.size(), ' ');
-
-              streamoff off = examplefile.tellg();
-              examplefile.seekp(off-line_size-1);
-              examplefile << line;
-              break;
-            }
-          }
-          examplefile.close();
-        }
-        */
+        ReplaceSingle(config_file, "metadata_arena_percentage", optarg);
         break;
       }
       case 'b': {
@@ -269,11 +242,11 @@ int main(int argc, char **argv) {
         break;
       }
       case 'u': {
-        ReplaceNum(config_file, "buffer_pool_arena_percentage", true, optarg);
+        ReplaceSingle(config_file, "buffer_pool_arena_percentage", optarg);
         break;
       }
       case 'w': {
-        ReplaceNum(config_file, "swap_mount", false, optarg);
+        ReplaceSingle(config_file, "swap_mount", optarg);
         break;
       }
       default: {
