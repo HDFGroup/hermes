@@ -101,6 +101,8 @@ union BufferID {
   u64 as_int;
 };
 
+bool operator==(const BufferID &lhs, const BufferID &rhs);
+
 /**
  * Metadata for a Hermes buffer.
  *

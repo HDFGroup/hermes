@@ -22,6 +22,17 @@ namespace hermes {
 BufferOrganizer::BufferOrganizer(int num_threads) : pool(num_threads) {
 }
 
+bool operator==(const BufferInfo &lhs, const BufferInfo &rhs) {
+  return (lhs.id == rhs.id && lhs.size == rhs.size &&
+          lhs.bandwidth_mbps == rhs.bandwidth_mbps);
+}
+
+struct TargetInfo {
+  TargetID id;
+  f32 bandwidth_mbps;
+  u64 capacity;
+};
+
 BufferInfo LocalGetBufferInfo(SharedMemoryContext *context,
                               BufferID buffer_id) {
   BufferInfo result = {};
@@ -103,6 +114,153 @@ f32 ComputeBlobAccessScore(SharedMemoryContext *context,
 
   return result;
 }
+void SortBufferInfo(std::vector<BufferInfo> &buffer_info, bool increasing) {
+#define HERMES_BUFFER_INFO_COMPARATOR(direction, comp)    \
+  auto direction##_buffer_info_comparator =               \
+    [](const BufferInfo &lhs, const BufferInfo &rhs) {    \
+      if (lhs.bandwidth_mbps == rhs.bandwidth_mbps) {     \
+        return lhs.size > rhs.size;                       \
+      }                                                   \
+      return lhs.bandwidth_mbps comp rhs.bandwidth_mbps;  \
+  };
+
+  if (increasing) {
+    // Sort first by bandwidth (descending), then by size (descending)
+    HERMES_BUFFER_INFO_COMPARATOR(increasing, >);
+    std::sort(buffer_info.begin(), buffer_info.end(),
+              increasing_buffer_info_comparator);
+  } else {
+    // Sort first by bandwidth (ascending), then by size (descending)
+    HERMES_BUFFER_INFO_COMPARATOR(decreasing, <);
+    std::sort(buffer_info.begin(), buffer_info.end(),
+              decreasing_buffer_info_comparator);
+  }
+
+#undef HERMES_BUFFER_INFO_COMPARATOR
+}
+
+void SortTargetInfo(std::vector<TargetInfo> &target_info, bool increasing) {
+  auto increasing_target_info_comparator = [](const TargetInfo &lhs,
+                                              const TargetInfo &rhs) {
+    return lhs.bandwidth_mbps > rhs.bandwidth_mbps;
+  };
+  auto decreasing_target_info_comparator = [](const TargetInfo &lhs,
+                                              const TargetInfo &rhs) {
+    return lhs.bandwidth_mbps < rhs.bandwidth_mbps;
+  };
+
+  if (increasing) {
+    std::sort(target_info.begin(), target_info.end(),
+              increasing_target_info_comparator);
+  } else {
+    std::sort(target_info.begin(), target_info.end(),
+              decreasing_target_info_comparator);
+  }
+}
+
+void LocalEnqueueBoMove(SharedMemoryContext *context, BufferID src,
+                        const std::vector<BufferID> &dest, BlobID blob_id,
+                        BoPriority priority) {
+  ThreadPool *pool = &context->bo->pool;
+  bool is_high_priority = priority == BoPriority::kHigh;
+  pool->run(std::bind(BoMove, context, src, dest, blob_id), is_high_priority);
+}
+
+void BoMove(SharedMemoryContext *context, BufferID src,
+            const std::vector<BufferID> &destinations,
+            BlobID blob_id) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  // old BufferID -> new BufferID
+  std::unordered_map<u64, u64> buffer_id_updates;
+  // TODO(chogan): create new blob_id with updated bufferid list
+  BlobID new_blob_id = {};
+  new_blob_id.bits.node_id = blob_id.bits.node_id;
+  // blob_id.bits.buffer_ids_offset =
+  //   LocalAllocateBufferIdList(mdm, buffer_ids);
+  // TODO(chogan): update blob_id in bucket's blob list
+  // TODO(chogan): update blob map
+
+  if (LocalLockBlob(context, blob_id)) {
+    BufferHeader *src_header = GetHeaderByBufferId(context, src);
+    if (src_header) {
+      std::vector<u8> src_data(src_header->used);
+      Blob blob = {};
+      blob.data = src_data.data();
+      blob.size = src_header->used;
+      LocalReadBufferById(context, src, &blob, 0);
+      size_t offset = 0;
+      i64 remaining_src_size = (i64)blob.size;
+
+      for (size_t i = 0; i < destinations.size(); ++i) {
+        BufferID dest = destinations[i];
+        // TODO(chogan): Some BufferID calls may need to be remote
+        BufferHeader *dest_header = GetHeaderByBufferId(context, dest);
+
+        if (dest_header) {
+          u32 dest_capacity = dest_header->capacity;
+          size_t portion_size = std::min((i64)dest_capacity,
+                                         remaining_src_size);
+          Blob blob_portion = {};
+          blob_portion.data = blob.data + offset;
+          blob_portion.size = portion_size;
+          LocalWriteBufferById(context, dest, blob_portion, offset);
+          offset += portion_size;
+          remaining_src_size -= portion_size;
+        } else {
+          LOG(WARNING) << "BufferID " << dest.as_int
+                       << " not found on this node\n";
+        }
+      }
+      assert(remaining_src_size == 0);
+    } else {
+      LOG(WARNING) << "BufferID " << src.as_int << " not found on this node\n";
+    }
+    LocalUnlockBlob(context, blob_id);
+  } else {
+    LOG(WARNING) << "Couldn't lock BlobID " << blob_id.as_int << "\n";
+  }
+}
+
+void BoCopy(SharedMemoryContext *context, BufferID src, TargetID dest) {
+  (void)context;
+  printf("%s(%d, %d)\n", __func__, (int)src.as_int, (int)dest.as_int);
+}
+
+void BoDelete(SharedMemoryContext *context, BufferID src) {
+  (void)context;
+  printf("%s(%d)\n", __func__, (int)src.as_int);
+}
+
+bool LocalEnqueueBoTask(SharedMemoryContext *context, BoTask task,
+                        BoPriority priority) {
+  // TODO(chogan): Limit queue size and return false when full
+  bool result = true;
+  bool is_high_priority = priority == BoPriority::kHigh;
+
+  ThreadPool *pool = &context->bo->pool;
+  switch (task.op) {
+    case BoOperation::kMove: {
+      // pool->run(std::bind(BoMove, context, task.args.move_args.src,
+      //                     task.args.move_args.dest), is_high_priority);
+      break;
+    }
+    case BoOperation::kCopy: {
+      pool->run(std::bind(BoCopy, context, task.args.copy_args.src,
+                          task.args.copy_args.dest), is_high_priority);
+      break;
+    }
+    case BoOperation::kDelete: {
+      pool->run(std::bind(BoDelete, context, task.args.delete_args.src),
+                is_high_priority);
+      break;
+    }
+    default: {
+      HERMES_INVALID_CODE_PATH;
+    }
+  }
+
+  return result;
+}
 
 void LocalOrganizeBlob(SharedMemoryContext *context, RpcContext *rpc,
                        const std::string &internal_blob_name, double epsilon,
@@ -112,40 +270,41 @@ void LocalOrganizeBlob(SharedMemoryContext *context, RpcContext *rpc,
   blob_id.as_int = LocalGet(mdm, internal_blob_name.c_str(), kMapType_BlobId);
 
   f32 importance_score = explicit_importance_score;
-  if (explicit_importance_score != -1) {
+  if (explicit_importance_score == -1) {
     importance_score = LocalGetBlobImportanceScore(context, blob_id);
   }
 
   std::vector<BufferID> buffer_ids = LocalGetBufferIdList(mdm, blob_id);
   std::vector<BufferInfo> buffer_info = GetBufferInfo(context, rpc, buffer_ids);
   f32 access_score = ComputeBlobAccessScore(context, buffer_info);
-
   bool increasing_access_score = importance_score > access_score;
-  // f32 score_difference = std::abs(importance_score - access_score);
-
-  auto buffer_info_comparator =
-    [](const BufferInfo &lhs, const BufferInfo &rhs) {
-      // Sort first by bandwidth, then by size
-      return (std::tie(lhs.bandwidth_mbps, lhs.size) <
-              std::tie(rhs.bandwidth_mbps, rhs.size));
-  };
-
-  if (increasing_access_score) {
-    std::sort(buffer_info.begin(), buffer_info.end(), buffer_info_comparator);
-  } else {
-    std::sort(buffer_info.rbegin(), buffer_info.rend(), buffer_info_comparator);
-  }
-
-  std::vector<TargetID> targets = LocalGetNodeTargets(context);
+  SortBufferInfo(buffer_info, increasing_access_score);
 
   for (size_t i = 0; i < buffer_info.size(); ++i) {
+    std::vector<TargetID> targets = LocalGetNodeTargets(context);
+    std::vector<f32> target_bandwidths_mbps = GetBandwidths(context, targets);
     std::vector<u64> capacities = GetRemainingTargetCapacities(context, rpc,
                                                                targets);
 
-    std::vector<BufferID> src;
-    src.push_back(buffer_info[i].id);
+    std::vector<TargetInfo> target_info(targets.size());
+    for (size_t j = 0; j < target_info.size(); ++j) {
+      target_info[j].id = targets[j];
+      target_info[j].bandwidth_mbps = target_bandwidths_mbps[j];
+      target_info[j].capacity = capacities[j];
+    }
+    SortTargetInfo(target_info, increasing_access_score);
 
+    BufferID src_buffer_id = {};
     PlacementSchema schema;
+    f32 new_bandwidth_mbps = 0;
+    for (size_t j = 0; j < target_info.size(); ++j) {
+      if (target_info[j].capacity > buffer_info[i].size) {
+        src_buffer_id = buffer_info[i].id;
+        schema.push_back(std::pair(buffer_info[i].size, target_info[j].id));
+        new_bandwidth_mbps = target_info[j].bandwidth_mbps;
+        break;
+      }
+    }
 
     if (increasing_access_score) {
       // TODO(chogan): possibly need to split buffer into smaller
@@ -154,14 +313,19 @@ void LocalOrganizeBlob(SharedMemoryContext *context, RpcContext *rpc,
     }
 
     std::vector<BufferID> dest = GetBuffers(context, schema);
-
-    if (dest.size()) {
-    } else {
+    if (dest.size() == 0) {
+      continue;
     }
 
-    // TODO(chogan): Create new_blob_info
-    std::vector<BufferInfo> new_blob_info;
-    f32 new_access_score = ComputeBlobAccessScore(context, new_blob_info);
+    std::vector<BufferInfo> new_buffer_info(buffer_info);
+    for (size_t j = 0; j < new_buffer_info.size(); ++j) {
+      if (new_buffer_info[j].id.as_int == src_buffer_id.as_int) {
+        new_buffer_info[j].id = src_buffer_id;
+        new_buffer_info[j].bandwidth_mbps = new_bandwidth_mbps;
+        // new_buffer_info[j].size remains the same
+      }
+    }
+    f32 new_access_score = ComputeBlobAccessScore(context, new_buffer_info);
 
     bool move_is_valid = true;
     // Make sure we didn't move too far past the target
@@ -179,10 +343,11 @@ void LocalOrganizeBlob(SharedMemoryContext *context, RpcContext *rpc,
 
     if (move_is_valid) {
       // TODO(chogan): Create schema in loop but only enqueue once?
-      // TODO(chogan): EnqueueBOTask();
+      LocalEnqueueBoMove(context, src_buffer_id, dest, blob_id,
+                         BoPriority::kLow);
     }
 
-    if (std::abs(importance_score - access_score) < epsilon) {
+    if (std::abs(importance_score - new_access_score) < epsilon) {
       break;
     }
   }
@@ -207,52 +372,6 @@ void LocalShutdownBufferOrganizer(SharedMemoryContext *context) {
   // NOTE(chogan): ThreadPool destructor needs to be called manually since we
   // allocated the BO instance with placement new.
   context->bo->pool.~ThreadPool();
-}
-
-void BoMove(SharedMemoryContext *context, BufferID src, TargetID dest) {
-  (void)context;
-  printf("%s(%d, %d)\n", __func__, (int)src.as_int, (int)dest.as_int);
-}
-
-void BoCopy(SharedMemoryContext *context, BufferID src, TargetID dest) {
-  (void)context;
-  printf("%s(%d, %d)\n", __func__, (int)src.as_int, (int)dest.as_int);
-}
-
-void BoDelete(SharedMemoryContext *context, BufferID src) {
-  (void)context;
-  printf("%s(%d)\n", __func__, (int)src.as_int);
-}
-
-bool LocalEnqueueBoTask(SharedMemoryContext *context, BoTask task,
-                        BoPriority priority) {
-  // TODO(chogan): Limit queue size and return false when full
-  bool result = true;
-  bool is_high_priority = priority == BoPriority::kHigh;
-
-  ThreadPool *pool = &context->bo->pool;
-  switch (task.op) {
-    case BoOperation::kMove: {
-      pool->run(std::bind(BoMove, context, task.args.move_args.src,
-                          task.args.move_args.dest), is_high_priority);
-      break;
-    }
-    case BoOperation::kCopy: {
-      pool->run(std::bind(BoCopy, context, task.args.copy_args.src,
-                          task.args.copy_args.dest), is_high_priority);
-      break;
-    }
-    case BoOperation::kDelete: {
-      pool->run(std::bind(BoDelete, context, task.args.delete_args.src),
-                is_high_priority);
-      break;
-    }
-    default: {
-      HERMES_INVALID_CODE_PATH;
-    }
-  }
-
-  return result;
 }
 
 void FlushBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id,

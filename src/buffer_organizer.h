@@ -57,6 +57,8 @@ struct BufferInfo {
   size_t size;
 };
 
+bool operator==(const BufferInfo &lhs, const BufferInfo &rhs);
+
 struct BufferOrganizer {
   ThreadPool pool;
 
@@ -71,7 +73,9 @@ bool LocalEnqueueFlushingTask(SharedMemoryContext *context, RpcContext *rpc,
 bool EnqueueFlushingTask(RpcContext *rpc, BlobID blob_id,
                          const std::string &filename, u64 offset);
 
-void BoMove(SharedMemoryContext *context, BufferID src, TargetID dest);
+void BoMove(SharedMemoryContext *context, BufferID src,
+            const std::vector<BufferID> &destinations,
+            BlobID blob_id);
 void BoCopy(SharedMemoryContext *context, BufferID src, TargetID dest);
 void BoDelete(SharedMemoryContext *context, BufferID src);
 
@@ -96,6 +100,11 @@ void LocalOrganizeBlob(SharedMemoryContext *context, RpcContext *rpc,
 void OrganizeBlob(SharedMemoryContext *context, RpcContext *rpc,
                   BucketID bucket_id, const std::string &blob_name,
                   double epsilon, f32 importance_score = -1);
+std::vector<BufferInfo> GetBufferInfo(SharedMemoryContext *context,
+                                      RpcContext *rpc,
+                                      const std::vector<BufferID> &buffer_ids);
+f32 ComputeBlobAccessScore(SharedMemoryContext *context,
+                           const std::vector<BufferInfo> &buffer_info);
 }  // namespace hermes
 
 #endif  // HERMES_BUFFER_ORGANIZER_H_

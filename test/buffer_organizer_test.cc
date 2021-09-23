@@ -14,6 +14,7 @@
 
 #include "hermes.h"
 #include "vbucket.h"
+#include "metadata_management_internal.h"
 #include "test_utils.h"
 
 #include <mpi.h>
@@ -114,6 +115,75 @@ void TestBackgroundFlush() {
   Assert(std::remove(final_destination.c_str()) == 0);
 }
 
+void TestBoMove() {
+  using hermes::BufferID;
+  using hermes::BucketID;
+  using hermes::BlobID;
+  using hermes::BufferInfo;
+  using hermes::f32;
+
+  hermes::Config config = {};
+  hermes::InitDefaultConfig(&config);
+  config.default_placement_policy = hapi::PlacementPolicy::kRoundRobin;
+
+  HermesPtr hermes = hermes::InitHermesDaemon(&config);
+  hermes::SharedMemoryContext *context = &hermes->context_;
+  hermes::RpcContext *rpc = &hermes->rpc_;
+
+  std::string bkt_name = "BoMove";
+  hapi::Bucket bkt(bkt_name, hermes);
+
+  // Force Blob to RAM tier
+  hermes::RoundRobinState rr_state;
+  size_t num_devices = rr_state.GetNumDevices();
+  rr_state.SetCurrentDeviceIndex(0);
+
+  std::string blob_name = "1";
+  hapi::Blob blob(KILOBYTES(20), 'z');
+  hapi::Status status = bkt.Put(blob_name, blob);
+  Assert(status.Succeeded());
+
+  BucketID bucket_id = {};
+  bucket_id.as_int = bkt.GetId();
+  BlobID old_blob_id = GetBlobId(context, rpc, blob_name, bucket_id, false);
+  Assert(!IsNullBlobId(old_blob_id));
+  std::vector<BufferID> old_buffer_ids = GetBufferIdList(context, rpc,
+                                                         old_blob_id);
+  Assert(old_buffer_ids.size() > 0);
+  std::vector<BufferInfo> old_buffer_info = GetBufferInfo(context, rpc,
+                                                          old_buffer_ids);
+  Assert(old_buffer_info.size() == old_buffer_ids.size());
+
+  f32 old_access_score = ComputeBlobAccessScore(context, old_buffer_info);
+
+  // move ram buffers to lowest tier buffers
+  hermes::BufferID src = old_buffer_ids[0];
+  hermes::PlacementSchema schema;
+  hermes::GetBuffers(context, schema);
+  std::vector<hermes::BufferID> dest;
+  hermes::BoMove(context, src, dest, old_blob_id);
+
+  BlobID new_blob_id = GetBlobId(context, rpc, blob_name, bucket_id, false);
+  Assert(!IsNullBlobId(new_blob_id));
+  Assert(new_blob_id.as_int != old_blob_id.as_int);
+  std::vector<BufferID> new_buffer_ids = GetBufferIdList(context, rpc,
+                                                         new_blob_id);
+  Assert(new_buffer_ids.size() > 0);
+  Assert(new_buffer_ids != old_buffer_ids);
+  std::vector<BufferInfo> new_buffer_info = GetBufferInfo(context, rpc,
+                                                          new_buffer_ids);
+  Assert(new_buffer_info.size() == new_buffer_ids.size());
+  Assert(new_buffer_info != old_buffer_info);
+
+  f32 new_access_score = ComputeBlobAccessScore(context, new_buffer_info);
+  Assert(new_access_score < old_access_score);
+
+  // move large low tier buffer to ram
+  rr_state.SetCurrentDeviceIndex(num_devices - 1);
+
+  hermes->Finalize(true);
+}
+
 int main(int argc, char *argv[]) {
   int mpi_threads_provided;
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
@@ -122,10 +192,12 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  TestIsBoFunction();
-  TestBoTasks();
-  TestBackgroundFlush();
+  // TestIsBoFunction();
+  // TestBoTasks();
+  // TestBackgroundFlush();
+  TestBoMove();
 
   MPI_Finalize();
+
   return 0;
 }

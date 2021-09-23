@@ -81,6 +81,10 @@
 
 namespace hermes {
 
+bool operator==(const BufferID &lhs, const BufferID &rhs) {
+  return lhs.as_int == rhs.as_int;
+}
+
 void Finalize(SharedMemoryContext *context, CommunicationContext *comm,
               RpcContext *rpc, const char *shmem_name, Arena *trans_arena,
               bool is_application_core, bool force_rpc_shutdown) {
