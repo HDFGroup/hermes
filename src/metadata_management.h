@@ -437,6 +437,13 @@ bool LocalUnlockBlob(SharedMemoryContext *context, BlobID blob_id);
  *
  */
 SystemViewState *GetLocalSystemViewState(SharedMemoryContext *context);
+
+/**
+ *
+ */
+void LocalReplaceBlobIdInBucket(SharedMemoryContext *context,
+                                BucketID bucket_id, BlobID old_blob_id,
+                                BlobID new_blob_id);
 }  // namespace hermes
 
 #endif  // HERMES_METADATA_MANAGEMENT_H_

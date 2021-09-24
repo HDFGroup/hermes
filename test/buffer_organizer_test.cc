@@ -161,7 +161,9 @@ void TestBoMove() {
   hermes::PlacementSchema schema;
   hermes::GetBuffers(context, schema);
   std::vector<hermes::BufferID> dest;
-  hermes::BoMove(context, src, dest, old_blob_id);
+  std::string internal_blob_name = MakeInternalBlobName(blob_name, bucket_id);
+  hermes::BoMove(context, rpc, src, dest, old_blob_id, bucket_id,
+                 internal_blob_name);
 
   BlobID new_blob_id = GetBlobId(context, rpc, blob_name, bucket_id, false);
   Assert(!IsNullBlobId(new_blob_id));

@@ -422,6 +422,14 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
       req.respond(true);
   };
 
+  auto rpc_replace_blob_id_in_bucket = [context](const request &req,
+                                                 BucketID bucket_id,
+                                                 BlobID old_blob_id,
+                                                 BlobID new_blob_id) {
+    LocalReplaceBlobIdInBucket(context, bucket_id, old_blob_id, new_blob_id);
+    req.respond(true);
+  };
+
   // TODO(chogan): Currently these three are only used for testing.
   rpc_server->define("GetBuffers", rpc_get_buffers);
   rpc_server->define("SplitBuffers", rpc_split_buffers).disable_response();
@@ -485,6 +493,8 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
   rpc_server->define("RemoteLockBlob", rpc_lock_blob);
   rpc_server->define("RemoteUnlockBlob", rpc_unlock_blob);
   rpc_server->define("RemoteCreateBlobMetadata", rpc_create_blob_metadata);
+  rpc_server->define("RemoteReplaceBlobIdInBucket",
+                     rpc_replace_blob_id_in_bucket);
 }
 
 void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,

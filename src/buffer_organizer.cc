@@ -158,27 +158,26 @@ void SortTargetInfo(std::vector<TargetInfo> &target_info, bool increasing) {
   }
 }
 
-void LocalEnqueueBoMove(SharedMemoryContext *context, BufferID src,
-                        const std::vector<BufferID> &dest, BlobID blob_id,
+void LocalEnqueueBoMove(SharedMemoryContext *context, RpcContext *rpc,
+                        BufferID src, const std::vector<BufferID> &dest,
+                        BlobID blob_id, BucketID bucket_id,
+                        const std::string &internal_blob_name,
                         BoPriority priority) {
   ThreadPool *pool = &context->bo->pool;
   bool is_high_priority = priority == BoPriority::kHigh;
-  pool->run(std::bind(BoMove, context, src, dest, blob_id), is_high_priority);
+  pool->run(std::bind(BoMove, context, rpc, src, dest, blob_id, bucket_id,
+                      internal_blob_name),
+            is_high_priority);
 }
 
-void BoMove(SharedMemoryContext *context, BufferID src,
+/**
+ * Assumes all BufferIDs in destinations are local
+ */
+void BoMove(SharedMemoryContext *context, RpcContext *rpc, BufferID src,
             const std::vector<BufferID> &destinations,
-            BlobID blob_id) {
+            BlobID blob_id, BucketID bucket_id,
+            const std::string &internal_blob_name) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
-  // old BufferID -> new BufferID
-  std::unordered_map<u64, u64> buffer_id_updates;
-  // TODO(chogan): create new blob_id with updated bufferid list
-  BlobID new_blob_id = {};
-  new_blob_id.bits.node_id = blob_id.bits.node_id;
-  // blob_id.bits.buffer_ids_offset =
-  //   LocalAllocateBufferIdList(mdm, buffer_ids);
-  // TODO(chogan): update blob_id in bucket's blob list
-  // TODO(chogan): update blob map
 
   if (LocalLockBlob(context, blob_id)) {
     BufferHeader *src_header = GetHeaderByBufferId(context, src);
@@ -190,10 +189,10 @@ void BoMove(SharedMemoryContext *context, BufferID src,
       LocalReadBufferById(context, src, &blob, 0);
       size_t offset = 0;
       i64 remaining_src_size = (i64)blob.size;
+      std::vector<BufferID> replacement_ids;
 
       for (size_t i = 0; i < destinations.size(); ++i) {
         BufferID dest = destinations[i];
-        // TODO(chogan): Some BufferID calls may need to be remote
         BufferHeader *dest_header = GetHeaderByBufferId(context, dest);
 
         if (dest_header) {
@@ -206,10 +205,46 @@ void BoMove(SharedMemoryContext *context, BufferID src,
           LocalWriteBufferById(context, dest, blob_portion, offset);
           offset += portion_size;
           remaining_src_size -= portion_size;
+          replacement_ids.push_back(dest);
         } else {
           LOG(WARNING) << "BufferID " << dest.as_int
                        << " not found on this node\n";
         }
+      }
+
+      if (replacement_ids.size() > 0) {
+        std::vector<BufferID> new_buffer_ids =
+          LocalGetBufferIdList(mdm, blob_id);
+
+        // Replace src BufferIDs with those from dest
+        // Swap src with the first replacement.
+        for (size_t i = 0; i < new_buffer_ids.size(); ++i) {
+          if (new_buffer_ids[i] == src) {
+            new_buffer_ids[i] = replacement_ids[0];
+            break;
+          }
+        }
+        // Append the remaining replacements
+        for (size_t i = 1; i < replacement_ids.size(); ++i) {
+          new_buffer_ids.push_back(replacement_ids[i]);
+        }
+
+        if (!BlobIsInSwap(blob_id)) {
+          LocalReleaseBuffer(context, src);
+        }
+        LocalFreeBufferIdList(context, blob_id);
+
+        BlobID new_blob_id = {};
+        new_blob_id.bits.node_id = blob_id.bits.node_id;
+        blob_id.bits.buffer_ids_offset =
+          LocalAllocateBufferIdList(mdm, new_buffer_ids);
+
+        // update blob_id in bucket's blob list
+        ReplaceBlobIdInBucket(context, rpc, bucket_id, blob_id, new_blob_id);
+
+        // update BlobID map
+        LocalPut(mdm, internal_blob_name.c_str(), new_blob_id.as_int,
+                 kMapType_BlobId);
       }
       assert(remaining_src_size == 0);
     } else {
@@ -263,7 +298,8 @@ bool LocalEnqueueBoTask(SharedMemoryContext *context, BoTask task,
 }
 
 void LocalOrganizeBlob(SharedMemoryContext *context, RpcContext *rpc,
-                       const std::string &internal_blob_name, double epsilon,
+                       const std::string &internal_blob_name,
+                       BucketID bucket_id, double epsilon,
                        f32 explicit_importance_score) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   BlobID blob_id = {};
@@ -300,9 +336,12 @@ void LocalOrganizeBlob(SharedMemoryContext *context, RpcContext *rpc,
     for (size_t j = 0; j < target_info.size(); ++j) {
       if (target_info[j].capacity > buffer_info[i].size) {
         src_buffer_id = buffer_info[i].id;
-        schema.push_back(std::pair(buffer_info[i].size, target_info[j].id));
-        new_bandwidth_mbps = target_info[j].bandwidth_mbps;
-        break;
+        if (src_buffer_id.bits.node_id == rpc->node_id) {
+          // Only consider local BufferIDs
+          schema.push_back(std::pair(buffer_info[i].size, target_info[j].id));
+          new_bandwidth_mbps = target_info[j].bandwidth_mbps;
+          break;
+        }
       }
     }
 
@@ -343,8 +382,8 @@ void LocalOrganizeBlob(SharedMemoryContext *context, RpcContext *rpc,
 
     if (move_is_valid) {
       // TODO(chogan): Create schema in loop but only enqueue once?
-      LocalEnqueueBoMove(context, src_buffer_id, dest, blob_id,
-                         BoPriority::kLow);
+      LocalEnqueueBoMove(context, rpc, src_buffer_id, dest, blob_id, bucket_id,
+                         internal_blob_name, BoPriority::kLow);
     }
 
     if (std::abs(importance_score - new_access_score) < epsilon) {
@@ -361,7 +400,8 @@ void OrganizeBlob(SharedMemoryContext *context, RpcContext *rpc,
   u32 target_node = HashString(mdm, rpc, internal_name.c_str());
 
   if (target_node == rpc->node_id) {
-    LocalOrganizeBlob(context, rpc, internal_name, epsilon, importance_score);
+    LocalOrganizeBlob(context, rpc, internal_name, bucket_id, epsilon,
+                      importance_score);
   } else {
     RpcCall<void>(rpc, target_node, "RemoteOrganizeBlob", internal_name,
                   epsilon);

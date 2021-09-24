@@ -73,9 +73,10 @@ bool LocalEnqueueFlushingTask(SharedMemoryContext *context, RpcContext *rpc,
 bool EnqueueFlushingTask(RpcContext *rpc, BlobID blob_id,
                          const std::string &filename, u64 offset);
 
-void BoMove(SharedMemoryContext *context, BufferID src,
-            const std::vector<BufferID> &destinations,
-            BlobID blob_id);
+void BoMove(SharedMemoryContext *context, RpcContext *rpc, BufferID src,
+            const std::vector<BufferID> &destinations, BlobID blob_id,
+            BucketID bucket_id,
+            const std::string &internal_blob_name);
 void BoCopy(SharedMemoryContext *context, BufferID src, TargetID dest);
 void BoDelete(SharedMemoryContext *context, BufferID src);
 

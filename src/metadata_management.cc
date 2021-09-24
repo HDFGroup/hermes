@@ -537,6 +537,27 @@ void CopyIds(u64 *dest, u64 *src, u32 count) {
   }
 }
 
+void LocalReplaceBlobIdInBucket(SharedMemoryContext *context,
+                                BucketID bucket_id, BlobID old_blob_id,
+                                BlobID new_blob_id) {
+  LocalRemoveBlobFromBucketInfo(context, bucket_id, old_blob_id);
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  LocalAddBlobIdToBucket(mdm, bucket_id, new_blob_id);
+}
+
+void ReplaceBlobIdInBucket(SharedMemoryContext *context, RpcContext *rpc,
+                           BucketID bucket_id, BlobID old_blob_id,
+                           BlobID new_blob_id) {
+  u32 target_node = bucket_id.bits.node_id;
+  if (target_node == rpc->node_id) {
+    LocalReplaceBlobIdInBucket(context, bucket_id, old_blob_id, new_blob_id);
+  } else {
+    RpcCall<bool>(rpc, target_node, "RemoteReplaceBlobIdInBucket", bucket_id,
+                  old_blob_id, new_blob_id);
+  }
+}
+
+
 void AddBlobIdToBucket(MetadataManager *mdm, RpcContext *rpc, BlobID blob_id,
                        BucketID bucket_id) {
   u32 target_node = bucket_id.bits.node_id;
