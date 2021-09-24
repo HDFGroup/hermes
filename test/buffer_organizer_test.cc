@@ -15,6 +15,7 @@
 #include "hermes.h"
 #include "vbucket.h"
 #include "metadata_management_internal.h"
+#include "buffer_pool_internal.h"
 #include "test_utils.h"
 
 #include <mpi.h>
@@ -119,6 +120,7 @@ void TestBoMove() {
   using hermes::BufferID;
   using hermes::BucketID;
   using hermes::BlobID;
+  using hermes::TargetID;
   using hermes::BufferInfo;
   using hermes::f32;
 
@@ -155,19 +157,26 @@ void TestBoMove() {
   Assert(old_buffer_info.size() == old_buffer_ids.size());
 
   f32 old_access_score = ComputeBlobAccessScore(context, old_buffer_info);
+  Assert(old_access_score == 1);
 
   // move ram buffers to lowest tier buffers
-  hermes::BufferID src = old_buffer_ids[0];
+  BufferID src = old_buffer_ids[0];
+  hermes::BufferHeader *header = GetHeaderByBufferId(context, src);
+  Assert(header);
+
+  std::vector<TargetID> targets = LocalGetNodeTargets(context);
   hermes::PlacementSchema schema;
-  hermes::GetBuffers(context, schema);
-  std::vector<hermes::BufferID> dest;
+  schema.push_back(std::pair(header->used, targets[targets.size() - 1]));
+
+  std::vector<BufferID> destinations = hermes::GetBuffers(context, schema);
+  Assert(destinations.size());
+
   std::string internal_blob_name = MakeInternalBlobName(blob_name, bucket_id);
-  hermes::BoMove(context, rpc, src, dest, old_blob_id, bucket_id,
+  hermes::BoMove(context, rpc, src, destinations, old_blob_id, bucket_id,
                  internal_blob_name);
 
   BlobID new_blob_id = GetBlobId(context, rpc, blob_name, bucket_id, false);
   Assert(!IsNullBlobId(new_blob_id));
-  Assert(new_blob_id.as_int != old_blob_id.as_int);
   std::vector<BufferID> new_buffer_ids = GetBufferIdList(context, rpc,
                                                          new_blob_id);
   Assert(new_buffer_ids.size() > 0);

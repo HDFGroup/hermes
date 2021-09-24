@@ -69,11 +69,12 @@ f32 NormalizeAccessScore(SharedMemoryContext *context, f32 raw_score,
                          f32 size_mb) {
   BufferPool *pool = GetBufferPoolFromContext(context);
 
-  f32 min_seconds = size_mb * pool->min_device_bw_mbps;
-  f32 max_seconds = size_mb * pool->max_device_bw_mbps;
+  f32 min_seconds = size_mb * (1.0 / pool->max_device_bw_mbps);
+  f32 max_seconds = size_mb * (1.0 / pool->min_device_bw_mbps);
   f32 range = max_seconds - min_seconds;
   f32 adjusted_score = raw_score - min_seconds;
-  f32 result = adjusted_score / range;
+  f32 result = 1.0 - (adjusted_score / range);
+  assert(result >= 0.0 && result <= 1.0);
 
   return result;
 }
@@ -236,7 +237,7 @@ void BoMove(SharedMemoryContext *context, RpcContext *rpc, BufferID src,
 
         BlobID new_blob_id = {};
         new_blob_id.bits.node_id = blob_id.bits.node_id;
-        blob_id.bits.buffer_ids_offset =
+        new_blob_id.bits.buffer_ids_offset =
           LocalAllocateBufferIdList(mdm, new_buffer_ids);
 
         // update blob_id in bucket's blob list
@@ -246,7 +247,7 @@ void BoMove(SharedMemoryContext *context, RpcContext *rpc, BufferID src,
         LocalPut(mdm, internal_blob_name.c_str(), new_blob_id.as_int,
                  kMapType_BlobId);
       }
-      assert(remaining_src_size == 0);
+      // assert(remaining_src_size == 0);
     } else {
       LOG(WARNING) << "BufferID " << src.as_int << " not found on this node\n";
     }
