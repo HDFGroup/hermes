@@ -542,7 +542,7 @@ void LocalReplaceBlobIdInBucket(SharedMemoryContext *context,
                                 BlobID new_blob_id) {
   LocalRemoveBlobFromBucketInfo(context, bucket_id, old_blob_id);
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
-  LocalAddBlobIdToBucket(mdm, bucket_id, new_blob_id);
+  LocalAddBlobIdToBucket(mdm, bucket_id, new_blob_id, false);
 }
 
 void ReplaceBlobIdInBucket(SharedMemoryContext *context, RpcContext *rpc,

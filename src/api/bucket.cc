@@ -279,6 +279,12 @@ Status Bucket::Persist(const std::string &file_name, const Context &ctx) {
   return result;
 }
 
+void Bucket::OrganizeBlob(const std::string &blob_name, f32 epsilon,
+                          f32 custom_importance) {
+  hermes::OrganizeBlob(&hermes_->context_, &hermes_->rpc_, id_, blob_name,
+                       epsilon, custom_importance);
+}
+
 Status Bucket::Release() {
   Status result = Release(ctx_);
 

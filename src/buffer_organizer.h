@@ -65,8 +65,6 @@ struct BufferOrganizer {
   explicit BufferOrganizer(int num_threads);
 };
 
-bool LocalEnqueueBoTask(SharedMemoryContext *context, BoTask task,
-                        BoPriority priority = BoPriority::kLow);
 bool LocalEnqueueFlushingTask(SharedMemoryContext *context, RpcContext *rpc,
                               BlobID blob_id, const std::string &filename,
                               u64 offset);
@@ -77,9 +75,6 @@ void BoMove(SharedMemoryContext *context, RpcContext *rpc, BufferID src,
             const std::vector<BufferID> &destinations, BlobID blob_id,
             BucketID bucket_id,
             const std::string &internal_blob_name);
-void BoCopy(SharedMemoryContext *context, BufferID src, TargetID dest);
-void BoDelete(SharedMemoryContext *context, BufferID src);
-
 void FlushBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id,
                const std::string &filename, u64 offset, bool async = false);
 void LocalShutdownBufferOrganizer(SharedMemoryContext *context);
@@ -95,12 +90,13 @@ void AwaitAsyncFlushingTasks(SharedMemoryContext *context, RpcContext *rpc,
                              VBucketID id);
 
 void LocalOrganizeBlob(SharedMemoryContext *context, RpcContext *rpc,
-                       const std::string &internal_blob_name, double epsilon,
+                       const std::string &internal_blob_name,
+                       BucketID bucket_id, f32 epsilon,
                        f32 explicit_importance_score);
 
 void OrganizeBlob(SharedMemoryContext *context, RpcContext *rpc,
                   BucketID bucket_id, const std::string &blob_name,
-                  double epsilon, f32 importance_score = -1);
+                  f32 epsilon, f32 importance_score = -1);
 std::vector<BufferInfo> GetBufferInfo(SharedMemoryContext *context,
                                       RpcContext *rpc,
                                       const std::vector<BufferID> &buffer_ids);

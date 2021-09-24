@@ -247,60 +247,20 @@ void BoMove(SharedMemoryContext *context, RpcContext *rpc, BufferID src,
         LocalPut(mdm, internal_blob_name.c_str(), new_blob_id.as_int,
                  kMapType_BlobId);
       }
-      // assert(remaining_src_size == 0);
+      // TODO(chogan): The blob_id here doesn't exist anymore because it was
+      // replaced with new_blob_id. How do we handle the locking?
+      LocalUnlockBlob(context, blob_id);
     } else {
       LOG(WARNING) << "BufferID " << src.as_int << " not found on this node\n";
     }
-    LocalUnlockBlob(context, blob_id);
   } else {
     LOG(WARNING) << "Couldn't lock BlobID " << blob_id.as_int << "\n";
   }
 }
 
-void BoCopy(SharedMemoryContext *context, BufferID src, TargetID dest) {
-  (void)context;
-  printf("%s(%d, %d)\n", __func__, (int)src.as_int, (int)dest.as_int);
-}
-
-void BoDelete(SharedMemoryContext *context, BufferID src) {
-  (void)context;
-  printf("%s(%d)\n", __func__, (int)src.as_int);
-}
-
-bool LocalEnqueueBoTask(SharedMemoryContext *context, BoTask task,
-                        BoPriority priority) {
-  // TODO(chogan): Limit queue size and return false when full
-  bool result = true;
-  bool is_high_priority = priority == BoPriority::kHigh;
-
-  ThreadPool *pool = &context->bo->pool;
-  switch (task.op) {
-    case BoOperation::kMove: {
-      // pool->run(std::bind(BoMove, context, task.args.move_args.src,
-      //                     task.args.move_args.dest), is_high_priority);
-      break;
-    }
-    case BoOperation::kCopy: {
-      pool->run(std::bind(BoCopy, context, task.args.copy_args.src,
-                          task.args.copy_args.dest), is_high_priority);
-      break;
-    }
-    case BoOperation::kDelete: {
-      pool->run(std::bind(BoDelete, context, task.args.delete_args.src),
-                is_high_priority);
-      break;
-    }
-    default: {
-      HERMES_INVALID_CODE_PATH;
-    }
-  }
-
-  return result;
-}
-
 void LocalOrganizeBlob(SharedMemoryContext *context, RpcContext *rpc,
                        const std::string &internal_blob_name,
-                       BucketID bucket_id, double epsilon,
+                       BucketID bucket_id, f32 epsilon,
                        f32 explicit_importance_score) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   BlobID blob_id = {};
@@ -316,6 +276,7 @@ void LocalOrganizeBlob(SharedMemoryContext *context, RpcContext *rpc,
   f32 access_score = ComputeBlobAccessScore(context, buffer_info);
   bool increasing_access_score = importance_score > access_score;
   SortBufferInfo(buffer_info, increasing_access_score);
+  std::vector<BufferInfo> new_buffer_info(buffer_info);
 
   for (size_t i = 0; i < buffer_info.size(); ++i) {
     std::vector<TargetID> targets = LocalGetNodeTargets(context);
@@ -346,25 +307,35 @@ void LocalOrganizeBlob(SharedMemoryContext *context, RpcContext *rpc,
       }
     }
 
-    if (increasing_access_score) {
-      // TODO(chogan): possibly need to split buffer into smaller
-    } else {
-      // TODO(chogan): possibly need to merge buffers into larger
-    }
+    // TODO(chogan): Possibly merge multiple smaller buffers into one large
 
     std::vector<BufferID> dest = GetBuffers(context, schema);
     if (dest.size() == 0) {
       continue;
     }
 
-    std::vector<BufferInfo> new_buffer_info(buffer_info);
+    // Replace old BufferInfo with new so we can calculate the updated access
+    // score
     for (size_t j = 0; j < new_buffer_info.size(); ++j) {
       if (new_buffer_info[j].id.as_int == src_buffer_id.as_int) {
-        new_buffer_info[j].id = src_buffer_id;
+        new_buffer_info[j].id = dest[0];
         new_buffer_info[j].bandwidth_mbps = new_bandwidth_mbps;
-        // new_buffer_info[j].size remains the same
+        BufferHeader *new_header = GetHeaderByBufferId(context, dest[0]);
+        // Assume we're using the full capacity
+        new_buffer_info[j].size = new_header->capacity;
+        break;
       }
     }
+    for (size_t j = 1; j < dest.size(); ++j) {
+      BufferInfo new_info = {};
+      new_info.id = dest[j];
+      new_info.bandwidth_mbps = new_bandwidth_mbps;
+      BufferHeader *new_header = GetHeaderByBufferId(context, dest[0]);
+      // Assume we're using the full capacity
+      new_info.size = new_header->capacity;
+      new_buffer_info.push_back(new_info);
+    }
+
     f32 new_access_score = ComputeBlobAccessScore(context, new_buffer_info);
 
     bool move_is_valid = true;
@@ -395,7 +366,7 @@ void LocalOrganizeBlob(SharedMemoryContext *context, RpcContext *rpc,
 
 void OrganizeBlob(SharedMemoryContext *context, RpcContext *rpc,
                   BucketID bucket_id, const std::string &blob_name,
-                  double epsilon, f32 importance_score) {
+                  f32 epsilon, f32 importance_score) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   std::string internal_name = MakeInternalBlobName(blob_name, bucket_id);
   u32 target_node = HashString(mdm, rpc, internal_name.c_str());
@@ -404,8 +375,8 @@ void OrganizeBlob(SharedMemoryContext *context, RpcContext *rpc,
     LocalOrganizeBlob(context, rpc, internal_name, bucket_id, epsilon,
                       importance_score);
   } else {
-    RpcCall<void>(rpc, target_node, "RemoteOrganizeBlob", internal_name,
-                  epsilon);
+    RpcCall<void>(rpc, target_node, "BO::OrganizeBlob", internal_name,
+                  bucket_id, epsilon);
   }
 }
 

@@ -565,19 +565,22 @@ void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
     req.respond(result);
   };
 
-  auto rpc_enqueue_bo_task = [context](const tl::request &req, BoTask task,
-                                       BoPriority priority) {
-    bool result = LocalEnqueueBoTask(context, task, priority);
+  auto rpc_organize_blob = [context, rpc](const tl::request &req,
+                                          const std::string &internal_blob_name,
+                                          BucketID bucket_id, f32 epsilon,
+                                          f32 importance_score) {
+    LocalOrganizeBlob(context, rpc, internal_blob_name, bucket_id, epsilon,
+                      importance_score);
 
-    req.respond(result);
+    req.respond(true);
   };
 
   rpc_server->define("PlaceInHierarchy",
                      rpc_place_in_hierarchy).disable_response();
   rpc_server->define("MoveToTarget",
                      rpc_move_to_target).disable_response();
-  rpc_server->define("EnqueueBoTask", rpc_enqueue_bo_task);
   rpc_server->define("EnqueueFlushingTask", rpc_enqueue_flushing_task);
+  rpc_server->define("OrganizeBlob", rpc_organize_blob);
 }
 
 void StartGlobalSystemViewStateUpdateThread(SharedMemoryContext *context,

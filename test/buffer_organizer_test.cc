@@ -34,7 +34,7 @@ using hermes::BlobID;
 using hermes::BufferInfo;
 
 
-void TestIsBoFunction() {
+static void TestIsBoFunction() {
   using hermes::IsBoFunction;
   Assert(IsBoFunction("BO::TriggerBufferOrganizer"));
   Assert(IsBoFunction("BO::A"));
@@ -46,32 +46,7 @@ void TestIsBoFunction() {
   Assert(!IsBoFunction("TriggerBufferOrganizer"));
 }
 
-void TestBoTasks() {
-  HermesPtr hermes = hermes::InitHermesDaemon();
-
-  const int kNumThreads = 3;
-  for (int i = 0; i < kNumThreads; ++i) {
-    BoTask task = {};
-    BufferID bid = {};
-    TargetID tid = {};
-    bid.as_int = i;
-    tid.as_int = i;
-    if (i == 0) {
-      task.op = hermes::BoOperation::kMove;
-      task.args.move_args = {bid, tid};
-    } else if (i == 1) {
-      task.op = hermes::BoOperation::kCopy;
-      task.args.copy_args = {bid, tid};
-    } else {
-      task.op = hermes::BoOperation::kDelete;
-      task.args.delete_args = {bid};
-    }
-    LocalEnqueueBoTask(&hermes->context_, task);
-  }
-
-  hermes->Finalize(true);
-}
-void TestBackgroundFlush() {
+static void TestBackgroundFlush() {
   HermesPtr hermes = hermes::InitHermesDaemon();
   const int io_size = KILOBYTES(4);
   const int iters = 4;
@@ -122,7 +97,7 @@ void TestBackgroundFlush() {
   Assert(std::remove(final_destination.c_str()) == 0);
 }
 
-void PutThenMove(HermesPtr hermes, bool move_up) {
+static void PutThenMove(HermesPtr hermes, bool move_up) {
   SharedMemoryContext *context = &hermes->context_;
   RpcContext *rpc = &hermes->rpc_;
 
@@ -130,8 +105,9 @@ void PutThenMove(HermesPtr hermes, bool move_up) {
     "BoMove" + (move_up ? std::string("Up") : std::string("Down"));
   hapi::Bucket bkt(bkt_name, hermes);
 
+  size_t blob_size = KILOBYTES(20);
   std::string blob_name = "1";
-  hapi::Blob blob(KILOBYTES(20), (move_up ? 'z' : 'a'));
+  hapi::Blob blob(blob_size, (move_up ? 'z' : 'a'));
   hapi::Status status = bkt.Put(blob_name, blob);
   Assert(status.Succeeded());
 
@@ -183,10 +159,17 @@ void PutThenMove(HermesPtr hermes, bool move_up) {
     Assert(new_access_score < old_access_score);
   }
 
+  hapi::Blob retrieved_blob;
+  size_t retrieved_blob_size = bkt.Get(blob_name, retrieved_blob);
+  Assert(retrieved_blob_size == blob_size);
+  retrieved_blob.resize(retrieved_blob_size);
+  bkt.Get(blob_name, retrieved_blob);
+  Assert(blob == retrieved_blob);
+
   bkt.Destroy();
 }
 
-void TestBoMove() {
+static void TestBoMove() {
   hermes::Config config = {};
   hermes::InitDefaultConfig(&config);
   config.default_placement_policy = hapi::PlacementPolicy::kRoundRobin;
@@ -208,6 +191,59 @@ void TestBoMove() {
   hermes->Finalize(true);
 }
 
+void TestOrganizeBlob() {
+  hermes::Config config = {};
+  hermes::InitDefaultConfig(&config);
+  config.default_placement_policy = hapi::PlacementPolicy::kRoundRobin;
+  HermesPtr hermes = hermes::InitHermesDaemon(&config);
+  SharedMemoryContext *context = &hermes->context_;
+  RpcContext *rpc = &hermes->rpc_;
+
+  // Put a Blob in RAM
+  hermes::RoundRobinState rr_state;
+  rr_state.SetCurrentDeviceIndex(0);
+  size_t blob_size = KILOBYTES(20);
+  hapi::Bucket bkt("Organize", hermes);
+  std::string blob_name = "1";
+  hapi::Blob blob(blob_size, 'x');
+  hapi::Status status = bkt.Put(blob_name, blob);
+  Assert(status.Succeeded());
+
+  // Call OrganizeBlob with 0 importance, meaning the BORG should move all
+  // buffers to the lowest tier, resulting in an access score of 0
+  f32 epsilon = 0.000001;
+  f32 custom_importance = 0;
+  bkt.OrganizeBlob(blob_name, epsilon, custom_importance);
+
+  // Wait for organization to complete
+  std::this_thread::sleep_for(std::chrono::seconds(2));
+  // hermes::MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  // WaitForOutstandingBlobOps(mdm, blob_id);
+
+  // Get access score and make sure it's 0
+  BucketID bucket_id = {};
+  bucket_id.as_int = bkt.GetId();
+  BlobID blob_id = GetBlobId(context, rpc, blob_name, bucket_id, false);
+  Assert(!IsNullBlobId(blob_id));
+  hermes::MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  std::vector<BufferID> buffer_ids = LocalGetBufferIdList(mdm, blob_id);
+  std::vector<BufferInfo> buffer_info = GetBufferInfo(context, rpc, buffer_ids);
+  f32 access_score = ComputeBlobAccessScore(context, buffer_info);
+  Assert(access_score == 0);
+
+  // Get the Blob and compare it with the original
+  hapi::Blob retrieved_blob;
+  size_t retrieved_blob_size = bkt.Get(blob_name, retrieved_blob);
+  Assert(retrieved_blob_size == blob_size);
+  retrieved_blob.resize(retrieved_blob_size);
+  bkt.Get(blob_name, retrieved_blob);
+  Assert(blob == retrieved_blob);
+
+  bkt.Destroy();
+
+  hermes->Finalize(true);
+}
+
 int main(int argc, char *argv[]) {
   int mpi_threads_provided;
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
@@ -216,10 +252,10 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  TestIsBoFunction();
-  TestBoTasks();
-  TestBackgroundFlush();
-  TestBoMove();
+  // TestIsBoFunction();
+  // TestBackgroundFlush();
+  // TestBoMove();
+  TestOrganizeBlob();
 
   MPI_Finalize();
 

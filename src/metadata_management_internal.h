@@ -37,7 +37,7 @@ void FreeBufferIdList(SharedMemoryContext *context, RpcContext *rpc,
                       BlobID blob_id);
 
 void LocalAddBlobIdToBucket(MetadataManager *mdm, BucketID bucket_id,
-                            BlobID blob_id);
+                            BlobID blob_id, bool track_stats = true);
 void LocalAddBlobIdToVBucket(MetadataManager *mdm, VBucketID vbucket_id,
                              BlobID blob_id);
 std::vector<BufferID> LocalGetBufferIdList(MetadataManager *mdm,

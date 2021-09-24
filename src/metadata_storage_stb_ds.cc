@@ -412,11 +412,13 @@ i64 GetIndexOfId(MetadataManager *mdm, ChunkedIdList *id_list, u64 id) {
 }
 
 void LocalAddBlobIdToBucket(MetadataManager *mdm, BucketID bucket_id,
-                            BlobID blob_id) {
+                            BlobID blob_id, bool track_stats) {
   BeginTicketMutex(&mdm->bucket_mutex);
   BucketInfo *info = LocalGetBucketInfoById(mdm, bucket_id);
   AppendToChunkedIdList(mdm, &info->blobs, blob_id.as_int);
-  LocalIncrementBlobStats(mdm, blob_id);
+  if (track_stats) {
+    LocalIncrementBlobStats(mdm, blob_id);
+  }
   EndTicketMutex(&mdm->bucket_mutex);
 
   CheckHeapOverlap(mdm);
