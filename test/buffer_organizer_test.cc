@@ -216,9 +216,9 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  // TestIsBoFunction();
-  // TestBoTasks();
-  // TestBackgroundFlush();
+  TestIsBoFunction();
+  TestBoTasks();
+  TestBackgroundFlush();
   TestBoMove();
 
   MPI_Finalize();
