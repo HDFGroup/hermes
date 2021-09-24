@@ -22,6 +22,17 @@
 
 namespace hapi = hermes::api;
 using HermesPtr = std::shared_ptr<hapi::Hermes>;
+using hermes::u8;
+using hermes::f32;
+using hermes::SharedMemoryContext;
+using hermes::RpcContext;
+using hermes::BoTask;
+using hermes::BufferID;
+using hermes::TargetID;
+using hermes::BucketID;
+using hermes::BlobID;
+using hermes::BufferInfo;
+
 
 void TestIsBoFunction() {
   using hermes::IsBoFunction;
@@ -36,10 +47,6 @@ void TestIsBoFunction() {
 }
 
 void TestBoTasks() {
-  using hermes::BoTask;
-  using hermes::BufferID;
-  using hermes::TargetID;
-
   HermesPtr hermes = hermes::InitHermesDaemon();
 
   const int kNumThreads = 3;
@@ -65,7 +72,6 @@ void TestBoTasks() {
   hermes->Finalize(true);
 }
 void TestBackgroundFlush() {
-  using hermes::u8;
   HermesPtr hermes = hermes::InitHermesDaemon();
   const int io_size = KILOBYTES(4);
   const int iters = 4;
@@ -116,32 +122,16 @@ void TestBackgroundFlush() {
   Assert(std::remove(final_destination.c_str()) == 0);
 }
 
-void TestBoMove() {
-  using hermes::BufferID;
-  using hermes::BucketID;
-  using hermes::BlobID;
-  using hermes::TargetID;
-  using hermes::BufferInfo;
-  using hermes::f32;
+void PutThenMove(HermesPtr hermes, bool move_up) {
+  SharedMemoryContext *context = &hermes->context_;
+  RpcContext *rpc = &hermes->rpc_;
 
-  hermes::Config config = {};
-  hermes::InitDefaultConfig(&config);
-  config.default_placement_policy = hapi::PlacementPolicy::kRoundRobin;
-
-  HermesPtr hermes = hermes::InitHermesDaemon(&config);
-  hermes::SharedMemoryContext *context = &hermes->context_;
-  hermes::RpcContext *rpc = &hermes->rpc_;
-
-  std::string bkt_name = "BoMove";
+  std::string bkt_name =
+    "BoMove" + (move_up ? std::string("Up") : std::string("Down"));
   hapi::Bucket bkt(bkt_name, hermes);
 
-  // Force Blob to RAM tier
-  hermes::RoundRobinState rr_state;
-  size_t num_devices = rr_state.GetNumDevices();
-  rr_state.SetCurrentDeviceIndex(0);
-
   std::string blob_name = "1";
-  hapi::Blob blob(KILOBYTES(20), 'z');
+  hapi::Blob blob(KILOBYTES(20), (move_up ? 'z' : 'a'));
   hapi::Status status = bkt.Put(blob_name, blob);
   Assert(status.Succeeded());
 
@@ -157,16 +147,16 @@ void TestBoMove() {
   Assert(old_buffer_info.size() == old_buffer_ids.size());
 
   f32 old_access_score = ComputeBlobAccessScore(context, old_buffer_info);
-  Assert(old_access_score == 1);
+  Assert(old_access_score == (move_up ? 0 : 1));
 
-  // move ram buffers to lowest tier buffers
   BufferID src = old_buffer_ids[0];
   hermes::BufferHeader *header = GetHeaderByBufferId(context, src);
   Assert(header);
 
   std::vector<TargetID> targets = LocalGetNodeTargets(context);
   hermes::PlacementSchema schema;
-  schema.push_back(std::pair(header->used, targets[targets.size() - 1]));
+  int target_index = move_up ? 0 : (targets.size() - 1);
+  schema.push_back(std::pair(header->used, targets[target_index]));
 
   std::vector<BufferID> destinations = hermes::GetBuffers(context, schema);
   Assert(destinations.size());
@@ -187,10 +177,33 @@ void TestBoMove() {
   Assert(new_buffer_info != old_buffer_info);
 
   f32 new_access_score = ComputeBlobAccessScore(context, new_buffer_info);
-  Assert(new_access_score < old_access_score);
+  if (move_up) {
+    Assert(old_access_score < new_access_score);
+  } else {
+    Assert(new_access_score < old_access_score);
+  }
 
-  // move large low tier buffer to ram
+  bkt.Destroy();
+}
+
+void TestBoMove() {
+  hermes::Config config = {};
+  hermes::InitDefaultConfig(&config);
+  config.default_placement_policy = hapi::PlacementPolicy::kRoundRobin;
+  HermesPtr hermes = hermes::InitHermesDaemon(&config);
+
+  hermes::RoundRobinState rr_state;
+  size_t num_devices = rr_state.GetNumDevices();
+
+  // Force Blob to RAM, then call BoMove to move a Buffer to the lowest tier and
+  // ensure that the access score has changed appropriately.
+  rr_state.SetCurrentDeviceIndex(0);
+  PutThenMove(hermes, false);
+
+  // Force Blob to lowest Tier, then call BoMove to move a Buffer to the RAM
+  // tier and ensure that the access score has changed appropriately.
   rr_state.SetCurrentDeviceIndex(num_devices - 1);
+  PutThenMove(hermes, true);
 
   hermes->Finalize(true);
 }
