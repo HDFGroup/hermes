@@ -537,14 +537,6 @@ void CopyIds(u64 *dest, u64 *src, u32 count) {
   }
 }
 
-void LocalReplaceBlobIdInBucket(SharedMemoryContext *context,
-                                BucketID bucket_id, BlobID old_blob_id,
-                                BlobID new_blob_id) {
-  LocalRemoveBlobFromBucketInfo(context, bucket_id, old_blob_id);
-  MetadataManager *mdm = GetMetadataManagerFromContext(context);
-  LocalAddBlobIdToBucket(mdm, bucket_id, new_blob_id, false);
-}
-
 void ReplaceBlobIdInBucket(SharedMemoryContext *context, RpcContext *rpc,
                            BucketID bucket_id, BlobID old_blob_id,
                            BlobID new_blob_id) {

@@ -411,6 +411,26 @@ i64 GetIndexOfId(MetadataManager *mdm, ChunkedIdList *id_list, u64 id) {
   return result;
 }
 
+void LocalReplaceBlobIdInBucket(SharedMemoryContext *context,
+                                BucketID bucket_id, BlobID old_blob_id,
+                                BlobID new_blob_id) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  BeginTicketMutex(&mdm->bucket_mutex);
+  BucketInfo *info = LocalGetBucketInfoById(mdm, bucket_id);
+  ChunkedIdList *blobs = &info->blobs;
+
+  BlobID *blobs_arr = (BlobID *)GetIdsPtr(mdm, *blobs);
+  for (u32 i = 0; i < blobs->length; ++i) {
+    if (blobs_arr[i].as_int == old_blob_id.as_int) {
+      blobs_arr[i] = new_blob_id;
+      break;
+    }
+  }
+  ReleaseIdsPtr(mdm);
+
+  EndTicketMutex(&mdm->bucket_mutex);
+}
+
 void LocalAddBlobIdToBucket(MetadataManager *mdm, BucketID bucket_id,
                             BlobID blob_id, bool track_stats) {
   BeginTicketMutex(&mdm->bucket_mutex);
