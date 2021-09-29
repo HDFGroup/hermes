@@ -230,11 +230,6 @@ void BoMove(SharedMemoryContext *context, RpcContext *rpc, BufferID src,
           new_buffer_ids.push_back(replacement_ids[i]);
         }
 
-        if (!BlobIsInSwap(blob_id)) {
-          LocalReleaseBuffer(context, src);
-        }
-        LocalFreeBufferIdList(context, blob_id);
-
         BlobID new_blob_id = {};
         new_blob_id.bits.node_id = blob_id.bits.node_id;
         new_blob_id.bits.buffer_ids_offset =
@@ -246,6 +241,11 @@ void BoMove(SharedMemoryContext *context, RpcContext *rpc, BufferID src,
         // update BlobID map
         LocalPut(mdm, internal_blob_name.c_str(), new_blob_id.as_int,
                  kMapType_BlobId);
+
+        if (!BlobIsInSwap(blob_id)) {
+          LocalReleaseBuffer(context, src);
+        }
+        LocalFreeBufferIdList(context, blob_id);
       }
       // TODO(chogan): The blob_id here doesn't exist anymore because it was
       // replaced with new_blob_id. How do we handle the locking?
@@ -309,8 +309,10 @@ void LocalOrganizeBlob(SharedMemoryContext *context, RpcContext *rpc,
 
     // TODO(chogan): Possibly merge multiple smaller buffers into one large
 
+    // TODO(chogan): Check move_is_valid before calling GetBuffers
     std::vector<BufferID> dest = GetBuffers(context, schema);
     if (dest.size() == 0) {
+      // TODO(chogan): ReleaseBuffers(dest);
       continue;
     }
 
@@ -356,6 +358,8 @@ void LocalOrganizeBlob(SharedMemoryContext *context, RpcContext *rpc,
       // TODO(chogan): Create schema in loop but only enqueue once?
       LocalEnqueueBoMove(context, rpc, src_buffer_id, dest, blob_id, bucket_id,
                          internal_blob_name, BoPriority::kLow);
+    } else {
+      // TODO(chogan): ReleaseBuffers(dest);
     }
 
     if (std::abs(importance_score - new_access_score) < epsilon) {
