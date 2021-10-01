@@ -103,16 +103,24 @@ class Bucket {
    *
    */
   template<typename T>
-  Status Put(std::vector<std::string> &names,
-             std::vector<std::vector<T>> &blobs, const Context &ctx);
+  Status Put(const std::vector<std::string> &names,
+             const std::vector<std::vector<T>> &blobs, const Context &ctx);
 
   /**
    *
    */
   template<typename T>
-  Status Put(std::vector<std::string> &names,
-             std::vector<std::vector<T>> &blobs);
+  Status Put(const std::vector<std::string> &names,
+             const std::vector<std::vector<T>> &blobs);
 
+  /**
+   *
+   */
+  template<typename T>
+  Status PutInternal(const std::vector<std::string> &names,
+                     const std::vector<size_t> &sizes,
+                     const std::vector<std::vector<T>> &blobs,
+                     const Context &ctx);
   /**
    *
    */
@@ -234,16 +242,37 @@ Status Bucket::PlaceBlobs(std::vector<PlacementSchema> &schemas,
 }
 
 template<typename T>
-Status Bucket::Put(std::vector<std::string> &names,
-                   std::vector<std::vector<T>> &blobs) {
+Status Bucket::Put(const std::vector<std::string> &names,
+                   const std::vector<std::vector<T>> &blobs) {
   Status result = Put(names, blobs, ctx_);
 
   return result;
 }
 
 template<typename T>
-Status Bucket::Put(std::vector<std::string> &names,
-                   std::vector<std::vector<T>> &blobs, const Context &ctx) {
+Status Bucket::PutInternal(const std::vector<std::string> &names,
+                           const std::vector<size_t> &sizes,
+                           const std::vector<std::vector<T>> &blobs,
+                           const Context &ctx) {
+  std::vector<PlacementSchema> schemas;
+  HERMES_BEGIN_TIMED_BLOCK("CalculatePlacement");
+  Status result = CalculatePlacement(&hermes_->context_, &hermes_->rpc_, sizes,
+                                     schemas, ctx);
+  HERMES_END_TIMED_BLOCK();
+
+  if (result.Succeeded()) {
+    result = PlaceBlobs(schemas, blobs, names, ctx);
+  } else {
+    LOG(ERROR) << result.Msg();
+  }
+
+  return result;
+}
+
+template<typename T>
+Status Bucket::Put(const std::vector<std::string> &names,
+                   const std::vector<std::vector<T>> &blobs,
+                   const Context &ctx) {
   Status ret;
 
   for (auto &name : names) {
@@ -266,17 +295,24 @@ Status Bucket::Put(std::vector<std::string> &names,
     for (size_t i = 0; i < num_blobs; ++i) {
       sizes_in_bytes[i] = blobs[i].size() * sizeof(T);
     }
-    std::vector<PlacementSchema> schemas;
-    HERMES_BEGIN_TIMED_BLOCK("CalculatePlacement");
-    ret = CalculatePlacement(&hermes_->context_, &hermes_->rpc_, sizes_in_bytes,
-                             schemas, ctx);
-    HERMES_END_TIMED_BLOCK();
 
-    if (ret.Succeeded()) {
-      ret = PlaceBlobs(schemas, blobs, names, ctx);
+    if (ctx.rr_retry) {
+      int num_devices =
+        GetLocalSystemViewState(&hermes_->context_)->num_devices;
+
+      for (int i = 0; i < num_devices; ++i) {
+        ret = PutInternal(names, sizes_in_bytes, blobs, ctx);
+
+        if (ret.Failed()) {
+          RoundRobinState rr_state;
+          int current = rr_state.GetCurrentDeviceIndex();
+          rr_state.SetCurrentDeviceIndex((current + 1) % num_devices);
+        } else {
+          break;
+        }
+      }
     } else {
-      LOG(ERROR) << ret.Msg();
-      return ret;
+      ret = PutInternal(names, sizes_in_bytes, blobs, ctx);
     }
   } else {
     ret = INVALID_BUCKET;

@@ -40,12 +40,13 @@ class RoundRobinState {
   void SetCurrentDeviceIndex(int new_device_index);
 };
 
-Status RoundRobinPlacement(std::vector<size_t> &blob_sizes,
-                        std::vector<u64> &node_state,
+Status RoundRobinPlacement(const std::vector<size_t> &blob_sizes,
+                           std::vector<u64> &node_state,
                            std::vector<PlacementSchema> &output,
-                           const std::vector<TargetID> &targets);
+                           const std::vector<TargetID> &targets,
+                           bool split);
 
-Status RandomPlacement(std::vector<size_t> &blob_sizes,
+Status RandomPlacement(const std::vector<size_t> &blob_sizes,
                        std::multimap<u64, TargetID> &ordered_cap,
                        std::vector<PlacementSchema> &output);
 
@@ -56,7 +57,7 @@ Status MinimizeIoTimePlacement(const std::vector<size_t> &blob_sizes,
                                std::vector<PlacementSchema> &output);
 
 Status CalculatePlacement(SharedMemoryContext *context, RpcContext *rpc,
-                          std::vector<size_t> &blob_size,
+                          const std::vector<size_t> &blob_size,
                           std::vector<PlacementSchema> &output,
                           const api::Context &api_context);
 

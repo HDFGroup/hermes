@@ -103,5 +103,7 @@ int main(int argc, char **argv) {
 
   Assert(config.bo_num_threads == 4);
 
+  Assert(config.default_rr_split == false);
+
   return 0;
 }

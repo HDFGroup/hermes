@@ -27,10 +27,6 @@ void LocalShutdownBufferOrganizer(SharedMemoryContext *context) {
   context->bo->pool.~ThreadPool();
 }
 
-void ShutdownBufferOrganizer(RpcContext *rpc) {
-  RpcCall<bool>(rpc, rpc->node_id, "BO::ShutdownBufferOrganizer");
-}
-
 void BoMove(SharedMemoryContext *context, BufferID src, TargetID dest) {
   (void)context;
   printf("%s(%d, %d)\n", __func__, (int)src.as_int, (int)dest.as_int);
@@ -243,11 +239,16 @@ void AwaitAsyncFlushingTasks(SharedMemoryContext *context, RpcContext *rpc,
                              VBucketID id) {
   auto sleep_time = std::chrono::milliseconds(500);
   int outstanding_flushes = 0;
+  int log_every = 10;
+  int counter = 0;
 
   while ((outstanding_flushes =
           GetNumOutstandingFlushingTasks(context, rpc, id)) != 0) {
-    LOG(INFO) << "Waiting for " << outstanding_flushes
-              << " outstanding flushes" << std::endl;
+    if (++counter == log_every) {
+      LOG(INFO) << "Waiting for " << outstanding_flushes
+                << " outstanding flushes" << std::endl;
+      counter = 0;
+    }
     std::this_thread::sleep_for(sleep_time);
   }
 }

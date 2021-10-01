@@ -53,12 +53,19 @@ enum class PlacementPolicy {
 struct Context {
   static int default_buffer_organizer_retries;
   static PlacementPolicy default_placement_policy;
+  static bool default_rr_split;
 
   PlacementPolicy policy;
   int buffer_organizer_retries;
+  bool rr_split;
+  bool rr_retry;
+  bool disable_swap;
 
   Context() : policy(default_placement_policy),
-              buffer_organizer_retries(default_buffer_organizer_retries) {}
+              buffer_organizer_retries(default_buffer_organizer_retries),
+              rr_split(default_rr_split),
+              rr_retry(false),
+              disable_swap(false) {}
 };
 
 }  // namespace api
@@ -183,6 +190,7 @@ struct Config {
   int rpc_num_threads;
   int bo_num_threads;
   api::PlacementPolicy default_placement_policy;
+  bool default_rr_split;
 
   /** A base name for the BufferPool shared memory segement. Hermes appends the
    * value of the USER environment variable to this string.

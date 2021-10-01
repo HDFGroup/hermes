@@ -561,18 +561,12 @@ void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
     req.respond(result);
   };
 
-  auto rpc_shutdown_buffer_organizer = [context](const tl::request &req) {
-    LocalShutdownBufferOrganizer(context);
-    req.respond(true);
-  };
-
   rpc_server->define("PlaceInHierarchy",
                      rpc_place_in_hierarchy).disable_response();
   rpc_server->define("MoveToTarget",
                      rpc_move_to_target).disable_response();
   rpc_server->define("EnqueueBoTask", rpc_enqueue_bo_task);
   rpc_server->define("EnqueueFlushingTask", rpc_enqueue_flushing_task);
-  rpc_server->define("ShutdownBufferOrganizer", rpc_shutdown_buffer_organizer);
 }
 
 void StartGlobalSystemViewStateUpdateThread(SharedMemoryContext *context,
@@ -703,7 +697,7 @@ void RunDaemon(SharedMemoryContext *context, RpcContext *rpc,
   state->bo_engine->wait_for_finalize();
   state->engine->wait_for_finalize();
 
-  ShutdownBufferOrganizer(rpc);
+  LocalShutdownBufferOrganizer(context);
   delete state->engine;
   delete state->bo_engine;
   ReleaseSharedMemoryContext(context);
