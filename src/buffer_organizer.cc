@@ -12,6 +12,7 @@
 
 #include <sys/file.h>
 #include <algorithm>
+#include <unordered_set>
 
 #include "hermes.h"
 #include "buffer_organizer.h"
@@ -160,13 +161,13 @@ void SortTargetInfo(std::vector<TargetInfo> &target_info, bool increasing) {
 }
 
 void LocalEnqueueBoMove(SharedMemoryContext *context, RpcContext *rpc,
-                        BufferID src, const std::vector<BufferID> &dest,
-                        BlobID blob_id, BucketID bucket_id,
+                        const BoMoveList &moves, BlobID blob_id,
+                        BucketID bucket_id,
                         const std::string &internal_blob_name,
                         BoPriority priority) {
   ThreadPool *pool = &context->bo->pool;
   bool is_high_priority = priority == BoPriority::kHigh;
-  pool->run(std::bind(BoMove, context, rpc, src, dest, blob_id, bucket_id,
+  pool->run(std::bind(BoMove, context, rpc, moves, blob_id, bucket_id,
                       internal_blob_name),
             is_high_priority);
 }
@@ -174,85 +175,101 @@ void LocalEnqueueBoMove(SharedMemoryContext *context, RpcContext *rpc,
 /**
  * Assumes all BufferIDs in destinations are local
  */
-void BoMove(SharedMemoryContext *context, RpcContext *rpc, BufferID src,
-            const std::vector<BufferID> &destinations,
-            BlobID blob_id, BucketID bucket_id,
+void BoMove(SharedMemoryContext *context, RpcContext *rpc,
+            const BoMoveList &moves, BlobID blob_id, BucketID bucket_id,
             const std::string &internal_blob_name) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
 
   if (LocalLockBlob(context, blob_id)) {
-    BufferHeader *src_header = GetHeaderByBufferId(context, src);
-    if (src_header) {
-      std::vector<u8> src_data(src_header->used);
-      Blob blob = {};
-      blob.data = src_data.data();
-      blob.size = src_header->used;
-      LocalReadBufferById(context, src, &blob, 0);
-      size_t offset = 0;
-      i64 remaining_src_size = (i64)blob.size;
-      std::vector<BufferID> replacement_ids;
+    auto warning_string = [](BufferID id) {
+      std::ostringstream ss;
+      ss << "BufferID" << id.as_int << " not found on this node\n";
 
-      for (size_t i = 0; i < destinations.size(); ++i) {
-        BufferID dest = destinations[i];
-        BufferHeader *dest_header = GetHeaderByBufferId(context, dest);
+      return ss.str();
+    };
 
-        if (dest_header) {
-          u32 dest_capacity = dest_header->capacity;
-          size_t portion_size = std::min((i64)dest_capacity,
-                                         remaining_src_size);
-          Blob blob_portion = {};
-          blob_portion.data = blob.data + offset;
-          blob_portion.size = portion_size;
-          LocalWriteBufferById(context, dest, blob_portion, offset);
-          offset += portion_size;
-          remaining_src_size -= portion_size;
-          replacement_ids.push_back(dest);
-        } else {
-          LOG(WARNING) << "BufferID " << dest.as_int
-                       << " not found on this node\n";
-        }
-      }
+    std::vector<BufferID> replacement_ids;
+    std::vector<BufferID> replaced_ids;
 
-      if (replacement_ids.size() > 0) {
-        std::vector<BufferID> new_buffer_ids =
-          LocalGetBufferIdList(mdm, blob_id);
+    for (size_t move_index = 0; move_index < moves.size(); ++move_index) {
+      BufferID src = moves[move_index].first;
+      BufferHeader *src_header = GetHeaderByBufferId(context, src);
+      if (src_header) {
+        std::vector<u8> src_data(src_header->used);
+        Blob blob = {};
+        blob.data = src_data.data();
+        blob.size = src_header->used;
+        LocalReadBufferById(context, src, &blob, 0);
+        size_t offset = 0;
+        i64 remaining_src_size = (i64)blob.size;
+        replaced_ids.push_back(src);
 
-        // Replace src BufferIDs with those from dest
-        // Swap src with the first replacement.
-        for (size_t i = 0; i < new_buffer_ids.size(); ++i) {
-          if (new_buffer_ids[i] == src) {
-            new_buffer_ids[i] = replacement_ids[0];
-            break;
+        for (size_t i = 0; i < moves[move_index].second.size(); ++i) {
+          BufferID dest = moves[move_index].second[i];
+          BufferHeader *dest_header = GetHeaderByBufferId(context, dest);
+
+          if (dest_header) {
+            u32 dest_capacity = dest_header->capacity;
+            size_t portion_size = std::min((i64)dest_capacity,
+                                           remaining_src_size);
+            Blob blob_portion = {};
+            blob_portion.data = blob.data + offset;
+            blob_portion.size = portion_size;
+            LocalWriteBufferById(context, dest, blob_portion, offset);
+            offset += portion_size;
+            remaining_src_size -= portion_size;
+            replacement_ids.push_back(dest);
+          } else {
+            LOG(WARNING) << warning_string(dest);
           }
         }
-        // Append the remaining replacements
-        for (size_t i = 1; i < replacement_ids.size(); ++i) {
-          new_buffer_ids.push_back(replacement_ids[i]);
-        }
-
-        BlobID new_blob_id = {};
-        new_blob_id.bits.node_id = blob_id.bits.node_id;
-        new_blob_id.bits.buffer_ids_offset =
-          LocalAllocateBufferIdList(mdm, new_buffer_ids);
-
-        // update blob_id in bucket's blob list
-        ReplaceBlobIdInBucket(context, rpc, bucket_id, blob_id, new_blob_id);
-
-        // update BlobID map
-        LocalPut(mdm, internal_blob_name.c_str(), new_blob_id.as_int,
-                 kMapType_BlobId);
-
-        if (!BlobIsInSwap(blob_id)) {
-          LocalReleaseBuffer(context, src);
-        }
-        LocalFreeBufferIdList(context, blob_id);
+      } else {
+        LOG(WARNING) << warning_string(src);
       }
-      // TODO(chogan): The blob_id here doesn't exist anymore because it was
-      // replaced with new_blob_id. How do we handle the locking?
-      LocalUnlockBlob(context, blob_id);
-    } else {
-      LOG(WARNING) << "BufferID " << src.as_int << " not found on this node\n";
     }
+
+    if (replacement_ids.size() > 0) {
+      std::vector<BufferID> buffer_ids = LocalGetBufferIdList(mdm, blob_id);
+      using BufferIdSet = std::unordered_set<BufferID, BufferIdHash>;
+      BufferIdSet new_buffer_ids(buffer_ids.begin(), buffer_ids.end());
+
+      // Remove all replaced BufferIDs from the new IDs.
+      for (size_t i = 0; i < replaced_ids.size(); ++i) {
+        new_buffer_ids.erase(replaced_ids[i]);
+      }
+
+      // Add all the replacement IDs
+      for (size_t i = 0; i < replacement_ids.size(); ++i) {
+        new_buffer_ids.insert(replacement_ids[i]);
+      }
+
+      std::vector<BufferID> ids_vec(new_buffer_ids.begin(),
+                                    new_buffer_ids.end());
+      BlobID new_blob_id = {};
+      new_blob_id.bits.node_id = blob_id.bits.node_id;
+      new_blob_id.bits.buffer_ids_offset =
+        LocalAllocateBufferIdList(mdm, ids_vec);
+
+      BlobInfo new_info = {};
+      BlobInfo *old_info = GetBlobInfoPtr(mdm, blob_id);
+      new_info.stats = old_info->stats;
+      old_info->stop = true;
+      ReleaseBlobInfoPtr(mdm);
+      LocalPut(mdm, new_blob_id, new_info);
+
+      // update blob_id in bucket's blob list
+      ReplaceBlobIdInBucket(context, rpc, bucket_id, blob_id, new_blob_id);
+      // update BlobID map
+      LocalPut(mdm, internal_blob_name.c_str(), new_blob_id.as_int,
+               kMapType_BlobId);
+
+      if (!BlobIsInSwap(blob_id)) {
+        LocalReleaseBuffers(context, replaced_ids);
+      }
+      LocalFreeBufferIdList(context, blob_id);
+    }
+    // TODO(chogan):
+    LocalUnlockBlob(context, blob_id);
   } else {
     LOG(WARNING) << "Couldn't lock BlobID " << blob_id.as_int << "\n";
   }
@@ -277,6 +294,8 @@ void LocalOrganizeBlob(SharedMemoryContext *context, RpcContext *rpc,
   bool increasing_access_score = importance_score > access_score;
   SortBufferInfo(buffer_info, increasing_access_score);
   std::vector<BufferInfo> new_buffer_info(buffer_info);
+
+  BoMoveList src_dest;
 
   for (size_t i = 0; i < buffer_info.size(); ++i) {
     std::vector<TargetID> targets = LocalGetNodeTargets(context);
@@ -309,10 +328,8 @@ void LocalOrganizeBlob(SharedMemoryContext *context, RpcContext *rpc,
 
     // TODO(chogan): Possibly merge multiple smaller buffers into one large
 
-    // TODO(chogan): Check move_is_valid before calling GetBuffers
     std::vector<BufferID> dest = GetBuffers(context, schema);
     if (dest.size() == 0) {
-      // TODO(chogan): ReleaseBuffers(dest);
       continue;
     }
 
@@ -355,17 +372,17 @@ void LocalOrganizeBlob(SharedMemoryContext *context, RpcContext *rpc,
     }
 
     if (move_is_valid) {
-      // TODO(chogan): Create schema in loop but only enqueue once?
-      LocalEnqueueBoMove(context, rpc, src_buffer_id, dest, blob_id, bucket_id,
-                         internal_blob_name, BoPriority::kLow);
+      src_dest.push_back(std::pair(src_buffer_id, dest));
     } else {
-      // TODO(chogan): ReleaseBuffers(dest);
+      ReleaseBuffers(context, rpc, dest);
     }
 
     if (std::abs(importance_score - new_access_score) < epsilon) {
       break;
     }
   }
+  LocalEnqueueBoMove(context, rpc, src_dest, blob_id, bucket_id,
+                     internal_blob_name, BoPriority::kLow);
 }
 
 void OrganizeBlob(SharedMemoryContext *context, RpcContext *rpc,

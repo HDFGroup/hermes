@@ -101,6 +101,12 @@ union BufferID {
   u64 as_int;
 };
 
+struct BufferIdHash {
+  size_t operator()(const BufferID &id) const {
+    return std::hash<u64>()(id.as_int);
+  }
+};
+
 bool operator==(const BufferID &lhs, const BufferID &rhs);
 
 /**

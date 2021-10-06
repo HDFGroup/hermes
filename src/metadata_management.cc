@@ -1400,16 +1400,36 @@ int GetNumOutstandingFlushingTasks(SharedMemoryContext *context,
 }
 
 bool LocalLockBlob(SharedMemoryContext *context, BlobID blob_id) {
+  Ticket t = {};
+  Ticket *ticket = 0;
+  bool result = true;
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
-  BlobInfo *blob_info = GetBlobInfoPtr(mdm, blob_id);
-  bool result = false;
 
-  if (blob_info) {
-    BeginTicketMutex(&blob_info->lock);
-    result = true;
+  while (!t.acquired) {
+    BlobInfo *blob_info = GetBlobInfoPtr(mdm, blob_id);
+    if (blob_info) {
+      t = TryBeginTicketMutex(&blob_info->lock, ticket);
+      if (!ticket) {
+        blob_info->last = t.ticket;
+      }
+    }
+    if (!t.acquired) {
+      ReleaseBlobInfoPtr(mdm);
+      sched_yield();
+    } else {
+      if (blob_info->stop) {
+        // This BlobID is no longer valid. Release the lock and delete the entry
+        // if we're the last ticket on that lock.
+        EndTicketMutex(&blob_info->lock);
+        result = false;
+        if (t.ticket == blob_info->last) {
+          LocalDelete(mdm, blob_id);
+        }
+      }
+      ReleaseBlobInfoPtr(mdm);
+    }
+    ticket = &t;
   }
-
-  ReleaseBlobInfoPtr(mdm);
 
   return result;
 }

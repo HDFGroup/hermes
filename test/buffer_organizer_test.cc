@@ -137,8 +137,10 @@ static void PutThenMove(HermesPtr hermes, bool move_up) {
   std::vector<BufferID> destinations = hermes::GetBuffers(context, schema);
   Assert(destinations.size());
 
+  hermes::BoMoveList moves;
+  moves.push_back(std::pair(src, destinations));
   std::string internal_blob_name = MakeInternalBlobName(blob_name, bucket_id);
-  hermes::BoMove(context, rpc, src, destinations, old_blob_id, bucket_id,
+  hermes::BoMove(context, rpc, moves, old_blob_id, bucket_id,
                  internal_blob_name);
 
   BlobID new_blob_id = GetBlobId(context, rpc, blob_name, bucket_id, false);
@@ -217,8 +219,6 @@ void TestOrganizeBlob() {
 
   // Wait for organization to complete
   std::this_thread::sleep_for(std::chrono::seconds(2));
-  // hermes::MetadataManager *mdm = GetMetadataManagerFromContext(context);
-  // WaitForOutstandingBlobOps(mdm, blob_id);
 
   // Get access score and make sure it's 0
   BucketID bucket_id = {};
@@ -252,9 +252,9 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  // TestIsBoFunction();
-  // TestBackgroundFlush();
-  // TestBoMove();
+  TestIsBoFunction();
+  TestBackgroundFlush();
+  TestBoMove();
   TestOrganizeBlob();
 
   MPI_Finalize();

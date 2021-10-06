@@ -62,8 +62,10 @@ struct BufferIdArray {
 struct BlobInfo {
   Stats stats;
   TicketMutex lock;
+  u32 last;
+  bool stop;
 
-  BlobInfo() {
+  BlobInfo() : last(0), stop(false) {
     stats.recency = 0;
     stats.frequency = 0;
     lock.ticket.store(0);

@@ -17,6 +17,8 @@
 
 namespace hermes {
 
+using BoMoveList = std::vector<std::pair<BufferID, std::vector<BufferID>>>;
+
 enum class BoOperation {
   kMove,
   kCopy,
@@ -71,9 +73,8 @@ bool LocalEnqueueFlushingTask(SharedMemoryContext *context, RpcContext *rpc,
 bool EnqueueFlushingTask(RpcContext *rpc, BlobID blob_id,
                          const std::string &filename, u64 offset);
 
-void BoMove(SharedMemoryContext *context, RpcContext *rpc, BufferID src,
-            const std::vector<BufferID> &destinations, BlobID blob_id,
-            BucketID bucket_id,
+void BoMove(SharedMemoryContext *context, RpcContext *rpc,
+            const BoMoveList &moves, BlobID blob_id, BucketID bucket_id,
             const std::string &internal_blob_name);
 void FlushBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id,
                const std::string &filename, u64 offset, bool async = false);
