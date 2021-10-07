@@ -508,18 +508,6 @@ Status PlaceInHierarchy(SharedMemoryContext *context, RpcContext *rpc,
   return result;
 }
 
-int MoveToTarget(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id,
-                 TargetID dest) {
-  (void)(context);
-  (void)(rpc);
-  (void)(blob_id);
-  (void)(dest);
-// TODO(chogan): Move blob from current location to Target dest
-  HERMES_NOT_IMPLEMENTED_YET;
-  int result = 0;
-  return result;
-}
-
 void LocalAdjustFlushCount(SharedMemoryContext *context,
                            const std::string &vbkt_name, int adjustment) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
@@ -530,6 +518,10 @@ void LocalAdjustFlushCount(SharedMemoryContext *context,
     VLOG(1) << "Flush count on VBucket " << vbkt_name
             << (adjustment > 0 ? "incremented" : "decremented") << " to "
             << flush_count + adjustment << "\n";
+  } else {
+    // TEMP(chogan):
+    LOG(FATAL) << "No VBucketInfo for " << vbkt_name
+               << " when attempting to adjust flush_count\n";
   }
 }
 
