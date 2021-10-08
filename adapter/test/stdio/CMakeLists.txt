@@ -1,7 +1,7 @@
 function(gcc_hermes exec tag_name tags conf async)
   set(TEST_NAME Test${exec}_${tag_name}_${async})
   add_test(NAME ${TEST_NAME}
-    COMMAND "${CMAKE_BINARY_DIR}/bin/${exec}" ${tags} --reporter compact)
+    COMMAND "${CMAKE_BINARY_DIR}/bin/${exec}" ${tags} --reporter compact -d yes)
   set_property(TEST ${TEST_NAME}
     PROPERTY ENVIRONMENT HERMES_CONF=${CMAKE_SOURCE_DIR}/adapter/test/data/${conf}.conf)
   set_property(TEST ${TEST_NAME} APPEND
