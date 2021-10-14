@@ -31,7 +31,7 @@ FileMappingTrait::FileMappingTrait(
     const std::string &filename,
     std::unordered_map<std::string, u64> &offset_map,
     FILE *fh,
-    TraitCallback flush_cb, TraitCallback load_cb)
+    OnLinkCallback flush_cb, OnLinkCallback load_cb)
     : Trait(HERMES_FILE_TRAIT, TraitIdArray(), TraitType::FILE_MAPPING),
       flush_cb(flush_cb),
       load_cb(load_cb),
@@ -52,30 +52,30 @@ FileMappingTrait::FileMappingTrait(
                                std::placeholders::_3);
 }
 
-void FileMappingTrait::onAttach(HermesPtr hermes, TraitInput &input,
-                                Trait *trait) {
-  if (load_cb) {
-    load_cb(hermes, input, trait);
-    // TODO(hari): @errorhandling Check if load was successful
-  }
+void FileMappingTrait::onAttach(HermesPtr hermes, VBucketID id, Trait *trait) {
+  (void)hermes;
+  (void)id;
+  (void)trait;
 }
 
-void FileMappingTrait::onDetach(HermesPtr hermes, TraitInput &input,
-                                Trait *trait) {
-  if (flush_cb) {
-    flush_cb(hermes, input, trait);
-    // TODO(hari): @errorhandling Check if flush was successful
-  }
+void FileMappingTrait::onDetach(HermesPtr hermes, VBucketID id, Trait *trait) {
+  (void)hermes;
+  (void)id;
+  (void)trait;
 }
 
 void FileMappingTrait::onLink(HermesPtr hermes, TraitInput &input,
                               Trait *trait) {
-  onAttach(hermes, input, trait);
+  (void)hermes;
+  (void)input;
+  (void)trait;
 }
 
 void FileMappingTrait::onUnlink(HermesPtr hermes, TraitInput &input,
                                 Trait *trait) {
-  onDetach(hermes, input, trait);
+  (void)hermes;
+  (void)input;
+  (void)trait;
 }
 
 PersistTrait::PersistTrait(FileMappingTrait mapping, bool synchronous)
@@ -95,13 +95,24 @@ PersistTrait::PersistTrait(FileMappingTrait mapping, bool synchronous)
                                std::placeholders::_3);
 }
 
-void PersistTrait::onAttach(HermesPtr hermes, TraitInput &input, Trait *trait) {
-  onLink(hermes, input, trait);
+void PersistTrait::onAttach(HermesPtr hermes, VBucketID id, Trait *trait) {
+  SharedMemoryContext *context = &hermes->context_;
+  RpcContext *rpc = &hermes->rpc_;
+
+  auto blob_ids =
+    GetBlobsFromVBucketInfo(context, rpc, id);
+  for (const auto& blob_id : blob_ids) {
+    TraitInput input;
+    auto bucket_id = GetBucketIdFromBlobId(context, rpc, blob_id);
+    input.bucket_name = GetBucketNameById(context, rpc, bucket_id);
+    input.blob_name = GetBlobNameFromId(context, rpc, blob_id);
+    onLink(hermes, input, trait);
+  }
 }
 
-void PersistTrait::onDetach(HermesPtr hermes, TraitInput &input, Trait *trait) {
+void PersistTrait::onDetach(HermesPtr hermes, VBucketID id, Trait *trait) {
   (void)hermes;
-  (void)input;
+  (void)id;
   (void)trait;
 }
 

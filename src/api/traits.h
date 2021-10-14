@@ -30,17 +30,17 @@ typedef BlobInfo TraitInput;
 struct Trait;
 using HermesPtr = std::shared_ptr<Hermes>;
 
-typedef
-std::function<void(HermesPtr, TraitInput &, Trait *)> TraitCallback;
+typedef std::function<void(HermesPtr, TraitInput &, Trait *)> OnLinkCallback;
+typedef std::function<void(HermesPtr, VBucketID, Trait *)> OnAttachCallback;
 
 struct Trait {
   TraitID id;
   TraitIdArray conflict_traits;
   TraitType type;
-  TraitCallback onAttachFn;
-  TraitCallback onDetachFn;
-  TraitCallback onLinkFn;
-  TraitCallback onUnlinkFn;
+  OnAttachCallback onAttachFn;
+  OnAttachCallback onDetachFn;
+  OnLinkCallback onLinkFn;
+  OnLinkCallback onUnlinkFn;
 
   Trait() {}
   Trait(TraitID id, TraitIdArray conflict_traits, TraitType type);
@@ -50,8 +50,8 @@ struct Trait {
 #define HERMES_PERSIST_TRAIT 11
 
 struct FileMappingTrait : public Trait {
-  TraitCallback flush_cb;
-  TraitCallback load_cb;
+  OnLinkCallback flush_cb;
+  OnLinkCallback load_cb;
   std::string filename;
   std::unordered_map<std::string, u64> offset_map;
   FILE *fh;
@@ -59,9 +59,9 @@ struct FileMappingTrait : public Trait {
   FileMappingTrait() {}
   FileMappingTrait(const std::string &filename,
                    std::unordered_map<std::string, u64> &offset_map, FILE *fh,
-                   TraitCallback flush_cb, TraitCallback load_cb);
-  void onAttach(HermesPtr hermes, TraitInput &blob, Trait *trait);
-  void onDetach(HermesPtr hermes, TraitInput &blob, Trait *trait);
+                   OnLinkCallback flush_cb, OnLinkCallback load_cb);
+  void onAttach(HermesPtr hermes, VBucketID id, Trait *trait);
+  void onDetach(HermesPtr hermes, VBucketID id, Trait *trait);
   void onLink(HermesPtr hermes, TraitInput &blob, Trait *trait);
   void onUnlink(HermesPtr hermes, TraitInput &blob, Trait *trait);
 };
@@ -74,8 +74,8 @@ struct PersistTrait : public Trait {
   explicit PersistTrait(FileMappingTrait mapping,
                         bool synchronous = false);
 
-  void onAttach(HermesPtr hermes, TraitInput &blob, Trait *trait);
-  void onDetach(HermesPtr hermes, TraitInput &blob, Trait *trait);
+  void onAttach(HermesPtr hermes, VBucketID id, Trait *trait);
+  void onDetach(HermesPtr hermes, VBucketID id, Trait *trait);
   void onLink(HermesPtr hermes, TraitInput &blob, Trait *trait);
   void onUnlink(HermesPtr hermes, TraitInput &blob, Trait *trait);
 };
