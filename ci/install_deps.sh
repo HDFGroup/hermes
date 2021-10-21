@@ -32,4 +32,8 @@ CATCH2_SPEC="catch2@${CATCH2_VERSION}"
 ORTOOLS_SPEC="gortools@${ORTOOLS_VERSION}"
 
 spack install ${THALLIUM_SPEC} ${CATCH2_SPEC} ${ORTOOLS_SPEC}
-spack view --verbose symlink ${INSTALL_DIR} ${THALLIUM_SPEC} ${CATCH2_SPEC} ${ORTOOLS_SPEC}
+SPACK_STAGING_DIR=~/spack_staging
+mkdir -p ${SPACK_STAGING_DIR}
+spack view --verbose symlink ${SPACK_STAGING_DIR} ${THALLIUM_SPEC} ${CATCH2_SPEC} ${ORTOOLS_SPEC}
+
+cp -LRnv ${SPACK_STAGING_DIR}/* ${INSTALL_DIR}
