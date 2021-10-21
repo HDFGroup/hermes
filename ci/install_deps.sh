@@ -29,7 +29,7 @@ spack repo add ./ci/hermes
 
 THALLIUM_SPEC="mochi-thallium~cereal@${THALLIUM_VERSION} ^mercury~boostsys"
 CATCH2_SPEC="catch2@${CATCH2_VERSION}"
-ORTOOLS_SPEC="gortools@${ORTOOLS_SPEC}"
+ORTOOLS_SPEC="gortools@${ORTOOLS_VERSION}"
 
 spack install ${THALLIUM_SPEC} ${CATCH2_SPEC} ${ORTOOLS_SPEC}
 spack view --verbose symlink ${INSTALL_DIR} ${THALLIUM_SPEC} ${CATCH2_SPEC} ${ORTOOLS_SPEC}
