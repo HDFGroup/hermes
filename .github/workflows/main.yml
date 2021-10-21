@@ -39,7 +39,7 @@ jobs:
         id: spack-cache
         with:
           path: ~/${{ env.LOCAL }}
-          key: ${{ runner.os }}-${{ hashFiles('ci/install_deps.sh') }}
+          key: ${{ runner.os }}-${{ hashFiles('ci/**') }}
 
       - name: Install APT Dependencies
         run: |
