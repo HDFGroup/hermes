@@ -565,6 +565,18 @@ void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
     req.respond(result);
   };
 
+  auto rpc_enqueue_bo_move = [context, rpc](const tl::request &req,
+                                            const BoMoveList &moves,
+                                            BlobID blob_id,
+                                            BucketID bucket_id,
+                                            const std::string &internal_name,
+                                            BoPriority priority) {
+    LocalEnqueueBoMove(context, rpc, moves, blob_id, bucket_id, internal_name,
+                       priority);
+
+    req.respond(true);
+  };
+
   auto rpc_organize_blob = [context, rpc](const tl::request &req,
                                           const std::string &internal_blob_name,
                                           BucketID bucket_id, f32 epsilon,
@@ -580,6 +592,7 @@ void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
   rpc_server->define("MoveToTarget",
                      rpc_move_to_target).disable_response();
   rpc_server->define("EnqueueFlushingTask", rpc_enqueue_flushing_task);
+  rpc_server->define("EnqueueBoMove", rpc_enqueue_bo_move);
   rpc_server->define("OrganizeBlob", rpc_organize_blob);
 }
 

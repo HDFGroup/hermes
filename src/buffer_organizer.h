@@ -103,6 +103,15 @@ std::vector<BufferInfo> GetBufferInfo(SharedMemoryContext *context,
                                       const std::vector<BufferID> &buffer_ids);
 f32 ComputeBlobAccessScore(SharedMemoryContext *context,
                            const std::vector<BufferInfo> &buffer_info);
+void LocalEnqueueBoMove(SharedMemoryContext *context, RpcContext *rpc,
+                        const BoMoveList &moves, BlobID blob_id,
+                        BucketID bucket_id,
+                        const std::string &internal_blob_name,
+                        BoPriority priority);
+void EnqueueBoMove(RpcContext *rpc, const BoMoveList &moves, BlobID blob_id,
+                   BucketID bucket_id, const std::string &internal_name,
+                   BoPriority priority);
+
 }  // namespace hermes
 
 #endif  // HERMES_BUFFER_ORGANIZER_H_

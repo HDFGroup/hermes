@@ -160,6 +160,13 @@ void SortTargetInfo(std::vector<TargetInfo> &target_info, bool increasing) {
   }
 }
 
+void EnqueueBoMove(RpcContext *rpc, const BoMoveList &moves, BlobID blob_id,
+                   BucketID bucket_id, const std::string &internal_name,
+                   BoPriority priority) {
+  RpcCall<bool>(rpc, rpc->node_id, "BO::EnqueueBoMove", moves, blob_id,
+                bucket_id, internal_name, priority);
+}
+
 void LocalEnqueueBoMove(SharedMemoryContext *context, RpcContext *rpc,
                         const BoMoveList &moves, BlobID blob_id,
                         BucketID bucket_id,
@@ -381,8 +388,8 @@ void LocalOrganizeBlob(SharedMemoryContext *context, RpcContext *rpc,
       break;
     }
   }
-  LocalEnqueueBoMove(context, rpc, src_dest, blob_id, bucket_id,
-                     internal_blob_name, BoPriority::kLow);
+  EnqueueBoMove(rpc, src_dest, blob_id, bucket_id, internal_blob_name,
+                BoPriority::kLow);
 }
 
 void OrganizeBlob(SharedMemoryContext *context, RpcContext *rpc,
