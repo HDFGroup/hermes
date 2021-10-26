@@ -101,3 +101,7 @@ buffer_pool_shmem_name = "/hermes_buffer_pool_";
 default_placement_policy = "Random";
 #default_placement_policy = "RoundRobin";
 #default_placement_policy = "MinimizeIoTime";
+
+# If true (1) the RoundRobin placement policy algorithm will split each Blob
+# into a random number of smaller Blobs.
+default_rr_split = 0;
