@@ -12,5 +12,3 @@ foreach(benchmark ${BENCHMARKS})
   target_compile_definitions(${benchmark}
     PRIVATE $<$<BOOL:${HERMES_RPC_THALLIUM}>:HERMES_RPC_THALLIUM>)
 endforeach()
-
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/HermesVFD)

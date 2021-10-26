@@ -1,6 +1,5 @@
 build/
-benchmarks/HermesVFD/1MB
-benchmarks/HermesVFD/128KB
+benchmarks/HermesVFD
 
 GPATH
 GRTAGS
