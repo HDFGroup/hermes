@@ -786,10 +786,13 @@ int HERMES_DECL(fsync)(int fd) {
   ret = real_fsync_(fd);
   return (ret);
 }
+
 int HERMES_DECL(close)(int fd) {
   int ret;
   if (hermes::adapter::IsTracked(fd)) {
-    LOG(INFO) << "Intercept close." << std::endl;
+    LOG(INFO) << "Intercept close(" << std::to_string(fd) << ")";
+    DLOG(INFO) << " -> " << hermes::adapter::GetFilenameFromFD(fd);
+    LOG(INFO) << std::endl;
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(fd);
     if (existing.second) {

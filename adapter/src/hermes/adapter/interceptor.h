@@ -42,7 +42,7 @@ namespace hermes::adapter {
 const char* kPathExclusions[] = {"/bin/", "/boot/", "/dev/",  "/etc/",
                                  "/lib/", "/opt/",  "/proc/", "/sbin/",
                                  "/sys/", "/usr/",  "/var/",  "/run/",
-                                 "pipe"};
+                                 "pipe", "socket:", "anon_inode:"};
 /**
  * Paths prefixed with the following directories are tracked by Hermes even if
  * they share a root with a path listed in path_exclusions
