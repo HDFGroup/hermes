@@ -52,7 +52,7 @@ set_target_properties(hermes_posix_adapter_mpi_test PROPERTIES COMPILE_FLAGS "-D
 mpi_daemon(hermes_posix_adapter_mpi_test 2 "~[request_size=range-large]" "" 1)
 mpi_daemon(hermes_posix_adapter_mpi_test 2 "[request_size=range-large]" "large" 1)
 if(HERMES_INSTALL_TESTS)
-    set(POSIX_TESTS posix_adapter_mapper_test posix_adapter_test hermes_posix_adapter_test posix_adapter_mpi_test hermes_posix_adapter_mpi_test)
+    set(POSIX_TESTS posix_adapter_test hermes_posix_adapter_test posix_adapter_mpi_test hermes_posix_adapter_mpi_test)
     foreach(program ${POSIX_TESTS})
         install(
                 TARGETS
@@ -65,4 +65,3 @@ if(HERMES_INSTALL_TESTS)
         )
     endforeach()
 endif()
-
