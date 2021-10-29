@@ -101,6 +101,11 @@ union BufferID {
   u64 as_int;
 };
 
+struct ShmemClientInfo {
+  ptrdiff_t mdm_offset;
+  ptrdiff_t bpm_offset;
+};
+
 /**
  * Metadata for a Hermes buffer.
  *
