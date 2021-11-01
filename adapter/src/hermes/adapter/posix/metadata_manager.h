@@ -114,9 +114,6 @@ class MetadataManager {
         bool shutdown_daemon = true;
 
         if (stop_daemon && stop_daemon[0] == '0') {
-          HERMES_NOT_IMPLEMENTED_YET;
-          // TODO(chogan): The Hermes core needs a few tweaks before it can
-          // support this feature. https://github.com/HDFGroup/hermes/issues/181
           shutdown_daemon = false;
         }
 

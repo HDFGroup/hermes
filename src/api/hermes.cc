@@ -200,11 +200,8 @@ SharedMemoryContext InitHermesCore(Config *config, CommunicationContext *comm,
   InitMetadataManager(mdm, &arenas[kArenaType_MetaData], config, comm->node_id);
   InitMetadataStorage(&context, mdm, &arenas[kArenaType_MetaData], config);
 
-  // NOTE(chogan): Store the metadata_manager_offset right after the
-  // buffer_pool_offset so other processes can pick it up.
-  ptrdiff_t *metadata_manager_offset_location =
-    (ptrdiff_t *)(shmem_base + sizeof(context.buffer_pool_offset));
-  *metadata_manager_offset_location = context.metadata_manager_offset;
+  ShmemClientInfo *client_info = (ShmemClientInfo *)shmem_base;
+  client_info->mdm_offset = context.metadata_manager_offset;
 
   return context;
 }
