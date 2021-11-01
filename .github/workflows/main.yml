@@ -54,7 +54,10 @@ jobs:
       - name: Build And Install Dependencies
         if: steps.spack-cache.outputs.cache-hit != 'true'
         run: ci/install_deps.sh
-          
+
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v2
+      
       - name: Build and Test
         run: ci/install_hermes.sh
 
