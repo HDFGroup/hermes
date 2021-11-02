@@ -109,7 +109,7 @@ void Finalize(SharedMemoryContext *context, CommunicationContext *comm,
     HERMES_DEBUG_SERVER_CLOSE();
   }
   DestroyArena(trans_arena);
-  
+
   google::ShutdownGoogleLogging();
 }
 
