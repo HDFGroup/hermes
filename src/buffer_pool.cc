@@ -1266,8 +1266,20 @@ FILE *FopenOrTerminate(const char *fname, const char *mode) {
   return result;
 }
 
-void InitFilesForBuffering(SharedMemoryContext *context, bool make_space,
-                           u32 node_id, bool first_on_node) {
+int OpenOrTerminate(const std::string &fname, int flags, mode_t mode = 0) {
+  int result = open(fname.c_str(), flags, mode);
+
+  if (result == -1) {
+    LOG(ERROR) << "Failed to open file at " << fname << ": ";
+    perror(nullptr);
+    LOG(FATAL) << "Terminating...";
+  }
+
+  return result;
+}
+
+void InitFilesForBuffering(SharedMemoryContext *context,
+                           CommunicationContext &comm) {
   BufferPool *pool = GetBufferPoolFromContext(context);
   context->buffering_filenames.resize(pool->num_devices);
 
@@ -1287,49 +1299,64 @@ void InitFilesForBuffering(SharedMemoryContext *context, bool make_space,
     context->buffering_filenames[device_id].resize(pool->num_slabs[device_id]);
 
     for (int slab = 0; slab < pool->num_slabs[device_id]; ++slab) {
-      // TODO(chogan): Where does memory for filenames come from? Probably need
-      // persistent memory for each application core.
       std::string node = (device->is_shared ? std::string("_node") +
-                          std::to_string(node_id) : "");
+                          std::to_string(comm.node_id) : "");
       context->buffering_filenames[device_id][slab] =
         std::string(std::string(mount_point) + (ends_in_slash ? "" : "/") +
                     "device" + std::to_string(device_id) + "_slab" +
                     std::to_string(slab) + node + ".hermes");
 
-      const char *buffering_fname =
-        context->buffering_filenames[device_id][slab].c_str();
-      FILE *buffering_file = FopenOrTerminate(buffering_fname, "w+");
+      int buffering_file_fd = 0;
+      bool reserve_space = false;
 
-      if (make_space) {
-        // TODO(chogan): Use posix_fallocate when it is available
-        // if (device->has_fallocate) {
-        //   int fallocate_result = posix_fallocate(fileno(buffering_file),
-        //                                          0, this_slabs_capacity);
-        // }
-
-        u32 num_buffers = GetNumBuffersAvailable(context, device_id, slab);
-        i32 buffer_size = GetSlabBufferSize(context, device_id, slab);
-        size_t this_slabs_capacity = num_buffers * buffer_size;
-
-        bool do_truncate = true;
-        if (device->is_shared && !first_on_node) {
-          // NOTE(chogan): Some Devices require file initialization on each
-          // node, and some are shared (burst buffers) and only require one
-          // rank to initialize them
-          do_truncate = false;
+      if (comm.proc_kind == ProcessKind::kHermes) {
+        if (device->is_shared && comm.sub_proc_id == 0) {
+          // Only one rank should create the file for shared devices
+          reserve_space = true;
         }
 
-        if (do_truncate) {
-          int ftruncate_result = ftruncate(fileno(buffering_file),
+        if (!device->is_shared && comm.first_on_node) {
+          // One rank per node creates the file for node-local devices
+          reserve_space = true;
+        }
+
+        if (reserve_space) {
+          int open_flags = O_RDWR | O_CREAT | O_TRUNC;
+          int open_mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+          buffering_file_fd =
+            OpenOrTerminate(context->buffering_filenames[device_id][slab],
+                            open_flags, open_mode);
+
+          u32 num_buffers = GetNumBuffersAvailable(context, device_id, slab);
+          i32 buffer_size = GetSlabBufferSize(context, device_id, slab);
+          size_t this_slabs_capacity = num_buffers * buffer_size;
+
+          // TODO(chogan): Use posix_fallocate when it is available
+          // if (device->has_fallocate) {
+          //   int fallocate_result = posix_fallocate(buffering_file_fd, 0,
+          //                                          this_slabs_capacity);
+          // }
+
+          int ftruncate_result = ftruncate(buffering_file_fd,
                                            this_slabs_capacity);
           if (ftruncate_result) {
             LOG(ERROR) << "Failed to allocate buffering file at "
-                       << buffering_fname << ": ";
+                       << context->buffering_filenames[device_id][slab] << ": ";
             FailedLibraryCall("ftruncate");
           }
         }
       }
-      context->open_streams[device_id][slab] = buffering_file;
+
+      WorldBarrier(&comm);
+
+      if (!reserve_space) {
+        // File should already be created, so we just open it
+        int open_flags = O_RDWR;
+        buffering_file_fd =
+          OpenOrTerminate(context->buffering_filenames[device_id][slab],
+                          open_flags);
+      }
+      context->open_files[device_id][slab] = buffering_file_fd;
     }
   }
 }
@@ -1406,10 +1433,10 @@ void CloseBufferingFiles(SharedMemoryContext *context) {
 
   for (int device_id = 0; device_id < pool->num_devices; ++device_id) {
     for (int slab = 0; slab < pool->num_slabs[device_id]; ++slab) {
-      if (context->open_streams[device_id][slab]) {
-        int fclose_result = fclose(context->open_streams[device_id][slab]);
-        if (fclose_result != 0) {
-          FailedLibraryCall("fclose");
+      if (context->open_files[device_id][slab]) {
+        int close_result = close(context->open_files[device_id][slab]);
+        if (close_result != 0) {
+          FailedLibraryCall("close");
         }
       }
     }
@@ -1443,6 +1470,7 @@ size_t LocalWriteBufferById(SharedMemoryContext *context, BufferID id,
     int slab_index = GetSlabIndexFromHeader(context, header);
     const char *filename =
       context->buffering_filenames[device->id][slab_index].c_str();
+    // TODO(chogan): Use context->open_files
     int fd = open(filename, O_WRONLY);
 
     if (fd != -1) {

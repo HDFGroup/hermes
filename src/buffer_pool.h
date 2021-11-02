@@ -251,9 +251,9 @@ struct SharedMemoryContext {
   /** This will only be valid on Hermes cores, and NULL on client cores. */
   BufferOrganizer *bo;
 
-  // TODO(chogan): Move these into a FileBufferingContext
+  // File buffering context
   std::vector<std::vector<std::string>> buffering_filenames;
-  FILE *open_streams[kMaxDevices][kMaxBufferPoolSlabs];
+  int open_files[kMaxDevices][kMaxBufferPoolSlabs];
   FILE *swap_file;
 };
 
@@ -284,6 +284,7 @@ size_t GetBlobSizeById(SharedMemoryContext *context, RpcContext *rpc,
 void MakeFullShmemName(char *dest, const char *base);
 
 /**
+ * TODO
  * Creates and opens all files that will be used for buffering. Stores open FILE
  * pointers in the @p context. The file buffering paradaigm uses one file per
  * slab for each Device. If `posix_fallocate` is available, and `make_space` is
@@ -297,8 +298,8 @@ void MakeFullShmemName(char *dest, const char *base);
  * @param node_id The node id, used for shared devices.
  * @param first_on_node True if this rank is sequentially the first on the node
  */
-void InitFilesForBuffering(SharedMemoryContext *context, bool make_space,
-                           u32 node_id, bool first_on_node);
+void InitFilesForBuffering(SharedMemoryContext *context,
+                           CommunicationContext &comm);
 
 /**
  * Retrieves information required for accessing the BufferPool shared memory.
