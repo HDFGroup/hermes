@@ -262,13 +262,7 @@ static void InitGlog() {
   FLAGS_v = 0;
 #endif
 
-  char result[PATH_MAX];
-  ssize_t count = readlink("/proc/self/exe", result, PATH_MAX);
-  std::string exe_string = std::string(result, (count > 0) ? count : 0);
-  if (exe_string.empty())
-    google::InitGoogleLogging("hermes");
-  else
-    google::InitGoogleLogging(exe_string.c_str());
+  google::InitGoogleLogging("hermes");
 }
 
 std::shared_ptr<api::Hermes> InitHermes(Config *config, bool is_daemon,
