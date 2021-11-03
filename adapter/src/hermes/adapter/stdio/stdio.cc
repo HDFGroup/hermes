@@ -489,7 +489,7 @@ FILE *HERMES_DECL(fopen)(const char *path, const char *mode) {
     LOG(FATAL) << "File: " << path
                << "\nis symbolic link. It is not supported yet";
   if (hermes::adapter::IsRelativePath(path))
-    LOG(FATAL) << "File: " << path 
+    LOG(FATAL) << "File: " << path
                << "\nis relative. It is not supported yet";
   if (hermes::adapter::IsTracked(path)) {
     LOG(INFO) << "Intercepting fopen(" << path << ", " << mode << ")\n";
