@@ -15,6 +15,8 @@
  */
 #include "interceptor.h"
 
+#include <unistd.h>
+
 namespace hermes::adapter {
 /**
  * is exit by program called.
@@ -23,6 +25,13 @@ bool exit = false;
 
 void PopulateBufferingPath() {
   char* hermes_config = getenv(kHermesConf);
+  if (IsSymLink(hermes_config))
+    LOG(FATAL) << "Hermes Config file: " << hermes_config 
+               << "\nis symbolic link. It is not supported yet";
+  if (IsRelativePath(hermes_config))
+    LOG(FATAL) << "Hermes Config file: " << hermes_config
+               << "\nis relative. It is not supported yet";
+
   hermes::Config config = {};
   const size_t kConfigMemorySize = KILOBYTES(16);
   hermes::u8 config_memory[kConfigMemorySize];
@@ -102,6 +111,28 @@ bool IsTracked(int fd) {
   if (hermes::adapter::exit) return false;
   atexit(OnExit);
   return IsTracked(GetFilenameFromFD(fd));
+}
+
+bool IsRelativePath(const std::string& path) {
+  std::regex e1 ("^/.*");
+  std::regex e2 ("(.*)(\\./)(.*)");
+  // Capture path not starting with "/" or containing "./"
+  return !std::regex_match(path, e1) 
+         && std::regex_match(path, e2);
+}
+
+bool IsSymLink(const std::string& path) {
+  std::string cmd = "readlink -f " + path;
+  std::array<char, PATH_MAX> buffer;
+  std::string result;
+  std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd.c_str(), "r"), pclose);
+  if (!pipe) {
+    LOG(FATAL) << "popen() failed!";
+  }
+  while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
+    result += buffer.data();
+  }
+  return result!= path;
 }
 
 void OnExit(void) { hermes::adapter::exit = true; }
