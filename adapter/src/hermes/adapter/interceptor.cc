@@ -116,8 +116,8 @@ bool IsTracked(int fd) {
 }
 
 bool IsRelativePath(const std::string& path) {
-  std::regex e1 ("^/.*");
-  std::regex e2 ("(.*)(\\./)(.*)");
+  std::regex e1("^/.*");
+  std::regex e2("(.*)(\\./)(.*)");
   // Capture path not starting with "/" or containing "./"
   return !std::regex_match(path, e1)
          && std::regex_match(path, e2);
