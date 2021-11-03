@@ -1057,6 +1057,7 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
     slab_metadata_size += config->num_slabs[device] * sizeof(u32);
   }
 
+  size_t client_info_size = sizeof(ShmemClientInfo);
   size_t headers_size = max_headers_needed * sizeof(BufferHeader);
   size_t devices_size = config->num_devices * sizeof(Device);
   size_t buffer_pool_size = (sizeof(BufferPool) + free_lists_size +
@@ -1068,8 +1069,8 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
   // print out when it adds alignment padding, so for now we can monitor that.
   // In the future it would be nice to have a programatic way to account for
   // alignment padding.
-  size_t required_bytes_for_metadata = (headers_size + buffer_pool_size +
-                                        devices_size);
+  size_t required_bytes_for_metadata = (client_info_size + headers_size +
+                                        buffer_pool_size + devices_size);
   LOG(INFO) << required_bytes_for_metadata
             << " bytes required for BufferPool metadata" << std::endl;
 
@@ -1123,6 +1124,10 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
 
   // Build RAM buffers.
 
+  // NOTE(chogan): Store offsets to the MDM and BPM at the beginning of shared
+  // memory so other processes can pick it up.
+  ShmemClientInfo *client_info = PushStruct<ShmemClientInfo>(buffer_pool_arena);
+
   // TODO(chogan): @configuration Assumes the first Device is RAM
   for (int slab = 0; slab < config->num_slabs[0]; ++slab) {
     PartitionRamBuffers(buffer_pool_arena, slab_buffer_sizes[0][slab],
@@ -1148,7 +1153,7 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
 
   u32 start = 0;
   u8 *header_begin = 0;
-  ptrdiff_t initial_offset = 0;
+  ptrdiff_t initial_offset = sizeof(ShmemClientInfo);
   // TODO(chogan): @configuration Assumes first Device is RAM
   for (i32 i = 0; i < config->num_slabs[0]; ++i) {
     u32 end = start + buffer_counts[0][i];
@@ -1215,11 +1220,8 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
       ((u8 *)available_buffers - shmem_base);
   }
 
-  // NOTE(chogan): The buffer pool offset is stored at the beginning of shared
-  // memory so the client processes can read it on initialization
-  ptrdiff_t *buffer_pool_offset_location = (ptrdiff_t *)shmem_base;
   ptrdiff_t buffer_pool_offset = (u8 *)pool - shmem_base;
-  *buffer_pool_offset_location = buffer_pool_offset;
+  client_info->bpm_offset = buffer_pool_offset;
 
   return buffer_pool_offset;
 }
@@ -1374,14 +1376,11 @@ SharedMemoryContext GetSharedMemoryContext(char *shmem_name) {
       close(shmem_fd);
 
       if (shm_base) {
-        // NOTE(chogan): On startup, the buffer_pool_offset will be stored at
-        // the beginning of the shared memory segment, and the
-        // metadata_arena_offset will be stored immediately after that.
-        ptrdiff_t *buffer_pool_offset_location = (ptrdiff_t *)shm_base;
-        result.buffer_pool_offset = *buffer_pool_offset_location;
-        ptrdiff_t *metadata_manager_offset_location =
-          (ptrdiff_t *)(shm_base + sizeof(result.buffer_pool_offset));
-        result.metadata_manager_offset = *metadata_manager_offset_location;
+        // NOTE(chogan): BPM and MDM offsets are stored at the beginning of the
+        // shared memory segment
+        ShmemClientInfo *client_info = (ShmemClientInfo *)shm_base;
+        result.buffer_pool_offset = client_info->bpm_offset;
+        result.metadata_manager_offset = client_info->mdm_offset;
         result.shm_base = shm_base;
         result.shm_size = shm_stat.st_size;
       } else {
