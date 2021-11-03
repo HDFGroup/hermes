@@ -264,10 +264,8 @@ std::shared_ptr<api::Hermes> InitHermes(Config *config, bool is_daemon,
     MetadataManager *mdm = GetMetadataManagerFromContext(&context);
     rpc.state = (void *)(context.shm_base + mdm->rpc_state_offset);
   }
-  bool create_shared_files = (comm.proc_kind == ProcessKind::kHermes &&
-                              comm.first_on_node);
-  InitFilesForBuffering(&context, create_shared_files, comm.node_id,
-                        comm.first_on_node);
+
+  InitFilesForBuffering(&context, comm);
 
   WorldBarrier(&comm);
 
