@@ -65,4 +65,3 @@ if(HERMES_INSTALL_TESTS)
         )
     endforeach()
 endif()
-

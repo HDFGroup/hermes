@@ -89,11 +89,9 @@ int simple_open(int ret, const std::string &path_str, int flags) {
         }
         /* FIXME(hari) check if this initialization is correct. */
         mdm->InitializeHermes();
-        hapi::Context ctx;
-        /* TODO(hari) how to pass to hermes to make a private bucket
-         * also add how to handle existing buckets of same name */
+        // TODO(hari) how to pass to hermes to make a private bucket
         stat.st_bkid =
-            std::make_shared<hapi::Bucket>(path_str, mdm->GetHermes(), ctx);
+          std::make_shared<hapi::Bucket>(path_str, mdm->GetHermes());
         mdm->Create(ret, stat);
       } else {
         // TODO(hari): @error_handling invalid fh.
