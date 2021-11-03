@@ -16,6 +16,10 @@ echo "Installing dependencies at ${INSTALL_DIR}"
 mkdir -p ${INSTALL_DIR}
 git clone https://github.com/spack/spack ${SPACK_DIR}
 
+pushd ${SPACK_DIR}
+git checkout v0.16.3
+popd
+
 set +x
 . ${SPACK_DIR}/share/spack/setup-env.sh
 set -x
