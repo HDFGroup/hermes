@@ -17,6 +17,8 @@
 
 #include <unistd.h>
 
+#include <regex>
+
 namespace hermes::adapter {
 /**
  * is exit by program called.
