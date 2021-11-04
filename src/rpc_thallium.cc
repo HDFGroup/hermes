@@ -730,6 +730,7 @@ void FinalizeClient(SharedMemoryContext *context, RpcContext *rpc,
   ReleaseSharedMemoryContext(context);
   HERMES_DEBUG_CLIENT_CLOSE();
   DestroyArena(trans_arena);
+  google::ShutdownGoogleLogging();
 }
 
 std::string GetRpcAddress(Config *config, const std::string &host_number,
