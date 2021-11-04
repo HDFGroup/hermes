@@ -124,7 +124,6 @@ bool IsRelativePath(const std::string& path) {
 }
 
 bool IsSymLink(const std::string& path) {
-/*
   std::string cmd = "readlink -f " + path;
   std::array<char, PATH_MAX> buffer;
   std::string result;
@@ -137,8 +136,6 @@ bool IsSymLink(const std::string& path) {
     result += buffer.data();
   }
   return result!= path;
-*/
-  return 0;
 }
 
 void OnExit(void) { hermes::adapter::exit = true; }
