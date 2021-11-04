@@ -705,6 +705,7 @@ void RunDaemon(SharedMemoryContext *context, RpcContext *rpc,
   HERMES_DEBUG_SERVER_CLOSE();
 
   DestroyArena(trans_arena);
+  google::ShutdownGoogleLogging();
 }
 
 void FinalizeClient(SharedMemoryContext *context, RpcContext *rpc,
