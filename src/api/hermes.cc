@@ -236,8 +236,34 @@ BootstrapSharedMemory(Arena *arenas, Config *config, CommunicationContext *comm,
   return result;
 }
 
+static void InitGlog() {
+#ifdef GLOG_TO_CONSOLE
+  FLAGS_logtostderr = 1;
+#else
+  // TODO(kimmy): log path from user
+  char cwd[PATH_MAX];
+  FLAGS_log_dir = getcwd(cwd, sizeof(cwd));
+#endif
+
+#ifdef HERMES_GLOG_SEVERITY_LEVEL
+  FLAGS_minloglevel = HERMES_GLOG_SEVERITY_LEVEL;
+#else
+  FLAGS_minloglevel = 0;
+#endif
+
+#ifdef HERMES_GLOG_VERBOSE_LEVEL
+  FLAGS_v = HERMES_GLOG_VERBOSE_LEVEL;
+#else
+  FLAGS_v = 0;
+#endif
+
+  google::InitGoogleLogging("hermes");
+}
+
 std::shared_ptr<api::Hermes> InitHermes(Config *config, bool is_daemon,
                                         bool is_adapter) {
+  InitGlog();
+
   std::string base_shmem_name(config->buffer_pool_shmem_name);
   MakeFullShmemName(config->buffer_pool_shmem_name, base_shmem_name.c_str());
 
