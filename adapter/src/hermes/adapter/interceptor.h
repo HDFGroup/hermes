@@ -110,13 +110,7 @@ struct InterceptorList {
       : adapter_mode(AdapterMode::kDefault),
         adapter_paths(),
         hermes_paths_exclusion(),
-        hermes_flush_exclusion() {
-    FLAGS_logtostderr = 1;
-    FLAGS_minloglevel = 0;
-    FLAGS_v = 0;
-    google::InitGoogleLogging("hermes_adapter");
-  }
-
+        hermes_flush_exclusion() {}
   void SetupAdapterMode() {
     char* adapter_mode_str = getenv(kAdapterMode);
     if (adapter_mode_str == nullptr) {
