@@ -124,7 +124,6 @@ bool IsRelativePath(const std::string& path) {
 }
 
 bool IsSymLink(const std::string& path) {
-(void)path;
 /*
   std::string cmd = "readlink -f " + path;
   std::array<char, PATH_MAX> buffer;
