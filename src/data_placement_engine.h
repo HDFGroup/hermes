@@ -23,20 +23,30 @@ namespace hermes {
 
 using api::Status;
 
+/** Represents the state of a Round-Robin data placement strategy */
 class RoundRobinState {
-  static inline int current_device_index_ {};
 
-  std::mutex device_index_mutex_;
+  static inline int current_device_index_ {};  /**< The current device index. */
+
+  std::mutex device_index_mutex_;              /**< Protects updates of the
+                                                    current device index */
 
  public:
-  static std::vector<DeviceID> devices_;
+  static std::vector<DeviceID> devices_;       /**< A list of device targets */
 
   RoundRobinState();
   ~RoundRobinState();
 
+  /** Retrieves the number of devices */
   size_t GetNumDevices() const;
+
+  /** Retrieves the current device index */
   int GetCurrentDeviceIndex() const;
+
+  /** Retrieves the device ID at a given index */
   DeviceID GetDeviceByIndex(int i) const;
+
+  /** Re-/Sets the current device index */
   void SetCurrentDeviceIndex(int new_device_index);
 };
 

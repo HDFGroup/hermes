@@ -19,25 +19,29 @@ namespace hermes {
 
 namespace api {
 
+/** ID class template */
 template<class Tag, class T, T default_value>
-
 class ID {
  private:
   T m_val_;
 
  public:
+
+  /** Returns the invalid ID */
   static ID Invalid() { return ID(); }
 
-  // Defaults to ID::invalid()
+  /** Defaults to ID::invalid() */
   ID() : m_val_(default_value) { }
 
-  // Explicit constructor:
+  /** Explicit constructor */
   explicit ID(T val) : m_val_(val) { }
 
-  // Explicit conversion to get back the T:
+  /** Explicit conversion to get back the T value */
   explicit operator T() const { return m_val_; }
 
+  /** Compare IDs for equality */
   friend bool operator==(ID a, ID b) { return a.m_val == b.m_val; }
+  /** Compare IDs for inequality */
   friend bool operator!=(ID a, ID b) { return a.m_val != b.m_val; }
 };
 

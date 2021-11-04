@@ -44,12 +44,14 @@ namespace hermes {
 #define RETURN_ENUM(ID, NAME, TEXT) NAME = ID,
 #define RETURN_TEXT(ID, NAME, TEXT) case ID: return TEXT;
 
+/** Hermes status codes. */
 enum StatusCode {
     RETURN_CODES(RETURN_ENUM)
 };
 
 namespace api {
 
+/** Represents the return status of Hermes class methods and function calls.  */
 class Status {
  public:
   /** Create an object representing success status. */
@@ -70,17 +72,20 @@ class Status {
     return (status_ < HERMES_SUCCESS && status_ > HERMES_ERROR_MAX);
   }
 
+  /** Custom equality check against a StatusCode */
   bool operator == (StatusCode code) {
     return (status_ == code);
   }
 
+  /** Custom assignment operator from StatusCode */
   void operator = (StatusCode code) {
     status_ = code;
   }
 
+  /** StatusCode Getter */
   StatusCode GetStatus() const {return status_;}
 
-  /** Returns  message */
+  /** Returns a message string */
   std::string Msg() const {
     switch (status_) {
       RETURN_CODES(RETURN_TEXT)
@@ -90,7 +95,7 @@ class Status {
   }
 
  private:
-  StatusCode status_;
+  StatusCode status_;  /**< StatusCode state variable */
 };
 
 }  // namespace api

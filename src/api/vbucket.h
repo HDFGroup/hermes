@@ -27,15 +27,23 @@ namespace hermes {
 
 namespace api {
 
+/**
+ * Virtual buckets (vbuckets) capture relationships between blobs
+ * across bucket boundaries.
+ */
 class VBucket {
  private:
+  /** vbucket name */
   std::string name_;
+  /** vbucket ID */
   VBucketID id_;
+  /** Traits attached to this vbucket */
   std::list<Trait *> attached_traits_;
+  /** \todo What's that Bob? */
   Blob local_blob;
   /** internal Hermes object owned by vbucket */
   std::shared_ptr<Hermes> hermes_;
-  /** The Context for this VBucket. */
+  /** The Context for this VBucket. \todo Why do we need that? */
   Context ctx_;
 
  public:
@@ -90,6 +98,7 @@ class VBucket {
    * @return A Status.
    */
   Status Link(std::string blob_name, std::string bucket_name, Context &ctx);
+  /** \todo Link */
   Status Link(std::string blob_name, std::string bucket_name);
 
   /**
@@ -101,6 +110,7 @@ class VBucket {
    * @return A Status.
    */
   Status Unlink(std::string blob_name, std::string bucket_name, Context &ctx);
+  /** \todo Unlink */
   Status Unlink(std::string blob_name, std::string bucket_name);
 
   /** check if blob is in this vbucket */
@@ -158,6 +168,7 @@ class VBucket {
    * @return A Status.
    */
   Status Release(Context &ctx);
+  /** \todo Release */
   Status Release();
 
   /**
@@ -173,6 +184,7 @@ class VBucket {
    * @return A Status.
    */
   Status Destroy(Context &ctx);
+  /** \todo Destroy */
   Status Destroy();
 };  // class VBucket
 
