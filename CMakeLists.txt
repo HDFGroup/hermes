@@ -156,9 +156,6 @@ option(HERMES_ENABLE_COVERAGE "Enable code coverage." OFF)
 option(HERMES_ENABLE_ADAPTERS "Enable hermes adapters." ON)
 option(HERMES_ENABLE_WRAPPER "Enable hermes C API wrapper." ON)
 option(HERMES_INSTALL_TESTS "Enable installation of tests." OFF)
-option(HERMES_GLOG_TO_CONSOLE "Enable glog to console." ON)
-set(HERMES_GLOG_SEVERITY_LEVEL "0" CACHE STRING "Log messages at or above this level" FORCE)
-set(HERMES_GLOG_VERBOSE_LEVEL "0" CACHE STRING "Show all VLOG(m) messages for m less or equal the value of this flag." FORCE)
 # Calculate code coverage with debug mode
 if(HERMES_ENABLE_COVERAGE)
   if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -214,17 +211,7 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
   endif()
 endif()
 
-#-----------------------------------------------------------------------------
-# Configure the hermes_config.h.cmake
-#-----------------------------------------------------------------------------
-if(HERMES_LOG_TO_CONSOLE)
-  set(GLOG_TO_CONSOLE 1)
-endif()
-set(HERMES_GLOG_SEVERITY_LEVEL ${HERMES_GLOG_SEVERITY_LEVEL})
-set(HERMES_GLOG_VERBOSE_LEVEL ${HERMES_GLOG_VERBOSE_LEVEL})
-CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/CMake/hermes_config.h.cmake 
-               ${PROJECT_BINARY_DIR}/hermes_config.h)
-#-----------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 function(hermes_set_lib_options libtarget libname libtype)
   if(${libtype} MATCHES "SHARED")
     if(WIN32 AND NOT MINGW)
