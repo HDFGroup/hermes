@@ -27,12 +27,12 @@ bool exit = false;
 
 void PopulateBufferingPath() {
   char* hermes_config = getenv(kHermesConf);
-  if (IsSymLink(hermes_config))
-    LOG(FATAL) << "Hermes Config file: " << hermes_config
-               << "\nis symbolic link. It is not supported yet";
   if (IsRelativePath(hermes_config))
     LOG(FATAL) << "Hermes Config file: " << hermes_config
                << "\nis relative. It is not supported yet";
+  if (IsSymLink(hermes_config))
+    LOG(FATAL) << "Hermes Config file: " << hermes_config
+               << "\nis symbolic link. It is not supported yet";
 
   hermes::Config config = {};
   const size_t kConfigMemorySize = KILOBYTES(16);
@@ -135,6 +135,8 @@ bool IsSymLink(const std::string& path) {
   while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
     result += buffer.data();
   }
+  LOG(INFO) << "parsing path: " << path;
+  LOG(INFO) << "Get parsing result : " << result;
   return result!= path;
 }
 
