@@ -11,10 +11,14 @@ THALLIUM_VERSION=0.8.3
 GOTCHA_VERSION=develop
 CATCH2_VERSION=2.13.3
 ORTOOLS_VERSION=7.7
+SPACK_VERSION=0.16.3
 
 echo "Installing dependencies at ${INSTALL_DIR}"
 mkdir -p ${INSTALL_DIR}
 git clone https://github.com/spack/spack ${SPACK_DIR}
+pushd ${SPACK_DIR}
+git checkout v${SPACK_VERSION}
+popd
 
 set +x
 . ${SPACK_DIR}/share/spack/setup-env.sh
