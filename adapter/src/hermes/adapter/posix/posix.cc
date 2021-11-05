@@ -443,12 +443,12 @@ int HERMES_DECL(open)(const char *path, int flags, ...) {
     va_end(arg);
   }
   if (hermes::adapter::IsTracked(path)) {
-    if (hermes::adapter::IsSymLink(path))
-      LOG(FATAL) << "File: " << path
-                 << "\nis symbolic link. It is not supported yet";
     if (hermes::adapter::IsRelativePath(path))
       LOG(FATAL) << "File: " << path
                  << "\nis relative. It is not supported yet";
+    if (hermes::adapter::IsSymLink(path))
+      LOG(FATAL) << "File: " << path
+                 << "\nis symbolic link. It is not supported yet";
 
     LOG(INFO) << "Intercept open for filename: " << path
               << " and mode: " << flags << " is tracked." << std::endl;
@@ -473,12 +473,12 @@ int HERMES_DECL(open64)(const char *path, int flags, ...) {
     va_end(arg);
   }
   if (hermes::adapter::IsTracked(path)) {
-    if (hermes::adapter::IsSymLink(path))
-      LOG(FATAL) << "File: " << path
-                 << "\nis symbolic link. It is not supported yet";
     if (hermes::adapter::IsRelativePath(path))
       LOG(FATAL) << "File: " << path
                  << "\nis relative. It is not supported yet";
+    if (hermes::adapter::IsSymLink(path))
+      LOG(FATAL) << "File: " << path
+                 << "\nis symbolic link. It is not supported yet";
 
     LOG(INFO) << "Intercept open for filename: " << path
               << " and mode: " << flags << " is tracked." << std::endl;
@@ -496,12 +496,12 @@ int HERMES_DECL(open64)(const char *path, int flags, ...) {
 int HERMES_DECL(__open_2)(const char *path, int oflag) {
   int ret;
   if (hermes::adapter::IsTracked(path)) {
-    if (hermes::adapter::IsSymLink(path))
-      LOG(FATAL) << "File: " << path
-                 << "\nis symbolic link. It is not supported yet";
     if (hermes::adapter::IsRelativePath(path))
       LOG(FATAL) << "File: " << path
                  << "\nis relative. It is not supported yet";
+    if (hermes::adapter::IsSymLink(path))
+      LOG(FATAL) << "File: " << path
+                 << "\nis symbolic link. It is not supported yet";
 
     LOG(INFO) << "Intercept __open_2 for filename: " << path
               << " and mode: " << oflag << " is tracked." << std::endl;

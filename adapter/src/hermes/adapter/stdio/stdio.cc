@@ -486,12 +486,12 @@ size_t read_internal(AdapterStat &stat, void *ptr, size_t total_size,
 FILE *HERMES_DECL(fopen)(const char *path, const char *mode) {
   FILE *ret;
   if (hermes::adapter::IsTracked(path)) {
-    if (hermes::adapter::IsSymLink(path))
-      LOG(FATAL) << "File: " << path
-                 << "\nis symbolic link. It is not supported yet";
     if (hermes::adapter::IsRelativePath(path))
       LOG(FATAL) << "File: " << path
                  << "\nis relative. It is not supported yet";
+    if (hermes::adapter::IsSymLink(path))
+      LOG(FATAL) << "File: " << path
+                 << "\nis symbolic link. It is not supported yet";
 
     LOG(INFO) << "Intercepting fopen(" << path << ", " << mode << ")\n";
     ret = open_internal(path, mode);
@@ -506,12 +506,12 @@ FILE *HERMES_DECL(fopen)(const char *path, const char *mode) {
 FILE *HERMES_DECL(fopen64)(const char *path, const char *mode) {
   FILE *ret;
   if (hermes::adapter::IsTracked(path)) {
-    if (hermes::adapter::IsSymLink(path))
-      LOG(FATAL) << "File: " << path
-                 << "\nis symbolic link. It is not supported yet";
     if (hermes::adapter::IsRelativePath(path))
       LOG(FATAL) << "File: " << path
                  << "\nis relative. It is not supported yet";
+    if (hermes::adapter::IsSymLink(path))
+      LOG(FATAL) << "File: " << path
+                 << "\nis symbolic link. It is not supported yet";
 
     LOG(INFO) << "Intercepting fopen64(" << path << ", " << mode << ")\n";
     ret = open_internal(path, mode);
@@ -529,12 +529,12 @@ FILE *HERMES_DECL(fdopen)(int fd, const char *mode) {
   ret = real_fdopen_(fd, mode);
   if (ret && hermes::adapter::IsTracked(ret)) {
     std::string path_str = hermes::adapter::GetFilenameFromFD(fd);
-    if (hermes::adapter::IsSymLink(path_str))
-      LOG(FATAL) << "File: " << path_str
-                 << "\nis symbolic link. It is not supported yet";
     if (hermes::adapter::IsRelativePath(path_str))
       LOG(FATAL) << "File: " << path_str
                  << "\nis relative. It is not supported yet";
+    if (hermes::adapter::IsSymLink(path_str))
+      LOG(FATAL) << "File: " << path_str
+                 << "\nis symbolic link. It is not supported yet";
 
     LOG(INFO) << "Intercepting fdopen(" << fd << ", " << mode << ")\n";
     const int kMaxSize = 0xFFF;
@@ -552,12 +552,12 @@ FILE *HERMES_DECL(fdopen)(int fd, const char *mode) {
 FILE *HERMES_DECL(freopen)(const char *path, const char *mode, FILE *stream) {
   FILE *ret;
   if (hermes::adapter::IsTracked(path)) {
-    if (hermes::adapter::IsSymLink(path))
-      LOG(FATAL) << "File: " << path
-                 << "\nis symbolic link. It is not supported yet";
     if (hermes::adapter::IsRelativePath(path))
       LOG(FATAL) << "File: " << path
                  << "\nis relative. It is not supported yet";
+    if (hermes::adapter::IsSymLink(path))
+      LOG(FATAL) << "File: " << path
+                 << "\nis symbolic link. It is not supported yet";
 
     LOG(INFO) << "Intercepting freopen(" << path << ", " << mode << ", "
               << stream << ")\n";
@@ -573,12 +573,12 @@ FILE *HERMES_DECL(freopen)(const char *path, const char *mode, FILE *stream) {
 FILE *HERMES_DECL(freopen64)(const char *path, const char *mode, FILE *stream) {
   FILE *ret;
   if (hermes::adapter::IsTracked(path)) {
-    if (hermes::adapter::IsSymLink(path))
-      LOG(FATAL) << "File: " << path
-                 << "\nis symbolic link. It is not supported yet";
     if (hermes::adapter::IsRelativePath(path))
       LOG(FATAL) << "File: " << path
                  << "\nis relative. It is not supported yet";
+    if (hermes::adapter::IsSymLink(path))
+      LOG(FATAL) << "File: " << path
+                 << "\nis symbolic link. It is not supported yet";
 
     LOG(INFO) << "Intercepting freopen64(" << path << ", " << mode << ", "
               << stream << ")\n";
