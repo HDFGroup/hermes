@@ -685,6 +685,10 @@ void ParseTokens(TokenList *tokens, Config *config) {
       case ConfigVariable_NumDevices: {
         int val = ParseInt(&tok);
         config->num_devices = val;
+        // TODO(chogan): For now we set the number of Targets equal to the
+        // number of Devices in order to avoid confusion, but in the future
+        // we'll allow multiple Targets per Device.
+        config->num_targets = val;
         break;
       }
       case ConfigVariable_NumTargets: {
