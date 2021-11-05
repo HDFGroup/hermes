@@ -135,9 +135,8 @@ bool IsSymLink(const std::string& path) {
   while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
     result += buffer.data();
   }
-  LOG(INFO) << "parsing path: " << path;
-  LOG(INFO) << "Get parsing result : " << result;
-  return result!= path;
+
+  return result.compare(0, result.size()-1, path);
 }
 
 void OnExit(void) { hermes::adapter::exit = true; }
