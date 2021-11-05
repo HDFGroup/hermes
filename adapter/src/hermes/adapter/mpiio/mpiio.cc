@@ -513,6 +513,13 @@ int HERMES_DECL(MPI_File_open)(MPI_Comm comm, const char *filename, int amode,
                                MPI_Info info, MPI_File *fh) {
   int status;
   if (hermes::adapter::IsTracked(filename)) {
+    if (hermes::adapter::IsRelativePath(filename))
+      LOG(FATAL) << "File: " << filename
+                 << "\nis relative. It is not supported yet";
+    if (hermes::adapter::IsSymLink(filename))
+      LOG(FATAL) << "File: " << filename
+                 << "\nis symbolic link. It is not supported yet";
+
     LOG(INFO) << "Intercept MPI_File_open for filename: " << filename
               << " and mode: " << amode << " is tracked." << std::endl;
     status = open_internal(comm, filename, amode, info, fh);
