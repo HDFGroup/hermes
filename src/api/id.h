@@ -26,7 +26,6 @@ class ID {
   T m_val_;
 
  public:
-
   /** Returns the invalid ID */
   static ID Invalid() { return ID(); }
 

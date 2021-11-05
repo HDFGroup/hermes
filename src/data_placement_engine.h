@@ -25,11 +25,9 @@ using api::Status;
 
 /** Represents the state of a Round-Robin data placement strategy */
 class RoundRobinState {
+  static inline int current_device_index_ {};  /**< The current device index */
 
-  static inline int current_device_index_ {};  /**< The current device index. */
-
-  std::mutex device_index_mutex_;              /**< Protects updates of the
-                                                    current device index */
+  std::mutex device_index_mutex_;              /**< Protect index updates */
 
  public:
   static std::vector<DeviceID> devices_;       /**< A list of device targets */

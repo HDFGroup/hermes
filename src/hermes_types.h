@@ -41,58 +41,55 @@ namespace hermes {
 
   typedef u16 DeviceID;
 
-  namespace api {
-    typedef std::vector<unsigned char> Blob;
+namespace api {
+  typedef std::vector<unsigned char> Blob;
 
-    /** Supported data placement policies */
-    enum class PlacementPolicy {
-      kRandom,          /**< Random blob placement */
-      kRoundRobin,      /**< Round-Robin (around devices) blob placement */
-      kMinimizeIoTime,  /**< Linear-programming-based blob placement to minimize
-                           expected I/O time */
-    };
+  /** Supported data placement policies */
+  enum class PlacementPolicy {
+    kRandom,          /**< Random blob placement */
+    kRoundRobin,      /**< Round-Robin (around devices) blob placement */
+    kMinimizeIoTime,  /**< LP-based blob placement, minimize I/O time */
+  };
 
+  /** Hermes API call context */
+  struct Context {
+    static int default_buffer_organizer_retries;
+    /**< The default maximum number of buffer organizer retries */
 
-    /** Hermes API call context */
-    struct Context {
+    static PlacementPolicy default_placement_policy;
+    /**< The default blob placement policy */
 
-      static int default_buffer_organizer_retries;
-      /**< The default maximum number of buffer organizer retries */
-
-      static PlacementPolicy default_placement_policy;
-      /**< The default blob placement policy */
-
-      static bool default_rr_split;
-      /**< Whether random splitting of blobs is enabled for Round-Robin blob
+    static bool default_rr_split;
+    /**< Whether random splitting of blobs is enabled for Round-Robin blob
          placement. */
 
-      PlacementPolicy policy;
-      /**< The blob placement policy */
+    PlacementPolicy policy;
+    /**< The blob placement policy */
 
-      int buffer_organizer_retries;
-      /**< The maximum number of buffer organizer retries */
+    int buffer_organizer_retries;
+    /**< The maximum number of buffer organizer retries */
 
-      bool rr_split;
-      /**< Whether random splitting of blobs is enabled for Round-Robin */
+    bool rr_split;
+    /**< Whether random splitting of blobs is enabled for Round-Robin */
 
-      bool rr_retry;
-      /**< Whether Round-Robin can be retried after failure */
+    bool rr_retry;
+    /**< Whether Round-Robin can be retried after failure */
 
-      bool disable_swap;
-      /**< Whether swapping is disabled */
+    bool disable_swap;
+    /**< Whether swapping is disabled */
 
-      Context() : policy(default_placement_policy),
-                  buffer_organizer_retries(default_buffer_organizer_retries),
-                  rr_split(default_rr_split),
-                  rr_retry(false),
-                  disable_swap(false) {}
+    Context() : policy(default_placement_policy),
+                buffer_organizer_retries(default_buffer_organizer_retries),
+                rr_split(default_rr_split),
+                rr_retry(false),
+                disable_swap(false) {}
     };
 
   }  // namespace api
 
-  // TODO(chogan): These constants impose limits on the number of slabs, devices,
-  // file path lengths, and shared memory name lengths, but eventually we should
-  // allow arbitrary sizes of each.
+  // TODO(chogan): These constants impose limits on the number of slabs,
+  // devices, file path lengths, and shared memory name lengths, but eventually
+  // we should allow arbitrary sizes of each.
   static constexpr int kMaxBufferPoolSlabs = 8;
   constexpr int kMaxPathLength = 256;
   constexpr int kMaxBufferPoolShmemNameLength = 64;
@@ -165,10 +162,10 @@ namespace hermes {
     int block_sizes[kMaxDevices];
     /** The number of slabs that each Device has */
     int num_slabs[kMaxDevices];
-    /** The unit of each slab, which is a multiplier of the Device's block size */
+    /** The unit of each slab, a multiple of the Device's block size */
     int slab_unit_sizes[kMaxDevices][kMaxBufferPoolSlabs];
-    /** The percentage of space each slab should occupy per Device. The values for
-     * each Device should add up to 1.0.
+    /** The percentage of space each slab should occupy per Device. The values
+     * for each Device should add up to 1.0.
      */
     f32 desired_slab_percentages[kMaxDevices][kMaxBufferPoolSlabs];
     /** The bandwidth of each Device */
@@ -191,8 +188,8 @@ namespace hermes {
     /** The length of a view state epoch */
     u32 system_view_state_update_interval_ms;
 
-    /** The mount point or desired directory for each Device. RAM Device should be the
-     * empty string.
+    /** The mount point or desired directory for each Device. RAM Device should
+     * be the empty string.
      */
     std::string mount_points[kMaxDevices];
     /** The mount point of the swap target. */
