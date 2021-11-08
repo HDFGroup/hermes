@@ -25,6 +25,15 @@
 const char* kHermesConf = "HERMES_CONF";
 
 /**
+ * Environment variable used to inform Hermes if this run consists of a separate
+ * client that need to attach to an existing daemon (1) or if this run is
+ * co-deployed with a Hermes core (0). This is only relevant for Hermes jobs
+ * launched with 1 application process, as Hermes jobs run with >1 MPI ranks
+ * require a daemon. Defaults to 0.
+ */
+const char* kHermesClient = "HERMES_CLIENT";
+
+/**
  * Specifies whether or not Hermes should eagerly and asynchronously flush
  * writes to their final destinations.
  *

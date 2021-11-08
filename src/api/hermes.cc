@@ -85,6 +85,13 @@ bool Hermes::BucketContainsBlob(const std::string &bucket_name,
   return result;
 }
 
+bool Hermes::BucketExists(const std::string &bucket_name) {
+  BucketID id = hermes::GetBucketId(&context_, &rpc_, bucket_name.c_str());
+  bool result = !IsNullBucketId(id);
+
+  return result;
+}
+
 int Hermes::GetProcessRank() {
   int result = comm_.sub_proc_id;
 

@@ -83,15 +83,23 @@ int simple_open(int ret, const std::string &path_str, int flags) {
         stat.st_atim = ts;
         stat.st_mtim = ts;
         stat.st_ctim = ts;
-        if (flags & O_APPEND) {
-          /* FIXME: get current size of bucket from Hermes*/
-          stat.st_ptr = stat.st_size;
-        }
+
         /* FIXME(hari) check if this initialization is correct. */
         mdm->InitializeHermes();
+
+        bool bucket_exists = mdm->GetHermes()->BucketExists(path_str);
         // TODO(hari) how to pass to hermes to make a private bucket
         stat.st_bkid =
           std::make_shared<hapi::Bucket>(path_str, mdm->GetHermes());
+
+        if (bucket_exists) {
+          stat.st_size = stat.st_bkid->GetTotalBlobSize();
+        }
+
+        if (flags & O_APPEND) {
+          stat.st_ptr = stat.st_size;
+        }
+
         mdm->Create(ret, stat);
       } else {
         // TODO(hari): @error_handling invalid fh.
