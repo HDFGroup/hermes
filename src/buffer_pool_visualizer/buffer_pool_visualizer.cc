@@ -216,7 +216,7 @@ static int DrawBufferPool(SharedMemoryContext *context,
     int num_blocks = header->capacity / block_size;
 
     for (int j = 0; j < num_blocks; ++j) {
-      std::string index_str = std::to_string(index) + std::to_string(j);
+      std::string index_str = std::to_string(index) + ":" + std::to_string(j);
       auto found = block_refs.find(index_str);
       if (found != block_refs.end()) {
         block_refs[index_str] += 1;

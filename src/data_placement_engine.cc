@@ -433,6 +433,7 @@ Status CalculatePlacement(SharedMemoryContext *context, RpcContext *rpc,
     }
 
     if (targets.size() == 0) {
+      result = DPE_PLACEMENTSCHEMA_EMPTY;
       continue;
     }
 

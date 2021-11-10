@@ -466,6 +466,7 @@ u32 AllocateEmbeddedIdList(MetadataManager *mdm, u32 length) {
 std::vector<BlobID> LocalGetBlobIds(SharedMemoryContext *context,
                                     BucketID bucket_id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  BeginTicketMutex(&mdm->bucket_mutex);
   BucketInfo *info = LocalGetBucketInfoById(mdm, bucket_id);
   u32 num_blobs = info->blobs.length;
   std::vector<BlobID> result(num_blobs);
@@ -475,6 +476,7 @@ std::vector<BlobID> LocalGetBlobIds(SharedMemoryContext *context,
     result[i] = blob_ids[i];
   }
   ReleaseIdsPtr(mdm);
+  EndTicketMutex(&mdm->bucket_mutex);
 
   return result;
 }
