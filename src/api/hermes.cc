@@ -245,7 +245,13 @@ BootstrapSharedMemory(Arena *arenas, Config *config, CommunicationContext *comm,
 
 static void InitGlog() {
   FLAGS_logtostderr = 1;
-  FLAGS_minloglevel = 0;
+  const char kMinLogLevel[] = "GLOG_minloglevel";
+  char *min_log_level = getenv(kMinLogLevel);
+
+  if (!min_log_level) {
+    FLAGS_minloglevel = 0;
+  }
+
   FLAGS_v = 0;
 
   google::InitGoogleLogging("hermes");
