@@ -718,7 +718,8 @@ BufferID MakeBufferHeaders(Arena *arena, int buffer_size, u32 start_index,
     header->device_id = device_id;
 
     // NOTE(chogan): Stored as offset from base address of shared memory
-    header->data_offset = (ptrdiff_t)buffer_size * (ptrdiff_t)j + initial_offset;
+    header->data_offset =
+      (ptrdiff_t)buffer_size * (ptrdiff_t)j + initial_offset;
 
     previous->next_free = header->id;
     previous = header;
