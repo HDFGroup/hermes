@@ -718,7 +718,7 @@ BufferID MakeBufferHeaders(Arena *arena, int buffer_size, u32 start_index,
     header->device_id = device_id;
 
     // NOTE(chogan): Stored as offset from base address of shared memory
-    header->data_offset = buffer_size * j + initial_offset;
+    header->data_offset = (ptrdiff_t)buffer_size * (ptrdiff_t)j + initial_offset;
 
     previous->next_free = header->id;
     previous = header;
@@ -1095,7 +1095,8 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
   // capacity for buffering (excluding BufferPool metadata).
   size_t actual_ram_buffer_capacity = 0;
   for (int slab = 0; slab < config->num_slabs[0]; ++slab) {
-    size_t slab_bytes = buffer_counts[0][slab] * slab_buffer_sizes[0][slab];
+    size_t slab_bytes =
+      (size_t)buffer_counts[0][slab] * (size_t)slab_buffer_sizes[0][slab];
     actual_ram_buffer_capacity += slab_bytes;
   }
   config->capacities[0] = actual_ram_buffer_capacity;
