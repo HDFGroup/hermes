@@ -27,12 +27,12 @@ bool exit = false;
 
 void PopulateBufferingPath() {
   char* hermes_config = getenv(kHermesConf);
-  // if (IsRelativePath(hermes_config))
-  //   LOG(FATAL) << "Hermes Config file: " << hermes_config
-  //              << "\nis relative. It is not supported yet";
-  // if (IsSymLink(hermes_config))
-  //   LOG(FATAL) << "Hermes Config file: " << hermes_config
-  //              << "\nis symbolic link. It is not supported yet";
+  if (IsRelativePath(hermes_config))
+    LOG(FATAL) << "Hermes Config file: " << hermes_config
+               << "\nis relative. It is not supported yet";
+  if (IsSymLink(hermes_config))
+    LOG(FATAL) << "Hermes Config file: " << hermes_config
+               << "\nis symbolic link. It is not supported yet";
 
   hermes::Config config = {};
   const size_t kConfigMemorySize = KILOBYTES(16);

@@ -88,8 +88,7 @@ class MetadataManager {
       if (this->is_mpi) {
         MPI_Comm_rank(MPI_COMM_WORLD, &rank);
         MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
-        // TODO(chogan): Need a better way to distinguish between client and
-        // daemon. https://github.com/HDFGroup/hermes/issues/206
+
         if ((hermes_client && hermes_client[0] == '1') || comm_size > 1) {
           hermes = hermes::InitHermesClient(hermes_config);
         } else {
