@@ -85,6 +85,13 @@ bool Hermes::BucketContainsBlob(const std::string &bucket_name,
   return result;
 }
 
+bool Hermes::BucketExists(const std::string &bucket_name) {
+  BucketID id = hermes::GetBucketId(&context_, &rpc_, bucket_name.c_str());
+  bool result = !IsNullBucketId(id);
+
+  return result;
+}
+
 int Hermes::GetProcessRank() {
   int result = comm_.sub_proc_id;
 
@@ -238,7 +245,13 @@ BootstrapSharedMemory(Arena *arenas, Config *config, CommunicationContext *comm,
 
 static void InitGlog() {
   FLAGS_logtostderr = 1;
-  FLAGS_minloglevel = 0;
+  const char kMinLogLevel[] = "GLOG_minloglevel";
+  char *min_log_level = getenv(kMinLogLevel);
+
+  if (!min_log_level) {
+    FLAGS_minloglevel = 0;
+  }
+
   FLAGS_v = 0;
 
   google::InitGoogleLogging("hermes");

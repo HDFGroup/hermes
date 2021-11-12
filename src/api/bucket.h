@@ -65,6 +65,9 @@ class Bucket {
   /** Returns true if this Bucket has been created but not yet destroyed */
   bool IsValid() const;
 
+  /** Returns the total size of all Blobs in this Bucket. */
+  size_t GetTotalBlobSize();
+
   /** Put a blob in this bucket with context */
   template<typename T>
   Status Put(const std::string &name, const std::vector<T> &data, Context &ctx);

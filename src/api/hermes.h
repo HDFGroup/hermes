@@ -101,9 +101,8 @@ class Hermes {
   /** Check if a given bucket contains a blob. */
   bool BucketContainsBlob(const std::string &bucket_name,
                           const std::string &blob_name);
-
-  // MPI comms.
-  // proxy/reference to Hermes core
+  /** Returns true if @p bucket_name exists in this Hermes instance. */
+  bool BucketExists(const std::string &bucket_name);
 };
 
 class VBucket;
