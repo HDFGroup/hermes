@@ -141,6 +141,8 @@ int GetNumOutstandingFlushingTasks(SharedMemoryContext *context,
                                    RpcContext *rpc, VBucketID id);
 void LocalCreateBlobMetadata(MetadataManager *mdm, const std::string &blob_name,
                              BlobID blob_id);
+Heap *GetIdHeap(MetadataManager *mdm);
+Heap *GetMapHeap(MetadataManager *mdm);
 
 }  // namespace hermes
 #endif  // HERMES_METADATA_MANAGEMENT_INTERNAL_H_

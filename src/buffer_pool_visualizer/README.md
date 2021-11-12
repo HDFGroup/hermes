@@ -30,3 +30,12 @@ option `HERMES_DEBUG_HEAP=ON`.
 | s   | Save a bitmap of the current view                      |
 | ESC | Exit the visualizer                                    |
 
+## Description of Visual Information
+
+### `BufferPool` mode
+
+![Buffer Pool Visualizer](https://github.com/HDFGroup/hermes/wiki/images/bp_viz.png)
+
+### `MetadataManager` mode
+
+![Metadata Visualizer](https://github.com/HDFGroup/hermes/wiki/images/mdm_viz.png)

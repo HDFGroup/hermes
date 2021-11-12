@@ -100,6 +100,7 @@ add_executable(stb_map stb_map_test.cc)
 target_link_libraries(stb_map hermes ${LIBRT}
   $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium> MPI::MPI_CXX)
 target_compile_definitions(stb_map
+  PRIVATE $<$<BOOL:${HERMES_DEBUG_HEAP}>:HERMES_DEBUG_HEAP>
   PRIVATE $<$<BOOL:${HERMES_RPC_THALLIUM}>:HERMES_RPC_THALLIUM>)
 add_test(NAME TestSTBMapWithHeap COMMAND stb_map)
 
