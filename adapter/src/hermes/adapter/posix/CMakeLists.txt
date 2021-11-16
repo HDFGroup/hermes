@@ -17,17 +17,10 @@ set(POSIX_ADAPTER_PRIVATE_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/metadata_manager.h
         ${CMAKE_CURRENT_SOURCE_DIR}/common/enumerations.h
         ${CMAKE_CURRENT_SOURCE_DIR}/common/constants.h)
 
-set(POSIX_INTERNAL_ADAPTER_SRC ${CMAKE_CURRENT_SOURCE_DIR}/metadata_manager.cc
-        ${CMAKE_CURRENT_SOURCE_DIR}/mapper/balanced_mapper.cc)
-
 # Add library hermes_posix
 add_library(hermes_posix SHARED ${POSIX_ADAPTER_PRIVATE_HEADER} ${POSIX_ADAPTER_PUBLIC_HEADER} ${POSIX_ADAPTER_SRC})
 add_dependencies(hermes_posix hermes)
 target_link_libraries(hermes_posix hermes MPI::MPI_CXX)
-
-add_library(hermes_posix_internal SHARED ${POSIX_ADAPTER_PRIVATE_HEADER} ${POSIX_ADAPTER_PUBLIC_HEADER} ${POSIX_INTERNAL_ADAPTER_SRC})
-add_dependencies(hermes_posix_internal hermes)
-target_link_libraries(hermes_posix_internal hermes MPI::MPI_CXX)
 
 #-----------------------------------------------------------------------------
 # Add Target(s) to CMake Install

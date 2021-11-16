@@ -16,6 +16,7 @@
 #include <sys/file.h>
 
 #include <hermes/adapter/interceptor.cc>
+#include <hermes/adapter/utils.cc>
 #include <hermes/adapter/stdio/mapper/balanced_mapper.cc>
 #include <hermes/adapter/stdio/metadata_manager.cc>
 
@@ -214,42 +215,11 @@ FILE *reopen_internal(const std::string &path_str, const char *mode,
   return ret;
 }
 
-void ReadGap(const std::string &filename, size_t seek_offset, u8 *read_ptr,
-             size_t read_size, size_t file_bounds) {
-  if (fs::exists(filename) &&
-      fs::file_size(filename) >= file_bounds) {
-    LOG(INFO) << "Blob has a gap in write. Read gap from original file.\n";
-    INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
-    int fd = open(filename.c_str(), O_RDONLY);
-    if (fd) {
-      if (flock(fd, LOCK_SH) == -1) {
-        hermes::FailedLibraryCall("flock");
-      }
-
-      ssize_t bytes_read = pread(fd, read_ptr, read_size, seek_offset);
-      if (bytes_read == -1 || (size_t)bytes_read != read_size) {
-        hermes::FailedLibraryCall("pread");
-      }
-
-      if (flock(fd, LOCK_UN) == -1) {
-        hermes::FailedLibraryCall("flock");
-      }
-
-      if (close(fd) != 0) {
-        hermes::FailedLibraryCall("close");
-      }
-    } else {
-      hermes::FailedLibraryCall("open");
-    }
-    INTERCEPTOR_LIST->hermes_flush_exclusion.erase(filename);
-  }
-}
-
 void PutWithStdioFallback(AdapterStat &stat, const std::string &blob_name,
                           const std::string &filename, u8 *data, size_t size,
                           size_t offset) {
   hapi::Context ctx;
-  const char *hermes_write_only = getenv("HERMES_WRITE_ONLY");
+  const char *hermes_write_only = getenv(kHermesWriteOnlyVar);
 
   if (hermes_write_only && hermes_write_only[0] == '1') {
     // Custom DPE for write-only apps like VPIC
@@ -274,15 +244,16 @@ size_t write_internal(AdapterStat &stat, const void *ptr, size_t total_size,
 
   LOG(INFO) << "Write called for filename: " << filename << " on offset: "
             << stat.st_ptr << " and size: " << total_size << std::endl;
-  size_t ret;
+
+  size_t ret = 0;
   auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
   auto mapper = MapperFactory().Get(kMapperType);
   auto mapping = mapper->map(
       FileStruct(mdm->Convert(fp), stat.st_ptr, total_size));
   size_t data_offset = 0;
-  LOG(INFO) << "Mapping for write has " << mapping.size() << " mappings."
-            << std::endl;
-  for (const auto& [finfo, hinfo] : mapping) {
+  LOG(INFO) << "Mapping for write has " << mapping.size() << " mappings.\n";
+
+  for (const auto &[finfo, hinfo] : mapping) {
     auto index = std::stol(hinfo.blob_name_) - 1;
     size_t offset = index * kPageSize;
     auto blob_exists = bkt->ContainsBlob(hinfo.blob_name_);
@@ -293,17 +264,16 @@ size_t write_internal(AdapterStat &stat, const void *ptr, size_t total_size,
       LOG(INFO) << "Create or Overwrite blob " << hinfo.blob_name_
                 << " of size:" << hinfo.size_ << "." << std::endl;
       if (hinfo.size_ == kPageSize) {
-        PutWithStdioFallback(stat, hinfo.blob_name_, filename,
-                             put_data_ptr, put_data_ptr_size,
-                             finfo.offset_);
+        PutWithStdioFallback(stat, hinfo.blob_name_, filename, put_data_ptr,
+                             put_data_ptr_size, finfo.offset_);
       } else if (hinfo.offset_ == 0) {
-        PutWithStdioFallback(stat, hinfo.blob_name_, filename,
-                             put_data_ptr, put_data_ptr_size, offset);
+        PutWithStdioFallback(stat, hinfo.blob_name_, filename, put_data_ptr,
+                             put_data_ptr_size, offset);
       } else {
         hapi::Blob final_data(hinfo.offset_ + hinfo.size_);
 
-        ReadGap(filename, index * kPageSize, final_data.data(),
-                hinfo.offset_, hinfo.offset_);
+        ReadGap(filename, offset, final_data.data(), hinfo.offset_,
+                hinfo.offset_);
         memcpy(final_data.data() + hinfo.offset_, put_data_ptr,
                put_data_ptr_size);
         PutWithStdioFallback(stat, hinfo.blob_name_, filename,
@@ -346,8 +316,8 @@ size_t write_internal(AdapterStat &stat, const void *ptr, size_t total_size,
                                          ? hinfo.offset_ : existing_data.size();
         memcpy(final_data.data(), existing_data.data(), existing_data_cp_size);
 
-        if (existing_blob_size < hinfo.offset_) {
-          ReadGap(filename, index * kPageSize + existing_data_cp_size,
+        if (existing_blob_size < hinfo.offset_ + 1) {
+          ReadGap(filename, offset + existing_data_cp_size,
                   final_data.data() + existing_data_cp_size,
                   hinfo.offset_ - existing_blob_size,
                   hinfo.offset_ + hinfo.size_);
@@ -362,6 +332,7 @@ size_t write_internal(AdapterStat &stat, const void *ptr, size_t total_size,
           memcpy(final_data.data() + off_t, existing_data.data() + off_t,
                  existing_blob_size - off_t);
         }
+
         PutWithStdioFallback(stat, hinfo.blob_name_, filename,
                              final_data.data(), final_data.size(), offset);
       }

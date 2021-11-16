@@ -33,12 +33,14 @@
 /**
  * Internal headers
  */
-#include <bucket.h>
 #include <hermes.h>
+#include <bucket.h>
+#include <vbucket.h>
+
+#include <hermes/adapter/constants.h>
+#include <hermes/adapter/singleton.h>
 #include <hermes/adapter/interceptor.h>
 #include <hermes/adapter/mpiio/mapper/mapper_factory.h>
-#include <hermes/adapter/singleton.h>
-#include <vbucket.h>
 
 #include <hermes/adapter/interceptor.cc>
 #include <hermes/adapter/mpiio/metadata_manager.cc>

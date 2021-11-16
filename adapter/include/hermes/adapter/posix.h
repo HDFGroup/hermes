@@ -28,15 +28,17 @@
 /**
  * Internal headers
  */
-#include <bucket.h>
 #include <hermes.h>
+#include <bucket.h>
+#include <vbucket.h>
+
+#include <hermes/adapter/constants.h>
 #include <hermes/adapter/interceptor.h>
+#include <hermes/adapter/singleton.h>
 #include <hermes/adapter/posix/common/constants.h>
 #include <hermes/adapter/posix/common/datastructures.h>
 #include <hermes/adapter/posix/mapper/mapper_factory.h>
 #include <hermes/adapter/posix/metadata_manager.h>
-#include <hermes/adapter/singleton.h>
-#include <vbucket.h>
 
 /**
  * Function declarations
