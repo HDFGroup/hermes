@@ -30,7 +30,6 @@ using namespace hermes;  // NOLINT(*)
 namespace hapi = hermes::api;
 
 int main(int argc, char** argv) {
-
   MPI_Init(&argc, &argv);
 
 #if HERMES_DEBUG_HEAP

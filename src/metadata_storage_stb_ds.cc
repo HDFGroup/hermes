@@ -300,6 +300,14 @@ void FreeIdList(MetadataManager *mdm, T id_list) {
   EndTicketMutex(&mdm->id_mutex);
 }
 
+void FreeIdList(MetadataManager *mdm, IdList id_list) {
+  Heap *id_heap = GetIdHeap(mdm);
+  BeginTicketMutex(&mdm->id_mutex);
+  u8 *ptr = HeapOffsetToPtr(id_heap, id_list.head_offset);
+  HeapFree(id_heap, ptr);
+  EndTicketMutex(&mdm->id_mutex);
+}
+
 void FreeEmbeddedIdList(MetadataManager *mdm, u32 offset) {
   Heap *id_heap = GetIdHeap(mdm);
   BeginTicketMutex(&mdm->id_mutex);

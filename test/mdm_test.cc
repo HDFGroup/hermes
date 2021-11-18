@@ -24,6 +24,7 @@ using namespace hermes;  // NOLINT(*)
 namespace hapi = hermes::api;
 using HermesPtr = std::shared_ptr<hapi::Hermes>;
 
+#if 0
 static void TestNullIds() {
   BucketID bkt_id = {};
   VBucketID vbkt_id = {};
@@ -335,6 +336,40 @@ static void TestBlobInfoMap() {
 
   hermes->Finalize(true);
 }
+#endif
+
+static void TestMdmViz() {
+  using namespace hermes;  // NOLINT(*)
+
+  Config config = {};
+  InitDefaultConfig(&config);
+  config.num_devices = 1;
+  config.num_targets = 1;
+  config.block_sizes[0] = 4096;
+  config.num_slabs[0] = 1;
+  config.desired_slab_percentages[0][0] = 1.0f;
+
+  HermesPtr hermes = InitHermesDaemon(&config);
+  SharedMemoryContext *context = &hermes->context_;
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  IdList ids1 = AllocateIdList(mdm, KILOBYTES(4));
+  FreeIdList(mdm, ids1);
+  IdList ids2 = AllocateIdList(mdm, KILOBYTES(1));
+  IdList ids3 = AllocateIdList(mdm, KILOBYTES(1));
+  IdList ids4 = AllocateIdList(mdm, KILOBYTES(1));
+  IdList ids5 = AllocateIdList(mdm, KILOBYTES(1));
+  IdList ids6 = AllocateIdList(mdm, KILOBYTES(1));
+  IdList ids7 = AllocateIdList(mdm, KILOBYTES(1));
+
+  FreeIdList(mdm, ids5);
+  FreeIdList(mdm, ids6);
+  FreeIdList(mdm, ids4);
+  FreeIdList(mdm, ids3);
+  FreeIdList(mdm, ids2);
+  FreeIdList(mdm, ids7);
+
+  hermes->Finalize();
+}
 
 int main(int argc, char **argv) {
   int mpi_threads_provided;
@@ -344,25 +379,26 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  HermesPtr hermes = hapi::InitHermes(NULL, true);
+  // HermesPtr hermes = hapi::InitHermes(NULL, true);
 
-  TestNullIds();
-  TestGetMapMutex();
-  TestLocalGetNextFreeBucketId(hermes);
-  TestGetOrCreateBucketId(hermes);
-  TestRenameBlob(hermes);
-  TestRenameBucket(hermes);
-  TestBucketRefCounting(hermes);
-  TestMaxNameLength(hermes);
-  TestGetRelativeNodeId();
-  TestDuplicateBlobNames(hermes);
-  TestGetBucketIdFromBlobId(hermes);
-  TestHexStringToU64();
+  // TestNullIds();
+  // TestGetMapMutex();
+  // TestLocalGetNextFreeBucketId(hermes);
+  // TestGetOrCreateBucketId(hermes);
+  // TestRenameBlob(hermes);
+  // TestRenameBucket(hermes);
+  // TestBucketRefCounting(hermes);
+  // TestMaxNameLength(hermes);
+  // TestGetRelativeNodeId();
+  // TestDuplicateBlobNames(hermes);
+  // TestGetBucketIdFromBlobId(hermes);
+  // TestHexStringToU64();
 
-  hermes->Finalize(true);
+  // hermes->Finalize(true);
 
-  TestSwapBlobsExistInBucket();
-  TestBlobInfoMap();
+  // TestSwapBlobsExistInBucket();
+  // TestBlobInfoMap();
+  TestMdmViz();
 
   MPI_Finalize();
 

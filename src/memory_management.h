@@ -79,14 +79,23 @@ struct Arena {
 };
 
 struct Heap {
+  /** Function called when this Heap encounters and error */
   ArenaErrorFunc *error_handler;
+  /** Mutex for multi-threaded access to this Heap's members */
   TicketMutex mutex;
   /** Offset of the beginning of this heap's memory, relative to the Heap */
   u32 base_offset;
   /** Offset of the head of the free list, relative to base_offset */
   u32 free_list_offset;
+  /** The highest (if Heap::grows_up == 1) or lowest (if Heap::grows_up == 0)
+   * used memory address of this Heap, stored as an offset from
+   * Heap::base_offset. This value is used to make sure two heaps growing in
+   * opposite directions don't overlap each other. */
   u32 extent;
+  /** Every allocation from this Heap will result in an address aligned to this
+   * value */
   u16 alignment;
+  /** 1 if allocating new memory returns higher memory addresses, else 0 */
   u16 grows_up;
 };
 
