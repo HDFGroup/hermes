@@ -13,6 +13,8 @@
 #ifndef HERMES_ADAPTER_CONSTANTS_H
 #define HERMES_ADAPTER_CONSTANTS_H
 
+#include <glog/logging.h>
+
 /**
  * Constants file for all adapter.
  * This file contains common constants across different adapters.
@@ -88,4 +90,40 @@ const char* kAdapterScratchMode = "SCRATCH";
  * Default value: \c 1
  */
 const char* kStopDaemon = "HERMES_STOP_DAEMON";
+
+/**
+ * The page size in bytes when mapping files to Hermes Blobs. Hermes will be
+ * more efficient if you set this number to the most common size of writes in
+ * your application. This is set via HERMES_PAGE_SIZE.
+ *
+ * Example: With a page size of 1MiB, a 100 MiB file will be mapped to 100, 1MiB
+ * Blobs. In this scenario, doing several smaller writes within the same 1MiB
+ * region will cause all of those writes to transfer 1MiB of data, which is why
+ * it's important to align the page size to your workload.
+ */
+const size_t kPageSize = []() {
+  const char *kPageSizeVar = "HERMES_PAGE_SIZE";
+  const size_t kDefaultPageSize = 1 * 1024 * 1024;
+
+  size_t result = kDefaultPageSize;
+  char *page_size = getenv(kPageSizeVar);
+
+  if (page_size) {
+    result = (size_t)std::strtoull(page_size, NULL, 0);
+    if (result == 0) {
+      LOG(FATAL) << "Invalid value of " << kPageSizeVar << ": " << page_size;
+    }
+  }
+
+  LOG(INFO) << "Adapter page size: " << result << "\n";
+
+  return result;
+}();
+
+/**
+ * Set this environment variable to '1' for more efficient performance on
+ * workloads that are write-only.
+ */
+const char* kHermesWriteOnlyVar = "HERMES_WRITE_ONLY";
+
 #endif  // HERMES_ADAPTER_CONSTANTS_H

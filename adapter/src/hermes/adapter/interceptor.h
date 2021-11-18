@@ -24,7 +24,6 @@
 #include <regex>
 
 #include <buffer_pool_internal.h>
-#include <hermes/adapter/constants.h>
 #include <hermes/adapter/enumerations.h>
 #include <hermes/adapter/singleton.h>
 
