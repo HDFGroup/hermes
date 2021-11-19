@@ -666,7 +666,8 @@ static void InitColors(SDL_PixelFormat *format) {
   global_id_colors[kColor_Blue5] = SDL_MapRGB(format, 0xca, 0xf0, 0xf8);
 }
 
-void DisplayBufferPoolSegment(SharedMemoryContext *context, WindowData *win_data) {
+static void DisplayBufferPoolSegment(SharedMemoryContext *context,
+                                     WindowData *win_data) {
   SDL_Surface *back_buffer = win_data->back_buffer;
   int width = win_data->width;
   int height = win_data->height;
@@ -959,7 +960,8 @@ bool CheckOverlap(HeapMetadata *hmd, Heap *map_heap,
   return result;
 }
 
-static void DisplayMetadataSegment(SharedMemoryContext *context, WindowData *win_data,
+static void DisplayMetadataSegment(SharedMemoryContext *context,
+                                   WindowData *win_data,
                                    DebugState *map_debug_state,
                                    DebugState *id_debug_state) {
   SDL_Surface *surface = win_data->back_buffer;
