@@ -368,6 +368,17 @@ static void TestMdmViz() {
   FreeIdList(mdm, ids2);
   FreeIdList(mdm, ids7);
 
+  std::string base_name("xxxxxxxxxxxxxxx");
+  hapi::Bucket bucket(std::string(base_name + "bkt"), hermes);
+
+  hapi::Blob data(255, 'z');
+
+  for (int i = 0; i < 10; ++i) {
+    bucket.Put(std::string(base_name + std::to_string(i)), data);
+  }
+
+  bucket.Destroy();
+
   hermes->Finalize();
 }
 

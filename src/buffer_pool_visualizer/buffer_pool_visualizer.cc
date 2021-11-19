@@ -858,8 +858,8 @@ static int DrawBucketsAndVBuckets(MetadataManager *mdm, SDL_Surface *surface,
 }
 #endif  // DRAW_BUCKETS
 
-bool PopulateByteCounts(DebugState *state, Heap *heap,
-                        std::vector<u8> &byte_counts, u32 heap_size) {
+static bool PopulateByteCounts(DebugState *state, Heap *heap,
+                               std::vector<u8> &byte_counts, u32 heap_size) {
   for (size_t i = 0; i < state->allocation_count; ++i) {
     DebugHeapAllocation *dha = &state->allocations[i];
     u32 offset = dha->offset;
@@ -882,8 +882,8 @@ bool PopulateByteCounts(DebugState *state, Heap *heap,
   return true;
 }
 
-bool CheckFreeBlocks(Heap *heap, const std::vector<u8> &byte_counts,
-                     u32 heap_size) {
+static bool CheckFreeBlocks(Heap *heap, const std::vector<u8> &byte_counts,
+                            u32 heap_size) {
   BeginTicketMutex(&heap->mutex);
   u32 extent_offset_from_start = heap->extent;
   if (!heap->grows_up) {
@@ -929,8 +929,8 @@ bool CheckFreeBlocks(Heap *heap, const std::vector<u8> &byte_counts,
   return result;
 }
 
-bool CheckOverlap(HeapMetadata *hmd, Heap *map_heap,
-                  Heap *id_heap) {
+static bool CheckOverlap(HeapMetadata *hmd, Heap *map_heap,
+                         Heap *id_heap) {
   std::vector<u8> heap_byte_counts(hmd->heap_size, 0);
 
   BeginTicketMutex(&global_id_debug_state->mutex);
