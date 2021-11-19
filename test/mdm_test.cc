@@ -379,7 +379,7 @@ static void TestMdmViz() {
 
   bucket.Destroy();
 
-  hermes->Finalize();
+  hermes->Finalize(true);
 }
 
 int main(int argc, char **argv) {
