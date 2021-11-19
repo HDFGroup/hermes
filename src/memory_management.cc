@@ -367,7 +367,6 @@ u8 *HeapPushSize(Heap *heap, u32 size) {
     BeginTicketMutex(&heap->mutex);
     // TODO(chogan): Respect heap->alignment
     FreeBlock *first_fit = FindFirstFit(heap, size + sizeof(FreeBlockHeader));
-    EndTicketMutex(&heap->mutex);
 
     if (first_fit) {
       u32 actual_size = first_fit->size - sizeof(FreeBlockHeader);
@@ -386,7 +385,6 @@ u8 *HeapPushSize(Heap *heap, u32 size) {
 
       u32 extent_adustment = heap->grows_up ? 0 : sizeof(FreeBlock);
 
-      BeginTicketMutex(&heap->mutex);
       u32 this_extent =
         ComputeHeapExtent(heap, header, header->size + sizeof(FreeBlockHeader));
       heap->extent = std::max(heap->extent, this_extent);
@@ -395,6 +393,7 @@ u8 *HeapPushSize(Heap *heap, u32 size) {
       }
       EndTicketMutex(&heap->mutex);
     } else {
+      EndTicketMutex(&heap->mutex);
       heap->error_handler();
     }
   }
@@ -404,6 +403,7 @@ u8 *HeapPushSize(Heap *heap, u32 size) {
 
 void HeapFree(Heap *heap, void *ptr) {
   if (heap && ptr) {
+    BeginTicketMutex(&heap->mutex);
     FreeBlockHeader *header = (FreeBlockHeader *)ptr - 1;
     u32 size = header->size;
     FreeBlock *new_block = 0;
@@ -417,7 +417,6 @@ void HeapFree(Heap *heap, void *ptr) {
 
     HERMES_DEBUG_TRACK_FREE(header, new_block->size, heap->grows_up);
 
-    BeginTicketMutex(&heap->mutex);
     u32 extent = ComputeHeapExtent(heap, ptr, size);
     if (extent == heap->extent) {
       assert(new_block->size < heap->extent);
