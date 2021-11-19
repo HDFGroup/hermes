@@ -66,7 +66,7 @@ static u32 global_colors[kColor_Count];
 static u32 global_id_colors[kIdHeapColors_Count];
 static int global_bitmap_index;
 static DeviceID global_active_device;
-static ActiveSegment global_active_segment;
+static ActiveSegment global_active_segment = ActiveSegment::Metadata;
 static ActiveHeap global_active_heap;
 static u32 global_color_counter;
 static DebugState *global_id_debug_state;
@@ -103,13 +103,22 @@ struct HeapMetadata {
   f32 bytes_to_slots;
 };
 
+struct WindowData {
+  SDL_Window *window;
+  SDL_Surface *back_buffer;
+  SDL_Surface *screen;
+  int width;
+  int height;
+  bool running;
+};
+
 static SDL_Window *CreateWindow(int width, int height) {
   SDL_Window *result = SDL_CreateWindow("BufferPool Visualizer",
-                                        SDL_WINDOWPOS_UNDEFINED,
-                                        SDL_WINDOWPOS_UNDEFINED,
+                                        1920 - width,
+                                        0,
                                         width,
                                         height,
-                                        0 /* SDL_WINDOW_OPENGL */);
+                                        SDL_WINDOW_RESIZABLE);
 
   if (result == NULL) {
     SDL_Log("Could not create window: %s\n", SDL_GetError());
@@ -529,24 +538,28 @@ static void SetActiveDevice(SharedMemoryContext *context, DeviceID device_id) {
   }
 }
 
-static void HandleInput(SharedMemoryContext *context, bool *running,
-                        SDL_Surface *surface, char *shmem_name) {
+static void HandleInput(SharedMemoryContext *context, WindowData *win_data,
+                        char *shmem_name) {
+  SDL_Surface *surface = win_data->screen;
+
   SDL_Event event;
   while (SDL_PollEvent(&event)) {
     switch (event.type) {
       case SDL_WINDOWEVENT: {
         switch (event.window.event) {
           case SDL_WINDOWEVENT_CLOSE: {
-            *running = false;
+            win_data->running = false;
             break;
           }
-            // TODO(chogan):
-            // case SDL_WINDOWEVENT_RESIZED: {
-            //   int new_width = event.window.data1;
-            //   int new_height = event.window.data2;
-            //   ResizeWindow(new_width, new_height);
-            //   break;
-            // }
+          case SDL_WINDOWEVENT_RESIZED: {
+            win_data->width = event.window.data1;
+            win_data->height = event.window.data2;
+            SDL_FreeSurface(win_data->back_buffer);
+            win_data->back_buffer = CreateBackBuffer(win_data->width,
+                                                     win_data->height);
+            win_data->screen = GetScreen(win_data->window);
+            break;
+          }
         }
         break;
       }
@@ -624,7 +637,7 @@ static void HandleInput(SharedMemoryContext *context, bool *running,
             break;
           }
           case SDL_SCANCODE_ESCAPE: {
-            *running = false;
+            win_data->running = false;
             break;
           }
           default:
@@ -653,8 +666,10 @@ static void InitColors(SDL_PixelFormat *format) {
   global_id_colors[kColor_Blue5] = SDL_MapRGB(format, 0xca, 0xf0, 0xf8);
 }
 
-void DisplayBufferPoolSegment(SharedMemoryContext *context,
-                              SDL_Surface *back_buffer, int width, int height) {
+void DisplayBufferPoolSegment(SharedMemoryContext *context, WindowData *win_data) {
+  SDL_Surface *back_buffer = win_data->back_buffer;
+  int width = win_data->width;
+  int height = win_data->height;
   int ending_y = 0;
   if (global_active_device == 0) {
     ending_y = DrawBufferPool(context, back_buffer, width, height,
@@ -874,19 +889,34 @@ bool CheckFreeBlocks(Heap *heap, const std::vector<u8> &byte_counts,
     extent_offset_from_start = heap_size - heap->extent;
   }
 
+  bool result = true;
   u32 offset = heap->free_list_offset;
   FreeBlock *head = GetHeapFreeList(heap);
-  while (head) {
+  bool stop = false;
+  while (head && !stop) {
     if (!heap->grows_up) {
       offset = offset - sizeof(FreeBlock) + head->size;
+      offset = heap_size - offset;
     }
 
-    size_t stop = std::min(offset + head->size, extent_offset_from_start);
-    for (size_t i = offset; i < stop; ++i) {
+    size_t start = 0;
+    size_t stop = 0;
+
+    if (heap->grows_up) {
+      start = offset;
+      stop = std::min(offset + head->size, extent_offset_from_start);
+    } else {
+      start = std::max(offset, extent_offset_from_start);
+      stop = offset + head->size;
+    }
+
+    for (size_t i = start; i < stop; ++i) {
       if (byte_counts[i] != 0) {
         SDL_Log("Byte %lu is referred to by a free block with offset %u\n", i,
                 offset);
-        return false;
+        stop = true;
+        result = false;
+        break;
       }
     }
 
@@ -895,7 +925,7 @@ bool CheckFreeBlocks(Heap *heap, const std::vector<u8> &byte_counts,
   }
   EndTicketMutex(&heap->mutex);
 
-  return true;
+  return result;
 }
 
 bool CheckOverlap(HeapMetadata *hmd, Heap *map_heap,
@@ -929,10 +959,13 @@ bool CheckOverlap(HeapMetadata *hmd, Heap *map_heap,
   return result;
 }
 
-static void DisplayMetadataSegment(SharedMemoryContext *context,
-                                   SDL_Surface *surface, int width, int height,
+static void DisplayMetadataSegment(SharedMemoryContext *context, WindowData *win_data,
                                    DebugState *map_debug_state,
-                                   DebugState *id_debug_state, bool &running) {
+                                   DebugState *id_debug_state) {
+  SDL_Surface *surface = win_data->back_buffer;
+  int width = win_data->width;
+  int height = win_data->height;
+
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   int pad = 2;
   int w = 3;
@@ -962,11 +995,6 @@ static void DisplayMetadataSegment(SharedMemoryContext *context,
   hmd.bytes_to_slots = 1.0f / hmd.slots_to_bytes;
   assert(hmd.heap_size > hmd.total_slots);
 
-  // if (global_mdm_byte_counts.size() == 0) {
-  //   global_mdm_byte_counts.resize(hmd.heap_size);
-  //   memset(global_mdm_byte_counts.data(), 0, hmd.heap_size);
-  // }
-
   // Map Heap
   DrawAllocatedHeapBlocks(map_debug_state, &hmd, map_heap, surface);
   DrawFreeHeapBlocks(&hmd, map_heap, surface);
@@ -978,21 +1006,22 @@ static void DisplayMetadataSegment(SharedMemoryContext *context,
   DrawHeapExtent(&hmd, id_heap, w, surface);
 
   if (!CheckOverlap(&hmd, map_heap, id_heap)) {
-    running = false;
+    win_data->running = false;
   }
 }
 
 int main() {
   SDL_Init(SDL_INIT_VIDEO);
 
-  int window_width = 1200;
-  int window_height = 600;
+  WindowData win_data = {};
+  win_data.width = 1200;
+  win_data.height = 600;
+  win_data.window = CreateWindow(win_data.width, win_data.height);
+  win_data.back_buffer = CreateBackBuffer(win_data.width, win_data.height);
+  win_data.screen = GetScreen(win_data.window);
+  win_data.running = true;
 
-  SDL_Window *window = CreateWindow(window_width, window_height);
-  SDL_Surface *screen = GetScreen(window);
-  SDL_Surface *back_buffer = CreateBackBuffer(window_width, window_height);
-
-  InitColors(back_buffer->format);
+  InitColors(win_data.back_buffer->format);
 
   char full_shmem_name[kMaxBufferPoolShmemNameLength];
   char base_shmem_name[] = "/hermes_buffer_pool_";
@@ -1015,28 +1044,25 @@ int main() {
     global_map_debug_state = (DebugState *)map_debug_context.shm_base;
   }
 
-  bool running = true;
-  while (running) {
-    HandleInput(&context, &running, screen, full_shmem_name);
+  while (win_data.running) {
+    HandleInput(&context, &win_data, full_shmem_name);
 
-    SDL_FillRect(back_buffer, NULL, global_colors[kColor_Black]);
+    SDL_FillRect(win_data.back_buffer, NULL, global_colors[kColor_Black]);
 
     switch (global_active_segment) {
       case ActiveSegment::BufferPool: {
-        DisplayBufferPoolSegment(&context, back_buffer, window_width,
-                                 window_height);
+        DisplayBufferPoolSegment(&context, &win_data);
         break;
       }
       case ActiveSegment::Metadata: {
-        DisplayMetadataSegment(&context, back_buffer, window_width,
-                               window_height, global_map_debug_state,
-                               global_id_debug_state, running);
+        DisplayMetadataSegment(&context, &win_data, global_map_debug_state,
+                               global_id_debug_state);
         break;
       }
     }
 
-    SDL_BlitSurface(back_buffer, NULL, screen, NULL);
-    SDL_UpdateWindowSurface(window);
+    SDL_BlitSurface(win_data.back_buffer, NULL, win_data.screen, NULL);
+    SDL_UpdateWindowSurface(win_data.window);
 
     SDL_Delay(60);
   }
@@ -1046,8 +1072,8 @@ int main() {
   UnmapSharedMemory(&id_debug_context);
   UnmapSharedMemory(&map_debug_context);
 
-  SDL_FreeSurface(back_buffer);
-  SDL_DestroyWindow(window);
+  SDL_FreeSurface(win_data.back_buffer);
+  SDL_DestroyWindow(win_data.window);
   SDL_Quit();
 
   return 0;
