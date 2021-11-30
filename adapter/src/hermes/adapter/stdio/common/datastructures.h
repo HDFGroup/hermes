@@ -30,6 +30,7 @@
 #include <bucket.h>
 #include <buffer_pool.h>
 #include <hermes_types.h>
+#include <traits.h>
 
 /**
  * Namespace simplification.
@@ -158,6 +159,10 @@ struct AdapterStat {
    * attributes
    */
   std::shared_ptr<hapi::Bucket> st_bkid; /* bucket associated with the file */
+  /** VBucket for persisting data asynchronously. */
+  std::shared_ptr<hapi::VBucket> st_vbkt;
+  /** Used for async flushing. */
+  std::shared_ptr<hapi::PersistTrait> st_persist;
   std::set<std::string, bool (*)(const std::string &, const std::string &)>
       st_blobs;         /* Blobs access in the bucket */
   i32 ref_count;        /* # of time process opens a file */
@@ -175,6 +180,8 @@ struct AdapterStat {
    */
   AdapterStat()
       : st_bkid(),
+        st_vbkt(),
+        st_persist(),
         st_blobs(CompareBlobs),
         ref_count(),
         st_mode(),
@@ -188,6 +195,8 @@ struct AdapterStat {
         st_ctim() {} /* default constructor */
   explicit AdapterStat(const struct stat &st)
       : st_bkid(),
+        st_vbkt(),
+        st_persist(),
         st_blobs(CompareBlobs),
         ref_count(1),
         st_mode(st.st_mode),

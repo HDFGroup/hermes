@@ -101,6 +101,11 @@ union BufferID {
   u64 as_int;
 };
 
+struct ShmemClientInfo {
+  ptrdiff_t mdm_offset;
+  ptrdiff_t bpm_offset;
+};
+
 /**
  * Metadata for a Hermes buffer.
  *
@@ -231,6 +236,9 @@ struct BufferPool {
  * BufferPool *pool = GetBufferPoolFromContext(context);
  * ```
  */
+
+struct BufferOrganizer;
+
 struct SharedMemoryContext {
   /** A pointer to the beginning of shared memory. */
   u8 *shm_base;
@@ -240,10 +248,12 @@ struct SharedMemoryContext {
   ptrdiff_t metadata_manager_offset;
   /** The total size of the shared memory (needed for munmap). */
   u64 shm_size;
+  /** This will only be valid on Hermes cores, and NULL on client cores. */
+  BufferOrganizer *bo;
 
-  // TODO(chogan): Move these into a FileBufferingContext
+  // File buffering context
   std::vector<std::vector<std::string>> buffering_filenames;
-  FILE *open_streams[kMaxDevices][kMaxBufferPoolSlabs];
+  int open_files[kMaxDevices][kMaxBufferPoolSlabs];
   FILE *swap_file;
 };
 
@@ -274,6 +284,7 @@ size_t GetBlobSizeById(SharedMemoryContext *context, RpcContext *rpc,
 void MakeFullShmemName(char *dest, const char *base);
 
 /**
+ * TODO
  * Creates and opens all files that will be used for buffering. Stores open FILE
  * pointers in the @p context. The file buffering paradaigm uses one file per
  * slab for each Device. If `posix_fallocate` is available, and `make_space` is
@@ -287,8 +298,8 @@ void MakeFullShmemName(char *dest, const char *base);
  * @param node_id The node id, used for shared devices.
  * @param first_on_node True if this rank is sequentially the first on the node
  */
-void InitFilesForBuffering(SharedMemoryContext *context, bool make_space,
-                           u32 node_id, bool first_on_node);
+void InitFilesForBuffering(SharedMemoryContext *context,
+                           CommunicationContext &comm);
 
 /**
  * Retrieves information required for accessing the BufferPool shared memory.
@@ -508,8 +519,8 @@ api::Status StdIoPersistBucket(SharedMemoryContext *context, RpcContext *rpc,
                                const std::string &open_mode);
 
 api::Status StdIoPersistBlob(SharedMemoryContext *context, RpcContext *rpc,
-                             Arena *arena, BlobID blob_id,
-                             FILE* file, const i32 &offset);
+                             Arena *arena, BlobID blob_id, int fd,
+                             const i32 &offset);
 
 }  // namespace hermes
 

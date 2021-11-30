@@ -79,10 +79,8 @@ std::string GetServerName(RpcContext *rpc, u32 node_id,
                           bool is_buffer_organizer = false);
 std::string GetProtocol(RpcContext *rpc);
 void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
-                          const char *addr, int num_threads, int port);
-void TriggerBufferOrganizer(RpcContext *rpc, const char *func_name,
-                            const std::string &blob_name, SwapBlob swap_blob,
-                            int retries);
+                          Arena *arena, const char *addr, int num_threads,
+                          int port);
 }  // namespace hermes
 
 // TODO(chogan): I don't like that code similar to this is in buffer_pool.cc.

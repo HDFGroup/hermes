@@ -20,7 +20,7 @@ cmake                                                      \
     -DCMAKE_C_COMPILER=`which mpicc`                       \
     -DBUILD_SHARED_LIBS=ON                                 \
     -DHERMES_ENABLE_COVERAGE=ON                            \
-    -DHERMES_INTERCEPT_IO=ON                               \
+    -DHERMES_INTERCEPT_IO=OFF                              \
     -DHERMES_BUILD_BENCHMARKS=ON                           \
     -DHERMES_COMMUNICATION_MPI=ON                          \
     -DHERMES_BUILD_BUFFER_POOL_VISUALIZER=ON               \

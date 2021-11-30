@@ -35,6 +35,7 @@
 // 5. Add the new variable to the Config struct.
 // 6. Add an Assert to config_parser_test.cc to test the functionality.
 // 7. Set a default value in InitDefaultConfig
+// 8. Add the variable with documentation to test/data/hermes.conf
 
 namespace hermes {
 
@@ -83,6 +84,8 @@ enum ConfigVariable {
   ConfigVariable_RpcNumThreads,
   ConfigVariable_PlacementPolicy,
   ConfigVariable_IsSharedDevice,
+  ConfigVariable_BoNumThreads,
+  ConfigVariable_RRSplit,
 
   ConfigVariable_Count
 };
@@ -120,6 +123,8 @@ static const char *kConfigVariableStrings[ConfigVariable_Count] = {
   "rpc_num_threads",
   "default_placement_policy",
   "is_shared_device",
+  "buffer_organizer_num_threads",
+  "default_rr_split",
 };
 
 struct Token {
@@ -680,6 +685,10 @@ void ParseTokens(TokenList *tokens, Config *config) {
       case ConfigVariable_NumDevices: {
         int val = ParseInt(&tok);
         config->num_devices = val;
+        // TODO(chogan): For now we set the number of Targets equal to the
+        // number of Devices in order to avoid confusion, but in the future
+        // we'll allow multiple Targets per Device.
+        config->num_targets = val;
         break;
       }
       case ConfigVariable_NumTargets: {
@@ -836,6 +845,14 @@ void ParseTokens(TokenList *tokens, Config *config) {
         tok = ParseIntList(tok, config->is_shared_device, config->num_devices);
         break;
       }
+      case ConfigVariable_BoNumThreads: {
+        config->bo_num_threads = ParseInt(&tok);
+        break;
+      }
+      case ConfigVariable_RRSplit: {
+        config->default_rr_split = ParseInt(&tok);
+        break;
+      }
       default: {
         HERMES_INVALID_CODE_PATH;
         break;
@@ -850,6 +867,7 @@ void ParseConfig(Arena *arena, const char *path, Config *config) {
   ScopedTemporaryMemory scratch(arena);
   EntireFile config_file = ReadEntireFile(scratch, path);
   TokenList tokens = Tokenize(scratch, config_file);
+  InitDefaultConfig(config);
   ParseTokens(&tokens, config);
 }
 

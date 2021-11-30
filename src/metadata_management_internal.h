@@ -77,7 +77,6 @@ void LocalDelete(MetadataManager *mdm, const char *key, MapType map_type);
 u64 LocalGetRemainingTargetCapacity(SharedMemoryContext *context, TargetID id);
 void LocalUpdateGlobalSystemViewState(SharedMemoryContext *context,
                                       std::vector<i64> adjustments);
-SystemViewState *GetLocalSystemViewState(SharedMemoryContext *context);
 SystemViewState *GetGlobalSystemViewState(SharedMemoryContext *context);
 std::vector<u64> LocalGetGlobalDeviceCapacities(SharedMemoryContext *context);
 std::vector<u64> GetGlobalDeviceCapacities(SharedMemoryContext *context,
@@ -105,6 +104,7 @@ BucketID LocalGetOrCreateBucketId(SharedMemoryContext *context,
                                   const std::string &name);
 VBucketID LocalGetOrCreateVBucketId(SharedMemoryContext *context,
                                     const std::string &name);
+f32 LocalGetBlobScore(SharedMemoryContext *context, BlobID blob_id);
 
 /**
  * Faster version of std::stoull.
@@ -133,6 +133,14 @@ std::vector<BlobID> LocalGetBlobsFromVBucketInfo(SharedMemoryContext *context,
                                                  VBucketID vbucket_id);
 std::string LocalGetBucketNameById(SharedMemoryContext *context,
                                    BucketID blob_id);
+
+
+int LocalGetNumOutstandingFlushingTasks(SharedMemoryContext *context,
+                                        VBucketID id);
+int GetNumOutstandingFlushingTasks(SharedMemoryContext *context,
+                                   RpcContext *rpc, VBucketID id);
+void LocalCreateBlobMetadata(MetadataManager *mdm, const std::string &blob_name,
+                             BlobID blob_id);
 
 }  // namespace hermes
 #endif  // HERMES_METADATA_MANAGEMENT_INTERNAL_H_

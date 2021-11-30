@@ -31,6 +31,7 @@ namespace api {
 
 int Context::default_buffer_organizer_retries;
 PlacementPolicy Context::default_placement_policy;
+bool Context::default_rr_split;
 
 Status RenameBucket(const std::string &old_name,
                     const std::string &new_name,
@@ -80,6 +81,13 @@ bool Hermes::BucketContainsBlob(const std::string &bucket_name,
                                 const std::string &blob_name) {
   BucketID bucket_id = GetBucketId(&context_, &rpc_, bucket_name.c_str());
   bool result = hermes::ContainsBlob(&context_, &rpc_, bucket_id, blob_name);
+
+  return result;
+}
+
+bool Hermes::BucketExists(const std::string &bucket_name) {
+  BucketID id = hermes::GetBucketId(&context_, &rpc_, bucket_name.c_str());
+  bool result = !IsNullBucketId(id);
 
   return result;
 }
@@ -199,11 +207,8 @@ SharedMemoryContext InitHermesCore(Config *config, CommunicationContext *comm,
   InitMetadataManager(mdm, &arenas[kArenaType_MetaData], config, comm->node_id);
   InitMetadataStorage(&context, mdm, &arenas[kArenaType_MetaData], config);
 
-  // NOTE(chogan): Store the metadata_manager_offset right after the
-  // buffer_pool_offset so other processes can pick it up.
-  ptrdiff_t *metadata_manager_offset_location =
-    (ptrdiff_t *)(shmem_base + sizeof(context.buffer_pool_offset));
-  *metadata_manager_offset_location = context.metadata_manager_offset;
+  ShmemClientInfo *client_info = (ShmemClientInfo *)shmem_base;
+  client_info->mdm_offset = context.metadata_manager_offset;
 
   return context;
 }
@@ -238,8 +243,24 @@ BootstrapSharedMemory(Arena *arenas, Config *config, CommunicationContext *comm,
   return result;
 }
 
+static void InitGlog() {
+  FLAGS_logtostderr = 1;
+  const char kMinLogLevel[] = "GLOG_minloglevel";
+  char *min_log_level = getenv(kMinLogLevel);
+
+  if (!min_log_level) {
+    FLAGS_minloglevel = 0;
+  }
+
+  FLAGS_v = 0;
+
+  google::InitGoogleLogging("hermes");
+}
+
 std::shared_ptr<api::Hermes> InitHermes(Config *config, bool is_daemon,
                                         bool is_adapter) {
+  InitGlog();
+
   std::string base_shmem_name(config->buffer_pool_shmem_name);
   MakeFullShmemName(config->buffer_pool_shmem_name, base_shmem_name.c_str());
 
@@ -266,10 +287,8 @@ std::shared_ptr<api::Hermes> InitHermes(Config *config, bool is_daemon,
     MetadataManager *mdm = GetMetadataManagerFromContext(&context);
     rpc.state = (void *)(context.shm_base + mdm->rpc_state_offset);
   }
-  bool create_shared_files = (comm.proc_kind == ProcessKind::kHermes &&
-                              comm.first_on_node);
-  InitFilesForBuffering(&context, create_shared_files, comm.node_id,
-                        comm.first_on_node);
+
+  InitFilesForBuffering(&context, comm);
 
   WorldBarrier(&comm);
 
@@ -296,10 +315,9 @@ std::shared_ptr<api::Hermes> InitHermes(Config *config, bool is_daemon,
 
     std::string bo_address = GetRpcAddress(config, host_number,
                                            config->buffer_organizer_port);
-    // TODO(chogan): @config Probably want a configuration variable for this.
-    int bo_threads = 1;
-    StartBufferOrganizer(&result->context_, &result->rpc_, bo_address.c_str(),
-                         bo_threads, config->buffer_organizer_port);
+    StartBufferOrganizer(&result->context_, &result->rpc_,
+                         &result->trans_arena_, bo_address.c_str(),
+                         config->bo_num_threads, config->buffer_organizer_port);
 
     double sleep_ms = config->system_view_state_update_interval_ms;
     StartGlobalSystemViewStateUpdateThread(&result->context_, &result->rpc_,
@@ -312,6 +330,7 @@ std::shared_ptr<api::Hermes> InitHermes(Config *config, bool is_daemon,
   api::Context::default_buffer_organizer_retries =
     config->num_buffer_organizer_retries;
   api::Context::default_placement_policy = config->default_placement_policy;
+  api::Context::default_rr_split = config->default_rr_split;
 
   RoundRobinState::devices_.reserve(config->num_devices);
   for (DeviceID id = 0; id < config->num_devices; ++id) {
@@ -327,6 +346,8 @@ std::shared_ptr<api::Hermes> InitHermes(Config *config, bool is_daemon,
   InitNeighborhoodTargets(&result->context_, &result->rpc_);
 
   result->is_initialized = true;
+
+  WorldBarrier(&comm);
 
   return result;
 }

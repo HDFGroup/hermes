@@ -313,6 +313,29 @@ void TestSwapBlobsExistInBucket() {
   hermes->Finalize(true);
 }
 
+static void TestBlobInfoMap() {
+  HermesPtr hermes = hapi::InitHermes(NULL, true);
+
+  const int kIters = 4;
+  hapi::Bucket bkt("test_blob_info_map", hermes);
+
+  hapi::Blob data(64, 'x');
+
+  for (int i = 0; i < kIters; ++i) {
+    std::string name = "blob_" + std::to_string(i);
+    bkt.Put(name, data);
+  }
+
+  for (int i = 0; i < kIters; ++i) {
+    std::string name = "blob_" + std::to_string(i);
+    bkt.DeleteBlob(name);
+  }
+
+  bkt.Destroy();
+
+  hermes->Finalize(true);
+}
+
 int main(int argc, char **argv) {
   int mpi_threads_provided;
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
@@ -339,6 +362,7 @@ int main(int argc, char **argv) {
   hermes->Finalize(true);
 
   TestSwapBlobsExistInBucket();
+  TestBlobInfoMap();
 
   MPI_Finalize();
 

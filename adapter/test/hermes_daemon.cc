@@ -1,6 +1,6 @@
-#include <mpi.h>
-
 #include <cstdlib>
+
+#include <mpi.h>
 
 #include "hermes.h"
 
@@ -20,5 +20,8 @@ int main(int argc, char* argv[]) {
   }
   auto hermes = hermes::InitHermesDaemon(hermes_config);
   hermes->RunDaemon();
+
   MPI_Finalize();
+
+  return 0;
 }

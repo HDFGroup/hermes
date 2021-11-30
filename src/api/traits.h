@@ -16,47 +16,85 @@
 #include <unordered_map>
 
 #include "hermes_types.h"
+#include "hermes.h"
 
 namespace hermes {
 namespace api {
 
+/** A blob's hosting bucket and blob names */
 struct BlobInfo {
+  /** The blob-hosting bucket name */
   std::string bucket_name;
+  /** The blob's name (in the bucket) */
   std::string blob_name;
 };
 
 typedef BlobInfo TraitInput;
 struct Trait;
-typedef std::function<void(TraitInput &, Trait *)> TraitCallback;
+using HermesPtr = std::shared_ptr<Hermes>;
 
+/** Callback for blob->vbucket link events */
+typedef std::function<void(HermesPtr, TraitInput &, Trait *)> OnLinkCallback;
+/** Callback for trait->vbucket attach events */
+typedef std::function<void(HermesPtr, VBucketID, Trait *)> OnAttachCallback;
+
+/** Traits represent vbucket behavior */
 struct Trait {
+  /** The trait's ID */
   TraitID id;
+  /** \todo ??? */
   TraitIdArray conflict_traits;
+  /** The trait's type */
   TraitType type;
-  TraitCallback onAttachFn;
-  TraitCallback onDetachFn;
-  TraitCallback onLinkFn;
-  TraitCallback onUnlinkFn;
+  /** Callback for trait->vbucket attach events */
+  OnAttachCallback onAttachFn;
+  /** Callback for trait-<vbucket detach events */
+  OnAttachCallback onDetachFn;
+  /** Callback for blob->vbucket link events */
+  OnLinkCallback onLinkFn;
+  /** Callback for blob-<vbucket unlink events */
+  OnLinkCallback onUnlinkFn;
+
+  Trait() {}
   Trait(TraitID id, TraitIdArray conflict_traits, TraitType type);
 };
 
 #define HERMES_FILE_TRAIT 10
+#define HERMES_PERSIST_TRAIT 11
 
+/** File mapping trait */
 struct FileMappingTrait : public Trait {
- public:
-  TraitCallback flush_cb;
-  TraitCallback load_cb;
+  OnLinkCallback flush_cb;
+  OnLinkCallback load_cb;
   std::string filename;
   std::unordered_map<std::string, u64> offset_map;
   FILE *fh;
-  FileMappingTrait(std::string &filename,
+
+  FileMappingTrait() {}
+  FileMappingTrait(const std::string &filename,
                    std::unordered_map<std::string, u64> &offset_map, FILE *fh,
-                   TraitCallback flush_cb, TraitCallback load_cb);
-  void onAttach(TraitInput &blob, Trait *trait);
-  void onDetach(TraitInput &blob, Trait *trait);
-  void onLink(TraitInput &blob, Trait *trait);
-  void onUnlink(TraitInput &blob, Trait *trait);
+                   OnLinkCallback flush_cb, OnLinkCallback load_cb);
+  void onAttach(HermesPtr hermes, VBucketID id, Trait *trait);
+  void onDetach(HermesPtr hermes, VBucketID id, Trait *trait);
+  void onLink(HermesPtr hermes, TraitInput &blob, Trait *trait);
+  void onUnlink(HermesPtr hermes, TraitInput &blob, Trait *trait);
 };
+
+/** (File) Persistence trait */
+struct PersistTrait : public Trait {
+  FileMappingTrait file_mapping;
+  bool synchronous;
+
+  explicit PersistTrait(bool synchronous);
+  explicit PersistTrait(FileMappingTrait mapping,
+                        bool synchronous = false);
+
+  void onAttach(HermesPtr hermes, VBucketID id, Trait *trait);
+  void onDetach(HermesPtr hermes, VBucketID id, Trait *trait);
+  void onLink(HermesPtr hermes, TraitInput &blob, Trait *trait);
+  void onUnlink(HermesPtr hermes, TraitInput &blob, Trait *trait);
+};
+
 }  // namespace api
 }  // namespace hermes
 

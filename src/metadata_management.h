@@ -30,12 +30,15 @@ struct RpcContext;
 enum MapType {
   kMapType_Bucket,
   kMapType_VBucket,
-  kMapType_Blob,
+  kMapType_BlobId,
+  kMapType_BlobInfo,
 
   kMapType_Count
 };
 
 struct Stats {
+  u32 recency;
+  u32 frequency;
 };
 
 const int kIdListChunkSize = 10;
@@ -56,12 +59,31 @@ struct BufferIdArray {
   u32 length;
 };
 
+struct BlobInfo {
+  Stats stats;
+  TicketMutex lock;
+
+  BlobInfo() {
+    stats.recency = 0;
+    stats.frequency = 0;
+    lock.ticket.store(0);
+    lock.serving.store(0);
+  }
+
+  BlobInfo& operator=(const BlobInfo &other) {
+    stats = other.stats;
+    lock.ticket.store(other.lock.ticket.load());
+    lock.serving.store(other.lock.serving.load());
+
+    return *this;
+  }
+};
+
 struct BucketInfo {
   BucketID next_free;
   ChunkedIdList blobs;
   std::atomic<int> ref_count;
   bool active;
-  Stats stats;
 };
 
 static constexpr int kMaxTraitsPerVBucket = 8;
@@ -70,9 +92,9 @@ struct VBucketInfo {
   VBucketID next_free;
   ChunkedIdList blobs;
   std::atomic<int> ref_count;
+  std::atomic<int> async_flush_count;
   TraitID traits[kMaxTraitsPerVBucket];
   bool active;
-  Stats stats;
 };
 
 struct SystemViewState {
@@ -97,7 +119,8 @@ struct MetadataManager {
 
   ptrdiff_t bucket_map_offset;
   ptrdiff_t vbucket_map_offset;
-  ptrdiff_t blob_map_offset;
+  ptrdiff_t blob_id_map_offset;
+  ptrdiff_t blob_info_map_offset;
 
   ptrdiff_t swap_filename_prefix_offset;
   ptrdiff_t swap_filename_suffix_offset;
@@ -116,8 +139,10 @@ struct MetadataManager {
   TicketMutex bucket_map_mutex;
   /** Lock for accessing the `IdMap` located at `vbucket_map_offset` */
   TicketMutex vbucket_map_mutex;
-  /** Lock for accessing the `IdMap` located at `blob_map_offset` */
-  TicketMutex blob_map_mutex;
+  /** Lock for accessing the `IdMap` located at `blob_id_map_offset` */
+  TicketMutex blob_id_map_mutex;
+  /** Lock for accessing the `BlobInfoMap` located at `blob_info_map_offset` */
+  TicketMutex blob_info_map_mutex;
   /** Lock for accessing `IdList`s and `ChunkedIdList`s */
   TicketMutex id_mutex;
 
@@ -132,6 +157,7 @@ struct MetadataManager {
   u32 max_buckets;
   u32 num_vbuckets;
   u32 max_vbuckets;
+  std::atomic<u32> clock;
 };
 
 struct RpcContext;
@@ -196,7 +222,8 @@ BufferIdArray GetBufferIdsFromBlobId(Arena *arena,
  *
  */
 BlobID GetBlobId(SharedMemoryContext *context, RpcContext *rpc,
-                       const std::string &name, BucketID bucket_id);
+                 const std::string &name, BucketID bucket_id,
+                 bool track_stats = true);
 
 
 
@@ -375,6 +402,41 @@ std::vector<BlobID> GetBlobsFromVBucketInfo(SharedMemoryContext *context,
  */
 std::string GetBucketNameById(SharedMemoryContext *context, RpcContext *rpc,
                               BucketID id);
+/**
+ *
+ */
+void IncrementBlobStats(SharedMemoryContext *context, RpcContext *rpc,
+                        BlobID blob_id);
+
+/**
+ *
+ */
+void LocalIncrementBlobStats(MetadataManager *mdm, BlobID blob_id);
+
+/**
+ *
+ */
+bool LockBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id);
+
+/**
+ *
+ */
+bool UnlockBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id);
+
+/**
+ *
+ */
+bool LocalLockBlob(SharedMemoryContext *context, BlobID blob_id);
+
+/**
+ *
+ */
+bool LocalUnlockBlob(SharedMemoryContext *context, BlobID blob_id);
+
+/**
+ *
+ */
+SystemViewState *GetLocalSystemViewState(SharedMemoryContext *context);
 }  // namespace hermes
 
 #endif  // HERMES_METADATA_MANAGEMENT_H_

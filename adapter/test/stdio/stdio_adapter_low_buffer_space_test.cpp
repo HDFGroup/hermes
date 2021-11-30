@@ -54,25 +54,10 @@ struct Info {
 }  // namespace hermes::adapter::stdio::test
 hermes::adapter::stdio::test::Arguments args;
 hermes::adapter::stdio::test::Info info;
-std::string gen_random(const int len) {
-  std::string tmp_s;
-  static const char alphanum[] =
-      "0123456789"
-      "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-      "abcdefghijklmnopqrstuvwxyz";
 
-  srand(100);
-
-  tmp_s.reserve(len);
-
-  for (int i = 0; i < len; ++i)
-    tmp_s += alphanum[rand() % (sizeof(alphanum) - 1)];
-
-  return tmp_s;
-}
 int init(int* argc, char*** argv) {
   MPI_Init(argc, argv);
-  info.write_data = gen_random(args.request_size);
+  info.write_data = GenRandom(args.request_size);
   info.read_data = std::string(args.request_size, 'r');
   return 0;
 }
@@ -274,7 +259,7 @@ TEST_CASE("BatchedWriteSequential",
     test::test_fopen(info.new_file.c_str(), "w+");
     REQUIRE(test::fh_orig != nullptr);
     auto write_size = args.request_size * (info.num_iterations + 1);
-    info.write_data = gen_random(write_size);
+    info.write_data = GenRandom(write_size);
     test::test_fwrite(info.write_data.c_str(), write_size);
     REQUIRE(test::size_written_orig == write_size);
     test::test_fclose();

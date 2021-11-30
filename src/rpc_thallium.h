@@ -23,12 +23,16 @@
 #include <thallium/serialization/stl/pair.hpp>
 #include <thallium/serialization/stl/string.hpp>
 
+#include "buffer_organizer.h"
+
 namespace tl = thallium;
 
 namespace hermes {
 
 const int kMaxServerNamePrefix = 32;
 const int kMaxServerNamePostfix = 8;
+const char kBoPrefix[] = "BO::";
+const int kBoPrefixLength = sizeof(kBoPrefix) - 1;
 
 struct ThalliumState {
   char server_name_prefix[kMaxServerNamePrefix];
@@ -148,6 +152,44 @@ void load(A &ar, MapType &map_type) {
 }
 #endif  // #ifndef THALLIUM_USE_CEREAL
 
+template<typename A>
+void save(A &ar, BoPriority &priority) {
+  int val = (int)priority;
+  ar.write(&val, 1);
+}
+
+template<typename A>
+void load(A &ar, BoPriority &priority) {
+  int val = 0;
+  ar.read(&val, 1);
+  priority = (BoPriority)val;
+}
+
+template<typename A>
+void save(A &ar, BoOperation &op) {
+  int val = (int)op;
+  ar.write(&val, 1);
+}
+
+template<typename A>
+void load(A &ar, BoOperation &op) {
+  int val = 0;
+  ar.read(&val, 1);
+  op = (BoOperation)val;
+}
+
+template<typename A>
+void serialize(A &ar, BoArgs &bo_args) {
+  ar & bo_args.move_args.src;
+  ar & bo_args.move_args.dest;
+}
+
+template<typename A>
+void serialize(A &ar, BoTask &bo_task) {
+  ar & bo_task.op;
+  ar & bo_task.args;
+}
+
 namespace api {
 template<typename A>
 void save(A &ar, api::Context &ctx) {
@@ -181,13 +223,37 @@ ClientThalliumState *GetClientThalliumState(RpcContext *rpc) {
   return result;
 }
 
+static bool IsBoFunction(const char * func_name) {
+  bool result = false;
+  int i = 0;
+
+  while (func_name && *func_name != '\0' && i < kBoPrefixLength) {
+    if (func_name[i] != kBoPrefix[i]) {
+      break;
+    }
+    ++i;
+  }
+
+  if (i == kBoPrefixLength) {
+    result = true;
+  }
+
+  return result;
+}
+
 template<typename ReturnType, typename... Ts>
 ReturnType RpcCall(RpcContext *rpc, u32 node_id, const char *func_name,
                    Ts... args) {
   VLOG(1) << "Calling " << func_name << " on node " << node_id
           << " from node " << rpc->node_id << std::endl;
   ClientThalliumState *state = GetClientThalliumState(rpc);
-  std::string server_name = GetServerName(rpc, node_id);
+  bool is_bo_func = IsBoFunction(func_name);
+  std::string server_name = GetServerName(rpc, node_id, is_bo_func);
+
+  if (is_bo_func) {
+    func_name += kBoPrefixLength;
+  }
+
   tl::remote_procedure remote_proc = state->engine->define(func_name);
   // TODO(chogan): @optimization We can save a little work by storing the
   // endpoint instead of looking it up on every call

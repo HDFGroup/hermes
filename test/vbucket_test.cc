@@ -53,7 +53,7 @@ int main(int argc, char **argv) {
           "Blob_" + std::to_string(app_rank) + "_" + std::to_string(i);
       rank_bucket.Put(blob_name, put_data, ctx);
     }
-    hapi::VBucket shared("shared_vbucket", hermes, false, ctx);
+    hapi::VBucket shared("shared_vbucket", hermes, ctx);
     for (int i = 0; i < num_blobs_per_rank; ++i) {
       std::string blob_name =
           "Blob_" + std::to_string(app_rank) + "_" + std::to_string(i);

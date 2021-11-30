@@ -23,29 +23,38 @@ namespace hermes {
 
 using api::Status;
 
+/** Represents the state of a Round-Robin data placement strategy */
 class RoundRobinState {
-  static inline int current_device_index_ {};
+  static inline int current_device_index_ {};  /**< The current device index */
 
-  std::mutex device_index_mutex_;
+  std::mutex device_index_mutex_;              /**< Protect index updates */
 
  public:
-  static std::vector<DeviceID> devices_;
+  static std::vector<DeviceID> devices_;       /**< A list of device targets */
 
   RoundRobinState();
   ~RoundRobinState();
 
+  /** Retrieves the number of devices */
   size_t GetNumDevices() const;
+
+  /** Retrieves the current device index */
   int GetCurrentDeviceIndex() const;
+
+  /** Retrieves the device ID at a given index */
   DeviceID GetDeviceByIndex(int i) const;
+
+  /** Re-/Sets the current device index */
   void SetCurrentDeviceIndex(int new_device_index);
 };
 
-Status RoundRobinPlacement(std::vector<size_t> &blob_sizes,
-                        std::vector<u64> &node_state,
+Status RoundRobinPlacement(const std::vector<size_t> &blob_sizes,
+                           std::vector<u64> &node_state,
                            std::vector<PlacementSchema> &output,
-                           const std::vector<TargetID> &targets);
+                           const std::vector<TargetID> &targets,
+                           bool split);
 
-Status RandomPlacement(std::vector<size_t> &blob_sizes,
+Status RandomPlacement(const std::vector<size_t> &blob_sizes,
                        std::multimap<u64, TargetID> &ordered_cap,
                        std::vector<PlacementSchema> &output);
 
@@ -56,7 +65,7 @@ Status MinimizeIoTimePlacement(const std::vector<size_t> &blob_sizes,
                                std::vector<PlacementSchema> &output);
 
 Status CalculatePlacement(SharedMemoryContext *context, RpcContext *rpc,
-                          std::vector<size_t> &blob_size,
+                          const std::vector<size_t> &blob_size,
                           std::vector<PlacementSchema> &output,
                           const api::Context &api_context);
 

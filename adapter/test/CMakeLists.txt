@@ -18,7 +18,9 @@ add_dependencies(hermes_daemon hermes)
 function(gcc exec args)
     add_test(NAME Test${exec} COMMAND "${CMAKE_BINARY_DIR}/bin/${exec}" ${args})
     set_property(TEST Test${exec}
-            PROPERTY ENVIRONMENT LSAN_OPTIONS=suppressions=${CMAKE_SOURCE_DIR}/test/data/asan.supp)
+      PROPERTY ENVIRONMENT LSAN_OPTIONS=suppressions=${CMAKE_SOURCE_DIR}/test/data/asan.supp)
+    set_property(TEST Test${exec} APPEND
+      PROPERTY ENVIRONMENT HERMES_CONF=${CMAKE_SOURCE_DIR}/adapter/test/data/hermes.conf)
 endfunction()
 
 function(mpi exec mpi_proc args)
