@@ -13,9 +13,6 @@
 #ifndef HERMES_INTERCEPTOR_H
 #define HERMES_INTERCEPTOR_H
 
-/**
- * Standard headers
- */
 #include <dlfcn.h>
 #include <stdlib.h>
 #include <utils.h>
@@ -24,16 +21,9 @@
 #include <string>
 #include <unordered_set>
 #include <vector>
+#include <regex>
 
-/**
- * Library headers
- */
-
-/**
- * Internal headers
- */
 #include <buffer_pool_internal.h>
-#include <hermes/adapter/constants.h>
 #include <hermes/adapter/enumerations.h>
 #include <hermes/adapter/singleton.h>
 
@@ -41,7 +31,7 @@
  * Define Interceptor list for adapter.
  */
 #define INTERCEPTOR_LIST \
-  hermes::adapter::Singleton<hermes::adapter::InterceptorList>::GetInstance()
+  hermes::adapter::Singleton<hermes::adapter::InterceptorList>::GetInstance<>()
 
 namespace hermes::adapter {
 /**
@@ -51,7 +41,8 @@ namespace hermes::adapter {
  */
 const char* kPathExclusions[] = {"/bin/", "/boot/", "/dev/",  "/etc/",
                                  "/lib/", "/opt/",  "/proc/", "/sbin/",
-                                 "/sys/", "/usr/",  "/var/",  "/run/"};
+                                 "/sys/", "/usr/",  "/var/",  "/run/",
+                                 "pipe", "socket:", "anon_inode:"};
 /**
  * Paths prefixed with the following directories are tracked by Hermes even if
  * they share a root with a path listed in path_exclusions
@@ -80,6 +71,16 @@ inline std::string GetFilenameFromFP(FILE* fh) {
   filename[r] = '\0';
   return filename;
 }
+inline std::string GetFilenameFromFD(int fd) {
+  const int kMaxSize = 0xFFF;
+  char proclnk[kMaxSize];
+  char filename[kMaxSize];
+  snprintf(proclnk, kMaxSize, "/proc/self/fd/%d", fd);
+  size_t r = readlink(proclnk, filename, kMaxSize);
+  filename[r] = '\0';
+  return filename;
+}
+
 /**
  * Interceptor list defines files and directory that should be either excluded
  * or included for interceptions.
@@ -107,7 +108,7 @@ struct InterceptorList {
    * Default constructor
    */
   InterceptorList()
-      : adapter_mode(AdapterMode::DEFAULT),
+      : adapter_mode(AdapterMode::kDefault),
         adapter_paths(),
         hermes_paths_exclusion(),
         hermes_flush_exclusion() {}
@@ -115,16 +116,16 @@ struct InterceptorList {
     char* adapter_mode_str = getenv(kAdapterMode);
     if (adapter_mode_str == nullptr) {
       // default is Persistent mode
-      adapter_mode = AdapterMode::DEFAULT;
+      adapter_mode = AdapterMode::kDefault;
     } else {
       if (strcmp(kAdapterDefaultMode, adapter_mode_str) == 0) {
-        adapter_mode = AdapterMode::DEFAULT;
+        adapter_mode = AdapterMode::kDefault;
       } else if (strcmp(kAdapterBypassMode, adapter_mode_str) == 0) {
-        adapter_mode = AdapterMode::BYPASS;
+        adapter_mode = AdapterMode::kBypass;
       } else if (strcmp(kAdapterScratchMode, adapter_mode_str) == 0) {
-        adapter_mode = AdapterMode::SCRATCH;
+        adapter_mode = AdapterMode::kScratch;
       } else {
-        // TODO(hari): @error_handling throw error.
+        // TODO(hari): @errorhandling throw error.
         return;
       }
     }
@@ -137,9 +138,10 @@ struct InterceptorList {
   }
 
   bool Persists(FILE* fh) { return Persists(GetFilenameFromFP(fh)); }
+  bool Persists(int fd) { return Persists(GetFilenameFromFD(fd)); }
 
   bool Persists(std::string path) {
-    if (adapter_mode == AdapterMode::DEFAULT) {
+    if (adapter_mode == AdapterMode::kDefault) {
       if (adapter_paths.empty()) {
         return true;
       } else {
@@ -150,7 +152,7 @@ struct InterceptorList {
         }
         return false;
       }
-    } else if (adapter_mode == AdapterMode::SCRATCH) {
+    } else if (adapter_mode == AdapterMode::kScratch) {
       if (adapter_paths.empty()) {
         return false;
       } else {
@@ -197,9 +199,8 @@ void OnExit(void);
   if (!(real_##func_##_)) {                                           \
     real_##func_##_ = (real_t_##func_##_)dlsym(RTLD_NEXT, #func_);    \
     if (!(real_##func_##_)) {                                         \
-      LOG(ERROR) << "HERMES Adapter failed to map symbol: " << #func_ \
+      LOG(FATAL) << "HERMES Adapter failed to map symbol: " << #func_ \
                  << std::endl;                                        \
-      exit(1);                                                        \
     }                                                                 \
   }
 
@@ -209,6 +210,16 @@ namespace hermes::adapter {
  * buffering mount points in the InclusionsList.hermes_paths_exclusion.
  */
 void PopulateBufferingPath();
+
+/**
+ * Check if path is symbolic link.
+ */
+bool IsSymLink(const std::string& path);
+
+/**
+ * Check if path is relative path.
+ */
+bool IsRelativePath(const std::string& path);
 
 /**
  * Check if path should be tracked. In this method, the path is compared against

@@ -23,20 +23,24 @@
 #include "test_utils.h"
 
 namespace hapi = hermes::api;
-std::shared_ptr<hermes::api::Hermes> hermes_app;
+using HermesPtr = std::shared_ptr<hapi::Hermes>;
 
-int compress_blob(hermes::api::TraitInput &input, hermes::api::Trait *trait);
+HermesPtr hermes_app;
+
+int compress_blob(HermesPtr hermes, hapi::TraitInput &input,
+                  hapi::Trait *trait);
 struct MyTrait : public hapi::Trait {
   int compress_level;
-  MyTrait() : Trait(10001, hermes::TraitIdArray(), hermes::TraitType::META) {
-    onAttachFn =
-        std::bind(&compress_blob, std::placeholders::_1, std::placeholders::_2);
+  MyTrait() : Trait(10001, hermes::TraitIdArray(), hapi::TraitType::META) {
+    onLinkFn =
+      std::bind(&compress_blob, std::placeholders::_1, std::placeholders::_2,
+                std::placeholders::_3);
   }
 
   // optional function pointer if only known at runtime
 };
 
-void add_buffer_to_vector(hermes::api::Blob &vector, const char *buffer,
+void add_buffer_to_vector(hapi::Blob &vector, const char *buffer,
                           uLongf length) {
   for (uLongf character_index = 0; character_index < length;
        character_index++) {
@@ -47,7 +51,9 @@ void add_buffer_to_vector(hermes::api::Blob &vector, const char *buffer,
 
 // The Trait implementer must define callbacks that match the VBucket::TraitFunc
 // type.
-int compress_blob(hermes::api::TraitInput &input, hermes::api::Trait *trait) {
+int compress_blob(HermesPtr hermes, hapi::TraitInput &input,
+                  hapi::Trait *trait) {
+  (void)hermes;
   MyTrait *my_trait = (MyTrait *)trait;
 
   hapi::Bucket bkt(input.bucket_name, hermes_app);
@@ -70,7 +76,7 @@ int compress_blob(hermes::api::TraitInput &input, hermes::api::Trait *trait) {
   int return_value = compress2((Bytef *) destination_data,
                                &destination_length, (Bytef *) blob.data(),
                                source_length, my_trait->compress_level);
-  hermes::api::Blob destination {0};
+  hapi::Blob destination {0};
   // TODO(KIMMY): where to store compressed data
   add_buffer_to_vector(destination, destination_data, destination_length);
   delete [] destination_data;
@@ -79,7 +85,7 @@ int compress_blob(hermes::api::TraitInput &input, hermes::api::Trait *trait) {
 }
 
 
-void TestBucketPersist(std::shared_ptr<hapi::Hermes> hermes) {
+void TestBucketPersist(HermesPtr hermes) {
   constexpr int bytes_per_blob = KILOBYTES(3);
   constexpr int num_blobs = 3;
   constexpr int total_bytes = num_blobs * bytes_per_blob;
@@ -136,7 +142,7 @@ void TestBucketPersist(std::shared_ptr<hapi::Hermes> hermes) {
   Assert(std::remove(saved_file.c_str()) == 0);
 }
 
-void TestPutOverwrite(std::shared_ptr<hapi::Hermes> hermes) {
+void TestPutOverwrite(HermesPtr hermes) {
   hapi::Bucket bucket("overwrite", hermes);
 
   std::string blob_name("1");
@@ -158,13 +164,13 @@ void TestPutOverwrite(std::shared_ptr<hapi::Hermes> hermes) {
   bucket.Destroy();
 }
 
-void TestCompressionTrait(std::shared_ptr<hapi::Hermes> hermes) {
-  hermes::api::Status status;
+void TestCompressionTrait(HermesPtr hermes) {
+  hapi::Status status;
 
   const std::string bucket_name = "compression";
-  hermes::api::Bucket my_bucket(bucket_name, hermes);
-  hermes::api::Blob p1(1024*1024*1, 255);
-  hermes::api::Blob p2(p1);
+  hapi::Bucket my_bucket(bucket_name, hermes);
+  hapi::Blob p1(1024*1024*1, 255);
+  hapi::Blob p2(p1);
 
   const std::string blob1_name = "Blob1";
   const std::string blob2_name = "Blob2";
@@ -175,7 +181,7 @@ void TestCompressionTrait(std::shared_ptr<hapi::Hermes> hermes) {
   Assert(my_bucket.ContainsBlob(blob2_name));
 
   const std::string vbucket_name = "VB1";
-  hermes::api::VBucket my_vb(vbucket_name, hermes, false);
+  hapi::VBucket my_vb(vbucket_name, hermes);
   my_vb.Link(blob1_name, bucket_name);
   my_vb.Link(blob2_name, bucket_name);
 
@@ -194,7 +200,7 @@ void TestCompressionTrait(std::shared_ptr<hapi::Hermes> hermes) {
   Assert(my_bucket.Destroy().Succeeded());
 }
 
-void TestMultiGet(std::shared_ptr<hapi::Hermes> hermes) {
+void TestMultiGet(HermesPtr hermes) {
   const size_t num_blobs = 4;
   const int blob_size = KILOBYTES(4);
 
@@ -255,7 +261,7 @@ int main(int argc, char **argv) {
     config_file = argv[1];
   }
 
-  hermes_app = hermes::api::InitHermes(config_file);
+  hermes_app = hapi::InitHermes(config_file);
 
   if (hermes_app->IsApplicationCore()) {
     TestCompressionTrait(hermes_app);

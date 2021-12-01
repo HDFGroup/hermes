@@ -37,7 +37,7 @@ TEST_CASE("SharedFile", "[process=" + std::to_string(info.comm_size) +
         status = fcntl(fd, F_SETLKW, &lock);
         REQUIRE(status != -1);
         size_t write_bytes =
-            write(fd, info.write_data.c_str(), args.request_size);
+            write(fd, info.write_data.data(), args.request_size);
         REQUIRE(write_bytes == args.request_size);
         lock.l_type = F_UNLCK;
         status = fcntl(fd, F_SETLK, &lock);

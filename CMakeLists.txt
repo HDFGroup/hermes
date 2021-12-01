@@ -142,6 +142,7 @@ endif()
 option(BUILD_SHARED_LIBS "Build with shared libraries." ON)
 option(HERMES_INTERCEPT_IO "Use GOTCHA as IO interception tool" ON)
 option(HERMES_COMMUNICATION_MPI "Use MPI as the communication layer." ON)
+option(HERMES_ENABLE_DOXYGEN "Enable hermes documentation." OFF)
 option(HERMES_BUILD_BUFFER_POOL_VISUALIZER "Build the BufferPool visualizer" OFF)
 option(HERMES_USE_ADDRESS_SANITIZER "Enable -fsanitize=address in Debug builds" ON)
 option(HERMES_USE_THREAD_SANITIZER "Enable -fsanitize=thread in Debug builds" OFF)
@@ -153,6 +154,7 @@ option(HERMES_BUILD_BENCHMARKS "Build the Hermes benchmark suite." OFF)
 option(HERMES_ENABLE_TIMING "Turn on timing of selected functions." OFF)
 option(HERMES_ENABLE_COVERAGE "Enable code coverage." OFF)
 option(HERMES_ENABLE_ADAPTERS "Enable hermes adapters." ON)
+option(HERMES_ENABLE_WRAPPER "Enable hermes C API wrapper." ON)
 option(HERMES_INSTALL_TESTS "Enable installation of tests." OFF)
 # Calculate code coverage with debug mode
 if(HERMES_ENABLE_COVERAGE)
@@ -334,6 +336,9 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src)
 if(HERMES_ENABLE_ADAPTERS)
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/adapter)
 endif()
+if(HERMES_ENABLE_WRAPPER)
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/wrapper)
+endif()
 #add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/mpi_io_adapter)
 #add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/hermes_vol)
 
@@ -341,6 +346,24 @@ if(HERMES_BUILD_BUFFER_POOL_VISUALIZER AND SDL2_FOUND)
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/buffer_pool_visualizer)
 endif()
 
+#-----------------------------------------------------------------------------
+# Documentation
+#-----------------------------------------------------------------------------
+
+if(HERMES_ENABLE_DOXYGEN)
+  include(UseDoxygenDoc)
+
+  add_doxygen_doc(
+    BUILD_DIR
+      ${CMAKE_CURRENT_BINARY_DIR}/_build
+    DOXY_FILE
+      ${CMAKE_CURRENT_SOURCE_DIR}/doc/Doxyfile.in
+    TARGET_NAME
+      dox
+    COMMENT
+      "HTML documentation"
+    )
+endif()
 
 #-----------------------------------------------------------------------------
 # Testing

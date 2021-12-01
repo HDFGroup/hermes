@@ -21,8 +21,8 @@ set(HERMES_VERSION_PATCH   @HERMES_VERSION_PATCH@)
 # project which has already built HERMES as a subproject
 #-----------------------------------------------------------------------------
 if(NOT TARGET "hermes" AND NOT HERMES_INSTALL_SKIP_TARGETS)
-  if(NOT TARGET "glog::glog")
-    include(@GLOG_DIR@/glog-config.cmake)
+  if(NOT TARGET "thallium")
+    include(@thallium_DIR@/thallium-config.cmake)
   endif()
   include(${SELF_DIR}/hermes-targets.cmake)
 endif()

@@ -13,17 +13,8 @@
 #ifndef HERMES_STDIO_COMMON_CONSTANTS_H
 #define HERMES_STDIO_COMMON_CONSTANTS_H
 
-/**
- * Standard header
- */
+#include <cstdlib>
 
-/**
- * Dependent library header
- */
-
-/**
- * Internal header
- */
 #include <hermes/adapter/stdio/common/enumerations.h>
 
 /**
@@ -35,10 +26,7 @@ using hermes::adapter::stdio::MapperType;
  * Which mapper to be used by STDIO adapter.
  */
 const MapperType kMapperType = MapperType::BALANCED;
-/**
- * Define kPageSize for balanced mapping.
- */
-const size_t kPageSize = 1024 * 1024;
+
 /**
  * String delimiter
  */

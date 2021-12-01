@@ -140,7 +140,7 @@ int main(int argc, char **argv) {
     case api::PlacementPolicy::kRoundRobin: {
       time_point start_tm = now();
       result = RoundRobinPlacement(blob_sizes, tgt_state.bytes_available,
-                                   output_tmp, targets);
+                                   output_tmp, targets, false);
       std::cout << "DPE benchmark uses RoundRobin placement.\n\n";
       time_point end_tm = now();
       dpe_seconds = std::chrono::duration<double>(end_tm - start_tm).count();

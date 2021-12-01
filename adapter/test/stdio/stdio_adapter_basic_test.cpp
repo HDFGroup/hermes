@@ -183,7 +183,7 @@ TEST_CASE("BatchedWriteSequential",
               "]"
               "[pattern=sequential][file=1]") {
   pretest();
-  SECTION("write to existing file") {
+  SECTION("write to new file always at beginning") {
     test::test_fopen(info.new_file.c_str(), "w+");
     REQUIRE(test::fh_orig != nullptr);
 
@@ -200,7 +200,7 @@ TEST_CASE("BatchedWriteSequential",
     REQUIRE(fs::file_size(info.new_file) == args.request_size);
   }
 
-  SECTION("write to new file always at end") {
+  SECTION("write to new file sequentially") {
     test::test_fopen(info.new_file.c_str(), "w+");
     REQUIRE(test::fh_orig != nullptr);
 

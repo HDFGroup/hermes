@@ -13,17 +13,6 @@
 #ifndef HERMES_MPIIO_ADAPTER_ADAPTER_FACTORY_H
 #define HERMES_MPIIO_ADAPTER_ADAPTER_FACTORY_H
 
-/**
- * Standard header
- */
-
-/**
- * Dependent library header
- */
-
-/**
- * Internal header
- */
 #include <hermes/adapter/singleton.h>
 #include <hermes/adapter/mpiio/common/enumerations.h>
 
@@ -45,7 +34,7 @@ class MapperFactory {
         return hermes::adapter::Singleton<BalancedMapper>::GetInstance();
       }
       default: {
-        // TODO(hari): @error_handling Mapper not implemented
+        // TODO(hari): @errorhandling Mapper not implemented
       }
     }
     return NULL;

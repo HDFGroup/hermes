@@ -26,6 +26,11 @@ struct IdMap {
   u64 value;
 };
 
+struct BlobInfoMap {
+  BlobID key;
+  BlobInfo value;
+};
+
 static IdMap *GetMapByOffset(MetadataManager *mdm, u32 offset) {
   IdMap *result =(IdMap *)((u8 *)mdm + offset);
 
@@ -44,8 +49,8 @@ static IdMap *GetVBucketMap(MetadataManager *mdm) {
   return result;
 }
 
-static IdMap *GetBlobMap(MetadataManager *mdm) {
-  IdMap *result = GetMapByOffset(mdm, mdm->blob_map_offset);
+static IdMap *GetBlobIdMap(MetadataManager *mdm) {
+  IdMap *result = GetMapByOffset(mdm, mdm->blob_id_map_offset);
 
   return result;
 }
@@ -87,8 +92,12 @@ TicketMutex *GetMapMutex(MetadataManager *mdm, MapType map_type) {
       mutex = &mdm->vbucket_map_mutex;
       break;
     }
-    case kMapType_Blob: {
-      mutex = &mdm->blob_map_mutex;
+    case kMapType_BlobId: {
+      mutex = &mdm->blob_id_map_mutex;
+      break;
+    }
+    case kMapType_BlobInfo: {
+      mutex = &mdm->blob_info_map_mutex;
       break;
     }
     default: {
@@ -120,13 +129,27 @@ IdMap *GetMap(MetadataManager *mdm, MapType map_type) {
       result = GetVBucketMap(mdm);
       break;
     }
-    case kMapType_Blob: {
-      result = GetBlobMap(mdm);
+    case kMapType_BlobId: {
+      result = GetBlobIdMap(mdm);
       break;
     }
     default:
       HERMES_INVALID_CODE_PATH;
   }
+
+  return result;
+}
+
+BlobInfoMap *GetBlobInfoMapNoLock(MetadataManager *mdm) {
+  BlobInfoMap *result = (BlobInfoMap *)((u8 *)mdm + mdm->blob_info_map_offset);
+
+  return result;
+}
+
+BlobInfoMap *GetBlobInfoMap(MetadataManager *mdm) {
+  TicketMutex *mutex = GetMapMutex(mdm, kMapType_BlobInfo);
+  BeginTicketMutex(mutex);
+  BlobInfoMap *result = GetBlobInfoMapNoLock(mdm);
 
   return result;
 }
@@ -145,8 +168,12 @@ void ReleaseMap(MetadataManager *mdm, MapType map_type) {
       mutex = &mdm->vbucket_map_mutex;
       break;
     }
-    case kMapType_Blob: {
-      mutex = &mdm->blob_map_mutex;
+    case kMapType_BlobId: {
+      mutex = &mdm->blob_id_map_mutex;
+      break;
+    }
+    case kMapType_BlobInfo: {
+      mutex = &mdm->blob_info_map_mutex;
       break;
     }
     default: {
@@ -155,6 +182,41 @@ void ReleaseMap(MetadataManager *mdm, MapType map_type) {
   }
 
   EndTicketMutex(mutex);
+}
+
+/**
+ * Takes a lock on mdm->blob_info_map_mutex. Requires a corresponding
+ * ReleaseBlobInfoPtr call.
+ */
+BlobInfo *GetBlobInfoPtr(MetadataManager *mdm, BlobID blob_id) {
+  Heap *map_heap = GetMapHeap(mdm);
+  BlobInfoMap *map = GetBlobInfoMap(mdm);
+  BlobInfoMap *element = hmgetp_null(map, blob_id, map_heap);
+
+  BlobInfo *result = 0;
+  if (element) {
+    result = &element->value;
+  }
+
+  return result;
+}
+
+void ReleaseBlobInfoPtr(MetadataManager *mdm) {
+  EndTicketMutex(&mdm->blob_info_map_mutex);
+}
+
+Stats LocalGetBlobStats(SharedMemoryContext *context, BlobID blob_id) {
+  Stats result = {};
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  Heap *map_heap = GetMapHeap(mdm);
+  BlobInfoMap *map = GetBlobInfoMap(mdm);
+  BlobInfoMap *info = hmgetp_null(map, blob_id, map_heap);
+  if (info) {
+    result = info->value.stats;
+  }
+  ReleaseMap(mdm, kMapType_BlobInfo);
+
+  return result;
 }
 
 /**
@@ -272,16 +334,81 @@ void AllocateOrGrowIdList(MetadataManager *mdm, ChunkedIdList *id_list) {
 
 /**
  * Assumes the caller has protected @p id_list with a lock.
+ *
+ * @return The index of the appended @p id.
  */
-void AppendToChunkedIdList(MetadataManager *mdm, ChunkedIdList *id_list,
-                           u64 id) {
+u32 AppendToChunkedIdList(MetadataManager *mdm, ChunkedIdList *id_list,
+                          u64 id) {
   if (id_list->length >= id_list->capacity) {
     AllocateOrGrowIdList(mdm, id_list);
   }
 
   u64 *head = GetIdsPtr(mdm, *id_list);
+  u32 result = id_list->length;
   head[id_list->length++] = id;
   ReleaseIdsPtr(mdm);
+
+  return result;
+}
+
+u64 GetChunkedIdListElement(MetadataManager *mdm, ChunkedIdList *id_list,
+                            u32 index) {
+  u64 result = 0;
+  if (id_list->length && index < id_list->length) {
+    u64 *head = GetIdsPtr(mdm, *id_list);
+    result = head[index];
+    ReleaseIdsPtr(mdm);
+  }
+
+  return result;
+}
+
+void SetChunkedIdListElement(MetadataManager *mdm, ChunkedIdList *id_list,
+                             u32 index, u64 value) {
+  if (id_list->length && index >= id_list->length) {
+    LOG(WARNING) << "Attempting to set index " << index
+                 << " on a ChunkedIdList of length " << id_list->length
+                 << std::endl;
+  } else {
+    u64 *head = GetIdsPtr(mdm, *id_list);
+    head[index] = value;
+    ReleaseIdsPtr(mdm);
+  }
+}
+
+void LocalIncrementBlobStats(MetadataManager *mdm, BlobID blob_id) {
+  BlobInfo *info = GetBlobInfoPtr(mdm, blob_id);
+  if (info) {
+    info->stats.frequency++;
+    info->stats.recency = mdm->clock++;
+  }
+  ReleaseBlobInfoPtr(mdm);
+}
+
+void IncrementBlobStats(SharedMemoryContext *context, RpcContext *rpc,
+                        BlobID blob_id) {
+  u32 target_node = GetBlobNodeId(blob_id);
+  if (target_node == rpc->node_id) {
+    MetadataManager *mdm = GetMetadataManagerFromContext(context);
+    LocalIncrementBlobStats(mdm, blob_id);
+  } else {
+    RpcCall<bool>(rpc, target_node, "RemoteIncrementBlobStats", blob_id);
+  }
+}
+
+i64 GetIndexOfId(MetadataManager *mdm, ChunkedIdList *id_list, u64 id) {
+  i64 result = -1;
+
+  u64 *head = GetIdsPtr(mdm, *id_list);
+  for (i64 i = 0; i < id_list->length; ++i) {
+    if (head[i] == id) {
+      result = i;
+      break;
+    }
+  }
+  ReleaseIdsPtr(mdm);
+
+  return result;
 }
 
 void LocalAddBlobIdToBucket(MetadataManager *mdm, BucketID bucket_id,
@@ -289,6 +416,7 @@ void LocalAddBlobIdToBucket(MetadataManager *mdm, BucketID bucket_id,
   BeginTicketMutex(&mdm->bucket_mutex);
   BucketInfo *info = LocalGetBucketInfoById(mdm, bucket_id);
   AppendToChunkedIdList(mdm, &info->blobs, blob_id.as_int);
+  LocalIncrementBlobStats(mdm, blob_id);
   EndTicketMutex(&mdm->bucket_mutex);
 
   CheckHeapOverlap(mdm);
@@ -338,6 +466,7 @@ u32 AllocateEmbeddedIdList(MetadataManager *mdm, u32 length) {
 std::vector<BlobID> LocalGetBlobIds(SharedMemoryContext *context,
                                     BucketID bucket_id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  BeginTicketMutex(&mdm->bucket_mutex);
   BucketInfo *info = LocalGetBucketInfoById(mdm, bucket_id);
   u32 num_blobs = info->blobs.length;
   std::vector<BlobID> result(num_blobs);
@@ -347,6 +476,7 @@ std::vector<BlobID> LocalGetBlobIds(SharedMemoryContext *context,
     result[i] = blob_ids[i];
   }
   ReleaseIdsPtr(mdm);
+  EndTicketMutex(&mdm->bucket_mutex);
 
   return result;
 }
@@ -408,6 +538,7 @@ void LocalRemoveBlobFromBucketInfo(SharedMemoryContext *context,
     }
   }
   ReleaseIdsPtr(mdm);
+
   EndTicketMutex(&mdm->bucket_mutex);
 }
 
@@ -487,7 +618,6 @@ bool LocalDestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
     // Reset BucketInfo to initial values
     info->ref_count.store(0);
     info->active = false;
-    info->stats = {};
 
     mdm->num_buckets--;
     info->next_free = mdm->first_free_bucket;
@@ -526,8 +656,8 @@ bool LocalDestroyVBucket(SharedMemoryContext *context, const char *vbucket_name,
 
     // Reset VBucketInfo to initial values
     info->ref_count.store(0);
+    info->async_flush_count.store(0);
     info->active = false;
-    info->stats = {};
 
     mdm->num_vbuckets--;
     info->next_free = mdm->first_free_vbucket;
@@ -537,7 +667,7 @@ bool LocalDestroyVBucket(SharedMemoryContext *context, const char *vbucket_name,
     LocalDelete(mdm, vbucket_name, kMapType_VBucket);
     destroyed = true;
   } else {
-    LOG(INFO) << "Cannot destroy bucket " << vbucket_name
+    LOG(INFO) << "Cannot destroy vbucket " << vbucket_name
               << ". It's refcount is " << ref_count << std::endl;
   }
   EndTicketMutex(&mdm->vbucket_mutex);
@@ -581,6 +711,15 @@ LocalGetNeighborhoodTargets(SharedMemoryContext *context) {
   return result;
 }
 
+void PutToStorage(MetadataManager *mdm, BlobID key, const BlobInfo &val) {
+  Heap *heap = GetMapHeap(mdm);
+  BlobInfoMap *map = GetBlobInfoMap(mdm);
+  hmput(map, key, val, heap);
+  ReleaseMap(mdm, kMapType_BlobInfo);
+
+  CheckHeapOverlap(mdm);
+}
+
 void PutToStorage(MetadataManager *mdm, const char *key, u64 val,
                   MapType map_type) {
   Heap *heap = GetMapHeap(mdm);
@@ -620,6 +759,23 @@ std::string ReverseGetFromStorage(MetadataManager *mdm, u64 id,
   ReleaseMap(mdm, map_type);
 
   return result;
+}
+
+void DeleteFromStorage(MetadataManager *mdm, BlobID key, bool lock) {
+  Heap *heap = GetMapHeap(mdm);
+  BlobInfoMap *map = 0;
+
+  if (lock) {
+    map = GetBlobInfoMap(mdm);
+  } else {
+    map = GetBlobInfoMapNoLock(mdm);
+  }
+
+  hmdel(map, key, heap);
+
+  if (lock) {
+    ReleaseMap(mdm, kMapType_BlobInfo);
+  }
 }
 
 void DeleteFromStorage(MetadataManager *mdm, const char *key,
@@ -716,9 +872,9 @@ void InitMetadataStorage(SharedMemoryContext *context, MetadataManager *mdm,
   ReleaseIdsPtr(mdm);
   mdm->node_targets = node_targets;
 
-  // ID Maps
+  // Maps
 
-  i64 total_map_capacity = GetHeapFreeList(map_heap)->size / 3;
+  i64 remaining_map_capacity = GetHeapFreeList(map_heap)->size / 3;
 
   IdMap *bucket_map = 0;
   // TODO(chogan): We can either calculate an average expected size here, or
@@ -731,30 +887,47 @@ void InitMetadataStorage(SharedMemoryContext *context, MetadataManager *mdm,
   u32 max_buckets = config->max_buckets_per_node + 1;
   u32 max_vbuckets = config->max_vbuckets_per_node + 1;
 
+  // Create Bucket name -> BucketID map
   sh_new_strdup(bucket_map, max_buckets, map_heap);
   shdefault(bucket_map, 0, map_heap);
   mdm->bucket_map_offset = GetOffsetFromMdm(mdm, bucket_map);
   u32 bucket_map_num_bytes = map_heap->extent;
-  total_map_capacity -= bucket_map_num_bytes;
-  assert(total_map_capacity > 0);
+  remaining_map_capacity -= bucket_map_num_bytes;
+  assert(remaining_map_capacity > 0);
 
-  // TODO(chogan): Just one map means better size estimate, but it's probably
-  // slower because they'll all share a lock.
-
+  // Create VBucket name -> VBucketID map
   IdMap *vbucket_map = 0;
   sh_new_strdup(vbucket_map, max_vbuckets, map_heap);
   shdefault(vbucket_map, 0, map_heap);
   mdm->vbucket_map_offset = GetOffsetFromMdm(mdm, vbucket_map);
   u32 vbucket_map_num_bytes = map_heap->extent - bucket_map_num_bytes;
-  total_map_capacity -= vbucket_map_num_bytes;
-  assert(total_map_capacity > 0);
+  remaining_map_capacity -= vbucket_map_num_bytes;
+  assert(remaining_map_capacity > 0);
 
-  IdMap *blob_map = 0;
   // NOTE(chogan): Each map element requires twice its size for storage.
-  size_t blob_map_capacity = total_map_capacity / (2 * sizeof(IdMap));
-  sh_new_strdup(blob_map, blob_map_capacity, map_heap);
+  size_t id_map_element_size = 2 * sizeof(IdMap);
+  size_t blob_info_map_element_size = 2 * sizeof(BlobInfoMap);
+  size_t bytes_per_blob = id_map_element_size + blob_info_map_element_size;
+  size_t num_blobs_supported = remaining_map_capacity / bytes_per_blob;
+  LOG(INFO) << "Metadata can support " << num_blobs_supported
+            << " Blobs per node\n";
+
+  // Create Blob name -> BlobID map
+  IdMap *blob_map = 0;
+  sh_new_strdup(blob_map, num_blobs_supported, map_heap);
   shdefault(blob_map, 0, map_heap);
-  mdm->blob_map_offset = GetOffsetFromMdm(mdm, blob_map);
+  mdm->blob_id_map_offset = GetOffsetFromMdm(mdm, blob_map);
+
+  // Create BlobID -> BlobInfo map
+  BlobInfoMap *blob_info_map = 0;
+  blob_info_map =
+    (BlobInfoMap *)stbds_arrgrowf(blob_info_map, sizeof(*blob_info_map), 0,
+                                  num_blobs_supported, map_heap);
+  blob_info_map =
+    (BlobInfoMap *)STBDS_ARR_TO_HASH(blob_info_map, sizeof(*blob_info_map));
+  BlobInfo default_blob_info = {};
+  hmdefault(blob_info_map, default_blob_info, map_heap);
+  mdm->blob_info_map_offset = GetOffsetFromMdm(mdm, blob_info_map);
 }
 
 std::vector<BlobID> LocalGetBlobsFromVBucketInfo(SharedMemoryContext *context,
@@ -785,6 +958,28 @@ void LocalRemoveBlobFromVBucketInfo(SharedMemoryContext *context,
   }
   ReleaseIdsPtr(mdm);
   EndTicketMutex(&mdm->vbucket_mutex);
+}
+
+f32 LocalGetBlobScore(SharedMemoryContext *context, BlobID blob_id) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  Stats stats = LocalGetBlobStats(context, blob_id);
+
+  f32 result = ScoringFunction(mdm, &stats);
+
+  return result;
+}
+
+f32 GetBlobScore(SharedMemoryContext *context, RpcContext *rpc,
+                 BlobID blob_id) {
+  f32 result = 0;
+  u32 target_node = GetBlobNodeId(blob_id);
+  if (target_node == rpc->node_id) {
+    result = LocalGetBlobScore(context, blob_id);
+  } else {
+    result = RpcCall<f32>(rpc, target_node, "RemoteGetBlobScore", blob_id);
+  }
+
+  return result;
 }
 
 }  // namespace hermes

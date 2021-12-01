@@ -37,7 +37,7 @@ class Bucket {
  public:
   /** internal Hermes object owned by Bucket */
   std::shared_ptr<Hermes> hermes_;
-  /** This Bucket's Context. */
+  /** This Bucket's Context. \todo Why does a bucket need a context? */
   Context ctx_;
 
   // TODO(chogan): Think about the Big Three
@@ -56,22 +56,23 @@ class Bucket {
    */
   ~Bucket();
 
-  /** get the name of bucket */
+  /** Get the name of bucket */
   std::string GetName() const;
 
-  /** get the internal ID of the bucket */
+  /** Get the internal ID of the bucket */
   u64 GetId() const;
 
-  /** returns true if this Bucket has been created but not yet destroyed */
+  /** Returns true if this Bucket has been created but not yet destroyed */
   bool IsValid() const;
 
-  /** put a blob on this bucket */
+  /** Returns the total size of all Blobs in this Bucket. */
+  size_t GetTotalBlobSize();
+
+  /** Put a blob in this bucket with context */
   template<typename T>
   Status Put(const std::string &name, const std::vector<T> &data, Context &ctx);
 
-  /**
-   *
-   */
+  /** Put a blob in this bucket \todo Why isn't this a context-free case?  */
   template<typename T>
   Status Put(const std::string &name, const std::vector<T> &data);
 
@@ -95,26 +96,34 @@ class Bucket {
              const Context &ctx);
 
   /**
-   *
+   * \todo Put
    */
   Status Put(const std::string &name, const u8 *data, size_t size);
 
   /**
-   *
+   * \todo Put
    */
   template<typename T>
-  Status Put(std::vector<std::string> &names,
-             std::vector<std::vector<T>> &blobs, const Context &ctx);
+  Status Put(const std::vector<std::string> &names,
+             const std::vector<std::vector<T>> &blobs, const Context &ctx);
 
   /**
-   *
+   * \todo Put
    */
   template<typename T>
-  Status Put(std::vector<std::string> &names,
-             std::vector<std::vector<T>> &blobs);
+  Status Put(const std::vector<std::string> &names,
+             const std::vector<std::vector<T>> &blobs);
 
   /**
-   *
+   * \todo PutInternal
+   */
+  template<typename T>
+  Status PutInternal(const std::vector<std::string> &names,
+                     const std::vector<size_t> &sizes,
+                     const std::vector<std::vector<T>> &blobs,
+                     const Context &ctx);
+  /**
+   * \todo PlaceBlobs
    */
   template<typename T>
   Status PlaceBlobs(std::vector<PlacementSchema> &schemas,
@@ -242,16 +251,37 @@ Status Bucket::PlaceBlobs(std::vector<PlacementSchema> &schemas,
 }
 
 template<typename T>
-Status Bucket::Put(std::vector<std::string> &names,
-                   std::vector<std::vector<T>> &blobs) {
+Status Bucket::Put(const std::vector<std::string> &names,
+                   const std::vector<std::vector<T>> &blobs) {
   Status result = Put(names, blobs, ctx_);
 
   return result;
 }
 
 template<typename T>
-Status Bucket::Put(std::vector<std::string> &names,
-                   std::vector<std::vector<T>> &blobs, const Context &ctx) {
+Status Bucket::PutInternal(const std::vector<std::string> &names,
+                           const std::vector<size_t> &sizes,
+                           const std::vector<std::vector<T>> &blobs,
+                           const Context &ctx) {
+  std::vector<PlacementSchema> schemas;
+  HERMES_BEGIN_TIMED_BLOCK("CalculatePlacement");
+  Status result = CalculatePlacement(&hermes_->context_, &hermes_->rpc_, sizes,
+                                     schemas, ctx);
+  HERMES_END_TIMED_BLOCK();
+
+  if (result.Succeeded()) {
+    result = PlaceBlobs(schemas, blobs, names, ctx);
+  } else {
+    LOG(ERROR) << result.Msg();
+  }
+
+  return result;
+}
+
+template<typename T>
+Status Bucket::Put(const std::vector<std::string> &names,
+                   const std::vector<std::vector<T>> &blobs,
+                   const Context &ctx) {
   Status ret;
 
   for (auto &name : names) {
@@ -274,17 +304,24 @@ Status Bucket::Put(std::vector<std::string> &names,
     for (size_t i = 0; i < num_blobs; ++i) {
       sizes_in_bytes[i] = blobs[i].size() * sizeof(T);
     }
-    std::vector<PlacementSchema> schemas;
-    HERMES_BEGIN_TIMED_BLOCK("CalculatePlacement");
-    ret = CalculatePlacement(&hermes_->context_, &hermes_->rpc_, sizes_in_bytes,
-                             schemas, ctx);
-    HERMES_END_TIMED_BLOCK();
 
-    if (ret.Succeeded()) {
-      ret = PlaceBlobs(schemas, blobs, names, ctx);
+    if (ctx.rr_retry) {
+      int num_devices =
+        GetLocalSystemViewState(&hermes_->context_)->num_devices;
+
+      for (int i = 0; i < num_devices; ++i) {
+        ret = PutInternal(names, sizes_in_bytes, blobs, ctx);
+
+        if (ret.Failed()) {
+          RoundRobinState rr_state;
+          int current = rr_state.GetCurrentDeviceIndex();
+          rr_state.SetCurrentDeviceIndex((current + 1) % num_devices);
+        } else {
+          break;
+        }
+      }
     } else {
-      LOG(ERROR) << ret.Msg();
-      return ret;
+      ret = PutInternal(names, sizes_in_bytes, blobs, ctx);
     }
   } else {
     ret = INVALID_BUCKET;
