@@ -26,7 +26,7 @@
 #include <hermes/adapter/pubsub/common/datastructures.h>
 #include <mpi.h>
 
-using hermes::adapter::pubsub::TopicMetadata;
+using hermes::adapter::pubsub::ClientMetadata;
 
 namespace hermes::adapter::pubsub {
 /**
@@ -37,7 +37,7 @@ class MetadataManager {
   /**
    * Private members
    */
-  std::unordered_map<std::string, TopicMetadata> metadata;
+  std::unordered_map<std::string, ClientMetadata> metadata;
   /**
    * hermes attribute to initialize Hermes
    */
@@ -48,12 +48,15 @@ class MetadataManager {
   std::atomic<size_t> ref;
 
  public:
+  int mpi_rank;
   /**
    * Constructor
    */
   MetadataManager()
       : metadata(),
-        ref(0){}
+        ref(0){
+    MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+  }
   /**
    * Get the instance of hermes.
    */
@@ -77,7 +80,6 @@ class MetadataManager {
   void FinalizeHermes() {
     if (ref == 1) {
       hermes->Finalize();
-      MPI_Finalize();
     }
     ref--;
   }
@@ -94,7 +96,7 @@ class MetadataManager {
    * @return    true, if operation was successful.
    *            false, if operation was unsuccessful.
    */
-  bool Create(const std::string& topic, const TopicMetadata& stat);
+  bool Create(const std::string& topic, const ClientMetadata& stat);
 
   /**
    * Update existing metadata entry for STDIO adapter for a given file handler.
@@ -103,7 +105,7 @@ class MetadataManager {
    * @return    true, if operation was successful.
    *            false, if operation was unsuccessful or entry doesn't exist.
    */
-  bool Update(const std::string& topic, const TopicMetadata& stat);
+  bool Update(const std::string& topic, const ClientMetadata& stat);
 
   /**
    * Delete existing metadata entry for STDIO adapter for a given file handler.
@@ -119,7 +121,7 @@ class MetadataManager {
    * @return    The metadata entry if exist.
    *            The bool in pair indicated whether metadata entry exists.
    */
-  std::pair<TopicMetadata, bool> Find(const std::string& topic);
+  std::pair<ClientMetadata, bool> Find(const std::string& topic);
 };
 }  // namespace hermes::adapter::stdio
 

@@ -143,7 +143,15 @@ class Bucket {
    */
   size_t Get(const std::string &name, void *user_blob, size_t blob_size,
              const Context &ctx);
-
+  /**
+  * \brief TODO
+  */
+  size_t GetNext(u64 blob_index, Blob& user_blob, const Context &ctx);
+  size_t GetNext(u64 blob_index, Blob& user_blob);
+  size_t GetNext(u64 blob_index, void *user_blob, size_t blob_size,
+                 const Context &ctx);
+  std::vector<size_t> GetNext(u64 blob_index, u64 count,
+                              std::vector<Blob> &blobs, const Context &ctx);
   /** get blob(s) on this bucket according to predicate */
   /** use provides buffer */
   template<class Predicate>

@@ -4,7 +4,7 @@ project(MPIIOAdapter VERSION 0.1.0)
 include_directories(${CMAKE_SOURCE_DIR}/adapter/include)
 
 # MPIIO src code. We only include mpiio.cc as it includes other cc to reduce compilation time.
-set(MPIIO_ADAPTER_SRC mpiio.cc)
+set(MPIIO_ADAPTER_SRC ${CMAKE_CURRENT_SOURCE_DIR}/mpiio.cc)
 
 # Only mpiio.h is the public adapter.
 set(MPIIO_ADAPTER_PUBLIC_HEADER ${CMAKE_SOURCE_DIR}/adapter/include/hermes/adapter/mpiio.h)

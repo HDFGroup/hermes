@@ -158,6 +158,71 @@ std::vector<size_t> Bucket::Get(const std::vector<std::string> &names,
   return result;
 }
 
+size_t Bucket::GetNext(u64 blob_index, Blob &user_blob,
+                       const Context &ctx) {
+  size_t ret = GetNext(blob_index, user_blob.data(), user_blob.size(), ctx);
+
+  return ret;
+}
+
+size_t Bucket::GetNext(u64 blob_index, Blob &user_blob) {
+  size_t result = GetNext(blob_index, user_blob, ctx_);
+
+  return result;
+}
+
+size_t Bucket::GetNext(u64 blob_index, void *user_blob, size_t blob_size,
+                       const Context &ctx) {
+  (void)ctx;
+  size_t ret = 0;
+
+  if (IsValid()) {
+    std::vector<BlobID> blob_ids = GetBlobIds(&hermes_->context_, &hermes_->rpc_, this->id_);
+    if(blob_index > blob_ids.size()){
+      LOG(INFO) << "Already on the tail for bucket " << name_ << '\n';
+      return ret;
+    }
+    BlobID next_blob_id = blob_ids.at(blob_index);
+    if (user_blob && blob_size != 0) {
+      hermes::Blob blob = {};
+      blob.data = (u8 *)user_blob;
+      blob.size = blob_size;
+      LOG(INFO) << "Getting Blob " << next_blob_id.as_int << " from bucket "
+                << name_ << '\n';
+      ret = ReadBlobById(&hermes_->context_, &hermes_->rpc_,
+                         &hermes_->trans_arena_, blob, next_blob_id);
+    } else {
+      LOG(INFO) << "Getting Blob " << next_blob_id.as_int << " size from bucket "
+                << name_ << '\n';
+      ScopedTemporaryMemory scratch(&hermes_->trans_arena_);
+      if (!IsNullBlobId(next_blob_id)) {
+        ret = GetBlobSizeById(&hermes_->context_, &hermes_->rpc_, scratch,
+                              next_blob_id);
+      }
+    }
+  }
+
+  return ret;
+}
+
+std::vector<size_t> Bucket::GetNext(u64 blob_index, u64 count,
+                                    std::vector<Blob> &blobs, const Context &ctx) {
+  std::vector<size_t> result(count, 0);
+
+  if (IsValid()) {
+    if (count == blobs.size()) {
+      for (size_t i = 0; i < result.size(); ++i) {
+        result[i] = GetNext(blob_index + i, blobs[i], ctx);
+      }
+    } else {
+      LOG(ERROR) << "names.size() != blobs.size() in Bucket::Get (" << count
+                 << " != " << blobs.size() << ")" << std::endl;
+    }
+  }
+
+  return result;
+}
+
 template<class Predicate>
 Status Bucket::GetV(void *user_blob, Predicate pred, Context &ctx) {
   (void)user_blob;

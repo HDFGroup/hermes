@@ -16,15 +16,17 @@ hapi::Status hermes::pubsub::mpiInit(int argc, char **argv){
   return hapi::Status(hermes::HERMES_SUCCESS);
 }
 
-hapi::Status hermes::pubsub::connect(const char *config_file){
+hapi::Status hermes::pubsub::connect(const std::string &config_file,
+                                     bool independent){
   LOG(INFO) << "Connecting adapter" << std::endl;
   auto mdm = hermes::adapter::Singleton<hermes::adapter::pubsub::MetadataManager>::GetInstance();
-  mdm->InitializeHermes(config_file);
+  mdm->InitializeHermes(config_file.c_str());
   if(mdm->isClient()) return hapi::Status(hermes::HERMES_SUCCESS);
+  //todo(Jaime):
   else return hapi::Status(hermes::HERMES_ERROR_MAX);
 }
 
-hapi::Status hermes::pubsub::connect(){
+hapi::Status hermes::pubsub::connect(bool independent){
   LOG(INFO) << "Connecting adapter" << std::endl;
   auto mdm = hermes::adapter::Singleton<hermes::adapter::pubsub::MetadataManager>::GetInstance();
   char* hermes_config = getenv(kHermesConf);
@@ -47,8 +49,8 @@ hapi::Status hermes::pubsub::attach(const std::string& topic){
   auto existing = mdm->Find(topic);
   if (!existing.second) {
     LOG(INFO) << "Topic not existing" << std::endl;
-    TopicMetadata stat;
-    stat.ref_count = 1;
+    ClientMetadata stat;
+//    stat.ref_count = 1;
     struct timespec ts{};
     timespec_get(&ts, TIME_UTC);
     stat.st_atim = ts;
@@ -58,7 +60,7 @@ hapi::Status hermes::pubsub::attach(const std::string& topic){
   }
   else{
     LOG(INFO) << "File exists" << std::endl;
-    existing.first.ref_count++;
+//    existing.first.ref_count++;
     struct timespec ts{};
     timespec_get(&ts, TIME_UTC);
     existing.first.st_atim = ts;
@@ -72,7 +74,8 @@ hapi::Status hermes::pubsub::detach(const std::string& topic){
   hapi::Context ctx;
   auto mdm = hermes::adapter::Singleton<hermes::adapter::pubsub::MetadataManager>::GetInstance();
   auto existing = mdm->Find(topic);
-  if (!existing.second) {
+  if (!existing.second)
+  {
     if (existing.first.ref_count == 1) {
       mdm->Delete(topic);
       //TODO(Jaime): Do we need to clean the blobs
@@ -81,7 +84,7 @@ hapi::Status hermes::pubsub::detach(const std::string& topic){
     else{
       LOG(INFO) << "Detaching from topic with more than one reference: "
                 << topic << std::endl;
-      existing.first.ref_count--;
+//      existing.first.ref_count--;
       struct timespec ts{};
       timespec_get(&ts, TIME_UTC);
       existing.first.st_atim = ts;
@@ -102,26 +105,21 @@ hapi::Status hermes::pubsub::publish(const std::string& topic, const std::vector
     else return hapi::Status(hermes::INVALID_BUCKET);
   }
 
-  auto index = std::to_string(metadata.first.final_blob);
-  auto blob_exists = metadata.first.st_bkid->ContainsBlob(index);
-  while(blob_exists){
-    metadata.first.final_blob++;
-    index = std::to_string(metadata.first.final_blob);
-    blob_exists = metadata.first.st_bkid->ContainsBlob(index);
-  }
-
   hapi::Context ctx;
 
-  LOG(INFO) << "Publishing to blob with id " <<
-      metadata.first.final_blob << std::endl;
-  auto status = metadata.first.st_bkid->Put(index, message, ctx);
-  if (status.Failed()) {
-    return hapi::Status(hermes::INVALID_BLOB); //TODO (jaime): add error codes
-  }
-
-  metadata.first.final_blob++;
   struct timespec ts{};
   timespec_get(&ts, TIME_UTC);
+
+  //TODO(Jaime): We might want to add some considerations for threads.
+  //Currently i am deploying 40 process per node no threads used.
+  std::string blob_name = std::to_string(mdm->mpi_rank) + "_" +
+                          std::to_string(ts.tv_nsec);
+  LOG(INFO) << "Publishing to blob with id " << blob_name << std::endl;
+  auto status = metadata.first.st_bkid->Put(blob_name, message, ctx);
+  if (status.Failed()) {
+    return hapi::Status(hermes::INVALID_BLOB);
+  }
+
   metadata.first.st_atim = ts;
   mdm->Update(topic, metadata.first);
 
@@ -142,32 +140,20 @@ std::pair<std::vector<unsigned char>, hapi::Status> hermes::pubsub::subscribe(co
   }
 
   hapi::Context ctx;
-  auto index = std::to_string(metadata.first.current_blob);
-  auto blob_exists = metadata.first.st_bkid->ContainsBlob(index);
+  u64 index = metadata.first.last_subscribed_blob;
 
   hapi::Blob read_data(0);
-  if (blob_exists) {
-    LOG(INFO) << "Subscribing to  " << topic << " at blob id " << index
-              << std::endl;
-
-    auto exiting_blob_size =
-        metadata.first.st_bkid->Get(index, read_data, ctx);
-    read_data.resize(exiting_blob_size);
-
-    if(metadata.first.st_bkid->Get(index, read_data, ctx) != exiting_blob_size){
-      return SubscribeReturn(std::vector<unsigned char>(), 
-          hapi::Status(hermes::BLOB_NOT_IN_BUCKET));
-    }
-  }
-  else{
-    LOG(INFO)
-        << "Blob does not exists, catch up to tail or error at topic:"
-        << topic << std::endl;
-      return SubscribeReturn(std::vector<unsigned char>(), 
-          hapi::Status(hermes::BLOB_NOT_IN_BUCKET));
+  LOG(INFO) << "Subscribing to  " << topic << " at blob id " << index
+            << std::endl;
+  auto exiting_blob_size =
+      metadata.first.st_bkid->GetNext(index, read_data, ctx);
+  read_data.resize(exiting_blob_size);
+  if(metadata.first.st_bkid->GetNext(index, read_data, ctx) != exiting_blob_size){
+    return SubscribeReturn(std::vector<unsigned char>(),
+        hapi::Status(hermes::BLOB_NOT_IN_BUCKET));
   }
 
-  metadata.first.current_blob++;
+  metadata.first.last_subscribed_blob++;
   struct timespec ts{};
   timespec_get(&ts, TIME_UTC);
   metadata.first.st_atim = ts;

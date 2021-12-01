@@ -1,11 +1,11 @@
 //
 // Created by jaime on 6/25/2021.
 //
-
 #include <hermes/adapter/pubsub.h>
+
 int main(int argc, char **argv) {
   auto mdm = hermes::adapter::Singleton<hermes::adapter::pubsub::MetadataManager>::GetInstance();
-  TopicMetadata stat;
+  ClientMetadata stat;
   stat.ref_count = 1;
   struct timespec ts{};
   timespec_get(&ts, TIME_UTC);

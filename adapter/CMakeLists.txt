@@ -12,7 +12,7 @@ add_subdirectory(src/hermes/adapter/stdio)
 add_subdirectory(src/hermes/adapter/posix)
 
 # add mpiio adapter
-add_subdirectory(src/hermes/adapter/mpiio)
+#add_subdirectory(src/hermes/adapter/mpiio)
 
 # add posix adapter
 add_subdirectory(src/hermes/adapter/pubsub)

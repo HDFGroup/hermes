@@ -18,8 +18,8 @@ namespace hermes::pubsub{
 
 hapi::Status mpiInit(int argc, char **argv);
 
-hapi::Status connect(const char *config_file);
-hapi::Status connect();
+hapi::Status connect(const std::string &config_file, bool independent = false);
+hapi::Status connect(bool independent = false);
 hapi::Status disconnect();
 
 hapi::Status attach(const std::string& topic);

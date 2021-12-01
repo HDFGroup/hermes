@@ -41,41 +41,27 @@ namespace hermes::adapter::pubsub {
 /**
  * Struct that defines the metadata required for the pubsub adapter.
  */
-struct TopicMetadata {
+struct ClientMetadata {
   /**
    * attributes
    */
-  std::shared_ptr<hapi::Bucket> st_bkid; /* bucket associated with the file */
-  std::set<std::string, bool (*)(const std::string &, const std::string &)>
-      st_blobs;         /* Blobs access in the bucket */
-  i32 ref_count;        /* # of time process opens a file */
-  u32 current_blob;     /* Current blob being used */
-  u32 final_blob;       /* Final blob of the topic */
+  std::shared_ptr<hapi::Bucket> st_bkid; /* bucket associated with the topic */
+//  i32 ref_count;        /* # of time process opens the topic */
+  u64 last_subscribed_blob; /* Current blob being used */
   timespec st_atim;     /* time of last access */
   /**
    * Constructor
    */
-  TopicMetadata()
+  ClientMetadata()
       : st_bkid(),
-        st_blobs(CompareBlobs),
-        ref_count(),
-        current_blob(),
-        final_blob(),
+//        ref_count(1),
+        last_subscribed_blob(0),
         st_atim() {} /* default constructor */
-  explicit TopicMetadata(const struct TopicMetadata &st)
-      : st_bkid(),
-        st_blobs(CompareBlobs),
-        ref_count(1),
-        current_blob(st.current_blob),
-        final_blob(st.final_blob),
+  explicit ClientMetadata(const struct ClientMetadata &st)
+      : st_bkid(st.st_bkid),
+//        ref_count(st.ref_count),
+        last_subscribed_blob(st.last_subscribed_blob),
         st_atim(st.st_atim) {} /* parameterized constructor */
-
-  /**
-   * Comparator for comparing two blobs.
-   */
-  static bool CompareBlobs(const std::string &a, const std::string &b) {
-    return std::stol(a) < std::stol(b);
-  }
 };
 
 }  // namespace hermes::adapter::stdio
