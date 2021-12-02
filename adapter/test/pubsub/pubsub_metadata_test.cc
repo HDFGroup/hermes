@@ -6,7 +6,6 @@
 int main(int argc, char **argv) {
   auto mdm = hermes::adapter::Singleton<hermes::adapter::pubsub::MetadataManager>::GetInstance();
   ClientMetadata stat;
-  stat.ref_count = 1;
   struct timespec ts{};
   timespec_get(&ts, TIME_UTC);
   stat.st_atim = ts;
