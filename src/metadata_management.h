@@ -111,6 +111,7 @@ struct MetadataManager {
   VBucketID first_free_vbucket;
 
   ptrdiff_t rpc_state_offset;
+  ptrdiff_t host_numbers_offset;
   ptrdiff_t system_view_state_offset;
   ptrdiff_t global_system_view_state_offset;
 
