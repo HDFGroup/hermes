@@ -5,14 +5,26 @@
 #ifndef HERMES_PUBSUB_H
 #define HERMES_PUBSUB_H
 
+/**
+ * Standard header
+ */
+
+#include <mpi.h>
+
+/**
+ * Dependent library headers
+ */
+#include "glog/logging.h"
+
+/**
+ * Internal headers
+ */
 #include <bucket.h>
 #include <hermes.h>
 
 #include <hermes/adapter/pubsub/metadata_manager.h>
 #include <hermes/adapter/singleton.h>
 #include <hermes/adapter/pubsub/common/constants.h>
-
-#include <mpi.h>
 
 namespace hermes::pubsub{
 

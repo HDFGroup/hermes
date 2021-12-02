@@ -3,9 +3,11 @@ set(PUBSUB_TESTS pubsub_connection_test pubsub_negative_connection_test pubsub_t
 
 add_executable(pubsub_metadata_test ${CMAKE_CURRENT_SOURCE_DIR}/pubsub_metadata_test.cc)
 add_test(pubsub_metadata_test pubsub_metadata_test)
+add_dependencies(pubsub_metadata_test.cc hermes_pubsub)
 
 foreach(program ${PUBSUB_TESTS})
     add_executable(${program} ${CMAKE_CURRENT_SOURCE_DIR}/${program}.cc)
+    add_dependencies(${program} hermes_pubsub)
     target_link_libraries(${program} ${LIBRT} hermes MPI::MPI_CXX
             $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium> hermes_pubsub)
     target_compile_definitions(${program}
