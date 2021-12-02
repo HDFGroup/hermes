@@ -76,14 +76,16 @@ hapi::Status hermes::pubsub::detach(const std::string& topic){
   auto existing = mdm->Find(topic);
   if (!existing.second)
   {
-    if (existing.first.ref_count == 1) {
-      mdm->Delete(topic);
-      //TODO(Jaime): Do we need to clean the blobs
-      return existing.first.st_bkid->Destroy(ctx);
-    }
-    else{
-      LOG(INFO) << "Detaching from topic with more than one reference: "
-                << topic << std::endl;
+    mdm->Delete(topic);
+    existing.first.st_bkid = nullptr;
+//    if (existing.first.ref_count == 1) {
+//      mdm->Delete(topic);
+//      //TODO(Jaime): Do we need to clean the blobs
+//      return existing.first.st_bkid->Destroy(ctx);
+//    }
+//    else{
+//      LOG(INFO) << "Detaching from topic with more than one reference: "
+//                << topic << std::endl;
 //      existing.first.ref_count--;
       struct timespec ts{};
       timespec_get(&ts, TIME_UTC);
