@@ -181,22 +181,12 @@ Status VBucket::Attach(Trait* trait, Context& ctx) {
     }
   }
   if (!selected_trait) {
-    auto blob_ids =
-        GetBlobsFromVBucketInfo(&hermes_->context_, &hermes_->rpc_, id_);
-    for (const auto& blob_id : blob_ids) {
-      Trait* t = static_cast<Trait*>(trait);
-      TraitInput input;
-      auto bucket_id =
-          GetBucketIdFromBlobId(&hermes_->context_, &hermes_->rpc_, blob_id);
-      input.bucket_name =
-          GetBucketNameById(&hermes_->context_, &hermes_->rpc_, bucket_id);
-      input.blob_name =
-          GetBlobNameFromId(&hermes_->context_, &hermes_->rpc_, blob_id);
-      if (t->onAttachFn != nullptr) {
-        t->onAttachFn(hermes_, input, trait);
-        // TODO(hari): @errorhandling Check if attach was successful
-      }
+    Trait* t = static_cast<Trait*>(trait);
+    if (t->onAttachFn != nullptr) {
+      t->onAttachFn(hermes_, id_, trait);
+      // TODO(hari): @errorhandling Check if attach was successful
     }
+
     attached_traits_.push_back(trait);
   } else {
     ret = TRAIT_EXISTS_ALREADY;
@@ -232,22 +222,12 @@ Status VBucket::Detach(Trait* trait, Context& ctx) {
     }
   }
   if (selected_trait) {
-    auto blob_ids =
-        GetBlobsFromVBucketInfo(&hermes_->context_, &hermes_->rpc_, id_);
-    for (const auto& blob_id : blob_ids) {
-      Trait* t = static_cast<Trait*>(trait);
-      TraitInput input;
-      auto bucket_id =
-          GetBucketIdFromBlobId(&hermes_->context_, &hermes_->rpc_, blob_id);
-      input.bucket_name =
-          GetBucketNameById(&hermes_->context_, &hermes_->rpc_, bucket_id);
-      input.blob_name =
-          GetBlobNameFromId(&hermes_->context_, &hermes_->rpc_, blob_id);
-      if (t->onDetachFn != nullptr) {
-        t->onDetachFn(hermes_, input, trait);
-        // TODO(hari): @errorhandling Check if detach was successful
-      }
+    Trait* t = static_cast<Trait*>(trait);
+    if (t->onDetachFn != nullptr) {
+      t->onDetachFn(hermes_, id_, trait);
+      // TODO(hari): @errorhandling Check if detach was successful
     }
+
     attached_traits_.erase(selected_trait_iter);
   } else {
     ret = TRAIT_NOT_VALID;
@@ -341,7 +321,7 @@ Status VBucket::Destroy(Context& ctx) {
     for (const auto& t : attached_traits_) {
       if (t->onDetachFn != nullptr) {
         TraitInput input = {};
-        t->onDetachFn(hermes_, input, t);
+        t->onDetachFn(hermes_, id_, t);
         // TODO(hari): @errorhandling Check if detach was successful
       }
     }

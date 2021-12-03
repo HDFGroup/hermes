@@ -37,7 +37,7 @@ class Bucket {
  public:
   /** internal Hermes object owned by Bucket */
   std::shared_ptr<Hermes> hermes_;
-  /** This Bucket's Context. */
+  /** This Bucket's Context. \todo Why does a bucket need a context? */
   Context ctx_;
 
   // TODO(chogan): Think about the Big Three
@@ -56,22 +56,23 @@ class Bucket {
    */
   ~Bucket();
 
-  /** get the name of bucket */
+  /** Get the name of bucket */
   std::string GetName() const;
 
-  /** get the internal ID of the bucket */
+  /** Get the internal ID of the bucket */
   u64 GetId() const;
 
-  /** returns true if this Bucket has been created but not yet destroyed */
+  /** Returns true if this Bucket has been created but not yet destroyed */
   bool IsValid() const;
 
-  /** put a blob on this bucket */
+  /** Returns the total size of all Blobs in this Bucket. */
+  size_t GetTotalBlobSize();
+
+  /** Put a blob in this bucket with context */
   template<typename T>
   Status Put(const std::string &name, const std::vector<T> &data, Context &ctx);
 
-  /**
-   *
-   */
+  /** Put a blob in this bucket \todo Why isn't this a context-free case?  */
   template<typename T>
   Status Put(const std::string &name, const std::vector<T> &data);
 
@@ -95,26 +96,26 @@ class Bucket {
              const Context &ctx);
 
   /**
-   *
+   * \todo Put
    */
   Status Put(const std::string &name, const u8 *data, size_t size);
 
   /**
-   *
+   * \todo Put
    */
   template<typename T>
   Status Put(const std::vector<std::string> &names,
              const std::vector<std::vector<T>> &blobs, const Context &ctx);
 
   /**
-   *
+   * \todo Put
    */
   template<typename T>
   Status Put(const std::vector<std::string> &names,
              const std::vector<std::vector<T>> &blobs);
 
   /**
-   *
+   * \todo PutInternal
    */
   template<typename T>
   Status PutInternal(const std::vector<std::string> &names,
@@ -122,7 +123,7 @@ class Bucket {
                      const std::vector<std::vector<T>> &blobs,
                      const Context &ctx);
   /**
-   *
+   * \todo PlaceBlobs
    */
   template<typename T>
   Status PlaceBlobs(std::vector<PlacementSchema> &schemas,

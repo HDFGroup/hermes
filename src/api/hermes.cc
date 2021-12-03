@@ -85,6 +85,13 @@ bool Hermes::BucketContainsBlob(const std::string &bucket_name,
   return result;
 }
 
+bool Hermes::BucketExists(const std::string &bucket_name) {
+  BucketID id = hermes::GetBucketId(&context_, &rpc_, bucket_name.c_str());
+  bool result = !IsNullBucketId(id);
+
+  return result;
+}
+
 int Hermes::GetProcessRank() {
   int result = comm_.sub_proc_id;
 
@@ -200,11 +207,8 @@ SharedMemoryContext InitHermesCore(Config *config, CommunicationContext *comm,
   InitMetadataManager(mdm, &arenas[kArenaType_MetaData], config, comm->node_id);
   InitMetadataStorage(&context, mdm, &arenas[kArenaType_MetaData], config);
 
-  // NOTE(chogan): Store the metadata_manager_offset right after the
-  // buffer_pool_offset so other processes can pick it up.
-  ptrdiff_t *metadata_manager_offset_location =
-    (ptrdiff_t *)(shmem_base + sizeof(context.buffer_pool_offset));
-  *metadata_manager_offset_location = context.metadata_manager_offset;
+  ShmemClientInfo *client_info = (ShmemClientInfo *)shmem_base;
+  client_info->mdm_offset = context.metadata_manager_offset;
 
   return context;
 }
@@ -239,8 +243,24 @@ BootstrapSharedMemory(Arena *arenas, Config *config, CommunicationContext *comm,
   return result;
 }
 
+static void InitGlog() {
+  FLAGS_logtostderr = 1;
+  const char kMinLogLevel[] = "GLOG_minloglevel";
+  char *min_log_level = getenv(kMinLogLevel);
+
+  if (!min_log_level) {
+    FLAGS_minloglevel = 0;
+  }
+
+  FLAGS_v = 0;
+
+  google::InitGoogleLogging("hermes");
+}
+
 std::shared_ptr<api::Hermes> InitHermes(Config *config, bool is_daemon,
                                         bool is_adapter) {
+  InitGlog();
+
   std::string base_shmem_name(config->buffer_pool_shmem_name);
   MakeFullShmemName(config->buffer_pool_shmem_name, base_shmem_name.c_str());
 
@@ -267,10 +287,8 @@ std::shared_ptr<api::Hermes> InitHermes(Config *config, bool is_daemon,
     MetadataManager *mdm = GetMetadataManagerFromContext(&context);
     rpc.state = (void *)(context.shm_base + mdm->rpc_state_offset);
   }
-  bool create_shared_files = (comm.proc_kind == ProcessKind::kHermes &&
-                              comm.first_on_node);
-  InitFilesForBuffering(&context, create_shared_files, comm.node_id,
-                        comm.first_on_node);
+
+  InitFilesForBuffering(&context, comm);
 
   WorldBarrier(&comm);
 

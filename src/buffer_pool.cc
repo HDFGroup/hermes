@@ -113,6 +113,7 @@ void Finalize(SharedMemoryContext *context, CommunicationContext *comm,
     HERMES_DEBUG_SERVER_CLOSE();
   }
   DestroyArena(trans_arena);
+  google::ShutdownGoogleLogging();
 }
 
 void LockBuffer(BufferHeader *header) {
@@ -721,7 +722,8 @@ BufferID MakeBufferHeaders(Arena *arena, int buffer_size, u32 start_index,
     header->device_id = device_id;
 
     // NOTE(chogan): Stored as offset from base address of shared memory
-    header->data_offset = buffer_size * j + initial_offset;
+    header->data_offset =
+      (ptrdiff_t)buffer_size * (ptrdiff_t)j + initial_offset;
 
     previous->next_free = header->id;
     previous = header;
@@ -1070,6 +1072,7 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
     slab_metadata_size += config->num_slabs[device] * sizeof(u32);
   }
 
+  size_t client_info_size = sizeof(ShmemClientInfo);
   size_t headers_size = max_headers_needed * sizeof(BufferHeader);
   size_t devices_size = config->num_devices * sizeof(Device);
   size_t buffer_pool_size = (sizeof(BufferPool) + free_lists_size +
@@ -1081,8 +1084,8 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
   // print out when it adds alignment padding, so for now we can monitor that.
   // In the future it would be nice to have a programatic way to account for
   // alignment padding.
-  size_t required_bytes_for_metadata = (headers_size + buffer_pool_size +
-                                        devices_size);
+  size_t required_bytes_for_metadata = (client_info_size + headers_size +
+                                        buffer_pool_size + devices_size);
   LOG(INFO) << required_bytes_for_metadata
             << " bytes required for BufferPool metadata" << std::endl;
 
@@ -1108,7 +1111,8 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
   // capacity for buffering (excluding BufferPool metadata).
   size_t actual_ram_buffer_capacity = 0;
   for (int slab = 0; slab < config->num_slabs[0]; ++slab) {
-    size_t slab_bytes = buffer_counts[0][slab] * slab_buffer_sizes[0][slab];
+    size_t slab_bytes =
+      (size_t)buffer_counts[0][slab] * (size_t)slab_buffer_sizes[0][slab];
     actual_ram_buffer_capacity += slab_bytes;
   }
   config->capacities[0] = actual_ram_buffer_capacity;
@@ -1135,6 +1139,10 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
   DLOG(INFO) << "Total Buffers: " << total_buffers << std::endl;;
 
   // Build RAM buffers.
+
+  // NOTE(chogan): Store offsets to the MDM and BPM at the beginning of shared
+  // memory so other processes can pick it up.
+  ShmemClientInfo *client_info = PushStruct<ShmemClientInfo>(buffer_pool_arena);
 
   // TODO(chogan): @configuration Assumes the first Device is RAM
   for (int slab = 0; slab < config->num_slabs[0]; ++slab) {
@@ -1163,7 +1171,7 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
 
   u32 start = 0;
   u8 *header_begin = 0;
-  ptrdiff_t initial_offset = 0;
+  ptrdiff_t initial_offset = sizeof(ShmemClientInfo);
   // TODO(chogan): @configuration Assumes first Device is RAM
   for (i32 i = 0; i < config->num_slabs[0]; ++i) {
     u32 end = start + buffer_counts[0][i];
@@ -1232,11 +1240,8 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
       ((u8 *)available_buffers - shmem_base);
   }
 
-  // NOTE(chogan): The buffer pool offset is stored at the beginning of shared
-  // memory so the client processes can read it on initialization
-  ptrdiff_t *buffer_pool_offset_location = (ptrdiff_t *)shmem_base;
   ptrdiff_t buffer_pool_offset = (u8 *)pool - shmem_base;
-  *buffer_pool_offset_location = buffer_pool_offset;
+  client_info->bpm_offset = buffer_pool_offset;
 
   return buffer_pool_offset;
 }
@@ -1283,8 +1288,20 @@ FILE *FopenOrTerminate(const char *fname, const char *mode) {
   return result;
 }
 
-void InitFilesForBuffering(SharedMemoryContext *context, bool make_space,
-                           u32 node_id, bool first_on_node) {
+int OpenOrTerminate(const std::string &fname, int flags, mode_t mode = 0) {
+  int result = open(fname.c_str(), flags, mode);
+
+  if (result == -1) {
+    LOG(ERROR) << "Failed to open file at " << fname << ": ";
+    perror(nullptr);
+    LOG(FATAL) << "Terminating...";
+  }
+
+  return result;
+}
+
+void InitFilesForBuffering(SharedMemoryContext *context,
+                           CommunicationContext &comm) {
   BufferPool *pool = GetBufferPoolFromContext(context);
   context->buffering_filenames.resize(pool->num_devices);
 
@@ -1304,49 +1321,64 @@ void InitFilesForBuffering(SharedMemoryContext *context, bool make_space,
     context->buffering_filenames[device_id].resize(pool->num_slabs[device_id]);
 
     for (int slab = 0; slab < pool->num_slabs[device_id]; ++slab) {
-      // TODO(chogan): Where does memory for filenames come from? Probably need
-      // persistent memory for each application core.
       std::string node = (device->is_shared ? std::string("_node") +
-                          std::to_string(node_id) : "");
+                          std::to_string(comm.node_id) : "");
       context->buffering_filenames[device_id][slab] =
         std::string(std::string(mount_point) + (ends_in_slash ? "" : "/") +
                     "device" + std::to_string(device_id) + "_slab" +
                     std::to_string(slab) + node + ".hermes");
 
-      const char *buffering_fname =
-        context->buffering_filenames[device_id][slab].c_str();
-      FILE *buffering_file = FopenOrTerminate(buffering_fname, "w+");
+      int buffering_file_fd = 0;
+      bool reserve_space = false;
 
-      if (make_space) {
-        // TODO(chogan): Use posix_fallocate when it is available
-        // if (device->has_fallocate) {
-        //   int fallocate_result = posix_fallocate(fileno(buffering_file),
-        //                                          0, this_slabs_capacity);
-        // }
-
-        u32 num_buffers = GetNumBuffersAvailable(context, device_id, slab);
-        i32 buffer_size = GetSlabBufferSize(context, device_id, slab);
-        size_t this_slabs_capacity = num_buffers * buffer_size;
-
-        bool do_truncate = true;
-        if (device->is_shared && !first_on_node) {
-          // NOTE(chogan): Some Devices require file initialization on each
-          // node, and some are shared (burst buffers) and only require one
-          // rank to initialize them
-          do_truncate = false;
+      if (comm.proc_kind == ProcessKind::kHermes) {
+        if (device->is_shared && comm.sub_proc_id == 0) {
+          // Only one rank should create the file for shared devices
+          reserve_space = true;
         }
 
-        if (do_truncate) {
-          int ftruncate_result = ftruncate(fileno(buffering_file),
+        if (!device->is_shared && comm.first_on_node) {
+          // One rank per node creates the file for node-local devices
+          reserve_space = true;
+        }
+
+        if (reserve_space) {
+          int open_flags = O_RDWR | O_CREAT | O_TRUNC;
+          int open_mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+          buffering_file_fd =
+            OpenOrTerminate(context->buffering_filenames[device_id][slab],
+                            open_flags, open_mode);
+
+          u32 num_buffers = GetNumBuffersAvailable(context, device_id, slab);
+          i32 buffer_size = GetSlabBufferSize(context, device_id, slab);
+          size_t this_slabs_capacity = num_buffers * buffer_size;
+
+          // TODO(chogan): Use posix_fallocate when it is available
+          // if (device->has_fallocate) {
+          //   int fallocate_result = posix_fallocate(buffering_file_fd, 0,
+          //                                          this_slabs_capacity);
+          // }
+
+          int ftruncate_result = ftruncate(buffering_file_fd,
                                            this_slabs_capacity);
           if (ftruncate_result) {
             LOG(ERROR) << "Failed to allocate buffering file at "
-                       << buffering_fname << ": ";
+                       << context->buffering_filenames[device_id][slab] << ": ";
             FailedLibraryCall("ftruncate");
           }
         }
       }
-      context->open_streams[device_id][slab] = buffering_file;
+
+      WorldBarrier(&comm);
+
+      if (!reserve_space) {
+        // File should already be created, so we just open it
+        int open_flags = O_RDWR;
+        buffering_file_fd =
+          OpenOrTerminate(context->buffering_filenames[device_id][slab],
+                          open_flags);
+      }
+      context->open_files[device_id][slab] = buffering_file_fd;
     }
   }
 }
@@ -1391,14 +1423,11 @@ SharedMemoryContext GetSharedMemoryContext(char *shmem_name) {
       close(shmem_fd);
 
       if (shm_base) {
-        // NOTE(chogan): On startup, the buffer_pool_offset will be stored at
-        // the beginning of the shared memory segment, and the
-        // metadata_arena_offset will be stored immediately after that.
-        ptrdiff_t *buffer_pool_offset_location = (ptrdiff_t *)shm_base;
-        result.buffer_pool_offset = *buffer_pool_offset_location;
-        ptrdiff_t *metadata_manager_offset_location =
-          (ptrdiff_t *)(shm_base + sizeof(result.buffer_pool_offset));
-        result.metadata_manager_offset = *metadata_manager_offset_location;
+        // NOTE(chogan): BPM and MDM offsets are stored at the beginning of the
+        // shared memory segment
+        ShmemClientInfo *client_info = (ShmemClientInfo *)shm_base;
+        result.buffer_pool_offset = client_info->bpm_offset;
+        result.metadata_manager_offset = client_info->mdm_offset;
         result.shm_base = shm_base;
         result.shm_size = shm_stat.st_size;
       } else {
@@ -1426,10 +1455,10 @@ void CloseBufferingFiles(SharedMemoryContext *context) {
 
   for (int device_id = 0; device_id < pool->num_devices; ++device_id) {
     for (int slab = 0; slab < pool->num_slabs[device_id]; ++slab) {
-      if (context->open_streams[device_id][slab]) {
-        int fclose_result = fclose(context->open_streams[device_id][slab]);
-        if (fclose_result != 0) {
-          FailedLibraryCall("fclose");
+      if (context->open_files[device_id][slab]) {
+        int close_result = close(context->open_files[device_id][slab]);
+        if (close_result != 0) {
+          FailedLibraryCall("close");
         }
       }
     }
@@ -1463,6 +1492,7 @@ size_t LocalWriteBufferById(SharedMemoryContext *context, BufferID id,
     int slab_index = GetSlabIndexFromHeader(context, header);
     const char *filename =
       context->buffering_filenames[device->id][slab_index].c_str();
+    // TODO(chogan): Use context->open_files
     int fd = open(filename, O_WRONLY);
 
     if (fd != -1) {

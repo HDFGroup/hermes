@@ -21,9 +21,9 @@
 #include <string>
 #include <unordered_set>
 #include <vector>
+#include <regex>
 
 #include <buffer_pool_internal.h>
-#include <hermes/adapter/constants.h>
 #include <hermes/adapter/enumerations.h>
 #include <hermes/adapter/singleton.h>
 
@@ -42,7 +42,7 @@ namespace hermes::adapter {
 const char* kPathExclusions[] = {"/bin/", "/boot/", "/dev/",  "/etc/",
                                  "/lib/", "/opt/",  "/proc/", "/sbin/",
                                  "/sys/", "/usr/",  "/var/",  "/run/",
-                                 "pipe"};
+                                 "pipe", "socket:", "anon_inode:"};
 /**
  * Paths prefixed with the following directories are tracked by Hermes even if
  * they share a root with a path listed in path_exclusions
@@ -80,6 +80,7 @@ inline std::string GetFilenameFromFD(int fd) {
   filename[r] = '\0';
   return filename;
 }
+
 /**
  * Interceptor list defines files and directory that should be either excluded
  * or included for interceptions.
@@ -209,6 +210,16 @@ namespace hermes::adapter {
  * buffering mount points in the InclusionsList.hermes_paths_exclusion.
  */
 void PopulateBufferingPath();
+
+/**
+ * Check if path is symbolic link.
+ */
+bool IsSymLink(const std::string& path);
+
+/**
+ * Check if path is relative path.
+ */
+bool IsRelativePath(const std::string& path);
 
 /**
  * Check if path should be tracked. In this method, the path is compared against

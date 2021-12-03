@@ -116,7 +116,7 @@ void InitDefaultConfig(Config *config) {
   config->is_shared_device[0] = 0;
   config->is_shared_device[1] = 0;
   config->is_shared_device[2] = 0;
-  config->is_shared_device[3] = 1;
+  config->is_shared_device[3] = 0;
 
   config->bo_num_threads = 4;
   config->default_rr_split = false;

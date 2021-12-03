@@ -35,10 +35,7 @@ using hermes::adapter::posix::MapperType;
  * Which mapper to be used by POSIX adapter.
  */
 const MapperType kMapperType = MapperType::BALANCED;
-/**
- * Define kPageSize for balanced mapping.
- */
-const size_t kPageSize = 1024 * 1024;
+
 /**
  * String delimiter
  */

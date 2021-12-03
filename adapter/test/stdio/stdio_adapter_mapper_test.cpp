@@ -11,6 +11,7 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include <catch_config.h>
+#include <hermes/adapter/constants.h>
 #include <hermes/adapter/stdio/common/constants.h>
 #include <hermes/adapter/stdio/common/datastructures.h>
 #include <hermes/adapter/stdio/mapper/mapper_factory.h>
@@ -49,11 +50,15 @@ hermes::adapter::stdio::test::Arguments args;
 hermes::adapter::stdio::test::Info info;
 
 int init(int* argc, char*** argv) {
-  (void)argc;
-  (void)argv;
+  MPI_Init(argc, argv);
+
   return 0;
 }
-int finalize() { return 0; }
+int finalize() {
+  MPI_Finalize();
+
+  return 0;
+}
 
 int pretest() {
   fs::path fullpath = args.directory;

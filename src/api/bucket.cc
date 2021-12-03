@@ -83,6 +83,20 @@ Status Bucket::Put(const std::string &name, const u8 *data, size_t size) {
   return result;
 }
 
+size_t Bucket::GetTotalBlobSize() {
+  std::vector<BlobID> blob_ids = hermes::GetBlobIds(&hermes_->context_,
+                                                    &hermes_->rpc_, id_);
+  api::Context ctx;
+  size_t result = 0;
+  for (size_t i = 0; i < blob_ids.size(); ++i) {
+    ScopedTemporaryMemory scratch(&hermes_->trans_arena_);
+    result += hermes::GetBlobSizeById(&hermes_->context_, &hermes_->rpc_,
+                                      scratch, blob_ids[i]);
+  }
+
+  return result;
+}
+
 size_t Bucket::GetBlobSize(Arena *arena, const std::string &name,
                            const Context &ctx) {
   (void)ctx;
