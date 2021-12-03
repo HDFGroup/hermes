@@ -9,7 +9,7 @@ add_dependencies(pubsub_metadata_test hermes_pubsub)
 
 add_executable(pubsub_negative_connection_test ${CMAKE_CURRENT_SOURCE_DIR}/pubsub_negative_connection_test.cc)
 add_test(NAME "pubsub_negative_connection_test" COMMAND "${CMAKE_BINARY_DIR}/bin/pubsub_negative_connection_test")
-target_link_libraries(pubsub_metadata_test ${LIBRT} hermes MPI::MPI_CXX
+target_link_libraries(pubsub_negative_connection_test ${LIBRT} hermes MPI::MPI_CXX
         $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium> hermes_pubsub)
 add_dependencies(pubsub_negative_connection_test hermes_pubsub)
 
