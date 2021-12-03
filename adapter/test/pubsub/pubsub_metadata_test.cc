@@ -1,7 +1,8 @@
 //
 // Created by jaime on 6/25/2021.
 //
-#include <hermes/adapter/pubsub.h>
+#include <hermes/adapter/pubsub/metadata_manager.h>
+#include <hermes/adapter/singleton.h>
 
 int main(int argc, char **argv) {
   auto mdm = hermes::adapter::Singleton<hermes::adapter::pubsub::MetadataManager>::GetInstance();
