@@ -11,7 +11,7 @@ hapi::Status hermes::pubsub::mpiInit(int argc, char **argv){
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
   if (mpi_threads_provided < MPI_THREAD_MULTIPLE) {
     fprintf(stderr, "Didn't receive appropriate MPI threading specification\n");
-    return hapi::Status(hermes::HERMES_ERROR_MAX);
+    return hapi::Status(hermes::INVALID_FILE);
   }
   return hapi::Status(hermes::HERMES_SUCCESS);
 }
