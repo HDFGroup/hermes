@@ -20,19 +20,21 @@ hapi::Status hermes::pubsub::connect(const std::string &config_file,
                                      bool independent){
   LOG(INFO) << "Connecting adapter" << std::endl;
   auto mdm = hermes::adapter::Singleton<hermes::adapter::pubsub::MetadataManager>::GetInstance();
-  mdm->InitializeHermes(config_file.c_str());
-  if(mdm->isClient()) return hapi::Status(hermes::HERMES_SUCCESS);
-  //todo(Jaime):
-  else return hapi::Status(hermes::HERMES_ERROR_MAX);
+  try {
+    mdm->InitializeHermes(config_file.c_str());
+    if(mdm->isClient()) return hapi::Status(hermes::HERMES_SUCCESS);
+    else return hapi::Status(hermes::HERMES_ERROR_MAX);
+  } catch (const std::exception& e){
+    LOG(FATAL) << "Could nto connect to hermes daemon" <<std::endl;
+    return hapi::Status(hermes::HERMES_ERROR_MAX);
+  }
 }
 
 hapi::Status hermes::pubsub::connect(bool independent){
   LOG(INFO) << "Connecting adapter" << std::endl;
   auto mdm = hermes::adapter::Singleton<hermes::adapter::pubsub::MetadataManager>::GetInstance();
   char* hermes_config = getenv(kHermesConf);
-  mdm->InitializeHermes(hermes_config);
-  if(mdm->isClient()) return hapi::Status(hermes::HERMES_SUCCESS);
-  else return hapi::Status(hermes::HERMES_ERROR_MAX);
+  return connect(hermes_config, independent);
 }
 
 hapi::Status hermes::pubsub::disconnect(){

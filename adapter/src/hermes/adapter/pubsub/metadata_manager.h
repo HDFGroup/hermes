@@ -55,7 +55,13 @@ class MetadataManager {
   MetadataManager()
       : metadata(),
         ref(0){
-    MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+    try {
+      MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+    }
+    catch (const std::exception e) {
+      LOG(INFO) << "PubSub Metadata Manager could not detect MPI rank" << std::endl;
+      mpi_rank = 0;
+    }
   }
   /**
    * Get the instance of hermes.
