@@ -68,7 +68,7 @@ class MetadataManager {
    */
   void InitializeHermes(const char *config_file) {
     if (ref == 0) {
-      hermes = hapi::InitHermes(config_file);
+      hermes = hapi::InitHermes(config_file, false, true);
     }
     ref++;
   }

@@ -1,10 +1,17 @@
-set(PUBSUB_TESTS pubsub_connection_test pubsub_negative_connection_test pubsub_topic_test
+set(PUBSUB_TESTS pubsub_connection_test pubsub_topic_test
         pubsub_end_to_end_test pubsub_end_to_end_test_sync)
 
 add_executable(pubsub_metadata_test ${CMAKE_CURRENT_SOURCE_DIR}/pubsub_metadata_test.cc)
-add_test(pubsub_metadata_test pubsub_metadata_test)
-target_link_libraries(pubsub_metadata_test hermes_pubsub)
+add_test(NAME "pubsub_metadata_test" COMMAND "${CMAKE_BINARY_DIR}/bin/pubsub_metadata_test")
+target_link_libraries(pubsub_metadata_test ${LIBRT} hermes MPI::MPI_CXX
+        $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium> hermes_pubsub)
 add_dependencies(pubsub_metadata_test hermes_pubsub)
+
+add_executable(pubsub_negative_connection_test ${CMAKE_CURRENT_SOURCE_DIR}/pubsub_negative_connection_test.cc)
+add_test(NAME "pubsub_negative_connection_test" COMMAND "${CMAKE_BINARY_DIR}/bin/pubsub_negative_connection_test")
+target_link_libraries(pubsub_metadata_test ${LIBRT} hermes MPI::MPI_CXX
+        $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium> hermes_pubsub)
+add_dependencies(pubsub_negative_connection_test hermes_pubsub)
 
 foreach(program ${PUBSUB_TESTS})
     add_executable(${program} ${CMAKE_CURRENT_SOURCE_DIR}/${program}.cc)
