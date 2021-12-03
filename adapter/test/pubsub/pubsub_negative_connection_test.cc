@@ -6,16 +6,16 @@
 int main(int argc, char **argv) {
   hermes::pubsub::mpiInit(argc, argv);
 
-//  char *config_file = 0;
-//  if (argc == 2) {
-//    config_file = argv[1];
-//  }
-//  else{
-//    config_file = getenv(kHermesConf);
-//  }
+  char *config_file = 0;
+  if (argc == 2) {
+    config_file = argv[1];
+  }
+  else{
+    config_file = getenv(kHermesConf);
+  }
 
-  auto connect_ret = hermes::pubsub::connect(false);
+  auto connect_ret = hermes::pubsub::connect(config_file, false);
   assert(connect_ret.Failed());
-//  auto disconnect_ret = hermes::pubsub::disconnect();
-//  assert(disconnect_ret.Failed());
+  auto disconnect_ret = hermes::pubsub::disconnect();
+  assert(disconnect_ret.Failed());
 }

@@ -8,11 +8,12 @@ target_link_libraries(pubsub_metadata_test ${LIBRT} hermes MPI::MPI_CXX
 add_dependencies(pubsub_metadata_test hermes_pubsub)
 
 add_executable(pubsub_negative_connection_test ${CMAKE_CURRENT_SOURCE_DIR}/pubsub_negative_connection_test.cc)
-add_test(NAME "pubsub_negative_connection_test" COMMAND "${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 1
-               ${CMAKE_BINARY_DIR}/bin/pubsub_negative_connection_test")
+add_dependencies(pubsub_negative_connection_test hermes_pubsub)
 target_link_libraries(pubsub_negative_connection_test ${LIBRT} hermes MPI::MPI_CXX
         $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium> hermes_pubsub)
-add_dependencies(pubsub_negative_connection_test hermes_pubsub)
+target_compile_definitions(pubsub_negative_connection_test
+        PRIVATE $<$<BOOL:${HERMES_RPC_THALLIUM}>:HERMES_RPC_THALLIUM>)
+mpi(${program} 1 "")
 
 foreach(program ${PUBSUB_TESTS})
     add_executable(${program} ${CMAKE_CURRENT_SOURCE_DIR}/${program}.cc)
