@@ -41,13 +41,20 @@ hapi::Status hermes::pubsub::connect(bool independent){
   } catch (const std::exception& e){
     LOG(FATAL) << "Could not connect to hermes daemon" <<std::endl;
     return hapi::Status(hermes::INVALID_FILE);
-  }}
+  }
+}
 
 hapi::Status hermes::pubsub::disconnect(){
   LOG(INFO) << "Disconnecting adapter" << std::endl;
   auto mdm = hermes::adapter::Singleton<hermes::adapter::pubsub::MetadataManager>::GetInstance();
-  mdm->FinalizeHermes();
-  return hapi::Status(hermes::HERMES_SUCCESS);
+  try {
+    mdm->FinalizeHermes();
+    return hapi::Status(hermes::HERMES_SUCCESS);
+  } catch (const std::exception& e){
+    LOG(FATAL) << "Could not disconnect from hermes" <<std::endl;
+    return hapi::Status(hermes::INVALID_FILE);
+  }
+
 }
 
 hapi::Status hermes::pubsub::attach(const std::string& topic){
