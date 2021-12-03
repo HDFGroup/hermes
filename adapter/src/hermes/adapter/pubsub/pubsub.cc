@@ -23,10 +23,10 @@ hapi::Status hermes::pubsub::connect(const std::string &config_file,
   try {
     mdm->InitializeHermes(config_file.c_str());
     if(mdm->isClient()) return hapi::Status(hermes::HERMES_SUCCESS);
-    else return hapi::Status(hermes::HERMES_ERROR_MAX);
+    else return hapi::Status(hermes::INVALID_FILE);
   } catch (const std::exception& e){
     LOG(FATAL) << "Could not connect to hermes daemon" <<std::endl;
-    return hapi::Status(hermes::HERMES_ERROR_MAX);
+    return hapi::Status(hermes::INVALID_FILE);
   }
 }
 
@@ -34,8 +34,14 @@ hapi::Status hermes::pubsub::connect(bool independent){
   LOG(INFO) << "Connecting adapter" << std::endl;
   auto mdm = hermes::adapter::Singleton<hermes::adapter::pubsub::MetadataManager>::GetInstance();
   char* hermes_config = getenv(kHermesConf);
-  return connect(hermes_config, independent);
-}
+  try {
+    mdm->InitializeHermes(hermes_config);
+    if(mdm->isClient()) return hapi::Status(hermes::HERMES_SUCCESS);
+    else return hapi::Status(hermes::INVALID_FILE);
+  } catch (const std::exception& e){
+    LOG(FATAL) << "Could not connect to hermes daemon" <<std::endl;
+    return hapi::Status(hermes::INVALID_FILE);
+  }}
 
 hapi::Status hermes::pubsub::disconnect(){
   LOG(INFO) << "Disconnecting adapter" << std::endl;
