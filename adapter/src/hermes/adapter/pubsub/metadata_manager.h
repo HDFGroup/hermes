@@ -52,14 +52,12 @@ class MetadataManager {
   /**
    * Constructor
    */
-  MetadataManager()
+  MetadataManager(bool is_mpi = true)
       : metadata(),
         ref(0){
-    try {
-      MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
-    }
-    catch (const std::exception& e) {
-      LOG(ERROR) << "PubSub Metadata Manager could not detect MPI rank" << std::endl;
+    if(is_mpi) MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+    else {
+      //branch exists for testing puropses
       mpi_rank = 0;
     }
   }

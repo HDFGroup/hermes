@@ -5,7 +5,7 @@
 #include <hermes/adapter/singleton.h>
 
 int main(int argc, char **argv) {
-  auto mdm = hermes::adapter::Singleton<hermes::adapter::pubsub::MetadataManager>::GetInstance();
+  auto mdm = hermes::adapter::Singleton<hermes::adapter::pubsub::MetadataManager>::GetInstance(false);
   ClientMetadata stat;
   struct timespec ts{};
   timespec_get(&ts, TIME_UTC);
@@ -27,7 +27,7 @@ int main(int argc, char **argv) {
   assert(update_ret == true);
   find_ret = mdm->Find("test");
   assert(find_ret.second == true);
-  assert(find_ret.first.st_atim.tv_nsec <= ts.tv_nsec);
+  assert(find_ret.first.st_atim.tv_nsec >= ts.tv_nsec);
   assert(find_ret.first.st_atim.tv_nsec == ts1.tv_nsec);
 
   auto delete_ret = mdm->Delete("test");
