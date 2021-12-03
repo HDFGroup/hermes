@@ -251,7 +251,7 @@ size_t write_internal(AdapterStat &stat, const void *ptr, size_t total_size,
   auto mapping = mapper->map(
       FileStruct(mdm->Convert(fp), stat.st_ptr, total_size));
   size_t data_offset = 0;
-  LOG(INFO) << "Mapping for write has " << mapping.size() << " mappings.\n";
+  VLOG(1) << "Mapping for write has " << mapping.size() << " mappings.\n";
 
   for (const auto &[finfo, hinfo] : mapping) {
     auto index = std::stol(hinfo.blob_name_) - 1;
@@ -379,8 +379,8 @@ size_t read_internal(AdapterStat &stat, void *ptr, size_t total_size,
   auto mapping = mapper->map(
       FileStruct(mdm->Convert(fp), stat.st_ptr, total_size));
   size_t total_read_size = 0;
-  LOG(INFO) << "Mapping for read has " << mapping.size() << " mapping."
-            << std::endl;
+  VLOG(1) << "Mapping for read has " << mapping.size() << " mapping."
+          << std::endl;
   for (const auto& [finfo, hinfo] : mapping) {
     auto blob_exists = bkt->ContainsBlob(hinfo.blob_name_);
     hapi::Blob read_data(0);

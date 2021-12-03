@@ -428,8 +428,8 @@ void FlushBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id,
 
     int fd = open(filename.c_str(), open_flags, open_mode);
     if (fd != -1) {
-      VLOG(1) << "Flushing BlobID " << blob_id.as_int << " to file "
-              << filename << " at offset " << offset << "\n";
+      LOG(INFO) << "Flushing BlobID " << blob_id.as_int << " to file "
+                << filename << " at offset " << offset << "\n";
 
       const int kFlushBufferSize = KILOBYTES(4);
       u8 flush_buffer[kFlushBufferSize];
@@ -452,10 +452,7 @@ void FlushBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id,
     } else {
       FailedLibraryCall("open");
     }
-    // TEMP
-    LOG(INFO) << "Unlocking...\n";
     UnlockBlob(context, rpc, blob_id);
-    LOG(INFO) << "Unlocked...\n";
   }
 
   if (async) {

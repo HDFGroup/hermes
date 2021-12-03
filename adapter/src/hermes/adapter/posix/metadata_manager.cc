@@ -20,13 +20,13 @@ using hermes::adapter::posix::FileID;
 using hermes::adapter::posix::MetadataManager;
 
 bool MetadataManager::Create(int fh, const AdapterStat &stat) {
-  LOG(INFO) << "Create metadata for file handler." << std::endl;
+  VLOG(1) << "Create metadata for file handler." << std::endl;
   auto ret = metadata.emplace(Convert(fh), stat);
   return ret.second;
 }
 
 bool MetadataManager::Update(int fh, const AdapterStat &stat) {
-  LOG(INFO) << "Update metadata for file handler." << std::endl;
+  VLOG(1) << "Update metadata for file handler." << std::endl;
   auto fileId = Convert(fh);
   auto iter = metadata.find(fileId);
   if (iter != metadata.end()) {
@@ -60,7 +60,7 @@ FileID MetadataManager::Convert(int fd) {
 }
 
 bool MetadataManager::Delete(int fh) {
-  LOG(INFO) << "Delete metadata for file handler." << std::endl;
+  VLOG(1) << "Delete metadata for file handler." << std::endl;
   auto fileId = Convert(fh);
   auto iter = metadata.find(fileId);
   if (iter != metadata.end()) {
