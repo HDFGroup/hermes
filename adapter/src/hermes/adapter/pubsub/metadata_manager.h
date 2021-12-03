@@ -59,7 +59,7 @@ class MetadataManager {
       MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
     }
     catch (const std::exception& e) {
-      LOG(INFO) << "PubSub Metadata Manager could not detect MPI rank" << std::endl;
+      LOG(ERROR) << "PubSub Metadata Manager could not detect MPI rank" << std::endl;
       mpi_rank = 0;
     }
   }
