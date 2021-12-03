@@ -25,7 +25,7 @@ hapi::Status hermes::pubsub::connect(const std::string &config_file,
     if(mdm->isClient()) return hapi::Status(hermes::HERMES_SUCCESS);
     else return hapi::Status(hermes::HERMES_ERROR_MAX);
   } catch (const std::exception& e){
-    LOG(FATAL) << "Could nto connect to hermes daemon" <<std::endl;
+    LOG(FATAL) << "Could not connect to hermes daemon" <<std::endl;
     return hapi::Status(hermes::HERMES_ERROR_MAX);
   }
 }
