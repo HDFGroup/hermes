@@ -101,10 +101,6 @@ hapi::Status hermes::pubsub::detach(const std::string& topic){
     //      LOG(INFO) << "Detaching from topic with more than one reference: "
     //                << topic << std::endl;
     //      existing.first.ref_count--;
-    struct timespec ts {};
-    timespec_get(&ts, TIME_UTC);
-    existing.first.st_atim = ts;
-    mdm->Update(topic, existing.first);
     return existing.first.st_bkid->Release(ctx);
   }
   return hapi::Status(hermes::INVALID_BUCKET);
