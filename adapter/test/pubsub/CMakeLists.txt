@@ -13,7 +13,7 @@ target_link_libraries(pubsub_negative_connection_test ${LIBRT} hermes MPI::MPI_C
         $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium> hermes_pubsub)
 target_compile_definitions(pubsub_negative_connection_test
         PRIVATE $<$<BOOL:${HERMES_RPC_THALLIUM}>:HERMES_RPC_THALLIUM>)
-mpi(${program} 1 "")
+mpi(pubsub_negative_connection_test 1 "")
 
 foreach(program ${PUBSUB_TESTS})
     add_executable(${program} ${CMAKE_CURRENT_SOURCE_DIR}/${program}.cc)
