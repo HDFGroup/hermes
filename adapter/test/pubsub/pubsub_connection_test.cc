@@ -14,7 +14,7 @@ int main(int argc, char **argv) {
     config_file = getenv(kHermesConf);
   }
 
-  auto connect_ret = hermes::pubsub::connect(config_file);
+  auto connect_ret = hermes::pubsub::connect(config_file, false);
   assert(connect_ret.Succeeded());
   auto disconnect_ret = hermes::pubsub::disconnect();
   assert(disconnect_ret.Succeeded());
