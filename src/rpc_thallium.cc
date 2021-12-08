@@ -22,8 +22,11 @@ namespace hermes {
 
 std::string GetHostNumberAsString(RpcContext *rpc, u32 node_id) {
   std::string result = "";
-  if (rpc->host_number_range[0] != 0 && rpc->host_number_range[1] != 0) {
-    result = std::to_string(node_id + rpc->host_number_range[0] - 1);
+  if (rpc->num_nodes > 1) {
+    // Subtract 1 because the node_id index starts at 1 instead of 0. We reserve
+    // 0 so that BufferIDs (which are made from the node_id) can be NULL.
+    int index = (node_id - 1);
+    result = std::to_string(rpc->host_numbers[index]);
   }
 
   return result;
@@ -644,8 +647,6 @@ void InitRpcContext(RpcContext *rpc, u32 num_nodes, u32 node_id,
                         kMaxServerNameSize);
   CopyStringToCharArray(config->rpc_server_suffix, rpc->hostname_suffix,
                         kMaxServerSuffixSize);
-  rpc->host_number_range[0] = config->rpc_host_number_range[0];
-  rpc->host_number_range[1] = config->rpc_host_number_range[1];
 
   rpc->client_rpc.state_size = sizeof(ClientThalliumState);
 }

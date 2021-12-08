@@ -18,6 +18,58 @@
 #include "memory_management.h"
 #include "buffer_pool_internal.h"
 #include "test_utils.h"
+#include "config_parser.h"
+
+
+using hermes::Arena;
+using hermes::u8;
+using hermes::Config;
+
+Config ParseConfigString(Arena *arena, const std::string &config_string) {
+  hermes::ScopedTemporaryMemory scratch(arena);
+  hermes::EntireFile config_file =
+    {(u8 *)config_string.data(), config_string.size()};
+  hermes::TokenList tokens = hermes::Tokenize(scratch, config_file);
+  Config config;
+  hermes::ParseTokens(&tokens, &config);
+
+  return config;
+}
+
+void RunHostNumbersTest(Arena *arena, const std::string &config_string,
+                        const std::vector<int> &expected) {
+  Config config = ParseConfigString(arena, config_string);
+  Assert(config.host_numbers == expected);
+}
+
+void TestParseRangeList(Arena *arena) {
+  {
+    std::vector<int> expected{1, 3, 4, 5, 7, 10, 11, 12, 13, 14};
+    RunHostNumbersTest(arena, "rpc_host_number_range = {1, 3-5, 7, 10-14};\n",
+                       expected);
+  }
+
+  {
+    std::vector<int> expected{1};
+    RunHostNumbersTest(arena, "rpc_host_number_range = {1};\n", expected);
+  }
+
+  {
+    std::vector<int> expected{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    RunHostNumbersTest(arena, "rpc_host_number_range = {1-10};\n", expected);
+  }
+
+  {
+    std::vector<int> expected{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12};
+    RunHostNumbersTest(arena, "rpc_host_number_range = {1-10, 12};\n",
+                       expected);
+  }
+
+  {
+    std::vector<int> expected;
+    RunHostNumbersTest(arena, "rpc_host_number_range = {};\n", expected);
+  }
+}
 
 int main(int argc, char **argv) {
   if (argc < 2) {
@@ -28,8 +80,8 @@ int main(int argc, char **argv) {
   hermes::Config config = {};
 
   const size_t kConfigMemorySize = KILOBYTES(16);
-  hermes::u8 config_memory[kConfigMemorySize];
-  hermes::Arena arena = {};
+  u8 config_memory[kConfigMemorySize];
+  Arena arena = {};
   hermes::InitArena(&arena, kConfigMemorySize, config_memory);
 
   hermes::ParseConfig(&arena, argv[1], &config);
@@ -81,13 +133,12 @@ int main(int argc, char **argv) {
   Assert(config.rpc_domain.empty());
   Assert(config.rpc_port == 8080);
   Assert(config.buffer_organizer_port == 8081);
-  Assert(config.rpc_host_number_range[0] == 0 &&
-         config.rpc_host_number_range[1] == 0);
   Assert(config.rpc_num_threads == 1);
 
   const char expected_rpc_server_name[] = "localhost";
   Assert(config.rpc_server_base_name == expected_rpc_server_name);
   Assert(config.rpc_server_suffix.empty());
+  Assert(config.host_numbers == std::vector<int>());
 
   const char expected_shm_name[] = "/hermes_buffer_pool_";
   Assert(strncmp(config.buffer_pool_shmem_name, expected_shm_name,
@@ -104,6 +155,8 @@ int main(int argc, char **argv) {
   Assert(config.bo_num_threads == 4);
 
   Assert(config.default_rr_split == false);
+
+  TestParseRangeList(&arena);
 
   return 0;
 }

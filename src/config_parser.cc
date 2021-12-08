@@ -23,6 +23,7 @@
 #include "hermes_types.h"
 #include "utils.h"
 #include "memory_management.h"
+#include "config_parser.h"
 
 // Steps to add a new configuration variable:
 // 1. Add an entry to the ConfigVariable enum
@@ -38,57 +39,6 @@
 // 8. Add the variable with documentation to test/data/hermes.conf
 
 namespace hermes {
-
-enum class TokenType {
-  Identifier,
-  Number,
-  String,
-  OpenCurlyBrace,
-  CloseCurlyBrace,
-  Comma,
-  Equal,
-  Semicolon,
-
-  Count
-};
-
-enum ConfigVariable {
-  ConfigVariable_Unkown,
-  ConfigVariable_NumDevices,
-  ConfigVariable_NumTargets,
-  ConfigVariable_Capacities,
-  ConfigVariable_BlockSizes,
-  ConfigVariable_NumSlabs,
-  ConfigVariable_SlabUnitSizes,
-  ConfigVariable_DesiredSlabPercentages,
-  ConfigVariable_BandwidthsMbps,
-  ConfigVariable_LatenciesUs,
-  ConfigVariable_BufferPoolArenaPercentage,
-  ConfigVariable_MetadataArenaPercentage,
-  ConfigVariable_TransferWindowArenaPercentage,
-  ConfigVariable_TransientArenaPercentage,
-  ConfigVariable_MountPoints,
-  ConfigVariable_SwapMount,
-  ConfigVariable_NumBufferOrganizerRetries,
-  ConfigVariable_MaxBucketsPerNode,
-  ConfigVariable_MaxVBucketsPerNode,
-  ConfigVariable_SystemViewStateUpdateInterval,
-  ConfigVariable_RpcServerBaseName,
-  ConfigVariable_RpcServerSuffix,
-  ConfigVariable_BufferPoolShmemName,
-  ConfigVariable_RpcProtocol,
-  ConfigVariable_RpcDomain,
-  ConfigVariable_RpcPort,
-  ConfigVariable_BufferOrganizerPort,
-  ConfigVariable_RpcHostNumberRange,
-  ConfigVariable_RpcNumThreads,
-  ConfigVariable_PlacementPolicy,
-  ConfigVariable_IsSharedDevice,
-  ConfigVariable_BoNumThreads,
-  ConfigVariable_RRSplit,
-
-  ConfigVariable_Count
-};
 
 // TODO(chogan): Make this work independent of declaration order
 static const char *kConfigVariableStrings[ConfigVariable_Count] = {
@@ -125,23 +75,6 @@ static const char *kConfigVariableStrings[ConfigVariable_Count] = {
   "is_shared_device",
   "buffer_organizer_num_threads",
   "default_rr_split",
-};
-
-struct Token {
-  Token *next;
-  char *data;
-  u32 size;
-  TokenType type;
-};
-
-struct TokenList {
-  Token *head;
-  int count;
-};
-
-struct EntireFile {
-  u8 *data;
-  u64 size;
 };
 
 EntireFile ReadEntireFile(Arena *arena, const char *path) {
@@ -185,9 +118,11 @@ EntireFile ReadEntireFile(Arena *arena, const char *path) {
   return result;
 }
 
-void AddTokenToList(Arena *arena, TokenList *list, TokenType type) {
+void AddTokenToList(Arena *arena, TokenList *list, TokenType type,
+                    u32 line_number) {
   Token *tok = PushClearedStruct<Token>(arena);
   tok->type = type;
+  tok->line = line_number;
   list->head->next = tok;
   list->head = tok;
 }
@@ -223,18 +158,35 @@ inline bool EndOfIdentifier(char c) {
 }
 
 inline bool BeginsNumber(char c) {
-  bool result = (c >= '0' && c <= '9') || (c == '.');
+  bool result = (c >= '0' && c <= '9') || (c == '.') || (c == '-');
 
   return result;
 }
 
 inline bool EndOfNumber(char c) {
-  bool result = IsWhitespace(c) || (c == ',') || (c == ';') || (c == '}');
+  bool result = (IsWhitespace(c) || (c == ',') || (c == ';') || (c == '}')
+                 || (c == '-'));
+
+  return result;
+}
+
+inline bool IsEndOfLine(char **at, char *end) {
+  // Linux style
+  bool result = (*at)[0] == '\n';
+
+  // Windows style
+  if (*at + 1 < end && !result) {
+    result = ((*at)[0] == '\r' && (*at)[1] == '\n');
+    if (result) {
+      (*at)++;
+    }
+  }
 
   return result;
 }
 
 TokenList Tokenize(Arena *arena, EntireFile entire_file) {
+  u32 line_number = 1;
   TokenList result = {};
   Token dummy = {};
   result.head = &dummy;
@@ -244,19 +196,28 @@ TokenList Tokenize(Arena *arena, EntireFile entire_file) {
 
   while (at < end) {
     if (IsWhitespace(*at)) {
+      if (IsEndOfLine(&at, end)) {
+        line_number++;
+      }
+
       ++at;
       continue;
     }
 
     if (BeginsComment(*at)) {
-      while (at < end && !EndOfComment(*at)) {
+      while (at < end) {
+        if (IsEndOfLine(&at, end)) {
+          line_number++;
+          ++at;
+          break;
+        }
         ++at;
       }
       continue;
     }
 
     if (BeginsIdentifier(*at)) {
-      AddTokenToList(arena, &result, TokenType::Identifier);
+      AddTokenToList(arena, &result, TokenType::Identifier, line_number);
       result.head->data = at;
 
       while (at && !EndOfIdentifier(*at)) {
@@ -264,8 +225,13 @@ TokenList Tokenize(Arena *arena, EntireFile entire_file) {
         at++;
       }
     } else if (BeginsNumber(*at)) {
-      AddTokenToList(arena, &result, TokenType::Number);
+      AddTokenToList(arena, &result, TokenType::Number, line_number);
       result.head->data = at;
+
+      if (*at == '-') {
+        result.head->size++;
+        at++;
+      }
 
       while (at && !EndOfNumber(*at)) {
         result.head->size++;
@@ -274,27 +240,29 @@ TokenList Tokenize(Arena *arena, EntireFile entire_file) {
     } else {
       switch (*at) {
         case ';': {
-          AddTokenToList(arena, &result, TokenType::Semicolon);
+          AddTokenToList(arena, &result, TokenType::Semicolon, line_number);
           break;
         }
         case '=': {
-          AddTokenToList(arena, &result, TokenType::Equal);
+          AddTokenToList(arena, &result, TokenType::Equal, line_number);
           break;
         }
         case ',': {
-          AddTokenToList(arena, &result, TokenType::Comma);
+          AddTokenToList(arena, &result, TokenType::Comma, line_number);
           break;
         }
         case '{': {
-          AddTokenToList(arena, &result, TokenType::OpenCurlyBrace);
+          AddTokenToList(arena, &result, TokenType::OpenCurlyBrace,
+                         line_number);
           break;
         }
         case '}': {
-          AddTokenToList(arena, &result, TokenType::CloseCurlyBrace);
+          AddTokenToList(arena, &result, TokenType::CloseCurlyBrace,
+                         line_number);
           break;
         }
         case '"': {
-          AddTokenToList(arena, &result, TokenType::String);
+          AddTokenToList(arena, &result, TokenType::String, line_number);
           at++;
           result.head->data = at;
 
@@ -305,7 +273,8 @@ TokenList Tokenize(Arena *arena, EntireFile entire_file) {
           break;
         }
         default: {
-          assert(!"Unexpected token encountered\n");
+          LOG(FATAL) << "Config parser encountered unexpected token on line "
+                     << line_number << ": " << *at << "\n";
           break;
         }
       }
@@ -355,6 +324,12 @@ inline bool IsComma(Token *tok) {
   return result;
 }
 
+inline bool IsHyphen(Token *tok) {
+  bool result = tok->type == TokenType::Hyphen;
+
+  return result;
+}
+
 inline bool IsEqual(Token *tok) {
   bool result = tok->type == TokenType::Equal;
 
@@ -367,8 +342,15 @@ inline bool IsSemicolon(Token *tok) {
   return result;
 }
 
-void PrintExpectedAndFail(const std::string &expected) {
-  LOG(FATAL) << "Configuration parser expected: " << expected << std::endl;
+void PrintExpectedAndFail(const std::string &expected, u32 line_number = 0) {
+  std::ostringstream msg;
+  msg << "Configuration parser expected '" << expected << "'";
+  if (line_number > 0) {
+    msg << " on line " << line_number;
+  }
+  msg << "\n";
+
+  LOG(FATAL) << msg.str();
 }
 
 ConfigVariable GetConfigVariable(Token *tok) {
@@ -402,7 +384,7 @@ size_t ParseSizet(Token **tok) {
                  << std::endl;
     }
   } else {
-    PrintExpectedAndFail("a number");
+    PrintExpectedAndFail("a number", (*tok)->line);
   }
 
   return result;
@@ -417,7 +399,7 @@ Token *ParseSizetList(Token *tok, size_t *out, int n) {
         if (IsComma(tok)) {
           tok = tok->next;
         } else {
-          PrintExpectedAndFail(",");
+          PrintExpectedAndFail(",", tok->line);
         }
       }
     }
@@ -425,10 +407,10 @@ Token *ParseSizetList(Token *tok, size_t *out, int n) {
     if (IsCloseCurlyBrace(tok)) {
       tok = tok->next;
     } else {
-      PrintExpectedAndFail("}");
+      PrintExpectedAndFail("}", tok->line);
     }
   } else {
-    PrintExpectedAndFail("{");
+    PrintExpectedAndFail("{", tok->line);
   }
 
   return tok;
@@ -440,14 +422,55 @@ int ParseInt(Token **tok) {
     errno = 0;
     result = strtol((*tok)->data, NULL, 0);
     if (errno == ERANGE || (result == 0 && errno != 0) || result >= INT_MAX) {
-      PrintExpectedAndFail("an integer between 0 and INT_MAX");
+      PrintExpectedAndFail("an integer between 0 and INT_MAX", (*tok)->line);
     }
     *tok = (*tok)->next;
   } else {
-    PrintExpectedAndFail("a number");
+    PrintExpectedAndFail("a number", (*tok)->line);
   }
 
   return (int)result;
+}
+
+Token *ParseRangeList(Token *tok, std::vector<int> &host_numbers) {
+  if (IsOpenCurlyBrace(tok)) {
+    tok = tok->next;
+    if (IsNumber(tok)) {
+      while (tok) {
+        int range_start = ParseInt(&tok);
+        host_numbers.push_back(range_start);
+
+        if (IsNumber(tok)) {
+          // This entry in the list represents a range
+          int negative_range_end = ParseInt(&tok);
+          if (negative_range_end > 0) {
+            PrintExpectedAndFail("a range", tok->line);
+          }
+          int range_end = -1 * negative_range_end;
+          for (int i = range_start + 1; i <= range_end; ++i) {
+            host_numbers.push_back(i);
+          }
+        }
+
+        if (IsComma(tok)) {
+          tok = tok->next;
+        } else if (IsCloseCurlyBrace(tok)) {
+          break;
+        } else {
+          PrintExpectedAndFail("either a range, a comma, or a }", tok->line);
+        }
+      }
+    }
+    if (IsCloseCurlyBrace(tok)) {
+      tok = tok->next;
+    } else {
+      PrintExpectedAndFail("}", tok->line);
+    }
+  } else {
+    PrintExpectedAndFail("{", tok->line);
+  }
+
+  return tok;
 }
 
 Token *ParseIntList(Token *tok, int *out, int n) {
@@ -459,17 +482,17 @@ Token *ParseIntList(Token *tok, int *out, int n) {
         if (IsComma(tok)) {
           tok = tok->next;
         } else {
-          PrintExpectedAndFail(",");
+          PrintExpectedAndFail(",", tok->line);
         }
       }
     }
     if (IsCloseCurlyBrace(tok)) {
       tok = tok->next;
     } else {
-      PrintExpectedAndFail("}");
+      PrintExpectedAndFail("}", tok->line);
     }
   } else {
-    PrintExpectedAndFail("{");
+    PrintExpectedAndFail("{", tok->line);
   }
 
   return tok;
@@ -494,10 +517,10 @@ Token *ParseIntListList(Token *tok, int out[][hermes::kMaxBufferPoolSlabs],
     if (IsCloseCurlyBrace(tok)) {
       tok = tok->next;
     } else {
-      PrintExpectedAndFail("}");
+      PrintExpectedAndFail("}", tok->line);
     }
   } else {
-    PrintExpectedAndFail("{");
+    PrintExpectedAndFail("{", tok->line);
   }
 
   return tok;
@@ -509,7 +532,7 @@ f32 ParseFloat(Token **tok) {
     result = std::stod(std::string((*tok)->data), nullptr);
     *tok = (*tok)->next;
   } else {
-    PrintExpectedAndFail("a number");
+    PrintExpectedAndFail("a number", (*tok)->line);
   }
 
   return (f32)result;
@@ -524,17 +547,17 @@ Token *ParseFloatList(Token *tok, f32 *out, int n) {
         if (IsComma(tok)) {
           tok = tok->next;
         } else {
-          PrintExpectedAndFail(",");
+          PrintExpectedAndFail(",", tok->line);
         }
       }
     }
     if (IsCloseCurlyBrace(tok)) {
       tok = tok->next;
     } else {
-      PrintExpectedAndFail("}");
+      PrintExpectedAndFail("}", tok->line);
     }
   } else {
-    PrintExpectedAndFail("{");
+    PrintExpectedAndFail("{", tok->line);
   }
 
   return tok;
@@ -550,7 +573,7 @@ Token *ParseFloatListList(Token *tok, f32 out[][hermes::kMaxBufferPoolSlabs],
         if (IsComma(tok)) {
           tok = tok->next;
         } else {
-          PrintExpectedAndFail(",");
+          PrintExpectedAndFail(",", tok->line);
         }
       } else {
         // Optional final comma
@@ -562,10 +585,10 @@ Token *ParseFloatListList(Token *tok, f32 out[][hermes::kMaxBufferPoolSlabs],
     if (IsCloseCurlyBrace(tok)) {
       tok = tok->next;
     } else {
-      PrintExpectedAndFail("}");
+      PrintExpectedAndFail("}", tok->line);
     }
   } else {
-    PrintExpectedAndFail("{");
+    PrintExpectedAndFail("{", tok->line);
   }
 
   return tok;
@@ -577,7 +600,7 @@ std::string ParseString(Token **tok) {
     result = std::string((*tok)->data, (*tok)->size);
     *tok = (*tok)->next;
   } else {
-    PrintExpectedAndFail("a string");
+    PrintExpectedAndFail("a string", (*tok)->line);
   }
 
   return result;
@@ -592,17 +615,17 @@ Token *ParseStringList(Token *tok, std::string *out, int n) {
         if (IsComma(tok)) {
           tok = tok->next;
         } else {
-          PrintExpectedAndFail(",");
+          PrintExpectedAndFail(",", tok->line);
         }
       }
     }
     if (IsCloseCurlyBrace(tok)) {
       tok = tok->next;
     } else {
-      PrintExpectedAndFail("}");
+      PrintExpectedAndFail("}", tok->line);
     }
   } else {
-    PrintExpectedAndFail("{");
+    PrintExpectedAndFail("{", tok->line);
   }
 
   return tok;
@@ -614,7 +637,7 @@ Token *ParseCharArrayString(Token *tok, char *arr) {
     arr[tok->size] = '\0';
     tok = tok->next;
   } else {
-    PrintExpectedAndFail("a string");
+    PrintExpectedAndFail("a string", tok->line);
   }
 
   return tok;
@@ -640,10 +663,10 @@ Token *BeginStatement(Token *tok) {
     if (tok && IsEqual(tok)) {
       tok = tok->next;
     } else {
-      PrintExpectedAndFail("=");
+      PrintExpectedAndFail("=", tok->line);
     }
   } else {
-    PrintExpectedAndFail("an identifier");
+    PrintExpectedAndFail("an identifier", tok->line);
   }
 
   return tok;
@@ -653,7 +676,7 @@ Token *EndStatement(Token *tok) {
   if (tok && IsSemicolon(tok)) {
     tok = tok->next;
   } else {
-    PrintExpectedAndFail(";");
+    PrintExpectedAndFail(";", tok->line);
   }
 
   return tok;
@@ -817,7 +840,7 @@ void ParseTokens(TokenList *tokens, Config *config) {
         break;
       }
       case ConfigVariable_RpcHostNumberRange: {
-        tok = ParseIntList(tok, config->rpc_host_number_range, 2);
+        tok = ParseRangeList(tok, config->host_numbers);
         break;
       }
       case ConfigVariable_RpcNumThreads: {

@@ -46,43 +46,43 @@ typedef std::vector<unsigned char> Blob;
 
 /** Supported data placement policies */
 enum class PlacementPolicy {
-    kRandom,          /**< Random blob placement */
-    kRoundRobin,      /**< Round-Robin (around devices) blob placement */
-    kMinimizeIoTime,  /**< LP-based blob placement, minimize I/O time */
+  kRandom,          /**< Random blob placement */
+  kRoundRobin,      /**< Round-Robin (around devices) blob placement */
+  kMinimizeIoTime,  /**< LP-based blob placement, minimize I/O time */
 };
 
 /** Hermes API call context */
 struct Context {
-    static int default_buffer_organizer_retries;
-    /**< The default maximum number of buffer organizer retries */
+  static int default_buffer_organizer_retries;
+  /**< The default maximum number of buffer organizer retries */
 
-    static PlacementPolicy default_placement_policy;
-    /**< The default blob placement policy */
+  static PlacementPolicy default_placement_policy;
+  /**< The default blob placement policy */
 
-    static bool default_rr_split;
-    /**< Whether random splitting of blobs is enabled for Round-Robin blob
-       placement. */
+  static bool default_rr_split;
+  /**< Whether random splitting of blobs is enabled for Round-Robin blob
+     placement. */
 
-    PlacementPolicy policy;
-    /**< The blob placement policy */
+  PlacementPolicy policy;
+  /**< The blob placement policy */
 
-    int buffer_organizer_retries;
-    /**< The maximum number of buffer organizer retries */
+  int buffer_organizer_retries;
+  /**< The maximum number of buffer organizer retries */
 
-    bool rr_split;
-    /**< Whether random splitting of blobs is enabled for Round-Robin */
+  bool rr_split;
+  /**< Whether random splitting of blobs is enabled for Round-Robin */
 
-    bool rr_retry;
-    /**< Whether Round-Robin can be retried after failure */
+  bool rr_retry;
+  /**< Whether Round-Robin can be retried after failure */
 
-    bool disable_swap;
-    /**< Whether swapping is disabled */
+  bool disable_swap;
+  /**< Whether swapping is disabled */
 
-    Context() : policy(default_placement_policy),
-                buffer_organizer_retries(default_buffer_organizer_retries),
-                rr_split(default_rr_split),
-                rr_retry(false),
-                disable_swap(false) {}
+  Context() : policy(default_placement_policy),
+              buffer_organizer_retries(default_buffer_organizer_retries),
+              rr_split(default_rr_split),
+              rr_retry(false),
+              disable_swap(false) {}
 };
 
 }  // namespace api
@@ -100,28 +100,28 @@ constexpr int kMaxVBucketNameSize = 256;
 constexpr char kPlaceInHierarchy[] = "PlaceInHierarchy";
 
 #define HERMES_NOT_IMPLEMENTED_YET                      \
-    LOG(FATAL) << __func__ << " not implemented yet\n"
+  LOG(FATAL) << __func__ << " not implemented yet\n"
 
 #define HERMES_INVALID_CODE_PATH                    \
-    LOG(FATAL) << "Invalid code path." << std::endl
+  LOG(FATAL) << "Invalid code path." << std::endl
 
 /** A TargetID uniquely identifies a buffering target within the system. */
 union TargetID {
-    /** The Target ID as bitfield */
-    struct {
-        /** The ID of the node in charge of this target. */
-        u32 node_id;
-        /** The ID of the virtual device that backs this target. It is an index into
-         * the Device array starting at BufferPool::devices_offset (on the node with
-         * ID node_id). */
-        u16 device_id;
-        /** The index into the Target array starting at BufferPool::targets_offset
-         * (on the node with ID node_id). */
-        u16 index;
-    } bits;
+  /** The Target ID as bitfield */
+  struct {
+    /** The ID of the node in charge of this target. */
+    u32 node_id;
+    /** The ID of the virtual device that backs this target. It is an index into
+     * the Device array starting at BufferPool::devices_offset (on the node with
+     * ID node_id). */
+    u16 device_id;
+    /** The index into the Target array starting at BufferPool::targets_offset
+     * (on the node with ID node_id). */
+    u16 index;
+  } bits;
 
-    /** The TargetID as a unsigned 64-bit integer */
-    u64 as_int;
+  /** The TargetID as a unsigned 64-bit integer */
+  u64 as_int;
 };
 
 /**
@@ -136,114 +136,115 @@ using PlacementSchema = std::vector<std::pair<size_t, TargetID>>;
  * or the Hermes core(s).
  */
 enum class ProcessKind {
-    kApp,     /**< Application process */
-    kHermes,  /**< Hermes core process */
+  kApp,     /**< Application process */
+  kHermes,  /**< Hermes core process */
 
-    kCount    /**< Sentinel value */
+  kCount    /**< Sentinel value */
 };
 
 /** Arena types */
 enum ArenaType {
-    kArenaType_BufferPool,      /**< Buffer pool: This must always be first! */
-    kArenaType_MetaData,        /**< Metadata                                */
-    kArenaType_Transient,       /**< Scratch space                           */
-    kArenaType_TransferWindow,  /**< Data transfer                           */
+  kArenaType_BufferPool,      /**< Buffer pool: This must always be first! */
+  kArenaType_MetaData,        /**< Metadata                                */
+  kArenaType_Transient,       /**< Scratch space                           */
+  kArenaType_TransferWindow,  /**< Data transfer                           */
 
-    kArenaType_Count            /**< Sentinel value                          */
+  kArenaType_Count            /**< Sentinel value                          */
 };
 
 /**
  * System and user configuration that is used to initialize Hermes.
  */
 struct Config {
-    /** The total capacity of each buffering Device */
-    size_t capacities[kMaxDevices];
-    /** The block sizes of each Device */
-    int block_sizes[kMaxDevices];
-    /** The number of slabs that each Device has */
-    int num_slabs[kMaxDevices];
-    /** The unit of each slab, a multiple of the Device's block size */
-    int slab_unit_sizes[kMaxDevices][kMaxBufferPoolSlabs];
-    /** The percentage of space each slab should occupy per Device. The values
-     * for each Device should add up to 1.0.
-     */
-    f32 desired_slab_percentages[kMaxDevices][kMaxBufferPoolSlabs];
-    /** The bandwidth of each Device */
-    f32 bandwidths[kMaxDevices];
-    /** The latency of each Device */
-    f32 latencies[kMaxDevices];
-    /** The percentages of the total available Hermes memory allotted for each
-     *  `ArenaType`
-     */
-    f32 arena_percentages[kArenaType_Count];
-    /** The number of Devices */
-    int num_devices;
-    /** The number of Targets */
-    int num_targets;
+  /** The total capacity of each buffering Device */
+  size_t capacities[kMaxDevices];
+  /** The block sizes of each Device */
+  int block_sizes[kMaxDevices];
+  /** The number of slabs that each Device has */
+  int num_slabs[kMaxDevices];
+  /** The unit of each slab, a multiple of the Device's block size */
+  int slab_unit_sizes[kMaxDevices][kMaxBufferPoolSlabs];
+  /** The percentage of space each slab should occupy per Device. The values
+   * for each Device should add up to 1.0.
+   */
+  f32 desired_slab_percentages[kMaxDevices][kMaxBufferPoolSlabs];
+  /** The bandwidth of each Device */
+  f32 bandwidths[kMaxDevices];
+  /** The latency of each Device */
+  f32 latencies[kMaxDevices];
+  /** The percentages of the total available Hermes memory allotted for each
+   *  `ArenaType`
+   */
+  f32 arena_percentages[kArenaType_Count];
+  /** The number of Devices */
+  int num_devices;
+  /** The number of Targets */
+  int num_targets;
 
-    /** The maximum number of buckets per node */
-    u32 max_buckets_per_node;
-    /** The maximum number of vbuckets per node */
-    u32 max_vbuckets_per_node;
-    /** The length of a view state epoch */
-    u32 system_view_state_update_interval_ms;
+  /** The maximum number of buckets per node */
+  u32 max_buckets_per_node;
+  /** The maximum number of vbuckets per node */
+  u32 max_vbuckets_per_node;
+  /** The length of a view state epoch */
+  u32 system_view_state_update_interval_ms;
 
-    /** The mount point or desired directory for each Device. RAM Device should
-     * be the empty string.
-     */
-    std::string mount_points[kMaxDevices];
-    /** The mount point of the swap target. */
-    std::string swap_mount;
-    /** The number of times the BufferOrganizer will attempt to place a swap
-     * blob into the hierarchy before giving up. */
-    int num_buffer_organizer_retries;
+  /** The mount point or desired directory for each Device. RAM Device should
+   * be the empty string.
+   */
+  std::string mount_points[kMaxDevices];
+  /** The mount point of the swap target. */
+  std::string swap_mount;
+  /** The number of times the BufferOrganizer will attempt to place a swap
+   * blob into the hierarchy before giving up. */
+  int num_buffer_organizer_retries;
 
-    /** If non-zero, the device is shared among all nodes (e.g., burst buffs) */
-    int is_shared_device[kMaxDevices];
+  /** If non-zero, the device is shared among all nodes (e.g., burst buffs) */
+  int is_shared_device[kMaxDevices];
 
-    /** The hostname of the RPC server, minus any numbers that Hermes may
-     * auto-generate when the rpc_hostNumber_range is specified. */
-    std::string rpc_server_base_name;
-    /** The RPC server name suffix. This is appended to the base name plus host
-        number. */
-    std::string rpc_server_suffix;
-    /** The RPC protocol to be used. */
-    std::string rpc_protocol;
-    /** The RPC domain name for verbs transport. */
-    std::string rpc_domain;
-    /** The RPC port number. */
-    int rpc_port;
-    /** The RPC port number for the buffer organizer. */
-    int buffer_organizer_port;
-    /** The inclusive first and last server numbers. */
-    int rpc_host_number_range[2];
-    /** The number of handler threads per RPC server. */
-    int rpc_num_threads;
-    /** The number of buffer organizer threads. */
-    int bo_num_threads;
-    /** The default blob placement policy. */
-    api::PlacementPolicy default_placement_policy;
-    /** Whether blob splitting is enabled for Round-Robin blob placement. */
-    bool default_rr_split;
+  /** The hostname of the RPC server, minus any numbers that Hermes may
+   * auto-generate when the rpc_hostNumber_range is specified. */
+  std::string rpc_server_base_name;
+  /** The RPC server name suffix. This is appended to the base name plus host
+      number. */
+  std::string rpc_server_suffix;
+  /** The RPC protocol to be used. */
+  std::string rpc_protocol;
+  /** The RPC domain name for verbs transport. */
+  std::string rpc_domain;
+  /** The RPC port number. */
+  int rpc_port;
+  /** The RPC port number for the buffer organizer. */
+  int buffer_organizer_port;
+  /** The list of numbers from all server names. E.g., '{1, 3}' if your servers
+   * are named ares-comp-1 and ares-comp-3 */
+  std::vector<int> host_numbers;
+  /** The number of handler threads per RPC server. */
+  int rpc_num_threads;
+  /** The number of buffer organizer threads. */
+  int bo_num_threads;
+  /** The default blob placement policy. */
+  api::PlacementPolicy default_placement_policy;
+  /** Whether blob splitting is enabled for Round-Robin blob placement. */
+  bool default_rr_split;
 
-    /** A base name for the BufferPool shared memory segement. Hermes appends the
-     * value of the USER environment variable to this string.
-     */
-    char buffer_pool_shmem_name[kMaxBufferPoolShmemNameLength];
+  /** A base name for the BufferPool shared memory segement. Hermes appends the
+   * value of the USER environment variable to this string.
+   */
+  char buffer_pool_shmem_name[kMaxBufferPoolShmemNameLength];
 };
 
 union BucketID {
-    /** The Bucket ID as bitfield */
-    struct {
-        /** The index into the Target array starting at BufferPool::targets_offset
-         * (on the node with ID node_id). */
-        u32 index;
-        /** The ID of the node in charge of this bucket. */
-        u32 node_id;
-    } bits;
+  /** The Bucket ID as bitfield */
+  struct {
+    /** The index into the Target array starting at BufferPool::targets_offset
+     * (on the node with ID node_id). */
+    u32 index;
+    /** The ID of the node in charge of this bucket. */
+    u32 node_id;
+  } bits;
 
-    /** The BucketID as a unsigned 64-bit integer */
-    u64 as_int;
+  /** The BucketID as a unsigned 64-bit integer */
+  u64 as_int;
 };
 
 // NOTE(chogan): We reserve sizeof(BucketID) * 2 bytes in order to embed the
@@ -253,32 +254,32 @@ constexpr int kBucketIdStringSize = sizeof(BucketID) * 2;
 constexpr int kMaxBlobNameSize = 64 - kBucketIdStringSize;
 
 union VBucketID {
-    /** The VBucket ID as bitfield */
-    struct {
-        /** The index into the Target array starting at BufferPool::targets_offset
-         * (on the node with ID node_id). */
-        u32 index;
-        /** The ID of the node in charge of this vbucket. */
-        u32 node_id;
-    } bits;
+  /** The VBucket ID as bitfield */
+  struct {
+    /** The index into the Target array starting at BufferPool::targets_offset
+     * (on the node with ID node_id). */
+    u32 index;
+    /** The ID of the node in charge of this vbucket. */
+    u32 node_id;
+  } bits;
 
-    /** The VBucketID as a unsigned 64-bit integer */
-    u64 as_int;
+  /** The VBucketID as a unsigned 64-bit integer */
+  u64 as_int;
 };
 
 union BlobID {
-    /** The Blob ID as bitfield */
-    struct {
-        /** The index into the Target array starting at BufferPool::targets_offset
-         * (on the node with ID node_id). */
-        u32 buffer_ids_offset;
-        /** The ID of the node in charge of this bucket. (Negative when in swap
-            space.) */
-        i32 node_id;
-    } bits;
+  /** The Blob ID as bitfield */
+  struct {
+    /** The index into the Target array starting at BufferPool::targets_offset
+     * (on the node with ID node_id). */
+    u32 buffer_ids_offset;
+    /** The ID of the node in charge of this bucket. (Negative when in swap
+        space.) */
+    i32 node_id;
+  } bits;
 
-    /** The BlobID as a unsigned 64-bit integer */
-    u64 as_int;
+  /** The BlobID as a unsigned 64-bit integer */
+  u64 as_int;
 };
 
 /** Trait ID type */
@@ -288,19 +289,17 @@ namespace api {
 
 /** Trait types */
 enum class TraitType : u8 {
-    META = 0,
-    DATA = 1,
-    FILE_MAPPING = 2,
-    PERSIST = 3,
+  META = 0,
+  DATA = 1,
+  FILE_MAPPING = 2,
+  PERSIST = 3,
 };
 }  // namespace api
 
 struct TraitIdArray {
-    TraitID *ids;
-    u32 length;
+  TraitID *ids;
+  u32 length;
 };
-
-
 
 }  // namespace hermes
 #endif  // HERMES_TYPES_H_
