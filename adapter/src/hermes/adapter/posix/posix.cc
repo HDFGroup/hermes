@@ -79,7 +79,8 @@ int simple_open(int ret, const std::string &path_str, int flags) {
     if (!existing.second) {
       LOG(INFO) << "File not opened before by adapter" << std::endl;
       struct stat st;
-      int status = fstat(ret, &st);
+      MAP_OR_FAIL(__fxstat);
+      int status = real___fxstat_(_STAT_VER, ret, &st);
       if (status == 0) {
         AdapterStat stat(st);
         stat.ref_count = 1;
@@ -396,6 +397,7 @@ int HERMES_DECL(MPI_Finalize)(void) {
   int status = real_MPI_Finalize_();
   return status;
 }
+
 /**
  * POSIX
  */
@@ -429,6 +431,7 @@ int HERMES_DECL(open)(const char *path, int flags, ...) {
   }
   return (ret);
 }
+
 int HERMES_DECL(open64)(const char *path, int flags, ...) {
   int ret;
   int mode = 0;
@@ -459,6 +462,7 @@ int HERMES_DECL(open64)(const char *path, int flags, ...) {
   }
   return (ret);
 }
+
 int HERMES_DECL(__open_2)(const char *path, int oflag) {
   int ret;
   if (hermes::adapter::IsTracked(path)) {
@@ -478,6 +482,7 @@ int HERMES_DECL(__open_2)(const char *path, int oflag) {
   }
   return (ret);
 }
+
 int HERMES_DECL(creat)(const char *path, mode_t mode) {
   int ret;
   std::string path_str(path);
@@ -491,6 +496,7 @@ int HERMES_DECL(creat)(const char *path, mode_t mode) {
   }
   return (ret);
 }
+
 int HERMES_DECL(creat64)(const char *path, mode_t mode) {
   int ret;
   std::string path_str(path);
@@ -504,6 +510,7 @@ int HERMES_DECL(creat64)(const char *path, mode_t mode) {
   }
   return (ret);
 }
+
 ssize_t HERMES_DECL(read)(int fd, void *buf, size_t count) {
   size_t ret;
   if (hermes::adapter::IsTracked(fd)) {
@@ -523,6 +530,7 @@ ssize_t HERMES_DECL(read)(int fd, void *buf, size_t count) {
   }
   return (ret);
 }
+
 ssize_t HERMES_DECL(write)(int fd, const void *buf, size_t count) {
   size_t ret;
   if (hermes::adapter::IsTracked(fd)) {
@@ -541,6 +549,7 @@ ssize_t HERMES_DECL(write)(int fd, const void *buf, size_t count) {
   }
   return (ret);
 }
+
 ssize_t HERMES_DECL(pread)(int fd, void *buf, size_t count, off_t offset) {
   size_t ret;
   if (hermes::adapter::IsTracked(fd)) {
@@ -562,6 +571,7 @@ ssize_t HERMES_DECL(pread)(int fd, void *buf, size_t count, off_t offset) {
   }
   return (ret);
 }
+
 ssize_t HERMES_DECL(pwrite)(int fd, const void *buf, size_t count,
                             off_t offset) {
   size_t ret;
@@ -584,6 +594,7 @@ ssize_t HERMES_DECL(pwrite)(int fd, const void *buf, size_t count,
   }
   return (ret);
 }
+
 ssize_t HERMES_DECL(pread64)(int fd, void *buf, size_t count, off64_t offset) {
   size_t ret;
   if (hermes::adapter::IsTracked(fd)) {
@@ -605,6 +616,7 @@ ssize_t HERMES_DECL(pread64)(int fd, void *buf, size_t count, off64_t offset) {
   }
   return (ret);
 }
+
 ssize_t HERMES_DECL(pwrite64)(int fd, const void *buf, size_t count,
                               off64_t offset) {
   size_t ret;
@@ -715,6 +727,44 @@ off64_t HERMES_DECL(lseek64)(int fd, off64_t offset, int whence) {
   }
   return (ret);
 }
+
+int HERMES_DECL(__fxstat)(int version, int fd, struct stat *buf) {
+  int result = 0;
+  if (hermes::adapter::IsTracked(fd)) {
+    LOG(INFO) << "Intercepted fstat." << std::endl;
+    auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+    auto existing = mdm->Find(fd);
+    if (existing.second) {
+      AdapterStat &astat = existing.first;
+      // TODO(chogan): st_dev and st_ino need to be assigned by us, but
+      // currently we get them by calling the real fstat on open.
+      buf->st_dev = 0;
+      buf->st_ino = 0;
+      buf->st_mode = astat.st_mode;
+      buf->st_nlink = 0;
+      buf->st_uid = astat.st_uid;
+      buf->st_gid = astat.st_gid;
+      buf->st_rdev = 0;
+      buf->st_size = astat.st_size;
+      buf->st_blksize = astat.st_blksize;
+      buf->st_blocks = 0;
+      buf->st_atime = astat.st_atime;
+      buf->st_mtime = astat.st_mtime;
+      buf->st_ctime = astat.st_ctime;
+    } else {
+      result = -1;
+      errno = EBADF;
+      LOG(ERROR) << "File with descriptor" << fd
+                 << "does not exist in Hermes\n";
+    }
+  } else {
+    MAP_OR_FAIL(__fxstat);
+    result = real___fxstat_(version, fd, buf);
+  }
+
+  return result;
+}
+
 int HERMES_DECL(fsync)(int fd) {
   int ret;
   if (hermes::adapter::IsTracked(fd)) {

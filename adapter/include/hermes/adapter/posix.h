@@ -21,10 +21,13 @@
  */
 #include <fcntl.h>
 #include <stdarg.h>
+#include <sys/stat.h>
+
 /**
  * Dependent library headers
  */
 #include "glog/logging.h"
+
 /**
  * Internal headers
  */
@@ -60,11 +63,12 @@ HERMES_FORWARD_DECL(pwrite64, ssize_t,
                     (int fd, const void *buf, size_t count, off64_t offset));
 HERMES_FORWARD_DECL(lseek, off_t, (int fd, off_t offset, int whence));
 HERMES_FORWARD_DECL(lseek64, off64_t, (int fd, off64_t offset, int whence));
+HERMES_FORWARD_DECL(__fxstat, int, (int version, int fd, struct stat *buf));
 HERMES_FORWARD_DECL(fsync, int, (int fd));
 HERMES_FORWARD_DECL(fdatasync, int, (int fd));
 HERMES_FORWARD_DECL(close, int, (int fd));
 /**
- * MPI functions declarations
+ * MPI function declarations
  */
 HERMES_FORWARD_DECL(MPI_Init, int, (int *argc, char ***argv));
 HERMES_FORWARD_DECL(MPI_Finalize, int, (void));

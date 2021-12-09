@@ -163,6 +163,11 @@ class MetadataManager {
    *            The bool in pair indicated whether metadata entry exists.
    */
   std::pair<AdapterStat, bool> Find(int fh);
+
+  /**
+   * Return the FileID associated with the file descriptor @p fd
+   */
+  FileID GetFileId(int fd);
 };
 }  // namespace hermes::adapter::posix
 
