@@ -10,6 +10,8 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+#include <sys/stat.h>
+
 TEST_CASE("Open", "[process=" + std::to_string(info.comm_size) +
                       "]"
                       "[operation=single_open]"
@@ -1449,5 +1451,26 @@ TEST_CASE("SingleMixed", "[process=" + std::to_string(info.comm_size) +
     test::test_close();
     REQUIRE(test::status_orig == 0);
   }
+  posttest();
+}
+
+TEST_CASE("fstat") {
+  pretest();
+
+  SECTION("fstat on new file") {
+    test::test_open(info.new_file.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0600);
+    REQUIRE(test::fh_orig != -1);
+    test::test_write(info.write_data.data(), args.request_size);
+    REQUIRE(test::size_written_orig == args.request_size);
+
+    struct stat buf = {};
+    int result = fstat(test::fh_orig, &buf);
+    REQUIRE(result == 0);
+    REQUIRE(buf.st_size == (off_t)test::size_written_orig);
+
+    test::test_close();
+    REQUIRE(test::status_orig == 0);
+  }
+
   posttest();
 }
