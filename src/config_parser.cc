@@ -697,10 +697,11 @@ void CheckConstraints(Config *config) {
 
   // arena_percentages must add up to 1.0
   double arena_percentage_sum = 0;
+  double tolerance = 0.0000001;
   for (int i = 0; i < kArenaType_Count; ++i) {
     arena_percentage_sum += config->arena_percentages[i];
   }
-  if (arena_percentage_sum != 1.0) {
+  if (fabs(1.0 - arena_percentage_sum) > tolerance) {
     PrintExpectedAndFail("the values in arena_percentages to add up to 1.0");
   }
 }
