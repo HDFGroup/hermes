@@ -689,9 +689,19 @@ Token *EndStatement(Token *tok) {
 }
 
 void CheckConstraints(Config *config) {
+  // rpc_domain must be present if rpc_protocol is "verbs"
   if (config->rpc_protocol.find("verbs") != std::string::npos &&
       config->rpc_domain.empty()) {
     PrintExpectedAndFail("a non-empty value for rpc_domain");
+  }
+
+  // arena_percentages must add up to 1.0
+  double arena_percentage_sum = 0;
+  for (int i = 0; i < kArenaType_Count; ++i) {
+    arena_percentage_sum += config->arena_percentages[i];
+  }
+  if (arena_percentage_sum != 1.0) {
+    PrintExpectedAndFail("the values in arena_percentages to add up to 1.0");
   }
 }
 
