@@ -383,4 +383,5 @@ void test_seek(long offset, int whence) {
 
 #include "posix_adapter_basic_test.cpp"
 #include "posix_adapter_rs_test.cpp"
-#include "posix_adapter_shared_test.cpp"
+// TODO(chogan): Disabling until issue #302 is fixed
+// #include "posix_adapter_shared_test.cpp"
