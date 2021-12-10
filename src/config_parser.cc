@@ -16,6 +16,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <ostream>
 #include <string>
 
 #include <glog/logging.h>
@@ -695,14 +696,34 @@ void CheckConstraints(Config *config) {
     PrintExpectedAndFail("a non-empty value for rpc_domain");
   }
 
+  double tolerance = 0.0000001;
+
   // arena_percentages must add up to 1.0
   double arena_percentage_sum = 0;
-  double tolerance = 0.0000001;
   for (int i = 0; i < kArenaType_Count; ++i) {
     arena_percentage_sum += config->arena_percentages[i];
   }
   if (fabs(1.0 - arena_percentage_sum) > tolerance) {
-    PrintExpectedAndFail("the values in arena_percentages to add up to 1.0");
+    std::ostringstream msg;
+    msg << "the values in arena_percentages to add up to 1.0 but got ";
+    msg << arena_percentage_sum << "\n";
+    PrintExpectedAndFail(msg.str());
+  }
+
+  // Each slab's desired_slab_percentages should add up to 1.0
+  for (int device = 0; device < config->num_devices; ++device) {
+    double total_slab_percentage = 0;
+    for (int slab = 0; slab < config->num_slabs[device]; ++slab) {
+      total_slab_percentage += config->desired_slab_percentages[device][slab];
+    }
+    if (fabs(1.0 - total_slab_percentage) > tolerance) {
+      std::ostringstream msg;
+      msg << "the values in desired_slab_percentages[";
+      msg << device;
+      msg << "] to add up to 1.0 but got ";
+      msg << total_slab_percentage << "\n";
+      PrintExpectedAndFail(msg.str());
+    }
   }
 }
 
