@@ -33,7 +33,8 @@ Config ParseConfigString(Arena *arena, const std::string &config_string) {
   hermes::EntireFile config_file =
     {(u8 *)config_string.data(), config_string.size()};
   hermes::TokenList tokens = hermes::Tokenize(scratch, config_file);
-  Config config;
+  Config config = {};
+  InitDefaultConfig(&config);
   hermes::ParseTokens(&tokens, &config);
 
   return config;
