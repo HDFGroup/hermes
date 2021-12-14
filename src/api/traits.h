@@ -59,34 +59,17 @@ struct Trait {
   Trait(TraitID id, TraitIdArray conflict_traits, TraitType type);
 };
 
-#define HERMES_FILE_TRAIT 10
 #define HERMES_PERSIST_TRAIT 11
-
-/** File mapping trait */
-struct FileMappingTrait : public Trait {
-  OnLinkCallback flush_cb;
-  OnLinkCallback load_cb;
-  std::string filename;
-  std::unordered_map<std::string, u64> offset_map;
-  FILE *fh;
-
-  FileMappingTrait() {}
-  FileMappingTrait(const std::string &filename,
-                   std::unordered_map<std::string, u64> &offset_map, FILE *fh,
-                   OnLinkCallback flush_cb, OnLinkCallback load_cb);
-  void onAttach(HermesPtr hermes, VBucketID id, Trait *trait);
-  void onDetach(HermesPtr hermes, VBucketID id, Trait *trait);
-  void onLink(HermesPtr hermes, TraitInput &blob, Trait *trait);
-  void onUnlink(HermesPtr hermes, TraitInput &blob, Trait *trait);
-};
 
 /** (File) Persistence trait */
 struct PersistTrait : public Trait {
-  FileMappingTrait file_mapping;
+  std::string filename;
+  std::unordered_map<std::string, u64> offset_map;
   bool synchronous;
 
   explicit PersistTrait(bool synchronous);
-  explicit PersistTrait(FileMappingTrait mapping,
+  explicit PersistTrait(const std::string &filename,
+                        const std::unordered_map<std::string, u64> &offset_map,
                         bool synchronous = false);
 
   void onAttach(HermesPtr hermes, VBucketID id, Trait *trait);
