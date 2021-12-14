@@ -119,10 +119,9 @@ TEST_CASE("CustomTrait",
       file_vbucket.Link(blob_name, args.filename);
       offset_map.emplace(blob_name, std::stol(blob_name) * info.FILE_PAGE);
     }
-    auto fm_trait = hapi::FileMappingTrait(fullpath_str, offset_map,
-                                               nullptr, NULL, NULL);
     bool flush_synchronously = true;
-    hapi::PersistTrait persist_trait(fm_trait, flush_synchronously);
+    hapi::PersistTrait persist_trait(fullpath_str, offset_map,
+                                     flush_synchronously);
     file_vbucket.Attach(&persist_trait);
     file_vbucket.Destroy();
     file_bucket.Destroy();

@@ -154,10 +154,8 @@ FILE *simple_open(FILE *ret, const std::string &path_str, const char *mode) {
           stat.st_vbkt =
             std::make_shared<hapi::VBucket>(path_str, mdm->GetHermes());
           auto offset_map = std::unordered_map<std::string, u64>();
-          hapi::FileMappingTrait mapping_trait(path_str, offset_map,
-                                               NULL, NULL, NULL);
           stat.st_persist =
-            std::make_shared<hapi::PersistTrait>(mapping_trait, false);
+            std::make_shared<hapi::PersistTrait>(path_str, offset_map, false);
           stat.st_vbkt->Attach(stat.st_persist.get());
         }
 
@@ -343,8 +341,7 @@ size_t write_internal(AdapterStat &stat, const void *ptr, size_t total_size,
       hapi::Trait *trait = stat.st_vbkt->GetTrait(hapi::TraitType::PERSIST);
       if (trait) {
         hapi::PersistTrait *persist_trait = (hapi::PersistTrait *)trait;
-        persist_trait->file_mapping.offset_map.emplace(hinfo.blob_name_,
-                                                       offset);
+        persist_trait->offset_map.emplace(hinfo.blob_name_, offset);
       }
 
       stat.st_vbkt->Link(hinfo.blob_name_, filename);
@@ -587,10 +584,9 @@ int HERMES_DECL(fflush)(FILE *fp) {
             auto page_index = std::stol(blob_name) - 1;
             offset_map.emplace(blob_name, page_index * kPageSize);
           }
-          auto file_mapping = hapi::FileMappingTrait(filename, offset_map,
-                                                     nullptr, NULL, NULL);
           bool flush_synchronously = true;
-          hapi::PersistTrait persist_trait(file_mapping, flush_synchronously);
+          hapi::PersistTrait persist_trait(filename, offset_map,
+                                           flush_synchronously);
           file_vbucket.Attach(&persist_trait);
           existing.first.st_blobs.clear();
           file_vbucket.Destroy();
@@ -637,10 +633,9 @@ int HERMES_DECL(fclose)(FILE *fp) {
                 offset_map.emplace(blob_name, page_index * kPageSize);
               }
             }
-            auto file_mapping =
-              hapi::FileMappingTrait(filename, offset_map, nullptr, NULL, NULL);
             bool flush_synchronously = true;
-            hapi::PersistTrait persist_trait(file_mapping, flush_synchronously);
+            hapi::PersistTrait persist_trait(filename, offset_map,
+                                             flush_synchronously);
             file_vbucket.Attach(&persist_trait);
             existing.first.st_blobs.clear();
             INTERCEPTOR_LIST->hermes_flush_exclusion.erase(filename);

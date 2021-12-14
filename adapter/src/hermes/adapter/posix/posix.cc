@@ -792,10 +792,9 @@ int HERMES_DECL(fsync)(int fd) {
               offset_map.emplace(blob_name, page_index * kPageSize);
             }
           }
-          auto file_mapping = hapi::FileMappingTrait(filename, offset_map,
-                                                     nullptr, NULL, NULL);
           bool flush_synchronously = true;
-          hapi::PersistTrait persist_trait(file_mapping, flush_synchronously);
+          hapi::PersistTrait persist_trait(filename, offset_map,
+                                           flush_synchronously);
           file_vbucket.Attach(&persist_trait, ctx);
           file_vbucket.Destroy(ctx);
           existing.first.st_blobs.clear();
@@ -849,11 +848,9 @@ int HERMES_DECL(close)(int fd) {
               offset_map.emplace(blob_name, page_index * kPageSize);
             }
           }
-          auto file_mapping =
-            hapi::FileMappingTrait(filename, offset_map, nullptr, NULL,
-                                          NULL);
           bool flush_synchronously = true;
-          hapi::PersistTrait persist_trait(file_mapping, flush_synchronously);
+          hapi::PersistTrait persist_trait(filename, offset_map,
+                                           flush_synchronously);
           file_vbucket.Attach(&persist_trait, ctx);
           file_vbucket.Destroy(ctx);
           existing.first.st_blobs.clear();

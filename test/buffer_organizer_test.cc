@@ -73,9 +73,7 @@ void TestBackgroundFlush() {
   hapi::Bucket bkt(bkt_name, hermes);
   hapi::VBucket vbkt(bkt_name, hermes);
 
-  hapi::FileMappingTrait mapping;
-  mapping.filename = final_destination;
-  hapi::PersistTrait persist_trait(mapping, false);
+  hapi::PersistTrait persist_trait(final_destination, {}, false);
   vbkt.Attach(&persist_trait);
 
   std::vector<u8> data(iters);
@@ -86,7 +84,7 @@ void TestBackgroundFlush() {
     std::string blob_name = std::to_string(i);
     bkt.Put(blob_name, blob);
 
-    persist_trait.file_mapping.offset_map.emplace(blob_name, i * io_size);
+    persist_trait.offset_map.emplace(blob_name, i * io_size);
     vbkt.Link(blob_name, bkt_name);
   }
 

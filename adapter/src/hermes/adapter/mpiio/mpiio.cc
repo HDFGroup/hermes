@@ -583,10 +583,9 @@ int HERMES_DECL(MPI_File_close)(MPI_File *fh) {
               }
             }
           }
-          auto file_mapping = hapi::FileMappingTrait(filename, offset_map,
-                                                     nullptr, NULL, NULL);
           bool flush_synchronously = true;
-          hapi::PersistTrait persist_trait(file_mapping, flush_synchronously);
+          hapi::PersistTrait persist_trait(filename, offset_map,
+                                           flush_synchronously);
           file_vbucket.Attach(&persist_trait, ctx);
           file_vbucket.Destroy(ctx);
 
@@ -1103,10 +1102,9 @@ int HERMES_DECL(MPI_File_sync)(MPI_File fh) {
             }
           }
         }
-        auto file_mapping = hapi::FileMappingTrait(filename, offset_map,
-                                                   nullptr, NULL, NULL);
         bool flush_synchronously = true;
-        hapi::PersistTrait persist_trait(file_mapping, flush_synchronously);
+        hapi::PersistTrait persist_trait(filename, offset_map,
+                                         flush_synchronously);
         file_vbucket.Attach(&persist_trait);
         file_vbucket.Destroy();
         for (const auto &vbucket : existing.first.st_vbuckets) {
