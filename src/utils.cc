@@ -81,8 +81,7 @@ void InitDefaultConfig(Config *config) {
   // rounding errors?
   config->arena_percentages[kArenaType_BufferPool] = 0.85f;
   config->arena_percentages[kArenaType_MetaData] = 0.04f;
-  config->arena_percentages[kArenaType_TransferWindow] = 0.08f;
-  config->arena_percentages[kArenaType_Transient] = 0.03f;
+  config->arena_percentages[kArenaType_Transient] = 0.11f;
 
   config->mount_points[0] = "";
   config->mount_points[1] = "./";
