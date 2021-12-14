@@ -185,8 +185,7 @@ void TestDefaultConfig(Arena *arena, const char *config_file) {
 
   Assert(config.arena_percentages[hermes::kArenaType_BufferPool] == 0.85f);
   Assert(config.arena_percentages[hermes::kArenaType_MetaData] == 0.04f);
-  Assert(config.arena_percentages[hermes::kArenaType_Transient] == 0.03f);
-  Assert(config.arena_percentages[hermes::kArenaType_TransferWindow] == 0.08f);
+  Assert(config.arena_percentages[hermes::kArenaType_Transient] == 0.11f);
 
   Assert(config.mount_points[0] == "");
   Assert(config.mount_points[1] == "./");

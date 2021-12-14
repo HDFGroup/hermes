@@ -147,7 +147,6 @@ enum ArenaType {
   kArenaType_BufferPool,      /**< Buffer pool: This must always be first! */
   kArenaType_MetaData,        /**< Metadata                                */
   kArenaType_Transient,       /**< Scratch space                           */
-  kArenaType_TransferWindow,  /**< Data transfer                           */
 
   kArenaType_Count            /**< Sentinel value                          */
 };

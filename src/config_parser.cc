@@ -61,7 +61,6 @@ static const char *kConfigVariableStrings[ConfigVariable_Count] = {
   "latencies_us",
   "buffer_pool_arena_percentage",
   "metadata_arena_percentage",
-  "transfer_window_arena_percentage",
   "transient_arena_percentage",
   "mount_points",
   "swap_mount",
@@ -878,11 +877,6 @@ void ParseTokens(TokenList *tokens, Config *config) {
       case ConfigVariable_MetadataArenaPercentage: {
         f32 val = ParseFloat(&tok);
         config->arena_percentages[hermes::kArenaType_MetaData] = val;
-        break;
-      }
-      case ConfigVariable_TransferWindowArenaPercentage: {
-        f32 val = ParseFloat(&tok);
-        config->arena_percentages[hermes::kArenaType_TransferWindow] = val;
         break;
       }
       case ConfigVariable_TransientArenaPercentage: {

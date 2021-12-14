@@ -48,7 +48,6 @@ enum ConfigVariable {
   ConfigVariable_LatenciesUs,
   ConfigVariable_BufferPoolArenaPercentage,
   ConfigVariable_MetadataArenaPercentage,
-  ConfigVariable_TransferWindowArenaPercentage,
   ConfigVariable_TransientArenaPercentage,
   ConfigVariable_MountPoints,
   ConfigVariable_SwapMount,
