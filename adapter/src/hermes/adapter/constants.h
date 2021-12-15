@@ -115,8 +115,6 @@ const size_t kPageSize = []() {
     }
   }
 
-  LOG(INFO) << "Adapter page size: " << result << "\n";
-
   return result;
 }();
 

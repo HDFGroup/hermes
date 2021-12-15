@@ -53,6 +53,10 @@ void PopulateBufferingPath() {
   INTERCEPTOR_LIST->hermes_paths_exclusion.push_back(
       config.buffer_pool_shmem_name);
   INTERCEPTOR_LIST->hermes_paths_exclusion.push_back(kHermesExtension);
+
+  // NOTE(chogan): Logging before setting up hermes_paths_exclusion results in
+  // deadlocks in GLOG
+  LOG(INFO) << "Adapter page size: " << kPageSize << "\n";
 }
 
 bool IsTracked(const std::string& path) {
