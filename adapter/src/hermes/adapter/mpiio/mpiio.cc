@@ -52,8 +52,8 @@ inline bool IsTracked(MPI_File *fh) {
   return existing.second;
 }
 
-int simple_open(MPI_Comm &comm, const char *user_path, int &amode, MPI_Info &info,
-                MPI_File *fh) {
+int simple_open(MPI_Comm &comm, const char *user_path, int &amode,
+                MPI_Info &info, MPI_File *fh) {
   std::string path_str = fs::absolute(user_path).string();
 
   LOG(INFO) << "Open file for filename " << path_str << " in mode " << amode
@@ -73,7 +73,8 @@ int simple_open(MPI_Comm &comm, const char *user_path, int &amode, MPI_Info &inf
     stat.info = info;
     stat.comm = comm;
     hapi::Context ctx;
-    stat.st_bkid = std::make_shared<hapi::Bucket>(path_str, mdm->GetHermes(), ctx);
+    stat.st_bkid = std::make_shared<hapi::Bucket>(path_str, mdm->GetHermes(),
+                                                  ctx);
     mdm->Create(fh, stat);
   } else {
     LOG(INFO) << "File opened before by adapter" << std::endl;
