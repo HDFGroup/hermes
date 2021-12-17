@@ -212,16 +212,6 @@ namespace hermes::adapter {
 void PopulateBufferingPath();
 
 /**
- * Check if path is symbolic link.
- */
-bool IsSymLink(const std::string& path);
-
-/**
- * Check if path is relative path.
- */
-bool IsRelativePath(const std::string& path);
-
-/**
  * Check if path should be tracked. In this method, the path is compared against
  * multiple inclusion and exclusion lists.
  *

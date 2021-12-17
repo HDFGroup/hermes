@@ -23,6 +23,8 @@ using hermes::adapter::posix::AdapterStat;
 using hermes::adapter::posix::FileStruct;
 using hermes::adapter::posix::MapperFactory;
 using hermes::adapter::posix::MetadataManager;
+using hermes::adapter::WeaklyCanonical;
+using hermes::adapter::ReadGap;
 
 namespace hapi = hermes::api;
 namespace fs = std::experimental::filesystem;
@@ -68,7 +70,9 @@ size_t perform_file_read(const char *filename, off_t file_offset, void *ptr,
   INTERCEPTOR_LIST->hermes_flush_exclusion.erase(filename);
   return read_size;
 }
-int simple_open(int ret, const std::string &path_str, int flags) {
+int simple_open(int ret, const std::string &user_path, int flags) {
+  std::string path_str = WeaklyCanonical(user_path).string();
+
   LOG(INFO) << "Open file for filename " << path_str << " with flags " << flags
             << std::endl;
   auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
@@ -411,13 +415,6 @@ int HERMES_DECL(open)(const char *path, int flags, ...) {
     va_end(arg);
   }
   if (hermes::adapter::IsTracked(path)) {
-    if (hermes::adapter::IsRelativePath(path))
-      LOG(FATAL) << "File: " << path
-                 << "\nis relative. It is not supported yet";
-    if (hermes::adapter::IsSymLink(path))
-      LOG(FATAL) << "File: " << path
-                 << "\nis symbolic link. It is not supported yet";
-
     LOG(INFO) << "Intercept open for filename: " << path
               << " and mode: " << flags << " is tracked." << std::endl;
     ret = open_internal(path, flags, mode);
@@ -442,13 +439,6 @@ int HERMES_DECL(open64)(const char *path, int flags, ...) {
     va_end(arg);
   }
   if (hermes::adapter::IsTracked(path)) {
-    if (hermes::adapter::IsRelativePath(path))
-      LOG(FATAL) << "File: " << path
-                 << "\nis relative. It is not supported yet";
-    if (hermes::adapter::IsSymLink(path))
-      LOG(FATAL) << "File: " << path
-                 << "\nis symbolic link. It is not supported yet";
-
     LOG(INFO) << "Intercept open for filename: " << path
               << " and mode: " << flags << " is tracked." << std::endl;
     ret = open_internal(path, flags, mode);
@@ -466,13 +456,6 @@ int HERMES_DECL(open64)(const char *path, int flags, ...) {
 int HERMES_DECL(__open_2)(const char *path, int oflag) {
   int ret;
   if (hermes::adapter::IsTracked(path)) {
-    if (hermes::adapter::IsRelativePath(path))
-      LOG(FATAL) << "File: " << path
-                 << "\nis relative. It is not supported yet";
-    if (hermes::adapter::IsSymLink(path))
-      LOG(FATAL) << "File: " << path
-                 << "\nis symbolic link. It is not supported yet";
-
     LOG(INFO) << "Intercept __open_2 for filename: " << path
               << " and mode: " << oflag << " is tracked." << std::endl;
     ret = open_internal(path, oflag, 0);

@@ -18,6 +18,11 @@
 #include <unistd.h>
 
 #include <regex>
+#include <experimental/filesystem>
+
+#include "hermes/adapter/utils.h"
+
+namespace fs = std::experimental::filesystem;
 
 namespace hermes::adapter {
 /**
@@ -27,60 +32,69 @@ bool exit = false;
 
 void PopulateBufferingPath() {
   char* hermes_config = getenv(kHermesConf);
-  if (IsRelativePath(hermes_config))
-    LOG(FATAL) << "Hermes Config file: " << hermes_config
-               << "\nis relative. It is not supported yet";
-  if (IsSymLink(hermes_config))
-    LOG(FATAL) << "Hermes Config file: " << hermes_config
-               << "\nis symbolic link. It is not supported yet";
 
   hermes::Config config = {};
   const size_t kConfigMemorySize = KILOBYTES(16);
   hermes::u8 config_memory[kConfigMemorySize];
-  if (hermes_config && strlen(hermes_config) > 0) {
-    INTERCEPTOR_LIST->hermes_paths_exclusion.push_back(hermes_config);
+  if (fs::exists(hermes_config)) {
+    std::string hermes_conf_abs_path =
+      WeaklyCanonical(fs::path(hermes_config)).string();
+    INTERCEPTOR_LIST->hermes_paths_exclusion.push_back(hermes_conf_abs_path);
     hermes::Arena config_arena = {};
     hermes::InitArena(&config_arena, kConfigMemorySize, config_memory);
-    hermes::ParseConfig(&config_arena, hermes_config, &config);
+    hermes::ParseConfig(&config_arena, hermes_conf_abs_path.c_str(), &config);
   } else {
     InitDefaultConfig(&config);
   }
 
   for (const auto& item : config.mount_points) {
     if (!item.empty()) {
-      INTERCEPTOR_LIST->hermes_paths_exclusion.push_back(item);
+      std::string abs_path = WeaklyCanonical(item).string();
+      INTERCEPTOR_LIST->hermes_paths_exclusion.push_back(abs_path);
     }
   }
   INTERCEPTOR_LIST->hermes_paths_exclusion.push_back(
       config.buffer_pool_shmem_name);
   INTERCEPTOR_LIST->hermes_paths_exclusion.push_back(kHermesExtension);
+
+  // NOTE(chogan): Logging before setting up hermes_paths_exclusion results in
+  // deadlocks in GLOG
+  LOG(INFO) << "Adapter page size: " << kPageSize << "\n";
 }
+
 bool IsTracked(const std::string& path) {
   if (hermes::adapter::exit) {
     return false;
   }
   atexit(OnExit);
+
+  std::string abs_path = WeaklyCanonical(path).string();
+
   for (const auto& pth : kPathExclusions) {
-    if (path.find(pth) == 0) {
+    if (abs_path.find(pth) == 0) {
       return false;
     }
   }
+
   for (const auto& pth : INTERCEPTOR_LIST->hermes_flush_exclusion) {
-    if (path.find(pth) != std::string::npos) {
+    if (abs_path.find(pth) != std::string::npos) {
       return false;
     }
   }
+
   if (INTERCEPTOR_LIST->hermes_paths_exclusion.empty()) {
     PopulateBufferingPath();
   }
+
   for (const auto& pth : INTERCEPTOR_LIST->hermes_paths_exclusion) {
-    if (path.find(pth) != std::string::npos ||
-        pth.find(path) != std::string::npos) {
+    if (abs_path.find(pth) != std::string::npos ||
+        pth.find(abs_path) != std::string::npos) {
       return false;
     }
   }
+
   for (const auto& pth : kPathInclusions) {
-    if (path.find(pth) == 0) {
+    if (abs_path.find(pth) == 0) {
       return true;
     }
   }
@@ -113,30 +127,6 @@ bool IsTracked(int fd) {
   if (hermes::adapter::exit) return false;
   atexit(OnExit);
   return IsTracked(GetFilenameFromFD(fd));
-}
-
-bool IsRelativePath(const std::string& path) {
-  std::regex e1("^/.*");
-  std::regex e2("(.*)(\\./)(.*)");
-  // Capture path not starting with "/" or containing "./"
-  return !std::regex_match(path, e1)
-         && std::regex_match(path, e2);
-}
-
-bool IsSymLink(const std::string& path) {
-  std::string cmd = "readlink -f " + path;
-  std::array<char, PATH_MAX> buffer;
-  std::string result;
-  std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd.c_str(), "r"),
-                                                pclose);
-  if (!pipe) {
-    LOG(FATAL) << "popen() failed!";
-  }
-  while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
-    result += buffer.data();
-  }
-
-  return result.compare(0, result.size()-1, path);
 }
 
 void OnExit(void) { hermes::adapter::exit = true; }
