@@ -37,6 +37,7 @@
 #include <bucket.h>
 #include <vbucket.h>
 
+#include <hermes/adapter/utils.h>
 #include <hermes/adapter/constants.h>
 #include <hermes/adapter/singleton.h>
 #include <hermes/adapter/interceptor.h>

@@ -20,6 +20,8 @@
 #include <regex>
 #include <experimental/filesystem>
 
+#include "hermes/adapter/utils.h"
+
 namespace fs = std::experimental::filesystem;
 
 namespace hermes::adapter {
@@ -35,7 +37,8 @@ void PopulateBufferingPath() {
   const size_t kConfigMemorySize = KILOBYTES(16);
   hermes::u8 config_memory[kConfigMemorySize];
   if (fs::exists(hermes_config)) {
-    std::string hermes_conf_abs_path = fs::absolute(hermes_config).string();
+    std::string hermes_conf_abs_path =
+      WeaklyCanonical(fs::path(hermes_config)).string();
     INTERCEPTOR_LIST->hermes_paths_exclusion.push_back(hermes_conf_abs_path);
     hermes::Arena config_arena = {};
     hermes::InitArena(&config_arena, kConfigMemorySize, config_memory);
@@ -46,7 +49,7 @@ void PopulateBufferingPath() {
 
   for (const auto& item : config.mount_points) {
     if (!item.empty()) {
-      std::string abs_path = fs::absolute(item).string();
+      std::string abs_path = WeaklyCanonical(item).string();
       INTERCEPTOR_LIST->hermes_paths_exclusion.push_back(abs_path);
     }
   }
@@ -65,7 +68,7 @@ bool IsTracked(const std::string& path) {
   }
   atexit(OnExit);
 
-  std::string abs_path = fs::absolute(path).string();
+  std::string abs_path = WeaklyCanonical(path).string();
 
   for (const auto& pth : kPathExclusions) {
     if (abs_path.find(pth) == 0) {

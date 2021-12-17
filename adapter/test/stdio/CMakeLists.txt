@@ -91,8 +91,14 @@ set_target_properties(hermes_stdio_adapter_mpi_test PROPERTIES COMPILE_FLAGS "-D
 
 mpi_daemon(hermes_stdio_adapter_mpi_test 2 "~[request_size=range-large]" "" 1)
 mpi_daemon(hermes_stdio_adapter_mpi_test 2 "[request_size=range-large]" "large" 1)
+
+add_executable(adapter_utils_test adapter_utils_test.cc ${ADAPTER_COMMON})
+target_link_libraries(adapter_utils_test Catch2::Catch2 hermes_stdio -lstdc++fs -ldl -lc MPI::MPI_CXX)
+add_dependencies(adapter_utils_test hermes_stdio)
+gcc(adapter_utils_test "")
+
 if(HERMES_INSTALL_TESTS)
-    set(STDIO_TESTS stdio_adapter_mapper_test stdio_adapter_test hermes_stdio_adapter_test stdio_adapter_mpi_test hermes_stdio_adapter_mpi_test)
+    set(STDIO_TESTS stdio_adapter_mapper_test stdio_adapter_test hermes_stdio_adapter_test stdio_adapter_mpi_test hermes_stdio_adapter_mpi_test adapter_utils_test)
     foreach(program ${STDIO_TESTS})
         install(
                 TARGETS

@@ -16,6 +16,7 @@
 #include <hermes/adapter/mpiio.h>
 #include <thread_pool.h>
 
+#include <hermes/adapter/utils.cc>
 #include <hermes/adapter/mpiio/mapper/balanced_mapper.cc>
 /**
  * Namespace declarations
@@ -29,6 +30,8 @@ using hermes::adapter::mpiio::MetadataManager;
 
 namespace hapi = hermes::api;
 namespace fs = std::experimental::filesystem;
+using hermes::adapter::WeaklyCanonical;
+
 /**
  * Internal Functions.
  */
@@ -54,7 +57,7 @@ inline bool IsTracked(MPI_File *fh) {
 
 int simple_open(MPI_Comm &comm, const char *user_path, int &amode,
                 MPI_Info &info, MPI_File *fh) {
-  std::string path_str = fs::absolute(user_path).string();
+  std::string path_str = WeaklyCanonical(user_path).string();
 
   LOG(INFO) << "Open file for filename " << path_str << " in mode " << amode
             << std::endl;

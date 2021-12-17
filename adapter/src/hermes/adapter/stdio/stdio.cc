@@ -25,6 +25,8 @@ using hermes::adapter::stdio::FileStruct;
 using hermes::adapter::stdio::MapperFactory;
 using hermes::adapter::stdio::MetadataManager;
 using hermes::adapter::stdio::global_flushing_mode;
+using hermes::adapter::WeaklyCanonical;
+using hermes::adapter::ReadGap;
 
 using hermes::u8;
 using hermes::u64;
@@ -101,9 +103,9 @@ int HERMES_DECL(MPI_Init)(int *argc, char ***argv) {
   MAP_OR_FAIL(MPI_Init);
   int status = real_MPI_Init_(argc, argv);
   if (status == 0) {
-    LOG(INFO) << "MPI Init intercepted." << std::endl;
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     mdm->InitializeHermes(true);
+    LOG(INFO) << "MPI Init intercepted." << std::endl;
   }
   return status;
 }
@@ -121,7 +123,7 @@ int HERMES_DECL(MPI_Finalize)(void) {
  * STDIO
  */
 FILE *simple_open(FILE *ret, const std::string &user_path, const char *mode) {
-  std::string path_str = fs::absolute(user_path).string();
+  std::string path_str = WeaklyCanonical(user_path).string();
 
   LOG(INFO) << "Open file for filename " << path_str << " in mode " << mode
             << std::endl;
@@ -197,7 +199,7 @@ FILE *reopen_internal(const std::string &user_path, const char *mode,
   if (!ret) {
     return ret;
   } else {
-    std::string path_str = fs::absolute(user_path).string();
+    std::string path_str = WeaklyCanonical(user_path).string();
     LOG(INFO) << "Reopen file for filename " << path_str << " in mode " << mode
               << std::endl;
     auto existing = mdm->Find(ret);

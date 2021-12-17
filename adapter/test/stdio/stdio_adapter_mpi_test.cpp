@@ -21,6 +21,7 @@
 #if HERMES_INTERCEPT == 1
 #include <hermes/adapter/stdio.h>
 #endif
+
 namespace fs = std::experimental::filesystem;
 
 namespace hermes::adapter::stdio::test {

@@ -23,6 +23,8 @@ using hermes::adapter::posix::AdapterStat;
 using hermes::adapter::posix::FileStruct;
 using hermes::adapter::posix::MapperFactory;
 using hermes::adapter::posix::MetadataManager;
+using hermes::adapter::WeaklyCanonical;
+using hermes::adapter::ReadGap;
 
 namespace hapi = hermes::api;
 namespace fs = std::experimental::filesystem;
@@ -69,7 +71,7 @@ size_t perform_file_read(const char *filename, off_t file_offset, void *ptr,
   return read_size;
 }
 int simple_open(int ret, const std::string &user_path, int flags) {
-  std::string path_str = fs::absolute(user_path).string();
+  std::string path_str = WeaklyCanonical(user_path).string();
 
   LOG(INFO) << "Open file for filename " << path_str << " with flags " << flags
             << std::endl;
