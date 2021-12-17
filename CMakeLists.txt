@@ -20,7 +20,7 @@ include_directories(${PROJECT_BINARY_DIR})
 # Version information
 #------------------------------------------------------------------------------
 set(HERMES_VERSION_MAJOR "0")
-set(HERMES_VERSION_MINOR "1")
+set(HERMES_VERSION_MINOR "2")
 set(HERMES_VERSION_PATCH "0")
 set(HERMES_PACKAGE "hermes")
 set(HERMES_PACKAGE_NAME "HERMES")
