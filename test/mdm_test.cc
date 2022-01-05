@@ -24,7 +24,6 @@ using namespace hermes;  // NOLINT(*)
 namespace hapi = hermes::api;
 using HermesPtr = std::shared_ptr<hapi::Hermes>;
 
-#if 0
 static void TestNullIds() {
   BucketID bkt_id = {};
   VBucketID vbkt_id = {};
@@ -336,7 +335,6 @@ static void TestBlobInfoMap() {
 
   hermes->Finalize(true);
 }
-#endif
 
 static void TestMdmViz() {
   using namespace hermes;  // NOLINT(*)
@@ -390,25 +388,25 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  // HermesPtr hermes = hapi::InitHermes(NULL, true);
+  HermesPtr hermes = hapi::InitHermes(NULL, true);
 
-  // TestNullIds();
-  // TestGetMapMutex();
-  // TestLocalGetNextFreeBucketId(hermes);
-  // TestGetOrCreateBucketId(hermes);
-  // TestRenameBlob(hermes);
-  // TestRenameBucket(hermes);
-  // TestBucketRefCounting(hermes);
-  // TestMaxNameLength(hermes);
-  // TestGetRelativeNodeId();
-  // TestDuplicateBlobNames(hermes);
-  // TestGetBucketIdFromBlobId(hermes);
-  // TestHexStringToU64();
+  TestNullIds();
+  TestGetMapMutex();
+  TestLocalGetNextFreeBucketId(hermes);
+  TestGetOrCreateBucketId(hermes);
+  TestRenameBlob(hermes);
+  TestRenameBucket(hermes);
+  TestBucketRefCounting(hermes);
+  TestMaxNameLength(hermes);
+  TestGetRelativeNodeId();
+  TestDuplicateBlobNames(hermes);
+  TestGetBucketIdFromBlobId(hermes);
+  TestHexStringToU64();
 
-  // hermes->Finalize(true);
+  hermes->Finalize(true);
 
-  // TestSwapBlobsExistInBucket();
-  // TestBlobInfoMap();
+  TestSwapBlobsExistInBucket();
+  TestBlobInfoMap();
   TestMdmViz();
 
   MPI_Finalize();

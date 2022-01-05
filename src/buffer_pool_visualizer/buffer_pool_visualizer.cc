@@ -72,15 +72,6 @@ static u32 global_color_counter;
 static DebugState *global_id_debug_state;
 static DebugState *global_map_debug_state;
 
-// namespace std {
-// template <> struct hash<DebugHeapAllocation> {
-//   inline size_t operator()(const DebugHeapAllocation &dha) const {
-//     std::hash<u32> u32_hasher;
-
-//     return u32_hasher(dha.offset) ^ u32_hasher(dha.size);
-//   }
-// };
-
 struct Range {
   int start;
   int end;
