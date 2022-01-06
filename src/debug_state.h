@@ -20,7 +20,7 @@ struct DebugHeapAllocation {
   u32 size;
 };
 
-const int kGlobalDebugMaxAllocations = 256;
+const int kGlobalDebugMaxAllocations = KILOBYTES(64);
 
 struct DebugState {
   u8 *shmem_base;

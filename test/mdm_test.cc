@@ -336,6 +336,50 @@ static void TestBlobInfoMap() {
   hermes->Finalize(true);
 }
 
+static void TestMdmViz() {
+  using namespace hermes;  // NOLINT(*)
+
+  Config config = {};
+  InitDefaultConfig(&config);
+  config.num_devices = 1;
+  config.num_targets = 1;
+  config.block_sizes[0] = 4096;
+  config.num_slabs[0] = 1;
+  config.desired_slab_percentages[0][0] = 1.0f;
+
+  HermesPtr hermes = InitHermesDaemon(&config);
+  SharedMemoryContext *context = &hermes->context_;
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  IdList ids1 = AllocateIdList(mdm, KILOBYTES(4));
+  FreeIdList(mdm, ids1);
+  IdList ids2 = AllocateIdList(mdm, KILOBYTES(1));
+  IdList ids3 = AllocateIdList(mdm, KILOBYTES(1));
+  IdList ids4 = AllocateIdList(mdm, KILOBYTES(1));
+  IdList ids5 = AllocateIdList(mdm, KILOBYTES(1));
+  IdList ids6 = AllocateIdList(mdm, KILOBYTES(1));
+  IdList ids7 = AllocateIdList(mdm, KILOBYTES(1));
+
+  FreeIdList(mdm, ids5);
+  FreeIdList(mdm, ids6);
+  FreeIdList(mdm, ids4);
+  FreeIdList(mdm, ids3);
+  FreeIdList(mdm, ids2);
+  FreeIdList(mdm, ids7);
+
+  std::string base_name("xxxxxxxxxxxxxxx");
+  hapi::Bucket bucket(std::string(base_name + "bkt"), hermes);
+
+  hapi::Blob data(255, 'z');
+
+  for (int i = 0; i < 10; ++i) {
+    bucket.Put(std::string(base_name + std::to_string(i)), data);
+  }
+
+  bucket.Destroy();
+
+  hermes->Finalize(true);
+}
+
 int main(int argc, char **argv) {
   int mpi_threads_provided;
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
@@ -363,6 +407,7 @@ int main(int argc, char **argv) {
 
   TestSwapBlobsExistInBucket();
   TestBlobInfoMap();
+  TestMdmViz();
 
   MPI_Finalize();
 

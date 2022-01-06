@@ -263,6 +263,8 @@ Heap *InitHeapInArena(Arena *arena, bool grows_up, u16 alignment) {
   result->base_offset = grows_up ? (u8 *)(result + 1) - (u8 *)result : 0;
   result->error_handler = HeapErrorHandler;
   result->alignment = alignment;
+  // NOTE(chogan): We reserve the first `alignment` sized block as the NULL
+  // block, so the free list starts after that.
   result->free_list_offset = alignment + (grows_up ? 0 : sizeof(FreeBlock));
   result->grows_up = grows_up;
 
@@ -383,12 +385,12 @@ u8 *HeapPushSize(Heap *heap, u32 size) {
                                     header->size + sizeof(FreeBlockHeader),
                                     heap->grows_up);
 
-      u32 extent_adustment = heap->grows_up ? 0 : sizeof(FreeBlock);
+      u32 extent_adjustment = heap->grows_up ? 0 : sizeof(FreeBlock);
 
       u32 this_extent =
         ComputeHeapExtent(heap, header, header->size + sizeof(FreeBlockHeader));
       heap->extent = std::max(heap->extent, this_extent);
-      if (heap->extent == heap->free_list_offset - extent_adustment) {
+      if (heap->extent == heap->free_list_offset - extent_adjustment) {
         heap->extent += sizeof(FreeBlock);
       }
       EndTicketMutex(&heap->mutex);
