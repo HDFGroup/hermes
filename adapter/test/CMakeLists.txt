@@ -1,19 +1,12 @@
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DHERMES_PRELOAD -DHERMES_RPC_THALLIUM")
-include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 set(ADAPTER_COMMON ${CMAKE_CURRENT_SOURCE_DIR}/catch_config.h)
-#------------------------------------------------------------------------------
-# Include source and build directories
-#------------------------------------------------------------------------------
-include_directories(
-        ${CMAKE_SOURCE_DIR}/adapter/include
-        ${CMAKE_SOURCE_DIR}/adapter/src)
+set(HERMES_ADAPTER_TEST_DIR ${HERMES_ADAPTER_DIR}/test)
 
 find_package(Catch2 REQUIRED)
 add_executable(hermes_daemon hermes_daemon.cc)
 target_link_libraries(hermes_daemon -ldl -lc MPI::MPI_CXX)
 target_link_libraries(hermes_daemon hermes)
 add_dependencies(hermes_daemon hermes)
-
 
 function(gcc exec args)
     add_test(NAME Test${exec} COMMAND "${CMAKE_BINARY_DIR}/bin/${exec}" ${args})
@@ -49,7 +42,7 @@ function(mpi_daemon test_exec test_mpi_proc test_args arg_name daemon_procs)
             PROPERTY ENVIRONMENT LSAN_OPTIONS=suppressions=${CMAKE_SOURCE_DIR}/test/data/asan.supp)
 endfunction()
 
-
+enable_testing()
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/posix)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/stdio)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/mpiio)
