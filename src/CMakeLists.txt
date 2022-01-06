@@ -1,13 +1,4 @@
 #------------------------------------------------------------------------------
-# Include source and build directories
-#------------------------------------------------------------------------------
-include_directories(
-  ${CMAKE_CURRENT_SOURCE_DIR}/api
-  ${CMAKE_CURRENT_SOURCE_DIR}/buffer_pool
-  ${CMAKE_CURRENT_SOURCE_DIR}/io_clients
-)
-
-#------------------------------------------------------------------------------
 # External dependencies
 #------------------------------------------------------------------------------
 # google ortools

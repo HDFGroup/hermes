@@ -10,14 +10,15 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include <catch_config.h>
-#include <hermes/adapter/constants.h>
-#include <hermes/adapter/stdio/common/constants.h>
-#include <hermes/adapter/stdio/common/datastructures.h>
-#include <hermes/adapter/stdio/mapper/mapper_factory.h>
-#include <hermes/adapter/stdio/metadata_manager.h>
-
 #include <experimental/filesystem>
+
+#include "catch_config.h"
+#include "constants.h"
+#include "stdio/constants.h"
+#include "stdio/datastructures.h"
+#include "stdio/mapper/mapper_factory.h"
+#include "stdio/metadata_manager.h"
+
 using hermes::adapter::stdio::FileStruct;
 using hermes::adapter::stdio::HermesStruct;
 using hermes::adapter::stdio::MapperFactory;

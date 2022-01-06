@@ -10,9 +10,8 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include <catch_config.h>
-
-#include "hermes/adapter/utils.h"
+#include "catch_config.h"
+#include "adapter_utils.h"
 
 namespace fs = std::experimental::filesystem;
 

@@ -19,10 +19,10 @@
 #include <iostream>
 
 #if HERMES_INTERCEPT == 1
-#include <hermes/adapter/stdio.h>
+#include "stdio/stdio.h"
 #endif
 
-#include "adapter_utils.h"
+#include "adapter_test_utils.h"
 
 namespace fs = std::experimental::filesystem;
 
