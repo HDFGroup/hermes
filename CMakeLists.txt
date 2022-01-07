@@ -152,6 +152,7 @@ option(HERMES_BUILD_BENCHMARKS "Build the Hermes benchmark suite." OFF)
 option(HERMES_ENABLE_TIMING "Turn on timing of selected functions." OFF)
 option(HERMES_ENABLE_COVERAGE "Enable code coverage." OFF)
 option(HERMES_ENABLE_ADAPTERS "Enable hermes adapters." ON)
+option(HERMES_ENABLE_VFD "Build the Hermes HDF5 Virtual File Driver" OFF)
 option(HERMES_ENABLE_WRAPPER "Enable hermes C API wrapper." ON)
 option(HERMES_INSTALL_TESTS "Enable installation of tests." OFF)
 # Calculate code coverage with debug mode
