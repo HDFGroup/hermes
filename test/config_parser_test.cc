@@ -25,12 +25,16 @@ using hermes::Arena;
 using hermes::u8;
 using hermes::Config;
 
+namespace hermes {
+namespace testing {
+
 Config ParseConfigString(Arena *arena, const std::string &config_string) {
   hermes::ScopedTemporaryMemory scratch(arena);
   hermes::EntireFile config_file =
     {(u8 *)config_string.data(), config_string.size()};
   hermes::TokenList tokens = hermes::Tokenize(scratch, config_file);
-  Config config;
+  Config config = {};
+  InitDefaultConfig(&config);
   hermes::ParseTokens(&tokens, &config);
 
   return config;
@@ -71,20 +75,86 @@ void TestParseRangeList(Arena *arena) {
   }
 }
 
-int main(int argc, char **argv) {
-  if (argc < 2) {
-    fprintf(stderr, "Expected a path to a hermes.conf file\n");
-    exit(-1);
+void RunCapacityValuesTest(Arena *arena, const std::string &config_string,
+                           const std::vector<size_t> &expected) {
+  Config config = ParseConfigString(arena, config_string);
+  Assert((size_t)config.num_devices == expected.size());
+  for (int i = 0; i < config.num_devices; ++i) {
+    Assert(config.capacities[i] == expected[i]);
+  }
+}
+
+void TestCapacityValues(Arena *arena) {
+  std::string base_config = "num_devices = 4;\n";
+
+  {
+    std::vector<size_t> expected{50, 50, 50, 50};
+    std::string config_string = "capacities_bytes = {50, 50, 50, 50};\n";
+    RunCapacityValuesTest(arena, base_config + config_string, expected);
   }
 
+  {
+    std::vector<size_t> expected{KILOBYTES(50), KILOBYTES(50), KILOBYTES(50),
+                                 KILOBYTES(50)};
+    std::string config_string = "capacities_kb = {50, 50, 50, 50};\n";
+    RunCapacityValuesTest(arena, base_config + config_string, expected);
+  }
+
+  {
+    std::vector<size_t> expected{MEGABYTES(50), MEGABYTES(50), MEGABYTES(50),
+                                 MEGABYTES(50)};
+    std::string config_string = "capacities_mb = {50, 50, 50, 50};\n";
+    RunCapacityValuesTest(arena, base_config + config_string, expected);
+  }
+
+  {
+    std::vector<size_t> expected{GIGABYTES(50), GIGABYTES(50), GIGABYTES(50),
+                                 GIGABYTES(50)};
+    std::string config_string = "capacities_gb = {50, 50, 50, 50};\n";
+    RunCapacityValuesTest(arena, base_config + config_string, expected);
+  }
+}
+
+void RunBlockSizesTest(Arena *arena, const std::string &config_string,
+                       const std::vector<int> &expected) {
+  Config config = ParseConfigString(arena, config_string);
+  Assert((size_t)config.num_devices == expected.size());
+  for (int i = 0; i < config.num_devices; ++i) {
+    Assert(config.block_sizes[i] == expected[i]);
+  }
+}
+
+void TestBlockSizes(Arena *arena) {
+  std::string base_config = "num_devices = 4;\n";
+
+  {
+    std::vector<int> expected{50, 50, 50, 50};
+    std::string config_string = "block_sizes_bytes = {50, 50, 50, 50};\n";
+    RunBlockSizesTest(arena, base_config + config_string, expected);
+  }
+  {
+    std::vector<int> expected{KILOBYTES(50), KILOBYTES(50), KILOBYTES(50),
+                              KILOBYTES(50)};
+    std::string config_string = "block_sizes_kb = {50, 50, 50, 50};\n";
+    RunBlockSizesTest(arena, base_config + config_string, expected);
+  }
+  {
+    std::vector<int> expected{MEGABYTES(50), MEGABYTES(50), MEGABYTES(50),
+                              MEGABYTES(50)};
+    std::string config_string = "block_sizes_mb = {50, 50, 50, 50};\n";
+    RunBlockSizesTest(arena, base_config + config_string, expected);
+  }
+  {
+    std::vector<int> expected{GIGABYTES(1), GIGABYTES(1), GIGABYTES(1),
+                              GIGABYTES(1)};
+    std::string config_string =  "block_sizes_gb = {1, 1, 1, 1};\n";
+    RunBlockSizesTest(arena, base_config + config_string, expected);
+  }
+}
+
+void TestDefaultConfig(Arena *arena, const char *config_file) {
   hermes::Config config = {};
-
-  const size_t kConfigMemorySize = KILOBYTES(16);
-  u8 config_memory[kConfigMemorySize];
-  Arena arena = {};
-  hermes::InitArena(&arena, kConfigMemorySize, config_memory);
-
-  hermes::ParseConfig(&arena, argv[1], &config);
+  hermes::ParseConfig(arena, config_file, &config);
 
   Assert(config.num_devices == 4);
   Assert(config.num_targets == 4);
@@ -115,8 +185,7 @@ int main(int argc, char **argv) {
 
   Assert(config.arena_percentages[hermes::kArenaType_BufferPool] == 0.85f);
   Assert(config.arena_percentages[hermes::kArenaType_MetaData] == 0.04f);
-  Assert(config.arena_percentages[hermes::kArenaType_Transient] == 0.03f);
-  Assert(config.arena_percentages[hermes::kArenaType_TransferWindow] == 0.08f);
+  Assert(config.arena_percentages[hermes::kArenaType_Transient] == 0.11f);
 
   Assert(config.mount_points[0] == "");
   Assert(config.mount_points[1] == "./");
@@ -153,10 +222,26 @@ int main(int argc, char **argv) {
   Assert(config.is_shared_device[3] == 0);
 
   Assert(config.bo_num_threads == 4);
+}
 
-  Assert(config.default_rr_split == false);
+}  // namespace testing
+}  // namespace hermes
 
-  TestParseRangeList(&arena);
+int main(int argc, char **argv) {
+  if (argc < 2) {
+    fprintf(stderr, "Expected a path to a hermes.conf file\n");
+    exit(-1);
+  }
+
+  const size_t kConfigMemorySize = KILOBYTES(16);
+  u8 config_memory[kConfigMemorySize];
+  Arena arena = {};
+  hermes::InitArena(&arena, kConfigMemorySize, config_memory);
+
+  hermes::testing::TestDefaultConfig(&arena, argv[1]);
+  hermes::testing::TestParseRangeList(&arena);
+  hermes::testing::TestCapacityValues(&arena);
+  hermes::testing::TestBlockSizes(&arena);
 
   return 0;
 }

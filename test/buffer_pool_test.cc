@@ -41,7 +41,7 @@ static void GetSwapConfig(hermes::Config *config) {
   InitDefaultConfig(config);
   // NOTE(chogan): Make capacities small so that a Put of 1MB will go to swap
   // space. After metadata, this configuration gives us 1 4KB RAM buffer.
-  config->capacities[0] = KILOBYTES(32);
+  config->capacities[0] = KILOBYTES(26);
   config->capacities[1] = 8;
   config->capacities[2] = 8;
   config->capacities[3] = 8;
@@ -138,7 +138,7 @@ static void MakeTwoBufferRAMConfig(hermes::Config *config) {
   InitDefaultConfig(config);
   config->num_devices = 1;
   config->num_targets = 1;
-  config->capacities[0] = KILOBYTES(36);
+  config->capacities[0] = KILOBYTES(32);
   config->desired_slab_percentages[0][0] = 1;
   config->desired_slab_percentages[0][1] = 0;
   config->desired_slab_percentages[0][2] = 0;

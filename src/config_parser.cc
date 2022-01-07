@@ -16,6 +16,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <ostream>
 #include <string>
 
 #include <glog/logging.h>
@@ -45,8 +46,14 @@ static const char *kConfigVariableStrings[ConfigVariable_Count] = {
   "unknown",
   "num_devices",
   "num_targets",
+  "capacities_bytes",
+  "capacities_kb",
   "capacities_mb",
+  "capacities_gb",
+  "block_sizes_bytes",
   "block_sizes_kb",
+  "block_sizes_mb",
+  "block_sizes_gb",
   "num_slabs",
   "slab_unit_sizes",
   "desired_slab_percentages",
@@ -54,7 +61,6 @@ static const char *kConfigVariableStrings[ConfigVariable_Count] = {
   "latencies_us",
   "buffer_pool_arena_percentage",
   "metadata_arena_percentage",
-  "transfer_window_arena_percentage",
   "transient_arena_percentage",
   "mount_points",
   "swap_mount",
@@ -683,13 +689,96 @@ Token *EndStatement(Token *tok) {
 }
 
 void CheckConstraints(Config *config) {
+  // rpc_domain must be present if rpc_protocol is "verbs"
   if (config->rpc_protocol.find("verbs") != std::string::npos &&
       config->rpc_domain.empty()) {
     PrintExpectedAndFail("a non-empty value for rpc_domain");
   }
+
+  double tolerance = 0.0000001;
+
+  // arena_percentages must add up to 1.0
+  double arena_percentage_sum = 0;
+  for (int i = 0; i < kArenaType_Count; ++i) {
+    arena_percentage_sum += config->arena_percentages[i];
+  }
+  if (fabs(1.0 - arena_percentage_sum) > tolerance) {
+    std::ostringstream msg;
+    msg << "the values in arena_percentages to add up to 1.0 but got ";
+    msg << arena_percentage_sum << "\n";
+    PrintExpectedAndFail(msg.str());
+  }
+
+  // Each slab's desired_slab_percentages should add up to 1.0
+  for (int device = 0; device < config->num_devices; ++device) {
+    double total_slab_percentage = 0;
+    for (int slab = 0; slab < config->num_slabs[device]; ++slab) {
+      total_slab_percentage += config->desired_slab_percentages[device][slab];
+    }
+    if (fabs(1.0 - total_slab_percentage) > tolerance) {
+      std::ostringstream msg;
+      msg << "the values in desired_slab_percentages[";
+      msg << device;
+      msg << "] to add up to 1.0 but got ";
+      msg << total_slab_percentage << "\n";
+      PrintExpectedAndFail(msg.str());
+    }
+  }
+}
+
+void RequireCapacitiesUnset(bool &already_specified) {
+  if (already_specified) {
+    LOG(FATAL) << "Capacities are specified multiple times in the configuration"
+               << " file. Only use one of 'capacities_bytes', 'capacities_kb',"
+               << "'capacities_mb', or 'capacities_gb'\n";
+  } else {
+    already_specified = true;
+  }
+}
+
+void RequireBlockSizesUnset(bool &already_specified) {
+  if (already_specified) {
+    LOG(FATAL) << "Block sizes are specified multiple times in the "
+               << "configuration file. Only use one of 'block_sizes_bytes',"
+               << "'block_sizes_kb', 'block_sizes_mb', or 'block_sizes_gb'\n";
+  } else {
+    already_specified = true;
+  }
+}
+
+Token *ParseCapacities(Config *config, Token *tok, bool &already_specified,
+                       size_t conversion) {
+  RequireNumDevices(config);
+  RequireCapacitiesUnset(already_specified);
+  tok = ParseSizetList(tok, config->capacities, config->num_devices);
+  for (int i = 0; i < config->num_devices; ++i) {
+    config->capacities[i] *= conversion;
+  }
+
+  return tok;
+}
+
+Token *ParseBlockSizes(Config *config, Token *tok, bool &already_specified,
+                       size_t conversion) {
+  RequireNumDevices(config);
+  RequireBlockSizesUnset(already_specified);
+  tok = ParseIntList(tok, config->block_sizes, config->num_devices);
+  for (int i = 0; i < config->num_devices; ++i) {
+    size_t val = (size_t)config->block_sizes[i] * conversion;
+    if (val > INT_MAX) {
+      LOG(FATAL) << "Max supported block size is " << INT_MAX << " bytes. "
+                 << "Config file requested " << val << " bytes\n";
+    }
+    config->block_sizes[i] *= conversion;
+  }
+
+  return tok;
 }
 
 void ParseTokens(TokenList *tokens, Config *config) {
+  bool capacities_specified = false;
+  bool block_sizes_specified = false;
+
   Token *tok = tokens->head;
   while (tok) {
     ConfigVariable var = GetConfigVariable(tok);
@@ -719,22 +808,36 @@ void ParseTokens(TokenList *tokens, Config *config) {
         config->num_targets = val;
         break;
       }
-      case ConfigVariable_Capacities: {
-        RequireNumDevices(config);
-        tok = ParseSizetList(tok, config->capacities, config->num_devices);
-        // NOTE(chogan): Convert from MB to bytes
-        for (int i = 0; i < config->num_devices; ++i) {
-          config->capacities[i] *= 1024 * 1024;
-        }
+      case ConfigVariable_CapacitiesB: {
+        tok = ParseCapacities(config, tok, capacities_specified, 1);
         break;
       }
-      case ConfigVariable_BlockSizes: {
-        RequireNumDevices(config);
-        tok = ParseIntList(tok, config->block_sizes, config->num_devices);
-        // NOTE(chogan): Convert from KB to bytes
-        for (int i = 0; i < config->num_devices; ++i) {
-          config->block_sizes[i] *= 1024;
-        }
+      case ConfigVariable_CapacitiesKb: {
+        tok = ParseCapacities(config, tok, capacities_specified, KILOBYTES(1));
+        break;
+      }
+      case ConfigVariable_CapacitiesMb: {
+        tok = ParseCapacities(config, tok, capacities_specified, MEGABYTES(1));
+        break;
+      }
+      case ConfigVariable_CapacitiesGb: {
+        tok = ParseCapacities(config, tok, capacities_specified, GIGABYTES(1));
+        break;
+      }
+      case ConfigVariable_BlockSizesB: {
+        tok = ParseBlockSizes(config, tok, block_sizes_specified, 1);
+        break;
+      }
+      case ConfigVariable_BlockSizesKb: {
+        tok = ParseBlockSizes(config, tok, block_sizes_specified, KILOBYTES(1));
+        break;
+      }
+      case ConfigVariable_BlockSizesMb: {
+        tok = ParseBlockSizes(config, tok, block_sizes_specified, MEGABYTES(1));
+        break;
+      }
+      case ConfigVariable_BlockSizesGb: {
+        tok = ParseBlockSizes(config, tok, block_sizes_specified, GIGABYTES(1));
         break;
       }
       case ConfigVariable_NumSlabs: {
@@ -774,11 +877,6 @@ void ParseTokens(TokenList *tokens, Config *config) {
       case ConfigVariable_MetadataArenaPercentage: {
         f32 val = ParseFloat(&tok);
         config->arena_percentages[hermes::kArenaType_MetaData] = val;
-        break;
-      }
-      case ConfigVariable_TransferWindowArenaPercentage: {
-        f32 val = ParseFloat(&tok);
-        config->arena_percentages[hermes::kArenaType_TransferWindow] = val;
         break;
       }
       case ConfigVariable_TransientArenaPercentage: {

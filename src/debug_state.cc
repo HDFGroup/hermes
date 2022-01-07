@@ -34,7 +34,7 @@ void CloseDebugState(bool unlink) {
 
 void AddDebugAllocation(DebugState *state, u32 offset, u32 size) {
   BeginTicketMutex(&state->mutex);
-  assert(state->allocation_count < global_debug_max_allocations);
+  assert(state->allocation_count < kGlobalDebugMaxAllocations);
   int i = state->allocation_count++;
   state->allocations[i].offset = offset;
   state->allocations[i].size = size;
