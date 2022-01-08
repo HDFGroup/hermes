@@ -93,37 +93,37 @@ class MetadataManager {
   }
 
   /**
-   * Create a metadata entry for STDIO adapter for a given file handler.
-   * @param fh, FILE*, original file handler of the file on the destination
-   * filesystem.
-   * @param stat, AdapterStat, STDIO Adapter version of Stat data structure.
-   * @return    true, if operation was successful.
-   *            false, if operation was unsuccessful.
+   * \brief Create a metadata entry for pubsub adapter for a given topic.
+   * \param topic, std::string&, name of the managed topic.
+   * \param stat, ClientMetadata&, current metadata of the topic.
+   * \return true, if operation was successful.
+   *         false, if operation was unsuccessful.
    */
   bool Create(const std::string& topic, const ClientMetadata& stat);
 
   /**
-   * Update existing metadata entry for STDIO adapter for a given file handler.
-   * @param fh, FILE*, original file handler of the file on the destination.
-   * @param stat, AdapterStat, STDIO Adapter version of Stat data structure.
-   * @return    true, if operation was successful.
-   *            false, if operation was unsuccessful or entry doesn't exist.
+   * \brief Update existing metadata entry for pubsub adapter for a given file handler.
+   * \param topic, std::string&, name of the managed topic.
+   * \param stat, ClientMetadata&, current metadata of the topic to replace previous one.
+   * \return true, if operation was successful.
+   *         false, if operation was unsuccessful or entry doesn't exist.
+   * \remark Update call will not degenerate into a create call if topic is not being tracked.
    */
   bool Update(const std::string& topic, const ClientMetadata& stat);
 
   /**
-   * Delete existing metadata entry for STDIO adapter for a given file handler.
-   * @param fh, FILE*, original file handler of the file on the destination.
-   * @return    true, if operation was successful.
+   * \brief Delete existing metadata entry for pubsub adapter for a given file handler.
+   * \param topic, std::string&, name of the managed topic.
+   * \return    true, if operation was successful.
    *            false, if operation was unsuccessful.
    */
   bool Delete(const std::string& topic);
 
   /**
-   * Find existing metadata entry for STDIO adapter for a given file handler.
-   * @param fh, FILE*, original file handler of the file on the destination.
-   * @return    The metadata entry if exist.
-   *            The bool in pair indicated whether metadata entry exists.
+   * \brief Find existing metadata entry for pubsub adapter for a given file handler.
+   * \param topic, std::string&, name of the managed topic.
+   * \return The metadata entry if exist.
+   *         The bool in pair indicated whether metadata entry exists.
    */
   std::pair<ClientMetadata, bool> Find(const std::string& topic);
 };

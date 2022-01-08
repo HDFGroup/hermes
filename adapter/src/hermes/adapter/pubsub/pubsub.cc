@@ -16,8 +16,7 @@ hapi::Status hermes::pubsub::mpiInit(int argc, char **argv){
   return hapi::Status(hermes::HERMES_SUCCESS);
 }
 
-hapi::Status hermes::pubsub::connect(const std::string &config_file,
-                                     bool independent){
+hapi::Status hermes::pubsub::connect(const std::string &config_file){
   LOG(INFO) << "Connecting adapter" << std::endl;
   auto mdm = hermes::adapter::Singleton<hermes::adapter::pubsub::MetadataManager>::GetInstance();
   try {
@@ -30,7 +29,7 @@ hapi::Status hermes::pubsub::connect(const std::string &config_file,
   }
 }
 
-hapi::Status hermes::pubsub::connect(bool independent){
+hapi::Status hermes::pubsub::connect(){
   LOG(INFO) << "Connecting adapter" << std::endl;
   auto mdm = hermes::adapter::Singleton<hermes::adapter::pubsub::MetadataManager>::GetInstance();
   char* hermes_config = getenv(kHermesConf);

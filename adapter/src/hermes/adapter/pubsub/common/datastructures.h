@@ -46,7 +46,6 @@ struct ClientMetadata {
    * attributes
    */
   std::shared_ptr<hapi::Bucket> st_bkid; /* bucket associated with the topic */
-//  i32 ref_count;        /* # of time process opens the topic */
   u64 last_subscribed_blob; /* Current blob being used */
   timespec st_atim;     /* time of last access */
   /**
@@ -54,16 +53,14 @@ struct ClientMetadata {
    */
   ClientMetadata()
       : st_bkid(),
-//        ref_count(1),
         last_subscribed_blob(0),
         st_atim() {} /* default constructor */
   explicit ClientMetadata(const struct ClientMetadata &st)
       : st_bkid(st.st_bkid),
-//        ref_count(st.ref_count),
         last_subscribed_blob(st.last_subscribed_blob),
         st_atim(st.st_atim) {} /* parameterized constructor */
 };
 
-}  // namespace hermes::adapter::stdio
+}
 
 #endif  // HERMES_STDIO_ADAPTER_DATASTRUCTURES_H
