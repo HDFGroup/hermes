@@ -2,7 +2,7 @@ project(StdioAdapter VERSION 0.1.0)
 
 set(HERMES_PUBSUB_ADAPTER_DIR ${HERMES_ADAPTER_DIR}/pubsub)
 
-set(PUBSUB_ADAPTER_PUBLIC_HEADER ${HERMES_POSIX_ADAPTER_DIR}/pubsub.h)
+set(PUBSUB_ADAPTER_PUBLIC_HEADER pubsub.h)
 set(PUBSUB_ADAPTER_PRIVATE_HEADER metadata_manager.h datastructures.h constants.h ${HERMES_ADAPTER_DIR}/singleton.h)
 set(PUBSUB_ADAPTER_SRC pubsub.cc metadata_manager.cc)
 
