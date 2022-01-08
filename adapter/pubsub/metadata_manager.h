@@ -19,12 +19,12 @@
 #include <ftw.h>
 #include <cstdio>
 #include <unordered_map>
+#include <mpi.h>
 
 /**
  * Internal headers
  */
-#include <datastructures.h>
-#include <mpi.h>
+#include "datastructures.h"
 
 using hermes::adapter::pubsub::ClientMetadata;
 

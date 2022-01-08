@@ -17,12 +17,7 @@
  * Standard header
  */
 #include <ftw.h>
-
 #include <string>
-
-/**
- * Dependent library header
- */
 
 /**
  * Internal header
