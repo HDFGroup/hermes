@@ -6,7 +6,7 @@ set(HERMES_ADAPTER_DIR ${CMAKE_SOURCE_DIR}/adapter)
 add_subdirectory(stdio)
 add_subdirectory(posix)
 add_subdirectory(mpiio)
-add_subdirectory(src/hermes/adapter/pubsub)
+add_subdirectory(pubsub)
 
 if(BUILD_TESTING)
   enable_testing()
