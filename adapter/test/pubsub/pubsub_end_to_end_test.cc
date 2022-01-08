@@ -47,6 +47,9 @@ int main(int argc, char **argv) {
     publish_ret = hermes::pubsub::publish("test", data3);
     assert(publish_ret.Succeeded());
 
+    //this subscribe reads data2;
+    hermes::pubsub::subscribe("test");
+
     auto subscribe_ret_2 = hermes::pubsub::subscribe("test");
     assert(subscribe_ret_2.second.Succeeded());
     assert(data3 == subscribe_ret_2.first);
