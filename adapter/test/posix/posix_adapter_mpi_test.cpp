@@ -10,8 +10,6 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include <adapter_utils.h>
-#include <catch_config.h>
 #include <fcntl.h>
 #include <stdarg.h>
 #include <unistd.h>
@@ -19,9 +17,14 @@
 #include <experimental/filesystem>
 #include <iostream>
 
+#include "catch_config.h"
+
+#include "adapter_test_utils.h"
+
 #if HERMES_INTERCEPT == 1
-#include <hermes/adapter/stdio.h>
+#include "posix/posix.h"
 #endif
+
 namespace fs = std::experimental::filesystem;
 
 namespace hermes::adapter::posix::test {
@@ -383,4 +386,5 @@ void test_seek(long offset, int whence) {
 
 #include "posix_adapter_basic_test.cpp"
 #include "posix_adapter_rs_test.cpp"
-#include "posix_adapter_shared_test.cpp"
+// TODO(chogan): Disabling until issue #302 is fixed
+// #include "posix_adapter_shared_test.cpp"

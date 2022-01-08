@@ -16,6 +16,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <ostream>
 #include <string>
 
 #include <glog/logging.h>
@@ -23,6 +24,7 @@
 #include "hermes_types.h"
 #include "utils.h"
 #include "memory_management.h"
+#include "config_parser.h"
 
 // Steps to add a new configuration variable:
 // 1. Add an entry to the ConfigVariable enum
@@ -39,64 +41,19 @@
 
 namespace hermes {
 
-enum class TokenType {
-  Identifier,
-  Number,
-  String,
-  OpenCurlyBrace,
-  CloseCurlyBrace,
-  Comma,
-  Equal,
-  Semicolon,
-
-  Count
-};
-
-enum ConfigVariable {
-  ConfigVariable_Unkown,
-  ConfigVariable_NumDevices,
-  ConfigVariable_NumTargets,
-  ConfigVariable_Capacities,
-  ConfigVariable_BlockSizes,
-  ConfigVariable_NumSlabs,
-  ConfigVariable_SlabUnitSizes,
-  ConfigVariable_DesiredSlabPercentages,
-  ConfigVariable_BandwidthsMbps,
-  ConfigVariable_LatenciesUs,
-  ConfigVariable_BufferPoolArenaPercentage,
-  ConfigVariable_MetadataArenaPercentage,
-  ConfigVariable_TransferWindowArenaPercentage,
-  ConfigVariable_TransientArenaPercentage,
-  ConfigVariable_MountPoints,
-  ConfigVariable_SwapMount,
-  ConfigVariable_NumBufferOrganizerRetries,
-  ConfigVariable_MaxBucketsPerNode,
-  ConfigVariable_MaxVBucketsPerNode,
-  ConfigVariable_SystemViewStateUpdateInterval,
-  ConfigVariable_RpcServerBaseName,
-  ConfigVariable_RpcServerSuffix,
-  ConfigVariable_BufferPoolShmemName,
-  ConfigVariable_RpcProtocol,
-  ConfigVariable_RpcDomain,
-  ConfigVariable_RpcPort,
-  ConfigVariable_BufferOrganizerPort,
-  ConfigVariable_RpcHostNumberRange,
-  ConfigVariable_RpcNumThreads,
-  ConfigVariable_PlacementPolicy,
-  ConfigVariable_IsSharedDevice,
-  ConfigVariable_BoNumThreads,
-  ConfigVariable_RRSplit,
-
-  ConfigVariable_Count
-};
-
 // TODO(chogan): Make this work independent of declaration order
 static const char *kConfigVariableStrings[ConfigVariable_Count] = {
   "unknown",
   "num_devices",
   "num_targets",
+  "capacities_bytes",
+  "capacities_kb",
   "capacities_mb",
+  "capacities_gb",
+  "block_sizes_bytes",
   "block_sizes_kb",
+  "block_sizes_mb",
+  "block_sizes_gb",
   "num_slabs",
   "slab_unit_sizes",
   "desired_slab_percentages",
@@ -104,7 +61,6 @@ static const char *kConfigVariableStrings[ConfigVariable_Count] = {
   "latencies_us",
   "buffer_pool_arena_percentage",
   "metadata_arena_percentage",
-  "transfer_window_arena_percentage",
   "transient_arena_percentage",
   "mount_points",
   "swap_mount",
@@ -125,23 +81,6 @@ static const char *kConfigVariableStrings[ConfigVariable_Count] = {
   "is_shared_device",
   "buffer_organizer_num_threads",
   "default_rr_split",
-};
-
-struct Token {
-  Token *next;
-  char *data;
-  u32 size;
-  TokenType type;
-};
-
-struct TokenList {
-  Token *head;
-  int count;
-};
-
-struct EntireFile {
-  u8 *data;
-  u64 size;
 };
 
 EntireFile ReadEntireFile(Arena *arena, const char *path) {
@@ -185,9 +124,11 @@ EntireFile ReadEntireFile(Arena *arena, const char *path) {
   return result;
 }
 
-void AddTokenToList(Arena *arena, TokenList *list, TokenType type) {
+void AddTokenToList(Arena *arena, TokenList *list, TokenType type,
+                    u32 line_number) {
   Token *tok = PushClearedStruct<Token>(arena);
   tok->type = type;
+  tok->line = line_number;
   list->head->next = tok;
   list->head = tok;
 }
@@ -223,18 +164,35 @@ inline bool EndOfIdentifier(char c) {
 }
 
 inline bool BeginsNumber(char c) {
-  bool result = (c >= '0' && c <= '9') || (c == '.');
+  bool result = (c >= '0' && c <= '9') || (c == '.') || (c == '-');
 
   return result;
 }
 
 inline bool EndOfNumber(char c) {
-  bool result = IsWhitespace(c) || (c == ',') || (c == ';') || (c == '}');
+  bool result = (IsWhitespace(c) || (c == ',') || (c == ';') || (c == '}')
+                 || (c == '-'));
+
+  return result;
+}
+
+inline bool IsEndOfLine(char **at, char *end) {
+  // Linux style
+  bool result = (*at)[0] == '\n';
+
+  // Windows style
+  if (*at + 1 < end && !result) {
+    result = ((*at)[0] == '\r' && (*at)[1] == '\n');
+    if (result) {
+      (*at)++;
+    }
+  }
 
   return result;
 }
 
 TokenList Tokenize(Arena *arena, EntireFile entire_file) {
+  u32 line_number = 1;
   TokenList result = {};
   Token dummy = {};
   result.head = &dummy;
@@ -244,19 +202,28 @@ TokenList Tokenize(Arena *arena, EntireFile entire_file) {
 
   while (at < end) {
     if (IsWhitespace(*at)) {
+      if (IsEndOfLine(&at, end)) {
+        line_number++;
+      }
+
       ++at;
       continue;
     }
 
     if (BeginsComment(*at)) {
-      while (at < end && !EndOfComment(*at)) {
+      while (at < end) {
+        if (IsEndOfLine(&at, end)) {
+          line_number++;
+          ++at;
+          break;
+        }
         ++at;
       }
       continue;
     }
 
     if (BeginsIdentifier(*at)) {
-      AddTokenToList(arena, &result, TokenType::Identifier);
+      AddTokenToList(arena, &result, TokenType::Identifier, line_number);
       result.head->data = at;
 
       while (at && !EndOfIdentifier(*at)) {
@@ -264,8 +231,13 @@ TokenList Tokenize(Arena *arena, EntireFile entire_file) {
         at++;
       }
     } else if (BeginsNumber(*at)) {
-      AddTokenToList(arena, &result, TokenType::Number);
+      AddTokenToList(arena, &result, TokenType::Number, line_number);
       result.head->data = at;
+
+      if (*at == '-') {
+        result.head->size++;
+        at++;
+      }
 
       while (at && !EndOfNumber(*at)) {
         result.head->size++;
@@ -274,27 +246,29 @@ TokenList Tokenize(Arena *arena, EntireFile entire_file) {
     } else {
       switch (*at) {
         case ';': {
-          AddTokenToList(arena, &result, TokenType::Semicolon);
+          AddTokenToList(arena, &result, TokenType::Semicolon, line_number);
           break;
         }
         case '=': {
-          AddTokenToList(arena, &result, TokenType::Equal);
+          AddTokenToList(arena, &result, TokenType::Equal, line_number);
           break;
         }
         case ',': {
-          AddTokenToList(arena, &result, TokenType::Comma);
+          AddTokenToList(arena, &result, TokenType::Comma, line_number);
           break;
         }
         case '{': {
-          AddTokenToList(arena, &result, TokenType::OpenCurlyBrace);
+          AddTokenToList(arena, &result, TokenType::OpenCurlyBrace,
+                         line_number);
           break;
         }
         case '}': {
-          AddTokenToList(arena, &result, TokenType::CloseCurlyBrace);
+          AddTokenToList(arena, &result, TokenType::CloseCurlyBrace,
+                         line_number);
           break;
         }
         case '"': {
-          AddTokenToList(arena, &result, TokenType::String);
+          AddTokenToList(arena, &result, TokenType::String, line_number);
           at++;
           result.head->data = at;
 
@@ -305,7 +279,8 @@ TokenList Tokenize(Arena *arena, EntireFile entire_file) {
           break;
         }
         default: {
-          assert(!"Unexpected token encountered\n");
+          LOG(FATAL) << "Config parser encountered unexpected token on line "
+                     << line_number << ": " << *at << "\n";
           break;
         }
       }
@@ -355,6 +330,12 @@ inline bool IsComma(Token *tok) {
   return result;
 }
 
+inline bool IsHyphen(Token *tok) {
+  bool result = tok->type == TokenType::Hyphen;
+
+  return result;
+}
+
 inline bool IsEqual(Token *tok) {
   bool result = tok->type == TokenType::Equal;
 
@@ -367,8 +348,15 @@ inline bool IsSemicolon(Token *tok) {
   return result;
 }
 
-void PrintExpectedAndFail(const std::string &expected) {
-  LOG(FATAL) << "Configuration parser expected: " << expected << std::endl;
+void PrintExpectedAndFail(const std::string &expected, u32 line_number = 0) {
+  std::ostringstream msg;
+  msg << "Configuration parser expected '" << expected << "'";
+  if (line_number > 0) {
+    msg << " on line " << line_number;
+  }
+  msg << "\n";
+
+  LOG(FATAL) << msg.str();
 }
 
 ConfigVariable GetConfigVariable(Token *tok) {
@@ -402,7 +390,7 @@ size_t ParseSizet(Token **tok) {
                  << std::endl;
     }
   } else {
-    PrintExpectedAndFail("a number");
+    PrintExpectedAndFail("a number", (*tok)->line);
   }
 
   return result;
@@ -417,7 +405,7 @@ Token *ParseSizetList(Token *tok, size_t *out, int n) {
         if (IsComma(tok)) {
           tok = tok->next;
         } else {
-          PrintExpectedAndFail(",");
+          PrintExpectedAndFail(",", tok->line);
         }
       }
     }
@@ -425,10 +413,10 @@ Token *ParseSizetList(Token *tok, size_t *out, int n) {
     if (IsCloseCurlyBrace(tok)) {
       tok = tok->next;
     } else {
-      PrintExpectedAndFail("}");
+      PrintExpectedAndFail("}", tok->line);
     }
   } else {
-    PrintExpectedAndFail("{");
+    PrintExpectedAndFail("{", tok->line);
   }
 
   return tok;
@@ -440,14 +428,55 @@ int ParseInt(Token **tok) {
     errno = 0;
     result = strtol((*tok)->data, NULL, 0);
     if (errno == ERANGE || (result == 0 && errno != 0) || result >= INT_MAX) {
-      PrintExpectedAndFail("an integer between 0 and INT_MAX");
+      PrintExpectedAndFail("an integer between 0 and INT_MAX", (*tok)->line);
     }
     *tok = (*tok)->next;
   } else {
-    PrintExpectedAndFail("a number");
+    PrintExpectedAndFail("a number", (*tok)->line);
   }
 
   return (int)result;
+}
+
+Token *ParseRangeList(Token *tok, std::vector<int> &host_numbers) {
+  if (IsOpenCurlyBrace(tok)) {
+    tok = tok->next;
+    if (IsNumber(tok)) {
+      while (tok) {
+        int range_start = ParseInt(&tok);
+        host_numbers.push_back(range_start);
+
+        if (IsNumber(tok)) {
+          // This entry in the list represents a range
+          int negative_range_end = ParseInt(&tok);
+          if (negative_range_end > 0) {
+            PrintExpectedAndFail("a range", tok->line);
+          }
+          int range_end = -1 * negative_range_end;
+          for (int i = range_start + 1; i <= range_end; ++i) {
+            host_numbers.push_back(i);
+          }
+        }
+
+        if (IsComma(tok)) {
+          tok = tok->next;
+        } else if (IsCloseCurlyBrace(tok)) {
+          break;
+        } else {
+          PrintExpectedAndFail("either a range, a comma, or a }", tok->line);
+        }
+      }
+    }
+    if (IsCloseCurlyBrace(tok)) {
+      tok = tok->next;
+    } else {
+      PrintExpectedAndFail("}", tok->line);
+    }
+  } else {
+    PrintExpectedAndFail("{", tok->line);
+  }
+
+  return tok;
 }
 
 Token *ParseIntList(Token *tok, int *out, int n) {
@@ -459,17 +488,17 @@ Token *ParseIntList(Token *tok, int *out, int n) {
         if (IsComma(tok)) {
           tok = tok->next;
         } else {
-          PrintExpectedAndFail(",");
+          PrintExpectedAndFail(",", tok->line);
         }
       }
     }
     if (IsCloseCurlyBrace(tok)) {
       tok = tok->next;
     } else {
-      PrintExpectedAndFail("}");
+      PrintExpectedAndFail("}", tok->line);
     }
   } else {
-    PrintExpectedAndFail("{");
+    PrintExpectedAndFail("{", tok->line);
   }
 
   return tok;
@@ -494,10 +523,10 @@ Token *ParseIntListList(Token *tok, int out[][hermes::kMaxBufferPoolSlabs],
     if (IsCloseCurlyBrace(tok)) {
       tok = tok->next;
     } else {
-      PrintExpectedAndFail("}");
+      PrintExpectedAndFail("}", tok->line);
     }
   } else {
-    PrintExpectedAndFail("{");
+    PrintExpectedAndFail("{", tok->line);
   }
 
   return tok;
@@ -509,7 +538,7 @@ f32 ParseFloat(Token **tok) {
     result = std::stod(std::string((*tok)->data), nullptr);
     *tok = (*tok)->next;
   } else {
-    PrintExpectedAndFail("a number");
+    PrintExpectedAndFail("a number", (*tok)->line);
   }
 
   return (f32)result;
@@ -524,17 +553,17 @@ Token *ParseFloatList(Token *tok, f32 *out, int n) {
         if (IsComma(tok)) {
           tok = tok->next;
         } else {
-          PrintExpectedAndFail(",");
+          PrintExpectedAndFail(",", tok->line);
         }
       }
     }
     if (IsCloseCurlyBrace(tok)) {
       tok = tok->next;
     } else {
-      PrintExpectedAndFail("}");
+      PrintExpectedAndFail("}", tok->line);
     }
   } else {
-    PrintExpectedAndFail("{");
+    PrintExpectedAndFail("{", tok->line);
   }
 
   return tok;
@@ -550,7 +579,7 @@ Token *ParseFloatListList(Token *tok, f32 out[][hermes::kMaxBufferPoolSlabs],
         if (IsComma(tok)) {
           tok = tok->next;
         } else {
-          PrintExpectedAndFail(",");
+          PrintExpectedAndFail(",", tok->line);
         }
       } else {
         // Optional final comma
@@ -562,10 +591,10 @@ Token *ParseFloatListList(Token *tok, f32 out[][hermes::kMaxBufferPoolSlabs],
     if (IsCloseCurlyBrace(tok)) {
       tok = tok->next;
     } else {
-      PrintExpectedAndFail("}");
+      PrintExpectedAndFail("}", tok->line);
     }
   } else {
-    PrintExpectedAndFail("{");
+    PrintExpectedAndFail("{", tok->line);
   }
 
   return tok;
@@ -577,7 +606,7 @@ std::string ParseString(Token **tok) {
     result = std::string((*tok)->data, (*tok)->size);
     *tok = (*tok)->next;
   } else {
-    PrintExpectedAndFail("a string");
+    PrintExpectedAndFail("a string", (*tok)->line);
   }
 
   return result;
@@ -592,17 +621,17 @@ Token *ParseStringList(Token *tok, std::string *out, int n) {
         if (IsComma(tok)) {
           tok = tok->next;
         } else {
-          PrintExpectedAndFail(",");
+          PrintExpectedAndFail(",", tok->line);
         }
       }
     }
     if (IsCloseCurlyBrace(tok)) {
       tok = tok->next;
     } else {
-      PrintExpectedAndFail("}");
+      PrintExpectedAndFail("}", tok->line);
     }
   } else {
-    PrintExpectedAndFail("{");
+    PrintExpectedAndFail("{", tok->line);
   }
 
   return tok;
@@ -614,7 +643,7 @@ Token *ParseCharArrayString(Token *tok, char *arr) {
     arr[tok->size] = '\0';
     tok = tok->next;
   } else {
-    PrintExpectedAndFail("a string");
+    PrintExpectedAndFail("a string", tok->line);
   }
 
   return tok;
@@ -640,10 +669,10 @@ Token *BeginStatement(Token *tok) {
     if (tok && IsEqual(tok)) {
       tok = tok->next;
     } else {
-      PrintExpectedAndFail("=");
+      PrintExpectedAndFail("=", tok->line);
     }
   } else {
-    PrintExpectedAndFail("an identifier");
+    PrintExpectedAndFail("an identifier", tok->line);
   }
 
   return tok;
@@ -653,20 +682,103 @@ Token *EndStatement(Token *tok) {
   if (tok && IsSemicolon(tok)) {
     tok = tok->next;
   } else {
-    PrintExpectedAndFail(";");
+    PrintExpectedAndFail(";", tok->line);
   }
 
   return tok;
 }
 
 void CheckConstraints(Config *config) {
+  // rpc_domain must be present if rpc_protocol is "verbs"
   if (config->rpc_protocol.find("verbs") != std::string::npos &&
       config->rpc_domain.empty()) {
     PrintExpectedAndFail("a non-empty value for rpc_domain");
   }
+
+  double tolerance = 0.0000001;
+
+  // arena_percentages must add up to 1.0
+  double arena_percentage_sum = 0;
+  for (int i = 0; i < kArenaType_Count; ++i) {
+    arena_percentage_sum += config->arena_percentages[i];
+  }
+  if (fabs(1.0 - arena_percentage_sum) > tolerance) {
+    std::ostringstream msg;
+    msg << "the values in arena_percentages to add up to 1.0 but got ";
+    msg << arena_percentage_sum << "\n";
+    PrintExpectedAndFail(msg.str());
+  }
+
+  // Each slab's desired_slab_percentages should add up to 1.0
+  for (int device = 0; device < config->num_devices; ++device) {
+    double total_slab_percentage = 0;
+    for (int slab = 0; slab < config->num_slabs[device]; ++slab) {
+      total_slab_percentage += config->desired_slab_percentages[device][slab];
+    }
+    if (fabs(1.0 - total_slab_percentage) > tolerance) {
+      std::ostringstream msg;
+      msg << "the values in desired_slab_percentages[";
+      msg << device;
+      msg << "] to add up to 1.0 but got ";
+      msg << total_slab_percentage << "\n";
+      PrintExpectedAndFail(msg.str());
+    }
+  }
+}
+
+void RequireCapacitiesUnset(bool &already_specified) {
+  if (already_specified) {
+    LOG(FATAL) << "Capacities are specified multiple times in the configuration"
+               << " file. Only use one of 'capacities_bytes', 'capacities_kb',"
+               << "'capacities_mb', or 'capacities_gb'\n";
+  } else {
+    already_specified = true;
+  }
+}
+
+void RequireBlockSizesUnset(bool &already_specified) {
+  if (already_specified) {
+    LOG(FATAL) << "Block sizes are specified multiple times in the "
+               << "configuration file. Only use one of 'block_sizes_bytes',"
+               << "'block_sizes_kb', 'block_sizes_mb', or 'block_sizes_gb'\n";
+  } else {
+    already_specified = true;
+  }
+}
+
+Token *ParseCapacities(Config *config, Token *tok, bool &already_specified,
+                       size_t conversion) {
+  RequireNumDevices(config);
+  RequireCapacitiesUnset(already_specified);
+  tok = ParseSizetList(tok, config->capacities, config->num_devices);
+  for (int i = 0; i < config->num_devices; ++i) {
+    config->capacities[i] *= conversion;
+  }
+
+  return tok;
+}
+
+Token *ParseBlockSizes(Config *config, Token *tok, bool &already_specified,
+                       size_t conversion) {
+  RequireNumDevices(config);
+  RequireBlockSizesUnset(already_specified);
+  tok = ParseIntList(tok, config->block_sizes, config->num_devices);
+  for (int i = 0; i < config->num_devices; ++i) {
+    size_t val = (size_t)config->block_sizes[i] * conversion;
+    if (val > INT_MAX) {
+      LOG(FATAL) << "Max supported block size is " << INT_MAX << " bytes. "
+                 << "Config file requested " << val << " bytes\n";
+    }
+    config->block_sizes[i] *= conversion;
+  }
+
+  return tok;
 }
 
 void ParseTokens(TokenList *tokens, Config *config) {
+  bool capacities_specified = false;
+  bool block_sizes_specified = false;
+
   Token *tok = tokens->head;
   while (tok) {
     ConfigVariable var = GetConfigVariable(tok);
@@ -696,22 +808,36 @@ void ParseTokens(TokenList *tokens, Config *config) {
         config->num_targets = val;
         break;
       }
-      case ConfigVariable_Capacities: {
-        RequireNumDevices(config);
-        tok = ParseSizetList(tok, config->capacities, config->num_devices);
-        // NOTE(chogan): Convert from MB to bytes
-        for (int i = 0; i < config->num_devices; ++i) {
-          config->capacities[i] *= 1024 * 1024;
-        }
+      case ConfigVariable_CapacitiesB: {
+        tok = ParseCapacities(config, tok, capacities_specified, 1);
         break;
       }
-      case ConfigVariable_BlockSizes: {
-        RequireNumDevices(config);
-        tok = ParseIntList(tok, config->block_sizes, config->num_devices);
-        // NOTE(chogan): Convert from KB to bytes
-        for (int i = 0; i < config->num_devices; ++i) {
-          config->block_sizes[i] *= 1024;
-        }
+      case ConfigVariable_CapacitiesKb: {
+        tok = ParseCapacities(config, tok, capacities_specified, KILOBYTES(1));
+        break;
+      }
+      case ConfigVariable_CapacitiesMb: {
+        tok = ParseCapacities(config, tok, capacities_specified, MEGABYTES(1));
+        break;
+      }
+      case ConfigVariable_CapacitiesGb: {
+        tok = ParseCapacities(config, tok, capacities_specified, GIGABYTES(1));
+        break;
+      }
+      case ConfigVariable_BlockSizesB: {
+        tok = ParseBlockSizes(config, tok, block_sizes_specified, 1);
+        break;
+      }
+      case ConfigVariable_BlockSizesKb: {
+        tok = ParseBlockSizes(config, tok, block_sizes_specified, KILOBYTES(1));
+        break;
+      }
+      case ConfigVariable_BlockSizesMb: {
+        tok = ParseBlockSizes(config, tok, block_sizes_specified, MEGABYTES(1));
+        break;
+      }
+      case ConfigVariable_BlockSizesGb: {
+        tok = ParseBlockSizes(config, tok, block_sizes_specified, GIGABYTES(1));
         break;
       }
       case ConfigVariable_NumSlabs: {
@@ -751,11 +877,6 @@ void ParseTokens(TokenList *tokens, Config *config) {
       case ConfigVariable_MetadataArenaPercentage: {
         f32 val = ParseFloat(&tok);
         config->arena_percentages[hermes::kArenaType_MetaData] = val;
-        break;
-      }
-      case ConfigVariable_TransferWindowArenaPercentage: {
-        f32 val = ParseFloat(&tok);
-        config->arena_percentages[hermes::kArenaType_TransferWindow] = val;
         break;
       }
       case ConfigVariable_TransientArenaPercentage: {
@@ -817,7 +938,7 @@ void ParseTokens(TokenList *tokens, Config *config) {
         break;
       }
       case ConfigVariable_RpcHostNumberRange: {
-        tok = ParseIntList(tok, config->rpc_host_number_range, 2);
+        tok = ParseRangeList(tok, config->host_numbers);
         break;
       }
       case ConfigVariable_RpcNumThreads: {

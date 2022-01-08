@@ -26,7 +26,14 @@ set -x
 
 cp ci/packages.yaml ${SPACK_DIR}/etc/spack/packages.yaml
 MOCHI_REPO=https://github.com/mochi-hpc/mochi-spack-packages.git
+# TODO(chogan): We pin this commit because in future commits they add features
+# of spack that are not included in the version we use. Next time there's a new
+# spack release, we can tryb using the head of `main` in mochi-spack-packages.
+MOCHI_SPACK_PACKAGES_COMMIT=f015ae93717ac3b81972c55116c3b91aa9c645e4
 git clone ${MOCHI_REPO} ${MOCHI_REPO_DIR}
+pushd ${MOCHI_REPO_DIR}
+git checkout ${MOCHI_SPACK_PACKAGES_COMMIT}
+popd
 
 spack repo add ${MOCHI_REPO_DIR}
 spack repo add ./ci/hermes

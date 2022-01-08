@@ -204,6 +204,13 @@ SharedMemoryContext InitHermesCore(Config *config, CommunicationContext *comm,
   rpc->state = CreateRpcState(&arenas[kArenaType_MetaData]);
   mdm->rpc_state_offset = (u8 *)rpc->state - shmem_base;
 
+  rpc->host_numbers = PushArray<int>(&arenas[kArenaType_MetaData],
+                                     config->host_numbers.size());
+  for (size_t i = 0; i < config->host_numbers.size(); ++i) {
+    rpc->host_numbers[i] = config->host_numbers[i];
+  }
+  mdm->host_numbers_offset = (u8 *)rpc->host_numbers - (u8 *)shmem_base;
+
   InitMetadataManager(mdm, &arenas[kArenaType_MetaData], config, comm->node_id);
   InitMetadataStorage(&context, mdm, &arenas[kArenaType_MetaData], config);
 
@@ -286,6 +293,8 @@ std::shared_ptr<api::Hermes> InitHermes(Config *config, bool is_daemon,
     // state in shared memory
     MetadataManager *mdm = GetMetadataManagerFromContext(&context);
     rpc.state = (void *)(context.shm_base + mdm->rpc_state_offset);
+    rpc.host_numbers =
+      (int *)((u8 *)context.shm_base + mdm->host_numbers_offset);
   }
 
   InitFilesForBuffering(&context, comm);

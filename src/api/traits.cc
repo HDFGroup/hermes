@@ -27,60 +27,13 @@ Trait::Trait(TraitID id, TraitIdArray conflict_traits, TraitType type)
       onLinkFn(nullptr),
       onUnlinkFn(nullptr) {}
 
-FileMappingTrait::FileMappingTrait(
-    const std::string &filename,
-    std::unordered_map<std::string, u64> &offset_map,
-    FILE *fh,
-    OnLinkCallback flush_cb, OnLinkCallback load_cb)
-    : Trait(HERMES_FILE_TRAIT, TraitIdArray(), TraitType::FILE_MAPPING),
-      flush_cb(flush_cb),
-      load_cb(load_cb),
-      filename(filename),
-      offset_map(offset_map),
-      fh(fh) {
-  this->onAttachFn = std::bind(&FileMappingTrait::onAttach, this,
-                               std::placeholders::_1, std::placeholders::_2,
-                               std::placeholders::_3);
-  this->onDetachFn = std::bind(&FileMappingTrait::onDetach, this,
-                               std::placeholders::_1, std::placeholders::_2,
-                               std::placeholders::_3);
-  this->onLinkFn = std::bind(&FileMappingTrait::onLink, this,
-                             std::placeholders::_1, std::placeholders::_2,
-                             std::placeholders::_3);
-  this->onUnlinkFn = std::bind(&FileMappingTrait::onUnlink, this,
-                               std::placeholders::_1, std::placeholders::_2,
-                               std::placeholders::_3);
-}
+using OffsetMap = std::unordered_map<std::string, u64>;
 
-void FileMappingTrait::onAttach(HermesPtr hermes, VBucketID id, Trait *trait) {
-  (void)hermes;
-  (void)id;
-  (void)trait;
-}
-
-void FileMappingTrait::onDetach(HermesPtr hermes, VBucketID id, Trait *trait) {
-  (void)hermes;
-  (void)id;
-  (void)trait;
-}
-
-void FileMappingTrait::onLink(HermesPtr hermes, TraitInput &input,
-                              Trait *trait) {
-  (void)hermes;
-  (void)input;
-  (void)trait;
-}
-
-void FileMappingTrait::onUnlink(HermesPtr hermes, TraitInput &input,
-                                Trait *trait) {
-  (void)hermes;
-  (void)input;
-  (void)trait;
-}
-
-PersistTrait::PersistTrait(FileMappingTrait mapping, bool synchronous)
+PersistTrait::PersistTrait(const std::string &filename,
+                           const OffsetMap &offset_map,
+                           bool synchronous)
   : Trait(HERMES_PERSIST_TRAIT, TraitIdArray(), TraitType::PERSIST),
-    file_mapping(mapping), synchronous(synchronous) {
+    filename(filename), offset_map(offset_map), synchronous(synchronous) {
   this->onAttachFn = std::bind(&PersistTrait::onAttach, this,
                                std::placeholders::_1, std::placeholders::_2,
                                std::placeholders::_3);
@@ -118,14 +71,14 @@ void PersistTrait::onDetach(HermesPtr hermes, VBucketID id, Trait *trait) {
 
 void PersistTrait::onLink(HermesPtr hermes, TraitInput &input, Trait *trait) {
   PersistTrait *persist_trait = (PersistTrait *)trait;
-  auto iter = persist_trait->file_mapping.offset_map.find(input.blob_name);
+  auto iter = persist_trait->offset_map.find(input.blob_name);
 
-  if (iter != persist_trait->file_mapping.offset_map.end()) {
+  if (iter != persist_trait->offset_map.end()) {
     SharedMemoryContext *context = &hermes->context_;
     RpcContext *rpc = &hermes->rpc_;
     BucketID bucket_id = GetBucketId(context, rpc, input.bucket_name.c_str());
     BlobID blob_id = GetBlobId(context, rpc, input.blob_name, bucket_id, true);
-    std::string filename = persist_trait->file_mapping.filename;
+    std::string filename = persist_trait->filename;
     u64 offset = iter->second;
 
     if (synchronous) {

@@ -14,13 +14,11 @@ endif()
 
 project(HERMES)
 
-include_directories(${PROJECT_BINARY_DIR})
-
 #------------------------------------------------------------------------------
 # Version information
 #------------------------------------------------------------------------------
 set(HERMES_VERSION_MAJOR "0")
-set(HERMES_VERSION_MINOR "1")
+set(HERMES_VERSION_MINOR "2")
 set(HERMES_VERSION_PATCH "0")
 set(HERMES_PACKAGE "hermes")
 set(HERMES_PACKAGE_NAME "HERMES")
@@ -329,18 +327,20 @@ endif()
 #-----------------------------------------------------------------------------
 # Source
 #-----------------------------------------------------------------------------
+
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src)
+
 if(HERMES_HAVE_GOTCHA)
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gotcha_intercept)
 endif()
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src)
+
 if(HERMES_ENABLE_ADAPTERS)
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/adapter)
 endif()
+
 if(HERMES_ENABLE_WRAPPER)
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/wrapper)
 endif()
-#add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/mpi_io_adapter)
-#add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/hermes_vol)
 
 if(HERMES_BUILD_BUFFER_POOL_VISUALIZER AND SDL2_FOUND)
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/buffer_pool_visualizer)
@@ -374,10 +374,8 @@ endif()
 
 if(CMAKE_PROJECT_NAME STREQUAL HERMES AND BUILD_TESTING)
   find_package(Catch2 REQUIRED)
+  enable_testing()
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test)
-  if(HERMES_ENABLE_ADAPTERS)
-    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/adapter/test)
-  endif()
 endif()
 
 #-----------------------------------------------------------------------------
