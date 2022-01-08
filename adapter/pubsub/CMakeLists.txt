@@ -1,18 +1,10 @@
 project(StdioAdapter VERSION 0.1.0)
 
-# include directories for stdio headers
-include_directories(${CMAKE_SOURCE_DIR}/adapter/include)
+set(HERMES_PUBSUB_ADAPTER_DIR ${HERMES_ADAPTER_DIR}/pubsub)
 
-# Only stdio.h is the public adapter.
-set(PUBSUB_ADAPTER_PUBLIC_HEADER ${CMAKE_SOURCE_DIR}/adapter/include/hermes/adapter/pubsub.h)
-# Private headers
-set(PUBSUB_ADAPTER_PRIVATE_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/metadata_manager.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/common/datastructures.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/common/constants.h
-        ${CMAKE_SOURCE_DIR}/adapter/src/hermes/adapter/singleton.h)
-
-# STDIO src code. We only include stdio.cc as it includes other cc to reduce compilation time.
-set(PUBSUB_ADAPTER_SRC pubsub.cc ${CMAKE_CURRENT_SOURCE_DIR}/metadata_manager.cc)
+set(PUBSUB_ADAPTER_PUBLIC_HEADER ${HERMES_POSIX_ADAPTER_DIR}/pubsub.h)
+set(PUBSUB_ADAPTER_PRIVATE_HEADER metadata_manager.h datastructures.h constants.h ${HERMES_ADAPTER_DIR}/singleton.h)
+set(PUBSUB_ADAPTER_SRC pubsub.cc metadata_manager.cc)
 
 # Add library hermes_stdio
 add_library(hermes_pubsub SHARED ${PUBSUB_ADAPTER_PRIVATE_HEADER} ${PUBSUB_ADAPTER_PUBLIC_HEADER} ${PUBSUB_ADAPTER_SRC})
