@@ -27,7 +27,7 @@ int main(int argc, char **argv) {
 
     auto subscribe_ret = hermes::pubsub::subscribe("test");
     assert(subscribe_ret.second.Succeeded());
-    assert(memcmp(data1, &subscribe_ret.first.front(), 6));
+    assert(memcmp(data1, &subscribe_ret.first.front(), 4));
 
     publish_ret = hermes::pubsub::publish(
         "test", std::vector<unsigned char>(data2, data2 + 6));
@@ -39,7 +39,7 @@ int main(int argc, char **argv) {
 
     subscribe_ret = hermes::pubsub::subscribe("test");
     assert(subscribe_ret.second.Succeeded());
-    assert(memcmp(data3, &subscribe_ret.first.front(), 6));
+    assert(memcmp(data3, &subscribe_ret.first.front(), 4));
 
     auto detach_ret = hermes::pubsub::detach("test");
     assert(detach_ret.Succeeded());
