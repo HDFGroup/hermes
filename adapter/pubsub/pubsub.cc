@@ -10,7 +10,7 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include "hermes/adapter/pubsub.h"
+#include "pubsub.h"
 
 namespace hapi = hapi;
 
