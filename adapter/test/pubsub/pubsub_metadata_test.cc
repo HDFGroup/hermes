@@ -10,7 +10,7 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include <metadata_manager.h>
+#include <pubsub/metadata_manager.h>
 #include <singleton.h>
 
 int main(int argc, char **argv) {

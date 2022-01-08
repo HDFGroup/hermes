@@ -10,7 +10,7 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include <pubsub.h>
+#include <pubsub/pubsub.h>
 
 int main(int argc, char **argv) {
   hermes::pubsub::mpiInit(argc, argv);
