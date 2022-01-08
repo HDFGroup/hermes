@@ -23,7 +23,7 @@
 /**
  * Internal headers
  */
-#include <hermes/adapter/pubsub/common/datastructures.h>
+#include <datastructures.h>
 #include <mpi.h>
 
 using hermes::adapter::pubsub::ClientMetadata;
