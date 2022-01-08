@@ -30,9 +30,9 @@
 #include <bucket.h>
 #include <hermes.h>
 
-#include <hermes/adapter/pubsub/metadata_manager.h>
+#include <metadata_manager.h>
+#include <constants.h>
 #include <hermes/adapter/singleton.h>
-#include <hermes/adapter/pubsub/common/constants.h>
 
 namespace hermes::pubsub{
 
