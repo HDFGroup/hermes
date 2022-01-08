@@ -1,7 +1,7 @@
 project(MPIIOAdapter VERSION 0.1.0)
 
 # MPIIO src code. We only include mpiio.cc as it includes other cc to reduce compilation time.
-set(MPIIO_ADAPTER_SRC ${CMAKE_CURRENT_SOURCE_DIR}/mpiio.cc)
+set(MPIIO_ADAPTER_SRC mpiio.cc)
 
 set(HERMES_MPIIO_ADAPTER_DIR ${HERMES_ADAPTER_DIR}/mpiio)
 
