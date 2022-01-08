@@ -41,12 +41,10 @@ int main(int argc, char **argv) {
     assert(subscribe_ret_1.second.Succeeded());
     assert(data1 == subscribe_ret_1.first);
 
-    publish_ret = hermes::pubsub::publish(
-        "test", std::vector<unsigned char>(data2, data2 + 6));
+    publish_ret = hermes::pubsub::publish("test", data2);
     assert(publish_ret.Succeeded());
 
-    publish_ret = hermes::pubsub::publish(
-        "test", std::vector<unsigned char>(data3, data3 + 6));
+    publish_ret = hermes::pubsub::publish("test", data3);
     assert(publish_ret.Succeeded());
 
     auto subscribe_ret_2 = hermes::pubsub::subscribe("test");
