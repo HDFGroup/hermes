@@ -33,23 +33,21 @@ int main(int argc, char **argv) {
     auto attach_ret = hermes::pubsub::attach("test");
     assert(attach_ret.Succeeded());
 
-    uint data_size = 6;
-    std::vector<unsigned char*> full_data;
-    unsigned char data1[6] = "test0";
+    std::vector<hapi::Blob> full_data;
+    hapi::Blob data1(4*1024, rand() % 255);
+    hapi::Blob data2(4*1024, rand() % 255);
+    hapi::Blob data3(4*1024, rand() % 255);
     full_data.push_back(data1);
-    unsigned char data2[6] = "test1";
     full_data.push_back(data2);
-    unsigned char data3[6] = "test2";
     full_data.push_back(data3);
 
-    for(unsigned char* data : full_data){
-      auto publish_ret = hermes::pubsub::publish(
-          "test", std::vector<unsigned char>(data, data + data_size));
+    for(const auto& data : full_data){
+      auto publish_ret = hermes::pubsub::publish("test", data);
       assert(publish_ret.Succeeded());
     }
 
     unsigned long num_messages = full_data.size() * comm_size;
-    std::pair<std::vector<unsigned char>, hapi::Status> subscribe_ret;
+    std::pair<hapi::Blob, hapi::Status> subscribe_ret;
     for(unsigned long i = 0; i < num_messages; i++) {
       subscribe_ret = hermes::pubsub::subscribe("test");
       assert(subscribe_ret.second.Succeeded());
@@ -59,5 +57,6 @@ int main(int argc, char **argv) {
     assert(detach_ret.Succeeded());
   }
   auto disconnect_ret = hermes::pubsub::disconnect();
+  assert(disconnect_ret.Succeeded());
   MPI_Finalize();
 }

@@ -30,17 +30,16 @@ int main(int argc, char **argv) {
     auto attach_ret = hermes::pubsub::attach("test");
     assert(attach_ret.Succeeded());
 
-    unsigned char data1[6] = "test0";
-    unsigned char data2[6] = "test1";
-    unsigned char data3[6] = "test2";
+    hapi::Blob data1(4*1024, rand() % 255);
+    hapi::Blob data2(4*1024, rand() % 255);
+    hapi::Blob data3(4*1024, rand() % 255);
 
-    auto publish_ret = hermes::pubsub::publish(
-        "test", std::vector<unsigned char>(data1, data1 + 6));
+    auto publish_ret = hermes::pubsub::publish("test", data1);
     assert(publish_ret.Succeeded());
 
-    auto subscribe_ret = hermes::pubsub::subscribe("test");
-    assert(subscribe_ret.second.Succeeded());
-    assert(memcmp(data1, &subscribe_ret.first.front(), 4));
+    auto subscribe_ret_1 = hermes::pubsub::subscribe("test");
+    assert(subscribe_ret_1.second.Succeeded());
+    assert(data1 == subscribe_ret_1.first);
 
     publish_ret = hermes::pubsub::publish(
         "test", std::vector<unsigned char>(data2, data2 + 6));
@@ -50,9 +49,9 @@ int main(int argc, char **argv) {
         "test", std::vector<unsigned char>(data3, data3 + 6));
     assert(publish_ret.Succeeded());
 
-    subscribe_ret = hermes::pubsub::subscribe("test");
-    assert(subscribe_ret.second.Succeeded());
-    assert(memcmp(data3, &subscribe_ret.first.front(), 4));
+    auto subscribe_ret_2 = hermes::pubsub::subscribe("test");
+    assert(subscribe_ret_2.second.Succeeded());
+    assert(data3 == subscribe_ret_2.first);
 
     auto detach_ret = hermes::pubsub::detach("test");
     assert(detach_ret.Succeeded());

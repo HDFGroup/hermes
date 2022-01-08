@@ -104,7 +104,7 @@ hapi::Status hermes::pubsub::detach(const std::string& topic){
   return hapi::Status(hermes::INVALID_BUCKET);
 }
 
-hapi::Status hermes::pubsub::publish(const std::string& topic, const std::vector<unsigned char>& message){
+hapi::Status hermes::pubsub::publish(const std::string& topic, const hapi::Blob& message){
   LOG(INFO) << "Publish to : " << topic << std::endl;
   auto mdm = hermes::adapter::Singleton<hermes::adapter::pubsub::MetadataManager>::GetInstance();
   auto metadata = mdm->Find(topic);
@@ -135,16 +135,16 @@ hapi::Status hermes::pubsub::publish(const std::string& topic, const std::vector
   return hapi::Status(hermes::HERMES_SUCCESS);
 }
 
-std::pair<std::vector<unsigned char>, hapi::Status> hermes::pubsub::subscribe(const std::string& topic){
+std::pair<hapi::Blob, hapi::Status> hermes::pubsub::subscribe(const std::string& topic){
   LOG(INFO) << "Publish to : " << topic << std::endl;
-  typedef std::pair<std::vector<unsigned char>, hapi::Status> SubscribeReturn;
+  typedef std::pair<hapi::Blob, hapi::Status> SubscribeReturn;
 
   auto mdm = hermes::adapter::Singleton<hermes::adapter::pubsub::MetadataManager>::GetInstance();
   auto metadata = mdm->Find(topic);
 
   if(!metadata.second){
     if(attach(topic) == hermes::HERMES_SUCCESS) metadata = mdm->Find(topic);
-    else return SubscribeReturn(std::vector<unsigned char>(), 
+    else return SubscribeReturn(hapi::Blob(),
         hapi::Status(hermes::INVALID_BUCKET));
   }
 
@@ -158,7 +158,7 @@ std::pair<std::vector<unsigned char>, hapi::Status> hermes::pubsub::subscribe(co
       metadata.first.st_bkid->GetNext(index, read_data, ctx);
   read_data.resize(exiting_blob_size);
   if(metadata.first.st_bkid->GetNext(index, read_data, ctx) != exiting_blob_size){
-    return SubscribeReturn(std::vector<unsigned char>(),
+    return SubscribeReturn(hapi::Blob(),
         hapi::Status(hermes::BLOB_NOT_IN_BUCKET));
   }
 
@@ -167,11 +167,6 @@ std::pair<std::vector<unsigned char>, hapi::Status> hermes::pubsub::subscribe(co
   timespec_get(&ts, TIME_UTC);
   metadata.first.st_atim = ts;
   mdm->Update(topic, metadata.first);
-
-  //TODO: Maybe stablish a memecopy, or discuss proper return types
-  //Issue here is the trasnlation between std::vector<unsigned char> and string
-  //I am trasnforming the string into an unisgned char* on put, and getting a
-  // unisgned char* in here
 
   return SubscribeReturn(read_data,
                          hapi::Status(hermes::HERMES_SUCCESS));
