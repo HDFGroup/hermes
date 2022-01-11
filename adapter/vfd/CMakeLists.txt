@@ -224,12 +224,3 @@ set(HDF5_HERMES_VFD_INCLUDES_INSTALL_TIME
   ${HDF5_HERMES_VFD_EXT_INCLUDE_DEPENDENCIES}
   PARENT_SCOPE
 )
-#-----------------------------------------------------------------------------
-# Testing
-#-----------------------------------------------------------------------------
-# option(BUILD_TESTING "Build testing." ON)
-# if(NOT HDF5_HERMES_VFD_EXTERNALLY_CONFIGURED AND BUILD_TESTING)
-#   enable_testing()
-#   include(CTest)
-#   add_subdirectory(test)
-# endif()

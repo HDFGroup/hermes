@@ -5,7 +5,8 @@
 #include <mpi.h>
 #include <assert.h>
 
-#include "hdf5.h"
+#include <hdf5.h>
+
 #include "H5FDhermes.h"
 
 /* HDF5 header for dynamic plugin loading */
