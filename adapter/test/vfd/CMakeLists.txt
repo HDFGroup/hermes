@@ -1,7 +1,6 @@
 set(HERMES_VFD_DIR ${HERMES_ADAPTER_DIR}/vfd)
 
 set(hermes_vfd_tests
-  hermes_set_fapl
   hermes_driver
   hermes_env
 )
