@@ -13,7 +13,7 @@
 #include <pubsub/metadata_manager.h>
 #include <singleton.h>
 
-int main(int argc, char **argv) {
+int main() {
   auto mdm = hermes::adapter::Singleton
       <hermes::adapter::pubsub::MetadataManager>::GetInstance(false);
   ClientMetadata stat;
