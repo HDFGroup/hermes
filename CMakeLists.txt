@@ -326,6 +326,24 @@ if(HERMES_ENABLE_COVERAGE)
 endif()
 
 #-----------------------------------------------------------------------------
+# Testing
+#-----------------------------------------------------------------------------
+if(CMAKE_PROJECT_NAME STREQUAL HERMES AND BUILD_TESTING)
+  include(CTest)
+  find_package(Catch2 REQUIRED)
+  find_program(IOR_EXE ior)
+  if(IOR_EXE)
+    message(STATUS "Found ior at ${IOR_EXE}")
+    set(HERMES_HAVE_IOR "YES")
+  else()
+    message(WARNING "Couldn't find the 'ior' executable. Some tests will be skipped.")
+    set(HERMES_HAVE_IOR "NO")
+  endif()
+  enable_testing()
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test)
+endif()
+
+#-----------------------------------------------------------------------------
 # Source
 #-----------------------------------------------------------------------------
 
@@ -364,27 +382,6 @@ if(HERMES_ENABLE_DOXYGEN)
     COMMENT
       "HTML documentation"
     )
-endif()
-
-#-----------------------------------------------------------------------------
-# Testing
-#-----------------------------------------------------------------------------
-if(CMAKE_PROJECT_NAME STREQUAL HERMES)
-  include(CTest)
-endif()
-
-if(CMAKE_PROJECT_NAME STREQUAL HERMES AND BUILD_TESTING)
-  find_package(Catch2 REQUIRED)
-  find_program(IOR_EXE ior)
-  if(IOR_EXE)
-    message(STATUS "Found ior at ${IOR_EXE}")
-    set(HERMES_HAVE_IOR "YES")
-  else()
-    message(WARNING "Couldn't find the 'ior' executable. Some tests will be skipped.")
-    set(HERMES_HAVE_IOR "NO")
-  endif()
-  enable_testing()
-  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test)
 endif()
 
 #-----------------------------------------------------------------------------

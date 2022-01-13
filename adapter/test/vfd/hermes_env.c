@@ -2,24 +2,22 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <mpi.h>
 #include <assert.h>
 
+#include <mpi.h>
 #include <hdf5.h>
+/* HDF5 header for dynamic plugin loading */
+#include <H5PLextern.h>
 
 #include "H5FDhermes.h"
-
-/* HDF5 header for dynamic plugin loading */
-#include "H5PLextern.h"
 
 #define DATASETNAME "IntArray"
 #define NX     128                      /* dataset dimensions */
 #define NY     128
 
 int main(int argc, char *argv[]) {
-    hid_t       file_id, fapl_id;
-    hid_t       dset_id, dcpl_id, dataspace_id;
-    hid_t       dapl;
+    hid_t       file_id;
+    hid_t       dset_id, dataspace_id;
     hsize_t     dims[2];
     char       *file_name = "hermes_test.h5";
     int         data_in[NX][NY];          /* data to write */
@@ -34,12 +32,8 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    if ((fapl_id = H5Pcreate(H5P_FILE_ACCESS)) < 0)
-        printf("H5Pcreate() error\n");
-    else
-        printf("H5Pcreate() succeeded\n");
-
-    if ((file_id = H5Fcreate(file_name, H5F_ACC_TRUNC, H5P_DEFAULT, fapl_id))
+    if ((file_id = H5Fcreate(file_name, H5F_ACC_TRUNC, H5P_DEFAULT,
+                             H5P_DEFAULT))
         < 0) {
         printf("H5Fcreate() error\n");
     } else {
@@ -77,7 +71,7 @@ int main(int argc, char *argv[]) {
         printf("H5Fclose() succeeded\n");
 
     hid_t fid;
-    if ((fid = H5Fopen(file_name, H5F_ACC_RDONLY, fapl_id)) < 0)
+    if ((fid = H5Fopen(file_name, H5F_ACC_RDONLY, H5P_DEFAULT)) < 0)
         printf("H5Fopen() error\n");
     else
         printf("H5Fopen() succeeded\n");
@@ -114,12 +108,7 @@ int main(int argc, char *argv[]) {
     else
         printf("H5Sclose() succeeded\n");
 
-    if (H5Pclose(fapl_id) < 0)
-        printf("H5Pclose() error\n");
-    else
-        printf("H5Pclose() succeeded\n");
-
-    printf("Done with Hermes set driver test!\n");
+    remove(file_name);
 
     return 0;
 }

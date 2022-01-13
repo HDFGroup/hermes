@@ -1,7 +1,6 @@
 set(HERMES_VFD_DIR ${HERMES_ADAPTER_DIR}/vfd)
 
 set(hermes_vfd_tests
-  hermes_driver
   hermes_env
 )
 
@@ -23,7 +22,7 @@ foreach(vfd_test ${hermes_vfd_tests})
   set_property(TEST "Test${vfd_test}" APPEND
     PROPERTY ENVIRONMENT HDF5_PLUGIN_PATH=${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
   set_property(TEST "Test${vfd_test}" APPEND
-    PROPERTY ENVIRONMENT HDF5_DRIVER_CONFIG="true 1024")
+    PROPERTY ENVIRONMENT HDF5_DRIVER_CONFIG=true\ 1024)
   set_property(TEST "Test${vfd_test}" APPEND
     PROPERTY ENVIRONMENT HDF5_DRIVER=hermes)
 endforeach()
