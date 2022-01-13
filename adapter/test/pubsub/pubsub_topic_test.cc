@@ -18,8 +18,7 @@ int main(int argc, char **argv) {
   char *config_file = 0;
   if (argc == 2) {
     config_file = argv[1];
-  }
-  else{
+  } else {
     config_file = getenv(kHermesConf);
   }
 

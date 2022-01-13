@@ -52,12 +52,13 @@ class MetadataManager {
   /**
    * Constructor
    */
-  MetadataManager(bool is_mpi = true)
+  explicit MetadataManager(bool is_mpi = true)
       : metadata(),
-        ref(0){
-    if(is_mpi) MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
-    else {
-      //branch exists for testing puropses
+        ref(0) {
+    if (is_mpi) {
+      MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+    } else {
+      // branch exists for testing puropses
       mpi_rank = 0;
     }
   }
@@ -88,7 +89,7 @@ class MetadataManager {
     ref--;
   }
 
-  bool isClient(){
+  bool isClient() {
     return hermes->IsApplicationCore();
   }
 
@@ -127,6 +128,7 @@ class MetadataManager {
    */
   std::pair<ClientMetadata, bool> Find(const std::string& topic);
 };
-}  // namespace hermes::adapter::stdio
+
+}  // namespace hermes::adapter::pubsub
 
 #endif  // HERMES_ADAPTER_METADATA_MANAGER_H

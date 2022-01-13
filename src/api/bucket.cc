@@ -191,8 +191,10 @@ size_t Bucket::GetNext(u64 blob_index, void *user_blob, size_t blob_size,
   size_t ret = 0;
 
   if (IsValid()) {
-    std::vector<BlobID> blob_ids = GetBlobIds(&hermes_->context_, &hermes_->rpc_, this->id_);
-    if(blob_index > blob_ids.size()){
+    std::vector<BlobID> blob_ids = GetBlobIds(&hermes_->context_,
+                                              &hermes_->rpc_,
+                                              this->id_);
+    if (blob_index > blob_ids.size()) {
       LOG(INFO) << "Already on the tail for bucket " << name_ << '\n';
       return ret;
     }
@@ -206,8 +208,8 @@ size_t Bucket::GetNext(u64 blob_index, void *user_blob, size_t blob_size,
       ret = ReadBlobById(&hermes_->context_, &hermes_->rpc_,
                          &hermes_->trans_arena_, blob, next_blob_id);
     } else {
-      LOG(INFO) << "Getting Blob " << next_blob_id.as_int << " size from bucket "
-                << name_ << '\n';
+      LOG(INFO) << "Getting Blob " << next_blob_id.as_int <<
+          " size from bucket " << name_ << '\n';
       ScopedTemporaryMemory scratch(&hermes_->trans_arena_);
       if (!IsNullBlobId(next_blob_id)) {
         ret = GetBlobSizeById(&hermes_->context_, &hermes_->rpc_, scratch,
@@ -220,7 +222,8 @@ size_t Bucket::GetNext(u64 blob_index, void *user_blob, size_t blob_size,
 }
 
 std::vector<size_t> Bucket::GetNext(u64 blob_index, u64 count,
-                                    std::vector<Blob> &blobs, const Context &ctx) {
+                                    std::vector<Blob> &blobs,
+                                    const Context &ctx) {
   std::vector<size_t> result(count, 0);
 
   if (IsValid()) {

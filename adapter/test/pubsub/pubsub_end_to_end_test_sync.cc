@@ -22,14 +22,13 @@ int main(int argc, char **argv) {
   char *config_file = 0;
   if (argc == 2) {
     config_file = argv[1];
-  }
-  else{
+  } else {
     config_file = getenv(kHermesConf);
   }
 
   auto connect_ret = hermes::pubsub::connect(config_file);
 
-  if(connect_ret.Succeeded()) {
+  if (connect_ret.Succeeded()) {
     auto attach_ret = hermes::pubsub::attach("test");
     assert(attach_ret.Succeeded());
 
@@ -41,14 +40,14 @@ int main(int argc, char **argv) {
     full_data.push_back(data2);
     full_data.push_back(data3);
 
-    for(const auto& data : full_data){
+    for (const auto& data : full_data) {
       auto publish_ret = hermes::pubsub::publish("test", data);
       assert(publish_ret.Succeeded());
     }
 
     unsigned long num_messages = full_data.size() * comm_size;
     std::pair<hapi::Blob, hapi::Status> subscribe_ret;
-    for(unsigned long i = 0; i < num_messages; i++) {
+    for (unsigned long i = 0; i < num_messages; i++) {
       subscribe_ret = hermes::pubsub::subscribe("test");
       assert(subscribe_ret.second.Succeeded());
     }

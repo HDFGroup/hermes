@@ -18,15 +18,14 @@ int main(int argc, char **argv) {
   char *config_file = 0;
   if (argc == 2) {
     config_file = argv[1];
-  }
-  else{
+  } else {
     config_file = getenv(kHermesConf);
   }
 
   auto connect_ret = hermes::pubsub::connect(config_file);
   assert(connect_ret.Succeeded());
 
-  if(connect_ret.Succeeded()) {
+  if (connect_ret.Succeeded()) {
     auto attach_ret = hermes::pubsub::attach("test");
     assert(attach_ret.Succeeded());
 
@@ -47,7 +46,7 @@ int main(int argc, char **argv) {
     publish_ret = hermes::pubsub::publish("test", data3);
     assert(publish_ret.Succeeded());
 
-    //this subscribe reads data2;
+    // this subscribe reads data2;
     hermes::pubsub::subscribe("test");
 
     auto subscribe_ret_2 = hermes::pubsub::subscribe("test");

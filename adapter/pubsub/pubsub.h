@@ -33,7 +33,7 @@
 #include "constants.h"
 #include "../singleton.h"
 
-namespace hermes::pubsub{
+namespace hermes::pubsub {
 
 /**
  * \brief Helper function to initialize MPI
@@ -104,7 +104,8 @@ hapi::Status detach(const std::string& topic);
  * \remark Using std::vector<unsigned char> as equivalent to Blob
  *
  */
-hapi::Status publish(const std::string& topic, const std::vector<unsigned char>& message);
+hapi::Status publish(const std::string& topic,
+                     const std::vector<unsigned char>& message);
 
 /**
  * \brief Retrieves the next message from the topic
@@ -119,8 +120,9 @@ hapi::Status publish(const std::string& topic, const std::vector<unsigned char>&
  * per-process by a metadata manager
  *
  */
-std::pair<std::vector<unsigned char>, hapi::Status> subscribe(const std::string& topic);
+std::pair<std::vector<unsigned char>, hapi::Status> subscribe(
+    const std::string& topic);
 
-}
+} // namespace hermes::pubsub
 
 #endif  // HERMES_PUBSUB_H

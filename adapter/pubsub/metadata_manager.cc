@@ -18,13 +18,15 @@
 using hermes::adapter::pubsub::MetadataManager;
 using hermes::adapter::pubsub::MetadataManager;
 
-bool MetadataManager::Create(const std::string& topic, const ClientMetadata&stat) {
+bool MetadataManager::Create(const std::string& topic,
+                             const ClientMetadata&stat) {
   LOG(INFO) << "Create metadata for topic: " << topic << std::endl;
   auto ret = metadata.emplace(topic, stat);
   return ret.second;
 }
 
-bool MetadataManager::Update(const std::string& topic, const ClientMetadata&stat) {
+bool MetadataManager::Update(const std::string& topic,
+                             const ClientMetadata&stat) {
   LOG(INFO) << "Update metadata for topic: " << topic << std::endl;
   auto iter = metadata.find(topic);
   if (iter != metadata.end()) {
@@ -36,7 +38,8 @@ bool MetadataManager::Update(const std::string& topic, const ClientMetadata&stat
   }
 }
 
-std::pair<ClientMetadata, bool> MetadataManager::Find(const std::string& topic) {
+std::pair<ClientMetadata, bool> MetadataManager::Find(
+    const std::string& topic) {
   typedef std::pair<ClientMetadata, bool> MetadataReturn;
   auto iter = metadata.find(topic);
   if (iter == metadata.end())
