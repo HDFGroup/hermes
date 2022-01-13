@@ -123,6 +123,6 @@ hapi::Status publish(const std::string& topic,
 std::pair<std::vector<unsigned char>, hapi::Status> subscribe(
     const std::string& topic);
 
-} // namespace hermes::pubsub
+}  // namespace hermes::pubsub
 
 #endif  // HERMES_PUBSUB_H

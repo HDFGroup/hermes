@@ -33,8 +33,7 @@ hapi::Status hermes::pubsub::connect(const std::string &config_file) {
     mdm->InitializeHermes(config_file.c_str());
     if (mdm->isClient()) {
       return hapi::Status(hermes::HERMES_SUCCESS);
-    }
-    else {
+    } else {
       return hapi::Status(hermes::INVALID_FILE);
     }
   } catch (const std::exception& e) {
@@ -52,8 +51,7 @@ hapi::Status hermes::pubsub::connect() {
     mdm->InitializeHermes(hermes_config);
     if (mdm->isClient()) {
       return hapi::Status(hermes::HERMES_SUCCESS);
-    }
-    else {
+    } else {
       return hapi::Status(hermes::INVALID_FILE);
     }
   } catch (const std::exception& e) {
@@ -127,8 +125,7 @@ hapi::Status hermes::pubsub::publish(const std::string& topic,
   if (!metadata.second) {
     if (attach(topic) == hermes::HERMES_SUCCESS) {
       metadata = mdm->Find(topic);
-    }
-    else {
+    } else {
       return hapi::Status(hermes::INVALID_BUCKET);
     }
   }
@@ -163,8 +160,7 @@ std::pair<hapi::Blob, hapi::Status> hermes::pubsub::subscribe(
   if (!metadata.second) {
     if (attach(topic) == hermes::HERMES_SUCCESS) {
       metadata = mdm->Find(topic);
-    }
-    else {
+    } else {
       return SubscribeReturn(hapi::Blob(),
                              hapi::Status(hermes::INVALID_BUCKET));
     }

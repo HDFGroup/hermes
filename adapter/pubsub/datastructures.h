@@ -50,12 +50,12 @@ struct ClientMetadata {
       : st_bkid(),
         last_subscribed_blob(0),
         st_atim() {} /* default constructor */
-  ClientMetadata(const struct ClientMetadata &st)
+  explicit ClientMetadata(const struct ClientMetadata &st)
       : st_bkid(st.st_bkid),
         last_subscribed_blob(st.last_subscribed_blob),
         st_atim(st.st_atim) {} /* parameterized constructor */
 };
 
-} // hermes::adapter::pubsub
+}  // namespace hermes::adapter::pubsub
 
 #endif  // HERMES_STDIO_ADAPTER_DATASTRUCTURES_H
