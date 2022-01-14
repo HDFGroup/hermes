@@ -6,7 +6,6 @@ name: GitHub Actions
 # events but only for the master branch
 on:
   push:
-    branches: [ master, chogan/**, kimmy/**, hariharan/** ]
   pull_request:
     branches: [ master ]
   workflow_dispatch:
