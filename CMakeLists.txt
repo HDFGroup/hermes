@@ -326,10 +326,28 @@ if(HERMES_ENABLE_COVERAGE)
 endif()
 
 #-----------------------------------------------------------------------------
+# Source
+#-----------------------------------------------------------------------------
+
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+if(HERMES_HAVE_GOTCHA)
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gotcha_intercept)
+endif()
+
+if(HERMES_ENABLE_WRAPPER)
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/wrapper)
+endif()
+
+if(HERMES_BUILD_BUFFER_POOL_VISUALIZER AND SDL2_FOUND)
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/buffer_pool_visualizer)
+endif()
+
+#-----------------------------------------------------------------------------
 # Testing
 #-----------------------------------------------------------------------------
+include(CTest)
 if(CMAKE_PROJECT_NAME STREQUAL HERMES AND BUILD_TESTING)
-  include(CTest)
   find_package(Catch2 REQUIRED)
   find_program(IOR_EXE ior)
   if(IOR_EXE)
@@ -343,26 +361,8 @@ if(CMAKE_PROJECT_NAME STREQUAL HERMES AND BUILD_TESTING)
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test)
 endif()
 
-#-----------------------------------------------------------------------------
-# Source
-#-----------------------------------------------------------------------------
-
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src)
-
-if(HERMES_HAVE_GOTCHA)
-  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gotcha_intercept)
-endif()
-
 if(HERMES_ENABLE_ADAPTERS)
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/adapter)
-endif()
-
-if(HERMES_ENABLE_WRAPPER)
-  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/wrapper)
-endif()
-
-if(HERMES_BUILD_BUFFER_POOL_VISUALIZER AND SDL2_FOUND)
-  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/buffer_pool_visualizer)
 endif()
 
 #-----------------------------------------------------------------------------

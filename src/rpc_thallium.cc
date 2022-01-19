@@ -706,7 +706,7 @@ void RunDaemon(SharedMemoryContext *context, RpcContext *rpc,
   HERMES_DEBUG_SERVER_CLOSE();
 
   DestroyArena(trans_arena);
-  google::ShutdownGoogleLogging();
+  // google::ShutdownGoogleLogging();
 }
 
 void FinalizeClient(SharedMemoryContext *context, RpcContext *rpc,
@@ -731,7 +731,7 @@ void FinalizeClient(SharedMemoryContext *context, RpcContext *rpc,
   ReleaseSharedMemoryContext(context);
   HERMES_DEBUG_CLIENT_CLOSE();
   DestroyArena(trans_arena);
-  google::ShutdownGoogleLogging();
+  // google::ShutdownGoogleLogging();
 }
 
 std::string GetRpcAddress(Config *config, const std::string &host_number,
