@@ -10,8 +10,8 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_STDIO_ADAPTER_DATASTRUCTURES_H
-#define HERMES_STDIO_ADAPTER_DATASTRUCTURES_H
+#ifndef HERMES_PUBSUB_ADAPTER_DATASTRUCTURES_H
+#define HERMES_PUBSUB_ADAPTER_DATASTRUCTURES_H
 
 /**
  * Standard header
@@ -58,4 +58,4 @@ struct ClientMetadata {
 
 }  // namespace hermes::adapter::pubsub
 
-#endif  // HERMES_STDIO_ADAPTER_DATASTRUCTURES_H
+#endif  // HERMES_PUBSUB_ADAPTER_DATASTRUCTURES_H
