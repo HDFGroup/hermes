@@ -1,4 +1,4 @@
-project(StdioAdapter VERSION 0.1.0)
+project(PubSubAdapter VERSION 0.1.0)
 
 set(HERMES_PUBSUB_ADAPTER_DIR ${HERMES_ADAPTER_DIR}/pubsub)
 
