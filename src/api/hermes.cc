@@ -250,22 +250,26 @@ BootstrapSharedMemory(Arena *arenas, Config *config, CommunicationContext *comm,
   return result;
 }
 
-// static void InitGlog() {
-//   FLAGS_logtostderr = 1;
-//   const char kMinLogLevel[] = "GLOG_minloglevel";
-//   char *min_log_level = getenv(kMinLogLevel);
+// TODO(chogan): https://github.com/HDFGroup/hermes/issues/323
+#if 0
+static void InitGlog() {
+  FLAGS_logtostderr = 1;
+  const char kMinLogLevel[] = "GLOG_minloglevel";
+  char *min_log_level = getenv(kMinLogLevel);
 
-//   if (!min_log_level) {
-//     FLAGS_minloglevel = 0;
-//   }
+  if (!min_log_level) {
+    FLAGS_minloglevel = 0;
+  }
 
-//   FLAGS_v = 0;
+  FLAGS_v = 0;
 
-//   google::InitGoogleLogging("hermes");
-// }
+  google::InitGoogleLogging("hermes");
+}
+#endif
 
 std::shared_ptr<api::Hermes> InitHermes(Config *config, bool is_daemon,
                                         bool is_adapter) {
+  // TODO(chogan): https://github.com/HDFGroup/hermes/issues/323
   // InitGlog();
 
   std::string base_shmem_name(config->buffer_pool_shmem_name);

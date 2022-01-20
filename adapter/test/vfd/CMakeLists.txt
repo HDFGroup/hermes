@@ -26,3 +26,16 @@ foreach(vfd_test ${hermes_vfd_tests})
   set_property(TEST "Test${vfd_test}" APPEND
     PROPERTY ENVIRONMENT HDF5_DRIVER=hermes)
 endforeach()
+
+# IOR tests
+if(HERMES_HAVE_IOR)
+  add_test(NAME "TestVFDWrite" COMMAND ${IOR_EXE} -a HDF5 -w -W -r -R)
+  set_property(TEST "TestVFDWrite"
+    PROPERTY ENVIRONMENT HERMES_CONF=${CMAKE_CURRENT_SOURCE_DIR}/hermes.conf)
+  set_property(TEST "TestVFDWrite" APPEND
+    PROPERTY ENVIRONMENT HDF5_PLUGIN_PATH=${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+  set_property(TEST "TestVFDWrite" APPEND
+    PROPERTY ENVIRONMENT HDF5_DRIVER_CONFIG=true\ 1024)
+  set_property(TEST "TestVFDWrite" APPEND
+    PROPERTY ENVIRONMENT HDF5_DRIVER=hermes)
+endif()

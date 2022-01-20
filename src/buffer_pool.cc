@@ -109,13 +109,7 @@ void Finalize(SharedMemoryContext *context, CommunicationContext *comm,
     HERMES_DEBUG_SERVER_CLOSE();
   }
   DestroyArena(trans_arena);
-  // TODO(chogan): The VFD calls H5FD__hermes_term in an atexit() registered
-  // function. This means that the global static objects in GLOG have already
-  // been destroyed, so when we try to shutdown GLOG here it dereferences NULL
-  // pointers. The correct thing to do is to protect the shutdown call with an
-  // IsGoogleLoggingInitialized `if` statement. However, that API call was only
-  // added in a version of GLOG that is incompatible with OR-tools (they
-  // reimplemented their own version of GLOG).
+  // TODO(chogan): https://github.com/HDFGroup/hermes/issues/323
   // google::ShutdownGoogleLogging();
 }
 

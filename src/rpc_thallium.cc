@@ -706,6 +706,7 @@ void RunDaemon(SharedMemoryContext *context, RpcContext *rpc,
   HERMES_DEBUG_SERVER_CLOSE();
 
   DestroyArena(trans_arena);
+  // TODO(chogan): https://github.com/HDFGroup/hermes/issues/323
   // google::ShutdownGoogleLogging();
 }
 
@@ -731,6 +732,7 @@ void FinalizeClient(SharedMemoryContext *context, RpcContext *rpc,
   ReleaseSharedMemoryContext(context);
   HERMES_DEBUG_CLIENT_CLOSE();
   DestroyArena(trans_arena);
+  // TODO(chogan): https://github.com/HDFGroup/hermes/issues/323
   // google::ShutdownGoogleLogging();
 }
 

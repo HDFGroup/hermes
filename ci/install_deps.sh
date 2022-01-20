@@ -23,12 +23,12 @@ mkdir -p ${INSTALL_DIR}
 git clone https://github.com/HDFGroup/hdf5
 pushd hdf5
 git checkout hdf5-${HDF5_VERSION}
-bash autogen.sh -v
+bash autogen.sh
 mkdir -p build
 pushd build
 CXXFLAGS=-I"${INSTALL_DIR}/include" LDFLAGS="-L${INSTALL_DIR}/lib -Wl,-rpath,${INSTALL_DIR}/lib" \
         ../configure --prefix=${INSTALL_DIR}
-make && make install
+make -j 4 && make install
 popd
 popd
 
