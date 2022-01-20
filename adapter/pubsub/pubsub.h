@@ -31,7 +31,7 @@
 #include <hermes.h>
 #include "metadata_manager.h"
 #include "constants.h"
-#include "../singleton.h"
+#include "singleton.h"
 
 namespace hermes::pubsub {
 
