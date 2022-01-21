@@ -28,7 +28,7 @@ foreach(program ${MULTI_NODE_PUBSUB_TESTS})
             $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium> hermes_pubsub)
     target_compile_definitions(${program}
             PRIVATE $<$<BOOL:${HERMES_RPC_THALLIUM}>:HERMES_RPC_THALLIUM>)
-    mpi_daemon(${program} 1 "" "" 1)
+    mpi_daemon(${program} 2 "" "" 1)
 endforeach()
 
 if(HERMES_INSTALL_TESTS)
