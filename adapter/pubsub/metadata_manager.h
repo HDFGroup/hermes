@@ -16,8 +16,6 @@
 /**
  * Standard headers
  */
-#include <ftw.h>
-#include <cstdio>
 #include <unordered_map>
 #include <mpi.h>
 

@@ -16,7 +16,6 @@
 /**
  * Standard header
  */
-#include <ftw.h>
 #include <string>
 
 /**
