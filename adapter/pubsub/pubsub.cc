@@ -43,21 +43,8 @@ hapi::Status hermes::pubsub::connect(const std::string &config_file) {
 }
 
 hapi::Status hermes::pubsub::connect() {
-  LOG(INFO) << "Connecting adapter" << std::endl;
-  auto mdm = hermes::adapter::Singleton
-      <hermes::adapter::pubsub::MetadataManager>::GetInstance();
   char* hermes_config = getenv(kHermesConf);
-  try {
-    mdm->InitializeHermes(hermes_config);
-    if (mdm->isClient()) {
-      return hapi::Status(hermes::HERMES_SUCCESS);
-    } else {
-      return hapi::Status(hermes::INVALID_FILE);
-    }
-  } catch (const std::exception& e) {
-    LOG(FATAL) << "Could not connect to hermes daemon" <<std::endl;
-    return hapi::Status(hermes::INVALID_FILE);
-  }
+  return hermes::pubsub::connect(hermes_config);
 }
 
 hapi::Status hermes::pubsub::disconnect() {
@@ -82,7 +69,6 @@ hapi::Status hermes::pubsub::attach(const std::string& topic) {
   if (!existing.second) {
     LOG(INFO) << "Topic not existing" << std::endl;
     ClientMetadata stat;
-    // stat.ref_count = 1;
     struct timespec ts{};
     timespec_get(&ts, TIME_UTC);
     stat.st_atim = ts;
@@ -91,7 +77,6 @@ hapi::Status hermes::pubsub::attach(const std::string& topic) {
     if (!mdm->Create(topic, stat)) return hapi::Status(hermes::INVALID_BUCKET);
   } else {
     LOG(INFO) << "File exists" << std::endl;
-    // existing.first.ref_count++;
     struct timespec ts{};
     timespec_get(&ts, TIME_UTC);
     existing.first.st_atim = ts;
