@@ -10,28 +10,22 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include <pubsub/pubsub.h>
-#include "test_utils.h"
+#ifndef HERMES_PUBSUB_TEST_UTILS_H_
+#define HERMES_PUBSUB_TEST_UTILS_H_
 
-int main(int argc, char **argv) {
-  hermes::pubsub::mpiInit(argc, argv);
+namespace hermes::pubsub::testing {
 
-  char *config_file = 0;
-  if (argc == 2) {
-    config_file = argv[1];
-  } else {
-    config_file = getenv(kHermesConf);
+void Assert(bool expr, const char *file, int lineno, const char *message) {
+  if (!expr) {
+    fprintf(stderr, "Assertion failed at %s: line %d: %s\n", file, lineno,
+            message);
+    exit(-1);
   }
-
-  auto connect_ret = hermes::pubsub::connect(config_file);
-  Assert(connect_ret.Succeeded());
-
-  auto attach_ret = hermes::pubsub::attach("test");
-  Assert(attach_ret.Succeeded());
-
-  auto detach_ret = hermes::pubsub::detach("test");
-  Assert(detach_ret.Succeeded());
-
-  auto disconnect_ret = hermes::pubsub::disconnect();
-  Assert(disconnect_ret.Succeeded());
 }
+
+#define Assert(expr) \
+  hermes::pubsub::testing::Assert((expr), __FILE__, __LINE__, #expr)
+
+}  // namespace hermes::pubsub::testing
+
+#endif  // HERMES_PUBSUB_TEST_UTILS_H_

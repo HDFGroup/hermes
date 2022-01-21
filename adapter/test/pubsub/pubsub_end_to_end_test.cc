@@ -11,6 +11,7 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include <pubsub/pubsub.h>
+#include "test_utils.h"
 
 int main(int argc, char **argv) {
   hermes::pubsub::mpiInit(argc, argv);
@@ -23,39 +24,39 @@ int main(int argc, char **argv) {
   }
 
   auto connect_ret = hermes::pubsub::connect(config_file);
-  assert(connect_ret.Succeeded());
+  Assert(connect_ret.Succeeded());
 
   if (connect_ret.Succeeded()) {
     auto attach_ret = hermes::pubsub::attach("test");
-    assert(attach_ret.Succeeded());
+    Assert(attach_ret.Succeeded());
 
     hapi::Blob data1(4*1024, rand() % 255);
     hapi::Blob data2(4*1024, rand() % 255);
     hapi::Blob data3(4*1024, rand() % 255);
 
     auto publish_ret = hermes::pubsub::publish("test", data1);
-    assert(publish_ret.Succeeded());
+    Assert(publish_ret.Succeeded());
 
     auto subscribe_ret_1 = hermes::pubsub::subscribe("test");
-    assert(subscribe_ret_1.second.Succeeded());
-    assert(data1 == subscribe_ret_1.first);
+    Assert(subscribe_ret_1.second.Succeeded());
+    Assert(data1 == subscribe_ret_1.first);
 
     publish_ret = hermes::pubsub::publish("test", data2);
-    assert(publish_ret.Succeeded());
+    Assert(publish_ret.Succeeded());
 
     publish_ret = hermes::pubsub::publish("test", data3);
-    assert(publish_ret.Succeeded());
+    Assert(publish_ret.Succeeded());
 
     // this subscribe reads data2;
     hermes::pubsub::subscribe("test");
 
     auto subscribe_ret_2 = hermes::pubsub::subscribe("test");
-    assert(subscribe_ret_2.second.Succeeded());
-    assert(data3 == subscribe_ret_2.first);
+    Assert(subscribe_ret_2.second.Succeeded());
+    Assert(data3 == subscribe_ret_2.first);
 
     auto detach_ret = hermes::pubsub::detach("test");
-    assert(detach_ret.Succeeded());
+    Assert(detach_ret.Succeeded());
   }
   auto disconnect_ret = hermes::pubsub::disconnect();
-  assert(disconnect_ret.Succeeded());
+  Assert(disconnect_ret.Succeeded());
 }
