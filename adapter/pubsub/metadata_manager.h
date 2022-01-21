@@ -10,8 +10,8 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_ADAPTER_METADATA_MANAGER_H
-#define HERMES_ADAPTER_METADATA_MANAGER_H
+#ifndef HERMES_PUBSUB_ADAPTER_METADATA_MANAGER_H
+#define HERMES_PUBSUB_ADAPTER_METADATA_MANAGER_H
 
 /**
  * Standard headers
@@ -28,7 +28,7 @@ using hermes::adapter::pubsub::ClientMetadata;
 
 namespace hermes::adapter::pubsub {
 /**
- * Metadata manager for STDIO adapter
+ * Metadata manager for PubSub adapter
  */
 class MetadataManager {
  private:
@@ -129,4 +129,4 @@ class MetadataManager {
 
 }  // namespace hermes::adapter::pubsub
 
-#endif  // HERMES_ADAPTER_METADATA_MANAGER_H
+#endif  // HERMES_PUBSUB_ADAPTER_METADATA_MANAGER_H
