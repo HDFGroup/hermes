@@ -31,6 +31,11 @@ foreach(program ${MULTI_NODE_PUBSUB_TESTS})
     mpi_daemon(${program} 2 "" "" 1)
 endforeach()
 
+foreach(program ${EXTENDED_PUBSUB_TESTS})
+    target_include_directories(${program} PUBLIC ${HERMES_ADAPTER_DIR})
+    target_include_directories(${program} PUBLIC ${HERMES_ADAPTER_TEST_DIR})
+endforeach()
+
 if(HERMES_INSTALL_TESTS)
     foreach(program ${EXTENDED_PUBSUB_TESTS})
         install(
