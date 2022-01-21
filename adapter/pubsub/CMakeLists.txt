@@ -5,7 +5,7 @@ set(HERMES_PUBSUB_ADAPTER_DIR ${HERMES_ADAPTER_DIR}/pubsub)
 set(PUBSUB_ADAPTER_PUBLIC_HEADER pubsub.h)
 set(PUBSUB_ADAPTER_PRIVATE_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/metadata_manager.h
         ${CMAKE_CURRENT_SOURCE_DIR}/datastructures.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/constants.h
+        ${HERMES_ADAPTER_DIR}/constants.h
         ${HERMES_ADAPTER_DIR}/singleton.h)
 set(PUBSUB_ADAPTER_SRC pubsub.cc metadata_manager.cc)
 
