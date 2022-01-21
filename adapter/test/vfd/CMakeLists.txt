@@ -5,14 +5,14 @@ set(hermes_vfd_tests
 )
 
 foreach(vfd_test ${hermes_vfd_tests})
-  add_executable(${vfd_test} ${CMAKE_CURRENT_SOURCE_DIR}/${vfd_test}.c)
+  add_executable(${vfd_test} ${CMAKE_CURRENT_SOURCE_DIR}/${vfd_test}.cc)
   add_dependencies(${vfd_test} hermes)
   target_include_directories(${vfd_test} PRIVATE ${HERMES_VFD_DIR})
   target_include_directories(${vfd_test}
     SYSTEM PUBLIC ${HDF5_HERMES_VFD_EXT_INCLUDE_DEPENDENCIES}
   )
 target_link_libraries(${vfd_test}
-  MPI::MPI_C
+  MPI::MPI_CXX
   hermes
   ${HDF5_HERMES_VFD_EXPORTED_LIBS}
   ${HDF5_HERMES_VFD_EXT_LIB_DEPENDENCIES}

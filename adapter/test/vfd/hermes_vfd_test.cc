@@ -27,12 +27,12 @@ int main(int argc, char *argv[]) {
   hid_t dataspace_id;
   hid_t fapl_id;
   hsize_t dims[2];
-  char *file_name = "hermes_test.h5";
+  const char *file_name = "hermes_test.h5";
   const int kNx = 128;
   const int kNy = 128;
   int data_in[kNx][kNy];  /* data to write */
   int data_out[kNx][kNy];  /* data to read */
-  int i, j, k;
+  int i, j;
 
   int mpi_threads_provided;
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
