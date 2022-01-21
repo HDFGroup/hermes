@@ -184,10 +184,11 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
         CACHE STRING "" FORCE)
   endif()
 
-  if (HERMES_USE_ADDRESS_SANITIZER AND
-      NOT "${CMAKE_CXX_FLAGS_DEBUG}" MATCHES ".*-fsanitize=address.*")
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address"
+  if (HERMES_USE_ADDRESS_SANITIZER)
+    if(NOT "${CMAKE_CXX_FLAGS_DEBUG}" MATCHES ".*-fsanitize=address.*")
+      set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address"
         CACHE STRING "" FORCE)
+    endif()
   else()
     string(REPLACE
       "-fsanitize=address" "" FLAGS_NO_SANITIZE "${CMAKE_CXX_FLAGS_DEBUG}")
@@ -198,10 +199,11 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     message(FATAL_ERROR "Cannont use -fsanitize=address and -fsanitize=thread "
                         "at the same time")
   else()
-    if (HERMES_USE_THREAD_SANITIZER AND
-        NOT "${CMAKE_CXX_FLAGS_DEBUG}" MATCHES ".*-fsanitize=thread.*")
-      set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=thread"
-        CACHE STRING "" FORCE)
+    if (HERMES_USE_THREAD_SANITIZER)
+      if(NOT "${CMAKE_CXX_FLAGS_DEBUG}" MATCHES ".*-fsanitize=thread.*")
+        set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=thread"
+          CACHE STRING "" FORCE)
+      endif()
     else()
       string(REPLACE
         "-fsanitize=thread" "" FLAGS_NO_SANITIZE "${CMAKE_CXX_FLAGS_DEBUG}")
