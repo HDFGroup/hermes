@@ -486,6 +486,8 @@ done:
     if (file) {
       HermesBucketDestroy(file->bkt_handle);
       free(file->blob_in_bucket.blobs);
+      free(file->bktname);
+      free(file->page_buf);
       free(file);
     }
   } /* end if */
@@ -552,6 +554,8 @@ static herr_t H5FD__hermes_close(H5FD_t *_file) {
 
   /* Release the file info */
   free(file->blob_in_bucket.blobs);
+  free(file->page_buf);
+  free(file->bktname);
   free(file);
 
 done:
