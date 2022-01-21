@@ -7,7 +7,7 @@ target_link_libraries(pubsub_metadata_test ${LIBRT} hermes MPI::MPI_CXX
         $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium> hermes_pubsub)
 add_dependencies(pubsub_metadata_test hermes_pubsub)
 
-set(PUBSUB_TESTS pubsub_connection_test pubsub_topic_test
+set(PUBSUB_TESTS pubsub_topic_test
         pubsub_end_to_end_test pubsub_end_to_end_test_sync)
 set(EXTENDED_PUBSUB_TESTS ${PUBSUB_TESTS} pubsub_metadata_test)
 foreach(program ${PUBSUB_TESTS})
@@ -26,7 +26,7 @@ foreach(program ${EXTENDED_PUBSUB_TESTS})
 endforeach()
 
 if(HERMES_INSTALL_TESTS)
-    set(PUBSUB_TESTS pubsub_connection_test pubsub_metadata_test pubsub_negative_connection_test pubsub_topic_test
+    set(PUBSUB_TESTS pubsub_metadata_test pubsub_topic_test
             pubsub_end_to_end_test pubsub_end_to_end_test_sync)
     foreach(program ${PUBSUB_TESTS})
         install(
