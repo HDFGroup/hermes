@@ -289,7 +289,7 @@ if(HERMES_INTERCEPT_IO)
 endif()
 
 if(HERMES_COMMUNICATION_MPI)
-  find_package(MPI REQUIRED COMPONENTS C CXX)
+  find_package(MPI REQUIRED COMPONENTS CXX)
   message(STATUS "found mpi.h at ${MPI_CXX_INCLUDE_DIRS}")
 endif()
 
