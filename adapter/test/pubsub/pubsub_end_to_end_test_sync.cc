@@ -58,5 +58,6 @@ int main(int argc, char **argv) {
   }
   auto disconnect_ret = hermes::pubsub::disconnect();
   Assert(disconnect_ret.Succeeded());
+
   MPI_Finalize();
 }
