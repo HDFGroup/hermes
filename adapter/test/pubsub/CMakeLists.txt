@@ -26,9 +26,7 @@ foreach(program ${EXTENDED_PUBSUB_TESTS})
 endforeach()
 
 if(HERMES_INSTALL_TESTS)
-    set(PUBSUB_TESTS pubsub_metadata_test pubsub_topic_test
-            pubsub_end_to_end_test pubsub_end_to_end_test_sync)
-    foreach(program ${PUBSUB_TESTS})
+    foreach(program ${EXTENDED_PUBSUB_TESTS})
         install(
                 TARGETS
                 ${program}
