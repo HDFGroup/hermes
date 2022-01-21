@@ -21,6 +21,8 @@ target_link_libraries(${vfd_test}
   add_test(NAME "Test${vfd_test}" COMMAND ${vfd_test})
   set_property(TEST "Test${vfd_test}"
     PROPERTY ENVIRONMENT HERMES_CONF=${CMAKE_CURRENT_SOURCE_DIR}/hermes.conf)
+  set_property(TEST "Test${vfd_test}" APPEND
+    PROPERTY ENVIRONMENT LSAN_OPTIONS=suppressions=${CMAKE_SOURCE_DIR}/test/data/asan.supp)
 endforeach()
 
 # IOR tests
