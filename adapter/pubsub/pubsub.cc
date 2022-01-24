@@ -67,7 +67,7 @@ hapi::Status hermes::pubsub::attach(const std::string& topic) {
       <hermes::adapter::pubsub::MetadataManager>::GetInstance();
   auto existing = mdm->Find(topic);
   if (!existing.second) {
-    LOG(INFO) << "Topic not existing" << std::endl;
+    LOG(INFO) << "Topic not currently tracked" << std::endl;
     ClientMetadata stat;
     struct timespec ts{};
     timespec_get(&ts, TIME_UTC);
@@ -76,7 +76,7 @@ hapi::Status hermes::pubsub::attach(const std::string& topic) {
     if (!stat.st_bkid->IsValid()) return hapi::Status(hermes::INVALID_BUCKET);
     if (!mdm->Create(topic, stat)) return hapi::Status(hermes::INVALID_BUCKET);
   } else {
-    LOG(INFO) << "File exists" << std::endl;
+    LOG(INFO) << "Topic is tracked, attaching to it" << std::endl;
     struct timespec ts{};
     timespec_get(&ts, TIME_UTC);
     existing.first.st_atim = ts;

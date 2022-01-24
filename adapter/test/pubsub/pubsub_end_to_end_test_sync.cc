@@ -46,9 +46,7 @@ int main(int argc, char **argv) {
       Assert(publish_ret.Succeeded());
     }
 
-    MPI_Barrier(MPI_COMM_WORLD);
-
-    unsigned long num_messages = full_data.size() * comm_size;
+    unsigned long num_messages = full_data.size();
     std::pair<hapi::Blob, hapi::Status> subscribe_ret;
     for (unsigned long i = 0; i < num_messages*comm_size; i++) {
       subscribe_ret = hermes::pubsub::subscribe("test");
