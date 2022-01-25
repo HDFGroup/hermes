@@ -48,7 +48,7 @@ int main(int argc, char **argv) {
 
     unsigned long num_messages = full_data.size();
     std::pair<hapi::Blob, hapi::Status> subscribe_ret;
-    for (unsigned long i = 0; i < num_messages*comm_size; i++) {
+    for (unsigned long i = 0; i < num_messages; i++) {
       subscribe_ret = hermes::pubsub::subscribe("test");
       Assert(subscribe_ret.second.Succeeded());
     }

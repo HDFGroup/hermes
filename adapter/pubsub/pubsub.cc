@@ -135,7 +135,7 @@ hapi::Status hermes::pubsub::publish(const std::string& topic,
 
 std::pair<hapi::Blob, hapi::Status> hermes::pubsub::subscribe(
     const std::string& topic) {
-  LOG(INFO) << "Publish to : " << topic << std::endl;
+  LOG(INFO) << "Subscribe to : " << topic << std::endl;
   typedef std::pair<hapi::Blob, hapi::Status> SubscribeReturn;
 
   auto mdm = hermes::adapter::Singleton
