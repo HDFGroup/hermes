@@ -49,14 +49,11 @@ int main(int argc, char **argv) {
     auto hermes = hermes::adapter::Singleton
         <hermes::adapter::pubsub::MetadataManager>::GetInstance()->GetHermes();
     MPI_Comm comm = *(MPI_Comm*)hermes->GetAppCommunicator();
-    LOG(INFO) << "Test Size (MPI_COMM_WORLD): " << comm_size << std::endl;
-    MPI_Comm_size(comm, &comm_size);
-    LOG(INFO) << "Test Size: " << comm_size << std::endl;
     MPI_Barrier(comm);
 
     unsigned long num_messages = full_data.size();
     std::pair<hapi::Blob, hapi::Status> subscribe_ret;
-    for (unsigned long i = 0; i < num_messages; i++) {
+    for (unsigned long i = 0; i < num_messages*comm_size; i++) {
       subscribe_ret = hermes::pubsub::subscribe("test");
       Assert(subscribe_ret.second.Succeeded());
     }
