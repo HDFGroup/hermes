@@ -802,7 +802,7 @@ static herr_t H5FD__hermes_read(H5FD_t *_file, H5FD_mem_t H5_ATTR_UNUSED type,
         if (bytes_read != bytes_copy)
           H5FD_HERMES_GOTO_ERROR(H5E_IO, H5E_READERROR, FAIL, "pread failed");
 
-        memcpy(buf+transfer_size, file->page_buf, bytes_in);
+        memcpy((char *)buf + transfer_size, file->page_buf, bytes_in);
 
         /* Write Blob k to Hermes buffering system */
         HermesBucketPut(file->bkt_handle, k_blob, file->page_buf, blob_size);
@@ -812,24 +812,26 @@ static herr_t H5FD__hermes_read(H5FD_t *_file, H5FD_mem_t H5_ATTR_UNUSED type,
         HermesBucketGet(file->bkt_handle, k_blob, blob_size, file->page_buf);
 
         /* Update transfer buffer */
-        memcpy(buf+transfer_size, file->page_buf, bytes_in);
+        memcpy((char *)buf + transfer_size, file->page_buf, bytes_in);
       }
       transfer_size += bytes_in;
       /* Page/Blob k is within the range of (addr, addr+size) */
       /* addr <= k*blob_size && addr_end >= (k+1)*blob_size-1 */
     } else {
       if (!blob_exists) {
-        ssize_t bytes_read = pread(file->fd, buf+transfer_size, blob_size,
-                                   addr+transfer_size);
+        ssize_t bytes_read = pread(file->fd, (char *)buf + transfer_size,
+                                   blob_size, addr+transfer_size);
         if (bytes_read != blob_size)
           H5FD_HERMES_GOTO_ERROR(H5E_IO, H5E_READERROR, FAIL, "pread failed");
 
         /* Write Blob k to Hermes buffering system */
-        HermesBucketPut(file->bkt_handle, k_blob, buf+transfer_size, blob_size);
+        HermesBucketPut(file->bkt_handle, k_blob, (char *)buf + transfer_size,
+                        blob_size);
         set_blob(&file->blob_in_bucket, k);
       } else {
         /* Read blob back directly */
-        HermesBucketGet(file->bkt_handle, k_blob, blob_size, buf+transfer_size);
+        HermesBucketGet(file->bkt_handle, k_blob, blob_size,
+                        (char *)buf + transfer_size);
       }
       transfer_size += blob_size;
     }
@@ -867,7 +869,6 @@ static herr_t H5FD__hermes_write(H5FD_t *_file, H5FD_mem_t H5_ATTR_UNUSED type,
                                  hid_t H5_ATTR_UNUSED dxpl_id, haddr_t addr,
                                  size_t size, const void *buf) {
   H5FD_hermes_t *file      = (H5FD_hermes_t *)_file;
-  size_t         num_pages; /* Number of pages of transfer buffer */
   size_t         start_page_index; /* First page index of tranfer buffer */
   size_t         end_page_index; /* End page index of tranfer buffer */
   size_t         transfer_size = 0;
@@ -896,7 +897,6 @@ static herr_t H5FD__hermes_write(H5FD_t *_file, H5FD_mem_t H5_ATTR_UNUSED type,
   }
   start_page_index = addr/blob_size;
   end_page_index = addr_end/blob_size;
-  num_pages = end_page_index - start_page_index + 1;
 
   /* Assume only using one page now */
   for (k = start_page_index; k <= end_page_index; ++k) {
@@ -920,12 +920,13 @@ static herr_t H5FD__hermes_write(H5FD_t *_file, H5FD_mem_t H5_ATTR_UNUSED type,
       /* Update transfer buffer */
       /* addr+size is within the same page (only one page) */
       if (addr_end <= (k+1)*blob_size-1) {
-        memcpy(file->page_buf+offset, buf+transfer_size, size);
+        memcpy(file->page_buf+offset, (char *)buf + transfer_size, size);
         transfer_size += size;
       } else {
         /* More than one page */
         /* Copy data from addr to the end of the address in page k */
-        memcpy(file->page_buf+offset, buf+transfer_size, (k+1)*blob_size-addr);
+        memcpy(file->page_buf+offset, (char *)buf + transfer_size,
+               (k+1)*blob_size-addr);
         transfer_size += (k+1)*blob_size-addr;
       }
       /* Write Blob k to Hermes buffering system */
@@ -943,7 +944,8 @@ static herr_t H5FD__hermes_write(H5FD_t *_file, H5FD_mem_t H5_ATTR_UNUSED type,
         HermesBucketGet(file->bkt_handle, k_blob, blob_size, file->page_buf);
       }
       /* Update transfer buffer */
-      memcpy(file->page_buf, buf+transfer_size, addr_end-k*blob_size+1);
+      memcpy(file->page_buf, (char *)buf + transfer_size,
+             addr_end-k*blob_size+1);
       transfer_size += addr_end-k*blob_size+1;
       /* Write Blob k to Hermes buffering system */
       HermesBucketPut(file->bkt_handle, k_blob, file->page_buf, blob_size);
