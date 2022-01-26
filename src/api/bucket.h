@@ -152,7 +152,30 @@ class Bucket {
    */
   size_t Get(const std::string &name, void *user_blob, size_t blob_size,
              const Context &ctx);
+  /**
+  * \brief Retrieves a blob from the Bucket. The Blob retrieved is the next
+   * one from the passed blob_index
+  *
+  * \pre if user_blob.size() == 0 => return the minimum buffer size needed
+  * \pre if user_blob.size() > 0 => copy user_blob.size() bytes to user_blob
+   * and return user_blob.size()
+  */
+  size_t GetNext(u64 blob_index, Blob& user_blob, const Context &ctx);
+  size_t GetNext(u64 blob_index, Blob& user_blob);
 
+  /**
+  * \brief Retrieves a blob from the Bucket into a user buffer. The Blob
+   * retrieved is the next one from the passed blob_index
+  */
+  size_t GetNext(u64 blob_index, void *user_blob, size_t blob_size,
+                 const Context &ctx);
+
+  /**
+  * \brief Retrieves multiple blobs from the Bucket. The Blobs retrieved are
+   * the next ones from the passed blob_index
+  */
+  std::vector<size_t> GetNext(u64 blob_index, u64 count,
+                              std::vector<Blob> &blobs, const Context &ctx);
   /** get blob(s) on this bucket according to predicate */
   /** use provides buffer */
   template<class Predicate>
