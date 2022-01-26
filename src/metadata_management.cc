@@ -1375,11 +1375,13 @@ f32 ScoringFunction(MetadataManager *mdm, Stats *stats) {
 int LocalGetNumOutstandingFlushingTasks(SharedMemoryContext *context,
                                         VBucketID id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  BeginTicketMutex(&mdm->vbucket_mutex);
   VBucketInfo *info = LocalGetVBucketInfoById(mdm, id);
   int result = 0;
   if (info) {
     result = info->async_flush_count;
   }
+  EndTicketMutex(&mdm->vbucket_mutex);
 
   return result;
 }
@@ -1412,6 +1414,10 @@ bool LocalLockBlob(SharedMemoryContext *context, BlobID blob_id) {
       if (!ticket) {
         blob_info->last = t.ticket;
       }
+    } else {
+      result = false;
+      ReleaseBlobInfoPtr(mdm);
+      break;
     }
     if (!t.acquired) {
       ReleaseBlobInfoPtr(mdm);

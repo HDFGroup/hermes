@@ -488,6 +488,8 @@ bool LocalEnqueueFlushingTask(SharedMemoryContext *context, RpcContext *rpc,
     pool->run(std::bind(FlushBlob, context, rpc, blob_id, filename, offset,
                         async));
     result = true;
+  } else {
+    HERMES_NOT_IMPLEMENTED_YET;
   }
 
   return result;
@@ -519,17 +521,15 @@ void LocalAdjustFlushCount(SharedMemoryContext *context,
                            const std::string &vbkt_name, int adjustment) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   VBucketID id = LocalGetVBucketId(context, vbkt_name.c_str());
+  BeginTicketMutex(&mdm->vbucket_mutex);
   VBucketInfo *info = LocalGetVBucketInfoById(mdm, id);
   if (info) {
     int flush_count = info->async_flush_count.fetch_add(adjustment);
     VLOG(1) << "Flush count on VBucket " << vbkt_name
             << (adjustment > 0 ? "incremented" : "decremented") << " to "
             << flush_count + adjustment << "\n";
-  } else {
-    // TEMP(chogan):
-    LOG(FATAL) << "No VBucketInfo for " << vbkt_name
-               << " when attempting to adjust flush_count\n";
   }
+  EndTicketMutex(&mdm->vbucket_mutex);
 }
 
 void LocalIncrementFlushCount(SharedMemoryContext *context,
