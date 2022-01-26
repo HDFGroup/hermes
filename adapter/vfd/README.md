@@ -4,8 +4,8 @@ The HDF5 Hermes VFD is a Virtual File Driver (VFD) for HDF5 that can be used to 
 
 ## 2. Dependencies
 To build the HDF5 Hermes VFD, the following libraries are required:
-  * [Hermes](https://github.com/HDFGroup/hermes) - A heterogeneous aware, multi-tiered, dynamic, and distributed I/O buffering system that aims to significantly accelerate I/O performance. Make sure to build with HERMES_ENABLE_WRAPPER=ON.
-  * [HDF5](https://github.com/HDFGroup/hdf5) - HDF5 is built for fast I/O processing and storage.
+*  [Hermes](https://github.com/HDFGroup/hermes) - A heterogeneous aware, multi-tiered, dynamic, and distributed I/O buffering system that aims to significantly accelerate I/O performance. Make sure to build with HERMES_ENABLE_WRAPPER=ON.
+*  [HDF5](https://github.com/HDFGroup/hdf5) - HDF5 is built for fast I/O processing and storage.
 
 ## 3. Building
 
