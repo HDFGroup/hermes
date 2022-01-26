@@ -20,7 +20,7 @@ ccmake ..
 
 Type 'c' to configure until there are no errors, then generate the makefile with 'g'. The default options should suffice for most use cases. In addition, we recommend the following options.
 
-```
+``` bash
 -DCMAKE_INSTALL_PREFIX=/installation/prefix
 -DHDF5_DIR=/paht/to/hdf5
 -DHERMES_DIR=/path/to/hermes
@@ -28,7 +28,7 @@ Type 'c' to configure until there are no errors, then generate the makefile with
 After the makefile has been generated, you can type `make -j 2` or `cmake --build . -- -j 2`. Add `VERBOSE=1` to see detailed compiler output.
 
 Assuming that the `CMAKE_INSTALL_PREFIX` has been set and that you have write permissions to the destination directory, you can install the driver by simply doing:
-```
+``` bash
 make install
 ```
 

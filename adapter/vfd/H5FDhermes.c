@@ -954,7 +954,8 @@ static herr_t H5FD__hermes_write(H5FD_t *_file, H5FD_mem_t H5_ATTR_UNUSED type,
       /* Page/Blob k is within the range of (addr, addr+size) */
       /* Update transfer buffer */
       /* Write Blob k to Hermes buffering system */
-      HermesBucketPut(file->bkt_handle, k_blob, buf+transfer_size, blob_size);
+      HermesBucketPut(file->bkt_handle, k_blob, (char *)buf + transfer_size,
+                      blob_size);
       set_blob(&(file->blob_in_bucket), k);
       transfer_size += blob_size;
     }
