@@ -1,5 +1,5 @@
 
-project(BufferPoolVisualizer VERSION 0.1.0)
+project(BufferPoolVisualizer VERSION 0.3.0)
 
 add_executable(bp_viz buffer_pool_visualizer.cc)
 
