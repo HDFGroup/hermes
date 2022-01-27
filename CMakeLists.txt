@@ -152,6 +152,7 @@ option(HERMES_BUILD_BENCHMARKS "Build the Hermes benchmark suite." OFF)
 option(HERMES_ENABLE_TIMING "Turn on timing of selected functions." OFF)
 option(HERMES_ENABLE_COVERAGE "Enable code coverage." OFF)
 option(HERMES_ENABLE_ADAPTERS "Enable hermes adapters." ON)
+option(HERMES_ENABLE_VFD "Build the Hermes HDF5 Virtual File Driver" OFF)
 option(HERMES_ENABLE_WRAPPER "Enable hermes C API wrapper." ON)
 option(HERMES_INSTALL_TESTS "Enable installation of tests." OFF)
 # Calculate code coverage with debug mode
@@ -183,10 +184,11 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
         CACHE STRING "" FORCE)
   endif()
 
-  if (HERMES_USE_ADDRESS_SANITIZER AND
-      NOT "${CMAKE_CXX_FLAGS_DEBUG}" MATCHES ".*-fsanitize=address.*")
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address"
+  if (HERMES_USE_ADDRESS_SANITIZER)
+    if(NOT "${CMAKE_CXX_FLAGS_DEBUG}" MATCHES ".*-fsanitize=address.*")
+      set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address"
         CACHE STRING "" FORCE)
+    endif()
   else()
     string(REPLACE
       "-fsanitize=address" "" FLAGS_NO_SANITIZE "${CMAKE_CXX_FLAGS_DEBUG}")
@@ -197,10 +199,11 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     message(FATAL_ERROR "Cannont use -fsanitize=address and -fsanitize=thread "
                         "at the same time")
   else()
-    if (HERMES_USE_THREAD_SANITIZER AND
-        NOT "${CMAKE_CXX_FLAGS_DEBUG}" MATCHES ".*-fsanitize=thread.*")
-      set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=thread"
-        CACHE STRING "" FORCE)
+    if (HERMES_USE_THREAD_SANITIZER)
+      if(NOT "${CMAKE_CXX_FLAGS_DEBUG}" MATCHES ".*-fsanitize=thread.*")
+        set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=thread"
+          CACHE STRING "" FORCE)
+      endif()
     else()
       string(REPLACE
         "-fsanitize=thread" "" FLAGS_NO_SANITIZE "${CMAKE_CXX_FLAGS_DEBUG}")
@@ -334,16 +337,34 @@ if(HERMES_HAVE_GOTCHA)
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gotcha_intercept)
 endif()
 
-if(HERMES_ENABLE_ADAPTERS)
-  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/adapter)
-endif()
-
 if(HERMES_ENABLE_WRAPPER)
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/wrapper)
 endif()
 
 if(HERMES_BUILD_BUFFER_POOL_VISUALIZER AND SDL2_FOUND)
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/buffer_pool_visualizer)
+endif()
+
+#-----------------------------------------------------------------------------
+# Testing
+#-----------------------------------------------------------------------------
+include(CTest)
+if(CMAKE_PROJECT_NAME STREQUAL HERMES AND BUILD_TESTING)
+  find_package(Catch2 REQUIRED)
+  find_program(IOR_EXE ior)
+  if(IOR_EXE)
+    message(STATUS "Found ior at ${IOR_EXE}")
+    set(HERMES_HAVE_IOR "YES")
+  else()
+    message(WARNING "Couldn't find the 'ior' executable. Some tests will be skipped.")
+    set(HERMES_HAVE_IOR "NO")
+  endif()
+  enable_testing()
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test)
+endif()
+
+if(HERMES_ENABLE_ADAPTERS)
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/adapter)
 endif()
 
 #-----------------------------------------------------------------------------
@@ -363,27 +384,6 @@ if(HERMES_ENABLE_DOXYGEN)
     COMMENT
       "HTML documentation"
     )
-endif()
-
-#-----------------------------------------------------------------------------
-# Testing
-#-----------------------------------------------------------------------------
-if(CMAKE_PROJECT_NAME STREQUAL HERMES)
-  include(CTest)
-endif()
-
-if(CMAKE_PROJECT_NAME STREQUAL HERMES AND BUILD_TESTING)
-  find_package(Catch2 REQUIRED)
-  find_program(IOR_EXE ior)
-  if(IOR_EXE)
-    message(STATUS "Found ior at ${IOR_EXE}")
-    set(HERMES_HAVE_IOR "YES")
-  else()
-    message(WARNING "Couldn't find the 'ior' executable. Some tests will be skipped.")
-    set(HERMES_HAVE_IOR "NO")
-  endif()
-  enable_testing()
-  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test)
 endif()
 
 #-----------------------------------------------------------------------------

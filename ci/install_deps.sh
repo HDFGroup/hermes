@@ -12,9 +12,27 @@ GOTCHA_VERSION=develop
 CATCH2_VERSION=2.13.3
 ORTOOLS_VERSION=7.7
 SPACK_VERSION=0.16.3
+HDF5_VERSION=1_13_0
 
 echo "Installing dependencies at ${INSTALL_DIR}"
 mkdir -p ${INSTALL_DIR}
+
+# HDF5
+# TODO: Use spack package once 1.13.0 is available in a release (currently
+# only on the develop branch)
+git clone https://github.com/HDFGroup/hdf5
+pushd hdf5
+git checkout hdf5-${HDF5_VERSION}
+bash autogen.sh
+mkdir -p build
+pushd build
+CXXFLAGS=-I"${INSTALL_DIR}/include" LDFLAGS="-L${INSTALL_DIR}/lib -Wl,-rpath,${INSTALL_DIR}/lib" \
+        ../configure --prefix="${INSTALL_DIR}"
+make -j 4 && make install
+popd
+popd
+
+# Spack
 git clone https://github.com/spack/spack ${SPACK_DIR}
 pushd ${SPACK_DIR}
 git checkout v${SPACK_VERSION}

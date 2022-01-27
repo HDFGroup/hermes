@@ -102,8 +102,8 @@ bool HermesBucketContainsBlob(BucketClass *bkt, char *name) {
   return bucket->ContainsBlob(name);
 }
 
-void HermesBucketPut(BucketClass *bkt, char *name, unsigned char *put_data,
-                    size_t size) {
+void HermesBucketPut(BucketClass *bkt, char *name,
+                     const unsigned char *put_data, size_t size) {
   hermes::api::Bucket *bucket = (hermes::api::Bucket *)bkt;
 
   LOG(INFO) << "Hermes Wrapper: Putting Blob " << name << " to bucket " <<

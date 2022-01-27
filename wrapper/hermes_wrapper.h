@@ -45,8 +45,8 @@ void HermesBucketDestroy(BucketClass *bucket_ptr);
 
 bool HermesBucketContainsBlob(BucketClass *bkt, char *name);
 
-void HermesBucketPut(BucketClass *bkt, char *name, unsigned char *put_data,
-                    size_t size);
+void HermesBucketPut(BucketClass *bkt, char *name,
+                     const unsigned char *put_data, size_t size);
 
 void HermesBucketGet(BucketClass *bkt, char *blob_name, size_t kPageSize,
                      unsigned char *buf);
