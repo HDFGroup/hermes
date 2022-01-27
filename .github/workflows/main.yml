@@ -6,7 +6,6 @@ name: GitHub Actions
 # events but only for the master branch
 on:
   push:
-    branches: [ master, chogan/**, kimmy/**, hariharan/** ]
   pull_request:
     branches: [ master ]
   workflow_dispatch:
@@ -52,6 +51,8 @@ jobs:
           sudo apt update
           sudo apt-get install -y autoconf
           sudo apt-get install -y automake
+          sudo apt-get install -y libtool
+          sudo apt-get install -y libtool-bin
           sudo apt-get install -y mpich
           sudo apt-get install -y lcov
           sudo apt-get install -y zlib1g-dev

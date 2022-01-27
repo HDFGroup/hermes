@@ -113,7 +113,8 @@ void Finalize(SharedMemoryContext *context, CommunicationContext *comm,
     HERMES_DEBUG_SERVER_CLOSE();
   }
   DestroyArena(trans_arena);
-  google::ShutdownGoogleLogging();
+  // TODO(chogan): https://github.com/HDFGroup/hermes/issues/323
+  // google::ShutdownGoogleLogging();
 }
 
 void LockBuffer(BufferHeader *header) {
