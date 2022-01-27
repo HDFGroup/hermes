@@ -501,7 +501,7 @@ int HERMES_DECL(MPI_Wait)(MPI_Request *req, MPI_Status *status) {
 }
 
 int HERMES_DECL(MPI_Waitall)(int count, MPI_Request *req, MPI_Status *status) {
-  int ret;
+  int ret = 0;
   for (int i = 0; i < count; i++) {
     auto sub_ret = MPI_Wait(&req[i], &status[i]);
     if (sub_ret != MPI_SUCCESS) {

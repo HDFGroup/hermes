@@ -534,7 +534,7 @@ ssize_t HERMES_DECL(write)(int fd, const void *buf, size_t count) {
 }
 
 ssize_t HERMES_DECL(pread)(int fd, void *buf, size_t count, off_t offset) {
-  size_t ret;
+  size_t ret = 0;
   if (hermes::adapter::IsTracked(fd)) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(fd);
@@ -557,7 +557,7 @@ ssize_t HERMES_DECL(pread)(int fd, void *buf, size_t count, off_t offset) {
 
 ssize_t HERMES_DECL(pwrite)(int fd, const void *buf, size_t count,
                             off_t offset) {
-  size_t ret;
+  size_t ret = 0;
   if (hermes::adapter::IsTracked(fd)) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(fd);
@@ -579,7 +579,7 @@ ssize_t HERMES_DECL(pwrite)(int fd, const void *buf, size_t count,
 }
 
 ssize_t HERMES_DECL(pread64)(int fd, void *buf, size_t count, off64_t offset) {
-  size_t ret;
+  size_t ret = 0;
   if (hermes::adapter::IsTracked(fd)) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(fd);
@@ -602,7 +602,7 @@ ssize_t HERMES_DECL(pread64)(int fd, void *buf, size_t count, off64_t offset) {
 
 ssize_t HERMES_DECL(pwrite64)(int fd, const void *buf, size_t count,
                               off64_t offset) {
-  size_t ret;
+  size_t ret = 0;
   if (hermes::adapter::IsTracked(fd)) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(fd);
