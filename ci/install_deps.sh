@@ -4,7 +4,6 @@ set -x
 set -e
 set -o pipefail
 
-LOCAL=local
 INSTALL_DIR="${HOME}/${LOCAL}"
 SPACK_DIR=${INSTALL_DIR}/spack
 MOCHI_REPO_DIR=${INSTALL_DIR}/mochi-spack-packages
