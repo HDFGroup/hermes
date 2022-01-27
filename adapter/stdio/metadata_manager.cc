@@ -20,7 +20,7 @@ using hermes::adapter::stdio::FileID;
 using hermes::adapter::stdio::MetadataManager;
 
 bool MetadataManager::Create(FILE *fh, const AdapterStat &stat) {
-  LOG(INFO) << "Create metadata for file handler." << std::endl;
+  VLOG(1) << "Create metadata for file handler." << std::endl;
   auto ret = metadata.emplace(Convert(fh), stat);
   return ret.second;
 }
@@ -60,7 +60,7 @@ FileID MetadataManager::Convert(FILE *fh) {
 }
 
 bool MetadataManager::Delete(FILE *fh) {
-  LOG(INFO) << "Delete metadata for file handler." << std::endl;
+  VLOG(1) << "Delete metadata for file handler." << std::endl;
   auto fileId = Convert(fh);
   auto iter = metadata.find(fileId);
   if (iter != metadata.end()) {

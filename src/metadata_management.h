@@ -62,8 +62,10 @@ struct BufferIdArray {
 struct BlobInfo {
   Stats stats;
   TicketMutex lock;
+  u32 last;
+  bool stop;
 
-  BlobInfo() {
+  BlobInfo() : last(0), stop(false) {
     stats.recency = 0;
     stats.frequency = 0;
     lock.ticket.store(0);
@@ -438,6 +440,20 @@ bool LocalUnlockBlob(SharedMemoryContext *context, BlobID blob_id);
  *
  */
 SystemViewState *GetLocalSystemViewState(SharedMemoryContext *context);
+
+/**
+ *
+ */
+void LocalReplaceBlobIdInBucket(SharedMemoryContext *context,
+                                BucketID bucket_id, BlobID old_blob_id,
+                                BlobID new_blob_id);
+/**
+ * Deletes @p old_blob_id from @p bucket_id and adds @p new_blob_id. It combines
+ * the delete and the add into one call in order to avoid multiple RPCs.
+ */
+void ReplaceBlobIdInBucket(SharedMemoryContext *context, RpcContext *rpc,
+                           BucketID bucket_id, BlobID old_blob_id,
+                           BlobID new_blob_id);
 }  // namespace hermes
 
 #endif  // HERMES_METADATA_MANAGEMENT_H_

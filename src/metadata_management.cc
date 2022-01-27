@@ -537,6 +537,19 @@ void CopyIds(u64 *dest, u64 *src, u32 count) {
   }
 }
 
+void ReplaceBlobIdInBucket(SharedMemoryContext *context, RpcContext *rpc,
+                           BucketID bucket_id, BlobID old_blob_id,
+                           BlobID new_blob_id) {
+  u32 target_node = bucket_id.bits.node_id;
+  if (target_node == rpc->node_id) {
+    LocalReplaceBlobIdInBucket(context, bucket_id, old_blob_id, new_blob_id);
+  } else {
+    RpcCall<bool>(rpc, target_node, "RemoteReplaceBlobIdInBucket", bucket_id,
+                  old_blob_id, new_blob_id);
+  }
+}
+
+
 void AddBlobIdToBucket(MetadataManager *mdm, RpcContext *rpc, BlobID blob_id,
                        BucketID bucket_id) {
   u32 target_node = bucket_id.bits.node_id;
@@ -1362,11 +1375,13 @@ f32 ScoringFunction(MetadataManager *mdm, Stats *stats) {
 int LocalGetNumOutstandingFlushingTasks(SharedMemoryContext *context,
                                         VBucketID id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  BeginTicketMutex(&mdm->vbucket_mutex);
   VBucketInfo *info = LocalGetVBucketInfoById(mdm, id);
   int result = 0;
   if (info) {
     result = info->async_flush_count;
   }
+  EndTicketMutex(&mdm->vbucket_mutex);
 
   return result;
 }
@@ -1387,16 +1402,40 @@ int GetNumOutstandingFlushingTasks(SharedMemoryContext *context,
 }
 
 bool LocalLockBlob(SharedMemoryContext *context, BlobID blob_id) {
+  Ticket t = {};
+  Ticket *ticket = 0;
+  bool result = true;
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
-  BlobInfo *blob_info = GetBlobInfoPtr(mdm, blob_id);
-  bool result = false;
 
-  if (blob_info) {
-    BeginTicketMutex(&blob_info->lock);
-    result = true;
+  while (!t.acquired) {
+    BlobInfo *blob_info = GetBlobInfoPtr(mdm, blob_id);
+    if (blob_info) {
+      t = TryBeginTicketMutex(&blob_info->lock, ticket);
+      if (!ticket) {
+        blob_info->last = t.ticket;
+      }
+    } else {
+      result = false;
+      ReleaseBlobInfoPtr(mdm);
+      break;
+    }
+    if (!t.acquired) {
+      ReleaseBlobInfoPtr(mdm);
+      sched_yield();
+    } else {
+      if (blob_info->stop) {
+        // This BlobID is no longer valid. Release the lock and delete the entry
+        // if we're the last ticket on that lock.
+        EndTicketMutex(&blob_info->lock);
+        result = false;
+        if (t.ticket == blob_info->last) {
+          LocalDelete(mdm, blob_id);
+        }
+      }
+      ReleaseBlobInfoPtr(mdm);
+    }
+    ticket = &t;
   }
-
-  ReleaseBlobInfoPtr(mdm);
 
   return result;
 }

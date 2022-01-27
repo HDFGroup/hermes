@@ -17,6 +17,8 @@
 
 namespace hermes {
 
+using BoMoveList = std::vector<std::pair<BufferID, std::vector<BufferID>>>;
+
 enum class BoOperation {
   kMove,
   kCopy,
@@ -51,24 +53,29 @@ struct BoTask {
   BoArgs args;
 };
 
+struct BufferInfo {
+  BufferID id;
+  f32 bandwidth_mbps;
+  size_t size;
+};
+
+bool operator==(const BufferInfo &lhs, const BufferInfo &rhs);
+
 struct BufferOrganizer {
   ThreadPool pool;
 
   explicit BufferOrganizer(int num_threads);
 };
 
-bool LocalEnqueueBoTask(SharedMemoryContext *context, BoTask task,
-                        BoPriority priority = BoPriority::kLow);
 bool LocalEnqueueFlushingTask(SharedMemoryContext *context, RpcContext *rpc,
                               BlobID blob_id, const std::string &filename,
                               u64 offset);
 bool EnqueueFlushingTask(RpcContext *rpc, BlobID blob_id,
                          const std::string &filename, u64 offset);
 
-void BoMove(SharedMemoryContext *context, BufferID src, TargetID dest);
-void BoCopy(SharedMemoryContext *context, BufferID src, TargetID dest);
-void BoDelete(SharedMemoryContext *context, BufferID src);
-
+void BoMove(SharedMemoryContext *context, RpcContext *rpc,
+            const BoMoveList &moves, BlobID blob_id, BucketID bucket_id,
+            const std::string &internal_blob_name);
 void FlushBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id,
                const std::string &filename, u64 offset, bool async = false);
 void LocalShutdownBufferOrganizer(SharedMemoryContext *context);
@@ -82,6 +89,29 @@ void LocalDecrementFlushCount(SharedMemoryContext *context,
                               const std::string &vbkt_name);
 void AwaitAsyncFlushingTasks(SharedMemoryContext *context, RpcContext *rpc,
                              VBucketID id);
+
+void LocalOrganizeBlob(SharedMemoryContext *context, RpcContext *rpc,
+                       const std::string &internal_blob_name,
+                       BucketID bucket_id, f32 epsilon,
+                       f32 explicit_importance_score);
+
+void OrganizeBlob(SharedMemoryContext *context, RpcContext *rpc,
+                  BucketID bucket_id, const std::string &blob_name,
+                  f32 epsilon, f32 importance_score = -1);
+std::vector<BufferInfo> GetBufferInfo(SharedMemoryContext *context,
+                                      RpcContext *rpc,
+                                      const std::vector<BufferID> &buffer_ids);
+f32 ComputeBlobAccessScore(SharedMemoryContext *context,
+                           const std::vector<BufferInfo> &buffer_info);
+void LocalEnqueueBoMove(SharedMemoryContext *context, RpcContext *rpc,
+                        const BoMoveList &moves, BlobID blob_id,
+                        BucketID bucket_id,
+                        const std::string &internal_blob_name,
+                        BoPriority priority);
+void EnqueueBoMove(RpcContext *rpc, const BoMoveList &moves, BlobID blob_id,
+                   BucketID bucket_id, const std::string &internal_name,
+                   BoPriority priority);
+
 }  // namespace hermes
 
 #endif  // HERMES_BUFFER_ORGANIZER_H_

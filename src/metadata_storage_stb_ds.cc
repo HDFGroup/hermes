@@ -419,12 +419,34 @@ i64 GetIndexOfId(MetadataManager *mdm, ChunkedIdList *id_list, u64 id) {
   return result;
 }
 
+void LocalReplaceBlobIdInBucket(SharedMemoryContext *context,
+                                BucketID bucket_id, BlobID old_blob_id,
+                                BlobID new_blob_id) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  BeginTicketMutex(&mdm->bucket_mutex);
+  BucketInfo *info = LocalGetBucketInfoById(mdm, bucket_id);
+  ChunkedIdList *blobs = &info->blobs;
+
+  BlobID *blobs_arr = (BlobID *)GetIdsPtr(mdm, *blobs);
+  for (u32 i = 0; i < blobs->length; ++i) {
+    if (blobs_arr[i].as_int == old_blob_id.as_int) {
+      blobs_arr[i] = new_blob_id;
+      break;
+    }
+  }
+  ReleaseIdsPtr(mdm);
+
+  EndTicketMutex(&mdm->bucket_mutex);
+}
+
 void LocalAddBlobIdToBucket(MetadataManager *mdm, BucketID bucket_id,
-                            BlobID blob_id) {
+                            BlobID blob_id, bool track_stats) {
   BeginTicketMutex(&mdm->bucket_mutex);
   BucketInfo *info = LocalGetBucketInfoById(mdm, bucket_id);
   AppendToChunkedIdList(mdm, &info->blobs, blob_id.as_int);
-  LocalIncrementBlobStats(mdm, blob_id);
+  if (track_stats) {
+    LocalIncrementBlobStats(mdm, blob_id);
+  }
   EndTicketMutex(&mdm->bucket_mutex);
 
   CheckHeapOverlap(mdm);
@@ -968,7 +990,7 @@ void LocalRemoveBlobFromVBucketInfo(SharedMemoryContext *context,
   EndTicketMutex(&mdm->vbucket_mutex);
 }
 
-f32 LocalGetBlobScore(SharedMemoryContext *context, BlobID blob_id) {
+f32 LocalGetBlobImportanceScore(SharedMemoryContext *context, BlobID blob_id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   Stats stats = LocalGetBlobStats(context, blob_id);
 
@@ -977,14 +999,15 @@ f32 LocalGetBlobScore(SharedMemoryContext *context, BlobID blob_id) {
   return result;
 }
 
-f32 GetBlobScore(SharedMemoryContext *context, RpcContext *rpc,
-                 BlobID blob_id) {
+f32 GetBlobImportanceScore(SharedMemoryContext *context, RpcContext *rpc,
+                           BlobID blob_id) {
   f32 result = 0;
   u32 target_node = GetBlobNodeId(blob_id);
   if (target_node == rpc->node_id) {
-    result = LocalGetBlobScore(context, blob_id);
+    result = LocalGetBlobImportanceScore(context, blob_id);
   } else {
-    result = RpcCall<f32>(rpc, target_node, "RemoteGetBlobScore", blob_id);
+    result = RpcCall<f32>(rpc, target_node, "RemoteGetBlobImportanceScore",
+                          blob_id);
   }
 
   return result;

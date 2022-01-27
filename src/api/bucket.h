@@ -211,9 +211,27 @@ class Bucket {
   Status Persist(const std::string &file_name);
 
   /**
+   * \brief Allign \p blob_name's access speed to its importance.
+   *
+   * \param blob_name The name of the Blob to organize.
+   *
+   * \param epsilon
+   * The threshold within which the Blob's access time should match its
+   * importance. Constraint: 0 < epsilon <= 1.
+   *
+   * \param custom_importance
+   * A measure of importance that overrides the internal importance of a Blob.
+   * Constraint: 0 <= custom_importance <= 1, where 1 signifies the most
+   * important Blob. By default the internal, statistics-based measure of
+   * importance is used.
+   */
+  void OrganizeBlob(const std::string &blob_name, f32 epsilon,
+                    f32 custom_importance = -1.f);
+
+  /**
    * \brief Release this Bucket
    *
-   * This simpley decrements the refcount to this Bucket in the Hermes metadata.
+   * This simply decrements the refcount to this Bucket in the Hermes metadata.
    * To free resources associated with this Bucket, call Bucket::Destroy.
    */
   Status Release(const Context &ctx);

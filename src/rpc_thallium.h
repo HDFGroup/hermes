@@ -121,6 +121,13 @@ void serialize(A &ar, SwapBlob &swap_blob) {
   ar & swap_blob.bucket_id;
 }
 
+template<typename A>
+void serialize(A &ar, BufferInfo &info) {
+  ar & info.id;
+  ar & info.bandwidth_mbps;
+  ar & info.size;
+}
+
 #ifndef THALLIUM_USE_CEREAL
 /**
  *  Lets Thallium know how to serialize a MapType.

@@ -81,6 +81,10 @@
 
 namespace hermes {
 
+bool operator==(const BufferID &lhs, const BufferID &rhs) {
+  return lhs.as_int == rhs.as_int;
+}
+
 void Finalize(SharedMemoryContext *context, CommunicationContext *comm,
               RpcContext *rpc, const char *shmem_name, Arena *trans_arena,
               bool is_application_core, bool force_rpc_shutdown) {
@@ -735,12 +739,23 @@ BufferID MakeBufferHeaders(Arena *arena, int buffer_size, u32 start_index,
   return dummy.next_free;
 }
 
-Device *InitDevices(Arena *arena, Config *config) {
+Device *InitDevices(Arena *arena, Config *config, f32 &min_bw, f32 &max_bw) {
+  min_bw = FLT_MAX;
+  max_bw = 0;
+
   Device *result = PushArray<Device>(arena, config->num_devices);
 
   for (int i = 0; i < config->num_devices; ++i) {
     Device *device = result + i;
     device->bandwidth_mbps = config->bandwidths[i];
+
+    if (device->bandwidth_mbps > max_bw) {
+      max_bw = device->bandwidth_mbps;
+    }
+    if (device->bandwidth_mbps < min_bw) {
+      min_bw = device->bandwidth_mbps;
+    }
+
     device->latency_ns = config->latencies[i];
     device->id = i;
     device->is_shared = config->is_shared_device[i];
@@ -1138,7 +1153,9 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
 
   // Init Devices and Targets
 
-  Device *devices = InitDevices(buffer_pool_arena, config);
+  f32 min_bw = 0;
+  f32 max_bw = 0;
+  Device *devices = InitDevices(buffer_pool_arena, config, min_bw, max_bw);
 
   Target *targets = InitTargets(buffer_pool_arena, config, devices, node_id);
 
@@ -1194,6 +1211,8 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
   pool->targets_offset = (u8 *)targets - shmem_base;
   pool->num_devices = config->num_devices;
   pool->total_headers = total_headers;
+  pool->min_device_bw_mbps = min_bw;
+  pool->max_device_bw_mbps = max_bw;
 
   for (int device = 0; device < config->num_devices; ++device) {
     pool->block_sizes[device] = config->block_sizes[device];

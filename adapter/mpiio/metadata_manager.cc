@@ -22,13 +22,13 @@ using hermes::adapter::mpiio::HermesStruct;
 using hermes::adapter::mpiio::MetadataManager;
 
 bool MetadataManager::Create(MPI_File *fh, const AdapterStat &stat) {
-  LOG(INFO) << "Create metadata for file handler." << std::endl;
+  VLOG(1) << "Create metadata for file handler." << std::endl;
   auto ret = metadata.emplace(*fh, stat);
   return ret.second;
 }
 
 bool MetadataManager::Update(MPI_File *fh, const AdapterStat &stat) {
-  LOG(INFO) << "Update metadata for file handler." << std::endl;
+  VLOG(1) << "Update metadata for file handler." << std::endl;
   auto iter = metadata.find(*fh);
   if (iter != metadata.end()) {
     metadata.erase(iter);
@@ -49,7 +49,7 @@ std::pair<AdapterStat, bool> MetadataManager::Find(MPI_File *fh) {
 }
 
 bool MetadataManager::Delete(MPI_File *fh) {
-  LOG(INFO) << "Delete metadata for file handler." << std::endl;
+  VLOG(1) << "Delete metadata for file handler." << std::endl;
   auto iter = metadata.find(*fh);
   if (iter != metadata.end()) {
     metadata.erase(iter);

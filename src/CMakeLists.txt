@@ -12,7 +12,7 @@ if(ORTOOLS_FOUND)
   set(HERMES_EXT_LIB_DEPENDENCIES
       ${ORTOOLS_LIBRARIES} ${HERMES_EXT_LIB_DEPENDENCIES})
 else()
-  message(STATUS, "ortools not found")
+  message(STATUS "ortools not found")
 endif()
 
 #------------------------------------------------------------------------------

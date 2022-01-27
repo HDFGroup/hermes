@@ -20,8 +20,8 @@ using hermes::adapter::posix::FileStruct;
 using hermes::adapter::posix::HermesStruct;
 
 MapperReturnType BalancedMapper::map(const FileStruct& file_op) {
-  LOG(INFO) << "Mapping File with offset:" << file_op.offset_
-            << " and size:" << file_op.size_ << "." << std::endl;
+  VLOG(1) << "Mapping File with offset:" << file_op.offset_
+          << " and size:" << file_op.size_ << "." << std::endl;
 
   auto mapper_return = MapperReturnType();
   size_t size_mapped = 0;

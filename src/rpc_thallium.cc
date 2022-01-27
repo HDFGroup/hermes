@@ -376,9 +376,9 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
       req.respond(true);
   };
 
-  auto rpc_get_blob_score =
+  auto rpc_get_blob_importance_score =
     [context](const request &req, BlobID blob_id) {
-      f32 result = LocalGetBlobScore(context, blob_id);
+      f32 result = LocalGetBlobImportanceScore(context, blob_id);
 
       req.respond(result);
   };
@@ -423,6 +423,14 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
       LocalCreateBlobMetadata(mdm, blob_name, blob_id);
 
       req.respond(true);
+  };
+
+  auto rpc_replace_blob_id_in_bucket = [context](const request &req,
+                                                 BucketID bucket_id,
+                                                 BlobID old_blob_id,
+                                                 BlobID new_blob_id) {
+    LocalReplaceBlobIdInBucket(context, bucket_id, old_blob_id, new_blob_id);
+    req.respond(true);
   };
 
   // TODO(chogan): Currently these three are only used for testing.
@@ -479,7 +487,8 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
   rpc_server->define("RemoteGetBucketNameById",
                      rpc_get_bucket_name_by_id);
   rpc_server->define("RemoteIncrementBlobStats", rpc_increment_blob_stats);
-  rpc_server->define("RemoteGetBlobScore", rpc_get_blob_score);
+  rpc_server->define("RemoteGetBlobImportanceScore",
+                     rpc_get_blob_importance_score);
   rpc_server->define("RemoteIncrementFlushCount", rpc_increment_flush_count);
   rpc_server->define("RemoteDecrementFlushCount", rpc_decrement_flush_count);
   rpc_server->define("RemoteGetNumOutstandingFlushingTasks",
@@ -487,6 +496,8 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
   rpc_server->define("RemoteLockBlob", rpc_lock_blob);
   rpc_server->define("RemoteUnlockBlob", rpc_unlock_blob);
   rpc_server->define("RemoteCreateBlobMetadata", rpc_create_blob_metadata);
+  rpc_server->define("RemoteReplaceBlobIdInBucket",
+                     rpc_replace_blob_id_in_bucket);
 }
 
 void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
@@ -557,19 +568,35 @@ void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
     req.respond(result);
   };
 
-  auto rpc_enqueue_bo_task = [context](const tl::request &req, BoTask task,
-                                       BoPriority priority) {
-    bool result = LocalEnqueueBoTask(context, task, priority);
+  auto rpc_enqueue_bo_move = [context, rpc](const tl::request &req,
+                                            const BoMoveList &moves,
+                                            BlobID blob_id,
+                                            BucketID bucket_id,
+                                            const std::string &internal_name,
+                                            BoPriority priority) {
+    LocalEnqueueBoMove(context, rpc, moves, blob_id, bucket_id, internal_name,
+                       priority);
 
-    req.respond(result);
+    req.respond(true);
+  };
+
+  auto rpc_organize_blob = [context, rpc](const tl::request &req,
+                                          const std::string &internal_blob_name,
+                                          BucketID bucket_id, f32 epsilon,
+                                          f32 importance_score) {
+    LocalOrganizeBlob(context, rpc, internal_blob_name, bucket_id, epsilon,
+                      importance_score);
+
+    req.respond(true);
   };
 
   rpc_server->define("PlaceInHierarchy",
                      rpc_place_in_hierarchy).disable_response();
   rpc_server->define("MoveToTarget",
                      rpc_move_to_target).disable_response();
-  rpc_server->define("EnqueueBoTask", rpc_enqueue_bo_task);
   rpc_server->define("EnqueueFlushingTask", rpc_enqueue_flushing_task);
+  rpc_server->define("EnqueueBoMove", rpc_enqueue_bo_move);
+  rpc_server->define("OrganizeBlob", rpc_organize_blob);
 }
 
 void StartGlobalSystemViewStateUpdateThread(SharedMemoryContext *context,
