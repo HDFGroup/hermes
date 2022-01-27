@@ -275,7 +275,6 @@ void BoMove(SharedMemoryContext *context, RpcContext *rpc,
       }
       LocalFreeBufferIdList(context, blob_id);
     }
-    // TODO(chogan):
     LocalUnlockBlob(context, blob_id);
   } else {
     LOG(WARNING) << "Couldn't lock BlobID " << blob_id.as_int << "\n";
