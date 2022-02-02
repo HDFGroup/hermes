@@ -33,7 +33,8 @@ using hermes::TargetID;
 using hermes::BucketID;
 using hermes::BlobID;
 using hermes::BufferInfo;
-
+using hapi::VBucket;
+using hapi::Bucket;
 
 static void TestIsBoFunction() {
   using hermes::IsBoFunction;
@@ -243,6 +244,30 @@ void TestOrganizeBlob() {
   hermes->Finalize(true);
 }
 
+static void TestWriteOnlyBucket() {
+  HermesPtr hermes = hermes::InitHermesDaemon();
+  std::string bkt_name = "WriteOnly";
+  VBucket vbkt(bkt_name, hermes);
+  Bucket bkt(bkt_name, hermes);
+
+
+  hapi::WriteOnlyTrait trait;
+  vbkt.Attach(&trait);
+
+  hapi::Blob blob(KILOBYTES(4), 127);
+
+  const int kIters = 128;
+  for (int i = 0; i < kIters; ++i) {
+    std::string blob_name = "b" + std::to_string(i);
+    bkt.Put(blob_name, blob);
+    vbkt.Link(blob_name, bkt_name);
+  }
+
+  vbkt.Destroy();
+  bkt.Destroy();
+  hermes->Finalize(true);
+}
+
 int main(int argc, char *argv[]) {
   int mpi_threads_provided;
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
@@ -251,10 +276,19 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  TestIsBoFunction();
-  TestBackgroundFlush();
-  TestBoMove();
-  TestOrganizeBlob();
+#define HERMES_ADD_TEST(test_name)                        \
+  if (argc == 1 || std::string(argv[1]) == #test_name) {  \
+    fprintf(stdout, "### Running %s\n", #test_name);      \
+    test_name();                                          \
+  }
+
+  HERMES_ADD_TEST(TestIsBoFunction);
+  HERMES_ADD_TEST(TestBackgroundFlush);
+  HERMES_ADD_TEST(TestBoMove);
+  HERMES_ADD_TEST(TestOrganizeBlob);
+  HERMES_ADD_TEST(TestWriteOnlyBucket);
+
+#undef HERMES_ADD_TEST
 
   MPI_Finalize();
 

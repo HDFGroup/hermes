@@ -174,9 +174,11 @@ void LocalEnqueueBoMove(SharedMemoryContext *context, RpcContext *rpc,
                         BoPriority priority) {
   ThreadPool *pool = &context->bo->pool;
   bool is_high_priority = priority == BoPriority::kHigh;
+  VLOG(1) << "BufferOrganizer moving Blob " << blob_id.as_int;
   pool->run(std::bind(BoMove, context, rpc, moves, blob_id, bucket_id,
                       internal_blob_name),
             is_high_priority);
+  VLOG(1) << "BufferOrganizer " << blob_id.as_int << " done\n";
 }
 
 /**
@@ -260,6 +262,8 @@ void BoMove(SharedMemoryContext *context, RpcContext *rpc,
       BlobInfo new_info = {};
       BlobInfo *old_info = GetBlobInfoPtr(mdm, blob_id);
       new_info.stats = old_info->stats;
+      // Invalidate the old Blob. It will get deleted when its TicketMutex
+      // reaches old_info->last
       old_info->stop = true;
       ReleaseBlobInfoPtr(mdm);
       LocalPut(mdm, new_blob_id, new_info);
