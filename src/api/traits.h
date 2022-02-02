@@ -43,7 +43,7 @@ struct Trait {
   /** The trait's ID */
   TraitID id;
   /** \todo ??? */
-  TraitIdArray conflict_traits;
+  std::vector<TraitID> conflict_traits;
   /** The trait's type */
   TraitType type;
   /** Callback for trait->vbucket attach events */
@@ -56,7 +56,7 @@ struct Trait {
   OnLinkCallback onUnlinkFn;
 
   Trait() {}
-  Trait(TraitID id, TraitIdArray conflict_traits, TraitType type);
+  Trait(TraitID id, std::vector<TraitID> conflict_traits, TraitType type);
 };
 
 #define HERMES_PERSIST_TRAIT 11

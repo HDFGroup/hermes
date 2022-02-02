@@ -290,15 +290,9 @@ namespace api {
 enum class TraitType : u8 {
   META = 0,
   DATA = 1,
-  FILE_MAPPING = 2,
-  PERSIST = 3,
+  PERSIST = 2,
 };
+
 }  // namespace api
-
-struct TraitIdArray {
-  TraitID *ids;
-  u32 length;
-};
-
 }  // namespace hermes
 #endif  // HERMES_TYPES_H_

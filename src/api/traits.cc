@@ -18,7 +18,7 @@
 
 namespace hermes {
 namespace api {
-Trait::Trait(TraitID id, TraitIdArray conflict_traits, TraitType type)
+Trait::Trait(TraitID id, std::vector<TraitID> conflict_traits, TraitType type)
     : id(id),
       conflict_traits(conflict_traits),
       type(type),
@@ -32,7 +32,7 @@ using OffsetMap = std::unordered_map<std::string, u64>;
 PersistTrait::PersistTrait(const std::string &filename,
                            const OffsetMap &offset_map,
                            bool synchronous)
-  : Trait(HERMES_PERSIST_TRAIT, TraitIdArray(), TraitType::PERSIST),
+  : Trait(HERMES_PERSIST_TRAIT, std::vector<TraitID>(), TraitType::PERSIST),
     filename(filename), offset_map(offset_map), synchronous(synchronous) {
   this->onAttachFn = std::bind(&PersistTrait::onAttach, this,
                                std::placeholders::_1, std::placeholders::_2,
