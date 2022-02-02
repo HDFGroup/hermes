@@ -95,6 +95,7 @@ struct VBucketInfo {
   ChunkedIdList blobs;
   std::atomic<int> ref_count;
   std::atomic<int> async_flush_count;
+  /** Not currently used since Traits are process local. */
   TraitID traits[kMaxTraitsPerVBucket];
   bool active;
 };

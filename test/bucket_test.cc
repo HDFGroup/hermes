@@ -31,10 +31,10 @@ int compress_blob(HermesPtr hermes, hapi::TraitInput &input,
                   hapi::Trait *trait);
 struct MyTrait : public hapi::Trait {
   int compress_level;
-  MyTrait() : Trait(10001, std::vector<hermes::TraitID>(), hapi::TraitType::META) {
-    onLinkFn =
-      std::bind(&compress_blob, std::placeholders::_1, std::placeholders::_2,
-                std::placeholders::_3);
+  MyTrait() : Trait(10001, std::vector<hermes::TraitID>(),
+                    hapi::TraitType::META) {
+    onLinkFn = std::bind(&compress_blob, std::placeholders::_1,
+                         std::placeholders::_2, std::placeholders::_3);
   }
 
   // optional function pointer if only known at runtime

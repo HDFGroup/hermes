@@ -21,6 +21,9 @@
 namespace hermes {
 namespace api {
 
+#define HERMES_PERSIST_TRAIT 11
+#define HERMES_WRITE_ONLY_TRAIT 12
+
 /** A blob's hosting bucket and blob names */
 struct BlobInfo {
   /** The blob-hosting bucket name */
@@ -59,8 +62,6 @@ struct Trait {
   Trait(TraitID id, std::vector<TraitID> conflict_traits, TraitType type);
 };
 
-#define HERMES_PERSIST_TRAIT 11
-
 /** (File) Persistence trait */
 struct PersistTrait : public Trait {
   std::string filename;
@@ -74,8 +75,17 @@ struct PersistTrait : public Trait {
 
   void onAttach(HermesPtr hermes, VBucketID id, Trait *trait);
   void onDetach(HermesPtr hermes, VBucketID id, Trait *trait);
-  void onLink(HermesPtr hermes, TraitInput &blob, Trait *trait);
-  void onUnlink(HermesPtr hermes, TraitInput &blob, Trait *trait);
+  void onLink(HermesPtr hermes, TraitInput &input, Trait *trait);
+  void onUnlink(HermesPtr hermes, TraitInput &input, Trait *trait);
+};
+
+struct WriteOnlyTrait : public Trait {
+  WriteOnlyTrait();
+
+  void onAttach(HermesPtr hermes, VBucketID id, Trait *trait);
+  void onDetach(HermesPtr hermes, VBucketID id, Trait *trait);
+  void onLink(HermesPtr hermes, TraitInput &input, Trait *trait);
+  void onUnlink(HermesPtr hermes, TraitInput &input, Trait *trait);
 };
 
 }  // namespace api

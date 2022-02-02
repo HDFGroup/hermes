@@ -34,18 +34,18 @@ PersistTrait::PersistTrait(const std::string &filename,
                            bool synchronous)
   : Trait(HERMES_PERSIST_TRAIT, std::vector<TraitID>(), TraitType::PERSIST),
     filename(filename), offset_map(offset_map), synchronous(synchronous) {
-  this->onAttachFn = std::bind(&PersistTrait::onAttach, this,
-                               std::placeholders::_1, std::placeholders::_2,
-                               std::placeholders::_3);
-  this->onDetachFn = std::bind(&PersistTrait::onDetach, this,
-                               std::placeholders::_1, std::placeholders::_2,
-                               std::placeholders::_3);
-  this->onLinkFn = std::bind(&PersistTrait::onLink, this,
-                             std::placeholders::_1, std::placeholders::_2,
-                             std::placeholders::_3);
-  this->onUnlinkFn = std::bind(&PersistTrait::onUnlink, this,
-                               std::placeholders::_1, std::placeholders::_2,
-                               std::placeholders::_3);
+  onAttachFn = std::bind(&PersistTrait::onAttach, this,
+                         std::placeholders::_1, std::placeholders::_2,
+                         std::placeholders::_3);
+  onDetachFn = std::bind(&PersistTrait::onDetach, this,
+                         std::placeholders::_1, std::placeholders::_2,
+                         std::placeholders::_3);
+  onLinkFn = std::bind(&PersistTrait::onLink, this,
+                       std::placeholders::_1, std::placeholders::_2,
+                       std::placeholders::_3);
+  onUnlinkFn = std::bind(&PersistTrait::onUnlink, this,
+                         std::placeholders::_1, std::placeholders::_2,
+                         std::placeholders::_3);
 }
 
 void PersistTrait::onAttach(HermesPtr hermes, VBucketID id, Trait *trait) {
@@ -90,6 +90,53 @@ void PersistTrait::onLink(HermesPtr hermes, TraitInput &input, Trait *trait) {
 }
 
 void PersistTrait::onUnlink(HermesPtr hermes, TraitInput &input, Trait *trait) {
+  (void)hermes;
+  (void)input;
+  (void)trait;
+}
+
+WriteOnlyTrait::WriteOnlyTrait()
+    : Trait(HERMES_WRITE_ONLY_TRAIT, std::vector<TraitID>(), TraitType::META) {
+  onAttachFn = std::bind(&WriteOnlyTrait::onAttach, this,
+                         std::placeholders::_1, std::placeholders::_2,
+                         std::placeholders::_3);
+  onDetachFn = std::bind(&WriteOnlyTrait::onDetach, this,
+                         std::placeholders::_1, std::placeholders::_2,
+                         std::placeholders::_3);
+  onLinkFn = std::bind(&WriteOnlyTrait::onLink, this,
+                       std::placeholders::_1, std::placeholders::_2,
+                       std::placeholders::_3);
+  onUnlinkFn = std::bind(&WriteOnlyTrait::onUnlink, this,
+                         std::placeholders::_1, std::placeholders::_2,
+                         std::placeholders::_3);
+}
+
+void WriteOnlyTrait::onAttach(HermesPtr hermes, VBucketID id, Trait *trait) {
+  (void)hermes;
+  (void)id;
+  (void)trait;
+}
+
+void WriteOnlyTrait::onDetach(HermesPtr hermes, VBucketID id, Trait *trait) {
+  (void)hermes;
+  (void)id;
+  (void)trait;
+}
+
+void WriteOnlyTrait::onLink(HermesPtr hermes, TraitInput &input, Trait *trait) {
+  (void)trait;
+
+  SharedMemoryContext *context = &hermes->context_;
+  RpcContext *rpc = &hermes->rpc_;
+  BucketID bucket_id = GetBucketId(context, rpc, input.bucket_name.c_str());
+  f32 epsilon = 0.1;
+  f32 custom_importance = 0;
+  hermes::OrganizeBlob(context, rpc, bucket_id, input.blob_name, epsilon,
+                       custom_importance);
+}
+
+void WriteOnlyTrait::onUnlink(HermesPtr hermes, TraitInput &input,
+                              Trait *trait) {
   (void)hermes;
   (void)input;
   (void)trait;
