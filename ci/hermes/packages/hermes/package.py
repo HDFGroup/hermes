@@ -2,7 +2,7 @@ from spack import *
 
 
 class Hermes(CMakePackage):
-    homepage = "https://hermes.page/"
+    homepage = "http://www.cs.iit.edu/~scs/assets/projects/Hermes/Hermes.html"
     url = "https://github.com/HDFGroup/hermes/tarball/master"
     git = "https://github.com/HDFGroup/hermes.git"
     version('master', branch='master')
