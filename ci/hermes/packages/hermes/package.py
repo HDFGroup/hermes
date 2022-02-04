@@ -6,7 +6,6 @@ class Hermes(CMakePackage):
     url = "https://github.com/HDFGroup/hermes/tarball/master"
     git = "https://github.com/HDFGroup/hermes.git"
     version('master', branch='master')
-    depends_on('gotcha@develop')
     depends_on('mochi-thallium~cereal@0.8.3')
     depends_on('catch2@2.13.3')
     depends_on('gortools@7.7')
