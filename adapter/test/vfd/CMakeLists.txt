@@ -11,13 +11,13 @@ foreach(vfd_test ${hermes_vfd_tests})
   target_include_directories(${vfd_test}
     SYSTEM PUBLIC ${HDF5_HERMES_VFD_EXT_INCLUDE_DEPENDENCIES}
   )
-target_link_libraries(${vfd_test}
-  MPI::MPI_CXX
-  hermes
-  ${HDF5_HERMES_VFD_EXPORTED_LIBS}
-  ${HDF5_HERMES_VFD_EXT_LIB_DEPENDENCIES}
-  ${HDF5_HERMES_VFD_EXT_PKG_DEPENDENCIES}
-)
+  target_link_libraries(${vfd_test}
+    MPI::MPI_CXX
+    hermes
+    ${HDF5_HERMES_VFD_EXPORTED_LIBS}
+    ${HDF5_HERMES_VFD_EXT_LIB_DEPENDENCIES}
+    ${HDF5_HERMES_VFD_EXT_PKG_DEPENDENCIES}
+  )
   add_test(NAME "Test${vfd_test}" COMMAND ${vfd_test})
   set_property(TEST "Test${vfd_test}"
     PROPERTY ENVIRONMENT HERMES_CONF=${CMAKE_CURRENT_SOURCE_DIR}/hermes.conf)

@@ -51,8 +51,8 @@ set(POSIX_TESTS
 )
 
 foreach(program ${POSIX_TESTS})
-  target_include_directories(${program} PUBLIC ${HERMES_ADAPTER_DIR})
-  target_include_directories(${program} PUBLIC ${HERMES_ADAPTER_TEST_DIR})
+  target_include_directories(${program} PRIVATE ${HERMES_ADAPTER_DIR})
+  target_include_directories(${program} PRIVATE ${HERMES_ADAPTER_TEST_DIR})
   target_link_libraries(${program} Catch2::Catch2 -lstdc++fs -lc MPI::MPI_CXX)
 endforeach()
 
@@ -61,8 +61,6 @@ if(HERMES_INSTALL_TESTS)
         install(
                 TARGETS
                 ${program}
-                EXPORT
-                ${HERMES_EXPORTED_TARGETS}
                 LIBRARY DESTINATION ${HERMES_INSTALL_LIB_DIR}
                 ARCHIVE DESTINATION ${HERMES_INSTALL_LIB_DIR}
                 RUNTIME DESTINATION ${HERMES_INSTALL_BIN_DIR}
