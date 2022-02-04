@@ -138,7 +138,7 @@ endif()
 # Build options
 #------------------------------------------------------------------------------
 option(BUILD_SHARED_LIBS "Build with shared libraries." ON)
-option(HERMES_INTERCEPT_IO "Use GOTCHA as IO interception tool" ON)
+option(HERMES_INTERCEPT_IO "Use GOTCHA as IO interception tool" OFF)
 option(HERMES_COMMUNICATION_MPI "Use MPI as the communication layer." ON)
 option(HERMES_ENABLE_DOXYGEN "Enable hermes documentation." OFF)
 option(HERMES_BUILD_BUFFER_POOL_VISUALIZER "Build the BufferPool visualizer" OFF)
