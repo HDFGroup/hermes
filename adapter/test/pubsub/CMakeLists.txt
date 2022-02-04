@@ -32,8 +32,8 @@ foreach(program ${MULTI_NODE_PUBSUB_TESTS})
 endforeach()
 
 foreach(program ${EXTENDED_PUBSUB_TESTS})
-    target_include_directories(${program} PUBLIC ${HERMES_ADAPTER_DIR})
-    target_include_directories(${program} PUBLIC ${HERMES_ADAPTER_TEST_DIR})
+    target_include_directories(${program} PRIVATE ${HERMES_ADAPTER_DIR})
+    target_include_directories(${program} PRIVATE ${HERMES_ADAPTER_TEST_DIR})
 endforeach()
 
 if(HERMES_INSTALL_TESTS)
@@ -41,8 +41,6 @@ if(HERMES_INSTALL_TESTS)
         install(
                 TARGETS
                 ${program}
-                EXPORT
-                ${HERMES_EXPORTED_TARGETS}
                 LIBRARY DESTINATION ${HERMES_INSTALL_LIB_DIR}
                 ARCHIVE DESTINATION ${HERMES_INSTALL_LIB_DIR}
                 RUNTIME DESTINATION ${HERMES_INSTALL_BIN_DIR}
