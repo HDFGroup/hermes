@@ -153,7 +153,7 @@ add_custom_target(ares
 if(HERMES_INSTALL_TESTS)
   set(TEST_EXECS dpe_optimization_test dpe_random_test
           dpe_roundrobin_test end_to_end_test
-          bucket_test stdio_test bp bp_test config_parser_test stb_map mdm trait)
+          bucket_test bp bp_test config_parser_test stb_map mdm trait)
   foreach(program ${TEST_EXECS})
     install(
             TARGETS
