@@ -484,7 +484,7 @@ void UpdateBufferingCapacities(SharedMemoryContext *context, i64 adjustment,
 
   // NOTE(chogan): Update local capacities, which will eventually be reflected
   // in the global SystemViewState.
-  // TODO(chogan): I think Target capacities will supercede the global system
+  // TODO(chogan): I think Target capacities will supersede the global system
   // view state once we have topologies. For now we track both node capacities
   // and global capacities.
   pool->capacity_adjustments[device_id].fetch_add(adjustment);
