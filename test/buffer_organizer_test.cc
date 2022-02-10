@@ -266,6 +266,29 @@ static void TestWriteOnlyBucket() {
   hermes->Finalize(true);
 }
 
+static void TestReadOnlyBucket() {
+  HermesPtr hermes = hermes::InitHermesDaemon();
+  std::string bkt_name = "ReadOnly";
+  VBucket vbkt(bkt_name, hermes);
+  Bucket bkt(bkt_name, hermes);
+
+  hapi::ReadOnlyTrait trait;
+  vbkt.Attach(&trait);
+
+  hapi::Blob blob(KILOBYTES(4), 127);
+
+  const int kIters = 128;
+  for (int i = 0; i < kIters; ++i) {
+    std::string blob_name = "b" + std::to_string(i);
+    bkt.Put(blob_name, blob);
+    vbkt.Link(blob_name, bkt_name);
+  }
+
+  vbkt.Destroy();
+  bkt.Destroy();
+  hermes->Finalize(true);
+}
+
 int main(int argc, char *argv[]) {
   int mpi_threads_provided;
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
@@ -285,6 +308,7 @@ int main(int argc, char *argv[]) {
   HERMES_ADD_TEST(TestBoMove);
   HERMES_ADD_TEST(TestOrganizeBlob);
   HERMES_ADD_TEST(TestWriteOnlyBucket);
+  HERMES_ADD_TEST(TestReadOnlyBucket);
 
 #undef HERMES_ADD_TEST
 

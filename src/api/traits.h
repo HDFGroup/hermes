@@ -23,6 +23,7 @@ namespace api {
 
 #define HERMES_PERSIST_TRAIT 11
 #define HERMES_WRITE_ONLY_TRAIT 12
+#define HERMES_READ_ONLY_TRAIT 13
 
 /** A blob's hosting bucket and blob names */
 struct BlobInfo {
@@ -57,6 +58,8 @@ struct Trait {
   OnLinkCallback onLinkFn;
   /** Callback for blob-<vbucket unlink events */
   OnLinkCallback onUnlinkFn;
+  /** Callback for VBucket::Get events */
+  OnLinkCallback onGetFn;
 
   Trait() {}
   Trait(TraitID id, std::vector<TraitID> conflict_traits, TraitType type);
@@ -86,8 +89,14 @@ struct WriteOnlyTrait : public Trait {
   void onDetach(HermesPtr hermes, VBucketID id, Trait *trait);
   void onLink(HermesPtr hermes, TraitInput &input, Trait *trait);
   void onUnlink(HermesPtr hermes, TraitInput &input, Trait *trait);
+  void onGet(HermesPtr hermes, TraitInput &input, Trait *trait);
 };
 
+struct ReadOnlyTrait : public Trait {
+  ReadOnlyTrait();
+
+  void onGet(HermesPtr hermes, TraitInput &input, Trait *trait);
+};
 }  // namespace api
 }  // namespace hermes
 
