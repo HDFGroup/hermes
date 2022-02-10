@@ -488,7 +488,8 @@ void CheckResults(float *data, size_t num_elements,
   CHECK(f);
 
   std::vector<float> read_data(num_elements);
-  fread(read_data.data(), 1, num_elements * sizeof(float), f);
+  size_t bytes_read = fread(read_data.data(), 1, num_elements * sizeof(float),
+                            f);
 
   for (size_t i = 0; i < num_elements; ++i) {
     Assert(data[i] == read_data[i]);
