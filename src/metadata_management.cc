@@ -727,6 +727,9 @@ void WaitForOutstandingBlobOps(MetadataManager *mdm, BlobID blob_id) {
     BlobInfo *blob_info = GetBlobInfoPtr(mdm, blob_id);
     if (blob_info) {
       t = TryBeginTicketMutex(&blob_info->lock, ticket);
+    } else {
+      // Blob was deleted
+      break;
     }
     if (!t.acquired) {
       ReleaseBlobInfoPtr(mdm);

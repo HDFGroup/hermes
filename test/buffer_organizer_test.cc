@@ -249,7 +249,6 @@ static void TestWriteOnlyBucket() {
   VBucket vbkt(bkt_name, hermes);
   Bucket bkt(bkt_name, hermes);
 
-
   hapi::WriteOnlyTrait trait;
   vbkt.Attach(&trait);
 
