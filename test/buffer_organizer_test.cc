@@ -275,13 +275,23 @@ static void TestReadOnlyBucket() {
   hapi::ReadOnlyTrait trait;
   vbkt.Attach(&trait);
 
-  hapi::Blob blob(KILOBYTES(4), 127);
+  const int kBlobSize = KILOBYTES(4);
+  const u8 kBlobData = 127;
+  hapi::Blob blob(kBlobSize, kBlobData);
 
   const int kIters = 128;
   for (int i = 0; i < kIters; ++i) {
     std::string blob_name = "b" + std::to_string(i);
     bkt.Put(blob_name, blob);
     vbkt.Link(blob_name, bkt_name);
+  }
+
+  for (int i = 0; i < kIters; ++i) {
+    std::string blob_name = "b" + std::to_string(i);
+    hapi::Blob retrieved_data(kBlobSize);
+    // Call Get through VBucket so the OnGet callback is triggered
+    vbkt.Get(blob_name, bkt, retrieved_data);
+    Assert(retrieved_data == blob);
   }
 
   vbkt.Destroy();
