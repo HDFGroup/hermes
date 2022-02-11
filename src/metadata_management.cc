@@ -968,16 +968,29 @@ SystemViewState *GetGlobalSystemViewState(SharedMemoryContext *context) {
   return result;
 }
 
-void LocalUpdateGlobalSystemViewState(SharedMemoryContext *context,
-                                      std::vector<i64> adjustments) {
+std::vector<DeviceID>
+LocalUpdateGlobalSystemViewState(SharedMemoryContext *context,
+                                 std::vector<i64> adjustments) {
+  std::vector<DeviceID> result;
+
   for (size_t i = 0; i < adjustments.size(); ++i) {
     SystemViewState *state = GetGlobalSystemViewState(context);
     if (adjustments[i]) {
       state->bytes_available[i].fetch_add(adjustments[i]);
       DLOG(INFO) << "DeviceID " << i << " adjusted by " << adjustments[i]
                  << " bytes\n";
+
+      // Collect devices for which to trigger the BufferOrganizer if the
+      // capacities are beyond the min/max thresholds
+      int mb_available = (int)(state->bytes_available[i] / 1024.0f / 1024.0f);
+      if (mb_available < state->bo_capacity_thresholds_mb[i][0] ||
+          mb_available > state->bo_capacity_thresholds_mb[i][1]) {
+        result.push_back((DeviceID)i);
+      }
     }
   }
+
+  return result;
 }
 
 void UpdateGlobalSystemViewState(SharedMemoryContext *context,
@@ -994,14 +1007,25 @@ void UpdateGlobalSystemViewState(SharedMemoryContext *context,
     }
   }
 
+  std::vector<DeviceID> devices_to_organize;
   if (update_needed) {
     u32 target_node = mdm->global_system_view_state_node_id;
     if (target_node == rpc->node_id) {
-      LocalUpdateGlobalSystemViewState(context, adjustments);
+      devices_to_organize =
+        LocalUpdateGlobalSystemViewState(context, adjustments);
     } else {
-      RpcCall<bool>(rpc, target_node, "RemoteUpdateGlobalSystemViewState",
-                    adjustments);
+      devices_to_organize =
+        RpcCall<std::vector<DeviceID>>(rpc, target_node,
+                                       "RemoteUpdateGlobalSystemViewState",
+                                       adjustments);
     }
+  }
+
+  for (size_t i = 0; i < devices_to_organize.size(); ++i) {
+    // TODO(chogan):
+    // for each blob with (a percentage of ?) buffers in this device:
+    //    OrganizeBlob(context, rpc, bucket_id, blob_name, epsilon,
+    //                 custom_importance);
   }
 }
 
@@ -1033,6 +1057,13 @@ SystemViewState *CreateSystemViewState(Arena *arena, Config *config) {
   result->num_devices = config->num_devices;
   for (int i = 0; i < result->num_devices; ++i) {
     result->bytes_available[i] = config->capacities[i];
+
+    // Min and max thresholds
+    const int kNumThresholds = 2;
+    for (int j = 0; j < kNumThresholds; ++j) {
+      result->bo_capacity_thresholds_mb[i][j] =
+        config->bo_capacity_thresholds_mb[i][j];
+    }
   }
 
   return result;

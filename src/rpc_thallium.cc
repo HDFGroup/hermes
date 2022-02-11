@@ -312,8 +312,10 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
   // Probably should move it to a completely separate tl::engine.
   auto rpc_update_global_system_view_state =
     [context](const request &req, std::vector<i64> adjustments) {
-      LocalUpdateGlobalSystemViewState(context, adjustments);
-      req.respond(true);
+      std::vector<DeviceID> result =
+        LocalUpdateGlobalSystemViewState(context, adjustments);
+
+      req.respond(result);
     };
 
   auto rpc_get_blob_ids = [context](const request &req, BucketID bucket_id) {

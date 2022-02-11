@@ -128,7 +128,12 @@ struct VBucketInfo {
 };
 
 struct SystemViewState {
+  /** The number of bytes available for buffering in each device. */
   std::atomic<u64> bytes_available[kMaxDevices];
+  /** The min and max threshold for each device at which the BufferOrganizer
+   * will trigger. */
+  int bo_capacity_thresholds_mb[kMaxDevices][2];
+  /** The total number of buffering devices. */
   int num_devices;
 };
 
