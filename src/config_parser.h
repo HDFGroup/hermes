@@ -68,6 +68,7 @@ enum ConfigVariable {
   ConfigVariable_IsSharedDevice,
   ConfigVariable_BoNumThreads,
   ConfigVariable_RRSplit,
+  ConfigVariable_BOCapacityThresholdsMiB,
 
   ConfigVariable_Count
 };
