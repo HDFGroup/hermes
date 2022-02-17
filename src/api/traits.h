@@ -92,11 +92,6 @@ struct WriteOnlyTrait : public Trait {
   void onGet(HermesPtr hermes, TraitInput &input, Trait *trait);
 };
 
-struct ReadOnlyTrait : public Trait {
-  ReadOnlyTrait();
-
-  void onGet(HermesPtr hermes, TraitInput &input, Trait *trait);
-};
 }  // namespace api
 }  // namespace hermes
 

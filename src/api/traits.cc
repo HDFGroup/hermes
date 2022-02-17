@@ -142,23 +142,5 @@ void WriteOnlyTrait::onUnlink(HermesPtr hermes, TraitInput &input,
   (void)trait;
 }
 
-ReadOnlyTrait::ReadOnlyTrait()
-  : Trait(HERMES_READ_ONLY_TRAIT, std::vector<TraitID>(), TraitType::META) {
-  onGetFn = std::bind(&ReadOnlyTrait::onGet, this, std::placeholders::_1,
-                      std::placeholders::_2, std::placeholders::_3);
-}
-
-void ReadOnlyTrait::onGet(HermesPtr hermes, TraitInput &input, Trait *trait) {
-  (void)trait;
-
-  SharedMemoryContext *context = &hermes->context_;
-  RpcContext *rpc = &hermes->rpc_;
-  BucketID bucket_id = GetBucketId(context, rpc, input.bucket_name.c_str());
-  f32 epsilon = 0.1f;
-  f32 custom_importance = 1.0f;
-  hermes::OrganizeBlob(context, rpc, bucket_id, input.blob_name, epsilon,
-                       custom_importance);
-}
-
 }  // namespace api
 }  // namespace hermes
