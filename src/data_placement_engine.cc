@@ -251,7 +251,8 @@ Status MinimizeIoTimePlacement(const std::vector<size_t> &blob_sizes,
                                const std::vector<u64> &node_state,
                                const std::vector<f32> &bandwidths,
                                const std::vector<TargetID> &targets,
-                               std::vector<PlacementSchema> &output) {
+                               std::vector<PlacementSchema> &output,
+                               const api::Context &ctx) {
   using operations_research::MPSolver;
   using operations_research::MPVariable;
   using operations_research::MPConstraint;
@@ -261,8 +262,19 @@ Status MinimizeIoTimePlacement(const std::vector<size_t> &blob_sizes,
   const size_t num_targets = targets.size();
   const size_t num_blobs = blob_sizes.size();
 
-  // TODO(KIMMY): size of constraints should be from context
-  const size_t constraints_per_target = 3;
+  const double minimum_remaining_capacity =
+    ctx.minimize_io_time_options.minimum_remaining_capacity;
+  const double capacity_change_threshold =
+    ctx.minimize_io_time_options.capacity_change_threshold;
+
+  size_t constraints_per_target = 1;
+  if (minimum_remaining_capacity != 0) {
+    constraints_per_target++;
+  }
+  if (capacity_change_threshold != 0) {
+    constraints_per_target++;
+  }
+
   const size_t total_constraints =
     num_blobs + (num_targets * constraints_per_target) - 1;
   std::vector<MPConstraint*> blob_constrt(total_constraints);
@@ -286,32 +298,32 @@ Status MinimizeIoTimePlacement(const std::vector<size_t> &blob_sizes,
   num_constrts += num_blobs;
 
   // Constraint #2: Minimum Remaining Capacity Constraint
-  // TODO(chogan): Get this number from the api::Context
-  const double minimum_remaining_capacity = 0.1;
-  for (size_t j {0}; j < num_targets; ++j) {
-    double remaining_capacity_threshold =
-      static_cast<double>(node_state[j]) * minimum_remaining_capacity;
-    blob_constrt[num_constrts+j] = solver.MakeRowConstraint(
-      0, static_cast<double>(node_state[j]) - remaining_capacity_threshold);
-    for (size_t i {0}; i < num_blobs; ++i) {
-      blob_constrt[num_constrts+j]->SetCoefficient(
-        blob_fraction[i][j], static_cast<double>(blob_sizes[i]));
+  if (minimum_remaining_capacity != 0) {
+    for (size_t j {0}; j < num_targets; ++j) {
+      double remaining_capacity_threshold =
+        static_cast<double>(node_state[j]) * minimum_remaining_capacity;
+      blob_constrt[num_constrts+j] = solver.MakeRowConstraint(
+        0, static_cast<double>(node_state[j]) - remaining_capacity_threshold);
+      for (size_t i {0}; i < num_blobs; ++i) {
+        blob_constrt[num_constrts+j]->SetCoefficient(
+          blob_fraction[i][j], static_cast<double>(blob_sizes[i]));
+      }
     }
+    num_constrts += num_targets;
   }
-  num_constrts += num_targets;
 
   // Constraint #3: Remaining Capacity Change Threshold
-  // TODO(chogan): Get this number from the api::Context
-  const double capacity_change_threshold = 0.2;
-  for (size_t j {0}; j < num_targets; ++j) {
-    blob_constrt[num_constrts+j] =
-      solver.MakeRowConstraint(0, capacity_change_threshold * node_state[j]);
-    for (size_t i {0}; i < num_blobs; ++i) {
-      blob_constrt[num_constrts+j]->SetCoefficient(
-        blob_fraction[i][j], static_cast<double>(blob_sizes[i]));
+  if (capacity_change_threshold != 0) {
+    for (size_t j {0}; j < num_targets; ++j) {
+      blob_constrt[num_constrts+j] =
+        solver.MakeRowConstraint(0, capacity_change_threshold * node_state[j]);
+      for (size_t i {0}; i < num_blobs; ++i) {
+        blob_constrt[num_constrts+j]->SetCoefficient(
+          blob_fraction[i][j], static_cast<double>(blob_sizes[i]));
+      }
     }
+    num_constrts += num_targets;
   }
-  num_constrts += num_targets;
 
   // Placement Ratio
   for (size_t j {0}; j < num_targets-1; ++j) {
@@ -461,7 +473,7 @@ Status CalculatePlacement(SharedMemoryContext *context, RpcContext *rpc,
         std::vector<f32> bandwidths = GetBandwidths(context, targets);
 
         result = MinimizeIoTimePlacement(blob_sizes, node_state, bandwidths,
-                                         targets, output_tmp);
+                                         targets, output_tmp, api_context);
         break;
       }
     }

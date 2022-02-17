@@ -12,13 +12,14 @@
 
 #include <numeric>
 
+#include <mpi.h>
+
 #include "hermes.h"
 #include "vbucket.h"
 #include "metadata_management_internal.h"
 #include "buffer_pool_internal.h"
 #include "test_utils.h"
 
-#include <mpi.h>
 
 namespace hapi = hermes::api;
 using HermesPtr = std::shared_ptr<hapi::Hermes>;
@@ -252,7 +253,9 @@ static void TestWriteOnlyBucket() {
   hapi::WriteOnlyTrait trait;
   vbkt.Attach(&trait);
 
-  hapi::Blob blob(KILOBYTES(4), 127);
+  const size_t kBlobSize = KILOBYTES(4);
+  hapi::Blob blob(kBlobSize);
+  std::iota(blob.begin(), blob.end(), 0);
 
   const int kIters = 128;
   for (int i = 0; i < kIters; ++i) {

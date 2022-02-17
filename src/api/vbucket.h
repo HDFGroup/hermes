@@ -121,10 +121,6 @@ class VBucket {
   size_t Get(const std::string &name, Bucket &bkt, Blob &user_blob,
              const Context &ctx);
   size_t Get(const std::string &name, Bucket &bkt, Blob &user_blob);
-
-  /**
-   *  *    * \brief Retrieve a Blob into a user buffer.
-   *   *       */
   size_t Get(const std::string &name, Bucket &bkt, void *user_blob,
              size_t blob_size, const Context &ctx);
 

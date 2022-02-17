@@ -151,7 +151,7 @@ int main(int argc, char **argv) {
       time_point start_tm = now();
       result = MinimizeIoTimePlacement(blob_sizes, tgt_state.bytes_available,
                                        tgt_state.bandwidth, targets,
-                                       output_tmp);
+                                       output_tmp, api::Context());
       time_point end_tm = now();
       dpe_seconds = std::chrono::duration<double>(end_tm - start_tm).count();
       break;
