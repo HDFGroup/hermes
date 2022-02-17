@@ -58,7 +58,8 @@ struct MinimizeIoTimeOptions {
   MinimizeIoTimeOptions(double minimum_remaining_capacity = 0.1,
                         double capacity_change_threshold = 0.2)
       : minimum_remaining_capacity(minimum_remaining_capacity),
-        capacity_change_threshold(capacity_change_threshold) {};
+        capacity_change_threshold(capacity_change_threshold) {
+  }
 };
 
 /** Hermes API call context */
