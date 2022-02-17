@@ -23,7 +23,6 @@ namespace api {
 
 #define HERMES_PERSIST_TRAIT 11
 #define HERMES_WRITE_ONLY_TRAIT 12
-#define HERMES_READ_ONLY_TRAIT 13
 
 /** A blob's hosting bucket and blob names */
 struct BlobInfo {
