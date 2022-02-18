@@ -2,6 +2,11 @@
 
 set -x -e
 
+if [[ "${CI}" != "true" ]]; then
+    echo "This script is only meant to be run within Github actions"
+    exit 1
+fi
+
 . cluster_utils.sh
 
 # Create ssh keys for the cluster to use
