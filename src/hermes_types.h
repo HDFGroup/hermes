@@ -200,6 +200,9 @@ struct Config {
   /** If non-zero, the device is shared among all nodes (e.g., burst buffs) */
   int is_shared_device[kMaxDevices];
 
+  /** TODO(chogan) */
+  std::string rpc_server_host_file;
+
   /** The hostname of the RPC server, minus any numbers that Hermes may
    * auto-generate when the rpc_hostNumber_range is specified. */
   std::string rpc_server_base_name;

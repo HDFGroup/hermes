@@ -27,6 +27,11 @@ static const u32 kGlobalMutexNodeId = 1;
 
 struct RpcContext;
 
+struct ShmemString {
+  u32 offset;
+  u32 size;
+};
+
 enum MapType {
   kMapType_Bucket,
   kMapType_VBucket,
@@ -113,6 +118,7 @@ struct MetadataManager {
   VBucketID first_free_vbucket;
 
   ptrdiff_t rpc_state_offset;
+  ptrdiff_t host_names_offset;
   ptrdiff_t host_numbers_offset;
   ptrdiff_t system_view_state_offset;
   ptrdiff_t global_system_view_state_offset;

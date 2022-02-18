@@ -42,9 +42,13 @@ struct RpcContext {
   /** Array of host numbers in shared memory. This size is
    * RpcContext::num_nodes */
   int *host_numbers;
+  /** Array of host names stored in shared memory. This array size is
+   * RpcContext::num_nodes. */
+  ShmemString *host_names;
   u32 node_id;
   u32 num_nodes;
   int port;
+  bool use_host_file;
   /** The host name without the host number. Allows programmatic construction of
    * predictable host names like cluster-node-1, cluster-node-2, etc. without
    * storing extra copies of the base hostname.*/

@@ -68,6 +68,7 @@ static const char *kConfigVariableStrings[ConfigVariable_Count] = {
   "max_buckets_per_node",
   "max_vbuckets_per_node",
   "system_view_state_update_interval_ms",
+  "rpc_server_host_file",
   "rpc_server_base_name",
   "rpc_server_suffix",
   "buffer_pool_shmem_name",
@@ -907,6 +908,10 @@ void ParseTokens(TokenList *tokens, Config *config) {
       }
       case ConfigVariable_SystemViewStateUpdateInterval: {
         config->system_view_state_update_interval_ms = ParseInt(&tok);
+        break;
+      }
+      case ConfigVariable_RpcServerHostFile: {
+        config->rpc_server_host_file = ParseString(&tok);
         break;
       }
       case ConfigVariable_RpcServerBaseName: {

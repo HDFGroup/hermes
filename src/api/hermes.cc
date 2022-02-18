@@ -13,6 +13,7 @@
 #include <sys/mman.h>
 
 #include <cmath>
+#include <fstream>
 
 #include "glog/logging.h"
 
@@ -170,6 +171,27 @@ ArenaInfo GetArenaInfo(Config *config) {
   return result;
 }
 
+std::vector<std::string> GetHostsFromFile(const std::string &host_file) {
+  std::vector<std::string> result;
+  std::fstream file;
+  LOG(INFO) << "Reading hosts from " << host_file;
+
+  file.open(host_file.c_str(), std::ios::in);
+  if (file.is_open()) {
+    std::string file_line;
+    while (getline(file, file_line)) {
+      if (!file_line.empty()) {
+        result.emplace_back(file_line);
+      }
+    }
+  } else {
+    LOG(FATAL) << "Failed to open host file " << host_file;
+  }
+  file.close();
+
+  return result;
+}
+
 SharedMemoryContext InitHermesCore(Config *config, CommunicationContext *comm,
                                    ArenaInfo *arena_info, Arena *arenas,
                                    RpcContext *rpc) {
@@ -204,12 +226,36 @@ SharedMemoryContext InitHermesCore(Config *config, CommunicationContext *comm,
   rpc->state = CreateRpcState(&arenas[kArenaType_MetaData]);
   mdm->rpc_state_offset = (u8 *)rpc->state - shmem_base;
 
-  rpc->host_numbers = PushArray<int>(&arenas[kArenaType_MetaData],
-                                     config->host_numbers.size());
-  for (size_t i = 0; i < config->host_numbers.size(); ++i) {
-    rpc->host_numbers[i] = config->host_numbers[i];
+  if (rpc->use_host_file) {
+    std::vector<std::string> host_names =
+      GetHostsFromFile(config->rpc_server_host_file);
+    CHECK_EQ(host_names.size(), rpc->num_nodes);
+
+    rpc->host_names = PushArray<ShmemString>(&arenas[kArenaType_MetaData],
+                                             host_names.size());
+
+    for (size_t i = 0; i < host_names.size(); ++i) {
+      size_t host_name_size = host_names[i].size();
+      ShmemString s = {};
+      char *host_name = PushArray<char>(&arenas[kArenaType_MetaData],
+                                        host_name_size);
+      memcpy(host_name, host_names[i].data(), host_name_size);
+      s.size = (u32)host_name_size;
+      // TODO(chogan): Offset is from the beginning of this ShmemString
+      // instance. Use API to enforce this.
+      s.offset = (u8 *)host_name - (u8 *)&rpc->host_names[i];
+      rpc->host_names[i] = s;
+    }
+
+    mdm->host_names_offset = (u8 *)rpc->host_names - (u8 *)shmem_base;
+  } else {
+    rpc->host_numbers = PushArray<int>(&arenas[kArenaType_MetaData],
+                                       config->host_numbers.size());
+    for (size_t i = 0; i < config->host_numbers.size(); ++i) {
+      rpc->host_numbers[i] = config->host_numbers[i];
+    }
+    mdm->host_numbers_offset = (u8 *)rpc->host_numbers - (u8 *)shmem_base;
   }
-  mdm->host_numbers_offset = (u8 *)rpc->host_numbers - (u8 *)shmem_base;
 
   InitMetadataManager(mdm, &arenas[kArenaType_MetaData], config, comm->node_id);
   InitMetadataStorage(&context, mdm, &arenas[kArenaType_MetaData], config);
@@ -299,6 +345,8 @@ std::shared_ptr<api::Hermes> InitHermes(Config *config, bool is_daemon,
     rpc.state = (void *)(context.shm_base + mdm->rpc_state_offset);
     rpc.host_numbers =
       (int *)((u8 *)context.shm_base + mdm->host_numbers_offset);
+    rpc.host_names =
+      (ShmemString *)((u8 *)context.shm_base + mdm->host_names_offset);
   }
 
   InitFilesForBuffering(&context, comm);
@@ -317,17 +365,17 @@ std::shared_ptr<api::Hermes> InitHermes(Config *config, bool is_daemon,
   // save a reference to the context and rpc instances that are members of the
   // Hermes instance.
   if (comm.proc_kind == ProcessKind::kHermes) {
-    std::string host_number = GetHostNumberAsString(&result->rpc_,
-                                                    result->rpc_.node_id);
+    std::string rpc_server_addr =
+      GetRpcAddress(&result->rpc_, config, result->rpc_.node_id,
+                    config->rpc_port);
+    std::string bo_address =
+      GetRpcAddress(&result->rpc_, config, result->rpc_.node_id,
+                    config->buffer_organizer_port);
 
-    std::string rpc_server_addr = GetRpcAddress(config, host_number,
-                                                config->rpc_port);
     result->rpc_.start_server(&result->context_, &result->rpc_,
                               &result->trans_arena_, rpc_server_addr.c_str(),
                               config->rpc_num_threads);
 
-    std::string bo_address = GetRpcAddress(config, host_number,
-                                           config->buffer_organizer_port);
     StartBufferOrganizer(&result->context_, &result->rpc_,
                          &result->trans_arena_, bo_address.c_str(),
                          config->bo_num_threads, config->buffer_organizer_port);

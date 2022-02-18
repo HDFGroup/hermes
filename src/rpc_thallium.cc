@@ -649,6 +649,10 @@ void InitRpcContext(RpcContext *rpc, u32 num_nodes, u32 node_id,
                         kMaxServerSuffixSize);
 
   rpc->client_rpc.state_size = sizeof(ClientThalliumState);
+
+  if (!config->rpc_server_host_file.empty()) {
+    rpc->use_host_file = true;
+  }
 }
 
 void *CreateRpcState(Arena *arena) {
@@ -763,15 +767,32 @@ void FinalizeClient(SharedMemoryContext *context, RpcContext *rpc,
   // google::ShutdownGoogleLogging();
 }
 
-std::string GetRpcAddress(Config *config, const std::string &host_number,
+std::string GetHostNameFromNodeId(RpcContext *rpc, u32 node_id) {
+  std::string result;
+  // NOTE(chogan): node_id 0 is reserved as the NULL node
+  u32 index = node_id - 1;
+  if (rpc->use_host_file) {
+    ShmemString *shmem_string = &rpc->host_names[index];
+    const char *host_name = (char *)((u8 *)shmem_string + shmem_string->offset);
+    result = std::string(host_name, shmem_string->size);
+  } else {
+    std::string host_number = GetHostNumberAsString(rpc, node_id);
+    result = (std::string(rpc->base_hostname) + host_number +
+              std::string(rpc->hostname_suffix));
+  }
+
+  return result;
+}
+
+std::string GetRpcAddress(RpcContext *rpc, Config *config, u32 node_id,
                           int port) {
   std::string result = config->rpc_protocol + "://";
 
   if (!config->rpc_domain.empty()) {
     result += config->rpc_domain + "/";
   }
-  result += (config->rpc_server_base_name + host_number +
-             config->rpc_server_suffix + ":" + std::to_string(port));
+  std::string host_name = GetHostNameFromNodeId(rpc, node_id);
+  result += host_name + ":" + std::to_string(port);
 
   return result;
 }
@@ -779,10 +800,8 @@ std::string GetRpcAddress(Config *config, const std::string &host_number,
 std::string GetServerName(RpcContext *rpc, u32 node_id,
                           bool is_buffer_organizer) {
   ThalliumState *tl_state = GetThalliumState(rpc);
+  std::string host_name = GetHostNameFromNodeId(rpc, node_id);
 
-  std::string host_number = GetHostNumberAsString(rpc, node_id);
-  std::string host_name = (std::string(rpc->base_hostname) + host_number +
-                           std::string(rpc->hostname_suffix));
   // TODO(chogan): @optimization Could cache the last N hostname->IP mappings to
   // avoid excessive syscalls. Should profile first.
   struct hostent hostname_info = {};

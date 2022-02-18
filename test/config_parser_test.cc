@@ -204,6 +204,8 @@ void TestDefaultConfig(Arena *arena, const char *config_file) {
   Assert(config.buffer_organizer_port == 8081);
   Assert(config.rpc_num_threads == 1);
 
+  Assert(config.rpc_server_host_file == "");
+
   const char expected_rpc_server_name[] = "localhost";
   Assert(config.rpc_server_base_name == expected_rpc_server_name);
   Assert(config.rpc_server_suffix.empty());
