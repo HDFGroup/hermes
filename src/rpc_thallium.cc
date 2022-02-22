@@ -769,12 +769,10 @@ void FinalizeClient(SharedMemoryContext *context, RpcContext *rpc,
 
 std::string GetHostNameFromNodeId(RpcContext *rpc, u32 node_id) {
   std::string result;
-  // NOTE(chogan): node_id 0 is reserved as the NULL node
-  u32 index = node_id - 1;
   if (rpc->use_host_file) {
-    ShmemString *shmem_string = &rpc->host_names[index];
-    const char *host_name = (char *)((u8 *)shmem_string + shmem_string->offset);
-    result = std::string(host_name, shmem_string->size);
+    // NOTE(chogan): node_id 0 is reserved as the NULL node
+    u32 index = node_id - 1;
+    result = GetShmemString(&rpc->host_names[index]);
   } else {
     std::string host_number = GetHostNumberAsString(rpc, node_id);
     result = (std::string(rpc->base_hostname) + host_number +

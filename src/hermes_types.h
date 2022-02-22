@@ -200,7 +200,7 @@ struct Config {
   /** If non-zero, the device is shared among all nodes (e.g., burst buffs) */
   int is_shared_device[kMaxDevices];
 
-  /** TODO(chogan) */
+  /** The name of a file that contains host names, 1 per line */
   std::string rpc_server_host_file;
 
   /** The hostname of the RPC server, minus any numbers that Hermes may

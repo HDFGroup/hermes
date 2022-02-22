@@ -235,16 +235,9 @@ SharedMemoryContext InitHermesCore(Config *config, CommunicationContext *comm,
                                              host_names.size());
 
     for (size_t i = 0; i < host_names.size(); ++i) {
-      size_t host_name_size = host_names[i].size();
-      ShmemString s = {};
-      char *host_name = PushArray<char>(&arenas[kArenaType_MetaData],
-                                        host_name_size);
-      memcpy(host_name, host_names[i].data(), host_name_size);
-      s.size = (u32)host_name_size;
-      // TODO(chogan): Offset is from the beginning of this ShmemString
-      // instance. Use API to enforce this.
-      s.offset = (u8 *)host_name - (u8 *)&rpc->host_names[i];
-      rpc->host_names[i] = s;
+      char *host_name_mem = PushArray<char>(&arenas[kArenaType_MetaData],
+                                            host_names[i].size());
+      MakeShmemString(&rpc->host_names[i], (u8 *)host_name_mem, host_names[i]);
     }
 
     mdm->host_names_offset = (u8 *)rpc->host_names - (u8 *)shmem_base;
