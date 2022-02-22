@@ -24,6 +24,21 @@
 namespace hapi = hermes::api;
 using HermesPtr = std::shared_ptr<hapi::Hermes>;
 
+double GetMPIAverage(double rank_seconds, int num_ranks, MPI_Comm comm) {
+  double total_secs = 0;
+  MPI_Reduce(&rank_seconds, &total_secs, 1, MPI_DOUBLE, MPI_SUM, 0, comm);
+  double result = total_secs / num_ranks;
+
+  return result;
+}
+
+double GetBandwidth(double total_elapsed, double total_mb, MPI_Comm comm, int ranks) {
+  double avg_total_seconds = GetMPIAverage(total_elapsed, ranks, comm);
+  double result = total_mb / avg_total_seconds;
+
+  return result;
+}
+
 int main(int argc, char *argv[]) {
   int mpi_threads_provided;
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
@@ -36,6 +51,7 @@ int main(int argc, char *argv[]) {
   HermesPtr hermes = hapi::InitHermes(getenv("HERMES_CONF"));
 
   if (hermes->IsApplicationCore()) {
+    hermes::testing::Timer timer;
     hapi::Context ctx;
     // Disable swapping of Blobs
     ctx.disable_swap = true;
@@ -58,14 +74,43 @@ int main(int argc, char *argv[]) {
     const int kIters = 128;
     for (int i = 0; i < kIters; ++i) {
       std::string blob_name = "b" + std::to_string(i);
-      bkt.Put(blob_name, blob);
+      timer.resumeTime();
+      hapi::Status status;
+      while (!status.Succeeded()) {
+        status = bkt.Put(blob_name, blob);
+      }
       if (use_borg) {
         vbkt.Link(blob_name, bkt_name);
       }
+      timer.pauseTime();
+      hermes->AppBarrier();
     }
 
-    vbkt.Destroy();
-    bkt.Destroy();
+    hermes->AppBarrier();
+    if (!hermes->IsFirstRankOnNode()) {
+      vbkt.Release();
+      bkt.Release();
+    }
+
+    hermes->AppBarrier();
+    if (hermes->IsFirstRankOnNode()) {
+      vbkt.Destroy();
+      bkt.Destroy();
+    }
+
+    hermes->AppBarrier();
+
+    MPI_Comm *comm = (MPI_Comm *)hermes->GetAppCommunicator();
+    int num_ranks = hermes->GetNumProcesses();
+    double total_mb = (kBlobSize * kIters * num_ranks) / 1024.0 / 1024.0;
+    double bandwidth = GetBandwidth(timer.getElapsedTime(), total_mb, *comm,
+                                    num_ranks);
+
+    if (hermes->IsFirstRankOnNode()) {
+      fprintf(stderr, "##################### %f MiB/s\n", bandwidth);
+    }
+
+    hermes->AppBarrier();
   }
 
   hermes->Finalize();
