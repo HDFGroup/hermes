@@ -32,7 +32,8 @@ double GetMPIAverage(double rank_seconds, int num_ranks, MPI_Comm comm) {
   return result;
 }
 
-double GetBandwidth(double total_elapsed, double total_mb, MPI_Comm comm, int ranks) {
+double GetBandwidth(double total_elapsed, double total_mb, MPI_Comm comm,
+                    int ranks) {
   double avg_total_seconds = GetMPIAverage(total_elapsed, ranks, comm);
   double result = total_mb / avg_total_seconds;
 
