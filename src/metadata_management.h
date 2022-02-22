@@ -27,6 +27,33 @@ static const u32 kGlobalMutexNodeId = 1;
 
 struct RpcContext;
 
+/**
+ * Representation of a non-NULL-terminated string in shared memory.
+ *
+ * Both the ShmemString iteself and the memory for the string it represents must
+ * reside in the same shared memory segement, and the ShmemString must be stored
+ * at a lower address than the string memory because the offset is from the
+ * ShmemString instance itself. Here is a diagram:
+ *
+ * |-----------8 bytes offset ------------|
+ * [ ShmemString | offset: 8 | size: 16 ] [ "string in memory" ]
+ *
+ * @see MakeShmemString()
+ * @see GetShmemString()
+ *
+ */
+struct ShmemString {
+  /** offset is from the address of this ShmemString instance iteself */
+  u32 offset;
+  /** The size of the string (not NULL terminated) */
+  u32 size;
+
+  ShmemString(const ShmemString &) = delete;
+  ShmemString(const ShmemString &&) = delete;
+  ShmemString& operator=(const ShmemString &) = delete;
+  ShmemString& operator=(const ShmemString &&) = delete;
+};
+
 enum MapType {
   kMapType_Bucket,
   kMapType_VBucket,
@@ -113,6 +140,7 @@ struct MetadataManager {
   VBucketID first_free_vbucket;
 
   ptrdiff_t rpc_state_offset;
+  ptrdiff_t host_names_offset;
   ptrdiff_t host_numbers_offset;
   ptrdiff_t system_view_state_offset;
   ptrdiff_t global_system_view_state_offset;
@@ -454,6 +482,29 @@ void LocalReplaceBlobIdInBucket(SharedMemoryContext *context,
 void ReplaceBlobIdInBucket(SharedMemoryContext *context, RpcContext *rpc,
                            BucketID bucket_id, BlobID old_blob_id,
                            BlobID new_blob_id);
+
+/**
+ * Creates a ShmemString with the value @p val at location @p memory.
+ *
+ * @pre The address of @p sms must be lower than @p memory because the @p offset
+ *      is from the beginning of the @sms.
+ *
+ * @param[out] sms The ShmemString instance to be filled out.
+ * @param memory The location in shared memory to store the @p val.
+ * @param val The string to store.
+ */
+void MakeShmemString(ShmemString *sms, u8 *memory, const std::string &val);
+
+/**
+ * Retrieves a ShmemString into a std::string
+ *
+ * @param sms The ShmemString that represents the internal string
+ *
+ * @return A newly allocated std::string containing a copy of the string from
+ *         shared memory, or an empty std::string if the ShmemString is invalid.
+ */
+std::string GetShmemString(ShmemString *sms);
+
 }  // namespace hermes
 
 #endif  // HERMES_METADATA_MANAGEMENT_H_

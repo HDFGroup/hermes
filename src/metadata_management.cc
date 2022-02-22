@@ -1479,4 +1479,28 @@ bool UnlockBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id) {
   return result;
 }
 
+void MakeShmemString(ShmemString *sms, u8 *memory, const char *val, u32 size) {
+  memcpy(memory, val, size);
+  sms->size = size;
+  // NOTE(chogan): Offset is from the beginning of this ShmemString instance, so
+  // the memory for a ShmemString should always be at a higher address than the
+  // ShmemString itself.
+  CHECK_LT((u8 *)sms, (u8 *)memory);
+  sms->offset = (u8 *)memory - (u8 *)sms;
+}
+
+void MakeShmemString(ShmemString *sms, u8 *memory, const std::string &val) {
+  MakeShmemString(sms, memory, val.data(), val.size());
+}
+
+std::string GetShmemString(ShmemString *sms) {
+  std::string result;
+  if (sms->offset >= sizeof(ShmemString) && sms->size > 0) {
+    const char *internal_string = (char *)((u8 *)sms + sms->offset);
+    result = std::string(internal_string, sms->size);
+  }
+
+  return result;
+}
+
 }  // namespace hermes

@@ -214,7 +214,7 @@ void load(A &ar, api::Context &ctx) {
 }
 }  // namespace api
 
-std::string GetRpcAddress(Config *config, const std::string &host_number,
+std::string GetRpcAddress(RpcContext *rpc, Config *config, u32 node_id,
                           int port);
 
 static inline ThalliumState *GetThalliumState(RpcContext *rpc) {

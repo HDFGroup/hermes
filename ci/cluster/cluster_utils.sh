@@ -30,15 +30,17 @@ function hermes_cluster_up() {
         # Change the default hermes.conf file to accommodate multiple nodes and
         # store it at ${cluster_conf} on each node.
         # 1. Replace "./" mount_points and swap_mount with ${docker_home}
-        # 2. Change rpc_server_base_name to 'node'
+        # 2. Use rpc_server_host_file
         # 3. Change num_rpc_threads to 4
-        # 4. Change rpc_host_number_range to {1-2}
         docker exec --user ${docker_user} -w ${hermes_build_dir} ${h} \
                bash -c "sed -e 's|\"\./\"|\""${docker_home}"\"|g' \
-                        -e 's|\"localhost\"|\"node\"|' \
+                        -e 's|rpc_server_host_file = \"\"|rpc_server_host_file = \"hermes_hosts\"|' \
                         -e 's|rpc_num_threads = 1|rpc_num_threads = 4|' \
-                        -e 's|{}|{1-2}|' ${conf_path} > ${cluster_conf}"
+                        ${conf_path} > ${cluster_conf}"
 
+        # Create the hosts file
+        docker exec --user ${docker_user} -w ${hermes_build_dir} ${h} \
+               bash -c "echo -e \"${host1}\n${host2}\n\" > hermes_hosts"
         # Copy ssh keys to ${docker_home}/.ssh
         docker exec ${h} bash -c "cp ${HOME}/.ssh/id_rsa ${docker_home}/.ssh/id_rsa"
         docker exec ${h} bash -c "cp ${HOME}/.ssh/id_rsa.pub ${docker_home}/.ssh/id_rsa.pub"

@@ -55,6 +55,7 @@ enum ConfigVariable {
   ConfigVariable_MaxBucketsPerNode,
   ConfigVariable_MaxVBucketsPerNode,
   ConfigVariable_SystemViewStateUpdateInterval,
+  ConfigVariable_RpcServerHostFile,
   ConfigVariable_RpcServerBaseName,
   ConfigVariable_RpcServerSuffix,
   ConfigVariable_BufferPoolShmemName,

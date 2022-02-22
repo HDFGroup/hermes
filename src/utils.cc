@@ -91,6 +91,7 @@ void InitDefaultConfig(Config *config) {
 
   config->num_buffer_organizer_retries = 3;
 
+  config->rpc_server_host_file = "";
   config->rpc_server_base_name = "localhost";
   config->rpc_server_suffix = "";
   config->rpc_protocol = "ofi+sockets";
