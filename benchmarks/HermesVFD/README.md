@@ -1,22 +1,24 @@
 # Demonstrate how to use Hermes with hdf5_iotest
 
 ## Build Hermes
-```bash
-git clone https://github.com/HDFGroup/hermes.git
-```
-build with `HERMES_ENABLE_WRAPPER=ON` following the instructions in hermes README file
 
-## Build hdf5 with Hermes VFD
-```bash
-git clone https://github.com/jya-kmu/hdf5.git
-git checkout hermes_vfd
-git checkout 30d224cec2ea21c41ce09083f96885ea4785bbdf .
-```
-build hdf5 with `HDF5_ENABLE_PARALLEL=ON` and `HDF5_ENABLE_HERMES_VFD=ON`
+Follow the instructions in the Hermes
+[README](https://github.com/HDFGroup/hermes#hermes). Make sure to set the following options:
+* `HERMES_ENABLE_VFD=ON`
+* `HERMES_ENABLE_WRAPPER=ON`
 
 ## Build hdf5-iotest
+
+### Dependencies
+
+* parallel HDF5
+
+We use a fork of `hdf5-iotest` with a few modifications to make it compatible
+with with the Hermes VFD.
+
 ```bash
-git checkout https://github.com/jya-kmu/hdf5-iotest.git
+git clone https://github.com/jya-kmu/hdf5-iotest.git
+cd hdf5-iotest
 git checkout hermes-vfd
 ```
 We need two config files `hermes.conf` and `hdf5_iotest.ini` to start hdf5-io test with 
