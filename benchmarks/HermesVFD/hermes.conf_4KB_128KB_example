@@ -48,10 +48,8 @@ latencies_us = {15, 250000, 500000, 1000000};
 buffer_pool_arena_percentage = 0.18;
 # The percentage of Hermes memory to reserve for metadata.
 metadata_arena_percentage = 0.71;
-# The percentage of Hermes memory to reserve for data transfers.
-transfer_window_arena_percentage = 0.08;
 # The percentage of Hermes memory to reserve for short term storage.
-transient_arena_percentage = 0.03;
+transient_arena_percentage = 0.11;
 
 # The maximum number of buckets that can be created.
 max_buckets_per_node = 16;
@@ -90,7 +88,7 @@ buffer_organizer_port = 8081;
 # server-100-40g, then you would set rpc_server_base_name to 'server',
 # rpc_server_suffix to '-40g', and rpc_host_number_range to {1, 100}.
 # TODO(chogan): Support reading server names from file.
-rpc_host_number_range = {0, 0};
+rpc_host_number_range = {};
 # The number of handler threads for each RPC server.
 rpc_num_threads = 1;
 # The shared memory prefix for the hermes shared memory segment. A user name
