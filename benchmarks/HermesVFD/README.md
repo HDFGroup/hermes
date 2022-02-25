@@ -19,7 +19,7 @@ with with the Hermes VFD.
 ```bash
 git clone https://github.com/jya-kmu/hdf5-iotest.git
 cd hdf5-iotest
-git checkout hermes-vfd
+git checkout hermes-vdf
 ```
 We need two config files `hermes.conf` and `hdf5_iotest.ini` to start hdf5-io test with 
 Hermes buffering system. 
