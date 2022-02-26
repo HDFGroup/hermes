@@ -21,7 +21,7 @@ git clone https://github.com/jya-kmu/hdf5-iotest.git
 cd hdf5-iotest
 git checkout hermes-vfd
 ```
-We need two config files `hermes.conf` and `hdf5_iotest.ini` to start hdf5-io test with 
+We need two config files `hermes.conf` and `hdf5_iotest.ini` to start `hdf5-iotest` with 
 Hermes buffering system. 
 
 To create hermes.conf configuration file for Hermes environment setup, user can start from
