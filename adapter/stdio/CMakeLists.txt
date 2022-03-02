@@ -1,4 +1,4 @@
-project(StdioAdapter VERSION 0.3.0)
+project(StdioAdapter VERSION 0.4.0)
 
 # STDIO src code. We only include stdio.cc as it includes other cc to reduce compilation time.
 set(STDIO_ADAPTER_SRC stdio.cc)
