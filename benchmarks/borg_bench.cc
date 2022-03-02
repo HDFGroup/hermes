@@ -52,6 +52,7 @@ int main(int argc, char *argv[]) {
   HermesPtr hermes = hapi::InitHermes(getenv("HERMES_CONF"));
 
   if (hermes->IsApplicationCore()) {
+    int rank = hermes->GetProcessRank();
     hermes::testing::Timer timer;
     hapi::Context ctx;
     // Disable swapping of Blobs
@@ -60,7 +61,7 @@ int main(int argc, char *argv[]) {
     ctx.minimize_io_time_options.minimum_remaining_capacity = 0;
     ctx.minimize_io_time_options.capacity_change_threshold = 0;
 
-    std::string bkt_name = "BORG";
+    std::string bkt_name = "BORG" + std::string(" ") + std::to_string(rank);
     hapi::VBucket vbkt(bkt_name, hermes);
     hapi::Bucket bkt(bkt_name, hermes);
 
@@ -73,31 +74,39 @@ int main(int argc, char *argv[]) {
 
     // MinIoTime with retry
     const int kIters = 128;
+    size_t failed_puts = 0;
+    size_t failed_links = 0;
     for (int i = 0; i < kIters; ++i) {
-      std::string blob_name = "b" + std::to_string(i);
+      std::string blob_name = "b_" + std::to_string(rank) + "_" + std::to_string(i);
       timer.resumeTime();
       hapi::Status status;
-      while (!status.Succeeded()) {
-        status = bkt.Put(blob_name, blob);
+      while (!((status = bkt.Put(blob_name, blob)).Succeeded())) {
+          failed_puts++;
       }
       if (use_borg) {
-        vbkt.Link(blob_name, bkt_name);
+        hapi::Status link_status = vbkt.Link(blob_name, bkt_name);
+        if (!link_status.Succeeded()) {
+          failed_links++;
+        }
       }
       timer.pauseTime();
       hermes->AppBarrier();
     }
 
-    hermes->AppBarrier();
-    if (!hermes->IsFirstRankOnNode()) {
-      vbkt.Release();
-      bkt.Release();
-    }
+    std::cout << "Rank " << rank << " failed puts: " << failed_puts << "\n";
+    std::cout << "     " << "failed links: " << failed_links << "\n";
+
+    // hermes->AppBarrier();
+    // if (!hermes->IsFirstRankOnNode()) {
+    //   vbkt.Release();
+    //   bkt.Release();
+    // }
 
     hermes->AppBarrier();
-    if (hermes->IsFirstRankOnNode()) {
+    // if (hermes->IsFirstRankOnNode()) {
       vbkt.Destroy();
       bkt.Destroy();
-    }
+    // }
 
     hermes->AppBarrier();
 
@@ -110,8 +119,6 @@ int main(int argc, char *argv[]) {
     if (hermes->IsFirstRankOnNode()) {
       fprintf(stderr, "##################### %f MiB/s\n", bandwidth);
     }
-
-    hermes->AppBarrier();
   }
 
   hermes->Finalize();
