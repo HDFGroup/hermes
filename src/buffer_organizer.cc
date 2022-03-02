@@ -187,6 +187,7 @@ void LocalEnqueueBoMove(SharedMemoryContext *context, RpcContext *rpc,
 void BoMove(SharedMemoryContext *context, RpcContext *rpc,
             const BoMoveList &moves, BlobID blob_id, BucketID bucket_id,
             const std::string &internal_blob_name) {
+  VLOG(1) << "Moving blob " << blob_id.bits.buffer_ids_offset << std::endl;
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
 
   if (LocalLockBlob(context, blob_id)) {
@@ -280,6 +281,7 @@ void BoMove(SharedMemoryContext *context, RpcContext *rpc,
       LocalFreeBufferIdList(context, blob_id);
     }
     LocalUnlockBlob(context, blob_id);
+    VLOG(1) << "Done moving blob " << blob_id.bits.buffer_ids_offset << std::endl;
   } else {
     LOG(WARNING) << "Couldn't lock BlobID " << blob_id.as_int << "\n";
   }

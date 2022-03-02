@@ -480,7 +480,7 @@ void BeginTicketMutex(TicketMutex *mutex) {
     // ticket mutex with a waiting array at some point:
     // https://arxiv.org/pdf/1810.01573.pdf. It looks like that should give
     // us the best of both worlds.
-    sched_yield();
+    // sched_yield();
   }
 }
 
