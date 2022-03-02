@@ -8,7 +8,7 @@ project(HDF5_HERMES_VFD)
 # Version information
 #------------------------------------------------------------------------------
 set(HDF5_HERMES_VFD_VERSION_MAJOR "0")
-set(HDF5_HERMES_VFD_VERSION_MINOR "1")
+set(HDF5_HERMES_VFD_VERSION_MINOR "4")
 set(HDF5_HERMES_VFD_VERSION_PATCH "0")
 set(HDF5_HERMES_VFD_PACKAGE "hdf5_hermes_vfd")
 set(HDF5_HERMES_VFD_PACKAGE_NAME "HDF5_HERMES_VFD")

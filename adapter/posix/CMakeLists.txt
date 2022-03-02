@@ -1,4 +1,4 @@
-project(PosixAdapter VERSION 0.3.0)
+project(PosixAdapter VERSION 0.4.0)
 
 # POSIX src code. We only include posix.cc as it includes other cc to reduce compilation time.
 set(POSIX_ADAPTER_SRC posix.cc)
