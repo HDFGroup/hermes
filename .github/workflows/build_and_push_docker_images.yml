@@ -4,31 +4,16 @@ on:
   workflow_dispatch:
     inputs:
       build_docker_images:
-        description: 'An existing tag for which to build new docker images and publish them to dockerhub'
+        description: 'If ''true'', force a build of the docker images and push them to dockerhub'
         required: false
-        default: ''
+        default: false
 jobs:
   build-docker-images:
     if: ${{ github.ref_type == 'tag' || github.event.inputs.build_docker_images }}
     runs-on: ubuntu-20.04
-    strategy:
-      # user depends on dev depends on deps, so don't run in parallel
-      max-parallel: 1
-      matrix:
-        include:
-          - dockerfile: deps
-            tag: hermes-deps
-          - dockerfile: dev
-            tag: hermes-dev
-          - dockerfile: user
-            tag: hermes
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-        with:
-          # Checkout the appropriate tag if we're forcing a docker build by
-          # using the `build_docker_images` workflow dispatch input.
-          ref: ${{ github.event.input.build_docker_images }}
       - name: Login to Docker Hub
         uses: docker/login-action@v1
         with:
@@ -36,11 +21,27 @@ jobs:
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
-      - name: Build ${{matrix.dockerfile}}.Dockerfile
+      - name: Build and push deps.Dockerfile
         uses: docker/build-push-action@v2
         with:
           context: ./
-          file: ./docker/${{matrix.dockerfile}}.Dockerfile
+          file: ./docker/deps.Dockerfile
           builder: ${{ steps.buildx.outputs.name }}
           push: true
-          tags: hdfgroup/${{matrix.tag}}:latest
+          tags: hdfgroup/hermes-deps:latest
+      - name: Build and push dev.Dockerfile
+        uses: docker/build-push-action@v2
+        with:
+          context: ./
+          file: ./docker/dev.Dockerfile
+          builder: ${{ steps.buildx.outputs.name }}
+          push: true
+          tags: hdfgroup/hermes-dev:latest
+      - name: Build and push user.Dockerfile
+        uses: docker/build-push-action@v2
+        with:
+          context: ./
+          file: ./docker/user.Dockerfile
+          builder: ${{ steps.buildx.outputs.name }}
+          push: true
+          tags: hdfgroup/hermes:latest
