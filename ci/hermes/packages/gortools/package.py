@@ -36,7 +36,6 @@ class Gortools(Package):
     version('7.8', sha256='d93a9502b18af51902abd130ff5f23768fcf47e266e6d1f34b3586387aa2de68')
     version('7.0', sha256='379c13c9a5ae70bf0e876763005b2d2d51fcf966882b28b1a65344f2d3d2c589')
     depends_on('cmake@3.0.2:', '@7.7')
-    depends_on('coinutils')
 
     def url_for_version(self, version):
         url = "https://github.com/google/or-tools/archive/v{}.tar.gz"
