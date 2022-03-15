@@ -375,7 +375,7 @@ H5FD__hermes_open(const char *name, unsigned flags, hid_t fapl_id,
   int             o_flags;     /* Flags for open() call    */
   struct stat     sb;
   const H5FD_hermes_fapl_t *fa   = NULL;
-  H5FD_hermes_fapl_t new_fa;
+  H5FD_hermes_fapl_t new_fa = {0};
   char           *hermes_config = NULL;
   H5FD_t         *ret_value = NULL; /* Return value */
 
@@ -898,7 +898,6 @@ static herr_t H5FD__hermes_write(H5FD_t *_file, H5FD_mem_t H5_ATTR_UNUSED type,
   start_page_index = addr/blob_size;
   end_page_index = addr_end/blob_size;
 
-  /* Assume only using one page now */
   for (k = start_page_index; k <= end_page_index; ++k) {
     char k_blob[LEN_BLOB_NAME];
     snprintf(k_blob, sizeof(k_blob), "%zu\n", k);
