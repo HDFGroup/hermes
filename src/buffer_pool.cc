@@ -1181,7 +1181,7 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
       MakeBufferHeaders(buffer_pool_arena, slab_buffer_sizes[0][i], start, end,
                         node_id, ram_device_id, initial_offset, &header_begin);
     start = end;
-    initial_offset += buffer_counts[0][i] * slab_buffer_sizes[0][i];
+    initial_offset += (ptrdiff_t)buffer_counts[0][i] * slab_buffer_sizes[0][i];
   }
 
   // NOTE(chogan): Add remaining unused RAM headers
