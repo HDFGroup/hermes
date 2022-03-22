@@ -121,11 +121,6 @@ if(NOT "${CMAKE_CXX_STANDARD}")
   set(CMAKE_CXX_EXTENSIONS OFF)
 endif()
 
-if(NOT CMAKE_CXX_FLAGS)
- set (CMAKE_CXX_FLAGS "-Wall -Wextra -Werror ${CMAKE_CXX_FLAGS}")
- message (STATUS "Warnings Configuration: default: ${CMAKE_CXX_FLAGS}")
-endif()
-
 #-----------------------------------------------------------------------------
 # Targets built within this project are exported at Install time for use
 # by other projects.
