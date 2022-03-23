@@ -6,16 +6,20 @@ class Hermes(CMakePackage):
     url = "https://github.com/HDFGroup/hermes/tarball/master"
     git = "https://github.com/HDFGroup/hermes.git"
     version('master', branch='master')
+    variant('vfd', default=False, description='Enable HDF5 VFD')
     depends_on('mochi-thallium~cereal@0.8.3')
     depends_on('catch2@2.13.3')
     depends_on('gortools@7.7')
     depends_on('mpich@3.3.2:')
+    depends_on('hdf5@1.13.0:', when='+vfd')    
 
     def cmake_args(self):
         args = ['-DCMAKE_INSTALL_PREFIX={}'.format(self.prefix),
                 '-DHERMES_RPC_THALLIUM=ON',
                 '-DHERMES_INSTALL_TESTS=ON',
                 '-DBUILD_TESTING=ON']
+        if '+vfd' in self.spec:
+            args.append(self.define('HERMES_ENABLE_VFD', 'ON'))        
         return args
 
     def set_include(self, env, path):
