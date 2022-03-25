@@ -27,19 +27,13 @@ TEST_CASE("Open", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(result == H5I_INVALID_HID);
   }
 
-  // SECTION("truncate existing file and write-only") {
-  //   test::test_fopen(info.existing_file.c_str(), "w");
-  //   REQUIRE(test::fh_orig != nullptr);
-  //   test::test_fclose();
-  //   REQUIRE(test::status_orig == 0);
-  // }
-
-  // SECTION("truncate existing file and read/write") {
-  //   test::test_fopen(info.existing_file.c_str(), "w+");
-  //   REQUIRE(test::fh_orig != nullptr);
-  //   test::test_fclose();
-  //   REQUIRE(test::status_orig == 0);
-  // }
+  SECTION("truncate existing file and write-only") {
+    MuteHdf5Errors mute;
+    hid_t result = api.Create(info.existing_file, H5F_ACC_TRUNC);
+    REQUIRE(result != H5I_INVALID_HID);
+    herr_t err = api.Close(result);
+    REQUIRE(err >= 0);
+  }
 
   // SECTION("open existing file") {
   //   test::test_fopen(info.existing_file.c_str(), "r+");

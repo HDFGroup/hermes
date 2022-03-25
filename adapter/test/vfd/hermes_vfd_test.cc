@@ -88,14 +88,22 @@ struct VfdApi {
     return result;
   }
 
-  // Create() {
-  // }
+  hid_t Create(const std::string &fname, unsigned flags) {
+    hid_t result = H5Fcreate(fname.c_str(), flags, H5P_DEFAULT, H5P_DEFAULT);
+
+    return result;
+  }
+
   // Read() {
   // }
   // Write() {
   // }
-  // Close() {
-  // }
+
+  herr_t Close(hid_t id) {
+    herr_t result = H5Fclose(id);
+
+    return result;
+  }
 };
 
 }  // namespace hermes::adapter::vfd::test
