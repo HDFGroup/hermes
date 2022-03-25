@@ -19,6 +19,10 @@
 
 #include "catch_config.h"
 
+#ifndef O_TMPFILE
+#define O_TMPFILE 0
+#endif
+
 #include "adapter_test_utils.h"
 
 #if HERMES_INTERCEPT == 1
@@ -35,6 +39,7 @@ struct Arguments {
 };
 struct Info {
   bool debug = false;
+  bool supports_tmpfile;
   int rank = 0;
   int comm_size = 1;
   std::vector<char> write_data;
@@ -78,10 +83,12 @@ std::vector<char> gen_random(const int len) {
 
   return tmp_s;
 }
+
 int init(int* argc, char*** argv) {
   MPI_Init(argc, argv);
   info.write_data = gen_random(args.request_size);
   info.read_data = std::vector<char>(args.request_size, 'r');
+  info.supports_tmpfile = FilesystemSupportsTmpfile();
   MPI_Comm_rank(MPI_COMM_WORLD, &info.rank);
   MPI_Comm_size(MPI_COMM_WORLD, &info.comm_size);
   if (info.debug && info.rank == 0) {
@@ -92,6 +99,7 @@ int init(int* argc, char*** argv) {
   MPI_Barrier(MPI_COMM_WORLD);
   return 0;
 }
+
 int finalize() {
   MPI_Finalize();
   return 0;

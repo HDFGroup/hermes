@@ -16,6 +16,22 @@
 #include <cstdio>
 #include <string>
 
+bool FilesystemSupportsTmpfile() {
+  bool result = false;
+
+#if O_TMPFILE
+  // NOTE(chogan): Even if O_TMPFILE is defined, the underlying filesystem might
+  // not support it.
+  int tmp_fd = open("/tmp", O_WRONLY | O_TMPFILE, 0600);
+  if (tmp_fd > 0) {
+    result = true;
+    close(tmp_fd);
+  }
+#endif
+
+  return result;
+}
+
 size_t GetRandomOffset(size_t i, unsigned int offset_seed, size_t stride,
                        size_t total_size) {
   return abs((int)(((i * rand_r(&offset_seed)) % stride) % total_size));

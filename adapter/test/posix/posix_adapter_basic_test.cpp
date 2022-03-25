@@ -211,23 +211,25 @@ TEST_CASE("Open", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(test::status_orig == 0);
   }
   SECTION("Temporary file") {
-    test::test_open("/tmp", O_WRONLY | O_TMPFILE, 0600);
-    REQUIRE(test::fh_orig != -1);
-    test::test_close();
-    REQUIRE(test::status_orig == 0);
-    test::test_open(info.new_file.c_str(), O_RDONLY | O_TMPFILE, 0600);
-    REQUIRE(test::fh_orig == -1);
-    test::test_open(info.new_file.c_str(), O_RDWR | O_TMPFILE, 0600);
-    REQUIRE(test::fh_orig == -1);
-    test::test_open(info.new_file.c_str(), O_APPEND | O_TMPFILE, 0600);
-    REQUIRE(test::fh_orig == -1);
+    if (info.supports_tmpfile) {
+      test::test_open("/tmp", O_WRONLY | O_TMPFILE, 0600);
+      REQUIRE(test::fh_orig != -1);
+      test::test_close();
+      REQUIRE(test::status_orig == 0);
+      test::test_open(info.new_file.c_str(), O_RDONLY | O_TMPFILE, 0600);
+      REQUIRE(test::fh_orig == -1);
+      test::test_open(info.new_file.c_str(), O_RDWR | O_TMPFILE, 0600);
+      REQUIRE(test::fh_orig == -1);
+      test::test_open(info.new_file.c_str(), O_APPEND | O_TMPFILE, 0600);
+      REQUIRE(test::fh_orig == -1);
 
-    test::test_open(info.existing_file.c_str(), O_WRONLY | O_TMPFILE, 0600);
-    REQUIRE(test::fh_orig == -1);
-    test::test_open(info.existing_file.c_str(), O_RDONLY | O_TMPFILE, 0600);
-    REQUIRE(test::fh_orig == -1);
-    test::test_open(info.existing_file.c_str(), O_RDWR | O_TMPFILE, 0600);
-    REQUIRE(test::fh_orig == -1);
+      test::test_open(info.existing_file.c_str(), O_WRONLY | O_TMPFILE, 0600);
+      REQUIRE(test::fh_orig == -1);
+      test::test_open(info.existing_file.c_str(), O_RDONLY | O_TMPFILE, 0600);
+      REQUIRE(test::fh_orig == -1);
+      test::test_open(info.existing_file.c_str(), O_RDWR | O_TMPFILE, 0600);
+      REQUIRE(test::fh_orig == -1);
+    }
   }
   posttest();
 }

@@ -43,6 +43,10 @@
 #include "posix/mapper/mapper_factory.h"
 #include "posix/metadata_manager.h"
 
+#ifndef O_TMPFILE
+#define O_TMPFILE 0
+#endif
+
 /**
  * Function declarations
  */
