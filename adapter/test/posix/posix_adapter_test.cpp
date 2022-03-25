@@ -18,16 +18,16 @@
 #include <iostream>
 
 #include "catch_config.h"
-#include "adapter_test_utils.h"
 #if HERMES_INTERCEPT == 1
 #include "posix/posix.h"
 #endif
 
 #ifndef O_TMPFILE
-#define __O_TMPFILE 020000000
-#define O_TMPFILE (__O_TMPFILE | O_DIRECTORY)
-#define O_TMPFILE_MASK (__O_TMPFILE | O_DIRECTORY | O_CREAT)
+#define O_TMPFILE 0
 #endif
+
+#include "adapter_test_utils.h"
+
 namespace fs = std::experimental::filesystem;
 
 namespace hermes::adapter::posix::test {
@@ -39,6 +39,7 @@ struct Arguments {
 struct Info {
   int rank = 0;
   int comm_size = 1;
+  bool supports_tmpfile;
   std::vector<char> write_data;
   std::vector<char> read_data;
   std::string new_file;
@@ -71,12 +72,15 @@ std::vector<char> gen_random(const int len) {
     tmp_s[i] = alphanum[rand() % (sizeof(alphanum) - 1)];
   return tmp_s;
 }
+
 int init(int* argc, char*** argv) {
   MPI_Init(argc, argv);
   info.write_data = gen_random(args.request_size);
   info.read_data = std::vector<char>(args.request_size, 'r');
+  info.supports_tmpfile = FilesystemSupportsTmpfile();
   return 0;
 }
+
 int finalize() {
   MPI_Finalize();
   return 0;
