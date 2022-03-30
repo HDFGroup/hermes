@@ -21,6 +21,7 @@
 
 #include <mpi.h>
 #include <hdf5.h>
+#include <hdf5_hl.h>
 /* HDF5 header for dynamic plugin loading */
 #include <H5PLextern.h>
 #include <catch_config.h>
@@ -34,7 +35,8 @@ namespace fs = std::experimental::filesystem;
 namespace hermes::adapter::vfd::test {
 
 struct Arguments {
-  std::string filename = "test.dat";
+  std::string filename = "test";
+  std::string extension = ".h5";
   std::string directory = "/tmp";
   size_t request_size = 65536;
 };
@@ -63,23 +65,34 @@ struct TestInfo {
   size_t large_max = MEGABYTES(3);
 };
 
-struct MuteHdf5Errors {
+class MuteHdf5Errors {
   H5E_auto2_t old_func;
   void *old_client_data;
 
+ public:
   MuteHdf5Errors() {
     // Save old error handler
     H5Eget_auto(H5E_DEFAULT, &old_func, &old_client_data);
 
-    // Turn off error handling
+    // Turn off error stack printing
     H5Eset_auto(H5E_DEFAULT, NULL, NULL);
   }
 
   ~MuteHdf5Errors() {
-    // Restore previous error handler */
+    // Restore previous error handler
     H5Eset_auto(H5E_DEFAULT, old_func, old_client_data);
   }
 };
+
+void AssertFunc(bool expr, const char *file, int lineno, const char *message) {
+  if (!expr) {
+    fprintf(stderr, "Assertion failed at %s: line %d: %s\n", file, lineno,
+            message);
+    exit(-1);
+  }
+}
+
+#define Assert(expr) AssertFunc((expr), __FILE__, __LINE__, #expr)
 
 struct VfdApi {
   hid_t Open(const std::string &fname, unsigned flags) {
@@ -96,8 +109,22 @@ struct VfdApi {
 
   // Read() {
   // }
-  // Write() {
-  // }
+
+  herr_t Write(hid_t hid, const std::string &dset_name,
+               const std::vector<float> &data) {
+    herr_t result = Write(hid, dset_name, data.data(), data.size());
+
+    return result;
+  }
+
+  herr_t Write(hid_t hid, const std::string &dset_name, const float *data,
+               size_t size) {
+    hsize_t dims[1] = {size};
+    herr_t result = H5LTmake_dataset_float(hid, dset_name.c_str(), 1, dims,
+                                           data);
+
+    return result;
+  }
 
   herr_t Close(hid_t id) {
     herr_t result = H5Fclose(id);
@@ -106,21 +133,64 @@ struct VfdApi {
   }
 };
 
+static inline u32 RotateLeft(const u32 x, int k) {
+  u32 result = (x << k) | (x >> (32 - k));
+
+  return result;
+}
+
+
+// xoshiro128+ random number generation: https://prng.di.unimi.it/xoshiro128plus.c
+static u32 random_state[4] = {111, 222, 333, 444};
+
+f32 GenNextRandom() {
+  const uint32_t random = random_state[0] + random_state[3];
+
+  const uint32_t t = random_state[1] << 9;
+
+  random_state[2] ^= random_state[0];
+  random_state[3] ^= random_state[1];
+  random_state[1] ^= random_state[2];
+  random_state[0] ^= random_state[3];
+
+  random_state[2] ^= t;
+
+  random_state[3] = RotateLeft(random_state[3], 11);
+
+  f32 result = (random >> 8) * 0x1.0p-24f;
+
+  return result;
+}
+
+void GenHdf5File(std::string fname, size_t dataset_size, size_t num_datasets) {
+  size_t total_bytes = dataset_size * num_datasets;
+  size_t total_floats = total_bytes / sizeof(f32);
+  size_t floats_per_dataset = dataset_size / sizeof(f32);
+  std::vector<float> data(total_floats);
+
+  for (size_t i = 0; i < total_floats; ++i) {
+    data[i] = GenNextRandom();
+  }
+
+  VfdApi api;
+  float *at = data.data();
+
+  hid_t file_id = api.Create(fname, H5F_ACC_TRUNC);
+  Assert(file_id != H5I_INVALID_HID);
+
+  for (size_t i = 0; i < num_datasets; ++i) {
+    Assert(api.Write(file_id, std::to_string(i), at, dataset_size) > -1);
+    at += floats_per_dataset;
+  }
+
+  Assert(api.Close(file_id) > -1);
+}
+
 }  // namespace hermes::adapter::vfd::test
 
 
 hermes::adapter::vfd::test::Arguments args;
 hermes::adapter::vfd::test::TestInfo info;
-
-void AssertFunc(bool expr, const char *file, int lineno, const char *message) {
-  if (!expr) {
-    fprintf(stderr, "Assertion failed at %s: line %d: %s\n", file, lineno,
-            message);
-    exit(-1);
-  }
-}
-
-#define Assert(expr) AssertFunc((expr), __FILE__, __LINE__, #expr)
 
 int init(int* argc, char*** argv) {
   MPI_Init(argc, argv);
@@ -137,38 +207,34 @@ int finalize() {
 int pretest() {
   fs::path fullpath = args.directory;
   fullpath /= args.filename;
-  info.new_file = fullpath.string() + "_new_" + std::to_string(getpid());
-  info.existing_file = fullpath.string() + "_ext_" + std::to_string(getpid());
-  info.new_file_cmp = fullpath.string() + "_new_cmp" + "_" +
-                      std::to_string(getpid());
-  info.existing_file_cmp = fullpath.string() + "_ext_cmp" + "_" +
-                           std::to_string(getpid());
+
+  std::string suffix = std::to_string(getpid()) + args.extension;
+  info.new_file = fullpath.string() + "_new_" + suffix;
+  info.existing_file = fullpath.string() + "_ext_" + suffix;
+  info.new_file_cmp = fullpath.string() + "_new_cmp_" + suffix;
+  info.existing_file_cmp = fullpath.string() + "_ext_cmp_" + suffix;
+
   if (fs::exists(info.new_file)) fs::remove(info.new_file);
   if (fs::exists(info.new_file_cmp)) fs::remove(info.new_file_cmp);
   if (fs::exists(info.existing_file)) fs::remove(info.existing_file);
   if (fs::exists(info.existing_file_cmp)) fs::remove(info.existing_file_cmp);
-  if (!fs::exists(info.existing_file)) {
-    std::string cmd = "{ tr -dc '[:alnum:]' < /dev/urandom | head -c " +
-                      std::to_string(args.request_size * info.num_iterations) +
-                      "; } > " + info.existing_file + " 2> /dev/null";
-    int status = system(cmd.c_str());
-    REQUIRE(status != -1);
-    REQUIRE(fs::file_size(info.existing_file) ==
-            args.request_size * info.num_iterations);
-    info.total_size = fs::file_size(info.existing_file);
-  }
-  if (!fs::exists(info.existing_file_cmp)) {
-    std::string cmd = "cp " + info.existing_file + " " + info.existing_file_cmp;
-    int status = system(cmd.c_str());
-    REQUIRE(status != -1);
-    REQUIRE(fs::file_size(info.existing_file_cmp) ==
-            args.request_size * info.num_iterations);
-  }
-  REQUIRE(info.total_size > 0);
+
+  hermes::adapter::vfd::test::GenHdf5File(info.existing_file, args.request_size,
+                                          info.num_iterations);
+  // info.total_size = fs::file_size(info.existing_file);
+
+  std::string cmd = "cp " + info.existing_file + " " + info.existing_file_cmp;
+  int status = system(cmd.c_str());
+  REQUIRE(status != -1);
+  // REQUIRE(fs::file_size(info.existing_file_cmp) ==
+  //         args.request_size * info.num_iterations);
+  // REQUIRE(info.total_size > 0);
+
 #if HERMES_INTERCEPT == 1
   INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.existing_file_cmp);
   INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.new_file_cmp);
 #endif
+
   return 0;
 }
 
@@ -260,6 +326,64 @@ cl::Parser define_options() {
          cl::Opt(args.request_size, "request_size")["-s"]["--request_size"](
              "Request size used for performing I/O");
 }
+
+namespace test {
+
+FILE* fh_orig;
+FILE* fh_cmp;
+int status_orig;
+size_t size_read_orig;
+size_t size_written_orig;
+
+void test_fopen(const char* path, const char* mode) {
+  std::string cmp_path;
+  if (strcmp(path, info.new_file.c_str()) == 0) {
+    cmp_path = info.new_file_cmp;
+  } else {
+    cmp_path = info.existing_file_cmp;
+  }
+  fh_orig = fopen(path, mode);
+  fh_cmp = fopen(cmp_path.c_str(), mode);
+  bool is_same = (fh_cmp != nullptr && fh_orig != nullptr) ||
+                 (fh_cmp == nullptr && fh_orig == nullptr);
+  REQUIRE(is_same);
+}
+
+void test_fclose() {
+  status_orig = fclose(fh_orig);
+  int status = fclose(fh_cmp);
+  REQUIRE(status == status_orig);
+}
+
+void test_fwrite(const void* ptr, size_t size) {
+  size_written_orig = fwrite(ptr, sizeof(char), size, fh_orig);
+  size_t size_written = fwrite(ptr, sizeof(char), size, fh_cmp);
+  REQUIRE(size_written == size_written_orig);
+}
+
+void test_fread(char* ptr, size_t size) {
+  size_read_orig = fread(ptr, sizeof(char), size, fh_orig);
+  std::vector<unsigned char> read_data(size, 'r');
+  size_t size_read = fread(read_data.data(), sizeof(char), size, fh_cmp);
+  REQUIRE(size_read == size_read_orig);
+  if (size_read > 0) {
+    size_t unmatching_chars = 0;
+    for (size_t i = 0; i < size; ++i) {
+      if (read_data[i] != ptr[i]) {
+        unmatching_chars = i;
+        break;
+      }
+    }
+    REQUIRE(unmatching_chars == 0);
+  }
+}
+
+void test_fseek(long offset, int whence) {
+  status_orig = fseek(fh_orig, offset, whence);
+  int status = fseek(fh_cmp, offset, whence);
+  REQUIRE(status == status_orig);
+}
+}  // namespace test
 
 // int main(int argc, char *argv[]) {
 //   hid_t file_id;

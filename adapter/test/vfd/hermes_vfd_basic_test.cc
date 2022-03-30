@@ -23,28 +23,32 @@ TEST_CASE("Open", "[process=" + std::to_string(info.comm_size) +
     MuteHdf5Errors mute;
     hid_t result = api.Open(info.new_file, H5F_ACC_RDONLY);
     REQUIRE(result == H5I_INVALID_HID);
-    result = api.Open(info.new_file.c_str(), H5F_ACC_RDWR);
+    result = api.Open(info.new_file, H5F_ACC_RDWR);
     REQUIRE(result == H5I_INVALID_HID);
   }
 
   SECTION("truncate existing file and write-only") {
-    MuteHdf5Errors mute;
     hid_t result = api.Create(info.existing_file, H5F_ACC_TRUNC);
     REQUIRE(result != H5I_INVALID_HID);
     herr_t err = api.Close(result);
     REQUIRE(err >= 0);
   }
 
-  // SECTION("open existing file") {
-  //   test::test_fopen(info.existing_file.c_str(), "r+");
-  //   REQUIRE(test::fh_orig != nullptr);
-  //   test::test_fclose();
-  //   REQUIRE(test::status_orig == 0);
-  //   test::test_fopen(info.existing_file.c_str(), "r");
-  //   REQUIRE(test::fh_orig != nullptr);
-  //   test::test_fclose();
-  //   REQUIRE(test::status_orig == 0);
-  // }
+  SECTION("open existing file") {
+    {
+      hid_t result = api.Open(info.existing_file, H5F_ACC_RDWR);
+      REQUIRE(result != H5I_INVALID_HID);
+      herr_t err = api.Close(result);
+      REQUIRE(err >= 0);
+    }
+
+    {
+      hid_t result = api.Open(info.existing_file, H5F_ACC_RDONLY);
+      REQUIRE(result != H5I_INVALID_HID);
+      herr_t err = api.Close(result);
+      REQUIRE(err >= 0);
+    }
+  }
 
   // SECTION("append write existing file") {
   //   test::test_fopen(info.existing_file.c_str(), "a");
