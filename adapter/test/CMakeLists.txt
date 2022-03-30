@@ -43,10 +43,23 @@ function(mpi_daemon test_exec test_mpi_proc test_args arg_name daemon_procs)
 endfunction()
 
 enable_testing()
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/posix)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/stdio)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/mpiio)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/pubsub)
+
+if(HERMES_ENABLE_STDIO_ADAPTER)
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/stdio)
+endif()
+
+if(HERMES_ENABLE_POSIX_ADAPTER)
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/posix)
+endif()
+
+if(HERMES_ENABLE_MPIIO_ADAPTER)
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/mpiio)
+endif()
+
+if(HERMES_ENABLE_PUBSUB_ADAPTER)
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/pubsub)
+endif()
+
 if(HERMES_ENABLE_VFD)
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/vfd)
 endif()
