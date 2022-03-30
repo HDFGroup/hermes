@@ -146,7 +146,10 @@ option(HERMES_DEBUG_HEAP "Store Heap debug information for visualization." OFF)
 option(HERMES_BUILD_BENCHMARKS "Build the Hermes benchmark suite." OFF)
 option(HERMES_ENABLE_TIMING "Turn on timing of selected functions." OFF)
 option(HERMES_ENABLE_COVERAGE "Enable code coverage." OFF)
-option(HERMES_ENABLE_ADAPTERS "Enable hermes adapters." ON)
+option(HERMES_ENABLE_STDIO_ADAPTER "Build the Hermes stdio adapter." ON)
+option(HERMES_ENABLE_POSIX_ADAPTER "Build the Hermes POSIX adapter." ON)
+option(HERMES_ENABLE_MPIIO_ADAPTER "Build the Hermes MPI-IO adapter." ON)
+option(HERMES_ENABLE_PUBSUB_ADAPTER "Build the Hermes pub/sub adapter." ON)
 option(HERMES_ENABLE_VFD "Build the Hermes HDF5 Virtual File Driver" OFF)
 option(HERMES_ENABLE_WRAPPER "Enable hermes C API wrapper." ON)
 option(HERMES_INSTALL_TESTS "Enable installation of tests." OFF)
@@ -358,7 +361,9 @@ if(CMAKE_PROJECT_NAME STREQUAL HERMES AND BUILD_TESTING)
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test)
 endif()
 
-if(HERMES_ENABLE_ADAPTERS)
+if(HERMES_ENABLE_STDIO_ADAPTER OR HERMES_ENABLE_POSIX_ADAPTER OR
+    HERMES_ENABLE_MPIIO_ADAPTER OR HERMES_ENABLE_PUBSUB_ADAPTER OR
+    HERMES_ENABLE_VFD)
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/adapter)
 endif()
 
