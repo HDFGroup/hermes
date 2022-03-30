@@ -33,7 +33,13 @@ endif()
 # External dependencies
 #------------------------------------------------------------------------------
 #HDF5
-find_package(HDF5 1.13.0 NO_MODULE NAMES hdf5 COMPONENTS C shared)
+
+set(HERMES_REQUIRED_HDF5_COMPONENTS C)
+if(BUILD_TESTING)
+  set(HERMES_REQUIRED_HDF5_COMPONENTS ${HERMES_REQUIRED_HDF5_COMPONENTS} HL)
+endif()
+
+find_package(HDF5 1.13.0 NO_MODULE NAMES hdf5 COMPONENTS ${HERMES_REQUIRED_HDF5_COMPONENTS} shared)
 if(HDF5_FOUND)
   set(HDF5_C_SHARED_LIBRARY hdf5-shared)
 #  if(NOT TARGET ${HDF5_C_SHARED_LIBRARY})
@@ -50,7 +56,7 @@ if(HDF5_FOUND)
      )
 else()
 # Allow for HDF5 autotools builds
-  find_package(HDF5 1.13.0 MODULE REQUIRED)
+  find_package(HDF5 1.13.0 MODULE REQUIRED COMPONENTS ${HERMES_REQUIRED_HDF5_COMPONENTS})
   if(HDF5_FOUND)
     set(HDF5_HERMES_VFD_EXT_INCLUDE_DEPENDENCIES
         ${HDF5_HERMES_VFD_EXT_INCLUDE_DEPENDENCIES}
@@ -58,7 +64,7 @@ else()
        )
     set(HDF5_HERMES_VFD_EXT_LIB_DEPENDENCIES
         ${HDF5_HERMES_VFD_EXT_LIB_DEPENDENCIES}
-        ${HDF5_LIBRARIES}
+        ${HDF5_LIBRARIES} ${HDF5_C_HL_LIBRARIES}
        )
   else()
     message(FATAL_ERROR "Could not find HDF5, please check HDF5_DIR.")
