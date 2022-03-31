@@ -14,7 +14,7 @@ set(EXTENDED_PUBSUB_TESTS ${SINGLE_NODE_PUBSUB_TESTS} ${MULTI_NODE_PUBSUB_TESTS}
 foreach(program ${SINGLE_NODE_PUBSUB_TESTS})
     add_executable(${program} ${CMAKE_CURRENT_SOURCE_DIR}/${program}.cc)
     add_dependencies(${program} hermes_pubsub)
-    target_link_libraries(${program} ${LIBRT} hermes MPI::MPI_CXX
+    target_link_libraries(${program} ${LIBRT} hermes MPI::MPI_CXX glog::glog
             $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium> hermes_pubsub)
     target_compile_definitions(${program}
             PRIVATE $<$<BOOL:${HERMES_RPC_THALLIUM}>:HERMES_RPC_THALLIUM>)
@@ -24,7 +24,7 @@ endforeach()
 foreach(program ${MULTI_NODE_PUBSUB_TESTS})
     add_executable(${program} ${CMAKE_CURRENT_SOURCE_DIR}/${program}.cc)
     add_dependencies(${program} hermes_pubsub)
-    target_link_libraries(${program} ${LIBRT} hermes MPI::MPI_CXX
+    target_link_libraries(${program} ${LIBRT} hermes MPI::MPI_CXX glog::glog
             $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium> hermes_pubsub)
     target_compile_definitions(${program}
             PRIVATE $<$<BOOL:${HERMES_RPC_THALLIUM}>:HERMES_RPC_THALLIUM>)

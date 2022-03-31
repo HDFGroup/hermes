@@ -29,13 +29,15 @@ endforeach()
 
 # IOR tests
 if(HERMES_HAVE_IOR)
-  add_test(NAME "TestVFDWrite" COMMAND ${IOR_EXE} -a HDF5 -w -W -r -R)
+  add_test(NAME "TestVFDWrite" COMMAND ${IOR_EXE} -a HDF5)
   set_property(TEST "TestVFDWrite"
     PROPERTY ENVIRONMENT HERMES_CONF=${CMAKE_CURRENT_SOURCE_DIR}/hermes.conf)
   set_property(TEST "TestVFDWrite" APPEND
     PROPERTY ENVIRONMENT HDF5_PLUGIN_PATH=${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
   set_property(TEST "TestVFDWrite" APPEND
-    PROPERTY ENVIRONMENT HDF5_DRIVER_CONFIG=true\ 1024)
+    PROPERTY ENVIRONMENT HDF5_DRIVER_CONFIG=true\ 262144)
   set_property(TEST "TestVFDWrite" APPEND
     PROPERTY ENVIRONMENT HDF5_DRIVER=hermes)
+  set_property(TEST "TestVFDWrite" APPEND
+    PROPERTY ENVIRONMENT LD_PRELOAD=${CMAKE_BIN_DIR}/libhdf5_hermes_vfd.so)
 endif()

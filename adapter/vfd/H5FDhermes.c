@@ -19,6 +19,7 @@
  *          and buffer datasets in Hermes buffering systems with
  *          multiple storage tiers.
  */
+#define _GNU_SOURCE
 
 #include <stdio.h>
 #include <string.h>
@@ -28,6 +29,8 @@
 #include <sys/file.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+
+#include <mpi.h>
 
 /* HDF5 header for dynamic plugin loading */
 #include "H5PLextern.h"
@@ -58,6 +61,7 @@ hid_t H5FDhermes_err_class_g = H5I_INVALID_HID;
 
 /* Whether Hermes is initialized */
 static htri_t hermes_initialized = FAIL;
+static hbool_t mpi_is_initialized = FALSE;
 
 /* File operations */
 #define OP_UNKNOWN 0
@@ -268,10 +272,10 @@ static herr_t
 H5FD__hermes_term(void) {
   herr_t ret_value = SUCCEED;
 
-  if ((H5OPEN hermes_initialized) == TRUE) {
-    HermesFinalize();
-    hermes_initialized = FALSE;
-  }
+  /* if ((H5OPEN hermes_initialized) == TRUE) { */
+  /*   HermesFinalize(); */
+  /*   hermes_initialized = FALSE; */
+  /* } */
 
   /* Unregister from HDF5 error API */
   if (H5FDhermes_err_class_g >= 0) {
@@ -987,4 +991,99 @@ H5PLget_plugin_type(void) {
 const void*
 H5PLget_plugin_info(void) {
   return &H5FD_hermes_g;
+}
+
+/* NOTE(chogan): Question: Why do we intercept H5open and MPI_Init? Answer: We
+ * have to handle several possible cases in order to get the initialization and
+ * finalization order of Hermes correct. First, the HDF5 application using the
+ * Hermes VFD can be either an MPI application or a serial application. If it's
+ * a serial application, we simply initialize Hermes before initializing the
+ * HDF5 library by intercepting H5open. See
+ * https://github.com/HDFGroup/hermes/issues/385 for an explanation of why we
+ * need to initialize Hermes before HDF5.
+ *
+ * If we're dealing with an MPI application, then there are two possibilities:
+ * the app called MPI_Init before any HDF5 calls, or it made at least one HDF5
+ * call before calling MPI_Init. If HDF5 was called first, then we have to
+ * initialize MPI ourselves and then intercept the app's call to MPI_Init to
+ * ensure MPI_Init is not called twice.
+ *
+ * For finalization, there are two cases to handle: 1) The application called
+ * MPI_Finalize(). In this case we need to intercept MPI_Finalize and shut down
+ * Hermes before MPI is finalized because Hermes finalization requires MPI. 2)
+ * If the app is serial, we need to call MPI_Finalize ourselves, so we intercept
+ * H5close().*/
+
+herr_t HERMES_DECL(H5_init_library)() {
+  herr_t ret_value = SUCCEED;
+
+  if (mpi_is_initialized == FALSE) {
+    int status = PMPI_Init(NULL, NULL);
+    if (status != MPI_SUCCESS) {
+      // NOTE(chogan): We can't use the HDF5 error reporting functions here
+      // because HDF5 isn't initialized yet.
+      fprintf(stderr, "Hermes VFD: can't initialize MPI\n");
+      ret_value = FAIL;
+    } else {
+      mpi_is_initialized = TRUE;
+    }
+  }
+
+  if (ret_value == SUCCEED) {
+    if (hermes_initialized == FAIL) {
+      char *hermes_config = getenv(kHermesConf);
+      int status = HermesInitHermes(hermes_config);
+      if (status == 0) {
+        hermes_initialized = TRUE;
+      } else {
+        fprintf(stderr, "Hermes VFD: can't initialize Hermes\n");
+        ret_value = FAIL;
+      }
+    }
+
+    if (hermes_initialized == TRUE) {
+      MAP_OR_FAIL(H5_init_library);
+      ret_value = real_H5_init_library_();
+    }
+  }
+
+  return ret_value;
+}
+
+herr_t HERMES_DECL(H5_term_library)() {
+  MAP_OR_FAIL(H5_term_library);
+  herr_t ret_value = real_H5_term_library_();
+
+  if (hermes_initialized == TRUE) {
+    HermesFinalize();
+    hermes_initialized = FALSE;
+  }
+
+  return ret_value;
+}
+
+/** Only Initialize MPI if it hasn't already been initialized. */
+int HERMES_DECL(MPI_Init)(int *argc, char ***argv) {
+  int status = MPI_SUCCESS;
+  if (mpi_is_initialized == FALSE) {
+    int status = PMPI_Init(argc, argv);
+    if (status == MPI_SUCCESS) {
+      mpi_is_initialized = TRUE;
+    }
+  }
+
+  return status;
+}
+
+int HERMES_DECL(MPI_Finalize)() {
+  H5_term_library();
+
+  if (hermes_initialized == TRUE) {
+    HermesFinalize();
+    hermes_initialized = FALSE;
+  }
+
+  int status = PMPI_Finalize();
+
+  return status;
 }
