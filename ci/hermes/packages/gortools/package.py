@@ -19,8 +19,8 @@ class Gortools(Package):
     version('7.7', sha256='d20eb031ea3f1b75e55e44ae6acdb674ee6fb31e7a56498be32dc83ba9bc13bd', preferred=True)
     version('7.8', sha256='d93a9502b18af51902abd130ff5f23768fcf47e266e6d1f34b3586387aa2de68')
     version('8.0', sha256='ac01d7ebde157daaeb0e21ce54923a48e4f1d21faebd0b08a54979f150f909ee')
-    
-    depends_on('cmake@3.0.2:', '@7.7:')
+
+    # depends_on('cmake@3.0.2:', '@7.7:')
 
     def url_for_version(self, version):
         url = "https://github.com/google/or-tools/archive/v{}.tar.gz"

@@ -85,6 +85,7 @@ target_include_directories(hdf5_hermes_vfd
 
 target_link_libraries(hdf5_hermes_vfd
   hermes_wrapper
+  MPI::MPI_C
   ${HDF5_HERMES_VFD_EXPORTED_LIBS}
   ${HDF5_HERMES_VFD_EXT_LIB_DEPENDENCIES}
   ${HDF5_HERMES_VFD_EXT_PKG_DEPENDENCIES}

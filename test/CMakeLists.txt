@@ -37,7 +37,7 @@ endif()
 
 add_executable(bucket_test bucket_test.cc)
 target_link_libraries(bucket_test ${LIBRT} hermes MPI::MPI_CXX ZLIB::ZLIB
-  $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium>)
+  glog::glog $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium>)
 target_compile_definitions(bucket_test
   PRIVATE $<$<BOOL:${HERMES_RPC_THALLIUM}>:HERMES_RPC_THALLIUM>)
 add_test(NAME "Testbucket_test"
@@ -70,7 +70,7 @@ set_tests_properties("TestBufferPool" PROPERTIES ENVIRONMENT
   LSAN_OPTIONS=suppressions=${CMAKE_CURRENT_SOURCE_DIR}/data/asan.supp)
 
 add_executable(bp_test buffer_pool_client_test.cc)
-target_link_libraries(bp_test hermes MPI::MPI_CXX
+target_link_libraries(bp_test hermes MPI::MPI_CXX glog::glog
      $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium>)
 target_compile_definitions(bp_test
   PRIVATE $<$<BOOL:${HERMES_RPC_THALLIUM}>:HERMES_RPC_THALLIUM>)
@@ -79,7 +79,7 @@ target_compile_definitions(bp_test
 # Config Parser tests
 #------------------------------------------------------------------------------
 add_executable(config_parser_test config_parser_test.cc)
-target_link_libraries(config_parser_test hermes
+target_link_libraries(config_parser_test hermes glog::glog
   $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium>)
 
 add_test(NAME TestConfigParser
@@ -108,7 +108,7 @@ add_test(NAME TestSTBMapWithHeap COMMAND stb_map)
 # Metadata Manager tests
 #------------------------------------------------------------------------------
 add_executable(mdm mdm_test.cc)
-target_link_libraries(mdm hermes ${LIBRT}
+target_link_libraries(mdm hermes ${LIBRT} glog::glog
   $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium> MPI::MPI_CXX)
 target_compile_definitions(mdm
   PRIVATE $<$<BOOL:${HERMES_RPC_THALLIUM}>:HERMES_RPC_THALLIUM>)

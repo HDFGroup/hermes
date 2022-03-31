@@ -50,7 +50,7 @@ target_include_directories(hermes
 )
 
 target_link_libraries(hermes
-  PUBLIC ${ORTOOLS_LIBRARIES}
+  PRIVATE ${ORTOOLS_LIBRARIES}
   PUBLIC thallium
   PUBLIC "$<$<BOOL:${HERMES_INTERCEPT_IO}>:${GOTCHA_MODULE_LIBS}>"
   PRIVATE $<$<BOOL:${HERMES_COMMUNICATION_MPI}>:MPI::MPI_CXX>
