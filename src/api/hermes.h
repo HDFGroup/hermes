@@ -39,6 +39,11 @@
 namespace hermes {
 namespace api {
 
+/** Return the (semantic versioning compatible) version of Hermes in the form
+ *  MAJOR.MINOR.PATCH
+ */
+std::string GetVersion();
+
 /** Hermes node state */
 class Hermes {
  public:

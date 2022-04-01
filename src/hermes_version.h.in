@@ -10,39 +10,12 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include <cstdlib>
-#include <string>
+#ifndef HERMES_VERSION_H_
+#define HERMES_VERSION_H_
 
-#include <mpi.h>
-#include <glog/logging.h>
+#define HERMES_VERSION_MAJOR @HERMES_VERSION_MAJOR@
+#define HERMES_VERSION_MINOR @HERMES_VERSION_MINOR@
+#define HERMES_VERSION_PATCH @HERMES_VERSION_PATCH@
+#define HERMES_VERSION_STRING "@HERMES_PACKAGE_VERSION@"
 
-#include "hermes.h"
-
-/**
- * kHermesConf env variable is used to define path to kHermesConf in adapters.
- * This is used for initialization of Hermes.
- */
-const char* kHermesConf = "HERMES_CONF";
-
-int main(int argc, char* argv[]) {
-  MPI_Init(&argc, &argv);
-  char* hermes_config = nullptr;
-  if (argc > 1) {
-    std::string option(argv[1]);
-    if (option == "-v") {
-      LOG(INFO) << "Hermes version: " << hermes::api::GetVersion() << "\n";
-      return 0;
-    } else {
-      hermes_config = argv[1];
-    }
-  } else {
-    hermes_config = getenv(kHermesConf);
-  }
-
-  auto hermes = hermes::InitHermesDaemon(hermes_config);
-  hermes->RunDaemon();
-
-  MPI_Finalize();
-
-  return 0;
-}
+#endif  // HERMES_VERSION_H_
