@@ -53,7 +53,7 @@ set(POSIX_TESTS
 foreach(program ${POSIX_TESTS})
   target_include_directories(${program} PRIVATE ${HERMES_ADAPTER_DIR})
   target_include_directories(${program} PRIVATE ${HERMES_ADAPTER_TEST_DIR})
-  target_link_libraries(${program} Catch2::Catch2 -lstdc++fs -lc MPI::MPI_CXX glog::glog)
+  target_link_libraries(${program} Catch2::Catch2 -lstdc++fs -lc MPI::MPI_CXX)
 endforeach()
 
 if(HERMES_INSTALL_TESTS)

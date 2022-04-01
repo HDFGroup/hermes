@@ -39,5 +39,5 @@ if(HERMES_HAVE_IOR)
   set_property(TEST "TestVFDWrite" APPEND
     PROPERTY ENVIRONMENT HDF5_DRIVER=hermes)
   set_property(TEST "TestVFDWrite" APPEND
-    PROPERTY ENVIRONMENT LD_PRELOAD=${CMAKE_BIN_DIR}/libhdf5_hermes_vfd.so)
+    PROPERTY ENVIRONMENT LD_PRELOAD=${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/libhdf5_hermes_vfd.so)
 endif()
