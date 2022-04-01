@@ -22,13 +22,10 @@
 #include <mpi.h>
 #include <hdf5.h>
 #include <hdf5_hl.h>
-/* HDF5 header for dynamic plugin loading */
-#include <H5PLextern.h>
-#include <catch_config.h>
 
-#include "H5FDhermes.h"
 #include "hermes_types.h"
 #include "adapter_test_utils.h"
+#include "catch_config.h"
 
 namespace fs = std::experimental::filesystem;
 
@@ -221,28 +218,17 @@ int pretest() {
 
   hermes::adapter::vfd::test::GenHdf5File(info.existing_file, args.request_size,
                                           info.num_iterations);
-  // info.total_size = fs::file_size(info.existing_file);
+  info.total_size = fs::file_size(info.existing_file);
 
   std::string cmd = "cp " + info.existing_file + " " + info.existing_file_cmp;
   int status = system(cmd.c_str());
   REQUIRE(status != -1);
-  // REQUIRE(fs::file_size(info.existing_file_cmp) ==
-  //         args.request_size * info.num_iterations);
-  // REQUIRE(info.total_size > 0);
-
-#if HERMES_INTERCEPT == 1
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.existing_file_cmp);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.new_file_cmp);
-#endif
+  REQUIRE(info.total_size > 0);
 
   return 0;
 }
 
 int posttest(bool compare_data = true) {
-#if HERMES_INTERCEPT == 1
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.existing_file);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.new_file);
-#endif
   if (compare_data && fs::exists(info.new_file) &&
       fs::exists(info.new_file_cmp)) {
     size_t size = fs::file_size(info.new_file);
@@ -309,12 +295,6 @@ int posttest(bool compare_data = true) {
   if (fs::exists(info.new_file_cmp)) fs::remove(info.new_file_cmp);
   if (fs::exists(info.existing_file_cmp)) fs::remove(info.existing_file_cmp);
 
-#if HERMES_INTERCEPT == 1
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_file_cmp);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.new_file_cmp);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.new_file);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_file);
-#endif
   return 0;
 }
 
@@ -326,64 +306,6 @@ cl::Parser define_options() {
          cl::Opt(args.request_size, "request_size")["-s"]["--request_size"](
              "Request size used for performing I/O");
 }
-
-namespace test {
-
-FILE* fh_orig;
-FILE* fh_cmp;
-int status_orig;
-size_t size_read_orig;
-size_t size_written_orig;
-
-void test_fopen(const char* path, const char* mode) {
-  std::string cmp_path;
-  if (strcmp(path, info.new_file.c_str()) == 0) {
-    cmp_path = info.new_file_cmp;
-  } else {
-    cmp_path = info.existing_file_cmp;
-  }
-  fh_orig = fopen(path, mode);
-  fh_cmp = fopen(cmp_path.c_str(), mode);
-  bool is_same = (fh_cmp != nullptr && fh_orig != nullptr) ||
-                 (fh_cmp == nullptr && fh_orig == nullptr);
-  REQUIRE(is_same);
-}
-
-void test_fclose() {
-  status_orig = fclose(fh_orig);
-  int status = fclose(fh_cmp);
-  REQUIRE(status == status_orig);
-}
-
-void test_fwrite(const void* ptr, size_t size) {
-  size_written_orig = fwrite(ptr, sizeof(char), size, fh_orig);
-  size_t size_written = fwrite(ptr, sizeof(char), size, fh_cmp);
-  REQUIRE(size_written == size_written_orig);
-}
-
-void test_fread(char* ptr, size_t size) {
-  size_read_orig = fread(ptr, sizeof(char), size, fh_orig);
-  std::vector<unsigned char> read_data(size, 'r');
-  size_t size_read = fread(read_data.data(), sizeof(char), size, fh_cmp);
-  REQUIRE(size_read == size_read_orig);
-  if (size_read > 0) {
-    size_t unmatching_chars = 0;
-    for (size_t i = 0; i < size; ++i) {
-      if (read_data[i] != ptr[i]) {
-        unmatching_chars = i;
-        break;
-      }
-    }
-    REQUIRE(unmatching_chars == 0);
-  }
-}
-
-void test_fseek(long offset, int whence) {
-  status_orig = fseek(fh_orig, offset, whence);
-  int status = fseek(fh_cmp, offset, whence);
-  REQUIRE(status == status_orig);
-}
-}  // namespace test
 
 // int main(int argc, char *argv[]) {
 //   hid_t file_id;
