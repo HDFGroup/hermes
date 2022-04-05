@@ -32,7 +32,7 @@ namespace hermes {
   X(-8,  TRAIT_NOT_VALID,            "Selected trait is not valid.") \
   X(-9,  TRAIT_EXISTS_ALREADY,       "Selected trait already exists.") \
   X(-10, OFFSET_MAP_EMPTY,           "Offset_map is empty.") \
-  X(-11, BLOB_NOT_LINKED_IN_MAP,     "Map doesnt have the blob linked.") \
+  X(-11, BLOB_NOT_LINKED_IN_MAP,     "Map doesn't have the blob linked.") \
   X(-12, BUCKET_IN_USE,              "Bucket cannot be destroyed because its "\
                                      "reference count is greater than 1.") \
   X(-13, DPE_RANDOM_FOUND_NO_TGT,    "DPE random found no target with enough " \
