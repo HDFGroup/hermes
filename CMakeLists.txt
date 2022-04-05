@@ -422,7 +422,7 @@ install(
   TYPE
     DATA
   RENAME
-    hermes_configuration_example.conf
+    hermes_sample.conf
 )
 
 #-----------------------------------------------------------------------------
