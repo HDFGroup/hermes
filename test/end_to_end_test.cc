@@ -94,6 +94,9 @@ int main(int argc, char **argv) {
 
   std::shared_ptr<hapi::Hermes> hermes = hapi::InitHermes(config_file);
 
+  std::string version = hapi::GetVersion();
+  Assert(!version.empty());
+
   if (hermes->IsApplicationCore()) {
     int app_rank = hermes->GetProcessRank();
     int app_size = hermes->GetNumProcesses();
