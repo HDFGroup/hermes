@@ -30,6 +30,12 @@ std::vector<DeviceID> RoundRobinState::devices_;
 
 namespace api {
 
+std::string GetVersion() {
+  std::string result(HERMES_VERSION_STRING);
+
+  return result;
+}
+
 int Context::default_buffer_organizer_retries;
 PlacementPolicy Context::default_placement_policy;
 bool Context::default_rr_split;
