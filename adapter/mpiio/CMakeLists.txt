@@ -1,4 +1,4 @@
-project(MPIIOAdapter VERSION 0.4.0)
+project(MPIIOAdapter VERSION ${HERMES_PACKAGE_VERSION})
 
 # MPIIO src code. We only include mpiio.cc as it includes other cc to reduce compilation time.
 set(MPIIO_ADAPTER_SRC mpiio.cc)

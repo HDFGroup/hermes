@@ -1,4 +1,4 @@
-project(PubSubAdapter VERSION 0.4.0)
+project(PubSubAdapter VERSION ${HERMES_PACKAGE_VERSION})
 
 set(HERMES_PUBSUB_ADAPTER_DIR ${HERMES_ADAPTER_DIR}/pubsub)
 

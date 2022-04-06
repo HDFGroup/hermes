@@ -1,4 +1,4 @@
-project(StdioAdapter VERSION 0.4.0)
+project(StdioAdapter VERSION ${HERMES_PACKAGE_VERSION})
 
 # STDIO src code. We only include stdio.cc as it includes other cc to reduce compilation time.
 set(STDIO_ADAPTER_SRC stdio.cc)
