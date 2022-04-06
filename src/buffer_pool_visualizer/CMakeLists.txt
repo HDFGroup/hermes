@@ -1,5 +1,5 @@
 
-project(BufferPoolVisualizer VERSION 0.4.0)
+project(BufferPoolVisualizer VERSION ${HERMES_PACKAGE_VERSION})
 
 add_executable(bp_viz buffer_pool_visualizer.cc)
 

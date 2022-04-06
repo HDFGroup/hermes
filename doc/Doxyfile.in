@@ -4,7 +4,7 @@
 #---------------------------------------------------------------------------
 DOXYFILE_ENCODING      = UTF-8
 PROJECT_NAME           = Hermes
-PROJECT_NUMBER         = 0.4.0-beta
+PROJECT_NUMBER         = 0.5.0-beta
 PROJECT_BRIEF          = "I/O Buffering System"
 PROJECT_LOGO           =
 OUTPUT_DIRECTORY       =
