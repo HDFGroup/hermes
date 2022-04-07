@@ -107,6 +107,7 @@ typedef struct H5FD_hermes_t {
   int            ref_count;
   unsigned char *page_buf;
   bitv_t         blob_in_bucket;
+  unsigned       flags;       /* The flags passed from H5Fcreate/H5Fopen */
 } H5FD_hermes_t;
 
 /* Driver-specific file access properties */
@@ -272,11 +273,6 @@ static herr_t
 H5FD__hermes_term(void) {
   herr_t ret_value = SUCCEED;
 
-  /* if ((H5OPEN hermes_initialized) == TRUE) { */
-  /*   HermesFinalize(); */
-  /*   hermes_initialized = FALSE; */
-  /* } */
-
   /* Unregister from HDF5 error API */
   if (H5FDhermes_err_class_g >= 0) {
     if (H5Eunregister_class(H5FDhermes_err_class_g) < 0)
@@ -388,6 +384,8 @@ H5FD__hermes_open(const char *name, unsigned flags, hid_t fapl_id,
 
   H5FD_HERMES_INIT;
 
+  fprintf(stdout, "USING HERMES DRIVER for file %s!!\n", name);
+
   /* Check arguments */
   if (!name || !*name)
     H5FD_HERMES_GOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL, "invalid file name");
@@ -430,6 +428,35 @@ H5FD__hermes_open(const char *name, unsigned flags, hid_t fapl_id,
     }
   }
 
+  /* Build the open flags */
+  o_flags = (H5F_ACC_RDWR & flags) ? O_RDWR : O_RDONLY;
+  if (H5F_ACC_TRUNC & flags) {
+    o_flags |= O_TRUNC;
+  }
+  if (H5F_ACC_CREAT & flags) {
+    o_flags |= O_CREAT;
+  }
+  if (H5F_ACC_EXCL & flags) {
+    o_flags |= O_EXCL;
+  }
+
+  /* TODO(chogan): Handle file->persistence == false */
+
+  /* Open the file */
+  if ((fd = open(name, o_flags, H5FD_HERMES_POSIX_CREATE_MODE_RW)) < 0) {
+    int myerrno = errno;
+    H5FD_HERMES_GOTO_ERROR(
+      H5E_FILE, H5E_CANTOPENFILE, NULL,
+      "unable to open file: name = '%s', errno = %d, error message = '%s',"
+      "flags = %x, o_flags = %x", name, myerrno, strerror(myerrno), flags,
+      (unsigned)o_flags);
+  }
+
+  if (fstat(fd, &sb) < 0) {
+    H5FD_HERMES_SYS_GOTO_ERROR(H5E_FILE, H5E_BADFILE, NULL,
+                               "unable to fstat file");
+  }
+
   /* Create the new file struct */
   if (NULL == (file = calloc(1, sizeof(H5FD_hermes_t)))) {
     H5FD_HERMES_GOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL,
@@ -439,6 +466,7 @@ H5FD__hermes_open(const char *name, unsigned flags, hid_t fapl_id,
   if (name && *name) {
     file->bktname = strdup(name);
   }
+
   file->persistence = fa->persistence;
   file->fd = -1;
   file->bkt_handle = HermesBucketCreate(name);
@@ -449,36 +477,9 @@ H5FD__hermes_open(const char *name, unsigned flags, hid_t fapl_id,
   file->blob_in_bucket.capacity = BIT_SIZE_OF_UNSIGNED;
   file->blob_in_bucket.blobs = (uint *)calloc(1, sizeof(uint));
   file->blob_in_bucket.end_pos = 0;
-
-  if (fa->persistence) {
-    /* Build the open flags */
-    o_flags = (H5F_ACC_RDWR & flags) ? O_RDWR : O_RDONLY;
-    if (H5F_ACC_TRUNC & flags)
-      o_flags |= O_TRUNC;
-    if (H5F_ACC_CREAT & flags)
-      o_flags |= O_CREAT;
-    if (H5F_ACC_EXCL & flags)
-      o_flags |= O_EXCL;
-
-    /* Open the file */
-    if ((fd = open(name, o_flags, H5FD_HERMES_POSIX_CREATE_MODE_RW)) < 0) {
-      int myerrno = errno;
-      H5FD_HERMES_GOTO_ERROR(
-        H5E_FILE, H5E_CANTOPENFILE, NULL,
-        "unable to open file: name = '%s', errno = %d, error message = '%s',"
-        "flags = %x, o_flags = %x", name, myerrno, strerror(myerrno), flags,
-        (unsigned)o_flags);
-    }
-
-    if (fstat(fd, &sb) < 0) {
-      H5FD_HERMES_SYS_GOTO_ERROR(H5E_FILE, H5E_BADFILE, NULL,
-                                 "unable to fstat file");
-    }
-
-    /* FIXME: Possible overflow! */
-    file->eof = (haddr_t)sb.st_size;
-    file->fd = fd;
-  }
+  file->flags = flags;
+  file->eof = (haddr_t)sb.st_size;
+  file->fd = fd;
 
   /* Set return value */
   ret_value = (H5FD_t *)file;
@@ -488,7 +489,9 @@ done:
     if (fd >= 0)
       close(fd);
     if (file) {
-      HermesBucketDestroy(file->bkt_handle);
+      if (file->bkt_handle) {
+        HermesBucketDestroy(file->bkt_handle);
+      }
       free(file->blob_in_bucket.blobs);
       free(file->bktname);
       free(file->page_buf);
