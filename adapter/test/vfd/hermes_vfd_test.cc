@@ -105,15 +105,15 @@ struct VfdApi {
     sec2_fapl = H5I_INVALID_HID;
   }
 
-  hid_t OpenPosix(const std::string &fname, unsigned flags) {
-    // TODO(chogan): Document
-    hid_t result = H5Fopen(fname.c_str(), flags, sec2_fapl);
+  hid_t Open(const std::string &fname, unsigned flags) {
+    hid_t result = H5Fopen(fname.c_str(), flags, H5P_DEFAULT);
 
     return result;
   }
 
-  hid_t Open(const std::string &fname, unsigned flags) {
-    hid_t result = H5Fopen(fname.c_str(), flags, H5P_DEFAULT);
+  hid_t OpenPosix(const std::string &fname, unsigned flags) {
+    // TODO(chogan): Document
+    hid_t result = H5Fopen(fname.c_str(), flags, sec2_fapl);
 
     return result;
   }
@@ -142,8 +142,8 @@ struct VfdApi {
   }
 
   herr_t Write(hid_t hid, const std::string &dset_name, const float *data,
-               size_t size) {
-    hsize_t dims[1] = {size};
+               size_t num_elements) {
+    hsize_t dims[1] = {num_elements};
     herr_t result = H5LTmake_dataset_float(hid, dset_name.c_str(), 1, dims,
                                            data);
 
@@ -162,7 +162,6 @@ static inline u32 RotateLeft(const u32 x, int k) {
 
   return result;
 }
-
 
 // xoshiro128+ random number generation: https://prng.di.unimi.it/xoshiro128plus.c
 static u32 random_state[4] = {111, 222, 333, 444};
@@ -192,7 +191,7 @@ void GenHdf5File(std::string fname, size_t dataset_size, size_t num_datasets) {
   size_t floats_per_dataset = dataset_size / sizeof(f32);
   std::vector<float> data(total_floats);
 
-  for (size_t i = 0; i < total_floats; ++i) {
+  for (size_t i = 0; i < data.size(); ++i) {
     data[i] = GenNextRandom();
   }
 
@@ -203,7 +202,7 @@ void GenHdf5File(std::string fname, size_t dataset_size, size_t num_datasets) {
   Assert(file_id != H5I_INVALID_HID);
 
   for (size_t i = 0; i < num_datasets; ++i) {
-    Assert(api.Write(file_id, std::to_string(i), at, dataset_size) > -1);
+    Assert(api.Write(file_id, std::to_string(i), at, floats_per_dataset) > -1);
     at += floats_per_dataset;
   }
 
@@ -318,11 +317,11 @@ int posttest(bool compare_data = true) {
   //     REQUIRE(char_mismatch == 0);
   //   }
   // }
-  // /* Clean up. */
-  // if (fs::exists(info.new_file)) fs::remove(info.new_file);
-  // if (fs::exists(info.existing_file)) fs::remove(info.existing_file);
-  // if (fs::exists(info.new_file_cmp)) fs::remove(info.new_file_cmp);
-  // if (fs::exists(info.existing_file_cmp)) fs::remove(info.existing_file_cmp);
+
+  if (fs::exists(info.new_file)) fs::remove(info.new_file);
+  if (fs::exists(info.existing_file)) fs::remove(info.existing_file);
+  if (fs::exists(info.new_file_cmp)) fs::remove(info.new_file_cmp);
+  if (fs::exists(info.existing_file_cmp)) fs::remove(info.existing_file_cmp);
 
   return 0;
 }

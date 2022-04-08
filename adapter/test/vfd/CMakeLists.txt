@@ -21,10 +21,11 @@ target_link_libraries(hermes_vfd_test
 add_test(NAME "TestVfd" COMMAND hermes_vfd_test --reporter compact -d yes)
 set_property(TEST "TestVfd"
   PROPERTY ENVIRONMENT HERMES_CONF=${CMAKE_CURRENT_SOURCE_DIR}/hermes.conf)
+# TEMP(chogan):
 set_property(TEST "TestVfd" APPEND
-  PROPERTY ENVIRONMENT HDF5_PLUGIN_PATH=${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+  PROPERTY ENVIRONMENT HDF5_PLUGIN_PATH=/home/chogan/local/share/hdf5_plugins)
 set_property(TEST "TestVfd" APPEND
-  PROPERTY ENVIRONMENT HDF5_DRIVER_CONFIG=true\ 262144)
+  PROPERTY ENVIRONMENT HDF5_DRIVER_CONFIG=true\ 1024)
 set_property(TEST "TestVfd" APPEND
   PROPERTY ENVIRONMENT HDF5_DRIVER=hermes)
 set_property(TEST "TestVfd" APPEND
