@@ -554,10 +554,12 @@ static herr_t H5FD__hermes_close(H5FD_t *_file) {
       H5FD_HERMES_SYS_GOTO_ERROR(H5E_IO, H5E_CANTCLOSEFILE, FAIL,
                                  "unable to close file");
   }
-  if (file->ref_count == 1)
+
+  if (file->ref_count == 1) {
     HermesBucketDestroy(file->bkt_handle);
-  else
+  } else {
     HermesBucketClose(file->bkt_handle);
+  }
 
   /* Release the file info */
   free(file->blob_in_bucket.blobs);
