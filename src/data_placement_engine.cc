@@ -399,7 +399,6 @@ enum Topology {
   Topology_Local,
   Topology_Neighborhood,
   Topology_Global,
-
   Topology_Count
 };
 
