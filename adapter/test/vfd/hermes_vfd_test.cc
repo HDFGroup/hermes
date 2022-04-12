@@ -93,19 +93,30 @@ void AssertFunc(bool expr, const char *file, int lineno, const char *message) {
 
 struct VfdApi {
   hid_t sec2_fapl;
+  // hid_t hermes_fapl;
 
-  VfdApi() : sec2_fapl(H5I_INVALID_HID) {
+  VfdApi() : sec2_fapl(H5I_INVALID_HID)
+             // , hermes_fapl(H5I_INVALID_HID) {
+  {
     sec2_fapl = H5Pcreate(H5P_FILE_ACCESS);
     Assert(sec2_fapl >= 0);
     Assert(H5Pset_fapl_sec2(sec2_fapl) >= 0);
+
+    // hermes_fapl = H5Pcreate(H5P_FILE_ACCESS);
+    // Assert(hermes_fapl >= 0);
+    // Assert(H5Pset_fapl_hermes(hermes_fapl, true, 1024) >= 0);
   }
 
   ~VfdApi() {
     Assert(H5Pclose(sec2_fapl) >= 0);
     sec2_fapl = H5I_INVALID_HID;
+
+    // Assert(H5Pclose(hermes_fapl) >= 0);
+    // hermes_fapl = H5I_INVALID_HID;
   }
 
   hid_t Open(const std::string &fname, unsigned flags) {
+    // hid_t result = H5Fopen(fname.c_str(), flags, hermes_fapl);
     hid_t result = H5Fopen(fname.c_str(), flags, H5P_DEFAULT);
 
     return result;
@@ -119,6 +130,7 @@ struct VfdApi {
   }
 
   hid_t Create(const std::string &fname, unsigned flags) {
+    // hid_t result = H5Fcreate(fname.c_str(), flags, H5P_DEFAULT, hermes_fapl);
     hid_t result = H5Fcreate(fname.c_str(), flags, H5P_DEFAULT, H5P_DEFAULT);
 
     return result;
@@ -228,7 +240,14 @@ int finalize() {
   return 0;
 }
 
-int pretest() {
+void CleanupFiles() {
+  if (fs::exists(info.new_file)) fs::remove(info.new_file);
+  if (fs::exists(info.new_file_cmp)) fs::remove(info.new_file_cmp);
+  if (fs::exists(info.existing_file)) fs::remove(info.existing_file);
+  if (fs::exists(info.existing_file_cmp)) fs::remove(info.existing_file_cmp);
+}
+
+int Pretest() {
   fs::path fullpath = args.directory;
   fullpath /= args.filename;
 
@@ -238,10 +257,7 @@ int pretest() {
   info.new_file_cmp = fullpath.string() + "_new_cmp_" + suffix;
   info.existing_file_cmp = fullpath.string() + "_ext_cmp_" + suffix;
 
-  if (fs::exists(info.new_file)) fs::remove(info.new_file);
-  if (fs::exists(info.new_file_cmp)) fs::remove(info.new_file_cmp);
-  if (fs::exists(info.existing_file)) fs::remove(info.existing_file);
-  if (fs::exists(info.existing_file_cmp)) fs::remove(info.existing_file_cmp);
+  CleanupFiles();
 
   hermes::adapter::vfd::test::GenHdf5File(info.existing_file, args.request_size,
                                           info.num_iterations);
@@ -255,73 +271,26 @@ int pretest() {
   return 0;
 }
 
-int posttest(bool compare_data = true) {
-  (void)compare_data;
-  // if (compare_data && fs::exists(info.new_file) &&
-  //     fs::exists(info.new_file_cmp)) {
-  //   size_t size = fs::file_size(info.new_file);
-  //   REQUIRE(size == fs::file_size(info.new_file_cmp));
-  //   if (size > 0) {
-  //     std::vector<unsigned char> d1(size, '0');
-  //     std::vector<unsigned char> d2(size, '1');
+void CheckResults(const std::string &file1, const std::string &file2) {
+  if (fs::exists(file1) && fs::exists(file2)) {
+    std::string options ="";//  "--vfd-name-1 sec2 --vfd-name-2 sec2 ";
+    std::string h5diff_cmd = "h5diff " + options + file1 + " " + file2;
+    LOG(INFO) << "===Running " << h5diff_cmd;
+    int status = system(h5diff_cmd.c_str());
+    REQUIRE(status == 0);
+  }
+}
 
-  //     FILE* fh1 = fopen(info.new_file.c_str(), "r");
-  //     REQUIRE(fh1 != nullptr);
-  //     size_t read_d1 = fread(d1.data(), size, sizeof(unsigned char), fh1);
-  //     REQUIRE(read_d1 == sizeof(unsigned char));
-  //     int status = fclose(fh1);
-  //     REQUIRE(status == 0);
+int Posttest(bool compare_data = true) {
+  if (compare_data) {
+    unsetenv("LD_PRELOAD");
+    unsetenv("HDF5_DRIVER");
+    CheckResults(info.new_file, info.new_file_cmp);
+    CheckResults(info.existing_file, info.existing_file_cmp);
+    setenv("HDF5_DRIVER", "hermes", 1);
+  }
 
-  //     FILE* fh2 = fopen(info.new_file_cmp.c_str(), "r");
-  //     REQUIRE(fh2 != nullptr);
-  //     size_t read_d2 = fread(d2.data(), size, sizeof(unsigned char), fh2);
-  //     REQUIRE(read_d2 == sizeof(unsigned char));
-  //     status = fclose(fh2);
-  //     REQUIRE(status == 0);
-
-  //     size_t char_mismatch = 0;
-  //     for (size_t pos = 0; pos < size; ++pos) {
-  //       if (d1[pos] != d2[pos]) {
-  //         char_mismatch++;
-  //       }
-  //     }
-  //     REQUIRE(char_mismatch == 0);
-  //   }
-  // }
-  // if (compare_data && fs::exists(info.existing_file) &&
-  //     fs::exists(info.existing_file_cmp)) {
-  //   size_t size = fs::file_size(info.existing_file);
-  //   if (size != fs::file_size(info.existing_file_cmp)) sleep(1);
-  //   REQUIRE(size == fs::file_size(info.existing_file_cmp));
-  //   if (size > 0) {
-  //     std::vector<unsigned char> d1(size, '0');
-  //     std::vector<unsigned char> d2(size, '1');
-
-  //     FILE* fh1 = fopen(info.existing_file.c_str(), "r");
-  //     REQUIRE(fh1 != nullptr);
-  //     size_t read_d1 = fread(d1.data(), size, sizeof(unsigned char), fh1);
-  //     REQUIRE(read_d1 == sizeof(unsigned char));
-  //     int status = fclose(fh1);
-  //     REQUIRE(status == 0);
-
-  //     FILE* fh2 = fopen(info.existing_file_cmp.c_str(), "r");
-  //     REQUIRE(fh2 != nullptr);
-  //     size_t read_d2 = fread(d2.data(), size, sizeof(unsigned char), fh2);
-  //     REQUIRE(read_d2 == sizeof(unsigned char));
-  //     status = fclose(fh2);
-  //     REQUIRE(status == 0);
-  //     size_t char_mismatch = 0;
-  //     for (size_t pos = 0; pos < size; ++pos) {
-  //       if (d1[pos] != d2[pos]) char_mismatch++;
-  //     }
-  //     REQUIRE(char_mismatch == 0);
-  //   }
-  // }
-
-  if (fs::exists(info.new_file)) fs::remove(info.new_file);
-  if (fs::exists(info.existing_file)) fs::remove(info.existing_file);
-  if (fs::exists(info.new_file_cmp)) fs::remove(info.new_file_cmp);
-  if (fs::exists(info.existing_file_cmp)) fs::remove(info.existing_file_cmp);
+  CleanupFiles();
 
   return 0;
 }
@@ -338,14 +307,14 @@ cl::Parser define_options() {
 using hermes::adapter::vfd::test::VfdApi;
 
 namespace test {
+
 hid_t hermes_hid;
 hid_t sec2_hid;
 herr_t hermes_herr;
 size_t hermes_size_read;
 size_t hermes_size_written;
 
-void test_open(const std::string &path, unsigned flags, bool create = false) {
-  // TODO(chogan): Too many H5P opens and closes
+void TestOpen(const std::string &path, unsigned flags, bool create = false) {
   VfdApi api;
   std::string cmp_path;
   if (path == info.new_file) {
@@ -368,7 +337,7 @@ void test_open(const std::string &path, unsigned flags, bool create = false) {
   REQUIRE(is_same);
 }
 
-void test_close() {
+void TestClose() {
   VfdApi api;
   hermes_herr = api.Close(hermes_hid);
   herr_t status = api.Close(sec2_hid);
