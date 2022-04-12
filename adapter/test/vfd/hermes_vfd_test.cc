@@ -95,9 +95,7 @@ struct VfdApi {
   hid_t sec2_fapl;
   // hid_t hermes_fapl;
 
-  VfdApi() : sec2_fapl(H5I_INVALID_HID)
-             // , hermes_fapl(H5I_INVALID_HID) {
-  {
+  VfdApi() : sec2_fapl(H5I_INVALID_HID) {
     sec2_fapl = H5Pcreate(H5P_FILE_ACCESS);
     Assert(sec2_fapl >= 0);
     Assert(H5Pset_fapl_sec2(sec2_fapl) >= 0);
@@ -273,8 +271,7 @@ int Pretest() {
 
 void CheckResults(const std::string &file1, const std::string &file2) {
   if (fs::exists(file1) && fs::exists(file2)) {
-    std::string options ="";//  "--vfd-name-1 sec2 --vfd-name-2 sec2 ";
-    std::string h5diff_cmd = "h5diff " + options + file1 + " " + file2;
+    std::string h5diff_cmd = "h5diff " + file1 + " " + file2;
     LOG(INFO) << "===Running " << h5diff_cmd;
     int status = system(h5diff_cmd.c_str());
     REQUIRE(status == 0);
