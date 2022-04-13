@@ -71,17 +71,19 @@ else()
   endif()
 endif()
 
-
 set(HDF5_HERMES_VFD_SRCS
   ${CMAKE_CURRENT_SOURCE_DIR}/H5FDhermes.h
   ${CMAKE_CURRENT_SOURCE_DIR}/H5FDhermes.c
   )
 
 add_library(hdf5_hermes_vfd ${HDF5_HERMES_VFD_SRCS})
+set_target_properties(hdf5_hermes_vfd PROPERTIES LIBRARY_OUTPUT_DIRECTORY
+  ${HERMES_VFD_LIBRARY_DIR}
+)
 target_include_directories(hdf5_hermes_vfd PRIVATE ${CMAKE_SOURCE_DIR}/wrapper)
 target_include_directories(hdf5_hermes_vfd
   SYSTEM PUBLIC ${HDF5_HERMES_VFD_EXT_INCLUDE_DEPENDENCIES}
-  )
+)
 
 target_link_libraries(hdf5_hermes_vfd
   hermes_wrapper
@@ -89,7 +91,7 @@ target_link_libraries(hdf5_hermes_vfd
   ${HDF5_HERMES_VFD_EXPORTED_LIBS}
   ${HDF5_HERMES_VFD_EXT_LIB_DEPENDENCIES}
   ${HDF5_HERMES_VFD_EXT_PKG_DEPENDENCIES}
-  )
+)
 
 set(HDF5_HERMES_VFD_EXPORTED_LIBS hdf5_hermes_vfd ${HDF5_HERMES_VFD_EXPORTED_LIBS} PARENT_SCOPE)
 
@@ -120,8 +122,8 @@ install(
     hdf5_hermes_vfd
   EXPORT
     ${HDF5_HERMES_VFD_EXPORTED_TARGETS}
-  LIBRARY DESTINATION ${HERMES_INSTALL_LIB_DIR}
-  ARCHIVE DESTINATION ${HERMES_INSTALL_LIB_DIR}
+  LIBRARY DESTINATION ${HERMES_INSTALL_LIB_DIR}/hermes_vfd
+  ARCHIVE DESTINATION ${HERMES_INSTALL_LIB_DIR}/hermes_vfd
   RUNTIME DESTINATION ${HERMES_INSTALL_BIN_DIR}
 )
 
