@@ -7,11 +7,11 @@ set -o pipefail
 INSTALL_DIR="${HOME}/${LOCAL}"
 SPACK_DIR=${INSTALL_DIR}/spack
 MOCHI_REPO_DIR=${INSTALL_DIR}/mochi-spack-packages
-THALLIUM_VERSION=0.8.3
+THALLIUM_VERSION=0.10.0
 GOTCHA_VERSION=develop
 CATCH2_VERSION=2.13.3
 ORTOOLS_VERSION=7.7
-SPACK_VERSION=0.16.3
+SPACK_VERSION=0.17.2
 HDF5_VERSION=1_13_0
 
 echo "Installing dependencies at ${INSTALL_DIR}"
@@ -44,10 +44,11 @@ set -x
 
 cp ci/packages.yaml ${SPACK_DIR}/etc/spack/packages.yaml
 MOCHI_REPO=https://github.com/mochi-hpc/mochi-spack-packages.git
-# TODO(chogan): We pin this commit because in future commits they add features
-# of spack that are not included in the version we use. Next time there's a new
-# spack release, we can tryb using the head of `main` in mochi-spack-packages.
-MOCHI_SPACK_PACKAGES_COMMIT=f015ae93717ac3b81972c55116c3b91aa9c645e4
+# TODO(chogan): We pin this commit because in the past using the HEAD of 'main'
+# has been unstable. We update at controlled intervals rather than putting out
+# fires. The fewer moving pieces we have in CI, the easier it is to diagnose
+# errors.
+MOCHI_SPACK_PACKAGES_COMMIT=3c3d64d5e7265b44cb68433be061604c9e0ed739
 git clone ${MOCHI_REPO} ${MOCHI_REPO_DIR}
 pushd ${MOCHI_REPO_DIR}
 git checkout ${MOCHI_SPACK_PACKAGES_COMMIT}
@@ -56,7 +57,7 @@ popd
 spack repo add ${MOCHI_REPO_DIR}
 spack repo add ./ci/hermes
 
-THALLIUM_SPEC="mochi-thallium~cereal@${THALLIUM_VERSION} ^mercury~boostsys"
+THALLIUM_SPEC="mochi-thallium@${THALLIUM_VERSION} ^mercury~boostsys"
 CATCH2_SPEC="catch2@${CATCH2_VERSION}"
 ORTOOLS_SPEC="gortools@${ORTOOLS_VERSION}"
 

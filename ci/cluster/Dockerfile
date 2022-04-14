@@ -17,6 +17,7 @@ RUN apt-get update -y && \
   mpich \
   binutils \
   libjson-c-dev \
+  libunwind-dev \
   && apt-get clean && apt-get purge && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 RUN mkdir /var/run/sshd
