@@ -160,9 +160,9 @@ struct VfdApi {
     return result;
   }
 
-  // herr_t WritePartial(hid_t hid, const std::strin &dest_name, const float *data,
-  //                     size_t num_elements) {
-    
+  // herr_t WritePartial(hid_t hid, const std::strin &dest_name,
+  //                     const float *data, size_t num_elements) {
+
   // }
 
   herr_t Close(hid_t id) {
@@ -178,7 +178,8 @@ static inline u32 RotateLeft(const u32 x, int k) {
   return result;
 }
 
-// xoshiro128+ random number generation: https://prng.di.unimi.it/xoshiro128plus.c
+// xoshiro128+ random number generation:
+// https://prng.di.unimi.it/xoshiro128plus.c
 static u32 random_state[4] = {111, 222, 333, 444};
 
 f32 GenNextRandom() {
@@ -356,7 +357,8 @@ void TestClose() {
 
 // void TestWrite(const void* ptr, size_t size) {
 //   VfdApi api;
-//   hermes_size_written = api.WritePartial(hermes_hid, ptr, sizeof(char), size);
+//   hermes_size_written = api.WritePartial(hermes_hid, ptr, sizeof(char),
+//                                          size);
 //   size_t size_written = api.Write(sec2_hid, ptr, sizeof(char), size);
 //   REQUIRE(size_written == size_written_orig);
 // }
