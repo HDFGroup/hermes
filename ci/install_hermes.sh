@@ -37,6 +37,7 @@ cmake                                                      \
     ..
 
 cmake --build . -- -j4
-ctest -VV
+# Need h5diff on the PATH
+PATH="${DEPENDENCY_PREFIX}/bin:${PATH}" ctest -VV
 
 popd
