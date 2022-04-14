@@ -86,7 +86,6 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
                       H5P_DEFAULT, info.write_data.data());
     REQUIRE(status >= 0);
 
-    // TODO Close all the things
     status = H5Sclose(memspace_id);
     REQUIRE(status >= 0);
     status = H5Sclose(dspace_id);
@@ -95,7 +94,6 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(status >= 0);
 
     {
-      // TODO do the same thing on sec2_hid
       hid_t dset_id = H5Dopen2(test::sec2_hid, "0", H5P_DEFAULT);
       REQUIRE(dset_id != H5I_INVALID_HID);
       hsize_t num_elements = args.request_size / sizeof(float);
@@ -115,7 +113,6 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
                         H5P_DEFAULT, info.write_data.data());
       REQUIRE(status >= 0);
 
-      // TODO Close all the things
       status = H5Sclose(memspace_id);
       REQUIRE(status >= 0);
       status = H5Sclose(dspace_id);
