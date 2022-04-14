@@ -62,16 +62,71 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
                              "[file=1]") {
   Pretest();
 
-  // SECTION("write to existing file") {
-  //   test::TestOpen(info.existing_file, H5F_ACC_RDWR);
-  //   REQUIRE(test::hermes_hid != H5I_INVALID_HID);
-  //   test::test_seek(0, SEEK_SET);
-  //   REQUIRE(test::status_orig == 0);
-  //   test::test_write(info.write_data.data(), args.request_size);
-  //   REQUIRE(test::size_written_orig == args.request_size);
-  //   test::TestClose();
-  //   REQUIRE(test::status_orig == 0);
-  // }
+  SECTION("write to existing file") {
+    test::TestOpen(info.existing_file, H5F_ACC_RDWR);
+    REQUIRE(test::hermes_hid != H5I_INVALID_HID);
+
+    // overwrite the first args.request_size bytes with info.write_data
+    hid_t dset_id = H5Dopen2(test::hermes_hid, "0", H5P_DEFAULT);
+    REQUIRE(dset_id != H5I_INVALID_HID);
+    hsize_t num_elements = args.request_size / sizeof(float);
+    hid_t memspace_id = H5Screate_simple(1, &num_elements, NULL);
+    REQUIRE(memspace_id != H5I_INVALID_HID);
+    hid_t dspace_id = H5Dget_space(dset_id);
+    REQUIRE(dspace_id != H5I_INVALID_HID);
+    std::vector<hsize_t> offset = {0};
+    std::vector<hsize_t> stride = {1};
+    std::vector<hsize_t> count = {args.request_size / sizeof(float)};
+    // std::vector<hsize_t> block = {1};
+    herr_t status =
+      H5Sselect_hyperslab(dspace_id, H5S_SELECT_SET, offset.data(),
+                          stride.data(), count.data(), NULL);
+    REQUIRE(status >= 0);
+    status = H5Dwrite(dset_id, H5T_NATIVE_FLOAT, memspace_id, dspace_id,
+                      H5P_DEFAULT, info.write_data.data());
+    REQUIRE(status >= 0);
+
+    // TODO Close all the things
+    status = H5Sclose(memspace_id);
+    REQUIRE(status >= 0);
+    status = H5Sclose(dspace_id);
+    REQUIRE(status >= 0);
+    status = H5Dclose(dset_id);
+    REQUIRE(status >= 0);
+
+    {
+      // TODO do the same thing on sec2_hid
+      hid_t dset_id = H5Dopen2(test::sec2_hid, "0", H5P_DEFAULT);
+      REQUIRE(dset_id != H5I_INVALID_HID);
+      hsize_t num_elements = args.request_size / sizeof(float);
+      hid_t memspace_id = H5Screate_simple(1, &num_elements, NULL);
+      REQUIRE(memspace_id != H5I_INVALID_HID);
+      hid_t dspace_id = H5Dget_space(dset_id);
+      REQUIRE(dspace_id != H5I_INVALID_HID);
+      std::vector<hsize_t> offset = {0};
+      std::vector<hsize_t> stride = {1};
+      std::vector<hsize_t> count = {args.request_size / sizeof(float)};
+      // std::vector<hsize_t> block = {1};
+      herr_t status =
+        H5Sselect_hyperslab(dspace_id, H5S_SELECT_SET, offset.data(),
+                            stride.data(), count.data(), NULL);
+      REQUIRE(status >= 0);
+      status = H5Dwrite(dset_id, H5T_NATIVE_FLOAT, memspace_id, dspace_id,
+                        H5P_DEFAULT, info.write_data.data());
+      REQUIRE(status >= 0);
+
+      // TODO Close all the things
+      status = H5Sclose(memspace_id);
+      REQUIRE(status >= 0);
+      status = H5Sclose(dspace_id);
+      REQUIRE(status >= 0);
+      status = H5Dclose(dset_id);
+      REQUIRE(status >= 0);
+    }
+
+    test::TestClose();
+    REQUIRE(test::hermes_herr >= 0);
+  }
 
   // SECTION("write to new file") {
   //   test::TestOpen(info.new_file, O_WRONLY | O_CREAT | O_EXCL, 0600);

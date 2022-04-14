@@ -41,8 +41,8 @@ struct Arguments {
 struct TestInfo {
   int rank = 0;
   int comm_size = 1;
-  std::string write_data;
-  std::string read_data;
+  std::vector<f32> write_data;
+  std::vector<f32> read_data;
   std::string new_file;
   std::string existing_file;
   std::string new_file_cmp;
@@ -160,6 +160,11 @@ struct VfdApi {
     return result;
   }
 
+  // herr_t WritePartial(hid_t hid, const std::strin &dest_name, const float *data,
+  //                     size_t num_elements) {
+    
+  // }
+
   herr_t Close(hid_t id) {
     herr_t result = H5Fclose(id);
 
@@ -225,10 +230,18 @@ void GenHdf5File(std::string fname, size_t dataset_size, size_t num_datasets) {
 hermes::adapter::vfd::test::Arguments args;
 hermes::adapter::vfd::test::TestInfo info;
 
+using hermes::adapter::vfd::test::GenNextRandom;
+
 int init(int* argc, char*** argv) {
   MPI_Init(argc, argv);
-  info.write_data = GenRandom(args.request_size);
-  info.read_data = std::string(args.request_size, 'r');
+  info.write_data.resize(args.request_size / sizeof(float));
+  for (size_t i = 0; i < info.write_data.size(); ++i) {
+    info.write_data[i] = GenNextRandom();
+  }
+  info.read_data.resize(args.request_size);
+  for (size_t i = 0; i < info.read_data.size() / sizeof(float); ++i) {
+    info.read_data[i] = 0.0f;
+  }
 
   return 0;
 }
@@ -341,9 +354,10 @@ void TestClose() {
   REQUIRE(status == hermes_herr);
 }
 
-// void test_fwrite(const void* ptr, size_t size) {
-//   size_written_orig = fwrite(ptr, sizeof(char), size, fh_orig);
-//   size_t size_written = fwrite(ptr, sizeof(char), size, fh_cmp);
+// void TestWrite(const void* ptr, size_t size) {
+//   VfdApi api;
+//   hermes_size_written = api.WritePartial(hermes_hid, ptr, sizeof(char), size);
+//   size_t size_written = api.Write(sec2_hid, ptr, sizeof(char), size);
 //   REQUIRE(size_written == size_written_orig);
 // }
 
