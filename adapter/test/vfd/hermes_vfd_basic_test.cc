@@ -104,7 +104,7 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
   //   test::TestClose();
   //   REQUIRE(test::status_orig == 0);
   //   REQUIRE(fs::file_size(info.existing_file) ==
-  //           test::size_written_orig + args.request_size * info.num_iterations);
+  //         test::size_written_orig + args.request_size * info.num_iterations);
   // }
 
   // SECTION("append to existing file") {
