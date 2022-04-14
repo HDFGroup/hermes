@@ -159,7 +159,7 @@ void load(A &ar, MapType &map_type) {
 }
 
 template<typename A>
-void save(A &ar, const BoPriority &priority) {
+void save(A &ar, BoPriority &priority) {
   int val = (int)priority;
   ar.write(&val, 1);
 }
@@ -170,26 +170,8 @@ void load(A &ar, BoPriority &priority) {
   ar.read(&val, 1);
   priority = (BoPriority)val;
 }
-
-namespace api {
-template<typename A>
-void save(A &ar, api::Context &ctx) {
-  ar.write(&ctx.buffer_organizer_retries, 1);
-  int val = (int)ctx.policy;
-  ar.write(&val, 1);
-}
-}  // namespace api
-
-#else
-namespace api {
-template<typename A>
-void save(A &ar, const api::Context &ctx) {
-  ar.write(&ctx.buffer_organizer_retries, 1);
-  int val = (int)ctx.policy;
-  ar.write(&val, 1);
-}
-}  // namespace api
 #endif  // #ifndef THALLIUM_USE_CEREAL
+
 
 template<typename A>
 void save(A &ar, BoOperation &op) {
@@ -217,6 +199,16 @@ void serialize(A &ar, BoTask &bo_task) {
 }
 
 namespace api {
+template<typename A>
+#ifndef THALLIUM_USE_CEREAL
+void save(A &ar, api::Context &ctx) {
+#else
+void save(A &ar, const api::Context &ctx) {
+#endif  // #ifndef THALLIUM_USE_CEREAL
+  ar.write(&ctx.buffer_organizer_retries, 1);
+  int val = (int)ctx.policy;
+  ar.write(&val, 1);
+}
 template<typename A>
 void load(A &ar, api::Context &ctx) {
   int val = 0;
