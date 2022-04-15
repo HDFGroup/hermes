@@ -34,9 +34,9 @@ if(HERMES_USE_ADDRESS_SANITIZER)
   endif()
 endif()
 
-add_test(NAME "TestVfd" COMMAND hermes_vfd_test --reporter compact -d yes)
+add_test(NAME "TestVfd" COMMAND hermes_vfd_test --reporter compact) #TODO -d yes)
 set_property(TEST "TestVfd"
-  PROPERTY ENVIRONMENT HERMES_CONF=${CMAKE_CURRENT_SOURCE_DIR}/hermes.conf)
+  PROPERTY ENVIRONMENT HERMES_CONF=${HERMES_ADAPTER_TEST_DIR}/data/hermes.conf)
 set_property(TEST "TestVfd" APPEND
   PROPERTY ENVIRONMENT HDF5_PLUGIN_PATH=${HERMES_VFD_LIBRARY_DIR})
 set_property(TEST "TestVfd" APPEND
@@ -53,7 +53,7 @@ if(HERMES_HAVE_IOR)
   set(IOR_TEST_NAME "TestVfdIor")
   add_test(NAME ${IOR_TEST_NAME} COMMAND ${IOR_EXE} -a HDF5 -w -W -r -R)
   set_property(TEST ${IOR_TEST_NAME}
-    PROPERTY ENVIRONMENT HERMES_CONF=${CMAKE_CURRENT_SOURCE_DIR}/hermes.conf)
+    PROPERTY ENVIRONMENT HERMES_CONF=${HERMES_ADAPTER_TEST_DIR}/data/hermes.conf)
   set_property(TEST ${IOR_TEST_NAME} APPEND
     PROPERTY ENVIRONMENT HDF5_PLUGIN_PATH=${HERMES_VFD_LIBRARY_DIR})
   set_property(TEST ${IOR_TEST_NAME} APPEND
