@@ -157,8 +157,6 @@ Status RoundRobinPlacement(const std::vector<size_t> &blob_sizes,
   std::vector<u64> ns_local(node_state.begin(), node_state.end());
 
   for (size_t i {0}; i < blob_sizes.size(); ++i) {
-    std::random_device dev;
-    std::mt19937 rng(dev());
     PlacementSchema schema;
 
     if (split) {
@@ -218,8 +216,6 @@ Status RandomPlacement(const std::vector<size_t> &blob_sizes,
 
   for (size_t i {0}; i < blob_sizes.size(); ++i) {
     PlacementSchema schema;
-    std::random_device dev;
-    std::mt19937 rng(dev());
 
     // Split the blob
     if (SplitBlob(blob_sizes[i])) {
