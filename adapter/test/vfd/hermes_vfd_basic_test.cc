@@ -241,23 +241,23 @@ TEST_CASE("BatchedUpdateRandom", "[process=" + std::to_string(info.comm_size) +
   }
 
   // FIXME(chogan):
-  // SECTION("update partial dataset in existing file") {
-  //   test::TestOpen(info.existing_file, H5F_ACC_RDWR);
-  //   REQUIRE(test::hermes_hid != H5I_INVALID_HID);
+  SECTION("update partial dataset in existing file") {
+    test::TestOpen(info.existing_file, H5F_ACC_RDWR);
+    REQUIRE(test::hermes_hid != H5I_INVALID_HID);
 
-  //   // for (size_t i = 0; i < info.num_iterations; ++i) {
-  //     u32 dataset = GenNextRandom() % info.num_iterations;
-  //     // NOTE(chogan): Subtract 1 from size so we're always writing at least 1
-  //     // element
-  //     hsize_t offset = GenNextRandom() % (info.write_data.size() - 1);
-  //     hsize_t elements_to_write = info.write_data.size() - offset;
-  //     test::TestWritePartial1d(std::to_string(dataset), info.write_data.data(),
-  //                              offset, elements_to_write * sizeof(f32));
-  //   // }
+    // for (size_t i = 0; i < info.num_iterations; ++i) {
+      u32 dataset = GenNextRandom() % info.num_iterations;
+      // NOTE(chogan): Subtract 1 from size so we're always writing at least 1
+      // element
+      hsize_t offset = GenNextRandom() % (info.write_data.size() - 1);
+      hsize_t elements_to_write = info.write_data.size() - offset;
+      test::TestWritePartial1d(std::to_string(dataset), info.write_data.data(),
+                               offset, elements_to_write * sizeof(f32));
+    // }
 
-  //   test::TestClose();
-  //   REQUIRE(test::hermes_herr >= 0);
-  // }
+    test::TestClose();
+    REQUIRE(test::hermes_herr >= 0);
+  }
   Posttest();
 }
 

@@ -281,6 +281,7 @@ int init(int* argc, char*** argv) {
   MPI_Init(argc, argv);
   info.write_data.resize(args.request_size / sizeof(f32));
   for (size_t i = 0; i < info.write_data.size(); ++i) {
+    // TODO(chogan): For debugging
     info.write_data[i] = 755.0f;  // GenRandom0to1();
   }
   info.read_data.resize(args.request_size / sizeof(f32));
