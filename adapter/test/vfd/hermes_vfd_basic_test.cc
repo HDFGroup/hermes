@@ -240,12 +240,11 @@ TEST_CASE("BatchedUpdateRandom", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(test::hermes_herr >= 0);
   }
 
-  // FIXME(chogan):
   SECTION("update partial dataset in existing file") {
     test::TestOpen(info.existing_file, H5F_ACC_RDWR);
     REQUIRE(test::hermes_hid != H5I_INVALID_HID);
 
-    // for (size_t i = 0; i < info.num_iterations; ++i) {
+    for (size_t i = 0; i < info.num_iterations; ++i) {
       u32 dataset = GenNextRandom() % info.num_iterations;
       // NOTE(chogan): Subtract 1 from size so we're always writing at least 1
       // element
@@ -253,7 +252,7 @@ TEST_CASE("BatchedUpdateRandom", "[process=" + std::to_string(info.comm_size) +
       hsize_t elements_to_write = info.write_data.size() - offset;
       test::TestWritePartial1d(std::to_string(dataset), info.write_data.data(),
                                offset, elements_to_write * sizeof(f32));
-    // }
+    }
 
     test::TestClose();
     REQUIRE(test::hermes_herr >= 0);
@@ -261,15 +260,15 @@ TEST_CASE("BatchedUpdateRandom", "[process=" + std::to_string(info.comm_size) +
   Posttest();
 }
 
-TEST_CASE("BatchedReadStrideFixed",
-          "[process=" + std::to_string(info.comm_size) +
-              "]"
-              "[operation=batched_read]"
-              "[request_size=type-fixed][repetition=" +
-              std::to_string(info.num_iterations) +
-              "]"
-              "[pattern=stride_fixed][file=1]") {
-  Pretest();
+// TEST_CASE("BatchedReadStrideFixed",
+//           "[process=" + std::to_string(info.comm_size) +
+//               "]"
+//               "[operation=batched_read]"
+//               "[request_size=type-fixed][repetition=" +
+//               std::to_string(info.num_iterations) +
+//               "]"
+//               "[pattern=stride_fixed][file=1]") {
+//   Pretest();
 
   // TODO(chogan):
   // SECTION("read from existing file") {
@@ -284,8 +283,8 @@ TEST_CASE("BatchedReadStrideFixed",
   //   test::TestClose();
   //   REQUIRE(test::hermes_herr >= 0);
   // }
-  Posttest();
-}
+//   Posttest();
+// }
 
 // TEST_CASE("BatchedUpdateStrideFixed",
 //           "[process=" + std::to_string(info.comm_size) +

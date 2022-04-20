@@ -225,37 +225,42 @@ static void set_blob(bitv_t *bits, size_t bit_pos) {
     bits->end_pos = bit_pos;
 }
 
-void H5FD__hermes_read_gap(h5fd_hermes_t *file, const char *filename,
-                           size_t seek_offset, u8 *read_ptr, size_t read_size) {
-  if ((file->flags & H5F_ACC_CREAT) || (file->flags & H5F_ACC_TRUNC) ||
+void H5FD__hermes_read_gap(H5FD_hermes_t *file, size_t seek_offset,
+                           unsigned char *read_ptr, size_t read_size) {
+  if (!(file->flags & H5F_ACC_CREAT) || (file->flags & H5F_ACC_TRUNC) ||
       (file->flags & H5F_ACC_EXCL)) {
       // fs::file_size(filename) >= file_bounds) {
     /* LOG(INFO) << "Blob has a gap in write. Read gap from original file.\n"; */
-    int fd = open(filename, O_RDONLY);
+    int fd = open(file->bktname, O_RDONLY);
     if (fd) {
       if (flock(fd, LOCK_SH) == -1) {
         // TODO(chogan): 
         /* hermes::FailedLibraryCall("flock"); */
+        assert(0);
       }
 
       ssize_t bytes_read = pread(fd, read_ptr, read_size, seek_offset);
       if (bytes_read == -1 || (size_t)bytes_read != read_size) {
         // TODO(chogan): 
         /* hermes::FailedLibraryCall("pread"); */
+        /* assert(0); */
       }
 
       if (flock(fd, LOCK_UN) == -1) {
         // TODO(chogan): 
         /* hermes::FailedLibraryCall("flock"); */
+        assert(0);
       }
 
       if (close(fd) != 0) {
         // TODO(chogan): 
         /* hermes::FailedLibraryCall("close"); */
+        assert(0);
       }
     } else {
       // TODO(chogan): 
       /* hermes::FailedLibraryCall("open"); */
+      assert(0);
     }
   }
 }
@@ -954,51 +959,54 @@ static herr_t H5FD__hermes_write(H5FD_t *_file, H5FD_mem_t H5_ATTR_UNUSED type,
     /* NOTE: The range does NOT include the start address of page k,
        but includes the end address of page k */
     if (addr > page_start && addr < next_page_start) {
-      /* Read blob back to transfer buffer */
+      size_t page_offset = addr - page_start;
+      size_t page_write_size;
+
+      if (addr_end < next_page_start) {
+        /* addr + size is within the same page (only one page) */
+        page_write_size = size;
+      } else {
+        /* More than one page. Only copy until the end of this page. */
+        page_write_size = next_page_start - addr;
+      }
+
+      /* Fill transfer buffer with existing data, if any. */
       if (blob_exists) {
         HermesBucketGet(file->bkt_handle, k_blob, blob_size, file->page_buf);
-      }
-      /* Calculate the starting address of transfer buffer update within page
-       * k */
-      size_t offset = addr - page_start;
-      // TODO(chogan): Signed value is always > 0
-      assert(offset > 0);
-
-      /* Update transfer buffer */
-      /* addr+size is within the same page (only one page) */
-      if (addr_end <= next_page_start-1) {
-        memcpy(file->page_buf+offset, (char *)buf + transfer_size, size);
-        transfer_size += size;
       } else {
-        /* More than one page */
-        /* Copy data from addr to the end of the address in page k */
-        memcpy(file->page_buf+offset, (char *)buf + transfer_size,
-               next_page_start-addr);
-        transfer_size += next_page_start-addr;
+        /* Populate this page from the original file */
+        H5FD__hermes_read_gap(file, page_start, file->page_buf, blob_size);
       }
-      /* Write Blob k to Hermes buffering system */
+
+      memcpy(file->page_buf + page_offset, (char *)buf + transfer_size,
+             page_write_size);
+      transfer_size += page_write_size;
+
+      /* TODO(chogan): Handle failed Put */
+      /* Write Blob k to Hermes. */
       HermesBucketPut(file->bkt_handle, k_blob, file->page_buf, blob_size);
       set_blob(&file->blob_in_bucket, k);
-    } else if (addr_end >= page_start && addr_end < next_page_start-1) {
-      /* Check if addr_end is in the range of [page_start,
-       * next_page_start-1) */
-      /* NOTE: The range includes the start address of page k,
-         but does NOT include the end address of page k */
+    } else if (addr_end >= page_start && addr_end < next_page_start - 1) {
+      /* NOTE: The range includes the start address of page k, but does NOT
+         include the end address of page k */
 
       /* Read blob back */
       if (blob_exists) {
         HermesBucketGet(file->bkt_handle, k_blob, blob_size, file->page_buf);
+      } else {
+        /* Populate this page from the original file */
+        H5FD__hermes_read_gap(file, page_start, file->page_buf, blob_size);
       }
+
       /* Update transfer buffer */
       memcpy(file->page_buf, (char *)buf + transfer_size,
-             addr_end-page_start+1);
-      transfer_size += addr_end-page_start+1;
-      /* Write Blob k to Hermes buffering system */
+             addr_end-page_start + 1);
+      transfer_size += addr_end-page_start + 1;
+      /* Write Blob k to Hermes. */
       HermesBucketPut(file->bkt_handle, k_blob, file->page_buf, blob_size);
       set_blob(&file->blob_in_bucket, k);
     } else if (addr <= page_start && addr_end >= next_page_start-1) {
-      /* Page/Blob k is within the range of (addr, addr+size) */
-      /* Update transfer buffer */
+      /* The write spans this page entirely */
       /* Write Blob k to Hermes buffering system */
       HermesBucketPut(file->bkt_handle, k_blob, (char *)buf + transfer_size,
                       blob_size);
