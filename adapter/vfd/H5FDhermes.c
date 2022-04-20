@@ -227,38 +227,39 @@ static void set_blob(bitv_t *bits, size_t bit_pos) {
 
 void H5FD__hermes_read_gap(H5FD_hermes_t *file, size_t seek_offset,
                            unsigned char *read_ptr, size_t read_size) {
-  if (!(file->flags & H5F_ACC_CREAT) || (file->flags & H5F_ACC_TRUNC) ||
-      (file->flags & H5F_ACC_EXCL)) {
-      // fs::file_size(filename) >= file_bounds) {
-    /* LOG(INFO) << "Blob has a gap in write. Read gap from original file.\n"; */
+  if (!(file->flags & H5F_ACC_CREAT || file->flags & H5F_ACC_TRUNC ||
+        file->flags & H5F_ACC_EXCL)) {
+    // TODO(chogan):
+    // fs::file_size(filename) >= file_bounds) {
+    // LOG(INFO) << "Blob has a gap in write. Read gap from original file.\n";
     int fd = open(file->bktname, O_RDONLY);
     if (fd) {
       if (flock(fd, LOCK_SH) == -1) {
-        // TODO(chogan): 
+        // TODO(chogan):
         /* hermes::FailedLibraryCall("flock"); */
         assert(0);
       }
 
       ssize_t bytes_read = pread(fd, read_ptr, read_size, seek_offset);
       if (bytes_read == -1 || (size_t)bytes_read != read_size) {
-        // TODO(chogan): 
+        // TODO(chogan):
         /* hermes::FailedLibraryCall("pread"); */
         /* assert(0); */
       }
 
       if (flock(fd, LOCK_UN) == -1) {
-        // TODO(chogan): 
+        // TODO(chogan):
         /* hermes::FailedLibraryCall("flock"); */
         assert(0);
       }
 
       if (close(fd) != 0) {
-        // TODO(chogan): 
+        // TODO(chogan):
         /* hermes::FailedLibraryCall("close"); */
         assert(0);
       }
     } else {
-      // TODO(chogan): 
+      // TODO(chogan):
       /* hermes::FailedLibraryCall("open"); */
       assert(0);
     }
@@ -423,8 +424,6 @@ H5FD__hermes_open(const char *name, unsigned flags, hid_t fapl_id,
   assert(sizeof(off_t) >= sizeof(size_t));
 
   H5FD_HERMES_INIT;
-
-  fprintf(stdout, "USING HERMES DRIVER for file %s!!\n", name);
 
   /* Check arguments */
   if (!name || !*name)
