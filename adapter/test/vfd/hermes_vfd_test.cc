@@ -83,16 +83,6 @@ class MuteHdf5Errors {
   }
 };
 
-void AssertFunc(bool expr, const char *file, int lineno, const char *message) {
-  if (!expr) {
-    fprintf(stderr, "Assertion failed at %s: line %d: %s\n", file, lineno,
-            message);
-    exit(-1);
-  }
-}
-
-#define Assert(expr) AssertFunc((expr), __FILE__, __LINE__, #expr)
-
 struct RwIds {
   hid_t dset_id;
   hid_t dspace_id;
@@ -106,12 +96,12 @@ struct VfdApi {
 
   VfdApi() : sec2_fapl(H5I_INVALID_HID) {
     sec2_fapl = H5Pcreate(H5P_FILE_ACCESS);
-    Assert(sec2_fapl >= 0);
-    Assert(H5Pset_fapl_sec2(sec2_fapl) >= 0);
+    REQUIRE(sec2_fapl != H5I_INVALID_HID);
+    REQUIRE(H5Pset_fapl_sec2(sec2_fapl) >= 0);
   }
 
   ~VfdApi() {
-    Assert(H5Pclose(sec2_fapl) >= 0);
+    REQUIRE(H5Pclose(sec2_fapl) >= 0);
     sec2_fapl = H5I_INVALID_HID;
   }
 
@@ -142,10 +132,17 @@ struct VfdApi {
   RwIds RwPreamble(hid_t hid, const std::string &dset_name, hsize_t offset,
                    hsize_t num_bytes, hsize_t stride = 1) {
     hid_t dset_id = H5Dopen2(hid, dset_name.c_str(), H5P_DEFAULT);
-    REQUIRE(dset_id != H5I_INVALID_HID);
+
     hsize_t num_elements = num_bytes / sizeof(f32);
     hid_t memspace_id = H5Screate_simple(1, &num_elements, NULL);
     REQUIRE(memspace_id != H5I_INVALID_HID);
+
+    if (dset_id == H5I_INVALID_HID) {
+      dset_id = H5Dcreate2(hid, dset_name.c_str(), H5T_NATIVE_FLOAT,
+                           memspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    }
+
+    REQUIRE(dset_id != H5I_INVALID_HID);
     hid_t dspace_id = H5Dget_space(dset_id);
     REQUIRE(dspace_id != H5I_INVALID_HID);
     herr_t status = H5Sselect_hyperslab(dspace_id, H5S_SELECT_SET, &offset,
@@ -165,13 +162,39 @@ struct VfdApi {
 
   void Read(hid_t hid, const std::string &dset_name, std::vector<f32> &buf,
             hsize_t offset, hsize_t num_bytes) {
-
     RwIds ids = RwPreamble(hid, dset_name, offset, num_bytes);
     herr_t status = H5Dread(ids.dset_id, H5T_NATIVE_FLOAT, ids.mspace_id,
                             ids.dspace_id, H5P_DEFAULT, buf.data());
     REQUIRE(status >= 0);
 
     RwCleanup(&ids);
+  }
+
+  void MakeCompactDataset(hid_t hid, const std::string &dset_name,
+                            const std::vector<f32> &data) {
+    REQUIRE(data.size() <= KILOBYTES(64));
+    hid_t dcpl = H5Pcreate(H5P_DATASET_CREATE);
+    REQUIRE(dcpl != H5I_INVALID_HID);
+    herr_t status = H5Pset_layout(dcpl, H5D_COMPACT);
+    REQUIRE(status >= 0);
+    hsize_t size = data.size();
+    hid_t memspace_id = H5Screate_simple(1, &size, NULL);
+    REQUIRE(memspace_id != H5I_INVALID_HID);
+
+    hid_t dset_id = H5Dcreate2(hid, dset_name.c_str(), H5T_NATIVE_FLOAT,
+                               memspace_id, H5P_DEFAULT, dcpl, H5P_DEFAULT);
+    REQUIRE(dset_id != H5I_INVALID_HID);
+
+    hid_t dspace_id = H5Dget_space(dset_id);
+    REQUIRE(dspace_id != H5I_INVALID_HID);
+
+    status = H5Dwrite(dset_id, H5T_NATIVE_FLOAT, memspace_id,
+                      dspace_id, H5P_DEFAULT, data.data());
+    REQUIRE(status >= 0);
+    REQUIRE(H5Sclose(memspace_id) >= 0);
+    REQUIRE(H5Sclose(dspace_id) >= 0);
+    REQUIRE(H5Pclose(dcpl) >= 0);
+    REQUIRE(H5Dclose(dset_id) >= 0);
   }
 
   herr_t WriteDataset(hid_t hid, const std::string &dset_name,
@@ -257,15 +280,15 @@ void GenHdf5File(std::string fname, size_t dataset_size, size_t num_datasets) {
   f32 *at = data.data();
 
   hid_t file_id = api.CreatePosix(fname, H5F_ACC_TRUNC);
-  Assert(file_id != H5I_INVALID_HID);
+  REQUIRE(file_id != H5I_INVALID_HID);
 
   for (size_t i = 0; i < num_datasets; ++i) {
-    Assert(api.WriteDataset(file_id, std::to_string(i), at, f32s_per_dataset)
-           > -1);
+    REQUIRE(api.WriteDataset(file_id, std::to_string(i), at, f32s_per_dataset)
+            > -1);
     at += f32s_per_dataset;
   }
 
-  Assert(api.Close(file_id) > -1);
+  REQUIRE(api.Close(file_id) > -1);
 }
 
 }  // namespace hermes::adapter::vfd::test
@@ -281,8 +304,7 @@ int init(int* argc, char*** argv) {
   MPI_Init(argc, argv);
   info.write_data.resize(args.request_size / sizeof(f32));
   for (size_t i = 0; i < info.write_data.size(); ++i) {
-    // TODO(chogan): For debugging
-    info.write_data[i] = 755.0f;  // GenRandom0to1();
+    info.write_data[i] = GenRandom0to1();
   }
   info.read_data.resize(args.request_size / sizeof(f32));
   for (size_t i = 0; i < info.read_data.size(); ++i) {
@@ -330,7 +352,6 @@ int Pretest() {
 void CheckResults(const std::string &file1, const std::string &file2) {
   if (fs::exists(file1) && fs::exists(file2)) {
     std::string h5diff_cmd = "h5diff " + file1 + " " + file2;
-    LOG(INFO) << "===Running " << h5diff_cmd;
     int status = system(h5diff_cmd.c_str());
     REQUIRE(status == 0);
   }
@@ -411,6 +432,13 @@ void TestWriteDataset(const std::string &dset_name,
   VfdApi api;
   api.WriteDataset(test::hermes_hid, dset_name, data);
   api.WriteDataset(test::sec2_hid, dset_name, data);
+}
+
+void TestMakeCompactDataset(const std::string &dset_name,
+                            const std::vector<f32> &data) {
+  VfdApi api;
+  api.MakeCompactDataset(test::hermes_hid, dset_name, data);
+  api.MakeCompactDataset(test::sec2_hid, dset_name, data);
 }
 
 void TestRead(const std::string &dset_name, std::vector<f32> &buf,
