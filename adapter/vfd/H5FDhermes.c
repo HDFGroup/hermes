@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#include <math.h>
 
 #include <unistd.h>
 #include <sys/file.h>
@@ -572,21 +573,21 @@ static herr_t H5FD__hermes_close(H5FD_t *_file) {
 
         char i_blob[LEN_BLOB_NAME];
         snprintf(i_blob, sizeof(i_blob), "%zu\n", i);
-        /* Read blob back */
         HermesBucketGet(file->bkt_handle, i_blob, blob_size, file->page_buf);
-        ssize_t bytes_wrote;
-        if (i == file->blob_in_bucket.end_pos) {
-          size_t bytes_in = file->eof%blob_size;
-          if (bytes_in == 0)
-            bytes_in = blob_size;
-          bytes_wrote = pwrite(file->fd, file->page_buf,
-                               bytes_in, i*blob_size);
-          assert(bytes_wrote == bytes_in);
-        } else {
-          bytes_wrote = pwrite(file->fd, file->page_buf,
-                               blob_size, i*blob_size);
-          assert(bytes_wrote == blob_size);
+
+        size_t total_pages = (size_t)ceil(file->eof / (float)blob_size);
+        size_t last_page_index = total_pages > 0 ? total_pages - 1 : 0;
+        bool is_last_page = i == last_page_index;
+        size_t bytes_to_write = blob_size;
+
+        if (is_last_page) {
+          size_t bytes_in_last_page = file->eof - (last_page_index * blob_size);
+          bytes_to_write = bytes_in_last_page;
         }
+
+        ssize_t bytes_written = pwrite(file->fd, file->page_buf, bytes_to_write,
+                                       i * blob_size);
+        assert(bytes_written == bytes_to_write);
       }
     }
     if (close(file->fd) < 0)
