@@ -28,7 +28,7 @@
 #include <iostream>
 #include <vector>
 
-#include "glog/logging.h"
+#include <glog/logging.h>
 
 #include "hermes_types.h"
 #include "buffer_pool.h"

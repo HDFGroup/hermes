@@ -18,7 +18,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "glog/logging.h"
+#include <glog/logging.h>
 
 #include "hermes.h"
 #include "data_placement_engine.h"

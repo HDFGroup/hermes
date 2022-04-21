@@ -33,7 +33,7 @@
 #include <utility>
 #include <vector>
 
-#include "glog/logging.h"
+#include <glog/logging.h>
 #include "mpi.h"
 
 #include "metadata_management.h"
