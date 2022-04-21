@@ -27,8 +27,6 @@ static inline std::string RandomDatasetName(size_t upper_bound) {
   return result;
 }
 
-size_t elements_per_request = args.request_size / sizeof(f32);
-
 TEST_CASE("H5FOpen", "[process=" + std::to_string(info.comm_size) +
                       "]"
                       "[operation=single_open]"
@@ -80,7 +78,8 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
   SECTION("overwrite dataset in existing file") {
     test::TestOpen(info.existing_file, H5F_ACC_RDWR);
     REQUIRE(test::hermes_hid != H5I_INVALID_HID);
-    test::TestWritePartial1d("0", info.write_data.data(), 0, args.request_size);
+    test::TestWritePartial1d("0", info.write_data.data(), 0,
+                             info.nelems_per_dataset);
     test::TestClose();
     REQUIRE(test::hermes_herr >= 0);
   }
@@ -128,7 +127,7 @@ TEST_CASE("SingleRead", "[process=" + std::to_string(info.comm_size) +
   SECTION("read first dataset from existing file") {
     test::TestOpen(info.existing_file, H5F_ACC_RDONLY);
     REQUIRE(test::hermes_hid != H5I_INVALID_HID);
-    test::TestRead("0", info.read_data, 0, args.request_size);
+    test::TestRead("0", info.read_data, 0, info.nelems_per_dataset);
     test::TestClose();
     REQUIRE(test::hermes_herr >= 0);
   }
@@ -137,7 +136,7 @@ TEST_CASE("SingleRead", "[process=" + std::to_string(info.comm_size) +
     test::TestOpen(info.existing_file, H5F_ACC_RDONLY);
     REQUIRE(test::hermes_hid != H5I_INVALID_HID);
     test::TestRead(std::to_string(info.num_iterations - 1), info.read_data, 0,
-                   args.request_size);
+                   info.nelems_per_dataset);
     test::TestClose();
     REQUIRE(test::hermes_herr >= 0);
   }
@@ -171,7 +170,7 @@ TEST_CASE("BatchedWriteSequential",
     test::TestWriteDataset("0", info.write_data);
     for (size_t i = 0; i < info.num_iterations; ++i) {
       test::TestWritePartial1d("0", info.write_data.data(), 0,
-                               args.request_size);
+                               info.nelems_per_dataset);
     }
     test::TestClose();
     REQUIRE(test::hermes_herr >= 0);
@@ -192,9 +191,9 @@ TEST_CASE("BatchedReadSequential",
     test::TestOpen(info.existing_file, H5F_ACC_RDWR);
     REQUIRE(test::hermes_hid != H5I_INVALID_HID);
 
-    std::vector<f32> buf(args.request_size / sizeof(f32), 0.0f);
+    std::vector<f32> buf(info.nelems_per_dataset, 0.0f);
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      test::TestRead(std::to_string(i), buf, 0, args.request_size);
+      test::TestRead(std::to_string(i), buf, 0, info.nelems_per_dataset);
     }
     test::TestClose();
     REQUIRE(test::hermes_herr >= 0);
@@ -205,7 +204,7 @@ TEST_CASE("BatchedReadSequential",
     REQUIRE(test::hermes_hid != H5I_INVALID_HID);
 
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      test::TestRead("0", info.read_data, 0, args.request_size);
+      test::TestRead("0", info.read_data, 0, info.nelems_per_dataset);
     }
     test::TestClose();
     REQUIRE(test::hermes_herr >= 0);
@@ -225,10 +224,10 @@ TEST_CASE("BatchedReadRandom", "[process=" + std::to_string(info.comm_size) +
     test::TestOpen(info.existing_file, H5F_ACC_RDWR);
     REQUIRE(test::hermes_hid != H5I_INVALID_HID);
 
-    std::vector<f32> buf(args.request_size / sizeof(f32), 0.0f);
+    std::vector<f32> buf(info.nelems_per_dataset, 0.0f);
     for (size_t i = 0; i < info.num_iterations; ++i) {
       u32 dataset = GenNextRandom() % info.num_iterations;
-      test::TestRead(std::to_string(dataset), buf, 0, args.request_size);
+      test::TestRead(std::to_string(dataset), buf, 0, info.nelems_per_dataset);
     }
     test::TestClose();
     REQUIRE(test::hermes_herr >= 0);
@@ -251,7 +250,7 @@ TEST_CASE("BatchedUpdateRandom", "[process=" + std::to_string(info.comm_size) +
     for (size_t i = 0; i < info.num_iterations; ++i) {
       u32 dataset = GenNextRandom() % info.num_iterations;
       test::TestWritePartial1d(std::to_string(dataset), info.write_data.data(),
-                               0, args.request_size);
+                               0, info.nelems_per_dataset);
     }
     test::TestClose();
     REQUIRE(test::hermes_herr >= 0);
@@ -268,7 +267,7 @@ TEST_CASE("BatchedUpdateRandom", "[process=" + std::to_string(info.comm_size) +
       hsize_t offset = GenNextRandom() % (info.write_data.size() - 1);
       hsize_t elements_to_write = info.write_data.size() - offset;
       test::TestWritePartial1d(std::to_string(dataset), info.write_data.data(),
-                               offset, elements_to_write * sizeof(f32));
+                               offset, elements_to_write);
     }
 
     test::TestClose();
@@ -293,8 +292,8 @@ TEST_CASE("BatchedWriteRSVariable",
     REQUIRE(test::hermes_hid != H5I_INVALID_HID);
 
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      size_t request_size = Random1ToUpperBound(args.request_size);
-      std::vector<f32> data(request_size / sizeof(f32), 2.0f);
+      size_t request_size = Random1ToUpperBound(info.nelems_per_dataset);
+      std::vector<f32> data(request_size, 2.0f);
       test::TestWritePartial1d(std::to_string(i), data.data(), 0, request_size);
     }
     test::TestClose();
@@ -319,13 +318,10 @@ TEST_CASE("BatchedReadSequentialRSVariable",
     REQUIRE(test::hermes_hid != H5I_INVALID_HID);
 
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      size_t request_size = Random1ToUpperBound(args.request_size);
-      size_t request_elements = request_size / sizeof(f32);
-      size_t total_elements = args.request_size / sizeof(f32);
-      size_t starting_element =  total_elements - request_elements;
-      std::vector<f32> data(request_elements, 1.5f);
-      test::TestRead(std::to_string(i), data, starting_element,
-                     request_size);
+      size_t request_size = Random1ToUpperBound(info.nelems_per_dataset);
+      size_t starting_element =  info.nelems_per_dataset - request_size;
+      std::vector<f32> data(request_size, 1.5f);
+      test::TestRead(std::to_string(i), data, starting_element, request_size);
     }
     test::TestClose();
     REQUIRE(test::hermes_herr >= 0);
@@ -336,8 +332,8 @@ TEST_CASE("BatchedReadSequentialRSVariable",
     REQUIRE(test::hermes_hid != H5I_INVALID_HID);
 
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      size_t request_size = Random1ToUpperBound(args.request_size);
-      std::vector<f32> data(request_size / sizeof(f32), 3.0f);
+      size_t request_size = Random1ToUpperBound(info.nelems_per_dataset);
+      std::vector<f32> data(request_size, 3.0f);
       test::TestRead(std::to_string(i), data, 0, request_size);
     }
     test::TestClose();
@@ -361,16 +357,14 @@ TEST_CASE("BatchedReadRandomRSVariable",
     test::TestOpen(info.existing_file, H5F_ACC_RDWR);
     REQUIRE(test::hermes_hid != H5I_INVALID_HID);
 
-    std::vector<f32> data(args.request_size / sizeof(f32), 5.0f);
+    std::vector<f32> data(info.nelems_per_dataset, 5.0f);
     for (size_t i = 0; i < info.num_iterations; ++i) {
       std::string dset_name = RandomDatasetName(info.num_iterations);
-      size_t offset = Random1ToUpperBound(args.request_size);
-      size_t starting_element = offset / sizeof(f32);
+      size_t starting_element = Random1ToUpperBound(info.nelems_per_dataset);
       size_t request_elements =
-        Random1ToUpperBound(elements_per_request - starting_element);
+        Random1ToUpperBound(info.nelems_per_dataset - starting_element);
       std::vector<f32> data(request_elements, 3.8f);
-      test::TestRead(dset_name, data, starting_element,
-                     request_elements * sizeof(f32));
+      test::TestRead(dset_name, data, starting_element, request_elements);
     }
     test::TestClose();
     REQUIRE(test::hermes_herr >= 0);
@@ -393,10 +387,10 @@ TEST_CASE("BatchedUpdateRandomRSVariable",
     test::TestOpen(info.existing_file, H5F_ACC_RDWR);
     REQUIRE(test::hermes_hid != H5I_INVALID_HID);
 
-    std::vector<f32> data(args.request_size / sizeof(f32), 8.0f);
+    std::vector<f32> data(info.nelems_per_dataset, 8.0f);
     for (size_t i = 0; i < info.num_iterations; ++i) {
       std::string dset_name = RandomDatasetName(info.num_iterations);
-      size_t request_size = Random1ToUpperBound(args.request_size);
+      size_t request_size = Random1ToUpperBound(info.nelems_per_dataset);
       test::TestWritePartial1d(dset_name, data.data(), 0, request_size);
     }
     test::TestClose();
@@ -423,7 +417,7 @@ TEST_CASE("BatchedWriteTemporalFixed",
     for (size_t i = 0; i < info.num_iterations; ++i) {
       usleep(info.temporal_interval_ms * 1000);
       test::TestWritePartial1d(std::to_string(i), info.write_data.data(), 0,
-                               args.request_size);
+                               info.nelems_per_dataset);
     }
     test::TestClose();
     REQUIRE(test::hermes_herr >= 0);
@@ -462,7 +456,7 @@ TEST_CASE("BatchedWriteTemporalVariable",
         GenNextRandom() % (info.temporal_interval_ms + 2);
       usleep(sleep_interval_ms * 1000);
       test::TestWritePartial1d(std::to_string(i), info.write_data.data(), 0,
-                               args.request_size);
+                               info.nelems_per_dataset);
     }
     test::TestClose();
     REQUIRE(test::hermes_herr >= 0);
@@ -502,7 +496,7 @@ TEST_CASE("BatchedMixedSequential",
     for (size_t i = 0; i < info.num_iterations; ++i) {
       std::string dset_name = std::to_string(i);
       test::TestWriteDataset(dset_name, info.write_data);
-      test::TestRead(dset_name, info.read_data, 0, args.request_size);
+      test::TestRead(dset_name, info.read_data, 0, info.nelems_per_dataset);
     }
     test::TestClose();
     REQUIRE(test::hermes_herr >= 0);
@@ -517,9 +511,9 @@ TEST_CASE("BatchedMixedSequential",
 
       if (i % 2 == 0) {
         test::TestWritePartial1d(dset_name, info.write_data.data(), 0,
-                                 args.request_size);
+                                 info.nelems_per_dataset);
       } else {
-        test::TestRead(dset_name, info.read_data, 0, args.request_size);
+        test::TestRead(dset_name, info.read_data, 0, info.nelems_per_dataset);
       }
     }
     test::TestClose();
@@ -532,9 +526,9 @@ TEST_CASE("BatchedMixedSequential",
 
     for (size_t i = 0; i < info.num_iterations; ++i) {
       std::string dset_name = std::to_string(i);
-      test::TestRead(dset_name, info.read_data, 0, args.request_size);
+      test::TestRead(dset_name, info.read_data, 0, info.nelems_per_dataset);
       test::TestWritePartial1d(dset_name, info.write_data.data(), 0,
-                               args.request_size);
+                               info.nelems_per_dataset);
     }
 
     test::TestClose();
@@ -552,7 +546,7 @@ TEST_CASE("BatchedMixedSequential",
 
     for (size_t i = 0; i < info.num_iterations; ++i) {
       std::string dset_name = std::to_string(i);
-      test::TestRead(dset_name, info.read_data, 0, args.request_size);
+      test::TestRead(dset_name, info.read_data, 0, info.nelems_per_dataset);
     }
 
     test::TestClose();
@@ -574,7 +568,8 @@ TEST_CASE("BatchedMixedSequential",
     REQUIRE(test::hermes_hid != H5I_INVALID_HID);
 
     for (size_t i = 0; i < info.num_iterations; ++i) {
-      test::TestRead(std::to_string(i), info.read_data, 0, args.request_size);
+      test::TestRead(std::to_string(i), info.read_data, 0,
+                     info.nelems_per_dataset);
     }
 
     test::TestClose();
@@ -594,7 +589,7 @@ TEST_CASE("SingleMixed", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(test::hermes_hid != H5I_INVALID_HID);
     std::string dset_name("0");
     test::TestWriteDataset(dset_name, info.write_data);
-    test::TestRead(dset_name, info.read_data, 0, args.request_size);
+    test::TestRead(dset_name, info.read_data, 0, info.nelems_per_dataset);
     test::TestClose();
     REQUIRE(test::hermes_herr >= 0);
   }
@@ -603,9 +598,9 @@ TEST_CASE("SingleMixed", "[process=" + std::to_string(info.comm_size) +
     test::TestOpen(info.existing_file, H5F_ACC_RDWR);
     REQUIRE(test::hermes_hid != H5I_INVALID_HID);
     std::string dset_name("0");
-    test::TestRead(dset_name, info.read_data, 0, args.request_size);
+    test::TestRead(dset_name, info.read_data, 0, info.nelems_per_dataset);
     test::TestWritePartial1d(dset_name, info.write_data.data(), 0,
-                             args.request_size);
+                             info.nelems_per_dataset);
     test::TestClose();
     REQUIRE(test::hermes_herr >= 0);
   }
@@ -619,7 +614,7 @@ TEST_CASE("SingleMixed", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(test::hermes_herr >= 0);
 
     test::TestOpen(info.new_file, H5F_ACC_RDWR);
-    test::TestRead(dset_name, info.read_data, 0, args.request_size);
+    test::TestRead(dset_name, info.read_data, 0, info.nelems_per_dataset);
     test::TestClose();
     REQUIRE(test::hermes_herr >= 0);
   }
@@ -647,7 +642,7 @@ TEST_CASE("CompactDatasets") {
     std::vector<f32> read_buf(num_elements, 0.0f);
     for (size_t i = 0; i < info.num_iterations; ++i) {
       std::string dset_name = RandomDatasetName(info.num_iterations);
-      test::TestRead(dset_name, read_buf, 0, num_elements * sizeof(f32));
+      test::TestRead(dset_name, read_buf, 0, num_elements);
     }
 
     test::TestClose();

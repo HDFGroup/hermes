@@ -21,7 +21,6 @@
 
 #include <mpi.h>
 #include <hdf5.h>
-#include <hdf5_hl.h>
 
 #include "hermes_types.h"
 #include "adapter_test_utils.h"
@@ -41,6 +40,8 @@ struct Arguments {
 };
 
 struct TestInfo {
+  static const int element_size = sizeof(f32);
+
   int rank = 0;
   int comm_size = 1;
   std::vector<f32> write_data;
@@ -62,6 +63,7 @@ struct TestInfo {
   size_t medium_max = KILOBYTES(256);
   size_t large_min = KILOBYTES(256) + 1;
   size_t large_max = MEGABYTES(3);
+  size_t nelems_per_dataset;
 };
 
 class MuteHdf5Errors {
@@ -91,16 +93,16 @@ struct RwIds {
 
 // TODO(chogan): Document
 // Working towards a common adapter api that adapters can subclass
-struct VfdApi {
+struct Hdf5Api {
   hid_t sec2_fapl;
 
-  VfdApi() : sec2_fapl(H5I_INVALID_HID) {
+  Hdf5Api() : sec2_fapl(H5I_INVALID_HID) {
     sec2_fapl = H5Pcreate(H5P_FILE_ACCESS);
     REQUIRE(sec2_fapl != H5I_INVALID_HID);
     REQUIRE(H5Pset_fapl_sec2(sec2_fapl) >= 0);
   }
 
-  ~VfdApi() {
+  ~Hdf5Api() {
     REQUIRE(H5Pclose(sec2_fapl) >= 0);
     sec2_fapl = H5I_INVALID_HID;
   }
@@ -130,11 +132,10 @@ struct VfdApi {
   }
 
   RwIds RwPreamble(hid_t hid, const std::string &dset_name, hsize_t offset,
-                   hsize_t num_bytes, hsize_t stride = 1) {
+                   hsize_t nelems, hsize_t stride = 1) {
     hid_t dset_id = H5Dopen2(hid, dset_name.c_str(), H5P_DEFAULT);
 
-    hsize_t num_elements = num_bytes / sizeof(f32);
-    hid_t memspace_id = H5Screate_simple(1, &num_elements, NULL);
+    hid_t memspace_id = H5Screate_simple(1, &nelems, NULL);
     REQUIRE(memspace_id != H5I_INVALID_HID);
 
     if (dset_id == H5I_INVALID_HID) {
@@ -146,7 +147,7 @@ struct VfdApi {
     hid_t dspace_id = H5Dget_space(dset_id);
     REQUIRE(dspace_id != H5I_INVALID_HID);
     herr_t status = H5Sselect_hyperslab(dspace_id, H5S_SELECT_SET, &offset,
-                                        &stride, &num_elements, NULL);
+                                        &stride, &nelems, NULL);
     REQUIRE(status >= 0);
 
     RwIds result = {dset_id, dspace_id, memspace_id};
@@ -161,8 +162,8 @@ struct VfdApi {
   }
 
   void Read(hid_t hid, const std::string &dset_name, std::vector<f32> &buf,
-            hsize_t offset, hsize_t num_bytes) {
-    RwIds ids = RwPreamble(hid, dset_name, offset, num_bytes);
+            hsize_t offset, hsize_t nelems) {
+    RwIds ids = RwPreamble(hid, dset_name, offset, nelems);
     herr_t status = H5Dread(ids.dset_id, H5T_NATIVE_FLOAT, ids.mspace_id,
                             ids.dspace_id, H5P_DEFAULT, buf.data());
     REQUIRE(status >= 0);
@@ -170,15 +171,25 @@ struct VfdApi {
     RwCleanup(&ids);
   }
 
-  void MakeCompactDataset(hid_t hid, const std::string &dset_name,
-                            const std::vector<f32> &data) {
-    REQUIRE(data.size() <= KILOBYTES(64));
-    hid_t dcpl = H5Pcreate(H5P_DATASET_CREATE);
-    REQUIRE(dcpl != H5I_INVALID_HID);
-    herr_t status = H5Pset_layout(dcpl, H5D_COMPACT);
-    REQUIRE(status >= 0);
-    hsize_t size = data.size();
-    hid_t memspace_id = H5Screate_simple(1, &size, NULL);
+  void MakeDataset(hid_t hid, const std::string &dset_name,
+                   const std::vector<f32> &data, bool compact = false) {
+    MakeDataset(hid, dset_name, data.data(), data.size(), compact);
+  }
+
+  void MakeDataset(hid_t hid, const std::string &dset_name, const f32 *data,
+                   hsize_t nelems, bool compact = false) {
+    hid_t dcpl = H5P_DEFAULT;
+    herr_t status = 0;
+
+    if (compact) {
+      REQUIRE(nelems * sizeof(f32) <= KILOBYTES(64));
+      dcpl = H5Pcreate(H5P_DATASET_CREATE);
+      REQUIRE(dcpl != H5I_INVALID_HID);
+      status = H5Pset_layout(dcpl, H5D_COMPACT);
+      REQUIRE(status >= 0);
+    }
+
+    hid_t memspace_id = H5Screate_simple(1, &nelems, NULL);
     REQUIRE(memspace_id != H5I_INVALID_HID);
 
     hid_t dset_id = H5Dcreate2(hid, dset_name.c_str(), H5T_NATIVE_FLOAT,
@@ -189,33 +200,20 @@ struct VfdApi {
     REQUIRE(dspace_id != H5I_INVALID_HID);
 
     status = H5Dwrite(dset_id, H5T_NATIVE_FLOAT, memspace_id,
-                      dspace_id, H5P_DEFAULT, data.data());
+                      dspace_id, H5P_DEFAULT, data);
     REQUIRE(status >= 0);
     REQUIRE(H5Sclose(memspace_id) >= 0);
     REQUIRE(H5Sclose(dspace_id) >= 0);
-    REQUIRE(H5Pclose(dcpl) >= 0);
     REQUIRE(H5Dclose(dset_id) >= 0);
-  }
 
-  herr_t WriteDataset(hid_t hid, const std::string &dset_name,
-               const std::vector<f32> &data) {
-    herr_t result = WriteDataset(hid, dset_name, data.data(), data.size());
-
-    return result;
-  }
-
-  herr_t WriteDataset(hid_t hid, const std::string &dset_name,
-                      const f32 *data, size_t num_elements) {
-    hsize_t dims[1] = {num_elements};
-    herr_t result = H5LTmake_dataset_float(hid, dset_name.c_str(), 1, dims,
-                                           data);
-
-    return result;
+    if (compact) {
+      REQUIRE(H5Pclose(dcpl) >= 0);
+    }
   }
 
   void WritePartial1d(hid_t hid, const std::string &dset_name,
-                        const f32 *data, hsize_t offset, hsize_t num_bytes) {
-    RwIds ids = RwPreamble(hid, dset_name, offset, num_bytes);
+                        const f32 *data, hsize_t offset, hsize_t nelems) {
+    RwIds ids = RwPreamble(hid, dset_name, offset, nelems);
     herr_t status = H5Dwrite(ids.dset_id, H5T_NATIVE_FLOAT, ids.mspace_id,
                              ids.dspace_id, H5P_DEFAULT, data);
     REQUIRE(status >= 0);
@@ -239,7 +237,6 @@ static inline u32 RotateLeft(const u32 x, int k) {
 // xoshiro128+ random number generation:
 // https://prng.di.unimi.it/xoshiro128plus.c
 static u32 random_state[4] = {111, 222, 333, 444};
-
 
 u32 GenNextRandom() {
   const u32 random = random_state[0] + random_state[3];
@@ -266,26 +263,23 @@ f32 GenRandom0to1() {
   return result;
 }
 
-void GenHdf5File(std::string fname, size_t dataset_size, size_t num_datasets) {
-  size_t total_bytes = dataset_size * num_datasets;
-  size_t total_f32s = total_bytes / sizeof(f32);
-  size_t f32s_per_dataset = dataset_size / sizeof(f32);
-  std::vector<f32> data(total_f32s);
+void GenHdf5File(std::string fname, size_t num_dataset_elems,
+                 size_t num_datasets) {
+  std::vector<f32> data(num_dataset_elems * num_datasets);
 
   for (size_t i = 0; i < data.size(); ++i) {
     data[i] = GenRandom0to1();
   }
 
-  VfdApi api;
+  Hdf5Api api;
   f32 *at = data.data();
 
   hid_t file_id = api.CreatePosix(fname, H5F_ACC_TRUNC);
   REQUIRE(file_id != H5I_INVALID_HID);
 
   for (size_t i = 0; i < num_datasets; ++i) {
-    REQUIRE(api.WriteDataset(file_id, std::to_string(i), at, f32s_per_dataset)
-            > -1);
-    at += f32s_per_dataset;
+    api.MakeDataset(file_id, std::to_string(i), at, num_dataset_elems);
+    at += num_dataset_elems;
   }
 
   REQUIRE(api.Close(file_id) > -1);
@@ -293,20 +287,25 @@ void GenHdf5File(std::string fname, size_t dataset_size, size_t num_datasets) {
 
 }  // namespace hermes::adapter::vfd::test
 
-
 hermes::adapter::vfd::test::Arguments args;
 hermes::adapter::vfd::test::TestInfo info;
 
+using hermes::adapter::vfd::test::GenHdf5File;
 using hermes::adapter::vfd::test::GenNextRandom;
 using hermes::adapter::vfd::test::GenRandom0to1;
 
 int init(int* argc, char*** argv) {
   MPI_Init(argc, argv);
-  info.write_data.resize(args.request_size / sizeof(f32));
+  if (args.request_size % info.element_size != 0) {
+    LOG(FATAL) << "request_size must be a multiple of " << info.element_size;
+  }
+  info.nelems_per_dataset = args.request_size / info.element_size;
+
+  info.write_data.resize(info.nelems_per_dataset);
   for (size_t i = 0; i < info.write_data.size(); ++i) {
     info.write_data[i] = GenRandom0to1();
   }
-  info.read_data.resize(args.request_size / sizeof(f32));
+  info.read_data.resize(info.nelems_per_dataset);
   for (size_t i = 0; i < info.read_data.size(); ++i) {
     info.read_data[i] = 0.0f;
   }
@@ -337,10 +336,8 @@ void CleanupFiles() {
 int Pretest() {
   CleanupFiles();
 
-  hermes::adapter::vfd::test::GenHdf5File(info.existing_file, args.request_size,
-                                          info.num_iterations);
+  GenHdf5File(info.existing_file, info.nelems_per_dataset, info.num_iterations);
   info.total_size = fs::file_size(info.existing_file);
-
   std::string cmd = "cp " + info.existing_file + " " + info.existing_file_cmp;
   int status = system(cmd.c_str());
   REQUIRE(status != -1);
@@ -353,6 +350,9 @@ void CheckResults(const std::string &file1, const std::string &file2) {
   if (fs::exists(file1) && fs::exists(file2)) {
     std::string h5diff_cmd = "h5diff " + file1 + " " + file2;
     int status = system(h5diff_cmd.c_str());
+    if (status != 0) {
+      LOG(WARNING) << "===== " << h5diff_cmd;
+    }
     REQUIRE(status == 0);
   }
 }
@@ -380,7 +380,7 @@ cl::Parser define_options() {
              "Request size used for performing I/O");
 }
 
-using hermes::adapter::vfd::test::VfdApi;
+using hermes::adapter::vfd::test::Hdf5Api;
 
 namespace test {
 
@@ -390,7 +390,7 @@ herr_t hermes_herr;
 size_t hermes_size_read;
 
 void TestOpen(const std::string &path, unsigned flags, bool create = false) {
-  VfdApi api;
+  Hdf5Api api;
 
   std::string cmp_path;
   if (path == info.new_file) {
@@ -414,43 +414,41 @@ void TestOpen(const std::string &path, unsigned flags, bool create = false) {
 }
 
 void TestClose() {
-  VfdApi api;
+  Hdf5Api api;
   hermes_herr = api.Close(hermes_hid);
   herr_t status = api.Close(sec2_hid);
   REQUIRE(status == hermes_herr);
 }
 
 void TestWritePartial1d(const std::string &dset_name, const f32 *data,
-                        hsize_t offset, hsize_t num_bytes) {
-  VfdApi api;
-  api.WritePartial1d(test::hermes_hid, dset_name, data, offset, num_bytes);
-  api.WritePartial1d(test::sec2_hid, dset_name, data, offset, num_bytes);
+                        hsize_t offset, hsize_t nelems) {
+  Hdf5Api api;
+  api.WritePartial1d(test::hermes_hid, dset_name, data, offset, nelems);
+  api.WritePartial1d(test::sec2_hid, dset_name, data, offset, nelems);
 }
 
 void TestWriteDataset(const std::string &dset_name,
                       const std::vector<f32> &data) {
-  VfdApi api;
-  api.WriteDataset(test::hermes_hid, dset_name, data);
-  api.WriteDataset(test::sec2_hid, dset_name, data);
+  Hdf5Api api;
+  api.MakeDataset(test::hermes_hid, dset_name, data);
+  api.MakeDataset(test::sec2_hid, dset_name, data);
 }
 
 void TestMakeCompactDataset(const std::string &dset_name,
                             const std::vector<f32> &data) {
-  VfdApi api;
-  api.MakeCompactDataset(test::hermes_hid, dset_name, data);
-  api.MakeCompactDataset(test::sec2_hid, dset_name, data);
+  Hdf5Api api;
+  api.MakeDataset(test::hermes_hid, dset_name, data, true);
+  api.MakeDataset(test::sec2_hid, dset_name, data, true);
 }
 
 void TestRead(const std::string &dset_name, std::vector<f32> &buf,
-              hsize_t offset, hsize_t num_bytes) {
-  VfdApi api;
-  hsize_t num_elements = num_bytes / sizeof(f32);
-  api.Read(test::hermes_hid, dset_name, buf, offset, num_bytes);
-  std::vector<f32> sec2_read_buf(num_elements, 0.0f);
-  api.Read(test::sec2_hid, dset_name, sec2_read_buf, offset, num_bytes);
+              hsize_t offset, hsize_t nelems) {
+  Hdf5Api api;
+  api.Read(test::hermes_hid, dset_name, buf, offset, nelems);
+  std::vector<f32> sec2_read_buf(nelems, 0.0f);
+  api.Read(test::sec2_hid, dset_name, sec2_read_buf, offset, nelems);
 
-  REQUIRE(std::equal(buf.begin(), buf.begin() + num_elements,
-                     sec2_read_buf.begin()));
+  REQUIRE(std::equal(buf.begin(), buf.begin() + nelems, sec2_read_buf.begin()));
 }
 }  // namespace test
 

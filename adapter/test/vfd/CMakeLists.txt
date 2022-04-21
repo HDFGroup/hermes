@@ -34,13 +34,13 @@ if(HERMES_USE_ADDRESS_SANITIZER)
   endif()
 endif()
 
-add_test(NAME "TestVfd" COMMAND hermes_vfd_test --reporter compact) #TODO -d yes)
+add_test(NAME "TestVfd" COMMAND hermes_vfd_test --reporter compact -d yes)
 set_property(TEST "TestVfd"
   PROPERTY ENVIRONMENT HERMES_CONF=${HERMES_ADAPTER_TEST_DIR}/data/hermes.conf)
 set_property(TEST "TestVfd" APPEND
   PROPERTY ENVIRONMENT HDF5_PLUGIN_PATH=${HERMES_VFD_LIBRARY_DIR})
 set_property(TEST "TestVfd" APPEND
-  PROPERTY ENVIRONMENT HDF5_DRIVER_CONFIG=true\ 1024)
+  PROPERTY ENVIRONMENT HDF5_DRIVER_CONFIG=true\ 65536)
 set_property(TEST "TestVfd" APPEND
   PROPERTY ENVIRONMENT HDF5_DRIVER=hermes)
 set_property(TEST "TestVfd" APPEND
