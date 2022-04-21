@@ -230,33 +230,23 @@ void H5FD__hermes_read_gap(H5FD_hermes_t *file, size_t seek_offset,
                            unsigned char *read_ptr, size_t read_size) {
   if (!(file->flags & H5F_ACC_CREAT || file->flags & H5F_ACC_TRUNC ||
         file->flags & H5F_ACC_EXCL)) {
-    // TODO(chogan):
-    // fs::file_size(filename) >= file_bounds) {
-    // LOG(INFO) << "Blob has a gap in write. Read gap from original file.\n";
-    int fd = open(file->bktname, O_RDONLY);
-    if (fd) {
-      if (flock(fd, LOCK_SH) == -1) {
+    if (file->fd > -1) {
+      if (flock(file->fd, LOCK_SH) == -1) {
         // TODO(chogan):
         /* hermes::FailedLibraryCall("flock"); */
         assert(0);
       }
 
-      ssize_t bytes_read = pread(fd, read_ptr, read_size, seek_offset);
+      ssize_t bytes_read = pread(file->fd, read_ptr, read_size, seek_offset);
       if (bytes_read == -1 || (size_t)bytes_read != read_size) {
         // TODO(chogan):
         /* hermes::FailedLibraryCall("pread"); */
         /* assert(0); */
       }
 
-      if (flock(fd, LOCK_UN) == -1) {
+      if (flock(file->fd, LOCK_UN) == -1) {
         // TODO(chogan):
         /* hermes::FailedLibraryCall("flock"); */
-        assert(0);
-      }
-
-      if (close(fd) != 0) {
-        // TODO(chogan):
-        /* hermes::FailedLibraryCall("close"); */
         assert(0);
       }
     } else {
@@ -414,8 +404,8 @@ H5FD__hermes_open(const char *name, unsigned flags, hid_t fapl_id,
                   haddr_t maxaddr) {
   H5FD_hermes_t  *file = NULL; /* hermes VFD info          */
   int             fd   = -1;   /* File descriptor          */
-  int             o_flags;     /* Flags for open() call    */
-  struct stat     sb;
+  int             o_flags = 0;     /* Flags for open() call    */
+  struct stat     sb = {0};
   const H5FD_hermes_fapl_t *fa   = NULL;
   H5FD_hermes_fapl_t new_fa = {0};
   char           *hermes_config = NULL;
@@ -468,6 +458,8 @@ H5FD__hermes_open(const char *name, unsigned flags, hid_t fapl_id,
     }
   }
 
+  bool creating_file = false;
+
   /* Build the open flags */
   o_flags = (H5F_ACC_RDWR & flags) ? O_RDWR : O_RDONLY;
   if (H5F_ACC_TRUNC & flags) {
@@ -475,26 +467,26 @@ H5FD__hermes_open(const char *name, unsigned flags, hid_t fapl_id,
   }
   if (H5F_ACC_CREAT & flags) {
     o_flags |= O_CREAT;
+    creating_file = true;
   }
   if (H5F_ACC_EXCL & flags) {
     o_flags |= O_EXCL;
   }
 
-  /* TODO(chogan): Handle file->persistence == false */
+  if (fa->persistence || !creating_file) {
+    if ((fd = open(name, o_flags, H5FD_HERMES_POSIX_CREATE_MODE_RW)) < 0) {
+      int myerrno = errno;
+      H5FD_HERMES_GOTO_ERROR(
+        H5E_FILE, H5E_CANTOPENFILE, NULL,
+        "unable to open file: name = '%s', errno = %d, error message = '%s',"
+        "flags = %x, o_flags = %x", name, myerrno, strerror(myerrno), flags,
+        (unsigned)o_flags);
+    }
 
-  /* Open the file */
-  if ((fd = open(name, o_flags, H5FD_HERMES_POSIX_CREATE_MODE_RW)) < 0) {
-    int myerrno = errno;
-    H5FD_HERMES_GOTO_ERROR(
-      H5E_FILE, H5E_CANTOPENFILE, NULL,
-      "unable to open file: name = '%s', errno = %d, error message = '%s',"
-      "flags = %x, o_flags = %x", name, myerrno, strerror(myerrno), flags,
-      (unsigned)o_flags);
-  }
-
-  if (fstat(fd, &sb) < 0) {
-    H5FD_HERMES_SYS_GOTO_ERROR(H5E_FILE, H5E_BADFILE, NULL,
-                               "unable to fstat file");
+    if (fstat(fd, &sb) < 0) {
+      H5FD_HERMES_SYS_GOTO_ERROR(H5E_FILE, H5E_BADFILE, NULL,
+                                 "unable to fstat file");
+    }
   }
 
   /* Create the new file struct */
@@ -508,7 +500,7 @@ H5FD__hermes_open(const char *name, unsigned flags, hid_t fapl_id,
   }
 
   file->persistence = fa->persistence;
-  file->fd = -1;
+  file->fd = fd;
   file->bkt_handle = HermesBucketCreate(name);
   file->page_buf = malloc(fa->page_size);
   file->buf_size = fa->page_size;
@@ -519,7 +511,6 @@ H5FD__hermes_open(const char *name, unsigned flags, hid_t fapl_id,
   file->blob_in_bucket.end_pos = 0;
   file->flags = flags;
   file->eof = (haddr_t)sb.st_size;
-  file->fd = fd;
 
   /* Set return value */
   ret_value = (H5FD_t *)file;
