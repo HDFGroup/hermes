@@ -20,7 +20,7 @@
 #include <vector>
 #include <functional>
 
-#include "glog/logging.h"
+#include <glog/logging.h>
 
 #include "hermes_version.h"
 

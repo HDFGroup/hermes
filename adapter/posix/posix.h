@@ -26,7 +26,7 @@
 /**
  * Dependent library headers
  */
-#include "glog/logging.h"
+#include <glog/logging.h>
 
 /**
  * Internal headers

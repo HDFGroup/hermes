@@ -28,7 +28,7 @@
 #include <mpi.h>
 #include <mpio.h>
 
-#include "glog/logging.h"
+#include <glog/logging.h>
 
 /**
  * Internal headers
