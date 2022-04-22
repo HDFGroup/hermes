@@ -229,14 +229,15 @@ struct Hdf5Api {
   }
 };
 
+// xoshiro128+ random number generation:
+// https://prng.di.unimi.it/xoshiro128plus.c
+
 static inline u32 RotateLeft(const u32 x, int k) {
   u32 result = (x << k) | (x >> (32 - k));
 
   return result;
 }
 
-// xoshiro128+ random number generation:
-// https://prng.di.unimi.it/xoshiro128plus.c
 static u32 random_state[4] = {111, 222, 333, 444};
 
 u32 GenNextRandom() {
@@ -397,7 +398,6 @@ namespace test {
 hid_t hermes_hid;
 hid_t sec2_hid;
 herr_t hermes_herr;
-size_t hermes_size_read;
 
 void TestOpen(const std::string &path, unsigned flags, bool create = false) {
   Hdf5Api api;

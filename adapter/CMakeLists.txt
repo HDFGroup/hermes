@@ -26,7 +26,8 @@ if(HERMES_ENABLE_VFD)
     # for a VFD, HDF5 will dlopen and dlclose every shared library in
     # HDF5_PLUGIN_PATH looking for a valid VFD, and when it goes through this
     # process with libhermes.so it resets some statically initialized variables.
-    set(HERMES_VFD_LIBRARY_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/hermes_vfd)
+    set(HERMES_VFD_DIR_NAME hermes_vfd)
+    set(HERMES_VFD_LIBRARY_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/${HERMES_VFD_DIR_NAME})
     add_subdirectory(vfd)
   else()
     message(FATAL_ERROR "The Hermes VFD requires HERMES_ENABLE_WRAPPER=ON")

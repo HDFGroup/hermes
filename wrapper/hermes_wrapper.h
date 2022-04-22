@@ -37,8 +37,6 @@ void HermesVBucketLink(VBucketClass *vbkt, char *blob_name);
 
 bool HermesVBucketIsValid(VBucketClass *vbkt);
 
-bool HermesBucketExists(const char *name);
-
 BucketClass *HermesBucketCreate(const char *name);
 
 void HermesBucketClose(BucketClass *bkt);

@@ -686,6 +686,7 @@ TEST_CASE("PartialUpdateToLastPage") {
     test::TestClose();
     REQUIRE(test::hermes_herr >= 0);
   }
+
   Posttest();
 }
 

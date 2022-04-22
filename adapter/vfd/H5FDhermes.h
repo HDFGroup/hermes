@@ -26,27 +26,18 @@
 #define H5FD_HERMES_NAME  "hermes"
 #define H5FD_HERMES_VALUE ((H5FD_class_value_t)(513))
 
-// TODO(chogan): These are repeated in inteceptor.h
-#define HERMES_PRELOAD 1
-#ifdef HERMES_PRELOAD
 #define HERMES_FORWARD_DECL(func_, ret_, args_) \
   typedef ret_(*real_t_##func_##_) args_;       \
   ret_(*real_##func_##_) args_ = NULL;
 
-#define HERMES_DECL(func_) func_
-#define MAP_OR_FAIL(func_)                                              \
-  if (!(real_##func_##_)) {                                             \
-    real_##func_##_ = (real_t_##func_##_)dlsym(RTLD_NEXT, #func_);      \
-    if (!(real_##func_##_)) {                                           \
+#define MAP_OR_FAIL(func_)                                                  \
+  if (!(real_##func_##_)) {                                                 \
+    real_##func_##_ = (real_t_##func_##_)dlsym(RTLD_NEXT, #func_);          \
+    if (!(real_##func_##_)) {                                               \
       fprintf(stderr, "HERMES Adapter failed to map symbol: %s\n", #func_); \
-    }                                                                   \
+      exit(1);                                                              \
+    }                                                                       \
   }
-#else
-#define HERMES_FORWARD_DECL(name_, ret_, args_) \
-  extern ret_ real_##name_##_ args_;
-#define HERMES_DECL(name_) wrap_##name_##_
-#define MAP_OR_FAIL(func_)
-#endif  /* #ifdef HERMES_PRELOAD */
 
 #ifdef __cplusplus
 extern "C" {
@@ -55,11 +46,8 @@ extern "C" {
 hid_t H5FD_hermes_init();
 herr_t H5Pset_fapl_hermes(hid_t fapl_id, hbool_t persistence, size_t page_size);
 
-
 HERMES_FORWARD_DECL(H5_init_library, herr_t, ());
 HERMES_FORWARD_DECL(H5_term_library, herr_t, ());
-// HERMES_FORWARD_DECL(H5open, herr_t, (void));
-// HERMES_FORWARD_DECL(H5close, herr_t, (void));
 
 HERMES_FORWARD_DECL(MPI_Init, int, (int *argc, char ***argv));
 HERMES_FORWARD_DECL(MPI_Finalize, int, (void));

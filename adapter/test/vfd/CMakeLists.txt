@@ -14,7 +14,7 @@ target_include_directories(hermes_vfd_test
 target_link_libraries(hermes_vfd_test
   hermes
   MPI::MPI_CXX
-  -lstdc++fs
+  stdc++fs
   ${HDF5_HERMES_VFD_EXT_LIB_DEPENDENCIES}
   ${HDF5_HERMES_VFD_EXT_PKG_DEPENDENCIES}
 )

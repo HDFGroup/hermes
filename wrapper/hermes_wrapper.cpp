@@ -55,12 +55,6 @@ bool HermesVBucketIsValid(VBucketClass *vbkt) {
   return vbucket->IsValid();
 }
 
-bool HermesBucketExists(const char *name) {
-  bool result = hermes_ptr->BucketExists((std::string(name)));
-
-  return result;
-}
-
 BucketClass *HermesBucketCreate(const char *name) {
   VLOG(1) << "Hermes Wrapper: Creating Bucket " << name << '\n';
 

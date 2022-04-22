@@ -488,6 +488,8 @@ H5FD__hermes_open(const char *name, unsigned flags, hid_t fapl_id,
   }
 
   if (fa->persistence || !creating_file) {
+    // NOTE(chogan): We're either in persistent mode, or we're in scratch mode
+    // and dealing with an existing file.
     if ((fd = open(name, o_flags, H5FD_HERMES_POSIX_CREATE_MODE_RW)) < 0) {
       int myerrno = errno;
       H5FD_HERMES_GOTO_ERROR(
@@ -950,7 +952,6 @@ static herr_t H5FD__hermes_write(H5FD_t *_file, H5FD_mem_t H5_ATTR_UNUSED type,
   start_page_index = addr/blob_size;
   end_page_index = addr_end/blob_size;
 
-
   for (k = start_page_index; k <= end_page_index; ++k) {
     char k_blob[LEN_BLOB_NAME];
     snprintf(k_blob, sizeof(k_blob), "%zu\n", k);
@@ -1057,12 +1058,12 @@ H5PLget_plugin_info(void) {
   return &H5FD_hermes_g;
 }
 
-/* NOTE(chogan): Question: Why do we intercept H5open and MPI_Init? Answer: We
- * have to handle several possible cases in order to get the initialization and
- * finalization order of Hermes correct. First, the HDF5 application using the
- * Hermes VFD can be either an MPI application or a serial application. If it's
- * a serial application, we simply initialize Hermes before initializing the
- * HDF5 library by intercepting H5open. See
+/* NOTE(chogan): Question: Why do we intercept initialization and termination of
+ * HDF5 and MPI? Answer: We have to handle several possible cases in order to
+ * get the initialization and finalization order of Hermes correct. First, the
+ * HDF5 application using the Hermes VFD can be either an MPI application or a
+ * serial application. If it's a serial application, we simply initialize Hermes
+ * before initializing the HDF5 library by intercepting H5_init_library. See
  * https://github.com/HDFGroup/hermes/issues/385 for an explanation of why we
  * need to initialize Hermes before HDF5.
  *
@@ -1076,9 +1077,9 @@ H5PLget_plugin_info(void) {
  * MPI_Finalize(). In this case we need to intercept MPI_Finalize and shut down
  * Hermes before MPI is finalized because Hermes finalization requires MPI. 2)
  * If the app is serial, we need to call MPI_Finalize ourselves, so we intercept
- * H5close().*/
+ * H5_term_library().*/
 
-herr_t HERMES_DECL(H5_init_library)() {
+herr_t H5_init_library() {
   herr_t ret_value = SUCCEED;
 
   if (mpi_is_initialized == FALSE) {
@@ -1114,7 +1115,7 @@ herr_t HERMES_DECL(H5_init_library)() {
   return ret_value;
 }
 
-herr_t HERMES_DECL(H5_term_library)() {
+herr_t H5_term_library() {
   MAP_OR_FAIL(H5_term_library);
   herr_t ret_value = real_H5_term_library_();
 
@@ -1123,11 +1124,16 @@ herr_t HERMES_DECL(H5_term_library)() {
     hermes_initialized = FALSE;
   }
 
+  if (mpi_is_initialized) {
+    MPI_Finalize();
+    mpi_is_initialized = FALSE;
+  }
+
   return ret_value;
 }
 
 /** Only Initialize MPI if it hasn't already been initialized. */
-int HERMES_DECL(MPI_Init)(int *argc, char ***argv) {
+int MPI_Init(int *argc, char ***argv) {
   int status = MPI_SUCCESS;
   if (mpi_is_initialized == FALSE) {
     int status = PMPI_Init(argc, argv);
@@ -1139,8 +1145,9 @@ int HERMES_DECL(MPI_Init)(int *argc, char ***argv) {
   return status;
 }
 
-int HERMES_DECL(MPI_Finalize)() {
-  H5_term_library();
+int MPI_Finalize() {
+  MAP_OR_FAIL(H5_term_library);
+  real_H5_term_library_();
 
   if (hermes_initialized == TRUE) {
     HermesFinalize();
@@ -1148,6 +1155,9 @@ int HERMES_DECL(MPI_Finalize)() {
   }
 
   int status = PMPI_Finalize();
+  if (status == MPI_SUCCESS) {
+    mpi_is_initialized = FALSE;
+  }
 
   return status;
 }
