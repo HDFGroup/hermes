@@ -651,3 +651,30 @@ TEST_CASE("CompactDatasets") {
 
   Posttest();
 }
+
+TEST_CASE("ScratchMode", "[scratch]") {
+  Pretest();
+
+  SECTION("created files shouldn't persist") {
+    test::TestOpen(info.new_file, H5F_ACC_EXCL, true);
+    REQUIRE(test::hermes_hid != H5I_INVALID_HID);
+
+    for (size_t i = 0; i < info.num_iterations; ++i) {
+      test::TestWriteDataset(std::to_string(i), info.write_data);
+    }
+
+    for (size_t i = 0; i < info.num_iterations; ++i) {
+      std::string dset_name = RandomDatasetName(info.num_iterations);
+      test::TestRead(dset_name, info.read_data, 0, info.nelems_per_dataset);
+    }
+
+    test::TestClose();
+    REQUIRE(test::hermes_herr >= 0);
+
+    if (info.scratch_mode) {
+      REQUIRE(!fs::exists(info.new_file));
+    }
+  }
+
+  Posttest();
+}

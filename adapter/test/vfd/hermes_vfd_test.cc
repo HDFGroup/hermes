@@ -64,6 +64,7 @@ struct TestInfo {
   size_t large_min = KILOBYTES(256) + 1;
   size_t large_max = MEGABYTES(3);
   size_t nelems_per_dataset;
+  bool scratch_mode = false;
 };
 
 class MuteHdf5Errors {
@@ -318,6 +319,15 @@ int init(int* argc, char*** argv) {
   info.new_file_cmp = fullpath.string() + "_new_cmp_" + suffix;
   info.existing_file_cmp = fullpath.string() + "_ext_cmp_" + suffix;
 
+  char *driver_config = getenv("HDF5_DRIVER_CONFIG");
+  if (driver_config) {
+    std::string looking_for("false");
+    std::string conf_str(driver_config);
+    if (!conf_str.compare(0, looking_for.size(), looking_for)) {
+      info.scratch_mode = true;
+    }
+  }
+
   return 0;
 }
 
@@ -351,14 +361,14 @@ void CheckResults(const std::string &file1, const std::string &file2) {
     std::string h5diff_cmd = "h5diff " + file1 + " " + file2;
     int status = system(h5diff_cmd.c_str());
     if (status != 0) {
-      LOG(WARNING) << "===== " << h5diff_cmd;
+      LOG(ERROR) << "Failing h5diff command: " << h5diff_cmd;
     }
     REQUIRE(status == 0);
   }
 }
 
-int Posttest(bool compare_data = true) {
-  if (compare_data) {
+int Posttest() {
+  if (!info.scratch_mode) {
     unsetenv("LD_PRELOAD");
     unsetenv("HDF5_DRIVER");
     CheckResults(info.new_file, info.new_file_cmp);
