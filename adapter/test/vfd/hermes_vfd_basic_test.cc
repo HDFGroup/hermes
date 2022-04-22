@@ -652,6 +652,43 @@ TEST_CASE("CompactDatasets") {
   Posttest();
 }
 
+TEST_CASE("PartialUpdateToLastPage") {
+  Pretest();
+
+  SECTION("beginning of last page") {
+    test::TestOpen(info.existing_file, H5F_ACC_RDWR);
+    REQUIRE(test::hermes_hid != H5I_INVALID_HID);
+    test::TestWritePartial1d(std::to_string(info.num_iterations - 1),
+                             info.write_data.data(), 0,
+                             info.nelems_per_dataset / 2);
+    test::TestClose();
+    REQUIRE(test::hermes_herr >= 0);
+  }
+
+  SECTION("in middle of last page") {
+    test::TestOpen(info.existing_file, H5F_ACC_RDWR);
+    REQUIRE(test::hermes_hid != H5I_INVALID_HID);
+    test::TestWritePartial1d(std::to_string(info.num_iterations - 1),
+                             info.write_data.data(),
+                             info.nelems_per_dataset / 4,
+                             info.nelems_per_dataset / 2);
+    test::TestClose();
+    REQUIRE(test::hermes_herr >= 0);
+  }
+
+  SECTION("at end of last page") {
+    test::TestOpen(info.existing_file, H5F_ACC_RDWR);
+    REQUIRE(test::hermes_hid != H5I_INVALID_HID);
+    test::TestWritePartial1d(std::to_string(info.num_iterations - 1),
+                             info.write_data.data(),
+                             info.nelems_per_dataset / 2,
+                             info.nelems_per_dataset / 2);
+    test::TestClose();
+    REQUIRE(test::hermes_herr >= 0);
+  }
+  Posttest();
+}
+
 TEST_CASE("ScratchMode", "[scratch]") {
   Pretest();
 
