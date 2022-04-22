@@ -226,35 +226,49 @@ static void set_blob(bitv_t *bits, size_t bit_pos) {
     bits->end_pos = bit_pos;
 }
 
-void H5FD__hermes_read_gap(H5FD_hermes_t *file, size_t seek_offset,
+bool H5FD__hermes_is_last_page(H5FD_hermes_t *file, size_t page_index) {
+  size_t total_pages = (size_t)ceil(file->eof / (float)file->buf_size);
+  size_t last_page_index = total_pages > 0 ? total_pages - 1 : 0;
+  bool ret_value = page_index == last_page_index;
+
+  return ret_value;
+}
+size_t H5FD__hermes_get_gap_size(H5FD_hermes_t *file, size_t page_index) {
+  size_t ret_value = file->buf_size;
+  if (H5FD__hermes_is_last_page(file, page_index)) {
+    ret_value = file->eof - (page_index * file->buf_size);
+  }
+
+  return ret_value;
+}
+
+herr_t H5FD__hermes_read_gap(H5FD_hermes_t *file, size_t seek_offset,
                            unsigned char *read_ptr, size_t read_size) {
+  herr_t ret_value = SUCCEED;
+
   if (!(file->flags & H5F_ACC_CREAT || file->flags & H5F_ACC_TRUNC ||
         file->flags & H5F_ACC_EXCL)) {
     if (file->fd > -1) {
       if (flock(file->fd, LOCK_SH) == -1) {
-        // TODO(chogan):
-        /* hermes::FailedLibraryCall("flock"); */
-        assert(0);
+        H5FD_HERMES_SYS_GOTO_ERROR(H5E_IO, H5E_CANTLOCKFILE, FAIL,
+                                   file->bktname);
       }
 
       ssize_t bytes_read = pread(file->fd, read_ptr, read_size, seek_offset);
-      if (bytes_read == -1 || (size_t)bytes_read != read_size) {
-        // TODO(chogan):
-        /* hermes::FailedLibraryCall("pread"); */
-        /* assert(0); */
+      if (bytes_read == -1 ||
+          ((size_t)bytes_read != read_size && bytes_read != 0)) {
+        H5FD_HERMES_SYS_GOTO_ERROR(H5E_IO, H5E_READERROR, FAIL, file->bktname);
       }
 
       if (flock(file->fd, LOCK_UN) == -1) {
-        // TODO(chogan):
-        /* hermes::FailedLibraryCall("flock"); */
-        assert(0);
+        H5FD_HERMES_SYS_GOTO_ERROR(H5E_IO, H5E_CANTUNLOCKFILE, FAIL,
+                                   file->bktname);
       }
-    } else {
-      // TODO(chogan):
-      /* hermes::FailedLibraryCall("open"); */
-      assert(0);
     }
   }
+
+done:
+  H5FD_HERMES_FUNC_LEAVE;
 }
 
 /*-------------------------------------------------------------------------
@@ -566,13 +580,11 @@ static herr_t H5FD__hermes_close(H5FD_t *_file) {
         snprintf(i_blob, sizeof(i_blob), "%zu\n", i);
         HermesBucketGet(file->bkt_handle, i_blob, blob_size, file->page_buf);
 
-        size_t total_pages = (size_t)ceil(file->eof / (float)blob_size);
-        size_t last_page_index = total_pages > 0 ? total_pages - 1 : 0;
-        bool is_last_page = i == last_page_index;
+        bool is_last_page = H5FD__hermes_is_last_page(file, i);
         size_t bytes_to_write = blob_size;
 
         if (is_last_page) {
-          size_t bytes_in_last_page = file->eof - (last_page_index * blob_size);
+          size_t bytes_in_last_page = file->eof - (i * blob_size);
           bytes_to_write = bytes_in_last_page;
         }
 
@@ -966,7 +978,12 @@ static herr_t H5FD__hermes_write(H5FD_t *_file, H5FD_mem_t H5_ATTR_UNUSED type,
         HermesBucketGet(file->bkt_handle, k_blob, blob_size, file->page_buf);
       } else {
         /* Populate this page from the original file */
-        H5FD__hermes_read_gap(file, page_start, file->page_buf, blob_size);
+        size_t gap_size = H5FD__hermes_get_gap_size(file, k);
+        herr_t status = H5FD__hermes_read_gap(file, page_start, file->page_buf,
+                                              gap_size);
+        if (status != SUCCEED) {
+          H5FD_HERMES_GOTO_DONE(FAIL);
+        }
       }
 
       memcpy(file->page_buf + page_offset, (char *)buf + transfer_size,
@@ -986,7 +1003,12 @@ static herr_t H5FD__hermes_write(H5FD_t *_file, H5FD_mem_t H5_ATTR_UNUSED type,
         HermesBucketGet(file->bkt_handle, k_blob, blob_size, file->page_buf);
       } else {
         /* Populate this page from the original file */
-        H5FD__hermes_read_gap(file, page_start, file->page_buf, blob_size);
+        size_t gap_size = H5FD__hermes_get_gap_size(file, k);
+        herr_t status = H5FD__hermes_read_gap(file, page_start, file->page_buf,
+                                              gap_size);
+        if (status != SUCCEED) {
+          H5FD_HERMES_GOTO_DONE(FAIL);
+        }
       }
 
       /* Update transfer buffer */
@@ -1019,7 +1041,7 @@ done:
     file->op  = OP_UNKNOWN;
   } /* end if */
 
-  H5FD_HERMES_FUNC_LEAVE;
+  H5FD_HERMES_FUNC_LEAVE_API;
 } /* end H5FD__hermes_write() */
 
 /*
