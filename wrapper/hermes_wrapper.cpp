@@ -126,7 +126,7 @@ void HermesBucketGet(BucketClass *bkt, char *blob_name, size_t page_size,
   size_t blob_size = bucket->Get(blob_name, buf, page_size, ctx);
   if (blob_size != page_size)
     LOG(ERROR) << "Blob size error: expected to get " << page_size
-               << ", but only get " << blob_size << '\n';
+               << ", but only got " << blob_size << '\n';
 }
 
 }  // extern "C"

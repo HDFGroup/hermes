@@ -226,6 +226,7 @@ static void set_blob(bitv_t *bits, size_t bit_pos) {
     bits->end_pos = bit_pos;
 }
 
+/** Returns true if @p page_index is the last page in the file. */
 bool H5FD__hermes_is_last_page(H5FD_hermes_t *file, size_t page_index) {
   size_t total_pages = (size_t)ceil(file->eof / (float)file->buf_size);
   size_t last_page_index = total_pages > 0 ? total_pages - 1 : 0;
@@ -233,6 +234,9 @@ bool H5FD__hermes_is_last_page(H5FD_hermes_t *file, size_t page_index) {
 
   return ret_value;
 }
+
+/** Returns the size of page @page_index. This is only different from
+ * H5FD_hermes_t::buf_size if it's the last page in the file. */
 size_t H5FD__hermes_get_gap_size(H5FD_hermes_t *file, size_t page_index) {
   size_t ret_value = file->buf_size;
   if (H5FD__hermes_is_last_page(file, page_index)) {
@@ -242,6 +246,11 @@ size_t H5FD__hermes_get_gap_size(H5FD_hermes_t *file, size_t page_index) {
   return ret_value;
 }
 
+/**
+ * If the Hermes VFD recieves a partial page update to an existing file, we
+ * first need to fill the page with exising data from the file with a read
+ * before the Blob can be buffered. We refer to these partial pages as "gaps."
+ */
 herr_t H5FD__hermes_read_gap(H5FD_hermes_t *file, size_t seek_offset,
                            unsigned char *read_ptr, size_t read_size) {
   herr_t ret_value = SUCCEED;
@@ -991,7 +1000,6 @@ static herr_t H5FD__hermes_write(H5FD_t *_file, H5FD_mem_t H5_ATTR_UNUSED type,
              page_write_size);
       transfer_size += page_write_size;
 
-      /* TODO(chogan): Handle failed Put */
       /* Write Blob k to Hermes. */
       HermesBucketPut(file->bkt_handle, k_blob, file->page_buf, blob_size);
       set_blob(&file->blob_in_bucket, k);
