@@ -1,50 +1,102 @@
 # HDF5 Hermes VFD
+
 ## 1. Description
-The HDF5 Hermes VFD is a Virtual File Driver (VFD) for HDF5 that can be used to interface with Hermes) API. The driver is built as a plugin library that is external to HDF5.
+The HDF5 Hermes VFD is a [Virtual File
+Driver](https://portal.hdfgroup.org/display/HDF5/Virtual+File+Drivers) (VFD) for
+HDF5 that can be used to interface with the Hermes API. The driver is built as a
+plugin library that is external to HDF5.
 
 ## 2. Dependencies
-To build the HDF5 Hermes VFD, the following libraries are required:
-*  [Hermes](https://github.com/HDFGroup/hermes) - A heterogeneous aware, multi-tiered, dynamic, and distributed I/O buffering system that aims to significantly accelerate I/O performance. Make sure to build with HERMES_ENABLE_WRAPPER=ON.
-*  [HDF5](https://github.com/HDFGroup/hdf5) - HDF5 is built for fast I/O processing and storage.
+The Hermes VFD requires [HDF5](https://github.com/HDFGroup/hdf5) >= `1.13.0`,
+which is the version that first introduced dynamically loadable VFDs.
 
-## 3. Building
+## 3. Usage
+To use the HDF5 Hermes VFD in an HDF5 application, the driver can either be
+linked with the application during compilation, or it can be dynamically loaded
+via an environment variable. It is more convenient to load the VFD as a dynamic
+plugin because it does not require code changes or recompilation.
 
-### CMake
-Hermes VFD makes use of the CMake build system and requires an out of source build.
-``` bash
-cd /path/to/Hermes_VFD
-mkdir build
-cd build
-ccmake ..
+### Method 1: Dynamically loaded by environment variable (recommended)
+
+As of HDF5 `1.13.0` each file in an HDF5 app opened or created with the default
+file access property list (FAPL) will use the VFD specified in the `HDF5_DRIVER`
+environment variable rather than the default "sec2" (POSIX) driver. To use the
+Hermes VFD, simply set
+
+```sh
+HDF5_DRIVER=hermes
 ```
 
-Type 'c' to configure until there are no errors, then generate the makefile with 'g'. The default options should suffice for most use cases. In addition, we recommend the following options.
+Now we must tell the HDF5 library where to find the Hermes VFD. That is done
+with the following environment variable:
 
-``` bash
--DCMAKE_INSTALL_PREFIX=/installation/prefix
--DHDF5_DIR=/paht/to/hdf5
--DHERMES_DIR=/path/to/hermes
-```
-After the makefile has been generated, you can type `make -j 2` or `cmake --build . -- -j 2`. Add `VERBOSE=1` to see detailed compiler output.
-
-Assuming that the `CMAKE_INSTALL_PREFIX` has been set and that you have write permissions to the destination directory, you can install the driver by simply doing:
-``` bash
-make install
+```sh
+HDF5_PLUGIN_PATH=<hermes_install_prefix/lib/hermes_vfd
 ```
 
-## 4. Usage
-To use the HDF5 Hermes VFD in an HDF5 application, the driver can either be linked into the application, or it can be dynamically loaded as a plugin. If dynamically loading the Hermes VFD, users should ensure that the HDF5_PLUGIN_PATH environment variable points to the directory containing the built VFD library if the VFD has been installed to a non-standard location.
+The Hermes VFD has two configuration options.
+1. persistence - if `true`, the HDF5 application will produce the same output
+   files with the Hermes VFD as it would without it. If `false`, the files are
+   buffered in Hermes during the application run, but are not persisted when the
+   application terminates. Thus, no files are produced.
+2. page size - The Hermes VFD works by mapping HDF5 files into its internal data
+   structures. This happens in pages. The `page size` configuration option
+   allows the user to specify the size, in bytes of these pages. If your app
+   does lots 2 MiB writes, then it's a good idea to set the page size to 2
+   MiB. A smaller page size, 1 KiB for example, would convert each 2 MiB write
+   into 2048 1 KiB writes. However, be aware that using pages that are too large
+   can slow down metadata operations, which are usually less than 2 KiB. To
+   combat the tradeoff between small metadata pages and large raw data pages,
+   the Hermes VFD can be stacked underneath the [split VFD](https://docs.hdfgroup.org/hdf5/develop/group___f_a_p_l.html#ga502f1ad38f5143cf281df8282fef26ed).
 
-### Method 1: Linked into application
-To link the Hermes VFD into an HDF5 application, the application should include the H5FDhermes.h header that gets installed on the system and should link the installed VFD library (libhdf5_hermes_vfd.so) into the application. Once this has been done, Hermes VFD access can be setup by calling `H5Pset_fapl_hermes(...)` on a FAPL within the HDF5 application. The test `hermes_set_fapl` is using this method, in which it calls `H5Pset_fapl_hermes` directly.
 
-### Method 2: Dynamically loaded by FAPL
-To explicitly load the Hermes VFD inside an HDF5 application, a call to the `H5Pset_driver_by_name(...)` routine should be made to setup Hermes VFD access on a FAPL. This will cause HDF5 to load the VFD as a plugin and set the VFD on the given FAPL. The string "hermes" should be given for the driver_name parameter. A string should be given for the `driver_config` parameter (last parameter in `H5Pset_driver_by_name`), as the driver requires additional parameters to config Hermes. An example string like "false,1024" (comma dilemma) is matching the second and third parameter as in `H5Pset_fapl_hermes`. User also needs to set up the enrivonment variable `HDF5_PLUGIN_PATH`, which points to directory containing the built Hermes VFD library. Test `hermes_driver` is using this method.
+These two configuration options are passed as a space-delimited string through
+an evnironment variable:
 
-### Method 3: Dynamically loaded by environment variable
-To implicitly load the Hermes VFD inside an HDF5 application, the HDF5_DRIVER environment variable may be set to the string "hermes". During library initialization, HDF5 will check this environment variable, load the Hermes VFD as a plugin and set the VFD as the default file driver on File Access Property Lists. Therefore, any file access that uses H5P_DEFAULT for its FAPL, or which uses a FAPL that hasn't had a specific VFD set on it, will automatically use the Hermes VFD for file access. User can simply setup HDF5_DRIVER environment variable to "hermes" and HDF5_DRIVER_CONFIG the same as `driver_config` parameter without calling `H5Pset_driver_by_name()`, compared to Method 2 Dynamically loaded by FAPL. Test `hermes_env` is using this method.
+```sh
+# Example of configuring the Hermes VFD with `persistent_mode=true` and
+# `page_size=64KiB`
+HDF5_DRIVER_CONFIG="true 65536"
+```
 
-## 5. More Information
-[More about Hermes](https://github.com/HDFGroup/hermes/wiki)
+Finally we need to provide a configuration file for Hermes itself, and
+`LD_PRELOAD` the Hermes VFD so we can intercept HDF5 and MPI calls for proper
+initialization and finalization:
 
-[HDF5 VFD Plugins RFC](https://github.com/HDFGroup/hdf5doc/blob/master/RFCs/HDF5_Library/VFL_DriverPlugins/RFC__A_Plugin_Interface_for_HDF5_Virtual_File_Drivers.pdf)
+```sh
+HERMES_CONF=<path_to>/hermes.conf
+LD_PRELOAD=<hermes_install_prefix>/hermes_vfd/libhdf5_hermes_vfd.so
+```
+
+Heres is a full example of running an HDF5 app with the Hermes VFD:
+
+```sh
+HDF5_DRIVER=hermes                                                    \
+  HDF5_PLUGIN_PATH=<hermes_install_prefix/lib/hermes_vfd              \
+  HDF5_DRIVER_CONFIG="true 65536"                                     \
+  HERMES_CONF=<path_to>/hermes.conf                                   \
+  LD_PRELOAD=<hermes_install_prefix>/hermes_vfd/libhdf5_hermes_vfd.so \
+  ./my_hdf5_app
+```
+
+### Method 2: Linked into application
+
+To link the Hermes VFD into an HDF5 application, the application should include
+the `H5FDhermes.h` header and should link the installed VFD library,
+`libhdf5_hermes_vfd.so`, into the application. Once this has been done, Hermes
+VFD access can be set up by calling `H5Pset_fapl_hermes()` on a FAPL within the
+HDF5 application. In this case, the `persistence` and `page_size` configuration
+options are pass directly to this function:
+
+```C
+herr_t H5Pset_fapl_hermes(hid_t fapl_id, hbool_t persistence, size_t page_size)
+```
+
+The resulting `fapl_id` should then be passed to each file open or creation for
+which you wish to use the Hermes VFD.
+
+## 4. More Information
+* [Hermes VFD performance results](https://github.com/HDFGroup/hermes/wiki/HDF5-Hermes-VFD)
+
+* [Hermes VFD with hdf5-iotest](https://github.com/HDFGroup/hermes/tree/master/benchmarks/HermesVFD)
+* [HDF5 VFD Plugins RFC](https://github.com/HDFGroup/hdf5doc/blob/master/RFCs/HDF5_Library/VFL_DriverPlugins/RFC__A_Plugin_Interface_for_HDF5_Virtual_File_Drivers.pdf)
