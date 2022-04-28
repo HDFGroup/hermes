@@ -19,15 +19,19 @@
  *          and buffer datasets in Hermes buffering systems with
  *          multiple storage tiers.
  */
+#define _GNU_SOURCE
 
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#include <math.h>
 
 #include <unistd.h>
 #include <sys/file.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+
+#include <mpi.h>
 
 /* HDF5 header for dynamic plugin loading */
 #include "H5PLextern.h"
@@ -58,6 +62,7 @@ hid_t H5FDhermes_err_class_g = H5I_INVALID_HID;
 
 /* Whether Hermes is initialized */
 static htri_t hermes_initialized = FAIL;
+static hbool_t mpi_is_initialized = FALSE;
 
 /* File operations */
 #define OP_UNKNOWN 0
@@ -103,6 +108,7 @@ typedef struct H5FD_hermes_t {
   int            ref_count;
   unsigned char *page_buf;
   bitv_t         blob_in_bucket;
+  unsigned       flags;       /* The flags passed from H5Fcreate/H5Fopen */
 } H5FD_hermes_t;
 
 /* Driver-specific file access properties */
@@ -220,6 +226,60 @@ static void set_blob(bitv_t *bits, size_t bit_pos) {
     bits->end_pos = bit_pos;
 }
 
+/** Returns true if @p page_index is the last page in the file. */
+bool H5FD__hermes_is_last_page(H5FD_hermes_t *file, size_t page_index) {
+  size_t total_pages = (size_t)ceil(file->eof / (float)file->buf_size);
+  size_t last_page_index = total_pages > 0 ? total_pages - 1 : 0;
+  bool ret_value = page_index == last_page_index;
+
+  return ret_value;
+}
+
+/** Returns the size of page @page_index. This is only different from
+ * H5FD_hermes_t::buf_size if it's the last page in the file. */
+size_t H5FD__hermes_get_gap_size(H5FD_hermes_t *file, size_t page_index) {
+  size_t ret_value = file->buf_size;
+  if (H5FD__hermes_is_last_page(file, page_index)) {
+    ret_value = file->eof - (page_index * file->buf_size);
+  }
+
+  return ret_value;
+}
+
+/**
+ * If the Hermes VFD recieves a partial page update to an existing file, we
+ * first need to fill the page with exising data from the file with a read
+ * before the Blob can be buffered. We refer to these partial pages as "gaps."
+ */
+herr_t H5FD__hermes_read_gap(H5FD_hermes_t *file, size_t seek_offset,
+                           unsigned char *read_ptr, size_t read_size) {
+  herr_t ret_value = SUCCEED;
+
+  if (!(file->flags & H5F_ACC_CREAT || file->flags & H5F_ACC_TRUNC ||
+        file->flags & H5F_ACC_EXCL)) {
+    if (file->fd > -1) {
+      if (flock(file->fd, LOCK_SH) == -1) {
+        H5FD_HERMES_SYS_GOTO_ERROR(H5E_IO, H5E_CANTLOCKFILE, FAIL,
+                                   file->bktname);
+      }
+
+      ssize_t bytes_read = pread(file->fd, read_ptr, read_size, seek_offset);
+      if (bytes_read == -1 ||
+          ((size_t)bytes_read != read_size && bytes_read != 0)) {
+        H5FD_HERMES_SYS_GOTO_ERROR(H5E_IO, H5E_READERROR, FAIL, file->bktname);
+      }
+
+      if (flock(file->fd, LOCK_UN) == -1) {
+        H5FD_HERMES_SYS_GOTO_ERROR(H5E_IO, H5E_CANTUNLOCKFILE, FAIL,
+                                   file->bktname);
+      }
+    }
+  }
+
+done:
+  H5FD_HERMES_FUNC_LEAVE;
+}
+
 /*-------------------------------------------------------------------------
  * Function:    H5FD_hermes_init
  *
@@ -267,11 +327,6 @@ done:
 static herr_t
 H5FD__hermes_term(void) {
   herr_t ret_value = SUCCEED;
-
-  if ((H5OPEN hermes_initialized) == TRUE) {
-    HermesFinalize();
-    hermes_initialized = FALSE;
-  }
 
   /* Unregister from HDF5 error API */
   if (H5FDhermes_err_class_g >= 0) {
@@ -372,8 +427,8 @@ H5FD__hermes_open(const char *name, unsigned flags, hid_t fapl_id,
                   haddr_t maxaddr) {
   H5FD_hermes_t  *file = NULL; /* hermes VFD info          */
   int             fd   = -1;   /* File descriptor          */
-  int             o_flags;     /* Flags for open() call    */
-  struct stat     sb;
+  int             o_flags = 0;     /* Flags for open() call    */
+  struct stat     sb = {0};
   const H5FD_hermes_fapl_t *fa   = NULL;
   H5FD_hermes_fapl_t new_fa = {0};
   char           *hermes_config = NULL;
@@ -426,37 +481,24 @@ H5FD__hermes_open(const char *name, unsigned flags, hid_t fapl_id,
     }
   }
 
-  /* Create the new file struct */
-  if (NULL == (file = calloc(1, sizeof(H5FD_hermes_t)))) {
-    H5FD_HERMES_GOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL,
-                           "unable to allocate file struct");
+  bool creating_file = false;
+
+  /* Build the open flags */
+  o_flags = (H5F_ACC_RDWR & flags) ? O_RDWR : O_RDONLY;
+  if (H5F_ACC_TRUNC & flags) {
+    o_flags |= O_TRUNC;
+  }
+  if (H5F_ACC_CREAT & flags) {
+    o_flags |= O_CREAT;
+    creating_file = true;
+  }
+  if (H5F_ACC_EXCL & flags) {
+    o_flags |= O_EXCL;
   }
 
-  if (name && *name) {
-    file->bktname = strdup(name);
-  }
-  file->persistence = fa->persistence;
-  file->fd = -1;
-  file->bkt_handle = HermesBucketCreate(name);
-  file->page_buf = malloc(fa->page_size);
-  file->buf_size = fa->page_size;
-  file->ref_count = 1;
-  file->op = OP_UNKNOWN;
-  file->blob_in_bucket.capacity = BIT_SIZE_OF_UNSIGNED;
-  file->blob_in_bucket.blobs = (uint *)calloc(1, sizeof(uint));
-  file->blob_in_bucket.end_pos = 0;
-
-  if (fa->persistence) {
-    /* Build the open flags */
-    o_flags = (H5F_ACC_RDWR & flags) ? O_RDWR : O_RDONLY;
-    if (H5F_ACC_TRUNC & flags)
-      o_flags |= O_TRUNC;
-    if (H5F_ACC_CREAT & flags)
-      o_flags |= O_CREAT;
-    if (H5F_ACC_EXCL & flags)
-      o_flags |= O_EXCL;
-
-    /* Open the file */
+  if (fa->persistence || !creating_file) {
+    // NOTE(chogan): We're either in persistent mode, or we're in scratch mode
+    // and dealing with an existing file.
     if ((fd = open(name, o_flags, H5FD_HERMES_POSIX_CREATE_MODE_RW)) < 0) {
       int myerrno = errno;
       H5FD_HERMES_GOTO_ERROR(
@@ -470,11 +512,30 @@ H5FD__hermes_open(const char *name, unsigned flags, hid_t fapl_id,
       H5FD_HERMES_SYS_GOTO_ERROR(H5E_FILE, H5E_BADFILE, NULL,
                                  "unable to fstat file");
     }
-
-    /* FIXME: Possible overflow! */
-    file->eof = (haddr_t)sb.st_size;
-    file->fd = fd;
   }
+
+  /* Create the new file struct */
+  if (NULL == (file = calloc(1, sizeof(H5FD_hermes_t)))) {
+    H5FD_HERMES_GOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL,
+                           "unable to allocate file struct");
+  }
+
+  if (name && *name) {
+    file->bktname = strdup(name);
+  }
+
+  file->persistence = fa->persistence;
+  file->fd = fd;
+  file->bkt_handle = HermesBucketCreate(name);
+  file->page_buf = malloc(fa->page_size);
+  file->buf_size = fa->page_size;
+  file->ref_count = 1;
+  file->op = OP_UNKNOWN;
+  file->blob_in_bucket.capacity = BIT_SIZE_OF_UNSIGNED;
+  file->blob_in_bucket.blobs = (uint *)calloc(1, sizeof(uint));
+  file->blob_in_bucket.end_pos = 0;
+  file->flags = flags;
+  file->eof = (haddr_t)sb.st_size;
 
   /* Set return value */
   ret_value = (H5FD_t *)file;
@@ -484,7 +545,9 @@ done:
     if (fd >= 0)
       close(fd);
     if (file) {
-      HermesBucketDestroy(file->bkt_handle);
+      if (file->bkt_handle) {
+        HermesBucketDestroy(file->bkt_handle);
+      }
       free(file->blob_in_bucket.blobs);
       free(file->bktname);
       free(file->page_buf);
@@ -526,31 +589,31 @@ static herr_t H5FD__hermes_close(H5FD_t *_file) {
 
         char i_blob[LEN_BLOB_NAME];
         snprintf(i_blob, sizeof(i_blob), "%zu\n", i);
-        /* Read blob back */
         HermesBucketGet(file->bkt_handle, i_blob, blob_size, file->page_buf);
-        ssize_t bytes_wrote;
-        if (i == file->blob_in_bucket.end_pos) {
-          size_t bytes_in = file->eof%blob_size;
-          if (bytes_in == 0)
-            bytes_in = blob_size;
-          bytes_wrote = pwrite(file->fd, file->page_buf,
-                               bytes_in, i*blob_size);
-          assert(bytes_wrote == bytes_in);
-        } else {
-          bytes_wrote = pwrite(file->fd, file->page_buf,
-                               blob_size, i*blob_size);
-          assert(bytes_wrote == blob_size);
+
+        bool is_last_page = H5FD__hermes_is_last_page(file, i);
+        size_t bytes_to_write = blob_size;
+
+        if (is_last_page) {
+          size_t bytes_in_last_page = file->eof - (i * blob_size);
+          bytes_to_write = bytes_in_last_page;
         }
+
+        ssize_t bytes_written = pwrite(file->fd, file->page_buf, bytes_to_write,
+                                       i * blob_size);
+        assert(bytes_written == bytes_to_write);
       }
     }
     if (close(file->fd) < 0)
       H5FD_HERMES_SYS_GOTO_ERROR(H5E_IO, H5E_CANTCLOSEFILE, FAIL,
                                  "unable to close file");
   }
-  if (file->ref_count == 1)
+
+  if (file->ref_count == 1) {
     HermesBucketDestroy(file->bkt_handle);
-  else
+  } else {
     HermesBucketClose(file->bkt_handle);
+  }
 
   /* Release the file info */
   free(file->blob_in_bucket.blobs);
@@ -901,57 +964,71 @@ static herr_t H5FD__hermes_write(H5FD_t *_file, H5FD_mem_t H5_ATTR_UNUSED type,
   for (k = start_page_index; k <= end_page_index; ++k) {
     char k_blob[LEN_BLOB_NAME];
     snprintf(k_blob, sizeof(k_blob), "%zu\n", k);
-    /* Check if addr is in the range of (k*blob_size, (k+1)*blob_size) */
+    bool blob_exists = check_blob(&file->blob_in_bucket, k);
+    size_t page_start = k * blob_size;
+    size_t next_page_start = (k + 1) * blob_size;
+
+    /* Check if addr is in the range of (page_start, next_page_start) */
     /* NOTE: The range does NOT include the start address of page k,
        but includes the end address of page k */
-    if (addr > k*blob_size && addr < (k+1)*blob_size) {
-      /* Check if this blob exists */
-      bool blob_exists = check_blob(&file->blob_in_bucket, k);
-      /* Read blob back to transfer buffer */
+    if (addr > page_start && addr < next_page_start) {
+      size_t page_offset = addr - page_start;
+      size_t page_write_size;
+
+      if (addr_end < next_page_start) {
+        /* addr + size is within the same page (only one page) */
+        page_write_size = size;
+      } else {
+        /* More than one page. Only copy until the end of this page. */
+        page_write_size = next_page_start - addr;
+      }
+
+      /* Fill transfer buffer with existing data, if any. */
       if (blob_exists) {
         HermesBucketGet(file->bkt_handle, k_blob, blob_size, file->page_buf);
-      }
-      /* Calculate the starting address of transfer buffer update within page
-       * k */
-      size_t offset = addr - k*blob_size;
-      assert(offset > 0);
-
-      /* Update transfer buffer */
-      /* addr+size is within the same page (only one page) */
-      if (addr_end <= (k+1)*blob_size-1) {
-        memcpy(file->page_buf+offset, (char *)buf + transfer_size, size);
-        transfer_size += size;
       } else {
-        /* More than one page */
-        /* Copy data from addr to the end of the address in page k */
-        memcpy(file->page_buf+offset, (char *)buf + transfer_size,
-               (k+1)*blob_size-addr);
-        transfer_size += (k+1)*blob_size-addr;
+        /* Populate this page from the original file */
+        size_t gap_size = H5FD__hermes_get_gap_size(file, k);
+        herr_t status = H5FD__hermes_read_gap(file, page_start, file->page_buf,
+                                              gap_size);
+        if (status != SUCCEED) {
+          H5FD_HERMES_GOTO_DONE(FAIL);
+        }
       }
-      /* Write Blob k to Hermes buffering system */
+
+      memcpy(file->page_buf + page_offset, (char *)buf + transfer_size,
+             page_write_size);
+      transfer_size += page_write_size;
+
+      /* Write Blob k to Hermes. */
       HermesBucketPut(file->bkt_handle, k_blob, file->page_buf, blob_size);
       set_blob(&file->blob_in_bucket, k);
-    } else if (addr_end >= k*blob_size && addr_end < (k+1)*blob_size-1) {
-      /* Check if addr_end is in the range of [k*blob_size,
-       * (k+1)*blob_size-1) */
-      /* NOTE: The range includes the start address of page k,
-         but does NOT include the end address of page k */
-      /* Check if this blob exists */
-      bool blob_exists = check_blob(&file->blob_in_bucket, k);
+    } else if (addr_end >= page_start && addr_end < next_page_start - 1) {
+      /* NOTE: The range includes the start address of page k, but does NOT
+         include the end address of page k */
+
       /* Read blob back */
       if (blob_exists) {
         HermesBucketGet(file->bkt_handle, k_blob, blob_size, file->page_buf);
+      } else {
+        /* Populate this page from the original file */
+        size_t gap_size = H5FD__hermes_get_gap_size(file, k);
+        herr_t status = H5FD__hermes_read_gap(file, page_start, file->page_buf,
+                                              gap_size);
+        if (status != SUCCEED) {
+          H5FD_HERMES_GOTO_DONE(FAIL);
+        }
       }
+
       /* Update transfer buffer */
       memcpy(file->page_buf, (char *)buf + transfer_size,
-             addr_end-k*blob_size+1);
-      transfer_size += addr_end-k*blob_size+1;
-      /* Write Blob k to Hermes buffering system */
+             addr_end-page_start + 1);
+      transfer_size += addr_end-page_start + 1;
+      /* Write Blob k to Hermes. */
       HermesBucketPut(file->bkt_handle, k_blob, file->page_buf, blob_size);
       set_blob(&file->blob_in_bucket, k);
-    } else if (addr <= k*blob_size && addr_end >= (k+1)*blob_size-1) {
-      /* Page/Blob k is within the range of (addr, addr+size) */
-      /* Update transfer buffer */
+    } else if (addr <= page_start && addr_end >= next_page_start-1) {
+      /* The write spans this page entirely */
       /* Write Blob k to Hermes buffering system */
       HermesBucketPut(file->bkt_handle, k_blob, (char *)buf + transfer_size,
                       blob_size);
@@ -973,7 +1050,7 @@ done:
     file->op  = OP_UNKNOWN;
   } /* end if */
 
-  H5FD_HERMES_FUNC_LEAVE;
+  H5FD_HERMES_FUNC_LEAVE_API;
 } /* end H5FD__hermes_write() */
 
 /*
@@ -987,4 +1064,108 @@ H5PLget_plugin_type(void) {
 const void*
 H5PLget_plugin_info(void) {
   return &H5FD_hermes_g;
+}
+
+/* NOTE(chogan): Question: Why do we intercept initialization and termination of
+ * HDF5 and MPI? Answer: We have to handle several possible cases in order to
+ * get the initialization and finalization order of Hermes correct. First, the
+ * HDF5 application using the Hermes VFD can be either an MPI application or a
+ * serial application. If it's a serial application, we simply initialize Hermes
+ * before initializing the HDF5 library by intercepting H5_init_library. See
+ * https://github.com/HDFGroup/hermes/issues/385 for an explanation of why we
+ * need to initialize Hermes before HDF5.
+ *
+ * If we're dealing with an MPI application, then there are two possibilities:
+ * the app called MPI_Init before any HDF5 calls, or it made at least one HDF5
+ * call before calling MPI_Init. If HDF5 was called first, then we have to
+ * initialize MPI ourselves and then intercept the app's call to MPI_Init to
+ * ensure MPI_Init is not called twice.
+ *
+ * For finalization, there are two cases to handle: 1) The application called
+ * MPI_Finalize(). In this case we need to intercept MPI_Finalize and shut down
+ * Hermes before MPI is finalized because Hermes finalization requires MPI. 2)
+ * If the app is serial, we need to call MPI_Finalize ourselves, so we intercept
+ * H5_term_library().*/
+
+herr_t H5_init_library() {
+  herr_t ret_value = SUCCEED;
+
+  if (mpi_is_initialized == FALSE) {
+    int status = PMPI_Init(NULL, NULL);
+    if (status != MPI_SUCCESS) {
+      // NOTE(chogan): We can't use the HDF5 error reporting functions here
+      // because HDF5 isn't initialized yet.
+      fprintf(stderr, "Hermes VFD: can't initialize MPI\n");
+      ret_value = FAIL;
+    } else {
+      mpi_is_initialized = TRUE;
+    }
+  }
+
+  if (ret_value == SUCCEED) {
+    if (hermes_initialized == FAIL) {
+      char *hermes_config = getenv(kHermesConf);
+      int status = HermesInitHermes(hermes_config);
+      if (status == 0) {
+        hermes_initialized = TRUE;
+      } else {
+        fprintf(stderr, "Hermes VFD: can't initialize Hermes\n");
+        ret_value = FAIL;
+      }
+    }
+
+    if (hermes_initialized == TRUE) {
+      MAP_OR_FAIL(H5_init_library);
+      ret_value = real_H5_init_library_();
+    }
+  }
+
+  return ret_value;
+}
+
+herr_t H5_term_library() {
+  MAP_OR_FAIL(H5_term_library);
+  herr_t ret_value = real_H5_term_library_();
+
+  if (hermes_initialized == TRUE) {
+    HermesFinalize();
+    hermes_initialized = FALSE;
+  }
+
+  if (mpi_is_initialized) {
+    MPI_Finalize();
+    mpi_is_initialized = FALSE;
+  }
+
+  return ret_value;
+}
+
+/** Only Initialize MPI if it hasn't already been initialized. */
+int MPI_Init(int *argc, char ***argv) {
+  int status = MPI_SUCCESS;
+  if (mpi_is_initialized == FALSE) {
+    int status = PMPI_Init(argc, argv);
+    if (status == MPI_SUCCESS) {
+      mpi_is_initialized = TRUE;
+    }
+  }
+
+  return status;
+}
+
+int MPI_Finalize() {
+  MAP_OR_FAIL(H5_term_library);
+  real_H5_term_library_();
+
+  if (hermes_initialized == TRUE) {
+    HermesFinalize();
+    hermes_initialized = FALSE;
+  }
+
+  int status = PMPI_Finalize();
+  if (status == MPI_SUCCESS) {
+    mpi_is_initialized = FALSE;
+  }
+
+  return status;
 }

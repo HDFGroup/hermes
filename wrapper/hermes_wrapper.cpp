@@ -23,7 +23,7 @@ std::shared_ptr<hermes::api::Hermes> hermes_ptr;
 int HermesInitHermes(char *hermes_config) {
   int result = 0;
 
-  LOG(INFO) << "Hermes Wrapper: Initializing Hermes\n";
+  VLOG(1) << "Hermes Wrapper: Initializing Hermes\n";
 
   hermes_ptr = hermes::InitHermesDaemon(hermes_config);
 
@@ -37,8 +37,8 @@ void HermesFinalize() {
 void HermesVBucketLink(VBucketClass *vbkt, char *blob_name) {
   hermes::api::VBucket *vbucket = (hermes::api::VBucket *)vbkt;
 
-  LOG(INFO) << "Hermes Wrapper: Linking Blob " << blob_name << "to VBucket "
-            << vbucket->GetName() << '\n';
+  VLOG(1) << "Hermes Wrapper: Linking Blob " << blob_name << "to VBucket "
+          << vbucket->GetName() << '\n';
 
   hermes::api::Status status =
     vbucket->Link(std::string(blob_name), vbucket->GetName());
@@ -50,13 +50,13 @@ void HermesVBucketLink(VBucketClass *vbkt, char *blob_name) {
 bool HermesVBucketIsValid(VBucketClass *vbkt) {
   hermes::api::VBucket *vbucket = (hermes::api::VBucket *)vbkt;
 
-  LOG(INFO) << "Hermes Wrapper: Checking if VBucket is valid\n";
+  VLOG(1) << "Hermes Wrapper: Checking if VBucket is valid\n";
 
   return vbucket->IsValid();
 }
 
 BucketClass *HermesBucketCreate(const char *name) {
-  LOG(INFO) << "Hermes Wrapper: Creating Bucket " << name << '\n';
+  VLOG(1) << "Hermes Wrapper: Creating Bucket " << name << '\n';
 
   try {
     hermes::api::Bucket *new_bucket =
@@ -77,7 +77,7 @@ BucketClass *HermesBucketCreate(const char *name) {
 void HermesBucketClose(BucketClass *bkt) {
   hermes::api::Bucket *my_bkt = (hermes::api::Bucket *)bkt;
 
-  LOG(INFO) << "Hermes Wrapper: Closing Bucket " << my_bkt->GetName() << '\n';
+  VLOG(1) << "Hermes Wrapper: Closing Bucket " << my_bkt->GetName() << '\n';
 
   my_bkt->Release();
   delete my_bkt;
@@ -86,7 +86,7 @@ void HermesBucketClose(BucketClass *bkt) {
 void HermesBucketDestroy(BucketClass *bkt) {
   hermes::api::Bucket *my_bkt = (hermes::api::Bucket *)bkt;
 
-  LOG(INFO) << "Hermes Wrapper: Destroying Bucket\n";
+  VLOG(1) << "Hermes Wrapper: Destroying Bucket\n";
 
   my_bkt->Destroy();
   delete my_bkt;
@@ -95,9 +95,9 @@ void HermesBucketDestroy(BucketClass *bkt) {
 bool HermesBucketContainsBlob(BucketClass *bkt, char *name) {
   hermes::api::Bucket *bucket = (hermes::api::Bucket *)bkt;
 
-  LOG(INFO) << "Hermes Wrapper: Checking if Bucket "
-            << bucket->GetName()
-            << " contains Blob " << name << '\n';
+  VLOG(1) << "Hermes Wrapper: Checking if Bucket "
+          << bucket->GetName()
+          << " contains Blob " << name << '\n';
 
   return bucket->ContainsBlob(name);
 }
@@ -106,8 +106,8 @@ void HermesBucketPut(BucketClass *bkt, char *name,
                      const unsigned char *put_data, size_t size) {
   hermes::api::Bucket *bucket = (hermes::api::Bucket *)bkt;
 
-  LOG(INFO) << "Hermes Wrapper: Putting Blob " << name << " to bucket " <<
-               bucket->GetName() << '\n';
+  VLOG(1) << "Hermes Wrapper: Putting Blob " << name << " to bucket "
+          << bucket->GetName() << '\n';
 
   hermes::api::Status status = bucket->Put(name, put_data, size);
 
@@ -120,13 +120,13 @@ void HermesBucketGet(BucketClass *bkt, char *blob_name, size_t page_size,
   hermes::api::Bucket *bucket = (hermes::api::Bucket *)bkt;
   const hermes::api::Context ctx;
 
-  LOG(INFO) << "Hermes Wrapper: Getting blob " << blob_name << " from Bucket "
-            << bucket->GetName();
+  VLOG(1) << "Hermes Wrapper: Getting blob " << blob_name << " from Bucket "
+          << bucket->GetName();
 
   size_t blob_size = bucket->Get(blob_name, buf, page_size, ctx);
   if (blob_size != page_size)
     LOG(ERROR) << "Blob size error: expected to get " << page_size
-               << ", but only get " << blob_size << '\n';
+               << ", but only got " << blob_size << '\n';
 }
 
 }  // extern "C"
