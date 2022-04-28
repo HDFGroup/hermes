@@ -31,7 +31,7 @@ Now we must tell the HDF5 library where to find the Hermes VFD. That is done
 with the following environment variable:
 
 ```sh
-HDF5_PLUGIN_PATH=<hermes_install_prefix/lib/hermes_vfd
+HDF5_PLUGIN_PATH=<hermes_install_prefix>/lib/hermes_vfd
 ```
 
 The Hermes VFD has two configuration options.
@@ -41,7 +41,7 @@ The Hermes VFD has two configuration options.
    application terminates. Thus, no files are produced.
 2. page size - The Hermes VFD works by mapping HDF5 files into its internal data
    structures. This happens in pages. The `page size` configuration option
-   allows the user to specify the size, in bytes of these pages. If your app
+   allows the user to specify the size, in bytes, of these pages. If your app
    does lots 2 MiB writes, then it's a good idea to set the page size to 2
    MiB. A smaller page size, 1 KiB for example, would convert each 2 MiB write
    into 2048 1 KiB writes. However, be aware that using pages that are too large
@@ -51,7 +51,7 @@ The Hermes VFD has two configuration options.
 
 
 These two configuration options are passed as a space-delimited string through
-an evnironment variable:
+an environment variable:
 
 ```sh
 # Example of configuring the Hermes VFD with `persistent_mode=true` and
