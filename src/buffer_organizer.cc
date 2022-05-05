@@ -281,7 +281,7 @@ void BoMove(SharedMemoryContext *context, RpcContext *rpc,
       LocalFreeBufferIdList(context, blob_id);
     }
     LocalUnlockBlob(context, blob_id);
-    VLOG(1) << "Done moving blob " << blob_id.bits.buffer_ids_offset << std::endl;
+    VLOG(1) << "Done moving blob " << blob_id.bits.buffer_ids_offset;
   } else {
     LOG(WARNING) << "Couldn't lock BlobID " << blob_id.as_int << "\n";
   }

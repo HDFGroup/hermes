@@ -77,7 +77,8 @@ int main(int argc, char *argv[]) {
     size_t failed_puts = 0;
     size_t failed_links = 0;
     for (int i = 0; i < kIters; ++i) {
-      std::string blob_name = "b_" + std::to_string(rank) + "_" + std::to_string(i);
+      std::string blob_name = ("b_" + std::to_string(rank) + "_" +
+                               std::to_string(i));
       timer.resumeTime();
       hapi::Status status;
       while (!((status = bkt.Put(blob_name, blob)).Succeeded())) {
