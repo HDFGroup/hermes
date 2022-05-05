@@ -22,7 +22,8 @@
 #include <numeric>
 #include <thread>
 
-#include "mpi.h"
+#include <mpi.h>
+
 #include "hermes.h"
 #include "bucket.h"
 #include "test_utils.h"
