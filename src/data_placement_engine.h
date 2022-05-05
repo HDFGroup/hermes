@@ -63,7 +63,7 @@ Status MinimizeIoTimePlacement(const std::vector<size_t> &blob_sizes,
                                const std::vector<f32> &bandwidths,
                                const std::vector<TargetID> &targets,
                                std::vector<PlacementSchema> &output,
-                               const api::Context &ctx);
+                               const api::Context &ctx = api::Context());
 
 Status CalculatePlacement(SharedMemoryContext *context, RpcContext *rpc,
                           const std::vector<size_t> &blob_size,
