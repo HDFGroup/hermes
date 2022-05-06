@@ -77,7 +77,7 @@ void LocalDelete(MetadataManager *mdm, const char *key, MapType map_type);
 u64 LocalGetRemainingTargetCapacity(SharedMemoryContext *context, TargetID id);
 std::vector<DeviceID>
 LocalUpdateGlobalSystemViewState(SharedMemoryContext *context,
-                                      std::vector<i64> adjustments);
+                                 std::vector<i64> adjustments);
 SystemViewState *GetGlobalSystemViewState(SharedMemoryContext *context);
 std::vector<u64> LocalGetGlobalDeviceCapacities(SharedMemoryContext *context);
 std::vector<u64> GetGlobalDeviceCapacities(SharedMemoryContext *context,
