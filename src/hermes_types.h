@@ -53,32 +53,47 @@ enum class PlacementPolicy {
   kMinimizeIoTime,  /**< LP-based blob placement, minimize I/O time */
 };
 
+struct MinimizeIoTimeOptions {
+  double minimum_remaining_capacity;
+  double capacity_change_threshold;
+
+  MinimizeIoTimeOptions(double minimum_remaining_capacity = 0.1,
+                        double capacity_change_threshold = 0.2)
+      : minimum_remaining_capacity(minimum_remaining_capacity),
+        capacity_change_threshold(capacity_change_threshold) {
+  }
+};
+
 /** Hermes API call context */
 struct Context {
+  /** The default maximum number of buffer organizer retries */
   static int default_buffer_organizer_retries;
-  /**< The default maximum number of buffer organizer retries */
 
+  /** The default blob placement policy */
   static PlacementPolicy default_placement_policy;
-  /**< The default blob placement policy */
 
+  /** Whether random splitting of blobs is enabled for Round-Robin blob
+   *  placement.
+   */
   static bool default_rr_split;
-  /**< Whether random splitting of blobs is enabled for Round-Robin blob
-     placement. */
 
+  /** The blob placement policy */
   PlacementPolicy policy;
-  /**< The blob placement policy */
 
+  /** Options for controlling the MinimizeIoTime PlacementPolicy */
+  MinimizeIoTimeOptions minimize_io_time_options;
+
+  /** The maximum number of buffer organizer retries */
   int buffer_organizer_retries;
-  /**< The maximum number of buffer organizer retries */
 
+  /** Whether random splitting of blobs is enabled for Round-Robin */
   bool rr_split;
-  /**< Whether random splitting of blobs is enabled for Round-Robin */
 
+  /** Whether Round-Robin can be retried after failure */
   bool rr_retry;
-  /**< Whether Round-Robin can be retried after failure */
 
+  /** Whether swapping is disabled */
   bool disable_swap;
-  /**< Whether swapping is disabled */
 
   Context() : policy(default_placement_policy),
               buffer_organizer_retries(default_buffer_organizer_retries),

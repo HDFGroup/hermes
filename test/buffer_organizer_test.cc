@@ -12,13 +12,14 @@
 
 #include <numeric>
 
+#include <mpi.h>
+
 #include "hermes.h"
 #include "vbucket.h"
 #include "metadata_management_internal.h"
 #include "buffer_pool_internal.h"
 #include "test_utils.h"
 
-#include <mpi.h>
 
 namespace hapi = hermes::api;
 using HermesPtr = std::shared_ptr<hapi::Hermes>;
