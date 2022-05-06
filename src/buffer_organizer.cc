@@ -278,7 +278,12 @@ void BoMove(SharedMemoryContext *context, RpcContext *rpc,
       if (!BlobIsInSwap(blob_id)) {
         LocalReleaseBuffers(context, replaced_ids);
       }
-      LocalFreeBufferIdList(context, blob_id);
+      // NOTE(chogan): We don't free the Blob's BufferIdList here because that
+      // would make the buffer_id_list_offset available for new incoming Blobs,
+      // and we can't reuse the buffer_id_list_offset until the old BlobInfo is
+      // deleted. We take care of both in LocalLockBlob when the final
+      // outstanding operation on this BlobID is complete (which is tracked by
+      // BlobInfo::last).
     }
     LocalUnlockBlob(context, blob_id);
     VLOG(1) << "Done moving blob " << blob_id.bits.buffer_ids_offset;

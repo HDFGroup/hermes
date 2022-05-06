@@ -245,7 +245,7 @@ void TestOrganizeBlob() {
 }
 
 static void TestWriteOnlyBucket() {
-  HermesPtr hermes = hermes::InitHermesDaemon();
+  HermesPtr hermes = hermes::InitHermesDaemon(getenv("HERMES_CONF"));
   std::string bkt_name = "WriteOnly";
   VBucket vbkt(bkt_name, hermes);
   Bucket bkt(bkt_name, hermes);

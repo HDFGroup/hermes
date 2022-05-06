@@ -1465,6 +1465,7 @@ bool LocalLockBlob(SharedMemoryContext *context, BlobID blob_id) {
         result = false;
         if (t.ticket == blob_info->last) {
           LocalDelete(mdm, blob_id);
+          LocalFreeBufferIdList(context, blob_id);
         }
       }
       ReleaseBlobInfoPtr(mdm);
