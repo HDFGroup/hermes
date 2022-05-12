@@ -983,9 +983,14 @@ LocalUpdateGlobalSystemViewState(SharedMemoryContext *context,
 
       // Collect devices for which to trigger the BufferOrganizer if the
       // capacities are beyond the min/max thresholds
-      int mb_available = (int)(state->bytes_available[i] / 1024.0f / 1024.0f);
-      if (mb_available < state->bo_capacity_thresholds_mb[i][0] ||
-          mb_available > state->bo_capacity_thresholds_mb[i][1]) {
+      float percentage_available = 0.0f;
+      if (state->bytes_available[i] > 0) {
+        percentage_available =
+          (f32)state->capacities[i] / (f32)state->bytes_available[i].load();
+      }
+
+      if (percentage_available < state->bo_capacity_thresholds[i].min ||
+          percentage_available > state->bo_capacity_thresholds[i].max) {
         result.push_back((DeviceID)i);
       }
     }
@@ -1057,14 +1062,11 @@ SystemViewState *CreateSystemViewState(Arena *arena, Config *config) {
   SystemViewState *result = PushClearedStruct<SystemViewState>(arena);
   result->num_devices = config->num_devices;
   for (int i = 0; i < result->num_devices; ++i) {
+    result->capacities[i] = config->capacities[i];
     result->bytes_available[i] = config->capacities[i];
 
     // Min and max thresholds
-    const int kNumThresholds = 2;
-    for (int j = 0; j < kNumThresholds; ++j) {
-      result->bo_capacity_thresholds_mb[i][j] =
-        config->bo_capacity_thresholds_mb[i][j];
-    }
+    result->bo_capacity_thresholds[i] = config->bo_capacity_thresholds[i];
   }
 
   return result;

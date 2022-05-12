@@ -168,6 +168,11 @@ enum ArenaType {
   kArenaType_Count            /**< Sentinel value                          */
 };
 
+struct Thresholds {
+  float min;
+  float max;
+};
+
 /**
  * System and user configuration that is used to initialize Hermes.
  */
@@ -247,7 +252,7 @@ struct Config {
   bool default_rr_split;
   /** The min and max capacity threshold in MiB for each device at which the
    * BufferOrganizer will trigger. */
-  int bo_capacity_thresholds_mb[kMaxDevices][2];
+  Thresholds bo_capacity_thresholds[kMaxDevices];
   /** A base name for the BufferPool shared memory segement. Hermes appends the
    * value of the USER environment variable to this string.
    */

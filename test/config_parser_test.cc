@@ -225,9 +225,8 @@ void TestDefaultConfig(Arena *arena, const char *config_file) {
 
 
   for (int i = 0; i < config.num_devices; ++i) {
-    Assert(config.bo_capacity_thresholds_mb[i][0] == 0);
-    int max_capacity_mb = (int)((f32)config.capacities[i] / 1024.0f / 1024.0f);
-    Assert(config.bo_capacity_thresholds_mb[i][1] == max_capacity_mb);
+    Assert(config.bo_capacity_thresholds[i].min == 0.0f);
+    Assert(config.bo_capacity_thresholds[i].max == 1.0f);
   }
 
   Assert(config.bo_num_threads == 4);

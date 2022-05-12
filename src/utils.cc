@@ -122,9 +122,8 @@ void InitDefaultConfig(Config *config) {
   config->default_rr_split = false;
 
   for (int i = 0; i < config->num_devices; ++i) {
-    config->bo_capacity_thresholds_mb[i][0] = 0;
-    int max_capacity_mb = (int)((f32)config->capacities[i] / 1024.0f / 1024.0f);
-    config->bo_capacity_thresholds_mb[i][1] = max_capacity_mb;
+    config->bo_capacity_thresholds[i].min = 0.0f;
+    config->bo_capacity_thresholds[i].max = 1.0f;
   }
 }
 
