@@ -20,6 +20,7 @@
 #include "memory_management.h"
 #include "buffer_pool.h"
 #include "buffer_pool_internal.h"
+#include "buffer_organizer.h"
 #include "rpc.h"
 #include "metadata_storage.h"
 
