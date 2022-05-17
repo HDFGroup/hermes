@@ -49,6 +49,11 @@ int main(int argc, char *argv[]) {
   }
 
   bool use_borg = true;
+
+  if (argc == 2) {
+    use_borg = false;
+  }
+
   HermesPtr hermes = hapi::InitHermes(getenv("HERMES_CONF"));
 
   if (hermes->IsApplicationCore()) {
@@ -66,7 +71,9 @@ int main(int argc, char *argv[]) {
     hapi::Bucket bkt(bkt_name, hermes);
 
     hapi::WriteOnlyTrait trait;
-    vbkt.Attach(&trait);
+    if (use_borg) {
+      vbkt.Attach(&trait);
+    }
 
     const size_t kBlobSize = KILOBYTES(4);
     hapi::Blob blob(kBlobSize);
@@ -97,17 +104,17 @@ int main(int argc, char *argv[]) {
     std::cout << "Rank " << rank << " failed puts: " << failed_puts << "\n";
     std::cout << "     " << "failed links: " << failed_links << "\n";
 
-    // hermes->AppBarrier();
-    // if (!hermes->IsFirstRankOnNode()) {
-    //   vbkt.Release();
-    //   bkt.Release();
-    // }
+    hermes->AppBarrier();
+    if (!hermes->IsFirstRankOnNode()) {
+      vbkt.Release();
+      bkt.Release();
+    }
 
     hermes->AppBarrier();
-    // if (hermes->IsFirstRankOnNode()) {
+    if (hermes->IsFirstRankOnNode()) {
       vbkt.Destroy();
       bkt.Destroy();
-    // }
+    }
 
     hermes->AppBarrier();
 
