@@ -989,8 +989,8 @@ LocalUpdateGlobalSystemViewState(SharedMemoryContext *context,
           (f32)state->capacities[i] / (f32)state->bytes_available[i].load();
       }
 
-      if (percentage_available < state->bo_capacity_thresholds[i].min ||
-          percentage_available > state->bo_capacity_thresholds[i].max) {
+      // TODO(chogan): Handle violation of bo_capacity_thresholds[i].min
+      if (percentage_available > state->bo_capacity_thresholds[i].max) {
         result.push_back((DeviceID)i);
       }
     }
@@ -1028,10 +1028,7 @@ void UpdateGlobalSystemViewState(SharedMemoryContext *context,
   }
 
   for (size_t i = 0; i < devices_to_organize.size(); ++i) {
-    // TODO(chogan):
-    // for each blob with (a percentage of ?) buffers in this device:
-    //    OrganizeBlob(context, rpc, bucket_id, blob_name, epsilon,
-    //                 custom_importance);
+    EnforceCapacityThresholds(context, rpc, devices_to_organize[i]);
   }
 }
 

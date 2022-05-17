@@ -418,6 +418,24 @@ void OrganizeBlob(SharedMemoryContext *context, RpcContext *rpc,
   }
 }
 
+void EnforceCapacityThresholds(SharedMemoryContext *context, RpcContext *rpc,
+                               DeviceID devices_id) {
+  (void)context;
+  (void)rpc;
+  (void)devices_id;
+
+  // TODO(chogan): Pass in whether it's min or max that's violated
+  // TODO(chogan): Pass in how much space needs to be filled/freed
+
+  // while (max is violated)
+  // Choose largest buffer from least important Blob
+  // Move to lower tier
+
+  // while (min is violated)
+  // Choose largest buffer from most important Blob
+  // Move to higher tier
+}
+
 void LocalShutdownBufferOrganizer(SharedMemoryContext *context) {
   // NOTE(chogan): ThreadPool destructor needs to be called manually since we
   // allocated the BO instance with placement new.
