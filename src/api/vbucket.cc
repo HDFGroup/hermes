@@ -332,11 +332,13 @@ Status VBucket::Destroy(Context& ctx) {
       for (const auto& blob_id : blob_ids) {
         TraitInput input = {};
         BucketID bucket_id = GetBucketIdFromBlobId(context, rpc, blob_id);
-        input.bucket_name = GetBucketNameById(context, rpc, bucket_id);
-        input.blob_name = GetBlobNameFromId(context, rpc, blob_id);
-        if (t->onUnlinkFn != nullptr) {
-          t->onUnlinkFn(hermes_, input, t);
-          // TODO(hari): @errorhandling Check if unlinking was successful
+        if (!IsNullBucketId(bucket_id)) {
+          input.bucket_name = GetBucketNameById(context, rpc, bucket_id);
+          input.blob_name = GetBlobNameFromId(context, rpc, blob_id);
+          if (t->onUnlinkFn != nullptr) {
+            t->onUnlinkFn(hermes_, input, t);
+            // TODO(hari): @errorhandling Check if unlinking was successful
+          }
         }
       }
     }
