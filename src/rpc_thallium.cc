@@ -22,10 +22,13 @@ namespace hermes {
 
 std::string GetHostNumberAsString(RpcContext *rpc, u32 node_id) {
   std::string result = "";
-  // Subtract 1 because the node_id index starts at 1 instead of 0. We reserve
-  // 0 so that BufferIDs (which are made from the node_id) can be NULL.
-  int index = (node_id - 1);
-  result = std::to_string(rpc->host_numbers[index]);
+
+  if (rpc->num_host_numbers > 0) {
+    // Subtract 1 because the node_id index starts at 1 instead of 0. We reserve
+    // 0 so that BufferIDs (which are made from the node_id) can be NULL.
+    int index = (node_id - 1);
+    result = std::to_string(rpc->host_numbers[index]);
+  }
 
   return result;
 }
