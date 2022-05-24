@@ -642,6 +642,10 @@ void StopGlobalSystemViewStateUpdateThread(RpcContext *rpc) {
 void InitRpcContext(RpcContext *rpc, u32 num_nodes, u32 node_id,
                      Config *config) {
   rpc->num_nodes = num_nodes;
+  // The number of host numbers in the rpc_host_number_range entry of the
+  // configuration file. Not necessarily the number of nodes because when there
+  // is only 1 node, the entry can be left blank, or contain 1 host number.
+  rpc->num_host_numbers = config->host_numbers.size();
   rpc->node_id = node_id;
   rpc->start_server = ThalliumStartRpcServer;
   rpc->state_size = sizeof(ThalliumState);

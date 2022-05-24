@@ -66,7 +66,7 @@ int main(int argc, char *argv[]) {
     ctx.minimize_io_time_options.minimum_remaining_capacity = 0;
     ctx.minimize_io_time_options.capacity_change_threshold = 0;
 
-    std::string bkt_name = "BORG" + std::string(" ") + std::to_string(rank);
+    std::string bkt_name = "BORG_" + std::to_string(rank);
     hapi::VBucket vbkt(bkt_name, hermes);
     hapi::Bucket bkt(bkt_name, hermes);
 
