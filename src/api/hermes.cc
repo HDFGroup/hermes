@@ -254,7 +254,7 @@ SharedMemoryContext InitHermesCore(Config *config, CommunicationContext *comm,
     rpc->num_host_numbers = num_host_numbers;
     rpc->host_numbers = PushArray<int>(&arenas[kArenaType_MetaData],
                                        num_host_numbers);
-    for (size_t i = 0; num_host_numbers; ++i) {
+    for (size_t i = 0; i < num_host_numbers; ++i) {
       rpc->host_numbers[i] = config->host_numbers[i];
     }
     mdm->host_numbers_offset = (u8 *)rpc->host_numbers - (u8 *)shmem_base;
