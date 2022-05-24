@@ -316,7 +316,7 @@ Status VBucket::Destroy(Context& ctx) {
   Status result;
 
   if (IsValid()) {
-    // NOTE(chogan): Let all flusing tasks complete before destroying the
+    // NOTE(chogan): Let all flushing tasks complete before destroying the
     // VBucket.
     WaitForBackgroundFlush();
 

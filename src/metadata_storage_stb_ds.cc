@@ -424,17 +424,20 @@ void LocalReplaceBlobIdInBucket(SharedMemoryContext *context,
                                 BlobID new_blob_id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   BeginTicketMutex(&mdm->bucket_mutex);
-  BucketInfo *info = LocalGetBucketInfoById(mdm, bucket_id);
-  ChunkedIdList *blobs = &info->blobs;
 
-  BlobID *blobs_arr = (BlobID *)GetIdsPtr(mdm, *blobs);
-  for (u32 i = 0; i < blobs->length; ++i) {
-    if (blobs_arr[i].as_int == old_blob_id.as_int) {
-      blobs_arr[i] = new_blob_id;
-      break;
+  if (info) {
+    BucketInfo *info = LocalGetBucketInfoById(mdm, bucket_id);
+    ChunkedIdList *blobs = &info->blobs;
+
+    BlobID *blobs_arr = (BlobID *)GetIdsPtr(mdm, *blobs);
+    for (u32 i = 0; i < blobs->length; ++i) {
+      if (blobs_arr[i].as_int == old_blob_id.as_int) {
+        blobs_arr[i] = new_blob_id;
+        break;
+      }
     }
+    ReleaseIdsPtr(mdm);
   }
-  ReleaseIdsPtr(mdm);
 
   EndTicketMutex(&mdm->bucket_mutex);
 }
