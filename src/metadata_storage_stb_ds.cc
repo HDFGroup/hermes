@@ -424,9 +424,9 @@ void LocalReplaceBlobIdInBucket(SharedMemoryContext *context,
                                 BlobID new_blob_id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   BeginTicketMutex(&mdm->bucket_mutex);
+  BucketInfo *info = LocalGetBucketInfoById(mdm, bucket_id);
 
   if (info) {
-    BucketInfo *info = LocalGetBucketInfoById(mdm, bucket_id);
     ChunkedIdList *blobs = &info->blobs;
 
     BlobID *blobs_arr = (BlobID *)GetIdsPtr(mdm, *blobs);
