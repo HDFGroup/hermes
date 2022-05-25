@@ -419,14 +419,15 @@ i64 GetIndexOfId(MetadataManager *mdm, ChunkedIdList *id_list, u64 id) {
   return result;
 }
 
+/** Assumes MetadataManager::bucket_mutex is held by the caller. */
 void LocalReplaceBlobIdInBucket(SharedMemoryContext *context,
                                 BucketID bucket_id, BlobID old_blob_id,
                                 BlobID new_blob_id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
-  BeginTicketMutex(&mdm->bucket_mutex);
+  // BeginTicketMutex(&mdm->bucket_mutex);
   BucketInfo *info = LocalGetBucketInfoById(mdm, bucket_id);
 
-  if (info) {
+  if (info && info->active) {
     ChunkedIdList *blobs = &info->blobs;
 
     BlobID *blobs_arr = (BlobID *)GetIdsPtr(mdm, *blobs);
@@ -439,7 +440,7 @@ void LocalReplaceBlobIdInBucket(SharedMemoryContext *context,
     ReleaseIdsPtr(mdm);
   }
 
-  EndTicketMutex(&mdm->bucket_mutex);
+  // EndTicketMutex(&mdm->bucket_mutex);
 }
 
 void LocalAddBlobIdToBucket(MetadataManager *mdm, BucketID bucket_id,

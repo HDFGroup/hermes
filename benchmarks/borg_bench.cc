@@ -75,7 +75,7 @@ int main(int argc, char *argv[]) {
       vbkt.Attach(&trait);
     }
 
-    const size_t kBlobSize = KILOBYTES(4);
+    const size_t kBlobSize = KILOBYTES(32);
     hapi::Blob blob(kBlobSize);
     std::iota(blob.begin(), blob.end(), 0);
 
