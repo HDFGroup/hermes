@@ -4,18 +4,18 @@ configure_file(hermes_version.h.in hermes_version.h)
 #------------------------------------------------------------------------------
 # External dependencies
 #------------------------------------------------------------------------------
-# google ortools
-find_package(ortools REQUIRED)
-if(ORTOOLS_FOUND)
-  include_directories(${ORTOOLS_INCLUDE_DIRS})
-  message(STATUS "Found ortools")
-  set(HERMES_EXT_INCLUDE_DEPENDENCIES ${ORTOOLS_INCLUDE_DIRS}
-      ${HERMES_EXT_INCLUDE_DEPENDENCIES}
-  )
+# GNU Linear Programming Kit
+find_package(GLPK REQUIRED)
+if(GLPK_FOUND)
+  include_directories(${GLPK_INCLUDE_DIRS})
+  message(STATUS "Found GLPK")
+  # set(HERMES_EXT_INCLUDE_DEPENDENCIES ${GLPK_INCLUDE_DIRS}
+  #     ${HERMES_EXT_INCLUDE_DEPENDENCIES}
+  # )
   set(HERMES_EXT_LIB_DEPENDENCIES
-      ${ORTOOLS_LIBRARIES} ${HERMES_EXT_LIB_DEPENDENCIES})
+      ${GLPK_LIBRARIES} ${HERMES_EXT_LIB_DEPENDENCIES})
 else()
-  message(STATUS "ortools not found")
+  message(STATUS "GLPK not found")
 endif()
 
 #------------------------------------------------------------------------------
@@ -50,7 +50,7 @@ target_include_directories(hermes
 )
 
 target_link_libraries(hermes
-  PUBLIC ${ORTOOLS_LIBRARIES}
+  PUBLIC ${GLPK_LIBRARIES}
   PUBLIC thallium
   PUBLIC "$<$<BOOL:${HERMES_INTERCEPT_IO}>:${GOTCHA_MODULE_LIBS}>"
   PRIVATE $<$<BOOL:${HERMES_COMMUNICATION_MPI}>:MPI::MPI_CXX>

@@ -20,7 +20,7 @@ set(STDIO_ADAPTER_PRIVATE_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/metadata_manager.h
 add_library(hermes_stdio SHARED ${STDIO_ADAPTER_PRIVATE_HEADER} ${STDIO_ADAPTER_PUBLIC_HEADER} ${STDIO_ADAPTER_SRC})
 target_include_directories(hermes_stdio PRIVATE ${HERMES_ADAPTER_DIR})
 add_dependencies(hermes_stdio hermes)
-target_link_libraries(hermes_stdio hermes MPI::MPI_CXX stdc++fs)
+target_link_libraries(hermes_stdio hermes MPI::MPI_CXX glog::glog stdc++fs)
 
 #-----------------------------------------------------------------------------
 # Add Target(s) to CMake Install
