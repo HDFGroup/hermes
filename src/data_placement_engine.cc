@@ -415,6 +415,7 @@ Status MinimizeIoTimePlacement(const std::vector<size_t> &blob_sizes,
     output.push_back(schema);
   }
   glp_delete_prob(lp);
+  glp_free_env();
   return result;
 }
 
