@@ -43,6 +43,9 @@ class Timer {
   double getElapsedTime() {
     return elapsed_time;
   }
+  void reset() {
+    elapsed_time = 0;
+  }
  private:
   std::chrono::high_resolution_clock::time_point t1;
   double elapsed_time;
