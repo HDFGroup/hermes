@@ -351,22 +351,24 @@ Status MinimizeIoTimePlacement(const std::vector<size_t> &blob_sizes,
   int last4 = 0;
 
   // Placement Ratio
-  for (size_t j {0}; j < num_targets-1; ++j) {
-    std::string row_name {"pr_row_" + std::to_string(j)};
-    glp_set_row_name(lp, num_constrts+j+1, row_name.c_str());
-    glp_set_row_bnds(lp, num_constrts+j+1, GLP_LO, 0.0, 0.0);
+  if (ctx.minimize_io_time_options.use_placement_ratio) {
+    for (size_t j {0}; j < num_targets-1; ++j) {
+      std::string row_name {"pr_row_" + std::to_string(j)};
+      glp_set_row_name(lp, num_constrts+j+1, row_name.c_str());
+      glp_set_row_bnds(lp, num_constrts+j+1, GLP_LO, 0.0, 0.0);
 
-    for (size_t i {0}; i < num_blobs; ++i) {
-      int ij = j * num_blobs + i + 1 + last3 + j;
-      ia[ij] = num_constrts+j+1, ja[ij] = j+2,
+      for (size_t i {0}; i < num_blobs; ++i) {
+        int ij = j * num_blobs + i + 1 + last3 + j;
+        ia[ij] = num_constrts+j+1, ja[ij] = j+2,
           ar[ij] = static_cast<double>(blob_sizes[i]);
 
-      double placement_ratio = static_cast<double>(node_state[j+1])/
-                                                   node_state[j];
-      ij = ij + 1;
-      ia[ij] = num_constrts+j+1, ja[ij] = j+1,
+        double placement_ratio = static_cast<double>(node_state[j+1])/
+          node_state[j];
+        ij = ij + 1;
+        ia[ij] = num_constrts+j+1, ja[ij] = j+1,
           ar[ij] = static_cast<double>(blob_sizes[i])*(0-placement_ratio);
-      last4 = ij;
+        last4 = ij;
+      }
     }
   }
 

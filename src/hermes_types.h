@@ -56,11 +56,14 @@ enum class PlacementPolicy {
 struct MinimizeIoTimeOptions {
   double minimum_remaining_capacity;
   double capacity_change_threshold;
+  bool use_placement_ratio;
 
-  MinimizeIoTimeOptions(double minimum_remaining_capacity = 0.1,
-                        double capacity_change_threshold = 0.2)
-      : minimum_remaining_capacity(minimum_remaining_capacity),
-        capacity_change_threshold(capacity_change_threshold) {
+  MinimizeIoTimeOptions(double minimum_remaining_capacity_ = 0.0,
+                        double capacity_change_threshold_ = 0.0,
+                        bool use_placement_ratio_ = false)
+      : minimum_remaining_capacity(minimum_remaining_capacity_),
+        capacity_change_threshold(capacity_change_threshold_),
+        use_placement_ratio(use_placement_ratio_) {
   }
 };
 
