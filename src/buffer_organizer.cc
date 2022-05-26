@@ -191,10 +191,6 @@ void BoMove(SharedMemoryContext *context, RpcContext *rpc,
           << std::endl;
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
 
-  // TODO(chogan): This locking is too aggressive but I don't know how else to
-  // solve the deadlock that results when the following block of code is running
-  // after LocalDestroyBlobByName holds MetadataManager::bucket_mutex
-  BeginTicketMutex(&mdm->bucket_mutex);
   if (LocalLockBlob(context, blob_id)) {
     auto warning_string = [](BufferID id) {
       std::ostringstream ss;
@@ -299,7 +295,6 @@ void BoMove(SharedMemoryContext *context, RpcContext *rpc,
   } else {
     LOG(WARNING) << "Couldn't lock BlobID " << blob_id.as_int << "\n";
   }
-  EndTicketMutex(&mdm->bucket_mutex);
 }
 
 void LocalOrganizeBlob(SharedMemoryContext *context, RpcContext *rpc,

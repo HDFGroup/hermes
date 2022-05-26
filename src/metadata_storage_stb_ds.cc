@@ -419,12 +419,11 @@ i64 GetIndexOfId(MetadataManager *mdm, ChunkedIdList *id_list, u64 id) {
   return result;
 }
 
-/** Assumes MetadataManager::bucket_mutex is held by the caller. */
 void LocalReplaceBlobIdInBucket(SharedMemoryContext *context,
                                 BucketID bucket_id, BlobID old_blob_id,
                                 BlobID new_blob_id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
-  // BeginTicketMutex(&mdm->bucket_mutex);
+  BeginTicketMutex(&mdm->bucket_mutex);
   BucketInfo *info = LocalGetBucketInfoById(mdm, bucket_id);
 
   if (info && info->active) {
@@ -440,7 +439,7 @@ void LocalReplaceBlobIdInBucket(SharedMemoryContext *context,
     ReleaseIdsPtr(mdm);
   }
 
-  // EndTicketMutex(&mdm->bucket_mutex);
+  EndTicketMutex(&mdm->bucket_mutex);
 }
 
 void LocalAddBlobIdToBucket(MetadataManager *mdm, BucketID bucket_id,
@@ -622,8 +621,6 @@ bool LocalDestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
   BeginTicketMutex(&mdm->bucket_mutex);
   BucketInfo *info = LocalGetBucketInfoById(mdm, bucket_id);
 
-  // TODO(chogan): @optimization Lock granularity can probably be relaxed if
-  // this is slow
   int ref_count = info->ref_count.load();
   if (ref_count == 1) {
     if (HasAllocatedBlobs(info)) {
@@ -638,9 +635,15 @@ bool LocalDestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
       }
       ReleaseIdsPtr(mdm);
 
+      // NOTE(chogan): Holding the mdm->bucket_mutex while destroying Blobs can
+      // result in deadlock if the BORG is in the middle of moving a Blob's
+      // Buffers.
+      EndTicketMutex(&mdm->bucket_mutex);
       for (auto blob_id : blobs_to_destroy) {
         DestroyBlobById(context, rpc, blob_id, bucket_id);
       }
+      BeginTicketMutex(&mdm->bucket_mutex);
+
       // Delete BlobId list
       FreeIdList(mdm, info->blobs);
     }
