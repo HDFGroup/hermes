@@ -270,6 +270,22 @@ if(HERMES_RPC_THALLIUM)
   endif()
 endif()
 
+# GLOG
+find_package(glog REQUIRED)
+if(glog_FOUND)
+  message(STATUS "found GLOG at ${glog_DIR}")
+endif()
+find_path(GLOG_INCLUDE_DIRS NAME glog PATH_SUFFIXES include/)
+include_directories(${GLOG_INCLUDE_DIRS})
+
+# GFLAGS
+find_package(gflags REQUIRED)
+if(gflags_FOUND)
+  message(STATUS "found GFLAGS at ${gflags_DIR}")
+endif()
+find_path(GFLAG_INCLUDE_DIRS NAME gflags PATH_SUFFIXES include/)
+include_directories(${GFLAG_INCLUDE_DIRS})
+
 # GOTCHA
 if(HERMES_INTERCEPT_IO)
   find_package(gotcha REQUIRED)

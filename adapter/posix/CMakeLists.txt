@@ -20,7 +20,7 @@ set(POSIX_ADAPTER_PRIVATE_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/metadata_manager.h
 add_library(hermes_posix SHARED ${POSIX_ADAPTER_PRIVATE_HEADER} ${POSIX_ADAPTER_PUBLIC_HEADER} ${POSIX_ADAPTER_SRC})
 target_include_directories(hermes_posix PRIVATE ${HERMES_ADAPTER_DIR})
 add_dependencies(hermes_posix hermes)
-target_link_libraries(hermes_posix hermes MPI::MPI_CXX stdc++fs)
+target_link_libraries(hermes_posix hermes MPI::MPI_CXX glog::glog stdc++fs)
 
 #-----------------------------------------------------------------------------
 # Add Target(s) to CMake Install

@@ -10,7 +10,6 @@ MOCHI_REPO_DIR=${INSTALL_DIR}/mochi-spack-packages
 THALLIUM_VERSION=0.10.0
 GOTCHA_VERSION=develop
 CATCH2_VERSION=2.13.3
-ORTOOLS_VERSION=7.7
 SPACK_VERSION=0.17.2
 HDF5_VERSION=1_13_0
 
@@ -59,11 +58,12 @@ spack repo add ./ci/hermes
 
 THALLIUM_SPEC="mochi-thallium@${THALLIUM_VERSION} ^mercury~boostsys"
 CATCH2_SPEC="catch2@${CATCH2_VERSION}"
-ORTOOLS_SPEC="gortools@${ORTOOLS_VERSION}"
+GLPK_SPEC="glpk"
+GLOG_SPEC="glog"
 
-spack install ${THALLIUM_SPEC} ${CATCH2_SPEC} ${ORTOOLS_SPEC}
+spack install ${THALLIUM_SPEC} ${CATCH2_SPEC} ${GLPK_SPEC} ${GLOG_SPEC}
 SPACK_STAGING_DIR=~/spack_staging
 mkdir -p ${SPACK_STAGING_DIR}
-spack view --verbose symlink ${SPACK_STAGING_DIR} ${THALLIUM_SPEC} ${CATCH2_SPEC} ${ORTOOLS_SPEC}
+spack view --verbose symlink ${SPACK_STAGING_DIR} ${THALLIUM_SPEC} ${CATCH2_SPEC} ${GLPK_SPEC} ${GLOG_SPEC}
 
 cp -LRnv ${SPACK_STAGING_DIR}/* ${INSTALL_DIR}
