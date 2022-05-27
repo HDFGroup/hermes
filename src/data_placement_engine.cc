@@ -291,7 +291,7 @@ Status MinimizeIoTimePlacement(const std::vector<size_t> &blob_sizes,
       int ij = i * num_targets + j + 1;
       std::string var_name {"blob_dst_" + std::to_string(i) + "_" +
                             std::to_string(j)};
-      // total umber of variables = number of blobs * number of targets.
+      // total number of variables = number of blobs * number of targets.
       glp_set_col_name(lp, ij, var_name.c_str());
       glp_set_col_bnds(lp, ij, GLP_DB, 0.0, 1.0);
       ia[ij] = i+1, ja[ij] = j+1, ar[ij] = 1.0;  // var[i][j] = 1.0
