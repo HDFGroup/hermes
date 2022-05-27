@@ -21,6 +21,7 @@
 #define H5FDhermes_H
 
 #include <dlfcn.h>
+#include <hdf5.h>
 #include <stdio.h>
 
 #define H5FD_HERMES_NAME  "hermes"
