@@ -134,7 +134,7 @@ LSAN_OPTIONS=suppressions=${CMAKE_CURRENT_SOURCE_DIR}/data/asan.supp)
 #------------------------------------------------------------------------------
 add_executable(bo buffer_organizer_test.cc)
 target_link_libraries(bo ${LIBRT} hermes MPI::MPI_CXX
-  $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium> glog::glog gflags)
+  $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium> glog::glog)
 target_compile_definitions(bo
   PRIVATE $<$<BOOL:${HERMES_RPC_THALLIUM}>:HERMES_RPC_THALLIUM>)
 add_test(NAME TestBufferOrganizer COMMAND bo)
