@@ -84,7 +84,7 @@ int main(int argc, char *argv[]) {
     std::iota(blob.begin(), blob.end(), 0);
 
     // MinIoTime with retry
-    const int kIters = 1500;
+    const int kIters = 2000;
     const int kReportFrequency = 30;
     hermes::testing::Timer put_timer;
     size_t failed_puts = 0;
