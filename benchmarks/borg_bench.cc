@@ -53,6 +53,13 @@ int main(int argc, char *argv[]) {
   if (argc == 2) {
     use_borg = false;
   }
+  // int gdb_iii = 0;
+  // char gdb_DEBUG_hostname[256];
+  // gethostname(gdb_DEBUG_hostname, sizeof(gdb_DEBUG_hostname));
+  // printf("PID %d on %s ready for attach\n", getpid(), gdb_DEBUG_hostname);
+  // fflush(stdout);
+  // while (0 == gdb_iii)
+  //   sleep(5);
 
   HermesPtr hermes = hapi::InitHermes(getenv("HERMES_CONF"));
 
@@ -62,13 +69,10 @@ int main(int argc, char *argv[]) {
     hapi::Context ctx;
     // Disable swapping of Blobs
     ctx.disable_swap = true;
-    // disable MinimizeIoTime PlacementPolicy constraints
-    ctx.minimize_io_time_options.minimum_remaining_capacity = 0;
-    ctx.minimize_io_time_options.capacity_change_threshold = 0;
 
     std::string bkt_name = "BORG_" + std::to_string(rank);
     hapi::VBucket vbkt(bkt_name, hermes);
-    hapi::Bucket bkt(bkt_name, hermes);
+    hapi::Bucket bkt(bkt_name, hermes, ctx);
 
     hapi::WriteOnlyTrait trait;
     if (use_borg) {
@@ -80,24 +84,40 @@ int main(int argc, char *argv[]) {
     std::iota(blob.begin(), blob.end(), 0);
 
     // MinIoTime with retry
-    const int kIters = 128;
+    const int kIters = 1500;
+    const int kReportFrequency = 30;
+    hermes::testing::Timer put_timer;
     size_t failed_puts = 0;
     size_t failed_links = 0;
     for (int i = 0; i < kIters; ++i) {
       std::string blob_name = ("b_" + std::to_string(rank) + "_" +
                                std::to_string(i));
       timer.resumeTime();
+      put_timer.resumeTime();
       hapi::Status status;
+      int consecutive_fails = 0;
       while (!((status = bkt.Put(blob_name, blob)).Succeeded())) {
           failed_puts++;
+          if (++consecutive_fails > 10) {
+            break;
+          }
       }
-      if (use_borg) {
+      put_timer.pauseTime();
+
+      if (use_borg && consecutive_fails <= 10) {
         hapi::Status link_status = vbkt.Link(blob_name, bkt_name);
         if (!link_status.Succeeded()) {
           failed_links++;
         }
       }
       timer.pauseTime();
+      if (i > 0 && i % kReportFrequency == 0) {
+        // TODO(chogan): Support more than 1 rank
+        constexpr double total_mb = (kBlobSize * kReportFrequency) / 1024.0 / 1024.0;
+
+        std::cout << i << ", " << total_mb / put_timer.getElapsedTime() << "\n";
+        put_timer.reset();
+      }
       hermes->AppBarrier();
     }
 
