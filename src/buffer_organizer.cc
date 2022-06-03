@@ -191,7 +191,7 @@ void BoMove(SharedMemoryContext *context, RpcContext *rpc,
           << std::endl;
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
 
-  bool got_lock = BeginTicketMutexIfNoWait(&mdm->bucket_delete_mutex);
+  bool got_lock = BeginReaderLock(&mdm->bucket_delete_lock);
   if (got_lock && LocalLockBlob(context, blob_id)) {
     auto warning_string = [](BufferID id) {
       std::ostringstream ss;
@@ -298,7 +298,7 @@ void BoMove(SharedMemoryContext *context, RpcContext *rpc,
   }
 
   if (got_lock) {
-    EndTicketMutex(&mdm->bucket_delete_mutex);
+    EndReaderLock(&mdm->bucket_delete_lock);
   }
 }
 

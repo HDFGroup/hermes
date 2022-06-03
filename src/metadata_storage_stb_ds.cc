@@ -618,7 +618,7 @@ bool LocalDestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
                         const char *bucket_name, BucketID bucket_id) {
   bool destroyed = false;
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
-  BeginTicketMutex(&mdm->bucket_delete_mutex);
+  BeginWriterLock(&mdm->bucket_delete_lock);
   BeginTicketMutex(&mdm->bucket_mutex);
   BucketInfo *info = LocalGetBucketInfoById(mdm, bucket_id);
 
@@ -669,7 +669,7 @@ bool LocalDestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
               << ". It's refcount is " << ref_count << std::endl;
   }
   EndTicketMutex(&mdm->bucket_mutex);
-  EndTicketMutex(&mdm->bucket_delete_mutex);
+  EndWriterLock(&mdm->bucket_delete_lock);
 
   return destroyed;
 }

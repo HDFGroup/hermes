@@ -504,4 +504,53 @@ void EndTicketMutex(TicketMutex *mutex) {
   mutex->serving.fetch_add(1);
 }
 
+const int kAttemptsBeforeYield = 100;
+
+bool BeginReaderLock(RwLock *lock) {
+  bool result = false;
+  if (!lock->writer_waiting.load()) {
+    lock->readers++;
+    result = true;
+  }
+
+  return result;
+}
+
+void EndReaderLock(RwLock *lock) {
+  u32 readers = lock->readers.load();
+
+  int retry = 0;
+  while (true) {
+    if (readers > 0) {
+      if (lock->readers.compare_exchange_weak(readers, readers - 1)) {
+        break;
+      }
+    }
+    retry++;
+    if (retry > kAttemptsBeforeYield) {
+      retry = 0;
+      sched_yield();
+    }
+  }
+}
+
+void BeginWriterLock(RwLock *lock) {
+  lock->writer_waiting.store(true);
+
+  int retry = 0;
+  while (lock->readers.load() > 0) {
+    retry++;
+    if (retry > kAttemptsBeforeYield) {
+      retry = 0;
+      sched_yield();
+    }
+  }
+  BeginTicketMutex(&lock->mutex);
+}
+
+void EndWriterLock(RwLock *lock) {
+  EndTicketMutex(&lock->mutex);
+  lock->writer_waiting.store(false);
+}
+
 }  // namespace hermes
