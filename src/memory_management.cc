@@ -469,6 +469,22 @@ Ticket TryBeginTicketMutex(TicketMutex *mutex, Ticket *existing_ticket) {
   return result;
 }
 
+/**
+ *
+ */
+bool BeginTicketMutexIfNoWait(TicketMutex *mutex) {
+  u32 serving = mutex->serving.load();
+  u32 ticket = mutex->ticket.load();
+  u32 next =  ticket + 1;
+
+  bool result = false;
+  if (serving == ticket) {
+    result = mutex->ticket.compare_exchange_strong(ticket, next);
+  }
+
+  return result;
+}
+
 void BeginTicketMutex(TicketMutex *mutex) {
   u32 ticket = mutex->ticket.fetch_add(1);
   while (ticket != mutex->serving.load()) {

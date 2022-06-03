@@ -113,7 +113,8 @@ int main(int argc, char *argv[]) {
       timer.pauseTime();
       if (i > 0 && i % kReportFrequency == 0) {
         // TODO(chogan): Support more than 1 rank
-        constexpr double total_mb = (kBlobSize * kReportFrequency) / 1024.0 / 1024.0;
+        constexpr double total_mb =
+          (kBlobSize * kReportFrequency) / 1024.0 / 1024.0;
 
         std::cout << i << ", " << total_mb / put_timer.getElapsedTime() << "\n";
         put_timer.reset();

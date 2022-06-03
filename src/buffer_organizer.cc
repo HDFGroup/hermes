@@ -191,7 +191,8 @@ void BoMove(SharedMemoryContext *context, RpcContext *rpc,
           << std::endl;
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
 
-  if (LocalLockBlob(context, blob_id)) {
+  bool got_lock = BeginTicketMutexIfNoWait(&mdm->bucket_delete_mutex);
+  if (got_lock && LocalLockBlob(context, blob_id)) {
     auto warning_string = [](BufferID id) {
       std::ostringstream ss;
       ss << "BufferID" << id.as_int << " not found on this node\n";
@@ -294,6 +295,10 @@ void BoMove(SharedMemoryContext *context, RpcContext *rpc,
             << std::endl;
   } else {
     LOG(WARNING) << "Couldn't lock BlobID " << blob_id.as_int << "\n";
+  }
+
+  if (got_lock) {
+    EndTicketMutex(&mdm->bucket_delete_mutex);
   }
 }
 

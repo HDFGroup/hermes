@@ -170,6 +170,8 @@ struct MetadataManager {
   /** Lock for accessing `BucketInfo` structures located at
    * `bucket_info_offset` */
   TicketMutex bucket_mutex;
+  TicketMutex bucket_delete_mutex;
+
   /** Lock for accessing `VBucketInfo` structures located at
    * `vbucket_info_offset` */
   TicketMutex vbucket_mutex;

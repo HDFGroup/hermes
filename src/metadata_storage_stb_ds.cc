@@ -618,6 +618,7 @@ bool LocalDestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
                         const char *bucket_name, BucketID bucket_id) {
   bool destroyed = false;
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  BeginTicketMutex(&mdm->bucket_delete_mutex);
   BeginTicketMutex(&mdm->bucket_mutex);
   BucketInfo *info = LocalGetBucketInfoById(mdm, bucket_id);
 
@@ -638,11 +639,11 @@ bool LocalDestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
       // NOTE(chogan): Holding the mdm->bucket_mutex while destroying Blobs can
       // result in deadlock if the BORG is in the middle of moving a Blob's
       // Buffers.
-      EndTicketMutex(&mdm->bucket_mutex);
+      // EndTicketMutex(&mdm->bucket_mutex);
       for (auto blob_id : blobs_to_destroy) {
         DestroyBlobById(context, rpc, blob_id, bucket_id);
       }
-      BeginTicketMutex(&mdm->bucket_mutex);
+      // BeginTicketMutex(&mdm->bucket_mutex);
 
       // Delete BlobId list
       FreeIdList(mdm, info->blobs);
@@ -668,6 +669,7 @@ bool LocalDestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
               << ". It's refcount is " << ref_count << std::endl;
   }
   EndTicketMutex(&mdm->bucket_mutex);
+  EndTicketMutex(&mdm->bucket_delete_mutex);
 
   return destroyed;
 }
