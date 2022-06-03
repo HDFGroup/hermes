@@ -294,7 +294,9 @@ void BoMove(SharedMemoryContext *context, RpcContext *rpc,
             << internal_blob_name.substr(kBucketIdStringSize, std::string::npos)
             << std::endl;
   } else {
-    LOG(WARNING) << "Couldn't lock BlobID " << blob_id.as_int << "\n";
+    if (got_lock) {
+      LOG(WARNING) << "Couldn't lock BlobID " << blob_id.as_int << "\n";
+    }
   }
 
   if (got_lock) {
