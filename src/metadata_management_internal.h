@@ -136,6 +136,7 @@ std::string LocalGetBucketNameById(SharedMemoryContext *context,
                                    BucketID blob_id);
 
 
+void WaitForOutstandingBlobOps(MetadataManager *mdm, BlobID blob_id);
 int LocalGetNumOutstandingFlushingTasks(SharedMemoryContext *context,
                                         VBucketID id);
 int GetNumOutstandingFlushingTasks(SharedMemoryContext *context,
