@@ -34,7 +34,8 @@ void PrintUsage(char *program) {
   fprintf(stderr, "  -b\n");
   fprintf(stderr, "    If present, enable the BORG.\n");
   fprintf(stderr, "  -f\n");
-  fprintf(stderr, "    The filename of the persisted data (for correctness verification).\n");
+  fprintf(stderr, "    The filename of the persisted data (for correctness"
+          "verification).\n");
   fprintf(stderr, "  -v\n");
   fprintf(stderr, "    If present, verify results at the end.\n");
 }
@@ -182,7 +183,8 @@ int main(int argc, char *argv[]) {
       //   constexpr double total_mb =
       //     (kBlobSize * kReportFrequency) / 1024.0 / 1024.0;
 
-      //   std::cout << i << ", " << total_mb / put_timer.getElapsedTime() << "\n";
+      //   std::cout << i << ", " << total_mb / put_timer.getElapsedTime()
+      //             << "\n";
       //   put_timer.reset();
       // }
       hermes->AppBarrier();
