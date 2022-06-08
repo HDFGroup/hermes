@@ -138,14 +138,18 @@ void WriteOnlyTrait::onLink(HermesPtr hermes, TraitInput &input, Trait *trait) {
 
 void WriteOnlyTrait::onUnlink(HermesPtr hermes, TraitInput &input,
                               Trait *trait) {
+  (void)hermes;
+  (void)input;
   (void)trait;
 
+#if 0
   BucketID bucket_id = GetBucketId(&hermes->context_, &hermes->rpc_,
                                    input.bucket_name.c_str());
   BlobID blob_id = GetBlobId(&hermes->context_, &hermes->rpc_, input.blob_name,
                              bucket_id, false);
   MetadataManager *mdm = GetMetadataManagerFromContext(&hermes->context_);
   WaitForOutstandingBlobOps(mdm, blob_id);
+#endif
 }
 
 }  // namespace api
