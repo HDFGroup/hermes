@@ -66,6 +66,11 @@ Options HandleArgs(int argc, char **argv) {
       }
     }
   }
+
+  if (result.verify && !result.output_filename) {
+    fprintf(stderr, "Please supply filename via -f\n");
+    exit(1);
+  }
   if (optind < argc) {
     fprintf(stderr, "non-option ARGV-elements: ");
     while (optind < argc) {
@@ -202,7 +207,7 @@ int main(int argc, char *argv[]) {
         for (int i = 0; i < kNumRanks; ++i) {
           for (int j = 0; j < kIters; ++j) {
             std::string blob_name = MakeBlobName(i, j);
-            file_vbucket.Link(blob_name, options.output_filename, ctx);
+            file_vbucket.Link(blob_name, bkt_name, ctx);
             const size_t kBytesPerRank = kIters * kBlobSize;
             size_t offset = (i * kBytesPerRank) + (j * kBlobSize);
             offset_map.emplace(blob_name, offset);
@@ -232,14 +237,14 @@ int main(int argc, char *argv[]) {
 
   hermes->Finalize();
 
-  int rank;
+  int my_rank;
   int comm_size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
   MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
 
   const size_t kAppCores = comm_size - 1;
   const size_t kTotalBytes = kAppCores * kIters * kBlobSize;
-  if (options.verify && rank == 0) {
+  if (options.verify && my_rank == 0) {
     std::vector<hermes::u8> data(kTotalBytes);
     FILE *f = fopen(options.output_filename, "r");
     Assert(f);
@@ -249,6 +254,15 @@ int main(int argc, char *argv[]) {
     Assert(fseek(f, 0L, SEEK_SET) == 0);
     size_t result = fread(data.data(), kTotalBytes, 1, f);
     Assert(result == 1);
+
+    for (size_t rank = 0; rank < kAppCores; ++rank) {
+      for (size_t iter = 0; iter < kIters; ++iter) {
+        for (size_t byte = 0; byte < kBlobSize; ++byte) {
+          Assert(data[(rank * kIters * kBlobSize) + (iter * kBlobSize) + byte]
+                 == iter % 255);
+        }
+      }
+    }
   }
 
   MPI_Finalize();
