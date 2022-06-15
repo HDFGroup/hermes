@@ -17,7 +17,6 @@ RUN DEBIAN_FRONTEND="noninteractive" apt-get install -y --no-install-recommends 
     autoconf \
     automake \
     ca-certificates \
-    cmake \
     curl \
     environment-modules \
     git \
@@ -34,9 +33,7 @@ RUN DEBIAN_FRONTEND="noninteractive" apt-get install -y --no-install-recommends 
     libsdl2-dev \
     gfortran \
     graphviz \
-    doxygen \
-    libmpich-dev \
-    libglpk-dev
+    doxygen
 
 USER $USER
 
@@ -65,7 +62,6 @@ RUN $spack repo add $PROJECT/ci/hermes
 RUN $spack compiler find
 
 RUN $spack compiler list
-RUN $spack external find
 
 ENV HERMES_VERSION=master
 
