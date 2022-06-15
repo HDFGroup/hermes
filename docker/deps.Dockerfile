@@ -54,7 +54,6 @@ RUN echo $INSTALL_DIR && mkdir -p $INSTALL_DIR
 RUN git clone https://github.com/spack/spack ${SPACK_DIR}
 RUN git clone https://github.com/mochi-hpc/mochi-spack-packages.git ${MOCHI_DIR}
 RUN git clone https://github.com/HDFGroup/hermes ${PROJECT}
-RUN pushd ${PROJECT} && git checkout chogan/glpk_docker && popd
 
 ENV spack=${SPACK_DIR}/bin/spack
 
