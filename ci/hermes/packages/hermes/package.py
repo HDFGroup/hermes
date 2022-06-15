@@ -9,9 +9,10 @@ class Hermes(CMakePackage):
     variant('vfd', default=False, description='Enable HDF5 VFD')
     depends_on('mochi-thallium~cereal@0.8.3')
     depends_on('catch2@2.13.3')
-    depends_on('gortools@7.7')
+    depends_on('glpk@4:')
     depends_on('mpich@3.3.2:')
-    depends_on('hdf5@1.13.0:', when='+vfd')    
+    depends_on('glog@0.4:')
+    depends_on('hdf5@1.13.0:', when='+vfd')
 
     def cmake_args(self):
         args = ['-DCMAKE_INSTALL_PREFIX={}'.format(self.prefix),
@@ -19,7 +20,7 @@ class Hermes(CMakePackage):
                 '-DHERMES_INSTALL_TESTS=ON',
                 '-DBUILD_TESTING=ON']
         if '+vfd' in self.spec:
-            args.append(self.define('HERMES_ENABLE_VFD', 'ON'))        
+            args.append(self.define('HERMES_ENABLE_VFD', 'ON'))
         return args
 
     def set_include(self, env, path):

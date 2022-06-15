@@ -152,6 +152,7 @@ option(HERMES_ENABLE_MPIIO_ADAPTER "Build the Hermes MPI-IO adapter." ON)
 option(HERMES_ENABLE_PUBSUB_ADAPTER "Build the Hermes pub/sub adapter." ON)
 option(HERMES_ENABLE_VFD "Build the Hermes HDF5 Virtual File Driver" OFF)
 option(HERMES_ENABLE_WRAPPER "Enable hermes C API wrapper." ON)
+option(HERMES_ENABLE_GFLAGS "Enable GFLAGS support." ON)
 option(HERMES_INSTALL_TESTS "Enable installation of tests." OFF)
 # Calculate code coverage with debug mode
 if(HERMES_ENABLE_COVERAGE)
@@ -279,12 +280,14 @@ find_path(GLOG_INCLUDE_DIRS NAME glog PATH_SUFFIXES include/)
 include_directories(${GLOG_INCLUDE_DIRS})
 
 # GFLAGS
-find_package(gflags REQUIRED)
-if(gflags_FOUND)
-  message(STATUS "found GFLAGS at ${gflags_DIR}")
+if(HERMES_ENABLE_GFLAGS)
+  find_package(gflags REQUIRED)
+  if(gflags_FOUND)
+    message(STATUS "found GFLAGS at ${gflags_DIR}")
+    find_path(GFLAG_INCLUDE_DIRS NAME gflags PATH_SUFFIXES include/)
+    include_directories(${GFLAG_INCLUDE_DIRS})
+  endif()
 endif()
-find_path(GFLAG_INCLUDE_DIRS NAME gflags PATH_SUFFIXES include/)
-include_directories(${GFLAG_INCLUDE_DIRS})
 
 # GOTCHA
 if(HERMES_INTERCEPT_IO)
