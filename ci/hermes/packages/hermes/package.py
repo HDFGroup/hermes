@@ -11,6 +11,7 @@ class Hermes(CMakePackage):
     depends_on('catch2@2.13.3')
     depends_on('glpk@4:')
     depends_on('mpich@3.3.2:')
+    depends_on('glog@0.4:')
     depends_on('hdf5@1.13.0:', when='+vfd')
 
     def cmake_args(self):
