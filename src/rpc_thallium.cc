@@ -313,7 +313,7 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
   // Probably should move it to a completely separate tl::engine.
   auto rpc_update_global_system_view_state =
     [context](const request &req, std::vector<i64> adjustments) {
-      std::vector<DeviceID> result =
+      std::vector<ViolationInfo> result =
         LocalUpdateGlobalSystemViewState(context, adjustments);
 
       req.respond(result);

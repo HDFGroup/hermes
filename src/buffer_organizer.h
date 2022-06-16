@@ -114,7 +114,7 @@ void EnqueueBoMove(RpcContext *rpc, const BoMoveList &moves, BlobID blob_id,
                    BucketID bucket_id, const std::string &internal_name,
                    BoPriority priority);
 void EnforceCapacityThresholds(SharedMemoryContext *context, RpcContext *rpc,
-                               DeviceID devices_id);
+                               const ViolationInfo &info);
 }  // namespace hermes
 
 #endif  // HERMES_BUFFER_ORGANIZER_H_

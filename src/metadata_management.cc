@@ -970,10 +970,10 @@ SystemViewState *GetGlobalSystemViewState(SharedMemoryContext *context) {
   return result;
 }
 
-std::vector<DeviceID>
+std::vector<ViolationInfo>
 LocalUpdateGlobalSystemViewState(SharedMemoryContext *context,
                                  std::vector<i64> adjustments) {
-  std::vector<DeviceID> result;
+  std::vector<ViolationInfo> result;
 
   for (size_t i = 0; i < adjustments.size(); ++i) {
     SystemViewState *state = GetGlobalSystemViewState(context);
@@ -990,9 +990,25 @@ LocalUpdateGlobalSystemViewState(SharedMemoryContext *context,
           (f32)state->capacities[i] / (f32)state->bytes_available[i].load();
       }
 
-      // TODO(chogan): Handle violation of bo_capacity_thresholds[i].min
       if (percentage_available > state->bo_capacity_thresholds[i].max) {
-        result.push_back((DeviceID)i);
+        float percentage_violation =
+          percentage_available - state->bo_capacity_thresholds[i].max;
+        ViolationInfo info = {};
+        info.device_id = (DeviceID)i;
+        info.violation = ThresholdViolation::kMax;
+        info.violation_size =
+          (size_t)(percentage_violation * state->capacities[i]);
+        result.push_back(info);
+      }
+      if (percentage_available < state->bo_capacity_thresholds[i].min) {
+        float percentage_violation =
+          state->bo_capacity_thresholds[i].max - percentage_available;
+        ViolationInfo info = {};
+        info.device_id = (DeviceID)i;
+        info.violation = ThresholdViolation::kMin;
+        info.violation_size =
+        (size_t)(percentage_violation * state->capacities[i]);
+        result.push_back(info);
       }
     }
   }
@@ -1014,7 +1030,7 @@ void UpdateGlobalSystemViewState(SharedMemoryContext *context,
     }
   }
 
-  std::vector<DeviceID> devices_to_organize;
+  std::vector<ViolationInfo> devices_to_organize;
   if (update_needed) {
     u32 target_node = mdm->global_system_view_state_node_id;
     if (target_node == rpc->node_id) {
@@ -1022,9 +1038,9 @@ void UpdateGlobalSystemViewState(SharedMemoryContext *context,
         LocalUpdateGlobalSystemViewState(context, adjustments);
     } else {
       devices_to_organize =
-        RpcCall<std::vector<DeviceID>>(rpc, target_node,
-                                       "RemoteUpdateGlobalSystemViewState",
-                                       adjustments);
+        RpcCall<std::vector<ViolationInfo>>(rpc, target_node,
+                                            "RemoteUpdateGlobalSystemViewState",
+                                            adjustments);
     }
   }
 

@@ -129,6 +129,11 @@ void serialize(A &ar, BufferInfo &info) {
 }
 
 #ifndef THALLIUM_USE_CEREAL
+
+// NOTE(chogan): Thallium's default serialization doesn't handle enums by
+// default so we must write serialization code for all enums when we're not
+// using cereal.
+
 /**
  *  Lets Thallium know how to serialize a MapType.
  *
@@ -170,6 +175,19 @@ void load(A &ar, BoPriority &priority) {
   ar.read(&val, 1);
   priority = (BoPriority)val;
 }
+
+template<typename A>
+void save(A &ar, ThresholdViolation &violation) {
+  int val = (int)violation;
+  ar.write(&val, 1);
+}
+
+template<typename A>
+void load(A &ar, ThresholdViolation &violation) {
+  int val = 0;
+  ar.read(&val, 1);
+  violation = (ThresholdViolation)val;
+}
 #endif  // #ifndef THALLIUM_USE_CEREAL
 
 
@@ -196,6 +214,13 @@ template<typename A>
 void serialize(A &ar, BoTask &bo_task) {
   ar & bo_task.op;
   ar & bo_task.args;
+}
+
+template<typename A>
+void serialize(A &ar, ViolationInfo &info) {
+  ar & info.device_id;
+  ar & info.violation;
+  ar & info.violation_size;
 }
 
 namespace api {

@@ -63,6 +63,17 @@ enum MapType {
   kMapType_Count
 };
 
+enum class ThresholdViolation {
+  kMin,
+  kMax
+};
+
+struct ViolationInfo {
+  DeviceID device_id;
+  ThresholdViolation violation;
+  size_t violation_size;
+};
+
 struct Stats {
   u32 recency;
   u32 frequency;
