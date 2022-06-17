@@ -602,7 +602,7 @@ void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
 
 void StartGlobalSystemViewStateUpdateThread(SharedMemoryContext *context,
                                             RpcContext *rpc, Arena *arena,
-                                            double  sleep_ms) {
+                                            double sleep_ms) {
   struct ThreadArgs {
     SharedMemoryContext *context;
     RpcContext *rpc;

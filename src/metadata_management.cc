@@ -1089,8 +1089,9 @@ SystemViewState *CreateSystemViewState(Arena *arena, Config *config) {
   return result;
 }
 
-GlobalSystemViewState *CreateGlobalSystemViewState(RpcContext *rpc, Arena *arena,
-                                 Config *config) {
+GlobalSystemViewState *CreateGlobalSystemViewState(RpcContext *rpc,
+                                                   Arena *arena,
+                                                   Config *config) {
   GlobalSystemViewState *result =
     PushClearedStruct<GlobalSystemViewState>(arena);
   result->num_devices = config->num_devices;
