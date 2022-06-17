@@ -435,7 +435,7 @@ void EnforceCapacityThresholds(SharedMemoryContext *context, RpcContext *rpc,
   (void)context;
   (void)rpc;
 
-  // DeviceID device_id = info.device_id;
+  // DeviceID dev_id = info.device_id;
 
   switch (info.violation) {
     case ThresholdViolation::kMin: {

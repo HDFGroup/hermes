@@ -934,7 +934,7 @@ SystemViewState *GetLocalSystemViewState(SharedMemoryContext *context) {
 }
 
 std::vector<u64> LocalGetGlobalDeviceCapacities(SharedMemoryContext *context) {
-  SystemViewState *global_svs = GetGlobalSystemViewState(context);
+  GlobalSystemViewState *global_svs = GetGlobalSystemViewState(context);
 
   std::vector<u64> result(global_svs->num_devices);
   for (size_t i = 0; i < result.size(); ++i) {
@@ -945,7 +945,7 @@ std::vector<u64> LocalGetGlobalDeviceCapacities(SharedMemoryContext *context) {
 }
 
 std::vector<u64> GetGlobalDeviceCapacities(SharedMemoryContext *context,
-                                         RpcContext *rpc) {
+                                           RpcContext *rpc) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   u32 target_node = mdm->global_system_view_state_node_id;
 
@@ -961,55 +961,57 @@ std::vector<u64> GetGlobalDeviceCapacities(SharedMemoryContext *context,
   return result;
 }
 
-SystemViewState *GetGlobalSystemViewState(SharedMemoryContext *context) {
+GlobalSystemViewState *GetGlobalSystemViewState(SharedMemoryContext *context) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
-  SystemViewState *result =
-    (SystemViewState *)((u8 *)mdm + mdm->global_system_view_state_offset);
+  GlobalSystemViewState *result =
+    (GlobalSystemViewState *)((u8 *)mdm + mdm->global_system_view_state_offset);
   assert((u8 *)result != (u8 *)mdm);
 
   return result;
 }
 
 std::vector<ViolationInfo>
-LocalUpdateGlobalSystemViewState(SharedMemoryContext *context,
+LocalUpdateGlobalSystemViewState(SharedMemoryContext *context, u32 node_id,
                                  std::vector<i64> adjustments) {
   std::vector<ViolationInfo> result;
-
-  for (size_t i = 0; i < adjustments.size(); ++i) {
-    SystemViewState *state = GetGlobalSystemViewState(context);
-    if (adjustments[i]) {
-      state->bytes_available[i].fetch_add(adjustments[i]);
-      DLOG(INFO) << "DeviceID " << i << " adjusted by " << adjustments[i]
-                 << " bytes\n";
+  // TODO(chogan): Take node_id into account when updating GlobalSVS
+  for (size_t device_idx = 0; device_idx < adjustments.size(); ++device_idx) {
+    GlobalSystemViewState *state = GetGlobalSystemViewState(context);
+    if (adjustments[device_idx]) {
+      u32 target_idx = ((node_id - 1) * adjustments.size()) + device_idx;
+      state->bytes_available[target_idx].fetch_add(adjustments[device_idx]);
+      DLOG(INFO) << "DeviceID " << device_idx << "on node " << node_id
+                 << " adjusted by " << adjustments[device_idx] << " bytes\n";
 
       // Collect devices for which to trigger the BufferOrganizer if the
       // capacities are beyond the min/max thresholds
       float percentage_available = 0.0f;
-      if (state->bytes_available[i] > 0) {
-        percentage_available =
-          (f32)state->capacities[i] / (f32)state->bytes_available[i].load();
+      if (state->bytes_available[target_idx] > 0) {
+        percentage_available = ((f32)state->capacities[device_idx] /
+                                (f32)state->bytes_available[target_idx].load());
       }
 
-      if (percentage_available > state->bo_capacity_thresholds[i].max) {
-        float percentage_violation =
-          percentage_available - state->bo_capacity_thresholds[i].max;
-        ViolationInfo info = {};
-        info.device_id = (DeviceID)i;
+      ViolationInfo info = {};
+      info.device_id = (DeviceID)device_idx;
+      info.node_id = node_id;
+
+      float percentage_violation = 0.0f;
+      if (percentage_available >
+          state->bo_capacity_thresholds[device_idx].max) {
+        percentage_violation =
+          percentage_available - state->bo_capacity_thresholds[device_idx].max;
         info.violation = ThresholdViolation::kMax;
-        info.violation_size =
-          (size_t)(percentage_violation * state->capacities[i]);
-        result.push_back(info);
       }
-      if (percentage_available < state->bo_capacity_thresholds[i].min) {
-        float percentage_violation =
-          state->bo_capacity_thresholds[i].max - percentage_available;
-        ViolationInfo info = {};
-        info.device_id = (DeviceID)i;
+      if (percentage_available <
+          state->bo_capacity_thresholds[device_idx].min) {
+        percentage_violation =
+          state->bo_capacity_thresholds[device_idx].max - percentage_available;
         info.violation = ThresholdViolation::kMin;
-        info.violation_size =
-        (size_t)(percentage_violation * state->capacities[i]);
-        result.push_back(info);
       }
+
+      info.violation_size =
+        (size_t)(percentage_violation * state->capacities[device_idx]);
+      result.push_back(info);
     }
   }
 
@@ -1022,6 +1024,7 @@ void UpdateGlobalSystemViewState(SharedMemoryContext *context,
   BufferPool *pool = GetBufferPoolFromContext(context);
 
   bool update_needed = false;
+  // TODO(chogan): BufferPool code should post adjustments via 1-sided rpc.
   std::vector<i64> adjustments(pool->num_devices);
   for (size_t i = 0; i < adjustments.size(); ++i) {
     adjustments[i] = pool->capacity_adjustments[i].exchange(0);
@@ -1035,7 +1038,7 @@ void UpdateGlobalSystemViewState(SharedMemoryContext *context,
     u32 target_node = mdm->global_system_view_state_node_id;
     if (target_node == rpc->node_id) {
       devices_to_organize =
-        LocalUpdateGlobalSystemViewState(context, adjustments);
+        LocalUpdateGlobalSystemViewState(context, rpc->node_id, adjustments);
     } else {
       devices_to_organize =
         RpcCall<std::vector<ViolationInfo>>(rpc, target_node,
@@ -1081,6 +1084,32 @@ SystemViewState *CreateSystemViewState(Arena *arena, Config *config) {
 
     // Min and max thresholds
     result->bo_capacity_thresholds[i] = config->bo_capacity_thresholds[i];
+  }
+
+  return result;
+}
+
+GlobalSystemViewState *CreateGlobalSystemViewState(RpcContext *rpc, Arena *arena,
+                                 Config *config) {
+  GlobalSystemViewState *result =
+    PushClearedStruct<GlobalSystemViewState>(arena);
+  result->num_devices = config->num_devices;
+
+  for (int i = 0; i < result->num_devices; ++i) {
+    result->capacities[i] = config->capacities[i];
+    // Min and max thresholds
+    result->bo_capacity_thresholds[i] = config->bo_capacity_thresholds[i];
+  }
+  size_t num_targets = config->num_devices * rpc->num_nodes;
+  result->num_targets = num_targets;
+  result->bytes_available =
+    PushClearedArray<std::atomic<u64>>(arena, num_targets);
+
+  for (u32 node_idx = 0; node_idx < rpc->num_nodes; ++node_idx) {
+    for (int device_idx = 0; device_idx < result->num_devices; ++device_idx) {
+      u64 index = (node_idx * result->num_devices) + device_idx;
+      result->bytes_available[index].store(result->capacities[device_idx]);
+    }
   }
 
   return result;
@@ -1140,11 +1169,11 @@ SwapBlob IdArrayToSwapBlob(BufferIdArray ids) {
   return result;
 }
 
-void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
-                         int node_id) {
+void InitMetadataManager(MetadataManager *mdm, RpcContext *rpc, Arena *arena,
+                         Config *config) {
   // NOTE(chogan): All MetadataManager offsets are relative to the address of
   // the MDM itself.
-
+  u32 node_id = rpc->node_id;
   arena->error_handler = MetadataArenaErrorHandler;
 
   mdm->map_seed = 0x4E58E5DF;
@@ -1160,9 +1189,11 @@ void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
 
   // Initialize Global SystemViewState
 
+  // TODO(chogan):
   if (node_id == 1) {
     // NOTE(chogan): Only Node 1 has the Global SystemViewState
-    SystemViewState *global_state = CreateSystemViewState(arena, config);
+    GlobalSystemViewState *global_state =
+      CreateGlobalSystemViewState(rpc, arena, config);
     mdm->global_system_view_state_offset = GetOffsetFromMdm(mdm, global_state);
   }
   mdm->global_system_view_state_node_id = 1;

@@ -76,9 +76,9 @@ void LocalDelete(MetadataManager *mdm, const char *key, MapType map_type);
 
 u64 LocalGetRemainingTargetCapacity(SharedMemoryContext *context, TargetID id);
 std::vector<ViolationInfo>
-LocalUpdateGlobalSystemViewState(SharedMemoryContext *context,
+LocalUpdateGlobalSystemViewState(SharedMemoryContext *context, u32 node_id,
                                  std::vector<i64> adjustments);
-SystemViewState *GetGlobalSystemViewState(SharedMemoryContext *context);
+GlobalSystemViewState *GetGlobalSystemViewState(SharedMemoryContext *context);
 std::vector<u64> LocalGetGlobalDeviceCapacities(SharedMemoryContext *context);
 std::vector<u64> GetGlobalDeviceCapacities(SharedMemoryContext *context,
                                            RpcContext *rpc);
@@ -87,7 +87,7 @@ void UpdateGlobalSystemViewState(SharedMemoryContext *context,
 
 void StartGlobalSystemViewStateUpdateThread(SharedMemoryContext *context,
                                             RpcContext *rpc, Arena *arena,
-                                            double slepp_ms);
+                                            double sleep_ms);
 
 void InitMetadataStorage(SharedMemoryContext *context, MetadataManager *mdm,
                          Arena *arena, Config *config);

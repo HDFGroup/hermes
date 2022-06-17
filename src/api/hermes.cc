@@ -256,7 +256,7 @@ SharedMemoryContext InitHermesCore(Config *config, CommunicationContext *comm,
     mdm->host_numbers_offset = (u8 *)rpc->host_numbers - (u8 *)shmem_base;
   }
 
-  InitMetadataManager(mdm, &arenas[kArenaType_MetaData], config, comm->node_id);
+  InitMetadataManager(mdm, rpc, &arenas[kArenaType_MetaData], config);
   InitMetadataStorage(&context, mdm, &arenas[kArenaType_MetaData], config);
 
   ShmemClientInfo *client_info = (ShmemClientInfo *)shmem_base;
@@ -381,8 +381,7 @@ std::shared_ptr<api::Hermes> InitHermes(Config *config, bool is_daemon,
 
     double sleep_ms = config->system_view_state_update_interval_ms;
     StartGlobalSystemViewStateUpdateThread(&result->context_, &result->rpc_,
-                                           &result->trans_arena_,
-                                           sleep_ms);
+                                           &result->trans_arena_, sleep_ms);
   }
 
   WorldBarrier(&comm);

@@ -72,6 +72,7 @@ struct ViolationInfo {
   DeviceID device_id;
   ThresholdViolation violation;
   size_t violation_size;
+  u32 node_id;
 };
 
 struct Stats {
@@ -150,6 +151,34 @@ struct SystemViewState {
   int num_devices;
 };
 
+// TODO(chogan):
+/**
+ * A snapshot view of the entire system's Targets' available capacities.
+ *
+ * This information is only stored on 1 node, designated by
+ * MetadataManager::global_system_view_state_node_id, and is only updated by 1
+ * rank (the Hermes process on that node). Hence, it does not need to be stored
+ * in shared memory and we are able to use normal std containers. However, since
+ * multiple RPC handler threads can potentially update the `bytes_available`
+ * field concurrently, we must not do any operations on the vector itself. We
+ * can only do operations on the atomics within. The vector is created in
+ * StartGlobalSystemViewStateUpdateThread, and thereafter we can only call
+ * functions on the individual atomics (e.g., bytes_available[i].fetch_add),
+ * which is thread safe.
+ */
+struct GlobalSystemViewState {
+  /** The total number of buffering Targets in the system */
+  u64 num_targets;
+  /** The number of devices per node */
+  int num_devices;
+  u64 capacities[kMaxDevices];
+  /** The remaining capacity of each Target in the system */
+  std::atomic<u64> *bytes_available;
+  /** The min and max capacity thresholds (percentage) for each Target in the
+   * system */
+  Thresholds bo_capacity_thresholds[kMaxDevices];
+};
+
 struct MetadataManager {
   // All offsets are relative to the beginning of the MDM
   ptrdiff_t bucket_info_offset;
@@ -217,8 +246,8 @@ struct RpcContext;
 /**
  *
  */
-void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
-                         int node_id);
+void InitMetadataManager(MetadataManager *mdm, RpcContext *rpc, Arena *arena,
+                         Config *config);
 
 /**
  *

@@ -309,12 +309,10 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
     req.respond(result);
   };
 
-  // TODO(chogan): Only need this on mdm->global_system_view_state_node_id.
-  // Probably should move it to a completely separate tl::engine.
   auto rpc_update_global_system_view_state =
-    [context](const request &req, std::vector<i64> adjustments) {
+    [context, rpc](const request &req, std::vector<i64> adjustments) {
       std::vector<ViolationInfo> result =
-        LocalUpdateGlobalSystemViewState(context, adjustments);
+        LocalUpdateGlobalSystemViewState(context, rpc->node_id, adjustments);
 
       req.respond(result);
     };
@@ -604,7 +602,7 @@ void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
 
 void StartGlobalSystemViewStateUpdateThread(SharedMemoryContext *context,
                                             RpcContext *rpc, Arena *arena,
-                                            double sleep_ms) {
+                                            double  sleep_ms) {
   struct ThreadArgs {
     SharedMemoryContext *context;
     RpcContext *rpc;
