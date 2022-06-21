@@ -991,10 +991,8 @@ LocalUpdateGlobalSystemViewState(SharedMemoryContext *context, u32 node_id,
       }
 
       ViolationInfo info = {};
-      info.device_id = (DeviceID)device_idx;
-      info.node_id = node_id;
-
       float percentage_violation = 0.0f;
+
       if (percentage_available >
           state->bo_capacity_thresholds[device_idx].max) {
         percentage_violation =
@@ -1008,9 +1006,13 @@ LocalUpdateGlobalSystemViewState(SharedMemoryContext *context, u32 node_id,
         info.violation = ThresholdViolation::kMin;
       }
 
-      info.violation_size =
-        (size_t)(percentage_violation * state->capacities[device_idx]);
-      result.push_back(info);
+      if (percentage_violation > 0.0f) {
+        info.device_id = (DeviceID)device_idx;
+        info.node_id = node_id;
+        info.violation_size =
+          (size_t)(percentage_violation * state->capacities[device_idx]);
+        result.push_back(info);
+      }
     }
   }
 
