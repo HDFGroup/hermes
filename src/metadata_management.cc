@@ -974,21 +974,20 @@ std::vector<ViolationInfo>
 LocalUpdateGlobalSystemViewState(SharedMemoryContext *context, u32 node_id,
                                  std::vector<i64> adjustments) {
   std::vector<ViolationInfo> result;
-  // TODO(chogan): Take node_id into account when updating GlobalSVS
   for (size_t device_idx = 0; device_idx < adjustments.size(); ++device_idx) {
     GlobalSystemViewState *state = GetGlobalSystemViewState(context);
     if (adjustments[device_idx]) {
       u32 target_idx = ((node_id - 1) * adjustments.size()) + device_idx;
       state->bytes_available[target_idx].fetch_add(adjustments[device_idx]);
-      DLOG(INFO) << "DeviceID " << device_idx << "on node " << node_id
+      DLOG(INFO) << "DeviceID " << device_idx << " on node " << node_id
                  << " adjusted by " << adjustments[device_idx] << " bytes\n";
 
       // Collect devices for which to trigger the BufferOrganizer if the
       // capacities are beyond the min/max thresholds
       float percentage_available = 0.0f;
       if (state->bytes_available[target_idx] > 0) {
-        percentage_available = ((f32)state->capacities[device_idx] /
-                                (f32)state->bytes_available[target_idx].load());
+        percentage_available = ((f32)state->bytes_available[target_idx].load() /
+                                (f32)state->capacities[device_idx]);
       }
 
       ViolationInfo info = {};
