@@ -26,6 +26,8 @@
 struct Options {
   bool use_borg;
   bool verify;
+  bool time_puts;
+  long sleep_ms;
   char *output_filename;
 };
 
@@ -36,6 +38,10 @@ void PrintUsage(char *program) {
   fprintf(stderr, "  -f\n");
   fprintf(stderr, "    The filename of the persisted data (for correctness"
           "verification).\n");
+  fprintf(stderr, "  -p\n");
+  fprintf(stderr, "    Get average for groups of puts.\n");
+  fprintf(stderr, "  -s\n");
+  fprintf(stderr, "    Sleep ms between each Put.\n");
   fprintf(stderr, "  -v\n");
   fprintf(stderr, "    If present, verify results at the end.\n");
 }
@@ -43,7 +49,7 @@ void PrintUsage(char *program) {
 Options HandleArgs(int argc, char **argv) {
   Options result = {};
   int option = -1;
-  while ((option = getopt(argc, argv, "bf:hv")) != -1) {
+  while ((option = getopt(argc, argv, "bf:hps:v")) != -1) {
     switch (option) {
       case 'h': {
         PrintUsage(argv[0]);
@@ -55,6 +61,14 @@ Options HandleArgs(int argc, char **argv) {
       }
       case 'f': {
         result.output_filename = optarg;
+        break;
+      }
+      case 'p': {
+        result.time_puts = true;
+        break;
+      }
+      case 's': {
+        result.sleep_ms = strtol(optarg, NULL, 0);
         break;
       }
       case 'v': {
@@ -140,6 +154,7 @@ int main(int argc, char *argv[]) {
     hapi::Context ctx;
     // Disable swapping of Blobs
     ctx.disable_swap = true;
+    // ctx.policy = hapi::PlacementPolicy::kRoundRobin;
 
     std::string bkt_name = "BORG_" + std::to_string(rank);
     hapi::VBucket vbkt(bkt_name, hermes);
@@ -151,25 +166,26 @@ int main(int argc, char *argv[]) {
     }
 
     // MinIoTime with retry
-    // const int kReportFrequency = 30;
-    // hermes::testing::Timer put_timer;
+    const int kReportFrequency = 30;
+    hermes::testing::Timer put_timer;
     size_t failed_puts = 0;
     size_t failed_links = 0;
+    size_t retries = 0;
     for (int i = 0; i < kIters; ++i) {
       std::string blob_name = MakeBlobName(rank, i);
       hapi::Blob blob(kBlobSize, i % 255);
 
       timer.resumeTime();
-      // put_timer.resumeTime();
+      put_timer.resumeTime();
       hapi::Status status;
       int consecutive_fails = 0;
       while (!((status = bkt.Put(blob_name, blob)).Succeeded())) {
+        retries++;
+        if (++consecutive_fails > 10) {
           failed_puts++;
-          if (++consecutive_fails > 10) {
-            break;
-          }
+          break;
+        }
       }
-      // put_timer.pauseTime();
 
       if (options.use_borg && consecutive_fails <= 10) {
         hapi::Status link_status = vbkt.Link(blob_name, bkt_name);
@@ -177,21 +193,32 @@ int main(int argc, char *argv[]) {
           failed_links++;
         }
       }
-      timer.pauseTime();
-      // if (i > 0 && i % kReportFrequency == 0) {
-      //   // TODO(chogan): Support more than 1 rank
-      //   constexpr double total_mb =
-      //     (kBlobSize * kReportFrequency) / 1024.0 / 1024.0;
 
-      //   std::cout << i << ", " << total_mb / put_timer.getElapsedTime()
-      //             << "\n";
-      //   put_timer.reset();
-      // }
+      if (options.sleep_ms > 0 && i > 0 && i % kReportFrequency == 0) {
+        std::this_thread::sleep_for(
+          std::chrono::milliseconds(options.sleep_ms));
+      }
+
+      put_timer.pauseTime();
+      timer.pauseTime();
+
+      if (options.time_puts && i > 0 && i % kReportFrequency == 0) {
+        // TODO(chogan): Support more than 1 rank
+        Assert(kNumRanks == 1);
+        constexpr double total_mb =
+          (kBlobSize * kReportFrequency) / 1024.0 / 1024.0;
+
+        std::cout << i << ", " << total_mb / put_timer.getElapsedTime()
+                  << "\n";
+        put_timer.reset();
+      }
       hermes->AppBarrier();
     }
 
-    std::cout << "Rank " << rank << " failed puts: " << failed_puts << "\n";
-    std::cout << "     " << "failed links: " << failed_links << "\n";
+    Assert(failed_puts == 0);
+    // std::cout << "Rank " << rank << " failed puts: " << failed_puts << "\n";
+    // std::cout << "Rank " << rank << " failed links: " << failed_links << "\n";
+    // std::cout << "Rank " << rank << " Put retries: " << retries << "\n";
 
     hermes->AppBarrier();
     if (!hermes->IsFirstRankOnNode()) {
@@ -218,6 +245,7 @@ int main(int argc, char *argv[]) {
         bool flush_synchronously = true;
         hapi::PersistTrait persist_trait(options.output_filename, offset_map,
                                          flush_synchronously);
+        std::cout << "Flushing buffers...\n";
         file_vbucket.Attach(&persist_trait);
 
         file_vbucket.Destroy();
@@ -233,7 +261,8 @@ int main(int argc, char *argv[]) {
                                     kNumRanks);
 
     if (hermes->IsFirstRankOnNode()) {
-      std::cout << "##################### " << bandwidth << " MiB/s\n";
+      std::cout << bandwidth << "," << kNumRanks << "," << options.use_borg
+                << "," << options.sleep_ms << "\n";
     }
   }
 
@@ -248,6 +277,7 @@ int main(int argc, char *argv[]) {
   const size_t kTotalBytes = kAppCores * kIters * kBlobSize;
   if (options.verify && my_rank == 0) {
     std::vector<hermes::u8> data(kTotalBytes);
+    std::cout << "Verifying data\n";
     FILE *f = fopen(options.output_filename, "r");
     Assert(f);
     Assert(fseek(f, 0L, SEEK_END) == 0);
