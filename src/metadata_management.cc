@@ -18,6 +18,7 @@
 #include <string>
 
 #include "memory_management.h"
+#include "metadata_management_internal.h"
 #include "buffer_pool.h"
 #include "buffer_pool_internal.h"
 #include "buffer_organizer.h"
@@ -650,22 +651,31 @@ BufferIdArray GetBufferIdsFromBlobId(Arena *arena,
   return result;
 }
 
-void LocalCreateBlobMetadata(MetadataManager *mdm, const std::string &blob_name,
-                             BlobID blob_id, TargetID effective_target) {
+void LocalCreateBlobMetadata(SharedMemoryContext *context, MetadataManager *mdm,
+                             const std::string &blob_name, BlobID blob_id,
+                             TargetID effective_target) {
   LocalPut(mdm, blob_name.c_str(), blob_id.as_int, kMapType_BlobId);
   BlobInfo blob_info = {};
   blob_info.stats.frequency = 1;
   blob_info.stats.recency = mdm->clock++;
   blob_info.effective_target = effective_target;
+  assert(blob_id.bits.node_id == (int)effective_target.bits.node_id);
+
+  Target *target = GetTargetFromId(context, effective_target);
+  BeginTicketMutex(&target->effective_blobs_lock);
+  AppendToChunkedIdList(mdm, &target->effective_blobs, blob_id.as_int);
+  EndTicketMutex(&target->effective_blobs_lock);
+
   LocalPut(mdm, blob_id, blob_info);
 }
 
-void CreateBlobMetadata(MetadataManager *mdm, RpcContext *rpc,
+void CreateBlobMetadata(SharedMemoryContext *context, RpcContext *rpc,
                         const std::string &blob_name, BlobID blob_id,
                         TargetID effective_target) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
   u32 target_node = GetBlobNodeId(blob_id);
   if (target_node == rpc->node_id) {
-    LocalCreateBlobMetadata(mdm, blob_name, blob_id, effective_target);
+    LocalCreateBlobMetadata(context, mdm, blob_name, blob_id, effective_target);
   } else {
     RpcCall<bool>(rpc, target_node, "RemoteCreateBlobMetadata", blob_name,
                   blob_id, effective_target);
@@ -703,7 +713,7 @@ void AttachBlobToBucket(SharedMemoryContext *context, RpcContext *rpc,
   blob_id.bits.buffer_ids_offset = AllocateBufferIdList(context, rpc,
                                                         target_node,
                                                         buffer_ids);
-  CreateBlobMetadata(mdm, rpc, internal_name, blob_id, effective_target);
+  CreateBlobMetadata(context, rpc, internal_name, blob_id, effective_target);
   AddBlobIdToBucket(mdm, rpc, blob_id, bucket_id);
 }
 

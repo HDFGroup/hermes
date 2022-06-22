@@ -445,16 +445,17 @@ void LocalEnforceCapacityThresholds(SharedMemoryContext *context,
   switch (info.violation) {
     case ThresholdViolation::kMin: {
       // while (min is violated)
-      // Choose largest buffer from most important Blob
-      // Move to higher tier
+      //   find most important blob in Target::effective_blobs
+      //   Choose largest buffer from most important Blob
+      //   Move to higher tier
       // Ensure info.violation_size has been moved
       break;
     }
     case ThresholdViolation::kMax: {
       // while (max is violated)
-      // Choose largest buffer from least important Blob
-        // find least important blob
-      // Move to lower tier
+      //   find least important blob in Target
+      //   Choose largest buffer from least important Blob
+      //   Move to lower tier
       // Ensure info.violation_size has been moved
       break;
     }

@@ -141,11 +141,13 @@ int LocalGetNumOutstandingFlushingTasks(SharedMemoryContext *context,
                                         VBucketID id);
 int GetNumOutstandingFlushingTasks(SharedMemoryContext *context,
                                    RpcContext *rpc, VBucketID id);
-void LocalCreateBlobMetadata(MetadataManager *mdm, const std::string &blob_name,
-                             BlobID blob_id, TargetID effective_target);
+void LocalCreateBlobMetadata(SharedMemoryContext *context, MetadataManager *mdm,
+                             const std::string &blob_name, BlobID blob_id,
+                             TargetID effective_target);
 Heap *GetIdHeap(MetadataManager *mdm);
 Heap *GetMapHeap(MetadataManager *mdm);
 IdList AllocateIdList(MetadataManager *mdm, u32 length);
 void FreeIdList(MetadataManager *mdm, IdList id_list);
+u32 AppendToChunkedIdList(MetadataManager *mdm, ChunkedIdList *id_list, u64 id);
 }  // namespace hermes
 #endif  // HERMES_METADATA_MANAGEMENT_INTERNAL_H_

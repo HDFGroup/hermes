@@ -76,6 +76,7 @@ struct Target {
   std::atomic<u64> remaining_space;
   std::atomic<u64> speed;
   ChunkedIdList effective_blobs;
+  TicketMutex effective_blobs_lock;
 };
 
 /**
