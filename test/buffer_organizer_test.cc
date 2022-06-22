@@ -277,12 +277,6 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-#define HERMES_ADD_TEST(test_name)                        \
-  if (argc == 1 || std::string(argv[1]) == #test_name) {  \
-    fprintf(stdout, "### Running %s\n", #test_name);      \
-    test_name();                                          \
-  }
-
   HERMES_ADD_TEST(TestIsBoFunction);
   HERMES_ADD_TEST(TestBackgroundFlush);
   HERMES_ADD_TEST(TestBoMove);

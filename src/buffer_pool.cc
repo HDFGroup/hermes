@@ -1723,9 +1723,8 @@ SwapBlob PutToSwap(SharedMemoryContext *context, RpcContext *rpc,
   u32 target_node = rpc->node_id;
   SwapBlob swap_blob =  WriteToSwap(context, blob, target_node, bucket_id);
   std::vector<BufferID> buffer_ids = SwapBlobToVec(swap_blob);
-  TargetID effective_target = {};
   AttachBlobToBucket(context, rpc, name.c_str(), bucket_id, buffer_ids,
-                     effective_target, true);
+                     kSwapTargetId, true);
 
   return swap_blob;
 }

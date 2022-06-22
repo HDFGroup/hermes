@@ -24,6 +24,12 @@
 #include "hermes_types.h"
 #include "bucket.h"
 
+#define HERMES_ADD_TEST(test_name, ...)                   \
+  if (argc == 1 || std::string(argv[1]) == #test_name) {  \
+    fprintf(stdout, "### Running %s\n", #test_name);      \
+    test_name(__VA_ARGS__);                               \
+  }
+
 namespace hermes {
 namespace testing {
 

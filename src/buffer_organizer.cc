@@ -442,6 +442,7 @@ void EnforceCapacityThresholds(SharedMemoryContext *context, RpcContext *rpc,
 
 void LocalEnforceCapacityThresholds(SharedMemoryContext *context,
                                     ViolationInfo info) {
+  (void)context;
   switch (info.violation) {
     case ThresholdViolation::kMin: {
       // while (min is violated)
@@ -454,6 +455,7 @@ void LocalEnforceCapacityThresholds(SharedMemoryContext *context,
     case ThresholdViolation::kMax: {
       // while (max is violated)
       //   find least important blob in Target
+      // f32 importance_score = LocalGetBlobImportanceScore(context, blob_id);
       //   Choose largest buffer from least important Blob
       //   Move to lower tier
       // Ensure info.violation_size has been moved

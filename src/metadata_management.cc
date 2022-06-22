@@ -27,6 +27,10 @@
 
 namespace hermes {
 
+static bool operator!=(const TargetID &lhs, const TargetID &rhs) {
+  return lhs.as_int != rhs.as_int;
+}
+
 static bool IsNameTooLong(const std::string &name, size_t max) {
   bool result = false;
   if (name.size() + 1 >= max) {
@@ -659,12 +663,14 @@ void LocalCreateBlobMetadata(SharedMemoryContext *context, MetadataManager *mdm,
   blob_info.stats.frequency = 1;
   blob_info.stats.recency = mdm->clock++;
   blob_info.effective_target = effective_target;
-  assert(blob_id.bits.node_id == (int)effective_target.bits.node_id);
 
-  Target *target = GetTargetFromId(context, effective_target);
-  BeginTicketMutex(&target->effective_blobs_lock);
-  AppendToChunkedIdList(mdm, &target->effective_blobs, blob_id.as_int);
-  EndTicketMutex(&target->effective_blobs_lock);
+  if (effective_target != kSwapTargetId) {
+    assert(blob_id.bits.node_id == (int)effective_target.bits.node_id);
+    Target *target = GetTargetFromId(context, effective_target);
+    BeginTicketMutex(&target->effective_blobs_lock);
+    AppendToChunkedIdList(mdm, &target->effective_blobs, blob_id.as_int);
+    EndTicketMutex(&target->effective_blobs_lock);
+  }
 
   LocalPut(mdm, blob_id, blob_info);
 }

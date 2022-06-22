@@ -150,6 +150,8 @@ union TargetID {
   u64 as_int;
 };
 
+const TargetID kSwapTargetId = {{0, 0, 0}};
+
 /**
  * A PlacementSchema is a vector of (size, target) pairs where size is the
  * number of bytes to buffer and target is the TargetID where to buffer those

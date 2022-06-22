@@ -380,6 +380,25 @@ static void TestMdmViz() {
   hermes->Finalize(true);
 }
 
+static void TestEffectiveTarget() {
+  using namespace hermes;  // NOLINT(*)
+
+  hermes::Config config = {};
+  hermes::InitDefaultConfig(&config);
+  config.default_placement_policy = hapi::PlacementPolicy::kRoundRobin;
+  config.default_rr_split = 0;
+  HermesPtr hermes = hermes::InitHermesDaemon(&config);
+  SharedMemoryContext *context = &hermes->context_;
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+
+  hermes::RoundRobinState rr_state;
+  size_t num_devices = rr_state.GetNumDevices();
+
+  // TODO(chogan):
+
+  hermes->Finalize(true);
+}
+
 int main(int argc, char **argv) {
   int mpi_threads_provided;
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
@@ -390,24 +409,25 @@ int main(int argc, char **argv) {
 
   HermesPtr hermes = hapi::InitHermes(NULL, true);
 
-  TestNullIds();
-  TestGetMapMutex();
-  TestLocalGetNextFreeBucketId(hermes);
-  TestGetOrCreateBucketId(hermes);
-  TestRenameBlob(hermes);
-  TestRenameBucket(hermes);
-  TestBucketRefCounting(hermes);
-  TestMaxNameLength(hermes);
-  TestGetRelativeNodeId();
-  TestDuplicateBlobNames(hermes);
-  TestGetBucketIdFromBlobId(hermes);
-  TestHexStringToU64();
+  HERMES_ADD_TEST(TestNullIds);
+  HERMES_ADD_TEST(TestGetMapMutex);
+  HERMES_ADD_TEST(TestLocalGetNextFreeBucketId, hermes);
+  HERMES_ADD_TEST(TestGetOrCreateBucketId, hermes);
+  HERMES_ADD_TEST(TestRenameBlob, hermes);
+  HERMES_ADD_TEST(TestRenameBucket, hermes);
+  HERMES_ADD_TEST(TestBucketRefCounting, hermes);
+  HERMES_ADD_TEST(TestMaxNameLength, hermes);
+  HERMES_ADD_TEST(TestGetRelativeNodeId);
+  HERMES_ADD_TEST(TestDuplicateBlobNames, hermes);
+  HERMES_ADD_TEST(TestGetBucketIdFromBlobId, hermes);
+  HERMES_ADD_TEST(TestHexStringToU64);
 
   hermes->Finalize(true);
 
-  TestSwapBlobsExistInBucket();
-  TestBlobInfoMap();
-  TestMdmViz();
+  HERMES_ADD_TEST(TestSwapBlobsExistInBucket);
+  HERMES_ADD_TEST(TestBlobInfoMap);
+  HERMES_ADD_TEST(TestMdmViz);
+  HERMES_ADD_TEST(TestEffectiveTarget);
 
   MPI_Finalize();
 
