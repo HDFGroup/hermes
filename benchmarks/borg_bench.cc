@@ -27,6 +27,8 @@ struct Options {
   bool use_borg;
   bool verify;
   bool time_puts;
+  bool verbose;
+  bool debug;
   long sleep_ms;
   char *output_filename;
 };
@@ -35,6 +37,8 @@ void PrintUsage(char *program) {
   fprintf(stderr, "Usage: %s [-b <bool>] [-f] <string>\n", program);
   fprintf(stderr, "  -b\n");
   fprintf(stderr, "    If present, enable the BORG.\n");
+  fprintf(stderr, "  -d\n");
+  fprintf(stderr, "    If present, enable MPI breakpoint for debugging.\n");
   fprintf(stderr, "  -f\n");
   fprintf(stderr, "    The filename of the persisted data (for correctness"
           "verification).\n");
@@ -43,13 +47,15 @@ void PrintUsage(char *program) {
   fprintf(stderr, "  -s\n");
   fprintf(stderr, "    Sleep ms between each Put.\n");
   fprintf(stderr, "  -v\n");
+  fprintf(stderr, "    Print verbose information.\n");
+  fprintf(stderr, "  -x\n");
   fprintf(stderr, "    If present, verify results at the end.\n");
 }
 
 Options HandleArgs(int argc, char **argv) {
   Options result = {};
   int option = -1;
-  while ((option = getopt(argc, argv, "bf:hps:v")) != -1) {
+  while ((option = getopt(argc, argv, "bdf:hps:vx")) != -1) {
     switch (option) {
       case 'h': {
         PrintUsage(argv[0]);
@@ -57,6 +63,10 @@ Options HandleArgs(int argc, char **argv) {
       }
       case 'b': {
         result.use_borg = true;
+        break;
+      }
+      case 'd': {
+        result.debug = true;
         break;
       }
       case 'f': {
@@ -72,6 +82,10 @@ Options HandleArgs(int argc, char **argv) {
         break;
       }
       case 'v': {
+        result.verbose  = true;
+        break;
+      }
+      case 'x': {
         result.verify  = true;
         break;
       }
@@ -135,13 +149,15 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  // int gdb_iii = 0;
-  // char gdb_DEBUG_hostname[256];
-  // gethostname(gdb_DEBUG_hostname, sizeof(gdb_DEBUG_hostname));
-  // printf("PID %d on %s ready for attach\n", getpid(), gdb_DEBUG_hostname);
-  // fflush(stdout);
-  // while (0 == gdb_iii)
-  //   sleep(5);
+  if (options.debug) {
+    int gdb_iii = 0;
+    char gdb_DEBUG_hostname[256];
+    gethostname(gdb_DEBUG_hostname, sizeof(gdb_DEBUG_hostname));
+    printf("PID %d on %s ready for attach\n", getpid(), gdb_DEBUG_hostname);
+    fflush(stdout);
+    while (0 == gdb_iii)
+      sleep(5);
+  }
 
   HermesPtr hermes = hapi::InitHermes(getenv("HERMES_CONF"));
 
@@ -203,7 +219,6 @@ int main(int argc, char *argv[]) {
       timer.pauseTime();
 
       if (options.time_puts && i > 0 && i % kReportFrequency == 0) {
-        // TODO(chogan): Support more than 1 rank
         Assert(kNumRanks == 1);
         constexpr double total_mb =
           (kBlobSize * kReportFrequency) / 1024.0 / 1024.0;
@@ -216,9 +231,11 @@ int main(int argc, char *argv[]) {
     }
 
     Assert(failed_puts == 0);
-    // std::cout << "Rank " << rank << " failed puts: " << failed_puts << "\n";
-    // std::cout << "Rank " << rank << " failed links: " << failed_links << "\n";
-    // std::cout << "Rank " << rank << " Put retries: " << retries << "\n";
+    if (options.verbose) {
+      std::cout << "Rank " << rank << " failed puts: " << failed_puts << "\n";
+      std::cout << "Rank " << rank << " failed links: " << failed_links << "\n";
+      std::cout << "Rank " << rank << " Put retries: " << retries << "\n";
+    }
 
     hermes->AppBarrier();
     if (!hermes->IsFirstRankOnNode()) {
@@ -245,7 +262,9 @@ int main(int argc, char *argv[]) {
         bool flush_synchronously = true;
         hapi::PersistTrait persist_trait(options.output_filename, offset_map,
                                          flush_synchronously);
-        std::cout << "Flushing buffers...\n";
+        if (options.verbose) {
+          std::cout << "Flushing buffers...\n";
+        }
         file_vbucket.Attach(&persist_trait);
 
         file_vbucket.Destroy();
@@ -277,7 +296,11 @@ int main(int argc, char *argv[]) {
   const size_t kTotalBytes = kAppCores * kIters * kBlobSize;
   if (options.verify && my_rank == 0) {
     std::vector<hermes::u8> data(kTotalBytes);
-    std::cout << "Verifying data\n";
+
+    if (options.verbose) {
+      std::cout << "Verifying data\n";
+    }
+
     FILE *f = fopen(options.output_filename, "r");
     Assert(f);
     Assert(fseek(f, 0L, SEEK_END) == 0);
