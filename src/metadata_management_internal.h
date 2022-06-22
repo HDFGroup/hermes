@@ -142,7 +142,7 @@ int LocalGetNumOutstandingFlushingTasks(SharedMemoryContext *context,
 int GetNumOutstandingFlushingTasks(SharedMemoryContext *context,
                                    RpcContext *rpc, VBucketID id);
 void LocalCreateBlobMetadata(MetadataManager *mdm, const std::string &blob_name,
-                             BlobID blob_id);
+                             BlobID blob_id, TargetID effective_target);
 Heap *GetIdHeap(MetadataManager *mdm);
 Heap *GetMapHeap(MetadataManager *mdm);
 IdList AllocateIdList(MetadataManager *mdm, u32 length);

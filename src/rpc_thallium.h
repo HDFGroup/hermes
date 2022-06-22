@@ -218,7 +218,7 @@ void serialize(A &ar, BoTask &bo_task) {
 
 template<typename A>
 void serialize(A &ar, ViolationInfo &info) {
-  ar & info.device_id;
+  ar & info.target_id;
   ar & info.violation;
   ar & info.violation_size;
 }

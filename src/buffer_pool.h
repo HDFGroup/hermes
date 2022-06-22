@@ -75,6 +75,7 @@ struct Target {
   u64 capacity;
   std::atomic<u64> remaining_space;
   std::atomic<u64> speed;
+  ChunkedIdList effective_blobs;
 };
 
 /**

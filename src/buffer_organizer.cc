@@ -431,23 +431,31 @@ void OrganizeBlob(SharedMemoryContext *context, RpcContext *rpc,
 }
 
 void EnforceCapacityThresholds(SharedMemoryContext *context, RpcContext *rpc,
-                               const ViolationInfo &info) {
-  (void)context;
-  (void)rpc;
+                               ViolationInfo info) {
+  u32 target_node = info.target_id.bits.node_id;
+  if (target_node == rpc->node_id) {
+    LocalEnforceCapacityThresholds(context, info);
+  } else {
+    RpcCall<void>(rpc, target_node, "RemoteEnforceCapacityThresholds", info);
+  }
+}
 
-  // DeviceID dev_id = info.device_id;
-
+void LocalEnforceCapacityThresholds(SharedMemoryContext *context,
+                                    ViolationInfo info) {
   switch (info.violation) {
     case ThresholdViolation::kMin: {
       // while (min is violated)
       // Choose largest buffer from most important Blob
       // Move to higher tier
+      // Ensure info.violation_size has been moved
       break;
     }
     case ThresholdViolation::kMax: {
       // while (max is violated)
       // Choose largest buffer from least important Blob
+        // find least important blob
       // Move to lower tier
+      // Ensure info.violation_size has been moved
       break;
     }
     default: {

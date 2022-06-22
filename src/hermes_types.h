@@ -43,6 +43,12 @@ typedef double f64;
 
 typedef u16 DeviceID;
 
+struct ChunkedIdList {
+  u32 head_offset;
+  u32 length;
+  u32 capacity;
+};
+
 namespace api {
 typedef std::vector<unsigned char> Blob;
 

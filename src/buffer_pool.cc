@@ -781,7 +781,7 @@ Device *InitDevices(Arena *arena, Config *config, f32 &min_bw, f32 &max_bw) {
 
 Target *InitTargets(Arena *arena, Config *config, Device *devices,
                     int node_id) {
-  Target *result = PushArray<Target>(arena, config->num_targets);
+  Target *result = PushClearedArray<Target>(arena, config->num_targets);
 
   if (config->num_targets != config->num_devices) {
     HERMES_NOT_IMPLEMENTED_YET;
@@ -1723,7 +1723,9 @@ SwapBlob PutToSwap(SharedMemoryContext *context, RpcContext *rpc,
   u32 target_node = rpc->node_id;
   SwapBlob swap_blob =  WriteToSwap(context, blob, target_node, bucket_id);
   std::vector<BufferID> buffer_ids = SwapBlobToVec(swap_blob);
-  AttachBlobToBucket(context, rpc, name.c_str(), bucket_id, buffer_ids, true);
+  TargetID effective_target = {};
+  AttachBlobToBucket(context, rpc, name.c_str(), bucket_id, buffer_ids,
+                     effective_target, true);
 
   return swap_blob;
 }
@@ -1768,9 +1770,16 @@ api::Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
     WriteBlobToBuffers(context, rpc, blob, buffer_ids);
     HERMES_END_TIMED_BLOCK();
 
+    std::pair<size_t, TargetID> max_target =
+      *std::max_element(schema.begin(), schema.end(),
+                        [](const auto& lhs, const auto& rhs) {
+                          return lhs.first < rhs.first;
+                        });
+    TargetID effective_target = max_target.second;
+
     // NOTE(chogan): Update all metadata associated with this Put
     AttachBlobToBucket(context, rpc, name.c_str(), bucket_id, buffer_ids,
-                       false, called_from_buffer_organizer);
+                       effective_target, false, called_from_buffer_organizer);
   } else {
     if (ctx.disable_swap) {
       result = PLACE_SWAP_BLOB_TO_BUF_FAILED;

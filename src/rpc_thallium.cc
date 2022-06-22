@@ -419,9 +419,9 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
 
   auto rpc_create_blob_metadata =
     [context](const request &req, const std::string &blob_name,
-              BlobID blob_id) {
+              BlobID blob_id, TargetID effective_target) {
       MetadataManager *mdm = GetMetadataManagerFromContext(context);
-      LocalCreateBlobMetadata(mdm, blob_name, blob_id);
+      LocalCreateBlobMetadata(mdm, blob_name, blob_id, effective_target);
 
       req.respond(true);
   };
@@ -431,6 +431,13 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
                                                  BlobID old_blob_id,
                                                  BlobID new_blob_id) {
     LocalReplaceBlobIdInBucket(context, bucket_id, old_blob_id, new_blob_id);
+    req.respond(true);
+  };
+
+  auto rpc_enforce_capacity_thresholds = [context](const request &req,
+                                                   ViolationInfo info) {
+    LocalEnforceCapacityThresholds(context, info);
+    // TODO(chogan): Can this be async?
     req.respond(true);
   };
 
@@ -499,6 +506,8 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
   rpc_server->define("RemoteCreateBlobMetadata", rpc_create_blob_metadata);
   rpc_server->define("RemoteReplaceBlobIdInBucket",
                      rpc_replace_blob_id_in_bucket);
+  rpc_server->define("RemoteEnforceCapacityThresholds",
+                     rpc_enforce_capacity_thresholds);
 }
 
 void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,

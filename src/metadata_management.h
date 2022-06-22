@@ -69,10 +69,9 @@ enum class ThresholdViolation {
 };
 
 struct ViolationInfo {
-  DeviceID device_id;
+  TargetID target_id;
   ThresholdViolation violation;
   size_t violation_size;
-  u32 node_id;
 };
 
 struct Stats {
@@ -81,12 +80,6 @@ struct Stats {
 };
 
 const int kIdListChunkSize = 10;
-
-struct ChunkedIdList {
-  u32 head_offset;
-  u32 length;
-  u32 capacity;
-};
 
 struct IdList {
   u32 head_offset;
@@ -101,6 +94,7 @@ struct BufferIdArray {
 struct BlobInfo {
   Stats stats;
   TicketMutex lock;
+  TargetID effective_target;
   u32 last;
   bool stop;
 
@@ -109,6 +103,7 @@ struct BlobInfo {
     stats.frequency = 0;
     lock.ticket.store(0);
     lock.serving.store(0);
+    effective_target.as_int = 0;
   }
 
   BlobInfo& operator=(const BlobInfo &other) {
@@ -337,7 +332,7 @@ VBucketID GetOrCreateVBucketId(SharedMemoryContext *context, RpcContext *rpc,
 void AttachBlobToBucket(SharedMemoryContext *context, RpcContext *rpc,
                         const char *blob_name, BucketID bucket_id,
                         const std::vector<BufferID> &buffer_ids,
-                        bool is_swap_blob = false,
+                        TargetID effective_target, bool is_swap_blob = false,
                         bool called_from_buffer_organizer = false);
 
 /**

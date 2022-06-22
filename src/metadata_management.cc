@@ -651,29 +651,32 @@ BufferIdArray GetBufferIdsFromBlobId(Arena *arena,
 }
 
 void LocalCreateBlobMetadata(MetadataManager *mdm, const std::string &blob_name,
-                             BlobID blob_id) {
+                             BlobID blob_id, TargetID effective_target) {
   LocalPut(mdm, blob_name.c_str(), blob_id.as_int, kMapType_BlobId);
   BlobInfo blob_info = {};
   blob_info.stats.frequency = 1;
   blob_info.stats.recency = mdm->clock++;
+  blob_info.effective_target = effective_target;
   LocalPut(mdm, blob_id, blob_info);
 }
 
 void CreateBlobMetadata(MetadataManager *mdm, RpcContext *rpc,
-                        const std::string &blob_name, BlobID blob_id) {
+                        const std::string &blob_name, BlobID blob_id,
+                        TargetID effective_target) {
   u32 target_node = GetBlobNodeId(blob_id);
   if (target_node == rpc->node_id) {
-    LocalCreateBlobMetadata(mdm, blob_name, blob_id);
+    LocalCreateBlobMetadata(mdm, blob_name, blob_id, effective_target);
   } else {
     RpcCall<bool>(rpc, target_node, "RemoteCreateBlobMetadata", blob_name,
-                  blob_id);
+                  blob_id, effective_target);
   }
 }
 
 void AttachBlobToBucket(SharedMemoryContext *context, RpcContext *rpc,
                         const char *blob_name, BucketID bucket_id,
                         const std::vector<BufferID> &buffer_ids,
-                        bool is_swap_blob, bool called_from_buffer_organizer) {
+                        TargetID effective_target, bool is_swap_blob,
+                        bool called_from_buffer_organizer) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
 
   std::string internal_name = MakeInternalBlobName(blob_name, bucket_id);
@@ -700,7 +703,7 @@ void AttachBlobToBucket(SharedMemoryContext *context, RpcContext *rpc,
   blob_id.bits.buffer_ids_offset = AllocateBufferIdList(context, rpc,
                                                         target_node,
                                                         buffer_ids);
-  CreateBlobMetadata(mdm, rpc, internal_name, blob_id);
+  CreateBlobMetadata(mdm, rpc, internal_name, blob_id, effective_target);
   AddBlobIdToBucket(mdm, rpc, blob_id, bucket_id);
 }
 
@@ -1007,8 +1010,14 @@ LocalUpdateGlobalSystemViewState(SharedMemoryContext *context, u32 node_id,
       }
 
       if (percentage_violation > 0.0f) {
-        info.device_id = (DeviceID)device_idx;
-        info.node_id = node_id;
+        TargetID target_id = {};
+        target_id.bits.node_id = node_id;
+        target_id.bits.device_id = (DeviceID)device_idx;
+        // TODO(chogan): This needs to change when we support num_devices !=
+        // num_targets
+        target_id.bits.index = device_idx;
+
+        info.target_id = target_id;
         info.violation_size =
           (size_t)(percentage_violation * state->capacities[device_idx]);
         result.push_back(info);
