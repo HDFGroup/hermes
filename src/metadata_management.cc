@@ -27,7 +27,7 @@
 
 namespace hermes {
 
-static bool operator!=(const TargetID &lhs, const TargetID &rhs) {
+bool operator!=(const TargetID &lhs, const TargetID &rhs) {
   return lhs.as_int != rhs.as_int;
 }
 

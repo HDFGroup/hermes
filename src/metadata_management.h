@@ -110,6 +110,9 @@ struct BlobInfo {
     stats = other.stats;
     lock.ticket.store(other.lock.ticket.load());
     lock.serving.store(other.lock.serving.load());
+    effective_target = other.effective_target;
+    last = other.last;
+    stop = other.stop;
 
     return *this;
   }

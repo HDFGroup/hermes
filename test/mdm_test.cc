@@ -18,6 +18,7 @@
 #include "bucket.h"
 #include "vbucket.h"
 #include "metadata_management_internal.h"
+#include "metadata_storage.h"
 #include "test_utils.h"
 
 using namespace hermes;  // NOLINT(*)
@@ -388,13 +389,29 @@ static void TestEffectiveTarget() {
   config.default_placement_policy = hapi::PlacementPolicy::kRoundRobin;
   config.default_rr_split = 0;
   HermesPtr hermes = hermes::InitHermesDaemon(&config);
-  SharedMemoryContext *context = &hermes->context_;
-  MetadataManager *mdm = GetMetadataManagerFromContext(context);
 
   hermes::RoundRobinState rr_state;
-  size_t num_devices = rr_state.GetNumDevices();
+  // size_t num_devices = rr_state.GetNumDevices();
+  rr_state.SetCurrentDeviceIndex(0);
 
-  // TODO(chogan):
+  std::string bucket_name(__func__);
+  hapi::Bucket bucket(bucket_name, hermes);
+  hapi::Blob data(4 * 1024, 'z');
+  std::string blob_name("1");
+  Assert(bucket.Put(blob_name, data).Succeeded());
+
+  SharedMemoryContext *context = &hermes->context_;
+  RpcContext *rpc = &hermes->rpc_;
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+
+  BucketID bucket_id = GetBucketId(context, rpc, bucket_name.c_str());
+  BlobID blob_id = GetBlobId(context, rpc, blob_name, bucket_id, false);
+  BlobInfo *info = GetBlobInfoPtr(mdm, blob_id);
+  TargetID expected_target_id = {{1, 0, 0}};
+  Assert(info->effective_target.as_int == expected_target_id.as_int);
+  ReleaseBlobInfoPtr(mdm);
+
+  bucket.Destroy();
 
   hermes->Finalize(true);
 }
