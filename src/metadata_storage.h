@@ -88,6 +88,10 @@ BlobInfo *GetBlobInfoPtr(MetadataManager *mdm, BlobID blob_id);
  */
 void ReleaseBlobInfoPtr(MetadataManager *mdm);
 
+template<typename T>
+u64 *GetIdsPtr(MetadataManager *mdm, T id_list);
+void ReleaseIdsPtr(MetadataManager *mdm);
+
 }  // namespace hermes
 
 #endif  // HERMES_METADATA_STORAGE_H_

@@ -17,6 +17,7 @@
 #include "hermes.h"
 #include "bucket.h"
 #include "vbucket.h"
+#include "buffer_pool_internal.h"
 #include "metadata_management_internal.h"
 #include "metadata_storage.h"
 #include "test_utils.h"
@@ -404,12 +405,22 @@ static void TestEffectiveTarget() {
   RpcContext *rpc = &hermes->rpc_;
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
 
+  // Check BlobInfo::effective_target
   BucketID bucket_id = GetBucketId(context, rpc, bucket_name.c_str());
   BlobID blob_id = GetBlobId(context, rpc, blob_name, bucket_id, false);
   BlobInfo *info = GetBlobInfoPtr(mdm, blob_id);
   TargetID expected_target_id = {{1, 0, 0}};
   Assert(info->effective_target.as_int == expected_target_id.as_int);
   ReleaseBlobInfoPtr(mdm);
+
+  // Check Target::effective_blobs
+  Target *ram_target = GetTarget(context, 0);
+  Assert(ram_target->effective_blobs.length == 1);
+  u64 *ids = GetIdsPtr(mdm, ram_target->effective_blobs);
+  BlobID effective_blob_id = {};
+  effective_blob_id.as_int = ids[0];
+  Assert(effective_blob_id.as_int == blob_id.as_int);
+  ReleaseIdsPtr(mdm);
 
   bucket.Destroy();
 
