@@ -92,6 +92,11 @@ template<typename T>
 u64 *GetIdsPtr(MetadataManager *mdm, T id_list);
 void ReleaseIdsPtr(MetadataManager *mdm);
 
+/**
+ *
+ */
+std::vector<u64> GetChunkedIdList(MetadataManager *mdm, ChunkedIdList id_list);
+
 }  // namespace hermes
 
 #endif  // HERMES_METADATA_STORAGE_H_

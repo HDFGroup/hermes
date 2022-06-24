@@ -435,9 +435,9 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
     req.respond(true);
   };
 
-  auto rpc_enforce_capacity_thresholds = [context](const request &req,
-                                                   ViolationInfo info) {
-    LocalEnforceCapacityThresholds(context, info);
+  auto rpc_enforce_capacity_thresholds = [context, rpc](const request &req,
+                                                        ViolationInfo info) {
+    LocalEnforceCapacityThresholds(context, rpc, info);
     // TODO(chogan): Can this be async?
     req.respond(true);
   };

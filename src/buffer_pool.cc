@@ -204,7 +204,7 @@ inline BufferHeader *GetHeaderByIndex(SharedMemoryContext *context, u32 index) {
 }
 
 BufferHeader *GetHeaderByBufferId(SharedMemoryContext *context,
-                                         BufferID id) {
+                                  BufferID id) {
   BufferHeader *result = GetHeaderByIndex(context, id.bits.header_index);
 
   return result;

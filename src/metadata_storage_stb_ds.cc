@@ -359,6 +359,24 @@ u32 AppendToChunkedIdList(MetadataManager *mdm, ChunkedIdList *id_list,
   return result;
 }
 
+/**
+ * Assumes the caller has protected @p id_list with a lock.
+ *
+ * @return A vector of the IDs.
+ */
+std::vector<u64> GetChunkedIdList(MetadataManager *mdm, ChunkedIdList id_list) {
+  std::vector<u64> result(id_list.length);
+  if (id_list.length > 0) {
+    u64 *head = GetIdsPtr(mdm, id_list);
+    for (u32 i = 0; i < id_list.length; ++i) {
+      result[i] = head[i];
+    }
+    ReleaseIdsPtr(mdm);
+  }
+
+  return result;
+}
+
 u64 GetChunkedIdListElement(MetadataManager *mdm, ChunkedIdList *id_list,
                             u32 index) {
   u64 result = 0;

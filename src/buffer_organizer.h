@@ -116,7 +116,7 @@ void EnqueueBoMove(RpcContext *rpc, const BoMoveList &moves, BlobID blob_id,
 void EnforceCapacityThresholds(SharedMemoryContext *context, RpcContext *rpc,
                                ViolationInfo info);
 void LocalEnforceCapacityThresholds(SharedMemoryContext *context,
-                                    ViolationInfo info);
+                                    RpcContext *rpc, ViolationInfo info);
 }  // namespace hermes
 
 #endif  // HERMES_BUFFER_ORGANIZER_H_

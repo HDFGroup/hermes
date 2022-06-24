@@ -315,7 +315,7 @@ union BlobID {
     i32 node_id;
   } bits;
 
-  /** The BlobID as a unsigned 64-bit integer */
+  /** The BlobID as an unsigned 64-bit integer */
   u64 as_int;
 };
 
