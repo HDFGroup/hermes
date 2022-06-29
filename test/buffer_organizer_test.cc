@@ -283,8 +283,6 @@ int main(int argc, char *argv[]) {
   HERMES_ADD_TEST(TestOrganizeBlob);
   HERMES_ADD_TEST(TestWriteOnlyBucket);
 
-#undef HERMES_ADD_TEST
-
   MPI_Finalize();
 
   return 0;
