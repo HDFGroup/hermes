@@ -510,15 +510,29 @@ void LocalEnforceCapacityThresholds(SharedMemoryContext *context,
         bytes_moved += buffer_info[index].size;
         index++;
       }
-      // TODO(chogan): which target?
-      TargetID target_dest = {};
+
+
+      // TODO(chogan): Allow sorting Targets by any metric. This implementation
+      // only works if the Targets are listed in the configuration in order of
+      // decreasing bandwidth.
+
+      // Select Target 1 Tier lower than violated Target
+      u16 target_index = info.target_id.bits.index + 1;
+      assert(target_index < mdm->node_targets.length);
+      TargetID target_dest = {
+        info.target_id.bits.node_id, target_index, target_index
+      };
+
+      // TODO(chogan):
+      // for (i in buffers_to_move) {
+
+      // }
       // TODO(chogan): combine src buffers into dest (need slab size info)
       PlacementSchema schema;
       schema.push_back(std::pair<size_t, TargetID>(bytes_moved, target_dest));
       std::vector<BufferID> dests = GetBuffers(context, schema);
       BoMoveList moves;
-      // TODO(chogan):
-      // moves.push_back(std::pair(src, dest));
+      moves.push_back(std::pair(src, dests));
 
       // Queue BO task to move to lower tier
       BucketID bucket_id = GetBucketIdFromBlobId(context, rpc,
