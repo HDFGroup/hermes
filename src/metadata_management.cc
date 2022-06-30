@@ -1011,17 +1011,16 @@ LocalUpdateGlobalSystemViewState(SharedMemoryContext *context, u32 node_id,
 
       ViolationInfo info = {};
       float percentage_violation = 0.0f;
+      f32 percentage_used = 1.0f - percentage_available;
 
-      if (percentage_available >
-          state->bo_capacity_thresholds[device_idx].max) {
+      if (percentage_used > state->bo_capacity_thresholds[device_idx].max) {
         percentage_violation =
-          percentage_available - state->bo_capacity_thresholds[device_idx].max;
+          percentage_used - state->bo_capacity_thresholds[device_idx].max;
         info.violation = ThresholdViolation::kMax;
       }
-      if (percentage_available <
-          state->bo_capacity_thresholds[device_idx].min) {
+      if (percentage_used < state->bo_capacity_thresholds[device_idx].min) {
         percentage_violation =
-          state->bo_capacity_thresholds[device_idx].max - percentage_available;
+          state->bo_capacity_thresholds[device_idx].max - percentage_used;
         info.violation = ThresholdViolation::kMin;
       }
 

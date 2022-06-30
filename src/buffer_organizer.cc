@@ -512,6 +512,8 @@ void LocalEnforceCapacityThresholds(SharedMemoryContext *context,
       }
 
       BoMoveList moves;
+      // TODO(chogan): Combine multiple smaller buffers into fewer larger
+      // buffers
       for (size_t i = 0; i < buffers_to_move.size(); ++i) {
         // TODO(chogan): Allow sorting Targets by any metric. This
         // implementation only works if the Targets are listed in the
@@ -524,15 +526,14 @@ void LocalEnforceCapacityThresholds(SharedMemoryContext *context,
             info.target_id.bits.node_id, target_index, target_index
           };
 
-          // TODO(chogan): combine src buffers into dest (need slab size info)
           PlacementSchema schema;
           schema.push_back(std::pair<size_t, TargetID>(bytes_moved,
                                                        target_dest));
           std::vector<BufferID> dests = GetBuffers(context, schema);
-          if (dests.size() == 0) {
-            continue;
+          if (dests.size() != 0) {
+            moves.push_back(std::pair(buffers_to_move[i].id, dests));
+            break;
           }
-          moves.push_back(std::pair(buffers_to_move[i].id, dests));
         }
       }
 
