@@ -511,37 +511,44 @@ void LocalEnforceCapacityThresholds(SharedMemoryContext *context,
         index++;
       }
 
-
-      // TODO(chogan): Allow sorting Targets by any metric. This implementation
-      // only works if the Targets are listed in the configuration in order of
-      // decreasing bandwidth.
-
-      // Select Target 1 Tier lower than violated Target
-      u16 target_index = info.target_id.bits.index + 1;
-      assert(target_index < mdm->node_targets.length);
-      TargetID target_dest = {
-        info.target_id.bits.node_id, target_index, target_index
-      };
-
-      // TODO(chogan):
-      // for (i in buffers_to_move) {
-
-      // }
-      // TODO(chogan): combine src buffers into dest (need slab size info)
-      PlacementSchema schema;
-      schema.push_back(std::pair<size_t, TargetID>(bytes_moved, target_dest));
-      std::vector<BufferID> dests = GetBuffers(context, schema);
       BoMoveList moves;
-      moves.push_back(std::pair(src, dests));
+      for (size_t i = 0; i < buffers_to_move.size(); ++i) {
+        // TODO(chogan): Allow sorting Targets by any metric. This
+        // implementation only works if the Targets are listed in the
+        // configuration in order of decreasing bandwidth.
+        for (u16 target_index = info.target_id.bits.index + 1;
+             target_index < mdm->node_targets.length;
+             ++target_index) {
+          // Select Target 1 Tier lower than violated Target
+          TargetID target_dest = {
+            info.target_id.bits.node_id, target_index, target_index
+          };
 
-      // Queue BO task to move to lower tier
-      BucketID bucket_id = GetBucketIdFromBlobId(context, rpc,
-                                                 least_important_blob);
-      std::string blob_name =
-        LocalGetBlobNameFromId(context, least_important_blob);
-      std::string internal_name = MakeInternalBlobName(blob_name, bucket_id);
-      EnqueueBoMove(rpc, moves, least_important_blob, bucket_id, internal_name,
-                    BoPriority::kLow);
+          // TODO(chogan): combine src buffers into dest (need slab size info)
+          PlacementSchema schema;
+          schema.push_back(std::pair<size_t, TargetID>(bytes_moved,
+                                                       target_dest));
+          std::vector<BufferID> dests = GetBuffers(context, schema);
+          if (dests.size() == 0) {
+            continue;
+          }
+          moves.push_back(std::pair(buffers_to_move[i].id, dests));
+        }
+      }
+
+      if (moves.size() > 0) {
+        // Queue BO task to move to lower tier
+        BucketID bucket_id = GetBucketIdFromBlobId(context, rpc,
+                                                   least_important_blob);
+        std::string blob_name =
+          LocalGetBlobNameFromId(context, least_important_blob);
+        std::string internal_name = MakeInternalBlobName(blob_name, bucket_id);
+        EnqueueBoMove(rpc, moves, least_important_blob, bucket_id,
+                      internal_name, BoPriority::kLow);
+      } else {
+        LOG(WARNING)
+          << "BufferOrganizer: No capacity available in lower Targets.\n";
+      }
       break;
     }
     default: {
