@@ -995,48 +995,48 @@ LocalUpdateGlobalSystemViewState(SharedMemoryContext *context, u32 node_id,
   std::vector<ViolationInfo> result;
   for (size_t device_idx = 0; device_idx < adjustments.size(); ++device_idx) {
     GlobalSystemViewState *state = GetGlobalSystemViewState(context);
+    u32 target_idx = ((node_id - 1) * adjustments.size()) + device_idx;
     if (adjustments[device_idx]) {
-      u32 target_idx = ((node_id - 1) * adjustments.size()) + device_idx;
       state->bytes_available[target_idx].fetch_add(adjustments[device_idx]);
       DLOG(INFO) << "DeviceID " << device_idx << " on node " << node_id
                  << " adjusted by " << adjustments[device_idx] << " bytes\n";
+    }
 
-      // Collect devices for which to trigger the BufferOrganizer if the
-      // capacities are beyond the min/max thresholds
-      float percentage_available = 0.0f;
-      if (state->bytes_available[target_idx] > 0) {
-        percentage_available = ((f32)state->bytes_available[target_idx].load() /
-                                (f32)state->capacities[device_idx]);
-      }
+    // Collect devices for which to trigger the BufferOrganizer if the
+    // capacities are beyond the min/max thresholds
+    float percentage_available = 0.0f;
+    if (state->bytes_available[target_idx] > 0) {
+      percentage_available = ((f32)state->bytes_available[target_idx].load() /
+                              (f32)state->capacities[device_idx]);
+    }
 
-      ViolationInfo info = {};
-      float percentage_violation = 0.0f;
-      f32 percentage_used = 1.0f - percentage_available;
+    ViolationInfo info = {};
+    float percentage_violation = 0.0f;
+    f32 percentage_used = 1.0f - percentage_available;
 
-      if (percentage_used > state->bo_capacity_thresholds[device_idx].max) {
-        percentage_violation =
-          percentage_used - state->bo_capacity_thresholds[device_idx].max;
-        info.violation = ThresholdViolation::kMax;
-      }
-      if (percentage_used < state->bo_capacity_thresholds[device_idx].min) {
-        percentage_violation =
-          state->bo_capacity_thresholds[device_idx].max - percentage_used;
-        info.violation = ThresholdViolation::kMin;
-      }
+    if (percentage_used > state->bo_capacity_thresholds[device_idx].max) {
+      percentage_violation =
+        percentage_used - state->bo_capacity_thresholds[device_idx].max;
+      info.violation = ThresholdViolation::kMax;
+    }
+    if (percentage_used < state->bo_capacity_thresholds[device_idx].min) {
+      percentage_violation =
+        state->bo_capacity_thresholds[device_idx].min - percentage_used;
+      info.violation = ThresholdViolation::kMin;
+    }
 
-      if (percentage_violation > 0.0f) {
-        TargetID target_id = {};
-        target_id.bits.node_id = node_id;
-        target_id.bits.device_id = (DeviceID)device_idx;
-        // TODO(chogan): This needs to change when we support num_devices !=
-        // num_targets
-        target_id.bits.index = device_idx;
+    if (percentage_violation > 0.0f) {
+      TargetID target_id = {};
+      target_id.bits.node_id = node_id;
+      target_id.bits.device_id = (DeviceID)device_idx;
+      // TODO(chogan): This needs to change when we support num_devices !=
+      // num_targets
+      target_id.bits.index = device_idx;
 
-        info.target_id = target_id;
-        info.violation_size =
-          (size_t)(percentage_violation * state->capacities[device_idx]);
-        result.push_back(info);
-      }
+      info.target_id = target_id;
+      info.violation_size =
+        (size_t)(percentage_violation * state->capacities[device_idx]);
+      result.push_back(info);
     }
   }
 

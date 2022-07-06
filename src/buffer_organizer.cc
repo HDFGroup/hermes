@@ -445,106 +445,109 @@ void LocalEnforceCapacityThresholds(SharedMemoryContext *context,
                                     RpcContext *rpc, ViolationInfo info) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
 
+  // TODO(chogan): Factor out the common code in the kMin and kMax cases
   switch (info.violation) {
     case ThresholdViolation::kMin: {
-      // TODO(chogan):
-      // while (min is violated)
-      //   find most important blob in Target::effective_blobs
-      //   Choose largest buffer from most important Blob
-      //   Move to higher tier
-      // Ensure info.violation_size has been moved
-      Target *target = GetTargetFromId(context, info.target_id);
+      // TODO(chogan): Allow sorting Targets by any metric. This
+      // implementation only works if the Targets are listed in the
+      // configuration in order of decreasing bandwidth.
+      for (u16 target_index = mdm->node_targets.length - 1;
+           target_index != info.target_id.bits.index;
+           --target_index) {
+        TargetID src_target_id = {
+          info.target_id.bits.node_id, target_index, target_index
+        };
 
-      f32 max_importance = FLT_MIN;
-      BlobID most_important_blob = {};
+        Target *src_target = GetTargetFromId(context, src_target_id);
+        BeginTicketMutex(&src_target->effective_blobs_lock);
+        std::vector<u64> blob_ids =
+          GetChunkedIdList(mdm, src_target->effective_blobs);
+        EndTicketMutex(&src_target->effective_blobs_lock);
 
-      BeginTicketMutex(&target->effective_blobs_lock);
-      std::vector<u64> blob_ids = GetChunkedIdList(mdm,
-                                                   target->effective_blobs);
-      EndTicketMutex(&target->effective_blobs_lock);
+        f32 max_importance = -FLT_MAX;
+        BlobID most_important_blob = {};
 
-      // Find most important blob in violated Target
-      for (size_t i = 0; i < blob_ids.size(); ++i) {
-        BlobID blob_id = {};
-        blob_id.as_int = blob_ids[i];
-        f32 importance_score = LocalGetBlobImportanceScore(context, blob_id);
-        if (importance_score > max_importance) {
-          max_importance = importance_score;
-          most_important_blob = blob_id;
+        // Find most important blob in source Target
+        for (size_t i = 0; i < blob_ids.size(); ++i) {
+          BlobID blob_id = {};
+          blob_id.as_int = blob_ids[i];
+          f32 importance_score = LocalGetBlobImportanceScore(context, blob_id);
+          if (importance_score > max_importance) {
+            max_importance = importance_score;
+            most_important_blob = blob_id;
+          }
         }
-      }
 
-      assert(!IsNullBlobId(most_important_blob));
-
-      std::vector<BufferID> all_buffer_ids =
-        LocalGetBufferIdList(mdm, most_important_blob);
-      std::vector<BufferID> buffer_ids_in_target;
-      // Filter out BufferIDs not in this Target
-      for (size_t i = 0; i < all_buffer_ids.size(); ++i) {
-        BufferHeader *header = GetHeaderByBufferId(context, all_buffer_ids[i]);
-        DeviceID device_id = header->device_id;
-        if (device_id == info.target_id.bits.device_id) {
-          // TODO(chogan): Needs to changes when we support num_devices !=
-          // num_targets
-          buffer_ids_in_target.push_back(all_buffer_ids[i]);
+        if (IsNullBlobId(most_important_blob)) {
+          continue;
         }
-      }
 
-      std::vector<BufferInfo> buffer_info =
-        GetBufferInfo(context, rpc, buffer_ids_in_target);
-      auto buffer_info_comparator = [](const BufferInfo &lhs,
-                                       const BufferInfo &rhs) {
-        return lhs.size > rhs.size;
-      };
-      // Sort in descending order
-      std::sort(buffer_info.begin(), buffer_info.end(), buffer_info_comparator);
+        std::vector<BufferID> all_buffer_ids =
+          LocalGetBufferIdList(mdm, most_important_blob);
+        std::vector<BufferID> buffer_ids_in_target;
+        // Filter out BufferIDs not in the Target
+        for (size_t i = 0; i < all_buffer_ids.size(); ++i) {
+          BufferHeader *header = GetHeaderByBufferId(context,
+                                                     all_buffer_ids[i]);
+          DeviceID device_id = header->device_id;
+          if (device_id == src_target_id.bits.device_id) {
+            // TODO(chogan): Needs to changes when we support num_devices !=
+            // num_targets
+            buffer_ids_in_target.push_back(all_buffer_ids[i]);
+          }
+        }
 
-      size_t bytes_moved = 0;
-      std::vector<BufferInfo> buffers_to_move;
-      size_t index = 0;
-      // Choose largest buffer until we've moved info.violation_size
-      while (bytes_moved < info.violation_size) {
-        buffers_to_move.push_back(buffer_info[index]);
-        bytes_moved += buffer_info[index].size;
-        index++;
-      }
+        std::vector<BufferInfo> buffer_info =
+          GetBufferInfo(context, rpc, buffer_ids_in_target);
+        auto buffer_info_comparator = [](const BufferInfo &lhs,
+                                         const BufferInfo &rhs) {
+          return lhs.size > rhs.size;
+        };
+        // Sort in descending order
+        std::sort(buffer_info.begin(), buffer_info.end(),
+                  buffer_info_comparator);
 
-      BoMoveList moves;
-      for (size_t i = 0; i < buffers_to_move.size(); ++i) {
-        // TODO(chogan): Allow sorting Targets by any metric. This
-        // implementation only works if the Targets are listed in the
-        // configuration in order of decreasing bandwidth.
-        for (int target_index = (int)info.target_id.bits.index - 1;
-             target_index >= 0;
-             --target_index) {
-          // Select Target 1 Tier lower than violated Target
-          TargetID target_dest = {
-            info.target_id.bits.node_id, (u16)target_index, (u16)target_index
-          };
+        size_t bytes_moved = 0;
+        std::vector<BufferInfo> buffers_to_move;
+        size_t index = 0;
+        size_t num_buffers = buffer_info.size();
 
+        if (num_buffers > 0) {
+          // Choose largest buffer until we've moved info.violation_size or we
+          // run out of buffers
+          while (index < num_buffers && bytes_moved < info.violation_size) {
+            buffers_to_move.push_back(buffer_info[index]);
+            bytes_moved += buffer_info[index].size;
+            index++;
+          }
+        }
+
+        BoMoveList moves;
+        for (size_t i = 0; i < buffers_to_move.size(); ++i) {
           PlacementSchema schema;
-          schema.push_back(std::pair<size_t, TargetID>(bytes_moved,
-                                                       target_dest));
+          schema.push_back(std::pair<size_t, TargetID>(buffers_to_move[i].size,
+                                                       info.target_id));
           std::vector<BufferID> dests = GetBuffers(context, schema);
           if (dests.size() != 0) {
             moves.push_back(std::pair(buffers_to_move[i].id, dests));
-            break;
           }
         }
-      }
 
-      if (moves.size() > 0) {
-        // Queue BO task to move to lower tier
-        BucketID bucket_id = GetBucketIdFromBlobId(context, rpc,
-                                                   most_important_blob);
-        std::string blob_name =
-          LocalGetBlobNameFromId(context, most_important_blob);
-        std::string internal_name = MakeInternalBlobName(blob_name, bucket_id);
-        EnqueueBoMove(rpc, moves, most_important_blob, bucket_id,
-                      internal_name, BoPriority::kLow);
-      } else {
-        LOG(WARNING)
-          << "BufferOrganizer: No capacity available in higher Targets.\n";
+        if (moves.size() > 0) {
+          // Queue BO task to move to lower tier
+          BucketID bucket_id = GetBucketIdFromBlobId(context, rpc,
+                                                     most_important_blob);
+          std::string blob_name =
+            LocalGetBlobNameFromId(context, most_important_blob);
+          std::string internal_name = MakeInternalBlobName(blob_name,
+                                                           bucket_id);
+          EnqueueBoMove(rpc, moves, most_important_blob, bucket_id,
+                        internal_name, BoPriority::kLow);
+        }
+
+        if (bytes_moved >= info.violation_size) {
+          break;
+        }
       }
       break;
     }
