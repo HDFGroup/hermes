@@ -30,6 +30,8 @@ struct Options {
   bool verbose;
   bool debug;
   long sleep_ms;
+  size_t blob_size;
+  int iters;
   char *output_filename;
 };
 
@@ -136,35 +138,13 @@ std::string MakeBlobName(int rank, int i) {
   return result;
 }
 
-int main(int argc, char *argv[]) {
-  const size_t kBlobSize = KILOBYTES(32);
-  const int kIters = 2000;
-
-  Options options = HandleArgs(argc, argv);
-
-  int mpi_threads_provided;
-  MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
-  if (mpi_threads_provided < MPI_THREAD_MULTIPLE) {
-    fprintf(stderr, "Didn't receive appropriate MPI threading specification\n");
-    return 1;
-  }
-
-  if (options.debug) {
-    int gdb_iii = 0;
-    char gdb_DEBUG_hostname[256];
-    gethostname(gdb_DEBUG_hostname, sizeof(gdb_DEBUG_hostname));
-    printf("PID %d on %s ready for attach\n", getpid(), gdb_DEBUG_hostname);
-    fflush(stdout);
-    while (0 == gdb_iii)
-      sleep(5);
-  }
-
+void WriteOnlyWorkload(const Options &options) {
   HermesPtr hermes = hapi::InitHermes(getenv("HERMES_CONF"));
 
   if (hermes->IsApplicationCore()) {
     int rank = hermes->GetProcessRank();
     const int kNumRanks = hermes->GetNumProcesses();
-    const size_t kTotalBytes = kNumRanks * kBlobSize * kIters;
+    const size_t kTotalBytes = kNumRanks * options.blob_size * options.iters;
 
     hermes::testing::Timer timer;
     hapi::Context ctx;
@@ -187,9 +167,9 @@ int main(int argc, char *argv[]) {
     size_t failed_puts = 0;
     size_t failed_links = 0;
     size_t retries = 0;
-    for (int i = 0; i < kIters; ++i) {
+    for (int i = 0; i < options.iters; ++i) {
       std::string blob_name = MakeBlobName(rank, i);
-      hapi::Blob blob(kBlobSize, i % 255);
+      hapi::Blob blob(options.blob_size, i % 255);
 
       timer.resumeTime();
       put_timer.resumeTime();
@@ -220,11 +200,10 @@ int main(int argc, char *argv[]) {
 
       if (options.time_puts && i > 0 && i % kReportFrequency == 0) {
         Assert(kNumRanks == 1);
-        constexpr double total_mb =
-          (kBlobSize * kReportFrequency) / 1024.0 / 1024.0;
+        double total_mb =
+          (options.blob_size * kReportFrequency) / 1024.0 / 1024.0;
 
-        std::cout << i << ", " << total_mb / put_timer.getElapsedTime()
-                  << "\n";
+        std::cout << i << ", " << total_mb / put_timer.getElapsedTime() << "\n";
         put_timer.reset();
       }
       hermes->AppBarrier();
@@ -251,11 +230,11 @@ int main(int argc, char *argv[]) {
         auto offset_map = std::unordered_map<std::string, hermes::u64>();
 
         for (int i = 0; i < kNumRanks; ++i) {
-          for (int j = 0; j < kIters; ++j) {
+          for (int j = 0; j < options.iters; ++j) {
             std::string blob_name = MakeBlobName(i, j);
             file_vbucket.Link(blob_name, bkt_name, ctx);
-            const size_t kBytesPerRank = kIters * kBlobSize;
-            size_t offset = (i * kBytesPerRank) + (j * kBlobSize);
+            const size_t kBytesPerRank = options.iters * options.blob_size;
+            size_t offset = (i * kBytesPerRank) + (j * options.blob_size);
             offset_map.emplace(blob_name, offset);
           }
         }
@@ -286,6 +265,31 @@ int main(int argc, char *argv[]) {
   }
 
   hermes->Finalize();
+}
+
+int main(int argc, char *argv[]) {
+  Options options = HandleArgs(argc, argv);
+  options.iters = 2000;
+  options.blob_size = KILOBYTES(32);
+
+  int mpi_threads_provided;
+  MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
+  if (mpi_threads_provided < MPI_THREAD_MULTIPLE) {
+    fprintf(stderr, "Didn't receive appropriate MPI threading specification\n");
+    return 1;
+  }
+
+  if (options.debug) {
+    int gdb_iii = 0;
+    char gdb_DEBUG_hostname[256];
+    gethostname(gdb_DEBUG_hostname, sizeof(gdb_DEBUG_hostname));
+    printf("PID %d on %s ready for attach\n", getpid(), gdb_DEBUG_hostname);
+    fflush(stdout);
+    while (0 == gdb_iii)
+      sleep(5);
+  }
+
+  WriteOnlyWorkload(options);
 
   int my_rank;
   int comm_size;
@@ -293,7 +297,7 @@ int main(int argc, char *argv[]) {
   MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
 
   const size_t kAppCores = comm_size - 1;
-  const size_t kTotalBytes = kAppCores * kIters * kBlobSize;
+  const size_t kTotalBytes = kAppCores * options.iters * options.blob_size;
   if (options.verify && my_rank == 0) {
     std::vector<hermes::u8> data(kTotalBytes);
 
@@ -311,10 +315,10 @@ int main(int argc, char *argv[]) {
     Assert(result == 1);
 
     for (size_t rank = 0; rank < kAppCores; ++rank) {
-      for (size_t iter = 0; iter < kIters; ++iter) {
-        for (size_t byte = 0; byte < kBlobSize; ++byte) {
-          Assert(data[(rank * kIters * kBlobSize) + (iter * kBlobSize) + byte]
-                 == iter % 255);
+      for (int iter = 0; iter < options.iters; ++iter) {
+        for (size_t byte = 0; byte < options.blob_size; ++byte) {
+          Assert(data[(rank * options.iters * options.blob_size) +
+                      (iter * options.blob_size) + byte] == iter % 255);
         }
       }
     }
