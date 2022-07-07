@@ -21,7 +21,14 @@
 #include "hermes.h"
 #include "bucket.h"
 #include "vbucket.h"
+#include "metadata_management_internal.h"
 #include "test_utils.h"
+
+namespace hapi = hermes::api;
+using HermesPtr = std::shared_ptr<hapi::Hermes>;
+
+const int kDefaultIters = 2000;
+const size_t kDefaultBlobSize = KILOBYTES(32);
 
 struct Options {
   bool use_borg;
@@ -29,35 +36,48 @@ struct Options {
   bool time_puts;
   bool verbose;
   bool debug;
+  bool write_only;
+  bool mixed;
   long sleep_ms;
   size_t blob_size;
   int iters;
   char *output_filename;
 };
 
-void PrintUsage(char *program) {
+static void PrintUsage(char *program) {
   fprintf(stderr, "Usage: %s [-b <bool>] [-f] <string>\n", program);
   fprintf(stderr, "  -b\n");
-  fprintf(stderr, "    If present, enable the BORG.\n");
+  fprintf(stderr, "    Enable the BORG for the write-only case.\n");
   fprintf(stderr, "  -d\n");
   fprintf(stderr, "    If present, enable MPI breakpoint for debugging.\n");
   fprintf(stderr, "  -f\n");
   fprintf(stderr, "    The filename of the persisted data (for correctness"
           "verification).\n");
+  fprintf(stderr, "  -i\n");
+  fprintf(stderr, "    Number of iterations (default: %d)\n", kDefaultIters);
+  fprintf(stderr, "  -m\n");
+  fprintf(stderr, "    Run mixed workload.\n");
   fprintf(stderr, "  -p\n");
   fprintf(stderr, "    Get average for groups of puts.\n");
   fprintf(stderr, "  -s\n");
   fprintf(stderr, "    Sleep ms between each Put.\n");
   fprintf(stderr, "  -v\n");
   fprintf(stderr, "    Print verbose information.\n");
+  fprintf(stderr, "  -w\n");
+  fprintf(stderr, "    Run write only workload.\n");
   fprintf(stderr, "  -x\n");
   fprintf(stderr, "    If present, verify results at the end.\n");
+  fprintf(stderr, "  -z\n");
+  fprintf(stderr, "    Blob size in bytes (default: %zu).\n", kDefaultBlobSize);
 }
 
-Options HandleArgs(int argc, char **argv) {
+static Options HandleArgs(int argc, char **argv) {
   Options result = {};
+  result.iters = kDefaultIters;
+  result.blob_size = kDefaultBlobSize;
+
   int option = -1;
-  while ((option = getopt(argc, argv, "bdf:hps:vx")) != -1) {
+  while ((option = getopt(argc, argv, "bdf:hi:ps:vxwz:")) != -1) {
     switch (option) {
       case 'h': {
         PrintUsage(argv[0]);
@@ -75,6 +95,14 @@ Options HandleArgs(int argc, char **argv) {
         result.output_filename = optarg;
         break;
       }
+      case 'i': {
+        result.iters = strtol(optarg, NULL, 0);
+        break;
+      }
+      case 'm': {
+        result.mixed = true;
+        break;
+      }
       case 'p': {
         result.time_puts = true;
         break;
@@ -89,6 +117,14 @@ Options HandleArgs(int argc, char **argv) {
       }
       case 'x': {
         result.verify  = true;
+        break;
+      }
+      case 'w': {
+        result.write_only = true;
+        break;
+      }
+      case 'z': {
+        result.blob_size = strtoll(optarg, NULL, 0);
         break;
       }
       default: {
@@ -112,11 +148,7 @@ Options HandleArgs(int argc, char **argv) {
   return result;
 }
 
-
-namespace hapi = hermes::api;
-using HermesPtr = std::shared_ptr<hapi::Hermes>;
-
-double GetMPIAverage(double rank_seconds, int num_ranks, MPI_Comm comm) {
+static double GetMPIAverage(double rank_seconds, int num_ranks, MPI_Comm comm) {
   double total_secs = 0;
   MPI_Reduce(&rank_seconds, &total_secs, 1, MPI_DOUBLE, MPI_SUM, 0, comm);
   double result = total_secs / num_ranks;
@@ -124,7 +156,7 @@ double GetMPIAverage(double rank_seconds, int num_ranks, MPI_Comm comm) {
   return result;
 }
 
-double GetBandwidth(double total_elapsed, double total_mb, MPI_Comm comm,
+static double GetBandwidth(double total_elapsed, double total_mb, MPI_Comm comm,
                     int ranks) {
   double avg_total_seconds = GetMPIAverage(total_elapsed, ranks, comm);
   double result = total_mb / avg_total_seconds;
@@ -132,13 +164,13 @@ double GetBandwidth(double total_elapsed, double total_mb, MPI_Comm comm,
   return result;
 }
 
-std::string MakeBlobName(int rank, int i) {
+static std::string MakeBlobName(int rank, int i) {
   std::string result = std::to_string(rank) + "_" + std::to_string(i);
 
   return result;
 }
 
-void WriteOnlyWorkload(const Options &options) {
+static void WriteOnlyWorkload(const Options &options) {
   HermesPtr hermes = hapi::InitHermes(getenv("HERMES_CONF"));
 
   if (hermes->IsApplicationCore()) {
@@ -150,7 +182,7 @@ void WriteOnlyWorkload(const Options &options) {
     hapi::Context ctx;
     // Disable swapping of Blobs
     ctx.disable_swap = true;
-    // ctx.policy = hapi::PlacementPolicy::kRoundRobin;
+    ctx.policy = hapi::PlacementPolicy::kMinimizeIoTime;
 
     std::string bkt_name = "BORG_" + std::to_string(rank);
     hapi::VBucket vbkt(bkt_name, hermes);
@@ -204,7 +236,7 @@ void WriteOnlyWorkload(const Options &options) {
           (options.blob_size * kReportFrequency) / 1024.0 / 1024.0;
 
         std::cout << i << ", " << total_mb / put_timer.getElapsedTime() << "\n";
-        put_timer.reset();
+
       }
       hermes->AppBarrier();
     }
@@ -267,30 +299,42 @@ void WriteOnlyWorkload(const Options &options) {
   hermes->Finalize();
 }
 
-int main(int argc, char *argv[]) {
-  Options options = HandleArgs(argc, argv);
-  options.iters = 2000;
-  options.blob_size = KILOBYTES(32);
+static void MixedWorkload(const Options &options) {
+  HermesPtr hermes = hapi::InitHermes(getenv("HERMES_CONF"));
 
-  int mpi_threads_provided;
-  MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
-  if (mpi_threads_provided < MPI_THREAD_MULTIPLE) {
-    fprintf(stderr, "Didn't receive appropriate MPI threading specification\n");
-    return 1;
+  if (hermes->IsApplicationCore()) {
+    using namespace hermes;
+    MetadataManager *mdm = GetMetadataManagerFromContext(&hermes->context_);
+    std::vector<TargetID> targets(mdm->node_targets.length);
+
+    for (u16 i = 0; i < mdm->node_targets.length; ++i) {
+      targets[i] = {1, i, i};
+    }
+
+    std::vector<u64> capacities =
+      GetRemainingTargetCapacities(&hermes->context_, &hermes->rpc_, targets);
+
+    // See how many blobs we can fit in each Target
+    std::vector<int> num_blobs(capacities.size());
+    for (size_t i = 0; i < num_blobs.size(); ++i) {
+      num_blobs[i] = capacities[i] / options.blob_size;
+    }
+
+    // Optimize reads
+    // Fill hierarchy
+    // Delete all RAM Blobs
+    // BORG moves BB Blobs to RAM
+    // Read all BB Blobs at RAM BW
+
+    // Optimize writes
+    // Fill hierarchy
+
   }
 
-  if (options.debug) {
-    int gdb_iii = 0;
-    char gdb_DEBUG_hostname[256];
-    gethostname(gdb_DEBUG_hostname, sizeof(gdb_DEBUG_hostname));
-    printf("PID %d on %s ready for attach\n", getpid(), gdb_DEBUG_hostname);
-    fflush(stdout);
-    while (0 == gdb_iii)
-      sleep(5);
-  }
+  hermes->Finalize();
+}
 
-  WriteOnlyWorkload(options);
-
+static void Verify(const Options &options) {
   int my_rank;
   int comm_size;
   MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
@@ -298,7 +342,7 @@ int main(int argc, char *argv[]) {
 
   const size_t kAppCores = comm_size - 1;
   const size_t kTotalBytes = kAppCores * options.iters * options.blob_size;
-  if (options.verify && my_rank == 0) {
+  if (my_rank == 0) {
     std::vector<hermes::u8> data(kTotalBytes);
 
     if (options.verbose) {
@@ -322,6 +366,41 @@ int main(int argc, char *argv[]) {
         }
       }
     }
+  }
+}
+
+static void DebugBreak() {
+  int gdb_iii = 0;
+  char gdb_DEBUG_hostname[256];
+  gethostname(gdb_DEBUG_hostname, sizeof(gdb_DEBUG_hostname));
+  printf("PID %d on %s ready for attach\n", getpid(), gdb_DEBUG_hostname);
+  fflush(stdout);
+  while (0 == gdb_iii)
+    sleep(5);
+}
+
+int main(int argc, char *argv[]) {
+  Options options = HandleArgs(argc, argv);
+
+  int mpi_threads_provided;
+  MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
+  if (mpi_threads_provided < MPI_THREAD_MULTIPLE) {
+    fprintf(stderr, "Didn't receive appropriate MPI threading specification\n");
+    return 1;
+  }
+
+  if (options.debug) {
+    DebugBreak();
+  }
+
+  if (options.write_only) {
+    WriteOnlyWorkload(options);
+  }
+  if (options.mixed) {
+    MixedWorkload(options);
+  }
+  if (options.verify) {
+    Verify(options);
   }
 
   MPI_Finalize();
