@@ -45,7 +45,7 @@ struct Options {
 };
 
 static void PrintUsage(char *program) {
-  fprintf(stderr, "Usage: %s [-b <bool>] [-f] <string>\n", program);
+  fprintf(stderr, "Usage: %s [-bdmpvwx] [-f <string>]\n", program);
   fprintf(stderr, "  -b\n");
   fprintf(stderr, "    Enable the BORG for the write-only case.\n");
   fprintf(stderr, "  -d\n");
@@ -77,7 +77,7 @@ static Options HandleArgs(int argc, char **argv) {
   result.blob_size = kDefaultBlobSize;
 
   int option = -1;
-  while ((option = getopt(argc, argv, "bdf:hi:ps:vxwz:")) != -1) {
+  while ((option = getopt(argc, argv, "bdf:hi:mps:vxwz:")) != -1) {
     switch (option) {
       case 'h': {
         PrintUsage(argv[0]);
@@ -299,11 +299,21 @@ static void WriteOnlyWorkload(const Options &options) {
   hermes->Finalize();
 }
 
-static void MixedWorkload(const Options &options) {
+static void OptimizeReads(const Options &options) {
   HermesPtr hermes = hapi::InitHermes(getenv("HERMES_CONF"));
 
   if (hermes->IsApplicationCore()) {
+    // Optimize reads
+    // Fill hierarchy
+    // Delete all RAM Blobs
+    // BORG moves BB Blobs to RAM
+    // Read all BB Blobs at RAM BW
+
     using namespace hermes;
+
+    int rank = hermes->GetProcessRank();
+    // const int kNumRanks = hermes->GetNumProcesses();
+    // const size_t kTotalBytes = kNumRanks * options.blob_size * options.iters;
     MetadataManager *mdm = GetMetadataManagerFromContext(&hermes->context_);
     std::vector<TargetID> targets(mdm->node_targets.length);
 
@@ -315,20 +325,64 @@ static void MixedWorkload(const Options &options) {
       GetRemainingTargetCapacities(&hermes->context_, &hermes->rpc_, targets);
 
     // See how many blobs we can fit in each Target
-    std::vector<int> num_blobs(capacities.size());
-    for (size_t i = 0; i < num_blobs.size(); ++i) {
-      num_blobs[i] = capacities[i] / options.blob_size;
+    std::vector<int> blobs_per_target(capacities.size());
+    for (size_t i = 0; i < blobs_per_target.size(); ++i) {
+      blobs_per_target[i] = capacities[i] / options.blob_size;
     }
 
-    // Optimize reads
-    // Fill hierarchy
-    // Delete all RAM Blobs
-    // BORG moves BB Blobs to RAM
-    // Read all BB Blobs at RAM BW
+    hermes::testing::Timer timer;
+    hapi::Context ctx;
+    // Disable swapping of Blobs
+    ctx.disable_swap = true;
+    ctx.policy = hapi::PlacementPolicy::kMinimizeIoTime;
 
-    // Optimize writes
-    // Fill hierarchy
+    std::string bkt_name = __func__ + std::to_string(rank);
+    hapi::Bucket bkt(bkt_name, hermes, ctx);
 
+    // MinIoTime with retry
+    // const int kReportFrequency = 30;
+    hermes::testing::Timer put_timer;
+    size_t failed_puts = 0;
+    size_t retries = 0;
+
+    // Fill hierarchy
+    for (size_t target_idx = 0; target_idx < blobs_per_target.size(); ++target_idx) {
+      for (int i = 0; i < blobs_per_target[target_idx]; ++i) {
+        std::string blob_name = (std::to_string(rank) + "_"
+                                 + std::to_string(target_idx) + "_"
+                                 + std::to_string(i));
+        hapi::Blob blob(options.blob_size, i % 255);
+
+        hapi::Status status;
+        int consecutive_fails = 0;
+
+        timer.resumeTime();
+        while (!((status = bkt.Put(blob_name, blob)).Succeeded())) {
+          retries++;
+          if (++consecutive_fails > 10) {
+            failed_puts++;
+            break;
+          }
+        }
+        timer.pauseTime();
+      }
+      hermes->AppBarrier();
+    }
+
+    Assert(failed_puts == 0);
+    if (options.verbose) {
+      std::cout << "Rank " << rank << " failed puts: " << failed_puts << "\n";
+      std::cout << "Rank " << rank << " Put retries: " << retries << "\n";
+    }
+
+    if (!hermes->IsFirstRankOnNode()) {
+      bkt.Release();
+    }
+    hermes->AppBarrier();
+    if (hermes->IsFirstRankOnNode()) {
+      bkt.Destroy();
+    }
+    hermes->AppBarrier();
   }
 
   hermes->Finalize();
@@ -397,7 +451,7 @@ int main(int argc, char *argv[]) {
     WriteOnlyWorkload(options);
   }
   if (options.mixed) {
-    MixedWorkload(options);
+    OptimizeReads(options);
   }
   if (options.verify) {
     Verify(options);
