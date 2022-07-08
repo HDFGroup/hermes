@@ -236,7 +236,6 @@ static void WriteOnlyWorkload(const Options &options) {
           (options.blob_size * kReportFrequency) / 1024.0 / 1024.0;
 
         std::cout << i << ", " << total_mb / put_timer.getElapsedTime() << "\n";
-
       }
       hermes->AppBarrier();
     }
@@ -309,11 +308,11 @@ static void OptimizeReads(const Options &options) {
     // BORG moves BB Blobs to RAM
     // Read all BB Blobs at RAM BW
 
-    using namespace hermes;
+    using namespace hermes;  // NOLINT(*)
 
     int rank = hermes->GetProcessRank();
-    // const int kNumRanks = hermes->GetNumProcesses();
-    // const size_t kTotalBytes = kNumRanks * options.blob_size * options.iters;
+    const int kNumRanks = hermes->GetNumProcesses();
+    const size_t kTotalBytes = kNumRanks * options.blob_size * options.iters;
     MetadataManager *mdm = GetMetadataManagerFromContext(&hermes->context_);
     std::vector<TargetID> targets(mdm->node_targets.length);
 
@@ -346,7 +345,8 @@ static void OptimizeReads(const Options &options) {
     size_t retries = 0;
 
     // Fill hierarchy
-    for (size_t target_idx = 0; target_idx < blobs_per_target.size(); ++target_idx) {
+    for (size_t target_idx = 0; target_idx < blobs_per_target.size();
+         ++target_idx) {
       for (int i = 0; i < blobs_per_target[target_idx]; ++i) {
         std::string blob_name = (std::to_string(rank) + "_"
                                  + std::to_string(target_idx) + "_"
@@ -356,7 +356,6 @@ static void OptimizeReads(const Options &options) {
         hapi::Status status;
         int consecutive_fails = 0;
 
-        timer.resumeTime();
         while (!((status = bkt.Put(blob_name, blob)).Succeeded())) {
           retries++;
           if (++consecutive_fails > 10) {
@@ -364,7 +363,6 @@ static void OptimizeReads(const Options &options) {
             break;
           }
         }
-        timer.pauseTime();
       }
       hermes->AppBarrier();
     }
@@ -375,6 +373,36 @@ static void OptimizeReads(const Options &options) {
       std::cout << "Rank " << rank << " Put retries: " << retries << "\n";
     }
 
+    // Delete all RAM and NVMe Blobs
+    for (size_t j = 0; j < blobs_per_target.size() - 1; ++j) {
+      for (int i = 0; i < blobs_per_target[j]; ++i) {
+        std::string blob_name = (std::to_string(rank) + "_"
+                                 + std::to_string(j) + "_"
+                                 + std::to_string(i));
+        Assert(bkt.DeleteBlob(blob_name).Succeeded());
+      }
+    }
+
+    // Give the BORG time to move BB Blobs to RAM and NVMe
+    std::this_thread::sleep_for(std::chrono::seconds(3));
+
+    // Read all BB Blobs at RAM and NVMe BW
+    const int kBbIndex = 2;
+    for (int i = 0; i < blobs_per_target[kBbIndex]; ++i) {
+      std::string blob_name = (std::to_string(rank) + "_"
+                               + std::to_string(kBbIndex) + "_"
+                               + std::to_string(i));
+
+      hapi::Blob blob(options.blob_size);
+      timer.resumeTime();
+      Assert(bkt.Get(blob_name, blob) == options.blob_size);
+      timer.pauseTime();
+
+      // Verify
+      hapi::Blob expected_blob(options.blob_size, i % 255);
+      Assert(blob == expected_blob);
+    }
+
     if (!hermes->IsFirstRankOnNode()) {
       bkt.Release();
     }
@@ -383,6 +411,16 @@ static void OptimizeReads(const Options &options) {
       bkt.Destroy();
     }
     hermes->AppBarrier();
+
+    MPI_Comm *comm = (MPI_Comm *)hermes->GetAppCommunicator();
+    double total_mb = kTotalBytes / 1024.0 / 1024.0;
+    double bandwidth = GetBandwidth(timer.getElapsedTime(), total_mb, *comm,
+                                    kNumRanks);
+
+    if (hermes->IsFirstRankOnNode()) {
+      std::cout << bandwidth << "," << kNumRanks << "," << options.use_borg
+                << "," << options.sleep_ms << "\n";
+    }
   }
 
   hermes->Finalize();
