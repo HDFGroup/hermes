@@ -258,13 +258,16 @@ Status MinimizeIoTimePlacement(const std::vector<size_t> &blob_sizes,
     ctx.minimize_io_time_options.capacity_change_threshold;
 
   size_t constraints_per_target = 1;
+  DLOG(INFO) << "MinimizeIoTimePlacement()::minimum_remaining_capacity=" <<
+      minimum_remaining_capacity;
   if (minimum_remaining_capacity != 0) {
     constraints_per_target++;
   }
   if (capacity_change_threshold != 0) {
     constraints_per_target++;
   }
-
+  DLOG(INFO) << "MinimizeIoTimePlacement()::constraints_per_target=" <<
+      constraints_per_target;
   const size_t total_constraints =
       num_blobs + (num_targets * constraints_per_target) - 1;
   glp_prob *lp = glp_create_prob();
@@ -321,6 +324,8 @@ Status MinimizeIoTimePlacement(const std::vector<size_t> &blob_sizes,
       }
     }
     num_constrts += num_targets;
+  } else {
+    last2 = last;
   }
 
   // Constraint #3: Remaining Capacity Change Threshold
@@ -332,14 +337,17 @@ Status MinimizeIoTimePlacement(const std::vector<size_t> &blob_sizes,
       glp_set_row_bnds(lp, num_constrts+j+1, GLP_DB, 0.0,
                capacity_change_threshold * node_state[j]);
       for (size_t i {0}; i < num_blobs; ++i) {
-    int ij = j * num_blobs + i + 1 + last2;
-    ia[ij] = num_constrts+j+1, ja[ij] = j+1,
-          ar[ij] = static_cast<double>(blob_sizes[i]);
-    last3 = ij;
+        int ij = j * num_blobs + i + 1 + last2;
+        ia[ij] = num_constrts+j+1, ja[ij] = j+1,
+            ar[ij] = static_cast<double>(blob_sizes[i]);
+        last3 = ij;
       }
     }
     num_constrts += num_targets;
+  } else {
+    last3 = last2;
   }
+
   int last4 = 0;
 
   // Placement Ratio
@@ -365,21 +373,25 @@ Status MinimizeIoTimePlacement(const std::vector<size_t> &blob_sizes,
   // Objective to minimize IO time
   for (size_t i {0}; i < num_blobs; ++i) {
     for (size_t j {0}; j < num_targets; ++j) {
-        int ij = i * num_targets + j + 1;
+      int ij = i * num_targets + j + 1;
       glp_set_obj_coef(lp, ij,
                        static_cast<double>(blob_sizes[i])/bandwidths[j]);
     }
   }
+  DLOG(INFO) << "MinimizeIoTimePlacement()::last4=" << last4;
+
   glp_load_matrix(lp, last4, ia, ja, ar);
   glp_smcp parm;
   glp_init_smcp(&parm);
   parm.msg_lev = GLP_MSG_OFF;
   glp_simplex(lp, &parm);
+
   // Check if the problem has an optimal solution.
   if (glp_get_status(lp) != GLP_OPT) {
     result = DPE_ORTOOLS_NO_SOLUTION;
     LOG(ERROR) << result.Msg();
     glp_delete_prob(lp);
+    glp_free_env();
     return result;
   }
   glp_get_obj_val(lp);
