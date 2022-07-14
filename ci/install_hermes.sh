@@ -12,6 +12,9 @@ pushd build
 DEPENDENCY_PREFIX="${HOME}/${LOCAL}"
 INSTALL_PREFIX="${HOME}/install"
 
+# Need h5diff and ior on the PATH
+export PATH="${DEPENDENCY_PREFIX}/bin:${PATH}"
+
 export CXXFLAGS="${CXXFLAGS} -std=c++17 -Werror -Wall -Wextra"
 cmake                                                      \
     -DCMAKE_INSTALL_PREFIX=${INSTALL_PREFIX}               \
@@ -37,7 +40,6 @@ cmake                                                      \
     ..
 
 cmake --build . -- -j4
-# Need h5diff on the PATH
-PATH="${DEPENDENCY_PREFIX}/bin:${PATH}" ctest -VV
+ctest -VV
 
 popd

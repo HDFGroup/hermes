@@ -13,6 +13,7 @@ CATCH2_VERSION=2.13.3
 SPACK_VERSION=0.18.0
 HDF5_VERSION=1_13_1
 
+git clone https://github.com/ChristopherHogan/IOR
 echo "Installing dependencies at ${INSTALL_DIR}"
 mkdir -p ${INSTALL_DIR}
 
@@ -54,3 +55,19 @@ mkdir -p ${SPACK_STAGING_DIR}
 spack view --verbose symlink ${SPACK_STAGING_DIR} ${ALL_SPECS}
 
 cp -LRnv ${SPACK_STAGING_DIR}/* ${INSTALL_DIR}
+
+# IOR
+pushd ~
+git clone https://github.com/ChristopherHogan/ior
+pushd ior
+git checkout chogan/hermes
+./bootstrap
+mkdir -p build
+pushd build
+CPPFLAGS=-I${INSTALL_DIR}/include \
+        LDFLAGS="-L${INSTALL_DIR}/lib -Wl,-rpath,${INSTALL_DIR}/lib" \
+        ../configure --prefix=${INSTALL_DIR} --with-hdf5=yes
+make -j 4 && make install
+popd
+popd
+popd
