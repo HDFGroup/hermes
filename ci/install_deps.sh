@@ -1,7 +1,5 @@
 #!/bin/bash
 
-exit 3
-
 set -x
 set -e
 set -o pipefail
@@ -28,8 +26,7 @@ set +x
 . ${SPACK_DIR}/share/spack/setup-env.sh
 set -x
 
-# cp ci/packages.yaml ${SPACK_DIR}/etc/spack/packages.yaml
-spack external find
+cp ci/packages.yaml ${SPACK_DIR}/etc/spack/packages.yaml
 MOCHI_REPO=https://github.com/mochi-hpc/mochi-spack-packages.git
 # TODO(chogan): We pin this commit because in the past using the HEAD of 'main'
 # has been unstable. We update at controlled intervals rather than putting out
