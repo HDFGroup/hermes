@@ -13,7 +13,6 @@ CATCH2_VERSION=2.13.3
 SPACK_VERSION=0.18.0
 HDF5_VERSION=1_13_1
 
-git clone https://github.com/ChristopherHogan/IOR
 echo "Installing dependencies at ${INSTALL_DIR}"
 mkdir -p ${INSTALL_DIR}
 
