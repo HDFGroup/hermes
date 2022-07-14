@@ -19,7 +19,9 @@
  *          and buffer datasets in Hermes buffering systems with
  *          multiple storage tiers.
  */
-#define _GNU_SOURCE
+#ifndef _GNU_SOURCE
+  #define _GNU_SOURCE
+#endif
 
 #include <stdio.h>
 #include <string.h>

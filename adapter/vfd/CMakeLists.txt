@@ -29,45 +29,6 @@ if(NOT HDF5_HERMES_VFD_EXPORTED_TARGETS)
   set(HDF5_HERMES_VFD_EXPORTED_TARGETS "${HDF5_HERMES_VFD_PACKAGE}-targets")
 endif()
 
-#------------------------------------------------------------------------------
-# External dependencies
-#------------------------------------------------------------------------------
-#HDF5
-
-set(HERMES_REQUIRED_HDF5_COMPONENTS C)
-
-find_package(HDF5 1.13.0 NO_MODULE NAMES hdf5 COMPONENTS ${HERMES_REQUIRED_HDF5_COMPONENTS} shared)
-if(HDF5_FOUND)
-  set(HDF5_C_SHARED_LIBRARY hdf5-shared)
-#  if(NOT TARGET ${HDF5_C_SHARED_LIBRARY})
-#      message(FATAL_ERROR "Could not find hdf5 shared target, please make "
-#"sure that HDF5 has ben compiled with shared libraries enabled.")
-#    endif()
-  set(HDF5_HERMES_VFD_EXT_INCLUDE_DEPENDENCIES
-      ${HDF5_HERMES_VFD_EXT_INCLUDE_DEPENDENCIES}
-      ${HDF5_INCLUDE_DIR}
-     )
-  set(HDF5_HERMES_VFD_EXT_PKG_DEPENDENCIES
-      ${HDF5_HERMES_VFD_EXT_PKG_DEPENDENCIES}
-      ${HDF5_C_SHARED_LIBRARY}
-     )
-else()
-# Allow for HDF5 autotools builds
-  find_package(HDF5 1.13.0 MODULE REQUIRED COMPONENTS ${HERMES_REQUIRED_HDF5_COMPONENTS})
-  if(HDF5_FOUND)
-    set(HDF5_HERMES_VFD_EXT_INCLUDE_DEPENDENCIES
-        ${HDF5_HERMES_VFD_EXT_INCLUDE_DEPENDENCIES}
-        ${HDF5_INCLUDE_DIRS}
-       )
-    set(HDF5_HERMES_VFD_EXT_LIB_DEPENDENCIES
-        ${HDF5_HERMES_VFD_EXT_LIB_DEPENDENCIES}
-        ${HDF5_LIBRARIES}
-       )
-  else()
-    message(FATAL_ERROR "Could not find HDF5, please check HDF5_DIR.")
-  endif()
-endif()
-
 set(HDF5_HERMES_VFD_SRCS
   ${CMAKE_CURRENT_SOURCE_DIR}/H5FDhermes.h
   ${CMAKE_CURRENT_SOURCE_DIR}/H5FDhermes.c
@@ -85,9 +46,7 @@ target_include_directories(hdf5_hermes_vfd
 target_link_libraries(hdf5_hermes_vfd
   hermes_wrapper
   MPI::MPI_C
-  ${HDF5_HERMES_VFD_EXPORTED_LIBS}
   ${HDF5_HERMES_VFD_EXT_LIB_DEPENDENCIES}
-  ${HDF5_HERMES_VFD_EXT_PKG_DEPENDENCIES}
 )
 
 set(HDF5_HERMES_VFD_EXPORTED_LIBS hdf5_hermes_vfd ${HDF5_HERMES_VFD_EXPORTED_LIBS} PARENT_SCOPE)

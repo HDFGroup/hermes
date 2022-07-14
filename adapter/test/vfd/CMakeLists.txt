@@ -17,7 +17,6 @@ target_link_libraries(hermes_vfd_test
   glog::glog
   stdc++fs
   ${HDF5_HERMES_VFD_EXT_LIB_DEPENDENCIES}
-  ${HDF5_HERMES_VFD_EXT_PKG_DEPENDENCIES}
 )
 
 if(HERMES_USE_ADDRESS_SANITIZER)

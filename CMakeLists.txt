@@ -326,6 +326,37 @@ if(HERMES_BUILD_BUFFER_POOL_VISUALIZER)
   endif()
 endif()
 
+# HDF5
+if(HERMES_ENABLE_VFD)
+  set(HERMES_REQUIRED_HDF5_VERSION 1.13.0)
+  set(HERMES_REQUIRED_HDF5_COMPONENTS C)
+  find_package(HDF5 ${HERMES_REQUIRED_HDF5_VERSION} CONFIG NAMES hdf5
+    COMPONENTS ${HERMES_REQUIRED_HDF5_COMPONENTS} shared)
+  if(HDF5_FOUND)
+    message(STATUS "found HDF5 ${HDF5_VERSION} at ${HDF5_INCLUDE_DIR}")
+    set(HDF5_HERMES_VFD_EXT_INCLUDE_DEPENDENCIES
+      ${HDF5_HERMES_VFD_EXT_INCLUDE_DEPENDENCIES}
+      ${HDF5_INCLUDE_DIR})
+    set(HDF5_HERMES_VFD_EXT_LIB_DEPENDENCIES
+      ${HDF5_HERMES_VFD_EXT_LIB_DEPENDENCIES}
+      ${HDF5_C_SHARED_LIBRARY})
+  else()
+    # Allow for HDF5 autotools builds
+    find_package(HDF5 ${HERMES_REQUIRED_HDF5_VERSION} MODULE REQUIRED
+      COMPONENTS ${HERMES_REQUIRED_HDF5_COMPONENTS})
+    if(HDF5_FOUND)
+      set(HDF5_HERMES_VFD_EXT_INCLUDE_DEPENDENCIES
+        ${HDF5_HERMES_VFD_EXT_INCLUDE_DEPENDENCIES}
+        ${HDF5_INCLUDE_DIRS})
+      set(HDF5_HERMES_VFD_EXT_LIB_DEPENDENCIES
+        ${HDF5_HERMES_VFD_EXT_LIB_DEPENDENCIES}
+        ${HDF5_LIBRARIES})
+    else()
+      message(FATAL_ERROR "Could not find HDF5, please set HDF5_DIR (1.13.0) or HDF5_ROOT (1.13.1).")
+    endif()
+  endif()
+endif()
+
 #-----------------------------------------------------------------------------
 # Coverage
 #-----------------------------------------------------------------------------
