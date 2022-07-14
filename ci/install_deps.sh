@@ -26,7 +26,8 @@ set +x
 . ${SPACK_DIR}/share/spack/setup-env.sh
 set -x
 
-cp ci/packages.yaml ${SPACK_DIR}/etc/spack/packages.yaml
+# cp ci/packages.yaml ${SPACK_DIR}/etc/spack/packages.yaml
+spack external find
 MOCHI_REPO=https://github.com/mochi-hpc/mochi-spack-packages.git
 # TODO(chogan): We pin this commit because in the past using the HEAD of 'main'
 # has been unstable. We update at controlled intervals rather than putting out
@@ -38,7 +39,6 @@ pushd ${MOCHI_REPO_DIR}
 git checkout ${MOCHI_SPACK_PACKAGES_COMMIT}
 popd
 
-spack external find
 spack repo add ${MOCHI_REPO_DIR}
 spack repo add ./ci/hermes
 
