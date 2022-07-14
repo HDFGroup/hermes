@@ -38,6 +38,7 @@ pushd ${MOCHI_REPO_DIR}
 git checkout ${MOCHI_SPACK_PACKAGES_COMMIT}
 popd
 
+spack external find
 spack repo add ${MOCHI_REPO_DIR}
 spack repo add ./ci/hermes
 
