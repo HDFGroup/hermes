@@ -370,6 +370,8 @@ Status MinimizeIoTimePlacement(const std::vector<size_t> &blob_sizes,
         last4 = ij;
       }
     }
+  } else {
+    last4 = last3;
   }
 
   // Objective to minimize IO time
