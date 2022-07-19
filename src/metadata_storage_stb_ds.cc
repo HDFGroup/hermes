@@ -223,12 +223,18 @@ Stats LocalGetBlobStats(SharedMemoryContext *context, BlobID blob_id) {
  * Return a pointer to the the internal array of IDs that the `id_list`
  * represents.
  *
- * T must be an `IdList` or a `ChunkedIdList`. This call acquires a lock, and
- * must be paired with a corresponding call to `ReleaseIdsPtr` to release the
- * lock.
+ * This call acquires a lock, and must be paired with a corresponding call to
+ * `ReleaseIdsPtr` to release the lock.
  */
-template<typename T>
-u64 *GetIdsPtr(MetadataManager *mdm, T id_list) {
+u64 *GetIdsPtr(MetadataManager *mdm, IdList id_list) {
+  Heap *id_heap = GetIdHeap(mdm);
+  BeginTicketMutex(&mdm->id_mutex);
+  u64 *result = (u64 *)HeapOffsetToPtr(id_heap, id_list.head_offset);
+
+  return result;
+}
+
+u64 *GetIdsPtr(MetadataManager *mdm, ChunkedIdList id_list) {
   Heap *id_heap = GetIdHeap(mdm);
   BeginTicketMutex(&mdm->id_mutex);
   u64 *result = (u64 *)HeapOffsetToPtr(id_heap, id_list.head_offset);

@@ -52,7 +52,7 @@ static void PrintUsage(char *program) {
   fprintf(stderr, "    If present, enable MPI breakpoint for debugging.\n");
   fprintf(stderr, "  -f\n");
   fprintf(stderr, "    The filename of the persisted data (for correctness"
-          "verification).\n");
+          " verification).\n");
   fprintf(stderr, "  -i\n");
   fprintf(stderr, "    Number of iterations (default: %d)\n", kDefaultIters);
   fprintf(stderr, "  -m\n");

@@ -88,8 +88,8 @@ BlobInfo *GetBlobInfoPtr(MetadataManager *mdm, BlobID blob_id);
  */
 void ReleaseBlobInfoPtr(MetadataManager *mdm);
 
-template<typename T>
-u64 *GetIdsPtr(MetadataManager *mdm, T id_list);
+u64 *GetIdsPtr(MetadataManager *mdm, IdList id_list);
+u64 *GetIdsPtr(MetadataManager *mdm, ChunkedIdList id_list);
 void ReleaseIdsPtr(MetadataManager *mdm);
 
 /**
