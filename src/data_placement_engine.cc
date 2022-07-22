@@ -258,7 +258,7 @@ Status MinimizeIoTimePlacement(const std::vector<size_t> &blob_sizes,
     ctx.minimize_io_time_options.capacity_change_threshold;
 
   size_t constraints_per_target = 1;
-  DLOG(INFO) << "MinimizeIoTimePlacement()::minimum_remaining_capacity=" <<
+  VLOG(1) << "MinimizeIoTimePlacement()::minimum_remaining_capacity=" <<
       minimum_remaining_capacity;
   if (minimum_remaining_capacity != 0) {
     constraints_per_target++;
@@ -266,7 +266,7 @@ Status MinimizeIoTimePlacement(const std::vector<size_t> &blob_sizes,
   if (capacity_change_threshold != 0) {
     constraints_per_target++;
   }
-  DLOG(INFO) << "MinimizeIoTimePlacement()::constraints_per_target=" <<
+  VLOG(1) << "MinimizeIoTimePlacement()::constraints_per_target=" <<
       constraints_per_target;
   const size_t total_constraints =
       num_blobs + (num_targets * constraints_per_target) - 1;
@@ -382,7 +382,7 @@ Status MinimizeIoTimePlacement(const std::vector<size_t> &blob_sizes,
                        static_cast<double>(blob_sizes[i])/bandwidths[j]);
     }
   }
-  DLOG(INFO) << "MinimizeIoTimePlacement()::last4=" << last4;
+  VLOG(1) << "MinimizeIoTimePlacement()::last4=" << last4;
 
   glp_load_matrix(lp, last4, ia, ja, ar);
   glp_smcp parm;
