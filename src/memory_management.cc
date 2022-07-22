@@ -415,6 +415,8 @@ void HeapFree(Heap *heap, void *ptr) {
       new_block =
         (FreeBlock *)((u8 *)(header + 1) + header->size - sizeof(FreeBlock));
     }
+
+    memset(ptr, 0, size);
     new_block->size = size + sizeof(FreeBlockHeader);
 
     HERMES_DEBUG_TRACK_FREE(header, new_block->size, heap->grows_up);
