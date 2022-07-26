@@ -14,10 +14,10 @@
 #define HERMES_CATCH_CONFIG_H
 
 #define CATCH_CONFIG_RUNNER
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 #include <mpi.h>
 
-namespace cl = Catch::clara;
+namespace cl = Catch::Clara;
 
 cl::Parser define_options();
 
