@@ -13,6 +13,7 @@ target_include_directories(hermes_vfd_test
 
 target_link_libraries(hermes_vfd_test
   hermes
+  Catch2::Catch2
   MPI::MPI_CXX
   glog::glog
   stdc++fs
