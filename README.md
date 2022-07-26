@@ -14,8 +14,8 @@ Hermes is a heterogeneous-aware, multi-tiered, dynamic, and distributed I/O buff
 * MPI (tested with MPICH `3.3.2` and OpenMPI `4.0.3`). Note: The MPI-IO adapter
   only supports MPICH. If you don't need the MPI-IO adapter you can use OpenMPI,
   but you must define the CMake variable `HERMES_ENABLE_MPIIO_ADAPTER=OFF`.
-* The [Catch2](https://github.com/catchorg/Catch2) testing framework (only required if built with `-DBUILD_TESTING=ON`; tested with `3.0.1`)
-
+* The [Catch2](https://github.com/catchorg/Catch2) testing framework
+  (only required if built with `-DBUILD_TESTING=ON`; tested with `3.0.1`)
 ## Building
 
 ### Spack
