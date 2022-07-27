@@ -7,15 +7,17 @@ Hermes is a heterogeneous-aware, multi-tiered, dynamic, and distributed I/O buff
 [![Coverage Status](https://coveralls.io/repos/github/HDFGroup/hermes/badge.svg?branch=master)](https://coveralls.io/github/HDFGroup/hermes?branch=master)
 
 ## Dependencies
-* A C++ compiler that supports C++ 17.
-* [Thallium](https://mochi.readthedocs.io/en/latest/installing.html) - RPC library for HPC. Use a version greater than `0.5` for RoCE support.
-* [GLOG](https://github.com/google/glog) - The Google logging library.
-* [GLPK](https://www.gnu.org/software/glpk/) - GNU Linear Programming Kit
-* MPI (tested with MPICH `3.3.2` and OpenMPI `4.0.3`). Note: The MPI-IO adapter
-  only supports MPICH. If you don't need the MPI-IO adapter you can use OpenMPI,
-  but you must define the CMake variable `HERMES_ENABLE_MPIIO_ADAPTER=OFF`.
-* The [Catch2](https://github.com/catchorg/Catch2) testing framework
-  (only required if built with `-DBUILD_TESTING=ON`; tested with `3.0.1`)
+
+*   A C++ compiler that supports C++ 17.
+*   [Thallium](https://mochi.readthedocs.io/en/latest/installing.html) - RPC library for HPC. Use a version greater than `0.5` for RoCE support.
+*   [GLOG](https://github.com/google/glog) - The Google logging library.
+*   [GLPK](https://www.gnu.org/software/glpk/) - GNU Linear Programming Kit
+*   MPI (tested with MPICH `3.3.2` and OpenMPI `4.0.3`). Note: The MPI-IO adapter
+    only supports MPICH. If you don't need the MPI-IO adapter you can use OpenMPI,
+    but you must define the CMake variable `HERMES_ENABLE_MPIIO_ADAPTER=OFF`.
+*   The [Catch2](https://github.com/catchorg/Catch2) testing framework
+    (only required if built with `-DBUILD_TESTING=ON`; tested with 3.0.1)
+
 ## Building
 
 ### Spack
@@ -47,29 +49,26 @@ spack install hermes
 ```
 
 ### CMake
+
 Hermes makes use of the CMake build system and requires an out of source build.
 
-```
-cd /path/to/hermes
-mkdir build
-cd build
-ccmake ..
-```
+    cd /path/to/hermes
+    mkdir build
+    cd build
+    ccmake ..
 
 Type 'c' to configure until there are no errors, then generate the makefile with 'g'. The default options should suffice for most use cases. In addition, we recommend the following options.
 
-```
--DCMAKE_INSTALL_PREFIX=/installation/prefix
--DCMAKE_PREFIX_PATH=/path/to/dependencies
--DCMAKE_BUILD_RPATH=/path/to/dependencies/lib
--DCMAKE_INSTALL_RPATH=/path/to/dependencies/lib
--DCMAKE_BUILD_TYPE=Release
--DCMAKE_CXX_COMPILER=`which mpicxx`
--DBUILD_SHARED_LIBS=ON
--DORTOOLS_DIR=/path/to/ortools
-```
-After the makefile has been generated, you can type `make -j 4` or `cmake --build . -- -j 4`. Add `VERBOSE=1` to see detailed compiler output.
+    -DCMAKE_INSTALL_PREFIX=/installation/prefix
+    -DCMAKE_PREFIX_PATH=/path/to/dependencies
+    -DCMAKE_BUILD_RPATH=/path/to/dependencies/lib
+    -DCMAKE_INSTALL_RPATH=/path/to/dependencies/lib
+    -DCMAKE_BUILD_TYPE=Release
+    -DCMAKE_CXX_COMPILER=`which mpicxx`
+    -DBUILD_SHARED_LIBS=ON
+    -DORTOOLS_DIR=/path/to/ortools
 
+After the makefile has been generated, you can type `make -j 4` or `cmake --build . -- -j 4`. Add `VERBOSE=1` to see detailed compiler output.
 
 ### Testing and Installation
 
@@ -80,4 +79,3 @@ Finally, install the library with `make install`. You can find a complete exampl
 ## Contributing
 
 We follow the [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html). You can run `make lint` to ensure that your code conforms to the style. This requires the `cpplint` Python module (`pip install cpplint`). Alternatively, you can let the CI build inform you of required style changes.
-
