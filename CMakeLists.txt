@@ -398,7 +398,7 @@ endif()
 #-----------------------------------------------------------------------------
 include(CTest)
 if(CMAKE_PROJECT_NAME STREQUAL HERMES AND BUILD_TESTING)
-  find_package(Catch2 REQUIRED)
+  find_package(Catch2 3.0.1 REQUIRED)  
   find_program(IOR_EXE ior)
   if(IOR_EXE)
     message(STATUS "Found ior at ${IOR_EXE}")
