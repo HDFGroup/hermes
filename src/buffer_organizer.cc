@@ -483,12 +483,12 @@ void LocalEnforceCapacityThresholds(SharedMemoryContext *context,
         // TODO(chogan): Get enough buffer_ids to cover info.violation_size
 
         size_t bytes_moved = 0;
-        std::vector<BufferInfo> buffers_to_move;
 
         for (size_t idx = 0;
              idx < blob_ids.size() && bytes_moved < info.violation_size;
              ++idx) {
           BlobID most_important_blob {};
+          std::vector<BufferInfo> buffers_to_move;
           most_important_blob.as_int = blob_ids[idx];
           std::vector<BufferID> buffer_ids =
             LocalGetBufferIdList(mdm, most_important_blob);
