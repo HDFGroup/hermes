@@ -312,7 +312,7 @@ static void OptimizeReads(const Options &options) {
 
     int rank = hermes->GetProcessRank();
     const int kNumRanks = hermes->GetNumProcesses();
-    const size_t kTotalBytes = kNumRanks * options.blob_size * options.iters;
+    // const size_t kTotalBytes = kNumRanks * options.blob_size * options.iters;
     MetadataManager *mdm = GetMetadataManagerFromContext(&hermes->context_);
     std::vector<TargetID> targets(mdm->node_targets.length);
 
@@ -413,7 +413,8 @@ static void OptimizeReads(const Options &options) {
     hermes->AppBarrier();
 
     MPI_Comm *comm = (MPI_Comm *)hermes->GetAppCommunicator();
-    double total_mb = kTotalBytes / 1024.0 / 1024.0;
+    size_t bytes_read = blobs_per_target[kBbIndex] * options.blob_size;
+    double total_mb = bytes_read / 1024.0 / 1024.0;
     double bandwidth = GetBandwidth(timer.getElapsedTime(), total_mb, *comm,
                                     kNumRanks);
 
