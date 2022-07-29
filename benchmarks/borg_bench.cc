@@ -320,6 +320,10 @@ static void OptimizeReads(const Options &options) {
       targets[i] = {1, i, i};
     }
 
+    GlobalSystemViewState *gsvs = GetGlobalSystemViewState(&hermes->context_);
+    f32 ram_min_threshold = gsvs->bo_capacity_thresholds[0].min;
+    f32 nvme_min_threshold = gsvs->bo_capacity_thresholds[1].min;
+
     std::vector<u64> capacities =
       GetRemainingTargetCapacities(&hermes->context_, &hermes->rpc_, targets);
 
@@ -388,7 +392,14 @@ static void OptimizeReads(const Options &options) {
 
     // Read all BB Blobs at RAM and NVMe BW
     const int kBbIndex = 2;
-    for (int i = 0; i < blobs_per_target[kBbIndex]; ++i) {
+
+    int blobs_to_read = blobs_per_target[kBbIndex];
+    if (ram_min_threshold > 0) {
+      blobs_to_read = (ram_min_threshold * blobs_per_target[0] +
+                       nvme_min_threshold * blobs_per_target[1]);
+    }
+    int stopping_index = blobs_per_target[kBbIndex] - blobs_to_read;
+    for (int i = blobs_per_target[kBbIndex] - 1; i > stopping_index; --i) {
       std::string blob_name = (std::to_string(rank) + "_"
                                + std::to_string(kBbIndex) + "_"
                                + std::to_string(i));
