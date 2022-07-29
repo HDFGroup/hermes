@@ -391,7 +391,7 @@ static void OptimizeReads(Options &options) {
     }
 
     // Give the BORG time to move BB Blobs to RAM and NVMe
-    std::this_thread::sleep_for(std::chrono::seconds(options.sleep_ms));
+    std::this_thread::sleep_for(std::chrono::milliseconds(options.sleep_ms));
 
     // Read all BB Blobs at RAM and NVMe BW
     const int kBbIndex = 2;
