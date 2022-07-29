@@ -298,8 +298,11 @@ static void WriteOnlyWorkload(const Options &options) {
   hermes->Finalize();
 }
 
-static void OptimizeReads(const Options &options) {
+static void OptimizeReads(Options &options) {
   HermesPtr hermes = hapi::InitHermes(getenv("HERMES_CONF"));
+  if (options.sleep_ms == 0) {
+    options.sleep_ms = 3000;
+  }
 
   if (hermes->IsApplicationCore()) {
     // Optimize reads
@@ -388,7 +391,7 @@ static void OptimizeReads(const Options &options) {
     }
 
     // Give the BORG time to move BB Blobs to RAM and NVMe
-    std::this_thread::sleep_for(std::chrono::seconds(3));
+    std::this_thread::sleep_for(std::chrono::seconds(options.sleep_ms));
 
     // Read all BB Blobs at RAM and NVMe BW
     const int kBbIndex = 2;
