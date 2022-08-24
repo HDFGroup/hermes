@@ -480,8 +480,6 @@ void LocalEnforceCapacityThresholds(SharedMemoryContext *context,
 
         std::sort(blob_ids.begin(), blob_ids.end(), compare_importance);
 
-        // TODO(chogan): Get enough buffer_ids to cover info.violation_size
-
         size_t bytes_moved = 0;
 
         for (size_t idx = 0;

@@ -392,7 +392,6 @@ static void TestEffectiveTarget() {
   HermesPtr hermes = hermes::InitHermesDaemon(&config);
 
   hermes::RoundRobinState rr_state;
-  // size_t num_devices = rr_state.GetNumDevices();
   rr_state.SetCurrentDeviceIndex(0);
 
   std::string bucket_name(__func__);

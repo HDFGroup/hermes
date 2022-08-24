@@ -660,14 +660,9 @@ bool LocalDestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
       }
       ReleaseIdsPtr(mdm);
 
-      // NOTE(chogan): Holding the mdm->bucket_mutex while destroying Blobs can
-      // result in deadlock if the BORG is in the middle of moving a Blob's
-      // Buffers.
-      // EndTicketMutex(&mdm->bucket_mutex);
       for (auto blob_id : blobs_to_destroy) {
         DestroyBlobById(context, rpc, blob_id, bucket_id);
       }
-      // BeginTicketMutex(&mdm->bucket_mutex);
 
       // Delete BlobId list
       FreeIdList(mdm, info->blobs);

@@ -346,7 +346,6 @@ static void OptimizeReads(Options &options) {
     hapi::Bucket bkt(bkt_name, hermes, ctx);
 
     // MinIoTime with retry
-    // const int kReportFrequency = 30;
     hermes::testing::Timer put_timer;
     size_t failed_puts = 0;
     size_t retries = 0;

@@ -1049,7 +1049,6 @@ void UpdateGlobalSystemViewState(SharedMemoryContext *context,
   BufferPool *pool = GetBufferPoolFromContext(context);
 
   bool update_needed = false;
-  // TODO(chogan): BufferPool code should post adjustments via 1-sided rpc.
   std::vector<i64> adjustments(pool->num_devices);
   for (size_t i = 0; i < adjustments.size(); ++i) {
     adjustments[i] = pool->capacity_adjustments[i].exchange(0);
@@ -1215,7 +1214,6 @@ void InitMetadataManager(MetadataManager *mdm, RpcContext *rpc, Arena *arena,
 
   // Initialize Global SystemViewState
 
-  // TODO(chogan):
   if (node_id == 1) {
     // NOTE(chogan): Only Node 1 has the Global SystemViewState
     GlobalSystemViewState *global_state =
