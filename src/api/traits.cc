@@ -19,7 +19,8 @@
 
 namespace hermes {
 namespace api {
-Trait::Trait(TraitID id, std::vector<TraitID> conflict_traits, TraitType type)
+Trait::Trait(TraitID id, const std::vector<TraitID> &conflict_traits,
+             TraitType type)
     : id(id),
       conflict_traits(conflict_traits),
       type(type),

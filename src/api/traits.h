@@ -61,7 +61,8 @@ struct Trait {
   OnLinkCallback onGetFn;
 
   Trait() {}
-  Trait(TraitID id, std::vector<TraitID> conflict_traits, TraitType type);
+  Trait(TraitID id, const std::vector<TraitID> &conflict_traits,
+        TraitType type);
 };
 
 /** (File) Persistence trait */
