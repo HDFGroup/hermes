@@ -223,12 +223,18 @@ Stats LocalGetBlobStats(SharedMemoryContext *context, BlobID blob_id) {
  * Return a pointer to the the internal array of IDs that the `id_list`
  * represents.
  *
- * T must be an `IdList` or a `ChunkedIdList`. This call acquires a lock, and
- * must be paired with a corresponding call to `ReleaseIdsPtr` to release the
- * lock.
+ * This call acquires a lock, and must be paired with a corresponding call to
+ * `ReleaseIdsPtr` to release the lock.
  */
-template<typename T>
-u64 *GetIdsPtr(MetadataManager *mdm, T id_list) {
+u64 *GetIdsPtr(MetadataManager *mdm, IdList id_list) {
+  Heap *id_heap = GetIdHeap(mdm);
+  BeginTicketMutex(&mdm->id_mutex);
+  u64 *result = (u64 *)HeapOffsetToPtr(id_heap, id_list.head_offset);
+
+  return result;
+}
+
+u64 *GetIdsPtr(MetadataManager *mdm, ChunkedIdList id_list) {
   Heap *id_heap = GetIdHeap(mdm);
   BeginTicketMutex(&mdm->id_mutex);
   u64 *result = (u64 *)HeapOffsetToPtr(id_heap, id_list.head_offset);
@@ -359,6 +365,24 @@ u32 AppendToChunkedIdList(MetadataManager *mdm, ChunkedIdList *id_list,
   return result;
 }
 
+/**
+ * Assumes the caller has protected @p id_list with a lock.
+ *
+ * @return A vector of the IDs.
+ */
+std::vector<u64> GetChunkedIdList(MetadataManager *mdm, ChunkedIdList id_list) {
+  std::vector<u64> result(id_list.length);
+  if (id_list.length > 0) {
+    u64 *head = GetIdsPtr(mdm, id_list);
+    for (u32 i = 0; i < id_list.length; ++i) {
+      result[i] = head[i];
+    }
+    ReleaseIdsPtr(mdm);
+  }
+
+  return result;
+}
+
 u64 GetChunkedIdListElement(MetadataManager *mdm, ChunkedIdList *id_list,
                             u32 index) {
   u64 result = 0;
@@ -425,16 +449,19 @@ void LocalReplaceBlobIdInBucket(SharedMemoryContext *context,
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   BeginTicketMutex(&mdm->bucket_mutex);
   BucketInfo *info = LocalGetBucketInfoById(mdm, bucket_id);
-  ChunkedIdList *blobs = &info->blobs;
 
-  BlobID *blobs_arr = (BlobID *)GetIdsPtr(mdm, *blobs);
-  for (u32 i = 0; i < blobs->length; ++i) {
-    if (blobs_arr[i].as_int == old_blob_id.as_int) {
-      blobs_arr[i] = new_blob_id;
-      break;
+  if (info && info->active) {
+    ChunkedIdList *blobs = &info->blobs;
+
+    BlobID *blobs_arr = (BlobID *)GetIdsPtr(mdm, *blobs);
+    for (u32 i = 0; i < blobs->length; ++i) {
+      if (blobs_arr[i].as_int == old_blob_id.as_int) {
+        blobs_arr[i] = new_blob_id;
+        break;
+      }
     }
+    ReleaseIdsPtr(mdm);
   }
-  ReleaseIdsPtr(mdm);
 
   EndTicketMutex(&mdm->bucket_mutex);
 }
@@ -615,11 +642,10 @@ bool LocalDestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
                         const char *bucket_name, BucketID bucket_id) {
   bool destroyed = false;
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
+  BeginWriterLock(&mdm->bucket_delete_lock);
   BeginTicketMutex(&mdm->bucket_mutex);
   BucketInfo *info = LocalGetBucketInfoById(mdm, bucket_id);
 
-  // TODO(chogan): @optimization Lock granularity can probably be relaxed if
-  // this is slow
   int ref_count = info->ref_count.load();
   if (ref_count == 1) {
     if (HasAllocatedBlobs(info)) {
@@ -637,6 +663,7 @@ bool LocalDestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
       for (auto blob_id : blobs_to_destroy) {
         DestroyBlobById(context, rpc, blob_id, bucket_id);
       }
+
       // Delete BlobId list
       FreeIdList(mdm, info->blobs);
     }
@@ -661,6 +688,7 @@ bool LocalDestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
               << ". It's refcount is " << ref_count << std::endl;
   }
   EndTicketMutex(&mdm->bucket_mutex);
+  EndWriterLock(&mdm->bucket_delete_lock);
 
   return destroyed;
 }

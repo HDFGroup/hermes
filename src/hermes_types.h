@@ -43,6 +43,12 @@ typedef double f64;
 
 typedef u16 DeviceID;
 
+struct ChunkedIdList {
+  u32 head_offset;
+  u32 length;
+  u32 capacity;
+};
+
 namespace api {
 typedef std::vector<unsigned char> Blob;
 
@@ -56,11 +62,14 @@ enum class PlacementPolicy {
 struct MinimizeIoTimeOptions {
   double minimum_remaining_capacity;
   double capacity_change_threshold;
+  bool use_placement_ratio;
 
-  MinimizeIoTimeOptions(double minimum_remaining_capacity = 0.1,
-                        double capacity_change_threshold = 0.2)
-      : minimum_remaining_capacity(minimum_remaining_capacity),
-        capacity_change_threshold(capacity_change_threshold) {
+  MinimizeIoTimeOptions(double minimum_remaining_capacity_ = 0.0,
+                        double capacity_change_threshold_ = 0.0,
+                        bool use_placement_ratio_ = false)
+      : minimum_remaining_capacity(minimum_remaining_capacity_),
+        capacity_change_threshold(capacity_change_threshold_),
+        use_placement_ratio(use_placement_ratio_) {
   }
 };
 
@@ -141,6 +150,8 @@ union TargetID {
   u64 as_int;
 };
 
+const TargetID kSwapTargetId = {{0, 0, 0}};
+
 /**
  * A PlacementSchema is a vector of (size, target) pairs where size is the
  * number of bytes to buffer and target is the TargetID where to buffer those
@@ -166,6 +177,11 @@ enum ArenaType {
   kArenaType_Transient,       /**< Scratch space                           */
 
   kArenaType_Count            /**< Sentinel value                          */
+};
+
+struct Thresholds {
+  float min;
+  float max;
 };
 
 /**
@@ -245,7 +261,9 @@ struct Config {
   api::PlacementPolicy default_placement_policy;
   /** Whether blob splitting is enabled for Round-Robin blob placement. */
   bool default_rr_split;
-
+  /** The min and max capacity threshold in MiB for each device at which the
+   * BufferOrganizer will trigger. */
+  Thresholds bo_capacity_thresholds[kMaxDevices];
   /** A base name for the BufferPool shared memory segement. Hermes appends the
    * value of the USER environment variable to this string.
    */
@@ -297,7 +315,7 @@ union BlobID {
     i32 node_id;
   } bits;
 
-  /** The BlobID as a unsigned 64-bit integer */
+  /** The BlobID as an unsigned 64-bit integer */
   u64 as_int;
 };
 
@@ -310,15 +328,9 @@ namespace api {
 enum class TraitType : u8 {
   META = 0,
   DATA = 1,
-  FILE_MAPPING = 2,
-  PERSIST = 3,
+  PERSIST = 2,
 };
+
 }  // namespace api
-
-struct TraitIdArray {
-  TraitID *ids;
-  u32 length;
-};
-
 }  // namespace hermes
 #endif  // HERMES_TYPES_H_

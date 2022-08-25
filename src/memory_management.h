@@ -43,6 +43,12 @@ struct Ticket {
   bool acquired;
 };
 
+struct RwLock {
+  TicketMutex mutex;
+  std::atomic<u32> readers;
+  std::atomic<bool> writer_waiting;
+};
+
 struct ArenaInfo {
   size_t sizes[kArenaType_Count];
   size_t total;
@@ -373,6 +379,11 @@ u8 *HeapExtentToPtr(Heap *heap);
 
 void BeginTicketMutex(TicketMutex *mutex);
 void EndTicketMutex(TicketMutex *mutex);
+
+bool BeginReaderLock(RwLock *lock);
+void EndReaderLock(RwLock *lock);
+void BeginWriterLock(RwLock *lock);
+void EndWriterLock(RwLock *lock);
 
 }  // namespace hermes
 

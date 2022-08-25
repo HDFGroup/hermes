@@ -25,6 +25,7 @@ namespace hapi = hermes::api;
 using HermesPtr = std::shared_ptr<hapi::Hermes>;
 using hermes::u8;
 using hermes::f32;
+using hermes::u64;
 using hermes::SharedMemoryContext;
 using hermes::RpcContext;
 using hermes::BoTask;
@@ -33,7 +34,8 @@ using hermes::TargetID;
 using hermes::BucketID;
 using hermes::BlobID;
 using hermes::BufferInfo;
-
+using hapi::VBucket;
+using hapi::Bucket;
 
 static void TestIsBoFunction() {
   using hermes::IsBoFunction;
@@ -243,6 +245,127 @@ void TestOrganizeBlob() {
   hermes->Finalize(true);
 }
 
+static void TestWriteOnlyBucket() {
+  HermesPtr hermes = hermes::InitHermesDaemon(getenv("HERMES_CONF"));
+  std::string bkt_name = "WriteOnly";
+  VBucket vbkt(bkt_name, hermes);
+  Bucket bkt(bkt_name, hermes);
+
+  hapi::WriteOnlyTrait trait;
+  vbkt.Attach(&trait);
+
+  const size_t kBlobSize = KILOBYTES(4);
+  hapi::Blob blob(kBlobSize);
+  std::iota(blob.begin(), blob.end(), 0);
+
+  const int kIters = 128;
+  for (int i = 0; i < kIters; ++i) {
+    std::string blob_name = "b" + std::to_string(i);
+    bkt.Put(blob_name, blob);
+    vbkt.Link(blob_name, bkt_name);
+  }
+
+  vbkt.Destroy();
+  bkt.Destroy();
+  hermes->Finalize(true);
+}
+
+void TestMinThresholdViolation() {
+  hermes::Config config = {};
+  InitDefaultConfig(&config);
+
+  size_t cap = MEGABYTES(1);
+  config.capacities[0] = cap;
+  config.capacities[1] = cap;
+  config.capacities[2] = cap;
+  config.capacities[3] = cap;
+
+  for (int i = 0; i < config.num_devices; ++i) {
+    config.num_slabs[i] = 1;
+    config.desired_slab_percentages[i][0] = 1.0;
+  }
+
+  f32 min = 0.25f;
+  f32 max = 0.75f;
+  config.bo_capacity_thresholds[0] = {0, max};
+  config.bo_capacity_thresholds[1] = {min, max};
+  config.bo_capacity_thresholds[2] = {0, max};
+
+  HermesPtr hermes = hermes::InitHermesDaemon(&config);
+
+
+  hermes::RoundRobinState rr_state;
+  rr_state.SetCurrentDeviceIndex(2);
+  hapi::Context ctx;
+  ctx.policy = hapi::PlacementPolicy::kRoundRobin;
+  Bucket bkt(__func__, hermes, ctx);
+  // Blob is big enough to exceed minimum capacity of Target 1
+  const size_t kBlobSize = (min * cap) + KILOBYTES(4);
+  hapi::Blob blob(kBlobSize, 'q');
+  Assert(bkt.Put("1", blob).Succeeded());
+
+  // Let the BORG run. It should move enough data from Target 2 to Target 1 to
+  // fill > the minimum capacity threshold
+  std::this_thread::sleep_for(std::chrono::seconds(2));
+
+  // Check remaining capacities
+  std::vector<TargetID> targets = {{1, 1, 1}, {1, 2, 2}};
+  std::vector<u64> capacities =
+    GetRemainingTargetCapacities(&hermes->context_, &hermes->rpc_, targets);
+  Assert(capacities[0] == cap - kBlobSize + KILOBYTES(4));
+  Assert(capacities[1] == cap - KILOBYTES(4));
+
+  bkt.Destroy();
+  hermes->Finalize(true);
+}
+
+void TestMaxThresholdViolation() {
+  hermes::Config config = {};
+  InitDefaultConfig(&config);
+
+  size_t cap = MEGABYTES(1);
+  config.capacities[0] = cap;
+  config.capacities[1] = cap;
+  config.capacities[2] = cap;
+  config.capacities[3] = cap;
+
+  for (int i = 0; i < config.num_devices; ++i) {
+    config.num_slabs[i] = 1;
+    config.desired_slab_percentages[i][0] = 1.0;
+  }
+
+  f32 min = 0.0f;
+  f32 max = 0.75f;
+  config.bo_capacity_thresholds[0] = {min, max};
+  config.bo_capacity_thresholds[1] = {min, max};
+  config.bo_capacity_thresholds[2] = {min, max};
+
+  HermesPtr hermes = hermes::InitHermesDaemon(&config);
+
+  hermes::RoundRobinState rr_state;
+  rr_state.SetCurrentDeviceIndex(1);
+  hapi::Context ctx;
+  ctx.policy = hapi::PlacementPolicy::kRoundRobin;
+  Bucket bkt(__func__, hermes, ctx);
+  // Exceed maximum capacity of Target 1 by 4KiB
+  const size_t kBlobSize = (max * MEGABYTES(1)) + KILOBYTES(4);
+  hapi::Blob blob(kBlobSize, 'q');
+  Assert(bkt.Put("1", blob).Succeeded());
+
+  // Let the BORG run. It should move 4KiB from Target 1 to 2
+  std::this_thread::sleep_for(std::chrono::seconds(2));
+
+  // Check remaining capacities
+  std::vector<TargetID> targets = {{1, 1, 1}, {1, 2, 2}};
+  std::vector<u64> capacities =
+    GetRemainingTargetCapacities(&hermes->context_, &hermes->rpc_, targets);
+  Assert(capacities[0] == cap - kBlobSize + KILOBYTES(4));
+  Assert(capacities[1] == cap - KILOBYTES(4));
+
+  bkt.Destroy();
+  hermes->Finalize(true);
+}
+
 int main(int argc, char *argv[]) {
   int mpi_threads_provided;
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
@@ -251,10 +374,13 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  TestIsBoFunction();
-  TestBackgroundFlush();
-  TestBoMove();
-  TestOrganizeBlob();
+  HERMES_ADD_TEST(TestIsBoFunction);
+  HERMES_ADD_TEST(TestBackgroundFlush);
+  HERMES_ADD_TEST(TestBoMove);
+  HERMES_ADD_TEST(TestOrganizeBlob);
+  HERMES_ADD_TEST(TestWriteOnlyBucket);
+  HERMES_ADD_TEST(TestMinThresholdViolation);
+  HERMES_ADD_TEST(TestMaxThresholdViolation);
 
   MPI_Finalize();
 

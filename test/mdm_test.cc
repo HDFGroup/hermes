@@ -17,7 +17,9 @@
 #include "hermes.h"
 #include "bucket.h"
 #include "vbucket.h"
+#include "buffer_pool_internal.h"
 #include "metadata_management_internal.h"
+#include "metadata_storage.h"
 #include "test_utils.h"
 
 using namespace hermes;  // NOLINT(*)
@@ -380,6 +382,50 @@ static void TestMdmViz() {
   hermes->Finalize(true);
 }
 
+static void TestEffectiveTarget() {
+  using namespace hermes;  // NOLINT(*)
+
+  hermes::Config config = {};
+  hermes::InitDefaultConfig(&config);
+  config.default_placement_policy = hapi::PlacementPolicy::kRoundRobin;
+  config.default_rr_split = 0;
+  HermesPtr hermes = hermes::InitHermesDaemon(&config);
+
+  hermes::RoundRobinState rr_state;
+  rr_state.SetCurrentDeviceIndex(0);
+
+  std::string bucket_name(__func__);
+  hapi::Bucket bucket(bucket_name, hermes);
+  hapi::Blob data(4 * 1024, 'z');
+  std::string blob_name("1");
+  Assert(bucket.Put(blob_name, data).Succeeded());
+
+  SharedMemoryContext *context = &hermes->context_;
+  RpcContext *rpc = &hermes->rpc_;
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+
+  // Check BlobInfo::effective_target
+  BucketID bucket_id = GetBucketId(context, rpc, bucket_name.c_str());
+  BlobID blob_id = GetBlobId(context, rpc, blob_name, bucket_id, false);
+  BlobInfo *info = GetBlobInfoPtr(mdm, blob_id);
+  TargetID expected_target_id = {{1, 0, 0}};
+  Assert(info->effective_target.as_int == expected_target_id.as_int);
+  ReleaseBlobInfoPtr(mdm);
+
+  // Check Target::effective_blobs
+  Target *ram_target = GetTarget(context, 0);
+  Assert(ram_target->effective_blobs.length == 1);
+  u64 *ids = GetIdsPtr(mdm, ram_target->effective_blobs);
+  BlobID effective_blob_id = {};
+  effective_blob_id.as_int = ids[0];
+  Assert(effective_blob_id.as_int == blob_id.as_int);
+  ReleaseIdsPtr(mdm);
+
+  bucket.Destroy();
+
+  hermes->Finalize(true);
+}
+
 int main(int argc, char **argv) {
   int mpi_threads_provided;
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &mpi_threads_provided);
@@ -390,24 +436,25 @@ int main(int argc, char **argv) {
 
   HermesPtr hermes = hapi::InitHermes(NULL, true);
 
-  TestNullIds();
-  TestGetMapMutex();
-  TestLocalGetNextFreeBucketId(hermes);
-  TestGetOrCreateBucketId(hermes);
-  TestRenameBlob(hermes);
-  TestRenameBucket(hermes);
-  TestBucketRefCounting(hermes);
-  TestMaxNameLength(hermes);
-  TestGetRelativeNodeId();
-  TestDuplicateBlobNames(hermes);
-  TestGetBucketIdFromBlobId(hermes);
-  TestHexStringToU64();
+  HERMES_ADD_TEST(TestNullIds);
+  HERMES_ADD_TEST(TestGetMapMutex);
+  HERMES_ADD_TEST(TestLocalGetNextFreeBucketId, hermes);
+  HERMES_ADD_TEST(TestGetOrCreateBucketId, hermes);
+  HERMES_ADD_TEST(TestRenameBlob, hermes);
+  HERMES_ADD_TEST(TestRenameBucket, hermes);
+  HERMES_ADD_TEST(TestBucketRefCounting, hermes);
+  HERMES_ADD_TEST(TestMaxNameLength, hermes);
+  HERMES_ADD_TEST(TestGetRelativeNodeId);
+  HERMES_ADD_TEST(TestDuplicateBlobNames, hermes);
+  HERMES_ADD_TEST(TestGetBucketIdFromBlobId, hermes);
+  HERMES_ADD_TEST(TestHexStringToU64);
 
   hermes->Finalize(true);
 
-  TestSwapBlobsExistInBucket();
-  TestBlobInfoMap();
-  TestMdmViz();
+  HERMES_ADD_TEST(TestSwapBlobsExistInBucket);
+  HERMES_ADD_TEST(TestBlobInfoMap);
+  HERMES_ADD_TEST(TestMdmViz);
+  HERMES_ADD_TEST(TestEffectiveTarget);
 
   MPI_Finalize();
 

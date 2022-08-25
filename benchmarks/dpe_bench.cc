@@ -17,6 +17,7 @@
 
 #include "hermes.h"
 #include "utils.h"
+#include "test_utils.h"
 #include "data_placement_engine.h"
 
 /* example usage: ./bin/dpe_bench -m -s 4096 */
@@ -28,6 +29,7 @@ const auto now = std::chrono::high_resolution_clock::now;
 const u64 dpe_total_targets = 10;
 const size_t dpe_total_num_blobs = 10;
 const size_t dpe_total_blob_size = GIGABYTES(10);
+const size_t kDefaultBlobSize = KILOBYTES(4);
 
 void PrintUsage(char *program) {
   fprintf(stderr, "Usage %s [-r]\n", program);
@@ -54,7 +56,7 @@ int main(int argc, char **argv) {
   bool fixed_total_num_blobs {true}, fixed_total_blob_size {false};
   int option = -1;
   char *rvalue = NULL;
-  size_t each_blob_size;
+  size_t each_blob_size = kDefaultBlobSize;
   size_t total_placed_size;
   double dpe_seconds;
   api::Status result;
@@ -84,7 +86,7 @@ int main(int argc, char **argv) {
         PrintUsage(argv[0]);
         policy = api::PlacementPolicy::kRandom;
         fixed_total_blob_size = true;
-        each_blob_size = 4096;
+        each_blob_size = kDefaultBlobSize;
         std::cout << "Using Random policy for data placement engine.\n"
                   << "Using fixed number of blobs of size 4KB for test.\n\n";
     }
@@ -174,7 +176,7 @@ int main(int argc, char **argv) {
   for (auto schema : output_tmp) {
     placed_size += testing::UpdateDeviceState(schema, tgt_state);
   }
-  assert(placed_size == total_placed_size);
+  Assert(placed_size == total_placed_size);
 
   // Aggregate placement schemas from the same target
   if (result.Succeeded()) {

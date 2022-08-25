@@ -82,6 +82,7 @@ static const char *kConfigVariableStrings[ConfigVariable_Count] = {
   "is_shared_device",
   "buffer_organizer_num_threads",
   "default_rr_split",
+  "bo_capacity_thresholds",
 };
 
 EntireFile ReadEntireFile(Arena *arena, const char *path) {
@@ -505,8 +506,8 @@ Token *ParseIntList(Token *tok, int *out, int n) {
   return tok;
 }
 
-Token *ParseIntListList(Token *tok, int out[][hermes::kMaxBufferPoolSlabs],
-                        int n, int *m) {
+template<int N>
+Token *ParseIntListList(Token *tok, int out[][N], int n, int *m) {
   if (IsOpenCurlyBrace(tok)) {
     tok = tok->next;
     for (int i = 0; i < n; ++i) {
@@ -570,8 +571,8 @@ Token *ParseFloatList(Token *tok, f32 *out, int n) {
   return tok;
 }
 
-Token *ParseFloatListList(Token *tok, f32 out[][hermes::kMaxBufferPoolSlabs],
-                          int n, int *m) {
+template<int N>
+Token *ParseFloatListList(Token *tok, f32 out[][N], int n, int *m) {
   if (IsOpenCurlyBrace(tok)) {
     tok = tok->next;
     for (int i = 0; i < n; ++i) {
@@ -977,6 +978,21 @@ void ParseTokens(TokenList *tokens, Config *config) {
       }
       case ConfigVariable_RRSplit: {
         config->default_rr_split = ParseInt(&tok);
+        break;
+      }
+      case ConfigVariable_BOCapacityThresholds: {
+        RequireNumDevices(config);
+        // Each entry has a min and max threshold
+        std::vector<int> num_thresholds(config->num_devices, 2);
+        float thresholds[kMaxDevices][2] = {0};
+
+        tok = ParseFloatListList(tok, thresholds, config->num_devices,
+                                 num_thresholds.data());
+
+        for (int i = 0; i < config->num_devices; ++i) {
+          config->bo_capacity_thresholds[i].min = thresholds[i][0];
+          config->bo_capacity_thresholds[i].max = thresholds[i][1];
+        }
         break;
       }
       default: {
