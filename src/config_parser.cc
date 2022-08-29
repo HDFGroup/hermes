@@ -10,21 +10,6 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include <float.h>
-#include <limits.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <yaml-cpp/yaml.h>
-
-#include <ostream>
-#include <string>
-
-#include <glog/logging.h>
-
-#include "hermes_types.h"
-#include "utils.h"
-#include "memory_management.h"
 #include "config_parser.h"
 
 
@@ -32,8 +17,6 @@
 // 6. Add an Assert to config_parser_test.cc to test the functionality.
 // 7. Set a default value in InitDefaultConfig
 // 8. Add the variable with documentation to test/data/hermes.conf
-
-using namespace hermes;
 
 namespace hermes {
 
@@ -72,40 +55,6 @@ void CheckConstraints(Config *config) {
       msg << total_slab_percentage << "\n";
       PrintExpectedAndFail(msg.str());
     }
-  }
-}
-
-void RequireNumDevices(Config *config) {
-  if (config->num_devices == 0) {
-    LOG(FATAL) << "The configuration variable 'num_devices' must be defined "
-               << "first" << std::endl;
-  }
-}
-
-void RequireNumSlabs(Config *config) {
-  if (config->num_slabs == 0) {
-    LOG(FATAL) << "The configuration variable 'num_slabs' must be defined first"
-               << std::endl;
-  }
-}
-
-void RequireCapacitiesUnset(bool &already_specified) {
-  if (already_specified) {
-    LOG(FATAL) << "Capacities are specified multiple times in the configuration"
-               << " file. Only use one of 'capacities_bytes', 'capacities_kb',"
-               << "'capacities_mb', or 'capacities_gb'\n";
-  } else {
-    already_specified = true;
-  }
-}
-
-void RequireBlockSizesUnset(bool &already_specified) {
-  if (already_specified) {
-    LOG(FATAL) << "Block sizes are specified multiple times in the "
-               << "configuration file. Only use one of 'block_sizes_bytes',"
-               << "'block_sizes_kb', 'block_sizes_mb', or 'block_sizes_gb'\n";
-  } else {
-    already_specified = true;
   }
 }
 
@@ -150,25 +99,25 @@ void ParseConfig(Arena *arena, const char *path, Config *config) {
 
   if(yaml_conf["num_slabs"]) {
     RequireNumDevices(config);
-    ParseList<int>(yaml_conf["num_slabs"], config->num_slabs, config->num_devices)
+    ParseList<int>(yaml_conf["num_slabs"], config->num_slabs, config->num_devices);
   }
   if(yaml_conf["slab_unit_sizes"]) {
     RequireNumDevices(config);
     RequireNumSlabs(config);
-    ParseMatrix<int>(yaml_conf["slab_unit_sizes"], config->slab_unit_sizes, config->num_devices, config->num_slabs)
+    ParseSlabUnitSizes(config, yaml_conf["slab_unit_sizes"], config->num_devices, config->num_slabs);
   }
   if(yaml_conf["desired_slab_percentages"]) {
     RequireNumDevices(config);
     RequireNumSlabs(config);
-    ParseMatrix<f32>(yaml_conf["desired_slab_percentages"], config->desired_slab_percentages, config->num_devices, config->num_slabs)
+    ParseDesiredSlabPercentages(config, yaml_conf["desired_slab_percentages"], config->num_devices, config->num_slabs);
   }
   if(yaml_conf["bandwidths_mbps"]) {
     RequireNumDevices(config);
-    ParseList<f32>(yaml_conf["bandwidths_mbps"], config->bandwidths, config->num_devices)
+    ParseList<f32>(yaml_conf["bandwidths_mbps"], config->bandwidths, config->num_devices);
   }
   if(yaml_conf["latencies"]) {
     RequireNumDevices(config);
-    ParseList<f32>(yaml_conf["latencies"], config->latencies, config->num_devices)
+    ParseList<f32>(yaml_conf["latencies"], config->latencies, config->num_devices);
   }
   if(yaml_conf["buffer_pool_arena_percentage"]) {
     config->arena_percentages[hermes::kArenaType_BufferPool] = yaml_conf["buffer_pool_arena_percentage"].as<f32>();

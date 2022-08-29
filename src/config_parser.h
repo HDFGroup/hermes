@@ -13,14 +13,75 @@
 #ifndef HERMES_CONFIG_PARSER_H_
 #define HERMES_CONFIG_PARSER_H_
 
+#include <float.h>
+#include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <yaml-cpp/yaml.h>
+
+#include <ostream>
+#include <string>
+
+#include <glog/logging.h>
+
+#include "hermes_types.h"
+#include "utils.h"
+#include "memory_management.h"
+
 namespace hermes {
+
+void PrintExpectedAndFail(const std::string &expected, u32 line_number = 0) {
+  std::ostringstream msg;
+  msg << "Configuration parser expected '" << expected << "'";
+  if (line_number > 0) {
+    msg << " on line " << line_number;
+  }
+  msg << "\n";
+
+  LOG(FATAL) << msg.str();
+}
+
+void RequireNumDevices(Config *config) {
+  if (config->num_devices == 0) {
+    LOG(FATAL) << "The configuration variable 'num_devices' must be defined "
+               << "first" << std::endl;
+  }
+}
+
+void RequireNumSlabs(Config *config) {
+  if (config->num_slabs == 0) {
+    LOG(FATAL) << "The configuration variable 'num_slabs' must be defined first"
+               << std::endl;
+  }
+}
+
+void RequireCapacitiesUnset(bool &already_specified) {
+  if (already_specified) {
+    LOG(FATAL) << "Capacities are specified multiple times in the configuration"
+               << " file. Only use one of 'capacities_bytes', 'capacities_kb',"
+               << "'capacities_mb', or 'capacities_gb'\n";
+  } else {
+    already_specified = true;
+  }
+}
+
+void RequireBlockSizesUnset(bool &already_specified) {
+  if (already_specified) {
+    LOG(FATAL) << "Block sizes are specified multiple times in the "
+               << "configuration file. Only use one of 'block_sizes_bytes',"
+               << "'block_sizes_kb', 'block_sizes_mb', or 'block_sizes_gb'\n";
+  } else {
+    already_specified = true;
+  }
+}
 
 void ParseCapacities(Config *config, YAML::Node capacities, int unit_conversion) {
   int i = 0;
   RequireNumDevices(config);
   static bool already_specified = false;
   RequireCapacitiesUnset(already_specified);
-  for(auto &val_node : capacities) {
+  for(auto val_node : capacities) {
     config->capacities[i++] = val_node.as<size_t>() * unit_conversion;
   }
 }
@@ -31,7 +92,7 @@ void ParseBlockSizes(Config *config, YAML::Node block_sizes, int unit_conversion
   RequireNumDevices(config);
   RequireBlockSizesUnset(already_specified);
   for(auto val_node : block_sizes) {
-    block_size = val_node.as<size_t>() * unit_conversion;
+    size_t block_size = val_node.as<size_t>() * unit_conversion;
     if (block_size > INT_MAX) {
       LOG(FATAL) << "Max supported block size is " << INT_MAX << " bytes. "
                  << "Config file requested " << block_size << " bytes\n";
@@ -48,11 +109,17 @@ void ParseList(YAML::Node list_node, T *list, int list_len) {
   }
 }
 
-template<typename T>
-void ParseMatrix(YAML::Node matrix_node, T *matrix[], int row_len, int col_len) {
+void ParseSlabUnitSizes(Config *config, YAML::Node matrix_node, int row_len, int col_len) {
   int i = 0;
   for(auto row : matrix_node) {
-    ParseList<T>(row, matrix[i++], col_len);
+    ParseList<int>(row, config->slab_unit_sizes[i++], col_len);
+  }
+}
+
+void ParseDesiredSlabPercentages(Config *config, YAML::Node matrix_node, int row_len, int col_len) {
+  int i = 0;
+  for(auto row : matrix_node) {
+    ParseList<f32>(row, config->desired_slab_percentages[i++], col_len);
   }
 }
 
@@ -78,12 +145,12 @@ void ParseRangeList(YAML::Node list_node, std::vector<int> &list) {
       max = std::stoi(words[1]);
     }
     for(int i = min; i <= max; ++i) {
-      list.append(i);
+      list.emplace_back(i);
     }
   }
 }
 
-void ParseTokens(TokenList *tokens, Config *config);
+void ParseConfig(Arena *arena, const char *path, Config *config);
 
 }  // namespace hermes
 #endif  // HERMES_CONFIG_PARSER_H_
