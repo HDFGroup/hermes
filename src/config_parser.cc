@@ -59,6 +59,8 @@ void CheckConstraints(Config *config) {
 }
 
 void ParseConfigYAML(Arena *arena, YAML::Node &yaml_conf, Config *config) {
+  bool capcities_specified = false, block_sizes_specified = false;
+
   if(yaml_conf["num_devices"]) {
     config->num_devices = yaml_conf["num_devices"].as<int>();
     config->num_targets = yaml_conf["num_devices"].as<int>();
@@ -68,29 +70,29 @@ void ParseConfigYAML(Arena *arena, YAML::Node &yaml_conf, Config *config) {
   }
 
   if(yaml_conf["capacities_bytes"]) {
-    ParseCapacities(config, yaml_conf["capacities_bytes"], 1);
+    ParseCapacities(config, yaml_conf["capacities_bytes"], 1, capcities_specified);
   }
   if(yaml_conf["capacities_kb"]) {
-    ParseCapacities(config, yaml_conf["capacities_kb"], KILOBYTES(1));
+    ParseCapacities(config, yaml_conf["capacities_kb"], KILOBYTES(1), capcities_specified);
   }
   if(yaml_conf["capacities_mb"]) {
-    ParseCapacities(config, yaml_conf["capacities_mb"], MEGABYTES(1));
+    ParseCapacities(config, yaml_conf["capacities_mb"], MEGABYTES(1), capcities_specified);
   }
   if(yaml_conf["capacities_gb"]) {
-    ParseCapacities(config, yaml_conf["capacities_gb"], GIGABYTES(1));
+    ParseCapacities(config, yaml_conf["capacities_gb"], GIGABYTES(1), capcities_specified);
   }
 
   if(yaml_conf["block_sizes_bytes"]) {
-    ParseBlockSizes(config, yaml_conf["block_sizes_bytes"], 1);
+    ParseBlockSizes(config, yaml_conf["block_sizes_bytes"], 1, block_sizes_specified);
   }
   if(yaml_conf["block_sizes_kb"]) {
-    ParseBlockSizes(config, yaml_conf["block_sizes_kb"], KILOBYTES(1));
+    ParseBlockSizes(config, yaml_conf["block_sizes_kb"], KILOBYTES(1), block_sizes_specified);
   }
   if(yaml_conf["block_sizes_mb"]) {
-    ParseBlockSizes(config, yaml_conf["block_sizes_mb"], MEGABYTES(1));
+    ParseBlockSizes(config, yaml_conf["block_sizes_mb"], MEGABYTES(1), block_sizes_specified);
   }
   if(yaml_conf["block_sizes_gb"]) {
-    ParseBlockSizes(config, yaml_conf["block_sizes_gb"], GIGABYTES(1));
+    ParseBlockSizes(config, yaml_conf["block_sizes_gb"], GIGABYTES(1), block_sizes_specified);
   }
 
   if(yaml_conf["num_slabs"]) {

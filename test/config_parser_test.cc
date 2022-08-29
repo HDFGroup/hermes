@@ -43,29 +43,29 @@ void RunHostNumbersTest(Arena *arena, const std::string &config_string,
 void TestParseRangeList(Arena *arena) {
   {
     std::vector<int> expected{1, 3, 4, 5, 7, 10, 11, 12, 13, 14};
-    RunHostNumbersTest(arena, "rpc_host_number_range = {1, 3-5, 7, 10-14};\n",
+    RunHostNumbersTest(arena, "rpc_host_number_range: [1, 3-5, 7, 10-14]\n",
                        expected);
   }
 
   {
     std::vector<int> expected{1};
-    RunHostNumbersTest(arena, "rpc_host_number_range = {1};\n", expected);
+    RunHostNumbersTest(arena, "rpc_host_number_range: [1]\n", expected);
   }
 
   {
     std::vector<int> expected{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-    RunHostNumbersTest(arena, "rpc_host_number_range = {1-10};\n", expected);
+    RunHostNumbersTest(arena, "rpc_host_number_range: [1-10]\n", expected);
   }
 
   {
     std::vector<int> expected{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12};
-    RunHostNumbersTest(arena, "rpc_host_number_range = {1-10, 12};\n",
+    RunHostNumbersTest(arena, "rpc_host_number_range: [1-10, 12]\n",
                        expected);
   }
 
   {
     std::vector<int> expected;
-    RunHostNumbersTest(arena, "rpc_host_number_range = {};\n", expected);
+    RunHostNumbersTest(arena, "rpc_host_number_range: []\n", expected);
   }
 }
 
@@ -79,32 +79,32 @@ void RunCapacityValuesTest(Arena *arena, const std::string &config_string,
 }
 
 void TestCapacityValues(Arena *arena) {
-  std::string base_config = "num_devices = 4;\n";
+  std::string base_config = "num_devices: 4\n";
 
   {
     std::vector<size_t> expected{50, 50, 50, 50};
-    std::string config_string = "capacities_bytes = {50, 50, 50, 50};\n";
+    std::string config_string = "capacities_bytes: [50, 50, 50, 50]\n";
     RunCapacityValuesTest(arena, base_config + config_string, expected);
   }
 
   {
     std::vector<size_t> expected{KILOBYTES(50), KILOBYTES(50), KILOBYTES(50),
                                  KILOBYTES(50)};
-    std::string config_string = "capacities_kb = {50, 50, 50, 50};\n";
+    std::string config_string = "capacities_kb: [50, 50, 50, 50]\n";
     RunCapacityValuesTest(arena, base_config + config_string, expected);
   }
 
   {
     std::vector<size_t> expected{MEGABYTES(50), MEGABYTES(50), MEGABYTES(50),
                                  MEGABYTES(50)};
-    std::string config_string = "capacities_mb = {50, 50, 50, 50};\n";
+    std::string config_string = "capacities_mb: [50, 50, 50, 50]\n";
     RunCapacityValuesTest(arena, base_config + config_string, expected);
   }
 
   {
     std::vector<size_t> expected{GIGABYTES(50), GIGABYTES(50), GIGABYTES(50),
                                  GIGABYTES(50)};
-    std::string config_string = "capacities_gb = {50, 50, 50, 50};\n";
+    std::string config_string = "capacities_gb: [50, 50, 50, 50]\n";
     RunCapacityValuesTest(arena, base_config + config_string, expected);
   }
 }
@@ -119,29 +119,29 @@ void RunBlockSizesTest(Arena *arena, const std::string &config_string,
 }
 
 void TestBlockSizes(Arena *arena) {
-  std::string base_config = "num_devices = 4;\n";
+  std::string base_config = "num_devices: 4\n";
 
   {
     std::vector<int> expected{50, 50, 50, 50};
-    std::string config_string = "block_sizes_bytes = {50, 50, 50, 50};\n";
+    std::string config_string = "block_sizes_bytes: [50, 50, 50, 50]\n";
     RunBlockSizesTest(arena, base_config + config_string, expected);
   }
   {
     std::vector<int> expected{KILOBYTES(50), KILOBYTES(50), KILOBYTES(50),
                               KILOBYTES(50)};
-    std::string config_string = "block_sizes_kb = {50, 50, 50, 50};\n";
+    std::string config_string = "block_sizes_kb: [50, 50, 50, 50]\n";
     RunBlockSizesTest(arena, base_config + config_string, expected);
   }
   {
     std::vector<int> expected{MEGABYTES(50), MEGABYTES(50), MEGABYTES(50),
                               MEGABYTES(50)};
-    std::string config_string = "block_sizes_mb = {50, 50, 50, 50};\n";
+    std::string config_string = "block_sizes_mb: [50, 50, 50, 50]\n";
     RunBlockSizesTest(arena, base_config + config_string, expected);
   }
   {
     std::vector<int> expected{GIGABYTES(1), GIGABYTES(1), GIGABYTES(1),
                               GIGABYTES(1)};
-    std::string config_string =  "block_sizes_gb = {1, 1, 1, 1};\n";
+    std::string config_string =  "block_sizes_gb: [1, 1, 1, 1]\n";
     RunBlockSizesTest(arena, base_config + config_string, expected);
   }
 }
@@ -190,7 +190,7 @@ void TestDefaultConfig(Arena *arena, const char *config_file) {
 
   Assert(config.max_buckets_per_node == 16);
   Assert(config.max_vbuckets_per_node == 8);
-  Assert(config.system_view_state_update_interval_ms == 1000);
+  Assert(config.system_view_state_update_interval_ms == 100);
 
   Assert(config.rpc_protocol == "ofi+sockets");
   Assert(config.rpc_domain.empty());

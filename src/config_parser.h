@@ -76,19 +76,17 @@ void RequireBlockSizesUnset(bool &already_specified) {
   }
 }
 
-void ParseCapacities(Config *config, YAML::Node capacities, int unit_conversion) {
+void ParseCapacities(Config *config, YAML::Node capacities, int unit_conversion, bool &already_specified) {
   int i = 0;
   RequireNumDevices(config);
-  static bool already_specified = false;
   RequireCapacitiesUnset(already_specified);
   for(auto val_node : capacities) {
     config->capacities[i++] = val_node.as<size_t>() * unit_conversion;
   }
 }
 
-void ParseBlockSizes(Config *config, YAML::Node block_sizes, int unit_conversion) {
+void ParseBlockSizes(Config *config, YAML::Node block_sizes, int unit_conversion, bool &already_specified) {
   int i = 0;
-  static bool already_specified = false;
   RequireNumDevices(config);
   RequireBlockSizesUnset(already_specified);
   for(auto val_node : block_sizes) {
