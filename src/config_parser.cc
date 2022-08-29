@@ -204,6 +204,9 @@ void ParseConfigYAML(Arena *arena, YAML::Node &yaml_conf, Config *config) {
   if(yaml_conf["path_exclusions"]) {
     ParseVector<std::string>(yaml_conf["path_exclusions"], config->path_exclusions);
   }
+  if(yaml_conf["path_inclusions"]) {
+    ParseVector<std::string>(yaml_conf["path_inclusions"], config->path_inclusions);
+  }
 
   /*switch (var) {
     default: {

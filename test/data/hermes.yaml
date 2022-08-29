@@ -114,10 +114,12 @@ default_placement_policy: "MinimizeIoTime"
 # into a random number of smaller Blobs.
 default_rr_split: 0
 
-#Paths which are ignored when buffering data Hermes
+#Paths which are ignored when buffering data
 path_exclusions: [
     "/bin/", "/boot/", "/dev/",  "/etc/",
     "/lib/", "/opt/",  "/proc/", "/sbin/",
     "/sys/", "/usr/",  "/var/",  "/run/",
     "pipe", "socket:", "anon_inode:"
 ]
+#Paths which are never ignored when buffering data
+path_inclusions: ["/var/opt/cray/dws/mounts/"]
