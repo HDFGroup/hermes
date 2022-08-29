@@ -250,6 +250,8 @@ struct Config {
    * value of the USER environment variable to this string.
    */
   char buffer_pool_shmem_name[kMaxBufferPoolShmemNameLength];
+
+  std::string *path_exclusions;
 };
 
 union BucketID {

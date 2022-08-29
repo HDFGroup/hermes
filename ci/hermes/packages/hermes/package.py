@@ -8,10 +8,11 @@ class Hermes(CMakePackage):
     version('master', branch='master')
     variant('vfd', default=False, description='Enable HDF5 VFD')
     depends_on('mochi-thallium~cereal@0.8.3')
-    depends_on('catch2@2.13.3')
+    depends_on('catch2@3.0.1')
     depends_on('glpk@4:')
     depends_on('mpich@3.3.2:')
     depends_on('glog@0.4:')
+    depends_on('yaml-cpp')
     depends_on('hdf5@1.13.0:', when='+vfd')
 
     def cmake_args(self):
