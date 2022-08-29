@@ -471,7 +471,7 @@ install(
 
 install(
   FILES
-    test/data/hermes.conf
+        test/data/hermes.yaml
   TYPE
     DATA
   RENAME
