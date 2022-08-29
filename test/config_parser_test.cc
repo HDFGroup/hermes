@@ -28,21 +28,15 @@ using hermes::Config;
 namespace hermes {
 namespace testing {
 
-Config ParseConfigString(Arena *arena, const std::string &config_string) {
-  hermes::ScopedTemporaryMemory scratch(arena);
-  hermes::EntireFile config_file =
-    {(u8 *)config_string.data(), config_string.size()};
-  hermes::TokenList tokens = hermes::Tokenize(scratch, config_file);
+Config ParseConfigStringTest(Arena *arena, const std::string &config_string) {
   Config config = {};
-  InitDefaultConfig(&config);
-  hermes::ParseTokens(&tokens, &config);
-
+  ParseConfigString(arena, config_string, &config);
   return config;
 }
 
 void RunHostNumbersTest(Arena *arena, const std::string &config_string,
                         const std::vector<int> &expected) {
-  Config config = ParseConfigString(arena, config_string);
+  Config config = ParseConfigStringTest(arena, config_string);
   Assert(config.host_numbers == expected);
 }
 
@@ -77,7 +71,7 @@ void TestParseRangeList(Arena *arena) {
 
 void RunCapacityValuesTest(Arena *arena, const std::string &config_string,
                            const std::vector<size_t> &expected) {
-  Config config = ParseConfigString(arena, config_string);
+  Config config = ParseConfigStringTest(arena, config_string);
   Assert((size_t)config.num_devices == expected.size());
   for (int i = 0; i < config.num_devices; ++i) {
     Assert(config.capacities[i] == expected[i]);
@@ -117,7 +111,7 @@ void TestCapacityValues(Arena *arena) {
 
 void RunBlockSizesTest(Arena *arena, const std::string &config_string,
                        const std::vector<int> &expected) {
-  Config config = ParseConfigString(arena, config_string);
+  Config config = ParseConfigStringTest(arena, config_string);
   Assert((size_t)config.num_devices == expected.size());
   for (int i = 0; i < config.num_devices; ++i) {
     Assert(config.block_sizes[i] == expected[i]);

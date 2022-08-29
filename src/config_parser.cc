@@ -58,11 +58,7 @@ void CheckConstraints(Config *config) {
   }
 }
 
-void ParseConfig(Arena *arena, const char *path, Config *config) {
-  ScopedTemporaryMemory scratch(arena);
-  InitDefaultConfig(config);
-  YAML::Node yaml_conf = YAML::LoadFile(path);
-
+void ParseConfigYAML(Arena *arena, YAML::Node &yaml_conf, Config *config) {
   if(yaml_conf["num_devices"]) {
     config->num_devices = yaml_conf["num_devices"].as<int>();
     config->num_targets = yaml_conf["num_devices"].as<int>();
@@ -203,14 +199,27 @@ void ParseConfig(Arena *arena, const char *path, Config *config) {
   if(yaml_conf["default_rr_split"]) {
     config->default_rr_split = yaml_conf["default_rr_split"].as<int>();
   }
-  if(yaml_conf[""]) {
-  }
+
   /*switch (var) {
     default: {
       HERMES_INVALID_CODE_PATH;
       break;
     }
   }*/
+}
+
+void ParseConfig(Arena *arena, const char *path, Config *config) {
+  ScopedTemporaryMemory scratch(arena);
+  InitDefaultConfig(config);
+  YAML::Node yaml_conf = YAML::LoadFile(path);
+  ParseConfigYAML(arena, yaml_conf, config);
+}
+
+void ParseConfigString(Arena *arena, const std::string &config_string, Config *config) {
+  ScopedTemporaryMemory scratch(arena);
+  InitDefaultConfig(config);
+  YAML::Node yaml_conf = YAML::Load(config_string);
+  ParseConfigYAML(arena, yaml_conf, config);
 }
 
 }  // namespace hermes

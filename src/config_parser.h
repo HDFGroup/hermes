@@ -151,6 +151,7 @@ void ParseRangeList(YAML::Node list_node, std::vector<int> &list) {
 }
 
 void ParseConfig(Arena *arena, const char *path, Config *config);
+void ParseConfigString(Arena *arena, const std::string &config_string, Config *config);
 
 }  // namespace hermes
 #endif  // HERMES_CONFIG_PARSER_H_
