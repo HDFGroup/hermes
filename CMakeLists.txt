@@ -271,6 +271,9 @@ if(HERMES_RPC_THALLIUM)
   endif()
 endif()
 
+#YAML-CPP
+find_package(yaml-cpp CONFIG REQUIRED)
+
 # GLOG
 find_package(glog REQUIRED)
 if(glog_FOUND)

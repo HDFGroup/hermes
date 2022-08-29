@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <yaml-cpp/yaml.h>
 
 #include <ostream>
 #include <string>
@@ -26,20 +27,13 @@
 #include "memory_management.h"
 #include "config_parser.h"
 
+
 // Steps to add a new configuration variable:
-// 1. Add an entry to the ConfigVariable enum
-// 2. Add the variable name to kConfigVariableStrings (currently the strings in
-// this array must be in the same order as the corresponding entries in the
-// ConfigVariable enum).
-// 3. If a Parse<type> function does not exist for the variable type, implement
-// it.
-// 4. Add a case to ParseTokens for the new variable.
-// 5. Add the new variable to the Config struct.
 // 6. Add an Assert to config_parser_test.cc to test the functionality.
 // 7. Set a default value in InitDefaultConfig
 // 8. Add the variable with documentation to test/data/hermes.conf
 
-
+using namespace hermes;
 
 namespace hermes {
 
@@ -81,6 +75,20 @@ void CheckConstraints(Config *config) {
   }
 }
 
+void RequireNumDevices(Config *config) {
+  if (config->num_devices == 0) {
+    LOG(FATAL) << "The configuration variable 'num_devices' must be defined "
+               << "first" << std::endl;
+  }
+}
+
+void RequireNumSlabs(Config *config) {
+  if (config->num_slabs == 0) {
+    LOG(FATAL) << "The configuration variable 'num_slabs' must be defined first"
+               << std::endl;
+  }
+}
+
 void RequireCapacitiesUnset(bool &already_specified) {
   if (already_specified) {
     LOG(FATAL) << "Capacities are specified multiple times in the configuration"
@@ -101,61 +109,11 @@ void RequireBlockSizesUnset(bool &already_specified) {
   }
 }
 
-size_t ParseCapacities(Config *config, YAML::Node capacities, int unit_conversion) {
-  int i = 0;
-  RequireNumDevices(config);
-  RequireCapacitiesUnset(already_specified);
-  for(auto &val_node : capacities) {
-    config->capacities[i++] = val_node.as<size_t>() * unit_conversion;
-  }
-}
-size_t ParseBlockSizes(Config *config, YAML::Node block_sizes, int unit_conversion) {
-  int i = 0;
-  RequireNumDevices(config);
-  RequireBlockSizesUnset(already_specified);
-  for(auto val_node : block_sizes) {
-    block_size = val_node.as<size_t>() * unit_conversion;
-    if (block_size > INT_MAX) {
-      LOG(FATAL) << "Max supported block size is " << INT_MAX << " bytes. "
-                 << "Config file requested " << block_size << " bytes\n";
-    }
-    config->block_sizes[i++] = block_size;
-  }
-}
-
-template<typename T>
-void ParseList(YAML::Node list_node, T *list, int list_len) {
-  int i = 0;
-  for(auto val_node : list_node) {
-    list[i++] = val_node.as<T>();
-  }
-}
-
-template<typename T>
-void ParseMatrix(YAML::Node matrix_node, T **matrix, int row_len, int col_len) {
-  int i = 0;
-  for(auto row : matrix_node) {
-    ParseNumberList<T>(row, matrix[i++], col_len);
-  }
-}
-
-void ParseRangeList(YAML::Node list_node, std::vector<int> &list) {
-  int i = 0;
-  for(auto val_node : list_node) {
-    std::string val = val_node.as<std::string>();
-    int min = 0;
-    int max = 0;
-    for(int i = min; i <= max; ++i) {
-      list.append(i);
-    }
-  }
-}
-
 void ParseConfig(Arena *arena, const char *path, Config *config) {
   ScopedTemporaryMemory scratch(arena);
   InitDefaultConfig(config);
-
   YAML::Node yaml_conf = YAML::LoadFile(path);
+
   if(yaml_conf["num_devices"]) {
     config->num_devices = yaml_conf["num_devices"].as<int>();
     config->num_targets = yaml_conf["num_devices"].as<int>();
@@ -250,13 +208,13 @@ void ParseConfig(Arena *arena, const char *path, Config *config) {
     config->rpc_server_suffix = yaml_conf["rpc_server_suffix"].as<std::string>();
   }
   if(yaml_conf["buffer_pool_shmem_name"]) {
-    config->buffer_pool_shmem_name = yaml_conf["buffer_pool_shmem_name"].as<std::string().c_str();
+    config->buffer_pool_shmem_name = yaml_conf["buffer_pool_shmem_name"].as<std::string()>.c_str();
   }
   if(yaml_conf["rpc_protocol"]) {
     config->rpc_protocol = yaml_conf["rpc_protocol"].as<std::string>();
   }
   if(yaml_conf["rpc_domain"]) {
-    config->rpc_domain = yaml_conf["rpc_domain"].as<std:string();
+    config->rpc_domain = yaml_conf["rpc_domain"].as<std::string>();
   }
   if(yaml_conf["rpc_port"]) {
     config->rpc_port = yaml_conf["rpc_port"].as<int>();
@@ -265,10 +223,10 @@ void ParseConfig(Arena *arena, const char *path, Config *config) {
     config->buffer_organizer_port = yaml_conf["buffer_organizer_port"].as<int>();
   }
   if(yaml_conf["rpc_host_number_range"]) {
-    ParseRangeList(yaml_conf["rpc_host_number_range"], config->host_numbers)
+    ParseRangeList(yaml_conf["rpc_host_number_range"], config->host_numbers);
   }
   if(yaml_conf["rpc_num_threads"]) {
-    config->rpc_num_threads = ParseInt(&tok);
+    config->rpc_num_threads = yaml_conf["rpc_num_threads"].as<int>();
   }
   if(yaml_conf["default_placement_policy"]) {
     std::string policy = yaml_conf["default_placement_policy"].as<std::string>();
@@ -287,7 +245,7 @@ void ParseConfig(Arena *arena, const char *path, Config *config) {
   }
   if(yaml_conf["is_shared_device"]) {
     RequireNumDevices(config);
-    ParseIntList(yaml_conf["is_shared_device"], config->is_shared_device, config->num_devices);
+    ParseList<int>(yaml_conf["is_shared_device"], config->is_shared_device, config->num_devices);
   }
   if(yaml_conf["buffer_organizer_num_threads"]) {
     config->bo_num_threads = yaml_conf["buffer_organizer_num_threads"].as<int>();
@@ -297,14 +255,12 @@ void ParseConfig(Arena *arena, const char *path, Config *config) {
   }
   if(yaml_conf[""]) {
   }
-
-  //
-  switch (var) {
+  /*switch (var) {
     default: {
       HERMES_INVALID_CODE_PATH;
       break;
     }
-  }
+  }*/
 }
 
 }  // namespace hermes

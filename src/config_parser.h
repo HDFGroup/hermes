@@ -15,83 +15,74 @@
 
 namespace hermes {
 
-enum class TokenType {
-  Identifier,
-  Number,
-  String,
-  OpenCurlyBrace,
-  CloseCurlyBrace,
-  Comma,
-  Equal,
-  Semicolon,
-  Hyphen,
+void ParseCapacities(Config *config, YAML::Node capacities, int unit_conversion) {
+  int i = 0;
+  RequireNumDevices(config);
+  static bool already_specified = false;
+  RequireCapacitiesUnset(already_specified);
+  for(auto &val_node : capacities) {
+    config->capacities[i++] = val_node.as<size_t>() * unit_conversion;
+  }
+}
 
-  Count
-};
+void ParseBlockSizes(Config *config, YAML::Node block_sizes, int unit_conversion) {
+  int i = 0;
+  static bool already_specified = false;
+  RequireNumDevices(config);
+  RequireBlockSizesUnset(already_specified);
+  for(auto val_node : block_sizes) {
+    block_size = val_node.as<size_t>() * unit_conversion;
+    if (block_size > INT_MAX) {
+      LOG(FATAL) << "Max supported block size is " << INT_MAX << " bytes. "
+                 << "Config file requested " << block_size << " bytes\n";
+    }
+    config->block_sizes[i++] = block_size;
+  }
+}
 
-enum ConfigVariable {
-  ConfigVariable_Unkown,
-  ConfigVariable_NumDevices,
-  ConfigVariable_NumTargets,
-  ConfigVariable_CapacitiesB,
-  ConfigVariable_CapacitiesKb,
-  ConfigVariable_CapacitiesMb,
-  ConfigVariable_CapacitiesGb,
-  ConfigVariable_BlockSizesB,
-  ConfigVariable_BlockSizesKb,
-  ConfigVariable_BlockSizesMb,
-  ConfigVariable_BlockSizesGb,
-  ConfigVariable_NumSlabs,
-  ConfigVariable_SlabUnitSizes,
-  ConfigVariable_DesiredSlabPercentages,
-  ConfigVariable_BandwidthsMbps,
-  ConfigVariable_LatenciesUs,
-  ConfigVariable_BufferPoolArenaPercentage,
-  ConfigVariable_MetadataArenaPercentage,
-  ConfigVariable_TransientArenaPercentage,
-  ConfigVariable_MountPoints,
-  ConfigVariable_SwapMount,
-  ConfigVariable_NumBufferOrganizerRetries,
-  ConfigVariable_MaxBucketsPerNode,
-  ConfigVariable_MaxVBucketsPerNode,
-  ConfigVariable_SystemViewStateUpdateInterval,
-  ConfigVariable_RpcServerHostFile,
-  ConfigVariable_RpcServerBaseName,
-  ConfigVariable_RpcServerSuffix,
-  ConfigVariable_BufferPoolShmemName,
-  ConfigVariable_RpcProtocol,
-  ConfigVariable_RpcDomain,
-  ConfigVariable_RpcPort,
-  ConfigVariable_BufferOrganizerPort,
-  ConfigVariable_RpcHostNumberRange,
-  ConfigVariable_RpcNumThreads,
-  ConfigVariable_PlacementPolicy,
-  ConfigVariable_IsSharedDevice,
-  ConfigVariable_BoNumThreads,
-  ConfigVariable_RRSplit,
-  ConfigVariable_PathExclusions,
-  ConfigVariable_Count
-};
+template<typename T>
+void ParseList(YAML::Node list_node, T *list, int list_len) {
+  int i = 0;
+  for(auto val_node : list_node) {
+    list[i++] = val_node.as<T>();
+  }
+}
 
-struct Token {
-  Token *next;
-  char *data;
-  u32 size;
-  u32 line;
-  TokenType type;
-};
+template<typename T>
+void ParseMatrix(YAML::Node matrix_node, T *matrix[], int row_len, int col_len) {
+  int i = 0;
+  for(auto row : matrix_node) {
+    ParseList<T>(row, matrix[i++], col_len);
+  }
+}
 
-struct TokenList {
-  Token *head;
-  int count;
-};
+void ParseRangeList(YAML::Node list_node, std::vector<int> &list) {
+  int i = 0, min, max;
+  for(auto val_node : list_node) {
+    std::string val = val_node.as<std::string>();
+    if(val.find('-') == std::string::npos) {
+      min = val_node.as<int>();
+      max = min;
+    }
+    else {
+      std::stringstream ss(val);
+      std::string word;
+      std::vector<std::string> words;
+      while(std::getline(ss, word, '-')) {
+        words.push_back(word);
+      }
+      if(words.size() != 2) {
+        LOG(FATAL) << "Invalid range definition " << val << std::endl;
+      }
+      min = std::stoi(words[0]);
+      max = std::stoi(words[1]);
+    }
+    for(int i = min; i <= max; ++i) {
+      list.append(i);
+    }
+  }
+}
 
-struct EntireFile {
-  u8 *data;
-  u64 size;
-};
-
-TokenList Tokenize(Arena *arena, EntireFile entire_file);
 void ParseTokens(TokenList *tokens, Config *config);
 
 }  // namespace hermes
