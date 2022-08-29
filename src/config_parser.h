@@ -109,17 +109,17 @@ void ParseList(YAML::Node list_node, T *list, int list_len) {
   }
 }
 
-void ParseSlabUnitSizes(Config *config, YAML::Node matrix_node, int row_len, int col_len) {
+void ParseSlabUnitSizes(Config *config, YAML::Node matrix_node, int row_len, int *col_len) {
   int i = 0;
   for(auto row : matrix_node) {
-    ParseList<int>(row, config->slab_unit_sizes[i++], col_len);
+    ParseList<int>(row, config->slab_unit_sizes[i++], col_len[i]);
   }
 }
 
-void ParseDesiredSlabPercentages(Config *config, YAML::Node matrix_node, int row_len, int col_len) {
+void ParseDesiredSlabPercentages(Config *config, YAML::Node matrix_node, int row_len, int *col_len) {
   int i = 0;
   for(auto row : matrix_node) {
-    ParseList<f32>(row, config->desired_slab_percentages[i++], col_len);
+    ParseList<f32>(row, config->desired_slab_percentages[i++], col_len[i]);
   }
 }
 

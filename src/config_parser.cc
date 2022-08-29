@@ -157,7 +157,8 @@ void ParseConfig(Arena *arena, const char *path, Config *config) {
     config->rpc_server_suffix = yaml_conf["rpc_server_suffix"].as<std::string>();
   }
   if(yaml_conf["buffer_pool_shmem_name"]) {
-    config->buffer_pool_shmem_name = yaml_conf["buffer_pool_shmem_name"].as<std::string()>.c_str();
+    std::string name = yaml_conf["buffer_pool_shmem_name"].as<std::string>();
+    std::strcpy(config->buffer_pool_shmem_name, name.c_str());
   }
   if(yaml_conf["rpc_protocol"]) {
     config->rpc_protocol = yaml_conf["rpc_protocol"].as<std::string>();

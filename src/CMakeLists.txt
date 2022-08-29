@@ -53,6 +53,7 @@ target_link_libraries(hermes
   PUBLIC ${GLPK_LIBRARIES}
   PUBLIC thallium
   PUBLIC glog::glog
+  PUBLIC yaml
   PUBLIC "$<$<BOOL:${HERMES_INTERCEPT_IO}>:${GOTCHA_MODULE_LIBS}>"
   PRIVATE $<$<BOOL:${HERMES_COMMUNICATION_MPI}>:MPI::MPI_CXX>
 )
