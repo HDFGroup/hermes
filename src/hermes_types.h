@@ -251,7 +251,7 @@ struct Config {
    */
   char buffer_pool_shmem_name[kMaxBufferPoolShmemNameLength];
 
-  std::string *path_exclusions;
+  std::vector<std::string> path_exclusions;
 };
 
 union BucketID {

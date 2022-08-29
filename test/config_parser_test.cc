@@ -78,6 +78,25 @@ void RunCapacityValuesTest(Arena *arena, const std::string &config_string,
   }
 }
 
+void TestPathExclusions(Arena *arena) {
+  std::vector<std::string> expected{"/bin/", "/boot/", "/dev/",  "/etc/",
+                                    "/lib/", "/opt/",  "/proc/", "/sbin/",
+                                    "/sys/", "/usr/",  "/var/",  "/run/",
+                                    "pipe", "socket:", "anon_inode:"};
+  std::string config_string = "path_exclusions: [\n"
+      "    \"/bin/\", \"/boot/\", \"/dev/\",  \"/etc/\",\n"
+      "    \"/lib/\", \"/opt/\",  \"/proc/\", \"/sbin/\",\n"
+      "    \"/sys/\", \"/usr/\",  \"/var/\",  \"/run/\",\n"
+      "    \"pipe\", \"socket:\", \"anon_inode:\"\n"
+      "]";
+  Config config = ParseConfigStringTest(arena, config_string);
+  for(int i =0; i < expected.size(); ++i) {
+    auto &e = expected[i];
+    auto &e2 = config.path_exclusions[i];
+    Assert(e == e2);
+  }
+}
+
 void TestCapacityValues(Arena *arena) {
   std::string base_config = "num_devices: 4\n";
 
@@ -238,6 +257,7 @@ int main(int argc, char **argv) {
   hermes::testing::TestParseRangeList(&arena);
   hermes::testing::TestCapacityValues(&arena);
   hermes::testing::TestBlockSizes(&arena);
+  hermes::testing::TestPathExclusions(&arena);
 
   return 0;
 }

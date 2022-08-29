@@ -97,7 +97,7 @@ void ParseConfigYAML(Arena *arena, YAML::Node &yaml_conf, Config *config) {
 
   if(yaml_conf["num_slabs"]) {
     RequireNumDevices(config);
-    ParseList<int>(yaml_conf["num_slabs"], config->num_slabs, config->num_devices);
+    ParseArray<int>(yaml_conf["num_slabs"], config->num_slabs, config->num_devices);
   }
   if(yaml_conf["slab_unit_sizes"]) {
     RequireNumDevices(config);
@@ -111,11 +111,11 @@ void ParseConfigYAML(Arena *arena, YAML::Node &yaml_conf, Config *config) {
   }
   if(yaml_conf["bandwidths_mbps"]) {
     RequireNumDevices(config);
-    ParseList<f32>(yaml_conf["bandwidths_mbps"], config->bandwidths, config->num_devices);
+    ParseArray<f32>(yaml_conf["bandwidths_mbps"], config->bandwidths, config->num_devices);
   }
   if(yaml_conf["latencies"]) {
     RequireNumDevices(config);
-    ParseList<f32>(yaml_conf["latencies"], config->latencies, config->num_devices);
+    ParseArray<f32>(yaml_conf["latencies"], config->latencies, config->num_devices);
   }
   if(yaml_conf["buffer_pool_arena_percentage"]) {
     config->arena_percentages[hermes::kArenaType_BufferPool] = yaml_conf["buffer_pool_arena_percentage"].as<f32>();
@@ -128,7 +128,7 @@ void ParseConfigYAML(Arena *arena, YAML::Node &yaml_conf, Config *config) {
   }
   if(yaml_conf["mount_points"]) {
     RequireNumDevices(config);
-    ParseList<std::string>(yaml_conf["mount_points"], config->mount_points, config->num_devices);
+    ParseArray<std::string>(yaml_conf["mount_points"], config->mount_points, config->num_devices);
   }
   if(yaml_conf["swap_mount"]) {
     config->swap_mount = yaml_conf["swap_mount"].as<std::string>();
@@ -193,13 +193,16 @@ void ParseConfigYAML(Arena *arena, YAML::Node &yaml_conf, Config *config) {
   }
   if(yaml_conf["is_shared_device"]) {
     RequireNumDevices(config);
-    ParseList<int>(yaml_conf["is_shared_device"], config->is_shared_device, config->num_devices);
+    ParseArray<int>(yaml_conf["is_shared_device"], config->is_shared_device, config->num_devices);
   }
   if(yaml_conf["buffer_organizer_num_threads"]) {
     config->bo_num_threads = yaml_conf["buffer_organizer_num_threads"].as<int>();
   }
   if(yaml_conf["default_rr_split"]) {
     config->default_rr_split = yaml_conf["default_rr_split"].as<int>();
+  }
+  if(yaml_conf["path_exclusions"]) {
+    ParseVector<std::string>(yaml_conf["path_exclusions"], config->path_exclusions);
   }
 
   /*switch (var) {

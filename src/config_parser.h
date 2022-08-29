@@ -100,24 +100,32 @@ void ParseBlockSizes(Config *config, YAML::Node block_sizes, int unit_conversion
 }
 
 template<typename T>
-void ParseList(YAML::Node list_node, T *list, int list_len) {
+void ParseArray(YAML::Node list_node, T *list, int list_len) {
   int i = 0;
   for(auto val_node : list_node) {
     list[i++] = val_node.as<T>();
   }
 }
 
+template<typename T>
+void ParseVector(YAML::Node list_node, std::vector<T> &list) {
+  int i = 0;
+  for(auto val_node : list_node) {
+    list.emplace_back(val_node.as<T>());
+  }
+}
+
 void ParseSlabUnitSizes(Config *config, YAML::Node matrix_node, int row_len, int *col_len) {
   int i = 0;
   for(auto row : matrix_node) {
-    ParseList<int>(row, config->slab_unit_sizes[i++], col_len[i]);
+    ParseArray<int>(row, config->slab_unit_sizes[i++], col_len[i]);
   }
 }
 
 void ParseDesiredSlabPercentages(Config *config, YAML::Node matrix_node, int row_len, int *col_len) {
   int i = 0;
   for(auto row : matrix_node) {
-    ParseList<f32>(row, config->desired_slab_percentages[i++], col_len[i]);
+    ParseArray<f32>(row, config->desired_slab_percentages[i++], col_len[i]);
   }
 }
 
