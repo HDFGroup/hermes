@@ -46,6 +46,8 @@ void PopulateBufferingPath() {
   } else {
     InitDefaultConfig(&config);
   }
+  kPathExclusions = config.path_exclusions;
+  kPathInclusions = config.path_inclusions;
 
   for (const auto& item : config.mount_points) {
     if (!item.empty()) {
@@ -70,12 +72,6 @@ bool IsTracked(const std::string& path) {
 
   std::string abs_path = WeaklyCanonical(path).string();
 
-  for (const auto& pth : kPathExclusions) {
-    if (abs_path.find(pth) == 0) {
-      return false;
-    }
-  }
-
   for (const auto& pth : INTERCEPTOR_LIST->hermes_flush_exclusion) {
     if (abs_path.find(pth) != std::string::npos) {
       return false;
@@ -84,6 +80,12 @@ bool IsTracked(const std::string& path) {
 
   if (INTERCEPTOR_LIST->hermes_paths_exclusion.empty()) {
     PopulateBufferingPath();
+  }
+
+  for (const auto& pth : kPathExclusions) {
+    if (abs_path.find(pth) == 0) {
+      return false;
+    }
   }
 
   for (const auto& pth : INTERCEPTOR_LIST->hermes_paths_exclusion) {
