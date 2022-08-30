@@ -145,10 +145,10 @@ void ParseBlockSizes(Config *config, YAML::Node block_sizes,
 }
 
 template<typename T>
-void ParseArray(YAML::Node list_node, T *list, int max_list_len) {
+void ParseArray(YAML::Node list_node, std::string var, T *list, int max_list_len) {
   int i = 0;
   if (max_list_len < (int)list_node.size()) {
-    LOG(FATAL) << "An array had " << list_node.size() << " arguments "
+    LOG(FATAL) << var << " (array) had " << list_node.size() << " arguments "
         << "but up to " << max_list_len << " expected\n";
   }
   for (auto val_node : list_node) {
@@ -164,34 +164,34 @@ void ParseVector(YAML::Node list_node, std::vector<T> &list) {
 }
 
 template<typename T>
-void ParseMatrix(YAML::Node matrix_node, T *matrix,
+void ParseMatrix(YAML::Node matrix_node, std::string var, T *matrix,
                  int max_row_len, int max_col_len, int *col_len) {
   int i = 0;
   if (max_row_len < (int)matrix_node.size()) {
-    LOG(FATAL) << "A 2-D array had " << matrix_node.size() << " arguments "
+    LOG(FATAL) << var << " (matrix) had " << matrix_node.size() << " arguments "
                << "but up to " << max_row_len << " expected\n";
   }
   for (auto row : matrix_node) {
-    ParseArray<T>(row, &matrix[i*max_col_len], col_len[i]);
+    ParseArray<T>(row, var, &matrix[i*max_col_len], col_len[i]);
     ++i;
   }
 }
 
 template<typename T>
-void ParseMatrix(YAML::Node matrix_node, T *matrix,
+void ParseMatrix(YAML::Node matrix_node, std::string var, T *matrix,
                  int max_row_len, int max_col_len) {
   int i = 0;
   if (max_row_len < (int)matrix_node.size()) {
-    LOG(FATAL) << "A 2-D array had " << matrix_node.size() << " arguments "
+    LOG(FATAL) << var << " (matrix) had " << matrix_node.size() << " arguments "
                << "but up to " << max_row_len << " expected\n";
   }
   for (auto row : matrix_node) {
-    ParseArray<T>(row, &matrix[i*max_col_len], max_col_len);
+    ParseArray<T>(row, var, &matrix[i*max_col_len], max_col_len);
     ++i;
   }
 }
 
-void ParseRangeList(YAML::Node list_node, std::vector<int> &list) {
+void ParseRangeList(YAML::Node list_node, std::string var, std::vector<int> &list) {
   int min, max;
   for (auto val_node : list_node) {
     std::string val = val_node.as<std::string>();
@@ -206,7 +206,7 @@ void ParseRangeList(YAML::Node list_node, std::vector<int> &list) {
         words.push_back(word);
       }
       if (words.size() != 2) {
-        LOG(FATAL) << "Invalid range definition " << val << std::endl;
+        LOG(FATAL) << var << " has invalid range definition " << val << std::endl;
       }
       min = std::stoi(words[0]);
       max = std::stoi(words[1]);
@@ -302,13 +302,15 @@ void ParseConfigYAML(YAML::Node &yaml_conf, Config *config) {
 
   if (yaml_conf["num_slabs"]) {
     RequireNumDevices(config);
-    ParseArray<int>(yaml_conf["num_slabs"], config->num_slabs,
+    ParseArray<int>(yaml_conf["num_slabs"], "num_slabs",
+                    config->num_slabs,
                     config->num_devices);
   }
   if (yaml_conf["slab_unit_sizes"]) {
     RequireNumDevices(config);
     RequireNumSlabs(config);
     ParseMatrix<int>(yaml_conf["slab_unit_sizes"],
+                     "slab_unit_sizes",
                      reinterpret_cast<int*>(config->slab_unit_sizes),
                      kMaxDevices, kMaxBufferPoolSlabs, config->num_slabs);
   }
@@ -316,17 +318,20 @@ void ParseConfigYAML(YAML::Node &yaml_conf, Config *config) {
     RequireNumDevices(config);
     RequireNumSlabs(config);
     ParseMatrix<f32>(yaml_conf["desired_slab_percentages"],
+                     "desired_slab_percentages",
                      reinterpret_cast<f32*>(config->desired_slab_percentages),
                      kMaxDevices, kMaxBufferPoolSlabs, config->num_slabs);
   }
   if (yaml_conf["bandwidths_mbps"]) {
     RequireNumDevices(config);
     ParseArray<f32>(yaml_conf["bandwidths_mbps"],
+                    "bandwidths_mbps",
                     config->bandwidths, config->num_devices);
   }
   if (yaml_conf["latencies"]) {
     RequireNumDevices(config);
     ParseArray<f32>(yaml_conf["latencies"],
+                    "latencies",
                     config->latencies, config->num_devices);
   }
   if (yaml_conf["buffer_pool_arena_percentage"]) {
@@ -344,6 +349,7 @@ void ParseConfigYAML(YAML::Node &yaml_conf, Config *config) {
   if (yaml_conf["mount_points"]) {
     RequireNumDevices(config);
     ParseArray<std::string>(yaml_conf["mount_points"],
+                            "mount_points",
                             config->mount_points, config->num_devices);
   }
   if (yaml_conf["swap_mount"]) {
@@ -396,7 +402,9 @@ void ParseConfigYAML(YAML::Node &yaml_conf, Config *config) {
         yaml_conf["buffer_organizer_port"].as<int>();
   }
   if (yaml_conf["rpc_host_number_range"]) {
-    ParseRangeList(yaml_conf["rpc_host_number_range"], config->host_numbers);
+    ParseRangeList(yaml_conf["rpc_host_number_range"],
+                   "rpc_host_number_range",
+                   config->host_numbers);
   }
   if (yaml_conf["rpc_num_threads"]) {
     config->rpc_num_threads =
@@ -421,6 +429,7 @@ void ParseConfigYAML(YAML::Node &yaml_conf, Config *config) {
   if (yaml_conf["is_shared_device"]) {
     RequireNumDevices(config);
     ParseArray<int>(yaml_conf["is_shared_device"],
+                    "is_shared_device",
                     config->is_shared_device, config->num_devices);
   }
   if (yaml_conf["buffer_organizer_num_threads"]) {
@@ -436,7 +445,8 @@ void ParseConfigYAML(YAML::Node &yaml_conf, Config *config) {
   if (yaml_conf["bo_capacity_thresholds"]) {
     RequireNumDevices(config);
     f32 thresholds[kMaxDevices][2] = {0};
-    ParseMatrix<f32>(yaml_conf["desired_slab_percentages"],
+    ParseMatrix<f32>(yaml_conf["bo_capacity_thresholds"],
+                     "bo_capacity_thresholds",
                      reinterpret_cast<f32*>(thresholds),
                      kMaxDevices, 2);
     for (int i = 0; i < config->num_devices; ++i) {
