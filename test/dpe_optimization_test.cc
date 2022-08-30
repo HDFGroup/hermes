@@ -30,10 +30,12 @@ void MinimizeIoTimePlaceBlob(std::vector<size_t> &blob_sizes,
             << blob_sizes[0] << " to targets\n" << std::flush;
   std::vector<TargetID> targets =
     testing::GetDefaultTargets(node_state.num_devices);
+  api::Context ctx;
+  ctx.minimize_io_time_options = api::MinimizeIoTimeOptions(0, 0, true);
   Status result = MinimizeIoTimePlacement(blob_sizes,
                                           node_state.bytes_available,
                                           node_state.bandwidth, targets,
-                                          schemas_tmp);
+                                          schemas_tmp, ctx);
   if (result.Failed()) {
     std::cout << "\nMinimizeIoTimePlacement failed\n" << std::flush;
     exit(1);

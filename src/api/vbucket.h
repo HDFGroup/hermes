@@ -39,8 +39,6 @@ class VBucket {
   VBucketID id_;
   /** Traits attached to this vbucket */
   std::list<Trait *> attached_traits_;
-  /** \todo What's that Bob? */
-  Blob local_blob;
   /** internal Hermes object owned by vbucket */
   std::shared_ptr<Hermes> hermes_;
   /** The Context for this VBucket. \todo Why do we need that? */
@@ -52,7 +50,6 @@ class VBucket {
       : name_(initial_name),
         id_({{0, 0}}),
         attached_traits_(),
-        local_blob(),
         hermes_(h),
         ctx_(ctx) {
     if (IsVBucketNameTooLong(name_)) {
@@ -116,8 +113,16 @@ class VBucket {
   /** check if blob is in this vbucket */
   bool ContainsBlob(std::string blob_name, std::string bucket_name);
 
-  /** get a blob linked to this vbucket */
-  Blob &GetBlob(std::string blob_name, std::string bucket_name);
+  /** Get a Blob, calling any OnGet callbacks of attached Traits.
+   *
+   * Exactly like Bucket::Get, except this function invokes the OnGet callback
+   * of any attached Traits.
+   */
+  size_t Get(const std::string &name, Bucket &bkt, Blob &user_blob,
+             const Context &ctx);
+  size_t Get(const std::string &name, Bucket &bkt, Blob &user_blob);
+  size_t Get(const std::string &name, Bucket &bkt, void *user_blob,
+             size_t blob_size, const Context &ctx);
 
   /** retrieves the subset of blob links satisfying pred */
   /** could return iterator */

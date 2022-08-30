@@ -120,6 +120,11 @@ void InitDefaultConfig(Config *config) {
 
   config->bo_num_threads = 4;
   config->default_rr_split = false;
+
+  for (int i = 0; i < config->num_devices; ++i) {
+    config->bo_capacity_thresholds[i].min = 0.0f;
+    config->bo_capacity_thresholds[i].max = 1.0f;
+  }
 }
 
 void FailedLibraryCall(std::string func) {

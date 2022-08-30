@@ -18,12 +18,18 @@
 #include <string>
 
 #include "memory_management.h"
+#include "metadata_management_internal.h"
 #include "buffer_pool.h"
 #include "buffer_pool_internal.h"
+#include "buffer_organizer.h"
 #include "rpc.h"
 #include "metadata_storage.h"
 
 namespace hermes {
+
+bool operator!=(const TargetID &lhs, const TargetID &rhs) {
+  return lhs.as_int != rhs.as_int;
+}
 
 static bool IsNameTooLong(const std::string &name, size_t max) {
   bool result = false;
@@ -649,30 +655,44 @@ BufferIdArray GetBufferIdsFromBlobId(Arena *arena,
   return result;
 }
 
-void LocalCreateBlobMetadata(MetadataManager *mdm, const std::string &blob_name,
-                             BlobID blob_id) {
+void LocalCreateBlobMetadata(SharedMemoryContext *context, MetadataManager *mdm,
+                             const std::string &blob_name, BlobID blob_id,
+                             TargetID effective_target) {
   LocalPut(mdm, blob_name.c_str(), blob_id.as_int, kMapType_BlobId);
   BlobInfo blob_info = {};
   blob_info.stats.frequency = 1;
   blob_info.stats.recency = mdm->clock++;
+  blob_info.effective_target = effective_target;
+
+  if (effective_target != kSwapTargetId) {
+    assert(blob_id.bits.node_id == (int)effective_target.bits.node_id);
+    Target *target = GetTargetFromId(context, effective_target);
+    BeginTicketMutex(&target->effective_blobs_lock);
+    AppendToChunkedIdList(mdm, &target->effective_blobs, blob_id.as_int);
+    EndTicketMutex(&target->effective_blobs_lock);
+  }
+
   LocalPut(mdm, blob_id, blob_info);
 }
 
-void CreateBlobMetadata(MetadataManager *mdm, RpcContext *rpc,
-                        const std::string &blob_name, BlobID blob_id) {
+void CreateBlobMetadata(SharedMemoryContext *context, RpcContext *rpc,
+                        const std::string &blob_name, BlobID blob_id,
+                        TargetID effective_target) {
+  MetadataManager *mdm = GetMetadataManagerFromContext(context);
   u32 target_node = GetBlobNodeId(blob_id);
   if (target_node == rpc->node_id) {
-    LocalCreateBlobMetadata(mdm, blob_name, blob_id);
+    LocalCreateBlobMetadata(context, mdm, blob_name, blob_id, effective_target);
   } else {
     RpcCall<bool>(rpc, target_node, "RemoteCreateBlobMetadata", blob_name,
-                  blob_id);
+                  blob_id, effective_target);
   }
 }
 
 void AttachBlobToBucket(SharedMemoryContext *context, RpcContext *rpc,
                         const char *blob_name, BucketID bucket_id,
                         const std::vector<BufferID> &buffer_ids,
-                        bool is_swap_blob, bool called_from_buffer_organizer) {
+                        TargetID effective_target, bool is_swap_blob,
+                        bool called_from_buffer_organizer) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
 
   std::string internal_name = MakeInternalBlobName(blob_name, bucket_id);
@@ -699,7 +719,7 @@ void AttachBlobToBucket(SharedMemoryContext *context, RpcContext *rpc,
   blob_id.bits.buffer_ids_offset = AllocateBufferIdList(context, rpc,
                                                         target_node,
                                                         buffer_ids);
-  CreateBlobMetadata(mdm, rpc, internal_name, blob_id);
+  CreateBlobMetadata(context, rpc, internal_name, blob_id, effective_target);
   AddBlobIdToBucket(mdm, rpc, blob_id, bucket_id);
 }
 
@@ -727,6 +747,10 @@ void WaitForOutstandingBlobOps(MetadataManager *mdm, BlobID blob_id) {
     BlobInfo *blob_info = GetBlobInfoPtr(mdm, blob_id);
     if (blob_info) {
       t = TryBeginTicketMutex(&blob_info->lock, ticket);
+    } else {
+      // Blob was deleted
+      ReleaseBlobInfoPtr(mdm);
+      break;
     }
     if (!t.acquired) {
       ReleaseBlobInfoPtr(mdm);
@@ -929,7 +953,7 @@ SystemViewState *GetLocalSystemViewState(SharedMemoryContext *context) {
 }
 
 std::vector<u64> LocalGetGlobalDeviceCapacities(SharedMemoryContext *context) {
-  SystemViewState *global_svs = GetGlobalSystemViewState(context);
+  GlobalSystemViewState *global_svs = GetGlobalSystemViewState(context);
 
   std::vector<u64> result(global_svs->num_devices);
   for (size_t i = 0; i < result.size(); ++i) {
@@ -940,7 +964,7 @@ std::vector<u64> LocalGetGlobalDeviceCapacities(SharedMemoryContext *context) {
 }
 
 std::vector<u64> GetGlobalDeviceCapacities(SharedMemoryContext *context,
-                                         RpcContext *rpc) {
+                                           RpcContext *rpc) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   u32 target_node = mdm->global_system_view_state_node_id;
 
@@ -956,25 +980,67 @@ std::vector<u64> GetGlobalDeviceCapacities(SharedMemoryContext *context,
   return result;
 }
 
-SystemViewState *GetGlobalSystemViewState(SharedMemoryContext *context) {
+GlobalSystemViewState *GetGlobalSystemViewState(SharedMemoryContext *context) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
-  SystemViewState *result =
-    (SystemViewState *)((u8 *)mdm + mdm->global_system_view_state_offset);
+  GlobalSystemViewState *result =
+    (GlobalSystemViewState *)((u8 *)mdm + mdm->global_system_view_state_offset);
   assert((u8 *)result != (u8 *)mdm);
 
   return result;
 }
 
-void LocalUpdateGlobalSystemViewState(SharedMemoryContext *context,
-                                      std::vector<i64> adjustments) {
-  for (size_t i = 0; i < adjustments.size(); ++i) {
-    SystemViewState *state = GetGlobalSystemViewState(context);
-    if (adjustments[i]) {
-      state->bytes_available[i].fetch_add(adjustments[i]);
-      DLOG(INFO) << "DeviceID " << i << " adjusted by " << adjustments[i]
-                 << " bytes\n";
+std::vector<ViolationInfo>
+LocalUpdateGlobalSystemViewState(SharedMemoryContext *context, u32 node_id,
+                                 std::vector<i64> adjustments) {
+  std::vector<ViolationInfo> result;
+  for (size_t device_idx = 0; device_idx < adjustments.size(); ++device_idx) {
+    GlobalSystemViewState *state = GetGlobalSystemViewState(context);
+    u32 target_idx = ((node_id - 1) * adjustments.size()) + device_idx;
+    if (adjustments[device_idx]) {
+      state->bytes_available[target_idx].fetch_add(adjustments[device_idx]);
+      DLOG(INFO) << "DeviceID " << device_idx << " on node " << node_id
+                 << " adjusted by " << adjustments[device_idx] << " bytes\n";
+    }
+
+    // Collect devices for which to trigger the BufferOrganizer if the
+    // capacities are beyond the min/max thresholds
+    float percentage_available = 0.0f;
+    if (state->bytes_available[target_idx] > 0) {
+      percentage_available = ((f32)state->bytes_available[target_idx].load() /
+                              (f32)state->capacities[device_idx]);
+    }
+
+    ViolationInfo info = {};
+    float percentage_violation = 0.0f;
+    f32 percentage_used = 1.0f - percentage_available;
+    float min_threshold = state->bo_capacity_thresholds[device_idx].min;
+    float max_threshold = state->bo_capacity_thresholds[device_idx].max;
+
+    if (percentage_used > max_threshold) {
+      percentage_violation = percentage_used - max_threshold;
+      info.violation = ThresholdViolation::kMax;
+    }
+    if (percentage_used < min_threshold) {
+      percentage_violation = min_threshold - percentage_used;
+      info.violation = ThresholdViolation::kMin;
+    }
+
+    if (percentage_violation > 0.0f) {
+      TargetID target_id = {};
+      target_id.bits.node_id = node_id;
+      target_id.bits.device_id = (DeviceID)device_idx;
+      // TODO(chogan): This needs to change when we support num_devices !=
+      // num_targets
+      target_id.bits.index = device_idx;
+
+      info.target_id = target_id;
+      info.violation_size =
+        (size_t)(percentage_violation * state->capacities[device_idx]);
+      result.push_back(info);
     }
   }
+
+  return result;
 }
 
 void UpdateGlobalSystemViewState(SharedMemoryContext *context,
@@ -991,14 +1057,22 @@ void UpdateGlobalSystemViewState(SharedMemoryContext *context,
     }
   }
 
+  std::vector<ViolationInfo> devices_to_organize;
   if (update_needed) {
     u32 target_node = mdm->global_system_view_state_node_id;
     if (target_node == rpc->node_id) {
-      LocalUpdateGlobalSystemViewState(context, adjustments);
+      devices_to_organize =
+        LocalUpdateGlobalSystemViewState(context, rpc->node_id, adjustments);
     } else {
-      RpcCall<bool>(rpc, target_node, "RemoteUpdateGlobalSystemViewState",
-                    adjustments);
+      devices_to_organize =
+        RpcCall<std::vector<ViolationInfo>>(rpc, target_node,
+                                            "RemoteUpdateGlobalSystemViewState",
+                                            adjustments);
     }
+  }
+
+  for (size_t i = 0; i < devices_to_organize.size(); ++i) {
+    EnforceCapacityThresholds(context, rpc, devices_to_organize[i]);
   }
 }
 
@@ -1029,7 +1103,38 @@ SystemViewState *CreateSystemViewState(Arena *arena, Config *config) {
   SystemViewState *result = PushClearedStruct<SystemViewState>(arena);
   result->num_devices = config->num_devices;
   for (int i = 0; i < result->num_devices; ++i) {
+    result->capacities[i] = config->capacities[i];
     result->bytes_available[i] = config->capacities[i];
+
+    // Min and max thresholds
+    result->bo_capacity_thresholds[i] = config->bo_capacity_thresholds[i];
+  }
+
+  return result;
+}
+
+GlobalSystemViewState *CreateGlobalSystemViewState(RpcContext *rpc,
+                                                   Arena *arena,
+                                                   Config *config) {
+  GlobalSystemViewState *result =
+    PushClearedStruct<GlobalSystemViewState>(arena);
+  result->num_devices = config->num_devices;
+
+  for (int i = 0; i < result->num_devices; ++i) {
+    result->capacities[i] = config->capacities[i];
+    // Min and max thresholds
+    result->bo_capacity_thresholds[i] = config->bo_capacity_thresholds[i];
+  }
+  size_t num_targets = config->num_devices * rpc->num_nodes;
+  result->num_targets = num_targets;
+  result->bytes_available =
+    PushClearedArray<std::atomic<u64>>(arena, num_targets);
+
+  for (u32 node_idx = 0; node_idx < rpc->num_nodes; ++node_idx) {
+    for (int device_idx = 0; device_idx < result->num_devices; ++device_idx) {
+      u64 index = (node_idx * result->num_devices) + device_idx;
+      result->bytes_available[index].store(result->capacities[device_idx]);
+    }
   }
 
   return result;
@@ -1089,11 +1194,11 @@ SwapBlob IdArrayToSwapBlob(BufferIdArray ids) {
   return result;
 }
 
-void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
-                         int node_id) {
+void InitMetadataManager(MetadataManager *mdm, RpcContext *rpc, Arena *arena,
+                         Config *config) {
   // NOTE(chogan): All MetadataManager offsets are relative to the address of
   // the MDM itself.
-
+  u32 node_id = rpc->node_id;
   arena->error_handler = MetadataArenaErrorHandler;
 
   mdm->map_seed = 0x4E58E5DF;
@@ -1111,7 +1216,8 @@ void InitMetadataManager(MetadataManager *mdm, Arena *arena, Config *config,
 
   if (node_id == 1) {
     // NOTE(chogan): Only Node 1 has the Global SystemViewState
-    SystemViewState *global_state = CreateSystemViewState(arena, config);
+    GlobalSystemViewState *global_state =
+      CreateGlobalSystemViewState(rpc, arena, config);
     mdm->global_system_view_state_offset = GetOffsetFromMdm(mdm, global_state);
   }
   mdm->global_system_view_state_node_id = 1;
@@ -1430,6 +1536,7 @@ bool LocalLockBlob(SharedMemoryContext *context, BlobID blob_id) {
         result = false;
         if (t.ticket == blob_info->last) {
           LocalDelete(mdm, blob_id);
+          LocalFreeBufferIdList(context, blob_id);
         }
       }
       ReleaseBlobInfoPtr(mdm);

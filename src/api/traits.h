@@ -21,6 +21,9 @@
 namespace hermes {
 namespace api {
 
+#define HERMES_PERSIST_TRAIT 11
+#define HERMES_WRITE_ONLY_TRAIT 12
+
 /** A blob's hosting bucket and blob names */
 struct BlobInfo {
   /** The blob-hosting bucket name */
@@ -43,7 +46,7 @@ struct Trait {
   /** The trait's ID */
   TraitID id;
   /** \todo ??? */
-  TraitIdArray conflict_traits;
+  std::vector<TraitID> conflict_traits;
   /** The trait's type */
   TraitType type;
   /** Callback for trait->vbucket attach events */
@@ -54,12 +57,13 @@ struct Trait {
   OnLinkCallback onLinkFn;
   /** Callback for blob-<vbucket unlink events */
   OnLinkCallback onUnlinkFn;
+  /** Callback for VBucket::Get events */
+  OnLinkCallback onGetFn;
 
   Trait() {}
-  Trait(TraitID id, TraitIdArray conflict_traits, TraitType type);
+  Trait(TraitID id, const std::vector<TraitID> &conflict_traits,
+        TraitType type);
 };
-
-#define HERMES_PERSIST_TRAIT 11
 
 /** (File) Persistence trait */
 struct PersistTrait : public Trait {
@@ -74,8 +78,18 @@ struct PersistTrait : public Trait {
 
   void onAttach(HermesPtr hermes, VBucketID id, Trait *trait);
   void onDetach(HermesPtr hermes, VBucketID id, Trait *trait);
-  void onLink(HermesPtr hermes, TraitInput &blob, Trait *trait);
-  void onUnlink(HermesPtr hermes, TraitInput &blob, Trait *trait);
+  void onLink(HermesPtr hermes, TraitInput &input, Trait *trait);
+  void onUnlink(HermesPtr hermes, TraitInput &input, Trait *trait);
+};
+
+struct WriteOnlyTrait : public Trait {
+  WriteOnlyTrait();
+
+  void onAttach(HermesPtr hermes, VBucketID id, Trait *trait);
+  void onDetach(HermesPtr hermes, VBucketID id, Trait *trait);
+  void onLink(HermesPtr hermes, TraitInput &input, Trait *trait);
+  void onUnlink(HermesPtr hermes, TraitInput &input, Trait *trait);
+  void onGet(HermesPtr hermes, TraitInput &input, Trait *trait);
 };
 
 }  // namespace api

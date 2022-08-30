@@ -135,16 +135,40 @@ bool VBucket::ContainsBlob(std::string blob_name, std::string bucket_name) {
   return ret;
 }
 
-Blob& VBucket::GetBlob(std::string blob_name, std::string bucket_name) {
-  LOG(INFO) << "Retrieving blob " << blob_name << " from bucket " << bucket_name
-            << " in VBucket " << name_ << '\n';
-  hermes::api::Context ctx;
-  Bucket bkt(bucket_name, hermes_, ctx);
-  local_blob = {};
-  size_t blob_size = bkt.Get(blob_name, local_blob, ctx);
-  local_blob.resize(blob_size);
-  bkt.Get(blob_name, local_blob, ctx);
-  return local_blob;
+size_t VBucket::Get(const std::string &name, Bucket &bkt, Blob &user_blob,
+                   const Context &ctx) {
+  size_t ret = Get(name, bkt, user_blob.data(), user_blob.size(), ctx);
+
+  return ret;
+}
+
+size_t VBucket::Get(const std::string &name, Bucket &bkt, Blob &user_blob) {
+  size_t result = Get(name, bkt, user_blob, ctx_);
+
+  return result;
+}
+
+size_t VBucket::Get(const std::string &name, Bucket &bkt, void *user_blob,
+                    size_t blob_size, const Context &ctx) {
+  bool is_size_query = false;
+  if (blob_size != 0) {
+    is_size_query = true;
+  }
+
+  size_t result = bkt.Get(name, user_blob, blob_size, ctx);
+
+  if (!is_size_query) {
+    TraitInput input;
+    input.blob_name = name;
+    input.bucket_name = bkt.GetName();
+    for (const auto& t : attached_traits_) {
+      if (t->onGetFn != nullptr) {
+        t->onGetFn(hermes_, input, t);
+      }
+    }
+  }
+
+  return result;
 }
 
 std::vector<std::string> VBucket::GetLinks(Context& ctx) {
@@ -292,7 +316,7 @@ Status VBucket::Destroy(Context& ctx) {
   Status result;
 
   if (IsValid()) {
-    // NOTE(chogan): Let all flusing tasks complete before destroying the
+    // NOTE(chogan): Let all flushing tasks complete before destroying the
     // VBucket.
     WaitForBackgroundFlush();
 
@@ -308,11 +332,13 @@ Status VBucket::Destroy(Context& ctx) {
       for (const auto& blob_id : blob_ids) {
         TraitInput input = {};
         BucketID bucket_id = GetBucketIdFromBlobId(context, rpc, blob_id);
-        input.bucket_name = GetBucketNameById(context, rpc, bucket_id);
-        input.blob_name = GetBlobNameFromId(context, rpc, blob_id);
-        if (t->onUnlinkFn != nullptr) {
-          t->onUnlinkFn(hermes_, input, t);
-          // TODO(hari): @errorhandling Check if unlinking was successful
+        if (!IsNullBucketId(bucket_id)) {
+          input.bucket_name = GetBucketNameById(context, rpc, bucket_id);
+          input.blob_name = GetBlobNameFromId(context, rpc, blob_id);
+          if (t->onUnlinkFn != nullptr) {
+            t->onUnlinkFn(hermes_, input, t);
+            // TODO(hari): @errorhandling Check if unlinking was successful
+          }
         }
       }
     }
