@@ -1,6 +1,0 @@
-path_exclusions: [
-    "/bin/", "/boot/", "/dev/",  "/etc/",
-    "/lib/", "/opt/",  "/proc/", "/sbin/",
-    "/sys/", "/usr/",  "/var/",  "/run/",
-    "pipe", "socket:", "anon_inode:"
-]

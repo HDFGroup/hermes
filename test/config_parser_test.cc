@@ -209,7 +209,7 @@ void TestDefaultConfig(Arena *arena, const char *config_file) {
 
   Assert(config.max_buckets_per_node == 16);
   Assert(config.max_vbuckets_per_node == 8);
-  Assert(config.system_view_state_update_interval_ms == 100);
+  Assert(config.system_view_state_update_interval_ms == 1000);
 
   Assert(config.rpc_protocol == "ofi+sockets");
   Assert(config.rpc_domain.empty());
@@ -224,9 +224,9 @@ void TestDefaultConfig(Arena *arena, const char *config_file) {
   Assert(config.rpc_server_suffix.empty());
   Assert(config.host_numbers == std::vector<int>());
 
-  const char expected_shm_name[] = "/hermes_buffer_pool_";
-  Assert(strncmp(config.buffer_pool_shmem_name, expected_shm_name,
-                 sizeof(expected_shm_name)) == 0);
+  std::string expected_shm_name = "/hermes_buffer_pool_";
+  std::string actual_shm_name = config.buffer_pool_shmem_name;
+  Assert(expected_shm_name == actual_shm_name);
 
   Assert(config.default_placement_policy ==
          hermes::api::PlacementPolicy::kMinimizeIoTime);

@@ -385,7 +385,8 @@ void ParseConfigYAML(YAML::Node &yaml_conf, Config *config) {
   }
   if (yaml_conf["buffer_pool_shmem_name"]) {
     std::string name = yaml_conf["buffer_pool_shmem_name"].as<std::string>();
-    std::snprintf(config->buffer_pool_shmem_name, name.size(),
+    std::snprintf(config->buffer_pool_shmem_name,
+                  kMaxBufferPoolShmemNameLength,
                   "%s", name.c_str());
   }
   if (yaml_conf["rpc_protocol"]) {
