@@ -29,7 +29,8 @@
 
 namespace hermes {
 
-//TODO(llogan): Could be helpful to check if user has invalid config. Unused for now.
+/* TODO(llogan): Could be helpful to check if user has invalid config.
+ * Unused for now. */
 static const char *kConfigVariableStrings[] = {
   "unknown",
   "num_devices",
@@ -118,20 +119,22 @@ void RequireBlockSizesUnset(bool &already_specified) {
   }
 }
 
-void ParseCapacities(Config *config, YAML::Node capacities, int unit_conversion, bool &already_specified) {
+void ParseCapacities(Config *config, YAML::Node capacities,
+                     int unit_conversion, bool &already_specified) {
   int i = 0;
   RequireNumDevices(config);
   RequireCapacitiesUnset(already_specified);
-  for(auto val_node : capacities) {
+  for (auto val_node : capacities) {
     config->capacities[i++] = val_node.as<size_t>() * unit_conversion;
   }
 }
 
-void ParseBlockSizes(Config *config, YAML::Node block_sizes, int unit_conversion, bool &already_specified) {
+void ParseBlockSizes(Config *config, YAML::Node block_sizes,
+                     int unit_conversion, bool &already_specified) {
   int i = 0;
   RequireNumDevices(config);
   RequireBlockSizesUnset(already_specified);
-  for(auto val_node : block_sizes) {
+  for (auto val_node : block_sizes) {
     size_t block_size = val_node.as<size_t>() * unit_conversion;
     if (block_size > INT_MAX) {
       LOG(FATAL) << "Max supported block size is " << INT_MAX << " bytes. "
@@ -144,7 +147,7 @@ void ParseBlockSizes(Config *config, YAML::Node block_sizes, int unit_conversion
 template<typename T>
 void ParseArray(YAML::Node list_node, T *list, int list_len) {
   int i = 0;
-  for(auto val_node : list_node) {
+  for (auto val_node : list_node) {
     list[i++] = val_node.as<T>();
   }
 }
@@ -152,24 +155,26 @@ void ParseArray(YAML::Node list_node, T *list, int list_len) {
 template<typename T>
 void ParseVector(YAML::Node list_node, std::vector<T> &list) {
   int i = 0;
-  for(auto val_node : list_node) {
+  for (auto val_node : list_node) {
     list.emplace_back(val_node.as<T>());
   }
 }
 
 template<typename T>
-void ParseMatrix(YAML::Node matrix_node, T *matrix, int max_row_len, int max_col_len, int *col_len) {
+void ParseMatrix(YAML::Node matrix_node, T *matrix,
+                 int max_row_len, int max_col_len, int *col_len) {
   int i = 0;
-  for(auto row : matrix_node) {
+  for (auto row : matrix_node) {
     ParseArray<T>(row, &matrix[i*max_col_len], col_len[i]);
     ++i;
   }
 }
 
 template<typename T>
-void ParseMatrix(YAML::Node matrix_node, T *matrix, int max_row_len, int max_col_len) {
+void ParseMatrix(YAML::Node matrix_node, T *matrix,
+                 int max_row_len, int max_col_len) {
   int i = 0;
-  for(auto row : matrix_node) {
+  for (auto row : matrix_node) {
     ParseArray<T>(row, &matrix[i*max_col_len], max_col_len);
     ++i;
   }
@@ -177,26 +182,25 @@ void ParseMatrix(YAML::Node matrix_node, T *matrix, int max_row_len, int max_col
 
 void ParseRangeList(YAML::Node list_node, std::vector<int> &list) {
   int i = 0, min, max;
-  for(auto val_node : list_node) {
+  for (auto val_node : list_node) {
     std::string val = val_node.as<std::string>();
-    if(val.find('-') == std::string::npos) {
+    if (val.find('-') == std::string::npos) {
       min = val_node.as<int>();
       max = min;
-    }
-    else {
+    } else {
       std::stringstream ss(val);
       std::string word;
       std::vector<std::string> words;
-      while(std::getline(ss, word, '-')) {
+      while (std::getline(ss, word, '-')) {
         words.push_back(word);
       }
-      if(words.size() != 2) {
+      if (words.size() != 2) {
         LOG(FATAL) << "Invalid range definition " << val << std::endl;
       }
       min = std::stoi(words[0]);
       max = std::stoi(words[1]);
     }
-    for(int i = min; i <= max; ++i) {
+    for (int i = min; i <= max; ++i) {
       list.emplace_back(i);
     }
   }
@@ -243,127 +247,153 @@ void CheckConstraints(Config *config) {
 void ParseConfigYAML(Arena *arena, YAML::Node &yaml_conf, Config *config) {
   bool capcities_specified = false, block_sizes_specified = false;
 
-  if(yaml_conf["num_devices"]) {
+  if (yaml_conf["num_devices"]) {
     config->num_devices = yaml_conf["num_devices"].as<int>();
     config->num_targets = yaml_conf["num_devices"].as<int>();
   }
-  if(yaml_conf["num_targets"]) {
+  if (yaml_conf["num_targets"]) {
     config->num_targets = yaml_conf["num_targets"].as<int>();
   }
 
-  if(yaml_conf["capacities_bytes"]) {
-    ParseCapacities(config, yaml_conf["capacities_bytes"], 1, capcities_specified);
+  if (yaml_conf["capacities_bytes"]) {
+    ParseCapacities(config, yaml_conf["capacities_bytes"], 1,
+                    capcities_specified);
   }
-  if(yaml_conf["capacities_kb"]) {
-    ParseCapacities(config, yaml_conf["capacities_kb"], KILOBYTES(1), capcities_specified);
+  if (yaml_conf["capacities_kb"]) {
+    ParseCapacities(config, yaml_conf["capacities_kb"], KILOBYTES(1),
+                    capcities_specified);
   }
-  if(yaml_conf["capacities_mb"]) {
-    ParseCapacities(config, yaml_conf["capacities_mb"], MEGABYTES(1), capcities_specified);
+  if (yaml_conf["capacities_mb"]) {
+    ParseCapacities(config, yaml_conf["capacities_mb"], MEGABYTES(1),
+                    capcities_specified);
   }
-  if(yaml_conf["capacities_gb"]) {
-    ParseCapacities(config, yaml_conf["capacities_gb"], GIGABYTES(1), capcities_specified);
-  }
-
-  if(yaml_conf["block_sizes_bytes"]) {
-    ParseBlockSizes(config, yaml_conf["block_sizes_bytes"], 1, block_sizes_specified);
-  }
-  if(yaml_conf["block_sizes_kb"]) {
-    ParseBlockSizes(config, yaml_conf["block_sizes_kb"], KILOBYTES(1), block_sizes_specified);
-  }
-  if(yaml_conf["block_sizes_mb"]) {
-    ParseBlockSizes(config, yaml_conf["block_sizes_mb"], MEGABYTES(1), block_sizes_specified);
-  }
-  if(yaml_conf["block_sizes_gb"]) {
-    ParseBlockSizes(config, yaml_conf["block_sizes_gb"], GIGABYTES(1), block_sizes_specified);
+  if (yaml_conf["capacities_gb"]) {
+    ParseCapacities(config, yaml_conf["capacities_gb"], GIGABYTES(1),
+                    capcities_specified);
   }
 
-  if(yaml_conf["num_slabs"]) {
+  if (yaml_conf["block_sizes_bytes"]) {
+    ParseBlockSizes(config, yaml_conf["block_sizes_bytes"],
+                    1, block_sizes_specified);
+  }
+  if (yaml_conf["block_sizes_kb"]) {
+    ParseBlockSizes(config, yaml_conf["block_sizes_kb"], KILOBYTES(1),
+                    block_sizes_specified);
+  }
+  if (yaml_conf["block_sizes_mb"]) {
+    ParseBlockSizes(config, yaml_conf["block_sizes_mb"], MEGABYTES(1),
+                    block_sizes_specified);
+  }
+  if (yaml_conf["block_sizes_gb"]) {
+    ParseBlockSizes(config, yaml_conf["block_sizes_gb"], GIGABYTES(1),
+                    block_sizes_specified);
+  }
+
+  if (yaml_conf["num_slabs"]) {
     RequireNumDevices(config);
-    ParseArray<int>(yaml_conf["num_slabs"], config->num_slabs, config->num_devices);
+    ParseArray<int>(yaml_conf["num_slabs"], config->num_slabs,
+                    config->num_devices);
   }
-  if(yaml_conf["slab_unit_sizes"]) {
+  if (yaml_conf["slab_unit_sizes"]) {
     RequireNumDevices(config);
     RequireNumSlabs(config);
     ParseMatrix<int>(yaml_conf["slab_unit_sizes"],
                      reinterpret_cast<int*>(config->slab_unit_sizes),
                      kMaxDevices, kMaxBufferPoolSlabs, config->num_slabs);
   }
-  if(yaml_conf["desired_slab_percentages"]) {
+  if (yaml_conf["desired_slab_percentages"]) {
     RequireNumDevices(config);
     RequireNumSlabs(config);
     ParseMatrix<f32>(yaml_conf["desired_slab_percentages"],
                      reinterpret_cast<f32*>(config->desired_slab_percentages),
                      kMaxDevices, kMaxBufferPoolSlabs, config->num_slabs);
   }
-  if(yaml_conf["bandwidths_mbps"]) {
+  if (yaml_conf["bandwidths_mbps"]) {
     RequireNumDevices(config);
-    ParseArray<f32>(yaml_conf["bandwidths_mbps"], config->bandwidths, config->num_devices);
+    ParseArray<f32>(yaml_conf["bandwidths_mbps"],
+                    config->bandwidths, config->num_devices);
   }
-  if(yaml_conf["latencies"]) {
+  if (yaml_conf["latencies"]) {
     RequireNumDevices(config);
-    ParseArray<f32>(yaml_conf["latencies"], config->latencies, config->num_devices);
+    ParseArray<f32>(yaml_conf["latencies"],
+                    config->latencies, config->num_devices);
   }
-  if(yaml_conf["buffer_pool_arena_percentage"]) {
-    config->arena_percentages[hermes::kArenaType_BufferPool] = yaml_conf["buffer_pool_arena_percentage"].as<f32>();
+  if (yaml_conf["buffer_pool_arena_percentage"]) {
+    config->arena_percentages[hermes::kArenaType_BufferPool] =
+        yaml_conf["buffer_pool_arena_percentage"].as<f32>();
   }
-  if(yaml_conf["metadata_arena_percentage"]) {
-    config->arena_percentages[hermes::kArenaType_MetaData] = yaml_conf["metadata_arena_percentage"].as<f32>();
+  if (yaml_conf["metadata_arena_percentage"]) {
+    config->arena_percentages[hermes::kArenaType_MetaData] =
+        yaml_conf["metadata_arena_percentage"].as<f32>();
   }
-  if(yaml_conf["transient_arena_percentage"]) {
-    config->arena_percentages[hermes::kArenaType_Transient] = yaml_conf["transient_arena_percentage"].as<f32>();
+  if (yaml_conf["transient_arena_percentage"]) {
+    config->arena_percentages[hermes::kArenaType_Transient] =
+        yaml_conf["transient_arena_percentage"].as<f32>();
   }
-  if(yaml_conf["mount_points"]) {
+  if (yaml_conf["mount_points"]) {
     RequireNumDevices(config);
-    ParseArray<std::string>(yaml_conf["mount_points"], config->mount_points, config->num_devices);
+    ParseArray<std::string>(yaml_conf["mount_points"],
+                            config->mount_points, config->num_devices);
   }
-  if(yaml_conf["swap_mount"]) {
+  if (yaml_conf["swap_mount"]) {
     config->swap_mount = yaml_conf["swap_mount"].as<std::string>();
   }
-  if(yaml_conf["num_buffer_organizer_retries"]) {
-    config->num_buffer_organizer_retries = yaml_conf["num_buffer_organizer_retries"].as<int>();
+  if (yaml_conf["num_buffer_organizer_retries"]) {
+    config->num_buffer_organizer_retries =
+        yaml_conf["num_buffer_organizer_retries"].as<int>();
   }
-  if(yaml_conf["max_buckets_per_node"]) {
-    config->max_buckets_per_node = yaml_conf["max_buckets_per_node"].as<int>();
+  if (yaml_conf["max_buckets_per_node"]) {
+    config->max_buckets_per_node =
+        yaml_conf["max_buckets_per_node"].as<int>();
   }
-  if(yaml_conf["max_vbuckets_per_node"]) {
-    config->max_vbuckets_per_node = yaml_conf["max_vbuckets_per_node"].as<int>();
+  if (yaml_conf["max_vbuckets_per_node"]) {
+    config->max_vbuckets_per_node =
+        yaml_conf["max_vbuckets_per_node"].as<int>();
   }
-  if(yaml_conf["system_view_state_update_interval_ms"]) {
-    config->system_view_state_update_interval_ms = yaml_conf["system_view_state_update_interval_ms"].as<int>();
+  if (yaml_conf["system_view_state_update_interval_ms"]) {
+    config->system_view_state_update_interval_ms =
+        yaml_conf["system_view_state_update_interval_ms"].as<int>();
   }
-  if(yaml_conf["rpc_server_host_file"]) {
-    config->rpc_server_host_file = yaml_conf["rpc_server_host_file"].as<std::string>();
+  if (yaml_conf["rpc_server_host_file"]) {
+    config->rpc_server_host_file =
+        yaml_conf["rpc_server_host_file"].as<std::string>();
   }
-  if(yaml_conf["rpc_server_base_name"]) {
-    config->rpc_server_base_name = yaml_conf["rpc_server_base_name"].as<std::string>();
+  if (yaml_conf["rpc_server_base_name"]) {
+    config->rpc_server_base_name =
+        yaml_conf["rpc_server_base_name"].as<std::string>();
   }
-  if(yaml_conf["rpc_server_suffix"]) {
-    config->rpc_server_suffix = yaml_conf["rpc_server_suffix"].as<std::string>();
+  if (yaml_conf["rpc_server_suffix"]) {
+    config->rpc_server_suffix =
+        yaml_conf["rpc_server_suffix"].as<std::string>();
   }
-  if(yaml_conf["buffer_pool_shmem_name"]) {
+  if (yaml_conf["buffer_pool_shmem_name"]) {
     std::string name = yaml_conf["buffer_pool_shmem_name"].as<std::string>();
-    std::strcpy(config->buffer_pool_shmem_name, name.c_str());
+    std::snprintf(config->buffer_pool_shmem_name, name.size(),
+                  "%s", name.c_str());
   }
-  if(yaml_conf["rpc_protocol"]) {
+  if (yaml_conf["rpc_protocol"]) {
     config->rpc_protocol = yaml_conf["rpc_protocol"].as<std::string>();
   }
-  if(yaml_conf["rpc_domain"]) {
+  if (yaml_conf["rpc_domain"]) {
     config->rpc_domain = yaml_conf["rpc_domain"].as<std::string>();
   }
-  if(yaml_conf["rpc_port"]) {
+  if (yaml_conf["rpc_port"]) {
     config->rpc_port = yaml_conf["rpc_port"].as<int>();
   }
-  if(yaml_conf["buffer_organizer_port"]) {
-    config->buffer_organizer_port = yaml_conf["buffer_organizer_port"].as<int>();
+  if (yaml_conf["buffer_organizer_port"]) {
+    config->buffer_organizer_port =
+        yaml_conf["buffer_organizer_port"].as<int>();
   }
-  if(yaml_conf["rpc_host_number_range"]) {
+  if (yaml_conf["rpc_host_number_range"]) {
     ParseRangeList(yaml_conf["rpc_host_number_range"], config->host_numbers);
   }
-  if(yaml_conf["rpc_num_threads"]) {
-    config->rpc_num_threads = yaml_conf["rpc_num_threads"].as<int>();
+  if (yaml_conf["rpc_num_threads"]) {
+    config->rpc_num_threads =
+        yaml_conf["rpc_num_threads"].as<int>();
   }
-  if(yaml_conf["default_placement_policy"]) {
-    std::string policy = yaml_conf["default_placement_policy"].as<std::string>();
+  if (yaml_conf["default_placement_policy"]) {
+    std::string policy =
+        yaml_conf["default_placement_policy"].as<std::string>();
 
     if (policy == "MinimizeIoTime") {
       config->default_placement_policy =
@@ -377,20 +407,22 @@ void ParseConfigYAML(Arena *arena, YAML::Node &yaml_conf, Config *config) {
                  << std::endl;
     }
   }
-  if(yaml_conf["is_shared_device"]) {
+  if (yaml_conf["is_shared_device"]) {
     RequireNumDevices(config);
-    ParseArray<int>(yaml_conf["is_shared_device"], config->is_shared_device, config->num_devices);
+    ParseArray<int>(yaml_conf["is_shared_device"],
+                    config->is_shared_device, config->num_devices);
   }
-  if(yaml_conf["buffer_organizer_num_threads"]) {
-    config->bo_num_threads = yaml_conf["buffer_organizer_num_threads"].as<int>();
+  if (yaml_conf["buffer_organizer_num_threads"]) {
+    config->bo_num_threads =
+        yaml_conf["buffer_organizer_num_threads"].as<int>();
   }
-  if(yaml_conf["default_rr_split"]) {
+  if (yaml_conf["default_rr_split"]) {
     config->default_rr_split = yaml_conf["default_rr_split"].as<int>();
   }
-  if(yaml_conf["bo_num_threads"]) {
+  if (yaml_conf["bo_num_threads"]) {
     config->bo_num_threads = yaml_conf["bo_num_threads"].as<int>();
   }
-  if(yaml_conf["bo_capacity_thresholds"]) {
+  if (yaml_conf["bo_capacity_thresholds"]) {
     RequireNumDevices(config);
     f32 thresholds[kMaxDevices][2] = {0};
     ParseMatrix<f32>(yaml_conf["desired_slab_percentages"],
@@ -401,11 +433,13 @@ void ParseConfigYAML(Arena *arena, YAML::Node &yaml_conf, Config *config) {
       config->bo_capacity_thresholds[i].max = thresholds[i][1];
     }
   }
-  if(yaml_conf["path_exclusions"]) {
-    ParseVector<std::string>(yaml_conf["path_exclusions"], config->path_exclusions);
+  if (yaml_conf["path_exclusions"]) {
+    ParseVector<std::string>(
+        yaml_conf["path_exclusions"], config->path_exclusions);
   }
-  if(yaml_conf["path_inclusions"]) {
-    ParseVector<std::string>(yaml_conf["path_inclusions"], config->path_inclusions);
+  if (yaml_conf["path_inclusions"]) {
+    ParseVector<std::string>(
+        yaml_conf["path_inclusions"], config->path_inclusions);
   }
 }
 
@@ -416,7 +450,8 @@ void ParseConfig(Arena *arena, const char *path, Config *config) {
   ParseConfigYAML(arena, yaml_conf, config);
 }
 
-void ParseConfigString(Arena *arena, const std::string &config_string, Config *config) {
+void ParseConfigString(
+    Arena *arena, const std::string &config_string, Config *config) {
   ScopedTemporaryMemory scratch(arena);
   InitDefaultConfig(config);
   YAML::Node yaml_conf = YAML::Load(config_string);
