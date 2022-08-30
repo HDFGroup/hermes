@@ -29,50 +29,50 @@
 
 namespace hermes {
 
-/* TODO(llogan): Could be helpful to check if user has invalid config.
- * Unused for now. */
-//static const char *kConfigVariableStrings[] = {
-//  "unknown",
-//  "num_devices",
-//  "num_targets",
-//  "capacities_bytes",
-//  "capacities_kb",
-//  "capacities_mb",
-//  "capacities_gb",
-//  "block_sizes_bytes",
-//  "block_sizes_kb",
-//  "block_sizes_mb",
-//  "block_sizes_gb",
-//  "num_slabs",
-//  "slab_unit_sizes",
-//  "desired_slab_percentages",
-//  "bandwidths_mbps",
-//  "latencies_us",
-//  "buffer_pool_arena_percentage",
-//  "metadata_arena_percentage",
-//  "transient_arena_percentage",
-//  "mount_points",
-//  "swap_mount",
-//  "num_buffer_organizer_retries",
-//  "max_buckets_per_node",
-//  "max_vbuckets_per_node",
-//  "system_view_state_update_interval_ms",
-//  "rpc_server_host_file",
-//  "rpc_server_base_name",
-//  "rpc_server_suffix",
-//  "buffer_pool_shmem_name",
-//  "rpc_protocol",
-//  "rpc_domain",
-//  "rpc_port",
-//  "buffer_organizer_port",
-//  "rpc_host_number_range",
-//  "rpc_num_threads",
-//  "default_placement_policy",
-//  "is_shared_device",
-//  "buffer_organizer_num_threads",
-//  "default_rr_split",
-//  "bo_capacity_thresholds",
-//};
+// TODO(llogan): Use to check for invalid params
+/*
+static const char *kConfigVariableStrings[] = {
+  "unknown",
+  "num_devices",
+  "num_targets",
+  "capacities_bytes",
+  "capacities_kb",
+  "capacities_mb",
+  "capacities_gb",
+  "block_sizes_bytes",
+  "block_sizes_kb",
+  "block_sizes_mb",
+  "block_sizes_gb",
+  "num_slabs",
+  "slab_unit_sizes",
+  "desired_slab_percentages",
+  "bandwidths_mbps",
+  "latencies_us",
+  "buffer_pool_arena_percentage",
+  "metadata_arena_percentage",
+  "transient_arena_percentage",
+  "mount_points",
+  "swap_mount",
+  "num_buffer_organizer_retries",
+  "max_buckets_per_node",
+  "max_vbuckets_per_node",
+  "system_view_state_update_interval_ms",
+  "rpc_server_host_file",
+  "rpc_server_base_name",
+  "rpc_server_suffix",
+  "buffer_pool_shmem_name",
+  "rpc_protocol",
+  "rpc_domain",
+  "rpc_port",
+  "buffer_organizer_port",
+  "rpc_host_number_range",
+  "rpc_num_threads",
+  "default_placement_policy",
+  "is_shared_device",
+  "buffer_organizer_num_threads",
+  "default_rr_split",
+  "bo_capacity_thresholds",
+};*/
 
 void PrintExpectedAndFail(const std::string &expected, u32 line_number = 0) {
   std::ostringstream msg;
@@ -147,7 +147,7 @@ void ParseBlockSizes(Config *config, YAML::Node block_sizes,
 template<typename T>
 void ParseArray(YAML::Node list_node, T *list, int max_list_len) {
   int i = 0;
-  if(max_list_len < (int)list_node.size()) {
+  if (max_list_len < (int)list_node.size()) {
     LOG(FATAL) << "An array had " << list_node.size() << " arguments "
         << "but up to " << max_list_len << " expected\n";
   }
@@ -167,7 +167,7 @@ template<typename T>
 void ParseMatrix(YAML::Node matrix_node, T *matrix,
                  int max_row_len, int max_col_len, int *col_len) {
   int i = 0;
-  if(max_row_len < (int)matrix_node.size()) {
+  if (max_row_len < (int)matrix_node.size()) {
     LOG(FATAL) << "A 2-D array had " << matrix_node.size() << " arguments "
                << "but up to " << max_row_len << " expected\n";
   }
@@ -181,7 +181,7 @@ template<typename T>
 void ParseMatrix(YAML::Node matrix_node, T *matrix,
                  int max_row_len, int max_col_len) {
   int i = 0;
-  if(max_row_len < (int)matrix_node.size()) {
+  if (max_row_len < (int)matrix_node.size()) {
     LOG(FATAL) << "A 2-D array had " << matrix_node.size() << " arguments "
                << "but up to " << max_row_len << " expected\n";
   }
