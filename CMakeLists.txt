@@ -272,7 +272,10 @@ if(HERMES_RPC_THALLIUM)
 endif()
 
 #YAML-CPP
-find_package(yaml-cpp CONFIG REQUIRED)
+find_package(yaml-cpp REQUIRED)
+if(yaml-cpp_FOUND)
+  message(STATUS "found yaml-cpp at ${yaml-cpp_DIR}")
+endif()
 
 # GLOG
 find_package(glog REQUIRED)
