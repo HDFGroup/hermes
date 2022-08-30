@@ -21,11 +21,11 @@ git clone https://github.com/jya-kmu/hdf5-iotest.git
 cd hdf5-iotest
 git checkout hermes-vfd
 ```
-We need two config files `hermes.conf` and `hdf5_iotest.ini` to start `hdf5-iotest` with 
+We need two config files `hermes.yaml` and `hdf5_iotest.ini` to start `hdf5-iotest` with 
 Hermes buffering system. 
 
-To create hermes.conf configuration file for Hermes environment setup, user can start from
-the provided example hermes.conf (named `hermes.conf_4KB_128KB_example`) and modify it 
+To create hermes.yaml configuration file for Hermes environment setup, user can start from
+the provided example hermes.yaml (named `hermes.conf_4KB_128KB_example`) and modify it 
 to match different system setup and test purposes. For example, user can modify 
 `mount_points` and `swap_mount` in the config file according to the system configuration.
 Once the file is ready, place it to top hdf5-iotest directory.
@@ -60,7 +60,7 @@ in the splitting case.
 ## Before the run
 Set up Herems environment variables by
 ```bash
-export HERMES_CONF=/path/to/hermes.conf
+export HERMES_CONF=/path/to/hermes.yaml
 ```
 
 ## Run

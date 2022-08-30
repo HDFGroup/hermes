@@ -250,7 +250,7 @@ void TestDefaultConfig(Arena *arena, const char *config_file) {
 
 int main(int argc, char **argv) {
   if (argc < 2) {
-    fprintf(stderr, "Expected a path to a hermes.conf file\n");
+    fprintf(stderr, "Expected a path to a hermes.yaml file\n");
     exit(-1);
   }
 
