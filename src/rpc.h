@@ -42,6 +42,9 @@ struct RpcContext {
   /** Array of host numbers in shared memory. This size is
    * RpcContext::num_nodes */
   int *host_numbers;
+  /** The number of host numbers that were present in the rpc_host_number_range
+   * entry in the config file*/
+  size_t num_host_numbers;
   /** Array of host names stored in shared memory. This array size is
    * RpcContext::num_nodes. */
   ShmemString *host_names;

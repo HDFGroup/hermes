@@ -236,6 +236,12 @@ void TestDefaultConfig(Arena *arena, const char *config_file) {
   Assert(config.is_shared_device[2] == 0);
   Assert(config.is_shared_device[3] == 0);
 
+
+  for (int i = 0; i < config.num_devices; ++i) {
+    Assert(config.bo_capacity_thresholds[i].min == 0.0f);
+    Assert(config.bo_capacity_thresholds[i].max == 1.0f);
+  }
+
   Assert(config.bo_num_threads == 4);
 }
 

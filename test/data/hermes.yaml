@@ -1,7 +1,5 @@
 # Example Hermes configuration file
 
-# TODO(chogan): Allow specifying capacity values in bytes, KiB, or GiB.
-
 # The number of buffering tiers available. For example, RAM, NVMe, burst
 # buffer, and parallel file system would be 4 tiers.
 num_devices: 4
@@ -114,6 +112,22 @@ default_placement_policy: "MinimizeIoTime"
 # into a random number of smaller Blobs.
 default_rr_split: 0
 
+# For each device, the minimum and maximum percent capacity threshold at which
+# the BufferOrganizer will trigger. Decreasing the maximum thresholds will cause
+# the BufferOrganizer to move data to lower devices, making more room in faster
+# devices (ideal for write-heavy workloads). Conversely, increasing the minimum
+# threshold will cause data to be moved from slower devices into faster devices
+# (ideal for read-heavy workloads). For example, a maximum capacity threshold of
+# 0.8 would have the effect of always keeping 20% of the device's space free for
+# incoming writes. Conversely, a minimum capacity threshold of 0.3 would ensure
+# that the device is always at least 30% occupied.
+bo_capacity_thresholds: [
+  [0.0, 1.0],
+  [0.0, 1.0],
+  [0.0, 1.0],
+  [0.0, 1.0]
+]
+
 #Paths which are ignored when buffering data
 path_exclusions: [
     "/bin/", "/boot/", "/dev/",  "/etc/",
@@ -123,3 +137,4 @@ path_exclusions: [
 ]
 #Paths which are never ignored when buffering data
 path_inclusions: ["/var/opt/cray/dws/mounts/"]
+

@@ -22,7 +22,8 @@ namespace hermes {
 
 std::string GetHostNumberAsString(RpcContext *rpc, u32 node_id) {
   std::string result = "";
-  if (rpc->num_nodes > 1) {
+
+  if (rpc->num_host_numbers > 0) {
     // Subtract 1 because the node_id index starts at 1 instead of 0. We reserve
     // 0 so that BufferIDs (which are made from the node_id) can be NULL.
     int index = (node_id - 1);
@@ -308,12 +309,12 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
     req.respond(result);
   };
 
-  // TODO(chogan): Only need this on mdm->global_system_view_state_node_id.
-  // Probably should move it to a completely separate tl::engine.
   auto rpc_update_global_system_view_state =
-    [context](const request &req, std::vector<i64> adjustments) {
-      LocalUpdateGlobalSystemViewState(context, adjustments);
-      req.respond(true);
+    [context, rpc](const request &req, std::vector<i64> adjustments) {
+      std::vector<ViolationInfo> result =
+        LocalUpdateGlobalSystemViewState(context, rpc->node_id, adjustments);
+
+      req.respond(result);
     };
 
   auto rpc_get_blob_ids = [context](const request &req, BucketID bucket_id) {
@@ -418,9 +419,10 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
 
   auto rpc_create_blob_metadata =
     [context](const request &req, const std::string &blob_name,
-              BlobID blob_id) {
+              BlobID blob_id, TargetID effective_target) {
       MetadataManager *mdm = GetMetadataManagerFromContext(context);
-      LocalCreateBlobMetadata(mdm, blob_name, blob_id);
+      LocalCreateBlobMetadata(context, mdm, blob_name, blob_id,
+                              effective_target);
 
       req.respond(true);
   };
@@ -430,6 +432,13 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
                                                  BlobID old_blob_id,
                                                  BlobID new_blob_id) {
     LocalReplaceBlobIdInBucket(context, bucket_id, old_blob_id, new_blob_id);
+    req.respond(true);
+  };
+
+  auto rpc_enforce_capacity_thresholds = [context, rpc](const request &req,
+                                                        ViolationInfo info) {
+    LocalEnforceCapacityThresholds(context, rpc, info);
+    // TODO(chogan): Can this be async?
     req.respond(true);
   };
 
@@ -498,6 +507,8 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
   rpc_server->define("RemoteCreateBlobMetadata", rpc_create_blob_metadata);
   rpc_server->define("RemoteReplaceBlobIdInBucket",
                      rpc_replace_blob_id_in_bucket);
+  rpc_server->define("RemoteEnforceCapacityThresholds",
+                     rpc_enforce_capacity_thresholds);
 }
 
 void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
@@ -639,6 +650,10 @@ void StopGlobalSystemViewStateUpdateThread(RpcContext *rpc) {
 void InitRpcContext(RpcContext *rpc, u32 num_nodes, u32 node_id,
                      Config *config) {
   rpc->num_nodes = num_nodes;
+  // The number of host numbers in the rpc_host_number_range entry of the
+  // configuration file. Not necessarily the number of nodes because when there
+  // is only 1 node, the entry can be left blank, or contain 1 host number.
+  rpc->num_host_numbers = config->host_numbers.size();
   rpc->node_id = node_id;
   rpc->start_server = ThalliumStartRpcServer;
   rpc->state_size = sizeof(ThalliumState);

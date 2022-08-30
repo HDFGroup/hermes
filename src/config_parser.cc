@@ -20,6 +20,50 @@
 
 namespace hermes {
 
+//TODO(llogan): Could be helpful to check if user has invalid config. Unused for now.
+static const char *kConfigVariableStrings[] = {
+  "unknown",
+  "num_devices",
+  "num_targets",
+  "capacities_bytes",
+  "capacities_kb",
+  "capacities_mb",
+  "capacities_gb",
+  "block_sizes_bytes",
+  "block_sizes_kb",
+  "block_sizes_mb",
+  "block_sizes_gb",
+  "num_slabs",
+  "slab_unit_sizes",
+  "desired_slab_percentages",
+  "bandwidths_mbps",
+  "latencies_us",
+  "buffer_pool_arena_percentage",
+  "metadata_arena_percentage",
+  "transient_arena_percentage",
+  "mount_points",
+  "swap_mount",
+  "num_buffer_organizer_retries",
+  "max_buckets_per_node",
+  "max_vbuckets_per_node",
+  "system_view_state_update_interval_ms",
+  "rpc_server_host_file",
+  "rpc_server_base_name",
+  "rpc_server_suffix",
+  "buffer_pool_shmem_name",
+  "rpc_protocol",
+  "rpc_domain",
+  "rpc_port",
+  "buffer_organizer_port",
+  "rpc_host_number_range",
+  "rpc_num_threads",
+  "default_placement_policy",
+  "is_shared_device",
+  "buffer_organizer_num_threads",
+  "default_rr_split",
+  "bo_capacity_thresholds",
+};
+
 void CheckConstraints(Config *config) {
   // rpc_domain must be present if rpc_protocol is "verbs"
   if (config->rpc_protocol.find("verbs") != std::string::npos &&
@@ -102,12 +146,16 @@ void ParseConfigYAML(Arena *arena, YAML::Node &yaml_conf, Config *config) {
   if(yaml_conf["slab_unit_sizes"]) {
     RequireNumDevices(config);
     RequireNumSlabs(config);
-    ParseSlabUnitSizes(config, yaml_conf["slab_unit_sizes"], config->num_devices, config->num_slabs);
+    ParseMatrix<int>(yaml_conf["slab_unit_sizes"],
+                     reinterpret_cast<int*>(config->slab_unit_sizes),
+                     kMaxDevices, kMaxBufferPoolSlabs, config->num_slabs);
   }
   if(yaml_conf["desired_slab_percentages"]) {
     RequireNumDevices(config);
     RequireNumSlabs(config);
-    ParseDesiredSlabPercentages(config, yaml_conf["desired_slab_percentages"], config->num_devices, config->num_slabs);
+    ParseMatrix<f32>(yaml_conf["desired_slab_percentages"],
+                     reinterpret_cast<f32*>(config->desired_slab_percentages),
+                     kMaxDevices, kMaxBufferPoolSlabs, config->num_slabs);
   }
   if(yaml_conf["bandwidths_mbps"]) {
     RequireNumDevices(config);
@@ -201,19 +249,26 @@ void ParseConfigYAML(Arena *arena, YAML::Node &yaml_conf, Config *config) {
   if(yaml_conf["default_rr_split"]) {
     config->default_rr_split = yaml_conf["default_rr_split"].as<int>();
   }
+  if(yaml_conf["bo_num_threads"]) {
+    config->bo_num_threads = yaml_conf["bo_num_threads"].as<int>();
+  }
+  if(yaml_conf["bo_capacity_thresholds"]) {
+    RequireNumDevices(config);
+    f32 thresholds[kMaxDevices][2] = {0};
+    ParseMatrix<f32>(yaml_conf["desired_slab_percentages"],
+                     reinterpret_cast<f32*>(thresholds),
+                     kMaxDevices, 2);
+    for (int i = 0; i < config->num_devices; ++i) {
+      config->bo_capacity_thresholds[i].min = thresholds[i][0];
+      config->bo_capacity_thresholds[i].max = thresholds[i][1];
+    }
+  }
   if(yaml_conf["path_exclusions"]) {
     ParseVector<std::string>(yaml_conf["path_exclusions"], config->path_exclusions);
   }
   if(yaml_conf["path_inclusions"]) {
     ParseVector<std::string>(yaml_conf["path_inclusions"], config->path_inclusions);
   }
-
-  /*switch (var) {
-    default: {
-      HERMES_INVALID_CODE_PATH;
-      break;
-    }
-  }*/
 }
 
 void ParseConfig(Arena *arena, const char *path, Config *config) {

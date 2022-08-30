@@ -115,17 +115,21 @@ void ParseVector(YAML::Node list_node, std::vector<T> &list) {
   }
 }
 
-void ParseSlabUnitSizes(Config *config, YAML::Node matrix_node, int row_len, int *col_len) {
+template<typename T>
+void ParseMatrix(YAML::Node matrix_node, T *matrix, int max_row_len, int max_col_len, int *col_len) {
   int i = 0;
   for(auto row : matrix_node) {
-    ParseArray<int>(row, config->slab_unit_sizes[i++], col_len[i]);
+    ParseArray<T>(row, &matrix[i*max_col_len], col_len[i]);
+    ++i;
   }
 }
 
-void ParseDesiredSlabPercentages(Config *config, YAML::Node matrix_node, int row_len, int *col_len) {
+template<typename T>
+void ParseMatrix(YAML::Node matrix_node, T *matrix, int max_row_len, int max_col_len) {
   int i = 0;
   for(auto row : matrix_node) {
-    ParseArray<f32>(row, config->desired_slab_percentages[i++], col_len[i]);
+    ParseArray<T>(row, &matrix[i*max_col_len], max_col_len);
+    ++i;
   }
 }
 
@@ -158,6 +162,5 @@ void ParseRangeList(YAML::Node list_node, std::vector<int> &list) {
 
 void ParseConfig(Arena *arena, const char *path, Config *config);
 void ParseConfigString(Arena *arena, const std::string &config_string, Config *config);
-
 }  // namespace hermes
 #endif  // HERMES_CONFIG_PARSER_H_

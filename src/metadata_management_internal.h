@@ -75,9 +75,10 @@ void LocalPut(MetadataManager *mdm, const char *key, u64 val, MapType map_type);
 void LocalDelete(MetadataManager *mdm, const char *key, MapType map_type);
 
 u64 LocalGetRemainingTargetCapacity(SharedMemoryContext *context, TargetID id);
-void LocalUpdateGlobalSystemViewState(SharedMemoryContext *context,
-                                      std::vector<i64> adjustments);
-SystemViewState *GetGlobalSystemViewState(SharedMemoryContext *context);
+std::vector<ViolationInfo>
+LocalUpdateGlobalSystemViewState(SharedMemoryContext *context, u32 node_id,
+                                 std::vector<i64> adjustments);
+GlobalSystemViewState *GetGlobalSystemViewState(SharedMemoryContext *context);
 std::vector<u64> LocalGetGlobalDeviceCapacities(SharedMemoryContext *context);
 std::vector<u64> GetGlobalDeviceCapacities(SharedMemoryContext *context,
                                            RpcContext *rpc);
@@ -86,7 +87,7 @@ void UpdateGlobalSystemViewState(SharedMemoryContext *context,
 
 void StartGlobalSystemViewStateUpdateThread(SharedMemoryContext *context,
                                             RpcContext *rpc, Arena *arena,
-                                            double slepp_ms);
+                                            double sleep_ms);
 
 void InitMetadataStorage(SharedMemoryContext *context, MetadataManager *mdm,
                          Arena *arena, Config *config);
@@ -135,15 +136,18 @@ std::string LocalGetBucketNameById(SharedMemoryContext *context,
                                    BucketID blob_id);
 
 
+void WaitForOutstandingBlobOps(MetadataManager *mdm, BlobID blob_id);
 int LocalGetNumOutstandingFlushingTasks(SharedMemoryContext *context,
                                         VBucketID id);
 int GetNumOutstandingFlushingTasks(SharedMemoryContext *context,
                                    RpcContext *rpc, VBucketID id);
-void LocalCreateBlobMetadata(MetadataManager *mdm, const std::string &blob_name,
-                             BlobID blob_id);
+void LocalCreateBlobMetadata(SharedMemoryContext *context, MetadataManager *mdm,
+                             const std::string &blob_name, BlobID blob_id,
+                             TargetID effective_target);
 Heap *GetIdHeap(MetadataManager *mdm);
 Heap *GetMapHeap(MetadataManager *mdm);
 IdList AllocateIdList(MetadataManager *mdm, u32 length);
 void FreeIdList(MetadataManager *mdm, IdList id_list);
+u32 AppendToChunkedIdList(MetadataManager *mdm, ChunkedIdList *id_list, u64 id);
 }  // namespace hermes
 #endif  // HERMES_METADATA_MANAGEMENT_INTERNAL_H_
