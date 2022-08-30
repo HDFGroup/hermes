@@ -8,14 +8,15 @@ Hermes is a heterogeneous-aware, multi-tiered, dynamic, and distributed I/O buff
 
 ## Dependencies
 
-*   A C++ compiler that supports C++ 17.
-*   [Thallium](https://mochi.readthedocs.io/en/latest/installing.html) - RPC library for HPC. Use a version greater than `0.5` for RoCE support.
-*   [GLOG](https://github.com/google/glog) - The Google logging library.
-*   [GLPK](https://www.gnu.org/software/glpk/) - GNU Linear Programming Kit
-*   MPI (tested with MPICH `3.3.2` and OpenMPI `4.0.3`). Note: The MPI-IO adapter
+* A C++ compiler that supports C++ 17.
+* [Thallium](https://mochi.readthedocs.io/en/latest/installing.html) - RPC library for HPC. Use a version greater than `0.5` for RoCE support.
+* [GLOG](https://github.com/google/glog) - The Google logging library.
+* [GLPK](https://www.gnu.org/software/glpk/) - GNU Linear Programming Kit
+* The [yaml-cpp](https://github.com/jbeder/yaml-cpp) configuration parser
+* MPI (tested with MPICH `3.3.2` and OpenMPI `4.0.3`). Note: The MPI-IO adapter
     only supports MPICH. If you don't need the MPI-IO adapter you can use OpenMPI,
     but you must define the CMake variable `HERMES_ENABLE_MPIIO_ADAPTER=OFF`.
-*   The [Catch2](https://github.com/catchorg/Catch2) testing framework
+* The [Catch2](https://github.com/catchorg/Catch2) testing framework
     (only required if built with `-DBUILD_TESTING=ON`; tested with 3.0.1)
 
 ## Building
