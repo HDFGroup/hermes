@@ -90,7 +90,7 @@ void TestPathExclusions(Arena *arena) {
       "    \"pipe\", \"socket:\", \"anon_inode:\"\n"
       "]";
   Config config = ParseConfigStringTest(arena, config_string);
-  for (int i = 0; i < expected.size(); ++i) {
+  for (size_t i = 0; i < expected.size(); ++i) {
     auto &e = expected[i];
     auto &e2 = config.path_exclusions[i];
     Assert(e == e2);
