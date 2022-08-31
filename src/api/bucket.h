@@ -29,15 +29,20 @@ namespace hermes {
 
 namespace api {
 
+/** \brief A container for Blob%s
+ *
+ */
 class Bucket {
  private:
+  /** The user-facing descriptor of this Bucket. */
   std::string name_;
+  /** The internal descriptor of this Bucket. */
   hermes::BucketID id_;
 
  public:
-  /** internal Hermes object owned by Bucket */
+  /** The internal Hermes instance within which to create this Bucket. */
   std::shared_ptr<Hermes> hermes_;
-  /** This Bucket's Context. \todo Why does a bucket need a context? */
+  /** The api::Context that controls all operations on this Bucket. */
   Context ctx_;
 
   // TODO(chogan): Think about the Big Three
@@ -45,34 +50,57 @@ class Bucket {
     LOG(INFO) << "Create NULL Bucket " << std::endl;
   }
 
+  /**
+   *
+   */
   Bucket(const std::string &initial_name, std::shared_ptr<Hermes> const &h,
          Context ctx = Context());
 
-  /**
-   * \brief Releases the Bucket, decrementing its reference count
+  /** \brief Releases the Bucket, decrementing its reference count.
    *
-   * This does not free any resources. To remove the Bucket from the
-   * MetadataManager and free its stored Blobs, see Bucket::Destroy.
+   * This does not free any resources. To remove the Bucket%'s metadata and free
+   * its stored Blob%s, see Bucket::Destroy.
    */
   ~Bucket();
 
-  /** Get the name of bucket */
+  /** \brief Get the user-facing name of the Bucket.
+   *
+   * \return The name of this Bucket.
+   */
   std::string GetName() const;
 
-  /** Get the internal ID of the bucket */
+  /** \brief Get the internal ID of the bucket.
+   *
+   * The ID is the internal representation of the Bucket%'s name.
+   *
+   * \return The internal Bucket ID.
+   */
   u64 GetId() const;
 
-  /** Returns true if this Bucket has been created but not yet destroyed */
+  /** \brief Return true if the Bucket is valid.
+   *
+   * A valid Bucket is one that was successfully created, contains metadata
+   * entries, has a valid ID, and has not been destroyed. An invalid Bucket
+   * cannot be used.
+   *
+   * \return \bool{the Bucket is valid}
+   */
   bool IsValid() const;
 
-  /** Returns the total size of all Blobs in this Bucket. */
+  /** \brief Return the total size of all Blobs in this Bucket. */
   size_t GetTotalBlobSize();
 
-  /** Put a blob in this bucket with context */
+  /** Put a blob in this bucket with context
+   *
+   * \return \status
+   */
   template<typename T>
   Status Put(const std::string &name, const std::vector<T> &data, Context &ctx);
 
-  /** Put a blob in this bucket \todo Why isn't this a context-free case?  */
+  /** \brief Put a blob in this bucket \todo Why isn't this a context-free case?
+   *
+   * \return \status
+   */
   template<typename T>
   Status Put(const std::string &name, const std::vector<T> &data);
 
@@ -82,9 +110,9 @@ class Bucket {
    * \param name A blob name
    * \param data A blob buffer
    * \param size The number of blob bytes in buffer
-   * \param ctx A Hermes context
+   * \param \ctx{Put}
    *
-   * \return The return code/status
+   * \return \status
    *
    * \pre The bucket must be valid.
    * \pre The blob name \p name length (as byte array) must not exceed #kMaxBlobName.
