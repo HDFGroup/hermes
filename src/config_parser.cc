@@ -469,6 +469,7 @@ void ParseConfigYAML(YAML::Node &yaml_conf, Config *config) {
     ParseVector<std::string>(
         yaml_conf["path_inclusions"], config->path_inclusions);
   }
+  CheckConstraints(config);
 }
 
 void ParseConfig(Arena *arena, const char *path, Config *config) {
