@@ -72,6 +72,12 @@ bool IsTracked(const std::string& path) {
   auto config = Singleton<hermes::Config>::GetInstance();
   std::string abs_path = WeaklyCanonical(path).string();
 
+  for (const auto& pth : config->path_exclusions) {
+    if (abs_path.find(pth) == 0) {
+      return false;
+    }
+  }
+
   for (const auto& pth : INTERCEPTOR_LIST->hermes_flush_exclusion) {
     if (abs_path.find(pth) != std::string::npos) {
       return false;
@@ -80,12 +86,6 @@ bool IsTracked(const std::string& path) {
 
   if (INTERCEPTOR_LIST->hermes_paths_exclusion.empty()) {
     PopulateBufferingPath();
-  }
-
-  for (const auto& pth : config->path_exclusions) {
-    if (abs_path.find(pth) == 0) {
-      return false;
-    }
   }
 
   for (const auto& pth : INTERCEPTOR_LIST->hermes_paths_exclusion) {
