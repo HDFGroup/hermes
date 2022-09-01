@@ -33,7 +33,7 @@ bool exit = false;
 void PopulateBufferingPath() {
   char* hermes_config = getenv(kHermesConf);
 
-  hermes::Config config = {};
+  auto config = Singleton<hermes::Config>::GetInstance().get();
   const size_t kConfigMemorySize = KILOBYTES(16);
   hermes::u8 config_memory[kConfigMemorySize];
   if (fs::exists(hermes_config)) {
@@ -42,21 +42,19 @@ void PopulateBufferingPath() {
     INTERCEPTOR_LIST->hermes_paths_exclusion.push_back(hermes_conf_abs_path);
     hermes::Arena config_arena = {};
     hermes::InitArena(&config_arena, kConfigMemorySize, config_memory);
-    hermes::ParseConfig(&config_arena, hermes_conf_abs_path.c_str(), &config);
+    hermes::ParseConfig(&config_arena, hermes_conf_abs_path.c_str(), config);
   } else {
-    InitDefaultConfig(&config);
+    InitDefaultConfig(config);
   }
-  kPathExclusions = config.path_exclusions;
-  kPathInclusions = config.path_inclusions;
 
-  for (const auto& item : config.mount_points) {
+  for (const auto& item : config->mount_points) {
     if (!item.empty()) {
       std::string abs_path = WeaklyCanonical(item).string();
       INTERCEPTOR_LIST->hermes_paths_exclusion.push_back(abs_path);
     }
   }
   INTERCEPTOR_LIST->hermes_paths_exclusion.push_back(
-      config.buffer_pool_shmem_name);
+      config->buffer_pool_shmem_name);
   INTERCEPTOR_LIST->hermes_paths_exclusion.push_back(kHermesExtension);
 
   // NOTE(chogan): Logging before setting up hermes_paths_exclusion results in
@@ -70,6 +68,8 @@ bool IsTracked(const std::string& path) {
   }
   atexit(OnExit);
 
+  // NOTE(llogan): This may be a performance issue
+  auto config = Singleton<hermes::Config>::GetInstance();
   std::string abs_path = WeaklyCanonical(path).string();
 
   for (const auto& pth : INTERCEPTOR_LIST->hermes_flush_exclusion) {
@@ -82,7 +82,7 @@ bool IsTracked(const std::string& path) {
     PopulateBufferingPath();
   }
 
-  for (const auto& pth : kPathExclusions) {
+  for (const auto& pth : config->path_exclusions) {
     if (abs_path.find(pth) == 0) {
       return false;
     }
@@ -95,7 +95,7 @@ bool IsTracked(const std::string& path) {
     }
   }
 
-  for (const auto& pth : kPathInclusions) {
+  for (const auto& pth : config->path_inclusions) {
     if (abs_path.find(pth) == 0) {
       return true;
     }

@@ -35,23 +35,9 @@
   hermes::adapter::Singleton<hermes::adapter::InterceptorList>::GetInstance<>()
 
 namespace hermes::adapter {
-/**
- * Paths prefixed with the following directories are not tracked in Hermes
- * Exclusion list used by darshan at
- * darshan/darshan-runtime/lib/darshan-core.c
- */
-std::vector<std::string> kPathExclusions = {
-    "/bin/", "/boot/", "/dev/",  "/etc/",
-    "/lib/", "/opt/",  "/proc/", "/sbin/",
-    "/sys/", "/usr/",  "/var/",  "/run/",
-    "pipe", "socket:", "anon_inode:"
-};
 
-/**
- * Paths prefixed with the following directories are tracked by Hermes even if
- * they share a root with a path listed in path_exclusions
- */
-std::vector<std::string> kPathInclusions = {"/var/opt/cray/dws/mounts/"};
+std::vector<std::string> kPathExclusions;
+std::vector<std::string> kPathInclusions;
 
 /**
  * Splits a string given a delimiter
