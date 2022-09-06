@@ -218,7 +218,7 @@ struct Hdf5Api {
   }
 
   /**
-   * Create a 1-dimensional dataset named @pdset_name in object @p hid with @p
+   * Create a 1-dimensional dataset named @p dset_name in object @p hid with @p
    * nelems elements from the array @p data.
    */
   void MakeDataset(hid_t hid, const std::string &dset_name, const f32 *data,

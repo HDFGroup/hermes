@@ -45,13 +45,24 @@ class Bucket {
   /** The api::Context that controls all operations on this Bucket. */
   Context ctx_;
 
-  // TODO(chogan): Think about the Big Three
+  // TODO(chogan): Think about copy/move constructor/assignment operators
+
+  /** \brief Default constructor.
+   *
+   * Creates the "NULL" Bucket.
+   */
   Bucket() : name_(""), id_{0, 0}, hermes_(nullptr) {
     LOG(INFO) << "Create NULL Bucket " << std::endl;
   }
 
-  /**
+  /** \brief Constructor.
    *
+   * Create a Bucket with name \p initial_name, backed by Hermes instance \p h,
+   * with optional Context \p ctx.
+   *
+   * \param initial_name The name of this Bucket.
+   * \param h An initialized Hermes instance.
+   * \param ctx An optional Context that controls the behavior of this Bucket.
    */
   Bucket(const std::string &initial_name, std::shared_ptr<Hermes> const &h,
          Context ctx = Context());
@@ -87,159 +98,252 @@ class Bucket {
    */
   bool IsValid() const;
 
-  /** \brief Return the total size of all Blobs in this Bucket. */
+  /** \brief Return the total size in bytes of all Blob%s in this Bucket.
+   *
+   * \return The total size in bytes of all Blob%s in this Bucket.
+   */
   size_t GetTotalBlobSize();
 
-  /** Put a blob in this bucket with context
+  /** \brief Put a Blob in this bucket.
    *
-   * \return \status
-   */
-  template<typename T>
-  Status Put(const std::string &name, const std::vector<T> &data, Context &ctx);
-
-  /** \brief Put a blob in this bucket \todo Why isn't this a context-free case?
+   * Uses the Bucket%'s saved Context.
+   *
+   * \param name The name of the Blob to put.
+   * \param data The Blob data.
    *
    * \return \status
    */
   template<typename T>
   Status Put(const std::string &name, const std::vector<T> &data);
 
-  /**
-   * \brief Puts a blob to a bucket
+  /** \overload
    *
-   * \param name A blob name
-   * \param data A blob buffer
-   * \param size The number of blob bytes in buffer
+   * \param \ctx{Put}
+   */
+  template<typename T>
+  Status Put(const std::string &name, const std::vector<T> &data, Context &ctx);
+
+
+  /**
+   * \brief Put a Blob in this Bucket.
+   *
+   * \param name The name of the Blob to Put
+   * \param data The Blob%'s data.
+   * \param size The size of the Blob in bytes.
    * \param \ctx{Put}
    *
    * \return \status
    *
-   * \pre The bucket must be valid.
-   * \pre The blob name \p name length (as byte array) must not exceed #kMaxBlobName.
-   * \pre The blob buffer \p data must not be \c nullptr unless \p size is 0.
-   * \pre If \p size is positive \p data must not be \c nullptr.
+   * \pre The Bucket must be valid.
+   * \pre The length of \p name in bytes must not exceed
+   * #hermes::api::kMaxBlobNameSize.
+   * \pre The Blob buffer \p data must not be \c nullptr unless \p size is 0.
    *
-   */
-  Status Put(const std::string &name, const u8 *data, size_t size,
-             const Context &ctx);
-
-  /**
-   * \todo Put
+   * \return \status
    */
   Status Put(const std::string &name, const u8 *data, size_t size);
 
   /**
-   * \todo Put
+   * \overload
+   *
+   * \param \ctx{Put}
    */
-  template<typename T>
-  Status Put(const std::vector<std::string> &names,
-             const std::vector<std::vector<T>> &blobs, const Context &ctx);
+  Status Put(const std::string &name, const u8 *data, size_t size,
+             const Context &ctx);
 
-  /**
-   * \todo Put
+  /** \brief Put a vector of Blob%s.
+   *
+   * \param names
+   * \param blobs
+   *
+   * \return \status
    */
   template<typename T>
   Status Put(const std::vector<std::string> &names,
              const std::vector<std::vector<T>> &blobs);
 
-  /**
-   * \todo PutInternal
+  /** \overload
+   *
+   * \param \ctx{Put}
+   */
+  template<typename T>
+  Status Put(const std::vector<std::string> &names,
+             const std::vector<std::vector<T>> &blobs, const Context &ctx);
+
+  /** \brief
+   *
+   * \return \status
    */
   template<typename T>
   Status PutInternal(const std::vector<std::string> &names,
                      const std::vector<size_t> &sizes,
                      const std::vector<std::vector<T>> &blobs,
                      const Context &ctx);
-  /**
-   * \todo PlaceBlobs
+  /** \brief
+   *
+   * \return \status
    */
   template<typename T>
   Status PlaceBlobs(std::vector<PlacementSchema> &schemas,
                     const std::vector<std::vector<T>> &blobs,
                     const std::vector<std::string> &names, const Context &ctx);
 
-  /** Get the size in bytes of the Blob referred to by `name` */
+  /** \brief Get the size in bytes of the Blob referred to by `name`
+   *
+   * \param name
+   * \param \ctx{call}
+   */
+  size_t GetBlobSize(const std::string &name, const Context &ctx);
+
+  /** \overload
+   *
+   * \param arena An Arena backed by allocated memory.
+   */
   size_t GetBlobSize(Arena *arena, const std::string &name, const Context &ctx);
 
-  /** get a blob on this bucket */
-  /** - if user_blob.size() == 0 => return the minimum buffer size needed */
-  /** - if user_blob.size() > 0 => copy user_blob.size() bytes */
-  /** to user_blob and return user_blob.size() */
-  /** use provides buffer */
-  size_t Get(const std::string &name, Blob& user_blob, const Context &ctx);
+  /** \brief Get a blob from this Bucket
+   * - if user_blob.size() == 0 => return the minimum buffer size needed
+   * - if user_blob.size() > 0 => copy user_blob.size() bytes
+   * to user_blob and return user_blob.size()
+   * use provides buffer
+   */
   size_t Get(const std::string &name, Blob& user_blob);
 
-  /**
-   * \brief Retrieve multiple Blobs in one call.
+  /** \overload
+   *
+   * \param ctx{Get}
+   */
+  size_t Get(const std::string &name, Blob& user_blob, const Context &ctx);
+
+  /** \brief Retrieve multiple Blob%s in one call.
+   *
    */
   std::vector<size_t> Get(const std::vector<std::string> &names,
                           std::vector<Blob> &blobs, const Context &ctx);
 
-  /**
-   * \brief Retrieve a Blob into a user buffer.
+  /** \brief Retrieve a Blob into a user buffer.
+   *
    */
   size_t Get(const std::string &name, void *user_blob, size_t blob_size,
              const Context &ctx);
-  /**
-  * \brief Retrieves a blob from the Bucket. The Blob retrieved is the next
-   * one from the passed blob_index
-  *
-  * \pre if user_blob.size() == 0 => return the minimum buffer size needed
-  * \pre if user_blob.size() > 0 => copy user_blob.size() bytes to user_blob
+  /** \brief Retrieves a Blob from this Bucket.
+   *
+   * The Blob retrieved is the next one from the passed blob_index.
+   *
+   * \pre if user_blob.size() == 0 => return the minimum buffer size needed
+   * \pre if user_blob.size() > 0 => copy user_blob.size() bytes to user_blob
    * and return user_blob.size()
-  */
-  size_t GetNext(u64 blob_index, Blob& user_blob, const Context &ctx);
+   */
   size_t GetNext(u64 blob_index, Blob& user_blob);
 
-  /**
-  * \brief Retrieves a blob from the Bucket into a user buffer. The Blob
-   * retrieved is the next one from the passed blob_index
-  */
+  /** \overload
+   *
+   * \param \ctx{call}
+   */
+  size_t GetNext(u64 blob_index, Blob& user_blob, const Context &ctx);
+
+  /** \brief Retrieves a blob from the Bucket into a user buffer.
+   *
+   * The Blob retrieved is the next one from the passed blob_index.
+   */
   size_t GetNext(u64 blob_index, void *user_blob, size_t blob_size,
                  const Context &ctx);
 
-  /**
-  * \brief Retrieves multiple blobs from the Bucket. The Blobs retrieved are
-   * the next ones from the passed blob_index
-  */
+  /** \brief Retrieves multiple blobs from the Bucket.
+   *
+   * The Blobs retrieved are the next ones from the passed blob_index
+   */
   std::vector<size_t> GetNext(u64 blob_index, u64 count,
                               std::vector<Blob> &blobs, const Context &ctx);
-  /** get blob(s) on this bucket according to predicate */
-  /** use provides buffer */
+
+  /** \brief Get Blob%(s) from this Bucket according to a predicate.
+   *
+   * \todo Not implemented yet.
+   *
+   * \return \status
+   */
   template<class Predicate>
   Status GetV(void *user_blob, Predicate pred, Context &ctx);
 
-  /** delete a blob from this bucket */
-  Status DeleteBlob(const std::string &name, const Context &ctx);
+  /** \brief Delete a Blob from this Bucket.
+   *
+   * \return \status
+   */
   Status DeleteBlob(const std::string &name);
 
-  /** rename a blob on this bucket */
-  Status RenameBlob(const std::string &old_name, const std::string &new_name,
-                    const Context &ctx);
+  /** \overload
+   *
+   * \param \ctx{call}
+   */
+  Status DeleteBlob(const std::string &name, const Context &ctx);
+
+  /** \brief Rename a Blob in this Bucket.
+   *
+   * \return \status
+   */
   Status RenameBlob(const std::string &old_name, const std::string &new_name);
 
-  /** Returns true if the Bucket contains a Blob called `name` */
+  /** \overload
+   *
+   * \param \ctx{call}
+   */
+  Status RenameBlob(const std::string &old_name, const std::string &new_name,
+                    const Context &ctx);
+
+  /** \brief Returns true if the Bucket contains a Blob called \p name.
+   *
+   * \return \bool{the Blob \p name is in this Bucket}
+   */
   bool ContainsBlob(const std::string &name);
 
-  /** Returns true if the Blob called `name` in this bucket is in swap space */
+  /** \brief Return true if the Blob \p name is in swap space.
+   *
+   * \return \bool{the Blob called \p name in this Bucket is in swap space}
+   *
+   */
   bool BlobIsInSwap(const std::string &name);
 
-  /** get a list of blob names filtered by pred */
+  /** \brief Get a list of blob names filtered by \p pred.
+   *
+   */
   template<class Predicate>
   std::vector<std::string> GetBlobNames(Predicate pred, Context &ctx);
 
-  /** rename this bucket */
-  Status Rename(const std::string& new_name, const Context &ctx);
+  /** \brief Rename this Bucket.
+   *
+   * \param new_name A new name for the Bucket.
+   *
+   * \pre The length of \p new_name in bytes should be less than
+   * #kMaxBlobNameSize.
+   *
+   * \return \status
+   */
   Status Rename(const std::string& new_name);
 
-  /** Save this bucket's blobs to persistent storage.
+  /** \overload
    *
-   * The blobs are written in the same order in which they are `Put`. */
-  Status Persist(const std::string &file_name, const Context &ctx);
+   * \param \ctx{call}.
+   */
+  Status Rename(const std::string& new_name, const Context &ctx);
+
+  /** \brief Save this Bucket%'s Blob%s to persistent storage.
+   *
+   * The blobs are written in the same order in which they are `Put`.
+   *
+   * \param file_name The name of the file to persist the Blob%s to.
+   *
+   * \return \status
+   */
   Status Persist(const std::string &file_name);
 
+  /** \overload
+   *
+   * \param \ctx{call}.
+   */
+  Status Persist(const std::string &file_name, const Context &ctx);
+
   /**
-   * \brief Allign \p blob_name's access speed to its importance.
+   * \brief Allign <tt>blob_name</tt>'s access speed to its importance.
    *
    * \param blob_name The name of the Blob to organize.
    *
@@ -256,19 +360,38 @@ class Bucket {
   void OrganizeBlob(const std::string &blob_name, f32 epsilon,
                     f32 custom_importance = -1.f);
 
-  /**
-   * \brief Release this Bucket
+  /** \brief Release this Bucket.
    *
-   * This simply decrements the refcount to this Bucket in the Hermes metadata.
-   * To free resources associated with this Bucket, call Bucket::Destroy.
+   * This function simply decrements the refcount to this Bucket in the Hermes
+   * metadata. To free resources associated with this Bucket, call
+   * Bucket::Destroy.
+   *
+   * \return \status
    */
-  Status Release(const Context &ctx);
   Status Release();
 
-  /** destroy this bucket */
-  /** ctx controls "aggressiveness */
-  Status Destroy(const Context &ctx);
+  /** \overload
+   *
+   * \param \ctx{call}
+   */
+  Status Release(const Context &ctx);
+
+  /** \brief Destroy this Bucket.
+   *
+   * Deletes all metadata and Blob%s associated with this Bucket.
+   *
+   * \pre The Bucket must have a reference count of 1. Other ranks must first
+   * Bucket::Close the Bucket.
+   *
+   * \return \status
+   */
   Status Destroy();
+
+  /** \overload
+   *
+   * \param \ctx{call}.
+   */
+  Status Destroy(const Context &ctx);
 };
 
 template<typename T>

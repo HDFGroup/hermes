@@ -321,6 +321,9 @@ union BucketID {
 // BucketID into the Blob name. See MakeInternalBlobName() for a description of
 // why we need double the bytes of a BucketID.
 constexpr int kBucketIdStringSize = sizeof(BucketID) * 2;
+/**
+ * The maximum size in bytes allowed for Blob names.
+ */
 constexpr int kMaxBlobNameSize = 64 - kBucketIdStringSize;
 
 union VBucketID {
