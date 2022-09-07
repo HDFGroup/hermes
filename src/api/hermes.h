@@ -34,17 +34,19 @@
 #include "buffer_pool.h"
 #include "metadata_management.h"
 #include "rpc.h"
-#include "id.h"
+
+/** \file hermes.h */
 
 namespace hermes {
 namespace api {
 
-/** Return the (semantic versioning compatible) version of Hermes in the form
- *  MAJOR.MINOR.PATCH
+/** \brief Return the (semantic versioning compatible) version of Hermes.
+ *
+ * \return A string in the form MAJOR.MINOR.PATCH
  */
 std::string GetVersion();
 
-/** Hermes node state */
+/** Class representing an instance of Hermes. */
 class Hermes {
  public:
   std::set<std::string> bucket_list_;
