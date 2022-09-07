@@ -14,6 +14,9 @@
 #define HERMES_STATUS_H_
 
 #include <iostream>
+
+/** \file hermes_status.h */
+
 namespace hermes {
 
 #define RETURN_CODES(X)                                          \

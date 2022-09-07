@@ -24,10 +24,18 @@
 
 #include "hermes_version.h"
 
+/**
+ * \file hermes_types.h
+ * Types used in Hermes.
+ */
+
 #define KILOBYTES(n) (((size_t)n) * 1024)
 #define MEGABYTES(n) (((size_t)n) * 1024 * 1024)
 #define GIGABYTES(n) (((size_t)n) * 1024UL * 1024UL * 1024UL)
 
+/**
+ * \namespace hermes
+ */
 namespace hermes {
 
 typedef uint8_t u8;
@@ -49,7 +57,14 @@ struct ChunkedIdList {
   u32 capacity;
 };
 
+/**
+ * \namespace api
+ */
 namespace api {
+
+/**
+ * A Blob is simply an uninterpreted vector of bytes.
+ */
 typedef std::vector<unsigned char> Blob;
 
 /** Supported data placement policies */

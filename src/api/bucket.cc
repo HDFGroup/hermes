@@ -324,6 +324,8 @@ std::vector<std::string> Bucket::GetBlobNames(Predicate pred,
 
   LOG(INFO) << "Getting blob names by predicate from bucket " << name_ << '\n';
 
+  HERMES_NOT_IMPLEMENTED_YET;
+
   return std::vector<std::string>();
 }
 

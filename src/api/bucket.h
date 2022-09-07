@@ -25,6 +25,8 @@
 #include "metadata_management.h"
 #include "utils.h"
 
+/** \file bucket.h */
+
 namespace hermes {
 
 namespace api {
@@ -104,7 +106,7 @@ class Bucket {
    */
   size_t GetTotalBlobSize();
 
-  /** \brief Put a Blob in this bucket.
+  /** \brief Put a Blob in this Bucket.
    *
    * Uses the Bucket%'s saved Context.
    *
@@ -153,8 +155,11 @@ class Bucket {
 
   /** \brief Put a vector of Blob%s.
    *
-   * \param names
-   * \param blobs
+   * \param names 1 or more names, each of which is no longer than
+   * kMaxBlobNameSize bytes.
+   * \param blobs 1 or more Blob%s.
+   *
+   * \pre The length of \p names and \p blobs should be equal.
    *
    * \return \status
    */
@@ -170,27 +175,9 @@ class Bucket {
   Status Put(const std::vector<std::string> &names,
              const std::vector<std::vector<T>> &blobs, const Context &ctx);
 
-  /** \brief
+  /** \brief Get the size in bytes of the Blob referred to by \p name.
    *
-   * \return \status
-   */
-  template<typename T>
-  Status PutInternal(const std::vector<std::string> &names,
-                     const std::vector<size_t> &sizes,
-                     const std::vector<std::vector<T>> &blobs,
-                     const Context &ctx);
-  /** \brief
-   *
-   * \return \status
-   */
-  template<typename T>
-  Status PlaceBlobs(std::vector<PlacementSchema> &schemas,
-                    const std::vector<std::vector<T>> &blobs,
-                    const std::vector<std::string> &names, const Context &ctx);
-
-  /** \brief Get the size in bytes of the Blob referred to by `name`
-   *
-   * \param name
+   * \param name The name of the Blob to query.
    * \param \ctx{call}
    */
   size_t GetBlobSize(const std::string &name, const Context &ctx);
@@ -201,38 +188,55 @@ class Bucket {
    */
   size_t GetBlobSize(Arena *arena, const std::string &name, const Context &ctx);
 
-  /** \brief Get a blob from this Bucket
-   * - if user_blob.size() == 0 => return the minimum buffer size needed
-   * - if user_blob.size() > 0 => copy user_blob.size() bytes
-   * to user_blob and return user_blob.size()
-   * use provides buffer
+  /** \brief Get a blob from this Bucket.
+   *
+   * If if the size of \p user_blob is 0, return the minimum buffer size needed
+   * to contain the Blob \p name, otherwise copy \p user_blob.size() bytes to \p
+   * user_blob and return the number of bytes copied.
+   *
+   * \param name The name of the Blob to get.
+   * \param user_blob User-provided storage for the retrieved Blob.
+   *
+   * \return The size in bytes of the Blob.
    */
   size_t Get(const std::string &name, Blob& user_blob);
 
   /** \overload
    *
-   * \param ctx{Get}
+   * \param \ctx{Get}
    */
   size_t Get(const std::string &name, Blob& user_blob, const Context &ctx);
 
   /** \brief Retrieve multiple Blob%s in one call.
    *
+   * \param names A list of names of the Blob%s to get.
+   * \param blobs User-provided storage for the retrieved Blob%s.
+   * \param \ctx{Get}
+   *
+   * \return The sizes in bytes of the Blob%s.
+   *
    */
   std::vector<size_t> Get(const std::vector<std::string> &names,
                           std::vector<Blob> &blobs, const Context &ctx);
 
-  /** \brief Retrieve a Blob into a user buffer.
+  /** \overload
    *
    */
   size_t Get(const std::string &name, void *user_blob, size_t blob_size,
              const Context &ctx);
-  /** \brief Retrieves a Blob from this Bucket.
+
+  /** \brief Given an ordering of Blob%s, retrieves the Blob at index \p
+   * blob_index + 1.
    *
-   * The Blob retrieved is the next one from the passed blob_index.
+   * By default Blob%s are arranged in the order in which they were Put. If
+   * user_blob.size() == 0, return the minimum buffer size needed. If
+   * user_blob.size() > 0, copy user_blob.size() bytes to user_blob and return
+   * user_blob.size()
    *
-   * \pre if user_blob.size() == 0 => return the minimum buffer size needed
-   * \pre if user_blob.size() > 0 => copy user_blob.size() bytes to user_blob
-   * and return user_blob.size()
+   * \param blob_index The starting index.
+   * \param user_blob User-provided memory for the Blob.
+   *
+   * \return The size in bytes of the retrieved Blob.
    */
   size_t GetNext(u64 blob_index, Blob& user_blob);
 
@@ -242,13 +246,14 @@ class Bucket {
    */
   size_t GetNext(u64 blob_index, Blob& user_blob, const Context &ctx);
 
-  /** \brief Retrieves a blob from the Bucket into a user buffer.
+  /** \overload
    *
-   * The Blob retrieved is the next one from the passed blob_index.
+   * \param \ctx{call}
    */
   size_t GetNext(u64 blob_index, void *user_blob, size_t blob_size,
                  const Context &ctx);
 
+  // TODO(chogan):
   /** \brief Retrieves multiple blobs from the Bucket.
    *
    * The Blobs retrieved are the next ones from the passed blob_index
@@ -267,6 +272,8 @@ class Bucket {
 
   /** \brief Delete a Blob from this Bucket.
    *
+   * \param name The name of the Blob to delete.
+   *
    * \return \status
    */
   Status DeleteBlob(const std::string &name);
@@ -278,6 +285,11 @@ class Bucket {
   Status DeleteBlob(const std::string &name, const Context &ctx);
 
   /** \brief Rename a Blob in this Bucket.
+   *
+   * \param old_name The Blob to rename.
+   * \param new_name The desired new name of the Blob.
+   *
+   * \pre The size in bytes of \p new_name must be <= to kMaxBlobNameSize.
    *
    * \return \status
    */
@@ -292,19 +304,23 @@ class Bucket {
 
   /** \brief Returns true if the Bucket contains a Blob called \p name.
    *
+   * \param name The name of the Blob to check.
+   *
    * \return \bool{the Blob \p name is in this Bucket}
    */
   bool ContainsBlob(const std::string &name);
 
   /** \brief Return true if the Blob \p name is in swap space.
    *
-   * \return \bool{the Blob called \p name in this Bucket is in swap space}
+   * \param name The name of the Blob to check.
    *
+   * \return \bool{the Blob called \p name in this Bucket is in swap space}
    */
   bool BlobIsInSwap(const std::string &name);
 
   /** \brief Get a list of blob names filtered by \p pred.
    *
+   * \todo Not implemented yet.
    */
   template<class Predicate>
   std::vector<std::string> GetBlobNames(Predicate pred, Context &ctx);
@@ -314,7 +330,7 @@ class Bucket {
    * \param new_name A new name for the Bucket.
    *
    * \pre The length of \p new_name in bytes should be less than
-   * #kMaxBlobNameSize.
+   * #kMaxBucketNameSize.
    *
    * \return \status
    */
@@ -328,7 +344,7 @@ class Bucket {
 
   /** \brief Save this Bucket%'s Blob%s to persistent storage.
    *
-   * The blobs are written in the same order in which they are `Put`.
+   * The blobs are written in the same order in which they were \p Put.
    *
    * \param file_name The name of the file to persist the Blob%s to.
    *
@@ -392,6 +408,25 @@ class Bucket {
    * \param \ctx{call}.
    */
   Status Destroy(const Context &ctx);
+
+ private:
+  /** \brief Internal version of Put, called by all overloads.
+   *
+   * \return \status
+   */
+  template<typename T>
+  Status PutInternal(const std::vector<std::string> &names,
+                     const std::vector<size_t> &sizes,
+                     const std::vector<std::vector<T>> &blobs,
+                     const Context &ctx);
+  /** \brief Low-level version of Put.
+   *
+   * \return \status
+   */
+  template<typename T>
+  Status PlaceBlobs(std::vector<PlacementSchema> &schemas,
+                    const std::vector<std::vector<T>> &blobs,
+                    const std::vector<std::string> &names, const Context &ctx);
 };
 
 template<typename T>
