@@ -28,6 +28,7 @@
  * Internal header
  */
 #include <bucket.h>
+#include <vbucket.h>
 #include <buffer_pool.h>
 #include <hermes_types.h>
 #include <traits.h>
