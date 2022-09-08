@@ -23,6 +23,31 @@ namespace hermes {
 
 namespace api {
 
+VBucket::VBucket(std::string initial_name, std::shared_ptr<Hermes> const &h,
+                 Context ctx = Context())
+  : name_(initial_name),
+    id_({{0, 0}}),
+    attached_traits_(),
+    hermes_(h),
+    ctx_(ctx) {
+  if (IsVBucketNameTooLong(name_)) {
+    id_.as_int = 0;
+    throw std::length_error("VBucket name exceeds maximum size of " +
+                            std::to_string(kMaxVBucketNameSize));
+  } else {
+    id_ = GetOrCreateVBucketId(&hermes_->context_, &hermes_->rpc_, name_);
+    if (!IsValid()) {
+      throw std::runtime_error("Could not open or create VBucket");
+    }
+  }
+}
+
+VBucket::~VBucket() {
+  if (IsValid()) {
+    Release();
+  }
+}
+
 bool VBucket::IsValid() const { return !IsNullVBucketId(id_); }
 
 void VBucket::WaitForBackgroundFlush() {

@@ -28,8 +28,8 @@ namespace hermes {
 namespace api {
 
 /**
- * Virtual buckets (vbuckets) capture relationships between blobs
- * across bucket boundaries.
+ * Virtual buckets (VBucket%s) capture relationships between Blob%s
+ * across Bucket boundaries.
  */
 class VBucket {
  private:
@@ -45,31 +45,20 @@ class VBucket {
   Context ctx_;
 
  public:
+  /**
+   *
+   */
   VBucket(std::string initial_name, std::shared_ptr<Hermes> const &h,
-          Context ctx = Context())
-      : name_(initial_name),
-        id_({{0, 0}}),
-        attached_traits_(),
-        hermes_(h),
-        ctx_(ctx) {
-    if (IsVBucketNameTooLong(name_)) {
-      id_.as_int = 0;
-      throw std::length_error("VBucket name exceeds maximum size of " +
-                              std::to_string(kMaxVBucketNameSize));
-    } else {
-      id_ = GetOrCreateVBucketId(&hermes_->context_, &hermes_->rpc_, name_);
-      if (!IsValid()) {
-        throw std::runtime_error("Could not open or create VBucket");
-      }
-    }
-  }
+          Context ctx = Context());
 
-  ~VBucket() {
-    if (IsValid()) {
-      Release();
-    }
-  }
+  /**
+   *
+   */
+  ~VBucket();
 
+  /**
+   *
+   */
   bool IsValid() const;
 
   /** get the name of vbucket */
@@ -88,11 +77,11 @@ class VBucket {
    * Blobs. Additional calls the Trait::OnLinkFn function on the Blob for each
    * attached Trait.
    *
-   * @param blob_name The name of the Blob to link.
-   * @param bucket_name The name of the Bucket containing the Blob to link.
-   * @param ctx Currently unused.
+   * \param blob_name The name of the Blob to link.
+   * \param bucket_name The name of the Bucket containing the Blob to link.
+   * \param ctx Currently unused.
    *
-   * @return A Status.
+   * \return \status
    */
   Status Link(std::string blob_name, std::string bucket_name, Context &ctx);
   /** \todo Link */
@@ -101,10 +90,10 @@ class VBucket {
   /**
    * Unlink a Blob from this VBucket.
    *
-   * @param blob_name The name of the Blob to unlink.
-   * @param bucket_name The name of the Bucket containing the Blob to unlink.
+   * \param blob_name The name of the Blob to unlink.
+   * \param bucket_name The name of the Bucket containing the Blob to unlink.
    *
-   * @return A Status.
+   * \return \status
    */
   Status Unlink(std::string blob_name, std::string bucket_name, Context &ctx);
   /** \todo Unlink */
@@ -128,39 +117,46 @@ class VBucket {
   /** could return iterator */
   std::vector<std::string> GetLinks(Context &ctx);
 
-  /**
-   * Attach a trait to this VBucket.
+  /** \brie Attach a Trait to this VBucket.
    *
-   * Calls the Trait::onAttachFn function of @p trait on each Blob that's linked
+   * Calls the Trait::onAttachFn function of \p trait on each Blob that's linked
    * to this VBucket.
    *
-   * @param trait The Trait to attach.
-   * @param ctx Currently unused.
+   * \param trait The Trait to attach.
    *
-   * @return A Status.
+   * \return \status
    */
-  Status Attach(Trait *trait, Context &ctx);
   Status Attach(Trait *trait);
 
-  /** detach a trait to this vbucket */
-  Status Detach(Trait *trait, Context &ctx);
+  /** \overload
+   *
+   * \param ctx Currently unused.
+   */
+  Status Attach(Trait *trait, Context &ctx);
+
+  /** \brief Detach a trait from  this VBucket.
+   *
+   */
   Status Detach(Trait *trait);
+
+  /** \overload
+   *
+   */
+  Status Detach(Trait *trait, Context &ctx);
 
   /** retrieves the subset of attached traits satisfying pred */
   template <class Predicate>
   std::vector<TraitID> GetTraits(Predicate pred, Context &ctx);
 
-  /**
-   * Get's an attached Trait that matches @p type.
+  /** \brief Get's an attached Trait that matches \p type.
    *
-   * @param type The type of Trait to retrieve.
+   * \param type The type of Trait to retrieve.
    *
-   * @return The first attached trait that matches @p type.
+   * \return The first attached trait that matches @p type.
    */
   Trait *GetTrait(TraitType type);
 
-  /**
-   * Release this vBucket.
+  /** \brief Release this vBucket.
    *
    * This function does not result in any Trait callbacks being invoked or any
    * Blob links to be deleted. It simply decrements the reference count on this
@@ -168,29 +164,32 @@ class VBucket {
    * reference count is 1. I.e., each rank that is not destroying the VBucket
    * must release it.
    *
-   * @param ctx Currently unused.
-   *
-   * @return A Status.
+   * \return A Status.
    */
-  Status Release(Context &ctx);
-  /** \todo Release */
   Status Release();
 
-  /**
-   * Destroy this VBucket.
+  /** \overload
+   *
+   * \param ctx Currently unused.
+   */
+  Status Release(Context &ctx);
+
+  /** \brief Destroy this VBucket.
    *
    * Releases all resources associated with this VBucket. If it is opened again,
    * it will be created from scratch. Unlinks all linked Blobs (which will
    * invoke each attached Trait's Trait::onUnlinkFn function), and detaches all
    * attached Traits, invoking Trait::onDetachFn.
    *
-   * @param ctx Currently unused.
+   * \return \status
+   */
+  Status Destroy();
+
+  /** \overload
    *
-   * @return A Status.
+   * \param ctx Currently unused.
    */
   Status Destroy(Context &ctx);
-  /** \todo Destroy */
-  Status Destroy();
 };  // class VBucket
 
 }  // namespace api
