@@ -762,7 +762,7 @@ int HERMES_DECL(fsync)(int fd) {
         auto filename = existing.first.st_bkid->GetName();
         const auto &blob_names = existing.first.st_blobs;
         if (!blob_names.empty() && persist) {
-          LOG(INFO) << "Adapter flushes " << blob_names.size()
+          LOG(INFO) << "POSIX fsync Adapter flushes " << blob_names.size()
                     << " blobs to filename:" << filename << "." << std::endl;
           INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
           hapi::VBucket file_vbucket(filename, mdm->GetHermes(), ctx);
@@ -818,7 +818,7 @@ int HERMES_DECL(close)(int fd) {
         mdm->Delete(fd);
         const auto &blob_names = existing.first.st_blobs;
         if (!blob_names.empty() && persist) {
-          LOG(INFO) << "Adapter flushes " << blob_names.size()
+          LOG(INFO) << "POSIX close Adapter flushes " << blob_names.size()
                     << " blobs to filename:" << filename << "." << std::endl;
           INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
           hapi::VBucket file_vbucket(filename, mdm->GetHermes(), ctx);

@@ -547,7 +547,7 @@ int HERMES_DECL(fflush)(FILE *fp) {
         } else {
           LOG(INFO) << "File handler is opened by adapter." << std::endl;
           hapi::Context ctx;
-          LOG(INFO) << "Adapter flushes " << blob_names.size()
+          LOG(INFO) << "STDIO-fflush Adapter flushes " << blob_names.size()
                     << " blobs to filename:" << filename << "." << std::endl;
           hapi::VBucket file_vbucket(filename, mdm->GetHermes());
           auto offset_map = std::unordered_map<std::string, hermes::u64>();
@@ -593,7 +593,7 @@ int HERMES_DECL(fclose)(FILE *fp) {
             existing.first.st_vbkt->WaitForBackgroundFlush();
             existing.first.st_vbkt->Destroy();
           } else {
-            LOG(INFO) << "Adapter flushes " << blob_names.size()
+            LOG(INFO) << "STDIO Adapter flushes " << blob_names.size()
                       << " blobs to filename:" << filename << "." << std::endl;
             INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
             hapi::VBucket file_vbucket(filename, mdm->GetHermes());
