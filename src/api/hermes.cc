@@ -23,6 +23,7 @@
 #include "buffer_pool.h"
 #include "buffer_pool_internal.h"
 #include "metadata_management_internal.h"
+#include "config_parser.h"
 
 namespace hermes {
 
@@ -276,7 +277,6 @@ BootstrapSharedMemory(Arena *arenas, Config *config, CommunicationContext *comm,
   // NOTE(chogan): The buffering capacity for the RAM Device is the size of the
   // BufferPool Arena
   config->capacities[0] = arena_info.sizes[kArenaType_BufferPool];
-
   size_t trans_arena_size =
     InitCommunication(comm, &arenas[kArenaType_Transient],
                       arena_info.sizes[kArenaType_Transient], is_daemon,
@@ -421,19 +421,13 @@ std::shared_ptr<Hermes> InitHermes(const char *config_file, bool is_daemon,
     LOG(FATAL) << "Big endian machines not supported yet." << std::endl;
   }
 
+  LOG(INFO) << "Initializing hermes config" << std::endl;
+
   hermes::Config config = {};
-  const size_t kConfigMemorySize = KILOBYTES(16);
-  hermes::u8 config_memory[kConfigMemorySize];
-
-  if (config_file) {
-    hermes::Arena config_arena = {};
-    hermes::InitArena(&config_arena, kConfigMemorySize, config_memory);
-    hermes::ParseConfig(&config_arena, config_file, &config);
-  } else {
-    InitDefaultConfig(&config);
-  }
-
+  hermes::InitConfig(&config, config_file);
   std::shared_ptr<Hermes> result = InitHermes(&config, is_daemon, is_adapter);
+
+  LOG(INFO) << "Initialized hermes config" << std::endl;
 
   return result;
 }

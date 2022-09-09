@@ -91,6 +91,7 @@ class MetadataManager {
 
       char* hermes_config = getenv(kHermesConf);
 
+      LOG(INFO) << "InitializeHermes (stdio): " << this->is_mpi << std::endl;
       if (this->is_mpi) {
         MPI_Comm_rank(MPI_COMM_WORLD, &rank);
         MPI_Comm_size(MPI_COMM_WORLD, &comm_size);

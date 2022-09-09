@@ -36,9 +36,6 @@
 
 namespace hermes::adapter {
 
-std::vector<std::string> kPathExclusions;
-std::vector<std::string> kPathInclusions;
-
 /**
  * Splits a string given a delimiter
  */

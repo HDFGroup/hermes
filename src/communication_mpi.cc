@@ -38,7 +38,6 @@ void *GetAppCommunicator(CommunicationContext *comm) {
 inline int MpiGetProcId(MPI_Comm comm) {
   int result;
   MPI_Comm_rank(comm, &result);
-
   return result;
 }
 

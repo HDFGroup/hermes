@@ -475,7 +475,9 @@ void ParseConfigYAML(YAML::Node &yaml_conf, Config *config) {
 void ParseConfig(Arena *arena, const char *path, Config *config) {
   ScopedTemporaryMemory scratch(arena);
   InitDefaultConfig(config);
+  LOG(INFO) << "ParseConfig-LoadFile" << std::endl;
   YAML::Node yaml_conf = YAML::LoadFile(path);
+  LOG(INFO) << "ParseConfig-LoadComplete" << std::endl;
   ParseConfigYAML(yaml_conf, config);
 }
 
@@ -485,6 +487,24 @@ void ParseConfigString(
   InitDefaultConfig(config);
   YAML::Node yaml_conf = YAML::Load(config_string);
   ParseConfigYAML(yaml_conf, config);
+}
+
+void InitConfig(hermes::Config *config, const char *config_file) {
+  const size_t kConfigMemorySize = KILOBYTES(16);
+  hermes::u8 config_memory[kConfigMemorySize];
+  if (config_file) {
+    hermes::Arena config_arena = {};
+    hermes::InitArena(&config_arena, kConfigMemorySize, config_memory);
+    hermes::ParseConfig(&config_arena, config_file, config);
+  } else {
+    InitDefaultConfig(config);
+  }
+}
+
+hermes::Config* CreateConfig(const char *config_file) {
+  hermes::Config *config = new hermes::Config();
+  InitConfig(config, config_file);
+  return config;
 }
 
 }  // namespace hermes
