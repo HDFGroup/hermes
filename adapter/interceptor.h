@@ -34,6 +34,12 @@
 #define INTERCEPTOR_LIST \
   hermes::adapter::Singleton<hermes::adapter::InterceptorList>::GetInstance<>()
 
+#define HERMES_CONF \
+  hermes::adapter::Singleton<hermes::Config>::GetInstance()
+
+// Path lengths are up to 4096, but add a few spaces because null and such
+const int kMaxPathLen = 4100;
+
 namespace hermes::adapter {
 
 /**
@@ -50,21 +56,19 @@ inline std::vector<std::string> StringSplit(char* str, char delimiter) {
   return v;
 }
 inline std::string GetFilenameFromFP(FILE* fh) {
-  const int kMaxSize = 0xFFF;
-  char proclnk[kMaxSize];
-  char filename[kMaxSize];
+  char proclnk[kMaxPathLen];
+  char filename[kMaxPathLen];
   int fno = fileno(fh);
-  snprintf(proclnk, kMaxSize, "/proc/self/fd/%d", fno);
-  size_t r = readlink(proclnk, filename, kMaxSize);
+  snprintf(proclnk, kMaxPathLen, "/proc/self/fd/%d", fno);
+  size_t r = readlink(proclnk, filename, kMaxPathLen);
   filename[r] = '\0';
   return filename;
 }
 inline std::string GetFilenameFromFD(int fd) {
-  const int kMaxSize = 0xFFF;
-  char proclnk[kMaxSize];
-  char filename[kMaxSize];
-  snprintf(proclnk, kMaxSize, "/proc/self/fd/%d", fd);
-  size_t r = readlink(proclnk, filename, kMaxSize);
+  char proclnk[kMaxPathLen];
+  char filename[kMaxPathLen];
+  snprintf(proclnk, kMaxPathLen, "/proc/self/fd/%d", fd);
+  size_t r = readlink(proclnk, filename, kMaxPathLen);
   filename[r] = '\0';
   return filename;
 }
@@ -83,6 +87,10 @@ struct InterceptorList {
    * Scratch paths
    */
   std::vector<std::string> adapter_paths;
+  /**
+   * Allow adapter to include hermes specific files.
+   */
+  std::vector<std::string> hermes_paths_inclusion;
   /**
    * Allow adapter to exclude hermes specific files.
    */

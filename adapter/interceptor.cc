@@ -42,17 +42,29 @@ void PopulateBufferingPath() {
         WeaklyCanonical(fs::path(hermes_config)).string();
     INTERCEPTOR_LIST->hermes_paths_exclusion.push_back(hermes_conf_abs_path);
   }
-  hermes::Config config = {};
-  hermes::InitConfig(&config, hermes_config);
-
-  for (const auto& item : config.mount_points) {
+  hermes::Config config_stack = {};
+  hermes::Config *config = &config_stack;
+  hermes::InitConfig(config, hermes_config);
+  for (const auto& item : config->mount_points) {
     if (!item.empty()) {
       std::string abs_path = WeaklyCanonical(item).string();
       INTERCEPTOR_LIST->hermes_paths_exclusion.push_back(abs_path);
     }
   }
+  for (const auto& item : config->path_exclusions) {
+    if (!item.empty()) {
+      std::string abs_path = WeaklyCanonical(item).string();
+      INTERCEPTOR_LIST->hermes_paths_exclusion.push_back(abs_path);
+    }
+  }
+  for (const auto& item : config->path_inclusions) {
+    if (!item.empty()) {
+      std::string abs_path = WeaklyCanonical(item).string();
+      INTERCEPTOR_LIST->hermes_paths_inclusion.push_back(abs_path);
+    }
+  }
   INTERCEPTOR_LIST->hermes_paths_exclusion.push_back(
-      config.buffer_pool_shmem_name);
+      config->buffer_pool_shmem_name);
   INTERCEPTOR_LIST->hermes_paths_exclusion.push_back(kHermesExtension);
 
   // NOTE(chogan): Logging before setting up hermes_paths_exclusion results in
@@ -67,19 +79,7 @@ bool IsTracked(const std::string& path) {
   }
   atexit(OnExit);
 
-  // NOTE(llogan): This may be a performance issue
   std::string abs_path = WeaklyCanonical(path).string();
-  for (int i = 0; i < 15; ++i) {
-    if (abs_path.find(kPathExclusions[i]) == 0) {
-      return false;
-    }
-  }
-
-//  for (const auto& pth : config->path_exclusions) {
-//    if (abs_path.find(pth) == 0) {
-//      return false;
-//    }
-//  }
 
   for (const auto& pth : INTERCEPTOR_LIST->hermes_flush_exclusion) {
     if (abs_path.find(pth) != std::string::npos) {
@@ -89,6 +89,12 @@ bool IsTracked(const std::string& path) {
 
   if (INTERCEPTOR_LIST->hermes_paths_exclusion.empty()) {
     PopulateBufferingPath();
+  }
+
+  for (const auto& pth : INTERCEPTOR_LIST->hermes_paths_inclusion) {
+    if (abs_path.find(pth) != std::string::npos) {
+      return true;
+    }
   }
 
   for (int i = 0; i < 15; ++i) {
@@ -103,12 +109,6 @@ bool IsTracked(const std::string& path) {
       return false;
     }
   }
-
-//  for (const auto& pth : config->path_inclusions) {
-//    if (abs_path.find(pth) == 0) {
-//      return true;
-//    }
-//  }
 
   auto list = INTERCEPTOR_LIST;
   auto buffer_mode = INTERCEPTOR_LIST->adapter_mode;
