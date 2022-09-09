@@ -1,6 +1,14 @@
-//
-// Created by lukemartinlogan on 9/8/22.
-//
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+* Distributed under BSD 3-Clause license.                                   *
+* Copyright by The HDF Group.                                               *
+* Copyright by the Illinois Institute of Technology.                        *
+* All rights reserved.                                                      *
+*                                                                           *
+* This file is part of Hermes. The full Hermes copyright notice, including  *
+* terms governing use, modification, and redistribution, is contained in    *
+* the COPYING file, which can be found at the top directory. If you do not  *
+* have access to the file, you may request a copy from help@hdfgroup.org.   *
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #ifndef HERMES_ADAPTER_METADATA_MANAGER_H_
 #define HERMES_ADAPTER_METADATA_MANAGER_H_
@@ -21,19 +29,21 @@ namespace hermes::adapter {
 FlushingMode global_flushing_mode;
 
 class MetadataManager {
-protected:
+ protected:
   int rank;
   int comm_size;
   std::atomic<size_t> ref;
   std::shared_ptr<hapi::Hermes> hermes;
   bool is_mpi_;
-public:
+
+ public:
   /**
    * Initialize hermes. Get the kHermesConf from environment else get_env
    * returns NULL which is handled internally by hermes. Initialize hermes in
    * daemon mode. Keep a reference of how many times Initialize is called.
    * Within the adapter, Initialize is called from fopen.
    */
+
   void InitializeHermes(bool is_mpi) {
     if (ref == 0) {
       is_mpi_ = is_mpi;
@@ -64,10 +74,13 @@ public:
     }
     ref++;
   }
+
+
   /**
    * Finalize hermes and close rpc if reference is equal to one. Else just
    * decrement the ref counter.
    */
+
   void FinalizeHermes() {
     if (ref == 1) {
       hermes->FinalizeClient();
@@ -78,9 +91,11 @@ public:
   /**
    * Get the instance of hermes.
    */
+
   std::shared_ptr<hapi::Hermes>& GetHermes() { return hermes; }
 };
 
-}
+}  // namespace hermes::adapter
+
 
 #endif  // HERMES_ADAPTER_METADATA_MANAGER_H_

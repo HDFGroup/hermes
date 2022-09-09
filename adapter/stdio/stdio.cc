@@ -497,7 +497,8 @@ FILE *HERMES_DECL(fdopen)(int fd, const char *mode) {
     filename[r] = '\0';
     ret = simple_open(ret, filename, mode);
   } else {
-    LOG(INFO) << "Not tracked: " << hermes::adapter::GetFilenameFromFD(fd) << std::endl;
+    LOG(INFO) << "Not tracked: " <<
+        hermes::adapter::GetFilenameFromFD(fd) << std::endl;
   }
 
   return ret;
