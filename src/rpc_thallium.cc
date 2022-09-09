@@ -645,6 +645,9 @@ void InitRpcContext(RpcContext *rpc, u32 num_nodes, u32 node_id,
   rpc->state_size = sizeof(ThalliumState);
   rpc->port = config->rpc_port;
   rpc->client_rpc.state_size = sizeof(ClientThalliumState);
+  if (!config->rpc_server_host_file.empty()) {
+    rpc->use_host_file = true;
+  }
 }
 
 void *CreateRpcState(Arena *arena) {

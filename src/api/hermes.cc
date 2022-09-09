@@ -205,6 +205,7 @@ SharedMemoryContext InitHermesCore(Config *config, CommunicationContext *comm,
   size_t shmem_size = (arena_info->total -
                        arena_info->sizes[kArenaType_Transient]);
   u8 *shmem_base = InitSharedMemory(config->buffer_pool_shmem_name, shmem_size);
+  LOG(INFO) << "HERMES CORE" << std::endl;
 
   // NOTE(chogan): Initialize shared arenas
   ptrdiff_t base_offset = 0;
@@ -246,8 +247,6 @@ SharedMemoryContext InitHermesCore(Config *config, CommunicationContext *comm,
                                             host_names[i].size());
       MakeShmemString(&rpc->host_names[i], (u8 *)host_name_mem, host_names[i]);
     }
-
-    mdm->host_names_offset = (u8 *)rpc->host_names - (u8 *)shmem_base;
   } else {
     rpc->host_names = PushArray<ShmemString>(&arenas[kArenaType_MetaData],
                                              config->host_names.size());
@@ -260,6 +259,7 @@ SharedMemoryContext InitHermesCore(Config *config, CommunicationContext *comm,
                       config->host_names[i]);
     }
   }
+  mdm->host_names_offset = (u8 *)rpc->host_names - (u8 *)shmem_base;
 
   InitMetadataManager(mdm, rpc, &arenas[kArenaType_MetaData], config);
   InitMetadataStorage(&context, mdm, &arenas[kArenaType_MetaData], config);
