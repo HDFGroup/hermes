@@ -199,6 +199,19 @@ std::vector<std::string> GetHostsFromFile(const std::string &host_file) {
   return result;
 }
 
+void PushHostNames(Arena *arenas, RpcContext *rpc,
+                   const std::vector<std::string> &host_names,
+                   MetadataManager *mdm, u8 *shmem_base) {
+  rpc->host_names = PushArray<ShmemString>(&arenas[kArenaType_MetaData],
+                                           host_names.size());
+  for (size_t i = 0; i < host_names.size(); ++i) {
+    char *host_name_mem = PushArray<char>(&arenas[kArenaType_MetaData],
+                                          host_names[i].size());
+    MakeShmemString(&rpc->host_names[i], (u8 *)host_name_mem, host_names[i]);
+  }
+  mdm->host_names_offset = (u8 *)rpc->host_names - (u8 *)shmem_base;
+}
+
 SharedMemoryContext InitHermesCore(Config *config, CommunicationContext *comm,
                                    ArenaInfo *arena_info, Arena *arenas,
                                    RpcContext *rpc) {
@@ -238,29 +251,10 @@ SharedMemoryContext InitHermesCore(Config *config, CommunicationContext *comm,
     std::vector<std::string> host_names =
       GetHostsFromFile(config->rpc_server_host_file);
     CHECK_EQ(host_names.size(), rpc->num_nodes);
-
-    rpc->host_names = PushArray<ShmemString>(&arenas[kArenaType_MetaData],
-                                             host_names.size());
-
-    for (size_t i = 0; i < host_names.size(); ++i) {
-      char *host_name_mem = PushArray<char>(&arenas[kArenaType_MetaData],
-                                            host_names[i].size());
-      MakeShmemString(&rpc->host_names[i], (u8 *)host_name_mem, host_names[i]);
-    }
+    PushHostNames(arenas, rpc, host_names, mdm, shmem_base);
   } else {
-    rpc->host_names = PushArray<ShmemString>(&arenas[kArenaType_MetaData],
-                                             config->host_names.size());
-
-    for (size_t i = 0; i < config->host_names.size(); ++i) {
-      char *host_name_mem = PushArray<char>(&arenas[kArenaType_MetaData],
-                                            config->host_names[i].size());
-      MakeShmemString(&rpc->host_names[i],
-                      (u8 *)host_name_mem,
-                      config->host_names[i]);
-    }
+    PushHostNames(arenas, rpc, config->host_names, mdm, shmem_base);
   }
-  mdm->host_names_offset = (u8 *)rpc->host_names - (u8 *)shmem_base;
-
   InitMetadataManager(mdm, rpc, &arenas[kArenaType_MetaData], config);
   InitMetadataStorage(&context, mdm, &arenas[kArenaType_MetaData], config);
 
