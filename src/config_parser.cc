@@ -145,7 +145,7 @@ void ParseBlockSizes(Config *config, YAML::Node block_sizes,
 }
 
 template<typename T>
-void ParseArray(YAML::Node list_node, std::string var,
+void ParseArray(YAML::Node list_node, const std::string var,
                 T *list, int max_list_len) {
   int i = 0;
   if (max_list_len < (int)list_node.size()) {
@@ -166,7 +166,7 @@ void ParseVector(YAML::Node list_node, std::vector<T> &list) {
 }
 
 template<typename T>
-void ParseMatrix(YAML::Node matrix_node, std::string var, T *matrix,
+void ParseMatrix(YAML::Node matrix_node, const std::string var, T *matrix,
                  int max_row_len, int max_col_len, int *col_len) {
   int i = 0;
   if (max_row_len < (int)matrix_node.size()) {
@@ -195,7 +195,7 @@ void ParseMatrix(YAML::Node matrix_node, std::string var, T *matrix,
   }
 }
 
-void ParseRangeList(YAML::Node list_node, std::string var,
+void ParseRangeList(YAML::Node list_node, const std::string var,
                     std::vector<int> &list) {
   int min, max;
   for (auto val_node : list_node) {
