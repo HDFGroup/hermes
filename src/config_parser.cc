@@ -20,6 +20,7 @@
 #include <glog/logging.h>
 #include "utils.h"
 #include "config_parser.h"
+#include <iomanip>
 
 // Steps to add a new configuration variable:
 // 1. Add an "if" statement similar to ParseConfigYAML function for the variable
@@ -196,8 +197,8 @@ void ParseMatrix(YAML::Node matrix_node, std::string var, T *matrix,
 }
 
 void ParseRangeList(YAML::Node list_node, std::string var,
-                    std::vector<int> &list) {
-  int min, max;
+                    std::vector<std::string> &list) {
+  int min, max, width;
   for (auto val_node : list_node) {
     std::string val = val_node.as<std::string>();
     if (val.find('-') == std::string::npos) {
@@ -213,14 +214,33 @@ void ParseRangeList(YAML::Node list_node, std::string var,
       if (words.size() != 2) {
         LOG(FATAL) << var <<
             " has invalid range definition " << val << std::endl;
+        return;
       }
       min = std::stoi(words[0]);
       max = std::stoi(words[1]);
+      width = words[0].size();
     }
     for (int i = min; i <= max; ++i) {
+      std::stringstream ss;
+      ss << std::setw(width) << std::setfill('0') << i;
       list.emplace_back(i);
     }
   }
+}
+
+std::string GetHostNameFromNodeId(RpcContext *rpc, u32 node_id) {
+  std::string result;
+  if (rpc->use_host_file) {
+    // NOTE(chogan): node_id 0 is reserved as the NULL node
+    u32 index = node_id - 1;
+    result = GetShmemString(&rpc->host_names[index]);
+  } else {
+    std::string host_number = GetHostNumberAsString(rpc, node_id);
+    result = (std::string(rpc->base_hostname) + host_number +
+              std::string(rpc->hostname_suffix));
+  }
+
+  return result;
 }
 
 void CheckConstraints(Config *config) {
@@ -469,6 +489,7 @@ void ParseConfigYAML(YAML::Node &yaml_conf, Config *config) {
     ParseVector<std::string>(
         yaml_conf["path_inclusions"], config->path_inclusions);
   }
+  ParseHostNames(config);
   CheckConstraints(config);
 }
 
