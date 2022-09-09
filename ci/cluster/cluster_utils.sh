@@ -34,9 +34,9 @@ function hermes_cluster_up() {
         # 3. Change num_rpc_threads to 4
         docker exec --user ${docker_user} -w ${hermes_build_dir} ${h} \
                bash -c "sed -e 's|\"\./\"|\""${docker_home}"\"|g' \
-                        -e 's|rpc_server_host_file = \"\"|rpc_server_host_file = \"hermes_hosts\"|' \
-                        -e 's|rpc_num_threads = 1|rpc_num_threads = 4|' \
-                        ${conf_path} > ${cluster_conf}"
+                         -e 's|rpc_server_host_file: \"\"|rpc_server_host_file: \"hermes_hosts\"|' \
+                         -e 's|rpc_num_threads: 1|rpc_num_threads: 4|' \
+                         ${conf_path} > ${cluster_conf}"
 
         # Create the hosts file
         docker exec --user ${docker_user} -w ${hermes_build_dir} ${h} \
