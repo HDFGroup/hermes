@@ -37,8 +37,8 @@
 #define HERMES_CONF \
   hermes::adapter::Singleton<hermes::Config>::GetInstance()
 
-// Path lengths are up to 4096, but add a few spaces because null and such
-const int kMaxPathLen = 4100;
+// Path lengths are up to 4096 bytes
+const int kMaxPathLen = 4096;
 
 namespace hermes::adapter {
 
