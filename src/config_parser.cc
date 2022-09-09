@@ -146,7 +146,7 @@ void ParseBlockSizes(Config *config, YAML::Node block_sizes,
 }
 
 template<typename T>
-void ParseArray(YAML::Node list_node, std::string var,
+void ParseArray(YAML::Node list_node, const std::string var,
                 T *list, int max_list_len) {
   int i = 0;
   if (max_list_len < (int)list_node.size()) {
@@ -167,7 +167,7 @@ void ParseVector(YAML::Node list_node, std::vector<T> &list) {
 }
 
 template<typename T>
-void ParseMatrix(YAML::Node matrix_node, std::string var, T *matrix,
+void ParseMatrix(YAML::Node matrix_node, const std::string var, T *matrix,
                  int max_row_len, int max_col_len, int *col_len) {
   int i = 0;
   if (max_row_len < (int)matrix_node.size()) {
@@ -198,7 +198,7 @@ void ParseMatrix(YAML::Node matrix_node, std::string var, T *matrix,
 
 void ParseRangeList(YAML::Node list_node, std::string var,
                     std::vector<std::string> &list) {
-  int min, max, width;
+  int min, max, width=0;
   for (auto val_node : list_node) {
     std::string val = val_node.as<std::string>();
     if (val.find('-') == std::string::npos) {
@@ -220,27 +220,53 @@ void ParseRangeList(YAML::Node list_node, std::string var,
       max = std::stoi(words[1]);
       width = words[0].size();
     }
-    for (int i = min; i <= max; ++i) {
-      std::stringstream ss;
-      ss << std::setw(width) << std::setfill('0') << i;
-      list.emplace_back(i);
+
+    if (width > 0) {
+      for (int i = min; i <= max; ++i) {
+        std::stringstream ss;
+        ss << std::setw(width) << std::setfill('0') << i;
+        list.emplace_back(ss.str());
+      }
+    } else {
+      for (int i = min; i <= max; ++i) {
+        list.emplace_back(std::to_string(i));
+      }
     }
   }
 }
 
-std::string GetHostNameFromNodeId(RpcContext *rpc, u32 node_id) {
-  std::string result;
-  if (rpc->use_host_file) {
-    // NOTE(chogan): node_id 0 is reserved as the NULL node
-    u32 index = node_id - 1;
-    result = GetShmemString(&rpc->host_names[index]);
-  } else {
-    std::string host_number = GetHostNumberAsString(rpc, node_id);
-    result = (std::string(rpc->base_hostname) + host_number +
-              std::string(rpc->hostname_suffix));
+void ParseHostNames(YAML::Node yaml_conf, hermes::Config *config) {
+  if (yaml_conf["rpc_server_host_file"]) {
+    config->rpc_server_host_file =
+        yaml_conf["rpc_server_host_file"].as<std::string>();
+  }
+  if (yaml_conf["rpc_server_base_name"]) {
+    config->rpc_server_base_name =
+        yaml_conf["rpc_server_base_name"].as<std::string>();
+  }
+  if (yaml_conf["rpc_server_suffix"]) {
+    config->rpc_server_suffix =
+        yaml_conf["rpc_server_suffix"].as<std::string>();
+  }
+  if (yaml_conf["rpc_host_number_range"]) {
+    ParseRangeList(yaml_conf["rpc_host_number_range"],
+                   "rpc_host_number_range",
+                   config->host_numbers);
   }
 
-  return result;
+  if (config->rpc_server_host_file.empty()) {
+    config->host_names.clear();
+    if (config->host_numbers.size() == 0) {
+      config->host_numbers.emplace_back("");
+    }
+    for(auto &host_number : config->host_numbers) {
+      config->host_names.emplace_back(
+          config->rpc_server_base_name +
+          host_number +
+          config->rpc_server_suffix
+      );
+    }
+  }
 }
 
 void CheckConstraints(Config *config) {
@@ -283,6 +309,9 @@ void CheckConstraints(Config *config) {
 
 void ParseConfigYAML(YAML::Node &yaml_conf, Config *config) {
   bool capcities_specified = false, block_sizes_specified = false;
+  std::vector<std::string> host_numbers;
+  std::vector<std::string> host_basename;
+  std::string host_suffix;
 
   if (yaml_conf["num_devices"]) {
     config->num_devices = yaml_conf["num_devices"].as<int>();
@@ -397,18 +426,6 @@ void ParseConfigYAML(YAML::Node &yaml_conf, Config *config) {
     config->system_view_state_update_interval_ms =
         yaml_conf["system_view_state_update_interval_ms"].as<int>();
   }
-  if (yaml_conf["rpc_server_host_file"]) {
-    config->rpc_server_host_file =
-        yaml_conf["rpc_server_host_file"].as<std::string>();
-  }
-  if (yaml_conf["rpc_server_base_name"]) {
-    config->rpc_server_base_name =
-        yaml_conf["rpc_server_base_name"].as<std::string>();
-  }
-  if (yaml_conf["rpc_server_suffix"]) {
-    config->rpc_server_suffix =
-        yaml_conf["rpc_server_suffix"].as<std::string>();
-  }
   if (yaml_conf["buffer_pool_shmem_name"]) {
     std::string name = yaml_conf["buffer_pool_shmem_name"].as<std::string>();
     std::snprintf(config->buffer_pool_shmem_name,
@@ -427,11 +444,6 @@ void ParseConfigYAML(YAML::Node &yaml_conf, Config *config) {
   if (yaml_conf["buffer_organizer_port"]) {
     config->buffer_organizer_port =
         yaml_conf["buffer_organizer_port"].as<int>();
-  }
-  if (yaml_conf["rpc_host_number_range"]) {
-    ParseRangeList(yaml_conf["rpc_host_number_range"],
-                   "rpc_host_number_range",
-                   config->host_numbers);
   }
   if (yaml_conf["rpc_num_threads"]) {
     config->rpc_num_threads =
@@ -489,7 +501,7 @@ void ParseConfigYAML(YAML::Node &yaml_conf, Config *config) {
     ParseVector<std::string>(
         yaml_conf["path_inclusions"], config->path_inclusions);
   }
-  ParseHostNames(config);
+  ParseHostNames(yaml_conf, config);
   CheckConstraints(config);
 }
 

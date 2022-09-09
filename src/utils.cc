@@ -94,6 +94,8 @@ void InitDefaultConfig(Config *config) {
   config->rpc_server_host_file = "";
   config->rpc_server_base_name = "localhost";
   config->rpc_server_suffix = "";
+  config->host_numbers = std::vector<std::string>();
+  config->host_names.emplace_back("localhost");
   config->rpc_protocol = "ofi+sockets";
   config->rpc_domain = "";
   config->rpc_port = 8080;

@@ -235,13 +235,17 @@ struct Config {
 
   /** The name of a file that contains host names, 1 per line */
   std::string rpc_server_host_file;
-
   /** The hostname of the RPC server, minus any numbers that Hermes may
    * auto-generate when the rpc_hostNumber_range is specified. */
   std::string rpc_server_base_name;
+  /** The list of numbers from all server names. E.g., '{1, 3}' if your servers
+   * are named ares-comp-1 and ares-comp-3 */
+  std::vector<std::string> host_numbers;
   /** The RPC server name suffix. This is appended to the base name plus host
       number. */
   std::string rpc_server_suffix;
+  /** The parsed hostnames from the hermes conf */
+  std::vector<std::string> host_names;
   /** The RPC protocol to be used. */
   std::string rpc_protocol;
   /** The RPC domain name for verbs transport. */
@@ -250,9 +254,6 @@ struct Config {
   int rpc_port;
   /** The RPC port number for the buffer organizer. */
   int buffer_organizer_port;
-  /** The list of numbers from all server names. E.g., '{1, 3}' if your servers
-   * are named ares-comp-1 and ares-comp-3 */
-  std::vector<int> host_numbers;
   /** The number of handler threads per RPC server. */
   int rpc_num_threads;
   /** The number of buffer organizer threads. */

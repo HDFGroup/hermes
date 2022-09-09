@@ -39,12 +39,6 @@ struct RpcContext {
   void *state;
   /** The size of the internal rpc state. */
   size_t state_size;
-  /** Array of host numbers in shared memory. This size is
-   * RpcContext::num_nodes */
-  int *host_numbers;
-  /** The number of host numbers that were present in the rpc_host_number_range
-   * entry in the config file*/
-  size_t num_host_numbers;
   /** Array of host names stored in shared memory. This array size is
    * RpcContext::num_nodes. */
   ShmemString *host_names;
@@ -52,12 +46,6 @@ struct RpcContext {
   u32 num_nodes;
   int port;
   bool use_host_file;
-  /** The host name without the host number. Allows programmatic construction of
-   * predictable host names like cluster-node-1, cluster-node-2, etc. without
-   * storing extra copies of the base hostname.*/
-  char base_hostname[kMaxServerNameSize];
-
-  char hostname_suffix[kMaxServerSuffixSize];
 
   // TODO(chogan): Also allow reading hostnames from a file for heterogeneous or
   // non-contiguous hostnames (e.g., compute-node-20, compute-node-30,
@@ -79,7 +67,6 @@ void FinalizeClient(SharedMemoryContext *context, RpcContext *rpc,
                     CommunicationContext *comm, Arena *trans_arena,
                     bool stop_daemon);
 void FinalizeRpcContext(RpcContext *rpc, bool is_daemon);
-std::string GetHostNumberAsString(RpcContext *rpc, u32 node_id);
 std::string GetServerName(RpcContext *rpc, u32 node_id,
                           bool is_buffer_organizer = false);
 std::string GetProtocol(RpcContext *rpc);

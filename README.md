@@ -12,7 +12,7 @@ Hermes is a heterogeneous-aware, multi-tiered, dynamic, and distributed I/O buff
 *   [Thallium](https://mochi.readthedocs.io/en/latest/installing.html) - RPC library for HPC. Use a version greater than `0.5` for RoCE support.
 *   [GLOG](https://github.com/google/glog) - The Google logging library.
 *   [GLPK](https://www.gnu.org/software/glpk/) - GNU Linear Programming Kit
-*   The [yaml-cpp](https://github.com/jbeder/yaml-cpp) configuration parser
+*   [yaml-cpp](https://github.com/jbeder/yaml-cpp) - YAML file parser
 *   MPI (tested with MPICH `3.3.2` and OpenMPI `4.0.3`). Note: The MPI-IO adapter
       only supports MPICH. If you don't need the MPI-IO adapter you can use OpenMPI,
       but you must define the CMake variable `HERMES_ENABLE_MPIIO_ADAPTER=OFF`.

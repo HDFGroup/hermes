@@ -35,37 +35,49 @@ Config ParseConfigStringTest(Arena *arena, const std::string &config_string) {
 }
 
 void RunHostNumbersTest(Arena *arena, const std::string &config_string,
-                        const std::vector<int> &expected) {
+                        const std::vector<std::string> &expected) {
   Config config = ParseConfigStringTest(arena, config_string);
-  Assert(config.host_numbers == expected);
+  Assert(config.host_names == expected);
 }
 
 void TestParseRangeList(Arena *arena) {
   {
-    std::vector<int> expected{1, 3, 4, 5, 7, 10, 11, 12, 13, 14};
-    RunHostNumbersTest(arena, "rpc_host_number_range: [1, 3-5, 7, 10-14]\n",
-                       expected);
+    std::vector<std::string> expected{
+        "localhost-1", "localhost-3", "localhost-4", "localhost-5",
+        "localhost-7", "localhost-10", "localhost-11", "localhost-12"
+    };
+    std::string yaml =
+        "rpc_server_base_name: localhost-\n"
+        "rpc_host_number_range: [1, 3-5, 7, 10-12]\n";
+    RunHostNumbersTest(arena, yaml, expected);
   }
 
   {
-    std::vector<int> expected{1};
-    RunHostNumbersTest(arena, "rpc_host_number_range: [1]\n", expected);
+    std::vector<std::string> expected{
+        "localhost-001", "localhost-002", "localhost-003"
+    };
+    std::string yaml =
+        "rpc_server_base_name: localhost-\n"
+        "rpc_host_number_range: [001-003]\n";
+    RunHostNumbersTest(arena, yaml, expected);
   }
 
   {
-    std::vector<int> expected{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-    RunHostNumbersTest(arena, "rpc_host_number_range: [1-10]\n", expected);
+    std::vector<std::string> expected{
+        "localhost-1"
+    };
+    std::string yaml =
+        "rpc_server_base_name: localhost-\n"
+        "rpc_host_number_range: [1]\n";
+    RunHostNumbersTest(arena, yaml, expected);
   }
 
   {
-    std::vector<int> expected{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12};
-    RunHostNumbersTest(arena, "rpc_host_number_range: [1-10, 12]\n",
-                       expected);
-  }
-
-  {
-    std::vector<int> expected;
-    RunHostNumbersTest(arena, "rpc_host_number_range: []\n", expected);
+    std::vector<std::string> expected{"localhost"};
+    std::string yaml =
+        "rpc_server_base_name: localhost\n"
+        "rpc_host_number_range: []\n";
+    RunHostNumbersTest(arena, yaml, expected);
   }
 }
 
@@ -218,11 +230,8 @@ void TestDefaultConfig(Arena *arena, const char *config_file) {
   Assert(config.rpc_num_threads == 1);
 
   Assert(config.rpc_server_host_file == "");
-
-  const char expected_rpc_server_name[] = "localhost";
-  Assert(config.rpc_server_base_name == expected_rpc_server_name);
-  Assert(config.rpc_server_suffix.empty());
-  Assert(config.host_numbers == std::vector<int>());
+  std::vector<std::string> expected_host_names{"localhost"};
+  Assert(config.host_names == expected_host_names);
 
   std::string expected_shm_name = "/hermes_buffer_pool_";
   std::string actual_shm_name = config.buffer_pool_shmem_name;
@@ -265,5 +274,6 @@ int main(int argc, char **argv) {
   hermes::testing::TestBlockSizes(&arena);
   hermes::testing::TestPathExclusions(&arena);
 
+  printf("SUCCESS!");
   return 0;
 }
