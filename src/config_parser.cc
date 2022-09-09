@@ -266,7 +266,7 @@ void ParseConfigYAML(YAML::Node &yaml_conf, Config *config) {
 
   if (yaml_conf["num_devices"]) {
     config->num_devices = yaml_conf["num_devices"].as<int>();
-    config->num_targets = yaml_conf["num_devices"].as<int>();
+    config->num_targets = config->num_devices;
   }
   if (yaml_conf["num_targets"]) {
     config->num_targets = yaml_conf["num_targets"].as<int>();
