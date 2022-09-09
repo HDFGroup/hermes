@@ -496,11 +496,7 @@ FILE *HERMES_DECL(fdopen)(int fd, const char *mode) {
     size_t r = readlink(proclnk, filename, kMaxSize);
     filename[r] = '\0';
     ret = simple_open(ret, filename, mode);
-  } else {
-    LOG(INFO) << "Not tracked: " <<
-        hermes::adapter::GetFilenameFromFD(fd) << std::endl;
   }
-
   return ret;
 }
 
