@@ -198,7 +198,7 @@ void ParseMatrix(YAML::Node matrix_node, std::string var, T *matrix,
 
 void ParseRangeList(YAML::Node list_node, std::string var,
                     std::vector<std::string> &list) {
-  int min, max, width=0;
+  int min, max, width = 0;
   for (auto val_node : list_node) {
     std::string val = val_node.as<std::string>();
     if (val.find('-') == std::string::npos) {
@@ -259,12 +259,11 @@ void ParseHostNames(YAML::Node yaml_conf, hermes::Config *config) {
     if (config->host_numbers.size() == 0) {
       config->host_numbers.emplace_back("");
     }
-    for(auto &host_number : config->host_numbers) {
+    for (auto &host_number : config->host_numbers) {
       config->host_names.emplace_back(
           config->rpc_server_base_name +
           host_number +
-          config->rpc_server_suffix
-      );
+          config->rpc_server_suffix);
     }
   }
 }
