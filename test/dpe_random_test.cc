@@ -34,7 +34,9 @@ void RandomPlaceBlob(std::vector<size_t> &blob_sizes,
   std::vector<TargetID> targets;
 
   Status result = Random().Placement(
-      blob_sizes, node_state.bytes_available, bandwidths, targets, schemas_tmp, ctx);
+      blob_sizes, node_state.bytes_available,
+      bandwidths, targets, schemas_tmp, ctx);
+
   if (!result.Succeeded()) {
     std::cout << "\nRandomPlacement failed\n" << std::flush;
     exit(1);

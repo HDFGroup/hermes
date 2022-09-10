@@ -1,6 +1,14 @@
-//
-// Created by lukemartinlogan on 9/9/22.
-//
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+* Distributed under BSD 3-Clause license.                                   *
+* Copyright by The HDF Group.                                               *
+* Copyright by the Illinois Institute of Technology.                        *
+* All rights reserved.                                                      *
+*                                                                           *
+* This file is part of Hermes. The full Hermes copyright notice, including  *
+* terms governing use, modification, and redistribution, is contained in    *
+* the COPYING file, which can be found at the top directory. If you do not  *
+* have access to the file, you may request a copy from help@hdfgroup.org.   *
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #ifndef HERMES_SRC_DPE_DATA_PLACEMENT_ENGINE_FACTORY_H_
 #define HERMES_SRC_DPE_DATA_PLACEMENT_ENGINE_FACTORY_H_
@@ -11,7 +19,7 @@
 
 namespace hermes {
 
-using namespace hermes::api;
+using hermes::api::PlacementPolicy;
 
 class DPEFactory {
  public:
@@ -40,6 +48,6 @@ class DPEFactory {
   }
 };
 
-}   // namespace hermes
+}  // namespace hermes
 
 #endif  // HERMES_SRC_DPE_DATA_PLACEMENT_ENGINE_FACTORY_H_

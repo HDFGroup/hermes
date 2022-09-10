@@ -62,8 +62,6 @@ class RoundRobin : public DPE {
                    PlacementSchema &output);
 };
 
-
-
 }  // namespace hermes
 
 #endif  // HERMES_SRC_DPE_ROUND_ROBIN_H_

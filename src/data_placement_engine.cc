@@ -11,7 +11,6 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "data_placement_engine_factory.h"
-//#include "data_placement_engine.h"
 
 #include <assert.h>
 #include <glpk.h>

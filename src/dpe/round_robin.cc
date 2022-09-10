@@ -144,5 +144,4 @@ Status RoundRobin::Placement(const std::vector<size_t> &blob_sizes,
 }
 
 
-
-}
+}  // namespace hermes
