@@ -163,7 +163,6 @@ TargetViewState InitDeviceState(u64 total_target, bool homo_dist) {
   using hermes::TargetID;
   std::vector<TargetID> targets = GetDefaultTargets(total_target);
 
-  u64 target_position {0};
   for (size_t i {0}; i < tgt_num_per_type.size(); ++i) {
     for (size_t j {0}; j < tgt_num_per_type[i]; ++j) {
       result.bandwidth.push_back(device_bandwidth[i]);
