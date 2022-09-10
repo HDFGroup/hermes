@@ -31,8 +31,14 @@ void RoundRobinPlaceBlob(std::vector<size_t> &blob_sizes,
 
   std::vector<TargetID> targets =
     testing::GetDefaultTargets(node_state.num_devices);
-  Status result = RoundRobinPlacement(blob_sizes, node_state.bytes_available,
-                                      schemas_tmp, targets, false);
+  std::vector<f32> bandwidths;
+  api::Context ctx;
+  ctx.rr_split = false;
+
+  Status result = RoundRobin().Placement(
+          blob_sizes, node_state.bytes_available, bandwidths,
+          targets, schemas_tmp, ctx);
+
   if (!result.Succeeded()) {
     std::cout << "\nRoundRobinPlacement failed\n" << std::flush;
     exit(1);
@@ -62,9 +68,7 @@ int main() {
   std::cout << "Device Initial State:\n";
   testing::PrintNodeState(node_state);
 
-  RoundRobinState::devices_ = std::vector<DeviceID>(node_state.num_devices);
-  std::iota(RoundRobinState::devices_.begin(),
-            RoundRobinState::devices_.end(), 0);
+  RoundRobin::InitDevices(node_state.num_devices);
 
   std::vector<size_t> blob_sizes1(1, MEGABYTES(10));
   std::vector<PlacementSchema> schemas1;

@@ -32,7 +32,7 @@ void MinimizeIoTimePlaceBlob(std::vector<size_t> &blob_sizes,
     testing::GetDefaultTargets(node_state.num_devices);
   api::Context ctx;
   ctx.minimize_io_time_options = api::MinimizeIoTimeOptions(0, 0, true);
-  Status result = MinimizeIoTimePlacement(blob_sizes,
+  Status result = MinimizeIoTime().Placement(blob_sizes,
                                           node_state.bytes_available,
                                           node_state.bandwidth, targets,
                                           schemas_tmp, ctx);

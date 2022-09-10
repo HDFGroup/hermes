@@ -27,8 +27,6 @@
 
 namespace hermes {
 
-std::vector<DeviceID> RoundRobinState::devices_;
-
 namespace api {
 
 std::string GetVersion() {
@@ -386,13 +384,7 @@ std::shared_ptr<api::Hermes> InitHermes(Config *config, bool is_daemon,
     config->num_buffer_organizer_retries;
   api::Context::default_placement_policy = config->default_placement_policy;
   api::Context::default_rr_split = config->default_rr_split;
-
-  RoundRobinState::devices_.reserve(config->num_devices);
-  for (DeviceID id = 0; id < config->num_devices; ++id) {
-    if (GetNumBuffersAvailable(&result->context_, id)) {
-      RoundRobinState::devices_.push_back(id);
-    }
-  }
+  RoundRobin::InitDevices(config, result);
 
   InitRpcClients(&result->rpc_);
 
