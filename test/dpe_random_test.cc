@@ -15,7 +15,7 @@
 #include <map>
 
 #include "hermes.h"
-#include "data_placement_engine.h"
+#include "dpe/random.h"
 #include "test_utils.h"
 #include "utils.h"
 
@@ -31,10 +31,10 @@ void RandomPlaceBlob(std::vector<size_t> &blob_sizes,
 
   std::vector<f32> bandwidths;
   api::Context ctx;
+  std::vector<TargetID> targets;
 
   Status result = Random().Placement(
-      blob_sizes, node_state.ordered_cap, bandwidths,
-                                  schemas_tmp, ctx);
+      blob_sizes, node_state.bytes_available, bandwidths, targets, schemas_tmp, ctx);
   if (!result.Succeeded()) {
     std::cout << "\nRandomPlacement failed\n" << std::flush;
     exit(1);

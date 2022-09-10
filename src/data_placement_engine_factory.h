@@ -8,7 +8,6 @@
 #include "dpe/random.h"
 #include "dpe/minimize_io_time.h"
 #include "dpe/round_robin.h"
-#include "data_placement_engine.h"
 
 namespace hermes {
 

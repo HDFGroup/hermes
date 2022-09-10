@@ -170,9 +170,6 @@ TargetViewState InitDeviceState(u64 total_target, bool homo_dist) {
 
       result.bytes_available.push_back(MEGABYTES(device_size[i]));
       result.bytes_capacity.push_back(MEGABYTES(device_size[i]));
-      result.ordered_cap.insert(std::pair<hermes::u64, TargetID>(
-                                MEGABYTES(device_size[i]),
-                                targets[target_position]));
     }
   }
 
@@ -182,16 +179,10 @@ TargetViewState InitDeviceState(u64 total_target, bool homo_dist) {
 u64 UpdateDeviceState(PlacementSchema &schema,
                       TargetViewState &node_state) {
   u64 result {0};
-  node_state.ordered_cap.clear();
-
   for (auto [size, target] : schema) {
     result += size;
     node_state.bytes_available[target.bits.device_id] -= size;
-    node_state.ordered_cap.insert(
-      std::pair<u64, TargetID>(
-        node_state.bytes_available[target.bits.device_id], target));
   }
-
   return result;
 }
 

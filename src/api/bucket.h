@@ -21,7 +21,7 @@
 #include <glog/logging.h>
 
 #include "hermes.h"
-#include "data_placement_engine_factory.h"
+#include "dpe/round_robin.h"
 #include "metadata_management.h"
 #include "utils.h"
 
