@@ -116,10 +116,10 @@ Status RoundRobin::Placement(const std::vector<size_t> &blob_sizes,
   std::vector<u64> ns_local(node_state.begin(), node_state.end());
   bool split = ctx.rr_split;
 
-  if(ctx.policy != hermes::api::PlacementPolicy::kRoundRobin) {
+  if (ctx.policy != hermes::api::PlacementPolicy::kRoundRobin) {
     return result;
   }
-  if(bandwidths.size()) {
+  if (bandwidths.size()) {
     require_bw_ = false;
   }
 

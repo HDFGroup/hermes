@@ -61,10 +61,10 @@ Status Random::Placement(const std::vector<size_t> &blob_sizes,
   Status result;
   std::multimap<u64, TargetID> ordered_cap;
 
-  if(ctx.policy != hermes::api::PlacementPolicy::kRandom) {
+  if (ctx.policy != hermes::api::PlacementPolicy::kRandom) {
     return result;
   }
-  if(bandwidths.size()) {
+  if (bandwidths.size()) {
     require_bw_ = false;
   }
 

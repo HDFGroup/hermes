@@ -27,10 +27,10 @@ Status MinimizeIoTime::Placement(const std::vector<size_t> &blob_sizes,
   const size_t num_targets = targets.size();
   const size_t num_blobs = blob_sizes.size();
 
-  if(ctx.policy != hermes::api::PlacementPolicy::kMinimizeIoTime) {
+  if (ctx.policy != hermes::api::PlacementPolicy::kMinimizeIoTime) {
     return result;
   }
-  if(bandwidths.size()) {
+  if (bandwidths.size()) {
     require_bw_ = false;
   }
 
