@@ -37,7 +37,7 @@ void RoundRobinPlaceBlob(std::vector<size_t> &blob_sizes,
 
   Status result = RoundRobin().Placement(
           blob_sizes, node_state.bytes_available, bandwidths,
-          targets, schemas_tmp, ctx);
+          targets, ctx, schemas_tmp);
 
   if (!result.Succeeded()) {
     std::cout << "\nRoundRobinPlacement failed\n" << std::flush;

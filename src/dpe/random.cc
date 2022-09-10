@@ -56,10 +56,17 @@ Status Random::Placement(const std::vector<size_t> &blob_sizes,
                          const std::vector<u64> &node_state,
                          const std::vector<f32> &bandwidths,
                          const std::vector<TargetID> &targets,
-                         std::vector<PlacementSchema> &output,
-                         const api::Context &ctx) {
+                         const api::Context &ctx,
+                         std::vector<PlacementSchema> &output) {
   Status result;
   std::multimap<u64, TargetID> ordered_cap;
+
+  if(ctx.policy != hermes::api::PlacementPolicy::kRandom) {
+    return result;
+  }
+  if(bandwidths.size()) {
+    require_bw_ = false;
+  }
 
   GetOrderedCapacities(node_state, targets, ordered_cap);
 

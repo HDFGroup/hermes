@@ -24,13 +24,15 @@ namespace hermes {
 using api::Status;
 
 class DPE {
+ protected:
+  bool require_bw_;
  public:
   virtual Status Placement(const std::vector<size_t> &blob_sizes,
                            const std::vector<u64> &node_state,
                            const std::vector<f32> &bandwidths,
                            const std::vector<TargetID> &targets,
-                           std::vector<PlacementSchema> &output,
-                           const api::Context &ctx) = 0;
+                           const api::Context &ctx,
+                           std::vector<PlacementSchema> &output) = 0;
  protected:
   std::vector<int> GetValidSplitChoices(size_t blob_size);
   bool SplitBlob(size_t blob_size);

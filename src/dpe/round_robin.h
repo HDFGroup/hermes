@@ -35,8 +35,8 @@ class RoundRobin : public DPE {
                    const std::vector<u64> &node_state,
                    const std::vector<f32> &bandwidths,
                    const std::vector<TargetID> &targets,
-                   std::vector<PlacementSchema> &output,
-                   const api::Context &ctx);
+                   const api::Context &ctx,
+                   std::vector<PlacementSchema> &output);
 
   /** Retrieves the number of devices */
   size_t GetNumDevices() const;

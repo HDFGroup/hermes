@@ -144,7 +144,7 @@ Status CalculatePlacement(SharedMemoryContext *context, RpcContext *rpc,
     std::vector<f32> bandwidths = GetBandwidths(context, targets);
     auto dpe = DPEFactory().Get(api_context.policy);
     result = dpe->Placement(blob_sizes, node_state, bandwidths,
-                   targets, output_tmp, api_context);
+                   targets, api_context, output_tmp);
 
     if (!result.Failed()) {
       break;
