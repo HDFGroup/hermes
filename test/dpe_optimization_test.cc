@@ -15,7 +15,7 @@
 #include <map>
 
 #include "hermes.h"
-#include "dpe/minimize_io_time.h"
+#include "data_placement_engine_factory.h"
 #include "test_utils.h"
 #include "utils.h"
 
@@ -33,11 +33,10 @@ void MinimizeIoTimePlaceBlob(std::vector<size_t> &blob_sizes,
   api::Context ctx;
   ctx.policy = hermes::api::PlacementPolicy::kMinimizeIoTime;
   ctx.minimize_io_time_options = api::MinimizeIoTimeOptions(0, 0, true);
-  Status result = MinimizeIoTime().Placement(blob_sizes,
-                                          node_state.bytes_available,
-                                          targets,
-                                          ctx,
-                                          schemas_tmp);
+  auto dpe = DPEFactory().Get(ctx.policy);
+  dpe->bandwidths = node_state.bandwidth;
+  Status result = dpe->Placement(blob_sizes, node_state.bytes_available,
+                                 targets, ctx, schemas_tmp);
   if (result.Failed()) {
     std::cout << "\nMinimizeIoTimePlacement failed\n" << std::flush;
     exit(1);
