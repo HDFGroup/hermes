@@ -20,6 +20,7 @@ namespace hermes {
 class MinimizeIoTime : public DPE {
  public:
   MinimizeIoTime() : DPE(PlacementPolicy::kMinimizeIoTime) {}
+  ~MinimizeIoTime() = default;
   Status Placement(const std::vector<size_t> &blob_sizes,
                    const std::vector<u64> &node_state,
                    const std::vector<TargetID> &targets,

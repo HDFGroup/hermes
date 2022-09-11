@@ -30,7 +30,8 @@ void RandomPlaceBlob(std::vector<size_t> &blob_sizes,
             << " to targets\n" << std::flush;
 
   api::Context ctx;
-  std::vector<TargetID> targets;
+  std::vector<TargetID> targets =
+      testing::GetDefaultTargets(node_state.num_devices);
   ctx.policy = hermes::api::PlacementPolicy::kRandom;
   Status result = Random().Placement(
       blob_sizes, node_state.bytes_available,

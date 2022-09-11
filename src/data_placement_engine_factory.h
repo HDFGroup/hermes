@@ -32,16 +32,17 @@ class DPEFactory {
   std::unique_ptr<DPE> Get(const PlacementPolicy &type) {
     switch (type) {
       case PlacementPolicy::kRandom: {
-        return std::make_unique<Random>();
+        return std::unique_ptr<Random>(new Random());
       }
       case PlacementPolicy::kRoundRobin: {
-        return std::make_unique<RoundRobin>();
+        return std::unique_ptr<RoundRobin>(new RoundRobin());
       }
       case PlacementPolicy::kMinimizeIoTime: {
-        return std::make_unique<MinimizeIoTime>();
+        return std::unique_ptr<MinimizeIoTime>(new MinimizeIoTime());
       }
       default: {
         // TODO(luke): @errorhandling not implemented
+        LOG(FATAL) << "PlacementPolicy not implemented" << std::endl;
         return NULL;
       }
     }

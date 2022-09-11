@@ -20,6 +20,7 @@ namespace hermes {
 class Random : public DPE {
  public:
   Random() : DPE(PlacementPolicy::kRandom) {}
+  ~Random() = default;
   Status Placement(const std::vector<size_t> &blob_sizes,
                    const std::vector<u64> &node_state,
                    const std::vector<TargetID> &targets,

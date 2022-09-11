@@ -398,7 +398,8 @@ static void TestEffectiveTarget() {
   hapi::Bucket bucket(bucket_name, hermes);
   hapi::Blob data(4 * 1024, 'z');
   std::string blob_name("1");
-  Assert(bucket.Put(blob_name, data).Succeeded());
+  bool success = bucket.Put(blob_name, data).Succeeded();
+  Assert(success);
 
   SharedMemoryContext *context = &hermes->context_;
   RpcContext *rpc = &hermes->rpc_;
@@ -458,5 +459,6 @@ int main(int argc, char **argv) {
 
   MPI_Finalize();
 
+  printf("SUCCESS!\n");
   return 0;
 }

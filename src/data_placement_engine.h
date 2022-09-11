@@ -34,6 +34,7 @@ class DPE {
  public:
   std::vector<f32> bandwidths;
   explicit DPE(PlacementPolicy policy) : policy_(policy) {}
+  virtual ~DPE() = default;
   virtual Status Placement(const std::vector<size_t> &blob_sizes,
                    const std::vector<u64> &node_state,
                    const std::vector<TargetID> &targets,
