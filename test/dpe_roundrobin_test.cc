@@ -31,12 +31,11 @@ void RoundRobinPlaceBlob(std::vector<size_t> &blob_sizes,
 
   std::vector<TargetID> targets =
     testing::GetDefaultTargets(node_state.num_devices);
-  std::vector<f32> bandwidths;
   api::Context ctx;
   ctx.rr_split = false;
-
+  ctx.policy = hermes::api::PlacementPolicy::kRoundRobin;
   Status result = RoundRobin().Placement(
-          blob_sizes, node_state.bytes_available, bandwidths,
+          blob_sizes, node_state.bytes_available,
           targets, ctx, schemas_tmp);
 
   if (!result.Succeeded()) {

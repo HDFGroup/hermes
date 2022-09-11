@@ -24,14 +24,6 @@ using hermes::api::Status;
 // Initialize RoundRobin devices
 std::vector<DeviceID> RoundRobin::devices_;
 
-RoundRobin::RoundRobin() : device_index_mutex_() {
-  device_index_mutex_.lock();
-}
-
-RoundRobin::~RoundRobin() {
-  device_index_mutex_.unlock();
-}
-
 void RoundRobin::InitDevices(hermes::Config *config,
                         std::shared_ptr<api::Hermes> result) {
   devices_.reserve(config->num_devices);
@@ -108,13 +100,13 @@ Status RoundRobin::AddSchema(size_t index, std::vector<u64> &node_state,
 
 Status RoundRobin::Placement(const std::vector<size_t> &blob_sizes,
                              const std::vector<u64> &node_state,
-                             const std::vector<f32> &bandwidths,
                              const std::vector<TargetID> &targets,
                              const api::Context &ctx,
                              std::vector<PlacementSchema> &output) {
   Status result;
   std::vector<u64> ns_local(node_state.begin(), node_state.end());
   bool split = ctx.rr_split;
+  VERIFY_DPE_POLICY(ctx)
 
   if (ctx.policy != hermes::api::PlacementPolicy::kRoundRobin) {
     return result;

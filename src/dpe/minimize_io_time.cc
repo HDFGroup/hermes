@@ -18,20 +18,17 @@
 namespace hermes {
 
 Status MinimizeIoTime::Placement(const std::vector<size_t> &blob_sizes,
-                                 const std::vector<u64> &node_state,
-                                 const std::vector<f32> &bandwidths,
-                                 const std::vector<TargetID> &targets,
-                                 const api::Context &ctx,
-                                 std::vector<PlacementSchema> &output) {
+                                  const std::vector<u64> &node_state,
+                                  const std::vector<TargetID> &targets,
+                                  const api::Context &ctx,
+                                  std::vector<PlacementSchema> &output) {
   Status result;
   const size_t num_targets = targets.size();
   const size_t num_blobs = blob_sizes.size();
+  VERIFY_DPE_POLICY(ctx)
 
   if (ctx.policy != hermes::api::PlacementPolicy::kMinimizeIoTime) {
     return result;
-  }
-  if (bandwidths.size()) {
-    require_bw_ = false;
   }
 
   const double minimum_remaining_capacity =

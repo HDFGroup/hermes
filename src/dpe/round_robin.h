@@ -28,12 +28,15 @@ class RoundRobin : public DPE {
   std::mutex device_index_mutex_; /**< Protect index updates */
 
  public:
-  RoundRobin();
-  ~RoundRobin();
+  RoundRobin() : DPE(PlacementPolicy::kRoundRobin) {
+    device_index_mutex_.lock();
+  }
+  ~RoundRobin() {
+    device_index_mutex_.unlock();
+  }
 
   Status Placement(const std::vector<size_t> &blob_sizes,
                    const std::vector<u64> &node_state,
-                   const std::vector<f32> &bandwidths,
                    const std::vector<TargetID> &targets,
                    const api::Context &ctx,
                    std::vector<PlacementSchema> &output);

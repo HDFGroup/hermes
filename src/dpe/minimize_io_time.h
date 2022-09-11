@@ -19,9 +19,9 @@ namespace hermes {
 
 class MinimizeIoTime : public DPE {
  public:
+  MinimizeIoTime() : DPE(PlacementPolicy::kMinimizeIoTime) {}
   Status Placement(const std::vector<size_t> &blob_sizes,
                    const std::vector<u64> &node_state,
-                   const std::vector<f32> &bandwidths,
                    const std::vector<TargetID> &targets,
                    const api::Context &ctx,
                    std::vector<PlacementSchema> &output);

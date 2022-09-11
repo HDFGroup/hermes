@@ -31,11 +31,12 @@ void MinimizeIoTimePlaceBlob(std::vector<size_t> &blob_sizes,
   std::vector<TargetID> targets =
     testing::GetDefaultTargets(node_state.num_devices);
   api::Context ctx;
+  ctx.policy = hermes::api::PlacementPolicy::kMinimizeIoTime;
   ctx.minimize_io_time_options = api::MinimizeIoTimeOptions(0, 0, true);
   Status result = MinimizeIoTime().Placement(blob_sizes,
                                           node_state.bytes_available,
-                                          node_state.bandwidth, targets,
-                                             ctx,
+                                          targets,
+                                          ctx,
                                           schemas_tmp);
   if (result.Failed()) {
     std::cout << "\nMinimizeIoTimePlacement failed\n" << std::flush;

@@ -59,6 +59,25 @@ enum class PlacementPolicy {
   kMinimizeIoTime,  /**< LP-based blob placement, minimize I/O time */
 };
 
+class PlacementPolicyConv {
+ public:
+  static std::string str(PlacementPolicy policy) {
+    switch (policy) {
+      case PlacementPolicy::kRandom: {
+        return "PlacementPolicy::kRandom";
+      }
+      case PlacementPolicy::kRoundRobin: {
+        return "PlacementPolicy::kRoundRobin";
+      }
+      case PlacementPolicy::kMinimizeIoTime: {
+        return "PlacementPolicy::kMinimizeIoTime";
+      }
+    }
+    return "PlacementPolicy::Invalid";
+  }
+};
+
+
 struct MinimizeIoTimeOptions {
   double minimum_remaining_capacity;
   double capacity_change_threshold;
