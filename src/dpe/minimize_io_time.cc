@@ -17,43 +17,79 @@
 
 namespace hermes {
 
+/**
+ * INPUTS:
+ *  Vector of blob sizes (vS): s1,s2,...sB
+ *  Vector of targets (vT): t1,t2,...tD
+ *  Vector of remaining capacities (vR): r1,r2,...rD
+ *  Vector of target bandwidth (vB): b1,b2,..bD
+ *  (NOTE: D is the number of devices)
+ *
+ * OUTPUT:
+ *   Vector of PlacementSchema: p1,p2,...pD
+ *   PlacementSchema:
+ *
+ *  Optimization Problem:
+ *    Decide what fraction of a blob can be placed in a target.
+ *    Ensure that fractional blob size < remaining capacity
+ *    Ensure that remaining capacity > min_capacity_thresh
+ *    Ensure
+ *
+ *    Total I/O time:
+ *      (s1/xV1) + (s2/xV2) +...+ (s3/xV3) is minimized
+ *    Minimize total I/O time such that:
+ *      Sum of blob fractions == 1 per-blob
+ *      Sum of
+ *
+ *  NOTE:
+ *      columns are variable names
+ *      rows are constraints
+ *      can set the bounds of a variable
+ *      can set the bounds of a contraint
+ * */
+
 Status MinimizeIoTime::Placement(const std::vector<size_t> &blob_sizes,
                                   const std::vector<u64> &node_state,
                                   const std::vector<TargetID> &targets,
                                   const api::Context &ctx,
                                   std::vector<PlacementSchema> &output) {
+  LOG(INFO) << "Placement" << std::endl;
+
   Status result;
   const size_t num_targets = targets.size();
   const size_t num_blobs = blob_sizes.size();
   VERIFY_DPE_POLICY(ctx)
-
-  if (ctx.policy != hermes::api::PlacementPolicy::kMinimizeIoTime) {
-    return result;
-  }
 
   const double minimum_remaining_capacity =
       ctx.minimize_io_time_options.minimum_remaining_capacity;
   const double capacity_change_threshold =
       ctx.minimize_io_time_options.capacity_change_threshold;
 
-  size_t constraints_per_target = 1;
+  size_t constraints_per_target = 2;
   VLOG(1) << "MinimizeIoTimePlacement()::minimum_remaining_capacity=" <<
       minimum_remaining_capacity;
-  if (minimum_remaining_capacity != 0) {
-    constraints_per_target++;
-  }
-  if (capacity_change_threshold != 0) {
-    constraints_per_target++;
-  }
   VLOG(1) << "MinimizeIoTimePlacement()::constraints_per_target=" <<
       constraints_per_target;
   const size_t total_constraints =
       num_blobs + (num_targets * constraints_per_target) - 1;
   glp_prob *lp = glp_create_prob();
-  int ia[1+1000], ja[1+1000], last = 0;
-  double ar[1+1000];
-  // double x[num_blobs * num_targets];
+  int ia[1+1000], ja[1+1000];
+  int last=0, last_tmp[3] = {0};
+  double ar[1+1000] = {0};
 
+  /**
+   * Columns: [s1,s2,...sB]x[t1,t2,...tD]
+   * Rows: [s1,s2,...sB][r1,r2,...rD][minCap1,...minCapD][capThresh1,...capThreshD]
+   *
+   * A column for each combo of (blob, target)
+   * A row for each blob,
+   * remaining capacity,
+   * minimum capacity (if provided),
+   * and capacity threshold (if provided)
+   *
+   * The variable s1t1 is a fraction between 0 and 1 representing the
+   * percentage of the blob.
+   * */
   glp_set_prob_name(lp, "min_io");
   glp_set_obj_dir(lp, GLP_MIN);
   glp_add_rows(lp, total_constraints);
@@ -64,11 +100,19 @@ Status MinimizeIoTime::Placement(const std::vector<size_t> &blob_sizes,
   // Constraint #1: Sum of fraction of each blob is 1.
   for (size_t i {0}; i < num_blobs; ++i) {
     // Use GLP_FX for the fixed contraint of 1.
+    // Ensure the entire row sums up to 1
     std::string row_name {"blob_row_" + std::to_string(i)};
     glp_set_row_name(lp, i+1, row_name.c_str());
     glp_set_row_bnds(lp, i+1, GLP_FX, 1.0, 1.0);
 
     // TODO(KIMMY): consider remote nodes?
+    /**
+     * Ensures that each (blob, target) pair is a
+     * fraction between 0 and 1.
+     *
+     * Ensure that A[row][(blob_i,target)] = 1
+     * A[row][(blob!=i,target)] = 0 because ar[ij] is initially 0.
+     * */
     for (size_t j {0}; j < num_targets; ++j) {
       int ij = i * num_targets + j + 1;
       std::string var_name {"blob_dst_" + std::to_string(i) + "_" +
@@ -77,67 +121,61 @@ Status MinimizeIoTime::Placement(const std::vector<size_t> &blob_sizes,
       glp_set_col_name(lp, ij, var_name.c_str());
       glp_set_col_bnds(lp, ij, GLP_DB, 0.0, 1.0);
       ia[ij] = i+1, ja[ij] = j+1, ar[ij] = 1.0;  // var[i][j] = 1.0
+      last_tmp[0] = ij;
       last = ij;
     }
   }
   num_constrts += num_blobs;
 
-  // Constraint #2: Minimum Remaining Capacity Constraint
-  int last2 = 0;
-  if (minimum_remaining_capacity != 0) {
-    for (size_t j{0}; j < num_targets; ++j) {
-      double remaining_capacity_threshold =
-          static_cast<double>(node_state[j]) * minimum_remaining_capacity;
-      std::string row_name{"mrc_row_" + std::to_string(j)};
-      glp_set_row_name(lp, num_constrts + j + 1, row_name.c_str());
-      glp_set_row_bnds(
-          lp, num_constrts + j + 1, GLP_DB, 0.0,
-          static_cast<double>(node_state[j]) - remaining_capacity_threshold);
+  // Constraint #2: Capacity constraints
+  for (size_t j{0}; j < num_targets; ++j) {
+    /**
+     * For each target, sum of blob sizes should be between 0 and
+     * remaining capacity - capacity thresh.
+     *
+     * A[row][(blob,target_j)] = blob_size
+     * A[row][(blob,target!=j)] = 0
+     * */
 
-      for (size_t i{0}; i < num_blobs; ++i) {
-        // Starting row of contraint array is (blob * target)*num_constrts.
-        int ij = j * num_blobs + i + 1 + last;
-        ia[ij] = num_constrts + j + 1, ja[ij] = j + 1,
-        ar[ij] = static_cast<double>(blob_sizes[i]);
-        last2 = ij;
-      }
+    double rem_cap_thresh =
+        static_cast<double>(node_state[j]) -
+        static_cast<double>(node_state[j]) * minimum_remaining_capacity;
+    double est_rem_cap = capacity_change_threshold * node_state[j];
+    double max_capacity = std::max({0.0, rem_cap_thresh, est_rem_cap});
+
+    std::string row_name{"mrc_row_" + std::to_string(j)};
+    glp_set_row_name(lp, num_constrts + j + 1, row_name.c_str());
+    glp_set_row_bnds(
+        lp, num_constrts + j + 1, GLP_DB, 0.0,max_capacity);
+
+    for (size_t i{0}; i < num_blobs; ++i) {
+      // Starting row of contraint array is (blob * target)*num_constrts.
+      int ij = j * num_blobs + i + 1 + last_tmp[0];
+      ia[ij] = num_constrts + j + 1, ja[ij] = j + 1,
+      ar[ij] = static_cast<double>(blob_sizes[i]);
+      last_tmp[1] = ij;
+      last = ij;
     }
-    num_constrts += num_targets;
-  } else {
-    last2 = last;
   }
-
-  // Constraint #3: Remaining Capacity Change Threshold
-  int last3 = 0;
-  if (capacity_change_threshold != 0) {
-    for (size_t j {0}; j < num_targets; ++j) {
-      std::string row_name {"rcct_row_" + std::to_string(j)};
-      glp_set_row_name(lp, num_constrts+j+1, row_name.c_str());
-      glp_set_row_bnds(lp, num_constrts+j+1, GLP_DB, 0.0,
-                       capacity_change_threshold * node_state[j]);
-      for (size_t i {0}; i < num_blobs; ++i) {
-        int ij = j * num_blobs + i + 1 + last2;
-        ia[ij] = num_constrts+j+1, ja[ij] = j+1,
-        ar[ij] = static_cast<double>(blob_sizes[i]);
-        last3 = ij;
-      }
-    }
-    num_constrts += num_targets;
-  } else {
-    last3 = last2;
-  }
-
-  int last4 = 0;
+  num_constrts += num_targets;
 
   // Placement Ratio
+  /**
+   * Blob comes in and gets divided into chunks
+   * 100MB RAM, 1GB for NVMe, 10TB SSD, 100TB HDD
+   *
+   * */
+
+  /*
   if (ctx.minimize_io_time_options.use_placement_ratio) {
+    LOG(INFO) << "placement ratio: true" << std::endl;
     for (size_t j {0}; j < num_targets-1; ++j) {
       std::string row_name {"pr_row_" + std::to_string(j)};
       glp_set_row_name(lp, num_constrts+j+1, row_name.c_str());
       glp_set_row_bnds(lp, num_constrts+j+1, GLP_LO, 0.0, 0.0);
 
       for (size_t i {0}; i < num_blobs; ++i) {
-        int ij = j * num_blobs + i + 1 + last3 + j;
+        int ij = j * num_blobs + i + 1 + last_tmp[1] + j;
         ia[ij] = num_constrts+j+1, ja[ij] = j+2,
         ar[ij] = static_cast<double>(blob_sizes[i]);
 
@@ -146,12 +184,11 @@ Status MinimizeIoTime::Placement(const std::vector<size_t> &blob_sizes,
         ij = ij + 1;
         ia[ij] = num_constrts+j+1, ja[ij] = j+1,
         ar[ij] = static_cast<double>(blob_sizes[i])*(0-placement_ratio);
-        last4 = ij;
+        last_tmp[2] = ij;
+        last = ij;
       }
     }
-  } else {
-    last4 = last3;
-  }
+  }*/
 
   // Objective to minimize IO time
   for (size_t i {0}; i < num_blobs; ++i) {
@@ -161,9 +198,9 @@ Status MinimizeIoTime::Placement(const std::vector<size_t> &blob_sizes,
                        static_cast<double>(blob_sizes[i])/bandwidths[j]);
     }
   }
-  VLOG(1) << "MinimizeIoTimePlacement()::last4=" << last4;
+  VLOG(1) << "MinimizeIoTimePlacement()::last=" << last;
 
-  glp_load_matrix(lp, last4, ia, ja, ar);
+  glp_load_matrix(lp, last, ia, ja, ar);
   glp_smcp parm;
   glp_init_smcp(&parm);
   parm.msg_lev = GLP_MSG_OFF;

@@ -24,9 +24,9 @@
 
 #include "hermes_version.h"
 
-#define KILOBYTES(n) ((n) * 1024)
-#define MEGABYTES(n) ((n) * 1024 * 1024)
-#define GIGABYTES(n) ((n) * 1024UL * 1024UL * 1024UL)
+#define KILOBYTES(n) (((size_t)n) * 1024)
+#define MEGABYTES(n) (((size_t)n) * 1024 * 1024)
+#define GIGABYTES(n) (((size_t)n) * 1024UL * 1024UL * 1024UL)
 
 namespace hermes {
 

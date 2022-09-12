@@ -188,8 +188,8 @@ u64 UpdateDeviceState(PlacementSchema &schema,
 void PrintNodeState(TargetViewState &node_state) {
   for (int i {0}; i < node_state.num_devices; ++i) {
     std::cout << "  capacity of device[" << i << "]: "
-              << node_state.bytes_available[i]
-              << '\n' << std::flush;
+              << node_state.bytes_available[i] / MEGABYTES(1)
+              << " MB\n" << std::flush;
     std::cout << "  available ratio of device["<< i << "]: "
               << static_cast<double>(node_state.bytes_available[i])/
                  node_state.bytes_capacity[i]

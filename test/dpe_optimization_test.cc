@@ -27,12 +27,13 @@ void MinimizeIoTimePlaceBlob(std::vector<size_t> &blob_sizes,
   std::vector<PlacementSchema> schemas_tmp;
 
   std::cout << "\nMinimizeIoTimePlacement to place blob of size "
-            << blob_sizes[0] << " to targets\n" << std::flush;
+            << blob_sizes[0] / MEGABYTES(1) << " MB to targets\n" << std::flush;
   std::vector<TargetID> targets =
     testing::GetDefaultTargets(node_state.num_devices);
   api::Context ctx;
   ctx.policy = hermes::api::PlacementPolicy::kMinimizeIoTime;
-  ctx.minimize_io_time_options = api::MinimizeIoTimeOptions(0, 0, true);
+  //ctx.minimize_io_time_options = api::MinimizeIoTimeOptions(0, 0, true);
+  ctx.minimize_io_time_options = api::MinimizeIoTimeOptions();
   auto dpe = DPEFactory().Get(ctx.policy);
   dpe->bandwidths = node_state.bandwidth;
   Status result = dpe->Placement(blob_sizes, node_state.bytes_available,
@@ -55,7 +56,11 @@ void MinimizeIoTimePlaceBlob(std::vector<size_t> &blob_sizes,
 
   std::cout << "\nUpdate Device State:\n";
   testing::PrintNodeState(node_state);
-  u64 total_sizes = std::accumulate(blob_sizes.begin(), blob_sizes.end(), 0);
+  size_t total_sizes = 0;
+  for(auto &sz : blob_sizes) {
+    total_sizes += sz;
+  }
+  //u64 total_sizes = std::accumulate(blob_sizes.begin(), blob_sizes.end(), 0);
   Assert(placed_size == total_sizes);
 }
 
@@ -66,7 +71,7 @@ int main() {
   std::cout << "Device Initial State:\n";
   testing::PrintNodeState(node_state);
 
-  std::vector<size_t> blob_sizes1(1, MEGABYTES(10));
+  std::vector<size_t> blob_sizes1(1, MEGABYTES(16384));
   std::vector<PlacementSchema> schemas1;
   MinimizeIoTimePlaceBlob(blob_sizes1, schemas1, node_state);
   Assert(schemas1.size() == blob_sizes1.size());
