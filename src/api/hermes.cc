@@ -23,6 +23,7 @@
 #include "buffer_pool.h"
 #include "buffer_pool_internal.h"
 #include "metadata_management_internal.h"
+#include "config_parser.h"
 
 namespace hermes {
 
@@ -198,12 +199,26 @@ std::vector<std::string> GetHostsFromFile(const std::string &host_file) {
   return result;
 }
 
+void PushHostNames(Arena *arenas, RpcContext *rpc,
+                   const std::vector<std::string> &host_names,
+                   MetadataManager *mdm, u8 *shmem_base) {
+  rpc->host_names = PushArray<ShmemString>(&arenas[kArenaType_MetaData],
+                                           host_names.size());
+  for (size_t i = 0; i < host_names.size(); ++i) {
+    char *host_name_mem = PushArray<char>(&arenas[kArenaType_MetaData],
+                                          host_names[i].size());
+    MakeShmemString(&rpc->host_names[i], (u8 *)host_name_mem, host_names[i]);
+  }
+  mdm->host_names_offset = (u8 *)rpc->host_names - (u8 *)shmem_base;
+}
+
 SharedMemoryContext InitHermesCore(Config *config, CommunicationContext *comm,
                                    ArenaInfo *arena_info, Arena *arenas,
                                    RpcContext *rpc) {
   size_t shmem_size = (arena_info->total -
                        arena_info->sizes[kArenaType_Transient]);
   u8 *shmem_base = InitSharedMemory(config->buffer_pool_shmem_name, shmem_size);
+  LOG(INFO) << "HERMES CORE" << std::endl;
 
   // NOTE(chogan): Initialize shared arenas
   ptrdiff_t base_offset = 0;
@@ -236,26 +251,10 @@ SharedMemoryContext InitHermesCore(Config *config, CommunicationContext *comm,
     std::vector<std::string> host_names =
       GetHostsFromFile(config->rpc_server_host_file);
     CHECK_EQ(host_names.size(), rpc->num_nodes);
-
-    rpc->host_names = PushArray<ShmemString>(&arenas[kArenaType_MetaData],
-                                             host_names.size());
-
-    for (size_t i = 0; i < host_names.size(); ++i) {
-      char *host_name_mem = PushArray<char>(&arenas[kArenaType_MetaData],
-                                            host_names[i].size());
-      MakeShmemString(&rpc->host_names[i], (u8 *)host_name_mem, host_names[i]);
-    }
-
-    mdm->host_names_offset = (u8 *)rpc->host_names - (u8 *)shmem_base;
+    PushHostNames(arenas, rpc, host_names, mdm, shmem_base);
   } else {
-    rpc->host_numbers = PushArray<int>(&arenas[kArenaType_MetaData],
-                                       rpc->num_host_numbers);
-    for (size_t i = 0; i < rpc->num_host_numbers; ++i) {
-      rpc->host_numbers[i] = config->host_numbers[i];
-    }
-    mdm->host_numbers_offset = (u8 *)rpc->host_numbers - (u8 *)shmem_base;
+    PushHostNames(arenas, rpc, config->host_names, mdm, shmem_base);
   }
-
   InitMetadataManager(mdm, rpc, &arenas[kArenaType_MetaData], config);
   InitMetadataStorage(&context, mdm, &arenas[kArenaType_MetaData], config);
 
@@ -276,7 +275,6 @@ BootstrapSharedMemory(Arena *arenas, Config *config, CommunicationContext *comm,
   // NOTE(chogan): The buffering capacity for the RAM Device is the size of the
   // BufferPool Arena
   config->capacities[0] = arena_info.sizes[kArenaType_BufferPool];
-
   size_t trans_arena_size =
     InitCommunication(comm, &arenas[kArenaType_Transient],
                       arena_info.sizes[kArenaType_Transient], is_daemon,
@@ -342,8 +340,6 @@ std::shared_ptr<api::Hermes> InitHermes(Config *config, bool is_daemon,
     // state in shared memory
     MetadataManager *mdm = GetMetadataManagerFromContext(&context);
     rpc.state = (void *)(context.shm_base + mdm->rpc_state_offset);
-    rpc.host_numbers =
-      (int *)((u8 *)context.shm_base + mdm->host_numbers_offset);
     rpc.host_names =
       (ShmemString *)((u8 *)context.shm_base + mdm->host_names_offset);
   }
@@ -421,19 +417,13 @@ std::shared_ptr<Hermes> InitHermes(const char *config_file, bool is_daemon,
     LOG(FATAL) << "Big endian machines not supported yet." << std::endl;
   }
 
+  LOG(INFO) << "Initializing hermes config" << std::endl;
+
   hermes::Config config = {};
-  const size_t kConfigMemorySize = KILOBYTES(16);
-  hermes::u8 config_memory[kConfigMemorySize];
-
-  if (config_file) {
-    hermes::Arena config_arena = {};
-    hermes::InitArena(&config_arena, kConfigMemorySize, config_memory);
-    hermes::ParseConfig(&config_arena, config_file, &config);
-  } else {
-    InitDefaultConfig(&config);
-  }
-
+  hermes::InitConfig(&config, config_file);
   std::shared_ptr<Hermes> result = InitHermes(&config, is_daemon, is_adapter);
+
+  LOG(INFO) << "Initialized hermes config" << std::endl;
 
   return result;
 }

@@ -94,6 +94,8 @@ void InitDefaultConfig(Config *config) {
   config->rpc_server_host_file = "";
   config->rpc_server_base_name = "localhost";
   config->rpc_server_suffix = "";
+  config->host_numbers = std::vector<std::string>();
+  config->host_names.emplace_back("localhost");
   config->rpc_protocol = "ofi+sockets";
   config->rpc_domain = "";
   config->rpc_port = 8080;
@@ -104,12 +106,10 @@ void InitDefaultConfig(Config *config) {
   config->max_vbuckets_per_node = 8;
   config->system_view_state_update_interval_ms = 100;
 
-  const char buffer_pool_shmem_name[] = "/hermes_buffer_pool_";
-  size_t shmem_name_size = strlen(buffer_pool_shmem_name);
-  for (size_t i = 0; i < shmem_name_size; ++i) {
-    config->buffer_pool_shmem_name[i] = buffer_pool_shmem_name[i];
-  }
-  config->buffer_pool_shmem_name[shmem_name_size] = '\0';
+  const std::string buffer_pool_shmem_name = "/hermes_buffer_pool_";
+  std::snprintf(config->buffer_pool_shmem_name,
+                kMaxBufferPoolShmemNameLength,
+                "%s", buffer_pool_shmem_name.c_str());
 
   config->default_placement_policy = api::PlacementPolicy::kMinimizeIoTime;
 

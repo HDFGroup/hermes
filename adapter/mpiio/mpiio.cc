@@ -558,7 +558,7 @@ int HERMES_DECL(MPI_File_close)(MPI_File *fh) {
         const auto &blob_names = existing.first.st_blobs;
         auto blob_vbucket_vec = std::vector<hapi::VBucket *>();
         if (!blob_names.empty() && persist) {
-          LOG(INFO) << "Adapter flushes " << blob_names.size()
+          LOG(INFO) << "MPI-IO close Adapter flushes " << blob_names.size()
                     << " blobs to filename:" << filename << "." << std::endl;
           auto vbucket_name = filename + "_" + std::to_string(mdm->rank);
           INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
@@ -1079,7 +1079,7 @@ int HERMES_DECL(MPI_File_sync)(MPI_File fh) {
       hapi::Context ctx;
       const auto &blob_names = existing.first.st_blobs;
       if (!blob_names.empty() && persist) {
-        LOG(INFO) << "Adapter flushes " << blob_names.size()
+        LOG(INFO) << "MPI-IO sync Adapter flushes " << blob_names.size()
                   << " blobs to filename:" << filename << "." << std::endl;
         INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
         hapi::VBucket file_vbucket(filename, mdm->GetHermes());

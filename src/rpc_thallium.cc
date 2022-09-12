@@ -20,19 +20,6 @@ namespace tl = thallium;
 
 namespace hermes {
 
-std::string GetHostNumberAsString(RpcContext *rpc, u32 node_id) {
-  std::string result = "";
-
-  if (rpc->num_host_numbers > 0) {
-    // Subtract 1 because the node_id index starts at 1 instead of 0. We reserve
-    // 0 so that BufferIDs (which are made from the node_id) can be NULL.
-    int index = (node_id - 1);
-    result = std::to_string(rpc->host_numbers[index]);
-  }
-
-  return result;
-}
-
 void CopyStringToCharArray(const std::string &src, char *dest, size_t max) {
   size_t src_size = src.size();
   if (src_size >= max) {
@@ -653,18 +640,11 @@ void InitRpcContext(RpcContext *rpc, u32 num_nodes, u32 node_id,
   // The number of host numbers in the rpc_host_number_range entry of the
   // configuration file. Not necessarily the number of nodes because when there
   // is only 1 node, the entry can be left blank, or contain 1 host number.
-  rpc->num_host_numbers = config->host_numbers.size();
   rpc->node_id = node_id;
   rpc->start_server = ThalliumStartRpcServer;
   rpc->state_size = sizeof(ThalliumState);
   rpc->port = config->rpc_port;
-  CopyStringToCharArray(config->rpc_server_base_name, rpc->base_hostname,
-                        kMaxServerNameSize);
-  CopyStringToCharArray(config->rpc_server_suffix, rpc->hostname_suffix,
-                        kMaxServerSuffixSize);
-
   rpc->client_rpc.state_size = sizeof(ClientThalliumState);
-
   if (!config->rpc_server_host_file.empty()) {
     rpc->use_host_file = true;
   }
@@ -784,16 +764,9 @@ void FinalizeClient(SharedMemoryContext *context, RpcContext *rpc,
 
 std::string GetHostNameFromNodeId(RpcContext *rpc, u32 node_id) {
   std::string result;
-  if (rpc->use_host_file) {
-    // NOTE(chogan): node_id 0 is reserved as the NULL node
-    u32 index = node_id - 1;
-    result = GetShmemString(&rpc->host_names[index]);
-  } else {
-    std::string host_number = GetHostNumberAsString(rpc, node_id);
-    result = (std::string(rpc->base_hostname) + host_number +
-              std::string(rpc->hostname_suffix));
-  }
-
+  // NOTE(chogan): node_id 0 is reserved as the NULL node
+  u32 index = node_id - 1;
+  result = GetShmemString(&rpc->host_names[index]);
   return result;
 }
 

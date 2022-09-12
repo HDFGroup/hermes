@@ -43,7 +43,7 @@ target_compile_definitions(bucket_test
 add_test(NAME "Testbucket_test"
   COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
   "${CMAKE_BINARY_DIR}/bin/bucket_test"
-  "${CMAKE_CURRENT_SOURCE_DIR}/data/bucket_test.conf")
+  "${CMAKE_CURRENT_SOURCE_DIR}/data/bucket_test.yaml")
 set_tests_properties("Testbucket_test" PROPERTIES ENVIRONMENT
   LSAN_OPTIONS=suppressions=${CMAKE_CURRENT_SOURCE_DIR}/data/asan.supp)
 
@@ -83,7 +83,7 @@ target_link_libraries(config_parser_test hermes
   $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium> glog::glog)
 
 add_test(NAME TestConfigParser
-  COMMAND config_parser_test ${CMAKE_CURRENT_SOURCE_DIR}/data/hermes.conf)
+  COMMAND config_parser_test ${CMAKE_CURRENT_SOURCE_DIR}/data/hermes.yaml)
 target_compile_definitions(config_parser_test
   PRIVATE $<$<BOOL:${HERMES_RPC_THALLIUM}>:HERMES_RPC_THALLIUM>)
 
@@ -125,7 +125,7 @@ $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium> Catch2::Catch2 glog::glog -lstdc++fs)
 target_compile_definitions(trait
 PRIVATE $<$<BOOL:${HERMES_RPC_THALLIUM}>:HERMES_RPC_THALLIUM>)
 add_test(NAME "TestTrait" COMMAND "${CMAKE_BINARY_DIR}/bin/trait" "-s" "--reporter" "compact"
-        "--config" "${CMAKE_CURRENT_SOURCE_DIR}/data/bucket_test.conf")
+        "--config" "${CMAKE_CURRENT_SOURCE_DIR}/data/bucket_test.yaml")
 set_tests_properties("TestTrait" PROPERTIES ENVIRONMENT
 LSAN_OPTIONS=suppressions=${CMAKE_CURRENT_SOURCE_DIR}/data/asan.supp)
 
@@ -148,7 +148,7 @@ add_custom_target(ares
   COMMAND LSAN_OPTIONS=suppressions=${CMAKE_CURRENT_SOURCE_DIR}/data/asan.supp
   ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4 -ppn 2
   "${CMAKE_BINARY_DIR}/bin/end_to_end_test"
-  "${CMAKE_CURRENT_SOURCE_DIR}/data/ares.conf"
+  "${CMAKE_CURRENT_SOURCE_DIR}/data/ares.yaml"
 )
 if(HERMES_INSTALL_TESTS)
   set(TEST_EXECS dpe_optimization_test dpe_random_test

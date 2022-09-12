@@ -37,7 +37,7 @@ endif()
 
 function(set_vfd_test_properties test_name)
   set_property(TEST ${test_name}
-    PROPERTY ENVIRONMENT HERMES_CONF=${HERMES_ADAPTER_TEST_DIR}/data/hermes.conf)
+    PROPERTY ENVIRONMENT HERMES_CONF=${HERMES_ADAPTER_TEST_DIR}/data/hermes.yaml)
   set_property(TEST ${test_name} APPEND
     PROPERTY ENVIRONMENT HDF5_PLUGIN_PATH=${HERMES_VFD_LIBRARY_DIR})
   set_property(TEST ${test_name} APPEND

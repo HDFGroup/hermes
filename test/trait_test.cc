@@ -25,7 +25,7 @@ namespace hapi = hermes::api;
 struct Arguments {
   std::string filename = "test.dat";
   std::string directory = "/tmp";
-  std::string config = "./hermes.conf";
+  std::string config = "./hermes.yaml";
   size_t request_size = 16 * 1024;
   size_t iterations = 1024;
 };

@@ -1,7 +1,7 @@
 function(gcc_hermes exec tag_name tags conf)
     add_test(NAME Test${exec}_${tag_name} COMMAND "${CMAKE_BINARY_DIR}/bin/${exec}" ${tags} --reporter compact -d yes)
     set_property(TEST Test${exec}_${tag_name}
-            PROPERTY ENVIRONMENT HERMES_CONF=${CMAKE_SOURCE_DIR}/adapter/test/data/${conf}.conf)
+            PROPERTY ENVIRONMENT HERMES_CONF=${CMAKE_SOURCE_DIR}/adapter/test/data/${conf}.yaml)
     set_property(TEST Test${exec}_${tag_name} APPEND
             PROPERTY ENVIRONMENT LSAN_OPTIONS=suppressions=${CMAKE_SOURCE_DIR}/test/data/asan.supp)
 endfunction()
@@ -10,7 +10,7 @@ function(gcc_hermes_mode exec tag_name tags mode path)
     set(test_name Test${exec}_${tag_name}_${mode}_${path})
     add_test(NAME ${test_name} COMMAND "${CMAKE_BINARY_DIR}/bin/${exec}" ${tags} --reporter compact -d yes)
     set_property(TEST ${test_name}
-            PROPERTY ENVIRONMENT HERMES_CONF=${CMAKE_SOURCE_DIR}/adapter/test/data/hermes.conf)
+            PROPERTY ENVIRONMENT HERMES_CONF=${CMAKE_SOURCE_DIR}/adapter/test/data/hermes.yaml)
     set_property(TEST ${test_name} APPEND
             PROPERTY ENVIRONMENT LSAN_OPTIONS=suppressions=${CMAKE_SOURCE_DIR}/test/data/asan.supp)
     set_property(TEST ${test_name} APPEND

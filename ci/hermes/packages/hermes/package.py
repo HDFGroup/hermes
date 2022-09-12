@@ -1,6 +1,5 @@
 from spack import *
 
-
 class Hermes(CMakePackage):
     homepage = "http://www.cs.iit.edu/~scs/assets/projects/Hermes/Hermes.html"
     url = "https://github.com/HDFGroup/hermes/tarball/master"
@@ -12,6 +11,7 @@ class Hermes(CMakePackage):
     depends_on('glpk@4:')
     depends_on('mpich@3.3.2:')
     depends_on('glog@0.4:')
+    depends_on('yaml-cpp')
     depends_on('hdf5@1.13.0:', when='+vfd')
 
     def cmake_args(self):

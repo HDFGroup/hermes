@@ -271,6 +271,12 @@ if(HERMES_RPC_THALLIUM)
   endif()
 endif()
 
+#YAML-CPP
+find_package(yaml-cpp REQUIRED)
+if(yaml-cpp_FOUND)
+  message(STATUS "found yaml-cpp at ${yaml-cpp_DIR}")
+endif()
+
 # GLOG
 find_package(glog REQUIRED)
 if(glog_FOUND)
@@ -468,7 +474,7 @@ install(
 
 install(
   FILES
-    test/data/hermes.conf
+        test/data/hermes.yaml
   TYPE
     DATA
   RENAME
@@ -492,5 +498,5 @@ install(
 
 add_custom_target(lint
   COMMAND cpplint --recursive --exclude=${CMAKE_CURRENT_SOURCE_DIR}/src/stb_ds.h
-  --exclude=${CMAKE_CURRENT_SOURCE_DIR}/build ${CMAKE_CURRENT_SOURCE_DIR}
+  --exclude=${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}
 )
