@@ -54,7 +54,7 @@ Status MinimizeIoTime::Placement(const std::vector<size_t> &blob_sizes,
 
     // TODO(KIMMY): consider remote nodes?
     for (size_t j = 0; j < num_targets; ++j) {
-      lp.SetConstraintCoeff(var.Get(i,j), 1);
+      lp.SetConstraintCoeff(var.Get(i, j), 1);
       if (placement_ratios_[j] > 0) {
         lp.SetVariableBounds("blob_dst_", var.Get(i, j), GLP_DB, 0,
                              placement_ratios_[j]);
@@ -77,7 +77,8 @@ Status MinimizeIoTime::Placement(const std::vector<size_t> &blob_sizes,
       lp.AddConstraint("rem_gap_", GLP_FX, 0.0, 0.0);
     }
     for (size_t i = 0; i < num_blobs; ++i) {
-      lp.SetConstraintCoeff(var.Get(i,j), static_cast<double>(blob_sizes[i]));
+      lp.SetConstraintCoeff(var.Get(i, j),
+                            static_cast<double>(blob_sizes[i]));
     }
   }
 
@@ -85,7 +86,7 @@ Status MinimizeIoTime::Placement(const std::vector<size_t> &blob_sizes,
   lp.SetObjective(GLP_MIN);
   for (size_t i = 0; i < num_blobs; ++i) {
     for (size_t j = 0; j < num_targets; ++j) {
-      lp.SetObjectiveCoeff(var.Get(i,j),
+      lp.SetObjectiveCoeff(var.Get(i, j),
                            static_cast<double>(blob_sizes[i])/bandwidths[j]);
     }
   }
@@ -141,7 +142,8 @@ void MinimizeIoTime::GetPlacementRatios(const std::vector<u64> &node_state,
                                         const api::Context &ctx) {
   placement_ratios_.reserve(node_state.size());
   if (ctx.minimize_io_time_options.use_placement_ratio) {
-    size_t total_bytes = std::accumulate(node_state.begin(), node_state.end(), (size_t)0);
+    size_t total_bytes = std::accumulate(
+        node_state.begin(), node_state.end(), (size_t)0);
     double total = static_cast<double>(total_bytes);
     for (size_t j = 0; j < node_state.size() - 1; ++j) {
       double target_cap = static_cast<double>(node_state[j]);

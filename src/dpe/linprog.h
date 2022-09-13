@@ -1,6 +1,14 @@
-//
-// Created by lukemartinlogan on 9/12/22.
-//
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+* Distributed under BSD 3-Clause license.                                   *
+* Copyright by The HDF Group.                                               *
+* Copyright by the Illinois Institute of Technology.                        *
+* All rights reserved.                                                      *
+*                                                                           *
+* This file is part of Hermes. The full Hermes copyright notice, including  *
+* terms governing use, modification, and redistribution, is contained in    *
+* the COPYING file, which can be found at the top directory. If you do not  *
+* have access to the file, you may request a copy from help@hdfgroup.org.   *
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #ifndef HERMES_SRC_DPE_LINPROG_H_
 #define HERMES_SRC_DPE_LINPROG_H_
@@ -19,7 +27,7 @@ struct Array2DIdx {
     return i*nrow_ + j;
   }
   int Begin(int i) {
-    return Get(i,0);
+    return Get(i, 0);
   }
   int End(int i) {
     return Get(i, ncol_);
@@ -30,24 +38,25 @@ struct Array2DIdx {
  * GLPK documentation: http://most.ccib.rutgers.edu/glpk.pdf
  * */
 
+const size_t kDefaultCoeffs = 1000 + 1;
+
 class LinearProgram {
  private:
   int num_vars_, num_constraints_;
   glp_prob *lp_;
-  std::vector<int> ia_; // The "i" in A[i][j]
-  std::vector<int> ja_; // The "j" in A[i][j]
+  std::vector<int> ia_;  // The "i" in A[i][j]
+  std::vector<int> ja_;  // The "j" in A[i][j]
   std::vector<double> ar_;
-  int off_;
-  int cur_constraint_;
-  int result_;
+  size_t cur_constraint_;
+  size_t result_;
 
  public:
-  LinearProgram(const char *name) {
+  explicit LinearProgram(const char *name) {
     lp_ = glp_create_prob();
     glp_set_prob_name(lp_, name);
     cur_constraint_ = 0;
-    off_ = 0;
   }
+
   ~LinearProgram() {
     glp_delete_prob(lp_);
     glp_free_env();
@@ -55,12 +64,11 @@ class LinearProgram {
 
   void DefineDimension(int num_vars, int num_constraints) {
     // NOTE(llogan): GLPK requires arrays start from "1" instead of "0"
-    int total = num_vars * num_constraints + 1;
     glp_add_rows(lp_, num_constraints);
     glp_add_cols(lp_, num_vars);
-    ia_.resize(total, 0);
-    ja_.resize(total, 0);
-    ar_.resize(total, 0);
+    ia_.reserve(kDefaultCoeffs); ia_.emplace_back(0);
+    ja_.reserve(kDefaultCoeffs); ja_.emplace_back(0);
+    ar_.reserve(kDefaultCoeffs); ar_.emplace_back(0.0);
     num_vars_ = num_vars;
     num_constraints_ = num_constraints;
   }
@@ -74,10 +82,10 @@ class LinearProgram {
   }
 
   void SetConstraintCoeff(int var, double val) {
-    int off = GetOffset(var);
-    ia_[off] = cur_constraint_;
-    ja_[off] = var;
-    ar_[off] = val;
+    var += 1;
+    ia_.emplace_back(cur_constraint_);
+    ja_.emplace_back(var);
+    ar_.emplace_back(val);
   }
 
   void SetVariableBounds(const std::string &base_name, int var,
@@ -98,7 +106,7 @@ class LinearProgram {
   }
 
   void Solve() {
-    glp_load_matrix(lp_, off_, ia_.data(), ja_.data(), ar_.data());
+    glp_load_matrix(lp_, ia_.size()-1, ia_.data(), ja_.data(), ar_.data());
     glp_smcp parm;
     glp_init_smcp(&parm);
     parm.msg_lev = GLP_MSG_OFF;
@@ -126,12 +134,6 @@ class LinearProgram {
       v.emplace_back(GetVariable(var));
     }
     return v;
-  }
-
- protected:
-  int GetOffset(int &var) {
-    var += 1;
-    return ++off_;
   }
 };
 

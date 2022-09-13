@@ -24,9 +24,9 @@ using namespace hermes;  // NOLINT(*)
 void MinimizeIoTimePlaceBlob(std::vector<size_t> &blob_sizes,
                              std::vector<PlacementSchema> &schemas,
                              testing::TargetViewState &node_state,
-                             double min_capacity=0,
-                             double capacity_change=0,
-                             bool use_placement_ratio=false) {
+                             double min_capacity = 0,
+                             double capacity_change = 0,
+                             bool use_placement_ratio = false) {
   std::vector<PlacementSchema> schemas_tmp;
 
   std::cout << "\nMinimizeIoTimePlacement to place blob of size "
@@ -35,7 +35,6 @@ void MinimizeIoTimePlaceBlob(std::vector<size_t> &blob_sizes,
     testing::GetDefaultTargets(node_state.num_devices);
   api::Context ctx;
   ctx.policy = hermes::api::PlacementPolicy::kMinimizeIoTime;
-  //ctx.minimize_io_time_options = api::MinimizeIoTimeOptions(0, 0, true);
   ctx.minimize_io_time_options = api::MinimizeIoTimeOptions(
       min_capacity,
       capacity_change,
@@ -62,11 +61,7 @@ void MinimizeIoTimePlaceBlob(std::vector<size_t> &blob_sizes,
 
   std::cout << "\nUpdate Device State:\n";
   testing::PrintNodeState(node_state);
-  size_t total_sizes = 0;
-  for(auto &sz : blob_sizes) {
-    total_sizes += sz;
-  }
-  //u64 total_sizes = std::accumulate(blob_sizes.begin(), blob_sizes.end(), 0);
+  u64 total_sizes = std::accumulate(blob_sizes.begin(), blob_sizes.end(), 0ul);
   Assert(placed_size == total_sizes);
 }
 
