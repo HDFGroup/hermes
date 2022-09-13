@@ -110,7 +110,6 @@ struct TargetViewState {
   std::vector<hermes::u64> bytes_capacity;
   std::vector<hermes::u64> bytes_available;
   std::vector<hermes::f32> bandwidth;
-  std::multimap<hermes::u64, TargetID> ordered_cap;
   int num_devices;
 };
 

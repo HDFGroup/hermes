@@ -163,16 +163,12 @@ TargetViewState InitDeviceState(u64 total_target, bool homo_dist) {
   using hermes::TargetID;
   std::vector<TargetID> targets = GetDefaultTargets(total_target);
 
-  u64 target_position {0};
   for (size_t i {0}; i < tgt_num_per_type.size(); ++i) {
     for (size_t j {0}; j < tgt_num_per_type[i]; ++j) {
       result.bandwidth.push_back(device_bandwidth[i]);
 
       result.bytes_available.push_back(MEGABYTES(device_size[i]));
       result.bytes_capacity.push_back(MEGABYTES(device_size[i]));
-      result.ordered_cap.insert(std::pair<hermes::u64, TargetID>(
-                                MEGABYTES(device_size[i]),
-                                targets[target_position]));
     }
   }
 
@@ -182,24 +178,18 @@ TargetViewState InitDeviceState(u64 total_target, bool homo_dist) {
 u64 UpdateDeviceState(PlacementSchema &schema,
                       TargetViewState &node_state) {
   u64 result {0};
-  node_state.ordered_cap.clear();
-
   for (auto [size, target] : schema) {
     result += size;
     node_state.bytes_available[target.bits.device_id] -= size;
-    node_state.ordered_cap.insert(
-      std::pair<u64, TargetID>(
-        node_state.bytes_available[target.bits.device_id], target));
   }
-
   return result;
 }
 
 void PrintNodeState(TargetViewState &node_state) {
   for (int i {0}; i < node_state.num_devices; ++i) {
     std::cout << "  capacity of device[" << i << "]: "
-              << node_state.bytes_available[i]
-              << '\n' << std::flush;
+              << node_state.bytes_available[i] / MEGABYTES(1)
+              << " MB\n" << std::flush;
     std::cout << "  available ratio of device["<< i << "]: "
               << static_cast<double>(node_state.bytes_available[i])/
                  node_state.bytes_capacity[i]

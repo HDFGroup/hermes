@@ -18,7 +18,7 @@
 #include "hermes.h"
 #include "utils.h"
 #include "test_utils.h"
-#include "data_placement_engine.h"
+#include "data_placement_engine_factory.h"
 
 /* example usage: ./bin/dpe_bench -m -s 4096 */
 
@@ -136,41 +136,17 @@ int main(int argc, char **argv) {
   std::vector<TargetID> targets =
                         testing::GetDefaultTargets(tgt_state.num_devices);
 
-  switch (policy) {
-    case api::PlacementPolicy::kRandom: {
-      std::multimap<u64, TargetID> ordered_cap;
-      for (auto i = 0; i < tgt_state.num_devices; ++i) {
-        ordered_cap.insert(std::pair<u64, TargetID>(
-                           tgt_state.bytes_available[i], targets[i]));
-      }
-
-      std::cout << "DPE benchmark uses Random placement.\n\n";
-      time_point start_tm = now();
-      result = RandomPlacement(blob_sizes, ordered_cap, output_tmp);
-      time_point end_tm = now();
-      dpe_seconds = std::chrono::duration<double>(end_tm - start_tm).count();
-      break;
-    }
-    case api::PlacementPolicy::kRoundRobin: {
-      time_point start_tm = now();
-      result = RoundRobinPlacement(blob_sizes, tgt_state.bytes_available,
-                                   output_tmp, targets, false);
-      std::cout << "DPE benchmark uses RoundRobin placement.\n\n";
-      time_point end_tm = now();
-      dpe_seconds = std::chrono::duration<double>(end_tm - start_tm).count();
-      break;
-    }
-    case api::PlacementPolicy::kMinimizeIoTime: {
-      std::cout << "DPE benchmark uses MinimizeIoTime placement.\n\n";
-      time_point start_tm = now();
-      result = MinimizeIoTimePlacement(blob_sizes, tgt_state.bytes_available,
-                                       tgt_state.bandwidth, targets,
-                                       output_tmp);
-      time_point end_tm = now();
-      dpe_seconds = std::chrono::duration<double>(end_tm - start_tm).count();
-      break;
-    }
-  }
+  api::Context ctx;
+  ctx.policy = policy;
+  std::cout << "DPE benchmark uses " <<
+      api::PlacementPolicyConv::str(policy) << " placement.\n\n";
+  time_point start_tm = now();
+  auto dpe = DPEFactory().Get(policy);
+  dpe->bandwidths = tgt_state.bandwidth;
+  result = dpe->Placement(blob_sizes, tgt_state.bytes_available,
+                          targets, ctx, output_tmp);
+  time_point end_tm = now();
+  dpe_seconds = std::chrono::duration<double>(end_tm - start_tm).count();
 
   u64 placed_size {0};
   for (auto schema : output_tmp) {

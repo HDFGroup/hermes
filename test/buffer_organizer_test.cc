@@ -178,7 +178,7 @@ static void TestBoMove() {
   config.default_placement_policy = hapi::PlacementPolicy::kRoundRobin;
   HermesPtr hermes = hermes::InitHermesDaemon(&config);
 
-  hermes::RoundRobinState rr_state;
+  hermes::RoundRobin rr_state;
   size_t num_devices = rr_state.GetNumDevices();
 
   // Force Blob to RAM, then call BoMove to move a Buffer to the lowest tier and
@@ -203,7 +203,7 @@ void TestOrganizeBlob() {
   RpcContext *rpc = &hermes->rpc_;
 
   // Put a Blob in RAM
-  hermes::RoundRobinState rr_state;
+  hermes::RoundRobin rr_state;
   rr_state.SetCurrentDeviceIndex(0);
   size_t blob_size = KILOBYTES(20);
   hapi::Bucket bkt("Organize", hermes);
@@ -294,7 +294,7 @@ void TestMinThresholdViolation() {
   HermesPtr hermes = hermes::InitHermesDaemon(&config);
 
 
-  hermes::RoundRobinState rr_state;
+  hermes::RoundRobin rr_state;
   rr_state.SetCurrentDeviceIndex(2);
   hapi::Context ctx;
   ctx.policy = hapi::PlacementPolicy::kRoundRobin;
@@ -342,7 +342,7 @@ void TestMaxThresholdViolation() {
 
   HermesPtr hermes = hermes::InitHermesDaemon(&config);
 
-  hermes::RoundRobinState rr_state;
+  hermes::RoundRobin rr_state;
   rr_state.SetCurrentDeviceIndex(1);
   hapi::Context ctx;
   ctx.policy = hapi::PlacementPolicy::kRoundRobin;

@@ -21,7 +21,7 @@
 #include <glog/logging.h>
 
 #include "hermes.h"
-#include "data_placement_engine.h"
+#include "dpe/round_robin.h"
 #include "metadata_management.h"
 #include "utils.h"
 
@@ -346,7 +346,7 @@ Status Bucket::Put(const std::vector<std::string> &names,
         ret = PutInternal(names, sizes_in_bytes, blobs, ctx);
 
         if (ret.Failed()) {
-          RoundRobinState rr_state;
+          RoundRobin rr_state;
           int current = rr_state.GetCurrentDeviceIndex();
           rr_state.SetCurrentDeviceIndex((current + 1) % num_devices);
         } else {

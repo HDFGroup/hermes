@@ -24,9 +24,9 @@
 
 #include "hermes_version.h"
 
-#define KILOBYTES(n) ((n) * 1024)
-#define MEGABYTES(n) ((n) * 1024 * 1024)
-#define GIGABYTES(n) ((n) * 1024UL * 1024UL * 1024UL)
+#define KILOBYTES(n) (((size_t)n) * 1024)
+#define MEGABYTES(n) (((size_t)n) * 1024 * 1024)
+#define GIGABYTES(n) (((size_t)n) * 1024UL * 1024UL * 1024UL)
 
 namespace hermes {
 
@@ -58,6 +58,25 @@ enum class PlacementPolicy {
   kRoundRobin,      /**< Round-Robin (around devices) blob placement */
   kMinimizeIoTime,  /**< LP-based blob placement, minimize I/O time */
 };
+
+class PlacementPolicyConv {
+ public:
+  static std::string str(PlacementPolicy policy) {
+    switch (policy) {
+      case PlacementPolicy::kRandom: {
+        return "PlacementPolicy::kRandom";
+      }
+      case PlacementPolicy::kRoundRobin: {
+        return "PlacementPolicy::kRoundRobin";
+      }
+      case PlacementPolicy::kMinimizeIoTime: {
+        return "PlacementPolicy::kMinimizeIoTime";
+      }
+    }
+    return "PlacementPolicy::Invalid";
+  }
+};
+
 
 struct MinimizeIoTimeOptions {
   double minimum_remaining_capacity;
