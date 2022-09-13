@@ -33,35 +33,42 @@ namespace api {
  */
 class VBucket {
  private:
-  /** vbucket name */
+  /** The user-facing name of this VBucket. */
   std::string name_;
-  /** vbucket ID */
+  /** The internal ID of this VBucket. */
   VBucketID id_;
-  /** Traits attached to this vbucket */
+  /** Traits attached to this vbucket. */
   std::list<Trait *> attached_traits_;
-  /** internal Hermes object owned by vbucket */
+  /** The Hermes instance this VBucket is stored in. */
   std::shared_ptr<Hermes> hermes_;
-  /** The Context for this VBucket. \todo Why do we need that? */
+  /** The Context for this VBucket. Overrides the global default Context. */
   Context ctx_;
 
  public:
-  /**
+  /** \brief
    *
    */
   VBucket(std::string initial_name, std::shared_ptr<Hermes> const &h,
           Context ctx = Context());
 
-  /**
+  /** \brief
    *
    */
   ~VBucket();
 
-  /**
+  /** \brief Return bool{this VBucket is valid}
    *
+   * A VBucket is valid if it has a non-NULL ID, meaning it has been registered
+   * in the Hermes system.
+   *
+   * \return \bool{this VBucket is valid}
    */
   bool IsValid() const;
 
-  /** get the name of vbucket */
+  /** \brief Return the name of this VBucket.
+   *
+   * \return The name of this VBucket.
+   */
   std::string GetName() const { return this->name_; }
 
   /**
@@ -73,19 +80,22 @@ class VBucket {
   /**
    * Link a Blob to this VBucket.
    *
-   * Adds Blob @p blob_name in Bucket @p bucket_name to this VBucket's list of
+   * Adds Blob \p blob_name in Bucket \p bucket_name to this VBucket's list of
    * Blobs. Additional calls the Trait::OnLinkFn function on the Blob for each
    * attached Trait.
    *
    * \param blob_name The name of the Blob to link.
    * \param bucket_name The name of the Bucket containing the Blob to link.
-   * \param ctx Currently unused.
    *
    * \return \status
    */
-  Status Link(std::string blob_name, std::string bucket_name, Context &ctx);
-  /** \todo Link */
   Status Link(std::string blob_name, std::string bucket_name);
+
+  /** \overload
+   *
+   * \param ctx Currently unused.
+   */
+  Status Link(std::string blob_name, std::string bucket_name, Context &ctx);
 
   /**
    * Unlink a Blob from this VBucket.
@@ -117,7 +127,7 @@ class VBucket {
   /** could return iterator */
   std::vector<std::string> GetLinks(Context &ctx);
 
-  /** \brie Attach a Trait to this VBucket.
+  /** \brief Attach a Trait to this VBucket.
    *
    * Calls the Trait::onAttachFn function of \p trait on each Blob that's linked
    * to this VBucket.
@@ -127,24 +137,34 @@ class VBucket {
    * \return \status
    */
   Status Attach(Trait *trait);
-
   /** \overload
    *
    * \param ctx Currently unused.
    */
   Status Attach(Trait *trait, Context &ctx);
 
-  /** \brief Detach a trait from  this VBucket.
+  /** \brief Detach a trait from this VBucket.
    *
+   * \param trait The Trait to detach.
+   *
+   * \return \status
    */
   Status Detach(Trait *trait);
 
   /** \overload
    *
+   * \param ctx Currently unused.
    */
   Status Detach(Trait *trait, Context &ctx);
 
-  /** retrieves the subset of attached traits satisfying pred */
+  /** \brief Retrieves the subset of attached traits satisfying the Predicate \p pred.
+   *
+   * \todo \p pred is curently ignored and this function returns all attached
+   * traits.
+   *
+   * \param pred \todo
+   * \param ctx Currently unused;
+   */
   template <class Predicate>
   std::vector<TraitID> GetTraits(Predicate pred, Context &ctx);
 
@@ -152,7 +172,7 @@ class VBucket {
    *
    * \param type The type of Trait to retrieve.
    *
-   * \return The first attached trait that matches @p type.
+   * \return The first attached trait that matches \p type.
    */
   Trait *GetTrait(TraitType type);
 
