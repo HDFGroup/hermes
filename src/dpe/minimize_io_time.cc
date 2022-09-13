@@ -18,37 +18,6 @@
 
 namespace hermes {
 
-/**
- * INPUTS:
- *  Vector of blob sizes (vS): s1,s2,...sB
- *  Vector of targets (vT): t1,t2,...tD
- *  Vector of remaining capacities (vR): r1,r2,...rD
- *  Vector of target bandwidth (vB): b1,b2,..bD
- *  (NOTE: D is the number of devices)
- *
- * OUTPUT:
- *   Vector of PlacementSchema: p1,p2,...pD
- *   PlacementSchema:
- *
- *  Optimization Problem:
- *    Decide what fraction of a blob can be placed in a target.
- *    Ensure that fractional blob size < remaining capacity
- *    Ensure that remaining capacity > min_capacity_thresh
- *    Ensure
- *
- *    Total I/O time:
- *      (s1/xV1) + (s2/xV2) +...+ (s3/xV3) is minimized
- *    Minimize total I/O time such that:
- *      Sum of blob fractions == 1 per-blob
- *      Sum of
- *
- *  NOTE:
- *      columns are variable names
- *      rows are constraints
- *      can set the bounds of a variable
- *      can set the bounds of a contraint
- * */
-
 Status MinimizeIoTime::Placement(const std::vector<size_t> &blob_sizes,
                                   const std::vector<u64> &node_state,
                                   const std::vector<TargetID> &targets,
@@ -78,34 +47,12 @@ Status MinimizeIoTime::Placement(const std::vector<size_t> &blob_sizes,
   hermes::LinearProgram lp("min_io");
   lp.DefineDimension(num_blobs * num_targets, total_constraints);
 
-  /**
-   * Columns: [s1,s2,...sB]x[t1,t2,...tD]
-   * Rows: [s1,s2,...sB][r1,r2,...rD][minCap1,...minCapD][capThresh1,...capThreshD]
-   *
-   * A column for each combo of (blob, target)
-   * A row for each blob,
-   * remaining capacity,
-   * minimum capacity (if provided),
-   * and capacity threshold (if provided)
-   *
-   * The variable s1t1 is a fraction between 0 and 1 representing the
-   * percentage of the blob.
-   * */
-
   // Constraint #1: Sum of fraction of each blob is 1.
   for (size_t i = 0; i < num_blobs; ++i) {
-    // Use GLP_FX for the fixed contraint of 1.
     // Ensure the entire row sums up to 1
     lp.AddConstraint("blob_row_", GLP_FX, 1.0, 1.0);
 
     // TODO(KIMMY): consider remote nodes?
-    /**
-     * Ensures that each (blob, target) pair is a
-     * fraction between 0 and 1.
-     *
-     * Ensure that A[row][(blob_i,target)] = 1
-     * A[row][(blob!=i,target)] = 0 because ar[ij] is initially 0.
-     * */
     for (size_t j = 0; j < num_targets; ++j) {
       lp.SetConstraintCoeff(var.Get(i,j), 1);
       if (placement_ratios_[j] > 0) {
@@ -119,14 +66,6 @@ Status MinimizeIoTime::Placement(const std::vector<size_t> &blob_sizes,
 
   // Constraint #2: Capacity constraints
   for (size_t j = 0; j < num_targets; ++j) {
-    /**
-     * For each target, sum of blob sizes should be between 0 and
-     * estimated ramining capacity.
-     *
-     * A[row][(blob,target_j)] = blob_size
-     * A[row][(blob,target!=j)] = 0
-     * */
-
     double rem_cap_thresh =
         static_cast<double>(node_state[j]) -
         static_cast<double>(node_state[j]) * minimum_remaining_capacity;
@@ -142,13 +81,6 @@ Status MinimizeIoTime::Placement(const std::vector<size_t> &blob_sizes,
     }
   }
 
-  // Placement Ratio
-  /**
-   * Blob comes in and gets divided into chunks
-   * 100MB RAM, 1GB for NVMe, 10TB SSD, 100TB HDD
-   *
-   * */
-
   // Objective to minimize IO time
   lp.SetObjective(GLP_MIN);
   for (size_t i = 0; i < num_blobs; ++i) {
@@ -158,7 +90,7 @@ Status MinimizeIoTime::Placement(const std::vector<size_t> &blob_sizes,
     }
   }
 
-  //Solve the problem
+  // Solve the problem
   lp.Solve();
   if (!lp.IsOptimal()) {
     result = DPE_ORTOOLS_NO_SOLUTION;
@@ -167,12 +99,13 @@ Status MinimizeIoTime::Placement(const std::vector<size_t> &blob_sizes,
   }
   std::vector<double> vars = lp.ToVector();
 
+  // Create the placement schema
   for (size_t i = 0; i < num_blobs; ++i) {
     PlacementSchema schema;
     int row_start = var.Begin(i);
     int row_end = var.End(i);
 
-    //Convert solution to bytes
+    // Convert solution from blob fractions to bytes
     std::transform(vars.begin() + row_start,
                    vars.begin() + row_end,
                    vars.begin() + row_start,
@@ -181,7 +114,7 @@ Status MinimizeIoTime::Placement(const std::vector<size_t> &blob_sizes,
     std::vector<size_t> vars_bytes(vars.begin() + row_start,
                                    vars.begin() + row_end);
 
-    //Account for rounding error due to fractions
+    // Account for rounding error due to fractions
     auto iter = std::max_element(
         vars_bytes.begin(),
         vars_bytes.end());
@@ -192,7 +125,7 @@ Status MinimizeIoTime::Placement(const std::vector<size_t> &blob_sizes,
     size_t io_diff = blob_sizes[i] - io_size;
     (*iter) += io_diff;
 
-    //Push all non-zero schemas to target
+    // Push all non-zero schemas to target
     for (size_t j = 0; j < num_targets; ++j) {
       size_t io_to_target = vars_bytes[j];
       if (io_to_target != 0) {

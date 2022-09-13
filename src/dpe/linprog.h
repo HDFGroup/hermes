@@ -12,12 +12,6 @@
 
 namespace hermes {
 
-/**
- * This class solves the following linear optimization problem:
- *
- *
- * */
-
 struct Array2DIdx {
   int nrow_, ncol_;
   Array2DIdx(int nrow, int ncol) : nrow_(nrow), ncol_(ncol) {}
@@ -31,6 +25,10 @@ struct Array2DIdx {
     return Get(i, ncol_);
   }
 };
+
+/**
+ * GLPK documentation: http://most.ccib.rutgers.edu/glpk.pdf
+ * */
 
 class LinearProgram {
  private:
@@ -56,6 +54,7 @@ class LinearProgram {
   }
 
   void DefineDimension(int num_vars, int num_constraints) {
+    // NOTE(llogan): GLPK requires arrays start from "1" instead of "0"
     int total = num_vars * num_constraints + 1;
     glp_add_rows(lp_, num_constraints);
     glp_add_cols(lp_, num_vars);
