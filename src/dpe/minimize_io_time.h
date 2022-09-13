@@ -30,6 +30,10 @@ class MinimizeIoTime : public DPE {
                    std::vector<PlacementSchema> &output);
 
  private:
+  size_t AbsDiff(size_t x, size_t y, bool &y_gt_x);
+  void PlaceBytes(size_t j, ssize_t bytes,
+                  std::vector<size_t> &vars_bytes,
+                  const std::vector<u64> &node_state);
   void GetPlacementRatios(const std::vector<u64> &node_state,
                           const api::Context &ctx);
 };

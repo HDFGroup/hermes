@@ -23,8 +23,6 @@ Status MinimizeIoTime::Placement(const std::vector<size_t> &blob_sizes,
                                   const std::vector<TargetID> &targets,
                                   const api::Context &ctx,
                                   std::vector<PlacementSchema> &output) {
-  LOG(INFO) << "Placement" << std::endl;
-
   Status result;
   const size_t num_targets = targets.size();
   const size_t num_blobs = blob_sizes.size();
@@ -112,19 +110,20 @@ Status MinimizeIoTime::Placement(const std::vector<size_t> &blob_sizes,
                    vars.begin() + row_start,
                    std::bind(std::multiplies<double>(),
                        std::placeholders::_1, blob_sizes[i]));
-    std::vector<size_t> vars_bytes(vars.begin() + row_start,
-                                   vars.begin() + row_end);
+    std::vector<size_t> vars_bytes(vars.size(), 0);
 
-    // Account for rounding error due to fractions
-    auto iter = std::max_element(
-        vars_bytes.begin(),
-        vars_bytes.end());
-    double io_size_frac = std::accumulate(vars_bytes.begin(),
-                                          vars_bytes.end(),
-                                          0.0);
-    size_t io_size = static_cast<size_t>(io_size_frac);
-    size_t io_diff = blob_sizes[i] - io_size;
-    (*iter) += io_diff;
+    // Account for rounding errors
+    for (size_t j = 0; j < num_targets; ++j) {
+      ssize_t io_to_target = static_cast<ssize_t>(vars[j]);
+      PlaceBytes(j, io_to_target, vars_bytes, node_state);
+    }
+    size_t est_io_size_u = std::accumulate(vars_bytes.begin(),
+                                         vars_bytes.end(),
+                                         0ul);
+    ssize_t est_io_size = static_cast<ssize_t>(est_io_size_u);
+    ssize_t true_io_size = static_cast<ssize_t>(blob_sizes[i]);
+    ssize_t io_diff = true_io_size - est_io_size;
+    PlaceBytes(0, io_diff, vars_bytes, node_state);
 
     // Push all non-zero schemas to target
     for (size_t j = 0; j < num_targets; ++j) {
@@ -136,6 +135,26 @@ Status MinimizeIoTime::Placement(const std::vector<size_t> &blob_sizes,
     output.push_back(schema);
   }
   return result;
+}
+
+void MinimizeIoTime::PlaceBytes(size_t j, ssize_t bytes,
+                                std::vector<size_t> &vars_bytes,
+                                const std::vector<u64> &node_state) {
+  ssize_t node_cap = static_cast<ssize_t>(node_state[j]);
+  ssize_t req_bytes = static_cast<ssize_t>(vars_bytes[j]);
+  req_bytes += bytes;
+  ssize_t io_diff = req_bytes - node_cap;
+  if (io_diff <= 0) {
+    vars_bytes[j] = static_cast<size_t>(req_bytes);
+    return;
+  }
+  if (j == node_state.size() - 1) {
+    LOG(FATAL) << "No capacity left to buffer blob" << std::endl;
+    return;
+  }
+  req_bytes -= io_diff;
+  vars_bytes[j] = static_cast<size_t>(req_bytes);
+  PlaceBytes(j+1, io_diff, vars_bytes, node_state);
 }
 
 void MinimizeIoTime::GetPlacementRatios(const std::vector<u64> &node_state,
