@@ -24,7 +24,7 @@ namespace hermes {
 namespace api {
 
 VBucket::VBucket(std::string initial_name, std::shared_ptr<Hermes> const &h,
-                 Context ctx = Context())
+                 Context ctx)
   : name_(initial_name),
     id_({{0, 0}}),
     attached_traits_(),
