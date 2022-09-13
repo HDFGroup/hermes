@@ -55,9 +55,6 @@ add_executable(hermes_stdio_low_buf_adapter_test stdio_adapter_low_buffer_space_
 target_link_libraries(hermes_stdio_low_buf_adapter_test hermes_stdio)
 add_dependencies(hermes_stdio_low_buf_adapter_test hermes_stdio hermes_daemon)
 set_target_properties(hermes_stdio_low_buf_adapter_test PROPERTIES COMPILE_FLAGS "-DHERMES_INTERCEPT=1")
-# TODO: The DPE doesn't respect available buffering space. In this test, it
-# gives out over 1 MiB of RAM even though the RAM tier only has ~756 KiB
-# available. See issue #439.
 gcc_hermes(hermes_stdio_low_buf_adapter_test "" "" hermes_small "")
 gcc_hermes(hermes_stdio_low_buf_adapter_test "" "" hermes_small async)
 
