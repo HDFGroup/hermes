@@ -533,10 +533,4 @@ void InitConfig(hermes::Config *config, const char *config_file) {
   }
 }
 
-hermes::Config* CreateConfig(const char *config_file) {
-  hermes::Config *config = new hermes::Config();
-  InitConfig(config, config_file);
-  return config;
-}
-
 }  // namespace hermes
