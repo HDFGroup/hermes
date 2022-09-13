@@ -18,6 +18,8 @@
 namespace hermes {
 
 class MinimizeIoTime : public DPE {
+ private:
+  std::vector<double> placement_ratios_;
  public:
   MinimizeIoTime() : DPE(PlacementPolicy::kMinimizeIoTime) {}
   ~MinimizeIoTime() = default;
@@ -26,6 +28,10 @@ class MinimizeIoTime : public DPE {
                    const std::vector<TargetID> &targets,
                    const api::Context &ctx,
                    std::vector<PlacementSchema> &output);
+
+ private:
+  void GetPlacementRatios(const std::vector<u64> &node_state,
+                          const api::Context &ctx);
 };
 
 }  // namespace hermes

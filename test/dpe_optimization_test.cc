@@ -23,7 +23,10 @@ using namespace hermes;  // NOLINT(*)
 
 void MinimizeIoTimePlaceBlob(std::vector<size_t> &blob_sizes,
                              std::vector<PlacementSchema> &schemas,
-                             testing::TargetViewState &node_state) {
+                             testing::TargetViewState &node_state,
+                             double min_capacity=0,
+                             double capacity_change=0,
+                             bool use_placement_ratio=false) {
   std::vector<PlacementSchema> schemas_tmp;
 
   std::cout << "\nMinimizeIoTimePlacement to place blob of size "
@@ -33,7 +36,10 @@ void MinimizeIoTimePlaceBlob(std::vector<size_t> &blob_sizes,
   api::Context ctx;
   ctx.policy = hermes::api::PlacementPolicy::kMinimizeIoTime;
   //ctx.minimize_io_time_options = api::MinimizeIoTimeOptions(0, 0, true);
-  ctx.minimize_io_time_options = api::MinimizeIoTimeOptions();
+  ctx.minimize_io_time_options = api::MinimizeIoTimeOptions(
+      min_capacity,
+      capacity_change,
+      use_placement_ratio);
   auto dpe = DPEFactory().Get(ctx.policy);
   dpe->bandwidths = node_state.bandwidth;
   Status result = dpe->Placement(blob_sizes, node_state.bytes_available,
@@ -71,7 +77,7 @@ int main() {
   std::cout << "Device Initial State:\n";
   testing::PrintNodeState(node_state);
 
-  std::vector<size_t> blob_sizes1(1, MEGABYTES(16384));
+  std::vector<size_t> blob_sizes1(1, MEGABYTES(4096));
   std::vector<PlacementSchema> schemas1;
   MinimizeIoTimePlaceBlob(blob_sizes1, schemas1, node_state);
   Assert(schemas1.size() == blob_sizes1.size());
@@ -80,6 +86,13 @@ int main() {
   std::vector<PlacementSchema> schemas2;
   MinimizeIoTimePlaceBlob(blob_sizes2, schemas2, node_state);
   Assert(schemas2.size() == blob_sizes2.size());
+
+
+  std::vector<size_t> blob_sizes3(1, MEGABYTES(1024));
+  std::vector<PlacementSchema> schemas3;
+  MinimizeIoTimePlaceBlob(blob_sizes3, schemas3, node_state,
+                          0, 0, true);
+  Assert(schemas3.size() == blob_sizes3.size());
 
   return 0;
 }
