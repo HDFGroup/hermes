@@ -45,14 +45,27 @@ class VBucket {
   Context ctx_;
 
  public:
-  /** \brief
+  /** \brief Create or open a VBucket.
    *
+   * If the VBucket \p initial_name doesn't already exist, it is created and
+   * registered in Hermes. If it does exists, it is opened and its reference
+   * count is incremented. Once a VBucket is created, it can be opened on any
+   * rank or node.
+   *
+   * \param initial_name The desired name of the VBucket.
+   * \param hermes An initialized Hermes instance.
+   * \param \ctx{VBucket}
+   *
+   * \pre The Hermes instance \p hermes must be be initialized.
    */
-  VBucket(std::string initial_name, std::shared_ptr<Hermes> const &h,
+  VBucket(std::string initial_name, std::shared_ptr<Hermes> const &hermes,
           Context ctx = Context());
 
-  /** \brief
+  /** \brief Close a VBucket.
    *
+   * This does not delete the VBucket from Hermes, it merely decrements the
+   * reference count. To delete the VBucket and all associated metadata use
+   * VBucket::Destroy.
    */
   ~VBucket();
 
@@ -69,7 +82,7 @@ class VBucket {
    *
    * \return The name of this VBucket.
    */
-  std::string GetName() const { return this->name_; }
+  std::string GetName() const;
 
   /**
    * Blocks until all outstanding asynchronous flushing tasks associated with

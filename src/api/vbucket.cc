@@ -48,7 +48,13 @@ VBucket::~VBucket() {
   }
 }
 
-bool VBucket::IsValid() const { return !IsNullVBucketId(id_); }
+bool VBucket::IsValid() const {
+  return !IsNullVBucketId(id_);
+}
+
+std::string VBucket::GetName() const {
+  return this->name_;
+}
 
 void VBucket::WaitForBackgroundFlush() {
   AwaitAsyncFlushingTasks(&hermes_->context_, &hermes_->rpc_, id_);
