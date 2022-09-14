@@ -375,10 +375,12 @@ typedef u64 TraitID;
 
 namespace api {
 
-/** Trait types */
+/** \brief Trait types.
+ *
+ */
 enum class TraitType : u8 {
-  META = 0,
-  DATA = 1,
+  META = 0, /**< The Trait only modifies metadata. */
+  DATA = 1, /**< The Trait modifies raw data (Blob%s). */
   PERSIST = 2,
 };
 
