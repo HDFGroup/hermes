@@ -84,7 +84,6 @@ set(HERMES_EXPORTED_LIBS hermes ${HERMES_EXPORTED_LIBS})
 set(HERMES_HEADERS
   ${CMAKE_CURRENT_SOURCE_DIR}/api/bucket.h
   ${CMAKE_CURRENT_SOURCE_DIR}/api/hermes.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/api/id.h
   ${CMAKE_CURRENT_SOURCE_DIR}/api/vbucket.h
   ${CMAKE_CURRENT_SOURCE_DIR}/buffer_pool.h
   ${CMAKE_CURRENT_SOURCE_DIR}/buffer_pool_internal.h

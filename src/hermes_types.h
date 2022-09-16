@@ -24,10 +24,18 @@
 
 #include "hermes_version.h"
 
+/**
+ * \file hermes_types.h
+ * Types used in Hermes.
+ */
+
 #define KILOBYTES(n) (((size_t)n) * 1024)
 #define MEGABYTES(n) (((size_t)n) * 1024 * 1024)
 #define GIGABYTES(n) (((size_t)n) * 1024UL * 1024UL * 1024UL)
 
+/**
+ * \namespace hermes
+ */
 namespace hermes {
 
 typedef uint8_t u8;
@@ -49,7 +57,14 @@ struct ChunkedIdList {
   u32 capacity;
 };
 
+/**
+ * \namespace api
+ */
 namespace api {
+
+/**
+ * A Blob is simply an uninterpreted vector of bytes.
+ */
 typedef std::vector<unsigned char> Blob;
 
 /** Supported data placement policies */
@@ -321,6 +336,9 @@ union BucketID {
 // BucketID into the Blob name. See MakeInternalBlobName() for a description of
 // why we need double the bytes of a BucketID.
 constexpr int kBucketIdStringSize = sizeof(BucketID) * 2;
+/**
+ * The maximum size in bytes allowed for Blob names.
+ */
 constexpr int kMaxBlobNameSize = 64 - kBucketIdStringSize;
 
 union VBucketID {
@@ -357,10 +375,12 @@ typedef u64 TraitID;
 
 namespace api {
 
-/** Trait types */
+/** \brief Trait types.
+ *
+ */
 enum class TraitType : u8 {
-  META = 0,
-  DATA = 1,
+  META = 0, /**< The Trait only modifies metadata. */
+  DATA = 1, /**< The Trait modifies raw data (Blob%s). */
   PERSIST = 2,
 };
 

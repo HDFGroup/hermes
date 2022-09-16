@@ -5,7 +5,7 @@
 DOXYFILE_ENCODING      = UTF-8
 PROJECT_NAME           = Hermes
 PROJECT_NUMBER         = 0.8.0-beta
-PROJECT_BRIEF          = "I/O Buffering System"
+PROJECT_BRIEF          = "Hierarchical Distributed I/O Buffering System"
 PROJECT_LOGO           =
 OUTPUT_DIRECTORY       =
 CREATE_SUBDIRS         = NO
@@ -35,7 +35,11 @@ MULTILINE_CPP_IS_BRIEF = NO
 INHERIT_DOCS           = YES
 SEPARATE_MEMBER_PAGES  = NO
 TAB_SIZE               = 4
-ALIASES                =
+
+ALIASES += status="A Status object."
+ALIASES += ctx{1}="ctx The Context for this \1."
+ALIASES += bool{1}="true if \1, otherwise false."
+
 TCL_SUBST              =
 OPTIMIZE_OUTPUT_FOR_C  = NO
 OPTIMIZE_OUTPUT_JAVA   = NO
@@ -75,7 +79,7 @@ SHOW_INCLUDE_FILES     = YES
 SHOW_GROUPED_MEMB_INC  = NO
 FORCE_LOCAL_INCLUDES   = NO
 INLINE_INFO            = YES
-SORT_MEMBER_DOCS       = YES
+SORT_MEMBER_DOCS       = NO
 SORT_BRIEF_DOCS        = NO
 SORT_MEMBERS_CTORS_1ST = NO
 SORT_GROUP_NAMES       = NO
@@ -113,7 +117,7 @@ INPUT_ENCODING         = UTF-8
 FILE_PATTERNS          = *.h \
                          *.cc
 RECURSIVE              = YES
-EXCLUDE                =
+EXCLUDE                = @PROJECT_SOURCE_DIR@/src/stb_ds.h
 EXCLUDE_SYMLINKS       = NO
 EXCLUDE_PATTERNS       =
 EXCLUDE_SYMBOLS        =

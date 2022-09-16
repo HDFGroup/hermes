@@ -36,60 +36,111 @@ typedef BlobInfo TraitInput;
 struct Trait;
 using HermesPtr = std::shared_ptr<Hermes>;
 
+// TODO(chogan): I don't think we need to pass a Trait* to these callbacks
+// anymore. That is a relic of an old implementation.
+
 /** Callback for blob->vbucket link events */
 typedef std::function<void(HermesPtr, TraitInput &, Trait *)> OnLinkCallback;
 /** Callback for trait->vbucket attach events */
 typedef std::function<void(HermesPtr, VBucketID, Trait *)> OnAttachCallback;
 
-/** Traits represent vbucket behavior */
+/** \brief Base class for Trait%s, which can attach functionality to VBucket%s.
+ *
+ * To add functionality to a VBucket, inherit from this class and implement the
+ * various callbacks.
+ */
 struct Trait {
   /** The trait's ID */
   TraitID id;
-  /** \todo ??? */
+  /** IDs of Trait%s whose functionality conflict with this Trait. */
   std::vector<TraitID> conflict_traits;
-  /** The trait's type */
+  /** The trait's type. */
   TraitType type;
-  /** Callback for trait->vbucket attach events */
+  /** Callback for trait->vbucket attach events. */
   OnAttachCallback onAttachFn;
-  /** Callback for trait-<vbucket detach events */
+  /** Callback for trait->vbucket detach events. */
   OnAttachCallback onDetachFn;
-  /** Callback for blob->vbucket link events */
+  /** Callback for blob->vbucket link events. */
   OnLinkCallback onLinkFn;
-  /** Callback for blob-<vbucket unlink events */
+  /** Callback for blob-<vbucket unlink events. */
   OnLinkCallback onUnlinkFn;
-  /** Callback for VBucket::Get events */
+  /** Callback for VBucket::Get events. */
   OnLinkCallback onGetFn;
 
+  /** \brief Default constructor.
+   *
+   */
   Trait() {}
+
+  /** \brief Construct a Trait.
+   *
+   * \param id A unique identifier.
+   * \param conflict_traits The IDs of the Traits that conflict with this Trait.
+   * \param type The type of Trait.
+   */
   Trait(TraitID id, const std::vector<TraitID> &conflict_traits,
         TraitType type);
 };
 
-/** (File) Persistence trait */
+/** \brief Engable persisting a <tt>VBucket</tt>'s linked Blob%s to permanent
+ * storage.
+ *
+ */
 struct PersistTrait : public Trait {
+  /** The name of the file to flush the Blob%s to. */
   std::string filename;
+  /** Maps Blob names to offsets within a file. */
   std::unordered_map<std::string, u64> offset_map;
+  /** \bool{flushing data should block until finished} */
   bool synchronous;
 
+  /** */
   explicit PersistTrait(bool synchronous);
+  /** */
   explicit PersistTrait(const std::string &filename,
                         const std::unordered_map<std::string, u64> &offset_map,
                         bool synchronous = false);
 
+  /**
+   *
+   */
   void onAttach(HermesPtr hermes, VBucketID id, Trait *trait);
+
+  /** \brief Currently a no-op. */
   void onDetach(HermesPtr hermes, VBucketID id, Trait *trait);
+
+  /**
+   *
+   */
   void onLink(HermesPtr hermes, TraitInput &input, Trait *trait);
+
+  /** \brief Currently a no-op. */
   void onUnlink(HermesPtr hermes, TraitInput &input, Trait *trait);
 };
 
+/** \brief Marks the Blob%s in a VBucket as write-only.
+ *
+ * If we know that certain Blob%s are write-only, we can asynchronously and
+ * eagerly flush buffered data to the final destination.
+ *
+ */
 struct WriteOnlyTrait : public Trait {
+  /** */
   WriteOnlyTrait();
 
+  /** \brief Currently a no-op. */
   void onAttach(HermesPtr hermes, VBucketID id, Trait *trait);
+
+  /** \brief Currently a no-op. */
   void onDetach(HermesPtr hermes, VBucketID id, Trait *trait);
+
+  /**
+   *
+   */
   void onLink(HermesPtr hermes, TraitInput &input, Trait *trait);
+
+  /** \brief Currently a no-op. */
   void onUnlink(HermesPtr hermes, TraitInput &input, Trait *trait);
-  void onGet(HermesPtr hermes, TraitInput &input, Trait *trait);
 };
 
 }  // namespace api
