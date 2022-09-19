@@ -1,5 +1,17 @@
 import sys,os
 
+preamble = """/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * Distributed under BSD 3-Clause license.                                   *
+ * Copyright by The HDF Group.                                               *
+ * Copyright by the Illinois Institute of Technology.                        *
+ * All rights reserved.                                                      *
+ *                                                                           *
+ * This file is part of Hermes. The full Hermes copyright notice, including  *
+ * terms governing use, modification, and redistribution, is contained in    *
+ * the COPYING file, which can be found at the top directory. If you do not  *
+ * have access to the file, you may request a copy from help@hdfgroup.org.   *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */"""
+
 class Api:
     def __init__(self, ret, name, var_defs):
         self.ret = ret
@@ -9,10 +21,14 @@ class Api:
         self.var_defs = var_defs
 
     def get_args(self):
+        if self.var_defs is None:
+            return ""
         args = [" ".join(arg) for arg in self.var_defs]
         return ", ".join(args)
 
     def pass_args(self):
+        if self.var_defs is None:
+            return ""
         args = [arg[-1] for arg in self.var_defs]
         return ", ".join(args)
 
@@ -23,6 +39,8 @@ class ApiClass:
         self.apis = apis
         self.lines = []
 
+        self.lines.append(preamble)
+        self.lines.append("")
         self.lines.append(f"#ifndef HERMES_ADAPTER_{namespace.upper()}_H")
         self.lines.append(f"#define HERMES_ADAPTER_{namespace.upper()}_H")
 
@@ -30,6 +48,7 @@ class ApiClass:
         self.lines.append("#include <dlfcn.h>")
         self.lines.append("#include <iostream>")
         self.lines.append("#include <glog/logging.h>")
+        self.lines.append("#include \"interceptor.h\"")
         self.lines.append("")
 
         self.lines.append(f"namespace hermes::adapter::{namespace} {{")
@@ -46,15 +65,12 @@ class ApiClass:
         for api in self.apis:
             self.init_api(api)
         self.lines.append(f"  }}")
-        self.lines.append("")
-
         self.lines.append(f"}};")
-        self.lines.append("")
-
         self.lines.append(f"}}  // namespace hermes::adapter::{namespace}")
 
         self.lines.append("")
         self.lines.append(f"#endif  // HERMES_ADAPTER_{namespace.upper()}_H")
+        self.lines.append("")
         self.save(path)
 
     def save(self, path):
@@ -76,7 +92,6 @@ class ApiClass:
         self.lines.append(f"      LOG(FATAL) << \"HERMES Adapter failed to map symbol: \"")
         self.lines.append(f"      \"{api.name}\" << std::endl;")
         self.lines.append(f"    }}")
-        self.lines.append(f"")
 
 apis = [
     Api("int", "open", [
@@ -163,7 +178,7 @@ apis = [
         ("int *", "argc"),
         ("char ***", "argv")
     ]),
-    Api("int", "MPI_Finalize", [("","")]),
+    Api("int", "MPI_Finalize", None),
 ]
 
 ApiClass("posix", apis)

@@ -1,3 +1,15 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * Distributed under BSD 3-Clause license.                                   *
+ * Copyright by The HDF Group.                                               *
+ * Copyright by the Illinois Institute of Technology.                        *
+ * All rights reserved.                                                      *
+ *                                                                           *
+ * This file is part of Hermes. The full Hermes copyright notice, including  *
+ * terms governing use, modification, and redistribution, is contained in    *
+ * the COPYING file, which can be found at the top directory. If you do not  *
+ * have access to the file, you may request a copy from help@hdfgroup.org.   *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
 #ifndef HERMES_ADAPTER_POSIX_H
 #define HERMES_ADAPTER_POSIX_H
 #include <string>
@@ -24,14 +36,22 @@ class API {
   ssize_t(*real_read_)(int fd, void * buf, size_t count) = nullptr;
   typedef ssize_t(*real_write_t)(int fd, const void * buf, size_t count);
   ssize_t(*real_write_)(int fd, const void * buf, size_t count) = nullptr;
-  typedef ssize_t(*real_pread_t)(int fd, void * buf, size_t count, off_t offset);
-  ssize_t(*real_pread_)(int fd, void * buf, size_t count, off_t offset) = nullptr;
-  typedef ssize_t(*real_pwrite_t)(int fd, const void * buf, size_t count, off_t offset);
-  ssize_t(*real_pwrite_)(int fd, const void * buf, size_t count, off_t offset) = nullptr;
-  typedef ssize_t(*real_pread64_t)(int fd, void * buf, size_t count, off64_t offset);
-  ssize_t(*real_pread64_)(int fd, void * buf, size_t count, off64_t offset) = nullptr;
-  typedef ssize_t(*real_pwrite64_t)(int fd, const void * buf, size_t count, off64_t offset);
-  ssize_t(*real_pwrite64_)(int fd, const void * buf, size_t count, off64_t offset) = nullptr;
+  typedef ssize_t(*real_pread_t)(int fd, void * buf,
+                                  size_t count, off_t offset);
+  ssize_t(*real_pread_)(int fd, void * buf,
+                         size_t count, off_t offset) = nullptr;
+  typedef ssize_t(*real_pwrite_t)(int fd, const void * buf,
+                                   size_t count, off_t offset);
+  ssize_t(*real_pwrite_)(int fd, const void * buf,
+                          size_t count, off_t offset) = nullptr;
+  typedef ssize_t(*real_pread64_t)(int fd, void * buf,
+                                    size_t count, off64_t offset);
+  ssize_t(*real_pread64_)(int fd, void * buf,
+                           size_t count, off64_t offset) = nullptr;
+  typedef ssize_t(*real_pwrite64_t)(int fd, const void * buf,
+                                     size_t count, off64_t offset);
+  ssize_t(*real_pwrite64_)(int fd, const void * buf,
+                            size_t count, off64_t offset) = nullptr;
   typedef off_t(*real_lseek_t)(int fd, off_t offset, int whence);
   off_t(*real_lseek_)(int fd, off_t offset, int whence) = nullptr;
   typedef off64_t(*real_lseek64_t)(int fd, off64_t offset, int whence);
@@ -46,8 +66,8 @@ class API {
   int(*real_close_)(int fd) = nullptr;
   typedef int(*real_MPI_Init_t)(int * argc, char *** argv);
   int(*real_MPI_Init_)(int * argc, char *** argv) = nullptr;
-  typedef int(*real_MPI_Finalize_t)( );
-  int(*real_MPI_Finalize_)( ) = nullptr;
+  typedef int(*real_MPI_Finalize_t)();
+  int(*real_MPI_Finalize_)() = nullptr;
   API() {
     void *is_intercepted = (void*)dlsym(RTLD_DEFAULT, "posix_intercepted");
     if (is_intercepted) {
@@ -59,7 +79,6 @@ class API {
       LOG(FATAL) << "HERMES Adapter failed to map symbol: "
       "open" << std::endl;
     }
-
     if (is_intercepted) {
       real_open64_ = (real_open64_t)dlsym(RTLD_NEXT, "open64");
     } else {
@@ -69,7 +88,6 @@ class API {
       LOG(FATAL) << "HERMES Adapter failed to map symbol: "
       "open64" << std::endl;
     }
-
     if (is_intercepted) {
       real___open_2_ = (real___open_2_t)dlsym(RTLD_NEXT, "__open_2");
     } else {
@@ -79,7 +97,6 @@ class API {
       LOG(FATAL) << "HERMES Adapter failed to map symbol: "
       "__open_2" << std::endl;
     }
-
     if (is_intercepted) {
       real_creat_ = (real_creat_t)dlsym(RTLD_NEXT, "creat");
     } else {
@@ -89,7 +106,6 @@ class API {
       LOG(FATAL) << "HERMES Adapter failed to map symbol: "
       "creat" << std::endl;
     }
-
     if (is_intercepted) {
       real_creat64_ = (real_creat64_t)dlsym(RTLD_NEXT, "creat64");
     } else {
@@ -99,7 +115,6 @@ class API {
       LOG(FATAL) << "HERMES Adapter failed to map symbol: "
       "creat64" << std::endl;
     }
-
     if (is_intercepted) {
       real_read_ = (real_read_t)dlsym(RTLD_NEXT, "read");
     } else {
@@ -109,7 +124,6 @@ class API {
       LOG(FATAL) << "HERMES Adapter failed to map symbol: "
       "read" << std::endl;
     }
-
     if (is_intercepted) {
       real_write_ = (real_write_t)dlsym(RTLD_NEXT, "write");
     } else {
@@ -119,7 +133,6 @@ class API {
       LOG(FATAL) << "HERMES Adapter failed to map symbol: "
       "write" << std::endl;
     }
-
     if (is_intercepted) {
       real_pread_ = (real_pread_t)dlsym(RTLD_NEXT, "pread");
     } else {
@@ -129,7 +142,6 @@ class API {
       LOG(FATAL) << "HERMES Adapter failed to map symbol: "
       "pread" << std::endl;
     }
-
     if (is_intercepted) {
       real_pwrite_ = (real_pwrite_t)dlsym(RTLD_NEXT, "pwrite");
     } else {
@@ -139,7 +151,6 @@ class API {
       LOG(FATAL) << "HERMES Adapter failed to map symbol: "
       "pwrite" << std::endl;
     }
-
     if (is_intercepted) {
       real_pread64_ = (real_pread64_t)dlsym(RTLD_NEXT, "pread64");
     } else {
@@ -149,7 +160,6 @@ class API {
       LOG(FATAL) << "HERMES Adapter failed to map symbol: "
       "pread64" << std::endl;
     }
-
     if (is_intercepted) {
       real_pwrite64_ = (real_pwrite64_t)dlsym(RTLD_NEXT, "pwrite64");
     } else {
@@ -159,7 +169,6 @@ class API {
       LOG(FATAL) << "HERMES Adapter failed to map symbol: "
       "pwrite64" << std::endl;
     }
-
     if (is_intercepted) {
       real_lseek_ = (real_lseek_t)dlsym(RTLD_NEXT, "lseek");
     } else {
@@ -169,7 +178,6 @@ class API {
       LOG(FATAL) << "HERMES Adapter failed to map symbol: "
       "lseek" << std::endl;
     }
-
     if (is_intercepted) {
       real_lseek64_ = (real_lseek64_t)dlsym(RTLD_NEXT, "lseek64");
     } else {
@@ -179,7 +187,6 @@ class API {
       LOG(FATAL) << "HERMES Adapter failed to map symbol: "
       "lseek64" << std::endl;
     }
-
     if (is_intercepted) {
       real___fxstat_ = (real___fxstat_t)dlsym(RTLD_NEXT, "__fxstat");
     } else {
@@ -189,7 +196,6 @@ class API {
       LOG(FATAL) << "HERMES Adapter failed to map symbol: "
       "__fxstat" << std::endl;
     }
-
     if (is_intercepted) {
       real_fsync_ = (real_fsync_t)dlsym(RTLD_NEXT, "fsync");
     } else {
@@ -199,7 +205,6 @@ class API {
       LOG(FATAL) << "HERMES Adapter failed to map symbol: "
       "fsync" << std::endl;
     }
-
     if (is_intercepted) {
       real_fdatasync_ = (real_fdatasync_t)dlsym(RTLD_NEXT, "fdatasync");
     } else {
@@ -209,7 +214,6 @@ class API {
       LOG(FATAL) << "HERMES Adapter failed to map symbol: "
       "fdatasync" << std::endl;
     }
-
     if (is_intercepted) {
       real_close_ = (real_close_t)dlsym(RTLD_NEXT, "close");
     } else {
@@ -219,7 +223,6 @@ class API {
       LOG(FATAL) << "HERMES Adapter failed to map symbol: "
       "close" << std::endl;
     }
-
     if (is_intercepted) {
       real_MPI_Init_ = (real_MPI_Init_t)dlsym(RTLD_NEXT, "MPI_Init");
     } else {
@@ -229,21 +232,19 @@ class API {
       LOG(FATAL) << "HERMES Adapter failed to map symbol: "
       "MPI_Init" << std::endl;
     }
-
     if (is_intercepted) {
-      real_MPI_Finalize_ = (real_MPI_Finalize_t)dlsym(RTLD_NEXT, "MPI_Finalize");
+      real_MPI_Finalize_ = (real_MPI_Finalize_t)dlsym(RTLD_NEXT,
+                                                      "MPI_Finalize");
     } else {
-      real_MPI_Finalize_ = (real_MPI_Finalize_t)dlsym(RTLD_DEFAULT, "MPI_Finalize");
+      real_MPI_Finalize_ = (real_MPI_Finalize_t)dlsym(RTLD_DEFAULT,
+                                                      "MPI_Finalize");
     }
     if (real_MPI_Finalize_ == nullptr) {
       LOG(FATAL) << "HERMES Adapter failed to map symbol: "
       "MPI_Finalize" << std::endl;
     }
-
   }
-
 };
-
 }  // namespace hermes::adapter::posix
 
 #endif  // HERMES_ADAPTER_POSIX_H
