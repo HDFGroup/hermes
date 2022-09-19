@@ -11,6 +11,7 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include <sys/file.h>
+#include "utils.cc"
 
 using hermes::u8;
 namespace fs = std::experimental::filesystem;

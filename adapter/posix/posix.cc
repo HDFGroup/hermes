@@ -10,14 +10,40 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include "posix/posix.h"
-
 #include <experimental/filesystem>
+#include <fcntl.h>
+#include <stdarg.h>
+#include <sys/stat.h>
+#include <glog/logging.h>
 
 #include "interceptor.cc"
 #include "adapter_utils.cc"
 #include "posix/mapper/balanced_mapper.cc"
+#include "posix/constants.h"
+#include "posix/datastructures.h"
+#include "posix/mapper/mapper_factory.h"
+
+#include <hermes.h>
+#include <bucket.h>
+#include <vbucket.h>
+
+#include "constants.h"
+#include "interceptor.h"
+#include "singleton.h"
+
+#include "posix/posix.h"
+
+bool posix_intercepted = true;
+namespace hermes::adapter::posix {
+  API api;
+}
+
+#include "posix/metadata_manager.h"
 #include "posix/metadata_manager.cc"
+
+#ifndef O_TMPFILE
+#define O_TMPFILE 0
+#endif
 
 using hermes::adapter::posix::AdapterStat;
 using hermes::adapter::posix::FileStruct;
@@ -25,11 +51,13 @@ using hermes::adapter::posix::MapperFactory;
 using hermes::adapter::posix::MetadataManager;
 using hermes::adapter::WeaklyCanonical;
 using hermes::adapter::ReadGap;
+using hermes::adapter::posix::api;
 
 namespace hapi = hermes::api;
 namespace fs = std::experimental::filesystem;
 
 using hermes::u8;
+
 
 /**
  * Internal Functions
@@ -83,8 +111,7 @@ int simple_open(int ret, const std::string &user_path, int flags) {
     if (!existing.second) {
       LOG(INFO) << "File not opened before by adapter" << std::endl;
       struct stat st;
-      MAP_OR_FAIL(__fxstat);
-      int status = real___fxstat_(_STAT_VER, ret, &st);
+      int status = api.real___fxstat_(_STAT_VER, ret, &st);
       if (status == 0) {
         AdapterStat stat(st);
         stat.ref_count = 1;
@@ -130,11 +157,10 @@ int simple_open(int ret, const std::string &user_path, int flags) {
 
 int open_internal(const std::string &path_str, int flags, int mode) {
   int ret;
-  MAP_OR_FAIL(open);
   if (flags & O_CREAT || flags & O_TMPFILE) {
-    ret = real_open_(path_str.c_str(), flags, mode);
+    ret = api.real_open_(path_str.c_str(), flags, mode);
   } else {
-    ret = real_open_(path_str.c_str(), flags);
+    ret = api.real_open_(path_str.c_str(), flags);
   }
   ret = simple_open(ret, path_str.c_str(), flags);
   return ret;
@@ -383,8 +409,7 @@ size_t read_internal(std::pair<AdapterStat, bool> &existing, void *ptr,
  * MPI
  */
 int HERMES_DECL(MPI_Init)(int *argc, char ***argv) {
-  MAP_OR_FAIL(MPI_Init);
-  int status = real_MPI_Init_(argc, argv);
+  int status = api.real_MPI_Init_(argc, argv);
   if (status == 0) {
     LOG(INFO) << "MPI Init intercepted." << std::endl;
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
@@ -397,8 +422,7 @@ int HERMES_DECL(MPI_Finalize)(void) {
   LOG(INFO) << "MPI Finalize intercepted." << std::endl;
   auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
   mdm->FinalizeHermes();
-  MAP_OR_FAIL(MPI_Finalize);
-  int status = real_MPI_Finalize_();
+  int status = api.real_MPI_Finalize_();
   return status;
 }
 
@@ -419,11 +443,10 @@ int HERMES_DECL(open)(const char *path, int flags, ...) {
               << " and mode: " << flags << " is tracked." << std::endl;
     ret = open_internal(path, flags, mode);
   } else {
-    MAP_OR_FAIL(open);
     if (flags & O_CREAT || flags & O_TMPFILE) {
-      ret = real_open_(path, flags, mode);
+      ret = api.real_open_(path, flags, mode);
     } else {
-      ret = real_open_(path, flags);
+      ret = api.real_open_(path, flags);
     }
   }
   return (ret);
@@ -443,11 +466,10 @@ int HERMES_DECL(open64)(const char *path, int flags, ...) {
               << " and mode: " << flags << " is tracked." << std::endl;
     ret = open_internal(path, flags, mode);
   } else {
-    MAP_OR_FAIL(open64);
     if (flags & O_CREAT) {
-      ret = real_open64_(path, flags, mode);
+      ret = api.real_open64_(path, flags, mode);
     } else {
-      ret = real_open64_(path, flags);
+      ret = api.real_open64_(path, flags);
     }
   }
   return (ret);
@@ -460,8 +482,7 @@ int HERMES_DECL(__open_2)(const char *path, int oflag) {
               << " and mode: " << oflag << " is tracked." << std::endl;
     ret = open_internal(path, oflag, 0);
   } else {
-    MAP_OR_FAIL(__open_2);
-    ret = real___open_2_(path, oflag);
+    ret = api.real___open_2_(path, oflag);
   }
   return (ret);
 }
@@ -474,8 +495,7 @@ int HERMES_DECL(creat)(const char *path, mode_t mode) {
               << " and mode: " << mode << " is tracked." << std::endl;
     ret = open_internal(path, O_CREAT, mode);
   } else {
-    MAP_OR_FAIL(creat);
-    ret = real_creat_(path, mode);
+    ret = api.real_creat_(path, mode);
   }
   return (ret);
 }
@@ -488,8 +508,7 @@ int HERMES_DECL(creat64)(const char *path, mode_t mode) {
               << " and mode: " << mode << " is tracked." << std::endl;
     ret = open_internal(path, O_CREAT, mode);
   } else {
-    MAP_OR_FAIL(creat64);
-    ret = real_creat64_(path, mode);
+    ret = api.real_creat64_(path, mode);
   }
   return (ret);
 }
@@ -504,12 +523,10 @@ ssize_t HERMES_DECL(read)(int fd, void *buf, size_t count) {
       ret = read_internal(existing, buf, count, fd);
 
     } else {
-      MAP_OR_FAIL(pread);
-      ret = real_read_(fd, buf, count);
+      ret = api.real_read_(fd, buf, count);
     }
   } else {
-    MAP_OR_FAIL(read);
-    ret = real_read_(fd, buf, count);
+    ret = api.real_read_(fd, buf, count);
   }
   return (ret);
 }
@@ -523,12 +540,10 @@ ssize_t HERMES_DECL(write)(int fd, const void *buf, size_t count) {
       LOG(INFO) << "Intercept write." << std::endl;
       ret = write_internal(existing.first, buf, count, fd);
     } else {
-      MAP_OR_FAIL(write);
-      ret = real_write_(fd, buf, count);
+      ret = api.real_write_(fd, buf, count);
     }
   } else {
-    MAP_OR_FAIL(write);
-    ret = real_write_(fd, buf, count);
+    ret = api.real_write_(fd, buf, count);
   }
   return (ret);
 }
@@ -545,12 +560,10 @@ ssize_t HERMES_DECL(pread)(int fd, void *buf, size_t count, off_t offset) {
         ret = read_internal(existing, buf, count, fd);
       }
     } else {
-      MAP_OR_FAIL(pread);
-      ret = real_pread_(fd, buf, count, offset);
+      ret = api.real_pread_(fd, buf, count, offset);
     }
   } else {
-    MAP_OR_FAIL(pread);
-    ret = real_pread_(fd, buf, count, offset);
+    ret = api.real_pread_(fd, buf, count, offset);
   }
   return (ret);
 }
@@ -568,12 +581,10 @@ ssize_t HERMES_DECL(pwrite)(int fd, const void *buf, size_t count,
         ret = write_internal(existing.first, buf, count, fd);
       }
     } else {
-      MAP_OR_FAIL(pwrite);
-      ret = real_pwrite_(fd, buf, count, offset);
+      ret = api.real_pwrite_(fd, buf, count, offset);
     }
   } else {
-    MAP_OR_FAIL(pwrite);
-    ret = real_pwrite_(fd, buf, count, offset);
+    ret = api.real_pwrite_(fd, buf, count, offset);
   }
   return (ret);
 }
@@ -590,12 +601,10 @@ ssize_t HERMES_DECL(pread64)(int fd, void *buf, size_t count, off64_t offset) {
         ret = read_internal(existing, buf, count, fd);
       }
     } else {
-      MAP_OR_FAIL(pread);
-      ret = real_pread_(fd, buf, count, offset);
+      ret = api.real_pread_(fd, buf, count, offset);
     }
   } else {
-    MAP_OR_FAIL(pread);
-    ret = real_pread_(fd, buf, count, offset);
+    ret = api.real_pread_(fd, buf, count, offset);
   }
   return (ret);
 }
@@ -613,12 +622,10 @@ ssize_t HERMES_DECL(pwrite64)(int fd, const void *buf, size_t count,
         ret = write_internal(existing.first, buf, count, fd);
       }
     } else {
-      MAP_OR_FAIL(pwrite);
-      ret = real_pwrite_(fd, buf, count, offset);
+      ret = api.real_pwrite_(fd, buf, count, offset);
     }
   } else {
-    MAP_OR_FAIL(pwrite);
-    ret = real_pwrite_(fd, buf, count, offset);
+    ret = api.real_pwrite_(fd, buf, count, offset);
   }
   return (ret);
 }
@@ -657,12 +664,10 @@ off_t HERMES_DECL(lseek)(int fd, off_t offset, int whence) {
         ret = -1;
       }
     } else {
-      MAP_OR_FAIL(lseek);
-      ret = real_lseek_(fd, offset, whence);
+      ret = api.real_lseek_(fd, offset, whence);
     }
   } else {
-    MAP_OR_FAIL(lseek);
-    ret = real_lseek_(fd, offset, whence);
+    ret = api.real_lseek_(fd, offset, whence);
   }
   return (ret);
 }
@@ -701,12 +706,10 @@ off64_t HERMES_DECL(lseek64)(int fd, off64_t offset, int whence) {
         ret = -1;
       }
     } else {
-      MAP_OR_FAIL(lseek);
-      ret = real_lseek_(fd, offset, whence);
+      ret = api.real_lseek_(fd, offset, whence);
     }
   } else {
-    MAP_OR_FAIL(lseek);
-    ret = real_lseek_(fd, offset, whence);
+    ret = api.real_lseek_(fd, offset, whence);
   }
   return (ret);
 }
@@ -741,8 +744,7 @@ int HERMES_DECL(__fxstat)(int version, int fd, struct stat *buf) {
                  << "does not exist in Hermes\n";
     }
   } else {
-    MAP_OR_FAIL(__fxstat);
-    result = real___fxstat_(version, fd, buf);
+    result = api.real___fxstat_(version, fd, buf);
   }
 
   return result;
@@ -796,8 +798,7 @@ int HERMES_DECL(fsync)(int fd) {
     }
   }
 
-  MAP_OR_FAIL(fsync);
-  ret = real_fsync_(fd);
+  ret = api.real_fsync_(fd);
   return (ret);
 }
 
@@ -855,7 +856,6 @@ int HERMES_DECL(close)(int fd) {
     }
   }
 
-  MAP_OR_FAIL(close);
-  ret = real_close_(fd);
+  ret = api.real_close_(fd);
   return (ret);
 }

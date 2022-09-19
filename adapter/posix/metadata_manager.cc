@@ -11,6 +11,7 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "metadata_manager.h"
+#include "posix.h"
 
 /**
  * Namespace declarations for cleaner code.
@@ -50,8 +51,7 @@ std::pair<AdapterStat, bool> MetadataManager::Find(int fh) {
 
 FileID MetadataManager::Convert(int fd) {
   struct stat st;
-  MAP_OR_FAIL(__fxstat);
-  int status = real___fxstat_(_STAT_VER, fd, &st);
+  int status = hermes::adapter::posix::api.real___fxstat_(_STAT_VER, fd, &st);
   if (status == 0) {
     return FileID(st.st_dev, st.st_ino);
   } else {
