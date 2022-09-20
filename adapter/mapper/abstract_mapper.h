@@ -10,14 +10,34 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include <experimental/filesystem>
+//
+// Created by manihariharan on 12/23/20.
+//
+
+#ifndef HERMES_ABSTRACT_ADAPTER_H
+#define HERMES_ABSTRACT_ADAPTER_H
 
 namespace hermes::adapter {
 
-namespace stdfs = std::experimental::filesystem;
+struct BlobPlacement {
+  size_t bucket_off_;
+  size_t blob_off_;
+  size_t blob_size_;
+  std::string blob_name_;
+};
 
-stdfs::path WeaklyCanonical(const stdfs::path& p);
-stdfs::path WeaklyCanonical(const stdfs::path& p, std::error_code& ec);
+typedef std::vector<BlobPlacement> BlobPlacements;
 
-}  // namespace hermes::adapter
+class AbstractMapper {
+ public:
+  /**
+   * This method maps the current Operation to Hermes data structures.
+   *
+   * @param file_op, FileStruct, operations for which we are mapping.
+   * @return a map of FileStruct to Hermes Struct
+   */
+  virtual void map(size_t off, size_t size, BlobPlacements &ps) = 0;
+};
+}  // namespace hermes::adapter::posix
 
+#endif  // HERMES_ABSTRACT_ADAPTER_H

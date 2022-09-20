@@ -10,14 +10,28 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include <experimental/filesystem>
+#include "balanced_mapper.h"
+#include "constants.h"
 
 namespace hermes::adapter {
 
-namespace stdfs = std::experimental::filesystem;
+void BalancedMapper::map(size_t off, size_t size, BlobPlacements &ps) {
+  VLOG(1) << "Mapping File with offset:" << off << " and size:" << size << "."
+          << std::endl;
 
-stdfs::path WeaklyCanonical(const stdfs::path& p);
-stdfs::path WeaklyCanonical(const stdfs::path& p, std::error_code& ec);
+  size_t size_mapped = 0;
+  while (size > size_mapped) {
+    BlobPlacement p;
+    p.bucket_off_ = off + size_mapped;
+    size_t page_index = p.bucket_off_ / kPageSize;
+    p.blob_off_ = p.bucket_off_ % kPageSize;
+    auto left_size_page = kPageSize - p.blob_off_;
+    p.blob_size_ = left_size_page < size - size_mapped ? left_size_page
+                                                       : size - size_mapped;
+    p.blob_name_ = std::to_string(page_index + 1);
+    ps.emplace_back(p);
+    size_mapped += p.blob_size_;
+  }
+}
 
 }  // namespace hermes::adapter
-

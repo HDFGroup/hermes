@@ -10,14 +10,35 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include <experimental/filesystem>
+#ifndef HERMES_POSIX_COMMON_CONSTANTS_H
+#define HERMES_POSIX_COMMON_CONSTANTS_H
 
-namespace hermes::adapter {
+/**
+ * Standard header
+ */
 
-namespace stdfs = std::experimental::filesystem;
+/**
+ * Dependent library header
+ */
 
-stdfs::path WeaklyCanonical(const stdfs::path& p);
-stdfs::path WeaklyCanonical(const stdfs::path& p, std::error_code& ec);
+/**
+ * Internal header
+ */
+#include "posix/enumerations.h"
 
-}  // namespace hermes::adapter
+/**
+ * Constants file for POSIX adapter.
+ */
+using hermes::adapter::posix::MapperType;
 
+/**
+ * Which mapper to be used by POSIX adapter.
+ */
+const MapperType kMapperType = MapperType::BALANCED;
+
+/**
+ * String delimiter
+ */
+const char kStringDelimiter = '#';
+
+#endif  // HERMES_POSIX_COMMON_CONSTANTS_H

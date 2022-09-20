@@ -32,7 +32,7 @@ using hermes::u8;
 using hermes::u64;
 
 namespace hapi = hermes::api;
-namespace fs = std::experimental::filesystem;
+namespace stdfs = std::experimental::filesystem;
 
 
 /**
@@ -419,8 +419,8 @@ size_t read_internal(AdapterStat &stat, void *ptr, size_t total_size,
                               total_read_size, hinfo.size_);
         read_size += file_read_size;
       }
-      if (contains_blob && fs::exists(filename) &&
-          fs::file_size(filename) >= finfo.offset_ + finfo.size_) {
+      if (contains_blob && stdfs::exists(filename) &&
+          stdfs::file_size(filename) >= finfo.offset_ + finfo.size_) {
         LOG(INFO) << "Blob does not have data and need to read from original "
                      "filename: "
                   << filename << " offset:" << finfo.offset_ + read_size
@@ -431,8 +431,8 @@ size_t read_internal(AdapterStat &stat, void *ptr, size_t total_size,
                                                hinfo.size_ - read_size);
         read_size += new_read_size;
       }
-    } else if (fs::exists(filename) &&
-               fs::file_size(filename) >= finfo.offset_ + finfo.size_) {
+    } else if (stdfs::exists(filename) &&
+               stdfs::file_size(filename) >= finfo.offset_ + finfo.size_) {
       LOG(INFO)
           << "Blob does not exists and need to read from original filename: "
           << filename << " offset:" << finfo.offset_

@@ -92,9 +92,9 @@ TEST_CASE("Open", "[process=" + std::to_string(info.comm_size) +
         MPI_MODE_WRONLY | MPI_MODE_CREATE | MPI_MODE_DELETE_ON_CLOSE,
         MPI_COMM_SELF);
     REQUIRE(test::status_orig == MPI_SUCCESS);
-    REQUIRE(fs::exists(info.new_file.c_str()));
+    REQUIRE(stdfs::exists(info.new_file.c_str()));
     test::test_close();
-    REQUIRE(!fs::exists(info.new_file.c_str()));
+    REQUIRE(!stdfs::exists(info.new_file.c_str()));
     REQUIRE(test::status_orig == MPI_SUCCESS);
   }
   posttest();
@@ -180,7 +180,7 @@ TEST_CASE("OpenCollective", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(test::status_orig == MPI_SUCCESS);
     test::test_close();
     REQUIRE(test::status_orig == MPI_SUCCESS);
-    REQUIRE(!fs::exists(info.shared_new_file.c_str()));
+    REQUIRE(!stdfs::exists(info.shared_new_file.c_str()));
   }
   posttest();
 }
@@ -213,7 +213,7 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
     REQUIRE((size_t)test::size_written_orig == args.request_size);
     test::test_close();
     REQUIRE(test::status_orig == MPI_SUCCESS);
-    REQUIRE(fs::file_size(info.new_file) == (size_t)test::size_written_orig);
+    REQUIRE(stdfs::file_size(info.new_file) == (size_t)test::size_written_orig);
   }
 
   SECTION("write to new file with allocate") {
@@ -229,12 +229,12 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
     test::test_close();
     REQUIRE(test::status_orig == MPI_SUCCESS);
     MPI_Barrier(MPI_COMM_WORLD);
-    REQUIRE(fs::file_size(info.shared_new_file) ==
+    REQUIRE(stdfs::file_size(info.shared_new_file) ==
             (size_t)test::size_written_orig * info.comm_size);
   }
 
   SECTION("append to existing file") {
-    auto existing_size = fs::file_size(info.existing_file);
+    auto existing_size = stdfs::file_size(info.existing_file);
     test::test_open(info.existing_file.c_str(),
                     MPI_MODE_WRONLY | MPI_MODE_APPEND | MPI_MODE_EXCL,
                     MPI_COMM_SELF);
@@ -243,7 +243,7 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
     REQUIRE((size_t)test::size_written_orig == args.request_size);
     test::test_close();
     REQUIRE(test::status_orig == MPI_SUCCESS);
-    REQUIRE(fs::file_size(info.existing_file) ==
+    REQUIRE(stdfs::file_size(info.existing_file) ==
             existing_size + test::size_written_orig);
   }
 
@@ -256,7 +256,7 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
     REQUIRE((size_t)test::size_written_orig == args.request_size);
     test::test_close();
     REQUIRE(test::status_orig == MPI_SUCCESS);
-    REQUIRE(fs::file_size(info.new_file) == (size_t)test::size_written_orig);
+    REQUIRE(stdfs::file_size(info.new_file) == (size_t)test::size_written_orig);
   }
 
   SECTION("write_at to existing file") {
@@ -278,7 +278,7 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
     REQUIRE((size_t)test::size_written_orig == args.request_size);
     test::test_close();
     REQUIRE(test::status_orig == MPI_SUCCESS);
-    REQUIRE(fs::file_size(info.new_file) == (size_t)test::size_written_orig);
+    REQUIRE(stdfs::file_size(info.new_file) == (size_t)test::size_written_orig);
   }
 
   SECTION("delete on close mode on new file") {
@@ -291,14 +291,14 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(test::status_orig == 0);
     test::test_write(info.write_data.c_str(), args.request_size, MPI_CHAR);
     REQUIRE((size_t)test::size_written_orig == args.request_size);
-    REQUIRE(fs::exists(info.new_file.c_str()));
+    REQUIRE(stdfs::exists(info.new_file.c_str()));
     test::test_close();
-    REQUIRE(!fs::exists(info.new_file.c_str()));
+    REQUIRE(!stdfs::exists(info.new_file.c_str()));
     REQUIRE(test::status_orig == MPI_SUCCESS);
   }
 
   SECTION("delete on close mode on existing file") {
-    auto original_size = fs::file_size(info.existing_file);
+    auto original_size = stdfs::file_size(info.existing_file);
     test::test_open(info.existing_file.c_str(),
                     MPI_MODE_WRONLY | MPI_MODE_EXCL | MPI_MODE_DELETE_ON_CLOSE,
                     MPI_COMM_SELF);
@@ -307,14 +307,14 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(test::status_orig == 0);
     test::test_write(info.write_data.c_str(), args.request_size, MPI_CHAR);
     REQUIRE((size_t)test::size_written_orig == args.request_size);
-    REQUIRE(fs::exists(info.existing_file.c_str()));
+    REQUIRE(stdfs::exists(info.existing_file.c_str()));
     auto new_size =
         original_size > (size_t)test::size_written_orig * info.comm_size
             ? original_size
             : test::size_written_orig * info.comm_size;
-    REQUIRE(fs::file_size(info.existing_file) == (size_t)new_size);
+    REQUIRE(stdfs::file_size(info.existing_file) == (size_t)new_size);
     test::test_close();
-    REQUIRE(!fs::exists(info.existing_file.c_str()));
+    REQUIRE(!stdfs::exists(info.existing_file.c_str()));
     REQUIRE(test::status_orig == MPI_SUCCESS);
     check_bytes = false;
   }
@@ -353,7 +353,7 @@ TEST_CASE("SingleWriteCollective",
     REQUIRE((size_t)test::size_written_orig == args.request_size);
     test::test_close();
     REQUIRE(test::status_orig == MPI_SUCCESS);
-    REQUIRE(fs::file_size(info.shared_new_file) ==
+    REQUIRE(stdfs::file_size(info.shared_new_file) ==
             (size_t)test::size_written_orig);
   }
 
@@ -370,7 +370,7 @@ TEST_CASE("SingleWriteCollective",
   //   REQUIRE((size_t)test::size_written_orig == args.request_size);
   //   test::test_close();
   //   REQUIRE(test::status_orig == MPI_SUCCESS);
-  //   REQUIRE(fs::file_size(info.shared_new_file) ==
+  //   REQUIRE(stdfs::file_size(info.shared_new_file) ==
   //           (size_t)test::size_written_orig * info.comm_size);
   // }
 
@@ -387,7 +387,7 @@ TEST_CASE("SingleWriteCollective",
     test::test_close();
     REQUIRE(test::status_orig == MPI_SUCCESS);
     MPI_Barrier(MPI_COMM_WORLD);
-    REQUIRE(fs::file_size(info.shared_new_file) ==
+    REQUIRE(stdfs::file_size(info.shared_new_file) ==
             (size_t)test::size_written_orig * info.comm_size);
   }
 
@@ -410,11 +410,11 @@ TEST_CASE("SingleWriteCollective",
     REQUIRE((size_t)test::size_written_orig == args.request_size);
     test::test_close();
     REQUIRE(test::status_orig == MPI_SUCCESS);
-    REQUIRE(fs::file_size(info.new_file) == (size_t)test::size_written_orig);
+    REQUIRE(stdfs::file_size(info.new_file) == (size_t)test::size_written_orig);
   }
 
   SECTION("append to existing file") {
-    auto existing_size = fs::file_size(info.existing_file);
+    auto existing_size = stdfs::file_size(info.existing_file);
     test::test_open(info.shared_existing_file.c_str(),
                     MPI_MODE_WRONLY | MPI_MODE_APPEND | MPI_MODE_EXCL,
                     MPI_COMM_WORLD);
@@ -423,7 +423,7 @@ TEST_CASE("SingleWriteCollective",
     REQUIRE((size_t)test::size_written_orig == args.request_size);
     test::test_close();
     REQUIRE(test::status_orig == MPI_SUCCESS);
-    REQUIRE(fs::file_size(info.shared_existing_file) ==
+    REQUIRE(stdfs::file_size(info.shared_existing_file) ==
             existing_size + test::size_written_orig);
   }
 
@@ -435,7 +435,7 @@ TEST_CASE("SingleWriteCollective",
     REQUIRE((size_t)test::size_written_orig == args.request_size);
     test::test_close();
     REQUIRE(test::status_orig == MPI_SUCCESS);
-    REQUIRE(fs::file_size(info.shared_new_file) ==
+    REQUIRE(stdfs::file_size(info.shared_new_file) ==
             (size_t)test::size_written_orig);
   }
 
@@ -458,7 +458,7 @@ TEST_CASE("SingleWriteCollective",
     REQUIRE((size_t)test::size_written_orig == args.request_size);
     test::test_close();
     REQUIRE(test::status_orig == MPI_SUCCESS);
-    REQUIRE(fs::file_size(info.new_file) == (size_t)test::size_written_orig);
+    REQUIRE(stdfs::file_size(info.new_file) == (size_t)test::size_written_orig);
   }
   SECTION("delete on close mode on new file") {
     test::test_open(
@@ -470,15 +470,15 @@ TEST_CASE("SingleWriteCollective",
     REQUIRE(test::status_orig == 0);
     test::test_write(info.write_data.c_str(), args.request_size, MPI_CHAR);
     REQUIRE((size_t)test::size_written_orig == args.request_size);
-    REQUIRE(fs::exists(info.shared_new_file.c_str()));
+    REQUIRE(stdfs::exists(info.shared_new_file.c_str()));
     MPI_Barrier(MPI_COMM_WORLD);
     test::test_close();
-    REQUIRE(!fs::exists(info.shared_new_file.c_str()));
+    REQUIRE(!stdfs::exists(info.shared_new_file.c_str()));
     REQUIRE(test::status_orig == MPI_SUCCESS);
   }
 
   SECTION("delete on close mode on existing file") {
-    auto original_size = fs::file_size(info.shared_existing_file);
+    auto original_size = stdfs::file_size(info.shared_existing_file);
     test::test_open(info.shared_existing_file.c_str(),
                     MPI_MODE_WRONLY | MPI_MODE_EXCL | MPI_MODE_DELETE_ON_CLOSE,
                     MPI_COMM_WORLD);
@@ -487,14 +487,14 @@ TEST_CASE("SingleWriteCollective",
     REQUIRE(test::status_orig == 0);
     test::test_write(info.write_data.c_str(), args.request_size, MPI_CHAR);
     REQUIRE((size_t)test::size_written_orig == args.request_size);
-    REQUIRE(fs::exists(info.shared_existing_file.c_str()));
+    REQUIRE(stdfs::exists(info.shared_existing_file.c_str()));
     auto new_size =
         original_size > (size_t)test::size_written_orig * info.comm_size
             ? original_size
             : test::size_written_orig * info.comm_size;
-    REQUIRE(fs::file_size(info.shared_existing_file) == (size_t)new_size);
+    REQUIRE(stdfs::file_size(info.shared_existing_file) == (size_t)new_size);
     test::test_close();
-    REQUIRE(!fs::exists(info.shared_existing_file.c_str()));
+    REQUIRE(!stdfs::exists(info.shared_existing_file.c_str()));
     REQUIRE(test::status_orig == MPI_SUCCESS);
     check_bytes = false;
   }
@@ -531,7 +531,7 @@ TEST_CASE("SingleAsyncWrite", "[process=" + std::to_string(info.comm_size) +
     REQUIRE((size_t)test::size_written_orig == args.request_size);
     test::test_close();
     REQUIRE(test::status_orig == MPI_SUCCESS);
-    REQUIRE(fs::file_size(info.new_file) == (size_t)test::size_written_orig);
+    REQUIRE(stdfs::file_size(info.new_file) == (size_t)test::size_written_orig);
   }
 
   SECTION("write to new  file using shared ptr") {
@@ -545,7 +545,7 @@ TEST_CASE("SingleAsyncWrite", "[process=" + std::to_string(info.comm_size) +
     REQUIRE((size_t)test::size_written_orig == args.request_size);
     test::test_close();
     REQUIRE(test::status_orig == MPI_SUCCESS);
-    REQUIRE(fs::file_size(info.shared_new_file) ==
+    REQUIRE(stdfs::file_size(info.shared_new_file) ==
             (size_t)test::size_written_orig * info.comm_size);
   }
 
@@ -562,12 +562,12 @@ TEST_CASE("SingleAsyncWrite", "[process=" + std::to_string(info.comm_size) +
     test::test_close();
     REQUIRE(test::status_orig == MPI_SUCCESS);
     MPI_Barrier(MPI_COMM_WORLD);
-    REQUIRE(fs::file_size(info.shared_new_file) ==
+    REQUIRE(stdfs::file_size(info.shared_new_file) ==
             (size_t)test::size_written_orig * info.comm_size);
   }
 
   SECTION("append to existing file") {
-    auto existing_size = fs::file_size(info.existing_file);
+    auto existing_size = stdfs::file_size(info.existing_file);
     test::test_open(info.existing_file.c_str(),
                     MPI_MODE_WRONLY | MPI_MODE_APPEND | MPI_MODE_EXCL,
                     MPI_COMM_SELF);
@@ -576,7 +576,7 @@ TEST_CASE("SingleAsyncWrite", "[process=" + std::to_string(info.comm_size) +
     REQUIRE((size_t)test::size_written_orig == args.request_size);
     test::test_close();
     REQUIRE(test::status_orig == MPI_SUCCESS);
-    REQUIRE(fs::file_size(info.existing_file) ==
+    REQUIRE(stdfs::file_size(info.existing_file) ==
             existing_size + test::size_written_orig);
   }
 
@@ -589,7 +589,7 @@ TEST_CASE("SingleAsyncWrite", "[process=" + std::to_string(info.comm_size) +
     REQUIRE((size_t)test::size_written_orig == args.request_size);
     test::test_close();
     REQUIRE(test::status_orig == MPI_SUCCESS);
-    REQUIRE(fs::file_size(info.new_file) == (size_t)test::size_written_orig);
+    REQUIRE(stdfs::file_size(info.new_file) == (size_t)test::size_written_orig);
   }
 
   SECTION("write_at to existing file") {
@@ -611,7 +611,7 @@ TEST_CASE("SingleAsyncWrite", "[process=" + std::to_string(info.comm_size) +
     REQUIRE((size_t)test::size_written_orig == args.request_size);
     test::test_close();
     REQUIRE(test::status_orig == MPI_SUCCESS);
-    REQUIRE(fs::file_size(info.new_file) == (size_t)test::size_written_orig);
+    REQUIRE(stdfs::file_size(info.new_file) == (size_t)test::size_written_orig);
   }
 
   SECTION("delete on close mode on new file") {
@@ -624,9 +624,9 @@ TEST_CASE("SingleAsyncWrite", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(test::status_orig == 0);
     test::test_iwrite(info.write_data.c_str(), args.request_size, MPI_CHAR);
     REQUIRE((size_t)test::size_written_orig == args.request_size);
-    REQUIRE(fs::exists(info.new_file.c_str()));
+    REQUIRE(stdfs::exists(info.new_file.c_str()));
     test::test_close();
-    REQUIRE(!fs::exists(info.new_file.c_str()));
+    REQUIRE(!stdfs::exists(info.new_file.c_str()));
     REQUIRE(test::status_orig == MPI_SUCCESS);
   }
 
@@ -639,9 +639,9 @@ TEST_CASE("SingleAsyncWrite", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(test::status_orig == 0);
     test::test_iwrite(info.write_data.c_str(), args.request_size, MPI_CHAR);
     REQUIRE((size_t)test::size_written_orig == args.request_size);
-    REQUIRE(fs::exists(info.existing_file.c_str()));
+    REQUIRE(stdfs::exists(info.existing_file.c_str()));
     test::test_close();
-    REQUIRE(!fs::exists(info.existing_file.c_str()));
+    REQUIRE(!stdfs::exists(info.existing_file.c_str()));
     REQUIRE(test::status_orig == MPI_SUCCESS);
     check_bytes = false;
   }
@@ -680,7 +680,7 @@ TEST_CASE("SingleAsyncWriteCollective",
     REQUIRE((size_t)test::size_written_orig == args.request_size);
     test::test_close();
     REQUIRE(test::status_orig == MPI_SUCCESS);
-    REQUIRE(fs::file_size(info.shared_new_file) ==
+    REQUIRE(stdfs::file_size(info.shared_new_file) ==
             (size_t)test::size_written_orig);
   }
 
@@ -695,7 +695,7 @@ TEST_CASE("SingleAsyncWriteCollective",
     REQUIRE((size_t)test::size_written_orig == args.request_size);
     test::test_close();
     REQUIRE(test::status_orig == MPI_SUCCESS);
-    REQUIRE(fs::file_size(info.shared_new_file) ==
+    REQUIRE(stdfs::file_size(info.shared_new_file) ==
             (size_t)test::size_written_orig * info.comm_size);
   }
 
@@ -712,7 +712,7 @@ TEST_CASE("SingleAsyncWriteCollective",
     test::test_close();
     REQUIRE(test::status_orig == MPI_SUCCESS);
     MPI_Barrier(MPI_COMM_WORLD);
-    REQUIRE(fs::file_size(info.shared_new_file) ==
+    REQUIRE(stdfs::file_size(info.shared_new_file) ==
             (size_t)test::size_written_orig * info.comm_size);
   }
 
@@ -735,10 +735,10 @@ TEST_CASE("SingleAsyncWriteCollective",
     REQUIRE((size_t)test::size_written_orig == args.request_size);
     test::test_close();
     REQUIRE(test::status_orig == MPI_SUCCESS);
-    REQUIRE(fs::file_size(info.new_file) == (size_t)test::size_written_orig);
+    REQUIRE(stdfs::file_size(info.new_file) == (size_t)test::size_written_orig);
   }
   SECTION("append to existing file") {
-    auto existing_size = fs::file_size(info.existing_file);
+    auto existing_size = stdfs::file_size(info.existing_file);
     test::test_open(info.shared_existing_file.c_str(),
                     MPI_MODE_WRONLY | MPI_MODE_APPEND | MPI_MODE_EXCL,
                     MPI_COMM_WORLD);
@@ -747,7 +747,7 @@ TEST_CASE("SingleAsyncWriteCollective",
     REQUIRE((size_t)test::size_written_orig == args.request_size);
     test::test_close();
     REQUIRE(test::status_orig == MPI_SUCCESS);
-    REQUIRE(fs::file_size(info.shared_existing_file) ==
+    REQUIRE(stdfs::file_size(info.shared_existing_file) ==
             existing_size + test::size_written_orig);
   }
 
@@ -759,7 +759,7 @@ TEST_CASE("SingleAsyncWriteCollective",
     REQUIRE((size_t)test::size_written_orig == args.request_size);
     test::test_close();
     REQUIRE(test::status_orig == MPI_SUCCESS);
-    REQUIRE(fs::file_size(info.shared_new_file) ==
+    REQUIRE(stdfs::file_size(info.shared_new_file) ==
             (size_t)test::size_written_orig);
   }
   SECTION("delete on close mode on new file") {
@@ -772,14 +772,14 @@ TEST_CASE("SingleAsyncWriteCollective",
     REQUIRE(test::status_orig == 0);
     test::test_iwrite(info.write_data.c_str(), args.request_size, MPI_CHAR);
     REQUIRE((size_t)test::size_written_orig == args.request_size);
-    REQUIRE(fs::exists(info.shared_new_file.c_str()));
+    REQUIRE(stdfs::exists(info.shared_new_file.c_str()));
     test::test_close();
-    REQUIRE(!fs::exists(info.shared_new_file.c_str()));
+    REQUIRE(!stdfs::exists(info.shared_new_file.c_str()));
     REQUIRE(test::status_orig == MPI_SUCCESS);
   }
 
   SECTION("delete on close mode on existing file") {
-    auto original_size = fs::file_size(info.shared_existing_file);
+    auto original_size = stdfs::file_size(info.shared_existing_file);
     test::test_open(info.shared_existing_file.c_str(),
                     MPI_MODE_WRONLY | MPI_MODE_EXCL | MPI_MODE_DELETE_ON_CLOSE,
                     MPI_COMM_WORLD);
@@ -788,14 +788,14 @@ TEST_CASE("SingleAsyncWriteCollective",
     REQUIRE(test::status_orig == 0);
     test::test_iwrite(info.write_data.c_str(), args.request_size, MPI_CHAR);
     REQUIRE((size_t)test::size_written_orig == args.request_size);
-    REQUIRE(fs::exists(info.shared_existing_file.c_str()));
+    REQUIRE(stdfs::exists(info.shared_existing_file.c_str()));
     auto new_size =
         original_size > (size_t)test::size_written_orig * info.comm_size
             ? original_size
             : test::size_written_orig * info.comm_size;
-    REQUIRE(fs::file_size(info.shared_existing_file) == (size_t)new_size);
+    REQUIRE(stdfs::file_size(info.shared_existing_file) == (size_t)new_size);
     test::test_close();
-    REQUIRE(!fs::exists(info.shared_existing_file.c_str()));
+    REQUIRE(!stdfs::exists(info.shared_existing_file.c_str()));
     REQUIRE(test::status_orig == MPI_SUCCESS);
     check_bytes = false;
   }

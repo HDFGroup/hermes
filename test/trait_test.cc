@@ -19,7 +19,7 @@
 #include "vbucket.h"
 #include "test_utils.h"
 
-namespace fs = std::experimental::filesystem;
+namespace stdfs = std::experimental::filesystem;
 namespace hapi = hermes::api;
 
 struct Arguments {
@@ -94,7 +94,7 @@ TEST_CASE("CustomTrait",
 
   using HermesPtr = std::shared_ptr<hapi::Hermes>;
   HermesPtr hermes_app = hapi::InitHermes(args.config.c_str(), true);
-  fs::path fullpath = args.directory;
+  stdfs::path fullpath = args.directory;
   fullpath /= args.filename;
   std::string fullpath_str = fullpath.string();
 
@@ -125,10 +125,10 @@ TEST_CASE("CustomTrait",
     file_vbucket.Attach(&persist_trait);
     file_vbucket.Destroy();
     file_bucket.Destroy();
-    REQUIRE(fs::exists(fullpath_str));
+    REQUIRE(stdfs::exists(fullpath_str));
 
     size_t total_bytes = args.iterations * args.request_size;
-    REQUIRE(fs::file_size(fullpath_str) == total_bytes);
+    REQUIRE(stdfs::file_size(fullpath_str) == total_bytes);
     auto read_blob = hapi::Blob(total_bytes, '0');
     FILE* fh = fopen(fullpath_str.c_str(), "r+");
     REQUIRE(fh != nullptr);

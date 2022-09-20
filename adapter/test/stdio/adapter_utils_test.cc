@@ -13,7 +13,7 @@
 #include "catch_config.h"
 #include "adapter_utils.h"
 
-namespace fs = std::experimental::filesystem;
+namespace stdfs = std::experimental::filesystem;
 
 int init(int* argc, char*** argv) {
   (void)argc;
@@ -36,26 +36,26 @@ TEST_CASE("WeaklyCanonical") {
   const std::error_code bad_ec = make_error_code(std::errc::invalid_argument);
   std::error_code ec;
 
-  auto dir = fs::path("tmp");
-  if (fs::exists(dir)) {
-    fs::remove_all(dir, ec);
+  auto dir = stdfs::path("tmp");
+  if (stdfs::exists(dir)) {
+    stdfs::remove_all(dir, ec);
   }
 
-  fs::create_directory(dir);
-  const auto dirc = fs::canonical(dir);
-  fs::path foo = dir/"foo", bar = dir/"bar";
-  fs::create_directory(foo);
-  fs::create_directory(bar);
-  fs::create_directory(bar/"baz");
-  fs::path p;
+  stdfs::create_directory(dir);
+  const auto dirc = stdfs::canonical(dir);
+  stdfs::path foo = dir/"foo", bar = dir/"bar";
+  stdfs::create_directory(foo);
+  stdfs::create_directory(bar);
+  stdfs::create_directory(bar/"baz");
+  stdfs::path p;
 
-  fs::create_symlink("../bar", foo/"bar");
+  stdfs::create_symlink("../bar", foo/"bar");
 
   p = had::WeaklyCanonical(dir/"foo//./bar///../biz/.");
   REQUIRE(p == dirc/"biz");
   p = had::WeaklyCanonical(dir/"foo/.//bar/././baz/.");
   REQUIRE(p == dirc/"bar/baz");
-  p = had::WeaklyCanonical(fs::current_path()/dir/"bar//../foo/bar/baz");
+  p = had::WeaklyCanonical(stdfs::current_path()/dir/"bar//../foo/bar/baz");
   REQUIRE(p == dirc/"bar/baz");
 
   ec = bad_ec;
@@ -67,7 +67,7 @@ TEST_CASE("WeaklyCanonical") {
   REQUIRE(!ec);
   REQUIRE(p == dirc/"bar/baz");
   ec = bad_ec;
-  p = had::WeaklyCanonical(fs::current_path()/dir/"bar//../foo/bar/baz", ec);
+  p = had::WeaklyCanonical(stdfs::current_path()/dir/"bar//../foo/bar/baz", ec);
   REQUIRE(!ec);
   REQUIRE(p == dirc/"bar/baz");
 
@@ -83,7 +83,7 @@ TEST_CASE("WeaklyCanonical") {
   REQUIRE(p == dirc/"biz");
   p = had::WeaklyCanonical(dir/"foo/.././/bar/././baz/.");
   REQUIRE(p == dirc/"bar/baz");
-  p = had::WeaklyCanonical(fs::current_path()/dir/"bar//../foo/../bar/baz");
+  p = had::WeaklyCanonical(stdfs::current_path()/dir/"bar//../foo/../bar/baz");
   REQUIRE(p == dirc/"bar/baz");
 
   ec = bad_ec;
@@ -95,9 +95,9 @@ TEST_CASE("WeaklyCanonical") {
   REQUIRE(!ec);
   REQUIRE(p == dirc/"bar/baz");
   ec = bad_ec;
-  p = had::WeaklyCanonical(fs::current_path()/dir/"bar//../foo/../bar/baz", ec);
+  p = had::WeaklyCanonical(stdfs::current_path()/dir/"bar//../foo/../bar/baz", ec);
   REQUIRE(!ec);
   REQUIRE(p == dirc/"bar/baz");
 
-  fs::remove_all(dir, ec);
+  stdfs::remove_all(dir, ec);
 }

@@ -24,7 +24,7 @@ using hermes::adapter::stdio::HermesStruct;
 using hermes::adapter::stdio::MapperFactory;
 using hermes::adapter::stdio::MetadataManager;
 
-namespace fs = std::experimental::filesystem;
+namespace stdfs = std::experimental::filesystem;
 
 namespace hermes::adapter::stdio::test {
 struct Arguments {
@@ -62,30 +62,30 @@ int finalize() {
 }
 
 int pretest() {
-  fs::path fullpath = args.directory;
+  stdfs::path fullpath = args.directory;
   fullpath /= args.filename;
   info.new_file = fullpath.string() + "_new";
   info.existing_file = fullpath.string() + "_ext";
-  if (fs::exists(info.new_file)) fs::remove(info.new_file);
-  if (fs::exists(info.existing_file)) fs::remove(info.existing_file);
-  if (!fs::exists(info.existing_file)) {
+  if (stdfs::exists(info.new_file)) stdfs::remove(info.new_file);
+  if (stdfs::exists(info.existing_file)) stdfs::remove(info.existing_file);
+  if (!stdfs::exists(info.existing_file)) {
     std::string cmd = "dd if=/dev/zero of=" + info.existing_file +
                       " bs=1 count=0 seek=" +
                       std::to_string(args.request_size * args.num_iterations) +
                       " > /dev/null 2>&1";
     int status = system(cmd.c_str());
     REQUIRE(status != -1);
-    REQUIRE(fs::file_size(info.existing_file) ==
+    REQUIRE(stdfs::file_size(info.existing_file) ==
             args.request_size * args.num_iterations);
-    info.total_size = fs::file_size(info.existing_file);
+    info.total_size = stdfs::file_size(info.existing_file);
   }
   REQUIRE(info.total_size > 0);
   return 0;
 }
 
 int posttest() {
-  if (fs::exists(info.new_file)) fs::remove(info.new_file);
-  if (fs::exists(info.existing_file)) fs::remove(info.existing_file);
+  if (stdfs::exists(info.new_file)) stdfs::remove(info.new_file);
+  if (stdfs::exists(info.existing_file)) stdfs::remove(info.existing_file);
   return 0;
 }
 

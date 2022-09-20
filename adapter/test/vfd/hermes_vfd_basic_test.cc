@@ -710,7 +710,7 @@ TEST_CASE("ScratchMode", "[scratch]") {
     REQUIRE(test::hermes_herr >= 0);
 
     if (info.scratch_mode) {
-      REQUIRE(!fs::exists(info.new_file));
+      REQUIRE(!stdfs::exists(info.new_file));
     }
   }
 

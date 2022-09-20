@@ -14,18 +14,18 @@
 #include "utils.cc"
 
 using hermes::u8;
-namespace fs = std::experimental::filesystem;
+namespace stdfs = std::experimental::filesystem;
 
 namespace {
-const fs::path::value_type dot = '.';
-inline bool is_dot(fs::path::value_type c) { return c == dot; }
+const stdfs::path::value_type dot = '.';
+inline bool is_dot(stdfs::path::value_type c) { return c == dot; }
 
-inline bool is_dot(const fs::path& path) {
+inline bool is_dot(const stdfs::path& path) {
   const auto& filename = path.native();
   return filename.size() == 1 && is_dot(filename[0]);
 }
 
-inline bool is_dotdot(const fs::path& path) {
+inline bool is_dotdot(const stdfs::path& path) {
   const auto& filename = path.native();
   return filename.size() == 2 && is_dot(filename[0]) && is_dot(filename[1]);
 }
@@ -36,7 +36,7 @@ namespace adapter {
 
 // NOTE(chogan): Back port of the C++17 standard fileystem implementation from
 // gcc 9.1 to support gcc 7
-fs::path LexicallyNormal(fs::path &path) {
+stdfs::path LexicallyNormal(stdfs::path &path) {
   /*
   C++17 [fs.path.generic] p6
   - If the path is empty, stop.
@@ -51,7 +51,7 @@ fs::path LexicallyNormal(fs::path &path) {
   - If the last filename is dot-dot, remove any trailing directory-separator.
   - If the path is empty, add a dot.
   */
-  fs::path ret;
+  stdfs::path ret;
   // If the path is empty, stop.
   if (path.empty()) {
     return ret;
@@ -102,7 +102,7 @@ fs::path LexicallyNormal(fs::path &path) {
         }
       }
     } else if (is_dot(p))  {
-      ret /= fs::path();
+      ret /= stdfs::path();
     } else {
       ret /= p;
     }
@@ -124,19 +124,19 @@ fs::path LexicallyNormal(fs::path &path) {
 }
 
 // NOTE(chogan): Backported from GCC 9
-fs::path WeaklyCanonical(const fs::path& p) {
-  fs::path result;
-  if (fs::exists(fs::status(p))) {
-    return fs::canonical(p);
+stdfs::path WeaklyCanonical(const stdfs::path& p) {
+  stdfs::path result;
+  if (stdfs::exists(stdfs::status(p))) {
+    return stdfs::canonical(p);
   }
 
-  fs::path tmp;
+  stdfs::path tmp;
   auto iter = p.begin(), end = p.end();
   // find leading elements of p that exist:
   while (iter != end) {
     tmp = result / *iter;
-    if (fs::exists(fs::status(tmp))) {
-      fs::swap(result, tmp);
+    if (stdfs::exists(stdfs::status(tmp))) {
+      stdfs::swap(result, tmp);
     } else {
       break;
     }
@@ -144,7 +144,7 @@ fs::path WeaklyCanonical(const fs::path& p) {
   }
   // canonicalize:
   if (!result.empty()) {
-    result = fs::canonical(result);
+    result = stdfs::canonical(result);
   }
   // append the non-existing elements:
   while (iter != end) {
@@ -155,27 +155,27 @@ fs::path WeaklyCanonical(const fs::path& p) {
 }
 
 // NOTE(chogan): Backported from GCC 9
-fs::path WeaklyCanonical(const fs::path& p, std::error_code& ec) {
-  fs::path result;
-  fs::file_status st = fs::status(p, ec);
+stdfs::path WeaklyCanonical(const stdfs::path& p, std::error_code& ec) {
+  stdfs::path result;
+  stdfs::file_status st = stdfs::status(p, ec);
   if (exists(st)) {
-    return fs::canonical(p, ec);
-  } else if (fs::status_known(st)) {
+    return stdfs::canonical(p, ec);
+  } else if (stdfs::status_known(st)) {
     ec.clear();
   } else {
     return result;
   }
 
-  fs::path tmp;
+  stdfs::path tmp;
   auto iter = p.begin(), end = p.end();
   // find leading elements of p that exist:
   while (iter != end) {
     tmp = result / *iter;
-    st = fs::status(tmp, ec);
+    st = stdfs::status(tmp, ec);
     if (exists(st)) {
       swap(result, tmp);
     } else {
-      if (fs::status_known(st)) {
+      if (stdfs::status_known(st)) {
         ec.clear();
       }
       break;
@@ -202,8 +202,8 @@ fs::path WeaklyCanonical(const fs::path& p, std::error_code& ec) {
 
 void ReadGap(const std::string &filename, size_t seek_offset, u8 *read_ptr,
              size_t read_size, size_t file_bounds) {
-  if (fs::exists(filename) &&
-      fs::file_size(filename) >= file_bounds) {
+  if (stdfs::exists(filename) &&
+      stdfs::file_size(filename) >= file_bounds) {
     LOG(INFO) << "Blob has a gap in write. Read gap from original file.\n";
     INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
     int fd = open(filename.c_str(), O_RDONLY);

@@ -20,7 +20,7 @@
 #include "adapter_utils.h"
 #include "config_parser.h"
 
-namespace fs = std::experimental::filesystem;
+namespace stdfs = std::experimental::filesystem;
 const char* kPathExclusions[15] = {"/bin/", "/boot/", "/dev/",  "/etc/",
                                  "/lib/", "/opt/",  "/proc/", "/sbin/",
                                  "/sys/", "/usr/",  "/var/",  "/run/",
@@ -37,9 +37,9 @@ bool populated = false;
 void PopulateBufferingPath() {
   char* hermes_config = getenv(kHermesConf);
 
-  if (fs::exists(hermes_config)) {
+  if (stdfs::exists(hermes_config)) {
     std::string hermes_conf_abs_path =
-        WeaklyCanonical(fs::path(hermes_config)).string();
+        WeaklyCanonical(stdfs::path(hermes_config)).string();
     INTERCEPTOR_LIST->hermes_paths_exclusion.push_back(hermes_conf_abs_path);
   }
   hermes::Config config_stack = {};

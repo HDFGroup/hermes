@@ -16,8 +16,8 @@ class Api:
     def __init__(self, ret, name, var_defs):
         self.ret = ret
         self.name = name
-        self.real_name = f"{self.name}"
-        self.type = f"{self.name}_t"
+        self.real_name = f"real_{self.name}_"
+        self.type = f"real_{self.name}_t"
         self.var_defs = var_defs
 
     def get_args(self):
@@ -49,7 +49,6 @@ class ApiClass:
         self.lines.append("#include <iostream>")
         self.lines.append("#include <glog/logging.h>")
         self.lines.append("#include \"interceptor.h\"")
-        self.lines.append("#include \"filesystem/filesystem.h\"")
         self.lines.append("")
 
         self.lines.append(f"namespace hermes::adapter::{namespace} {{")
@@ -67,7 +66,6 @@ class ApiClass:
             self.init_api(api)
         self.lines.append(f"  }}")
         self.lines.append(f"}};")
-        self.lines.append(f"API real_api;")
         self.lines.append(f"}}  // namespace hermes::adapter::{namespace}")
 
         self.lines.append("")

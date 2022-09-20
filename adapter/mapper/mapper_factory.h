@@ -10,14 +10,36 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include <experimental/filesystem>
+#ifndef HERMES_ADAPTER_FACTORY_H
+#define HERMES_ADAPTER_FACTORY_H
+
+#include "singleton.h"
+#include "posix/enumerations.h"
+
+#include "abstract_mapper.h"
+#include "balanced_mapper.h"
+#include "balanced_mapper.cc"
 
 namespace hermes::adapter {
-
-namespace stdfs = std::experimental::filesystem;
-
-stdfs::path WeaklyCanonical(const stdfs::path& p);
-stdfs::path WeaklyCanonical(const stdfs::path& p, std::error_code& ec);
-
-}  // namespace hermes::adapter
-
+class MapperFactory {
+ public:
+  /**
+   * Return the instance of mapper given a type. Uses factory pattern.
+   *
+   * @param type, MapperType, type of mapper to be used by the POSIX adapter.
+   * @return Instance of mapper given a type.
+   */
+  std::shared_ptr<AbstractMapper> Get(const MapperType &type) {
+    switch (type) {
+      case MapperType::BALANCED: {
+        return hermes::adapter::Singleton<BalancedMapper>::GetInstance();
+      }
+      default: {
+        // TODO(hari): @error_handling Mapper not implemented
+      }
+    }
+    return NULL;
+  }
+};
+}  // namespace hermes::adapter::posix
+#endif  // HERMES_ADAPTER_FACTORY_H

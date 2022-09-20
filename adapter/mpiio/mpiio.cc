@@ -27,7 +27,7 @@ using hermes::adapter::mpiio::MapperFactory;
 using hermes::adapter::mpiio::MetadataManager;
 
 namespace hapi = hermes::api;
-namespace fs = std::experimental::filesystem;
+namespace stdfs = std::experimental::filesystem;
 using hermes::adapter::WeaklyCanonical;
 
 /**
@@ -178,6 +178,7 @@ std::pair<int, size_t> write_internal(std::pair<AdapterStat, bool> &existing,
     size_t put_data_ptr_size = item.first.size_;
 
     if (item.second.size_ == kPageSize) {
+      // Entire blob being created or overriden. Put will do either.
       LOG(INFO) << "Create or Overwrite blob " << item.second.blob_name_
                 << " of size:" << item.second.size_ << "." << std::endl;
       auto status = existing.first.st_bkid->Put(
@@ -194,6 +195,7 @@ std::pair<int, size_t> write_internal(std::pair<AdapterStat, bool> &existing,
       auto blob_exists =
           existing.first.st_bkid->ContainsBlob(item.second.blob_name_);
       if (blob_exists) {
+        // Load the existing blob, read it, and override its contents
         hapi::Blob temp(0);
         auto existing_blob_size =
             existing.first.st_bkid->Get(item.second.blob_name_, temp, ctx);
@@ -221,12 +223,14 @@ std::pair<int, size_t> write_internal(std::pair<AdapterStat, bool> &existing,
                   << std::endl;
         std::string process_local_blob_name =
             mdm->EncodeBlobNameLocal(item.second);
+        // Create vbucket for this new blob?
         auto vbucket_name = filename + "#" + item.second.blob_name_;
         auto vbucket = hapi::VBucket(vbucket_name, mdm->GetHermes());
         existing.first.st_vbuckets.emplace(vbucket_name);
         auto blob_names = vbucket.GetLinks(ctx);
         LOG(INFO) << "vbucket with blobname " << item.second.blob_name_
                   << " does not exists." << std::endl;
+        // Create new blob with contents
         auto status = existing.first.st_bkid->Put(
             process_local_blob_name, put_data_ptr, put_data_ptr_size, ctx);
         if (status.Failed()) {
@@ -236,6 +240,7 @@ std::pair<int, size_t> write_internal(std::pair<AdapterStat, bool> &existing,
           perform_file_write(filename, item.first.offset_, put_data_ptr_size,
                              MPI_CHAR, put_data_ptr);
         } else {
+          // Link process blob to vbucket?
           existing.first.st_blobs.emplace(process_local_blob_name);
           vbucket.Link(process_local_blob_name,
                        existing.first.st_bkid->GetName());
@@ -371,8 +376,8 @@ std::pair<int, size_t> read_internal(std::pair<AdapterStat, bool> &existing,
             (int)item.second.size_, MPI_CHAR);
         read_size += file_read_size;
       }
-      if (contains_blob && fs::exists(filename) &&
-          fs::file_size(filename) >= item.first.offset_ + item.first.size_) {
+      if (contains_blob && stdfs::exists(filename) &&
+          stdfs::file_size(filename) >= item.first.offset_ + item.first.size_) {
         LOG(INFO) << "Blob does not have data and need to read from original "
                      "filename: "
                   << filename << " offset:" << item.first.offset_ + read_size
@@ -435,8 +440,8 @@ std::pair<int, size_t> read_internal(std::pair<AdapterStat, bool> &existing,
           }
           if (read_size == item.second.size_) break;
         }
-      } else if (fs::exists(filename) &&
-                 fs::file_size(filename) >=
+      } else if (stdfs::exists(filename) &&
+                 stdfs::file_size(filename) >=
                      item.first.offset_ + item.first.size_) {
         LOG(INFO) << "Blob does not exists and need to read from original "
                      "filename: "
@@ -615,7 +620,7 @@ int HERMES_DECL(MPI_File_close)(MPI_File *fh) {
         MPI_Barrier(existing.first.comm);
         existing.first.st_bkid->Destroy(ctx);
         if (existing.first.a_mode & MPI_MODE_DELETE_ON_CLOSE) {
-          fs::remove(filename);
+          stdfs::remove(filename);
         }
 
       } else {

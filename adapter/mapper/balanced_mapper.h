@@ -10,14 +10,29 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include <experimental/filesystem>
+#ifndef HERMES_BALANCED_MAPPER_H
+#define HERMES_BALANCED_MAPPER_H
+
+#include <vector>
+
+#include "posix/constants.h"
+
+#include "abstract_mapper.h"
 
 namespace hermes::adapter {
+/**
+ * Implement balanced mapping
+ */
+class BalancedMapper : public AbstractMapper {
+ public:
+  /**
+   * This method maps the current Operation to Hermes data structures.
+   *
+   * @param file_op, FileStruct, operations for which we are mapping.
+   * @return a map of FileStruct to Hermes Struct
+   */
+  void map(size_t off, size_t size, BlobPlacements &ps) override;
+};
+}  // namespace hermes::adapter::posix
 
-namespace stdfs = std::experimental::filesystem;
-
-stdfs::path WeaklyCanonical(const stdfs::path& p);
-stdfs::path WeaklyCanonical(const stdfs::path& p, std::error_code& ec);
-
-}  // namespace hermes::adapter
-
+#endif  // HERMES_BALANCED_MAPPER_H
