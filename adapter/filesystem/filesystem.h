@@ -43,7 +43,7 @@ struct AdapterStat {
   AdapterStat()
       : st_bkid(),
         st_blobs(CompareBlobs),
-        ref_count(),
+        ref_count(1),
         st_mode(),
         st_uid(),
         st_gid(),
@@ -53,19 +53,6 @@ struct AdapterStat {
         st_atim(),
         st_mtim(),
         st_ctim() {} /* default constructor */
-  explicit AdapterStat(const struct stat &st)
-      : st_bkid(),
-        st_blobs(CompareBlobs),
-        ref_count(1),
-        st_mode(st.st_mode),
-        st_uid(st.st_uid),
-        st_gid(st.st_gid),
-        st_size(st.st_size),
-        st_ptr(0),
-        st_blksize(st.st_blksize),
-        st_atim(st.st_atim),
-        st_mtim(st.st_mtim),
-        st_ctim(st.st_ctim) {} /* parameterized constructor */
 
   static bool CompareBlobs(const std::string &a, const std::string &b) {
     return std::stol(a) < std::stol(b);
@@ -97,10 +84,15 @@ struct File {
 class Filesystem {
  public:
   File Open(AdapterStat &stat, const std::string &path);
-  size_t Write(AdapterStat &stat, const void *ptr,
-               size_t off, size_t total_size, File &f);
-  size_t Read(AdapterStat &stat, void *ptr,
-              size_t off, size_t total_size, File &f);
+  size_t Write(File &f, AdapterStat &stat, const void *ptr,
+               size_t total_size);
+  size_t Read(File &f, AdapterStat &stat, void *ptr,
+              size_t total_size);
+  size_t Write(File &f, AdapterStat &stat, const void *ptr,
+               size_t off, size_t total_size, bool seek = false);
+  size_t Read(File &f, AdapterStat &stat, void *ptr,
+              size_t off, size_t total_size, bool seek = false);
+  off_t Seek(File &f, AdapterStat &stat, int whence, off_t offset);
   int Close(File &f);
 
  private:
@@ -132,15 +124,36 @@ class Filesystem {
                                  std::shared_ptr<hapi::Bucket> bkt,
                                  const std::string &filename,
                                  const BlobPlacement &p);
-
   void _PutWithFallback(AdapterStat &stat, const std::string &blob_name,
                         const std::string &filename, u8 *data, size_t size,
                         size_t offset);
+
+
+  size_t _ReadExistingContained(File &f, AdapterStat &stat,
+                                hapi::Context ctx,
+                                hapi::Blob read_data,
+                                u8 *mem_ptr,
+                                const std::string &filename,
+                                const BlobPlacement &p);
+  size_t _ReadExistingPartial(File &f, AdapterStat &stat,
+                              hapi::Context ctx,
+                              hapi::Blob read_data,
+                              u8 *mem_ptr,
+                              const std::string &filename,
+                              const BlobPlacement &p);
+  size_t _ReadNew(File &f, AdapterStat &stat,
+                  hapi::Context ctx,
+                  hapi::Blob read_data,
+                  u8 *mem_ptr,
+                  const std::string &filename,
+                  const BlobPlacement &p);
+
+  virtual void _OpenInitStats(File &f, AdapterStat &stat, bool bucket_exists) = 0;
   virtual File _RealOpen(AdapterStat &stat, const std::string &path) = 0;
   virtual size_t _RealWrite(const std::string &filename, off_t offset,
                             size_t size, u8 *data_ptr) = 0;
-  virtual size_t _RealRead(const char *filename, off_t file_offset, void *ptr,
-                           size_t ptr_offset, size_t size) = 0;
+  virtual size_t _RealRead(const std::string &filename, off_t offset,
+                           size_t size, u8 *data_ptr) = 0;
 };
 
 }  // namespace hermes::adapter::fs

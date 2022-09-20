@@ -197,7 +197,7 @@ ssize_t HERMES_DECL(read)(int fd, void *buf, size_t count) {
     auto existing = mdm->Find(f);
     if (existing.second) {
       LOG(INFO) << "Intercept read." << std::endl;
-      ret = fs_api->Read(existing.first, buf, 0, count, f);
+      ret = fs_api->Read(f, existing.first, buf, count);
       return (ret);
     }
   }
@@ -214,7 +214,7 @@ ssize_t HERMES_DECL(write)(int fd, const void *buf, size_t count) {
     auto existing = mdm->Find(f);
     if (existing.second) {
       LOG(INFO) << "Intercept write." << std::endl;
-      ret = fs_api->Write(existing.first, buf, 0, count, f);
+      ret = fs_api->Write(f, existing.first, buf, count);
       return (ret);
     }
   }
@@ -232,11 +232,8 @@ ssize_t HERMES_DECL(pread)(int fd, void *buf, size_t count, off_t offset) {
     auto existing = mdm->Find(f);
     if (existing.second) {
       LOG(INFO) << "Intercept pread." << std::endl;
-      int status = lseek(fd, offset, SEEK_SET);
-      if (status == 0) {
-        ret = fs_api->Read(existing.first, buf, 0, count, f);
-        return ret;
-      }
+      ret = fs_api->Read(f, existing.first, buf, offset, count);
+      return ret;
     }
   }
   ret = real_api->pread(fd, buf, count, offset);
@@ -254,11 +251,8 @@ ssize_t HERMES_DECL(pwrite)(int fd, const void *buf, size_t count,
     auto existing = mdm->Find(f);
     if (existing.second) {
       LOG(INFO) << "Intercept pwrite." << std::endl;
-      int status = lseek(fd, offset, SEEK_SET);
-      if (status == 0) {
-        ret = fs_api->Write(existing.first, buf, 0, count, f);
-        return ret;
-      }
+      ret = fs_api->Write(f, existing.first, buf, offset, count);
+      return ret;
     }
   }
   ret = real_api->pwrite(fd, buf, count, offset);
@@ -275,14 +269,11 @@ ssize_t HERMES_DECL(pread64)(int fd, void *buf, size_t count, off64_t offset) {
     auto existing = mdm->Find(f);
     if (existing.second) {
       LOG(INFO) << "Intercept pread64." << std::endl;
-      int status = lseek(fd, offset, SEEK_SET);
-      if (status == 0) {
-        ret = fs_api->Read(existing.first, buf, 0, count, f);
-        return ret;
-      }
+      ret = fs_api->Read(f, existing.first, buf, offset, count);
+      return ret;
     }
   }
-  ret = real_api->pread(fd, buf, count, offset);
+  ret = real_api->pread64(fd, buf, count, offset);
   return (ret);
 }
 
@@ -297,16 +288,14 @@ ssize_t HERMES_DECL(pwrite64)(int fd, const void *buf, size_t count,
     auto existing = mdm->Find(f);
     if (existing.second) {
       LOG(INFO) << "Intercept pwrite." << std::endl;
-      int status = lseek(fd, offset, SEEK_SET);
-      if (status == 0) {
-        ret = fs_api->Write(existing.first, buf, 0, count, f);
-        return ret;
-      }
+      ret = fs_api->Write(f, existing.first, buf, offset, count);
+      return ret;
     }
   }
-  ret = real_api->pwrite(fd, buf, count, offset);
+  ret = real_api->pwrite64(fd, buf, count, offset);
   return (ret);
 }
+
 off_t HERMES_DECL(lseek)(int fd, off_t offset, int whence) {
   int ret = -1;
   auto real_api = Singleton<API>::GetInstance();
@@ -318,38 +307,14 @@ off_t HERMES_DECL(lseek)(int fd, off_t offset, int whence) {
     if (existing.second) {
       LOG(INFO) << "Intercept lseek offset:" << offset << " whence:" << whence
                 << "." << std::endl;
-      if (!(existing.first.st_mode & O_APPEND)) {
-        switch (whence) {
-          case SEEK_SET: {
-            existing.first.st_ptr = offset;
-            break;
-          }
-          case SEEK_CUR: {
-            existing.first.st_ptr += offset;
-            break;
-          }
-          case SEEK_END: {
-            existing.first.st_ptr = existing.first.st_size + offset;
-            break;
-          }
-          default: {
-            // TODO(hari): throw not implemented error.
-          }
-        }
-        mdm->Update(f, existing.first);
-        ret = existing.first.st_ptr;
-      } else {
-        LOG(INFO)
-            << "File pointer not updating as file was opened in append mode."
-            << std::endl;
-        ret = -1;
-      }
+      ret = fs_api->Seek(f, existing.first, whence, offset);
       return ret;
     }
   }
   ret = real_api->lseek(fd, offset, whence);
   return (ret);
 }
+
 off64_t HERMES_DECL(lseek64)(int fd, off64_t offset, int whence) {
   int ret = -1;
   auto real_api = Singleton<API>::GetInstance();
@@ -361,36 +326,11 @@ off64_t HERMES_DECL(lseek64)(int fd, off64_t offset, int whence) {
     if (existing.second) {
       LOG(INFO) << "Intercept lseek64 offset:" << offset << " whence:" << whence
                 << "." << std::endl;
-      if (!(existing.first.st_mode & O_APPEND)) {
-        switch (whence) {
-          case SEEK_SET: {
-            existing.first.st_ptr = offset;
-            break;
-          }
-          case SEEK_CUR: {
-            existing.first.st_ptr += offset;
-            break;
-          }
-          case SEEK_END: {
-            existing.first.st_ptr = existing.first.st_size + offset;
-            break;
-          }
-          default: {
-            // TODO(hari): throw not implemented error.
-          }
-        }
-        mdm->Update(f, existing.first);
-        ret = 0;
-      } else {
-        LOG(INFO)
-            << "File pointer not updating as file was opened in append mode."
-            << std::endl;
-        ret = -1;
-      }
+      ret = fs_api->Seek(f, existing.first, whence, offset);
     }
     return ret;
   }
-  ret = real_api->lseek(fd, offset, whence);
+  ret = real_api->lseek64(fd, offset, whence);
   return (ret);
 }
 

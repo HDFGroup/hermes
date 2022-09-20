@@ -20,10 +20,10 @@
 namespace hermes::adapter {
 
 struct BlobPlacement {
-  size_t bucket_off_;
-  size_t blob_off_;
-  size_t blob_size_;
-  std::string blob_name_;
+  size_t bucket_off_;       // Offset from file start (for FS)
+  size_t blob_off_;         // Offset from blob start
+  size_t blob_size_;        // Size after offset to read
+  std::string blob_name_;   // Name of the blob
 };
 
 typedef std::vector<BlobPlacement> BlobPlacements;

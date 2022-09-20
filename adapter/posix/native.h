@@ -26,12 +26,14 @@ class PosixFS : public hermes::adapter::fs::Filesystem {
   PosixFS() {
     real_api = Singleton<API>::GetInstance();
   }
+  ~PosixFS() = default;
  private:
+  void _OpenInitStats(File &f, AdapterStat &stat, bool bucket_exists) override;
   File _RealOpen(AdapterStat &stat, const std::string &path) override;
   size_t _RealWrite(const std::string &filename, off_t offset, size_t size,
                     u8 *data_ptr) override;
-  size_t _RealRead(const char *filename, off_t file_offset, void *ptr,
-                   size_t ptr_offset, size_t size) override;
+  size_t _RealRead(const std::string &filename, off_t offset, size_t size,
+                   u8 *data_ptr) override;
 };
 
 }  // namespace hermes::adapter::posix
