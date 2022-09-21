@@ -43,7 +43,8 @@ File Filesystem::Open(AdapterStat &stat, const std::string &path) {
         std::make_shared<hapi::Bucket>(path_str, mdm->GetHermes());
 
     _OpenInitStats(f, stat, bucket_exists);
-    LOG(INFO) << "File has size: " << stat.st_size << std::endl;
+    LOG(INFO) << "fd: "<< f.fd_
+              << " has size: " << stat.st_size << std::endl;
 
     mdm->Create(f, stat);
   } else {
@@ -53,6 +54,7 @@ File Filesystem::Open(AdapterStat &stat, const std::string &path) {
     timespec_get(&ts, TIME_UTC);
     existing.first.st_atim = ts;
     existing.first.st_ctim = ts;
+    stat = existing.first;
     mdm->Update(f, existing.first);
   }
   return f;
@@ -298,7 +300,8 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
             << " (fd: " << f.fd_ << ")"
             << " on offset: " << stat.st_ptr
             << " and size: " << total_size
-            << " (total file size: " << stat.st_size
+            << " (stored file size: " << stat.st_size
+            << " true file size: " << stdfs::file_size(stat.st_bkid->GetName())
             << ")" << std::endl;
   if (stat.st_ptr >= stat.st_size)  {
     LOG(INFO) << "The current offset: " << stat.st_ptr <<
@@ -307,6 +310,7 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
   }
   size_t ret;
   BlobPlacements mapping;
+  auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
   auto mapper = MapperFactory().Get(kMapperType);
   mapper->map(off, total_size, mapping);
   
@@ -344,6 +348,7 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
   stat.st_atim = ts;
   stat.st_ctim = ts;
   ret = data_offset;
+  mdm->Update(f, stat);
   return ret;
 }
 

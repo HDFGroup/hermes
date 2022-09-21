@@ -61,23 +61,41 @@ struct AdapterStat {
 
 struct File {
   int fd_;
+  dev_t st_dev;
+  ino_t st_ino;
   bool status_;
 
-  File() : fd_(0), status_(true) {}
+  File() : fd_(-1),
+           st_dev(-1),
+           st_ino(-1),
+           status_(true) {}
 
   File(const File &old) {
-    fd_ = old.fd_;
-    status_ = old.status_;
+    Copy(old);
   }
 
   File &operator=(const File &old) {
-    fd_ = old.fd_;
-    status_ = old.status_;
+    Copy(old);
     return *this;
+  }
+
+  void Copy(const File &old) {
+    fd_ = old.fd_;
+    st_dev = old.st_dev;
+    st_ino = old.st_ino;
+    status_ = old.status_;
   }
 
   bool operator==(const File &old) const {
     return fd_ == old.fd_;
+  }
+
+  std::size_t hash() const {
+    std::size_t result;
+    std::size_t h1 = std::hash<dev_t>{}(st_dev);
+    std::size_t h2 = std::hash<ino_t>{}(st_ino);
+    result = h1 ^ (h2 << 1);
+    return result;
   }
 };
 
@@ -94,6 +112,8 @@ class Filesystem {
               size_t off, size_t total_size, bool seek = false);
   off_t Seek(File &f, AdapterStat &stat, int whence, off_t offset);
   int Close(File &f);
+
+  virtual void _InitFile(File &f) = 0;
 
  private:
   void _WriteToNewAligned(File &f,
@@ -162,10 +182,7 @@ namespace std {
 template <>
 struct hash<hermes::adapter::fs::File> {
   std::size_t operator()(const hermes::adapter::fs::File &key) const {
-    std::size_t result = 0;
-    std::size_t h1 = std::hash<dev_t>{}(key.fd_);
-    result = h1;
-    return result;
+    return key.hash();
   }
 };
 }  // namespace std

@@ -8,10 +8,61 @@
 
 namespace hermes::adapter::posix {
 
+File PosixFS::_RealOpen(AdapterStat &stat, const std::string &path) {
+  File f;
+  if (stat.flags & O_CREAT || stat.flags & O_TMPFILE) {
+    f.fd_ = real_api->open(path.c_str(), stat.flags, stat.st_mode);
+  } else {
+    f.fd_ = real_api->open(path.c_str(), stat.flags);
+  }
+  if (f.fd_ < 0) {
+    f.status_ = false;
+  }
+  _InitFile(f);
+  return f;
+}
+
+void PosixFS::_InitFile(File &f) {
+  struct stat st;
+  real_api->__fxstat(_STAT_VER, f.fd_, &st);
+  f.st_dev = st.st_dev;
+  f.st_ino = st.st_ino;
+}
+
+void PosixFS::_OpenInitStats(File &f, AdapterStat &stat, bool bucket_exists) {
+  struct stat st;
+  real_api->__fxstat(_STAT_VER, f.fd_, &st);
+  stat.st_mode = st.st_mode;
+  stat.st_uid = st.st_uid;
+  stat.st_gid = st.st_gid;
+  stat.st_size = st.st_size;
+  std::string fn = GetFilenameFromFD(f.fd_);
+  if (fn.find("/tmp/#") == std::string::npos) {
+    LOG(INFO) << "fd: " << f.fd_
+              << " fxstat size: " << stat.st_size
+              << " stdfs size: " << stdfs::file_size(GetFilenameFromFD(f.fd_))
+              << std::endl;
+  }
+  stat.st_blksize = st.st_blksize;
+  stat.st_atim = st.st_atim;
+  stat.st_mtim = st.st_mtim;
+  stat.st_ctim = st.st_ctim;
+  if (bucket_exists) {
+    /*stat.st_size = stat.st_bkid->GetTotalBlobSize();*/
+    LOG(INFO) << "Since bucket exists, should reset its size to: " << stat.st_size
+              << std::endl;
+  }
+  if (stat.flags & O_APPEND) {
+    stat.st_ptr = stat.st_size;
+  }
+}
+
 size_t PosixFS::_RealWrite(const std::string &filename, off_t offset,
                            size_t size, u8 *data_ptr) {
-  LOG(INFO) << "Writing to file: " << filename << " offset: " << offset
-            << " of size:" << size << "." << std::endl;
+  LOG(INFO) << "Writing to file: " << filename
+            << " offset: " << offset
+            << " size:" << size << "."
+            << " file_size:" << stdfs::file_size(filename) << std::endl;
   int fd = real_api->open(filename.c_str(), O_RDWR | O_CREAT);
   if (fd < 0) { return 0; }
   size_t write_size = real_api->pwrite(fd, data_ptr, size, offset);
@@ -22,45 +73,14 @@ size_t PosixFS::_RealWrite(const std::string &filename, off_t offset,
 size_t PosixFS::_RealRead(const std::string &filename, off_t offset, size_t size,
                           u8 *data_ptr) {
   LOG(INFO) << "Read called for filename from destination: " << filename
-            << " on offset: " << offset << " and size: " << size
-            << std::endl;
+            << " on offset: " << offset
+            << " and size: " << size << "."
+            << " file_size:" << stdfs::file_size(filename) << std::endl;
   int fd = real_api->open(filename.c_str(), O_RDONLY);
   if (fd < 0) { return 0; }
   size_t read_size = real_api->pread(fd, data_ptr, size, offset);
   real_api->close(fd);
   return read_size;
-}
-
-File PosixFS::_RealOpen(AdapterStat &stat, const std::string &path) {
-  File ret;
-  if (stat.flags & O_CREAT || stat.flags & O_TMPFILE) {
-    ret.fd_ = real_api->open(path.c_str(), stat.flags, stat.st_mode);
-  } else {
-    ret.fd_ = real_api->open(path.c_str(), stat.flags);
-  }
-  if (ret.fd_ < 0) {
-    ret.status_ = false;
-  }
-  return ret;
-}
-
-void PosixFS::_OpenInitStats(File &f, AdapterStat &stat, bool bucket_exists) {
-  struct stat st;
-  real_api->__fxstat(_STAT_VER, f.fd_, &st);
-  stat.st_mode = st.st_mode;
-  stat.st_uid = st.st_uid;
-  stat.st_gid = st.st_gid;
-  stat.st_size = st.st_size;
-  stat.st_blksize = st.st_blksize;
-  stat.st_atim = st.st_atim;
-  stat.st_mtim = st.st_mtim;
-  stat.st_ctim = st.st_ctim;
-  if (bucket_exists) {
-    stat.st_size = stat.st_bkid->GetTotalBlobSize();
-  }
-  if (stat.flags & O_APPEND) {
-    stat.st_ptr = stat.st_size;
-  }
 }
 
 }  // namespace hermes::adapter::posix

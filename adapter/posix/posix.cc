@@ -39,7 +39,6 @@ bool posix_intercepted = true;
 #endif
 
 using hermes::adapter::WeaklyCanonical;
-using hermes::adapter::ReadGap;
 using hermes::adapter::posix::API;
 using hermes::adapter::posix::PosixFS;
 using hermes::adapter::Singleton;
@@ -191,7 +190,7 @@ ssize_t HERMES_DECL(read)(int fd, void *buf, size_t count) {
   size_t ret;
   auto real_api = Singleton<API>::GetInstance();
   auto fs_api = Singleton<PosixFS>::GetInstance();
-  File f; f.fd_ = fd;
+  File f; f.fd_ = fd; fs_api->_InitFile(f);
   if (hermes::adapter::IsTracked(fd)) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(f);
@@ -208,7 +207,7 @@ ssize_t HERMES_DECL(write)(int fd, const void *buf, size_t count) {
   size_t ret;
   auto real_api = Singleton<API>::GetInstance();
   auto fs_api = Singleton<PosixFS>::GetInstance();
-  File f; f.fd_ = fd;
+  File f; f.fd_ = fd; fs_api->_InitFile(f);
   if (hermes::adapter::IsTracked(fd)) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(f);
@@ -226,7 +225,7 @@ ssize_t HERMES_DECL(pread)(int fd, void *buf, size_t count, off_t offset) {
   size_t ret = 0;
   auto real_api = Singleton<API>::GetInstance();
   auto fs_api = Singleton<PosixFS>::GetInstance();
-  File f; f.fd_ = fd;
+  File f; f.fd_ = fd; fs_api->_InitFile(f);
   if (hermes::adapter::IsTracked(fd)) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(f);
@@ -245,7 +244,7 @@ ssize_t HERMES_DECL(pwrite)(int fd, const void *buf, size_t count,
   size_t ret = 0;
   auto real_api = Singleton<API>::GetInstance();
   auto fs_api = Singleton<PosixFS>::GetInstance();
-  File f; f.fd_ = fd;
+  File f; f.fd_ = fd; fs_api->_InitFile(f);
   if (hermes::adapter::IsTracked(fd)) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(f);
@@ -263,7 +262,7 @@ ssize_t HERMES_DECL(pread64)(int fd, void *buf, size_t count, off64_t offset) {
   size_t ret = 0;
   auto real_api = Singleton<API>::GetInstance();
   auto fs_api = Singleton<PosixFS>::GetInstance();
-  File f; f.fd_ = fd;
+  File f; f.fd_ = fd; fs_api->_InitFile(f);
   if (hermes::adapter::IsTracked(fd)) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(f);
@@ -282,7 +281,7 @@ ssize_t HERMES_DECL(pwrite64)(int fd, const void *buf, size_t count,
   size_t ret = 0;
   auto real_api = Singleton<API>::GetInstance();
   auto fs_api = Singleton<PosixFS>::GetInstance();
-  File f; f.fd_ = fd;
+  File f; f.fd_ = fd; fs_api->_InitFile(f);
   if (hermes::adapter::IsTracked(fd)) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(f);
@@ -300,7 +299,7 @@ off_t HERMES_DECL(lseek)(int fd, off_t offset, int whence) {
   int ret = -1;
   auto real_api = Singleton<API>::GetInstance();
   auto fs_api = Singleton<PosixFS>::GetInstance();
-  File f; f.fd_ = fd;
+  File f; f.fd_ = fd; fs_api->_InitFile(f);
   if (hermes::adapter::IsTracked(fd)) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(f);
@@ -319,7 +318,7 @@ off64_t HERMES_DECL(lseek64)(int fd, off64_t offset, int whence) {
   int ret = -1;
   auto real_api = Singleton<API>::GetInstance();
   auto fs_api = Singleton<PosixFS>::GetInstance();
-  File f; f.fd_ = fd;
+  File f; f.fd_ = fd; fs_api->_InitFile(f);
   if (hermes::adapter::IsTracked(fd)) {
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(f);
@@ -338,7 +337,7 @@ int HERMES_DECL(__fxstat)(int version, int fd, struct stat *buf) {
   int result = 0;
   auto real_api = Singleton<API>::GetInstance();
   auto fs_api = Singleton<PosixFS>::GetInstance();
-  File f; f.fd_ = fd;
+  File f; f.fd_ = fd; fs_api->_InitFile(f);
   if (hermes::adapter::IsTracked(fd)) {
     LOG(INFO) << "Intercepted fstat." << std::endl;
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
@@ -363,8 +362,8 @@ int HERMES_DECL(__fxstat)(int version, int fd, struct stat *buf) {
     } else {
       result = -1;
       errno = EBADF;
-      LOG(ERROR) << "File with descriptor" << fd
-                 << "does not exist in Hermes\n";
+      LOG(ERROR) << "File with descriptor " << fd
+                 << " does not exist in Hermes\n";
     }
   } else {
     result = real_api->__fxstat(version, fd, buf);
@@ -376,7 +375,7 @@ int HERMES_DECL(fsync)(int fd) {
   int ret;
   auto real_api = Singleton<API>::GetInstance();
   auto fs_api = Singleton<PosixFS>::GetInstance();
-  File f; f.fd_ = fd;
+  File f; f.fd_ = fd; fs_api->_InitFile(f);
   if (hermes::adapter::IsTracked(fd)) {
     LOG(INFO) << "Intercept fsync." << std::endl;
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
@@ -430,7 +429,7 @@ int HERMES_DECL(close)(int fd) {
   int ret;
   auto real_api = Singleton<API>::GetInstance();
   auto fs_api = Singleton<PosixFS>::GetInstance();
-  File f; f.fd_ = fd;
+  File f; f.fd_ = fd; fs_api->_InitFile(f);
   if (hermes::adapter::IsTracked(fd)) {
     LOG(INFO) << "Intercept close(" << std::to_string(fd) << ")";
     DLOG(INFO) << " -> " << hermes::adapter::GetFilenameFromFD(fd);
@@ -441,6 +440,7 @@ int HERMES_DECL(close)(int fd) {
       LOG(INFO) << "File handler is opened by adapter." << std::endl;
       hapi::Context ctx;
       if (existing.first.ref_count == 1) {
+        LOG(INFO) << "Deleting fd " << fd << std::endl;
         auto persist = INTERCEPTOR_LIST->Persists(fd);
         auto filename = existing.first.st_bkid->GetName();
         mdm->Delete(f);
