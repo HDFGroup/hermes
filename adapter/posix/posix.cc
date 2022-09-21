@@ -188,8 +188,8 @@ ssize_t HERMES_DECL(read)(int fd, void *buf, size_t count) {
   size_t ret;
   auto real_api = Singleton<API>::GetInstance();
   auto fs_api = Singleton<PosixFS>::GetInstance();
-  File f; f.fd_ = fd; fs_api->_InitFile(f);
   if (hermes::adapter::IsTracked(fd)) {
+    File f; f.fd_ = fd; fs_api->_InitFile(f);
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(f);
     if (existing.second) {
@@ -205,8 +205,8 @@ ssize_t HERMES_DECL(write)(int fd, const void *buf, size_t count) {
   size_t ret;
   auto real_api = Singleton<API>::GetInstance();
   auto fs_api = Singleton<PosixFS>::GetInstance();
-  File f; f.fd_ = fd; fs_api->_InitFile(f);
   if (hermes::adapter::IsTracked(fd)) {
+    File f; f.fd_ = fd; fs_api->_InitFile(f);
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(f);
     if (existing.second) {
@@ -223,8 +223,8 @@ ssize_t HERMES_DECL(pread)(int fd, void *buf, size_t count, off_t offset) {
   size_t ret = 0;
   auto real_api = Singleton<API>::GetInstance();
   auto fs_api = Singleton<PosixFS>::GetInstance();
-  File f; f.fd_ = fd; fs_api->_InitFile(f);
   if (hermes::adapter::IsTracked(fd)) {
+    File f; f.fd_ = fd; fs_api->_InitFile(f);
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(f);
     if (existing.second) {
@@ -242,8 +242,8 @@ ssize_t HERMES_DECL(pwrite)(int fd, const void *buf, size_t count,
   size_t ret = 0;
   auto real_api = Singleton<API>::GetInstance();
   auto fs_api = Singleton<PosixFS>::GetInstance();
-  File f; f.fd_ = fd; fs_api->_InitFile(f);
   if (hermes::adapter::IsTracked(fd)) {
+    File f; f.fd_ = fd; fs_api->_InitFile(f);
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(f);
     if (existing.second) {
@@ -260,8 +260,8 @@ ssize_t HERMES_DECL(pread64)(int fd, void *buf, size_t count, off64_t offset) {
   size_t ret = 0;
   auto real_api = Singleton<API>::GetInstance();
   auto fs_api = Singleton<PosixFS>::GetInstance();
-  File f; f.fd_ = fd; fs_api->_InitFile(f);
   if (hermes::adapter::IsTracked(fd)) {
+    File f; f.fd_ = fd; fs_api->_InitFile(f);
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(f);
     if (existing.second) {
@@ -279,8 +279,8 @@ ssize_t HERMES_DECL(pwrite64)(int fd, const void *buf, size_t count,
   size_t ret = 0;
   auto real_api = Singleton<API>::GetInstance();
   auto fs_api = Singleton<PosixFS>::GetInstance();
-  File f; f.fd_ = fd; fs_api->_InitFile(f);
   if (hermes::adapter::IsTracked(fd)) {
+    File f; f.fd_ = fd; fs_api->_InitFile(f);
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(f);
     if (existing.second) {
@@ -297,8 +297,8 @@ off_t HERMES_DECL(lseek)(int fd, off_t offset, int whence) {
   int ret = -1;
   auto real_api = Singleton<API>::GetInstance();
   auto fs_api = Singleton<PosixFS>::GetInstance();
-  File f; f.fd_ = fd; fs_api->_InitFile(f);
   if (hermes::adapter::IsTracked(fd)) {
+    File f; f.fd_ = fd; fs_api->_InitFile(f);
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(f);
     if (existing.second) {
@@ -316,8 +316,8 @@ off64_t HERMES_DECL(lseek64)(int fd, off64_t offset, int whence) {
   int ret = -1;
   auto real_api = Singleton<API>::GetInstance();
   auto fs_api = Singleton<PosixFS>::GetInstance();
-  File f; f.fd_ = fd; fs_api->_InitFile(f);
   if (hermes::adapter::IsTracked(fd)) {
+    File f; f.fd_ = fd; fs_api->_InitFile(f);
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(f);
     if (existing.second) {
@@ -335,8 +335,8 @@ int HERMES_DECL(__fxstat)(int version, int fd, struct stat *buf) {
   int result = 0;
   auto real_api = Singleton<API>::GetInstance();
   auto fs_api = Singleton<PosixFS>::GetInstance();
-  File f; f.fd_ = fd; fs_api->_InitFile(f);
   if (hermes::adapter::IsTracked(fd)) {
+    File f; f.fd_ = fd; fs_api->_InitFile(f);
     LOG(INFO) << "Intercepted fstat." << std::endl;
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(f);
@@ -373,8 +373,8 @@ int HERMES_DECL(fsync)(int fd) {
   int ret;
   auto real_api = Singleton<API>::GetInstance();
   auto fs_api = Singleton<PosixFS>::GetInstance();
-  File f; f.fd_ = fd; fs_api->_InitFile(f);
   if (hermes::adapter::IsTracked(fd)) {
+    File f; f.fd_ = fd; fs_api->_InitFile(f);
     LOG(INFO) << "Intercept fsync." << std::endl;
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(f);
@@ -427,8 +427,8 @@ int HERMES_DECL(close)(int fd) {
   int ret;
   auto real_api = Singleton<API>::GetInstance();
   auto fs_api = Singleton<PosixFS>::GetInstance();
-  File f; f.fd_ = fd; fs_api->_InitFile(f);
   if (hermes::adapter::IsTracked(fd)) {
+    File f; f.fd_ = fd; fs_api->_InitFile(f);
     LOG(INFO) << "Intercept close(" << std::to_string(fd) << ")";
     DLOG(INFO) << " -> " << hermes::adapter::GetFilenameFromFD(fd);
     LOG(INFO) << std::endl;

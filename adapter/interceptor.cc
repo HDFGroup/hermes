@@ -21,7 +21,7 @@
 #include "config_parser.h"
 
 namespace stdfs = std::experimental::filesystem;
-const char* kPathExclusions[15] = {"/bin/", "/boot/", "/dev/",  "/etc/",
+const char* kPathExclusions[] = {"/bin/", "/boot/", "/dev/",  "/etc/",
                                  "/lib/", "/opt/",  "/proc/", "/sbin/",
                                  "/sys/", "/usr/",  "/var/",  "/run/",
                                  "pipe", "socket:", "anon_inode:"};
@@ -98,7 +98,7 @@ bool IsTracked(const std::string& path) {
   }
 
   for (auto &pth : kPathExclusions) {
-    if (abs_path.find(pth) == 0) {
+    if (abs_path.find(pth) != std::string::npos) {
       return false;
     }
   }

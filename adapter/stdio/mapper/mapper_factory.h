@@ -39,7 +39,7 @@ class MapperFactory {
    * @param type, MapperType, type of mapper to be used by the STDIO adapter.
    * @return Instance of mapper given a type.
    */
-  std::shared_ptr<AbstractMapper> Get(const MapperType &type) {
+  AbstractMapper* Get(const MapperType &type) {
     switch (type) {
       case MapperType::BALANCED: {
         return hermes::adapter::Singleton<BalancedMapper>::GetInstance();

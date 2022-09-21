@@ -29,7 +29,7 @@ namespace hermes::adapter::posix {
 
 class PosixFS : public hermes::adapter::fs::Filesystem {
  private:
-  std::shared_ptr<API> real_api;
+  API* real_api;
  public:
   PosixFS() {
     real_api = Singleton<API>::GetInstance();

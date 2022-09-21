@@ -31,10 +31,10 @@ class Singleton {
    * @return instance of T
    */
   template <typename... Args>
-  static std::shared_ptr<T> GetInstance(Args... args) {
+  static T* GetInstance(Args... args) {
     if (instance == nullptr)
-      instance = std::make_shared<T>(std::forward<Args>(args)...);
-    return instance;
+      instance = std::make_unique<T>(std::forward<Args>(args)...);
+    return instance.get();
   }
 
   /**
@@ -52,11 +52,11 @@ class Singleton {
   /**
    * static instance.
    */
-  static std::shared_ptr<T> instance;
+  static std::unique_ptr<T> instance;
   Singleton() {} /* hidden default constructor. */
 };
 
 template <typename T>
-std::shared_ptr<T> Singleton<T>::instance = nullptr;
+std::unique_ptr<T> Singleton<T>::instance = nullptr;
 }  // namespace hermes::adapter
 #endif  // HERMES_ADAPTER_SINGLETON_H
