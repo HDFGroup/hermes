@@ -23,10 +23,6 @@ endfunction()
 # Posix Adapter tests
 #------------------------------------------------------------------------------
 
-add_executable(posix_singleton_test ${CMAKE_CURRENT_SOURCE_DIR}/posix_singleton_test.cc)
-target_link_libraries(posix_singleton_test hermes_posix)
-target_include_directories(posix_singleton_test PUBLIC ${HERMES_ADAPTER_DIR})
-
 add_executable(posix_adapter_test posix_adapter_test.cpp ${ADAPTER_COMMON})
 gcc(posix_adapter_test "")
 
