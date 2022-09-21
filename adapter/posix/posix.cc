@@ -54,7 +54,6 @@ using hermes::u8;
  */
 int HERMES_DECL(MPI_Init)(int *argc, char ***argv) {
   auto real_api = Singleton<API>::GetInstance();
-  auto fs_api = Singleton<PosixFS>::GetInstance();
   int status = real_api->MPI_Init(argc, argv);
   if (status == 0) {
     LOG(INFO) << "MPI Init intercepted." << std::endl;
@@ -66,7 +65,6 @@ int HERMES_DECL(MPI_Init)(int *argc, char ***argv) {
 
 int HERMES_DECL(MPI_Finalize)(void) {
   auto real_api = Singleton<API>::GetInstance();
-  auto fs_api = Singleton<PosixFS>::GetInstance();
   LOG(INFO) << "MPI Finalize intercepted." << std::endl;
   auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
   mdm->FinalizeHermes();

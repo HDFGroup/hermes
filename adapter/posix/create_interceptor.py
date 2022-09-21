@@ -87,6 +87,7 @@ class ApiClass:
     def init_api(self, api):
         self.lines.append(f"    if (is_intercepted) {{")
         self.lines.append(f"      {api.real_name} = ({api.type})dlsym(RTLD_NEXT, \"{api.name}\");")
+        self.lines.append(f"      if ({api.real_name} == )")
         self.lines.append(f"    }} else {{")
         self.lines.append(f"      {api.real_name} = ({api.type})dlsym(RTLD_DEFAULT, \"{api.name}\");")
         self.lines.append(f"    }}")

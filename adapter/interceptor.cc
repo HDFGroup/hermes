@@ -97,8 +97,8 @@ bool IsTracked(const std::string& path) {
     }
   }
 
-  for (int i = 0; i < 15; ++i) {
-    if (abs_path.find(kPathExclusions[i]) == 0) {
+  for (auto &pth : kPathExclusions) {
+    if (abs_path.find(pth) == 0) {
       return false;
     }
   }
