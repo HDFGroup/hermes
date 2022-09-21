@@ -473,8 +473,7 @@ int HERMES_DECL(MPI_Init)(int *argc, char ***argv) {
     LOG(INFO) << "MPI Init intercepted." << std::endl;
     auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     mdm->InitializeHermes();
-    auto pool =
-        hermes::adapter::Singleton<ThreadPool>::GetInstance(kNumThreads);
+    hermes::adapter::Singleton<ThreadPool>::GetInstance(kNumThreads);
   }
   return status;
 }
