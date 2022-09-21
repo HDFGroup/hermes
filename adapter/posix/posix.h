@@ -40,12 +40,16 @@ class API {
   ssize_t(*write)(int fd, const void * buf, size_t count) = nullptr;
   typedef ssize_t(*pread_t)(int fd, void * buf, size_t count, off_t offset);
   ssize_t(*pread)(int fd, void * buf, size_t count, off_t offset) = nullptr;
-  typedef ssize_t(*pwrite_t)(int fd, const void * buf, size_t count, off_t offset);
-  ssize_t(*pwrite)(int fd, const void * buf, size_t count, off_t offset) = nullptr;
+  typedef ssize_t(*pwrite_t)(int fd, const void * buf,
+                              size_t count, off_t offset);
+  ssize_t(*pwrite)(int fd, const void * buf,
+                    size_t count, off_t offset) = nullptr;
   typedef ssize_t(*pread64_t)(int fd, void * buf, size_t count, off64_t offset);
   ssize_t(*pread64)(int fd, void * buf, size_t count, off64_t offset) = nullptr;
-  typedef ssize_t(*pwrite64_t)(int fd, const void * buf, size_t count, off64_t offset);
-  ssize_t(*pwrite64)(int fd, const void * buf, size_t count, off64_t offset) = nullptr;
+  typedef ssize_t(*pwrite64_t)(int fd, const void * buf,
+                                size_t count, off64_t offset);
+  ssize_t(*pwrite64)(int fd, const void * buf,
+                      size_t count, off64_t offset) = nullptr;
   typedef off_t(*lseek_t)(int fd, off_t offset, int whence);
   off_t(*lseek)(int fd, off_t offset, int whence) = nullptr;
   typedef off64_t(*lseek64_t)(int fd, off64_t offset, int whence);

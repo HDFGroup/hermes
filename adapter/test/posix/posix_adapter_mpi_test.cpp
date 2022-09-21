@@ -129,10 +129,14 @@ int pretest() {
       fullpath.string() + "_shared_new_" + std::to_string(info.comm_size);
   info.shared_new_file_cmp =
       fullpath.string() + "_shared_new_cmp_" + std::to_string(info.comm_size);
-  if (stdfs::exists(info.new_file)) stdfs::remove(info.new_file);
-  if (stdfs::exists(info.existing_file)) stdfs::remove(info.existing_file);
-  if (stdfs::exists(info.new_file_cmp)) stdfs::remove(info.new_file_cmp);
-  if (stdfs::exists(info.existing_file_cmp)) stdfs::remove(info.existing_file_cmp);
+  if (stdfs::exists(info.new_file))
+    stdfs::remove(info.new_file);
+  if (stdfs::exists(info.existing_file))
+    stdfs::remove(info.existing_file);
+  if (stdfs::exists(info.new_file_cmp))
+    stdfs::remove(info.new_file_cmp);
+  if (stdfs::exists(info.existing_file_cmp))
+    stdfs::remove(info.existing_file_cmp);
   if (stdfs::exists(info.existing_shared_file))
     stdfs::remove(info.existing_shared_file);
   if (stdfs::exists(info.existing_shared_file_cmp))
@@ -292,10 +296,14 @@ int posttest(bool compare_data = true) {
     }
   }
   /* Clean up. */
-  if (stdfs::exists(info.new_file)) stdfs::remove(info.new_file);
-  if (stdfs::exists(info.existing_file)) stdfs::remove(info.existing_file);
-  if (stdfs::exists(info.new_file_cmp)) stdfs::remove(info.new_file_cmp);
-  if (stdfs::exists(info.existing_file_cmp)) stdfs::remove(info.existing_file_cmp);
+  if (stdfs::exists(info.new_file))
+    stdfs::remove(info.new_file);
+  if (stdfs::exists(info.existing_file))
+    stdfs::remove(info.existing_file);
+  if (stdfs::exists(info.new_file_cmp))
+    stdfs::remove(info.new_file_cmp);
+  if (stdfs::exists(info.existing_file_cmp))
+    stdfs::remove(info.existing_file_cmp);
   MPI_Barrier(MPI_COMM_WORLD);
   if (info.rank == 0) {
     if (stdfs::exists(info.existing_shared_file))

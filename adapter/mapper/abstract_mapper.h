@@ -38,6 +38,6 @@ class AbstractMapper {
    */
   virtual void map(size_t off, size_t size, BlobPlacements &ps) = 0;
 };
-}  // namespace hermes::adapter::posix
+}  // namespace hermes::adapter
 
 #endif  // HERMES_ABSTRACT_ADAPTER_H

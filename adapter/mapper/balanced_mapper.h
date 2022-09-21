@@ -33,6 +33,6 @@ class BalancedMapper : public AbstractMapper {
    */
   void map(size_t off, size_t size, BlobPlacements &ps) override;
 };
-}  // namespace hermes::adapter::posix
+}  // namespace hermes::adapter
 
 #endif  // HERMES_BALANCED_MAPPER_H

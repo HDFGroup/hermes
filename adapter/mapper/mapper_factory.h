@@ -41,5 +41,5 @@ class MapperFactory {
     return NULL;
   }
 };
-}  // namespace hermes::adapter::posix
+}  // namespace hermes::adapter
 #endif  // HERMES_ADAPTER_FACTORY_H

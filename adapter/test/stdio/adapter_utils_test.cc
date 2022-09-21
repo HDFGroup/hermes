@@ -95,7 +95,8 @@ TEST_CASE("WeaklyCanonical") {
   REQUIRE(!ec);
   REQUIRE(p == dirc/"bar/baz");
   ec = bad_ec;
-  p = had::WeaklyCanonical(stdfs::current_path()/dir/"bar//../foo/../bar/baz", ec);
+  p = had::WeaklyCanonical(
+      stdfs::current_path()/dir/"bar//../foo/../bar/baz", ec);
   REQUIRE(!ec);
   REQUIRE(p == dirc/"bar/baz");
 

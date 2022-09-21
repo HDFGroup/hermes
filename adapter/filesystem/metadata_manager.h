@@ -142,6 +142,6 @@ class MetadataManager {
    */
   std::pair<AdapterStat, bool> Find(const File &f);
 };
-}  // namespace hermes::adapter::posix
+}  // namespace hermes::adapter::fs
 
 #endif  // HERMES_ADAPTER_METADATA_MANAGER_H

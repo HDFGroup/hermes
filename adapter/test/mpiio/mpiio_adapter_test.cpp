@@ -98,10 +98,14 @@ int pretest() {
       fullpath.string() + "_shared_new_cmp_" + std::to_string(info.comm_size);
   info.shared_existing_file_cmp =
       fullpath.string() + "_shared_ext_cmp_" + std::to_string(info.comm_size);
-  if (stdfs::exists(info.new_file)) stdfs::remove(info.new_file);
-  if (stdfs::exists(info.new_file_cmp)) stdfs::remove(info.new_file_cmp);
-  if (stdfs::exists(info.existing_file)) stdfs::remove(info.existing_file);
-  if (stdfs::exists(info.existing_file_cmp)) stdfs::remove(info.existing_file_cmp);
+  if (stdfs::exists(info.new_file))
+    stdfs::remove(info.new_file);
+  if (stdfs::exists(info.new_file_cmp))
+    stdfs::remove(info.new_file_cmp);
+  if (stdfs::exists(info.existing_file))
+    stdfs::remove(info.existing_file);
+  if (stdfs::exists(info.existing_file_cmp))
+    stdfs::remove(info.existing_file_cmp);
   if (!stdfs::exists(info.existing_file)) {
     std::string cmd = "{ tr -dc '[:alnum:]' < /dev/urandom | head -c " +
                       std::to_string(args.request_size * info.num_iterations) +
@@ -122,7 +126,8 @@ int pretest() {
   }
   MPI_Barrier(MPI_COMM_WORLD);
   if (info.rank == 0) {
-    if (stdfs::exists(info.shared_new_file)) stdfs::remove(info.shared_new_file);
+    if (stdfs::exists(info.shared_new_file))
+      stdfs::remove(info.shared_new_file);
     if (stdfs::exists(info.shared_existing_file))
       stdfs::remove(info.shared_existing_file);
     if (!stdfs::exists(info.shared_existing_file)) {
@@ -222,10 +227,14 @@ int posttest(bool compare_data = true) {
     }
   }
   /* Clean up. */
-  if (stdfs::exists(info.new_file)) stdfs::remove(info.new_file);
-  if (stdfs::exists(info.existing_file)) stdfs::remove(info.existing_file);
-  if (stdfs::exists(info.new_file_cmp)) stdfs::remove(info.new_file_cmp);
-  if (stdfs::exists(info.existing_file_cmp)) stdfs::remove(info.existing_file_cmp);
+  if (stdfs::exists(info.new_file))
+    stdfs::remove(info.new_file);
+  if (stdfs::exists(info.existing_file))
+    stdfs::remove(info.existing_file);
+  if (stdfs::exists(info.new_file_cmp))
+    stdfs::remove(info.new_file_cmp);
+  if (stdfs::exists(info.existing_file_cmp))
+    stdfs::remove(info.existing_file_cmp);
 
 #if HERMES_INTERCEPT == 1
   INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_file_cmp);

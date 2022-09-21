@@ -80,10 +80,14 @@ int finalize() {
 }
 
 int pretest() {
-  if (stdfs::exists(info.new_file)) stdfs::remove(info.new_file);
-  if (stdfs::exists(info.new_file_cmp)) stdfs::remove(info.new_file_cmp);
-  if (stdfs::exists(info.existing_file)) stdfs::remove(info.existing_file);
-  if (stdfs::exists(info.existing_file_cmp)) stdfs::remove(info.existing_file_cmp);
+  if (stdfs::exists(info.new_file))
+    stdfs::remove(info.new_file);
+  if (stdfs::exists(info.new_file_cmp))
+    stdfs::remove(info.new_file_cmp);
+  if (stdfs::exists(info.existing_file))
+    stdfs::remove(info.existing_file);
+  if (stdfs::exists(info.existing_file_cmp))
+    stdfs::remove(info.existing_file_cmp);
   if (!stdfs::exists(info.existing_file)) {
     std::string cmd = "{ tr -dc '[:alnum:]' < /dev/urandom | head -c " +
                       std::to_string(args.request_size * info.num_iterations) +
@@ -173,10 +177,14 @@ int posttest(bool compare_data = true) {
     }
   }
   /* Clean up. */
-  if (stdfs::exists(info.new_file)) stdfs::remove(info.new_file);
-  if (stdfs::exists(info.existing_file)) stdfs::remove(info.existing_file);
-  if (stdfs::exists(info.new_file_cmp)) stdfs::remove(info.new_file_cmp);
-  if (stdfs::exists(info.existing_file_cmp)) stdfs::remove(info.existing_file_cmp);
+  if (stdfs::exists(info.new_file))
+    stdfs::remove(info.new_file);
+  if (stdfs::exists(info.existing_file))
+    stdfs::remove(info.existing_file);
+  if (stdfs::exists(info.new_file_cmp))
+    stdfs::remove(info.new_file_cmp);
+  if (stdfs::exists(info.existing_file_cmp))
+    stdfs::remove(info.existing_file_cmp);
 
 #if HERMES_INTERCEPT == 1
   INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_file_cmp);

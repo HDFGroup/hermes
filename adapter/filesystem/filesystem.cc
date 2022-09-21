@@ -1,6 +1,14 @@
-//
-// Created by lukemartinlogan on 9/19/22.
-//
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+* Distributed under BSD 3-Clause license.                                   *
+* Copyright by The HDF Group.                                               *
+* Copyright by the Illinois Institute of Technology.                        *
+* All rights reserved.                                                      *
+*                                                                           *
+* This file is part of Hermes. The full Hermes copyright notice, including  *
+* terms governing use, modification, and redistribution, is contained in    *
+* the COPYING file, which can be found at the top directory. If you do not  *
+* have access to the file, you may request a copy from help@hdfgroup.org.   *
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "filesystem.h"
 #include "constants.h"
@@ -60,9 +68,11 @@ File Filesystem::Open(AdapterStat &stat, const std::string &path) {
   return f;
 }
 
-void Filesystem::_PutWithFallback(AdapterStat &stat, const std::string &blob_name,
-                          const std::string &filename, u8 *data, size_t size,
-                          size_t offset) {
+void Filesystem::_PutWithFallback(AdapterStat &stat,
+                                  const std::string &blob_name,
+                                  const std::string &filename,
+                                  u8 *data, size_t size,
+                                  size_t offset) {
   hapi::Context ctx;
   const char *hermes_write_only = getenv(kHermesWriteOnlyVar);
 
@@ -313,7 +323,7 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
   auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
   auto mapper = MapperFactory().Get(kMapperType);
   mapper->map(off, total_size, mapping);
-  
+
   size_t data_offset = 0;
   auto filename = stat.st_bkid->GetName();
   LOG(INFO) << "Mapping for read has " << mapping.size() << " mapping."
@@ -429,4 +439,4 @@ size_t Filesystem::_ReadNew(File &f, AdapterStat &stat,
   return ret;
 }
 
-}
+}  // namespace hermes::adapter::fs

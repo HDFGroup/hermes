@@ -168,7 +168,8 @@ class Filesystem {
                   const std::string &filename,
                   const BlobPlacement &p);
 
-  virtual void _OpenInitStats(File &f, AdapterStat &stat, bool bucket_exists) = 0;
+  virtual void _OpenInitStats(File &f, AdapterStat &stat,
+                              bool bucket_exists) = 0;
   virtual File _RealOpen(AdapterStat &stat, const std::string &path) = 0;
   virtual size_t _RealWrite(const std::string &filename, off_t offset,
                             size_t size, u8 *data_ptr) = 0;

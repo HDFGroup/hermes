@@ -1,6 +1,14 @@
-//
-// Created by lukemartinlogan on 9/20/22.
-//
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+* Distributed under BSD 3-Clause license.                                   *
+* Copyright by The HDF Group.                                               *
+* Copyright by the Illinois Institute of Technology.                        *
+* All rights reserved.                                                      *
+*                                                                           *
+* This file is part of Hermes. The full Hermes copyright notice, including  *
+* terms governing use, modification, and redistribution, is contained in    *
+* the COPYING file, which can be found at the top directory. If you do not  *
+* have access to the file, you may request a copy from help@hdfgroup.org.   *
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include <fcntl.h>
 #include "native.h"
@@ -30,6 +38,7 @@ void PosixFS::_InitFile(File &f) {
 }
 
 void PosixFS::_OpenInitStats(File &f, AdapterStat &stat, bool bucket_exists) {
+  (void) bucket_exists;
   struct stat st;
   real_api->__fxstat(_STAT_VER, f.fd_, &st);
   stat.st_mode = st.st_mode;
@@ -37,21 +46,21 @@ void PosixFS::_OpenInitStats(File &f, AdapterStat &stat, bool bucket_exists) {
   stat.st_gid = st.st_gid;
   stat.st_size = st.st_size;
   std::string fn = GetFilenameFromFD(f.fd_);
-  if (fn.find("/tmp/#") == std::string::npos) {
+  /*if (fn.find("/tmp/#") == std::string::npos) {
     LOG(INFO) << "fd: " << f.fd_
               << " fxstat size: " << stat.st_size
               << " stdfs size: " << stdfs::file_size(GetFilenameFromFD(f.fd_))
               << std::endl;
-  }
+  }*/
   stat.st_blksize = st.st_blksize;
   stat.st_atim = st.st_atim;
   stat.st_mtim = st.st_mtim;
   stat.st_ctim = st.st_ctim;
-  if (bucket_exists) {
-    /*stat.st_size = stat.st_bkid->GetTotalBlobSize();*/
+  /*if (bucket_exists) {
+    stat.st_size = stat.st_bkid->GetTotalBlobSize();
     LOG(INFO) << "Since bucket exists, should reset its size to: " << stat.st_size
               << std::endl;
-  }
+  }*/
   if (stat.flags & O_APPEND) {
     stat.st_ptr = stat.st_size;
   }
@@ -70,8 +79,8 @@ size_t PosixFS::_RealWrite(const std::string &filename, off_t offset,
   return write_size;
 }
 
-size_t PosixFS::_RealRead(const std::string &filename, off_t offset, size_t size,
-                          u8 *data_ptr) {
+size_t PosixFS::_RealRead(const std::string &filename, off_t offset,
+                          size_t size, u8 *data_ptr) {
   LOG(INFO) << "Read called for filename from destination: " << filename
             << " on offset: " << offset
             << " and size: " << size << "."
