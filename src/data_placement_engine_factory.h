@@ -40,6 +40,7 @@ class DPEFactory {
       case PlacementPolicy::kMinimizeIoTime: {
         return std::make_unique<MinimizeIoTime>();
       }
+      case PlacementPolicy::kNone:
       default: {
         // TODO(luke): @errorhandling not implemented
         LOG(FATAL) << "PlacementPolicy not implemented" << std::endl;
