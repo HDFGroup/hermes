@@ -92,4 +92,12 @@ size_t PosixFS::_RealRead(const std::string &filename, off_t offset,
   return read_size;
 }
 
+int PosixFS::_RealSync(File &f) {
+  return 0;
+}
+
+int PosixFS::_RealClose(File &f) {
+  return 0;
+}
+
 }  // namespace hermes::adapter::posix

@@ -99,74 +99,58 @@ struct File {
   }
 };
 
+struct BlobPlacementIter {
+  File &f_;
+  AdapterStat &stat_;
+  const std::string &filename_;
+  const BlobPlacement &p_;
+  std::shared_ptr<hapi::Bucket> &bkt_;
+
+  u8 *mem_ptr_;
+  size_t blob_start_;
+  hapi::Context ctx_;
+  hapi::Blob blob_;
+
+  explicit BlobPlacementIter(File &f, AdapterStat &stat,
+                             const std::string &filename,
+                             const BlobPlacement &p,
+                             std::shared_ptr<hapi::Bucket> &bkt) :
+        f_(f), stat_(stat), filename_(filename), p_(p), bkt_(bkt) {}
+};
+
 class Filesystem {
  public:
   File Open(AdapterStat &stat, const std::string &path);
   size_t Write(File &f, AdapterStat &stat, const void *ptr,
-               size_t total_size);
+               size_t total_size,
+               PlacementPolicy dpe = PlacementPolicy::kNone);
   size_t Read(File &f, AdapterStat &stat, void *ptr,
-              size_t total_size);
+              size_t total_size,
+              PlacementPolicy dpe = PlacementPolicy::kNone);
   size_t Write(File &f, AdapterStat &stat, const void *ptr,
-               size_t off, size_t total_size, bool seek = false);
+               size_t off, size_t total_size, bool seek = false,
+               PlacementPolicy dpe = PlacementPolicy::kNone);
   size_t Read(File &f, AdapterStat &stat, void *ptr,
-              size_t off, size_t total_size, bool seek = false);
+              size_t off, size_t total_size, bool seek = false,
+              PlacementPolicy dpe = PlacementPolicy::kNone);
   off_t Seek(File &f, AdapterStat &stat, int whence, off_t offset);
+  int Sync(File &f);
+  void FreeFile(File &f);
   int Close(File &f);
 
   virtual void _InitFile(File &f) = 0;
 
  private:
-  void _WriteToNewAligned(File &f,
-                          AdapterStat &stat,
-                          u8 *put_data_ptr,
-                          size_t bucket_off,
-                          std::shared_ptr<hapi::Bucket> bkt,
-                          const std::string &filename,
-                          const BlobPlacement &p);
-  void _WriteToNewUnaligned(File &f,
-                            AdapterStat &stat,
-                            u8 *put_data_ptr,
-                            size_t bucket_off,
-                            std::shared_ptr<hapi::Bucket> bkt,
-                            const std::string &filename,
-                            const BlobPlacement &p);
-  void _WriteToExistingAligned(File &f,
-                               AdapterStat &stat,
-                               u8 *put_data_ptr,
-                               size_t bucket_off,
-                               std::shared_ptr<hapi::Bucket> bkt,
-                               const std::string &filename,
-                               const BlobPlacement &p);
-  void _WriteToExistingUnaligned(File &f,
-                                 AdapterStat &stat,
-                                 u8 *put_data_ptr,
-                                 size_t bucket_off,
-                                 std::shared_ptr<hapi::Bucket> bkt,
-                                 const std::string &filename,
-                                 const BlobPlacement &p);
+  void _WriteToNewAligned(BlobPlacementIter &write_iter);
+  void _WriteToNewUnaligned(BlobPlacementIter &write_iter);
+  void _WriteToExistingAligned(BlobPlacementIter &write_iter);
+  void _WriteToExistingUnaligned(BlobPlacementIter &write_iter);
   void _PutWithFallback(AdapterStat &stat, const std::string &blob_name,
                         const std::string &filename, u8 *data, size_t size,
                         size_t offset);
-
-
-  size_t _ReadExistingContained(File &f, AdapterStat &stat,
-                                hapi::Context ctx,
-                                hapi::Blob read_data,
-                                u8 *mem_ptr,
-                                const std::string &filename,
-                                const BlobPlacement &p);
-  size_t _ReadExistingPartial(File &f, AdapterStat &stat,
-                              hapi::Context ctx,
-                              hapi::Blob read_data,
-                              u8 *mem_ptr,
-                              const std::string &filename,
-                              const BlobPlacement &p);
-  size_t _ReadNew(File &f, AdapterStat &stat,
-                  hapi::Context ctx,
-                  hapi::Blob read_data,
-                  u8 *mem_ptr,
-                  const std::string &filename,
-                  const BlobPlacement &p);
+  size_t _ReadExistingContained(BlobPlacementIter &read_iter);
+  size_t _ReadExistingPartial(BlobPlacementIter &read_iter);
+  size_t _ReadNew(BlobPlacementIter &read_iter);
 
   virtual void _OpenInitStats(File &f, AdapterStat &stat,
                               bool bucket_exists) = 0;
@@ -175,6 +159,8 @@ class Filesystem {
                             size_t size, u8 *data_ptr) = 0;
   virtual size_t _RealRead(const std::string &filename, off_t offset,
                            size_t size, u8 *data_ptr) = 0;
+  virtual int _RealSync(File &f) = 0;
+  virtual int _RealClose(File &f) = 0;
 };
 
 }  // namespace hermes::adapter::fs

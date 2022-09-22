@@ -45,6 +45,8 @@ class PosixFS : public hermes::adapter::fs::Filesystem {
                     u8 *data_ptr) override;
   size_t _RealRead(const std::string &filename, off_t offset, size_t size,
                    u8 *data_ptr) override;
+  int _RealSync(File &f) override;
+  int _RealClose(File &f) override;
 };
 
 }  // namespace hermes::adapter::posix
