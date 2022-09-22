@@ -16,6 +16,7 @@
 #include "mapper/mapper_factory.h"
 #include "interceptor.h"
 #include "metadata_manager.h"
+#include "vbucket.h"
 
 #include <fcntl.h>
 #include <experimental/filesystem>
@@ -62,7 +63,6 @@ File Filesystem::Open(AdapterStat &stat, const std::string &path) {
     timespec_get(&ts, TIME_UTC);
     stat.st_atim = ts;
     stat.st_ctim = ts;
-    stat = stat;
     mdm->Update(f, stat);
   }
   return f;
@@ -132,7 +132,6 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
   (void) f; (void) dpe;
   std::shared_ptr<hapi::Bucket> &bkt = stat.st_bkid;
   std::string filename = bkt->GetName();
-
   LOG(INFO) << "Write called for filename: " << filename << " on offset: "
             << stat.st_ptr << " and size: " << total_size << std::endl;
 
@@ -385,49 +384,162 @@ size_t Filesystem::_ReadNew(BlobPlacementIter &ri) {
   return ret;
 }
 
-int Filesystem::Sync(File &f) {
-  return 0;
+int Filesystem::Sync(File &f, AdapterStat &stat) {
+  auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+  if (stat.ref_count != 1) {
+    LOG(INFO) << "File handler is opened by more than one fopen."
+              << std::endl;
+    struct timespec ts;
+    timespec_get(&ts, TIME_UTC);
+    stat.st_atim = ts;
+    stat.st_ctim = ts;
+    mdm->Update(f, stat);
+    return 0;
+  }
+
+  hapi::Context ctx;
+  auto filename = stat.st_bkid->GetName();
+  auto persist = INTERCEPTOR_LIST->Persists(filename);
+  const auto &blob_names = stat.st_blobs;
+  if (blob_names.empty() || !persist) {
+    return 0;
+  }
+
+  LOG(INFO) << "POSIX fsync Adapter flushes " << blob_names.size()
+            << " blobs to filename:" << filename << "." << std::endl;
+  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
+  hapi::VBucket file_vbucket(filename, mdm->GetHermes(), ctx);
+  auto offset_map = std::unordered_map<std::string, hermes::u64>();
+
+  for (const auto &blob_name : blob_names) {
+    auto status = file_vbucket.Link(blob_name, filename, ctx);
+    if (!status.Failed()) {
+      auto page_index = std::stol(blob_name) - 1;
+      offset_map.emplace(blob_name, page_index * kPageSize);
+    }
+  }
+  bool flush_synchronously = true;
+  hapi::PersistTrait persist_trait(filename, offset_map,
+                                   flush_synchronously);
+  file_vbucket.Attach(&persist_trait, ctx);
+  file_vbucket.Destroy(ctx);
+  stat.st_blobs.clear();
+  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(filename);
+  mdm->Update(f, stat);
+  return _RealSync(f);
 }
 
-int Filesystem::Close(File &f) {
-  return 0;
+int Filesystem::Close(File &f, AdapterStat &stat, bool destroy) {
+  hapi::Context ctx;
+  auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+  if (stat.ref_count != 1) {
+    LOG(INFO) << "File handler is opened by more than one fopen."
+              << std::endl;
+    stat.ref_count--;
+    struct timespec ts;
+    timespec_get(&ts, TIME_UTC);
+    stat.st_atim = ts;
+    stat.st_ctim = ts;
+    mdm->Update(f, stat);
+    stat.st_bkid->Release(ctx);
+    return 0;
+  }
+  Sync(f, stat);
+  mdm->Delete(f);
+  if (destroy) { stat.st_bkid->Destroy(ctx); }
+  mdm->FinalizeHermes();
+  return _RealClose(f);
 }
 
-/*void Filesystem::Sync(File f) {
-  LOG(INFO) << "File handler is opened by adapter." << std::endl;
 
+/**
+ * Variants of the above functions which retrieve the AdapterStat
+ * data structure internally.
+ * */
+
+size_t Filesystem::Write(File &f, bool &stat_exists, const void *ptr,
+             size_t total_size,
+             PlacementPolicy dpe) {
   auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
   auto [stat, exists] = mdm->Find(f);
-  if (!exists || stat.ref_count != 1) {
-    return;
+  if (!exists) {
+    stat_exists = false;
+    return 0;
   }
-  hapi::Context ctx;
-  auto persist = INTERCEPTOR_LIST->Persists(fd);
-  auto filename = stat.st_bkid->GetName();
-  const auto &blob_names = stat.st_blobs;
-  if (!blob_names.empty() && persist) {
-    LOG(INFO) << "POSIX fsync Adapter flushes " << blob_names.size()
-              << " blobs to filename:" << filename << "." << std::endl;
-    INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
-    hapi::VBucket file_vbucket(filename, mdm->GetHermes(), ctx);
-    auto offset_map = std::unordered_map<std::string, hermes::u64>();
+  stat_exists = true;
+  return Write(f, stat, ptr, total_size, dpe);
+}
 
-    for (const auto &blob_name : blob_names) {
-      auto status = file_vbucket.Link(blob_name, filename, ctx);
-      if (!status.Failed()) {
-        auto page_index = std::stol(blob_name) - 1;
-        offset_map.emplace(blob_name, page_index * kPageSize);
-      }
-    }
-    bool flush_synchronously = true;
-    hapi::PersistTrait persist_trait(filename, offset_map,
-                                     flush_synchronously);
-    file_vbucket.Attach(&persist_trait, ctx);
-    file_vbucket.Destroy(ctx);
-    stat.st_blobs.clear();
-    INTERCEPTOR_LIST->hermes_flush_exclusion.erase(filename);
-    mdm->Update(f, stat);
+size_t Filesystem::Read(File &f, bool &stat_exists, void *ptr,
+            size_t total_size,
+            PlacementPolicy dpe) {
+  auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+  auto [stat, exists] = mdm->Find(f);
+  if (!exists) {
+    stat_exists = false;
+    return 0;
   }
-}*/
+  stat_exists = true;
+  return Read(f, stat, ptr, total_size, dpe);
+}
+
+size_t Filesystem::Write(File &f, bool &stat_exists, const void *ptr,
+             size_t off, size_t total_size, bool seek,
+             PlacementPolicy dpe) {
+  auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+  auto [stat, exists] = mdm->Find(f);
+  if (!exists) {
+    stat_exists = false;
+    return 0;
+  }
+  stat_exists = true;
+  return Write(f, stat, ptr, off, total_size, seek, dpe);
+}
+
+size_t Filesystem::Read(File &f, bool &stat_exists, void *ptr,
+            size_t off, size_t total_size, bool seek,
+            PlacementPolicy dpe) {
+  auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+  auto [stat, exists] = mdm->Find(f);
+  if (!exists) {
+    stat_exists = false;
+    return 0;
+  }
+  stat_exists = true;
+  return Read(f, stat, ptr, off, total_size, seek, dpe);
+}
+
+off_t Filesystem::Seek(File &f, bool &stat_exists, int whence, off_t offset) {
+  auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+  auto [stat, exists] = mdm->Find(f);
+  if (!exists) {
+    stat_exists = false;
+    return -1;
+  }
+  stat_exists = true;
+  return Seek(f, stat, whence, offset);
+}
+
+int Filesystem::Sync(File &f, bool &stat_exists) {
+  auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+  auto [stat, exists] = mdm->Find(f);
+  if (!exists) {
+    stat_exists = false;
+    return -1;
+  }
+  stat_exists = true;
+  return Sync(f, stat);
+}
+
+int Filesystem::Close(File &f, bool &stat_exists, bool destroy) {
+  auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+  auto [stat, exists] = mdm->Find(f);
+  if (!exists) {
+    stat_exists = false;
+    return -1;
+  }
+  stat_exists = true;
+  return Close(f, stat, destroy);
+}
 
 }  // namespace hermes::adapter::fs

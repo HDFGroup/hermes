@@ -134,9 +134,8 @@ class Filesystem {
               size_t off, size_t total_size, bool seek = false,
               PlacementPolicy dpe = PlacementPolicy::kNone);
   off_t Seek(File &f, AdapterStat &stat, int whence, off_t offset);
-  int Sync(File &f);
-  void FreeFile(File &f);
-  int Close(File &f);
+  int Sync(File &f, AdapterStat &stat);
+  int Close(File &f, AdapterStat &stat, bool destroy = true);
 
   virtual void _InitFile(File &f) = 0;
 
@@ -161,6 +160,23 @@ class Filesystem {
                            size_t size, u8 *data_ptr) = 0;
   virtual int _RealSync(File &f) = 0;
   virtual int _RealClose(File &f) = 0;
+
+ public:
+  size_t Write(File &f, bool &stat_exists, const void *ptr,
+               size_t total_size,
+               PlacementPolicy dpe = PlacementPolicy::kNone);
+  size_t Read(File &f, bool &stat_exists, void *ptr,
+              size_t total_size,
+              PlacementPolicy dpe = PlacementPolicy::kNone);
+  size_t Write(File &f, bool &stat_exists, const void *ptr,
+               size_t off, size_t total_size, bool seek = false,
+               PlacementPolicy dpe = PlacementPolicy::kNone);
+  size_t Read(File &f, bool &stat_exists, void *ptr,
+              size_t off, size_t total_size, bool seek = false,
+              PlacementPolicy dpe = PlacementPolicy::kNone);
+  off_t Seek(File &f, bool &stat_exists, int whence, off_t offset);
+  int Sync(File &f, bool &stat_exists);
+  int Close(File &f, bool &stat_exists, bool destroy = true);
 };
 
 }  // namespace hermes::adapter::fs
