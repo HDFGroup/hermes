@@ -133,7 +133,7 @@ FILE *HERMES_DECL(fdopen)(int fd, const char *mode) {
 
 FILE *HERMES_DECL(freopen)(const char *path, const char *mode, FILE *stream) {
   auto real_api = Singleton<API>::GetInstance();
-  auto fs_api = Singleton<StdioFS>::GetInstance();
+  //auto fs_api = Singleton<StdioFS>::GetInstance();
   FILE *ret;
   if (hermes::adapter::IsTracked(path)) {
     LOG(INFO) << "Intercepting freopen(" << path << ", " << mode << ", "
@@ -147,7 +147,7 @@ FILE *HERMES_DECL(freopen)(const char *path, const char *mode, FILE *stream) {
 
 FILE *HERMES_DECL(freopen64)(const char *path, const char *mode, FILE *stream) {
   auto real_api = Singleton<API>::GetInstance();
-  auto fs_api = Singleton<StdioFS>::GetInstance();
+  //auto fs_api = Singleton<StdioFS>::GetInstance();
   FILE *ret;
   if (hermes::adapter::IsTracked(path)) {
     LOG(INFO) << "Intercepting freopen64(" << path << ", " << mode << ", "
