@@ -140,6 +140,7 @@ off_t Filesystem::Seek(File &f, AdapterStat &stat, int whence, off_t offset) {
 }
 
 off_t Filesystem::Tell(File &f, AdapterStat &stat) {
+  (void) f;
   return stat.st_ptr;
 }
 
