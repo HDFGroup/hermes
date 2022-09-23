@@ -435,12 +435,14 @@ int Filesystem::Sync(File &f, AdapterStat &stat) {
   }
   if (PersistEagerly(filename)) {
     stat.st_vbkt->WaitForBackgroundFlush();
-    return 0; // NOTE(llogan): This doesn't make sense to me
+    // NOTE(llogan): This doesn't make sense to me
+    return 0;
   }
 
   LOG(INFO) << "POSIX fsync Adapter flushes " << blob_names.size()
             << " blobs to filename:" << filename << "." << std::endl;
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename); // NOTE(llogan): not in stdio?
+  // NOTE(llogan): not in stdio?
+  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
   hapi::VBucket file_vbucket(filename, mdm->GetHermes(), ctx);
   auto offset_map = std::unordered_map<std::string, hermes::u64>();
 
@@ -457,7 +459,8 @@ int Filesystem::Sync(File &f, AdapterStat &stat) {
   file_vbucket.Attach(&persist_trait, ctx);
   file_vbucket.Destroy(ctx);
   stat.st_blobs.clear();
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(filename); // NOTE(llogan): not in stdio?
+  // NOTE(llogan): not in stdio?
+  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(filename);
   mdm->Update(f, stat);
   return _RealSync(f);
 }

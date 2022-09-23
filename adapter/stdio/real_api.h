@@ -34,16 +34,22 @@ class API {
   FILE * (*fopen64)(const char * path, const char * mode) = nullptr;
   typedef FILE * (*fdopen_t)(int fd, const char * mode);
   FILE * (*fdopen)(int fd, const char * mode) = nullptr;
-  typedef FILE * (*freopen_t)(const char * path, const char * mode, FILE * stream);
-  FILE * (*freopen)(const char * path, const char * mode, FILE * stream) = nullptr;
-  typedef FILE * (*freopen64_t)(const char * path, const char * mode, FILE * stream);
-  FILE * (*freopen64)(const char * path, const char * mode, FILE * stream) = nullptr;
+  typedef FILE * (*freopen_t)(const char * path,
+                             const char * mode, FILE * stream);
+  FILE * (*freopen)(const char * path,
+                    const char * mode, FILE * stream) = nullptr;
+  typedef FILE * (*freopen64_t)(const char * path,
+                               const char * mode, FILE * stream);
+  FILE * (*freopen64)(const char * path,
+                     const char * mode, FILE * stream) = nullptr;
   typedef int (*fflush_t)(FILE * fp);
   int (*fflush)(FILE * fp) = nullptr;
   typedef int (*fclose_t)(FILE * fp);
   int (*fclose)(FILE * fp) = nullptr;
-  typedef size_t (*fwrite_t)(const void * ptr, size_t size, size_t nmemb, FILE * fp);
-  size_t (*fwrite)(const void * ptr, size_t size, size_t nmemb, FILE * fp) = nullptr;
+  typedef size_t (*fwrite_t)(const void * ptr, size_t size,
+                             size_t nmemb, FILE * fp);
+  size_t (*fwrite)(const void * ptr, size_t size,
+                   size_t nmemb, FILE * fp) = nullptr;
   typedef int (*fputc_t)(int c, FILE * fp);
   int (*fputc)(int c, FILE * fp) = nullptr;
   typedef int (*fgetpos_t)(FILE * fp, fpos_t * pos);
@@ -56,8 +62,10 @@ class API {
   int (*putw)(int w, FILE * fp) = nullptr;
   typedef int (*fputs_t)(const char * s, FILE * stream);
   int (*fputs)(const char * s, FILE * stream) = nullptr;
-  typedef size_t (*fread_t)(void * ptr, size_t size, size_t nmemb, FILE * stream);
-  size_t (*fread)(void * ptr, size_t size, size_t nmemb, FILE * stream) = nullptr;
+  typedef size_t (*fread_t)(void * ptr, size_t size,
+                            size_t nmemb, FILE * stream);
+  size_t (*fread)(void * ptr, size_t size,
+                  size_t nmemb, FILE * stream) = nullptr;
   typedef int (*fgetc_t)(FILE * stream);
   int (*fgetc)(FILE * stream) = nullptr;
   typedef int (*getc_t)(FILE * stream);
@@ -81,7 +89,8 @@ class API {
   typedef long int (*ftell_t)(FILE * fp);
   long int (*ftell)(FILE * fp) = nullptr;
   API() {
-    void *is_intercepted = (void*)dlsym(RTLD_DEFAULT, "stdio_intercepted");
+    void *is_intercepted = (void*)dlsym(RTLD_DEFAULT,
+                                         "stdio_intercepted");
     if (is_intercepted) {
       MPI_Init = (MPI_Init_t)dlsym(RTLD_NEXT, "MPI_Init");
     } else {
@@ -92,9 +101,11 @@ class API {
       "MPI_Init" << std::endl;
     }
     if (is_intercepted) {
-      MPI_Finalize = (MPI_Finalize_t)dlsym(RTLD_NEXT, "MPI_Finalize");
+      MPI_Finalize = (MPI_Finalize_t)dlsym(RTLD_NEXT,
+                                           "MPI_Finalize");
     } else {
-      MPI_Finalize = (MPI_Finalize_t)dlsym(RTLD_DEFAULT, "MPI_Finalize");
+      MPI_Finalize = (MPI_Finalize_t)dlsym(RTLD_DEFAULT,
+                                           "MPI_Finalize");
     }
     if (MPI_Finalize == nullptr) {
       LOG(FATAL) << "HERMES Adapter failed to map symbol: "

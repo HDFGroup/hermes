@@ -292,8 +292,7 @@ int HERMES_DECL(putw)(int w, FILE *fp) {
     int ret = fs_api->Write(f, stat_exists, &w, sizeof(w));
     if (ret == sizeof(w)) {
       return 0;
-    }
-    else {
+    } else {
       return EOF;
     }
   }
