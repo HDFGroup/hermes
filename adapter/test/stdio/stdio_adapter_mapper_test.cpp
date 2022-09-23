@@ -105,7 +105,6 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
                              "[pattern=sequential][file=1]") {
   pretest();
   SECTION("Map a one request") {
-    auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto mapper = MapperFactory().Get(kMapperType);
     size_t total_size = args.request_size;
     FILE* fp = fopen(info.new_file.c_str(), "w+");
@@ -122,7 +121,6 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(status == 0);
   }
   SECTION("Map a one big request") {
-    auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto mapper = MapperFactory().Get(kMapperType);
     size_t total_size = args.request_size * args.num_iterations;
     FILE* fp = fopen(info.new_file.c_str(), "w+");
@@ -143,7 +141,6 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(status == 0);
   }
   SECTION("Map a one large unaligned request") {
-    auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto mapper = MapperFactory().Get(kMapperType);
     size_t total_size = args.request_size * args.num_iterations;
     FILE* fp = fopen(info.new_file.c_str(), "w+");
@@ -179,7 +176,6 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(status == 0);
   }
   SECTION("Map a one small unaligned request") {
-    auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto mapper = MapperFactory().Get(kMapperType);
     size_t total_size = args.request_size;
     FILE* fp = fopen(info.new_file.c_str(), "w+");
