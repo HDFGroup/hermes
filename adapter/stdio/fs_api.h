@@ -18,8 +18,8 @@
 #include "filesystem/filesystem.cc"
 #include "filesystem/metadata_manager.h"
 #include "filesystem/metadata_manager.cc"
-#include "posix/posix.h"
-#include "stdio.h"
+#include "posix/real_api.h"
+#include "real_api.h"
 
 using hermes::adapter::fs::AdapterStat;
 using hermes::adapter::fs::File;

@@ -26,7 +26,7 @@
 #include "adapter_test_utils.h"
 
 #if HERMES_INTERCEPT == 1
-#include "posix/posix.h"
+#include "posix/real_api.h"
 #endif
 
 namespace stdfs = std::experimental::filesystem;

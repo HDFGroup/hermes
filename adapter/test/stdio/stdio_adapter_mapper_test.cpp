@@ -14,7 +14,7 @@
 
 #include "catch_config.h"
 #include "constants.h"
-#include "stdio/native.h"
+#include "stdio/fs_api.h"
 #include "mapper/mapper_factory.h"
 
 using hermes::adapter::BlobPlacements;

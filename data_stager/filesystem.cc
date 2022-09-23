@@ -11,7 +11,7 @@
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "filesystem.h"
-#include "posix/native.h"
+#include "posix/fs_api.h"
 
 using hermes::adapter::posix::PosixFS;
 using hermes::api::PlacementPolicy;

@@ -18,8 +18,9 @@ bool stdio_intercepted = true;
 #include "interceptor.cc"
 #include "adapter_utils.cc"
 
-#include "stdio/stdio.h"
-#include "stdio/native.h"
+#include <cstdio>
+#include "stdio/real_api.h"
+#include "stdio/fs_api.h"
 
 using hermes::adapter::WeaklyCanonical;
 using hermes::adapter::stdio::API;

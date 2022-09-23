@@ -18,6 +18,7 @@
 #include <glog/logging.h>
 #include "interceptor.h"
 #include "filesystem/filesystem.h"
+#include <cstdio>
 
 namespace hermes::adapter::stdio {
 

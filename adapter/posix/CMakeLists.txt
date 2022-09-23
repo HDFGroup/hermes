@@ -8,11 +8,11 @@ set(HERMES_POSIX_ADAPTER_DIR ${HERMES_ADAPTER_DIR}/posix)
 
 # Only posix.h is the public adapter.
 set(POSIX_ADAPTER_PUBLIC_HEADER
-        ${HERMES_POSIX_ADAPTER_DIR}/native.h
-        ${HERMES_POSIX_ADAPTER_DIR}/posix.h)
+        ${HERMES_POSIX_ADAPTER_DIR}/real_api.h
+        ${HERMES_POSIX_ADAPTER_DIR}/fs_api.h)
 
 # Add library hermes_posix_backend
-add_library(hermes_posix_backend ${CMAKE_CURRENT_SOURCE_DIR}/native.cc)
+add_library(hermes_posix_backend ${CMAKE_CURRENT_SOURCE_DIR}/fs_api.cc)
 add_dependencies(hermes_posix_backend hermes)
 target_link_libraries(hermes_posix_backend hermes MPI::MPI_CXX glog::glog stdc++fs dl)
 

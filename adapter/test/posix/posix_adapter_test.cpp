@@ -19,7 +19,7 @@
 
 #include "catch_config.h"
 #if HERMES_INTERCEPT == 1
-#include "posix/posix.h"
+#include "posix/real_api.h"
 #endif
 
 #ifndef O_TMPFILE

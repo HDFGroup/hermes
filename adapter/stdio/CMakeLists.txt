@@ -8,11 +8,11 @@ set(HERMES_STDIO_ADAPTER_DIR ${HERMES_ADAPTER_DIR}/stdio)
 
 # Only stdio.h is the public adapter.
 set(STDIO_ADAPTER_PUBLIC_HEADER
-        ${HERMES_STDIO_ADAPTER_DIR}/stdio.h
-        ${HERMES_STDIO_ADAPTER_DIR}/native.h)
+        ${HERMES_STDIO_ADAPTER_DIR}/real_api.h
+        ${HERMES_STDIO_ADAPTER_DIR}/fs_api.h)
 
 # Add library hermes_stdio
-add_library(hermes_stdio_backend ${CMAKE_CURRENT_SOURCE_DIR}/native.cc)
+add_library(hermes_stdio_backend ${CMAKE_CURRENT_SOURCE_DIR}/fs_api.cc)
 add_dependencies(hermes_stdio_backend hermes)
 target_link_libraries(hermes_stdio_backend hermes MPI::MPI_CXX glog::glog stdc++fs dl)
 

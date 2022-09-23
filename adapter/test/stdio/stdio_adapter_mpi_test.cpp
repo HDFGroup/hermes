@@ -19,7 +19,7 @@
 #include <experimental/filesystem>
 #include <iostream>
 #if HERMES_INTERCEPT == 1
-#include "stdio/stdio.h"
+#include "stdio/real_api.h"
 #endif
 
 namespace stdfs = std::experimental::filesystem;

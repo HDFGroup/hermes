@@ -4,8 +4,8 @@
 
 
 #include <fcntl.h>
-#include "stdio.h"
-#include "native.h"
+#include "real_api.h"
+#include "fs_api.h"
 
 namespace hermes::adapter::stdio {
 
@@ -21,6 +21,10 @@ File StdioFS::_RealOpen(AdapterStat &stat, const std::string &path) {
 
 void StdioFS::_InitFile(File &f) {
   struct stat st;
+  if (f.fh_ == nullptr) {
+    f.fd_ = -1;
+    return;
+  }
   f.fd_ = fileno(f.fh_);
   posix_api->__fxstat(_STAT_VER, f.fd_, &st);
   f.st_dev = st.st_dev;

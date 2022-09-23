@@ -24,8 +24,8 @@ bool posix_intercepted = true;
 #include "interceptor.h"
 #include "singleton.h"
 
-#include "posix/posix.h"
-#include "posix/native.h"
+#include "posix/real_api.h"
+#include "posix/fs_api.h"
 
 #ifndef O_TMPFILE
 #define O_TMPFILE 0

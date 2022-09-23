@@ -124,7 +124,7 @@ class ApiClass:
     def save(self, path, namespace):
         if path is None:
             ns_dir = os.path.dirname(os.getcwd())
-            path = os.path.join(ns_dir, namespace, f"{namespace}.h")
+            path = os.path.join(ns_dir, namespace, f"real_api.h")
         with open(path, "w") as fp:
             fp.write(self.text)
 

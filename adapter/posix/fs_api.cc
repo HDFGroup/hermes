@@ -11,8 +11,8 @@
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include <fcntl.h>
-#include "native.h"
-#include "posix.h"
+#include "fs_api.h"
+#include "real_api.h"
 
 namespace hermes::adapter::posix {
 
