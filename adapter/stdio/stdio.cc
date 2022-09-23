@@ -422,8 +422,8 @@ int HERMES_DECL(fseek)(FILE *stream, long offset, int whence) {
     LOG(INFO) << "Intercept fseek offset:" << offset << " whence:" << whence
               << "." << std::endl;
     File f; f.fh_ = stream; fs_api->_InitFile(f);
-    int ret = fs_api->Seek(f, stat_exists, whence, offset);
-    if (stat_exists) { return ret; }
+    off_t ret = fs_api->Seek(f, stat_exists, whence, offset);
+    if (stat_exists && ret > 0) { return 0; }
   }
   return real_api->fseek(stream, offset, whence);
 }
@@ -436,8 +436,8 @@ int HERMES_DECL(fseeko)(FILE *stream, off_t offset, int whence) {
     LOG(INFO) << "Intercept fseeko offset:" << offset << " whence:" << whence
               << "." << std::endl;
     File f; f.fh_ = stream; fs_api->_InitFile(f);
-    int ret = fs_api->Seek(f, stat_exists, whence, offset);
-    if (stat_exists) { return ret; }
+    off_t ret = fs_api->Seek(f, stat_exists, whence, offset);
+    if (stat_exists && ret > 0) { return 0; }
   }
   return real_api->fseeko(stream, offset, whence);
 }
@@ -450,8 +450,8 @@ int HERMES_DECL(fseeko64)(FILE *stream, off64_t offset, int whence) {
     LOG(INFO) << "Intercept fseeko offset:" << offset << " whence:" << whence
               << "." << std::endl;
     File f; f.fh_ = stream; fs_api->_InitFile(f);
-    int ret = fs_api->Seek(f, stat_exists, whence, offset);
-    if (stat_exists) { return ret; }
+    off_t ret = fs_api->Seek(f, stat_exists, whence, offset);
+    if (stat_exists && ret > 0) { return 0; }
   }
   return real_api->fseeko64(stream, offset, whence);
 }
@@ -464,8 +464,8 @@ int HERMES_DECL(fsetpos)(FILE *stream, const fpos_t *pos) {
   if (hermes::adapter::IsTracked(stream)) {
     LOG(INFO) << "Intercept fsetpos offset:" << offset << "." << std::endl;
     File f; f.fh_ = stream; fs_api->_InitFile(f);
-    int ret = fs_api->Seek(f, stat_exists, SEEK_SET, offset);
-    if (stat_exists) { return ret; }
+    off_t ret = fs_api->Seek(f, stat_exists, SEEK_SET, offset);
+    if (stat_exists && ret > 0) { return 0; }
   }
   return real_api->fsetpos(stream, pos);
 }
@@ -478,8 +478,8 @@ int HERMES_DECL(fsetpos64)(FILE *stream, const fpos64_t *pos) {
   if (hermes::adapter::IsTracked(stream)) {
     LOG(INFO) << "Intercept fsetpos64 offset:" << offset << "." << std::endl;
     File f; f.fh_ = stream; fs_api->_InitFile(f);
-    int ret = fs_api->Seek(f, stat_exists, SEEK_SET, offset);
-    if (stat_exists) { return ret; }
+    off_t ret = fs_api->Seek(f, stat_exists, SEEK_SET, offset);
+    if (stat_exists && ret > 0) { return 0; }
   }
   return real_api->fsetpos64(stream, pos);
 }

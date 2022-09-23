@@ -45,13 +45,6 @@ void PosixFS::_OpenInitStats(File &f, AdapterStat &stat, bool bucket_exists) {
   stat.st_uid = st.st_uid;
   stat.st_gid = st.st_gid;
   stat.st_size = st.st_size;
-  std::string fn = GetFilenameFromFD(f.fd_);
-  /*if (fn.find("/tmp/#") == std::string::npos) {
-    LOG(INFO) << "fd: " << f.fd_
-              << " fxstat size: " << stat.st_size
-              << " stdfs size: " << stdfs::file_size(GetFilenameFromFD(f.fd_))
-              << std::endl;
-  }*/
   stat.st_blksize = st.st_blksize;
   stat.st_atim = st.st_atim;
   stat.st_mtim = st.st_mtim;

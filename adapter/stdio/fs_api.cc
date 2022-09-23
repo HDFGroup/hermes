@@ -39,13 +39,6 @@ void StdioFS::_OpenInitStats(File &f, AdapterStat &stat, bool bucket_exists) {
   stat.st_uid = st.st_uid;
   stat.st_gid = st.st_gid;
   stat.st_size = st.st_size;
-  std::string fn = GetFilenameFromFD(f.fd_);
-  /*if (fn.find("/tmp/#") == std::string::npos) {
-    LOG(INFO) << "fd: " << f.fd_
-              << " fxstat size: " << stat.st_size
-              << " stdfs size: " << stdfs::file_size(GetFilenameFromFD(f.fd_))
-              << std::endl;
-  }*/
   stat.st_blksize = st.st_blksize;
   stat.st_atim = st.st_atim;
   stat.st_mtim = st.st_mtim;
@@ -55,7 +48,7 @@ void StdioFS::_OpenInitStats(File &f, AdapterStat &stat, bool bucket_exists) {
     LOG(INFO) << "Since bucket exists, should reset its size to: " << stat.st_size
               << std::endl;
   }*/
-  if (stat.flags & O_APPEND) {
+  if (stat.mode_str.find('a') != std::string::npos) {
     stat.st_ptr = stat.st_size;
   }
 }
@@ -68,9 +61,8 @@ size_t StdioFS::_RealWrite(const std::string &filename, off_t offset,
             << " file_size:" << stdfs::file_size(filename) << std::endl;
   FILE *fh = real_api->fopen(filename.c_str(), "r+");
   if (fh == nullptr) { return 0; }
-  size_t write_size = 0;
-  if (real_api->fseek(fh, offset, SEEK_SET) != 0) { return 0; }
-  write_size = real_api->fwrite(data_ptr, sizeof(char), size, fh);
+  real_api->fseek(fh, offset, SEEK_SET);
+  size_t write_size = real_api->fwrite(data_ptr, sizeof(char), size, fh);
   real_api->fclose(fh);
   return write_size;
 }
@@ -83,9 +75,8 @@ size_t StdioFS::_RealRead(const std::string &filename, off_t offset,
             << " file_size:" << stdfs::file_size(filename) << std::endl;
   FILE *fh = real_api->fopen(filename.c_str(), "r");
   if (fh == nullptr) { return 0; }
-  size_t read_size = 0;
   real_api->fseek(fh, offset, SEEK_SET);
-  read_size = real_api->fread((char *)data_ptr + offset, sizeof(char), size, fh);
+  size_t read_size = real_api->fread(data_ptr, sizeof(char), size, fh);
   real_api->fclose(fh);
   return read_size;
 }
