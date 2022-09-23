@@ -14,15 +14,13 @@
 
 #include "catch_config.h"
 #include "constants.h"
-#include "stdio/constants.h"
-#include "stdio/datastructures.h"
-#include "stdio/mapper/mapper_factory.h"
-#include "stdio/metadata_manager.h"
+#include "stdio/native.h"
+#include "mapper/mapper_factory.h"
 
-using hermes::adapter::stdio::FileStruct;
-using hermes::adapter::stdio::HermesStruct;
-using hermes::adapter::stdio::MapperFactory;
-using hermes::adapter::stdio::MetadataManager;
+using hermes::adapter::BlobPlacements;
+using hermes::adapter::MapperFactory;
+using hermes::adapter::fs::MetadataManager;
+using hermes::adapter::fs::kMapperType;
 
 namespace stdfs = std::experimental::filesystem;
 
@@ -114,14 +112,12 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(fp != nullptr);
     size_t offset = 0;
     REQUIRE(kPageSize > total_size + offset);
-    auto mapping =
-        mapper->map(FileStruct(mdm->Convert(fp), offset, total_size));
+    BlobPlacements mapping;
+    mapper->map(offset, total_size, mapping);
     REQUIRE(mapping.size() == 1);
-    REQUIRE(mapping[0].first.offset_ == offset);
-    REQUIRE(mapping[0].first.size_ == total_size);
-    REQUIRE(mapping[0].second.offset_ == offset);
-    REQUIRE(mapping[0].second.size_ == total_size);
-
+    REQUIRE(mapping[0].bucket_off_ == offset);
+    REQUIRE(mapping[0].blob_size_ == total_size);
+    REQUIRE(mapping[0].blob_off_ == offset);
     int status = fclose(fp);
     REQUIRE(status == 0);
   }
@@ -132,16 +128,15 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
     FILE* fp = fopen(info.new_file.c_str(), "w+");
     REQUIRE(fp != nullptr);
     size_t offset = 0;
-    auto mapping =
-        mapper->map(FileStruct(mdm->Convert(fp), offset, total_size));
+    BlobPlacements mapping;
+    mapper->map(offset, total_size, mapping);
     REQUIRE(mapping.size() == ceil((double)total_size / kPageSize));
     for (const auto& item : mapping) {
       size_t mapped_size =
           total_size - offset > kPageSize ? kPageSize : total_size - offset;
-      REQUIRE(item.first.offset_ == offset);
-      REQUIRE(item.first.size_ == mapped_size);
-      REQUIRE(item.second.offset_ == offset % kPageSize);
-      REQUIRE(item.second.size_ == mapped_size);
+      REQUIRE(item.bucket_off_ == offset);
+      REQUIRE(item.blob_size_ == mapped_size);
+      REQUIRE(item.blob_off_ == offset % kPageSize);
       offset += mapped_size;
     }
     int status = fclose(fp);
@@ -154,8 +149,8 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
     FILE* fp = fopen(info.new_file.c_str(), "w+");
     REQUIRE(fp != nullptr);
     size_t offset = 1;
-    auto mapping =
-        mapper->map(FileStruct(mdm->Convert(fp), offset, total_size));
+    BlobPlacements mapping;
+    mapper->map(offset, total_size, mapping);
     bool has_rem = (total_size + offset) % kPageSize != 0;
     if (has_rem) {
       REQUIRE(mapping.size() == ceil((double)total_size / kPageSize) + 1);
@@ -174,10 +169,9 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
       } else {
         mapped_size = kPageSize;
       }
-      REQUIRE(item.first.offset_ == current_offset);
-      REQUIRE(item.first.size_ == mapped_size);
-      REQUIRE(item.second.offset_ == current_offset % kPageSize);
-      REQUIRE(item.second.size_ == mapped_size);
+      REQUIRE(item.bucket_off_ == current_offset);
+      REQUIRE(item.blob_size_ == mapped_size);
+      REQUIRE(item.blob_off_ == current_offset % kPageSize);
       current_offset += mapped_size;
       i++;
     }
@@ -192,13 +186,12 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(fp != nullptr);
     size_t offset = 1;
     REQUIRE(kPageSize > total_size + offset);
-    auto mapping =
-        mapper->map(FileStruct(mdm->Convert(fp), offset, total_size));
+    BlobPlacements mapping;
+    mapper->map(offset, total_size, mapping);
     REQUIRE(mapping.size() == 1);
-    REQUIRE(mapping[0].first.offset_ == offset);
-    REQUIRE(mapping[0].first.size_ == total_size);
-    REQUIRE(mapping[0].second.offset_ == 1);
-    REQUIRE(mapping[0].second.size_ == total_size);
+    REQUIRE(mapping[0].bucket_off_ == offset);
+    REQUIRE(mapping[0].blob_size_ == total_size);
+    REQUIRE(mapping[0].blob_off_ == 1);
     int status = fclose(fp);
     REQUIRE(status == 0);
   }

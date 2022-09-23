@@ -14,8 +14,6 @@
 #define HERMES_ADAPTER_FACTORY_H
 
 #include "singleton.h"
-#include "posix/enumerations.h"
-
 #include "abstract_mapper.h"
 #include "balanced_mapper.h"
 #include "balanced_mapper.cc"

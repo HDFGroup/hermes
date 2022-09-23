@@ -13,7 +13,6 @@
 // Dynamically checked to see which are the real APIs and which are intercepted
 bool posix_intercepted = true;
 
-#include <experimental/filesystem>
 #include <fcntl.h>
 #include <stdarg.h>
 #include <sys/stat.h>
@@ -21,13 +20,7 @@ bool posix_intercepted = true;
 
 #include "interceptor.cc"
 #include "adapter_utils.cc"
-#include "posix/constants.h"
 
-#include <hermes.h>
-#include <bucket.h>
-#include <vbucket.h>
-
-#include "constants.h"
 #include "interceptor.h"
 #include "singleton.h"
 

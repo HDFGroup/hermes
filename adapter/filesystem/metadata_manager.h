@@ -67,6 +67,14 @@ class MetadataManager {
       this->is_mpi = is_mpi;
       char* hermes_config = getenv(kHermesConf);
       char* hermes_client = getenv(kHermesClient);
+      char* async_flush_mode = getenv(kHermesAsyncFlush);
+
+      if (async_flush_mode && async_flush_mode[0] == '1') {
+        global_flushing_mode = FlushingMode::kAsynchronous;
+      } else {
+        global_flushing_mode = FlushingMode::kSynchronous;
+      }
+
       if (this->is_mpi) {
         MPI_Comm_rank(MPI_COMM_WORLD, &rank);
         MPI_Comm_size(MPI_COMM_WORLD, &comm_size);

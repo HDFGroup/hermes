@@ -19,6 +19,14 @@
 
 namespace hermes::adapter {
 
+/**
+ * Define different types of mappers supported by POSIX Adapter.
+ * Also define its construction in the MapperFactory.
+ */
+enum MapperType {
+  BALANCED = 0 /* Balanced Mapping */
+};
+
 struct BlobPlacement {
   size_t bucket_off_;       // Offset from file start (for FS)
   size_t blob_off_;         // Offset from blob start

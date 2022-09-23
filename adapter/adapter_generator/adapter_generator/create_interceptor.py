@@ -1,4 +1,5 @@
 import sys,os
+import re
 
 preamble = """/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Distributed under BSD 3-Clause license.                                   *
@@ -13,17 +14,60 @@ preamble = """/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */"""
 
 class Api:
-    def __init__(self, ret, name, var_defs):
-        self.ret = ret
-        self.name = name
-        self.real_name = f"{self.name}"
-        self.type = f"{self.name}_t"
-        self.var_defs = var_defs
+    def __init__(self, api_str):
+        self.decompose_prototype(api_str)
+
+    def _is_text(self, tok):
+        first_is_text = re.match("[_a-zA-Z]", tok[0]) is not None
+        if not first_is_text:
+            return False
+        return re.match("[_a-zA-Z0-9]+", tok) is not None
+
+    def _clean(self, toks):
+        return [tok for tok in toks if tok is not None and len(tok) > 0]
+
+    def get_arg_tuple(self, arg):
+        arg_toks = self._clean(re.split("[ ]|(\*+)", arg))
+        if len(arg_toks) == 1:
+            if arg_toks[0] == '...':
+                type = ""
+                name = "..."
+                return (type, name)
+        type = " ".join(arg_toks[:-1])
+        name = arg_toks[-1]
+        return (type, name)
+
+    def decompose_prototype(self, api_str):
+        toks = self._clean(re.split("[()]", api_str))
+        proto, args = toks[0], toks[1]
+
+        try:
+            proto = self._clean(re.split("[ ]|(\*+)", proto))
+            self.name = proto[-1]
+            self.ret = " ".join(proto[:-1])
+            self.real_name = self.name
+            self.type = f"{self.name}_t"
+        except:
+            print(f"Failed to decompose proto name: {proto}")
+            exit()
+
+        try:
+            self.var_defs = []
+            args = args.split(',')
+            for arg in args:
+                self.var_defs.append(self.get_arg_tuple(arg))
+        except:
+            print(f"Failed to decompose proto args: {args}")
+            exit(1)
 
     def get_args(self):
-        if self.var_defs is None:
+        if len(self.var_defs) == 0:
             return ""
-        args = [" ".join(arg) for arg in self.var_defs]
+        try:
+            args = [" ".join(arg_tuple) for arg_tuple in self.var_defs]
+        except:
+            print(f"Failed to get arg list: {self.var_defs}")
+            exit(1)
         return ", ".join(args)
 
     def pass_args(self):
@@ -33,9 +77,7 @@ class Api:
         return ", ".join(args)
 
 class ApiClass:
-    def __init__(self, namespace, apis, path=None):
-        if path is None:
-            path = os.path.join(os.getcwd(), f"{namespace}.h")
+    def __init__(self, namespace, apis, path=None, do_save=True):
         self.apis = apis
         self.lines = []
 
@@ -60,34 +102,39 @@ class ApiClass:
         for api in self.apis:
             self.add_intercept_api(api)
 
-        #self.lines.append(f" public:")
         self.lines.append(f"  API() {{")
         self.lines.append(f"    void *is_intercepted = (void*)dlsym(RTLD_DEFAULT, \"{namespace}_intercepted\");")
         for api in self.apis:
             self.init_api(api)
         self.lines.append(f"  }}")
         self.lines.append(f"}};")
-        self.lines.append(f"API real_api;")
         self.lines.append(f"}}  // namespace hermes::adapter::{namespace}")
 
         self.lines.append("")
         self.lines.append(f"#endif  // HERMES_ADAPTER_{namespace.upper()}_H")
         self.lines.append("")
-        self.save(path)
+        self.text = "\n".join(self.lines)
 
-    def save(self, path):
-        text = "\n".join(self.lines)
+        if do_save:
+            self.save(path, namespace)
+        else:
+            print(self.text)
+
+
+    def save(self, path, namespace):
+        if path is None:
+            ns_dir = os.path.dirname(os.getcwd())
+            path = os.path.join(ns_dir, namespace, f"{namespace}.h")
         with open(path, "w") as fp:
-            fp.write(text)
+            fp.write(self.text)
 
     def add_intercept_api(self, api):
-        self.lines.append(f"  typedef {api.ret}(*{api.type})({api.get_args()});")
-        self.lines.append(f"  {api.ret}(*{api.real_name})({api.get_args()}) = nullptr;")
+        self.lines.append(f"  typedef {api.ret} (*{api.type})({api.get_args()});")
+        self.lines.append(f"  {api.ret} (*{api.real_name})({api.get_args()}) = nullptr;")
 
     def init_api(self, api):
         self.lines.append(f"    if (is_intercepted) {{")
         self.lines.append(f"      {api.real_name} = ({api.type})dlsym(RTLD_NEXT, \"{api.name}\");")
-        self.lines.append(f"      if ({api.real_name} == )")
         self.lines.append(f"    }} else {{")
         self.lines.append(f"      {api.real_name} = ({api.type})dlsym(RTLD_DEFAULT, \"{api.name}\");")
         self.lines.append(f"    }}")
@@ -95,93 +142,3 @@ class ApiClass:
         self.lines.append(f"      LOG(FATAL) << \"HERMES Adapter failed to map symbol: \"")
         self.lines.append(f"      \"{api.name}\" << std::endl;")
         self.lines.append(f"    }}")
-
-apis = [
-    Api("int", "open", [
-        ("const", "char *", "path"),
-        ("int", "flags"),
-        ("", "...")
-    ]),
-    Api("int", "open64", [
-        ("const", "char *", "path"),
-        ("int", "flags"),
-        ("", "...")
-    ]),
-    Api("int", "__open_2", [
-        ("const", "char *", "path"),
-        ("int", "oflag")
-    ]),
-    Api("int", "creat", [
-        ("const", "char *", "path"),
-        ("mode_t", "mode")
-    ]),
-    Api("int", "creat64", [
-        ("const", "char *", "path"),
-        ("mode_t", "mode")
-    ]),
-    Api("ssize_t", "read", [
-        ("int", "fd"),
-        ("void *", "buf"),
-        ("size_t", "count")
-    ]),
-    Api("ssize_t", "write", [
-        ("int", "fd"),
-        ("const", "void *", "buf"),
-        ("size_t", "count")
-    ]),
-    Api("ssize_t", "pread", [
-        ("int", "fd"),
-        ("void *", "buf"),
-        ("size_t", "count"),
-        ("off_t", "offset")
-    ]),
-    Api("ssize_t", "pwrite", [
-        ("int", "fd"),
-        ("const", "void *", "buf"),
-        ("size_t", "count"),
-        ("off_t", "offset")
-    ]),
-    Api("ssize_t", "pread64", [
-        ("int", "fd"),
-        ("void *", "buf"),
-        ("size_t", "count"),
-        ("off64_t", "offset")
-    ]),
-    Api("ssize_t", "pwrite64", [
-        ("int", "fd"),
-        ("const", "void *", "buf"),
-        ("size_t", "count"),
-        ("off64_t", "offset")
-    ]),
-    Api("off_t", "lseek", [
-        ("int", "fd"),
-        ("off_t", "offset"),
-        ("int", "whence")
-    ]),
-    Api("off64_t", "lseek64", [
-        ("int", "fd"),
-        ("off64_t", "offset"),
-        ("int", "whence")
-    ]),
-    Api("int", "__fxstat", [
-        ("int", "version"),
-        ("int", "fd"),
-        ("struct stat *", "buf")
-    ]),
-    Api("int", "fsync", [
-        ("int", "fd")
-    ]),
-    Api("int", "fdatasync", [
-        ("int", "fd")
-    ]),
-    Api("int", "close", [
-        ("int", "fd")
-    ]),
-    Api("int", "MPI_Init", [
-        ("int *", "argc"),
-        ("char ***", "argv")
-    ]),
-    Api("int", "MPI_Finalize", None),
-]
-
-ApiClass("posix", apis)

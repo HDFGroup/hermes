@@ -13,19 +13,30 @@
 #ifndef HERMES_ADAPTER_FILESYSTEM_FILESYSTEM_H_
 #define HERMES_ADAPTER_FILESYSTEM_FILESYSTEM_H_
 
+#include "enumerations.h"
 #include <ftw.h>
 #include <string>
 #include <bucket.h>
 #include <buffer_pool.h>
 #include <hermes_types.h>
+#include <traits.h>
 #include "mapper/mapper_factory.h"
+
 
 namespace hapi = hermes::api;
 
 namespace hermes::adapter::fs {
 
+const char kStringDelimiter = '#';
+const MapperType kMapperType = MapperType::BALANCED;
+FlushingMode global_flushing_mode;
+
 struct AdapterStat {
   std::shared_ptr<hapi::Bucket> st_bkid; /* bucket associated with the file */
+  /** VBucket for persisting data asynchronously. */
+  std::shared_ptr<hapi::VBucket> st_vbkt;
+  /** Used for async flushing. */
+  std::shared_ptr<hapi::PersistTrait> st_persist;
   std::set<std::string, bool (*)(const std::string &, const std::string &)>
       st_blobs;         /* Blobs access in the bucket */
   i32 ref_count;        /* # of time process opens a file */
@@ -39,6 +50,7 @@ struct AdapterStat {
   timespec st_atim;     /* time of last access */
   timespec st_mtim;     /* time of last modification */
   timespec st_ctim;     /* time of last status change */
+  std::string mode_str; /* mode used for fopen() */
 
   AdapterStat()
       : st_bkid(),
@@ -61,6 +73,7 @@ struct AdapterStat {
 
 struct File {
   int fd_;
+  FILE *fh_;
   dev_t st_dev;
   ino_t st_ino;
   bool status_;
@@ -121,6 +134,7 @@ struct BlobPlacementIter {
 class Filesystem {
  public:
   File Open(AdapterStat &stat, const std::string &path);
+  void Open(AdapterStat &stat, File &f, const std::string &path);
   size_t Write(File &f, AdapterStat &stat, const void *ptr,
                size_t total_size,
                PlacementPolicy dpe = PlacementPolicy::kNone);
@@ -134,6 +148,7 @@ class Filesystem {
               size_t off, size_t total_size, bool seek = false,
               PlacementPolicy dpe = PlacementPolicy::kNone);
   off_t Seek(File &f, AdapterStat &stat, int whence, off_t offset);
+  off_t Tell(File &f, AdapterStat &stat);
   int Sync(File &f, AdapterStat &stat);
   int Close(File &f, AdapterStat &stat, bool destroy = true);
 
@@ -175,6 +190,7 @@ class Filesystem {
               size_t off, size_t total_size, bool seek = false,
               PlacementPolicy dpe = PlacementPolicy::kNone);
   off_t Seek(File &f, bool &stat_exists, int whence, off_t offset);
+  off_t Tell(File &f, bool &stat_exists);
   int Sync(File &f, bool &stat_exists);
   int Close(File &f, bool &stat_exists, bool destroy = true);
 };

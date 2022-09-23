@@ -25,13 +25,23 @@ namespace stdfs = std::experimental::filesystem;
 
 namespace hermes::adapter::fs {
 
+static bool PersistEagerly(const std::string &path_str) {
+  bool result = (INTERCEPTOR_LIST->Persists(path_str) &&
+                 global_flushing_mode == FlushingMode::kAsynchronous);
+  return result;
+}
+
+
 File Filesystem::Open(AdapterStat &stat, const std::string &path) {
   std::string path_str = WeaklyCanonical(path).string();
   File f = _RealOpen(stat, path);
-  if (!f.status_) {
-    return f;
-  }
+  if (!f.status_) { return f; }
+  Open(stat, f, path);
+  return f;
+}
 
+void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
+  std::string path_str = WeaklyCanonical(path).string();
   auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
   auto existing = mdm->Find(f);
   if (!existing.second) {
@@ -51,6 +61,15 @@ File Filesystem::Open(AdapterStat &stat, const std::string &path) {
     stat.st_bkid =
         std::make_shared<hapi::Bucket>(path_str, mdm->GetHermes());
 
+    if (PersistEagerly(path_str)) {
+      stat.st_vbkt =
+          std::make_shared<hapi::VBucket>(path_str, mdm->GetHermes());
+      auto offset_map = std::unordered_map<std::string, u64>();
+      stat.st_persist =
+          std::make_shared<hapi::PersistTrait>(path_str, offset_map, false);
+      stat.st_vbkt->Attach(stat.st_persist.get());
+    }
+
     _OpenInitStats(f, stat, bucket_exists);
     LOG(INFO) << "fd: "<< f.fd_
               << " has size: " << stat.st_size << std::endl;
@@ -65,7 +84,6 @@ File Filesystem::Open(AdapterStat &stat, const std::string &path) {
     stat.st_ctim = ts;
     mdm->Update(f, stat);
   }
-  return f;
 }
 
 void Filesystem::_PutWithFallback(AdapterStat &stat,
@@ -121,6 +139,10 @@ off_t Filesystem::Seek(File &f, AdapterStat &stat, int whence, off_t offset) {
   return stat.st_ptr;
 }
 
+off_t Filesystem::Tell(File &f, AdapterStat &stat) {
+  return stat.st_ptr;
+}
+
 size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
                          size_t total_size, PlacementPolicy dpe) {
   return Write(f, stat, ptr, stat.st_ptr, total_size, true, dpe);
@@ -162,7 +184,14 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
         _WriteToNewUnaligned(write_iter);
       }
     }
-
+    if (PersistEagerly(filename)) {
+      hapi::Trait *trait = stat.st_vbkt->GetTrait(hapi::TraitType::PERSIST);
+      if (trait) {
+        hapi::PersistTrait *persist_trait = (hapi::PersistTrait *)trait;
+        persist_trait->offset_map.emplace(p.blob_name_, write_iter.blob_start_);
+      }
+      stat.st_vbkt->Link(p.blob_name_, filename);
+    }
     data_offset += p.blob_size_;
   }
   off_t f_offset = off + data_offset;
@@ -404,10 +433,14 @@ int Filesystem::Sync(File &f, AdapterStat &stat) {
   if (blob_names.empty() || !persist) {
     return 0;
   }
+  if (PersistEagerly(filename)) {
+    stat.st_vbkt->WaitForBackgroundFlush();
+    return 0; // NOTE(llogan): This doesn't make sense to me
+  }
 
   LOG(INFO) << "POSIX fsync Adapter flushes " << blob_names.size()
             << " blobs to filename:" << filename << "." << std::endl;
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
+  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename); // NOTE(llogan): not in stdio?
   hapi::VBucket file_vbucket(filename, mdm->GetHermes(), ctx);
   auto offset_map = std::unordered_map<std::string, hermes::u64>();
 
@@ -424,7 +457,7 @@ int Filesystem::Sync(File &f, AdapterStat &stat) {
   file_vbucket.Attach(&persist_trait, ctx);
   file_vbucket.Destroy(ctx);
   stat.st_blobs.clear();
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(filename);
+  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(filename); // NOTE(llogan): not in stdio?
   mdm->Update(f, stat);
   return _RealSync(f);
 }
@@ -442,9 +475,14 @@ int Filesystem::Close(File &f, AdapterStat &stat, bool destroy) {
     stat.st_ctim = ts;
     mdm->Update(f, stat);
     stat.st_bkid->Release(ctx);
+    if (stat.st_vbkt) { stat.st_vbkt->Release(); }
     return 0;
   }
   Sync(f, stat);
+  auto filename = stat.st_bkid->GetName();
+  if (PersistEagerly(filename)) {
+    stat.st_vbkt->Destroy();
+  }
   mdm->Delete(f);
   if (destroy) { stat.st_bkid->Destroy(ctx); }
   mdm->FinalizeHermes();
@@ -518,6 +556,17 @@ off_t Filesystem::Seek(File &f, bool &stat_exists, int whence, off_t offset) {
   }
   stat_exists = true;
   return Seek(f, stat, whence, offset);
+}
+
+off_t Filesystem::Tell(File &f, bool &stat_exists) {
+  auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+  auto [stat, exists] = mdm->Find(f);
+  if (!exists) {
+    stat_exists = false;
+    return -1;
+  }
+  stat_exists = true;
+  return Tell(f, stat);
 }
 
 int Filesystem::Sync(File &f, bool &stat_exists) {
