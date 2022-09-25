@@ -73,7 +73,7 @@ FILE *reopen_internal(const std::string &user_path, const char *mode,
   ret = real_api->freopen(user_path.c_str(), mode, stream);
   if (!ret) { return ret; }
 
-  File f; f.fh_ = stream; fs_api->_InitFile(f);
+  File f; f.fh_ = ret; fs_api->_InitFile(f);
   std::string path_str = WeaklyCanonical(user_path).string();
   LOG(INFO) << "Reopen file for filename " << path_str << " in mode " << mode
             << std::endl;
@@ -124,7 +124,7 @@ FILE *HERMES_DECL(fdopen)(int fd, const char *mode) {
   if (ret && hermes::adapter::IsTracked(ret)) {
     LOG(INFO) << "Intercepting fdopen(" << fd << ", " << mode << ")\n";
     std::string path_str = hermes::adapter::GetFilenameFromFD(fd);
-    File f; f.fh_ = ret;
+    File f; f.fh_ = ret; fs_api->_InitFile(f);
     AdapterStat stat; stat.mode_str = mode;
     fs_api->Open(stat, f, path_str);
   }
@@ -133,45 +133,33 @@ FILE *HERMES_DECL(fdopen)(int fd, const char *mode) {
 
 FILE *HERMES_DECL(freopen)(const char *path, const char *mode, FILE *stream) {
   auto real_api = Singleton<API>::GetInstance();
-  // auto fs_api = Singleton<StdioFS>::GetInstance();
-  FILE *ret;
   if (hermes::adapter::IsTracked(path)) {
     LOG(INFO) << "Intercepting freopen(" << path << ", " << mode << ", "
               << stream << ")\n";
-    ret = reopen_internal(path, mode, stream);
-  } else {
-    ret = real_api->freopen(path, mode, stream);
+    return reopen_internal(path, mode, stream);
   }
-  return ret;
+  return real_api->freopen(path, mode, stream);
 }
 
 FILE *HERMES_DECL(freopen64)(const char *path, const char *mode, FILE *stream) {
   auto real_api = Singleton<API>::GetInstance();
-  // auto fs_api = Singleton<StdioFS>::GetInstance();
-  FILE *ret;
   if (hermes::adapter::IsTracked(path)) {
     LOG(INFO) << "Intercepting freopen64(" << path << ", " << mode << ", "
               << stream << ")\n";
-    ret = reopen_internal(path, mode, stream);
-  } else {
-    ret = real_api->freopen64(path, mode, stream);
+    return reopen_internal(path, mode, stream);
   }
-
-  return ret;
+  return real_api->freopen64(path, mode, stream);
 }
 
 int HERMES_DECL(fflush)(FILE *fp) {
   bool stat_exists;
   auto real_api = Singleton<API>::GetInstance();
   auto fs_api = Singleton<StdioFS>::GetInstance();
-  int ret = -1;
   if (fp && hermes::adapter::IsTracked(fp)) {
     File f; f.fh_ = fp; fs_api->_InitFile(f);
     return fs_api->Sync(f, stat_exists);
-  } else {
-    ret = real_api->fflush(fp);
   }
-  return ret;
+  return real_api->fflush(fp);
 }
 
 int HERMES_DECL(fclose)(FILE *fp) {
@@ -316,11 +304,10 @@ size_t HERMES_DECL(fread)(void *ptr, size_t size, size_t nmemb, FILE *stream) {
   bool stat_exists;
   auto real_api = Singleton<API>::GetInstance();
   auto fs_api = Singleton<StdioFS>::GetInstance();
-  size_t ret;
   if (hermes::adapter::IsTracked(stream)) {
     LOG(INFO) << "Intercept fread with size: " << size << "." << std::endl;
     File f; f.fh_ = stream; fs_api->_InitFile(f);
-    ret = fs_api->Read(f, stat_exists, ptr, size * nmemb);
+    size_t ret = fs_api->Read(f, stat_exists, ptr, size * nmemb);
     if (stat_exists) { return ret; }
   }
   return real_api->fread(ptr, size, nmemb, stream);

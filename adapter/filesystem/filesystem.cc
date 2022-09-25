@@ -77,12 +77,12 @@ void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
     mdm->Create(f, stat);
   } else {
     LOG(INFO) << "File opened before by adapter" << std::endl;
-    stat.ref_count++;
+    existing.first.ref_count++;
     struct timespec ts;
     timespec_get(&ts, TIME_UTC);
-    stat.st_atim = ts;
-    stat.st_ctim = ts;
-    mdm->Update(f, stat);
+    existing.first.st_atim = ts;
+    existing.first.st_ctim = ts;
+    mdm->Update(f, existing.first);
   }
 }
 
@@ -209,18 +209,17 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
 }
 
 void Filesystem::_WriteToNewAligned(BlobPlacementIter &wi) {
-  LOG(INFO) << "Create blob " << wi.p_.blob_name_
-            << " of size:" << wi.p_.blob_size_ << "." << std::endl;
-  if (wi.p_.blob_size_ == kPageSize) {
-    _PutWithFallback(wi.stat_, wi.p_.blob_name_, wi.filename_, wi.mem_ptr_,
-                     wi.p_.blob_size_, wi.p_.bucket_off_);
-  } else if (wi.p_.blob_off_ == 0) {
-    _PutWithFallback(wi.stat_, wi.p_.blob_name_, wi.filename_, wi.mem_ptr_,
-                     wi.p_.blob_size_, wi.blob_start_);
-  }
+  LOG(INFO) << "Create new blob (aligned)"
+            << " offset: " << wi.p_.blob_off_
+            << " size: " << wi.p_.blob_size_ << std::endl;
+  _PutWithFallback(wi.stat_, wi.p_.blob_name_, wi.filename_, wi.mem_ptr_,
+                   wi.p_.blob_size_, wi.p_.bucket_off_);
 }
 
 void Filesystem::_WriteToNewUnaligned(BlobPlacementIter &wi) {
+  LOG(INFO) << "Create new blob (unaligned)"
+      << " offset: " << wi.p_.blob_off_
+      << " size: " << wi.p_.blob_size_ << std::endl;
   hapi::Blob final_data(wi.p_.blob_off_ + wi.p_.blob_size_);
   Read(wi.f_, wi.stat_, final_data.data(), wi.blob_start_, wi.p_.blob_off_);
   memcpy(final_data.data() + wi.p_.blob_off_, wi.mem_ptr_,
@@ -230,33 +229,34 @@ void Filesystem::_WriteToNewUnaligned(BlobPlacementIter &wi) {
 }
 
 void Filesystem::_WriteToExistingAligned(BlobPlacementIter &wi) {
+  LOG(INFO) << "Modify existing blob (aligned)"
+            << " offset: " << wi.p_.blob_off_
+            << " size: " << wi.p_.blob_size_ << std::endl;
+
   hapi::Blob temp(0);
   auto existing_blob_size = wi.bkt_->Get(wi.p_.blob_name_, temp);
-  if (wi.p_.blob_size_ == kPageSize) {
-    _PutWithFallback(wi.stat_, wi.p_.blob_name_, wi.filename_, wi.mem_ptr_,
-                     wi.p_.blob_size_, wi.p_.bucket_off_);
-  }
-  if (wi.p_.blob_off_ == 0) {
-    LOG(INFO) << "Blob offset is 0" << std::endl;
-    if (wi.p_.blob_size_ >= existing_blob_size) {
-      LOG(INFO) << "Overwrite blob " << wi.p_.blob_name_
-                << " of size:" << wi.p_.blob_size_ << "." << std::endl;
-      _PutWithFallback(wi.stat_, wi.p_.blob_name_, wi.filename_,
-                       wi.mem_ptr_, wi.p_.blob_size_, wi.blob_start_);
-    } else {
-      LOG(INFO) << "Update blob " << wi.p_.blob_name_
-                << " of size:" << existing_blob_size << "." << std::endl;
-      hapi::Blob existing_data(existing_blob_size);
-      wi.bkt_->Get(wi.p_.blob_name_, existing_data);
-      memcpy(existing_data.data(), wi.mem_ptr_, wi.p_.blob_size_);
-      _PutWithFallback(wi.stat_, wi.p_.blob_name_, wi.filename_,
-                       existing_data.data(), existing_data.size(),
-                       wi.blob_start_);
-    }
+  if (wi.p_.blob_size_ >= existing_blob_size) {
+    LOG(INFO) << "Overwrite blob " << wi.p_.blob_name_
+              << " of size:" << wi.p_.blob_size_ << "." << std::endl;
+    _PutWithFallback(wi.stat_, wi.p_.blob_name_, wi.filename_,
+                     wi.mem_ptr_, wi.p_.blob_size_, wi.blob_start_);
+  } else {
+    LOG(INFO) << "Update blob " << wi.p_.blob_name_
+              << " of size:" << existing_blob_size << "." << std::endl;
+    hapi::Blob existing_data(existing_blob_size);
+    wi.bkt_->Get(wi.p_.blob_name_, existing_data);
+    memcpy(existing_data.data(), wi.mem_ptr_, wi.p_.blob_size_);
+    _PutWithFallback(wi.stat_, wi.p_.blob_name_, wi.filename_,
+                     existing_data.data(), existing_data.size(),
+                     wi.blob_start_);
   }
 }
 
 void Filesystem::_WriteToExistingUnaligned(BlobPlacementIter &wi) {
+  LOG(INFO) << "Modify existing blob (unaligned)"
+            << " offset: " << wi.p_.blob_off_
+            << " size: " << wi.p_.blob_size_ << std::endl;
+
   auto new_size = wi.p_.blob_off_ + wi.p_.blob_size_;
   hapi::Blob temp(0);
   auto existing_blob_size = wi.bkt_->Get(wi.p_.blob_name_, temp);
@@ -267,26 +267,33 @@ void Filesystem::_WriteToExistingUnaligned(BlobPlacementIter &wi) {
     new_size = existing_blob_size;
   }
   hapi::Blob final_data(new_size);
-  auto existing_data_cp_size = existing_data.size() >= wi.p_.blob_off_
-                                   ? wi.p_.blob_off_ : existing_data.size();
-  memcpy(final_data.data(), existing_data.data(), existing_data_cp_size);
 
-  if (existing_blob_size < wi.p_.blob_off_ + 1) {
+  //[0, existing_data)
+  memcpy(final_data.data(), existing_data.data(),
+         existing_data.size());
+
+  // [existing_data, blob_off)
+  if (existing_data.size() < wi.p_.blob_off_) {
     Read(wi.f_, wi.stat_,
-         final_data.data() + existing_data_cp_size,
-         wi.blob_start_ + existing_data_cp_size,
-         wi.p_.blob_off_ - existing_blob_size);
+         final_data.data() + existing_data.size(),
+         wi.blob_start_ + existing_data.size(),
+         wi.p_.blob_off_ - existing_data.size());
   }
+
+  // [blob_off, blob_off + blob_size)
   memcpy(final_data.data() + wi.p_.blob_off_, wi.mem_ptr_,
          wi.p_.blob_size_);
 
-  if (wi.p_.blob_off_ + wi.p_.blob_size_ < existing_blob_size) {
+  // [blob_off + blob_size, existing_blob_size)
+  if (existing_blob_size > wi.p_.blob_off_ + wi.p_.blob_size_) {
     LOG(INFO) << "Retain last portion of blob as Blob is bigger than the "
                  "update." << std::endl;
     auto off_t = wi.p_.blob_off_ + wi.p_.blob_size_;
     memcpy(final_data.data() + off_t, existing_data.data() + off_t,
            existing_blob_size - off_t);
   }
+
+  //Store updated blob
   _PutWithFallback(wi.stat_, wi.p_.blob_name_, wi.filename_,
                    final_data.data(),
                    final_data.size(),
@@ -369,7 +376,7 @@ size_t Filesystem::_ReadExistingContained(BlobPlacementIter &ri) {
 }
 
 size_t Filesystem::_ReadExistingPartial(BlobPlacementIter &ri) {
-  LOG(INFO) << "Blob exists and need to read from Hermes from blob: "
+  LOG(INFO) << "Blob exists and need to partially read from Hermes from blob: "
             << ri.p_.blob_name_ << "." << std::endl;
   /*if (!stdfs::exists(filename) ||
       stdfs::file_size(filename) < p.bucket_off_ + p.blob_off_ + p.blob_size_) {
@@ -377,7 +384,9 @@ size_t Filesystem::_ReadExistingPartial(BlobPlacementIter &ri) {
   }*/
   size_t existing_size = ri.blob_.size();
   size_t partial_size = 0;
-  if (existing_size > ri.p_.blob_off_) {
+
+  // [blob_off, existing_size)
+  if (ri.p_.blob_off_ < existing_size) {
     partial_size = existing_size - ri.p_.blob_off_;
     memcpy(ri.mem_ptr_, ri.blob_.data() + ri.p_.blob_off_, partial_size);
     ri.mem_ptr_ += partial_size;
@@ -446,7 +455,6 @@ int Filesystem::Sync(File &f, AdapterStat &stat) {
   INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
   hapi::VBucket file_vbucket(filename, mdm->GetHermes(), ctx);
   auto offset_map = std::unordered_map<std::string, hermes::u64>();
-
   for (const auto &blob_name : blob_names) {
     auto status = file_vbucket.Link(blob_name, filename, ctx);
     if (!status.Failed()) {
@@ -477,9 +485,9 @@ int Filesystem::Close(File &f, AdapterStat &stat, bool destroy) {
     timespec_get(&ts, TIME_UTC);
     stat.st_atim = ts;
     stat.st_ctim = ts;
-    mdm->Update(f, stat);
     stat.st_bkid->Release(ctx);
     if (stat.st_vbkt) { stat.st_vbkt->Release(); }
+    mdm->Update(f, stat);
     return 0;
   }
   Sync(f, stat);

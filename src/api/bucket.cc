@@ -405,6 +405,7 @@ Status Bucket::Destroy(const Context &ctx) {
     } else {
       result = BUCKET_IN_USE;
       LOG(ERROR) << result.Msg();
+      exit(1);
     }
   }
 

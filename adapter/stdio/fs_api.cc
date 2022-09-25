@@ -13,6 +13,7 @@
 #include <fcntl.h>
 #include "real_api.h"
 #include "fs_api.h"
+#include <sys/file.h>
 
 namespace hermes::adapter::stdio {
 
@@ -69,7 +70,9 @@ size_t StdioFS::_RealWrite(const std::string &filename, off_t offset,
   FILE *fh = real_api->fopen(filename.c_str(), "r+");
   if (fh == nullptr) { return 0; }
   real_api->fseek(fh, offset, SEEK_SET);
+  flock(fileno(fh), LOCK_EX);
   size_t write_size = real_api->fwrite(data_ptr, sizeof(char), size, fh);
+  flock(fileno(fh), LOCK_UN);
   real_api->fclose(fh);
   return write_size;
 }
@@ -83,7 +86,9 @@ size_t StdioFS::_RealRead(const std::string &filename, off_t offset,
   FILE *fh = real_api->fopen(filename.c_str(), "r");
   if (fh == nullptr) { return 0; }
   real_api->fseek(fh, offset, SEEK_SET);
+  flock(fileno(fh), LOCK_SH);
   size_t read_size = real_api->fread(data_ptr, sizeof(char), size, fh);
+  flock(fileno(fh), LOCK_UN);
   real_api->fclose(fh);
   return read_size;
 }
