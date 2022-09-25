@@ -21,4 +21,4 @@ apis = [
     Api("int close(int fd)"),
 ]
 
-ApiClass("posix", apis)
+ApiClass("posix", apis, [])

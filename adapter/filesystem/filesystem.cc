@@ -31,7 +31,6 @@ static bool IsAsyncFlush(const std::string &path_str) {
   return result;
 }
 
-
 File Filesystem::Open(AdapterStat &stat, const std::string &path) {
   std::string path_str = WeaklyCanonical(path).string();
   File f = _RealOpen(stat, path);

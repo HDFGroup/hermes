@@ -77,7 +77,7 @@ class Api:
         return ", ".join(args)
 
 class ApiClass:
-    def __init__(self, namespace, apis, path=None, do_save=True):
+    def __init__(self, namespace, apis, includes, path=None, do_save=True):
         self.apis = apis
         self.lines = []
 
@@ -92,6 +92,8 @@ class ApiClass:
         self.lines.append("#include <glog/logging.h>")
         self.lines.append("#include \"interceptor.h\"")
         self.lines.append("#include \"filesystem/filesystem.h\"")
+        for include in includes:
+            self.lines.append(f"#include {include}")
         self.lines.append("")
 
         self.lines.append(f"namespace hermes::adapter::{namespace} {{")

@@ -31,4 +31,8 @@ apis = [
     Api("long int ftell(FILE *fp)"),
 ]
 
-ApiClass("stdio", apis)
+includes = [
+    "\"cstdio.h\""
+]
+
+ApiClass("stdio", apis, includes)
