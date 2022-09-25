@@ -204,57 +204,39 @@ int HERMES_DECL(fputc)(int c, FILE *fp) {
 }
 
 int HERMES_DECL(fgetpos)(FILE *fp, fpos_t *pos) {
+  bool stat_exists;
   auto real_api = Singleton<API>::GetInstance();
   auto fs_api = Singleton<StdioFS>::GetInstance();
-  int ret;
   if (hermes::adapter::IsTracked(fp) && pos) {
     File f; f.fh_ = fp; fs_api->_InitFile(f);
-    auto mdm = Singleton<MetadataManager>::GetInstance();
-    auto existing = mdm->Find(f);
-    if (existing.second) {
-      LOG(INFO) << "Intercept fgetpos." << std::endl;
-      // TODO(chogan): @portability In the GNU C Library, fpos_t is an opaque
-      // data structure that contains internal data to represent file offset and
-      // conversion state information. In other systems, it might have a
-      // different internal representation. This will need to change to support
-      // other compilers.
-      pos->__pos = existing.first.st_ptr;
-      ret = 0;
-    } else {
-      ret = real_api->fgetpos(fp, pos);
-    }
-  } else {
-    ret = real_api->fgetpos(fp, pos);
+    LOG(INFO) << "Intercept fgetpos." << std::endl;
+    // TODO(chogan): @portability In the GNU C Library, fpos_t is an opaque
+    // data structure that contains internal data to represent file offset and
+    // conversion state information. In other systems, it might have a
+    // different internal representation. This will need to change to support
+    // other compilers.
+    pos->__pos = fs_api->Tell(f, stat_exists);
+    if (stat_exists) { return 0; }
   }
-
-  return ret;
+  return real_api->fgetpos(fp, pos);
 }
 
 int HERMES_DECL(fgetpos64)(FILE *fp, fpos64_t *pos) {
+  bool stat_exists;
   auto real_api = Singleton<API>::GetInstance();
   auto fs_api = Singleton<StdioFS>::GetInstance();
-  int ret;
   if (hermes::adapter::IsTracked(fp) && pos) {
     File f; f.fh_ = fp; fs_api->_InitFile(f);
-    auto mdm = Singleton<MetadataManager>::GetInstance();
-    auto existing = mdm->Find(f);
-    if (existing.second) {
-      LOG(INFO) << "Intercept fgetpos64." << std::endl;
-      // TODO(chogan): @portability In the GNU C Library, fpos_t is an opaque
-      // data structure that contains internal data to represent file offset and
-      // conversion state information. In other systems, it might have a
-      // different internal representation. This will need to change to support
-      // other compilers.
-      pos->__pos = existing.first.st_ptr;
-      ret = 0;
-    } else {
-      ret = real_api->fgetpos64(fp, pos);
-    }
-  } else {
-    ret = real_api->fgetpos64(fp, pos);
+    LOG(INFO) << "Intercept fgetpos64." << std::endl;
+    // TODO(chogan): @portability In the GNU C Library, fpos_t is an opaque
+    // data structure that contains internal data to represent file offset and
+    // conversion state information. In other systems, it might have a
+    // different internal representation. This will need to change to support
+    // other compilers.
+    pos->__pos = fs_api->Tell(f, stat_exists);
+    if (stat_exists) { return 0; }
   }
-
-  return ret;
+  return real_api->fgetpos64(fp, pos);
 }
 
 int HERMES_DECL(putc)(int c, FILE *fp) {
