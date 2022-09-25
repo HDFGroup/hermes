@@ -25,7 +25,7 @@ namespace stdfs = std::experimental::filesystem;
 
 namespace hermes::adapter::fs {
 
-static bool PersistEagerly(const std::string &path_str) {
+static bool IsAsyncFlush(const std::string &path_str) {
   bool result = (INTERCEPTOR_LIST->Persists(path_str) &&
                  global_flushing_mode == FlushingMode::kAsynchronous);
   return result;
@@ -43,7 +43,7 @@ File Filesystem::Open(AdapterStat &stat, const std::string &path) {
 void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
   std::string path_str = WeaklyCanonical(path).string();
   _InitFile(f);
-  auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+  auto mdm = Singleton<MetadataManager>::GetInstance();
   auto existing = mdm->Find(f);
   if (!existing.second) {
     LOG(INFO) << "File not opened before by adapter" << std::endl;
@@ -62,7 +62,7 @@ void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
     stat.st_bkid =
         std::make_shared<hapi::Bucket>(path_str, mdm->GetHermes());
 
-    if (PersistEagerly(path_str)) {
+    if (IsAsyncFlush(path_str)) {
       stat.st_vbkt =
           std::make_shared<hapi::VBucket>(path_str, mdm->GetHermes());
       auto offset_map = std::unordered_map<std::string, u64>();
@@ -118,7 +118,7 @@ off_t Filesystem::Seek(File &f, AdapterStat &stat, int whence, off_t offset) {
         << std::endl;
     return -1;
   }
-  auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+  auto mdm = Singleton<MetadataManager>::GetInstance();
   switch (whence) {
     case SEEK_SET: {
       stat.st_ptr = offset;
@@ -160,7 +160,7 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
             << stat.st_ptr << " and size: " << total_size << std::endl;
 
   size_t ret = 0;
-  auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+  auto mdm = Singleton<MetadataManager>::GetInstance();
   BlobPlacements mapping;
   auto mapper = MapperFactory().Get(kMapperType);
   mapper->map(off, total_size, mapping);
@@ -186,7 +186,7 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
         _WriteToNewUnaligned(write_iter);
       }
     }
-    if (PersistEagerly(filename)) {
+    if (IsAsyncFlush(filename)) {
       hapi::Trait *trait = stat.st_vbkt->GetTrait(hapi::TraitType::PERSIST);
       if (trait) {
         hapi::PersistTrait *persist_trait = (hapi::PersistTrait *)trait;
@@ -325,7 +325,7 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
   }
   size_t ret;
   BlobPlacements mapping;
-  auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+  auto mdm = Singleton<MetadataManager>::GetInstance();
   auto mapper = MapperFactory().Get(kMapperType);
   mapper->map(off, total_size, mapping);
 
@@ -425,7 +425,7 @@ size_t Filesystem::_ReadNew(BlobPlacementIter &ri) {
 }
 
 int Filesystem::Sync(File &f, AdapterStat &stat) {
-  auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+  auto mdm = Singleton<MetadataManager>::GetInstance();
   if (stat.ref_count != 1) {
     LOG(INFO) << "File handler is opened by more than one fopen."
               << std::endl;
@@ -444,7 +444,7 @@ int Filesystem::Sync(File &f, AdapterStat &stat) {
   if (blob_names.empty() || !persist) {
     return 0;
   }
-  if (PersistEagerly(filename)) {
+  if (IsAsyncFlush(filename)) {
     stat.st_vbkt->WaitForBackgroundFlush();
     return 0;
   }
@@ -474,7 +474,7 @@ int Filesystem::Sync(File &f, AdapterStat &stat) {
 
 int Filesystem::Close(File &f, AdapterStat &stat, bool destroy) {
   hapi::Context ctx;
-  auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+  auto mdm = Singleton<MetadataManager>::GetInstance();
   if (stat.ref_count != 1) {
     LOG(INFO) << "File handler is opened by more than one fopen."
               << std::endl;
@@ -490,7 +490,7 @@ int Filesystem::Close(File &f, AdapterStat &stat, bool destroy) {
   }
   Sync(f, stat);
   auto filename = stat.st_bkid->GetName();
-  if (PersistEagerly(filename)) {
+  if (IsAsyncFlush(filename)) {
     stat.st_vbkt->Destroy();
   }
   mdm->Delete(f);
@@ -508,7 +508,7 @@ int Filesystem::Close(File &f, AdapterStat &stat, bool destroy) {
 size_t Filesystem::Write(File &f, bool &stat_exists, const void *ptr,
              size_t total_size,
              PlacementPolicy dpe) {
-  auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+  auto mdm = Singleton<MetadataManager>::GetInstance();
   auto [stat, exists] = mdm->Find(f);
   if (!exists) {
     stat_exists = false;
@@ -521,7 +521,7 @@ size_t Filesystem::Write(File &f, bool &stat_exists, const void *ptr,
 size_t Filesystem::Read(File &f, bool &stat_exists, void *ptr,
             size_t total_size,
             PlacementPolicy dpe) {
-  auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+  auto mdm = Singleton<MetadataManager>::GetInstance();
   auto [stat, exists] = mdm->Find(f);
   if (!exists) {
     stat_exists = false;
@@ -534,7 +534,7 @@ size_t Filesystem::Read(File &f, bool &stat_exists, void *ptr,
 size_t Filesystem::Write(File &f, bool &stat_exists, const void *ptr,
              size_t off, size_t total_size, bool seek,
              PlacementPolicy dpe) {
-  auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+  auto mdm = Singleton<MetadataManager>::GetInstance();
   auto [stat, exists] = mdm->Find(f);
   if (!exists) {
     stat_exists = false;
@@ -547,7 +547,7 @@ size_t Filesystem::Write(File &f, bool &stat_exists, const void *ptr,
 size_t Filesystem::Read(File &f, bool &stat_exists, void *ptr,
             size_t off, size_t total_size, bool seek,
             PlacementPolicy dpe) {
-  auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+  auto mdm = Singleton<MetadataManager>::GetInstance();
   auto [stat, exists] = mdm->Find(f);
   if (!exists) {
     stat_exists = false;
@@ -558,7 +558,7 @@ size_t Filesystem::Read(File &f, bool &stat_exists, void *ptr,
 }
 
 off_t Filesystem::Seek(File &f, bool &stat_exists, int whence, off_t offset) {
-  auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+  auto mdm = Singleton<MetadataManager>::GetInstance();
   auto [stat, exists] = mdm->Find(f);
   if (!exists) {
     stat_exists = false;
@@ -569,7 +569,7 @@ off_t Filesystem::Seek(File &f, bool &stat_exists, int whence, off_t offset) {
 }
 
 off_t Filesystem::Tell(File &f, bool &stat_exists) {
-  auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+  auto mdm = Singleton<MetadataManager>::GetInstance();
   auto [stat, exists] = mdm->Find(f);
   if (!exists) {
     stat_exists = false;
@@ -580,7 +580,7 @@ off_t Filesystem::Tell(File &f, bool &stat_exists) {
 }
 
 int Filesystem::Sync(File &f, bool &stat_exists) {
-  auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+  auto mdm = Singleton<MetadataManager>::GetInstance();
   auto [stat, exists] = mdm->Find(f);
   if (!exists) {
     stat_exists = false;
@@ -591,7 +591,7 @@ int Filesystem::Sync(File &f, bool &stat_exists) {
 }
 
 int Filesystem::Close(File &f, bool &stat_exists, bool destroy) {
-  auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+  auto mdm = Singleton<MetadataManager>::GetInstance();
   auto [stat, exists] = mdm->Find(f);
   if (!exists) {
     stat_exists = false;
