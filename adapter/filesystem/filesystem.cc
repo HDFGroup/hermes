@@ -42,6 +42,7 @@ File Filesystem::Open(AdapterStat &stat, const std::string &path) {
 
 void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
   std::string path_str = WeaklyCanonical(path).string();
+  _InitFile(f);
   auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
   auto existing = mdm->Find(f);
   if (!existing.second) {

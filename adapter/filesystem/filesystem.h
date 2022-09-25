@@ -94,20 +94,21 @@ struct File {
 
   void Copy(const File &old) {
     fd_ = old.fd_;
+    fh_ = old.fh_;
     st_dev = old.st_dev;
     st_ino = old.st_ino;
     status_ = old.status_;
   }
 
   bool operator==(const File &old) const {
-    return fd_ == old.fd_;
+    return (st_dev == old.st_dev) && (st_ino == old.st_ino);
   }
 
   std::size_t hash() const {
     std::size_t result;
     std::size_t h1 = std::hash<dev_t>{}(st_dev);
     std::size_t h2 = std::hash<ino_t>{}(st_ino);
-    result = h1 ^ (h2 << 1);
+    result = h1 ^ h2;
     return result;
   }
 };
