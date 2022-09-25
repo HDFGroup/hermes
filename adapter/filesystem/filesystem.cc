@@ -269,7 +269,7 @@ void Filesystem::_WriteToExistingUnaligned(BlobPlacementIter &wi) {
   }
   hapi::Blob final_data(new_size);
 
-  //[0, existing_data)
+  // [0, existing_data)
   memcpy(final_data.data(), existing_data.data(),
          existing_data.size());
 
@@ -294,7 +294,7 @@ void Filesystem::_WriteToExistingUnaligned(BlobPlacementIter &wi) {
            existing_blob_size - off_t);
   }
 
-  //Store updated blob
+  // Store updated blob
   _PutWithFallback(wi.stat_, wi.p_.blob_name_, wi.filename_,
                    final_data.data(),
                    final_data.size(),
