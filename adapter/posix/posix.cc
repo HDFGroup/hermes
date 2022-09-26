@@ -19,7 +19,6 @@ bool posix_intercepted = true;
 #include <glog/logging.h>
 
 #include "interceptor.cc"
-#include "adapter_utils.cc"
 
 #include "interceptor.h"
 #include "singleton.h"

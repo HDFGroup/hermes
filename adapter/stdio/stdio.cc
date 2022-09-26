@@ -16,8 +16,6 @@ bool stdio_intercepted = true;
 #include <sys/file.h>
 
 #include "interceptor.cc"
-#include "adapter_utils.cc"
-
 #include <cstdio>
 #include "stdio/real_api.h"
 #include "stdio/fs_api.h"

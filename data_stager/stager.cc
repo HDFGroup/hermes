@@ -10,9 +10,27 @@
 * have access to the file, you may request a copy from help@hdfgroup.org.   *
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_DATA_STAGER_FILESYSTEM_H_
-#define HERMES_DATA_STAGER_FILESYSTEM_H_
+#include <string>
+#include "posix/fs_api.h"
+#include "hermes_types.h"
 
-class filesystem {};
+using hermes::adapter::posix::PosixFS;
+using hermes::api::PlacementPolicyConv;
+using hermes::api::PlacementPolicy;
 
-#endif  // HERMES_DATA_STAGER_FILESYSTEM_H_
+/* Stage in a single file */
+void StageIn(std::string path, int off, int size, PlacementPolicy dpe) {
+  auto fs_api = PosixFS();
+  void *buf = malloc(size);
+  AdapterStat stat;
+  File f = fs_api.Open(stat, path);
+  fs_api.Read(f, stat, buf, off, size, false, dpe);
+}
+
+int main(int argc, char **argv) {
+  std::string path = argv[1];
+  int off = atoi(argv[2]);
+  int size = atoi(argv[3]);
+  PlacementPolicy dpe = PlacementPolicyConv::to_enum(argv[3]);
+  StageIn(path, off, size, dpe);
+}

@@ -14,6 +14,9 @@
 #include "fs_api.h"
 #include "real_api.h"
 
+#include "filesystem/metadata_manager.cc"
+#include "filesystem/filesystem.cc"
+
 namespace hermes::adapter::posix {
 
 File PosixFS::_RealOpen(AdapterStat &stat, const std::string &path) {

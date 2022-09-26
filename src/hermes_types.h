@@ -79,6 +79,19 @@ class PlacementPolicyConv {
     }
     return "PlacementPolicy::Invalid";
   }
+
+  static PlacementPolicy to_enum(const std::string &policy) {
+    if (policy.find("kRandom") != std::string::npos) {
+      return PlacementPolicy::kRandom;
+    } else if (policy.find("kRoundRobin") != std::string::npos) {
+      return PlacementPolicy::kRoundRobin;
+    } else if (policy.find("kMinimizeIoTime") != std::string::npos) {
+      return PlacementPolicy::kMinimizeIoTime;
+    } else if (policy.find("kNone") != std::string::npos) {
+      return PlacementPolicy::kNone;
+    }
+    return PlacementPolicy::kNone;
+  }
 };
 
 

@@ -17,6 +17,7 @@
 #include "interceptor.h"
 #include "metadata_manager.h"
 #include "vbucket.h"
+#include "adapter_utils.cc"
 
 #include <fcntl.h>
 #include <experimental/filesystem>
@@ -382,6 +383,7 @@ size_t Filesystem::_ReadExistingPartial(BlobPlacementIter &ri) {
       stdfs::file_size(filename) < p.bucket_off_ + p.blob_off_ + p.blob_size_) {
     return 0;
   }*/
+  hapi::Blob temp(0);
   size_t existing_size = ri.blob_.size();
   size_t partial_size = 0;
 
