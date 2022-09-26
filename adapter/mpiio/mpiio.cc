@@ -10,10 +10,24 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include "mpiio/mpiio.h"
+bool mpiio_intercepted = true;
+
+#include <hermes.h>
+#include <bucket.h>
+#include <vbucket.h>
+
+#include "real_api.h"
+
+#include "constants.h"
+#include "singleton.h"
+#include "interceptor.h"
+#include "interceptor.cc"
+#include "mpiio/mapper/mapper_factory.h"
+#include "mpiio/metadata_manager.cc"
+#include "adapter_utils.h"
+#include "adapter_utils.cc"
 
 #include "thread_pool.h"
-#include "adapter_utils.cc"
 #include "mpiio/mapper/balanced_mapper.cc"
 
 /**
@@ -25,6 +39,8 @@ using hermes::adapter::mpiio::FileStruct;
 using hermes::adapter::mpiio::HermesRequest;
 using hermes::adapter::mpiio::MapperFactory;
 using hermes::adapter::mpiio::MetadataManager;
+using hermes::adapter::mpiio::API;
+using hermes::adapter::Singleton;
 
 namespace hapi = hermes::api;
 namespace stdfs = std::experimental::filesystem;
@@ -48,7 +64,7 @@ inline std::string GetFilenameFromFP(MPI_File *fh) {
 
 inline bool IsTracked(MPI_File *fh) {
   if (hermes::adapter::exit) return false;
-  auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+  auto mdm = Singleton<MetadataManager>::GetInstance();
   auto existing = mdm->Find(fh);
   return existing.second;
 }
@@ -60,7 +76,7 @@ int simple_open(MPI_Comm &comm, const char *user_path, int &amode,
   LOG(INFO) << "Open file for filename " << path_str << " in mode " << amode
             << std::endl;
   int ret = MPI_SUCCESS;
-  auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+  auto mdm = Singleton<MetadataManager>::GetInstance();
   auto existing = mdm->Find(fh);
   if (!existing.second) {
     LOG(INFO) << "File not opened before by adapter" << std::endl;
@@ -88,8 +104,8 @@ int simple_open(MPI_Comm &comm, const char *user_path, int &amode,
 int open_internal(MPI_Comm &comm, const char *path, int &amode, MPI_Info &info,
                   MPI_File *fh) {
   int ret;
-  MAP_OR_FAIL(MPI_File_open);
-  ret = real_MPI_File_open_(comm, path, amode, info, fh);
+  auto real_api = Singleton<API>::GetInstance();
+  ret = real_api->MPI_File_open(comm, path, amode, info, fh);
   if (ret == MPI_SUCCESS) {
     ret = simple_open(comm, path, amode, info, fh);
   }
@@ -161,7 +177,7 @@ std::pair<int, size_t> write_internal(std::pair<AdapterStat, bool> &existing,
             << " on offset: " << existing.first.ptr << " and count: " << count
             << std::endl;
   size_t ret;
-  auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+  auto mdm = Singleton<MetadataManager>::GetInstance();
   auto mapper = MapperFactory().Get(kMapperType);
   int datatype_size;
   MPI_Type_size(datatype, &datatype_size);
@@ -329,7 +345,7 @@ std::pair<int, size_t> read_internal(std::pair<AdapterStat, bool> &existing,
   int datatype_size;
   MPI_Type_size(datatype, &datatype_size);
   size_t total_size = datatype_size * count;
-  auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+  auto mdm = Singleton<MetadataManager>::GetInstance();
   auto mapper = MapperFactory().Get(kMapperType);
   auto mapping = mapper->map(FileStruct(fp, existing.first.ptr, total_size));
   size_t total_read_size = 0;
@@ -467,29 +483,30 @@ std::pair<int, size_t> read_internal(std::pair<AdapterStat, bool> &existing,
  * MPI
  */
 int HERMES_DECL(MPI_Init)(int *argc, char ***argv) {
-  MAP_OR_FAIL(MPI_Init);
-  int status = real_MPI_Init_(argc, argv);
+  auto real_api = Singleton<API>::GetInstance();
+  int status = real_api->MPI_Init(argc, argv);
   if (status == 0) {
     LOG(INFO) << "MPI Init intercepted." << std::endl;
-    auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+    auto mdm = Singleton<MetadataManager>::GetInstance();
     mdm->InitializeHermes();
-    hermes::adapter::Singleton<ThreadPool>::GetInstance(kNumThreads);
+    Singleton<ThreadPool>::GetInstance(kNumThreads);
   }
   return status;
 }
 
 int HERMES_DECL(MPI_Finalize)(void) {
   LOG(INFO) << "MPI Finalize intercepted." << std::endl;
-  auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+  auto real_api = Singleton<API>::GetInstance();
+  auto mdm = Singleton<MetadataManager>::GetInstance();
   mdm->FinalizeHermes();
-  MAP_OR_FAIL(MPI_Finalize);
-  int status = real_MPI_Finalize_();
+  int status = real_api->MPI_Finalize();
   return status;
 }
 
 int HERMES_DECL(MPI_Wait)(MPI_Request *req, MPI_Status *status) {
   int ret;
-  auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+  auto real_api = Singleton<API>::GetInstance();
+  auto mdm = Singleton<MetadataManager>::GetInstance();
   auto iter = mdm->request_map.find(req);
   if (iter != mdm->request_map.end()) {
     ret = iter->second->return_future.get();
@@ -498,8 +515,7 @@ int HERMES_DECL(MPI_Wait)(MPI_Request *req, MPI_Status *status) {
     mdm->request_map.erase(iter);
     delete (h_req);
   } else {
-    MAP_OR_FAIL(MPI_Wait);
-    ret = real_MPI_Wait_(req, status);
+    ret = real_api->MPI_Wait(req, status);
   }
   return ret;
 }
@@ -520,22 +536,23 @@ int HERMES_DECL(MPI_Waitall)(int count, MPI_Request *req, MPI_Status *status) {
 int HERMES_DECL(MPI_File_open)(MPI_Comm comm, const char *filename, int amode,
                                MPI_Info info, MPI_File *fh) {
   int status;
+  auto real_api = Singleton<API>::GetInstance();
   if (hermes::adapter::IsTracked(filename)) {
     LOG(INFO) << "Intercept MPI_File_open for filename: " << filename
               << " and mode: " << amode << " is tracked." << std::endl;
     status = open_internal(comm, filename, amode, info, fh);
   } else {
-    MAP_OR_FAIL(MPI_File_open);
-    status = real_MPI_File_open_(comm, filename, amode, info, fh);
+    status = real_api->MPI_File_open(comm, filename, amode, info, fh);
   }
   return (status);
 }
 
 int HERMES_DECL(MPI_File_close)(MPI_File *fh) {
   int ret;
+  auto real_api = Singleton<API>::GetInstance();
   if (IsTracked(fh)) {
     LOG(INFO) << "Intercept MPI_File_close." << std::endl;
-    auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+    auto mdm = Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(fh);
     if (existing.second) {
       MPI_Barrier(existing.first.comm);
@@ -632,12 +649,10 @@ int HERMES_DECL(MPI_File_close)(MPI_File *fh) {
       MPI_Barrier(existing.first.comm);
       ret = MPI_SUCCESS;
     } else {
-      MAP_OR_FAIL(MPI_File_close);
-      ret = real_MPI_File_close_(fh);
+      ret = real_api->MPI_File_close(fh);
     }
   } else {
-    MAP_OR_FAIL(MPI_File_close);
-    ret = real_MPI_File_close_(fh);
+    ret = real_api->MPI_File_close(fh);
   }
   return (ret);
 }
@@ -645,10 +660,11 @@ int HERMES_DECL(MPI_File_close)(MPI_File *fh) {
 int HERMES_DECL(MPI_File_seek_shared)(MPI_File fh, MPI_Offset offset,
                                       int whence) {
   int ret;
+  auto real_api = Singleton<API>::GetInstance();
   if (IsTracked(&fh)) {
     LOG(INFO) << "Intercept MPI_File_seek_shared offset:" << offset
               << " whence:" << whence << "." << std::endl;
-    auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+    auto mdm = Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(&fh);
     MPI_Offset sum_offset;
     int sum_whence;
@@ -670,16 +686,16 @@ int HERMES_DECL(MPI_File_seek_shared)(MPI_File fh, MPI_Offset offset,
     }
     ret = MPI_File_seek(fh, offset, whence);
   } else {
-    MAP_OR_FAIL(MPI_File_seek_shared);
-    ret = real_MPI_File_seek_shared_(fh, offset, whence);
+    ret = real_api->MPI_File_seek_shared(fh, offset, whence);
   }
   return (ret);
 }
 
 int HERMES_DECL(MPI_File_seek)(MPI_File fh, MPI_Offset offset, int whence) {
   int ret = -1;
+  auto real_api = Singleton<API>::GetInstance();
   if (IsTracked(&fh)) {
-    auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+    auto mdm = Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(&fh);
     if (existing.second) {
       LOG(INFO) << "Intercept fseek offset:" << offset << " whence:" << whence
@@ -711,25 +727,23 @@ int HERMES_DECL(MPI_File_seek)(MPI_File fh, MPI_Offset offset, int whence) {
         ret = -1;
       }
     } else {
-      MAP_OR_FAIL(MPI_File_seek);
-      ret = real_MPI_File_seek_(fh, offset, whence);
+      ret = real_api->MPI_File_seek(fh, offset, whence);
     }
   } else {
-    MAP_OR_FAIL(MPI_File_seek);
-    ret = real_MPI_File_seek_(fh, offset, whence);
+    ret = real_api->MPI_File_seek(fh, offset, whence);
   }
   return (ret);
 }
 int HERMES_DECL(MPI_File_get_position)(MPI_File fh, MPI_Offset *offset) {
   int ret = -1;
+  auto real_api = Singleton<API>::GetInstance();
   if (IsTracked(&fh)) {
-    auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+    auto mdm = Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(&fh);
     *offset = existing.first.ptr;
     ret = MPI_SUCCESS;
   } else {
-    MAP_OR_FAIL(MPI_File_get_position);
-    ret = real_MPI_File_get_position_(fh, offset);
+    ret = real_api->MPI_File_get_position(fh, offset);
   }
   return ret;
 }
@@ -739,8 +753,9 @@ int HERMES_DECL(MPI_File_get_position)(MPI_File fh, MPI_Offset *offset) {
 int HERMES_DECL(MPI_File_read_all)(MPI_File fh, void *buf, int count,
                                    MPI_Datatype datatype, MPI_Status *status) {
   int ret;
+  auto real_api = Singleton<API>::GetInstance();
   if (IsTracked(&fh)) {
-    auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+    auto mdm = Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(&fh);
     if (existing.second) {
       MPI_Barrier(existing.first.comm);
@@ -750,12 +765,10 @@ int HERMES_DECL(MPI_File_read_all)(MPI_File fh, void *buf, int count,
       ret = read_ret.first;
       MPI_Barrier(existing.first.comm);
     } else {
-      MAP_OR_FAIL(MPI_File_read_all);
-      ret = real_MPI_File_read_all_(fh, buf, count, datatype, status);
+      ret = real_api->MPI_File_read_all(fh, buf, count, datatype, status);
     }
   } else {
-    MAP_OR_FAIL(MPI_File_read_all);
-    ret = real_MPI_File_read_all_(fh, buf, count, datatype, status);
+    ret = real_api->MPI_File_read_all(fh, buf, count, datatype, status);
   }
   return (ret);
 }
@@ -763,14 +776,14 @@ int HERMES_DECL(MPI_File_read_at_all)(MPI_File fh, MPI_Offset offset, void *buf,
                                       int count, MPI_Datatype datatype,
                                       MPI_Status *status) {
   int ret;
+  auto real_api = Singleton<API>::GetInstance();
   if (IsTracked(&fh)) {
     ret = MPI_File_seek(fh, offset, MPI_SEEK_SET);
     if (ret == MPI_SUCCESS) {
       ret = MPI_File_read_all(fh, buf, count, datatype, status);
     }
   } else {
-    MAP_OR_FAIL(MPI_File_read_at_all);
-    ret = real_MPI_File_read_at_all_(fh, offset, buf, count, datatype, status);
+    ret = real_api->MPI_File_read_at_all(fh, offset, buf, count, datatype, status);
   }
   return ret;
 }
@@ -778,22 +791,23 @@ int HERMES_DECL(MPI_File_read_at)(MPI_File fh, MPI_Offset offset, void *buf,
                                   int count, MPI_Datatype datatype,
                                   MPI_Status *status) {
   int ret;
+  auto real_api = Singleton<API>::GetInstance();
   if (IsTracked(&fh)) {
     ret = MPI_File_seek(fh, offset, MPI_SEEK_SET);
     if (ret == MPI_SUCCESS) {
       ret = MPI_File_read(fh, buf, count, datatype, status);
     }
   } else {
-    MAP_OR_FAIL(MPI_File_read_at);
-    ret = real_MPI_File_read_at_(fh, offset, buf, count, datatype, status);
+    ret = real_api->MPI_File_read_at(fh, offset, buf, count, datatype, status);
   }
   return ret;
 }
 int HERMES_DECL(MPI_File_read)(MPI_File fh, void *buf, int count,
                                MPI_Datatype datatype, MPI_Status *status) {
   int ret;
+  auto real_api = Singleton<API>::GetInstance();
   if (IsTracked(&fh)) {
-    auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+    auto mdm = Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(&fh);
     if (existing.second) {
       LOG(INFO) << "Intercept MPI_File_read." << std::endl;
@@ -801,12 +815,10 @@ int HERMES_DECL(MPI_File_read)(MPI_File fh, void *buf, int count,
           read_internal(existing, buf, count, datatype, &fh, status);
       ret = read_ret.first;
     } else {
-      MAP_OR_FAIL(MPI_File_read);
-      ret = real_MPI_File_read_(fh, buf, count, datatype, status);
+      ret = real_api->MPI_File_read(fh, buf, count, datatype, status);
     }
   } else {
-    MAP_OR_FAIL(MPI_File_read);
-    ret = real_MPI_File_read_(fh, buf, count, datatype, status);
+    ret = real_api->MPI_File_read(fh, buf, count, datatype, status);
   }
   return (ret);
 }
@@ -814,16 +826,16 @@ int HERMES_DECL(MPI_File_read_ordered)(MPI_File fh, void *buf, int count,
                                        MPI_Datatype datatype,
                                        MPI_Status *status) {
   int ret;
+  auto real_api = Singleton<API>::GetInstance();
   if (IsTracked(&fh)) {
-    auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+    auto mdm = Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(&fh);
     int total;
     MPI_Scan(&count, &total, 1, MPI_INT, MPI_SUM, existing.first.comm);
     MPI_Offset my_offset = total - count;
     ret = MPI_File_read_at_all(fh, my_offset, buf, count, datatype, status);
   } else {
-    MAP_OR_FAIL(MPI_File_read_ordered);
-    ret = real_MPI_File_read_ordered_(fh, buf, count, datatype, status);
+    ret = real_api->MPI_File_read_ordered(fh, buf, count, datatype, status);
   }
   return (ret);
 }
@@ -831,19 +843,20 @@ int HERMES_DECL(MPI_File_read_shared)(MPI_File fh, void *buf, int count,
                                       MPI_Datatype datatype,
                                       MPI_Status *status) {
   int ret;
+  auto real_api = Singleton<API>::GetInstance();
   if (IsTracked(&fh)) {
     ret = MPI_File_read(fh, buf, count, datatype, status);
   } else {
-    MAP_OR_FAIL(MPI_File_read_shared);
-    ret = real_MPI_File_read_shared_(fh, buf, count, datatype, status);
+    ret = real_api->MPI_File_read_shared(fh, buf, count, datatype, status);
   }
   return ret;
 }
 int HERMES_DECL(MPI_File_write_all)(MPI_File fh, const void *buf, int count,
                                     MPI_Datatype datatype, MPI_Status *status) {
   int ret;
+  auto real_api = Singleton<API>::GetInstance();
   if (IsTracked(&fh)) {
-    auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+    auto mdm = Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(&fh);
     if (existing.second) {
       MPI_Barrier(existing.first.comm);
@@ -853,12 +866,10 @@ int HERMES_DECL(MPI_File_write_all)(MPI_File fh, const void *buf, int count,
       ret = write_ret.first;
       MPI_Barrier(existing.first.comm);
     } else {
-      MAP_OR_FAIL(MPI_File_write_all);
-      ret = real_MPI_File_write_all_(fh, buf, count, datatype, status);
+      ret = real_api->MPI_File_write_all(fh, buf, count, datatype, status);
     }
   } else {
-    MAP_OR_FAIL(MPI_File_write_all);
-    ret = real_MPI_File_write_all_(fh, buf, count, datatype, status);
+    ret = real_api->MPI_File_write_all(fh, buf, count, datatype, status);
   }
   return (ret);
 }
@@ -867,14 +878,14 @@ int HERMES_DECL(MPI_File_write_at_all)(MPI_File fh, MPI_Offset offset,
                                        MPI_Datatype datatype,
                                        MPI_Status *status) {
   int ret;
+  auto real_api = Singleton<API>::GetInstance();
   if (IsTracked(&fh)) {
     ret = MPI_File_seek(fh, offset, MPI_SEEK_SET);
     if (ret == MPI_SUCCESS) {
       ret = MPI_File_write_all(fh, buf, count, datatype, status);
     }
   } else {
-    MAP_OR_FAIL(MPI_File_write_at_all);
-    ret = real_MPI_File_write_at_all_(fh, offset, buf, count, datatype, status);
+    ret = real_api->MPI_File_write_at_all(fh, offset, buf, count, datatype, status);
   }
   return ret;
 }
@@ -882,22 +893,23 @@ int HERMES_DECL(MPI_File_write_at)(MPI_File fh, MPI_Offset offset,
                                    const void *buf, int count,
                                    MPI_Datatype datatype, MPI_Status *status) {
   int ret;
+  auto real_api = Singleton<API>::GetInstance();
   if (IsTracked(&fh)) {
     ret = MPI_File_seek(fh, offset, MPI_SEEK_SET);
     if (ret == MPI_SUCCESS) {
       ret = MPI_File_write(fh, buf, count, datatype, status);
     }
   } else {
-    MAP_OR_FAIL(MPI_File_write_at);
-    ret = real_MPI_File_write_at_(fh, offset, buf, count, datatype, status);
+    ret = real_api->MPI_File_write_at(fh, offset, buf, count, datatype, status);
   }
   return ret;
 }
 int HERMES_DECL(MPI_File_write)(MPI_File fh, const void *buf, int count,
                                 MPI_Datatype datatype, MPI_Status *status) {
   int ret;
+  auto real_api = Singleton<API>::GetInstance();
   if (IsTracked(&fh)) {
-    auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+    auto mdm = Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(&fh);
     if (existing.second) {
       LOG(INFO) << "Intercept MPI_File_write." << std::endl;
@@ -905,12 +917,10 @@ int HERMES_DECL(MPI_File_write)(MPI_File fh, const void *buf, int count,
           write_internal(existing, buf, count, datatype, &fh, status, false);
       ret = write_ret.first;
     } else {
-      MAP_OR_FAIL(MPI_File_write);
-      ret = real_MPI_File_write_(fh, buf, count, datatype, status);
+      ret = real_api->MPI_File_write(fh, buf, count, datatype, status);
     }
   } else {
-    MAP_OR_FAIL(MPI_File_write);
-    ret = real_MPI_File_write_(fh, buf, count, datatype, status);
+    ret = real_api->MPI_File_write(fh, buf, count, datatype, status);
   }
   return (ret);
 }
@@ -918,16 +928,16 @@ int HERMES_DECL(MPI_File_write_ordered)(MPI_File fh, const void *buf, int count,
                                         MPI_Datatype datatype,
                                         MPI_Status *status) {
   int ret;
+  auto real_api = Singleton<API>::GetInstance();
   if (IsTracked(&fh)) {
-    auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+    auto mdm = Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(&fh);
     int total;
     MPI_Scan(&count, &total, 1, MPI_INT, MPI_SUM, existing.first.comm);
     MPI_Offset my_offset = total - count;
     ret = MPI_File_write_at_all(fh, my_offset, buf, count, datatype, status);
   } else {
-    MAP_OR_FAIL(MPI_File_write_ordered);
-    ret = real_MPI_File_write_ordered_(fh, buf, count, datatype, status);
+    ret = real_api->MPI_File_write_ordered(fh, buf, count, datatype, status);
   }
   return (ret);
 }
@@ -935,11 +945,11 @@ int HERMES_DECL(MPI_File_write_shared)(MPI_File fh, const void *buf, int count,
                                        MPI_Datatype datatype,
                                        MPI_Status *status) {
   int ret;
+  auto real_api = Singleton<API>::GetInstance();
   if (IsTracked(&fh)) {
     ret = MPI_File_write_ordered(fh, buf, count, datatype, status);
   } else {
-    MAP_OR_FAIL(MPI_File_write_shared);
-    ret = real_MPI_File_write_shared_(fh, buf, count, datatype, status);
+    ret = real_api->MPI_File_write_shared(fh, buf, count, datatype, status);
   }
   return ret;
 }
@@ -950,38 +960,38 @@ int HERMES_DECL(MPI_File_iread_at)(MPI_File fh, MPI_Offset offset, void *buf,
                                    int count, MPI_Datatype datatype,
                                    MPI_Request *request) {
   int ret;
+  auto real_api = Singleton<API>::GetInstance();
   if (IsTracked(&fh)) {
     auto pool =
-        hermes::adapter::Singleton<ThreadPool>::GetInstance(kNumThreads);
+        Singleton<ThreadPool>::GetInstance(kNumThreads);
     HermesRequest *req = new HermesRequest();
     auto func = std::bind(MPI_File_read_at, fh, offset, buf, count, datatype,
                           &req->status);
     req->return_future = pool->run(func);
-    auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+    auto mdm = Singleton<MetadataManager>::GetInstance();
     mdm->request_map.emplace(request, req);
     ret = MPI_SUCCESS;
   } else {
-    MAP_OR_FAIL(MPI_File_iread_at);
-    ret = real_MPI_File_iread_at_(fh, offset, buf, count, datatype, request);
+    ret = real_api->MPI_File_iread_at(fh, offset, buf, count, datatype, request);
   }
   return ret;
 }
 int HERMES_DECL(MPI_File_iread)(MPI_File fh, void *buf, int count,
                                 MPI_Datatype datatype, MPI_Request *request) {
   int ret;
+  auto real_api = Singleton<API>::GetInstance();
   if (IsTracked(&fh)) {
     auto pool =
-        hermes::adapter::Singleton<ThreadPool>::GetInstance(kNumThreads);
+        Singleton<ThreadPool>::GetInstance(kNumThreads);
     HermesRequest *req = new HermesRequest();
     auto func =
         std::bind(MPI_File_read, fh, buf, count, datatype, &req->status);
     req->return_future = pool->run(func);
-    auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+    auto mdm = Singleton<MetadataManager>::GetInstance();
     mdm->request_map.emplace(request, req);
     ret = MPI_SUCCESS;
   } else {
-    MAP_OR_FAIL(MPI_File_iread);
-    ret = real_MPI_File_iread_(fh, buf, count, datatype, request);
+    ret = real_api->MPI_File_iread(fh, buf, count, datatype, request);
   }
   return ret;
 }
@@ -989,19 +999,19 @@ int HERMES_DECL(MPI_File_iread_shared)(MPI_File fh, void *buf, int count,
                                        MPI_Datatype datatype,
                                        MPI_Request *request) {
   int ret;
+  auto real_api = Singleton<API>::GetInstance();
   if (IsTracked(&fh)) {
     auto pool =
-        hermes::adapter::Singleton<ThreadPool>::GetInstance(kNumThreads);
+        Singleton<ThreadPool>::GetInstance(kNumThreads);
     HermesRequest *req = new HermesRequest();
     auto func =
         std::bind(MPI_File_read_shared, fh, buf, count, datatype, &req->status);
     req->return_future = pool->run(func);
-    auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+    auto mdm = Singleton<MetadataManager>::GetInstance();
     mdm->request_map.emplace(request, req);
     ret = MPI_SUCCESS;
   } else {
-    MAP_OR_FAIL(MPI_File_iread_shared);
-    ret = real_MPI_File_iread_shared_(fh, buf, count, datatype, request);
+    ret = real_api->MPI_File_iread_shared(fh, buf, count, datatype, request);
   }
   return ret;
 }
@@ -1010,19 +1020,19 @@ int HERMES_DECL(MPI_File_iwrite_at)(MPI_File fh, MPI_Offset offset,
                                     MPI_Datatype datatype,
                                     MPI_Request *request) {
   int ret;
+  auto real_api = Singleton<API>::GetInstance();
   if (IsTracked(&fh)) {
     auto pool =
-        hermes::adapter::Singleton<ThreadPool>::GetInstance(kNumThreads);
+        Singleton<ThreadPool>::GetInstance(kNumThreads);
     HermesRequest *req = new HermesRequest();
     auto func = std::bind(MPI_File_write_at, fh, offset, buf, count, datatype,
                           &req->status);
     req->return_future = pool->run(func);
-    auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+    auto mdm = Singleton<MetadataManager>::GetInstance();
     mdm->request_map.emplace(request, req);
     ret = MPI_SUCCESS;
   } else {
-    MAP_OR_FAIL(MPI_File_iwrite_at);
-    ret = real_MPI_File_iwrite_at_(fh, offset, buf, count, datatype, request);
+    ret = real_api->MPI_File_iwrite_at(fh, offset, buf, count, datatype, request);
   }
   return ret;
 }
@@ -1030,19 +1040,19 @@ int HERMES_DECL(MPI_File_iwrite_at)(MPI_File fh, MPI_Offset offset,
 int HERMES_DECL(MPI_File_iwrite)(MPI_File fh, const void *buf, int count,
                                  MPI_Datatype datatype, MPI_Request *request) {
   int ret;
+  auto real_api = Singleton<API>::GetInstance();
   if (IsTracked(&fh)) {
     auto pool =
-        hermes::adapter::Singleton<ThreadPool>::GetInstance(kNumThreads);
+        Singleton<ThreadPool>::GetInstance(kNumThreads);
     HermesRequest *req = new HermesRequest();
     auto func =
         std::bind(MPI_File_write, fh, buf, count, datatype, &req->status);
     req->return_future = pool->run(func);
-    auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+    auto mdm = Singleton<MetadataManager>::GetInstance();
     mdm->request_map.emplace(request, req);
     ret = MPI_SUCCESS;
   } else {
-    MAP_OR_FAIL(MPI_File_iwrite);
-    ret = real_MPI_File_iwrite_(fh, buf, count, datatype, request);
+    ret = real_api->MPI_File_iwrite(fh, buf, count, datatype, request);
   }
   return ret;
 }
@@ -1050,19 +1060,19 @@ int HERMES_DECL(MPI_File_iwrite_shared)(MPI_File fh, const void *buf, int count,
                                         MPI_Datatype datatype,
                                         MPI_Request *request) {
   int ret;
+  auto real_api = Singleton<API>::GetInstance();
   if (IsTracked(&fh)) {
     auto pool =
-        hermes::adapter::Singleton<ThreadPool>::GetInstance(kNumThreads);
+        Singleton<ThreadPool>::GetInstance(kNumThreads);
     HermesRequest *req = new HermesRequest();
     auto func = std::bind(MPI_File_write_shared, fh, buf, count, datatype,
                           &req->status);
     req->return_future = pool->run(func);
-    auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+    auto mdm = Singleton<MetadataManager>::GetInstance();
     mdm->request_map.emplace(request, req);
     ret = MPI_SUCCESS;
   } else {
-    MAP_OR_FAIL(MPI_File_iwrite_shared);
-    ret = real_MPI_File_iwrite_shared_(fh, buf, count, datatype, request);
+    ret = real_api->MPI_File_iwrite_shared(fh, buf, count, datatype, request);
   }
   return ret;
 }
@@ -1072,8 +1082,9 @@ int HERMES_DECL(MPI_File_iwrite_shared)(MPI_File fh, const void *buf, int count,
  */
 int HERMES_DECL(MPI_File_sync)(MPI_File fh) {
   int ret = -1;
+  auto real_api = Singleton<API>::GetInstance();
   if (IsTracked(&fh)) {
-    auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+    auto mdm = Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(&fh);
     if (existing.second) {
       LOG(INFO) << "Intercept MPI_File_sync." << std::endl;
@@ -1126,8 +1137,7 @@ int HERMES_DECL(MPI_File_sync)(MPI_File fh) {
       ret = 0;
     }
   } else {
-    MAP_OR_FAIL(MPI_File_sync);
-    ret = real_MPI_File_sync_(fh);
+    ret = real_api->MPI_File_sync(fh);
   }
   return (ret);
 }

@@ -17,7 +17,6 @@
 #include <iostream>
 #include <glog/logging.h>
 #include "interceptor.h"
-#include "filesystem/filesystem.h"
 #include <mpi.h>
 #include <mpio.h>
 

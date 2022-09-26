@@ -21,7 +21,7 @@
 #include <hermes_types.h>
 #include <traits.h>
 #include "mapper/mapper_factory.h"
-
+#include <mpi.h>
 
 namespace hapi = hermes::api;
 
@@ -52,6 +52,13 @@ struct AdapterStat {
   timespec st_ctim;     /* time of last status change */
   std::string mode_str; /* mode used for fopen() */
 
+  int a_mode;                            /* access mode */
+  MPI_Info info;                         /* Info object (handle) */
+  MPI_Comm comm;                         /* Communicator for the file.*/
+  MPI_Offset size;                       /* total size, in bytes */
+  MPI_Offset ptr;                        /* Current ptr of FILE */
+  bool atomicity; /* Consistency semantics for data-access */
+
   AdapterStat()
       : st_bkid(),
         st_blobs(CompareBlobs),
@@ -64,7 +71,8 @@ struct AdapterStat {
         st_blksize(4096),
         st_atim(),
         st_mtim(),
-        st_ctim() {} /* default constructor */
+        st_ctim(),
+        atomicity(false) {} /* default constructor */
 
   static bool CompareBlobs(const std::string &a, const std::string &b) {
     return std::stol(a) < std::stol(b);

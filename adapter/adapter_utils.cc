@@ -12,6 +12,7 @@
 
 #include <sys/file.h>
 #include "utils.cc"
+#include <experimental/filesystem>
 
 using hermes::u8;
 namespace stdfs = std::experimental::filesystem;
