@@ -32,8 +32,8 @@ apis = [
 ]
 
 includes = [
-    "#include <mpi.h>",
-    "#include <mpio.h>"
+    "<mpi.h>",
+    "<mpio.h>"
 ]
 
 ApiClass("mpiio", apis, includes)
