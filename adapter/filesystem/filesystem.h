@@ -132,12 +132,14 @@ struct BlobPlacementIter {
   size_t blob_start_;
   hapi::Context ctx_;
   hapi::Blob blob_;
+  PlacementPolicy dpe_;
 
   explicit BlobPlacementIter(File &f, AdapterStat &stat,
                              const std::string &filename,
                              const BlobPlacement &p,
-                             std::shared_ptr<hapi::Bucket> &bkt) :
-        f_(f), stat_(stat), filename_(filename), p_(p), bkt_(bkt) {}
+                             std::shared_ptr<hapi::Bucket> &bkt,
+                             PlacementPolicy dpe) :
+        f_(f), stat_(stat), filename_(filename), p_(p), bkt_(bkt), dpe_(dpe) {}
 };
 
 class Filesystem {

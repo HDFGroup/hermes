@@ -153,7 +153,7 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
 size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
                          size_t off, size_t total_size, bool seek,
                          PlacementPolicy dpe) {
-  (void) f; (void) dpe;
+  (void) f;
   std::shared_ptr<hapi::Bucket> &bkt = stat.st_bkid;
   std::string filename = bkt->GetName();
   LOG(INFO) << "Write called for filename: " << filename << " on offset: "
@@ -168,7 +168,7 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
   LOG(INFO) << "Mapping for write has " << mapping.size() << " mappings.\n";
 
   for (const auto &p : mapping) {
-    BlobPlacementIter write_iter(f, stat, filename, p, bkt);
+    BlobPlacementIter write_iter(f, stat, filename, p, bkt, dpe);
     bool blob_exists = bkt->ContainsBlob(p.blob_name_);
     long index = std::stol(p.blob_name_) - 1;
     write_iter.blob_start_ = index * kPageSize;
@@ -309,7 +309,7 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
 size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
                         size_t off, size_t total_size, bool seek,
                         PlacementPolicy dpe) {
-  (void) f; (void) dpe;
+  (void) f;
   std::shared_ptr<hapi::Bucket> &bkt = stat.st_bkid;
   LOG(INFO) << "Read called for filename: " << bkt->GetName()
             << " (fd: " << f.fd_ << ")"
@@ -334,8 +334,10 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
   LOG(INFO) << "Mapping for read has " << mapping.size() << " mapping."
             << std::endl;
   for (const auto &p : mapping) {
-    BlobPlacementIter read_iter(f, stat, filename, p, bkt);
+    BlobPlacementIter read_iter(f, stat, filename, p, bkt, dpe);
     auto blob_exists = bkt->ContainsBlob(p.blob_name_);
+    long index = std::stol(p.blob_name_) - 1;
+    read_iter.blob_start_ = index * kPageSize;
     read_iter.mem_ptr_ = (u8 *)ptr + data_offset;
     size_t read_size;
     if (blob_exists) {
@@ -383,28 +385,37 @@ size_t Filesystem::_ReadExistingPartial(BlobPlacementIter &ri) {
       stdfs::file_size(filename) < p.bucket_off_ + p.blob_off_ + p.blob_size_) {
     return 0;
   }*/
-  hapi::Blob temp(0);
+  size_t min_blob_size = ri.p_.blob_off_ + ri.p_.blob_size_;
   size_t existing_size = ri.blob_.size();
-  size_t partial_size = 0;
-
-  // [blob_off, existing_size)
-  if (ri.p_.blob_off_ < existing_size) {
-    partial_size = existing_size - ri.p_.blob_off_;
-    memcpy(ri.mem_ptr_, ri.blob_.data() + ri.p_.blob_off_, partial_size);
-    ri.mem_ptr_ += partial_size;
-  }
+  size_t new_blob_size = std::max(min_blob_size, existing_size);
+  size_t bytes_to_read = min_blob_size - existing_size;
+  ri.blob_.resize(new_blob_size);
 
   LOG(INFO) << "Blob does not have data and need to read from original "
                "filename: "
-            << ri.filename_ << " offset:" << ri.p_.bucket_off_ + partial_size
-            << " size:" << ri.p_.blob_size_ - partial_size << "."
+            << ri.filename_ << " offset:" << ri.blob_start_ + existing_size
+            << " size:" << bytes_to_read << "."
             << std::endl;
 
   size_t ret = _RealRead(ri.filename_,
-                         ri.p_.bucket_off_ + partial_size,
-                         ri.p_.blob_size_ - partial_size,
-                     ri.mem_ptr_);
-  return ret + partial_size;
+                         ri.blob_start_ + existing_size,
+                         bytes_to_read,
+                         ri.blob_.data() + existing_size);
+
+  if (ri.dpe_ != PlacementPolicy::kNone) {
+    hapi::Status status =
+        ri.bkt_->Put(ri.p_.blob_name_, ri.blob_.data(), new_blob_size, ri.ctx_);
+    if (status.Failed()) {
+      LOG(ERROR) << "Was unable to place read blob in the hierarchy" << std::endl;
+    }
+  }
+
+  if (ret != bytes_to_read) {
+    LOG(FATAL) << "Was not able to read all data from the file" << std::endl;
+  }
+
+  memcpy(ri.mem_ptr_, ri.blob_.data() + ri.p_.blob_off_, ri.p_.blob_size_);
+  return ri.p_.blob_size_;
 }
 
 size_t Filesystem::_ReadNew(BlobPlacementIter &ri) {
@@ -417,12 +428,26 @@ size_t Filesystem::_ReadNew(BlobPlacementIter &ri) {
       stdfs::file_size(filename) < p.bucket_off_ + p.blob_size_) {
     return 0;
   }*/
-  size_t ret = _RealRead(ri.filename_, ri.p_.bucket_off_,
-                         ri.p_.blob_size_, ri.mem_ptr_);
-  if (ret != ri.p_.blob_size_) {
+
+  auto new_blob_size = ri.p_.blob_off_ + ri.p_.blob_size_;
+  ri.blob_.resize(new_blob_size);
+  size_t ret = _RealRead(ri.filename_, ri.blob_start_,
+                         new_blob_size, ri.blob_.data());
+  if (ret != new_blob_size) {
     LOG(FATAL) << "Was not able to read full content" << std::endl;
   }
-  return ret;
+
+  if (ri.dpe_ != PlacementPolicy::kNone) {
+    hapi::Status status =
+        ri.bkt_->Put(ri.p_.blob_name_, ri.blob_.data(), new_blob_size, ri.ctx_);
+    if (status.Failed()) {
+      LOG(ERROR) << "Was unable to place read blob in the hierarchy" << std::endl;
+    }
+    return ret;
+  }
+
+  memcpy(ri.mem_ptr_, ri.blob_.data() + ri.p_.blob_off_, ri.p_.blob_size_);
+  return ri.p_.blob_size_;
 }
 
 int Filesystem::Sync(File &f, AdapterStat &stat) {
