@@ -158,7 +158,10 @@ void Filesystem::_CoordinatedPut(BlobPlacementIter &wi) {
   hapi::Context ctx;
 
   if (!wi.blob_exists_) {
-    wi.bkt_->Put(wi.blob_name_, nullptr, 0, ctx);
+    auto status = wi.bkt_->Put(wi.blob_name_, nullptr, 0, ctx);
+    if (status.Failed()) {
+      LOG(ERROR) << "Not enough space for coordinated put" << std::endl;
+    }
   }
 
   auto mdm = Singleton<MetadataManager>::GetInstance();
@@ -168,6 +171,7 @@ void Filesystem::_CoordinatedPut(BlobPlacementIter &wi) {
   BucketID bucket_id = GetBucketId(context, rpc, wi.filename_.c_str());
   BlobID blob_id = GetBlobId(context, rpc, wi.blob_name_, bucket_id, true);
 
+  wi.blob_exists_ = wi.bkt_->ContainsBlob(wi.blob_name_);
   LockBlob(context, rpc, blob_id);
   _UncoordinatedPut(wi);
   UnlockBlob(context, rpc, blob_id);
