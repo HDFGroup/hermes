@@ -36,11 +36,12 @@ class MetadataManager {
    * references of how many times hermes was tried to initialize.
    */
   std::atomic<size_t> ref;
+
+ public:
   bool is_mpi;
   int rank;
   int comm_size;
 
- public:
   /**
    * Constructor
    */

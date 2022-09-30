@@ -121,25 +121,48 @@ struct File {
   }
 };
 
+struct IoOptions {
+  PlacementPolicy dpe_;
+  bool coordinate_;
+  MPI_Comm comm_;
+  bool seek_;
+  IoOptions() :
+                dpe_(PlacementPolicy::kNone),
+                coordinate_(false),
+                comm_(MPI_COMM_WORLD),
+                seek_(true) {}
+
+  static IoOptions WithDpe(PlacementPolicy dpe) {
+    IoOptions opts;
+    opts.dpe_ = dpe;
+    return std::move(opts);
+  }
+};
+
 struct BlobPlacementIter {
   File &f_;
   AdapterStat &stat_;
   const std::string &filename_;
   const BlobPlacement &p_;
   std::shared_ptr<hapi::Bucket> &bkt_;
+  IoOptions &opts_;
 
+  std::string blob_name_;
   u8 *mem_ptr_;
   size_t blob_start_;
   hapi::Context ctx_;
   hapi::Blob blob_;
-  PlacementPolicy dpe_;
+  int rank_;
+  int nprocs_;
+  bool blob_exists_;
 
   explicit BlobPlacementIter(File &f, AdapterStat &stat,
                              const std::string &filename,
                              const BlobPlacement &p,
                              std::shared_ptr<hapi::Bucket> &bkt,
-                             PlacementPolicy dpe) :
-        f_(f), stat_(stat), filename_(filename), p_(p), bkt_(bkt), dpe_(dpe) {}
+                             IoOptions &opts) :
+        f_(f), stat_(stat), filename_(filename),
+        p_(p), bkt_(bkt), opts_(opts) {}
 };
 
 class Filesystem {
@@ -147,17 +170,11 @@ class Filesystem {
   File Open(AdapterStat &stat, const std::string &path);
   void Open(AdapterStat &stat, File &f, const std::string &path);
   size_t Write(File &f, AdapterStat &stat, const void *ptr,
-               size_t total_size,
-               PlacementPolicy dpe = PlacementPolicy::kNone);
+               size_t off, size_t total_size,
+               IoOptions opts = IoOptions());
   size_t Read(File &f, AdapterStat &stat, void *ptr,
-              size_t total_size,
-              PlacementPolicy dpe = PlacementPolicy::kNone);
-  size_t Write(File &f, AdapterStat &stat, const void *ptr,
-               size_t off, size_t total_size, bool seek = false,
-               PlacementPolicy dpe = PlacementPolicy::kNone);
-  size_t Read(File &f, AdapterStat &stat, void *ptr,
-              size_t off, size_t total_size, bool seek = false,
-              PlacementPolicy dpe = PlacementPolicy::kNone);
+              size_t off, size_t total_size,
+              IoOptions opts = IoOptions());
   off_t Seek(File &f, AdapterStat &stat, int whence, off_t offset);
   off_t Tell(File &f, AdapterStat &stat);
   int Sync(File &f, AdapterStat &stat);
@@ -166,6 +183,8 @@ class Filesystem {
   virtual void _InitFile(File &f) = 0;
 
  private:
+  void _CoordinatedPut(BlobPlacementIter &wi);
+  void _UncoordinatedPut(BlobPlacementIter &wi);
   void _WriteToNewAligned(BlobPlacementIter &write_iter);
   void _WriteToNewUnaligned(BlobPlacementIter &write_iter);
   void _WriteToExistingAligned(BlobPlacementIter &write_iter);
@@ -188,18 +207,18 @@ class Filesystem {
   virtual int _RealClose(File &f) = 0;
 
  public:
+  size_t Write(File &f, AdapterStat &stat, const void *ptr,
+               size_t total_size, IoOptions opts);
+  size_t Read(File &f, AdapterStat &stat, void *ptr,
+              size_t total_size, IoOptions opts);
   size_t Write(File &f, bool &stat_exists, const void *ptr,
-               size_t total_size,
-               PlacementPolicy dpe = PlacementPolicy::kNone);
+               size_t total_size, IoOptions opts = IoOptions());
   size_t Read(File &f, bool &stat_exists, void *ptr,
-              size_t total_size,
-              PlacementPolicy dpe = PlacementPolicy::kNone);
+              size_t total_size, IoOptions opts = IoOptions());
   size_t Write(File &f, bool &stat_exists, const void *ptr,
-               size_t off, size_t total_size, bool seek = false,
-               PlacementPolicy dpe = PlacementPolicy::kNone);
+               size_t off, size_t total_size, IoOptions opts = IoOptions());
   size_t Read(File &f, bool &stat_exists, void *ptr,
-              size_t off, size_t total_size, bool seek = false,
-              PlacementPolicy dpe = PlacementPolicy::kNone);
+              size_t off, size_t total_size, IoOptions opts = IoOptions());
   off_t Seek(File &f, bool &stat_exists, int whence, off_t offset);
   off_t Tell(File &f, bool &stat_exists);
   int Sync(File &f, bool &stat_exists);

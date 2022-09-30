@@ -10,37 +10,37 @@
 * have access to the file, you may request a copy from help@hdfgroup.org.   *
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+#include "mpi.h"
+#include <vector>
 #include <string>
-#include "posix/fs_api.h"
-#include "hermes_types.h"
-#include <hermes.h>
+#include <experimental/filesystem>
+#include <cstdio>
 
-using hermes::adapter::posix::PosixFS;
-using hermes::api::PlacementPolicyConv;
-using hermes::api::PlacementPolicy;
-using hermes::adapter::fs::IoOptions;
-
-/* Stage in a single file */
-void StageIn(std::string path, int off, int size, PlacementPolicy dpe) {
-  auto fs_api = PosixFS();
-  void *buf = malloc(size);
-  AdapterStat stat;
-  bool stat_exists;
-  File f = fs_api.Open(stat, path);
-  fs_api.Read(f, stat, buf, off, size, IoOptions::WithDpe(dpe));
-  fs_api.Close(f, stat_exists, false);
-  free(buf);
-}
+namespace stdfs = std::experimental::filesystem;
 
 int main(int argc, char **argv) {
-  auto mdm = Singleton<hermes::adapter::fs::MetadataManager>::GetInstance();
+  MPI_File f;
+  MPI_Status status;
+  int count = 1024 * 1024 / 8;
+  int rank, nprocs;
   MPI_Init(&argc, &argv);
-  mdm->InitializeHermes(true);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
   std::string path = argv[1];
-  int off = atoi(argv[2]);
-  int size = atoi(argv[3]);
-  PlacementPolicy dpe = PlacementPolicyConv::to_enum(argv[4]);
-  StageIn(path, off, size, dpe);
-  mdm->FinalizeHermes();
+  std::vector<char> buf(count, rank);
+  if (rank == 0) {
+    FILE *fp = fopen(path.c_str(), "w");
+    std::vector<char> init(count*nprocs, -1);
+    fwrite(init.data(), 1, count*nprocs, fp);
+    fclose(fp);
+  }
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  MPI_File_open(MPI_COMM_WORLD, path.c_str(), MPI_MODE_WRONLY | MPI_MODE_CREATE,
+                MPI_INFO_NULL, &f);
+  MPI_File_write_at(f, rank*count, buf.data(), count,
+                 MPI_CHAR, &status);
+  MPI_File_sync(f);
+  MPI_File_close(&f);
   MPI_Finalize();
 }

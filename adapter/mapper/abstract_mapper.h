@@ -17,6 +17,8 @@
 #ifndef HERMES_ABSTRACT_ADAPTER_H
 #define HERMES_ABSTRACT_ADAPTER_H
 
+#include "interceptor.h"
+
 namespace hermes::adapter {
 
 /**
@@ -28,10 +30,40 @@ enum MapperType {
 };
 
 struct BlobPlacement {
-  size_t bucket_off_;       // Offset from file start (for FS)
-  size_t blob_off_;         // Offset from blob start
-  size_t blob_size_;        // Size after offset to read
-  std::string blob_name_;   // Name of the blob
+  int rank_;                 // The rank of the process producing the blob
+  size_t page_;              // The index in the array placements
+  size_t bucket_off_;        // Offset from file start (for FS)
+  size_t blob_off_;          // Offset from blob start
+  size_t blob_size_;         // Size after offset to read
+  int time_;                 // The order of the blob in a list of blobs
+
+  std::string CreateBlobName() const {
+    return std::to_string(page_);
+  }
+
+  void DecodeBlobName(const std::string &blob_name) {
+    std::stringstream(blob_name) >> page_;
+  }
+
+  std::string CreateBlobNameLogEntry(int time) const {
+    std::stringstream ss;
+    ss << std::to_string(page_);
+    ss << "#" << std::to_string(blob_off_);
+    ss << "#" << std::to_string(blob_size_);
+    ss << "#" << std::to_string(rank_);
+    ss << "#" << std::to_string(time);
+    return ss.str();
+  }
+
+  void DecodeBlobNamePerProc(const std::string &blob_name) {
+    auto str_split =
+        hermes::adapter::StringSplit(blob_name.data(), '#');
+    std::stringstream(str_split[0]) >> page_;
+    std::stringstream(str_split[1]) >> blob_off_;
+    std::stringstream(str_split[2]) >> blob_size_;
+    std::stringstream(str_split[3]) >> rank_;
+    std::stringstream(str_split[4]) >> rank_;
+  }
 };
 
 typedef std::vector<BlobPlacement> BlobPlacements;

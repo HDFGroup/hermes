@@ -783,7 +783,8 @@ int HERMES_DECL(MPI_File_read_at_all)(MPI_File fh, MPI_Offset offset, void *buf,
       ret = MPI_File_read_all(fh, buf, count, datatype, status);
     }
   } else {
-    ret = real_api->MPI_File_read_at_all(fh, offset, buf, count, datatype, status);
+    ret = real_api->MPI_File_read_at_all(fh, offset, buf,
+                                         count, datatype, status);
   }
   return ret;
 }
@@ -885,7 +886,8 @@ int HERMES_DECL(MPI_File_write_at_all)(MPI_File fh, MPI_Offset offset,
       ret = MPI_File_write_all(fh, buf, count, datatype, status);
     }
   } else {
-    ret = real_api->MPI_File_write_at_all(fh, offset, buf, count, datatype, status);
+    ret = real_api->MPI_File_write_at_all(fh, offset, buf, count,
+                                          datatype, status);
   }
   return ret;
 }
@@ -894,7 +896,9 @@ int HERMES_DECL(MPI_File_write_at)(MPI_File fh, MPI_Offset offset,
                                    MPI_Datatype datatype, MPI_Status *status) {
   int ret;
   auto real_api = Singleton<API>::GetInstance();
+  LOG(INFO) << "In MPI_File_write_at" << std::endl;
   if (IsTracked(&fh)) {
+    LOG(INFO) << "IsTracked" << std::endl;
     ret = MPI_File_seek(fh, offset, MPI_SEEK_SET);
     if (ret == MPI_SUCCESS) {
       ret = MPI_File_write(fh, buf, count, datatype, status);
@@ -908,13 +912,17 @@ int HERMES_DECL(MPI_File_write)(MPI_File fh, const void *buf, int count,
                                 MPI_Datatype datatype, MPI_Status *status) {
   int ret;
   auto real_api = Singleton<API>::GetInstance();
+  LOG(INFO) << "In MPI_FILE_WRITE" << std::endl;
   if (IsTracked(&fh)) {
     auto mdm = Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(&fh);
+    LOG(INFO) << "Is the file handle existing? " <<
+        existing.second << std::endl;
     if (existing.second) {
       LOG(INFO) << "Intercept MPI_File_write." << std::endl;
       auto write_ret =
-          write_internal(existing, buf, count, datatype, &fh, status, false);
+          write_internal(existing, buf, count, datatype,
+                         &fh, status, false);
       ret = write_ret.first;
     } else {
       ret = real_api->MPI_File_write(fh, buf, count, datatype, status);
@@ -972,7 +980,8 @@ int HERMES_DECL(MPI_File_iread_at)(MPI_File fh, MPI_Offset offset, void *buf,
     mdm->request_map.emplace(request, req);
     ret = MPI_SUCCESS;
   } else {
-    ret = real_api->MPI_File_iread_at(fh, offset, buf, count, datatype, request);
+    ret = real_api->MPI_File_iread_at(fh, offset, buf, count,
+                                      datatype, request);
   }
   return ret;
 }
@@ -1032,7 +1041,8 @@ int HERMES_DECL(MPI_File_iwrite_at)(MPI_File fh, MPI_Offset offset,
     mdm->request_map.emplace(request, req);
     ret = MPI_SUCCESS;
   } else {
-    ret = real_api->MPI_File_iwrite_at(fh, offset, buf, count, datatype, request);
+    ret = real_api->MPI_File_iwrite_at(fh, offset, buf, count,
+                                       datatype, request);
   }
   return ret;
 }
