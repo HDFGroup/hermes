@@ -135,7 +135,7 @@ struct IoOptions {
   static IoOptions WithDpe(PlacementPolicy dpe) {
     IoOptions opts;
     opts.dpe_ = dpe;
-    return std::move(opts);
+    return opts;
   }
 };
 
