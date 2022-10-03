@@ -91,7 +91,8 @@ void Filesystem::_PutWithFallback(AdapterStat &stat,
                                   const std::string &blob_name,
                                   const std::string &filename,
                                   u8 *data, size_t size,
-                                  size_t offset) {
+                                  size_t offset,
+                                  IoOptions &opts) {
   hapi::Context ctx;
   const char *hermes_write_only = getenv(kHermesWriteOnlyVar);
   if (hermes_write_only && hermes_write_only[0] == '1') {
@@ -101,9 +102,11 @@ void Filesystem::_PutWithFallback(AdapterStat &stat,
   }
   hapi::Status status = stat.st_bkid->Put(blob_name, data, size, ctx);
   if (status.Failed()) {
-    LOG(WARNING) << "Failed to Put Blob " << blob_name << " to Bucket "
-                 << filename << ". Falling back to posix I/O." << std::endl;
-    _RealWrite(filename, offset, size, data);
+    if (opts.with_fallback_) {
+      LOG(WARNING) << "Failed to Put Blob " << blob_name << " to Bucket "
+                   << filename << ". Falling back to posix I/O." << std::endl;
+      _RealWrite(filename, offset, size, data);
+    }
   } else {
     stat.st_blobs.emplace(blob_name);
   }
@@ -154,10 +157,12 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
 
 void Filesystem::_CoordinatedPut(BlobPlacementIter &wi) {
   hapi::Context ctx;
-  LOG(INFO) << "Starting coordinate PUT" << std::endl;
+  LOG(INFO) << "Starting coordinate PUT"
+            << " (blob: " << wi.p_.page_ << ")" << std::endl;
 
   if (!wi.blob_exists_) {
-    auto status = wi.bkt_->Put(wi.blob_name_, nullptr, 0, ctx);
+    u8 c = 0;
+    auto status = wi.bkt_->Put(wi.blob_name_, &c, 1, ctx);
     if (status.Failed()) {
       LOG(ERROR) << "Not enough space for coordinated put" << std::endl;
     }
@@ -171,14 +176,19 @@ void Filesystem::_CoordinatedPut(BlobPlacementIter &wi) {
   BlobID blob_id = GetBlobId(context, rpc, wi.blob_name_, bucket_id, true);
 
   wi.blob_exists_ = wi.bkt_->ContainsBlob(wi.blob_name_);
-  LockBlob(context, rpc, blob_id);
-  LOG(INFO) << "Beginning coordinated PUT" << std::endl;
-  _UncoordinatedPut(wi);
-  UnlockBlob(context, rpc, blob_id);
+  bool is_locked = LockBlob(context, rpc, blob_id);
+  if (is_locked) {
+    LOG(INFO) << "Acquire lock for process: " << getpid() << std::endl;
+    _UncoordinatedPut(wi);
+    UnlockBlob(context, rpc, blob_id);
+  } else {
+    LOG(FATAL) << "Could not acquire blob lock?" << std::endl;
+  }
 }
 
 void Filesystem::_UncoordinatedPut(BlobPlacementIter &wi) {
-  LOG(INFO) << "Starting uncoordinate PUT" << std::endl;
+  LOG(INFO) << "Starting uncoordinate PUT"
+            << " (blob: " << wi.p_.page_ << ")" << std::endl;
   if (wi.blob_exists_) {
     if (wi.p_.blob_off_ == 0) {
       _WriteToExistingAligned(wi);
@@ -207,7 +217,7 @@ void Filesystem::_WriteToNewAligned(BlobPlacementIter &wi) {
             << " offset: " << wi.p_.blob_off_
             << " size: " << wi.p_.blob_size_ << std::endl;
   _PutWithFallback(wi.stat_, wi.blob_name_, wi.filename_, wi.mem_ptr_,
-                   wi.p_.blob_size_, wi.p_.bucket_off_);
+                   wi.p_.blob_size_, wi.p_.bucket_off_, wi.opts_);
 }
 
 void Filesystem::_WriteToNewUnaligned(BlobPlacementIter &wi) {
@@ -219,7 +229,8 @@ void Filesystem::_WriteToNewUnaligned(BlobPlacementIter &wi) {
   memcpy(final_data.data() + wi.p_.blob_off_, wi.mem_ptr_,
          wi.p_.blob_size_);
   _PutWithFallback(wi.stat_, wi.blob_name_, wi.filename_,
-                   final_data.data(), final_data.size(), wi.blob_start_);
+                   final_data.data(), final_data.size(), wi.blob_start_,
+                   wi.opts_);
 }
 
 void Filesystem::_WriteToExistingAligned(BlobPlacementIter &wi) {
@@ -233,7 +244,8 @@ void Filesystem::_WriteToExistingAligned(BlobPlacementIter &wi) {
     LOG(INFO) << "Overwrite blob " << wi.blob_name_
               << " of size:" << wi.p_.blob_size_ << "." << std::endl;
     _PutWithFallback(wi.stat_, wi.blob_name_, wi.filename_,
-                     wi.mem_ptr_, wi.p_.blob_size_, wi.blob_start_);
+                     wi.mem_ptr_, wi.p_.blob_size_, wi.blob_start_,
+                     wi.opts_);
   } else {
     LOG(INFO) << "Update blob " << wi.blob_name_
               << " of size:" << existing_blob_size << "." << std::endl;
@@ -242,7 +254,7 @@ void Filesystem::_WriteToExistingAligned(BlobPlacementIter &wi) {
     memcpy(existing_data.data(), wi.mem_ptr_, wi.p_.blob_size_);
     _PutWithFallback(wi.stat_, wi.blob_name_, wi.filename_,
                      existing_data.data(), existing_data.size(),
-                     wi.blob_start_);
+                     wi.blob_start_, wi.opts_);
   }
 }
 
@@ -268,10 +280,12 @@ void Filesystem::_WriteToExistingUnaligned(BlobPlacementIter &wi) {
 
   // [existing_data, blob_off)
   if (existing_data.size() < wi.p_.blob_off_) {
+    IoOptions opts = IoOptions::DirectIo(wi.opts_);
     Read(wi.f_, wi.stat_,
          final_data.data() + existing_data.size(),
          wi.blob_start_ + existing_data.size(),
-         wi.p_.blob_off_ - existing_data.size());
+         wi.p_.blob_off_ - existing_data.size(),
+         opts);
   }
 
   // [blob_off, blob_off + blob_size)
@@ -291,7 +305,8 @@ void Filesystem::_WriteToExistingUnaligned(BlobPlacementIter &wi) {
   _PutWithFallback(wi.stat_, wi.blob_name_, wi.filename_,
                    final_data.data(),
                    final_data.size(),
-                   wi.blob_start_);
+                   wi.blob_start_,
+                   wi.opts_);
 }
 
 size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
@@ -300,7 +315,7 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
   std::shared_ptr<hapi::Bucket> &bkt = stat.st_bkid;
   LOG(INFO) << "Read called for filename: " << bkt->GetName()
             << " (fd: " << f.fd_ << ")"
-            << " on offset: " << stat.st_ptr
+            << " on offset: " << off
             << " and size: " << total_size
             << " (stored file size: " << stat.st_size
             << " true file size: " << stdfs::file_size(bkt->GetName())
@@ -392,9 +407,10 @@ size_t Filesystem::_ReadExistingPartial(BlobPlacementIter &ri) {
   if (ri.opts_.dpe_ != PlacementPolicy::kNone) {
     IoOptions opts(ri.opts_);
     opts.seek_ = false;
+    opts.with_fallback_ = false;
     Write(ri.f_, ri.stat_,
-          ri.blob_.data(),
-          ri.blob_start_,
+          ri.blob_.data() + ri.p_.blob_off_,
+          ri.p_.bucket_off_,
           new_blob_size, opts);
   }
 
@@ -429,10 +445,11 @@ size_t Filesystem::_ReadNew(BlobPlacementIter &ri) {
     LOG(INFO) << "Placing the read blob in the hierarchy" << std::endl;
     IoOptions opts(ri.opts_);
     opts.seek_ = false;
-    ret = Write(ri.f_, ri.stat_,
-                ri.blob_.data(), ri.blob_start_,
-                new_blob_size, opts);
-    return ret;
+    opts.with_fallback_ = false;
+    Write(ri.f_, ri.stat_,
+          ri.blob_.data() + ri.p_.blob_off_,
+          ri.p_.bucket_off_,
+          new_blob_size, opts);
   }
 
   memcpy(ri.mem_ptr_, ri.blob_.data() + ri.p_.blob_off_, ri.p_.blob_size_);

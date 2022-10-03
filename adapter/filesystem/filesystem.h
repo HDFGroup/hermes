@@ -125,15 +125,25 @@ struct IoOptions {
   PlacementPolicy dpe_;
   bool coordinate_;
   bool seek_;
+  bool with_fallback_;
   IoOptions() :
                 dpe_(PlacementPolicy::kNone),
                 coordinate_(false),
-                seek_(true) {}
+                seek_(true),
+                with_fallback_(true) {}
 
   static IoOptions WithParallelDpe(PlacementPolicy dpe) {
     IoOptions opts;
     opts.dpe_ = dpe;
     opts.coordinate_ = true;
+    return opts;
+  }
+
+  static IoOptions DirectIo(IoOptions &cur_opts) {
+    IoOptions opts(cur_opts);
+    opts.seek_ = false;
+    opts.dpe_ = PlacementPolicy::kNone;
+    opts.with_fallback_ = true;
     return opts;
   }
 };
@@ -190,7 +200,7 @@ class Filesystem {
   void _WriteToExistingUnaligned(BlobPlacementIter &write_iter);
   void _PutWithFallback(AdapterStat &stat, const std::string &blob_name,
                         const std::string &filename, u8 *data, size_t size,
-                        size_t offset);
+                        size_t offset, IoOptions &opts);
   size_t _ReadExistingContained(BlobPlacementIter &read_iter);
   size_t _ReadExistingPartial(BlobPlacementIter &read_iter);
   size_t _ReadNew(BlobPlacementIter &read_iter);

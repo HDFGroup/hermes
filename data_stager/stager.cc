@@ -50,6 +50,10 @@ int main(int argc, char **argv) {
     per_proc_size += size % mdm->comm_size;
   }
 
+  LOG(INFO) << "pid: " << getpid()
+            << " size: " << per_proc_size
+            << " off: " << per_proc_off;
+
   StageIn(path,
           per_proc_off,
           per_proc_size,
