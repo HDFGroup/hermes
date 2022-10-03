@@ -471,22 +471,6 @@ Ticket TryBeginTicketMutex(TicketMutex *mutex, Ticket *existing_ticket) {
   return result;
 }
 
-/**
- *
- */
-bool BeginTicketMutexIfNoWait(TicketMutex *mutex) {
-  u32 serving = mutex->serving.load();
-  u32 ticket = mutex->ticket.load();
-  u32 next =  ticket + 1;
-
-  bool result = false;
-  if (serving == ticket) {
-    result = mutex->ticket.compare_exchange_strong(ticket, next);
-  }
-
-  return result;
-}
-
 void BeginTicketMutex(TicketMutex *mutex) {
   u32 ticket = mutex->ticket.fetch_add(1);
   while (ticket != mutex->serving.load()) {
@@ -504,6 +488,38 @@ void BeginTicketMutex(TicketMutex *mutex) {
 
 void EndTicketMutex(TicketMutex *mutex) {
   mutex->serving.fetch_add(1);
+}
+
+Ticket TryBeginRecursiveTicketMutex(TicketMutex *mutex, Ticket *existing_ticket,
+                                    u32 pid, u32 tid) {
+  Ticket result = {};
+  if (mutex->pid_ == pid && mutex->tid_ == tid) {
+    result.ticket = mutex->ticket;
+    result.acquired = true;
+    mutex->count_.fetch_add(1);
+    return result;
+  }
+
+  result.ticket =
+      existing_ticket ? existing_ticket->ticket : mutex->ticket.fetch_add(1);
+
+  if (result.ticket == mutex->serving.load()) {
+    mutex->pid_ = pid;
+    mutex->tid_ = tid;
+    mutex->count_.fetch_add(1);
+    result.acquired = true;
+  }
+
+  return result;
+}
+
+void EndRecursiveTicketMutex(TicketMutex *mutex) {
+  mutex->count_.fetch_sub(1);
+  if (mutex->count_ == 0) {
+    mutex->pid_ = 0;
+    mutex->tid_ = 0;
+    mutex->serving.fetch_add(1);
+  }
 }
 
 const int kAttemptsBeforeYield = 100;

@@ -505,12 +505,14 @@ bool UnlockBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id);
 /**
  *
  */
-bool LocalLockBlob(SharedMemoryContext *context, BlobID blob_id);
+bool LocalLockBlob(SharedMemoryContext *context, BlobID blob_id,
+                   u32 pid, u32 tid);
 
 /**
  *
  */
-bool LocalUnlockBlob(SharedMemoryContext *context, BlobID blob_id);
+bool LocalUnlockBlob(SharedMemoryContext *context, BlobID blob_id,
+                     u32 pid, u32 tid);
 
 /**
  *

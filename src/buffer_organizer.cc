@@ -193,7 +193,9 @@ void BoMove(SharedMemoryContext *context, RpcContext *rpc,
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
 
   bool got_lock = BeginReaderLock(&mdm->bucket_delete_lock);
-  if (got_lock && LocalLockBlob(context, blob_id)) {
+  u32 pid, tid;
+  GetPidTid(pid, tid);
+  if (got_lock && LocalLockBlob(context, blob_id, pid, tid)) {
     auto warning_string = [](BufferID id) {
       std::ostringstream ss;
       ss << "BufferID" << id.as_int << " not found on this node\n";
@@ -290,7 +292,7 @@ void BoMove(SharedMemoryContext *context, RpcContext *rpc,
       // outstanding operation on this BlobID is complete (which is tracked by
       // BlobInfo::last).
     }
-    LocalUnlockBlob(context, blob_id);
+    LocalUnlockBlob(context, blob_id, pid, tid);
     VLOG(1) << "Done moving blob "
             << internal_blob_name.substr(kBucketIdStringSize, std::string::npos)
             << std::endl;

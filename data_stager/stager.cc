@@ -27,7 +27,8 @@ void StageIn(std::string path, int off, int size, PlacementPolicy dpe) {
   AdapterStat stat;
   bool stat_exists;
   File f = fs_api.Open(stat, path);
-  fs_api.Read(f, stat, buf, off, size, IoOptions::WithDpe(dpe));
+  fs_api.Read(f, stat, buf, off, size,
+              IoOptions::WithParallelDpe(dpe));
   fs_api.Close(f, stat_exists, false);
   free(buf);
 }
@@ -36,11 +37,23 @@ int main(int argc, char **argv) {
   auto mdm = Singleton<hermes::adapter::fs::MetadataManager>::GetInstance();
   MPI_Init(&argc, &argv);
   mdm->InitializeHermes(true);
+  off_t off;
+  size_t size;
   std::string path = argv[1];
-  int off = atoi(argv[2]);
-  int size = atoi(argv[3]);
+  std::stringstream(argv[2]) >> off;
+  std::stringstream(argv[3]) >> size;
   PlacementPolicy dpe = PlacementPolicyConv::to_enum(argv[4]);
-  StageIn(path, off, size, dpe);
+
+  size_t per_proc_size = size / mdm->comm_size;
+  size_t per_proc_off = off + per_proc_size * mdm->rank;
+  if (mdm->rank == mdm->comm_size - 1) {
+    per_proc_size += size % mdm->comm_size;
+  }
+
+  StageIn(path,
+          per_proc_off,
+          per_proc_size,
+          dpe);
   mdm->FinalizeHermes();
   MPI_Finalize();
 }

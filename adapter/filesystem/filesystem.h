@@ -124,17 +124,16 @@ struct File {
 struct IoOptions {
   PlacementPolicy dpe_;
   bool coordinate_;
-  MPI_Comm comm_;
   bool seek_;
   IoOptions() :
                 dpe_(PlacementPolicy::kNone),
                 coordinate_(false),
-                comm_(MPI_COMM_WORLD),
                 seek_(true) {}
 
-  static IoOptions WithDpe(PlacementPolicy dpe) {
+  static IoOptions WithParallelDpe(PlacementPolicy dpe) {
     IoOptions opts;
     opts.dpe_ = dpe;
+    opts.coordinate_ = true;
     return opts;
   }
 };

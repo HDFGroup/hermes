@@ -1507,7 +1507,8 @@ int GetNumOutstandingFlushingTasks(SharedMemoryContext *context,
   return result;
 }
 
-bool LocalLockBlob(SharedMemoryContext *context, BlobID blob_id) {
+bool LocalLockBlob(SharedMemoryContext *context, BlobID blob_id,
+                   u32 pid, u32 tid) {
   Ticket t = {};
   Ticket *ticket = 0;
   bool result = true;
@@ -1516,7 +1517,8 @@ bool LocalLockBlob(SharedMemoryContext *context, BlobID blob_id) {
   while (!t.acquired) {
     BlobInfo *blob_info = GetBlobInfoPtr(mdm, blob_id);
     if (blob_info) {
-      t = TryBeginTicketMutex(&blob_info->lock, ticket);
+      t = TryBeginRecursiveTicketMutex(&blob_info->lock,
+                                       ticket, pid, tid);
       if (!ticket) {
         blob_info->last = t.ticket;
       }
@@ -1532,7 +1534,7 @@ bool LocalLockBlob(SharedMemoryContext *context, BlobID blob_id) {
       if (blob_info->stop) {
         // This BlobID is no longer valid. Release the lock and delete the entry
         // if we're the last ticket on that lock.
-        EndTicketMutex(&blob_info->lock);
+        EndRecursiveTicketMutex(&blob_info->lock);
         result = false;
         if (t.ticket == blob_info->last) {
           LocalDelete(mdm, blob_id);
@@ -1547,13 +1549,14 @@ bool LocalLockBlob(SharedMemoryContext *context, BlobID blob_id) {
   return result;
 }
 
-bool LocalUnlockBlob(SharedMemoryContext *context, BlobID blob_id) {
+bool LocalUnlockBlob(SharedMemoryContext *context, BlobID blob_id,
+                     u32 pid, u32 tid) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   BlobInfo *blob_info = GetBlobInfoPtr(mdm, blob_id);
   bool result = false;
 
   if (blob_info) {
-    EndTicketMutex(&blob_info->lock);
+    EndRecursiveTicketMutex(&blob_info->lock);
     result = true;
   }
 
@@ -1562,25 +1565,37 @@ bool LocalUnlockBlob(SharedMemoryContext *context, BlobID blob_id) {
   return result;
 }
 
+void GetPidTid(u32 &pid, u32 &tid) {
+  pid = getpid();
+  ABT_unit_id tid_argo;
+  ABT_thread_self_id(&tid_argo);
+  tid = tid_argo;
+}
+
 bool LockBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id) {
   u32 target_node = GetBlobNodeId(blob_id);
   bool result = false;
+  u32 pid, tid;
+  GetPidTid(pid, tid);
   if (target_node == rpc->node_id) {
-    result = LocalLockBlob(context, blob_id);
+    result = LocalLockBlob(context, blob_id, pid, tid);
   } else {
-    result = RpcCall<bool>(rpc, target_node, "RemoteLockBlob", blob_id);
+    result = RpcCall<bool>(rpc, target_node, "RemoteLockBlob", blob_id,
+                           pid, tid);
   }
-
   return result;
 }
 
 bool UnlockBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id) {
   u32 target_node = GetBlobNodeId(blob_id);
+  u32 pid, tid;
+  GetPidTid(pid, tid);
   bool result = false;
   if (target_node == rpc->node_id) {
-    result = LocalUnlockBlob(context, blob_id);
+    result = LocalUnlockBlob(context, blob_id, pid, tid);
   } else {
-    result = RpcCall<bool>(rpc, target_node, "RemoteUnlockBlob", blob_id);
+    result = RpcCall<bool>(rpc, target_node, "RemoteUnlockBlob", blob_id,
+                           pid, tid);
   }
 
   return result;

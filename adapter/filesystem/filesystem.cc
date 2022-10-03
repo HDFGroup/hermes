@@ -117,8 +117,6 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
   LOG(INFO) << "Write called for filename: " << filename << " on offset: "
             << stat.st_ptr << " and size: " << total_size << std::endl;
 
-  int rank = 0;
-  if (opts.coordinate_) { MPI_Comm_rank(opts.comm_, &rank); }
   size_t ret;
   auto mdm = Singleton<MetadataManager>::GetInstance();
   BlobPlacements mapping;
@@ -156,6 +154,7 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
 
 void Filesystem::_CoordinatedPut(BlobPlacementIter &wi) {
   hapi::Context ctx;
+  LOG(INFO) << "Starting coordinate PUT" << std::endl;
 
   if (!wi.blob_exists_) {
     auto status = wi.bkt_->Put(wi.blob_name_, nullptr, 0, ctx);
@@ -173,11 +172,13 @@ void Filesystem::_CoordinatedPut(BlobPlacementIter &wi) {
 
   wi.blob_exists_ = wi.bkt_->ContainsBlob(wi.blob_name_);
   LockBlob(context, rpc, blob_id);
+  LOG(INFO) << "Beginning coordinated PUT" << std::endl;
   _UncoordinatedPut(wi);
   UnlockBlob(context, rpc, blob_id);
 }
 
 void Filesystem::_UncoordinatedPut(BlobPlacementIter &wi) {
+  LOG(INFO) << "Starting uncoordinate PUT" << std::endl;
   if (wi.blob_exists_) {
     if (wi.p_.blob_off_ == 0) {
       _WriteToExistingAligned(wi);
@@ -389,12 +390,12 @@ size_t Filesystem::_ReadExistingPartial(BlobPlacementIter &ri) {
                          ri.blob_.data() + existing_size);
 
   if (ri.opts_.dpe_ != PlacementPolicy::kNone) {
-    hapi::Status status =
-        ri.bkt_->Put(ri.blob_name_, ri.blob_.data(), new_blob_size, ri.ctx_);
-    if (status.Failed()) {
-      LOG(ERROR) << "Was unable to place read blob in the hierarchy" <<
-          std::endl;
-    }
+    IoOptions opts(ri.opts_);
+    opts.seek_ = false;
+    Write(ri.f_, ri.stat_,
+          ri.blob_.data(),
+          ri.blob_start_,
+          new_blob_size, opts);
   }
 
   if (ret != bytes_to_read) {
@@ -426,12 +427,11 @@ size_t Filesystem::_ReadNew(BlobPlacementIter &ri) {
 
   if (ri.opts_.dpe_ != PlacementPolicy::kNone) {
     LOG(INFO) << "Placing the read blob in the hierarchy" << std::endl;
-    hapi::Status status =
-        ri.bkt_->Put(ri.blob_name_, ri.blob_.data(), new_blob_size, ri.ctx_);
-    if (status.Failed()) {
-      LOG(ERROR) << "Was unable to place read blob in the hierarchy" <<
-          std::endl;
-    }
+    IoOptions opts(ri.opts_);
+    opts.seek_ = false;
+    ret = Write(ri.f_, ri.stat_,
+                ri.blob_.data(), ri.blob_start_,
+                new_blob_size, opts);
     return ret;
   }
 

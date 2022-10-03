@@ -392,14 +392,16 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
       req.respond(result);
   };
 
-  auto rpc_lock_blob = [context](const request &req, BlobID id) {
-    bool result = LocalLockBlob(context, id);
+  auto rpc_lock_blob = [context](const request &req, BlobID id,
+                                 u32 pid, u32 tid) {
+    bool result = LocalLockBlob(context, id, pid, tid);
 
     req.respond(result);
   };
 
-  auto rpc_unlock_blob = [context](const request &req, BlobID id) {
-    bool result = LocalUnlockBlob(context, id);
+  auto rpc_unlock_blob = [context](const request &req, BlobID id,
+                                   u32 pid, u32 tid) {
+    bool result = LocalUnlockBlob(context, id, pid, tid);
 
     req.respond(result);
   };
