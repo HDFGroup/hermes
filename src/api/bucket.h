@@ -108,7 +108,7 @@ class Bucket {
 
   /** \brief Put a Blob in this Bucket.
    *
-   * Uses the Bucket%'s saved Context.
+   * Uses the Bucket's saved Context.
    *
    * \param name The name of the Blob to put.
    * \param data The Blob data.
