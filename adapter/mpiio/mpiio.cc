@@ -146,7 +146,6 @@ int HERMES_DECL(MPI_File_seek_shared)(MPI_File fh, MPI_Offset offset,
 }
 
 int HERMES_DECL(MPI_File_get_position)(MPI_File fh, MPI_Offset *offset) {
-  int ret = -1;
   bool stat_exists;
   auto real_api = Singleton<API>::GetInstance();
   auto fs_api = Singleton<MpiioFS>::GetInstance();
@@ -222,7 +221,6 @@ int HERMES_DECL(MPI_File_read_ordered)(MPI_File fh, void *buf, int count,
 int HERMES_DECL(MPI_File_read_shared)(MPI_File fh, void *buf, int count,
                                       MPI_Datatype datatype,
                                       MPI_Status *status) {
-  int ret;
   bool stat_exists;
   auto real_api = Singleton<API>::GetInstance();
   auto fs_api = Singleton<MpiioFS>::GetInstance();
