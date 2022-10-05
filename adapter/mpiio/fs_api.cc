@@ -19,7 +19,7 @@ size_t MpiioFS::Read(File &f, AdapterStat &stat,
                      int count, MPI_Datatype datatype,
                      MPI_Status *status, IoOptions opts) {
   opts.mpi_type_ = datatype;
-  if (offset >= stat.st_size) {
+  if (offset >= static_cast<MPI_Offset>(stat.st_size)) {
     status->count_hi_and_cancelled = 0;
     status->count_lo = 0;
     return 0;
@@ -71,7 +71,7 @@ size_t MpiioFS::Write(File &f, AdapterStat &stat,
                       int count, MPI_Datatype datatype,
                       MPI_Status *status, IoOptions opts) {
   opts.mpi_type_ = datatype;
-  if (offset >= stat.st_size) {
+  if (offset >= static_cast<MPI_Offset>(stat.st_size)) {
     status->count_hi_and_cancelled = 0;
     status->count_lo = 0;
     return 0;
@@ -122,7 +122,7 @@ int MpiioFS::Wait(MPI_Request *req, MPI_Status *status) {
   auto iter = mdm->request_map.find(reinterpret_cast<size_t>(req));
   if (iter != mdm->request_map.end()) {
     hermes::adapter::fs::HermesRequest *req = iter->second;
-    int ret = req->return_future.get();
+    req->return_future.get();
     memcpy(status, &iter->second->status, sizeof(MPI_Status));
     auto h_req = iter->second;
     mdm->request_map.erase(iter);
@@ -145,7 +145,7 @@ int MpiioFS::WaitAll(int count, MPI_Request *req, MPI_Status *status) {
 
 int MpiioFS::Seek(File &f, AdapterStat &stat,
                   MPI_Offset offset, int whence) {
-  size_t ret = Filesystem::Seek(f, stat,
+  Filesystem::Seek(f, stat,
                                 MpiioSeekModeConv::Normalize(whence),
                                 offset);
   return MPI_SUCCESS;
@@ -467,6 +467,7 @@ File MpiioFS::_RealOpen(AdapterStat &stat, const std::string &path) {
 
 void MpiioFS::_InitFile(File &f) {
   // NOTE(llogan): MPI_Info_get does not behave well, so removing
+  (void) f;
   /*struct stat st;
   std::string filename = GetFilenameFromFP(&f.mpi_fh_);
   int fd = posix_api->open(filename.c_str(), O_RDONLY);
@@ -477,6 +478,7 @@ void MpiioFS::_InitFile(File &f) {
 }
 
 void MpiioFS::_OpenInitStats(File &f, AdapterStat &stat, bool bucket_exists) {
+  (void) bucket_exists;
   MPI_Offset size = static_cast<MPI_Offset>(stat.st_size);
   MPI_File_get_size(f.mpi_fh_, &size);
   stat.st_size = size;
@@ -492,8 +494,8 @@ size_t MpiioFS::_RealWrite(const std::string &filename, off_t offset,
             << " size:" << count << "."
             << " file_size:" << stdfs::file_size(filename) << std::endl;
   MPI_File fh;
-  int read_size = 0;
-  MPI_Status read_status;
+  int write_size = 0;
+  MPI_Status write_status;
   int status = real_api->MPI_File_open(MPI_COMM_SELF, filename.c_str(),
                                        MPI_MODE_RDONLY, MPI_INFO_NULL, &fh);
   if (status == MPI_SUCCESS) {
@@ -505,16 +507,16 @@ size_t MpiioFS::_RealWrite(const std::string &filename, off_t offset,
     goto ERROR;
   }
   status = real_api->MPI_File_write(fh, data_ptr, count, opts.mpi_type_,
-                                    &read_status);
-  MPI_Get_count(&read_status, opts.mpi_type_, &read_size);
-  if (read_size != count) {
-    LOG(ERROR) << "reading failed: read " << read_size << " of " << count
+                                    &write_status);
+  MPI_Get_count(&write_status, opts.mpi_type_, &write_size);
+  if (static_cast<int>(count)) {
+    LOG(ERROR) << "writing failed: write " << write_size << " of " << count
                << "." << std::endl;
   }
 
 ERROR:
   status = real_api->MPI_File_close(&fh);
-  return read_size;
+  return write_size;
 }
 
 size_t MpiioFS::_RealRead(const std::string &filename, off_t offset,
@@ -538,7 +540,7 @@ size_t MpiioFS::_RealRead(const std::string &filename, off_t offset,
   status = real_api->MPI_File_read(fh, data_ptr, count, opts.mpi_type_,
                                    &read_status);
   MPI_Get_count(&read_status, opts.mpi_type_, &read_size);
-  if (read_size != count) {
+  if (read_size != static_cast<int>(count)) {
     LOG(ERROR) << "reading failed: read " << read_size << " of " << count
                << "." << std::endl;
   }
