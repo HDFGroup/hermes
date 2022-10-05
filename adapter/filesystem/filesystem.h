@@ -123,14 +123,16 @@ struct File {
   }
 
   bool operator==(const File &old) const {
-    return (st_dev == old.st_dev) && (st_ino == old.st_ino);
+    return (st_dev == old.st_dev) && (st_ino == old.st_ino) &&
+           (mpi_fh_ == old.mpi_fh_);
   }
 
   std::size_t hash() const {
     std::size_t result;
     std::size_t h1 = std::hash<dev_t>{}(st_dev);
     std::size_t h2 = std::hash<ino_t>{}(st_ino);
-    result = h1 ^ h2;
+    std::size_t h3 = std::hash<MPI_File>{}(mpi_fh_);
+    result = h1 ^ h2 ^ h3;
     return result;
   }
 };

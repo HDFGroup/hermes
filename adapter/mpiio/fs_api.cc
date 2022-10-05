@@ -446,20 +446,24 @@ File MpiioFS::_RealOpen(AdapterStat &stat, const std::string &path) {
   if (f.mpi_status_ != MPI_SUCCESS) {
     f.status_ = false;
   }
+  // NOTE(llogan): MPI_Info_get does not behave well, so removing
+  /*
   MPI_Info info;
   MPI_File_get_info(f.mpi_fh_, &info);
   MPI_Info_set(info, "path", path.c_str());
-  MPI_File_set_info(f.mpi_fh_, info);
+  MPI_File_set_info(f.mpi_fh_, info);*/
+  return f;
 }
 
 void MpiioFS::_InitFile(File &f) {
-  struct stat st;
+  // NOTE(llogan): MPI_Info_get does not behave well, so removing
+  /*struct stat st;
   std::string filename = GetFilenameFromFP(&f.mpi_fh_);
   int fd = posix_api->open(filename.c_str(), O_RDONLY);
   posix_api->__fxstat(_STAT_VER, fd, &st);
   f.st_dev = st.st_dev;
   f.st_ino = st.st_ino;
-  posix_api->close(fd);
+  posix_api->close(fd);*/
 }
 
 void MpiioFS::_OpenInitStats(File &f, AdapterStat &stat, bool bucket_exists) {
