@@ -1509,6 +1509,7 @@ int GetNumOutstandingFlushingTasks(SharedMemoryContext *context,
 
 bool LocalLockBlob(SharedMemoryContext *context, BlobID blob_id,
                    u32 pid, u32 tid) {
+  (void) pid; (void) tid;
   Ticket t = {};
   Ticket *ticket = 0;
   bool result = true;
@@ -1550,6 +1551,7 @@ bool LocalLockBlob(SharedMemoryContext *context, BlobID blob_id,
 
 bool LocalUnlockBlob(SharedMemoryContext *context, BlobID blob_id,
                      u32 pid, u32 tid) {
+  (void) pid; (void) tid;
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   BlobInfo *blob_info = GetBlobInfoPtr(mdm, blob_id);
   bool result = false;
