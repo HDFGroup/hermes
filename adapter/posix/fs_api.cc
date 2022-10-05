@@ -59,11 +59,13 @@ void PosixFS::_OpenInitStats(File &f, AdapterStat &stat, bool bucket_exists) {
   }*/
   if (stat.flags & O_APPEND) {
     stat.st_ptr = stat.st_size;
+    stat.is_append = true;
   }
 }
 
 size_t PosixFS::_RealWrite(const std::string &filename, off_t offset,
-                           size_t size, u8 *data_ptr) {
+                           size_t size, const u8 *data_ptr, IoOptions &opts) {
+  (void) opts;
   LOG(INFO) << "Writing to file: " << filename
             << " offset: " << offset
             << " size:" << size << "."
@@ -76,7 +78,8 @@ size_t PosixFS::_RealWrite(const std::string &filename, off_t offset,
 }
 
 size_t PosixFS::_RealRead(const std::string &filename, off_t offset,
-                          size_t size, u8 *data_ptr) {
+                          size_t size, u8 *data_ptr, IoOptions &opts) {
+  (void) opts;
   LOG(INFO) << "Read called for filename from destination: " << filename
             << " on offset: " << offset
             << " and size: " << size << "."

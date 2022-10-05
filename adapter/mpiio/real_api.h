@@ -16,7 +16,6 @@
 #include <dlfcn.h>
 #include <iostream>
 #include <glog/logging.h>
-#include "interceptor.h"
 #include <mpi.h>
 #include <mpio.h>
 

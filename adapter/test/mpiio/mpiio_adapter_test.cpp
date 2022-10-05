@@ -18,7 +18,7 @@
 #include "catch_config.h"
 #include "adapter_test_utils.h"
 #if HERMES_INTERCEPT == 1
-#include "mpiio/mpiio.h"
+#include "filesystem/filesystem.h"
 #endif
 
 #include "adapter_test_utils.h"

@@ -38,6 +38,7 @@ class MetadataManager {
   std::atomic<size_t> ref;
 
  public:
+  std::unordered_map<uint64_t, HermesRequest*> request_map;
   bool is_mpi;
   int rank;
   int comm_size;

@@ -25,6 +25,7 @@ using hermes::adapter::stdio::API;
 using hermes::adapter::stdio::StdioFS;
 using hermes::adapter::Singleton;
 using hermes::adapter::fs::MetadataManager;
+using hermes::adapter::fs::SeekMode;
 
 namespace hapi = hermes::api;
 namespace stdfs = std::experimental::filesystem;
@@ -374,7 +375,7 @@ void HERMES_DECL(rewind)(FILE *stream) {
   if (hermes::adapter::IsTracked(stream)) {
     LOG(INFO) << "Intercept rewind." << std::endl;
     File f; f.fh_ = stream; fs_api->_InitFile(f);
-    fs_api->Seek(f, stat_exists, SEEK_SET, 0);
+    fs_api->Seek(f, stat_exists, SeekMode::kSet, 0);
     if (stat_exists) { return; }
   }
   real_api->rewind(stream);
@@ -388,7 +389,8 @@ int HERMES_DECL(fseek)(FILE *stream, long offset, int whence) {
     LOG(INFO) << "Intercept fseek offset:" << offset << " whence:" << whence
               << "." << std::endl;
     File f; f.fh_ = stream; fs_api->_InitFile(f);
-    off_t ret = fs_api->Seek(f, stat_exists, whence, offset);
+    off_t ret = fs_api->Seek(f, stat_exists,
+                             static_cast<SeekMode>(whence), offset);
     if (stat_exists && ret > 0) { return 0; }
   }
   return real_api->fseek(stream, offset, whence);
@@ -402,7 +404,8 @@ int HERMES_DECL(fseeko)(FILE *stream, off_t offset, int whence) {
     LOG(INFO) << "Intercept fseeko offset:" << offset << " whence:" << whence
               << "." << std::endl;
     File f; f.fh_ = stream; fs_api->_InitFile(f);
-    off_t ret = fs_api->Seek(f, stat_exists, whence, offset);
+    off_t ret = fs_api->Seek(f, stat_exists,
+                             static_cast<SeekMode>(whence), offset);
     if (stat_exists && ret > 0) { return 0; }
   }
   return real_api->fseeko(stream, offset, whence);
@@ -416,7 +419,8 @@ int HERMES_DECL(fseeko64)(FILE *stream, off64_t offset, int whence) {
     LOG(INFO) << "Intercept fseeko offset:" << offset << " whence:" << whence
               << "." << std::endl;
     File f; f.fh_ = stream; fs_api->_InitFile(f);
-    off_t ret = fs_api->Seek(f, stat_exists, whence, offset);
+    off_t ret = fs_api->Seek(f, stat_exists,
+                             static_cast<SeekMode>(whence), offset);
     if (stat_exists && ret > 0) { return 0; }
   }
   return real_api->fseeko64(stream, offset, whence);
@@ -430,7 +434,7 @@ int HERMES_DECL(fsetpos)(FILE *stream, const fpos_t *pos) {
   if (hermes::adapter::IsTracked(stream)) {
     LOG(INFO) << "Intercept fsetpos offset:" << offset << "." << std::endl;
     File f; f.fh_ = stream; fs_api->_InitFile(f);
-    off_t ret = fs_api->Seek(f, stat_exists, SEEK_SET, offset);
+    off_t ret = fs_api->Seek(f, stat_exists, SeekMode::kSet, offset);
     if (stat_exists && ret > 0) { return 0; }
   }
   return real_api->fsetpos(stream, pos);
@@ -444,7 +448,7 @@ int HERMES_DECL(fsetpos64)(FILE *stream, const fpos64_t *pos) {
   if (hermes::adapter::IsTracked(stream)) {
     LOG(INFO) << "Intercept fsetpos64 offset:" << offset << "." << std::endl;
     File f; f.fh_ = stream; fs_api->_InitFile(f);
-    off_t ret = fs_api->Seek(f, stat_exists, SEEK_SET, offset);
+    off_t ret = fs_api->Seek(f, stat_exists, SeekMode::kSet, offset);
     if (stat_exists && ret > 0) { return 0; }
   }
   return real_api->fsetpos64(stream, pos);

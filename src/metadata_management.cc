@@ -1517,8 +1517,7 @@ bool LocalLockBlob(SharedMemoryContext *context, BlobID blob_id,
   while (!t.acquired) {
     BlobInfo *blob_info = GetBlobInfoPtr(mdm, blob_id);
     if (blob_info) {
-      t = TryBeginRecursiveTicketMutex(&blob_info->lock,
-                                       ticket, pid, tid);
+      t = TryBeginTicketMutex(&blob_info->lock, ticket);
       if (!ticket) {
         blob_info->last = t.ticket;
       }
@@ -1534,7 +1533,7 @@ bool LocalLockBlob(SharedMemoryContext *context, BlobID blob_id,
       if (blob_info->stop) {
         // This BlobID is no longer valid. Release the lock and delete the entry
         // if we're the last ticket on that lock.
-        EndRecursiveTicketMutex(&blob_info->lock);
+        EndTicketMutex(&blob_info->lock);
         result = false;
         if (t.ticket == blob_info->last) {
           LocalDelete(mdm, blob_id);
@@ -1556,7 +1555,7 @@ bool LocalUnlockBlob(SharedMemoryContext *context, BlobID blob_id,
   bool result = false;
 
   if (blob_info) {
-    EndRecursiveTicketMutex(&blob_info->lock);
+    EndTicketMutex(&blob_info->lock);
     result = true;
   }
 

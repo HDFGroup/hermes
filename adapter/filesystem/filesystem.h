@@ -30,6 +30,14 @@ namespace hermes::adapter::fs {
 const char kStringDelimiter = '#';
 const MapperType kMapperType = MapperType::BALANCED;
 FlushingMode global_flushing_mode;
+const int kNumThreads = 1;
+
+enum class SeekMode {
+  kNone = -1,
+  kSet = SEEK_SET,
+  kCurrent = SEEK_CUR,
+  kEnd = SEEK_END
+};
 
 struct AdapterStat {
   std::shared_ptr<hapi::Bucket> st_bkid; /* bucket associated with the file */
@@ -52,11 +60,10 @@ struct AdapterStat {
   timespec st_ctim;     /* time of last status change */
   std::string mode_str; /* mode used for fopen() */
 
-  int a_mode;                            /* access mode */
-  MPI_Info info;                         /* Info object (handle) */
-  MPI_Comm comm;                         /* Communicator for the file.*/
-  MPI_Offset size;                       /* total size, in bytes */
-  MPI_Offset ptr;                        /* Current ptr of FILE */
+  bool is_append; /* File is in append mode */
+  int a_mode;     /* access mode */
+  MPI_Info info;  /* Info object (handle) */
+  MPI_Comm comm;  /* Communicator for the file.*/
   bool atomicity; /* Consistency semantics for data-access */
 
   AdapterStat()
@@ -72,7 +79,8 @@ struct AdapterStat {
         st_atim(),
         st_mtim(),
         st_ctim(),
-        atomicity(false) {} /* default constructor */
+        atomicity(false),
+        is_append(false) {} /* default constructor */
 
   static bool CompareBlobs(const std::string &a, const std::string &b) {
     return std::stol(a) < std::stol(b);
@@ -82,6 +90,8 @@ struct AdapterStat {
 struct File {
   int fd_;
   FILE *fh_;
+  MPI_File mpi_fh_;
+
   dev_t st_dev;
   ino_t st_ino;
   bool status_;
@@ -89,6 +99,8 @@ struct File {
   File() : fd_(-1),
            st_dev(-1),
            st_ino(-1),
+           fh_(nullptr),
+           mpi_fh_(nullptr),
            status_(true) {}
 
   File(const File &old) {
@@ -103,13 +115,15 @@ struct File {
   void Copy(const File &old) {
     fd_ = old.fd_;
     fh_ = old.fh_;
+    mpi_fh_ = old.mpi_fh_;
     st_dev = old.st_dev;
     st_ino = old.st_ino;
     status_ = old.status_;
   }
 
   bool operator==(const File &old) const {
-    return (st_dev == old.st_dev) && (st_ino == old.st_ino);
+    return (st_dev == old.st_dev) && (st_ino == old.st_ino) &&
+           (mpi_fh_ == old.mpi_fh_);
   }
 
   std::size_t hash() const {
@@ -126,11 +140,13 @@ struct IoOptions {
   bool coordinate_;
   bool seek_;
   bool with_fallback_;
+  MPI_Datatype mpi_type_;
   IoOptions() :
                 dpe_(PlacementPolicy::kNone),
                 coordinate_(false),
                 seek_(true),
-                with_fallback_(true) {}
+                with_fallback_(true),
+                mpi_type_(MPI_CHAR) {}
 
   static IoOptions WithParallelDpe(PlacementPolicy dpe) {
     IoOptions opts;
@@ -144,6 +160,13 @@ struct IoOptions {
     opts.seek_ = false;
     opts.dpe_ = PlacementPolicy::kNone;
     opts.with_fallback_ = true;
+    return opts;
+  }
+
+  static IoOptions DataType(MPI_Datatype mpi_type, bool seek=true) {
+    IoOptions opts;
+    opts.mpi_type_ = mpi_type;
+    opts.seek_ = seek;
     return opts;
   }
 };
@@ -184,12 +207,22 @@ class Filesystem {
   size_t Read(File &f, AdapterStat &stat, void *ptr,
               size_t off, size_t total_size,
               IoOptions opts = IoOptions());
-  off_t Seek(File &f, AdapterStat &stat, int whence, off_t offset);
+  int AWrite(File &f, AdapterStat &stat, const void *ptr,
+             size_t off, size_t total_size, size_t req_id,
+             IoOptions opts = IoOptions());
+  int ARead(File &f, AdapterStat &stat, void *ptr,
+            size_t off, size_t total_size, size_t req_id,
+            IoOptions opts = IoOptions());
+  size_t Wait(uint64_t req_id);
+  size_t Wait(std::vector<uint64_t> &req_id, std::vector<size_t> &ret);
+  off_t Seek(File &f, AdapterStat &stat, SeekMode whence, off_t offset);
   off_t Tell(File &f, AdapterStat &stat);
   int Sync(File &f, AdapterStat &stat);
   int Close(File &f, AdapterStat &stat, bool destroy = true);
 
-  virtual void _InitFile(File &f) = 0;
+  /*
+   * APIs used internally
+   * */
 
  private:
   void _CoordinatedPut(BlobPlacementIter &wi);
@@ -205,21 +238,45 @@ class Filesystem {
   size_t _ReadExistingPartial(BlobPlacementIter &read_iter);
   size_t _ReadNew(BlobPlacementIter &read_iter);
 
+  /*
+   * The APIs to overload
+   * */
+ public:
+  virtual void _InitFile(File &f) = 0;
+
+ private:
   virtual void _OpenInitStats(File &f, AdapterStat &stat,
                               bool bucket_exists) = 0;
   virtual File _RealOpen(AdapterStat &stat, const std::string &path) = 0;
   virtual size_t _RealWrite(const std::string &filename, off_t offset,
-                            size_t size, u8 *data_ptr) = 0;
+                            size_t size, const u8 *data_ptr, IoOptions &opts) = 0;
   virtual size_t _RealRead(const std::string &filename, off_t offset,
-                           size_t size, u8 *data_ptr) = 0;
+                           size_t size, u8 *data_ptr, IoOptions &opts) = 0;
   virtual int _RealSync(File &f) = 0;
   virtual int _RealClose(File &f) = 0;
+
+  /*
+   * I/O APIs which seek based on the internal AdapterStat st_ptr,
+   * instead of taking an offset as input.
+   * */
 
  public:
   size_t Write(File &f, AdapterStat &stat, const void *ptr,
                size_t total_size, IoOptions opts);
   size_t Read(File &f, AdapterStat &stat, void *ptr,
               size_t total_size, IoOptions opts);
+  int AWrite(File &f, AdapterStat &stat, const void *ptr,
+             size_t total_size, size_t req_id, IoOptions opts);
+  int ARead(File &f, AdapterStat &stat, void *ptr,
+            size_t total_size, size_t req_id, IoOptions opts);
+
+  /*
+   * Locates the AdapterStat data structure internally, and
+   * call the underlying APIs which take AdapterStat as input.
+   * */
+
+ public:
+
   size_t Write(File &f, bool &stat_exists, const void *ptr,
                size_t total_size, IoOptions opts = IoOptions());
   size_t Read(File &f, bool &stat_exists, void *ptr,
@@ -228,10 +285,31 @@ class Filesystem {
                size_t off, size_t total_size, IoOptions opts = IoOptions());
   size_t Read(File &f, bool &stat_exists, void *ptr,
               size_t off, size_t total_size, IoOptions opts = IoOptions());
-  off_t Seek(File &f, bool &stat_exists, int whence, off_t offset);
+
+  int AWrite(File &f, bool &stat_exists, const void *ptr,
+             size_t total_size, size_t req_id,
+             IoOptions opts);
+  int ARead(File &f, bool &stat_exists, void *ptr,
+            size_t total_size, size_t req_id,
+            IoOptions opts);
+  int AWrite(File &f, bool &stat_exists, const void *ptr,
+             size_t off, size_t total_size, size_t req_id,
+             IoOptions opts);
+  int ARead(File &f, bool &stat_exists, void *ptr,
+            size_t off, size_t total_size, size_t req_id,
+            IoOptions opts);
+
+  off_t Seek(File &f, bool &stat_exists, SeekMode whence, off_t offset);
   off_t Tell(File &f, bool &stat_exists);
   int Sync(File &f, bool &stat_exists);
   int Close(File &f, bool &stat_exists, bool destroy = true);
+
+
+};
+
+struct HermesRequest {
+  std::future<size_t> return_future;
+  MPI_Status status;
 };
 
 }  // namespace hermes::adapter::fs

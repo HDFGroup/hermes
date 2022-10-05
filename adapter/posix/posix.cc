@@ -35,6 +35,7 @@ using hermes::adapter::posix::API;
 using hermes::adapter::posix::PosixFS;
 using hermes::adapter::Singleton;
 using hermes::adapter::fs::MetadataManager;
+using hermes::adapter::fs::SeekMode;
 
 namespace hapi = hermes::api;
 namespace stdfs = std::experimental::filesystem;
@@ -247,7 +248,8 @@ off_t HERMES_DECL(lseek)(int fd, off_t offset, int whence) {
     File f; f.fd_ = fd; fs_api->_InitFile(f);
     LOG(INFO) << "Intercept lseek offset:" << offset << " whence:" << whence
               << "." << std::endl;
-    return fs_api->Seek(f, stat_exists, whence, offset);
+    return fs_api->Seek(f, stat_exists,
+                        static_cast<SeekMode>(whence), offset);
   }
   return real_api->lseek(fd, offset, whence);
 }
@@ -260,7 +262,8 @@ off64_t HERMES_DECL(lseek64)(int fd, off64_t offset, int whence) {
     File f; f.fd_ = fd; fs_api->_InitFile(f);
     LOG(INFO) << "Intercept lseek64 offset:" << offset << " whence:" << whence
               << "." << std::endl;
-    return fs_api->Seek(f, stat_exists, whence, offset);
+    return fs_api->Seek(f, stat_exists,
+                        static_cast<SeekMode>(whence), offset);
   }
   return real_api->lseek64(fd, offset, whence);
 }
