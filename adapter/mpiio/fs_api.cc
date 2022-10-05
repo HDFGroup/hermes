@@ -19,7 +19,7 @@ size_t MpiioFS::Read(File &f, AdapterStat &stat,
                      int count, MPI_Datatype datatype,
                      MPI_Status *status, IoOptions opts) {
   opts.mpi_type_ = datatype;
-  if (offset >= static_cast<MPI_Offset>(stat.st_size)) {
+  if (offset >= static_cast<size_t>(stat.st_size)) {
     status->count_hi_and_cancelled = 0;
     status->count_lo = 0;
     return 0;
@@ -71,7 +71,7 @@ size_t MpiioFS::Write(File &f, AdapterStat &stat,
                       int count, MPI_Datatype datatype,
                       MPI_Status *status, IoOptions opts) {
   opts.mpi_type_ = datatype;
-  if (offset >= static_cast<MPI_Offset>(stat.st_size)) {
+  if (offset >= static_cast<size_t>(stat.st_size)) {
     status->count_hi_and_cancelled = 0;
     status->count_lo = 0;
     return 0;
