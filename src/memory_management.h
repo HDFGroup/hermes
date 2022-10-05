@@ -45,8 +45,7 @@ struct TicketMutex {
 struct Ticket {
   u32 ticket;
   bool acquired;
-
-  Ticket() : acquired(false), ticket(-1) {}
+  Ticket() : ticket(-1), acquired(false) {}
 };
 
 struct RwLock {
