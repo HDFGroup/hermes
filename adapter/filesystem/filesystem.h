@@ -165,7 +165,7 @@ struct IoOptions {
     return opts;
   }
 
-  static IoOptions DataType(MPI_Datatype mpi_type, bool seek=true) {
+  static IoOptions DataType(MPI_Datatype mpi_type, bool seek = true) {
     IoOptions opts;
     opts.mpi_type_ = mpi_type;
     opts.seek_ = seek;
@@ -216,7 +216,7 @@ class Filesystem {
             size_t off, size_t total_size, size_t req_id,
             IoOptions opts = IoOptions());
   size_t Wait(uint64_t req_id);
-  size_t Wait(std::vector<uint64_t> &req_id, std::vector<size_t> &ret);
+  void Wait(std::vector<uint64_t> &req_id, std::vector<size_t> &ret);
   off_t Seek(File &f, AdapterStat &stat, SeekMode whence, off_t offset);
   off_t Tell(File &f, AdapterStat &stat);
   int Sync(File &f, AdapterStat &stat);
@@ -251,7 +251,8 @@ class Filesystem {
                               bool bucket_exists) = 0;
   virtual File _RealOpen(AdapterStat &stat, const std::string &path) = 0;
   virtual size_t _RealWrite(const std::string &filename, off_t offset,
-                            size_t size, const u8 *data_ptr, IoOptions &opts) = 0;
+                            size_t size, const u8 *data_ptr,
+                            IoOptions &opts) = 0;
   virtual size_t _RealRead(const std::string &filename, off_t offset,
                            size_t size, u8 *data_ptr, IoOptions &opts) = 0;
   virtual int _RealSync(File &f) = 0;
@@ -278,7 +279,6 @@ class Filesystem {
    * */
 
  public:
-
   size_t Write(File &f, bool &stat_exists, const void *ptr,
                size_t total_size, IoOptions opts = IoOptions());
   size_t Read(File &f, bool &stat_exists, void *ptr,
@@ -305,8 +305,6 @@ class Filesystem {
   off_t Tell(File &f, bool &stat_exists);
   int Sync(File &f, bool &stat_exists);
   int Close(File &f, bool &stat_exists, bool destroy = true);
-
-
 };
 
 struct HermesRequest {

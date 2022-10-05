@@ -504,12 +504,15 @@ size_t Filesystem::Wait(size_t req_id) {
   return ret;
 }
 
-size_t Filesystem::Wait(std::vector<uint64_t> &req_ids, std::vector<size_t> &ret) {
-  // TODO: implement
-  return 0;
+void Filesystem::Wait(std::vector<uint64_t> &req_ids,
+                        std::vector<size_t> &ret) {
+  for (auto &req_id : req_ids) {
+    ret.emplace_back(Wait(req_id));
+  }
 }
 
-off_t Filesystem::Seek(File &f, AdapterStat &stat, SeekMode whence, off_t offset) {
+off_t Filesystem::Seek(File &f, AdapterStat &stat,
+                       SeekMode whence, off_t offset) {
   if (stat.is_append) {
     LOG(INFO)
         << "File pointer not updating as file was opened in append mode."
@@ -759,7 +762,8 @@ int Filesystem::ARead(File &f, bool &stat_exists, void *ptr,
   return ARead(f, stat, ptr, off, total_size, req_id, opts);
 }
 
-off_t Filesystem::Seek(File &f, bool &stat_exists, SeekMode whence, off_t offset) {
+off_t Filesystem::Seek(File &f, bool &stat_exists,
+                       SeekMode whence, off_t offset) {
   auto mdm = Singleton<MetadataManager>::GetInstance();
   auto [stat, exists] = mdm->Find(f);
   if (!exists) {

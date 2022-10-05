@@ -1,6 +1,14 @@
-//
-// Created by lukemartinlogan on 10/3/22.
-//
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+* Distributed under BSD 3-Clause license.                                   *
+* Copyright by The HDF Group.                                               *
+* Copyright by the Illinois Institute of Technology.                        *
+* All rights reserved.                                                      *
+*                                                                           *
+* This file is part of Hermes. The full Hermes copyright notice, including  *
+* terms governing use, modification, and redistribution, is contained in    *
+* the COPYING file, which can be found at the top directory. If you do not  *
+* have access to the file, you may request a copy from help@hdfgroup.org.   *
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #ifndef HERMES_ADAPTER_MPIIO_FS_API_H_
 #define HERMES_ADAPTER_MPIIO_FS_API_H_
@@ -35,7 +43,7 @@ using hermes::adapter::fs::SeekMode;
 class MpiioSeekModeConv {
  public:
   static SeekMode Normalize(int mpi_seek) {
-    switch(mpi_seek) {
+    switch (mpi_seek) {
       case MPI_SEEK_SET: return SeekMode::kSet;
       case MPI_SEEK_CUR: return SeekMode::kCurrent;
       case MPI_SEEK_END: return SeekMode::kEnd;
@@ -48,6 +56,7 @@ class MpiioFS : public hermes::adapter::fs::Filesystem {
  private:
   API *real_api;
   hermes::adapter::posix::API *posix_api;
+
  public:
   MpiioFS() {
     real_api = Singleton<API>::GetInstance();
@@ -68,7 +77,8 @@ class MpiioFS : public hermes::adapter::fs::Filesystem {
     const int kMaxSize = 0xFFF;
     int flag;
     char filename[kMaxSize] = {0};
-    MPI_Info_get(info, "filename", kMaxSize, filename, &flag);
+    MPI_Info_get(info, "filename", kMaxSize,
+                 filename, &flag);
     return filename;
   }
 
@@ -88,14 +98,14 @@ class MpiioFS : public hermes::adapter::fs::Filesystem {
                      void *ptr, int count,
                      MPI_Datatype datatype,
                      MPI_Status *status, IoOptions opts = IoOptions());
-
   size_t Write(File &f, AdapterStat &stat,
                const void *ptr, size_t offset,
                int count, MPI_Datatype datatype,
                MPI_Status *status, IoOptions opts = IoOptions());
   int AWrite(File &f, AdapterStat &stat,
              const void *ptr, size_t offset,
-             int count, MPI_Datatype datatype, MPI_Request *request, IoOptions opts = IoOptions());
+             int count, MPI_Datatype datatype, MPI_Request *request,
+             IoOptions opts = IoOptions());
   size_t WriteAll(File &f, AdapterStat &stat,
                   const void *ptr, size_t offset,
                   int count, MPI_Datatype datatype,
@@ -104,7 +114,6 @@ class MpiioFS : public hermes::adapter::fs::Filesystem {
                       const void *ptr, int count,
                       MPI_Datatype datatype,
                       MPI_Status *status, IoOptions opts = IoOptions());
-  
   int Wait(MPI_Request *req, MPI_Status *status);
   int WaitAll(int count, MPI_Request *req, MPI_Status *status);
   int Seek(File &f, AdapterStat &stat, MPI_Offset offset, int whence);
@@ -112,14 +121,15 @@ class MpiioFS : public hermes::adapter::fs::Filesystem {
 
   /**
    * Variants which internally find the correct offset
-   * */
-   
+   */
+
  public:
   size_t Read(File &f, AdapterStat &stat,
               void *ptr, int count, MPI_Datatype datatype,
               MPI_Status *status);
   int ARead(File &f, AdapterStat &stat,
-            void *ptr, int count, MPI_Datatype datatype, MPI_Request *request);
+            void *ptr, int count, MPI_Datatype datatype,
+            MPI_Request *request);
   size_t ReadAll(File &f, AdapterStat &stat,
                  void *ptr, int count, MPI_Datatype datatype,
                  MPI_Status *status);
@@ -128,7 +138,8 @@ class MpiioFS : public hermes::adapter::fs::Filesystem {
                const void *ptr, int count, MPI_Datatype datatype,
                MPI_Status *status);
   int AWrite(File &f, AdapterStat &stat,
-             const void *ptr, int count, MPI_Datatype datatype, MPI_Request *request);
+             const void *ptr, int count, MPI_Datatype datatype,
+             MPI_Request *request);
   size_t WriteAll(File &f, AdapterStat &stat,
                   const void *ptr, int count, MPI_Datatype datatype,
                   MPI_Status *status);
@@ -183,7 +194,8 @@ class MpiioFS : public hermes::adapter::fs::Filesystem {
                const void *ptr, int count, MPI_Datatype datatype,
                MPI_Status *status);
   int AWrite(File &f, bool &stat_exists,
-             const void *ptr, int count, MPI_Datatype datatype, MPI_Request *request);
+             const void *ptr, int count, MPI_Datatype datatype,
+             MPI_Request *request);
   size_t WriteAll(File &f, bool &stat_exists,
                   const void *ptr, int count, MPI_Datatype datatype,
                   MPI_Status *status);

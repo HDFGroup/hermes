@@ -23,8 +23,6 @@ bool mpiio_intercepted = true;
 #include "singleton.h"
 #include "interceptor.h"
 #include "interceptor.cc"
-//#include "adapter_utils.h"
-//#include "adapter_utils.cc"
 
 #include "thread_pool.h"
 
@@ -179,7 +177,8 @@ int HERMES_DECL(MPI_File_read_at_all)(MPI_File fh, MPI_Offset offset, void *buf,
   auto fs_api = Singleton<MpiioFS>::GetInstance();
   if (IsTracked(&fh)) {
     File f; f.mpi_fh_ = fh; fs_api->_InitFile(f);
-    return fs_api->ReadAll(f, stat_exists, buf, offset, count, datatype, status);
+    return fs_api->ReadAll(f, stat_exists, buf,
+                           offset, count, datatype, status);
   }
   return real_api->MPI_File_read_at_all(fh, offset, buf,
                                          count, datatype, status);
@@ -256,7 +255,8 @@ int HERMES_DECL(MPI_File_write_at_all)(MPI_File fh, MPI_Offset offset,
   auto fs_api = Singleton<MpiioFS>::GetInstance();
   if (IsTracked(&fh)) {
     File f; f.mpi_fh_ = fh; fs_api->_InitFile(f);
-    int ret = fs_api->WriteAll(f, stat_exists, buf, offset, count, datatype, status);
+    int ret = fs_api->WriteAll(f, stat_exists, buf,
+                               offset, count, datatype, status);
     if (stat_exists) return ret;
   }
   return real_api->MPI_File_write_at_all(fh, offset, buf, count,

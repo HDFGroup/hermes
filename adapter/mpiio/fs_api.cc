@@ -1,6 +1,14 @@
-//
-// Created by lukemartinlogan on 10/3/22.
-//
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+* Distributed under BSD 3-Clause license.                                   *
+* Copyright by The HDF Group.                                               *
+* Copyright by the Illinois Institute of Technology.                        *
+* All rights reserved.                                                      *
+*                                                                           *
+* This file is part of Hermes. The full Hermes copyright notice, including  *
+* terms governing use, modification, and redistribution, is contained in    *
+* the COPYING file, which can be found at the top directory. If you do not  *
+* have access to the file, you may request a copy from help@hdfgroup.org.   *
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "fs_api.h"
 
@@ -135,14 +143,16 @@ int MpiioFS::WaitAll(int count, MPI_Request *req, MPI_Status *status) {
   return ret;
 }
 
-int MpiioFS::Seek(File &f, AdapterStat &stat, MPI_Offset offset, int whence) {
+int MpiioFS::Seek(File &f, AdapterStat &stat,
+                  MPI_Offset offset, int whence) {
   size_t ret = Filesystem::Seek(f, stat,
                                 MpiioSeekModeConv::Normalize(whence),
                                 offset);
   return MPI_SUCCESS;
 }
 
-int MpiioFS::SeekShared(File &f, AdapterStat &stat, MPI_Offset offset, int whence) {
+int MpiioFS::SeekShared(File &f, AdapterStat &stat,
+                        MPI_Offset offset, int whence) {
   MPI_Offset sum_offset;
   int sum_whence;
   int comm_participators;
@@ -538,9 +548,12 @@ ERROR:
   return read_size;
 }
 
-int MpiioFS::_RealSync(File &f) { return real_api->MPI_File_sync(f.mpi_fh_); }
+int MpiioFS::_RealSync(File &f) {
+  return real_api->MPI_File_sync(f.mpi_fh_);
+}
 
-int MpiioFS::_RealClose(File &f) { return real_api->MPI_File_close(&f.mpi_fh_); }
-
+int MpiioFS::_RealClose(File &f) {
+  return real_api->MPI_File_close(&f.mpi_fh_);
+}
 
 }  // namespace hermes::adapter::mpiio
