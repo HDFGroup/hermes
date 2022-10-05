@@ -20,6 +20,7 @@
 #include "filesystem/metadata_manager.h"
 #include "filesystem/metadata_manager.cc"
 #include "real_api.h"
+#include "posix/real_api.h"
 
 namespace hermes::adapter::mpiio {
 
@@ -46,10 +47,11 @@ class MpiioSeekModeConv {
 class MpiioFS : public hermes::adapter::fs::Filesystem {
  private:
   API *real_api;
-
+  hermes::adapter::posix::API *posix_api;
  public:
   MpiioFS() {
     real_api = Singleton<API>::GetInstance();
+    posix_api = Singleton<hermes::adapter::posix::API>::GetInstance();
   }
   ~MpiioFS() = default;
 
@@ -57,6 +59,19 @@ class MpiioFS : public hermes::adapter::fs::Filesystem {
 
 
  public:
+  static inline std::string GetFilenameFromFP(MPI_File *fh) {
+    MPI_Info info;
+    int status = MPI_File_get_info(*fh, &info);
+    if (status != MPI_SUCCESS) {
+      LOG(ERROR) << "MPI_File_get_info on file handler failed." << std::endl;
+    }
+    const int kMaxSize = 0xFFF;
+    int flag;
+    char filename[kMaxSize] = {0};
+    MPI_Info_get(info, "filename", kMaxSize, filename, &flag);
+    return filename;
+  }
+
   size_t Read(File &f, AdapterStat &stat,
               void *ptr, size_t offset,
               int count, MPI_Datatype datatype,
@@ -92,8 +107,9 @@ class MpiioFS : public hermes::adapter::fs::Filesystem {
   
   int Wait(MPI_Request *req, MPI_Status *status);
   int WaitAll(int count, MPI_Request *req, MPI_Status *status);
+  int Seek(File &f, AdapterStat &stat, MPI_Offset offset, int whence);
   int SeekShared(File &f, AdapterStat &stat, MPI_Offset offset, int whence);
-  
+
   /**
    * Variants which internally find the correct offset
    * */
@@ -172,6 +188,7 @@ class MpiioFS : public hermes::adapter::fs::Filesystem {
                   const void *ptr, int count, MPI_Datatype datatype,
                   MPI_Status *status);
 
+  int Seek(File &f, bool &stat_exists, MPI_Offset offset, int whence);
   int SeekShared(File &f, bool &stat_exists, MPI_Offset offset, int whence);
 
 

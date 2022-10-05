@@ -61,7 +61,7 @@ struct AdapterStat {
   std::string mode_str; /* mode used for fopen() */
 
   bool is_append; /* File is in append mode */
-  int a_mode;     /* access mode */
+  int amode;     /* access mode */
   MPI_Info info;  /* Info object (handle) */
   MPI_Comm comm;  /* Communicator for the file.*/
   bool atomicity; /* Consistency semantics for data-access */
@@ -95,6 +95,7 @@ struct File {
   dev_t st_dev;
   ino_t st_ino;
   bool status_;
+  int mpi_status_;
 
   File() : fd_(-1),
            st_dev(-1),
@@ -122,8 +123,7 @@ struct File {
   }
 
   bool operator==(const File &old) const {
-    return (st_dev == old.st_dev) && (st_ino == old.st_ino) &&
-           (mpi_fh_ == old.mpi_fh_);
+    return (st_dev == old.st_dev) && (st_ino == old.st_ino);
   }
 
   std::size_t hash() const {

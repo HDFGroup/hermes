@@ -46,22 +46,11 @@ using hermes::adapter::WeaklyCanonical;
 /**
  * Internal Functions.
  */
-inline std::string GetFilenameFromFP(MPI_File *fh) {
-  MPI_Info info_out;
-  int status = MPI_File_get_info(*fh, &info_out);
-  if (status != MPI_SUCCESS) {
-    LOG(ERROR) << "MPI_File_get_info on file handler failed." << std::endl;
-  }
-  const int kMaxSize = 0xFFF;
-  int flag;
-  char filename[kMaxSize];
-  MPI_Info_get(info_out, "filename", kMaxSize, filename, &flag);
-  return filename;
-}
+
 
 inline bool IsTracked(MPI_File *fh) {
   if (hermes::adapter::exit) return false;
-  std::string filename = GetFilenameFromFP(fh);
+  std::string filename = hermes::adapter::mpiio::MpiioFS::GetFilenameFromFP(fh);
   return hermes::adapter::IsTracked(filename);
 }
 
@@ -103,7 +92,6 @@ int HERMES_DECL(MPI_Waitall)(int count, MPI_Request *req, MPI_Status *status) {
  */
 int HERMES_DECL(MPI_File_open)(MPI_Comm comm, const char *filename, int amode,
                                MPI_Info info, MPI_File *fh) {
-  int status;
   auto real_api = Singleton<API>::GetInstance();
   auto fs_api = Singleton<MpiioFS>::GetInstance();
   if (hermes::adapter::IsTracked(filename)) {
@@ -111,14 +99,13 @@ int HERMES_DECL(MPI_File_open)(MPI_Comm comm, const char *filename, int amode,
               << " and mode: " << amode << " is tracked." << std::endl;
     AdapterStat stat;
     stat.comm = comm;
-    stat.a_mode = amode;
+    stat.amode = amode;
     stat.info = info;
     File f = fs_api->Open(stat, filename);
     (*fh) = f.mpi_fh_;
-    return f.status_;
-  } else {
-    return real_api->MPI_File_open(comm, filename, amode, info, fh);
+    return f.mpi_status_;
   }
+  return real_api->MPI_File_open(comm, filename, amode, info, fh);
 }
 
 int HERMES_DECL(MPI_File_close)(MPI_File *fh) {
@@ -135,6 +122,17 @@ int HERMES_DECL(MPI_File_close)(MPI_File *fh) {
   return (ret);
 }
 
+int HERMES_DECL(MPI_File_seek)(MPI_File fh, MPI_Offset offset, int whence) {
+  bool stat_exists;
+  auto real_api = Singleton<API>::GetInstance();
+  auto fs_api = Singleton<MpiioFS>::GetInstance();
+  if (IsTracked(&fh)) {
+    File f; f.mpi_fh_ = fh; fs_api->_InitFile(f);
+    return fs_api->Seek(f, stat_exists, offset, whence);
+  }
+  return real_api->MPI_File_seek(fh, offset, whence);
+}
+
 int HERMES_DECL(MPI_File_seek_shared)(MPI_File fh, MPI_Offset offset,
                                       int whence) {
   bool stat_exists;
@@ -147,18 +145,6 @@ int HERMES_DECL(MPI_File_seek_shared)(MPI_File fh, MPI_Offset offset,
     return fs_api->SeekShared(f, stat_exists, offset, whence);
   }
   return real_api->MPI_File_seek_shared(fh, offset, whence);
-}
-
-int HERMES_DECL(MPI_File_seek)(MPI_File fh, MPI_Offset offset, int whence) {
-  bool stat_exists;
-  auto real_api = Singleton<API>::GetInstance();
-  auto fs_api = Singleton<MpiioFS>::GetInstance();
-  if (IsTracked(&fh)) {
-    File f; f.mpi_fh_ = fh; fs_api->_InitFile(f);
-    return fs_api->Seek(f, stat_exists,
-                        MpiioSeekModeConv::Normalize(whence), offset);
-  }
-  return real_api->MPI_File_seek(fh, offset, whence);
 }
 
 int HERMES_DECL(MPI_File_get_position)(MPI_File fh, MPI_Offset *offset) {

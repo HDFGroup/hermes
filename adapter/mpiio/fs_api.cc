@@ -135,6 +135,13 @@ int MpiioFS::WaitAll(int count, MPI_Request *req, MPI_Status *status) {
   return ret;
 }
 
+int MpiioFS::Seek(File &f, AdapterStat &stat, MPI_Offset offset, int whence) {
+  size_t ret = Filesystem::Seek(f, stat,
+                                MpiioSeekModeConv::Normalize(whence),
+                                offset);
+  return MPI_SUCCESS;
+}
+
 int MpiioFS::SeekShared(File &f, AdapterStat &stat, MPI_Offset offset, int whence) {
   MPI_Offset sum_offset;
   int sum_whence;
@@ -154,7 +161,7 @@ int MpiioFS::SeekShared(File &f, AdapterStat &stat, MPI_Offset offset, int whenc
         << "Same whence should be passed across the opened file communicator."
         << std::endl;
   }
-  Seek(f, stat, MpiioSeekModeConv::Normalize(whence), offset);
+  Seek(f, stat, offset, whence);
   return 0;
 }
 
@@ -404,6 +411,18 @@ size_t MpiioFS::WriteAll(File &f, bool &stat_exists,
   return WriteAll(f, stat, ptr, count, datatype, status);
 }
 
+int MpiioFS::Seek(File &f, bool &stat_exists,
+                  MPI_Offset offset, int whence) {
+  auto mdm = Singleton<MetadataManager>::GetInstance();
+  auto [stat, exists] = mdm->Find(f);
+  if (!exists) {
+    stat_exists = false;
+    return -1;
+  }
+  stat_exists = true;
+  return Seek(f, stat, offset, whence);
+}
+
 int MpiioFS::SeekShared(File &f, bool &stat_exists,
                         MPI_Offset offset, int whence) {
   auto mdm = Singleton<MetadataManager>::GetInstance();
@@ -422,21 +441,32 @@ int MpiioFS::SeekShared(File &f, bool &stat_exists,
 
 File MpiioFS::_RealOpen(AdapterStat &stat, const std::string &path) {
   File f;
-  int ret = real_api->MPI_File_open(stat.comm, path.c_str(), stat.a_mode,
-                                    stat.info, &f.mpi_fh_);
-  if (ret != MPI_SUCCESS) {
+  f.mpi_status_ = real_api->MPI_File_open(stat.comm, path.c_str(), stat.amode,
+                                          stat.info, &f.mpi_fh_);
+  if (f.mpi_status_ != MPI_SUCCESS) {
     f.status_ = false;
   }
-  return f;
+  MPI_Info info;
+  MPI_File_get_info(f.mpi_fh_, &info);
+  MPI_Info_set(info, "path", path.c_str());
+  MPI_File_set_info(f.mpi_fh_, info);
 }
 
-void MpiioFS::_InitFile(File &f) {}
+void MpiioFS::_InitFile(File &f) {
+  struct stat st;
+  std::string filename = GetFilenameFromFP(&f.mpi_fh_);
+  int fd = posix_api->open(filename.c_str(), O_RDONLY);
+  posix_api->__fxstat(_STAT_VER, fd, &st);
+  f.st_dev = st.st_dev;
+  f.st_ino = st.st_ino;
+  posix_api->close(fd);
+}
 
 void MpiioFS::_OpenInitStats(File &f, AdapterStat &stat, bool bucket_exists) {
   MPI_Offset size = static_cast<MPI_Offset>(stat.st_size);
   MPI_File_get_size(f.mpi_fh_, &size);
   stat.st_size = size;
-  if (stat.a_mode & MPI_MODE_APPEND) {
+  if (stat.amode & MPI_MODE_APPEND) {
     stat.st_ptr = stat.st_size;
     stat.is_append = true;
   }
