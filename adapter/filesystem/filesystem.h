@@ -79,8 +79,8 @@ struct AdapterStat {
         st_atim(),
         st_mtim(),
         st_ctim(),
-        atomicity(false),
-        is_append(false) {} /* default constructor */
+        is_append(false),
+        atomicity(false) {}
 
   static bool CompareBlobs(const std::string &a, const std::string &b) {
     return std::stol(a) < std::stol(b);
@@ -98,11 +98,12 @@ struct File {
   int mpi_status_;
 
   File() : fd_(-1),
-           st_dev(-1),
-           st_ino(-1),
            fh_(nullptr),
            mpi_fh_(nullptr),
-           status_(true) {}
+           st_dev(-1),
+           st_ino(-1),
+           status_(true),
+           mpi_status_(MPI_SUCCESS) {}
 
   File(const File &old) {
     Copy(old);
