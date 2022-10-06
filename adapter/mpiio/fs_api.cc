@@ -123,10 +123,9 @@ int MpiioFS::Wait(MPI_Request *req, MPI_Status *status) {
   if (iter != mdm->request_map.end()) {
     hermes::adapter::fs::HermesRequest *req = iter->second;
     req->return_future.get();
-    memcpy(status, &iter->second->status, sizeof(MPI_Status));
-    auto h_req = iter->second;
+    memcpy(status, &req->status, sizeof(MPI_Status));
     mdm->request_map.erase(iter);
-    delete (h_req);
+    delete (req);
     return MPI_SUCCESS;
   }
   return real_api->MPI_Wait(req, status);

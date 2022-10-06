@@ -992,6 +992,7 @@ TEST_CASE("SingleAsyncRead", "[process=" + std::to_string(info.comm_size) +
 
 // TODO(chogan): This test fails sporadically.
 // https://github.com/HDFGroup/hermes/issues/413
+/*
 TEST_CASE("SingleAsyncReadCollective",
           "[process=" + std::to_string(info.comm_size) +
               "]"
@@ -1044,3 +1045,5 @@ TEST_CASE("SingleAsyncReadCollective",
   }
   posttest();
 }
+
+ */

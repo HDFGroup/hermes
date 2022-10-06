@@ -104,11 +104,9 @@ class MetadataManager {
         MPI_Barrier(MPI_COMM_WORLD);
         char *stop_daemon = getenv(kStopDaemon);
         bool shutdown_daemon = true;
-
         if (stop_daemon && stop_daemon[0] == '0') {
           shutdown_daemon = false;
         }
-
         hermes->FinalizeClient(shutdown_daemon);
       } else {
         hermes->Finalize(true);

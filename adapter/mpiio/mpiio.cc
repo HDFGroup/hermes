@@ -48,8 +48,11 @@ using hermes::adapter::WeaklyCanonical;
 
 inline bool IsTracked(MPI_File *fh) {
   if (hermes::adapter::exit) return false;
-  std::string filename = hermes::adapter::mpiio::MpiioFS::GetFilenameFromFP(fh);
-  return hermes::adapter::IsTracked(filename);
+  auto mdm = Singleton<MetadataManager>::GetInstance();
+  auto fs_api = Singleton<MpiioFS>::GetInstance();
+  File f; f.mpi_fh_ = (*fh); fs_api->_InitFile(f);
+  auto [stat, exists] = mdm->Find(f);
+  return exists;
 }
 
 /**
@@ -85,6 +88,7 @@ int HERMES_DECL(MPI_Waitall)(int count, MPI_Request *req, MPI_Status *status) {
   auto fs_api = Singleton<MpiioFS>::GetInstance();
   return fs_api->WaitAll(count, req, status);
 }
+
 /**
  * Metadata functions
  */
@@ -107,17 +111,14 @@ int HERMES_DECL(MPI_File_open)(MPI_Comm comm, const char *filename, int amode,
 }
 
 int HERMES_DECL(MPI_File_close)(MPI_File *fh) {
-  int ret;
   bool stat_exists;
   auto real_api = Singleton<API>::GetInstance();
   auto fs_api = Singleton<MpiioFS>::GetInstance();
   if (IsTracked(fh)) {
     File f; f.mpi_fh_ = *fh; fs_api->_InitFile(f);
     return fs_api->Close(f, stat_exists);
-  } else {
-    ret = real_api->MPI_File_close(fh);
   }
-  return (ret);
+  return real_api->MPI_File_close(fh);
 }
 
 int HERMES_DECL(MPI_File_seek)(MPI_File fh, MPI_Offset offset, int whence) {

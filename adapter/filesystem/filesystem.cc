@@ -460,6 +460,7 @@ size_t Filesystem::_ReadNew(BlobPlacementIter &ri) {
 int Filesystem::AWrite(File &f, AdapterStat &stat, const void *ptr,
                        size_t off, size_t total_size, size_t req_id,
                        IoOptions opts) {
+  LOG(INFO) << "Starting an asynchronous write" << std::endl;
   auto pool =
       Singleton<ThreadPool>::GetInstance(kNumThreads);
   HermesRequest *req = new HermesRequest();
@@ -501,6 +502,7 @@ size_t Filesystem::Wait(size_t req_id) {
   }
   HermesRequest *req = (*req_iter).second;
   size_t ret = req->return_future.get();
+  delete req;
   return ret;
 }
 
@@ -557,6 +559,11 @@ int Filesystem::Sync(File &f, AdapterStat &stat) {
     stat.st_ctim = ts;
     mdm->Update(f, stat);
     return 0;
+  }
+
+  // Wait for all async requests to complete
+  for (auto &req : mdm->request_map) {
+    Wait(req.first);
   }
 
   hapi::Context ctx;
