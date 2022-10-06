@@ -37,6 +37,7 @@ using hermes::adapter::fs::File;
 using hermes::adapter::Singleton;
 using hermes::adapter::mpiio::API;
 using hermes::adapter::fs::IoOptions;
+using hermes::adapter::fs::IoStatus;
 using hermes::adapter::fs::MetadataManager;
 using hermes::adapter::fs::SeekMode;
 
@@ -82,7 +83,7 @@ class MpiioFS : public hermes::adapter::fs::Filesystem {
     return filename;
   }
 
-  size_t Read(File &f, AdapterStat &stat,
+  int Read(File &f, AdapterStat &stat,
               void *ptr, size_t offset,
               int count, MPI_Datatype datatype,
               MPI_Status *status, IoOptions opts = IoOptions());
@@ -90,15 +91,15 @@ class MpiioFS : public hermes::adapter::fs::Filesystem {
             void *ptr, size_t offset,
             int count, MPI_Datatype datatype,
             MPI_Request *request, IoOptions opts = IoOptions());
-  size_t ReadAll(File &f, AdapterStat &stat,
+  int ReadAll(File &f, AdapterStat &stat,
                  void *ptr, size_t offset,
                  int count, MPI_Datatype datatype,
                  MPI_Status *status, IoOptions opts = IoOptions());
-  size_t ReadOrdered(File &f, AdapterStat &stat,
+  int ReadOrdered(File &f, AdapterStat &stat,
                      void *ptr, int count,
                      MPI_Datatype datatype,
                      MPI_Status *status, IoOptions opts = IoOptions());
-  size_t Write(File &f, AdapterStat &stat,
+  int Write(File &f, AdapterStat &stat,
                const void *ptr, size_t offset,
                int count, MPI_Datatype datatype,
                MPI_Status *status, IoOptions opts = IoOptions());
@@ -106,11 +107,11 @@ class MpiioFS : public hermes::adapter::fs::Filesystem {
              const void *ptr, size_t offset,
              int count, MPI_Datatype datatype, MPI_Request *request,
              IoOptions opts = IoOptions());
-  size_t WriteAll(File &f, AdapterStat &stat,
+  int WriteAll(File &f, AdapterStat &stat,
                   const void *ptr, size_t offset,
                   int count, MPI_Datatype datatype,
                   MPI_Status *status, IoOptions opts = IoOptions());
-  size_t WriteOrdered(File &f, AdapterStat &stat,
+  int WriteOrdered(File &f, AdapterStat &stat,
                       const void *ptr, int count,
                       MPI_Datatype datatype,
                       MPI_Status *status, IoOptions opts = IoOptions());
@@ -124,23 +125,23 @@ class MpiioFS : public hermes::adapter::fs::Filesystem {
    */
 
  public:
-  size_t Read(File &f, AdapterStat &stat,
+  int Read(File &f, AdapterStat &stat,
               void *ptr, int count, MPI_Datatype datatype,
               MPI_Status *status);
   int ARead(File &f, AdapterStat &stat,
             void *ptr, int count, MPI_Datatype datatype,
             MPI_Request *request);
-  size_t ReadAll(File &f, AdapterStat &stat,
+  int ReadAll(File &f, AdapterStat &stat,
                  void *ptr, int count, MPI_Datatype datatype,
                  MPI_Status *status);
 
-  size_t Write(File &f, AdapterStat &stat,
+  int Write(File &f, AdapterStat &stat,
                const void *ptr, int count, MPI_Datatype datatype,
                MPI_Status *status);
   int AWrite(File &f, AdapterStat &stat,
              const void *ptr, int count, MPI_Datatype datatype,
              MPI_Request *request);
-  size_t WriteAll(File &f, AdapterStat &stat,
+  int WriteAll(File &f, AdapterStat &stat,
                   const void *ptr, int count, MPI_Datatype datatype,
                   MPI_Status *status);
 
@@ -149,54 +150,54 @@ class MpiioFS : public hermes::adapter::fs::Filesystem {
    * */
 
  public:
-  size_t Read(File &f, bool &stat_exists,
+  int Read(File &f, bool &stat_exists,
               void *ptr, size_t offset,
               int count, MPI_Datatype datatype,
               MPI_Status *status);
   int ARead(File &f, bool &stat_exists,
             void *ptr, size_t offset,
             int count, MPI_Datatype datatype, MPI_Request *request);
-  size_t ReadAll(File &f, bool &stat_exists,
+  int ReadAll(File &f, bool &stat_exists,
                  void *ptr, size_t offset,
                  int count, MPI_Datatype datatype,
                  MPI_Status *status);
-  size_t ReadOrdered(File &f, bool &stat_exists,
+  int ReadOrdered(File &f, bool &stat_exists,
                      void *ptr, int count,
                      MPI_Datatype datatype,
                      MPI_Status *status);
 
-  size_t Write(File &f, bool &stat_exists,
+  int Write(File &f, bool &stat_exists,
                const void *ptr, size_t offset,
                int count, MPI_Datatype datatype,
                MPI_Status *status);
   int AWrite(File &f, bool &stat_exists,
              const void *ptr, size_t offset,
              int count, MPI_Datatype datatype, MPI_Request *request);
-  size_t WriteAll(File &f, bool &stat_exists,
+  int WriteAll(File &f, bool &stat_exists,
                   const void *ptr, size_t offset,
                   int count, MPI_Datatype datatype,
                   MPI_Status *status);
-  size_t WriteOrdered(File &f, bool &stat_exists,
+  int WriteOrdered(File &f, bool &stat_exists,
                       const void *ptr, int count,
                       MPI_Datatype datatype,
                       MPI_Status *status);
 
-  size_t Read(File &f, bool &stat_exists,
+  int Read(File &f, bool &stat_exists,
               void *ptr, int count, MPI_Datatype datatype,
               MPI_Status *status);
   int ARead(File &f, bool &stat_exists,
             void *ptr, int count, MPI_Datatype datatype, MPI_Request *request);
-  size_t ReadAll(File &f, bool &stat_exists,
+  int ReadAll(File &f, bool &stat_exists,
                  void *ptr, int count, MPI_Datatype datatype,
                  MPI_Status *status);
 
-  size_t Write(File &f, bool &stat_exists,
+  int Write(File &f, bool &stat_exists,
                const void *ptr, int count, MPI_Datatype datatype,
                MPI_Status *status);
   int AWrite(File &f, bool &stat_exists,
              const void *ptr, int count, MPI_Datatype datatype,
              MPI_Request *request);
-  size_t WriteAll(File &f, bool &stat_exists,
+  int WriteAll(File &f, bool &stat_exists,
                   const void *ptr, int count, MPI_Datatype datatype,
                   MPI_Status *status);
 
@@ -212,9 +213,11 @@ class MpiioFS : public hermes::adapter::fs::Filesystem {
   void _OpenInitStats(File &f, AdapterStat &stat, bool bucket_exists) override;
   File _RealOpen(AdapterStat &stat, const std::string &path) override;
   size_t _RealWrite(const std::string &filename, off_t offset, size_t size,
-                    const u8 *data_ptr, IoOptions &opts) override;
+                    const u8 *data_ptr,
+                    IoStatus &io_status, IoOptions &opts) override;
   size_t _RealRead(const std::string &filename, off_t offset, size_t size,
-                   u8 *data_ptr, IoOptions &opts) override;
+                   u8 *data_ptr,
+                   IoStatus &io_status, IoOptions &opts) override;
   int _RealSync(File &f) override;
   int _RealClose(File &f) override;
 };

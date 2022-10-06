@@ -26,9 +26,10 @@ void StageIn(std::string path, int off, int size, PlacementPolicy dpe) {
   void *buf = malloc(size);
   AdapterStat stat;
   bool stat_exists;
+  IoStatus io_status;
   File f = fs_api.Open(stat, path);
   fs_api.Read(f, stat, buf, off, size,
-              IoOptions::WithParallelDpe(dpe));
+              io_status, IoOptions::WithParallelDpe(dpe));
   fs_api.Close(f, stat_exists, false);
   free(buf);
 }

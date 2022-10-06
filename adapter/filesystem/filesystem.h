@@ -174,12 +174,17 @@ struct IoOptions {
   }
 };
 
+struct IoStatus {
+  MPI_Status mpi_status_;
+};
+
 struct BlobPlacementIter {
   File &f_;
   AdapterStat &stat_;
   const std::string &filename_;
   const BlobPlacement &p_;
   std::shared_ptr<hapi::Bucket> &bkt_;
+  IoStatus &io_status_;
   IoOptions &opts_;
 
   std::string blob_name_;
@@ -195,9 +200,10 @@ struct BlobPlacementIter {
                              const std::string &filename,
                              const BlobPlacement &p,
                              std::shared_ptr<hapi::Bucket> &bkt,
+                             IoStatus &io_status,
                              IoOptions &opts) :
         f_(f), stat_(stat), filename_(filename),
-        p_(p), bkt_(bkt), opts_(opts) {}
+        p_(p), bkt_(bkt), io_status_(io_status), opts_(opts) {}
 };
 
 class Filesystem {
@@ -205,17 +211,17 @@ class Filesystem {
   File Open(AdapterStat &stat, const std::string &path);
   void Open(AdapterStat &stat, File &f, const std::string &path);
   size_t Write(File &f, AdapterStat &stat, const void *ptr,
-               size_t off, size_t total_size,
+               size_t off, size_t total_size, IoStatus &io_status,
                IoOptions opts = IoOptions());
   size_t Read(File &f, AdapterStat &stat, void *ptr,
-              size_t off, size_t total_size,
+              size_t off, size_t total_size, IoStatus &io_status,
               IoOptions opts = IoOptions());
   int AWrite(File &f, AdapterStat &stat, const void *ptr,
              size_t off, size_t total_size, size_t req_id,
-             IoOptions opts = IoOptions());
+             IoStatus &io_status, IoOptions opts = IoOptions());
   int ARead(File &f, AdapterStat &stat, void *ptr,
             size_t off, size_t total_size, size_t req_id,
-            IoOptions opts = IoOptions());
+            IoStatus &io_status, IoOptions opts = IoOptions());
   size_t Wait(uint64_t req_id);
   void Wait(std::vector<uint64_t> &req_id, std::vector<size_t> &ret);
   off_t Seek(File &f, AdapterStat &stat, SeekMode whence, off_t offset);
@@ -236,7 +242,7 @@ class Filesystem {
   void _WriteToExistingUnaligned(BlobPlacementIter &write_iter);
   void _PutWithFallback(AdapterStat &stat, const std::string &blob_name,
                         const std::string &filename, u8 *data, size_t size,
-                        size_t offset, IoOptions &opts);
+                        size_t offset, IoStatus &io_status_, IoOptions &opts);
   size_t _ReadExistingContained(BlobPlacementIter &read_iter);
   size_t _ReadExistingPartial(BlobPlacementIter &read_iter);
   size_t _ReadNew(BlobPlacementIter &read_iter);
@@ -253,9 +259,10 @@ class Filesystem {
   virtual File _RealOpen(AdapterStat &stat, const std::string &path) = 0;
   virtual size_t _RealWrite(const std::string &filename, off_t offset,
                             size_t size, const u8 *data_ptr,
-                            IoOptions &opts) = 0;
+                            IoStatus &io_status, IoOptions &opts) = 0;
   virtual size_t _RealRead(const std::string &filename, off_t offset,
-                           size_t size, u8 *data_ptr, IoOptions &opts) = 0;
+                           size_t size, u8 *data_ptr,
+                           IoStatus &io_status, IoOptions &opts) = 0;
   virtual int _RealSync(File &f) = 0;
   virtual int _RealClose(File &f) = 0;
 
@@ -266,13 +273,15 @@ class Filesystem {
 
  public:
   size_t Write(File &f, AdapterStat &stat, const void *ptr,
-               size_t total_size, IoOptions opts);
+               size_t total_size, IoStatus &io_status, IoOptions opts);
   size_t Read(File &f, AdapterStat &stat, void *ptr,
-              size_t total_size, IoOptions opts);
+              size_t total_size, IoStatus &io_status, IoOptions opts);
   int AWrite(File &f, AdapterStat &stat, const void *ptr,
-             size_t total_size, size_t req_id, IoOptions opts);
+             size_t total_size, size_t req_id,
+             IoStatus &io_status, IoOptions opts);
   int ARead(File &f, AdapterStat &stat, void *ptr,
-            size_t total_size, size_t req_id, IoOptions opts);
+            size_t total_size, size_t req_id,
+            IoStatus &io_status, IoOptions opts);
 
   /*
    * Locates the AdapterStat data structure internally, and
@@ -281,26 +290,30 @@ class Filesystem {
 
  public:
   size_t Write(File &f, bool &stat_exists, const void *ptr,
-               size_t total_size, IoOptions opts = IoOptions());
+               size_t total_size, IoStatus &io_status,
+               IoOptions opts = IoOptions());
   size_t Read(File &f, bool &stat_exists, void *ptr,
-              size_t total_size, IoOptions opts = IoOptions());
+              size_t total_size, IoStatus &io_status,
+              IoOptions opts = IoOptions());
   size_t Write(File &f, bool &stat_exists, const void *ptr,
-               size_t off, size_t total_size, IoOptions opts = IoOptions());
+               size_t off, size_t total_size, IoStatus &io_status,
+               IoOptions opts = IoOptions());
   size_t Read(File &f, bool &stat_exists, void *ptr,
-              size_t off, size_t total_size, IoOptions opts = IoOptions());
+              size_t off, size_t total_size, IoStatus &io_status,
+              IoOptions opts = IoOptions());
 
   int AWrite(File &f, bool &stat_exists, const void *ptr,
              size_t total_size, size_t req_id,
-             IoOptions opts);
+             IoStatus &io_status, IoOptions opts);
   int ARead(File &f, bool &stat_exists, void *ptr,
             size_t total_size, size_t req_id,
-            IoOptions opts);
+            IoStatus &io_status, IoOptions opts);
   int AWrite(File &f, bool &stat_exists, const void *ptr,
              size_t off, size_t total_size, size_t req_id,
-             IoOptions opts);
+             IoStatus &io_status, IoOptions opts);
   int ARead(File &f, bool &stat_exists, void *ptr,
             size_t off, size_t total_size, size_t req_id,
-            IoOptions opts);
+            IoStatus &io_status, IoOptions opts);
 
   off_t Seek(File &f, bool &stat_exists, SeekMode whence, off_t offset);
   off_t Tell(File &f, bool &stat_exists);

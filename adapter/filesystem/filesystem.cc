@@ -92,7 +92,7 @@ void Filesystem::_PutWithFallback(AdapterStat &stat,
                                   const std::string &filename,
                                   u8 *data, size_t size,
                                   size_t offset,
-                                  IoOptions &opts) {
+                                  IoStatus &io_status, IoOptions &opts) {
   hapi::Context ctx;
   const char *hermes_write_only = getenv(kHermesWriteOnlyVar);
   if (hermes_write_only && hermes_write_only[0] == '1') {
@@ -100,12 +100,12 @@ void Filesystem::_PutWithFallback(AdapterStat &stat,
     ctx.rr_retry = true;
     ctx.disable_swap = true;
   }
-  hapi::Status status = stat.st_bkid->Put(blob_name, data, size, ctx);
-  if (status.Failed()) {
+  hapi::Status put_status = stat.st_bkid->Put(blob_name, data, size, ctx);
+  if (put_status.Failed()) {
     if (opts.with_fallback_) {
       LOG(WARNING) << "Failed to Put Blob " << blob_name << " to Bucket "
                    << filename << ". Falling back to posix I/O." << std::endl;
-      _RealWrite(filename, offset, size, data, opts);
+      _RealWrite(filename, offset, size, data, io_status, opts);
     }
   } else {
     stat.st_blobs.emplace(blob_name);
@@ -113,7 +113,8 @@ void Filesystem::_PutWithFallback(AdapterStat &stat,
 }
 
 size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
-                         size_t off, size_t total_size, IoOptions opts) {
+                         size_t off, size_t total_size,
+                         IoStatus &io_status, IoOptions opts) {
   (void) f;
   std::shared_ptr<hapi::Bucket> &bkt = stat.st_bkid;
   std::string filename = bkt->GetName();
@@ -129,7 +130,7 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
   LOG(INFO) << "Mapping for write has " << mapping.size() << " mappings.\n";
 
   for (const auto &p : mapping) {
-    BlobPlacementIter wi(f, stat, filename, p, bkt, opts);
+    BlobPlacementIter wi(f, stat, filename, p, bkt, io_status, opts);
     wi.blob_name_ = wi.p_.CreateBlobName();
     wi.blob_exists_ = wi.bkt_->ContainsBlob(wi.blob_name_);
     wi.blob_start_ = p.page_ * kPageSize;
@@ -217,7 +218,8 @@ void Filesystem::_WriteToNewAligned(BlobPlacementIter &wi) {
             << " offset: " << wi.p_.blob_off_
             << " size: " << wi.p_.blob_size_ << std::endl;
   _PutWithFallback(wi.stat_, wi.blob_name_, wi.filename_, wi.mem_ptr_,
-                   wi.p_.blob_size_, wi.p_.bucket_off_, wi.opts_);
+                   wi.p_.blob_size_, wi.p_.bucket_off_,
+                   wi.io_status_, wi.opts_);
 }
 
 void Filesystem::_WriteToNewUnaligned(BlobPlacementIter &wi) {
@@ -225,12 +227,13 @@ void Filesystem::_WriteToNewUnaligned(BlobPlacementIter &wi) {
       << " offset: " << wi.p_.blob_off_
       << " size: " << wi.p_.blob_size_ << std::endl;
   hapi::Blob final_data(wi.p_.blob_off_ + wi.p_.blob_size_);
-  Read(wi.f_, wi.stat_, final_data.data(), wi.blob_start_, wi.p_.blob_off_);
+  Read(wi.f_, wi.stat_, final_data.data(), wi.blob_start_,
+       wi.p_.blob_off_, wi.io_status_);
   memcpy(final_data.data() + wi.p_.blob_off_, wi.mem_ptr_,
          wi.p_.blob_size_);
   _PutWithFallback(wi.stat_, wi.blob_name_, wi.filename_,
                    final_data.data(), final_data.size(), wi.blob_start_,
-                   wi.opts_);
+                   wi.io_status_, wi.opts_);
 }
 
 void Filesystem::_WriteToExistingAligned(BlobPlacementIter &wi) {
@@ -245,7 +248,7 @@ void Filesystem::_WriteToExistingAligned(BlobPlacementIter &wi) {
               << " of size:" << wi.p_.blob_size_ << "." << std::endl;
     _PutWithFallback(wi.stat_, wi.blob_name_, wi.filename_,
                      wi.mem_ptr_, wi.p_.blob_size_, wi.blob_start_,
-                     wi.opts_);
+                     wi.io_status_, wi.opts_);
   } else {
     LOG(INFO) << "Update blob " << wi.blob_name_
               << " of size:" << existing_blob_size << "." << std::endl;
@@ -254,7 +257,7 @@ void Filesystem::_WriteToExistingAligned(BlobPlacementIter &wi) {
     memcpy(existing_data.data(), wi.mem_ptr_, wi.p_.blob_size_);
     _PutWithFallback(wi.stat_, wi.blob_name_, wi.filename_,
                      existing_data.data(), existing_data.size(),
-                     wi.blob_start_, wi.opts_);
+                     wi.blob_start_, wi.io_status_, wi.opts_);
   }
 }
 
@@ -285,6 +288,7 @@ void Filesystem::_WriteToExistingUnaligned(BlobPlacementIter &wi) {
          final_data.data() + existing_data.size(),
          wi.blob_start_ + existing_data.size(),
          wi.p_.blob_off_ - existing_data.size(),
+         wi.io_status_,
          opts);
   }
 
@@ -306,11 +310,13 @@ void Filesystem::_WriteToExistingUnaligned(BlobPlacementIter &wi) {
                    final_data.data(),
                    final_data.size(),
                    wi.blob_start_,
+                   wi.io_status_,
                    wi.opts_);
 }
 
 size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
-                        size_t off, size_t total_size, IoOptions opts) {
+                        size_t off, size_t total_size,
+                        IoStatus &io_status, IoOptions opts) {
   (void) f;
   std::shared_ptr<hapi::Bucket> &bkt = stat.st_bkid;
   LOG(INFO) << "Read called for filename: " << bkt->GetName()
@@ -336,7 +342,7 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
   LOG(INFO) << "Mapping for read has " << mapping.size() << " mapping."
             << std::endl;
   for (const auto &p : mapping) {
-    BlobPlacementIter ri(f, stat, filename, p, bkt, opts);
+    BlobPlacementIter ri(f, stat, filename, p, bkt, io_status, opts);
     ri.blob_name_ = ri.p_.CreateBlobName();
     ri.blob_exists_ = bkt->ContainsBlob(ri.blob_name_);
     ri.blob_start_ = ri.p_.page_ * kPageSize;
@@ -403,6 +409,7 @@ size_t Filesystem::_ReadExistingPartial(BlobPlacementIter &ri) {
                          ri.blob_start_ + existing_size,
                          bytes_to_read,
                          ri.blob_.data() + existing_size,
+                         ri.io_status_,
                          ri.opts_);
 
   if (ri.opts_.dpe_ != PlacementPolicy::kNone) {
@@ -412,7 +419,7 @@ size_t Filesystem::_ReadExistingPartial(BlobPlacementIter &ri) {
     Write(ri.f_, ri.stat_,
           ri.blob_.data() + ri.p_.blob_off_,
           ri.p_.bucket_off_,
-          new_blob_size, opts);
+          new_blob_size, ri.io_status_, opts);
   }
 
   if (ret != bytes_to_read) {
@@ -437,7 +444,8 @@ size_t Filesystem::_ReadNew(BlobPlacementIter &ri) {
   auto new_blob_size = ri.p_.blob_off_ + ri.p_.blob_size_;
   ri.blob_.resize(new_blob_size);
   size_t ret = _RealRead(ri.filename_, ri.blob_start_,
-                         new_blob_size, ri.blob_.data(), ri.opts_);
+                         new_blob_size, ri.blob_.data(),
+                         ri.io_status_, ri.opts_);
   if (ret != new_blob_size) {
     LOG(FATAL) << "Was not able to read full content" << std::endl;
   }
@@ -450,7 +458,7 @@ size_t Filesystem::_ReadNew(BlobPlacementIter &ri) {
     Write(ri.f_, ri.stat_,
           ri.blob_.data() + ri.p_.blob_off_,
           ri.p_.bucket_off_,
-          new_blob_size, opts);
+          new_blob_size, ri.io_status_, opts);
   }
 
   memcpy(ri.mem_ptr_, ri.blob_.data() + ri.p_.blob_off_, ri.p_.blob_size_);
@@ -459,17 +467,18 @@ size_t Filesystem::_ReadNew(BlobPlacementIter &ri) {
 
 int Filesystem::AWrite(File &f, AdapterStat &stat, const void *ptr,
                        size_t off, size_t total_size, size_t req_id,
-                       IoOptions opts) {
+                       IoStatus &io_status, IoOptions opts) {
   LOG(INFO) << "Starting an asynchronous write" << std::endl;
   auto pool =
       Singleton<ThreadPool>::GetInstance(kNumThreads);
   HermesRequest *req = new HermesRequest();
   auto lambda =
       [](Filesystem *fs, File &f, AdapterStat &stat, const void *ptr,
-                 size_t off, size_t total_size, IoOptions opts) {
-    return fs->Write(f, stat, ptr, off, total_size, opts);
+         size_t off, size_t total_size, IoStatus &io_status, IoOptions opts) {
+    return fs->Write(f, stat, ptr, off, total_size, io_status, opts);
   };
-  auto func = std::bind(lambda, this, f, stat, ptr, off, total_size, opts);
+  auto func = std::bind(lambda, this, f, stat, ptr, off,
+                        total_size, io_status, opts);
   req->return_future = pool->run(func);
   auto mdm = Singleton<MetadataManager>::GetInstance();
   mdm->request_map.emplace(req_id, req);
@@ -478,16 +487,17 @@ int Filesystem::AWrite(File &f, AdapterStat &stat, const void *ptr,
 
 int Filesystem::ARead(File &f, AdapterStat &stat, void *ptr,
                       size_t off, size_t total_size, size_t req_id,
-                      IoOptions opts) {
+                      IoStatus &io_status, IoOptions opts) {
   auto pool =
       Singleton<ThreadPool>::GetInstance(kNumThreads);
   HermesRequest *req = new HermesRequest();
   auto lambda =
       [](Filesystem *fs, File &f, AdapterStat &stat, void *ptr,
-         size_t off, size_t total_size, IoOptions opts) {
-        return fs->Read(f, stat, ptr, off, total_size, opts);
+         size_t off, size_t total_size, IoStatus &io_status, IoOptions opts) {
+        return fs->Read(f, stat, ptr, off, total_size, io_status, opts);
       };
-  auto func = std::bind(lambda, this, f, stat, ptr, off, total_size, opts);
+  auto func = std::bind(lambda, this, f, stat,
+                        ptr, off, total_size, io_status, opts);
   req->return_future = pool->run(func);
   auto mdm = Singleton<MetadataManager>::GetInstance();
   mdm->request_map.emplace(req_id, req);
@@ -636,27 +646,30 @@ int Filesystem::Close(File &f, AdapterStat &stat, bool destroy) {
  * */
 
 size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
-                         size_t total_size, IoOptions opts) {
+                         size_t total_size, IoStatus &io_status, IoOptions opts) {
   off_t off = Tell(f, stat);
-  return Write(f, stat, ptr, off, total_size, opts);
+  return Write(f, stat, ptr, off, total_size, io_status, opts);
 }
 
 size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
-                        size_t total_size, IoOptions opts) {
+                        size_t total_size,
+                        IoStatus &io_status, IoOptions opts) {
   off_t off = Tell(f, stat);
-  return Read(f, stat, ptr, off, total_size, opts);
+  return Read(f, stat, ptr, off, total_size, io_status, opts);
 }
 
 int Filesystem::AWrite(File &f, AdapterStat &stat, const void *ptr,
-                       size_t total_size, size_t req_id, IoOptions opts) {
+                       size_t total_size, size_t req_id,
+                       IoStatus &io_status, IoOptions opts) {
   off_t off = Tell(f, stat);
-  return AWrite(f, stat, ptr, off, total_size, req_id, opts);
+  return AWrite(f, stat, ptr, off, total_size, req_id, io_status, opts);
 }
 
 int Filesystem::ARead(File &f, AdapterStat &stat, void *ptr,
-                      size_t total_size, size_t req_id, IoOptions opts) {
+                      size_t total_size, size_t req_id,
+                      IoStatus &io_status, IoOptions opts) {
   off_t off = Tell(f, stat);
-  return ARead(f, stat, ptr, off, total_size, req_id, opts);
+  return ARead(f, stat, ptr, off, total_size, req_id, io_status, opts);
 }
 
 
@@ -666,7 +679,8 @@ int Filesystem::ARead(File &f, AdapterStat &stat, void *ptr,
  * */
 
 size_t Filesystem::Write(File &f, bool &stat_exists, const void *ptr,
-                         size_t total_size, IoOptions opts) {
+                         size_t total_size,
+                         IoStatus &io_status, IoOptions opts) {
   auto mdm = Singleton<MetadataManager>::GetInstance();
   auto [stat, exists] = mdm->Find(f);
   if (!exists) {
@@ -674,11 +688,12 @@ size_t Filesystem::Write(File &f, bool &stat_exists, const void *ptr,
     return 0;
   }
   stat_exists = true;
-  return Write(f, stat, ptr, total_size, opts);
+  return Write(f, stat, ptr, total_size, io_status, opts);
 }
 
 size_t Filesystem::Read(File &f, bool &stat_exists, void *ptr,
-                        size_t total_size, IoOptions opts) {
+                        size_t total_size,
+                        IoStatus &io_status, IoOptions opts) {
   auto mdm = Singleton<MetadataManager>::GetInstance();
   auto [stat, exists] = mdm->Find(f);
   if (!exists) {
@@ -686,11 +701,12 @@ size_t Filesystem::Read(File &f, bool &stat_exists, void *ptr,
     return 0;
   }
   stat_exists = true;
-  return Read(f, stat, ptr, total_size, opts);
+  return Read(f, stat, ptr, total_size, io_status, opts);
 }
 
 size_t Filesystem::Write(File &f, bool &stat_exists, const void *ptr,
-                         size_t off, size_t total_size, IoOptions opts) {
+                         size_t off, size_t total_size,
+                         IoStatus &io_status, IoOptions opts) {
   auto mdm = Singleton<MetadataManager>::GetInstance();
   auto [stat, exists] = mdm->Find(f);
   if (!exists) {
@@ -699,11 +715,12 @@ size_t Filesystem::Write(File &f, bool &stat_exists, const void *ptr,
   }
   stat_exists = true;
   opts.seek_ = false;
-  return Write(f, stat, ptr, off, total_size, opts);
+  return Write(f, stat, ptr, off, total_size, io_status, opts);
 }
 
 size_t Filesystem::Read(File &f, bool &stat_exists, void *ptr,
-                        size_t off, size_t total_size, IoOptions opts) {
+                        size_t off, size_t total_size,
+                        IoStatus &io_status, IoOptions opts) {
   auto mdm = Singleton<MetadataManager>::GetInstance();
   auto [stat, exists] = mdm->Find(f);
   if (!exists) {
@@ -712,12 +729,12 @@ size_t Filesystem::Read(File &f, bool &stat_exists, void *ptr,
   }
   stat_exists = true;
   opts.seek_ = false;
-  return Read(f, stat, ptr, off, total_size, opts);
+  return Read(f, stat, ptr, off, total_size, io_status, opts);
 }
 
 int Filesystem::AWrite(File &f, bool &stat_exists, const void *ptr,
                        size_t total_size, size_t req_id,
-                       IoOptions opts) {
+                       IoStatus &io_status, IoOptions opts) {
   auto mdm = Singleton<MetadataManager>::GetInstance();
   auto [stat, exists] = mdm->Find(f);
   if (!exists) {
@@ -725,12 +742,12 @@ int Filesystem::AWrite(File &f, bool &stat_exists, const void *ptr,
     return 0;
   }
   stat_exists = true;
-  return AWrite(f, stat, ptr, total_size, req_id, opts);
+  return AWrite(f, stat, ptr, total_size, req_id, io_status, opts);
 }
 
 int Filesystem::ARead(File &f, bool &stat_exists, void *ptr,
                       size_t total_size, size_t req_id,
-                      IoOptions opts) {
+                      IoStatus &io_status, IoOptions opts) {
   auto mdm = Singleton<MetadataManager>::GetInstance();
   auto [stat, exists] = mdm->Find(f);
   if (!exists) {
@@ -738,12 +755,12 @@ int Filesystem::ARead(File &f, bool &stat_exists, void *ptr,
     return 0;
   }
   stat_exists = true;
-  return ARead(f, stat, ptr, total_size, req_id, opts);
+  return ARead(f, stat, ptr, total_size, req_id, io_status, opts);
 }
 
 int Filesystem::AWrite(File &f, bool &stat_exists, const void *ptr,
                        size_t off, size_t total_size, size_t req_id,
-                       IoOptions opts) {
+                       IoStatus &io_status, IoOptions opts) {
   auto mdm = Singleton<MetadataManager>::GetInstance();
   auto [stat, exists] = mdm->Find(f);
   if (!exists) {
@@ -752,12 +769,12 @@ int Filesystem::AWrite(File &f, bool &stat_exists, const void *ptr,
   }
   stat_exists = true;
   opts.seek_ = false;
-  return AWrite(f, stat, ptr, off, total_size, req_id, opts);
+  return AWrite(f, stat, ptr, off, total_size, req_id, io_status, opts);
 }
 
 int Filesystem::ARead(File &f, bool &stat_exists, void *ptr,
                       size_t off, size_t total_size, size_t req_id,
-                      IoOptions opts) {
+                      IoStatus &io_status, IoOptions opts) {
   auto mdm = Singleton<MetadataManager>::GetInstance();
   auto [stat, exists] = mdm->Find(f);
   if (!exists) {
@@ -766,7 +783,7 @@ int Filesystem::ARead(File &f, bool &stat_exists, void *ptr,
   }
   stat_exists = true;
   opts.seek_ = false;
-  return ARead(f, stat, ptr, off, total_size, req_id, opts);
+  return ARead(f, stat, ptr, off, total_size, req_id, io_status, opts);
 }
 
 off_t Filesystem::Seek(File &f, bool &stat_exists,

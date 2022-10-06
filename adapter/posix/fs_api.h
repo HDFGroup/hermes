@@ -23,6 +23,7 @@ using hermes::adapter::fs::File;
 using hermes::adapter::Singleton;
 using hermes::adapter::posix::API;
 using hermes::adapter::fs::IoOptions;
+using hermes::adapter::fs::IoStatus;
 
 namespace hermes::adapter::posix {
 
@@ -41,9 +42,11 @@ class PosixFS : public hermes::adapter::fs::Filesystem {
   void _OpenInitStats(File &f, AdapterStat &stat, bool bucket_exists) override;
   File _RealOpen(AdapterStat &stat, const std::string &path) override;
   size_t _RealWrite(const std::string &filename, off_t offset, size_t size,
-                    const u8 *data_ptr, IoOptions &opts) override;
+                    const u8 *data_ptr,
+                    IoStatus &io_status, IoOptions &opts) override;
   size_t _RealRead(const std::string &filename, off_t offset, size_t size,
-                   u8 *data_ptr, IoOptions &opts) override;
+                   u8 *data_ptr,
+                   IoStatus &io_status, IoOptions &opts) override;
   int _RealSync(File &f) override;
   int _RealClose(File &f) override;
 };
