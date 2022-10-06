@@ -195,7 +195,7 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
   pretest();
   bool check_bytes = true;
   SECTION("write to existing file") {
-    test::test_open(info.existing_file.c_str(), MPI_MODE_RDWR, MPI_COMM_SELF);
+    test::test_open(info.existing_file.c_str(), MPI_MODE_RDWR,  MPI_COMM_SELF);
     REQUIRE(test::status_orig == MPI_SUCCESS);
     test::test_seek(info.rank * args.request_size, MPI_SEEK_SET);
     REQUIRE(test::status_orig == 0);
@@ -1034,8 +1034,7 @@ TEST_CASE("SingleAsyncReadCollective",
   }
 
   SECTION("read_at_all from existing file") {
-    test::test_open(info.existing_file.c_str(), MPI_MODE_RDONLY,
-                 MPI_COMM_SELF);
+    test::test_open(info.existing_file.c_str(), MPI_MODE_RDONLY, MPI_COMM_SELF);
     REQUIRE(test::status_orig == MPI_SUCCESS);
     test::test_iread_at_all(info.read_data.data(), args.request_size,
                          MPI_CHAR, info.rank * args.request_size);

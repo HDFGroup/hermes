@@ -58,9 +58,28 @@ void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
     mdm->InitializeHermes();
 
     bool bucket_exists = mdm->GetHermes()->BucketExists(path_str);
-    // TODO(hari) how to pass to hermes to make a private bucket
-    stat.st_bkid =
-        std::make_shared<hapi::Bucket>(path_str, mdm->GetHermes());
+
+    // TODO(llogan): needed for locking in parallel
+    if (mdm->is_mpi) {
+      int rank;
+      MPI_Comm_rank(stat.comm, &rank);
+      stat.main_lock_blob = "#main_lock";
+      if (rank == 0) {
+        u8 c;
+        stat.st_bkid =
+            std::make_shared<hapi::Bucket>(path_str, mdm->GetHermes());
+        stat.st_bkid->Put(stat.main_lock_blob, &c, 1);
+        LOG(INFO) << "Bucket ID (rank 0): " << stat.st_bkid->GetId() << std::endl;
+      }
+      MPI_Barrier(stat.comm);
+      if (rank != 0) {
+        stat.st_bkid =
+            std::make_shared<hapi::Bucket>(path_str, mdm->GetHermes());
+      }
+    } else {
+      stat.st_bkid =
+          std::make_shared<hapi::Bucket>(path_str, mdm->GetHermes());
+    }
 
     if (IsAsyncFlush(path_str)) {
       stat.st_vbkt =
@@ -70,11 +89,7 @@ void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
           std::make_shared<hapi::PersistTrait>(path_str, offset_map, false);
       stat.st_vbkt->Attach(stat.st_persist.get());
     }
-
     _OpenInitStats(f, stat, bucket_exists);
-    LOG(INFO) << "fd: "<< f.fd_
-              << " has size: " << stat.st_size << std::endl;
-
     mdm->Create(f, stat);
   } else {
     LOG(INFO) << "File opened before by adapter" << std::endl;
@@ -127,7 +142,6 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
   auto mapper = MapperFactory().Get(kMapperType);
   mapper->map(off, total_size, mapping);
   size_t data_offset = 0;
-  LOG(INFO) << "Mapping for write has " << mapping.size() << " mappings.\n";
 
   for (const auto &p : mapping) {
     BlobPlacementIter wi(f, stat, filename, p, bkt, io_status, opts);
@@ -135,9 +149,11 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
     wi.blob_exists_ = wi.bkt_->ContainsBlob(wi.blob_name_);
     wi.blob_start_ = p.page_ * kPageSize;
     wi.mem_ptr_ = (u8 *)ptr + data_offset;
-    if (p.blob_size_ != kPageSize && opts.coordinate_) {
+    if (p.blob_size_ != kPageSize && opts.coordinate_
+        && stat.main_lock_blob.size() > 0) {
       _CoordinatedPut(wi);
     } else {
+      LOG(INFO) << "In the unlocked uncoordinated put?" << std::endl;
       _UncoordinatedPut(wi);
     }
     data_offset += p.blob_size_;
@@ -157,38 +173,45 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
   return ret;
 }
 
+bool Lock(const std::string &bucket, const std::string &blob_name) {
+  auto mdm = Singleton<MetadataManager>::GetInstance();
+  auto &hermes = mdm->GetHermes();
+  SharedMemoryContext *context = &hermes->context_;
+  RpcContext *rpc = &hermes->rpc_;
+  BucketID bucket_id = GetBucketId(context, rpc, bucket.c_str());
+  LOG(INFO) << "Bucket id: " << bucket_id.as_int << std::endl;
+  BlobID lock_id = GetBlobId(context, rpc, blob_name, bucket_id, true);
+  LOG(INFO) << "Blob id: " << lock_id.as_int << std::endl;
+  bool ret = LockBlob(context, rpc, lock_id);
+  LOG(INFO) << "Lock ret: " << ret << std::endl;
+  return ret;
+}
+
+void Unlock(const std::string &bucket, const std::string &blob_name) {
+  auto mdm = Singleton<MetadataManager>::GetInstance();
+  auto &hermes = mdm->GetHermes();
+  SharedMemoryContext *context = &hermes->context_;
+  RpcContext *rpc = &hermes->rpc_;
+  BucketID bucket_id = GetBucketId(context, rpc, bucket.c_str());
+  BlobID lock_id = GetBlobId(context, rpc, blob_name, bucket_id, true);
+  UnlockBlob(context, rpc, lock_id);
+}
+
 void Filesystem::_CoordinatedPut(BlobPlacementIter &wi) {
-  hapi::Context ctx;
   LOG(INFO) << "Starting coordinate PUT"
             << " blob: " << wi.p_.page_
             << " off: " << wi.p_.blob_off_
             << " size: " << wi.p_.blob_size_
             << " pid: " << getpid() << std::endl;
 
-  if (!wi.blob_exists_) {
-    u8 c = 0;
-    auto status = wi.bkt_->Put(wi.blob_name_, &c, 1, ctx);
-    if (status.Failed()) {
-      LOG(ERROR) << "Not enough space for coordinated put" << std::endl;
-    }
-  }
-
-  auto mdm = Singleton<MetadataManager>::GetInstance();
-  auto &hermes = mdm->GetHermes();
-  SharedMemoryContext *context = &hermes->context_;
-  RpcContext *rpc = &hermes->rpc_;
-  BucketID bucket_id = GetBucketId(context, rpc, wi.filename_.c_str());
-  BlobID blob_id = GetBlobId(context, rpc, wi.blob_name_, bucket_id, true);
-
+  // TODO(llogan): make put async, instead of doing a lock like this
+  Lock(wi.filename_, wi.stat_.main_lock_blob);
+  LOG(INFO) << "Acquire lock: " << wi.stat_.main_lock_blob <<
+      " for process: " << getpid() << std::endl;
   wi.blob_exists_ = wi.bkt_->ContainsBlob(wi.blob_name_);
-  bool is_locked = LockBlob(context, rpc, blob_id);
-  if (is_locked) {
-    LOG(INFO) << "Acquire lock for process: " << getpid() << std::endl;
-    _UncoordinatedPut(wi);
-    UnlockBlob(context, rpc, blob_id);
-  } else {
-    LOG(FATAL) << "Could not acquire blob lock?" << std::endl;
-  }
+  _UncoordinatedPut(wi);
+  LOG(INFO) << "Unlocking for process: " << getpid() << std::endl;
+  Unlock(wi.filename_, wi.stat_.main_lock_blob);
 }
 
 void Filesystem::_UncoordinatedPut(BlobPlacementIter &wi) {
@@ -234,8 +257,9 @@ void Filesystem::_WriteToNewUnaligned(BlobPlacementIter &wi) {
       << " offset: " << wi.p_.blob_off_
       << " size: " << wi.p_.blob_size_ << std::endl;
   hapi::Blob final_data(wi.p_.blob_off_ + wi.p_.blob_size_);
+  IoOptions opts = IoOptions::DirectIo(wi.opts_);
   Read(wi.f_, wi.stat_, final_data.data(), wi.blob_start_,
-       wi.p_.blob_off_, wi.io_status_);
+       wi.p_.blob_off_, wi.io_status_, opts);
   memcpy(final_data.data() + wi.p_.blob_off_, wi.mem_ptr_,
          wi.p_.blob_size_);
   _PutWithFallback(wi.stat_, wi.blob_name_, wi.filename_,

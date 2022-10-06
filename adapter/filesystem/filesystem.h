@@ -43,6 +43,8 @@ struct AdapterStat {
   std::shared_ptr<hapi::Bucket> st_bkid; /* bucket associated with the file */
   /** VBucket for persisting data asynchronously. */
   std::shared_ptr<hapi::VBucket> st_vbkt;
+  /** Blob for locking when coordination is needed. */
+  std::string main_lock_blob;
   /** Used for async flushing. */
   std::shared_ptr<hapi::PersistTrait> st_persist;
   std::set<std::string, bool (*)(const std::string &, const std::string &)>
@@ -147,7 +149,7 @@ struct IoOptions {
   int count_;
   IoOptions() :
                 dpe_(PlacementPolicy::kNone),
-                coordinate_(false),
+                coordinate_(true),
                 seek_(true),
                 with_fallback_(true),
                 mpi_type_(MPI_CHAR), count_(0) {}

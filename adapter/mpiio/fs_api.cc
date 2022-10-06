@@ -503,12 +503,13 @@ size_t MpiioFS::_RealWrite(const std::string &filename, off_t offset,
                            IoStatus &io_status, IoOptions &opts) {
   LOG(INFO) << "Writing to file: " << filename << " offset: " << offset
             << " size:" << size << "."
+            << " offset:" << offset << "."
             << " file_size:" << stdfs::file_size(filename)
             << " pid: " << getpid() << std::endl;
   MPI_File fh;
   int write_count = 0;
   io_status.mpi_ret_ = real_api->MPI_File_open(MPI_COMM_SELF, filename.c_str(),
-                                       MPI_MODE_RDONLY, MPI_INFO_NULL, &fh);
+                                       MPI_MODE_RDWR, MPI_INFO_NULL, &fh);
   if (io_status.mpi_ret_ != MPI_SUCCESS) {
     return 0;
   }

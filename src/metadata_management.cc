@@ -1507,9 +1507,7 @@ int GetNumOutstandingFlushingTasks(SharedMemoryContext *context,
   return result;
 }
 
-bool LocalLockBlob(SharedMemoryContext *context, BlobID blob_id,
-                   u32 pid, u32 tid) {
-  (void) pid; (void) tid;
+bool LocalLockBlob(SharedMemoryContext *context, BlobID blob_id) {
   Ticket t = {};
   Ticket *ticket = 0;
   bool result = true;
@@ -1545,13 +1543,10 @@ bool LocalLockBlob(SharedMemoryContext *context, BlobID blob_id,
     }
     ticket = &t;
   }
-
   return result;
 }
 
-bool LocalUnlockBlob(SharedMemoryContext *context, BlobID blob_id,
-                     u32 pid, u32 tid) {
-  (void) pid; (void) tid;
+bool LocalUnlockBlob(SharedMemoryContext *context, BlobID blob_id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   BlobInfo *blob_info = GetBlobInfoPtr(mdm, blob_id);
   bool result = false;
@@ -1576,27 +1571,21 @@ void GetPidTid(u32 &pid, u32 &tid) {
 bool LockBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id) {
   u32 target_node = GetBlobNodeId(blob_id);
   bool result = false;
-  u32 pid, tid;
-  GetPidTid(pid, tid);
   if (target_node == rpc->node_id) {
-    result = LocalLockBlob(context, blob_id, pid, tid);
+    result = LocalLockBlob(context, blob_id);
   } else {
-    result = RpcCall<bool>(rpc, target_node, "RemoteLockBlob", blob_id,
-                           pid, tid);
+    result = RpcCall<bool>(rpc, target_node, "RemoteLockBlob", blob_id);
   }
   return result;
 }
 
 bool UnlockBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id) {
   u32 target_node = GetBlobNodeId(blob_id);
-  u32 pid, tid;
-  GetPidTid(pid, tid);
   bool result = false;
   if (target_node == rpc->node_id) {
-    result = LocalUnlockBlob(context, blob_id, pid, tid);
+    result = LocalUnlockBlob(context, blob_id);
   } else {
-    result = RpcCall<bool>(rpc, target_node, "RemoteUnlockBlob", blob_id,
-                           pid, tid);
+    result = RpcCall<bool>(rpc, target_node, "RemoteUnlockBlob", blob_id);
   }
 
   return result;

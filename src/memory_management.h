@@ -36,10 +36,6 @@ typedef void (ArenaErrorFunc)();
 struct TicketMutex {
   std::atomic<u32> ticket;
   std::atomic<u32> serving;
-  u32 pid_, tid_;
-  std::atomic<u32> count_;
-  TicketMutex() : pid_(0), tid_(0), count_(0) {}
-  TicketMutex(u32 pid, u32 tid) : pid_(pid), tid_(tid), count_(0) {}
 };
 
 struct Ticket {
