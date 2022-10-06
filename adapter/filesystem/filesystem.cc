@@ -474,18 +474,18 @@ HermesRequest* Filesystem::AWrite(File &f, AdapterStat &stat, const void *ptr,
   LOG(INFO) << "Starting an asynchronous write" << std::endl;
   auto pool =
       Singleton<ThreadPool>::GetInstance(kNumThreads);
-  HermesRequest *req = new HermesRequest();
+  HermesRequest *hreq = new HermesRequest();
   auto lambda =
       [](Filesystem *fs, File &f, AdapterStat &stat, const void *ptr,
          size_t off, size_t total_size, IoStatus &io_status, IoOptions opts) {
     return fs->Write(f, stat, ptr, off, total_size, io_status, opts);
   };
   auto func = std::bind(lambda, this, f, stat, ptr, off,
-                        total_size, req->io_status, opts);
-  req->return_future = pool->run(func);
+                        total_size, hreq->io_status, opts);
+  hreq->return_future = pool->run(func);
   auto mdm = Singleton<MetadataManager>::GetInstance();
-  mdm->request_map.emplace(req_id, req);
-  return req;
+  mdm->request_map.emplace(req_id, hreq);
+  return hreq;
 }
 
 HermesRequest* Filesystem::ARead(File &f, AdapterStat &stat, void *ptr,
@@ -494,18 +494,18 @@ HermesRequest* Filesystem::ARead(File &f, AdapterStat &stat, void *ptr,
   (void) io_status;
   auto pool =
       Singleton<ThreadPool>::GetInstance(kNumThreads);
-  HermesRequest *req = new HermesRequest();
+  HermesRequest *hreq = new HermesRequest();
   auto lambda =
       [](Filesystem *fs, File &f, AdapterStat &stat, void *ptr,
          size_t off, size_t total_size, IoStatus &io_status, IoOptions opts) {
         return fs->Read(f, stat, ptr, off, total_size, io_status, opts);
       };
   auto func = std::bind(lambda, this, f, stat,
-                        ptr, off, total_size, req->io_status, opts);
-  req->return_future = pool->run(func);
+                        ptr, off, total_size, hreq->io_status, opts);
+  hreq->return_future = pool->run(func);
   auto mdm = Singleton<MetadataManager>::GetInstance();
-  mdm->request_map.emplace(req_id, req);
-  return req;
+  mdm->request_map.emplace(req_id, hreq);
+  return hreq;
 }
 
 size_t Filesystem::Wait(size_t req_id) {
