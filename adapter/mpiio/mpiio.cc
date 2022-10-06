@@ -152,7 +152,8 @@ int HERMES_DECL(MPI_File_get_position)(MPI_File fh, MPI_Offset *offset) {
   auto fs_api = Singleton<MpiioFS>::GetInstance();
   if (IsTracked(&fh)) {
     File f; f.mpi_fh_ = fh; fs_api->_InitFile(f);
-    return fs_api->Tell(f, stat_exists);
+    (*offset) = static_cast<MPI_Offset>(fs_api->Tell(f, stat_exists));
+    return MPI_SUCCESS;
   }
   return real_api->MPI_File_get_position(fh, offset);
 }

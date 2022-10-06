@@ -175,7 +175,16 @@ struct IoOptions {
 };
 
 struct IoStatus {
+  int mpi_ret_;
   MPI_Status mpi_status_;
+  MPI_Status *mpi_status_ptr_;
+
+  IoStatus() : mpi_ret_(MPI_SUCCESS), mpi_status_ptr_(&mpi_status_) {}
+};
+
+struct HermesRequest {
+  std::future<size_t> return_future;
+  IoStatus io_status;
 };
 
 struct BlobPlacementIter {
@@ -216,10 +225,10 @@ class Filesystem {
   size_t Read(File &f, AdapterStat &stat, void *ptr,
               size_t off, size_t total_size, IoStatus &io_status,
               IoOptions opts = IoOptions());
-  int AWrite(File &f, AdapterStat &stat, const void *ptr,
+  HermesRequest* AWrite(File &f, AdapterStat &stat, const void *ptr,
              size_t off, size_t total_size, size_t req_id,
              IoStatus &io_status, IoOptions opts = IoOptions());
-  int ARead(File &f, AdapterStat &stat, void *ptr,
+  HermesRequest* ARead(File &f, AdapterStat &stat, void *ptr,
             size_t off, size_t total_size, size_t req_id,
             IoStatus &io_status, IoOptions opts = IoOptions());
   size_t Wait(uint64_t req_id);
@@ -263,6 +272,9 @@ class Filesystem {
   virtual size_t _RealRead(const std::string &filename, off_t offset,
                            size_t size, u8 *data_ptr,
                            IoStatus &io_status, IoOptions &opts) = 0;
+  virtual void _IoStats(size_t count, IoStatus &io_status, IoOptions &opts) {
+    (void) count; (void) io_status; (void) opts;
+  }
   virtual int _RealSync(File &f) = 0;
   virtual int _RealClose(File &f) = 0;
 
@@ -276,10 +288,10 @@ class Filesystem {
                size_t total_size, IoStatus &io_status, IoOptions opts);
   size_t Read(File &f, AdapterStat &stat, void *ptr,
               size_t total_size, IoStatus &io_status, IoOptions opts);
-  int AWrite(File &f, AdapterStat &stat, const void *ptr,
+  HermesRequest* AWrite(File &f, AdapterStat &stat, const void *ptr,
              size_t total_size, size_t req_id,
              IoStatus &io_status, IoOptions opts);
-  int ARead(File &f, AdapterStat &stat, void *ptr,
+  HermesRequest* ARead(File &f, AdapterStat &stat, void *ptr,
             size_t total_size, size_t req_id,
             IoStatus &io_status, IoOptions opts);
 
@@ -302,16 +314,16 @@ class Filesystem {
               size_t off, size_t total_size, IoStatus &io_status,
               IoOptions opts = IoOptions());
 
-  int AWrite(File &f, bool &stat_exists, const void *ptr,
+  HermesRequest* AWrite(File &f, bool &stat_exists, const void *ptr,
              size_t total_size, size_t req_id,
              IoStatus &io_status, IoOptions opts);
-  int ARead(File &f, bool &stat_exists, void *ptr,
+  HermesRequest* ARead(File &f, bool &stat_exists, void *ptr,
             size_t total_size, size_t req_id,
             IoStatus &io_status, IoOptions opts);
-  int AWrite(File &f, bool &stat_exists, const void *ptr,
+  HermesRequest* AWrite(File &f, bool &stat_exists, const void *ptr,
              size_t off, size_t total_size, size_t req_id,
              IoStatus &io_status, IoOptions opts);
-  int ARead(File &f, bool &stat_exists, void *ptr,
+  HermesRequest* ARead(File &f, bool &stat_exists, void *ptr,
             size_t off, size_t total_size, size_t req_id,
             IoStatus &io_status, IoOptions opts);
 
@@ -321,10 +333,6 @@ class Filesystem {
   int Close(File &f, bool &stat_exists, bool destroy = true);
 };
 
-struct HermesRequest {
-  std::future<size_t> return_future;
-  MPI_Status status;
-};
 
 }  // namespace hermes::adapter::fs
 

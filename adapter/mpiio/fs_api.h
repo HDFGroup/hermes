@@ -38,6 +38,7 @@ using hermes::adapter::Singleton;
 using hermes::adapter::mpiio::API;
 using hermes::adapter::fs::IoOptions;
 using hermes::adapter::fs::IoStatus;
+using hermes::adapter::fs::HermesRequest;
 using hermes::adapter::fs::MetadataManager;
 using hermes::adapter::fs::SeekMode;
 
@@ -218,6 +219,7 @@ class MpiioFS : public hermes::adapter::fs::Filesystem {
   size_t _RealRead(const std::string &filename, off_t offset, size_t size,
                    u8 *data_ptr,
                    IoStatus &io_status, IoOptions &opts) override;
+  void _IoStats(size_t count, IoStatus &io_status, IoOptions &opts) override;
   int _RealSync(File &f) override;
   int _RealClose(File &f) override;
 };

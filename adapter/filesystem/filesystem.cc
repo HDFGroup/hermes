@@ -153,6 +153,7 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
 
   mdm->Update(f, stat);
   ret = data_offset;
+  _IoStats(data_offset, io_status, opts);
   return ret;
 }
 
@@ -370,6 +371,7 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
   stat.st_ctim = ts;
   ret = data_offset;
   mdm->Update(f, stat);
+  _IoStats(data_offset, io_status, opts);
   return ret;
 }
 
@@ -465,9 +467,10 @@ size_t Filesystem::_ReadNew(BlobPlacementIter &ri) {
   return ri.p_.blob_size_;
 }
 
-int Filesystem::AWrite(File &f, AdapterStat &stat, const void *ptr,
+HermesRequest* Filesystem::AWrite(File &f, AdapterStat &stat, const void *ptr,
                        size_t off, size_t total_size, size_t req_id,
                        IoStatus &io_status, IoOptions opts) {
+  (void) io_status;
   LOG(INFO) << "Starting an asynchronous write" << std::endl;
   auto pool =
       Singleton<ThreadPool>::GetInstance(kNumThreads);
@@ -478,16 +481,17 @@ int Filesystem::AWrite(File &f, AdapterStat &stat, const void *ptr,
     return fs->Write(f, stat, ptr, off, total_size, io_status, opts);
   };
   auto func = std::bind(lambda, this, f, stat, ptr, off,
-                        total_size, io_status, opts);
+                        total_size, req->io_status, opts);
   req->return_future = pool->run(func);
   auto mdm = Singleton<MetadataManager>::GetInstance();
   mdm->request_map.emplace(req_id, req);
-  return 0;
+  return req;
 }
 
-int Filesystem::ARead(File &f, AdapterStat &stat, void *ptr,
+HermesRequest* Filesystem::ARead(File &f, AdapterStat &stat, void *ptr,
                       size_t off, size_t total_size, size_t req_id,
                       IoStatus &io_status, IoOptions opts) {
+  (void) io_status;
   auto pool =
       Singleton<ThreadPool>::GetInstance(kNumThreads);
   HermesRequest *req = new HermesRequest();
@@ -497,11 +501,11 @@ int Filesystem::ARead(File &f, AdapterStat &stat, void *ptr,
         return fs->Read(f, stat, ptr, off, total_size, io_status, opts);
       };
   auto func = std::bind(lambda, this, f, stat,
-                        ptr, off, total_size, io_status, opts);
+                        ptr, off, total_size, req->io_status, opts);
   req->return_future = pool->run(func);
   auto mdm = Singleton<MetadataManager>::GetInstance();
   mdm->request_map.emplace(req_id, req);
-  return 0;
+  return req;
 }
 
 size_t Filesystem::Wait(size_t req_id) {
@@ -646,7 +650,8 @@ int Filesystem::Close(File &f, AdapterStat &stat, bool destroy) {
  * */
 
 size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
-                         size_t total_size, IoStatus &io_status, IoOptions opts) {
+                         size_t total_size, IoStatus &io_status,
+                         IoOptions opts) {
   off_t off = Tell(f, stat);
   return Write(f, stat, ptr, off, total_size, io_status, opts);
 }
@@ -658,14 +663,14 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
   return Read(f, stat, ptr, off, total_size, io_status, opts);
 }
 
-int Filesystem::AWrite(File &f, AdapterStat &stat, const void *ptr,
+HermesRequest* Filesystem::AWrite(File &f, AdapterStat &stat, const void *ptr,
                        size_t total_size, size_t req_id,
                        IoStatus &io_status, IoOptions opts) {
   off_t off = Tell(f, stat);
   return AWrite(f, stat, ptr, off, total_size, req_id, io_status, opts);
 }
 
-int Filesystem::ARead(File &f, AdapterStat &stat, void *ptr,
+HermesRequest* Filesystem::ARead(File &f, AdapterStat &stat, void *ptr,
                       size_t total_size, size_t req_id,
                       IoStatus &io_status, IoOptions opts) {
   off_t off = Tell(f, stat);
@@ -732,7 +737,7 @@ size_t Filesystem::Read(File &f, bool &stat_exists, void *ptr,
   return Read(f, stat, ptr, off, total_size, io_status, opts);
 }
 
-int Filesystem::AWrite(File &f, bool &stat_exists, const void *ptr,
+HermesRequest* Filesystem::AWrite(File &f, bool &stat_exists, const void *ptr,
                        size_t total_size, size_t req_id,
                        IoStatus &io_status, IoOptions opts) {
   auto mdm = Singleton<MetadataManager>::GetInstance();
@@ -745,7 +750,7 @@ int Filesystem::AWrite(File &f, bool &stat_exists, const void *ptr,
   return AWrite(f, stat, ptr, total_size, req_id, io_status, opts);
 }
 
-int Filesystem::ARead(File &f, bool &stat_exists, void *ptr,
+HermesRequest* Filesystem::ARead(File &f, bool &stat_exists, void *ptr,
                       size_t total_size, size_t req_id,
                       IoStatus &io_status, IoOptions opts) {
   auto mdm = Singleton<MetadataManager>::GetInstance();
@@ -758,7 +763,7 @@ int Filesystem::ARead(File &f, bool &stat_exists, void *ptr,
   return ARead(f, stat, ptr, total_size, req_id, io_status, opts);
 }
 
-int Filesystem::AWrite(File &f, bool &stat_exists, const void *ptr,
+HermesRequest* Filesystem::AWrite(File &f, bool &stat_exists, const void *ptr,
                        size_t off, size_t total_size, size_t req_id,
                        IoStatus &io_status, IoOptions opts) {
   auto mdm = Singleton<MetadataManager>::GetInstance();
@@ -772,7 +777,7 @@ int Filesystem::AWrite(File &f, bool &stat_exists, const void *ptr,
   return AWrite(f, stat, ptr, off, total_size, req_id, io_status, opts);
 }
 
-int Filesystem::ARead(File &f, bool &stat_exists, void *ptr,
+HermesRequest* Filesystem::ARead(File &f, bool &stat_exists, void *ptr,
                       size_t off, size_t total_size, size_t req_id,
                       IoStatus &io_status, IoOptions opts) {
   auto mdm = Singleton<MetadataManager>::GetInstance();
