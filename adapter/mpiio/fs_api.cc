@@ -126,6 +126,31 @@ int MpiioFS::WriteOrdered(File &f, AdapterStat &stat,
   return ret;
 }
 
+int MpiioFS::AWriteOrdered(File &f, AdapterStat &stat,
+                  const void *ptr, int count,
+                  MPI_Datatype datatype,
+                  MPI_Request *request, IoOptions opts) {
+  LOG(INFO) << "Starting an asynchronous write" << std::endl;
+  auto pool =
+      Singleton<ThreadPool>::GetInstance();
+  HermesRequest *hreq = new HermesRequest();
+  auto lambda =
+      [](MpiioFS *fs, File &f, AdapterStat &stat,
+         const void *ptr, int count,
+         MPI_Datatype datatype, IoOptions opts) {
+        MPI_Status status;
+        int ret = fs->WriteOrdered(f, stat, ptr,
+                                count, datatype, &status, opts);
+        return static_cast<size_t>(ret);
+      };
+  auto func = std::bind(lambda, this, f, stat, ptr,
+                        count, datatype, opts);
+  hreq->return_future = pool->run(func);
+  auto mdm = Singleton<MetadataManager>::GetInstance();
+  mdm->request_map.emplace(reinterpret_cast<size_t>(request), hreq);
+  return MPI_SUCCESS;
+}
+
 int MpiioFS::Wait(MPI_Request *req, MPI_Status *status) {
   auto mdm = Singleton<MetadataManager>::GetInstance();
   auto iter = mdm->request_map.find(reinterpret_cast<size_t>(req));
@@ -351,6 +376,21 @@ int MpiioFS::WriteOrdered(File &f, bool &stat_exists,
   stat_exists = true;
   IoOptions opts = IoOptions::DataType(datatype, false);
   return WriteOrdered(f, stat, ptr, count, datatype, status, opts);
+}
+
+int MpiioFS::AWriteOrdered(File &f, bool &stat_exists,
+                           const void *ptr, int count,
+                           MPI_Datatype datatype,
+                           MPI_Request *request) {
+  auto mdm = Singleton<MetadataManager>::GetInstance();
+  auto [stat, exists] = mdm->Find(f);
+  if (!exists) {
+    stat_exists = false;
+    return -1;
+  }
+  stat_exists = true;
+  IoOptions opts = IoOptions::DataType(datatype, false);
+  return AWriteOrdered(f, stat, ptr, count, datatype, request, opts);
 }
 
 int MpiioFS::Read(File &f, bool &stat_exists,

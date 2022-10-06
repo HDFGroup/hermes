@@ -310,6 +310,7 @@ int HERMES_DECL(MPI_File_write_shared)(MPI_File fh, const void *buf, int count,
     // NOTE(llogan): originally WriteOrdered
     File f; f.mpi_fh_ = fh; fs_api->_InitFile(f);
     return fs_api->Write(f, stat_exists, buf, count, datatype, status);
+    //return fs_api->WriteOrdered(f, stat_exists, buf, count, datatype, status);
   }
   return real_api->MPI_File_write_shared(fh, buf, count, datatype, status);
 }
@@ -392,6 +393,7 @@ int HERMES_DECL(MPI_File_iwrite_shared)(MPI_File fh, const void *buf, int count,
   if (IsTracked(&fh)) {
     File f; f.mpi_fh_ = fh; fs_api->_InitFile(f);
     fs_api->AWrite(f, stat_exists, buf, count, datatype, request);
+    //fs_api->AWriteOrdered(f, stat_exists, buf, count, datatype, request);
     return MPI_SUCCESS;
   }
   return real_api->MPI_File_iwrite_shared(fh, buf, count,

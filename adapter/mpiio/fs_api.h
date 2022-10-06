@@ -116,6 +116,10 @@ class MpiioFS : public hermes::adapter::fs::Filesystem {
                       const void *ptr, int count,
                       MPI_Datatype datatype,
                       MPI_Status *status, IoOptions opts = IoOptions());
+  int AWriteOrdered(File &f, AdapterStat &stat,
+                   const void *ptr, int count,
+                   MPI_Datatype datatype,
+                    MPI_Request *request, IoOptions opts = IoOptions());
   int Wait(MPI_Request *req, MPI_Status *status);
   int WaitAll(int count, MPI_Request *req, MPI_Status *status);
   int Seek(File &f, AdapterStat &stat, MPI_Offset offset, int whence);
@@ -182,6 +186,10 @@ class MpiioFS : public hermes::adapter::fs::Filesystem {
                       const void *ptr, int count,
                       MPI_Datatype datatype,
                       MPI_Status *status);
+  int AWriteOrdered(File &f, bool &stat_exists,
+                    const void *ptr, int count,
+                    MPI_Datatype datatype,
+                    MPI_Request *request);
 
   int Read(File &f, bool &stat_exists,
               void *ptr, int count, MPI_Datatype datatype,
