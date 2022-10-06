@@ -160,7 +160,10 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
 void Filesystem::_CoordinatedPut(BlobPlacementIter &wi) {
   hapi::Context ctx;
   LOG(INFO) << "Starting coordinate PUT"
-            << " (blob: " << wi.p_.page_ << ")" << std::endl;
+            << " blob: " << wi.p_.page_
+            << " off: " << wi.p_.blob_off_
+            << " size: " << wi.p_.blob_size_
+            << " pid: " << getpid() << std::endl;
 
   if (!wi.blob_exists_) {
     u8 c = 0;
@@ -190,7 +193,10 @@ void Filesystem::_CoordinatedPut(BlobPlacementIter &wi) {
 
 void Filesystem::_UncoordinatedPut(BlobPlacementIter &wi) {
   LOG(INFO) << "Starting uncoordinate PUT"
-            << " (blob: " << wi.p_.page_ << ")" << std::endl;
+            << " blob: " << wi.p_.page_
+            << " off: " << wi.p_.blob_off_
+            << " size: " << wi.p_.blob_size_
+            << " pid: " << getpid() << std::endl;
   if (wi.blob_exists_) {
     if (wi.p_.blob_off_ == 0) {
       _WriteToExistingAligned(wi);

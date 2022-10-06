@@ -144,12 +144,13 @@ struct IoOptions {
   bool seek_;
   bool with_fallback_;
   MPI_Datatype mpi_type_;
+  int count_;
   IoOptions() :
                 dpe_(PlacementPolicy::kNone),
                 coordinate_(false),
                 seek_(true),
                 with_fallback_(true),
-                mpi_type_(MPI_CHAR) {}
+                mpi_type_(MPI_CHAR), count_(0) {}
 
   static IoOptions WithParallelDpe(PlacementPolicy dpe) {
     IoOptions opts;

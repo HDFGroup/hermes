@@ -14,6 +14,14 @@
 
 namespace hermes::adapter::mpiio {
 
+size_t IoSizeFromCount(int count, MPI_Datatype datatype, IoOptions &opts) {
+  int datatype_size;
+  opts.mpi_type_ = datatype;
+  opts.count_ = count;
+  MPI_Type_size(datatype, &datatype_size);
+  return static_cast<size_t>(count * datatype_size);
+}
+
 int MpiioFS::Read(File &f, AdapterStat &stat,
                      void *ptr, size_t offset,
                      int count, MPI_Datatype datatype,
@@ -26,9 +34,9 @@ int MpiioFS::Read(File &f, AdapterStat &stat,
   }
   IoStatus io_status;
   io_status.mpi_status_ptr_ = status;
+  size_t total_size = IoSizeFromCount(count, datatype, opts);
   Filesystem::Read(f, stat, ptr, offset,
-                   static_cast<size_t>(count),
-                   io_status, opts);
+                   total_size, io_status, opts);
   return io_status.mpi_ret_;
 }
 
@@ -38,8 +46,8 @@ int MpiioFS::ARead(File &f, AdapterStat &stat,
                    MPI_Request *request, IoOptions opts) {
   opts.mpi_type_ = datatype;
   IoStatus io_status;
-  Filesystem::ARead(f, stat, ptr, offset,
-                    static_cast<size_t>(count),
+  size_t total_size = IoSizeFromCount(count, datatype, opts);
+  Filesystem::ARead(f, stat, ptr, offset, total_size,
                     reinterpret_cast<size_t>(request),
                     io_status, opts);
   return io_status.mpi_ret_;
@@ -76,8 +84,8 @@ int MpiioFS::Write(File &f, AdapterStat &stat,
   opts.mpi_type_ = datatype;
   IoStatus io_status;
   io_status.mpi_status_ptr_ = status;
-  Filesystem::Write(f, stat, ptr, offset,
-                    static_cast<size_t>(count),
+  size_t total_size = IoSizeFromCount(count, datatype, opts);
+  Filesystem::Write(f, stat, ptr, offset, total_size,
                     io_status, opts);
   return io_status.mpi_ret_;
 }
@@ -88,8 +96,8 @@ int MpiioFS::AWrite(File &f, AdapterStat &stat,
                     MPI_Request *request, IoOptions opts) {
   opts.mpi_type_ = datatype;
   IoStatus io_status;
-  Filesystem::AWrite(f, stat, ptr, offset,
-                     static_cast<size_t>(count),
+  size_t total_size = IoSizeFromCount(count, datatype, opts);
+  Filesystem::AWrite(f, stat, ptr, offset, total_size,
                      reinterpret_cast<size_t>(request),
                      io_status, opts);
   return io_status.mpi_ret_;
@@ -491,13 +499,14 @@ void MpiioFS::_OpenInitStats(File &f, AdapterStat &stat, bool bucket_exists) {
 }
 
 size_t MpiioFS::_RealWrite(const std::string &filename, off_t offset,
-                           size_t count, const u8 *data_ptr,
+                           size_t size, const u8 *data_ptr,
                            IoStatus &io_status, IoOptions &opts) {
   LOG(INFO) << "Writing to file: " << filename << " offset: " << offset
-            << " size:" << count << "."
-            << " file_size:" << stdfs::file_size(filename) << std::endl;
+            << " size:" << size << "."
+            << " file_size:" << stdfs::file_size(filename)
+            << " pid: " << getpid() << std::endl;
   MPI_File fh;
-  int write_size = 0;
+  int write_count = 0;
   io_status.mpi_ret_ = real_api->MPI_File_open(MPI_COMM_SELF, filename.c_str(),
                                        MPI_MODE_RDONLY, MPI_INFO_NULL, &fh);
   if (io_status.mpi_ret_ != MPI_SUCCESS) {
@@ -509,27 +518,28 @@ size_t MpiioFS::_RealWrite(const std::string &filename, off_t offset,
     goto ERROR;
   }
   io_status.mpi_ret_ = real_api->MPI_File_write(fh, data_ptr,
-                                                count, opts.mpi_type_,
+                                                opts.count_, opts.mpi_type_,
                                                 io_status.mpi_status_ptr_);
-  MPI_Get_count(io_status.mpi_status_ptr_, opts.mpi_type_, &write_size);
-  if (static_cast<int>(count)) {
-    LOG(ERROR) << "writing failed: write " << write_size << " of " << count
-               << "." << std::endl;
+  MPI_Get_count(io_status.mpi_status_ptr_, opts.mpi_type_, &write_count);
+  if (opts.count_ != write_count) {
+    LOG(ERROR) << "writing failed: write " << write_count << " of "
+               << opts.count_ << "." << std::endl;
   }
 
 ERROR:
   real_api->MPI_File_close(&fh);
-  return write_size;
+  return size;
 }
 
 size_t MpiioFS::_RealRead(const std::string &filename, off_t offset,
-                          size_t count, u8 *data_ptr,
+                          size_t size, u8 *data_ptr,
                           IoStatus &io_status, IoOptions &opts) {
   LOG(INFO) << "Read called for filename from destination: " << filename
-            << " on offset: " << offset << " and count: " << count << "."
-            << " file_size:" << stdfs::file_size(filename) << std::endl;
+            << " on offset: " << offset << " and size: " << size << "."
+            << " file_size:" << stdfs::file_size(filename)
+            << " pid: " << getpid() << std::endl;
   MPI_File fh;
-  int read_size = 0;
+  int read_count = 0;
   io_status.mpi_ret_ = real_api->MPI_File_open(MPI_COMM_SELF, filename.c_str(),
                                        MPI_MODE_RDONLY, MPI_INFO_NULL, &fh);
   if (io_status.mpi_ret_ != MPI_SUCCESS) {
@@ -540,18 +550,19 @@ size_t MpiioFS::_RealRead(const std::string &filename, off_t offset,
   if (io_status.mpi_ret_ != MPI_SUCCESS) {
     goto ERROR;
   }
-  io_status.mpi_ret_ = real_api->MPI_File_read(fh, data_ptr, count,
-                                               opts.mpi_type_,
+  io_status.mpi_ret_ = real_api->MPI_File_read(fh, data_ptr,
+                                               opts.count_, opts.mpi_type_,
                                                io_status.mpi_status_ptr_);
-  MPI_Get_count(io_status.mpi_status_ptr_, opts.mpi_type_, &read_size);
-  if (read_size != static_cast<int>(count)) {
-    LOG(ERROR) << "reading failed: read " << read_size << " of " << count
+  MPI_Get_count(io_status.mpi_status_ptr_,
+                opts.mpi_type_, &read_count);
+  if (read_count != opts.count_) {
+    LOG(ERROR) << "reading failed: read " << read_count << " of " << opts.count_
                << "." << std::endl;
   }
 
 ERROR:
   real_api->MPI_File_close(&fh);
-  return read_size;
+  return size;
 }
 
 void MpiioFS::_IoStats(size_t count, IoStatus &io_status, IoOptions &opts) {
