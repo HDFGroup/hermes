@@ -593,6 +593,7 @@ off_t Filesystem::Tell(File &f, AdapterStat &stat) {
 }
 
 int Filesystem::Sync(File &f, AdapterStat &stat) {
+  int rank = 0;
   auto mdm = Singleton<MetadataManager>::GetInstance();
   if (stat.ref_count != 1) {
     LOG(INFO) << "File handler is opened by more than one fopen."
@@ -603,6 +604,9 @@ int Filesystem::Sync(File &f, AdapterStat &stat) {
     stat.st_ctim = ts;
     mdm->Update(f, stat);
     return 0;
+  }
+  if (mdm->is_mpi) {
+    MPI_Comm_rank(stat.comm, &rank);
   }
 
   // Wait for all async requests to complete
@@ -622,10 +626,12 @@ int Filesystem::Sync(File &f, AdapterStat &stat) {
     return 0;
   }
 
-  LOG(INFO) << "POSIX fsync Adapter flushes " << blob_names.size()
+  LOG(INFO) << "Filesystem Sync flushes " << blob_names.size()
             << " blobs to filename:" << filename << "." << std::endl;
   INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
-  hapi::VBucket file_vbucket(filename, mdm->GetHermes(), ctx);
+
+  std::string vbucket_name = filename + "#" + std::to_string(rank);
+  hapi::VBucket file_vbucket(vbucket_name, mdm->GetHermes(), ctx);
   auto offset_map = std::unordered_map<std::string, hermes::u64>();
   for (const auto &blob_name : blob_names) {
     auto status = file_vbucket.Link(blob_name, filename, ctx);
@@ -648,6 +654,7 @@ int Filesystem::Sync(File &f, AdapterStat &stat) {
 
 int Filesystem::Close(File &f, AdapterStat &stat, bool destroy) {
   hapi::Context ctx;
+  int rank = 0;
   auto mdm = Singleton<MetadataManager>::GetInstance();
   if (stat.ref_count != 1) {
     LOG(INFO) << "File handler is opened by more than one fopen."
@@ -662,13 +669,20 @@ int Filesystem::Close(File &f, AdapterStat &stat, bool destroy) {
     mdm->Update(f, stat);
     return 0;
   }
+  if (mdm->is_mpi) {
+    MPI_Comm_rank(stat.comm, &rank);
+  }
   Sync(f, stat);
   auto filename = stat.st_bkid->GetName();
+  if (mdm->is_mpi) { MPI_Barrier(stat.comm); }
   if (IsAsyncFlush(filename)) {
     stat.st_vbkt->Destroy();
   }
   mdm->Delete(f);
   if (destroy) { stat.st_bkid->Destroy(ctx); }
+  if (stat.amode & MPI_MODE_DELETE_ON_CLOSE) {
+    stdfs::remove(filename);
+  }
   mdm->FinalizeHermes();
   return _RealClose(f);
 }
