@@ -109,7 +109,7 @@ int MpiioFS::WriteAll(File &f, AdapterStat &stat,
                          MPI_Status *status, IoOptions opts) {
   opts.mpi_type_ = datatype;
   MPI_Barrier(stat.comm);
-  size_t ret = Write(f, stat, ptr, offset, count, datatype, status, opts);
+  int ret = Write(f, stat, ptr, offset, count, datatype, status, opts);
   MPI_Barrier(stat.comm);
   return ret;
 }
@@ -137,14 +137,15 @@ int MpiioFS::AWriteOrdered(File &f, AdapterStat &stat,
   auto lambda =
       [](MpiioFS *fs, File &f, AdapterStat &stat,
          const void *ptr, int count,
-         MPI_Datatype datatype, IoOptions opts) {
-        MPI_Status status;
+         MPI_Datatype datatype, MPI_Status *status,
+         IoOptions opts) {
         int ret = fs->WriteOrdered(f, stat, ptr,
-                                count, datatype, &status, opts);
+                                count, datatype, status, opts);
         return static_cast<size_t>(ret);
       };
   auto func = std::bind(lambda, this, f, stat, ptr,
-                        count, datatype, opts);
+                        count, datatype, &hreq->io_status.mpi_status_,
+                        opts);
   hreq->return_future = pool->run(func);
   auto mdm = Singleton<MetadataManager>::GetInstance();
   mdm->request_map.emplace(reinterpret_cast<size_t>(request), hreq);

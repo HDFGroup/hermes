@@ -359,20 +359,20 @@ TEST_CASE("SingleWriteCollective",
 
   // TODO(chogan): This test fails intermittently. Needs diagnosis.
   // https://github.com/HDFGroup/hermes/issues/209
-  // SECTION("write to new  file using shared ptr") {
-  //   test::test_open(info.shared_new_file.c_str(),
-  //                   MPI_MODE_WRONLY | MPI_MODE_CREATE, MPI_COMM_WORLD);
-  //   REQUIRE(test::status_orig == MPI_SUCCESS);
-  //   test::test_seek_shared(0, MPI_SEEK_SET);
-  //   REQUIRE(test::status_orig == 0);
-  //   test::test_write_shared(info.write_data.c_str(), args.request_size,
-  //                           MPI_CHAR);
-  //   REQUIRE((size_t)test::size_written_orig == args.request_size);
-  //   test::test_close();
-  //   REQUIRE(test::status_orig == MPI_SUCCESS);
-  //   REQUIRE(stdfs::file_size(info.shared_new_file) ==
-  //           (size_t)test::size_written_orig * info.comm_size);
-  // }
+  SECTION("write to new  file using shared ptr") {
+    test::test_open(info.shared_new_file.c_str(),
+                   MPI_MODE_WRONLY | MPI_MODE_CREATE, MPI_COMM_WORLD);
+    REQUIRE(test::status_orig == MPI_SUCCESS);
+    test::test_seek_shared(0, MPI_SEEK_SET);
+    REQUIRE(test::status_orig == 0);
+    test::test_write_shared(info.write_data.c_str(), args.request_size,
+                           MPI_CHAR);
+    REQUIRE((size_t)test::size_written_orig == args.request_size);
+    test::test_close();
+    REQUIRE(test::status_orig == MPI_SUCCESS);
+    REQUIRE(stdfs::file_size(info.shared_new_file) ==
+           (size_t)test::size_written_orig * info.comm_size);
+  }
 
   SECTION("write to new file with allocate") {
     test::test_open(info.shared_new_file.c_str(),
@@ -510,7 +510,7 @@ TEST_CASE("SingleAsyncWrite", "[process=" + std::to_string(info.comm_size) +
                                   "[file=1]") {
   pretest();
   bool check_bytes = true;
-  /*SECTION("write to existing file") {
+  SECTION("write to existing file") {
     test::test_open(info.existing_file.c_str(), MPI_MODE_RDWR, MPI_COMM_SELF);
     REQUIRE(test::status_orig == MPI_SUCCESS);
     test::test_seek(info.rank * args.request_size, MPI_SEEK_SET);
@@ -547,7 +547,7 @@ TEST_CASE("SingleAsyncWrite", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(test::status_orig == MPI_SUCCESS);
     REQUIRE(stdfs::file_size(info.shared_new_file) ==
             (size_t)test::size_written_orig * info.comm_size);
-  }*/
+  }
 
   SECTION("write to new file with allocate") {
     test::test_open(info.shared_new_file.c_str(),
@@ -566,7 +566,7 @@ TEST_CASE("SingleAsyncWrite", "[process=" + std::to_string(info.comm_size) +
             (size_t)test::size_written_orig * info.comm_size);
   }
 
-  /*SECTION("append to existing file") {
+  SECTION("append to existing file") {
     auto existing_size = stdfs::file_size(info.existing_file);
     test::test_open(info.existing_file.c_str(),
                     MPI_MODE_WRONLY | MPI_MODE_APPEND | MPI_MODE_EXCL,
@@ -798,7 +798,7 @@ TEST_CASE("SingleAsyncWriteCollective",
     REQUIRE(!stdfs::exists(info.shared_existing_file.c_str()));
     REQUIRE(test::status_orig == MPI_SUCCESS);
     check_bytes = false;
-  }*/
+  }
   posttest(check_bytes);
 }
 
@@ -992,7 +992,6 @@ TEST_CASE("SingleAsyncRead", "[process=" + std::to_string(info.comm_size) +
 
 // TODO(chogan): This test fails sporadically.
 // https://github.com/HDFGroup/hermes/issues/413
-/*
 TEST_CASE("SingleAsyncReadCollective",
           "[process=" + std::to_string(info.comm_size) +
               "]"
@@ -1044,5 +1043,3 @@ TEST_CASE("SingleAsyncReadCollective",
   }
   posttest();
 }
-
- */

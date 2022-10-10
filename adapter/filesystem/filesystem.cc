@@ -45,6 +45,10 @@ void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
   _InitFile(f);
   auto mdm = Singleton<MetadataManager>::GetInstance();
   auto existing = mdm->Find(f);
+  int rank = 0;
+  if (mdm->is_mpi) {
+    MPI_Comm_rank(stat.comm, &rank);
+  }
   if (!existing.second) {
     LOG(INFO) << "File not opened before by adapter" << std::endl;
     stat.ref_count = 1;
@@ -61,15 +65,12 @@ void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
 
     // TODO(llogan): needed for locking in parallel
     if (mdm->is_mpi) {
-      int rank;
-      MPI_Comm_rank(stat.comm, &rank);
       stat.main_lock_blob = "#main_lock";
       if (rank == 0) {
         u8 c;
         stat.st_bkid =
             std::make_shared<hapi::Bucket>(path_str, mdm->GetHermes());
         stat.st_bkid->Put(stat.main_lock_blob, &c, 1);
-        LOG(INFO) << "Bucket ID (rank 0): " << stat.st_bkid->GetId() << std::endl;
       }
       MPI_Barrier(stat.comm);
       if (rank != 0) {
@@ -82,8 +83,10 @@ void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
     }
 
     if (IsAsyncFlush(path_str)) {
+      // TODO(llogan): should we use a vbucket per-rank instead?
+      std::string vbucket_name = path_str + "#" + std::to_string(rank);
       stat.st_vbkt =
-          std::make_shared<hapi::VBucket>(path_str, mdm->GetHermes());
+          std::make_shared<hapi::VBucket>(vbucket_name, mdm->GetHermes());
       auto offset_map = std::unordered_map<std::string, u64>();
       stat.st_persist =
           std::make_shared<hapi::PersistTrait>(path_str, offset_map, false);
@@ -153,7 +156,6 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
         && stat.main_lock_blob.size() > 0) {
       _CoordinatedPut(wi);
     } else {
-      LOG(INFO) << "In the unlocked uncoordinated put?" << std::endl;
       _UncoordinatedPut(wi);
     }
     data_offset += p.blob_size_;
@@ -179,11 +181,8 @@ bool Lock(const std::string &bucket, const std::string &blob_name) {
   SharedMemoryContext *context = &hermes->context_;
   RpcContext *rpc = &hermes->rpc_;
   BucketID bucket_id = GetBucketId(context, rpc, bucket.c_str());
-  LOG(INFO) << "Bucket id: " << bucket_id.as_int << std::endl;
   BlobID lock_id = GetBlobId(context, rpc, blob_name, bucket_id, true);
-  LOG(INFO) << "Blob id: " << lock_id.as_int << std::endl;
   bool ret = LockBlob(context, rpc, lock_id);
-  LOG(INFO) << "Lock ret: " << ret << std::endl;
   return ret;
 }
 
@@ -607,6 +606,7 @@ int Filesystem::Sync(File &f, AdapterStat &stat) {
   }
   if (mdm->is_mpi) {
     MPI_Comm_rank(stat.comm, &rank);
+    MPI_Barrier(stat.comm);
   }
 
   // Wait for all async requests to complete
@@ -630,7 +630,8 @@ int Filesystem::Sync(File &f, AdapterStat &stat) {
             << " blobs to filename:" << filename << "." << std::endl;
   INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
 
-  std::string vbucket_name = filename + "#" + std::to_string(rank);
+  std::string vbucket_name = filename + "#" +
+                             std::to_string(rank) + "#sync";
   hapi::VBucket file_vbucket(vbucket_name, mdm->GetHermes(), ctx);
   auto offset_map = std::unordered_map<std::string, hermes::u64>();
   for (const auto &blob_name : blob_names) {
@@ -656,7 +657,7 @@ int Filesystem::Close(File &f, AdapterStat &stat, bool destroy) {
   hapi::Context ctx;
   int rank = 0;
   auto mdm = Singleton<MetadataManager>::GetInstance();
-  if (stat.ref_count != 1) {
+  if (stat.ref_count > 1) {
     LOG(INFO) << "File handler is opened by more than one fopen."
               << std::endl;
     stat.ref_count--;
@@ -671,6 +672,10 @@ int Filesystem::Close(File &f, AdapterStat &stat, bool destroy) {
   }
   if (mdm->is_mpi) {
     MPI_Comm_rank(stat.comm, &rank);
+    if (rank != 0) {
+      stat.st_bkid->Release(ctx);
+    }
+    MPI_Barrier(stat.comm);
   }
   Sync(f, stat);
   auto filename = stat.st_bkid->GetName();
@@ -679,6 +684,7 @@ int Filesystem::Close(File &f, AdapterStat &stat, bool destroy) {
     stat.st_vbkt->Destroy();
   }
   mdm->Delete(f);
+  if (mdm->is_mpi) { MPI_Barrier(stat.comm); }
   if (destroy) { stat.st_bkid->Destroy(ctx); }
   if (stat.amode & MPI_MODE_DELETE_ON_CLOSE) {
     stdfs::remove(filename);
