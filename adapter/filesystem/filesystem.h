@@ -72,6 +72,7 @@ struct AdapterStat {
       : st_bkid(),
         st_blobs(CompareBlobs),
         ref_count(1),
+        flags(0),
         st_mode(),
         st_uid(),
         st_gid(),
@@ -83,6 +84,7 @@ struct AdapterStat {
         st_ctim(),
         is_append(false),
         amode(0),
+        comm(MPI_COMM_SELF),
         atomicity(false) {}
 
   static bool CompareBlobs(const std::string &a, const std::string &b) {
