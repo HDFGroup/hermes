@@ -82,6 +82,7 @@ struct AdapterStat {
         st_mtim(),
         st_ctim(),
         is_append(false),
+        amode(0),
         atomicity(false) {}
 
   static bool CompareBlobs(const std::string &a, const std::string &b) {
