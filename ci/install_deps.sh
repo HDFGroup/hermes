@@ -1,14 +1,31 @@
 #!/bin/bash
 
+# Hermes dependency installation script
+#
+# Hermes depends on the following packages (in alphabetical order):
+#
+# Catch2
+# GLOG
+# GLPK
+# HDF5
+# IOR (for performance testing)
+# Thallium
+# yaml-cpp
+#
+# This script will build and install them via Spack from source
+# because Hermes requires a very specific version and configuration options
+# for each package.
+
 set -x
 set -e
 set -o pipefail
 
+# Change this especially when your $HOME doesn't have enough disk space. 
 INSTALL_DIR="${HOME}/${LOCAL}"
+
 SPACK_DIR=${INSTALL_DIR}/spack
 MOCHI_REPO_DIR=${INSTALL_DIR}/mochi-spack-packages
 THALLIUM_VERSION=0.10.0
-GOTCHA_VERSION=develop
 CATCH2_VERSION=3.0.1
 SPACK_VERSION=0.18.1
 HDF5_VERSION=1_13_1
@@ -26,7 +43,11 @@ set +x
 . ${SPACK_DIR}/share/spack/setup-env.sh
 set -x
 
+# This will allow Spack to skip building some packages that are directly
+# available from the system. For example, autoconf, cmake, m4, etc.
+# Modify ci/pckages.yaml to skip building compilers or build tools via Spack.
 cp ci/packages.yaml ${SPACK_DIR}/etc/spack/packages.yaml
+
 MOCHI_REPO=https://github.com/mochi-hpc/mochi-spack-packages.git
 # TODO(chogan): We pin this commit because in the past using the HEAD of 'main'
 # has been unstable. We update at controlled intervals rather than putting out
@@ -38,6 +59,8 @@ pushd ${MOCHI_REPO_DIR}
 git checkout ${MOCHI_SPACK_PACKAGES_COMMIT}
 popd
 
+# This will override Spack's default package repository to allow building
+# a custom package when the same package is available from Spack.
 spack repo add ${MOCHI_REPO_DIR}
 spack repo add ./ci/hermes
 
@@ -52,11 +75,15 @@ ALL_SPECS="${THALLIUM_SPEC} ${CATCH2_SPEC} ${GLPK_SPEC} ${GLOG_SPEC} ${HDF5_SPEC
 spack install ${ALL_SPECS}
 SPACK_STAGING_DIR=~/spack_staging
 mkdir -p ${SPACK_STAGING_DIR}
+
+# Spack installation directory has hash value.
+# This will simplify and consolidate the installation path.
 spack view --verbose symlink ${SPACK_STAGING_DIR} ${ALL_SPECS}
 
+# Copy what Spack installed in a temporary location to your desired location.
 cp -LRnv ${SPACK_STAGING_DIR}/* ${INSTALL_DIR}
 
-# IOR
+# Install a custom IOR that has patches for Hermes for performance testing.
 pushd ~
 git clone https://github.com/ChristopherHogan/ior
 pushd ior
