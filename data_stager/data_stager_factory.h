@@ -36,5 +36,6 @@ class DataStagerFactory {
   }
 };
 
-}
+}  // namespace hermes
+
 #endif  // HERMES_DATA_STAGER_STAGE_FACTORY_H_

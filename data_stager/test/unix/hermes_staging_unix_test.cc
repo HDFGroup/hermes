@@ -140,10 +140,6 @@ void test_file_stage() {
   VerifyFile(path, new_nonce, file_size);
 }
 
-void test_directory_stage() {
-
-}
-
 int main(int argc, char **argv) {
   MPI_Init(&argc, &argv);
   auto mdm = Singleton<hermes::adapter::fs::MetadataManager>::GetInstance();

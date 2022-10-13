@@ -34,6 +34,6 @@ class UnixStager : public DataStager {
   void DirectoryStageOut(std::string path);
 };
 
-}
+}  // namespace hermes
 
 #endif  // HERMES_DATA_STAGER_STAGERS_UNIX_STAGE_H_

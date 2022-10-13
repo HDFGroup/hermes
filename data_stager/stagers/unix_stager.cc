@@ -23,7 +23,7 @@ namespace hermes {
 void UnixStager::StageIn(std::string path, PlacementPolicy dpe) {
   if (stdfs::is_regular_file(path)) {
     FileStageIn(path, dpe);
-  } else if(stdfs::is_directory(path)) {
+  } else if (stdfs::is_directory(path)) {
     DirectoryStageIn(path, dpe);
   } else {
     LOG(ERROR) << "Unix stage in is neither a file or directory" << std::endl;
@@ -47,7 +47,7 @@ void UnixStager::StageIn(std::string path, off_t off,
                          size_t size, PlacementPolicy dpe) {
   if (stdfs::is_regular_file(path)) {
     FileStageIn(path, off, size, dpe);
-  } else if(stdfs::is_directory(path)) {
+  } else if (stdfs::is_directory(path)) {
     LOG(ERROR) << "Unix stage-in with offset " <<
         "is not supported for directories" << std::endl;
   } else {
@@ -71,7 +71,7 @@ void UnixStager::FileStageIn(std::string path,
 void UnixStager::StageOut(std::string path) {
   if (stdfs::is_regular_file(path)) {
     FileStageOut(path);
-  } else if(stdfs::is_directory(path)) {
+  } else if (stdfs::is_directory(path)) {
     DirectoryStageOut(path);
   } else {
     LOG(ERROR) << "Unix stage-out is neither a file or directory" << std::endl;
@@ -96,4 +96,4 @@ void UnixStager::DirectoryStageOut(std::string path) {
   }
 }
 
-}
+}  // namespace hermes
