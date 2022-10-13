@@ -14,17 +14,15 @@
 
 #include "catch_config.h"
 #include "constants.h"
-#include "stdio/constants.h"
-#include "stdio/datastructures.h"
-#include "stdio/mapper/mapper_factory.h"
-#include "stdio/metadata_manager.h"
+#include "stdio/fs_api.h"
+#include "mapper/mapper_factory.h"
 
-using hermes::adapter::stdio::FileStruct;
-using hermes::adapter::stdio::HermesStruct;
-using hermes::adapter::stdio::MapperFactory;
-using hermes::adapter::stdio::MetadataManager;
+using hermes::adapter::BlobPlacements;
+using hermes::adapter::MapperFactory;
+using hermes::adapter::fs::MetadataManager;
+using hermes::adapter::fs::kMapperType;
 
-namespace fs = std::experimental::filesystem;
+namespace stdfs = std::experimental::filesystem;
 
 namespace hermes::adapter::stdio::test {
 struct Arguments {
@@ -62,30 +60,30 @@ int finalize() {
 }
 
 int pretest() {
-  fs::path fullpath = args.directory;
+  stdfs::path fullpath = args.directory;
   fullpath /= args.filename;
   info.new_file = fullpath.string() + "_new";
   info.existing_file = fullpath.string() + "_ext";
-  if (fs::exists(info.new_file)) fs::remove(info.new_file);
-  if (fs::exists(info.existing_file)) fs::remove(info.existing_file);
-  if (!fs::exists(info.existing_file)) {
+  if (stdfs::exists(info.new_file)) stdfs::remove(info.new_file);
+  if (stdfs::exists(info.existing_file)) stdfs::remove(info.existing_file);
+  if (!stdfs::exists(info.existing_file)) {
     std::string cmd = "dd if=/dev/zero of=" + info.existing_file +
                       " bs=1 count=0 seek=" +
                       std::to_string(args.request_size * args.num_iterations) +
                       " > /dev/null 2>&1";
     int status = system(cmd.c_str());
     REQUIRE(status != -1);
-    REQUIRE(fs::file_size(info.existing_file) ==
+    REQUIRE(stdfs::file_size(info.existing_file) ==
             args.request_size * args.num_iterations);
-    info.total_size = fs::file_size(info.existing_file);
+    info.total_size = stdfs::file_size(info.existing_file);
   }
   REQUIRE(info.total_size > 0);
   return 0;
 }
 
 int posttest() {
-  if (fs::exists(info.new_file)) fs::remove(info.new_file);
-  if (fs::exists(info.existing_file)) fs::remove(info.existing_file);
+  if (stdfs::exists(info.new_file)) stdfs::remove(info.new_file);
+  if (stdfs::exists(info.existing_file)) stdfs::remove(info.existing_file);
   return 0;
 }
 
@@ -107,55 +105,49 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
                              "[pattern=sequential][file=1]") {
   pretest();
   SECTION("Map a one request") {
-    auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto mapper = MapperFactory().Get(kMapperType);
     size_t total_size = args.request_size;
     FILE* fp = fopen(info.new_file.c_str(), "w+");
     REQUIRE(fp != nullptr);
     size_t offset = 0;
     REQUIRE(kPageSize > total_size + offset);
-    auto mapping =
-        mapper->map(FileStruct(mdm->Convert(fp), offset, total_size));
+    BlobPlacements mapping;
+    mapper->map(offset, total_size, mapping);
     REQUIRE(mapping.size() == 1);
-    REQUIRE(mapping[0].first.offset_ == offset);
-    REQUIRE(mapping[0].first.size_ == total_size);
-    REQUIRE(mapping[0].second.offset_ == offset);
-    REQUIRE(mapping[0].second.size_ == total_size);
-
+    REQUIRE(mapping[0].bucket_off_ == offset);
+    REQUIRE(mapping[0].blob_size_ == total_size);
+    REQUIRE(mapping[0].blob_off_ == offset);
     int status = fclose(fp);
     REQUIRE(status == 0);
   }
   SECTION("Map a one big request") {
-    auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto mapper = MapperFactory().Get(kMapperType);
     size_t total_size = args.request_size * args.num_iterations;
     FILE* fp = fopen(info.new_file.c_str(), "w+");
     REQUIRE(fp != nullptr);
     size_t offset = 0;
-    auto mapping =
-        mapper->map(FileStruct(mdm->Convert(fp), offset, total_size));
+    BlobPlacements mapping;
+    mapper->map(offset, total_size, mapping);
     REQUIRE(mapping.size() == ceil((double)total_size / kPageSize));
     for (const auto& item : mapping) {
       size_t mapped_size =
           total_size - offset > kPageSize ? kPageSize : total_size - offset;
-      REQUIRE(item.first.offset_ == offset);
-      REQUIRE(item.first.size_ == mapped_size);
-      REQUIRE(item.second.offset_ == offset % kPageSize);
-      REQUIRE(item.second.size_ == mapped_size);
+      REQUIRE(item.bucket_off_ == offset);
+      REQUIRE(item.blob_size_ == mapped_size);
+      REQUIRE(item.blob_off_ == offset % kPageSize);
       offset += mapped_size;
     }
     int status = fclose(fp);
     REQUIRE(status == 0);
   }
   SECTION("Map a one large unaligned request") {
-    auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto mapper = MapperFactory().Get(kMapperType);
     size_t total_size = args.request_size * args.num_iterations;
     FILE* fp = fopen(info.new_file.c_str(), "w+");
     REQUIRE(fp != nullptr);
     size_t offset = 1;
-    auto mapping =
-        mapper->map(FileStruct(mdm->Convert(fp), offset, total_size));
+    BlobPlacements mapping;
+    mapper->map(offset, total_size, mapping);
     bool has_rem = (total_size + offset) % kPageSize != 0;
     if (has_rem) {
       REQUIRE(mapping.size() == ceil((double)total_size / kPageSize) + 1);
@@ -174,10 +166,9 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
       } else {
         mapped_size = kPageSize;
       }
-      REQUIRE(item.first.offset_ == current_offset);
-      REQUIRE(item.first.size_ == mapped_size);
-      REQUIRE(item.second.offset_ == current_offset % kPageSize);
-      REQUIRE(item.second.size_ == mapped_size);
+      REQUIRE(item.bucket_off_ == current_offset);
+      REQUIRE(item.blob_size_ == mapped_size);
+      REQUIRE(item.blob_off_ == current_offset % kPageSize);
       current_offset += mapped_size;
       i++;
     }
@@ -185,20 +176,18 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(status == 0);
   }
   SECTION("Map a one small unaligned request") {
-    auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
     auto mapper = MapperFactory().Get(kMapperType);
     size_t total_size = args.request_size;
     FILE* fp = fopen(info.new_file.c_str(), "w+");
     REQUIRE(fp != nullptr);
     size_t offset = 1;
     REQUIRE(kPageSize > total_size + offset);
-    auto mapping =
-        mapper->map(FileStruct(mdm->Convert(fp), offset, total_size));
+    BlobPlacements mapping;
+    mapper->map(offset, total_size, mapping);
     REQUIRE(mapping.size() == 1);
-    REQUIRE(mapping[0].first.offset_ == offset);
-    REQUIRE(mapping[0].first.size_ == total_size);
-    REQUIRE(mapping[0].second.offset_ == 1);
-    REQUIRE(mapping[0].second.size_ == total_size);
+    REQUIRE(mapping[0].bucket_off_ == offset);
+    REQUIRE(mapping[0].blob_size_ == total_size);
+    REQUIRE(mapping[0].blob_off_ == 1);
     int status = fclose(fp);
     REQUIRE(status == 0);
   }

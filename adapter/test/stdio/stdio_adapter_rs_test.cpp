@@ -38,7 +38,7 @@ TEST_CASE("BatchedWriteRSRangeSmall",
     }
     test::test_fclose();
     REQUIRE(test::status_orig == 0);
-    REQUIRE(fs::file_size(info.new_file) == biggest_written);
+    REQUIRE(stdfs::file_size(info.new_file) == biggest_written);
   }
 
   SECTION("write to new file") {
@@ -55,7 +55,7 @@ TEST_CASE("BatchedWriteRSRangeSmall",
     }
     test::test_fclose();
     REQUIRE(test::status_orig == 0);
-    REQUIRE(fs::file_size(info.new_file) == total_written);
+    REQUIRE(stdfs::file_size(info.new_file) == total_written);
   }
   posttest();
 }
@@ -450,7 +450,7 @@ TEST_CASE("BatchedWriteRSRangeMedium",
     }
     test::test_fclose();
     REQUIRE(test::status_orig == 0);
-    REQUIRE(fs::file_size(info.new_file) == biggest_written);
+    REQUIRE(stdfs::file_size(info.new_file) == biggest_written);
   }
 
   SECTION("write to new file") {
@@ -879,7 +879,7 @@ TEST_CASE("BatchedWriteRSRangeLarge",
     }
     test::test_fclose();
     REQUIRE(test::status_orig == 0);
-    REQUIRE(fs::file_size(info.new_file) == total_written);
+    REQUIRE(stdfs::file_size(info.new_file) == total_written);
   }
   posttest();
 }

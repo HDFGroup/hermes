@@ -45,7 +45,7 @@ namespace hermes::adapter {
 /**
  * Splits a string given a delimiter
  */
-inline std::vector<std::string> StringSplit(char* str, char delimiter) {
+inline std::vector<std::string> StringSplit(const char* str, char delimiter) {
   std::stringstream ss(str);
   std::vector<std::string> v;
   while (ss.good()) {

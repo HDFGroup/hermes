@@ -3,7 +3,8 @@
 num_devices: 4
 num_targets: 4
 
-capacities_mb: [1, 1, 1, 1]
+#2 is used for RAM because some space is taken by the Arena.
+capacities_mb: [2, 1, 1, 1]
 block_sizes_kb: [4, 4, 4, 4]
 num_slabs: [4, 4, 4, 4]
 

@@ -31,3 +31,16 @@ if(HERMES_INSTALL_TESTS)
       )
   endforeach()
 endif()
+
+add_executable(mpi_parallel parallel.cc)
+add_dependencies(mpi_parallel hermes_mpiio hermes_daemon)
+target_link_libraries(mpi_parallel hermes_mpiio  Catch2::Catch2 -lstdc++fs -lc MPI::MPI_CXX)
+set_target_properties(mpi_parallel PROPERTIES COMPILE_FLAGS "-DHERMES_INTERCEPT=1")
+
+install(
+        TARGETS
+        mpi_parallel
+        LIBRARY DESTINATION ${HERMES_INSTALL_LIB_DIR}
+        ARCHIVE DESTINATION ${HERMES_INSTALL_LIB_DIR}
+        RUNTIME DESTINATION ${HERMES_INSTALL_BIN_DIR}
+)

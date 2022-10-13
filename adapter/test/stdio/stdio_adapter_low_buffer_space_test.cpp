@@ -20,10 +20,10 @@
 #include "catch_config.h"
 #include "adapter_test_utils.h"
 #if HERMES_INTERCEPT == 1
-#include "stdio/stdio.h"
+#include "stdio/real_api.h"
 #endif
 
-namespace fs = std::experimental::filesystem;
+namespace stdfs = std::experimental::filesystem;
 
 namespace hermes::adapter::stdio::test {
 struct Arguments {
@@ -67,7 +67,7 @@ int finalize() {
 }
 
 int pretest() {
-  fs::path fullpath = args.directory;
+  stdfs::path fullpath = args.directory;
   fullpath /= args.filename;
   info.new_file = fullpath.string() + "_new_" + std::to_string(getpid());
   info.existing_file = fullpath.string() + "_ext_" + std::to_string(getpid());
@@ -75,25 +75,29 @@ int pretest() {
       fullpath.string() + "_new_cmp" + "_" + std::to_string(getpid());
   info.existing_file_cmp =
       fullpath.string() + "_ext_cmp" + "_" + std::to_string(getpid());
-  if (fs::exists(info.new_file)) fs::remove(info.new_file);
-  if (fs::exists(info.new_file_cmp)) fs::remove(info.new_file_cmp);
-  if (fs::exists(info.existing_file)) fs::remove(info.existing_file);
-  if (fs::exists(info.existing_file_cmp)) fs::remove(info.existing_file_cmp);
-  if (!fs::exists(info.existing_file)) {
+  if (stdfs::exists(info.new_file))
+    stdfs::remove(info.new_file);
+  if (stdfs::exists(info.new_file_cmp))
+    stdfs::remove(info.new_file_cmp);
+  if (stdfs::exists(info.existing_file))
+    stdfs::remove(info.existing_file);
+  if (stdfs::exists(info.existing_file_cmp))
+    stdfs::remove(info.existing_file_cmp);
+  if (!stdfs::exists(info.existing_file)) {
     std::string cmd = "{ tr -dc '[:alnum:]' < /dev/urandom | head -c " +
                       std::to_string(args.request_size * info.num_iterations) +
                       "; } > " + info.existing_file + " 2> /dev/null";
     int status = system(cmd.c_str());
     REQUIRE(status != -1);
-    REQUIRE(fs::file_size(info.existing_file) ==
+    REQUIRE(stdfs::file_size(info.existing_file) ==
             args.request_size * info.num_iterations);
-    info.total_size = fs::file_size(info.existing_file);
+    info.total_size = stdfs::file_size(info.existing_file);
   }
-  if (!fs::exists(info.existing_file_cmp)) {
+  if (!stdfs::exists(info.existing_file_cmp)) {
     std::string cmd = "cp " + info.existing_file + " " + info.existing_file_cmp;
     int status = system(cmd.c_str());
     REQUIRE(status != -1);
-    REQUIRE(fs::file_size(info.existing_file_cmp) ==
+    REQUIRE(stdfs::file_size(info.existing_file_cmp) ==
             args.request_size * info.num_iterations);
   }
   REQUIRE(info.total_size > 0);
@@ -109,10 +113,10 @@ int posttest(bool compare_data = true) {
   INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.existing_file);
   INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.new_file);
 #endif
-  if (compare_data && fs::exists(info.new_file) &&
-      fs::exists(info.new_file_cmp)) {
-    size_t size = fs::file_size(info.new_file);
-    REQUIRE(size == fs::file_size(info.new_file_cmp));
+  if (compare_data && stdfs::exists(info.new_file) &&
+      stdfs::exists(info.new_file_cmp)) {
+    size_t size = stdfs::file_size(info.new_file);
+    REQUIRE(size == stdfs::file_size(info.new_file_cmp));
     if (size > 0) {
       std::vector<unsigned char> d1(size, '0');
       std::vector<unsigned char> d2(size, '1');
@@ -141,11 +145,11 @@ int posttest(bool compare_data = true) {
       REQUIRE(char_mismatch == 0);
     }
   }
-  if (compare_data && fs::exists(info.existing_file) &&
-      fs::exists(info.existing_file_cmp)) {
-    size_t size = fs::file_size(info.existing_file);
-    if (size != fs::file_size(info.existing_file_cmp)) sleep(1);
-    REQUIRE(size == fs::file_size(info.existing_file_cmp));
+  if (compare_data && stdfs::exists(info.existing_file) &&
+      stdfs::exists(info.existing_file_cmp)) {
+    size_t size = stdfs::file_size(info.existing_file);
+    if (size != stdfs::file_size(info.existing_file_cmp)) sleep(1);
+    REQUIRE(size == stdfs::file_size(info.existing_file_cmp));
     if (size > 0) {
       std::vector<unsigned char> d1(size, '0');
       std::vector<unsigned char> d2(size, '1');
@@ -171,10 +175,14 @@ int posttest(bool compare_data = true) {
     }
   }
   /* Clean up. */
-  if (fs::exists(info.new_file)) fs::remove(info.new_file);
-  if (fs::exists(info.existing_file)) fs::remove(info.existing_file);
-  if (fs::exists(info.new_file_cmp)) fs::remove(info.new_file_cmp);
-  if (fs::exists(info.existing_file_cmp)) fs::remove(info.existing_file_cmp);
+  if (stdfs::exists(info.new_file))
+    stdfs::remove(info.new_file);
+  if (stdfs::exists(info.existing_file))
+    stdfs::remove(info.existing_file);
+  if (stdfs::exists(info.new_file_cmp))
+    stdfs::remove(info.new_file_cmp);
+  if (stdfs::exists(info.existing_file_cmp))
+    stdfs::remove(info.existing_file_cmp);
 
 #if HERMES_INTERCEPT == 1
   INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_file_cmp);
@@ -264,7 +272,7 @@ TEST_CASE("BatchedWriteSequential",
     REQUIRE(test::size_written_orig == write_size);
     test::test_fclose();
     REQUIRE(test::status_orig == 0);
-    REQUIRE(fs::file_size(info.new_file) == write_size);
+    REQUIRE(stdfs::file_size(info.new_file) == write_size);
   }
   SECTION("write to new file multiple write") {
     test::test_fopen(info.new_file.c_str(), "w+");
@@ -276,7 +284,7 @@ TEST_CASE("BatchedWriteSequential",
     REQUIRE(test::size_written_orig == args.request_size);
     test::test_fclose();
     REQUIRE(test::status_orig == 0);
-    REQUIRE(fs::file_size(info.new_file) ==
+    REQUIRE(stdfs::file_size(info.new_file) ==
             args.request_size * (info.num_iterations + 1));
   }
   posttest();

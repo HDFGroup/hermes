@@ -86,7 +86,7 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(test::size_written_orig == args.request_size);
     test::test_fclose();
     REQUIRE(test::status_orig == 0);
-    REQUIRE(fs::file_size(info.new_file) == test::size_written_orig);
+    REQUIRE(stdfs::file_size(info.new_file) == test::size_written_orig);
   }
 
   SECTION("write to existing file with truncate") {
@@ -96,7 +96,7 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(test::size_written_orig == args.request_size);
     test::test_fclose();
     REQUIRE(test::status_orig == 0);
-    REQUIRE(fs::file_size(info.existing_file) == test::size_written_orig);
+    REQUIRE(stdfs::file_size(info.existing_file) == test::size_written_orig);
   }
 
   SECTION("write to existing file at the end") {
@@ -110,19 +110,19 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(test::size_written_orig == args.request_size);
     test::test_fclose();
     REQUIRE(test::status_orig == 0);
-    REQUIRE(fs::file_size(info.existing_file) ==
+    REQUIRE(stdfs::file_size(info.existing_file) ==
             test::size_written_orig + offset);
   }
 
   SECTION("append to existing file") {
-    auto existing_size = fs::file_size(info.existing_file);
+    auto existing_size = stdfs::file_size(info.existing_file);
     test::test_fopen(info.existing_file.c_str(), "a+");
     REQUIRE(test::fh_orig != nullptr);
     test::test_fwrite(info.write_data.c_str(), args.request_size);
     REQUIRE(test::size_written_orig == args.request_size);
     test::test_fclose();
     REQUIRE(test::status_orig == 0);
-    REQUIRE(fs::file_size(info.existing_file) ==
+    REQUIRE(stdfs::file_size(info.existing_file) ==
             existing_size + test::size_written_orig);
   }
 
@@ -133,7 +133,7 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(test::size_written_orig == args.request_size);
     test::test_fclose();
     REQUIRE(test::status_orig == 0);
-    REQUIRE(fs::file_size(info.new_file) == test::size_written_orig);
+    REQUIRE(stdfs::file_size(info.new_file) == test::size_written_orig);
   }
   posttest();
 }
@@ -197,7 +197,7 @@ TEST_CASE("BatchedWriteSequential",
     }
     test::test_fclose();
     REQUIRE(test::status_orig == 0);
-    REQUIRE(fs::file_size(info.new_file) == args.request_size);
+    REQUIRE(stdfs::file_size(info.new_file) == args.request_size);
   }
 
   SECTION("write to new file sequentially") {
@@ -210,7 +210,7 @@ TEST_CASE("BatchedWriteSequential",
     }
     test::test_fclose();
     REQUIRE(test::status_orig == 0);
-    REQUIRE(fs::file_size(info.new_file) ==
+    REQUIRE(stdfs::file_size(info.new_file) ==
             info.num_iterations * args.request_size);
   }
   posttest();
@@ -445,7 +445,7 @@ TEST_CASE("BatchedWriteRSVariable",
     }
     test::test_fclose();
     REQUIRE(test::status_orig == 0);
-    REQUIRE(fs::file_size(info.new_file) == biggest_written);
+    REQUIRE(stdfs::file_size(info.new_file) == biggest_written);
   }
 
   SECTION("write to new file") {
@@ -462,7 +462,7 @@ TEST_CASE("BatchedWriteRSVariable",
     }
     test::test_fclose();
     REQUIRE(test::status_orig == 0);
-    REQUIRE(fs::file_size(info.new_file) == total_test_written);
+    REQUIRE(stdfs::file_size(info.new_file) == total_test_written);
   }
   posttest();
 }
@@ -1004,7 +1004,7 @@ TEST_CASE("BatchedWriteTemporalFixed",
     }
     test::test_fclose();
     REQUIRE(test::status_orig == 0);
-    REQUIRE(fs::file_size(info.new_file) == args.request_size);
+    REQUIRE(stdfs::file_size(info.new_file) == args.request_size);
   }
 
   SECTION("write to new file always at start") {
@@ -1018,7 +1018,7 @@ TEST_CASE("BatchedWriteTemporalFixed",
     }
     test::test_fclose();
     REQUIRE(test::status_orig == 0);
-    REQUIRE(fs::file_size(info.new_file) ==
+    REQUIRE(stdfs::file_size(info.new_file) ==
             info.num_iterations * args.request_size);
   }
   posttest();
@@ -1093,7 +1093,7 @@ TEST_CASE("BatchedWriteTemporalVariable",
     }
     test::test_fclose();
     REQUIRE(test::status_orig == 0);
-    REQUIRE(fs::file_size(info.new_file) == args.request_size);
+    REQUIRE(stdfs::file_size(info.new_file) == args.request_size);
   }
 
   SECTION("write to new file always at start") {
@@ -1109,7 +1109,7 @@ TEST_CASE("BatchedWriteTemporalVariable",
     }
     test::test_fclose();
     REQUIRE(test::status_orig == 0);
-    REQUIRE(fs::file_size(info.new_file) ==
+    REQUIRE(stdfs::file_size(info.new_file) ==
             info.num_iterations * args.request_size);
   }
   posttest();

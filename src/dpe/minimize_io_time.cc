@@ -65,8 +65,7 @@ Status MinimizeIoTime::Placement(const std::vector<size_t> &blob_sizes,
   // Constraint #2: Capacity constraints
   for (size_t j = 0; j < num_targets; ++j) {
     double rem_cap_thresh =
-        static_cast<double>(node_state[j]) -
-        static_cast<double>(node_state[j]) * minimum_remaining_capacity;
+        static_cast<double>(node_state[j]) * (1 - minimum_remaining_capacity);
     double est_rem_cap = capacity_change_threshold * node_state[j];
     double max_capacity = std::max({rem_cap_thresh, est_rem_cap});
     if (max_capacity > 0) {

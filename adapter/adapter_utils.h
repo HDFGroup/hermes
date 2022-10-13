@@ -14,10 +14,10 @@
 
 namespace hermes::adapter {
 
-namespace fs = std::experimental::filesystem;
+namespace stdfs = std::experimental::filesystem;
 
-fs::path WeaklyCanonical(const fs::path& p);
-fs::path WeaklyCanonical(const fs::path& p, std::error_code& ec);
+stdfs::path WeaklyCanonical(const stdfs::path& p);
+stdfs::path WeaklyCanonical(const stdfs::path& p, std::error_code& ec);
 
 }  // namespace hermes::adapter
 
