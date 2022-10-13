@@ -14,51 +14,30 @@
 #include "posix/fs_api.h"
 #include "hermes_types.h"
 #include <hermes.h>
+#include "data_stager_factory.h"
 
-using hermes::adapter::posix::PosixFS;
 using hermes::api::PlacementPolicyConv;
 using hermes::api::PlacementPolicy;
-using hermes::adapter::fs::IoOptions;
-
-/* Stage in a single file */
-void StageIn(std::string path, int off, int size, PlacementPolicy dpe) {
-  auto fs_api = PosixFS();
-  void *buf = malloc(size);
-  AdapterStat stat;
-  bool stat_exists;
-  IoStatus io_status;
-  File f = fs_api.Open(stat, path);
-  fs_api.Read(f, stat, buf, off, size,
-              io_status, IoOptions::WithParallelDpe(dpe));
-  fs_api.Close(f, stat_exists, false);
-  free(buf);
-}
+using hermes::DataStager;
+using hermes::DataStagerFactory;
 
 int main(int argc, char **argv) {
+  if (argc != 4) {
+    std::cout << "Usage: mpirun -n [nprocs]" <<
+        " ./stage_in [url] [offset] [size] [dpe]" << std::endl;
+    exit(1);
+  }
   auto mdm = Singleton<hermes::adapter::fs::MetadataManager>::GetInstance();
   MPI_Init(&argc, &argv);
   mdm->InitializeHermes(true);
   off_t off;
   size_t size;
-  std::string path = argv[1];
+  std::string url = argv[1];
   std::stringstream(argv[2]) >> off;
   std::stringstream(argv[3]) >> size;
   PlacementPolicy dpe = PlacementPolicyConv::to_enum(argv[4]);
-
-  size_t per_proc_size = size / mdm->comm_size;
-  size_t per_proc_off = off + per_proc_size * mdm->rank;
-  if (mdm->rank == mdm->comm_size - 1) {
-    per_proc_size += size % mdm->comm_size;
-  }
-
-  LOG(INFO) << "pid: " << getpid()
-            << " size: " << per_proc_size
-            << " off: " << per_proc_off;
-
-  StageIn(path,
-          per_proc_off,
-          per_proc_size,
-          dpe);
+  auto stager = DataStagerFactory::Get(url);
+  stager->StageIn(url, dpe);
   mdm->FinalizeHermes();
   MPI_Finalize();
 }
