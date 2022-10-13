@@ -24,9 +24,6 @@
 
 #include <cstdint>
 #include <string>
-#include <set>
-#include <iostream>
-#include <vector>
 
 #include <glog/logging.h>
 
@@ -34,83 +31,150 @@
 #include "buffer_pool.h"
 #include "metadata_management.h"
 #include "rpc.h"
-#include "id.h"
+
+/** \file hermes.h */
 
 namespace hermes {
 namespace api {
 
-/** Return the (semantic versioning compatible) version of Hermes in the form
- *  MAJOR.MINOR.PATCH
+/** \brief Return the (semantic versioning compatible) version of Hermes.
+ *
+ * \return A string in the form MAJOR.MINOR.PATCH
  */
 std::string GetVersion();
 
-/** Hermes node state */
+/** Class representing an instance of a Hermes buffering system. */
 class Hermes {
  public:
-  std::set<std::string> bucket_list_;
-  std::set<std::string> vbucket_list_;
+  /** \bool{Hermes is initialized} */
+  bool is_initialized;
 
   // TODO(chogan): Temporarily public to facilitate iterative development.
   hermes::SharedMemoryContext context_;
   hermes::CommunicationContext comm_;
   hermes::RpcContext rpc_;
   hermes::Arena trans_arena_;
+  /** The name of the shared memory segment in which all Hermes data is
+   * stored.
+   */
   std::string shmem_name_;
+  /** The name of the primary RPC server. */
   std::string rpc_server_name_;
-  bool is_initialized;
-
-  /** if true will do more checks, warnings, expect slower code */
-  const bool debug_mode_ = true;
 
   Hermes() {}
 
   explicit Hermes(SharedMemoryContext context) : context_(context) {}
 
-  /** Display the list of buckets in this node */
-  void Display_bucket() {
-    for (auto it = bucket_list_.begin(); it != bucket_list_.end(); ++it)
-      std::cout << *it << '\t';
-    std::cout << '\n';
-  }
-
-  /** Display the list of vbuckets in this node */
-  void Display_vbucket() {
-    for (auto it = vbucket_list_.begin(); it != vbucket_list_.end(); ++it)
-      std::cout << *it << '\t';
-    std::cout << '\n';
-  }
-
-  /** Returns whether we are running on an application core. */
+  /** \brief Return \bool{this rank is an application core}
+   *
+   * An application core is a core or rank on which user code runs as opposed to
+   * the Hermes core (or rank) which only runs Hermes services.
+   *
+   * \return \bool{this rank is an application core}
+   */
   bool IsApplicationCore();
-  /** Returns whether we are the first MPI rank on a given node */
+
+  /** \brief Returns \bool{this is the first MPI rank on this node}
+   *
+   * Hermes assigns numeric IDs to each rank. The first rank on the node is the
+   * lowest ID on that node.
+   *
+   * \return \bool{this is the first MPI rank on this node}
+   */
   bool IsFirstRankOnNode();
-  /** A barrier across all application processes. */
+
+  /** \brief A barrier across all application processes.
+   *
+   * Like MPI_Barrier but only involves application ranks.
+   */
   void AppBarrier();
-  /** Returns the rank of this process */
+
+  /** \brief Returns the rank of this process.
+   *
+   * Hermes assigns each application core a unique rank.
+   *
+   * \return The rank of this process.
+   */
   int GetProcessRank();
-  /** Return the Node ID of this process */
+
+  /** \brief Return ID of the node this process is running on.
+   *
+   * Hermes assigns each node a numeric ID.
+   *
+   * \return The node's ID.
+   */
   int GetNodeId();
-  /** Returns the total number of application processes */
+
+  /** \brief Returns the total number of application processes.
+   *
+   * Does not count Hermes processes.
+   *
+   * \return The number of application processes.
+   */
   int GetNumProcesses();
-  /** Get an application communicator handle */
+
+  /** \brief Get an application communicator handle.
+   *
+   * The handle can be cast to the appropriate type for the communication
+   * backend and used in the backend's API calls. For example, when using the
+   * MPI communication backend (the default), this function returns a pointer to
+   * an MPI_Comm object, which can then be used in any MPI call.
+   *
+   * \return A void pointer to a communicator handle.
+   */
   void *GetAppCommunicator();
-  /** \todo Hermes::Finalize */
+
+  /** \brief Shutdown Hermes.
+   *
+   * This should be called by every process (application and Hermes cores)
+   * before shutting down the communication backend (e.g., MPI_Finalize).
+   *
+   * \param force_rpc_shutdown This should be \c true if Hermes was initialized
+   * as a daemon.
+   */
   void Finalize(bool force_rpc_shutdown = false);
-  /** \todo Hermes::FinalizeClient */
+
+  /** \brief Shutdown application cores.
+   *
+   * To be called from application cores that were started separately from a
+   * Hermes daemon. Normally this is called from adapters.
+   *
+   * \param stop_daemon By default this function will stop the daemon this
+   * client is connected to. Passing \c false here will keep it alive.
+   */
   void FinalizeClient(bool stop_daemon = true);
-  /** \todo Hermes::RemoteFinalize */
+
+  /** \todo Is this still necessary?
+   *
+   */
   void RemoteFinalize();
-  /** \todo Hermes::RunDaemon */
+
+  /** \brief Starts a Hermes daemon.
+   *
+   * Starts all Hermes services, then waits on the main thread to be finalized.
+   *
+   * \pre The Hermes instance must be initialized with InitHermesDaemon.
+   */
   void RunDaemon();
 
-  /** Check if a given bucket contains a blob. */
+  /** \brief Check if a given Bucket contains a Blob.
+   *
+   * \param bucket_name The name of the Bucket to check.
+   * \param blob_name The name of the Blob to check.
+   *
+   * \return \bool{the bucket \p bucket_name contains the Blob \p blob_name}
+   */
   bool BucketContainsBlob(const std::string &bucket_name,
                           const std::string &blob_name);
-  /** Returns true if @p bucket_name exists in this Hermes instance. */
+
+  /** \brief Returns true if \p bucket_name exists in this Hermes instance.
+   *
+   * \param bucket_name The name of the Bucket to check.
+   *
+   * \return \bool{\p bucket_name exists in this Hermes instance}
+   */
   bool BucketExists(const std::string &bucket_name);
 };
-
-class VBucket;
 
 class Bucket;
 
@@ -119,28 +183,73 @@ Status RenameBucket(const std::string &old_name,
                     const std::string &new_name,
                     Context &ctx);
 
-/** Transfers a blob between buckets */
+/** \todo Not implemented yet. */
 Status TransferBlob(const Bucket &src_bkt,
                     const std::string &src_blob_name,
                     Bucket &dst_bkt,
                     const std::string &dst_blob_name,
                     Context &ctx);
 
-/** \todo InitHermes */
+/** \brief Initialize an instance of Hermes.
+ *
+ * \param config_file The (relative or absolute) path to a hermes configuration
+ * file
+ * \param is_daemon \c true if initializing this Hermes instance as a daemon.
+ * \param is_adapter \c true if initializing this Hermes instance as an adapter,
+ * or client to an existing daemon.
+ *
+ * \pre Only one of \p is_daemon and \p is_adapter can be \c true.
+ *
+ * \return An initialized Hermes instance.
+ */
 std::shared_ptr<api::Hermes> InitHermes(const char *config_file = NULL,
                                         bool is_daemon = false,
                                         bool is_adapter = false);
 
 }  // namespace api
 
-/** \todo InitHermes */
+/** \overload
+ *
+ * Allows programatically generating configurations.
+ *
+ * \param config A valid Config.
+ *
+ * \return An initialized Hermes instance.
+ */
 std::shared_ptr<api::Hermes> InitHermes(Config *config, bool is_daemon = false,
                                         bool is_adapter = false);
-/** \todo InitHermesDaemon */
+
+/** \brief Initialize a Hermes instance as a daemon.
+ *
+ * A Hermes daemon is one or more processes (one per node) that handle all
+ * Hermes background services. This includes RPC servers, thread pools, buffer
+ * organization, and SystemViewState updates. A daemon is necessary in workflows
+ * that involve 2 or more applications sharing buffered data. Without a daemon,
+ * (i.e., co-deploying Hermes services with an application) the lifetime of
+ * Hermes is tied to the app.
+ *
+ * \param config_file The (relative or absolute) path to a hermes configuration
+ * file
+ *
+ * \return An initialized Hermes instance.
+ */
 std::shared_ptr<api::Hermes> InitHermesDaemon(char *config_file = NULL);
-/** \todo InitHermesDaemon */
+
+/** \overload
+ *
+ * \param config A valid Config.
+ */
 std::shared_ptr<api::Hermes> InitHermesDaemon(Config *config);
-/** \todo InitHermesClient */
+
+/** \brief  Initialize a Hermes instance as a client or adapter.
+ *
+ * \param config_file The (relative or absolute) path to a hermes configuration
+ * file
+ *
+ * \pre An existing Hermes daemon must already be running.
+ *
+ * \return An initialized Hermes instance.
+ */
 std::shared_ptr<api::Hermes> InitHermesClient(const char *config_file = NULL);
 
 }  // namespace hermes

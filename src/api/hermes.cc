@@ -64,6 +64,8 @@ Status TransferBlob(const Bucket &src_bkt,
   LOG(INFO) << "Transferring Blob from " << src_blob_name << " to "
             << dst_blob_name << '\n';
 
+  HERMES_NOT_IMPLEMENTED_YET;
+
   return ret;
 }
 

@@ -97,6 +97,13 @@ size_t Bucket::GetTotalBlobSize() {
   return result;
 }
 
+size_t Bucket::GetBlobSize(const std::string &name, const Context &ctx) {
+  ScopedTemporaryMemory scratch(&hermes_->trans_arena_);
+  size_t result = GetBlobSize(scratch, name, ctx);
+
+  return result;
+}
+
 size_t Bucket::GetBlobSize(Arena *arena, const std::string &name,
                            const Context &ctx) {
   (void)ctx;
@@ -248,6 +255,8 @@ Status Bucket::GetV(void *user_blob, Predicate pred, Context &ctx) {
 
   LOG(INFO) << "Getting blobs by predicate from bucket " << name_ << '\n';
 
+  HERMES_NOT_IMPLEMENTED_YET;
+
   return ret;
 }
 
@@ -314,6 +323,8 @@ std::vector<std::string> Bucket::GetBlobNames(Predicate pred,
   (void)ctx;
 
   LOG(INFO) << "Getting blob names by predicate from bucket " << name_ << '\n';
+
+  HERMES_NOT_IMPLEMENTED_YET;
 
   return std::vector<std::string>();
 }

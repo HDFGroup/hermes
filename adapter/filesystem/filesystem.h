@@ -17,11 +17,13 @@
 #include <ftw.h>
 #include <string>
 #include <bucket.h>
+#include <vbucket.h>
 #include <buffer_pool.h>
 #include <hermes_types.h>
 #include <traits.h>
 #include "mapper/mapper_factory.h"
 #include <mpi.h>
+#include <set>
 
 namespace hapi = hermes::api;
 

@@ -34,7 +34,7 @@ option `HERMES_DEBUG_HEAP=ON`.
 
 ### `BufferPool` mode
 
-![Buffer Pool Visualizer](https://github.com/HDFGroup/hermes/wiki/images/bp_viz.png)
+![Buffer Pool Visualizer](https://github.com/HDFGroup/hermes/wiki/images/buffer_pool_visualizer_default.png)
 
 ### `MetadataManager` mode
 
