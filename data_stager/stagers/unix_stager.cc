@@ -58,15 +58,14 @@ void UnixStager::StageIn(std::string path, off_t off,
 void UnixStager::FileStageIn(std::string path,
                              off_t off, size_t size, PlacementPolicy dpe) {
   auto fs_api = PosixFS();
-  void *buf = malloc(size);
+  std::vector<char> buf(size);
   AdapterStat stat;
   bool stat_exists;
   IoStatus io_status;
   File f = fs_api.Open(stat, path);
-  fs_api.Read(f, stat, buf, off, size,
+  fs_api.Read(f, stat, buf.data(), off, size,
               io_status, IoOptions::WithParallelDpe(dpe));
   fs_api.Close(f, stat_exists, false);
-  free(buf);
 }
 
 void UnixStager::StageOut(std::string path) {
@@ -88,7 +87,7 @@ void UnixStager::FileStageOut(std::string path) {
     LOG(INFO) << "Couldn't open file: " << path << std::endl;
     return;
   }
-  fs_api.Sync(f, stat_exists);
+  fs_api.Close(f, stat_exists, false);
 }
 
 void UnixStager::DirectoryStageOut(std::string path) {

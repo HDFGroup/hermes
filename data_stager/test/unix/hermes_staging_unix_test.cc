@@ -27,13 +27,9 @@ void CreateFile(const std::string &path, int nonce, size_t size) {
   }
   if (rank == 0) {
     FILE *file = fopen(path.c_str(), "w");
-    int *ptr = (int*)malloc(size);
-    for (size_t i = 0; i < count; ++i) {
-      ptr[i] = nonce;
-    }
-    fwrite(ptr, 1, size, file);
+    std::vector<int> data(count, nonce);
+    fwrite(data.data(), 1, size, file);
     fclose(file);
-    free(ptr);
   }
   if (mdm->is_mpi) {
     MPI_Barrier(MPI_COMM_WORLD);
@@ -53,10 +49,10 @@ void VerifyFile(const std::string &path, int nonce, size_t size) {
   }
 
   FILE *file = fopen(path.c_str(), "r");
-  int *ptr = (int*)malloc(size);
-  fread(ptr, 1, size, file);
+  std::vector<int> data(count);
+  fread(data.data(), 1, size, file);
   for (size_t i = 0; i < count ; ++i) {
-    if (ptr[i] != nonce) {
+    if (data[i] != nonce) {
       std::cout << "File verification failed"
                 << " at offset: " << i << "/" << count << std::endl;
       exit(1);
@@ -125,16 +121,13 @@ void test_file_stage() {
 
     // Override the original blob contents with new contents
     auto count = file_size / sizeof(int);
-    int *new_data = (int *)malloc(file_size);
-    for (size_t off = 0; off < count; ++off) {
-      new_data[off] = new_nonce;
-    }
+    std::vector<int> new_data(count, new_nonce);
     bool stat_exists;
     AdapterStat stat;
     PosixFS fs_api;
     IoStatus io_status;
     File f = fs_api.Open(stat, path);
-    fs_api.Write(f, stat, new_data, 0, file_size, io_status,
+    fs_api.Write(f, stat, new_data.data(), 0, file_size, io_status,
                  IoOptions::WithParallelDpe(dpe));
     fs_api.Close(f, stat_exists, false);
   }
