@@ -13,6 +13,7 @@ set(POSIX_ADAPTER_PUBLIC_HEADER
 
 # Add library hermes_posix_backend
 add_library(hermes_posix_backend ${CMAKE_CURRENT_SOURCE_DIR}/fs_api.cc)
+target_compile_options(hermes_posix_backend PUBLIC -fPIC)
 add_dependencies(hermes_posix_backend hermes)
 target_link_libraries(hermes_posix_backend hermes MPI::MPI_CXX glog::glog stdc++fs dl)
 

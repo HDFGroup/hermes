@@ -85,7 +85,8 @@ bool IsTracked(const std::string& path, bool log) {
   for (const auto& pth : INTERCEPTOR_LIST->hermes_flush_exclusion) {
     if (abs_path.rfind(pth) != std::string::npos) {
       if (log) {
-        LOG(INFO) << "Path " << path << " is not tracked (hermes_flush_exclusion)"
+        LOG(INFO) << "Path " << path
+                  << " is not tracked (hermes_flush_exclusion)"
                   << " because: "  << pth << std::endl;
       }
       return false;
@@ -119,7 +120,8 @@ bool IsTracked(const std::string& path, bool log) {
   for (const auto& pth : INTERCEPTOR_LIST->hermes_paths_exclusion) {
     if (abs_path.rfind(pth) != std::string::npos) {
       if (log) {
-        LOG(INFO) << "Path " << path << " is not tracked (hermes_paths_exclusion)"
+        LOG(INFO) << "Path " << path
+                  << " is not tracked (hermes_paths_exclusion)"
                   << " because: "  << pth << std::endl;
       }
       return false;

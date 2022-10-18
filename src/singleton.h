@@ -58,5 +58,5 @@ class Singleton {
 
 template <typename T>
 std::unique_ptr<T> Singleton<T>::instance = nullptr;
-}  // namespace hermes::adapter
+}  // namespace hermes
 #endif  // HERMES_ADAPTER_SINGLETON_H

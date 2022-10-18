@@ -146,15 +146,23 @@ class ApiClass:
         self.require_api()
         self.h_lines.append("")
 
+        # Create typedefs
+        self.h_lines.append(f"extern \"C\" {{")
+        for api in self.apis:
+            self.add_typedef(api)
+        self.h_lines.append(f"}}")
+        self.h_lines.append(f"")
+
         # Create the class definition
         self.h_lines.append(f"namespace hermes::adapter::{namespace} {{")
         self.h_lines.append(f"")
         self.h_lines.append(f"class API {{")
 
-        # Create the typedefs
+        # Create class function pointers
         self.h_lines.append(f" public:")
         for api in self.apis:
             self.add_intercept_api(api)
+        self.h_lines.append(f"")
 
         # Create the symbol mapper
         self.h_lines.append(f"  API() {{")
@@ -183,8 +191,10 @@ class ApiClass:
         self.h_lines.append(f"    #api_name << std::endl; \\")
         self.h_lines.append(f"    exit(1);")
 
+    def add_typedef(self, api):
+        self.h_lines.append(f"typedef {api.ret} (*{api.type})({api.get_args()});")
+
     def add_intercept_api(self, api):
-        self.h_lines.append(f"  typedef {api.ret} (*{api.type})({api.get_args()});")
         self.h_lines.append(f"  {api.ret} (*{api.real_name})({api.get_args()}) = nullptr;")
 
     def init_api(self, api):

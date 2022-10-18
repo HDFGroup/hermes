@@ -55,23 +55,24 @@ inline std::vector<std::string> StringSplit(const char* str, char delimiter) {
   }
   return v;
 }
-inline std::string GetFilenameFromFP(FILE* fh) {
-  char proclnk[kMaxPathLen];
-  char filename[kMaxPathLen];
-  if (fh == nullptr) return "";
-  int fno = fileno(fh);
-  snprintf(proclnk, kMaxPathLen, "/proc/self/fd/%d", fno);
-  size_t r = readlink(proclnk, filename, kMaxPathLen);
-  filename[r] = '\0';
-  return filename;
-}
+
 inline std::string GetFilenameFromFD(int fd) {
   char proclnk[kMaxPathLen];
   char filename[kMaxPathLen];
   if (fd == -1) return "";
   snprintf(proclnk, kMaxPathLen, "/proc/self/fd/%d", fd);
   size_t r = readlink(proclnk, filename, kMaxPathLen);
-  return std::string(filename, r);
+  if (r > 0) {
+    return std::string(filename, r);
+  } else {
+    return "";
+  }
+}
+
+inline std::string GetFilenameFromFP(FILE* fh) {
+  if (fh == nullptr) return "";
+  int fno = fileno(fh);
+  return GetFilenameFromFD(fno);
 }
 
 /**
