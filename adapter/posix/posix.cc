@@ -78,7 +78,8 @@ int HERMES_DECL(open)(const char *path, int flags, ...) {
     mode = va_arg(arg, int);
     va_end(arg);
   }
-  if (hermes::adapter::IsTracked(path)) {
+  bool do_log =  std::string(path) == "../testfile";
+  if (hermes::adapter::IsTracked(path, do_log)) {
     LOG(INFO) << "Intercept open for filename: " << path
               << " and mode: " << flags << " is tracked." << std::endl;
     AdapterStat stat;

@@ -223,7 +223,7 @@ void PopulateBufferingPath();
  * @return true, if file should be tracked.
  *         false, if file should not be intercepted.
  */
-bool IsTracked(const std::string& path);
+bool IsTracked(const std::string& path, bool log = false);
 
 /**
  * Check if fh should be tracked. In this method, first Convert fh to path.
@@ -233,7 +233,8 @@ bool IsTracked(const std::string& path);
  * @return true, if file should be tracked.
  *         false, if file should not be intercepted.
  */
-bool IsTracked(FILE* fh);
+bool IsTracked(FILE* fh, bool log = false);
+bool IsTracked(int fd, bool log = false);
 }  // namespace hermes::adapter
 #else
 /**
