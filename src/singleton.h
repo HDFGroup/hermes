@@ -21,7 +21,7 @@
  * Singleton<T>::GetInstance()
  * @tparam T
  */
-namespace hermes::adapter {
+namespace hermes {
 template <typename T>
 class Singleton {
  public:
@@ -58,5 +58,5 @@ class Singleton {
 
 template <typename T>
 std::unique_ptr<T> Singleton<T>::instance = nullptr;
-}  // namespace hermes::adapter
+}  // namespace hermes
 #endif  // HERMES_ADAPTER_SINGLETON_H

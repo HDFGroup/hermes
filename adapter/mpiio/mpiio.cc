@@ -35,7 +35,7 @@ using hermes::adapter::fs::File;
 using hermes::adapter::mpiio::API;
 using hermes::adapter::mpiio::MpiioFS;
 using hermes::adapter::mpiio::MpiioSeekModeConv;
-using hermes::adapter::Singleton;
+using hermes::Singleton;
 
 namespace hapi = hermes::api;
 namespace stdfs = std::experimental::filesystem;
@@ -54,6 +54,8 @@ inline bool IsTracked(MPI_File *fh) {
   auto [stat, exists] = mdm->Find(f);
   return exists;
 }
+
+extern "C" {
 
 /**
  * MPI
@@ -115,7 +117,9 @@ int HERMES_DECL(MPI_File_close)(MPI_File *fh) {
   auto real_api = Singleton<API>::GetInstance();
   auto fs_api = Singleton<MpiioFS>::GetInstance();
   if (IsTracked(fh)) {
-    File f; f.mpi_fh_ = *fh; fs_api->_InitFile(f);
+    File f;
+    f.mpi_fh_ = *fh;
+    fs_api->_InitFile(f);
     return fs_api->Close(f, stat_exists);
   }
   return real_api->MPI_File_close(fh);
@@ -126,7 +130,9 @@ int HERMES_DECL(MPI_File_seek)(MPI_File fh, MPI_Offset offset, int whence) {
   auto real_api = Singleton<API>::GetInstance();
   auto fs_api = Singleton<MpiioFS>::GetInstance();
   if (IsTracked(&fh)) {
-    File f; f.mpi_fh_ = fh; fs_api->_InitFile(f);
+    File f;
+    f.mpi_fh_ = fh;
+    fs_api->_InitFile(f);
     return fs_api->Seek(f, stat_exists, offset, whence);
   }
   return real_api->MPI_File_seek(fh, offset, whence);
@@ -140,7 +146,9 @@ int HERMES_DECL(MPI_File_seek_shared)(MPI_File fh, MPI_Offset offset,
   if (IsTracked(&fh)) {
     LOG(INFO) << "Intercept MPI_File_seek_shared offset:" << offset
               << " whence:" << whence << "." << std::endl;
-    File f; f.mpi_fh_ = fh; fs_api->_InitFile(f);
+    File f;
+    f.mpi_fh_ = fh;
+    fs_api->_InitFile(f);
     return fs_api->SeekShared(f, stat_exists, offset, whence);
   }
   return real_api->MPI_File_seek_shared(fh, offset, whence);
@@ -151,7 +159,9 @@ int HERMES_DECL(MPI_File_get_position)(MPI_File fh, MPI_Offset *offset) {
   auto real_api = Singleton<API>::GetInstance();
   auto fs_api = Singleton<MpiioFS>::GetInstance();
   if (IsTracked(&fh)) {
-    File f; f.mpi_fh_ = fh; fs_api->_InitFile(f);
+    File f;
+    f.mpi_fh_ = fh;
+    fs_api->_InitFile(f);
     (*offset) = static_cast<MPI_Offset>(fs_api->Tell(f, stat_exists));
     return MPI_SUCCESS;
   }
@@ -165,7 +175,9 @@ int HERMES_DECL(MPI_File_read_all)(MPI_File fh, void *buf, int count,
   auto fs_api = Singleton<MpiioFS>::GetInstance();
   if (IsTracked(&fh)) {
     LOG(INFO) << "Intercept MPI_File_read_all." << std::endl;
-    File f; f.mpi_fh_ = fh; fs_api->_InitFile(f);
+    File f;
+    f.mpi_fh_ = fh;
+    fs_api->_InitFile(f);
     return fs_api->ReadAll(f, stat_exists, buf, count, datatype, status);
   }
   return real_api->MPI_File_read_all(fh, buf, count, datatype, status);
@@ -177,12 +189,14 @@ int HERMES_DECL(MPI_File_read_at_all)(MPI_File fh, MPI_Offset offset, void *buf,
   auto real_api = Singleton<API>::GetInstance();
   auto fs_api = Singleton<MpiioFS>::GetInstance();
   if (IsTracked(&fh)) {
-    File f; f.mpi_fh_ = fh; fs_api->_InitFile(f);
-    return fs_api->ReadAll(f, stat_exists, buf,
-                           offset, count, datatype, status);
+    File f;
+    f.mpi_fh_ = fh;
+    fs_api->_InitFile(f);
+    return fs_api->ReadAll(f, stat_exists, buf, offset, count, datatype,
+                           status);
   }
-  return real_api->MPI_File_read_at_all(fh, offset, buf,
-                                         count, datatype, status);
+  return real_api->MPI_File_read_at_all(fh, offset, buf, count, datatype,
+                                        status);
 }
 int HERMES_DECL(MPI_File_read_at)(MPI_File fh, MPI_Offset offset, void *buf,
                                   int count, MPI_Datatype datatype,
@@ -191,7 +205,9 @@ int HERMES_DECL(MPI_File_read_at)(MPI_File fh, MPI_Offset offset, void *buf,
   auto real_api = Singleton<API>::GetInstance();
   auto fs_api = Singleton<MpiioFS>::GetInstance();
   if (IsTracked(&fh)) {
-    File f; f.mpi_fh_ = fh; fs_api->_InitFile(f);
+    File f;
+    f.mpi_fh_ = fh;
+    fs_api->_InitFile(f);
     return fs_api->Read(f, stat_exists, buf, offset, count, datatype, status);
   }
   return real_api->MPI_File_read_at(fh, offset, buf, count, datatype, status);
@@ -202,7 +218,9 @@ int HERMES_DECL(MPI_File_read)(MPI_File fh, void *buf, int count,
   auto real_api = Singleton<API>::GetInstance();
   auto fs_api = Singleton<MpiioFS>::GetInstance();
   if (IsTracked(&fh)) {
-    File f; f.mpi_fh_ = fh; fs_api->_InitFile(f);
+    File f;
+    f.mpi_fh_ = fh;
+    fs_api->_InitFile(f);
     int ret = fs_api->Read(f, stat_exists, buf, count, datatype, status);
     if (stat_exists) return ret;
   }
@@ -215,7 +233,9 @@ int HERMES_DECL(MPI_File_read_ordered)(MPI_File fh, void *buf, int count,
   auto real_api = Singleton<API>::GetInstance();
   auto fs_api = Singleton<MpiioFS>::GetInstance();
   if (IsTracked(&fh)) {
-    File f; f.mpi_fh_ = fh; fs_api->_InitFile(f);
+    File f;
+    f.mpi_fh_ = fh;
+    fs_api->_InitFile(f);
     return fs_api->ReadOrdered(f, stat_exists, buf, count, datatype, status);
   }
   return real_api->MPI_File_read_ordered(fh, buf, count, datatype, status);
@@ -228,7 +248,9 @@ int HERMES_DECL(MPI_File_read_shared)(MPI_File fh, void *buf, int count,
   auto fs_api = Singleton<MpiioFS>::GetInstance();
   if (IsTracked(&fh)) {
     LOG(INFO) << "Intercept MPI_File_read_shared." << std::endl;
-    File f; f.mpi_fh_ = fh; fs_api->_InitFile(f);
+    File f;
+    f.mpi_fh_ = fh;
+    fs_api->_InitFile(f);
     return fs_api->Read(f, stat_exists, buf, count, datatype, status);
   }
   return real_api->MPI_File_read_shared(fh, buf, count, datatype, status);
@@ -239,10 +261,12 @@ int HERMES_DECL(MPI_File_write_all)(MPI_File fh, const void *buf, int count,
   auto real_api = Singleton<API>::GetInstance();
   auto fs_api = Singleton<MpiioFS>::GetInstance();
   if (IsTracked(&fh)) {
-      LOG(INFO) << "Intercept MPI_File_write_all." << std::endl;
-      File f; f.mpi_fh_ = fh; fs_api->_InitFile(f);
-      int ret = fs_api->WriteAll(f, stat_exists, buf, count, datatype, status);
-      if (stat_exists) return ret;
+    LOG(INFO) << "Intercept MPI_File_write_all." << std::endl;
+    File f;
+    f.mpi_fh_ = fh;
+    fs_api->_InitFile(f);
+    int ret = fs_api->WriteAll(f, stat_exists, buf, count, datatype, status);
+    if (stat_exists) return ret;
   }
   return real_api->MPI_File_write_all(fh, buf, count, datatype, status);
 }
@@ -254,13 +278,15 @@ int HERMES_DECL(MPI_File_write_at_all)(MPI_File fh, MPI_Offset offset,
   auto real_api = Singleton<API>::GetInstance();
   auto fs_api = Singleton<MpiioFS>::GetInstance();
   if (IsTracked(&fh)) {
-    File f; f.mpi_fh_ = fh; fs_api->_InitFile(f);
-    int ret = fs_api->WriteAll(f, stat_exists, buf,
-                               offset, count, datatype, status);
+    File f;
+    f.mpi_fh_ = fh;
+    fs_api->_InitFile(f);
+    int ret =
+        fs_api->WriteAll(f, stat_exists, buf, offset, count, datatype, status);
     if (stat_exists) return ret;
   }
-  return real_api->MPI_File_write_at_all(fh, offset, buf, count,
-                                          datatype, status);
+  return real_api->MPI_File_write_at_all(fh, offset, buf, count, datatype,
+                                         status);
 }
 int HERMES_DECL(MPI_File_write_at)(MPI_File fh, MPI_Offset offset,
                                    const void *buf, int count,
@@ -270,7 +296,9 @@ int HERMES_DECL(MPI_File_write_at)(MPI_File fh, MPI_Offset offset,
   auto fs_api = Singleton<MpiioFS>::GetInstance();
   LOG(INFO) << "In MPI_File_write_at" << std::endl;
   if (IsTracked(&fh)) {
-    File f; f.mpi_fh_ = fh; fs_api->_InitFile(f);
+    File f;
+    f.mpi_fh_ = fh;
+    fs_api->_InitFile(f);
     return fs_api->Write(f, stat_exists, buf, offset, count, datatype, status);
   }
   return real_api->MPI_File_write_at(fh, offset, buf, count, datatype, status);
@@ -282,7 +310,9 @@ int HERMES_DECL(MPI_File_write)(MPI_File fh, const void *buf, int count,
   auto fs_api = Singleton<MpiioFS>::GetInstance();
   LOG(INFO) << "In MPI_File_write" << std::endl;
   if (IsTracked(&fh)) {
-    File f; f.mpi_fh_ = fh; fs_api->_InitFile(f);
+    File f;
+    f.mpi_fh_ = fh;
+    fs_api->_InitFile(f);
     int ret = fs_api->Write(f, stat_exists, buf, count, datatype, status);
     if (stat_exists) return ret;
   }
@@ -295,7 +325,9 @@ int HERMES_DECL(MPI_File_write_ordered)(MPI_File fh, const void *buf, int count,
   auto real_api = Singleton<API>::GetInstance();
   auto fs_api = Singleton<MpiioFS>::GetInstance();
   if (IsTracked(&fh)) {
-    File f; f.mpi_fh_ = fh; fs_api->_InitFile(f);
+    File f;
+    f.mpi_fh_ = fh;
+    fs_api->_InitFile(f);
     return fs_api->WriteOrdered(f, stat_exists, buf, count, datatype, status);
   }
   return real_api->MPI_File_write_ordered(fh, buf, count, datatype, status);
@@ -308,7 +340,9 @@ int HERMES_DECL(MPI_File_write_shared)(MPI_File fh, const void *buf, int count,
   auto fs_api = Singleton<MpiioFS>::GetInstance();
   if (IsTracked(&fh)) {
     // NOTE(llogan): originally WriteOrdered
-    File f; f.mpi_fh_ = fh; fs_api->_InitFile(f);
+    File f;
+    f.mpi_fh_ = fh;
+    fs_api->_InitFile(f);
     return fs_api->WriteOrdered(f, stat_exists, buf, count, datatype, status);
   }
   return real_api->MPI_File_write_shared(fh, buf, count, datatype, status);
@@ -324,12 +358,13 @@ int HERMES_DECL(MPI_File_iread_at)(MPI_File fh, MPI_Offset offset, void *buf,
   auto real_api = Singleton<API>::GetInstance();
   auto fs_api = Singleton<MpiioFS>::GetInstance();
   if (IsTracked(&fh)) {
-    File f; f.mpi_fh_ = fh; fs_api->_InitFile(f);
+    File f;
+    f.mpi_fh_ = fh;
+    fs_api->_InitFile(f);
     fs_api->ARead(f, stat_exists, buf, offset, count, datatype, request);
     return MPI_SUCCESS;
   }
-  return real_api->MPI_File_iread_at(fh, offset, buf,
-                                     count, datatype, request);
+  return real_api->MPI_File_iread_at(fh, offset, buf, count, datatype, request);
 }
 int HERMES_DECL(MPI_File_iread)(MPI_File fh, void *buf, int count,
                                 MPI_Datatype datatype, MPI_Request *request) {
@@ -337,7 +372,9 @@ int HERMES_DECL(MPI_File_iread)(MPI_File fh, void *buf, int count,
   auto real_api = Singleton<API>::GetInstance();
   auto fs_api = Singleton<MpiioFS>::GetInstance();
   if (IsTracked(&fh)) {
-    File f; f.mpi_fh_ = fh; fs_api->_InitFile(f);
+    File f;
+    f.mpi_fh_ = fh;
+    fs_api->_InitFile(f);
     fs_api->ARead(f, stat_exists, buf, count, datatype, request);
   }
   return real_api->MPI_File_iread(fh, buf, count, datatype, request);
@@ -349,7 +386,9 @@ int HERMES_DECL(MPI_File_iread_shared)(MPI_File fh, void *buf, int count,
   auto real_api = Singleton<API>::GetInstance();
   auto fs_api = Singleton<MpiioFS>::GetInstance();
   if (IsTracked(&fh)) {
-    File f; f.mpi_fh_ = fh; fs_api->_InitFile(f);
+    File f;
+    f.mpi_fh_ = fh;
+    fs_api->_InitFile(f);
     fs_api->ARead(f, stat_exists, buf, count, datatype, request);
     return MPI_SUCCESS;
   }
@@ -363,12 +402,14 @@ int HERMES_DECL(MPI_File_iwrite_at)(MPI_File fh, MPI_Offset offset,
   auto real_api = Singleton<API>::GetInstance();
   auto fs_api = Singleton<MpiioFS>::GetInstance();
   if (IsTracked(&fh)) {
-    File f; f.mpi_fh_ = fh; fs_api->_InitFile(f);
+    File f;
+    f.mpi_fh_ = fh;
+    fs_api->_InitFile(f);
     fs_api->AWrite(f, stat_exists, buf, offset, count, datatype, request);
     return MPI_SUCCESS;
   }
-  return real_api->MPI_File_iwrite_at(fh, offset, buf,
-                                      count, datatype, request);
+  return real_api->MPI_File_iwrite_at(fh, offset, buf, count, datatype,
+                                      request);
 }
 
 int HERMES_DECL(MPI_File_iwrite)(MPI_File fh, const void *buf, int count,
@@ -377,7 +418,9 @@ int HERMES_DECL(MPI_File_iwrite)(MPI_File fh, const void *buf, int count,
   auto real_api = Singleton<API>::GetInstance();
   auto fs_api = Singleton<MpiioFS>::GetInstance();
   if (IsTracked(&fh)) {
-    File f; f.mpi_fh_ = fh; fs_api->_InitFile(f);
+    File f;
+    f.mpi_fh_ = fh;
+    fs_api->_InitFile(f);
     fs_api->AWrite(f, stat_exists, buf, count, datatype, request);
     return MPI_SUCCESS;
   }
@@ -390,12 +433,13 @@ int HERMES_DECL(MPI_File_iwrite_shared)(MPI_File fh, const void *buf, int count,
   auto real_api = Singleton<API>::GetInstance();
   auto fs_api = Singleton<MpiioFS>::GetInstance();
   if (IsTracked(&fh)) {
-    File f; f.mpi_fh_ = fh; fs_api->_InitFile(f);
+    File f;
+    f.mpi_fh_ = fh;
+    fs_api->_InitFile(f);
     fs_api->AWriteOrdered(f, stat_exists, buf, count, datatype, request);
     return MPI_SUCCESS;
   }
-  return real_api->MPI_File_iwrite_shared(fh, buf, count,
-                                          datatype, request);
+  return real_api->MPI_File_iwrite_shared(fh, buf, count, datatype, request);
 }
 
 /**
@@ -406,9 +450,13 @@ int HERMES_DECL(MPI_File_sync)(MPI_File fh) {
   auto real_api = Singleton<API>::GetInstance();
   auto fs_api = Singleton<MpiioFS>::GetInstance();
   if (IsTracked(&fh)) {
-    File f; f.mpi_fh_ = fh; fs_api->_InitFile(f);
+    File f;
+    f.mpi_fh_ = fh;
+    fs_api->_InitFile(f);
     fs_api->Sync(f, stat_exists);
     return 0;
   }
   return real_api->MPI_File_sync(fh);
 }
+
+}  // extern C

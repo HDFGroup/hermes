@@ -32,10 +32,10 @@
  * Define Interceptor list for adapter.
  */
 #define INTERCEPTOR_LIST \
-  hermes::adapter::Singleton<hermes::adapter::InterceptorList>::GetInstance<>()
+  hermes::Singleton<hermes::adapter::InterceptorList>::GetInstance<>()
 
 #define HERMES_CONF \
-  hermes::adapter::Singleton<hermes::Config>::GetInstance()
+  hermes::Singleton<hermes::Config>::GetInstance()
 
 // Path lengths are up to 4096 bytes
 const int kMaxPathLen = 4096;

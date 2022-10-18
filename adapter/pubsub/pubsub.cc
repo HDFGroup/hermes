@@ -27,7 +27,7 @@ hapi::Status hermes::pubsub::mpiInit(int argc, char **argv) {
 
 hapi::Status hermes::pubsub::connect(const std::string &config_file) {
   LOG(INFO) << "Connecting adapter" << std::endl;
-  auto mdm = hermes::adapter::Singleton
+  auto mdm = hermes::Singleton
       <hermes::adapter::pubsub::MetadataManager>::GetInstance();
   try {
     mdm->InitializeHermes(config_file.c_str());
@@ -49,7 +49,7 @@ hapi::Status hermes::pubsub::connect() {
 
 hapi::Status hermes::pubsub::disconnect() {
   LOG(INFO) << "Disconnecting adapter" << std::endl;
-  auto mdm = hermes::adapter::Singleton
+  auto mdm = hermes::Singleton
       <hermes::adapter::pubsub::MetadataManager>::GetInstance();
   try {
     mdm->FinalizeHermes();
@@ -63,7 +63,7 @@ hapi::Status hermes::pubsub::disconnect() {
 hapi::Status hermes::pubsub::attach(const std::string& topic) {
   LOG(INFO) << "Attaching to topic: " << topic << std::endl;
   hapi::Context ctx;
-  auto mdm = hermes::adapter::Singleton
+  auto mdm = hermes::Singleton
       <hermes::adapter::pubsub::MetadataManager>::GetInstance();
   auto existing = mdm->Find(topic);
   if (!existing.second) {
@@ -90,7 +90,7 @@ hapi::Status hermes::pubsub::attach(const std::string& topic) {
 hapi::Status hermes::pubsub::detach(const std::string& topic) {
   LOG(INFO) << "Detaching from topic: " << topic << std::endl;
   hapi::Context ctx;
-  auto mdm = hermes::adapter::Singleton
+  auto mdm = hermes::Singleton
       <hermes::adapter::pubsub::MetadataManager>::GetInstance();
   auto existing = mdm->Find(topic);
   if (existing.second) {
@@ -103,7 +103,7 @@ hapi::Status hermes::pubsub::detach(const std::string& topic) {
 hapi::Status hermes::pubsub::publish(const std::string& topic,
                                      const hapi::Blob& message) {
   LOG(INFO) << "Publish to : " << topic << std::endl;
-  auto mdm = hermes::adapter::Singleton
+  auto mdm = hermes::Singleton
       <hermes::adapter::pubsub::MetadataManager>::GetInstance();
   auto metadata = mdm->Find(topic);
 
@@ -138,7 +138,7 @@ std::pair<hapi::Blob, hapi::Status> hermes::pubsub::subscribe(
   LOG(INFO) << "Subscribe to : " << topic << std::endl;
   typedef std::pair<hapi::Blob, hapi::Status> SubscribeReturn;
 
-  auto mdm = hermes::adapter::Singleton
+  auto mdm = hermes::Singleton
       <hermes::adapter::pubsub::MetadataManager>::GetInstance();
   auto metadata = mdm->Find(topic);
 

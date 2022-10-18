@@ -23,7 +23,7 @@
 
 using hermes::adapter::fs::AdapterStat;
 using hermes::adapter::fs::File;
-using hermes::adapter::Singleton;
+using hermes::Singleton;
 using hermes::adapter::stdio::API;
 using hermes::adapter::fs::IoOptions;
 using hermes::adapter::fs::IoStatus;

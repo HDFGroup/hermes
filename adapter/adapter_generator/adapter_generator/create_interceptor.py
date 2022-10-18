@@ -15,6 +15,7 @@ preamble = """/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 class Api:
     def __init__(self, api_str):
+        self.api_str = api_str
         self.decompose_prototype(api_str)
 
     def _is_text(self, tok):
@@ -73,74 +74,136 @@ class Api:
     def pass_args(self):
         if self.var_defs is None:
             return ""
-        args = [arg[-1] for arg in self.var_defs]
+        args = [arg[-1] for arg in self.var_defs if arg[0] != '']
         return ", ".join(args)
 
 class ApiClass:
-    def __init__(self, namespace, apis, includes, path=None, do_save=True):
+    def __init__(self, namespace, apis, includes, dir=None,
+                 create_h=True, create_cc=False):
         self.apis = apis
-        self.lines = []
+        h_file = None
+        cc_file = None
+        # Ensure that directory is set if create_cc or create_h is true
+        if create_h or create_cc:
+            if dir is None:
+                dir = os.path.dirname(os.getcwd())
+                dir = os.path.join(dir, namespace)
+        if dir is not None and create_h:
+            h_file = os.path.join(dir, "real_api.h")
+            print(f"Will create header {h_file}")
+        if dir is not None and create_cc:
+            cc_file = os.path.join(dir, f"{namespace}.cc")
+            print(f"Will create cpp file {h_file}")
+        self.cc_lines = []
+        self.h_lines = []
+        self._CreateH(namespace, includes, h_file)
+        self._CreateCC(namespace, cc_file)
 
-        self.lines.append(preamble)
-        self.lines.append("")
-        self.lines.append(f"#ifndef HERMES_ADAPTER_{namespace.upper()}_H")
-        self.lines.append(f"#define HERMES_ADAPTER_{namespace.upper()}_H")
+    def _CreateCC(self, namespace, path):
+        self.cc_lines.append(preamble)
+        self.cc_lines.append("")
 
-        self.lines.append("#include <string>")
-        self.lines.append("#include <dlfcn.h>")
-        self.lines.append("#include <iostream>")
-        self.lines.append("#include <glog/logging.h>")
-        self.lines.append("#include \"interceptor.h\"")
-        self.lines.append("#include \"filesystem/filesystem.h\"")
+        # Includes
+        self.cc_lines.append(f"bool {namespace}_intercepted = true;")
+        self.cc_lines.append(f"#include \"real_api.h\"")
+        self.cc_lines.append(f"#include \"singleton.h\"")
+        self.cc_lines.append("")
+
+        # Namespace simplification
+        self.cc_lines.append(f"using hermes::adapter::{namespace}::API;")
+        self.cc_lines.append(f"using hermes::Singleton;")
+        self.cc_lines.append("")
+
+        # Intercept function
+        for api in self.apis:
+            self.cc_lines.append(f"{api.api_str} {{")
+            self.cc_lines.append(f"  auto real_api = Singleton<API>::GetInstance();")
+            self.cc_lines.append(f"  REQUIRE_API({api.name});")
+            self.cc_lines.append(f"  // auto fs_api = ")
+            self.cc_lines.append(f"  return real_api->{api.name}({api.pass_args()});")
+            self.cc_lines.append(f"}}")
+            self.cc_lines.append("")
+
+        text = "\n".join(self.cc_lines)
+        self.save(path, text)
+
+    def _CreateH(self, namespace, includes, path):
+        self.h_lines.append(preamble)
+        self.h_lines.append("")
+        self.h_lines.append(f"#ifndef HERMES_ADAPTER_{namespace.upper()}_H")
+        self.h_lines.append(f"#define HERMES_ADAPTER_{namespace.upper()}_H")
+
+        # Include files
+        self.h_lines.append("#include <string>")
+        self.h_lines.append("#include <dlfcn.h>")
+        self.h_lines.append("#include <iostream>")
+        self.h_lines.append("#include <glog/logging.h>")
         for include in includes:
-            self.lines.append(f"#include {include}")
-        self.lines.append("")
+            self.h_lines.append(f"#include {include}")
+        self.h_lines.append("")
 
-        self.lines.append(f"namespace hermes::adapter::{namespace} {{")
-        self.lines.append(f"")
-        self.lines.append(f"class API {{")
+        # Require API macro
+        self.require_api()
+        self.h_lines.append("")
 
-        self.lines.append(f" public:")
+        # Create typedefs
+        self.h_lines.append(f"extern \"C\" {{")
+        for api in self.apis:
+            self.add_typedef(api)
+        self.h_lines.append(f"}}")
+        self.h_lines.append(f"")
+
+        # Create the class definition
+        self.h_lines.append(f"namespace hermes::adapter::{namespace} {{")
+        self.h_lines.append(f"")
+        self.h_lines.append(f"class API {{")
+
+        # Create class function pointers
+        self.h_lines.append(f" public:")
         for api in self.apis:
             self.add_intercept_api(api)
+        self.h_lines.append(f"")
 
-        self.lines.append(f"  API() {{")
-        self.lines.append(f"    void *is_intercepted = (void*)dlsym(RTLD_DEFAULT, \"{namespace}_intercepted\");")
+        # Create the symbol mapper
+        self.h_lines.append(f"  API() {{")
+        self.h_lines.append(f"    void *is_intercepted = (void*)dlsym(RTLD_DEFAULT, \"{namespace}_intercepted\");")
         for api in self.apis:
             self.init_api(api)
-        self.lines.append(f"  }}")
-        self.lines.append(f"}};")
-        self.lines.append(f"}}  // namespace hermes::adapter::{namespace}")
+        self.h_lines.append(f"  }}")
 
-        self.lines.append("")
-        self.lines.append(f"#endif  // HERMES_ADAPTER_{namespace.upper()}_H")
-        self.lines.append("")
-        self.text = "\n".join(self.lines)
+        # End the class, namespace, and header guard
+        self.h_lines.append(f"}};")
+        self.h_lines.append(f"}}  // namespace hermes::adapter::{namespace}")
+        self.h_lines.append("")
+        self.h_lines.append(f"#endif  // HERMES_ADAPTER_{namespace.upper()}_H")
+        self.h_lines.append("")
 
-        if do_save:
-            self.save(path, namespace)
-        else:
-            print(self.text)
+        text = "\n".join(self.h_lines)
+        self.save(path, text)
 
+    def require_api(self):
+        self.h_lines.append(f"#define REQUIRE_API(api_name) \\")
+        self.h_lines.append(f"  if (real_api->api_name == nullptr) {{ \\")
+        self.h_lines.append(f"    LOG(FATAL) << \"HERMES Adapter failed to map symbol: \" \\")
+        self.h_lines.append(f"    #api_name << std::endl; \\")
+        self.h_lines.append(f"    exit(1);")
 
-    def save(self, path, namespace):
-        if path is None:
-            ns_dir = os.path.dirname(os.getcwd())
-            path = os.path.join(ns_dir, namespace, f"real_api.h")
-        with open(path, "w") as fp:
-            fp.write(self.text)
+    def add_typedef(self, api):
+        self.h_lines.append(f"typedef {api.ret} (*{api.type})({api.get_args()});")
 
     def add_intercept_api(self, api):
-        self.lines.append(f"  typedef {api.ret} (*{api.type})({api.get_args()});")
-        self.lines.append(f"  {api.ret} (*{api.real_name})({api.get_args()}) = nullptr;")
+        self.h_lines.append(f"  {api.ret} (*{api.real_name})({api.get_args()}) = nullptr;")
 
     def init_api(self, api):
-        self.lines.append(f"    if (is_intercepted) {{")
-        self.lines.append(f"      {api.real_name} = ({api.type})dlsym(RTLD_NEXT, \"{api.name}\");")
-        self.lines.append(f"    }} else {{")
-        self.lines.append(f"      {api.real_name} = ({api.type})dlsym(RTLD_DEFAULT, \"{api.name}\");")
-        self.lines.append(f"    }}")
-        self.lines.append(f"    if ({api.real_name} == nullptr) {{")
-        self.lines.append(f"      LOG(FATAL) << \"HERMES Adapter failed to map symbol: \"")
-        self.lines.append(f"      \"{api.name}\" << std::endl;")
-        self.lines.append(f"    }}")
+        self.h_lines.append(f"    if (is_intercepted) {{")
+        self.h_lines.append(f"      {api.real_name} = ({api.type})dlsym(RTLD_NEXT, \"{api.name}\");")
+        self.h_lines.append(f"    }} else {{")
+        self.h_lines.append(f"      {api.real_name} = ({api.type})dlsym(RTLD_DEFAULT, \"{api.name}\");")
+        self.h_lines.append(f"    }}")
+
+    def save(self, path, text):
+        if path is None:
+            print(text)
+            return
+        with open(path, "w") as fp:
+            fp.write(text)

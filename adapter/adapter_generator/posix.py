@@ -21,4 +21,12 @@ apis = [
     Api("int close(int fd)"),
 ]
 
-ApiClass("posix", apis, [])
+includes = [
+    "<unistd.h>",
+    "<fcntl.h>",
+    "\"interceptor.h\"",
+    "\"filesystem/filesystem.h\"",
+    "\"filesystem/metadata_manager.h\""
+]
+
+ApiClass("posix", apis, includes)

@@ -30,7 +30,7 @@ class MapperFactory {
   AbstractMapper* Get(const MapperType &type) {
     switch (type) {
       case MapperType::BALANCED: {
-        return hermes::adapter::Singleton<BalancedMapper>::GetInstance();
+        return hermes::Singleton<BalancedMapper>::GetInstance();
       }
       default: {
         // TODO(hari): @error_handling Mapper not implemented

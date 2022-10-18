@@ -11,11 +11,11 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include <pubsub/metadata_manager.h>
-#include <singleton.h>
+#include "singleton.h"
 #include "test_utils.h"
 
 int main() {
-  auto mdm = hermes::adapter::Singleton
+  auto mdm = hermes::Singleton
       <hermes::adapter::pubsub::MetadataManager>::GetInstance(false);
   ClientMetadata stat;
   struct timespec ts{};
