@@ -201,6 +201,12 @@ void OnExit(void);
     }                                                                 \
   }
 
+#define REQUIRE_API(api_name) \
+  if (real_api->api_name == nullptr) { \
+    LOG(FATAL) << "HERMES Adapter failed to map symbol: " \
+    #api_name << std::endl; \
+    exit(1);
+
 namespace hermes::adapter {
 /**
  * Loads the buffering paths for Hermes Adapter to exclude. It inserts the

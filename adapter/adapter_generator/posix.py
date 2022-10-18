@@ -26,7 +26,4 @@ includes = [
     "<fcntl.h>"
 ]
 
-ApiClass("posix", apis, includes,
-         dir="/home/lukemartinlogan/Documents/Projects/PhD/hermes/test",
-         create_h=True,
-         create_cc=True)
+ApiClass("posix", apis, includes)
