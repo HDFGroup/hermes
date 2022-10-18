@@ -33,7 +33,10 @@ apis = [
 
 includes = [
     "<mpi.h>",
-    "<mpio.h>"
+    "<mpio.h>",
+    "\"interceptor.h\"",
+    "\"filesystem/filesystem.h\"",
+    "\"filesystem/metadata_manager.h\""
 ]
 
 ApiClass("mpiio", apis, includes)
