@@ -164,3 +164,5 @@ if(HERMES_INSTALL_TESTS)
     )
   endforeach()
 endif()
+
+add_executable(preload_test preload_test.cc)

@@ -15,6 +15,7 @@ preamble = """/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 class Api:
     def __init__(self, api_str):
+        self.api_str = api_str
         self.decompose_prototype(api_str)
 
     def _is_text(self, tok):
@@ -77,8 +78,41 @@ class Api:
         return ", ".join(args)
 
 class ApiClass:
-    def __init__(self, namespace, apis, includes, path=None, do_save=True):
+    def __init__(self, namespace, apis, includes, dir=None,
+                 create_h=True, create_cc=False):
         self.apis = apis
+        h_file = None
+        cc_file = None
+        # Ensure that directory is set if create_cc or create_h is true
+        if create_h or create_cc:
+            if dir is None:
+                dir = os.path.dirname(os.getcwd())
+                os.path.join(ns_dir, namespace)
+        if dir is not None:
+            h_file = os.path.join(dir, "real_api.h")
+        if dir is not None:
+            cc_file = os.path.join(dir, f"{namespace}.cc")
+        self._CreateH(namespace, h_file)
+        self._CreateCC(namespace, cc_file)
+
+    def _CreateCC(self, namespace, path):
+        self.lines.append(preamble)
+        self.lines.append("")
+        self.lines.append(f"bool {namespace}_is_intercepted = true")
+        self.lines.append(f"#include \"real_api.h\"")
+        self.lines.append("")
+        for api in self.apis:
+            self.lines.append(f"{api.api_str} {{")
+            self.lines.append(f"  auto real_api = Singleton<RealAPI>::GetInstance();")
+            self.lines.append(f"  // auto fs_api = Singleton<API>::GetInstance();")
+            self.lines.append(f"  return real_api->{api.name}({api.pass_args()});")
+            self.lines.append(f"}}")
+            self.lines.append("")
+
+        text = "\n".join(self.lines)
+        self.save(path, text)
+
+    def _CreateH(self, namespace, path, do_save):
         self.lines = []
 
         self.lines.append(preamble)
@@ -115,20 +149,17 @@ class ApiClass:
         self.lines.append("")
         self.lines.append(f"#endif  // HERMES_ADAPTER_{namespace.upper()}_H")
         self.lines.append("")
-        self.text = "\n".join(self.lines)
 
-        if do_save:
-            self.save(path, namespace)
-        else:
-            print(self.text)
+        text = "\n".join(self.lines)
+        self.save(path, text)
 
 
-    def save(self, path, namespace):
+    def save(self, path, text):
         if path is None:
-            ns_dir = os.path.dirname(os.getcwd())
-            path = os.path.join(ns_dir, namespace, f"real_api.h")
+            print(text)
+            return
         with open(path, "w") as fp:
-            fp.write(self.text)
+            fp.write(text)
 
     def add_intercept_api(self, api):
         self.lines.append(f"  typedef {api.ret} (*{api.type})({api.get_args()});")

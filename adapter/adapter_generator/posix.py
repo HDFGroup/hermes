@@ -21,4 +21,7 @@ apis = [
     Api("int close(int fd)"),
 ]
 
-ApiClass("posix", apis, [])
+ApiClass("posix", apis, [],
+         dir="/home/lukemartinlogan/Documents/Projects/PhD/hermes/test",
+         create_h=True,
+         create_cc=True)
