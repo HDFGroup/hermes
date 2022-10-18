@@ -15,6 +15,8 @@
 #include "rpc.h"
 #include "buffer_organizer.h"
 #include "metadata_management_internal.h"
+#include "prefetcher.h"
+#include "singleton.h"
 
 namespace tl = thallium;
 
@@ -595,6 +597,51 @@ void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
   rpc_server->define("EnqueueFlushingTask", rpc_enqueue_flushing_task);
   rpc_server->define("EnqueueBoMove", rpc_enqueue_bo_move);
   rpc_server->define("OrganizeBlob", rpc_organize_blob);
+}
+
+void StartPrefetcher(SharedMemoryContext *context, RpcContext *rpc,
+                     double sleep_ms) {
+  ThalliumState *state = GetThalliumState(rpc);
+  tl::engine *rpc_server = state->engine;
+  using tl::request;
+
+  // Create the LogIoStat RPC
+  auto rpc_log_io_stat = [context](const request &req, IoLogEntry &entry) {
+    (void) context;
+    auto prefetcher = Singleton<Prefetcher>::GetInstance();
+    prefetcher->Log(entry);
+    req.respond(true);
+  };
+  rpc_server->define("LogIoStat", rpc_log_io_stat);
+
+  // Prefetcher thread args
+  struct PrefetcherThreadArgs {
+    SharedMemoryContext *context;
+    RpcContext *rpc;
+    double sleep_ms;
+  };
+
+  // Create the prefetcher thread lambda
+  auto prefetch = [](void *args) {
+    PrefetcherThreadArgs targs = *((PrefetcherThreadArgs*)args);
+    ThalliumState *state = GetThalliumState(targs.rpc);
+    auto prefetcher = Singleton<Prefetcher>::GetInstance();
+    while (!state->kill_requested.load()) {
+      prefetcher->Process();
+      tl::thread::self().sleep(*state->engine, targs.sleep_ms);
+    }
+  };
+
+  // Create prefetcher thread
+  PrefetcherThreadArgs args;
+  args.context = context;
+  args.rpc = rpc;
+  args.sleep_ms = sleep_ms;
+
+  ABT_xstream_create(ABT_SCHED_NULL, &state->execution_stream);
+  ABT_thread_create_on_xstream(state->prefetch_stream,
+                               prefetch, &args,
+                               ABT_THREAD_ATTR_NULL, NULL);
 }
 
 void StartGlobalSystemViewStateUpdateThread(SharedMemoryContext *context,

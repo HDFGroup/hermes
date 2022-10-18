@@ -387,6 +387,7 @@ union BlobID {
   u64 as_int;
 };
 
+
 /** Trait ID type */
 typedef u64 TraitID;
 
@@ -403,4 +404,27 @@ enum class TraitType : u8 {
 
 }  // namespace api
 }  // namespace hermes
+
+namespace std {
+template <>
+struct hash<hermes::BlobID> {
+  std::size_t operator()(const hermes::BlobID &key) const {
+    return std::hash<hermes::u64>{}(key.as_int);
+  }
+};
+
+template <>
+struct hash<hermes::BucketID> {
+  std::size_t operator()(const hermes::BucketID &key) const {
+    return std::hash<hermes::u64>{}(key.as_int);
+  }
+};
+
+template <>
+struct hash<hermes::VBucketID> {
+  std::size_t operator()(const hermes::VBucketID &key) const {
+    return std::hash<hermes::u64>{}(key.as_int);
+  }
+};
+}  // namespace std
 #endif  // HERMES_TYPES_H_
