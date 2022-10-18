@@ -21,7 +21,7 @@
  * Singleton<T>::GetInstance()
  * @tparam T
  */
-namespace hermes::adapter {
+namespace hermes {
 template <typename T>
 class Singleton {
  public:

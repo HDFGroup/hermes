@@ -23,7 +23,7 @@ bool stdio_intercepted = true;
 using hermes::adapter::WeaklyCanonical;
 using hermes::adapter::stdio::API;
 using hermes::adapter::stdio::StdioFS;
-using hermes::adapter::Singleton;
+using hermes::Singleton;
 using hermes::adapter::fs::MetadataManager;
 using hermes::adapter::fs::SeekMode;
 

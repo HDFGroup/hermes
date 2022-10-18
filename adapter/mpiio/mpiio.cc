@@ -35,7 +35,7 @@ using hermes::adapter::fs::File;
 using hermes::adapter::mpiio::API;
 using hermes::adapter::mpiio::MpiioFS;
 using hermes::adapter::mpiio::MpiioSeekModeConv;
-using hermes::adapter::Singleton;
+using hermes::Singleton;
 
 namespace hapi = hermes::api;
 namespace stdfs = std::experimental::filesystem;

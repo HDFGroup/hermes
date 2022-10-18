@@ -33,7 +33,7 @@ bool posix_intercepted = true;
 using hermes::adapter::WeaklyCanonical;
 using hermes::adapter::posix::API;
 using hermes::adapter::posix::PosixFS;
-using hermes::adapter::Singleton;
+using hermes::Singleton;
 using hermes::adapter::fs::MetadataManager;
 using hermes::adapter::fs::SeekMode;
 
@@ -50,7 +50,7 @@ int HERMES_DECL(MPI_Init)(int *argc, char ***argv) {
   int status = real_api->MPI_Init(argc, argv);
   if (status == 0) {
     LOG(INFO) << "MPI Init intercepted." << std::endl;
-    auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+    auto mdm = hermes::Singleton<MetadataManager>::GetInstance();
     mdm->InitializeHermes(true);
   }
   return status;
@@ -59,7 +59,7 @@ int HERMES_DECL(MPI_Init)(int *argc, char ***argv) {
 int HERMES_DECL(MPI_Finalize)(void) {
   auto real_api = Singleton<API>::GetInstance();
   LOG(INFO) << "MPI Finalize intercepted." << std::endl;
-  auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+  auto mdm = hermes::Singleton<MetadataManager>::GetInstance();
   mdm->FinalizeHermes();
   int status = real_api->MPI_Finalize();
   return status;
@@ -275,7 +275,7 @@ int HERMES_DECL(__fxstat)(int version, int fd, struct stat *buf) {
   if (hermes::adapter::IsTracked(fd)) {
     File f; f.fd_ = fd; fs_api->_InitFile(f);
     LOG(INFO) << "Intercepted fstat." << std::endl;
-    auto mdm = hermes::adapter::Singleton<MetadataManager>::GetInstance();
+    auto mdm = hermes::Singleton<MetadataManager>::GetInstance();
     auto existing = mdm->Find(f);
     if (existing.second) {
       AdapterStat &astat = existing.first;

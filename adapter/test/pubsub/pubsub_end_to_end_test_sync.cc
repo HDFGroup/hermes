@@ -46,7 +46,7 @@ int main(int argc, char **argv) {
       Assert(publish_ret.Succeeded());
     }
 
-    auto hermes = hermes::adapter::Singleton
+    auto hermes = hermes::Singleton
         <hermes::adapter::pubsub::MetadataManager>::GetInstance()->GetHermes();
     MPI_Comm comm = *(MPI_Comm*)hermes->GetAppCommunicator();
     MPI_Barrier(comm);

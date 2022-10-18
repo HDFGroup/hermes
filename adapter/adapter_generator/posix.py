@@ -21,7 +21,12 @@ apis = [
     Api("int close(int fd)"),
 ]
 
-ApiClass("posix", apis, [],
+includes = [
+    "<unistd.h>",
+    "<fcntl.h>"
+]
+
+ApiClass("posix", apis, includes,
          dir="/home/lukemartinlogan/Documents/Projects/PhD/hermes/test",
          create_h=True,
          create_cc=True)
