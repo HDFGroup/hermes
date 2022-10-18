@@ -55,24 +55,22 @@ inline std::vector<std::string> StringSplit(const char* str, char delimiter) {
   }
   return v;
 }
-
+inline std::string GetFilenameFromFP(FILE* fh) {
+  char proclnk[kMaxPathLen];
+  char filename[kMaxPathLen];
+  int fno = fileno(fh);
+  snprintf(proclnk, kMaxPathLen, "/proc/self/fd/%d", fno);
+  size_t r = readlink(proclnk, filename, kMaxPathLen);
+  filename[r] = '\0';
+  return filename;
+}
 inline std::string GetFilenameFromFD(int fd) {
   char proclnk[kMaxPathLen];
   char filename[kMaxPathLen];
-  if (fd == -1) return "";
   snprintf(proclnk, kMaxPathLen, "/proc/self/fd/%d", fd);
   size_t r = readlink(proclnk, filename, kMaxPathLen);
-  if (r > 0) {
-    return std::string(filename, r);
-  } else {
-    return "";
-  }
-}
-
-inline std::string GetFilenameFromFP(FILE* fh) {
-  if (fh == nullptr) return "";
-  int fno = fileno(fh);
-  return GetFilenameFromFD(fno);
+  filename[r] = '\0';
+  return filename;
 }
 
 /**
@@ -202,12 +200,6 @@ void OnExit(void);
     }                                                                 \
   }
 
-#define REQUIRE_API(api_name) \
-  if (real_api->api_name == nullptr) { \
-    LOG(FATAL) << "HERMES Adapter failed to map symbol: " \
-    #api_name << std::endl; \
-    exit(1);
-
 namespace hermes::adapter {
 /**
  * Loads the buffering paths for Hermes Adapter to exclude. It inserts the
@@ -224,7 +216,7 @@ void PopulateBufferingPath();
  * @return true, if file should be tracked.
  *         false, if file should not be intercepted.
  */
-bool IsTracked(const std::string& path, bool log = false);
+bool IsTracked(const std::string& path);
 
 /**
  * Check if fh should be tracked. In this method, first Convert fh to path.
@@ -234,8 +226,7 @@ bool IsTracked(const std::string& path, bool log = false);
  * @return true, if file should be tracked.
  *         false, if file should not be intercepted.
  */
-bool IsTracked(FILE* fh, bool log = false);
-bool IsTracked(int fd, bool log = false);
+bool IsTracked(FILE* fh);
 }  // namespace hermes::adapter
 #else
 /**

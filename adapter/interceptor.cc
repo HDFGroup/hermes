@@ -73,8 +73,7 @@ void PopulateBufferingPath() {
   populated = true;
 }
 
-bool IsTracked(const std::string& path, bool log) {
-  if (log) { LOG(INFO) << "IsTracked path? " << path <<  std::endl; }
+bool IsTracked(const std::string& path) {
   if (hermes::adapter::exit) {
     return false;
   }
@@ -83,12 +82,7 @@ bool IsTracked(const std::string& path, bool log) {
   std::string abs_path = WeaklyCanonical(path).string();
 
   for (const auto& pth : INTERCEPTOR_LIST->hermes_flush_exclusion) {
-    if (abs_path.rfind(pth) != std::string::npos) {
-      if (log) {
-        LOG(INFO) << "Path " << path
-                  << " is not tracked (hermes_flush_exclusion)"
-                  << " because: "  << pth << std::endl;
-      }
+    if (abs_path.find(pth) != std::string::npos) {
       return false;
     }
   }
@@ -98,32 +92,20 @@ bool IsTracked(const std::string& path, bool log) {
   }
 
   for (const auto& pth : INTERCEPTOR_LIST->hermes_paths_inclusion) {
-    if (abs_path.rfind(pth) != std::string::npos) {
-      if (log) {
-        LOG(INFO) << "Path " << path << "is tracked (hermes_paths_inclusion)"
-                  << " because: "  << pth << std::endl;
-      }
+    if (abs_path.find(pth) != std::string::npos) {
       return true;
     }
   }
 
   for (auto &pth : kPathExclusions) {
-    if (abs_path.rfind(pth) != std::string::npos) {
-      if (log) {
-        LOG(INFO) << "Path " << path << " is not tracked (kPathExclusions)"
-                  << " because: "  << pth << std::endl;
-      }
+    if (abs_path.find(pth) != std::string::npos) {
       return false;
     }
   }
 
   for (const auto& pth : INTERCEPTOR_LIST->hermes_paths_exclusion) {
-    if (abs_path.rfind(pth) != std::string::npos) {
-      if (log) {
-        LOG(INFO) << "Path " << path
-                  << " is not tracked (hermes_paths_exclusion)"
-                  << " because: "  << pth << std::endl;
-      }
+    if (abs_path.find(pth) != std::string::npos ||
+        pth.find(abs_path) != std::string::npos) {
       return false;
     }
   }
@@ -132,18 +114,10 @@ bool IsTracked(const std::string& path, bool log) {
   auto buffer_mode = INTERCEPTOR_LIST->adapter_mode;
   if (buffer_mode == AdapterMode::kBypass) {
     if (list->adapter_paths.empty()) {
-      if (log) {
-        LOG(INFO) << "Path " << path << " is not tracked (kBypass)"
-                  << " because adapter_paths empty " << std::endl;
-      }
       return false;
     } else {
       for (const auto& pth : list->adapter_paths) {
         if (path.find(pth) == 0) {
-          if (log) {
-            LOG(INFO) << "Path " << path << " is not tracked (kBypass)"
-                      << " because: "  << pth << std::endl;
-          }
           return false;
         }
       }
@@ -154,25 +128,16 @@ bool IsTracked(const std::string& path, bool log) {
   }
 }
 
-bool IsTracked(FILE* fh, bool log) {
-  if (log) { LOG(INFO) << "IsTracked fh?" << std::endl; }
+bool IsTracked(FILE* fh) {
   if (hermes::adapter::exit) return false;
   atexit(OnExit);
-  std::string path = GetFilenameFromFP(fh);
-  if (path == "") return false;
-  return IsTracked(path, log);
+  return IsTracked(GetFilenameFromFP(fh));
 }
 
-bool IsTracked(int fd, bool log) {
-  if (log) { LOG(INFO) << "IsTracked fd?" << std::endl; }
+bool IsTracked(int fd) {
   if (hermes::adapter::exit) return false;
   atexit(OnExit);
-  std::string path = GetFilenameFromFD(fd);
-  if (path == "") {
-    if (log) { LOG(INFO) << fd << "is not tracked" << std::endl; }
-    return false;
-  }
-  return IsTracked(path, log);
+  return IsTracked(GetFilenameFromFD(fd));
 }
 
 void OnExit(void) { hermes::adapter::exit = true; }
