@@ -171,9 +171,6 @@ class ApiClass:
             self.init_api(api)
         self.h_lines.append(f"  }}")
 
-        # Create the symbol require function
-        self.h_lines.append("")
-
         # End the class, namespace, and header guard
         self.h_lines.append(f"}};")
         self.h_lines.append(f"}}  // namespace hermes::adapter::{namespace}")
