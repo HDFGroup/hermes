@@ -7,6 +7,7 @@
 namespace hermes {
 
 void Prefetcher::Process() {
+  LOG(INFO) << "In prefetcher!!!" << std::endl;
 }
 
 }  // namespace hermes
