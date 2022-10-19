@@ -42,7 +42,6 @@ struct ThalliumState {
   tl::engine *engine;
   tl::engine *bo_engine;
   ABT_xstream execution_stream;
-  ABT_xstream prefetch_stream;
 };
 
 struct ClientThalliumState {

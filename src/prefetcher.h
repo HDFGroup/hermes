@@ -20,12 +20,13 @@ namespace hermes {
 static bool operator==(const BlobID& first, const BlobID& second) {
   return first.as_int == second.as_int;
 }
+/*
 static bool operator==(const BucketID& first, const BucketID& second) {
   return first.as_int == second.as_int;
 }
 static bool operator==(const VBucketID& first, const VBucketID& second) {
   return first.as_int == second.as_int;
-}
+}*/
 
 enum class PrefetchHint {
   kNone,
@@ -70,20 +71,16 @@ class Prefetcher {
   uint32_t max_length_;
   std::list<IoLogEntry> log_;
   thallium::mutex lock_;
+
  public:
   Prefetcher() : max_length_(4096) {}
-  void SetLogLength(uint32_t max_length);
-  void Log(IoLogEntry &entry) {
-    lock_.lock();
-    if (log_.size() == max_length_) {
-      log_.pop_front();
-    }
-    log_.emplace_back(entry);
-    lock_.unlock();
-  }
-  static void LogIoStat(IoLogEntry &entry) {
-  }
+  void SetLogLength(uint32_t max_length) { max_length_ = max_length; }
+  void Log(IoLogEntry &entry);
+  static bool LogIoStat(api::Hermes *hermes, IoLogEntry &entry);
   void Process();
+
+ private:
+  static size_t HashToNode(api::Hermes *hermes, IoLogEntry &entry);
 };
 
 struct PrefetchDecision {

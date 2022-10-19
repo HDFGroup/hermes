@@ -600,7 +600,7 @@ void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
 }
 
 void StartPrefetcher(SharedMemoryContext *context, RpcContext *rpc,
-                     double sleep_ms) {
+                     Arena *arena, double sleep_ms) {
   ThalliumState *state = GetThalliumState(rpc);
   tl::engine *rpc_server = state->engine;
   using tl::request;
@@ -619,12 +619,14 @@ void StartPrefetcher(SharedMemoryContext *context, RpcContext *rpc,
     SharedMemoryContext *context;
     RpcContext *rpc;
     double sleep_ms;
+    bool init_;
   };
 
   // Create the prefetcher thread lambda
   auto prefetch = [](void *args) {
     PrefetcherThreadArgs targs = *((PrefetcherThreadArgs*)args);
     ThalliumState *state = GetThalliumState(targs.rpc);
+    LOG(INFO) << "Prefetching thread started" << std::endl;
     auto prefetcher = Singleton<Prefetcher>::GetInstance();
     while (!state->kill_requested.load()) {
       prefetcher->Process();
@@ -633,14 +635,15 @@ void StartPrefetcher(SharedMemoryContext *context, RpcContext *rpc,
   };
 
   // Create prefetcher thread
-  PrefetcherThreadArgs args;
-  args.context = context;
-  args.rpc = rpc;
-  args.sleep_ms = sleep_ms;
+  PrefetcherThreadArgs *args = PushStruct<PrefetcherThreadArgs>(arena);
+  args->context = context;
+  args->rpc = rpc;
+  args->sleep_ms = sleep_ms;
+  args->init_ = false;
 
   ABT_xstream_create(ABT_SCHED_NULL, &state->execution_stream);
-  ABT_thread_create_on_xstream(state->prefetch_stream,
-                               prefetch, &args,
+  ABT_thread_create_on_xstream(state->execution_stream,
+                               prefetch, args,
                                ABT_THREAD_ATTR_NULL, NULL);
 }
 
@@ -656,6 +659,7 @@ void StartGlobalSystemViewStateUpdateThread(SharedMemoryContext *context,
   auto update_global_system_view_state = [](void *args) {
     ThreadArgs *targs = (ThreadArgs *)args;
     ThalliumState *state = GetThalliumState(targs->rpc);
+    LOG(INFO) << "Update global system view state start" << std::endl;
     while (!state->kill_requested.load()) {
       UpdateGlobalSystemViewState(targs->context, targs->rpc);
       tl::thread::self().sleep(*state->engine, targs->sleep_ms);
@@ -668,7 +672,6 @@ void StartGlobalSystemViewStateUpdateThread(SharedMemoryContext *context,
   args->sleep_ms = sleep_ms;
 
   ThalliumState *state = GetThalliumState(rpc);
-  ABT_xstream_create(ABT_SCHED_NULL, &state->execution_stream);
   ABT_thread_create_on_xstream(state->execution_stream,
                                update_global_system_view_state, args,
                                ABT_THREAD_ATTR_NULL, NULL);
