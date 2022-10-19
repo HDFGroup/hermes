@@ -17,6 +17,7 @@ bool Prefetcher::LogIoStat(Hermes *hermes, IoLogEntry &entry) {
   if (target_node == rpc->node_id) {
     auto prefetcher = Singleton<Prefetcher>::GetInstance();
     prefetcher->Log(entry);
+    result = true;
   } else {
     result = RpcCall<bool>(rpc, target_node,
                            "LogIoStat", entry);
@@ -47,6 +48,7 @@ void Prefetcher::Log(IoLogEntry &entry) {
   if (log_.size() == max_length_) {
     log_.pop_front();
   }
+  timespec_get(&entry.timestamp_, TIME_UTC);
   log_.emplace_back(entry);
   lock_.unlock();
 }
@@ -74,14 +76,15 @@ float Prefetcher::EstimateBlobMovementTime(BlobID blob_id) {
   return xfer_time;
 }
 
-void Prefetcher::CalculateBlobScore(PrefetchDecision &decision) {
+void Prefetcher::CalculateBlobScore(struct timespec &ts,
+                                    PrefetchDecision &decision) {
   float est_xfer_time = decision.est_xfer_time_;
   float max_wait_xfer = 10;
   float max_wait_sec = 60;
   decision.new_score_ = -1;
   decision.queue_later_ = false;
-  for (auto &access_time_struct : decision.access_times_) {
-    float next_access_sec =
+  for (auto &access_time_struct : decision.stats_) {
+    float next_access_sec = access_time_struct.GetRemainingTime(&ts);
     if (next_access_sec < est_xfer_time) continue;
     float max_access_wait = std::max(max_wait_xfer*est_xfer_time,
                                     max_wait_sec);
@@ -113,30 +116,31 @@ void Prefetcher::Process() {
     auto algorithm= PrefetcherFactory::Get(hint);
     algorithm->Process(hint_log, schema);
   }
-  schema.SetCurrentTime();
 
-  // Merge old prefetching decisions with the new ones
+  // Take into consideration old prefetching decisions
   for (auto &[blob_id, decision] : queue_later_) {
     schema.emplace(decision);
   }
   queue_later_.erase(queue_later_.begin(), queue_later_.end());
+
+  //Get the current time
+  struct timespec ts;
+  timespec_get(&ts, TIME_UTC);
 
   // Calculate new blob scores
   for (auto &[blob_id, decision] : schema) {
     if (decision.est_xfer_time_ == -1) {
       decision.est_xfer_time_ = EstimateBlobMovementTime(blob_id);
     }
-    CalculateBlobScore(decision);
+    CalculateBlobScore(ts, decision);
     if (decision.new_score_ < 0) {
       queue_later_.emplace(blob_id, decision);
       continue;
     }
     OrganizeBlob(&hermes_->context_, &hermes_->rpc_,
-                 decision.bkt_id_, decision.blob_id_,
+                 decision.bkt_id_, decision.blob_name_,
                  epsilon_, decision.new_score_);
   }
-
-  //
 }
 
 }  // namespace hermes

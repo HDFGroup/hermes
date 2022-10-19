@@ -224,6 +224,26 @@ void serialize(A &ar, ViolationInfo &info) {
 }
 
 namespace api {
+
+// PrefetchHint
+template <typename A>
+void save(A &ar, PrefetchHint &hint) {
+  ar << static_cast<int>(hint);
+}
+template <typename A>
+void load(A &ar, PrefetchHint &hint) {
+  int hint_i;
+  ar >> hint_i;
+  hint = static_cast<PrefetchHint>(hint_i);
+}
+
+// PrefetchContext
+template <typename A>
+void serialize(A &ar, PrefetchContext &pctx) {
+  ar & pctx.hint_;
+  ar & pctx.read_ahead_;
+}
+
 template<typename A>
 #ifndef THALLIUM_USE_CEREAL
 void save(A &ar, api::Context &ctx) {

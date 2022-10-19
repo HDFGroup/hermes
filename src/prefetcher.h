@@ -16,35 +16,15 @@
 
 namespace hermes {
 
-/* Equal operators */
+using hermes::api::PrefetchContext;
+using hermes::api::PrefetchHint;
+
 static bool operator==(const BlobID& first, const BlobID& second) {
   return first.as_int == second.as_int;
 }
-/*
-static bool operator==(const BucketID& first, const BucketID& second) {
-  return first.as_int == second.as_int;
-}
-static bool operator==(const VBucketID& first, const VBucketID& second) {
-  return first.as_int == second.as_int;
-}*/
-
-enum class PrefetchHint {
-  kNone,
-  kFileSequential,
-  kApriori,
-
-  kFileStrided,
-  kMachineLearning
-};
 
 enum class IoType {
   kNone, kPut, kGet
-};
-
-struct PrefetchContext {
-  PrefetchHint hint_;
-  int read_ahead_;
-  PrefetchContext() : hint_(PrefetchHint::kNone) {}
 };
 
 struct GlobalThreadID {
@@ -58,6 +38,7 @@ struct IoLogEntry {
   VBucketID vbkt_id_;
   BucketID bkt_id_;
   BlobID blob_id_;
+  std::string blob_name_;
   IoType type_;
   off_t off_;
   size_t size_;
@@ -71,7 +52,8 @@ struct PrefetchStat {
   float max_time_;
   struct timespec start_;
 
-  explicit PrefetchStat(float max_time) : max_time_(max_time) {}
+  explicit PrefetchStat(float max_time, struct timespec &start) :
+        max_time_(max_time), start_(start) {}
 
   float GetRemainingTime(const struct timespec *cur) {
     float diff = DiffTimespec(cur, &start_);
@@ -89,16 +71,15 @@ struct PrefetchStat {
 struct PrefetchDecision {
   BucketID bkt_id_;
   BlobID blob_id_;
+  std::string blob_name_;
   std::list<PrefetchStat> stats_;
   bool queue_later_;
   float est_xfer_time_;
   float new_score_;
 
   PrefetchDecision() : est_xfer_time_(-1), new_score_(-1) {}
-  void SetCurrentTime(struct timespec &ts) {
-    for (auto &access_time : stats_) {
-      access_time.start_ = ts;
-    }
+  void AddStat(float est_access_time, struct timespec &start) {
+    stats_.emplace_back(est_access_time, start);
   }
 };
 
@@ -107,10 +88,6 @@ class PrefetchSchema {
   std::unordered_map<BlobID, PrefetchDecision> schema_;
 
  public:
-  void emplace(BlobID blob_id, float access_time) {
-
-  }
-
   void emplace(PrefetchDecision &decision) {
     auto prior_decision_iter = schema_.find(decision.blob_id_);
     if (prior_decision_iter == schema_.end()) {
@@ -122,14 +99,6 @@ class PrefetchSchema {
     prior_decision.stats_.splice(
         prior_decision.stats_.end(),
         decision.stats_);
-  }
-
-  void SetCurrentTime() {
-    struct timespec ts;
-    timespec_get(&ts, TIME_UTC);
-    for (auto &[blob_id, decision] : schema_) {
-      decision.SetCurrentTime(ts);
-    }
   }
 
   std::unordered_map<BlobID, PrefetchDecision>::iterator begin() {
@@ -167,22 +136,11 @@ class Prefetcher {
  private:
   static size_t HashToNode(api::Hermes *hermes, IoLogEntry &entry);
   float EstimateBlobMovementTime(BlobID blob_id);
-  void CalculateBlobScore(PrefetchDecision &decision);
+  void CalculateBlobScore(struct timespec &ts,
+                          PrefetchDecision &decision);
 };
 
 /** RPC SERIALIZERS */
-
-// PrefetchHint
-template <typename A>
-void save(A &ar, PrefetchHint &hint) {
-  ar << static_cast<int>(hint);
-}
-template <typename A>
-void load(A &ar, PrefetchHint &hint) {
-  int hint_i;
-  ar >> hint_i;
-  hint = static_cast<PrefetchHint>(hint_i);
-}
 
 // IoType
 template <typename A>
@@ -208,13 +166,6 @@ void load(A &ar, struct timespec &ts) {
   ar >> ts.tv_nsec;
 }
 
-// PrefetchContext
-template <typename A>
-void serialize(A &ar, PrefetchContext &pctx) {
-  ar & pctx.hint_;
-  ar & pctx.read_ahead_;
-}
-
 // GlobalThreadID
 template <typename A>
 void serialize(A &ar, GlobalThreadID &tid) {
@@ -228,6 +179,7 @@ void serialize(A &ar, IoLogEntry &entry) {
   ar & entry.vbkt_id_;
   ar & entry.bkt_id_;
   ar & entry.blob_id_;
+  ar & entry.blob_name_;
   ar & entry.type_;
   ar & entry.off_;
   ar & entry.size_;
@@ -237,6 +189,6 @@ void serialize(A &ar, IoLogEntry &entry) {
   ar & entry.historical_;
 }
 
-}
+}  // namespace hermes
 
 #endif  // HERMES_SRC_PREFETCHER_H_

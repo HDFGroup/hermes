@@ -124,6 +124,21 @@ struct MinimizeIoTimeOptions {
   }
 };
 
+enum class PrefetchHint {
+  kNone,
+  kFileSequential,
+  kApriori,
+
+  kFileStrided,
+  kMachineLearning
+};
+
+struct PrefetchContext {
+  PrefetchHint hint_;
+  int read_ahead_;
+  PrefetchContext() : hint_(PrefetchHint::kNone) {}
+};
+
 /** Hermes API call context */
 struct Context {
   /** The default maximum number of buffer organizer retries */
@@ -154,6 +169,9 @@ struct Context {
 
   /** Whether swapping is disabled */
   bool disable_swap;
+
+  /** Prefetching hints */
+  PrefetchContext pctx_;
 
   Context() : policy(default_placement_policy),
               buffer_organizer_retries(default_buffer_organizer_retries),
