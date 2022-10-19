@@ -499,6 +499,5 @@ install(
 )
 
 add_custom_target(lint
-  COMMAND cpplint --recursive --exclude=${CMAKE_CURRENT_SOURCE_DIR}/src/stb_ds.h
-  --exclude=${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}
+  COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/ci/lint.sh ${CMAKE_CURRENT_SOURCE_DIR}
 )

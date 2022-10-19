@@ -32,7 +32,10 @@ apis = [
 ]
 
 includes = [
-    "\"cstdio.h\""
+    "<cstdio>",
+    "\"interceptor.h\"",
+    "\"filesystem/filesystem.h\"",
+    "\"filesystem/metadata_manager.h\""
 ]
 
 ApiClass("stdio", apis, includes)

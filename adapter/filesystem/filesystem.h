@@ -56,7 +56,7 @@ struct AdapterStat {
   mode_t st_mode;       /* protection */
   uid_t st_uid;         /* user ID of owner */
   gid_t st_gid;         /* group ID of owner */
-  off_t st_size;        /* total size, in bytes */
+  size_t st_size;       /* total size, in bytes */
   off_t st_ptr;         /* Current ptr of FILE */
   blksize_t st_blksize; /* blocksize for blob within bucket */
   timespec st_atim;     /* time of last access */
@@ -264,6 +264,30 @@ class Filesystem {
   size_t _ReadExistingPartial(BlobPlacementIter &read_iter);
   size_t _ReadNew(BlobPlacementIter &read_iter);
 
+  void _OpenInitStatsInternal(AdapterStat &stat, bool bucket_exists) {
+    // TODO(llogan): This isn't really parallel-safe.
+    /**
+     * Here we assume that the file size can only be growing.
+     * If the bucket already exists and has content not already in
+     * the file (e.g., when using ADAPTER_MODE=SCRATCH), we should
+     * use the size of the bucket instead.
+     *
+     * There are other concerns with what happens during multi-tenancy.
+     * What happens if one process is opening a file, while another
+     * process is adding content? The mechanics here aren't
+     * well-defined.
+     * */
+    if (bucket_exists) {
+      size_t bkt_size = stat.st_bkid->GetTotalBlobSize();
+      stat.st_size = std::max(bkt_size, stat.st_size);
+      LOG(INFO) << "Since bucket exists, should reset its size to: "
+                << stat.st_size << std::endl;
+    }
+    if (stat.is_append) {
+      stat.st_ptr = stat.st_size;
+    }
+  }
+
   /*
    * The APIs to overload
    * */
@@ -271,8 +295,7 @@ class Filesystem {
   virtual void _InitFile(File &f) = 0;
 
  private:
-  virtual void _OpenInitStats(File &f, AdapterStat &stat,
-                              bool bucket_exists) = 0;
+  virtual void _OpenInitStats(File &f, AdapterStat &stat) = 0;
   virtual File _RealOpen(AdapterStat &stat, const std::string &path) = 0;
   virtual size_t _RealWrite(const std::string &filename, off_t offset,
                             size_t size, const u8 *data_ptr,

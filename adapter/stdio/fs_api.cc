@@ -39,8 +39,7 @@ void StdioFS::_InitFile(File &f) {
   f.st_ino = st.st_ino;
 }
 
-void StdioFS::_OpenInitStats(File &f, AdapterStat &stat, bool bucket_exists) {
-  (void) bucket_exists;
+void StdioFS::_OpenInitStats(File &f, AdapterStat &stat) {
   struct stat st;
   posix_api->__fxstat(_STAT_VER, f.fd_, &st);
   stat.st_mode = st.st_mode;
@@ -51,13 +50,7 @@ void StdioFS::_OpenInitStats(File &f, AdapterStat &stat, bool bucket_exists) {
   stat.st_atim = st.st_atim;
   stat.st_mtim = st.st_mtim;
   stat.st_ctim = st.st_ctim;
-  /*if (bucket_exists) {
-    stat.st_size = stat.st_bkid->GetTotalBlobSize();
-    LOG(INFO) << "Since bucket exists, should reset its size to: " << stat.st_size
-              << std::endl;
-  }*/
   if (stat.mode_str.find('a') != std::string::npos) {
-    stat.st_ptr = stat.st_size;
     stat.is_append = true;
   }
 }

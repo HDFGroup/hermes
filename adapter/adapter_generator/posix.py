@@ -23,7 +23,10 @@ apis = [
 
 includes = [
     "<unistd.h>",
-    "<fcntl.h>"
+    "<fcntl.h>",
+    "\"interceptor.h\"",
+    "\"filesystem/filesystem.h\"",
+    "\"filesystem/metadata_manager.h\""
 ]
 
 ApiClass("posix", apis, includes)

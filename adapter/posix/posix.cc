@@ -41,6 +41,7 @@ namespace hapi = hermes::api;
 namespace stdfs = std::experimental::filesystem;
 using hermes::u8;
 
+extern "C" {
 
 /**
  * MPI
@@ -102,9 +103,9 @@ int HERMES_DECL(open64)(const char *path, int flags, ...) {
     mode = va_arg(arg, int);
     va_end(arg);
   }
-  LOG(INFO) << "Intercept open64 for filename: " << path
-            << " and mode: " << flags << " is tracked." << std::endl;
   if (hermes::adapter::IsTracked(path)) {
+    LOG(INFO) << "Intercept open64 for filename: " << path
+              << " and mode: " << flags << " is tracked." << std::endl;
     AdapterStat stat;
     stat.flags = flags;
     stat.st_mode = mode;
@@ -119,9 +120,9 @@ int HERMES_DECL(open64)(const char *path, int flags, ...) {
 int HERMES_DECL(__open_2)(const char *path, int oflag) {
   auto real_api = Singleton<API>::GetInstance();
   auto fs_api = Singleton<PosixFS>::GetInstance();
-  LOG(INFO) << "Intercept __open_2 for filename: " << path
-            << " and mode: " << oflag << " is tracked." << std::endl;
   if (hermes::adapter::IsTracked(path)) {
+    LOG(INFO) << "Intercept __open_2 for filename: " << path
+              << " and mode: " << oflag << " is tracked." << std::endl;
     AdapterStat stat;
     stat.flags = oflag;
     stat.st_mode = 0;
@@ -134,9 +135,9 @@ int HERMES_DECL(creat)(const char *path, mode_t mode) {
   std::string path_str(path);
   auto real_api = Singleton<API>::GetInstance();
   auto fs_api = Singleton<PosixFS>::GetInstance();
-  LOG(INFO) << "Intercept creat for filename: " << path
-            << " and mode: " << mode << " is tracked." << std::endl;
   if (hermes::adapter::IsTracked(path)) {
+    LOG(INFO) << "Intercept creat for filename: " << path
+              << " and mode: " << mode << " is tracked." << std::endl;
     AdapterStat stat;
     stat.flags = O_CREAT;
     stat.st_mode = mode;
@@ -149,9 +150,9 @@ int HERMES_DECL(creat64)(const char *path, mode_t mode) {
   std::string path_str(path);
   auto real_api = Singleton<API>::GetInstance();
   auto fs_api = Singleton<PosixFS>::GetInstance();
-  LOG(INFO) << "Intercept creat64 for filename: " << path
-            << " and mode: " << mode << " is tracked." << std::endl;
   if (hermes::adapter::IsTracked(path)) {
+    LOG(INFO) << "Intercept creat64 for filename: " << path
+              << " and mode: " << mode << " is tracked." << std::endl;
     AdapterStat stat;
     stat.flags = O_CREAT;
     stat.st_mode = mode;
@@ -332,3 +333,5 @@ int HERMES_DECL(close)(int fd) {
   }
   return real_api->close(fd);
 }
+
+}  // extern C

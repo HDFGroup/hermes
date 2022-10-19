@@ -58,7 +58,6 @@ inline std::vector<std::string> StringSplit(const char* str, char delimiter) {
 inline std::string GetFilenameFromFP(FILE* fh) {
   char proclnk[kMaxPathLen];
   char filename[kMaxPathLen];
-  if (fh == nullptr) return "";
   int fno = fileno(fh);
   snprintf(proclnk, kMaxPathLen, "/proc/self/fd/%d", fno);
   size_t r = readlink(proclnk, filename, kMaxPathLen);
@@ -68,10 +67,10 @@ inline std::string GetFilenameFromFP(FILE* fh) {
 inline std::string GetFilenameFromFD(int fd) {
   char proclnk[kMaxPathLen];
   char filename[kMaxPathLen];
-  if (fd == -1) return "";
   snprintf(proclnk, kMaxPathLen, "/proc/self/fd/%d", fd);
   size_t r = readlink(proclnk, filename, kMaxPathLen);
-  return std::string(filename, r);
+  filename[r] = '\0';
+  return filename;
 }
 
 /**
@@ -200,12 +199,6 @@ void OnExit(void);
                  << std::endl;                                        \
     }                                                                 \
   }
-
-#define REQUIRE_API(api_name) \
-  if (real_api->api_name == nullptr) { \
-    LOG(FATAL) << "HERMES Adapter failed to map symbol: " \
-    #api_name << std::endl; \
-    exit(1);
 
 namespace hermes::adapter {
 /**
