@@ -232,7 +232,7 @@ struct Context {
               rr_split(default_rr_split),
               rr_retry(false),
               disable_swap(false),
-              vbkt_id_({0,0}) {}
+              vbkt_id_({0, 0}) {}
 };
 
 }  // namespace api

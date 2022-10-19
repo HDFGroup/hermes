@@ -1,6 +1,14 @@
-//
-// Created by lukemartinlogan on 10/18/22.
-//
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+* Distributed under BSD 3-Clause license.                                   *
+* Copyright by The HDF Group.                                               *
+* Copyright by the Illinois Institute of Technology.                        *
+* All rights reserved.                                                      *
+*                                                                           *
+* This file is part of Hermes. The full Hermes copyright notice, including  *
+* terms governing use, modification, and redistribution, is contained in    *
+* the COPYING file, which can be found at the top directory. If you do not  *
+* have access to the file, you may request a copy from help@hdfgroup.org.   *
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #ifndef HERMES_SRC_PREFETCHER_H_
 #define HERMES_SRC_PREFETCHER_H_
@@ -31,7 +39,7 @@ struct GlobalThreadID {
   int rank_;
   int tid_;
   GlobalThreadID() : rank_(0), tid_(0) {}
-  GlobalThreadID(int rank) : rank_(rank) {
+  explicit GlobalThreadID(int rank) : rank_(rank) {
     ABT_unit_id tid_argo;
     ABT_thread_self_id(&tid_argo);
     tid_ = tid_argo;
@@ -130,7 +138,7 @@ class Prefetcher {
   float epsilon_;
 
  public:
-  explicit Prefetcher() : max_length_(4096), epsilon_(.05) {}
+  Prefetcher() : max_length_(4096), epsilon_(.05) {}
   void SetHermes(std::shared_ptr<api::Hermes> &hermes) { hermes_ = hermes; }
   void SetLogLength(uint32_t max_length) { max_length_ = max_length; }
   void Log(IoLogEntry &entry);
