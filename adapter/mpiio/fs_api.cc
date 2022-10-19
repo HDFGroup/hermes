@@ -528,13 +528,11 @@ void MpiioFS::_InitFile(File &f) {
   posix_api->close(fd);*/
 }
 
-void MpiioFS::_OpenInitStats(File &f, AdapterStat &stat, bool bucket_exists) {
-  (void) bucket_exists;
+void MpiioFS::_OpenInitStats(File &f, AdapterStat &stat) {
   MPI_Offset size = static_cast<MPI_Offset>(stat.st_size);
   MPI_File_get_size(f.mpi_fh_, &size);
   stat.st_size = size;
   if (stat.amode & MPI_MODE_APPEND) {
-    stat.st_ptr = stat.st_size;
     stat.is_append = true;
   }
 }
