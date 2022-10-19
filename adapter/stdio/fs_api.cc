@@ -52,8 +52,8 @@ void StdioFS::_OpenInitStats(File &f, AdapterStat &stat, bool bucket_exists) {
   stat.st_ctim = st.st_ctim;
   if (bucket_exists) {
     stat.st_size = stat.st_bkid->GetTotalBlobSize();
-    LOG(INFO) << "Since bucket exists, should reset its size to: " << stat.st_size
-              << std::endl;
+    LOG(INFO) << "Since bucket exists, should reset its size to: "
+              << stat.st_size << std::endl;
   }
   if (stat.mode_str.find('a') != std::string::npos) {
     stat.st_ptr = stat.st_size;
