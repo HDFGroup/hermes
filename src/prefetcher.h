@@ -44,6 +44,20 @@ struct GlobalThreadID {
     ABT_thread_self_id(&tid_argo);
     tid_ = tid_argo;
   }
+
+  bool operator==(const GlobalThreadID &other) {
+    return (rank_ == other.rank_ && tid_ == other.tid_);
+  }
+};
+
+struct UniqueBucket {
+  VBucketID vbkt_id_;
+  BucketID bkt_id_;
+
+  bool operator==(const UniqueBucket &other) {
+    return (vbkt_id_.as_int == other.vbkt_id_.as_int &&
+            bkt_id_.as_int == other.bkt_id_.as_int);
+  }
 };
 
 struct IoLogEntry {
@@ -202,5 +216,27 @@ void serialize(A &ar, IoLogEntry &entry) {
 }
 
 }  // namespace hermes
+
+namespace std {
+template <>
+struct hash<hermes::GlobalThreadID> {
+  std::size_t operator()(const hermes::GlobalThreadID &key) const {
+    size_t h1 = std::hash<int>{}(key.rank_);
+    size_t h2 = std::hash<int>{}(key.tid_);
+    size_t hash = h1^h2;
+    return hash;
+  }
+};
+
+template <>
+struct hash<hermes::UniqueBucket> {
+  std::size_t operator()(const hermes::UniqueBucket &key) const {
+    size_t h1 = std::hash<hermes::VBucketID>{}(key.vbkt_id_);
+    size_t h2 = std::hash<hermes::BucketID>{}(key.bkt_id_);
+    size_t hash = h1^h2;
+    return hash;
+  }
+};
+}  // namespace std
 
 #endif  // HERMES_SRC_PREFETCHER_H_

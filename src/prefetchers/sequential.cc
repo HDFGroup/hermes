@@ -11,3 +11,19 @@
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "sequential.h"
+
+namespace hermes {
+
+void SequentialPrefetcher::Process(std::list<IoLogEntry> &log,
+                                   PrefetchSchema &schema) {
+  // Group by tid
+  std::unordered_map<GlobalThreadID, std::list<IoLogEntry>> per_thread_log;
+  for (auto &entry : log) {
+    per_thread_log[entry.tid_].emplace_back(entry);
+  }
+
+  // Estimate the time until next access
+
+}
+
+}  // namespace hermes
