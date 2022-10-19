@@ -39,7 +39,7 @@ class PosixFS : public hermes::adapter::fs::Filesystem {
   void _InitFile(File &f) override;
 
  private:
-  void _OpenInitStats(File &f, AdapterStat &stat, bool bucket_exists) override;
+  void _OpenInitStats(File &f, AdapterStat &stat) override;
   File _RealOpen(AdapterStat &stat, const std::string &path) override;
   size_t _RealWrite(const std::string &filename, off_t offset, size_t size,
                     const u8 *data_ptr,

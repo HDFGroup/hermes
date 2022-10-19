@@ -92,7 +92,8 @@ void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
           std::make_shared<hapi::PersistTrait>(path_str, offset_map, false);
       stat.st_vbkt->Attach(stat.st_persist.get());
     }
-    _OpenInitStats(f, stat, bucket_exists);
+    _OpenInitStats(f, stat);
+    _OpenInitStatsInternal(stat, bucket_exists);
     mdm->Create(f, stat);
   } else {
     LOG(INFO) << "File opened before by adapter" << std::endl;
@@ -162,7 +163,7 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
   }
   off_t f_offset = off + data_offset;
   if (opts.seek_) { stat.st_ptr = f_offset; }
-  stat.st_size = std::max(stat.st_size, f_offset);
+  stat.st_size = std::max(stat.st_size, static_cast<size_t>(f_offset));
 
   struct timespec ts;
   timespec_get(&ts, TIME_UTC);
@@ -356,7 +357,7 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
             << " (stored file size: " << stat.st_size
             << " true file size: " << stdfs::file_size(bkt->GetName())
             << ")" << std::endl;
-  if (stat.st_ptr >= stat.st_size)  {
+  if (static_cast<size_t>(stat.st_ptr) >= stat.st_size)  {
     LOG(INFO) << "The current offset: " << stat.st_ptr <<
         " is larger than file size: " << stat.st_size << std::endl;
     return 0;
