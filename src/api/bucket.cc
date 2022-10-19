@@ -11,6 +11,7 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "bucket.h"
+#include "prefetcher.h"
 
 #include <iostream>
 #include <vector>
@@ -153,6 +154,22 @@ size_t Bucket::Get(const std::string &name, void *user_blob, size_t blob_size,
       LOG(INFO) << "Getting Blob " << name << " from bucket " << name_ << '\n';
       BlobID blob_id = GetBlobId(&hermes_->context_, &hermes_->rpc_,
                                  name, id_);
+
+      // Upload statistic to prefetcher
+      if (ctx.pctx_.hint_ != PrefetchHint::kNone) {
+        IoLogEntry entry;
+        entry.vbkt_id_ = ctx.vbkt_id_;
+        entry.bkt_id_ = id_;
+        entry.blob_id_ = blob_id;
+        entry.blob_name_ = name;
+        entry.type_ = IoType::kGet;
+        entry.off_ = 0;
+        entry.size_ = blob_size;
+        entry.pctx_ = ctx.pctx_;
+        entry.tid_ = GlobalThreadID(hermes_->comm_.world_proc_id);
+        entry.historical_ = false;
+        Prefetcher::LogIoStat(hermes_.get(), entry);
+      }
       ret = ReadBlobById(&hermes_->context_, &hermes_->rpc_,
                          &hermes_->trans_arena_, blob, blob_id);
     } else {

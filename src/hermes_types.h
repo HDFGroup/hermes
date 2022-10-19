@@ -57,6 +57,58 @@ struct ChunkedIdList {
   u32 capacity;
 };
 
+union BucketID {
+  /** The Bucket ID as bitfield */
+  struct {
+    /** The index into the Target array starting at BufferPool::targets_offset
+     * (on the node with ID node_id). */
+    u32 index;
+    /** The ID of the node in charge of this bucket. */
+    u32 node_id;
+  } bits;
+
+  /** The BucketID as a unsigned 64-bit integer */
+  u64 as_int;
+};
+
+// NOTE(chogan): We reserve sizeof(BucketID) * 2 bytes in order to embed the
+// BucketID into the Blob name. See MakeInternalBlobName() for a description of
+// why we need double the bytes of a BucketID.
+constexpr int kBucketIdStringSize = sizeof(BucketID) * 2;
+/**
+ * The maximum size in bytes allowed for Blob names.
+ */
+constexpr int kMaxBlobNameSize = 64 - kBucketIdStringSize;
+
+union VBucketID {
+  /** The VBucket ID as bitfield */
+  struct {
+    /** The index into the Target array starting at BufferPool::targets_offset
+     * (on the node with ID node_id). */
+    u32 index;
+    /** The ID of the node in charge of this vbucket. */
+    u32 node_id;
+  } bits;
+
+  /** The VBucketID as a unsigned 64-bit integer */
+  u64 as_int;
+};
+
+union BlobID {
+  /** The Blob ID as bitfield */
+  struct {
+    /** The index into the Target array starting at BufferPool::targets_offset
+     * (on the node with ID node_id). */
+    u32 buffer_ids_offset;
+    /** The ID of the node in charge of this bucket. (Negative when in swap
+        space.) */
+    i32 node_id;
+  } bits;
+
+  /** The BlobID as an unsigned 64-bit integer */
+  u64 as_int;
+};
+
 /**
  * \namespace api
  */
@@ -66,6 +118,7 @@ namespace api {
  * A Blob is simply an uninterpreted vector of bytes.
  */
 typedef std::vector<unsigned char> Blob;
+
 
 /** Supported data placement policies */
 enum class PlacementPolicy {
@@ -171,13 +224,15 @@ struct Context {
   bool disable_swap;
 
   /** Prefetching hints */
+  VBucketID vbkt_id_;
   PrefetchContext pctx_;
 
   Context() : policy(default_placement_policy),
               buffer_organizer_retries(default_buffer_organizer_retries),
               rr_split(default_rr_split),
               rr_retry(false),
-              disable_swap(false) {}
+              disable_swap(false),
+              vbkt_id_({0,0}) {}
 };
 
 }  // namespace api
@@ -351,58 +406,6 @@ struct Config {
    * they share a root with a path listed in path_exclusions
    */
   std::vector<std::string> path_inclusions;
-};
-
-union BucketID {
-  /** The Bucket ID as bitfield */
-  struct {
-    /** The index into the Target array starting at BufferPool::targets_offset
-     * (on the node with ID node_id). */
-    u32 index;
-    /** The ID of the node in charge of this bucket. */
-    u32 node_id;
-  } bits;
-
-  /** The BucketID as a unsigned 64-bit integer */
-  u64 as_int;
-};
-
-// NOTE(chogan): We reserve sizeof(BucketID) * 2 bytes in order to embed the
-// BucketID into the Blob name. See MakeInternalBlobName() for a description of
-// why we need double the bytes of a BucketID.
-constexpr int kBucketIdStringSize = sizeof(BucketID) * 2;
-/**
- * The maximum size in bytes allowed for Blob names.
- */
-constexpr int kMaxBlobNameSize = 64 - kBucketIdStringSize;
-
-union VBucketID {
-  /** The VBucket ID as bitfield */
-  struct {
-    /** The index into the Target array starting at BufferPool::targets_offset
-     * (on the node with ID node_id). */
-    u32 index;
-    /** The ID of the node in charge of this vbucket. */
-    u32 node_id;
-  } bits;
-
-  /** The VBucketID as a unsigned 64-bit integer */
-  u64 as_int;
-};
-
-union BlobID {
-  /** The Blob ID as bitfield */
-  struct {
-    /** The index into the Target array starting at BufferPool::targets_offset
-     * (on the node with ID node_id). */
-    u32 buffer_ids_offset;
-    /** The ID of the node in charge of this bucket. (Negative when in swap
-        space.) */
-    i32 node_id;
-  } bits;
-
-  /** The BlobID as an unsigned 64-bit integer */
-  u64 as_int;
 };
 
 

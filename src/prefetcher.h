@@ -31,7 +31,11 @@ struct GlobalThreadID {
   int rank_;
   int tid_;
   GlobalThreadID() : rank_(0), tid_(0) {}
-  GlobalThreadID(int rank, int tid) : rank_(rank), tid_(tid) {}
+  GlobalThreadID(int rank) : rank_(rank) {
+    ABT_unit_id tid_argo;
+    ABT_thread_self_id(&tid_argo);
+    tid_ = tid_argo;
+  }
 };
 
 struct IoLogEntry {
@@ -44,8 +48,8 @@ struct IoLogEntry {
   size_t size_;
   PrefetchContext pctx_;
   GlobalThreadID tid_;
-  struct timespec timestamp_;
   bool historical_;
+  struct timespec timestamp_;
 };
 
 struct PrefetchStat {

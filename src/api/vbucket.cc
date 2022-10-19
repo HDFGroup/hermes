@@ -18,6 +18,7 @@
 #include <vector>
 
 #include "bucket.h"
+#include "prefetcher.h"
 
 namespace hermes {
 
@@ -167,7 +168,7 @@ bool VBucket::ContainsBlob(std::string blob_name, std::string bucket_name) {
 }
 
 size_t VBucket::Get(const std::string &name, Bucket &bkt, Blob &user_blob,
-                   const Context &ctx) {
+                    Context &ctx) {
   size_t ret = Get(name, bkt, user_blob.data(), user_blob.size(), ctx);
 
   return ret;
@@ -180,12 +181,13 @@ size_t VBucket::Get(const std::string &name, Bucket &bkt, Blob &user_blob) {
 }
 
 size_t VBucket::Get(const std::string &name, Bucket &bkt, void *user_blob,
-                    size_t blob_size, const Context &ctx) {
+                    size_t blob_size, Context &ctx) {
   bool is_size_query = false;
   if (blob_size != 0) {
     is_size_query = true;
   }
 
+  ctx.vbkt_id_ = id_;
   size_t result = bkt.Get(name, user_blob, blob_size, ctx);
 
   if (!is_size_query) {

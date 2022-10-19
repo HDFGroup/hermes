@@ -131,10 +131,10 @@ class VBucket {
    * of any attached Traits.
    */
   size_t Get(const std::string &name, Bucket &bkt, Blob &user_blob,
-             const Context &ctx);
+             Context &ctx);
   size_t Get(const std::string &name, Bucket &bkt, Blob &user_blob);
   size_t Get(const std::string &name, Bucket &bkt, void *user_blob,
-             size_t blob_size, const Context &ctx);
+             size_t blob_size, Context &ctx);
 
   /** retrieves the subset of blob links satisfying pred */
   /** could return iterator */

@@ -1561,13 +1561,6 @@ bool LocalUnlockBlob(SharedMemoryContext *context, BlobID blob_id) {
   return result;
 }
 
-void GetPidTid(u32 &pid, u32 &tid) {
-  pid = getpid();
-  ABT_unit_id tid_argo;
-  ABT_thread_self_id(&tid_argo);
-  tid = tid_argo;
-}
-
 bool LockBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id) {
   u32 target_node = GetBlobNodeId(blob_id);
   bool result = false;
