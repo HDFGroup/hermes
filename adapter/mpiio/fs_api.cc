@@ -533,8 +533,20 @@ void MpiioFS::_OpenInitStats(File &f, AdapterStat &stat, bool bucket_exists) {
   MPI_Offset size = static_cast<MPI_Offset>(stat.st_size);
   MPI_File_get_size(f.mpi_fh_, &size);
   stat.st_size = size;
+  // TODO(llogan): This isn't really parallel-safe.
+  /**
+   * Here, we assume that when bkt_size is 0, then the bucket was just
+   * created and the true size of the file being opened is the
+   * size of the file on the PFS. However, if the user truncated
+   * the file at runtime, this will now be incorrect. Need a
+   * better way to determine what the true size of the file
+   * should be.
+   * */
   if (bucket_exists) {
-    stat.st_size = stat.st_bkid->GetTotalBlobSize();
+    size_t bkt_size = stat.st_bkid->GetTotalBlobSize();
+    if (bkt_size > 0) {
+      stat.st_size = bkt_size;
+    }
     LOG(INFO) << "Since bucket exists, should reset its size to: "
               << stat.st_size << std::endl;
   }
