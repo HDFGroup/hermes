@@ -73,8 +73,8 @@ std::string GetProtocol(RpcContext *rpc);
 void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
                           Arena *arena, const char *addr, int num_threads,
                           int port);
-void StartPrefetcher(SharedMemoryContext *context, RpcContext *rpc,
-                     Arena *arena, double sleep_ms);
+void StartPrefetcher(SharedMemoryContext *context,
+                     RpcContext *rpc, Arena *arena, double sleep_ms);
 }  // namespace hermes
 
 // TODO(chogan): I don't like that code similar to this is in buffer_pool.cc.

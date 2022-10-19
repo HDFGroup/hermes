@@ -599,8 +599,8 @@ void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
   rpc_server->define("OrganizeBlob", rpc_organize_blob);
 }
 
-void StartPrefetcher(SharedMemoryContext *context, RpcContext *rpc,
-                     Arena *arena, double sleep_ms) {
+void StartPrefetcher(SharedMemoryContext *context,
+                     RpcContext *rpc, Arena *arena, double sleep_ms) {
   ThalliumState *state = GetThalliumState(rpc);
   tl::engine *rpc_server = state->engine;
   using tl::request;

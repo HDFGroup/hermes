@@ -24,6 +24,8 @@
 #include "buffer_pool_internal.h"
 #include "metadata_management_internal.h"
 #include "config_parser.h"
+#include "prefetcher.h"
+#include "singleton.h"
 
 namespace hermes {
 
@@ -375,6 +377,8 @@ std::shared_ptr<api::Hermes> InitHermes(Config *config, bool is_daemon,
                          &result->trans_arena_, bo_address.c_str(),
                          config->bo_num_threads, config->buffer_organizer_port);
 
+    auto prefetcher = Singleton<Prefetcher>::GetInstance();
+    prefetcher->SetHermes(result);
     StartPrefetcher(&result->context_, &result->rpc_,
                     &result->trans_arena_, 10);
 

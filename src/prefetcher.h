@@ -30,8 +30,9 @@ static bool operator==(const VBucketID& first, const VBucketID& second) {
 
 enum class PrefetchHint {
   kNone,
-  kNoPrefetch,
   kFileSequential,
+  kApriori,
+
   kFileStrided,
   kMachineLearning
 };
@@ -66,27 +67,39 @@ struct IoLogEntry {
   bool historical_;
 };
 
-class Prefetcher {
- private:
-  uint32_t max_length_;
-  std::list<IoLogEntry> log_;
-  thallium::mutex lock_;
+struct PrefetchStat {
+  float max_time_;
+  struct timespec start_;
 
- public:
-  Prefetcher() : max_length_(4096) {}
-  void SetLogLength(uint32_t max_length) { max_length_ = max_length; }
-  void Log(IoLogEntry &entry);
-  static bool LogIoStat(api::Hermes *hermes, IoLogEntry &entry);
-  void Process();
+  explicit PrefetchStat(float max_time) : max_time_(max_time) {}
+
+  float GetRemainingTime(const struct timespec *cur) {
+    float diff = DiffTimespec(cur, &start_);
+    return max_time_ - diff;
+  }
 
  private:
-  static size_t HashToNode(api::Hermes *hermes, IoLogEntry &entry);
+  static float DiffTimespec(const struct timespec *left,
+                            const struct timespec *right) {
+    return (left->tv_sec - right->tv_sec)
+           + (left->tv_nsec - right->tv_nsec) / 1000000000.0;
+  }
 };
 
 struct PrefetchDecision {
-  BlobID blob_id;
-  std::list<float> access_times_;
-  float updated_score_;
+  BucketID bkt_id_;
+  BlobID blob_id_;
+  std::list<PrefetchStat> stats_;
+  bool queue_later_;
+  float est_xfer_time_;
+  float new_score_;
+
+  PrefetchDecision() : est_xfer_time_(-1), new_score_(-1) {}
+  void SetCurrentTime(struct timespec &ts) {
+    for (auto &access_time : stats_) {
+      access_time.start_ = ts;
+    }
+  }
 };
 
 class PrefetchSchema {
@@ -94,8 +107,37 @@ class PrefetchSchema {
   std::unordered_map<BlobID, PrefetchDecision> schema_;
 
  public:
+  void emplace(BlobID blob_id, float access_time) {
+
+  }
+
   void emplace(PrefetchDecision &decision) {
-    schema_.emplace(decision.blob_id, decision);
+    auto prior_decision_iter = schema_.find(decision.blob_id_);
+    if (prior_decision_iter == schema_.end()) {
+      schema_.emplace(decision.blob_id_, decision);
+      return;
+    }
+    auto &[blob_id, prior_decision] = (*prior_decision_iter);
+    prior_decision.est_xfer_time_ = decision.est_xfer_time_;
+    prior_decision.stats_.splice(
+        prior_decision.stats_.end(),
+        decision.stats_);
+  }
+
+  void SetCurrentTime() {
+    struct timespec ts;
+    timespec_get(&ts, TIME_UTC);
+    for (auto &[blob_id, decision] : schema_) {
+      decision.SetCurrentTime(ts);
+    }
+  }
+
+  std::unordered_map<BlobID, PrefetchDecision>::iterator begin() {
+    return schema_.begin();
+  }
+
+  std::unordered_map<BlobID, PrefetchDecision>::iterator end() {
+    return schema_.end();
   }
 };
 
@@ -103,6 +145,29 @@ class PrefetchAlgorithm {
  public:
   virtual void Process(std::list<IoLogEntry> &log,
                        PrefetchSchema &schema) = 0;
+};
+
+class Prefetcher {
+ private:
+  uint32_t max_length_;
+  thallium::mutex lock_;
+  std::list<IoLogEntry> log_;
+  std::unordered_map<BlobID, PrefetchDecision> queue_later_;
+  std::shared_ptr<api::Hermes> hermes_;
+  float epsilon_;
+
+ public:
+  explicit Prefetcher() : max_length_(4096), epsilon_(.05) {}
+  void SetHermes(std::shared_ptr<api::Hermes> &hermes) { hermes_ = hermes; }
+  void SetLogLength(uint32_t max_length) { max_length_ = max_length; }
+  void Log(IoLogEntry &entry);
+  static bool LogIoStat(api::Hermes *hermes, IoLogEntry &entry);
+  void Process();
+
+ private:
+  static size_t HashToNode(api::Hermes *hermes, IoLogEntry &entry);
+  float EstimateBlobMovementTime(BlobID blob_id);
+  void CalculateBlobScore(PrefetchDecision &decision);
 };
 
 /** RPC SERIALIZERS */

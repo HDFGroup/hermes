@@ -10,6 +10,7 @@
 
 #include "prefetchers/sequential.h"
 #include "prefetchers/apriori.h"
+#include "singleton.h"
 
 namespace hermes {
 
@@ -21,13 +22,13 @@ class PrefetcherFactory {
    * @param type, MapperType, type of mapper to be used by the STDIO adapter.
    * @return Instance of mapper given a type.
    */
-  static std::unique_ptr<PrefetchAlgorithm> Get(const PrefetchHint &type) {
+  static PrefetchAlgorithm* Get(const PrefetchHint &type) {
     switch (type) {
-      case PrefetchHint::kSequential: {
-        return std::make_unique<SequentialPrefetcher>();
+      case PrefetchHint::kFileSequential: {
+        return Singleton<SequentialPrefetcher>::GetInstance();
       }
       case PrefetchHint::kApriori: {
-        return std::make_unique<AprioriPrefetcher>();
+        return Singleton<AprioriPrefetcher>::GetInstance();
       }
       default: return nullptr;
     }
