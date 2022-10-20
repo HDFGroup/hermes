@@ -23,6 +23,6 @@ class AprioriPrefetcher : public PrefetchAlgorithm {
                PrefetchSchema &schema) {}
 };
 
-}
+}  // namespace hermes
 
 #endif  // HERMES_SRC_PREFETCHERS_APRIORI_H_

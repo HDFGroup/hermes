@@ -41,6 +41,6 @@ class SequentialPrefetcher : public PrefetchAlgorithm {
                       BlobID &cur_id);
 };
 
-}
+}  // namespace hermes
 
 #endif  // HERMES_SRC_PREFETCHERS_SEQUENTIAL_H_
