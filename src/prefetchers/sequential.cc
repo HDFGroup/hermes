@@ -21,10 +21,16 @@ namespace hermes {
 
 void SequentialPrefetcher::Process(std::list<IoLogEntry> &log,
                                    PrefetchSchema &schema) {
+  auto prefetcher = Singleton<Prefetcher>::GetInstance();
+
   // Increase each unique_bucket access count
   for (auto &entry : log) {
     UniqueBucket id(entry.vbkt_id_, entry.bkt_id_);
-    ++state_[id].count_;
+    auto &state = state_[id];
+    if (state.count_ == 0) {
+      state.first_access_ = entry.timestamp_;
+    }
+    ++state.count_;
   }
 
   // Append time estimates and read-aheads to the schema
@@ -34,6 +40,9 @@ void SequentialPrefetcher::Process(std::list<IoLogEntry> &log,
     float cur_runtime = PrefetchStat::DiffTimespec(&entry.timestamp_,
                                                    &state.first_access_);
     float avg_time = cur_runtime / state.count_;
+    if (avg_time == 0) {
+      avg_time = prefetcher->max_wait_sec_ / 2.0;
+    }
 
     // Read-ahead the next few blobs
     BlobID cur_id = entry.blob_id_;
@@ -48,7 +57,7 @@ void SequentialPrefetcher::Process(std::list<IoLogEntry> &log,
       if (IsNullBlobId(decision.blob_id_)) {
         break;
       }
-      decision.AddStat(avg_time, entry.timestamp_);
+      decision.AddStat((i+1)*avg_time, entry.timestamp_);
       schema.emplace(decision);
       cur_id = decision.blob_id_;
     }
@@ -69,12 +78,12 @@ void SequentialPrefetcher::GetNextBucket(IoLogEntry &entry,
   BlobPlacement p;
   p.DecodeBlobName(blob_name);
   p.page_ += 1;
-  std::string next_blob_name = p.CreateBlobName();
+  decision.blob_name_ = p.CreateBlobName();
 
   // Get the next blob ID from the bucket
   decision.blob_id_ = GetBlobId(&hermes->context_, &hermes->rpc_,
-                             next_blob_name, entry.bkt_id_,
-                             false);
+                                decision.blob_name_, entry.bkt_id_,
+                                false);
 }
 
 void SequentialPrefetcher::GetNextVbucket(IoLogEntry &entry,

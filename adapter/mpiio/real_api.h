@@ -63,34 +63,34 @@ namespace hermes::adapter::mpiio {
 
 class API {
  public:
-  int (*MPI_Init)(int * argc, char *** argv) = nullptr;
-  int (*MPI_Finalize)( void) = nullptr;
-  int (*MPI_Wait)(MPI_Request * req, MPI_Status * status) = nullptr;
-  int (*MPI_Waitall)(int count, MPI_Request * req, MPI_Status * status) = nullptr;
-  int (*MPI_File_open)(MPI_Comm comm, const char * filename, int amode, MPI_Info info, MPI_File * fh) = nullptr;
-  int (*MPI_File_close)(MPI_File * fh) = nullptr;
-  int (*MPI_File_seek_shared)(MPI_File fh, MPI_Offset offset, int whence) = nullptr;
-  int (*MPI_File_seek)(MPI_File fh, MPI_Offset offset, int whence) = nullptr;
-  int (*MPI_File_get_position)(MPI_File fh, MPI_Offset * offset) = nullptr;
-  int (*MPI_File_read_all)(MPI_File fh, void * buf, int count, MPI_Datatype datatype, MPI_Status * status) = nullptr;
-  int (*MPI_File_read_at_all)(MPI_File fh, MPI_Offset offset, void * buf, int count, MPI_Datatype datatype, MPI_Status * status) = nullptr;
-  int (*MPI_File_read_at)(MPI_File fh, MPI_Offset offset, void * buf, int count, MPI_Datatype datatype, MPI_Status * status) = nullptr;
-  int (*MPI_File_read)(MPI_File fh, void * buf, int count, MPI_Datatype datatype, MPI_Status * status) = nullptr;
-  int (*MPI_File_read_ordered)(MPI_File fh, void * buf, int count, MPI_Datatype datatype, MPI_Status * status) = nullptr;
-  int (*MPI_File_read_shared)(MPI_File fh, void * buf, int count, MPI_Datatype datatype, MPI_Status * status) = nullptr;
-  int (*MPI_File_write_all)(MPI_File fh, const void * buf, int count, MPI_Datatype datatype, MPI_Status * status) = nullptr;
-  int (*MPI_File_write_at_all)(MPI_File fh, MPI_Offset offset, const void * buf, int count, MPI_Datatype datatype, MPI_Status * status) = nullptr;
-  int (*MPI_File_write_at)(MPI_File fh, MPI_Offset offset, const void * buf, int count, MPI_Datatype datatype, MPI_Status * status) = nullptr;
-  int (*MPI_File_write)(MPI_File fh, const void * buf, int count, MPI_Datatype datatype, MPI_Status * status) = nullptr;
-  int (*MPI_File_write_ordered)(MPI_File fh, const void * buf, int count, MPI_Datatype datatype, MPI_Status * status) = nullptr;
-  int (*MPI_File_write_shared)(MPI_File fh, const void * buf, int count, MPI_Datatype datatype, MPI_Status * status) = nullptr;
-  int (*MPI_File_iread_at)(MPI_File fh, MPI_Offset offset, void * buf, int count, MPI_Datatype datatype, MPI_Request * request) = nullptr;
-  int (*MPI_File_iread)(MPI_File fh, void * buf, int count, MPI_Datatype datatype, MPI_Request * request) = nullptr;
-  int (*MPI_File_iread_shared)(MPI_File fh, void * buf, int count, MPI_Datatype datatype, MPI_Request * request) = nullptr;
-  int (*MPI_File_iwrite_at)(MPI_File fh, MPI_Offset offset, const void * buf, int count, MPI_Datatype datatype, MPI_Request * request) = nullptr;
-  int (*MPI_File_iwrite)(MPI_File fh, const void * buf, int count, MPI_Datatype datatype, MPI_Request * request) = nullptr;
-  int (*MPI_File_iwrite_shared)(MPI_File fh, const void * buf, int count, MPI_Datatype datatype, MPI_Request * request) = nullptr;
-  int (*MPI_File_sync)(MPI_File fh) = nullptr;
+  MPI_Init_t MPI_Init = nullptr;
+  MPI_Finalize_t MPI_Finalize = nullptr;
+  MPI_Wait_t MPI_Wait = nullptr;
+  MPI_Waitall_t MPI_Waitall = nullptr;
+  MPI_File_open_t MPI_File_open = nullptr;
+  MPI_File_close_t MPI_File_close = nullptr;
+  MPI_File_seek_shared_t MPI_File_seek_shared = nullptr;
+  MPI_File_seek_t MPI_File_seek = nullptr;
+  MPI_File_get_position_t MPI_File_get_position = nullptr;
+  MPI_File_read_all_t MPI_File_read_all = nullptr;
+  MPI_File_read_at_all_t MPI_File_read_at_all = nullptr;
+  MPI_File_read_at_t MPI_File_read_at = nullptr;
+  MPI_File_read_t MPI_File_read = nullptr;
+  MPI_File_read_ordered_t MPI_File_read_ordered = nullptr;
+  MPI_File_read_shared_t MPI_File_read_shared = nullptr;
+  MPI_File_write_all_t MPI_File_write_all = nullptr;
+  MPI_File_write_at_all_t MPI_File_write_at_all = nullptr;
+  MPI_File_write_at_t MPI_File_write_at = nullptr;
+  MPI_File_write_t MPI_File_write = nullptr;
+  MPI_File_write_ordered_t MPI_File_write_ordered = nullptr;
+  MPI_File_write_shared_t MPI_File_write_shared = nullptr;
+  MPI_File_iread_at_t MPI_File_iread_at = nullptr;
+  MPI_File_iread_t MPI_File_iread = nullptr;
+  MPI_File_iread_shared_t MPI_File_iread_shared = nullptr;
+  MPI_File_iwrite_at_t MPI_File_iwrite_at = nullptr;
+  MPI_File_iwrite_t MPI_File_iwrite = nullptr;
+  MPI_File_iwrite_shared_t MPI_File_iwrite_shared = nullptr;
+  MPI_File_sync_t MPI_File_sync = nullptr;
 
   API() {
     void *is_intercepted = (void*)dlsym(RTLD_DEFAULT, "mpiio_intercepted");

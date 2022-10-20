@@ -26,39 +26,45 @@ bool VerifyBlob(hapi::Blob &blob, int nonce, size_t ret_size) {
 }
 
 int main(int argc, char **argv) {
+  MPI_Init(&argc, &argv);
   std::shared_ptr<hapi::Hermes> hermes =
-      hapi::InitHermes(getenv("HERMES_CONF"));
+      hermes::InitHermesDaemon(getenv("HERMES_CONF"));
 
-  if (hermes->IsApplicationCore()) {
-    hapi::Context ctx;
+  bool with_prefetch = atoi(argv[1]);
+
+  hapi::Context ctx;
+  if (with_prefetch) {
     ctx.pctx_.hint_ = hapi::PrefetchHint::kFileSequential;
     ctx.pctx_.read_ahead_ = 1;
-    std::string bkt_name = "PREFETCH";
-    auto bkt = std::make_shared<hapi::Bucket>(
-        bkt_name, hermes, ctx);
-
-    // Place 100 1MB blobs
-    for (int i = 0; i < 100; ++i) {
-      hapi::Blob blob;
-      blob.resize(MEGABYTES(1), i);
-      hermes::adapter::BlobPlacement p;
-      p.page_ = i;
-      std::string blob_name = p.CreateBlobName();
-      bkt->Put(blob_name, blob);
-    }
-
-    // Get 100 1MB blobs (sequentially)
-    for (int i = 0; i < 100; ++i) {
-      hapi::Blob blob;
-      blob.resize(MEGABYTES(1), -1);
-      hermes::adapter::BlobPlacement p;
-      p.page_ = i;
-      std::string blob_name = p.CreateBlobName();
-      size_t ret = bkt->Get(blob_name, blob);
-      assert(VerifyBlob(blob, i, ret));
-      usleep(50000);
-    }
   }
+  std::string bkt_name = "PREFETCH";
+  auto bkt = std::make_shared<hapi::Bucket>(
+      bkt_name, hermes, ctx);
 
-  hermes->Finalize();
+  // Place 100 1MB blobs
+  for (int i = 0; i < 100; ++i) {
+    hapi::Blob blob;
+    blob.resize(MEGABYTES(1), i);
+    hermes::adapter::BlobPlacement p;
+    p.page_ = i;
+    std::string blob_name = p.CreateBlobName();
+    bkt->Put(blob_name, blob);
+  }
+  LOG(INFO) << "FINISHED PUTTING ALL BLOBS" << std::endl;
+
+  // Get 100 1MB blobs (sequentially)
+  for (int i = 0; i < 100; ++i) {
+    hapi::Blob blob;
+    blob.resize(MEGABYTES(1), -1);
+    hermes::adapter::BlobPlacement p;
+    p.page_ = i;
+    std::string blob_name = p.CreateBlobName();
+    size_t ret = bkt->Get(blob_name, blob);
+    assert(VerifyBlob(blob, i, ret));
+    usleep(500000);
+  }
+  LOG(INFO) << "FINISHED GETTING ALL BLOBS" << std::endl;
+
+  hermes->Finalize(true);
+  MPI_Finalize();
 }

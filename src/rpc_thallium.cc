@@ -632,6 +632,7 @@ void StartPrefetcher(SharedMemoryContext *context,
       prefetcher->Process();
       tl::thread::self().sleep(*state->engine, targs.sleep_ms);
     }
+    LOG(INFO) << "Finished prefetcher" << std::endl;
   };
 
   // Create prefetcher thread
@@ -645,6 +646,13 @@ void StartPrefetcher(SharedMemoryContext *context,
   ABT_thread_create_on_xstream(state->execution_stream,
                                prefetch, args,
                                ABT_THREAD_ATTR_NULL, NULL);
+}
+
+void StopPrefetcher(RpcContext *rpc) {
+  ThalliumState *state = GetThalliumState(rpc);
+  state->kill_requested.store(true);
+  ABT_xstream_join(state->execution_stream);
+  ABT_xstream_free(&state->execution_stream);
 }
 
 void StartGlobalSystemViewStateUpdateThread(SharedMemoryContext *context,
@@ -664,6 +672,7 @@ void StartGlobalSystemViewStateUpdateThread(SharedMemoryContext *context,
       UpdateGlobalSystemViewState(targs->context, targs->rpc);
       tl::thread::self().sleep(*state->engine, targs->sleep_ms);
     }
+    LOG(INFO) << "Finished global system view update thread" << std::endl;
   };
 
   ThreadArgs *args = PushStruct<ThreadArgs>(arena);
@@ -764,6 +773,7 @@ void RunDaemon(SharedMemoryContext *context, RpcContext *rpc,
 
   auto prefinalize_callback = [rpc, comm]() {
     SubBarrier(comm);
+    StopPrefetcher(rpc);
     StopGlobalSystemViewStateUpdateThread(rpc);
     SubBarrier(comm);
     ShutdownRpcClients(rpc);

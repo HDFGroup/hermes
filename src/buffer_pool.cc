@@ -90,7 +90,8 @@ void Finalize(SharedMemoryContext *context, CommunicationContext *comm,
               bool is_application_core, bool force_rpc_shutdown) {
   WorldBarrier(comm);
   if (!is_application_core && comm->first_on_node) {
-      StopGlobalSystemViewStateUpdateThread(rpc);
+    StopPrefetcher(rpc);
+    StopGlobalSystemViewStateUpdateThread(rpc);
   }
   WorldBarrier(comm);
   ShutdownRpcClients(rpc);

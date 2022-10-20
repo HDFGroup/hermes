@@ -78,15 +78,15 @@ struct IoLogEntry {
 };
 
 struct PrefetchStat {
-  float max_time_;
+  float est_next_time_;
   struct timespec start_;
 
-  explicit PrefetchStat(float max_time, struct timespec &start) :
-        max_time_(max_time), start_(start) {}
+  explicit PrefetchStat(float est_next_time, struct timespec &start) :
+      est_next_time_(est_next_time), start_(start) {}
 
   float GetRemainingTime(const struct timespec *cur) {
     float diff = DiffTimespec(cur, &start_);
-    return max_time_ - diff;
+    return est_next_time_ - diff;
   }
 
   static float DiffTimespec(const struct timespec *left,
@@ -152,12 +152,17 @@ class Prefetcher {
   thallium::mutex lock_;
   std::list<IoLogEntry> log_;
   std::unordered_map<BlobID, PrefetchDecision> queue_later_;
+
+ public:
+  float max_wait_xfer_;
+  float max_wait_sec_;
   float epsilon_;
 
  public:
   std::shared_ptr<api::Hermes> hermes_;
 
-  Prefetcher() : max_length_(4096), epsilon_(.05) {}
+  Prefetcher() : max_length_(4096), max_wait_xfer_(10), max_wait_sec_(60),
+                 epsilon_(.05) {}
   void SetHermes(std::shared_ptr<api::Hermes> &hermes) { hermes_ = hermes; }
   void SetLogLength(uint32_t max_length) { max_length_ = max_length; }
   void Log(IoLogEntry &entry);

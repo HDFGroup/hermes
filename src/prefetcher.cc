@@ -52,6 +52,7 @@ size_t Prefetcher::HashToNode(Hermes *hermes, IoLogEntry &entry) {
 }
 
 void Prefetcher::Log(IoLogEntry &entry) {
+  LOG(INFO) << "Logging I/O stat" << std::endl;
   lock_.lock();
   if (log_.size() == max_length_) {
     log_.pop_front();
@@ -87,15 +88,13 @@ float Prefetcher::EstimateBlobMovementTime(BlobID blob_id) {
 void Prefetcher::CalculateBlobScore(struct timespec &ts,
                                     PrefetchDecision &decision) {
   float est_xfer_time = decision.est_xfer_time_;
-  float max_wait_xfer = 10;
-  float max_wait_sec = 60;
   decision.new_score_ = -1;
   decision.queue_later_ = false;
   for (auto &access_time_struct : decision.stats_) {
     float next_access_sec = access_time_struct.GetRemainingTime(&ts);
     if (next_access_sec < est_xfer_time) continue;
-    float max_access_wait = std::max(max_wait_xfer*est_xfer_time,
-                                    max_wait_sec);
+    float max_access_wait = std::max(max_wait_xfer_*est_xfer_time,
+                                    max_wait_sec_);
     float est_wait = (next_access_sec - est_xfer_time);
     if (est_wait > max_access_wait) {
       decision.queue_later_ = true;
@@ -117,6 +116,9 @@ void Prefetcher::Process() {
   }
   log_.erase(log_.begin(), log_.end());
   lock_.unlock();
+  if (hint_logs.size() == 0) {
+    return;
+  }
 
   // Based on the current log, determine what blobs to prefetch
   PrefetchSchema schema;
@@ -142,9 +144,14 @@ void Prefetcher::Process() {
     }
     CalculateBlobScore(ts, decision);
     if (decision.new_score_ < 0) {
-      queue_later_.emplace(blob_id, decision);
+      if (decision.queue_later_) {
+        queue_later_.emplace(blob_id, decision);
+      }
       continue;
     }
+    LOG(INFO) << "Prefetching bkt_id: " << decision.bkt_id_.as_int
+              << " blob_id: " << decision.blob_name_
+              << " score: " << decision.new_score_ << std::endl;
     OrganizeBlob(&hermes_->context_, &hermes_->rpc_,
                  decision.bkt_id_, decision.blob_name_,
                  epsilon_, decision.new_score_);
