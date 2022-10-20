@@ -18,19 +18,27 @@
 namespace hermes {
 
 struct SequentialState {
-  struct timespec prior_access_;
-  float total_access_time_;
+  struct timespec first_access_;
   u32 count_;
 
-  SequentialState() : total_access_time_(0), count_(0) {}
+  SequentialState() : count_(0) {}
 };
 
 class SequentialPrefetcher : public PrefetchAlgorithm {
  private:
   std::unordered_map<UniqueBucket, SequentialState> state_;
+
  public:
   void Process(std::list<IoLogEntry> &log,
                PrefetchSchema &schema);
+
+ private:
+  void GetNextBucket(IoLogEntry &entry,
+                     PrefetchDecision &decision,
+                     BlobID &cur_id);
+  void GetNextVbucket(IoLogEntry &entry,
+                      PrefetchDecision &decision,
+                      BlobID &cur_id);
 };
 
 }

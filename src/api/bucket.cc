@@ -161,7 +161,6 @@ size_t Bucket::Get(const std::string &name, void *user_blob, size_t blob_size,
         entry.vbkt_id_ = ctx.vbkt_id_;
         entry.bkt_id_ = id_;
         entry.blob_id_ = blob_id;
-        entry.blob_name_ = name;
         entry.type_ = IoType::kGet;
         entry.off_ = 0;
         entry.size_ = blob_size;

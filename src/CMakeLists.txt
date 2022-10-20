@@ -1,3 +1,4 @@
+include_directories(${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/adapter)
 
 configure_file(hermes_version.h.in hermes_version.h)
 

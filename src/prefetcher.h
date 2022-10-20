@@ -45,7 +45,7 @@ struct GlobalThreadID {
     tid_ = tid_argo;
   }
 
-  bool operator==(const GlobalThreadID &other) {
+  bool operator==(const GlobalThreadID &other) const {
     return (rank_ == other.rank_ && tid_ == other.tid_);
   }
 };
@@ -54,7 +54,11 @@ struct UniqueBucket {
   VBucketID vbkt_id_;
   BucketID bkt_id_;
 
-  bool operator==(const UniqueBucket &other) {
+  UniqueBucket() = default;
+  UniqueBucket(VBucketID vbkt_id, BucketID bkt_id) :
+       vbkt_id_(vbkt_id), bkt_id_(bkt_id) {}
+
+  bool operator==(const UniqueBucket &other) const {
     return (vbkt_id_.as_int == other.vbkt_id_.as_int &&
             bkt_id_.as_int == other.bkt_id_.as_int);
   }
@@ -64,7 +68,6 @@ struct IoLogEntry {
   VBucketID vbkt_id_;
   BucketID bkt_id_;
   BlobID blob_id_;
-  std::string blob_name_;
   IoType type_;
   off_t off_;
   size_t size_;
@@ -86,7 +89,6 @@ struct PrefetchStat {
     return max_time_ - diff;
   }
 
- private:
   static float DiffTimespec(const struct timespec *left,
                             const struct timespec *right) {
     return (left->tv_sec - right->tv_sec)
@@ -103,7 +105,9 @@ struct PrefetchDecision {
   float est_xfer_time_;
   float new_score_;
 
-  PrefetchDecision() : est_xfer_time_(-1), new_score_(-1) {}
+  PrefetchDecision() : queue_later_(false),
+                       est_xfer_time_(-1),
+                       new_score_(-1) {}
   void AddStat(float est_access_time, struct timespec &start) {
     stats_.emplace_back(est_access_time, start);
   }
@@ -148,10 +152,11 @@ class Prefetcher {
   thallium::mutex lock_;
   std::list<IoLogEntry> log_;
   std::unordered_map<BlobID, PrefetchDecision> queue_later_;
-  std::shared_ptr<api::Hermes> hermes_;
   float epsilon_;
 
  public:
+  std::shared_ptr<api::Hermes> hermes_;
+
   Prefetcher() : max_length_(4096), epsilon_(.05) {}
   void SetHermes(std::shared_ptr<api::Hermes> &hermes) { hermes_ = hermes; }
   void SetLogLength(uint32_t max_length) { max_length_ = max_length; }
@@ -205,7 +210,6 @@ void serialize(A &ar, IoLogEntry &entry) {
   ar & entry.vbkt_id_;
   ar & entry.bkt_id_;
   ar & entry.blob_id_;
-  ar & entry.blob_name_;
   ar & entry.type_;
   ar & entry.off_;
   ar & entry.size_;
