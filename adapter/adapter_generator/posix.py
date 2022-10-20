@@ -16,7 +16,7 @@ apis = [
     Api("ssize_t pwrite64(int fd, const void *buf, size_t count, off64_t offset)"),
     Api("off_t lseek(int fd, off_t offset, int whence)"),
     Api("off64_t lseek64(int fd, off64_t offset, int whence)"),
-    Api("int __fxstat(int version, int fd, struct stat *buf)"),
+    Api("int fstat(int fd, struct stat *buf)"),
     Api("int fsync(int fd)"),
     Api("int close(int fd)"),
 ]

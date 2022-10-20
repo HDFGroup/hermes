@@ -44,7 +44,7 @@ typedef ssize_t (*pread64_t)(int fd, void * buf, size_t count, off64_t offset);
 typedef ssize_t (*pwrite64_t)(int fd, const void * buf, size_t count, off64_t offset);
 typedef off_t (*lseek_t)(int fd, off_t offset, int whence);
 typedef off64_t (*lseek64_t)(int fd, off64_t offset, int whence);
-typedef int (*__fxstat_t)(int version, int fd, struct stat * buf);
+typedef int (*fstat_t)(int fd, struct stat * buf);
 typedef int (*fsync_t)(int fd);
 typedef int (*close_t)(int fd);
 }
@@ -68,7 +68,7 @@ class API {
   pwrite64_t pwrite64 = nullptr;
   lseek_t lseek = nullptr;
   lseek64_t lseek64 = nullptr;
-  __fxstat_t __fxstat = nullptr;
+  fstat_t fstat = nullptr;
   fsync_t fsync = nullptr;
   close_t close = nullptr;
 
@@ -150,9 +150,9 @@ class API {
       lseek64 = (lseek64_t)dlsym(RTLD_DEFAULT, "lseek64");
     }
     if (is_intercepted) {
-      __fxstat = (__fxstat_t)dlsym(RTLD_NEXT, "__fxstat");
+      fstat = (fstat_t)dlsym(RTLD_NEXT, "fstat");
     } else {
-      __fxstat = (__fxstat_t)dlsym(RTLD_DEFAULT, "__fxstat");
+      fstat = (fstat_t)dlsym(RTLD_DEFAULT, "fstat");
     }
     if (is_intercepted) {
       fsync = (fsync_t)dlsym(RTLD_NEXT, "fsync");
