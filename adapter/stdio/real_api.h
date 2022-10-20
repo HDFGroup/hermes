@@ -22,10 +22,11 @@
 #include "filesystem/metadata_manager.h"
 
 #define REQUIRE_API(api_name) \
-  if (real_api->api_name == nullptr) { \
+  if (api_name == nullptr) { \
     LOG(FATAL) << "HERMES Adapter failed to map symbol: " \
     #api_name << std::endl; \
-    exit(1);
+    std::exit(1); \
+   }
 
 extern "C" {
 typedef int (*MPI_Init_t)(int * argc, char *** argv);
@@ -98,143 +99,173 @@ class API {
     } else {
       MPI_Init = (MPI_Init_t)dlsym(RTLD_DEFAULT, "MPI_Init");
     }
+    REQUIRE_API(MPI_Init)
     if (is_intercepted) {
       MPI_Finalize = (MPI_Finalize_t)dlsym(RTLD_NEXT, "MPI_Finalize");
     } else {
       MPI_Finalize = (MPI_Finalize_t)dlsym(RTLD_DEFAULT, "MPI_Finalize");
     }
+    REQUIRE_API(MPI_Finalize)
     if (is_intercepted) {
       fopen = (fopen_t)dlsym(RTLD_NEXT, "fopen");
     } else {
       fopen = (fopen_t)dlsym(RTLD_DEFAULT, "fopen");
     }
+    REQUIRE_API(fopen)
     if (is_intercepted) {
       fopen64 = (fopen64_t)dlsym(RTLD_NEXT, "fopen64");
     } else {
       fopen64 = (fopen64_t)dlsym(RTLD_DEFAULT, "fopen64");
     }
+    REQUIRE_API(fopen64)
     if (is_intercepted) {
       fdopen = (fdopen_t)dlsym(RTLD_NEXT, "fdopen");
     } else {
       fdopen = (fdopen_t)dlsym(RTLD_DEFAULT, "fdopen");
     }
+    REQUIRE_API(fdopen)
     if (is_intercepted) {
       freopen = (freopen_t)dlsym(RTLD_NEXT, "freopen");
     } else {
       freopen = (freopen_t)dlsym(RTLD_DEFAULT, "freopen");
     }
+    REQUIRE_API(freopen)
     if (is_intercepted) {
       freopen64 = (freopen64_t)dlsym(RTLD_NEXT, "freopen64");
     } else {
       freopen64 = (freopen64_t)dlsym(RTLD_DEFAULT, "freopen64");
     }
+    REQUIRE_API(freopen64)
     if (is_intercepted) {
       fflush = (fflush_t)dlsym(RTLD_NEXT, "fflush");
     } else {
       fflush = (fflush_t)dlsym(RTLD_DEFAULT, "fflush");
     }
+    REQUIRE_API(fflush)
     if (is_intercepted) {
       fclose = (fclose_t)dlsym(RTLD_NEXT, "fclose");
     } else {
       fclose = (fclose_t)dlsym(RTLD_DEFAULT, "fclose");
     }
+    REQUIRE_API(fclose)
     if (is_intercepted) {
       fwrite = (fwrite_t)dlsym(RTLD_NEXT, "fwrite");
     } else {
       fwrite = (fwrite_t)dlsym(RTLD_DEFAULT, "fwrite");
     }
+    REQUIRE_API(fwrite)
     if (is_intercepted) {
       fputc = (fputc_t)dlsym(RTLD_NEXT, "fputc");
     } else {
       fputc = (fputc_t)dlsym(RTLD_DEFAULT, "fputc");
     }
+    REQUIRE_API(fputc)
     if (is_intercepted) {
       fgetpos = (fgetpos_t)dlsym(RTLD_NEXT, "fgetpos");
     } else {
       fgetpos = (fgetpos_t)dlsym(RTLD_DEFAULT, "fgetpos");
     }
+    REQUIRE_API(fgetpos)
     if (is_intercepted) {
       fgetpos64 = (fgetpos64_t)dlsym(RTLD_NEXT, "fgetpos64");
     } else {
       fgetpos64 = (fgetpos64_t)dlsym(RTLD_DEFAULT, "fgetpos64");
     }
+    REQUIRE_API(fgetpos64)
     if (is_intercepted) {
       putc = (putc_t)dlsym(RTLD_NEXT, "putc");
     } else {
       putc = (putc_t)dlsym(RTLD_DEFAULT, "putc");
     }
+    REQUIRE_API(putc)
     if (is_intercepted) {
       putw = (putw_t)dlsym(RTLD_NEXT, "putw");
     } else {
       putw = (putw_t)dlsym(RTLD_DEFAULT, "putw");
     }
+    REQUIRE_API(putw)
     if (is_intercepted) {
       fputs = (fputs_t)dlsym(RTLD_NEXT, "fputs");
     } else {
       fputs = (fputs_t)dlsym(RTLD_DEFAULT, "fputs");
     }
+    REQUIRE_API(fputs)
     if (is_intercepted) {
       fread = (fread_t)dlsym(RTLD_NEXT, "fread");
     } else {
       fread = (fread_t)dlsym(RTLD_DEFAULT, "fread");
     }
+    REQUIRE_API(fread)
     if (is_intercepted) {
       fgetc = (fgetc_t)dlsym(RTLD_NEXT, "fgetc");
     } else {
       fgetc = (fgetc_t)dlsym(RTLD_DEFAULT, "fgetc");
     }
+    REQUIRE_API(fgetc)
     if (is_intercepted) {
       getc = (getc_t)dlsym(RTLD_NEXT, "getc");
     } else {
       getc = (getc_t)dlsym(RTLD_DEFAULT, "getc");
     }
+    REQUIRE_API(getc)
     if (is_intercepted) {
       getw = (getw_t)dlsym(RTLD_NEXT, "getw");
     } else {
       getw = (getw_t)dlsym(RTLD_DEFAULT, "getw");
     }
+    REQUIRE_API(getw)
     if (is_intercepted) {
       fgets = (fgets_t)dlsym(RTLD_NEXT, "fgets");
     } else {
       fgets = (fgets_t)dlsym(RTLD_DEFAULT, "fgets");
     }
+    REQUIRE_API(fgets)
     if (is_intercepted) {
       rewind = (rewind_t)dlsym(RTLD_NEXT, "rewind");
     } else {
       rewind = (rewind_t)dlsym(RTLD_DEFAULT, "rewind");
     }
+    REQUIRE_API(rewind)
     if (is_intercepted) {
       fseek = (fseek_t)dlsym(RTLD_NEXT, "fseek");
     } else {
       fseek = (fseek_t)dlsym(RTLD_DEFAULT, "fseek");
     }
+    REQUIRE_API(fseek)
     if (is_intercepted) {
       fseeko = (fseeko_t)dlsym(RTLD_NEXT, "fseeko");
     } else {
       fseeko = (fseeko_t)dlsym(RTLD_DEFAULT, "fseeko");
     }
+    REQUIRE_API(fseeko)
     if (is_intercepted) {
       fseeko64 = (fseeko64_t)dlsym(RTLD_NEXT, "fseeko64");
     } else {
       fseeko64 = (fseeko64_t)dlsym(RTLD_DEFAULT, "fseeko64");
     }
+    REQUIRE_API(fseeko64)
     if (is_intercepted) {
       fsetpos = (fsetpos_t)dlsym(RTLD_NEXT, "fsetpos");
     } else {
       fsetpos = (fsetpos_t)dlsym(RTLD_DEFAULT, "fsetpos");
     }
+    REQUIRE_API(fsetpos)
     if (is_intercepted) {
       fsetpos64 = (fsetpos64_t)dlsym(RTLD_NEXT, "fsetpos64");
     } else {
       fsetpos64 = (fsetpos64_t)dlsym(RTLD_DEFAULT, "fsetpos64");
     }
+    REQUIRE_API(fsetpos64)
     if (is_intercepted) {
       ftell = (ftell_t)dlsym(RTLD_NEXT, "ftell");
     } else {
       ftell = (ftell_t)dlsym(RTLD_DEFAULT, "ftell");
     }
+    REQUIRE_API(ftell)
   }
 };
 }  // namespace hermes::adapter::stdio
+
+#undef REQUIRE_API
 
 #endif  // HERMES_ADAPTER_STDIO_H
