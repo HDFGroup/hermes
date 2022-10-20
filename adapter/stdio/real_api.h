@@ -62,34 +62,34 @@ namespace hermes::adapter::stdio {
 
 class API {
  public:
-  int (*MPI_Init)(int * argc, char *** argv) = nullptr;
-  int (*MPI_Finalize)( void) = nullptr;
-  FILE * (*fopen)(const char * path, const char * mode) = nullptr;
-  FILE * (*fopen64)(const char * path, const char * mode) = nullptr;
-  FILE * (*fdopen)(int fd, const char * mode) = nullptr;
-  FILE * (*freopen)(const char * path, const char * mode, FILE * stream) = nullptr;
-  FILE * (*freopen64)(const char * path, const char * mode, FILE * stream) = nullptr;
-  int (*fflush)(FILE * fp) = nullptr;
-  int (*fclose)(FILE * fp) = nullptr;
-  size_t (*fwrite)(const void * ptr, size_t size, size_t nmemb, FILE * fp) = nullptr;
-  int (*fputc)(int c, FILE * fp) = nullptr;
-  int (*fgetpos)(FILE * fp, fpos_t * pos) = nullptr;
-  int (*fgetpos64)(FILE * fp, fpos64_t * pos) = nullptr;
-  int (*putc)(int c, FILE * fp) = nullptr;
-  int (*putw)(int w, FILE * fp) = nullptr;
-  int (*fputs)(const char * s, FILE * stream) = nullptr;
-  size_t (*fread)(void * ptr, size_t size, size_t nmemb, FILE * stream) = nullptr;
-  int (*fgetc)(FILE * stream) = nullptr;
-  int (*getc)(FILE * stream) = nullptr;
-  int (*getw)(FILE * stream) = nullptr;
-  char * (*fgets)(char * s, int size, FILE * stream) = nullptr;
-  void (*rewind)(FILE * stream) = nullptr;
-  int (*fseek)(FILE * stream, long offset, int whence) = nullptr;
-  int (*fseeko)(FILE * stream, off_t offset, int whence) = nullptr;
-  int (*fseeko64)(FILE * stream, off64_t offset, int whence) = nullptr;
-  int (*fsetpos)(FILE * stream, const fpos_t * pos) = nullptr;
-  int (*fsetpos64)(FILE * stream, const fpos64_t * pos) = nullptr;
-  long int (*ftell)(FILE * fp) = nullptr;
+  MPI_Init_t MPI_Init = nullptr;
+  MPI_Finalize_t MPI_Finalize = nullptr;
+  fopen_t fopen = nullptr;
+  fopen64_t fopen64 = nullptr;
+  fdopen_t fdopen = nullptr;
+  freopen_t freopen = nullptr;
+  freopen64_t freopen64 = nullptr;
+  fflush_t fflush = nullptr;
+  fclose_t fclose = nullptr;
+  fwrite_t fwrite = nullptr;
+  fputc_t fputc = nullptr;
+  fgetpos_t fgetpos = nullptr;
+  fgetpos64_t fgetpos64 = nullptr;
+  putc_t putc = nullptr;
+  putw_t putw = nullptr;
+  fputs_t fputs = nullptr;
+  fread_t fread = nullptr;
+  fgetc_t fgetc = nullptr;
+  getc_t getc = nullptr;
+  getw_t getw = nullptr;
+  fgets_t fgets = nullptr;
+  rewind_t rewind = nullptr;
+  fseek_t fseek = nullptr;
+  fseeko_t fseeko = nullptr;
+  fseeko64_t fseeko64 = nullptr;
+  fsetpos_t fsetpos = nullptr;
+  fsetpos64_t fsetpos64 = nullptr;
+  ftell_t ftell = nullptr;
 
   API() {
     void *is_intercepted = (void*)dlsym(RTLD_DEFAULT, "stdio_intercepted");

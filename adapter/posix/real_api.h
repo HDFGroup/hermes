@@ -39,11 +39,9 @@ typedef int (*creat64_t)(const char * path, mode_t mode);
 typedef ssize_t (*read_t)(int fd, void * buf, size_t count);
 typedef ssize_t (*write_t)(int fd, const void * buf, size_t count);
 typedef ssize_t (*pread_t)(int fd, void * buf, size_t count, off_t offset);
-typedef ssize_t (*pwrite_t)(int fd, const void * buf,
-                            size_t count, off_t offset);
+typedef ssize_t (*pwrite_t)(int fd, const void * buf, size_t count, off_t offset);
 typedef ssize_t (*pread64_t)(int fd, void * buf, size_t count, off64_t offset);
-typedef ssize_t (*pwrite64_t)(int fd, const void * buf,
-                              size_t count, off64_t offset);
+typedef ssize_t (*pwrite64_t)(int fd, const void * buf, size_t count, off64_t offset);
 typedef off_t (*lseek_t)(int fd, off_t offset, int whence);
 typedef off64_t (*lseek64_t)(int fd, off64_t offset, int whence);
 typedef int (*__fxstat_t)(int version, int fd, struct stat * buf);
@@ -55,43 +53,36 @@ namespace hermes::adapter::posix {
 
 class API {
  public:
-  int (*MPI_Init)(int * argc, char *** argv) = nullptr;
-  int (*MPI_Finalize)( void) = nullptr;
-  int (*open)(const char * path, int flags,  ...) = nullptr;
-  int (*open64)(const char * path, int flags,  ...) = nullptr;
-  int (*__open_2)(const char * path, int oflag) = nullptr;
-  int (*creat)(const char * path, mode_t mode) = nullptr;
-  int (*creat64)(const char * path, mode_t mode) = nullptr;
-  ssize_t (*read)(int fd, void * buf, size_t count) = nullptr;
-  ssize_t (*write)(int fd, const void * buf, size_t count) = nullptr;
-  ssize_t (*pread)(int fd, void * buf,
-                   size_t count, off_t offset) = nullptr;
-  ssize_t (*pwrite)(int fd, const void * buf,
-                    size_t count, off_t offset) = nullptr;
-  ssize_t (*pread64)(int fd, void * buf,
-                     size_t count, off64_t offset) = nullptr;
-  ssize_t (*pwrite64)(int fd, const void * buf,
-                      size_t count, off64_t offset) = nullptr;
-  off_t (*lseek)(int fd, off_t offset, int whence) = nullptr;
-  off64_t (*lseek64)(int fd, off64_t offset, int whence) = nullptr;
-  int (*__fxstat)(int version, int fd, struct stat * buf) = nullptr;
-  int (*fsync)(int fd) = nullptr;
-  int (*close)(int fd) = nullptr;
+  MPI_Init_t MPI_Init = nullptr;
+  MPI_Finalize_t MPI_Finalize = nullptr;
+  open_t open = nullptr;
+  open64_t open64 = nullptr;
+  __open_2_t __open_2 = nullptr;
+  creat_t creat = nullptr;
+  creat64_t creat64 = nullptr;
+  read_t read = nullptr;
+  write_t write = nullptr;
+  pread_t pread = nullptr;
+  pwrite_t pwrite = nullptr;
+  pread64_t pread64 = nullptr;
+  pwrite64_t pwrite64 = nullptr;
+  lseek_t lseek = nullptr;
+  lseek64_t lseek64 = nullptr;
+  __fxstat_t __fxstat = nullptr;
+  fsync_t fsync = nullptr;
+  close_t close = nullptr;
 
   API() {
-    void *is_intercepted = (void*)dlsym(RTLD_DEFAULT,
-                                         "posix_intercepted");
+    void *is_intercepted = (void*)dlsym(RTLD_DEFAULT, "posix_intercepted");
     if (is_intercepted) {
       MPI_Init = (MPI_Init_t)dlsym(RTLD_NEXT, "MPI_Init");
     } else {
       MPI_Init = (MPI_Init_t)dlsym(RTLD_DEFAULT, "MPI_Init");
     }
     if (is_intercepted) {
-      MPI_Finalize = (MPI_Finalize_t)dlsym(
-          RTLD_NEXT, "MPI_Finalize");
+      MPI_Finalize = (MPI_Finalize_t)dlsym(RTLD_NEXT, "MPI_Finalize");
     } else {
-      MPI_Finalize = (MPI_Finalize_t)dlsym(
-          RTLD_DEFAULT, "MPI_Finalize");
+      MPI_Finalize = (MPI_Finalize_t)dlsym(RTLD_DEFAULT, "MPI_Finalize");
     }
     if (is_intercepted) {
       open = (open_t)dlsym(RTLD_NEXT, "open");

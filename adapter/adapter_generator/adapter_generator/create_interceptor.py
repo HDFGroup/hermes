@@ -192,7 +192,7 @@ class ApiClass:
         self.h_lines.append(f"typedef {api.ret} (*{api.type})({api.get_args()});")
 
     def add_intercept_api(self, api):
-        self.h_lines.append(f"  {api.ret} (*{api.real_name})({api.get_args()}) = nullptr;")
+        self.h_lines.append(f"  {api.type} {api.real_name} = nullptr;")
 
     def init_api(self, api):
         self.h_lines.append(f"    if (is_intercepted) {{")
