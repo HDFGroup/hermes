@@ -164,3 +164,10 @@ if(HERMES_INSTALL_TESTS)
     )
   endforeach()
 endif()
+
+include_directories(${CMAKE_SOURCE_DIR}/adapter)
+add_executable(prefetch_test prefetch_test.cc)
+target_compile_definitions(prefetch_test
+        PRIVATE $<$<BOOL:${HERMES_RPC_THALLIUM}>:HERMES_RPC_THALLIUM>)
+add_dependencies(prefetch_test hermes)
+target_link_libraries(prefetch_test hermes MPI::MPI_CXX glog::glog)
