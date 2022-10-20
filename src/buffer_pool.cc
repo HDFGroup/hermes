@@ -1418,7 +1418,7 @@ SharedMemoryContext GetSharedMemoryContext(char *shmem_name) {
 
   if (shmem_fd >= 0) {
     struct stat shm_stat;
-    if (fstat(shmem_fd, &shm_stat) == 0) {
+    if (__fxstat(_STAT_VER, shmem_fd, &shm_stat) == 0) {
       u8 *shm_base = (u8 *)mmap(0, shm_stat.st_size, PROT_READ | PROT_WRITE,
                                 MAP_SHARED, shmem_fd, 0);
       close(shmem_fd);

@@ -34,14 +34,14 @@ void StdioFS::_InitFile(File &f) {
     return;
   }
   f.fd_ = fileno(f.fh_);
-  posix_api->fstat(f.fd_, &st);
+  posix_api->__fxstat(_STAT_VER, f.fd_, &st);
   f.st_dev = st.st_dev;
   f.st_ino = st.st_ino;
 }
 
 void StdioFS::_OpenInitStats(File &f, AdapterStat &stat) {
   struct stat st;
-  posix_api->fstat(f.fd_, &st);
+  posix_api->__fxstat(_STAT_VER, f.fd_, &st);
   stat.st_mode = st.st_mode;
   stat.st_uid = st.st_uid;
   stat.st_gid = st.st_gid;

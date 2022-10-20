@@ -510,7 +510,7 @@ H5FD__hermes_open(const char *name, unsigned flags, hid_t fapl_id,
         (unsigned)o_flags);
     }
 
-    if (fstat(fd, &sb) < 0) {
+    if (__fxstat(_STAT_VER, fd, &sb) < 0) {
       H5FD_HERMES_SYS_GOTO_ERROR(H5E_FILE, H5E_BADFILE, NULL,
                                  "unable to fstat file");
     }

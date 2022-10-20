@@ -522,7 +522,7 @@ void MpiioFS::_InitFile(File &f) {
   /*struct stat st;
   std::string filename = GetFilenameFromFP(&f.mpi_fh_);
   int fd = posix_api->open(filename.c_str(), O_RDONLY);
-  posix_api->fstat(fd, &st);
+  posix_api->__fxstat(_STAT_VER, fd, &st);
   f.st_dev = st.st_dev;
   f.st_ino = st.st_ino;
   posix_api->close(fd);*/
