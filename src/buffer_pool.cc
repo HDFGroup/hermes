@@ -1013,16 +1013,18 @@ void SplitRamBufferFreeList(SharedMemoryContext *context, int slab_index) {
   EndTicketMutex(&pool->ticket_mutex);
 }
 
-ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
-                         Arena *scratch_arena, i32 node_id, Config *config) {
-  ScopedTemporaryMemory scratch(scratch_arena);
+/**
+ * GetBufferSlabInfo
+ *
+ * @scratch temporary memory (avoids using new/malloc)
+ * @config the shared-memory hermes config
+ * @slab_buffer_sizes the size (bytes) of each buffer in a particular device
+ * @buffer_counts the number of slabs in a particular device
+ * */
 
-  i32 **buffer_counts = PushArray<i32*>(scratch, config->num_devices);
-  i32 **slab_buffer_sizes = PushArray<i32*>(scratch, config->num_devices);
-  i32 *header_counts = PushArray<i32>(scratch, config->num_devices);
-
-  size_t total_ram_bytes = 0;
-
+void GetBufferSlabInfo(ScopedTemporaryMemory &scratch, Config *config,
+                        i32 **slab_buffer_sizes, i32 **buffer_counts,
+                        size_t &total_ram_bytes) {
   for (int device = 0; device < config->num_devices; ++device) {
     slab_buffer_sizes[device] = PushArray<i32>(scratch,
                                                config->num_slabs[device]);
@@ -1030,17 +1032,31 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
 
     for (int slab = 0; slab < config->num_slabs[device]; ++slab) {
       slab_buffer_sizes[device][slab] = (config->block_sizes[device] *
-                                       config->slab_unit_sizes[device][slab]);
+                                         config->slab_unit_sizes[device][slab]);
       f32 slab_percentage = config->desired_slab_percentages[device][slab];
-      size_t bytes_for_slab = (size_t)((f32)config->capacities[device] *
+      f32 device_capacity = config->capacities[device];
+      size_t bytes_for_slab = (size_t)((f32)device_capacity *
                                        slab_percentage);
       buffer_counts[device][slab] = (bytes_for_slab /
-                                   slab_buffer_sizes[device][slab]);
+                                     slab_buffer_sizes[device][slab]);
       if (device == 0) {
         total_ram_bytes += bytes_for_slab;
       }
     }
   }
+}
+ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
+                         Arena *scratch_arena, i32 node_id, Config *config) {
+  ScopedTemporaryMemory scratch(scratch_arena);
+
+  i32 **buffer_counts = PushArray<i32*>(scratch, config->num_devices);
+  i32 **slab_buffer_sizes = PushArray<i32*>(scratch, config->num_devices);
+  i32 *header_counts = PushArray<i32>(scratch, config->num_devices);
+  size_t total_ram_bytes = 0;
+
+  // Determine the number and size of buffers
+  GetBufferSlabInfo(scratch, config, slab_buffer_sizes, buffer_counts,
+                    total_ram_bytes);
 
   // TODO(chogan): @configuration Assumes first Device is RAM
   // TODO(chogan): Allow splitting and merging for every Device
@@ -1048,7 +1064,6 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
   // NOTE(chogan): We need one header per RAM block to allow for splitting and
   //  merging
   header_counts[0] = total_ram_bytes / config->block_sizes[0];
-
   for (int device = 1; device < config->num_devices; ++device) {
     header_counts[device] = 0;
     for (int slab = 0; slab < config->num_slabs[device]; ++slab) {

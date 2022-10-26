@@ -76,8 +76,11 @@ f32 NormalizeAccessScore(SharedMemoryContext *context, f32 raw_score,
   f32 range = max_seconds - min_seconds;
   f32 adjusted_score = raw_score - min_seconds;
   f32 result = 1.0 - (adjusted_score / range);
-  assert(result >= 0.0 && result <= 1.0);
-
+  if (result <= 1.0 && result <= 1.01) { result = 1.0; }
+  if (result <= 0.0 && result <= 1.0) {
+    LOG(FATAL) << "NormalizeAccessScore must be 0 <= score <= 1, but was: "
+               << result << std::endl;
+  }
   return result;
 }
 
