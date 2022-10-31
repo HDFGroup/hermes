@@ -22,7 +22,7 @@ using hermes::DataStager;
 using hermes::DataStagerFactory;
 
 int main(int argc, char **argv) {
-  if (argc != 4) {
+  if (argc != 5) {
     std::cout << "Usage: mpirun -n [nprocs]" <<
         " ./stage_in [url] [offset] [size] [dpe]" << std::endl;
     exit(1);

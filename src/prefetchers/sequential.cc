@@ -43,6 +43,7 @@ void SequentialPrefetcher::Process(std::list<IoLogEntry> &log,
     if (avg_time == 0) {
       avg_time = prefetcher->max_wait_sec_ / 2.0;
     }
+    LOG(INFO) << "Avg time: " << avg_time << std::endl;
 
     // Read-ahead the next few blobs
     BlobID cur_id = entry.blob_id_;

@@ -78,8 +78,10 @@ float Prefetcher::EstimateBlobMovementTime(BlobID blob_id) {
 
   float xfer_time = 0;
   for (auto &info : buffer_info) {
-    xfer_time += static_cast<float>(info.size) /
-                 (MEGABYTES(1) * info.bandwidth_mbps);
+    xfer_time += static_cast<float>(info.size) / MEGABYTES(info.bandwidth_mbps);
+    /*LOG(INFO) << "size: " << info.size / MEGABYTES(1)
+              << " bw: " << info.bandwidth_mbps
+              << " current total: " << xfer_time << std::endl;*/
   }
   xfer_time *= 2;  // x2 because movement reads, and then writes data
   return xfer_time;
@@ -91,10 +93,23 @@ void Prefetcher::CalculateBlobScore(struct timespec &ts,
   decision.new_score_ = -1;
   decision.queue_later_ = false;
   for (auto &access_time_struct : decision.stats_) {
-    float next_access_sec = access_time_struct.GetRemainingTime(&ts);
+    // Wait until the I/O for this Get seems to have completed
+    float time_left_on_io = access_time_struct.TimeLeftOnIo(
+        est_xfer_time, &ts);
+    /*LOG(INFO) << "Blob id: " << decision.blob_id_.as_int
+              << " Time left before starting prefetch: "
+              << time_left_on_io << std::endl;*/
+    if (time_left_on_io > 0) {
+      decision.queue_later_ = true;
+      continue;
+    }
+    float next_access_sec = access_time_struct.TimeToNextIo(&ts);
+    LOG(INFO) << "Next access sec: " << next_access_sec << std::endl;
+    LOG(INFO) << "Est xfer time : " << est_xfer_time << std::endl;
     if (next_access_sec < est_xfer_time) continue;
     float max_access_wait = std::max(max_wait_xfer_*est_xfer_time,
                                     max_wait_sec_);
+    LOG(INFO) << "Max access wait: " << max_access_wait << std::endl;
     float est_wait = (next_access_sec - est_xfer_time);
     if (est_wait > max_access_wait) {
       decision.queue_later_ = true;
@@ -116,7 +131,7 @@ void Prefetcher::Process() {
   }
   log_.erase(log_.begin(), log_.end());
   lock_.unlock();
-  if (hint_logs.size() == 0) {
+  if (hint_logs.size() == 0 && queue_later_.size() == 0) {
     return;
   }
 
@@ -157,7 +172,7 @@ void Prefetcher::Process() {
               << " score: " << decision.new_score_ << std::endl;
     OrganizeBlob(&hermes_->context_, &hermes_->rpc_,
                  decision.bkt_id_, decision.blob_name_,
-                 epsilon_, decision.new_score_);
+                 epsilon_, 1.0);
   }
 }
 

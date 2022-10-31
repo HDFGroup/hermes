@@ -92,10 +92,10 @@ int main(int argc, char **argv) {
     std::string blob_name = p.CreateBlobName();
     size_t ret = bkt->Get(blob_name, blob);
     assert(VerifyBlob(blob, i, ret));
-    if (phase > 0 && ((i+1) % phase) == 0) {
+    if (phase > 0) {
       hermes::HighResMonotonicTimer t2;
       t2.Resume();
-      while(t2.GetMsecFromStart() < 100) {
+      while(t2.GetMsecFromStart() < phase) {
         ABT_thread_yield();
       }
     }

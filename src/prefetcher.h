@@ -84,7 +84,14 @@ struct PrefetchStat {
   explicit PrefetchStat(float est_next_time, struct timespec &start) :
       est_next_time_(est_next_time), start_(start) {}
 
-  float GetRemainingTime(const struct timespec *cur) {
+  float TimeLeftOnIo(float est_xfer_time, const struct timespec *cur) {
+    float diff = DiffTimespec(cur, &start_);
+    /*LOG(INFO) << "Time since I/O submitted: " << diff << std::endl;
+    LOG(INFO) << "Est I/O time: " << est_xfer_time << std::endl;*/
+    return est_xfer_time - diff;
+  }
+
+  float TimeToNextIo(const struct timespec *cur) {
     float diff = DiffTimespec(cur, &start_);
     return est_next_time_ - diff;
   }

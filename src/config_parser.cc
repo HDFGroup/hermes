@@ -376,10 +376,10 @@ void ParseConfigYAML(YAML::Node &yaml_conf, Config *config) {
                      reinterpret_cast<f32*>(config->desired_slab_percentages),
                      kMaxDevices, kMaxBufferPoolSlabs, config->num_slabs);
   }
-  if (yaml_conf["bandwidths_mbps"]) {
+  if (yaml_conf["bandwidth_mbps"]) {
     RequireNumDevices(config);
-    ParseArray<f32>(yaml_conf["bandwidths_mbps"],
-                    "bandwidths_mbps",
+    ParseArray<f32>(yaml_conf["bandwidth_mbps"],
+                    "bandwidth_mbps",
                     config->bandwidths, config->num_devices);
   }
   if (yaml_conf["latencies"]) {

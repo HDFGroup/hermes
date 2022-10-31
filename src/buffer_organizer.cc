@@ -178,7 +178,8 @@ void LocalEnqueueBoMove(SharedMemoryContext *context, RpcContext *rpc,
                         BoPriority priority) {
   ThreadPool *pool = &context->bo->pool;
   bool is_high_priority = priority == BoPriority::kHigh;
-  VLOG(1) << "BufferOrganizer queuing Blob " << blob_id.as_int;
+  // NOTE(llogan): VLOG(1) -> LOG(INFO)
+  LOG(INFO) << "BufferOrganizer queuing Blob " << blob_id.as_int;
   pool->run(std::bind(BoMove, context, rpc, moves, blob_id, bucket_id,
                       internal_blob_name),
             is_high_priority);
@@ -190,7 +191,8 @@ void LocalEnqueueBoMove(SharedMemoryContext *context, RpcContext *rpc,
 void BoMove(SharedMemoryContext *context, RpcContext *rpc,
             const BoMoveList &moves, BlobID blob_id, BucketID bucket_id,
             const std::string &internal_blob_name) {
-  VLOG(1) << "Moving blob "
+  // NOTE(llogan): VLOG(1) -> LOG(INFO)
+  LOG(INFO) << "Moving blob "
           << internal_blob_name.substr(kBucketIdStringSize, std::string::npos)
           << std::endl;
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
@@ -412,6 +414,20 @@ void LocalOrganizeBlob(SharedMemoryContext *context, RpcContext *rpc,
 
     if (std::abs(importance_score - new_access_score) < epsilon) {
       break;
+    }
+  }
+
+  for (auto &src_dest_pair : src_dest) {
+    auto &src = src_dest_pair.first;
+    for (auto &dst : src_dest_pair.second) {
+      LOG(INFO) << "Moving "
+                << LocalGetBufferInfo(context, src).size / MEGABYTES(1) << " mb "
+                << " of " << blob_id.as_int << ""
+                << " from "
+                << LocalGetBufferInfo(context, src).bandwidth_mbps
+                << " into "
+                << LocalGetBufferInfo(context, dst).bandwidth_mbps
+                << std::endl;
     }
   }
   EnqueueBoMove(rpc, src_dest, blob_id, bucket_id, internal_blob_name,
