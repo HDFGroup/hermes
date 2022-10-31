@@ -8,7 +8,7 @@ num_targets: 2
 
 # The maximum buffering capacity in MiB of each device. Here we say that all 4
 # devices get 50 MiB of buffering capacity.
-capacities_mb: [50, 10000]
+capacities_mb: [1000, 10000]
 
 # The size of the smallest available buffer in KiB. In general this should be
 # the page size of your system for byte addressable storage, and the block size
@@ -23,7 +23,7 @@ num_slabs: [4, 4]
 # device should contain for each slab (controlled by num_slabs). This allows for
 # precise control of the distibution of buffer sizes.
 slab_unit_sizes: [
-  [1, 4, 16, 32],
+  [1, 256],
   [256]
 ]
 
@@ -31,7 +31,7 @@ slab_unit_sizes: [
 # Each row should add up to 1. In this example, we have 2 devices, each with 4
 # slabs, and each slab is allotted 25% of the device's total buffering capacity.
 desired_slab_percentages: [
-  [0.25, 0.25, 0.25, 0.25],
+  [0.5, 0.5, 0.0, 0.0],
   [1.0, 0.0, 0.0, 0.0]
 ]
 
@@ -43,11 +43,11 @@ latencies_us: [10, 100]
 
 # Hermes memory management. The following 4 values should add up to 1.
 # The percentage of Hermes memory to reserve for RAM buffers.
-buffer_pool_arena_percentage: 0.85
+buffer_pool_arena_percentage: 0.6
 # The percentage of Hermes memory to reserve for metadata.
-metadata_arena_percentage: 0.04
+metadata_arena_percentage: 0.2
 # The percentage of Hermes memory to reserve for short term storage.
-transient_arena_percentage: 0.11
+transient_arena_percentage: 0.2
 
 # The maxiumum number of buckets that can be created.
 max_buckets_per_node: 16

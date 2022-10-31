@@ -63,7 +63,7 @@ void Prefetcher::Log(IoLogEntry &entry) {
 }
 
 float Prefetcher::EstimateBlobMovementTime(BlobID blob_id) {
-  Arena arena = InitArenaAndAllocate(8192);
+  Arena arena = InitArenaAndAllocate(MEGABYTES(1));
   u32 *buffer_sizes = 0;
   BufferIdArray id_array = GetBufferIdsFromBlobId(&arena,
                                                   &hermes_->context_,
@@ -147,6 +147,9 @@ void Prefetcher::Process() {
       if (decision.queue_later_) {
         queue_later_.emplace(blob_id, decision);
       }
+      /*LOG(INFO) << "Not prefetching bkt_id: " << decision.bkt_id_.as_int
+                << " blob_id: " << decision.blob_name_
+                << " score: " << decision.new_score_ << std::endl;*/
       continue;
     }
     LOG(INFO) << "Prefetching bkt_id: " << decision.bkt_id_.as_int
