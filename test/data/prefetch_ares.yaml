@@ -2,9 +2,9 @@
 
 # The number of buffering tiers available. For example, RAM, NVMe, burst
 # buffer, and parallel file system would be 4 tiers.
-num_devices: 2
+num_devices: 4
 # For now this should be the same as num_devices.
-num_targets: 2
+num_targets: 4
 
 # The maximum buffering capacity in MiB of each device. Here we say that all 4
 # devices get 50 MiB of buffering capacity.
