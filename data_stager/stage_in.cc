@@ -37,7 +37,7 @@ int main(int argc, char **argv) {
   std::stringstream(argv[3]) >> size;
   PlacementPolicy dpe = PlacementPolicyConv::to_enum(argv[4]);
   auto stager = DataStagerFactory::Get(url);
-  stager->StageIn(url, dpe);
+  stager->StageIn(url, off, size, dpe);
   mdm->FinalizeHermes();
   MPI_Finalize();
 }

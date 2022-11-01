@@ -63,7 +63,7 @@ void UnixStager::FileStageIn(std::string path,
   bool stat_exists;
   IoStatus io_status;
   File f = fs_api.Open(stat, path);
-  fs_api.Read(f, stat, buf.data(), off, size,
+  fs_api.Read(f, stat_exists, buf.data(), off, size,
               io_status, IoOptions::WithParallelDpe(dpe));
   fs_api.Close(f, stat_exists, false);
 }
