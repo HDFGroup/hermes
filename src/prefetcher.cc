@@ -106,7 +106,7 @@ void Prefetcher::CalculateBlobScore(struct timespec &ts,
     float next_access_sec = access_time_struct.TimeToNextIo(&ts);
     LOG(INFO) << "Next access sec: " << next_access_sec << std::endl;
     LOG(INFO) << "Est xfer time : " << est_xfer_time << std::endl;
-    if (next_access_sec < est_xfer_time) continue;
+    // if (next_access_sec < est_xfer_time) continue;
     float max_access_wait = std::max(max_wait_xfer_*est_xfer_time,
                                     max_wait_sec_);
     LOG(INFO) << "Max access wait: " << max_access_wait << std::endl;
