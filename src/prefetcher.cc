@@ -94,15 +94,15 @@ void Prefetcher::CalculateBlobScore(struct timespec &ts,
   decision.queue_later_ = false;
   for (auto &access_time_struct : decision.stats_) {
     // Wait until the I/O for this Get seems to have completed
-    float time_left_on_io = access_time_struct.TimeLeftOnIo(
+    /*float time_left_on_io = access_time_struct.TimeLeftOnIo(
         est_xfer_time, &ts);
-    /*LOG(INFO) << "Blob id: " << decision.blob_id_.as_int
+    LOG(INFO) << "Blob id: " << decision.blob_id_.as_int
               << " Time left before starting prefetch: "
-              << time_left_on_io << std::endl;*/
+              << time_left_on_io << std::endl;
     if (time_left_on_io > 0) {
       decision.queue_later_ = true;
       continue;
-    }
+    }*/
     float next_access_sec = access_time_struct.TimeToNextIo(&ts);
     LOG(INFO) << "Next access sec: " << next_access_sec << std::endl;
     LOG(INFO) << "Est xfer time : " << est_xfer_time << std::endl;
