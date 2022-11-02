@@ -29,8 +29,6 @@ Trait::Trait(TraitID id, const std::vector<TraitID> &conflict_traits,
       onLinkFn(nullptr),
       onUnlinkFn(nullptr) {}
 
-using OffsetMap = std::unordered_map<std::string, u64>;
-
 PersistTrait::PersistTrait(const std::string &filename,
                            const OffsetMap &offset_map,
                            bool synchronous)

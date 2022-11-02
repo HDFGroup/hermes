@@ -22,10 +22,10 @@
 #include <utility>
 #include <vector>
 
-#include "hermes_types.h"
-#include "hermes_status.h"
-#include "memory_management.h"
 #include "communication.h"
+#include "hermes_status.h"
+#include "hermes_types.h"
+#include "memory_management.h"
 
 /** @file buffer_pool.h
  *
@@ -51,8 +51,8 @@ struct Device {
   f32 bandwidth_mbps;
   /** The device's theoretical latency in nanoseconds. */
   f32 latency_ns;
-  /** The Device's identifier. This is an index into the array of Devices stored in
-   * the BufferPool.
+  /** The Device's identifier. This is an index into the array of Devices stored
+   * in the BufferPool.
    */
   DeviceID id;
   /** True if the Device is a RAM Device (or other byte addressable, local or
@@ -69,14 +69,17 @@ struct Device {
   char mount_point[kMaxPathLength];
 };
 
+/**
+ A structure to represent target
+*/
 struct Target {
-  TargetID id;
+  TargetID id; /**< ID of target */
   /** The total capacity of the Target. */
   u64 capacity;
-  std::atomic<u64> remaining_space;
-  std::atomic<u64> speed;
-  ChunkedIdList effective_blobs;
-  TicketMutex effective_blobs_lock;
+  std::atomic<u64> remaining_space; /**< remaining space */
+  std::atomic<u64> speed;           /**< speed */
+  ChunkedIdList effective_blobs;    /**< ID list of BLOBs */
+  TicketMutex effective_blobs_lock; /**< ticket lock for BLOBs */
 };
 
 /**
@@ -84,10 +87,11 @@ struct Target {
  *
  * This number is unique for each buffer when read as a 64 bit integer. The top
  * 32 bits signify the node that "owns" the buffer, and the bottom 32 bits form
- * in index into the array of BufferHeaders in the BufferPool on that node. Node
+ * an index into the array of BufferHeaders in the BufferPool on that node. Node
  * indexing begins at 1 so that a BufferID of 0 represents the NULL BufferID.
  */
 union BufferID {
+  /** A structure to represent 64 bits with 32-bit header index and node id */
   struct {
     /** An index into the BufferHeaders array in the BufferPool on node
      * `node_id`.
@@ -103,7 +107,11 @@ union BufferID {
   u64 as_int;
 };
 
+/**
+ A structure to represent hash from buffer ID
+*/
 struct BufferIdHash {
+  /** return unsigned 64-bit integer hash value from buffer ID. */
   size_t operator()(const BufferID &id) const {
     return std::hash<u64>()(id.as_int);
   }
@@ -111,9 +119,12 @@ struct BufferIdHash {
 
 bool operator==(const BufferID &lhs, const BufferID &rhs);
 
+/**
+ A structure to represent shared memory client information
+*/
 struct ShmemClientInfo {
-  ptrdiff_t mdm_offset;
-  ptrdiff_t bpm_offset;
+  ptrdiff_t mdm_offset; /**< metadata manager offset */
+  ptrdiff_t bpm_offset; /**< buffer pool manager offset */
 };
 
 /**
@@ -182,6 +193,7 @@ struct BufferPool {
   /** The offset from the base of shared memory where the Device array begins.
    */
   ptrdiff_t devices_offset;
+  /** The offset from the targets */
   ptrdiff_t targets_offset;
   /** The offset from the base of shared memory where each Device's free list is
    * stored. Converting the offset to a pointer results in a pointer to an array
@@ -207,10 +219,11 @@ struct BufferPool {
    */
   ptrdiff_t buffers_available_offsets[kMaxDevices];
   /** A ticket lock to syncrhonize access to free lists
-   * TODO(chogan): @optimization One mutex per free list.
+   * \todo (chogan): optimization - One mutex per free list.
    */
   TicketMutex ticket_mutex;
 
+  /** capacity adjustment for each device */
   std::atomic<i64> capacity_adjustments[kMaxDevices];
 
   /** The block size for each Device. */
@@ -221,10 +234,13 @@ struct BufferPool {
   u32 num_headers[kMaxDevices];
   /** The total number of Devices. */
   i32 num_devices;
+  /** total number of targets */
   i32 num_targets;
   /** The total number of BufferHeaders in the header array. */
   u32 total_headers;
+  /** minimum device bandwidth in Megabits per second */
   f32 min_device_bw_mbps;
+  /** maximum device bandwidth in Megabits per second */
   f32 max_device_bw_mbps;
 };
 
@@ -251,6 +267,9 @@ struct BufferPool {
 
 struct BufferOrganizer;
 
+/**
+ A structure to represent shared memory context
+*/
 struct SharedMemoryContext {
   /** A pointer to the beginning of shared memory. */
   u8 *shm_base;
@@ -264,8 +283,11 @@ struct SharedMemoryContext {
   BufferOrganizer *bo;
 
   // File buffering context
+  /** vector of buffering file names */
   std::vector<std::vector<std::string>> buffering_filenames;
+  /** 2D array of open files for each device and buffer pool slab */
   int open_files[kMaxDevices][kMaxBufferPoolSlabs];
+  /** pointer to swap file */
   FILE *swap_file;
 };
 
@@ -283,6 +305,8 @@ size_t GetBlobSize(SharedMemoryContext *context, RpcContext *rpc,
 size_t GetBlobSizeById(SharedMemoryContext *context, RpcContext *rpc,
                        Arena *arena, BlobID blob_id);
 
+f32 GetBlobImportanceScore(SharedMemoryContext *context, RpcContext *rpc,
+                           BlobID blob_id);
 /**
  * Constructs a unique (among users) shared memory name from a base name.
  *
@@ -296,7 +320,7 @@ size_t GetBlobSizeById(SharedMemoryContext *context, RpcContext *rpc,
 void MakeFullShmemName(char *dest, const char *base);
 
 /**
- * TODO
+ * \todo
  * Creates and opens all files that will be used for buffering. Stores open FILE
  * pointers in the @p context. The file buffering paradaigm uses one file per
  * slab for each Device. If `posix_fallocate` is available, and `make_space` is
@@ -305,10 +329,7 @@ void MakeFullShmemName(char *dest, const char *base);
  *
  * @param context The SharedMemoryContext in which to store the opened FILE
  * pointers.
- * @param make_space If true, attempts to reserve space on the * filesystem for
- * each file.
- * @param node_id The node id, used for shared devices.
- * @param first_on_node True if this rank is sequentially the first on the node
+ * @param comm context for communication
  */
 void InitFilesForBuffering(SharedMemoryContext *context,
                            CommunicationContext &comm);
@@ -349,8 +370,8 @@ void UnmapSharedMemory(SharedMemoryContext *context);
  *
  * If a request cannot be fulfilled, an empty list is returned. GetBuffers will
  * never partially satisfy a request. It is all or nothing. If @p schema
- * includes a remote Device, this function will make an RPC call to get BufferIDs
- * from a remote node.
+ * includes a remote Device, this function will make an RPC call to get
+ * BufferIDs from a remote node.
  *
  * @param context The shared memory context for the BufferPool.
  * @param schema A description of the amount and Device of storage requested.
@@ -374,9 +395,11 @@ void ReleaseBuffers(SharedMemoryContext *context, RpcContext *rpc,
  * Starts an RPC server that will listen for remote requests directed to the
  * BufferPool.
  *
- * @param context The shared memory context where the BufferPool lives.
- * @param addr The address and port where the RPC server will listen.
+ * @param context The shared memory context where the BufferPool lives
+ * @param addr The address and port where the RPC server will listen
  * This address must be a compatible with whatever the RPC implementation is.
+ * @param num_rpc_threads number of RPC threads
+ *
  */
 void StartBufferPoolRpcServer(SharedMemoryContext *context, const char *addr,
                               i32 num_rpc_threads);
@@ -390,6 +413,7 @@ void StartBufferPoolRpcServer(SharedMemoryContext *context, const char *addr,
  * @param shmem_name The name of the shared memory.
  * @param trans_arena The instance's transient arena.
  * @param is_application_core Whether or not this rank is an app rank.
+ * @param force_rpc_shutdown Force RPC shutdown when it is true.
  */
 void Finalize(SharedMemoryContext *context, CommunicationContext *comm,
               RpcContext *rpc, const char *shmem_name, Arena *trans_arena,
@@ -407,16 +431,23 @@ struct Blob {
   u64 size;
 };
 
-// NOTE(chogan): When adding members to this struct, it is important to also add
-// an entry to the SwapBlobMembers enum below.
+/**
+ A structure to represent swap BLOB
+
+ \note (chogan): When adding members to this struct, it is important to also add
+ an entry to the SwapBlobMembers enum below.
+*/
 struct SwapBlob {
-  u32 node_id;
-  u64 offset;
-  u64 size;
-  BucketID bucket_id;
+  u32 node_id;        /**< node ID */
+  u64 offset;         /**< offset of swap BLOB */
+  u64 size;           /**< size of swap BLOB */
+  BucketID bucket_id; /**< Bucket ID */
 };
 
-// TODO(chogan): @metaprogramming Generate this
+/**
+ An enum to represent swap BLOB members
+ \todo (chogan): metaprogramming - Generate this
+*/
 enum SwapBlobMembers {
   SwapBlobMembers_NodeId,
   SwapBlobMembers_Offset,
@@ -433,9 +464,10 @@ enum SwapBlobMembers {
  * call whether it is writing locally, remotely, to RAM (or a byte addressable
  * Device) or to a file (block addressable Device).
  *
- * @param context The shared memory context needed to access BufferPool info.
- * @param blob The data to write.
- * @param buffer_ids The collection of BufferIDs that should buffer the blob.
+ * @param context The shared memory context needed to access BufferPool info
+ * @param rpc The Hermes instance's RPC context
+ * @param blob The data to write
+ * @param buffer_ids The collection of BufferIDs that should buffer the blob
  */
 void WriteBlobToBuffers(SharedMemoryContext *context, RpcContext *rpc,
                         const Blob &blob,
@@ -475,25 +507,29 @@ size_t LocalReadBufferById(SharedMemoryContext *context, BufferID id,
 SwapBlob PutToSwap(SharedMemoryContext *context, RpcContext *rpc,
                    const std::string &name, BucketID bucket_id, const u8 *data,
                    size_t size);
-
-template<typename T>
+/**
+ A template function to put BLOBs into swap
+*/
+template <typename T>
 std::vector<SwapBlob> PutToSwap(SharedMemoryContext *context, RpcContext *rpc,
-                                BucketID id,
-                                std::vector<std::vector<T>> &blobs,
+                                BucketID id, std::vector<std::vector<T>> &blobs,
                                 std::vector<std::string> &names) {
   size_t num_blobs = blobs.size();
   std::vector<SwapBlob> result(num_blobs);
 
   for (size_t i = 0; i < num_blobs; ++i) {
-    SwapBlob swap_blob = PutToSwap(context, rpc, names[i], id,
-                                   (const u8*)blobs[i].data(),
-                                   blobs[i].size() * sizeof(T));
+    SwapBlob swap_blob =
+        PutToSwap(context, rpc, names[i], id, (const u8 *)blobs[i].data(),
+                  blobs[i].size() * sizeof(T));
     result.push_back(swap_blob);
   }
 
   return result;
 }
 
+/**
+  write BLOB to swap.
+*/
 SwapBlob WriteToSwap(SharedMemoryContext *context, Blob blob, BlobID blob_id,
                      BucketID bucket_id);
 size_t ReadFromSwap(SharedMemoryContext *context, Blob blob,

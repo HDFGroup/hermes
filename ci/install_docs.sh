@@ -1,8 +1,8 @@
 #!/bin/bash
 
-set -x
-set -e
-set -o pipefail
+# set -x
+# set -e
+# set -o pipefail
 
 mkdir build
 pushd build
@@ -33,8 +33,10 @@ cmake                                                      \
     -DHERMES_ENABLE_VFD=ON                                 \
     -DBUILD_TESTING=ON                                     \
     ..
-make dox
-# cmake --build . -- -j4
-# ctest -VV
-
+make dox >& out.txt
+# cat out.txt | grep warning | grep -v "ignoring unsupported tag"
 popd
+rec="$( grep warning build/out.txt | grep -v "ignoring unsupported tag" |  wc -l )"
+echo $rec
+exit $rec
+

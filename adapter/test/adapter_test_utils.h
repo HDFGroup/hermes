@@ -40,9 +40,9 @@ size_t GetRandomOffset(size_t i, unsigned int offset_seed, size_t stride,
 std::string GenRandom(const int len) {
   std::string tmp_s;
   static const char alphanum[] =
-    "0123456789"
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    "abcdefghijklmnopqrstuvwxyz";
+      "0123456789"
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+      "abcdefghijklmnopqrstuvwxyz";
 
   srand(100);
 

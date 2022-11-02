@@ -14,12 +14,12 @@
 #define HERMES_ADAPTER_ENUMERATIONS_H
 enum class AdapterMode {
   kDefault = 0, /**< All/given files are stored on file close or flush. */
-  kBypass = 1, /**< All/given files are not buffered. */
-  kScratch = 2 /**< All/given files are ignored on file close or flush. */
+  kBypass = 1,  /**< All/given files are not buffered. */
+  kScratch = 2  /**< All/given files are ignored on file close or flush. */
 };
 
 enum class FlushingMode {
-  kSynchronous, /**< Flush persistent Blobs synchronously on fclose. */
+  kSynchronous,  /**< Flush persistent Blobs synchronously on fclose. */
   kAsynchronous, /**< Flush persistent Blobs asynchronously on fwrite. */
 };
 

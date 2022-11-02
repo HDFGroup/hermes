@@ -20,4 +20,3 @@ stdfs::path WeaklyCanonical(const stdfs::path& p);
 stdfs::path WeaklyCanonical(const stdfs::path& p, std::error_code& ec);
 
 }  // namespace hermes::adapter
-

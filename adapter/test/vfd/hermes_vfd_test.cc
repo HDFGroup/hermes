@@ -32,39 +32,45 @@ using hermes::u32;
 
 namespace hermes::adapter::vfd::test {
 
+/**
+   A structure to represent test arguments
+*/
 struct Arguments {
-  std::string filename = "test";
-  std::string directory = "/tmp";
-  size_t request_size = 65536;
+  std::string filename = "test";  /**< test file name */
+  std::string directory = "/tmp"; /**< test directory name */
+  size_t request_size = 65536;    /**< test request size */
 };
 
+/**
+   A structure to represent test information
+*/
 struct TestInfo {
-  static const int element_size = sizeof(f32);
+  static const int element_size = sizeof(f32); /**< test element size */
 
-  int rank = 0;
-  int comm_size = 1;
-  std::vector<f32> write_data;
-  std::vector<f32> read_data;
-  std::string new_file;
-  std::string existing_file;
-  std::string new_file_cmp;
-  std::string existing_file_cmp;
-  std::string hdf5_extension = ".h5";
-  size_t num_iterations = 64;
-  int offset_seed = 1;
-  unsigned int rs_seed = 1;
-  unsigned int temporal_interval_seed = 5;
-  size_t total_size;
-  size_t stride_size = 512;
-  unsigned int temporal_interval_ms = 1;
-  size_t small_min = 1;
-  size_t small_max = KILOBYTES(4);
-  size_t medium_min = KILOBYTES(4) + 1;
-  size_t medium_max = KILOBYTES(256);
-  size_t large_min = KILOBYTES(256) + 1;
-  size_t large_max = MEGABYTES(3);
-  size_t nelems_per_dataset;
-  bool scratch_mode = false;
+  // int rank = 0;
+  int comm_size = 1;            /**< communicator size */
+  std::vector<f32> write_data;  /**< test data for writing */
+  std::vector<f32> read_data;   /**< test data for reading */
+  std::string new_file;         /**< new file name */
+  std::string existing_file;    /**< existing file name */
+  std::string new_file_cmp;     /**< new file name to compare */
+  std::string existing_file_cmp; /**< existing file name to compare */
+  std::string hdf5_extension = ".h5"; /**< HDF5 file extention to use */
+  size_t num_iterations = 64;         /**< number of iterations */
+  // int offset_seed = 1;
+  // unsigned int rs_seed = 1;
+  // unsigned int temporal_interval_seed = 5;
+  size_t total_size;                     /**< total size */
+  // size_t stride_size = 512;
+  unsigned int temporal_interval_ms = 1; /**< interval in milliseconds */
+  // size_t small_min = 1;
+  // size_t small_max = KILOBYTES(4);
+  // size_t medium_min = KILOBYTES(4) + 1;
+  // size_t medium_max = KILOBYTES(256);
+  // size_t large_min = KILOBYTES(256) + 1;
+  // size_t large_max = MEGABYTES(3);
+  size_t nelems_per_dataset;    /**< number of elements per dataset */
+  bool scratch_mode = false;    /**< flag for scratch mode */
 };
 
 /**
@@ -74,8 +80,8 @@ struct TestInfo {
  * want to clutter the output with HDF5 error messages.
  */
 class MuteHdf5Errors {
-  H5E_auto2_t old_func;
-  void *old_client_data;
+  H5E_auto2_t old_func;         /**<  error handler callback function */
+  void *old_client_data;        /**<  pointer to client data for old_func */
 
  public:
   MuteHdf5Errors() {
@@ -96,9 +102,9 @@ class MuteHdf5Errors {
  * HDF5 identifiers required for reads and writes.
  */
 struct RwIds {
-  hid_t dset_id;
-  hid_t dspace_id;
-  hid_t mspace_id;
+  hid_t dset_id;                /**< dataset ID */
+  hid_t dspace_id;              /**< data space ID */
+  hid_t mspace_id;              /**< memory space ID */
 };
 
 /**
@@ -211,7 +217,9 @@ struct Hdf5Api {
 
     RwCleanup(&ids);
   }
-
+  /**
+    Create a 1-dimensional dataset using \a data vector.
+  */
   void MakeDataset(hid_t hid, const std::string &dset_name,
                    const std::vector<f32> &data, bool compact = false) {
     MakeDataset(hid, dset_name, data.data(), data.size(), compact);
@@ -270,7 +278,9 @@ struct Hdf5Api {
 
     RwCleanup(&ids);
   }
-
+  /**
+    Close HDF5 file.
+  */
   herr_t Close(hid_t id) {
     herr_t result = H5Fclose(id);
 
@@ -488,10 +498,12 @@ using hermes::adapter::vfd::test::Hdf5Api;
  */
 namespace test {
 
-hid_t hermes_hid;
-hid_t sec2_hid;
-herr_t hermes_herr;
-
+hid_t hermes_hid;               /**< Hermes handle ID */
+hid_t sec2_hid;                 /**< POSIX driver handle ID */
+herr_t hermes_herr;             /**< Hermes error return value */
+/**
+   Test creating and opening a new file.
+*/
 void TestOpen(const std::string &path, unsigned flags, bool create = false) {
   Hdf5Api api;
 
@@ -515,7 +527,9 @@ void TestOpen(const std::string &path, unsigned flags, bool create = false) {
 
   REQUIRE(is_same);
 }
-
+/**
+   Test Close() calls.
+*/    
 void TestClose() {
   Hdf5Api api;
   hermes_herr = api.Close(hermes_hid);
@@ -523,6 +537,9 @@ void TestClose() {
   REQUIRE(status == hermes_herr);
 }
 
+/**
+   Test writing partial 1-D dataset.
+*/
 void TestWritePartial1d(const std::string &dset_name, const f32 *data,
                         hsize_t offset, hsize_t nelems) {
   Hdf5Api api;
@@ -530,6 +547,9 @@ void TestWritePartial1d(const std::string &dset_name, const f32 *data,
   api.WritePartial1d(test::sec2_hid, dset_name, data, offset, nelems);
 }
 
+/**
+   Test making dataset.
+*/  
 void TestWriteDataset(const std::string &dset_name,
                       const std::vector<f32> &data) {
   Hdf5Api api;
@@ -537,6 +557,10 @@ void TestWriteDataset(const std::string &dset_name,
   api.MakeDataset(test::sec2_hid, dset_name, data);
 }
 
+
+/**
+   Test making compact dataset.
+*/
 void TestMakeCompactDataset(const std::string &dset_name,
                             const std::vector<f32> &data) {
   Hdf5Api api;
@@ -544,6 +568,9 @@ void TestMakeCompactDataset(const std::string &dset_name,
   api.MakeDataset(test::sec2_hid, dset_name, data, true);
 }
 
+/**
+   Test reading dataset.
+*/  
 void TestRead(const std::string &dset_name, std::vector<f32> &buf,
               hsize_t offset, hsize_t nelems) {
   Hdf5Api api;

@@ -15,8 +15,8 @@
 #include <experimental/filesystem>
 #include <iostream>
 
-#include "catch_config.h"
 #include "adapter_test_utils.h"
+#include "catch_config.h"
 #if HERMES_INTERCEPT == 1
 #include "filesystem/filesystem.h"
 #endif
@@ -98,12 +98,9 @@ int pretest() {
       fullpath.string() + "_shared_new_cmp_" + std::to_string(info.comm_size);
   info.shared_existing_file_cmp =
       fullpath.string() + "_shared_ext_cmp_" + std::to_string(info.comm_size);
-  if (stdfs::exists(info.new_file))
-    stdfs::remove(info.new_file);
-  if (stdfs::exists(info.new_file_cmp))
-    stdfs::remove(info.new_file_cmp);
-  if (stdfs::exists(info.existing_file))
-    stdfs::remove(info.existing_file);
+  if (stdfs::exists(info.new_file)) stdfs::remove(info.new_file);
+  if (stdfs::exists(info.new_file_cmp)) stdfs::remove(info.new_file_cmp);
+  if (stdfs::exists(info.existing_file)) stdfs::remove(info.existing_file);
   if (stdfs::exists(info.existing_file_cmp))
     stdfs::remove(info.existing_file_cmp);
   if (!stdfs::exists(info.existing_file)) {
@@ -227,12 +224,9 @@ int posttest(bool compare_data = true) {
     }
   }
   /* Clean up. */
-  if (stdfs::exists(info.new_file))
-    stdfs::remove(info.new_file);
-  if (stdfs::exists(info.existing_file))
-    stdfs::remove(info.existing_file);
-  if (stdfs::exists(info.new_file_cmp))
-    stdfs::remove(info.new_file_cmp);
+  if (stdfs::exists(info.new_file)) stdfs::remove(info.new_file);
+  if (stdfs::exists(info.existing_file)) stdfs::remove(info.existing_file);
+  if (stdfs::exists(info.new_file_cmp)) stdfs::remove(info.new_file_cmp);
   if (stdfs::exists(info.existing_file_cmp))
     stdfs::remove(info.existing_file_cmp);
 

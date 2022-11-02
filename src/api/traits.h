@@ -15,8 +15,8 @@
 
 #include <unordered_map>
 
-#include "hermes_types.h"
 #include "hermes.h"
+#include "hermes_types.h"
 
 namespace hermes {
 namespace api {
@@ -44,7 +44,7 @@ typedef std::function<void(HermesPtr, TraitInput &, Trait *)> OnLinkCallback;
 /** Callback for trait->vbucket attach events */
 typedef std::function<void(HermesPtr, VBucketID, Trait *)> OnAttachCallback;
 
-/** \brief Base class for Trait%s, which can attach functionality to VBucket%s.
+/** \brief Base class for Traits, which can attach functionality to VBuckets.
  *
  * To add functionality to a VBucket, inherit from this class and implement the
  * various callbacks.
@@ -52,7 +52,7 @@ typedef std::function<void(HermesPtr, VBucketID, Trait *)> OnAttachCallback;
 struct Trait {
   /** The trait's ID */
   TraitID id;
-  /** IDs of Trait%s whose functionality conflict with this Trait. */
+  /** IDs of Traits whose functionality conflict with this Trait. */
   std::vector<TraitID> conflict_traits;
   /** The trait's type. */
   TraitType type;
@@ -82,27 +82,30 @@ struct Trait {
         TraitType type);
 };
 
-/** \brief Engable persisting a <tt>VBucket</tt>'s linked Blob%s to permanent
+/** \brief Engable persisting a <tt>VBucket</tt>'s linked Blobs to permanent
  * storage.
  *
  */
 struct PersistTrait : public Trait {
-  /** The name of the file to flush the Blob%s to. */
+  /** The name of the file to flush the Blobs to. */
   std::string filename;
   /** Maps Blob names to offsets within a file. */
   std::unordered_map<std::string, u64> offset_map;
   /** \bool{flushing data should block until finished} */
   bool synchronous;
 
-  /** */
+  /** offset map */
+  using OffsetMap = std::unordered_map<std::string, u64>;
+
+  /** Constructor */
   explicit PersistTrait(bool synchronous);
-  /** */
+
+  /** Constructor with file name and offset map */
   explicit PersistTrait(const std::string &filename,
-                        const std::unordered_map<std::string, u64> &offset_map,
-                        bool synchronous = false);
+                        const OffsetMap &offset_map, bool synchronous = false);
 
   /**
-   *
+   * a binding function to run on attchment event
    */
   void onAttach(HermesPtr hermes, VBucketID id, Trait *trait);
 
@@ -110,7 +113,7 @@ struct PersistTrait : public Trait {
   void onDetach(HermesPtr hermes, VBucketID id, Trait *trait);
 
   /**
-   *
+   * a binding function to run on link event
    */
   void onLink(HermesPtr hermes, TraitInput &input, Trait *trait);
 
@@ -118,9 +121,9 @@ struct PersistTrait : public Trait {
   void onUnlink(HermesPtr hermes, TraitInput &input, Trait *trait);
 };
 
-/** \brief Marks the Blob%s in a VBucket as write-only.
+/** \brief Marks the Blobs in a VBucket as write-only.
  *
- * If we know that certain Blob%s are write-only, we can asynchronously and
+ * If we know that certain Blobs are write-only, we can asynchronously and
  * eagerly flush buffered data to the final destination.
  *
  */
@@ -135,7 +138,7 @@ struct WriteOnlyTrait : public Trait {
   void onDetach(HermesPtr hermes, VBucketID id, Trait *trait);
 
   /**
-   *
+   * a binding function to run on link event
    */
   void onLink(HermesPtr hermes, TraitInput &input, Trait *trait);
 

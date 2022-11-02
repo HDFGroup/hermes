@@ -18,12 +18,12 @@
 #include <atomic>
 #include <string>
 
-#include "memory_management.h"
 #include "buffer_pool.h"
+#include "memory_management.h"
 
 namespace hermes {
 
-static const u32 kGlobalMutexNodeId = 1;
+static const u32 kGlobalMutexNodeId = 1; /**< global mutex node ID */
 
 struct RpcContext;
 
@@ -50,53 +50,65 @@ struct ShmemString {
 
   ShmemString(const ShmemString &) = delete;
   ShmemString(const ShmemString &&) = delete;
-  ShmemString& operator=(const ShmemString &) = delete;
-  ShmemString& operator=(const ShmemString &&) = delete;
+  ShmemString &operator=(const ShmemString &) = delete;
+  ShmemString &operator=(const ShmemString &&) = delete;
 };
 
+/** map type */
 enum MapType {
   kMapType_Bucket,
   kMapType_VBucket,
   kMapType_BlobId,
   kMapType_BlobInfo,
-
   kMapType_Count
 };
 
-enum class ThresholdViolation {
-  kMin,
-  kMax
-};
+/** min/max threshold violation */
+enum class ThresholdViolation { kMin, kMax };
 
+/**
+   A structure to represent violation information
+*/
 struct ViolationInfo {
-  TargetID target_id;
-  ThresholdViolation violation;
-  size_t violation_size;
+  TargetID target_id;           /**< target node ID */
+  ThresholdViolation violation; /**< threshold violation */
+  size_t violation_size;        /**< size of violation */
 };
 
+/**
+   A structure to represent statistics
+ */
 struct Stats {
-  u32 recency;
-  u32 frequency;
+  u32 recency;   /**< recency */
+  u32 frequency; /**< frequency */
 };
 
-const int kIdListChunkSize = 10;
-
+const int kIdListChunkSize = 10; /**< chunk size of ID list */
+/**
+   A structure to represent ID list
+*/
 struct IdList {
-  u32 head_offset;
-  u32 length;
+  u32 head_offset; /**< the offset of head in the list */
+  u32 length;      /**< length of list */
 };
 
+/**
+   A structure to represent the array of buffer IDs
+ */
 struct BufferIdArray {
-  BufferID *ids;
-  u32 length;
+  BufferID *ids; /**< pointer to IDs */
+  u32 length;    /**< length of array */
 };
 
+/**
+   A structure to represent Blob information
+ */
 struct BlobInfo {
-  Stats stats;
-  TicketMutex lock;
-  TargetID effective_target;
-  u32 last;
-  bool stop;
+  Stats stats;               /**< BLOB statistics */
+  TicketMutex lock;          /**< lock */
+  TargetID effective_target; /**< target ID */
+  u32 last;                  /**< last */
+  bool stop;                 /**< stop */
 
   BlobInfo() : last(0), stop(false) {
     stats.recency = 0;
@@ -106,7 +118,8 @@ struct BlobInfo {
     effective_target.as_int = 0;
   }
 
-  BlobInfo& operator=(const BlobInfo &other) {
+  /** Copy \a other BlobInfo sturcture. */
+  BlobInfo &operator=(const BlobInfo &other) {
     stats = other.stats;
     lock.ticket.store(other.lock.ticket.load());
     lock.serving.store(other.lock.serving.load());
@@ -118,25 +131,35 @@ struct BlobInfo {
   }
 };
 
+/**
+   A structure to represent bucket information
+*/
 struct BucketInfo {
-  BucketID next_free;
-  ChunkedIdList blobs;
-  std::atomic<int> ref_count;
-  bool active;
+  BucketID next_free;         /**< id of next free bucket */
+  ChunkedIdList blobs;        /**< list of BLOB IDs */
+  std::atomic<int> ref_count; /**< reference count */
+  bool active;                /**< is bucket active? */
 };
 
+/** maxinum number of traits per bucket */
 static constexpr int kMaxTraitsPerVBucket = 8;
 
+/**
+   A structure to represent virtual bucket information
+ */
 struct VBucketInfo {
-  VBucketID next_free;
-  ChunkedIdList blobs;
-  std::atomic<int> ref_count;
-  std::atomic<int> async_flush_count;
+  VBucketID next_free;                /**< id of next free virtual bucket */
+  ChunkedIdList blobs;                /**< list of BLOB IDs */
+  std::atomic<int> ref_count;         /**< reference count */
+  std::atomic<int> async_flush_count; /**< asynchrnous flush count */
   /** Not currently used since Traits are process local. */
   TraitID traits[kMaxTraitsPerVBucket];
-  bool active;
+  bool active; /**< is virtual bucket active? */
 };
 
+/**
+   A sntructure to view the current state of system
+ */
 struct SystemViewState {
   /** Total capacities of each device. */
   u64 capacities[kMaxDevices];
@@ -169,7 +192,7 @@ struct GlobalSystemViewState {
   u64 num_targets;
   /** The number of devices per node */
   int num_devices;
-  u64 capacities[kMaxDevices];
+  u64 capacities[kMaxDevices]; /**< capacities of devices */
   /** The remaining capacity of each Target in the system */
   std::atomic<u64> *bytes_available;
   /** The min and max capacity thresholds (percentage) for each Target in the
@@ -177,30 +200,33 @@ struct GlobalSystemViewState {
   Thresholds bo_capacity_thresholds[kMaxDevices];
 };
 
+/**
+   A structure to represent metadata manager
+*/
 struct MetadataManager {
   // All offsets are relative to the beginning of the MDM
-  ptrdiff_t bucket_info_offset;
-  BucketID first_free_bucket;
+  ptrdiff_t bucket_info_offset; /**< bucket information */
+  BucketID first_free_bucket;   /**< ID of first free bucket */
 
-  ptrdiff_t vbucket_info_offset;
-  VBucketID first_free_vbucket;
+  ptrdiff_t vbucket_info_offset; /**< virtual bucket information */
+  VBucketID first_free_vbucket;  /**< ID of first free virtual bucket */
 
-  ptrdiff_t rpc_state_offset;
-  ptrdiff_t host_names_offset;
-  ptrdiff_t host_numbers_offset;
-  ptrdiff_t system_view_state_offset;
-  ptrdiff_t global_system_view_state_offset;
+  ptrdiff_t rpc_state_offset;                /**< RPC state */
+  ptrdiff_t host_names_offset;               /**< host names  */
+  ptrdiff_t host_numbers_offset;             /**< host numbers */
+  ptrdiff_t system_view_state_offset;        /**< system view state */
+  ptrdiff_t global_system_view_state_offset; /**< global system view state */
 
-  ptrdiff_t id_heap_offset;
-  ptrdiff_t map_heap_offset;
+  ptrdiff_t id_heap_offset;  /**< ID heap */
+  ptrdiff_t map_heap_offset; /**< map heap */
 
-  ptrdiff_t bucket_map_offset;
-  ptrdiff_t vbucket_map_offset;
-  ptrdiff_t blob_id_map_offset;
-  ptrdiff_t blob_info_map_offset;
+  ptrdiff_t bucket_map_offset;    /**< bucket map */
+  ptrdiff_t vbucket_map_offset;   /**< virtual bucket map */
+  ptrdiff_t blob_id_map_offset;   /**< BLOB ID map */
+  ptrdiff_t blob_info_map_offset; /**< BLOB information map */
 
-  ptrdiff_t swap_filename_prefix_offset;
-  ptrdiff_t swap_filename_suffix_offset;
+  ptrdiff_t swap_filename_prefix_offset; /**< swap file name prefix */
+  ptrdiff_t swap_filename_suffix_offset; /**< swap file name suffix */
 
   // TODO(chogan): @optimization Should the TicketMutexes here be reader/writer
   // locks?
@@ -208,7 +234,7 @@ struct MetadataManager {
   /** Lock for accessing `BucketInfo` structures located at
    * `bucket_info_offset` */
   TicketMutex bucket_mutex;
-  RwLock bucket_delete_lock;
+  RwLock bucket_delete_lock; /**< lock for bucket deletion */
 
   /** Lock for accessing `VBucketInfo` structures located at
    * `vbucket_info_offset` */
@@ -225,18 +251,18 @@ struct MetadataManager {
   /** Lock for accessing `IdList`s and `ChunkedIdList`s */
   TicketMutex id_mutex;
 
-  size_t map_seed;
+  size_t map_seed; /**<  map seed */
 
-  IdList node_targets;
-  IdList neighborhood_targets;
+  IdList node_targets;         /**<  ID list of node targets  */
+  IdList neighborhood_targets; /**<  ID list of neighborhood targets */
 
-  u32 system_view_state_update_interval_ms;
-  u32 global_system_view_state_node_id;
-  u32 num_buckets;
-  u32 max_buckets;
-  u32 num_vbuckets;
-  u32 max_vbuckets;
-  std::atomic<u32> clock;
+  u32 system_view_state_update_interval_ms; /**< sys. view update interval */
+  u32 global_system_view_state_node_id;     /**< node ID fo global sys. view */
+  u32 num_buckets;                          /**< number of buckets */
+  u32 max_buckets;                          /**< maximum number of buckets */
+  u32 num_vbuckets;                         /**< number of virtual buckets */
+  u32 max_vbuckets;       /**< maximum number of virtual buckets */
+  std::atomic<u32> clock; /**< clock */
 };
 
 struct RpcContext;
@@ -292,8 +318,7 @@ bool ContainsBlob(SharedMemoryContext *context, RpcContext *rpc,
 /**
  *
  */
-BufferIdArray GetBufferIdsFromBlobId(Arena *arena,
-                                     SharedMemoryContext *context,
+BufferIdArray GetBufferIdsFromBlobId(Arena *arena, SharedMemoryContext *context,
                                      RpcContext *rpc, BlobID blob_id,
                                      u32 **sizes);
 
@@ -303,8 +328,6 @@ BufferIdArray GetBufferIdsFromBlobId(Arena *arena,
 BlobID GetBlobId(SharedMemoryContext *context, RpcContext *rpc,
                  const std::string &name, BucketID bucket_id,
                  bool track_stats = true);
-
-
 
 /**
  *
@@ -388,9 +411,9 @@ std::vector<TargetID> GetNeighborhoodTargets(SharedMemoryContext *context,
 /**
  *
  */
-std::vector<u64>
-GetRemainingTargetCapacities(SharedMemoryContext *context, RpcContext *rpc,
-                             const std::vector<TargetID> &targets);
+std::vector<u64> GetRemainingTargetCapacities(
+    SharedMemoryContext *context, RpcContext *rpc,
+    const std::vector<TargetID> &targets);
 /**
  *
  */
@@ -401,7 +424,7 @@ std::vector<BlobID> GetBlobIds(SharedMemoryContext *context, RpcContext *rpc,
  *
  */
 BucketID GetBucketId(SharedMemoryContext *context, RpcContext *rpc,
-                           const char *name);
+                     const char *name);
 
 /**
  *
@@ -430,95 +453,95 @@ bool IsNullVBucketId(VBucketID id);
 bool IsNullBlobId(BlobID id);
 
 /**
- *
+ * begin global ticket mutex
  */
 void BeginGlobalTicketMutex(SharedMemoryContext *context, RpcContext *rpc);
 
 /**
- *
+ * end global ticket mutex
  */
 void EndGlobalTicketMutex(SharedMemoryContext *context, RpcContext *rpc);
 
 /**
- *
+ * begin global ticket mutex locally
  */
 void LocalBeginGlobalTicketMutex(MetadataManager *mdm);
 
 /**
- *
+ * end global ticket mutex locally
  */
 void LocalEndGlobalTicketMutex(MetadataManager *mdm);
 
 /**
- *
+ * attach BLOB to VBucket
  */
 void AttachBlobToVBucket(SharedMemoryContext *context, RpcContext *rpc,
                          const char *blob_name, const char *bucket_name,
                          VBucketID vbucket_id);
 
 /**
- *
+ * remove BLOB from Bucket
  */
 void RemoveBlobFromBucketInfo(SharedMemoryContext *context, RpcContext *rpc,
                               BucketID bucket_id, BlobID blob_id);
 
 /**
- *
+ * remove BLOB from VBucket
  */
 void RemoveBlobFromVBucketInfo(SharedMemoryContext *context, RpcContext *rpc,
                                VBucketID vbucket_id, const char *blob_name,
                                const char *bucket_name);
 
 /**
- *
+ * get BLOB from VBucket
  */
 std::vector<BlobID> GetBlobsFromVBucketInfo(SharedMemoryContext *context,
                                             RpcContext *rpc,
                                             VBucketID vbucket_id);
 
 /**
- *
+ * get bucket name by bucket ID
  */
 std::string GetBucketNameById(SharedMemoryContext *context, RpcContext *rpc,
                               BucketID id);
 /**
- *
+ * increment BLOB stats
  */
 void IncrementBlobStats(SharedMemoryContext *context, RpcContext *rpc,
                         BlobID blob_id);
 
 /**
- *
+ * increment BLOB stats locally
  */
 void LocalIncrementBlobStats(MetadataManager *mdm, BlobID blob_id);
 
 /**
- *
+ * lock BLOB
  */
 bool LockBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id);
 
 /**
- *
+ * unlock BLOB
  */
 bool UnlockBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id);
 
 /**
- *
+ * lock BLOB locally
  */
 bool LocalLockBlob(SharedMemoryContext *context, BlobID blob_id);
 
 /**
- *
+ * unlock BLOB locally
  */
 bool LocalUnlockBlob(SharedMemoryContext *context, BlobID blob_id);
 
 /**
- *
+ * get local system view state
  */
 SystemViewState *GetLocalSystemViewState(SharedMemoryContext *context);
 
 /**
- *
+ * replace BLOB ID in bucket locally
  */
 void LocalReplaceBlobIdInBucket(SharedMemoryContext *context,
                                 BucketID bucket_id, BlobID old_blob_id,
@@ -535,7 +558,7 @@ void ReplaceBlobIdInBucket(SharedMemoryContext *context, RpcContext *rpc,
  * Creates a ShmemString with the value @p val at location @p memory.
  *
  * @pre The address of @p sms must be lower than @p memory because the @p offset
- *      is from the beginning of the @sms.
+ *      is from the beginning of the \a sms.
  *
  * @param[out] sms The ShmemString instance to be filled out.
  * @param memory The location in shared memory to store the @p val.

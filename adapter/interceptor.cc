@@ -32,10 +32,20 @@ namespace hermes::adapter {
  */
 bool exit = false;
 
+/**
+ * a flag for checking if buffering paths are populated or not
+ */
 bool populated = false;
 
+/**
+  populate buffering path
+*/
 void PopulateBufferingPath() {
   char* hermes_config = getenv(kHermesConf);
+  if (hermes_config == NULL) {
+    LOG(ERROR) << "HERMES_CONF is not set.";
+    return;
+  }
 
   if (stdfs::exists(hermes_config)) {
     std::string hermes_conf_abs_path =
@@ -73,6 +83,9 @@ void PopulateBufferingPath() {
   populated = true;
 }
 
+/**
+  check if \a path is being tracked
+*/
 bool IsTracked(const std::string& path) {
   if (hermes::adapter::exit) {
     return false;
@@ -128,12 +141,18 @@ bool IsTracked(const std::string& path) {
   }
 }
 
+/**
+  check if \a fh file handler is being tracked
+*/
 bool IsTracked(FILE* fh) {
   if (hermes::adapter::exit) return false;
   atexit(OnExit);
   return IsTracked(GetFilenameFromFP(fh));
 }
 
+/**
+  check if \a fd file descriptor is being tracked
+*/  
 bool IsTracked(int fd) {
   if (hermes::adapter::exit) return false;
   atexit(OnExit);
