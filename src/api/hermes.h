@@ -22,13 +22,13 @@
 #ifndef HERMES_H_
 #define HERMES_H_
 
+#include <glog/logging.h>
+
 #include <cstdint>
 #include <string>
 
-#include <glog/logging.h>
-
-#include "hermes_types.h"
 #include "buffer_pool.h"
+#include "hermes_types.h"
 #include "metadata_management.h"
 #include "rpc.h"
 
@@ -50,10 +50,10 @@ class Hermes {
   bool is_initialized;
 
   // TODO(chogan): Temporarily public to facilitate iterative development.
-  hermes::SharedMemoryContext context_;
-  hermes::CommunicationContext comm_;
-  hermes::RpcContext rpc_;
-  hermes::Arena trans_arena_;
+  hermes::SharedMemoryContext context_; /**< shared memory context */
+  hermes::CommunicationContext comm_;   /**< communication context */
+  hermes::RpcContext rpc_;              /**< remote procedure call context */
+  hermes::Arena trans_arena_; /**< arena backed by allocated memory. */
   /** The name of the shared memory segment in which all Hermes data is
    * stored.
    */
@@ -63,6 +63,9 @@ class Hermes {
 
   Hermes() {}
 
+  /**
+     Constructor
+   */
   explicit Hermes(SharedMemoryContext context) : context_(context) {}
 
   /** \brief Return \bool{this rank is an application core}
@@ -179,15 +182,12 @@ class Hermes {
 class Bucket;
 
 /** Renames a bucket referred to by name only */
-Status RenameBucket(const std::string &old_name,
-                    const std::string &new_name,
+Status RenameBucket(const std::string &old_name, const std::string &new_name,
                     Context &ctx);
 
 /** \todo Not implemented yet. */
-Status TransferBlob(const Bucket &src_bkt,
-                    const std::string &src_blob_name,
-                    Bucket &dst_bkt,
-                    const std::string &dst_blob_name,
+Status TransferBlob(const Bucket &src_bkt, const std::string &src_blob_name,
+                    Bucket &dst_bkt, const std::string &dst_blob_name,
                     Context &ctx);
 
 /** \brief Initialize an instance of Hermes.
@@ -212,7 +212,9 @@ std::shared_ptr<api::Hermes> InitHermes(const char *config_file = NULL,
  *
  * Allows programatically generating configurations.
  *
- * \param config A valid Config.
+ * \param config a pointer to configuration
+ * \param is_daemon a flag to run Hermes as a daemon
+ * \param is_adapter a flag to run Hermes in adapter mode
  *
  * \return An initialized Hermes instance.
  */

@@ -34,9 +34,12 @@ inline bool is_dotdot(const stdfs::path& path) {
 
 namespace hermes {
 namespace adapter {
-
-// NOTE(chogan): Back port of the C++17 standard fileystem implementation from
-// gcc 9.1 to support gcc 7
+/**
+ * normalize \a path
+ *
+ * \note (chogan): Back port of the C++17 standard fileystem implementation
+ *                 from gcc 9.1 to support gcc 7
+*/
 stdfs::path LexicallyNormal(stdfs::path &path) {
   /*
   C++17 [fs.path.generic] p6
@@ -124,7 +127,10 @@ stdfs::path LexicallyNormal(stdfs::path &path) {
   return ret;
 }
 
-// NOTE(chogan): Backported from GCC 9
+/**
+  convert path \a p to a canonical absolute path
+  \note (chogan): Backported from GCC 9
+*/
 stdfs::path WeaklyCanonical(const stdfs::path& p) {
   stdfs::path result;
   if (stdfs::exists(stdfs::status(p))) {
@@ -155,7 +161,10 @@ stdfs::path WeaklyCanonical(const stdfs::path& p) {
   return LexicallyNormal(result);
 }
 
-// NOTE(chogan): Backported from GCC 9
+/**
+  convert path \a p to a canonical absolute path with \a ec error code
+  \note (chogan): Backported from GCC 9
+*/
 stdfs::path WeaklyCanonical(const stdfs::path& p, std::error_code& ec) {
   stdfs::path result;
   stdfs::file_status st = stdfs::status(p, ec);
@@ -201,6 +210,9 @@ stdfs::path WeaklyCanonical(const stdfs::path& p, std::error_code& ec) {
   return result;
 }
 
+/**
+   Read gap from the original file when BLOB has a gap in write.
+ */
 void ReadGap(const std::string &filename, size_t seek_offset, u8 *read_ptr,
              size_t read_size, size_t file_bounds) {
   if (stdfs::exists(filename) &&
@@ -231,6 +243,5 @@ void ReadGap(const std::string &filename, size_t seek_offset, u8 *read_ptr,
     INTERCEPTOR_LIST->hermes_flush_exclusion.erase(filename);
   }
 }
-
 }  // namespace adapter
 }  // namespace hermes

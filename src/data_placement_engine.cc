@@ -80,6 +80,7 @@ void DPE::GetSplitSizes(size_t blob_size, std::vector<size_t> &output) {
   output.push_back(blob_size - blob_each_portion*(split_num-1));
 }
 
+/** aggregate BLOB schema */
 PlacementSchema AggregateBlobSchema(PlacementSchema &schema) {
   std::unordered_map<u64, u64> place_size;
   PlacementSchema result;
@@ -97,6 +98,7 @@ PlacementSchema AggregateBlobSchema(PlacementSchema &schema) {
   return result;
 }
 
+/** topology */
 enum Topology {
   Topology_Local,
   Topology_Neighborhood,
@@ -105,6 +107,7 @@ enum Topology {
   Topology_Count
 };
 
+/** calculate data placement */
 Status CalculatePlacement(SharedMemoryContext *context, RpcContext *rpc,
                           const std::vector<size_t> &blob_sizes,
                           std::vector<PlacementSchema> &output,

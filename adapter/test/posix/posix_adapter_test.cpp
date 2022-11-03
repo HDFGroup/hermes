@@ -95,12 +95,9 @@ int pretest() {
       fullpath.string() + "_new_cmp" + "_" + std::to_string(getpid());
   info.existing_file_cmp =
       fullpath.string() + "_ext_cmp" + "_" + std::to_string(getpid());
-  if (stdfs::exists(info.new_file))
-    stdfs::remove(info.new_file);
-  if (stdfs::exists(info.new_file_cmp))
-    stdfs::remove(info.new_file_cmp);
-  if (stdfs::exists(info.existing_file))
-    stdfs::remove(info.existing_file);
+  if (stdfs::exists(info.new_file)) stdfs::remove(info.new_file);
+  if (stdfs::exists(info.new_file_cmp)) stdfs::remove(info.new_file_cmp);
+  if (stdfs::exists(info.existing_file)) stdfs::remove(info.existing_file);
   if (stdfs::exists(info.existing_file_cmp))
     stdfs::remove(info.existing_file_cmp);
   if (!stdfs::exists(info.existing_file)) {
@@ -195,12 +192,9 @@ int posttest(bool compare_data = true) {
     }
   }
   /* Clean up. */
-  if (stdfs::exists(info.new_file))
-    stdfs::remove(info.new_file);
-  if (stdfs::exists(info.existing_file))
-    stdfs::remove(info.existing_file);
-  if (stdfs::exists(info.new_file_cmp))
-    stdfs::remove(info.new_file_cmp);
+  if (stdfs::exists(info.new_file)) stdfs::remove(info.new_file);
+  if (stdfs::exists(info.existing_file)) stdfs::remove(info.existing_file);
+  if (stdfs::exists(info.new_file_cmp)) stdfs::remove(info.new_file_cmp);
   if (stdfs::exists(info.existing_file_cmp))
     stdfs::remove(info.existing_file_cmp);
 

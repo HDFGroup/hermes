@@ -36,12 +36,10 @@ namespace hermes::adapter::pubsub {
  * Struct that defines the metadata required for the pubsub adapter.
  */
 struct ClientMetadata {
-  /**
-   * attributes
-   */
-  std::shared_ptr<hapi::Bucket> st_bkid; /* bucket associated with the topic */
-  u64 last_subscribed_blob; /* Current blob being used */
-  timespec st_atim;     /* time of last access */
+  /** bucket associated with the topic */
+  std::shared_ptr<hapi::Bucket> st_bkid;
+  u64 last_subscribed_blob; /**< Current blob being used */
+  timespec st_atim;         /**< time of last access */
   /**
    * Constructor
    */
@@ -52,7 +50,7 @@ struct ClientMetadata {
   explicit ClientMetadata(const struct ClientMetadata &st)
       : st_bkid(st.st_bkid),
         last_subscribed_blob(st.last_subscribed_blob),
-        st_atim(st.st_atim) {} /* parameterized constructor */
+        st_atim(st.st_atim) {} /**< parameterized constructor */
 };
 
 }  // namespace hermes::adapter::pubsub

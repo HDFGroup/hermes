@@ -23,6 +23,9 @@
  */
 namespace hermes {
 template <typename T>
+/**
+   A class to represent singleton pattern
+ */
 class Singleton {
  public:
   /**
