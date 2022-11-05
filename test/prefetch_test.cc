@@ -46,7 +46,7 @@ int main(int argc, char **argv) {
   if (argc != 6) {
     std::cout << "USAGE: ./prefetch_test"
               << "[with_prefetch] [dataset_mb] [blob_size_mb]"
-              << "[read_ahead] [phase]" << std::endl;
+              << "[read_ahead] [phase] [clear_cache_path]" << std::endl;
   }
 
   bool with_prefetch = atoi(argv[1]);
@@ -55,6 +55,11 @@ int main(int argc, char **argv) {
   size_t blob_count = dataset_size / blob_size;
   int read_ahead = atoi(argv[4]);
   int phase = atoi(argv[5]);
+  std::string clear_cache = argv[6];
+  std::string clear_cache_script = ("bash " + clear_cache);
+
+  std::cout << clear_cache_script << std::endl;
+  system(clear_cache_script.c_str());
 
   std::cout << "Dataset Size: " << dataset_size / MEGABYTES(1)
             << " Blob Size: " << blob_size / MEGABYTES(1)
@@ -80,6 +85,9 @@ int main(int argc, char **argv) {
     bkt->Put(blob_name, blob);
   }
   LOG(INFO) << "FINISHED PUTTING ALL BLOBS" << std::endl;
+
+  std::cout << clear_cache_script << std::endl;
+  system(clear_cache_script.c_str());
 
   // Get blobs (sequentially)
   hermes::HighResMonotonicTimer t;

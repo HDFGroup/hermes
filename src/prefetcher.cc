@@ -13,6 +13,7 @@
 #include "prefetcher_factory.h"
 #include "metadata_management.h"
 #include "singleton.h"
+#include "metadata_management_internal.h"
 
 using hermes::api::Hermes;
 
@@ -87,14 +88,41 @@ float Prefetcher::EstimateBlobMovementTime(BlobID blob_id) {
   return xfer_time;
 }
 
+bool HasOnlyDemotions(PrefetchDecision &decision, float &decay) {
+  decay = std::numeric_limits<float>::infinity();
+  if (decision.stats_.size() == 0) return false;
+  for (auto &prefetch_stat : decision.stats_) {
+    if (prefetch_stat.decay_ < 0) {
+      return false;
+    }
+    decay = std::min(decay, prefetch_stat.decay_);
+  }
+  return true;
+};
+
 void Prefetcher::CalculateBlobScore(struct timespec &ts,
                                     PrefetchDecision &decision) {
   float est_xfer_time = decision.est_xfer_time_;
   decision.new_score_ = -1;
   decision.queue_later_ = false;
-  for (auto &access_time_struct : decision.stats_) {
+
+  float decay;
+  if (HasOnlyDemotions(decision, decay)) {
+    decision.new_score_ = GetBlobImportanceScore(&hermes_->context_,
+                                                 &hermes_->rpc_,
+                                                 decision.blob_id_);
+    decision.new_score_ *= decay;
+    if (decision.new_score_ < 0) {
+      decision.new_score_ = 0;
+    }
+    decision.decay_ = true;
+    return;
+  }
+
+  for (auto &prefetch_stat : decision.stats_) {
+    if (prefetch_stat.decay_ >= 0) continue;
     // Wait until the I/O for this Get seems to have completed
-    /*float time_left_on_io = access_time_struct.TimeLeftOnIo(
+    /*float time_left_on_io = prefetch_stat.TimeLeftOnIo(
         est_xfer_time, &ts);
     LOG(INFO) << "Blob id: " << decision.blob_id_.as_int
               << " Time left before starting prefetch: "
@@ -103,7 +131,7 @@ void Prefetcher::CalculateBlobScore(struct timespec &ts,
       decision.queue_later_ = true;
       continue;
     }*/
-    float next_access_sec = access_time_struct.TimeToNextIo(&ts);
+    float next_access_sec = prefetch_stat.TimeToNextIo(&ts);
     LOG(INFO) << "Next access sec: " << next_access_sec << std::endl;
     LOG(INFO) << "Est xfer time : " << est_xfer_time << std::endl;
     // if (next_access_sec < est_xfer_time) continue;
@@ -162,11 +190,30 @@ void Prefetcher::Process() {
       if (decision.queue_later_) {
         queue_later_.emplace(blob_id, decision);
       }
-      /*LOG(INFO) << "Not prefetching bkt_id: " << decision.bkt_id_.as_int
-                << " blob_id: " << decision.blob_name_
-                << " score: " << decision.new_score_ << std::endl;*/
-      continue;
     }
+  }
+
+  // Process decay blobs first (make room)
+  for (auto &[blob_id, decision] : schema) {
+    if (!decision.decay_) { continue; }
+    LOG(INFO) << "Decaying Blob: " << blob_id.as_int
+              << " to score: " << decision.new_score_ << std::endl;
+    OrganizeBlob(&hermes_->context_, &hermes_->rpc_,
+                 decision.bkt_id_, decision.blob_name_,
+                 epsilon_, decision.new_score_);
+  }
+
+  // TODO(llogan): a hack to help BORG shuffle data
+  struct timespec ts2;
+  while(PrefetchStat::DiffTimespec(&ts2, &ts) < 1) {
+    timespec_get(&ts2, TIME_UTC);
+    ABT_thread_yield();
+  }
+
+  // Calculate new blob scores
+  for (auto &[blob_id, decision] : schema) {
+    if (decision.decay_) { continue; }
+    if (decision.new_score_ < 0) { continue; }
     LOG(INFO) << "Prefetching bkt_id: " << decision.bkt_id_.as_int
               << " blob_id: " << decision.blob_name_
               << " score: " << decision.new_score_ << std::endl;

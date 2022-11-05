@@ -189,7 +189,8 @@ enum class PrefetchHint {
 struct PrefetchContext {
   PrefetchHint hint_;
   int read_ahead_;
-  PrefetchContext() : hint_(PrefetchHint::kNone) {}
+  float decay_;
+  PrefetchContext() : hint_(PrefetchHint::kNone), read_ahead_(1), decay_(.5) {}
 };
 
 /** Hermes API call context */

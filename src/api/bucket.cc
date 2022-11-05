@@ -169,8 +169,10 @@ size_t Bucket::Get(const std::string &name, void *user_blob, size_t blob_size,
         entry.historical_ = false;
         Prefetcher::LogIoStat(hermes_.get(), entry);
       }
+      LockBlob(&hermes_->context_, &hermes_->rpc_, blob_id);
       ret = ReadBlobById(&hermes_->context_, &hermes_->rpc_,
                          &hermes_->trans_arena_, blob, blob_id);
+      UnlockBlob(&hermes_->context_, &hermes_->rpc_, blob_id);
     } else {
       ret = GetBlobSize(scratch, name, ctx);
     }

@@ -678,6 +678,9 @@ ptrdiff_t GetBufferOffset(SharedMemoryContext *context, BufferID id) {
 
 u8 *GetRamBufferPtr(SharedMemoryContext *context, BufferID buffer_id) {
   ptrdiff_t data_offset = GetBufferOffset(context, buffer_id);
+  if (data_offset > context->shm_size) {
+    LOG(FATAL) << "Buffer pointer outside of SHM region" << std::endl;
+  }
   u8 *result = context->shm_base + data_offset;
 
   return result;
@@ -1037,6 +1040,9 @@ void GetBufferSlabInfo(ScopedTemporaryMemory &scratch, Config *config,
       f32 device_capacity = config->capacities[device];
       size_t bytes_for_slab = (size_t)((f32)device_capacity *
                                        slab_percentage);
+      if (device == 0) {
+        bytes_for_slab *= .6; // TODO(llogan): this is a temporary hack
+      }
       buffer_counts[device][slab] = (bytes_for_slab /
                                      slab_buffer_sizes[device][slab]);
       if (device == 0) {

@@ -2,28 +2,30 @@
 
 # The number of buffering tiers available. For example, RAM, NVMe, burst
 # buffer, and parallel file system would be 4 tiers.
-num_devices: 2
+num_devices: 4
 # For now this should be the same as num_devices.
-num_targets: 2
+num_targets: 4
 
 # The maximum buffering capacity in MiB of each device. Here we say that all 4
 # devices get 50 MiB of buffering capacity.
-capacities_mb: [4000, 16000]
+capacities_mb: [2000, 2000, 2000, 16000]
 
 # The size of the smallest available buffer in KiB. In general this should be
 # the page size of your system for byte addressable storage, and the block size
 # of the storage device for block addressable storage.
-block_sizes_kb: [4, 4]
+block_sizes_kb: [4, 4, 4, 4]
 
 # The nummber of size categories for each device. Here we say that each of our 4
 # devices should have 4 different sizes of buffers.
-num_slabs: [2, 1]
+num_slabs: [2, 1, 1, 1]
 
 # The number of blocks (the size of which is chosen in block_sizes_kb) that each
 # device should contain for each slab (controlled by num_slabs). This allows for
 # precise control of the distibution of buffer sizes.
 slab_unit_sizes: [
   [1, 256],
+  [256],
+  [256],
   [256]
 ]
 
@@ -32,22 +34,24 @@ slab_unit_sizes: [
 # slabs, and each slab is allotted 25% of the device's total buffering capacity.
 desired_slab_percentages: [
   [0.1, 0.9],
+  [1.0],
+  [1.0],
   [1.0]
 ]
 
 # The maximum theoretical bandwidth (as advertised by the manufacturer) in
 # MiB/sec. of each device.
-bandwidth_mbps: [4000, 500]
+bandwidth_mbps: [4000, 1000, 500, 150]
 # The latency in microseconds of each device (as advertised by the manufacturer).
-latencies_us: [10, 100]
+latencies_us: [10, 100, 800, 10000]
 
 # Hermes memory management. The following 4 values should add up to 1.
 # The percentage of Hermes memory to reserve for RAM buffers.
-buffer_pool_arena_percentage: 0.8
+buffer_pool_arena_percentage: 0.6
 # The percentage of Hermes memory to reserve for metadata.
-metadata_arena_percentage: 0.1
+metadata_arena_percentage: 0.2
 # The percentage of Hermes memory to reserve for short term storage.
-transient_arena_percentage: 0.1
+transient_arena_percentage: 0.2
 
 # The maxiumum number of buckets that can be created.
 max_buckets_per_node: 16
@@ -59,10 +63,10 @@ system_view_state_update_interval_ms: 1000
 # The mount point of each device. RAM should be the empty string. For block
 # devices, this is the directory where Hermes will create buffering files. For
 # object storage or cloud targets, this will be a url.
-mount_points: [""]
+mount_points: ["", "/mnt/nvme/llogan/borg", "/mnt/ssd/llogan/borg", "/mnt/hdd/llogan/borg"]
 # For each device, indicate '1' if it is shared among nodes (e.g., burst
 # buffers), or '0' if it is per node (e.g., local NVMe).
-is_shared_device: [0,0]
+is_shared_device: [0, 0, 0, 0]
 # The mount point of a PFS or object store for swap space, in the event that
 # Hermes buffers become full.
 swap_mount: "./"
@@ -98,7 +102,7 @@ rpc_host_number_range: []
 # The number of handler threads for each RPC server.
 rpc_num_threads: 1
 # The number of threads used in the background organization of internal Hermes buffers.
-buffer_organizer_num_threads: 1
+buffer_organizer_num_threads: 4
 # The shared memory prefix for the hermes shared memory segment. A user name
 # will be automatically appended.
 buffer_pool_shmem_name: "/hermes_buffer_pool_"
@@ -118,6 +122,8 @@ default_rr_split: 0
 # incoming writes. Conversely, a minimum capacity threshold of 0.3 would ensure
 # that the device is always at least 30% occupied.
 bo_capacity_thresholds: [
+  [0.0, 1.0],
+  [0.0, 1.0],
   [0.0, 1.0],
   [0.0, 1.0]
 ]

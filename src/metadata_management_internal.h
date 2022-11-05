@@ -106,6 +106,8 @@ BucketID LocalGetOrCreateBucketId(SharedMemoryContext *context,
 VBucketID LocalGetOrCreateVBucketId(SharedMemoryContext *context,
                                     const std::string &name);
 f32 LocalGetBlobImportanceScore(SharedMemoryContext *context, BlobID blob_id);
+f32 GetBlobImportanceScore(SharedMemoryContext *context, RpcContext *rpc,
+                           BlobID blob_id);
 
 /**
  * Faster version of std::stoull.

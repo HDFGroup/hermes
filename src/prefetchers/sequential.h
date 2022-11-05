@@ -33,12 +33,18 @@ class SequentialPrefetcher : public PrefetchAlgorithm {
                PrefetchSchema &schema);
 
  private:
-  void GetNextBucket(IoLogEntry &entry,
-                     PrefetchDecision &decision,
-                     BlobID &cur_id);
-  void GetNextVbucket(IoLogEntry &entry,
-                      PrefetchDecision &decision,
-                      BlobID &cur_id);
+  void GetNextFromBucket(IoLogEntry &entry,
+                         PrefetchDecision &decision,
+                         BlobID &cur_id);
+  void GetNextFromVbucket(IoLogEntry &entry,
+                          PrefetchDecision &decision,
+                          BlobID &cur_id);
+  void GetPriorFromBucket(IoLogEntry &entry,
+                          PrefetchDecision &decision,
+                          BlobID &cur_id);
+  void GetPriorFromVbucket(IoLogEntry &entry,
+                           PrefetchDecision &decision,
+                           BlobID &cur_id);
 };
 
 }  // namespace hermes

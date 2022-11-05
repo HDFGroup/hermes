@@ -80,9 +80,14 @@ struct IoLogEntry {
 struct PrefetchStat {
   float est_next_time_;
   struct timespec start_;
+  float decay_;
+
+  PrefetchStat() : est_next_time_(0), decay_(-1) {}
 
   explicit PrefetchStat(float est_next_time, struct timespec &start) :
-      est_next_time_(est_next_time), start_(start) {}
+      est_next_time_(est_next_time), start_(start), decay_(-1) {}
+
+  explicit PrefetchStat(float decay) : decay_(decay) {}
 
   float TimeLeftOnIo(float est_xfer_time, const struct timespec *cur) {
     float diff = DiffTimespec(cur, &start_);
@@ -111,12 +116,17 @@ struct PrefetchDecision {
   bool queue_later_;
   float est_xfer_time_;
   float new_score_;
+  bool decay_;
 
   PrefetchDecision() : queue_later_(false),
                        est_xfer_time_(-1),
-                       new_score_(-1) {}
+                       new_score_(-1),
+                       decay_(false) {}
   void AddStat(float est_access_time, struct timespec &start) {
     stats_.emplace_back(est_access_time, start);
+  }
+  void AddStat(float decay) {
+    stats_.emplace_back(decay);
   }
 };
 

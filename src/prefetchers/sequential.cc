@@ -51,9 +51,9 @@ void SequentialPrefetcher::Process(std::list<IoLogEntry> &log,
       PrefetchDecision decision;
       decision.bkt_id_ = entry.bkt_id_;
       if (IsNullVBucketId(entry.vbkt_id_)) {
-        GetNextBucket(entry, decision, cur_id);
+        GetNextFromBucket(entry, decision, cur_id);
       } else {
-        GetNextVbucket(entry, decision, cur_id);
+        GetNextFromVbucket(entry, decision, cur_id);
       }
       if (IsNullBlobId(decision.blob_id_)) {
         break;
@@ -62,12 +62,29 @@ void SequentialPrefetcher::Process(std::list<IoLogEntry> &log,
       schema.emplace(decision);
       cur_id = decision.blob_id_;
     }
+
+    // Demote the previous blobs
+    cur_id = entry.blob_id_;
+    for (int i = 0; i < entry.pctx_.read_ahead_; ++i) {
+      PrefetchDecision decision;
+      if (IsNullVBucketId(entry.vbkt_id_)) {
+        GetPriorFromBucket(entry, decision, cur_id);
+      } else {
+        GetPriorFromVbucket(entry, decision, cur_id);
+      }
+      if (IsNullBlobId(decision.blob_id_)) {
+        break;
+      }
+      decision.AddStat(entry.pctx_.decay_);
+      schema.emplace(decision);
+      cur_id = decision.blob_id_;
+    }
   }
 }
 
-void SequentialPrefetcher::GetNextBucket(IoLogEntry &entry,
-                                         PrefetchDecision &decision,
-                                         BlobID &cur_id) {
+void SequentialPrefetcher::GetNextFromBucket(IoLogEntry &entry,
+                                             PrefetchDecision &decision,
+                                             BlobID &cur_id) {
   // Get current blob name
   auto prefetcher = Singleton<Prefetcher>::GetInstance();
   auto hermes = prefetcher->hermes_;
@@ -87,9 +104,41 @@ void SequentialPrefetcher::GetNextBucket(IoLogEntry &entry,
                                 false);
 }
 
-void SequentialPrefetcher::GetNextVbucket(IoLogEntry &entry,
-                                          PrefetchDecision &decision,
-                                          BlobID &cur_id) {
+void SequentialPrefetcher::GetNextFromVbucket(IoLogEntry &entry,
+                                              PrefetchDecision &decision,
+                                              BlobID &cur_id) {
+  // TODO(llogan): Not implemented for now.
+}
+
+void SequentialPrefetcher::GetPriorFromBucket(IoLogEntry &entry,
+                                             PrefetchDecision &decision,
+                                             BlobID &cur_id) {
+  // Get current blob name
+  auto prefetcher = Singleton<Prefetcher>::GetInstance();
+  auto hermes = prefetcher->hermes_;
+  std::string blob_name = GetBlobNameFromId(&hermes->context_,
+                                            &hermes->rpc_,
+                                            cur_id);
+
+  // Get prior blob name
+  BlobPlacement p;
+  p.DecodeBlobName(blob_name);
+  if (p.page_ == 0) {
+    cur_id.as_int = 0;
+    return;
+  }
+  p.page_ -= 1;
+  decision.blob_name_ = p.CreateBlobName();
+
+  // Get the prior blob ID from the bucket
+  decision.blob_id_ = GetBlobId(&hermes->context_, &hermes->rpc_,
+                                decision.blob_name_, entry.bkt_id_,
+                                false);
+}
+
+void SequentialPrefetcher::GetPriorFromVbucket(IoLogEntry &entry,
+                                              PrefetchDecision &decision,
+                                              BlobID &cur_id) {
   // TODO(llogan): Not implemented for now.
 }
 
