@@ -86,8 +86,8 @@ int main(int argc, char **argv) {
   }
   LOG(INFO) << "FINISHED PUTTING ALL BLOBS" << std::endl;
 
-  std::cout << clear_cache_script << std::endl;
-  system(clear_cache_script.c_str());
+  //std::cout << clear_cache_script << std::endl;
+  //system(clear_cache_script.c_str());
 
   // Get blobs (sequentially)
   hermes::HighResMonotonicTimer t;
