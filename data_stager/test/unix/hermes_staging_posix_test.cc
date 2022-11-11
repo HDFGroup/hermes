@@ -10,8 +10,13 @@
 * have access to the file, you may request a copy from help@hdfgroup.org.   *
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include "../../stagers/unix_stager.h"
+#include "../../stagers/posix_stager.h"
 #include <cstdlib>
+
+#define CATCH_CONFIG_RUNNER
+#include <catch2/catch_all.hpp>
+#include <mpi.h>
+#include <hermes.h>
 
 using hermes::UnixStager;
 using hermes::PlacementPolicy;
@@ -61,7 +66,7 @@ void VerifyFile(const std::string &path, int nonce, size_t size) {
   fclose(file);
 }
 
-void test_file_stage() {
+TEST_CASE("SingleFile") {
   UnixStager stager;
   auto mdm = Singleton<hermes::adapter::fs::MetadataManager>::GetInstance();
   std::string path = "/tmp/test.txt";
@@ -140,11 +145,25 @@ void test_file_stage() {
   VerifyFile(path, new_nonce, file_size);
 }
 
+TEST_CASE("SingleDirectory") {
+}
+
+namespace cl = Catch::Clara;
+cl::Parser define_options();
+
 int main(int argc, char **argv) {
+  int rc;
   MPI_Init(&argc, &argv);
+  Catch::Session session;
+  auto cli = session.cli();
+  session.cli(cli);
+  rc = session.applyCommandLine(argc, argv);
+  if (rc != 0) return rc;
+  rc = session.run();
+  if (rc != 0) return rc;
   auto mdm = Singleton<hermes::adapter::fs::MetadataManager>::GetInstance();
   mdm->InitializeHermes(true);
-  test_file_stage();
+  // test
   mdm->FinalizeHermes();
   MPI_Finalize();
   std::cout << "Evaluation passed!" << std::endl;

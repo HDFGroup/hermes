@@ -180,6 +180,13 @@ struct IoOptions {
     opts.seek_ = seek;
     return opts;
   }
+
+  static IoOptions PlaceInHermes(IoOptions &orig_opts) {
+    IoOptions opts(orig_opts);
+    opts.seek_ = false;
+    opts.with_fallback_ = false;
+    return opts;
+  }
 };
 
 struct IoStatus {

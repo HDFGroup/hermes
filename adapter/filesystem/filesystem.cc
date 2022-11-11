@@ -138,7 +138,7 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
   std::shared_ptr<hapi::Bucket> &bkt = stat.st_bkid;
   std::string filename = bkt->GetName();
   LOG(INFO) << "Write called for filename: " << filename << " on offset: "
-            << stat.st_ptr << " and size: " << total_size << std::endl;
+            << off << " and size: " << total_size << std::endl;
 
   size_t ret;
   auto mdm = Singleton<MetadataManager>::GetInstance();
@@ -484,9 +484,7 @@ size_t Filesystem::_ReadNew(BlobPlacementIter &ri) {
 
   if (ri.opts_.dpe_ != PlacementPolicy::kNone) {
     LOG(INFO) << "Placing the read blob in the hierarchy" << std::endl;
-    IoOptions opts(ri.opts_);
-    opts.seek_ = false;
-    opts.with_fallback_ = false;
+    IoOptions opts = IoOptions::PlaceInHermes(ri.opts_);
     Write(ri.f_, ri.stat_,
           ri.blob_.data() + ri.p_.blob_off_,
           ri.p_.bucket_off_,

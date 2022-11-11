@@ -1,8 +1,8 @@
-include_directories(${CMAKE_SOURCE_DIR}/adapter ${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(${CMAKE_SOURCE_DIR}/adapter ${CMAKE_SOURCE_DIR}/adapter/test ${CMAKE_CURRENT_SOURCE_DIR})
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DHERMES_RPC_THALLIUM")
 
 add_library(hermes_data_stager
-        ${CMAKE_CURRENT_SOURCE_DIR}/stagers/unix_stager.cc)
+        ${CMAKE_CURRENT_SOURCE_DIR}/stagers/posix_stager.cc)
 add_dependencies(hermes_data_stager hermes_posix_backend)
 target_link_libraries(hermes_data_stager hermes_posix_backend)
 
@@ -14,9 +14,14 @@ add_executable(stage_out ${CMAKE_CURRENT_SOURCE_DIR}/stage_out.cc)
 add_dependencies(stage_out hermes_data_stager)
 target_link_libraries(stage_out hermes_data_stager)
 
-add_executable(unix_stage_test test/unix/hermes_staging_unix_test.cc)
-add_dependencies(unix_stage_test hermes_data_stager)
-target_link_libraries(unix_stage_test hermes_data_stager)
+add_executable(finalize_hermes ${CMAKE_CURRENT_SOURCE_DIR}/finalize_hermes.cc)
+add_dependencies(finalize_hermes hermes_posix_backend)
+target_link_libraries(finalize_hermes hermes_posix_backend)
+
+find_package(Catch2 REQUIRED)
+add_executable(posix_stage_test test/unix/hermes_staging_posix_test.cc)
+add_dependencies(posix_stage_test hermes_data_stager)
+target_link_libraries(posix_stage_test hermes_data_stager Catch2::Catch2)
 
 install(
         TARGETS

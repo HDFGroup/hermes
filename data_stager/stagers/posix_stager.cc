@@ -10,7 +10,7 @@
 * have access to the file, you may request a copy from help@hdfgroup.org.   *
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include "unix_stager.h"
+#include "posix_stager.h"
 
 using hermes::adapter::posix::PosixFS;
 using hermes::api::PlacementPolicyConv;

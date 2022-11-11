@@ -14,7 +14,7 @@
 #define HERMES_DATA_STAGER_STAGE_FACTORY_H_
 
 #include "data_stager.h"
-#include "stagers/unix_stager.h"
+#include "stagers/posix_stager.h"
 
 namespace hermes {
 
@@ -26,7 +26,7 @@ class DataStagerFactory {
 
   static std::unique_ptr<DataStager> Get(DataStagerType stager) {
     switch (stager) {
-      case DataStagerType::kUnix: {
+      case DataStagerType::kPosix: {
         return std::make_unique<UnixStager>();
       }
       default: {

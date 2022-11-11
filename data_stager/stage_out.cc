@@ -26,6 +26,8 @@ int main(int argc, char **argv) {
     std::cout << "Usage: ./stage_out [url]" << std::endl;
     exit(1);
   }
+
+  setenv("HERMES_STOP_DAEMON", "0", true);
   auto mdm = Singleton<hermes::adapter::fs::MetadataManager>::GetInstance();
   mdm->InitializeHermes(false);
   std::string url = argv[1];
