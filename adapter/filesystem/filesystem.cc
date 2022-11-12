@@ -676,7 +676,8 @@ int Filesystem::Close(File &f, AdapterStat &stat, bool destroy) {
     }
     MPI_Barrier(stat.comm);
   }
-  if (INTERCEPTOR_LIST->adapter_mode == AdapterMode::kScratch) {
+  if (INTERCEPTOR_LIST->adapter_mode == AdapterMode::kScratch ||
+      INTERCEPTOR_LIST->adapter_mode == AdapterMode::kWorkflow) {
     destroy = false;
   }
 

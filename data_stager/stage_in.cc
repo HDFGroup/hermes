@@ -30,6 +30,8 @@ int main(int argc, char **argv) {
   }
   auto mdm = Singleton<hermes::adapter::fs::MetadataManager>::GetInstance();
   MPI_Init(&argc, &argv);
+  setenv("HERMES_STOP_DAEMON", "0", true);
+  setenv("HERMES_CLIENT", "1", true);
   mdm->InitializeHermes(true);
   off_t off;
   size_t size;
@@ -37,8 +39,6 @@ int main(int argc, char **argv) {
   std::stringstream(argv[2]) >> off;
   std::stringstream(argv[3]) >> size;
   PlacementPolicy dpe = PlacementPolicyConv::to_enum(argv[4]);
-
-  setenv("HERMES_STOP_DAEMON", "0", true);
   auto stager = DataStagerFactory::Get(url);
   if (size == 0) {
     stager->StageIn(url, dpe);

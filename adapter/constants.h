@@ -81,6 +81,7 @@ const char kPathDelimiter = ',';
 const char* kAdapterDefaultMode = "DEFAULT";
 const char* kAdapterBypassMode = "BYPASS";
 const char* kAdapterScratchMode = "SCRATCH";
+const char* kAdapterWorkflowMode = "WORKFLOW";
 
 /**
  * If the \c HERMES_STOP_DAEMON environment variable is unset or has a non-zero

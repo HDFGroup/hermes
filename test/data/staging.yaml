@@ -63,7 +63,7 @@ system_view_state_update_interval_ms: 1000
 # The mount point of each device. RAM should be the empty string. For block
 # devices, this is the directory where Hermes will create buffering files. For
 # object storage or cloud targets, this will be a url.
-mount_points: ["", "./", "./", "./"]
+mount_points: ["", "./hermes_dir", "./hermes_dir", "./hermes_dir"]
 # For each device, indicate '1' if it is shared among nodes (e.g., burst
 # buffers), or '0' if it is per node (e.g., local NVMe).
 is_shared_device: [0, 0, 0, 0]
