@@ -34,7 +34,6 @@ using hermes::api::PlacementPolicy;
 */
 class DPE {
  protected:
-  bool require_bw_;        /**< check if bandwidth is required */
   PlacementPolicy policy_; /**< data placement policy */
 
  public:

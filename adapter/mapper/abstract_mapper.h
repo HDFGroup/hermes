@@ -59,7 +59,7 @@ struct BlobPlacement {
     return ss.str();
   }
 
-  /** decode a BLOB name by splitting it into index, offset, size,
+  /** decode \a blob_name BLOB name by splitting it into index, offset, size,
         and rank. */
   void DecodeBlobNameLogEntry(const std::string &blob_name) {
     auto str_split =

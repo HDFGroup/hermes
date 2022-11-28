@@ -26,7 +26,7 @@ void PosixStager::StageIn(std::string path, PlacementPolicy dpe) {
   } else if (stdfs::is_directory(path)) {
     DirectoryStageIn(path, dpe);
   } else {
-    LOG(ERROR) << "Unix stage in is neither a file or directory" << std::endl;
+    LOG(ERROR) << "Posix stage in is neither a file or directory" << std::endl;
   }
 }
 
@@ -48,10 +48,10 @@ void PosixStager::StageIn(std::string path, off_t off,
   if (stdfs::is_regular_file(path)) {
     FileStageIn(path, off, size, dpe);
   } else if (stdfs::is_directory(path)) {
-    LOG(ERROR) << "Unix stage-in with offset " <<
+    LOG(ERROR) << "Posix stage-in with offset " <<
         "is not supported for directories" << std::endl;
   } else {
-    LOG(ERROR) << "Unix stage-in is neither a file or directory" << std::endl;
+    LOG(ERROR) << "Posix stage-in is neither a file or directory" << std::endl;
   }
 }
 
@@ -74,7 +74,7 @@ void PosixStager::StageOut(std::string path) {
   } else if (stdfs::is_directory(path)) {
     DirectoryStageOut(path);
   } else {
-    LOG(ERROR) << "Unix stage-out is neither a file or directory" << std::endl;
+    LOG(ERROR) << "Posix stage-out is neither a file or directory" << std::endl;
   }
 }
 

@@ -111,10 +111,6 @@ Status RoundRobin::Placement(const std::vector<size_t> &blob_sizes,
   if (ctx.policy != hermes::api::PlacementPolicy::kRoundRobin) {
     return result;
   }
-  if (bandwidths.size()) {
-    require_bw_ = false;
-  }
-
   for (size_t i {0}; i < blob_sizes.size(); ++i) {
     PlacementSchema schema;
 
