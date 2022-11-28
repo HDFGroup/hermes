@@ -25,7 +25,7 @@
 static bool VerifyBuffer(char *ptr, size_t size, char nonce) {
   for (size_t i = 0; i < size; ++i) {
     if (ptr[i] != nonce) {
-      std::cout << (int)ptr[i] << " != " << nonce <<  std::endl;
+      std::cout << (int)ptr[i] << " != " << (int)nonce <<  std::endl;
       return false;
     }
   }
@@ -33,9 +33,10 @@ static bool VerifyBuffer(char *ptr, size_t size, char nonce) {
 }
 
 int main(int argc, char **argv) {
-  int rank;
+  int rank, nprocs;
   MPI_Init(&argc, &argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
   if (argc != 6) {
     std::cout << "USAGE: ./posix_simple_io"
               << " [path] [rw] [block_size (kb)] [count] [lag (sec)]";
@@ -48,6 +49,7 @@ int main(int argc, char **argv) {
   int count = atoi(argv[4]);
   int lag = atoi(argv[5]);
   size_t size = count * block_size;
+  size_t total_size = size * nprocs;
   int off = rank * size;
 
   std::stringstream ss;
@@ -64,6 +66,17 @@ int main(int argc, char **argv) {
   char *buf = (char*)malloc(size);
   int fd = open(path, O_CREAT | O_RDWR, 0666);
   lseek(fd, off, SEEK_SET);
+
+  struct stat st;
+  fstat(fd, &st);
+  if (st.st_size != total_size) {
+    if (rank == 0) {
+      std::cout << "File sizes aren't equivalent: "
+                << " stat: " << st.st_size
+                << " real: " << total_size << std::endl;
+    }
+    exit(1);
+  }
 
   for (int i = 0; i < count; ++i) {
     char nonce = i;
