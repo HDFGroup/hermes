@@ -62,6 +62,7 @@ typedef int (*MPI_File_sync_t)(MPI_File fh);
 
 namespace hermes::adapter::mpiio {
 
+/** Pointers to the real mpiio API */
 class API {
  public:
   /** MPI_Init */

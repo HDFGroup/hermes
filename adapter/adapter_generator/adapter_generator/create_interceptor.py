@@ -156,6 +156,7 @@ class ApiClass:
         # Create the class definition
         self.h_lines.append(f"namespace hermes::adapter::{namespace} {{")
         self.h_lines.append(f"")
+        self.h_lines.append(f"/** Pointers to the real {namespace} API */")
         self.h_lines.append(f"class API {{")
 
         # Create class function pointers

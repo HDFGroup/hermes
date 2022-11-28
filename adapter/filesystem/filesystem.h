@@ -201,6 +201,11 @@ struct IoOptions {
     return opts;
   }
 
+  /**
+   * Ensure that I/O goes only to Hermes, and does not fall back to PFS.
+   *
+   * @param orig_opts The original options to modify
+   * */
   static IoOptions PlaceInHermes(IoOptions &orig_opts) {
     IoOptions opts(orig_opts);
     opts.seek_ = false;

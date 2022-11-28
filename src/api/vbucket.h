@@ -163,9 +163,10 @@ class VBucket {
   size_t Get(const std::string &name, Bucket *bkt, void *user_blob,
              size_t blob_size, const Context &ctx);
 
-  /** retrieves the subset of blob links satisfying pred */
-  /** could return iterator */
+  /** retrieves all blob links */
   std::vector<std::string> GetLinks();
+
+  /** retrieves all blob links subject to a predicte in \a ctx */
   std::vector<std::string> GetLinks(Context &ctx);
 
   /** \brief Attach a Trait to this VBucket.

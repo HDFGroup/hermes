@@ -61,6 +61,7 @@ typedef long int (*ftell_t)(FILE * fp);
 
 namespace hermes::adapter::stdio {
 
+/** Pointers to the real stdio API */
 class API {
  public:
   /** MPI_Init */

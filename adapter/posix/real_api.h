@@ -54,6 +54,7 @@ typedef int (*close_t)(int fd);
 
 namespace hermes::adapter::posix {
 
+/** Pointers to the real posix API */
 class API {
  public:
   /** MPI_Init */
