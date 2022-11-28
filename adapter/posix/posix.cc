@@ -302,7 +302,7 @@ int HERMES_DECL(__fxstat)(int __ver, int fd, struct stat *buf) {
                  << " does not exist in Hermes\n";
     }
   } else {
-    result = real_api->__fxstat(_STAT_VER, fd, buf);
+    result = real_api->__fxstat(__ver, fd, buf);
   }
   return result;
 }
