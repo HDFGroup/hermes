@@ -14,13 +14,13 @@
 
 #include "catch_config.h"
 #include "constants.h"
-#include "stdio/fs_api.h"
 #include "mapper/mapper_factory.h"
+#include "stdio/fs_api.h"
 
 using hermes::adapter::BlobPlacements;
 using hermes::adapter::MapperFactory;
-using hermes::adapter::fs::MetadataManager;
 using hermes::adapter::fs::kMapperType;
+using hermes::adapter::fs::MetadataManager;
 
 namespace stdfs = std::experimental::filesystem;
 

@@ -29,22 +29,26 @@ enum MapperType {
   BALANCED = 0 /* Balanced Mapping */
 };
 
+/**
+ A structure to represent BLOB placement
+*/
 struct BlobPlacement {
-  int rank_;                 // The rank of the process producing the blob
-  size_t page_;              // The index in the array placements
-  size_t bucket_off_;        // Offset from file start (for FS)
-  size_t blob_off_;          // Offset from blob start
-  size_t blob_size_;         // Size after offset to read
-  int time_;                 // The order of the blob in a list of blobs
+  int rank_;          /**< The rank of the process producing the BLOB */
+  size_t page_;       /**< The index in the array placements */
+  size_t bucket_off_; /**< Offset from file start (for FS) */
+  size_t blob_off_;   /**< Offset from BLOB start */
+  size_t blob_size_;  /**< Size after offset to read */
+  int time_;          /**< The order of the blob in a list of blobs */
 
-  std::string CreateBlobName() const {
-    return std::to_string(page_);
-  }
+  /** create a BLOB name from index. */
+  std::string CreateBlobName() const { return std::to_string(page_); }
 
+  /** decode \a blob_name BLOB name to index.  */
   void DecodeBlobName(const std::string &blob_name) {
     std::stringstream(blob_name) >> page_;
   }
 
+  /** create a log entry for this BLOB using \a time. */
   std::string CreateBlobNameLogEntry(int time) const {
     std::stringstream ss;
     ss << std::to_string(page_);
@@ -55,6 +59,8 @@ struct BlobPlacement {
     return ss.str();
   }
 
+  /** decode a BLOB name by splitting it into index, offset, size,
+        and rank. */
   void DecodeBlobNameLogEntry(const std::string &blob_name) {
     auto str_split =
         hermes::adapter::StringSplit(blob_name.data(), '#');
@@ -68,13 +74,18 @@ struct BlobPlacement {
 
 typedef std::vector<BlobPlacement> BlobPlacements;
 
+/**
+   A class to represent abstract mapper
+*/
 class AbstractMapper {
  public:
   /**
-   * This method maps the current Operation to Hermes data structures.
+   * This method maps the current operation to Hermes data structures.
    *
-   * @param file_op, FileStruct, operations for which we are mapping.
-   * @return a map of FileStruct to Hermes Struct
+   * @param off offset
+   * @param size size
+   * @param ps BLOB placement
+   *
    */
   virtual void map(size_t off, size_t size, BlobPlacements &ps) = 0;
 };

@@ -27,32 +27,41 @@
 
 namespace hermes {
 
-typedef void (ArenaErrorFunc)();
+typedef void(ArenaErrorFunc)(); /**< Arena error function */
 
 /**
  * Implements a ticket lock as described at
  * https://en.wikipedia.org/wiki/Ticket_lock.
  */
 struct TicketMutex {
-  std::atomic<u32> ticket;
-  std::atomic<u32> serving;
+  std::atomic<u32> ticket;  /**< ticket number */
+  std::atomic<u32> serving; /**< ticket number being served */
 };
 
+/**
+ A structure to represent ticket
+*/
 struct Ticket {
-  u32 ticket;
-  bool acquired;
-  Ticket() : ticket(-1), acquired(false) {}
+  u32 ticket;                               /**< ticket number */
+  bool acquired;                            /**< is ticket acquired? */
+  Ticket() : ticket(-1), acquired(false) {} /**< constructor */
 };
 
+/**
+ A structure to represent read-write lock
+*/
 struct RwLock {
-  TicketMutex mutex;
-  std::atomic<u32> readers;
-  std::atomic<bool> writer_waiting;
+  TicketMutex mutex;                /**< mutex is a lock for shared resource. */
+  std::atomic<u32> readers;         /**< number of readers */
+  std::atomic<bool> writer_waiting; /**< is writer waiting for the lock? */
 };
 
+/**
+ A structure to represent arena information
+*/
 struct ArenaInfo {
-  size_t sizes[kArenaType_Count];
-  size_t total;
+  size_t sizes[kArenaType_Count]; /**< array of sizes for each arena type */
+  size_t total;                   /**< total number of arena */
 };
 
 /**
@@ -85,6 +94,9 @@ struct Arena {
   i32 temp_count;
 };
 
+/**
+ A structure to represent heap
+*/
 struct Heap {
   /** Function called when this Heap encounters and error */
   ArenaErrorFunc *error_handler;
@@ -103,23 +115,32 @@ struct Heap {
    * value */
   u16 alignment;
   /** 1 if allocating new memory returns higher memory addresses, else 0 */
-  u16 grows_up;
+  bool grows_up;
 };
 
+/**
+ A structure to represent free block header
+*/
 struct FreeBlockHeader {
-  size_t size;
+  size_t size; /**< size of free block header */
 };
 
+/**
+ A structure to represent free block
+*/
 struct FreeBlock {
-  /* The offset of the next FreeBlock in the list. Offset 0 represents NULL */
+  /** The offset of the next FreeBlock in the list. Offset 0 represents NULL. */
   u32 next_offset;
-  /* The size of the next FreeBlock in the list. */
+  /** The size of the next FreeBlock in the list */
   u32 size;
 };
 
+/**
+ A structure to represent a temporary memory
+*/
 struct TemporaryMemory {
-  Arena *arena;
-  size_t used;
+  Arena *arena; /**< pointer to arena */
+  size_t used;  /**< temporary memory used */
 };
 
 /**
@@ -152,7 +173,7 @@ struct ScopedTemporaryMemory {
 
   ScopedTemporaryMemory() = delete;
   ScopedTemporaryMemory(const ScopedTemporaryMemory &) = delete;
-  ScopedTemporaryMemory& operator=(const ScopedTemporaryMemory &) = delete;
+  ScopedTemporaryMemory &operator=(const ScopedTemporaryMemory &) = delete;
 
   /**
    * Creates a ScopedTemporaryMemory from an existing, backing Arena.
@@ -183,18 +204,16 @@ struct ScopedTemporaryMemory {
    * Allows passing a ScopedTemporaryMemory to functions that take an Arena
    * without an explicit cast.
    */
-  operator Arena*() {
-    return arena;
-  }
+  operator Arena *() { return arena; }
 };
 
 /**
- *
+  return a temporary memory that points to \a arena Arena
  */
 TemporaryMemory BeginTemporaryMemory(Arena *arena);
 
 /**
- *
+  copy \a temp_memory usage information back to its arena.
  */
 void EndTemporaryMemory(TemporaryMemory *temp_memory);
 
@@ -290,7 +309,7 @@ u8 *PushSizeAndClear(Arena *arena, size_t size, size_t alignment = 8);
  *
  * @return A pointer to an uninitialized `T` instance.
  */
-template<typename T>
+template <typename T>
 inline T *PushStruct(Arena *arena, size_t alignment = 8) {
   T *result = reinterpret_cast<T *>(PushSize(arena, sizeof(T), alignment));
 
@@ -308,10 +327,10 @@ inline T *PushStruct(Arena *arena, size_t alignment = 8) {
  *
  * @return A pointer to a `T` instance with all members initialized to zero.
  */
-template<typename T>
+template <typename T>
 inline T *PushClearedStruct(Arena *arena, size_t alignment = 8) {
-  T *result = reinterpret_cast<T *>(PushSizeAndClear(arena, sizeof(T),
-                                                     alignment));
+  T *result =
+      reinterpret_cast<T *>(PushSizeAndClear(arena, sizeof(T), alignment));
 
   return result;
 }
@@ -328,10 +347,10 @@ inline T *PushClearedStruct(Arena *arena, size_t alignment = 8) {
  *
  * @return A pointer to the first `T` instance in the uninitialized array.
  */
-template<typename T>
+template <typename T>
 inline T *PushArray(Arena *arena, int count, size_t alignment = 8) {
-  T *result = reinterpret_cast<T *>(PushSize(arena, sizeof(T) * count,
-                                             alignment));
+  T *result =
+      reinterpret_cast<T *>(PushSize(arena, sizeof(T) * count, alignment));
 
   return result;
 }
@@ -346,23 +365,29 @@ inline T *PushArray(Arena *arena, int count, size_t alignment = 8) {
  *
  * @return A pointer to the first `T` instance in the array.
  */
-template<typename T>
+template <typename T>
 inline T *PushClearedArray(Arena *arena, int count, size_t alignment = 8) {
-  T *result = reinterpret_cast<T *>(PushSizeAndClear(arena, sizeof(T) * count,
-                                                     alignment));
+  T *result = reinterpret_cast<T *>(
+      PushSizeAndClear(arena, sizeof(T) * count, alignment));
 
   return result;
 }
-u8 *HeapPushSize(Heap *heap, u32 size);
+u8 *HeapPushSize(Heap *heap, u32 size); /**< push \a size to \a heap */
 
-template<typename T>
+/**
+ A template for pushing structure to \a heap.
+*/
+template <typename T>
 inline T *HeapPushStruct(Heap *heap) {
   T *result = reinterpret_cast<T *>(HeapPushSize(heap, sizeof(T)));
 
   return result;
 }
 
-template<typename T>
+/**
+ A template for pushing array of \a count size to \a heap.
+*/
+template <typename T>
 inline T *HeapPushArray(Heap *heap, u32 count) {
   T *result = reinterpret_cast<T *>(HeapPushSize(heap, count * sizeof(T)));
 

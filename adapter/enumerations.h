@@ -20,7 +20,7 @@ enum class AdapterMode {
 };
 
 enum class FlushingMode {
-  kSynchronous, /**< Flush persistent Blobs synchronously on fclose. */
+  kSynchronous,  /**< Flush persistent Blobs synchronously on fclose. */
   kAsynchronous, /**< Flush persistent Blobs asynchronously on fwrite. */
 };
 

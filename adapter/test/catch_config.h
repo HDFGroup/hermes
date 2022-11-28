@@ -14,28 +14,29 @@
 #define HERMES_CATCH_CONFIG_H
 
 #define CATCH_CONFIG_RUNNER
-#include <catch2/catch_all.hpp>
 #include <mpi.h>
+
+#include <catch2/catch_all.hpp>
 
 namespace cl = Catch::Clara;
 
 cl::Parser define_options();
 
-int init(int *argc, char*** argv);
+int init(int* argc, char*** argv);
 int finalize();
 
 int main(int argc, char* argv[]) {
-    Catch::Session session;
-    auto cli = session.cli() | define_options();
-    int returnCode = init(&argc, &argv);
-    if (returnCode != 0) return returnCode;
-    session.cli(cli);
-    returnCode = session.applyCommandLine(argc, argv);
-    if (returnCode != 0) return returnCode;
-    int test_return_code = session.run();
-    returnCode = finalize();
-    if (returnCode != 0) return returnCode;
-    return test_return_code;
+  Catch::Session session;
+  auto cli = session.cli() | define_options();
+  int returnCode = init(&argc, &argv);
+  if (returnCode != 0) return returnCode;
+  session.cli(cli);
+  returnCode = session.applyCommandLine(argc, argv);
+  if (returnCode != 0) return returnCode;
+  int test_return_code = session.run();
+  returnCode = finalize();
+  if (returnCode != 0) return returnCode;
+  return test_return_code;
 }
 
 #endif

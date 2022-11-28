@@ -18,16 +18,16 @@
 
 #include <chrono>
 #include <iostream>
-#include <vector>
 #include <map>
+#include <vector>
 
-#include "hermes_types.h"
 #include "bucket.h"
+#include "hermes_types.h"
 
-#define HERMES_ADD_TEST(test_name, ...)                   \
-  if (argc == 1 || std::string(argv[1]) == #test_name) {  \
-    fprintf(stdout, "### Running %s\n", #test_name);      \
-    test_name(__VA_ARGS__);                               \
+#define HERMES_ADD_TEST(test_name, ...)                  \
+  if (argc == 1 || std::string(argv[1]) == #test_name) { \
+    fprintf(stdout, "### Running %s\n", #test_name);     \
+    test_name(__VA_ARGS__);                              \
   }
 
 namespace hermes {
@@ -37,21 +37,16 @@ namespace testing {
 // end
 class Timer {
  public:
-  Timer():elapsed_time(0) {}
-  void resumeTime() {
-    t1 = std::chrono::high_resolution_clock::now();
-  }
+  Timer() : elapsed_time(0) {}
+  void resumeTime() { t1 = std::chrono::high_resolution_clock::now(); }
   double pauseTime() {
     auto t2 = std::chrono::high_resolution_clock::now();
     elapsed_time += std::chrono::duration<double>(t2 - t1).count();
     return elapsed_time;
   }
-  double getElapsedTime() {
-    return elapsed_time;
-  }
-  void reset() {
-    elapsed_time = 0;
-  }
+  double getElapsedTime() { return elapsed_time; }
+  void reset() { elapsed_time = 0; }
+
  private:
   std::chrono::high_resolution_clock::time_point t1;
   double elapsed_time;

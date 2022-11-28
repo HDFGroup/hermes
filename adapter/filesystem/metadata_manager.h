@@ -14,15 +14,15 @@
 #define HERMES_ADAPTER_METADATA_MANAGER_H
 
 #include <ftw.h>
+#include <mpi.h>
+
 #include <cstdio>
 #include <unordered_map>
 
-#include <mpi.h>
-
 #include "constants.h"
 #include "enumerations.h"
-#include "interceptor.h"
 #include "filesystem.h"
+#include "interceptor.h"
 
 namespace hermes::adapter::fs {
 /**
@@ -30,33 +30,29 @@ namespace hermes::adapter::fs {
  */
 class MetadataManager {
  private:
-  std::unordered_map<File, AdapterStat> metadata;
-  std::shared_ptr<hapi::Hermes> hermes;
+  std::unordered_map<File, AdapterStat> metadata; /**< map for metadata*/
+  std::shared_ptr<hapi::Hermes> hermes;           /**< pointers for hermes */
   /**
    * references of how many times hermes was tried to initialize.
    */
   std::atomic<size_t> ref;
 
  public:
+  /** map for Hermes request */
   std::unordered_map<uint64_t, HermesRequest*> request_map;
-  bool is_mpi;
-  int rank;
-  int comm_size;
+  bool is_mpi;   /**< flag for checking if MPI is used */
+  int rank;      /**< rank of MPI processor */
+  int comm_size; /**< number of MPI processors */
 
   /**
    * Constructor
    */
   MetadataManager()
-      : metadata(),
-        ref(0),
-        is_mpi(false),
-        rank(0),
-        comm_size(1) {}
+      : metadata(), ref(0), is_mpi(false), rank(0), comm_size(1) {}
   /**
    * Get the instance of hermes.
    */
   std::shared_ptr<hapi::Hermes>& GetHermes() { return hermes; }
-
 
   /**
    * Initialize hermes. Get the kHermesConf from environment else get_env
@@ -102,7 +98,7 @@ class MetadataManager {
     if (ref == 1) {
       if (this->is_mpi) {
         MPI_Barrier(MPI_COMM_WORLD);
-        char *stop_daemon = getenv(kStopDaemon);
+        char* stop_daemon = getenv(kStopDaemon);
         bool shutdown_daemon = true;
         if (stop_daemon && stop_daemon[0] == '0') {
           shutdown_daemon = false;
@@ -117,38 +113,38 @@ class MetadataManager {
 
   /**
    * Create a metadata entry for POSIX adapter for a given file handler.
-   * @param fh, int, original file handler of the file on the destination
+   * @param f original file handler of the file on the destination
    * filesystem.
-   * @param stat, AdapterStat, POSIX Adapter version of Stat data structure.
+   * @param stat POSIX Adapter version of Stat data structure.
    * @return    true, if operation was successful.
    *            false, if operation was unsuccessful.
    */
-  bool Create(const File &f, const AdapterStat& stat);
+  bool Create(const File& f, const AdapterStat& stat);
 
   /**
    * Update existing metadata entry for POSIX adapter for a given file handler.
-   * @param fh, int, original file handler of the file on the destination.
-   * @param stat, AdapterStat, POSIX Adapter version of Stat data structure.
+   * @param f original file handler of the file on the destination.
+   * @param stat POSIX Adapter version of Stat data structure.
    * @return    true, if operation was successful.
    *            false, if operation was unsuccessful or entry doesn't exist.
    */
-  bool Update(const File &f, const AdapterStat& stat);
+  bool Update(const File& f, const AdapterStat& stat);
 
   /**
    * Delete existing metadata entry for POSIX adapter for a given file handler.
-   * @param fh, int, original file handler of the file on the destination.
+   * @param f original file handler of the file on the destination.
    * @return    true, if operation was successful.
    *            false, if operation was unsuccessful.
    */
-  bool Delete(const File &f);
+  bool Delete(const File& f);
 
   /**
    * Find existing metadata entry for POSIX adapter for a given file handler.
-   * @param fh, int, original file handler of the file on the destination.
+   * @param f original file handler of the file on the destination.
    * @return    The metadata entry if exist.
    *            The bool in pair indicated whether metadata entry exists.
    */
-  std::pair<AdapterStat, bool> Find(const File &f);
+  std::pair<AdapterStat, bool> Find(const File& f);
 };
 }  // namespace hermes::adapter::fs
 

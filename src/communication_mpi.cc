@@ -21,26 +21,38 @@
 
 namespace hermes {
 
+/**
+ A structure to represent MPI state
+*/
 struct MPIState {
-  MPI_Comm world_comm;
+  MPI_Comm world_comm;   /**< MPI world communicator */
   /** This communicator is in one of two groups, depending on the value of the
    * rank's ProcessKind. When its kHermes, sub_comm groups all Hermes cores, and
    * when its kApp, it groups all application cores. */
   MPI_Comm sub_comm;
 };
 
+/**
+   get the application's communicator
+*/
 void *GetAppCommunicator(CommunicationContext *comm) {
   MPIState *mpi_state = (MPIState *)comm->state;
 
   return &mpi_state->sub_comm;
 }
 
+/**
+   get the MPI process ID of \a comm MPI communicator.
+*/
 inline int MpiGetProcId(MPI_Comm comm) {
   int result;
   MPI_Comm_rank(comm, &result);
   return result;
 }
 
+/**
+   get the MPI process ID of MPI world communicator from \a state MPIState.
+*/
 inline int MpiGetWorldProcId(void *state) {
   MPIState *mpi_state = (MPIState *)state;
   int result = MpiGetProcId(mpi_state->world_comm);
@@ -48,6 +60,9 @@ inline int MpiGetWorldProcId(void *state) {
   return result;
 }
 
+/**
+   get the MPI process ID of MPI sub-communicator from \a state MPIState.
+*/
 inline int MpiGetSubProcId(void *state) {
   MPIState *mpi_state = (MPIState *)state;
   int result = MpiGetProcId(mpi_state->sub_comm);
@@ -55,6 +70,9 @@ inline int MpiGetSubProcId(void *state) {
   return result;
 }
 
+/**
+   get the number of MPI processes of \a comm MPI communicator.
+*/
 inline int MpiGetNumProcs(MPI_Comm comm) {
   int result;
   MPI_Comm_size(comm, &result);
@@ -62,6 +80,9 @@ inline int MpiGetNumProcs(MPI_Comm comm) {
   return result;
 }
 
+/**
+   get the number of MPI processes of MPI world communicator.
+*/
 inline int MpiGetNumWorldProcs(void *state) {
   MPIState *mpi_state = (MPIState *)state;
   int result = MpiGetNumProcs(mpi_state->world_comm);
@@ -69,15 +90,24 @@ inline int MpiGetNumWorldProcs(void *state) {
   return result;
 }
 
+/**
+  a wrapper for MPI_Barrier() fucntion
+*/
 inline void MpiBarrier(MPI_Comm comm) {
   MPI_Barrier(comm);
 }
 
+/**
+  a wrapper for MPI global communicator's MPI_Barrier() function
+*/  
 inline void MpiWorldBarrier(void *state) {
   MPIState *mpi_state = (MPIState *)state;
   MpiBarrier(mpi_state->world_comm);
 }
 
+/**
+  a wrapper for MPI sub-communicator's MPI_Barrier() function
+*/
 inline void MpiSubBarrier(void *state) {
   MPIState *mpi_state = (MPIState *)state;
   MpiBarrier(mpi_state->sub_comm);
@@ -202,11 +232,17 @@ size_t MpiAssignIDsToNodes(CommunicationContext *comm,
   return result;
 }
 
+/**
+   a wrapper for MPI_Finalize() function
+ */
 void MpiFinalize(void *state) {
   (void)state;
   MPI_Finalize();
 }
 
+/**
+   initialize MPI communication.
+ */
 size_t InitCommunication(CommunicationContext *comm, Arena *arena,
                          size_t trans_arena_size_per_node, bool is_daemon,
                          bool is_adapter) {
