@@ -23,36 +23,42 @@ namespace hermes {
 
 struct RpcContext;
 
-const int kMaxServerNameSize = 128;
-const int kMaxServerSuffixSize = 16;
+const int kMaxServerNameSize = 128;  /**< maximum size of server name */
+const int kMaxServerSuffixSize = 16; /**< maximum size of server suffix */
 
-typedef void (*StartFunc)(SharedMemoryContext*, RpcContext*, Arena*,
-                          const char*, int);
-
+/** start function for RPC server */
+typedef void (*StartFunc)(SharedMemoryContext *, RpcContext *, Arena *,
+                          const char *, int);
+/**
+   A structure to represent a client's RPC context.
+ */
 struct ClientRpcContext {
-  void *state;
-  size_t state_size;
+  void *state;       /**< pointer to state */
+  size_t state_size; /**< size of state */
 };
 
+/**
+   A structure to represent RPC context.
+ */
 struct RpcContext {
-  ClientRpcContext client_rpc;
-  void *state;
-  /** The size of the internal rpc state. */
+  ClientRpcContext client_rpc; /**< client's RPC context */
+  void *state;                 /**< pointer to state*/
+  /** The size of the internal RPC state. */
   size_t state_size;
   /** Array of host names stored in shared memory. This array size is
    * RpcContext::num_nodes. */
   ShmemString *host_names;
-  u32 node_id;
-  u32 num_nodes;
-  int port;
-  bool use_host_file;
+  u32 node_id;        /**< node ID */
+  u32 num_nodes;      /**< number of nodes */
+  int port;           /**< port number */
+  bool use_host_file; /**< use host file if true */
 
   // TODO(chogan): Also allow reading hostnames from a file for heterogeneous or
   // non-contiguous hostnames (e.g., compute-node-20, compute-node-30,
   // storage-node-16, storage-node-24)
   // char *host_file_name;
 
-  StartFunc start_server;
+  StartFunc start_server; /**< start function */
 };
 
 void InitRpcContext(RpcContext *rpc, u32 num_nodes, u32 node_id,

@@ -10,30 +10,17 @@
 * have access to the file, you may request a copy from help@hdfgroup.org.   *
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_DATA_STAGER_STAGERS_UNIX_STAGE_H_
-#define HERMES_DATA_STAGER_STAGERS_UNIX_STAGE_H_
+#include "filesystem/metadata_manager.h"
+#include "singleton.h"
 
-#include "posix/fs_api.h"
-#include "../data_stager.h"
+using hermes::Singleton;
 
-namespace hermes {
-
-class UnixStager : public DataStager {
- public:
-  void StageIn(std::string url, PlacementPolicy dpe) override;
-  void FileStageIn(std::string path, PlacementPolicy dpe);
-  void DirectoryStageIn(std::string path, PlacementPolicy dpe);
-
-  void StageIn(std::string url,
-               off_t off, size_t size, PlacementPolicy dpe) override;
-  void FileStageIn(std::string path,
-                   off_t off, size_t size, PlacementPolicy dpe);
-
-  void StageOut(std::string url) override;
-  void FileStageOut(std::string path);
-  void DirectoryStageOut(std::string path);
-};
-
-}  // namespace hermes
-
-#endif  // HERMES_DATA_STAGER_STAGERS_UNIX_STAGE_H_
+int main(int argc, char **argv) {
+  auto mdm = Singleton<hermes::adapter::fs::MetadataManager>::GetInstance();
+  setenv("HERMES_CLIENT", "1", true);
+  setenv("HERMES_STOP_DAEMON", "1", true);
+  MPI_Init(&argc, &argv);
+  mdm->InitializeHermes(true);
+  mdm->FinalizeHermes();
+  MPI_Finalize();
+}

@@ -22,12 +22,18 @@
 
 namespace hermes {
 
+/** Check if \a val number is a power of 2 or not.
+    Use a bitwise operator instead of log_2(n) math function.
+ */
 bool IsPowerOfTwo(size_t val) {
   bool result = (val & (val - 1)) == 0;
 
   return result;
 }
 
+/**
+   align \a addr forward by \a alignment. 
+ */
 uintptr_t AlignForward(uintptr_t addr, size_t alignment) {
   assert(IsPowerOfTwo(alignment));
 
@@ -42,6 +48,9 @@ uintptr_t AlignForward(uintptr_t addr, size_t alignment) {
   return result;
 }
 
+/**
+   align \a addr backward by \a alignment. 
+ */  
 uintptr_t AlignBackward(uintptr_t addr, size_t alignment) {
   assert(IsPowerOfTwo(alignment));
 
@@ -56,6 +65,9 @@ uintptr_t AlignBackward(uintptr_t addr, size_t alignment) {
   return result;
 }
 
+/**
+   initialize \a arena Arena with \a bytes capacity and \a base address
+ */
 void InitArena(Arena *arena, size_t bytes, u8 *base) {
   arena->base = base;
   arena->used = 0;
@@ -63,6 +75,9 @@ void InitArena(Arena *arena, size_t bytes, u8 *base) {
   arena->temp_count = 0;
 }
 
+/**
+   initialize arena by allocating \a bytes memory
+ */
 Arena InitArenaAndAllocate(size_t bytes) {
   Arena result = {};
   result.base = (u8 *)malloc(bytes);
@@ -71,6 +86,9 @@ Arena InitArenaAndAllocate(size_t bytes) {
   return result;
 }
 
+/**
+   free \a arena Arena memory and reset its members to 0.  
+ */
 void DestroyArena(Arena *arena) {
   // TODO(chogan): Check for temp count?
   free(arena->base);
@@ -79,6 +97,9 @@ void DestroyArena(Arena *arena) {
   arena->capacity = 0;
 }
 
+/**
+   get the remaining capacity of \a arena Arena 
+ */
 size_t GetRemainingCapacity(Arena *arena) {
   size_t result = arena->capacity - arena->used;
 
@@ -159,12 +180,18 @@ u8 *PushSizeAndClear(Arena *arena, size_t size, size_t alignment) {
   return result;
 }
 
+/**
+   get \a heap memory address 
+ */
 u8 *GetHeapMemory(Heap *heap) {
   u8 *result = (u8 *)heap + heap->base_offset;
 
   return result;
 }
 
+/**
+   get \a heap free block pointer
+ */
 FreeBlock *GetHeapFreeList(Heap *heap) {
   FreeBlock *result = 0;
   if (heap->free_list_offset) {
@@ -178,6 +205,9 @@ FreeBlock *GetHeapFreeList(Heap *heap) {
   return result;
 }
 
+/**
+   get \a heap's next free block from \a block.
+ */
 FreeBlock *NextFreeBlock(Heap *heap, FreeBlock *block) {
   FreeBlock *result = 0;
 
@@ -192,6 +222,9 @@ FreeBlock *NextFreeBlock(Heap *heap, FreeBlock *block) {
   return result;
 }
 
+/**
+   get \a pointer to heap's memory from \a offset.
+ */
 u8 *HeapOffsetToPtr(Heap *heap, u32 offset) {
   u8 *result = 0;
   if (heap->grows_up) {
@@ -203,6 +236,9 @@ u8 *HeapOffsetToPtr(Heap *heap, u32 offset) {
   return result;
 }
 
+/**
+   get \a pointer to heap's memory from \a offset.
+ */
 u32 GetHeapOffset(Heap *heap, u8 *ptr) {
   ptrdiff_t signed_result = (u8 *)ptr - GetHeapMemory(heap);
   u32 result = (u32)std::abs(signed_result);
@@ -210,11 +246,17 @@ u32 GetHeapOffset(Heap *heap, u8 *ptr) {
   return result;
 }
 
+/**
+   print a fatal out-of-memory error message.
+ */
 void HeapErrorHandler() {
   LOG(FATAL) << "Heap out of memory. Increase metadata_arena_percentage "
              << "in Hermes configuration." << std::endl;
 }
 
+/**
+   compute \a heap's extent
+ */  
 u32 ComputeHeapExtent(Heap *heap, void *item, u32 size) {
   u32 result = 0;
   if (heap->grows_up) {
@@ -226,6 +268,9 @@ u32 ComputeHeapExtent(Heap *heap, void *item, u32 size) {
   return result;
 }
 
+/**
+   return a pointer to \a heap's extent
+ */
 u8 *HeapExtentToPtr(Heap *heap) {
   u8 *result = 0;
   BeginTicketMutex(&heap->mutex);
@@ -239,6 +284,9 @@ u8 *HeapExtentToPtr(Heap *heap) {
   return result;
 }
 
+/**
+   initialize heap in \a arena with 4G capacity.
+ */
 Heap *InitHeapInArena(Arena *arena, bool grows_up, u16 alignment) {
   Heap *result = 0;
 
@@ -282,6 +330,9 @@ Heap *InitHeapInArena(Arena *arena, bool grows_up, u16 alignment) {
   return result;
 }
 
+/**
+   get the pointer to first free block from \a heap that has \a desired_size.
+ */
 FreeBlock *FindFirstFit(Heap *heap, u32 desired_size) {
   const u32 min_free_block_size = 8 + sizeof(FreeBlock);
   FreeBlock *result = 0;
@@ -403,6 +454,9 @@ u8 *HeapPushSize(Heap *heap, u32 size) {
   return result;
 }
 
+/**
+   free heap
+*/
 void HeapFree(Heap *heap, void *ptr) {
   if (heap && ptr) {
     BeginTicketMutex(&heap->mutex);
@@ -433,6 +487,9 @@ void HeapFree(Heap *heap, void *ptr) {
   }
 }
 
+/**
+   reallocate heap
+*/
 void *HeapRealloc(Heap *heap, void *ptr, size_t size) {
   if (ptr) {
     // NOTE(chogan): We only support malloc behavior for now. The stb_ds.h hash
@@ -447,6 +504,8 @@ void *HeapRealloc(Heap *heap, void *ptr, size_t size) {
   return result;
 }
 
+
+/** coalesce free blocks from \a heap */
 void CoalesceFreeBlocks(Heap *heap) {
   (void)heap;
   // TODO(chogan): This will run as a deferred coalesce. How often?
@@ -459,6 +518,9 @@ void CoalesceFreeBlocks(Heap *heap) {
   // |2|/|4|1|6|3|8|X|5|
 }
 
+/**
+   acquire ticket from \a existing_ticket or new one from \a mutex
+*/
 Ticket TryBeginTicketMutex(TicketMutex *mutex, Ticket *existing_ticket) {
   Ticket result = {};
   result.ticket =
@@ -471,6 +533,9 @@ Ticket TryBeginTicketMutex(TicketMutex *mutex, Ticket *existing_ticket) {
   return result;
 }
 
+/**
+   begin ticket mutex
+ */  
 void BeginTicketMutex(TicketMutex *mutex) {
   u32 ticket = mutex->ticket.fetch_add(1);
   while (ticket != mutex->serving.load()) {
@@ -486,12 +551,19 @@ void BeginTicketMutex(TicketMutex *mutex) {
   }
 }
 
+/**
+   end ticket mutex
+ */
 void EndTicketMutex(TicketMutex *mutex) {
   mutex->serving.fetch_add(1);
 }
 
+/** A constant value for maximum attempts for ticket lock */
 const int kAttemptsBeforeYield = 100;
 
+/**
+   begin reader lock by incrementing \a lock's readers.
+ */  
 bool BeginReaderLock(RwLock *lock) {
   bool result = false;
   if (!lock->writer_waiting.load()) {
@@ -502,6 +574,9 @@ bool BeginReaderLock(RwLock *lock) {
   return result;
 }
 
+/**
+   end reader lock
+ */
 void EndReaderLock(RwLock *lock) {
   u32 readers = lock->readers.load();
 
@@ -520,6 +595,9 @@ void EndReaderLock(RwLock *lock) {
   }
 }
 
+/**
+   begin writer lock
+ */
 void BeginWriterLock(RwLock *lock) {
   lock->writer_waiting.store(true);
 
@@ -534,6 +612,9 @@ void BeginWriterLock(RwLock *lock) {
   BeginTicketMutex(&lock->mutex);
 }
 
+/**
+   end writer lock
+ */
 void EndWriterLock(RwLock *lock) {
   EndTicketMutex(&lock->mutex);
   lock->writer_waiting.store(false);

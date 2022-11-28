@@ -15,35 +15,46 @@
 
 #include <map>
 
-#include "hermes_types.h"
-#include "hermes_status.h"
 #include "hermes.h"
+#include "hermes_status.h"
+#include "hermes_types.h"
 
 namespace hermes {
 
 #define VERIFY_DPE_POLICY(ctx) \
-  if (ctx.policy != policy_) { return Status(); }
+  if (ctx.policy != policy_) { \
+    return Status();           \
+  }
 
 using api::Status;
 using hermes::api::PlacementPolicy;
 
+/**
+ A class to represent data placement engine
+*/
 class DPE {
  protected:
-  bool require_bw_;
-  PlacementPolicy policy_;
+  PlacementPolicy policy_; /**< data placement policy */
+
  public:
-  std::vector<f32> bandwidths;
+  std::vector<f32> bandwidths; /**< a vector of bandwidths */
+  /** constructor function */
   explicit DPE(PlacementPolicy policy) : policy_(policy) {}
   virtual ~DPE() = default;
+  /**
+     set placement schema given BLOB sizes, node states, targets, and context.
+   */
   virtual Status Placement(const std::vector<size_t> &blob_sizes,
-                   const std::vector<u64> &node_state,
-                   const std::vector<TargetID> &targets,
-                   const api::Context &ctx,
-                   std::vector<PlacementSchema> &output) = 0;
+                           const std::vector<u64> &node_state,
+                           const std::vector<TargetID> &targets,
+                           const api::Context &ctx,
+                           std::vector<PlacementSchema> &output) = 0;
 
  protected:
+  /** get valid choices for splitting BLOB. */
   std::vector<int> GetValidSplitChoices(size_t blob_size);
   bool SplitBlob(size_t blob_size);
+  /** get split sizes for \a blob_size. */
   void GetSplitSizes(size_t blob_size, std::vector<size_t> &output);
 };
 

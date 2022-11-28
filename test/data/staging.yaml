@@ -2,6 +2,7 @@
 
 # The number of buffering tiers available. For example, RAM, NVMe, burst
 # buffer, and parallel file system would be 4 tiers.
+<<<<<<< HEAD
 num_devices: 2
 # For now this should be the same as num_devices.
 num_targets: 2
@@ -9,20 +10,38 @@ num_targets: 2
 # The maximum buffering capacity in MiB of each device. Here we say that all 4
 # devices get 50 MiB of buffering capacity.
 capacities_mb: [2000, 18000]
+=======
+num_devices: 4
+# For now this should be the same as num_devices.
+num_targets: 4
+
+# The maximum buffering capacity in MiB of each device. Here we say that all 4
+# devices get 50 MiB of buffering capacity.
+capacities_mb: [2000, 2000, 2000, 2000]
+>>>>>>> master
 
 # The size of the smallest available buffer in KiB. In general this should be
 # the page size of your system for byte addressable storage, and the block size
 # of the storage device for block addressable storage.
+<<<<<<< HEAD
 block_sizes_kb: [4, 4]
 
 # The nummber of size categories for each device. Here we say that each of our 4
 # devices should have 4 different sizes of buffers.
 num_slabs: [2, 1]
+=======
+block_sizes_kb: [4, 4, 4, 4]
+
+# The nummber of size categories for each device. Here we say that each of our 4
+# devices should have 4 different sizes of buffers.
+num_slabs: [2, 1, 1, 1]
+>>>>>>> master
 
 # The number of blocks (the size of which is chosen in block_sizes_kb) that each
 # device should contain for each slab (controlled by num_slabs). This allows for
 # precise control of the distibution of buffer sizes.
 slab_unit_sizes: [
+<<<<<<< HEAD
   [1, 256],
   [256]
 ]
@@ -33,10 +52,27 @@ slab_unit_sizes: [
 desired_slab_percentages: [
   [0.1, 0.9],
   [1.0]
+=======
+  [1, 32],
+  [32],
+  [32],
+  [32]
+]
+
+# The percentage of buffering capacity per device to allocate for each slab.
+# Each row should add up to 1. In this example, we have 4 devices, each with 4
+# slabs, and each slab is allotted 25% of the device's total buffering capacity.
+desired_slab_percentages: [
+  [0.5, 0.5],
+  [1],
+  [1],
+  [1]
+>>>>>>> master
 ]
 
 # The maximum theoretical bandwidth (as advertised by the manufacturer) in
 # MiB/sec. of each device.
+<<<<<<< HEAD
 bandwidth_mbps: [4000, 500]
 # The latency in microseconds of each device (as advertised by the manufacturer).
 latencies_us: [10, 100]
@@ -48,6 +84,19 @@ buffer_pool_arena_percentage: 0.6
 metadata_arena_percentage: 0.2
 # The percentage of Hermes memory to reserve for short term storage.
 transient_arena_percentage: 0.2
+=======
+bandwidth_mbps: [6000, 300, 150, 70]
+# The latency in microseconds of each device (as advertised by the manufacturer).
+latencies_us: [15, 250000, 500000, 1000000]
+
+# Hermes memory management. The following 4 values should add up to 1.
+# The percentage of Hermes memory to reserve for RAM buffers.
+buffer_pool_arena_percentage: 0.85
+# The percentage of Hermes memory to reserve for metadata.
+metadata_arena_percentage: 0.04
+# The percentage of Hermes memory to reserve for short term storage.
+transient_arena_percentage: 0.11
+>>>>>>> master
 
 # The maxiumum number of buckets that can be created.
 max_buckets_per_node: 16
@@ -59,10 +108,17 @@ system_view_state_update_interval_ms: 1000
 # The mount point of each device. RAM should be the empty string. For block
 # devices, this is the directory where Hermes will create buffering files. For
 # object storage or cloud targets, this will be a url.
+<<<<<<< HEAD
 mount_points: ["", "./"]
 # For each device, indicate '1' if it is shared among nodes (e.g., burst
 # buffers), or '0' if it is per node (e.g., local NVMe).
 is_shared_device: [0, 0]
+=======
+mount_points: ["", "./hermes_dir", "./hermes_dir", "./hermes_dir"]
+# For each device, indicate '1' if it is shared among nodes (e.g., burst
+# buffers), or '0' if it is per node (e.g., local NVMe).
+is_shared_device: [0, 0, 0, 0]
+>>>>>>> master
 # The mount point of a PFS or object store for swap space, in the event that
 # Hermes buffers become full.
 swap_mount: "./"
@@ -119,6 +175,11 @@ default_rr_split: 0
 # that the device is always at least 30% occupied.
 bo_capacity_thresholds: [
   [0.0, 1.0],
+<<<<<<< HEAD
+=======
+  [0.0, 1.0],
+  [0.0, 1.0],
+>>>>>>> master
   [0.0, 1.0]
 ]
 

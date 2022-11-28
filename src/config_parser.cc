@@ -75,6 +75,7 @@ static const char *kConfigVariableStrings[] = {
   "bo_capacity_thresholds",
 };*/
 
+/** print \a expected value and fail when an error occurs */
 void PrintExpectedAndFail(const std::string &expected, u32 line_number = 0) {
   std::ostringstream msg;
   msg << "Configuration parser expected '" << expected << "'";
@@ -86,6 +87,7 @@ void PrintExpectedAndFail(const std::string &expected, u32 line_number = 0) {
   LOG(FATAL) << msg.str();
 }
 
+/** log an error message when the number of devices is 0 in \a config */
 void RequireNumDevices(Config *config) {
   if (config->num_devices == 0) {
     LOG(FATAL) << "The configuration variable 'num_devices' must be defined "
@@ -93,6 +95,7 @@ void RequireNumDevices(Config *config) {
   }
 }
 
+/** log an error message when the number of slabs is 0 in \a config  */
 void RequireNumSlabs(Config *config) {
   if (config->num_slabs == 0) {
     LOG(FATAL) << "The configuration variable 'num_slabs' must be defined first"
@@ -100,6 +103,7 @@ void RequireNumSlabs(Config *config) {
   }
 }
 
+/** log an error message when capacities are specified multiple times */
 void RequireCapacitiesUnset(bool &already_specified) {
   if (already_specified) {
     LOG(FATAL) << "Capacities are specified multiple times in the configuration"
@@ -110,6 +114,7 @@ void RequireCapacitiesUnset(bool &already_specified) {
   }
 }
 
+/** log an error message when block sizes are specified multiple times */
 void RequireBlockSizesUnset(bool &already_specified) {
   if (already_specified) {
     LOG(FATAL) << "Block sizes are specified multiple times in the "
@@ -120,6 +125,7 @@ void RequireBlockSizesUnset(bool &already_specified) {
   }
 }
 
+/** parse capacities from configuration file in YAML */
 void ParseCapacities(Config *config, YAML::Node capacities,
                      int unit_conversion, bool &already_specified) {
   int i = 0;
@@ -130,6 +136,7 @@ void ParseCapacities(Config *config, YAML::Node capacities,
   }
 }
 
+/** parse block sizes from configuration file in YAML */
 void ParseBlockSizes(Config *config, YAML::Node block_sizes,
                      int unit_conversion, bool &already_specified) {
   int i = 0;
@@ -145,6 +152,7 @@ void ParseBlockSizes(Config *config, YAML::Node block_sizes,
   }
 }
 
+/** parse \a var array from configuration file in YAML */
 template<typename T>
 void ParseArray(YAML::Node list_node, const std::string var,
                 T *list, int max_list_len) {
@@ -159,6 +167,7 @@ void ParseArray(YAML::Node list_node, const std::string var,
   }
 }
 
+/** parse \a list_node vector from configuration file in YAML */
 template<typename T>
 void ParseVector(YAML::Node list_node, std::vector<T> &list) {
   for (auto val_node : list_node) {
@@ -166,6 +175,7 @@ void ParseVector(YAML::Node list_node, std::vector<T> &list) {
   }
 }
 
+/** parse \a matrix_node matrix using \a col_len column length */
 template<typename T>
 void ParseMatrix(YAML::Node matrix_node, const std::string var, T *matrix,
                  int max_row_len, int max_col_len, int *col_len) {
@@ -181,6 +191,7 @@ void ParseMatrix(YAML::Node matrix_node, const std::string var, T *matrix,
   }
 }
 
+/** parse \a matrix_node matrix from configuration file in YAML */
 template<typename T>
 void ParseMatrix(YAML::Node matrix_node, std::string var, T *matrix,
                  int max_row_len, int max_col_len) {
@@ -196,6 +207,7 @@ void ParseMatrix(YAML::Node matrix_node, std::string var, T *matrix,
   }
 }
 
+/** parse range list from configuration file in YAML */
 void ParseRangeList(YAML::Node list_node, std::string var,
                     std::vector<std::string> &list) {
   int min, max, width = 0;
@@ -235,6 +247,7 @@ void ParseRangeList(YAML::Node list_node, std::string var,
   }
 }
 
+/** parse host names from configuration file in YAML */
 void ParseHostNames(YAML::Node yaml_conf, hermes::Config *config) {
   if (yaml_conf["rpc_server_host_file"]) {
     config->rpc_server_host_file =
@@ -268,6 +281,7 @@ void ParseHostNames(YAML::Node yaml_conf, hermes::Config *config) {
   }
 }
 
+/** check constraints in \a config configuration */
 void CheckConstraints(Config *config) {
   // rpc_domain must be present if rpc_protocol is "verbs"
   if (config->rpc_protocol.find("verbs") != std::string::npos &&
@@ -504,6 +518,9 @@ void ParseConfigYAML(YAML::Node &yaml_conf, Config *config) {
   CheckConstraints(config);
 }
 
+/**
+   parse YAML configuration file
+ */
 void ParseConfig(Arena *arena, const char *path, Config *config) {
   ScopedTemporaryMemory scratch(arena);
   InitDefaultConfig(config);
@@ -513,6 +530,9 @@ void ParseConfig(Arena *arena, const char *path, Config *config) {
   ParseConfigYAML(yaml_conf, config);
 }
 
+/**
+   parse configuration string
+ */
 void ParseConfigString(
     Arena *arena, const std::string &config_string, Config *config) {
   ScopedTemporaryMemory scratch(arena);

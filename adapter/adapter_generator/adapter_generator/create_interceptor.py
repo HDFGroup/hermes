@@ -156,6 +156,7 @@ class ApiClass:
         # Create the class definition
         self.h_lines.append(f"namespace hermes::adapter::{namespace} {{")
         self.h_lines.append(f"")
+        self.h_lines.append(f"/** Pointers to the real {namespace} API */")
         self.h_lines.append(f"class API {{")
 
         # Create class function pointers
@@ -195,6 +196,7 @@ class ApiClass:
         self.h_lines.append(f"typedef {api.ret} (*{api.type})({api.get_args()});")
 
     def add_intercept_api(self, api):
+        self.h_lines.append(f"  /** {api.real_name} */")
         self.h_lines.append(f"  {api.type} {api.real_name} = nullptr;")
 
     def init_api(self, api):

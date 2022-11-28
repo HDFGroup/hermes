@@ -20,8 +20,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <unistd.h>
-#include <fcntl.h>
 #include "interceptor.h"
 #include "filesystem/filesystem.h"
 #include "filesystem/metadata_manager.h"
@@ -32,11 +30,6 @@
     #api_name << std::endl; \
     std::exit(1); \
    }
-
-#ifndef _STAT_VER
-#define _STAT_VER 1
-#warning "_STAT_VER was not defined, auto-defining as 1"
-#endif
 
 extern "C" {
 typedef int (*MPI_Init_t)(int * argc, char *** argv);
@@ -61,25 +54,44 @@ typedef int (*close_t)(int fd);
 
 namespace hermes::adapter::posix {
 
+/** Pointers to the real posix API */
 class API {
  public:
+  /** MPI_Init */
   MPI_Init_t MPI_Init = nullptr;
+  /** MPI_Finalize */
   MPI_Finalize_t MPI_Finalize = nullptr;
+  /** open */
   open_t open = nullptr;
+  /** open64 */
   open64_t open64 = nullptr;
+  /** __open_2 */
   __open_2_t __open_2 = nullptr;
+  /** creat */
   creat_t creat = nullptr;
+  /** creat64 */
   creat64_t creat64 = nullptr;
+  /** read */
   read_t read = nullptr;
+  /** write */
   write_t write = nullptr;
+  /** pread */
   pread_t pread = nullptr;
+  /** pwrite */
   pwrite_t pwrite = nullptr;
+  /** pread64 */
   pread64_t pread64 = nullptr;
+  /** pwrite64 */
   pwrite64_t pwrite64 = nullptr;
+  /** lseek */
   lseek_t lseek = nullptr;
+  /** lseek64 */
   lseek64_t lseek64 = nullptr;
+  /** __fxstat */
   __fxstat_t __fxstat = nullptr;
+  /** fsync */
   fsync_t fsync = nullptr;
+  /** close */
   close_t close = nullptr;
 
   API() {

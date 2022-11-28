@@ -21,52 +21,65 @@
 
 namespace hermes {
 
+/**
+  A structure to represent ID <key, value> map
+*/
 struct IdMap {
-  char *key;
-  u64 value;
+  char *key;                    /**< ID string as key */
+  u64 value;                    /**< ID value */
 };
 
+/**
+  A structure to represent BLOB information <key, value> map
+*/
 struct BlobInfoMap {
-  BlobID key;
-  BlobInfo value;
+  BlobID key;                   /**< BLOB ID as key */
+  BlobInfo value;               /**< BLOB information value */
 };
 
+/** get map by offset */
 static IdMap *GetMapByOffset(MetadataManager *mdm, u32 offset) {
   IdMap *result =(IdMap *)((u8 *)mdm + offset);
 
   return result;
 }
 
+/** get bucket map */
 static IdMap *GetBucketMap(MetadataManager *mdm) {
   IdMap *result = GetMapByOffset(mdm, mdm->bucket_map_offset);
 
   return result;
 }
 
+/** get virtual bucket map */
 static IdMap *GetVBucketMap(MetadataManager *mdm) {
   IdMap *result = GetMapByOffset(mdm, mdm->vbucket_map_offset);
 
   return result;
 }
 
+/** get BLOB ID map */
 static IdMap *GetBlobIdMap(MetadataManager *mdm) {
   IdMap *result = GetMapByOffset(mdm, mdm->blob_id_map_offset);
 
   return result;
 }
 
+/** get map heap */
 Heap *GetMapHeap(MetadataManager *mdm) {
   Heap *result = (Heap *)((u8 *)mdm + mdm->map_heap_offset);
 
   return result;
 }
 
+/** get ID heap */
 Heap *GetIdHeap(MetadataManager *mdm) {
   Heap *result = (Heap *)((u8 *)mdm + mdm->id_heap_offset);
 
   return result;
 }
 
+/** check if heap overlaps */
 void CheckHeapOverlap(MetadataManager *mdm) {
   Heap *map_heap = GetMapHeap(mdm);
   Heap *id_heap = GetIdHeap(mdm);
@@ -81,6 +94,7 @@ void CheckHeapOverlap(MetadataManager *mdm) {
   }
 }
 
+/** get ticket mutex based on \a map_type */
 TicketMutex *GetMapMutex(MetadataManager *mdm, MapType map_type) {
   TicketMutex *mutex = 0;
   switch (map_type) {
@@ -140,12 +154,14 @@ IdMap *GetMap(MetadataManager *mdm, MapType map_type) {
   return result;
 }
 
+/** get BLOB information map without mutex locking */
 BlobInfoMap *GetBlobInfoMapNoLock(MetadataManager *mdm) {
   BlobInfoMap *result = (BlobInfoMap *)((u8 *)mdm + mdm->blob_info_map_offset);
 
   return result;
 }
 
+/** get BLOB information map */
 BlobInfoMap *GetBlobInfoMap(MetadataManager *mdm) {
   TicketMutex *mutex = GetMapMutex(mdm, kMapType_BlobInfo);
   BeginTicketMutex(mutex);
@@ -201,10 +217,12 @@ BlobInfo *GetBlobInfoPtr(MetadataManager *mdm, BlobID blob_id) {
   return result;
 }
 
+/** release pointer to BLOB information */
 void ReleaseBlobInfoPtr(MetadataManager *mdm) {
   EndTicketMutex(&mdm->blob_info_map_mutex);
 }
 
+/** get BLOB stats locally */
 Stats LocalGetBlobStats(SharedMemoryContext *context, BlobID blob_id) {
   Stats result = {};
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
@@ -220,7 +238,7 @@ Stats LocalGetBlobStats(SharedMemoryContext *context, BlobID blob_id) {
 }
 
 /**
- * Return a pointer to the the internal array of IDs that the `id_list`
+ * Return a pointer to the internal array of IDs that the `id_list`
  * represents.
  *
  * This call acquires a lock, and must be paired with a corresponding call to
@@ -234,6 +252,10 @@ u64 *GetIdsPtr(MetadataManager *mdm, IdList id_list) {
   return result;
 }
 
+/**
+   get pointer to the internal array of IDs that the chucked \a id_list
+   represents
+*/
 u64 *GetIdsPtr(MetadataManager *mdm, ChunkedIdList id_list) {
   Heap *id_heap = GetIdHeap(mdm);
   BeginTicketMutex(&mdm->id_mutex);
@@ -277,6 +299,7 @@ BufferID *GetBufferIdsPtrFromBlobId(MetadataManager *mdm, BlobID blob_id,
   return result;
 }
 
+/** release IDs pointer */
 void ReleaseIdsPtr(MetadataManager *mdm) {
   EndTicketMutex(&mdm->id_mutex);
 }
@@ -297,6 +320,7 @@ static char *GetKey(MetadataManager *mdm, IdMap *map, u32 index) {
   return result;
 }
 
+/** free ID list */
 template<typename T>
 void FreeIdList(MetadataManager *mdm, T id_list) {
   Heap *id_heap = GetIdHeap(mdm);
@@ -306,6 +330,7 @@ void FreeIdList(MetadataManager *mdm, T id_list) {
   EndTicketMutex(&mdm->id_mutex);
 }
 
+/** free \a id_list ID list */
 void FreeIdList(MetadataManager *mdm, IdList id_list) {
   Heap *id_heap = GetIdHeap(mdm);
   BeginTicketMutex(&mdm->id_mutex);
@@ -314,6 +339,7 @@ void FreeIdList(MetadataManager *mdm, IdList id_list) {
   EndTicketMutex(&mdm->id_mutex);
 }
 
+/** free embedded ID list */
 void FreeEmbeddedIdList(MetadataManager *mdm, u32 offset) {
   Heap *id_heap = GetIdHeap(mdm);
   BeginTicketMutex(&mdm->id_mutex);
@@ -383,6 +409,7 @@ std::vector<u64> GetChunkedIdList(MetadataManager *mdm, ChunkedIdList id_list) {
   return result;
 }
 
+/** get chuncked ID list element */
 u64 GetChunkedIdListElement(MetadataManager *mdm, ChunkedIdList *id_list,
                             u32 index) {
   u64 result = 0;
@@ -395,6 +422,7 @@ u64 GetChunkedIdListElement(MetadataManager *mdm, ChunkedIdList *id_list,
   return result;
 }
 
+/** set chuncked ID list element */
 void SetChunkedIdListElement(MetadataManager *mdm, ChunkedIdList *id_list,
                              u32 index, u64 value) {
   if (id_list->length && index >= id_list->length) {
@@ -428,6 +456,7 @@ void IncrementBlobStats(SharedMemoryContext *context, RpcContext *rpc,
   }
 }
 
+/** get index of ID */
 i64 GetIndexOfId(MetadataManager *mdm, ChunkedIdList *id_list, u64 id) {
   i64 result = -1;
 
@@ -466,6 +495,7 @@ void LocalReplaceBlobIdInBucket(SharedMemoryContext *context,
   EndTicketMutex(&mdm->bucket_mutex);
 }
 
+/** add BLOB ID to bucket locally */
 void LocalAddBlobIdToBucket(MetadataManager *mdm, BucketID bucket_id,
                             BlobID blob_id, bool track_stats) {
   BeginTicketMutex(&mdm->bucket_mutex);
@@ -479,6 +509,7 @@ void LocalAddBlobIdToBucket(MetadataManager *mdm, BucketID bucket_id,
   CheckHeapOverlap(mdm);
 }
 
+/** add BLOB ID to virtual bucket locally */
 void LocalAddBlobIdToVBucket(MetadataManager *mdm, VBucketID vbucket_id,
                              BlobID blob_id) {
   BeginTicketMutex(&mdm->vbucket_mutex);
@@ -489,6 +520,7 @@ void LocalAddBlobIdToVBucket(MetadataManager *mdm, VBucketID vbucket_id,
   CheckHeapOverlap(mdm);
 }
 
+/** allocate ID list */
 IdList AllocateIdList(MetadataManager *mdm, u32 length) {
   static_assert(sizeof(IdList) == sizeof(u64));
   Heap *id_heap = GetIdHeap(mdm);
@@ -503,6 +535,7 @@ IdList AllocateIdList(MetadataManager *mdm, u32 length) {
   return result;
 }
 
+/** allocate embedded ID list */
 u32 AllocateEmbeddedIdList(MetadataManager *mdm, u32 length) {
   static_assert(sizeof(IdList) == sizeof(u64));
   Heap *id_heap = GetIdHeap(mdm);
@@ -520,6 +553,7 @@ u32 AllocateEmbeddedIdList(MetadataManager *mdm, u32 length) {
   return result;
 }
 
+/** get BLOB IDs locally */
 std::vector<BlobID> LocalGetBlobIds(SharedMemoryContext *context,
                                     BucketID bucket_id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
@@ -538,6 +572,7 @@ std::vector<BlobID> LocalGetBlobIds(SharedMemoryContext *context,
   return result;
 }
 
+/** allocate buffer ID list locally */
 u32 LocalAllocateBufferIdList(MetadataManager *mdm,
                               const std::vector<BufferID> &buffer_ids) {
   static_assert(sizeof(IdList) == sizeof(BufferID));
@@ -553,6 +588,7 @@ u32 LocalAllocateBufferIdList(MetadataManager *mdm,
   return result;
 }
 
+/** get buffer ID list locally */
 std::vector<BufferID> LocalGetBufferIdList(MetadataManager *mdm,
                                            BlobID blob_id) {
   size_t length = 0;
@@ -564,6 +600,7 @@ std::vector<BufferID> LocalGetBufferIdList(MetadataManager *mdm,
   return result;
 }
 
+/** get buffer ID list into \a buffer_ids locally */
 void LocalGetBufferIdList(Arena *arena, MetadataManager *mdm, BlobID blob_id,
                           BufferIdArray *buffer_ids) {
   size_t length = 0;
@@ -574,12 +611,14 @@ void LocalGetBufferIdList(Arena *arena, MetadataManager *mdm, BlobID blob_id,
   ReleaseIdsPtr(mdm);
 }
 
+/** free buffer ID list locally */
 void LocalFreeBufferIdList(SharedMemoryContext *context, BlobID blob_id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   FreeEmbeddedIdList(mdm, blob_id.bits.buffer_ids_offset);
   CheckHeapOverlap(mdm);
 }
 
+/** remove BLOB from bucket locally */
 void LocalRemoveBlobFromBucketInfo(SharedMemoryContext *context,
                                    BucketID bucket_id, BlobID blob_id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
@@ -599,6 +638,7 @@ void LocalRemoveBlobFromBucketInfo(SharedMemoryContext *context,
   EndTicketMutex(&mdm->bucket_mutex);
 }
 
+/** does \a bucket_id contain \a blob_id BLOB locally? */
 bool LocalContainsBlob(SharedMemoryContext *context, BucketID bucket_id,
                        BlobID blob_id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
@@ -620,24 +660,28 @@ bool LocalContainsBlob(SharedMemoryContext *context, BucketID bucket_id,
   return result;
 }
 
+/** is \a list's capacity greater than 0?  */
 static inline bool HasAllocated(ChunkedIdList *list) {
   bool result = list->capacity > 0;
 
   return result;
 }
 
+/** Has virtual bucket \a info allocated BLOBS?  */
 static inline bool HasAllocatedBlobs(VBucketInfo *info) {
   bool result = HasAllocated(&info->blobs);
 
   return result;
 }
 
+/** Has bucket \a info allocated BLOBS?  */
 static inline bool HasAllocatedBlobs(BucketInfo *info) {
   bool result = HasAllocated(&info->blobs);
 
   return result;
 }
 
+/** destroy bucket locally */
 bool LocalDestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
                         const char *bucket_name, BucketID bucket_id) {
   bool destroyed = false;
@@ -693,6 +737,7 @@ bool LocalDestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
   return destroyed;
 }
 
+/** destroy virtual bucket locally */
 bool LocalDestroyVBucket(SharedMemoryContext *context, const char *vbucket_name,
                          VBucketID vbucket_id) {
   bool destroyed = false;
@@ -732,6 +777,7 @@ bool LocalDestroyVBucket(SharedMemoryContext *context, const char *vbucket_name,
   return destroyed;
 }
 
+/** get targets locally */
 std::vector<TargetID> LocalGetTargets(SharedMemoryContext *context,
                                       IdList target_list) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
@@ -753,6 +799,7 @@ std::vector<TargetID> LocalGetTargets(SharedMemoryContext *context,
   return result;
 }
 
+/** get node targets locally */
 std::vector<TargetID> LocalGetNodeTargets(SharedMemoryContext *context) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   std::vector<TargetID> result = LocalGetTargets(context, mdm->node_targets);
@@ -760,6 +807,7 @@ std::vector<TargetID> LocalGetNodeTargets(SharedMemoryContext *context) {
   return result;
 }
 
+/** get neighborhood targets locally */
 std::vector<TargetID>
 LocalGetNeighborhoodTargets(SharedMemoryContext *context) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
@@ -769,6 +817,7 @@ LocalGetNeighborhoodTargets(SharedMemoryContext *context) {
   return result;
 }
 
+/** put to storage */
 void PutToStorage(MetadataManager *mdm, BlobID key, const BlobInfo &val) {
   Heap *heap = GetMapHeap(mdm);
   BlobInfoMap *map = GetBlobInfoMap(mdm);
@@ -778,6 +827,7 @@ void PutToStorage(MetadataManager *mdm, BlobID key, const BlobInfo &val) {
   CheckHeapOverlap(mdm);
 }
 
+/** put \a map_type to storage */
 void PutToStorage(MetadataManager *mdm, const char *key, u64 val,
                   MapType map_type) {
   Heap *heap = GetMapHeap(mdm);
@@ -789,6 +839,7 @@ void PutToStorage(MetadataManager *mdm, const char *key, u64 val,
   CheckHeapOverlap(mdm);
 }
 
+/** get from storage */
 u64 GetFromStorage(MetadataManager *mdm, const char *key, MapType map_type) {
   Heap *heap = GetMapHeap(mdm);
   IdMap *map = GetMap(mdm, map_type);
@@ -798,6 +849,7 @@ u64 GetFromStorage(MetadataManager *mdm, const char *key, MapType map_type) {
   return result;
 }
 
+/** reverse the get from storage operation */
 std::string ReverseGetFromStorage(MetadataManager *mdm, u64 id,
                                   MapType map_type) {
   std::string result;
@@ -819,6 +871,7 @@ std::string ReverseGetFromStorage(MetadataManager *mdm, u64 id,
   return result;
 }
 
+/** delete from storage */
 void DeleteFromStorage(MetadataManager *mdm, BlobID key, bool lock) {
   Heap *heap = GetMapHeap(mdm);
   BlobInfoMap *map = 0;
@@ -836,6 +889,7 @@ void DeleteFromStorage(MetadataManager *mdm, BlobID key, bool lock) {
   }
 }
 
+/** delete \a map_type from storage */
 void DeleteFromStorage(MetadataManager *mdm, const char *key,
                        MapType map_type) {
   Heap *heap = GetMapHeap(mdm);
@@ -847,6 +901,7 @@ void DeleteFromStorage(MetadataManager *mdm, const char *key,
   CheckHeapOverlap(mdm);
 }
 
+/** get the size of stored map */
 size_t GetStoredMapSize(MetadataManager *mdm, MapType map_type) {
   IdMap *map = GetMap(mdm, map_type);
   size_t result = shlen(map);
@@ -855,6 +910,7 @@ size_t GetStoredMapSize(MetadataManager *mdm, MapType map_type) {
   return result;
 }
 
+/** generate hash string for storage  */
 u32 HashStringForStorage(MetadataManager *mdm, RpcContext *rpc,
                          const char *str) {
   int result =
@@ -863,10 +919,12 @@ u32 HashStringForStorage(MetadataManager *mdm, RpcContext *rpc,
   return result;
 }
 
+/** seed hash for storage  */
 void SeedHashForStorage(size_t seed) {
   stbds_rand_seed(seed);
 }
 
+/** initialize swap space file name */
 void InitSwapSpaceFilename(MetadataManager *mdm, Arena *arena, Config *config) {
   std::string swap_filename_prefix("swap");
   size_t swap_mount_length = config->swap_mount.size();
@@ -890,6 +948,7 @@ void InitSwapSpaceFilename(MetadataManager *mdm, Arena *arena, Config *config) {
     GetOffsetFromMdm(mdm, swap_file_suffix_memory);
 }
 
+/** initialize neighborhood targets */
 void InitNeighborhoodTargets(SharedMemoryContext *context, RpcContext *rpc) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   std::vector<TargetID> neighborhood_targets =
@@ -905,6 +964,7 @@ void InitNeighborhoodTargets(SharedMemoryContext *context, RpcContext *rpc) {
   mdm->neighborhood_targets = targets;
 }
 
+/** initialize metadata storage */
 void InitMetadataStorage(SharedMemoryContext *context, MetadataManager *mdm,
                          Arena *arena, Config *config) {
   InitSwapSpaceFilename(mdm, arena, config);
@@ -988,6 +1048,7 @@ void InitMetadataStorage(SharedMemoryContext *context, MetadataManager *mdm,
   mdm->blob_info_map_offset = GetOffsetFromMdm(mdm, blob_info_map);
 }
 
+/** get BLOBs from virtual bucket information locally */
 std::vector<BlobID> LocalGetBlobsFromVBucketInfo(SharedMemoryContext *context,
                                                  VBucketID vbucket_id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
@@ -1001,6 +1062,7 @@ std::vector<BlobID> LocalGetBlobsFromVBucketInfo(SharedMemoryContext *context,
   return blobids;
 }
 
+/** remove BLOB from virtual bucket locally */
 void LocalRemoveBlobFromVBucketInfo(SharedMemoryContext *context,
                                     VBucketID vbucket_id, BlobID blob_id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
@@ -1018,6 +1080,7 @@ void LocalRemoveBlobFromVBucketInfo(SharedMemoryContext *context,
   EndTicketMutex(&mdm->vbucket_mutex);
 }
 
+/** get BLOB's importance score locally */
 f32 LocalGetBlobImportanceScore(SharedMemoryContext *context, BlobID blob_id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   Stats stats = LocalGetBlobStats(context, blob_id);
@@ -1027,6 +1090,9 @@ f32 LocalGetBlobImportanceScore(SharedMemoryContext *context, BlobID blob_id) {
   return result;
 }
 
+/**
+   Get the importance score of \a blob_id BLOB.
+ */   
 f32 GetBlobImportanceScore(SharedMemoryContext *context, RpcContext *rpc,
                            BlobID blob_id) {
   f32 result = 0;

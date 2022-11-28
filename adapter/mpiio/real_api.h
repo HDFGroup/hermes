@@ -62,35 +62,64 @@ typedef int (*MPI_File_sync_t)(MPI_File fh);
 
 namespace hermes::adapter::mpiio {
 
+/** Pointers to the real mpiio API */
 class API {
  public:
+  /** MPI_Init */
   MPI_Init_t MPI_Init = nullptr;
+  /** MPI_Finalize */
   MPI_Finalize_t MPI_Finalize = nullptr;
+  /** MPI_Wait */
   MPI_Wait_t MPI_Wait = nullptr;
+  /** MPI_Waitall */
   MPI_Waitall_t MPI_Waitall = nullptr;
+  /** MPI_File_open */
   MPI_File_open_t MPI_File_open = nullptr;
+  /** MPI_File_close */
   MPI_File_close_t MPI_File_close = nullptr;
+  /** MPI_File_seek_shared */
   MPI_File_seek_shared_t MPI_File_seek_shared = nullptr;
+  /** MPI_File_seek */
   MPI_File_seek_t MPI_File_seek = nullptr;
+  /** MPI_File_get_position */
   MPI_File_get_position_t MPI_File_get_position = nullptr;
+  /** MPI_File_read_all */
   MPI_File_read_all_t MPI_File_read_all = nullptr;
+  /** MPI_File_read_at_all */
   MPI_File_read_at_all_t MPI_File_read_at_all = nullptr;
+  /** MPI_File_read_at */
   MPI_File_read_at_t MPI_File_read_at = nullptr;
+  /** MPI_File_read */
   MPI_File_read_t MPI_File_read = nullptr;
+  /** MPI_File_read_ordered */
   MPI_File_read_ordered_t MPI_File_read_ordered = nullptr;
+  /** MPI_File_read_shared */
   MPI_File_read_shared_t MPI_File_read_shared = nullptr;
+  /** MPI_File_write_all */
   MPI_File_write_all_t MPI_File_write_all = nullptr;
+  /** MPI_File_write_at_all */
   MPI_File_write_at_all_t MPI_File_write_at_all = nullptr;
+  /** MPI_File_write_at */
   MPI_File_write_at_t MPI_File_write_at = nullptr;
+  /** MPI_File_write */
   MPI_File_write_t MPI_File_write = nullptr;
+  /** MPI_File_write_ordered */
   MPI_File_write_ordered_t MPI_File_write_ordered = nullptr;
+  /** MPI_File_write_shared */
   MPI_File_write_shared_t MPI_File_write_shared = nullptr;
+  /** MPI_File_iread_at */
   MPI_File_iread_at_t MPI_File_iread_at = nullptr;
+  /** MPI_File_iread */
   MPI_File_iread_t MPI_File_iread = nullptr;
+  /** MPI_File_iread_shared */
   MPI_File_iread_shared_t MPI_File_iread_shared = nullptr;
+  /** MPI_File_iwrite_at */
   MPI_File_iwrite_at_t MPI_File_iwrite_at = nullptr;
+  /** MPI_File_iwrite */
   MPI_File_iwrite_t MPI_File_iwrite = nullptr;
+  /** MPI_File_iwrite_shared */
   MPI_File_iwrite_shared_t MPI_File_iwrite_shared = nullptr;
+  /** MPI_File_sync */
   MPI_File_sync_t MPI_File_sync = nullptr;
 
   API() {

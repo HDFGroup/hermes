@@ -61,35 +61,64 @@ typedef long int (*ftell_t)(FILE * fp);
 
 namespace hermes::adapter::stdio {
 
+/** Pointers to the real stdio API */
 class API {
  public:
+  /** MPI_Init */
   MPI_Init_t MPI_Init = nullptr;
+  /** MPI_Finalize */
   MPI_Finalize_t MPI_Finalize = nullptr;
+  /** fopen */
   fopen_t fopen = nullptr;
+  /** fopen64 */
   fopen64_t fopen64 = nullptr;
+  /** fdopen */
   fdopen_t fdopen = nullptr;
+  /** freopen */
   freopen_t freopen = nullptr;
+  /** freopen64 */
   freopen64_t freopen64 = nullptr;
+  /** fflush */
   fflush_t fflush = nullptr;
+  /** fclose */
   fclose_t fclose = nullptr;
+  /** fwrite */
   fwrite_t fwrite = nullptr;
+  /** fputc */
   fputc_t fputc = nullptr;
+  /** fgetpos */
   fgetpos_t fgetpos = nullptr;
+  /** fgetpos64 */
   fgetpos64_t fgetpos64 = nullptr;
+  /** putc */
   putc_t putc = nullptr;
+  /** putw */
   putw_t putw = nullptr;
+  /** fputs */
   fputs_t fputs = nullptr;
+  /** fread */
   fread_t fread = nullptr;
+  /** fgetc */
   fgetc_t fgetc = nullptr;
+  /** getc */
   getc_t getc = nullptr;
+  /** getw */
   getw_t getw = nullptr;
+  /** fgets */
   fgets_t fgets = nullptr;
+  /** rewind */
   rewind_t rewind = nullptr;
+  /** fseek */
   fseek_t fseek = nullptr;
+  /** fseeko */
   fseeko_t fseeko = nullptr;
+  /** fseeko64 */
   fseeko64_t fseeko64 = nullptr;
+  /** fsetpos */
   fsetpos_t fsetpos = nullptr;
+  /** fsetpos64 */
   fsetpos64_t fsetpos64 = nullptr;
+  /** ftell */
   ftell_t ftell = nullptr;
 
   API() {

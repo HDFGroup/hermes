@@ -72,35 +72,47 @@ static u32 global_color_counter;
 static DebugState *global_id_debug_state;
 static DebugState *global_map_debug_state;
 
+/**
+  A structure to represent range from start to end.
+*/
 struct Range {
-  int start;
-  int end;
+  int start;                    /**< start value of range */
+  int end;                      /**< end value of range */
 };
 
+/**
+ A structure to represent a point at (x,y) location
+*/
 struct Point {
-  int x;
-  int y;
+  int x;                        /**< x location value */
+  int y;                        /**< y location value */
 };
 
+/**
+ A structure to represent heap for metadata
+*/
 struct HeapMetadata {
-  u8 *heap_base;
-  ptrdiff_t heap_size;
-  int total_slots;
-  int screen_width;
-  int num_rows;
-  int y_offset;
-  int h;
-  f32 slots_to_bytes;
-  f32 bytes_to_slots;
+  u8 *heap_base;                /**< pointer to heap */
+  ptrdiff_t heap_size;          /**< size of heap */
+  int total_slots;              /**< total number of slots */
+  int screen_width;             /**< screen width */
+  int num_rows;                 /**< number of rows */
+  int y_offset;                 /**< y offset */
+  int h;                        /**< height */
+  f32 slots_to_bytes;           /**< slots:bytes ratio */
+  f32 bytes_to_slots;           /**< bytes:slots ratio */
 };
 
+/**
+ A structure to represent window
+*/
 struct WindowData {
-  SDL_Window *window;
-  SDL_Surface *back_buffer;
-  SDL_Surface *screen;
-  int width;
-  int height;
-  bool running;
+  SDL_Window *window;           /**< pointer to window */
+  SDL_Surface *back_buffer;     /**< buffer */
+  SDL_Surface *screen;          /**< screen */
+  int width;                    /**< width */
+  int height;                   /**< height */
+  bool running;                 /**< is window running? */
 };
 
 static SDL_Window *CreateWindow(int width, int height) {

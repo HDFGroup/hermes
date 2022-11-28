@@ -417,6 +417,7 @@ if(CMAKE_PROJECT_NAME STREQUAL HERMES AND BUILD_TESTING)
   endif()
   enable_testing()
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test)
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/data_stager/test)
 endif()
 
 if(HERMES_ENABLE_STDIO_ADAPTER OR HERMES_ENABLE_POSIX_ADAPTER OR

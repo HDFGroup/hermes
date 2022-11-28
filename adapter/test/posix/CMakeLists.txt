@@ -43,11 +43,15 @@ set_target_properties(hermes_posix_adapter_mpi_test PROPERTIES COMPILE_FLAGS "-D
 mpi_daemon(hermes_posix_adapter_mpi_test 2 "~[request_size=range-large]" "" 1)
 mpi_daemon(hermes_posix_adapter_mpi_test 2 "[request_size=range-large]" "large" 1)
 
+include_directories(${CMAKE_SOURCE_DIR}/adapter)
+add_executable(posix_simple_io simple_io.cc)
+
 set(POSIX_TESTS
   posix_adapter_test
   hermes_posix_adapter_test
   posix_adapter_mpi_test
   hermes_posix_adapter_mpi_test
+  posix_simple_io
 )
 
 foreach(program ${POSIX_TESTS})

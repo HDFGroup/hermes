@@ -22,6 +22,7 @@ namespace tl = thallium;
 
 namespace hermes {
 
+/** copy string to character array */
 void CopyStringToCharArray(const std::string &src, char *dest, size_t max) {
   size_t src_size = src.size();
   if (src_size >= max) {
@@ -33,6 +34,7 @@ void CopyStringToCharArray(const std::string &src, char *dest, size_t max) {
   dest[copy_size] = '\0';
 }
 
+/** start Thallium RPC server */
 void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
                             Arena *arena, const char *addr,
                             i32 num_rpc_threads) {
@@ -500,6 +502,7 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
                      rpc_enforce_capacity_thresholds);
 }
 
+/** start buffer organizer */
 void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
                           Arena *arena, const char *addr, int num_threads,
                           int port) {
@@ -599,6 +602,7 @@ void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
   rpc_server->define("OrganizeBlob", rpc_organize_blob);
 }
 
+/** start prefetcher */
 void StartPrefetcher(SharedMemoryContext *context,
                      RpcContext *rpc, Arena *arena, double sleep_ms) {
   ThalliumState *state = GetThalliumState(rpc);
@@ -648,6 +652,7 @@ void StartPrefetcher(SharedMemoryContext *context,
                                ABT_THREAD_ATTR_NULL, NULL);
 }
 
+/** stop prefetcher */
 void StopPrefetcher(RpcContext *rpc) {
   ThalliumState *state = GetThalliumState(rpc);
   state->kill_requested.store(true);
@@ -655,6 +660,7 @@ void StopPrefetcher(RpcContext *rpc) {
   ABT_xstream_free(&state->execution_stream);
 }
 
+/** start global system view state update thread  */
 void StartGlobalSystemViewStateUpdateThread(SharedMemoryContext *context,
                                             RpcContext *rpc, Arena *arena,
                                             double sleep_ms) {
@@ -686,6 +692,7 @@ void StartGlobalSystemViewStateUpdateThread(SharedMemoryContext *context,
                                ABT_THREAD_ATTR_NULL, NULL);
 }
 
+/** stop global system view state update thread */
 void StopGlobalSystemViewStateUpdateThread(RpcContext *rpc) {
   ThalliumState *state = GetThalliumState(rpc);
   state->kill_requested.store(true);
@@ -693,6 +700,7 @@ void StopGlobalSystemViewStateUpdateThread(RpcContext *rpc) {
   ABT_xstream_free(&state->execution_stream);
 }
 
+/** initialize RPC context  */
 void InitRpcContext(RpcContext *rpc, u32 num_nodes, u32 node_id,
                      Config *config) {
   rpc->num_nodes = num_nodes;
@@ -709,12 +717,14 @@ void InitRpcContext(RpcContext *rpc, u32 num_nodes, u32 node_id,
   }
 }
 
+/** create RPC state */
 void *CreateRpcState(Arena *arena) {
   ThalliumState *result = PushClearedStruct<ThalliumState>(arena);
 
   return result;
 }
 
+/** get protocol */
 std::string GetProtocol(RpcContext *rpc) {
   ThalliumState *tl_state = GetThalliumState(rpc);
 
@@ -726,6 +736,7 @@ std::string GetProtocol(RpcContext *rpc) {
   return result;
 }
 
+/** initialize RPC clients */
 void InitRpcClients(RpcContext *rpc) {
   // TODO(chogan): Need a per-client persistent arena
   ClientThalliumState *state =
@@ -737,6 +748,7 @@ void InitRpcClients(RpcContext *rpc) {
   rpc->client_rpc.state = state;
 }
 
+/** shut down RPC clients */
 void ShutdownRpcClients(RpcContext *rpc) {
   ClientThalliumState *state = GetClientThalliumState(rpc);
   if (state) {
@@ -749,6 +761,7 @@ void ShutdownRpcClients(RpcContext *rpc) {
   }
 }
 
+/** finalize RPC context */
 void FinalizeRpcContext(RpcContext *rpc, bool is_daemon) {
   ThalliumState *state = GetThalliumState(rpc);
 
@@ -764,6 +777,7 @@ void FinalizeRpcContext(RpcContext *rpc, bool is_daemon) {
   delete state->bo_engine;
 }
 
+/** run daemon */
 void RunDaemon(SharedMemoryContext *context, RpcContext *rpc,
                CommunicationContext *comm, Arena *trans_arena,
                const char *shmem_name) {
@@ -796,6 +810,7 @@ void RunDaemon(SharedMemoryContext *context, RpcContext *rpc,
   // google::ShutdownGoogleLogging();
 }
 
+/** finalize client */
 void FinalizeClient(SharedMemoryContext *context, RpcContext *rpc,
                     CommunicationContext *comm, Arena *trans_arena,
                     bool stop_daemon) {
@@ -822,6 +837,7 @@ void FinalizeClient(SharedMemoryContext *context, RpcContext *rpc,
   // google::ShutdownGoogleLogging();
 }
 
+/** get host name from node ID */
 std::string GetHostNameFromNodeId(RpcContext *rpc, u32 node_id) {
   std::string result;
   // NOTE(chogan): node_id 0 is reserved as the NULL node
@@ -830,6 +846,7 @@ std::string GetHostNameFromNodeId(RpcContext *rpc, u32 node_id) {
   return result;
 }
 
+/** get RPC address */
 std::string GetRpcAddress(RpcContext *rpc, Config *config, u32 node_id,
                           int port) {
   std::string result = config->rpc_protocol + "://";
@@ -843,6 +860,7 @@ std::string GetRpcAddress(RpcContext *rpc, Config *config, u32 node_id,
   return result;
 }
 
+/** get server name */
 std::string GetServerName(RpcContext *rpc, u32 node_id,
                           bool is_buffer_organizer) {
   ThalliumState *tl_state = GetThalliumState(rpc);
@@ -854,6 +872,10 @@ std::string GetServerName(RpcContext *rpc, u32 node_id,
   struct hostent *hostname_result;
   int hostname_error = 0;
   char hostname_buffer[4096] = {};
+#ifdef __APPLE__
+  hostname_result = gethostbyname(host_name.c_str());
+      in_addr **addr_list = (struct in_addr **)hostname_result->h_addr_list;
+#else
   int gethostbyname_result = gethostbyname_r(host_name.c_str(), &hostname_info,
                                              hostname_buffer, 4096,
                                              &hostname_result, &hostname_error);
@@ -861,6 +883,7 @@ std::string GetServerName(RpcContext *rpc, u32 node_id,
     LOG(FATAL) << hstrerror(h_errno);
   }
   in_addr **addr_list = (struct in_addr **)hostname_info.h_addr_list;
+#endif
   if (!addr_list[0]) {
     LOG(FATAL) << hstrerror(h_errno);
   }
@@ -884,6 +907,7 @@ std::string GetServerName(RpcContext *rpc, u32 node_id,
   return result;
 }
 
+/** read bulk */
 size_t BulkRead(RpcContext *rpc, u32 node_id, const char *func_name,
                 u8 *data, size_t max_size, BufferID id) {
   std::string server_name = GetServerName(rpc, node_id);

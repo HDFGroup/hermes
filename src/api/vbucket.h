@@ -13,13 +13,14 @@
 #ifndef VBUCKET_H_
 #define VBUCKET_H_
 
+#include <glog/logging.h>
+
 #include <list>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include <glog/logging.h>
 #include "hermes.h"
 #include "traits.h"
 
@@ -106,6 +107,8 @@ class VBucket {
 
   /** \overload
    *
+   * \param blob_name The name of the Blob to link.
+   * \param bucket_name The name of the Bucket containing the Blob to link.
    * \param ctx Currently unused.
    */
   Status Link(std::string blob_name, std::string bucket_name, Context &ctx);
@@ -115,6 +118,7 @@ class VBucket {
    *
    * \param blob_name The name of the Blob to unlink.
    * \param bucket_name The name of the Bucket containing the Blob to unlink.
+   * \param ctx context
    *
    * \return \status
    */
@@ -132,12 +136,37 @@ class VBucket {
    */
   size_t Get(const std::string &name, Bucket &bkt, Blob &user_blob,
              Context &ctx);
+
+  /** Get a Blob without context.
+   */
   size_t Get(const std::string &name, Bucket &bkt, Blob &user_blob);
+
+  /** Get a Blob with size and context.
+   */
   size_t Get(const std::string &name, Bucket &bkt, void *user_blob,
              size_t blob_size, Context &ctx);
 
-  /** retrieves the subset of blob links satisfying pred */
-  /** could return iterator */
+  /** get a blob on this bucket */
+  /** - if user_blob.size() == 0 => return the minimum buffer size needed */
+  /** - if user_blob.size() > 0 => copy user_blob.size() bytes */
+  /** to user_blob and return user_blob.size() */
+  /** use provides buffer */
+  size_t Get(const std::string &name, Bucket *bkt, Blob &user_blob,
+             const Context &ctx);
+
+  /** Get a blob on this bucket without context. */
+  size_t Get(const std::string &name, Bucket *bkt, Blob &user_blob);
+
+  /**
+   *\brief Retrieve a Blob into a user buffer.
+   */
+  size_t Get(const std::string &name, Bucket *bkt, void *user_blob,
+             size_t blob_size, const Context &ctx);
+
+  /** retrieves all blob links */
+  std::vector<std::string> GetLinks();
+
+  /** retrieves all blob links subject to a predicte in \a ctx */
   std::vector<std::string> GetLinks(Context &ctx);
 
   /** \brief Attach a Trait to this VBucket.
@@ -150,8 +179,10 @@ class VBucket {
    * \return \status
    */
   Status Attach(Trait *trait);
+
   /** \overload
    *
+   * \param trait The Trait to attach.
    * \param ctx Currently unused.
    */
   Status Attach(Trait *trait, Context &ctx);
@@ -166,11 +197,13 @@ class VBucket {
 
   /** \overload
    *
+   * \param trait The Trait to detach.
    * \param ctx Currently unused.
    */
   Status Detach(Trait *trait, Context &ctx);
 
-  /** \brief Retrieves the subset of attached traits satisfying the Predicate \p pred.
+  /** \brief Retrieves the subset of attached traits satisfying the Predicate \p
+   * pred.
    *
    * \todo \p pred is curently ignored and this function returns all attached
    * traits.

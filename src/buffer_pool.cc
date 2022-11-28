@@ -81,6 +81,7 @@
 
 namespace hermes {
 
+/** comparison operator  */
 bool operator==(const BufferID &lhs, const BufferID &rhs) {
   return lhs.as_int == rhs.as_int;
 }
@@ -118,6 +119,9 @@ void Finalize(SharedMemoryContext *context, CommunicationContext *comm,
   // google::ShutdownGoogleLogging();
 }
 
+/**
+   Lock \a header buffer.
+ */
 void LockBuffer(BufferHeader *header) {
   while (true) {
     bool expected = false;
@@ -127,6 +131,9 @@ void LockBuffer(BufferHeader *header) {
   }
 }
 
+/**
+   Unlock \a header buffer.
+ */
 void UnlockBuffer(BufferHeader *header) {
   header->locked.store(false);
 }
@@ -138,6 +145,7 @@ BufferPool *GetBufferPoolFromContext(SharedMemoryContext *context) {
   return result;
 }
 
+/** Get Device from \a context SharedMemoryContext and \a header BufferHeader */
 Device *GetDeviceFromHeader(SharedMemoryContext *context,
                             BufferHeader *header) {
   BufferPool *pool = GetBufferPoolFromContext(context);
@@ -147,6 +155,7 @@ Device *GetDeviceFromHeader(SharedMemoryContext *context,
   return result;
 }
 
+/** Get Target from \a context SharedMemoryContext and \a index index. */
 Target *GetTarget(SharedMemoryContext *context, int index) {
   BufferPool *pool = GetBufferPoolFromContext(context);
   Target *targets_base = (Target *)(context->shm_base + pool->targets_offset);
@@ -155,6 +164,7 @@ Target *GetTarget(SharedMemoryContext *context, int index) {
   return result;
 }
 
+/** Get Target from \a context SharedMemoryContext and \a id TargetID. */
 Target *GetTargetFromId(SharedMemoryContext *context, TargetID id) {
   Target *result = GetTarget(context, id.bits.index);
 
@@ -181,6 +191,7 @@ Device *GetDeviceById(SharedMemoryContext *context, DeviceID device_id) {
   return result;
 }
 
+/** Get DeviceID from \a target_id TargetID. */
 DeviceID GetDeviceIdFromTargetId(TargetID target_id) {
   DeviceID result = target_id.bits.device_id;
 
@@ -195,6 +206,7 @@ BufferHeader *GetHeadersBase(SharedMemoryContext *context) {
   return result;
 }
 
+/** Get BufferHeader from \a context SharedMemoryContext and \a index index. */
 inline BufferHeader *GetHeaderByIndex(SharedMemoryContext *context, u32 index) {
   [[maybe_unused]] BufferPool *pool = GetBufferPoolFromContext(context);
   BufferHeader *headers = GetHeadersBase(context);
@@ -211,6 +223,7 @@ BufferHeader *GetHeaderByBufferId(SharedMemoryContext *context,
   return result;
 }
 
+/** Reset \a header BufferHeader. */
 void ResetHeader(BufferHeader *header) {
   if (header) {
     // NOTE(chogan): Keep `id` the same. They should never change.
@@ -224,6 +237,7 @@ void ResetHeader(BufferHeader *header) {
   }
 }
 
+/** Make \a header BufferHeader dormant by setting capacity to 0. */
 static inline void MakeHeaderDormant(BufferHeader *header) {
   header->capacity = 0;
 }
@@ -286,6 +300,10 @@ f32 ComputeFragmentationScore(SharedMemoryContext *context) {
 }
 #endif
 
+/**
+   Get slab unit size from \a context SharedMemoryContext, \a device_id
+   Device ID, and \a slab_index slab index.
+*/
 i32 GetSlabUnitSize(SharedMemoryContext *context, DeviceID device_id,
                     int slab_index) {
   BufferPool *pool = GetBufferPoolFromContext(context);
@@ -307,6 +325,10 @@ i32 GetSlabUnitSize(SharedMemoryContext *context, DeviceID device_id,
   return result;
 }
 
+/**
+   Get slab buffer size from \a context SharedMemoryContext, \a device_id
+   Device ID, and \a slab_index slab index.
+*/
 i32 GetSlabBufferSize(SharedMemoryContext *context, DeviceID device_id,
                        int slab_index) {
   BufferPool *pool = GetBufferPoolFromContext(context);
@@ -333,6 +355,10 @@ i32 GetSlabBufferSize(SharedMemoryContext *context, DeviceID device_id,
   return result;
 }
 
+/**
+   Get BufferID pointer to the free list offset of \a device_id Device ID
+   from \a context SharedMemoryContext.
+*/
 BufferID *GetFreeListPtr(SharedMemoryContext *context, DeviceID device_id) {
   BufferPool *pool = GetBufferPoolFromContext(context);
   BufferID *result = nullptr;
@@ -345,6 +371,9 @@ BufferID *GetFreeListPtr(SharedMemoryContext *context, DeviceID device_id) {
   return result;
 }
 
+/**
+  Get slab index from \a context SharedMemoryContext and \a header BufferHeader.
+*/
 int GetSlabIndexFromHeader(SharedMemoryContext *context, BufferHeader *header) {
   BufferPool *pool = GetBufferPoolFromContext(context);
   DeviceID device_id = header->device_id;
@@ -361,24 +390,37 @@ int GetSlabIndexFromHeader(SharedMemoryContext *context, BufferHeader *header) {
   return result;
 }
 
+/**
+  Check if node ID of \a buffer_id BufferID is same as node ID of \a comm
+  CommunicationContext.
+*/
 bool BufferIsRemote(CommunicationContext *comm, BufferID buffer_id) {
   bool result = (u32)comm->node_id != buffer_id.bits.node_id;
 
   return result;
 }
 
+/**
+  Check if node ID of \a buffer_id BufferID is same as node ID of \a rpc
+  RpcContext.
+*/
 bool BufferIsRemote(RpcContext *rpc, BufferID buffer_id) {
   bool result = rpc->node_id != buffer_id.bits.node_id;
 
   return result;
 }
 
+/** Check if \a id BufferID is null. */
 bool IsNullBufferId(BufferID id) {
   bool result = id.as_int == 0;
 
   return result;
 }
 
+/**
+  Check if the device with \a context SharedMemoryContext and
+  \a buffer_id BufferID is byte-addressable.
+*/
 bool BufferIsByteAddressable(SharedMemoryContext *context, BufferID id) {
   BufferHeader *header = GetHeaderByBufferId(context, id);
   Device *device = GetDeviceFromHeader(context, header);
@@ -387,6 +429,10 @@ bool BufferIsByteAddressable(SharedMemoryContext *context, BufferID id) {
   return result;
 }
 
+/**
+  Get the first free BufferID from \a context SharedMemoryContext, 
+  \a device_id DeviceID, and \a slab_index slab index.
+*/
 BufferID PeekFirstFreeBufferId(SharedMemoryContext *context, DeviceID device_id,
                                int slab_index) {
   BufferPool *pool = GetBufferPoolFromContext(context);
@@ -399,6 +445,11 @@ BufferID PeekFirstFreeBufferId(SharedMemoryContext *context, DeviceID device_id,
   return result;
 }
 
+/**
+  Set the value at \a slab_index slab index of free list
+  from \a context SharedMemoryContext and \a device_id DeviceID
+  as \a new_id BufferID.
+*/
 void SetFirstFreeBufferId(SharedMemoryContext *context, DeviceID device_id,
                           int slab_index, BufferID new_id) {
   BufferPool *pool = GetBufferPoolFromContext(context);
@@ -408,6 +459,10 @@ void SetFirstFreeBufferId(SharedMemoryContext *context, DeviceID device_id,
   }
 }
 
+/**
+  Get the array of available buffer offsets
+  from \a context SharedMemoryContext and \a device_id DeviceID.
+*/
 std::atomic<u32> *GetAvailableBuffersArray(SharedMemoryContext *context,
                                            DeviceID device_id) {
   BufferPool *pool = GetBufferPoolFromContext(context);
@@ -418,6 +473,10 @@ std::atomic<u32> *GetAvailableBuffersArray(SharedMemoryContext *context,
   return result;
 }
 
+/**
+  Get the number of available buffers from \a context SharedMemoryContext,
+  and \a device_id DeviceID at \a slab_index slab index.
+*/  
 static u32 GetNumBuffersAvailable(SharedMemoryContext *context,
                                   DeviceID device_id, int slab_index) {
   std::atomic<u32> *buffers_available = GetAvailableBuffersArray(context,
@@ -430,6 +489,10 @@ static u32 GetNumBuffersAvailable(SharedMemoryContext *context,
   return result;
 }
 
+/**
+  Get the number of available buffers from \a context SharedMemoryContext,
+  and \a device_id DeviceID.
+*/    
 u32 GetNumBuffersAvailable(SharedMemoryContext *context, DeviceID device_id) {
   BufferPool *pool = GetBufferPoolFromContext(context);
   u32 result = 0;
@@ -461,6 +524,10 @@ static u64 GetNumBytesRemaining(SharedMemoryContext *context, DeviceID id) {
 }
 #endif
 
+/**
+  Decrement the number of available buffers at \a slab_index slab index
+  from \a context SharedMemoryContext and \a device_id DeviceID.
+*/
 static void DecrementAvailableBuffers(SharedMemoryContext *context,
                                       DeviceID device_id, int slab_index) {
   std::atomic<u32> *buffers_available = GetAvailableBuffersArray(context,
@@ -470,6 +537,10 @@ static void DecrementAvailableBuffers(SharedMemoryContext *context,
   }
 }
 
+/**
+  Increment the number of available buffers at \a slab_index slab index
+  from \a context SharedMemoryContext and \a device_id DeviceID.
+*/
 static void IncrementAvailableBuffers(SharedMemoryContext *context,
                                       DeviceID device_id, int slab_index) {
   std::atomic<u32> *buffers_available = GetAvailableBuffersArray(context,
@@ -479,6 +550,10 @@ static void IncrementAvailableBuffers(SharedMemoryContext *context,
   }
 }
 
+/**
+  Update buffering capacities of \a device_id DeviceID by \a adjustment 
+  from \a context SharedMemoryContext.
+*/
 void UpdateBufferingCapacities(SharedMemoryContext *context, i64 adjustment,
                                DeviceID device_id) {
   BufferPool *pool = GetBufferPoolFromContext(context);
@@ -496,7 +571,9 @@ void UpdateBufferingCapacities(SharedMemoryContext *context, i64 adjustment,
   Target *target = GetTarget(context, device_id);
   target->remaining_space.fetch_add(adjustment);
 }
-
+/**
+  Release local \a buffer_id buffer from \a context SharedMemoryContext.
+*/
 void LocalReleaseBuffer(SharedMemoryContext *context, BufferID buffer_id) {
   BufferPool *pool = GetBufferPoolFromContext(context);
   BufferHeader *header_to_free = GetHeaderByIndex(context,
@@ -519,6 +596,10 @@ void LocalReleaseBuffer(SharedMemoryContext *context, BufferID buffer_id) {
   }
 }
 
+/**
+  Release remote \a buffer_id buffer from \a context SharedMemoryContext
+  and \a rpc RpcContext.
+*/  
 void ReleaseBuffer(SharedMemoryContext *context, RpcContext *rpc,
                    BufferID buffer_id) {
   u32 target_node = buffer_id.bits.node_id;
@@ -529,6 +610,10 @@ void ReleaseBuffer(SharedMemoryContext *context, RpcContext *rpc,
   }
 }
 
+/**
+  Release remote \a buffer_ids buffers from \a context SharedMemoryContext
+  and \a rpc RpcContext.
+*/
 void ReleaseBuffers(SharedMemoryContext *context, RpcContext *rpc,
                     const std::vector<BufferID> &buffer_ids) {
   for (auto id : buffer_ids) {
@@ -536,6 +621,9 @@ void ReleaseBuffers(SharedMemoryContext *context, RpcContext *rpc,
   }
 }
 
+/**
+  Release local \a buffer_ids buffers from \a context SharedMemoryContext.
+*/
 void LocalReleaseBuffers(SharedMemoryContext *context,
                          const std::vector<BufferID> &buffer_ids) {
   for (auto id : buffer_ids) {
@@ -543,6 +631,10 @@ void LocalReleaseBuffers(SharedMemoryContext *context,
   }
 }
 
+/**
+  Get the BufferID of free buffer at \a slab_index slab index
+  from \a context SharedMemoryContext and \a device_id DeviceID.
+*/
 BufferID GetFreeBuffer(SharedMemoryContext *context, DeviceID device_id,
                        int slab_index) {
   BufferPool *pool = GetBufferPoolFromContext(context);
@@ -623,6 +715,9 @@ std::vector<BufferID> GetBuffers(SharedMemoryContext *context,
   return result;
 }
 
+/**
+   Get buffer size from \a context SharedMemoryContext and \a id BufferID.
+*/
 u32 LocalGetBufferSize(SharedMemoryContext *context, BufferID id) {
   BufferHeader *header = GetHeaderByBufferId(context, id);
   u32 result = header->used;
@@ -630,6 +725,10 @@ u32 LocalGetBufferSize(SharedMemoryContext *context, BufferID id) {
   return result;
 }
 
+/**
+   Get remote buffer size from \a context SharedMemoryContext,
+   \a rpc RpcContext, and \a id BufferID.
+*/  
 u32 GetBufferSize(SharedMemoryContext *context, RpcContext *rpc, BufferID id) {
   u32 result = 0;
   if (BufferIsRemote(rpc, id)) {
@@ -641,6 +740,10 @@ u32 GetBufferSize(SharedMemoryContext *context, RpcContext *rpc, BufferID id) {
   return result;
 }
 
+/**
+   Get remote BLOB size from \a context SharedMemoryContext,
+   \a rpc RpcContext, and \a buffer_ids BufferIdArray.
+*/
 size_t GetBlobSize(SharedMemoryContext *context, RpcContext *rpc,
                    BufferIdArray *buffer_ids) {
   size_t result = 0;
@@ -653,6 +756,10 @@ size_t GetBlobSize(SharedMemoryContext *context, RpcContext *rpc,
   return result;
 }
 
+/**
+   Get remote BLOB size from \a context SharedMemoryContext,
+   \a rpc RpcContext, \a arena Arena, and \a blob_id BlobID.
+*/  
 size_t GetBlobSizeById(SharedMemoryContext *context, RpcContext *rpc,
                        Arena *arena, BlobID blob_id) {
   size_t result = 0;
@@ -669,6 +776,10 @@ size_t GetBlobSizeById(SharedMemoryContext *context, RpcContext *rpc,
   return result;
 }
 
+
+/**
+   Get buffer offset of \a id buffer from \a context SharedMemoryContext.
+*/
 ptrdiff_t GetBufferOffset(SharedMemoryContext *context, BufferID id) {
   BufferHeader *header = GetHeaderByIndex(context, id.bits.header_index);
   ptrdiff_t result = header->data_offset;
@@ -676,6 +787,9 @@ ptrdiff_t GetBufferOffset(SharedMemoryContext *context, BufferID id) {
   return result;
 }
 
+/**
+   Get RAM buffer pointer of \a id buffer from \a context SharedMemoryContext.
+*/  
 u8 *GetRamBufferPtr(SharedMemoryContext *context, BufferID buffer_id) {
   ptrdiff_t data_offset = GetBufferOffset(context, buffer_id);
   if (data_offset > context->shm_size) {
@@ -686,6 +800,7 @@ u8 *GetRamBufferPtr(SharedMemoryContext *context, BufferID buffer_id) {
   return result;
 }
 
+/** Make BufferID using \a node_id and \a header_index. */
 BufferID MakeBufferId(u32 node_id, u32 header_index) {
   BufferID result = {};
   result.bits.node_id = node_id;
@@ -694,6 +809,10 @@ BufferID MakeBufferId(u32 node_id, u32 header_index) {
   return result;
 }
 
+/**
+  Partition RAM buffers by \a block_size for \a buffer_count buffers
+ with \a buffer_size size in \a arena Arena.
+*/
 void PartitionRamBuffers(Arena *arena, i32 buffer_size, i32 buffer_count,
                          int block_size) {
   for (int i = 0; i < buffer_count; ++i) {
@@ -714,6 +833,9 @@ void PartitionRamBuffers(Arena *arena, i32 buffer_size, i32 buffer_count,
   }
 }
 
+/**
+   Make \a end_index - \a start_index amount of BufferHeaders.
+ */   
 BufferID MakeBufferHeaders(Arena *arena, int buffer_size, u32 start_index,
                            u32 end_index, int node_id, DeviceID device_id,
                            ptrdiff_t initial_offset, u8 **header_begin) {
@@ -743,6 +865,9 @@ BufferID MakeBufferHeaders(Arena *arena, int buffer_size, u32 start_index,
   return dummy.next_free;
 }
 
+/**
+   Initialize devices.
+ */   
 Device *InitDevices(Arena *arena, Config *config, f32 &min_bw, f32 &max_bw) {
   min_bw = FLT_MAX;
   max_bw = 0;
@@ -783,6 +908,7 @@ Device *InitDevices(Arena *arena, Config *config, f32 &min_bw, f32 &max_bw) {
   return result;
 }
 
+/** Initialize targets. */
 Target *InitTargets(Arena *arena, Config *config, Device *devices,
                     int node_id) {
   Target *result = PushClearedArray<Target>(arena, config->num_targets);
@@ -806,8 +932,12 @@ Target *InitTargets(Arena *arena, Config *config, Device *devices,
   return result;
 }
 
-// TODO(chogan): @testing Needs more testing for the case when the free list has
-// been jumbled for a while. Currently we just test a nice linear free list.
+/**
+   Merge RAM buffer free list.
+   
+   \todo (chogan): needs more testing for the case when the free list has
+   been jumbled for a while. Currently, we just test a nice linear free list.
+*/
 void MergeRamBufferFreeList(SharedMemoryContext *context, int slab_index) {
   BufferPool *pool = GetBufferPoolFromContext(context);
 
@@ -941,9 +1071,12 @@ void MergeRamBufferFreeList(SharedMemoryContext *context, int slab_index) {
   }
   EndTicketMutex(&pool->ticket_mutex);
 }
-
-// TODO(chogan): @testing Needs more testing for the case when the free list has
-// been jumbled for a while. Currently we just test a nice linear free list.
+/**
+   Split RAM buffer free list.
+   
+   \todo (chogan) Needs more testing for the case when the free list has
+    been jumbled for a while. Currently we just test a nice linear free list.
+*/
 void SplitRamBufferFreeList(SharedMemoryContext *context, int slab_index) {
   BufferPool *pool = GetBufferPoolFromContext(context);
 
@@ -1269,6 +1402,9 @@ ptrdiff_t InitBufferPool(u8 *shmem_base, Arena *buffer_pool_arena,
   return buffer_pool_offset;
 }
 
+/**
+   Write buffer pool to \a file file.
+*/
 void SerializeBufferPoolToFile(SharedMemoryContext *context, FILE *file) {
   int result = fwrite(context->shm_base, context->shm_size, 1, file);
 
@@ -1299,6 +1435,7 @@ void MakeFullShmemName(char *dest, const char *base) {
   }
 }
 
+/**  Terminate if fopen() call fails. Otherwise, return file pointer. */
 FILE *FopenOrTerminate(const char *fname, const char *mode) {
   FILE *result = fopen(fname, mode);
 
@@ -1311,6 +1448,7 @@ FILE *FopenOrTerminate(const char *fname, const char *mode) {
   return result;
 }
 
+/** Terminate if open() call fails. Otherwise, return file pointer. */
 int OpenOrTerminate(const std::string &fname, int flags, mode_t mode = 0) {
   int result = open(fname.c_str(), flags, mode);
 
@@ -1406,28 +1544,29 @@ void InitFilesForBuffering(SharedMemoryContext *context,
   }
 }
 
+/** Initialize shared memory. */
 u8 *InitSharedMemory(const char *shmem_name, size_t total_size) {
   u8 *result = 0;
   int shmem_fd =
     shm_open(shmem_name, O_CREAT | O_RDWR | O_TRUNC, S_IRUSR | S_IWUSR);
-
-  if (shmem_fd >= 0) {
-    int ftruncate_result = ftruncate(shmem_fd, total_size);
-    if (ftruncate_result != 0) {
-      FailedLibraryCall("ftruncate");
-    }
-
-    result = (u8 *)mmap(0, total_size, PROT_READ | PROT_WRITE, MAP_SHARED,
-                        shmem_fd, 0);
-
-    if (result == MAP_FAILED) {
-      FailedLibraryCall("mmap");
-    }
-    if (close(shmem_fd) == -1) {
-      FailedLibraryCall("close");
-    }
-  } else {
+  if (shmem_fd < 0) {
+    // shm_unlink(shmem_name);
     FailedLibraryCall("shm_open");
+  }
+
+  int ftruncate_result = ftruncate(shmem_fd, total_size);
+  if (ftruncate_result != 0) {
+    FailedLibraryCall("ftruncate");
+  }
+
+  result = (u8 *)mmap(0, total_size, PROT_READ | PROT_WRITE, MAP_SHARED,
+                      shmem_fd, 0);
+
+  if (result == MAP_FAILED) {
+    FailedLibraryCall("mmap");
+  }
+  if (close(shmem_fd) == -1) {
+    FailedLibraryCall("close");
   }
 
   return result;
@@ -1469,10 +1608,12 @@ SharedMemoryContext GetSharedMemoryContext(char *shmem_name) {
   return result;
 }
 
+/**  Unmap shared memory. */
 void UnmapSharedMemory(SharedMemoryContext *context) {
   munmap(context->shm_base, context->shm_size);
 }
 
+/** Close buffering files. */
 void CloseBufferingFiles(SharedMemoryContext *context) {
   BufferPool *pool = GetBufferPoolFromContext(context);
 
@@ -1501,6 +1642,7 @@ void ReleaseSharedMemoryContext(SharedMemoryContext *context) {
 
 // IO clients
 
+/** Write buffer by \a id buffer locally. */
 size_t LocalWriteBufferById(SharedMemoryContext *context, BufferID id,
                             const Blob &blob, size_t offset) {
   BufferHeader *header = GetHeaderByIndex(context, id.bits.header_index);
@@ -1572,6 +1714,7 @@ void WriteBlobToBuffers(SharedMemoryContext *context, RpcContext *rpc,
   assert(bytes_left_to_write == 0);
 }
 
+/** Read buffer by \a id buffer locally. */
 size_t LocalReadBufferById(SharedMemoryContext *context, BufferID id,
                            Blob *blob, size_t read_offset) {
   BufferHeader *header = GetHeaderByIndex(context, id.bits.header_index);
@@ -1663,6 +1806,7 @@ size_t ReadBlobFromBuffers(SharedMemoryContext *context, RpcContext *rpc,
   return total_bytes_read;
 }
 
+/** Read \a blob_id BLOB. */
 size_t ReadBlobById(SharedMemoryContext *context, RpcContext *rpc, Arena *arena,
                     Blob blob, BlobID blob_id) {
   size_t result = 0;
@@ -1683,6 +1827,7 @@ size_t ReadBlobById(SharedMemoryContext *context, RpcContext *rpc, Arena *arena,
   return result;
 }
 
+/** Read a remote \a blob_id BLOB. */
 size_t ReadBlobById(SharedMemoryContext *context, RpcContext *rpc, Arena *arena,
                     api::Blob &dest, BlobID blob_id) {
   hermes::Blob blob = {};
@@ -1693,6 +1838,7 @@ size_t ReadBlobById(SharedMemoryContext *context, RpcContext *rpc, Arena *arena,
   return result;
 }
 
+/** Open swap file. */
 void OpenSwapFile(SharedMemoryContext *context, u32 node_id) {
   if (!context->swap_file) {
     MetadataManager *mdm = GetMetadataManagerFromContext(context);
@@ -1705,6 +1851,7 @@ void OpenSwapFile(SharedMemoryContext *context, u32 node_id) {
   }
 }
 
+/** Write \a blob data to a swap file. */
 SwapBlob WriteToSwap(SharedMemoryContext *context, Blob blob, u32 node_id,
                      BucketID bucket_id) {
   SwapBlob result = {};
@@ -1735,6 +1882,7 @@ SwapBlob WriteToSwap(SharedMemoryContext *context, Blob blob, u32 node_id,
   return result;
 }
 
+/** Put \a data to a remote swap. */
 SwapBlob PutToSwap(SharedMemoryContext *context, RpcContext *rpc,
                    const std::string &name, BucketID bucket_id, const u8 *data,
                    size_t size) {
@@ -1751,6 +1899,7 @@ SwapBlob PutToSwap(SharedMemoryContext *context, RpcContext *rpc,
   return swap_blob;
 }
 
+/** Read  \a blob data from swap file. */
 size_t ReadFromSwap(SharedMemoryContext *context, Blob blob,
                   SwapBlob swap_blob) {
   u32 node_id = swap_blob.node_id;
@@ -1767,6 +1916,7 @@ size_t ReadFromSwap(SharedMemoryContext *context, Blob blob,
   return swap_blob.size;
 }
 
+/** Place \a blob BLOB. */
 api::Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
                       PlacementSchema &schema, Blob blob,
                       const std::string &name, BucketID bucket_id,
@@ -1822,6 +1972,7 @@ api::Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
   return result;
 }
 
+/** Persist Bucket using stdio. */
 api::Status StdIoPersistBucket(SharedMemoryContext *context, RpcContext *rpc,
                           Arena *arena, BucketID bucket_id,
                           const std::string &file_name,
@@ -1870,6 +2021,7 @@ api::Status StdIoPersistBucket(SharedMemoryContext *context, RpcContext *rpc,
   return result;
 }
 
+/** Persist BLOB using stdio. */
 api::Status StdIoPersistBlob(SharedMemoryContext *context, RpcContext *rpc,
                              Arena *arena, BlobID blob_id, int fd,
                              const i32 &offset) {

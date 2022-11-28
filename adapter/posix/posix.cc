@@ -269,7 +269,7 @@ off64_t HERMES_DECL(lseek64)(int fd, off64_t offset, int whence) {
   return real_api->lseek64(fd, offset, whence);
 }
 
-int HERMES_DECL(fstat)(int fd, struct stat *buf) {
+int HERMES_DECL(__fxstat)(int __ver, int fd, struct stat *buf) {
   int result = 0;
   auto real_api = Singleton<API>::GetInstance();
   auto fs_api = Singleton<PosixFS>::GetInstance();
@@ -302,7 +302,7 @@ int HERMES_DECL(fstat)(int fd, struct stat *buf) {
                  << " does not exist in Hermes\n";
     }
   } else {
-    result = real_api->__fxstat(_STAT_VER, fd, buf);
+    result = real_api->__fxstat(__ver, fd, buf);
   }
   return result;
 }

@@ -10,33 +10,30 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_CATCH_CONFIG_H
-#define HERMES_CATCH_CONFIG_H
+#ifndef HERMES_DATA_STAGER_STAGERS_POSIX_STAGE_H
+#define HERMES_DATA_STAGER_STAGERS_POSIX_STAGE_H
 
-#define CATCH_CONFIG_RUNNER
-#include <mpi.h>
+#include "../data_stager.h"
+#include "posix/fs_api.h"
 
-#include <catch2/catch_all.hpp>
+namespace hermes {
 
-namespace cl = Catch::Clara;
+class PosixStager : public DataStager {
+ public:
+  void StageIn(std::string url, PlacementPolicy dpe) override;
+  void FileStageIn(std::string path, PlacementPolicy dpe);
+  void DirectoryStageIn(std::string path, PlacementPolicy dpe);
 
-cl::Parser define_options();
+  void StageIn(std::string url, off_t off, size_t size,
+               PlacementPolicy dpe) override;
+  void FileStageIn(std::string path, off_t off, size_t size,
+                   PlacementPolicy dpe);
 
-int init(int* argc, char*** argv);
-int finalize();
+  void StageOut(std::string url) override;
+  void FileStageOut(std::string path);
+  void DirectoryStageOut(std::string path);
+};
 
-int main(int argc, char* argv[]) {
-  Catch::Session session;
-  auto cli = session.cli() | define_options();
-  int returnCode = init(&argc, &argv);
-  if (returnCode != 0) return returnCode;
-  session.cli(cli);
-  returnCode = session.applyCommandLine(argc, argv);
-  if (returnCode != 0) return returnCode;
-  int test_return_code = session.run();
-  returnCode = finalize();
-  if (returnCode != 0) return returnCode;
-  return test_return_code;
-}
+}  // namespace hermes
 
-#endif
+#endif  // HERMES_DATA_STAGER_STAGERS_POSIX_STAGE_H

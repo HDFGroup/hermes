@@ -78,8 +78,8 @@ BufferPool *GetBufferPoolFromContext(SharedMemoryContext *context);
  * managed by the Hermes core.
  *
  * @param context The shared memory context where the Devices are stored.
- * @param device_id An identifier for the desired Device. This is an index into an
- * array of Devices.
+ * @param device_id An identifier for the desired Device. This is an index into
+ * an array of Devices.
  *
  * @return A pointer to the Device with ID device_id.
  */

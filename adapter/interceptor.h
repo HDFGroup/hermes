@@ -17,16 +17,16 @@
 #include <stdlib.h>
 
 #include <fstream>
+#include <regex>
 #include <string>
 #include <unordered_set>
 #include <vector>
-#include <regex>
 
+#include "adapter_utils.h"
 #include "buffer_pool_internal.h"
 #include "constants.h"
 #include "enumerations.h"
 #include "singleton.h"
-#include "adapter_utils.h"
 
 /**
  * Define Interceptor list for adapter.
@@ -34,8 +34,7 @@
 #define INTERCEPTOR_LIST \
   hermes::Singleton<hermes::adapter::InterceptorList>::GetInstance<>()
 
-#define HERMES_CONF \
-  hermes::Singleton<hermes::Config>::GetInstance()
+#define HERMES_CONF hermes::Singleton<hermes::Config>::GetInstance()
 
 // Path lengths are up to 4096 bytes
 const int kMaxPathLen = 4096;
@@ -55,15 +54,23 @@ inline std::vector<std::string> StringSplit(const char* str, char delimiter) {
   }
   return v;
 }
-inline std::string GetFilenameFromFP(FILE* fh) {
+
+/**
+   get the file name from \a fp file pointer
+*/
+inline std::string GetFilenameFromFP(FILE* fp) {
   char proclnk[kMaxPathLen];
   char filename[kMaxPathLen];
-  int fno = fileno(fh);
+  int fno = fileno(fp);
   snprintf(proclnk, kMaxPathLen, "/proc/self/fd/%d", fno);
   size_t r = readlink(proclnk, filename, kMaxPathLen);
   filename[r] = '\0';
   return filename;
 }
+
+/**
+   get the file name from \a fd file descriptor
+*/
 inline std::string GetFilenameFromFD(int fd) {
   char proclnk[kMaxPathLen];
   char filename[kMaxPathLen];
@@ -108,6 +115,9 @@ struct InterceptorList {
         adapter_paths(),
         hermes_paths_exclusion(),
         hermes_flush_exclusion() {}
+  /**
+     set up adapter mode - default, bypass, or scratch
+   */
   void SetupAdapterMode() {
     char* adapter_mode_str = getenv(kAdapterMode);
     if (adapter_mode_str == nullptr) {
@@ -120,6 +130,8 @@ struct InterceptorList {
         adapter_mode = AdapterMode::kBypass;
       } else if (strcmp(kAdapterScratchMode, adapter_mode_str) == 0) {
         adapter_mode = AdapterMode::kScratch;
+      } else if (strcmp(kAdapterWorkflowMode, adapter_mode_str) == 0) {
+        adapter_mode = AdapterMode::kWorkflow;
       } else {
         // TODO(hari): @errorhandling throw error.
         return;
@@ -133,11 +145,22 @@ struct InterceptorList {
     adapter_paths = paths_local;
   }
 
-  bool Persists(FILE* fh) { return Persists(GetFilenameFromFP(fh)); }
+  /**
+     check if \a fp file pointer persists
+   */
+  bool Persists(FILE* fp) { return Persists(GetFilenameFromFP(fp)); }
+
+  /**
+     check if \a fd file descriptor persists
+   */
   bool Persists(int fd) { return Persists(GetFilenameFromFD(fd)); }
 
+  /**
+     check if \a path file path persists
+   */
   bool Persists(std::string path) {
-    if (adapter_mode == AdapterMode::kDefault) {
+    if (adapter_mode == AdapterMode::kDefault ||
+        adapter_mode == AdapterMode::kWorkflow) {
       if (adapter_paths.empty()) {
         return true;
       } else {

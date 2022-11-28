@@ -204,6 +204,11 @@ size_t VBucket::Get(const std::string &name, Bucket &bkt, void *user_blob,
   return result;
 }
 
+std::vector<std::string> VBucket::GetLinks() {
+  Context ctx;
+  return GetLinks(ctx);
+}
+
 std::vector<std::string> VBucket::GetLinks(Context& ctx) {
   (void)ctx;
   LOG(INFO) << "Getting subset of links satisfying pred in VBucket " << name_

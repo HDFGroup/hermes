@@ -70,13 +70,18 @@ void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
         u8 c;
         stat.st_bkid =
             std::make_shared<hapi::Bucket>(path_str, mdm->GetHermes());
-        stat.st_bkid->Put(stat.main_lock_blob, &c, 1);
+        if (!stat.st_bkid->ContainsBlob(stat.main_lock_blob)) {
+          stat.st_bkid->Put(stat.main_lock_blob, &c, 1);
+        }
       }
       MPI_Barrier(stat.comm);
       if (rank != 0) {
         stat.st_bkid =
             std::make_shared<hapi::Bucket>(path_str, mdm->GetHermes());
       }
+
+      // Create a vbucket for storing all modified blobs (per-rank)
+
     } else {
       stat.st_bkid =
           std::make_shared<hapi::Bucket>(path_str, mdm->GetHermes());
@@ -138,7 +143,7 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
   std::shared_ptr<hapi::Bucket> &bkt = stat.st_bkid;
   std::string filename = bkt->GetName();
   LOG(INFO) << "Write called for filename: " << filename << " on offset: "
-            << stat.st_ptr << " and size: " << total_size << std::endl;
+            << off << " and size: " << total_size << std::endl;
 
   size_t ret;
   auto mdm = Singleton<MetadataManager>::GetInstance();
@@ -484,9 +489,7 @@ size_t Filesystem::_ReadNew(BlobPlacementIter &ri) {
 
   if (ri.opts_.dpe_ != PlacementPolicy::kNone) {
     LOG(INFO) << "Placing the read blob in the hierarchy" << std::endl;
-    IoOptions opts(ri.opts_);
-    opts.seek_ = false;
-    opts.with_fallback_ = false;
+    IoOptions opts = IoOptions::PlaceInHermes(ri.opts_);
     Write(ri.f_, ri.stat_,
           ri.blob_.data() + ri.p_.blob_off_,
           ri.p_.bucket_off_,
@@ -538,7 +541,7 @@ HermesRequest* Filesystem::ARead(File &f, AdapterStat &stat, void *ptr,
   return hreq;
 }
 
-size_t Filesystem::Wait(size_t req_id) {
+size_t Filesystem::Wait(uint64_t req_id) {
   auto mdm = Singleton<MetadataManager>::GetInstance();
   auto req_iter = mdm->request_map.find(req_id);
   if (req_iter == mdm->request_map.end()) {
@@ -623,6 +626,7 @@ int Filesystem::Sync(File &f, AdapterStat &stat) {
     return 0;
   }
   if (IsAsyncFlush(filename)) {
+    LOG(INFO) << "Asynchronous flushing enabled" << std::endl;
     stat.st_vbkt->WaitForBackgroundFlush();
     return 0;
   }
@@ -654,6 +658,23 @@ int Filesystem::Sync(File &f, AdapterStat &stat) {
   return _RealSync(f);
 }
 
+void SaveModifiedBlobSet(AdapterStat &stat) {
+  int rank = 0;
+  auto mdm = Singleton<MetadataManager>::GetInstance();
+  if (mdm->is_mpi) {
+    MPI_Comm_rank(stat.comm, &rank);
+  }
+  auto filename = stat.st_bkid->GetName();
+  const auto &blob_names = stat.st_blobs;
+  std::string vbucket_name = filename + "#" +
+                             std::to_string(rank) + "#sync";
+  hapi::VBucket file_vbucket(vbucket_name, mdm->GetHermes());
+  auto offset_map = std::unordered_map<std::string, hermes::u64>();
+  for (const auto &blob_name : blob_names) {
+    file_vbucket.Link(blob_name, filename);
+  }
+}
+
 int Filesystem::Close(File &f, AdapterStat &stat, bool destroy) {
   hapi::Context ctx;
   int rank = 0;
@@ -678,11 +699,12 @@ int Filesystem::Close(File &f, AdapterStat &stat, bool destroy) {
     }
     MPI_Barrier(stat.comm);
   }
-  if (INTERCEPTOR_LIST->adapter_mode == AdapterMode::kScratch) {
+  if (INTERCEPTOR_LIST->adapter_mode == AdapterMode::kScratch ||
+      INTERCEPTOR_LIST->adapter_mode == AdapterMode::kWorkflow) {
     destroy = false;
   }
 
-  Sync(f, stat);
+  Sync(f, stat);  // TODO(llogan): should wait until hermes destroyed to flush
   auto filename = stat.st_bkid->GetName();
   if (mdm->is_mpi) { MPI_Barrier(stat.comm); }
   if (IsAsyncFlush(filename)) {
@@ -690,7 +712,9 @@ int Filesystem::Close(File &f, AdapterStat &stat, bool destroy) {
   }
   mdm->Delete(f);
   if (mdm->is_mpi) { MPI_Barrier(stat.comm); }
-  if (destroy) { stat.st_bkid->Destroy(ctx); }
+  if (destroy) {
+    stat.st_bkid->Destroy(ctx);
+  }
   if (stat.amode & MPI_MODE_DELETE_ON_CLOSE) {
     stdfs::remove(filename);
   }
