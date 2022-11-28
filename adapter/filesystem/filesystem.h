@@ -200,6 +200,18 @@ struct IoOptions {
     opts.seek_ = seek;
     return opts;
   }
+
+  /**
+   * Ensure that I/O goes only to Hermes, and does not fall back to PFS.
+   *
+   * @param orig_opts The original options to modify
+   * */
+  static IoOptions PlaceInHermes(IoOptions &orig_opts) {
+    IoOptions opts(orig_opts);
+    opts.seek_ = false;
+    opts.with_fallback_ = false;
+    return opts;
+  }
 };
 
 /**
@@ -337,10 +349,12 @@ class Filesystem {
      * well-defined.
      * */
     if (bucket_exists) {
+      size_t orig = stat.st_size;
       size_t bkt_size = stat.st_bkid->GetTotalBlobSize();
-      stat.st_size = std::max(bkt_size, stat.st_size);
+      stat.st_size = std::max(bkt_size, orig);
       LOG(INFO) << "Since bucket exists, should reset its size to: "
-                << stat.st_size << std::endl;
+                << bkt_size << " or " << orig
+                << ", winner: " << stat.st_size << std::endl;
     }
     if (stat.is_append) {
       stat.st_ptr = stat.st_size;

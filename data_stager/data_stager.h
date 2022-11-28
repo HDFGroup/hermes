@@ -20,7 +20,10 @@
 
 namespace hermes {
 
-enum class DataStagerType { kUnix, kHdf5 };
+enum class DataStagerType {
+  kPosix,
+  kHdf5
+};
 
 class DataStagerTypeConv {
  public:
@@ -28,7 +31,7 @@ class DataStagerTypeConv {
     if (url.rfind("h5::", 0) != std::string::npos) {
       return DataStagerType::kHdf5;
     } else {
-      return DataStagerType::kUnix;
+      return DataStagerType::kPosix;
     }
   }
 };

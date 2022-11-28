@@ -15,6 +15,7 @@
 #include "hermes_types.h"
 #include <hermes.h>
 #include "data_stager_factory.h"
+#include <stdlib.h>
 
 using hermes::api::PlacementPolicyConv;
 using hermes::api::PlacementPolicy;
@@ -22,13 +23,16 @@ using hermes::DataStager;
 using hermes::DataStagerFactory;
 
 int main(int argc, char **argv) {
-  if (argc != 4) {
+  if (argc != 5) {
     std::cout << "Usage: mpirun -n [nprocs]" <<
         " ./stage_in [url] [offset] [size] [dpe]" << std::endl;
     exit(1);
   }
-  auto mdm = Singleton<hermes::adapter::fs::MetadataManager>::GetInstance();
   MPI_Init(&argc, &argv);
+  auto mdm = Singleton<hermes::adapter::fs::MetadataManager>::GetInstance();
+  setenv("HERMES_STOP_DAEMON", "0", true);
+  setenv("HERMES_ADAPTER_MODE", "WORKFLOW", true);
+  setenv("HERMES_CLIENT", "1", true);
   mdm->InitializeHermes(true);
   off_t off;
   size_t size;
@@ -37,7 +41,11 @@ int main(int argc, char **argv) {
   std::stringstream(argv[3]) >> size;
   PlacementPolicy dpe = PlacementPolicyConv::to_enum(argv[4]);
   auto stager = DataStagerFactory::Get(url);
-  stager->StageIn(url, dpe);
+  if (size == 0) {
+    stager->StageIn(url, dpe);
+  } else {
+    stager->StageIn(url, off, size, dpe);
+  }
   mdm->FinalizeHermes();
   MPI_Finalize();
 }

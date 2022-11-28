@@ -1527,24 +1527,24 @@ u8 *InitSharedMemory(const char *shmem_name, size_t total_size) {
   u8 *result = 0;
   int shmem_fd =
     shm_open(shmem_name, O_CREAT | O_RDWR | O_TRUNC, S_IRUSR | S_IWUSR);
-
-  if (shmem_fd >= 0) {
-    int ftruncate_result = ftruncate(shmem_fd, total_size);
-    if (ftruncate_result != 0) {
-      FailedLibraryCall("ftruncate");
-    }
-
-    result = (u8 *)mmap(0, total_size, PROT_READ | PROT_WRITE, MAP_SHARED,
-                        shmem_fd, 0);
-
-    if (result == MAP_FAILED) {
-      FailedLibraryCall("mmap");
-    }
-    if (close(shmem_fd) == -1) {
-      FailedLibraryCall("close");
-    }
-  } else {
+  if (shmem_fd < 0) {
+    // shm_unlink(shmem_name);
     FailedLibraryCall("shm_open");
+  }
+
+  int ftruncate_result = ftruncate(shmem_fd, total_size);
+  if (ftruncate_result != 0) {
+    FailedLibraryCall("ftruncate");
+  }
+
+  result = (u8 *)mmap(0, total_size, PROT_READ | PROT_WRITE, MAP_SHARED,
+                      shmem_fd, 0);
+
+  if (result == MAP_FAILED) {
+    FailedLibraryCall("mmap");
+  }
+  if (close(shmem_fd) == -1) {
+    FailedLibraryCall("close");
   }
 
   return result;
@@ -1557,7 +1557,7 @@ SharedMemoryContext GetSharedMemoryContext(char *shmem_name) {
 
   if (shmem_fd >= 0) {
     struct stat shm_stat;
-    if (fstat(shmem_fd, &shm_stat) == 0) {
+    if (__fxstat(_STAT_VER, shmem_fd, &shm_stat) == 0) {
       u8 *shm_base = (u8 *)mmap(0, shm_stat.st_size, PROT_READ | PROT_WRITE,
                                 MAP_SHARED, shmem_fd, 0);
       close(shmem_fd);

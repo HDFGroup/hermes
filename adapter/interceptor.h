@@ -130,6 +130,8 @@ struct InterceptorList {
         adapter_mode = AdapterMode::kBypass;
       } else if (strcmp(kAdapterScratchMode, adapter_mode_str) == 0) {
         adapter_mode = AdapterMode::kScratch;
+      } else if (strcmp(kAdapterWorkflowMode, adapter_mode_str) == 0) {
+        adapter_mode = AdapterMode::kWorkflow;
       } else {
         // TODO(hari): @errorhandling throw error.
         return;
@@ -157,7 +159,8 @@ struct InterceptorList {
      check if \a path file path persists
    */
   bool Persists(std::string path) {
-    if (adapter_mode == AdapterMode::kDefault) {
+    if (adapter_mode == AdapterMode::kDefault ||
+        adapter_mode == AdapterMode::kWorkflow) {
       if (adapter_paths.empty()) {
         return true;
       } else {

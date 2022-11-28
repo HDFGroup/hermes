@@ -156,6 +156,7 @@ class ApiClass:
         # Create the class definition
         self.h_lines.append(f"namespace hermes::adapter::{namespace} {{")
         self.h_lines.append(f"")
+        self.h_lines.append(f"/** Pointers to the real {namespace} API */")
         self.h_lines.append(f"class API {{")
 
         # Create class function pointers
@@ -175,6 +176,8 @@ class ApiClass:
         self.h_lines.append(f"}};")
         self.h_lines.append(f"}}  // namespace hermes::adapter::{namespace}")
         self.h_lines.append("")
+        self.h_lines.append("#undef REQUIRE_API")
+        self.h_lines.append("")
         self.h_lines.append(f"#endif  // HERMES_ADAPTER_{namespace.upper()}_H")
         self.h_lines.append("")
 
@@ -183,16 +186,18 @@ class ApiClass:
 
     def require_api(self):
         self.h_lines.append(f"#define REQUIRE_API(api_name) \\")
-        self.h_lines.append(f"  if (real_api->api_name == nullptr) {{ \\")
+        self.h_lines.append(f"  if (api_name == nullptr) {{ \\")
         self.h_lines.append(f"    LOG(FATAL) << \"HERMES Adapter failed to map symbol: \" \\")
         self.h_lines.append(f"    #api_name << std::endl; \\")
-        self.h_lines.append(f"    exit(1);")
+        self.h_lines.append(f"    std::exit(1); \\")
+        self.h_lines.append(f"   }}")
 
     def add_typedef(self, api):
         self.h_lines.append(f"typedef {api.ret} (*{api.type})({api.get_args()});")
 
     def add_intercept_api(self, api):
-        self.h_lines.append(f"  {api.ret} (*{api.real_name})({api.get_args()}) = nullptr;")
+        self.h_lines.append(f"  /** {api.real_name} */")
+        self.h_lines.append(f"  {api.type} {api.real_name} = nullptr;")
 
     def init_api(self, api):
         self.h_lines.append(f"    if (is_intercepted) {{")
@@ -200,6 +205,7 @@ class ApiClass:
         self.h_lines.append(f"    }} else {{")
         self.h_lines.append(f"      {api.real_name} = ({api.type})dlsym(RTLD_DEFAULT, \"{api.name}\");")
         self.h_lines.append(f"    }}")
+        self.h_lines.append(f"    REQUIRE_API({api.real_name})")
 
     def save(self, path, text):
         if path is None:

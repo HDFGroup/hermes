@@ -60,14 +60,15 @@ struct BlobPlacement {
   }
 
   /** decode \a blob_name BLOB name by splitting it into index, offset, size,
-      and rank. */
-  void DecodeBlobNamePerProc(const std::string &blob_name) {
-    auto str_split = hermes::adapter::StringSplit(blob_name.data(), '#');
+        and rank. */
+  void DecodeBlobNameLogEntry(const std::string &blob_name) {
+    auto str_split =
+        hermes::adapter::StringSplit(blob_name.data(), '#');
     std::stringstream(str_split[0]) >> page_;
     std::stringstream(str_split[1]) >> blob_off_;
     std::stringstream(str_split[2]) >> blob_size_;
     std::stringstream(str_split[3]) >> rank_;
-    std::stringstream(str_split[4]) >> rank_;
+    std::stringstream(str_split[4]) >> time_;
   }
 };
 

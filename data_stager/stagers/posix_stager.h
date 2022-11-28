@@ -10,15 +10,15 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_DATA_STAGER_STAGERS_UNIX_STAGE_H_
-#define HERMES_DATA_STAGER_STAGERS_UNIX_STAGE_H_
+#ifndef HERMES_DATA_STAGER_STAGERS_POSIX_STAGE_H
+#define HERMES_DATA_STAGER_STAGERS_POSIX_STAGE_H
 
 #include "../data_stager.h"
 #include "posix/fs_api.h"
 
 namespace hermes {
 
-class UnixStager : public DataStager {
+class PosixStager : public DataStager {
  public:
   void StageIn(std::string url, PlacementPolicy dpe) override;
   void FileStageIn(std::string path, PlacementPolicy dpe);
@@ -36,4 +36,4 @@ class UnixStager : public DataStager {
 
 }  // namespace hermes
 
-#endif  // HERMES_DATA_STAGER_STAGERS_UNIX_STAGE_H_
+#endif  // HERMES_DATA_STAGER_STAGERS_POSIX_STAGE_H
