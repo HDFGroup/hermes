@@ -25,7 +25,7 @@
 static bool VerifyBuffer(char *ptr, size_t size, char nonce) {
   for (size_t i = 0; i < size; ++i) {
     if (ptr[i] != nonce) {
-      std::cout << (int)ptr[i] << std::endl;
+      std::cout << (int)ptr[i] << " != " << nonce <<  std::endl;
       return false;
     }
   }
@@ -53,9 +53,10 @@ int main(int argc, char **argv) {
   std::stringstream ss;
   ss << "RANK: " << rank << std::endl
      << " PATH: " << path << std::endl
-     << " Block Size (KB): " << block_size << std::endl
+     << " READ or WRITE: " << (rw ? "READ" : "WRITE") << std::endl
+     << " Block Size: " << block_size << std::endl
      << " Count: " << count  << std::endl
-     << " Total Size (MB): " << size / count << std::endl;
+     << " Proc Size (MB): " << size / (1<<20) << std::endl;
   std::cout << ss.str() << std::endl;
 
   sleep(lag);
