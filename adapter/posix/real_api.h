@@ -20,8 +20,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <unistd.h>
-#include <fcntl.h>
 #include "interceptor.h"
 #include "filesystem/filesystem.h"
 #include "filesystem/metadata_manager.h"

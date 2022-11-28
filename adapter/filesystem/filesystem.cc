@@ -70,7 +70,9 @@ void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
         u8 c;
         stat.st_bkid =
             std::make_shared<hapi::Bucket>(path_str, mdm->GetHermes());
-        stat.st_bkid->Put(stat.main_lock_blob, &c, 1);
+        if (!stat.st_bkid->ContainsBlob(stat.main_lock_blob)) {
+          stat.st_bkid->Put(stat.main_lock_blob, &c, 1);
+        }
       }
       MPI_Barrier(stat.comm);
       if (rank != 0) {
