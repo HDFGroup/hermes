@@ -18,11 +18,6 @@ add_executable(finalize_hermes ${CMAKE_CURRENT_SOURCE_DIR}/finalize_hermes.cc)
 add_dependencies(finalize_hermes hermes_posix_backend)
 target_link_libraries(finalize_hermes hermes_posix_backend)
 
-find_package(Catch2 REQUIRED)
-add_executable(posix_stage_test test/posix/hermes_staging_posix_test.cc)
-add_dependencies(posix_stage_test hermes_data_stager)
-target_link_libraries(posix_stage_test hermes_data_stager Catch2::Catch2)
-
 install(
         TARGETS
         hermes_data_stager

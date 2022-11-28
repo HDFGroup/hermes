@@ -37,25 +37,33 @@ int main(int argc, char **argv) {
   MPI_Init(&argc, &argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
-  if (argc != 6) {
+  if (argc != 7) {
     std::cout << "USAGE: ./posix_simple_io"
-              << " [path] [rw] [block_size (kb)] [count] [lag (sec)]";
+              << " [path] [read] [block_size (kb)] [count]"
+              << " [off (blocks)] [lag (sec)]";
     exit(1);
   }
 
   char *path = argv[1];
-  int rw = atoi(argv[2]);
+  int do_read = atoi(argv[2]);
   int block_size = atoi(argv[3])*1024;
   int count = atoi(argv[4]);
-  int lag = atoi(argv[5]);
+  int block_off = atoi(argv[5]);
+  int lag = atoi(argv[6]);
+  if (do_read) {
+    count -= block_off;
+  } else {
+    block_off = 0;
+  }
   size_t size = count * block_size;
   size_t total_size = size * nprocs;
-  int off = rank * size;
+  int off = (rank * size) + block_off * block_size;
 
   std::stringstream ss;
   ss << "RANK: " << rank << std::endl
      << " PATH: " << path << std::endl
-     << " READ or WRITE: " << (rw ? "READ" : "WRITE") << std::endl
+     << " READ or WRITE: " << (do_read ? "READ" : "WRITE") << std::endl
+     << " Block Off: " << block_off << std::endl
      << " Block Size: " << block_size << std::endl
      << " Count: " << count  << std::endl
      << " Proc Size (MB): " << size / (1<<20) << std::endl;
@@ -69,7 +77,7 @@ int main(int argc, char **argv) {
 
   struct stat st;
   __fxstat(_STAT_VER, fd, &st);
-  if (rw && (st.st_size - total_size) > 3) {
+  if (do_read && (st.st_size - total_size) > 3) {
     if (rank == 0) {
       std::cout << "File sizes aren't equivalent: "
                 << " stat: " << st.st_size
@@ -80,13 +88,13 @@ int main(int argc, char **argv) {
 
   for (int i = 0; i < count; ++i) {
     char nonce = i;
-    if (rw == 0) {
+    if (!do_read) {
       memset(buf, nonce, block_size);
       write(fd, buf, block_size);
     } else {
       memset(buf, 0, block_size);
       read(fd, buf, block_size);
-      if(!VerifyBuffer(buf, block_size, nonce)) {
+      if (!VerifyBuffer(buf, block_size, nonce)) {
         std::cout << "Buffer verification failed!" << std::endl;
         exit(1);
       }

@@ -714,8 +714,6 @@ int Filesystem::Close(File &f, AdapterStat &stat, bool destroy) {
   if (mdm->is_mpi) { MPI_Barrier(stat.comm); }
   if (destroy) {
     stat.st_bkid->Destroy(ctx);
-  } else {
-
   }
   if (stat.amode & MPI_MODE_DELETE_ON_CLOSE) {
     stdfs::remove(filename);

@@ -10,8 +10,8 @@
 * have access to the file, you may request a copy from help@hdfgroup.org.   *
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_DATA_STAGER_STAGERS_UNIX_STAGE_H_
-#define HERMES_DATA_STAGER_STAGERS_UNIX_STAGE_H_
+#ifndef HERMES_DATA_STAGER_STAGERS_POSIX_STAGE_H
+#define HERMES_DATA_STAGER_STAGERS_POSIX_STAGE_H
 
 #include "posix/fs_api.h"
 #include "../data_stager.h"
@@ -36,4 +36,4 @@ class PosixStager : public DataStager {
 
 }  // namespace hermes
 
-#endif  // HERMES_DATA_STAGER_STAGERS_UNIX_STAGE_H_
+#endif  // HERMES_DATA_STAGER_STAGERS_POSIX_STAGE_H
