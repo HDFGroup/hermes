@@ -18,7 +18,7 @@
 #include <mpi.h>
 #include <hermes.h>
 
-using hermes::UnixStager;
+using hermes::PosixStager;
 using hermes::PlacementPolicy;
 using hermes::adapter::posix::PosixFS;
 namespace stdfs = std::experimental::filesystem;
@@ -67,7 +67,7 @@ void VerifyFile(const std::string &path, int nonce, size_t size) {
 }
 
 TEST_CASE("SingleFile") {
-  UnixStager stager;
+  PosixStager stager;
   auto mdm = Singleton<hermes::adapter::fs::MetadataManager>::GetInstance();
   std::string path = "/tmp/test.txt";
   int nonce = mdm->rank + 122;

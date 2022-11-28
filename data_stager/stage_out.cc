@@ -22,16 +22,19 @@ using hermes::DataStager;
 using hermes::DataStagerFactory;
 
 int main(int argc, char **argv) {
+  MPI_Init(&argc, &argv);
   if (argc != 2) {
     std::cout << "Usage: ./stage_out [url]" << std::endl;
     exit(1);
   }
-
-  setenv("HERMES_STOP_DAEMON", "0", true);
+  setenv("HERMES_STOP_DAEMON", "1", true);
+  setenv("HERMES_ADAPTER_MODE", "DEFAULT", true);
+  setenv("HERMES_CLIENT", "1", true);
   auto mdm = Singleton<hermes::adapter::fs::MetadataManager>::GetInstance();
-  mdm->InitializeHermes(false);
+  mdm->InitializeHermes(true);
   std::string url = argv[1];
   auto stager = DataStagerFactory::Get(url);
   stager->StageOut(url);
   mdm->FinalizeHermes();
+  MPI_Finalize();
 }

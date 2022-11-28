@@ -18,7 +18,7 @@
 
 namespace hermes {
 
-class UnixStager : public DataStager {
+class PosixStager : public DataStager {
  public:
   void StageIn(std::string url, PlacementPolicy dpe) override;
   void FileStageIn(std::string path, PlacementPolicy dpe);

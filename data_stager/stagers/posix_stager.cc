@@ -20,7 +20,7 @@ namespace stdfs = std::experimental::filesystem;
 
 namespace hermes {
 
-void UnixStager::StageIn(std::string path, PlacementPolicy dpe) {
+void PosixStager::StageIn(std::string path, PlacementPolicy dpe) {
   if (stdfs::is_regular_file(path)) {
     FileStageIn(path, dpe);
   } else if (stdfs::is_directory(path)) {
@@ -30,20 +30,20 @@ void UnixStager::StageIn(std::string path, PlacementPolicy dpe) {
   }
 }
 
-void UnixStager::FileStageIn(std::string path, PlacementPolicy dpe) {
+void PosixStager::FileStageIn(std::string path, PlacementPolicy dpe) {
   off_t per_proc_off;
   size_t per_proc_size;
   DivideRange(0, stdfs::file_size(path), per_proc_off, per_proc_size);
   FileStageIn(path, per_proc_off, per_proc_size, dpe);
 }
 
-void UnixStager::DirectoryStageIn(std::string path, PlacementPolicy dpe) {
+void PosixStager::DirectoryStageIn(std::string path, PlacementPolicy dpe) {
   for (auto &file_path : stdfs::directory_iterator(path)) {
     FileStageIn(file_path.path(), dpe);
   }
 }
 
-void UnixStager::StageIn(std::string path, off_t off,
+void PosixStager::StageIn(std::string path, off_t off,
                          size_t size, PlacementPolicy dpe) {
   if (stdfs::is_regular_file(path)) {
     FileStageIn(path, off, size, dpe);
@@ -55,7 +55,7 @@ void UnixStager::StageIn(std::string path, off_t off,
   }
 }
 
-void UnixStager::FileStageIn(std::string path,
+void PosixStager::FileStageIn(std::string path,
                              off_t off, size_t size, PlacementPolicy dpe) {
   auto fs_api = PosixFS();
   std::vector<char> buf(size);
@@ -68,7 +68,7 @@ void UnixStager::FileStageIn(std::string path,
   fs_api.Close(f, stat_exists, false);
 }
 
-void UnixStager::StageOut(std::string path) {
+void PosixStager::StageOut(std::string path) {
   if (stdfs::is_regular_file(path)) {
     FileStageOut(path);
   } else if (stdfs::is_directory(path)) {
@@ -78,7 +78,7 @@ void UnixStager::StageOut(std::string path) {
   }
 }
 
-void UnixStager::FileStageOut(std::string path) {
+void PosixStager::FileStageOut(std::string path) {
   auto fs_api = PosixFS();
   AdapterStat stat;
   bool stat_exists;
@@ -90,7 +90,7 @@ void UnixStager::FileStageOut(std::string path) {
   fs_api.Close(f, stat_exists, false);
 }
 
-void UnixStager::DirectoryStageOut(std::string path) {
+void PosixStager::DirectoryStageOut(std::string path) {
   for (auto &file_path : stdfs::directory_iterator(path)) {
     FileStageOut(file_path.path());
   }

@@ -28,8 +28,8 @@ int main(int argc, char **argv) {
         " ./stage_in [url] [offset] [size] [dpe]" << std::endl;
     exit(1);
   }
-  auto mdm = Singleton<hermes::adapter::fs::MetadataManager>::GetInstance();
   MPI_Init(&argc, &argv);
+  auto mdm = Singleton<hermes::adapter::fs::MetadataManager>::GetInstance();
   setenv("HERMES_STOP_DAEMON", "0", true);
   setenv("HERMES_CLIENT", "1", true);
   mdm->InitializeHermes(true);

@@ -27,7 +27,7 @@ class DataStagerFactory {
   static std::unique_ptr<DataStager> Get(DataStagerType stager) {
     switch (stager) {
       case DataStagerType::kPosix: {
-        return std::make_unique<UnixStager>();
+        return std::make_unique<PosixStager>();
       }
       default: {
         return nullptr;
