@@ -22,6 +22,16 @@
 #include <cstdlib>
 #include <cstring>
 
+static bool VerifyBuffer(char *ptr, size_t size, char nonce) {
+  for (size_t i = 0; i < size; ++i) {
+    if (ptr[i] != nonce) {
+      std::cout << (int)ptr[i] << std::endl;
+      return false;
+    }
+  }
+  return true;
+}
+
 int main(int argc, char **argv) {
   int rank;
   MPI_Init(&argc, &argv);
@@ -48,6 +58,8 @@ int main(int argc, char **argv) {
      << " Total Size (MB): " << size / count << std::endl;
   std::cout << ss.str() << std::endl;
 
+  sleep(lag);
+
   char *buf = (char*)malloc(size);
   int fd = open(path, O_CREAT | O_RDWR, 0666);
   lseek(fd, off, SEEK_SET);
@@ -60,7 +72,10 @@ int main(int argc, char **argv) {
     } else {
       memset(buf, 0, size);
       read(fd, buf, size);
-      VerifyBuffer(buf, nonce, size);
+      if(!VerifyBuffer(buf, nonce, size)) {
+        std::cout << "Buffer verification failed!" << std::endl;
+        exit(1);
+      }
     }
   }
 
