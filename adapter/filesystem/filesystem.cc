@@ -541,7 +541,7 @@ HermesRequest* Filesystem::ARead(File &f, AdapterStat &stat, void *ptr,
   return hreq;
 }
 
-size_t Filesystem::Wait(size_t req_id) {
+size_t Filesystem::Wait(uint64_t req_id) {
   auto mdm = Singleton<MetadataManager>::GetInstance();
   auto req_iter = mdm->request_map.find(req_id);
   if (req_iter == mdm->request_map.end()) {

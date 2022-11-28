@@ -103,11 +103,11 @@ const char* kStopDaemon = "HERMES_STOP_DAEMON";
  * it's important to align the page size to your workload.
  */
 const size_t kPageSize = []() {
-  const char *kPageSizeVar = "HERMES_PAGE_SIZE";
+  const char* kPageSizeVar = "HERMES_PAGE_SIZE";
   const size_t kDefaultPageSize = 1 * 1024 * 1024;
 
   size_t result = kDefaultPageSize;
-  char *page_size = getenv(kPageSizeVar);
+  char* page_size = getenv(kPageSizeVar);
 
   if (page_size) {
     result = (size_t)std::strtoull(page_size, NULL, 0);

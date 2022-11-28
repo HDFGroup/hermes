@@ -20,8 +20,12 @@
 #include <thread>
 
 namespace hermes {
+/**
+   A class to represent thread pool
+ */
 class ThreadPool {
  public:
+  /** construct thread pool with \a num_threads number of threads */
   explicit ThreadPool(
       unsigned num_threads = std::thread::hardware_concurrency()) {
     while (num_threads--) {
@@ -32,8 +36,8 @@ class ThreadPool {
             return !queue_high.empty() || !queue_low.empty();
           });
           bool high_priority = !queue_high.empty();
-          auto task = high_priority ? std::move(queue_high.front()) :
-            std::move(queue_low.front());
+          auto task = high_priority ? std::move(queue_high.front())
+                                    : std::move(queue_low.front());
           if (task.valid()) {
             if (high_priority) {
               queue_high.pop();
@@ -54,6 +58,7 @@ class ThreadPool {
     }
   }
 
+  /** a template for running thread pool */
   template <typename F, typename R = std::result_of_t<F && ()>>
   std::future<R> run(F&& f, bool high_priority = false) const {
     auto task = std::packaged_task<R()>(std::forward<F>(f));
@@ -87,11 +92,13 @@ class ThreadPool {
   }
 
  private:
-  std::vector<std::thread> threads;
+  std::vector<std::thread> threads; /**< a vector of threads */
+  /** high-priority  queue */
   mutable std::queue<std::packaged_task<void()>> queue_low;
+  /** low-priority queue */
   mutable std::queue<std::packaged_task<void()>> queue_high;
-  mutable std::mutex mutex;
-  mutable std::condition_variable condvar;
+  mutable std::mutex mutex;                /**< mutex lock */
+  mutable std::condition_variable condvar; /**< conditional variable */
 };
 }  // namespace hermes
 #endif  // HERMES_THREAD_POOL_H_

@@ -80,12 +80,9 @@ int finalize() {
 }
 
 int pretest() {
-  if (stdfs::exists(info.new_file))
-    stdfs::remove(info.new_file);
-  if (stdfs::exists(info.new_file_cmp))
-    stdfs::remove(info.new_file_cmp);
-  if (stdfs::exists(info.existing_file))
-    stdfs::remove(info.existing_file);
+  if (stdfs::exists(info.new_file)) stdfs::remove(info.new_file);
+  if (stdfs::exists(info.new_file_cmp)) stdfs::remove(info.new_file_cmp);
+  if (stdfs::exists(info.existing_file)) stdfs::remove(info.existing_file);
   if (stdfs::exists(info.existing_file_cmp))
     stdfs::remove(info.existing_file_cmp);
   if (!stdfs::exists(info.existing_file)) {
@@ -177,12 +174,9 @@ int posttest(bool compare_data = true) {
     }
   }
   /* Clean up. */
-  if (stdfs::exists(info.new_file))
-    stdfs::remove(info.new_file);
-  if (stdfs::exists(info.existing_file))
-    stdfs::remove(info.existing_file);
-  if (stdfs::exists(info.new_file_cmp))
-    stdfs::remove(info.new_file_cmp);
+  if (stdfs::exists(info.new_file)) stdfs::remove(info.new_file);
+  if (stdfs::exists(info.existing_file)) stdfs::remove(info.existing_file);
+  if (stdfs::exists(info.new_file_cmp)) stdfs::remove(info.new_file_cmp);
   if (stdfs::exists(info.existing_file_cmp))
     stdfs::remove(info.existing_file_cmp);
 
@@ -267,8 +261,7 @@ TEST_CASE("BatchedWriteSequentialPersistent",
               "[pattern=sequential][file=1]") {
   char* adapter_mode = getenv(kAdapterMode);
   REQUIRE(adapter_mode != nullptr);
-  bool is_same =
-      strcmp(kAdapterDefaultMode, adapter_mode) == 0;
+  bool is_same = strcmp(kAdapterDefaultMode, adapter_mode) == 0;
   REQUIRE(is_same);
   pretest();
   SECTION("write to new file always at end") {

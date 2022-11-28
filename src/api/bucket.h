@@ -13,15 +13,15 @@
 #ifndef BUCKET_H_
 #define BUCKET_H_
 
+#include <glog/logging.h>
+
 #include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
-#include <glog/logging.h>
-
-#include "hermes.h"
 #include "dpe/round_robin.h"
+#include "hermes.h"
 #include "metadata_management.h"
 #include "utils.h"
 
@@ -115,30 +115,30 @@ class Bucket {
    *
    * \return \status
    */
-  template<typename T>
+  template <typename T>
   Status Put(const std::string &name, const std::vector<T> &data);
 
-  /** \overload
+  /** \brief Put a Blob in this Bucket using context.
    *
-   * \param \ctx{Put}
+   * \param name BLOB name
+   * \param data BLOB data
+   * \param ctx context
    */
-  template<typename T>
+  template <typename T>
   Status Put(const std::string &name, const std::vector<T> &data, Context &ctx);
-
 
   /**
    * \brief Put a Blob in this Bucket.
    *
    * \param name The name of the Blob to Put
-   * \param data The Blob%'s data.
+   * \param data The Blob's data.
    * \param size The size of the Blob in bytes.
-   * \param \ctx{Put}
    *
    * \return \status
    *
    * \pre The Bucket must be valid.
    * \pre The length of \p name in bytes must not exceed
-   * #hermes::api::kMaxBlobNameSize.
+   *      hermes::api::kMaxBlobNameSize.
    * \pre The Blob buffer \p data must not be \c nullptr unless \p size is 0.
    *
    * \return \status
@@ -147,8 +147,10 @@ class Bucket {
 
   /**
    * \overload
-   *
-   * \param \ctx{Put}
+   * \param name BLOB name
+   * \param data BLOB data
+   * \param size BLOB size
+   * \param ctx context
    */
   Status Put(const std::string &name, const u8 *data, size_t size,
              const Context &ctx);
@@ -163,28 +165,32 @@ class Bucket {
    *
    * \return \status
    */
-  template<typename T>
+  template <typename T>
   Status Put(const std::vector<std::string> &names,
              const std::vector<std::vector<T>> &blobs);
 
   /** \overload
    *
-   * \param \ctx{Put}
+   * \param names BLOB names
+   * \param blobs BLOB data
+   * \param ctx context
    */
-  template<typename T>
+  template <typename T>
   Status Put(const std::vector<std::string> &names,
              const std::vector<std::vector<T>> &blobs, const Context &ctx);
 
   /** \brief Get the size in bytes of the Blob referred to by \p name.
    *
    * \param name The name of the Blob to query.
-   * \param \ctx{call}
+   * \param ctx context
    */
   size_t GetBlobSize(const std::string &name, const Context &ctx);
 
   /** \overload
    *
    * \param arena An Arena backed by allocated memory.
+   * \param name The name of the Blob to query.
+   * \param ctx context
    */
   size_t GetBlobSize(Arena *arena, const std::string &name, const Context &ctx);
 
@@ -199,13 +205,15 @@ class Bucket {
    *
    * \return The size in bytes of the Blob.
    */
-  size_t Get(const std::string &name, Blob& user_blob);
+  size_t Get(const std::string &name, Blob &user_blob);
 
   /** \overload
    *
-   * \param \ctx{Get}
+   * \param name The name of the Blob to get.
+   * \param user_blob User-provided storage for the retrieved Blob.
+   * \param ctx context
    */
-  size_t Get(const std::string &name, Blob& user_blob, const Context &ctx);
+  size_t Get(const std::string &name, Blob &user_blob, const Context &ctx);
 
   /** \brief Retrieve multiple Blob%s in one call.
    *
@@ -238,17 +246,22 @@ class Bucket {
    *
    * \return The size in bytes of the retrieved Blob.
    */
-  size_t GetNext(u64 blob_index, Blob& user_blob);
+  size_t GetNext(u64 blob_index, Blob &user_blob);
 
   /** \overload
    *
-   * \param \ctx{call}
+   * \param blob_index The starting index.
+   * \param user_blob User-provided memory for the Blob.
+   * \param ctx context
    */
-  size_t GetNext(u64 blob_index, Blob& user_blob, const Context &ctx);
+  size_t GetNext(u64 blob_index, Blob &user_blob, const Context &ctx);
 
   /** \overload
    *
-   * \param \ctx{call}
+   * \param blob_index The starting index.
+   * \param user_blob User-provided memory for the Blob.
+   * \param blob_size Blob size
+   * \param ctx context
    */
   size_t GetNext(u64 blob_index, void *user_blob, size_t blob_size,
                  const Context &ctx);
@@ -267,7 +280,7 @@ class Bucket {
    *
    * \return \status
    */
-  template<class Predicate>
+  template <class Predicate>
   Status GetV(void *user_blob, Predicate pred, Context &ctx);
 
   /** \brief Delete a Blob from this Bucket.
@@ -280,7 +293,8 @@ class Bucket {
 
   /** \overload
    *
-   * \param \ctx{call}
+   * \param name The name of the Blob to delete.
+   * \param ctx context
    */
   Status DeleteBlob(const std::string &name, const Context &ctx);
 
@@ -297,7 +311,9 @@ class Bucket {
 
   /** \overload
    *
-   * \param \ctx{call}
+   * \param old_name The Blob to rename.
+   * \param new_name The desired new name of the Blob.
+   * \param ctx context
    */
   Status RenameBlob(const std::string &old_name, const std::string &new_name,
                     const Context &ctx);
@@ -322,7 +338,7 @@ class Bucket {
    *
    * \todo Not implemented yet.
    */
-  template<class Predicate>
+  template <class Predicate>
   std::vector<std::string> GetBlobNames(Predicate pred, Context &ctx);
 
   /** \brief Rename this Bucket.
@@ -334,27 +350,28 @@ class Bucket {
    *
    * \return \status
    */
-  Status Rename(const std::string& new_name);
+  Status Rename(const std::string &new_name);
 
   /** \overload
    *
-   * \param \ctx{call}.
+   * \param new_name A new name for the Bucket.
+   * \param ctx context
    */
-  Status Rename(const std::string& new_name, const Context &ctx);
+  Status Rename(const std::string &new_name, const Context &ctx);
 
   /** \brief Save this Bucket%'s Blob%s to persistent storage.
    *
    * The blobs are written in the same order in which they were \p Put.
    *
-   * \param file_name The name of the file to persist the Blob%s to.
+   * \param file_name The name of the file to persist the Blob's to.
    *
    * \return \status
    */
   Status Persist(const std::string &file_name);
 
   /** \overload
-   *
-   * \param \ctx{call}.
+   * \param file_name The name of the file to persist the Blob's to.
+   * \param ctx context
    */
   Status Persist(const std::string &file_name, const Context &ctx);
 
@@ -394,7 +411,7 @@ class Bucket {
 
   /** \brief Destroy this Bucket.
    *
-   * Deletes all metadata and Blob%s associated with this Bucket.
+   * Deletes all metadata and Blob's associated with this Bucket.
    *
    * \pre The Bucket must have a reference count of 1. Other ranks must first
    * Bucket::Close the Bucket.
@@ -414,7 +431,7 @@ class Bucket {
    *
    * \return \status
    */
-  template<typename T>
+  template <typename T>
   Status PutInternal(const std::vector<std::string> &names,
                      const std::vector<size_t> &sizes,
                      const std::vector<std::vector<T>> &blobs,
@@ -423,13 +440,13 @@ class Bucket {
    *
    * \return \status
    */
-  template<typename T>
+  template <typename T>
   Status PlaceBlobs(std::vector<PlacementSchema> &schemas,
                     const std::vector<std::vector<T>> &blobs,
                     const std::vector<std::string> &names, const Context &ctx);
 };
 
-template<typename T>
+template <typename T>
 Status Bucket::Put(const std::string &name, const std::vector<T> &data,
                    Context &ctx) {
   Status result = Put(name, (u8 *)data.data(), data.size() * sizeof(T), ctx);
@@ -437,14 +454,14 @@ Status Bucket::Put(const std::string &name, const std::vector<T> &data,
   return result;
 }
 
-template<typename T>
+template <typename T>
 Status Bucket::Put(const std::string &name, const std::vector<T> &data) {
   Status result = Put(name, data, ctx_);
 
   return result;
 }
 
-template<typename T>
+template <typename T>
 Status Bucket::PlaceBlobs(std::vector<PlacementSchema> &schemas,
                           const std::vector<std::vector<T>> &blobs,
                           const std::vector<std::string> &names,
@@ -469,7 +486,7 @@ Status Bucket::PlaceBlobs(std::vector<PlacementSchema> &schemas,
   return result;
 }
 
-template<typename T>
+template <typename T>
 Status Bucket::Put(const std::vector<std::string> &names,
                    const std::vector<std::vector<T>> &blobs) {
   Status result = Put(names, blobs, ctx_);
@@ -477,7 +494,7 @@ Status Bucket::Put(const std::vector<std::string> &names,
   return result;
 }
 
-template<typename T>
+template <typename T>
 Status Bucket::PutInternal(const std::vector<std::string> &names,
                            const std::vector<size_t> &sizes,
                            const std::vector<std::vector<T>> &blobs,
@@ -497,7 +514,7 @@ Status Bucket::PutInternal(const std::vector<std::string> &names,
   return result;
 }
 
-template<typename T>
+template <typename T>
 Status Bucket::Put(const std::vector<std::string> &names,
                    const std::vector<std::vector<T>> &blobs,
                    const Context &ctx) {
@@ -526,7 +543,7 @@ Status Bucket::Put(const std::vector<std::string> &names,
 
     if (ctx.rr_retry) {
       int num_devices =
-        GetLocalSystemViewState(&hermes_->context_)->num_devices;
+          GetLocalSystemViewState(&hermes_->context_)->num_devices;
 
       for (int i = 0; i < num_devices; ++i) {
         ret = PutInternal(names, sizes_in_bytes, blobs, ctx);

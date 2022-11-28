@@ -23,7 +23,7 @@ bool IsNullBlobId(BlobID id);
 bool IsNullTargetId(TargetID id);
 TicketMutex *GetMapMutex(MetadataManager *mdm, MapType map_type);
 VBucketID GetVBucketId(SharedMemoryContext *context, RpcContext *rpc,
-                             const char *name);
+                       const char *name);
 u32 HashString(MetadataManager *mdm, RpcContext *rpc, const char *str);
 MetadataManager *GetMetadataManagerFromContext(SharedMemoryContext *context);
 BucketInfo *LocalGetBucketInfoByIndex(MetadataManager *mdm, u32 index);
@@ -46,7 +46,7 @@ void LocalGetBufferIdList(Arena *arena, MetadataManager *mdm, BlobID blob_id,
                           BufferIdArray *buffer_ids);
 void LocalFreeBufferIdList(SharedMemoryContext *context, BlobID blob_id);
 bool LocalDestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
-                               const char *bucket_name, BucketID bucket_id);
+                        const char *bucket_name, BucketID bucket_id);
 bool LocalDestroyVBucket(SharedMemoryContext *context, const char *vbucket_name,
                          VBucketID vbucket_id);
 void LocalDestroyBlobById(SharedMemoryContext *context, RpcContext *rpc,
@@ -75,15 +75,13 @@ void LocalPut(MetadataManager *mdm, const char *key, u64 val, MapType map_type);
 void LocalDelete(MetadataManager *mdm, const char *key, MapType map_type);
 
 u64 LocalGetRemainingTargetCapacity(SharedMemoryContext *context, TargetID id);
-std::vector<ViolationInfo>
-LocalUpdateGlobalSystemViewState(SharedMemoryContext *context, u32 node_id,
-                                 std::vector<i64> adjustments);
+std::vector<ViolationInfo> LocalUpdateGlobalSystemViewState(
+    SharedMemoryContext *context, u32 node_id, std::vector<i64> adjustments);
 GlobalSystemViewState *GetGlobalSystemViewState(SharedMemoryContext *context);
 std::vector<u64> LocalGetGlobalDeviceCapacities(SharedMemoryContext *context);
 std::vector<u64> GetGlobalDeviceCapacities(SharedMemoryContext *context,
                                            RpcContext *rpc);
-void UpdateGlobalSystemViewState(SharedMemoryContext *context,
-                                 RpcContext *rpc);
+void UpdateGlobalSystemViewState(SharedMemoryContext *context, RpcContext *rpc);
 
 void StartGlobalSystemViewStateUpdateThread(SharedMemoryContext *context,
                                             RpcContext *rpc, Arena *arena,
@@ -134,7 +132,6 @@ std::vector<BlobID> LocalGetBlobsFromVBucketInfo(SharedMemoryContext *context,
                                                  VBucketID vbucket_id);
 std::string LocalGetBucketNameById(SharedMemoryContext *context,
                                    BucketID blob_id);
-
 
 void WaitForOutstandingBlobOps(MetadataManager *mdm, BlobID blob_id);
 int LocalGetNumOutstandingFlushingTasks(SharedMemoryContext *context,

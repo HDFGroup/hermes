@@ -14,6 +14,7 @@
 #define HERMES_BALANCED_MAPPER_H
 
 #include <vector>
+
 #include "abstract_mapper.h"
 
 namespace hermes::adapter {
@@ -25,8 +26,6 @@ class BalancedMapper : public AbstractMapper {
   /**
    * This method maps the current Operation to Hermes data structures.
    *
-   * @param file_op, FileStruct, operations for which we are mapping.
-   * @return a map of FileStruct to Hermes Struct
    */
   void map(size_t off, size_t size, BlobPlacements &ps) override;
 };

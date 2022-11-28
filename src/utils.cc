@@ -126,7 +126,9 @@ void InitDefaultConfig(Config *config) {
     config->bo_capacity_thresholds[i].max = 1.0f;
   }
 }
-
+/**
+   print an error message for \a func function that failed
+ */   
 void FailedLibraryCall(std::string func) {
   int saved_errno = errno;
   LOG(FATAL) << func << " failed with error: "  << strerror(saved_errno)
