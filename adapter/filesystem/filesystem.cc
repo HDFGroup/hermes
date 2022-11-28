@@ -79,6 +79,9 @@ void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
         stat.st_bkid =
             std::make_shared<hapi::Bucket>(path_str, mdm->GetHermes());
       }
+
+      // Create a vbucket for storing all modified blobs (per-rank)
+
     } else {
       stat.st_bkid =
           std::make_shared<hapi::Bucket>(path_str, mdm->GetHermes());
@@ -623,6 +626,7 @@ int Filesystem::Sync(File &f, AdapterStat &stat) {
     return 0;
   }
   if (IsAsyncFlush(filename)) {
+    LOG(INFO) << "Asynchronous flushing enabled" << std::endl;
     stat.st_vbkt->WaitForBackgroundFlush();
     return 0;
   }
@@ -654,6 +658,23 @@ int Filesystem::Sync(File &f, AdapterStat &stat) {
   return _RealSync(f);
 }
 
+void SaveModifiedBlobSet(AdapterStat &stat) {
+  int rank = 0;
+  auto mdm = Singleton<MetadataManager>::GetInstance();
+  if (mdm->is_mpi) {
+    MPI_Comm_rank(stat.comm, &rank);
+  }
+  auto filename = stat.st_bkid->GetName();
+  const auto &blob_names = stat.st_blobs;
+  std::string vbucket_name = filename + "#" +
+                             std::to_string(rank) + "#sync";
+  hapi::VBucket file_vbucket(vbucket_name, mdm->GetHermes());
+  auto offset_map = std::unordered_map<std::string, hermes::u64>();
+  for (const auto &blob_name : blob_names) {
+    file_vbucket.Link(blob_name, filename);
+  }
+}
+
 int Filesystem::Close(File &f, AdapterStat &stat, bool destroy) {
   hapi::Context ctx;
   int rank = 0;
@@ -683,7 +704,7 @@ int Filesystem::Close(File &f, AdapterStat &stat, bool destroy) {
     destroy = false;
   }
 
-  Sync(f, stat);
+  Sync(f, stat);  // TODO(llogan): should wait until hermes destroyed to flush
   auto filename = stat.st_bkid->GetName();
   if (mdm->is_mpi) { MPI_Barrier(stat.comm); }
   if (IsAsyncFlush(filename)) {
@@ -691,7 +712,11 @@ int Filesystem::Close(File &f, AdapterStat &stat, bool destroy) {
   }
   mdm->Delete(f);
   if (mdm->is_mpi) { MPI_Barrier(stat.comm); }
-  if (destroy) { stat.st_bkid->Destroy(ctx); }
+  if (destroy) {
+    stat.st_bkid->Destroy(ctx);
+  } else {
+
+  }
   if (stat.amode & MPI_MODE_DELETE_ON_CLOSE) {
     stdfs::remove(filename);
   }

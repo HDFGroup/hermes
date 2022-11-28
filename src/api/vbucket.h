@@ -138,6 +138,7 @@ class VBucket {
 
   /** retrieves the subset of blob links satisfying pred */
   /** could return iterator */
+  std::vector<std::string> GetLinks();
   std::vector<std::string> GetLinks(Context &ctx);
 
   /** \brief Attach a Trait to this VBucket.

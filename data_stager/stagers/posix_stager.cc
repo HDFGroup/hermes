@@ -87,7 +87,7 @@ void PosixStager::FileStageOut(std::string path) {
     LOG(INFO) << "Couldn't open file: " << path << std::endl;
     return;
   }
-  fs_api.Close(f, stat_exists, false);
+  fs_api.Close(f, stat_exists, true);
 }
 
 void PosixStager::DirectoryStageOut(std::string path) {
