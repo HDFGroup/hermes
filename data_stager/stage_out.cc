@@ -22,7 +22,7 @@ using hermes::DataStager;
 using hermes::DataStagerFactory;
 
 int main(int argc, char **argv) {
-  if (argc != 1) {
+  if (argc != 2) {
     std::cout << "Usage: ./stage_out [url]" << std::endl;
     exit(1);
   }

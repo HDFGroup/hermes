@@ -68,8 +68,8 @@ int main(int argc, char **argv) {
   lseek(fd, off, SEEK_SET);
 
   struct stat st;
-  fstat(fd, &st);
-  if (st.st_size != total_size) {
+  __fxstat(_STAT_VER, fd, &st);
+  if (rw && (st.st_size - total_size) > 3) {
     if (rank == 0) {
       std::cout << "File sizes aren't equivalent: "
                 << " stat: " << st.st_size
@@ -81,12 +81,12 @@ int main(int argc, char **argv) {
   for (int i = 0; i < count; ++i) {
     char nonce = i;
     if (rw == 0) {
-      memset(buf, nonce, size);
-      write(fd, buf, size);
+      memset(buf, nonce, block_size);
+      write(fd, buf, block_size);
     } else {
-      memset(buf, 0, size);
-      read(fd, buf, size);
-      if(!VerifyBuffer(buf, nonce, size)) {
+      memset(buf, 0, block_size);
+      read(fd, buf, block_size);
+      if(!VerifyBuffer(buf, block_size, nonce)) {
         std::cout << "Buffer verification failed!" << std::endl;
         exit(1);
       }
