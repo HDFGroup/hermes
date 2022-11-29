@@ -105,7 +105,7 @@ size_t Bucket::GetBlobSize(const std::string &name, const Context &ctx) {
   return result;
 }
 
-size_t Bucket::GetBlobSize(Arena *arena, const std::string &name,
+size_t Bucket::GetBlobSize(const std::string &name,
                            const Context &ctx) {
   (void)ctx;
   size_t result = 0;

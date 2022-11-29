@@ -285,6 +285,13 @@ endif()
 find_path(GLOG_INCLUDE_DIRS NAME glog PATH_SUFFIXES include/)
 include_directories(${GLOG_INCLUDE_DIRS})
 
+# LabStor
+find_package(LabStor REQUIRED)
+if(LabStor_FOUND)
+  message(STATUS "found Labstor at ${LabStor_DIR}")
+endif()
+include_directories(${LabStor_INCLUDE_DIR})
+
 # GFLAGS
 if(HERMES_ENABLE_GFLAGS)
   find_package(gflags REQUIRED)

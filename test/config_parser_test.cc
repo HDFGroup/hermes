@@ -28,13 +28,13 @@ using hermes::Config;
 namespace hermes {
 namespace testing {
 
-Config ParseConfigStringTest(Arena *arena, const std::string &config_string) {
+Config ParseConfigStringTest(const std::string &config_string) {
   Config config = {};
   ParseConfigString(arena, config_string, &config);
   return config;
 }
 
-void RunHostNumbersTest(Arena *arena, const std::string &config_string,
+void RunHostNumbersTest(const std::string &config_string,
                         const std::vector<std::string> &expected) {
   Config config = ParseConfigStringTest(arena, config_string);
   Assert(config.host_names == expected);
@@ -81,7 +81,7 @@ void TestParseRangeList(Arena *arena) {
   }
 }
 
-void RunCapacityValuesTest(Arena *arena, const std::string &config_string,
+void RunCapacityValuesTest(const std::string &config_string,
                            const std::vector<size_t> &expected) {
   Config config = ParseConfigStringTest(arena, config_string);
   Assert((size_t)config.num_devices == expected.size());
@@ -140,7 +140,7 @@ void TestCapacityValues(Arena *arena) {
   }
 }
 
-void RunBlockSizesTest(Arena *arena, const std::string &config_string,
+void RunBlockSizesTest(const std::string &config_string,
                        const std::vector<int> &expected) {
   Config config = ParseConfigStringTest(arena, config_string);
   Assert((size_t)config.num_devices == expected.size());
@@ -177,7 +177,7 @@ void TestBlockSizes(Arena *arena) {
   }
 }
 
-void TestDefaultConfig(Arena *arena, const char *config_file) {
+void TestDefaultConfig(const char *config_file) {
   hermes::Config config = {};
   hermes::ParseConfig(arena, config_file, &config);
 

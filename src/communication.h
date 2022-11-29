@@ -14,7 +14,6 @@
 #define HERMES_COMMUNICATION_H_
 
 #include "hermes_types.h"
-#include "memory_management.h"
 
 /**
  * @file communication.h

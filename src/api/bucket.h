@@ -192,7 +192,7 @@ class Bucket {
    * \param name The name of the Blob to query.
    * \param ctx context
    */
-  size_t GetBlobSize(Arena *arena, const std::string &name, const Context &ctx);
+  size_t GetBlobSize(const std::string &name, const Context &ctx);
 
   /** \brief Get a blob from this Bucket.
    *

@@ -25,7 +25,8 @@
 #include "communication.h"
 #include "hermes_status.h"
 #include "hermes_types.h"
-#include "memory_management.h"
+
+#include <labstor/thread/mutex.h>
 
 /** @file buffer_pool.h
  *
@@ -303,7 +304,7 @@ size_t GetBlobSize(SharedMemoryContext *context, RpcContext *rpc,
  *
  */
 size_t GetBlobSizeById(SharedMemoryContext *context, RpcContext *rpc,
-                       Arena *arena, BlobID blob_id);
+                       BlobID blob_id);
 
 f32 GetBlobImportanceScore(SharedMemoryContext *context, RpcContext *rpc,
                            BlobID blob_id);
@@ -562,12 +563,12 @@ api::Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
                       const api::Context &ctx,
                       bool called_from_buffer_organizer = false);
 api::Status StdIoPersistBucket(SharedMemoryContext *context, RpcContext *rpc,
-                               Arena *arena, BucketID bucket_id,
+                               BucketID bucket_id,
                                const std::string &file_name,
                                const std::string &open_mode);
 
 api::Status StdIoPersistBlob(SharedMemoryContext *context, RpcContext *rpc,
-                             Arena *arena, BlobID blob_id, int fd,
+                             BlobID blob_id, int fd,
                              const i32 &offset);
 
 Device *GetDeviceFromHeader(SharedMemoryContext *context, BufferHeader *header);

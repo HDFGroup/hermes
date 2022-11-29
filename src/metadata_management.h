@@ -318,7 +318,7 @@ bool ContainsBlob(SharedMemoryContext *context, RpcContext *rpc,
 /**
  *
  */
-BufferIdArray GetBufferIdsFromBlobId(Arena *arena, SharedMemoryContext *context,
+BufferIdArray GetBufferIdsFromBlobId(SharedMemoryContext *context,
                                      RpcContext *rpc, BlobID blob_id,
                                      u32 **sizes);
 

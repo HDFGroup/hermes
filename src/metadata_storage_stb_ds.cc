@@ -601,7 +601,7 @@ std::vector<BufferID> LocalGetBufferIdList(MetadataManager *mdm,
 }
 
 /** get buffer ID list into \a buffer_ids locally */
-void LocalGetBufferIdList(Arena *arena, MetadataManager *mdm, BlobID blob_id,
+void LocalGetBufferIdList(MetadataManager *mdm, BlobID blob_id,
                           BufferIdArray *buffer_ids) {
   size_t length = 0;
   BufferID *ids = GetBufferIdsPtrFromBlobId(mdm, blob_id, length);
@@ -925,7 +925,7 @@ void SeedHashForStorage(size_t seed) {
 }
 
 /** initialize swap space file name */
-void InitSwapSpaceFilename(MetadataManager *mdm, Arena *arena, Config *config) {
+void InitSwapSpaceFilename(MetadataManager *mdm, Config *config) {
   std::string swap_filename_prefix("swap");
   size_t swap_mount_length = config->swap_mount.size();
   bool ends_in_slash = config->swap_mount[swap_mount_length - 1] == '/';
@@ -966,7 +966,7 @@ void InitNeighborhoodTargets(SharedMemoryContext *context, RpcContext *rpc) {
 
 /** initialize metadata storage */
 void InitMetadataStorage(SharedMemoryContext *context, MetadataManager *mdm,
-                         Arena *arena, Config *config) {
+                         Config *config) {
   InitSwapSpaceFilename(mdm, arena, config);
 
   // Heaps

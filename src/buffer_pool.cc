@@ -761,7 +761,7 @@ size_t GetBlobSize(SharedMemoryContext *context, RpcContext *rpc,
    \a rpc RpcContext, \a arena Arena, and \a blob_id BlobID.
 */  
 size_t GetBlobSizeById(SharedMemoryContext *context, RpcContext *rpc,
-                       Arena *arena, BlobID blob_id) {
+                       BlobID blob_id) {
   size_t result = 0;
   BufferIdArray buffer_ids =
     GetBufferIdsFromBlobId(arena, context, rpc, blob_id, NULL);
@@ -813,7 +813,7 @@ BufferID MakeBufferId(u32 node_id, u32 header_index) {
   Partition RAM buffers by \a block_size for \a buffer_count buffers
  with \a buffer_size size in \a arena Arena.
 */
-void PartitionRamBuffers(Arena *arena, i32 buffer_size, i32 buffer_count,
+void PartitionRamBuffers(i32 buffer_size, i32 buffer_count,
                          int block_size) {
   for (int i = 0; i < buffer_count; ++i) {
     int num_blocks_needed = buffer_size / block_size;
@@ -836,7 +836,7 @@ void PartitionRamBuffers(Arena *arena, i32 buffer_size, i32 buffer_count,
 /**
    Make \a end_index - \a start_index amount of BufferHeaders.
  */   
-BufferID MakeBufferHeaders(Arena *arena, int buffer_size, u32 start_index,
+BufferID MakeBufferHeaders(int buffer_size, u32 start_index,
                            u32 end_index, int node_id, DeviceID device_id,
                            ptrdiff_t initial_offset, u8 **header_begin) {
   BufferHeader dummy = {};
@@ -868,7 +868,7 @@ BufferID MakeBufferHeaders(Arena *arena, int buffer_size, u32 start_index,
 /**
    Initialize devices.
  */   
-Device *InitDevices(Arena *arena, Config *config, f32 &min_bw, f32 &max_bw) {
+Device *InitDevices(Config *config, f32 &min_bw, f32 &max_bw) {
   min_bw = FLT_MAX;
   max_bw = 0;
 
@@ -909,7 +909,7 @@ Device *InitDevices(Arena *arena, Config *config, f32 &min_bw, f32 &max_bw) {
 }
 
 /** Initialize targets. */
-Target *InitTargets(Arena *arena, Config *config, Device *devices,
+Target *InitTargets(Config *config, Device *devices,
                     int node_id) {
   Target *result = PushClearedArray<Target>(arena, config->num_targets);
 
@@ -1974,7 +1974,7 @@ api::Status PlaceBlob(SharedMemoryContext *context, RpcContext *rpc,
 
 /** Persist Bucket using stdio. */
 api::Status StdIoPersistBucket(SharedMemoryContext *context, RpcContext *rpc,
-                          Arena *arena, BucketID bucket_id,
+                          BucketID bucket_id,
                           const std::string &file_name,
                           const std::string &open_mode) {
   api::Status result;
@@ -2023,7 +2023,7 @@ api::Status StdIoPersistBucket(SharedMemoryContext *context, RpcContext *rpc,
 
 /** Persist BLOB using stdio. */
 api::Status StdIoPersistBlob(SharedMemoryContext *context, RpcContext *rpc,
-                             Arena *arena, BlobID blob_id, int fd,
+                             BlobID blob_id, int fd,
                              const i32 &offset) {
   api::Status result;
 

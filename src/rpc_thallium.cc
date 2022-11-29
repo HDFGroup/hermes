@@ -36,7 +36,7 @@ void CopyStringToCharArray(const std::string &src, char *dest, size_t max) {
 
 /** start Thallium RPC server */
 void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
-                            Arena *arena, const char *addr,
+                            const char *addr,
                             i32 num_rpc_threads) {
   ThalliumState *state = GetThalliumState(rpc);
   state->engine = new tl::engine(addr, THALLIUM_SERVER_MODE, true,
@@ -504,7 +504,7 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
 
 /** start buffer organizer */
 void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
-                          Arena *arena, const char *addr, int num_threads,
+                          const char *addr, int num_threads,
                           int port) {
   context->bo = PushStruct<BufferOrganizer>(arena);
   new(context->bo) BufferOrganizer(num_threads);
@@ -604,7 +604,7 @@ void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
 
 /** start prefetcher */
 void StartPrefetcher(SharedMemoryContext *context,
-                     RpcContext *rpc, Arena *arena, double sleep_ms) {
+                     RpcContext *rpc, double sleep_ms) {
   ThalliumState *state = GetThalliumState(rpc);
   tl::engine *rpc_server = state->engine;
   using tl::request;

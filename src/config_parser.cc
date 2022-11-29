@@ -521,7 +521,7 @@ void ParseConfigYAML(YAML::Node &yaml_conf, Config *config) {
 /**
    parse YAML configuration file
  */
-void ParseConfig(Arena *arena, const char *path, Config *config) {
+void ParseConfig(const char *path, Config *config) {
   ScopedTemporaryMemory scratch(arena);
   InitDefaultConfig(config);
   LOG(INFO) << "ParseConfig-LoadFile" << std::endl;
@@ -534,7 +534,7 @@ void ParseConfig(Arena *arena, const char *path, Config *config) {
    parse configuration string
  */
 void ParseConfigString(
-    Arena *arena, const std::string &config_string, Config *config) {
+    const std::string &config_string, Config *config) {
   ScopedTemporaryMemory scratch(arena);
   InitDefaultConfig(config);
   YAML::Node yaml_conf = YAML::Load(config_string);

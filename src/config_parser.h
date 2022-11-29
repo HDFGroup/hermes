@@ -16,12 +16,11 @@
 #include <string.h>
 
 #include "hermes_types.h"
-#include "memory_management.h"
 
 namespace hermes {
 
-void ParseConfig(Arena *arena, const char *path, Config *config);
-void ParseConfigString(Arena *arena, const std::string &config_string,
+void ParseConfig(const char *path, Config *config);
+void ParseConfigString(const std::string &config_string,
                        Config *config);
 void InitConfig(hermes::Config *config, const char *config_file);
 /** create configuration file */

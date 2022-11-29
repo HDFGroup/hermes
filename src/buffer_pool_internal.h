@@ -54,8 +54,7 @@ namespace hermes {
  * @return The offset of the beginning of the BufferPool from the beginning of
  * shared memory.
  */
-ptrdiff_t InitBufferPool(u8 *hermes_memory, Arena *buffer_pool_arena,
-                         Arena *scratch_arena, i32 node_id, Config *config);
+ptrdiff_t InitBufferPool(u8 *hermes_memory, i32 node_id, Config *config);
 
 /**
  * Obtains a pointer to the BufferPool constructed in shared memory.
@@ -191,7 +190,7 @@ void SerializeBufferPoolToFile(SharedMemoryContext *context, FILE *file);
 /**
  *
  */
-void ParseConfig(Arena *arena, const char *path, Config *config);
+void ParseConfig(const char *path, Config *config);
 
 /**
  *

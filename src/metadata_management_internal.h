@@ -42,7 +42,7 @@ void LocalAddBlobIdToVBucket(MetadataManager *mdm, VBucketID vbucket_id,
                              BlobID blob_id);
 std::vector<BufferID> LocalGetBufferIdList(MetadataManager *mdm,
                                            BlobID blob_id);
-void LocalGetBufferIdList(Arena *arena, MetadataManager *mdm, BlobID blob_id,
+void LocalGetBufferIdList(MetadataManager *mdm, BlobID blob_id,
                           BufferIdArray *buffer_ids);
 void LocalFreeBufferIdList(SharedMemoryContext *context, BlobID blob_id);
 bool LocalDestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
@@ -88,7 +88,7 @@ void StartGlobalSystemViewStateUpdateThread(SharedMemoryContext *context,
                                             double sleep_ms);
 
 void InitMetadataStorage(SharedMemoryContext *context, MetadataManager *mdm,
-                         Arena *arena, Config *config);
+                         Config *config);
 
 std::string GetSwapFilename(MetadataManager *mdm, u32 node_id);
 std::vector<BlobID> LocalGetBlobIds(SharedMemoryContext *context,

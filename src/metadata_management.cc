@@ -656,7 +656,7 @@ bool BlobIsInSwap(BlobID id) {
 }
 
 /** get buffer ID list */
-void GetBufferIdList(Arena *arena, SharedMemoryContext *context,
+void GetBufferIdList(SharedMemoryContext *context,
                      RpcContext *rpc, BlobID blob_id,
                      BufferIdArray *buffer_ids) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
@@ -1185,7 +1185,7 @@ static ptrdiff_t GetOffsetFromMdm(MetadataManager *mdm, void *ptr) {
 }
 
 /** create system view state */
-SystemViewState *CreateSystemViewState(Arena *arena, Config *config) {
+SystemViewState *CreateSystemViewState(Config *config) {
   SystemViewState *result = PushClearedStruct<SystemViewState>(arena);
   result->num_devices = config->num_devices;
   for (int i = 0; i < result->num_devices; ++i) {
