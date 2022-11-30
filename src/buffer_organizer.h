@@ -14,6 +14,7 @@
 #define HERMES_BUFFER_ORGANIZER_H_
 
 #include "thread_pool.h"
+#include "hermes_status.h"
 
 namespace hermes {
 
@@ -78,6 +79,15 @@ struct BufferInfo {
 bool operator==(const BufferInfo &lhs, const BufferInfo &rhs);
 
 /**
+ A structure to represent Target information
+*/
+struct TargetInfo {
+  TargetID id;                  /**< unique ID */
+  f32 bandwidth_mbps;           /**< bandwidth in Megabits per second */
+  u64 capacity;                 /**< capacity */
+};
+
+/**
    A structure to represent buffer organizer
 */
 class BufferOrganizer {
@@ -91,8 +101,81 @@ class BufferOrganizer {
   explicit BufferOrganizer(SharedMemoryContext *context,
                            RpcContext *rpc, int num_threads);
 
+  /** get buffer information locally */
+  BufferInfo LocalGetBufferInfo(BufferID buffer_id);
 
+  /** get buffer information */
+  BufferInfo GetBufferInfo(BufferID buffer_id);
+
+  /** get information for multiple buffers */
+  std::vector<BufferInfo>
+  GetBufferInfo(const std::vector<BufferID> &buffer_ids);
+
+  /** normalize access score from \a raw-score using \a size_mb */
+  f32 NormalizeAccessScore(f32 raw_score, f32 size_mb);
+
+  /** compute blob access score */
+  f32 ComputeBlobAccessScore(const std::vector<BufferInfo> &buffer_info);
+
+  /** sort buffer information */
+  void SortBufferInfo(std::vector<BufferInfo> &buffer_info, bool increasing);
+
+  /** sort target information */
+  void SortTargetInfo(std::vector<TargetInfo> &target_info, bool increasing);
+
+  /** Local enqueue of buffer information */
+  void LocalEnqueueBoMove(const BoMoveList &moves, BlobID blob_id,
+                          BucketID bucket_id,
+                          const std::string &internal_blob_name,
+                          BoPriority priority);
+
+  /** enqueue a move operation */
+  void EnqueueBoMove(const BoMoveList &moves, BlobID blob_id,
+                     BucketID bucket_id, const std::string &internal_name,
+                     BoPriority priority);
+
+  /**
+   * copy a set of buffers into a set of new buffers.
+   *
+   * assumes all BufferIDs in destinations are local
+   * */
+  void BoMove(const BoMoveList &moves, BlobID blob_id, BucketID bucket_id,
+              const std::string &internal_blob_name);
+
+  /** change the composition of a blob based on importance locally */
+  void LocalOrganizeBlob(const std::string &internal_blob_name,
+                         BucketID bucket_id, f32 epsilon,
+                         f32 explicit_importance_score);
+
+  /** change the composition of a blob  */
+  void OrganizeBlob(BucketID bucket_id, const std::string &blob_name,
+                    f32 epsilon, f32 importance_score);
+
+
+  void EnforceCapacityThresholds(ViolationInfo info);
+  void LocalEnforceCapacityThresholds(ViolationInfo info);
+  void LocalShutdownBufferOrganizer();
+  void FlushBlob(BlobID blob_id, const std::string &filename,
+                 u64 offset, bool async);
+  bool EnqueueFlushingTask(BlobID blob_id,
+                           const std::string &filename, u64 offset);
+  bool LocalEnqueueFlushingTask(BlobID blob_id, const std::string &filename,
+                                u64 offset);
+  api::Status PlaceInHierarchy(SwapBlob swap_blob, const std::string &name,
+                               const api::Context &ctx);
+  void LocalAdjustFlushCount(const std::string &vbkt_name, int adjustment);
+  void LocalIncrementFlushCount(const std::string &vbkt_name);
+  void LocalDecrementFlushCount(const std::string &vbkt_name);
+  void IncrementFlushCount(const std::string &vbkt_name);
+  void DecrementFlushCount(const std::string &vbkt_name);
+  void AwaitAsyncFlushingTasks(VBucketID id);
 };
+
+static inline f32 BytesToMegabytes(size_t bytes) {
+  f32 result = (f32)bytes / (f32)MEGABYTES(1);
+
+  return result;
+}
 
 }  // namespace hermes
 

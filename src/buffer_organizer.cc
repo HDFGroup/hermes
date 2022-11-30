@@ -21,25 +21,17 @@
 
 namespace hermes {
 
-BufferOrganizer::BufferOrganizer(int num_threads) :
-    pool(num_threads) {}
+BufferOrganizer::BufferOrganizer(SharedMemoryContext *context,
+                                 RpcContext *rpc, int num_threads) :
+    context_(context), rpc_(rpc), pool(num_threads) {}
 
 bool operator==(const BufferInfo &lhs, const BufferInfo &rhs) {
   return (lhs.id == rhs.id && lhs.size == rhs.size &&
           lhs.bandwidth_mbps == rhs.bandwidth_mbps);
 }
-/**
- A structure to represent Target information
-*/
-struct TargetInfo {
-  TargetID id;                  /**< unique ID */
-  f32 bandwidth_mbps;           /**< bandwidth in Megabits per second */
-  u64 capacity;                 /**< capacity */
-};
 
 /** get buffer information locally */
-BufferInfo LocalGetBufferInfo(SharedMemoryContext *context,
-                              BufferID buffer_id) {
+BufferInfo BufferOrganizer::LocalGetBufferInfo(BufferID buffer_id) {
   BufferInfo result = {};
 
   BufferHeader *header = GetHeaderByBufferId(context, buffer_id);
@@ -56,8 +48,7 @@ BufferInfo LocalGetBufferInfo(SharedMemoryContext *context,
 }
 
 /** get buffer information */
-BufferInfo GetBufferInfo(SharedMemoryContext *context, RpcContext *rpc,
-                         BufferID buffer_id) {
+BufferInfo BufferOrganizer::GetBufferInfo(BufferID buffer_id) {
   BufferInfo result = {};
   u32 target_node = buffer_id.bits.node_id;
 
@@ -71,9 +62,20 @@ BufferInfo GetBufferInfo(SharedMemoryContext *context, RpcContext *rpc,
   return result;
 }
 
+/** get information for multiple buffers */
+std::vector<BufferInfo>
+BufferOrganizer::GetBufferInfo(const std::vector<BufferID> &buffer_ids) {
+  std::vector<BufferInfo> result(buffer_ids.size());
+
+  for (size_t i = 0; i < buffer_ids.size(); ++i) {
+    result[i] = GetBufferInfo(context, rpc, buffer_ids[i]);
+  }
+
+  return result;
+}
+
 /** normalize access score from \a raw-score using \a size_mb */
-f32 NormalizeAccessScore(SharedMemoryContext *context, f32 raw_score,
-                         f32 size_mb) {
+f32 BufferOrganizer::NormalizeAccessScore(f32 raw_score, f32 size_mb) {
   BufferPool *pool = GetBufferPoolFromContext(context);
 
   f32 min_seconds = size_mb * (1.0 / pool->max_device_bw_mbps);
@@ -86,26 +88,8 @@ f32 NormalizeAccessScore(SharedMemoryContext *context, f32 raw_score,
   return result;
 }
 
-static inline f32 BytesToMegabytes(size_t bytes) {
-  f32 result = (f32)bytes / (f32)MEGABYTES(1);
-
-  return result;
-}
-
-std::vector<BufferInfo> GetBufferInfo(SharedMemoryContext *context,
-                                      RpcContext *rpc,
-                                      const std::vector<BufferID> &buffer_ids) {
-  std::vector<BufferInfo> result(buffer_ids.size());
-
-  for (size_t i = 0; i < buffer_ids.size(); ++i) {
-    result[i] = GetBufferInfo(context, rpc, buffer_ids[i]);
-  }
-
-  return result;
-}
-
-f32 ComputeBlobAccessScore(SharedMemoryContext *context,
-                           const std::vector<BufferInfo> &buffer_info) {
+f32 BufferOrganizer::ComputeBlobAccessScore(
+    const std::vector<BufferInfo> &buffer_info) {
   f32 result = 0;
   f32 raw_score = 0;
   f32 total_blob_size_mb = 0;
@@ -124,7 +108,8 @@ f32 ComputeBlobAccessScore(SharedMemoryContext *context,
 }
 
 /** sort buffer information */
-void SortBufferInfo(std::vector<BufferInfo> &buffer_info, bool increasing) {
+void BufferOrganizer::SortBufferInfo(std::vector<BufferInfo> &buffer_info,
+                                     bool increasing) {
 #define HERMES_BUFFER_INFO_COMPARATOR(direction, comp)    \
   auto direction##_buffer_info_comparator =               \
     [](const BufferInfo &lhs, const BufferInfo &rhs) {    \
@@ -150,7 +135,8 @@ void SortBufferInfo(std::vector<BufferInfo> &buffer_info, bool increasing) {
 }
 
 /** sort target information */
-void SortTargetInfo(std::vector<TargetInfo> &target_info, bool increasing) {
+void BufferOrganizer::SortTargetInfo(std::vector<TargetInfo> &target_info,
+                                     bool increasing) {
   auto increasing_target_info_comparator = [](const TargetInfo &lhs,
                                               const TargetInfo &rhs) {
     return lhs.bandwidth_mbps > rhs.bandwidth_mbps;
@@ -169,18 +155,12 @@ void SortTargetInfo(std::vector<TargetInfo> &target_info, bool increasing) {
   }
 }
 
-void EnqueueBoMove(RpcContext *rpc, const BoMoveList &moves, BlobID blob_id,
-                   BucketID bucket_id, const std::string &internal_name,
-                   BoPriority priority) {
-  RpcCall<bool>(rpc, rpc->node_id, "BO::EnqueueBoMove", moves, blob_id,
-                bucket_id, internal_name, priority);
-}
-
-void LocalEnqueueBoMove(SharedMemoryContext *context, RpcContext *rpc,
-                        const BoMoveList &moves, BlobID blob_id,
-                        BucketID bucket_id,
-                        const std::string &internal_blob_name,
-                        BoPriority priority) {
+/** Local enqueue of buffer information */
+void BufferOrganizer::LocalEnqueueBoMove(const BoMoveList &moves,
+                                         BlobID blob_id,
+                                         BucketID bucket_id,
+                                         const std::string &internal_blob_name,
+                                         BoPriority priority) {
   ThreadPool *pool = &context->bo->pool;
   bool is_high_priority = priority == BoPriority::kHigh;
   // NOTE(llogan): VLOG(1) -> LOG(INFO)
@@ -190,12 +170,23 @@ void LocalEnqueueBoMove(SharedMemoryContext *context, RpcContext *rpc,
             is_high_priority);
 }
 
+/** enqueue a move operation */
+void BufferOrganizer::EnqueueBoMove(const BoMoveList &moves, BlobID blob_id,
+                                    BucketID bucket_id,
+                                    const std::string &internal_name,
+                                    BoPriority priority) {
+  RpcCall<bool>(rpc, rpc->node_id, "BO::EnqueueBoMove", moves, blob_id,
+                bucket_id, internal_name, priority);
+}
+
 /**
- * Assumes all BufferIDs in destinations are local
- */
-void BoMove(SharedMemoryContext *context, RpcContext *rpc,
-            const BoMoveList &moves, BlobID blob_id, BucketID bucket_id,
-            const std::string &internal_blob_name) {
+   * copy a set of buffers into a set of new buffers.
+   *
+   * assumes all BufferIDs in destinations are local
+   * */
+void BufferOrganizer::BoMove(const BoMoveList &moves,
+                             BlobID blob_id, BucketID bucket_id,
+                             const std::string &internal_blob_name) {
   // NOTE(llogan): VLOG(1) -> LOG(INFO)
   LOG(INFO) << "Moving blob "
           << internal_blob_name.substr(kBucketIdStringSize, std::string::npos)
@@ -315,10 +306,10 @@ void BoMove(SharedMemoryContext *context, RpcContext *rpc,
   }
 }
 
-void LocalOrganizeBlob(SharedMemoryContext *context, RpcContext *rpc,
-                       const std::string &internal_blob_name,
-                       BucketID bucket_id, f32 epsilon,
-                       f32 explicit_importance_score) {
+/** change the composition of a blob based on importance */
+void BufferOrganizer::LocalOrganizeBlob(const std::string &internal_blob_name,
+                                        BucketID bucket_id, f32 epsilon,
+                                        f32 explicit_importance_score) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   BlobID blob_id = {};
   blob_id.as_int = LocalGet(mdm, internal_blob_name.c_str(), kMapType_BlobId);
@@ -439,9 +430,9 @@ void LocalOrganizeBlob(SharedMemoryContext *context, RpcContext *rpc,
                 BoPriority::kLow);
 }
 
-void OrganizeBlob(SharedMemoryContext *context, RpcContext *rpc,
-                  BucketID bucket_id, const std::string &blob_name,
-                  f32 epsilon, f32 importance_score) {
+void BufferOrganizer::OrganizeBlob(BucketID bucket_id,
+                                   const std::string &blob_name,
+                                   f32 epsilon, f32 importance_score) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   std::string internal_name = MakeInternalBlobName(blob_name, bucket_id);
   u32 target_node = HashString(mdm, rpc, internal_name.c_str());
@@ -455,8 +446,7 @@ void OrganizeBlob(SharedMemoryContext *context, RpcContext *rpc,
   }
 }
 
-void EnforceCapacityThresholds(SharedMemoryContext *context, RpcContext *rpc,
-                               ViolationInfo info) {
+void BufferOrganizer::EnforceCapacityThresholds(ViolationInfo info) {
   u32 target_node = info.target_id.bits.node_id;
   if (target_node == rpc->node_id) {
     LocalEnforceCapacityThresholds(context, rpc, info);
@@ -465,8 +455,7 @@ void EnforceCapacityThresholds(SharedMemoryContext *context, RpcContext *rpc,
   }
 }
 
-void LocalEnforceCapacityThresholds(SharedMemoryContext *context,
-                                    RpcContext *rpc, ViolationInfo info) {
+void BufferOrganizer::LocalEnforceCapacityThresholds(ViolationInfo info) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
 
   // TODO(chogan): Factor out the common code in the kMin and kMax cases
@@ -674,14 +663,14 @@ void LocalEnforceCapacityThresholds(SharedMemoryContext *context,
   }
 }
 
-void LocalShutdownBufferOrganizer(SharedMemoryContext *context) {
+void BufferOrganizer::LocalShutdownBufferOrganizer() {
   // NOTE(chogan): ThreadPool destructor needs to be called manually since we
   // allocated the BO instance with placement new.
   context->bo->pool.~ThreadPool();
 }
 
-void FlushBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id,
-               const std::string &filename, u64 offset, bool async) {
+void BufferOrganizer::FlushBlob(BlobID blob_id, const std::string &filename,
+                                u64 offset, bool async) {
   if (LockBlob(context, rpc, blob_id)) {
     int open_flags = 0;
     mode_t open_mode = 0;
@@ -733,7 +722,7 @@ void FlushBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id,
   // }
 }
 
-bool EnqueueFlushingTask(RpcContext *rpc, BlobID blob_id,
+bool BufferOrganizer::EnqueueFlushingTask(BlobID blob_id,
                          const std::string &filename, u64 offset) {
   bool result = RpcCall<bool>(rpc, rpc->node_id, "BO::EnqueueFlushingTask",
                               blob_id, filename, offset);
@@ -741,8 +730,7 @@ bool EnqueueFlushingTask(RpcContext *rpc, BlobID blob_id,
   return result;
 }
 
-bool LocalEnqueueFlushingTask(SharedMemoryContext *context, RpcContext *rpc,
-                              BlobID blob_id, const std::string &filename,
+bool BufferOrganizer::LocalEnqueueFlushingTask(BlobID blob_id, const std::string &filename,
                               u64 offset) {
   bool result = false;
 
@@ -763,9 +751,9 @@ bool LocalEnqueueFlushingTask(SharedMemoryContext *context, RpcContext *rpc,
 /**
    place BLOBs in hierarchy
 */
-Status PlaceInHierarchy(SharedMemoryContext *context, RpcContext *rpc,
-                        SwapBlob swap_blob, const std::string &name,
-                        const api::Context &ctx) {
+Status BufferOrganizer::PlaceInHierarchy(SwapBlob swap_blob,
+                                         const std::string &name,
+                                         const api::Context &ctx) {
   std::vector<PlacementSchema> schemas;
   std::vector<size_t> sizes(1, swap_blob.size);
   Status result = CalculatePlacement(context, rpc, sizes, schemas, ctx);
@@ -786,8 +774,8 @@ Status PlaceInHierarchy(SharedMemoryContext *context, RpcContext *rpc,
 }
 
 /** adjust flush coun locally */
-void LocalAdjustFlushCount(SharedMemoryContext *context,
-                           const std::string &vbkt_name, int adjustment) {
+void BufferOrganizer::LocalAdjustFlushCount(const std::string &vbkt_name,
+                                            int adjustment) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   VBucketID id = LocalGetVBucketId(context, vbkt_name.c_str());
   mdm->vbucket_mutex.Lock();
@@ -801,18 +789,15 @@ void LocalAdjustFlushCount(SharedMemoryContext *context,
   mdm->vbucket_mutex.Unlock();
 }
 
-void LocalIncrementFlushCount(SharedMemoryContext *context,
-                              const std::string &vbkt_name) {
+void BufferOrganizer::LocalIncrementFlushCount(const std::string &vbkt_name) {
   LocalAdjustFlushCount(context, vbkt_name, 1);
 }
 
-void LocalDecrementFlushCount(SharedMemoryContext *context,
-                         const std::string &vbkt_name) {
+void BufferOrganizer::LocalDecrementFlushCount(const std::string &vbkt_name) {
   LocalAdjustFlushCount(context, vbkt_name, -1);
 }
 
-void IncrementFlushCount(SharedMemoryContext *context, RpcContext *rpc,
-                         const std::string &vbkt_name) {
+void BufferOrganizer::IncrementFlushCount(const std::string &vbkt_name) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   u32 target_node = HashString(mdm, rpc, vbkt_name.c_str());
 
@@ -824,8 +809,7 @@ void IncrementFlushCount(SharedMemoryContext *context, RpcContext *rpc,
   }
 }
 
-void DecrementFlushCount(SharedMemoryContext *context, RpcContext *rpc,
-                         const std::string &vbkt_name) {
+void BufferOrganizer::DecrementFlushCount(const std::string &vbkt_name) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   u32 target_node = HashString(mdm, rpc, vbkt_name.c_str());
 
@@ -837,15 +821,14 @@ void DecrementFlushCount(SharedMemoryContext *context, RpcContext *rpc,
   }
 }
 
-void AwaitAsyncFlushingTasks(SharedMemoryContext *context, RpcContext *rpc,
-                             VBucketID id) {
+void BufferOrganizer::AwaitAsyncFlushingTasks(VBucketID id) {
   auto sleep_time = std::chrono::milliseconds(500);
   int outstanding_flushes = 0;
   int log_every = 10;
   int counter = 0;
 
   while ((outstanding_flushes =
-          GetNumOutstandingFlushingTasks(context, rpc, id)) != 0) {
+          GetNumOutstandingFlushingTasks(id)) != 0) {
     if (++counter == log_every) {
       LOG(INFO) << "Waiting for " << outstanding_flushes
                 << " outstanding flushes" << std::endl;

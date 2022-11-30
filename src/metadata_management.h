@@ -104,7 +104,7 @@ struct BufferIdArray {
  */
 struct BlobInfo {
   Stats stats;               /**< BLOB statistics */
-  TicketMutex lock;          /**< lock */
+  labstor::Mutex lock;          /**< lock */
   TargetID effective_target; /**< target ID */
   u32 last;                  /**< last */
   bool stop;                 /**< stop */
@@ -202,7 +202,12 @@ struct GlobalSystemViewState {
 /**
    A structure to represent metadata manager
 */
-struct MetadataManager {
+class MetadataManager {
+ public:
+  Config *config_;
+  SharedMemoryContext *context_;
+  RpcContext *rpc_;
+
   // All offsets are relative to the beginning of the MDM
   ptrdiff_t bucket_info_offset; /**< bucket information */
   BucketID first_free_bucket;   /**< ID of first free bucket */
@@ -227,28 +232,28 @@ struct MetadataManager {
   ptrdiff_t swap_filename_prefix_offset; /**< swap file name prefix */
   ptrdiff_t swap_filename_suffix_offset; /**< swap file name suffix */
 
-  // TODO(chogan): @optimization Should the TicketMutexes here be reader/writer
+  // TODO(chogan): @optimization Should the mutexes here be reader/writer
   // locks?
 
   /** Lock for accessing `BucketInfo` structures located at
    * `bucket_info_offset` */
-  TicketMutex bucket_mutex;
-  RwLock bucket_delete_lock; /**< lock for bucket deletion */
+  labstor::Mutex bucket_mutex;
+  labstor::RwLock bucket_delete_lock; /**< lock for bucket deletion */
 
   /** Lock for accessing `VBucketInfo` structures located at
    * `vbucket_info_offset` */
-  TicketMutex vbucket_mutex;
+  labstor::Mutex vbucket_mutex;
 
   /** Lock for accessing the `IdMap` located at `bucket_map_offset` */
-  TicketMutex bucket_map_mutex;
+  labstor::Mutex bucket_map_mutex;
   /** Lock for accessing the `IdMap` located at `vbucket_map_offset` */
-  TicketMutex vbucket_map_mutex;
+  labstor::Mutex vbucket_map_mutex;
   /** Lock for accessing the `IdMap` located at `blob_id_map_offset` */
-  TicketMutex blob_id_map_mutex;
+  labstor::Mutex blob_id_map_mutex;
   /** Lock for accessing the `BlobInfoMap` located at `blob_info_map_offset` */
-  TicketMutex blob_info_map_mutex;
+  labstor::Mutex blob_info_map_mutex;
   /** Lock for accessing `IdList`s and `ChunkedIdList`s */
-  TicketMutex id_mutex;
+  labstor::Mutex id_mutex;
 
   size_t map_seed; /**<  map seed */
 
@@ -262,9 +267,10 @@ struct MetadataManager {
   u32 num_vbuckets;                         /**< number of virtual buckets */
   u32 max_vbuckets;       /**< maximum number of virtual buckets */
   std::atomic<u32> clock; /**< clock */
-};
 
-struct RpcContext;
+ public:
+  MetadataManager(RpcContext *context, Config *config);
+};
 
 /**
  *
@@ -453,22 +459,22 @@ bool IsNullBlobId(BlobID id);
 /**
  * begin global ticket mutex
  */
-void BeginGlobalTicketMutex(SharedMemoryContext *context, RpcContext *rpc);
+void BeginGloballabstor::Mutex(SharedMemoryContext *context, RpcContext *rpc);
 
 /**
  * end global ticket mutex
  */
-void EndGlobalTicketMutex(SharedMemoryContext *context, RpcContext *rpc);
+void EndGloballabstor::Mutex(SharedMemoryContext *context, RpcContext *rpc);
 
 /**
  * begin global ticket mutex locally
  */
-void LocalBeginGlobalTicketMutex(MetadataManager *mdm);
+void LocalBeginGloballabstor::Mutex(MetadataManager *mdm);
 
 /**
  * end global ticket mutex locally
  */
-void LocalEndGlobalTicketMutex(MetadataManager *mdm);
+void LocalEndGloballabstor::Mutex(MetadataManager *mdm);
 
 /**
  * attach BLOB to VBucket

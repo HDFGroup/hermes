@@ -1275,8 +1275,8 @@ SwapBlob IdArrayToSwapBlob(BufferIdArray ids) {
 }
 
 /** initialize metadata manager */
-void InitMetadataManager(MetadataManager *mdm, RpcContext *rpc, Arena *arena,
-                         Config *config) {
+MetadataManager::MetadataManager(RpcContext *rpc, Config *config) :
+    config_(config), rpc_(rpc) {
   // NOTE(chogan): All MetadataManager offsets are relative to the address of
   // the MDM itself.
   u32 node_id = rpc->node_id;
