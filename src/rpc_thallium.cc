@@ -34,15 +34,170 @@ void CopyStringToCharArray(const std::string &src, char *dest, size_t max) {
   dest[copy_size] = '\0';
 }
 
+/** Get protocol */
+std::string ThalliumRpc::GetProtocol() {
+  std::string prefix = std::string(server_name_prefix);
+  // NOTE(chogan): Chop "://" off the end of the server_name_prefix to get the
+  // protocol
+  std::string result = prefix.substr(0, prefix.length() - 3);
+  return result;
+}
+
+/** initialize RPC clients */
+void ThalliumRpc::InitClients() {
+  std::string protocol = GetProtocol();
+  // TODO(chogan): This should go in a per-client persistent arena
+  client_engine_ = new tl::engine(protocol, THALLIUM_CLIENT_MODE, true, 1);
+}
+
+/** shut down RPC clients */
+void ThalliumRpc::ShutdownClients() {
+  if (client_engine_) {
+    delete client_engine_;
+    client_engine_ = 0;
+  }
+}
+
+/** finalize RPC context */
+void ThalliumRpc::Finalize(bool is_daemon) {
+  if (is_daemon) {
+    engine->wait_for_finalize();
+    bo_engine->wait_for_finalize();
+  } else {
+    engine->finalize();
+    bo_engine->finalize();
+  }
+  delete engine;
+  delete bo_engine;
+}
+
+/** run daemon */
+void ThalliumRpc::RunDaemon(const char *shmem_name) {
+  engine->enable_remote_shutdown();
+  bo_engine->enable_remote_shutdown();
+
+  auto prefinalize_callback = [this, &comm = comm_]() {
+    comm->SubBarrier();
+    StopPrefetcher();
+    StopGlobalSystemViewStateUpdateThread();
+    SubBarrier(comm);
+    ShutdownRpcClients();
+  };
+
+  engine->push_prefinalize_callback(prefinalize_callback);
+
+  bo_engine->wait_for_finalize();
+  engine->wait_for_finalize();
+
+  LocalShutdownBufferOrganizer();
+  delete engine;
+  delete bo_engine;
+  ReleaseSharedMemoryContext(context);
+  shm_unlink(shmem_name);
+  HERMES_DEBUG_SERVER_CLOSE();
+
+  DestroyArena(trans_arena);
+  // TODO(chogan): https://github.com/HDFGroup/hermes/issues/323
+  // google::ShutdownGoogleLogging();
+}
+
+/** finalize client */
+void ThalliumRpc::FinalizeClient(bool stop_daemon) {
+  SubBarrier(comm);
+
+  if (stop_daemon && comm->first_on_node) {
+    ClientThalliumState *state = GetClientThalliumState(rpc);
+
+    std::string bo_server_name = GetServerName(rpc, rpc->node_id, true);
+    tl::endpoint bo_server = engine->lookup(bo_server_name);
+    engine->shutdown_remote_engine(bo_server);
+
+    std::string server_name = GetServerName(rpc, rpc->node_id);
+    tl::endpoint server = engine->lookup(server_name);
+    engine->shutdown_remote_engine(server);
+  }
+
+  SubBarrier(comm);
+  ShutdownRpcClients(rpc);
+  ReleaseSharedMemoryContext(context);
+  HERMES_DEBUG_CLIENT_CLOSE();
+  DestroyArena(trans_arena);
+  // TODO(chogan): https://github.com/HDFGroup/hermes/issues/323
+  // google::ShutdownGoogleLogging();
+}
+
+/** get server name */
+std::string ThalliumRpc::GetServerName(u32 node_id, bool is_buffer_organizer) {
+  std::string host_name = GetHostNameFromNodeId(node_id);
+  // TODO(chogan): @optimization Could cache the last N hostname->IP mappings to
+  // avoid excessive syscalls. Should profile first.
+  struct hostent hostname_info = {};
+  struct hostent *hostname_result;
+  int hostname_error = 0;
+  char hostname_buffer[4096] = {};
+#ifdef __APPLE__
+  hostname_result = gethostbyname(host_name.c_str());
+      in_addr **addr_list = (struct in_addr **)hostname_result->h_addr_list;
+#else
+  int gethostbyname_result = gethostbyname_r(host_name.c_str(), &hostname_info,
+                                             hostname_buffer, 4096,
+                                             &hostname_result, &hostname_error);
+  if (gethostbyname_result != 0) {
+    LOG(FATAL) << hstrerror(h_errno);
+  }
+  in_addr **addr_list = (struct in_addr **)hostname_info.h_addr_list;
+#endif
+  if (!addr_list[0]) {
+    LOG(FATAL) << hstrerror(h_errno);
+  }
+
+  char ip_address[INET_ADDRSTRLEN];
+  const char *inet_result = inet_ntop(AF_INET, addr_list[0], ip_address,
+                                      INET_ADDRSTRLEN);
+  if (!inet_result) {
+    FailedLibraryCall("inet_ntop");
+  }
+
+  std::string result = std::string(server_name_prefix);
+  result += std::string(ip_address);
+
+  if (is_buffer_organizer) {
+    result += std::string(bo_server_name_postfix);
+  } else {
+    result += std::string(server_name_postfix);
+  }
+
+  return result;
+}
+
+/** read bulk */
+size_t ThalliumRpc::BulkRead(u32 node_id, const char *func_name,
+                             u8 *data, size_t max_size, BufferID id) {
+  std::string server_name = GetServerName(node_id, false);
+  std::string protocol = GetProtocol();
+
+  tl::engine engine(protocol, THALLIUM_CLIENT_MODE, true);
+  tl::remote_procedure remote_proc = engine.define(func_name);
+  tl::endpoint server = engine.lookup(server_name);
+
+  std::vector<std::pair<void*, size_t>> segments(1);
+  segments[0].first  = data;
+  segments[0].second = max_size;
+
+  tl::bulk bulk = engine.expose(segments, tl::bulk_mode::write_only);
+  size_t result = remote_proc.on(server)(bulk, id);
+
+  return result;
+}
+
 /** start Thallium RPC server */
-void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
-                            const char *addr,
-                            i32 num_rpc_threads) {
+void ThalliumRpc::StartServer(const char *addr,
+                              i32 num_rpc_threads) {
   ThalliumState *state = GetThalliumState(rpc);
-  state->engine = new tl::engine(addr, THALLIUM_SERVER_MODE, true,
+  engine = new tl::engine(addr, THALLIUM_SERVER_MODE, true,
                                  num_rpc_threads);
 
-  tl::engine *rpc_server = state->engine;
+  tl::engine *rpc_server = engine;
 
   std::string rpc_server_name = rpc_server->self();
   LOG(INFO) << "Serving at " << rpc_server_name << " with "
@@ -50,12 +205,12 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
 
   size_t end_of_protocol = rpc_server_name.find_first_of(":");
   std::string server_name_prefix =
-    rpc_server_name.substr(0, end_of_protocol) + "://";
-  CopyStringToCharArray(server_name_prefix, state->server_name_prefix,
+      rpc_server_name.substr(0, end_of_protocol) + "://";
+  CopyStringToCharArray(server_name_prefix, server_name_prefix,
                         kMaxServerNamePrefix);
 
   std::string server_name_postfix = ":" + std::to_string(rpc->port);
-  CopyStringToCharArray(server_name_postfix, state->server_name_postfix,
+  CopyStringToCharArray(server_name_postfix, server_name_postfix,
                         kMaxServerNamePostfix);
 
   using std::function;
@@ -66,10 +221,10 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
   // BufferPool requests
 
   auto rpc_get_buffers =
-    [context](const request &req, const PlacementSchema &schema) {
-      std::vector<BufferID> result = GetBuffers(context, schema);
-      req.respond(result);
-    };
+      [context](const request &req, const PlacementSchema &schema) {
+        std::vector<BufferID> result = GetBuffers(context, schema);
+        req.respond(result);
+      };
 
   auto rpc_release_buffer = [context](const request &req, BufferID id) {
     LocalReleaseBuffer(context, id);
@@ -93,15 +248,15 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
   };
 
   auto rpc_write_buffer_by_id =
-    [context](const request &req, BufferID id, std::vector<u8> data,
-              size_t offset) {
-      Blob blob = {};
-      blob.size = data.size();
-      blob.data = data.data();
-      size_t result = LocalWriteBufferById(context, id, blob, offset);
+      [context](const request &req, BufferID id, std::vector<u8> data,
+                size_t offset) {
+        Blob blob = {};
+        blob.size = data.size();
+        blob.data = data.data();
+        size_t result = LocalWriteBufferById(context, id, blob, offset);
 
-      req.respond(result);
-    };
+        req.respond(result);
+      };
 
   auto rpc_read_buffer_by_id = [context](const request &req, BufferID id) {
     BufferHeader *header = GetHeaderByBufferId(context, id);
@@ -117,92 +272,92 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
   };
 
   auto rpc_bulk_read_buffer_by_id =
-    [context, rpc_server, arena](const request &req, tl::bulk &bulk,
-                                 BufferID id) {
-      tl::endpoint endpoint = req.get_endpoint();
-      BufferHeader *header = GetHeaderByBufferId(context, id);
-      ScopedTemporaryMemory temp_memory(arena);
+      [context, rpc_server, arena](const request &req, tl::bulk &bulk,
+                                   BufferID id) {
+        tl::endpoint endpoint = req.get_endpoint();
+        BufferHeader *header = GetHeaderByBufferId(context, id);
+        ScopedTemporaryMemory temp_memory(arena);
 
-      u8 *buffer_data = 0;
-      size_t size = header->used;
+        u8 *buffer_data = 0;
+        size_t size = header->used;
 
-      if (BufferIsByteAddressable(context, id)) {
-        buffer_data = GetRamBufferPtr(context, id);
-      } else {
-        // TODO(chogan): Probably need a way to lock the trans_arena. Currently
-        // an assertion will fire if multiple threads try to use it at once.
-        if (size > GetRemainingCapacity(temp_memory)) {
-          // TODO(chogan): Need to transfer in a loop if we don't have enough
-          // temporary memory available
-          HERMES_NOT_IMPLEMENTED_YET;
+        if (BufferIsByteAddressable(context, id)) {
+          buffer_data = GetRamBufferPtr(context, id);
+        } else {
+          // TODO(chogan): Probably need a way to lock the trans_arena. Currently
+          // an assertion will fire if multiple threads try to use it at once.
+          if (size > GetRemainingCapacity(temp_memory)) {
+            // TODO(chogan): Need to transfer in a loop if we don't have enough
+            // temporary memory available
+            HERMES_NOT_IMPLEMENTED_YET;
+          }
+          buffer_data = PushSize(temp_memory, size);
+          Blob blob = {};
+          blob.data = buffer_data;
+          blob.size = size;
+          size_t read_offset = 0;
+          LocalReadBufferById(context, id, &blob, read_offset);
         }
-        buffer_data = PushSize(temp_memory, size);
-        Blob blob = {};
-        blob.data = buffer_data;
-        blob.size = size;
-        size_t read_offset = 0;
-        LocalReadBufferById(context, id, &blob, read_offset);
-      }
 
-      std::vector<std::pair<void*, size_t>> segments(1);
-      segments[0].first  = buffer_data;
-      segments[0].second = size;
-      tl::bulk local_bulk = rpc_server->expose(segments,
-                                               tl::bulk_mode::read_only);
+        std::vector<std::pair<void*, size_t>> segments(1);
+        segments[0].first  = buffer_data;
+        segments[0].second = size;
+        tl::bulk local_bulk = rpc_server->expose(segments,
+                                                 tl::bulk_mode::read_only);
 
-      size_t bytes_read = local_bulk >> bulk.on(endpoint);
-      // TODO(chogan): @errorhandling
-      assert(bytes_read == size);
+        size_t bytes_read = local_bulk >> bulk.on(endpoint);
+        // TODO(chogan): @errorhandling
+        assert(bytes_read == size);
 
-      req.respond(bytes_read);
-    };
+        req.respond(bytes_read);
+      };
 
   // Metadata requests
 
   auto rpc_map_get =
-    [context](const request &req, string name, const MapType &map_type) {
-      MetadataManager *mdm = GetMetadataManagerFromContext(context);
-      u64 result = LocalGet(mdm, name.c_str(), map_type);
+      [context](const request &req, string name, const MapType &map_type) {
+        MetadataManager *mdm = GetMetadataManagerFromContext(context);
+        u64 result = LocalGet(mdm, name.c_str(), map_type);
 
-      req.respond(result);
-    };
+        req.respond(result);
+      };
 
   auto rpc_map_put =
-    [context](const request &req, const string &name, u64 val,
-              const MapType &map_type) {
-      MetadataManager *mdm = GetMetadataManagerFromContext(context);
-      LocalPut(mdm, name.c_str(), val, map_type);
-      req.respond(true);
-    };
+      [context](const request &req, const string &name, u64 val,
+                const MapType &map_type) {
+        MetadataManager *mdm = GetMetadataManagerFromContext(context);
+        LocalPut(mdm, name.c_str(), val, map_type);
+        req.respond(true);
+      };
 
   auto rpc_map_delete =
-    [context](const request &req, string name, const MapType &map_type) {
-      MetadataManager *mdm = GetMetadataManagerFromContext(context);
-      LocalDelete(mdm, name.c_str(), map_type);
-      req.respond(true);
-    };
+      [context](const request &req, string name, const MapType &map_type) {
+        MetadataManager *mdm = GetMetadataManagerFromContext(context);
+        LocalDelete(mdm, name.c_str(), map_type);
+        req.respond(true);
+      };
 
   auto rpc_add_blob_bucket =
-    [context](const request &req, BucketID bucket_id, BlobID blob_id) {
-      MetadataManager *mdm = GetMetadataManagerFromContext(context);
-      LocalAddBlobIdToBucket(mdm, bucket_id, blob_id);
-      req.respond(true);
-    };
+      [context](const request &req, BucketID bucket_id, BlobID blob_id) {
+        MetadataManager *mdm = GetMetadataManagerFromContext(context);
+        LocalAddBlobIdToBucket(mdm, bucket_id, blob_id);
+        req.respond(true);
+      };
 
   auto rpc_add_blob_vbucket =
-    [context](const request &req, VBucketID vbucket_id, BlobID blob_id) {
-      MetadataManager *mdm = GetMetadataManagerFromContext(context);
-      LocalAddBlobIdToVBucket(mdm, vbucket_id, blob_id);
-      req.respond(true);
-    };
+      [context](const request &req, VBucketID vbucket_id, BlobID blob_id) {
+        MetadataManager *mdm = GetMetadataManagerFromContext(context);
+        LocalAddBlobIdToVBucket(mdm, vbucket_id, blob_id);
+        req.respond(true);
+      };
 
   auto rpc_get_buffer_id_list =
-    [context](const request &req, BlobID blob_id) {
-      MetadataManager *mdm = GetMetadataManagerFromContext(context);
-      std::vector<BufferID> result = LocalGetBufferIdList(mdm, blob_id);
+      [context](const request &req, BlobID blob_id) {
+        MetadataManager *mdm = GetMetadataManagerFromContext(context);
+        std::vector<BufferID> result = LocalGetBufferIdList(mdm, blob_id);
 
-      req.respond(result);
-    };
+        req.respond(result);
+      };
 
   auto rpc_free_buffer_id_list = [context](const request &req, BlobID blob_id) {
     LocalFreeBufferIdList(context, blob_id);
@@ -210,11 +365,11 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
   };
 
   auto rpc_destroy_bucket =
-    [context, rpc](const request &req, const string &name, BucketID id) {
-      bool result = LocalDestroyBucket(context, rpc, name.c_str(), id);
+      [context, rpc](const request &req, const string &name, BucketID id) {
+        bool result = LocalDestroyBucket(context, rpc, name.c_str(), id);
 
-      req.respond(result);
-    };
+        req.respond(result);
+      };
 
   auto rpc_destroy_vbucket =
       [context](const request &req, const string &name, VBucketID id) {
@@ -223,70 +378,70 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
       };
 
   auto rpc_get_or_create_bucket_id =
-    [context](const request &req, const std::string &name) {
-      BucketID result = LocalGetOrCreateBucketId(context, name);
+      [context](const request &req, const std::string &name) {
+        BucketID result = LocalGetOrCreateBucketId(context, name);
 
-      req.respond(result);
-  };
+        req.respond(result);
+      };
 
   auto rpc_get_or_create_vbucket_id =
-    [context](const request &req, std::string &name) {
-      VBucketID result = LocalGetOrCreateVBucketId(context, name);
+      [context](const request &req, std::string &name) {
+        VBucketID result = LocalGetOrCreateVBucketId(context, name);
 
-      req.respond(result);
-  };
+        req.respond(result);
+      };
 
   auto rpc_allocate_buffer_id_list =
-    [context](const request &req, const vector<BufferID> &buffer_ids) {
-      MetadataManager *mdm = GetMetadataManagerFromContext(context);
-      u32 result = LocalAllocateBufferIdList(mdm, buffer_ids);
+      [context](const request &req, const vector<BufferID> &buffer_ids) {
+        MetadataManager *mdm = GetMetadataManagerFromContext(context);
+        u32 result = LocalAllocateBufferIdList(mdm, buffer_ids);
 
-      req.respond(result);
-    };
+        req.respond(result);
+      };
 
   auto rpc_rename_bucket =
-    [context, rpc](const request &req, BucketID id, const string &old_name,
-                   const string &new_name) {
-      LocalRenameBucket(context, rpc, id, old_name, new_name);
-      req.respond(true);
-    };
+      [context, rpc](const request &req, BucketID id, const string &old_name,
+                     const string &new_name) {
+        LocalRenameBucket(context, rpc, id, old_name, new_name);
+        req.respond(true);
+      };
 
   auto rpc_destroy_blob_by_name =
-    [context, rpc](const request &req, const string &name, BlobID id,
-                   BucketID bucket_id) {
-      LocalDestroyBlobByName(context, rpc, name.c_str(), id, bucket_id);
-      req.respond(true);
-    };
+      [context, rpc](const request &req, const string &name, BlobID id,
+                     BucketID bucket_id) {
+        LocalDestroyBlobByName(context, rpc, name.c_str(), id, bucket_id);
+        req.respond(true);
+      };
 
   auto rpc_destroy_blob_by_id =
-    [context, rpc](const request &req, BlobID id, BucketID bucket_id) {
-      LocalDestroyBlobById(context, rpc, id, bucket_id);
-      req.respond(true);
-    };
+      [context, rpc](const request &req, BlobID id, BucketID bucket_id) {
+        LocalDestroyBlobById(context, rpc, id, bucket_id);
+        req.respond(true);
+      };
 
   auto rpc_contains_blob =
-    [context](const request &req, BucketID bucket_id, BlobID blob_id) {
-      bool result = LocalContainsBlob(context, bucket_id, blob_id);
-      req.respond(result);
-    };
+      [context](const request &req, BucketID bucket_id, BlobID blob_id) {
+        bool result = LocalContainsBlob(context, bucket_id, blob_id);
+        req.respond(result);
+      };
 
   auto rpc_remove_blob_from_bucket_info =
-    [context](const request &req, BucketID bucket_id, BlobID blob_id) {
-      LocalRemoveBlobFromBucketInfo(context, bucket_id, blob_id);
-      req.respond(true);
-    };
+      [context](const request &req, BucketID bucket_id, BlobID blob_id) {
+        LocalRemoveBlobFromBucketInfo(context, bucket_id, blob_id);
+        req.respond(true);
+      };
 
   auto rpc_decrement_refcount_bucket =
-    [context](const request &req, BucketID id) {
-      LocalDecrementRefcount(context, id);
-      req.respond(true);
-    };
+      [context](const request &req, BucketID id) {
+        LocalDecrementRefcount(context, id);
+        req.respond(true);
+      };
 
-    auto rpc_decrement_refcount_vbucket =
-    [context](const request &req, VBucketID id) {
-      LocalDecrementRefcount(context, id);
-      req.respond(true);
-    };
+  auto rpc_decrement_refcount_vbucket =
+      [context](const request &req, VBucketID id) {
+        LocalDecrementRefcount(context, id);
+        req.respond(true);
+      };
 
   auto rpc_get_global_device_capacities = [context](const request &req) {
     std::vector<u64> result = LocalGetGlobalDeviceCapacities(context);
@@ -301,12 +456,12 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
   };
 
   auto rpc_update_global_system_view_state =
-    [context, rpc](const request &req, std::vector<i64> adjustments) {
-      std::vector<ViolationInfo> result =
-        LocalUpdateGlobalSystemViewState(context, rpc->node_id, adjustments);
+      [context, rpc](const request &req, std::vector<i64> adjustments) {
+        std::vector<ViolationInfo> result =
+            LocalUpdateGlobalSystemViewState(context, rpc->node_id, adjustments);
 
-      req.respond(result);
-    };
+        req.respond(result);
+      };
 
   auto rpc_get_blob_ids = [context](const request &req, BucketID bucket_id) {
     std::vector<BlobID> result = LocalGetBlobIds(context, bucket_id);
@@ -321,11 +476,11 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
   };
 
   auto rpc_get_bucket_id_from_blob_id =
-    [context](const request &req, BlobID id) {
-      BucketID result = LocalGetBucketIdFromBlobId(context, id);
+      [context](const request &req, BlobID id) {
+        BucketID result = LocalGetBucketIdFromBlobId(context, id);
 
-      req.respond(result);
-    };
+        req.respond(result);
+      };
 
   auto rpc_get_blob_name_from_id = [context](const request &req, BlobID id) {
     std::string result = LocalGetBlobNameFromId(context, id);
@@ -336,19 +491,19 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
   auto rpc_finalize = [rpc](const request &req) {
     (void)req;
     ThalliumState *state = GetThalliumState(rpc);
-    state->engine->finalize();
+    engine->finalize();
   };
 
   auto rpc_remove_blob_from_vbucket_info = [context](const request &req,
-                                                    VBucketID vbucket_id,
-                                                    BlobID blob_id) {
+                                                     VBucketID vbucket_id,
+                                                     BlobID blob_id) {
     LocalRemoveBlobFromVBucketInfo(context, vbucket_id, blob_id);
 
     req.respond(true);
   };
 
   auto rpc_get_blobs_from_vbucket_info = [context](const request &req,
-                                                  VBucketID vbucket_id) {
+                                                   VBucketID vbucket_id) {
     auto ret = LocalGetBlobsFromVBucketInfo(context, vbucket_id);
 
     req.respond(ret);
@@ -361,19 +516,19 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
   };
 
   auto rpc_increment_blob_stats =
-    [context](const request &req, BlobID blob_id) {
-      MetadataManager *mdm = GetMetadataManagerFromContext(context);
-      LocalIncrementBlobStats(mdm, blob_id);
+      [context](const request &req, BlobID blob_id) {
+        MetadataManager *mdm = GetMetadataManagerFromContext(context);
+        LocalIncrementBlobStats(mdm, blob_id);
 
-      req.respond(true);
-  };
+        req.respond(true);
+      };
 
   auto rpc_get_blob_importance_score =
-    [context](const request &req, BlobID blob_id) {
-      f32 result = LocalGetBlobImportanceScore(context, blob_id);
+      [context](const request &req, BlobID blob_id) {
+        f32 result = LocalGetBlobImportanceScore(context, blob_id);
 
-      req.respond(result);
-  };
+        req.respond(result);
+      };
 
   auto rpc_increment_flush_count = [context](const request &req,
                                              const std::string &name) {
@@ -390,11 +545,11 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
   };
 
   auto rpc_get_num_outstanding_flushing_tasks =
-    [context](const request &req, VBucketID id) {
-      int result = LocalGetNumOutstandingFlushingTasks(context, id);
+      [context](const request &req, VBucketID id) {
+        int result = LocalGetNumOutstandingFlushingTasks(context, id);
 
-      req.respond(result);
-  };
+        req.respond(result);
+      };
 
   auto rpc_lock_blob = [context](const request &req, BlobID id) {
     bool result = LocalLockBlob(context, id);
@@ -409,14 +564,14 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
   };
 
   auto rpc_create_blob_metadata =
-    [context](const request &req, const std::string &blob_name,
-              BlobID blob_id, TargetID effective_target) {
-      MetadataManager *mdm = GetMetadataManagerFromContext(context);
-      LocalCreateBlobMetadata(context, mdm, blob_name, blob_id,
-                              effective_target);
+      [context](const request &req, const std::string &blob_name,
+                BlobID blob_id, TargetID effective_target) {
+        MetadataManager *mdm = GetMetadataManagerFromContext(context);
+        LocalCreateBlobMetadata(context, mdm, blob_name, blob_id,
+                                effective_target);
 
-      req.respond(true);
-  };
+        req.respond(true);
+      };
 
   auto rpc_replace_blob_id_in_bucket = [context](const request &req,
                                                  BucketID bucket_id,
@@ -458,7 +613,7 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
   rpc_server->define("RemoteDestroyBlobById", rpc_destroy_blob_by_id);
   rpc_server->define("RemoteContainsBlob", rpc_contains_blob);
   rpc_server->define("RemoteRemoveBlobFromBucketInfo",
-                    rpc_remove_blob_from_bucket_info);
+                     rpc_remove_blob_from_bucket_info);
   rpc_server->define("RemoteAllocateBufferIdList", rpc_allocate_buffer_id_list);
   rpc_server->define("RemoteGetBufferIdList", rpc_get_buffer_id_list);
   rpc_server->define("RemoteFreeBufferIdList", rpc_free_buffer_id_list);
@@ -503,18 +658,17 @@ void ThalliumStartRpcServer(SharedMemoryContext *context, RpcContext *rpc,
 }
 
 /** start buffer organizer */
-void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
-                          const char *addr, int num_threads,
-                          int port) {
+void ThalliumRpc::StartBufferOrganizer(const char *addr, int num_threads,
+                                       int port) {
   context->bo = PushStruct<BufferOrganizer>(arena);
   new(context->bo) BufferOrganizer(num_threads);
 
   ThalliumState *state = GetThalliumState(rpc);
 
   int num_bo_rpc_threads = 1;
-  state->bo_engine = new tl::engine(addr, THALLIUM_SERVER_MODE, true,
+  bo_engine = new tl::engine(addr, THALLIUM_SERVER_MODE, true,
                                     num_bo_rpc_threads);
-  tl::engine *rpc_server = state->bo_engine;
+  tl::engine *rpc_server = bo_engine;
 
   std::string rpc_server_name = rpc_server->self();
   LOG(INFO) << "Buffer organizer serving at " << rpc_server_name << " with "
@@ -522,7 +676,7 @@ void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
             << " BO worker threads" << std::endl;
 
   std::string server_name_postfix = ":" + std::to_string(port);
-  CopyStringToCharArray(server_name_postfix, state->bo_server_name_postfix,
+  CopyStringToCharArray(server_name_postfix, bo_server_name_postfix,
                         kMaxServerNamePostfix);
 
   auto rpc_place_in_hierarchy = [context, rpc](const tl::request &req,
@@ -540,11 +694,11 @@ void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
       } else {
         ThalliumState *state = GetThalliumState(rpc);
 
-        if (state && state->bo_engine) {
+        if (state && bo_engine) {
           // TODO(chogan): We probably don't want to sleep here, but for now
           // this enables testing.
           double sleep_ms = 2000;
-          tl::thread::self().sleep(*state->bo_engine, sleep_ms);
+          tl::thread::self().sleep(*bo_engine, sleep_ms);
         }
       }
     }
@@ -563,13 +717,13 @@ void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
   };
 
   auto rpc_enqueue_flushing_task =
-    [context, rpc](const tl::request &req, BlobID blob_id,
-                   const std::string &filename, u64 offset) {
-    bool result = LocalEnqueueFlushingTask(context, rpc, blob_id, filename,
-                                           offset);
+      [context, rpc](const tl::request &req, BlobID blob_id,
+                     const std::string &filename, u64 offset) {
+        bool result = LocalEnqueueFlushingTask(context, rpc, blob_id, filename,
+                                               offset);
 
-    req.respond(result);
-  };
+        req.respond(result);
+      };
 
   auto rpc_enqueue_bo_move = [context, rpc](const tl::request &req,
                                             const BoMoveList &moves,
@@ -603,10 +757,8 @@ void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
 }
 
 /** start prefetcher */
-void StartPrefetcher(SharedMemoryContext *context,
-                     RpcContext *rpc, double sleep_ms) {
-  ThalliumState *state = GetThalliumState(rpc);
-  tl::engine *rpc_server = state->engine;
+void ThalliumRpc::StartPrefetcher(double sleep_ms) {
+  tl::engine *rpc_server = engine;
   using tl::request;
 
   // Create the LogIoStat RPC
@@ -632,9 +784,9 @@ void StartPrefetcher(SharedMemoryContext *context,
     ThalliumState *state = GetThalliumState(targs.rpc);
     LOG(INFO) << "Prefetching thread started" << std::endl;
     auto prefetcher = Singleton<Prefetcher>::GetInstance();
-    while (!state->kill_requested.load()) {
+    while (!kill_requested.load()) {
       prefetcher->Process();
-      tl::thread::self().sleep(*state->engine, targs.sleep_ms);
+      tl::thread::self().sleep(*engine, targs.sleep_ms);
     }
     LOG(INFO) << "Finished prefetcher" << std::endl;
   };
@@ -646,24 +798,21 @@ void StartPrefetcher(SharedMemoryContext *context,
   args->sleep_ms = sleep_ms;
   args->init_ = false;
 
-  ABT_xstream_create(ABT_SCHED_NULL, &state->execution_stream);
-  ABT_thread_create_on_xstream(state->execution_stream,
+  ABT_xstream_create(ABT_SCHED_NULL, &execution_stream);
+  ABT_thread_create_on_xstream(execution_stream,
                                prefetch, args,
                                ABT_THREAD_ATTR_NULL, NULL);
 }
 
 /** stop prefetcher */
-void StopPrefetcher(RpcContext *rpc) {
-  ThalliumState *state = GetThalliumState(rpc);
-  state->kill_requested.store(true);
-  ABT_xstream_join(state->execution_stream);
-  ABT_xstream_free(&state->execution_stream);
+void ThalliumRpc::StopPrefetcher() {
+  kill_requested.store(true);
+  ABT_xstream_join(execution_stream);
+  ABT_xstream_free(&execution_stream);
 }
 
 /** start global system view state update thread  */
-void StartGlobalSystemViewStateUpdateThread(SharedMemoryContext *context,
-                                            RpcContext *rpc, Arena *arena,
-                                            double sleep_ms) {
+void ThalliumRpc::StartGlobalSystemViewStateUpdateThread(double sleep_ms) {
   struct ThreadArgs {
     SharedMemoryContext *context;
     RpcContext *rpc;
@@ -674,9 +823,9 @@ void StartGlobalSystemViewStateUpdateThread(SharedMemoryContext *context,
     ThreadArgs *targs = (ThreadArgs *)args;
     ThalliumState *state = GetThalliumState(targs->rpc);
     LOG(INFO) << "Update global system view state start" << std::endl;
-    while (!state->kill_requested.load()) {
+    while (!kill_requested.load()) {
       UpdateGlobalSystemViewState(targs->context, targs->rpc);
-      tl::thread::self().sleep(*state->engine, targs->sleep_ms);
+      tl::thread::self().sleep(*engine, targs->sleep_ms);
     }
     LOG(INFO) << "Finished global system view update thread" << std::endl;
   };
@@ -687,244 +836,17 @@ void StartGlobalSystemViewStateUpdateThread(SharedMemoryContext *context,
   args->sleep_ms = sleep_ms;
 
   ThalliumState *state = GetThalliumState(rpc);
-  ABT_thread_create_on_xstream(state->execution_stream,
+  ABT_thread_create_on_xstream(execution_stream,
                                update_global_system_view_state, args,
                                ABT_THREAD_ATTR_NULL, NULL);
 }
 
 /** stop global system view state update thread */
-void StopGlobalSystemViewStateUpdateThread(RpcContext *rpc) {
+void ThalliumRpc::StopGlobalSystemViewStateUpdateThread() {
   ThalliumState *state = GetThalliumState(rpc);
-  state->kill_requested.store(true);
-  ABT_xstream_join(state->execution_stream);
-  ABT_xstream_free(&state->execution_stream);
-}
-
-/** initialize RPC context  */
-void InitRpcContext(RpcContext *rpc, u32 num_nodes, u32 node_id,
-                     Config *config) {
-  rpc->num_nodes = num_nodes;
-  // The number of host numbers in the rpc_host_number_range entry of the
-  // configuration file. Not necessarily the number of nodes because when there
-  // is only 1 node, the entry can be left blank, or contain 1 host number.
-  rpc->node_id = node_id;
-  rpc->start_server = ThalliumStartRpcServer;
-  rpc->state_size = sizeof(ThalliumState);
-  rpc->port = config->rpc_port;
-  rpc->client_rpc.state_size = sizeof(ClientThalliumState);
-  if (!config->rpc_server_host_file.empty()) {
-    rpc->use_host_file = true;
-  }
-}
-
-/** create RPC state */
-void *CreateRpcState(Arena *arena) {
-  ThalliumState *result = PushClearedStruct<ThalliumState>(arena);
-
-  return result;
-}
-
-/** get protocol */
-std::string GetProtocol(RpcContext *rpc) {
-  ThalliumState *tl_state = GetThalliumState(rpc);
-
-  std::string prefix = std::string(tl_state->server_name_prefix);
-  // NOTE(chogan): Chop "://" off the end of the server_name_prefix to get the
-  // protocol
-  std::string result = prefix.substr(0, prefix.length() - 3);
-
-  return result;
-}
-
-/** initialize RPC clients */
-void InitRpcClients(RpcContext *rpc) {
-  // TODO(chogan): Need a per-client persistent arena
-  ClientThalliumState *state =
-    (ClientThalliumState *)malloc(sizeof(ClientThalliumState));
-  std::string protocol = GetProtocol(rpc);
-  // TODO(chogan): This should go in a per-client persistent arena
-  state->engine = new tl::engine(protocol, THALLIUM_CLIENT_MODE, true, 1);
-
-  rpc->client_rpc.state = state;
-}
-
-/** shut down RPC clients */
-void ShutdownRpcClients(RpcContext *rpc) {
-  ClientThalliumState *state = GetClientThalliumState(rpc);
-  if (state) {
-    if (state->engine) {
-      delete state->engine;
-      state->engine = 0;
-    }
-    free(state);
-    state = 0;
-  }
-}
-
-/** finalize RPC context */
-void FinalizeRpcContext(RpcContext *rpc, bool is_daemon) {
-  ThalliumState *state = GetThalliumState(rpc);
-
-  if (is_daemon) {
-    state->engine->wait_for_finalize();
-    state->bo_engine->wait_for_finalize();
-  } else {
-    state->engine->finalize();
-    state->bo_engine->finalize();
-  }
-
-  delete state->engine;
-  delete state->bo_engine;
-}
-
-/** run daemon */
-void RunDaemon(SharedMemoryContext *context, RpcContext *rpc,
-               CommunicationContext *comm, Arena *trans_arena,
-               const char *shmem_name) {
-  ThalliumState *state = GetThalliumState(rpc);
-  state->engine->enable_remote_shutdown();
-  state->bo_engine->enable_remote_shutdown();
-
-  auto prefinalize_callback = [rpc, comm]() {
-    SubBarrier(comm);
-    StopPrefetcher(rpc);
-    StopGlobalSystemViewStateUpdateThread(rpc);
-    SubBarrier(comm);
-    ShutdownRpcClients(rpc);
-  };
-
-  state->engine->push_prefinalize_callback(prefinalize_callback);
-
-  state->bo_engine->wait_for_finalize();
-  state->engine->wait_for_finalize();
-
-  LocalShutdownBufferOrganizer(context);
-  delete state->engine;
-  delete state->bo_engine;
-  ReleaseSharedMemoryContext(context);
-  shm_unlink(shmem_name);
-  HERMES_DEBUG_SERVER_CLOSE();
-
-  DestroyArena(trans_arena);
-  // TODO(chogan): https://github.com/HDFGroup/hermes/issues/323
-  // google::ShutdownGoogleLogging();
-}
-
-/** finalize client */
-void FinalizeClient(SharedMemoryContext *context, RpcContext *rpc,
-                    CommunicationContext *comm, Arena *trans_arena,
-                    bool stop_daemon) {
-  SubBarrier(comm);
-
-  if (stop_daemon && comm->first_on_node) {
-    ClientThalliumState *state = GetClientThalliumState(rpc);
-
-    std::string bo_server_name = GetServerName(rpc, rpc->node_id, true);
-    tl::endpoint bo_server = state->engine->lookup(bo_server_name);
-    state->engine->shutdown_remote_engine(bo_server);
-
-    std::string server_name = GetServerName(rpc, rpc->node_id);
-    tl::endpoint server = state->engine->lookup(server_name);
-    state->engine->shutdown_remote_engine(server);
-  }
-
-  SubBarrier(comm);
-  ShutdownRpcClients(rpc);
-  ReleaseSharedMemoryContext(context);
-  HERMES_DEBUG_CLIENT_CLOSE();
-  DestroyArena(trans_arena);
-  // TODO(chogan): https://github.com/HDFGroup/hermes/issues/323
-  // google::ShutdownGoogleLogging();
-}
-
-/** get host name from node ID */
-std::string GetHostNameFromNodeId(RpcContext *rpc, u32 node_id) {
-  std::string result;
-  // NOTE(chogan): node_id 0 is reserved as the NULL node
-  u32 index = node_id - 1;
-  result = GetShmemString(&rpc->host_names[index]);
-  return result;
-}
-
-/** get RPC address */
-std::string GetRpcAddress(RpcContext *rpc, Config *config, u32 node_id,
-                          int port) {
-  std::string result = config->rpc_protocol + "://";
-
-  if (!config->rpc_domain.empty()) {
-    result += config->rpc_domain + "/";
-  }
-  std::string host_name = GetHostNameFromNodeId(rpc, node_id);
-  result += host_name + ":" + std::to_string(port);
-
-  return result;
-}
-
-/** get server name */
-std::string GetServerName(RpcContext *rpc, u32 node_id,
-                          bool is_buffer_organizer) {
-  ThalliumState *tl_state = GetThalliumState(rpc);
-  std::string host_name = GetHostNameFromNodeId(rpc, node_id);
-
-  // TODO(chogan): @optimization Could cache the last N hostname->IP mappings to
-  // avoid excessive syscalls. Should profile first.
-  struct hostent hostname_info = {};
-  struct hostent *hostname_result;
-  int hostname_error = 0;
-  char hostname_buffer[4096] = {};
-#ifdef __APPLE__
-  hostname_result = gethostbyname(host_name.c_str());
-      in_addr **addr_list = (struct in_addr **)hostname_result->h_addr_list;
-#else
-  int gethostbyname_result = gethostbyname_r(host_name.c_str(), &hostname_info,
-                                             hostname_buffer, 4096,
-                                             &hostname_result, &hostname_error);
-  if (gethostbyname_result != 0) {
-    LOG(FATAL) << hstrerror(h_errno);
-  }
-  in_addr **addr_list = (struct in_addr **)hostname_info.h_addr_list;
-#endif
-  if (!addr_list[0]) {
-    LOG(FATAL) << hstrerror(h_errno);
-  }
-
-  char ip_address[INET_ADDRSTRLEN];
-  const char *inet_result = inet_ntop(AF_INET, addr_list[0], ip_address,
-                                      INET_ADDRSTRLEN);
-  if (!inet_result) {
-    FailedLibraryCall("inet_ntop");
-  }
-
-  std::string result = std::string(tl_state->server_name_prefix);
-  result += std::string(ip_address);
-
-  if (is_buffer_organizer) {
-    result += std::string(tl_state->bo_server_name_postfix);
-  } else {
-    result += std::string(tl_state->server_name_postfix);
-  }
-
-  return result;
-}
-
-/** read bulk */
-size_t BulkRead(RpcContext *rpc, u32 node_id, const char *func_name,
-                u8 *data, size_t max_size, BufferID id) {
-  std::string server_name = GetServerName(rpc, node_id);
-  std::string protocol = GetProtocol(rpc);
-
-  tl::engine engine(protocol, THALLIUM_CLIENT_MODE, true);
-  tl::remote_procedure remote_proc = engine.define(func_name);
-  tl::endpoint server = engine.lookup(server_name);
-
-  std::vector<std::pair<void*, size_t>> segments(1);
-  segments[0].first  = data;
-  segments[0].second = max_size;
-
-  tl::bulk bulk = engine.expose(segments, tl::bulk_mode::write_only);
-  size_t result = remote_proc.on(server)(bulk, id);
-
-  return result;
+  kill_requested.store(true);
+  ABT_xstream_join(execution_stream);
+  ABT_xstream_free(&execution_stream);
 }
 
 }  // namespace hermes

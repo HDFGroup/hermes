@@ -272,14 +272,10 @@ struct BufferOrganizer;
  A structure to represent shared memory context
 */
 struct SharedMemoryContext {
-  /** A pointer to the beginning of shared memory. */
-  u8 *shm_base;
   /** The offset from the beginning of shared memory to the BufferPool. */
   ptrdiff_t buffer_pool_offset;
   /** The offset from the beginning of shared memory to the Metadata Arena. */
   ptrdiff_t metadata_manager_offset;
-  /** The total size of the shared memory (needed for munmap). */
-  u64 shm_size;
   /** This will only be valid on Hermes cores, and NULL on client cores. */
   BufferOrganizer *bo;
 
@@ -334,20 +330,6 @@ void MakeFullShmemName(char *dest, const char *base);
  */
 void InitFilesForBuffering(SharedMemoryContext *context,
                            CommunicationContext &comm);
-
-/**
- * Retrieves information required for accessing the BufferPool shared memory.
- *
- * Maps an existing shared memory segment into the calling process's address
- * space. Application cores will call this function, and the Hermes core
- * initialization will have already created the shared memory segment.
- * Application cores can then use the context to access the BufferPool.
- *
- * @param shmem_name The name of the shared memory segment.
- *
- * @return The shared memory context required to access the BufferPool.
- */
-SharedMemoryContext GetSharedMemoryContext(char *shmem_name);
 
 /**
  * Unmaps the shared memory represented by context and closes any open file

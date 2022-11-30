@@ -21,8 +21,8 @@
 
 namespace hermes {
 
-BufferOrganizer::BufferOrganizer(int num_threads) : pool(num_threads) {
-}
+BufferOrganizer::BufferOrganizer(int num_threads) :
+    pool(num_threads) {}
 
 bool operator==(const BufferInfo &lhs, const BufferInfo &rhs) {
   return (lhs.id == rhs.id && lhs.size == rhs.size &&

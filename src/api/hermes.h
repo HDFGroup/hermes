@@ -50,10 +50,10 @@ class Hermes {
   bool is_initialized;
 
   // TODO(chogan): Temporarily public to facilitate iterative development.
+  Config *config_;
   hermes::SharedMemoryContext context_; /**< shared memory context */
-  hermes::CommunicationContext comm_;   /**< communication context */
-  hermes::RpcContext rpc_;              /**< remote procedure call context */
-  hermes::Arena trans_arena_; /**< arena backed by allocated memory. */
+  std::unique_ptr<hermes::CommunicationContext> comm_; /**< communication context */
+  std::unique_ptr<hermes::RpcContext> rpc_;  /**< remote procedure call context */
   /** The name of the shared memory segment in which all Hermes data is
    * stored.
    */
@@ -64,9 +64,10 @@ class Hermes {
   Hermes() {}
 
   /**
-     Constructor
-   */
-  explicit Hermes(SharedMemoryContext context) : context_(context) {}
+   * Constructor
+   * */
+
+  Hermes(Config *config, bool is_daemon, bool is_adapter);
 
   /** \brief Return \bool{this rank is an application core}
    *

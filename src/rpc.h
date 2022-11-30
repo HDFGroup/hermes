@@ -19,67 +19,79 @@
 #include "hermes_types.h"
 #include "metadata_management.h"
 #include <labstor/data_structures/lockless/string.h>
+#include <labstor/data_structures/lockless/vector.h>
 
 namespace hermes {
-
-struct RpcContext;
 
 const int kMaxServerNameSize = 128;  /**< maximum size of server name */
 const int kMaxServerSuffixSize = 16; /**< maximum size of server suffix */
 
-/** start function for RPC server */
-typedef void (*StartFunc)(SharedMemoryContext *, RpcContext *, Arena *,
-                          const char *, int);
-/**
-   A structure to represent a client's RPC context.
- */
-struct ClientRpcContext {
-  void *state;       /**< pointer to state */
-  size_t state_size; /**< size of state */
+/** RPC types */
+enum class RpcType {
+  kThallium
 };
 
 /**
    A structure to represent RPC context.
  */
-struct RpcContext {
-  ClientRpcContext client_rpc; /**< client's RPC context */
-  void *state;                 /**< pointer to state*/
-  /** The size of the internal RPC state. */
-  size_t state_size;
+namespace labstor_l = labstor::ipc::lockless;
+
+class RpcContext {
+ public:
+  CommunicationContext *comm_;
+  SharedMemoryContext *context_;
+  Config *config_;  /** The hermes configuration used to initialize this RPC */
   /** Array of host names stored in shared memory. This array size is
    * RpcContext::num_nodes. */
-  labstor::ipc::lockless::string host_names;
-  u32 node_id;        /**< node ID */
-  u32 num_nodes;      /**< number of nodes */
-  int port;           /**< port number */
-  bool use_host_file; /**< use host file if true */
+  labstor_l::vector<labstor_l::string> host_names;
+  u32 node_id_;        /**< node ID */
+  u32 num_nodes_;      /**< number of nodes */
+  // The number of host numbers in the rpc_host_number_range entry of the
+  // configuration file. Not necessarily the number of nodes because when there
+  // is only 1 node, the entry can be left blank, or contain 1 host number.
+  int port_;           /**< port number */
+  bool use_host_file_; /**< use host file if true */
 
   // TODO(chogan): Also allow reading hostnames from a file for heterogeneous or
   // non-contiguous hostnames (e.g., compute-node-20, compute-node-30,
   // storage-node-16, storage-node-24)
   // char *host_file_name;
 
-  StartFunc start_server; /**< start function */
+ public:
+  explicit RpcContext(CommunicationContext *comm,
+                      SharedMemoryContext *context,
+                      u32 num_nodes, u32 node_id, Config *config) :
+      comm_(comm), context_(context), num_nodes_(num_nodes),
+      node_id_(node_id), config_(config) {
+    port_ = config->rpc_port;
+    if (!config->rpc_server_host_file.empty()) {
+      use_host_file_ = true;
+    }
+  }
+
+  /** get RPC address */
+  std::string GetRpcAddress(u32 node_id, int port) {
+    std::string result = config_->rpc_protocol + "://";
+
+    if (!config_->rpc_domain.empty()) {
+      result += config_->rpc_domain + "/";
+    }
+    std::string host_name = GetHostNameFromNodeId(node_id);
+    result += host_name + ":" + std::to_string(port);
+
+    return result;
+  }
+
+  /** get host name from node ID */
+  std::string GetHostNameFromNodeId(u32 node_id) {
+    std::string result;
+    // NOTE(chogan): node_id 0 is reserved as the NULL node
+    u32 index = node_id - 1;
+    result = host_names[index].str();
+    return result;
+  }
 };
 
-void InitRpcContext(RpcContext *rpc, u32 num_nodes, u32 node_id,
-                    Config *config);
-void *CreateRpcState();
-void InitRpcClients(RpcContext *rpc);
-void ShutdownRpcClients(RpcContext *rpc);
-void RunDaemon(SharedMemoryContext *context, RpcContext *rpc,
-               CommunicationContext *comm, const char *shmem_name);
-void FinalizeClient(SharedMemoryContext *context, RpcContext *rpc,
-                    CommunicationContext *comm, bool stop_daemon);
-void FinalizeRpcContext(RpcContext *rpc, bool is_daemon);
-std::string GetServerName(RpcContext *rpc, u32 node_id,
-                          bool is_buffer_organizer = false);
-std::string GetProtocol(RpcContext *rpc);
-void StartBufferOrganizer(SharedMemoryContext *context, RpcContext *rpc,
-                          const char *addr, int num_threads,
-                          int port);
-void StartPrefetcher(SharedMemoryContext *context,
-                     RpcContext *rpc, double sleep_ms);
 }  // namespace hermes
 
 // TODO(chogan): I don't like that code similar to this is in buffer_pool.cc.

@@ -80,78 +80,20 @@ bool operator==(const BufferInfo &lhs, const BufferInfo &rhs);
 /**
    A structure to represent buffer organizer
 */
-struct BufferOrganizer {
+class BufferOrganizer {
+ public:
+  SharedMemoryContext *context_;
+  RpcContext *rpc_;
   ThreadPool pool; /**< a pool of threads */
+
+ public:
   /** initialize buffer organizer with \a num_threads number of threads.  */
-  explicit BufferOrganizer(int num_threads);
+  explicit BufferOrganizer(SharedMemoryContext *context,
+                           RpcContext *rpc, int num_threads);
+
+
 };
 
-/** enqueue flushing task locally */
-bool LocalEnqueueFlushingTask(SharedMemoryContext *context, RpcContext *rpc,
-                              BlobID blob_id, const std::string &filename,
-                              u64 offset);
-/** enqueue flushing task */
-bool EnqueueFlushingTask(RpcContext *rpc, BlobID blob_id,
-                         const std::string &filename, u64 offset);
-
-void BoMove(SharedMemoryContext *context, RpcContext *rpc,
-            const BoMoveList &moves, BlobID blob_id, BucketID bucket_id,
-            const std::string &internal_blob_name);
-void FlushBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id,
-               const std::string &filename, u64 offset, bool async = false);
-/** shut down buffer organizer locally */
-void LocalShutdownBufferOrganizer(SharedMemoryContext *context);
-/** increment flush count */
-void IncrementFlushCount(SharedMemoryContext *context, RpcContext *rpc,
-                         const std::string &vbkt_name);
-/** decrement flush count */
-void DecrementFlushCount(SharedMemoryContext *context, RpcContext *rpc,
-                         const std::string &vbkt_name);
-/** increment flush count locally */
-void LocalIncrementFlushCount(SharedMemoryContext *context,
-                              const std::string &vbkt_name);
-/** decrement flush count locally */
-void LocalDecrementFlushCount(SharedMemoryContext *context,
-                              const std::string &vbkt_name);
-/** await asynchronous flushing tasks */
-void AwaitAsyncFlushingTasks(SharedMemoryContext *context, RpcContext *rpc,
-                             VBucketID id);
-/** organize BLOB locally */
-void LocalOrganizeBlob(SharedMemoryContext *context, RpcContext *rpc,
-                       const std::string &internal_blob_name,
-                       BucketID bucket_id, f32 epsilon,
-                       f32 explicit_importance_score);
-/** organize BLOB */
-void OrganizeBlob(SharedMemoryContext *context, RpcContext *rpc,
-                  BucketID bucket_id, const std::string &blob_name, f32 epsilon,
-                  f32 importance_score = -1);
-/** organize device */
-void OrganizeDevice(SharedMemoryContext *context, RpcContext *rpc,
-                    DeviceID devices_id);
-
-/** get buffer information */
-std::vector<BufferInfo> GetBufferInfo(SharedMemoryContext *context,
-                                      RpcContext *rpc,
-                                      const std::vector<BufferID> &buffer_ids);
-/** compute BLOB access score */
-f32 ComputeBlobAccessScore(SharedMemoryContext *context,
-                           const std::vector<BufferInfo> &buffer_info);
-/**  enqueue buffer organizer move list locally */
-void LocalEnqueueBoMove(SharedMemoryContext *context, RpcContext *rpc,
-                        const BoMoveList &moves, BlobID blob_id,
-                        BucketID bucket_id,
-                        const std::string &internal_blob_name,
-                        BoPriority priority);
-/**  enqueue buffer organizer move list */
-void EnqueueBoMove(RpcContext *rpc, const BoMoveList &moves, BlobID blob_id,
-                   BucketID bucket_id, const std::string &internal_name,
-                   BoPriority priority);
-/** enforce capacity threholds */
-void EnforceCapacityThresholds(SharedMemoryContext *context, RpcContext *rpc,
-                               ViolationInfo info);
-/** enforce capacity threholds locally */
-void LocalEnforceCapacityThresholds(SharedMemoryContext *context,
-                                    RpcContext *rpc, ViolationInfo info);
 }  // namespace hermes
 
 #endif  // HERMES_BUFFER_ORGANIZER_H_

@@ -26,6 +26,8 @@
 #include "config_parser.h"
 #include "prefetcher.h"
 #include "singleton.h"
+#include "communication_factory.h"
+#include "rpc_factory.h"
 
 namespace hermes {
 
@@ -147,40 +149,6 @@ void Hermes::RunDaemon() {
 
 }  // namespace api
 
-/** get arena information from \a config configuration */
-ArenaInfo GetArenaInfo(Config *config) {
-  size_t page_size = sysconf(_SC_PAGESIZE);
-  // NOTE(chogan): Assumes first Device is RAM
-  size_t total_hermes_memory = RoundDownToMultiple(config->capacities[0],
-                                                   page_size);
-  size_t total_pages = total_hermes_memory / page_size;
-  size_t pages_left = total_pages;
-
-  ArenaInfo result = {};
-
-  for (int i = kArenaType_Count - 1; i > kArenaType_BufferPool; --i) {
-    size_t desired_pages =
-      std::floor(config->arena_percentages[i] * total_pages);
-    // NOTE(chogan): Each arena gets 1 page at minimum
-    size_t pages = std::max(desired_pages, 1UL);
-    pages_left -= pages;
-    size_t num_bytes = pages * page_size;
-    result.sizes[i] = num_bytes;
-    result.total += num_bytes;
-  }
-
-  if (pages_left == 0) {
-    // TODO(chogan): @errorhandling
-    HERMES_NOT_IMPLEMENTED_YET;
-  }
-
-  // NOTE(chogan): BufferPool Arena gets remainder of pages
-  result.sizes[kArenaType_BufferPool] = pages_left * page_size;
-  result.total += result.sizes[kArenaType_BufferPool];
-
-  return result;
-}
-
 /** get hosts from \a host_file file  */
 std::vector<std::string> GetHostsFromFile(const std::string &host_file) {
   std::vector<std::string> result;
@@ -270,36 +238,6 @@ SharedMemoryContext InitHermesCore(Config *config, CommunicationContext *comm,
   return context;
 }
 
-/** boostrap shared memory  */
-SharedMemoryContext
-BootstrapSharedMemory(Arena *arenas, Config *config, CommunicationContext *comm,
-                      RpcContext *rpc, bool is_daemon, bool is_adapter) {
-  size_t bootstrap_size = KILOBYTES(4);
-  u8 *bootstrap_memory = (u8 *)malloc(bootstrap_size);
-  InitArena(&arenas[kArenaType_Transient], bootstrap_size, bootstrap_memory);
-
-  ArenaInfo arena_info = GetArenaInfo(config);
-  // NOTE(chogan): The buffering capacity for the RAM Device is the size of the
-  // BufferPool Arena
-  config->capacities[0] = arena_info.sizes[kArenaType_BufferPool];
-  size_t trans_arena_size =
-    InitCommunication(comm, &arenas[kArenaType_Transient],
-                      arena_info.sizes[kArenaType_Transient], is_daemon,
-                      is_adapter);
-
-  GrowArena(&arenas[kArenaType_Transient], trans_arena_size);
-  comm->state = arenas[kArenaType_Transient].base;
-
-  InitRpcContext(rpc, comm->num_nodes, comm->node_id, config);
-
-  SharedMemoryContext result = {};
-  if (comm->proc_kind == ProcessKind::kHermes && comm->first_on_node) {
-    result = InitHermesCore(config, comm, &arena_info, arenas, rpc);
-  }
-
-  return result;
-}
-
 // TODO(chogan): https://github.com/HDFGroup/hermes/issues/323
 #if 0
 static void InitGlog() {
@@ -317,8 +255,58 @@ static void InitGlog() {
 }
 #endif
 
-std::shared_ptr<api::Hermes> InitHermes(Config *config, bool is_daemon,
-                                        bool is_adapter) {
+namespace api {
+
+/** get arena information from \a config configuration */
+ArenaInfo GetArenaInfo(Config *config) {
+  size_t page_size = sysconf(_SC_PAGESIZE);
+  // NOTE(chogan): Assumes first Device is RAM
+  size_t total_hermes_memory = RoundDownToMultiple(config->capacities[0],
+                                                   page_size);
+  size_t total_pages = total_hermes_memory / page_size;
+  size_t pages_left = total_pages;
+
+  ArenaInfo result = {};
+
+  for (int i = kArenaType_Count - 1; i > kArenaType_BufferPool; --i) {
+    size_t desired_pages =
+        std::floor(config->arena_percentages[i] * total_pages);
+    // NOTE(chogan): Each arena gets 1 page at minimum
+    size_t pages = std::max(desired_pages, 1UL);
+    pages_left -= pages;
+    size_t num_bytes = pages * page_size;
+    result.sizes[i] = num_bytes;
+    result.total += num_bytes;
+  }
+
+  if (pages_left == 0) {
+    // TODO(chogan): @errorhandling
+    HERMES_NOT_IMPLEMENTED_YET;
+  }
+
+  // NOTE(chogan): BufferPool Arena gets remainder of pages
+  result.sizes[kArenaType_BufferPool] = pages_left * page_size;
+  result.total += result.sizes[kArenaType_BufferPool];
+
+  return result;
+}
+
+/** boostrap shared memory  */
+void Hermes::BootstrapSharedMemory(bool is_daemon, bool is_adapter) {
+  ArenaInfo arena_info = GetArenaInfo(config);
+  // NOTE(chogan): The buffering capacity for the RAM Device is the size of the
+  // BufferPool Arena
+  config_->capacities[0] = arena_info.sizes[kArenaType_BufferPool];
+  InitRpcContext(rpc, comm->num_nodes, comm->node_id, config);
+
+  SharedMemoryContext result = {};
+  if (comm->proc_kind == ProcessKind::kHermes && comm->first_on_node) {
+    result = InitHermesCore(config, comm, &arena_info, arenas, rpc);
+  }
+}
+
+Hermes::Hermes(Config *config, bool is_daemon, bool is_adapter) :
+    config_(config) {
   // TODO(chogan): https://github.com/HDFGroup/hermes/issues/323
   // InitGlog();
 
@@ -327,13 +315,12 @@ std::shared_ptr<api::Hermes> InitHermes(Config *config, bool is_daemon,
 
   // TODO(chogan): Do we need a transfer window arena? We can probably just use
   // the transient arena for this.
-  Arena arenas[kArenaType_Count] = {};
-  CommunicationContext comm = {};
-  RpcContext rpc = {};
+  comm_ = CommunicationFactory::Get(CommunicationType::kMpi);
   SharedMemoryContext context =
-    BootstrapSharedMemory(arenas, config, &comm, &rpc, is_daemon, is_adapter);
+      BootstrapSharedMemory(config, is_daemon, is_adapter);
+  rpc_ = RpcFactory::Get(RpcType::kThallium);
 
-  WorldBarrier(&comm);
+  WorldBarrier(comm_);
   std::shared_ptr<api::Hermes> result = nullptr;
 
   if (comm.proc_kind == ProcessKind::kHermes) {
@@ -348,7 +335,7 @@ std::shared_ptr<api::Hermes> InitHermes(Config *config, bool is_daemon,
     MetadataManager *mdm = GetMetadataManagerFromContext(&context);
     rpc.state = (void *)(context.shm_base + mdm->rpc_state_offset);
     rpc.host_names =
-      (ShmemString *)((u8 *)context.shm_base + mdm->host_names_offset);
+        (ShmemString *)((u8 *)context.shm_base + mdm->host_names_offset);
   }
 
   InitFilesForBuffering(&context, comm);
@@ -358,7 +345,6 @@ std::shared_ptr<api::Hermes> InitHermes(Config *config, bool is_daemon,
   rpc.node_id = comm.node_id;
   rpc.num_nodes = comm.num_nodes;
 
-  result->trans_arena_ = arenas[kArenaType_Transient];
   result->comm_ = comm;
   result->context_ = context;
   result->rpc_ = rpc;
@@ -368,15 +354,15 @@ std::shared_ptr<api::Hermes> InitHermes(Config *config, bool is_daemon,
   // Hermes instance.
   if (comm.proc_kind == ProcessKind::kHermes) {
     std::string rpc_server_addr =
-      GetRpcAddress(&result->rpc_, config, result->rpc_.node_id,
-                    config->rpc_port);
+        result->rpc_.GetRpcAddress(config, result->rpc_.node_id,
+                                   config->rpc_port);
     std::string bo_address =
-      GetRpcAddress(&result->rpc_, config, result->rpc_.node_id,
-                    config->buffer_organizer_port);
+        result->rpc_.GetRpcAddress(config, result->rpc_.node_id,
+                                   config->buffer_organizer_port);
 
-    result->rpc_.start_server(&result->context_, &result->rpc_,
-                              &result->trans_arena_, rpc_server_addr.c_str(),
-                              config->rpc_num_threads);
+    result->rpc_.StartServer(&result->context_, &result->rpc_,
+                             &result->trans_arena_, rpc_server_addr.c_str(),
+                             config->rpc_num_threads);
 
     StartBufferOrganizer(&result->context_, &result->rpc_,
                          &result->trans_arena_, bo_address.c_str(),
@@ -395,7 +381,7 @@ std::shared_ptr<api::Hermes> InitHermes(Config *config, bool is_daemon,
   WorldBarrier(&comm);
 
   api::Context::default_buffer_organizer_retries =
-    config->num_buffer_organizer_retries;
+      config->num_buffer_organizer_retries;
   api::Context::default_placement_policy = config->default_placement_policy;
   api::Context::default_rr_split = config->default_rr_split;
   RoundRobin::InitDevices(config, result);
@@ -412,8 +398,6 @@ std::shared_ptr<api::Hermes> InitHermes(Config *config, bool is_daemon,
 
   return result;
 }
-
-namespace api {
 
 std::shared_ptr<Hermes> InitHermes(const char *config_file, bool is_daemon,
                                    bool is_adapter) {
@@ -436,9 +420,14 @@ std::shared_ptr<Hermes> InitHermes(const char *config_file, bool is_daemon,
 
 }  // namespace api
 
+std::shared_ptr<api::Hermes> InitHermes(Config *config, bool is_daemon,
+                                        bool is_adapter) {
+  return std::make_shared<api::Hermes>(config, is_daemon, is_adapter);
+}
+
 std::shared_ptr<api::Hermes> InitHermesClient(const char *config_file) {
   std::shared_ptr<api::Hermes> result =
-    api::InitHermes(config_file, false, true);
+      api::InitHermes(config_file, false, true);
 
   return result;
 }

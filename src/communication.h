@@ -25,19 +25,22 @@
 
 namespace hermes {
 
-typedef void (*BarrierFunc)(void *);  /**< MPI barrier function pointer */
-typedef void (*FinalizeFunc)(void *); /**< MPI finalize function pointer */
+/**
+ * The type of communicator
+ * */
+
+enum class CommunicationType {
+  kMpi
+};
 
 /**
  A structure to represent MPI communication context
 */
 struct CommunicationContext {
-  BarrierFunc world_barrier; /**< MPI communication world barrier */
-  BarrierFunc sub_barrier;   /**< MPI communication subset barrier */
-  FinalizeFunc finalize;     /**< MPI communication finalize */
+  virtual void WorldBarrier() = 0; /** E.g., MPI_Barrier(MPI_COMM_WORLD)*/
+  virtual void SubBarrier() = 0; /** E.g., MPI_Barrier(something else)*/
+  virtual void Finalize() = 0; /** E.g., MPI_Finalize() */
 
-  /** Details relative to the backing communciation implementation. */
-  void *state;
   /** A unique identifier for each rank, relative to all ranks. */
   i32 world_proc_id;
   /** a unique identifier for each rank, releative to each ProcessKind. */
