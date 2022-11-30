@@ -483,10 +483,10 @@ void LocalEnforceCapacityThresholds(SharedMemoryContext *context,
         };
 
         Target *src_target = GetTargetFromId(context, src_target_id);
-        BeginTicketMutex(&src_target->effective_blobs_lock);
+        src_target->effective_blobs_lock.Lock();
         std::vector<u64> blob_ids =
           GetChunkedIdList(mdm, src_target->effective_blobs);
-        EndTicketMutex(&src_target->effective_blobs_lock);
+        src_target->effective_blobs_lock.Unlock();
 
         auto compare_importance = [context](const u64 lhs, const u64 rhs) {
           BlobID lhs_blob_id = {};
@@ -576,10 +576,10 @@ void LocalEnforceCapacityThresholds(SharedMemoryContext *context,
       f32 min_importance = FLT_MAX;
       BlobID least_important_blob = {};
 
-      BeginTicketMutex(&target->effective_blobs_lock);
+      target->effective_blobs_lock.Lock();
       std::vector<u64> blob_ids = GetChunkedIdList(mdm,
                                                    target->effective_blobs);
-      EndTicketMutex(&target->effective_blobs_lock);
+      target->effective_blobs_lock.Unlock();
 
       // Find least important blob in violated Target
       for (size_t i = 0; i < blob_ids.size(); ++i) {
@@ -790,7 +790,7 @@ void LocalAdjustFlushCount(SharedMemoryContext *context,
                            const std::string &vbkt_name, int adjustment) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   VBucketID id = LocalGetVBucketId(context, vbkt_name.c_str());
-  BeginTicketMutex(&mdm->vbucket_mutex);
+  mdm->vbucket_mutex.Lock();
   VBucketInfo *info = LocalGetVBucketInfoById(mdm, id);
   if (info) {
     int flush_count = info->async_flush_count.fetch_add(adjustment);
@@ -798,7 +798,7 @@ void LocalAdjustFlushCount(SharedMemoryContext *context,
             << (adjustment > 0 ? "incremented" : "decremented") << " to "
             << flush_count + adjustment << "\n";
   }
-  EndTicketMutex(&mdm->vbucket_mutex);
+  mdm->vbucket_mutex.Unlock();
 }
 
 void LocalIncrementFlushCount(SharedMemoryContext *context,

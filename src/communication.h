@@ -62,7 +62,7 @@ struct CommunicationContext {
   bool first_on_node;
 };
 
-size_t InitCommunication(CommunicationContext *comm, Arena *arena,
+size_t InitCommunication(CommunicationContext *comm,
                          size_t trans_arena_size_per_node,
                          bool is_daemon = false, bool is_adapter = false);
 /** world communicator  */

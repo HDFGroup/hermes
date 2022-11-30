@@ -80,7 +80,7 @@ struct Target {
   std::atomic<u64> remaining_space; /**< remaining space */
   std::atomic<u64> speed;           /**< speed */
   ChunkedIdList effective_blobs;    /**< ID list of BLOBs */
-  TicketMutex effective_blobs_lock; /**< ticket lock for BLOBs */
+  labstor::Mutex effective_blobs_lock; /**< ticket lock for BLOBs */
 };
 
 /**

@@ -15,13 +15,10 @@
 #include <string.h>
 
 #include "hermes_types.h"
-#include "memory_management.h"
 #include "buffer_pool_internal.h"
 #include "test_utils.h"
 #include "config_parser.h"
 
-
-using hermes::Arena;
 using hermes::u8;
 using hermes::Config;
 
@@ -30,17 +27,17 @@ namespace testing {
 
 Config ParseConfigStringTest(const std::string &config_string) {
   Config config = {};
-  ParseConfigString(arena, config_string, &config);
+  ParseConfigString(config_string, &config);
   return config;
 }
 
 void RunHostNumbersTest(const std::string &config_string,
                         const std::vector<std::string> &expected) {
-  Config config = ParseConfigStringTest(arena, config_string);
+  Config config = ParseConfigStringTest(config_string);
   Assert(config.host_names == expected);
 }
 
-void TestParseRangeList(Arena *arena) {
+void TestParseRangeList() {
   {
     std::vector<std::string> expected{
         "localhost-1", "localhost-3", "localhost-4", "localhost-5",
@@ -49,7 +46,7 @@ void TestParseRangeList(Arena *arena) {
     std::string yaml =
         "rpc_server_base_name: localhost-\n"
         "rpc_host_number_range: [1, 3-5, 7, 10-12]\n";
-    RunHostNumbersTest(arena, yaml, expected);
+    RunHostNumbersTest(yaml, expected);
   }
 
   {
@@ -59,7 +56,7 @@ void TestParseRangeList(Arena *arena) {
     std::string yaml =
         "rpc_server_base_name: localhost-\n"
         "rpc_host_number_range: [001-003]\n";
-    RunHostNumbersTest(arena, yaml, expected);
+    RunHostNumbersTest(yaml, expected);
   }
 
   {
@@ -69,7 +66,7 @@ void TestParseRangeList(Arena *arena) {
     std::string yaml =
         "rpc_server_base_name: localhost-\n"
         "rpc_host_number_range: [1]\n";
-    RunHostNumbersTest(arena, yaml, expected);
+    RunHostNumbersTest(yaml, expected);
   }
 
   {
@@ -77,20 +74,20 @@ void TestParseRangeList(Arena *arena) {
     std::string yaml =
         "rpc_server_base_name: localhost\n"
         "rpc_host_number_range: []\n";
-    RunHostNumbersTest(arena, yaml, expected);
+    RunHostNumbersTest(yaml, expected);
   }
 }
 
 void RunCapacityValuesTest(const std::string &config_string,
                            const std::vector<size_t> &expected) {
-  Config config = ParseConfigStringTest(arena, config_string);
+  Config config = ParseConfigStringTest(config_string);
   Assert((size_t)config.num_devices == expected.size());
   for (int i = 0; i < config.num_devices; ++i) {
     Assert(config.capacities[i] == expected[i]);
   }
 }
 
-void TestPathExclusions(Arena *arena) {
+void TestPathExclusions() {
   std::vector<std::string> expected{"/bin/", "/boot/", "/dev/",  "/etc/",
                                     "/lib/", "/opt/",  "/proc/", "/sbin/",
                                     "/sys/", "/usr/",  "/var/",  "/run/",
@@ -101,7 +98,7 @@ void TestPathExclusions(Arena *arena) {
       "    \"/sys/\", \"/usr/\",  \"/var/\",  \"/run/\",\n"
       "    \"pipe\", \"socket:\", \"anon_inode:\"\n"
       "]";
-  Config config = ParseConfigStringTest(arena, config_string);
+  Config config = ParseConfigStringTest(config_string);
   for (size_t i = 0; i < expected.size(); ++i) {
     auto &e = expected[i];
     auto &e2 = config.path_exclusions[i];
@@ -109,77 +106,77 @@ void TestPathExclusions(Arena *arena) {
   }
 }
 
-void TestCapacityValues(Arena *arena) {
+void TestCapacityValues() {
   std::string base_config = "num_devices: 4\n";
 
   {
     std::vector<size_t> expected{50, 50, 50, 50};
     std::string config_string = "capacities_bytes: [50, 50, 50, 50]\n";
-    RunCapacityValuesTest(arena, base_config + config_string, expected);
+    RunCapacityValuesTest(base_config + config_string, expected);
   }
 
   {
     std::vector<size_t> expected{KILOBYTES(50), KILOBYTES(50), KILOBYTES(50),
                                  KILOBYTES(50)};
     std::string config_string = "capacities_kb: [50, 50, 50, 50]\n";
-    RunCapacityValuesTest(arena, base_config + config_string, expected);
+    RunCapacityValuesTest(base_config + config_string, expected);
   }
 
   {
     std::vector<size_t> expected{MEGABYTES(50), MEGABYTES(50), MEGABYTES(50),
                                  MEGABYTES(50)};
     std::string config_string = "capacities_mb: [50, 50, 50, 50]\n";
-    RunCapacityValuesTest(arena, base_config + config_string, expected);
+    RunCapacityValuesTest(base_config + config_string, expected);
   }
 
   {
     std::vector<size_t> expected{GIGABYTES(50), GIGABYTES(50), GIGABYTES(50),
                                  GIGABYTES(50)};
     std::string config_string = "capacities_gb: [50, 50, 50, 50]\n";
-    RunCapacityValuesTest(arena, base_config + config_string, expected);
+    RunCapacityValuesTest(base_config + config_string, expected);
   }
 }
 
 void RunBlockSizesTest(const std::string &config_string,
                        const std::vector<int> &expected) {
-  Config config = ParseConfigStringTest(arena, config_string);
+  Config config = ParseConfigStringTest(config_string);
   Assert((size_t)config.num_devices == expected.size());
   for (int i = 0; i < config.num_devices; ++i) {
     Assert(config.block_sizes[i] == expected[i]);
   }
 }
 
-void TestBlockSizes(Arena *arena) {
+void TestBlockSizes() {
   std::string base_config = "num_devices: 4\n";
 
   {
     std::vector<int> expected{50, 50, 50, 50};
     std::string config_string = "block_sizes_bytes: [50, 50, 50, 50]\n";
-    RunBlockSizesTest(arena, base_config + config_string, expected);
+    RunBlockSizesTest(base_config + config_string, expected);
   }
   {
     std::vector<int> expected{KILOBYTES(50), KILOBYTES(50), KILOBYTES(50),
                               KILOBYTES(50)};
     std::string config_string = "block_sizes_kb: [50, 50, 50, 50]\n";
-    RunBlockSizesTest(arena, base_config + config_string, expected);
+    RunBlockSizesTest(base_config + config_string, expected);
   }
   {
     std::vector<int> expected{MEGABYTES(50), MEGABYTES(50), MEGABYTES(50),
                               MEGABYTES(50)};
     std::string config_string = "block_sizes_mb: [50, 50, 50, 50]\n";
-    RunBlockSizesTest(arena, base_config + config_string, expected);
+    RunBlockSizesTest(base_config + config_string, expected);
   }
   {
     std::vector<int> expected{GIGABYTES(1), GIGABYTES(1), GIGABYTES(1),
                               GIGABYTES(1)};
     std::string config_string =  "block_sizes_gb: [1, 1, 1, 1]\n";
-    RunBlockSizesTest(arena, base_config + config_string, expected);
+    RunBlockSizesTest(base_config + config_string, expected);
   }
 }
 
 void TestDefaultConfig(const char *config_file) {
   hermes::Config config = {};
-  hermes::ParseConfig(arena, config_file, &config);
+  hermes::ParseConfig(config_file, &config);
 
   Assert(config.num_devices == 4);
   Assert(config.num_targets == 4);
@@ -263,16 +260,11 @@ int main(int argc, char **argv) {
     exit(-1);
   }
 
-  const size_t kConfigMemorySize = KILOBYTES(16);
-  u8 config_memory[kConfigMemorySize];
-  Arena arena = {};
-  hermes::InitArena(&arena, kConfigMemorySize, config_memory);
-
-  hermes::testing::TestDefaultConfig(&arena, argv[1]);
-  hermes::testing::TestParseRangeList(&arena);
-  hermes::testing::TestCapacityValues(&arena);
-  hermes::testing::TestBlockSizes(&arena);
-  hermes::testing::TestPathExclusions(&arena);
+  hermes::testing::TestDefaultConfig(argv[1]);
+  hermes::testing::TestParseRangeList();
+  hermes::testing::TestCapacityValues();
+  hermes::testing::TestBlockSizes();
+  hermes::testing::TestPathExclusions();
 
   printf("SUCCESS!");
   return 0;

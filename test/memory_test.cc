@@ -11,7 +11,6 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "test_utils.h"
-#include "memory_management.h"
 
 using namespace hermes;  // NOLINT(*)
 

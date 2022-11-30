@@ -17,7 +17,6 @@
 #include <iomanip>
 #include <string>
 
-#include "memory_management.h"
 #include "metadata_management_internal.h"
 #include "buffer_pool.h"
 #include "buffer_pool_internal.h"
@@ -483,7 +482,7 @@ BucketID LocalGetNextFreeBucketId(SharedMemoryContext *context,
 BucketID LocalGetOrCreateBucketId(SharedMemoryContext *context,
                                   const std::string &name) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
-  BeginTicketMutex(&mdm->bucket_mutex);
+  mdm->bucket_mutex.Lock();;
   BucketID result = LocalGetBucketId(context, name.c_str());
 
   if (result.as_int != 0) {
@@ -493,7 +492,7 @@ BucketID LocalGetOrCreateBucketId(SharedMemoryContext *context,
     LOG(INFO) << "Creating Bucket '" << name << "'" << std::endl;
     result = LocalGetNextFreeBucketId(context, name);
   }
-  EndTicketMutex(&mdm->bucket_mutex);
+  mdm->bucket_mutex.Unlock();
 
   return result;
 }
@@ -554,7 +553,7 @@ VBucketID LocalGetOrCreateVBucketId(SharedMemoryContext *context,
                                     const std::string &name) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
 
-  BeginTicketMutex(&mdm->vbucket_mutex);
+  mdm->vbucket_mutex.Lock();
   VBucketID result = LocalGetVBucketId(context, name.c_str());
 
   if (result.as_int != 0) {
@@ -564,7 +563,7 @@ VBucketID LocalGetOrCreateVBucketId(SharedMemoryContext *context,
     LOG(INFO) << "Creating VBucket '" << name << "'" << std::endl;
     result = LocalGetNextFreeVBucketId(context, name);
   }
-  EndTicketMutex(&mdm->vbucket_mutex);
+  mdm->vbucket_mutex.Unlock();
 
   return result;
 }
@@ -724,9 +723,9 @@ void LocalCreateBlobMetadata(SharedMemoryContext *context, MetadataManager *mdm,
   if (effective_target != kSwapTargetId) {
     assert(blob_id.bits.node_id == (int)effective_target.bits.node_id);
     Target *target = GetTargetFromId(context, effective_target);
-    BeginTicketMutex(&target->effective_blobs_lock);
+    target->effective_blobs_lock.Lock();
     AppendToChunkedIdList(mdm, &target->effective_blobs, blob_id.as_int);
-    EndTicketMutex(&target->effective_blobs_lock);
+    target->effective_blobs_lock.Unlock();
   }
 
   LocalPut(mdm, blob_id, blob_info);
@@ -802,22 +801,12 @@ void LocalDeleteBlobMetadata(MetadataManager *mdm, const char *blob_name,
 
 /** wait for outstanding BLOB operations */
 void WaitForOutstandingBlobOps(MetadataManager *mdm, BlobID blob_id) {
-  Ticket t = {};
-  Ticket *ticket = 0;
-
-  while (!t.acquired) {
-    BlobInfo *blob_info = GetBlobInfoPtr(mdm, blob_id);
-    if (blob_info) {
-      t = TryBeginTicketMutex(&blob_info->lock, ticket);
-    } else {
-      // Blob was deleted
-      ReleaseBlobInfoPtr(mdm);
-      break;
-    }
-    if (!t.acquired) {
-      ReleaseBlobInfoPtr(mdm);
-    }
-    ticket = &t;
+  BlobInfo *blob_info = GetBlobInfoPtr(mdm, blob_id);
+  if (blob_info) {
+    blob_info->lock.Lock();
+    blob_info->lock.Unlock();
+  } else {
+    ReleaseBlobInfoPtr(mdm);
   }
 }
 
@@ -1587,13 +1576,13 @@ f32 ScoringFunction(MetadataManager *mdm, Stats *stats) {
 int LocalGetNumOutstandingFlushingTasks(SharedMemoryContext *context,
                                         VBucketID id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
-  BeginTicketMutex(&mdm->vbucket_mutex);
+  mdm->vbucket_mutex.Lock();
   VBucketInfo *info = LocalGetVBucketInfoById(mdm, id);
   int result = 0;
   if (info) {
     result = info->async_flush_count;
   }
-  EndTicketMutex(&mdm->vbucket_mutex);
+  mdm->vbucket_mutex.Unlock();
 
   return result;
 }
@@ -1615,63 +1604,41 @@ int GetNumOutstandingFlushingTasks(SharedMemoryContext *context,
 }
 
 bool LocalLockBlob(SharedMemoryContext *context, BlobID blob_id) {
-  Ticket t = {};
-  Ticket *ticket = 0;
-  bool result = true;
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
-
-  while (!t.acquired) {
-    BlobInfo *blob_info = GetBlobInfoPtr(mdm, blob_id);
-    if (blob_info) {
-      t = TryBeginTicketMutex(&blob_info->lock, ticket);
-      if (!ticket) {
-        blob_info->last = t.ticket;
-      }
-    } else {
-      result = false;
-      ReleaseBlobInfoPtr(mdm);
-      break;
-    }
-    if (!t.acquired) {
-      ReleaseBlobInfoPtr(mdm);
-      sched_yield();
-    } else {
-      if (blob_info->stop) {
-        // This BlobID is no longer valid. Release the lock and delete the entry
-        // if we're the last ticket on that lock.
-        EndTicketMutex(&blob_info->lock);
-        result = false;
-        if (t.ticket == blob_info->last) {
-          LocalDelete(mdm, blob_id);
-          LocalFreeBufferIdList(context, blob_id);
-        }
-      }
-      ReleaseBlobInfoPtr(mdm);
-    }
-    ticket = &t;
+  BlobInfo *blob_info = GetBlobInfoPtr(mdm, blob_id);
+  if (blob_info) {
+    blob_info->lock.Lock();
+  } else {
+    ReleaseBlobInfoPtr(mdm);
+    return false;
   }
-  return result;
+  if (blob_info->stop) {
+    blob_info->lock.Unlock();
+    LocalDelete(mdm, blob_id);
+    LocalFreeBufferIdList(context, blob_id);
+    ReleaseBlobInfoPtr(mdm);
+    return false;
+  }
+  ReleaseBlobInfoPtr(mdm);
+  return true;
 }
 
 bool LocalUnlockBlob(SharedMemoryContext *context, BlobID blob_id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   BlobInfo *blob_info = GetBlobInfoPtr(mdm, blob_id);
   bool result = false;
-
   if (blob_info) {
-    EndTicketMutex(&blob_info->lock);
+    blob_info->lock.Unlock();
     result = true;
   }
-
   ReleaseBlobInfoPtr(mdm);
-
   return result;
 }
 
 /** lock BLOB */
 bool LockBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id) {
   u32 target_node = GetBlobNodeId(blob_id);
-  bool result = false;
+  bool result;
   if (target_node == rpc->node_id) {
     result = LocalLockBlob(context, blob_id);
   } else {
@@ -1683,36 +1650,11 @@ bool LockBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id) {
 /** unlock BLOB */
 bool UnlockBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id) {
   u32 target_node = GetBlobNodeId(blob_id);
-  bool result = false;
+  bool result;
   if (target_node == rpc->node_id) {
     result = LocalUnlockBlob(context, blob_id);
   } else {
     result = RpcCall<bool>(rpc, target_node, "RemoteUnlockBlob", blob_id);
-  }
-
-  return result;
-}
-
-/** make shared memory string */
-void MakeShmemString(ShmemString *sms, u8 *memory, const char *val, u32 size) {
-  memcpy(memory, val, size);
-  sms->size = size;
-  // NOTE(chogan): Offset is from the beginning of this ShmemString instance, so
-  // the memory for a ShmemString should always be at a higher address than the
-  // ShmemString itself.
-  CHECK_LT((u8 *)sms, (u8 *)memory);
-  sms->offset = (u8 *)memory - (u8 *)sms;
-}
-
-void MakeShmemString(ShmemString *sms, u8 *memory, const std::string &val) {
-  MakeShmemString(sms, memory, val.data(), val.size());
-}
-
-std::string GetShmemString(ShmemString *sms) {
-  std::string result;
-  if (sms->offset >= sizeof(ShmemString) && sms->size > 0) {
-    const char *internal_string = (char *)((u8 *)sms + sms->offset);
-    result = std::string(internal_string, sms->size);
   }
 
   return result;

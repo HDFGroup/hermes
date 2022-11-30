@@ -742,7 +742,7 @@ static SDL_Rect OffsetToRect(HeapMetadata *hmd, Heap *heap, u32 offset,
 static void DrawAllocatedHeapBlocks(DebugState *state, HeapMetadata *hmd,
                                     Heap *heap, SDL_Surface *surface) {
   global_color_counter = 0;
-  BeginTicketMutex(&state->mutex);
+  state->mutex.Lock();;
   for (u32 i = 0; i < state->allocation_count; ++i) {
     DebugHeapAllocation *allocation = &state->allocations[i];
     SDL_Rect rect = OffsetToRect(hmd, heap, allocation->offset,
@@ -758,7 +758,7 @@ static void DrawAllocatedHeapBlocks(DebugState *state, HeapMetadata *hmd,
     u32 color = global_id_colors[global_color_counter];
     DrawWrappingRect(&rect, hmd->screen_width, 0, surface, color);
   }
-  EndTicketMutex(&state->mutex);
+  state->mutex.Unlock();;
 }
 
 static void DrawHeapExtent(HeapMetadata *hmd, Heap *heap, int w,
@@ -780,7 +780,7 @@ static void DrawHeapExtent(HeapMetadata *hmd, Heap *heap, int w,
 
 static void DrawFreeHeapBlocks(HeapMetadata *hmd, Heap *heap,
                                SDL_Surface *surface) {
-  BeginTicketMutex(&heap->mutex);
+  heap->mutex.Lock();
   u32 offset = heap->free_list_offset;
   FreeBlock *head = GetHeapFreeList(heap);
   while (head) {
@@ -793,7 +793,7 @@ static void DrawFreeHeapBlocks(HeapMetadata *hmd, Heap *heap,
     offset = head->next_offset;
     head = NextFreeBlock(heap, head);
   }
-  EndTicketMutex(&heap->mutex);
+  heap->mutex.Unlock();
 }
 
 #if DRAW_BUCKETS
@@ -804,10 +804,10 @@ static int DrawBucketsAndVBuckets(MetadataManager *mdm, SDL_Surface *surface,
 
   // BucketInfo
   for (size_t i = 0; i < mdm->max_buckets; ++i) {
-    BeginTicketMutex(&mdm->bucket_mutex);
+    mdm->bucket_mutex.Lock();
     BucketInfo *info = LocalGetBucketInfoByIndex(mdm, i);
     bool active = info->active;
-    EndTicketMutex(&mdm->bucket_mutex);
+    mdm->bucket_mutex.Unlock();
 
     if (x > width) {
       x = 0;
@@ -829,10 +829,10 @@ static int DrawBucketsAndVBuckets(MetadataManager *mdm, SDL_Surface *surface,
 
   // VBucketInfo
   for (size_t i = 0; i < mdm->max_vbuckets; ++i) {
-    BeginTicketMutex(&mdm->vbucket_mutex);
+    mdm->vbucket_mutex.Lock();
     VBucketInfo *info = GetVBucketInfoByIndex(mdm, i);
     bool active = info->active;
-    EndTicketMutex(&mdm->vbucket_mutex);
+    mdm->vbucket_mutex.Unlock();
 
     if (x > width) {
       x = 0;
@@ -887,7 +887,7 @@ static bool PopulateByteCounts(DebugState *state, Heap *heap,
 
 static bool CheckFreeBlocks(Heap *heap, const std::vector<u8> &byte_counts,
                             u32 heap_size) {
-  BeginTicketMutex(&heap->mutex);
+  heap->mutex.Lock();
   u32 extent_offset_from_start = heap->extent;
   if (!heap->grows_up) {
     extent_offset_from_start = heap_size - heap->extent;
@@ -927,7 +927,7 @@ static bool CheckFreeBlocks(Heap *heap, const std::vector<u8> &byte_counts,
     offset = head->next_offset;
     head = NextFreeBlock(heap, head);
   }
-  EndTicketMutex(&heap->mutex);
+  heap->mutex.Unlock();
 
   return result;
 }
@@ -936,8 +936,8 @@ static bool CheckOverlap(HeapMetadata *hmd, Heap *map_heap,
                          Heap *id_heap) {
   std::vector<u8> heap_byte_counts(hmd->heap_size, 0);
 
-  BeginTicketMutex(&global_id_debug_state->mutex);
-  BeginTicketMutex(&global_map_debug_state->mutex);
+  global_id_debug_state->mutex.Lock();
+  global_map_debug_state->mutex.Lock();
 
   bool result = true;
   if (!PopulateByteCounts(global_id_debug_state, id_heap, heap_byte_counts,
@@ -957,8 +957,8 @@ static bool CheckOverlap(HeapMetadata *hmd, Heap *map_heap,
     result = false;
   }
 
-  EndTicketMutex(&global_map_debug_state->mutex);
-  EndTicketMutex(&global_id_debug_state->mutex);
+  global_id_debug_state->mutex.Unlock();
+  global_map_debug_state->mutex.Unlock();
 
   return result;
 }
@@ -1037,18 +1037,6 @@ int main() {
     exit(1);
   }
 
-  SharedMemoryContext id_debug_context =
-    GetSharedMemoryContext(global_debug_id_name);
-  SharedMemoryContext map_debug_context =
-    GetSharedMemoryContext(global_debug_map_name);
-
-  if (id_debug_context.shm_base) {
-    global_id_debug_state = (DebugState *)id_debug_context.shm_base;
-  }
-  if (map_debug_context.shm_base) {
-    global_map_debug_state = (DebugState *)map_debug_context.shm_base;
-  }
-
   while (win_data.running) {
     HandleInput(&context, &win_data, full_shmem_name);
 
@@ -1073,9 +1061,6 @@ int main() {
   }
 
   ReleaseSharedMemoryContext(&context);
-
-  UnmapSharedMemory(&id_debug_context);
-  UnmapSharedMemory(&map_debug_context);
 
   SDL_FreeSurface(win_data.back_buffer);
   SDL_DestroyWindow(win_data.window);

@@ -15,7 +15,6 @@
 #include <mpi.h>
 
 #include "test_utils.h"
-#include "memory_management.h"
 
 #define STBDS_ASSERT(x) Assert((x))
 

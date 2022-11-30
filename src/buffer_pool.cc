@@ -40,7 +40,6 @@
 #include "rpc.h"
 
 #include "debug_state.cc"
-#include "memory_management.cc"
 #include "config_parser.cc"
 #include "utils.cc"
 #include "traits.cc"
@@ -579,7 +578,7 @@ void LocalReleaseBuffer(SharedMemoryContext *context, BufferID buffer_id) {
   BufferHeader *header_to_free = GetHeaderByIndex(context,
                                                   buffer_id.bits.header_index);
   if (header_to_free) {
-    BeginTicketMutex(&pool->ticket_mutex);
+    pool->ticket_mutex.Lock();
     header_to_free->used = 0;
     header_to_free->in_use = false;
     int slab_index = GetSlabIndexFromHeader(context, header_to_free);
@@ -592,7 +591,7 @@ void LocalReleaseBuffer(SharedMemoryContext *context, BufferID buffer_id) {
     i64 capacity_adjustment = header_to_free->capacity;
     UpdateBufferingCapacities(context, capacity_adjustment, device_id);
 
-    EndTicketMutex(&pool->ticket_mutex);
+    pool->ticket_mutex.Unlock();
   }
 }
 
@@ -640,7 +639,7 @@ BufferID GetFreeBuffer(SharedMemoryContext *context, DeviceID device_id,
   BufferPool *pool = GetBufferPoolFromContext(context);
   BufferID result = {};
 
-  BeginTicketMutex(&pool->ticket_mutex);
+  pool->ticket_mutex.Lock();
   BufferID id = PeekFirstFreeBufferId(context, device_id, slab_index);
   if (!IsNullBufferId(id)) {
     u32 header_index = id.bits.header_index;
@@ -653,7 +652,7 @@ BufferID GetFreeBuffer(SharedMemoryContext *context, DeviceID device_id,
     i64 capacity_adjustment = -(i64)header->capacity;
     UpdateBufferingCapacities(context, capacity_adjustment, device_id);
   }
-  EndTicketMutex(&pool->ticket_mutex);
+  pool->ticket_mutex.Unlock();
 
   return result;
 }
@@ -962,7 +961,7 @@ void MergeRamBufferFreeList(SharedMemoryContext *context, int slab_index) {
   int new_slab_size_in_bytes = bigger_slab_unit_size * pool->block_sizes[0];
   int old_slab_size_in_bytes = this_slab_unit_size * pool->block_sizes[0];
 
-  BeginTicketMutex(&pool->ticket_mutex);
+  pool->ticket_mutex.Lock();
   // TODO(chogan): Assuming first Device is RAM
   DeviceID device_id = 0;
   BufferID id = PeekFirstFreeBufferId(context, device_id, slab_index);
@@ -1069,7 +1068,7 @@ void MergeRamBufferFreeList(SharedMemoryContext *context, int slab_index) {
       id = header_to_merge->next_free;
     }
   }
-  EndTicketMutex(&pool->ticket_mutex);
+  pool->ticket_mutex.Unlock();
 }
 /**
    Split RAM buffer free list.
@@ -1099,7 +1098,7 @@ void SplitRamBufferFreeList(SharedMemoryContext *context, int slab_index) {
   // TODO(chogan): @optimization We don't really want to wait for a long queue
   // on the ticket mutex. If we need to split, we want to stop the world and do
   // it immediately.
-  BeginTicketMutex(&pool->ticket_mutex);
+  pool->ticket_mutex.Lock();
   // TODO(chogan): Assuming first Device is RAM
   DeviceID device_id = 0;
   BufferID id = PeekFirstFreeBufferId(context, device_id, slab_index);
@@ -1146,7 +1145,7 @@ void SplitRamBufferFreeList(SharedMemoryContext *context, int slab_index) {
       old_data_offset += new_slab_size_in_bytes;
     }
   }
-  EndTicketMutex(&pool->ticket_mutex);
+  pool->ticket_mutex.Unlock();
 }
 
 /**

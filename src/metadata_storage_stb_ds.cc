@@ -95,31 +95,25 @@ void CheckHeapOverlap(MetadataManager *mdm) {
 }
 
 /** get ticket mutex based on \a map_type */
-TicketMutex *GetMapMutex(MetadataManager *mdm, MapType map_type) {
-  TicketMutex *mutex = 0;
+labstor::Mutex& GetMapMutex(MetadataManager *mdm, MapType map_type) {
   switch (map_type) {
     case kMapType_Bucket: {
-      mutex = &mdm->bucket_map_mutex;
-      break;
+      return mdm->bucket_map_mutex;
     }
     case kMapType_VBucket: {
-      mutex = &mdm->vbucket_map_mutex;
-      break;
+      return mdm->vbucket_map_mutex;
     }
     case kMapType_BlobId: {
-      mutex = &mdm->blob_id_map_mutex;
+      return mdm->blob_id_map_mutex;
       break;
     }
     case kMapType_BlobInfo: {
-      mutex = &mdm->blob_info_map_mutex;
-      break;
+      return mdm->blob_info_map_mutex;
     }
     default: {
       HERMES_INVALID_CODE_PATH;
     }
   }
-
-  return mutex;
 }
 
 /**
@@ -131,9 +125,8 @@ TicketMutex *GetMapMutex(MetadataManager *mdm, MapType map_type) {
  */
 IdMap *GetMap(MetadataManager *mdm, MapType map_type) {
   IdMap *result = 0;
-  TicketMutex *mutex = GetMapMutex(mdm, map_type);
-  BeginTicketMutex(mutex);
-
+  labstor::Mutex &mutex = GetMapMutex(mdm, map_type);
+  mutex.Lock();
   switch (map_type) {
     case kMapType_Bucket: {
       result = GetBucketMap(mdm);
@@ -163,8 +156,8 @@ BlobInfoMap *GetBlobInfoMapNoLock(MetadataManager *mdm) {
 
 /** get BLOB information map */
 BlobInfoMap *GetBlobInfoMap(MetadataManager *mdm) {
-  TicketMutex *mutex = GetMapMutex(mdm, kMapType_BlobInfo);
-  BeginTicketMutex(mutex);
+  labstor::Mutex &mutex = GetMapMutex(mdm, kMapType_BlobInfo);
+  mutex.Lock();
   BlobInfoMap *result = GetBlobInfoMapNoLock(mdm);
 
   return result;
@@ -174,30 +167,27 @@ BlobInfoMap *GetBlobInfoMap(MetadataManager *mdm) {
  * Releases the lock acquired by `GetMap`.
  */
 void ReleaseMap(MetadataManager *mdm, MapType map_type) {
-  TicketMutex *mutex = 0;
   switch (map_type) {
     case kMapType_Bucket: {
-      mutex = &mdm->bucket_map_mutex;
+      mdm->bucket_map_mutex.Unlock();
       break;
     }
     case kMapType_VBucket: {
-      mutex = &mdm->vbucket_map_mutex;
+      mdm->vbucket_map_mutex.Unlock();
       break;
     }
     case kMapType_BlobId: {
-      mutex = &mdm->blob_id_map_mutex;
+      mdm->blob_id_map_mutex.Unlock();
       break;
     }
     case kMapType_BlobInfo: {
-      mutex = &mdm->blob_info_map_mutex;
+      mdm->blob_info_map_mutex.Unlock();
       break;
     }
     default: {
       HERMES_INVALID_CODE_PATH;
     }
   }
-
-  EndTicketMutex(mutex);
 }
 
 /**
@@ -219,7 +209,7 @@ BlobInfo *GetBlobInfoPtr(MetadataManager *mdm, BlobID blob_id) {
 
 /** release pointer to BLOB information */
 void ReleaseBlobInfoPtr(MetadataManager *mdm) {
-  EndTicketMutex(&mdm->blob_info_map_mutex);
+  mdm->blob_info_map_mutex.Unlock();
 }
 
 /** get BLOB stats locally */
@@ -246,7 +236,7 @@ Stats LocalGetBlobStats(SharedMemoryContext *context, BlobID blob_id) {
  */
 u64 *GetIdsPtr(MetadataManager *mdm, IdList id_list) {
   Heap *id_heap = GetIdHeap(mdm);
-  BeginTicketMutex(&mdm->id_mutex);
+  mdm->id_mutex.Lock();
   u64 *result = (u64 *)HeapOffsetToPtr(id_heap, id_list.head_offset);
 
   return result;
@@ -258,7 +248,7 @@ u64 *GetIdsPtr(MetadataManager *mdm, IdList id_list) {
 */
 u64 *GetIdsPtr(MetadataManager *mdm, ChunkedIdList id_list) {
   Heap *id_heap = GetIdHeap(mdm);
-  BeginTicketMutex(&mdm->id_mutex);
+  mdm->id_mutex.Lock();
   u64 *result = (u64 *)HeapOffsetToPtr(id_heap, id_list.head_offset);
 
   return result;
@@ -275,11 +265,10 @@ u64 *GetIdsPtr(MetadataManager *mdm, ChunkedIdList id_list) {
  */
 IdList GetEmbeddedIdList(MetadataManager *mdm, u32 offset) {
   Heap *id_heap = GetIdHeap(mdm);
-  BeginTicketMutex(&mdm->id_mutex);
+  &mdm->id_mutex.Lock();
   IdList *embedded_id_list = (IdList *)HeapOffsetToPtr(id_heap, offset);
   IdList result = *embedded_id_list;
-  EndTicketMutex(&mdm->id_mutex);
-
+  mdm->id_mutex.Unlock();
   return result;
 }
 
@@ -301,7 +290,7 @@ BufferID *GetBufferIdsPtrFromBlobId(MetadataManager *mdm, BlobID blob_id,
 
 /** release IDs pointer */
 void ReleaseIdsPtr(MetadataManager *mdm) {
-  EndTicketMutex(&mdm->id_mutex);
+  mdm->id_mutex.Unlock();
 }
 
 /** Convert a key offset into the pointer where the string is stored.
@@ -324,28 +313,28 @@ static char *GetKey(MetadataManager *mdm, IdMap *map, u32 index) {
 template<typename T>
 void FreeIdList(MetadataManager *mdm, T id_list) {
   Heap *id_heap = GetIdHeap(mdm);
-  BeginTicketMutex(&mdm->id_mutex);
+  mdm->id_mutex.Lock();
   u8 *ptr = HeapOffsetToPtr(id_heap, id_list.head_offset);
   HeapFree(id_heap, ptr);
-  EndTicketMutex(&mdm->id_mutex);
+  mdm->id_mutex.Unlock();
 }
 
 /** free \a id_list ID list */
 void FreeIdList(MetadataManager *mdm, IdList id_list) {
   Heap *id_heap = GetIdHeap(mdm);
-  BeginTicketMutex(&mdm->id_mutex);
+  mdm->id_mutex.Lock();
   u8 *ptr = HeapOffsetToPtr(id_heap, id_list.head_offset);
   HeapFree(id_heap, ptr);
-  EndTicketMutex(&mdm->id_mutex);
+  mdm->id_mutex.Unlock();
 }
 
 /** free embedded ID list */
 void FreeEmbeddedIdList(MetadataManager *mdm, u32 offset) {
   Heap *id_heap = GetIdHeap(mdm);
-  BeginTicketMutex(&mdm->id_mutex);
+  mdm->id_mutex.Lock();
   u8 *to_free = HeapOffsetToPtr(id_heap, offset);
   HeapFree(id_heap, to_free);
-  EndTicketMutex(&mdm->id_mutex);
+  mdm->id_mutex.Unlock();
 }
 
 /**
@@ -476,7 +465,7 @@ void LocalReplaceBlobIdInBucket(SharedMemoryContext *context,
                                 BucketID bucket_id, BlobID old_blob_id,
                                 BlobID new_blob_id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
-  BeginTicketMutex(&mdm->bucket_mutex);
+  mdm->bucket_mutex.Lock();
   BucketInfo *info = LocalGetBucketInfoById(mdm, bucket_id);
 
   if (info && info->active) {
@@ -492,19 +481,19 @@ void LocalReplaceBlobIdInBucket(SharedMemoryContext *context,
     ReleaseIdsPtr(mdm);
   }
 
-  EndTicketMutex(&mdm->bucket_mutex);
+  mdm->bucket_mutex.Unlock();
 }
 
 /** add BLOB ID to bucket locally */
 void LocalAddBlobIdToBucket(MetadataManager *mdm, BucketID bucket_id,
                             BlobID blob_id, bool track_stats) {
-  BeginTicketMutex(&mdm->bucket_mutex);
+  mdm->bucket_mutex.Lock();
   BucketInfo *info = LocalGetBucketInfoById(mdm, bucket_id);
   AppendToChunkedIdList(mdm, &info->blobs, blob_id.as_int);
   if (track_stats) {
     LocalIncrementBlobStats(mdm, blob_id);
   }
-  EndTicketMutex(&mdm->bucket_mutex);
+  mdm->bucket_mutex.Unlock();
 
   CheckHeapOverlap(mdm);
 }
@@ -512,10 +501,10 @@ void LocalAddBlobIdToBucket(MetadataManager *mdm, BucketID bucket_id,
 /** add BLOB ID to virtual bucket locally */
 void LocalAddBlobIdToVBucket(MetadataManager *mdm, VBucketID vbucket_id,
                              BlobID blob_id) {
-  BeginTicketMutex(&mdm->vbucket_mutex);
+  mdm->vbucket_mutex.Lock();
   VBucketInfo *info = LocalGetVBucketInfoById(mdm, vbucket_id);
   AppendToChunkedIdList(mdm, &info->blobs, blob_id.as_int);
-  EndTicketMutex(&mdm->vbucket_mutex);
+  mdm->vbucket_mutex.Unlock();
 
   CheckHeapOverlap(mdm);
 }
@@ -524,12 +513,12 @@ void LocalAddBlobIdToVBucket(MetadataManager *mdm, VBucketID vbucket_id,
 IdList AllocateIdList(MetadataManager *mdm, u32 length) {
   static_assert(sizeof(IdList) == sizeof(u64));
   Heap *id_heap = GetIdHeap(mdm);
-  BeginTicketMutex(&mdm->id_mutex);
+  mdm->id_mutex.Lock();
   u64 *id_list_memory = HeapPushArray<u64>(id_heap, length);
   IdList result = {};
   result.length = length;
   result.head_offset = GetHeapOffset(id_heap, (u8 *)(id_list_memory));
-  EndTicketMutex(&mdm->id_mutex);
+  mdm->id_mutex.Unlock();
   CheckHeapOverlap(mdm);
 
   return result;
@@ -539,7 +528,7 @@ IdList AllocateIdList(MetadataManager *mdm, u32 length) {
 u32 AllocateEmbeddedIdList(MetadataManager *mdm, u32 length) {
   static_assert(sizeof(IdList) == sizeof(u64));
   Heap *id_heap = GetIdHeap(mdm);
-  BeginTicketMutex(&mdm->id_mutex);
+  mdm->id_mutex.Lock();
   // NOTE(chogan): Add 1 extra for the embedded IdList
   u64 *id_list_memory = HeapPushArray<u64>(id_heap, length + 1);
   IdList *embedded_id_list = (IdList *)id_list_memory;
@@ -547,7 +536,7 @@ u32 AllocateEmbeddedIdList(MetadataManager *mdm, u32 length) {
   embedded_id_list->head_offset =
     GetHeapOffset(id_heap, (u8 *)(embedded_id_list + 1));
   u32 result = GetHeapOffset(id_heap, (u8 *)embedded_id_list);
-  EndTicketMutex(&mdm->id_mutex);
+  mdm->id_mutex.Unlock();
   CheckHeapOverlap(mdm);
 
   return result;
@@ -557,7 +546,7 @@ u32 AllocateEmbeddedIdList(MetadataManager *mdm, u32 length) {
 std::vector<BlobID> LocalGetBlobIds(SharedMemoryContext *context,
                                     BucketID bucket_id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
-  BeginTicketMutex(&mdm->bucket_mutex);
+  mdm->bucket_mutex.Lock();
   BucketInfo *info = LocalGetBucketInfoById(mdm, bucket_id);
   u32 num_blobs = info->blobs.length;
   std::vector<BlobID> result(num_blobs);
@@ -567,7 +556,7 @@ std::vector<BlobID> LocalGetBlobIds(SharedMemoryContext *context,
     result[i] = blob_ids[i];
   }
   ReleaseIdsPtr(mdm);
-  EndTicketMutex(&mdm->bucket_mutex);
+  mdm->bucket_mutex.Unlock();
 
   return result;
 }
@@ -622,7 +611,7 @@ void LocalFreeBufferIdList(SharedMemoryContext *context, BlobID blob_id) {
 void LocalRemoveBlobFromBucketInfo(SharedMemoryContext *context,
                                    BucketID bucket_id, BlobID blob_id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
-  BeginTicketMutex(&mdm->bucket_mutex);
+  mdm->bucket_mutex.Lock();
   BucketInfo *info = LocalGetBucketInfoById(mdm, bucket_id);
   ChunkedIdList *blobs = &info->blobs;
 
@@ -635,14 +624,14 @@ void LocalRemoveBlobFromBucketInfo(SharedMemoryContext *context,
   }
   ReleaseIdsPtr(mdm);
 
-  EndTicketMutex(&mdm->bucket_mutex);
+  mdm->bucket_mutex.Unlock();
 }
 
 /** does \a bucket_id contain \a blob_id BLOB locally? */
 bool LocalContainsBlob(SharedMemoryContext *context, BucketID bucket_id,
                        BlobID blob_id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
-  BeginTicketMutex(&mdm->bucket_mutex);
+  mdm->bucket_mutex.Lock();
   BucketInfo *info = LocalGetBucketInfoById(mdm, bucket_id);
   ChunkedIdList *blobs = &info->blobs;
   BlobID *blob_id_arr = (BlobID *)GetIdsPtr(mdm, *blobs);
@@ -655,7 +644,7 @@ bool LocalContainsBlob(SharedMemoryContext *context, BucketID bucket_id,
     }
   }
   ReleaseIdsPtr(mdm);
-  EndTicketMutex(&mdm->bucket_mutex);
+  mdm->bucket_mutex.Unlock();
 
   return result;
 }
@@ -687,7 +676,7 @@ bool LocalDestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
   bool destroyed = false;
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   BeginWriterLock(&mdm->bucket_delete_lock);
-  BeginTicketMutex(&mdm->bucket_mutex);
+  mdm->bucket_mutex.Lock();
   BucketInfo *info = LocalGetBucketInfoById(mdm, bucket_id);
 
   int ref_count = info->ref_count.load();
@@ -731,7 +720,7 @@ bool LocalDestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
     LOG(INFO) << "Cannot destroy bucket " << bucket_name
               << ". It's refcount is " << ref_count << std::endl;
   }
-  EndTicketMutex(&mdm->bucket_mutex);
+  mdm->bucket_mutex.Unlock();
   EndWriterLock(&mdm->bucket_delete_lock);
 
   return destroyed;
@@ -742,7 +731,7 @@ bool LocalDestroyVBucket(SharedMemoryContext *context, const char *vbucket_name,
                          VBucketID vbucket_id) {
   bool destroyed = false;
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
-  BeginTicketMutex(&mdm->vbucket_mutex);
+  mdm->vbucket_mutex.Lock();
   VBucketInfo *info = LocalGetVBucketInfoById(mdm, vbucket_id);
 
   // TODO(chogan): @optimization Lock granularity can probably be relaxed if
@@ -773,7 +762,7 @@ bool LocalDestroyVBucket(SharedMemoryContext *context, const char *vbucket_name,
     LOG(INFO) << "Cannot destroy vbucket " << vbucket_name
               << ". It's refcount is " << ref_count << std::endl;
   }
-  EndTicketMutex(&mdm->vbucket_mutex);
+  mdm->vbucket_mutex.Unlock();
   return destroyed;
 }
 
@@ -1052,13 +1041,13 @@ void InitMetadataStorage(SharedMemoryContext *context, MetadataManager *mdm,
 std::vector<BlobID> LocalGetBlobsFromVBucketInfo(SharedMemoryContext *context,
                                                  VBucketID vbucket_id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
-  BeginTicketMutex(&mdm->vbucket_mutex);
+  mdm->vbucket_mutex.Lock();
   VBucketInfo *info = LocalGetVBucketInfoById(mdm, vbucket_id);
   ChunkedIdList *blobs = &info->blobs;
   BlobID *blobs_arr = (BlobID *)GetIdsPtr(mdm, *blobs);
   std::vector<BlobID> blobids(blobs_arr, blobs_arr + blobs->length);
   ReleaseIdsPtr(mdm);
-  EndTicketMutex(&mdm->vbucket_mutex);
+  mdm->vbucket_mutex.Unlock();
   return blobids;
 }
 
@@ -1066,7 +1055,7 @@ std::vector<BlobID> LocalGetBlobsFromVBucketInfo(SharedMemoryContext *context,
 void LocalRemoveBlobFromVBucketInfo(SharedMemoryContext *context,
                                     VBucketID vbucket_id, BlobID blob_id) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
-  BeginTicketMutex(&mdm->vbucket_mutex);
+  mdm->vbucket_mutex.Lock();
   VBucketInfo *info = LocalGetVBucketInfoById(mdm, vbucket_id);
   ChunkedIdList *blobs = &info->blobs;
   BlobID *blobs_arr = (BlobID *)GetIdsPtr(mdm, *blobs);
@@ -1077,7 +1066,7 @@ void LocalRemoveBlobFromVBucketInfo(SharedMemoryContext *context,
     }
   }
   ReleaseIdsPtr(mdm);
-  EndTicketMutex(&mdm->vbucket_mutex);
+  mdm->vbucket_mutex.Unlock();
 }
 
 /** get BLOB's importance score locally */

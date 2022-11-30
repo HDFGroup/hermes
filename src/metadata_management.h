@@ -19,7 +19,6 @@
 #include <string>
 
 #include "buffer_pool.h"
-#include "memory_management.h"
 
 namespace hermes {
 
@@ -270,8 +269,7 @@ struct RpcContext;
 /**
  *
  */
-void InitMetadataManager(MetadataManager *mdm, RpcContext *rpc, Arena *arena,
-                         Config *config);
+void InitMetadataManager(MetadataManager *mdm, RpcContext *rpc, Config *config);
 
 /**
  *

@@ -18,6 +18,7 @@
 
 #include "hermes_types.h"
 #include "metadata_management.h"
+#include <labstor/data_structures/lockless/string.h>
 
 namespace hermes {
 
@@ -47,7 +48,7 @@ struct RpcContext {
   size_t state_size;
   /** Array of host names stored in shared memory. This array size is
    * RpcContext::num_nodes. */
-  ShmemString *host_names;
+  labstor::ipc::lockless::string host_names;
   u32 node_id;        /**< node ID */
   u32 num_nodes;      /**< number of nodes */
   int port;           /**< port number */
@@ -63,15 +64,13 @@ struct RpcContext {
 
 void InitRpcContext(RpcContext *rpc, u32 num_nodes, u32 node_id,
                     Config *config);
-void *CreateRpcState(Arena *arena);
+void *CreateRpcState();
 void InitRpcClients(RpcContext *rpc);
 void ShutdownRpcClients(RpcContext *rpc);
 void RunDaemon(SharedMemoryContext *context, RpcContext *rpc,
-               CommunicationContext *comm, Arena *trans_arena,
-               const char *shmem_name);
+               CommunicationContext *comm, const char *shmem_name);
 void FinalizeClient(SharedMemoryContext *context, RpcContext *rpc,
-                    CommunicationContext *comm, Arena *trans_arena,
-                    bool stop_daemon);
+                    CommunicationContext *comm, bool stop_daemon);
 void FinalizeRpcContext(RpcContext *rpc, bool is_daemon);
 std::string GetServerName(RpcContext *rpc, u32 node_id,
                           bool is_buffer_organizer = false);

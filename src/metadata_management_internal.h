@@ -21,7 +21,7 @@ bool IsNullBucketId(BucketID id);
 bool IsNullVBucketId(VBucketID id);
 bool IsNullBlobId(BlobID id);
 bool IsNullTargetId(TargetID id);
-TicketMutex *GetMapMutex(MetadataManager *mdm, MapType map_type);
+labstor::Mutex& GetMapMutex(MetadataManager *mdm, MapType map_type);
 VBucketID GetVBucketId(SharedMemoryContext *context, RpcContext *rpc,
                        const char *name);
 u32 HashString(MetadataManager *mdm, RpcContext *rpc, const char *str);
@@ -84,8 +84,7 @@ std::vector<u64> GetGlobalDeviceCapacities(SharedMemoryContext *context,
 void UpdateGlobalSystemViewState(SharedMemoryContext *context, RpcContext *rpc);
 
 void StartGlobalSystemViewStateUpdateThread(SharedMemoryContext *context,
-                                            RpcContext *rpc, Arena *arena,
-                                            double sleep_ms);
+                                            RpcContext *rpc, double sleep_ms);
 
 void InitMetadataStorage(SharedMemoryContext *context, MetadataManager *mdm,
                          Config *config);
