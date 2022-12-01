@@ -62,92 +62,52 @@ bool MetadataManager::IsVBucketNameTooLong(const std::string &name) {
   return result;
 }
 
-/** put \a key, \a value, and \a map_type locally */
-void MetadataManager::LocalPut(const char *key, u64 val, MapType map_type) {
-  PutToStorage(key, val, map_type);
-}
-
-/** put \a key and \a value locally */
-void MetadataManager::LocalPut(BlobID key, const BlobInfo &value) {
-  PutToStorage(key, value);
-}
-
-/** get the value of \a key and \a map_type locally */
-u64 MetadataManager::LocalGet(const char *key, MapType map_type) {
-  u64 result = GetFromStorage(key, map_type);
-
-  return result;
-}
-
-/** delete \a key locally */
-void MetadataManager::LocalDelete(BlobID key) {
-  DeleteFromStorage(key, false);
-}
-
-/** delete \a map_type locally */
-void MetadataManager::LocalDelete(const char *key, MapType map_type) {
-  DeleteFromStorage(key, map_type);
-}
-
 /** get hash string for metadata storage */
 u32 MetadataManager::HashString(const char *str) {
-  u32 result = HashStringForStorage(rpc, str);
-
-  return result;
-}
-
-/** get id */
-u64 MetadataManager::GetId(const char *name, MapType map_type) {
-  u64 result = 0;
-
-  mdm = GetMetadataManagerFromContext(context);
-  u32 target_node = HashString(rpc, name);
-
-  if (target_node == rpc_->node_id_) {
-    result = LocalGet(name, map_type);
-  } else {
-    result = RpcCall<u64>(rpc, target_node, "RemoteGet", std::string(name),
-                          map_type);
-  }
+  u32 result = HashStringForStorage(str);
 
   return result;
 }
 
 /** get bucket id */
 BucketID MetadataManager::GetBucketId(const char *name) {
-  BucketID result = {};
-  result.as_int = GetId(context, rpc, name, kMapType_Bucket);
-
-  return result;
+  u32 target_node = HashString(name);
+  if (target_node == rpc_->node_id_) {
+    LocalGetBucketId(name);
+  } else {
+    // TODO(llogan): Add RemoteGetBucketId
+    return rpc_->Call<BucketID>(target_node,
+                                "RemoteGetBucketId",
+                                std::string(name));
+  }
 }
 
 /** get local bucket id */
 BucketID MetadataManager::LocalGetBucketId(const char *name) {
-  mdm = GetMetadataManagerFromContext(context);
-  BucketID result = {};
-  result.as_int = LocalGet(name, kMapType_Bucket);
-
-  return result;
+  return bucket_id_map_[name];
 }
+
 /** get virtual bucket id */
 VBucketID MetadataManager::GetVBucketId(const char *name) {
-  VBucketID result = {};
-  result.as_int = GetId(context, rpc, name, kMapType_VBucket);
-
-  return result;
+  u32 target_node = HashString(name);
+  if (target_node == rpc_->node_id_) {
+    return LocalGetVBucketId(name);
+  } else {
+    // TODO(llogan): Add RemoteGetVBucketId
+    return rpc_->Call<VBucketID>(target_node,
+                                "RemoteGetVBucketId",
+                                std::string(name));
+  }
 }
 
 /** get local virtual bucket id */
 VBucketID MetadataManager::LocalGetVBucketId(const char *name) {
-  mdm = GetMetadataManagerFromContext(context);
-  VBucketID result = {};
-  result.as_int = LocalGet(name, kMapType_VBucket);
-
-  return result;
+  return vbucket_id_map_[name];
 }
 
 /** make an internal BLOB name */
-std::string MetadataManager::MakeInternalBlobName(const std::string &name, BucketID id) {
+std::string MetadataManager::MakeInternalBlobName(const std::string &name,
+                                                  BucketID id) {
   std::stringstream ss;
 
   // NOTE(chogan): Store the bytes of \p id at the beginning of the name. We
@@ -173,24 +133,25 @@ BlobID MetadataManager::GetBlobId(const std::string &name,
                                   BucketID bucket_id,
                                   bool track_stats) {
   std::string internal_name = MakeInternalBlobName(name, bucket_id);
-  BlobID result = {};
-  result.as_int = GetId(context, rpc, internal_name.c_str(), kMapType_BlobId);
-  if (!IsNullBlobId(result) && track_stats) {
-    IncrementBlobStats(context, rpc, result);
+  BlobID result;
+  u32 target_node = HashString(name.c_str());
+  if (target_node == rpc_->node_id_) {
+    result = LocalGetBlobId(name);
+  } else {
+    // TODO(llogan): Add RemoteGetBlobId
+    result = rpc_->Call<BlobID>(target_node,
+                                 "RemoteGetBlobId",
+                                 std::string(name));
   }
-
+  if (!result.IsNull() && track_stats) {
+    IncrementBlobStats(result);
+  }
   return result;
 }
 
-/** put BLOB id */
-void MetadataManager::PutId(const std::string &name,
-                            u64 id, MapType map_type) {
-  u32 target_node = HashString(rpc, name.c_str());
-  if (target_node == rpc_->node_id_) {
-    LocalPut(name.c_str(), id, map_type);
-  } else {
-    RpcCall<bool>(rpc, target_node, "RemotePut", name, id, map_type);
-  }
+/** get local BLOB id */
+BlobID MetadataManager::LocalGetBlobId(const std::string &name) {
+  return blob_id_map_[name];
 }
 
 /** put bucket id */

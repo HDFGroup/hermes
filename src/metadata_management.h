@@ -56,15 +56,6 @@ struct ShmemString {
   ShmemString &operator=(const ShmemString &&) = delete;
 };
 
-/** map type */
-enum MapType {
-  kMapType_Bucket,
-  kMapType_VBucket,
-  kMapType_BlobId,
-  kMapType_BlobInfo,
-  kMapType_Count
-};
-
 /** min/max threshold violation */
 enum class ThresholdViolation { kMin, kMax };
 
@@ -229,39 +220,26 @@ class MetadataManager {
   ptrdiff_t id_heap_offset;  /**< ID heap */
   ptrdiff_t map_heap_offset; /**< map heap */
 
-  ptrdiff_t bucket_map_offset;    /**< bucket map */
-  ptrdiff_t vbucket_map_offset;   /**< virtual bucket map */
-  ptrdiff_t blob_id_map_offset;   /**< BLOB ID map */
-  ptrdiff_t blob_info_map_offset; /**< BLOB information map */
-
   ptrdiff_t swap_filename_prefix_offset; /**< swap file name prefix */
   ptrdiff_t swap_filename_suffix_offset; /**< swap file name suffix */
 
   // TODO(chogan): @optimization Should the mutexes here be reader/writer
   // locks?
 
-  lipc::unordered_map<lipcl::string, BlobID> blob_id_map_;
-  lipc::unordered_map<BlobID, BlobInfo> blob_info_map_;
-  lipc::unordered_map<BucketID, BucketInfo> bucket_map_;
-  lipc::unordered_map<VBucketID, VBucketInfo> vbucket_map_;
+  lipc::unordered_map<lipcl::string, BlobID>
+      blob_id_map_; /**< BLOB ID map */
+  lipc::unordered_map<lipcl::string, BucketID>
+      bucket_id_map_; /**< Bucket ID map */
+  lipc::unordered_map<lipcl::string, VBucketID>
+      vbucket_id_map_; /**< VBucket ID map */
 
-  /** Lock for accessing `BucketInfo` structures located at
-   * `bucket_info_offset` */
-  labstor::Mutex bucket_mutex;
-  labstor::RwLock bucket_delete_lock; /**< lock for bucket deletion */
+  lipc::unordered_map<BlobID, BlobInfo>
+      blob_info_map_; /**< BLOB information map */
+  lipc::unordered_map<BucketID, BucketInfo>
+      bucket_map_; /**< bucket map */
+  lipc::unordered_map<VBucketID, VBucketInfo>
+      vbucket_map_; /**< virtual bucket map */
 
-  /** Lock for accessing `VBucketInfo` structures located at
-   * `vbucket_info_offset` */
-  labstor::Mutex vbucket_mutex;
-
-  /** Lock for accessing the `IdMap` located at `bucket_map_offset` */
-  labstor::Mutex bucket_map_mutex;
-  /** Lock for accessing the `IdMap` located at `vbucket_map_offset` */
-  labstor::Mutex vbucket_map_mutex;
-  /** Lock for accessing the `IdMap` located at `blob_id_map_offset` */
-  labstor::Mutex blob_id_map_mutex;
-  /** Lock for accessing the `BlobInfoMap` located at `blob_info_map_offset` */
-  labstor::Mutex blob_info_map_mutex;
   /** Lock for accessing `IdList`s and `ChunkedIdList`s */
   labstor::Mutex id_mutex;
 
@@ -362,29 +340,8 @@ class MetadataManager {
   /** is vBucket's \a name too long for kMaxVBucketNameSize? */
   bool IsVBucketNameTooLong(const std::string &name);
 
-  /** put \a key, \a value, and \a map_type locally */
-  void LocalPut(const char *key, u64 val, MapType map_type);
-
-  /** put \a key and \a value locally */
-  void LocalPut(BlobID key, const BlobInfo &value);
-
-  /** get the value of \a key and \a map_type locally */
-  u64 LocalGet(const char *key, MapType map_type);
-
-  /** delete \a key locally */
-  void LocalDelete(BlobID key);
-
-  /** delete \a map_type locally */
-  void LocalDelete(const char *key, MapType map_type);
-
-  /** log error when metadata arena capacity is full */
-  static void MetadataArenaErrorHandler();
-
   /** get hash string for metadata storage */
   u32 HashString(const char *str);
-
-  /** get id */
-  u64 GetId(const char *name, MapType map_type);
 
   /** get bucket id */
   BucketID GetBucketId(const char *name);
@@ -404,6 +361,9 @@ class MetadataManager {
   /** get BLOB id */
   BlobID GetBlobId(const std::string &name, BucketID bucket_id,
                    bool track_stats);
+
+  /** get local BLOB id */
+  BlobID LocalGetBlobId(const std::string &name);
 
   /** put BLOB id */
   void PutId(const std::string &name, u64 id, MapType map_type);
@@ -638,13 +598,16 @@ class MetadataManager {
   std::string GetSwapFilename(u32 node_id);
 
   /** swap BLOB to vector */
-  std::vector<BufferID> SwapBlobToVec(SwapBlob swap_blob)l
+  std::vector<BufferID> SwapBlobToVec(SwapBlob swap_blob);
 
   /** vector to swap BLOB */
-  SwapBlob VecToSwapBlob(std::vector<BufferID> &vec)l
+  SwapBlob VecToSwapBlob(std::vector<BufferID> &vec);
 
   /** ID array to swap BLOB */
-  SwapBlob IdArrayToSwapBlob(BufferIdArray ids)l
+  SwapBlob IdArrayToSwapBlob(BufferIdArray ids);
+
+#define RPC_METADATA_MANAGER_RPC
+#undef RPC_METADATA_MANAGER_RPC
 };
 
 /** log error when metadata arena capacity is full */
