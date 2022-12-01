@@ -104,7 +104,7 @@ struct BufferIdArray {
  */
 struct BlobInfo {
   Stats stats;               /**< BLOB statistics */
-  labstor::Mutex lock;          /**< lock */
+  labstor::Mutex lock;       /**< lock */
   TargetID effective_target; /**< target ID */
   u32 last;                  /**< last */
   bool stop;                 /**< stop */
@@ -112,16 +112,12 @@ struct BlobInfo {
   BlobInfo() : last(0), stop(false) {
     stats.recency = 0;
     stats.frequency = 0;
-    lock.ticket.store(0);
-    lock.serving.store(0);
     effective_target.as_int = 0;
   }
 
   /** Copy \a other BlobInfo sturcture. */
   BlobInfo &operator=(const BlobInfo &other) {
     stats = other.stats;
-    lock.ticket.store(other.lock.ticket.load());
-    lock.serving.store(other.lock.serving.load());
     effective_target = other.effective_target;
     last = other.last;
     stop = other.stop;
@@ -269,316 +265,384 @@ class MetadataManager {
   std::atomic<u32> clock; /**< clock */
 
  public:
-  MetadataManager(RpcContext *context, Config *config);
+
+  /**
+   * initialize metadata manager
+   * */
+  MetadataManager(SharedMemoryContext *context, RpcContext *rpc, Config *config);
+
+  /** get virtual bucket information by index locally */
+  VBucketInfo* LocalGetVBucketInfoByIndex(u32 index);
+
+  /** get virtual bucket information by id locally */
+  VBucketInfo* LocalGetVBucketInfoById(VBucketID id);
+
+  /** increment reference counter locally */
+  void LocalIncrementRefcount(VBucketID id);
+
+  /** decrement reference counter locally */
+  void LocalDecrementRefcount(VBucketID id);
+
+  /** decrement reference counter */
+  void DecrementRefcount(VBucketID id);
+
+  /** get relative node ID */
+  u32 GetRelativeNodeId(int offset);
+
+  /** get next node */
+  u32 GetNextNode();
+
+  /** get previous node */
+  u32 GetPreviousNode();
+
+  /** get node targets */
+  std::vector<TargetID> GetNodeTargets(u32 target_node);
+
+  /** get neighborhood node targets */
+  std::vector<TargetID> GetNeighborhoodTargets();
+
+  /** get remaining target capacity */
+  u64 GetRemainingTargetCapacity(TargetID target_id);
+
+  /** get remaining target capacities */
+  std::vector<u64>
+  GetRemainingTargetCapacities(const std::vector<TargetID> &targets);
+
+  void AttachBlobToVBucket(const char *blob_name, const char *bucket_name,
+                           VBucketID vbucket_id);
+
+  /** get bucket name by ID locally */
+  std::string LocalGetBucketNameById(BucketID blob_id);
+
+  std::vector<BlobID> GetBlobsFromVBucketInfo(VBucketID vbucket_id);
+
+  void RemoveBlobFromVBucketInfo(VBucketID vbucket_id, const char *blob_name,
+                                 const char *bucket_name);
+
+  std::string GetBucketNameById(BucketID id);
+
+  f32 ScoringFunction(Stats *stats);
+
+  int LocalGetNumOutstandingFlushingTasks(VBucketID id);
+
+  int GetNumOutstandingFlushingTasks(VBucketID id);
+
+  bool LocalLockBlob(BlobID blob_id);
+
+  bool LocalUnlockBlob(BlobID blob_id);
+
+  /** lock BLOB */
+  bool LockBlob(BlobID blob_id);
+
+  /** unlock BLOB */
+  bool UnlockBlob(BlobID blob_id);
+
+ private:
+
+  /** is BLOB's \a name too long for kMaxBlobNameSize? */
+  bool IsBlobNameTooLong(const std::string &name);
+
+  /** is Bucket's \a name too long for kMaxBucketNameSize? */
+  bool IsBucketNameTooLong(const std::string &name);
+
+  /** is vBucket's \a name too long for kMaxVBucketNameSize? */
+  bool IsVBucketNameTooLong(const std::string &name);
+
+  /** put \a key, \a value, and \a map_type locally */
+  void LocalPut(const char *key, u64 val, MapType map_type);
+
+  /** put \a key and \a value locally */
+  void LocalPut(BlobID key, const BlobInfo &value);
+
+  /** get the value of \a key and \a map_type locally */
+  u64 LocalGet(const char *key, MapType map_type);
+
+  /** delete \a key locally */
+  void LocalDelete(BlobID key);
+
+  /** delete \a map_type locally */
+  void LocalDelete(const char *key, MapType map_type);
+
+  /** log error when metadata arena capacity is full */
+  static void MetadataArenaErrorHandler();
+
+  /** get hash string for metadata storage */
+  u32 HashString(const char *str);
+
+  /** get id */
+  u64 GetId(const char *name, MapType map_type);
+
+  /** get bucket id */
+  BucketID GetBucketId(const char *name);
+
+  /** get local bucket id */
+  BucketID LocalGetBucketId(const char *name);
+
+  /** get virtual bucket id */
+  VBucketID GetVBucketId(const char *name);
+
+  /** get local virtual bucket id */
+  VBucketID LocalGetVBucketId(const char *name);
+
+  /** make an internal BLOB name */
+  std::string MakeInternalBlobName(const std::string &name, BucketID id);
+
+  /** get BLOB id */
+  BlobID GetBlobId(const std::string &name, BucketID bucket_id,
+                   bool track_stats);
+
+  /** put BLOB id */
+  void PutId(const std::string &name, u64 id, MapType map_type);
+
+  /** put bucket id */
+  void PutBucketId(const std::string &name, BucketID id);
+
+  /** put bucket id locally */
+  void LocalPutBucketId(const std::string &name,BucketID id);
+
+  /** put virtual bucket id */
+  void PutVBucketId(const std::string &name, VBucketID id);
+
+  /** put virtual bucket id locally */
+  void LocalPutVBucketId(const std::string &name, VBucketID id);
+
+  /** put BLOB id */
+  void PutBlobId(const std::string &name, BlobID id, BucketID bucket_id);
+
+  /** delete id */
+  void DeleteId(const std::string &name,MapType map_type);
+
+  /** delete bucket id */
+  void DeleteBucketId(const std::string &name);
+
+  /** delete virtual bucket id */
+  void DeleteVBucketId(const std::string &name);
+
+  /** delete BLOB information locally */
+  void LocalDeleteBlobInfo(BlobID blob_id);
+
+  /** delete BLOB id locally */
+  void LocalDeleteBlobId(const std::string &name,
+                         BucketID bucket_id);
+
+  /** delete BLOB id */
+  void DeleteBlobId(const std::string &name, BucketID bucket_id);
+
+  /** get bucket information by \a index index locally */
+  BucketInfo *LocalGetBucketInfoByIndex(u32 index);
+
+  /** get BLOB name from \a blob_id locally */
+  std::string LocalGetBlobNameFromId(BlobID blob_id);
+
+  /** get BLOB name from \a blob_id */
+  std::string GetBlobNameFromId(BlobID blob_id);
+
+  u64 HexStringToU64(const std::string &s);
+
+  /** get bucket ID from \a blob_id locally */
+  BucketID LocalGetBucketIdFromBlobId(BlobID id);
+
+  /** get bucket ID from \a blob_id */
+  BucketID GetBucketIdFromBlobId(BlobID id);
+
+  /** get bucket information from \a bucket_id */
+  BucketInfo *LocalGetBucketInfoById(BucketID id);
+
+  /** get BLOB IDs from \a bucket_id */
+  std::vector<BlobID> GetBlobIds(BucketID bucket_id);
+
+  /** get virtual bucket information by \a index */
+  VBucketInfo *GetVBucketInfoByIndex(u32 index);
+
+  /**
+ * Returns an available BucketID and marks it as in use in the MDM.
+ *
+ * Assumes bucket_mutex is already held by the caller.
+   */
+  BucketID LocalGetNextFreeBucketId(const std::string &name);
+
+  /** get or create a bucket ID locally */
+  BucketID LocalGetOrCreateBucketId(const std::string &name);
+
+  /** get or create a bucket ID */
+  BucketID GetOrCreateBucketId(const std::string &name);
+
+  /**
+ * Returns an available VBucketID and marks it as in use in the MDM.
+ *
+ * Assumes MetadataManager::vbucket_mutex is already held by the caller.
+   */
+  VBucketID LocalGetNextFreeVBucketId(const std::string &name);
+
+  /** get or create a virtual bucket ID locally */
+  VBucketID LocalGetOrCreateVBucketId(const std::string &name);
+
+  /** get or create a virtual bucket ID */
+  VBucketID GetOrCreateVBucketId(const std::string &name);
+
+  /** copy IDs */
+  void CopyIds(u64 *dest, u64 *src, u32 count);
+
+  void ReplaceBlobIdInBucket(BucketID bucket_id,
+                             BlobID old_blob_id,
+                             BlobID new_blob_id);
+
+  /** add BLOB ID to bucket */
+  void AddBlobIdToBucket(BlobID blob_id,
+                         BucketID bucket_id);
+
+  /** add BLOB ID to virtual bucket */
+  void AddBlobIdToVBucket(BlobID blob_id,
+                          VBucketID vbucket_id);
+
+  /** allocate buffer ID list */
+  u32 AllocateBufferIdList(u32 target_node,
+                           const std::vector<BufferID> &buffer_ids);
+
+  /** get buffer ID list */
+  void GetBufferIdList(
+      BlobID blob_id,
+      BufferIdArray *buffer_ids);
+
+  /** get buffer ID list as vector */
+  std::vector<BufferID> GetBufferIdList(BlobID blob_id);
+
+  /** get buffer IDs from BLOB id */
+  BufferIdArray GetBufferIdsFromBlobId(BlobID blob_id,
+                                       u32 **sizes);
+
+  /** create BLOB metadata locally */
+  void LocalCreateBlobMetadata(const std::string &blob_name, BlobID blob_id,
+                               TargetID effective_target);
+
+  /** create BLOB metadata */
+  void CreateBlobMetadata(
+      const std::string &blob_name, BlobID blob_id,
+      TargetID effective_target);
+
+  /** attach BLOB to bucket */
+  void AttachBlobToBucket(
+      const char *blob_name, BucketID bucket_id,
+      const std::vector<BufferID> &buffer_ids,
+      TargetID effective_target, bool is_swap_blob,
+      bool called_from_buffer_organizer);
+
+  /** free buffer ID list */
+  void FreeBufferIdList(
+      BlobID blob_id);
+
+  /** delete BLOB metadata locally */
+  void LocalDeleteBlobMetadata(const char *blob_name,
+                               BlobID blob_id, BucketID bucket_id);
+
+  /** wait for outstanding BLOB operations */
+  void WaitForOutstandingBlobOps(BlobID blob_id);
+
+  /** destroy BLOB by name locally */
+  void LocalDestroyBlobByName(const char *blob_name,
+                              BlobID blob_id,
+                              BucketID bucket_id);
+
+  /** destroy BLOB by ID locally */
+  void LocalDestroyBlobById(BlobID blob_id, BucketID bucket_id);
+
+  void RemoveBlobFromBucketInfo(BucketID bucket_id, BlobID blob_id);
+
+  /** destroy BLOB by name */
+  void DestroyBlobByName(BucketID bucket_id, const std::string &blob_name);
+
+  /** rename BLOB */
+  void RenameBlob(const std::string &old_name,
+                  const std::string &new_name,
+                  BucketID bucket_id);
+
+  /** does \a bucket_id bucket contain \a blob_name BLOB? */
+  bool ContainsBlob(
+      BucketID bucket_id, const std::string &blob_name);
+
+  /** destroy BLOB by ID */
+  void DestroyBlobById(BlobID id,
+                       BucketID bucket_id);
+
+  /** destroy bucket */
+  bool DestroyBucket(
+      const char *name, BucketID bucket_id);
+
+  /** destroy virtual bucket */
+  bool DestroyVBucket(
+      const char *name, VBucketID vbucket_id);
+
+  /** rename bucket locally */
+  void LocalRenameBucket(
+      BucketID id, const std::string &old_name,
+      const std::string &new_name);
+
+  /** rename bucket */
+  void RenameBucket(BucketID id,
+                    const std::string &old_name,
+                    const std::string &new_name);
+
+  /** increment reference count locally */
+  void LocalIncrementRefcount(BucketID id);
+
+  /** decrement reference count locally */
+  void LocalDecrementRefcount(BucketID id);
+
+  /** decrement reference count  */
+  void DecrementRefcount(BucketID id);
+
+  /** get remaning target capacity locally */
+  u64 LocalGetRemainingTargetCapacity(TargetID id);
+
+  /** get local system view state */
+  SystemViewState *GetLocalSystemViewState();
+
+  /** get global device capacities locally */
+  std::vector<u64> LocalGetGlobalDeviceCapacities();
+
+  /** get global device capacities */
+  std::vector<u64> GetGlobalDeviceCapacities();
+
+  /** get global system view state from \a context */
+  GlobalSystemViewState *GetGlobalSystemViewState();
+
+  /** update global system view state locally */
+  std::vector<ViolationInfo>
+  LocalUpdateGlobalSystemViewState(u32 node_id,
+                                   std::vector<i64> adjustments);
+
+  /** update global system view state */
+  void UpdateGlobalSystemViewState();
+
+  /** find target ID from device ID */
+  TargetID FindTargetIdFromDeviceId(const std::vector<TargetID> &targets,
+                                    DeviceID device_id);
+
+  /** create system view state */
+  SystemViewState *CreateSystemViewState(Config *config);
+
+  /** create global system view state */
+  GlobalSystemViewState *CreateGlobalSystemViewState(Config *config);
+
+  /** get swap file name */
+  std::string GetSwapFilename(u32 node_id);
+
+  /** swap BLOB to vector */
+  std::vector<BufferID> SwapBlobToVec(SwapBlob swap_blob)l
+
+  /** vector to swap BLOB */
+  SwapBlob VecToSwapBlob(std::vector<BufferID> &vec)l
+
+  /** ID array to swap BLOB */
+  SwapBlob IdArrayToSwapBlob(BufferIdArray ids)l
 };
 
-/**
- *
- */
-void InitMetadataManager(MetadataManager *mdm, RpcContext *rpc, Config *config);
-
-/**
- *
- */
-void InitNeighborhoodTargets(SharedMemoryContext *context, RpcContext *rpc);
-
-/**
- *
- */
-bool DestroyBucket(SharedMemoryContext *context, RpcContext *rpc,
-                   const char *name, BucketID bucket_id);
-
-/**
- *
- */
-bool DestroyVBucket(SharedMemoryContext *context, RpcContext *rpc,
-                    const char *name, VBucketID vbucket_id);
-
-/**
- *
- */
-void DestroyBlobByName(SharedMemoryContext *context, RpcContext *rpc,
-                       BucketID bucket_id, const std::string &blob_name);
-
-/**
- *
- */
-void RenameBlob(SharedMemoryContext *context, RpcContext *rpc,
-                const std::string &old_name, const std::string &new_name,
-                BucketID bucket_id);
-
-/**
- *
- */
-void RenameBucket(SharedMemoryContext *context, RpcContext *rpc, BucketID id,
-                  const std::string &old_name, const std::string &new_name);
-
-/**
- *
- */
-bool ContainsBlob(SharedMemoryContext *context, RpcContext *rpc,
-                  BucketID bucket_id, const std::string &blob_name);
-
-/**
- *
- */
-BufferIdArray GetBufferIdsFromBlobId(SharedMemoryContext *context,
-                                     RpcContext *rpc, BlobID blob_id,
-                                     u32 **sizes);
-
-/**
- *
- */
-BlobID GetBlobId(SharedMemoryContext *context, RpcContext *rpc,
-                 const std::string &name, BucketID bucket_id,
-                 bool track_stats = true);
-
-/**
- *
- */
-std::string GetBlobNameFromId(SharedMemoryContext *context, RpcContext *rpc,
-                              BlobID blob_id);
-
-/**
- *
- */
-bool BlobIsInSwap(BlobID id);
-
-/**
- *
- */
-BucketID GetOrCreateBucketId(SharedMemoryContext *context, RpcContext *rpc,
-                             const std::string &name);
-
-/**
- *
- */
-VBucketID GetOrCreateVBucketId(SharedMemoryContext *context, RpcContext *rpc,
-                               const std::string &name);
-
-/**
- *
- */
-void AttachBlobToBucket(SharedMemoryContext *context, RpcContext *rpc,
-                        const char *blob_name, BucketID bucket_id,
-                        const std::vector<BufferID> &buffer_ids,
-                        TargetID effective_target, bool is_swap_blob = false,
-                        bool called_from_buffer_organizer = false);
-
-/**
- *
- */
-void DecrementRefcount(SharedMemoryContext *context, RpcContext *rpc,
-                       BucketID id);
-
-/**
- *
- */
-std::vector<BufferID> SwapBlobToVec(SwapBlob swap_blob);
-
-/**
- *
- */
-SwapBlob VecToSwapBlob(std::vector<BufferID> &vec);
-
-/**
- *
- */
-SwapBlob IdArrayToSwapBlob(BufferIdArray ids);
-
-/**
- *
- */
-bool IsBlobNameTooLong(const std::string &name);
-
-/**
- *
- */
-bool IsBucketNameTooLong(const std::string &name);
-
-/**
- *
- */
-bool IsVBucketNameTooLong(const std::string &name);
-
-/**
- *
- */
-TargetID FindTargetIdFromDeviceId(const std::vector<TargetID> &targets,
-                                  DeviceID device_id);
-
-/**
- *
- */
-std::vector<TargetID> GetNeighborhoodTargets(SharedMemoryContext *context,
-                                             RpcContext *rpc);
-/**
- *
- */
-std::vector<u64> GetRemainingTargetCapacities(
-    SharedMemoryContext *context, RpcContext *rpc,
-    const std::vector<TargetID> &targets);
-/**
- *
- */
-std::vector<BlobID> GetBlobIds(SharedMemoryContext *context, RpcContext *rpc,
-                               BucketID bucket_id);
-
-/**
- *
- */
-BucketID GetBucketId(SharedMemoryContext *context, RpcContext *rpc,
-                     const char *name);
-
-/**
- *
- */
-BucketID GetBucketIdFromBlobId(SharedMemoryContext *context, RpcContext *rpc,
-                               BlobID blob_id);
-
-/**
- *
- */
-void DecrementRefcount(SharedMemoryContext *context, RpcContext *rpc,
-                       VBucketID id);
-/**
- *
- */
-bool IsNullBucketId(BucketID id);
-
-/**
- *
- */
-bool IsNullVBucketId(VBucketID id);
-
-/**
- *
- */
-bool IsNullBlobId(BlobID id);
-
-/**
- * begin global ticket mutex
- */
-void BeginGloballabstor::Mutex(SharedMemoryContext *context, RpcContext *rpc);
-
-/**
- * end global ticket mutex
- */
-void EndGloballabstor::Mutex(SharedMemoryContext *context, RpcContext *rpc);
-
-/**
- * begin global ticket mutex locally
- */
-void LocalBeginGloballabstor::Mutex(MetadataManager *mdm);
-
-/**
- * end global ticket mutex locally
- */
-void LocalEndGloballabstor::Mutex(MetadataManager *mdm);
-
-/**
- * attach BLOB to VBucket
- */
-void AttachBlobToVBucket(SharedMemoryContext *context, RpcContext *rpc,
-                         const char *blob_name, const char *bucket_name,
-                         VBucketID vbucket_id);
-
-/**
- * remove BLOB from Bucket
- */
-void RemoveBlobFromBucketInfo(SharedMemoryContext *context, RpcContext *rpc,
-                              BucketID bucket_id, BlobID blob_id);
-
-/**
- * remove BLOB from VBucket
- */
-void RemoveBlobFromVBucketInfo(SharedMemoryContext *context, RpcContext *rpc,
-                               VBucketID vbucket_id, const char *blob_name,
-                               const char *bucket_name);
-
-/**
- * get BLOB from VBucket
- */
-std::vector<BlobID> GetBlobsFromVBucketInfo(SharedMemoryContext *context,
-                                            RpcContext *rpc,
-                                            VBucketID vbucket_id);
-
-/**
- * get bucket name by bucket ID
- */
-std::string GetBucketNameById(SharedMemoryContext *context, RpcContext *rpc,
-                              BucketID id);
-/**
- * increment BLOB stats
- */
-void IncrementBlobStats(SharedMemoryContext *context, RpcContext *rpc,
-                        BlobID blob_id);
-
-/**
- * increment BLOB stats locally
- */
-void LocalIncrementBlobStats(MetadataManager *mdm, BlobID blob_id);
-
-/**
- * lock BLOB
- */
-bool LockBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id);
-
-/**
- * unlock BLOB
- */
-bool UnlockBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id);
-
-/**
- * lock BLOB locally
- */
-bool LocalLockBlob(SharedMemoryContext *context, BlobID blob_id);
-
-/**
- * unlock BLOB locally
- */
-bool LocalUnlockBlob(SharedMemoryContext *context, BlobID blob_id);
-
-/**
- * get local system view state
- */
-SystemViewState *GetLocalSystemViewState(SharedMemoryContext *context);
-
-/**
- * replace BLOB ID in bucket locally
- */
-void LocalReplaceBlobIdInBucket(SharedMemoryContext *context,
-                                BucketID bucket_id, BlobID old_blob_id,
-                                BlobID new_blob_id);
-/**
- * Deletes @p old_blob_id from @p bucket_id and adds @p new_blob_id. It combines
- * the delete and the add into one call in order to avoid multiple RPCs.
- */
-void ReplaceBlobIdInBucket(SharedMemoryContext *context, RpcContext *rpc,
-                           BucketID bucket_id, BlobID old_blob_id,
-                           BlobID new_blob_id);
-
-/**
- * Creates a ShmemString with the value @p val at location @p memory.
- *
- * @pre The address of @p sms must be lower than @p memory because the @p offset
- *      is from the beginning of the \a sms.
- *
- * @param[out] sms The ShmemString instance to be filled out.
- * @param memory The location in shared memory to store the @p val.
- * @param val The string to store.
- */
-void MakeShmemString(ShmemString *sms, u8 *memory, const std::string &val);
-
-/**
- * Retrieves a ShmemString into a std::string
- *
- * @param sms The ShmemString that represents the internal string
- *
- * @return A newly allocated std::string containing a copy of the string from
- *         shared memory, or an empty std::string if the ShmemString is invalid.
- */
-std::string GetShmemString(ShmemString *sms);
+/** log error when metadata arena capacity is full */
+static void MetadataArenaErrorHandler() {
+  LOG(FATAL) << "Metadata arena capacity exceeded. Consider increasing the "
+             << "value of metadata_arena_percentage in the Hermes configuration"
+             << std::endl;
+}
 
 }  // namespace hermes
 

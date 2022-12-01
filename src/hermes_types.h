@@ -71,6 +71,8 @@ union BucketID {
 
   /** The BucketID as a unsigned 64-bit integer */
   u64 as_int;
+
+  bool IsNull() { return as_int == 0; }
 };
 
 // NOTE(chogan): We reserve sizeof(BucketID) * 2 bytes in order to embed the
@@ -94,6 +96,8 @@ union VBucketID {
 
   /** The VBucketID as a unsigned 64-bit integer */
   u64 as_int;
+
+  bool IsNull() { return as_int == 0; }
 };
 
 union BlobID {
@@ -109,6 +113,10 @@ union BlobID {
 
   /** The BlobID as an unsigned 64-bit integer */
   u64 as_int;
+
+  bool IsNull() { return as_int == 0; }
+  bool InSwap() { return bits.node_id < 0; }
+  i32 GetNodeId() { return bits.node_id; }
 };
 
 /**
@@ -284,6 +292,8 @@ union TargetID {
 
   /** The TargetID as a unsigned 64-bit integer */
   u64 as_int;
+
+  bool IsNull() { return as_int == 0; }
 };
 
 /**
