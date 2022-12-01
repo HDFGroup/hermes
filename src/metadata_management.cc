@@ -103,7 +103,7 @@ u64 MetadataManager::GetId(const char *name, MapType map_type) {
   mdm = GetMetadataManagerFromContext(context);
   u32 target_node = HashString(rpc, name);
 
-  if (target_node == rpc->node_id) {
+  if (target_node == rpc_->node_id_) {
     result = LocalGet(name, map_type);
   } else {
     result = RpcCall<u64>(rpc, target_node, "RemoteGet", std::string(name),
@@ -186,7 +186,7 @@ BlobID MetadataManager::GetBlobId(const std::string &name,
 void MetadataManager::PutId(const std::string &name,
                             u64 id, MapType map_type) {
   u32 target_node = HashString(rpc, name.c_str());
-  if (target_node == rpc->node_id) {
+  if (target_node == rpc_->node_id_) {
     LocalPut(name.c_str(), id, map_type);
   } else {
     RpcCall<bool>(rpc, target_node, "RemotePut", name, id, map_type);
@@ -225,7 +225,7 @@ void MetadataManager::DeleteId(const std::string &name,
                                MapType map_type) {
   u32 target_node = HashString(rpc, name.c_str());
 
-  if (target_node == rpc->node_id) {
+  if (target_node == rpc_->node_id_) {
     LocalDelete(name.c_str(), map_type);
   } else {
     RpcCall<bool>(rpc, target_node, "RemoteDelete", name, map_type);
@@ -285,9 +285,9 @@ std::string MetadataManager::LocalGetBlobNameFromId(BlobID blob_id) {
 
 /** get BLOB name from \a blob_id */
 std::string MetadataManager::GetBlobNameFromId(BlobID blob_id) {
-  u32 target_node = GetBlobNodeId(blob_id);
+  u32 target_node = blob_id.GetNodeId();
   std::string result;
-  if (target_node == rpc->node_id) {
+  if (target_node == rpc_->node_id_) {
     result = LocalGetBlobNameFromId(context, blob_id);
   } else {
     result = RpcCall<std::string>(rpc, target_node, "RemoteGetBlobNameFromId",
@@ -339,7 +339,7 @@ BucketID MetadataManager::LocalGetBucketIdFromBlobId(BlobID id) {
 BucketID MetadataManager::GetBucketIdFromBlobId(BlobID id) {
   BucketID result = {};
   u32 target_node = GetBlobNodeId(id);
-  if (target_node == rpc->node_id) {
+  if (target_node == rpc_->node_id_) {
     result = LocalGetBucketIdFromBlobId(context, id);
   } else {
     result = RpcCall<BucketID>(rpc, target_node, "RemoteGetBucketIdFromBlobId",
@@ -360,7 +360,7 @@ BucketInfo* MetadataManager::LocalGetBucketInfoById(BucketID id) {
 std::vector<BlobID> MetadataManager::GetBlobIds(BucketID bucket_id) {
   std::vector<BlobID> result;
   u32 target_node = bucket_id.bits.node_id;
-  if (target_node == rpc->node_id) {
+  if (target_node == rpc_->node_id_) {
     result = LocalGetBlobIds(context, bucket_id);
   } else {
     result = RpcCall<std::vector<BlobID>>(rpc, target_node, "RemoteGetBlobIds",
@@ -436,7 +436,7 @@ BucketID MetadataManager::GetOrCreateBucketId(const std::string &name) {
   mdm = GetMetadataManagerFromContext(context);
   u32 target_node = HashString(rpc, name.c_str());
   BucketID result = {};
-  if (target_node == rpc->node_id) {
+  if (target_node == rpc_->node_id_) {
     result = LocalGetOrCreateBucketId(context, name);
   } else {
     result = RpcCall<BucketID>(rpc, target_node, "RemoteGetOrCreateBucketId",
@@ -504,7 +504,7 @@ VBucketID MetadataManager::GetOrCreateVBucketId(const std::string &name) {
   VBucketID result = {};
   mdm = GetMetadataManagerFromContext(context);
   u32 target_node = HashString(rpc, name.c_str());
-  if (target_node == rpc->node_id) {
+  if (target_node == rpc_->node_id_) {
     result = LocalGetOrCreateVBucketId(context, name);
   } else {
     result = RpcCall<VBucketID>(rpc, target_node, "RemoteGetOrCreateVBucketId",
@@ -526,7 +526,7 @@ void MetadataManager::ReplaceBlobIdInBucket(BucketID bucket_id,
                                             BlobID old_blob_id,
                                             BlobID new_blob_id) {
   u32 target_node = bucket_id.bits.node_id;
-  if (target_node == rpc->node_id) {
+  if (target_node == rpc_->node_id_) {
     LocalReplaceBlobIdInBucket(context, bucket_id, old_blob_id, new_blob_id);
   } else {
     RpcCall<bool>(rpc, target_node, "RemoteReplaceBlobIdInBucket", bucket_id,
@@ -539,7 +539,7 @@ void MetadataManager::AddBlobIdToBucket(BlobID blob_id,
                                         BucketID bucket_id) {
   u32 target_node = bucket_id.bits.node_id;
 
-  if (target_node == rpc->node_id) {
+  if (target_node == rpc_->node_id_) {
     LocalAddBlobIdToBucket(bucket_id, blob_id);
   } else {
     RpcCall<bool>(rpc, target_node, "RemoteAddBlobIdToBucket", bucket_id,
@@ -552,7 +552,7 @@ void MetadataManager::AddBlobIdToVBucket(BlobID blob_id,
                                          VBucketID vbucket_id) {
   u32 target_node = vbucket_id.bits.node_id;
 
-  if (target_node == rpc->node_id) {
+  if (target_node == rpc_->node_id_) {
     LocalAddBlobIdToVBucket(vbucket_id, blob_id);
   } else {
     RpcCall<bool>(rpc, target_node, "RemoteAddBlobIdToVBucket", vbucket_id,
@@ -566,7 +566,7 @@ u32 MetadataManager::AllocateBufferIdList(
   mdm = GetMetadataManagerFromContext(context);
   u32 result = 0;
 
-  if (target_node == rpc->node_id) {
+  if (target_node == rpc_->node_id_) {
     result = LocalAllocateBufferIdList(buffer_ids);
   } else {
     result = RpcCall<u32>(rpc, target_node, "RemoteAllocateBufferIdList",
@@ -580,9 +580,9 @@ u32 MetadataManager::AllocateBufferIdList(
 void MetadataManager::GetBufferIdList(BlobID blob_id,
                                       BufferIdArray *buffer_ids) {
   mdm = GetMetadataManagerFromContext(context);
-  u32 target_node = GetBlobNodeId(blob_id);
+  u32 target_node = blob_id.GetNodeId();
 
-  if (target_node == rpc->node_id) {
+  if (target_node == rpc_->node_id_) {
     LocalGetBufferIdList(blob_id, buffer_ids);
   } else {
     std::vector<BufferID> result =
@@ -597,11 +597,11 @@ void MetadataManager::GetBufferIdList(BlobID blob_id,
 /** get buffer ID list as vector */
 std::vector<BufferID> MetadataManager::GetBufferIdList(BlobID blob_id) {
   mdm = GetMetadataManagerFromContext(context);
-  u32 target_node = GetBlobNodeId(blob_id);
+  u32 target_node = blob_id.GetNodeId();
 
   std::vector<BufferID> result;
 
-  if (target_node == rpc->node_id) {
+  if (target_node == rpc_->node_id_) {
     result = LocalGetBufferIdList(blob_id);
   } else {
     result = RpcCall<std::vector<BufferID>>(rpc, target_node,
@@ -654,8 +654,8 @@ void MetadataManager::CreateBlobMetadata(const std::string &blob_name,
                                          BlobID blob_id,
                                          TargetID effective_target) {
   mdm = GetMetadataManagerFromContext(context);
-  u32 target_node = GetBlobNodeId(blob_id);
-  if (target_node == rpc->node_id) {
+  u32 target_node = blob_id.GetNodeId();
+  if (target_node == rpc_->node_id_) {
     LocalCreateBlobMetadata(context, blob_name, blob_id, effective_target);
   } else {
     RpcCall<bool>(rpc, target_node, "RemoteCreateBlobMetadata", blob_name,
@@ -701,8 +701,8 @@ void MetadataManager::AttachBlobToBucket(
 
 /** free buffer ID list */
 void MetadataManager::FreeBufferIdList(BlobID blob_id) {
-  u32 target_node = GetBlobNodeId(blob_id);
-  if (target_node == rpc->node_id) {
+  u32 target_node = blob_id.GetNodeId();
+  if (target_node == rpc_->node_id_) {
     LocalFreeBufferIdList(context, blob_id);
   } else {
     RpcCall<bool>(rpc, target_node, "RemoteFreeBufferIdList", blob_id);
@@ -765,7 +765,7 @@ void MetadataManager::LocalDestroyBlobById(BlobID blob_id,
 void MetadataManager::RemoveBlobFromBucketInfo(BucketID bucket_id,
                                                BlobID blob_id) {
   u32 target_node = bucket_id.bits.node_id;
-  if (target_node == rpc->node_id) {
+  if (target_node == rpc_->node_id_) {
     LocalRemoveBlobFromBucketInfo(context, bucket_id, blob_id);
   } else {
     RpcCall<bool>(rpc, target_node, "RemoteRemoveBlobFromBucketInfo", bucket_id,
@@ -778,9 +778,9 @@ void MetadataManager::DestroyBlobByName(BucketID bucket_id,
                                         const std::string &blob_name) {
   BlobID blob_id = GetBlobId(context, rpc, blob_name, bucket_id);
   if (!IsNullBlobId(blob_id)) {
-    u32 blob_id_target_node = GetBlobNodeId(blob_id);
+    u32 blob_id_target_node = blob_id.GetNodeId();
 
-    if (blob_id_target_node == rpc->node_id) {
+    if (blob_id_target_node == rpc_->node_id_) {
       LocalDestroyBlobByName(context, rpc, blob_name.c_str(), blob_id,
                              bucket_id);
     } else {
@@ -813,7 +813,7 @@ bool MetadataManager::ContainsBlob(BucketID bucket_id,
 
   if (!IsNullBlobId(blob_id)) {
     u32 target_node = bucket_id.bits.node_id;
-    if (target_node == rpc->node_id) {
+    if (target_node == rpc_->node_id_) {
       result = LocalContainsBlob(context, bucket_id, blob_id);
     } else {
       result = RpcCall<bool>(rpc, target_node, "RemoteContainsBlob", bucket_id,
@@ -827,7 +827,7 @@ bool MetadataManager::ContainsBlob(BucketID bucket_id,
 /** destroy BLOB by ID */
 void MetadataManager::DestroyBlobById(BlobID id, BucketID bucket_id) {
   u32 target_node = GetBlobNodeId(id);
-  if (target_node == rpc->node_id) {
+  if (target_node == rpc_->node_id_) {
     LocalDestroyBlobById(context, rpc, id, bucket_id);
   } else {
     RpcCall<bool>(rpc, target_node, "RemoteDestroyBlobById", id, bucket_id);
@@ -838,7 +838,7 @@ void MetadataManager::DestroyBlobById(BlobID id, BucketID bucket_id) {
 bool MetadataManager::DestroyBucket(const char *name, BucketID bucket_id) {
   u32 target_node = bucket_id.bits.node_id;
   bool destroyed = false;
-  if (target_node == rpc->node_id) {
+  if (target_node == rpc_->node_id_) {
     destroyed = LocalDestroyBucket(context, rpc, name, bucket_id);
   } else {
     destroyed = RpcCall<bool>(rpc, target_node, "RemoteDestroyBucket",
@@ -852,7 +852,7 @@ bool MetadataManager::DestroyBucket(const char *name, BucketID bucket_id) {
 bool MetadataManager::DestroyVBucket(const char *name, VBucketID vbucket_id) {
   u32 target_node = vbucket_id.bits.node_id;
   bool destroyed = false;
-  if (target_node == rpc->node_id) {
+  if (target_node == rpc_->node_id_) {
     destroyed = LocalDestroyVBucket(context, name, vbucket_id);
   } else {
     destroyed = RpcCall<bool>(rpc, target_node, "RemoteDestroyVBucket",
@@ -876,7 +876,7 @@ void MetadataManager::RenameBucket(BucketID id,
                                    const std::string &old_name,
                                    const std::string &new_name) {
   u32 target_node = id.bits.node_id;
-  if (target_node == rpc->node_id) {
+  if (target_node == rpc_->node_id_) {
     LocalRenameBucket(context, rpc, id, old_name, new_name);
   } else {
     RpcCall<bool>(rpc, target_node, "RemoteRenameBucket", id, old_name,
@@ -902,7 +902,7 @@ void MetadataManager::LocalDecrementRefcount(BucketID id) {
 /** decrement reference count  */
 void MetadataManager::DecrementRefcount(BucketID id) {
   u32 target_node = id.bits.node_id;
-  if (target_node == rpc->node_id) {
+  if (target_node == rpc_->node_id_) {
     LocalDecrementRefcount(context, id);
   } else {
     RpcCall<bool>(rpc, target_node, "RemoteDecrementRefcount", id);
@@ -936,7 +936,7 @@ std::vector<u64> MetadataManager::GetGlobalDeviceCapacities() {
 
   std::vector<u64> result;
 
-  if (target_node == rpc->node_id) {
+  if (target_node == rpc_->node_id_) {
     result = LocalGetGlobalDeviceCapacities(context);
   } else {
     result = RpcCall<std::vector<u64>>(rpc, target_node,
@@ -1028,9 +1028,9 @@ void MetadataManager::UpdateGlobalSystemViewState() {
   std::vector<ViolationInfo> devices_to_organize;
   if (update_needed) {
     u32 target_node = global_system_view_state_node_id;
-    if (target_node == rpc->node_id) {
+    if (target_node == rpc_->node_id_) {
       devices_to_organize =
-        LocalUpdateGlobalSystemViewState(context, rpc->node_id, adjustments);
+        LocalUpdateGlobalSystemViewState(context, rpc_->node_id_, adjustments);
     } else {
       devices_to_organize =
         RpcCall<std::vector<ViolationInfo>>(rpc, target_node,
@@ -1089,12 +1089,12 @@ MetadataManager::CreateGlobalSystemViewState(Config *config) {
     // Min and max thresholds
     result->bo_capacity_thresholds[i] = config->bo_capacity_thresholds[i];
   }
-  size_t num_targets = config->num_devices * rpc->num_nodes;
+  size_t num_targets = config->num_devices * rpc_->num_nodes;
   result->num_targets = num_targets;
   result->bytes_available =
     PushClearedArray<std::atomic<u64>>(num_targets);
 
-  for (u32 node_idx = 0; node_idx < rpc->num_nodes; ++node_idx) {
+  for (u32 node_idx = 0; node_idx < rpc_->num_nodes; ++node_idx) {
     for (int device_idx = 0; device_idx < result->num_devices; ++device_idx) {
       u64 index = (node_idx * result->num_devices) + device_idx;
       result->bytes_available[index].store(result->capacities[device_idx]);
@@ -1168,7 +1168,7 @@ MetadataManager::MetadataManager(RpcContext *rpc, Config *config) :
     config_(config), rpc_(rpc) {
   // NOTE(chogan): All MetadataManager offsets are relative to the address of
   // the MDM itself.
-  u32 node_id = rpc->node_id_;
+  u32 node_id = rpc_->node_id__;
   
   map_seed = 0x4E58E5DF;
   SeedHashForStorage(map_seed);
@@ -1269,7 +1269,7 @@ void MetadataManager::LocalDecrementRefcount(VBucketID id) {
 /** decrement reference counter */
 void MetadataManager::DecrementRefcount(VBucketID id) {
   u32 target_node = id.bits.node_id;
-  if (target_node == rpc->node_id) {
+  if (target_node == rpc_->node_id_) {
     LocalDecrementRefcount(context, id);
   } else {
     RpcCall<bool>(rpc, target_node, "RemoteDecrementRefcountVBucket", id);
@@ -1278,14 +1278,14 @@ void MetadataManager::DecrementRefcount(VBucketID id) {
 
 /** get relative node ID */
 u32 MetadataManager::GetRelativeNodeId(int offset) {
-  int result = rpc->node_id + offset;
+  int result = rpc_->node_id_ + offset;
   assert(result >= 0);
-  assert(result <= (int)(rpc->num_nodes + 1));
+  assert(result <= (int)(rpc_->num_nodes + 1));
 
-  if (result > (int)rpc->num_nodes) {
+  if (result > (int)rpc_->num_nodes) {
     result = 1;
   } else if (result == 0) {
-    result = rpc->num_nodes;
+    result = rpc_->num_nodes;
   }
 
   return (u32)result;
@@ -1309,7 +1309,7 @@ u32 MetadataManager::GetPreviousNode() {
 std::vector<TargetID> MetadataManager::GetNodeTargets(u32 target_node) {
   std::vector<TargetID> result;
 
-  if (target_node == rpc->node_id) {
+  if (target_node == rpc_->node_id_) {
     result = LocalGetNodeTargets(context);
   } else {
     result = RpcCall<std::vector<TargetID>>(rpc, target_node,
@@ -1326,7 +1326,7 @@ std::vector<TargetID> MetadataManager::GetNeighborhoodTargets() {
   // (wrapping around for nodes 1 and N).
   std::vector<TargetID> result;
 
-  switch (rpc->num_nodes) {
+  switch (rpc_->num_nodes) {
     case 1: {
       // No neighbors
       break;
@@ -1360,7 +1360,7 @@ u64 MetadataManager::GetRemainingTargetCapacity(TargetID target_id) {
   u64 result = 0;
   u32 target_node = target_id.bits.node_id;
 
-  if (target_node == rpc->node_id) {
+  if (target_node == rpc_->node_id_) {
     result = LocalGetRemainingTargetCapacity(context, target_id);
   } else {
     result = RpcCall<u64>(rpc, target_node, "RemoteGetRemainingTargetCapacity",
@@ -1403,7 +1403,7 @@ MetadataManager::LocalGetBucketNameById(BucketID blob_id) {
 std::vector<BlobID>
 MetadataManager::GetBlobsFromVBucketInfo(VBucketID vbucket_id) {
   u32 target_node = vbucket_id.bits.node_id;
-  if (target_node == rpc->node_id) {
+  if (target_node == rpc_->node_id_) {
     return LocalGetBlobsFromVBucketInfo(context, vbucket_id);
   } else {
     return RpcCall<std::vector<BlobID>>(
@@ -1417,7 +1417,7 @@ void MetadataManager::RemoveBlobFromVBucketInfo(VBucketID vbucket_id,
   BucketID bucket_id = GetBucketId(context, rpc, bucket_name);
   BlobID blob_id = GetBlobId(context, rpc, blob_name, bucket_id);
   u32 target_node = vbucket_id.bits.node_id;
-  if (target_node == rpc->node_id) {
+  if (target_node == rpc_->node_id_) {
     LocalRemoveBlobFromVBucketInfo(context, vbucket_id, blob_id);
   } else {
     RpcCall<bool>(rpc, target_node, "RemoteRemoveBlobFromVBucketInfo",
@@ -1427,7 +1427,7 @@ void MetadataManager::RemoveBlobFromVBucketInfo(VBucketID vbucket_id,
 
 std::string MetadataManager::GetBucketNameById(BucketID id) {
   auto target_node = id.bits.node_id;
-  if (target_node == rpc->node_id) {
+  if (target_node == rpc_->node_id_) {
     return LocalGetBucketNameById(context, id);
   } else {
     return RpcCall<std::string>(rpc, target_node, "RemoteGetBucketNameById",
@@ -1472,7 +1472,7 @@ int MetadataManager::GetNumOutstandingFlushingTasks(VBucketID id) {
   u32 target_node = id.bits.node_id;
   int result = 0;
 
-  if (target_node == rpc->node_id) {
+  if (target_node == rpc_->node_id_) {
     result = LocalGetNumOutstandingFlushingTasks(context, id);
   } else {
     result = RpcCall<int>(rpc, target_node,
@@ -1503,7 +1503,6 @@ bool MetadataManager::LocalLockBlob(BlobID blob_id) {
 }
 
 bool MetadataManager::LocalUnlockBlob(BlobID blob_id) {
-  mdm = GetMetadataManagerFromContext(context);
   BlobInfo *blob_info = GetBlobInfoPtr(blob_id);
   bool result = false;
   if (blob_info) {
@@ -1516,21 +1515,21 @@ bool MetadataManager::LocalUnlockBlob(BlobID blob_id) {
 
 /** lock BLOB */
 bool MetadataManager::LockBlob(BlobID blob_id) {
-  u32 target_node = GetBlobNodeId(blob_id);
+  u32 target_node = blob_id.GetNodeId();
   bool result;
-  if (target_node == rpc->node_id) {
-    result = LocalLockBlob(context, blob_id);
+  if (target_node == rpc_->node_id_) {
+    result = LocalLockBlob(blob_id);
   } else {
-    result = RpcCall<bool>(rpc, target_node, "RemoteLockBlob", blob_id);
+    result = rpc_->Call<bool>(target_node, "RemoteLockBlob", blob_id);
   }
   return result;
 }
 
 /** unlock BLOB */
 bool MetadataManager::UnlockBlob(BlobID blob_id) {
-  u32 target_node = GetBlobNodeId(blob_id);
+  u32 target_node = blob_id.GetNodeId();
   bool result;
-  if (target_node == rpc->node_id) {
+  if (target_node == rpc_->node_id_) {
     result = LocalUnlockBlob(context, blob_id);
   } else {
     result = RpcCall<bool>(rpc, target_node, "RemoteUnlockBlob", blob_id);

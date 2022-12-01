@@ -436,7 +436,7 @@ void LocalIncrementBlobStats(MetadataManager *mdm, BlobID blob_id) {
 
 void IncrementBlobStats(SharedMemoryContext *context, RpcContext *rpc,
                         BlobID blob_id) {
-  u32 target_node = GetBlobNodeId(blob_id);
+  u32 target_node = blob_id.GetNodeId();
   if (target_node == rpc->node_id) {
     MetadataManager *mdm = GetMetadataManagerFromContext(context);
     LocalIncrementBlobStats(mdm, blob_id);
@@ -1085,7 +1085,7 @@ f32 LocalGetBlobImportanceScore(SharedMemoryContext *context, BlobID blob_id) {
 f32 GetBlobImportanceScore(SharedMemoryContext *context, RpcContext *rpc,
                            BlobID blob_id) {
   f32 result = 0;
-  u32 target_node = GetBlobNodeId(blob_id);
+  u32 target_node = blob_id.GetNodeId();
   if (target_node == rpc->node_id) {
     result = LocalGetBlobImportanceScore(context, blob_id);
   } else {

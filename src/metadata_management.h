@@ -19,6 +19,7 @@
 #include <string>
 
 #include "buffer_pool.h"
+#include "rpc_thallium.h"
 #include <labstor/data_structures/lockless/string.h>
 #include <labstor/data_structures/unordered_map.h>
 
@@ -204,12 +205,11 @@ struct GlobalSystemViewState {
 namespace lipc = labstor::ipc;
 namespace lipcl = labstor::ipc::lockless;
 
-
 class MetadataManager {
  public:
   Config *config_;
   SharedMemoryContext *context_;
-  RpcContext *rpc_;
+  ThalliumRpc *rpc_;
   SystemViewState local_state_;
   GlobalSystemViewState global_state_;
 

@@ -123,7 +123,7 @@ class ThalliumRpc : public RpcContext {
 
   /** RPC call */
   template <typename ReturnType, typename... Ts>
-  ReturnType RpcCall(u32 node_id, const char *func_name, Ts... args) {
+  ReturnType Call(u32 node_id, const char *func_name, Ts... args) {
     VLOG(1) << "Calling " << func_name << " on node " << node_id << " from node "
             << node_id << std::endl;
     bool is_bo_func = IsBoFunction(func_name);
