@@ -240,6 +240,11 @@ class MetadataManager {
   // TODO(chogan): @optimization Should the mutexes here be reader/writer
   // locks?
 
+  lipc::unordered_map<lipcl::string, BlobID> blob_id_map_;
+  lipc::unordered_map<BlobID, BlobInfo> blob_info_map_;
+  lipc::unordered_map<BucketID, BucketInfo> bucket_map_;
+  lipc::unordered_map<VBucketID, VBucketInfo> vbucket_map_;
+
   /** Lock for accessing `BucketInfo` structures located at
    * `bucket_info_offset` */
   labstor::Mutex bucket_mutex;
