@@ -19,6 +19,8 @@
 #include <string>
 
 #include "buffer_pool.h"
+#include <labstor/data_structures/lockless/string.h>
+#include <labstor/data_structures/unordered_map.h>
 
 namespace hermes {
 
@@ -198,11 +200,18 @@ struct GlobalSystemViewState {
 /**
    A structure to represent metadata manager
 */
+
+namespace lipc = labstor::ipc;
+namespace lipcl = labstor::ipc::lockless;
+
+
 class MetadataManager {
  public:
   Config *config_;
   SharedMemoryContext *context_;
   RpcContext *rpc_;
+  SystemViewState local_state_;
+  GlobalSystemViewState global_state_;
 
   // All offsets are relative to the beginning of the MDM
   ptrdiff_t bucket_info_offset; /**< bucket information */
@@ -557,8 +566,7 @@ class MetadataManager {
                   BucketID bucket_id);
 
   /** does \a bucket_id bucket contain \a blob_name BLOB? */
-  bool ContainsBlob(
-      BucketID bucket_id, const std::string &blob_name);
+  bool ContainsBlob(BucketID bucket_id, const std::string &blob_name);
 
   /** destroy BLOB by ID */
   void DestroyBlobById(BlobID id,
@@ -603,9 +611,6 @@ class MetadataManager {
   /** get global device capacities */
   std::vector<u64> GetGlobalDeviceCapacities();
 
-  /** get global system view state from \a context */
-  GlobalSystemViewState *GetGlobalSystemViewState();
-
   /** update global system view state locally */
   std::vector<ViolationInfo>
   LocalUpdateGlobalSystemViewState(u32 node_id,
@@ -619,10 +624,10 @@ class MetadataManager {
                                     DeviceID device_id);
 
   /** create system view state */
-  SystemViewState *CreateSystemViewState(Config *config);
+  SystemViewState* CreateSystemViewState(Config *config);
 
   /** create global system view state */
-  GlobalSystemViewState *CreateGlobalSystemViewState(Config *config);
+  GlobalSystemViewState* CreateGlobalSystemViewState(Config *config);
 
   /** get swap file name */
   std::string GetSwapFilename(u32 node_id);

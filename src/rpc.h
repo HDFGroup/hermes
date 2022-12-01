@@ -34,7 +34,7 @@ enum class RpcType {
 /**
    A structure to represent RPC context.
  */
-namespace labstor_l = labstor::ipc::lockless;
+namespace lipcl = labstor::ipc::lockless;
 
 class RpcContext {
  public:
@@ -43,7 +43,7 @@ class RpcContext {
   Config *config_;  /** The hermes configuration used to initialize this RPC */
   /** Array of host names stored in shared memory. This array size is
    * RpcContext::num_nodes. */
-  labstor_l::vector<labstor_l::string> host_names;
+  lipcl::vector<lipcl::string> host_names;
   u32 node_id_;        /**< node ID */
   u32 num_nodes_;      /**< number of nodes */
   // The number of host numbers in the rpc_host_number_range entry of the
