@@ -83,7 +83,7 @@ target_link_libraries(config_parser_test hermes
   $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium> glog::glog)
 
 add_test(NAME TestConfigParser
-  COMMAND config_parser_test ${CMAKE_CURRENT_SOURCE_DIR}/data/hermes.yaml)
+  COMMAND config_parser_test ${CMAKE_CURRENT_SOURCE_DIR}/data/hermes_server.yaml)
 target_compile_definitions(config_parser_test
   PRIVATE $<$<BOOL:${HERMES_RPC_THALLIUM}>:HERMES_RPC_THALLIUM>)
 

@@ -18,7 +18,7 @@
 #include <regex>
 #include <experimental/filesystem>
 #include "adapter_utils.h"
-#include "config_parser.h"
+#include "config.h"
 
 namespace stdfs = std::experimental::filesystem;
 const char* kPathExclusions[] = {"/bin/", "/boot/", "/dev/",  "/etc/",

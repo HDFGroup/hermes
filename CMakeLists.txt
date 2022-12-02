@@ -395,18 +395,18 @@ endif()
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 if(HERMES_HAVE_GOTCHA)
-  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gotcha_intercept)
+  # add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gotcha_intercept)
 endif()
 
 if(HERMES_ENABLE_WRAPPER)
-  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/wrapper)
+  # add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/wrapper)
 endif()
 
 if(HERMES_BUILD_BUFFER_POOL_VISUALIZER AND SDL2_FOUND)
-  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/buffer_pool_visualizer)
+  # add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/buffer_pool_visualizer)
 endif()
 
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/data_stager)
+# add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/data_stager)
 
 #-----------------------------------------------------------------------------
 # Testing
@@ -423,14 +423,14 @@ if(CMAKE_PROJECT_NAME STREQUAL HERMES AND BUILD_TESTING)
     set(HERMES_HAVE_IOR "NO")
   endif()
   enable_testing()
-  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test)
-  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/data_stager/test)
+  # add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test)
+  # add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/data_stager/test)
 endif()
 
 if(HERMES_ENABLE_STDIO_ADAPTER OR HERMES_ENABLE_POSIX_ADAPTER OR
     HERMES_ENABLE_MPIIO_ADAPTER OR HERMES_ENABLE_PUBSUB_ADAPTER OR
     HERMES_ENABLE_VFD)
-  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/adapter)
+  # add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/adapter)
 endif()
 
 #-----------------------------------------------------------------------------
@@ -484,7 +484,7 @@ install(
 
 install(
   FILES
-        test/data/hermes.yaml
+        test/data/hermes_server.yaml
   TYPE
     DATA
   RENAME

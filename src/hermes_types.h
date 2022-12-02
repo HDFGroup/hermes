@@ -28,9 +28,17 @@
  * Types used in Hermes.
  */
 
+#ifndef KILOBYTES
 #define KILOBYTES(n) (((size_t)n) * 1024)                     /**< KB */
+#endif
+
+#ifndef MEGABYTES
 #define MEGABYTES(n) (((size_t)n) * 1024 * 1024)              /**< MB */
+#endif
+
+#ifndef GIGABYTES
 #define GIGABYTES(n) (((size_t)n) * 1024UL * 1024UL * 1024UL) /**< GB */
+#endif
 
 /**
  * \namespace hermes
@@ -50,15 +58,6 @@ typedef double f64;   /**< 64-bit float */
 
 typedef u16 DeviceID; /**< device id in unsigned 16-bit integer */
 
-/**
-   A structure to represent chunked ID list
- */
-struct ChunkedIdList {
-  u32 head_offset; /**< offset of head in the list */
-  u32 length;      /**< length of list */
-  u32 capacity;    /**< capacity of list */
-};
-
 union BucketID {
   /** The Bucket ID as bitfield */
   struct {
@@ -72,7 +71,7 @@ union BucketID {
   /** The BucketID as a unsigned 64-bit integer */
   u64 as_int;
 
-  bool IsNull() { return as_int == 0; }
+  bool IsNull() const { return as_int == 0; }
 };
 
 // NOTE(chogan): We reserve sizeof(BucketID) * 2 bytes in order to embed the
@@ -97,7 +96,7 @@ union VBucketID {
   /** The VBucketID as a unsigned 64-bit integer */
   u64 as_int;
 
-  bool IsNull() { return as_int == 0; }
+  bool IsNull() const { return as_int == 0; }
 };
 
 union BlobID {
@@ -114,9 +113,9 @@ union BlobID {
   /** The BlobID as an unsigned 64-bit integer */
   u64 as_int;
 
-  bool IsNull() { return as_int == 0; }
-  bool InSwap() { return bits.node_id < 0; }
-  i32 GetNodeId() { return bits.node_id; }
+  bool IsNull() const  { return as_int == 0; }
+  bool InSwap() const { return bits.node_id < 0; }
+  i32 GetNodeId() const { return bits.node_id; }
 };
 
 /**
@@ -293,13 +292,8 @@ union TargetID {
   /** The TargetID as a unsigned 64-bit integer */
   u64 as_int;
 
-  bool IsNull() { return as_int == 0; }
+  bool IsNull() const  { return as_int == 0; }
 };
-
-/**
-   A constant for swap target IDs
- */
-const TargetID kSwapTargetId = {{0, 0, 0}};
 
 /**
  * A PlacementSchema is a vector of (size, target) pairs where size is the
@@ -319,13 +313,6 @@ enum class ProcessKind {
   kCount /**< Sentinel value */
 };
 
-/** Arena types */
-enum ArenaType {
-  kArenaType_BufferPool, /**< Buffer pool: This must always be first! */
-  kArenaType_MetaData,   /**< Metadata                                */
-  kArenaType_Transient,  /**< Scratch space                           */
-  kArenaType_Count       /**< Sentinel value                          */
-};
 
 /**
  * A structure to represent thesholds with mimimum and maximum values
@@ -333,106 +320,6 @@ enum ArenaType {
 struct Thresholds {
   float min; /**< minimum threshold value */
   float max; /**< maximum threshold value */
-};
-
-/**
- * System and user configuration that is used to initialize Hermes.
- */
-struct Config {
-  /** The total capacity of each buffering Device */
-  size_t capacities[kMaxDevices];
-  /** The block sizes of each Device */
-  int block_sizes[kMaxDevices];
-  /** The number of slabs that each Device has */
-  int num_slabs[kMaxDevices];
-  /** The unit of each slab, a multiple of the Device's block size */
-  int slab_unit_sizes[kMaxDevices][kMaxBufferPoolSlabs];
-  /** The percentage of space each slab should occupy per Device. The values
-   * for each Device should add up to 1.0.
-   */
-  f32 desired_slab_percentages[kMaxDevices][kMaxBufferPoolSlabs];
-  /** The bandwidth of each Device */
-  f32 bandwidths[kMaxDevices];
-  /** The latency of each Device */
-  f32 latencies[kMaxDevices];
-  /** The percentages of the total available Hermes memory allotted for each
-   *  `ArenaType`
-   */
-  f32 arena_percentages[kArenaType_Count];
-  /** The number of Devices */
-  int num_devices;
-  /** The number of Targets */
-  int num_targets;
-
-  /** The maximum number of buckets per node */
-  u32 max_buckets_per_node;
-  /** The maximum number of vbuckets per node */
-  u32 max_vbuckets_per_node;
-  /** The length of a view state epoch */
-  u32 system_view_state_update_interval_ms;
-
-  /** The mount point or desired directory for each Device. RAM Device should
-   * be the empty string.
-   */
-  std::string mount_points[kMaxDevices];
-  /** The mount point of the swap target. */
-  std::string swap_mount;
-  /** The number of times the BufferOrganizer will attempt to place a swap
-   * blob into the hierarchy before giving up. */
-  int num_buffer_organizer_retries;
-
-  /** If non-zero, the device is shared among all nodes (e.g., burst buffs) */
-  int is_shared_device[kMaxDevices];
-
-  /** The name of a file that contains host names, 1 per line */
-  std::string rpc_server_host_file;
-  /** The hostname of the RPC server, minus any numbers that Hermes may
-   * auto-generate when the rpc_hostNumber_range is specified. */
-  std::string rpc_server_base_name;
-  /** The list of numbers from all server names. E.g., '{1, 3}' if your servers
-   * are named ares-comp-1 and ares-comp-3 */
-  std::vector<std::string> host_numbers;
-  /** The RPC server name suffix. This is appended to the base name plus host
-      number. */
-  std::string rpc_server_suffix;
-  /** The parsed hostnames from the hermes conf */
-  std::vector<std::string> host_names;
-  /** The RPC protocol to be used. */
-  std::string rpc_protocol;
-  /** The RPC domain name for verbs transport. */
-  std::string rpc_domain;
-  /** The RPC port number. */
-  int rpc_port;
-  /** The RPC port number for the buffer organizer. */
-  int buffer_organizer_port;
-  /** The number of handler threads per RPC server. */
-  int rpc_num_threads;
-  /** The number of buffer organizer threads. */
-  int bo_num_threads;
-  /** The default blob placement policy. */
-  api::PlacementPolicy default_placement_policy;
-  /** Whether blob splitting is enabled for Round-Robin blob placement. */
-  bool default_rr_split;
-  /** The min and max capacity threshold in MiB for each device at which the
-   * BufferOrganizer will trigger. */
-  Thresholds bo_capacity_thresholds[kMaxDevices];
-  /** A base name for the BufferPool shared memory segement. Hermes appends the
-   * value of the USER environment variable to this string.
-   */
-  char buffer_pool_shmem_name[kMaxBufferPoolShmemNameLength];
-
-  /**
-   * Paths prefixed with the following directories are not tracked in Hermes
-   * Exclusion list used by darshan at
-   * darshan/darshan-runtime/lib/darshan-core.c
-   */
-  std::vector<std::string> path_exclusions;
-
-  /**
-   * Paths prefixed with the following directories are tracked by Hermes even if
-   * they share a root with a path listed in path_exclusions
-   */
-  std::vector<std::string> path_inclusions;
 };
 
 /** Trait ID type */

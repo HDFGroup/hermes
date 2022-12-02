@@ -17,7 +17,7 @@
 #include <vector>
 
 #include "hermes_types.h"
-#include "metadata_management.h"
+#include "communication.h"
 #include <labstor/data_structures/lockless/string.h>
 #include <labstor/data_structures/lockless/vector.h>
 
@@ -38,8 +38,7 @@ namespace lipcl = labstor::ipc::lockless;
 
 class RpcContext {
  public:
-  CommunicationContext *comm_;
-  SharedMemoryContext *context_;
+  COMM_TYPE *comm_;
   Config *config_;  /** The hermes configuration used to initialize this RPC */
   /** Array of host names stored in shared memory. This array size is
    * RpcContext::num_nodes. */
@@ -58,10 +57,9 @@ class RpcContext {
   // char *host_file_name;
 
  public:
-  explicit RpcContext(CommunicationContext *comm,
-                      SharedMemoryContext *context,
+  explicit RpcContext(COMM_TYPE *comm,
                       u32 num_nodes, u32 node_id, Config *config) :
-      comm_(comm), context_(context), num_nodes_(num_nodes),
+      comm_(comm), num_nodes_(num_nodes),
       node_id_(node_id), config_(config) {
     port_ = config->rpc_port;
     if (!config->rpc_server_host_file.empty()) {
@@ -98,6 +96,7 @@ class RpcContext {
 // I'd like to only have it in one place.
 #if defined(HERMES_RPC_THALLIUM)
 #include "rpc_thallium.h"
+#define RPC_TYPE ThalliumRpc
 #else
 #error "RPC implementation required (e.g., -DHERMES_RPC_THALLIUM)."
 #endif

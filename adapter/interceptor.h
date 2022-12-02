@@ -23,7 +23,6 @@
 #include <vector>
 
 #include "adapter_utils.h"
-#include "buffer_pool_internal.h"
 #include "constants.h"
 #include "enumerations.h"
 #include "singleton.h"

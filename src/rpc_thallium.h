@@ -23,6 +23,7 @@
 #include <thallium/serialization/stl/string.hpp>
 #include <thallium/serialization/stl/vector.hpp>
 
+#include "rpc.h"
 #include "buffer_organizer.h"
 
 namespace tl = thallium;
@@ -72,54 +73,15 @@ class ThalliumRpc : public RpcContext {
   tl::engine *client_engine_;   /**< pointer to engine */
 
   /** initialize RPC context  */
-  explicit ThalliumRpc(CommunicationContext *comm,
-                       SharedMemoryContext *context,
+  explicit ThalliumRpc(COMM_TYPE *comm,
                        u32 num_nodes, u32 node_id, Config *config) :
-     RpcContext(comm, context, num_nodes, node_id, config) {
+     RpcContext(comm, num_nodes, node_id, config) {
   }
 
   /** Get protocol */
   std::string GetProtocol();
 
-  /** initialize RPC clients */
-  void InitClients();
 
-  /** shut down RPC clients */
-  void ShutdownClients();
-
-  /** finalize RPC context */
-  void Finalize(bool is_daemon);
-
-  /** run daemon */
-  void RunDaemon(const char *shmem_name);
-
-  /** finalize client */
-  void FinalizeClient(bool stop_daemon);
-
-  /** get server name */
-  std::string GetServerName(u32 node_id, bool is_buffer_organizer);
-
-  /** read bulk */
-  size_t BulkRead(u32 node_id, const char *func_name,
-                  u8 *data, size_t max_size, BufferID id);
-
-  /** start Thallium RPC server */
-  void StartServer(const char *addr, i32 num_rpc_threads);
-
-  /** start buffer organizer */
-  void StartBufferOrganizer(const char *addr, int num_threads, int port);
-
-  /** start prefetcher */
-  void StartPrefetcher(double sleep_ms);
-
-  /** stop prefetcher */
-  void StopPrefetcher();
-
-  /** start global system view state update thread  */
-  void StartGlobalSystemViewStateUpdateThread(double sleep_ms);
-
-  /** stop global system view state update thread */
-  void StopGlobalSystemViewStateUpdateThread();
 
   /** RPC call */
   template <typename ReturnType, typename... Ts>
@@ -148,19 +110,6 @@ class ThalliumRpc : public RpcContext {
     }
   }
 };
-
-/**
- *  Lets Thallium know how to serialize a BufferID.
- *
- * This function is called implicitly by Thallium.
- *
- * @param ar An archive provided by Thallium.
- * @param buffer_id The BufferID to serialize.
- */
-template <typename A>
-void serialize(A &ar, BufferID &buffer_id) {
-  ar &buffer_id.as_int;
-}
 
 /**
  *  Lets Thallium know how to serialize a BucketID.
@@ -214,19 +163,10 @@ void serialize(A &ar, TargetID &target_id) {
   ar &target_id.as_int;
 }
 
-/** serialize \a swap_blob */
-template <typename A>
-void serialize(A &ar, SwapBlob &swap_blob) {
-  ar &swap_blob.node_id;
-  ar &swap_blob.offset;
-  ar &swap_blob.size;
-  ar &swap_blob.bucket_id;
-}
-
 /** serialize \a info */
 template <typename A>
 void serialize(A &ar, BufferInfo &info) {
-  ar &info.id;
+  ar &info.target_;
   ar &info.bandwidth_mbps;
   ar &info.size;
 }
@@ -236,35 +176,6 @@ void serialize(A &ar, BufferInfo &info) {
 // NOTE(chogan): Thallium's default serialization doesn't handle enums by
 // default so we must write serialization code for all enums when we're not
 // using cereal.
-
-/**
- *  Lets Thallium know how to serialize a MapType.
- *
- * This function is called implicitly by Thallium.
- *
- * @param ar An archive provided by Thallium.
- * @param map_type The MapType to serialize.
- */
-template <typename A>
-void save(A &ar, MapType &map_type) {
-  int val = (int)map_type;
-  ar.write(&val, 1);
-}
-
-/**
- *  Lets Thallium know how to serialize a MapType.
- *
- * This function is called implicitly by Thallium.
- *
- * @param ar An archive provided by Thallium.
- * @param map_type The MapType to serialize.
- */
-template <typename A>
-void load(A &ar, MapType &map_type) {
-  int val = 0;
-  ar.read(&val, 1);
-  map_type = (MapType)val;
-}
 
 /** save \a priority */
 template <typename A>
@@ -282,19 +193,19 @@ void load(A &ar, BoPriority &priority) {
 }
 
 /** save \a violation */
-template <typename A>
+/* template <typename A>
 void save(A &ar, ThresholdViolation &violation) {
   int val = (int)violation;
   ar.write(&val, 1);
-}
+} */
 
 /** load \a violation */
-template <typename A>
+/* template <typename A>
 void load(A &ar, ThresholdViolation &violation) {
   int val = 0;
   ar.read(&val, 1);
   violation = (ThresholdViolation)val;
-}
+} */
 #endif  // #ifndef THALLIUM_USE_CEREAL
 
 /** save buffer organizer \a op */
@@ -312,27 +223,19 @@ void load(A &ar, BoOperation &op) {
   op = (BoOperation)val;
 }
 
-/** serialize buffer organizer arguments */
-template <typename A>
-void serialize(A &ar, BoArgs &bo_args) {
-  ar &bo_args.move_args.src;
-  ar &bo_args.move_args.dest;
-}
-
 /** serialize buffer organizer task */
 template <typename A>
 void serialize(A &ar, BoTask &bo_task) {
   ar &bo_task.op;
-  ar &bo_task.args;
 }
 
 /** serialize violation information */
-template <typename A>
+/*template <typename A>
 void serialize(A &ar, ViolationInfo &info) {
   ar &info.target_id;
   ar &info.violation;
   ar &info.violation_size;
-}
+}*/
 
 namespace api {
 

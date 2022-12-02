@@ -26,21 +26,10 @@
 namespace hermes {
 
 /**
- * The type of communicator
- * */
-
-enum class CommunicationType {
-  kMpi
-};
-
-/**
  A structure to represent MPI communication context
 */
-struct CommunicationContext {
-  virtual void WorldBarrier() = 0; /** E.g., MPI_Barrier(MPI_COMM_WORLD)*/
-  virtual void SubBarrier() = 0; /** E.g., MPI_Barrier(something else)*/
-  virtual void Finalize() = 0; /** E.g., MPI_Finalize() */
-
+class CommunicationContext {
+ public:
   /** A unique identifier for each rank, relative to all ranks. */
   i32 world_proc_id;
   /** a unique identifier for each rank, releative to each ProcessKind. */
@@ -63,23 +52,23 @@ struct CommunicationContext {
    * is not relative to all ranks, but to each ProcessKind. This is useful for
    * operations that only need to happen once per node. */
   bool first_on_node;
+
+ public:
+  virtual void WorldBarrier() = 0; /** E.g., MPI_Barrier(MPI_COMM_WORLD)*/
+  virtual void SubBarrier() = 0; /** E.g., MPI_Barrier(something else)*/
+  virtual void Finalize() = 0; /** E.g., MPI_Finalize() */
 };
 
-size_t InitCommunication(CommunicationContext *comm,
-                         size_t trans_arena_size_per_node,
-                         bool is_daemon = false, bool is_adapter = false);
-/** world communicator  */
-inline void WorldBarrier(CommunicationContext *comm) {
-  comm->world_barrier(comm->state);
-}
-
-/** sub-communicator */
-inline void SubBarrier(CommunicationContext *comm) {
-  comm->sub_barrier(comm->state);
-}
-
-void *GetAppCommunicator(CommunicationContext *comm);
-
 }  // namespace hermes
+
+#if defined(HERMES_COMMUNICATION_MPI)
+#include "communication_mpi.h"
+#define COMM_TYPE MpiCommunicator
+#elif defined(HERMES_COMMUNICATION_ZMQ)
+#include "communication_zmq.cc"
+#else
+#error "Communication implementation required " \
+  "(e.g., -DHERMES_COMMUNICATION_MPI)."
+#endif
 
 #endif  // HERMES_COMMUNICATION_H_
