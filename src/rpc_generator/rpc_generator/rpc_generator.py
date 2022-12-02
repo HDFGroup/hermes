@@ -111,36 +111,45 @@ class RpcGenerator:
             (local_rpc_name, target_node, self.context))
 
     def generate(self):
+        rpc_lambdas = []
         for path, class_rpcs in self.rpcs.items():
-            class_lines = []
-            with open(path) as fp:
-                class_lines = fp.read().splitlines()
-            rpc_map = self.get_rpcs_from_class(class_lines)
+            self.generate_class_file(path, class_rpcs, rpc_lambdas)
+        self.generate_rpc_file(rpc_lambdas)
 
-            rpc_lambdas = []
-            for class_name, rpcs in class_rpcs.items():
-                i = rpc_map[class_name]['macro']
-                space = self.get_macro_space(class_lines[i])
-                print(space)
-                global_rpc_funcs = []
-                for rpc in rpcs:
-                    local_rpc_name = rpc[0]
-                    target_node = rpc[1]
-                    context = rpc[2]
-                    local_rpc_api = rpc_map[class_name]['apis'][local_rpc_name]
-                    self.create_global_rpc_func(local_rpc_api, target_node,
-                                                space, global_rpc_funcs)
-                    self.create_rpc_lambda(local_rpc_api, context,
-                                           space, rpc_lambdas)
+    def generate_class_file(self, path, class_rpcs, rpc_lambdas):
+        with open(path) as fp:
+            class_lines = fp.read().splitlines()
+        rpc_map = self.get_rpcs_from_class(class_lines)
+        for class_name, rpcs in class_rpcs.items():
+            i = rpc_map[class_name]['macro']
+            space = self.get_macro_space(class_lines[i])
+            print(space)
+            global_rpc_funcs = []
+            for rpc in rpcs:
+                local_rpc_name = rpc[0]
+                target_node = rpc[1]
+                context = rpc[2]
+                local_rpc_api = rpc_map[class_name]['apis'][local_rpc_name]
+                self.create_global_rpc_func(local_rpc_api, target_node,
+                                            space, global_rpc_funcs)
+                self.create_rpc_lambda(local_rpc_api, context,
+                                       space, rpc_lambdas)
 
-                class_lines = class_lines[:i+1] + \
-                              global_rpc_funcs + \
-                              class_lines[i+1:]
-            
-            with open(path, 'w'):
-                fp.writelines(class_lines)
+            class_lines = class_lines[:i + 1] + \
+                          global_rpc_funcs + \
+                          class_lines[i + 1:]
 
+        with open("tmp", 'w') as fp:
+            fp.write("\n".join(class_lines))
 
+    def generate_rpc_file(self, rpc_lambdas):
+        path = "../rpc_thallium.cc"
+        with open(path) as fp:
+            rpc_lines = fp.read().splitlines()
+        i = self.find_macro("RPC_AUTOGEN_START", rpc_lines)
+        rpc_lines = rpc_lines[:i+1] + rpc_lambdas + rpc_lines[i+1:]
+        with open("tmp2", 'w') as fp:
+            fp.write("\n".join(rpc_lines))
 
     def get_rpcs_from_class(self, class_lines):
         cur_class = None
@@ -197,8 +206,8 @@ class RpcGenerator:
             PARAMS=rpc.get_args(),
             PASS_PARAMS=rpc.pass_args(),
             TARGET_NODE=target_node
-        ))
-        self.add_space(space, lines[-1])
+        ).strip())
+        lines[-1] = self.add_space(space, lines[-1])
 
     def create_rpc_lambda(self, rpc, context, space, lines):
         lines.append(rpc_lambda_text.format(
@@ -208,6 +217,6 @@ class RpcGenerator:
             PARAMS=rpc.get_args(),
             PASS_PARAMS=rpc.pass_args(),
             LOCAL_NAME=rpc.name
-        ))
-        self.add_space(space, lines[-1])
+        ).strip())
+        lines[-1] = self.add_space(space, lines[-1])
 
