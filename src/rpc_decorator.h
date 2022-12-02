@@ -1,0 +1,12 @@
+//
+// Created by lukemartinlogan on 12/1/22.
+//
+
+#ifndef HERMES_SRC_RPC_GENERATOR_DECORATOR_H_
+#define HERMES_SRC_RPC_GENERATOR_DECORATOR_H_
+
+#define RPC
+#define RPC_AUTOGEN_START
+#define RPC_AUTOGEN_END
+
+#endif  // HERMES_SRC_RPC_GENERATOR_DECORATOR_H_

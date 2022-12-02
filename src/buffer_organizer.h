@@ -173,6 +173,8 @@ class BufferOrganizer {
 
   /** Automatically Generate RPCs */
   RPC_AUTOGEN_START
+  //hello
+  //hello
   RPC_AUTOGEN_END
 };
 

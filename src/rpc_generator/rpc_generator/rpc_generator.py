@@ -121,9 +121,9 @@ class RpcGenerator:
             class_lines = fp.read().splitlines()
         rpc_map = self.get_rpcs_from_class(class_lines)
         for class_name, rpcs in class_rpcs.items():
-            i = rpc_map[class_name]['macro']
-            space = self.get_macro_space(class_lines[i])
-            print(space)
+            gen_start = rpc_map[class_name]['gen_start']
+            gen_end = rpc_map[class_name]['gen_end']
+            space = self.get_macro_space(class_lines[gen_start])
             global_rpc_funcs = []
             for rpc in rpcs:
                 local_rpc_name = rpc[0]
@@ -135,9 +135,10 @@ class RpcGenerator:
                 self.create_rpc_lambda(local_rpc_api, context,
                                        space, rpc_lambdas)
 
-            class_lines = class_lines[:i + 1] + \
+            class_lines = class_lines[:gen_start+1] + class_lines[gen_end:]
+            class_lines = class_lines[:gen_start + 1] + \
                           global_rpc_funcs + \
-                          class_lines[i + 1:]
+                          class_lines[gen_start + 1:]
 
         with open("tmp", 'w') as fp:
             fp.write("\n".join(class_lines))
@@ -146,8 +147,12 @@ class RpcGenerator:
         path = "../rpc_thallium.cc"
         with open(path) as fp:
             rpc_lines = fp.read().splitlines()
-        i = self.find_macro("RPC_AUTOGEN_START", rpc_lines)
-        rpc_lines = rpc_lines[:i+1] + rpc_lambdas + rpc_lines[i+1:]
+        gen_start = self.find_macro("RPC_AUTOGEN_START", rpc_lines)
+        gen_end = self.find_macro("RPC_AUTOGEN_END", rpc_lines)
+        rpc_lines = rpc_lines[:gen_start+1] + rpc_lines[gen_end:]
+        rpc_lines = rpc_lines[:gen_start+1] + \
+                    rpc_lambdas + \
+                    rpc_lines[gen_start+1:]
         with open("tmp2", 'w') as fp:
             fp.write("\n".join(rpc_lines))
 
@@ -157,11 +162,13 @@ class RpcGenerator:
         for i, line in enumerate(class_lines):
             if "class" == line.strip()[0:5]:
                 cur_class = self.get_class_name(line)
-                rpc_map[cur_class] = {'apis': {}, 'macro': None}
+                rpc_map[cur_class] = {'apis': {},
+                                      'gen_start': None,
+                                      'gen_end': None}
             elif "RPC_AUTOGEN_START" in line:
-                rpc_map[cur_class]['macro'] = i
+                rpc_map[cur_class]['gen_start'] = i
             elif "RPC_AUTOGEN_END" in line:
-                pass
+                rpc_map[cur_class]['gen_end'] = i
             elif "RPC" == line.strip()[0:3]:
                 text_proto = self.get_rpc_prototype(class_lines[i:])
                 api = Api(text_proto)
