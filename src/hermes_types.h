@@ -254,19 +254,6 @@ struct Context {
 
 }  // namespace api
 
-// TODO(chogan): These constants impose limits on the number of slabs,
-// devices, file path lengths, and shared memory name lengths, but eventually
-// we should allow arbitrary sizes of each.
-static constexpr int kMaxBufferPoolSlabs = 8; /**< max. buffer pool slabs */
-constexpr int kMaxPathLength = 256;           /**< max. path length */
-/** max. buffer pool shared memory name length */
-constexpr int kMaxBufferPoolShmemNameLength = 64;
-constexpr int kMaxDevices = 8;           /**< max. devices */
-constexpr int kMaxBucketNameSize = 256;  /**< max. bucket name size */
-constexpr int kMaxVBucketNameSize = 256; /**< max. virtual bucket name size */
-/** a string to represent the place in hierarchy */
-constexpr char kPlaceInHierarchy[] = "PlaceInHierarchy";
-
 /** A definition for logging something that is not yet implemented */
 #define HERMES_NOT_IMPLEMENTED_YET \
   LOG(FATAL) << __func__ << " not implemented yet\n"

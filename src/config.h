@@ -19,7 +19,7 @@
 #include <ostream>
 #include <vector>
 #include <sstream>
-#include <labstor/data_structures/lockless/vector.h>
+#include "data_structures.h"
 
 #include "hermes_types.h"
 
@@ -40,70 +40,52 @@ struct ClientConfig {
   void LoadDefault();
 };
 
+struct DeviceInfo {
+  /** The minimum transfer size of each device */
+  size_t block_size_;
+  /** The unit of each slab, a multiple of the Device's block size */
+  lipcl::vector<size_t> slab_sizes_;
+  /** The mount point of a device */
+  lipcl::string mount_point_;
+  /** Device capacity (bytes) */
+  size_t capacity_;
+  /** Bandwidth of a device (MBps) */
+  f32 bandwidth_;
+  /** Latency of the device (us)*/
+  f32 latency_;
+  /** Whether or not the device is shared among all nodes */
+  bool is_shared_;
+  /** */
+};
+
 /**
  * System and user configuration that is used to initialize Hermes.
  */
 class ServerConfig {
  public:
-  /** The total capacity of each buffering Device */
-  size_t capacities_[kMaxDevices];
-  /** The block sizes for each device */
-  lipcl::vector<int> block_sizes_;
+  /** The device information */
+  lipcl::vector<DeviceInfo> devices_;
 
-  /** The block sizes of each Device */
-  int block_sizes_[kMaxDevices];
-  /** The unit of each slab, a multiple of the Device's block size */
-  int slab_unit_sizes[kMaxDevices][kMaxBufferPoolSlabs];
-  /** The percentage of space each slab should occupy per Device. The values
-   * for each Device should add up to 1.0.
-   */
-  f32 desired_slab_percentages[kMaxDevices][kMaxBufferPoolSlabs];
-  /** The bandwidth of each Device */
-  f32 bandwidths[kMaxDevices];
-  /** The latency of each Device */
-  f32 latencies[kMaxDevices];
-  /** The number of Devices */
-  int num_devices;
-  /** The number of Targets */
-  int num_targets;
-
-  /** The maximum number of buckets per node */
-  u32 max_buckets_per_node;
-  /** The maximum number of vbuckets per node */
-  u32 max_vbuckets_per_node;
   /** The length of a view state epoch */
   u32 system_view_state_update_interval_ms;
 
-  /** The mount point or desired directory for each Device. RAM Device should
-   * be the empty string.
-   */
-  std::string mount_points[kMaxDevices];
-  /** The mount point of the swap target. */
-  std::string swap_mount;
-  /** The number of times the BufferOrganizer will attempt to place a swap
-   * blob into the hierarchy before giving up. */
-  int num_buffer_organizer_retries;
-
-  /** If non-zero, the device is shared among all nodes (e.g., burst buffs) */
-  int is_shared_device[kMaxDevices];
-
   /** The name of a file that contains host names, 1 per line */
-  std::string rpc_server_host_file;
+  lipcl::string rpc_server_host_file;
   /** The hostname of the RPC server, minus any numbers that Hermes may
    * auto-generate when the rpc_hostNumber_range is specified. */
-  std::string rpc_server_base_name;
+  lipcl::string rpc_server_base_name;
   /** The list of numbers from all server names. E.g., '{1, 3}' if your servers
    * are named ares-comp-1 and ares-comp-3 */
-  std::vector<std::string> host_numbers;
+  lipcl::vector<lipcl::string> host_numbers;
   /** The RPC server name suffix. This is appended to the base name plus host
       number. */
-  std::string rpc_server_suffix;
+  lipcl::string rpc_server_suffix;
   /** The parsed hostnames from the hermes conf */
-  std::vector<std::string> host_names;
+  lipcl::vector<lipcl::string> host_names;
   /** The RPC protocol to be used. */
-  std::string rpc_protocol;
+  lipcl::string rpc_protocol;
   /** The RPC domain name for verbs transport. */
-  std::string rpc_domain;
+  lipcl::string rpc_domain;
   /** The RPC port number. */
   int rpc_port;
   /** The RPC port number for the buffer organizer. */
@@ -142,6 +124,11 @@ class ServerConfig {
   void LoadText(const std::string &text);
   void LoadFromFile(const char *path);
   void LoadDefault();
+
+ private:
+  void ParseYAML(YAML::Node &yaml_conf);
+  void CheckConstraints();
+  void ParseHostNames(YAML::Node yaml_conf);
 };
 
 /** print \a expected value and fail when an error occurs */
@@ -248,6 +235,65 @@ void ParseRangeList(YAML::Node list_node, std::string var,
         list.emplace_back(std::to_string(i));
       }
     }
+  }
+}
+
+std::string ParseNumberSuffix(const std::string &num_text) {
+  int i;
+  for (i = 0; i < num_text.size(); ++i) {
+    char c = num_text[i];
+    if ('0' <= c && c <= '9') continue;
+    if (c == ' ' || c == '\t' || c == '\n' || c == '\r') continue;
+    break;
+  }
+  return std::string(num_text.begin() + i, num_text.end());;
+}
+
+size_t ParseNumber(const std::string &num_text) {
+  size_t size;
+  std::stringstream(num_text) >> size;
+  return size;
+}
+
+/** Returns size (bytes) */
+size_t ParseSize(const std::string &size_text) {
+  size_t size = ParseNumber(size_text);
+  std::string suffix = ParseNumberSuffix(size_text);
+  if (suffix.size() == 0) {
+    return size;
+  } else if (suffix[0] == 'k' || suffix[0] == 'k') {
+    return KILOBYTES(size);
+  } else if (suffix[0] == 'm' || suffix[0] == 'M') {
+    return MEGABYTES(size);
+  } else if (suffix[0] == 'g' || suffix[0] == 'G') {
+    return GIGABYTES(size);
+  } else {
+    LOG(FATAL) << "Could not parse the size: " << size_text << std::endl;
+  }
+}
+
+/** Returns bandwidth (bytes / second) */
+size_t ParseBandwidth(const std::string &size_text) {
+  return ParseSize(size_text);
+}
+
+/** Returns latency (nanoseconds) */
+size_t ParseLatency(const std::string &latency_text) {
+  size_t size = ParseNumber(latency_text);
+  std::string suffix = ParseNumberSuffix(latency_text);
+  if (suffix.size() == 0) {
+    return size;
+  } else if (suffix[0] == 'n' || suffix[0] == 'N') {
+    return size;
+  } else if (suffix[0] == 'u' || suffix[0] == 'U') {
+    return KILOBYTES(size);
+  } else if (suffix[0] == 'm' || suffix[0] == 'M') {
+    return MEGABYTES(size);
+  } else if (suffix[0] == 's' || suffix[0] == 'S') {
+    return GIGABYTES(size);
+  }
+  else {
+    LOG(FATAL) << "Could not parse the latency: " << latency_text << std::endl;
   }
 }
 
