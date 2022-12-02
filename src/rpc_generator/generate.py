@@ -4,12 +4,16 @@ Automatically generate the RPCs for a series of Local functions
 
 USAGE:
     cd /path/to/rpc_generator
-    python3 generate.py
+    python3 generate.py [whether or not to modify path or make tmpfiles]
 """
 
+import sys
 from rpc_generator.rpc_generator import RpcGenerator
 
-gen = RpcGenerator()
+if len(sys.argv) < 2:
+    gen = RpcGenerator(False)
+else:
+    gen = RpcGenerator(sys.argv[1])
 
 gen.set_file("../buffer_organizer.h", "BufferOrganizer", "borg")
 gen.add("LocalGetBufferInfo", "buffer_id.bits.node_id")

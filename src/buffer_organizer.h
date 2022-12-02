@@ -173,8 +173,76 @@ class BufferOrganizer {
 
   /** Automatically Generate RPCs */
   RPC_AUTOGEN_START
-  //hello
-  //hello
+  RPC BufferInfo GetBufferInfo(BufferID buffer_id) {
+    u32 target_node = buffer_id.bits.node_id;
+    if (target_node == rpc_->node_id_) {
+      LocalAddBlobIdToVBucket(
+        buffer_id);
+    } else {
+      rpc_->Call<bool>(rpc, target_node, "GetBufferInfo",
+        buffer_id);
+    }
+  }
+  RPC void EnqueueBoMove(const BoMoveList &moves, BlobID blob_id, BucketID bucket_id, const std::string &internal_blob_name, BoPriority priority) {
+    u32 target_node = rpc_->node_id_;
+    if (target_node == rpc_->node_id_) {
+      LocalAddBlobIdToVBucket(
+        &moves, blob_id, bucket_id, &internal_blob_name, priority);
+    } else {
+      rpc_->Call<bool>(rpc, target_node, "EnqueueBoMove",
+        &moves, blob_id, bucket_id, &internal_blob_name, priority);
+    }
+  }
+  RPC void OrganizeBlob(const std::string &internal_blob_name, BucketID bucket_id, f32 epsilon, f32 explicit_importance_score) {
+    u32 target_node = HashString(internal_name.c_str());
+    if (target_node == rpc_->node_id_) {
+      LocalAddBlobIdToVBucket(
+        &internal_blob_name, bucket_id, epsilon, explicit_importance_score);
+    } else {
+      rpc_->Call<bool>(rpc, target_node, "OrganizeBlob",
+        &internal_blob_name, bucket_id, epsilon, explicit_importance_score);
+    }
+  }
+  RPC void EnforceCapacityThresholds(ViolationInfo info) {
+    u32 target_node = info.target_id.bits.node_id;
+    if (target_node == rpc_->node_id_) {
+      LocalAddBlobIdToVBucket(
+        info);
+    } else {
+      rpc_->Call<bool>(rpc, target_node, "EnforceCapacityThresholds",
+        info);
+    }
+  }
+  RPC bool EnqueueFlushingTask(BlobID blob_id, const std::string &filename, u64 offset) {
+    u32 target_node = rpc->node_id_;
+    if (target_node == rpc_->node_id_) {
+      LocalAddBlobIdToVBucket(
+        blob_id, &filename, offset);
+    } else {
+      rpc_->Call<bool>(rpc, target_node, "EnqueueFlushingTask",
+        blob_id, &filename, offset);
+    }
+  }
+  RPC void IncrementFlushCount(const std::string &vbkt_name) {
+    u32 target_node = HashString(vbkt_name.c_str());
+    if (target_node == rpc_->node_id_) {
+      LocalAddBlobIdToVBucket(
+        &vbkt_name);
+    } else {
+      rpc_->Call<bool>(rpc, target_node, "IncrementFlushCount",
+        &vbkt_name);
+    }
+  }
+  RPC void DecrementFlushCount(const std::string &vbkt_name) {
+    u32 target_node = HashString(vbkt_name.c_str());
+    if (target_node == rpc_->node_id_) {
+      LocalAddBlobIdToVBucket(
+        &vbkt_name);
+    } else {
+      rpc_->Call<bool>(rpc, target_node, "DecrementFlushCount",
+        &vbkt_name);
+    }
+  }
   RPC_AUTOGEN_END
 };
 

@@ -294,8 +294,7 @@ void ThalliumRpc::StartPrefetcher(double sleep_ms) {
   using tl::request;
 
   // Create the LogIoStat RPC
-  auto rpc_log_io_stat = [context](const request &req, IoLogEntry &entry) {
-    (void) context;
+  auto rpc_log_io_stat = [](const request &req, IoLogEntry &entry) {
     auto prefetcher = Singleton<Prefetcher>::GetInstance();
     prefetcher->Log(entry);
     req.respond(true);
@@ -410,6 +409,41 @@ void ThalliumRpc::StartServer(const char *addr,
   using tl::request;
 
   RPC_AUTOGEN_START
+  auto RpcGetBufferInfo = [borg](const request &req, BufferID buffer_id) {
+    auto result = borg->LocalGetBufferInfo(buffer_id);
+    req.respond(result);
+  };
+  rpc_server->define("GetBufferInfo", rpc_get_buffers);
+  auto RpcEnqueueBoMove = [borg](const request &req, const BoMoveList &moves, BlobID blob_id, BucketID bucket_id, const std::string &internal_blob_name, BoPriority priority) {
+    auto result = borg->LocalEnqueueBoMove(&moves, blob_id, bucket_id, &internal_blob_name, priority);
+    req.respond(result);
+  };
+  rpc_server->define("EnqueueBoMove", rpc_get_buffers);
+  auto RpcOrganizeBlob = [borg](const request &req, const std::string &internal_blob_name, BucketID bucket_id, f32 epsilon, f32 explicit_importance_score) {
+    auto result = borg->LocalOrganizeBlob(&internal_blob_name, bucket_id, epsilon, explicit_importance_score);
+    req.respond(result);
+  };
+  rpc_server->define("OrganizeBlob", rpc_get_buffers);
+  auto RpcEnforceCapacityThresholds = [borg](const request &req, ViolationInfo info) {
+    auto result = borg->LocalEnforceCapacityThresholds(info);
+    req.respond(result);
+  };
+  rpc_server->define("EnforceCapacityThresholds", rpc_get_buffers);
+  auto RpcEnqueueFlushingTask = [borg](const request &req, BlobID blob_id, const std::string &filename, u64 offset) {
+    auto result = borg->LocalEnqueueFlushingTask(blob_id, &filename, offset);
+    req.respond(result);
+  };
+  rpc_server->define("EnqueueFlushingTask", rpc_get_buffers);
+  auto RpcIncrementFlushCount = [borg](const request &req, const std::string &vbkt_name) {
+    auto result = borg->LocalIncrementFlushCount(&vbkt_name);
+    req.respond(result);
+  };
+  rpc_server->define("IncrementFlushCount", rpc_get_buffers);
+  auto RpcDecrementFlushCount = [borg](const request &req, const std::string &vbkt_name) {
+    auto result = borg->LocalDecrementFlushCount(&vbkt_name);
+    req.respond(result);
+  };
+  rpc_server->define("DecrementFlushCount", rpc_get_buffers);
   RPC_AUTOGEN_END
 
 

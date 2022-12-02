@@ -13,6 +13,7 @@ rpc_func_text = """
 }}
 """
 
+# Will add this to rpc_thallium.cc
 rpc_lambda_text = """
 auto {LAMBDA_NAME} = [{CONTEXT}](const request &req, {PARAMS}) {{
   auto result = {CONTEXT}->{LOCAL_NAME}({PASS_PARAMS});
@@ -91,7 +92,11 @@ class Api:
         return ", ".join(args)
 
 class RpcGenerator:
-    def __init__(self):
+    def __init__(self, modify):
+        if modify != "True":
+            self.modify = False
+        else:
+            self.modify = True
         self.path = None
         self.macro = None
         self.context = None
@@ -140,8 +145,13 @@ class RpcGenerator:
                           global_rpc_funcs + \
                           class_lines[gen_start + 1:]
 
-        with open("tmp", 'w') as fp:
-            fp.write("\n".join(class_lines))
+        if self.modify:
+            with open(path, 'w') as fp:
+                fp.write("\n".join(class_lines))
+        else:
+            tmp_path = os.path.basename(path)
+            with open(f"tmp_{tmp_path}", 'w') as fp:
+                fp.write("\n".join(class_lines))
 
     def generate_rpc_file(self, rpc_lambdas):
         path = "../rpc_thallium.cc"
@@ -153,8 +163,13 @@ class RpcGenerator:
         rpc_lines = rpc_lines[:gen_start+1] + \
                     rpc_lambdas + \
                     rpc_lines[gen_start+1:]
-        with open("tmp2", 'w') as fp:
-            fp.write("\n".join(rpc_lines))
+        if self.modify:
+            with open(path, 'w') as fp:
+                fp.write("\n".join(rpc_lines))
+        else:
+            tmp_path = os.path.basename(path)
+            with open(tmp_path, 'w') as fp:
+                fp.write("\n".join(rpc_lines))
 
     def get_rpcs_from_class(self, class_lines):
         cur_class = None
