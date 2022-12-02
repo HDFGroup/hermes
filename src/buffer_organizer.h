@@ -15,6 +15,7 @@
 
 #include "thread_pool.h"
 #include "hermes_status.h"
+#include "rpc_decorator.h"
 
 namespace hermes {
 
@@ -102,7 +103,7 @@ class BufferOrganizer {
                            RpcContext *rpc, int num_threads);
 
   /** get buffer information locally */
-  BufferInfo LocalGetBufferInfo(BufferID buffer_id);
+  RPC BufferInfo LocalGetBufferInfo(BufferID buffer_id);
 
   /** get buffer information */
   BufferInfo GetBufferInfo(BufferID buffer_id);
@@ -124,10 +125,10 @@ class BufferOrganizer {
   void SortTargetInfo(std::vector<TargetInfo> &target_info, bool increasing);
 
   /** Local enqueue of buffer information */
-  void LocalEnqueueBoMove(const BoMoveList &moves, BlobID blob_id,
-                          BucketID bucket_id,
-                          const std::string &internal_blob_name,
-                          BoPriority priority);
+  RPC void LocalEnqueueBoMove(const BoMoveList &moves, BlobID blob_id,
+                              BucketID bucket_id,
+                              const std::string &internal_blob_name,
+                              BoPriority priority);
 
   /** enqueue a move operation */
   void EnqueueBoMove(const BoMoveList &moves, BlobID blob_id,
@@ -143,9 +144,9 @@ class BufferOrganizer {
               const std::string &internal_blob_name);
 
   /** change the composition of a blob based on importance locally */
-  void LocalOrganizeBlob(const std::string &internal_blob_name,
-                         BucketID bucket_id, f32 epsilon,
-                         f32 explicit_importance_score);
+  RPC void LocalOrganizeBlob(const std::string &internal_blob_name,
+                             BucketID bucket_id, f32 epsilon,
+                             f32 explicit_importance_score);
 
   /** change the composition of a blob  */
   void OrganizeBlob(BucketID bucket_id, const std::string &blob_name,
@@ -153,22 +154,26 @@ class BufferOrganizer {
 
 
   void EnforceCapacityThresholds(ViolationInfo info);
-  void LocalEnforceCapacityThresholds(ViolationInfo info);
+  RPC void LocalEnforceCapacityThresholds(ViolationInfo info);
   void LocalShutdownBufferOrganizer();
   void FlushBlob(BlobID blob_id, const std::string &filename,
                  u64 offset, bool async);
   bool EnqueueFlushingTask(BlobID blob_id,
                            const std::string &filename, u64 offset);
-  bool LocalEnqueueFlushingTask(BlobID blob_id, const std::string &filename,
-                                u64 offset);
+  RPC bool LocalEnqueueFlushingTask(BlobID blob_id, const std::string &filename,
+                                    u64 offset);
   api::Status PlaceInHierarchy(SwapBlob swap_blob, const std::string &name,
                                const api::Context &ctx);
   void LocalAdjustFlushCount(const std::string &vbkt_name, int adjustment);
-  void LocalIncrementFlushCount(const std::string &vbkt_name);
-  void LocalDecrementFlushCount(const std::string &vbkt_name);
+  RPC void LocalIncrementFlushCount(const std::string &vbkt_name);
+  RPC void LocalDecrementFlushCount(const std::string &vbkt_name);
   void IncrementFlushCount(const std::string &vbkt_name);
   void DecrementFlushCount(const std::string &vbkt_name);
   void AwaitAsyncFlushingTasks(VBucketID id);
+
+  /** Automatically Generate RPCs */
+  RPC_AUTOGEN_START
+  RPC_AUTOGEN_END
 };
 
 static inline f32 BytesToMegabytes(size_t bytes) {

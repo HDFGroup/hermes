@@ -435,7 +435,7 @@ void BufferOrganizer::OrganizeBlob(BucketID bucket_id,
                                    f32 epsilon, f32 importance_score) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
   std::string internal_name = MakeInternalBlobName(blob_name, bucket_id);
-  u32 target_node = HashString(mdm, rpc, internal_name.c_str());
+  u32 target_node = HashString(internal_name.c_str());
 
   if (target_node == rpc->node_id) {
     LocalOrganizeBlob(context, rpc, internal_name, bucket_id, epsilon,
@@ -799,7 +799,7 @@ void BufferOrganizer::LocalDecrementFlushCount(const std::string &vbkt_name) {
 
 void BufferOrganizer::IncrementFlushCount(const std::string &vbkt_name) {
   MetadataManager *mdm = GetMetadataManagerFromContext(context);
-  u32 target_node = HashString(mdm, rpc, vbkt_name.c_str());
+  u32 target_node = HashString(vbkt_name.c_str());
 
   if (target_node == rpc->node_id) {
     LocalIncrementFlushCount(context, vbkt_name);

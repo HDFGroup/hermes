@@ -14,7 +14,6 @@
 
 #include "rpc.h"
 #include "buffer_organizer.h"
-#include "metadata_management_internal.h"
 #include "prefetcher.h"
 #include "singleton.h"
 
@@ -190,6 +189,198 @@ size_t ThalliumRpc::BulkRead(u32 node_id, const char *func_name,
   return result;
 }
 
+/** start buffer organizer */
+void ThalliumRpc::StartBufferOrganizer(const char *addr, int num_threads,
+                                       int port) {
+  context->bo = PushStruct<BufferOrganizer>(arena);
+  new(context->bo) BufferOrganizer(num_threads);
+
+  ThalliumState *state = GetThalliumState(rpc);
+
+  int num_bo_rpc_threads = 1;
+  bo_engine = new tl::engine(addr, THALLIUM_SERVER_MODE, true,
+                             num_bo_rpc_threads);
+  tl::engine *rpc_server = bo_engine;
+
+  std::string rpc_server_name = rpc_server->self();
+  LOG(INFO) << "Buffer organizer serving at " << rpc_server_name << " with "
+            << num_bo_rpc_threads << " RPC threads and " << num_threads
+            << " BO worker threads" << std::endl;
+
+  std::string server_name_postfix = ":" + std::to_string(port);
+  CopyStringToCharArray(server_name_postfix, bo_server_name_postfix,
+                        kMaxServerNamePostfix);
+
+  auto rpc_place_in_hierarchy = [context, rpc](const tl::request &req,
+                                               SwapBlob swap_blob,
+                                               const std::string name,
+                                               api::Context ctx) {
+    (void)req;
+    for (int i = 0; i < ctx.buffer_organizer_retries; ++i) {
+      LOG(INFO) << "Buffer Organizer placing blob '" << name
+                << "' in hierarchy. Attempt " << i + 1 << " of "
+                << ctx.buffer_organizer_retries << std::endl;
+      api::Status result = PlaceInHierarchy(context, rpc, swap_blob, name, ctx);
+      if (result.Succeeded()) {
+        break;
+      } else {
+        ThalliumState *state = GetThalliumState(rpc);
+
+        if (state && bo_engine) {
+          // TODO(chogan): We probably don't want to sleep here, but for now
+          // this enables testing.
+          double sleep_ms = 2000;
+          tl::thread::self().sleep(*bo_engine, sleep_ms);
+        }
+      }
+    }
+  };
+
+  auto rpc_move_to_target = [context, rpc](const tl::request &req,
+                                           SwapBlob swap_blob,
+                                           TargetID target_id, int retries) {
+    (void)req;
+    (void)swap_blob;
+    (void)target_id;
+    for (int i = 0; i < retries; ++i) {
+      // TODO(chogan): MoveToTarget(context, rpc, target_id, swap_blob);
+      HERMES_NOT_IMPLEMENTED_YET;
+    }
+  };
+
+  auto rpc_enqueue_flushing_task =
+      [context, rpc](const tl::request &req, BlobID blob_id,
+                     const std::string &filename, u64 offset) {
+        bool result = LocalEnqueueFlushingTask(context, rpc, blob_id, filename,
+                                               offset);
+
+        req.respond(result);
+      };
+
+  auto rpc_enqueue_bo_move = [context, rpc](const tl::request &req,
+                                            const BoMoveList &moves,
+                                            BlobID blob_id,
+                                            BucketID bucket_id,
+                                            const std::string &internal_name,
+                                            BoPriority priority) {
+    LocalEnqueueBoMove(context, rpc, moves, blob_id, bucket_id, internal_name,
+                       priority);
+
+    req.respond(true);
+  };
+
+  auto rpc_organize_blob = [context, rpc](const tl::request &req,
+                                          const std::string &internal_blob_name,
+                                          BucketID bucket_id, f32 epsilon,
+                                          f32 importance_score) {
+    LocalOrganizeBlob(context, rpc, internal_blob_name, bucket_id, epsilon,
+                      importance_score);
+
+    req.respond(true);
+  };
+
+  rpc_server->define("PlaceInHierarchy",
+                     rpc_place_in_hierarchy).disable_response();
+  rpc_server->define("MoveToTarget",
+                     rpc_move_to_target).disable_response();
+  rpc_server->define("EnqueueFlushingTask", rpc_enqueue_flushing_task);
+  rpc_server->define("EnqueueBoMove", rpc_enqueue_bo_move);
+  rpc_server->define("OrganizeBlob", rpc_organize_blob);
+}
+
+/** start prefetcher */
+void ThalliumRpc::StartPrefetcher(double sleep_ms) {
+  tl::engine *rpc_server = engine;
+  using tl::request;
+
+  // Create the LogIoStat RPC
+  auto rpc_log_io_stat = [context](const request &req, IoLogEntry &entry) {
+    (void) context;
+    auto prefetcher = Singleton<Prefetcher>::GetInstance();
+    prefetcher->Log(entry);
+    req.respond(true);
+  };
+  rpc_server->define("LogIoStat", rpc_log_io_stat);
+
+  // Prefetcher thread args
+  struct PrefetcherThreadArgs {
+    SharedMemoryContext *context;
+    RpcContext *rpc;
+    double sleep_ms;
+    bool init_;
+  };
+
+  // Create the prefetcher thread lambda
+  auto prefetch = [](void *args) {
+    PrefetcherThreadArgs targs = *((PrefetcherThreadArgs*)args);
+    ThalliumState *state = GetThalliumState(targs.rpc);
+    LOG(INFO) << "Prefetching thread started" << std::endl;
+    auto prefetcher = Singleton<Prefetcher>::GetInstance();
+    while (!kill_requested.load()) {
+      prefetcher->Process();
+      tl::thread::self().sleep(*engine, targs.sleep_ms);
+    }
+    LOG(INFO) << "Finished prefetcher" << std::endl;
+  };
+
+  // Create prefetcher thread
+  PrefetcherThreadArgs *args = PushStruct<PrefetcherThreadArgs>(arena);
+  args->context = context;
+  args->rpc = rpc;
+  args->sleep_ms = sleep_ms;
+  args->init_ = false;
+
+  ABT_xstream_create(ABT_SCHED_NULL, &execution_stream);
+  ABT_thread_create_on_xstream(execution_stream,
+                               prefetch, args,
+                               ABT_THREAD_ATTR_NULL, NULL);
+}
+
+/** stop prefetcher */
+void ThalliumRpc::StopPrefetcher() {
+  kill_requested.store(true);
+  ABT_xstream_join(execution_stream);
+  ABT_xstream_free(&execution_stream);
+}
+
+/** start global system view state update thread  */
+void ThalliumRpc::StartGlobalSystemViewStateUpdateThread(double sleep_ms) {
+  struct ThreadArgs {
+    SharedMemoryContext *context;
+    RpcContext *rpc;
+    double sleep_ms;
+  };
+
+  auto update_global_system_view_state = [](void *args) {
+    ThreadArgs *targs = (ThreadArgs *)args;
+    ThalliumState *state = GetThalliumState(targs->rpc);
+    LOG(INFO) << "Update global system view state start" << std::endl;
+    while (!kill_requested.load()) {
+      UpdateGlobalSystemViewState(targs->context, targs->rpc);
+      tl::thread::self().sleep(*engine, targs->sleep_ms);
+    }
+    LOG(INFO) << "Finished global system view update thread" << std::endl;
+  };
+
+  ThreadArgs *args = PushStruct<ThreadArgs>(arena);
+  args->context = context;
+  args->rpc = rpc;
+  args->sleep_ms = sleep_ms;
+
+  ThalliumState *state = GetThalliumState(rpc);
+  ABT_thread_create_on_xstream(execution_stream,
+                               update_global_system_view_state, args,
+                               ABT_THREAD_ATTR_NULL, NULL);
+}
+
+/** stop global system view state update thread */
+void ThalliumRpc::StopGlobalSystemViewStateUpdateThread() {
+  ThalliumState *state = GetThalliumState(rpc);
+  kill_requested.store(true);
+  ABT_xstream_join(execution_stream);
+  ABT_xstream_free(&execution_stream);
+}
+
 /** start Thallium RPC server */
 void ThalliumRpc::StartServer(const char *addr,
                               i32 num_rpc_threads) {
@@ -217,6 +408,10 @@ void ThalliumRpc::StartServer(const char *addr,
   using std::string;
   using std::vector;
   using tl::request;
+
+  RPC_AUTOGEN_START
+  RPC_AUTOGEN_END
+
 
   // BufferPool requests
 
@@ -583,7 +778,7 @@ void ThalliumRpc::StartServer(const char *addr,
 
   auto rpc_enforce_capacity_thresholds = [context, rpc](const request &req,
                                                         ViolationInfo info) {
-    LocalEnforceCapacityThresholds(context, rpc, info);
+    LocalEnforceCapacityThresholds(info);
     // TODO(chogan): Can this be async?
     req.respond(true);
   };
@@ -655,198 +850,6 @@ void ThalliumRpc::StartServer(const char *addr,
                      rpc_replace_blob_id_in_bucket);
   rpc_server->define("RemoteEnforceCapacityThresholds",
                      rpc_enforce_capacity_thresholds);
-}
-
-/** start buffer organizer */
-void ThalliumRpc::StartBufferOrganizer(const char *addr, int num_threads,
-                                       int port) {
-  context->bo = PushStruct<BufferOrganizer>(arena);
-  new(context->bo) BufferOrganizer(num_threads);
-
-  ThalliumState *state = GetThalliumState(rpc);
-
-  int num_bo_rpc_threads = 1;
-  bo_engine = new tl::engine(addr, THALLIUM_SERVER_MODE, true,
-                                    num_bo_rpc_threads);
-  tl::engine *rpc_server = bo_engine;
-
-  std::string rpc_server_name = rpc_server->self();
-  LOG(INFO) << "Buffer organizer serving at " << rpc_server_name << " with "
-            << num_bo_rpc_threads << " RPC threads and " << num_threads
-            << " BO worker threads" << std::endl;
-
-  std::string server_name_postfix = ":" + std::to_string(port);
-  CopyStringToCharArray(server_name_postfix, bo_server_name_postfix,
-                        kMaxServerNamePostfix);
-
-  auto rpc_place_in_hierarchy = [context, rpc](const tl::request &req,
-                                               SwapBlob swap_blob,
-                                               const std::string name,
-                                               api::Context ctx) {
-    (void)req;
-    for (int i = 0; i < ctx.buffer_organizer_retries; ++i) {
-      LOG(INFO) << "Buffer Organizer placing blob '" << name
-                << "' in hierarchy. Attempt " << i + 1 << " of "
-                << ctx.buffer_organizer_retries << std::endl;
-      api::Status result = PlaceInHierarchy(context, rpc, swap_blob, name, ctx);
-      if (result.Succeeded()) {
-        break;
-      } else {
-        ThalliumState *state = GetThalliumState(rpc);
-
-        if (state && bo_engine) {
-          // TODO(chogan): We probably don't want to sleep here, but for now
-          // this enables testing.
-          double sleep_ms = 2000;
-          tl::thread::self().sleep(*bo_engine, sleep_ms);
-        }
-      }
-    }
-  };
-
-  auto rpc_move_to_target = [context, rpc](const tl::request &req,
-                                           SwapBlob swap_blob,
-                                           TargetID target_id, int retries) {
-    (void)req;
-    (void)swap_blob;
-    (void)target_id;
-    for (int i = 0; i < retries; ++i) {
-      // TODO(chogan): MoveToTarget(context, rpc, target_id, swap_blob);
-      HERMES_NOT_IMPLEMENTED_YET;
-    }
-  };
-
-  auto rpc_enqueue_flushing_task =
-      [context, rpc](const tl::request &req, BlobID blob_id,
-                     const std::string &filename, u64 offset) {
-        bool result = LocalEnqueueFlushingTask(context, rpc, blob_id, filename,
-                                               offset);
-
-        req.respond(result);
-      };
-
-  auto rpc_enqueue_bo_move = [context, rpc](const tl::request &req,
-                                            const BoMoveList &moves,
-                                            BlobID blob_id,
-                                            BucketID bucket_id,
-                                            const std::string &internal_name,
-                                            BoPriority priority) {
-    LocalEnqueueBoMove(context, rpc, moves, blob_id, bucket_id, internal_name,
-                       priority);
-
-    req.respond(true);
-  };
-
-  auto rpc_organize_blob = [context, rpc](const tl::request &req,
-                                          const std::string &internal_blob_name,
-                                          BucketID bucket_id, f32 epsilon,
-                                          f32 importance_score) {
-    LocalOrganizeBlob(context, rpc, internal_blob_name, bucket_id, epsilon,
-                      importance_score);
-
-    req.respond(true);
-  };
-
-  rpc_server->define("PlaceInHierarchy",
-                     rpc_place_in_hierarchy).disable_response();
-  rpc_server->define("MoveToTarget",
-                     rpc_move_to_target).disable_response();
-  rpc_server->define("EnqueueFlushingTask", rpc_enqueue_flushing_task);
-  rpc_server->define("EnqueueBoMove", rpc_enqueue_bo_move);
-  rpc_server->define("OrganizeBlob", rpc_organize_blob);
-}
-
-/** start prefetcher */
-void ThalliumRpc::StartPrefetcher(double sleep_ms) {
-  tl::engine *rpc_server = engine;
-  using tl::request;
-
-  // Create the LogIoStat RPC
-  auto rpc_log_io_stat = [context](const request &req, IoLogEntry &entry) {
-    (void) context;
-    auto prefetcher = Singleton<Prefetcher>::GetInstance();
-    prefetcher->Log(entry);
-    req.respond(true);
-  };
-  rpc_server->define("LogIoStat", rpc_log_io_stat);
-
-  // Prefetcher thread args
-  struct PrefetcherThreadArgs {
-    SharedMemoryContext *context;
-    RpcContext *rpc;
-    double sleep_ms;
-    bool init_;
-  };
-
-  // Create the prefetcher thread lambda
-  auto prefetch = [](void *args) {
-    PrefetcherThreadArgs targs = *((PrefetcherThreadArgs*)args);
-    ThalliumState *state = GetThalliumState(targs.rpc);
-    LOG(INFO) << "Prefetching thread started" << std::endl;
-    auto prefetcher = Singleton<Prefetcher>::GetInstance();
-    while (!kill_requested.load()) {
-      prefetcher->Process();
-      tl::thread::self().sleep(*engine, targs.sleep_ms);
-    }
-    LOG(INFO) << "Finished prefetcher" << std::endl;
-  };
-
-  // Create prefetcher thread
-  PrefetcherThreadArgs *args = PushStruct<PrefetcherThreadArgs>(arena);
-  args->context = context;
-  args->rpc = rpc;
-  args->sleep_ms = sleep_ms;
-  args->init_ = false;
-
-  ABT_xstream_create(ABT_SCHED_NULL, &execution_stream);
-  ABT_thread_create_on_xstream(execution_stream,
-                               prefetch, args,
-                               ABT_THREAD_ATTR_NULL, NULL);
-}
-
-/** stop prefetcher */
-void ThalliumRpc::StopPrefetcher() {
-  kill_requested.store(true);
-  ABT_xstream_join(execution_stream);
-  ABT_xstream_free(&execution_stream);
-}
-
-/** start global system view state update thread  */
-void ThalliumRpc::StartGlobalSystemViewStateUpdateThread(double sleep_ms) {
-  struct ThreadArgs {
-    SharedMemoryContext *context;
-    RpcContext *rpc;
-    double sleep_ms;
-  };
-
-  auto update_global_system_view_state = [](void *args) {
-    ThreadArgs *targs = (ThreadArgs *)args;
-    ThalliumState *state = GetThalliumState(targs->rpc);
-    LOG(INFO) << "Update global system view state start" << std::endl;
-    while (!kill_requested.load()) {
-      UpdateGlobalSystemViewState(targs->context, targs->rpc);
-      tl::thread::self().sleep(*engine, targs->sleep_ms);
-    }
-    LOG(INFO) << "Finished global system view update thread" << std::endl;
-  };
-
-  ThreadArgs *args = PushStruct<ThreadArgs>(arena);
-  args->context = context;
-  args->rpc = rpc;
-  args->sleep_ms = sleep_ms;
-
-  ThalliumState *state = GetThalliumState(rpc);
-  ABT_thread_create_on_xstream(execution_stream,
-                               update_global_system_view_state, args,
-                               ABT_THREAD_ATTR_NULL, NULL);
-}
-
-/** stop global system view state update thread */
-void ThalliumRpc::StopGlobalSystemViewStateUpdateThread() {
-  ThalliumState *state = GetThalliumState(rpc);
-  kill_requested.store(true);
-  ABT_xstream_join(execution_stream);
-  ABT_xstream_free(&execution_stream);
 }
 
 }  // namespace hermes
