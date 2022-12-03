@@ -7,8 +7,4 @@
 
 namespace hermes {
 
-ClientConfig::ClientConfig() {
-
-}
-
 }  // namespace hermes

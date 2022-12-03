@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "hermes_version.h"
+#include "data_structures.h"
 
 /**
  * \file hermes_types.h
@@ -143,7 +144,7 @@ enum class PlacementPolicy {
 class PlacementPolicyConv {
  public:
   /** A function to return string representation of \a policy */
-  static std::string str(PlacementPolicy policy) {
+  static std::string to_str(PlacementPolicy policy) {
     switch (policy) {
       case PlacementPolicy::kRandom: {
         return "PlacementPolicy::kRandom";

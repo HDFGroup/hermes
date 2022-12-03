@@ -15,12 +15,9 @@
 
 #include <mpi.h>
 #include <glog/logging.h>
+#include "hermes.h"
 
-/**
- * kHermesConf env variable is used to define path to kHermesConf in adapters.
- * This is used for initialization of Hermes.
- */
-const char* kHermesConf = "HERMES_CONF";
+namespace hapi = hermes::api;
 
 int main(int argc, char* argv[]) {
   MPI_Init(&argc, &argv);
@@ -29,8 +26,8 @@ int main(int argc, char* argv[]) {
     hermes_config = argv[1];
   }
 
-  auto hermes = hermes::InitHermesDaemon(hermes_config);
-  hermes->RunDaemon();
+  auto hermes = hapi::Hermes(hapi::HermesType::kDaemon, hermes_config);
+  hermes.RunDaemon();
 
   MPI_Finalize();
 

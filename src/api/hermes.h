@@ -6,11 +6,9 @@
 #define HERMES_SRC_API_HERMES_H_
 
 #include "config.h"
+#include "constants.h"
 
 namespace hermes::api {
-
-const char* kHermesConf = "HERMES_CONF";
-const char* kHermesClientConf = "HERMES_CLIENT_CONF";
 
 enum class HermesType {
   kDaemon,
@@ -21,30 +19,28 @@ enum class HermesType {
 class Hermes {
  public:
   HermesType mode_;
-  Config config_;
+  ServerConfig server_config_;
+  ClientConfig client_config_;
 
  public:
   Hermes() = default;
+  Hermes(HermesType mode, std::string config_path) {
+    Init(mode, std::move(config_path));
+  }
 
   void Init(HermesType mode, std::string config_path) {
-    // Load the Hermes Configuration
-    if (config_path.size() == 0) {
-      config_path = getenv(kHermesConf);
-    }
-    InitConfig(&config_, config_path.c_str());
-
     mode_ = mode;
     switch (mode) {
       case HermesType::kDaemon: {
-        InitDaemon();
+        InitDaemon(std::move(config_path));
         break;
       }
       case HermesType::kClient: {
-        InitClient();
+        InitClient(std::move(config_path));
         break;
       }
       case HermesType::kColocated: {
-        InitColocated();
+        InitColocated(std::move(config_path));
         break;
       }
     }
@@ -57,13 +53,18 @@ class Hermes {
   }
 
  private:
-  void InitDaemon() {
+  void InitDaemon(std::string config_path) {
+    // Load the Hermes Configuration
+    if (config_path.size() == 0) {
+      config_path = GetEnvSafe(kHermesServerConf);
+    }
+    server_config_.LoadFromFile(config_path);
   }
 
-  void InitClient() {
+  void InitClient(std::string config_path) {
   }
 
-  void InitColocated() {
+  void InitColocated(std::string config_path) {
   }
 
   void FinalizeDaemon() {
@@ -73,6 +74,15 @@ class Hermes {
   }
 
   void FinalizeColocated() {
+  }
+
+ private:
+  inline std::string GetEnvSafe(const char *env_name) {
+    char *val = getenv(env_name);
+    if (val == nullptr){
+      return "";
+    }
+    return val;
   }
 };
 

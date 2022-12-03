@@ -22,6 +22,7 @@
 #include "data_structures.h"
 
 #include "hermes_types.h"
+#include "constants.h"
 
 namespace hermes {
 
@@ -34,9 +35,9 @@ struct ClientConfig {
   bool stop_daemon_;
 
  public:
-  ClientConfig();
+  ClientConfig() = default;
   void LoadText(const std::string &text);
-  void LoadFromFile(const char *path);
+  void LoadFromFile(const std::string &path);
   void LoadDefault();
 };
 
@@ -44,9 +45,9 @@ struct DeviceInfo {
   /** The minimum transfer size of each device */
   size_t block_size_;
   /** The unit of each slab, a multiple of the Device's block size */
-  lipcl::vector<size_t> slab_sizes_;
+  std::vector<size_t> slab_sizes_;
   /** The mount point of a device */
-  lipcl::string mount_point_;
+  std::string mount_point_;
   /** Device capacity (bytes) */
   size_t capacity_;
   /** Bandwidth of a device (MBps) */
@@ -55,7 +56,38 @@ struct DeviceInfo {
   f32 latency_;
   /** Whether or not the device is shared among all nodes */
   bool is_shared_;
-  /** */
+  /** BORG's minimum and maximum capacity threshold for device */
+  f32 borg_min_thresh_, borg_max_thresh_;
+};
+
+struct RpcInfo {
+  /** The name of a file that contains host names, 1 per line */
+  std::string host_file_;
+  /** The parsed hostnames from the hermes conf */
+  std::vector<std::string> host_names_;
+  /** The RPC protocol to be used. */
+  std::string protocol_;
+  /** The RPC domain name for verbs transport. */
+  std::string domain_;
+  /** The RPC port number. */
+  int port_;
+  /** The number of handler threads per RPC server. */
+  int num_threads_;
+};
+
+struct DpeInfo {
+  /** The default blob placement policy. */
+  api::PlacementPolicy default_policy_;
+
+  /** Whether blob splitting is enabled for Round-Robin blob placement. */
+  bool default_rr_split_;
+};
+
+struct BorgInfo {
+  /** The RPC port number for the buffer organizer. */
+  int port_;
+  /** The number of buffer organizer threads. */
+  int num_threads_;
 };
 
 /**
@@ -64,47 +96,24 @@ struct DeviceInfo {
 class ServerConfig {
  public:
   /** The device information */
-  lipcl::vector<DeviceInfo> devices_;
+  std::vector<DeviceInfo> devices_;
+
+  /** The RPC information */
+  RpcInfo rpc_;
+
+  /** The DPE information */
+  DpeInfo dpe_;
+
+  /** Buffer organizer (BORG) information */
+  BorgInfo borg_;
 
   /** The length of a view state epoch */
   u32 system_view_state_update_interval_ms;
 
-  /** The name of a file that contains host names, 1 per line */
-  lipcl::string rpc_server_host_file;
-  /** The hostname of the RPC server, minus any numbers that Hermes may
-   * auto-generate when the rpc_hostNumber_range is specified. */
-  lipcl::string rpc_server_base_name;
-  /** The list of numbers from all server names. E.g., '{1, 3}' if your servers
-   * are named ares-comp-1 and ares-comp-3 */
-  lipcl::vector<lipcl::string> host_numbers;
-  /** The RPC server name suffix. This is appended to the base name plus host
-      number. */
-  lipcl::string rpc_server_suffix;
-  /** The parsed hostnames from the hermes conf */
-  lipcl::vector<lipcl::string> host_names;
-  /** The RPC protocol to be used. */
-  lipcl::string rpc_protocol;
-  /** The RPC domain name for verbs transport. */
-  lipcl::string rpc_domain;
-  /** The RPC port number. */
-  int rpc_port;
-  /** The RPC port number for the buffer organizer. */
-  int buffer_organizer_port;
-  /** The number of handler threads per RPC server. */
-  int rpc_num_threads;
-  /** The number of buffer organizer threads. */
-  int bo_num_threads;
-  /** The default blob placement policy. */
-  api::PlacementPolicy default_placement_policy;
-  /** Whether blob splitting is enabled for Round-Robin blob placement. */
-  bool default_rr_split;
-  /** The min and max capacity threshold in MiB for each device at which the
-   * BufferOrganizer will trigger. */
-  Thresholds bo_capacity_thresholds[kMaxDevices];
   /** A base name for the BufferPool shared memory segement. Hermes appends the
    * value of the USER environment variable to this string.
    */
-  char buffer_pool_shmem_name[kMaxBufferPoolShmemNameLength];
+  std::string shmem_name_;
 
   /**
    * Paths prefixed with the following directories are not tracked in Hermes
@@ -120,19 +129,22 @@ class ServerConfig {
   std::vector<std::string> path_inclusions;
 
  public:
-  ServerConfig();
+  ServerConfig() = default;
   void LoadText(const std::string &text);
-  void LoadFromFile(const char *path);
+  void LoadFromFile(const std::string &path);
   void LoadDefault();
 
  private:
   void ParseYAML(YAML::Node &yaml_conf);
   void CheckConstraints();
-  void ParseHostNames(YAML::Node yaml_conf);
+  void ParseRpcInfo(YAML::Node yaml_conf);
+  void ParseDeviceInfo(YAML::Node yaml_conf);
+  void ParseDpeInfo(YAML::Node yaml_conf);
+  void ParseBorgInfo(YAML::Node yaml_conf);
 };
 
 /** print \a expected value and fail when an error occurs */
-void PrintExpectedAndFail(const std::string &expected, u32 line_number = 0) {
+static void PrintExpectedAndFail(const std::string &expected, u32 line_number = 0) {
   std::ostringstream msg;
   msg << "Configuration parser expected '" << expected << "'";
   if (line_number > 0) {
@@ -143,64 +155,17 @@ void PrintExpectedAndFail(const std::string &expected, u32 line_number = 0) {
   LOG(FATAL) << msg.str();
 }
 
-/** parse \a var array from configuration file in YAML */
-template<typename T>
-void ParseArray(YAML::Node list_node, const std::string var,
-                T *list, int max_list_len) {
-  int i = 0;
-  if (max_list_len < (int)list_node.size()) {
-    LOG(FATAL) << var << " (array) had "
-               << list_node.size() << " arguments "
-               << "but up to " << max_list_len << " expected\n";
-  }
-  for (auto val_node : list_node) {
-    list[i++] = val_node.as<T>();
-  }
-}
-
 /** parse \a list_node vector from configuration file in YAML */
 template<typename T>
-void ParseVector(YAML::Node list_node, std::vector<T> &list) {
+static void ParseVector(YAML::Node list_node, std::vector<T> &list) {
   for (auto val_node : list_node) {
     list.emplace_back(val_node.as<T>());
   }
 }
 
-/** parse \a matrix_node matrix using \a col_len column length */
-template<typename T>
-void ParseMatrix(YAML::Node matrix_node, const std::string var, T *matrix,
-                 int max_row_len, int max_col_len, int *col_len) {
-  int i = 0;
-  if (max_row_len < (int)matrix_node.size()) {
-    LOG(FATAL) << var << " (matrix) had "
-               << matrix_node.size() << " arguments "
-               << "but up to " << max_row_len << " expected\n";
-  }
-  for (auto row : matrix_node) {
-    ParseArray<T>(row, var, &matrix[i*max_col_len], col_len[i]);
-    ++i;
-  }
-}
-
-/** parse \a matrix_node matrix from configuration file in YAML */
-template<typename T>
-void ParseMatrix(YAML::Node matrix_node, std::string var, T *matrix,
-                 int max_row_len, int max_col_len) {
-  int i = 0;
-  if (max_row_len < (int)matrix_node.size()) {
-    LOG(FATAL) << var << " (matrix) had "
-               << matrix_node.size() << " arguments "
-               << "but up to " << max_row_len << " expected\n";
-  }
-  for (auto row : matrix_node) {
-    ParseArray<T>(row, var, &matrix[i*max_col_len], max_col_len);
-    ++i;
-  }
-}
-
 /** parse range list from configuration file in YAML */
-void ParseRangeList(YAML::Node list_node, std::string var,
-                    std::vector<std::string> &list) {
+static void ParseRangeList(YAML::Node list_node, std::string var,
+                           std::vector<std::string> &list) {
   int min, max, width = 0;
   for (auto val_node : list_node) {
     std::string val = val_node.as<std::string>();
@@ -238,7 +203,7 @@ void ParseRangeList(YAML::Node list_node, std::string var,
   }
 }
 
-std::string ParseNumberSuffix(const std::string &num_text) {
+static std::string ParseNumberSuffix(const std::string &num_text) {
   int i;
   for (i = 0; i < num_text.size(); ++i) {
     char c = num_text[i];
@@ -249,14 +214,14 @@ std::string ParseNumberSuffix(const std::string &num_text) {
   return std::string(num_text.begin() + i, num_text.end());;
 }
 
-size_t ParseNumber(const std::string &num_text) {
+static size_t ParseNumber(const std::string &num_text) {
   size_t size;
   std::stringstream(num_text) >> size;
   return size;
 }
 
 /** Returns size (bytes) */
-size_t ParseSize(const std::string &size_text) {
+static size_t ParseSize(const std::string &size_text) {
   size_t size = ParseNumber(size_text);
   std::string suffix = ParseNumberSuffix(size_text);
   if (suffix.size() == 0) {
@@ -273,12 +238,12 @@ size_t ParseSize(const std::string &size_text) {
 }
 
 /** Returns bandwidth (bytes / second) */
-size_t ParseBandwidth(const std::string &size_text) {
+static size_t ParseBandwidth(const std::string &size_text) {
   return ParseSize(size_text);
 }
 
 /** Returns latency (nanoseconds) */
-size_t ParseLatency(const std::string &latency_text) {
+static size_t ParseLatency(const std::string &latency_text) {
   size_t size = ParseNumber(latency_text);
   std::string suffix = ParseNumberSuffix(latency_text);
   if (suffix.size() == 0) {
@@ -292,9 +257,7 @@ size_t ParseLatency(const std::string &latency_text) {
   } else if (suffix[0] == 's' || suffix[0] == 'S') {
     return GIGABYTES(size);
   }
-  else {
-    LOG(FATAL) << "Could not parse the latency: " << latency_text << std::endl;
-  }
+  LOG(FATAL) << "Could not parse the latency: " << latency_text << std::endl;
 }
 
 }  // namespace hermes

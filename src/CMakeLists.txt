@@ -23,6 +23,11 @@ endif()
 # Set sources
 #------------------------------------------------------------------------------
 set(HERMES_SRCS
+  ${CMAKE_CURRENT_SOURCE_DIR}/constants.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/config_client.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/config_server.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/hermes_daemon.cc
+  #${CMAKE_CURRENT_SOURCE_DIR}/rpc_thallium.cc
   #${CMAKE_CURRENT_SOURCE_DIR}/api/bucket.cc
   #${CMAKE_CURRENT_SOURCE_DIR}/api/hermes.cc
   #${CMAKE_CURRENT_SOURCE_DIR}/api/vbucket.cc
@@ -34,9 +39,6 @@ set(HERMES_SRCS
   #${CMAKE_CURRENT_SOURCE_DIR}/dpe/random.cc
   #${CMAKE_CURRENT_SOURCE_DIR}/dpe/round_robin.cc
   #${CMAKE_CURRENT_SOURCE_DIR}/dpe/minimize_io_time.cc
-  ${CMAKE_CURRENT_SOURCE_DIR}/config_parser.cc
-  ${CMAKE_CURRENT_SOURCE_DIR}/rpc_thallium.cc
-  ${CMAKE_CURRENT_SOURCE_DIR}/hermes_daemon.cc
 )
 
 #------------------------------------------------------------------------------
