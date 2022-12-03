@@ -26,7 +26,8 @@ int main(int argc, char* argv[]) {
     hermes_config = argv[1];
   }
 
-  auto hermes = hapi::Hermes(hapi::HermesType::kDaemon, hermes_config);
+  auto hermes = hapi::Hermes(hermes::HermesType::kServer,
+                             hermes_config);
   hermes.RunDaemon();
 
   MPI_Finalize();

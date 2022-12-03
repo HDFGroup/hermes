@@ -26,19 +26,51 @@
 
 namespace hermes {
 
+class BaseConfig {
+ public:
+  /** load configuration from a string */
+  void LoadText(const std::string &config_string, bool with_default = true) {
+    if (with_default) { LoadDefault(); }
+    if (config_string.size() == 0) {
+      return;
+    }
+    YAML::Node yaml_conf = YAML::Load(config_string);
+    ParseYAML(yaml_conf);
+  }
+
+  /** load configuration from file */
+  void LoadFromFile(const std::string &path, bool with_default = true) {
+    if (with_default) { LoadDefault(); }
+    if (path.size() == 0) {
+      return;
+    }
+    LOG(INFO) << "ParseConfig-LoadFile" << std::endl;
+    YAML::Node yaml_conf = YAML::LoadFile(path);
+    LOG(INFO) << "ParseConfig-LoadComplete" << std::endl;
+    ParseYAML(yaml_conf);
+  }
+
+  /** load the default configuration */
+  virtual void LoadDefault() = 0;
+
+ private:
+  virtual void ParseYAML(YAML::Node &yaml_conf) = 0;
+};
+
 /**
  * Configuration used to intialize client
  * */
 
-struct ClientConfig {
+class ClientConfig : public BaseConfig {
  public:
   bool stop_daemon_;
 
  public:
   ClientConfig() = default;
-  void LoadText(const std::string &text);
-  void LoadFromFile(const std::string &path);
-  void LoadDefault();
+  void LoadDefault() override;
+
+ private:
+   void ParseYAML(YAML::Node &yaml_conf) override;
 };
 
 struct DeviceInfo {
@@ -93,7 +125,7 @@ struct BorgInfo {
 /**
  * System and user configuration that is used to initialize Hermes.
  */
-class ServerConfig {
+class ServerConfig : public BaseConfig {
  public:
   /** The device information */
   std::vector<DeviceInfo> devices_;
@@ -130,8 +162,6 @@ class ServerConfig {
 
  public:
   ServerConfig() = default;
-  void LoadText(const std::string &text);
-  void LoadFromFile(const std::string &path);
   void LoadDefault();
 
  private:

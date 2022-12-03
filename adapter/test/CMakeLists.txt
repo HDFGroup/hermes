@@ -2,12 +2,6 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DHERMES_PRELOAD -DHERMES_RPC_THALLIUM")
 set(ADAPTER_COMMON ${CMAKE_CURRENT_SOURCE_DIR}/catch_config.h)
 set(HERMES_ADAPTER_TEST_DIR ${HERMES_ADAPTER_DIR}/test)
 
-find_package(Catch2 REQUIRED)
-add_executable(hermes_daemon ../../src/hermes_daemon.cc)
-target_link_libraries(hermes_daemon -ldl -lc MPI::MPI_CXX glog::glog)
-target_link_libraries(hermes_daemon hermes)
-add_dependencies(hermes_daemon hermes)
-
 function(gcc exec args)
     add_test(NAME Test${exec} COMMAND "${CMAKE_BINARY_DIR}/bin/${exec}" ${args})
     set_property(TEST Test${exec}
@@ -63,13 +57,3 @@ endif()
 if(HERMES_ENABLE_VFD)
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/vfd)
 endif()
-
-install(
-        TARGETS
-        hermes_daemon
-        EXPORT
-        ${HERMES_EXPORTED_TARGETS}
-        LIBRARY DESTINATION ${HERMES_INSTALL_LIB_DIR}
-        ARCHIVE DESTINATION ${HERMES_INSTALL_LIB_DIR}
-        RUNTIME DESTINATION ${HERMES_INSTALL_BIN_DIR}
-)

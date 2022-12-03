@@ -27,6 +27,7 @@ set(HERMES_SRCS
   ${CMAKE_CURRENT_SOURCE_DIR}/config_client.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/config_server.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/hermes_daemon.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/utils.cc
   #${CMAKE_CURRENT_SOURCE_DIR}/rpc_thallium.cc
   #${CMAKE_CURRENT_SOURCE_DIR}/api/bucket.cc
   #${CMAKE_CURRENT_SOURCE_DIR}/api/hermes.cc
@@ -87,6 +88,12 @@ endif()
 
 set(HERMES_EXPORTED_LIBS hermes ${HERMES_EXPORTED_LIBS})
 
+# HERMES DAEMON
+find_package(Catch2 REQUIRED)
+add_executable(hermes_daemon hermes_daemon.cc)
+add_dependencies(hermes_daemon hermes)
+target_link_libraries(hermes_daemon hermes -ldl -lc MPI::MPI_CXX glog::glog)
+
 #-----------------------------------------------------------------------------
 # Specify project header files to be installed
 #-----------------------------------------------------------------------------
@@ -121,6 +128,15 @@ install(
 install(
   TARGETS
     hermes
+  EXPORT
+    ${HERMES_EXPORTED_TARGETS}
+  LIBRARY DESTINATION ${HERMES_INSTALL_LIB_DIR}
+  ARCHIVE DESTINATION ${HERMES_INSTALL_LIB_DIR}
+  RUNTIME DESTINATION ${HERMES_INSTALL_BIN_DIR}
+)
+install(
+  TARGETS
+    hermes_daemon
   EXPORT
     ${HERMES_EXPORTED_TARGETS}
   LIBRARY DESTINATION ${HERMES_INSTALL_LIB_DIR}

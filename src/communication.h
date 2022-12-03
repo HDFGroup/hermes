@@ -31,27 +31,13 @@ namespace hermes {
 class CommunicationContext {
  public:
   /** A unique identifier for each rank, relative to all ranks. */
-  i32 world_proc_id;
-  /** a unique identifier for each rank, releative to each ProcessKind. */
-  i32 sub_proc_id;
+  i32 world_proc_id_;
   /** The total number of ranks. */
-  i32 world_size;
-  /** The total number of Hermes cores. Currently this is only defined on ranks
-   * that have ProcessKind::kHermes */
-  i32 hermes_size;
-  /** The total number of application cores. Currently this is only defined on
-   * ranks that have ProcessKind::kApp */
-  i32 app_size;
+  i32 world_size_;
   /** The total number of nodes. */
-  i32 num_nodes;
-  /** A unique index for each node. Starts at 1, not 0. */
-  i32 node_id;
-  /** Distinguishes between Hermes ranks and application ranks. */
-  ProcessKind proc_kind;
-  /** True if this rank is the lowest numbered rank on the current node. Lowest
-   * is not relative to all ranks, but to each ProcessKind. This is useful for
-   * operations that only need to happen once per node. */
-  bool first_on_node;
+  i32 num_nodes_;
+  /** The type of communicator this is */
+  HermesType type_;
 
  public:
   virtual void WorldBarrier() = 0; /** E.g., MPI_Barrier(MPI_COMM_WORLD)*/

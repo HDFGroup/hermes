@@ -7,14 +7,9 @@
 
 #include "config.h"
 #include "constants.h"
+#include "hermes_types.h"
 
 namespace hermes::api {
-
-enum class HermesType {
-  kDaemon,
-  kClient,
-  kColocated
-};
 
 class Hermes {
  public:
@@ -31,7 +26,7 @@ class Hermes {
   void Init(HermesType mode, std::string config_path) {
     mode_ = mode;
     switch (mode) {
-      case HermesType::kDaemon: {
+      case HermesType::kServer: {
         InitDaemon(std::move(config_path));
         break;
       }

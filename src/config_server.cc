@@ -134,26 +134,9 @@ void ServerConfig::ParseYAML(YAML::Node &yaml_conf) {
   }
 }
 
-/** load configuration from a string */
-void ServerConfig::LoadText(const std::string &config_string) {
-  LoadDefault();
-  if (config_string.size() == 0) {
-    return;
-  }
-  YAML::Node yaml_conf = YAML::Load(config_string);
-  ParseYAML(yaml_conf);
-}
-
-/** load configuration from file */
-void ServerConfig::LoadFromFile(const std::string &path) {
-  LoadDefault();
-  if (path.size() == 0) {
-    return;
-  }
-  LOG(INFO) << "ParseConfig-LoadFile" << std::endl;
-  YAML::Node yaml_conf = YAML::LoadFile(path);
-  LOG(INFO) << "ParseConfig-LoadComplete" << std::endl;
-  ParseYAML(yaml_conf);
+/** Load the default configuration */
+void ServerConfig::LoadDefault() {
+  LoadText(kServerDefaultConfigStr, false);
 }
 
 }  // namespace hermes

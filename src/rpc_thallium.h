@@ -19,263 +19,92 @@
 #include <sys/socket.h>
 
 #include <thallium.hpp>
-#include <thallium/serialization/stl/pair.hpp>
-#include <thallium/serialization/stl/string.hpp>
-#include <thallium/serialization/stl/vector.hpp>
+#include "rpc_thallium_serialization.h"
+#include "communication.h"
+#include "config.h"
+#include "utils.h"
 
 #include "rpc.h"
-#include "buffer_organizer.h"
 
 namespace tl = thallium;
 
 namespace hermes {
-
-const int kMaxServerNamePrefix = 32; /**< max. server name prefix */
-const int kMaxServerNamePostfix = 8; /**< max. server name suffix */
-const char kBoPrefix[] = "BO::";     /**< buffer organizer prefix */
-/** buffer organizer prefix length */
-const int kBoPrefixLength = sizeof(kBoPrefix) - 1;
-
-std::string GetRpcAddress(RpcContext *rpc, Config *config, u32 node_id,
-                          int port);
-
-/** is \a func_name buffer organizer function? */
-static bool IsBoFunction(const char *func_name) {
-  bool result = false;
-  int i = 0;
-
-  while (func_name && *func_name != '\0' && i < kBoPrefixLength) {
-    if (func_name[i] != kBoPrefix[i]) {
-      break;
-    }
-    ++i;
-  }
-
-  if (i == kBoPrefixLength) {
-    result = true;
-  }
-
-  return result;
-}
 
 /**
    A structure to represent Thallium state
 */
 class ThalliumRpc : public RpcContext {
  public:
-  char server_name_prefix[kMaxServerNamePrefix];      /**< server prefix */
-  char server_name_postfix[kMaxServerNamePostfix];    /**< server suffix */
-  char bo_server_name_postfix[kMaxServerNamePostfix]; /**< buf. org. suffix */
-  std::atomic<bool> kill_requested;                   /**< is kill requested? */
-  tl::engine *engine;                                 /**< pointer to engine */
-  tl::engine *bo_engine;        /**< pointer to buf. org. engine */
-  ABT_xstream execution_stream; /**< Argobots execution stream */
-  tl::engine *client_engine_;   /**< pointer to engine */
+  std::atomic<bool> kill_requested_; /**< is kill requested? */
+  tl::engine server_engine_;         /**< pointer to engine */
+  tl::engine bo_engine_;             /**< pointer to buf. org. engine */
+  ABT_xstream execution_stream_;     /**< Argobots execution stream */
+  tl::engine client_engine_;         /**< pointer to engine */
+  tl::engine io_engine_;         /**< pointer to engine */
 
   /** initialize RPC context  */
-  explicit ThalliumRpc(COMM_TYPE *comm,
-                       u32 num_nodes, u32 node_id, Config *config) :
-     RpcContext(comm, num_nodes, node_id, config) {
-  }
+  explicit ThalliumRpc(COMM_TYPE *comm, u32 num_nodes, u32 node_id,
+                       ServerConfig &config)
+      : RpcContext(comm, num_nodes, node_id, config) {}
 
   /** Get protocol */
+  void InitClients();
+  void InitServer();
+  void Finalize();
+  void RunDaemon(const char *shmem_name);
+  std::string GetServerName(u32 node_id);
   std::string GetProtocol();
-
-
 
   /** RPC call */
   template <typename ReturnType, typename... Ts>
   ReturnType Call(u32 node_id, const char *func_name, Ts... args) {
-    VLOG(1) << "Calling " << func_name << " on node " << node_id << " from node "
-            << node_id << std::endl;
-    bool is_bo_func = IsBoFunction(func_name);
-    std::string server_name = GetServerName(node_id, is_bo_func);
-
-    if (is_bo_func) {
-      func_name += kBoPrefixLength;
-    }
-
-    tl::remote_procedure remote_proc = client_engine_->define(func_name);
-    // TODO(chogan): @optimization We can save a little work by storing the
-    // endpoint instead of looking it up on every call
-    tl::endpoint server = client_engine_->lookup(server_name);
-
+    VLOG(1) << "Calling " << func_name << " on node " << node_id
+            << " from node " << node_id << std::endl;
+    std::string server_name = GetServerName(node_id);
+    tl::remote_procedure remote_proc = client_engine_.define(func_name);
+    tl::endpoint server = client_engine_.lookup(server_name);
     if constexpr (std::is_same<ReturnType, void>::value) {
       remote_proc.disable_response();
       remote_proc.on(server)(std::forward<Ts>(args)...);
     } else {
       ReturnType result = remote_proc.on(server)(std::forward<Ts>(args)...);
-
       return result;
     }
   }
+
+  size_t IoCall(u32 node_id, IoType type, u8 *data,
+                TargetID id, size_t off, size_t size) {
+    std::string server_name = GetServerName(node_id);
+    const char *func_name;
+    tl::bulk_mode flag;
+
+    switch (type) {
+      case IoType::kRead: {
+        func_name = "BulkRead";
+        flag = tl::bulk_mode::read_only;
+      }
+      case IoType::kWrite: {
+        func_name = "BulkWrite";
+        flag = tl::bulk_mode::write_only;
+      }
+    }
+
+    tl::remote_procedure remote_proc = io_engine_.define(func_name);
+    tl::endpoint server = io_engine_.lookup(server_name);
+
+    std::vector<std::pair<void*, size_t>> segments(1);
+    segments[0].first  = data;
+    segments[0].second = size;
+
+    tl::bulk bulk = io_engine_.expose(segments, flag);
+    size_t result = remote_proc.on(server)(bulk, id);
+
+    return result;
+  }
+
+ private:
+  void DefineRpcs();
 };
-
-/**
- *  Lets Thallium know how to serialize a BucketID.
- *
- * This function is called implicitly by Thallium.
- *
- * @param ar An archive provided by Thallium.
- * @param bucket_id The BucketID to serialize.
- */
-template <typename A>
-void serialize(A &ar, BucketID &bucket_id) {
-  ar &bucket_id.as_int;
-}
-
-/**
- *  Lets Thallium know how to serialize a VBucketID.
- *
- * This function is called implicitly by Thallium.
- *
- * @param ar An archive provided by Thallium.
- * @param vbucket_id The VBucketID to serialize.
- */
-template <typename A>
-void serialize(A &ar, VBucketID &vbucket_id) {
-  ar &vbucket_id.as_int;
-}
-
-/**
- *  Lets Thallium know how to serialize a BlobID.
- *
- * This function is called implicitly by Thallium.
- *
- * @param ar An archive provided by Thallium.
- * @param blob_id The BlobID to serialize.
- */
-template <typename A>
-void serialize(A &ar, BlobID &blob_id) {
-  ar &blob_id.as_int;
-}
-
-/**
- *  Lets Thallium know how to serialize a TargetID.
- *
- * This function is called implicitly by Thallium.
- *
- * @param ar An archive provided by Thallium.
- * @param target_id The TargetID to serialize.
- */
-template <typename A>
-void serialize(A &ar, TargetID &target_id) {
-  ar &target_id.as_int;
-}
-
-/** serialize \a info */
-template <typename A>
-void serialize(A &ar, BufferInfo &info) {
-  ar &info.target_;
-  ar &info.bandwidth_mbps;
-  ar &info.size;
-}
-
-#ifndef THALLIUM_USE_CEREAL
-
-// NOTE(chogan): Thallium's default serialization doesn't handle enums by
-// default so we must write serialization code for all enums when we're not
-// using cereal.
-
-/** save \a priority */
-template <typename A>
-void save(A &ar, BoPriority &priority) {
-  int val = (int)priority;
-  ar.write(&val, 1);
-}
-
-/** load \a priority */
-template <typename A>
-void load(A &ar, BoPriority &priority) {
-  int val = 0;
-  ar.read(&val, 1);
-  priority = (BoPriority)val;
-}
-
-/** save \a violation */
-/* template <typename A>
-void save(A &ar, ThresholdViolation &violation) {
-  int val = (int)violation;
-  ar.write(&val, 1);
-} */
-
-/** load \a violation */
-/* template <typename A>
-void load(A &ar, ThresholdViolation &violation) {
-  int val = 0;
-  ar.read(&val, 1);
-  violation = (ThresholdViolation)val;
-} */
-#endif  // #ifndef THALLIUM_USE_CEREAL
-
-/** save buffer organizer \a op */
-template <typename A>
-void save(A &ar, BoOperation &op) {
-  int val = (int)op;
-  ar.write(&val, 1);
-}
-
-/** load buffer organizer \a op */
-template <typename A>
-void load(A &ar, BoOperation &op) {
-  int val = 0;
-  ar.read(&val, 1);
-  op = (BoOperation)val;
-}
-
-/** serialize buffer organizer task */
-template <typename A>
-void serialize(A &ar, BoTask &bo_task) {
-  ar &bo_task.op;
-}
-
-/** serialize violation information */
-/*template <typename A>
-void serialize(A &ar, ViolationInfo &info) {
-  ar &info.target_id;
-  ar &info.violation;
-  ar &info.violation_size;
-}*/
-
-namespace api {
-
-// PrefetchHint
-template <typename A>
-void save(A &ar, PrefetchHint &hint) {
-  ar << static_cast<int>(hint);
-}
-template <typename A>
-void load(A &ar, PrefetchHint &hint) {
-  int hint_i;
-  ar >> hint_i;
-  hint = static_cast<PrefetchHint>(hint_i);
-}
-
-// PrefetchContext
-template <typename A>
-void serialize(A &ar, PrefetchContext &pctx) {
-  ar & pctx.hint_;
-  ar & pctx.read_ahead_;
-}
-
-template<typename A>
-#ifndef THALLIUM_USE_CEREAL
-void save(A &ar, api::Context &ctx) {
-#else
-void save(A &ar, const api::Context &ctx) {
-#endif  // #ifndef THALLIUM_USE_CEREAL
-  ar.write(&ctx.buffer_organizer_retries, 1);
-  int val = (int)ctx.policy;
-  ar.write(&val, 1);
-}
-template <typename A>
-void load(A &ar, api::Context &ctx) {
-  int val = 0;
-  ar.read(&ctx.buffer_organizer_retries, 1);
-  ar.read(&val, 1);
-  ctx.policy = (PlacementPolicy)val;
-}
-}  // namespace api
 
 }  // namespace hermes
 

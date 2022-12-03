@@ -23,6 +23,7 @@
 
 #include "hermes_version.h"
 #include "data_structures.h"
+#include "constants.h"
 
 /**
  * \file hermes_types.h
@@ -56,6 +57,19 @@ typedef int32_t i32;  /**< 32-bit signed integer */
 typedef int64_t i64;  /**< 64-bit signed integer */
 typedef float f32;    /**< 32-bit float */
 typedef double f64;   /**< 64-bit float */
+
+/** The mode Hermes is launched in */
+enum class HermesType {
+  kServer,
+  kClient,
+  kColocated
+};
+
+/** The types of I/O that can be performed (for IoCall RPC) */
+enum class IoType {
+  kRead,
+  kWrite
+};
 
 typedef u16 DeviceID; /**< device id in unsigned 16-bit integer */
 
@@ -114,15 +128,61 @@ union BlobID {
   /** The BlobID as an unsigned 64-bit integer */
   u64 as_int;
 
-  bool IsNull() const  { return as_int == 0; }
+  bool IsNull() const { return as_int == 0; }
   bool InSwap() const { return bits.node_id < 0; }
   i32 GetNodeId() const { return bits.node_id; }
 };
 
+/** A definition for logging something that is not yet implemented */
+#define HERMES_NOT_IMPLEMENTED_YET \
+  LOG(FATAL) << __func__ << " not implemented yet\n"
+
+/** A definition for logging invalid code path */
+#define HERMES_INVALID_CODE_PATH LOG(FATAL) << "Invalid code path." << std::endl
+
+/** A TargetID uniquely identifies a buffering target within the system. */
+union TargetID {
+  /** The Target ID as bitfield */
+  struct {
+    /** The ID of the node in charge of this target. */
+    u32 node_id;
+    /** The ID of the virtual device that backs this target. It is an index into
+     * the Device array starting at BufferPool::devices_offset (on the node with
+     * ID node_id). */
+    u16 device_id;
+    /** The index into the Target array starting at BufferPool::targets_offset
+     * (on the node with ID node_id). */
+    u16 index;
+  } bits;
+
+  /** The TargetID as a unsigned 64-bit integer */
+  u64 as_int;
+
+  bool IsNull() const  { return as_int == 0; }
+};
+
 /**
- * \namespace api
+ * A PlacementSchema is a vector of (size, target) pairs where size is the
+ * number of bytes to buffer and target is the TargetID where to buffer those
+ * bytes.
  */
-namespace api {
+using PlacementSchema = std::vector<std::pair<size_t, TargetID>>;
+
+/**
+ * A structure to represent thesholds with mimimum and maximum values
+ */
+struct Thresholds {
+  float min; /**< minimum threshold value */
+  float max; /**< maximum threshold value */
+};
+
+/** Trait ID type */
+typedef u64 TraitID;
+
+}  // namespace hermes
+
+
+namespace hermes::api {
 
 /**
  * A Blob is simply an uninterpreted vector of bytes.
@@ -253,68 +313,6 @@ struct Context {
               vbkt_id_({0, 0}) {}
 };
 
-}  // namespace api
-
-/** A definition for logging something that is not yet implemented */
-#define HERMES_NOT_IMPLEMENTED_YET \
-  LOG(FATAL) << __func__ << " not implemented yet\n"
-
-/** A definition for logging invalid code path */
-#define HERMES_INVALID_CODE_PATH LOG(FATAL) << "Invalid code path." << std::endl
-
-/** A TargetID uniquely identifies a buffering target within the system. */
-union TargetID {
-  /** The Target ID as bitfield */
-  struct {
-    /** The ID of the node in charge of this target. */
-    u32 node_id;
-    /** The ID of the virtual device that backs this target. It is an index into
-     * the Device array starting at BufferPool::devices_offset (on the node with
-     * ID node_id). */
-    u16 device_id;
-    /** The index into the Target array starting at BufferPool::targets_offset
-     * (on the node with ID node_id). */
-    u16 index;
-  } bits;
-
-  /** The TargetID as a unsigned 64-bit integer */
-  u64 as_int;
-
-  bool IsNull() const  { return as_int == 0; }
-};
-
-/**
- * A PlacementSchema is a vector of (size, target) pairs where size is the
- * number of bytes to buffer and target is the TargetID where to buffer those
- * bytes.
- */
-using PlacementSchema = std::vector<std::pair<size_t, TargetID>>;
-
-/**
- * Distinguishes whether the process (or rank) is part of the application cores
- * or the Hermes core(s).
- */
-enum class ProcessKind {
-  kApp,    /**< Application process */
-  kHermes, /**< Hermes core process */
-
-  kCount /**< Sentinel value */
-};
-
-
-/**
- * A structure to represent thesholds with mimimum and maximum values
- */
-struct Thresholds {
-  float min; /**< minimum threshold value */
-  float max; /**< maximum threshold value */
-};
-
-/** Trait ID type */
-typedef u64 TraitID;
-
-namespace api {
-
 /** \brief Trait types.
  *
  */
@@ -324,8 +322,12 @@ enum class TraitType : u8 {
   PERSIST = 2,
 };
 
-}  // namespace api
-}  // namespace hermes
+}  // namespace hermes::api
+
+
+/**
+ * HASH FUNCTIONS
+ * */
 
 namespace std {
 template <>

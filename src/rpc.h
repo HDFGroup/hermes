@@ -18,13 +18,13 @@
 
 #include "hermes_types.h"
 #include "communication.h"
+#include "rpc_decorator.h"
+#include "config.h"
+
 #include <labstor/data_structures/lockless/string.h>
 #include <labstor/data_structures/lockless/vector.h>
 
 namespace hermes {
-
-const int kMaxServerNameSize = 128;  /**< maximum size of server name */
-const int kMaxServerSuffixSize = 16; /**< maximum size of server suffix */
 
 /** RPC types */
 enum class RpcType {
@@ -34,45 +34,54 @@ enum class RpcType {
 /**
    A structure to represent RPC context.
  */
-namespace lipcl = labstor::ipc::lockless;
-
 class RpcContext {
  public:
-  COMM_TYPE *comm_;
-  Config *config_;  /** The hermes configuration used to initialize this RPC */
+  COMM_TYPE &comm_;
+  /** The hermes configuration used to initialize this RPC */
+  ServerConfig &config_;
   /** Array of host names stored in shared memory. This array size is
    * RpcContext::num_nodes. */
-  lipcl::vector<lipcl::string> host_names;
-  u32 node_id_;        /**< node ID */
-  u32 num_nodes_;      /**< number of nodes */
-  // The number of host numbers in the rpc_host_number_range entry of the
-  // configuration file. Not necessarily the number of nodes because when there
-  // is only 1 node, the entry can be left blank, or contain 1 host number.
-  int port_;           /**< port number */
-  bool use_host_file_; /**< use host file if true */
-
-  // TODO(chogan): Also allow reading hostnames from a file for heterogeneous or
-  // non-contiguous hostnames (e.g., compute-node-20, compute-node-30,
-  // storage-node-16, storage-node-24)
-  // char *host_file_name;
+  lipcl::vector<lipcl::string> host_names_;
+  int port_;  /**< port number */
 
  public:
-  explicit RpcContext(COMM_TYPE *comm,
-                      u32 num_nodes, u32 node_id, Config *config) :
-      comm_(comm), num_nodes_(num_nodes),
-      node_id_(node_id), config_(config) {
-    port_ = config->rpc_port;
-    if (!config->rpc_server_host_file.empty()) {
-      use_host_file_ = true;
+  explicit RpcContext(COMM_TYPE &comm, ServerConfig &config, u32 num_nodes,
+                      u32 node_id) : comm_(comm), config_(config) {
+    port_ = config.rpc_.port_;
+    switch (comm.type_) {
+      case HermesType::kColocated
+      case HermesType::kServer: {
+        // Load configuration from either file or config
+        break;
+      }
+      case HermesType::kClient: {
+        // Load hostnames from SHMEM
+        break;
+      }
+    }
+  }
+
+  /** Check if we should skip an RPC and call a function locally */
+  bool ShouldDoLocalCall(int node_id) {
+    switch (comm_.type_) {
+      case HermesType::kClient: {
+        return false;
+      }
+      case HermesType::kServer: {
+        return node_id == comm_->node_id_;
+      }
+      case HermesType::kColocated: {
+        return true;
+      }
     }
   }
 
   /** get RPC address */
   std::string GetRpcAddress(u32 node_id, int port) {
-    std::string result = config_->rpc_protocol + "://";
+    std::string result = config_.rpc_.protocol_ + "://";
 
-    if (!config_->rpc_domain.empty()) {
-      result += config_->rpc_domain + "/";
+    if (!config_.rpc_.domain_.empty()) {
+      result += config_.rpc_.domain_ + "/";
     }
     std::string host_name = GetHostNameFromNodeId(node_id);
     result += host_name + ":" + std::to_string(port);
@@ -85,15 +94,13 @@ class RpcContext {
     std::string result;
     // NOTE(chogan): node_id 0 is reserved as the NULL node
     u32 index = node_id - 1;
-    result = host_names[index].str();
+    result = host_names_[index].str();
     return result;
   }
 };
 
 }  // namespace hermes
 
-// TODO(chogan): I don't like that code similar to this is in buffer_pool.cc.
-// I'd like to only have it in one place.
 #if defined(HERMES_RPC_THALLIUM)
 #include "rpc_thallium.h"
 #define RPC_TYPE ThalliumRpc
