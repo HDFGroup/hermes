@@ -13,11 +13,6 @@
 #ifndef HERMES_RPC_THALLIUM_H_
 #define HERMES_RPC_THALLIUM_H_
 
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-
 #include <thallium.hpp>
 #include "rpc_thallium_serialization.h"
 #include "communication.h"
@@ -43,15 +38,14 @@ class ThalliumRpc : public RpcContext {
   tl::engine io_engine_;         /**< pointer to engine */
 
   /** initialize RPC context  */
-  explicit ThalliumRpc(COMM_TYPE *comm, u32 num_nodes, u32 node_id,
-                       ServerConfig &config)
-      : RpcContext(comm, num_nodes, node_id, config) {}
+  explicit ThalliumRpc(COMM_TYPE *comm, ServerConfig *config)
+      : RpcContext(comm, config) {}
 
   /** Get protocol */
-  void InitClients();
+  void InitClient();
   void InitServer();
   void Finalize();
-  void RunDaemon(const char *shmem_name);
+  void RunDaemon();
   std::string GetServerName(u32 node_id);
   std::string GetProtocol();
 
@@ -97,7 +91,8 @@ class ThalliumRpc : public RpcContext {
     segments[0].second = size;
 
     tl::bulk bulk = io_engine_.expose(segments, flag);
-    size_t result = remote_proc.on(server)(bulk, id);
+    // size_t result = remote_proc.on(server)(bulk, id);
+    size_t result = remote_proc.on(server)(bulk);
 
     return result;
   }

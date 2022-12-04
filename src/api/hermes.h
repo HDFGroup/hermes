@@ -8,6 +8,7 @@
 #include "config.h"
 #include "constants.h"
 #include "hermes_types.h"
+#include "rpc.h"
 
 namespace hermes::api {
 
@@ -16,60 +17,45 @@ class Hermes {
   HermesType mode_;
   ServerConfig server_config_;
   ClientConfig client_config_;
+  COMM_TYPE comm_;
+  RPC_TYPE rpc_;
+  lipc::Allocator *main_alloc_;
 
  public:
   Hermes() = default;
-  Hermes(HermesType mode, std::string config_path) {
-    Init(mode, std::move(config_path));
-  }
+  Hermes(HermesType mode,
+         std::string server_config_path = "",
+         std::string client_config_path = "");
 
-  void Init(HermesType mode, std::string config_path) {
-    mode_ = mode;
-    switch (mode) {
-      case HermesType::kServer: {
-        InitDaemon(std::move(config_path));
-        break;
-      }
-      case HermesType::kClient: {
-        InitClient(std::move(config_path));
-        break;
-      }
-      case HermesType::kColocated: {
-        InitColocated(std::move(config_path));
-        break;
-      }
-    }
-  }
+  void Init(HermesType mode,
+            std::string server_config_path = "",
+            std::string client_config_path = "");
 
-  void Finalize() {
-  }
+  void Finalize();
 
-  void RunDaemon() {
-  }
+  void RunDaemon();
 
  private:
-  void InitDaemon(std::string config_path) {
-    // Load the Hermes Configuration
-    if (config_path.size() == 0) {
-      config_path = GetEnvSafe(kHermesServerConf);
-    }
-    server_config_.LoadFromFile(config_path);
-  }
+  void InitDaemon(std::string server_config_path);
 
-  void InitClient(std::string config_path) {
-  }
+  void InitColocated(std::string server_config_path,
+                     std::string client_config_path);
 
-  void InitColocated(std::string config_path) {
-  }
+  void InitClient(std::string client_config_path);
 
-  void FinalizeDaemon() {
-  }
+  void LoadServerConfig(std::string config_path);
 
-  void FinalizeClient() {
-  }
+  void LoadClientConfig(std::string config_path);
 
-  void FinalizeColocated() {
-  }
+  void InitSharedMemory();
+
+  void LoadSharedMemory();
+
+  void FinalizeDaemon();
+
+  void FinalizeClient();
+
+  void FinalizeColocated();
 
  private:
   inline std::string GetEnvSafe(const char *env_name) {
@@ -81,6 +67,6 @@ class Hermes {
   }
 };
 
-}
+}  // namespace hermes::api
 
 #endif  // HERMES_SRC_API_HERMES_H_

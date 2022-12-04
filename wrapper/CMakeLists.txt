@@ -12,8 +12,6 @@ include_directories(
 #------------------------------------------------------------------------------
 add_library(hermes_wrapper hermes_wrapper.cpp)
 target_link_libraries(hermes_wrapper ${LIBRT} hermes)
-target_compile_definitions(hermes_wrapper
-    PRIVATE $<$<BOOL:${HERMES_RPC_THALLIUM}>:HERMES_RPC_THALLIUM>)
 
 set(HERMES_EXPORTED_LIBS hermes_wrapper ${HERMES_EXPORTED_LIBS})
 

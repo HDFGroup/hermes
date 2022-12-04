@@ -2,6 +2,22 @@ include_directories(${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/adapter)
 
 configure_file(hermes_version.h.in hermes_version.h)
 
+# Create communication factory
+set(CMAKE_HERMES_COMMUNICATION_TYPE HERMES_RPC_NONE)
+if (HERMES_COMMUNICATION_MPI)
+  set(CMAKE_HERMES_COMMUNICATION_TYPE HERMES_COMMUNICATION_MPI)
+  set(CMAKE_HERMES_COMMUNICATION_TYPE_LIB MPI::MPI_CXX)
+endif()
+configure_file(communication_factory.h.in communication_factory.h)
+
+# Create rpc factory
+set(CMAKE_HERMES_COMMUNICATION_TYPE HERMES_RPC_NONE)
+if (HERMES_RPC_THALLIUM)
+  set(CMAKE_HERMES_RPC_TYPE HERMES_RPC_THALLIUM)
+  set(CMAKE_HERMES_RPC_TYPE_LIB thallium)
+endif()
+configure_file(rpc_factory.h.in rpc_factory.h)
+
 #------------------------------------------------------------------------------
 # External dependencies
 #------------------------------------------------------------------------------
@@ -23,12 +39,12 @@ endif()
 # Set sources
 #------------------------------------------------------------------------------
 set(HERMES_SRCS
-  ${CMAKE_CURRENT_SOURCE_DIR}/constants.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/api/hermes.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/config_client.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/config_server.cc
-  ${CMAKE_CURRENT_SOURCE_DIR}/hermes_daemon.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/utils.cc
-  #${CMAKE_CURRENT_SOURCE_DIR}/rpc_thallium.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/rpc_thallium.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/rpc_thallium_defs.cc
   #${CMAKE_CURRENT_SOURCE_DIR}/api/bucket.cc
   #${CMAKE_CURRENT_SOURCE_DIR}/api/hermes.cc
   #${CMAKE_CURRENT_SOURCE_DIR}/api/vbucket.cc
@@ -65,18 +81,15 @@ target_include_directories(hermes
 
 target_link_libraries(hermes
   PUBLIC ${GLPK_LIBRARIES}
-  PUBLIC thallium
+  PUBLIC ${CMAKE_HERMES_COMMUNICATION_TYPE_LIB}
+  PUBLIC ${CMAKE_HERMES_RPC_TYPE_LIB}
   PUBLIC glog::glog
   PUBLIC yaml-cpp
+  PUBLIC labstor_client labstor_data_structures
   PUBLIC "$<$<BOOL:${HERMES_INTERCEPT_IO}>:${GOTCHA_MODULE_LIBS}>"
-  PRIVATE $<$<BOOL:${HERMES_COMMUNICATION_MPI}>:MPI::MPI_CXX>
 )
 
 target_compile_definitions(hermes
-  PRIVATE $<$<BOOL:${HERMES_COMMUNICATION_MPI}>:HERMES_COMMUNICATION_MPI>
-  PRIVATE $<$<BOOL:${HERMES_RPC_THALLIUM}>:HERMES_RPC_THALLIUM>
-  PRIVATE $<$<BOOL:${HERMES_DEBUG_HEAP}>:HERMES_DEBUG_HEAP>
-  PRIVATE $<$<BOOL:${HERMES_MDM_STORAGE_STBDS}>:HERMES_MDM_STORAGE_STBDS>
   PRIVATE $<$<BOOL:${HERMES_ENABLE_TIMING}>:HERMES_ENABLE_TIMING>
 )
 
@@ -93,6 +106,8 @@ find_package(Catch2 REQUIRED)
 add_executable(hermes_daemon hermes_daemon.cc)
 add_dependencies(hermes_daemon hermes)
 target_link_libraries(hermes_daemon hermes -ldl -lc MPI::MPI_CXX glog::glog)
+target_compile_definitions(hermes_daemon
+        PRIVATE $<$<BOOL:${HERMES_ENABLE_TIMING}>:HERMES_ENABLE_TIMING>)
 
 #-----------------------------------------------------------------------------
 # Specify project header files to be installed

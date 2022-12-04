@@ -21,15 +21,20 @@ namespace hermes {
 
 /** start Thallium RPC server */
 void ThalliumRpc::InitServer() {
-  // Load the host names
-
+  std::string addr = GetMyRpcAddress();
+  server_engine_ = tl::engine(addr,
+                              THALLIUM_SERVER_MODE,
+                              true,
+                              config_->rpc_.num_threads_);
+  std::string rpc_server_name = server_engine_.self();
+  LOG(INFO) << "Serving at " << rpc_server_name << " with "
+            << config_->rpc_.num_threads_ << " RPC threads" << std::endl;
   DefineRpcs();
 }
 
 /** initialize RPC clients */
-void ThalliumRpc::InitClients() {
+void ThalliumRpc::InitClient() {
   std::string protocol = GetProtocol();
-  // TODO(chogan): This should go in a per-client persistent arena
   client_engine_ = tl::engine(protocol,
                               THALLIUM_CLIENT_MODE,
                               true, 1);
@@ -40,55 +45,20 @@ void ThalliumRpc::Finalize() {
 }
 
 /** run daemon */
-void ThalliumRpc::RunDaemon(const char *shmem_name) {
+void ThalliumRpc::RunDaemon() {
 }
 
 /** get server name */
 std::string ThalliumRpc::GetServerName(u32 node_id) {
-  std::string host_name = GetHostNameFromNodeId(node_id);
-  // TODO(chogan): @optimization Could cache the last N hostname->IP mappings to
-  // avoid excessive syscalls. Should profile first.
-  struct hostent hostname_info = {};
-  struct hostent *hostname_result;
-  int hostname_error = 0;
-  char hostname_buffer[4096] = {};
-#ifdef __APPLE__
-  hostname_result = gethostbyname(host_name.c_str());
-  in_addr **addr_list = (struct in_addr **)hostname_result->h_addr_list;
-#else
-  int gethostbyname_result = gethostbyname_r(host_name.c_str(), &hostname_info,
-                                             hostname_buffer, 4096,
-                                             &hostname_result, &hostname_error);
-  if (gethostbyname_result != 0) {
-    LOG(FATAL) << hstrerror(h_errno);
-  }
-  in_addr **addr_list = (struct in_addr **)hostname_info.h_addr_list;
-#endif
-  if (!addr_list[0]) {
-    LOG(FATAL) << hstrerror(h_errno);
-  }
-
-  char ip_address[INET_ADDRSTRLEN];
-  const char *inet_result = inet_ntop(AF_INET,
-                                      addr_list[0],
-                                      ip_address,
-                                      INET_ADDRSTRLEN);
-  if (!inet_result) {
-    FailedLibraryCall("inet_ntop");
-  }
-
-  result = config_.prefix_ std::string(ip_address);
-
-  return result;
+  std::string ip_address = GetIpAddressFromNodeId(node_id);
+  return config_->rpc_.protocol_ + "://" +
+         std::string(ip_address) +
+         ":" + std::to_string(config_->rpc_.port_);
 }
 
 /** Get protocol */
 std::string ThalliumRpc::GetProtocol() {
-  std::string prefix = std::string(server_name_prefix);
-  // NOTE(chogan): Chop "://" off the end of the server_name_prefix to get the
-  // protocol
-  std::string result = prefix.substr(0, prefix.length() - 3);
-  return result;
+  return config_->rpc_.protocol_;
 }
 
 }  // namespace hermes

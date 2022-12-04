@@ -21,6 +21,12 @@
  * A generic communication interface for Hermes that can be implemented by
  * multiple backends. See communication_mpi.cc for an example of how to
  * implement a communication backend.
+ *
+ * NOTE: this file is only applied to HermesType::kServer.
+ * This does not get used in kColocated or kClient modes.
+ * It is used almost solely to ensure RPC servers remain
+ * running until all nodes want to terminate their
+ * Hermes core.
  */
 
 namespace hermes {
@@ -34,27 +40,17 @@ class CommunicationContext {
   i32 world_proc_id_;
   /** The total number of ranks. */
   i32 world_size_;
-  /** The total number of nodes. */
-  i32 num_nodes_;
   /** The type of communicator this is */
   HermesType type_;
 
  public:
+  CommunicationContext() : world_proc_id_(0), world_size_(0) {}
   virtual void WorldBarrier() = 0; /** E.g., MPI_Barrier(MPI_COMM_WORLD)*/
-  virtual void SubBarrier() = 0; /** E.g., MPI_Barrier(something else)*/
   virtual void Finalize() = 0; /** E.g., MPI_Finalize() */
 };
 
 }  // namespace hermes
 
-#if defined(HERMES_COMMUNICATION_MPI)
-#include "communication_mpi.h"
-#define COMM_TYPE MpiCommunicator
-#elif defined(HERMES_COMMUNICATION_ZMQ)
-#include "communication_zmq.cc"
-#else
-#error "Communication implementation required " \
-  "(e.g., -DHERMES_COMMUNICATION_MPI)."
-#endif
+#include "communication_factory.h"
 
 #endif  // HERMES_COMMUNICATION_H_

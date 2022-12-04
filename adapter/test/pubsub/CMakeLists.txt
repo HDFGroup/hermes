@@ -16,8 +16,6 @@ foreach(program ${SINGLE_NODE_PUBSUB_TESTS})
     add_dependencies(${program} hermes_pubsub)
     target_link_libraries(${program} ${LIBRT} hermes MPI::MPI_CXX
             $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium> hermes_pubsub)
-    target_compile_definitions(${program}
-            PRIVATE $<$<BOOL:${HERMES_RPC_THALLIUM}>:HERMES_RPC_THALLIUM>)
     mpi_daemon(${program} 1 "" "" 1)
 endforeach()
 
@@ -26,8 +24,6 @@ foreach(program ${MULTI_NODE_PUBSUB_TESTS})
     add_dependencies(${program} hermes_pubsub)
     target_link_libraries(${program} ${LIBRT} hermes MPI::MPI_CXX
             $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium> hermes_pubsub)
-    target_compile_definitions(${program}
-            PRIVATE $<$<BOOL:${HERMES_RPC_THALLIUM}>:HERMES_RPC_THALLIUM>)
     mpi_daemon(${program} 2 "" "" 1)
 endforeach()
 

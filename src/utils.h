@@ -20,8 +20,12 @@
 
 #include "hermes_types.h"
 
+namespace hermes {
+
 size_t RoundUpToMultiple(size_t val, size_t multiple);
 size_t RoundDownToMultiple(size_t val, size_t multiple);
 void FailedLibraryCall(std::string func);
+
+}  // namespace hermes
 
 #endif  // HERMES_UTILS_H_
