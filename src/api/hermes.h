@@ -35,6 +35,8 @@ class Hermes {
 
   void RunDaemon();
 
+  void StopDaemon();
+
  private:
   void InitServer(std::string server_config_path);
 

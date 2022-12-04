@@ -9,6 +9,9 @@ namespace hermes {
 
 /** parse the YAML node */
 void ClientConfig::ParseYAML(YAML::Node &yaml_conf) {
+  if (yaml_conf["stop_daemon"]) {
+    stop_daemon_ = yaml_conf["stop_daemon"].as<bool>();
+  }
 }
 
 /** Load the default configuration */

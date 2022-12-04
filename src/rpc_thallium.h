@@ -46,8 +46,8 @@ class ThalliumRpc : public RpcContext {
   void InitColocated() override;
   void Finalize();
   void RunDaemon();
+  void StopDaemon();
   std::string GetServerName(u32 node_id);
-  std::string GetProtocol();
 
   /** RPC call */
   template <typename ReturnType, typename... Ts>

@@ -57,6 +57,10 @@ void Hermes::RunDaemon() {
   rpc_.RunDaemon();
 }
 
+void Hermes::StopDaemon() {
+  rpc_.StopDaemon();
+}
+
 void Hermes::InitServer(std::string server_config_path) {
   LoadServerConfig(server_config_path);
   InitSharedMemory();
@@ -118,6 +122,9 @@ void Hermes::FinalizeServer() {
 }
 
 void Hermes::FinalizeClient() {
+  if (client_config_.stop_daemon_) {
+    StopDaemon();
+  }
   rpc_.Finalize();
 }
 

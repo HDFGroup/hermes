@@ -48,28 +48,6 @@ void ThalliumRpc::InitColocated() {
   // NOTE(llogan): RPCs are never used in colocated mode.
 }
 
-/** finalize RPC context */
-void ThalliumRpc::Finalize() {
-  switch (comm_->type_) {
-    case HermesType::kServer: {
-      comm_->WorldBarrier();
-      this->kill_requested_.store(true);
-      break;
-    }
-    case HermesType::kClient: {
-      std::string server_name = GetServerName(node_id_);
-      tl::endpoint server = client_engine_->lookup(server_name.c_str());
-      client_engine_->shutdown_remote_engine(server);
-      client_engine_->finalize();
-      break;
-    }
-    case HermesType::kColocated: {
-      //TODO(llogan)
-      break;
-    }
-  }
-}
-
 /** run daemon */
 void ThalliumRpc::RunDaemon() {
   server_engine_->enable_remote_shutdown();
@@ -81,6 +59,13 @@ void ThalliumRpc::RunDaemon() {
   client_engine_->finalize();
 }
 
+/** stop daemon (from client) */
+void ThalliumRpc::StopDaemon() {
+  std::string server_name = GetServerName(node_id_);
+  tl::endpoint server = client_engine_->lookup(server_name.c_str());
+  client_engine_->shutdown_remote_engine(server);
+}
+
 /** get server name */
 std::string ThalliumRpc::GetServerName(u32 node_id) {
   std::string ip_address = GetIpAddressFromNodeId(node_id);
@@ -89,9 +74,23 @@ std::string ThalliumRpc::GetServerName(u32 node_id) {
          ":" + std::to_string(config_->rpc_.port_);
 }
 
-/** Get protocol */
-std::string ThalliumRpc::GetProtocol() {
-  return config_->rpc_.protocol_;
+/** finalize RPC context */
+void ThalliumRpc::Finalize() {
+  switch (comm_->type_) {
+    case HermesType::kServer: {
+      comm_->WorldBarrier();
+      this->kill_requested_.store(true);
+      break;
+    }
+    case HermesType::kClient: {
+      client_engine_->finalize();
+      break;
+    }
+    case HermesType::kColocated: {
+      //TODO(llogan)
+      break;
+    }
+  }
 }
 
 }  // namespace hermes

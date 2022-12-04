@@ -1,2 +1,0 @@
-stop_daemon: true
-file_page_size_kb: 1024

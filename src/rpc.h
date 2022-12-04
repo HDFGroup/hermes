@@ -136,6 +136,10 @@ class RpcContext {
     return hosts_[index].ip_addr_;
   }
 
+  /** Get RPC protocol */
+  std::string GetProtocol() {
+    return config_->rpc_.protocol_;
+  }
 
  private:
   /** Get the IPv4 address of this machine */

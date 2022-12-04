@@ -26,6 +26,9 @@
 
 namespace hermes {
 
+/**
+ * Base class for configuration files
+ * */
 class BaseConfig {
  public:
   /** load configuration from a string */
@@ -60,7 +63,6 @@ class BaseConfig {
 /**
  * Configuration used to intialize client
  * */
-
 class ClientConfig : public BaseConfig {
  public:
   bool stop_daemon_;
@@ -73,6 +75,10 @@ class ClientConfig : public BaseConfig {
    void ParseYAML(YAML::Node &yaml_conf) override;
 };
 
+
+/**
+ * Device information defined in server config
+ * */
 struct DeviceInfo {
   /** The minimum transfer size of each device */
   size_t block_size_;
@@ -92,6 +98,9 @@ struct DeviceInfo {
   f32 borg_min_thresh_, borg_max_thresh_;
 };
 
+/**
+ * RPC information defined in server config
+ * */
 struct RpcInfo {
   /** The name of a file that contains host names, 1 per line */
   std::string host_file_;
@@ -107,6 +116,9 @@ struct RpcInfo {
   int num_threads_;
 };
 
+/**
+ * DPE information defined in server config
+ * */
 struct DpeInfo {
   /** The default blob placement policy. */
   api::PlacementPolicy default_policy_;
@@ -115,6 +127,9 @@ struct DpeInfo {
   bool default_rr_split_;
 };
 
+/**
+ * Buffer organizer information defined in server config
+ * */
 struct BorgInfo {
   /** The RPC port number for the buffer organizer. */
   int port_;
@@ -123,7 +138,7 @@ struct BorgInfo {
 };
 
 /**
- * System and user configuration that is used to initialize Hermes.
+ * System configuration for Hermes
  */
 class ServerConfig : public BaseConfig {
  public:
