@@ -36,7 +36,7 @@ class Hermes {
   void RunDaemon();
 
  private:
-  void InitDaemon(std::string server_config_path);
+  void InitServer(std::string server_config_path);
 
   void InitColocated(std::string server_config_path,
                      std::string client_config_path);
@@ -51,7 +51,7 @@ class Hermes {
 
   void LoadSharedMemory();
 
-  void FinalizeDaemon();
+  void FinalizeServer();
 
   void FinalizeClient();
 

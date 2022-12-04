@@ -18,9 +18,9 @@ void Hermes::Init(HermesType mode,
                   std::string server_config_path,
                   std::string client_config_path) {
   mode_ = mode;
-  switch (mode) {
+  switch (mode_) {
     case HermesType::kServer: {
-      InitDaemon(std::move(server_config_path));
+      InitServer(std::move(server_config_path));
       break;
     }
     case HermesType::kClient: {
@@ -35,13 +35,32 @@ void Hermes::Init(HermesType mode,
   }
 }
 
-void Hermes::Finalize() {}
+void Hermes::Finalize() {
+  switch (mode_) {
+    case HermesType::kServer: {
+      FinalizeServer();
+      break;
+    }
+    case HermesType::kClient: {
+      FinalizeClient();
+      break;
+    }
+    case HermesType::kColocated: {
+      FinalizeColocated();
+      break;
+    }
+  }
+}
 
-void Hermes::RunDaemon() {}
+void Hermes::RunDaemon() {
+  rpc_.RunDaemon();
+}
 
-void Hermes::InitDaemon(std::string server_config_path) {
+void Hermes::InitServer(std::string server_config_path) {
   LoadServerConfig(server_config_path);
   InitSharedMemory();
+  rpc_.InitServer();
+  rpc_.InitClient();
 }
 
 void Hermes::InitColocated(std::string server_config_path,
@@ -49,11 +68,13 @@ void Hermes::InitColocated(std::string server_config_path,
   LoadServerConfig(server_config_path);
   LoadClientConfig(client_config_path);
   InitSharedMemory();
+  rpc_.InitClient();
 }
 
 void Hermes::InitClient(std::string client_config_path) {
   LoadClientConfig(client_config_path);
   LoadSharedMemory();
+  rpc_.InitClient();
 }
 
 void Hermes::LoadServerConfig(std::string config_path) {
@@ -89,10 +110,17 @@ void Hermes::LoadSharedMemory() {
   main_alloc_ = mem_mngr->GetAllocator(main_alloc_id);
 }
 
-void Hermes::FinalizeDaemon() {}
+void Hermes::FinalizeServer() {
+  rpc_.Finalize();
+  LABSTOR_MEMORY_MANAGER->DestroyBackend(server_config_.shmem_name_);
+}
 
-void Hermes::FinalizeClient() {}
+void Hermes::FinalizeClient() {
+  rpc_.Finalize();
+}
 
-void Hermes::FinalizeColocated() {}
+void Hermes::FinalizeColocated() {
+  rpc_.Finalize();
+}
 
 }  // namespace hermes::api

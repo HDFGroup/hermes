@@ -21,6 +21,7 @@ namespace hermes {
 
 /** start Thallium RPC server */
 void ThalliumRpc::InitServer() {
+  InitHostInfo();
   std::string addr = GetMyRpcAddress();
   server_engine_ = tl::engine(addr,
                               THALLIUM_SERVER_MODE,
@@ -34,6 +35,7 @@ void ThalliumRpc::InitServer() {
 
 /** initialize RPC clients */
 void ThalliumRpc::InitClient() {
+  InitHostInfo();
   std::string protocol = GetProtocol();
   client_engine_ = tl::engine(protocol,
                               THALLIUM_CLIENT_MODE,
@@ -42,10 +44,31 @@ void ThalliumRpc::InitClient() {
 
 /** finalize RPC context */
 void ThalliumRpc::Finalize() {
+  switch (comm_->type_) {
+    case HermesType::kServer: {
+      comm_->WorldBarrier();
+      server_engine_.finalize();
+      client_engine_.finalize();
+    }
+    case HermesType::kClient: {
+      std::string server_name = GetServerName(node_id_);
+      tl::endpoint server = client_engine_.lookup(server_name);
+      client_engine_.shutdown_remote_engine(server);
+      client_engine_.finalize();
+    }
+    case HermesType::kColocated: {
+    }
+  }
 }
 
 /** run daemon */
 void ThalliumRpc::RunDaemon() {
+  server_engine_.enable_remote_shutdown();
+  auto prefinalize_callback = [this]() {
+    this->comm_->WorldBarrier();
+  };
+  server_engine_.push_prefinalize_callback(prefinalize_callback);
+  server_engine_.wait_for_finalize();
 }
 
 /** get server name */

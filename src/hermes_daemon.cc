@@ -29,8 +29,7 @@ int main(int argc, char* argv[]) {
   auto hermes = hapi::Hermes(hermes::HermesType::kServer,
                              hermes_config);
   hermes.RunDaemon();
-
+  hermes.Finalize();
   MPI_Finalize();
-
   return 0;
 }

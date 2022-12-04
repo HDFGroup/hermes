@@ -41,9 +41,8 @@ class ThalliumRpc : public RpcContext {
   explicit ThalliumRpc(COMM_TYPE *comm, ServerConfig *config)
       : RpcContext(comm, config) {}
 
-  /** Get protocol */
-  void InitClient();
-  void InitServer();
+  void InitClient() override;
+  void InitServer() override;
   void Finalize();
   void RunDaemon();
   std::string GetServerName(u32 node_id);
@@ -66,6 +65,7 @@ class ThalliumRpc : public RpcContext {
     }
   }
 
+  /** I/O transfers */
   size_t IoCall(u32 node_id, IoType type, u8 *data,
                 TargetID id, size_t off, size_t size) {
     std::string server_name = GetServerName(node_id);

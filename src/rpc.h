@@ -60,9 +60,36 @@ class RpcContext {
   std::vector<HostInfo> hosts_; /**< Hostname and ip addr per-node */
 
  public:
-  explicit RpcContext(COMM_TYPE *comm, ServerConfig *config) :
-      comm_(comm), config_(config) {
+  explicit RpcContext(COMM_TYPE *comm, ServerConfig *config)
+      : comm_(comm), config_(config) {
     port_ = config->rpc_.port_;
+  }
+
+  /** initialize host info list */
+  void InitHostInfo() {
+    if (hosts_.size()) { return; }
+    auto &hosts = config_->rpc_.host_names_;
+    // Load hosts from hostfile
+    if (!config_->rpc_.host_file_.empty()) {
+      // TODO(llogan): load host names from hostfile
+    }
+
+    // Get all host info
+    hosts_.resize(hosts.size());
+    for (const auto& name : hosts) {
+      hosts_.emplace_back(name, _GetIpAddress(name));
+    }
+
+    // Get id of current host
+    int node_id = 1;  // NOTE(llogan): node_ids start from 1 (0 is NULL)
+    std::string my_ip = _GetMyIpAddress();
+    for (const auto& host_info : hosts_) {
+      if (host_info.ip_addr_ == my_ip) {
+        node_id_ = node_id;
+        break;
+      }
+      ++node_id;
+    }
   }
 
   /** Check if we should skip an RPC and call a function locally */
@@ -94,32 +121,6 @@ class RpcContext {
   /** Get RPC address for this node */
   std::string GetMyRpcAddress() {
     return GetRpcAddress(node_id_, port_);
-  }
-
-  /** initialize host info list */
-  void InitHostInfo() {
-    auto &hosts = config_->rpc_.host_names_;
-    // Load hosts from hostfile
-    if (!config_->rpc_.host_file_.empty()) {
-      // TODO(llogan): load host names from hostfile
-    }
-
-    // Get all host info
-    hosts_.resize(hosts.size());
-    for (const auto& name : hosts) {
-      hosts_.emplace_back(name, _GetIpAddress(name));
-    }
-
-    // Get id of current host
-    int node_id = 1;  // NOTE(llogan): node_ids start from 1 (0 is NULL)
-    std::string my_ip = _GetMyIpAddress();
-    for (const auto& host_info : hosts_) {
-      if (host_info.ip_addr_ == my_ip) {
-        node_id_ = node_id;
-        break;
-      }
-      ++node_id;
-    }
   }
 
   /** get host name from node ID */
@@ -173,6 +174,10 @@ class RpcContext {
     }
     return ip_address;
   }
+
+ public:
+  virtual void InitServer() = 0;
+  virtual void InitClient() = 0;
 };
 
 }  // namespace hermes
