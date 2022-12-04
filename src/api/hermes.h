@@ -41,7 +41,8 @@ class Hermes {
   void InitColocated(std::string server_config_path,
                      std::string client_config_path);
 
-  void InitClient(std::string client_config_path);
+  void InitClient(std::string server_config_path,
+                  std::string client_config_path);
 
   void LoadServerConfig(std::string config_path);
 

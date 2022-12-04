@@ -61,12 +61,11 @@ class RpcContext {
 
  public:
   explicit RpcContext(COMM_TYPE *comm, ServerConfig *config)
-      : comm_(comm), config_(config) {
-    port_ = config->rpc_.port_;
-  }
+      : comm_(comm), config_(config) {}
 
   /** initialize host info list */
   void InitHostInfo() {
+    port_ = config_->rpc_.port_;
     if (hosts_.size()) { return; }
     auto &hosts = config_->rpc_.host_names_;
     // Load hosts from hostfile
@@ -178,6 +177,7 @@ class RpcContext {
  public:
   virtual void InitServer() = 0;
   virtual void InitClient() = 0;
+  virtual void InitColocated() = 0;
 };
 
 }  // namespace hermes

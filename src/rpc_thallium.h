@@ -41,8 +41,9 @@ class ThalliumRpc : public RpcContext {
   explicit ThalliumRpc(COMM_TYPE *comm, ServerConfig *config)
       : RpcContext(comm, config) {}
 
-  void InitClient() override;
   void InitServer() override;
+  void InitClient() override;
+  void InitColocated() override;
   void Finalize();
   void RunDaemon();
   std::string GetServerName(u32 node_id);

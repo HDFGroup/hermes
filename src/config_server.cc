@@ -43,15 +43,6 @@ void ServerConfig::ParseRpcInfo(YAML::Node yaml_conf) {
   std::string suffix;
   std::vector<std::string> host_numbers;
 
-  if (yaml_conf["domain"]) {
-    rpc_.domain_ = yaml_conf["domain"].as<std::string>();
-  }
-  if (yaml_conf["protocol"]) {
-    rpc_.protocol_ = yaml_conf["protocol"].as<std::string>();
-  }
-  if (yaml_conf["num_threads"]) {
-    rpc_.num_threads_ = yaml_conf["num_threads"].as<int>();
-  }
   if (yaml_conf["host_file"]) {
     rpc_.host_file_ =
         yaml_conf["host_file"].as<std::string>();
@@ -65,6 +56,18 @@ void ServerConfig::ParseRpcInfo(YAML::Node yaml_conf) {
   if (yaml_conf["number_range"]) {
     ParseRangeList(yaml_conf["rpc_host_number_range"], "rpc_host_number_range",
                    host_numbers);
+  }
+  if (yaml_conf["domain"]) {
+    rpc_.domain_ = yaml_conf["domain"].as<std::string>();
+  }
+  if (yaml_conf["protocol"]) {
+    rpc_.protocol_ = yaml_conf["protocol"].as<std::string>();
+  }
+  if (yaml_conf["port"]) {
+    rpc_.port_ = yaml_conf["port"].as<int>();
+  }
+  if (yaml_conf["num_threads"]) {
+    rpc_.num_threads_ = yaml_conf["num_threads"].as<int>();
   }
 
   // Remove all default host names
@@ -93,35 +96,34 @@ void ServerConfig::ParseDpeInfo(YAML::Node yaml_conf) {
 
 /** parse buffer organizer information from YAML config */
 void ServerConfig::ParseBorgInfo(YAML::Node yaml_conf) {
-  borg_.port_ = yaml_conf["port"].as<int>();
-  borg_.num_threads_ = yaml_conf["num_threads"].as<int>();
+  if (yaml_conf["port"]) {
+    borg_.port_ = yaml_conf["port"].as<int>();
+  }
+  if (yaml_conf["num_threads"]) {
+    borg_.num_threads_ = yaml_conf["num_threads"].as<int>();
+  }
 }
 
 /** parse the YAML node */
 void ServerConfig::ParseYAML(YAML::Node &yaml_conf) {
-  bool capcities_specified = false, block_sizes_specified = false;
-  std::vector<std::string> host_numbers;
-  std::vector<std::string> host_basename;
-  std::string host_suffix;
-
   if (yaml_conf["devices"]) {
     ParseDeviceInfo(yaml_conf["devices"]);
   }
   if (yaml_conf["rpc"]) {
+    ParseRpcInfo(yaml_conf["rpc"]);
   }
   if (yaml_conf["dpe"]) {
     ParseDpeInfo(yaml_conf["dpe"]);
   }
   if (yaml_conf["buffer_organizer"]) {
-    auto borg_yaml = yaml_conf["buffer_organizer"];
-
+    ParseBorgInfo(yaml_conf["buffer_organizer"]);
   }
   if (yaml_conf["system_view_state_update_interval_ms"]) {
     system_view_state_update_interval_ms =
         yaml_conf["system_view_state_update_interval_ms"].as<int>();
   }
   if (yaml_conf["shmem_name"]) {
-    std::string name = yaml_conf["shmem_name"].as<std::string>();
+    shmem_name_ = yaml_conf["shmem_name"].as<std::string>();
   }
 
   if (yaml_conf["path_exclusions"]) {

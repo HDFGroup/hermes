@@ -42,21 +42,29 @@ void ThalliumRpc::InitClient() {
                               true, 1);
 }
 
+/** initialize RPC for colocated mode */
+void ThalliumRpc::InitColocated() {
+  InitHostInfo();
+  // NOTE(llogan): RPCs are never used in colocated mode.
+}
+
 /** finalize RPC context */
 void ThalliumRpc::Finalize() {
   switch (comm_->type_) {
     case HermesType::kServer: {
       comm_->WorldBarrier();
-      server_engine_.finalize();
-      client_engine_.finalize();
+      break;
     }
     case HermesType::kClient: {
       std::string server_name = GetServerName(node_id_);
       tl::endpoint server = client_engine_.lookup(server_name);
       client_engine_.shutdown_remote_engine(server);
       client_engine_.finalize();
+      break;
     }
     case HermesType::kColocated: {
+      //TODO(llogan)
+      break;
     }
   }
 }
@@ -69,6 +77,7 @@ void ThalliumRpc::RunDaemon() {
   };
   server_engine_.push_prefinalize_callback(prefinalize_callback);
   server_engine_.wait_for_finalize();
+  client_engine_.finalize();
 }
 
 /** get server name */

@@ -104,9 +104,6 @@ rpc:
   # Desired RPC port number.
   port: 8080
 
-  # Desired RPC port number for buffer organizer.
-  buffer_organizer_port: 8081
-
   # The number of handler threads for each RPC server.
   num_threads: 1
 
@@ -114,6 +111,9 @@ rpc:
 buffer_organizer:
   # The number of threads used in the background organization of internal Hermes buffers.
   num_threads: 4
+
+  # Desired RPC port number for buffer organizer.
+  port: 8081
 
 ### Define the default data placement policy
 dpe:

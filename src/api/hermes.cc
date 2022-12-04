@@ -24,7 +24,8 @@ void Hermes::Init(HermesType mode,
       break;
     }
     case HermesType::kClient: {
-      InitClient(std::move(client_config_path));
+      InitClient(std::move(server_config_path),
+                 std::move(client_config_path));
       break;
     }
     case HermesType::kColocated: {
@@ -63,18 +64,20 @@ void Hermes::InitServer(std::string server_config_path) {
   rpc_.InitClient();
 }
 
-void Hermes::InitColocated(std::string server_config_path,
-                   std::string client_config_path) {
+void Hermes::InitClient(std::string server_config_path,
+                        std::string client_config_path) {
   LoadServerConfig(server_config_path);
-  LoadClientConfig(client_config_path);
-  InitSharedMemory();
-  rpc_.InitClient();
-}
-
-void Hermes::InitClient(std::string client_config_path) {
   LoadClientConfig(client_config_path);
   LoadSharedMemory();
   rpc_.InitClient();
+}
+
+void Hermes::InitColocated(std::string server_config_path,
+                           std::string client_config_path) {
+  LoadServerConfig(server_config_path);
+  LoadClientConfig(client_config_path);
+  InitSharedMemory();
+  rpc_.InitColocated();
 }
 
 void Hermes::LoadServerConfig(std::string config_path) {
@@ -104,9 +107,8 @@ void Hermes::InitSharedMemory() {
 void Hermes::LoadSharedMemory() {
   // Load shared-memory allocator
   auto mem_mngr = LABSTOR_MEMORY_MANAGER;
-  mem_mngr->CreateBackend(lipc::MemoryBackendType::kPosixShmMmap,
+  mem_mngr->AttachBackend(lipc::MemoryBackendType::kPosixShmMmap,
                           server_config_.shmem_name_);
-  mem_mngr->ScanBackends();
   main_alloc_ = mem_mngr->GetAllocator(main_alloc_id);
 }
 

@@ -103,7 +103,7 @@ set(HERMES_EXPORTED_LIBS hermes ${HERMES_EXPORTED_LIBS})
 
 # HERMES DAEMON
 find_package(Catch2 REQUIRED)
-add_executable(hermes_daemon hermes_daemon.cc)
+add_executable(hermes_daemon api/hermes_daemon.cc)
 add_dependencies(hermes_daemon hermes)
 target_link_libraries(hermes_daemon hermes -ldl -lc MPI::MPI_CXX glog::glog)
 target_compile_definitions(hermes_daemon
