@@ -31,11 +31,11 @@ namespace hermes {
 class ThalliumRpc : public RpcContext {
  public:
   std::atomic<bool> kill_requested_; /**< is kill requested? */
-  tl::engine server_engine_;         /**< pointer to engine */
-  tl::engine bo_engine_;             /**< pointer to buf. org. engine */
+  std::unique_ptr<tl::engine> client_engine_; /**< pointer to engine */
+  std::unique_ptr<tl::engine> server_engine_; /**< pointer to engine */
+  std::unique_ptr<tl::engine> bo_engine_;     /**< pointer to buf. org. engine */
+  std::unique_ptr<tl::engine> io_engine_;     /**< pointer to engine */
   ABT_xstream execution_stream_;     /**< Argobots execution stream */
-  tl::engine client_engine_;         /**< pointer to engine */
-  tl::engine io_engine_;         /**< pointer to engine */
 
   /** initialize RPC context  */
   explicit ThalliumRpc(COMM_TYPE *comm, ServerConfig *config)
@@ -55,8 +55,8 @@ class ThalliumRpc : public RpcContext {
     VLOG(1) << "Calling " << func_name << " on node " << node_id
             << " from node " << node_id << std::endl;
     std::string server_name = GetServerName(node_id);
-    tl::remote_procedure remote_proc = client_engine_.define(func_name);
-    tl::endpoint server = client_engine_.lookup(server_name);
+    tl::remote_procedure remote_proc = client_engine_->define(func_name);
+    tl::endpoint server = client_engine_->lookup(server_name);
     if constexpr (std::is_same<ReturnType, void>::value) {
       remote_proc.disable_response();
       remote_proc.on(server)(std::forward<Ts>(args)...);
@@ -84,14 +84,14 @@ class ThalliumRpc : public RpcContext {
       }
     }
 
-    tl::remote_procedure remote_proc = io_engine_.define(func_name);
-    tl::endpoint server = io_engine_.lookup(server_name);
+    tl::remote_procedure remote_proc = io_engine_->define(func_name);
+    tl::endpoint server = io_engine_->lookup(server_name);
 
     std::vector<std::pair<void*, size_t>> segments(1);
     segments[0].first  = data;
     segments[0].second = size;
 
-    tl::bulk bulk = io_engine_.expose(segments, flag);
+    tl::bulk bulk = io_engine_->expose(segments, flag);
     // size_t result = remote_proc.on(server)(bulk, id);
     size_t result = remote_proc.on(server)(bulk);
 

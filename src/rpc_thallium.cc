@@ -23,11 +23,11 @@ namespace hermes {
 void ThalliumRpc::InitServer() {
   InitHostInfo();
   std::string addr = GetMyRpcAddress();
-  server_engine_ = tl::engine(addr,
+  server_engine_ = std::make_unique<tl::engine>(addr,
                               THALLIUM_SERVER_MODE,
                               true,
                               config_->rpc_.num_threads_);
-  std::string rpc_server_name = server_engine_.self();
+  std::string rpc_server_name = server_engine_->self();
   LOG(INFO) << "Serving at " << rpc_server_name << " with "
             << config_->rpc_.num_threads_ << " RPC threads" << std::endl;
   DefineRpcs();
@@ -37,7 +37,7 @@ void ThalliumRpc::InitServer() {
 void ThalliumRpc::InitClient() {
   InitHostInfo();
   std::string protocol = GetProtocol();
-  client_engine_ = tl::engine(protocol,
+  client_engine_ = std::make_unique<tl::engine>(protocol,
                               THALLIUM_CLIENT_MODE,
                               true, 1);
 }
@@ -57,9 +57,9 @@ void ThalliumRpc::Finalize() {
     }
     case HermesType::kClient: {
       std::string server_name = GetServerName(node_id_);
-      tl::endpoint server = client_engine_.lookup(server_name);
-      client_engine_.shutdown_remote_engine(server);
-      client_engine_.finalize();
+      tl::endpoint server = client_engine_->lookup(server_name.c_str());
+      client_engine_->shutdown_remote_engine(server);
+      client_engine_->finalize();
       break;
     }
     case HermesType::kColocated: {
@@ -71,13 +71,13 @@ void ThalliumRpc::Finalize() {
 
 /** run daemon */
 void ThalliumRpc::RunDaemon() {
-  server_engine_.enable_remote_shutdown();
+  server_engine_->enable_remote_shutdown();
   auto prefinalize_callback = [this]() {
     this->comm_->WorldBarrier();
   };
-  server_engine_.push_prefinalize_callback(prefinalize_callback);
-  server_engine_.wait_for_finalize();
-  client_engine_.finalize();
+  server_engine_->push_prefinalize_callback(prefinalize_callback);
+  server_engine_->wait_for_finalize();
+  client_engine_->finalize();
 }
 
 /** get server name */
