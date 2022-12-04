@@ -53,6 +53,7 @@ void ThalliumRpc::Finalize() {
   switch (comm_->type_) {
     case HermesType::kServer: {
       comm_->WorldBarrier();
+      this->kill_requested_.store(true);
       break;
     }
     case HermesType::kClient: {
@@ -73,7 +74,7 @@ void ThalliumRpc::Finalize() {
 void ThalliumRpc::RunDaemon() {
   server_engine_->enable_remote_shutdown();
   auto prefinalize_callback = [this]() {
-    this->comm_->WorldBarrier();
+    Finalize();
   };
   server_engine_->push_prefinalize_callback(prefinalize_callback);
   server_engine_->wait_for_finalize();
