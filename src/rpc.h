@@ -59,7 +59,6 @@ struct HostInfo {
  */
 class RpcContext {
  public:
-  Hermes *hermes_;
   COMM_TYPE *comm_;
   ServerConfig *config_;
   MetadataManager *mdm_;
@@ -68,10 +67,10 @@ class RpcContext {
   std::vector<HostInfo> hosts_; /**< Hostname and ip addr per-node */
 
  public:
-  explicit RpcContext();
+  RpcContext() = default;
 
   /** initialize host info list */
-  void InitHostInfo();
+  void InitRpcContext();
 
   /** Check if we should skip an RPC and call a function locally */
   bool ShouldDoLocalCall(int node_id);

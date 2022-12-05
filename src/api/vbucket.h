@@ -13,7 +13,7 @@ namespace hermes::api {
 
 class VBucket {
  public:
-  VBucket(std::string name, Context &ctx, Hermes *hermes);
+  VBucket(std::string name, Context &ctx);
 
   /*void Link(std::string bucket_name,
             std::string blob_name, Context ctx = Context());

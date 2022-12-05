@@ -58,6 +58,7 @@ void Hermes::StopDaemon() {
 void Hermes::InitServer(std::string server_config_path) {
   LoadServerConfig(server_config_path);
   InitSharedMemory();
+  mdm_.Init();
   rpc_.InitServer();
   rpc_.InitClient();
 }
@@ -67,6 +68,7 @@ void Hermes::InitClient(std::string server_config_path,
   LoadServerConfig(server_config_path);
   LoadClientConfig(client_config_path);
   LoadSharedMemory();
+  mdm_.Init();
   rpc_.InitClient();
 }
 
@@ -75,6 +77,7 @@ void Hermes::InitColocated(std::string server_config_path,
   LoadServerConfig(server_config_path);
   LoadClientConfig(client_config_path);
   InitSharedMemory();
+  mdm_.Init();
   rpc_.InitColocated();
 }
 
@@ -128,12 +131,12 @@ void Hermes::FinalizeColocated() {
 
 std::shared_ptr<Bucket> Hermes::GetBucket(std::string name,
                                           Context ctx) {
-  return std::make_shared<Bucket>(name, ctx, this);
+  return std::make_shared<Bucket>(name, ctx);
 }
 
 std::shared_ptr<VBucket> Hermes::GetVBucket(std::string name,
                                             Context ctx) {
-  return std::make_shared<VBucket>(name, ctx, this);
+  return std::make_shared<VBucket>(name, ctx);
 }
 
 }  // namespace hermes::api

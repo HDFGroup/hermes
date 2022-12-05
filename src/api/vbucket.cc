@@ -6,7 +6,7 @@
 
 namespace hermes::api {
 
-VBucket::VBucket(std::string name, Context &ctx, Hermes *hermes) {
+VBucket::VBucket(std::string name, Context &ctx) {
 }
 
 }  // namespace hermes::api

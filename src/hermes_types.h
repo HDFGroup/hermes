@@ -61,6 +61,7 @@ typedef double f64;   /**< 64-bit float */
 
 /** The mode Hermes is launched in */
 enum class HermesType {
+  kNone,
   kServer,
   kClient,
   kColocated

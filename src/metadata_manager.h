@@ -8,16 +8,24 @@
 #include "rpc_decorator.h"
 #include "hermes_types.h"
 #include "hermes_status.h"
+#include "rpc.h"
 
 namespace hermes {
 
 class MetadataManager {
+ private:
+  RPC_TYPE *rpc_;
+
  public:
   MetadataManager() = default;
+  void Init();
 
-  RPC void LocalGetOrCreateBucket(std::string bucket_name) {
-    std::cout << bucket_name << std::endl;
-  }
+  RPC bool LocalGetOrCreateBucket(std::string bucket_name);
+
+ public:
+  RPC_AUTOGEN_START
+  bool GetOrCreateBucket(std::string bucket_name);
+  RPC_AUTOGEN_END
 };
 
 }  // namespace hermes

@@ -7,8 +7,8 @@
 namespace hermes::api {
 
 Bucket::Bucket(std::string name,
-               Context &ctx,
-               Hermes *hermes) {
+               Context &ctx) : mdm_(&HERMES->mdm_) {
+  mdm_->GetOrCreateBucket(name);
 }
 
 }  // namespace hermes::api

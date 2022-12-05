@@ -13,19 +13,15 @@ namespace hermes::api {
 
 class Bucket {
  private:
-
+  MetadataManager *mdm_;
 
  public:
   Bucket(std::string name,
-         Context &ctx,
-         Hermes *hermes);
+         Context &ctx);
 
   /* std::string GetName() const;
 
   u64 GetId() const; */
-
- private:
-  RPC void LocalGetOrCreateBucket();
 
  public:
   RPC_AUTOGEN_START

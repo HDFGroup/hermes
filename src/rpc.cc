@@ -7,11 +7,10 @@
 
 namespace hermes {
 
-RpcContext::RpcContext()
-    : comm_(&HERMES->comm_), config_(&HERMES->server_config_) {}
-
 /** initialize host info list */
-void RpcContext::InitHostInfo() {
+void RpcContext::InitRpcContext() {
+  comm_ = &HERMES->comm_;
+  config_ = &HERMES->server_config_;
   port_ = config_->rpc_.port_;
   if (hosts_.size()) { return; }
   auto &hosts = config_->rpc_.host_names_;
@@ -49,6 +48,9 @@ bool RpcContext::ShouldDoLocalCall(int node_id) {
     }
     case HermesType::kColocated: {
       return true;
+    }
+    default: {
+      LOG(FATAL) << "Invalid HermesType" << std::endl;
     }
   }
 }

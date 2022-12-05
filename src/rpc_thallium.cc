@@ -22,7 +22,7 @@ namespace hermes {
 
 /** start Thallium RPC server */
 void ThalliumRpc::InitServer() {
-  InitHostInfo();
+  InitRpcContext();
   std::string addr = GetMyRpcAddress();
   server_engine_ = std::make_unique<tl::engine>(addr,
                               THALLIUM_SERVER_MODE,
@@ -36,7 +36,7 @@ void ThalliumRpc::InitServer() {
 
 /** initialize RPC clients */
 void ThalliumRpc::InitClient() {
-  InitHostInfo();
+  InitRpcContext();
   std::string protocol = GetProtocol();
   client_engine_ = std::make_unique<tl::engine>(protocol,
                               THALLIUM_CLIENT_MODE,
@@ -45,7 +45,7 @@ void ThalliumRpc::InitClient() {
 
 /** initialize RPC for colocated mode */
 void ThalliumRpc::InitColocated() {
-  InitHostInfo();
+  InitRpcContext();
   // NOTE(llogan): RPCs are never used in colocated mode.
 }
 
