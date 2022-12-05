@@ -42,7 +42,9 @@ class MpiCommunicator : public CommunicationContext {
   }
 
   /** initialize MPI communication. */
-  MpiCommunicator(HermesType type) {
+  MpiCommunicator() : CommunicationContext() {}
+
+  void Init(HermesType type) {
     world_comm_ = MPI_COMM_WORLD;
     world_proc_id_ = GetWorldProcId();
     world_size_ = GetNumWorldProcs();

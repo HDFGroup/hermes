@@ -1,4 +1,4 @@
-include_directories(${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/adapter)
+include_directories(${CMAKE_SOURCE_DIR})
 
 configure_file(hermes_version.h.in hermes_version.h)
 
@@ -39,15 +39,17 @@ endif()
 # Set sources
 #------------------------------------------------------------------------------
 set(HERMES_SRCS
-  ${CMAKE_CURRENT_SOURCE_DIR}/api/hermes.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/singleton.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/config_client.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/config_server.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/hermes_types.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/utils.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/rpc.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/rpc_thallium.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/rpc_thallium_defs.cc
-  #${CMAKE_CURRENT_SOURCE_DIR}/api/bucket.cc
-  #${CMAKE_CURRENT_SOURCE_DIR}/api/hermes.cc
-  #${CMAKE_CURRENT_SOURCE_DIR}/api/vbucket.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/api/bucket.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/api/hermes.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/api/vbucket.cc
   #${CMAKE_CURRENT_SOURCE_DIR}/buffer_pool.cc
   #${CMAKE_CURRENT_SOURCE_DIR}/prefetcher.cc
   #${CMAKE_CURRENT_SOURCE_DIR}/prefetchers/sequential.cc

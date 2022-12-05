@@ -3,16 +3,10 @@
 //
 
 #include "hermes.h"
+#include "bucket.h"
+#include "vbucket.h"
 
 namespace hermes::api {
-
-Hermes::Hermes(HermesType mode,
-               std::string server_config_path,
-               std::string client_config_path)
-    : comm_(mode),
-      rpc_(&comm_, &server_config_) {
-  Init(mode, std::move(server_config_path), std::move(client_config_path));
-}
 
 void Hermes::Init(HermesType mode,
                   std::string server_config_path,
@@ -130,6 +124,16 @@ void Hermes::FinalizeClient() {
 
 void Hermes::FinalizeColocated() {
   rpc_.Finalize();
+}
+
+std::shared_ptr<Bucket> Hermes::GetBucket(std::string name,
+                                          Context ctx) {
+  return std::make_shared<Bucket>(name, ctx, this);
+}
+
+std::shared_ptr<VBucket> Hermes::GetVBucket(std::string name,
+                                            Context ctx) {
+  return std::make_shared<VBucket>(name, ctx, this);
 }
 
 }  // namespace hermes::api

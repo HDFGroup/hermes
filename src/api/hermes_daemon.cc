@@ -26,10 +26,11 @@ int main(int argc, char* argv[]) {
     hermes_config = argv[1];
   }
 
-  auto hermes = hapi::Hermes(hermes::HermesType::kServer,
-                             hermes_config);
-  hermes.RunDaemon();
-  hermes.Finalize();
+  auto hermes = hapi::Hermes::Create(
+      hermes::HermesType::kServer,
+      hermes_config);
+  hermes->RunDaemon();
+  hermes->Finalize();
   MPI_Finalize();
   return 0;
 }

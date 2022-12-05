@@ -12,6 +12,7 @@
 
 #include <string>
 
+#include "metadata_manager.h"
 #include "rpc_thallium.h"
 #include "singleton.h"
 

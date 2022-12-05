@@ -16,50 +16,28 @@
 #include <iostream>
 #include <memory>
 #include <utility>
+
+namespace hermes {
 /**
  * Make a class singleton when used with the class. format for class name T
  * Singleton<T>::GetInstance()
  * @tparam T
  */
-namespace hermes {
-template <typename T>
-/**
-   A class to represent singleton pattern
- */
+
+template<typename T>
 class Singleton {
+ private:
+  static std::unique_ptr<T> obj_;
  public:
-  /**
-   * Uses unique pointer to build a static global instance of variable.
-   * @tparam T
-   * @return instance of T
-   */
-  template <typename... Args>
-  static T* GetInstance(Args... args) {
-    if (instance == nullptr)
-      instance = std::make_unique<T>(std::forward<Args>(args)...);
-    return instance.get();
+  Singleton() = default;
+
+  /** Get or create an instance of type T */
+  template<typename ...Args>
+  inline static T* GetInstance(Args ...args) {
+    if(!obj_) { obj_ = std::make_unique<T>(args...); }
+    return obj_.get();
   }
-
-  /**
-   * Operators
-   */
-  Singleton& operator=(const Singleton) = delete; /* deleting = operators*/
-
- public:
-  /**
-   * Constructor
-   */
-  Singleton(const Singleton&) = delete; /* deleting copy constructor. */
-
- protected:
-  /**
-   * static instance.
-   */
-  static std::unique_ptr<T> instance;
-  Singleton() {} /* hidden default constructor. */
 };
 
-template <typename T>
-std::unique_ptr<T> Singleton<T>::instance = nullptr;
 }  // namespace hermes
 #endif  // HERMES_ADAPTER_SINGLETON_H

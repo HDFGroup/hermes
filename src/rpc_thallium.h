@@ -38,8 +38,7 @@ class ThalliumRpc : public RpcContext {
   ABT_xstream execution_stream_;     /**< Argobots execution stream */
 
   /** initialize RPC context  */
-  explicit ThalliumRpc(COMM_TYPE *comm, ServerConfig *config)
-      : RpcContext(comm, config) {}
+  ThalliumRpc() : RpcContext() {}
 
   void InitServer() override;
   void InitClient() override;

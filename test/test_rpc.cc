@@ -21,8 +21,9 @@ namespace hapi = hermes::api;
 
 int main(int argc, char* argv[]) {
   MPI_Init(&argc, &argv);
-  auto hermes = hapi::Hermes(hermes::HermesType::kClient);
-  hermes.Finalize();
+  auto hermes = hapi::Hermes::Create(hermes::HermesType::kClient);
+  auto bkt = hermes->GetBucket("hello");
+  hermes->Finalize();
   MPI_Finalize();
   return 0;
 }

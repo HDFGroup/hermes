@@ -24,6 +24,7 @@
 #include "hermes_version.h"
 #include "data_structures.h"
 #include "constants.h"
+#include "singleton_macros.h"
 
 /**
  * \file hermes_types.h
@@ -272,25 +273,11 @@ struct PrefetchContext {
 
 /** Hermes API call context */
 struct Context {
-  /** The default maximum number of buffer organizer retries */
-  static int default_buffer_organizer_retries;
-
-  /** The default blob placement policy */
-  static PlacementPolicy default_placement_policy;
-
-  /** Whether random splitting of blobs is enabled for Round-Robin blob
-   *  placement.
-   */
-  static bool default_rr_split;
-
   /** The blob placement policy */
   PlacementPolicy policy;
 
   /** Options for controlling the MinimizeIoTime PlacementPolicy */
   MinimizeIoTimeOptions minimize_io_time_options;
-
-  /** The maximum number of buffer organizer retries */
-  int buffer_organizer_retries;
 
   /** Whether random splitting of blobs is enabled for Round-Robin */
   bool rr_split;
@@ -305,12 +292,7 @@ struct Context {
   VBucketID vbkt_id_;
   PrefetchContext pctx_;
 
-  Context() : policy(default_placement_policy),
-              buffer_organizer_retries(default_buffer_organizer_retries),
-              rr_split(default_rr_split),
-              rr_retry(false),
-              disable_swap(false),
-              vbkt_id_({0, 0}) {}
+  Context();
 };
 
 /** \brief Trait types.
