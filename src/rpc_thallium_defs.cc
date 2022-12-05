@@ -10,6 +10,10 @@ namespace hermes {
 using thallium::request;
 
 void ThalliumRpc::DefineRpcs() {
+  RPC_CLASS_INSTANCE_DEFS_START
+  MetadataManager *mdm = this->mdm_;
+  RPC_CLASS_INSTANCE_DEFS_END
+
   RPC_AUTOGEN_START
   auto get_or_create_bucket =
       [this](const request &req, std::string name) {

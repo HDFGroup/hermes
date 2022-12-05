@@ -1,13 +1,3 @@
-"""
-USAGE:
-    cd /path/to/hermes_config_gen
-    python3 generate.py
-
-OUTPUT:
-    ../../config_client_default.h (if client)
-    ../../config_server_default.h (if server)
-"""
-
 import sys, os
 
 def create_config(path, var_name, config_path, macro_name):
@@ -34,18 +24,4 @@ def create_config(path, var_name, config_path, macro_name):
     config = "\n".join(config_lines)
     with open(config_path, 'w') as fp:
         fp.write(config)
-
-create_config(
-    path="../../config/hermes_client_default.yaml",
-    var_name="kClientDefaultConfigStr",
-    config_path="../../src/config_client_default.h",
-    macro_name="CLIENT"
-)
-
-create_config(
-    path="../../config/hermes_server_default.yaml",
-    var_name="kServerDefaultConfigStr",
-    config_path="../../src/config_server_default.h",
-    macro_name="SERVER"
-)
 

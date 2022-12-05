@@ -8,25 +8,9 @@ USAGE:
 
 import re
 
-def ToCamelCase(string):
-    if string is None:
-        return
-    words = re.sub(r"(_|-)+", " ", string).split()
-    words = [word.capitalize() for word in words]
-    return "".join(words)
-
-def ToSnakeCase(string):
-    if string is None:
-        return
-    string = re.sub('(\.|-)+', '_', string)
-    words = re.split('([A-Z][^A-Z]*)', string)
-    words = [word for word in words if len(word)]
-    string = "_".join(words)
-    return string.lower()
-
 class SingletonDefinition:
     def __init__(self, namespace, class_name, include):
-        snake = ToSnakeCase(class_name).upper()
+        snake = to_snake_case(class_name).upper()
         if snake == "HERMES":
             self.macro_name = f"HERMES"
         else:
@@ -83,8 +67,3 @@ class SingletonGenerator:
             return
         with open(path, 'w') as fp:
             fp.write(text)
-
-gen = SingletonGenerator("SRC", "\"singleton.h\"")
-gen.add("hermes::api", "Hermes", "hermes.h")
-gen.generate("../../src/singleton.cc",
-             "../../src/singleton_macros.h")
