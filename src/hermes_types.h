@@ -131,7 +131,6 @@ union BlobID {
   u64 as_int;
 
   bool IsNull() const { return as_int == 0; }
-  bool InSwap() const { return bits.node_id < 0; }
   i32 GetNodeId() const { return bits.node_id; }
 };
 

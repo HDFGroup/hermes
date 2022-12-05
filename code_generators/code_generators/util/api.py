@@ -18,14 +18,17 @@ class Api:
         return [tok for tok in toks if tok is not None and len(tok) > 0]
 
     def get_arg_tuple(self, arg):
-        arg_toks = self._clean(re.split("[ ]|(\*+)", arg))
+        arg_toks = self._clean(re.split("[ ]|(\*+)|(&+)", arg))
         if len(arg_toks) == 1:
             if arg_toks[0] == '...':
                 type = ""
                 name = "..."
                 return (type, name)
         type = " ".join(arg_toks[:-1])
+        type = type.replace(" ", "")
+        type = type.replace("\n", "")
         name = arg_toks[-1]
+        name = name.replace(" ", "")
         return (type, name)
 
     def decompose_prototype(self, api_str):

@@ -11,14 +11,8 @@ void MetadataManager::Init() {
   rpc_ = &HERMES->rpc_;
 }
 
-bool MetadataManager::LocalGetOrCreateBucket(std::string name) {
+BucketID MetadataManager::LocalGetOrCreateBucket(std::string name) {
   std::cout << "In bucket!" << std::endl;
-  return true;
-}
-
-bool MetadataManager::GetOrCreateBucket(std::string name) {
-  return rpc_->Call<bool>(
-      rpc_->node_id_, "GetOrCreateBucket", name);
 }
 
 }  // namespace hermes

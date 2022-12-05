@@ -1,6 +1,7 @@
 import sys, os, re
 from code_generators.util.api import Api
 from code_generators.util.naming import to_snake_case
+from code_generators.util.conv import str_to_bool
 
 rpc_func_text = """
 {RET} {GLOBAL_NAME}({PARAMS}) {{
@@ -9,10 +10,19 @@ rpc_func_text = """
     return {LOCAL_NAME}(
       {PASS_PARAMS});
   }} else {{
-    return rpc_->Call<bool>(
+    return rpc_->Call<{RET}>(
       target_node, "{GLOBAL_NAME}",
       {PASS_PARAMS});
   }}
+}}
+"""
+
+rpc_func_text2 = """
+{RET} {GLOBAL_NAME}({PARAMS}) {{
+  u32 target_node = {TARGET_NODE};
+  return rpc_->Call<{RET}>(
+      target_node, "{GLOBAL_NAME}",
+      {PASS_PARAMS});
 }}
 """
 
@@ -27,7 +37,7 @@ server_engine_->define("{GLOBAL_NAME}", {LAMBDA_NAME});
 """
 
 class RpcGenerator:
-    def __init__(self, rpc_defs_path, modify):
+    def __init__(self, rpc_defs_path, modify=True):
         """
         Automatically inserts RPC code into class files and builds
         rpc_thallium_defs.cc.
@@ -36,11 +46,7 @@ class RpcGenerator:
         store temporary output in the working directory.
         """
 
-        if modify != "True":
-            self.modify = False
-        else:
-            self.modify = True
-
+        self.modify = str_to_bool(modify)
         self.path = None
         self.rpc_defs_path = rpc_defs_path
         self.macro = None

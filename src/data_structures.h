@@ -9,6 +9,7 @@
 #include <labstor/data_structures/lockless/vector.h>
 #include <labstor/data_structures/lockless/list.h>
 #include <labstor/data_structures/lockless/string.h>
+#include <labstor/data_structures/lockless/charbuf.h>
 
 namespace lipc = labstor::ipc;
 namespace lipcl = labstor::ipc::lockless;

@@ -77,7 +77,7 @@ devices:
     is_shared_device: 0
     borg_capacity_thresh: [ 0.0, 1.0 ]
 
-### Define the network communication protocol
+### Define properties of RPCs
 rpc:
   # A path to a file containing a list of server names, 1 per line. If your
   # servers are named according to a pattern (e.g., server-1, server-2, etc.),
