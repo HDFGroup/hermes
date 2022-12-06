@@ -147,8 +147,8 @@ class ParseDecoratedCppApis:
 
         # Load class file lines, but remove excess newlines and comments
         with open(self.hpp_file) as fp:
-            class_lines = fp.read().splitlines()
-            class_lines = list(enumerate(class_lines))
+            self.orig_class_lines = fp.read().splitlines()
+            class_lines = list(enumerate(self.orig_class_lines))
             self.class_lines = self._clean_lines(class_lines)
             self.only_class_lines = list(zip(*self.class_lines))[1]
 
@@ -355,12 +355,13 @@ class ParseDecoratedCppApis:
         if self.ignore_autogen_ns:
             namespace = None
         self._induct_namespace(namespace)
-        line = self.only_class_lines[i].strip()
+        true_i, line = self.class_lines[i]
+        line = line.strip()
         if line == self.autogen_dec_start:
-            self.api_map[namespace]['start'] = i
+            self.api_map[namespace]['start'] = true_i
             self.api_map[namespace]['indent'] = self._indent(line)
         else:
-            self.api_map[namespace]['end'] = i
+            self.api_map[namespace]['end'] = true_i
         return line
 
     def _is_namespace(self, i):
