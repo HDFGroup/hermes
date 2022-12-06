@@ -14,4 +14,14 @@
 namespace lipc = labstor::ipc;
 namespace lipcl = labstor::ipc::lockless;
 
+using labstor::RwLock;
+using labstor::Mutex;
+
+#include <unordered_map>
+#include <unordered_set>
+#include <set>
+#include <vector>
+#include <list>
+#include <queue>
+
 #endif  // HERMES_SRC_DATA_STRUCTURES_H_

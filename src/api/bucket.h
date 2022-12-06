@@ -14,14 +14,78 @@ namespace hermes::api {
 class Bucket {
  private:
   MetadataManager *mdm_;
+  BucketID id_;
+  std::string name_;
+  Context ctx_;
 
+  /* Bucket operations */
  public:
-  Bucket(std::string name,
+
+  /**
+   * Get or create \a bkt_name bucket.
+   *
+   * Called from hermes.h in GetBucket(). Should not
+   * be used directly.
+   * */
+  Bucket(std::string bkt_name,
          Context &ctx);
 
-  /* std::string GetName() const;
+  /**
+   * Get the name of this bucket. Name is cached instead of
+   * making an RPC. Not coherent if Rename is called.
+   * */
+  std::string GetName() const {
+    return name_;
+  }
 
-  u64 GetId() const; */
+  /**
+   * Get the identifier of this bucket
+   * */
+  BucketID GetId() const {
+    return id_;
+  }
+
+  /**
+   * Rename this bucket
+   * */
+  void Rename(std::string new_bkt_name);
+
+  /**
+   * Destroys this bucket along with all its contents.
+   * */
+  void Destroy(std::string blob_name);
+
+
+  /* Blob operations */
+ public:
+
+  /**
+   * Put \a blob_name Blob into the bucket
+   * */
+  Status PutBlob(std::string blob_name, Blob &blob,
+                 Context &ctx);
+
+  /**
+   * Put \a blob_id Blob into the bucket
+   * */
+  Status PutBlob(BlobID blob_id, Blob &blob,
+                 Context &ctx);
+
+  /**
+   * Get \a blob_name Blob from the bucket
+   * */
+  Status GetBlob(std::string blob_name, Blob &blob,
+                 Context &ctx);
+
+  /**
+   * Get \a blob_id Blob from the bucket
+   * */
+  Status GetBlob(BlobID blob_id, Blob &blob,
+                  Context &ctx);
+
+ public:
+  CONTEXT_AUTOGEN_START
+  CONTEXT_AUTOGEN_END
 
  public:
   RPC_AUTOGEN_START

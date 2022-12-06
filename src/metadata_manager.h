@@ -5,7 +5,7 @@
 #ifndef HERMES_SRC_METADATA_MANAGER_H_
 #define HERMES_SRC_METADATA_MANAGER_H_
 
-#include "rpc_decorator.h"
+#include "decorator.h"
 #include "hermes_types.h"
 #include "hermes_status.h"
 #include "rpc.h"
@@ -23,6 +23,7 @@ struct BufferInfo {
 struct BlobInfo {
   lipcl::charbuf name_;
   std::vector<BufferInfo> buffers_;
+  RwLock rwlock_;
 };
 
 struct BucketInfo {
@@ -32,7 +33,7 @@ struct BucketInfo {
 
 struct VBucketInfo {
   std::vector<char> name_;
-  std::vector<BlobID> blobs_;
+  std::unordered_set<BlobID> blobs_;
 };
 
 class MetadataManager {
@@ -50,42 +51,134 @@ class MetadataManager {
   MetadataManager() = default;
   void Init();
 
+  /**
+   * Get or create a bucket with \a bkt_name bucket name
+   * */
   RPC BucketID LocalGetOrCreateBucket(std::string bkt_name);
+
+  /**
+   * Get the BucketID with \a bkt_name bucket name
+   * */
   RPC BucketID LocalGetBucketId(std::string bkt_name);
+
+  /**
+   * Check whether or not \a bkt_id bucket contains
+   * \a blob_id blob
+   * */
   RPC bool LocalBucketContainsBlob(BucketID bkt_id, BlobID blob_id);
-  RPC bool LocalRenameBucket(BucketID bkt_id);
+
+  /**
+   * Rename \a bkt_id bucket to \a new_bkt_name new name
+   * */
+  RPC bool LocalRenameBucket(BucketID bkt_id, std::string new_bkt_name);
+
+  /**
+   * Destroy \a bkt_id bucket
+   * */
   RPC bool LocalDestroyBucket(BucketID bkt_id);
 
+  /**
+   * Put a blob in a bucket
+   *
+   * @param bkt_id id of the bucket
+   * @param blob_name semantic blob name
+   * @param data the data being placed
+   * @param buffers the buffers to place data in
+   * */
   RPC BlobID LocalBucketPutBlob(BucketID bkt_id,
                                 std::string blob_name,
                                 Blob data,
                                 std::vector<BufferInfo> &buffers);
+
+  /**
+   * Get \a blob_name blob from \a bkt_id bucket
+   * */
   RPC BlobID LocalGetBlobId(BucketID bkt_id, std::string blob_name);
+
+  /**
+   * Change \a blob_id blob's buffers to \the buffers
+   * */
   RPC bool LocalSetBlobBuffers(BlobID blob_id,
                                std::vector<BufferInfo> &buffers);
+
+  /**
+   * Get \a blob_id blob's buffers
+   * */
   RPC std::vector<BufferInfo>&
       LocalGetBlobBuffers(BlobID blob_id);
-  RPC bool LocalRenameBlob(BucketID bkt_id, std::string new_blob_name);
+
+  /**
+   * Rename \a blob_id blob to \a new_blob_name new blob name
+   * in \a bkt_id bucket.
+   * */
+  RPC bool LocalRenameBlob(BucketID bkt_id,
+                           BlobID blob_id, std::string new_blob_name);
+
+  /**
+   * Destroy \a blob_id blob in \a bkt_id bucket
+   * */
   RPC bool LocalDestroyBlob(BucketID bkt_id, std::string blob_name);
 
+  /**
+   * Acquire \a blob_id blob's write lock
+   * */
   RPC bool LocalWriteLockBlob(BlobID blob_id);
+
+  /**
+   * Release \a blob_id blob's write lock
+   * */
   RPC bool LocalWriteUnlockBlob(BlobID blob_id);
+
+  /**
+   * Acquire \a blob_id blob's read lock
+   * */
   RPC bool LocalReadLockBlob(BlobID blob_id);
+
+  /**
+   * Release \a blob_id blob's read lock
+   * */
   RPC bool LocalReadUnlockBlob(BlobID blob_id);
 
+  /**
+   * Get or create \a vbkt_name VBucket
+   * */
   RPC VBucketID LocalGetOrCreateVBucket(std::string vbkt_name);
+
+  /**
+   * Get the VBucketID of \a vbkt_name VBucket
+   * */
   RPC VBucketID LocalGetVBucketId(std::string vbkt_name);
-  RPC VBucketID LocalLinkBlobVBucket(VBucketID vbkt_id,
+
+  /**
+   * Link \a vbkt_id VBucketID
+   * */
+  RPC VBucketID LocalVBucketLinkBlob(VBucketID vbkt_id,
                                      BucketID bkt_id,
                                      std::string blob_name);
-  RPC VBucketID LocalUnlinkBlobVBucket(VBucketID vbkt_id,
+
+  /**
+   * Unlink \a blob_name Blob of \a bkt_id Bucket
+   * from \a vbkt_id VBucket
+   * */
+  RPC VBucketID LocalVBucketUnlinkBlob(VBucketID vbkt_id,
                                        BucketID bkt_id,
                                        std::string blob_name);
-  RPC std::list<BlobID> LocalGetLinksVBucket(VBucketID vbkt_id);
+
+  /**
+   * Get the linked blobs from \a vbkt_id VBucket
+   * */
+  RPC std::list<BlobID> LocalVBucketGetLinks(VBucketID vbkt_id);
+
+  /**
+   * Rename \a vbkt_id VBucket to \a new_vbkt_name name
+   * */
   RPC bool LocalRenameVBucket(VBucketID vbkt_id,
                               std::string new_vbkt_name);
-  RPC bool LocalDestroyVBucket(VBucketID vbkt_id,
-                               std::string new_vbkt_name);
+
+  /**
+   * Destroy \a vbkt_id VBucket
+   * */
+  RPC bool LocalDestroyVBucket(VBucketID vbkt_id);
 
  public:
   RPC_AUTOGEN_START

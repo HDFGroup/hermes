@@ -23,7 +23,7 @@
 
 #include "hermes_types.h"
 #include "communication.h"
-#include "rpc_decorator.h"
+#include "decorator.h"
 #include "config.h"
 #include "utils.h"
 
