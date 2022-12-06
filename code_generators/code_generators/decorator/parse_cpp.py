@@ -1,119 +1,6 @@
 import sys, os, re
+from .api import Api
 
-class Api:
-    """
-    Parses a C++ function prototype to determine:
-    1. The arguments to the function
-    2. The return value of the function
-    3. The function decorators
-    4. The function template
-    """
-
-    def __init__(self, api_str, template_str=None):
-        self.api_str = api_str # Original C++ API string
-        self.template_str = template_str # Original C++ API template string
-        self.name = None  # The name of the API
-        self.ret = None  # Return value of the API
-        self.var_defs = None  # The variables in the API
-        self.decorators = None # The set of function decorators
-        self._decompose_prototype(api_str)
-
-    def _clean(self, toks):
-        return [tok for tok in toks if tok is not None and len(tok) > 0]
-
-    def _decompose_prototype(self, api_str):
-        """
-        Parses a C++ api string
-
-        :param api_str: the C++ api to parse
-        :return: None. But modifies the name, type, parameters,
-        and decorators of this class
-        """
-
-        # Split by parenthesis and semicolon
-        toks = self._clean(re.split("[()]|;", api_str))
-        proto, args = toks[0], toks[1]
-
-        try:
-            proto = self._clean(re.split("[ ]|(\*+)", proto))
-            self.name = proto[-1]
-            self.ret = " ".join(proto[:-1])
-        except:
-            print(f"Failed to decompose proto name: {proto}")
-            exit()
-
-        try:
-            self.var_defs = []
-            args = args.split(',')
-            for arg in args:
-                self.var_defs.append(self._get_arg_tuple(arg))
-        except:
-            print(f"Failed to decompose proto args: {args}")
-            exit(1)
-
-    def _get_arg_tuple(self, arg):
-        """
-        Parse a function argument into a type and name.
-        E.g., int hi -> (int, hi)
-
-        :param arg: The C++ text representing a function argument
-        :return: (type, name)
-        """
-
-        arg_toks = self._clean(re.split("[ ]|(\*+)|(&+)", arg))
-        if len(arg_toks) == 1:
-            if arg_toks[0] == '...':
-                type = ""
-                name = "..."
-                return (type, name)
-        type = " ".join(arg_toks[:-1])
-        type = type.replace(" ", "")
-        type = type.replace("\n", "")
-        name = arg_toks[-1]
-        name = name.replace(" ", "")
-        return (type, name)
-
-    def get_args(self):
-        """
-        Create string to forward the parameters
-        passed to this API to another API
-
-        Example:
-            Hello(int a, int b, int c) {
-              Hello2(a, b, c);
-            }
-            "int a, int b, int c" would be the return value of get_args
-
-        :return: Typed argument list
-        """
-
-        if len(self.var_defs) == 0:
-            return ""
-        try:
-            args = [" ".join(arg_tuple) for arg_tuple in self.var_defs]
-        except:
-            print(f"Failed to get arg list: {self.var_defs}")
-            exit(1)
-        return ", ".join(args)
-
-    def pass_args(self):
-        """
-        Create string to forward the parameters
-        passed to this API to another API
-
-        Example:
-            Hello(int a, int b, int c) {
-              Hello2(a, b, c);
-            }
-            "a, b, c" is the return value of pass_args
-
-        :return: Untyped argument list
-        """
-
-        if self.var_defs is None:
-            return ""
-        args = [arg[-1] for arg in self.var_defs if arg[0] != '']
-        return ", ".join(args)
 
 class ParseDecoratedCppApis:
     """
@@ -122,42 +9,22 @@ class ParseDecoratedCppApis:
     the C++ style. These are defined in:
         _is_class, _is_namespace, _is_api
     :return: self.api_map
-             [namespace+class]['apis'][api_name] -> API()
-             [namespace+class]['start'] -> autogen macro start
-             [namespace+class]['end'] -> autogen macro end
-             [namespace+class]['indent'] -> autogen macro indentation
+             [path][namespace+class]['apis'][api_name] -> API()
+             [path][namespace+class]['start'] -> autogen macro start
+             [path][namespace+class]['end'] -> autogen macro end
+             [path][namespace+class]['indent'] -> autogen macro indentation
     """
 
-    def __init__(self, hpp_file, api_dec=None, autogen_dec=None,
-                 ignore_autogen_ns=False):
+    def __init__(self, files, api_decs):
         """
         Load the C++ header file and clean out commented lines
 
-        :param hpp_file: the path to the C++ header file to parse
-        :param api_dec: the name of the API decorator to search for
-        :param autogen_dec: the name of the code autogen statement
-        to search for
-        :param ignore_autogen_ns: whether or not to consider the
-        namespace the autogen macros are apart of
+        :param files: the files to augment
+        :param api_decs: the API decorators to process
         """
-        self.hpp_file = hpp_file
-        self.api_dec = api_dec
-        self.autogen_dec = autogen_dec
+        self.files = files
+        self.api_decs = api_decs
         self.api_map = {}
-
-        # Load class file lines, but remove excess newlines and comments
-        with open(self.hpp_file) as fp:
-            self.orig_class_lines = fp.read().splitlines()
-            class_lines = list(enumerate(self.orig_class_lines))
-            self.class_lines = self._clean_lines(class_lines)
-            self.only_class_lines = list(zip(*self.class_lines))[1]
-
-    def set_decorators(self, api_dec, autogen_dec, ignore_autogen_ns=False):
-        self.api_dec = api_dec
-        self.autogen_dec = autogen_dec
-        self.autogen_dec_start = f"{self.autogen_dec}_START"
-        self.autogen_dec_end = f"{self.autogen_dec}_END"
-        self.ignore_autogen_ns = ignore_autogen_ns
 
     def _clean_lines(self, class_lines):
         """
@@ -208,7 +75,42 @@ class ParseDecoratedCppApis:
 
         return '*/' == line.strip()[-2:]
 
-    def parse(self, namespace=None, start=None, end=None):
+    def parse(self):
+        self._parse_files()
+        self._apply_decorators()
+
+    def _parse_files(self):
+        for path in self.files:
+            self.hpp_file = path
+            with open(self.hpp_file) as fp:
+                self.orig_class_lines = fp.read().splitlines()
+                class_lines = list(enumerate(self.orig_class_lines))
+                self.class_lines = self._clean_lines(class_lines)
+                self.only_class_lines = list(zip(*self.class_lines))[1]
+            self._parse()
+
+    def _apply_decorators(self):
+        while self._has_unmodified_apis():
+            for api_dec in self.api_decs:
+                api_dec.modify(self.api_map)
+                self._strip_decorator(api_dec)
+
+    def _strip_decorator(self, api_dec):
+        for path, namespace_dict in self.api_map.items():
+            for namespace, api_dict in namespace_dict.items():
+                for api in api_dict['apis'].values():
+                    api.decorators.remove(api_dec.dec)
+                    if len(api.decorators) == 0:
+                        del api_dict['apis'][api.name]
+
+    def _has_unmodified_apis(self):
+        for path, namespace_dict in self.api_map.items():
+            for namespace, api_dict in namespace_dict.items():
+                if len(api_dict['apis']):
+                    return True
+        return False
+
+    def _parse(self, namespace=None, start=None, end=None):
         if start == None:
             start = 0
         if end == None:
@@ -221,8 +123,9 @@ class ParseDecoratedCppApis:
             elif self._is_api(i):
                 i = self._parse_api(namespace, i)
                 continue
-            elif self._is_autogen(namespace, i):
+            elif self._is_autogen(i):
                 i = self._parse_autogen(namespace, i)
+                continue
             i += 1
         return i
 
@@ -260,8 +163,8 @@ class ParseDecoratedCppApis:
         api_str,api_end = self._get_api_str(i)
         api = Api(api_str, tmpl_str)
         self._induct_namespace(namespace)
-        self.api_map[namespace][api.name] = api
-        return api_end
+        self.api_map[self.hpp_file][namespace]['apis'][api.name] = api
+        return api_end + 1
 
     def _get_template_str(self, i):
         """
@@ -329,9 +232,9 @@ class ParseDecoratedCppApis:
         # Get the class name + indentation
         line = self.class_lines[i][1]
         toks = re.split("[ :]", line)
-        toks = [tok for tok in toks if tok is not None and len(tok)]
+        toks = [tok .strip() for tok in toks if tok is not None and len(tok)]
         class_name = toks[1]
-        indent = self._indent()
+        indent = self._indent(line)
         # Find the end of the class (};)
         end = i
         end_of_class = f"{indent}}};"
@@ -341,7 +244,7 @@ class ParseDecoratedCppApis:
                 break
         # Parse all lines for prototypes
         namespace = self._ns_append(namespace, class_name)
-        return self.parse(namespace, i+1, end)
+        return self._parse(namespace, i+1, end)
 
     def _parse_autogen(self, namespace, i):
         """
@@ -352,17 +255,16 @@ class ParseDecoratedCppApis:
         :return:
         """
 
-        if self.ignore_autogen_ns:
-            namespace = None
         self._induct_namespace(namespace)
         true_i, line = self.class_lines[i]
         line = line.strip()
         if line == self.autogen_dec_start:
-            self.api_map[namespace]['start'] = true_i
-            self.api_map[namespace]['indent'] = self._indent(line)
+            self.api_map[self.hpp_file][namespace]['start'] = true_i
+            self.api_map[self.hpp_file][namespace]['indent'] = \
+                self._indent(line)
         else:
-            self.api_map[namespace]['end'] = true_i
-        return line
+            self.api_map[self.hpp_file][namespace]['end'] = true_i
+        return i + 1
 
     def _is_namespace(self, i):
         """
@@ -391,8 +293,8 @@ class ParseDecoratedCppApis:
 
     def _is_class(self, i):
         """
-        Determine whether a tokenized line defines a C++ class definition.
-        Ignores class declarations (e.g., class hello;).
+        Determine whether a tokenized line defines a C++ class, struct,
+        or union definition. Ignores class declarations (e.g., class hello;).
 
         ASSUMPTIONS:
         1. Class definitions do not contain any ';', which may be possible
@@ -416,7 +318,7 @@ class ParseDecoratedCppApis:
         toks = line.split()
         if len(toks) < 2:
             return False
-        if toks[0] != 'class':
+        if toks[0] != 'class' and toks[0] != 'struct' and toks[0] != 'union':
             return False
         for true_i, line in self.class_lines[i:]:
             toks = line.split()
@@ -439,9 +341,10 @@ class ParseDecoratedCppApis:
         line = self.only_class_lines[i]
         toks = line.split()
         # Determine if the line has a decorator
-        for tok in toks:
-            if tok == self.api_dec:
-                return True
+        for api_dec in self.api_decs:
+            for tok in toks:
+                if tok == api_dec.api_dec:
+                    return True
         return False
 
     def _is_autogen(self, i):
@@ -453,15 +356,18 @@ class ParseDecoratedCppApis:
         """
 
         line = self.only_class_lines[i].strip()
-        if line == self.autogen_dec_start:
-            return True
-        if line == self.autogen_dec_end:
-            return True
+        for api_dec in self.api_decs:
+            if line == api_dec.autogen_dec_start:
+                return True
+            if line == api_dec.autogen_dec_end:
+                return True
         return False
 
     def _induct_namespace(self, namespace):
-        if namespace not in self.api_map:
-            self.api_map[namespace] = {
+        if self.hpp_file not in self.api_map:
+            self.api_map[self.hpp_file] = {}
+        if namespace not in self.api_map[self.hpp_file]:
+            self.api_map[self.hpp_file][namespace] = {
                 'apis': {},
                 'start': None,
                 'end': None,
