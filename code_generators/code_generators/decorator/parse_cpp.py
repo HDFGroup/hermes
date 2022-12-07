@@ -15,7 +15,7 @@ class ParseDecoratedCppApis:
              [path][namespace+class]['indent'] -> autogen macro indentation
     """
 
-    def __init__(self, files, api_decs):
+    def __init__(self, files, api_decs, modify=True):
         """
         Load the C++ header file and clean out commented lines
 
@@ -25,6 +25,20 @@ class ParseDecoratedCppApis:
         self.files = files
         self.api_decs = api_decs
         self.api_map = {}
+        self.text_map = {}
+        self.modify = modify
+
+    def parse(self):
+        self._parse_files()
+        self._apply_decorators()
+        self._autogen_lines()
+        if self.modify:
+            self._generate_files()
+        return self.text_map
+
+    """
+    TEXT CLEANING
+    """
 
     def _clean_lines(self, class_lines):
         """
@@ -75,9 +89,9 @@ class ParseDecoratedCppApis:
 
         return '*/' == line.strip()[-2:]
 
-    def parse(self):
-        self._parse_files()
-        self._apply_decorators()
+    """
+    PARSE ALL FILES FOR DECORATED FUNCTIONS
+    """
 
     def _parse_files(self):
         for path in self.files:
@@ -88,27 +102,6 @@ class ParseDecoratedCppApis:
                 self.class_lines = self._clean_lines(class_lines)
                 self.only_class_lines = list(zip(*self.class_lines))[1]
             self._parse()
-
-    def _apply_decorators(self):
-        while self._has_unmodified_apis():
-            for api_dec in self.api_decs:
-                api_dec.modify(self.api_map)
-                self._strip_decorator(api_dec)
-
-    def _strip_decorator(self, api_dec):
-        for path, namespace_dict in self.api_map.items():
-            for namespace, api_dict in namespace_dict.items():
-                for api in api_dict['apis'].values():
-                    api.decorators.remove(api_dec.dec)
-                    if len(api.decorators) == 0:
-                        del api_dict['apis'][api.name]
-
-    def _has_unmodified_apis(self):
-        for path, namespace_dict in self.api_map.items():
-            for namespace, api_dict in namespace_dict.items():
-                if len(api_dict['apis']):
-                    return True
-        return False
 
     def _parse(self, namespace=None, start=None, end=None):
         if start == None:
@@ -163,9 +156,9 @@ class ParseDecoratedCppApis:
         tmpl_i, tmpl_str = self._get_template_str(i)
         doc_str = self._get_doc_str(i)
         api_str,api_end = self._get_api_str(i)
-        api = Api(api_str, self.api_decs, tmpl_str, doc_str)
+        api = Api(self.hpp_file, namespace, api_str, self.api_decs, tmpl_str, doc_str)
         self._induct_namespace(namespace)
-        self.api_map[self.hpp_file][namespace]['apis'][api.name] = api
+        self.api_map[api.path][api.namespace]['apis'][api.name] = api
         return api_end + 1
 
     def _get_doc_str(self, i):
@@ -264,18 +257,20 @@ class ParseDecoratedCppApis:
         is_ns = toks[0] == 'namespace'
         class_name = toks[1]
         indent = self._indent(line)
+        namespace = self._ns_append(namespace, class_name)
         # Find the end of the class (};)
-        end = i
+        end = None
         if is_ns:
-            end_of_scope = f"{indent}}}"
+            end_of_scope = f"}}  // namespace {namespace}"
         else:
             end_of_scope = f"{indent}}};"
         for off, line in enumerate(self.only_class_lines[i+1:]):
             if end_of_scope == line[0:len(end_of_scope)]:
-                end += off
+                end = i + 1 + off
                 break
+        if end is None:
+            raise Exception(f"Could not find the end of {namespace}")
         # Parse all lines for prototypes
-        namespace = self._ns_append(namespace, class_name)
         return self._parse(namespace, i+1, end)
 
     def _parse_autogen(self, namespace, i):
@@ -289,13 +284,13 @@ class ParseDecoratedCppApis:
 
         self._induct_namespace(namespace)
         true_i, line = self.class_lines[i]
-        line = line.strip()
+        strip_line = line.strip()
         for api_dec in self.api_decs:
-            if line == api_dec.autogen_dec_start:
+            if strip_line == api_dec.autogen_dec_start:
                 self.api_map[self.hpp_file][namespace]['start'] = true_i
                 self.api_map[self.hpp_file][namespace]['indent'] = \
                     self._indent(line)
-            elif line == api_dec.autogen_dec_end:
+            elif strip_line == api_dec.autogen_dec_end:
                 self.api_map[self.hpp_file][namespace]['end'] = true_i
         return i + 1
 
@@ -350,17 +345,13 @@ class ParseDecoratedCppApis:
 
         line = self.only_class_lines[i]
         toks = line.split()
-        if len(toks) < 2:
+        if len(toks) < 3:
             return False
         if toks[0] != 'class' and toks[0] != 'struct' and toks[0] != 'union':
             return False
-        for true_i, line in self.class_lines[i:]:
-            toks = line.split()
-            if toks[-1] == ';':
-                return False
-            if toks[-1] == '{':
-                return True
-        raise f"class {toks[1]} definition missing either ; or {{"
+        if toks[2] != '{' and toks[2] != ':':
+            return False
+        return True
 
     def _is_api(self, i):
         """
@@ -379,7 +370,7 @@ class ParseDecoratedCppApis:
             for tok in toks:
                 if '#' in tok:
                     return False
-                if tok == api_dec.api_dec:
+                if tok == api_dec.macro:
                     return True
         return False
 
@@ -407,7 +398,8 @@ class ParseDecoratedCppApis:
                 'apis': {},
                 'start': None,
                 'end': None,
-                'indent': None
+                'indent': '',
+                'gen': []
             }
 
     @staticmethod
@@ -420,3 +412,60 @@ class ParseDecoratedCppApis:
     def _indent(line):
         ilen = len(line) - len(line.lstrip())
         return line[0:ilen]
+
+    """
+    APPLY DECORATORS AFTER PARSING
+    """
+
+    def _apply_decorators(self):
+        while self._has_unmodified_apis():
+            for api_dec in self.api_decs:
+                api_dec.modify(self.api_map)
+                self._strip_decorator(api_dec)
+
+    def _strip_decorator(self, api_dec):
+        for path, namespace_dict in self.api_map.items():
+            for namespace, api_dict in namespace_dict.items():
+                cur_apis = list(api_dict['apis'].values())
+                for api in cur_apis:
+                    if api_dec.macro in api.get_decorator_macros():
+                        api.rm_decorator_by_macro(api_dec.macro)
+                    if len(api.decorators) == 0:
+                        del api_dict['apis'][api.name]
+
+    def _has_unmodified_apis(self):
+        for path, namespace_dict in self.api_map.items():
+            for namespace, api_dict in namespace_dict.items():
+                if len(api_dict['apis']):
+                    return True
+        return False
+
+    """
+    GENERATE THE FINAL OUTPUT
+    """
+
+    def _autogen_lines(self):
+        self.text_map = {}
+        for path, namespace_dict in self.api_map.items():
+            with open(path) as fp:
+                lines = fp.read().splitlines()
+            autogens = list(namespace_dict.values())
+            autogens.sort(reverse=True, key=lambda x : x['start'])
+            for api_dict in autogens:
+                autogen = api_dict['gen']
+                start = api_dict['start']
+                end = api_dict['end']
+
+                # Remove (start, end)
+                # I.e, include everything up to start
+                # and include everything after end
+                lines = lines[0:start+1] + lines[end:]
+
+                # Add new autogen APIs
+                lines = lines[0:start+1] + autogen + lines[end:]
+            self.text_map[path] = "\n".join(lines)
+
+    def _generate_files(self):
+        for path, text in self.text_map.items():
+            with open(path, 'w') as fp:
+                fp.write(text)

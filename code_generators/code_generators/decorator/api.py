@@ -11,17 +11,20 @@ class Api:
     4. The function template
     """
 
-    def __init__(self, api_str, api_decs, template_str=None, doc_str=None):
-        self.api_str = api_str # Original C++ API string
-        self.api_decs = api_decs
-        if self.api_decs is None:
-            self.api_decs = []
-        self.template_str = template_str # Original C++ API template string
+    def __init__(self, path, namespace, api_str, all_decorators,
+                 template_str=None, doc_str=None):
+        self.path = path  # The file containing the API
+        self.namespace = namespace  # The namespace of the API
+        self.api_str = api_str  # Original C++ API string
+        self.all_decorators = all_decorators
+        if self.all_decorators is None:
+            self.all_decorators = []
+        self.template_str = template_str  # Original C++ API template string
         self.doc_str = doc_str
         self.name = None  # The name of the API
         self.ret = None  # Return value of the API
         self.params = []  # The variables in the API
-        self.decorators = [] # The set of function decorators
+        self.decorators = []  # The set of function decorators
         self._decompose_prototype(api_str)
 
     def _decompose_prototype(self, api_str):
@@ -87,6 +90,19 @@ class Api:
             return ""
         args = [arg[1] for arg in self.params if arg[0] != '']
         return ", ".join(args)
+
+    def get_decorator_macros(self, exclude=None):
+        if exclude is None:
+            exclude = []
+        return [macro for macro in self.decorators
+                if macro not in exclude]
+
+    def get_decorator_macro_str(self, exclude=None):
+        return " ".join(self.get_decorator_macros(exclude))
+
+    def rm_decorator_by_macro(self, exclude_macro):
+        self.decorators = [macro for macro in self.decorators
+                           if macro != exclude_macro]
 
     """
     TOKENIZATION
@@ -311,8 +327,8 @@ class Api:
         return i
 
     def _is_decorator(self, i, toks):
-        for api_dec in self.api_decs:
-            if toks[i] == api_dec.api_dec:
+        for api_dec in self.all_decorators:
+            if toks[i] == api_dec.macro:
                 return True
             return False
 
@@ -329,3 +345,29 @@ class Api:
                     new_toks.append(' ')
             i += 1
         return "".join(new_toks)
+
+    """
+    HELPERS
+    """
+
+    def __str__(self):
+        strs = [
+            f"PATH: {self.path}",
+            f"NAMESPACE: {self.namespace}",
+            f"DECORATORS: {self.get_decorator_macros()}",
+            f"RETURN: {self.ret}",
+            f"NAME: {self.name}",
+            f"PARAMS: {self.params}",
+        ]
+        return "\n".join(strs)
+
+    def __repr__(self):
+        strs = [
+            f"PATH: {self.path}",
+            f"NAMESPACE: {self.namespace}",
+            f"DECORATORS: {self.get_decorator_macros()}",
+            f"RETURN: {self.ret}",
+            f"NAME: {self.name}",
+            f"PARAMS: {self.params}",
+        ]
+        return "\n".join(strs)

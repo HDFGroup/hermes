@@ -19,10 +19,13 @@ def create_rpc_generator():
 
     gen.set_class("nstest", None)
     gen.add("Localf99", "5")
-    gen.add("Localf101", "6")
+    gen.add("Localf102", "6")
 
     gen.set_class("nstest::Hi", "hi")
     gen.add("Localf100", "7")
+
+    gen.set_class("nstest::BigHi", "hi2")
+    gen.add("Localf101", "8")
 
     return gen
 
@@ -36,5 +39,7 @@ decs = [
     NullDecorator("WRAP")
 ]
 
-gen = ParseDecoratedCppApis(files, decs)
+gen = ParseDecoratedCppApis(files, decs, modify=False)
 gen.parse()
+print(gen.text_map[files[0]])
+print(gen.text_map[files[1]])

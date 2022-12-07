@@ -5,4 +5,4 @@ def str_to_bool(text):
         return False
     elif text == 'true':
         return True
-    raise "Neither true or false (str_too_bool)"
+    raise Exception("Neither true or false (str_too_bool)")

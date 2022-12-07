@@ -2,18 +2,15 @@ from abc import ABC, abstractmethod
 
 
 class ApiDecorator(ABC):
-    def __init__(self, api_dec):
-        self.api_dec = api_dec
-        self.autogen_dec_start = f"{self.api_dec}_AUTOGEN_START"
-        self.autogen_dec_end = f"{self.api_dec}_AUTOGEN_END"
+    def __init__(self, macro):
+        """
+        :param api_dec: the string representing the decorator macro to
+        search for in the CPP files
+        """
 
-    @abstractmethod
-    def init_api(self, api):
-        """
-        Add additional information to the Api object when it's registered
-        for processing
-        """
-        pass
+        self.macro = macro
+        self.autogen_dec_start = f"{self.macro}_AUTOGEN_START"
+        self.autogen_dec_end = f"{self.macro}_AUTOGEN_END"
 
     @abstractmethod
     def modify(self, api_map):

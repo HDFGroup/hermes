@@ -1,6 +1,7 @@
 import os
 from code_generators.decorator.decorator import ApiDecorator
 from code_generators.decorator.api import Api
+from code_generators.util.naming import to_snake_case
 from code_generators.util.conv import str_to_bool
 
 rpc_func_text = """
@@ -56,7 +57,6 @@ class RpcGenerator(ApiDecorator):
 
         super().__init__("RPC")
         self.path = None
-        self.macro = None
         self.class_instance = None
         self.rpcs = {}  # [class_path][class_name][api_name] ->
                         # tuple(local_rpc_name, target_node,
@@ -106,9 +106,6 @@ class RpcGenerator(ApiDecorator):
         self.rpcs[self.path][self.class_name][local_rpc_name] = (
             (target_node, self.class_instance))
 
-    def init_api(self, api):
-        pass
-
     def modify(self, api_map):
         """
         Generates the RPCs (GlobalRPC + lambda) for a particular class file
@@ -124,25 +121,32 @@ class RpcGenerator(ApiDecorator):
 
         # Autogen RPCs for each class
         for path, namespace_dict in api_map.items():
+            if path not in self.rpcs:
+                continue
             for namespace, api_dict in namespace_dict.items():
                 indent = api_dict['indent']
+                if namespace not in self.rpcs[path]:
+                    continue
                 for local_rpc_api in api_dict['apis'].values():
                     if "RPC" not in local_rpc_api.decorators:
                         continue
-                    if local_rpc_api.name in rpc_info:
-                        pass
+                    if local_rpc_api.name not in self.rpcs[path][namespace]:
+                        continue
                     rpc_info = self.rpcs[path][namespace][local_rpc_api.name]
                     target_node = rpc_info[0]
                     class_instance = rpc_info[1]
 
                     # Generate RPC code
-                    rpc_api = self.create_global_rpc_func(local_rpc_api,
-                                                target_node, indent)
-                    rpc_lambda = self.create_rpc_lambda(local_rpc_api,
-                                                class_instance, indent)
+                    global_name = local_rpc_api.name.replace("Local", "")
+                    lambda_name = f"remote_{to_snake_case(global_name)}"
+                    rpc_api = self.create_global_rpc_func(
+                        global_name, local_rpc_api, target_node, indent)
+                    rpc_lambda = self.create_rpc_lambda(
+                        global_name, lambda_name,
+                        local_rpc_api, class_instance, indent)
 
                     # Add the generated code to the API map
-                    if len(rpc_api.decorators):
+                    if len(rpc_api.decorators) == 1:
                         api_dict['apis'][rpc_api.name] = rpc_api
                     else:
                         api_dict['gen'].append(rpc_api.api_str)
@@ -154,27 +158,29 @@ class RpcGenerator(ApiDecorator):
             lines[j] = f"{space}{line}"
         return "\n".join(lines)
 
-    def create_global_rpc_func(self, rpc, target_node, indent):
+    def create_global_rpc_func(self, global_name, rpc, target_node, indent):
         func = rpc_func_text.format(
-            DEC=rpc.get_decorators("RPC"),
+            DEC=rpc.get_decorator_macro_str("RPC"),
             RET=rpc.ret,
             LOCAL_NAME=rpc.name,
-            GLOBAL_NAME=rpc.global_name,
+            GLOBAL_NAME=global_name,
             PARAMS=rpc.get_args(),
             PASS_PARAMS=rpc.pass_args(),
             TARGET_NODE=target_node
         ).strip()
         func = self.add_space(indent, func)
-        return Api(func)
+        return Api(rpc.path, rpc.namespace, func,
+                   rpc.all_decorators)
 
-    def create_rpc_lambda(self, rpc, class_instance, indent):
+    def create_rpc_lambda(self, global_name, lambda_name,
+                          rpc, class_instance, indent):
         lambda_text = rpc_lambda_text
         if class_instance is None:
             lambda_text = rpc_lambda_text_void
         func = lambda_text.format(
-            DEC=rpc.get_decorators("RPC"),
-            GLOBAL_NAME=rpc.global_name,
-            LAMBDA_NAME=rpc.lambda_name,
+            DEC=rpc.get_decorator_macro_str("RPC"),
+            GLOBAL_NAME=global_name,
+            LAMBDA_NAME=lambda_name,
             class_instance=class_instance,
             PARAMS=rpc.get_args(),
             PASS_PARAMS=rpc.pass_args(),
