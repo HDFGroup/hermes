@@ -9,32 +9,9 @@
 #include "hermes_types.h"
 #include "hermes_status.h"
 #include "rpc.h"
+#include "metadata_types.h"
 
 namespace hermes {
-
-using api::Blob;
-
-struct BufferInfo {
-  size_t off_;
-  size_t size_;
-  TargetID target_;
-};
-
-struct BlobInfo {
-  std::string name_;
-  std::vector<BufferInfo> buffers_;
-  RwLock rwlock_;
-};
-
-struct BucketInfo {
-  std::string name_;
-  std::vector<BlobID> blobs_;
-};
-
-struct VBucketInfo {
-  std::vector<char> name_;
-  std::unordered_set<BlobID> blobs_;
-};
 
 class MetadataManager {
  private:
@@ -128,7 +105,7 @@ class MetadataManager {
    * @RPC_TARGET_NODE rpc_->node_id_
    * @RPC_CLASS_INSTANCE mdm
    * */
-  RPC std::vector<BufferInfo>& LocalGetBlobBuffers(BlobID blob_id);
+  RPC std::vector<BufferInfo> LocalGetBlobBuffers(BlobID blob_id);
 
   /**
    * Rename \a blob_id blob to \a new_blob_name new blob name
@@ -241,6 +218,248 @@ class MetadataManager {
 
  public:
   RPC_AUTOGEN_START
+  BucketID GetOrCreateBucket(std::string bkt_name) {
+    u32 target_node = rpc_->node_id_;
+    if (target_node == rpc_->node_id_) {
+      return LocalGetOrCreateBucket(
+        bkt_name);
+    } else {
+      return rpc_->Call<BucketID>(
+        target_node, "GetOrCreateBucket",
+        bkt_name);
+    }
+  }
+  BucketID GetBucketId(std::string bkt_name) {
+    u32 target_node = rpc_->node_id_;
+    if (target_node == rpc_->node_id_) {
+      return LocalGetBucketId(
+        bkt_name);
+    } else {
+      return rpc_->Call<BucketID>(
+        target_node, "GetBucketId",
+        bkt_name);
+    }
+  }
+  bool BucketContainsBlob(BucketID bkt_id, BlobID blob_id) {
+    u32 target_node = rpc_->node_id_;
+    if (target_node == rpc_->node_id_) {
+      return LocalBucketContainsBlob(
+        bkt_id, blob_id);
+    } else {
+      return rpc_->Call<bool>(
+        target_node, "BucketContainsBlob",
+        bkt_id, blob_id);
+    }
+  }
+  bool RenameBucket(BucketID bkt_id, std::string new_bkt_name) {
+    u32 target_node = rpc_->node_id_;
+    if (target_node == rpc_->node_id_) {
+      return LocalRenameBucket(
+        bkt_id, new_bkt_name);
+    } else {
+      return rpc_->Call<bool>(
+        target_node, "RenameBucket",
+        bkt_id, new_bkt_name);
+    }
+  }
+  bool DestroyBucket(BucketID bkt_id) {
+    u32 target_node = rpc_->node_id_;
+    if (target_node == rpc_->node_id_) {
+      return LocalDestroyBucket(
+        bkt_id);
+    } else {
+      return rpc_->Call<bool>(
+        target_node, "DestroyBucket",
+        bkt_id);
+    }
+  }
+  BlobID BucketPutBlob(BucketID bkt_id, std::string blob_name, Blob data, std::vector<BufferInfo> buffers) {
+    u32 target_node = rpc_->node_id_;
+    if (target_node == rpc_->node_id_) {
+      return LocalBucketPutBlob(
+        bkt_id, blob_name, data, buffers);
+    } else {
+      return rpc_->Call<BlobID>(
+        target_node, "BucketPutBlob",
+        bkt_id, blob_name, data, buffers);
+    }
+  }
+  BlobID GetBlobId(BucketID bkt_id, std::string blob_name) {
+    u32 target_node = rpc_->node_id_;
+    if (target_node == rpc_->node_id_) {
+      return LocalGetBlobId(
+        bkt_id, blob_name);
+    } else {
+      return rpc_->Call<BlobID>(
+        target_node, "GetBlobId",
+        bkt_id, blob_name);
+    }
+  }
+  bool SetBlobBuffers(BlobID blob_id, std::vector<BufferInfo> buffers) {
+    u32 target_node = rpc_->node_id_;
+    if (target_node == rpc_->node_id_) {
+      return LocalSetBlobBuffers(
+        blob_id, buffers);
+    } else {
+      return rpc_->Call<bool>(
+        target_node, "SetBlobBuffers",
+        blob_id, buffers);
+    }
+  }
+  std::vector<BufferInfo> GetBlobBuffers(BlobID blob_id) {
+    u32 target_node = rpc_->node_id_;
+    if (target_node == rpc_->node_id_) {
+      return LocalGetBlobBuffers(
+        blob_id);
+    } else {
+      return rpc_->Call<std::vector<BufferInfo>>(
+        target_node, "GetBlobBuffers",
+        blob_id);
+    }
+  }
+  bool RenameBlob(BucketID bkt_id, BlobID blob_id, std::string new_blob_name) {
+    u32 target_node = rpc_->node_id_;
+    if (target_node == rpc_->node_id_) {
+      return LocalRenameBlob(
+        bkt_id, blob_id, new_blob_name);
+    } else {
+      return rpc_->Call<bool>(
+        target_node, "RenameBlob",
+        bkt_id, blob_id, new_blob_name);
+    }
+  }
+  bool DestroyBlob(BucketID bkt_id, std::string blob_name) {
+    u32 target_node = rpc_->node_id_;
+    if (target_node == rpc_->node_id_) {
+      return LocalDestroyBlob(
+        bkt_id, blob_name);
+    } else {
+      return rpc_->Call<bool>(
+        target_node, "DestroyBlob",
+        bkt_id, blob_name);
+    }
+  }
+  bool WriteLockBlob(BlobID blob_id) {
+    u32 target_node = rpc_->node_id_;
+    if (target_node == rpc_->node_id_) {
+      return LocalWriteLockBlob(
+        blob_id);
+    } else {
+      return rpc_->Call<bool>(
+        target_node, "WriteLockBlob",
+        blob_id);
+    }
+  }
+  bool WriteUnlockBlob(BlobID blob_id) {
+    u32 target_node = rpc_->node_id_;
+    if (target_node == rpc_->node_id_) {
+      return LocalWriteUnlockBlob(
+        blob_id);
+    } else {
+      return rpc_->Call<bool>(
+        target_node, "WriteUnlockBlob",
+        blob_id);
+    }
+  }
+  bool ReadLockBlob(BlobID blob_id) {
+    u32 target_node = rpc_->node_id_;
+    if (target_node == rpc_->node_id_) {
+      return LocalReadLockBlob(
+        blob_id);
+    } else {
+      return rpc_->Call<bool>(
+        target_node, "ReadLockBlob",
+        blob_id);
+    }
+  }
+  bool ReadUnlockBlob(BlobID blob_id) {
+    u32 target_node = rpc_->node_id_;
+    if (target_node == rpc_->node_id_) {
+      return LocalReadUnlockBlob(
+        blob_id);
+    } else {
+      return rpc_->Call<bool>(
+        target_node, "ReadUnlockBlob",
+        blob_id);
+    }
+  }
+  VBucketID GetOrCreateVBucket(std::string vbkt_name) {
+    u32 target_node = rpc_->node_id_;
+    if (target_node == rpc_->node_id_) {
+      return LocalGetOrCreateVBucket(
+        vbkt_name);
+    } else {
+      return rpc_->Call<VBucketID>(
+        target_node, "GetOrCreateVBucket",
+        vbkt_name);
+    }
+  }
+  VBucketID GetVBucketId(std::string vbkt_name) {
+    u32 target_node = rpc_->node_id_;
+    if (target_node == rpc_->node_id_) {
+      return LocalGetVBucketId(
+        vbkt_name);
+    } else {
+      return rpc_->Call<VBucketID>(
+        target_node, "GetVBucketId",
+        vbkt_name);
+    }
+  }
+  VBucketID VBucketLinkBlob(VBucketID vbkt_id, BucketID bkt_id, std::string blob_name) {
+    u32 target_node = rpc_->node_id_;
+    if (target_node == rpc_->node_id_) {
+      return LocalVBucketLinkBlob(
+        vbkt_id, bkt_id, blob_name);
+    } else {
+      return rpc_->Call<VBucketID>(
+        target_node, "VBucketLinkBlob",
+        vbkt_id, bkt_id, blob_name);
+    }
+  }
+  VBucketID VBucketUnlinkBlob(VBucketID vbkt_id, BucketID bkt_id, std::string blob_name) {
+    u32 target_node = rpc_->node_id_;
+    if (target_node == rpc_->node_id_) {
+      return LocalVBucketUnlinkBlob(
+        vbkt_id, bkt_id, blob_name);
+    } else {
+      return rpc_->Call<VBucketID>(
+        target_node, "VBucketUnlinkBlob",
+        vbkt_id, bkt_id, blob_name);
+    }
+  }
+  std::list<BlobID> VBucketGetLinks(VBucketID vbkt_id) {
+    u32 target_node = rpc_->node_id_;
+    if (target_node == rpc_->node_id_) {
+      return LocalVBucketGetLinks(
+        vbkt_id);
+    } else {
+      return rpc_->Call<std::list<BlobID>>(
+        target_node, "VBucketGetLinks",
+        vbkt_id);
+    }
+  }
+  bool RenameVBucket(VBucketID vbkt_id, std::string new_vbkt_name) {
+    u32 target_node = rpc_->node_id_;
+    if (target_node == rpc_->node_id_) {
+      return LocalRenameVBucket(
+        vbkt_id, new_vbkt_name);
+    } else {
+      return rpc_->Call<bool>(
+        target_node, "RenameVBucket",
+        vbkt_id, new_vbkt_name);
+    }
+  }
+  bool DestroyVBucket(VBucketID vbkt_id) {
+    u32 target_node = rpc_->node_id_;
+    if (target_node == rpc_->node_id_) {
+      return LocalDestroyVBucket(
+        vbkt_id);
+    } else {
+      return rpc_->Call<bool>(
+        target_node, "DestroyVBucket",
+        vbkt_id);
+    }
+  }
   RPC_AUTOGEN_END
 };
 
