@@ -466,12 +466,9 @@ class ParseDecoratedCppApis:
                 start = api_dict['start']
                 end = api_dict['end']
 
-                # Remove (start, end)
+                # Inject autogen APIs (start, end)
                 # I.e, include everything up to start
                 # and include everything after end
-                lines = lines[0:start+1] + lines[end:]
-
-                # Add new autogen APIs
                 lines = lines[0:start+1] + autogen + lines[end:]
             self.text_map[path] = "\n".join(lines)
 

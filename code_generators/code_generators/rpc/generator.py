@@ -73,7 +73,7 @@ class RpcGenerator(ApiDecorator):
         :return: Modifies rpc_lambdas and the C++ class file.
         """
         # Get the autogen dict for rpc_thallium_defs.cc
-        autogen_api_dict = api_map[self.rpc_defs_path][None]
+        autogen_api_dict = api_map[self.rpc_defs_path]['hermes']
 
         # Autogen RPCs for each class
         for path, namespace_dict in api_map.items():

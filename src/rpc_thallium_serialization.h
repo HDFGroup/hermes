@@ -9,6 +9,7 @@
 #include <thallium/serialization/stl/pair.hpp>
 #include <thallium/serialization/stl/string.hpp>
 #include <thallium/serialization/stl/vector.hpp>
+#include "hermes_types.h"
 
 namespace hermes {
 
