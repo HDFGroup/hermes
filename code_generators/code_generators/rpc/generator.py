@@ -3,6 +3,8 @@ from code_generators.decorator.decorator import ApiDecorator
 from code_generators.decorator.api import Api
 from code_generators.util.naming import to_snake_case
 from code_generators.util.conv import str_to_bool
+from .parse_docstring import RpcDocstring
+
 
 rpc_func_text = """
 {DEC}
@@ -49,7 +51,7 @@ server_engine_->define("{GLOBAL_NAME}", {LAMBDA_NAME});
 
 
 class RpcGenerator(ApiDecorator):
-    def __init__(self):
+    def __init__(self, rpc_defs_path):
         """
         Automatically inserts RPC code into class files and builds
         rpc_thallium_defs.cc.
@@ -58,53 +60,7 @@ class RpcGenerator(ApiDecorator):
         super().__init__("RPC")
         self.path = None
         self.class_instance = None
-        self.rpcs = {}  # [class_path][class_name][api_name] ->
-                        # tuple(local_rpc_name, target_node,
-                        # class_instance)
-
-    def set_rpc_lambda_file(self, rpc_defs_path):
         self.rpc_defs_path = rpc_defs_path
-
-    def set_file(self, path):
-        """
-        Sets information used in subsequent calls to "add".
-
-        :param path: the path to the class containing RPC prototypes
-        (e.g., metadata_manager.h)
-        """
-
-        self.path = path
-
-    def set_class(self, class_name, class_instance):
-        """
-        Sets information used in subsequent calls to "add".
-
-        :param class_name: the name of the class to scan prototypes from
-        (e.g., hermes::MetadataManager). Namespace is required.
-        :param class_instance: The name of the C++ class instance to input
-        into the RPC lambda in rpc_thallium_defs.cc (e.g., mdm). These are
-        encapsulated in RPC_CLASS_INSTANCE_DEFS in rpc_thallium_defs.cc.
-        :return: None
-        """
-        self.class_name = class_name
-        self.class_instance = class_instance
-
-    def add(self, local_rpc_name, target_node):
-        """
-        Register an RPC to scan for.
-
-        :param local_rpc_name: The local name of the RPC in a C++ class
-        (e.g., LocalGetOrCreateBucket)
-        :param target_node: The C++ code to determine the node to execute an RPC
-        :return: None
-        """
-
-        if self.path not in self.rpcs:
-            self.rpcs[self.path] = {}
-        if self.class_name not in self.rpcs[self.path]:
-            self.rpcs[self.path][self.class_name] = {}
-        self.rpcs[self.path][self.class_name][local_rpc_name] = (
-            (target_node, self.class_instance))
 
     def modify(self, api_map):
         """
@@ -121,20 +77,15 @@ class RpcGenerator(ApiDecorator):
 
         # Autogen RPCs for each class
         for path, namespace_dict in api_map.items():
-            if path not in self.rpcs:
-                continue
             for namespace, api_dict in namespace_dict.items():
                 indent = api_dict['indent']
-                if namespace not in self.rpcs[path]:
-                    continue
                 for local_rpc_api in api_dict['apis'].values():
                     if "RPC" not in local_rpc_api.decorators:
                         continue
-                    if local_rpc_api.name not in self.rpcs[path][namespace]:
-                        continue
-                    rpc_info = self.rpcs[path][namespace][local_rpc_api.name]
-                    target_node = rpc_info[0]
-                    class_instance = rpc_info[1]
+                    doc = RpcDocstring(local_rpc_api)
+                    doc.parse()
+                    target_node = doc.target_node
+                    class_instance = doc.class_instance
 
                     # Generate RPC code
                     global_name = local_rpc_api.name.replace("Local", "")

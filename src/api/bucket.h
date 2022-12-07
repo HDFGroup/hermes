@@ -79,13 +79,10 @@ class Bucket {
 
   /**
    * Get \a blob_id Blob from the bucket
+   * :WRAP-param: ctx -> ctx_
    * */
   Status GetBlob(BlobID blob_id, Blob &blob,
                   Context &ctx);
-
- public:
-  CONTEXT_AUTOGEN_START
-  CONTEXT_AUTOGEN_END
 
  public:
   RPC_AUTOGEN_START

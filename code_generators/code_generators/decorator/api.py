@@ -91,6 +91,11 @@ class Api:
         args = [arg[1] for arg in self.params if arg[0] != '']
         return ", ".join(args)
 
+    def get_scoped_name(self):
+        if self.namespace is None or len(self.namespace) == 0:
+            return self.name
+        return f"{self.namespace}::{self.name}"
+
     def get_decorator_macros(self, exclude=None):
         if exclude is None:
             exclude = []
