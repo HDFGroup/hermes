@@ -8,6 +8,14 @@ class ApiDecorator(ABC):
         self.autogen_dec_end = f"{self.api_dec}_AUTOGEN_END"
 
     @abstractmethod
+    def init_api(self, api):
+        """
+        Add additional information to the Api object when it's registered
+        for processing
+        """
+        pass
+
+    @abstractmethod
     def modify(self, api_map):
         """
         Generate RPCs in the files

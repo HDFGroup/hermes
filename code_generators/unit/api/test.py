@@ -6,7 +6,7 @@ from code_generators.util.paths import HERMES_ROOT
 
 def create_rpc_generator():
     gen = RpcGenerator()
-    rpc_defs_path = f"{HERMES_ROOT}/code_generators/unit/rpcs.cc"
+    rpc_defs_path = f"{HERMES_ROOT}/code_generators/unit/api/rpcs.cc"
     gen.set_rpc_lambda_file(rpc_defs_path)
 
     gen.set_file(f"{HERMES_ROOT}/code_generators/unit/api/apis.h")
@@ -27,7 +27,8 @@ def create_rpc_generator():
     return gen
 
 files = [
-    f"{HERMES_ROOT}/code_generators/unit/api/apis.h"
+    f"{HERMES_ROOT}/code_generators/unit/api/apis.h",
+    f"{HERMES_ROOT}/code_generators/unit/api/rpcs.cc",
 ]
 
 decs = [

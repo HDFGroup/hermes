@@ -106,6 +106,9 @@ class RpcGenerator(ApiDecorator):
         self.rpcs[self.path][self.class_name][local_rpc_name] = (
             (target_node, self.class_instance))
 
+    def init_api(self, api):
+        pass
+
     def modify(self, api_map):
         """
         Generates the RPCs (GlobalRPC + lambda) for a particular class file
@@ -123,9 +126,11 @@ class RpcGenerator(ApiDecorator):
         for path, namespace_dict in api_map.items():
             for namespace, api_dict in namespace_dict.items():
                 indent = api_dict['indent']
-                for local_rpc_api in api_dict['apis']:
+                for local_rpc_api in api_dict['apis'].values():
                     if "RPC" not in local_rpc_api.decorators:
                         continue
+                    if local_rpc_api.name in rpc_info:
+                        pass
                     rpc_info = self.rpcs[path][namespace][local_rpc_api.name]
                     target_node = rpc_info[0]
                     class_instance = rpc_info[1]

@@ -11,10 +11,13 @@ class Api:
     4. The function template
     """
 
-    def __init__(self, api_str, api_decs, template_str=None):
+    def __init__(self, api_str, api_decs, template_str=None, doc_str=None):
         self.api_str = api_str # Original C++ API string
         self.api_decs = api_decs
+        if self.api_decs is None:
+            self.api_decs = []
         self.template_str = template_str # Original C++ API template string
+        self.doc_str = doc_str
         self.name = None  # The name of the API
         self.ret = None  # Return value of the API
         self.params = []  # The variables in the API
@@ -239,6 +242,8 @@ class Api:
 
     def _parse_param(self, i, toks):
         param_start = i
+        if i >= len(toks) or toks[i] == ')':
+            return i + 1, None, False
         while i < len(toks):
             tok = toks[i]
             if tok == ',':

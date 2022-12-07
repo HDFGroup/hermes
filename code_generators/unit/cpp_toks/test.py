@@ -8,6 +8,10 @@ WRAP RPC std::vector<int>& Localf5(int a,
                               Ctx ctx = Ctx());
 """
 
+text = """
+RPC int f2();
+"""
+
 gen = RpcGenerator()
 api = Api(text, [gen])
 

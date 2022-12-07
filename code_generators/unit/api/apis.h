@@ -2,6 +2,9 @@
 // Created by lukemartinlogan on 12/6/22.
 //
 
+namespace hello::hi {
+}
+
 #ifndef HERMES_CODE_GENERATORS_CODE_GENERATORS_UNIT_PROTOS_H_
 #define HERMES_CODE_GENERATORS_CODE_GENERATORS_UNIT_PROTOS_H_
 

@@ -117,6 +117,7 @@ class ParseDecoratedCppApis:
             end = len(self.class_lines)
         i = start
         while i < end:
+            line = self.class_lines[i]
             if self._is_namespace(i) or self._is_class(i):
                 i = self._parse_class_or_ns(namespace, i)
                 continue
@@ -159,12 +160,39 @@ class ParseDecoratedCppApis:
         :return: None. Modifies the
         """
 
-        tmpl_str = self._get_template_str(i)
+        tmpl_i, tmpl_str = self._get_template_str(i)
+        doc_str = self._get_doc_str(i)
         api_str,api_end = self._get_api_str(i)
-        api = Api(api_str, tmpl_str)
+        api = Api(api_str, self.api_decs, tmpl_str, doc_str)
         self._induct_namespace(namespace)
         self.api_map[self.hpp_file][namespace]['apis'][api.name] = api
         return api_end + 1
+
+    def _get_doc_str(self, i):
+        """
+        Starting at i, parses upwards until the docstring comment has started
+        """
+
+        in_comment = False
+        docstr_i = i
+        for class_line in reversed(self.orig_class_lines[:i - 1]):
+            strip_class_line = class_line.strip()
+            if len(strip_class_line) == 0:
+                docstr_i -= 1
+                continue
+            if strip_class_line[-2:] == '*/':
+                in_comment = True
+                docstr_i -= 1
+                continue
+            if strip_class_line[0:2] == '/*':
+                in_comment = False
+                return "\n".join(self.orig_class_lines[docstr_i:i])
+            if strip_class_line[0:2] == '//':
+                return i
+            if in_comment:
+                docstr_i -= 1
+                continue
+            return None
 
     def _get_template_str(self, i):
         """
@@ -175,9 +203,9 @@ class ParseDecoratedCppApis:
         """
 
         if i == 0:
-            return None
+            return i, None
         if '>' not in self.only_class_lines[i-1]:
-            return None
+            return i, None
         tmpl_i = None
         for class_line in reversed(self.only_class_lines[:i-1]):
             toks = class_line.split()
@@ -186,9 +214,9 @@ class ParseDecoratedCppApis:
                 break
             i -= 1
         if tmpl_i is None:
-            return None
+            return i, None
         tmpl_str = self.only_class_lines[tmpl_i:i]
-        return tmpl_str
+        return tmpl_i, tmpl_str
 
     def _get_api_str(self, i):
         """
@@ -230,16 +258,20 @@ class ParseDecoratedCppApis:
         """
 
         # Get the class name + indentation
-        line = self.class_lines[i][1]
-        toks = re.split("[ :]", line)
+        line = self.only_class_lines[i]
+        toks = re.split("[ \{]", line)
         toks = [tok .strip() for tok in toks if tok is not None and len(tok)]
+        is_ns = toks[0] == 'namespace'
         class_name = toks[1]
         indent = self._indent(line)
         # Find the end of the class (};)
         end = i
-        end_of_class = f"{indent}}};"
-        for off, line in enumerate(self.class_lines[i+1:]):
-            if end_of_class == line[0:len(end_of_class)]:
+        if is_ns:
+            end_of_scope = f"{indent}}}"
+        else:
+            end_of_scope = f"{indent}}};"
+        for off, line in enumerate(self.only_class_lines[i+1:]):
+            if end_of_scope == line[0:len(end_of_scope)]:
                 end += off
                 break
         # Parse all lines for prototypes
@@ -258,12 +290,13 @@ class ParseDecoratedCppApis:
         self._induct_namespace(namespace)
         true_i, line = self.class_lines[i]
         line = line.strip()
-        if line == self.autogen_dec_start:
-            self.api_map[self.hpp_file][namespace]['start'] = true_i
-            self.api_map[self.hpp_file][namespace]['indent'] = \
-                self._indent(line)
-        else:
-            self.api_map[self.hpp_file][namespace]['end'] = true_i
+        for api_dec in self.api_decs:
+            if line == api_dec.autogen_dec_start:
+                self.api_map[self.hpp_file][namespace]['start'] = true_i
+                self.api_map[self.hpp_file][namespace]['indent'] = \
+                    self._indent(line)
+            elif line == api_dec.autogen_dec_end:
+                self.api_map[self.hpp_file][namespace]['end'] = true_i
         return i + 1
 
     def _is_namespace(self, i):
@@ -290,6 +323,7 @@ class ParseDecoratedCppApis:
             return False
         if toks[2] != '{':
             return False
+        return True
 
     def _is_class(self, i):
         """
@@ -343,6 +377,8 @@ class ParseDecoratedCppApis:
         # Determine if the line has a decorator
         for api_dec in self.api_decs:
             for tok in toks:
+                if '#' in tok:
+                    return False
                 if tok == api_dec.api_dec:
                     return True
         return False
@@ -378,7 +414,7 @@ class ParseDecoratedCppApis:
     def _ns_append(namespace, suffix):
         if namespace is None or len(namespace) == 0:
             return suffix
-        return namespace + suffix
+        return f"{namespace}::{suffix}"
 
     @staticmethod
     def _indent(line):
