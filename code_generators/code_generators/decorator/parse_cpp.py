@@ -222,13 +222,15 @@ class ParseDecoratedCppApis:
 
         :param i: the first line of the API
         :return: the API text
+
+        TODO(llogan): Keep track of the offset of a line in the file
+        and pass everything after decorator directly to API(), which
+        is much less error-prone
         """
 
         api_end = i
         for line in self.only_class_lines[i:]:
-            if ');' in line:
-                break
-            if ':' in line:
+            if ';' in line:
                 break
             if ') {' in line:
                 break
