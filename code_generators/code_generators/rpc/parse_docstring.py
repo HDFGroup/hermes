@@ -8,5 +8,5 @@ class RpcDocstring(ParseDocstring):
         self.class_instance = None
 
     def parse(self):
-        self.target_node = self.get_param("RPC_HASH")
-        self.class_instance = self.get_param("RPC_CLASS")
+        self.target_node = self.get_param("RPC_TARGET_NODE")
+        self.class_instance = self.get_param("RPC_CLASS_INSTANCE")

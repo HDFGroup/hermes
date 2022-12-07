@@ -155,7 +155,7 @@ class ParseDecoratedCppApis:
 
         tmpl_i, tmpl_str = self._get_template_str(i)
         api_str,api_end = self._get_api_str(i)
-        doc_str = self._get_doc_str(i)
+        doc_str = self._get_doc_str(tmpl_i)
         api = Api(self.hpp_file, namespace, api_str, self.api_decs, tmpl_str, doc_str)
         self._induct_namespace(namespace)
         self.api_map[api.path][api.namespace]['apis'][api.name] = api

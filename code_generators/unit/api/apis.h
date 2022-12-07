@@ -23,22 +23,40 @@ struct Ctx {
 
 int f1();
 
+/**
+   * Get or create a bucket with \a bkt_name bucket name
+   *
+   * @RPC_TARGET_NODE 0
+   * @RPC_CLASS_INSTANCE mdm
+   * */
 RPC int Localf2();
 
 /**
-* This is considered a docstring
-*/
+   * Get or create a bucket with \a bkt_name bucket name
+   *
+   * @RPC_TARGET_NODE 0
+   * @RPC_CLASS_INSTANCE mdm
+   * */
 
 RPC int Localf3(int a, int b);
 
+/**
+   * Get or create a bucket with \a bkt_name bucket name
+   *
+   * @RPC_TARGET_NODE 0
+   * @RPC_CLASS_INSTANCE mdm
+   * */
 template<typename T>
 RPC std::vector<int>& Localf4(int a,
                          std::vector<int> b,
                          Ctx = Ctx());
 
 /**
-* This is considered a docstring
-*/
+   * Get or create a bucket with \a bkt_name bucket name
+   *
+   * @RPC_TARGET_NODE 0
+   * @RPC_CLASS_INSTANCE mdm
+   * */
 template<typename T,
          typename S,
          class Hash = std::hash<S>>
@@ -47,20 +65,32 @@ WRAP RPC std::vector<int>& Localf5(int a,
                               Ctx = Ctx());
 
 /**
-* This is considered a docstring
-*/
+   * Get or create a bucket with \a bkt_name bucket name
+   *
+   * @RPC_TARGET_NODE 0
+   * @RPC_CLASS_INSTANCE mdm
+   * */
 WRAP RPC
 std::vector<int>& Localf6(int a, std::vector<int> b, Ctx = Ctx());
 
 namespace nstest {
 
 /**
-* This is considered a docstring
-*/
+   * Get or create a bucket with \a bkt_name bucket name
+   *
+   * @RPC_TARGET_NODE 0
+   * @RPC_CLASS_INSTANCE mdm
+   * */
 RPC int Localf99();
 
 template <typename T>
 class Hi {
+  /**
+   * Get or create a bucket with \a bkt_name bucket name
+   *
+   * @RPC_TARGET_NODE 0
+   * @RPC_CLASS_INSTANCE mdm
+   * */
   RPC int Localf100();
 
   RPC_AUTOGEN_START
@@ -69,12 +99,24 @@ class Hi {
 
 template<typename S>
 class BigHi {
+    /**
+     * Get or create a bucket with \a bkt_name bucket name
+     *
+     * @RPC_TARGET_NODE 0
+     * @RPC_CLASS_INSTANCE mdm
+     * */
     RPC int Localf101();
 
     RPC_AUTOGEN_START
     RPC_AUTOGEN_END
 };
 
+/**
+   * Get or create a bucket with \a bkt_name bucket name
+   *
+   * @RPC_TARGET_NODE 0
+   * @RPC_CLASS_INSTANCE mdm
+   * */
 RPC int Localf102();
 
 RPC_AUTOGEN_START
