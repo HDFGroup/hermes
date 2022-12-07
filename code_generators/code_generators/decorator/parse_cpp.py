@@ -7,12 +7,12 @@ class ParseDecoratedCppApis:
     Parse a C++ header file and get the set of all decorated prototypes
     and autogen statements. This parser makes various assumptions about
     the C++ style. These are defined in:
-        _is_class, _is_full_namespace, _is_api
+        _is_class, _is_namespace, _is_api
     :return: self.api_map
-             [path][full_namespace+class]['apis'][api_name] -> API()
-             [path][full_namespace+class]['start'] -> autogen macro start
-             [path][full_namespace+class]['end'] -> autogen macro end
-             [path][full_namespace+class]['indent'] -> autogen macro indentation
+             [path][namespace+class]['apis'][api_name] -> API()
+             [path][namespace+class]['start'] -> autogen macro start
+             [path][namespace+class]['end'] -> autogen macro end
+             [path][namespace+class]['indent'] -> autogen macro indentation
     """
 
     def __init__(self, files, api_decs, modify=True):
@@ -27,6 +27,9 @@ class ParseDecoratedCppApis:
         self.api_map = {}
         self.text_map = {}
         self.modify = modify
+
+    def build_api_map(self):
+        self._parse_files()
 
     def parse(self):
         self._parse_files()
@@ -103,7 +106,7 @@ class ParseDecoratedCppApis:
                 self.only_class_lines = list(zip(*self.class_lines))[1]
             self._parse()
 
-    def _parse(self, full_namespace=None, start=None, end=None):
+    def _parse(self, namespace=None, start=None, end=None):
         if start == None:
             start = 0
         if end == None:
@@ -111,19 +114,19 @@ class ParseDecoratedCppApis:
         i = start
         while i < end:
             line = self.class_lines[i]
-            if self._is_full_namespace(i) or self._is_class(i):
-                i = self._parse_class_or_ns(full_namespace, i)
+            if self._is_namespace(i) or self._is_class(i):
+                i = self._parse_class_or_ns(namespace, i)
                 continue
             elif self._is_api(i):
-                i = self._parse_api(full_namespace, i)
+                i = self._parse_api(namespace, i)
                 continue
             elif self._is_autogen(i):
-                i = self._parse_autogen(full_namespace, i)
+                i = self._parse_autogen(namespace, i)
                 continue
             i += 1
         return i
 
-    def _parse_api(self, full_namespace, i):
+    def _parse_api(self, namespace, i):
         """
         Determines the set of text belonging to a particular API.
         ASSUMPTIONS:
@@ -148,7 +151,7 @@ class ParseDecoratedCppApis:
 
                 RP
 
-        :param full_namespace: the C++ full_namespace + class the API belongs to
+        :param namespace: the C++ namespace + class the API belongs to
         :param i: the line containing part of the API definition
         :return: None. Modifies the
         """
@@ -156,8 +159,8 @@ class ParseDecoratedCppApis:
         tmpl_i, tmpl_str = self._get_template_str(i)
         api_str,api_end = self._get_api_str(i)
         doc_str = self._get_doc_str(tmpl_i)
-        api = Api(self.hpp_file, full_namespace, api_str, self.api_decs, tmpl_str, doc_str)
-        self._induct_full_namespace(full_namespace)
+        api = Api(self.hpp_file, namespace, api_str, self.api_decs, tmpl_str, doc_str)
+        self._induct_namespace(namespace)
         self.api_map[api.path][api.namespace]['apis'][api.name] = api
         return api_end + 1
 
@@ -238,9 +241,9 @@ class ParseDecoratedCppApis:
         api_str = "\n".join(self.only_class_lines[i:api_end+1])
         return api_str, api_end
 
-    def _parse_class_or_ns(self, full_namespace, i):
+    def _parse_class_or_ns(self, namespace, i):
         """
-        Parse all APIs within the boundaries of a class or full_namespace.
+        Parse all APIs within the boundaries of a class or namespace.
 
         ASSUMPTIONS:
         1. A class is terminated with the first }; that has equivalent
@@ -252,7 +255,7 @@ class ParseDecoratedCppApis:
                 class hello {
                   };  // "class" and }; are misaligned vertically
 
-        :param full_namespace: the current full_namespace the class is apart of
+        :param namespace: the current namespace the class is apart of
         :param i: The line to start parsing at
         :return: The index of the terminating };
         """
@@ -262,55 +265,55 @@ class ParseDecoratedCppApis:
         toks = re.split("[ \{]", line)
         toks = [tok .strip() for tok in toks if tok is not None and len(tok)]
         is_ns = toks[0] == 'namespace'
-        namespace = toks[1]
+        scoped_namespace = toks[1]
         indent = self._indent(line)
-        full_namespace = self._ns_append(full_namespace, namespace)
+        namespace = self._ns_append(namespace, scoped_namespace)
         # Find the end of the class (};)
         end = None
         if is_ns:
-            end_of_scope = f"}}  // namespace {namespace}"
+            end_of_scope = f"}}  // namespace {scoped_namespace}"
         else:
             end_of_scope = f"{indent}}};"
         for off, line in enumerate(self.only_class_lines[i+1:]):
-            if end_of_scope == line[0:len(end_of_scope)]:
+            if end_of_scope == line:
                 end = i + 1 + off
                 break
         if end is None:
-            raise Exception(f"Could not find the end of {full_namespace}")
+            raise Exception(f"Could not find the end of {namespace}")
         # Parse all lines for prototypes
-        return self._parse(full_namespace, i+1, end)
+        return self._parse(namespace, i+1, end)
 
-    def _parse_autogen(self, full_namespace, i):
+    def _parse_autogen(self, namespace, i):
         """
-        Parse the AUTOGEN keyword statements for a particular full_namespace
+        Parse the AUTOGEN keyword statements for a particular namespace
 
-        :param full_namespace: the current full_namespace the autogen is apart of
+        :param namespace: the current namespace the autogen is apart of
         :param i: The line to start parsing at
         :return:
         """
 
-        self._induct_full_namespace(full_namespace)
+        self._induct_namespace(namespace)
         true_i, line = self.class_lines[i]
         strip_line = line.strip()
         for api_dec in self.api_decs:
             if strip_line == api_dec.autogen_dec_start:
-                self.api_map[self.hpp_file][full_namespace]['start'] = true_i
-                self.api_map[self.hpp_file][full_namespace]['indent'] = \
+                self.api_map[self.hpp_file][namespace]['start'] = true_i
+                self.api_map[self.hpp_file][namespace]['indent'] = \
                     self._indent(line)
             elif strip_line == api_dec.autogen_dec_end:
-                self.api_map[self.hpp_file][full_namespace]['end'] = true_i
+                self.api_map[self.hpp_file][namespace]['end'] = true_i
         return i + 1
 
-    def _is_full_namespace(self, i):
+    def _is_namespace(self, i):
         """
-        Determine whether a tokenized line defines a C++ full_namespace.
+        Determine whether a tokenized line defines a C++ namespace.
 
         ASSUMPTIONS:
-        1. A full_namespace is defined entirely on a single line
+        1. A namespace is defined entirely on a single line
             VALID:
-                full_namespace hello {
+                namespace hello {
             INVALID:
-                full_namespace hello
+                namespace hello
                 {
 
         :param i: The line to start parsing at
@@ -318,10 +321,10 @@ class ParseDecoratedCppApis:
         """
         line = self.only_class_lines[i]
         toks = line.split()
-        # "full_namespace hello {" (is 3 tokens)
+        # "namespace hello {" (is 3 tokens)
         if len(toks) < 3:
             return False
-        if toks[0] != 'full_namespace':
+        if toks[0] != 'namespace':
             return False
         if toks[2] != '{':
             return False
@@ -397,11 +400,11 @@ class ParseDecoratedCppApis:
                 return True
         return False
 
-    def _induct_full_namespace(self, full_namespace):
+    def _induct_namespace(self, namespace):
         if self.hpp_file not in self.api_map:
             self.api_map[self.hpp_file] = {}
-        if full_namespace not in self.api_map[self.hpp_file]:
-            self.api_map[self.hpp_file][full_namespace] = {
+        if namespace not in self.api_map[self.hpp_file]:
+            self.api_map[self.hpp_file][namespace] = {
                 'apis': {},
                 'start': None,
                 'end': None,
@@ -410,10 +413,10 @@ class ParseDecoratedCppApis:
             }
 
     @staticmethod
-    def _ns_append(full_namespace, suffix):
-        if full_namespace is None or len(full_namespace) == 0:
+    def _ns_append(namespace, suffix):
+        if namespace is None or len(namespace) == 0:
             return suffix
-        return f"{full_namespace}::{suffix}"
+        return f"{namespace}::{suffix}"
 
     @staticmethod
     def _indent(line):
@@ -431,8 +434,8 @@ class ParseDecoratedCppApis:
                 self._strip_decorator(api_dec)
 
     def _strip_decorator(self, api_dec):
-        for path, full_namespace_dict in self.api_map.items():
-            for full_namespace, api_dict in full_namespace_dict.items():
+        for path, namespace_dict in self.api_map.items():
+            for namespace, api_dict in namespace_dict.items():
                 cur_apis = list(api_dict['apis'].values())
                 for api in cur_apis:
                     if api_dec.macro in api.get_decorator_macros():
@@ -441,8 +444,8 @@ class ParseDecoratedCppApis:
                         del api_dict['apis'][api.name]
 
     def _has_unmodified_apis(self):
-        for path, full_namespace_dict in self.api_map.items():
-            for full_namespace, api_dict in full_namespace_dict.items():
+        for path, namespace_dict in self.api_map.items():
+            for namespace, api_dict in namespace_dict.items():
                 if len(api_dict['apis']):
                     return True
         return False
@@ -453,10 +456,10 @@ class ParseDecoratedCppApis:
 
     def _autogen_lines(self):
         self.text_map = {}
-        for path, full_namespace_dict in self.api_map.items():
+        for path, namespace_dict in self.api_map.items():
             with open(path) as fp:
                 lines = fp.read().splitlines()
-            autogens = list(full_namespace_dict.values())
+            autogens = list(namespace_dict.values())
             autogens.sort(reverse=True, key=lambda x : x['start'])
             for api_dict in autogens:
                 autogen = api_dict['gen']

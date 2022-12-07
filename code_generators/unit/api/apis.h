@@ -97,6 +97,17 @@ class Hi {
   RPC int Localf100();
 
   RPC_AUTOGEN_START
+  int f100() {
+    u32 target_node = 0;
+    if (target_node == rpc_->node_id_) {
+      return Localf100(
+        );
+    } else {
+      return rpc_->Call<int>(
+        target_node, "f100",
+        );
+    }
+  }
   RPC_AUTOGEN_END
 };
 }  // namespace nstest2
@@ -112,6 +123,17 @@ class BigHi {
     RPC int Localf101();
 
     RPC_AUTOGEN_START
+    int f101() {
+      u32 target_node = 0;
+      if (target_node == rpc_->node_id_) {
+        return Localf101(
+          );
+      } else {
+        return rpc_->Call<int>(
+          target_node, "f101",
+          );
+      }
+    }
     RPC_AUTOGEN_END
 };
 
@@ -124,10 +146,87 @@ class BigHi {
 RPC int Localf102();
 
 RPC_AUTOGEN_START
+int f99() {
+  u32 target_node = 0;
+  if (target_node == rpc_->node_id_) {
+    return Localf99(
+      );
+  } else {
+    return rpc_->Call<int>(
+      target_node, "f99",
+      );
+  }
+}
+int f102() {
+  u32 target_node = 0;
+  if (target_node == rpc_->node_id_) {
+    return Localf102(
+      );
+  } else {
+    return rpc_->Call<int>(
+      target_node, "f102",
+      );
+  }
+}
 RPC_AUTOGEN_END
 }  // namespace nstest
 
 RPC_AUTOGEN_START
+int f2() {
+  u32 target_node = 0;
+  if (target_node == rpc_->node_id_) {
+    return Localf2(
+      );
+  } else {
+    return rpc_->Call<int>(
+      target_node, "f2",
+      );
+  }
+}
+int f3(int a, int b) {
+  u32 target_node = 0;
+  if (target_node == rpc_->node_id_) {
+    return Localf3(
+      a, b);
+  } else {
+    return rpc_->Call<int>(
+      target_node, "f3",
+      a, b);
+  }
+}
+std::vector<int>& f4(int a, std::vector<int> b,  Ctx) {
+  u32 target_node = 0;
+  if (target_node == rpc_->node_id_) {
+    return Localf4(
+      a, b);
+  } else {
+    return rpc_->Call<std::vector<int>&>(
+      target_node, "f4",
+      a, b);
+  }
+}
+WRAP std::vector<int>& f5(int a, std::vector<int> b,  Ctx) {
+  u32 target_node = 0;
+  if (target_node == rpc_->node_id_) {
+    return Localf5(
+      a, b);
+  } else {
+    return rpc_->Call<WRAP std::vector<int>&>(
+      target_node, "f5",
+      a, b);
+  }
+}
+WRAP std::vector<int>& f6(int a, std::vector<int> b,  Ctx) {
+  u32 target_node = 0;
+  if (target_node == rpc_->node_id_) {
+    return Localf6(
+      a, b);
+  } else {
+    return rpc_->Call<WRAP std::vector<int>&>(
+      target_node, "f6",
+      a, b);
+  }
+}
 RPC_AUTOGEN_END
 
 #endif  // HERMES_CODE_GENERATORS_CODE_GENERATORS_UNIT_PROTOS_H_
