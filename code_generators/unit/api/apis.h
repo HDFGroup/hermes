@@ -29,6 +29,7 @@ int f1();
    * @RPC_TARGET_NODE 0
    * @RPC_CLASS_INSTANCE mdm
    * */
+//
 RPC int Localf2();
 
 /**
@@ -83,6 +84,8 @@ namespace nstest {
    * */
 RPC int Localf99();
 
+
+namespace nstest2 {
 template <typename T>
 class Hi {
   /**
@@ -96,6 +99,7 @@ class Hi {
   RPC_AUTOGEN_START
   RPC_AUTOGEN_END
 };
+}  // namespace nstest2
 
 template<typename S>
 class BigHi {
