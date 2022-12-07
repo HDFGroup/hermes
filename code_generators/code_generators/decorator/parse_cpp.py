@@ -154,8 +154,8 @@ class ParseDecoratedCppApis:
         """
 
         tmpl_i, tmpl_str = self._get_template_str(i)
-        doc_str = self._get_doc_str(i)
         api_str,api_end = self._get_api_str(i)
+        doc_str = self._get_doc_str(i)
         api = Api(self.hpp_file, namespace, api_str, self.api_decs, tmpl_str, doc_str)
         self._induct_namespace(namespace)
         self.api_map[api.path][api.namespace]['apis'][api.name] = api
@@ -167,8 +167,10 @@ class ParseDecoratedCppApis:
         """
 
         in_comment = False
-        docstr_i = i
-        for class_line in reversed(self.orig_class_lines[:i - 1]):
+        true_i = self.class_lines[i][0]
+        docstr_i = true_i
+        cur_line = self.orig_class_lines[true_i]
+        for class_line in reversed(self.orig_class_lines[:true_i]):
             strip_class_line = class_line.strip()
             if len(strip_class_line) == 0:
                 docstr_i -= 1
@@ -179,7 +181,7 @@ class ParseDecoratedCppApis:
                 continue
             if strip_class_line[0:2] == '/*':
                 in_comment = False
-                return "\n".join(self.orig_class_lines[docstr_i:i])
+                return "\n".join(self.orig_class_lines[docstr_i:true_i])
             if strip_class_line[0:2] == '//':
                 return i
             if in_comment:
@@ -197,18 +199,20 @@ class ParseDecoratedCppApis:
 
         if i == 0:
             return i, None
-        if '>' not in self.only_class_lines[i-1]:
+        prior_line = self.only_class_lines[i-1]
+        if '>' not in prior_line:
             return i, None
         tmpl_i = None
-        for class_line in reversed(self.only_class_lines[:i-1]):
+        off = 1
+        for class_line in reversed(self.only_class_lines[:i]):
             toks = class_line.split()
             if 'template' in toks[0]:
-                tmpl_i = i
+                tmpl_i = i - off
                 break
-            i -= 1
+            off += 1
         if tmpl_i is None:
             return i, None
-        tmpl_str = self.only_class_lines[tmpl_i:i]
+        tmpl_str = "".join(self.only_class_lines[tmpl_i:i])
         return tmpl_i, tmpl_str
 
     def _get_api_str(self, i):

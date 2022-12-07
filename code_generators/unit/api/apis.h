@@ -25,6 +25,10 @@ int f1();
 
 RPC int Localf2();
 
+/**
+* This is considered a docstring
+*/
+
 RPC int Localf3(int a, int b);
 
 template<typename T>
@@ -32,6 +36,9 @@ RPC std::vector<int>& Localf4(int a,
                          std::vector<int> b,
                          Ctx = Ctx());
 
+/**
+* This is considered a docstring
+*/
 template<typename T,
          typename S,
          class Hash = std::hash<S>>
