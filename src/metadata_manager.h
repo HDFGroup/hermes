@@ -15,27 +15,31 @@
 namespace hermes {
 
 /**
+ * Type name simplification for the various map types
+ * */
+typedef lipc::unordered_map<lipc::charbuf, BlobID> BLOB_ID_MAP_T;
+typedef lipc::unordered_map<lipc::charbuf, BucketID> BKT_ID_MAP_T;
+typedef lipc::unordered_map<lipc::charbuf, VBucketID> VBKT_ID_MAP_T;
+typedef lipc::unordered_map<BlobID, BlobInfoShmHeader> BLOB_MAP_T;
+typedef lipc::unordered_map<BucketID, BucketInfoShmHeader> BKT_MAP_T;
+typedef lipc::unordered_map<VBucketID, VBucketInfoShmHeader> VBKT_MAP_T;
+
+/**
  * The SHM representation of the MetadataManager
  * */
 struct MetadataManagerShmHeader {
   /// SHM representation of blob id map
-  lipc::ShmArchive<lipc::uptr<lipc::unordered_map<lipc::charbuf, BlobID>>>
-      blob_id_map_ar_;
+  lipc::ShmArchive<lipc::uptr<BLOB_ID_MAP_T>> blob_id_map_ar_;
   /// SHM representation of bucket id map
-  lipc::ShmArchive<lipc::uptr<lipc::unordered_map<lipc::charbuf, BucketID>>>
-      bkt_id_map_ar_;
+  lipc::ShmArchive<lipc::uptr<BKT_ID_MAP_T>> bkt_id_map_ar_;
   /// SHM representation of vbucket id map
-  lipc::ShmArchive<lipc::uptr<lipc::unordered_map<lipc::charbuf, VBucketID>>>
-      vbkt_id_map_ar_;
+  lipc::ShmArchive<lipc::uptr<VBKT_ID_MAP_T>> vbkt_id_map_ar_;
   /// SHM representation of blob map
-  lipc::ShmArchive<lipc::uptr<lipc::unordered_map<BlobID, BlobInfo>>>
-      blob_map_ar_;
+  lipc::ShmArchive<lipc::uptr<BLOB_MAP_T>> blob_map_ar_;
   /// SHM representation of bucket map
-  lipc::ShmArchive<lipc::uptr<lipc::unordered_map<BucketID, BucketInfo>>>
-      bkt_map_ar_;
+  lipc::ShmArchive<lipc::uptr<BKT_MAP_T>> bkt_map_ar_;
   /// SHM representation of vbucket map
-  lipc::ShmArchive<lipc::uptr<lipc::unordered_map<VBucketID, VBucketInfo>>>
-      vbkt_map_ar_;
+  lipc::ShmArchive<lipc::uptr<VBKT_MAP_T>> vbkt_map_ar_;
   /// Used to create unique ids. Starts at 1.
   std::atomic<u64> id_alloc_;
 };
@@ -54,24 +58,24 @@ class MetadataManager {
    * MetadataManager (on the Hermes core) is destroyed. This avoids having
    * to manually "delete" the MetadataManager.
    * */
-  lipc::uptr<lipc::unordered_map<lipc::charbuf, BlobID>> blob_id_map_owner_;
-  lipc::uptr<lipc::unordered_map<lipc::charbuf, BucketID>> bkt_id_map_owner_;
-  lipc::uptr<lipc::unordered_map<lipc::charbuf, VBucketID>> vbkt_id_map_owner_;
-  lipc::uptr<lipc::unordered_map<BlobID, BlobInfo>> blob_map_owner_;
-  lipc::uptr<lipc::unordered_map<BucketID, BucketInfo>> bkt_map_owner_;
-  lipc::uptr<lipc::unordered_map<VBucketID, VBucketInfo>> vbkt_map_owner_;
+  lipc::uptr<BLOB_ID_MAP_T> blob_id_map_owner_;
+  lipc::uptr<BKT_ID_MAP_T> bkt_id_map_owner_;
+  lipc::uptr<VBKT_ID_MAP_T> vbkt_id_map_owner_;
+  lipc::uptr<BLOB_MAP_T> blob_map_owner_;
+  lipc::uptr<BKT_MAP_T> bkt_map_owner_;
+  lipc::uptr<VBKT_MAP_T> vbkt_map_owner_;
 
   /**
    * The manual pointers representing the different map types.
    * These are references to the objects stored in lipc::uptr
    * objects above.
    * */
-  lipc::mptr<lipc::unordered_map<lipc::charbuf, BlobID>> blob_id_map_;
-  lipc::mptr<lipc::unordered_map<lipc::charbuf, BucketID>> bkt_id_map_;
-  lipc::mptr<lipc::unordered_map<lipc::charbuf, VBucketID>> vbkt_id_map_;
-  lipc::mptr<lipc::unordered_map<BlobID, BlobInfo>> blob_map_;
-  lipc::mptr<lipc::unordered_map<BucketID, BucketInfo>> bkt_map_;
-  lipc::mptr<lipc::unordered_map<VBucketID, VBucketInfo>> vbkt_map_;
+  lipc::mptr<BLOB_ID_MAP_T> blob_id_map_;
+  lipc::mptr<BKT_ID_MAP_T> bkt_id_map_;
+  lipc::mptr<VBKT_ID_MAP_T> vbkt_id_map_;
+  lipc::mptr<BLOB_MAP_T> blob_map_;
+  lipc::mptr<BKT_MAP_T> bkt_map_;
+  lipc::mptr<VBKT_MAP_T> vbkt_map_;
 
  public:
   MetadataManager() = default;
@@ -84,12 +88,24 @@ class MetadataManager {
   /**
    * Store the MetadataManager in shared memory.
    * */
-   void shm_serialize();
+  void shm_serialize();
 
    /**
     * Unload the MetadtaManager from shared memory
     * */
-   void shm_deserialize(MetadataManagerShmHeader *header);
+  void shm_deserialize(MetadataManagerShmHeader *header);
+
+   /**
+    * Create a unique blob name using BucketID
+    * */
+  lipc::charbuf CreateBlobName(BucketID bkt_id, lipc::charbuf &blob_name) {
+    lipc::charbuf new_name(sizeof(bkt_id) + blob_name.size());
+    size_t off = 0;
+    memcpy(new_name.data_mutable() + off, &bkt_id, sizeof(BucketID));
+    off += sizeof(BucketID);
+    memcpy(blob_name.data_mutable() + off, blob_name.data(), blob_name.size());
+    return new_name;
+  }
 
   /**
    * Get or create a bucket with \a bkt_name bucket name

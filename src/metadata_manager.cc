@@ -14,19 +14,12 @@ void MetadataManager::shm_init(MetadataManagerShmHeader *header) {
   header_ = header;
   rpc_ = &HERMES->rpc_;
   header_->id_alloc_ = 1;
-
-  blob_id_map_owner_ =
-      lipc::make_uptr<lipc::unordered_map<lipc::charbuf, BlobID>>(nullptr);
-  bkt_id_map_owner_ =
-      lipc::make_uptr<lipc::unordered_map<lipc::charbuf, BucketID>>(nullptr);
-  vbkt_id_map_owner_ =
-      lipc::make_uptr<lipc::unordered_map<lipc::charbuf, VBucketID>>(nullptr);
-  blob_map_owner_ =
-      lipc::make_uptr<lipc::unordered_map<BlobID, BlobInfo>>(nullptr);
-  bkt_map_owner_ =
-      lipc::make_uptr<lipc::unordered_map<BucketID, BucketInfo>>(nullptr);
-  vbkt_map_owner_ =
-      lipc::make_uptr<lipc::unordered_map<VBucketID, VBucketInfo>>(nullptr);
+  blob_id_map_owner_ = lipc::make_uptr<BLOB_ID_MAP_T>(nullptr);
+  bkt_id_map_owner_ = lipc::make_uptr<BKT_ID_MAP_T>(nullptr);
+  vbkt_id_map_owner_ = lipc::make_uptr<VBKT_ID_MAP_T>(nullptr);
+  blob_map_owner_ = lipc::make_uptr<BLOB_MAP_T>(nullptr);
+  bkt_map_owner_ = lipc::make_uptr<BKT_MAP_T>(nullptr);
+  vbkt_map_owner_ = lipc::make_uptr<VBKT_MAP_T>(nullptr);
 }
 
 /**
@@ -104,6 +97,14 @@ BucketID MetadataManager::LocalGetBucketId(lipc::charbuf &bkt_name) {
    * @RPC_CLASS_INSTANCE mdm
    * */
 bool MetadataManager::LocalBucketContainsBlob(BucketID bkt_id, BlobID blob_id) {
+  auto iter = blob_map_->find(blob_id);
+  if (iter == blob_map_->end()) {
+    return false;
+  }
+  // Get the blob info
+  BlobInfoShmHeader &hdr = (*iter).val_.get_ref();
+  BlobInfo info(hdr);
+  return info.bkt_id_ == bkt_id;
 }
 
 /**
@@ -114,6 +115,7 @@ bool MetadataManager::LocalBucketContainsBlob(BucketID bkt_id, BlobID blob_id) {
    * */
 bool MetadataManager::LocalRenameBucket(BucketID bkt_id,
                                         lipc::charbuf &new_bkt_name) {
+  return true;
 }
 
 
@@ -142,6 +144,32 @@ BlobID MetadataManager::LocalBucketPutBlob(BucketID bkt_id,
                                            lipc::charbuf &blob_name,
                                            Blob &data,
                                            lipc::vector<BufferInfo> &buffers) {
+  /*lipc::charbuf internal_blob_name = CreateBlobName(bkt_id, blob_name);
+
+  // Create unique ID for the Blob
+  BlobID blob_id;
+  blob_id.unique_ = header_->id_alloc_.fetch_add(1);
+  blob_id.node_id_ = rpc_->node_id_;
+  if (blob_id_map_->try_emplace(blob_name, blob_id)) {
+    BlobInfo info;
+    info.name_ = lipc::make_mptr<lipc::string>(
+        CreateBlobName(bkt_id, blob_name));
+    info.buffers_ = lipc::make_mptr<lipc::vector<BufferInfo>>(
+        std::move(buffers));
+
+    BlobInfoShmHeader hdr;
+    info.shm_serialize(hdr);
+    // blob_map_->emplace(blob_id, hdr);
+  } else {
+    auto iter = blob_map_->find(blob_id);
+    BlobInfoShmHeader &hdr = (*iter).val_.get_ref();
+    BlobInfo info(hdr);
+    *(info.buffers_) = std::move(buffers);
+    info.shm_serialize(hdr);
+    (*iter).val_ = hdr;
+  }
+
+  return blob_id;*/
 }
 
 /**

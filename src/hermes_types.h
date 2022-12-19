@@ -75,42 +75,33 @@ enum class IoType {
 
 typedef u16 DeviceID; /**< device id in unsigned 16-bit integer */
 
-struct BucketID {
+template<int TYPE>
+struct UniqueID {
   u64 unique_;   /**< A unique id for the blob */
-  i32 node_id_;  /**< The node the blob is on */
+  i32 node_id_;  /**< The node the content is on */
 
   bool IsNull() const { return unique_ == 0; }
 
-  static BucketID GetNull() {
-    BucketID id;
+  static UniqueID GetNull() {
+    UniqueID id;
     id.unique_ = 0;
     return id;
   }
-};
 
-// NOTE(chogan): We reserve sizeof(BucketID) * 2 bytes in order to embed the
-// BucketID into the Blob name. See MakeInternalBlobName() for a description of
-// why we need double the bytes of a BucketID.
-constexpr int kBucketIdStringSize = sizeof(BucketID) * 2;
-/**
- * The maximum size in bytes allowed for Blob names.
- */
-constexpr int kMaxBlobNameSize = 64 - kBucketIdStringSize;
-
-struct VBucketID {
-  u64 unique_;   /**< A unique id for the blob */
-  i32 node_id_;  /**< The node the blob is on */
-
-  bool IsNull() const { return unique_ == 0; }
-};
-
-struct BlobID {
-  u64 unique_;       /**< A unique id for the blob */
-  i32 node_id_;      /**< The node the blob is on */
-
-  bool IsNull() const { return unique_ == 0; }
   i32 GetNodeId() const { return node_id_; }
+
+  bool operator==(const UniqueID &other) const {
+    return unique_ == other.unique_ && node_id_ == other.node_id_;
+  }
+
+  bool operator!=(const UniqueID &other) const {
+    return unique_ != other.unique_ || node_id_ != other.node_id_;
+  }
 };
+
+typedef UniqueID<0> BucketID;
+typedef UniqueID<1> VBucketID;
+typedef UniqueID<2> BlobID;
 
 /** A definition for logging something that is not yet implemented */
 #define HERMES_NOT_IMPLEMENTED_YET \
@@ -290,27 +281,9 @@ enum class TraitType : u8 {
  * */
 
 namespace std {
-template <>
-struct hash<hermes::BlobID> {
+template <int TYPE>
+struct hash<hermes::UniqueID<TYPE>> {
   std::size_t operator()(const hermes::BlobID &key) const {
-    return
-        std::hash<hermes::u64>{}(key.unique_) +
-        std::hash<hermes::i32>{}(key.node_id_);
-  }
-};
-
-template <>
-struct hash<hermes::BucketID> {
-  std::size_t operator()(const hermes::BucketID &key) const {
-    return
-        std::hash<hermes::u64>{}(key.unique_) +
-        std::hash<hermes::i32>{}(key.node_id_);
-  }
-};
-
-template <>
-struct hash<hermes::VBucketID> {
-  std::size_t operator()(const hermes::VBucketID &key) const {
     return
         std::hash<hermes::u64>{}(key.unique_) +
         std::hash<hermes::i32>{}(key.node_id_);
