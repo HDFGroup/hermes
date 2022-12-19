@@ -5,7 +5,8 @@
 #ifndef HERMES_SRC_API_HERMES_H_
 #define HERMES_SRC_API_HERMES_H_
 
-#include "config.h"
+#include "config_client.h"
+#include "config_server.h"
 #include "constants.h"
 #include "hermes_types.h"
 

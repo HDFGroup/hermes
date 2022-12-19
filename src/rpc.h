@@ -24,7 +24,7 @@
 #include "hermes_types.h"
 #include "communication.h"
 #include "decorator.h"
-#include "config.h"
+#include "config_server.h"
 #include "utils.h"
 
 namespace hermes::api {

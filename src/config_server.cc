@@ -14,7 +14,7 @@
 #include "config.h"
 #include <iomanip>
 
-#include "config.h"
+#include "config_server.h"
 #include "config_server_default.h"
 
 namespace hermes {
