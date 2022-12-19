@@ -18,19 +18,19 @@ struct BufferInfo {
 };
 
 struct BlobInfo {
-  std::string name_;
-  std::vector<BufferInfo> buffers_;
+  BucketID bkt_id_;  /**< The bucket containing the blob */
+  lipc::ShmArchive<lipc::uptr<lipc::string>> name_;
+  lipc::ShmArchive<lipc::uptr<lipc::vector<BufferInfo>>> buffers_;
   RwLock rwlock_;
 };
 
 struct BucketInfo {
-  std::string name_;
-  std::vector<BlobID> blobs_;
+  lipc::ShmArchive<lipc::uptr<lipc::string>> name_;
 };
 
 struct VBucketInfo {
-  std::vector<char> name_;
-  std::unordered_set<BlobID> blobs_;
+  lipc::ShmArchive<lipc::uptr<lipc::vector<char>>> name_;
+  lipc::ShmArchive<lipc::uptr<lipc::unordered_map<BlobID, BlobID>>> blobs_;
 };
 
 }  // namespace hermes

@@ -49,8 +49,8 @@ class ThalliumRpc : public RpcContext {
   std::string GetServerName(u32 node_id);
 
   /** RPC call */
-  template <typename ReturnType, typename... Ts>
-  ReturnType Call(u32 node_id, const char *func_name, Ts... args) {
+  template <typename ReturnType, typename... Args>
+  ReturnType Call(u32 node_id, const char *func_name, Args&&... args) {
     VLOG(1) << "Calling " << func_name << " on node " << node_id
             << " from node " << node_id << std::endl;
     std::string server_name = GetServerName(node_id);
@@ -58,9 +58,9 @@ class ThalliumRpc : public RpcContext {
     tl::endpoint server = client_engine_->lookup(server_name);
     if constexpr (std::is_same<ReturnType, void>::value) {
       remote_proc.disable_response();
-      remote_proc.on(server)(std::forward<Ts>(args)...);
+      remote_proc.on(server)(std::forward<Args>(args)...);
     } else {
-      ReturnType result = remote_proc.on(server)(std::forward<Ts>(args)...);
+      ReturnType result = remote_proc.on(server)(std::forward<Args>(args)...);
       return result;
     }
   }
@@ -76,10 +76,12 @@ class ThalliumRpc : public RpcContext {
       case IoType::kRead: {
         func_name = "BulkRead";
         flag = tl::bulk_mode::read_only;
+        break;
       }
       case IoType::kWrite: {
         func_name = "BulkWrite";
         flag = tl::bulk_mode::write_only;
+        break;
       }
     }
 

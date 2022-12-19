@@ -27,9 +27,6 @@
 #include "config.h"
 #include "utils.h"
 
-#include <labstor/data_structures/lockless/string.h>
-#include <labstor/data_structures/lockless/vector.h>
-
 namespace hermes::api {
 class Hermes;
 }  // namespace hermes::api
@@ -44,6 +41,7 @@ enum class RpcType {
   kThallium
 };
 
+/** Uniquely identify a host machine */
 struct HostInfo {
   int node_id_;
   std::string hostname_;
@@ -54,9 +52,7 @@ struct HostInfo {
       : hostname_(hostname), ip_addr_(ip_addr) {}
 };
 
-/**
-   A structure to represent RPC context.
- */
+/** A structure to represent RPC context. */
 class RpcContext {
  public:
   COMM_TYPE *comm_;

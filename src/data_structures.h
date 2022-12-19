@@ -5,14 +5,13 @@
 #ifndef HERMES_SRC_DATA_STRUCTURES_H_
 #define HERMES_SRC_DATA_STRUCTURES_H_
 
-#include <labstor/data_structures/unordered_map.h>
-#include <labstor/data_structures/lockless/vector.h>
-#include <labstor/data_structures/lockless/list.h>
-#include <labstor/data_structures/lockless/string.h>
-// #include <labstor/data_structures/lockless/charbuf.h>
+#include <labstor/data_structures/thread_safe/unordered_map.h>
+#include <labstor/data_structures/thread_unsafe/vector.h>
+#include <labstor/data_structures/thread_unsafe/list.h>
+#include <labstor/data_structures/string.h>
+#include <labstor/data_structures/smart_ptr/unique_ptr.h>
 
 namespace lipc = labstor::ipc;
-namespace lipcl = labstor::ipc::lockless;
 
 using labstor::RwLock;
 using labstor::Mutex;

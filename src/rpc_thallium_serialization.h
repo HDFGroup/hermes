@@ -12,6 +12,8 @@
 #include <thallium/serialization/stl/list.hpp>
 #include "hermes_types.h"
 #include "metadata_types.h"
+#include "data_structures.h"
+#include <labstor/data_structures/serialization/thallium.h>
 
 namespace hermes {
 
@@ -25,7 +27,8 @@ namespace hermes {
  */
 template <typename A>
 void serialize(A &ar, VBucketID &vbucket_id) {
-  ar &vbucket_id.as_int;
+  ar &vbucket_id.unique_;
+  ar &vbucket_id.node_id_;
 }
 
 /**
@@ -38,7 +41,8 @@ void serialize(A &ar, VBucketID &vbucket_id) {
  */
 template <typename A>
 void serialize(A &ar, BucketID &bucket_id) {
-  ar &bucket_id.as_int;
+  ar &bucket_id.unique_;
+  ar &bucket_id.node_id_;
 }
 
 /**
@@ -51,7 +55,8 @@ void serialize(A &ar, BucketID &bucket_id) {
  */
 template <typename A>
 void serialize(A &ar, BlobID &blob_id) {
-  ar &blob_id.as_int;
+  ar &blob_id.unique_;
+  ar &blob_id.node_id_;
 }
 
 /**
@@ -64,7 +69,7 @@ void serialize(A &ar, BlobID &blob_id) {
  */
 template <typename A>
 void serialize(A &ar, TargetID &target_id) {
-  ar &target_id.as_int;
+  ar &target_id.as_int_;
 }
 
 /**

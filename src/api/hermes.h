@@ -18,9 +18,21 @@ namespace hermes::api {
 class Bucket;
 class VBucket;
 
+
+/**
+ * The Hermes shared-memory header
+ * */
+struct HermesShmHeader {
+  MetadataManagerShmHeader mdm_;
+};
+
+/**
+ * An index into all Hermes-related data structures.
+ * */
 class Hermes {
  public:
   HermesType mode_;
+  HermesShmHeader *header_;
   ServerConfig server_config_;
   ClientConfig client_config_;
   MetadataManager mdm_;

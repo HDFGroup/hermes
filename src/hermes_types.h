@@ -75,20 +75,17 @@ enum class IoType {
 
 typedef u16 DeviceID; /**< device id in unsigned 16-bit integer */
 
-union BucketID {
-  /** The Bucket ID as bitfield */
-  struct {
-    /** The index into the Target array starting at BufferPool::targets_offset
-     * (on the node with ID node_id). */
-    u32 index;
-    /** The ID of the node in charge of this bucket. */
-    u32 node_id;
-  } bits;
+struct BucketID {
+  u64 unique_;   /**< A unique id for the blob */
+  i32 node_id_;  /**< The node the blob is on */
 
-  /** The BucketID as a unsigned 64-bit integer */
-  u64 as_int;
+  bool IsNull() const { return unique_ == 0; }
 
-  bool IsNull() const { return as_int == 0; }
+  static BucketID GetNull() {
+    BucketID id;
+    id.unique_ = 0;
+    return id;
+  }
 };
 
 // NOTE(chogan): We reserve sizeof(BucketID) * 2 bytes in order to embed the
@@ -100,38 +97,19 @@ constexpr int kBucketIdStringSize = sizeof(BucketID) * 2;
  */
 constexpr int kMaxBlobNameSize = 64 - kBucketIdStringSize;
 
-union VBucketID {
-  /** The VBucket ID as bitfield */
-  struct {
-    /** The index into the Target array starting at BufferPool::targets_offset
-     * (on the node with ID node_id). */
-    u32 index;
-    /** The ID of the node in charge of this vbucket. */
-    u32 node_id;
-  } bits;
+struct VBucketID {
+  u64 unique_;   /**< A unique id for the blob */
+  i32 node_id_;  /**< The node the blob is on */
 
-  /** The VBucketID as a unsigned 64-bit integer */
-  u64 as_int;
-
-  bool IsNull() const { return as_int == 0; }
+  bool IsNull() const { return unique_ == 0; }
 };
 
-union BlobID {
-  /** The Blob ID as bitfield */
-  struct {
-    /** The index into the Target array starting at BufferPool::targets_offset
-     * (on the node with ID node_id). */
-    u32 buffer_ids_offset;
-    /** The ID of the node in charge of this bucket. (Negative when in swap
-        space.) */
-    i32 node_id;
-  } bits;
+struct BlobID {
+  u64 unique_;       /**< A unique id for the blob */
+  i32 node_id_;      /**< The node the blob is on */
 
-  /** The BlobID as an unsigned 64-bit integer */
-  u64 as_int;
-
-  bool IsNull() const { return as_int == 0; }
-  i32 GetNodeId() const { return bits.node_id; }
+  bool IsNull() const { return unique_ == 0; }
+  i32 GetNodeId() const { return node_id_; }
 };
 
 /** A definition for logging something that is not yet implemented */
@@ -146,20 +124,18 @@ union TargetID {
   /** The Target ID as bitfield */
   struct {
     /** The ID of the node in charge of this target. */
-    u32 node_id;
+    u32 node_id_;
     /** The ID of the virtual device that backs this target. It is an index into
-     * the Device array starting at BufferPool::devices_offset (on the node with
-     * ID node_id). */
-    u16 device_id;
-    /** The index into the Target array starting at BufferPool::targets_offset
-     * (on the node with ID node_id). */
-    u16 index;
-  } bits;
+     * the Device array. */
+    u16 device_id_;
+    /** The index into the Target array. */
+    u16 index_;
+  } bits_;
 
   /** The TargetID as a unsigned 64-bit integer */
-  u64 as_int;
+  u64 as_int_;
 
-  bool IsNull() const  { return as_int == 0; }
+  bool IsNull() const  { return as_int_ == 0; }
 };
 
 /**
@@ -173,12 +149,14 @@ using PlacementSchema = std::vector<std::pair<size_t, TargetID>>;
  * A structure to represent thesholds with mimimum and maximum values
  */
 struct Thresholds {
-  float min; /**< minimum threshold value */
-  float max; /**< maximum threshold value */
+  float min_; /**< minimum threshold value */
+  float max_; /**< maximum threshold value */
 };
 
 /** Trait ID type */
-typedef u64 TraitID;
+struct TraitID {
+  u64 type_;
+};
 
 }  // namespace hermes
 
@@ -315,21 +293,27 @@ namespace std {
 template <>
 struct hash<hermes::BlobID> {
   std::size_t operator()(const hermes::BlobID &key) const {
-    return std::hash<hermes::u64>{}(key.as_int);
+    return
+        std::hash<hermes::u64>{}(key.unique_) +
+        std::hash<hermes::i32>{}(key.node_id_);
   }
 };
 
 template <>
 struct hash<hermes::BucketID> {
   std::size_t operator()(const hermes::BucketID &key) const {
-    return std::hash<hermes::u64>{}(key.as_int);
+    return
+        std::hash<hermes::u64>{}(key.unique_) +
+        std::hash<hermes::i32>{}(key.node_id_);
   }
 };
 
 template <>
 struct hash<hermes::VBucketID> {
   std::size_t operator()(const hermes::VBucketID &key) const {
-    return std::hash<hermes::u64>{}(key.as_int);
+    return
+        std::hash<hermes::u64>{}(key.unique_) +
+        std::hash<hermes::i32>{}(key.node_id_);
   }
 };
 }  // namespace std

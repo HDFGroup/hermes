@@ -10,23 +10,86 @@
 #include "hermes_status.h"
 #include "rpc.h"
 #include "metadata_types.h"
+#include "rpc_thallium_serialization.h"
 
 namespace hermes {
 
+/**
+ * The SHM representation of the MetadataManager
+ * */
+struct MetadataManagerShmHeader {
+  /// SHM representation of blob id map
+  lipc::ShmArchive<lipc::uptr<lipc::unordered_map<lipc::charbuf, BlobID>>>
+      blob_id_map_ar_;
+  /// SHM representation of bucket id map
+  lipc::ShmArchive<lipc::uptr<lipc::unordered_map<lipc::charbuf, BucketID>>>
+      bkt_id_map_ar_;
+  /// SHM representation of vbucket id map
+  lipc::ShmArchive<lipc::uptr<lipc::unordered_map<lipc::charbuf, VBucketID>>>
+      vbkt_id_map_ar_;
+  /// SHM representation of blob map
+  lipc::ShmArchive<lipc::uptr<lipc::unordered_map<BlobID, BlobInfo>>>
+      blob_map_ar_;
+  /// SHM representation of bucket map
+  lipc::ShmArchive<lipc::uptr<lipc::unordered_map<BucketID, BucketInfo>>>
+      bkt_map_ar_;
+  /// SHM representation of vbucket map
+  lipc::ShmArchive<lipc::uptr<lipc::unordered_map<VBucketID, VBucketInfo>>>
+      vbkt_map_ar_;
+  /// Used to create unique ids. Starts at 1.
+  std::atomic<u64> id_alloc_;
+};
+
+/**
+ * Manages the metadata for blobs, buckets, and vbuckets.
+ * */
 class MetadataManager {
  private:
   RPC_TYPE* rpc_;
-  std::unordered_map<std::string, BlobID> blob_id_map_;
-  std::unordered_map<std::string, BucketID> bkt_id_map_;
-  std::unordered_map<std::string, VBucketID> vbkt_id_map_;
+  MetadataManagerShmHeader *header_;
 
-  std::unordered_map<BlobID, BlobInfo> blob_map_;
-  std::unordered_map<BucketID, BucketInfo> bkt_map_;
-  std::unordered_map<VBucketID, VBucketInfo> vbkt_map_;
+  /**
+   * The unique pointers representing the different map types.
+   * They are created in shm_init. They are destroyed automatically when the
+   * MetadataManager (on the Hermes core) is destroyed. This avoids having
+   * to manually "delete" the MetadataManager.
+   * */
+  lipc::uptr<lipc::unordered_map<lipc::charbuf, BlobID>> blob_id_map_owner_;
+  lipc::uptr<lipc::unordered_map<lipc::charbuf, BucketID>> bkt_id_map_owner_;
+  lipc::uptr<lipc::unordered_map<lipc::charbuf, VBucketID>> vbkt_id_map_owner_;
+  lipc::uptr<lipc::unordered_map<BlobID, BlobInfo>> blob_map_owner_;
+  lipc::uptr<lipc::unordered_map<BucketID, BucketInfo>> bkt_map_owner_;
+  lipc::uptr<lipc::unordered_map<VBucketID, VBucketInfo>> vbkt_map_owner_;
+
+  /**
+   * The manual pointers representing the different map types.
+   * These are references to the objects stored in lipc::uptr
+   * objects above.
+   * */
+  lipc::mptr<lipc::unordered_map<lipc::charbuf, BlobID>> blob_id_map_;
+  lipc::mptr<lipc::unordered_map<lipc::charbuf, BucketID>> bkt_id_map_;
+  lipc::mptr<lipc::unordered_map<lipc::charbuf, VBucketID>> vbkt_id_map_;
+  lipc::mptr<lipc::unordered_map<BlobID, BlobInfo>> blob_map_;
+  lipc::mptr<lipc::unordered_map<BucketID, BucketInfo>> bkt_map_;
+  lipc::mptr<lipc::unordered_map<VBucketID, VBucketInfo>> vbkt_map_;
 
  public:
   MetadataManager() = default;
-  void Init();
+
+  /**
+   * Explicitly initialize the MetadataManager
+   * */
+  void shm_init(MetadataManagerShmHeader *header);
+
+  /**
+   * Store the MetadataManager in shared memory.
+   * */
+   void shm_serialize();
+
+   /**
+    * Unload the MetadtaManager from shared memory
+    * */
+   void shm_deserialize(MetadataManagerShmHeader *header);
 
   /**
    * Get or create a bucket with \a bkt_name bucket name
@@ -34,7 +97,7 @@ class MetadataManager {
    * @RPC_TARGET_NODE rpc_->node_id_
    * @RPC_CLASS_INSTANCE mdm
    * */
-  RPC BucketID LocalGetOrCreateBucket(std::string bkt_name);
+  RPC BucketID LocalGetOrCreateBucket(lipc::charbuf &bkt_name);
 
   /**
    * Get the BucketID with \a bkt_name bucket name
@@ -42,7 +105,7 @@ class MetadataManager {
    * @RPC_TARGET_NODE rpc_->node_id_
    * @RPC_CLASS_INSTANCE mdm
    * */
-  RPC BucketID LocalGetBucketId(std::string bkt_name);
+  RPC BucketID LocalGetBucketId(lipc::charbuf &bkt_name);
 
   /**
    * Check whether or not \a bkt_id bucket contains
@@ -59,7 +122,7 @@ class MetadataManager {
    * @RPC_TARGET_NODE rpc_->node_id_
    * @RPC_CLASS_INSTANCE mdm
    * */
-  RPC bool LocalRenameBucket(BucketID bkt_id, std::string new_bkt_name);
+  RPC bool LocalRenameBucket(BucketID bkt_id, lipc::charbuf &new_bkt_name);
 
   /**
    * Destroy \a bkt_id bucket
@@ -80,8 +143,8 @@ class MetadataManager {
    * @RPC_TARGET_NODE rpc_->node_id_
    * @RPC_CLASS_INSTANCE mdm
    * */
-  RPC BlobID LocalBucketPutBlob(BucketID bkt_id, std::string blob_name,
-                                Blob data, std::vector<BufferInfo> buffers);
+  RPC BlobID LocalBucketPutBlob(BucketID bkt_id, lipc::charbuf &blob_name,
+                                Blob &data, lipc::vector<BufferInfo> &buffers);
 
   /**
    * Get \a blob_name blob from \a bkt_id bucket
@@ -89,7 +152,7 @@ class MetadataManager {
    * @RPC_TARGET_NODE rpc_->node_id_
    * @RPC_CLASS_INSTANCE mdm
    * */
-  RPC BlobID LocalGetBlobId(BucketID bkt_id, std::string blob_name);
+  RPC BlobID LocalGetBlobId(BucketID bkt_id, lipc::charbuf &blob_name);
 
   /**
    * Change \a blob_id blob's buffers to \the buffers
@@ -97,7 +160,8 @@ class MetadataManager {
    * @RPC_TARGET_NODE rpc_->node_id_
    * @RPC_CLASS_INSTANCE mdm
    * */
-  RPC bool LocalSetBlobBuffers(BlobID blob_id, std::vector<BufferInfo> buffers);
+  RPC bool LocalSetBlobBuffers(BlobID blob_id,
+                               lipc::vector<BufferInfo> &buffers);
 
   /**
    * Get \a blob_id blob's buffers
@@ -105,7 +169,7 @@ class MetadataManager {
    * @RPC_TARGET_NODE rpc_->node_id_
    * @RPC_CLASS_INSTANCE mdm
    * */
-  RPC std::vector<BufferInfo> LocalGetBlobBuffers(BlobID blob_id);
+  RPC lipc::vector<BufferInfo> LocalGetBlobBuffers(BlobID blob_id);
 
   /**
    * Rename \a blob_id blob to \a new_blob_name new blob name
@@ -115,7 +179,7 @@ class MetadataManager {
    * @RPC_CLASS_INSTANCE mdm
    * */
   RPC bool LocalRenameBlob(BucketID bkt_id, BlobID blob_id,
-                           std::string new_blob_name);
+                           lipc::charbuf &new_blob_name);
 
   /**
    * Destroy \a blob_id blob in \a bkt_id bucket
@@ -123,7 +187,7 @@ class MetadataManager {
    * @RPC_TARGET_NODE rpc_->node_id_
    * @RPC_CLASS_INSTANCE mdm
    * */
-  RPC bool LocalDestroyBlob(BucketID bkt_id, std::string blob_name);
+  RPC bool LocalDestroyBlob(BucketID bkt_id, lipc::charbuf &blob_name);
 
   /**
    * Acquire \a blob_id blob's write lock
@@ -163,7 +227,7 @@ class MetadataManager {
    * @RPC_TARGET_NODE rpc_->node_id_
    * @RPC_CLASS_INSTANCE mdm
    * */
-  RPC VBucketID LocalGetOrCreateVBucket(std::string vbkt_name);
+  RPC VBucketID LocalGetOrCreateVBucket(lipc::charbuf &vbkt_name);
 
   /**
    * Get the VBucketID of \a vbkt_name VBucket
@@ -171,7 +235,7 @@ class MetadataManager {
    * @RPC_TARGET_NODE rpc_->node_id_
    * @RPC_CLASS_INSTANCE mdm
    * */
-  RPC VBucketID LocalGetVBucketId(std::string vbkt_name);
+  RPC VBucketID LocalGetVBucketId(lipc::charbuf &vbkt_name);
 
   /**
    * Link \a vbkt_id VBucketID
@@ -180,7 +244,7 @@ class MetadataManager {
    * @RPC_CLASS_INSTANCE mdm
    * */
   RPC VBucketID LocalVBucketLinkBlob(VBucketID vbkt_id, BucketID bkt_id,
-                                     std::string blob_name);
+                                     lipc::charbuf &blob_name);
 
   /**
    * Unlink \a blob_name Blob of \a bkt_id Bucket
@@ -190,7 +254,7 @@ class MetadataManager {
    * @RPC_CLASS_INSTANCE mdm
    * */
   RPC VBucketID LocalVBucketUnlinkBlob(VBucketID vbkt_id, BucketID bkt_id,
-                                       std::string blob_name);
+                                       lipc::charbuf &blob_name);
 
   /**
    * Get the linked blobs from \a vbkt_id VBucket
@@ -206,7 +270,7 @@ class MetadataManager {
    * @RPC_TARGET_NODE rpc_->node_id_
    * @RPC_CLASS_INSTANCE mdm
    * */
-  RPC bool LocalRenameVBucket(VBucketID vbkt_id, std::string new_vbkt_name);
+  RPC bool LocalRenameVBucket(VBucketID vbkt_id, lipc::charbuf &new_vbkt_name);
 
   /**
    * Destroy \a vbkt_id VBucket
@@ -218,7 +282,7 @@ class MetadataManager {
 
  public:
   RPC_AUTOGEN_START
-  BucketID GetOrCreateBucket(std::string bkt_name) {
+  BucketID GetOrCreateBucket(lipc::charbuf& bkt_name) {
     u32 target_node = rpc_->node_id_;
     if (target_node == rpc_->node_id_) {
       return LocalGetOrCreateBucket(
@@ -229,7 +293,7 @@ class MetadataManager {
         bkt_name);
     }
   }
-  BucketID GetBucketId(std::string bkt_name) {
+  BucketID GetBucketId(lipc::charbuf& bkt_name) {
     u32 target_node = rpc_->node_id_;
     if (target_node == rpc_->node_id_) {
       return LocalGetBucketId(
@@ -251,7 +315,7 @@ class MetadataManager {
         bkt_id, blob_id);
     }
   }
-  bool RenameBucket(BucketID bkt_id, std::string new_bkt_name) {
+  bool RenameBucket(BucketID bkt_id, lipc::charbuf& new_bkt_name) {
     u32 target_node = rpc_->node_id_;
     if (target_node == rpc_->node_id_) {
       return LocalRenameBucket(
@@ -273,7 +337,7 @@ class MetadataManager {
         bkt_id);
     }
   }
-  BlobID BucketPutBlob(BucketID bkt_id, std::string blob_name, Blob data, std::vector<BufferInfo> buffers) {
+  BlobID BucketPutBlob(BucketID bkt_id, lipc::charbuf& blob_name, Blob& data, lipc::vector<BufferInfo>& buffers) {
     u32 target_node = rpc_->node_id_;
     if (target_node == rpc_->node_id_) {
       return LocalBucketPutBlob(
@@ -284,7 +348,7 @@ class MetadataManager {
         bkt_id, blob_name, data, buffers);
     }
   }
-  BlobID GetBlobId(BucketID bkt_id, std::string blob_name) {
+  BlobID GetBlobId(BucketID bkt_id, lipc::charbuf& blob_name) {
     u32 target_node = rpc_->node_id_;
     if (target_node == rpc_->node_id_) {
       return LocalGetBlobId(
@@ -295,7 +359,7 @@ class MetadataManager {
         bkt_id, blob_name);
     }
   }
-  bool SetBlobBuffers(BlobID blob_id, std::vector<BufferInfo> buffers) {
+  bool SetBlobBuffers(BlobID blob_id, lipc::vector<BufferInfo>& buffers) {
     u32 target_node = rpc_->node_id_;
     if (target_node == rpc_->node_id_) {
       return LocalSetBlobBuffers(
@@ -306,18 +370,18 @@ class MetadataManager {
         blob_id, buffers);
     }
   }
-  std::vector<BufferInfo> GetBlobBuffers(BlobID blob_id) {
+  lipc::vector<BufferInfo> GetBlobBuffers(BlobID blob_id) {
     u32 target_node = rpc_->node_id_;
     if (target_node == rpc_->node_id_) {
       return LocalGetBlobBuffers(
         blob_id);
     } else {
-      return rpc_->Call<std::vector<BufferInfo>>(
+      return rpc_->Call<lipc::vector<BufferInfo>>(
         target_node, "GetBlobBuffers",
         blob_id);
     }
   }
-  bool RenameBlob(BucketID bkt_id, BlobID blob_id, std::string new_blob_name) {
+  bool RenameBlob(BucketID bkt_id, BlobID blob_id, lipc::charbuf& new_blob_name) {
     u32 target_node = rpc_->node_id_;
     if (target_node == rpc_->node_id_) {
       return LocalRenameBlob(
@@ -328,7 +392,7 @@ class MetadataManager {
         bkt_id, blob_id, new_blob_name);
     }
   }
-  bool DestroyBlob(BucketID bkt_id, std::string blob_name) {
+  bool DestroyBlob(BucketID bkt_id, lipc::charbuf& blob_name) {
     u32 target_node = rpc_->node_id_;
     if (target_node == rpc_->node_id_) {
       return LocalDestroyBlob(
@@ -383,7 +447,7 @@ class MetadataManager {
         blob_id);
     }
   }
-  VBucketID GetOrCreateVBucket(std::string vbkt_name) {
+  VBucketID GetOrCreateVBucket(lipc::charbuf& vbkt_name) {
     u32 target_node = rpc_->node_id_;
     if (target_node == rpc_->node_id_) {
       return LocalGetOrCreateVBucket(
@@ -394,7 +458,7 @@ class MetadataManager {
         vbkt_name);
     }
   }
-  VBucketID GetVBucketId(std::string vbkt_name) {
+  VBucketID GetVBucketId(lipc::charbuf& vbkt_name) {
     u32 target_node = rpc_->node_id_;
     if (target_node == rpc_->node_id_) {
       return LocalGetVBucketId(
@@ -405,7 +469,7 @@ class MetadataManager {
         vbkt_name);
     }
   }
-  VBucketID VBucketLinkBlob(VBucketID vbkt_id, BucketID bkt_id, std::string blob_name) {
+  VBucketID VBucketLinkBlob(VBucketID vbkt_id, BucketID bkt_id, lipc::charbuf& blob_name) {
     u32 target_node = rpc_->node_id_;
     if (target_node == rpc_->node_id_) {
       return LocalVBucketLinkBlob(
@@ -416,7 +480,7 @@ class MetadataManager {
         vbkt_id, bkt_id, blob_name);
     }
   }
-  VBucketID VBucketUnlinkBlob(VBucketID vbkt_id, BucketID bkt_id, std::string blob_name) {
+  VBucketID VBucketUnlinkBlob(VBucketID vbkt_id, BucketID bkt_id, lipc::charbuf& blob_name) {
     u32 target_node = rpc_->node_id_;
     if (target_node == rpc_->node_id_) {
       return LocalVBucketUnlinkBlob(
@@ -438,7 +502,7 @@ class MetadataManager {
         vbkt_id);
     }
   }
-  bool RenameVBucket(VBucketID vbkt_id, std::string new_vbkt_name) {
+  bool RenameVBucket(VBucketID vbkt_id, lipc::charbuf& new_vbkt_name) {
     u32 target_node = rpc_->node_id_;
     if (target_node == rpc_->node_id_) {
       return LocalRenameVBucket(
