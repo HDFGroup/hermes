@@ -12,7 +12,7 @@ namespace hermes::api {
  * */
 Bucket::Bucket(std::string name, Context &ctx) : mdm_(&HERMES->mdm_) {
   lipc::string lname(name);
-  mdm_->GetOrCreateBucket(lname);
+  id_ = mdm_->GetOrCreateBucket(lname);
 }
 
 /**

@@ -29,17 +29,17 @@ typedef lipc::unordered_map<VBucketId, VBucketInfoShmHeader> VBKT_MAP_T;
  * */
 struct MetadataManagerShmHeader {
   /// SHM representation of blob id map
-  lipc::ShmArchive<lipc::uptr<BLOB_ID_MAP_T>> blob_id_map_ar_;
+  lipc::ShmArchive<lipc::mptr<BLOB_ID_MAP_T>> blob_id_map_ar_;
   /// SHM representation of bucket id map
-  lipc::ShmArchive<lipc::uptr<BKT_ID_MAP_T>> bkt_id_map_ar_;
+  lipc::ShmArchive<lipc::mptr<BKT_ID_MAP_T>> bkt_id_map_ar_;
   /// SHM representation of vbucket id map
-  lipc::ShmArchive<lipc::uptr<VBKT_ID_MAP_T>> vbkt_id_map_ar_;
+  lipc::ShmArchive<lipc::mptr<VBKT_ID_MAP_T>> vbkt_id_map_ar_;
   /// SHM representation of blob map
-  lipc::ShmArchive<lipc::uptr<BLOB_MAP_T>> blob_map_ar_;
+  lipc::ShmArchive<lipc::mptr<BLOB_MAP_T>> blob_map_ar_;
   /// SHM representation of bucket map
-  lipc::ShmArchive<lipc::uptr<BKT_MAP_T>> bkt_map_ar_;
+  lipc::ShmArchive<lipc::mptr<BKT_MAP_T>> bkt_map_ar_;
   /// SHM representation of vbucket map
-  lipc::ShmArchive<lipc::uptr<VBKT_MAP_T>> vbkt_map_ar_;
+  lipc::ShmArchive<lipc::mptr<VBKT_MAP_T>> vbkt_map_ar_;
   /// Used to create unique ids. Starts at 1.
   std::atomic<u64> id_alloc_;
 };
@@ -53,22 +53,7 @@ class MetadataManager {
   MetadataManagerShmHeader *header_;
 
   /**
-   * The unique pointers representing the different map types.
-   * They are created in shm_init. They are destroyed automatically when the
-   * MetadataManager (on the Hermes core) is destroyed. This avoids having
-   * to manually "delete" the MetadataManager.
-   * */
-  lipc::uptr<BLOB_ID_MAP_T> blob_id_map_owner_;
-  lipc::uptr<BKT_ID_MAP_T> bkt_id_map_owner_;
-  lipc::uptr<VBKT_ID_MAP_T> vbkt_id_map_owner_;
-  lipc::uptr<BLOB_MAP_T> blob_map_owner_;
-  lipc::uptr<BKT_MAP_T> bkt_map_owner_;
-  lipc::uptr<VBKT_MAP_T> vbkt_map_owner_;
-
-  /**
    * The manual pointers representing the different map types.
-   * These are references to the objects stored in lipc::uptr
-   * objects above.
    * */
   lipc::mptr<BLOB_ID_MAP_T> blob_id_map_;
   lipc::mptr<BKT_ID_MAP_T> bkt_id_map_;
@@ -84,6 +69,11 @@ class MetadataManager {
    * Explicitly initialize the MetadataManager
    * */
   void shm_init(MetadataManagerShmHeader *header);
+
+  /**
+   * Explicitly destroy the MetadataManager
+   * */
+  void shm_destroy();
 
   /**
    * Store the MetadataManager in shared memory.

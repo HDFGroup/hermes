@@ -118,7 +118,8 @@ void Hermes::LoadSharedMemory() {
 }
 
 void Hermes::FinalizeServer() {
-  // NOTE(llogan): Finalize() is called internally by daemon in this case
+  // NOTE(llogan): rpc_.Finalize() is called internally by daemon in this case
+  mdm_.shm_destroy();
   LABSTOR_MEMORY_MANAGER->DestroyBackend(server_config_.shmem_name_);
 }
 

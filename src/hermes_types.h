@@ -312,7 +312,7 @@ enum class TraitType : u8 {
 namespace std {
 template <int TYPE>
 struct hash<hermes::UniqueID<TYPE>> {
-  std::size_t operator()(const hermes::BlobId &key) const {
+  std::size_t operator()(const hermes::UniqueID<TYPE> &key) const {
     return
         std::hash<hermes::u64>{}(key.unique_) +
         std::hash<hermes::i32>{}(key.node_id_);

@@ -14,24 +14,38 @@ void MetadataManager::shm_init(MetadataManagerShmHeader *header) {
   header_ = header;
   rpc_ = &HERMES->rpc_;
   header_->id_alloc_ = 1;
-  blob_id_map_owner_ = lipc::make_uptr<BLOB_ID_MAP_T>(nullptr);
-  bkt_id_map_owner_ = lipc::make_uptr<BKT_ID_MAP_T>(nullptr);
-  vbkt_id_map_owner_ = lipc::make_uptr<VBKT_ID_MAP_T>(nullptr);
-  blob_map_owner_ = lipc::make_uptr<BLOB_MAP_T>(nullptr);
-  bkt_map_owner_ = lipc::make_uptr<BKT_MAP_T>(nullptr);
-  vbkt_map_owner_ = lipc::make_uptr<VBKT_MAP_T>(nullptr);
+  blob_id_map_ = lipc::make_mptr<BLOB_ID_MAP_T>(nullptr);
+  bkt_id_map_ = lipc::make_mptr<BKT_ID_MAP_T>(nullptr);
+  vbkt_id_map_ = lipc::make_mptr<VBKT_ID_MAP_T>(nullptr);
+  blob_map_ = lipc::make_mptr<BLOB_MAP_T>(nullptr);
+  bkt_map_ = lipc::make_mptr<BKT_MAP_T>(nullptr);
+  vbkt_map_ = lipc::make_mptr<VBKT_MAP_T>(nullptr);
+  shm_serialize();
+  shm_deserialize(header_);
+}
+
+/**
+ * Explicitly destroy the MetadataManager
+ * */
+void MetadataManager::shm_destroy() {
+  blob_id_map_.shm_destroy();
+  bkt_id_map_.shm_destroy();
+  vbkt_id_map_.shm_destroy();
+  blob_map_.shm_destroy();
+  bkt_map_.shm_destroy();
+  vbkt_map_.shm_destroy();
 }
 
 /**
  * Store the MetadataManager in shared memory.
  * */
 void MetadataManager::shm_serialize() {
-  blob_id_map_owner_ >> header_->blob_id_map_ar_;
-  bkt_id_map_owner_ >> header_->bkt_id_map_ar_;
-  vbkt_id_map_owner_ >> header_->vbkt_id_map_ar_;
-  blob_map_owner_ >> header_->blob_map_ar_;
-  bkt_map_owner_ >> header_->bkt_map_ar_;
-  vbkt_map_owner_ >> header_->vbkt_map_ar_;
+  blob_id_map_ >> header_->blob_id_map_ar_;
+  bkt_id_map_ >> header_->bkt_id_map_ar_;
+  vbkt_id_map_ >> header_->vbkt_id_map_ar_;
+  blob_map_ >> header_->blob_map_ar_;
+  bkt_map_ >> header_->bkt_map_ar_;
+  vbkt_map_ >> header_->vbkt_map_ar_;
 }
 
 /**
@@ -62,6 +76,11 @@ BucketId MetadataManager::LocalGetOrCreateBucket(lipc::charbuf &bkt_name) {
 
   // Emplace bucket if it does not already exist
   if (bkt_id_map_->try_emplace(bkt_name, bkt_id)) {
+    BucketInfo info;
+    info.name_ = lipc::make_mptr<lipc::string>(bkt_name);
+    BucketInfoShmHeader hdr;
+    info.name_ >> hdr.name_ar_;
+    bkt_map_->emplace(bkt_id, hdr);
   } else {
     auto iter = bkt_id_map_->find(bkt_name);
     if (iter == bkt_id_map_->end()) {
