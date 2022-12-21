@@ -16,7 +16,7 @@ namespace hermes {
  * The shared-memory representation of the BufferPool
  * */
 struct BufferPoolManagerShmHeader {
-  lipc::vector<int> targets_;
+  lipc::vector<DeviceInfo> targets_;
 };
 
 /**

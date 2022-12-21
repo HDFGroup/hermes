@@ -186,8 +186,8 @@ bool Lock(const std::string &bucket, const std::string &blob_name) {
   auto &hermes = mdm->GetHermes();
   SharedMemoryContext *context = &hermes->context_;
   RpcContext *rpc = &hermes->rpc_;
-  BucketID bucket_id = GetBucketId(context, rpc, bucket.c_str());
-  BlobID lock_id = GetBlobId(context, rpc, blob_name, bucket_id, true);
+  BucketId bucket_id = GetBucketId(context, rpc, bucket.c_str());
+  BlobId lock_id = GetBlobId(context, rpc, blob_name, bucket_id, true);
   bool ret = LockBlob(context, rpc, lock_id);
   return ret;
 }
@@ -197,8 +197,8 @@ void Unlock(const std::string &bucket, const std::string &blob_name) {
   auto &hermes = mdm->GetHermes();
   SharedMemoryContext *context = &hermes->context_;
   RpcContext *rpc = &hermes->rpc_;
-  BucketID bucket_id = GetBucketId(context, rpc, bucket.c_str());
-  BlobID lock_id = GetBlobId(context, rpc, blob_name, bucket_id, true);
+  BucketId bucket_id = GetBucketId(context, rpc, bucket.c_str());
+  BlobId lock_id = GetBlobId(context, rpc, blob_name, bucket_id, true);
   UnlockBlob(context, rpc, lock_id);
 }
 

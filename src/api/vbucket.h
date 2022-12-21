@@ -6,7 +6,7 @@
 #define HERMES_SRC_API_VBUCKET_H_
 
 #include "hermes_types.h"
-#include "hermes_status.h"
+#include "status.h"
 #include "hermes.h"
 
 namespace hermes::api {

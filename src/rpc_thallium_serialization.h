@@ -18,43 +18,43 @@
 namespace hermes {
 
 /**
- *  Lets Thallium know how to serialize a VBucketID.
+ *  Lets Thallium know how to serialize a VBucketId.
  *
  * This function is called implicitly by Thallium.
  *
  * @param ar An archive provided by Thallium.
- * @param vbucket_id The VBucketID to serialize.
+ * @param vbucket_id The VBucketId to serialize.
  */
 template <typename A>
-void serialize(A &ar, VBucketID &vbucket_id) {
+void serialize(A &ar, VBucketId &vbucket_id) {
   ar &vbucket_id.unique_;
   ar &vbucket_id.node_id_;
 }
 
 /**
- *  Lets Thallium know how to serialize a BucketID.
+ *  Lets Thallium know how to serialize a BucketId.
  *
  * This function is called implicitly by Thallium.
  *
  * @param ar An archive provided by Thallium.
- * @param bucket_id The BucketID to serialize.
+ * @param bucket_id The BucketId to serialize.
  */
 template <typename A>
-void serialize(A &ar, BucketID &bucket_id) {
+void serialize(A &ar, BucketId &bucket_id) {
   ar &bucket_id.unique_;
   ar &bucket_id.node_id_;
 }
 
 /**
- *  Lets Thallium know how to serialize a BlobID.
+ *  Lets Thallium know how to serialize a BlobId.
  *
  * This function is called implicitly by Thallium.
  *
  * @param ar An archive provided by Thallium.
- * @param blob_id The BlobID to serialize.
+ * @param blob_id The BlobId to serialize.
  */
 template <typename A>
-void serialize(A &ar, BlobID &blob_id) {
+void serialize(A &ar, BlobId &blob_id) {
   ar &blob_id.unique_;
   ar &blob_id.node_id_;
 }

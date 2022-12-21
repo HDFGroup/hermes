@@ -7,7 +7,7 @@
 
 #include "config.h"
 
-namespace hermes {
+namespace hermes::config {
 
 /**
  * Device information defined in server config
@@ -121,6 +121,10 @@ class ServerConfig : public BaseConfig {
   void ParseBorgInfo(YAML::Node yaml_conf);
 };
 
+}  // namespace hermes::config
+
+namespace hermes {
+using config::ServerConfig;
 }  // namespace hermes
 
 #endif  // HERMES_SRC_CONFIG_SERVER_H_

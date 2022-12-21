@@ -17,10 +17,34 @@
 
 /** \file hermes_status.h */
 
-namespace hermes {
+namespace hermes::api {
 
 class Status {
+ private:
+  static int code_counter_;
+  int code_;
+  const char *msg_;
+
  public:
+  Status() = default;
+
+  explicit Status(const char *msg) : msg_(msg) {
+    code_ = code_counter_;
+    code_counter_ += 1;
+  }
+
+  Status(const Status &other) {
+    code_ = other.code_;
+    msg_ = other.msg_;
+  }
+
+  bool Success() {
+    return code_ == 0;
+  }
+
+  bool Failed() {
+    return code_ != 0;
+  }
 };
 
 }  // hermes

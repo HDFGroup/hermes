@@ -25,6 +25,7 @@
 #include "data_structures.h"
 #include "constants.h"
 #include "singleton_macros.h"
+#include "statuses.h"
 
 /**
  * \file hermes_types.h
@@ -75,6 +76,14 @@ enum class IoType {
 
 typedef u16 DeviceID; /**< device id in unsigned 16-bit integer */
 
+/** The types of topologies */
+enum class TopologyType {
+  Local,
+  Neighborhood,
+  Global
+};
+
+/** Represents unique ID for BlobId, BucketId, and VBucketId */
 template<int TYPE>
 struct UniqueID {
   u64 unique_;   /**< A unique id for the blob */
@@ -98,10 +107,9 @@ struct UniqueID {
     return unique_ != other.unique_ || node_id_ != other.node_id_;
   }
 };
-
-typedef UniqueID<0> BucketID;
-typedef UniqueID<1> VBucketID;
-typedef UniqueID<2> BlobID;
+typedef UniqueID<0> BucketId;
+typedef UniqueID<1> VBucketId;
+typedef UniqueID<2> BlobId;
 
 /** A definition for logging something that is not yet implemented */
 #define HERMES_NOT_IMPLEMENTED_YET \
@@ -130,11 +138,32 @@ union TargetID {
 };
 
 /**
- * A PlacementSchema is a vector of (size, target) pairs where size is the
- * number of bytes to buffer and target is the TargetID where to buffer those
- * bytes.
+ * Represents the fraction of a blob to place
+ * on a particular target during data placement
+ * */
+struct SubPlacement {
+  size_t size_;   /**> Size (bytes) */
+  TargetID tid_;  /**> Target destination of data */
+
+  SubPlacement(size_t size, TargetID tid)
+      : size_(size), tid_(tid) {}
+};
+
+/**
+ * The organization of a particular blob in the storage
+ * hierarchy during data placement.
  */
-using PlacementSchema = std::vector<std::pair<size_t, TargetID>>;
+struct PlacementSchema {
+  std::vector<SubPlacement> plcmnt_;
+
+  void AddSubPlacement(size_t size, TargetID tid) {
+    plcmnt_.emplace_back(size, tid);
+  }
+
+  void Clear() {
+    plcmnt_.clear();
+  }
+};
 
 /**
  * A structure to represent thesholds with mimimum and maximum values
@@ -157,7 +186,7 @@ namespace hermes::api {
 /**
  * A Blob is simply an uninterpreted vector of bytes.
  */
-typedef std::vector<unsigned char> Blob;
+typedef lipc::charbuf Blob;
 
 
 /** Supported data placement policies */
@@ -258,7 +287,7 @@ struct Context {
   bool disable_swap;
 
   /** Prefetching hints */
-  VBucketID vbkt_id_;
+  VBucketId vbkt_id_;
   PrefetchContext pctx_;
 
   Context();
@@ -283,7 +312,7 @@ enum class TraitType : u8 {
 namespace std {
 template <int TYPE>
 struct hash<hermes::UniqueID<TYPE>> {
-  std::size_t operator()(const hermes::BlobID &key) const {
+  std::size_t operator()(const hermes::BlobId &key) const {
     return
         std::hash<hermes::u64>{}(key.unique_) +
         std::hash<hermes::i32>{}(key.node_id_);

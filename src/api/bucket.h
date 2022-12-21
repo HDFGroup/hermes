@@ -6,7 +6,7 @@
 #define HERMES_SRC_API_BUCKET_H_
 
 #include "hermes_types.h"
-#include "hermes_status.h"
+#include "status.h"
 #include "hermes.h"
 
 namespace hermes::api {
@@ -14,7 +14,7 @@ namespace hermes::api {
 class Bucket {
  private:
   MetadataManager *mdm_;
-  BucketID id_;
+  BucketId id_;
   std::string name_;
   Context ctx_;
 
@@ -41,7 +41,7 @@ class Bucket {
   /**
    * Get the identifier of this bucket
    * */
-  BucketID GetId() const {
+  BucketId GetId() const {
     return id_;
   }
 
@@ -60,29 +60,23 @@ class Bucket {
  public:
 
   /**
-   * Put \a blob_name Blob into the bucket
+   * Get the id of a blob from the blob name
    * */
-  Status PutBlob(std::string blob_name, Blob &blob,
-                 Context &ctx);
+  Status GetBlobId(std::string blob_name, BlobId &blob_id, Context &ctx);
 
   /**
    * Put \a blob_id Blob into the bucket
    * */
-  Status PutBlob(BlobID blob_id, Blob &blob,
-                 Context &ctx);
-
-  /**
-   * Get \a blob_name Blob from the bucket
-   * */
-  Status GetBlob(std::string blob_name, Blob &blob,
-                 Context &ctx);
+  Status Put(std::string blob_name, Blob blob,
+             BlobId &blob_id, Context &ctx);
 
   /**
    * Get \a blob_id Blob from the bucket
-   * :WRAP-param: ctx -> ctx_
+   * @WRAP_DEFAULT: ctx -> ctx_
+   * @WRAP_PROTO: blob_id -> std::string blob_name
+   * @WRAP_DEFAULT: blob_id -> GetBlobId(blob_name)
    * */
-  Status GetBlob(BlobID blob_id, Blob &blob,
-                  Context &ctx);
+  Status Get(BlobId blob_id, Blob &blob, Context &ctx);
 
  public:
   RPC_AUTOGEN_START

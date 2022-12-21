@@ -5,7 +5,7 @@
 #include "config_client.h"
 #include "config_client_default.h"
 
-namespace hermes {
+namespace hermes::config {
 
 /** parse the YAML node */
 void ClientConfig::ParseYAML(YAML::Node &yaml_conf) {
@@ -19,4 +19,4 @@ void ClientConfig::LoadDefault() {
   LoadText(kClientDefaultConfigStr, false);
 }
 
-}  // namespace hermes
+}  // namespace hermes::config

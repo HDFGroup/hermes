@@ -24,7 +24,7 @@
 #include "hermes_types.h"
 #include "constants.h"
 
-namespace hermes {
+namespace hermes::config {
 
 /**
  * Base class for configuration files
@@ -177,5 +177,5 @@ static size_t ParseLatency(const std::string &latency_text) {
   LOG(FATAL) << "Could not parse the latency: " << latency_text << std::endl;
 }
 
-}  // namespace hermes
+}  // namespace hermes::config
 #endif  // HERMES_CONFIG_PARSER_H_

@@ -7,7 +7,7 @@
 
 #include "config.h"
 
-namespace hermes {
+namespace hermes::config {
 
 /**
  * Configuration used to intialize client
@@ -24,6 +24,10 @@ class ClientConfig : public BaseConfig {
   void ParseYAML(YAML::Node &yaml_conf) override;
 };
 
+}  // hermes::config
+
+namespace hermes {
+using config::ClientConfig;
 }  // namespace hermes
 
 #endif  // HERMES_SRC_CONFIG_CLIENT_H_

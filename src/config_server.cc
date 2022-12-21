@@ -17,7 +17,7 @@
 #include "config_server.h"
 #include "config_server_default.h"
 
-namespace hermes {
+namespace hermes::config {
 
 /** parse device information from YAML config */
 void ServerConfig::ParseDeviceInfo(YAML::Node yaml_conf) {
@@ -141,4 +141,4 @@ void ServerConfig::LoadDefault() {
   LoadText(kServerDefaultConfigStr, false);
 }
 
-}  // namespace hermes
+}  // hermes::config

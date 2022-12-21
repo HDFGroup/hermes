@@ -66,7 +66,7 @@ void Run(int target_node, int rank, int comm_size, int num_requests,
 
     MPI_Barrier(comm);
 
-    hermes::BlobID blob_id = {};
+    hermes::BlobId blob_id = {};
     blob_id.bits.node_id = target_node;
     blob_id.bits.buffer_ids_offset = id_list_offset;
 
