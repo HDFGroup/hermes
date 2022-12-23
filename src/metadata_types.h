@@ -44,11 +44,26 @@ struct BufferInfo {
 /** Represents BlobInfo in shared memory */
 struct BlobInfoShmHeader {
   BucketId bkt_id_;  /**< The bucket containing the blob */
-  lipc::ShmArchive<lipc::mptr<lipc::string>> name_ar_;
-  lipc::ShmArchive<lipc::mptr<lipc::vector<BufferInfo>>> buffers_ar_;
+  lipc::ShmArchive<lipc::string> name_ar_;
+  lipc::ShmArchive<lipc::vector<BufferInfo>> buffers_ar_;
   RwLock rwlock_;
 
   BlobInfoShmHeader() = default;
+
+  BlobInfoShmHeader(BlobInfoShmHeader &&other) noexcept
+  : bkt_id_(std::move(other.bkt_id_)), name_ar_(std::move(other.name_ar_)),
+    buffers_ar_(std::move(other.buffers_ar_)),
+    rwlock_(std::move(other.rwlock_)) {}
+
+  BlobInfoShmHeader& operator=(BlobInfoShmHeader &&other) {
+    if (this != &other) {
+      bkt_id_ = std::move(other.bkt_id_);
+      name_ar_ = std::move(other.name_ar_);
+      buffers_ar_ = std::move(other.buffers_ar_);
+      rwlock_ = std::move(other.rwlock_);
+    }
+    return *this;
+  }
 };
 
 /** Blob metadata */

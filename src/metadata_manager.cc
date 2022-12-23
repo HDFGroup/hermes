@@ -182,32 +182,30 @@ BlobId MetadataManager::LocalBucketPutBlob(BucketId bkt_id,
                                            const lipc::charbuf &blob_name,
                                            Blob &data,
                                            lipc::vector<BufferInfo> &buffers) {
-  /*lipc::charbuf internal_blob_name = CreateBlobName(bkt_id, blob_name);
+  lipc::charbuf internal_blob_name = CreateBlobName(bkt_id, blob_name);
 
   // Create unique ID for the Blob
   BlobId blob_id;
   blob_id.unique_ = header_->id_alloc_.fetch_add(1);
   blob_id.node_id_ = rpc_->node_id_;
-  if (blob_id_map_->try_emplace(blob_name, blob_id)) {
+  if (blob_id_map_->try_emplace(internal_blob_name, blob_id)) {
     BlobInfo info;
-    info.name_ = lipc::make_mptr<lipc::string>(
-        CreateBlobName(bkt_id, blob_name));
+    info.name_ = lipc::make_mptr<lipc::string>(std::move(internal_blob_name));
     info.buffers_ = lipc::make_mptr<lipc::vector<BufferInfo>>(
         std::move(buffers));
-
     BlobInfoShmHeader hdr;
     info.shm_serialize(hdr);
-    // blob_map_->emplace(blob_id, hdr);
+    blob_map_->emplace(blob_id, std::move(hdr));
   } else {
     auto iter = blob_map_->find(blob_id);
     BlobInfoShmHeader &hdr = (*iter).val_.get_ref();
     BlobInfo info(hdr);
     *(info.buffers_) = std::move(buffers);
     info.shm_serialize(hdr);
-    (*iter).val_ = hdr;
+    (*iter).val_ = std::move(hdr);
   }
 
-  return blob_id;*/
+  return blob_id;
 }
 
 /**

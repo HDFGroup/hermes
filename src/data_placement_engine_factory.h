@@ -47,7 +47,7 @@ class DPEFactory {
       }
       case PlacementPolicy::kNone:
       default: {
-        // TODO(luke): @errorhandling not implemented
+        // TODO(llogan): @errorhandling not implemented
         LOG(FATAL) << "PlacementPolicy not implemented" << std::endl;
         return NULL;
       }

@@ -94,12 +94,13 @@ class MetadataManager {
    /**
     * Create a unique blob name using BucketId
     * */
-  lipc::charbuf CreateBlobName(BucketId bkt_id, lipc::charbuf &blob_name) {
+  lipc::charbuf CreateBlobName(BucketId bkt_id,
+                               const lipc::charbuf &blob_name) {
     lipc::charbuf new_name(sizeof(bkt_id) + blob_name.size());
     size_t off = 0;
     memcpy(new_name.data_mutable() + off, &bkt_id, sizeof(BucketId));
     off += sizeof(BucketId);
-    memcpy(blob_name.data_mutable() + off, blob_name.data(), blob_name.size());
+    memcpy(new_name.data_mutable() + off, blob_name.data(), blob_name.size());
     return new_name;
   }
 

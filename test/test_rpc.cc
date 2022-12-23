@@ -16,6 +16,7 @@
 #include <mpi.h>
 #include <glog/logging.h>
 #include "hermes.h"
+#include "bucket.h"
 
 namespace hapi = hermes::api;
 
@@ -24,6 +25,12 @@ int main(int argc, char* argv[]) {
   auto hermes = hapi::Hermes::Create(hermes::HermesType::kClient);
   auto bkt = hermes->GetBucket("hello");
   auto bkt2 = hermes->GetBucket("hello");
+
+  hermes::api::Context ctx;
+  hermes::BlobId blob_id;
+  hermes::Blob blob(nullptr, 1024);
+  bkt2->Put("0", std::move(blob), blob_id, ctx);
+
   hermes->Finalize();
   MPI_Finalize();
   return 0;
