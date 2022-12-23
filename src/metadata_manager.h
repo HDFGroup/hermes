@@ -40,6 +40,10 @@ struct MetadataManagerShmHeader {
   lipc::ShmArchive<lipc::mptr<BKT_MAP_T>> bkt_map_ar_;
   /// SHM representation of vbucket map
   lipc::ShmArchive<lipc::mptr<VBKT_MAP_T>> vbkt_map_ar_;
+  /// SHM representation of device vector
+  lipc::ShmArchive<lipc::mptr<lipc::vector<DeviceInfo>>> devices_;
+  /// SHM representation of target info vector
+  lipc::ShmArchive<lipc::mptr<lipc::vector<TargetInfo>>> targets_;
   /// Used to create unique ids. Starts at 1.
   std::atomic<u64> id_alloc_;
 };
@@ -65,8 +69,8 @@ class MetadataManager {
   /**
    * Information about targets and devices
    * */
-  lipc::vector<DeviceInfo> devices_;
-  lipc::vector<TargetInfo> targets_;
+  lipc::mptr<lipc::vector<DeviceInfo>> devices_;
+  lipc::mptr<lipc::vector<TargetInfo>> targets_;
 
  public:
   MetadataManager() = default;
@@ -298,7 +302,7 @@ class MetadataManager {
    * Update the capacity of the target device
    * */
   RPC void LocalUpdateTargetCapacity(TargetId tid, off64_t offset) {
-    auto &target = targets_[tid.GetIndex()];
+    auto &target = (*targets_)[tid.GetIndex()];
     target.rem_cap_ += offset;
   }
 
@@ -306,7 +310,7 @@ class MetadataManager {
    * Update the capacity of the target device
    * */
   RPC const lipc::vector<TargetInfo>& LocalGetTargetInfo() {
-    return targets_;
+    return (*targets_);
   }
 
   /**

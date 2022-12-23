@@ -36,7 +36,7 @@ class DPE {
   std::vector<f32> bandwidths; /**< a vector of bandwidths */
 
   /** Constructor. */
-  explicit DPE() {}
+  DPE();
 
   /** Destructor. */
   virtual ~DPE() = default;

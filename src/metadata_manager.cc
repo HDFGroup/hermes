@@ -25,13 +25,15 @@ void MetadataManager::shm_init(ServerConfig *config,
   vbkt_map_ = lipc::make_mptr<VBKT_MAP_T>(nullptr);
 
   // Create the DeviceInfo vector
-  devices_.shm_init(config->devices_);
+  devices_ = lipc::make_mptr<lipc::vector<DeviceInfo>>(
+      nullptr, HERMES->server_config_.devices_);
+  targets_ = lipc::make_mptr<lipc::vector<TargetInfo>>(nullptr);
 
   // Create the TargetInfo vector
-  targets_.resize(devices_.size());
+  targets_->reserve(devices_->size());
   int dev_id = 0;
   for (auto &dev_info : config->devices_) {
-    targets_.emplace_back(
+    targets_->emplace_back(
         TargetId(rpc_->node_id_, dev_id, dev_id),
         dev_info.capacity_,
         dev_info.capacity_);
@@ -53,6 +55,8 @@ void MetadataManager::shm_destroy() {
   blob_map_.shm_destroy();
   bkt_map_.shm_destroy();
   vbkt_map_.shm_destroy();
+  targets_.shm_destroy();
+  devices_.shm_destroy();
 }
 
 /**
@@ -65,6 +69,8 @@ void MetadataManager::shm_serialize() {
   blob_map_ >> header_->blob_map_ar_;
   bkt_map_ >> header_->bkt_map_ar_;
   vbkt_map_ >> header_->vbkt_map_ar_;
+  targets_ >> header_->targets_;
+  devices_ >> header_->devices_;
 }
 
 /**
@@ -79,6 +85,8 @@ void MetadataManager::shm_deserialize(MetadataManagerShmHeader *header) {
   blob_map_ << header_->blob_map_ar_;
   bkt_map_ << header_->bkt_map_ar_;
   vbkt_map_ << header_->vbkt_map_ar_;
+  targets_ << header_->targets_;
+  devices_ << header_->devices_;
 }
 
 /**

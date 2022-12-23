@@ -19,6 +19,7 @@
 #include <ostream>
 #include <vector>
 #include <sstream>
+#include <limits>
 #include "data_structures.h"
 
 #include "hermes_types.h"
@@ -140,6 +141,9 @@ static size_t ParseNumber(const std::string &num_text) {
 /** Returns size (bytes) */
 static size_t ParseSize(const std::string &size_text) {
   size_t size = ParseNumber(size_text);
+  if (size_text == "inf") {
+    return std::numeric_limits<size_t>::max();
+  }
   std::string suffix = ParseNumberSuffix(size_text);
   if (suffix.size() == 0) {
     return size;

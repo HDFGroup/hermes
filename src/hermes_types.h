@@ -245,13 +245,13 @@ class PlacementPolicyConv {
 
   /** return enum value of \a policy  */
   static PlacementPolicy to_enum(const std::string &policy) {
-    if (policy.find("kRandom") != std::string::npos) {
+    if (policy.find("Random") != std::string::npos) {
       return PlacementPolicy::kRandom;
-    } else if (policy.find("kRoundRobin") != std::string::npos) {
+    } else if (policy.find("RoundRobin") != std::string::npos) {
       return PlacementPolicy::kRoundRobin;
-    } else if (policy.find("kMinimizeIoTime") != std::string::npos) {
+    } else if (policy.find("MinimizeIoTime") != std::string::npos) {
       return PlacementPolicy::kMinimizeIoTime;
-    } else if (policy.find("kNone") != std::string::npos) {
+    } else if (policy.find("None") != std::string::npos) {
       return PlacementPolicy::kNone;
     }
     return PlacementPolicy::kNone;

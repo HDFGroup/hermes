@@ -22,7 +22,7 @@ namespace hermes::config {
 /** parse device information from YAML config */
 void ServerConfig::ParseDeviceInfo(YAML::Node yaml_conf) {
   devices_.clear();
-  for (auto device : yaml_conf["devices"]) {
+  for (auto device : yaml_conf) {
     DeviceInfo dev;
     auto dev_info = device.second;
     dev.mount_point_ = lipc::string(dev_info["mount_point"].as<std::string>());

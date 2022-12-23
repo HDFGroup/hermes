@@ -11,9 +11,9 @@ namespace hermes {
 void BufferPoolManager::shm_init(MetadataManager *mdm) {
   mdm_ = mdm;
   target_allocs_.shm_init(nullptr);
-  target_allocs_.resize(mdm_->targets_.size());
-  for (auto &target : mdm_->targets_) {
-    auto &dev_info = mdm_->devices_[target.id_.GetDeviceId()];
+  target_allocs_.resize(mdm_->targets_->size());
+  for (auto &target : (*mdm_->targets_)) {
+    auto &dev_info = (*mdm_->devices_)[target.id_.GetDeviceId()];
     dev_info.mount_point_;
   }
 }

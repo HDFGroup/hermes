@@ -12,7 +12,7 @@ namespace hermes {
 RPC void BufferOrganizer::LocalPlaceBlobInBuffers(
     Blob &blob, lipc::vector<BufferInfo> &buffers) {
   for (auto &buffer_info : buffers) {
-    auto &dev_info = mdm_->devices_[buffer_info.tid_.GetDeviceId()];
+    auto &dev_info = (*mdm_->devices_)[buffer_info.tid_.GetDeviceId()];
     auto io_client = IoClientFactory::Get(dev_info.io_api_);
     bool ret = io_client->Write(dev_info, blob.data(),
                                 buffer_info.off_, buffer_info.size_);
