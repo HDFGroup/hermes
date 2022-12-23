@@ -38,11 +38,15 @@ class Status {
     msg_ = other.msg_;
   }
 
+  const char* Msg() {
+    return msg_;
+  }
+
   bool Success() {
     return code_ == 0;
   }
 
-  bool Failed() {
+  bool Fail() {
     return code_ != 0;
   }
 };

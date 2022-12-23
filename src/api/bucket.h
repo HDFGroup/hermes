@@ -14,6 +14,7 @@ namespace hermes::api {
 class Bucket {
  private:
   MetadataManager *mdm_;
+  BufferPoolManager *bpm_;
   BucketId id_;
   std::string name_;
   Context ctx_;

@@ -24,11 +24,10 @@ class MinimizeIoTime : public DPE {
   std::vector<double> placement_ratios_; /**< a vector of placement ratios */
 
  public:
-  MinimizeIoTime() : DPE(PlacementPolicy::kMinimizeIoTime) {}
+  MinimizeIoTime() = default;
   ~MinimizeIoTime() = default;
   Status Placement(const std::vector<size_t> &blob_sizes,
-                   const std::vector<u64> &node_state,
-                   const std::vector<TargetId> &targets,
+                   const lipc::vector<TargetInfo> &targets,
                    const api::Context &ctx,
                    std::vector<PlacementSchema> &output);
 
@@ -37,9 +36,9 @@ class MinimizeIoTime : public DPE {
   size_t AbsDiff(size_t x, size_t y, bool &y_gt_x);
   /** place bytes */
   void PlaceBytes(size_t j, ssize_t bytes, std::vector<size_t> &vars_bytes,
-                  const std::vector<u64> &node_state);
+                  const lipc::vector<TargetInfo> &targets);
   /** get placement ratios from node states in \a ctx  context */
-  void GetPlacementRatios(const std::vector<u64> &node_state,
+  void GetPlacementRatios(const lipc::vector<TargetInfo> &targets,
                           const api::Context &ctx);
 };
 

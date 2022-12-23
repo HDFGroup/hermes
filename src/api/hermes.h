@@ -13,6 +13,8 @@
 #include "communication_factory.h"
 #include "rpc.h"
 #include "metadata_manager.h"
+#include "buffer_pool.h"
+#include "buffer_organizer.h"
 
 namespace hermes::api {
 
@@ -37,6 +39,8 @@ class Hermes {
   ServerConfig server_config_;
   ClientConfig client_config_;
   MetadataManager mdm_;
+  BufferPoolManager bpm_;
+  BufferOrganizer borg_;
   COMM_TYPE comm_;
   RPC_TYPE rpc_;
   lipc::Allocator *main_alloc_;

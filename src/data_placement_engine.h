@@ -30,14 +30,13 @@ using hermes::api::PlacementPolicy;
 */
 class DPE {
  protected:
-  PlacementPolicy policy_; /**< data placement policy */
   MetadataManager *mdm_; /**< A pointer to the MDM */
 
  public:
   std::vector<f32> bandwidths; /**< a vector of bandwidths */
 
   /** Constructor. */
-  explicit DPE(PlacementPolicy policy) : policy_(policy) {}
+  explicit DPE() {}
 
   /** Destructor. */
   virtual ~DPE() = default;
@@ -47,7 +46,7 @@ class DPE {
    * algorithm given a context.
    * */
   virtual Status Placement(const std::vector<size_t> &blob_sizes,
-                           const std::vector<TargetInfo> &targets,
+                           const lipc::vector<TargetInfo> &targets,
                            const api::Context &ctx,
                            std::vector<PlacementSchema> &output) = 0;
 

@@ -25,15 +25,6 @@
 
 namespace hermes {
 
-/** topology */
-enum Topology {
-  Topology_Local,
-  Topology_Neighborhood,
-  Topology_Global,
-
-  Topology_Count
-};
-
 /** calculate data placement */
 Status DPE::CalculatePlacement(const std::vector<size_t> &blob_sizes,
                                std::vector<PlacementSchema> &output,
@@ -42,24 +33,22 @@ Status DPE::CalculatePlacement(const std::vector<size_t> &blob_sizes,
 
   // NOTE(chogan): Start with local targets and gradually expand the target
   // list until the placement succeeds.
-  for (int i = 0; i < Topology_Count; ++i) {
+  for (int i = 0; i < static_cast<int>(TopologyType::kCount); ++i) {
     // Reset the output schema
     output.clear();
     // Get the capacity/bandwidth of targets
-    std::vector<TargetInfo> targets;
+    lipc::vector<TargetInfo> targets;
     switch (static_cast<TopologyType>(i)) {
       case TopologyType::Local: {
-        // TODO(chogan): @optimization We can avoid the copy here when getting
-        // local targets by just getting a pointer and length.
-        targets = mdm_->LocalGetNodeTargetInfo();
+        targets = mdm_->LocalGetTargetInfo();
         break;
       }
       case TopologyType::Neighborhood: {
-        targets = mdm_->GetNeighborhoodTargets();
+        // targets = mdm_->GetNeighborhoodTargetInfo();
         break;
       }
       case TopologyType::Global: {
-        targets = mdm_->GetGlobalTargets();
+        // targets = mdm_->GetGlobalTargetInfo();
         break;
       }
     }
@@ -69,7 +58,7 @@ Status DPE::CalculatePlacement(const std::vector<size_t> &blob_sizes,
     }
     // Calculate a placement schema
     result = Placement(blob_sizes, targets, ctx, output);
-    if (!result.Failed()) {
+    if (!result.Fail()) {
       break;
     }
   }

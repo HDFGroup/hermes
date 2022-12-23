@@ -3,14 +3,15 @@
 //
 
 #include "bucket.h"
-// #include "data_placement_engine_factory.h"
+#include "data_placement_engine_factory.h"
 
 namespace hermes::api {
 
 /**
  * Either initialize or fetch the bucket.
  * */
-Bucket::Bucket(std::string name, Context &ctx) : mdm_(&HERMES->mdm_) {
+Bucket::Bucket(std::string name, Context &ctx)
+    : mdm_(&HERMES->mdm_), bpm_(&HERMES->bpm_) {
   lipc::string lname(name);
   id_ = mdm_->GetOrCreateBucket(lname);
 }
@@ -33,13 +34,17 @@ void Bucket::Destroy(std::string blob_name) {
 Status Bucket::Put(std::string blob_name, Blob blob,
                    BlobId &blob_id, Context &ctx) {
   // Calculate placement
-  /*auto dpe = DPEFactory::Get(ctx.policy);
+  auto dpe = DPEFactory::Get(ctx.policy);
   std::vector<size_t> blob_sizes(1, blob.size());
-  std::vector<PlacementSchema> schema;
-  dpe->CalculatePlacement(blob_sizes, schema, ctx);*/
+  std::vector<PlacementSchema> schemas;
+  dpe->CalculatePlacement(blob_sizes, schemas, ctx);
 
-  // Allocate buffers for the blob
-
+  // Allocate buffers for the blob & enqueue placement
+  for (auto &schema : schemas) {
+    // TODO(llogan): Use RPC if-else, not Local
+    auto buffers = bpm_->LocalAllocateAndSetBuffers(schema, blob);
+    mdm_->LocalBucketPutBlob(id_, lipc::string(blob_name), blob, buffers);
+  }
 }
 
 /**

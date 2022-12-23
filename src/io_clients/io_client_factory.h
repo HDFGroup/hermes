@@ -13,12 +13,12 @@
 namespace hermes {
 
 /**
- A class to represent Data Placement Engine Factory
+ A class to represent I/O Client Factory
 */
 class IoClientFactory {
  public:
   /**
-   * Get the I/O api corresponding to a particular device type
+   * Get the I/O api implementation
    * */
   static std::unique_ptr<IoClient> Get(IoInterface type) {
     switch (type) {

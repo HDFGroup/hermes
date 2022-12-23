@@ -21,24 +21,12 @@ namespace hermes {
 */
 class Random : public DPE {
  public:
-  Random() : DPE(PlacementPolicy::kRandom) {}
+  Random() = default;
   ~Random() = default;
   Status Placement(const std::vector<size_t> &blob_sizes,
-                   const std::vector<u64> &node_state,
-                   const std::vector<TargetId> &targets,
+                   const lipc::vector<TargetInfo> &targets,
                    const api::Context &ctx,
-                   std::vector<PlacementSchema> &output);
-
- private:
-  /**
-     get the capacities of each \a node_state and \a targets and store them
-     into \a ordered_cap.*/
-  void GetOrderedCapacities(const std::vector<u64> &node_state,
-                            const std::vector<TargetId> &targets,
-                            std::multimap<u64, TargetId> &ordered_cap);
-  /** add placement schema */
-  Status AddSchema(std::multimap<u64, TargetId> &ordered_cap, size_t blob_size,
-                   PlacementSchema &schema);
+                   std::vector<PlacementSchema> &output) override;
 };
 
 }  // namespace hermes

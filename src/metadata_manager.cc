@@ -179,7 +179,7 @@ bool MetadataManager::LocalDestroyBucket(BucketId bkt_id) {
    * @RPC_CLASS_INSTANCE mdm
    * */
 BlobId MetadataManager::LocalBucketPutBlob(BucketId bkt_id,
-                                           lipc::charbuf &blob_name,
+                                           const lipc::charbuf &blob_name,
                                            Blob &data,
                                            lipc::vector<BufferInfo> &buffers) {
   /*lipc::charbuf internal_blob_name = CreateBlobName(bkt_id, blob_name);

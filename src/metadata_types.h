@@ -18,7 +18,7 @@ using config::IoInterface;
 
 /** Represents the current status of a target */
 struct TargetInfo {
-  TargetId id_;    /**< unique Target ID */
+  TargetId id_;     /**< unique Target ID */
   size_t max_cap_;  /**< maximum capacity of the target */
   size_t rem_cap_;  /**< remaining capacity of the target */
 
@@ -31,6 +31,7 @@ struct TargetInfo {
 /** Represents an allocated fraction of a target */
 struct BufferInfo {
   size_t off_;
+  size_t blob_off_;
   size_t size_;
   TargetId tid_;
 

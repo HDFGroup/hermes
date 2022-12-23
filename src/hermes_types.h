@@ -80,7 +80,9 @@ typedef u16 DeviceID; /**< device id in unsigned 16-bit integer */
 enum class TopologyType {
   Local,
   Neighborhood,
-  Global
+  Global,
+
+  kCount
 };
 
 /** Represents unique ID for BlobId, BucketId, and VBucketId */

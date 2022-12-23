@@ -48,7 +48,7 @@ class BufferPoolManager {
    * Allocate buffers from the targets according to the schema
    * */
   RPC lipc::vector<BufferInfo>
-  LocalAllocateBuffers(PlacementSchema &schema, Blob &blob);
+  LocalAllocateAndSetBuffers(PlacementSchema &schema, Blob &blob);
 
   /**
    * Free buffers from the BufferPool

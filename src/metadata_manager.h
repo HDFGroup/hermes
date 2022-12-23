@@ -155,7 +155,7 @@ class MetadataManager {
    * @RPC_TARGET_NODE rpc_->node_id_
    * @RPC_CLASS_INSTANCE mdm
    * */
-  RPC BlobId LocalBucketPutBlob(BucketId bkt_id, lipc::charbuf &blob_name,
+  RPC BlobId LocalBucketPutBlob(BucketId bkt_id, const lipc::charbuf &blob_name,
                                 Blob &data, lipc::vector<BufferInfo> &buffers);
 
   /**
@@ -299,6 +299,25 @@ class MetadataManager {
   RPC void LocalUpdateTargetCapacity(TargetId tid, off64_t offset) {
     auto &target = targets_[tid.GetIndex()];
     target.rem_cap_ += offset;
+  }
+
+  /**
+   * Update the capacity of the target device
+   * */
+  RPC const lipc::vector<TargetInfo>& LocalGetTargetInfo() {
+    return targets_;
+  }
+
+  /**
+   * Get the TargetInfo for neighborhood
+   * */
+  lipc::vector<TargetInfo> GetNeighborhoodTargetInfo() {
+  }
+
+  /**
+   * Get all TargetInfo in the system
+   * */
+  lipc::vector<TargetInfo> GetGlobalTargetInfo() {
   }
 
  public:

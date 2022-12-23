@@ -34,7 +34,8 @@ void BufferPoolManager::shm_deserialize(BufferPoolManagerShmHeader *header) {
  * TODO(llogan): use better allocator policy
  * */
 lipc::vector<BufferInfo>
-BufferPoolManager::LocalAllocateBuffers(PlacementSchema &schema, Blob &blob) {
+BufferPoolManager::LocalAllocateAndSetBuffers(PlacementSchema &schema,
+                                              Blob &blob) {
   lipc::vector<BufferInfo> buffers(nullptr);
   for (auto plcmnt : schema.plcmnts_) {
     if (plcmnt.tid_.GetNodeId() != mdm_->rpc_->node_id_) {
