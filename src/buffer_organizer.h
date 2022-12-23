@@ -5,9 +5,41 @@
 #ifndef HERMES_SRC_BUFFER_ORGANIZER_H_
 #define HERMES_SRC_BUFFER_ORGANIZER_H_
 
+#include "rpc.h"
+#include "hermes_types.h"
+#include "buffer_pool.h"
+
+namespace hermes {
+
+/**
+ * Manages the organization of blobs in the hierarchy.
+ * */
 class BufferOrganizer {
  public:
+  MetadataManager *mdm_;
+
+ public:
   BufferOrganizer() = default;
+
+  /** Initialize the BORG */
+  void shm_init(MetadataManager *mdm);
+
+  /** Finalize the BORG */
+  void shm_destroy();
+
+  /** Stores a blob into a set of buffers */
+  RPC void LocalPlaceBlobInBuffers(Blob &blob,
+                                   lipc::vector<BufferInfo> &buffers);
+
+  /** Stores a blob into a set of buffers */
+  RPC void LocalReadBlobFromBuffers(Blob &blob,
+                                    lipc::vector<BufferInfo> &buffers);
+
+  /** Copies one buffer set into another buffer set */
+  RPC void LocalCopyBuffers(lipc::vector<BufferInfo> &dst,
+                            lipc::vector<BufferInfo> &src);
 };
+
+}  // namespace hermes
 
 #endif  // HERMES_SRC_BUFFER_ORGANIZER_H_

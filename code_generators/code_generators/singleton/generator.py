@@ -7,6 +7,7 @@ USAGE:
 """
 
 import re
+from code_generators.util.naming import to_snake_case
 
 class SingletonDefinition:
     def __init__(self, namespace, class_name, include):
@@ -42,7 +43,7 @@ class SingletonGenerator:
         lines.append(f"#include {self.singleton_include}")
         lines.append("")
         for defn in self.defs:
-            lines.append(f"#include <{defn.include}>")
+            lines.append(f"#include {defn.include}")
             lines.append(f"template<> std::unique_ptr<{defn.class_name}> hermes::Singleton<{defn.class_name}>::obj_ = nullptr;")
         self._save_lines(lines, path)
 

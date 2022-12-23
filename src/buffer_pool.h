@@ -12,11 +12,16 @@ class MetadataManager;
 
 namespace hermes {
 
+struct BufferPoolAllocator {
+  std::atomic<size_t> max_size_;
+  std::atomic<size_t> cur_off_;
+};
+
 /**
  * The shared-memory representation of the BufferPool
  * */
 struct BufferPoolManagerShmHeader {
-  lipc::vector<DeviceInfo> targets_;
+  lipc::ShmArchive<lipc::vector<BufferPoolAllocator>> alloc_ar_;
 };
 
 /**
@@ -25,15 +30,19 @@ struct BufferPoolManagerShmHeader {
 class BufferPoolManager {
  private:
   MetadataManager *mdm_;
+  lipc::vector<BufferPoolAllocator> target_allocs_;  /**< Per-target allocator */
 
  public:
   BufferPoolManager() = default;
 
-  void shm_init();
+  /** Initialize the BPM and its shared memory. */
+  void shm_init(MetadataManager *mdm);
 
-  void shm_serialize();
+  /** Store the BPM in shared memory */
+  void shm_serialize(BufferPoolManagerShmHeader *header);
 
-  void shm_deserialize();
+  /** Deserialize the BPM from shared memory */
+  void shm_deserialize(BufferPoolManagerShmHeader *header);
 
   /**
    * Allocate buffers from the targets according to the schema

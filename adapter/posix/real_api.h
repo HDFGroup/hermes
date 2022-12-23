@@ -20,9 +20,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include "interceptor.h"
-#include "filesystem/filesystem.h"
-#include "filesystem/metadata_manager.h"
 
 #define REQUIRE_API(api_name) \
   if (api_name == nullptr) { \
@@ -32,8 +29,6 @@
    }
 
 extern "C" {
-typedef int (*MPI_Init_t)(int * argc, char *** argv);
-typedef int (*MPI_Finalize_t)( void);
 typedef int (*open_t)(const char * path, int flags,  ...);
 typedef int (*open64_t)(const char * path, int flags,  ...);
 typedef int (*__open_2_t)(const char * path, int oflag);
@@ -55,12 +50,8 @@ typedef int (*close_t)(int fd);
 namespace hermes::adapter::posix {
 
 /** Pointers to the real posix API */
-class API {
+class PosixApi {
  public:
-  /** MPI_Init */
-  MPI_Init_t MPI_Init = nullptr;
-  /** MPI_Finalize */
-  MPI_Finalize_t MPI_Finalize = nullptr;
   /** open */
   open_t open = nullptr;
   /** open64 */
@@ -94,20 +85,8 @@ class API {
   /** close */
   close_t close = nullptr;
 
-  API() {
+  PosixApi() {
     void *is_intercepted = (void*)dlsym(RTLD_DEFAULT, "posix_intercepted");
-    if (is_intercepted) {
-      MPI_Init = (MPI_Init_t)dlsym(RTLD_NEXT, "MPI_Init");
-    } else {
-      MPI_Init = (MPI_Init_t)dlsym(RTLD_DEFAULT, "MPI_Init");
-    }
-    REQUIRE_API(MPI_Init)
-    if (is_intercepted) {
-      MPI_Finalize = (MPI_Finalize_t)dlsym(RTLD_NEXT, "MPI_Finalize");
-    } else {
-      MPI_Finalize = (MPI_Finalize_t)dlsym(RTLD_DEFAULT, "MPI_Finalize");
-    }
-    REQUIRE_API(MPI_Finalize)
     if (is_intercepted) {
       open = (open_t)dlsym(RTLD_NEXT, "open");
     } else {

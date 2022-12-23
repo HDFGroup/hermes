@@ -67,7 +67,7 @@ class ThalliumRpc : public RpcContext {
 
   /** I/O transfers */
   size_t IoCall(u32 node_id, IoType type, u8 *data,
-                TargetID id, size_t off, size_t size) {
+                TargetId id, size_t off, size_t size) {
     std::string server_name = GetServerName(node_id);
     const char *func_name;
     tl::bulk_mode flag;

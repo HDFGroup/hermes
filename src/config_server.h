@@ -10,15 +10,25 @@
 namespace hermes::config {
 
 /**
+ * The type of interface the device exposes
+ * */
+enum class IoInterface {
+  kRam,
+  kPosix
+};
+
+/**
  * Device information defined in server config
  * */
 struct DeviceInfo {
+  /** The I/O interface for the device */
+  IoInterface io_api_;
   /** The minimum transfer size of each device */
   size_t block_size_;
   /** The unit of each slab, a multiple of the Device's block size */
-  std::vector<size_t> slab_sizes_;
+  lipc::vector<size_t> slab_sizes_;
   /** The mount point of a device */
-  std::string mount_point_;
+  lipc::string mount_point_;
   /** Device capacity (bytes) */
   size_t capacity_;
   /** Bandwidth of a device (MBps) */

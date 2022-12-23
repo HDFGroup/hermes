@@ -85,31 +85,31 @@ enum class TopologyType {
 
 /** Represents unique ID for BlobId, BucketId, and VBucketId */
 template<int TYPE>
-struct UniqueID {
+struct UniqueId {
   u64 unique_;   /**< A unique id for the blob */
   i32 node_id_;  /**< The node the content is on */
 
   bool IsNull() const { return unique_ == 0; }
 
-  static UniqueID GetNull() {
-    UniqueID id;
+  static UniqueId GetNull() {
+    UniqueId id;
     id.unique_ = 0;
     return id;
   }
 
   i32 GetNodeId() const { return node_id_; }
 
-  bool operator==(const UniqueID &other) const {
+  bool operator==(const UniqueId &other) const {
     return unique_ == other.unique_ && node_id_ == other.node_id_;
   }
 
-  bool operator!=(const UniqueID &other) const {
+  bool operator!=(const UniqueId &other) const {
     return unique_ != other.unique_ || node_id_ != other.node_id_;
   }
 };
-typedef UniqueID<0> BucketId;
-typedef UniqueID<1> VBucketId;
-typedef UniqueID<2> BlobId;
+typedef UniqueId<0> BucketId;
+typedef UniqueId<1> VBucketId;
+typedef UniqueId<2> BlobId;
 
 /** A definition for logging something that is not yet implemented */
 #define HERMES_NOT_IMPLEMENTED_YET \
@@ -118,8 +118,8 @@ typedef UniqueID<2> BlobId;
 /** A definition for logging invalid code path */
 #define HERMES_INVALID_CODE_PATH LOG(FATAL) << "Invalid code path." << std::endl
 
-/** A TargetID uniquely identifies a buffering target within the system. */
-union TargetID {
+/** A TargetId uniquely identifies a buffering target within the system. */
+union TargetId {
   /** The Target ID as bitfield */
   struct {
     /** The ID of the node in charge of this target. */
@@ -131,8 +131,28 @@ union TargetID {
     u16 index_;
   } bits_;
 
-  /** The TargetID as a unsigned 64-bit integer */
+  /** The TargetId as a unsigned 64-bit integer */
   u64 as_int_;
+
+  TargetId() = default;
+
+  TargetId(u32 node_id, u16 device_id, u16 index) {
+    bits_.node_id_ = node_id;
+    bits_.device_id_ = device_id;
+    bits_.index_ = index;
+  }
+
+  u32 GetNodeId() {
+    return bits_.node_id_;
+  }
+
+  u16 GetDeviceId() {
+    return bits_.device_id_;
+  }
+
+  u16 GetIndex() {
+    return bits_.index_;
+  }
 
   bool IsNull() const  { return as_int_ == 0; }
 };
@@ -143,9 +163,9 @@ union TargetID {
  * */
 struct SubPlacement {
   size_t size_;   /**> Size (bytes) */
-  TargetID tid_;  /**> Target destination of data */
+  TargetId tid_;  /**> Target destination of data */
 
-  SubPlacement(size_t size, TargetID tid)
+  SubPlacement(size_t size, TargetId tid)
       : size_(size), tid_(tid) {}
 };
 
@@ -154,14 +174,14 @@ struct SubPlacement {
  * hierarchy during data placement.
  */
 struct PlacementSchema {
-  std::vector<SubPlacement> plcmnt_;
+  std::vector<SubPlacement> plcmnts_;
 
-  void AddSubPlacement(size_t size, TargetID tid) {
-    plcmnt_.emplace_back(size, tid);
+  void AddSubPlacement(size_t size, TargetId tid) {
+    plcmnts_.emplace_back(size, tid);
   }
 
   void Clear() {
-    plcmnt_.clear();
+    plcmnts_.clear();
   }
 };
 
@@ -174,7 +194,7 @@ struct Thresholds {
 };
 
 /** Trait ID type */
-struct TraitID {
+struct TraitId {
   u64 type_;
 };
 
@@ -311,8 +331,8 @@ enum class TraitType : u8 {
 
 namespace std {
 template <int TYPE>
-struct hash<hermes::UniqueID<TYPE>> {
-  std::size_t operator()(const hermes::UniqueID<TYPE> &key) const {
+struct hash<hermes::UniqueId<TYPE>> {
+  std::size_t operator()(const hermes::UniqueId<TYPE> &key) const {
     return
         std::hash<hermes::u64>{}(key.unique_) +
         std::hash<hermes::i32>{}(key.node_id_);

@@ -25,14 +25,15 @@ void ServerConfig::ParseDeviceInfo(YAML::Node yaml_conf) {
   for (auto device : yaml_conf["devices"]) {
     DeviceInfo dev;
     auto dev_info = device.second;
-    dev.mount_point_ = dev_info["mount_point"].as<std::string>();
+    dev.mount_point_ = lipc::string(dev_info["mount_point"].as<std::string>());
     dev.capacity_ =
         ParseSize(dev_info["capacity"].as<std::string>());
     dev.bandwidth_ =
         ParseSize(dev_info["bandwidth"].as<std::string>());
     dev.latency_ =
         ParseLatency(dev_info["latency"].as<std::string>());
-    ParseVector<size_t>(dev_info["slab_sizes"], dev.slab_sizes_);
+    ParseVector<size_t, lipc::vector<size_t>>(
+        dev_info["slab_sizes"], dev.slab_sizes_);
     devices_.emplace_back(dev);
   }
 }

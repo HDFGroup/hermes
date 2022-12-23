@@ -317,7 +317,7 @@ static void OptimizeReads(Options &options) {
     const int kNumRanks = hermes->GetNumProcesses();
     // const size_t kTotalBytes = kNumRanks * options.blob_size * options.iters;
     MetadataManager *mdm = GetMetadataManagerFromContext(&hermes->context_);
-    std::vector<TargetID> targets(mdm->node_targets.length);
+    std::vector<TargetId> targets(mdm->node_targets.length);
 
     for (u16 i = 0; i < mdm->node_targets.length; ++i) {
       targets[i] = {1, i, i};

@@ -20,13 +20,12 @@ std::vector<DeviceID> RoundRobin::devices_;
 
 Status RoundRobin::Placement(const std::vector<size_t> &blob_sizes,
                              const std::vector<u64> &node_state,
-                             const std::vector<TargetID> &targets,
+                             const std::vector<TargetId> &targets,
                              const api::Context &ctx,
                              std::vector<PlacementSchema> &output) {
   Status result;
   std::vector<u64> ns_local(node_state.begin(), node_state.end());
   bool split = ctx.rr_split;
-  VERIFY_DPE_POLICY(ctx)
 
   for (auto &blob_size : blob_sizes) {
     for (auto &target : targets) {

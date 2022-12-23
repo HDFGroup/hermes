@@ -52,7 +52,8 @@ set(HERMES_SRCS
   ${CMAKE_CURRENT_SOURCE_DIR}/api/bucket.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/api/hermes.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/api/vbucket.cc
-  #${CMAKE_CURRENT_SOURCE_DIR}/buffer_pool.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/buffer_pool.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/buffer_organizer.cc
   #${CMAKE_CURRENT_SOURCE_DIR}/prefetcher.cc
   #${CMAKE_CURRENT_SOURCE_DIR}/prefetchers/sequential.cc
   #${CMAKE_CURRENT_SOURCE_DIR}/prefetchers/apriori.cc
@@ -83,7 +84,10 @@ target_include_directories(hermes
   SYSTEM PUBLIC ${HERMES_EXT_INCLUDE_DEPENDENCIES}
 )
 
+add_dependencies(hermes hermes_posix_singleton)
+
 target_link_libraries(hermes
+  PUBLIC hermes_posix_singleton
   PUBLIC ${GLPK_LIBRARIES}
   PUBLIC ${CMAKE_HERMES_COMMUNICATION_TYPE_LIB}
   PUBLIC ${CMAKE_HERMES_RPC_TYPE_LIB}
@@ -153,6 +157,7 @@ install(
   ARCHIVE DESTINATION ${HERMES_INSTALL_LIB_DIR}
   RUNTIME DESTINATION ${HERMES_INSTALL_BIN_DIR}
 )
+message(${HERMES_EXPORTED_TARGETS})
 install(
   TARGETS
     hermes_daemon

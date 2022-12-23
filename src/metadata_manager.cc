@@ -10,16 +10,35 @@ namespace hermes {
 /**
  * Explicitly initialize the MetadataManager
  * */
-void MetadataManager::shm_init(MetadataManagerShmHeader *header) {
+void MetadataManager::shm_init(ServerConfig *config,
+                               MetadataManagerShmHeader *header) {
   header_ = header;
   rpc_ = &HERMES->rpc_;
   header_->id_alloc_ = 1;
+
+  // Create the metadata maps
   blob_id_map_ = lipc::make_mptr<BLOB_ID_MAP_T>(nullptr);
   bkt_id_map_ = lipc::make_mptr<BKT_ID_MAP_T>(nullptr);
   vbkt_id_map_ = lipc::make_mptr<VBKT_ID_MAP_T>(nullptr);
   blob_map_ = lipc::make_mptr<BLOB_MAP_T>(nullptr);
   bkt_map_ = lipc::make_mptr<BKT_MAP_T>(nullptr);
   vbkt_map_ = lipc::make_mptr<VBKT_MAP_T>(nullptr);
+
+  // Create the DeviceInfo vector
+  devices_.shm_init(config->devices_);
+
+  // Create the TargetInfo vector
+  targets_.resize(devices_.size());
+  int dev_id = 0;
+  for (auto &dev_info : config->devices_) {
+    targets_.emplace_back(
+        TargetId(rpc_->node_id_, dev_id, dev_id),
+        dev_info.capacity_,
+        dev_info.capacity_);
+    ++dev_id;
+  }
+
+  // Ensure all local processes can access data structures
   shm_serialize();
   shm_deserialize(header_);
 }

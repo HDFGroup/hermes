@@ -18,7 +18,7 @@
 
 namespace hermes {
 
-Status Random::AddSchema(std::multimap<u64, TargetID> &ordered_cap,
+Status Random::AddSchema(std::multimap<u64, TargetId> &ordered_cap,
                        size_t blob_size, PlacementSchema &schema) {
   std::random_device rd;
   std::mt19937 gen(rd());
@@ -34,7 +34,7 @@ Status Random::AddSchema(std::multimap<u64, TargetID> &ordered_cap,
         dst_dist(1, std::distance(itlow, ordered_cap.end()));
     size_t dst_relative = dst_dist(gen);
     std::advance(itlow, dst_relative-1);
-    ordered_cap.insert(std::pair<u64, TargetID>((*itlow).first-blob_size,
+    ordered_cap.insert(std::pair<u64, TargetId>((*itlow).first-blob_size,
                                                 (*itlow).second));
 
     schema.push_back(std::make_pair(blob_size, (*itlow).second));
@@ -45,21 +45,20 @@ Status Random::AddSchema(std::multimap<u64, TargetID> &ordered_cap,
 }
 
 void Random::GetOrderedCapacities(const std::vector<u64> &node_state,
-                                  const std::vector<TargetID> &targets,
-                                  std::multimap<u64, TargetID> &ordered_cap) {
+                                  const std::vector<TargetId> &targets,
+                                  std::multimap<u64, TargetId> &ordered_cap) {
   for (size_t i = 0; i < node_state.size(); ++i) {
-    ordered_cap.insert(std::pair<u64, TargetID>(node_state[i], targets[i]));
+    ordered_cap.insert(std::pair<u64, TargetId>(node_state[i], targets[i]));
   }
 }
 
 Status Random::Placement(const std::vector<size_t> &blob_sizes,
                          const std::vector<u64> &node_state,
-                         const std::vector<TargetID> &targets,
+                         const std::vector<TargetId> &targets,
                          const api::Context &ctx,
                          std::vector<PlacementSchema> &output) {
   Status result;
-  std::multimap<u64, TargetID> ordered_cap;
-  VERIFY_DPE_POLICY(ctx)
+  std::multimap<u64, TargetId> ordered_cap;
 
   GetOrderedCapacities(node_state, targets, ordered_cap);
 

@@ -392,6 +392,8 @@ endif()
 # Source
 #-----------------------------------------------------------------------------
 
+set(HERMES_EXPORTED_LIBS "")
+
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 if(HERMES_HAVE_GOTCHA)
@@ -427,10 +429,11 @@ if(CMAKE_PROJECT_NAME STREQUAL HERMES AND BUILD_TESTING)
   # add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/data_stager/test)
 endif()
 
+##### ADAPTERS
 if(HERMES_ENABLE_STDIO_ADAPTER OR HERMES_ENABLE_POSIX_ADAPTER OR
     HERMES_ENABLE_MPIIO_ADAPTER OR HERMES_ENABLE_PUBSUB_ADAPTER OR
     HERMES_ENABLE_VFD)
-  # add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/adapter)
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/adapter)
 endif()
 
 #-----------------------------------------------------------------------------

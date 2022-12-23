@@ -60,31 +60,31 @@ void serialize(A &ar, BlobId &blob_id) {
 }
 
 /**
- *  Lets Thallium know how to serialize a TargetID.
+ *  Lets Thallium know how to serialize a TargetId.
  *
  * This function is called implicitly by Thallium.
  *
  * @param ar An archive provided by Thallium.
- * @param target_id The TargetID to serialize.
+ * @param target_id The TargetId to serialize.
  */
 template <typename A>
-void serialize(A &ar, TargetID &target_id) {
+void serialize(A &ar, TargetId &target_id) {
   ar &target_id.as_int_;
 }
 
 /**
- *  Lets Thallium know how to serialize a TargetID.
+ *  Lets Thallium know how to serialize a TargetId.
  *
  * This function is called implicitly by Thallium.
  *
  * @param ar An archive provided by Thallium.
- * @param target_id The TargetID to serialize.
+ * @param target_id The TargetId to serialize.
  */
 template <typename A>
 void serialize(A &ar, BufferInfo &info) {
   ar &info.off_;
   ar &info.size_;
-  ar &info.target_;
+  ar &info.tid_;
 }
 
 }  // namespace hermes

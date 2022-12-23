@@ -48,7 +48,7 @@ struct MetadataManagerShmHeader {
  * Manages the metadata for blobs, buckets, and vbuckets.
  * */
 class MetadataManager {
- private:
+ public:
   RPC_TYPE* rpc_;
   MetadataManagerShmHeader *header_;
 
@@ -62,13 +62,19 @@ class MetadataManager {
   lipc::mptr<BKT_MAP_T> bkt_map_;
   lipc::mptr<VBKT_MAP_T> vbkt_map_;
 
+  /**
+   * Information about targets and devices
+   * */
+  lipc::vector<DeviceInfo> devices_;
+  lipc::vector<TargetInfo> targets_;
+
  public:
   MetadataManager() = default;
 
   /**
    * Explicitly initialize the MetadataManager
    * */
-  void shm_init(MetadataManagerShmHeader *header);
+  void shm_init(ServerConfig *config, MetadataManagerShmHeader *header);
 
   /**
    * Explicitly destroy the MetadataManager
@@ -285,6 +291,15 @@ class MetadataManager {
    * @RPC_CLASS_INSTANCE mdm
    * */
   RPC bool LocalDestroyVBucket(VBucketId vbkt_id);
+
+
+  /**
+   * Update the capacity of the target device
+   * */
+  RPC void LocalUpdateTargetCapacity(TargetId tid, off64_t offset) {
+    auto &target = targets_[tid.GetIndex()];
+    target.rem_cap_ += offset;
+  }
 
  public:
   RPC_AUTOGEN_START

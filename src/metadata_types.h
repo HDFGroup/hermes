@@ -6,28 +6,38 @@
 #define HERMES_SRC_METADATA_TYPES_H_
 
 #include "hermes_types.h"
+#include "config_server.h"
 
 namespace hermes {
 
 using api::Blob;
 
-/**  */
-struct DeviceInfo {
-
-};
+/** Device information required by other processes */
+using config::DeviceInfo;
+using config::IoInterface;
 
 /** Represents the current status of a target */
 struct TargetInfo {
-  TargetID tid_;    /**< unique Target ID */
+  TargetId id_;    /**< unique Target ID */
   size_t max_cap_;  /**< maximum capacity of the target */
   size_t rem_cap_;  /**< remaining capacity of the target */
+
+  TargetInfo() = default;
+
+  TargetInfo(TargetId id, size_t max_cap, size_t rem_cap)
+      : id_(id), max_cap_(max_cap), rem_cap_(rem_cap) {}
 };
 
 /** Represents an allocated fraction of a target */
 struct BufferInfo {
   size_t off_;
   size_t size_;
-  TargetID target_;
+  TargetId tid_;
+
+  BufferInfo() = default;
+
+  BufferInfo(size_t off, size_t size, TargetId tid)
+  : off_(off), size_(size), tid_(tid) {}
 };
 
 /** Represents BlobInfo in shared memory */

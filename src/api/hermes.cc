@@ -58,7 +58,7 @@ void Hermes::StopDaemon() {
 void Hermes::InitServer(std::string server_config_path) {
   LoadServerConfig(server_config_path);
   InitSharedMemory();
-  mdm_.shm_init(&header_->mdm_);
+  mdm_.shm_init(&server_config_, &header_->mdm_);
   rpc_.InitServer();
   rpc_.InitClient();
 }
@@ -77,7 +77,7 @@ void Hermes::InitColocated(std::string server_config_path,
   LoadServerConfig(server_config_path);
   LoadClientConfig(client_config_path);
   InitSharedMemory();
-  mdm_.shm_init(&header_->mdm_);
+  mdm_.shm_init(&server_config_, &header_->mdm_);
   rpc_.InitColocated();
 }
 
@@ -99,12 +99,12 @@ void Hermes::InitSharedMemory() {
   // Create shared-memory allocator
   auto mem_mngr = LABSTOR_MEMORY_MANAGER;
   mem_mngr->CreateBackend(lipc::MemoryBackendType::kPosixShmMmap,
+                          lipc::MemoryManager::kDefaultBackendSize,
                           server_config_.shmem_name_);
   main_alloc_ =
       mem_mngr->CreateAllocator(lipc::AllocatorType::kPageAllocator,
                                 server_config_.shmem_name_, main_alloc_id,
-                                sizeof(HermesShmHeader),
-                                lipc::MemoryManager::kDefaultSlotSize);
+                                sizeof(HermesShmHeader));
   header_ = main_alloc_->GetCustomHeader<HermesShmHeader>();
 }
 

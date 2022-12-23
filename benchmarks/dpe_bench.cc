@@ -133,7 +133,7 @@ int main(int argc, char **argv) {
   assert(tgt_state.num_devices == dpe_total_targets);
 
   std::vector<PlacementSchema> output_tmp, schemas;
-  std::vector<TargetID> targets =
+  std::vector<TargetId> targets =
                         testing::GetDefaultTargets(tgt_state.num_devices);
 
   api::Context ctx;

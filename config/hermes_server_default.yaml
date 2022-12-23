@@ -36,13 +36,13 @@ devices:
     # buffers), or '0' if it is per node (e.g., local NVMe).
     is_shared_device: 0
 
-      # For each device, the minimum and maximum percent capacity threshold at which
-      # the BufferOrganizer will trigger. Decreasing the maximum thresholds will cause
-      # the BufferOrganizer to move data to lower devices, making more room in faster
-      # devices (ideal for write-heavy workloads). Conversely, increasing the minimum
-      # threshold will cause data to be moved from slower devices into faster devices
-      # (ideal for read-heavy workloads). For example, a maximum capacity threshold of
-      # 0.8 would have the effect of always keeping 20% of the device's space free for
+    # For each device, the minimum and maximum percent capacity threshold at which
+    # the BufferOrganizer will trigger. Decreasing the maximum thresholds will cause
+    # the BufferOrganizer to move data to lower devices, making more room in faster
+    # devices (ideal for write-heavy workloads). Conversely, increasing the minimum
+    # threshold will cause data to be moved from slower devices into faster devices
+    # (ideal for read-heavy workloads). For example, a maximum capacity threshold of
+    # 0.8 would have the effect of always keeping 20% of the device's space free for
     # incoming writes. Conversely, a minimum capacity threshold of 0.3 would ensure
     # that the device is always at least 30% occupied.
     borg_capacity_thresh: [0.0, 1.0]
