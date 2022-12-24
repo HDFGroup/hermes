@@ -8,9 +8,10 @@
 #include "hermes_types.h"
 #include "rpc.h"
 
-class MetadataManager;
-
 namespace hermes {
+
+class MetadataManager;
+class BufferOrganizer;
 
 struct BufferPoolAllocator {
   std::atomic<size_t> max_size_;
@@ -20,29 +21,37 @@ struct BufferPoolAllocator {
 /**
  * The shared-memory representation of the BufferPool
  * */
-struct BufferPoolManagerShmHeader {
+struct BufferPoolShmHeader {
   lipc::ShmArchive<lipc::vector<BufferPoolAllocator>> alloc_ar_;
 };
 
 /**
  * Responsible for managing the buffering space of all node-local targets.
  * */
-class BufferPoolManager {
+class BufferPool {
  private:
   MetadataManager *mdm_;
-  lipc::vector<BufferPoolAllocator> target_allocs_;  /**< Per-target allocator */
+  BufferOrganizer *borg_;
+  /** Per-target allocator */
+  lipc::mptr<lipc::vector<BufferPoolAllocator>> target_allocs_;
 
  public:
-  BufferPoolManager() = default;
+  BufferPool() = default;
 
-  /** Initialize the BPM and its shared memory. */
-  void shm_init(MetadataManager *mdm);
+  /**
+   * Initialize the BPM and its shared memory.
+   * REQUIRES mdm to be initialized already.
+   * */
+  void shm_init(BufferPoolShmHeader *header);
+
+  /** Destroy the BPM shared memory. */
+  void shm_destroy();
 
   /** Store the BPM in shared memory */
-  void shm_serialize(BufferPoolManagerShmHeader *header);
+  void shm_serialize(BufferPoolShmHeader *header);
 
   /** Deserialize the BPM from shared memory */
-  void shm_deserialize(BufferPoolManagerShmHeader *header);
+  void shm_deserialize(BufferPoolShmHeader *header, MetadataManager *mdm);
 
   /**
    * Allocate buffers from the targets according to the schema

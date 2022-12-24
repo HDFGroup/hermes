@@ -26,7 +26,7 @@ class Status {
   const char *msg_;
 
  public:
-  Status() = default;
+  Status() : code_(0) {}
 
   explicit Status(const char *msg) : msg_(msg) {
     code_ = code_counter_;

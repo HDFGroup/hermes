@@ -21,8 +21,11 @@ class BufferOrganizer {
  public:
   BufferOrganizer() = default;
 
-  /** Initialize the BORG */
-  void shm_init(MetadataManager *mdm);
+  /**
+   * Initialize the BORG
+   * REQUIRES mdm to be initialized already.
+   * */
+  void shm_init();
 
   /** Finalize the BORG */
   void shm_destroy();

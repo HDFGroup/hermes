@@ -58,9 +58,11 @@ void Hermes::StopDaemon() {
 void Hermes::InitServer(std::string server_config_path) {
   LoadServerConfig(server_config_path);
   InitSharedMemory();
-  mdm_.shm_init(&server_config_, &header_->mdm_);
   rpc_.InitServer();
   rpc_.InitClient();
+  mdm_.shm_init(&server_config_, &header_->mdm_);
+  bpm_.shm_init(&header_->bpm_);
+  borg_.shm_init();
 }
 
 void Hermes::InitClient(std::string server_config_path,
@@ -68,8 +70,10 @@ void Hermes::InitClient(std::string server_config_path,
   LoadServerConfig(server_config_path);
   LoadClientConfig(client_config_path);
   LoadSharedMemory();
-  mdm_.shm_deserialize(&header_->mdm_);
   rpc_.InitClient();
+  mdm_.shm_deserialize(&header_->mdm_);
+  bpm_.shm_deserialize(&header_->bpm_, &mdm_);
+  // borg_.shm_deserialize(&header_->borg_);
 }
 
 void Hermes::InitColocated(std::string server_config_path,
@@ -77,8 +81,10 @@ void Hermes::InitColocated(std::string server_config_path,
   LoadServerConfig(server_config_path);
   LoadClientConfig(client_config_path);
   InitSharedMemory();
-  mdm_.shm_init(&server_config_, &header_->mdm_);
   rpc_.InitColocated();
+  mdm_.shm_init(&server_config_, &header_->mdm_);
+  bpm_.shm_init(&header_->bpm_);
+  borg_.shm_init();
 }
 
 void Hermes::LoadServerConfig(std::string config_path) {
@@ -118,9 +124,11 @@ void Hermes::LoadSharedMemory() {
 }
 
 void Hermes::FinalizeServer() {
+  // TODO(llogan): Fix the shared memory segfault
   // NOTE(llogan): rpc_.Finalize() is called internally by daemon in this case
-  mdm_.shm_destroy();
-  LABSTOR_MEMORY_MANAGER->DestroyBackend(server_config_.shmem_name_);
+  // bpm_.shm_destroy();
+  // mdm_.shm_destroy();
+  // LABSTOR_MEMORY_MANAGER->DestroyBackend(server_config_.shmem_name_);
 }
 
 void Hermes::FinalizeClient() {

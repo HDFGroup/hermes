@@ -36,7 +36,9 @@ void MetadataManager::shm_init(ServerConfig *config,
     targets_->emplace_back(
         TargetId(rpc_->node_id_, dev_id, dev_id),
         dev_info.capacity_,
-        dev_info.capacity_);
+        dev_info.capacity_,
+        dev_info.bandwidth_,
+        dev_info.latency_);
     ++dev_id;
   }
 
@@ -198,6 +200,7 @@ BlobId MetadataManager::LocalBucketPutBlob(BucketId bkt_id,
   blob_id.node_id_ = rpc_->node_id_;
   if (blob_id_map_->try_emplace(internal_blob_name, blob_id)) {
     BlobInfo info;
+    info.bkt_id_ = bkt_id;
     info.name_ = lipc::make_mptr<lipc::string>(std::move(internal_blob_name));
     info.buffers_ = lipc::make_mptr<lipc::vector<BufferInfo>>(
         std::move(buffers));
@@ -205,6 +208,7 @@ BlobId MetadataManager::LocalBucketPutBlob(BucketId bkt_id,
     info.shm_serialize(hdr);
     blob_map_->emplace(blob_id, std::move(hdr));
   } else {
+    blob_id = (*blob_id_map_)[internal_blob_name];
     auto iter = blob_map_->find(blob_id);
     BlobInfoShmHeader &hdr = (*iter).val_.get_ref();
     BlobInfo info(hdr);

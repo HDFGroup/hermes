@@ -13,6 +13,14 @@ namespace hermes {
 
 class PosixIoClient : public IoClient {
  public:
+  bool Init(DeviceInfo &dev_info) override {
+    auto api = HERMES_POSIX_API;
+    int fd = api->open(dev_info.mount_point_.c_str(), O_TRUNC | O_CREAT, 0666);
+    if (fd < 0) { return false; }
+    api->close(fd);
+    return true;
+  }
+
   bool Write(DeviceInfo &dev_info, void *data,
              size_t off, size_t size) override {
     auto api = HERMES_POSIX_API;

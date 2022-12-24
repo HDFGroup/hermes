@@ -20,7 +20,7 @@ void RpcContext::InitRpcContext() {
   }
 
   // Get all host info
-  hosts_.resize(hosts.size());
+  hosts_.reserve(hosts.size());
   for (const auto& name : hosts) {
     hosts_.emplace_back(name, _GetIpAddress(name));
   }

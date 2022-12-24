@@ -80,7 +80,7 @@ Status MinimizeIoTime::Placement(const std::vector<size_t> &blob_sizes,
   for (size_t i = 0; i < num_blobs; ++i) {
     for (size_t j = 0; j < num_targets; ++j) {
       lp.SetObjectiveCoeff(var.Get(i, j),
-                           static_cast<double>(blob_sizes[i])/bandwidths[j]);
+                           static_cast<double>(blob_sizes[i])/targets[j].bandwidth_);
     }
   }
 

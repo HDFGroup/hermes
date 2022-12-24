@@ -33,8 +33,6 @@ class DPE {
   MetadataManager *mdm_; /**< A pointer to the MDM */
 
  public:
-  std::vector<f32> bandwidths; /**< a vector of bandwidths */
-
   /** Constructor. */
   DPE();
 

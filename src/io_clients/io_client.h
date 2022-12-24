@@ -12,6 +12,7 @@ namespace hermes {
 
 class IoClient {
  public:
+  virtual bool Init(DeviceInfo &dev_info) = 0;
   virtual bool Write(DeviceInfo &dev_info, void *data,
                      size_t off, size_t size) = 0;
   virtual bool Read(DeviceInfo &dev_info, void *data,

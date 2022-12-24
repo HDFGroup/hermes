@@ -29,7 +29,9 @@ int main(int argc, char* argv[]) {
   hermes::api::Context ctx;
   hermes::BlobId blob_id;
   hermes::Blob blob(nullptr, 1024);
-  bkt2->Put("0", std::move(blob), blob_id, ctx);
+  for (size_t i = 0; i < 2; ++i) {
+    bkt2->Put("0", std::move(blob), blob_id, ctx);
+  }
 
   hermes->Finalize();
   MPI_Finalize();

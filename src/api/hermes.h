@@ -27,6 +27,7 @@ class VBucket;
  * */
 struct HermesShmHeader {
   MetadataManagerShmHeader mdm_;
+  BufferPoolShmHeader bpm_;
 };
 
 /**
@@ -39,7 +40,7 @@ class Hermes {
   ServerConfig server_config_;
   ClientConfig client_config_;
   MetadataManager mdm_;
-  BufferPoolManager bpm_;
+  BufferPool bpm_;
   BufferOrganizer borg_;
   COMM_TYPE comm_;
   RPC_TYPE rpc_;

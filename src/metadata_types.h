@@ -18,14 +18,18 @@ using config::IoInterface;
 
 /** Represents the current status of a target */
 struct TargetInfo {
-  TargetId id_;     /**< unique Target ID */
-  size_t max_cap_;  /**< maximum capacity of the target */
-  size_t rem_cap_;  /**< remaining capacity of the target */
+  TargetId id_;         /**< unique Target ID */
+  size_t max_cap_;      /**< maximum capacity of the target */
+  size_t rem_cap_;      /**< remaining capacity of the target */
+  double bandwidth_;    /**< the bandwidth of the device */
+  double latency_;      /**< the latency of the device */
 
   TargetInfo() = default;
 
-  TargetInfo(TargetId id, size_t max_cap, size_t rem_cap)
-      : id_(id), max_cap_(max_cap), rem_cap_(rem_cap) {}
+  TargetInfo(TargetId id, size_t max_cap, size_t rem_cap,
+             double bandwidth, double latency)
+      : id_(id), max_cap_(max_cap), rem_cap_(rem_cap),
+        bandwidth_(bandwidth), latency_(latency) {}
 };
 
 /** Represents an allocated fraction of a target */
@@ -50,10 +54,15 @@ struct BlobInfoShmHeader {
 
   BlobInfoShmHeader() = default;
 
+  BlobInfoShmHeader(const BlobInfoShmHeader &other) noexcept
+      : bkt_id_(other.bkt_id_), name_ar_(other.name_ar_),
+        buffers_ar_(other.buffers_ar_),
+        rwlock_() {}
+
   BlobInfoShmHeader(BlobInfoShmHeader &&other) noexcept
   : bkt_id_(std::move(other.bkt_id_)), name_ar_(std::move(other.name_ar_)),
     buffers_ar_(std::move(other.buffers_ar_)),
-    rwlock_(std::move(other.rwlock_)) {}
+    rwlock_() {}
 
   BlobInfoShmHeader& operator=(BlobInfoShmHeader &&other) {
     if (this != &other) {
@@ -82,6 +91,7 @@ struct BlobInfo {
   }
 
   void shm_serialize(BlobInfoShmHeader &ar) {
+    ar.bkt_id_ = bkt_id_;
     name_ >> ar.name_ar_;
     buffers_ >> ar.buffers_ar_;
   }
