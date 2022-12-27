@@ -34,15 +34,18 @@ struct TargetInfo {
 
 /** Represents an allocated fraction of a target */
 struct BufferInfo {
-  size_t off_;
-  size_t blob_off_;
-  size_t size_;
-  TargetId tid_;
+  TargetId tid_;        /**< The destination target */
+  size_t t_off_;        /**< Offset in the target */
+  size_t t_size_;       /**< Size in the target */
+  size_t blob_off_;     /**< Offset in the blob */
+  size_t blob_size_;    /**< The amount of the blob being placed */
 
   BufferInfo() = default;
 
-  BufferInfo(size_t off, size_t size, TargetId tid)
-  : off_(off), size_(size), tid_(tid) {}
+  BufferInfo(TargetId tid, size_t t_off, size_t t_size,
+             size_t blob_off, size_t blob_size)
+      : tid_(tid), t_off_(t_off), t_size_(t_size),
+        blob_off_(blob_off), blob_size_(blob_size){}
 };
 
 /** Represents BlobInfo in shared memory */

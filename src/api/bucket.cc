@@ -43,7 +43,8 @@ Status Bucket::Put(std::string blob_name, Blob blob,
   for (auto &schema : schemas) {
     // TODO(llogan): Use RPC if-else, not Local
     auto buffers = bpm_->LocalAllocateAndSetBuffers(schema, blob);
-    mdm_->LocalBucketPutBlob(id_, lipc::string(blob_name), blob, buffers);
+    blob_id = mdm_->LocalBucketPutBlob(id_,
+                                       lipc::string(blob_name), blob, buffers);
   }
 }
 
@@ -52,6 +53,8 @@ Status Bucket::Put(std::string blob_name, Blob blob,
  * :WRAP-param: ctx -> ctx_
  * */
 Status Bucket::Get(BlobId blob_id, Blob &blob, Context &ctx) {
+  blob = mdm_->LocalBucketGetBlob(blob_id);
+  return Status();
 }
 
 }  // namespace hermes::api

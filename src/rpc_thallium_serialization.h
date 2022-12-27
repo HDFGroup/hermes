@@ -82,9 +82,11 @@ void serialize(A &ar, TargetId &target_id) {
  */
 template <typename A>
 void serialize(A &ar, BufferInfo &info) {
-  ar &info.off_;
-  ar &info.size_;
   ar &info.tid_;
+  ar &info.t_off_;
+  ar &info.t_size_;
+  ar &info.blob_off_;
+  ar &info.blob_size_;
 }
 
 }  // namespace hermes

@@ -9,6 +9,14 @@
 
 namespace hermes {
 
+static size_t SumBufferBlobSizes(lipc::vector<BufferInfo> &buffers) {
+  size_t sum = 0;
+  for (auto &buffer : buffers) {
+    sum += buffer.blob_size_;
+  }
+  return sum;
+}
+
 /**
  * Initialize the BORG
  * REQUIRES mdm to be initialized already.
@@ -30,14 +38,29 @@ void BufferOrganizer::shm_init() {
 /** Finalize the BORG */
 void BufferOrganizer::shm_destroy() {}
 
-/** Stores a blob into a set of buffers */
+/** Serialize the BORG into shared memory */
+void BufferOrganizer::shm_serialize()  {
+}
+
+/** Deserialize the BORG from shared memory */
+void BufferOrganizer::shm_deserialize()  {
+  mdm_ = &HERMES->mdm_;
+}
+
+    /** Stores a blob into a set of buffers */
 RPC void BufferOrganizer::LocalPlaceBlobInBuffers(
     Blob &blob, lipc::vector<BufferInfo> &buffers) {
+  size_t blob_off = 0;
   for (auto &buffer_info : buffers) {
+    if (buffer_info.tid_.GetNodeId() != mdm_->rpc_->node_id_) {
+      continue;
+    }
     auto &dev_info = (*mdm_->devices_)[buffer_info.tid_.GetDeviceId()];
     auto io_client = IoClientFactory::Get(dev_info.io_api_);
-    bool ret = io_client->Write(dev_info, blob.data(),
-                                buffer_info.off_, buffer_info.size_);
+    bool ret = io_client->Write(dev_info, blob.data() + blob_off,
+                                buffer_info.t_off_,
+                                buffer_info.blob_size_);
+    blob_off += buffer_info.blob_size_;
     if (!ret) {
       LOG(FATAL) << "Could not perform I/O in BORG" << std::endl;
     }
@@ -45,13 +68,30 @@ RPC void BufferOrganizer::LocalPlaceBlobInBuffers(
 }
 
 /** Stores a blob into a set of buffers */
-RPC void LocalReadBlobFromBuffers(Blob &blob,
-                                  lipc::vector<BufferInfo> &buffers) {
+RPC Blob BufferOrganizer::LocalReadBlobFromBuffers(
+    lipc::vector<BufferInfo> &buffers) {
+  Blob blob(nullptr, SumBufferBlobSizes(buffers));
+  size_t blob_off = 0;
+  for (auto &buffer_info : buffers) {
+    if (buffer_info.tid_.GetNodeId() != mdm_->rpc_->node_id_) {
+      continue;
+    }
+    auto &dev_info = (*mdm_->devices_)[buffer_info.tid_.GetDeviceId()];
+    auto io_client = IoClientFactory::Get(dev_info.io_api_);
+    bool ret = io_client->Read(dev_info, blob.data_mutable() + blob_off,
+                                buffer_info.t_off_,
+                                buffer_info.blob_size_);
+    blob_off += buffer_info.blob_size_;
+    if (!ret) {
+      LOG(FATAL) << "Could not perform I/O in BORG" << std::endl;
+    }
+  }
+  return std::move(blob);
 }
 
 /** Copies one buffer set into another buffer set */
-RPC void LocalCopyBuffers(lipc::vector<BufferInfo> &dst,
-                          lipc::vector<BufferInfo> &src) {
+RPC void BufferOrganizer::LocalCopyBuffers(lipc::vector<BufferInfo> &dst,
+                                           lipc::vector<BufferInfo> &src) {
 }
 
 }  // namespace hermes

@@ -4,16 +4,19 @@
 
 #include "hermes.h"
 #include "metadata_manager.h"
+#include "buffer_organizer.h"
 
 namespace hermes {
 
 /**
  * Explicitly initialize the MetadataManager
+ * Doesn't require anything to be initialized.
  * */
 void MetadataManager::shm_init(ServerConfig *config,
                                MetadataManagerShmHeader *header) {
   header_ = header;
   rpc_ = &HERMES->rpc_;
+  borg_ = &HERMES->borg_;
   header_->id_alloc_ = 1;
 
   // Create the metadata maps
@@ -81,6 +84,7 @@ void MetadataManager::shm_serialize() {
 void MetadataManager::shm_deserialize(MetadataManagerShmHeader *header) {
   header_ = header;
   rpc_ = &HERMES->rpc_;
+  borg_ = &HERMES->borg_;
   blob_id_map_ << header_->blob_id_map_ar_;
   bkt_id_map_ << header_->bkt_id_map_ar_;
   vbkt_id_map_ << header_->vbkt_id_map_ar_;
@@ -226,8 +230,22 @@ BlobId MetadataManager::LocalBucketPutBlob(BucketId bkt_id,
    * @RPC_TARGET_NODE rpc_->node_id_
    * @RPC_CLASS_INSTANCE mdm
    * */
+Blob MetadataManager::LocalBucketGetBlob(BlobId blob_id) {
+  auto iter = blob_map_->find(blob_id);
+  BlobInfoShmHeader &hdr = (*iter).val_.get_ref();
+  BlobInfo info(hdr);
+  return borg_->LocalReadBlobFromBuffers(*info.buffers_);
+}
+
+/**
+   * Get \a blob_name blob from \a bkt_id bucket
+   *
+   * @RPC_TARGET_NODE rpc_->node_id_
+   * @RPC_CLASS_INSTANCE mdm
+   * */
 BlobId MetadataManager::LocalGetBlobId(BucketId bkt_id,
                                        lipc::charbuf &blob_name) {
+  lipc::charbuf internal_blob_name = CreateBlobName(bkt_id, blob_name);
 }
 
 /**

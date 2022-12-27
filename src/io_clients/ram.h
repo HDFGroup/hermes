@@ -22,6 +22,7 @@ class RamIoClient : public IoClient {
     if (hermes_header->ram_tier_.is_null()) {
       LOG(FATAL) << BUFFER_POOL_OUT_OF_RAM.Msg() << std::endl;
     }
+    return true;
   }
 
   bool Write(DeviceInfo &dev_info, void *data,
@@ -30,6 +31,7 @@ class RamIoClient : public IoClient {
     auto &main_alloc = HERMES->main_alloc_;
     char *ram_ptr = main_alloc->Convert<char>(hermes_header->ram_tier_);
     memcpy(ram_ptr + off, data, size);
+    return true;
   }
 
   bool Read(DeviceInfo &dev_info, void *data,
@@ -38,6 +40,7 @@ class RamIoClient : public IoClient {
     auto &main_alloc = HERMES->main_alloc_;
     char *ram_ptr = main_alloc->Convert<char>(hermes_header->ram_tier_);
     memcpy(data, ram_ptr + off, size);
+    return true;
   }
 };
 

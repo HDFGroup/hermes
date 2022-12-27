@@ -72,8 +72,8 @@ void Hermes::InitClient(std::string server_config_path,
   LoadSharedMemory();
   rpc_.InitClient();
   mdm_.shm_deserialize(&header_->mdm_);
-  bpm_.shm_deserialize(&header_->bpm_, &mdm_);
-  // borg_.shm_deserialize(&header_->borg_);
+  bpm_.shm_deserialize(&header_->bpm_);
+  borg_.shm_deserialize();
 }
 
 void Hermes::InitColocated(std::string server_config_path,

@@ -51,7 +51,7 @@ class BufferPool {
   void shm_serialize(BufferPoolShmHeader *header);
 
   /** Deserialize the BPM from shared memory */
-  void shm_deserialize(BufferPoolShmHeader *header, MetadataManager *mdm);
+  void shm_deserialize(BufferPoolShmHeader *header);
 
   /**
    * Allocate buffers from the targets according to the schema

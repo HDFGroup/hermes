@@ -30,13 +30,18 @@ class BufferOrganizer {
   /** Finalize the BORG */
   void shm_destroy();
 
+  /** Serialize the BORG into shared memory */
+  void shm_serialize();
+
+  /** Deserialize the BORG from shared memory */
+  void shm_deserialize();
+
   /** Stores a blob into a set of buffers */
   RPC void LocalPlaceBlobInBuffers(Blob &blob,
                                    lipc::vector<BufferInfo> &buffers);
 
   /** Stores a blob into a set of buffers */
-  RPC void LocalReadBlobFromBuffers(Blob &blob,
-                                    lipc::vector<BufferInfo> &buffers);
+  RPC Blob LocalReadBlobFromBuffers(lipc::vector<BufferInfo> &buffers);
 
   /** Copies one buffer set into another buffer set */
   RPC void LocalCopyBuffers(lipc::vector<BufferInfo> &dst,

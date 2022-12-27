@@ -14,6 +14,9 @@
 
 namespace hermes {
 
+/** Forward declaration of borg */
+class BufferOrganizer;
+
 /**
  * Type name simplification for the various map types
  * */
@@ -55,6 +58,7 @@ class MetadataManager {
  public:
   RPC_TYPE* rpc_;
   MetadataManagerShmHeader *header_;
+  BufferOrganizer *borg_;
 
   /**
    * The manual pointers representing the different map types.
@@ -162,6 +166,17 @@ class MetadataManager {
    * */
   RPC BlobId LocalBucketPutBlob(BucketId bkt_id, const lipc::charbuf &blob_name,
                                 Blob &data, lipc::vector<BufferInfo> &buffers);
+
+  /**
+   * Get a blob from a bucket
+   *
+   * @param bkt_id id of the bucket
+   * @param blob_id id of the blob to get
+   *
+   * @RPC_TARGET_NODE rpc_->node_id_
+   * @RPC_CLASS_INSTANCE mdm
+   * */
+  Blob LocalBucketGetBlob(BlobId blob_id);
 
   /**
    * Get \a blob_name blob from \a bkt_id bucket

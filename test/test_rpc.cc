@@ -18,6 +18,8 @@
 #include "hermes.h"
 #include "bucket.h"
 
+#include "verify_buffer.h"
+
 namespace hapi = hermes::api;
 
 int main(int argc, char* argv[]) {
@@ -30,7 +32,12 @@ int main(int argc, char* argv[]) {
   hermes::BlobId blob_id;
   hermes::Blob blob(nullptr, 1024);
   for (size_t i = 0; i < 2; ++i) {
+    memset(blob.data_mutable(), 10, 1024);
     bkt2->Put("0", std::move(blob), blob_id, ctx);
+    hermes::Blob ret;
+    bkt->Get(blob_id, ret, ctx);
+    assert(ret.size() == 1024);
+    assert(VerifyBuffer(ret.data(), 1024, 10));
   }
 
   hermes->Finalize();
