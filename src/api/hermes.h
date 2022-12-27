@@ -26,6 +26,7 @@ class VBucket;
  * The Hermes shared-memory header
  * */
 struct HermesShmHeader {
+  lipc::Pointer ram_tier_;
   MetadataManagerShmHeader mdm_;
   BufferPoolShmHeader bpm_;
 };

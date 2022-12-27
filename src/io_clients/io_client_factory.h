@@ -27,9 +27,7 @@ class IoClientFactory {
       }
       case IoInterface::kRam:
       default: {
-        // TODO(llogan): @errorhandling not implemented
-        LOG(FATAL) << "IoClient not implemented" << std::endl;
-        return NULL;
+        return std::make_unique<RamIoClient>();
       }
     }
   }

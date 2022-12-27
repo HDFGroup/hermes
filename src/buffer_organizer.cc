@@ -17,7 +17,7 @@ void BufferOrganizer::shm_init() {
   mdm_ = &HERMES->mdm_;
   for (auto &target : (*mdm_->targets_)) {
     auto &dev_info = (*mdm_->devices_)[target.id_.GetDeviceId()];
-    if (dev_info.mount_point_.size() == 0) {
+    if (dev_info.mount_dir_.size() == 0) {
       dev_info.io_api_ = IoInterface::kRam;
     } else {
       dev_info.io_api_ = IoInterface::kPosix;

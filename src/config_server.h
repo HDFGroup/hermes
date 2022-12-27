@@ -21,13 +21,17 @@ enum class IoInterface {
  * Device information defined in server config
  * */
 struct DeviceInfo {
+  /** The human-readable name of the device */
+  lipc::string dev_name_;
   /** The I/O interface for the device */
   IoInterface io_api_;
   /** The minimum transfer size of each device */
   size_t block_size_;
   /** The unit of each slab, a multiple of the Device's block size */
   lipc::vector<size_t> slab_sizes_;
-  /** The mount point of a device */
+  /** The directory the device is mounted on */
+  lipc::string mount_dir_;
+  /** The file to create on the device */
   lipc::string mount_point_;
   /** Device capacity (bytes) */
   size_t capacity_;

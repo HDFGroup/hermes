@@ -38,7 +38,7 @@ class Status {
     msg_ = other.msg_;
   }
 
-  const char* Msg() {
+  const char* Msg() const {
     return msg_;
   }
 

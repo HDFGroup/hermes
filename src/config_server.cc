@@ -25,7 +25,8 @@ void ServerConfig::ParseDeviceInfo(YAML::Node yaml_conf) {
   for (auto device : yaml_conf) {
     DeviceInfo dev;
     auto dev_info = device.second;
-    dev.mount_point_ = lipc::string(dev_info["mount_point"].as<std::string>());
+    dev.dev_name_ = lipc::string(device.first.as<std::string>());
+    dev.mount_dir_ = lipc::string(dev_info["mount_point"].as<std::string>());
     dev.capacity_ =
         ParseSize(dev_info["capacity"].as<std::string>());
     dev.bandwidth_ =
