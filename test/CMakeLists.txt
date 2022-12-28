@@ -11,7 +11,7 @@ include_directories(
 #------------------------------------------------------------------------------
 # API tests
 #------------------------------------------------------------------------------
-set(API_TESTS test_rpc)
+set(API_TESTS test_rpc test_put_get)
 
 foreach(program ${API_TESTS})
   add_executable(${program} ${program}.cc)

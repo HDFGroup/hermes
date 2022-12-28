@@ -400,10 +400,6 @@ if(HERMES_HAVE_GOTCHA)
   # add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gotcha_intercept)
 endif()
 
-if(HERMES_ENABLE_WRAPPER)
-  # add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/wrapper)
-endif()
-
 if(HERMES_BUILD_BUFFER_POOL_VISUALIZER AND SDL2_FOUND)
   # add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/buffer_pool_visualizer)
 endif()
@@ -459,7 +455,7 @@ endif()
 # Benchmarks
 #-----------------------------------------------------------------------------
 if(HERMES_BUILD_BENCHMARKS)
-  # add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/benchmarks)
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/benchmarks)
 endif()
 
 #-----------------------------------------------------------------------------

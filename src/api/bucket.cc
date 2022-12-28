@@ -29,6 +29,17 @@ void Bucket::Destroy(std::string blob_name) {
 }
 
 /**
+ * Get the id of a blob from the blob name
+ * */
+Status Bucket::GetBlobId(std::string blob_name,
+                         BlobId &blob_id, Context &ctx) {
+  lipc::string blob_name_l(blob_name);
+  blob_id = mdm_->GetBlobId(GetId(), blob_name_l);
+  return Status();
+}
+
+
+/**
  * Put \a blob_id Blob into the bucket
  * */
 Status Bucket::Put(std::string blob_name, Blob blob,
@@ -43,8 +54,8 @@ Status Bucket::Put(std::string blob_name, Blob blob,
   for (auto &schema : schemas) {
     // TODO(llogan): Use RPC if-else, not Local
     auto buffers = bpm_->LocalAllocateAndSetBuffers(schema, blob);
-    blob_id = mdm_->LocalBucketPutBlob(id_,
-                                       lipc::string(blob_name), blob, buffers);
+    blob_id = mdm_->LocalBucketPutBlob(id_, lipc::string(blob_name),
+                                       blob, buffers);
   }
 }
 

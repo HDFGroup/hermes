@@ -108,7 +108,7 @@ void Hermes::InitSharedMemory() {
                           lipc::MemoryManager::kDefaultBackendSize,
                           server_config_.shmem_name_);
   main_alloc_ =
-      mem_mngr->CreateAllocator(lipc::AllocatorType::kMultiPageAllocator,
+      mem_mngr->CreateAllocator(lipc::AllocatorType::kStackAllocator,
                                 server_config_.shmem_name_, main_alloc_id,
                                 sizeof(HermesShmHeader));
   header_ = main_alloc_->GetCustomHeader<HermesShmHeader>();

@@ -22,12 +22,35 @@
 
 namespace hapi = hermes::api;
 
-int main(int argc, char* argv[]) {
-  MPI_Init(&argc, &argv);
-  auto hermes = hapi::Hermes::Create(hermes::HermesType::kClient);
+void TestManyPuts(hapi::Hermes *hermes) {
+  auto bkt = hermes->GetBucket("hello");
+  int num_blobs = 16;
+  size_t blob_size = KILOBYTES(1);
+  hermes::api::Context ctx;
+  hermes::BlobId blob_id;
+
+  for (size_t i = 0; i < num_blobs; ++i) {
+    hermes::Blob blob(nullptr, blob_size);
+    std::string name = std::to_string(i);
+    char nonce = i % 256;
+    memset(blob.data_mutable(), nonce, blob_size);
+    bkt->Put(name, std::move(blob), blob_id, ctx);
+  }
+
+  for (size_t i = 0; i < num_blobs; ++i) {
+    std::string name = std::to_string(i);
+    char nonce = i % 256;
+    hermes::Blob blob;
+    bkt->GetBlobId(name, blob_id, ctx);
+    bkt->Get(blob_id, blob, ctx);
+    assert(blob.size() == blob_size);
+    assert(VerifyBuffer(blob.data(), blob_size, nonce));
+  }
+}
+
+void TestBlobOverride(hapi::Hermes *hermes) {
   auto bkt = hermes->GetBucket("hello");
   auto bkt2 = hermes->GetBucket("hello");
-
   hermes::api::Context ctx;
   hermes::BlobId blob_id;
   hermes::Blob blob(nullptr, 1024);
@@ -39,6 +62,13 @@ int main(int argc, char* argv[]) {
     assert(ret.size() == 1024);
     assert(VerifyBuffer(ret.data(), 1024, 10));
   }
+}
+
+int main(int argc, char* argv[]) {
+  MPI_Init(&argc, &argv);
+  auto hermes = hapi::Hermes::Create(hermes::HermesType::kClient);
+
+  TestManyPuts(hermes);
 
   hermes->Finalize();
   MPI_Finalize();

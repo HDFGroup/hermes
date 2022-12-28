@@ -46,6 +46,35 @@ struct BufferInfo {
              size_t blob_off, size_t blob_size)
       : tid_(tid), t_off_(t_off), t_size_(t_size),
         blob_off_(blob_off), blob_size_(blob_size){}
+
+  /** Copy constructor */
+  BufferInfo(const BufferInfo &other) {
+    Copy(other);
+  }
+
+  /** Move constructor */
+  BufferInfo(BufferInfo &&other) {
+    Copy(other);
+  }
+
+  /** Copy assignment */
+  BufferInfo& operator=(const BufferInfo &other) {
+    Copy(other);
+  }
+
+  /** Move assignment */
+  BufferInfo& operator=(BufferInfo &&other) {
+    Copy(other);
+  }
+
+  /** Performs move/copy */
+  void Copy(const BufferInfo &other) {
+    tid_ = other.tid_;
+    t_off_ = other.t_off_;
+    t_size_ = other.t_size_;
+    blob_off_ = other.blob_off_;
+    blob_size_ = other.blob_size_;
+  }
 };
 
 /** Represents BlobInfo in shared memory */
@@ -80,6 +109,7 @@ struct BlobInfoShmHeader {
 
 /** Blob metadata */
 struct BlobInfo {
+ public:
   /// The bucket containing the blob
   BucketId bkt_id_;
   /// The name of the blob
@@ -100,6 +130,7 @@ struct BlobInfo {
   }
 
   void shm_deserialize(BlobInfoShmHeader &ar) {
+    bkt_id_ = ar.bkt_id_;
     name_ << ar.name_ar_;
     buffers_ << ar.buffers_ar_;
   }

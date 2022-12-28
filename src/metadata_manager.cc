@@ -206,8 +206,8 @@ BlobId MetadataManager::LocalBucketPutBlob(BucketId bkt_id,
     BlobInfo info;
     info.bkt_id_ = bkt_id;
     info.name_ = lipc::make_mptr<lipc::string>(std::move(internal_blob_name));
-    info.buffers_ = lipc::make_mptr<lipc::vector<BufferInfo>>(
-        std::move(buffers));
+    info.buffers_ = lipc::make_mptr<lipc::vector<BufferInfo>>(buffers);
+    auto &buffers = *info.buffers_;
     BlobInfoShmHeader hdr;
     info.shm_serialize(hdr);
     blob_map_->emplace(blob_id, std::move(hdr));
@@ -216,7 +216,7 @@ BlobId MetadataManager::LocalBucketPutBlob(BucketId bkt_id,
     auto iter = blob_map_->find(blob_id);
     BlobInfoShmHeader &hdr = (*iter).val_.get_ref();
     BlobInfo info(hdr);
-    *(info.buffers_) = std::move(buffers);
+    *(info.buffers_) = buffers;
     info.shm_serialize(hdr);
     (*iter).val_ = std::move(hdr);
   }
@@ -234,7 +234,8 @@ Blob MetadataManager::LocalBucketGetBlob(BlobId blob_id) {
   auto iter = blob_map_->find(blob_id);
   BlobInfoShmHeader &hdr = (*iter).val_.get_ref();
   BlobInfo info(hdr);
-  return borg_->LocalReadBlobFromBuffers(*info.buffers_);
+  auto &buffers = *info.buffers_;
+  return borg_->LocalReadBlobFromBuffers(buffers);
 }
 
 /**
@@ -246,6 +247,11 @@ Blob MetadataManager::LocalBucketGetBlob(BlobId blob_id) {
 BlobId MetadataManager::LocalGetBlobId(BucketId bkt_id,
                                        lipc::charbuf &blob_name) {
   lipc::charbuf internal_blob_name = CreateBlobName(bkt_id, blob_name);
+  auto iter = blob_id_map_->find(internal_blob_name);
+  if (iter == blob_id_map_->end()) {
+    return BlobId::GetNull();
+  }
+  return (*iter).val_;
 }
 
 /**
