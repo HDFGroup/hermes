@@ -34,7 +34,7 @@ devices:
 
     # For each device, indicate '1' if it is shared among nodes (e.g., burst
     # buffers), or '0' if it is per node (e.g., local NVMe).
-    is_shared_device: 0
+    is_shared_device: false
 
     # For each device, the minimum and maximum percent capacity threshold at which
     # the BufferOrganizer will trigger. Decreasing the maximum thresholds will cause
@@ -54,7 +54,7 @@ devices:
     slab_units: [ 1, 4, 16, 32 ]
     bandwidth: 1GBps
     latency: 600us
-    is_shared_device: 0
+    is_shared_device: false
     borg_capacity_thresh: [ 0.0, 1.0 ]
 
   ssd:
@@ -64,7 +64,7 @@ devices:
     slab_units: [ 1, 4, 16, 32 ]
     bandwidth: 500MBps
     latency: 1200us
-    is_shared_device: 0
+    is_shared_device: false
     borg_capacity_thresh: [ 0.0, 1.0 ]
 
   pfs:
@@ -74,7 +74,7 @@ devices:
     slab_units: [ 1, 4, 16, 32 ]
     bandwidth: 100MBps # Per-device bandwidth
     latency: 200ms
-    is_shared_device: 0
+    is_shared_device: true
     borg_capacity_thresh: [ 0.0, 1.0 ]
 
 ### Define properties of RPCs

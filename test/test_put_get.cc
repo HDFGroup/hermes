@@ -24,8 +24,8 @@ namespace hapi = hermes::api;
 
 void TestManyPuts(hapi::Hermes *hermes) {
   auto bkt = hermes->GetBucket("hello");
-  int num_blobs = 16;
-  size_t blob_size = KILOBYTES(1);
+  int num_blobs = 1;
+  size_t blob_size = MEGABYTES(150);
   hermes::api::Context ctx;
   hermes::BlobId blob_id;
 

@@ -147,7 +147,7 @@ static size_t ParseSize(const std::string &size_text) {
   std::string suffix = ParseNumberSuffix(size_text);
   if (suffix.size() == 0) {
     return size;
-  } else if (suffix[0] == 'k' || suffix[0] == 'k') {
+  } else if (suffix[0] == 'k' || suffix[0] == 'K') {
     return KILOBYTES(size);
   } else if (suffix[0] == 'm' || suffix[0] == 'M') {
     return MEGABYTES(size);

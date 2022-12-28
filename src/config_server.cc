@@ -27,6 +27,11 @@ void ServerConfig::ParseDeviceInfo(YAML::Node yaml_conf) {
     auto dev_info = device.second;
     dev.dev_name_ = lipc::string(device.first.as<std::string>());
     dev.mount_dir_ = lipc::string(dev_info["mount_point"].as<std::string>());
+    dev.borg_min_thresh_ = dev_info["borg_capacity_thresh"][0].as<float>();
+    dev.borg_max_thresh_ = dev_info["borg_capacity_thresh"][1].as<float>();
+    dev.is_shared_ = dev_info["is_shared_device"].as<bool>();
+    dev.block_size_ =
+        ParseSize(dev_info["block_size"].as<std::string>());
     dev.capacity_ =
         ParseSize(dev_info["capacity"].as<std::string>());
     dev.bandwidth_ =
