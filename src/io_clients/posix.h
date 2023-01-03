@@ -21,6 +21,7 @@ class PosixIoClient : public IoClient {
     auto api = HERMES_POSIX_API;
     dev_info.mount_point_ = dev_info.mount_dir_ +
                             "/" + "slab_" + dev_info.dev_name_;
+    dev_info.mount_point_ >> dev_info.header_->mount_point_;
     int fd = api->open(dev_info.mount_point_.c_str(), O_TRUNC | O_CREAT, 0666);
     if (fd < 0) { return false; }
     api->close(fd);

@@ -30,7 +30,7 @@ int main(int argc, char* argv[]) {
 
   hermes::api::Context ctx;
   hermes::BlobId blob_id;
-  hermes::Blob blob(nullptr, 1024);
+  hermes::Blob blob(1024);
   for (size_t i = 0; i < 1024; ++i) {
     memset(blob.data_mutable(), 10, 1024);
     bkt2->Put("0", std::move(blob), blob_id, ctx);

@@ -11,6 +11,7 @@ namespace hermes {
 
 using api::Status;
 
+const Status NOT_IMPLEMENTED("The function was not implemented");
 const Status DPE_PLACEMENT_SCHEMA_EMPTY("Placement failed. Non-fatal.");
 const Status DPE_NO_SPACE("DPE has no remaining space.");
 const Status DPE_MIN_IO_TIME_NO_SOLUTION(

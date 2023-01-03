@@ -23,9 +23,9 @@ class BufferOrganizer;
 typedef lipc::unordered_map<lipc::charbuf, BlobId> BLOB_ID_MAP_T;
 typedef lipc::unordered_map<lipc::charbuf, BucketId> BKT_ID_MAP_T;
 typedef lipc::unordered_map<lipc::charbuf, VBucketId> VBKT_ID_MAP_T;
-typedef lipc::unordered_map<BlobId, BlobInfoShmHeader> BLOB_MAP_T;
-typedef lipc::unordered_map<BucketId, BucketInfoShmHeader> BKT_MAP_T;
-typedef lipc::unordered_map<VBucketId, VBucketInfoShmHeader> VBKT_MAP_T;
+typedef lipc::unordered_map<BlobId, BlobInfo> BLOB_MAP_T;
+typedef lipc::unordered_map<BucketId, BucketInfo> BKT_MAP_T;
+typedef lipc::unordered_map<VBucketId, VBucketInfo> VBKT_MAP_T;
 
 /**
  * The SHM representation of the MetadataManager
@@ -317,7 +317,7 @@ class MetadataManager {
    * Update the capacity of the target device
    * */
   RPC void LocalUpdateTargetCapacity(TargetId tid, off64_t offset) {
-    auto &target = (*targets_)[tid.GetIndex()];
+    TargetInfo &target = *(*targets_)[tid.GetIndex()];
     target.rem_cap_ += offset;
   }
 

@@ -18,8 +18,9 @@ class RamIoClient : public IoClient {
     auto &hermes_header = HERMES->header_;
     auto &main_alloc = HERMES->main_alloc_;
     auto &server_config = HERMES->server_config_;
-    hermes_header->ram_tier_ = main_alloc->Allocate(dev_info.capacity_);
-    if (hermes_header->ram_tier_.is_null()) {
+    hermes_header->ram_tier_ = main_alloc->
+                               Allocate(dev_info.header_->capacity_);
+    if (hermes_header->ram_tier_.IsNull()) {
       LOG(FATAL) << BUFFER_POOL_OUT_OF_RAM.Msg() << std::endl;
     }
     return true;

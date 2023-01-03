@@ -31,7 +31,7 @@ void PutTest(hapi::Hermes *hermes,
   auto bkt = hermes->GetBucket("hello");
   hermes::api::Context ctx;
   hermes::BlobId blob_id;
-  hermes::Blob blob(nullptr, blob_size);
+  hermes::Blob blob(blob_size);
   for (size_t i = 0; i < blobs_per_rank; ++i) {
     size_t blob_name_int = rank * blobs_per_rank + i;
     std::string name = std::to_string(blob_name_int);
@@ -48,7 +48,7 @@ void GetTest(hapi::Hermes *hermes,
   auto bkt = hermes->GetBucket("hello");
   hermes::api::Context ctx;
   hermes::BlobId blob_id;
-  hermes::Blob blob(nullptr, blob_size);
+  hermes::Blob blob(blob_size);
   for (size_t i = 0; i < blobs_per_rank; ++i) {
     size_t blob_name_int = rank * blobs_per_rank + i;
     std::string name = std::to_string(blob_name_int);

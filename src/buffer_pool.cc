@@ -16,7 +16,8 @@ namespace hermes {
 void BufferPool::shm_init(BufferPoolShmHeader *header) {
   mdm_ = &HERMES->mdm_;
   borg_ = &HERMES->borg_;
-  target_allocs_ = lipc::make_mptr<lipc::vector<BufferPoolAllocator>>(nullptr);
+  target_allocs_ = lipc::make_mptr<lipc::vector<BufferPoolAllocator>>(
+      HERMES->main_alloc_);
   target_allocs_->resize(mdm_->targets_->size());
   shm_serialize(header);
 }
@@ -45,14 +46,14 @@ void BufferPool::shm_deserialize(BufferPoolShmHeader *header) {
  * */
 lipc::vector<BufferInfo>
 BufferPool::LocalAllocateAndSetBuffers(PlacementSchema &schema, Blob &blob) {
-  lipc::vector<BufferInfo> buffers(nullptr);
+  lipc::vector<BufferInfo> buffers(HERMES->main_alloc_);
   size_t blob_off_ = 0;
   for (auto plcmnt : schema.plcmnts_) {
     if (plcmnt.tid_.GetNodeId() != mdm_->rpc_->node_id_) {
       blob_off_ += plcmnt.size_;
       continue;
     }
-    auto &alloc = (*target_allocs_)[plcmnt.tid_.GetDeviceId()];
+    BufferPoolAllocator &alloc = *(*target_allocs_)[plcmnt.tid_.GetDeviceId()];
     BufferInfo info;
     info.t_off_ = alloc.cur_off_;
     alloc.cur_off_ += plcmnt.size_;  // NOTE(llogan): allocate emulation

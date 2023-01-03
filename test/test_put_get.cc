@@ -30,7 +30,7 @@ void TestManyPuts(hapi::Hermes *hermes) {
   hermes::BlobId blob_id;
 
   for (size_t i = 0; i < num_blobs; ++i) {
-    hermes::Blob blob(nullptr, blob_size);
+    hermes::Blob blob(blob_size);
     std::string name = std::to_string(i);
     char nonce = i % 256;
     memset(blob.data_mutable(), nonce, blob_size);
@@ -53,7 +53,7 @@ void TestBlobOverride(hapi::Hermes *hermes) {
   auto bkt2 = hermes->GetBucket("hello");
   hermes::api::Context ctx;
   hermes::BlobId blob_id;
-  hermes::Blob blob(nullptr, 1024);
+  hermes::Blob blob(1024);
   for (size_t i = 0; i < 1024; ++i) {
     memset(blob.data_mutable(), 10, 1024);
     bkt2->Put("0", std::move(blob), blob_id, ctx);

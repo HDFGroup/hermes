@@ -17,22 +17,27 @@ enum class IoInterface {
   kPosix
 };
 
+
+/** Forward declaration of DeviceInfo */
+class DeviceInfo;
+
 /**
- * Device information defined in server config
+ * DeviceInfo shared-memory representation
  * */
-struct DeviceInfo {
+template<>
+struct ShmHeader<DeviceInfo> : public lipc::ShmBaseHeader {
   /** The human-readable name of the device */
-  lipc::string dev_name_;
+  lipc::ShmArchive<lipc::string> dev_name_;
   /** The I/O interface for the device */
   IoInterface io_api_;
   /** The minimum transfer size of each device */
   size_t block_size_;
   /** The unit of each slab, a multiple of the Device's block size */
-  lipc::vector<size_t> slab_sizes_;
+  lipc::ShmArchive<lipc::vector<size_t>> slab_sizes_;
   /** The directory the device is mounted on */
-  lipc::string mount_dir_;
+  lipc::ShmArchive<lipc::string> mount_dir_;
   /** The file to create on the device */
-  lipc::string mount_point_;
+  lipc::ShmArchive<lipc::string> mount_point_;
   /** Device capacity (bytes) */
   size_t capacity_;
   /** Bandwidth of a device (MBps) */
@@ -43,6 +48,58 @@ struct DeviceInfo {
   bool is_shared_;
   /** BORG's minimum and maximum capacity threshold for device */
   f32 borg_min_thresh_, borg_max_thresh_;
+};
+
+/**
+ * Device information defined in server config
+ * */
+struct DeviceInfo : public SHM_CONTAINER(DeviceInfo) {
+  SHM_CONTAINER_TEMPLATE(DeviceInfo, DeviceInfo)
+
+  /** The human-readable name of the device */
+  lipc::string dev_name_;
+  /** The unit of each slab, a multiple of the Device's block size */
+  lipc::vector<size_t> slab_sizes_;
+  /** The directory the device is mounted on */
+  lipc::string mount_dir_;
+  /** The file to create on the device */
+  lipc::string mount_point_;
+
+  void shm_init_main(lipc::ShmArchive<DeviceInfo> *ar,
+                     lipc::Allocator *alloc) {
+    shm_init_header(ar, alloc);
+  }
+
+  void shm_destroy(bool destroy_header = true) {
+    dev_name_.SetDestructable();
+    slab_sizes_.SetDestructable();
+    mount_dir_.SetDestructable();
+    mount_point_.SetDestructable();
+  }
+
+  void shm_serialize(lipc::ShmArchive<DeviceInfo> &ar) const {
+    shm_serialize_header(ar.header_ptr_);
+    dev_name_ >> header_->dev_name_;
+    slab_sizes_ >> header_->slab_sizes_;
+    mount_dir_ >> header_->mount_dir_;
+    mount_point_ >> header_->mount_point_;
+  }
+
+  void shm_deserialize(const lipc::ShmArchive<DeviceInfo> &ar) {
+    shm_deserialize_header(ar.header_ptr_);
+    dev_name_ << header_->dev_name_;
+    slab_sizes_ << header_->slab_sizes_;
+    mount_dir_ << header_->mount_dir_;
+    mount_point_ << header_->mount_point_;
+  }
+
+  void WeakMove(DeviceInfo &other) {
+    throw NOT_IMPLEMENTED;
+  }
+
+  void StrongCopy(const DeviceInfo &other) {
+    throw NOT_IMPLEMENTED;
+  }
 };
 
 /**

@@ -20,17 +20,17 @@ void MetadataManager::shm_init(ServerConfig *config,
   header_->id_alloc_ = 1;
 
   // Create the metadata maps
-  blob_id_map_ = lipc::make_mptr<BLOB_ID_MAP_T>(nullptr);
-  bkt_id_map_ = lipc::make_mptr<BKT_ID_MAP_T>(nullptr);
-  vbkt_id_map_ = lipc::make_mptr<VBKT_ID_MAP_T>(nullptr);
-  blob_map_ = lipc::make_mptr<BLOB_MAP_T>(nullptr);
-  bkt_map_ = lipc::make_mptr<BKT_MAP_T>(nullptr);
-  vbkt_map_ = lipc::make_mptr<VBKT_MAP_T>(nullptr);
+  blob_id_map_ = lipc::make_mptr<BLOB_ID_MAP_T>();
+  bkt_id_map_ = lipc::make_mptr<BKT_ID_MAP_T>();
+  vbkt_id_map_ = lipc::make_mptr<VBKT_ID_MAP_T>();
+  blob_map_ = lipc::make_mptr<BLOB_MAP_T>();
+  bkt_map_ = lipc::make_mptr<BKT_MAP_T>();
+  vbkt_map_ = lipc::make_mptr<VBKT_MAP_T>();
 
   // Create the DeviceInfo vector
   devices_ = lipc::make_mptr<lipc::vector<DeviceInfo>>(
-      nullptr, HERMES->server_config_.devices_);
-  targets_ = lipc::make_mptr<lipc::vector<TargetInfo>>(nullptr);
+      HERMES->server_config_.devices_);
+  targets_ = lipc::make_mptr<lipc::vector<TargetInfo>>();
 
   // Create the TargetInfo vector
   targets_->reserve(devices_->size());
@@ -38,10 +38,10 @@ void MetadataManager::shm_init(ServerConfig *config,
   for (auto &dev_info : config->devices_) {
     targets_->emplace_back(
         TargetId(rpc_->node_id_, dev_id, dev_id),
-        dev_info.capacity_,
-        dev_info.capacity_,
-        dev_info.bandwidth_,
-        dev_info.latency_);
+        dev_info.header_->capacity_,
+        dev_info.header_->capacity_,
+        dev_info.header_->bandwidth_,
+        dev_info.header_->latency_);
     ++dev_id;
   }
 
@@ -109,17 +109,16 @@ BucketId MetadataManager::LocalGetOrCreateBucket(lipc::charbuf &bkt_name) {
 
   // Emplace bucket if it does not already exist
   if (bkt_id_map_->try_emplace(bkt_name, bkt_id)) {
-    BucketInfo info;
+    BucketInfo info(HERMES->main_alloc_);
     info.name_ = lipc::make_mptr<lipc::string>(bkt_name);
-    BucketInfoShmHeader hdr;
-    info.name_ >> hdr.name_ar_;
-    bkt_map_->emplace(bkt_id, hdr);
+    info.name_ >> info.header_->name_ar_;
+    bkt_map_->emplace(bkt_id, info);
   } else {
     auto iter = bkt_id_map_->find(bkt_name);
     if (iter == bkt_id_map_->end()) {
       return BucketId::GetNull();
     }
-    bkt_id = (*iter).val_;
+    bkt_id = *(*iter).val_;
   }
 
   return bkt_id;
@@ -132,12 +131,11 @@ BucketId MetadataManager::LocalGetOrCreateBucket(lipc::charbuf &bkt_name) {
    * @RPC_CLASS_INSTANCE mdm
    * */
 BucketId MetadataManager::LocalGetBucketId(lipc::charbuf &bkt_name) {
-  BucketId bkt_id;
   auto iter = bkt_id_map_->find(bkt_name);
   if (iter == bkt_id_map_->end()) {
     return BucketId::GetNull();
   }
-  bkt_id = (*iter).val_;
+  BucketId bkt_id = *(*iter).val_;
   return bkt_id;
 }
 
@@ -154,9 +152,8 @@ bool MetadataManager::LocalBucketContainsBlob(BucketId bkt_id, BlobId blob_id) {
     return false;
   }
   // Get the blob info
-  BlobInfoShmHeader &hdr = (*iter).val_.get_ref();
-  BlobInfo info(hdr);
-  return info.bkt_id_ == bkt_id;
+  BlobInfo &blob_info = *(*iter).val_;
+  return blob_info.bkt_id_ == bkt_id;
 }
 
 /**
@@ -207,18 +204,12 @@ BlobId MetadataManager::LocalBucketPutBlob(BucketId bkt_id,
     info.bkt_id_ = bkt_id;
     info.name_ = lipc::make_mptr<lipc::string>(std::move(internal_blob_name));
     info.buffers_ = lipc::make_mptr<lipc::vector<BufferInfo>>(buffers);
-    auto &buffers = *info.buffers_;
-    BlobInfoShmHeader hdr;
-    info.shm_serialize(hdr);
-    blob_map_->emplace(blob_id, std::move(hdr));
+    blob_map_->emplace(blob_id, info);
   } else {
-    blob_id = (*blob_id_map_)[internal_blob_name];
+    blob_id = *(*blob_id_map_)[internal_blob_name];
     auto iter = blob_map_->find(blob_id);
-    BlobInfoShmHeader &hdr = (*iter).val_.get_ref();
-    BlobInfo info(hdr);
+    BlobInfo info(*(*iter).val_);
     *(info.buffers_) = buffers;
-    info.shm_serialize(hdr);
-    (*iter).val_ = std::move(hdr);
   }
 
   return blob_id;
@@ -232,9 +223,8 @@ BlobId MetadataManager::LocalBucketPutBlob(BucketId bkt_id,
    * */
 Blob MetadataManager::LocalBucketGetBlob(BlobId blob_id) {
   auto iter = blob_map_->find(blob_id);
-  BlobInfoShmHeader &hdr = (*iter).val_.get_ref();
-  BlobInfo info(hdr);
-  auto &buffers = *info.buffers_;
+  BlobInfo &info = *(*iter).val_;
+  lipc::vector<BufferInfo> &buffers = *info.buffers_;
   return borg_->LocalReadBlobFromBuffers(buffers);
 }
 
@@ -251,7 +241,7 @@ BlobId MetadataManager::LocalGetBlobId(BucketId bkt_id,
   if (iter == blob_id_map_->end()) {
     return BlobId::GetNull();
   }
-  return (*iter).val_;
+  return *(*iter).val_;
 }
 
 /**

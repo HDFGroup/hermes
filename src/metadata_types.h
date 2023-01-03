@@ -11,6 +11,9 @@
 namespace hermes {
 
 using api::Blob;
+struct BucketInfo;     /** Forward declaration of BucketInfo */
+struct BlobInfo;       /** Forward declaration of BlobInfo */
+struct VBucketInfo;    /** Forward declaration of VBucketInfo */
 
 /** Device information required by other processes */
 using config::DeviceInfo;
@@ -65,6 +68,7 @@ struct BufferInfo {
   /** Move assignment */
   BufferInfo& operator=(BufferInfo &&other) {
     Copy(other);
+    return *this;
   }
 
   /** Performs move/copy */
@@ -78,25 +82,26 @@ struct BufferInfo {
 };
 
 /** Represents BlobInfo in shared memory */
-struct BlobInfoShmHeader {
+template<>
+struct ShmHeader<BlobInfo> : public lipc::ShmBaseHeader {
   BucketId bkt_id_;  /**< The bucket containing the blob */
   lipc::ShmArchive<lipc::string> name_ar_;
   lipc::ShmArchive<lipc::vector<BufferInfo>> buffers_ar_;
   RwLock rwlock_;
 
-  BlobInfoShmHeader() = default;
+  ShmHeader() = default;
 
-  BlobInfoShmHeader(const BlobInfoShmHeader &other) noexcept
+  ShmHeader(const ShmHeader &other) noexcept
       : bkt_id_(other.bkt_id_), name_ar_(other.name_ar_),
         buffers_ar_(other.buffers_ar_),
         rwlock_() {}
 
-  BlobInfoShmHeader(BlobInfoShmHeader &&other) noexcept
+  ShmHeader(ShmHeader &&other) noexcept
   : bkt_id_(std::move(other.bkt_id_)), name_ar_(std::move(other.name_ar_)),
     buffers_ar_(std::move(other.buffers_ar_)),
     rwlock_() {}
 
-  BlobInfoShmHeader& operator=(BlobInfoShmHeader &&other) {
+  ShmHeader& operator=(ShmHeader &&other) {
     if (this != &other) {
       bkt_id_ = std::move(other.bkt_id_);
       name_ar_ = std::move(other.name_ar_);
@@ -108,7 +113,10 @@ struct BlobInfoShmHeader {
 };
 
 /** Blob metadata */
-struct BlobInfo {
+struct BlobInfo : public SHM_CONTAINER(BlobInfo){
+ public:
+  SHM_CONTAINER_TEMPLATE(BlobInfo, BlobInfo);
+
  public:
   /// The bucket containing the blob
   BucketId bkt_id_;
@@ -119,43 +127,129 @@ struct BlobInfo {
 
   BlobInfo() = default;
 
-  BlobInfo(BlobInfoShmHeader &ar) {
-    shm_deserialize(ar);
+  void shm_init_main(lipc::ShmArchive<BlobInfo> *ar,
+                     lipc::Allocator *alloc) {
+    shm_init_header(ar, alloc);
   }
 
-  void shm_serialize(BlobInfoShmHeader &ar) {
-    ar.bkt_id_ = bkt_id_;
-    name_ >> ar.name_ar_;
-    buffers_ >> ar.buffers_ar_;
+  void shm_destroy(bool destroy_header = true) {
+    SHM_DESTROY_DATA_START
+    SHM_DESTROY_DATA_END
+    SHM_DESTROY_END
   }
 
-  void shm_deserialize(BlobInfoShmHeader &ar) {
-    bkt_id_ = ar.bkt_id_;
-    name_ << ar.name_ar_;
-    buffers_ << ar.buffers_ar_;
+  void shm_serialize(lipc::ShmArchive<BlobInfo> &ar) const {
+    shm_serialize_header(ar.header_ptr_);
+    header_->bkt_id_ = bkt_id_;
+    name_ >> header_->name_ar_;
+    buffers_ >> header_->buffers_ar_;
+  }
+
+  void shm_deserialize(const lipc::ShmArchive<BlobInfo> &ar) {
+    shm_deserialize_header(ar.header_ptr_);
+    bkt_id_ = header_->bkt_id_;
+    name_ << header_->name_ar_;
+    buffers_ << header_->buffers_ar_;
+  }
+
+  void WeakMove(BlobInfo &other) {
+    throw NOT_IMPLEMENTED;
+  }
+
+  void StrongCopy(const BlobInfo &other) {
+    throw NOT_IMPLEMENTED;
   }
 };
 
+
 /** Represents BucketInfo in shared memory */
-struct BucketInfoShmHeader {
-  lipc::ShmArchive<lipc::mptr<lipc::string>> name_ar_;
+template<>
+struct ShmHeader<BucketInfo> : public lipc::ShmBaseHeader {
+  lipc::ShmArchive<lipc::string> name_ar_;
 };
 
 /** Metadata for a Bucket */
-struct BucketInfo {
+struct BucketInfo : public SHM_CONTAINER(BucketInfo) {
+ public:
+  SHM_CONTAINER_TEMPLATE(BucketInfo, BucketInfo);
+
+ public:
   lipc::mptr<lipc::string> name_;
+
+ public:
+  BucketInfo() = default;
+
+  void shm_init_main(lipc::ShmArchive<BucketInfo> *ar,
+                     lipc::Allocator *alloc) {
+    shm_init_header(ar, alloc);
+  }
+
+  void shm_destroy(bool destroy_header = true) {
+    SHM_DESTROY_DATA_START
+    SHM_DESTROY_DATA_END
+    SHM_DESTROY_END
+  }
+
+  void shm_serialize(lipc::ShmArchive<BucketInfo> &ar) const {
+    shm_serialize_header(ar.header_ptr_);
+  }
+
+  void shm_deserialize(const lipc::ShmArchive<BucketInfo> &ar) {
+    shm_deserialize_header(ar.header_ptr_);
+  }
+
+  void WeakMove(BucketInfo &other) {
+    throw NOT_IMPLEMENTED;
+  }
+
+  void StrongCopy(const BucketInfo &other) {
+    throw NOT_IMPLEMENTED;
+  }
 };
 
 /** Represents a VBucket in shared memory */
-struct VBucketInfoShmHeader {
-  lipc::ShmArchive<lipc::mptr<lipc::vector<char>>> name_;
-  lipc::ShmArchive<lipc::mptr<lipc::unordered_map<BlobId, BlobId>>> blobs_;
+template<>
+struct ShmHeader<VBucketInfo> : public lipc::ShmBaseHeader {
+  lipc::ShmArchive<lipc::vector<char>> name_;
+  lipc::ShmArchive<lipc::unordered_map<BlobId, BlobId>> blobs_;
 };
 
 /** Metadata for a VBucket */
-struct VBucketInfo {
+struct VBucketInfo : public SHM_CONTAINER(VBucketInfo) {
+ public:
+  SHM_CONTAINER_TEMPLATE(VBucketInfo, VBucketInfo);
+
+ public:
   lipc::mptr<lipc::vector<char>> name_;
   lipc::mptr<lipc::unordered_map<BlobId, BlobId>> blobs_;
+
+ public:
+  void shm_init_main(lipc::ShmArchive<VBucketInfo> *ar,
+                     lipc::Allocator *alloc) {
+    shm_init_header(ar, alloc);
+  }
+
+  void shm_destroy(bool destroy_header = true) {
+    SHM_DESTROY_DATA_START
+    SHM_DESTROY_DATA_END
+    SHM_DESTROY_END
+  }
+
+  void shm_serialize(lipc::ShmArchive<VBucketInfo> &ar) const {
+    shm_serialize_header(ar.header_ptr_);
+  }
+
+  void shm_deserialize(const lipc::ShmArchive<VBucketInfo> &ar) {
+    shm_deserialize_header(ar.header_ptr_);
+  }
+
+  void WeakMove(VBucketInfo &other) {
+    throw NOT_IMPLEMENTED;
+  }
+
+  void StrongCopy(const VBucketInfo &other) {
+    throw NOT_IMPLEMENTED;
+  }
 };
 
 }  // namespace hermes

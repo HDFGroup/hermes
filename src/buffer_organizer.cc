@@ -11,8 +11,8 @@ namespace hermes {
 
 static size_t SumBufferBlobSizes(lipc::vector<BufferInfo> &buffers) {
   size_t sum = 0;
-  for (auto &buffer : buffers) {
-    sum += buffer.blob_size_;
+  for (lipc::Ref<BufferInfo> buffer_ref : buffers) {
+    sum += (*buffer_ref).blob_size_;
   }
   return sum;
 }
@@ -23,14 +23,15 @@ static size_t SumBufferBlobSizes(lipc::vector<BufferInfo> &buffers) {
  * */
 void BufferOrganizer::shm_init() {
   mdm_ = &HERMES->mdm_;
-  for (auto &target : (*mdm_->targets_)) {
-    auto &dev_info = (*mdm_->devices_)[target.id_.GetDeviceId()];
+  for (lipc::Ref<TargetInfo> target_ref : (*mdm_->targets_)) {
+    auto &target = *target_ref;
+    DeviceInfo &dev_info = *(*mdm_->devices_)[target.id_.GetDeviceId()];
     if (dev_info.mount_dir_.size() == 0) {
-      dev_info.io_api_ = IoInterface::kRam;
+      dev_info.header_->io_api_ = IoInterface::kRam;
     } else {
-      dev_info.io_api_ = IoInterface::kPosix;
+      dev_info.header_->io_api_ = IoInterface::kPosix;
     }
-    auto io_client = IoClientFactory::Get(dev_info.io_api_);
+    auto io_client = IoClientFactory::Get(dev_info.header_->io_api_);
     io_client->Init(dev_info);
   }
 }
@@ -47,16 +48,17 @@ void BufferOrganizer::shm_deserialize()  {
   mdm_ = &HERMES->mdm_;
 }
 
-    /** Stores a blob into a set of buffers */
+/** Stores a blob into a set of buffers */
 RPC void BufferOrganizer::LocalPlaceBlobInBuffers(
     Blob &blob, lipc::vector<BufferInfo> &buffers) {
   size_t blob_off = 0;
-  for (auto &buffer_info : buffers) {
+  for (lipc::Ref<BufferInfo> buffer_info_ref : buffers) {
+    BufferInfo &buffer_info = *buffer_info_ref;
     if (buffer_info.tid_.GetNodeId() != mdm_->rpc_->node_id_) {
       continue;
     }
-    auto &dev_info = (*mdm_->devices_)[buffer_info.tid_.GetDeviceId()];
-    auto io_client = IoClientFactory::Get(dev_info.io_api_);
+    DeviceInfo &dev_info = *(*mdm_->devices_)[buffer_info.tid_.GetDeviceId()];
+    auto io_client = IoClientFactory::Get(dev_info.header_->io_api_);
     bool ret = io_client->Write(dev_info, blob.data() + blob_off,
                                 buffer_info.t_off_,
                                 buffer_info.blob_size_);
@@ -70,14 +72,16 @@ RPC void BufferOrganizer::LocalPlaceBlobInBuffers(
 /** Stores a blob into a set of buffers */
 RPC Blob BufferOrganizer::LocalReadBlobFromBuffers(
     lipc::vector<BufferInfo> &buffers) {
-  Blob blob(nullptr, SumBufferBlobSizes(buffers));
+  Blob blob(SumBufferBlobSizes(buffers));
   size_t blob_off = 0;
-  for (auto &buffer_info : buffers) {
+  for (lipc::Ref<BufferInfo> buffer_info_ref : buffers) {
+    BufferInfo &buffer_info = *buffer_info_ref;
     if (buffer_info.tid_.GetNodeId() != mdm_->rpc_->node_id_) {
       continue;
     }
-    auto &dev_info = (*mdm_->devices_)[buffer_info.tid_.GetDeviceId()];
-    auto io_client = IoClientFactory::Get(dev_info.io_api_);
+    auto dev_info_ref = (*mdm_->devices_)[buffer_info.tid_.GetDeviceId()];
+    DeviceInfo &dev_info = *dev_info_ref;
+    auto io_client = IoClientFactory::Get(dev_info.header_->io_api_);
     bool ret = io_client->Read(dev_info, blob.data_mutable() + blob_off,
                                 buffer_info.t_off_,
                                 buffer_info.blob_size_);
