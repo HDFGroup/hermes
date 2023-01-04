@@ -23,10 +23,12 @@ namespace hermes::config {
 void ServerConfig::ParseDeviceInfo(YAML::Node yaml_conf) {
   devices_.clear();
   for (auto device : yaml_conf) {
-    DeviceInfo dev;
+    DeviceInfo dev(SHM_ALLOCATOR_NULL);
     auto dev_info = device.second;
-    dev.dev_name_ = lipc::string(device.first.as<std::string>());
-    dev.mount_dir_ = lipc::string(dev_info["mount_point"].as<std::string>());
+    (*dev.dev_name_) = lipc::string(
+        device.first.as<std::string>());
+    (*dev.mount_dir_) = lipc::string(
+        dev_info["mount_point"].as<std::string>());
     dev.header_->borg_min_thresh_ =
         dev_info["borg_capacity_thresh"][0].as<float>();
     dev.header_->borg_max_thresh_ =
@@ -42,8 +44,8 @@ void ServerConfig::ParseDeviceInfo(YAML::Node yaml_conf) {
     dev.header_->latency_ =
         ParseLatency(dev_info["latency"].as<std::string>());
     ParseVector<size_t, lipc::vector<size_t>>(
-        dev_info["slab_sizes"], dev.slab_sizes_);
-    devices_.emplace_back(dev);
+        dev_info["slab_sizes"], *dev.slab_sizes_);
+    devices_.emplace_back(std::move(dev));
   }
 }
 

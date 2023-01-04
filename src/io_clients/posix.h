@@ -19,10 +19,10 @@ class PosixIoClient : public IoClient {
  public:
   bool Init(DeviceInfo &dev_info) override {
     auto api = HERMES_POSIX_API;
-    dev_info.mount_point_ = dev_info.mount_dir_ +
-                            "/" + "slab_" + dev_info.dev_name_;
-    dev_info.mount_point_ >> dev_info.header_->mount_point_;
-    int fd = api->open(dev_info.mount_point_.c_str(), O_TRUNC | O_CREAT, 0666);
+    (*dev_info.mount_point_) = (*dev_info.mount_dir_) +
+                            "/" + "slab_" + (*dev_info.dev_name_);
+    int fd = api->open((*dev_info.mount_point_).c_str(),
+                       O_TRUNC | O_CREAT, 0666);
     if (fd < 0) { return false; }
     api->close(fd);
     return true;
@@ -31,8 +31,7 @@ class PosixIoClient : public IoClient {
   bool Write(DeviceInfo &dev_info, void *data,
              size_t off, size_t size) override {
     auto api = HERMES_POSIX_API;
-    std::string str = dev_info.mount_point_.str();
-    int fd = api->open(dev_info.mount_point_.c_str(), O_RDWR);
+    int fd = api->open((*dev_info.mount_point_).c_str(), O_RDWR);
     if (fd < 0) { return false; }
     size_t count = api->pwrite(fd, data, size, off);
     api->close(fd);
@@ -42,7 +41,7 @@ class PosixIoClient : public IoClient {
   bool Read(DeviceInfo &dev_info, void *data,
             size_t off, size_t size) override {
     auto api = HERMES_POSIX_API;
-    int fd = api->open(dev_info.mount_point_.c_str(), O_RDWR);
+    int fd = api->open((*dev_info.mount_point_).c_str(), O_RDWR);
     if (fd < 0) { return false; }
     size_t count = api->pread(fd, data, size, off);
     api->close(fd);

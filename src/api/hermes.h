@@ -50,6 +50,8 @@ class Hermes {
  public:
   Hermes() = default;
 
+  ~Hermes() = default;
+
   static Hermes* Create(HermesType mode = HermesType::kClient,
                         std::string server_config_path = "",
                         std::string client_config_path = "") {

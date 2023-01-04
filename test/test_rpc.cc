@@ -18,29 +18,18 @@
 #include "hermes.h"
 #include "bucket.h"
 
-#include "verify_buffer.h"
+#include "basic_test.h"
 
 namespace hapi = hermes::api;
 
-int main(int argc, char* argv[]) {
-  MPI_Init(&argc, &argv);
-  auto hermes = hapi::Hermes::Create(hermes::HermesType::kClient);
-  auto bkt = hermes->GetBucket("hello");
-  auto bkt2 = hermes->GetBucket("hello");
+void MainPretest() {
+  hapi::Hermes::Create(hermes::HermesType::kClient);
+}
 
-  hermes::api::Context ctx;
-  hermes::BlobId blob_id;
-  hermes::Blob blob(1024);
-  for (size_t i = 0; i < 1024; ++i) {
-    memset(blob.data_mutable(), 10, 1024);
-    bkt2->Put("0", std::move(blob), blob_id, ctx);
-    hermes::Blob ret;
-    bkt->Get(blob_id, ret, ctx);
-    assert(ret.size() == 1024);
-    assert(VerifyBuffer(ret.data(), 1024, 10));
-  }
+void MainPosttest() {
+  HERMES->Finalize();
+}
 
-  hermes->Finalize();
-  MPI_Finalize();
-  return 0;
+TEST_CASE("TestRpc") {
+  HERMES->Finalize();
 }

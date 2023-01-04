@@ -76,8 +76,14 @@ static void PrintExpectedAndFail(const std::string &expected, u32 line_number = 
 /** parse \a list_node vector from configuration file in YAML */
 template<typename T, typename VEC_TYPE=std::vector<T>>
 static void ParseVector(YAML::Node list_node, VEC_TYPE &list) {
-  for (auto val_node : list_node) {
-    list.emplace_back(val_node.as<T>());
+  if constexpr(IS_SHM_SMART_POINTER(VEC_TYPE)) {
+    for (auto val_node : list_node) {
+      list->emplace_back(val_node.as<T>());
+    }
+  } else {
+    for (auto val_node : list_node) {
+      list.emplace_back(val_node.as<T>());
+    }
   }
 }
 

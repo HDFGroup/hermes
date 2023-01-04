@@ -15,6 +15,17 @@ endif()
 project(HERMES)
 
 #------------------------------------------------------------------------------
+# Compiler optimization
+#------------------------------------------------------------------------------
+message(${CMAKE_BUILD_TYPE})
+if (CMAKE_BUILD_TYPE STREQUAL "Release")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O1")
+  message("This IS a release build")
+else()
+  message("This is NOT a release build")
+endif()
+
+#------------------------------------------------------------------------------
 # Version information
 #------------------------------------------------------------------------------
 set(HERMES_VERSION_MAJOR "0")

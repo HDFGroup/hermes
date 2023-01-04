@@ -18,9 +18,17 @@
 #include "hermes.h"
 #include "bucket.h"
 
-#include "verify_buffer.h"
+#include "basic_test.h"
 
 namespace hapi = hermes::api;
+
+void MainPretest() {
+  hapi::Hermes::Create(hermes::HermesType::kClient);
+}
+
+void MainPosttest() {
+  HERMES->Finalize();
+}
 
 void TestManyPuts(hapi::Hermes *hermes) {
   auto bkt = hermes->GetBucket("hello");
@@ -64,13 +72,10 @@ void TestBlobOverride(hapi::Hermes *hermes) {
   }
 }
 
-int main(int argc, char* argv[]) {
-  MPI_Init(&argc, &argv);
-  auto hermes = hapi::Hermes::Create(hermes::HermesType::kClient);
+TEST_CASE("TestManyPuts") {
+  TestManyPuts(HERMES);
+}
 
-  TestManyPuts(hermes);
-
-  hermes->Finalize();
-  MPI_Finalize();
-  return 0;
+TEST_CASE("TestBlobOverride") {
+  TestBlobOverride(HERMES);
 }

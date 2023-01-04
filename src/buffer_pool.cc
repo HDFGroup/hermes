@@ -53,10 +53,11 @@ BufferPool::LocalAllocateAndSetBuffers(PlacementSchema &schema, Blob &blob) {
       blob_off_ += plcmnt.size_;
       continue;
     }
-    BufferPoolAllocator &alloc = *(*target_allocs_)[plcmnt.tid_.GetDeviceId()];
+    lipc::Ref<BufferPoolAllocator> alloc =
+        (*target_allocs_)[plcmnt.tid_.GetDeviceId()];
     BufferInfo info;
-    info.t_off_ = alloc.cur_off_;
-    alloc.cur_off_ += plcmnt.size_;  // NOTE(llogan): allocate emulation
+    info.t_off_ = alloc->cur_off_;
+    alloc->cur_off_ += plcmnt.size_;  // NOTE(llogan): allocate emulation
     info.t_size_ = plcmnt.size_;
     info.blob_off_ = blob_off_;
     info.blob_size_ = plcmnt.size_;
@@ -64,7 +65,7 @@ BufferPool::LocalAllocateAndSetBuffers(PlacementSchema &schema, Blob &blob) {
     buffers.emplace_back(info);
     borg_->LocalPlaceBlobInBuffers(blob, buffers);
     mdm_->LocalUpdateTargetCapacity(info.tid_,
-                                    static_cast<off64_t>(info.t_size_));
+                                    -static_cast<off64_t>(info.t_size_));
     blob_off_ += plcmnt.size_;
   }
   return std::move(buffers);

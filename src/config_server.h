@@ -9,6 +9,8 @@
 
 namespace hermes::config {
 
+class DeviceInfo; /** Forward declaration of DeviceInfo */
+
 /**
  * The type of interface the device exposes
  * */
@@ -16,10 +18,6 @@ enum class IoInterface {
   kRam,
   kPosix
 };
-
-
-/** Forward declaration of DeviceInfo */
-class DeviceInfo;
 
 /**
  * DeviceInfo shared-memory representation
@@ -57,24 +55,32 @@ struct DeviceInfo : public SHM_CONTAINER(DeviceInfo) {
   SHM_CONTAINER_TEMPLATE(DeviceInfo, DeviceInfo)
 
   /** The human-readable name of the device */
-  lipc::string dev_name_;
+  lipc::mptr<lipc::string> dev_name_;
   /** The unit of each slab, a multiple of the Device's block size */
-  lipc::vector<size_t> slab_sizes_;
+  lipc::mptr<lipc::vector<size_t>> slab_sizes_;
   /** The directory the device is mounted on */
-  lipc::string mount_dir_;
+  lipc::mptr<lipc::string> mount_dir_;
   /** The file to create on the device */
-  lipc::string mount_point_;
+  lipc::mptr<lipc::string> mount_point_;
 
   void shm_init_main(lipc::ShmArchive<DeviceInfo> *ar,
                      lipc::Allocator *alloc) {
     shm_init_header(ar, alloc);
+    dev_name_.shm_init(alloc);
+    slab_sizes_.shm_init(alloc);
+    mount_dir_.shm_init(alloc);
+    mount_point_.shm_init(alloc);
+    shm_serialize(ar_);
   }
 
   void shm_destroy(bool destroy_header = true) {
-    dev_name_.SetDestructable();
-    slab_sizes_.SetDestructable();
-    mount_dir_.SetDestructable();
-    mount_point_.SetDestructable();
+    SHM_DESTROY_DATA_START
+    dev_name_.shm_destroy();
+    slab_sizes_.shm_destroy();
+    mount_dir_.shm_destroy();
+    mount_point_.shm_destroy();
+    SHM_DESTROY_DATA_END
+    SHM_DESTROY_END
   }
 
   void shm_serialize(lipc::ShmArchive<DeviceInfo> &ar) const {
@@ -94,11 +100,23 @@ struct DeviceInfo : public SHM_CONTAINER(DeviceInfo) {
   }
 
   void WeakMove(DeviceInfo &other) {
-    throw NOT_IMPLEMENTED;
+    SHM_WEAK_MOVE_START(SHM_WEAK_MOVE_DEFAULT(DeviceInfo))
+    (*header_) = (*other.header_);
+    (*dev_name_) = lipc::Move(*other.dev_name_);
+    (*slab_sizes_) = lipc::Move(*other.slab_sizes_);
+    (*mount_dir_) = lipc::Move(*other.mount_dir_);
+    (*mount_point_) = lipc::Move(*other.mount_point_);
+    SHM_WEAK_MOVE_END()
   }
 
   void StrongCopy(const DeviceInfo &other) {
-    throw NOT_IMPLEMENTED;
+    SHM_STRONG_COPY_START(SHM_STRONG_COPY_DEFAULT(DeviceInfo))
+    (*header_) = (*other.header_);
+    (*dev_name_) = lipc::Copy(*other.dev_name_);
+    (*slab_sizes_) = lipc::Copy(*other.slab_sizes_);
+    (*mount_dir_) = lipc::Copy(*other.mount_dir_);
+    (*mount_point_) = lipc::Copy(*other.mount_point_);
+    SHM_STRONG_COPY_END()
   }
 };
 

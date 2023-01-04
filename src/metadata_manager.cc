@@ -29,7 +29,7 @@ void MetadataManager::shm_init(ServerConfig *config,
 
   // Create the DeviceInfo vector
   devices_ = lipc::make_mptr<lipc::vector<DeviceInfo>>(
-      HERMES->server_config_.devices_);
+      HERMES->main_alloc_, HERMES->server_config_.devices_);
   targets_ = lipc::make_mptr<lipc::vector<TargetInfo>>();
 
   // Create the TargetInfo vector
@@ -110,9 +110,8 @@ BucketId MetadataManager::LocalGetOrCreateBucket(lipc::charbuf &bkt_name) {
   // Emplace bucket if it does not already exist
   if (bkt_id_map_->try_emplace(bkt_name, bkt_id)) {
     BucketInfo info(HERMES->main_alloc_);
-    info.name_ = lipc::make_mptr<lipc::string>(bkt_name);
-    info.name_ >> info.header_->name_ar_;
-    bkt_map_->emplace(bkt_id, info);
+    (*info.name_) = bkt_name;
+    bkt_map_->emplace(bkt_id, std::move(info));
   } else {
     auto iter = bkt_id_map_->find(bkt_name);
     if (iter == bkt_id_map_->end()) {
@@ -200,16 +199,16 @@ BlobId MetadataManager::LocalBucketPutBlob(BucketId bkt_id,
   blob_id.unique_ = header_->id_alloc_.fetch_add(1);
   blob_id.node_id_ = rpc_->node_id_;
   if (blob_id_map_->try_emplace(internal_blob_name, blob_id)) {
-    BlobInfo info;
-    info.bkt_id_ = bkt_id;
-    info.name_ = lipc::make_mptr<lipc::string>(std::move(internal_blob_name));
-    info.buffers_ = lipc::make_mptr<lipc::vector<BufferInfo>>(buffers);
-    blob_map_->emplace(blob_id, info);
+    BlobInfo blob_info(HERMES->main_alloc_);
+    blob_info.bkt_id_ = bkt_id;
+    (*blob_info.name_) = std::move(internal_blob_name);
+    (*blob_info.buffers_) = std::move(buffers);
+    blob_map_->emplace(blob_id, std::move(blob_info));
   } else {
     blob_id = *(*blob_id_map_)[internal_blob_name];
     auto iter = blob_map_->find(blob_id);
-    BlobInfo info(*(*iter).val_);
-    *(info.buffers_) = buffers;
+    lipc::Ref<BlobInfo> blob_info = (*iter).val_;
+    (*blob_info->buffers_) = std::move(buffers);
   }
 
   return blob_id;
@@ -223,8 +222,8 @@ BlobId MetadataManager::LocalBucketPutBlob(BucketId bkt_id,
    * */
 Blob MetadataManager::LocalBucketGetBlob(BlobId blob_id) {
   auto iter = blob_map_->find(blob_id);
-  BlobInfo &info = *(*iter).val_;
-  lipc::vector<BufferInfo> &buffers = *info.buffers_;
+  lipc::Ref<BlobInfo> blob_info = (*iter).val_;
+  lipc::vector<BufferInfo> &buffers = (*blob_info->buffers_);
   return borg_->LocalReadBlobFromBuffers(buffers);
 }
 
