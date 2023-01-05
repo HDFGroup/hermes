@@ -143,7 +143,8 @@ class MetadataManager {
    * @RPC_TARGET_NODE rpc_->node_id_
    * @RPC_CLASS_INSTANCE mdm
    * */
-  RPC bool LocalRenameBucket(BucketId bkt_id, lipc::charbuf &new_bkt_name);
+  RPC bool LocalRenameBucket(BucketId bkt_id,
+                             lipc::charbuf &new_bkt_name);
 
   /**
    * Destroy \a bkt_id bucket
@@ -187,15 +188,6 @@ class MetadataManager {
   RPC BlobId LocalGetBlobId(BucketId bkt_id, lipc::charbuf &blob_name);
 
   /**
-   * Change \a blob_id blob's buffers to \the buffers
-   *
-   * @RPC_TARGET_NODE rpc_->node_id_
-   * @RPC_CLASS_INSTANCE mdm
-   * */
-  RPC bool LocalSetBlobBuffers(BlobId blob_id,
-                               lipc::vector<BufferInfo> &buffers);
-
-  /**
    * Get \a blob_id blob's buffers
    *
    * @RPC_TARGET_NODE rpc_->node_id_
@@ -219,39 +211,7 @@ class MetadataManager {
    * @RPC_TARGET_NODE rpc_->node_id_
    * @RPC_CLASS_INSTANCE mdm
    * */
-  RPC bool LocalDestroyBlob(BucketId bkt_id, lipc::charbuf &blob_name);
-
-  /**
-   * Acquire \a blob_id blob's write lock
-   *
-   * @RPC_TARGET_NODE rpc_->node_id_
-   * @RPC_CLASS_INSTANCE mdm
-   * */
-  RPC bool LocalWriteLockBlob(BlobId blob_id);
-
-  /**
-   * Release \a blob_id blob's write lock
-   *
-   * @RPC_TARGET_NODE rpc_->node_id_
-   * @RPC_CLASS_INSTANCE mdm
-   * */
-  RPC bool LocalWriteUnlockBlob(BlobId blob_id);
-
-  /**
-   * Acquire \a blob_id blob's read lock
-   *
-   * @RPC_TARGET_NODE rpc_->node_id_
-   * @RPC_CLASS_INSTANCE mdm
-   * */
-  RPC bool LocalReadLockBlob(BlobId blob_id);
-
-  /**
-   * Release \a blob_id blob's read lock
-   *
-   * @RPC_TARGET_NODE rpc_->node_id_
-   * @RPC_CLASS_INSTANCE mdm
-   * */
-  RPC bool LocalReadUnlockBlob(BlobId blob_id);
+  RPC bool LocalDestroyBlob(BucketId bkt_id, BlobId blob_id);
 
   /**
    * Get or create \a vbkt_name VBucket
@@ -275,8 +235,7 @@ class MetadataManager {
    * @RPC_TARGET_NODE rpc_->node_id_
    * @RPC_CLASS_INSTANCE mdm
    * */
-  RPC VBucketId LocalVBucketLinkBlob(VBucketId vbkt_id, BucketId bkt_id,
-                                     lipc::charbuf &blob_name);
+  RPC bool LocalVBucketLinkBlob(VBucketId vbkt_id, BlobId blob_id);
 
   /**
    * Unlink \a blob_name Blob of \a bkt_id Bucket
@@ -285,8 +244,7 @@ class MetadataManager {
    * @RPC_TARGET_NODE rpc_->node_id_
    * @RPC_CLASS_INSTANCE mdm
    * */
-  RPC VBucketId LocalVBucketUnlinkBlob(VBucketId vbkt_id, BucketId bkt_id,
-                                       lipc::charbuf &blob_name);
+  RPC bool LocalVBucketUnlinkBlob(VBucketId vbkt_id, BlobId blob_id);
 
   /**
    * Get the linked blobs from \a vbkt_id VBucket
@@ -295,6 +253,11 @@ class MetadataManager {
    * @RPC_CLASS_INSTANCE mdm
    * */
   RPC std::list<BlobId> LocalVBucketGetLinks(VBucketId vbkt_id);
+
+  /**
+   * Whether \a vbkt_id VBucket contains \a blob_id blob
+   * */
+  RPC bool LocalVBucketContainsBlob(VBucketId vbkt_id, BlobId blob_id);
 
   /**
    * Rename \a vbkt_id VBucket to \a new_vbkt_name name
@@ -332,258 +295,18 @@ class MetadataManager {
    * Get the TargetInfo for neighborhood
    * */
   lipc::vector<TargetInfo> GetNeighborhoodTargetInfo() {
+    return {};
   }
 
   /**
    * Get all TargetInfo in the system
    * */
   lipc::vector<TargetInfo> GetGlobalTargetInfo() {
+    return {};
   }
 
  public:
   RPC_AUTOGEN_START
-  BucketId GetOrCreateBucket(lipc::charbuf& bkt_name) {
-    u32 target_node = rpc_->node_id_;
-    if (target_node == rpc_->node_id_) {
-      return LocalGetOrCreateBucket(
-        bkt_name);
-    } else {
-      return rpc_->Call<BucketId>(
-        target_node, "GetOrCreateBucket",
-        bkt_name);
-    }
-  }
-  BucketId GetBucketId(lipc::charbuf& bkt_name) {
-    u32 target_node = rpc_->node_id_;
-    if (target_node == rpc_->node_id_) {
-      return LocalGetBucketId(
-        bkt_name);
-    } else {
-      return rpc_->Call<BucketId>(
-        target_node, "GetBucketId",
-        bkt_name);
-    }
-  }
-  bool BucketContainsBlob(BucketId bkt_id, BlobId blob_id) {
-    u32 target_node = rpc_->node_id_;
-    if (target_node == rpc_->node_id_) {
-      return LocalBucketContainsBlob(
-        bkt_id, blob_id);
-    } else {
-      return rpc_->Call<bool>(
-        target_node, "BucketContainsBlob",
-        bkt_id, blob_id);
-    }
-  }
-  bool RenameBucket(BucketId bkt_id, lipc::charbuf& new_bkt_name) {
-    u32 target_node = rpc_->node_id_;
-    if (target_node == rpc_->node_id_) {
-      return LocalRenameBucket(
-        bkt_id, new_bkt_name);
-    } else {
-      return rpc_->Call<bool>(
-        target_node, "RenameBucket",
-        bkt_id, new_bkt_name);
-    }
-  }
-  bool DestroyBucket(BucketId bkt_id) {
-    u32 target_node = rpc_->node_id_;
-    if (target_node == rpc_->node_id_) {
-      return LocalDestroyBucket(
-        bkt_id);
-    } else {
-      return rpc_->Call<bool>(
-        target_node, "DestroyBucket",
-        bkt_id);
-    }
-  }
-  BlobId BucketPutBlob(BucketId bkt_id, lipc::charbuf& blob_name, Blob& data, lipc::vector<BufferInfo>& buffers) {
-    u32 target_node = rpc_->node_id_;
-    if (target_node == rpc_->node_id_) {
-      return LocalBucketPutBlob(
-        bkt_id, blob_name, data, buffers);
-    } else {
-      return rpc_->Call<BlobId>(
-        target_node, "BucketPutBlob",
-        bkt_id, blob_name, data, buffers);
-    }
-  }
-  BlobId GetBlobId(BucketId bkt_id, lipc::charbuf& blob_name) {
-    u32 target_node = rpc_->node_id_;
-    if (target_node == rpc_->node_id_) {
-      return LocalGetBlobId(
-        bkt_id, blob_name);
-    } else {
-      return rpc_->Call<BlobId>(
-        target_node, "GetBlobId",
-        bkt_id, blob_name);
-    }
-  }
-  bool SetBlobBuffers(BlobId blob_id, lipc::vector<BufferInfo>& buffers) {
-    u32 target_node = rpc_->node_id_;
-    if (target_node == rpc_->node_id_) {
-      return LocalSetBlobBuffers(
-        blob_id, buffers);
-    } else {
-      return rpc_->Call<bool>(
-        target_node, "SetBlobBuffers",
-        blob_id, buffers);
-    }
-  }
-  lipc::vector<BufferInfo> GetBlobBuffers(BlobId blob_id) {
-    u32 target_node = rpc_->node_id_;
-    if (target_node == rpc_->node_id_) {
-      return LocalGetBlobBuffers(
-        blob_id);
-    } else {
-      return rpc_->Call<lipc::vector<BufferInfo>>(
-        target_node, "GetBlobBuffers",
-        blob_id);
-    }
-  }
-  bool RenameBlob(BucketId bkt_id, BlobId blob_id, lipc::charbuf& new_blob_name) {
-    u32 target_node = rpc_->node_id_;
-    if (target_node == rpc_->node_id_) {
-      return LocalRenameBlob(
-        bkt_id, blob_id, new_blob_name);
-    } else {
-      return rpc_->Call<bool>(
-        target_node, "RenameBlob",
-        bkt_id, blob_id, new_blob_name);
-    }
-  }
-  bool DestroyBlob(BucketId bkt_id, lipc::charbuf& blob_name) {
-    u32 target_node = rpc_->node_id_;
-    if (target_node == rpc_->node_id_) {
-      return LocalDestroyBlob(
-        bkt_id, blob_name);
-    } else {
-      return rpc_->Call<bool>(
-        target_node, "DestroyBlob",
-        bkt_id, blob_name);
-    }
-  }
-  bool WriteLockBlob(BlobId blob_id) {
-    u32 target_node = rpc_->node_id_;
-    if (target_node == rpc_->node_id_) {
-      return LocalWriteLockBlob(
-        blob_id);
-    } else {
-      return rpc_->Call<bool>(
-        target_node, "WriteLockBlob",
-        blob_id);
-    }
-  }
-  bool WriteUnlockBlob(BlobId blob_id) {
-    u32 target_node = rpc_->node_id_;
-    if (target_node == rpc_->node_id_) {
-      return LocalWriteUnlockBlob(
-        blob_id);
-    } else {
-      return rpc_->Call<bool>(
-        target_node, "WriteUnlockBlob",
-        blob_id);
-    }
-  }
-  bool ReadLockBlob(BlobId blob_id) {
-    u32 target_node = rpc_->node_id_;
-    if (target_node == rpc_->node_id_) {
-      return LocalReadLockBlob(
-        blob_id);
-    } else {
-      return rpc_->Call<bool>(
-        target_node, "ReadLockBlob",
-        blob_id);
-    }
-  }
-  bool ReadUnlockBlob(BlobId blob_id) {
-    u32 target_node = rpc_->node_id_;
-    if (target_node == rpc_->node_id_) {
-      return LocalReadUnlockBlob(
-        blob_id);
-    } else {
-      return rpc_->Call<bool>(
-        target_node, "ReadUnlockBlob",
-        blob_id);
-    }
-  }
-  VBucketId GetOrCreateVBucket(lipc::charbuf& vbkt_name) {
-    u32 target_node = rpc_->node_id_;
-    if (target_node == rpc_->node_id_) {
-      return LocalGetOrCreateVBucket(
-        vbkt_name);
-    } else {
-      return rpc_->Call<VBucketId>(
-        target_node, "GetOrCreateVBucket",
-        vbkt_name);
-    }
-  }
-  VBucketId GetVBucketId(lipc::charbuf& vbkt_name) {
-    u32 target_node = rpc_->node_id_;
-    if (target_node == rpc_->node_id_) {
-      return LocalGetVBucketId(
-        vbkt_name);
-    } else {
-      return rpc_->Call<VBucketId>(
-        target_node, "GetVBucketId",
-        vbkt_name);
-    }
-  }
-  VBucketId VBucketLinkBlob(VBucketId vbkt_id, BucketId bkt_id, lipc::charbuf& blob_name) {
-    u32 target_node = rpc_->node_id_;
-    if (target_node == rpc_->node_id_) {
-      return LocalVBucketLinkBlob(
-        vbkt_id, bkt_id, blob_name);
-    } else {
-      return rpc_->Call<VBucketId>(
-        target_node, "VBucketLinkBlob",
-        vbkt_id, bkt_id, blob_name);
-    }
-  }
-  VBucketId VBucketUnlinkBlob(VBucketId vbkt_id, BucketId bkt_id, lipc::charbuf& blob_name) {
-    u32 target_node = rpc_->node_id_;
-    if (target_node == rpc_->node_id_) {
-      return LocalVBucketUnlinkBlob(
-        vbkt_id, bkt_id, blob_name);
-    } else {
-      return rpc_->Call<VBucketId>(
-        target_node, "VBucketUnlinkBlob",
-        vbkt_id, bkt_id, blob_name);
-    }
-  }
-  std::list<BlobId> VBucketGetLinks(VBucketId vbkt_id) {
-    u32 target_node = rpc_->node_id_;
-    if (target_node == rpc_->node_id_) {
-      return LocalVBucketGetLinks(
-        vbkt_id);
-    } else {
-      return rpc_->Call<std::list<BlobId>>(
-        target_node, "VBucketGetLinks",
-        vbkt_id);
-    }
-  }
-  bool RenameVBucket(VBucketId vbkt_id, lipc::charbuf& new_vbkt_name) {
-    u32 target_node = rpc_->node_id_;
-    if (target_node == rpc_->node_id_) {
-      return LocalRenameVBucket(
-        vbkt_id, new_vbkt_name);
-    } else {
-      return rpc_->Call<bool>(
-        target_node, "RenameVBucket",
-        vbkt_id, new_vbkt_name);
-    }
-  }
-  bool DestroyVBucket(VBucketId vbkt_id) {
-    u32 target_node = rpc_->node_id_;
-    if (target_node == rpc_->node_id_) {
-      return LocalDestroyVBucket(
-        vbkt_id);
-    } else {
-      return rpc_->Call<bool>(
-        target_node, "DestroyVBucket",
-        vbkt_id);
-    }
-  }
   RPC_AUTOGEN_END
 };
 

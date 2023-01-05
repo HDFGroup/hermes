@@ -12,30 +12,59 @@
 namespace hermes::api {
 
 class VBucket {
+ private:
+  MetadataManager *mdm_;
+  VBucketId id_;
+
  public:
+  /**
+   * Either gets or creates a VBucket.
+   *
+   * @param name the name of the vbucket
+   * @param ctx any additional information
+   * */
   VBucket(std::string name, Context &ctx);
 
-  /*void Link(std::string bucket_name,
-            std::string blob_name, Context ctx = Context());
+  /**
+   * Rename a VBucket.
+   *
+   * @param name the name of the new vbucket
+   * */
+  void Rename(std::string name);
 
-  void Link(std::shared_ptr<Bucket> &bucket,
-            std::string blob_name, Context ctx = Context());
+  /**
+   * Associate a blob in a VBucket.
+   *
+   * @param blob_id the ID of the blob to associate
+   * @param ctx any additional information
+   * @return status
+   * */
+  Status Link(BlobId blob_id, Context &ctx);
 
-  void Unlink(std::string bucket_name,
-              std::string blob_name, Context ctx = Context());
+  /**
+   * Unlink a blob from a VBucket.
+   *
+   * @param blob_id the ID of a blob
+   * @param ctx any additional information
+   * */
+  Status Unlink(BlobId blob_id, Context &ctx);
 
-  void Unlink(std::shared_ptr<Bucket> &bucket,
-              std::string blob_name, Context ctx = Context());
-
+  /**
+   * Destroys a VBucket and its contents
+   * */
   Status Destroy();
 
-  bool ContainsBlob(std::string bucket_name, std::string blob_name);
+  /**
+   * Check if \a blob_id blob is linked in the VBucket
+   * */
+  bool ContainsBlob(BlobId blob_id);
 
-  size_t Get();
-
+  /**
+   * Create + attach a trait to the VBucket.
+   * */
   template<typename T, typename ...Args>
   void Attach(Args ...args) {
-  }*/
+  }
 };
 
 }  // namespace hermes::api

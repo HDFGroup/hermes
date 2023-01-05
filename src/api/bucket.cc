@@ -13,13 +13,17 @@ namespace hermes::api {
 Bucket::Bucket(std::string name, Context &ctx)
     : mdm_(&HERMES->mdm_), bpm_(&HERMES->bpm_) {
   lipc::string lname(name);
-  id_ = mdm_->GetOrCreateBucket(lname);
+  // TODO(llogan): rpcify
+  id_ = mdm_->LocalGetOrCreateBucket(lname);
 }
 
 /**
  * Rename this bucket
  * */
 void Bucket::Rename(std::string new_bkt_name) {
+  lipc::string lname(new_bkt_name);
+  // TODO(llogan): rpcify
+  mdm_->LocalRenameBucket(id_, lname);
 }
 
 /**
@@ -34,7 +38,8 @@ void Bucket::Destroy(std::string blob_name) {
 Status Bucket::GetBlobId(std::string blob_name,
                          BlobId &blob_id, Context &ctx) {
   lipc::string blob_name_l(blob_name);
-  blob_id = mdm_->GetBlobId(GetId(), blob_name_l);
+  // TODO(llogan): rpcify
+  blob_id = mdm_->LocalGetBlobId(GetId(), blob_name_l);
   return Status();
 }
 
@@ -52,11 +57,13 @@ Status Bucket::Put(std::string blob_name, Blob blob,
 
   // Allocate buffers for the blob & enqueue placement
   for (auto &schema : schemas) {
-    // TODO(llogan): Use RPC if-else, not Local
+    // TODO(llogan): rpcify
     auto buffers = bpm_->LocalAllocateAndSetBuffers(schema, blob);
     blob_id = mdm_->LocalBucketPutBlob(id_, lipc::string(blob_name),
                                        blob, buffers);
   }
+
+  return Status();
 }
 
 /**

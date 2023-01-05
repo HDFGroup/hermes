@@ -51,8 +51,8 @@ void TestManyPuts(hapi::Hermes *hermes) {
     hermes::Blob blob;
     bkt->GetBlobId(name, blob_id, ctx);
     bkt->Get(blob_id, blob, ctx);
-    assert(blob.size() == blob_size);
-    assert(VerifyBuffer(blob.data(), blob_size, nonce));
+    REQUIRE(blob.size() == blob_size);
+    REQUIRE(VerifyBuffer(blob.data(), blob_size, nonce));
   }
 }
 
@@ -67,8 +67,8 @@ void TestBlobOverride(hapi::Hermes *hermes) {
     bkt2->Put("0", std::move(blob), blob_id, ctx);
     hermes::Blob ret;
     bkt->Get(blob_id, ret, ctx);
-    assert(ret.size() == 1024);
-    assert(VerifyBuffer(ret.data(), 1024, 10));
+    REQUIRE(ret.size() == 1024);
+    REQUIRE(VerifyBuffer(ret.data(), 1024, 10));
   }
 }
 

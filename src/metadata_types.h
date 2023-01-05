@@ -263,7 +263,7 @@ struct BucketInfo : public SHM_CONTAINER(BucketInfo) {
 /** Represents a VBucket in shared memory */
 template<>
 struct ShmHeader<VBucketInfo> : public lipc::ShmBaseHeader {
-  lipc::ShmArchive<lipc::vector<char>> name_;
+  lipc::ShmArchive<lipc::charbuf> name_;
   lipc::ShmArchive<lipc::unordered_map<BlobId, BlobId>> blobs_;
 };
 
@@ -273,7 +273,7 @@ struct VBucketInfo : public SHM_CONTAINER(VBucketInfo) {
   SHM_CONTAINER_TEMPLATE(VBucketInfo, VBucketInfo);
 
  public:
-  lipc::mptr<lipc::vector<char>> name_;
+  lipc::mptr<lipc::charbuf> name_;
   lipc::mptr<lipc::unordered_map<BlobId, BlobId>> blobs_;
 
  public:
