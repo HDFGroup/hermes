@@ -19,7 +19,9 @@ class Bucket {
   std::string name_;
   Context ctx_;
 
-  /* Bucket operations */
+  ///////////////////////////
+  ////// Bucket Operations
+  //////////////////////////
  public:
 
   /**
@@ -54,14 +56,28 @@ class Bucket {
   /**
    * Destroys this bucket along with all its contents.
    * */
-  void Destroy(std::string blob_name);
+  void Destroy();
+
+  /**
+   * Check if this bucket is valid
+   * */
+  bool IsNull() {
+    return id_.IsNull();
+  }
 
 
-  /* Blob operations */
+  ///////////////////////
+  ////// Blob Operations
+  ///////////////////////
  public:
 
   /**
    * Get the id of a blob from the blob name
+   *
+   * @param blob_name the name of the blob
+   * @param blob_id (output) the returned blob_id
+   * @param ctx any additional information
+   * @return The Status of the operation
    * */
   Status GetBlobId(std::string blob_name, BlobId &blob_id, Context &ctx);
 
@@ -78,6 +94,16 @@ class Bucket {
    * @WRAP_DEFAULT: blob_id -> GetBlobId(blob_name)
    * */
   Status Get(BlobId blob_id, Blob &blob, Context &ctx);
+
+  /**
+   * Rename \a blob_id blob to \a new_blob_name new name
+   * */
+  void RenameBlob(BlobId blob_id, std::string new_blob_name, Context &ctx);
+
+  /**
+   * Delete \a blob_id blob
+   * */
+  void DestroyBlob(BlobId blob_id, Context &ctx);
 
  public:
   RPC_AUTOGEN_START

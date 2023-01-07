@@ -126,9 +126,8 @@ void Hermes::LoadSharedMemory() {
 void Hermes::FinalizeServer() {
   // TODO(llogan): Fix the shared memory segfault
   // NOTE(llogan): rpc_.Finalize() is called internally by daemon in this case
-  // bpm_.shm_destroy();
-  // mdm_.shm_destroy();
-  // LABSTOR_MEMORY_MANAGER->DestroyBackend(server_config_.shmem_name_);
+  bpm_.shm_destroy();
+  mdm_.shm_destroy();
 }
 
 void Hermes::FinalizeClient() {

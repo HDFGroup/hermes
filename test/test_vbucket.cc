@@ -15,6 +15,14 @@
 
 namespace hapi = hermes::api;
 
+void MainPretest() {
+  hapi::Hermes::Create(hermes::HermesType::kClient);
+}
+
+void MainPosttest() {
+  HERMES->Finalize();
+}
+
 void TestVBucketCreateDestroy(hapi::Hermes *hermes) {
   auto bkt = hermes->GetBucket("hello");
   auto vbkt = hermes->GetVBucket("hello");

@@ -72,10 +72,91 @@ void TestBlobOverride(hapi::Hermes *hermes) {
   }
 }
 
+void TestBucketRename(hapi::Hermes *hermes) {
+  auto bkt = hermes->GetBucket("hello");
+  bkt->Rename("hello2");
+  auto bkt1 = hermes->GetBucket("hello");
+  auto bkt2 = hermes->GetBucket("hello2");
+
+  REQUIRE(!bkt2->IsNull());
+  REQUIRE(bkt1->GetId() != bkt2->GetId());
+  REQUIRE(bkt->GetId() == bkt2->GetId());
+}
+
+void TestBucketDestroy(hapi::Hermes *hermes) {
+  auto bkt = hermes->GetBucket("hello");
+  int num_blobs = 1;
+  size_t blob_size = MEGABYTES(150);
+  hermes::api::Context ctx;
+  hermes::BlobId blob_id;
+
+  for (size_t i = 0; i < num_blobs; ++i) {
+    hermes::Blob blob(blob_size);
+    std::string name = std::to_string(i);
+    char nonce = i % 256;
+    memset(blob.data_mutable(), nonce, blob_size);
+    bkt->Put(name, std::move(blob), blob_id, ctx);
+  }
+
+  bkt->Destroy();
+}
+
+void TestBlobRename(hapi::Hermes *hermes) {
+  auto bkt = hermes->GetBucket("hello");
+  hapi::Blob blob(1024);
+  hermes::BlobId blob_id;
+  hapi::Context ctx;
+  bkt->Put("0", blob, blob_id, ctx);
+  bkt->RenameBlob(blob_id, "1", ctx);
+
+  {
+    hermes::BlobId blob_get_id;
+    bkt->GetBlobId("0", blob_get_id, ctx);
+    REQUIRE(blob_get_id.IsNull());
+  }
+
+  {
+    hermes::BlobId blob_get_id;
+    bkt->GetBlobId("1", blob_get_id, ctx);
+    REQUIRE(!blob_get_id.IsNull());
+    REQUIRE(blob_get_id == blob_id);
+  }
+}
+
+void TestBlobDestroy(hapi::Hermes *hermes) {
+  auto bkt = hermes->GetBucket("hello");
+  hapi::Blob blob(1024);
+  hermes::BlobId blob_id;
+  hapi::Context ctx;
+  bkt->Put("0", blob, blob_id, ctx);
+  bkt->DestroyBlob(blob_id, ctx);
+  {
+    hermes::BlobId blob_id_get;
+    bkt->GetBlobId("0", blob_id_get, ctx);
+    REQUIRE(blob_id_get.IsNull());
+  }
+}
+
 TEST_CASE("TestManyPuts") {
   TestManyPuts(HERMES);
 }
 
 TEST_CASE("TestBlobOverride") {
   TestBlobOverride(HERMES);
+}
+
+TEST_CASE("TestBucketRename") {
+  TestBucketRename(HERMES);
+}
+
+TEST_CASE("TestBucketDestroy") {
+  TestBucketDestroy(HERMES);
+}
+
+TEST_CASE("TestBlobRename") {
+  TestBlobRename(HERMES);
+}
+
+TEST_CASE("TestBlobDestroy") {
+  TestBlobDestroy(HERMES);
 }

@@ -7,13 +7,16 @@
 
 namespace hermes::api {
 
+///////////////////////////
+////// Bucket Operations
+//////////////////////////
+
 /**
  * Either initialize or fetch the bucket.
  * */
 Bucket::Bucket(std::string name, Context &ctx)
     : mdm_(&HERMES->mdm_), bpm_(&HERMES->bpm_) {
   lipc::string lname(name);
-  // TODO(llogan): rpcify
   id_ = mdm_->LocalGetOrCreateBucket(lname);
 }
 
@@ -22,24 +25,26 @@ Bucket::Bucket(std::string name, Context &ctx)
  * */
 void Bucket::Rename(std::string new_bkt_name) {
   lipc::string lname(new_bkt_name);
-  // TODO(llogan): rpcify
   mdm_->LocalRenameBucket(id_, lname);
 }
 
 /**
  * Destroys this bucket along with all its contents.
  * */
-void Bucket::Destroy(std::string blob_name) {
+void Bucket::Destroy() {
 }
+
+///////////////////////
+////// Blob Operations
+///////////////////////
 
 /**
  * Get the id of a blob from the blob name
  * */
 Status Bucket::GetBlobId(std::string blob_name,
                          BlobId &blob_id, Context &ctx) {
-  lipc::string blob_name_l(blob_name);
-  // TODO(llogan): rpcify
-  blob_id = mdm_->LocalGetBlobId(GetId(), blob_name_l);
+  lipc::string lblob_name(blob_name);
+  blob_id = mdm_->LocalGetBlobId(GetId(), lblob_name);
   return Status();
 }
 
@@ -68,11 +73,26 @@ Status Bucket::Put(std::string blob_name, Blob blob,
 
 /**
  * Get \a blob_id Blob from the bucket
- * :WRAP-param: ctx -> ctx_
  * */
 Status Bucket::Get(BlobId blob_id, Blob &blob, Context &ctx) {
   blob = mdm_->LocalBucketGetBlob(blob_id);
   return Status();
+}
+
+/**
+ * Rename \a blob_id blob to \a new_blob_name new name
+ * */
+void Bucket::RenameBlob(BlobId blob_id,
+                        std::string new_blob_name, Context &ctx) {
+  lipc::string lnew_blob_name(new_blob_name);
+  mdm_->LocalRenameBlob(id_, blob_id, lnew_blob_name);
+}
+
+/**
+ * Delete \a blob_id blob
+ * */
+void Bucket::DestroyBlob(BlobId blob_id, Context &ctx) {
+  mdm_->LocalDestroyBlob(id_, blob_id);
 }
 
 }  // namespace hermes::api

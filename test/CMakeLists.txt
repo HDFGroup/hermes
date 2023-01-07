@@ -13,7 +13,7 @@ include_directories(
 #------------------------------------------------------------------------------
 set(API_TESTS
         test_rpc
-        test_put_get
+        test_bucket
         test_vbucket)
 
 foreach(program ${API_TESTS})

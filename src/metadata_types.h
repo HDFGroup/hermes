@@ -201,6 +201,7 @@ struct BlobInfo : public SHM_CONTAINER(BlobInfo){
 template<>
 struct ShmHeader<BucketInfo> : public lipc::ShmBaseHeader {
   lipc::ShmArchive<lipc::string> name_ar_;
+  size_t num_blobs_;
 };
 
 /** Metadata for a Bucket */
