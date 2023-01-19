@@ -25,36 +25,40 @@ void GatherTimes(std::string test_name, Timer &t) {
 }
 
 void PutTest(hapi::Hermes *hermes,
-             int rank, int blobs_per_rank, size_t blob_size) {
+             int rank, int repeat, int blobs_per_rank, size_t blob_size) {
   Timer t;
   auto bkt = hermes->GetBucket("hello");
   hermes::api::Context ctx;
   hermes::BlobId blob_id;
   hermes::Blob blob(blob_size);
   t.Resume();
-  for (size_t i = 0; i < blobs_per_rank; ++i) {
-    size_t blob_name_int = rank * blobs_per_rank + i;
-    std::string name = std::to_string(blob_name_int);
-    bkt->Put(name, std::move(blob), blob_id, ctx);
+  for (int j = 0; j < repeat; ++j) {
+    for (size_t i = 0; i < blobs_per_rank; ++i) {
+      size_t blob_name_int = rank * blobs_per_rank + i;
+      std::string name = std::to_string(blob_name_int);
+      bkt->Put(name, std::move(blob), blob_id, ctx);
+    }
   }
   t.Pause();
   GatherTimes("Put", t);
 }
 
 void GetTest(hapi::Hermes *hermes,
-             int rank, int blobs_per_rank, size_t blob_size) {
+             int rank, int repeat, int blobs_per_rank, size_t blob_size) {
   Timer t;
   auto bkt = hermes->GetBucket("hello");
   hermes::api::Context ctx;
   hermes::BlobId blob_id;
   hermes::Blob blob(blob_size);
   t.Resume();
-  for (size_t i = 0; i < blobs_per_rank; ++i) {
-    size_t blob_name_int = rank * blobs_per_rank + i;
-    std::string name = std::to_string(blob_name_int);
-    hermes::Blob ret;
-    bkt->GetBlobId(name, blob_id, ctx);
-    bkt->Get(blob_id, ret, ctx);
+  for (int j = 0; j < repeat; ++j) {
+    for (size_t i = 0; i < blobs_per_rank; ++i) {
+      size_t blob_name_int = rank * blobs_per_rank + i;
+      std::string name = std::to_string(blob_name_int);
+      hermes::Blob ret;
+      bkt->GetBlobId(name, blob_id, ctx);
+      bkt->Get(blob_id, ret, ctx);
+    }
   }
   t.Pause();
   GatherTimes("Get", t);
@@ -66,9 +70,12 @@ int main(int argc, char **argv) {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   auto hermes = hapi::Hermes::Create(hermes::HermesType::kClient);
   int blobs_per_rank = 1024;
+
   size_t blob_size = KILOBYTES(64);
-  PutTest(hermes, rank, blobs_per_rank, blob_size);
-  GetTest(hermes, rank, blobs_per_rank, blob_size);
+  MPI_Barrier(MPI_COMM_WORLD);
+  PutTest(hermes, rank, 1, blobs_per_rank, blob_size);
+  MPI_Barrier(MPI_COMM_WORLD);
+  // GetTest(hermes, rank, 1, blobs_per_rank, blob_size);
   hermes->Finalize();
   MPI_Finalize();
 }

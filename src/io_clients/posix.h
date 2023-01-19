@@ -32,7 +32,11 @@ class PosixIoClient : public IoClient {
              size_t off, size_t size) override {
     auto api = HERMES_POSIX_API;
     int fd = api->open((*dev_info.mount_point_).c_str(), O_RDWR);
-    if (fd < 0) { return false; }
+    if (fd < 0) {
+      LOG(INFO) << "Failed to open (write): "
+                << dev_info.mount_point_->str() << std::endl;
+      return false;
+    }
     size_t count = api->pwrite(fd, data, size, off);
     api->close(fd);
     return count == size;
@@ -42,7 +46,11 @@ class PosixIoClient : public IoClient {
             size_t off, size_t size) override {
     auto api = HERMES_POSIX_API;
     int fd = api->open((*dev_info.mount_point_).c_str(), O_RDWR);
-    if (fd < 0) { return false; }
+    if (fd < 0) {
+      LOG(INFO) << "Failed to open (read): "
+                << dev_info.mount_point_->str() << std::endl;
+      return false;
+    }
     size_t count = api->pread(fd, data, size, off);
     api->close(fd);
     return count == size;

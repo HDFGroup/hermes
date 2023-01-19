@@ -34,6 +34,7 @@ void TestVBucketCreateDestroy(hapi::Hermes *hermes) {
   vbkt->Link(blob_id, ctx);
 }
 
+
 TEST_CASE("TestVBucketCreate") {
   TestVBucketCreateDestroy(HERMES);
 }

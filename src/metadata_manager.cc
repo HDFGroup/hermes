@@ -20,12 +20,12 @@ void MetadataManager::shm_init(ServerConfig *config,
   header_->id_alloc_ = 1;
 
   // Create the metadata maps
-  blob_id_map_ = lipc::make_mptr<BLOB_ID_MAP_T>();
-  bkt_id_map_ = lipc::make_mptr<BKT_ID_MAP_T>();
-  vbkt_id_map_ = lipc::make_mptr<VBKT_ID_MAP_T>();
-  blob_map_ = lipc::make_mptr<BLOB_MAP_T>();
-  bkt_map_ = lipc::make_mptr<BKT_MAP_T>();
-  vbkt_map_ = lipc::make_mptr<VBKT_MAP_T>();
+  blob_id_map_ = lipc::make_mptr<BLOB_ID_MAP_T>(16384);
+  bkt_id_map_ = lipc::make_mptr<BKT_ID_MAP_T>(16384);
+  vbkt_id_map_ = lipc::make_mptr<VBKT_ID_MAP_T>(16384);
+  blob_map_ = lipc::make_mptr<BLOB_MAP_T>(16384);
+  bkt_map_ = lipc::make_mptr<BKT_MAP_T>(16384);
+  vbkt_map_ = lipc::make_mptr<VBKT_MAP_T>(16384);
 
   // Create the DeviceInfo vector
   devices_ = lipc::make_mptr<lipc::vector<DeviceInfo>>(
