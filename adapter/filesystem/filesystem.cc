@@ -96,8 +96,8 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
 }
 
 HermesRequest* Filesystem::AWrite(File &f, AdapterStat &stat, const void *ptr,
-                       size_t off, size_t total_size, size_t req_id,
-                       IoStatus &io_status, IoOptions opts) {
+                                  size_t off, size_t total_size, size_t req_id,
+                                  IoStatus &io_status, IoOptions opts) {
   (void) io_status;
   LOG(INFO) << "Starting an asynchronous write" << std::endl;
   auto pool =
@@ -117,8 +117,8 @@ HermesRequest* Filesystem::AWrite(File &f, AdapterStat &stat, const void *ptr,
 }
 
 HermesRequest* Filesystem::ARead(File &f, AdapterStat &stat, void *ptr,
-                      size_t off, size_t total_size, size_t req_id,
-                      IoStatus &io_status, IoOptions opts) {
+                                 size_t off, size_t total_size, size_t req_id,
+                                 IoStatus &io_status, IoOptions opts) {
   (void) io_status;
   auto pool =
       Singleton<ThreadPool>::GetInstance(kNumThreads);

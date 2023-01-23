@@ -35,8 +35,8 @@ extern "C" {
  */
 int HERMES_DECL(open)(const char *path, int flags, ...) {
   int mode = 0;
-  auto real_api = Singleton<PosixApi>::GetInstance();
-  auto fs_api = Singleton<PosixFS>::GetInstance();
+  auto real_api = HERMES_POSIX_API;
+  auto fs_api = HERMES_POSIX_FS;
   if (flags & O_CREAT || flags & O_TMPFILE) {
     va_list arg;
     va_start(arg, flags);
@@ -59,8 +59,8 @@ int HERMES_DECL(open)(const char *path, int flags, ...) {
 
 int HERMES_DECL(open64)(const char *path, int flags, ...) {
   int mode = 0;
-  auto real_api = Singleton<PosixApi>::GetInstance();
-  auto fs_api = Singleton<PosixFS>::GetInstance();
+  auto real_api = HERMES_POSIX_API;
+  auto fs_api = HERMES_POSIX_FS;
   if (flags & O_CREAT) {
     va_list arg;
     va_start(arg, flags);
@@ -82,8 +82,8 @@ int HERMES_DECL(open64)(const char *path, int flags, ...) {
 }
 
 int HERMES_DECL(__open_2)(const char *path, int oflag) {
-  auto real_api = Singleton<PosixApi>::GetInstance();
-  auto fs_api = Singleton<PosixFS>::GetInstance();
+  auto real_api = HERMES_POSIX_API;
+  auto fs_api = HERMES_POSIX_FS;
   if (hermes::adapter::IsTracked(path)) {
     LOG(INFO) << "Intercept __open_2 for filename: " << path
               << " and mode: " << oflag << " is tracked." << std::endl;
@@ -97,8 +97,8 @@ int HERMES_DECL(__open_2)(const char *path, int oflag) {
 
 int HERMES_DECL(creat)(const char *path, mode_t mode) {
   std::string path_str(path);
-  auto real_api = Singleton<PosixApi>::GetInstance();
-  auto fs_api = Singleton<PosixFS>::GetInstance();
+  auto real_api = HERMES_POSIX_API;
+  auto fs_api = HERMES_POSIX_FS;
   if (hermes::adapter::IsTracked(path)) {
     LOG(INFO) << "Intercept creat for filename: " << path
               << " and mode: " << mode << " is tracked." << std::endl;
@@ -112,8 +112,8 @@ int HERMES_DECL(creat)(const char *path, mode_t mode) {
 
 int HERMES_DECL(creat64)(const char *path, mode_t mode) {
   std::string path_str(path);
-  auto real_api = Singleton<PosixApi>::GetInstance();
-  auto fs_api = Singleton<PosixFS>::GetInstance();
+  auto real_api = HERMES_POSIX_API;
+  auto fs_api = HERMES_POSIX_FS;
   if (hermes::adapter::IsTracked(path)) {
     LOG(INFO) << "Intercept creat64 for filename: " << path
               << " and mode: " << mode << " is tracked." << std::endl;
@@ -127,8 +127,8 @@ int HERMES_DECL(creat64)(const char *path, mode_t mode) {
 
 ssize_t HERMES_DECL(read)(int fd, void *buf, size_t count) {
   bool stat_exists;
-  auto real_api = Singleton<PosixApi>::GetInstance();
-  auto fs_api = Singleton<PosixFS>::GetInstance();
+  auto real_api = HERMES_POSIX_API;
+  auto fs_api = HERMES_POSIX_FS;
   if (hermes::adapter::IsTracked(fd)) {
     LOG(INFO) << "Intercept read." << std::endl;
     File f; f.fd_ = fd; fs_api->_InitFile(f); IoStatus io_status;
@@ -140,8 +140,8 @@ ssize_t HERMES_DECL(read)(int fd, void *buf, size_t count) {
 
 ssize_t HERMES_DECL(write)(int fd, const void *buf, size_t count) {
   bool stat_exists;
-  auto real_api = Singleton<PosixApi>::GetInstance();
-  auto fs_api = Singleton<PosixFS>::GetInstance();
+  auto real_api = HERMES_POSIX_API;
+  auto fs_api = HERMES_POSIX_FS;
   if (hermes::adapter::IsTracked(fd)) {
     LOG(INFO) << "Intercept write." << std::endl;
     File f; f.fd_ = fd; fs_api->_InitFile(f); IoStatus io_status;
@@ -153,8 +153,8 @@ ssize_t HERMES_DECL(write)(int fd, const void *buf, size_t count) {
 
 ssize_t HERMES_DECL(pread)(int fd, void *buf, size_t count, off_t offset) {
   bool stat_exists;
-  auto real_api = Singleton<PosixApi>::GetInstance();
-  auto fs_api = Singleton<PosixFS>::GetInstance();
+  auto real_api = HERMES_POSIX_API;
+  auto fs_api = HERMES_POSIX_FS;
   if (hermes::adapter::IsTracked(fd)) {
     LOG(INFO) << "Intercept pread." << std::endl;
     File f; f.fd_ = fd; fs_api->_InitFile(f); IoStatus io_status;
@@ -167,8 +167,8 @@ ssize_t HERMES_DECL(pread)(int fd, void *buf, size_t count, off_t offset) {
 ssize_t HERMES_DECL(pwrite)(int fd, const void *buf, size_t count,
                             off_t offset) {
   bool stat_exists;
-  auto real_api = Singleton<PosixApi>::GetInstance();
-  auto fs_api = Singleton<PosixFS>::GetInstance();
+  auto real_api = HERMES_POSIX_API;
+  auto fs_api = HERMES_POSIX_FS;
   if (hermes::adapter::IsTracked(fd)) {
     File f; f.fd_ = fd; fs_api->_InitFile(f); IoStatus io_status;
     LOG(INFO) << "Intercept pwrite." << std::endl;
@@ -180,8 +180,8 @@ ssize_t HERMES_DECL(pwrite)(int fd, const void *buf, size_t count,
 
 ssize_t HERMES_DECL(pread64)(int fd, void *buf, size_t count, off64_t offset) {
   bool stat_exists;
-  auto real_api = Singleton<PosixApi>::GetInstance();
-  auto fs_api = Singleton<PosixFS>::GetInstance();
+  auto real_api = HERMES_POSIX_API;
+  auto fs_api = HERMES_POSIX_FS;
   if (hermes::adapter::IsTracked(fd)) {
     File f; f.fd_ = fd; fs_api->_InitFile(f); IoStatus io_status;
     LOG(INFO) << "Intercept pread64." << std::endl;
@@ -194,8 +194,8 @@ ssize_t HERMES_DECL(pread64)(int fd, void *buf, size_t count, off64_t offset) {
 ssize_t HERMES_DECL(pwrite64)(int fd, const void *buf, size_t count,
                               off64_t offset) {
   bool stat_exists;
-  auto real_api = Singleton<PosixApi>::GetInstance();
-  auto fs_api = Singleton<PosixFS>::GetInstance();
+  auto real_api = HERMES_POSIX_API;
+  auto fs_api = HERMES_POSIX_FS;
   if (hermes::adapter::IsTracked(fd)) {
     File f; f.fd_ = fd; fs_api->_InitFile(f); IoStatus io_status;
     LOG(INFO) << "Intercept pwrite." << std::endl;
@@ -207,8 +207,8 @@ ssize_t HERMES_DECL(pwrite64)(int fd, const void *buf, size_t count,
 
 off_t HERMES_DECL(lseek)(int fd, off_t offset, int whence) {
   bool stat_exists;
-  auto real_api = Singleton<PosixApi>::GetInstance();
-  auto fs_api = Singleton<PosixFS>::GetInstance();
+  auto real_api = HERMES_POSIX_API;
+  auto fs_api = HERMES_POSIX_FS;
   if (hermes::adapter::IsTracked(fd)) {
     File f; f.fd_ = fd; fs_api->_InitFile(f);
     LOG(INFO) << "Intercept lseek offset:" << offset << " whence:" << whence
@@ -221,8 +221,8 @@ off_t HERMES_DECL(lseek)(int fd, off_t offset, int whence) {
 
 off64_t HERMES_DECL(lseek64)(int fd, off64_t offset, int whence) {
   bool stat_exists;
-  auto real_api = Singleton<PosixApi>::GetInstance();
-  auto fs_api = Singleton<PosixFS>::GetInstance();
+  auto real_api = HERMES_POSIX_API;
+  auto fs_api = HERMES_POSIX_FS;
   if (hermes::adapter::IsTracked(fd)) {
     File f; f.fd_ = fd; fs_api->_InitFile(f);
     LOG(INFO) << "Intercept lseek64 offset:" << offset << " whence:" << whence
@@ -235,8 +235,8 @@ off64_t HERMES_DECL(lseek64)(int fd, off64_t offset, int whence) {
 
 int HERMES_DECL(__fxstat)(int __ver, int fd, struct stat *buf) {
   int result = 0;
-  auto real_api = Singleton<PosixApi>::GetInstance();
-  auto fs_api = Singleton<PosixFS>::GetInstance();
+  auto real_api = HERMES_POSIX_API;
+  auto fs_api = HERMES_POSIX_FS;
   if (hermes::adapter::IsTracked(fd)) {
     File f; f.fd_ = fd; fs_api->_InitFile(f);
     LOG(INFO) << "Intercepted fstat." << std::endl;
@@ -273,8 +273,8 @@ int HERMES_DECL(__fxstat)(int __ver, int fd, struct stat *buf) {
 
 int HERMES_DECL(fsync)(int fd) {
   bool stat_exists;
-  auto real_api = Singleton<PosixApi>::GetInstance();
-  auto fs_api = Singleton<PosixFS>::GetInstance();
+  auto real_api = HERMES_POSIX_API;
+  auto fs_api = HERMES_POSIX_FS;
   if (hermes::adapter::IsTracked(fd)) {
     File f; f.fd_ = fd; fs_api->_InitFile(f);
     LOG(INFO) << "Intercept fsync." << std::endl;
@@ -285,8 +285,8 @@ int HERMES_DECL(fsync)(int fd) {
 
 int HERMES_DECL(close)(int fd) {
   bool stat_exists;
-  auto real_api = Singleton<PosixApi>::GetInstance();
-  auto fs_api = Singleton<PosixFS>::GetInstance();
+  auto real_api = HERMES_POSIX_API;
+  auto fs_api = HERMES_POSIX_FS;
   if (hermes::adapter::IsTracked(fd)) {
     LOG(INFO) << "Intercept close(" << std::to_string(fd) << ")";
     DLOG(INFO) << " -> " << hermes::adapter::GetFilenameFromFD(fd);

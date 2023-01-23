@@ -1,0 +1,46 @@
+# Test configuration
+
+num_devices: 4
+num_targets: 4
+
+#2 is used for RAM because some space is taken by the Arena.
+capacities_mb: [2, 1, 1, 1]
+block_sizes_kb: [4, 4, 4, 4]
+num_slabs: [4, 4, 4, 4]
+
+slab_unit_sizes: [
+  [1, 4, 16, 32],
+  [1, 4, 16, 32],
+  [1, 4, 16, 32],
+  [1, 4, 16, 32],
+]
+
+desired_slab_percentages: [
+  [0.25, 0.25, 0.25, 0.25],
+  [0.25, 0.25, 0.25, 0.25],
+  [0.25, 0.25, 0.25, 0.25],
+  [0.25, 0.25, 0.25, 0.25],
+]
+
+bandwidths_mbps: [6000, 300, 150, 70]
+latencies_us: [15, 250000, 500000, 1000000]
+
+buffer_pool_arena_percentage: 0.85
+metadata_arena_percentage: 0.08
+transient_arena_percentage: 0.07
+
+max_buckets_per_node: 16
+max_vbuckets_per_node: 8
+system_view_state_update_interval_ms: 1000
+
+mount_points: ["", "./", "./", "./"]
+swap_mount: "./"
+num_buffer_organizer_retries: 3
+rpc_server_base_name: "localhost"
+rpc_protocol: "ofi+sockets"
+rpc_port: 8080
+buffer_organizer_port: 8081
+rpc_host_number_range: []
+rpc_num_threads: 1
+buffer_organizer_num_threads: 4
+buffer_pool_shmem_name: "/hermes_buffer_pool_"
