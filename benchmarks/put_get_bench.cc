@@ -75,7 +75,7 @@ int main(int argc, char **argv) {
   MPI_Barrier(MPI_COMM_WORLD);
   PutTest(hermes, rank, 1, blobs_per_rank, blob_size);
   MPI_Barrier(MPI_COMM_WORLD);
-  // GetTest(hermes, rank, 1, blobs_per_rank, blob_size);
+  GetTest(hermes, rank, 1, blobs_per_rank, blob_size);
   hermes->Finalize();
   MPI_Finalize();
 }

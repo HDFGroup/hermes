@@ -30,8 +30,6 @@ int main(int argc, char* argv[]) {
       hermes::HermesType::kServer,
       hermes_config);
 
-  hermes->mdm_.PrintDeviceInfo();
-
   hermes->RunDaemon();
   hermes->Finalize();
   MPI_Finalize();

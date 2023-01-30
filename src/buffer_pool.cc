@@ -57,7 +57,7 @@ BufferPool::LocalAllocateAndSetBuffers(PlacementSchema &schema,
     lipc::ShmRef<BufferPoolAllocator> alloc =
         (*target_allocs_)[plcmnt.tid_.GetDeviceId()];
     BufferInfo info;
-    info.t_off_ = alloc->cur_off_;
+    info.t_off_ = alloc->cur_off_.load();
     alloc->cur_off_ += plcmnt.size_;  // NOTE(llogan): allocate emulation
     info.t_size_ = plcmnt.size_;
     info.blob_off_ = blob_off_;

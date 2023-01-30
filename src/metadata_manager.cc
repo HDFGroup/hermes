@@ -30,7 +30,8 @@ void MetadataManager::shm_init(ServerConfig *config,
   // Create the DeviceInfo vector
   devices_ = lipc::make_mptr<lipc::vector<DeviceInfo>>(
       HERMES->main_alloc_, config->devices_);
-  targets_ = lipc::make_mptr<lipc::vector<TargetInfo>>();
+  targets_ = lipc::make_mptr<lipc::vector<TargetInfo>>(
+      HERMES->main_alloc_);
 
   // Create the TargetInfo vector
   targets_->reserve(devices_->size());
@@ -93,7 +94,6 @@ void MetadataManager::shm_deserialize(MetadataManagerShmHeader *header) {
   vbkt_map_ << header_->vbkt_map_ar_;
   targets_ << header_->targets_;
   devices_ << header_->devices_;
-  PrintDeviceInfo();
 }
 
 /**
@@ -216,7 +216,6 @@ BlobId MetadataManager::LocalBucketPutBlob(BucketId bkt_id,
     (*blob_info.name_) = std::move(internal_blob_name);
     (*blob_info.buffers_) = std::move(buffers);
     blob_map_->emplace(blob_id, std::move(blob_info));
-    std::cout << "HERE" << std::endl;
   } else {
     blob_id = *(*blob_id_map_)[internal_blob_name];
     auto iter = blob_map_->find(blob_id);

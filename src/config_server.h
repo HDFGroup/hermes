@@ -113,6 +113,7 @@ struct DeviceInfo : public lipc::ShmContainer {
     (*slab_sizes_) = std::move(*other.slab_sizes_);
     (*mount_dir_) = std::move(*other.mount_dir_);
     (*mount_point_) = std::move(*other.mount_point_);
+    shm_serialize_main();
   }
 
   /** Copy another object into this object */
@@ -126,6 +127,7 @@ struct DeviceInfo : public lipc::ShmContainer {
     (*slab_sizes_) = (*other.slab_sizes_);
     (*mount_dir_) = (*other.mount_dir_);
     (*mount_point_) = (*other.mount_point_);
+    shm_serialize_main();
   }
 };
 

@@ -14,8 +14,19 @@ class MetadataManager;
 class BufferOrganizer;
 
 struct BufferPoolAllocator {
-  std::atomic<size_t> max_size_;
-  std::atomic<size_t> cur_off_;
+  lipc::atomic<size_t> max_size_;
+  lipc::atomic<size_t> cur_off_;
+
+  /** Default constructor */
+  BufferPoolAllocator() = default;
+
+  /** Copy Constructor */
+  BufferPoolAllocator(const BufferPoolAllocator &other)
+  : max_size_(other.max_size_.load()), cur_off_(other.cur_off_.load()) {}
+
+  /** Move Constructor */
+  BufferPoolAllocator(BufferPoolAllocator &&other)
+  : max_size_(other.max_size_.load()), cur_off_(other.cur_off_.load()) {}
 };
 
 /**
