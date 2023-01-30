@@ -244,6 +244,7 @@ struct BucketInfo : public lipc::ShmContainer {
     name_ << header_->name_ar_;
   }
 
+  /** Move other object into this one */
   void shm_weak_move_main(ShmHeader<BucketInfo> *header,
                           lipc::Allocator *alloc,
                           BucketInfo &other) {
@@ -254,6 +255,7 @@ struct BucketInfo : public lipc::ShmContainer {
     shm_serialize_main();
   }
 
+  /** Copy other object into this one */
   void shm_strong_copy_main(ShmHeader<BucketInfo> *header,
                             lipc::Allocator *alloc,
                             const BucketInfo &other) {
@@ -282,8 +284,10 @@ struct VBucketInfo : public lipc::ShmContainer {
   lipc::mptr<lipc::unordered_map<BlobId, BlobId>> blobs_;
 
  public:
+  /** Default constructor. */
   VBucketInfo() = default;
 
+  /** Default SHM Constructor */
   void shm_init_main(ShmHeader<VBucketInfo> *header,
                      lipc::Allocator *alloc) {
     shm_init_allocator(alloc);
@@ -292,21 +296,25 @@ struct VBucketInfo : public lipc::ShmContainer {
     blobs_ = lipc::make_mptr<lipc::unordered_map<BlobId, BlobId>>(alloc_);
   }
 
-  void shm_destroy_main(bool destroy_header = true) {
+  /** Free shared memory */
+  void shm_destroy_main() {
     name_.shm_destroy();
     blobs_.shm_destroy();
   }
 
+  /** Serialize into SHM */
   void shm_serialize_main() const {
     name_ >> header_->name_;
     blobs_ >> header_->blobs_;
   }
 
+  /** Deserialize from SHM */
   void shm_deserialize_main() {
     name_ << header_->name_;
     blobs_ << header_->blobs_;
   }
 
+  /** Move other object into this one */
   void shm_weak_move_main(ShmHeader<VBucketInfo> *header,
                           lipc::Allocator *alloc,
                           VBucketInfo &other) {
@@ -318,6 +326,7 @@ struct VBucketInfo : public lipc::ShmContainer {
     shm_serialize_main();
   }
 
+  /** Copy other object into this one */
   void shm_strong_copy_main(ShmHeader<VBucketInfo> *header,
                             lipc::Allocator *alloc,
                             const VBucketInfo &other) {

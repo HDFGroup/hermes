@@ -19,8 +19,9 @@ class PosixIoClient : public IoClient {
  public:
   bool Init(DeviceInfo &dev_info) override {
     auto api = HERMES_POSIX_API;
-    (*dev_info.mount_point_) = (*dev_info.mount_dir_) +
-                            "/" + "slab_" + (*dev_info.dev_name_);
+    lipc::string text = (*dev_info.mount_dir_) +
+                        "/" + "slab_" + (*dev_info.dev_name_);
+    (*dev_info.mount_point_) = std::move(text);
     int fd = api->open((*dev_info.mount_point_).c_str(),
                        O_TRUNC | O_CREAT, 0666);
     if (fd < 0) { return false; }

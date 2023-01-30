@@ -29,6 +29,9 @@ int main(int argc, char* argv[]) {
   auto hermes = hapi::Hermes::Create(
       hermes::HermesType::kServer,
       hermes_config);
+
+  hermes->mdm_.PrintDeviceInfo();
+
   hermes->RunDaemon();
   hermes->Finalize();
   MPI_Finalize();

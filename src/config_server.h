@@ -63,6 +63,10 @@ struct DeviceInfo : public lipc::ShmContainer {
   /** The file to create on the device */
   lipc::mptr<lipc::string> mount_point_;
 
+  /** Default Constructor */
+  DeviceInfo() = default;
+
+  /** Default SHM Constructor */
   void shm_init_main(ShmHeader<DeviceInfo> *header,
                      lipc::Allocator *alloc) {
     shm_init_allocator(alloc);
@@ -74,6 +78,7 @@ struct DeviceInfo : public lipc::ShmContainer {
     shm_serialize_main();
   }
 
+  /** Free shared memory */
   void shm_destroy_main() {
     dev_name_.shm_destroy();
     slab_sizes_.shm_destroy();
@@ -81,6 +86,7 @@ struct DeviceInfo : public lipc::ShmContainer {
     mount_point_.shm_destroy();
   }
 
+  /** Serialize into SHM */
   void shm_serialize_main() const {
     dev_name_ >> header_->dev_name_;
     slab_sizes_ >> header_->slab_sizes_;
@@ -88,6 +94,7 @@ struct DeviceInfo : public lipc::ShmContainer {
     mount_point_ >> header_->mount_point_;
   }
 
+  /** Deserialize from SHM */
   void shm_deserialize_main() {
     dev_name_ << header_->dev_name_;
     slab_sizes_ << header_->slab_sizes_;
@@ -95,6 +102,7 @@ struct DeviceInfo : public lipc::ShmContainer {
     mount_point_ << header_->mount_point_;
   }
 
+  /** Move another object into this object. */
   void shm_weak_move_main(ShmHeader<DeviceInfo> *header,
                           lipc::Allocator *alloc,
                           DeviceInfo &other) {
@@ -107,6 +115,7 @@ struct DeviceInfo : public lipc::ShmContainer {
     (*mount_point_) = std::move(*other.mount_point_);
   }
 
+  /** Copy another object into this object */
   void shm_strong_copy_main(ShmHeader<DeviceInfo> *header,
                             lipc::Allocator *alloc,
                             const DeviceInfo &other) {

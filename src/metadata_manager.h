@@ -310,9 +310,29 @@ class MetadataManager {
     return {};
   }
 
- public:
-  RPC_AUTOGEN_START
-  RPC_AUTOGEN_END
+  // TODO(llogan): remove
+  void PrintDeviceInfo() {
+    for (lipc::ShmRef<TargetInfo> target : (*targets_)) {
+      lipc::Pointer p;
+      lipc::ShmRef<DeviceInfo> dev_info =
+          (*devices_)[target->id_.GetDeviceId()];
+
+      std::cout << dev_info->dev_name_->str() << std::endl;
+
+      *devices_ >> p;
+      std::cout << "devices_->header_ = " << p.off_.load() << std::endl;
+
+      *dev_info >> p;
+      std::cout << "dev_info->header_ = " << p.off_.load() << std::endl;
+
+      dev_info->mount_point_ >> p;
+      std::cout << "mount_point_->header_ = " << p.off_.load() << std::endl;
+
+      p = dev_info->mount_point_->header_->text_;
+      std::cout << "mount_point_->header_->text_ = " << p.off_.load()
+                << std::endl;
+    }
+  }
 };
 
 }  // namespace hermes

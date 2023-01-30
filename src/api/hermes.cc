@@ -74,6 +74,7 @@ void Hermes::InitClient(std::string server_config_path,
   mdm_.shm_deserialize(&header_->mdm_);
   bpm_.shm_deserialize(&header_->bpm_);
   borg_.shm_deserialize();
+  mdm_.PrintDeviceInfo();
 }
 
 void Hermes::InitColocated(std::string server_config_path,
@@ -125,7 +126,6 @@ void Hermes::LoadSharedMemory() {
 }
 
 void Hermes::FinalizeServer() {
-  // TODO(llogan): Fix the shared memory segfault
   // NOTE(llogan): rpc_.Finalize() is called internally by daemon in this case
   bpm_.shm_destroy();
   mdm_.shm_destroy();

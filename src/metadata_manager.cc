@@ -29,7 +29,7 @@ void MetadataManager::shm_init(ServerConfig *config,
 
   // Create the DeviceInfo vector
   devices_ = lipc::make_mptr<lipc::vector<DeviceInfo>>(
-      HERMES->main_alloc_, HERMES->server_config_.devices_);
+      HERMES->main_alloc_, config->devices_);
   targets_ = lipc::make_mptr<lipc::vector<TargetInfo>>();
 
   // Create the TargetInfo vector
@@ -93,6 +93,7 @@ void MetadataManager::shm_deserialize(MetadataManagerShmHeader *header) {
   vbkt_map_ << header_->vbkt_map_ar_;
   targets_ << header_->targets_;
   devices_ << header_->devices_;
+  PrintDeviceInfo();
 }
 
 /**
