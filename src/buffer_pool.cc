@@ -45,7 +45,8 @@ void BufferPool::shm_deserialize(BufferPoolShmHeader *header) {
  * TODO(llogan): use better allocator policy
  * */
 lipc::vector<BufferInfo>
-BufferPool::LocalAllocateAndSetBuffers(PlacementSchema &schema, Blob &blob) {
+BufferPool::LocalAllocateAndSetBuffers(PlacementSchema &schema,
+                                       const Blob &blob) {
   lipc::vector<BufferInfo> buffers(HERMES->main_alloc_);
   size_t blob_off_ = 0;
   for (auto plcmnt : schema.plcmnts_) {
@@ -53,7 +54,7 @@ BufferPool::LocalAllocateAndSetBuffers(PlacementSchema &schema, Blob &blob) {
       blob_off_ += plcmnt.size_;
       continue;
     }
-    lipc::Ref<BufferPoolAllocator> alloc =
+    lipc::ShmRef<BufferPoolAllocator> alloc =
         (*target_allocs_)[plcmnt.tid_.GetDeviceId()];
     BufferInfo info;
     info.t_off_ = alloc->cur_off_;

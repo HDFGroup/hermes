@@ -23,7 +23,7 @@ namespace hermes::config {
 void ServerConfig::ParseDeviceInfo(YAML::Node yaml_conf) {
   devices_.clear();
   for (auto device : yaml_conf) {
-    DeviceInfo dev(SHM_ALLOCATOR_NULL);
+    DeviceInfo dev(lipc::typed_nullptr<lipc::Allocator>());
     auto dev_info = device.second;
     (*dev.dev_name_) = lipc::string(
         device.first.as<std::string>());

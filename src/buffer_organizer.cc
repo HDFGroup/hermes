@@ -11,7 +11,7 @@ namespace hermes {
 
 static size_t SumBufferBlobSizes(lipc::vector<BufferInfo> &buffers) {
   size_t sum = 0;
-  for (lipc::Ref<BufferInfo> buffer_ref : buffers) {
+  for (lipc::ShmRef<BufferInfo> buffer_ref : buffers) {
     sum += (*buffer_ref).blob_size_;
   }
   return sum;
@@ -23,8 +23,8 @@ static size_t SumBufferBlobSizes(lipc::vector<BufferInfo> &buffers) {
  * */
 void BufferOrganizer::shm_init() {
   mdm_ = &HERMES->mdm_;
-  for (lipc::Ref<TargetInfo> target : (*mdm_->targets_)) {
-    lipc::Ref<DeviceInfo> dev_info =
+  for (lipc::ShmRef<TargetInfo> target : (*mdm_->targets_)) {
+    lipc::ShmRef<DeviceInfo> dev_info =
         (*mdm_->devices_)[target->id_.GetDeviceId()];
     if (dev_info->mount_dir_->size() == 0) {
       dev_info->header_->io_api_ = IoInterface::kRam;
@@ -50,13 +50,13 @@ void BufferOrganizer::shm_deserialize()  {
 
 /** Stores a blob into a set of buffers */
 RPC void BufferOrganizer::LocalPlaceBlobInBuffers(
-    Blob &blob, lipc::vector<BufferInfo> &buffers) {
+    const Blob &blob, lipc::vector<BufferInfo> &buffers) {
   size_t blob_off = 0;
-  for (lipc::Ref<BufferInfo> buffer_info : buffers) {
+  for (lipc::ShmRef<BufferInfo> buffer_info : buffers) {
     if (buffer_info->tid_.GetNodeId() != mdm_->rpc_->node_id_) {
       continue;
     }
-    lipc::Ref<DeviceInfo> dev_info =
+    lipc::ShmRef<DeviceInfo> dev_info =
         (*mdm_->devices_)[buffer_info->tid_.GetDeviceId()];
     auto io_client = IoClientFactory::Get(dev_info->header_->io_api_);
     bool ret = io_client->Write(*dev_info, blob.data() + blob_off,
@@ -74,11 +74,11 @@ RPC Blob BufferOrganizer::LocalReadBlobFromBuffers(
     lipc::vector<BufferInfo> &buffers) {
   Blob blob(SumBufferBlobSizes(buffers));
   size_t blob_off = 0;
-  for (lipc::Ref<BufferInfo> buffer_info : buffers) {
+  for (lipc::ShmRef<BufferInfo> buffer_info : buffers) {
     if (buffer_info->tid_.GetNodeId() != mdm_->rpc_->node_id_) {
       continue;
     }
-    lipc::Ref<DeviceInfo> dev_info =
+    lipc::ShmRef<DeviceInfo> dev_info =
         (*mdm_->devices_)[buffer_info->tid_.GetDeviceId()];
     auto io_client = IoClientFactory::Get(dev_info->header_->io_api_);
     bool ret = io_client->Read(*dev_info, blob.data_mutable() + blob_off,

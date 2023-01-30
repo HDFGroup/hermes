@@ -37,7 +37,7 @@ class BufferOrganizer {
   void shm_deserialize();
 
   /** Stores a blob into a set of buffers */
-  RPC void LocalPlaceBlobInBuffers(Blob &blob,
+  RPC void LocalPlaceBlobInBuffers(const Blob &blob,
                                    lipc::vector<BufferInfo> &buffers);
 
   /** Stores a blob into a set of buffers */

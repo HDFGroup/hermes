@@ -22,7 +22,7 @@ struct BufferPoolAllocator {
  * The shared-memory representation of the BufferPool
  * */
 struct BufferPoolShmHeader {
-  lipc::ShmArchive<lipc::vector<BufferPoolAllocator>> alloc_ar_;
+  lipc::TypedPointer<lipc::vector<BufferPoolAllocator>> alloc_ar_;
 };
 
 /**
@@ -57,7 +57,7 @@ class BufferPool {
    * Allocate buffers from the targets according to the schema
    * */
   RPC lipc::vector<BufferInfo>
-  LocalAllocateAndSetBuffers(PlacementSchema &schema, Blob &blob);
+  LocalAllocateAndSetBuffers(PlacementSchema &schema, const Blob &blob);
 
   /**
    * Free buffers from the BufferPool

@@ -19,9 +19,10 @@ project(HERMES)
 #------------------------------------------------------------------------------
 message(${CMAKE_BUILD_TYPE})
 if (CMAKE_BUILD_TYPE STREQUAL "Release")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O1")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
   message("This IS a release build")
 else()
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0")
   message("This is NOT a release build")
 endif()
 

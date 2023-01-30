@@ -84,7 +84,7 @@ class Bucket {
   /**
    * Put \a blob_id Blob into the bucket
    * */
-  Status Put(std::string blob_name, Blob blob,
+  Status Put(std::string blob_name, const Blob &blob,
              BlobId &blob_id, Context &ctx);
 
   /**

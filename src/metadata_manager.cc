@@ -117,7 +117,8 @@ BucketId MetadataManager::LocalGetOrCreateBucket(lipc::charbuf &bkt_name) {
     if (iter == bkt_id_map_->end()) {
       return BucketId::GetNull();
     }
-    bkt_id = *(*iter).val_;
+    lipc::ShmRef<lipc::pair<lipc::charbuf, BucketId>> info = (*iter);
+    bkt_id = *info->second_;
   }
 
   return bkt_id;
@@ -134,7 +135,8 @@ BucketId MetadataManager::LocalGetBucketId(lipc::charbuf &bkt_name) {
   if (iter == bkt_id_map_->end()) {
     return BucketId::GetNull();
   }
-  BucketId bkt_id = *(*iter).val_;
+  lipc::ShmRef<lipc::pair<lipc::charbuf, BucketId>> info = (*iter);
+  BucketId bkt_id = *info->second_;
   return bkt_id;
 }
 
@@ -151,7 +153,8 @@ bool MetadataManager::LocalBucketContainsBlob(BucketId bkt_id, BlobId blob_id) {
     return false;
   }
   // Get the blob info
-  BlobInfo &blob_info = *(*iter).val_;
+  lipc::ShmRef<lipc::pair<BlobId, BlobInfo>> info = (*iter);
+  BlobInfo &blob_info = *info->second_;
   return blob_info.bkt_id_ == bkt_id;
 }
 
@@ -167,8 +170,8 @@ bool MetadataManager::LocalRenameBucket(BucketId bkt_id,
   if (iter == bkt_map_->end()) {
     return true;
   }
-  lipc::Ref<BucketInfo> bkt_info = (*iter).val_;
-  lipc::string &old_bkt_name = *bkt_info->name_;
+  lipc::ShmRef<lipc::pair<BucketId, BucketInfo>> info = (*iter);
+  lipc::string &old_bkt_name = *info->second_->name_;
   bkt_id_map_->emplace(new_bkt_name, bkt_id);
   bkt_id_map_->erase(old_bkt_name);
   return true;
@@ -198,7 +201,7 @@ bool MetadataManager::LocalDestroyBucket(BucketId bkt_id) {
  * */
 BlobId MetadataManager::LocalBucketPutBlob(BucketId bkt_id,
                                            const lipc::charbuf &blob_name,
-                                           Blob &data,
+                                           const Blob &data,
                                            lipc::vector<BufferInfo> &buffers) {
   lipc::charbuf internal_blob_name = CreateBlobName(bkt_id, blob_name);
 
@@ -212,11 +215,13 @@ BlobId MetadataManager::LocalBucketPutBlob(BucketId bkt_id,
     (*blob_info.name_) = std::move(internal_blob_name);
     (*blob_info.buffers_) = std::move(buffers);
     blob_map_->emplace(blob_id, std::move(blob_info));
+    std::cout << "HERE" << std::endl;
   } else {
     blob_id = *(*blob_id_map_)[internal_blob_name];
     auto iter = blob_map_->find(blob_id);
-    lipc::Ref<BlobInfo> blob_info = (*iter).val_;
-    (*blob_info->buffers_) = std::move(buffers);
+    lipc::ShmRef<lipc::pair<BlobId, BlobInfo>> info = (*iter);
+    BlobInfo &blob_info = *info->second_;
+    (*blob_info.buffers_) = std::move(buffers);
   }
 
   return blob_id;
@@ -230,8 +235,9 @@ BlobId MetadataManager::LocalBucketPutBlob(BucketId bkt_id,
  * */
 Blob MetadataManager::LocalBucketGetBlob(BlobId blob_id) {
   auto iter = blob_map_->find(blob_id);
-  lipc::Ref<BlobInfo> blob_info = (*iter).val_;
-  lipc::vector<BufferInfo> &buffers = (*blob_info->buffers_);
+  lipc::ShmRef<lipc::pair<BlobId, BlobInfo>> info = (*iter);
+  BlobInfo &blob_info = *info->second_;
+  lipc::vector<BufferInfo> &buffers = *blob_info.buffers_;
   return borg_->LocalReadBlobFromBuffers(buffers);
 }
 
@@ -248,7 +254,8 @@ BlobId MetadataManager::LocalGetBlobId(BucketId bkt_id,
   if (iter == blob_id_map_->end()) {
     return BlobId::GetNull();
   }
-  return *(*iter).val_;
+  lipc::ShmRef<lipc::pair<lipc::charbuf, BlobId>> info = *iter;
+  return *info->second_;
 }
 
 /**
@@ -262,8 +269,9 @@ lipc::vector<BufferInfo> MetadataManager::LocalGetBlobBuffers(BlobId blob_id) {
   if (iter == blob_map_->end()) {
     return lipc::vector<BufferInfo>();
   }
-  lipc::Ref<BlobInfo> blob_info = (*iter).val_;
-  return (*blob_info->buffers_);
+  lipc::ShmRef<lipc::pair<BlobId, BlobInfo>> info = (*iter);
+  BlobInfo &blob_info = *info->second_;
+  return (*blob_info.buffers_);
 }
 
 /**
@@ -279,8 +287,9 @@ bool MetadataManager::LocalRenameBlob(BucketId bkt_id, BlobId blob_id,
   if (iter == blob_map_->end()) {
     return true;
   }
-  lipc::Ref<BlobInfo> blob_info = (*iter).val_;
-  lipc::charbuf &old_blob_name = (*blob_info->name_);
+  lipc::ShmRef<lipc::pair<BlobId, BlobInfo>> info = (*iter);
+  BlobInfo &blob_info = *info->second_;
+  lipc::charbuf &old_blob_name = (*blob_info.name_);
   lipc::charbuf internal_blob_name = CreateBlobName(bkt_id, new_blob_name);
   blob_id_map_->erase(old_blob_name);
   blob_id_map_->emplace(internal_blob_name, blob_id);
@@ -300,8 +309,9 @@ bool MetadataManager::LocalDestroyBlob(BucketId bkt_id,
   if (iter == blob_map_->end()) {
     return true;
   }
-  lipc::Ref<BlobInfo> blob_info = (*iter).val_;
-  lipc::charbuf &blob_name = (*blob_info->name_);
+  lipc::ShmRef<lipc::pair<BlobId, BlobInfo>> info = (*iter);
+  BlobInfo &blob_info = *info->second_;
+  lipc::charbuf &blob_name = (*blob_info.name_);
   blob_id_map_->erase(blob_name);
   blob_map_->erase(blob_id);
   return true;
@@ -329,11 +339,10 @@ VBucketId MetadataManager::LocalGetOrCreateVBucket(lipc::charbuf &vbkt_name) {
     if (iter == vbkt_id_map_->end()) {
       return VBucketId::GetNull();
     }
-    vbkt_id = *(*iter).val_;
+    lipc::ShmRef<lipc::pair<lipc::charbuf, VBucketId>> info = (*iter);
+    vbkt_id = *info->second_;
   }
-
   return vbkt_id;
-
 }
 
 /**
@@ -347,7 +356,8 @@ VBucketId MetadataManager::LocalGetVBucketId(lipc::charbuf &vbkt_name) {
   if (iter == vbkt_id_map_->end()) {
     return VBucketId::GetNull();
   }
-  VBucketId vbkt_id = *(*iter).val_;
+  lipc::ShmRef<lipc::pair<lipc::charbuf, VBucketId>> info = (*iter);
+  VBucketId vbkt_id = *info->second_;
   return vbkt_id;
 }
 
@@ -363,8 +373,9 @@ bool MetadataManager::LocalVBucketLinkBlob(VBucketId vbkt_id,
   if (iter == vbkt_map_->end()) {
     return true;
   }
-  lipc::Ref<VBucketInfo> vbkt_info = (*iter).val_;
-  vbkt_info->blobs_->emplace(blob_id, blob_id);
+  lipc::ShmRef<lipc::pair<VBucketId, VBucketInfo>> info = (*iter);
+  VBucketInfo &vbkt_info = *info->second_;
+  vbkt_info.blobs_->emplace(blob_id, blob_id);
   return true;
 }
 
@@ -381,8 +392,9 @@ bool MetadataManager::LocalVBucketUnlinkBlob(VBucketId vbkt_id,
   if (iter == vbkt_map_->end()) {
     return true;
   }
-  lipc::Ref<VBucketInfo> vbkt_info = (*iter).val_;
-  vbkt_info->blobs_->erase(blob_id);
+  lipc::ShmRef<lipc::pair<VBucketId, VBucketInfo>> info = (*iter);
+  VBucketInfo &vbkt_info = *info->second_;
+  vbkt_info.blobs_->erase(blob_id);
   return true;
 }
 
@@ -406,9 +418,10 @@ bool MetadataManager::LocalVBucketContainsBlob(VBucketId vbkt_id,
   if (iter == vbkt_map_->end()) {
     return true;
   }
-  lipc::Ref<VBucketInfo> vbkt_info = (*iter).val_;
-  auto link_iter = vbkt_info->blobs_->find(blob_id);
-  return link_iter != vbkt_info->blobs_->end();
+  lipc::ShmRef<lipc::pair<VBucketId, VBucketInfo>> info = (*iter);
+  VBucketInfo &vbkt_info = *info->second_;
+  auto link_iter = vbkt_info.blobs_->find(blob_id);
+  return link_iter != vbkt_info.blobs_->end();
 }
 
 /**
@@ -423,8 +436,9 @@ bool MetadataManager::LocalRenameVBucket(VBucketId vbkt_id,
   if (iter == vbkt_map_->end()) {
     return true;
   }
-  lipc::Ref<VBucketInfo> vbkt_info = (*iter).val_;
-  lipc::string &old_bkt_name = *vbkt_info->name_;
+  lipc::ShmRef<lipc::pair<VBucketId, VBucketInfo>> info = (*iter);
+  VBucketInfo &vbkt_info = *info->second_;
+  lipc::string &old_bkt_name = *vbkt_info.name_;
   vbkt_id_map_->emplace(new_vbkt_name, vbkt_id);
   vbkt_id_map_->erase(old_bkt_name);
   return true;

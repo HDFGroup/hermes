@@ -32,21 +32,21 @@ typedef lipc::unordered_map<VBucketId, VBucketInfo> VBKT_MAP_T;
  * */
 struct MetadataManagerShmHeader {
   /// SHM representation of blob id map
-  lipc::ShmArchive<lipc::mptr<BLOB_ID_MAP_T>> blob_id_map_ar_;
+  lipc::TypedPointer<lipc::mptr<BLOB_ID_MAP_T>> blob_id_map_ar_;
   /// SHM representation of bucket id map
-  lipc::ShmArchive<lipc::mptr<BKT_ID_MAP_T>> bkt_id_map_ar_;
+  lipc::TypedPointer<lipc::mptr<BKT_ID_MAP_T>> bkt_id_map_ar_;
   /// SHM representation of vbucket id map
-  lipc::ShmArchive<lipc::mptr<VBKT_ID_MAP_T>> vbkt_id_map_ar_;
+  lipc::TypedPointer<lipc::mptr<VBKT_ID_MAP_T>> vbkt_id_map_ar_;
   /// SHM representation of blob map
-  lipc::ShmArchive<lipc::mptr<BLOB_MAP_T>> blob_map_ar_;
+  lipc::TypedPointer<lipc::mptr<BLOB_MAP_T>> blob_map_ar_;
   /// SHM representation of bucket map
-  lipc::ShmArchive<lipc::mptr<BKT_MAP_T>> bkt_map_ar_;
+  lipc::TypedPointer<lipc::mptr<BKT_MAP_T>> bkt_map_ar_;
   /// SHM representation of vbucket map
-  lipc::ShmArchive<lipc::mptr<VBKT_MAP_T>> vbkt_map_ar_;
+  lipc::TypedPointer<lipc::mptr<VBKT_MAP_T>> vbkt_map_ar_;
   /// SHM representation of device vector
-  lipc::ShmArchive<lipc::mptr<lipc::vector<DeviceInfo>>> devices_;
+  lipc::TypedPointer<lipc::mptr<lipc::vector<DeviceInfo>>> devices_;
   /// SHM representation of target info vector
-  lipc::ShmArchive<lipc::mptr<lipc::vector<TargetInfo>>> targets_;
+  lipc::TypedPointer<lipc::mptr<lipc::vector<TargetInfo>>> targets_;
   /// Used to create unique ids. Starts at 1.
   std::atomic<u64> id_alloc_;
 };
@@ -75,6 +75,9 @@ class MetadataManager {
    * */
   lipc::mptr<lipc::vector<DeviceInfo>> devices_;
   lipc::mptr<lipc::vector<TargetInfo>> targets_;
+
+  /** A global lock for simplifying MD management */
+  RwLock lock_;
 
  public:
   MetadataManager() = default;
@@ -165,8 +168,10 @@ class MetadataManager {
    * @RPC_TARGET_NODE rpc_->node_id_
    * @RPC_CLASS_INSTANCE mdm
    * */
-  RPC BlobId LocalBucketPutBlob(BucketId bkt_id, const lipc::charbuf &blob_name,
-                                Blob &data, lipc::vector<BufferInfo> &buffers);
+  RPC BlobId LocalBucketPutBlob(BucketId bkt_id,
+                                const lipc::charbuf &blob_name,
+                                const Blob &data,
+                                lipc::vector<BufferInfo> &buffers);
 
   /**
    * Get a blob from a bucket

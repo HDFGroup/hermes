@@ -1,4 +1,7 @@
-include_directories(${HERMES_ADAPTER_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(
+        ${HERMES_SRC_DIR}
+        ${HERMES_ADAPTER_DIR}
+        ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Create the hermes_posix_singleton
 add_library(hermes_posix_singleton SHARED ${CMAKE_CURRENT_SOURCE_DIR}/singleton.cc)
