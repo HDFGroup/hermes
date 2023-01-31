@@ -42,6 +42,7 @@ up-to-date repos.
 STAGE_DIR=~/hermes_stage
 MOCHI_REPO=${STAGE_DIR}/mochi
 HERMES_REPO=${STAGE_DIR}/hermes
+git clone https://github.com/mochi-hpc/mochi-spack-packages.git ${MOCHI_REPO}
 git clone https://github.com/HDFGroup/hermes ${HERMES_REPO}
 spack repo add ${MOCHI_REPO}
 spack repo add ${HERMES_REPO}/ci/hermes
