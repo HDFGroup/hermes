@@ -42,7 +42,6 @@ up-to-date repos.
 STAGE_DIR=~/hermes_stage
 MOCHI_REPO=${STAGE_DIR}/mochi
 HERMES_REPO=${STAGE_DIR}/hermes
-git clone https://github.com/mochi-hpc/mochi-spack-packages.git ${MOCHI_REPO}
 git clone https://github.com/HDFGroup/hermes ${HERMES_REPO}
 spack repo add ${MOCHI_REPO}
 spack repo add ${HERMES_REPO}/ci/hermes
@@ -67,7 +66,6 @@ Type 'c' to configure until there are no errors, then generate the makefile with
     -DCMAKE_BUILD_TYPE=Release
     -DCMAKE_CXX_COMPILER=`which mpicxx`
     -DBUILD_SHARED_LIBS=ON
-    -DORTOOLS_DIR=/path/to/ortools
 
 After the makefile has been generated, you can type `make -j 4` or `cmake --build . -- -j 4`. Add `VERBOSE=1` to see detailed compiler output.
 
