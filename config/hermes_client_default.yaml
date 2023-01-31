@@ -1,2 +1,2 @@
 stop_daemon: true
-file_page_size_kb: 1024
+file_page_size: 1024KB

@@ -5,9 +5,9 @@
 #ifndef HERMES_ADAPTER_UTILS_H_
 #define HERMES_ADAPTER_UTILS_H_
 
-#define HERMES_DECL
-
 namespace hermes::adapter {
+
+#define HERMES_DECL(F) F
 
 bool IsTracked(int fd) {
 

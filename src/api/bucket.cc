@@ -52,7 +52,7 @@ Status Bucket::GetBlobId(std::string blob_name,
 /**
  * Put \a blob_id Blob into the bucket
  * */
-Status Bucket::Put(std::string blob_name, const Blob &blob,
+Status Bucket::Put(std::string blob_name, ConstBlobData blob,
                    BlobId &blob_id, Context &ctx) {
   // Calculate placement
   auto dpe = DPEFactory::Get(ctx.policy);
@@ -74,9 +74,8 @@ Status Bucket::Put(std::string blob_name, const Blob &blob,
 /**
  * Get \a blob_id Blob from the bucket
  * */
-Status Bucket::Get(BlobId blob_id, Blob &blob, Context &ctx) {
-  blob = mdm_->LocalBucketGetBlob(blob_id);
-  return Status();
+Blob Bucket::Get(BlobId blob_id, Context &ctx) {
+  return mdm_->LocalBucketGetBlob(blob_id);;
 }
 
 /**

@@ -24,6 +24,8 @@
 #include <set>
 #include <string>
 
+#include "metadata_manager_singleton_macros.h"
+
 namespace hapi = hermes::api;
 
 namespace hermes::adapter::fs {
@@ -45,13 +47,13 @@ struct AdapterStat {
   int flags_;            /**< open() flags for POSIX */
   mode_t st_mode_;       /**< protection */
   off64_t st_ptr_;       /**< Current ptr of FILE */
-  timespec st_atim_;     /**< time of last access */
-  timespec st_mtim_;     /**< time of last modification */
-  timespec st_ctim_;     /**< time of last status change */
+  timespec st_atime_;     /**< time of last access */
+  timespec st_mtime_;     /**< time of last modification */
+  timespec st_ctime_;     /**< time of last status change */
   std::string mode_str_; /**< mode used for fopen() */
 
   bool is_append_; /**< File is in append mode */
-  int amode_;      /**< access mode */
+  int amode_;      /**< access mode (MPI) */
   MPI_Info info_;  /**< Info object (handle) */
   MPI_Comm comm_;  /**< Communicator for the file.*/
   bool atomicity_; /**< Consistency semantics for data-access */
@@ -62,9 +64,9 @@ struct AdapterStat {
         flags_(0),
         st_mode_(),
         st_ptr_(0),
-        st_atim_(),
-        st_mtim_(),
-        st_ctim_(),
+        st_atime_(),
+        st_mtime_(),
+        st_ctime_(),
         is_append_(false),
         amode_(0),
         comm_(MPI_COMM_SELF),
@@ -139,25 +141,24 @@ struct File {
    A structure to represent IO options
 */
 struct IoOptions {
-  PlacementPolicy dpe_;   /**< data placement policy */
-  bool coordinate_;       /**< use coordinate? */
+  hapi::PlacementPolicy dpe_;   /**< data placement policy */
   bool seek_;             /**< use seek? */
   bool with_fallback_;    /**< use fallback? */
   MPI_Datatype mpi_type_; /**< MPI data type */
   int count_;             /**< option count */
+
+  /** Default constructor */
   IoOptions()
-      : dpe_(PlacementPolicy::kNone),
-        coordinate_(true),
+      : dpe_(hapi::PlacementPolicy::kNone),
         seek_(true),
         with_fallback_(true),
         mpi_type_(MPI_CHAR),
         count_(0) {}
 
   /** return options with \a dpe parallel data placement engine */
-  static IoOptions WithParallelDpe(PlacementPolicy dpe) {
+  static IoOptions WithParallelDpe(hapi::PlacementPolicy dpe) {
     IoOptions opts;
     opts.dpe_ = dpe;
-    opts.coordinate_ = true;
     return opts;
   }
 
@@ -165,7 +166,7 @@ struct IoOptions {
   static IoOptions DirectIo(IoOptions &cur_opts) {
     IoOptions opts(cur_opts);
     opts.seek_ = false;
-    opts.dpe_ = PlacementPolicy::kNone;
+    opts.dpe_ = hapi::PlacementPolicy::kNone;
     opts.with_fallback_ = true;
     return opts;
   }
@@ -211,42 +212,6 @@ struct HermesRequest {
 };
 
 /**
- A structure to represent BLOB placement iterator
-*/
-struct BlobPlacementIter {
-  File &f_;                            /**< file */
-  AdapterStat &stat_;                  /**< adapter stat */
-  const std::string &filename_;        /**< file name */
-  const BlobPlacement &p_;             /**< BLOB placement */
-  std::shared_ptr<hapi::Bucket> &bkt_; /**< bucket*/
-  IoStatus &io_status_;                /**< IO status */
-  IoOptions &opts_;                    /**< IO options */
-
-  std::string blob_name_; /**< BLOB name */
-  u8 *mem_ptr_;           /**< pointer to memory  */
-  size_t blob_start_;     /**< BLOB start  */
-  hapi::Context ctx_;     /**< context  */
-  hapi::Blob blob_;       /**< BLOB */
-  int rank_;              /**< MPI rank */
-  int nprocs_;            /**< number of processes */
-  bool blob_exists_;      /**< Does BLOB exist? */
-
-  /** iterate \a p BLOB placement */
-  explicit BlobPlacementIter(File &f, AdapterStat &stat,
-                             const std::string &filename,
-                             const BlobPlacement &p,
-                             std::shared_ptr<hapi::Bucket> &bkt,
-                             IoStatus &io_status, IoOptions &opts)
-      : f_(f),
-        stat_(stat),
-        filename_(filename),
-        p_(p),
-        bkt_(bkt),
-        io_status_(io_status),
-        opts_(opts) {}
-};
-
-/**
    A class to represent file system
 */
 class Filesystem {
@@ -284,59 +249,7 @@ class Filesystem {
   /** close */
   int Close(File &f, AdapterStat &stat, bool destroy = true);
 
-  /*
-   * APIs used internally
-   * */
-
  private:
-  /** coordinated put */
-  void _CoordinatedPut(BlobPlacementIter &wi);
-  /** uncoordinated put */
-  void _UncoordinatedPut(BlobPlacementIter &wi);
-  /** write to a new aligned buffer */
-  void _WriteToNewAligned(BlobPlacementIter &write_iter);
-  /** write to a new unaligned buffer */
-  void _WriteToNewUnaligned(BlobPlacementIter &write_iter);
-  /** write to an existing aligned buffer */
-  void _WriteToExistingAligned(BlobPlacementIter &write_iter);
-  /** write to an existing unaligned buffer */
-  void _WriteToExistingUnaligned(BlobPlacementIter &write_iter);
-  /** put with fallback */
-  void _PutWithFallback(AdapterStat &stat, const std::string &blob_name,
-                        const std::string &filename, u8 *data, size_t size,
-                        size_t offset, IoStatus &io_status_, IoOptions &opts);
-  /** read existing contained buffer */
-  size_t _ReadExistingContained(BlobPlacementIter &read_iter);
-  /** read existing partial buffer */
-  size_t _ReadExistingPartial(BlobPlacementIter &read_iter);
-  /** read new buffer */
-  size_t _ReadNew(BlobPlacementIter &read_iter);
-
-  void _OpenInitStatsInternal(AdapterStat &stat, bool bucket_exists) {
-    // TODO(llogan): This isn't really parallel-safe.
-    /**
-     * Here we assume that the file size can only be growing.
-     * If the bucket already exists and has content not already in
-     * the file (e.g., when using ADAPTER_MODE=SCRATCH), we should
-     * use the size of the bucket instead.
-     *
-     * There are other concerns with what happens during multi-tenancy.
-     * What happens if one process is opening a file, while another
-     * process is adding content? The mechanics here aren't
-     * well-defined.
-     * */
-    if (bucket_exists) {
-      size_t orig = stat.st_size;
-      size_t bkt_size = stat.st_bkid->GetTotalBlobSize();
-      stat.st_size = std::max(bkt_size, orig);
-      LOG(INFO) << "Since bucket exists, should reset its size to: "
-                << bkt_size << " or " << orig
-                << ", winner: " << stat.st_size << std::endl;
-    }
-    if (stat.is_append) {
-      stat.st_ptr = stat.st_size;
-    }
-  }
 
   /*
    * The APIs to overload
@@ -437,9 +350,7 @@ class Filesystem {
 }  // namespace hermes::adapter::fs
 
 namespace std {
-/**
-   A structure to represent hash
-*/
+/** A structure to represent hash */
 template <>
 struct hash<hermes::adapter::fs::File> {
   /** hash creator functor */

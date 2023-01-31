@@ -15,7 +15,7 @@ const char* kServerDefaultConfigStr =
 "\n"
 "    # The maximum buffering capacity in MiB of each device. Here we say that all 4\n"
 "    # devices get 50 MiB of buffering capacity.\n"
-"    capacity: 50MB\n"
+"    capacity: 5000MB\n"
 "\n"
 "    # The size of the smallest available buffer in KiB. In general this should be\n"
 "    # the page size of your system for byte addressable storage, and the block size\n"

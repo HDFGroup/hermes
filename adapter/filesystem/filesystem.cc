@@ -10,11 +10,13 @@
 * have access to the file, you may request a copy from help@hdfgroup.org.   *
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+#include "metadata_manager_singleton_macros.h"
 #include "filesystem.h"
 #include "constants.h"
 #include "singleton.h"
 #include "metadata_manager.h"
 #include "vbucket.h"
+#include "mapper/mapper_factory.h"
 
 #include <fcntl.h>
 #include <experimental/filesystem>
@@ -32,7 +34,7 @@ File Filesystem::Open(AdapterStat &stat, const std::string &path) {
 
 void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
   _InitFile(f);
-  auto mdm = HERMES_FILESYSTEM_ADAPTER_METADTA_MANAGER;
+  auto mdm = HERMES_FS_METADATA_MANAGER;
   stat.bkt_id_ = HERMES->GetBucket(path);
   LOG(INFO) << "File not opened before by adapter" << std::endl;
   _OpenInitStats(f, stat);
@@ -42,7 +44,7 @@ void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
 void Filesystem::_PutWithFallback(AdapterStat &stat,
                                   const std::string &blob_name,
                                   const std::string &filename,
-                                  hapi::Blob blob,
+                                  const hapi::Blob &blob,
                                   size_t offset,
                                   IoStatus &io_status, IoOptions &opts) {
   hapi::Context ctx;
@@ -52,7 +54,7 @@ void Filesystem::_PutWithFallback(AdapterStat &stat,
     if (opts.with_fallback_) {
       LOG(WARNING) << "Failed to Put Blob " << blob_name << " to Bucket "
                    << filename << ". Falling back to posix I/O." << std::endl;
-      _RealWrite(filename, offset, size, data, io_status, opts);
+      _RealWrite(filename, offset, blob.size(), blob.data(), io_status, opts);
     }
   }
 }
@@ -61,29 +63,27 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
                          size_t off, size_t total_size,
                          IoStatus &io_status, IoOptions opts) {
   (void) f;
-  std::shared_ptr<hapi::Bucket> &bkt = stat.st_bkid;
+  std::shared_ptr<hapi::Bucket> &bkt = stat.st_bkid_;
   std::string filename = bkt->GetName();
   LOG(INFO) << "Write called for filename: " << filename << " on offset: "
             << off << " and size: " << total_size << std::endl;
 
   size_t ret;
-  auto mdm = Singleton<MetadataManager>::GetInstance();
+  auto mdm = HERMES_FS_METADATA_MANAGER;
   BlobPlacements mapping;
   auto mapper = MapperFactory().Get(kMapperType);
   mapper->map(off, total_size, mapping);
   size_t data_offset = 0;
 
   for (const auto &p : mapping) {
-    BlobPlacementIter wi(f, stat, filename, p, bkt, io_status, opts);
-    wi.blob_name_ = wi.p_.CreateBlobName();
-    wi.blob_exists_ = wi.bkt_->ContainsBlob(wi.blob_name_);
+    lipc::charbuf blob_name(p.CreateBlobName());
+
     wi.blob_start_ = p.page_ * kPageSize;
     wi.mem_ptr_ = (u8 *)ptr + data_offset;
     data_offset += p.blob_size_;
   }
   off_t f_offset = off + data_offset;
-  if (opts.seek_) { stat.st_ptr = f_offset; }
-  stat.st_size = std::max(stat.st_size, static_cast<size_t>(f_offset));
+  if (opts.seek_) { stat.st_ptr_ = f_offset; }
 
   struct timespec ts;
   timespec_get(&ts, TIME_UTC);
@@ -98,7 +98,7 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
 HermesRequest* Filesystem::AWrite(File &f, AdapterStat &stat, const void *ptr,
                                   size_t off, size_t total_size, size_t req_id,
                                   IoStatus &io_status, IoOptions opts) {
-  (void) io_status;
+  /*(void) io_status;
   LOG(INFO) << "Starting an asynchronous write" << std::endl;
   auto pool =
       Singleton<ThreadPool>::GetInstance(kNumThreads);
@@ -111,15 +111,15 @@ HermesRequest* Filesystem::AWrite(File &f, AdapterStat &stat, const void *ptr,
   auto func = std::bind(lambda, this, f, stat, ptr, off,
                         total_size, hreq->io_status, opts);
   hreq->return_future = pool->run(func);
-  auto mdm = Singleton<MetadataManager>::GetInstance();
+  auto mdm = HERMES_FS_METADATA_MANAGER;
   mdm->request_map.emplace(req_id, hreq);
-  return hreq;
+  return hreq;*/
 }
 
 HermesRequest* Filesystem::ARead(File &f, AdapterStat &stat, void *ptr,
                                  size_t off, size_t total_size, size_t req_id,
                                  IoStatus &io_status, IoOptions opts) {
-  (void) io_status;
+  /*(void) io_status;
   auto pool =
       Singleton<ThreadPool>::GetInstance(kNumThreads);
   HermesRequest *hreq = new HermesRequest();
@@ -131,13 +131,13 @@ HermesRequest* Filesystem::ARead(File &f, AdapterStat &stat, void *ptr,
   auto func = std::bind(lambda, this, f, stat,
                         ptr, off, total_size, hreq->io_status, opts);
   hreq->return_future = pool->run(func);
-  auto mdm = Singleton<MetadataManager>::GetInstance();
+  auto mdm = HERMES_FS_METADATA_MANAGER;
   mdm->request_map.emplace(req_id, hreq);
-  return hreq;
+  return hreq;*/
 }
 
 size_t Filesystem::Wait(uint64_t req_id) {
-  auto mdm = Singleton<MetadataManager>::GetInstance();
+  /*auto mdm = HERMES_FS_METADATA_MANAGER;
   auto req_iter = mdm->request_map.find(req_id);
   if (req_iter == mdm->request_map.end()) {
     return 0;
@@ -145,7 +145,7 @@ size_t Filesystem::Wait(uint64_t req_id) {
   HermesRequest *req = (*req_iter).second;
   size_t ret = req->return_future.get();
   delete req;
-  return ret;
+  return ret;*/
 }
 
 void Filesystem::Wait(std::vector<uint64_t> &req_ids,
@@ -163,7 +163,7 @@ off_t Filesystem::Seek(File &f, AdapterStat &stat,
         << std::endl;
     return -1;
   }
-  auto mdm = Singleton<MetadataManager>::GetInstance();
+  auto mdm = HERMES_FS_METADATA_MANAGER;
   switch (whence) {
     case SeekMode::kSet: {
       stat.st_ptr_ = offset;
@@ -174,7 +174,7 @@ off_t Filesystem::Seek(File &f, AdapterStat &stat,
       break;
     }
     case SeekMode::kEnd: {
-      stat.st_ptr_ = stat.st_size + offset;
+      stat.st_ptr_ = stat.st_bkt_-> + offset;
       break;
     }
     default: {
@@ -239,7 +239,7 @@ HermesRequest* Filesystem::ARead(File &f, AdapterStat &stat, void *ptr,
 size_t Filesystem::Write(File &f, bool &stat_exists, const void *ptr,
                          size_t total_size,
                          IoStatus &io_status, IoOptions opts) {
-  auto mdm = Singleton<MetadataManager>::GetInstance();
+  auto mdm = HERMES_FS_METADATA_MANAGER;
   auto [stat, exists] = mdm->Find(f);
   if (!exists) {
     stat_exists = false;
@@ -252,7 +252,7 @@ size_t Filesystem::Write(File &f, bool &stat_exists, const void *ptr,
 size_t Filesystem::Read(File &f, bool &stat_exists, void *ptr,
                         size_t total_size,
                         IoStatus &io_status, IoOptions opts) {
-  auto mdm = Singleton<MetadataManager>::GetInstance();
+  auto mdm = HERMES_FS_METADATA_MANAGER;
   auto [stat, exists] = mdm->Find(f);
   if (!exists) {
     stat_exists = false;
@@ -265,7 +265,7 @@ size_t Filesystem::Read(File &f, bool &stat_exists, void *ptr,
 size_t Filesystem::Write(File &f, bool &stat_exists, const void *ptr,
                          size_t off, size_t total_size,
                          IoStatus &io_status, IoOptions opts) {
-  auto mdm = Singleton<MetadataManager>::GetInstance();
+  auto mdm = HERMES_FS_METADATA_MANAGER;
   auto [stat, exists] = mdm->Find(f);
   if (!exists) {
     stat_exists = false;
@@ -279,7 +279,7 @@ size_t Filesystem::Write(File &f, bool &stat_exists, const void *ptr,
 size_t Filesystem::Read(File &f, bool &stat_exists, void *ptr,
                         size_t off, size_t total_size,
                         IoStatus &io_status, IoOptions opts) {
-  auto mdm = Singleton<MetadataManager>::GetInstance();
+  auto mdm = HERMES_FS_METADATA_MANAGER;
   auto [stat, exists] = mdm->Find(f);
   if (!exists) {
     stat_exists = false;
@@ -293,7 +293,7 @@ size_t Filesystem::Read(File &f, bool &stat_exists, void *ptr,
 HermesRequest* Filesystem::AWrite(File &f, bool &stat_exists, const void *ptr,
                        size_t total_size, size_t req_id,
                        IoStatus &io_status, IoOptions opts) {
-  auto mdm = Singleton<MetadataManager>::GetInstance();
+  auto mdm = HERMES_FS_METADATA_MANAGER;
   auto [stat, exists] = mdm->Find(f);
   if (!exists) {
     stat_exists = false;
@@ -306,7 +306,7 @@ HermesRequest* Filesystem::AWrite(File &f, bool &stat_exists, const void *ptr,
 HermesRequest* Filesystem::ARead(File &f, bool &stat_exists, void *ptr,
                       size_t total_size, size_t req_id,
                       IoStatus &io_status, IoOptions opts) {
-  auto mdm = Singleton<MetadataManager>::GetInstance();
+  auto mdm = HERMES_FS_METADATA_MANAGER;
   auto [stat, exists] = mdm->Find(f);
   if (!exists) {
     stat_exists = false;
@@ -319,7 +319,7 @@ HermesRequest* Filesystem::ARead(File &f, bool &stat_exists, void *ptr,
 HermesRequest* Filesystem::AWrite(File &f, bool &stat_exists, const void *ptr,
                        size_t off, size_t total_size, size_t req_id,
                        IoStatus &io_status, IoOptions opts) {
-  auto mdm = Singleton<MetadataManager>::GetInstance();
+  auto mdm = HERMES_FS_METADATA_MANAGER;
   auto [stat, exists] = mdm->Find(f);
   if (!exists) {
     stat_exists = false;
@@ -333,7 +333,7 @@ HermesRequest* Filesystem::AWrite(File &f, bool &stat_exists, const void *ptr,
 HermesRequest* Filesystem::ARead(File &f, bool &stat_exists, void *ptr,
                       size_t off, size_t total_size, size_t req_id,
                       IoStatus &io_status, IoOptions opts) {
-  auto mdm = Singleton<MetadataManager>::GetInstance();
+  auto mdm = HERMES_FS_METADATA_MANAGER;
   auto [stat, exists] = mdm->Find(f);
   if (!exists) {
     stat_exists = false;
@@ -346,7 +346,7 @@ HermesRequest* Filesystem::ARead(File &f, bool &stat_exists, void *ptr,
 
 off_t Filesystem::Seek(File &f, bool &stat_exists,
                        SeekMode whence, off_t offset) {
-  auto mdm = Singleton<MetadataManager>::GetInstance();
+  auto mdm = HERMES_FS_METADATA_MANAGER;
   auto [stat, exists] = mdm->Find(f);
   if (!exists) {
     stat_exists = false;
@@ -357,7 +357,7 @@ off_t Filesystem::Seek(File &f, bool &stat_exists,
 }
 
 off_t Filesystem::Tell(File &f, bool &stat_exists) {
-  auto mdm = Singleton<MetadataManager>::GetInstance();
+  auto mdm = HERMES_FS_METADATA_MANAGER;
   auto [stat, exists] = mdm->Find(f);
   if (!exists) {
     stat_exists = false;
@@ -368,7 +368,7 @@ off_t Filesystem::Tell(File &f, bool &stat_exists) {
 }
 
 int Filesystem::Sync(File &f, bool &stat_exists) {
-  auto mdm = Singleton<MetadataManager>::GetInstance();
+  auto mdm = HERMES_FS_METADATA_MANAGER;
   auto [stat, exists] = mdm->Find(f);
   if (!exists) {
     stat_exists = false;
@@ -379,7 +379,7 @@ int Filesystem::Sync(File &f, bool &stat_exists) {
 }
 
 int Filesystem::Close(File &f, bool &stat_exists, bool destroy) {
-  auto mdm = Singleton<MetadataManager>::GetInstance();
+  auto mdm = HERMES_FS_METADATA_MANAGER;
   auto [stat, exists] = mdm->Find(f);
   if (!exists) {
     stat_exists = false;

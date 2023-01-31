@@ -9,14 +9,6 @@
 
 namespace hermes {
 
-static size_t SumBufferBlobSizes(lipc::vector<BufferInfo> &buffers) {
-  size_t sum = 0;
-  for (lipc::ShmRef<BufferInfo> buffer_ref : buffers) {
-    sum += (*buffer_ref).blob_size_;
-  }
-  return sum;
-}
-
 /**
  * Initialize the BORG
  * REQUIRES mdm to be initialized already.
@@ -50,7 +42,7 @@ void BufferOrganizer::shm_deserialize()  {
 
 /** Stores a blob into a set of buffers */
 RPC void BufferOrganizer::LocalPlaceBlobInBuffers(
-    const Blob &blob, lipc::vector<BufferInfo> &buffers) {
+    ConstBlobData &blob, lipc::vector<BufferInfo> &buffers) {
   size_t blob_off = 0;
   for (lipc::ShmRef<BufferInfo> buffer_info : buffers) {
     if (buffer_info->tid_.GetNodeId() != mdm_->rpc_->node_id_) {
@@ -59,7 +51,8 @@ RPC void BufferOrganizer::LocalPlaceBlobInBuffers(
     lipc::ShmRef<DeviceInfo> dev_info =
         (*mdm_->devices_)[buffer_info->tid_.GetDeviceId()];
     auto io_client = IoClientFactory::Get(dev_info->header_->io_api_);
-    bool ret = io_client->Write(*dev_info, blob.data() + blob_off,
+    bool ret = io_client->Write(*dev_info,
+                                blob.data() + blob_off,
                                 buffer_info->t_off_,
                                 buffer_info->blob_size_);
     blob_off += buffer_info->blob_size_;

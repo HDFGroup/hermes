@@ -6,8 +6,8 @@
 #define HERMES_SRC_IO_CLIENTS_POSIX_H_
 
 #include "io_client.h"
-#include "adapter/posix/real_api.h"
-#include "adapter/posix/singleton_macros.h"
+#include "adapter/posix/posix_api.h"
+#include "adapter/posix/posix_singleton_macros.h"
 
 #include <experimental/filesystem>
 
@@ -29,7 +29,7 @@ class PosixIoClient : public IoClient {
     return true;
   }
 
-  bool Write(DeviceInfo &dev_info, void *data,
+  bool Write(DeviceInfo &dev_info, const char *data,
              size_t off, size_t size) override {
     auto api = HERMES_POSIX_API;
     int fd = api->open((*dev_info.mount_point_).c_str(), O_RDWR);
@@ -43,7 +43,7 @@ class PosixIoClient : public IoClient {
     return count == size;
   }
 
-  bool Read(DeviceInfo &dev_info, void *data,
+  bool Read(DeviceInfo &dev_info, char *data,
             size_t off, size_t size) override {
     auto api = HERMES_POSIX_API;
     int fd = api->open((*dev_info.mount_point_).c_str(), O_RDWR);

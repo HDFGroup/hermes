@@ -19,11 +19,17 @@ bool posix_intercepted = true;
 #include <glog/logging.h>
 #include <experimental/filesystem>
 
+#include "hermes_types.h"
 #include "singleton.h"
-#include "utils.h"
-#include "posix/real_api.h"
+#include "adapter_utils.h"
+#include "posix_api.h"
+#include "posix_singleton_macros.h"
+#include "filesystem/filesystem.h"
 
 using hermes::Singleton;
+using hermes::adapter::fs::AdapterStat;
+using hermes::adapter::fs::IoStatus;
+using hermes::adapter::fs::File;
 
 namespace hapi = hermes::api;
 namespace stdfs = std::experimental::filesystem;
@@ -47,8 +53,8 @@ int HERMES_DECL(open)(const char *path, int flags, ...) {
     LOG(INFO) << "Intercept open for filename: " << path
               << " and mode: " << flags << " is tracked." << std::endl;
     AdapterStat stat;
-    stat.flags = flags;
-    stat.st_mode = mode;
+    stat.flags_ = flags;
+    stat.st_mode_ = mode;
     return fs_api->Open(stat, path).fd_;
   }
   if (flags & O_CREAT || flags & O_TMPFILE) {
@@ -71,8 +77,8 @@ int HERMES_DECL(open64)(const char *path, int flags, ...) {
     LOG(INFO) << "Intercept open64 for filename: " << path
               << " and mode: " << flags << " is tracked." << std::endl;
     AdapterStat stat;
-    stat.flags = flags;
-    stat.st_mode = mode;
+    stat.flags_ = flags;
+    stat.st_mode_ = mode;
     return fs_api->Open(stat, path).fd_;
   }
   if (flags & O_CREAT) {
@@ -88,8 +94,8 @@ int HERMES_DECL(__open_2)(const char *path, int oflag) {
     LOG(INFO) << "Intercept __open_2 for filename: " << path
               << " and mode: " << oflag << " is tracked." << std::endl;
     AdapterStat stat;
-    stat.flags = oflag;
-    stat.st_mode = 0;
+    stat.flags_ = oflag;
+    stat.st_mode_ = 0;
     return fs_api->Open(stat, path).fd_;
   }
   return real_api->__open_2(path, oflag);
@@ -103,8 +109,8 @@ int HERMES_DECL(creat)(const char *path, mode_t mode) {
     LOG(INFO) << "Intercept creat for filename: " << path
               << " and mode: " << mode << " is tracked." << std::endl;
     AdapterStat stat;
-    stat.flags = O_CREAT;
-    stat.st_mode = mode;
+    stat.flags_ = O_CREAT;
+    stat.st_mode_ = mode;
     return fs_api->Open(stat, path).fd_;
   }
   return real_api->creat(path, mode);
@@ -118,8 +124,8 @@ int HERMES_DECL(creat64)(const char *path, mode_t mode) {
     LOG(INFO) << "Intercept creat64 for filename: " << path
               << " and mode: " << mode << " is tracked." << std::endl;
     AdapterStat stat;
-    stat.flags = O_CREAT;
-    stat.st_mode = mode;
+    stat.flags_ = O_CREAT;
+    stat.st_mode_ = mode;
     return fs_api->Open(stat, path).fd_;
   }
   return real_api->creat64(path, mode);
@@ -240,7 +246,7 @@ int HERMES_DECL(__fxstat)(int __ver, int fd, struct stat *buf) {
   if (hermes::adapter::IsTracked(fd)) {
     File f; f.fd_ = fd; fs_api->_InitFile(f);
     LOG(INFO) << "Intercepted fstat." << std::endl;
-    auto mdm = hermes::Singleton<MetadataManager>::GetInstance();
+    auto mdm = HERMES_FS_METADATA_MANAGER;
     auto existing = mdm->Find(f);
     if (existing.second) {
       AdapterStat &astat = existing.first;
@@ -248,17 +254,17 @@ int HERMES_DECL(__fxstat)(int __ver, int fd, struct stat *buf) {
       // currently we get them by calling the real fstat on open.
       buf->st_dev = 0;
       buf->st_ino = 0;
-      buf->st_mode = astat.st_mode;
+      buf->st_mode = astat.st_mode_;
       buf->st_nlink = 0;
-      buf->st_uid = astat.st_uid;
-      buf->st_gid = astat.st_gid;
+      buf->st_uid = astat.st_uid_;
+      buf->st_gid = astat.st_gid_;
       buf->st_rdev = 0;
-      buf->st_size = astat.st_size;
-      buf->st_blksize = astat.st_blksize;
+      buf->st_size = astat.st_size_;
+      buf->st_blksize = astat.st_blksize_;
       buf->st_blocks = 0;
-      buf->st_atime = astat.st_atime;
-      buf->st_mtime = astat.st_mtime;
-      buf->st_ctime = astat.st_ctime;
+      buf->st_atime = astat.st_atime_;
+      buf->st_mtime = astat.st_mtime_;
+      buf->st_ctime = astat.st_ctime_;
     } else {
       result = -1;
       errno = EBADF;

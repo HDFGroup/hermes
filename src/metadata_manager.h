@@ -170,7 +170,7 @@ class MetadataManager {
    * */
   RPC BlobId LocalBucketPutBlob(BucketId bkt_id,
                                 const lipc::charbuf &blob_name,
-                                const Blob &data,
+                                ConstBlobData &data,
                                 lipc::vector<BufferInfo> &buffers);
 
   /**

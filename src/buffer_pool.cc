@@ -46,7 +46,7 @@ void BufferPool::shm_deserialize(BufferPoolShmHeader *header) {
  * */
 lipc::vector<BufferInfo>
 BufferPool::LocalAllocateAndSetBuffers(PlacementSchema &schema,
-                                       const Blob &blob) {
+                                       ConstBlobData &blob) {
   lipc::vector<BufferInfo> buffers(HERMES->main_alloc_);
   size_t blob_off_ = 0;
   for (auto plcmnt : schema.plcmnts_) {

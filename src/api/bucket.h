@@ -20,7 +20,7 @@ class Bucket {
   Context ctx_;
 
   ///////////////////////////
-  ////// Bucket Operations
+  /// Bucket Operations
   //////////////////////////
  public:
 
@@ -49,6 +49,21 @@ class Bucket {
   }
 
   /**
+   * Set the size of bucket on storage
+   * */
+  void SetBackendSize();
+
+  /**
+   * Get the size of the data on storage
+   * */
+  void GetBackendSize();
+
+  /**
+   * Get the current size of the bucket
+   * */
+  size_t GetSize();
+
+  /**
    * Rename this bucket
    * */
   void Rename(std::string new_bkt_name);
@@ -67,7 +82,7 @@ class Bucket {
 
 
   ///////////////////////
-  ////// Blob Operations
+  /// Blob Operations
   ///////////////////////
  public:
 
@@ -82,18 +97,56 @@ class Bucket {
   Status GetBlobId(std::string blob_name, BlobId &blob_id, Context &ctx);
 
   /**
-   * Put \a blob_id Blob into the bucket
+   * Put \a blob_name Blob into the bucket
    * */
-  Status Put(std::string blob_name, const Blob &blob,
-             BlobId &blob_id, Context &ctx);
+  Status Put(std::string blob_name,
+             ConstBlobData blob,
+             BlobId &blob_id,
+             Context &ctx);
+
+  /**
+   * Put \a blob_name Blob into the bucket. Load the blob from the
+   * I/O backend if it does not exist.
+   *
+   * @param blob_name the semantic name of the blob
+   * @param blob the buffer to put final data in
+   * @param backend_off the offset to read from the backend if blob DNE
+   * @param backend_size the size to read from the backend if blob DNE
+   * @param backend_ctx which adapter to route I/O request if blob DNE
+   * @param ctx any additional information
+   * */
+  Status PartialPutOrCreate(std::string blob_name,
+                            ConstBlobData blob,
+                            size_t backend_off,
+                            size_t backend_size,
+                            IoContext &backend_ctx,
+                            BlobId &blob_id,
+                            Context &ctx);
 
   /**
    * Get \a blob_id Blob from the bucket
-   * @WRAP_DEFAULT: ctx -> ctx_
-   * @WRAP_PROTO: blob_id -> std::string blob_name
-   * @WRAP_DEFAULT: blob_id -> GetBlobId(blob_name)
    * */
-  Status Get(BlobId blob_id, Blob &blob, Context &ctx);
+  Status Get(BlobId blob_id,
+             Blob &blob,
+             Context &ctx);
+
+  /**
+   * Partially (or fully) Get a blob from a bucket. Load the blob from the
+   * I/O backend if it does not exist.
+   *
+   * @param blob_name the semantic name of the blob
+   * @param blob the buffer to put final data in
+   * @param backend_off the offset to read from the backend if blob DNE
+   * @param backend_size the size to read from the backend if blob DNE
+   * @param backend_ctx which adapter to route I/O request if blob DNE
+   * @param ctx any additional information
+   * */
+  Status PartialGetOrCreate(std::string blob_name,
+                            MutableBlobData blob,
+                            size_t backend_off,
+                            size_t backend_size,
+                            IoContext &backend_ctx,
+                            Context &ctx);
 
   /**
    * Rename \a blob_id blob to \a new_blob_name new name
@@ -104,10 +157,6 @@ class Bucket {
    * Delete \a blob_id blob
    * */
   void DestroyBlob(BlobId blob_id, Context &ctx);
-
- public:
-  RPC_AUTOGEN_START
-  RPC_AUTOGEN_END
 };
 
 }

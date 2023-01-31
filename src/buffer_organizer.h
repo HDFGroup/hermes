@@ -11,6 +11,15 @@
 
 namespace hermes {
 
+/** Calculates the total size of a blob's buffers */
+static inline size_t SumBufferBlobSizes(lipc::vector<BufferInfo> &buffers) {
+  size_t sum = 0;
+  for (lipc::ShmRef<BufferInfo> buffer_ref : buffers) {
+    sum += (*buffer_ref).blob_size_;
+  }
+  return sum;
+}
+
 /**
  * Manages the organization of blobs in the hierarchy.
  * */
@@ -37,7 +46,7 @@ class BufferOrganizer {
   void shm_deserialize();
 
   /** Stores a blob into a set of buffers */
-  RPC void LocalPlaceBlobInBuffers(const Blob &blob,
+  RPC void LocalPlaceBlobInBuffers(ConstBlobData &blob,
                                    lipc::vector<BufferInfo> &buffers);
 
   /** Stores a blob into a set of buffers */

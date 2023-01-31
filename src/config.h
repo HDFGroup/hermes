@@ -127,6 +127,7 @@ static void ParseRangeList(YAML::Node list_node, std::string var,
   }
 }
 
+/** parse the suffix of \a num_text NUMBER text */
 static std::string ParseNumberSuffix(const std::string &num_text) {
   int i;
   for (i = 0; i < num_text.size(); ++i) {
@@ -138,13 +139,14 @@ static std::string ParseNumberSuffix(const std::string &num_text) {
   return std::string(num_text.begin() + i, num_text.end());;
 }
 
+/** parse the number of \a num_text NUMBER text */
 static size_t ParseNumber(const std::string &num_text) {
   size_t size;
   std::stringstream(num_text) >> size;
   return size;
 }
 
-/** Returns size (bytes) */
+/** Converts \a size_text SIZE text into a size_t */
 static size_t ParseSize(const std::string &size_text) {
   size_t size = ParseNumber(size_text);
   if (size_text == "inf") {

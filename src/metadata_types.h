@@ -185,8 +185,9 @@ struct BlobInfo : public lipc::ShmContainer {
     shm_init_header(header);
     (*header_) = (*other.header_);
     bkt_id_ = other.bkt_id_;
-    (name_) = std::move(other.name_);
-    (buffers_) = std::move(other.buffers_);
+    (*name_) = std::move(*other.name_);
+    (*buffers_) = std::move(*other.buffers_);
+    shm_serialize_main();
   }
 
   /** Deep copy data into another BlobInfo */
@@ -199,6 +200,7 @@ struct BlobInfo : public lipc::ShmContainer {
     bkt_id_ = other.bkt_id_;
     (*name_) = (*other.name_);
     (*buffers_) = (*other.buffers_);
+    shm_serialize_main();
   }
 };
 
@@ -207,6 +209,7 @@ template<>
 struct ShmHeader<BucketInfo> : public lipc::ShmBaseHeader {
   lipc::TypedPointer<lipc::string> name_ar_;
   size_t num_blobs_;
+  size_t true_size_;
 };
 
 /** Metadata for a Bucket */

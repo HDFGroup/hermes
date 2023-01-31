@@ -15,6 +15,7 @@ namespace hermes::config {
 class ClientConfig : public BaseConfig {
  public:
   bool stop_daemon_;
+  size_t file_page_size_;
 
  public:
   ClientConfig() = default;

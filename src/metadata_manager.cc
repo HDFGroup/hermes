@@ -202,7 +202,7 @@ bool MetadataManager::LocalDestroyBucket(BucketId bkt_id) {
  * */
 BlobId MetadataManager::LocalBucketPutBlob(BucketId bkt_id,
                                            const lipc::charbuf &blob_name,
-                                           const Blob &data,
+                                           ConstBlobData &data,
                                            lipc::vector<BufferInfo> &buffers) {
   lipc::charbuf internal_blob_name = CreateBlobName(bkt_id, blob_name);
 
@@ -238,7 +238,7 @@ Blob MetadataManager::LocalBucketGetBlob(BlobId blob_id) {
   lipc::ShmRef<lipc::pair<BlobId, BlobInfo>> info = (*iter);
   BlobInfo &blob_info = *info->second_;
   lipc::vector<BufferInfo> &buffers = *blob_info.buffers_;
-  return borg_->LocalReadBlobFromBuffers(buffers);
+  return borg_->LocalReadBlobFromBuffers(buffers);;
 }
 
 /**
