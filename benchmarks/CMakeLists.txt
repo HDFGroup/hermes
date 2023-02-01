@@ -1,4 +1,5 @@
 include_directories(
+  ${CMAKE_SOURCE_DIR}
   ${PROJECT_SOURCE_DIR}/src/api
   ${PROJECT_SOURCE_DIR}/test
 )

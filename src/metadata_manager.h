@@ -11,8 +11,15 @@
 #include "rpc.h"
 #include "metadata_types.h"
 #include "rpc_thallium_serialization.h"
+#include "adapter/adapter_factory/abstract_adapter.h"
 
 namespace hermes {
+
+/** Namespace simplification for IoClientContext */
+using hermes::adapter::IoClientContext;
+
+/** Namespace simplification for AbstractAdapter */
+using hermes::adapter::AbstractAdapter;
 
 /** Forward declaration of borg */
 class BufferOrganizer;
@@ -170,8 +177,48 @@ class MetadataManager {
    * */
   RPC BlobId LocalBucketPutBlob(BucketId bkt_id,
                                 const lipc::charbuf &blob_name,
-                                ConstBlobData &data,
+                                const Blob &data,
                                 lipc::vector<BufferInfo> &buffers);
+
+  /**
+   * Partially (or fully) Put a blob from a bucket. Load the blob from the
+   * I/O backend if it does not exist.
+   *
+   * @param blob_name the semantic name of the blob
+   * @param blob the buffer to put final data in
+   * @param blob_off the offset within the blob to begin the Put
+   * @param backend_off the offset to read from the backend if blob DNE
+   * @param backend_size the size to read from the backend if blob DNE
+   * @param backend_ctx which adapter to route I/O request if blob DNE
+   * @param ctx any additional information
+   * */
+  Status LocalPartialPutOrCreateBlob(BucketId bkt_id,
+                                     lipc::string blob_name,
+                                     Blob &blob,
+                                     size_t blob_off,
+                                     size_t backend_off,
+                                     size_t backend_size,
+                                     BlobId &blob_id,
+                                     IoClientContext &backend_ctx,
+                                     Context &ctx);
+
+  /**
+   * Modify part of a blob. Load the blob from a backend if it does not
+   * exist.
+   *
+   * @param bkt_id id of the bucket
+   * @param blob_name semantic blob name
+   * @param data the data being placed
+   * @param buffers the buffers to place data in
+   *
+   * @RPC_TARGET_NODE rpc_->node_id_
+   * @RPC_CLASS_INSTANCE mdm
+   * */
+  RPC BlobId LocalBucketPartialPutOrCreateBlob(
+      BucketId bkt_id,
+      const lipc::charbuf &blob_name,
+      const Blob &data,
+      lipc::vector<BufferInfo> &buffers);
 
   /**
    * Get a blob from a bucket

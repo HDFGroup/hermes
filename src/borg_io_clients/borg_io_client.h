@@ -2,15 +2,15 @@
 // Created by lukemartinlogan on 12/22/22.
 //
 
-#ifndef HERMES_SRC_IO_CLIENTS_IO_CLIENT_H_
-#define HERMES_SRC_IO_CLIENTS_IO_CLIENT_H_
+#ifndef HERMES_SRC_BORG_IO_CLIENTS_IO_CLIENT_H
+#define HERMES_SRC_BORG_IO_CLIENTS_IO_CLIENT_H
 
 #include "hermes_types.h"
 #include "metadata_types.h"
 
 namespace hermes {
 
-class IoClient {
+class BorgIoClient {
  public:
   virtual bool Init(DeviceInfo &dev_info) = 0;
   virtual bool Write(DeviceInfo &dev_info,
@@ -21,4 +21,4 @@ class IoClient {
 
 }  // namespace hermes
 
-#endif  // HERMES_SRC_IO_CLIENTS_IO_CLIENT_H_
+#endif  // HERMES_SRC_BORG_IO_CLIENTS_IO_CLIENT_H

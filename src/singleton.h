@@ -39,5 +39,32 @@ class Singleton {
   }
 };
 
+/**
+ * A class to represent singleton pattern
+ * Does not require specific initialization of the static veraible
+ * */
+template<typename T>
+class EasySingleton {
+ protected:
+  /** static instance. */
+  static std::unique_ptr<T> instance;
+
+ public:
+  /**
+   * Uses unique pointer to build a static global instance of variable.
+   * @tparam T
+   * @return instance of T
+   */
+  static T* GetInstance() {
+    if (instance == nullptr) {
+      instance = std::make_unique<T>();
+    }
+    return instance.get();
+  }
+};
+
+template <typename T>
+std::unique_ptr<T> EasySingleton<T>::instance = nullptr;
+
 }  // namespace hermes
 #endif  // HERMES_ADAPTER_SINGLETON_H

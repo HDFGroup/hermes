@@ -10,13 +10,14 @@
 * have access to the file, you may request a copy from help@hdfgroup.org.   *
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include "metadata_manager_singleton_macros.h"
+#include "fs_metadata_manager_singleton_macros.h"
 #include "filesystem.h"
 #include "constants.h"
 #include "singleton.h"
-#include "metadata_manager.h"
+#include "fs_metadata_manager.h"
 #include "vbucket.h"
 #include "mapper/mapper_factory.h"
+#include "io_client/io_client_factory.h"
 
 #include <fcntl.h>
 #include <experimental/filesystem>
@@ -33,66 +34,61 @@ File Filesystem::Open(AdapterStat &stat, const std::string &path) {
 }
 
 void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
+  auto io_client = IoClientFactory::Get(io_client_);
+  IoStatus status;
   _InitFile(f);
   auto mdm = HERMES_FS_METADATA_MANAGER;
   stat.bkt_id_ = HERMES->GetBucket(path);
   LOG(INFO) << "File not opened before by adapter" << std::endl;
-  _OpenInitStats(f, stat);
+  io_client->StatObject(f, stat, status);
   mdm->Create(f, stat);
-}
-
-void Filesystem::_PutWithFallback(AdapterStat &stat,
-                                  const std::string &blob_name,
-                                  const std::string &filename,
-                                  const hapi::Blob &blob,
-                                  size_t offset,
-                                  IoStatus &io_status, IoOptions &opts) {
-  hapi::Context ctx;
-  hermes::BlobId blob_id;
-  hapi::Status put_status = stat.bkt_id_->Put(blob_name, blob, blob_id, ctx);
-  if (put_status.Fail()) {
-    if (opts.with_fallback_) {
-      LOG(WARNING) << "Failed to Put Blob " << blob_name << " to Bucket "
-                   << filename << ". Falling back to posix I/O." << std::endl;
-      _RealWrite(filename, offset, blob.size(), blob.data(), io_status, opts);
-    }
-  }
 }
 
 size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
                          size_t off, size_t total_size,
                          IoStatus &io_status, IoOptions opts) {
   (void) f;
-  std::shared_ptr<hapi::Bucket> &bkt = stat.st_bkid_;
+  std::shared_ptr<hapi::Bucket> &bkt = stat.bkt_id_;
   std::string filename = bkt->GetName();
   LOG(INFO) << "Write called for filename: " << filename << " on offset: "
             << off << " and size: " << total_size << std::endl;
 
   size_t ret;
-  auto mdm = HERMES_FS_METADATA_MANAGER;
   BlobPlacements mapping;
-  auto mapper = MapperFactory().Get(kMapperType);
+  auto mapper = MapperFactory().Get(MapperType::kBalancedMapper);
   mapper->map(off, total_size, mapping);
   size_t data_offset = 0;
+  size_t kPageSize = HERMES->client_config_.file_page_size_;
 
   for (const auto &p : mapping) {
+    const Blob blob_wrap((const char*)ptr + data_offset, off);
     lipc::charbuf blob_name(p.CreateBlobName());
-
-    wi.blob_start_ = p.page_ * kPageSize;
-    wi.mem_ptr_ = (u8 *)ptr + data_offset;
+    BlobId blob_id;
+    size_t backend_start = p.page_ * kPageSize;
+    IoClientContext backend_ctx;
+    Context ctx;
+    backend_ctx.filename_ = filename;
+    bkt->PartialPutOrCreate(blob_name.str(),
+                            blob_wrap,
+                            p.blob_off_,
+                            backend_start,
+                            kPageSize,
+                            blob_id,
+                            backend_ctx,
+                            ctx);
     data_offset += p.blob_size_;
   }
   off_t f_offset = off + data_offset;
   if (opts.seek_) { stat.st_ptr_ = f_offset; }
-
-  struct timespec ts;
-  timespec_get(&ts, TIME_UTC);
-  stat.st_mtim = ts;
-  stat.st_ctim = ts;
+  stat.UpdateTime();
 
   ret = data_offset;
-  _IoStats(data_offset, io_status, opts);
   return ret;
+}
+
+size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
+                        size_t off, size_t total_size,
+                        IoStatus &io_status, IoOptions opts) {
 }
 
 HermesRequest* Filesystem::AWrite(File &f, AdapterStat &stat, const void *ptr,
@@ -174,11 +170,13 @@ off_t Filesystem::Seek(File &f, AdapterStat &stat,
       break;
     }
     case SeekMode::kEnd: {
-      stat.st_ptr_ = stat.st_bkt_-> + offset;
+      //TODO(llogan): Fix seek end
+      // stat.st_ptr_ = stat.bkt_id_-> + offset;
+      stat.st_ptr_ = 0 + offset;
       break;
     }
     default: {
-      // TODO(hari): throw not implemented error.
+      // TODO(llogan): throw not implemented error.
     }
   }
   mdm->Update(f, stat);

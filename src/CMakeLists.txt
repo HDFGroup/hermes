@@ -87,7 +87,7 @@ target_include_directories(hermes
 add_dependencies(hermes hermes_posix_singleton)
 
 target_link_libraries(hermes
-  PUBLIC hermes_posix_singleton
+  PUBLIC hermes_adapter_native
   PUBLIC ${GLPK_LIBRARIES}
   PUBLIC ${CMAKE_HERMES_COMMUNICATION_TYPE_LIB}
   PUBLIC ${CMAKE_HERMES_RPC_TYPE_LIB}

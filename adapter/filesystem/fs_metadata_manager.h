@@ -13,13 +13,8 @@
 #ifndef HERMES_ADAPTER_METADATA_MANAGER_H
 #define HERMES_ADAPTER_METADATA_MANAGER_H
 
-#include <ftw.h>
-#include <mpi.h>
-
 #include <cstdio>
 #include <unordered_map>
-
-#include "constants.h"
 #include "filesystem.h"
 
 namespace hermes::adapter::fs {
@@ -43,20 +38,7 @@ class MetadataManager {
   : metadata(), is_init_(false) {}
 
   /** Initialize Hermes (thread-safe) */
-  void InitializeHermes() {
-    if (!is_init_) {
-      lock_.lock();
-      if (!is_init_) {
-        HERMES->Init(HermesType::kClient);
-        is_init_ = true;
-      }
-      lock_.unlock();
-    }
-
-    // TODO(llogan): Recycle old fds
-    hermes_fd_min_ = 8192;  // TODO(llogan): don't assume 8192
-    hermes_fd_max_ = INT_MAX;
-  }
+  void InitializeHermes();
 
   /**
    * Create a metadata entry for POSIX adapter for a given file handler.

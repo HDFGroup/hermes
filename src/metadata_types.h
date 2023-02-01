@@ -143,6 +143,10 @@ struct BlobInfo : public lipc::ShmContainer {
   lipc::mptr<lipc::string> name_;
   /// The BufferInfo vector
   lipc::mptr<lipc::vector<BufferInfo>> buffers_;
+  /// Synchronize access to blob
+  Mutex lock_;
+  /// Ensure that operations belonging to a transaction are not locked forever
+  TransactionId transaction_;
 
   /** Default constructor. Does nothing. */
   BlobInfo() = default;

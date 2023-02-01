@@ -13,23 +13,23 @@
 #ifndef HERMES_ADAPTER_FILESYSTEM_FILESYSTEM_H_
 #define HERMES_ADAPTER_FILESYSTEM_FILESYSTEM_H_
 
-#include <bucket.h>
-#include <buffer_pool.h>
 #include <ftw.h>
-#include <hermes_types.h>
 #include <mpi.h>
-#include <traits.h>
-#include <vbucket.h>
-
+#include <future>
 #include <set>
 #include <string>
 
-#include "metadata_manager_singleton_macros.h"
+#include "traits.h"
+#include "bucket.h"
+#include "vbucket.h"
+#include "adapter/io_client/io_client.h"
+#include "fs_metadata_manager_singleton_macros.h"
 
 namespace hapi = hermes::api;
 
 namespace hermes::adapter::fs {
 
+/** The type of seek to perform */
 enum class SeekMode {
   kNone = -1,
   kSet = SEEK_SET,
@@ -40,37 +40,15 @@ enum class SeekMode {
 /**
  A structure to represent adapter stat.
 */
-struct AdapterStat {
+struct AdapterStat : public IoClientStat {
   std::shared_ptr<hapi::Bucket> bkt_id_; /**< bucket associated with the file */
   /** VBucket for persisting data asynchronously. */
   std::shared_ptr<hapi::VBucket> vbkt_id_;
-  int flags_;            /**< open() flags for POSIX */
-  mode_t st_mode_;       /**< protection */
-  off64_t st_ptr_;       /**< Current ptr of FILE */
-  timespec st_atime_;     /**< time of last access */
-  timespec st_mtime_;     /**< time of last modification */
-  timespec st_ctime_;     /**< time of last status change */
-  std::string mode_str_; /**< mode used for fopen() */
 
-  bool is_append_; /**< File is in append mode */
-  int amode_;      /**< access mode (MPI) */
-  MPI_Info info_;  /**< Info object (handle) */
-  MPI_Comm comm_;  /**< Communicator for the file.*/
-  bool atomicity_; /**< Consistency semantics for data-access */
-
+  /** Default constructor. */
   AdapterStat()
       : bkt_id_(),
-        vbkt_id_(),
-        flags_(0),
-        st_mode_(),
-        st_ptr_(0),
-        st_atime_(),
-        st_mtime_(),
-        st_ctime_(),
-        is_append_(false),
-        amode_(0),
-        comm_(MPI_COMM_SELF),
-        atomicity_(false) {}
+        vbkt_id_() {}
 
   /** compare \a a BLOB and \a b BLOB.*/
   static bool CompareBlobs(const std::string &a, const std::string &b) {
@@ -78,29 +56,8 @@ struct AdapterStat {
   }
 };
 
-/**
-   A structure to represent file
-*/
-struct File {
-  int fd_;          /**< file descriptor */
-  FILE *fh_;        /**< file handler */
-  MPI_File mpi_fh_; /**< MPI file handler */
-
-  dev_t st_dev;    /**< device */
-  ino_t st_ino;    /**< inode */
-  bool status_;    /**< status */
-  int mpi_status_; /**< MPI status */
-
-  /** default file constructor */
-  File()
-      : fd_(-1),
-        fh_(nullptr),
-        mpi_fh_(nullptr),
-        st_dev(-1),
-        st_ino(-1),
-        status_(true),
-        mpi_status_(MPI_SUCCESS) {}
-
+/** A structure to represent file */
+struct File : public IoClientContext {
   /** file constructor that copies \a old file */
   File(const File &old) { Copy(old); }
 
@@ -137,23 +94,17 @@ struct File {
   }
 };
 
-/**
-   A structure to represent IO options
-*/
-struct IoOptions {
-  hapi::PlacementPolicy dpe_;   /**< data placement policy */
-  bool seek_;             /**< use seek? */
-  bool with_fallback_;    /**< use fallback? */
-  MPI_Datatype mpi_type_; /**< MPI data type */
-  int count_;             /**< option count */
+/** A structure to represent IO options */
+struct IoOptions : public IoClientOptions {
+  hapi::PlacementPolicy dpe_;     /**< data placement policy */
+  bool seek_;                     /**< use seek? */
+  bool with_fallback_;            /**< use fallback? */
 
   /** Default constructor */
   IoOptions()
       : dpe_(hapi::PlacementPolicy::kNone),
         seek_(true),
-        with_fallback_(true),
-        mpi_type_(MPI_CHAR),
-        count_(0) {}
+        with_fallback_(true) {}
 
   /** return options with \a dpe parallel data placement engine */
   static IoOptions WithParallelDpe(hapi::PlacementPolicy dpe) {
@@ -192,42 +143,35 @@ struct IoOptions {
   }
 };
 
-/**
-   A structure to represent IO status
-*/
-struct IoStatus {
-  int mpi_ret_;                /**< MPI return value */
-  MPI_Status mpi_status_;      /**< MPI status */
-  MPI_Status *mpi_status_ptr_; /**< MPI status pointer */
-
-  IoStatus() : mpi_ret_(MPI_SUCCESS), mpi_status_ptr_(&mpi_status_) {}
-};
-
-/**
-   A structure to represent Hermes request
-*/
+/** A structure to represent Hermes request */
 struct HermesRequest {
   std::future<size_t> return_future; /**< future result of async op. */
   IoStatus io_status;                /**< IO status */
 };
 
-/**
-   A class to represent file system
-*/
+/** A class to represent file system */
 class Filesystem {
  public:
+  IoClientType io_client_; /**< The I/O client to use for I/O */
+
+ public:
+  /** Constructor */
+  explicit Filesystem(IoClientType io_client) : io_client_(io_client) {}
+
   /** open \a path */
   File Open(AdapterStat &stat, const std::string &path);
   /** open \a f File in \a path*/
   void Open(AdapterStat &stat, File &f, const std::string &path);
+
   /** write */
   size_t Write(File &f, AdapterStat &stat, const void *ptr, size_t off,
                size_t total_size, IoStatus &io_status,
                IoOptions opts = IoOptions());
   /** read */
-  size_t Read(File &f, AdapterStat &stat, void *ptr, size_t off,
-              size_t total_size, IoStatus &io_status,
-              IoOptions opts = IoOptions());
+  size_t Read(File &f, AdapterStat &stat, void *ptr,
+              size_t off, size_t total_size,
+              IoStatus &io_status, IoOptions opts = IoOptions());
+
   /** write asynchronously */
   HermesRequest *AWrite(File &f, AdapterStat &stat, const void *ptr, size_t off,
                         size_t total_size, size_t req_id, IoStatus &io_status,
@@ -248,39 +192,6 @@ class Filesystem {
   int Sync(File &f, AdapterStat &stat);
   /** close */
   int Close(File &f, AdapterStat &stat, bool destroy = true);
-
- private:
-
-  /*
-   * The APIs to overload
-   */
- public:
-  /** initialize file */
-  virtual void _InitFile(File &f) = 0;
-
- private:
-  /** open initial status */
-  virtual void _OpenInitStats(File &f, AdapterStat &stat) = 0;
-  /** real open */
-  virtual File _RealOpen(AdapterStat &stat, const std::string &path) = 0;
-  /** real write */
-  virtual size_t _RealWrite(const std::string &filename, off_t offset,
-                            size_t size, const u8 *data_ptr,
-                            IoStatus &io_status, IoOptions &opts) = 0;
-  /** real read */
-  virtual size_t _RealRead(const std::string &filename, off_t offset,
-                           size_t size, u8 *data_ptr, IoStatus &io_status,
-                           IoOptions &opts) = 0;
-  /** io status */
-  virtual void _IoStats(size_t count, IoStatus &io_status, IoOptions &opts) {
-    (void)count;
-    (void)io_status;
-    (void)opts;
-  }
-  /** real sync */
-  virtual int _RealSync(File &f) = 0;
-  /** real close */
-  virtual int _RealClose(File &f) = 0;
 
   /*
    * I/O APIs which seek based on the internal AdapterStat st_ptr,

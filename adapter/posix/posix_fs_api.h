@@ -10,37 +10,29 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_ADAPTER_FACTORY_H
-#define HERMES_ADAPTER_FACTORY_H
+#ifndef HERMES_ADAPTER_POSIX_NATIVE_H_
+#define HERMES_ADAPTER_POSIX_NATIVE_H_
 
-#include "abstract_mapper.h"
-#include "balanced_mapper.cc"
-#include "balanced_mapper.h"
-#include "singleton.h"
+#include <memory>
 
-namespace hermes::adapter {
-/**
- A class to represent mapper factory pattern
-*/
-class MapperFactory {
+#include "adapter/filesystem/filesystem.h"
+#include "adapter/filesystem/fs_metadata_manager.h"
+#include "posix_singleton_macros.h"
+#include "posix_api.h"
+#include "posix_io_client.h"
+
+namespace hermes::adapter::posix {
+
+/** A class to represent POSIX IO file system */
+class PosixFs : public hermes::adapter::fs::Filesystem {
  public:
-  /**
-   * Return the instance of mapper given a type. Uses factory pattern.
-   *
-   * @param[in] type type of mapper to be used by the POSIX adapter.
-   * @return Instance of mapper given a type.
-   */
-  AbstractMapper* Get(const MapperType& type) {
-    switch (type) {
-      case MapperType::kBalancedMapper: {
-        return hermes::Singleton<BalancedMapper>::GetInstance();
-      }
-      default: {
-        // TODO(llogan): @error_handling Mapper not implemented
-      }
-    }
-    return NULL;
-  }
+  PosixFs() : hermes::adapter::fs::Filesystem(IoClientType::kPosix) {}
 };
-}  // namespace hermes::adapter
-#endif  // HERMES_ADAPTER_FACTORY_H
+
+/** Simplify access to the stateless PosixFs Singleton */
+#define HERMES_POSIX_FS hermes::EasySingleton<hermes::adapter::posix::PosixFS>::GetInstance()
+#define HERMES_POSIX_FS_T hermes::adapter::posix::PosixFs*
+
+}  // namespace hermes::adapter::posix
+
+#endif  // HERMES_ADAPTER_POSIX_NATIVE_H_

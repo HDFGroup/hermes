@@ -7,9 +7,12 @@
 
 #include "hermes_types.h"
 #include "status.h"
-#include "hermes.h"
+#include "buffer_pool.h"
+#include "adapter/adapter_factory/abstract_adapter.h"
 
 namespace hermes::api {
+
+using hermes::adapter::IoClientContext;
 
 class Bucket {
  private:
@@ -33,6 +36,14 @@ class Bucket {
   Bucket(std::string bkt_name,
          Context &ctx);
 
+  /**
+   * Get \a bkt_id bucket, which is known to exist.
+   *
+   * Used internally by Hermes.
+   * */
+  Bucket(BucketId bkt_id, Context &ctx);
+
+ public:
   /**
    * Get the name of this bucket. Name is cached instead of
    * making an RPC. Not coherent if Rename is called.
@@ -100,7 +111,7 @@ class Bucket {
    * Put \a blob_name Blob into the bucket
    * */
   Status Put(std::string blob_name,
-             ConstBlobData blob,
+             const Blob blob,
              BlobId &blob_id,
              Context &ctx);
 
@@ -110,17 +121,19 @@ class Bucket {
    *
    * @param blob_name the semantic name of the blob
    * @param blob the buffer to put final data in
+   * @param blob_off the offset within the blob to begin the Put
    * @param backend_off the offset to read from the backend if blob DNE
    * @param backend_size the size to read from the backend if blob DNE
    * @param backend_ctx which adapter to route I/O request if blob DNE
    * @param ctx any additional information
    * */
   Status PartialPutOrCreate(std::string blob_name,
-                            ConstBlobData blob,
+                            const Blob &blob,
+                            size_t blob_off,
                             size_t backend_off,
                             size_t backend_size,
-                            IoContext &backend_ctx,
                             BlobId &blob_id,
+                            IoClientContext &backend_ctx,
                             Context &ctx);
 
   /**
@@ -129,24 +142,6 @@ class Bucket {
   Status Get(BlobId blob_id,
              Blob &blob,
              Context &ctx);
-
-  /**
-   * Partially (or fully) Get a blob from a bucket. Load the blob from the
-   * I/O backend if it does not exist.
-   *
-   * @param blob_name the semantic name of the blob
-   * @param blob the buffer to put final data in
-   * @param backend_off the offset to read from the backend if blob DNE
-   * @param backend_size the size to read from the backend if blob DNE
-   * @param backend_ctx which adapter to route I/O request if blob DNE
-   * @param ctx any additional information
-   * */
-  Status PartialGetOrCreate(std::string blob_name,
-                            MutableBlobData blob,
-                            size_t backend_off,
-                            size_t backend_size,
-                            IoContext &backend_ctx,
-                            Context &ctx);
 
   /**
    * Rename \a blob_id blob to \a new_blob_name new name

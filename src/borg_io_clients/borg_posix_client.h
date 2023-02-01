@@ -2,10 +2,10 @@
 // Created by lukemartinlogan on 12/22/22.
 //
 
-#ifndef HERMES_SRC_IO_CLIENTS_POSIX_H_
-#define HERMES_SRC_IO_CLIENTS_POSIX_H_
+#ifndef HERMES_SRC_BORG_IO_CLIENTS_POSIX_H
+#define HERMES_SRC_BORG_IO_CLIENTS_POSIX_H
 
-#include "io_client.h"
+#include "borg_io_client.h"
 #include "adapter/posix/posix_api.h"
 #include "adapter/posix/posix_singleton_macros.h"
 
@@ -13,9 +13,9 @@
 
 namespace stdfs = std::experimental::filesystem;
 
-namespace hermes {
+namespace hermes::borg {
 
-class PosixIoClient : public IoClient {
+class PosixIoClient : public BorgIoClient {
  public:
   bool Init(DeviceInfo &dev_info) override {
     auto api = HERMES_POSIX_API;
@@ -60,4 +60,4 @@ class PosixIoClient : public IoClient {
 
 }  // namespace hermes
 
-#endif  // HERMES_SRC_IO_CLIENTS_POSIX_H_
+#endif  // HERMES_SRC_BORG_IO_CLIENTS_POSIX_H

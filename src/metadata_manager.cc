@@ -5,8 +5,16 @@
 #include "hermes.h"
 #include "metadata_manager.h"
 #include "buffer_organizer.h"
+#include "api/bucket.h"
+#include "adapter/adapter_factory/adapter_factory.h"
 
 namespace hermes {
+
+/** Namespace simplification for AdapterFactory */
+using hermes::adapter::AdapterFactory;
+
+/** Namespace simplification for Bucket */
+using api::Bucket;
 
 /**
  * Explicitly initialize the MetadataManager
@@ -202,7 +210,7 @@ bool MetadataManager::LocalDestroyBucket(BucketId bkt_id) {
  * */
 BlobId MetadataManager::LocalBucketPutBlob(BucketId bkt_id,
                                            const lipc::charbuf &blob_name,
-                                           ConstBlobData &data,
+                                           const Blob &data,
                                            lipc::vector<BufferInfo> &buffers) {
   lipc::charbuf internal_blob_name = CreateBlobName(bkt_id, blob_name);
 
@@ -225,6 +233,50 @@ BlobId MetadataManager::LocalBucketPutBlob(BucketId bkt_id,
   }
 
   return blob_id;
+}
+
+/**
+ * Partially (or fully) Put a blob from a bucket. Load the blob from the
+ * I/O backend if it does not exist.
+ *
+ * @param blob_name the semantic name of the blob
+ * @param blob the buffer to put final data in
+ * @param blob_off the offset within the blob to begin the Put
+ * @param backend_off the offset to read from the backend if blob DNE
+ * @param backend_size the size to read from the backend if blob DNE
+ * @param backend_ctx which adapter to route I/O request if blob DNE
+ * @param ctx any additional information
+ * */
+Status MetadataManager::LocalPartialPutOrCreateBlob(BucketId bkt_id,
+                                                    lipc::string blob_name,
+                                                    Blob &blob,
+                                                    size_t blob_off,
+                                                    size_t backend_off,
+                                                    size_t backend_size,
+                                                    BlobId &blob_id,
+                                                    IoClientContext &backend_ctx,
+                                                    Context &ctx) {
+  Blob full_blob;
+  Bucket bkt(bkt_id, ctx);
+  lipc::charbuf internal_blob_name = CreateBlobName(bkt_id, blob_name);
+  auto iter = blob_id_map_->find(internal_blob_name);
+  if (blob_off == 0 && blob.size() == backend_size) {
+    // Put the entire blob, no need to load from storage
+    return bkt.Put(blob_name.str(), blob, blob_id, ctx);
+  }
+  if (iter != blob_id_map_->end()) {
+    // Read blob from Hermes
+    bkt.Get(blob_id, full_blob, ctx);
+  } else {
+    // Read blob using adapter
+    auto adapter = AdapterFactory::Get(backend_ctx.type_);
+    adapter->ReadBlobFromBackend(full_blob, backend_off,
+                                 backend_size, backend_ctx);
+  }
+  // Modify the blob
+  memcpy(full_blob.data() + blob_off, blob.data(), blob.size());
+  // Re-put the blob
+  bkt.Put(blob_name.str(), full_blob, blob_id, ctx);
 }
 
 /**

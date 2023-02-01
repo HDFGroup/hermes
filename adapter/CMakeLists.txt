@@ -6,5 +6,7 @@ set(HERMES_ADAPTER_DIR ${CMAKE_SOURCE_DIR}/adapter)
 include_directories(${CMAKE_SOURCE_DIR}/src)
 
 if(HERMES_ENABLE_POSIX_ADAPTER)
+  add_subdirectory(filesystem)
   add_subdirectory(posix)
+  add_subdirectory(adapter_factory)
 endif()

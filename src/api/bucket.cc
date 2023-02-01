@@ -21,6 +21,14 @@ Bucket::Bucket(std::string name, Context &ctx)
 }
 
 /**
+ * Get \a bkt_id bucket, which is known to exist.
+ *
+ * Used internally by Hermes.
+ * */
+Bucket::Bucket(BucketId bkt_id, Context &ctx)
+: id_(bkt_id) {}
+
+/**
  * Rename this bucket
  * */
 void Bucket::Rename(std::string new_bkt_name) {
@@ -52,7 +60,7 @@ Status Bucket::GetBlobId(std::string blob_name,
 /**
  * Put \a blob_id Blob into the bucket
  * */
-Status Bucket::Put(std::string blob_name, ConstBlobData blob,
+Status Bucket::Put(std::string blob_name, const Blob blob,
                    BlobId &blob_id, Context &ctx) {
   // Calculate placement
   auto dpe = DPEFactory::Get(ctx.policy);
@@ -74,15 +82,18 @@ Status Bucket::Put(std::string blob_name, ConstBlobData blob,
 /**
  * Get \a blob_id Blob from the bucket
  * */
-Blob Bucket::Get(BlobId blob_id, Context &ctx) {
-  return mdm_->LocalBucketGetBlob(blob_id);;
+Status Bucket::Get(BlobId blob_id, Blob &blob, Context &ctx) {
+  Blob b = mdm_->LocalBucketGetBlob(blob_id);
+  blob = std::move(b);
+  return Status();
 }
 
 /**
  * Rename \a blob_id blob to \a new_blob_name new name
  * */
 void Bucket::RenameBlob(BlobId blob_id,
-                        std::string new_blob_name, Context &ctx) {
+                        std::string new_blob_name,
+                        Context &ctx) {
   lipc::string lnew_blob_name(new_blob_name);
   mdm_->LocalRenameBlob(id_, blob_id, lnew_blob_name);
 }

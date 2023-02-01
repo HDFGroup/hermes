@@ -14,8 +14,8 @@
 // Created by manihariharan on 12/23/20.
 //
 
-#ifndef HERMES_ABSTRACT_ADAPTER_H
-#define HERMES_ABSTRACT_ADAPTER_H
+#ifndef HERMES_ABSTRACT_MAPPER_H
+#define HERMES_ABSTRACT_MAPPER_H
 
 #include "utils.h"
 
@@ -25,8 +25,8 @@ namespace hermes::adapter {
  * Define different types of mappers supported by POSIX Adapter.
  * Also define its construction in the MapperFactory.
  */
-enum MapperType {
-  BALANCED = 0 /* Balanced Mapping */
+enum class MapperType {
+  kBalancedMapper
 };
 
 /**
@@ -71,4 +71,4 @@ class AbstractMapper {
 };
 }  // namespace hermes::adapter
 
-#endif  // HERMES_ABSTRACT_ADAPTER_H
+#endif  // HERMES_ABSTRACT_MAPPER_H

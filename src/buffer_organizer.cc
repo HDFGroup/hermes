@@ -4,7 +4,7 @@
 
 #include "buffer_organizer.h"
 #include "metadata_manager.h"
-#include "io_clients/io_client_factory.h"
+#include "borg_io_clients/borg_io_client_factory.h"
 #include "hermes.h"
 
 namespace hermes {
@@ -23,7 +23,7 @@ void BufferOrganizer::shm_init() {
     } else {
       dev_info->header_->io_api_ = IoInterface::kPosix;
     }
-    auto io_client = IoClientFactory::Get(dev_info->header_->io_api_);
+    auto io_client = borg::BorgIoClientFactory::Get(dev_info->header_->io_api_);
     io_client->Init(*dev_info);
   }
 }
@@ -42,7 +42,7 @@ void BufferOrganizer::shm_deserialize()  {
 
 /** Stores a blob into a set of buffers */
 RPC void BufferOrganizer::LocalPlaceBlobInBuffers(
-    ConstBlobData &blob, lipc::vector<BufferInfo> &buffers) {
+    const Blob &blob, lipc::vector<BufferInfo> &buffers) {
   size_t blob_off = 0;
   for (lipc::ShmRef<BufferInfo> buffer_info : buffers) {
     if (buffer_info->tid_.GetNodeId() != mdm_->rpc_->node_id_) {
@@ -50,7 +50,7 @@ RPC void BufferOrganizer::LocalPlaceBlobInBuffers(
     }
     lipc::ShmRef<DeviceInfo> dev_info =
         (*mdm_->devices_)[buffer_info->tid_.GetDeviceId()];
-    auto io_client = IoClientFactory::Get(dev_info->header_->io_api_);
+    auto io_client = borg::BorgIoClientFactory::Get(dev_info->header_->io_api_);
     bool ret = io_client->Write(*dev_info,
                                 blob.data() + blob_off,
                                 buffer_info->t_off_,
@@ -73,8 +73,8 @@ RPC Blob BufferOrganizer::LocalReadBlobFromBuffers(
     }
     lipc::ShmRef<DeviceInfo> dev_info =
         (*mdm_->devices_)[buffer_info->tid_.GetDeviceId()];
-    auto io_client = IoClientFactory::Get(dev_info->header_->io_api_);
-    bool ret = io_client->Read(*dev_info, blob.data_mutable() + blob_off,
+    auto io_client = borg::BorgIoClientFactory::Get(dev_info->header_->io_api_);
+    bool ret = io_client->Read(*dev_info, blob.data() + blob_off,
                                 buffer_info->t_off_,
                                 buffer_info->blob_size_);
     blob_off += buffer_info->blob_size_;

@@ -10,13 +10,29 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include "metadata_manager.h"
+#include "fs_metadata_manager.h"
+#include "hermes.h"
 
 /**
  * Namespace declarations for cleaner code.
  */
 using hermes::adapter::fs::AdapterStat;
 using hermes::adapter::fs::MetadataManager;
+
+void MetadataManager::InitializeHermes() {
+  if (!is_init_) {
+    lock_.lock();
+    if (!is_init_) {
+      HERMES->Init(HermesType::kClient);
+      is_init_ = true;
+    }
+    lock_.unlock();
+  }
+
+  // TODO(llogan): Recycle old fds
+  hermes_fd_min_ = 8192;  // TODO(llogan): don't assume 8192
+  hermes_fd_max_ = INT_MAX;
+}
 
 bool MetadataManager::Create(const File &f, const AdapterStat &stat) {
   VLOG(1) << "Create metadata for file handler." << std::endl;

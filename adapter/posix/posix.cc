@@ -23,6 +23,7 @@ bool posix_intercepted = true;
 #include "singleton.h"
 #include "adapter_utils.h"
 #include "posix_api.h"
+#include "posix_fs_api.h"
 #include "posix_singleton_macros.h"
 #include "filesystem/filesystem.h"
 

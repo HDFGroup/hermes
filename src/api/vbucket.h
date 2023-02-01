@@ -7,7 +7,7 @@
 
 #include "hermes_types.h"
 #include "status.h"
-#include "hermes.h"
+#include "metadata_manager.h"
 
 namespace hermes::api {
 

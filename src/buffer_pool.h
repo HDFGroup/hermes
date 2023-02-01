@@ -69,7 +69,7 @@ class BufferPool {
    * */
   RPC lipc::vector<BufferInfo>
   LocalAllocateAndSetBuffers(PlacementSchema &schema,
-                             ConstBlobData &blob);
+                             const Blob &blob);
 
   /**
    * Free buffers from the BufferPool

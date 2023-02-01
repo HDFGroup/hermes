@@ -10,6 +10,7 @@
 #include <labstor/data_structures/thread_unsafe/list.h>
 #include <labstor/data_structures/string.h>
 #include <labstor/data_structures/smart_ptr/manual_ptr.h>
+#include <labstor/types/charbuf.h>
 #include <labstor/types/atomic.h>
 
 namespace lipc = labstor::ipc;

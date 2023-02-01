@@ -10,39 +10,38 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_ADAPTER_FACTORY_H
-#define HERMES_ADAPTER_FACTORY_H
+#ifndef HERMES_IO_CLIENT_FACTORY_H
+#define HERMES_IO_CLIENT_FACTORY_H
 
-#include "abstract_adapter.h"
+#include "io_client.h"
 #include "singleton.h"
+
+#include "adapter/posix/posix_fs_api.h"
 
 namespace hermes::adapter {
 /**
  A class to represent adapter factory pattern
 */
-class AdapterFactory {
+class IoClientFactory {
  public:
   /**
    * Return the instance of adapter given a type. Uses factory pattern.
    *
-   * @param[in] type type of mapper to be used by the POSIX adapter.
+   * @param[in] type type of adapter.
    * @return Instance of mapper given a type.
    */
-  std::unique_ptr<AbstractAdapter> Get(const AdapterType& type) {
+  static IoClient* Get(const IoClientType& type) {
     switch (type) {
-      case AdapterType::kPosix: {
+      case IoClientType::kPosix: {
         return HERMES_POSIX_FS;
       }
-      case AdapterType::kStdio: {
+      case IoClientType::kStdio: {
         return nullptr;
       }
-      case AdapterType::kMpiio: {
+      case IoClientType::kMpiio: {
         return nullptr;
       }
-      case AdapterType::kPubsub: {
-        return nullptr;
-      }
-      case AdapterType::kVfd: {
+      case IoClientType::kVfd: {
         return nullptr;
       }
       default: {
@@ -53,4 +52,4 @@ class AdapterFactory {
   }
 };
 }  // namespace hermes::adapter
-#endif  // HERMES_ADAPTER_FACTORY_H
+#endif  // HERMES_IO_CLIENT_FACTORY_H

@@ -112,6 +112,7 @@ struct UniqueId {
 typedef UniqueId<0> BucketId;
 typedef UniqueId<1> VBucketId;
 typedef UniqueId<2> BlobId;
+typedef UniqueId<3> TransactionId;
 
 /** A definition for logging something that is not yet implemented */
 #define HERMES_NOT_IMPLEMENTED_YET \
@@ -205,65 +206,8 @@ struct TraitId {
 
 namespace hermes::api {
 
-/**
- * A Blob is simply an uninterpreted vector of bytes.
- */
-struct Blob {
-  lipc::Allocator *alloc_; /**< The allocator used to allocate data */
-  char *data_; /**< The pointer to data */
-  size_t size_; /**< The size of data */
-  bool destructable_;  /**< Whether or not this container owns data */
-
-  /** Default constructor */
-  Blob() : alloc_(nullptr), data_(nullptr), size_(0), destructable_(false) {}
-
-  /** Destructor */
-  ~Blob() { Free(); }
-
-  /** Size-based constructor */
-  explicit Blob(size_t size);
-
-  /** String-based constructor */
-  explicit Blob(const std::string &data);
-
-  /** Pointer-based constructor */
-  explicit Blob(char *data, size_t size)
-  : alloc_(nullptr), data_(data), size_(size), destructable_(false) {}
-
-  /** Copy constructor */
-  Blob(const Blob &other);
-
-  /** Copy assignment operator */
-  Blob& operator=(const Blob &other);
-
-  /** Move constructor */
-  Blob(Blob &&other);
-
-  /** Move assignment operator */
-  Blob& operator=(Blob &other);
-
-  /** Reference data */
-  char* data() {
-    return data_;
-  }
-
-  /** Reference data */
-  char* data() const {
-    return data_;
-  }
-
-  /** Reference size */
-  size_t size() const {
-    return size_;
-  }
-
- private:
-  /** Allocate blob */
-  bool Allocate(lipc::Allocator *alloc, size_t size);
-
-  /** Explicitly free the blob */
-  void Free();
-};
+/** A blob is an uniterpreted array of bytes */
+typedef labstor::charbuf Blob;
 
 /** Supported data placement policies */
 enum class PlacementPolicy {
@@ -383,11 +327,8 @@ namespace hermes {
 /** Namespace simplification for Blob */
 using api::Blob;
 
-/** Namespace simplification for MutableBlobData */
-using api::MutableBlobData;
-
-/** Namespace simplification for ConstBlobData */
-using api::ConstBlobData;
+/** Namespace simplification for Context */
+using api::Context;
 
 }  // namespace hermes
 

@@ -3,6 +3,7 @@
 //
 
 #include "vbucket.h"
+#include "hermes.h"
 
 namespace hermes::api {
 

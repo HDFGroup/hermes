@@ -41,7 +41,7 @@ void TestManyPuts(hapi::Hermes *hermes) {
     hermes::Blob blob(blob_size);
     std::string name = std::to_string(i);
     char nonce = i % 256;
-    memset(blob.data_mutable(), nonce, blob_size);
+    memset(blob.data(), nonce, blob_size);
     bkt->Put(name, std::move(blob), blob_id, ctx);
   }
 
@@ -63,7 +63,7 @@ void TestBlobOverride(hapi::Hermes *hermes) {
   hermes::BlobId blob_id;
   hermes::Blob blob(1024);
   for (size_t i = 0; i < 1024; ++i) {
-    memset(blob.data_mutable(), 10, 1024);
+    memset(blob.data(), 10, 1024);
     bkt2->Put("0", std::move(blob), blob_id, ctx);
     hermes::Blob ret;
     bkt->Get(blob_id, ret, ctx);
@@ -94,7 +94,7 @@ void TestBucketDestroy(hapi::Hermes *hermes) {
     hermes::Blob blob(blob_size);
     std::string name = std::to_string(i);
     char nonce = i % 256;
-    memset(blob.data_mutable(), nonce, blob_size);
+    memset(blob.data(), nonce, blob_size);
     bkt->Put(name, std::move(blob), blob_id, ctx);
   }
 

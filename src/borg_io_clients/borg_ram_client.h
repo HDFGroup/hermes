@@ -2,17 +2,17 @@
 // Created by lukemartinlogan on 12/22/22.
 //
 
-#ifndef HERMES_SRC_IO_CLIENTS_RAM_H_
-#define HERMES_SRC_IO_CLIENTS_RAM_H_
+#ifndef HERMES_SRC_BORG_IO_CLIENTS_RAM_H_
+#define HERMES_SRC_BORG_IO_CLIENTS_RAM_H_
 
-#include "io_client.h"
+#include "borg_io_client.h"
 #include "adapter/posix/posix_api.h"
 #include "adapter/posix/posix_singleton_macros.h"
 #include "hermes.h"
 
-namespace hermes {
+namespace hermes::borg {
 
-class RamIoClient : public IoClient {
+class RamIoClient : public BorgIoClient {
  public:
   bool Init(DeviceInfo &dev_info) override {
     auto &hermes_header = HERMES->header_;
@@ -47,4 +47,4 @@ class RamIoClient : public IoClient {
 
 }  // namespace hermes
 
-#endif  // HERMES_SRC_IO_CLIENTS_RAM_H_
+#endif  // HERMES_SRC_BORG_IO_CLIENTS_RAM_H_
