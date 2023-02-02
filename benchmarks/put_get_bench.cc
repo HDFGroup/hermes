@@ -56,7 +56,7 @@ void GetTest(hapi::Hermes *hermes,
       size_t blob_name_int = rank * blobs_per_rank + i;
       std::string name = std::to_string(blob_name_int);
       hermes::Blob ret;
-      bkt->GetBlobId(name, blob_id, ctx);
+      bkt->GetBlobId(name, blob_id);
       bkt->Get(blob_id, ret, ctx);
     }
   }

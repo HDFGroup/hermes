@@ -86,10 +86,9 @@ class Bucket {
    *
    * @param blob_name the name of the blob
    * @param blob_id (output) the returned blob_id
-   * @param ctx any additional information
    * @return The Status of the operation
    * */
-  Status GetBlobId(std::string blob_name, BlobId &blob_id, Context &ctx);
+  Status GetBlobId(std::string blob_name, BlobId &blob_id);
 
   /**
    * Put \a blob_name Blob into the bucket
@@ -112,7 +111,7 @@ class Bucket {
    * @param opts specific configuration of the I/O to perform
    * @param ctx any additional information
    * */
-  Status PartialPutOrCreate(std::string blob_name,
+  Status PartialPutOrCreate(const std::string &blob_name,
                             const Blob &blob,
                             size_t blob_off,
                             BlobId &blob_id,
@@ -139,7 +138,7 @@ class Bucket {
    * @param opts specific configuration of the I/O to perform
    * @param ctx any additional information
    * */
-  Status PartialGetOrCreate(std::string blob_name,
+  Status PartialGetOrCreate(const std::string &blob_name,
                             Blob &blob,
                             size_t blob_off,
                             size_t blob_size,
@@ -147,6 +146,12 @@ class Bucket {
                             const IoClientContext &io_ctx,
                             const IoClientOptions &opts,
                             Context &ctx);
+
+  /**
+   * Determine if the bucket contains \a blob_id BLOB
+   * */
+  bool ContainsBlob(const std::string &blob_name,
+                    BlobId &blob_id);
 
   /**
    * Determine if the bucket contains \a blob_id BLOB

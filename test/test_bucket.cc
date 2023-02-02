@@ -49,7 +49,7 @@ void TestManyPuts(hapi::Hermes *hermes) {
     std::string name = std::to_string(i);
     char nonce = i % 256;
     hermes::Blob blob;
-    bkt->GetBlobId(name, blob_id, ctx);
+    bkt->GetBlobId(name, blob_id);
     bkt->Get(blob_id, blob, ctx);
     REQUIRE(blob.size() == blob_size);
     REQUIRE(VerifyBuffer(blob.data(), blob_size, nonce));
@@ -111,13 +111,13 @@ void TestBlobRename(hapi::Hermes *hermes) {
 
   {
     hermes::BlobId blob_get_id;
-    bkt->GetBlobId("0", blob_get_id, ctx);
+    bkt->GetBlobId("0", blob_get_id);
     REQUIRE(blob_get_id.IsNull());
   }
 
   {
     hermes::BlobId blob_get_id;
-    bkt->GetBlobId("1", blob_get_id, ctx);
+    bkt->GetBlobId("1", blob_get_id);
     REQUIRE(!blob_get_id.IsNull());
     REQUIRE(blob_get_id == blob_id);
   }
@@ -132,7 +132,7 @@ void TestBlobDestroy(hapi::Hermes *hermes) {
   bkt->DestroyBlob(blob_id, ctx);
   {
     hermes::BlobId blob_id_get;
-    bkt->GetBlobId("0", blob_id_get, ctx);
+    bkt->GetBlobId("0", blob_id_get);
     REQUIRE(blob_id_get.IsNull());
   }
 }

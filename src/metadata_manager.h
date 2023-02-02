@@ -158,7 +158,7 @@ class MetadataManager {
    * @RPC_TARGET_NODE rpc_->node_id_
    * @RPC_CLASS_INSTANCE mdm
    * */
-  RPC bool LocalBucketContainsBlob(BucketId bkt_id, BlobId blob_id);
+  bool LocalBucketContainsBlob(BucketId bkt_id, BlobId blob_id);
 
   /**
    * Rename \a bkt_id bucket to \a new_bkt_name new name

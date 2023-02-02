@@ -92,9 +92,12 @@ struct UniqueId {
 
   bool IsNull() const { return unique_ == 0; }
 
-  static UniqueId GetNull() {
-    UniqueId id;
-    id.unique_ = 0;
+  UniqueId() = default;
+
+  UniqueId(u64 unique, i32 node_id) : unique_(unique), node_id_(node_id) {}
+
+  static inline UniqueId GetNull() {
+    static const UniqueId id(0, 0);
     return id;
   }
 

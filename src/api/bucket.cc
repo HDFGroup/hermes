@@ -51,8 +51,7 @@ void Bucket::Destroy() {
  * Get the id of a blob from the blob name
  * */
 Status Bucket::GetBlobId(std::string blob_name,
-                         BlobId &blob_id,
-                         Context &ctx) {
+                         BlobId &blob_id) {
   lipc::string lblob_name(blob_name);
   blob_id = mdm_->LocalGetBlobId(GetId(), lblob_name);
   return Status();
@@ -104,7 +103,7 @@ Status Bucket::Put(std::string blob_name,
  * @param opts which adapter to route I/O request if blob DNE
  * @param ctx any additional information
  * */
-Status Bucket::PartialPutOrCreate(std::string blob_name,
+Status Bucket::PartialPutOrCreate(const std::string &blob_name,
                                   const Blob &blob,
                                   size_t blob_off,
                                   BlobId &blob_id,
@@ -163,7 +162,7 @@ Status Bucket::Get(BlobId blob_id, Blob &blob, Context &ctx) {
  * @param opts specific configuration of the I/O to perform
  * @param ctx any additional information
  * */
-Status Bucket::PartialGetOrCreate(std::string blob_name,
+Status Bucket::PartialGetOrCreate(const std::string &blob_name,
                                   Blob &blob,
                                   size_t blob_off,
                                   size_t blob_size,
@@ -172,7 +171,7 @@ Status Bucket::PartialGetOrCreate(std::string blob_name,
                                   const IoClientOptions &opts,
                                   Context &ctx) {
   Blob full_blob;
-  if (ContainsBlob(blob_id)) {
+  if (ContainsBlob(blob_name, blob_id)) {
     // Case 1: The blob already exists (read from hermes)
     // Read blob from Hermes
     Get(blob_id, full_blob, ctx);
@@ -196,6 +195,15 @@ Status Bucket::PartialGetOrCreate(std::string blob_name,
   blob.resize(blob_size);
   memcpy(blob.data() + blob_off, full_blob.data() + blob_off, blob.size());
   return Status();
+}
+
+/**
+ * Determine if the bucket contains \a blob_id BLOB
+ * */
+bool Bucket::ContainsBlob(const std::string &blob_name,
+                          BlobId &blob_id) {
+  GetBlobId(blob_name, blob_id);
+  return blob_id.IsNull();
 }
 
 /**

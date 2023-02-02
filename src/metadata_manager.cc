@@ -184,7 +184,8 @@ size_t MetadataManager::LocalGetBucketSize(BucketId bkt_id,
  * @RPC_TARGET_NODE rpc_->node_id_
  * @RPC_CLASS_INSTANCE mdm
  * */
-bool MetadataManager::LocalBucketContainsBlob(BucketId bkt_id, BlobId blob_id) {
+bool MetadataManager::LocalBucketContainsBlob(BucketId bkt_id,
+                                              BlobId blob_id) {
   auto iter = blob_map_->find(blob_id);
   if (iter == blob_map_->end()) {
     return false;
