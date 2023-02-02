@@ -249,7 +249,7 @@ class Filesystem {
 
  public:
   /** Whether or not \a path PATH is tracked by Hermes */
-  static bool IsTracked(const std::string &path) {
+  static bool IsPathTracked(const std::string &path) {
     if (!HERMES->IsInitialized()) {
       return false;
     }

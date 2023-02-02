@@ -39,7 +39,7 @@ endif()
 # Set sources
 #------------------------------------------------------------------------------
 set(HERMES_SRCS
-  ${CMAKE_CURRENT_SOURCE_DIR}/singleton.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/api/hermes_singleton.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/config_client.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/config_server.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/hermes_types.cc

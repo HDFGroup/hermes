@@ -23,7 +23,7 @@
 
 #include "data_structures.h"
 #include "constants.h"
-#include "singleton_macros.h"
+#include "api/hermes_singleton_macros.h"
 #include "statuses.h"
 
 /**

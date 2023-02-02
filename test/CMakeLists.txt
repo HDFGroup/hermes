@@ -19,8 +19,13 @@ set(API_TESTS
 
 foreach(program ${API_TESTS})
   add_executable(${program} ${program}.cc main_mpi.cc)
-  target_link_libraries(${program} ${LIBRT} hermes MPI::MPI_CXX
-   $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium> glog::glog Catch2::Catch2)
+  add_dependencies(${program} hermes)
+  target_link_libraries(${program} ${LIBRT}
+          hermes
+          MPI::MPI_CXX
+          $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium>
+          glog::glog
+          Catch2::Catch2)
   add_test(NAME "Test${program}"
     COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
     "${CMAKE_BINARY_DIR}/bin/${program}")
