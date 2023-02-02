@@ -13,10 +13,13 @@ namespace hermes::api {
  * @param name the name of the vbucket
  * @param ctx any additional information
  * */
-VBucket::VBucket(std::string name, Context &ctx) : mdm_(&HERMES->mdm_) {
+VBucket::VBucket(const std::string &name,
+                 Context &ctx,
+                 const IoClientOptions &opts)
+: mdm_(&HERMES->mdm_), ctx_(ctx) {
   lipc::string lname(name);
   // TODO(llogan): rpcify
-  id_ = mdm_->LocalGetOrCreateVBucket(lname);
+  id_ = mdm_->LocalGetOrCreateVBucket(lname, opts);
 }
 
 /**

@@ -35,54 +35,6 @@ void PosixIoClient::HermesOpen(IoClientContext &f,
 
 }
 
-/** Write blob to backend */
-void PosixIoClient::WriteBlob(const Blob &full_blob,
-                              size_t backend_off,
-                              const IoClientContext &io_ctx,
-                              const IoClientOptions &opts,
-                              IoStatus &status) {
-  (void) opts;
-  LOG(INFO) << "Writing to file: " << io_ctx.filename_
-            << " offset: " << backend_off
-            << " size:" << full_blob.size() << "."
-            << " file_size:" << stdfs::file_size(io_ctx.filename_)
-            << std::endl;
-  int fd = real_api->open(io_ctx.filename_.c_str(), O_RDWR | O_CREAT);
-  if (fd < 0) {
-    status.posix_ret_ =0;
-    return;
-  }
-  status.posix_ret_ = real_api->pwrite(fd,
-                                       full_blob.data(),
-                                       full_blob.size(),
-                                       backend_off);
-  real_api->close(fd);
-}
-
-/** Read blob from the backend */
-void PosixIoClient::ReadBlob(Blob &full_blob,
-                             size_t backend_off,
-                             const IoClientContext &io_ctx,
-                             const IoClientOptions &opts,
-                             IoStatus &status) {
-  (void) opts;
-  LOG(INFO) << "Writing to file: " << io_ctx.filename_
-            << " offset: " << backend_off
-            << " size:" << full_blob.size() << "."
-            << " file_size:" << stdfs::file_size(io_ctx.filename_)
-            << std::endl;
-  int fd = real_api->open(io_ctx.filename_.c_str(), O_RDONLY);
-  if (fd < 0) {
-    status.posix_ret_ =0;
-    return;
-  }
-  status.posix_ret_ = real_api->pread(fd,
-                                      full_blob.data(),
-                                      full_blob.size(),
-                                      backend_off);
-  real_api->close(fd);
-}
-
 /** Synchronize \a file FILE f */
 int PosixIoClient::RealSync(const IoClientContext &f,
                             const IoClientStat &stat) {
@@ -95,6 +47,66 @@ int PosixIoClient::RealClose(const IoClientContext &f,
                              const IoClientStat &stat) {
   (void) f;
   return real_api->close(stat.fd_);
+}
+
+/** Get initial statistics from the backend */
+void PosixIoClient::InitBucketState(const lipc::charbuf &bkt_name,
+                                    const IoClientOptions &opts,
+                                    GlobalIoClientState &stat) {
+  // real_api->__fxstat();
+  stat.true_size_ = 0;
+}
+
+/** Update backend statistics */
+void PosixIoClient::UpdateBucketState(const IoClientOptions &opts,
+                                      GlobalIoClientState &stat) {
+  stat.true_size_;
+}
+
+/** Write blob to backend */
+void PosixIoClient::WriteBlob(const Blob &full_blob,
+                              const IoClientContext &io_ctx,
+                              const IoClientOptions &opts,
+                              IoStatus &status) {
+  (void) opts;
+  LOG(INFO) << "Writing to file: " << io_ctx.filename_
+            << " offset: " << opts.backend_off_
+            << " size:" << full_blob.size() << "."
+            << " file_size:" << stdfs::file_size(io_ctx.filename_)
+            << std::endl;
+  int fd = real_api->open(io_ctx.filename_.c_str(), O_RDWR | O_CREAT);
+  if (fd < 0) {
+    status.posix_ret_ = 0;
+    return;
+  }
+  status.posix_ret_ = real_api->pwrite(fd,
+                                       full_blob.data(),
+                                       full_blob.size(),
+                                       opts.backend_off_);
+  real_api->close(fd);
+}
+
+/** Read blob from the backend */
+void PosixIoClient::ReadBlob(Blob &full_blob,
+                             const IoClientContext &io_ctx,
+                             const IoClientOptions &opts,
+                             IoStatus &status) {
+  (void) opts;
+  LOG(INFO) << "Writing to file: " << io_ctx.filename_
+            << " offset: " << opts.backend_off_
+            << " size:" << full_blob.size() << "."
+            << " file_size:" << stdfs::file_size(io_ctx.filename_)
+            << std::endl;
+  int fd = real_api->open(io_ctx.filename_.c_str(), O_RDONLY);
+  if (fd < 0) {
+    status.posix_ret_ =0;
+    return;
+  }
+  status.posix_ret_ = real_api->pread(fd,
+                                      full_blob.data(),
+                                      full_blob.size(),
+                                      opts.backend_off_);
+  real_api->close(fd);
 }
 
 }  // namespace hermes::adapter::fs

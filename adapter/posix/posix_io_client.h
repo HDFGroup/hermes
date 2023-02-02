@@ -47,20 +47,6 @@ class PosixIoClient : public hermes::adapter::fs::FilesystemIoClient {
                   const IoClientStat &stat,
                   FilesystemIoClientContext &fs_mdm) override;
 
-  /** Write blob to backend */
-  void WriteBlob(const Blob &full_blob,
-                 size_t backend_off,
-                 const IoClientContext &io_ctx,
-                 const IoClientOptions &opts,
-                 IoStatus &status) override;
-
-  /** Read blob from the backend */
-  void ReadBlob(Blob &full_blob,
-                size_t backend_off,
-                const IoClientContext &io_ctx,
-                const IoClientOptions &opts,
-                IoStatus &status) override;
-
   /** Synchronize \a file FILE f */
   int RealSync(const IoClientContext &f,
                const IoClientStat &stat) override;
@@ -68,6 +54,27 @@ class PosixIoClient : public hermes::adapter::fs::FilesystemIoClient {
   /** Close \a file FILE f */
   int RealClose(const IoClientContext &f,
                 const IoClientStat &stat) override;
+
+  /** Get initial statistics from the backend */
+  void InitBucketState(const lipc::charbuf &bkt_name,
+                       const IoClientOptions &opts,
+                       GlobalIoClientState &stat) override;
+
+  /** Update backend statistics */
+  void UpdateBucketState(const IoClientOptions &opts,
+                         GlobalIoClientState &stat) override;
+
+  /** Write blob to backend */
+  void WriteBlob(const Blob &full_blob,
+                 const IoClientContext &io_ctx,
+                 const IoClientOptions &opts,
+                 IoStatus &status) override;
+
+  /** Read blob from the backend */
+  void ReadBlob(Blob &full_blob,
+                const IoClientContext &io_ctx,
+                const IoClientOptions &opts,
+                IoStatus &status) override;
 };
 
 }  // namespace hermes::adapter::fs

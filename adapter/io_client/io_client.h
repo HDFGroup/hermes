@@ -24,17 +24,18 @@
 namespace hermes::adapter {
 
 /** Adapter types */
-enum class IoClientType {
+enum class AdapterType {
   kNone,
   kPosix,
   kStdio,
   kMpiio,
+  kPubsub,
   kVfd
 };
 
 /** Represents an object in the I/O client (e.g., a file) */
 struct IoClientContext {
-  IoClientType type_;     /**< Client to forward I/O request to */
+  AdapterType type_;     /**< Client to forward I/O request to */
   std::string filename_;  /**< Filename to read from */
 
   int hermes_fd_;          /**< fake file descriptor (SCRATCH MODE) */
@@ -46,7 +47,7 @@ struct IoClientContext {
 
   /** Default constructor */
   IoClientContext()
-      : type_(IoClientType::kNone),
+      : type_(AdapterType::kNone),
         filename_(),
         hermes_fd_(-1),
         hermes_fh_(nullptr),
@@ -57,21 +58,28 @@ struct IoClientContext {
 
 /** Represents any relevant settings for an I/O client operation */
 struct IoClientOptions {
+  AdapterType type_;      /**< Client to forward I/O request to */
   MPI_Datatype mpi_type_; /**< MPI data type */
   int mpi_count_;         /**< The number of types */
+  size_t backend_off_;    /**< Offset in the backend to begin I/O */
+  size_t backend_size_;   /**< Size of I/O to perform at backend */
 
   /** Default constructor */
   IoClientOptions() : mpi_type_(MPI_CHAR),
-                      mpi_count_(0) {}
+                      mpi_count_(0),
+                      backend_off_(0),
+                      backend_size_(0) {}
 };
 
 /** Any relevant statistics from the I/O client */
 struct IoClientStat {
   int flags_;            /**< open() flags for POSIX */
   mode_t st_mode_;       /**< protection */
+  size_t backend_size_;  /**< size of the object in the backend */
+  size_t bkt_size_;      /**< size of the object in Hermes */
   uid_t st_uid_;         /**< user ID of owner */
   gid_t st_gid_;         /**< group ID of owner */
-  off64_t st_ptr_;       /**< Current ptr of FILE */
+  off64_t st_ptr_;       /**< current ptr of FILE */
   timespec st_atim_;     /**< time of last access */
   timespec st_mtim_;     /**< time of last modification */
   timespec st_ctim_;     /**< time of last status change */
@@ -109,6 +117,11 @@ struct IoClientStat {
   }
 };
 
+/** Any statistics which need to be globally maintained across ranks */
+struct GlobalIoClientState {
+  size_t true_size_;
+};
+
 /** A structure to represent IO status */
 struct IoStatus {
   size_t posix_ret_;           /**< POSIX/STDIO return value */
@@ -140,16 +153,26 @@ class IoClient {
   /** Virtual destructor */
   virtual ~IoClient() = default;
 
+  /** Get initial statistics from the backend */
+  virtual void InitBucketState(const lipc::charbuf &bkt_name,
+                               const IoClientOptions &opts,
+                               GlobalIoClientState &stat) = 0;
+
+  /**
+   * What the statistics would be if all blobs were flushed from Hermes
+   * to the backing storage system.
+   * */
+  virtual void UpdateBucketState(const IoClientOptions &opts,
+                                 GlobalIoClientState &stat) = 0;
+
   /** Write blob to backend */
   virtual void WriteBlob(const Blob &full_blob,
-                         size_t backend_off,
                          const IoClientContext &io_ctx,
                          const IoClientOptions &opts,
                          IoStatus &status) = 0;
 
   /** Read blob from the backend */
   virtual void ReadBlob(Blob &full_blob,
-                        size_t backend_off,
                         const IoClientContext &io_ctx,
                         const IoClientOptions &opts,
                         IoStatus &status) = 0;

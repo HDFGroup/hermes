@@ -39,6 +39,12 @@ void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
   std::pair<AdapterStat*, bool> exists = mdm->Find(f);
   if (!exists.second) {
     LOG(INFO) << "File not opened before by adapter" << std::endl;
+    // Create the new bucket
+    Context ctx;
+    IoOptions opts;
+    opts.type_ = type_;
+    stat.bkt_id_ = HERMES->GetBucket(path, ctx, opts);
+    // Allocate internal hermes data
     auto stat_ptr = std::make_unique<AdapterStat>(stat);
     FilesystemIoClientContext fs_ctx(&mdm->fs_mdm_, (void*)stat_ptr.get());
     io_client_->HermesOpen(f, stat, fs_ctx);
@@ -69,15 +75,14 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
     const Blob blob_wrap((const char*)ptr + data_offset, off);
     lipc::charbuf blob_name(p.CreateBlobName());
     BlobId blob_id;
-    size_t backend_start = p.page_ * kPageSize;
     IoClientContext io_ctx;
     Context ctx;
     io_ctx.filename_ = filename;
+    opts.backend_off_ = p.page_ * kPageSize;
+    opts.backend_size_ = kPageSize;
     bkt->PartialPutOrCreate(blob_name.str(),
                             blob_wrap,
                             p.blob_off_,
-                            backend_start,
-                            kPageSize,
                             blob_id,
                             io_ctx,
                             opts,

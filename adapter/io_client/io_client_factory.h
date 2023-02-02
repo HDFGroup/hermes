@@ -30,25 +30,23 @@ class IoClientFactory {
    * @param[in] type type of adapter.
    * @return Instance of mapper given a type.
    */
-  static IoClient* Get(const IoClientType& type) {
+  static IoClient* Get(const AdapterType& type) {
     switch (type) {
-      case IoClientType::kPosix: {
+      case AdapterType::kPosix: {
         return HERMES_POSIX_IO_CLIENT;
       }
-      case IoClientType::kStdio: {
+      case AdapterType::kStdio: {
         return nullptr;
       }
-      case IoClientType::kMpiio: {
+      case AdapterType::kMpiio: {
         return nullptr;
       }
-      case IoClientType::kVfd: {
-        return nullptr;
-      }
+      case AdapterType::kPubsub:
+      case AdapterType::kVfd:
       default: {
-        // TODO(llogan): @error_handling Mapper not implemented
+        return nullptr;
       }
     }
-    return NULL;
   }
 };
 }  // namespace hermes::adapter

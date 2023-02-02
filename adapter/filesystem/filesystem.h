@@ -113,10 +113,12 @@ struct IoOptions : public IoClientOptions {
 class Filesystem {
  public:
   FilesystemIoClient *io_client_;
+  AdapterType type_;
 
  public:
   /** Constructor */
-  explicit Filesystem(FilesystemIoClient *io_client) : io_client_(io_client) {}
+  explicit Filesystem(FilesystemIoClient *io_client, AdapterType type)
+  : io_client_(io_client), type_(type) {}
 
   /** open \a path */
   File Open(AdapterStat &stat, const std::string &path);

@@ -143,13 +143,15 @@ void Hermes::FinalizeColocated() {
 }
 
 std::shared_ptr<Bucket> Hermes::GetBucket(std::string name,
-                                          Context ctx) {
-  return std::make_shared<Bucket>(name, ctx);
+                                          Context ctx,
+                                          IoClientOptions opts) {
+  return std::make_shared<Bucket>(name, ctx, opts);
 }
 
 std::shared_ptr<VBucket> Hermes::GetVBucket(std::string name,
-                                            Context ctx) {
-  return std::make_shared<VBucket>(name, ctx);
+                                            Context ctx,
+                                            IoClientOptions opts) {
+  return std::make_shared<VBucket>(name, ctx, opts);
 }
 
 }  // namespace hermes::api

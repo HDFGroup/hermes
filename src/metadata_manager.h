@@ -131,7 +131,8 @@ class MetadataManager {
    * @RPC_TARGET_NODE rpc_->node_id_
    * @RPC_CLASS_INSTANCE mdm
    * */
-  RPC BucketId LocalGetOrCreateBucket(lipc::charbuf &bkt_name);
+  RPC BucketId LocalGetOrCreateBucket(lipc::charbuf &bkt_name,
+                                      const IoClientOptions &opts);
 
   /**
    * Get the BucketId with \a bkt_name bucket name
@@ -149,6 +150,15 @@ class MetadataManager {
    * @RPC_CLASS_INSTANCE mdm
    * */
   RPC bool LocalBucketContainsBlob(BucketId bkt_id, BlobId blob_id);
+
+  /**
+   * Get the size of a bucket (depends on the IoClient used).
+   *
+   * @RPC_TARGET_NODE rpc_->node_id_
+   * @RPC_CLASS_INSTANCE mdm
+   * */
+  RPC size_t LocalGetBucketSize(BucketId bkt_id,
+                                IoClientContext &io_ctx);
 
   /**
    * Rename \a bkt_id bucket to \a new_bkt_name new name
@@ -178,32 +188,30 @@ class MetadataManager {
    * @RPC_TARGET_NODE rpc_->node_id_
    * @RPC_CLASS_INSTANCE mdm
    * */
-  RPC BlobId LocalBucketPutBlob(BucketId bkt_id,
-                                const lipc::charbuf &blob_name,
-                                const Blob &data,
-                                lipc::vector<BufferInfo> &buffers);
+  RPC std::tuple<BlobId, bool, size_t> LocalBucketPutBlob(
+      BucketId bkt_id,
+      const lipc::charbuf &blob_name,
+      size_t blob_size,
+      lipc::vector<BufferInfo> &buffers);
 
   /**
-   * Partially (or fully) Put a blob from a bucket. Load the blob from the
-   * I/O backend if it does not exist.
-   *
-   * @param blob_name the semantic name of the blob
-   * @param blob the buffer to put final data in
-   * @param blob_off the offset within the blob to begin the Put
-   * @param backend_off the offset to read from the backend if blob DNE
-   * @param backend_size the size to read from the backend if blob DNE
-   * @param backend_ctx which adapter to route I/O request if blob DNE
-   * @param ctx any additional information
+   * Registers the existence of a Blob with the Bucket. Required for
+   * deletion and statistics.
    * */
-  RPC Status LocalBucketPartialPutOrCreateBlob(BucketId bkt_id,
-                                               const lipc::string &blob_name,
-                                               const Blob &blob,
-                                               size_t blob_off,
-                                               size_t backend_off,
-                                               size_t backend_size,
-                                               const IoClientContext &io_ctx,
-                                               const IoClientOptions &opts,
-                                               Context &ctx);
+  Status LocalBucketRegisterBlobId(BucketId bkt_id,
+                                   BlobId blob_id,
+                                   size_t orig_blob_size,
+                                   size_t new_blob_size,
+                                   bool did_create,
+                                   const IoClientOptions &opts);
+
+  /**
+   * Registers the existence of a Blob with the Bucket. Required for
+   * deletion and statistics.
+   * */
+  Status LocalBucketUnregisterBlobId(BucketId bkt_id,
+                                     BlobId blob_id,
+                                     const IoClientContext &io_ctx);
 
   /**
    * Get a blob from a bucket
@@ -230,7 +238,7 @@ class MetadataManager {
    * @RPC_TARGET_NODE rpc_->node_id_
    * @RPC_CLASS_INSTANCE mdm
    * */
-  RPC lipc::vector<BufferInfo> LocalGetBlobBuffers(BlobId blob_id);
+  RPC std::vector<BufferInfo> LocalGetBlobBuffers(BlobId blob_id);
 
   /**
    * Rename \a blob_id blob to \a new_blob_name new blob name
@@ -256,7 +264,8 @@ class MetadataManager {
    * @RPC_TARGET_NODE rpc_->node_id_
    * @RPC_CLASS_INSTANCE mdm
    * */
-  RPC VBucketId LocalGetOrCreateVBucket(lipc::charbuf &vbkt_name);
+  RPC VBucketId LocalGetOrCreateVBucket(lipc::charbuf &vbkt_name,
+                                        const IoClientOptions &opts);
 
   /**
    * Get the VBucketId of \a vbkt_name VBucket

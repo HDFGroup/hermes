@@ -15,6 +15,7 @@ class VBucket {
  private:
   MetadataManager *mdm_;
   VBucketId id_;
+  Context ctx_;
 
  public:
   /**
@@ -23,7 +24,9 @@ class VBucket {
    * @param name the name of the vbucket
    * @param ctx any additional information
    * */
-  VBucket(std::string name, Context &ctx);
+  VBucket(const std::string &name,
+          Context &ctx,
+          const IoClientOptions &opts);
 
   /**
    * Rename a VBucket.

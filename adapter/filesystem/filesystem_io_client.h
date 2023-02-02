@@ -22,9 +22,20 @@ struct FsIoClientMetadata {
 
   /** Default constructor */
   FsIoClientMetadata() {
-    // TODO(llogan): Recycle old fds
     hermes_fd_min_ = 8192;  // TODO(llogan): don't assume 8192
     hermes_fd_max_ = std::numeric_limits<int>::max();
+  }
+
+  /** Allocate a Hermes FD */
+  int AllocateFd() {
+    int cur = hermes_fd_cur_.fetch_add(1);
+    return cur;
+  }
+
+  /** Release a Hermes FD */
+  void ReleaseFd(int hermes_fd) {
+    // TODO(llogan): recycle instead of ignore
+    (void) hermes_fd;
   }
 };
 

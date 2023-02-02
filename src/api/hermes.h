@@ -80,11 +80,13 @@ class Hermes {
  public:
   /** Create a Bucket in Hermes */
   std::shared_ptr<Bucket> GetBucket(std::string name,
-                                    Context ctx = Context());
+                                    Context ctx = Context(),
+                                    IoClientOptions = IoClientOptions());
 
   /** Create a VBucket in Hermes */
   std::shared_ptr<VBucket> GetVBucket(std::string name,
-                                      Context ctx = Context());
+                                      Context ctx = Context(),
+                                      IoClientOptions = IoClientOptions());
 
  private:
   /** Internal initialization of Hermes */

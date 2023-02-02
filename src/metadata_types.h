@@ -7,9 +7,11 @@
 
 #include "hermes_types.h"
 #include "config_server.h"
+#include "adapter/io_client/io_client.h"
 
 namespace hermes {
 
+using adapter::GlobalIoClientState;
 using api::Blob;
 struct BucketInfo;     /** Forward declaration of BucketInfo */
 struct BlobInfo;       /** Forward declaration of BlobInfo */
@@ -92,8 +94,9 @@ struct ShmHeader<BlobInfo> : public lipc::ShmBaseHeader {
   BucketId bkt_id_;  /**< The bucket containing the blob */
   lipc::TypedPointer<lipc::string> name_ar_; /**< SHM pointer to string */
   lipc::TypedPointer<lipc::vector<BufferInfo>>
-      buffers_ar_; /**< SHM pointer to BufferInfo vector */
-  RwLock rwlock_; /**< Ensures BlobInfo access is synchronized */
+      buffers_ar_;     /**< SHM pointer to BufferInfo vector */
+  size_t blob_size_;   /**< The overall size of the blob */
+  RwLock rwlock_;      /**< Ensures BlobInfo access is synchronized */
 
   /** Default constructor */
   ShmHeader() = default;
@@ -102,12 +105,14 @@ struct ShmHeader<BlobInfo> : public lipc::ShmBaseHeader {
   ShmHeader(const ShmHeader &other) noexcept
       : bkt_id_(other.bkt_id_), name_ar_(other.name_ar_),
         buffers_ar_(other.buffers_ar_),
+        blob_size_(other.blob_size_),
         rwlock_() {}
 
   /** Move constructor */
   ShmHeader(ShmHeader &&other) noexcept
   : bkt_id_(std::move(other.bkt_id_)), name_ar_(std::move(other.name_ar_)),
     buffers_ar_(std::move(other.buffers_ar_)),
+    blob_size_(other.blob_size_),
     rwlock_() {}
 
   /** Copy assignment */
@@ -116,6 +121,7 @@ struct ShmHeader<BlobInfo> : public lipc::ShmBaseHeader {
       bkt_id_ = other.bkt_id_;
       name_ar_ = other.name_ar_;
       buffers_ar_ = other.buffers_ar_;
+      blob_size_ = other.blob_size_;
     }
     return *this;
   }
@@ -126,6 +132,7 @@ struct ShmHeader<BlobInfo> : public lipc::ShmBaseHeader {
       bkt_id_ = std::move(other.bkt_id_);
       name_ar_ = std::move(other.name_ar_);
       buffers_ar_ = std::move(other.buffers_ar_);
+      blob_size_ = other.blob_size_;
     }
     return *this;
   }
@@ -212,8 +219,9 @@ struct BlobInfo : public lipc::ShmContainer {
 template<>
 struct ShmHeader<BucketInfo> : public lipc::ShmBaseHeader {
   lipc::TypedPointer<lipc::string> name_ar_;
-  size_t num_blobs_;
-  size_t true_size_;
+  lipc::TypedPointer<lipc::vector<BlobId>> blobs_ar_;
+  size_t internal_size_;
+  GlobalIoClientState client_state_;
 };
 
 /** Metadata for a Bucket */

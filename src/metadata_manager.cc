@@ -106,7 +106,9 @@ void MetadataManager::shm_deserialize(MetadataManagerShmHeader *header) {
  * @RPC_TARGET_NODE rpc_->node_id_
  * @RPC_CLASS_INSTANCE mdm
  * */
-BucketId MetadataManager::LocalGetOrCreateBucket(lipc::charbuf &bkt_name) {
+BucketId MetadataManager::LocalGetOrCreateBucket(
+    lipc::charbuf &bkt_name,
+    const IoClientOptions &opts) {
   // Create unique ID for the Bucket
   BucketId bkt_id;
   bkt_id.unique_ = header_->id_alloc_.fetch_add(1);
@@ -116,6 +118,13 @@ BucketId MetadataManager::LocalGetOrCreateBucket(lipc::charbuf &bkt_name) {
   if (bkt_id_map_->try_emplace(bkt_name, bkt_id)) {
     BucketInfo info(HERMES->main_alloc_);
     (*info.name_) = bkt_name;
+    info.header_->internal_size_ = 0;
+    auto io_client = IoClientFactory::Get(opts.type_);
+    if (io_client) {
+      io_client->InitBucketState(bkt_name,
+                                 opts,
+                                 info.header_->client_state_);
+    }
     bkt_map_->emplace(bkt_id, std::move(info));
   } else {
     auto iter = bkt_id_map_->find(bkt_name);
@@ -143,6 +152,29 @@ BucketId MetadataManager::LocalGetBucketId(lipc::charbuf &bkt_name) {
   lipc::ShmRef<lipc::pair<lipc::charbuf, BucketId>> info = (*iter);
   BucketId bkt_id = *info->second_;
   return bkt_id;
+}
+
+/**
+ * Get the size of the bucket. May consider the impact the bucket has
+ * on the backing storage system's statistics using the io_ctx.
+ *
+ * @RPC_TARGET_NODE rpc_->node_id_
+ * @RPC_CLASS_INSTANCE mdm
+ * */
+size_t MetadataManager::LocalGetBucketSize(BucketId bkt_id,
+                                           IoClientContext &io_ctx) {
+  auto iter = bkt_map_->find(bkt_id);
+  if (iter == bkt_map_->end()) {
+    return 0;
+  }
+  lipc::ShmRef<lipc::pair<BucketId, BucketInfo>> info = (*iter);
+  BucketInfo &bkt_info = *info->second_;
+  auto io_client = IoClientFactory::Get(io_ctx.type_);
+  if (io_client) {
+    return bkt_info.header_->client_state_.true_size_;
+  } else {
+    return bkt_info.header_->internal_size_;
+  }
 }
 
 /**
@@ -193,8 +225,42 @@ bool MetadataManager::LocalDestroyBucket(BucketId bkt_id) {
   return true;
 }
 
+/** Registers a blob with the bucket */
+Status MetadataManager::LocalBucketRegisterBlobId(
+    BucketId bkt_id,
+    BlobId blob_id,
+    size_t orig_blob_size,
+    size_t new_blob_size,
+    bool did_create,
+    const IoClientOptions &opts) {
+  auto iter = bkt_map_->find(bkt_id);
+  if (iter == bkt_map_->end()) {
+    return Status();
+  }
+  lipc::ShmRef<lipc::pair<BucketId, BucketInfo>> info = (*iter);
+  BucketInfo &bkt_info = *info->second_;
+  // Update I/O client bucket stats
+  auto io_client = IoClientFactory::Get(opts.type_);
+  if (io_client) {
+    io_client->UpdateBucketState(opts, bkt_info.header_->client_state_);
+  }
+  // Update internal bucket size
+  bkt_info.header_->internal_size_ += new_blob_size - orig_blob_size;
+  // Add blob to ID vector if it didn't already exist
+  if (!did_create) { return Status(); }
+  // TODO(llogan): add blob id
+  return Status();
+}
+
+/** Unregister a blob from a bucket */
+Status MetadataManager::LocalBucketUnregisterBlobId(
+    BucketId bkt_id, BlobId blob_id,
+    const IoClientContext &io_ctx) {
+  // TODO(llogan)
+}
+
 /**
- * Put a blob in a bucket
+ * Creates the blob metadata
  *
  * @param bkt_id id of the bucket
  * @param blob_name semantic blob name
@@ -204,21 +270,27 @@ bool MetadataManager::LocalDestroyBucket(BucketId bkt_id) {
  * @RPC_TARGET_NODE rpc_->node_id_
  * @RPC_CLASS_INSTANCE mdm
  * */
-BlobId MetadataManager::LocalBucketPutBlob(BucketId bkt_id,
-                                           const lipc::charbuf &blob_name,
-                                           const Blob &data,
-                                           lipc::vector<BufferInfo> &buffers) {
+std::tuple<BlobId, bool, size_t> MetadataManager::LocalBucketPutBlob(
+    BucketId bkt_id,
+    const lipc::charbuf &blob_name,
+    size_t blob_size,
+    lipc::vector<BufferInfo> &buffers) {
+  size_t orig_blob_size = 0;
+
+  // Get internal blob name
   lipc::charbuf internal_blob_name = CreateBlobName(bkt_id, blob_name);
 
   // Create unique ID for the Blob
   BlobId blob_id;
   blob_id.unique_ = header_->id_alloc_.fetch_add(1);
   blob_id.node_id_ = rpc_->node_id_;
-  if (blob_id_map_->try_emplace(internal_blob_name, blob_id)) {
+  bool did_create = blob_id_map_->try_emplace(internal_blob_name, blob_id);
+  if (did_create) {
     BlobInfo blob_info(HERMES->main_alloc_);
     blob_info.bkt_id_ = bkt_id;
     (*blob_info.name_) = std::move(internal_blob_name);
     (*blob_info.buffers_) = std::move(buffers);
+    blob_info.header_->blob_size_ = blob_size;
     blob_map_->emplace(blob_id, std::move(blob_info));
   } else {
     blob_id = *(*blob_id_map_)[internal_blob_name];
@@ -227,69 +299,7 @@ BlobId MetadataManager::LocalBucketPutBlob(BucketId bkt_id,
     BlobInfo &blob_info = *info->second_;
     (*blob_info.buffers_) = std::move(buffers);
   }
-
-  return blob_id;
-}
-
-/**
- * Partially (or fully) Put a blob from a bucket. Load the blob from the
- * I/O backend if it does not exist.
- *
- * @param blob_name the semantic name of the blob
- * @param blob the buffer to put final data in
- * @param blob_off the offset within the blob to begin the Put
- * @param backend_off the offset to read from the backend if blob DNE
- * @param backend_size the size to read from the backend if blob DNE
- * @param backend_ctx which adapter to route I/O request if blob DNE
- * @param ctx any additional information
- * */
-Status MetadataManager::LocalBucketPartialPutOrCreateBlob(
-    BucketId bkt_id,
-    const lipc::string &blob_name,
-    const Blob &blob,
-    size_t blob_off,
-    size_t backend_off,
-    size_t backend_size,
-    const IoClientContext &io_ctx,
-    const IoClientOptions &opts,
-    Context &ctx) {
-
-  // Determine if the blob exists
-  BlobId blob_id;
-  Blob full_blob;
-  Bucket bkt(bkt_id, ctx);
-  lipc::charbuf internal_blob_name = CreateBlobName(bkt_id, blob_name);
-  auto iter = blob_id_map_->find(internal_blob_name);
-
-  // Put the blob
-  if (blob_off == 0 && blob.size() == backend_size) {
-    // Case 1: We're overriding the entire blob
-    // Put the entire blob, no need to load from storage
-    return bkt.Put(blob_name.str(), blob, blob_id, ctx);
-  }
-  if (iter != blob_id_map_->end()) {
-    // Case 2: The blob already exists (read from hermes)
-    // Read blob from Hermes
-    bkt.Get(blob_id, full_blob, ctx);
-  } else {
-    // Case 3: The blob did not exist (need to read from backend)
-    // Read blob using adapter
-    IoStatus status;
-    auto io_client = IoClientFactory::Get(io_ctx.type_);
-    full_blob.resize(backend_size);
-    io_client->ReadBlob(full_blob,
-                        backend_off,
-                        io_ctx,
-                        opts,
-                        status);
-  }
-  // Ensure the blob can hold the update
-  full_blob.resize(std::max(full_blob.size(), blob_off + blob.size()));
-  // Modify the blob
-  memcpy(full_blob.data() + blob_off, blob.data(), blob.size());
-  // Re-put the blob
-  bkt.Put(blob_name.str(), full_blob, blob_id, ctx);
-  return Status();
+  return std::tuple<BlobId, bool, size_t>(blob_id, did_create, orig_blob_size);
 }
 
 /**
@@ -329,14 +339,21 @@ BlobId MetadataManager::LocalGetBlobId(BucketId bkt_id,
  * @RPC_TARGET_NODE rpc_->node_id_
  * @RPC_CLASS_INSTANCE mdm
  * */
-lipc::vector<BufferInfo> MetadataManager::LocalGetBlobBuffers(BlobId blob_id) {
+std::vector<BufferInfo> MetadataManager::LocalGetBlobBuffers(BlobId blob_id) {
   auto iter = blob_map_->find(blob_id);
   if (iter == blob_map_->end()) {
-    return lipc::vector<BufferInfo>();
+    return std::vector<BufferInfo>();
   }
   lipc::ShmRef<lipc::pair<BlobId, BlobInfo>> info = (*iter);
   BlobInfo &blob_info = *info->second_;
-  return (*blob_info.buffers_);
+
+  // TODO(llogan): make this internal to the lipc::vec
+  std::vector<BufferInfo> v;
+  v.reserve(blob_info.buffers_->size());
+  for (lipc::ShmRef<BufferInfo> buffer_info : *blob_info.buffers_) {
+    v.emplace_back(*buffer_info);
+  }
+  return v;
 }
 
 /**
@@ -388,7 +405,10 @@ bool MetadataManager::LocalDestroyBlob(BucketId bkt_id,
  * @RPC_TARGET_NODE rpc_->node_id_
  * @RPC_CLASS_INSTANCE mdm
  * */
-VBucketId MetadataManager::LocalGetOrCreateVBucket(lipc::charbuf &vbkt_name) {
+VBucketId MetadataManager::LocalGetOrCreateVBucket(
+    lipc::charbuf &vbkt_name,
+    const IoClientOptions &opts) {
+  (void) opts;
   // Create unique ID for the Bucket
   VBucketId vbkt_id;
   vbkt_id.unique_ = header_->id_alloc_.fetch_add(1);

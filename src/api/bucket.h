@@ -33,15 +33,9 @@ class Bucket {
    * Called from hermes.h in GetBucket(). Should not
    * be used directly.
    * */
-  Bucket(std::string bkt_name,
-         Context &ctx);
-
-  /**
-   * Get \a bkt_id bucket, which is known to exist.
-   *
-   * Used internally by Hermes.
-   * */
-  Bucket(BucketId bkt_id, Context &ctx);
+  Bucket(const std::string &bkt_name,
+         Context &ctx,
+         const IoClientOptions &opts);
 
  public:
   /**
@@ -58,16 +52,6 @@ class Bucket {
   BucketId GetId() const {
     return id_;
   }
-
-  /**
-   * Set the size of bucket on storage
-   * */
-  void SetBackendSize();
-
-  /**
-   * Get the size of the data on storage
-   * */
-  void GetBackendSize();
 
   /**
    * Get the current size of the bucket
@@ -113,7 +97,8 @@ class Bucket {
   Status Put(std::string blob_name,
              const Blob blob,
              BlobId &blob_id,
-             Context &ctx);
+             Context &ctx,
+             IoClientOptions opts = IoClientOptions());
 
   /**
    * Put \a blob_name Blob into the bucket. Load the blob from the
@@ -122,16 +107,14 @@ class Bucket {
    * @param blob_name the semantic name of the blob
    * @param blob the buffer to put final data in
    * @param blob_off the offset within the blob to begin the Put
-   * @param backend_off the offset to read from the backend if blob DNE
-   * @param backend_size the size to read from the backend if blob DNE
-   * @param backend_ctx which adapter to route I/O request if blob DNE
+   * @param blob_id [out] the blob id corresponding to blob_name
+   * @param io_ctx information required to perform I/O to the backend
+   * @param opts specific configuration of the I/O to perform
    * @param ctx any additional information
    * */
   Status PartialPutOrCreate(std::string blob_name,
                             const Blob &blob,
                             size_t blob_off,
-                            size_t backend_off,
-                            size_t backend_size,
                             BlobId &blob_id,
                             const IoClientContext &io_ctx,
                             const IoClientOptions &opts,
@@ -143,6 +126,31 @@ class Bucket {
   Status Get(BlobId blob_id,
              Blob &blob,
              Context &ctx);
+
+  /**
+   * Load \a blob_name Blob from the bucket. Load the blob from the
+   * I/O backend if it does not exist.
+   *
+   * @param blob_name the semantic name of the blob
+   * @param blob the buffer to put final data in
+   * @param blob_off the offset within the blob to begin the Put
+   * @param blob_id [out] the blob id corresponding to blob_name
+   * @param io_ctx information required to perform I/O to the backend
+   * @param opts specific configuration of the I/O to perform
+   * @param ctx any additional information
+   * */
+  Status PartialGetOrCreate(std::string blob_name,
+                            const Blob &blob,
+                            size_t blob_off,
+                            BlobId &blob_id,
+                            const IoClientContext &io_ctx,
+                            const IoClientOptions &opts,
+                            Context &ctx);
+
+  /**
+   * Determine if the bucket contains \a blob_id BLOB
+   * */
+  bool ContainsBlob(BlobId blob_id);
 
   /**
    * Rename \a blob_id blob to \a new_blob_name new name
