@@ -143,6 +143,15 @@ class MetadataManager {
   RPC BucketId LocalGetBucketId(lipc::charbuf &bkt_name);
 
   /**
+   * Get the size of a bucket (depends on the IoClient used).
+   *
+   * @RPC_TARGET_NODE rpc_->node_id_
+   * @RPC_CLASS_INSTANCE mdm
+   * */
+  RPC size_t LocalGetBucketSize(BucketId bkt_id,
+                                const IoClientOptions &opts);
+
+  /**
    * Check whether or not \a bkt_id bucket contains
    * \a blob_id blob
    *
@@ -150,15 +159,6 @@ class MetadataManager {
    * @RPC_CLASS_INSTANCE mdm
    * */
   RPC bool LocalBucketContainsBlob(BucketId bkt_id, BlobId blob_id);
-
-  /**
-   * Get the size of a bucket (depends on the IoClient used).
-   *
-   * @RPC_TARGET_NODE rpc_->node_id_
-   * @RPC_CLASS_INSTANCE mdm
-   * */
-  RPC size_t LocalGetBucketSize(BucketId bkt_id,
-                                IoClientContext &io_ctx);
 
   /**
    * Rename \a bkt_id bucket to \a new_bkt_name new name

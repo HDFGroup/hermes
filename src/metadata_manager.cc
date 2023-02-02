@@ -162,14 +162,14 @@ BucketId MetadataManager::LocalGetBucketId(lipc::charbuf &bkt_name) {
  * @RPC_CLASS_INSTANCE mdm
  * */
 size_t MetadataManager::LocalGetBucketSize(BucketId bkt_id,
-                                           IoClientContext &io_ctx) {
+                                           const IoClientOptions &opts) {
   auto iter = bkt_map_->find(bkt_id);
   if (iter == bkt_map_->end()) {
     return 0;
   }
   lipc::ShmRef<lipc::pair<BucketId, BucketInfo>> info = (*iter);
   BucketInfo &bkt_info = *info->second_;
-  auto io_client = IoClientFactory::Get(io_ctx.type_);
+  auto io_client = IoClientFactory::Get(opts.type_);
   if (io_client) {
     return bkt_info.header_->client_state_.true_size_;
   } else {

@@ -56,7 +56,7 @@ class Bucket {
   /**
    * Get the current size of the bucket
    * */
-  size_t GetSize();
+  size_t GetSize(IoClientOptions opts = IoClientOptions());
 
   /**
    * Rename this bucket
@@ -140,8 +140,9 @@ class Bucket {
    * @param ctx any additional information
    * */
   Status PartialGetOrCreate(std::string blob_name,
-                            const Blob &blob,
+                            Blob &blob,
                             size_t blob_off,
+                            size_t blob_size,
                             BlobId &blob_id,
                             const IoClientContext &io_ctx,
                             const IoClientOptions &opts,

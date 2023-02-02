@@ -17,9 +17,16 @@ namespace hermes::api {
 Bucket::Bucket(const std::string &bkt_name,
                Context &ctx,
                const IoClientOptions &opts)
-    : mdm_(&HERMES->mdm_), bpm_(&HERMES->bpm_) {
+: mdm_(&HERMES->mdm_), bpm_(&HERMES->bpm_) {
   lipc::string lname(bkt_name);
   id_ = mdm_->LocalGetOrCreateBucket(lname, opts);
+}
+
+/**
+ * Get the current size of the bucket
+ * */
+size_t Bucket::GetSize(IoClientOptions opts) {
+  return mdm_->LocalGetBucketSize(id_, opts);
 }
 
 /**
@@ -156,13 +163,38 @@ Status Bucket::Get(BlobId blob_id, Blob &blob, Context &ctx) {
  * @param opts specific configuration of the I/O to perform
  * @param ctx any additional information
  * */
-Status PartialGetOrCreate(std::string blob_name,
-                          const Blob &blob,
-                          size_t blob_off,
-                          BlobId &blob_id,
-                          const IoClientContext &io_ctx,
-                          const IoClientOptions &opts,
-                          Context &ctx) {
+Status Bucket::PartialGetOrCreate(std::string blob_name,
+                                  Blob &blob,
+                                  size_t blob_off,
+                                  size_t blob_size,
+                                  BlobId &blob_id,
+                                  const IoClientContext &io_ctx,
+                                  const IoClientOptions &opts,
+                                  Context &ctx) {
+  Blob full_blob;
+  if (ContainsBlob(blob_id)) {
+    // Case 1: The blob already exists (read from hermes)
+    // Read blob from Hermes
+    Get(blob_id, full_blob, ctx);
+  } else {
+    // Case 2: The blob did not exist (need to read from backend)
+    // Read blob using adapter
+    IoStatus status;
+    auto io_client = IoClientFactory::Get(io_ctx.type_);
+    full_blob.resize(opts.backend_size_);
+    io_client->ReadBlob(full_blob,
+                        io_ctx,
+                        opts,
+                        status);
+  }
+  // Ensure the blob can hold the update
+  if (full_blob.size() < blob_off + blob_size) {
+    return PARTIAL_GET_OR_CREATE_OVERFLOW;
+  }
+  // Modify the blob
+  // TODO(llogan): we can avoid a copy here
+  blob.resize(blob_size);
+  memcpy(blob.data() + blob_off, full_blob.data() + blob_off, blob.size());
   return Status();
 }
 

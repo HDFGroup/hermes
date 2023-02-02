@@ -18,6 +18,9 @@ const Status DPE_MIN_IO_TIME_NO_SOLUTION(
     "DPE could not find solution for the minimize I/O time DPE");
 const Status BUFFER_POOL_OUT_OF_RAM(
     "Could not allocate the ram tier of storage in BPM");
+const Status PARTIAL_GET_OR_CREATE_OVERFLOW(
+    "The read exceeds the size of the backend's data");
+
 }
 
 #endif  // HERMES_SRC_STATUSES_H_
