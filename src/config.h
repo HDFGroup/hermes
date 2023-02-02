@@ -62,7 +62,8 @@ class BaseConfig {
 };
 
 /** print \a expected value and fail when an error occurs */
-static void PrintExpectedAndFail(const std::string &expected, u32 line_number = 0) {
+static void PrintExpectedAndFail(const std::string &expected,
+                                 u32 line_number = 0) {
   std::ostringstream msg;
   msg << "Configuration parser expected '" << expected << "'";
   if (line_number > 0) {
@@ -74,7 +75,7 @@ static void PrintExpectedAndFail(const std::string &expected, u32 line_number = 
 }
 
 /** parse \a list_node vector from configuration file in YAML */
-template<typename T, typename VEC_TYPE=std::vector<T>>
+template<typename T, typename VEC_TYPE = std::vector<T>>
 static void ParseVector(YAML::Node list_node, VEC_TYPE &list) {
   if constexpr(IS_SHM_SMART_POINTER(VEC_TYPE)) {
     for (auto val_node : list_node) {

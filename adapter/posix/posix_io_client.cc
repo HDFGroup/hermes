@@ -40,7 +40,6 @@ void PosixIoClient::RealOpen(IoClientContext &f,
 void PosixIoClient::HermesOpen(IoClientContext &f,
                                const IoClientStat &stat,
                                FilesystemIoClientContext &fs_mdm) {
-
 }
 
 /** Synchronize \a file FILE f */
@@ -107,7 +106,7 @@ void PosixIoClient::ReadBlob(Blob &full_blob,
             << std::endl;
   int fd = real_api->open(io_ctx.filename_.c_str(), O_RDONLY);
   if (fd < 0) {
-    status.posix_ret_ =0;
+    status.posix_ret_ = 0;
     return;
   }
   status.posix_ret_ = real_api->pread(fd,

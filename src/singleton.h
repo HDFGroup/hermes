@@ -34,7 +34,7 @@ class Singleton {
   /** Get or create an instance of type T */
   template<typename ...Args>
   inline static T* GetInstance(Args ...args) {
-    if(!obj_) { obj_ = std::make_unique<T>(args...); }
+    if (!obj_) { obj_ = std::make_unique<T>(args...); }
     return obj_.get();
   }
 };

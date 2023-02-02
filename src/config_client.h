@@ -35,7 +35,7 @@ class ClientConfig : public BaseConfig {
   void ParseYAML(YAML::Node &yaml_conf) override;
 };
 
-}  // hermes::config
+}  // namespace hermes::config
 
 namespace hermes {
 using config::ClientConfig;

@@ -88,7 +88,7 @@ void ThalliumRpc::Finalize() {
       break;
     }
     case HermesType::kColocated: {
-      //TODO(llogan)
+      // TODO(llogan)
       break;
     }
   }

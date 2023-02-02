@@ -66,6 +66,6 @@ class PosixIoClient : public BorgIoClient {
   }
 };
 
-}  // namespace hermes
+}  // namespace hermes::borg
 
 #endif  // HERMES_SRC_BORG_IO_CLIENTS_POSIX_H

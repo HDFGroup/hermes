@@ -134,4 +134,4 @@ std::string RpcContext::_GetIpAddress(const std::string &host_name) {
   return ip_address;
 }
 
-}
+}  // namespace hermes

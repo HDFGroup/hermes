@@ -58,7 +58,7 @@ struct File : public IoClientContext {
   }
 };
 
-}  // hermes::adapter::fs
+}  // namespace hermes::adapter::fs
 
 namespace std {
 /** A structure to represent hash */

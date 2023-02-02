@@ -53,6 +53,6 @@ class RamIoClient : public BorgIoClient {
   }
 };
 
-}  // namespace hermes
+}  // namespace hermes::borg
 
 #endif  // HERMES_SRC_BORG_IO_CLIENTS_RAM_H_

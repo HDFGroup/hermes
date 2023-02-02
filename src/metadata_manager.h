@@ -357,7 +357,8 @@ class MetadataManager {
    * */
   lipc::vector<TargetInfo> GetGlobalTargetInfo() {
     return {};
-  }};
+  }
+};
 
 }  // namespace hermes
 

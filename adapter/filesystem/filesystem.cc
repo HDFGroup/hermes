@@ -182,7 +182,7 @@ off_t Filesystem::Seek(File &f, AdapterStat &stat,
       break;
     }
     case SeekMode::kEnd: {
-      //TODO(llogan): Fix seek end
+      // TODO(llogan): Fix seek end
       // stat.st_ptr_ = stat.bkt_id_-> + offset;
       stat.st_ptr_ = 0 + offset;
       break;

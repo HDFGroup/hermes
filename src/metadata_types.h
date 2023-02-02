@@ -62,7 +62,7 @@ struct BufferInfo {
   BufferInfo(TargetId tid, size_t t_off, size_t t_size,
              size_t blob_off, size_t blob_size)
       : tid_(tid), t_off_(t_off), t_size_(t_size),
-        blob_off_(blob_off), blob_size_(blob_size){}
+        blob_off_(blob_off), blob_size_(blob_size) {}
 
   /** Copy constructor */
   BufferInfo(const BufferInfo &other) {

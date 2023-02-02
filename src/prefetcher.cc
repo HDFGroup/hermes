@@ -97,7 +97,7 @@ bool HasOnlyDemotions(PrefetchDecision &decision, float &decay) {
     decay = std::min(decay, prefetch_stat.decay_);
   }
   return true;
-};
+}
 
 void Prefetcher::CalculateBlobScore(struct timespec &ts,
                                     PrefetchDecision &decision) {
@@ -204,7 +204,7 @@ void Prefetcher::Process() {
 
   // TODO(llogan): a hack to help BORG shuffle data
   struct timespec ts2;
-  while(PrefetchStat::DiffTimespec(&ts2, &ts) < 1) {
+  while (PrefetchStat::DiffTimespec(&ts2, &ts) < 1) {
     timespec_get(&ts2, TIME_UTC);
     ABT_thread_yield();
   }

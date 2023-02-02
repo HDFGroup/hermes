@@ -161,4 +161,4 @@ void ServerConfig::LoadDefault() {
   LoadText(kServerDefaultConfigStr, false);
 }
 
-}  // hermes::config
+}  // namespace hermes::config

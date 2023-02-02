@@ -29,6 +29,6 @@ const Status BUFFER_POOL_OUT_OF_RAM(
 const Status PARTIAL_GET_OR_CREATE_OVERFLOW(
     "The read exceeds the size of the backend's data");
 
-}
+}  // namespace hermes
 
 #endif  // HERMES_SRC_STATUSES_H_

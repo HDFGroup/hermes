@@ -138,7 +138,7 @@ class Hermes {
   /** Get an environment variable with null safety. */
   inline std::string GetEnvSafe(const char *env_name) {
     char *val = getenv(env_name);
-    if (val == nullptr){
+    if (val == nullptr) {
       return "";
     }
     return val;

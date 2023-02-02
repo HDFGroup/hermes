@@ -15,7 +15,8 @@
 
 #include "singleton.h"
 
-#define HERMES_FS_METADATA_MANAGER hermes::GlobalSingleton<hermes::adapter::fs::MetadataManager>::GetInstance()
+#define HERMES_FS_METADATA_MANAGER \
+  hermes::GlobalSingleton<hermes::adapter::fs::MetadataManager>::GetInstance()
 #define HERMES_FS_METADATA_MANAGER_T hermes::adapter::fs::MetadataManager*
 
 #endif  // HERMES_SINGLETON_ADAPTER_MACROS_H

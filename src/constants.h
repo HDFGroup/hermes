@@ -30,6 +30,6 @@ static const char kBoPrefix[] = "BO::";     /**< buffer organizer prefix */
 /** buffer organizer prefix length */
 static const int kBoPrefixLength = sizeof(kBoPrefix) - 1;
 
-}
+}  // namespace hermes
 
 #endif  // HERMES_SRC_CONSTANTS_H_

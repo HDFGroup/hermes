@@ -34,7 +34,6 @@ class Bucket {
   /// Bucket Operations
   //////////////////////////
  public:
-
   /**
    * Get or create \a bkt_name bucket.
    *
@@ -88,7 +87,6 @@ class Bucket {
   /// Blob Operations
   ///////////////////////
  public:
-
   /**
    * Get the id of a blob from the blob name
    *
@@ -177,6 +175,6 @@ class Bucket {
   void DestroyBlob(BlobId blob_id, Context &ctx);
 };
 
-}
+}  // namespace hermes::api
 
 #endif  // HERMES_SRC_API_BUCKET_H_

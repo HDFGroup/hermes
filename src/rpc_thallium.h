@@ -31,10 +31,10 @@ namespace hermes {
 class ThalliumRpc : public RpcContext {
  public:
   std::atomic<bool> kill_requested_; /**< is kill requested? */
-  std::unique_ptr<tl::engine> client_engine_; /**< pointer to engine */
-  std::unique_ptr<tl::engine> server_engine_; /**< pointer to engine */
-  std::unique_ptr<tl::engine> bo_engine_;     /**< pointer to buf. org. engine */
-  std::unique_ptr<tl::engine> io_engine_;     /**< pointer to engine */
+  std::unique_ptr<tl::engine> client_engine_; /**< pointer to client engine */
+  std::unique_ptr<tl::engine> server_engine_; /**< pointer to server engine */
+  std::unique_ptr<tl::engine> bo_engine_;     /**< pointer to borg engine */
+  std::unique_ptr<tl::engine> io_engine_;     /**< pointer to I/O engine */
   ABT_xstream execution_stream_;     /**< Argobots execution stream */
 
   /** initialize RPC context  */
