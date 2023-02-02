@@ -10,10 +10,6 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-//
-// Created by manihariharan on 12/23/20.
-//
-
 #ifndef HERMES_ABSTRACT_MAPPER_H
 #define HERMES_ABSTRACT_MAPPER_H
 
