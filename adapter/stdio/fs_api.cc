@@ -17,17 +17,17 @@
 
 namespace hermes::adapter::stdio {
 
-File StdioFS::_RealOpen(AdapterStat &stat, const std::string &path) {
+File StdioFS::RealOpen(AdapterStat &stat, const std::string &path) {
   File f;
   f.fh_ = real_api->fopen(path.c_str(), stat.mode_str.c_str());
   if (f.fh_ == nullptr) {
     f.status_ = false;
   }
-  _InitFile(f);
+  InitFile(f);
   return f;
 }
 
-void StdioFS::_InitFile(File &f) {
+void StdioFS::InitFile(File &f) {
   struct stat st;
   if (f.fh_ == nullptr) {
     f.fd_ = -1;
@@ -39,7 +39,7 @@ void StdioFS::_InitFile(File &f) {
   f.st_ino = st.st_ino;
 }
 
-void StdioFS::_OpenInitStats(File &f, AdapterStat &stat) {
+void StdioFS::OpenInitStat(File &f, AdapterStat &stat) {
   struct stat st;
   posix_api->__fxstat(_STAT_VER, f.fd_, &st);
   stat.st_mode = st.st_mode;
@@ -91,11 +91,11 @@ size_t StdioFS::_RealRead(const std::string &filename, off_t offset,
   return read_size;
 }
 
-int StdioFS::_RealSync(File &f) {
+int StdioFS::RealSync(File &f) {
   return real_api->fflush(f.fh_);
 }
 
-int StdioFS::_RealClose(File &f) {
+int StdioFS::RealClose(File &f) {
   return real_api->fclose(f.fh_);
 }
 

@@ -30,7 +30,7 @@
 
 namespace stdfs = std::experimental::filesystem;
 
-namespace hermes::adapter::posix::test {
+namespace hermes::adapter::fs::test {
 struct Arguments {
   std::string filename = "test.dat";
   std::string directory = "/tmp";
@@ -57,9 +57,9 @@ struct Info {
   size_t medium_min = 4 * 1024 + 1, medium_max = 256 * 1024;
   size_t large_min = 256 * 1024 + 1, large_max = 3 * 1024 * 1024;
 };
-}  // namespace hermes::adapter::posix::test
-hermes::adapter::posix::test::Arguments args;
-hermes::adapter::posix::test::Info info;
+}  // namespace hermes::adapter::fs::test
+hermes::adapter::fs::test::Arguments args;
+hermes::adapter::fs::test::Info info;
 std::vector<char> gen_random(const int len) {
   auto tmp_s = std::vector<char>(len);
   static const char alphanum[] =

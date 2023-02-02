@@ -21,7 +21,6 @@
 #include <utility>
 #include <vector>
 
-#include "hermes_version.h"
 #include "data_structures.h"
 #include "constants.h"
 #include "singleton_macros.h"

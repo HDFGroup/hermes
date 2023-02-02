@@ -16,6 +16,8 @@ class ClientConfig : public BaseConfig {
  public:
   bool stop_daemon_;
   size_t file_page_size_;
+  std::vector<std::string> path_inclusions_;
+  std::vector<std::string> path_exclusions_;
 
  public:
   ClientConfig() = default;

@@ -12,7 +12,7 @@
 
 #include "posix_stager.h"
 
-using hermes::adapter::posix::PosixFS;
+using hermes::adapter::fs::PosixFS;
 using hermes::api::PlacementPolicyConv;
 using hermes::api::PlacementPolicy;
 using hermes::adapter::fs::IoOptions;

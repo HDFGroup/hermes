@@ -10,7 +10,7 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include "fs_metadata_manager.h"
+#include "filesystem_mdm.h"
 #include "hermes.h"
 
 /**
@@ -19,24 +19,10 @@
 using hermes::adapter::fs::AdapterStat;
 using hermes::adapter::fs::MetadataManager;
 
-void MetadataManager::InitializeHermes() {
-  if (!is_init_) {
-    lock_.lock();
-    if (!is_init_) {
-      HERMES->Init(HermesType::kClient);
-      is_init_ = true;
-    }
-    lock_.unlock();
-  }
-
-  // TODO(llogan): Recycle old fds
-  hermes_fd_min_ = 8192;  // TODO(llogan): don't assume 8192
-  hermes_fd_max_ = INT_MAX;
-}
-
-bool MetadataManager::Create(const File &f, const AdapterStat &stat) {
+bool MetadataManager::Create(const File &f,
+                             std::unique_ptr<AdapterStat> &stat) {
   VLOG(1) << "Create metadata for file handler." << std::endl;
-  auto ret = metadata.emplace(f, stat);
+  auto ret = metadata.emplace(f, std::move(stat));
   return ret.second;
 }
 
@@ -44,21 +30,20 @@ bool MetadataManager::Update(const File &f, const AdapterStat &stat) {
   VLOG(1) << "Update metadata for file handler." << std::endl;
   auto iter = metadata.find(f);
   if (iter != metadata.end()) {
-    metadata.erase(iter);
-    auto ret = metadata.emplace(f, stat);
-    return ret.second;
+    *(*iter).second = stat;
+    return true;
   } else {
     return false;
   }
 }
 
-std::pair<AdapterStat, bool> MetadataManager::Find(const File &f) {
+std::pair<AdapterStat*, bool> MetadataManager::Find(const File &f) {
   typedef std::pair<AdapterStat, bool> MetadataReturn;
   auto iter = metadata.find(f);
   if (iter == metadata.end())
-    return MetadataReturn(AdapterStat(), false);
+    return std::pair<AdapterStat*, bool>(nullptr, false);
   else
-    return MetadataReturn(iter->second, true);
+    return std::pair<AdapterStat*, bool>(iter->second.get(), true);
 }
 
 bool MetadataManager::Delete(const File &f) {

@@ -10,14 +10,13 @@
 * have access to the file, you may request a copy from help@hdfgroup.org.   *
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include "fs_metadata_manager_singleton_macros.h"
+#include "filesystem_mdm_singleton_macros.h"
 #include "filesystem.h"
 #include "constants.h"
 #include "singleton.h"
-#include "fs_metadata_manager.h"
+#include "filesystem_mdm.h"
 #include "vbucket.h"
 #include "mapper/mapper_factory.h"
-#include "io_client/io_client_factory.h"
 
 #include <fcntl.h>
 #include <experimental/filesystem>
@@ -27,21 +26,27 @@ namespace stdfs = std::experimental::filesystem;
 namespace hermes::adapter::fs {
 
 File Filesystem::Open(AdapterStat &stat, const std::string &path) {
-  File f = _RealOpen(stat, path);
+  File f;
+  io_client_->RealOpen(f, stat, path);
   if (!f.status_) { return f; }
   Open(stat, f, path);
   return f;
 }
 
 void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
-  auto io_client = IoClientFactory::Get(io_client_);
-  IoStatus status;
-  _InitFile(f);
   auto mdm = HERMES_FS_METADATA_MANAGER;
   stat.bkt_id_ = HERMES->GetBucket(path);
-  LOG(INFO) << "File not opened before by adapter" << std::endl;
-  io_client->StatObject(f, stat, status);
-  mdm->Create(f, stat);
+  std::pair<AdapterStat*, bool> exists = mdm->Find(f);
+  if (!exists.second) {
+    LOG(INFO) << "File not opened before by adapter" << std::endl;
+    auto stat_ptr = std::make_unique<AdapterStat>(stat);
+    FilesystemIoClientContext fs_ctx(&mdm->fs_mdm_, (void*)stat_ptr.get());
+    io_client_->HermesOpen(f, stat, fs_ctx);
+    mdm->Create(f, stat_ptr);
+  } else {
+    LOG(INFO) << "File opened by adapter" << std::endl;
+    exists.first->UpdateTime();
+  }
 }
 
 size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
@@ -65,16 +70,17 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
     lipc::charbuf blob_name(p.CreateBlobName());
     BlobId blob_id;
     size_t backend_start = p.page_ * kPageSize;
-    IoClientContext backend_ctx;
+    IoClientContext io_ctx;
     Context ctx;
-    backend_ctx.filename_ = filename;
+    io_ctx.filename_ = filename;
     bkt->PartialPutOrCreate(blob_name.str(),
                             blob_wrap,
                             p.blob_off_,
                             backend_start,
                             kPageSize,
                             blob_id,
-                            backend_ctx,
+                            io_ctx,
+                            opts,
                             ctx);
     data_offset += p.blob_size_;
   }
@@ -142,6 +148,7 @@ size_t Filesystem::Wait(uint64_t req_id) {
   size_t ret = req->return_future.get();
   delete req;
   return ret;*/
+  return 0;
 }
 
 void Filesystem::Wait(std::vector<uint64_t> &req_ids,
@@ -244,7 +251,7 @@ size_t Filesystem::Write(File &f, bool &stat_exists, const void *ptr,
     return 0;
   }
   stat_exists = true;
-  return Write(f, stat, ptr, total_size, io_status, opts);
+  return Write(f, *stat, ptr, total_size, io_status, opts);
 }
 
 size_t Filesystem::Read(File &f, bool &stat_exists, void *ptr,
@@ -257,7 +264,7 @@ size_t Filesystem::Read(File &f, bool &stat_exists, void *ptr,
     return 0;
   }
   stat_exists = true;
-  return Read(f, stat, ptr, total_size, io_status, opts);
+  return Read(f, *stat, ptr, total_size, io_status, opts);
 }
 
 size_t Filesystem::Write(File &f, bool &stat_exists, const void *ptr,
@@ -271,7 +278,7 @@ size_t Filesystem::Write(File &f, bool &stat_exists, const void *ptr,
   }
   stat_exists = true;
   opts.seek_ = false;
-  return Write(f, stat, ptr, off, total_size, io_status, opts);
+  return Write(f, *stat, ptr, off, total_size, io_status, opts);
 }
 
 size_t Filesystem::Read(File &f, bool &stat_exists, void *ptr,
@@ -285,7 +292,7 @@ size_t Filesystem::Read(File &f, bool &stat_exists, void *ptr,
   }
   stat_exists = true;
   opts.seek_ = false;
-  return Read(f, stat, ptr, off, total_size, io_status, opts);
+  return Read(f, *stat, ptr, off, total_size, io_status, opts);
 }
 
 HermesRequest* Filesystem::AWrite(File &f, bool &stat_exists, const void *ptr,
@@ -298,7 +305,7 @@ HermesRequest* Filesystem::AWrite(File &f, bool &stat_exists, const void *ptr,
     return 0;
   }
   stat_exists = true;
-  return AWrite(f, stat, ptr, total_size, req_id, io_status, opts);
+  return AWrite(f, *stat, ptr, total_size, req_id, io_status, opts);
 }
 
 HermesRequest* Filesystem::ARead(File &f, bool &stat_exists, void *ptr,
@@ -311,7 +318,7 @@ HermesRequest* Filesystem::ARead(File &f, bool &stat_exists, void *ptr,
     return 0;
   }
   stat_exists = true;
-  return ARead(f, stat, ptr, total_size, req_id, io_status, opts);
+  return ARead(f, *stat, ptr, total_size, req_id, io_status, opts);
 }
 
 HermesRequest* Filesystem::AWrite(File &f, bool &stat_exists, const void *ptr,
@@ -325,7 +332,7 @@ HermesRequest* Filesystem::AWrite(File &f, bool &stat_exists, const void *ptr,
   }
   stat_exists = true;
   opts.seek_ = false;
-  return AWrite(f, stat, ptr, off, total_size, req_id, io_status, opts);
+  return AWrite(f, *stat, ptr, off, total_size, req_id, io_status, opts);
 }
 
 HermesRequest* Filesystem::ARead(File &f, bool &stat_exists, void *ptr,
@@ -339,7 +346,7 @@ HermesRequest* Filesystem::ARead(File &f, bool &stat_exists, void *ptr,
   }
   stat_exists = true;
   opts.seek_ = false;
-  return ARead(f, stat, ptr, off, total_size, req_id, io_status, opts);
+  return ARead(f, *stat, ptr, off, total_size, req_id, io_status, opts);
 }
 
 off_t Filesystem::Seek(File &f, bool &stat_exists,
@@ -351,7 +358,7 @@ off_t Filesystem::Seek(File &f, bool &stat_exists,
     return -1;
   }
   stat_exists = true;
-  return Seek(f, stat, whence, offset);
+  return Seek(f, *stat, whence, offset);
 }
 
 off_t Filesystem::Tell(File &f, bool &stat_exists) {
@@ -362,7 +369,7 @@ off_t Filesystem::Tell(File &f, bool &stat_exists) {
     return -1;
   }
   stat_exists = true;
-  return Tell(f, stat);
+  return Tell(f, *stat);
 }
 
 int Filesystem::Sync(File &f, bool &stat_exists) {
@@ -373,7 +380,7 @@ int Filesystem::Sync(File &f, bool &stat_exists) {
     return -1;
   }
   stat_exists = true;
-  return Sync(f, stat);
+  return Sync(f, *stat);
 }
 
 int Filesystem::Close(File &f, bool &stat_exists, bool destroy) {
@@ -384,7 +391,7 @@ int Filesystem::Close(File &f, bool &stat_exists, bool destroy) {
     return -1;
   }
   stat_exists = true;
-  return Close(f, stat, destroy);
+  return Close(f, *stat, destroy);
 }
 
 }  // namespace hermes::adapter::fs

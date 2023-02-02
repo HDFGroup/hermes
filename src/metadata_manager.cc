@@ -6,12 +6,8 @@
 #include "metadata_manager.h"
 #include "buffer_organizer.h"
 #include "api/bucket.h"
-#include "adapter/adapter_factory/adapter_factory.h"
 
 namespace hermes {
-
-/** Namespace simplification for AdapterFactory */
-using hermes::adapter::AdapterFactory;
 
 /** Namespace simplification for Bucket */
 using api::Bucket;
@@ -247,36 +243,53 @@ BlobId MetadataManager::LocalBucketPutBlob(BucketId bkt_id,
  * @param backend_ctx which adapter to route I/O request if blob DNE
  * @param ctx any additional information
  * */
-Status MetadataManager::LocalPartialPutOrCreateBlob(BucketId bkt_id,
-                                                    lipc::string blob_name,
-                                                    Blob &blob,
-                                                    size_t blob_off,
-                                                    size_t backend_off,
-                                                    size_t backend_size,
-                                                    BlobId &blob_id,
-                                                    IoClientContext &backend_ctx,
-                                                    Context &ctx) {
+Status MetadataManager::LocalBucketPartialPutOrCreateBlob(
+    BucketId bkt_id,
+    const lipc::string &blob_name,
+    const Blob &blob,
+    size_t blob_off,
+    size_t backend_off,
+    size_t backend_size,
+    const IoClientContext &io_ctx,
+    const IoClientOptions &opts,
+    Context &ctx) {
+
+  // Determine if the blob exists
+  BlobId blob_id;
   Blob full_blob;
   Bucket bkt(bkt_id, ctx);
   lipc::charbuf internal_blob_name = CreateBlobName(bkt_id, blob_name);
   auto iter = blob_id_map_->find(internal_blob_name);
+
+  // Put the blob
   if (blob_off == 0 && blob.size() == backend_size) {
+    // Case 1: We're overriding the entire blob
     // Put the entire blob, no need to load from storage
     return bkt.Put(blob_name.str(), blob, blob_id, ctx);
   }
   if (iter != blob_id_map_->end()) {
+    // Case 2: The blob already exists (read from hermes)
     // Read blob from Hermes
     bkt.Get(blob_id, full_blob, ctx);
   } else {
+    // Case 3: The blob did not exist (need to read from backend)
     // Read blob using adapter
-    auto adapter = AdapterFactory::Get(backend_ctx.type_);
-    adapter->ReadBlobFromBackend(full_blob, backend_off,
-                                 backend_size, backend_ctx);
+    IoStatus status;
+    auto io_client = IoClientFactory::Get(io_ctx.type_);
+    full_blob.resize(backend_size);
+    io_client->ReadBlob(full_blob,
+                        backend_off,
+                        io_ctx,
+                        opts,
+                        status);
   }
+  // Ensure the blob can hold the update
+  full_blob.resize(std::max(full_blob.size(), blob_off + blob.size()));
   // Modify the blob
   memcpy(full_blob.data() + blob_off, blob.data(), blob.size());
   // Re-put the blob
   bkt.Put(blob_name.str(), full_blob, blob_id, ctx);
+  return Status();
 }
 
 /**

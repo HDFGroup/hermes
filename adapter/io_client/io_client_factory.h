@@ -16,7 +16,7 @@
 #include "io_client.h"
 #include "singleton.h"
 
-#include "adapter/posix/posix_fs_api.h"
+#include "adapter/posix/posix_io_client.h"
 
 namespace hermes::adapter {
 /**
@@ -33,7 +33,7 @@ class IoClientFactory {
   static IoClient* Get(const IoClientType& type) {
     switch (type) {
       case IoClientType::kPosix: {
-        return HERMES_POSIX_FS;
+        return HERMES_POSIX_IO_CLIENT;
       }
       case IoClientType::kStdio: {
         return nullptr;

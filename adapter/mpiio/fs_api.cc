@@ -500,7 +500,7 @@ int MpiioFS::SeekShared(File &f, bool &stat_exists,
  * Internal overrides
  * */
 
-File MpiioFS::_RealOpen(AdapterStat &stat, const std::string &path) {
+File MpiioFS::RealOpen(AdapterStat &stat, const std::string &path) {
   File f;
   f.mpi_status_ = real_api->MPI_File_open(stat.comm, path.c_str(), stat.amode,
                                           stat.info, &f.mpi_fh_);
@@ -516,7 +516,7 @@ File MpiioFS::_RealOpen(AdapterStat &stat, const std::string &path) {
   return f;
 }
 
-void MpiioFS::_InitFile(File &f) {
+void MpiioFS::InitFile(File &f) {
   // NOTE(llogan): MPI_Info_get does not behave well, so removing
   (void) f;
   /*struct stat st;
@@ -528,7 +528,7 @@ void MpiioFS::_InitFile(File &f) {
   posix_api->close(fd);*/
 }
 
-void MpiioFS::_OpenInitStats(File &f, AdapterStat &stat) {
+void MpiioFS::OpenInitStat(File &f, AdapterStat &stat) {
   MPI_Offset size = static_cast<MPI_Offset>(stat.st_size);
   MPI_File_get_size(f.mpi_fh_, &size);
   stat.st_size = size;
@@ -611,11 +611,11 @@ void MpiioFS::_IoStats(size_t count, IoStatus &io_status, IoOptions &opts) {
   io_status.mpi_status_ptr_->count_lo = count;
 }
 
-int MpiioFS::_RealSync(File &f) {
+int MpiioFS::RealSync(File &f) {
   return real_api->MPI_File_sync(f.mpi_fh_);
 }
 
-int MpiioFS::_RealClose(File &f) {
+int MpiioFS::RealClose(File &f) {
   return real_api->MPI_File_close(&f.mpi_fh_);
 }
 

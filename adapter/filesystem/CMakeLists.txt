@@ -4,13 +4,27 @@ include_directories(
         ${HERMES_ADAPTER_DIR}
         ${CMAKE_CURRENT_SOURCE_DIR})
 
-# Create the POSIX Real API singleton
+# Create the metadata manager singleton + FS base class
 add_library(hermes_fs_mdm_singleton SHARED
-        ${CMAKE_CURRENT_SOURCE_DIR}/fs_metadata_manager_singleton.cc)
-add_dependencies(hermes_fs_mdm_singleton hermes)
+        ${CMAKE_CURRENT_SOURCE_DIR}/filesystem_mdm_singleton.cc)
+add_dependencies(hermes_fs_mdm_singleton
+        hermes)
 target_link_libraries(hermes_fs_mdm_singleton
-        MPI::MPI_CXX hermes)
+        hermes
+        MPI::MPI_CXX)
 target_compile_options(hermes_fs_mdm_singleton PUBLIC -fPIC)
+
+# Create the metadata manager singleton + FS base class
+add_library(hermes_fs_base SHARED
+        ${CMAKE_CURRENT_SOURCE_DIR}/filesystem.cc)
+add_dependencies(hermes_fs_base
+        hermes
+        hermes_fs_mdm_singleton)
+target_link_libraries(hermes_fs_base
+        MPI::MPI_CXX
+        hermes
+        hermes_fs_mdm_singleton)
+target_compile_options(hermes_fs_base PUBLIC -fPIC)
 
 #-----------------------------------------------------------------------------
 # Add Target(s) to CMake Install
@@ -18,6 +32,7 @@ target_compile_options(hermes_fs_mdm_singleton PUBLIC -fPIC)
 install(
         TARGETS
         hermes_fs_mdm_singleton
+        hermes_fs_base
         EXPORT
         ${HERMES_EXPORTED_TARGETS}
         LIBRARY DESTINATION ${HERMES_INSTALL_LIB_DIR}
@@ -30,6 +45,7 @@ install(
 #-----------------------------------------------------------------------------
 set(HERMES_EXPORTED_LIBS
         hermes_fs_mdm_singleton
+        hermes_fs_base
         ${HERMES_EXPORTED_LIBS})
 if(NOT HERMES_EXTERNALLY_CONFIGURED)
 EXPORT (

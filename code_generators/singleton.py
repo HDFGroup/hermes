@@ -18,6 +18,6 @@ gen.generate(f"{HERMES_ROOT}/src/singleton.cc",
 
 # POSIX RealAPI singleton
 gen = SingletonGenerator("ADAPTER", "\"singleton.h\"")
-gen.add("hermes::adapter::posix", "PosixApi", "\"real_api.h\"")
+gen.add("hermes::adapter::fs", "PosixApi", "\"real_api.h\"")
 gen.generate(f"{HERMES_ROOT}/adapter/posix/singleton.cc",
              f"{HERMES_ROOT}/adapter/posix/singleton_macros.h")

@@ -28,6 +28,7 @@ void Hermes::Init(HermesType mode,
       break;
     }
   }
+  is_initialized_ = true;
 }
 
 void Hermes::Finalize() {

@@ -18,12 +18,12 @@
 #include <utility>
 
 namespace hermes {
+
 /**
- * Make a class singleton when used with the class. format for class name T
- * Singleton<T>::GetInstance()
+ * Makes a singleton. Constructs the first time GetInstance is called.
+ * Requires user to define the static storage of obj_ in separate file.
  * @tparam T
  */
-
 template<typename T>
 class Singleton {
  private:
@@ -40,8 +40,23 @@ class Singleton {
 };
 
 /**
+ * Makes a singleton. Constructs during initialization of program.
+ * Requires user to define the static storage of obj_ in separate file.
+ * */
+template<typename T>
+class GlobalSingleton {
+ private:
+  static T obj_;
+ public:
+  GlobalSingleton() = default;
+  static T* GetInstance() {
+    return &obj_;
+  }
+};
+
+/**
  * A class to represent singleton pattern
- * Does not require specific initialization of the static veraible
+ * Does not require specific initialization of the static variable
  * */
 template<typename T>
 class EasySingleton {
@@ -62,9 +77,26 @@ class EasySingleton {
     return instance.get();
   }
 };
-
 template <typename T>
 std::unique_ptr<T> EasySingleton<T>::instance = nullptr;
+
+/**
+ * Makes a singleton. Constructs during initialization of program.
+ * Does not require specific initialization of the static variable.
+ * */
+template<typename T>
+class EasyGlobalSingleton {
+ private:
+  static T obj_;
+ public:
+  EasyGlobalSingleton() = default;
+  static T* GetInstance() {
+    return &obj_;
+  }
+};
+template <typename T>
+T EasyGlobalSingleton<T>::obj_;
+
 
 }  // namespace hermes
 #endif  // HERMES_ADAPTER_SINGLETON_H

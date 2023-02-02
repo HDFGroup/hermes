@@ -36,27 +36,27 @@ namespace hermes::adapter::stdio {
 class StdioFS : public hermes::adapter::fs::Filesystem {
  private:
   API *real_api;                          /**< pointer to real APIs */
-  hermes::adapter::posix::API *posix_api; /**< pointer to POSIX APIs */
+  hermes::adapter::fs::API *posix_api; /**< pointer to POSIX APIs */
 
  public:
   StdioFS() {
     real_api = Singleton<API>::GetInstance();
-    posix_api = Singleton<hermes::adapter::posix::API>::GetInstance();
+    posix_api = Singleton<hermes::adapter::fs::API>::GetInstance();
   }
   ~StdioFS() = default;
 
-  void _InitFile(File &f) override;
+  void InitFile(File &f) override;
 
  private:
-  void _OpenInitStats(File &f, AdapterStat &stat) override;
-  File _RealOpen(AdapterStat &stat, const std::string &path) override;
+  void OpenInitStat(File &f, AdapterStat &stat) override;
+  File RealOpen(AdapterStat &stat, const std::string &path) override;
   size_t _RealWrite(const std::string &filename, off_t offset, size_t size,
                     const u8 *data_ptr, IoStatus &io_status,
                     IoOptions &opts) override;
   size_t _RealRead(const std::string &filename, off_t offset, size_t size,
                    u8 *data_ptr, IoStatus &io_status, IoOptions &opts) override;
-  int _RealSync(File &f) override;
-  int _RealClose(File &f) override;
+  int RealSync(File &f) override;
+  int RealClose(File &f) override;
 };
 
 }  // namespace hermes::adapter::stdio

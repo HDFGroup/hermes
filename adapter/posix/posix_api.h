@@ -47,7 +47,7 @@ typedef int (*fsync_t)(int fd);
 typedef int (*close_t)(int fd);
 }
 
-namespace hermes::adapter::posix {
+namespace hermes::adapter::fs {
 
 /** Pointers to the real posix API */
 class PosixApi {
@@ -185,7 +185,7 @@ class PosixApi {
     REQUIRE_API(close)
   }
 };
-}  // namespace hermes::adapter::posix
+}  // namespace hermes::adapter::fs
 
 #undef REQUIRE_API
 

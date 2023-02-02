@@ -5,7 +5,9 @@
 #ifndef HERMES_SRC_RPC_FACTORY_H_
 #define HERMES_SRC_RPC_FACTORY_H_
 
+#ifndef @CMAKE_HERMES_RPC_TYPE@
 #define @CMAKE_HERMES_RPC_TYPE@
+#endif
 
 #if defined(HERMES_RPC_THALLIUM)
 #include "rpc_thallium.h"

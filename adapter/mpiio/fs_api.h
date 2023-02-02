@@ -63,16 +63,16 @@ class MpiioSeekModeConv {
 class MpiioFS : public hermes::adapter::fs::Filesystem {
  private:
   API *real_api;                          /**< pointer to real APIs */
-  hermes::adapter::posix::API *posix_api; /**< pointer to POSIX APIs */
+  hermes::adapter::fs::API *posix_api; /**< pointer to POSIX APIs */
 
  public:
   MpiioFS() {
     real_api = Singleton<API>::GetInstance();
-    posix_api = Singleton<hermes::adapter::posix::API>::GetInstance();
+    posix_api = Singleton<hermes::adapter::fs::API>::GetInstance();
   }
   ~MpiioFS() = default;
 
-  void _InitFile(File &f) override;
+  void InitFile(File &f) override;
 
  public:
   /** get file name from \a fh MPI file pointer */
@@ -217,10 +217,10 @@ class MpiioFS : public hermes::adapter::fs::Filesystem {
    */
 
  private:
-  /** OpenInitStats */
-  void _OpenInitStats(File &f, AdapterStat &stat) override;
+  /** OpenInitStat */
+  void OpenInitStat(File &f, AdapterStat &stat) override;
   /** RealOpen */
-  File _RealOpen(AdapterStat &stat, const std::string &path) override;
+  File RealOpen(AdapterStat &stat, const std::string &path) override;
   /** RealWrite */
   size_t _RealWrite(const std::string &filename, off_t offset, size_t size,
                     const u8 *data_ptr, IoStatus &io_status,
@@ -231,9 +231,9 @@ class MpiioFS : public hermes::adapter::fs::Filesystem {
   /** IoStats */
   void _IoStats(size_t count, IoStatus &io_status, IoOptions &opts) override;
   /** RealSync */
-  int _RealSync(File &f) override;
+  int RealSync(File &f) override;
   /** RealClose */
-  int _RealClose(File &f) override;
+  int RealClose(File &f) override;
 };
 
 }  // namespace hermes::adapter::mpiio

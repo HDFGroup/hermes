@@ -4,24 +4,26 @@ include_directories(
         ${HERMES_ADAPTER_DIR}
         ${CMAKE_CURRENT_SOURCE_DIR})
 
-# Create the POSIX Real API singleton
-add_library(hermes_posix_singleton SHARED ${CMAKE_CURRENT_SOURCE_DIR}/posix_singleton.cc)
-target_compile_options(hermes_posix_singleton PUBLIC -fPIC)
-
-# Add library hermes_posix_fs
-add_library(hermes_posix_fs ${CMAKE_CURRENT_SOURCE_DIR}/posix_fs_api.cc)
-target_compile_options(hermes_posix_fs PUBLIC -fPIC)
-add_dependencies(hermes_posix_fs
-        hermes hermes_posix_singleton hermes_fs_mdm_singleton)
-target_link_libraries(hermes_posix_fs
-        hermes hermes_posix_singleton hermes_fs_mdm_singleton
+# Creates the POSIX I/O client and singleton
+add_library(hermes_posix_io_client
+        ${CMAKE_CURRENT_SOURCE_DIR}/posix_api_singleton.cc
+        ${CMAKE_CURRENT_SOURCE_DIR}/posix_io_client.cc)
+target_compile_options(hermes_posix_io_client PUBLIC -fPIC)
+target_link_libraries(hermes_posix_io_client
         MPI::MPI_CXX glog::glog stdc++fs dl)
 
 # Create the POSIX interceptor
 add_library(hermes_posix SHARED ${CMAKE_CURRENT_SOURCE_DIR}/posix.cc)
-add_dependencies(hermes_posix hermes hermes_posix_singleton)
+add_dependencies(hermes_posix
+        hermes
+        hermes_posix_io_client
+        hermes_fs_base
+        adapter_init)
 target_link_libraries(hermes_posix
-        hermes hermes_posix_singleton hermes_posix_fs)
+        hermes
+        hermes_posix_io_client
+        hermes_fs_base
+        adapter_init)
 target_compile_options(hermes_posix PUBLIC -fPIC)
 
 #-----------------------------------------------------------------------------
@@ -29,8 +31,7 @@ target_compile_options(hermes_posix PUBLIC -fPIC)
 #-----------------------------------------------------------------------------
 install(
         TARGETS
-        hermes_posix_singleton
-        hermes_posix_fs
+        hermes_posix_io_client
         hermes_posix
         EXPORT
         ${HERMES_EXPORTED_TARGETS}
@@ -43,8 +44,7 @@ install(
 # Export all exported targets to the build tree for use by parent project
 #-----------------------------------------------------------------------------
 set(HERMES_EXPORTED_LIBS
-        hermes_posix_singleton
-        hermes_posix_fs
+        hermes_posix_io_client
         hermes_posix
         ${HERMES_EXPORTED_LIBS})
 if(NOT HERMES_EXTERNALLY_CONFIGURED)

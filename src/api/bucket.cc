@@ -80,6 +80,39 @@ Status Bucket::Put(std::string blob_name, const Blob blob,
 }
 
 /**
+ * Put \a blob_name Blob into the bucket. Load the blob from the
+ * I/O backend if it does not exist.
+ *
+ * @param blob_name the semantic name of the blob
+ * @param blob the buffer to put final data in
+ * @param blob_off the offset within the blob to begin the Put
+ * @param backend_off the offset to read from the backend if blob DNE
+ * @param backend_size the size to read from the backend if blob DNE
+ * @param backend_ctx which adapter to route I/O request if blob DNE
+ * @param ctx any additional information
+ * */
+Status Bucket::PartialPutOrCreate(std::string blob_name,
+                                  const Blob &blob,
+                                  size_t blob_off,
+                                  size_t backend_off,
+                                  size_t backend_size,
+                                  BlobId &blob_id,
+                                  const IoClientContext &io_ctx,
+                                  const IoClientOptions &opts,
+                                  Context &ctx) {
+  mdm_->LocalBucketPartialPutOrCreateBlob(
+      id_,
+      lipc::string(blob_name),
+      blob,
+      blob_off,
+      backend_off,
+      backend_size,
+      io_ctx,
+      opts,
+      ctx);
+}
+
+/**
  * Get \a blob_id Blob from the bucket
  * */
 Status Bucket::Get(BlobId blob_id, Blob &blob, Context &ctx) {

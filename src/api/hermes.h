@@ -46,12 +46,19 @@ class Hermes {
   COMM_TYPE comm_;
   RPC_TYPE rpc_;
   lipc::Allocator *main_alloc_;
+  bool is_initialized_;
 
  public:
-  Hermes() = default;
+  /** Default constructor */
+  Hermes() : is_initialized_(false) {}
 
+  /** Destructor */
   ~Hermes() = default;
 
+  /** Whether or not Hermes is initialized */
+  bool IsInitialized() { return is_initialized_; }
+
+  /** Initialize Hermes explicitly */
   static Hermes* Create(HermesType mode = HermesType::kClient,
                         std::string server_config_path = "",
                         std::string client_config_path = "") {
@@ -60,46 +67,65 @@ class Hermes {
     return hermes;
   }
 
-  void Init(HermesType mode = HermesType::kClient,
-            std::string server_config_path = "",
-            std::string client_config_path = "");
-
+ public:
+  /** Finalize Hermes explicitly */
   void Finalize();
 
+  /** Run the Hermes core Daemon */
   void RunDaemon();
 
+  /** Stop the Hermes core Daemon */
   void StopDaemon();
 
  public:
+  /** Create a Bucket in Hermes */
   std::shared_ptr<Bucket> GetBucket(std::string name,
                                     Context ctx = Context());
+
+  /** Create a VBucket in Hermes */
   std::shared_ptr<VBucket> GetVBucket(std::string name,
                                       Context ctx = Context());
 
  private:
+  /** Internal initialization of Hermes */
+  void Init(HermesType mode = HermesType::kClient,
+            std::string server_config_path = "",
+            std::string client_config_path = "");
+
+  /** Initialize Hermes as a server */
   void InitServer(std::string server_config_path);
 
+  /** Initialize Hermes as both a server and a daemon */
   void InitColocated(std::string server_config_path,
                      std::string client_config_path);
 
+  /** Initialize Hermes as a client to the daemon */
   void InitClient(std::string server_config_path,
                   std::string client_config_path);
 
+  /** Load the server-side configuration */
   void LoadServerConfig(std::string config_path);
 
+  /** Load the client-side configuration */
   void LoadClientConfig(std::string config_path);
 
+  /** Initialize shared-memory between daemon and client */
   void InitSharedMemory();
 
+  /** Connect to a Daemon's shared memory */
   void LoadSharedMemory();
 
+  /** Finalize Daemon mode */
   void FinalizeServer();
 
+  /** Finalize client mode */
   void FinalizeClient();
 
+  /** Finalize colocated mode */
   void FinalizeColocated();
 
  private:
+  /** Get an environment variable with null safety. */
   inline std::string GetEnvSafe(const char *env_name) {
     char *val = getenv(env_name);
     if (val == nullptr){

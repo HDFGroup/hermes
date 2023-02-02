@@ -3,7 +3,7 @@
 
 #include "singleton.h"
 
-#define HERMES hermes::Singleton<hermes::api::Hermes>::GetInstance()
+#define HERMES hermes::GlobalSingleton<hermes::api::Hermes>::GetInstance()
 #define HERMES_T hermes::api::Hermes*
 
 #endif  // HERMES_SINGLETON_SRC_MACROS_H

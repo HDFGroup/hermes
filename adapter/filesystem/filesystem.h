@@ -22,12 +22,18 @@
 #include "traits.h"
 #include "bucket.h"
 #include "vbucket.h"
+#include "hermes.h"
+
 #include "adapter/io_client/io_client.h"
-#include "fs_metadata_manager_singleton_macros.h"
+#include "filesystem_io_client.h"
+#include "file.h"
 
 namespace hapi = hermes::api;
 
 namespace hermes::adapter::fs {
+
+/** The maximum length of a posix path */
+static inline const int kMaxPathLen = 4096;
 
 /** The type of seek to perform */
 enum class SeekMode {
@@ -37,9 +43,7 @@ enum class SeekMode {
   kEnd = SEEK_END
 };
 
-/**
- A structure to represent adapter stat.
-*/
+/** A structure to represent adapter statistics */
 struct AdapterStat : public IoClientStat {
   std::shared_ptr<hapi::Bucket> bkt_id_; /**< bucket associated with the file */
   /** VBucket for persisting data asynchronously. */
@@ -53,44 +57,6 @@ struct AdapterStat : public IoClientStat {
   /** compare \a a BLOB and \a b BLOB.*/
   static bool CompareBlobs(const std::string &a, const std::string &b) {
     return std::stol(a) < std::stol(b);
-  }
-};
-
-/** A structure to represent file */
-struct File : public IoClientContext {
-  /** file constructor that copies \a old file */
-  File(const File &old) { Copy(old); }
-
-  /** file assignment operator that copies \a old file */
-  File &operator=(const File &old) {
-    Copy(old);
-    return *this;
-  }
-
-  /** copy \a old file */
-  void Copy(const File &old) {
-    fd_ = old.fd_;
-    fh_ = old.fh_;
-    mpi_fh_ = old.mpi_fh_;
-    st_dev = old.st_dev;
-    st_ino = old.st_ino;
-    status_ = old.status_;
-  }
-
-  /** file comparison operator */
-  bool operator==(const File &old) const {
-    return (st_dev == old.st_dev) && (st_ino == old.st_ino) &&
-           (mpi_fh_ == old.mpi_fh_);
-  }
-
-  /** return hash value of this class  */
-  std::size_t hash() const {
-    std::size_t result;
-    std::size_t h1 = std::hash<dev_t>{}(st_dev);
-    std::size_t h2 = std::hash<ino_t>{}(st_ino);
-    std::size_t h3 = std::hash<MPI_File>{}(mpi_fh_);
-    result = h1 ^ h2 ^ h3;
-    return result;
   }
 };
 
@@ -143,20 +109,14 @@ struct IoOptions : public IoClientOptions {
   }
 };
 
-/** A structure to represent Hermes request */
-struct HermesRequest {
-  std::future<size_t> return_future; /**< future result of async op. */
-  IoStatus io_status;                /**< IO status */
-};
-
 /** A class to represent file system */
 class Filesystem {
  public:
-  IoClientType io_client_; /**< The I/O client to use for I/O */
+  FilesystemIoClient *io_client_;
 
  public:
   /** Constructor */
-  explicit Filesystem(IoClientType io_client) : io_client_(io_client) {}
+  explicit Filesystem(FilesystemIoClient *io_client) : io_client_(io_client) {}
 
   /** open \a path */
   File Open(AdapterStat &stat, const std::string &path);
@@ -256,19 +216,64 @@ class Filesystem {
   int Sync(File &f, bool &stat_exists);
   /** close */
   int Close(File &f, bool &stat_exists, bool destroy = true);
+
+ public:
+  /** real open */
+  void RealOpen(IoClientContext &f,
+                IoClientStat &stat,
+                const std::string &path) {
+    io_client_->RealOpen(f, stat, path);
+  }
+
+  /**
+   * Called after real open. Allocates the Hermes representation of
+   * identifying file information, such as a hermes file descriptor
+   * and hermes file handler. These are not the same as POSIX file
+   * descriptor and STDIO file handler.
+   * */
+  virtual void HermesOpen(IoClientContext &f,
+                          IoClientStat &stat,
+                          FilesystemIoClientContext &fs_mdm) {
+    io_client_->HermesOpen(f, stat, fs_mdm);
+  }
+
+  /** real sync */
+  int RealSync(const IoClientContext &f, const AdapterStat &stat) {
+    return io_client_->RealSync(f, stat);
+  }
+
+  /** real close */
+  int RealClose(const IoClientContext &f, const AdapterStat &stat) {
+    return io_client_->RealClose(f, stat);
+  }
+
+ public:
+  /** Whether or not \a path PATH is tracked by Hermes */
+  static bool IsTracked(const std::string &path) {
+    if (!HERMES->IsInitialized()) {
+      return false;
+    }
+    stdfs::path stdfs_path(path);
+    // TODO(llogan): use weak_canonical for performance reasons
+    std::string abs_path = stdfs::canonical(stdfs_path);
+    auto &path_inclusions = HERMES->client_config_.path_inclusions_;
+    auto &path_exclusions = HERMES->client_config_.path_exclusions_;
+    // Check if path is included
+    for (const std::string &pth : path_inclusions) {
+      if (abs_path.rfind(pth) != std::string::npos) {
+        return true;
+      }
+    }
+    // Check if path is excluded
+    for (const std::string &pth : path_exclusions) {
+      if (abs_path.rfind(pth) != std::string::npos) {
+        return false;
+      }
+    }
+    return true;
+  }
 };
 
 }  // namespace hermes::adapter::fs
-
-namespace std {
-/** A structure to represent hash */
-template <>
-struct hash<hermes::adapter::fs::File> {
-  /** hash creator functor */
-  std::size_t operator()(const hermes::adapter::fs::File &key) const {
-    return key.hash();
-  }
-};
-}  // namespace std
 
 #endif  // HERMES_ADAPTER_FILESYSTEM_FILESYSTEM_H_

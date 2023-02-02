@@ -84,10 +84,10 @@ target_include_directories(hermes
   SYSTEM PUBLIC ${HERMES_EXT_INCLUDE_DEPENDENCIES}
 )
 
-add_dependencies(hermes hermes_posix_singleton)
+add_dependencies(hermes hermes_adapter_io_clients)
 
 target_link_libraries(hermes
-  PUBLIC hermes_adapter_native
+  PUBLIC hermes_adapter_io_clients
   PUBLIC ${GLPK_LIBRARIES}
   PUBLIC ${CMAKE_HERMES_COMMUNICATION_TYPE_LIB}
   PUBLIC ${CMAKE_HERMES_RPC_TYPE_LIB}

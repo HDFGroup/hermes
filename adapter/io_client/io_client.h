@@ -17,9 +17,9 @@
 #ifndef HERMES_ABSTRACT_ADAPTER_H
 #define HERMES_ABSTRACT_ADAPTER_H
 
-#include "utils.h"
-#include "hermes_types.h"
 #include <mpi.h>
+#include "hermes_types.h"
+#include <future>
 
 namespace hermes::adapter {
 
@@ -36,12 +36,11 @@ enum class IoClientType {
 struct IoClientContext {
   IoClientType type_;     /**< Client to forward I/O request to */
   std::string filename_;  /**< Filename to read from */
-  int fd_;          /**< file descriptor */
-  FILE *fh_;        /**< file handler */
-  MPI_File mpi_fh_; /**< MPI file handler */
 
-  dev_t st_dev;    /**< device */
-  ino_t st_ino;    /**< inode */
+  int hermes_fd_;          /**< fake file descriptor (SCRATCH MODE) */
+  FILE *hermes_fh_;        /**< fake file handler (SCRATCH MODE) */
+  MPI_File hermes_mpi_fh_; /**< fake MPI file handler (SCRATCH MODE) */
+
   bool status_;    /**< status */
   int mpi_status_; /**< MPI status */
 
@@ -49,11 +48,9 @@ struct IoClientContext {
   IoClientContext()
       : type_(IoClientType::kNone),
         filename_(),
-        fd_(-1),
-        fh_(nullptr),
-        mpi_fh_(nullptr),
-        st_dev(-1),
-        st_ino(-1),
+        hermes_fd_(-1),
+        hermes_fh_(nullptr),
+        hermes_mpi_fh_(nullptr),
         status_(true),
         mpi_status_(MPI_SUCCESS) {}
 };
@@ -79,6 +76,10 @@ struct IoClientStat {
   timespec st_mtim_;     /**< time of last modification */
   timespec st_ctim_;     /**< time of last status change */
   std::string mode_str_; /**< mode used for fopen() */
+
+  int fd_;          /**< real file descriptor */
+  FILE *fh_;        /**< real STDIO file handler */
+  MPI_File mpi_fh_; /**< real MPI file handler */
 
   bool is_append_; /**< File is in append mode */
   int amode_;      /**< access mode (MPI) */
@@ -121,6 +122,12 @@ struct IoStatus {
                mpi_status_ptr_(&mpi_status_) {}
 };
 
+/** A structure to represent Hermes request */
+struct HermesRequest {
+  std::future<size_t> return_future; /**< future result of async op. */
+  IoStatus io_status;                /**< IO status */
+};
+
 /**
  * A class to represent abstract I/O client.
  * Used internally by BORG and certain adapter classes.
@@ -136,7 +143,6 @@ class IoClient {
   /** Write blob to backend */
   virtual void WriteBlob(const Blob &full_blob,
                          size_t backend_off,
-                         size_t backend_size,
                          const IoClientContext &io_ctx,
                          const IoClientOptions &opts,
                          IoStatus &status) = 0;
@@ -144,7 +150,6 @@ class IoClient {
   /** Read blob from the backend */
   virtual void ReadBlob(Blob &full_blob,
                         size_t backend_off,
-                        size_t backend_size,
                         const IoClientContext &io_ctx,
                         const IoClientOptions &opts,
                         IoStatus &status) = 0;

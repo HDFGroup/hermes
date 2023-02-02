@@ -8,7 +8,7 @@
 #include "hermes_types.h"
 #include "status.h"
 #include "buffer_pool.h"
-#include "adapter/adapter_factory/abstract_adapter.h"
+#include "adapter/io_client/io_client_factory.h"
 
 namespace hermes::api {
 
@@ -133,7 +133,8 @@ class Bucket {
                             size_t backend_off,
                             size_t backend_size,
                             BlobId &blob_id,
-                            IoClientContext &backend_ctx,
+                            const IoClientContext &io_ctx,
+                            const IoClientOptions &opts,
                             Context &ctx);
 
   /**
