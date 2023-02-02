@@ -72,7 +72,7 @@ def PrependPreamble(path):
         text = text.replace(labstor_preamble, "")
         text = re.sub("//\n// Created by [^\n]*\n//\n", "", text)
         text = text.strip()
-        text = hermes_preamble + "\n" + text + "\n"
+        text = hermes_preamble + "\n\n" + text + "\n"
 
     with open(path, 'w') as fp:
         fp.write(text)
