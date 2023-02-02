@@ -55,9 +55,9 @@ def PrependPreamble(path):
         text = fp.read()
         text = text.replace(hermes_preamble, "")
         text = text.replace(labstor_preamble, "")
-        text = text.strip()
         text = re.sub("//\n// Created by [^\n]*\n//\n", "", text)
-        text = preamble.strip() + text + "\n"
+        text = text.strip()
+        text = hermes_preamble + "\n" + text + "\n"
 
     with open(path, 'w') as fp:
         fp.write(text)
