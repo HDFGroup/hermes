@@ -31,6 +31,7 @@ struct FsIoClientMetadata {
   /** Default constructor */
   FsIoClientMetadata() {
     hermes_fd_min_ = 8192;  // TODO(llogan): don't assume 8192
+    hermes_fd_cur_ = hermes_fd_min_;
     hermes_fd_max_ = std::numeric_limits<int>::max();
   }
 

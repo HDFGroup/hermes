@@ -71,28 +71,35 @@ void PosixIoClient::HermesClose(IoClientObject &f,
 void PosixIoClient::InitBucketState(const lipc::charbuf &bkt_name,
                                     const IoClientContext &opts,
                                     GlobalIoClientStatse &stat) {
-  // real_api->__fxstat();
   stat.true_size_ = 0;
+  std::string filename = bkt_name.str();
+  int fd = real_api->open(filename.c_str(), O_RDONLY);
+  if (fd < 0) { return; }
+  struct stat buf;
+  real_api->__fxstat(_STAT_VER, fd, &buf);
+  stat.true_size_ = buf.st_size;
+  real_api->close(fd);
 }
 
 /** Update backend statistics */
 void PosixIoClient::UpdateBucketState(const IoClientContext &opts,
                                       GlobalIoClientStatse &stat) {
-  stat.true_size_;
+  stat.true_size_ = std::max(stat.true_size_,
+                             opts.backend_off_ + opts.backend_size_);
 }
 
 /** Write blob to backend */
-void PosixIoClient::WriteBlob(const Blob &full_blob,
-                              const IoClientObject &io_ctx,
+void PosixIoClient::WriteBlob(const lipc::charbuf &bkt_name,
+                              const Blob &full_blob,
                               const IoClientContext &opts,
                               IoStatus &status) {
   (void) opts;
-  LOG(INFO) << "Writing to file: " << io_ctx.filename_
+  LOG(INFO) << "Writing to file: " << bkt_name.str()
             << " offset: " << opts.backend_off_
             << " size:" << full_blob.size() << "."
-            << " file_size:" << stdfs::file_size(io_ctx.filename_)
+            << " file_size:" << stdfs::file_size(bkt_name.str())
             << std::endl;
-  int fd = real_api->open(io_ctx.filename_.c_str(), O_RDWR | O_CREAT);
+  int fd = real_api->open(bkt_name.str().c_str(), O_RDWR | O_CREAT);
   if (fd < 0) {
     status.posix_ret_ = 0;
     return;
@@ -105,17 +112,17 @@ void PosixIoClient::WriteBlob(const Blob &full_blob,
 }
 
 /** Read blob from the backend */
-void PosixIoClient::ReadBlob(Blob &full_blob,
-                             const IoClientObject &io_ctx,
+void PosixIoClient::ReadBlob(const lipc::charbuf &bkt_name,
+                             Blob &full_blob,
                              const IoClientContext &opts,
                              IoStatus &status) {
   (void) opts;
-  LOG(INFO) << "Writing to file: " << io_ctx.filename_
+  LOG(INFO) << "Writing to file: " << bkt_name.str()
             << " offset: " << opts.backend_off_
             << " size:" << full_blob.size() << "."
-            << " file_size:" << stdfs::file_size(io_ctx.filename_)
+            << " file_size:" << stdfs::file_size(bkt_name.str())
             << std::endl;
-  int fd = real_api->open(io_ctx.filename_.c_str(), O_RDONLY);
+  int fd = real_api->open(bkt_name.str().c_str(), O_RDONLY);
   if (fd < 0) {
     status.posix_ret_ = 0;
     return;

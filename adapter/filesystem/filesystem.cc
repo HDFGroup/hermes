@@ -75,10 +75,7 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
     const Blob blob_wrap((const char*)ptr + data_offset, off);
     lipc::charbuf blob_name(p.CreateBlobName());
     BlobId blob_id;
-    IoClientObject io_ctx;
     Context ctx;
-    io_ctx.type_ = type_;
-    io_ctx.filename_ = filename;
     opts.type_ = type_;
     opts.backend_off_ = p.page_ * kPageSize;
     opts.backend_size_ = kPageSize;
@@ -86,7 +83,6 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
                             blob_wrap,
                             p.blob_off_,
                             blob_id,
-                            io_ctx,
                             opts,
                             ctx);
     data_offset += p.blob_size_;
@@ -118,10 +114,7 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
     Blob blob_wrap((const char*)ptr + data_offset, off);
     lipc::charbuf blob_name(p.CreateBlobName());
     BlobId blob_id;
-    IoClientObject io_ctx;
     Context ctx;
-    io_ctx.type_ = type_;
-    io_ctx.filename_ = filename;
     opts.backend_off_ = p.page_ * kPageSize;
     opts.backend_size_ = kPageSize;
     opts.type_ = type_;
@@ -130,7 +123,6 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
                             p.blob_off_,
                             p.blob_size_,
                             blob_id,
-                            io_ctx,
                             opts,
                             ctx);
     data_offset += p.blob_size_;

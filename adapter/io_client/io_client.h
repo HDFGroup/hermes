@@ -177,14 +177,14 @@ class IoClient {
                                  GlobalIoClientStatse &stat) = 0;
 
   /** Write blob to backend */
-  virtual void WriteBlob(const Blob &full_blob,
-                         const IoClientObject &io_ctx,
+  virtual void WriteBlob(const lipc::charbuf &bkt_name,
+                         const Blob &full_blob,
                          const IoClientContext &opts,
                          IoStatus &status) = 0;
 
   /** Read blob from the backend */
-  virtual void ReadBlob(Blob &full_blob,
-                        const IoClientObject &io_ctx,
+  virtual void ReadBlob(const lipc::charbuf &bkt_name,
+                        Blob &full_blob,
                         const IoClientContext &opts,
                         IoStatus &status) = 0;
 };

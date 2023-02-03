@@ -25,7 +25,7 @@ namespace hermes::api {
 Bucket::Bucket(const std::string &bkt_name,
                Context &ctx,
                const IoClientContext &opts)
-: mdm_(&HERMES->mdm_), bpm_(&HERMES->bpm_) {
+: mdm_(&HERMES->mdm_), bpm_(&HERMES->bpm_), name_(bkt_name) {
   lipc::string lname(bkt_name);
   id_ = mdm_->LocalGetOrCreateBucket(lname, opts);
 }
@@ -115,7 +115,6 @@ Status Bucket::PartialPutOrCreate(const std::string &blob_name,
                                   const Blob &blob,
                                   size_t blob_off,
                                   BlobId &blob_id,
-                                  const IoClientObject &io_ctx,
                                   const IoClientContext &opts,
                                   Context &ctx) {
   Blob full_blob;
@@ -133,10 +132,11 @@ Status Bucket::PartialPutOrCreate(const std::string &blob_name,
     // Case 3: The blob did not exist (need to read from backend)
     // Read blob using adapter
     IoStatus status;
-    auto io_client = IoClientFactory::Get(io_ctx.type_);
+    auto io_client = IoClientFactory::Get(opts.type_);
     full_blob.resize(opts.backend_size_);
     if (io_client) {
-      io_client->ReadBlob(full_blob, io_ctx, opts, status);
+      io_client->ReadBlob(lipc::charbuf(name_),
+                          full_blob, opts, status);
     }
   }
   // Ensure the blob can hold the update
@@ -174,7 +174,6 @@ Status Bucket::PartialGetOrCreate(const std::string &blob_name,
                                   size_t blob_off,
                                   size_t blob_size,
                                   BlobId &blob_id,
-                                  const IoClientObject &io_ctx,
                                   const IoClientContext &opts,
                                   Context &ctx) {
   Blob full_blob;
@@ -186,12 +185,11 @@ Status Bucket::PartialGetOrCreate(const std::string &blob_name,
     // Case 2: The blob did not exist (need to read from backend)
     // Read blob using adapter
     IoStatus status;
-    auto io_client = IoClientFactory::Get(io_ctx.type_);
+    auto io_client = IoClientFactory::Get(opts.type_);
     full_blob.resize(opts.backend_size_);
-    io_client->ReadBlob(full_blob,
-                        io_ctx,
-                        opts,
-                        status);
+    if (io_client) {
+      io_client->ReadBlob(lipc::charbuf(name_), full_blob, opts, status);
+    }
   }
   // Ensure the blob can hold the update
   if (full_blob.size() < blob_off + blob_size) {

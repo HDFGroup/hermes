@@ -81,14 +81,14 @@ class PosixIoClient : public hermes::adapter::fs::FilesystemIoClient {
                          GlobalIoClientStatse &stat) override;
 
   /** Write blob to backend */
-  void WriteBlob(const Blob &full_blob,
-                 const IoClientObject &io_ctx,
+  void WriteBlob(const lipc::charbuf &bkt_name,
+                 const Blob &full_blob,
                  const IoClientContext &opts,
                  IoStatus &status) override;
 
   /** Read blob from the backend */
-  void ReadBlob(Blob &full_blob,
-                const IoClientObject &io_ctx,
+  void ReadBlob(const lipc::charbuf &bkt_name,
+                Blob &full_blob,
                 const IoClientContext &opts,
                 IoStatus &status) override;
 };
