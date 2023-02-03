@@ -89,8 +89,7 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
                             ctx);
     data_offset += p.blob_size_;
   }
-  off_t f_offset = off + data_offset;
-  if (opts.seek_) { stat.st_ptr_ = f_offset; }
+  if (opts.DoSeek()) { stat.st_ptr_ = off + data_offset; }
   stat.UpdateTime();
 
   ret = data_offset;
@@ -100,6 +99,43 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
 size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
                         size_t off, size_t total_size,
                         IoStatus &io_status, IoOptions opts) {
+  (void) f;
+  std::shared_ptr<hapi::Bucket> &bkt = stat.bkt_id_;
+  std::string filename = bkt->GetName();
+  LOG(INFO) << "Read called for filename: " << filename << " on offset: "
+            << off << " and size: " << total_size << std::endl;
+
+  size_t ret;
+  BlobPlacements mapping;
+  auto mapper = MapperFactory().Get(MapperType::kBalancedMapper);
+  mapper->map(off, total_size, mapping);
+  size_t data_offset = 0;
+  size_t kPageSize = HERMES->client_config_.file_page_size_;
+
+  for (const auto &p : mapping) {
+    Blob blob_wrap((const char*)ptr + data_offset, off);
+    lipc::charbuf blob_name(p.CreateBlobName());
+    BlobId blob_id;
+    IoClientContext io_ctx;
+    Context ctx;
+    io_ctx.filename_ = filename;
+    opts.backend_off_ = p.page_ * kPageSize;
+    opts.backend_size_ = kPageSize;
+    bkt->PartialGetOrCreate(blob_name.str(),
+                            blob_wrap,
+                            p.blob_off_,
+                            p.blob_size_,
+                            blob_id,
+                            io_ctx,
+                            opts,
+                            ctx);
+    data_offset += p.blob_size_;
+  }
+  if (opts.DoSeek()) { stat.st_ptr_ = off + data_offset; }
+  stat.UpdateTime();
+
+  ret = data_offset;
+  return ret;
 }
 
 HermesRequest* Filesystem::AWrite(File &f, AdapterStat &stat, const void *ptr,
@@ -282,7 +318,7 @@ size_t Filesystem::Write(File &f, bool &stat_exists, const void *ptr,
     return 0;
   }
   stat_exists = true;
-  opts.seek_ = false;
+  opts.UnsetSeek();
   return Write(f, *stat, ptr, off, total_size, io_status, opts);
 }
 
@@ -296,7 +332,7 @@ size_t Filesystem::Read(File &f, bool &stat_exists, void *ptr,
     return 0;
   }
   stat_exists = true;
-  opts.seek_ = false;
+  opts.UnsetSeek();
   return Read(f, *stat, ptr, off, total_size, io_status, opts);
 }
 
@@ -336,7 +372,7 @@ HermesRequest* Filesystem::AWrite(File &f, bool &stat_exists, const void *ptr,
     return 0;
   }
   stat_exists = true;
-  opts.seek_ = false;
+  opts.UnsetSeek();
   return AWrite(f, *stat, ptr, off, total_size, req_id, io_status, opts);
 }
 
@@ -350,7 +386,7 @@ HermesRequest* Filesystem::ARead(File &f, bool &stat_exists, void *ptr,
     return 0;
   }
   stat_exists = true;
-  opts.seek_ = false;
+  opts.UnsetSeek();
   return ARead(f, *stat, ptr, off, total_size, req_id, io_status, opts);
 }
 

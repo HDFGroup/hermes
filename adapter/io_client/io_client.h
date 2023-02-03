@@ -17,6 +17,8 @@
 #include "hermes_types.h"
 #include <future>
 
+namespace hapi = hermes::api;
+
 namespace hermes::adapter {
 
 /** Adapter types */
@@ -52,16 +54,29 @@ struct IoClientContext {
         mpi_status_(MPI_SUCCESS) {}
 };
 
+/** Put or get data directly from I/O client */
+#define HERMES_IO_CLIENT_BYPASS (1<<0)
+/** Only put or get data from a Hermes buffer; no fallback to I/O client */
+#define HERMES_IO_CLIENT_NO_FALLBACK (1<<1)
+/** The number of I/O client flags (used for extending flag field) */
+#define HERMES_IO_CLIENT_FLAGS_COUNT 2
+
 /** Represents any relevant settings for an I/O client operation */
 struct IoClientOptions {
-  AdapterType type_;      /**< Client to forward I/O request to */
+  // TODO(llogan): We should use an std::variant or union instead of large set
+  AdapterType type_;              /**< Client to forward I/O request to */
+  hapi::PlacementPolicy dpe_;     /**< data placement policy */
+  bitfield32_t flags_;            /**< various I/O flags */
   MPI_Datatype mpi_type_; /**< MPI data type */
   int mpi_count_;         /**< The number of types */
   size_t backend_off_;    /**< Offset in the backend to begin I/O */
   size_t backend_size_;   /**< Size of I/O to perform at backend */
 
   /** Default constructor */
-  IoClientOptions() : mpi_type_(MPI_CHAR),
+  IoClientOptions() : type_(AdapterType::kNone),
+                      dpe_(hapi::PlacementPolicy::kNone),
+                      flags_(),
+                      mpi_type_(MPI_CHAR),
                       mpi_count_(0),
                       backend_off_(0),
                       backend_size_(0) {}

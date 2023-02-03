@@ -25,6 +25,7 @@ namespace lipc = labstor::ipc;
 
 using labstor::RwLock;
 using labstor::Mutex;
+using labstor::bitfield32_t;
 
 #include <unordered_map>
 #include <unordered_set>

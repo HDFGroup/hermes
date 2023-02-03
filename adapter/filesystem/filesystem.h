@@ -60,52 +60,32 @@ struct AdapterStat : public IoClientStat {
   }
 };
 
-/** A structure to represent IO options */
+/**< Whether to perform seek */
+#define HERMES_FS_SEEK (1<< (HERMES_IO_CLIENT_FLAGS_COUNT))
+
+/**
+ * A structure to represent IO options for FS adapter.
+ * For now, nothing additional than the typical IoClientOptions.
+ * */
 struct IoOptions : public IoClientOptions {
-  hapi::PlacementPolicy dpe_;     /**< data placement policy */
-  bool seek_;                     /**< use seek? */
-  bool with_fallback_;            /**< use fallback? */
-
   /** Default constructor */
-  IoOptions()
-      : dpe_(hapi::PlacementPolicy::kNone),
-        seek_(true),
-        with_fallback_(true) {}
-
-  /** return options with \a dpe parallel data placement engine */
-  static IoOptions WithParallelDpe(hapi::PlacementPolicy dpe) {
-    IoOptions opts;
-    opts.dpe_ = dpe;
-    return opts;
+  IoOptions() : IoClientOptions() {
+    flags_.SetBits(HERMES_FS_SEEK);
   }
 
-  /** return direct IO options by setting placement policy to none */
-  static IoOptions DirectIo(IoOptions &cur_opts) {
-    IoOptions opts(cur_opts);
-    opts.seek_ = false;
-    opts.dpe_ = hapi::PlacementPolicy::kNone;
-    opts.with_fallback_ = true;
-    return opts;
+  /** Enable seek for this I/O */
+  void SetSeek() {
+    flags_.SetBits(HERMES_FS_SEEK);
   }
 
-  /** return IO options with \a mpi_type MPI data type */
-  static IoOptions DataType(MPI_Datatype mpi_type, bool seek = true) {
-    IoOptions opts;
-    opts.mpi_type_ = mpi_type;
-    opts.seek_ = seek;
-    return opts;
+  /** Disable seek for this I/O */
+  void UnsetSeek() {
+    flags_.UnsetBits(HERMES_FS_SEEK);
   }
 
-  /**
-   * Ensure that I/O goes only to Hermes, and does not fall back to PFS.
-   *
-   * @param orig_opts The original options to modify
-   * */
-  static IoOptions PlaceInHermes(IoOptions &orig_opts) {
-    IoOptions opts(orig_opts);
-    opts.seek_ = false;
-    opts.with_fallback_ = false;
-    return opts;
+  /** Whether or not to perform seek in FS adapter */
+  bool DoSeek() {
+    return flags_.OrBits(HERMES_FS_SEEK);
   }
 };
 
