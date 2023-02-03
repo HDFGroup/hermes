@@ -15,7 +15,6 @@
 
 #include "hermes.h"
 #include "adapter/filesystem/filesystem_mdm.h"
-#include "adapter/filesystem/filesystem_mdm_singleton_macros.h"
 
 namespace stdfs = std::filesystem;
 

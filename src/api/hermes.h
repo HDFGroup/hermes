@@ -23,7 +23,11 @@
 #include "metadata_manager.h"
 #include "buffer_pool.h"
 #include "buffer_organizer.h"
-#include "hermes_singleton_macros.h"
+#include "singleton.h"
+
+// Singleton macros
+#define HERMES hermes::GlobalSingleton<hermes::api::Hermes>::GetInstance()
+#define HERMES_T hermes::api::Hermes*
 
 namespace hermes::api {
 

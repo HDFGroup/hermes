@@ -16,7 +16,6 @@
 #include <memory>
 
 #include "adapter/filesystem/filesystem_io_client.h"
-#include "posix_api_singleton_macros.h"
 #include "posix_api.h"
 
 using hermes::Singleton;

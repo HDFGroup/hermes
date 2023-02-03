@@ -17,11 +17,10 @@
 
 #include "adapter/filesystem/filesystem.h"
 #include "adapter/filesystem/filesystem_mdm.h"
-#include "stdio_api_singleton_macros.h"
 #include "stdio_api.h"
 #include "stdio_io_client.h"
 
-namespace hermes::adpater::fs {
+namespace hermes::adapter::fs {
 
 /** A class to represent POSIX IO file system */
 class StdioFs : public hermes::adapter::fs::Filesystem {

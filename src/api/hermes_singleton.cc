@@ -11,7 +11,6 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "singleton.h"
-#include "hermes_singleton_macros.h"
 
 #include "hermes.h"
 template<> hermes::api::Hermes hermes::GlobalSingleton<

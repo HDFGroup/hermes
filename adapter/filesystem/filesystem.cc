@@ -10,7 +10,6 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include "filesystem_mdm_singleton_macros.h"
 #include "filesystem.h"
 #include "constants.h"
 #include "singleton.h"

@@ -25,7 +25,6 @@ bool posix_intercepted = true;
 
 #include "posix_api.h"
 #include "posix_fs_api.h"
-#include "posix_api_singleton_macros.h"
 #include "filesystem/filesystem.h"
 
 using hermes::adapter::fs::AdapterStat;

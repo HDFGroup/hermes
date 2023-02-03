@@ -15,7 +15,6 @@
 
 #include "borg_io_client.h"
 #include "adapter/posix/posix_api.h"
-#include "adapter/posix/posix_api_singleton_macros.h"
 
 #include <filesystem>
 

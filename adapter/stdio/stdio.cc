@@ -30,37 +30,14 @@ using hermes::u64;
 extern "C" {
 
 /**
- * MPI
- */
-int HERMES_DECL(MPI_Init)(int *argc, char ***argv) {
-  auto real_api = Singleton<API>::GetInstance();
-  int status = real_api->MPI_Init(argc, argv);
-  if (status == 0) {
-    auto mdm = Singleton<MetadataManager>::GetInstance();
-    mdm->InitializeHermes(true);
-    LOG(INFO) << "MPI Init intercepted." << std::endl;
-  }
-  return status;
-}
-
-int HERMES_DECL(MPI_Finalize)(void) {
-  LOG(INFO) << "MPI Finalize intercepted." << std::endl;
-  auto real_api = Singleton<API>::GetInstance();
-  auto mdm = Singleton<MetadataManager>::GetInstance();
-  mdm->FinalizeHermes();
-  int status = real_api->MPI_Finalize();
-  return status;
-}
-
-/**
  * STDIO
  */
 
 FILE *reopen_internal(const std::string &user_path, const char *mode,
                       FILE *stream) {
-  auto real_api = Singleton<API>::GetInstance();
-  auto fs_api = Singleton<StdioFS>::GetInstance();
-  auto mdm = Singleton<MetadataManager>::GetInstance();
+  auto real_api = HERMES_STDIO_API;
+  auto fs_api = HERMES_STDIO_FS;
+  auto mdm = HERMES_FS_METADATA_MANAGER;
   FILE *ret;
   ret = real_api->freopen(user_path.c_str(), mode, stream);
   if (!ret) {
@@ -89,8 +66,8 @@ FILE *reopen_internal(const std::string &user_path, const char *mode,
 }
 
 FILE *HERMES_DECL(fopen)(const char *path, const char *mode) {
-  auto real_api = Singleton<API>::GetInstance();
-  auto fs_api = Singleton<StdioFS>::GetInstance();
+  auto real_api = HERMES_STDIO_API;
+  auto fs_api = HERMES_STDIO_FS;
   if (hermes::adapter::IsTracked(path)) {
     LOG(INFO) << "Intercepting fopen(" << path << ", " << mode << ")\n";
     AdapterStat stat;
@@ -102,8 +79,8 @@ FILE *HERMES_DECL(fopen)(const char *path, const char *mode) {
 }
 
 FILE *HERMES_DECL(fopen64)(const char *path, const char *mode) {
-  auto real_api = Singleton<API>::GetInstance();
-  auto fs_api = Singleton<StdioFS>::GetInstance();
+  auto real_api = HERMES_STDIO_API;
+  auto fs_api = HERMES_STDIO_FS;
   if (hermes::adapter::IsTracked(path)) {
     LOG(INFO) << "Intercepting fopen64(" << path << ", " << mode << ")\n";
     AdapterStat stat;
@@ -115,8 +92,8 @@ FILE *HERMES_DECL(fopen64)(const char *path, const char *mode) {
 }
 
 FILE *HERMES_DECL(fdopen)(int fd, const char *mode) {
-  auto real_api = Singleton<API>::GetInstance();
-  auto fs_api = Singleton<StdioFS>::GetInstance();
+  auto real_api = HERMES_STDIO_API;
+  auto fs_api = HERMES_STDIO_FS;
   FILE *ret = real_api->fdopen(fd, mode);
   if (ret && hermes::adapter::IsTracked(ret)) {
     LOG(INFO) << "Intercepting fdopen(" << fd << ", " << mode << ")\n";
@@ -132,7 +109,7 @@ FILE *HERMES_DECL(fdopen)(int fd, const char *mode) {
 }
 
 FILE *HERMES_DECL(freopen)(const char *path, const char *mode, FILE *stream) {
-  auto real_api = Singleton<API>::GetInstance();
+  auto real_api = HERMES_STDIO_API;
   if (hermes::adapter::IsTracked(path)) {
     LOG(INFO) << "Intercepting freopen(" << path << ", " << mode << ", "
               << stream << ")\n";
@@ -142,7 +119,7 @@ FILE *HERMES_DECL(freopen)(const char *path, const char *mode, FILE *stream) {
 }
 
 FILE *HERMES_DECL(freopen64)(const char *path, const char *mode, FILE *stream) {
-  auto real_api = Singleton<API>::GetInstance();
+  auto real_api = HERMES_STDIO_API;
   if (hermes::adapter::IsTracked(path)) {
     LOG(INFO) << "Intercepting freopen64(" << path << ", " << mode << ", "
               << stream << ")\n";
@@ -153,8 +130,8 @@ FILE *HERMES_DECL(freopen64)(const char *path, const char *mode, FILE *stream) {
 
 int HERMES_DECL(fflush)(FILE *fp) {
   bool stat_exists;
-  auto real_api = Singleton<API>::GetInstance();
-  auto fs_api = Singleton<StdioFS>::GetInstance();
+  auto real_api = HERMES_STDIO_API;
+  auto fs_api = HERMES_STDIO_FS;
   if (fp && hermes::adapter::IsTracked(fp)) {
     File f;
     f.fh_ = fp;
@@ -166,8 +143,8 @@ int HERMES_DECL(fflush)(FILE *fp) {
 
 int HERMES_DECL(fclose)(FILE *fp) {
   bool stat_exists;
-  auto real_api = Singleton<API>::GetInstance();
-  auto fs_api = Singleton<StdioFS>::GetInstance();
+  auto real_api = HERMES_STDIO_API;
+  auto fs_api = HERMES_STDIO_FS;
   if (hermes::adapter::IsTracked(fp)) {
     LOG(INFO) << "Intercepting fclose(" << fp << ")\n";
     File f;
@@ -182,8 +159,8 @@ int HERMES_DECL(fclose)(FILE *fp) {
 size_t HERMES_DECL(fwrite)(const void *ptr, size_t size, size_t nmemb,
                            FILE *fp) {
   bool stat_exists;
-  auto real_api = Singleton<API>::GetInstance();
-  auto fs_api = Singleton<StdioFS>::GetInstance();
+  auto real_api = HERMES_STDIO_API;
+  auto fs_api = HERMES_STDIO_FS;
   if (hermes::adapter::IsTracked(fp)) {
     LOG(INFO) << "Intercepting fwrite(" << ptr << ", " << size << ", " << nmemb
               << ", " << fp << ")\n";
@@ -201,8 +178,8 @@ size_t HERMES_DECL(fwrite)(const void *ptr, size_t size, size_t nmemb,
 
 int HERMES_DECL(fputc)(int c, FILE *fp) {
   bool stat_exists;
-  auto real_api = Singleton<API>::GetInstance();
-  auto fs_api = Singleton<StdioFS>::GetInstance();
+  auto real_api = HERMES_STDIO_API;
+  auto fs_api = HERMES_STDIO_FS;
   if (hermes::adapter::IsTracked(fp)) {
     LOG(INFO) << "Intercepting fputc(" << c << ", " << fp << ")\n";
     File f;
@@ -219,8 +196,8 @@ int HERMES_DECL(fputc)(int c, FILE *fp) {
 
 int HERMES_DECL(fgetpos)(FILE *fp, fpos_t *pos) {
   bool stat_exists;
-  auto real_api = Singleton<API>::GetInstance();
-  auto fs_api = Singleton<StdioFS>::GetInstance();
+  auto real_api = HERMES_STDIO_API;
+  auto fs_api = HERMES_STDIO_FS;
   if (hermes::adapter::IsTracked(fp) && pos) {
     File f;
     f.fh_ = fp;
@@ -241,8 +218,8 @@ int HERMES_DECL(fgetpos)(FILE *fp, fpos_t *pos) {
 
 int HERMES_DECL(fgetpos64)(FILE *fp, fpos64_t *pos) {
   bool stat_exists;
-  auto real_api = Singleton<API>::GetInstance();
-  auto fs_api = Singleton<StdioFS>::GetInstance();
+  auto real_api = HERMES_STDIO_API;
+  auto fs_api = HERMES_STDIO_FS;
   if (hermes::adapter::IsTracked(fp) && pos) {
     File f;
     f.fh_ = fp;
@@ -263,8 +240,8 @@ int HERMES_DECL(fgetpos64)(FILE *fp, fpos64_t *pos) {
 
 int HERMES_DECL(putc)(int c, FILE *fp) {
   bool stat_exists;
-  auto real_api = Singleton<API>::GetInstance();
-  auto fs_api = Singleton<StdioFS>::GetInstance();
+  auto real_api = HERMES_STDIO_API;
+  auto fs_api = HERMES_STDIO_FS;
   if (hermes::adapter::IsTracked(fp)) {
     File f;
     f.fh_ = fp;
@@ -281,8 +258,8 @@ int HERMES_DECL(putc)(int c, FILE *fp) {
 
 int HERMES_DECL(putw)(int w, FILE *fp) {
   bool stat_exists;
-  auto real_api = Singleton<API>::GetInstance();
-  auto fs_api = Singleton<StdioFS>::GetInstance();
+  auto real_api = HERMES_STDIO_API;
+  auto fs_api = HERMES_STDIO_FS;
   if (hermes::adapter::IsTracked(fp)) {
     LOG(INFO) << "Intercept putw." << std::endl;
     File f;
@@ -301,8 +278,8 @@ int HERMES_DECL(putw)(int w, FILE *fp) {
 
 int HERMES_DECL(fputs)(const char *s, FILE *stream) {
   bool stat_exists;
-  auto real_api = Singleton<API>::GetInstance();
-  auto fs_api = Singleton<StdioFS>::GetInstance();
+  auto real_api = HERMES_STDIO_API;
+  auto fs_api = HERMES_STDIO_FS;
   if (hermes::adapter::IsTracked(stream)) {
     LOG(INFO) << "Intercept fputs." << std::endl;
     File f;
@@ -319,8 +296,8 @@ int HERMES_DECL(fputs)(const char *s, FILE *stream) {
 
 size_t HERMES_DECL(fread)(void *ptr, size_t size, size_t nmemb, FILE *stream) {
   bool stat_exists;
-  auto real_api = Singleton<API>::GetInstance();
-  auto fs_api = Singleton<StdioFS>::GetInstance();
+  auto real_api = HERMES_STDIO_API;
+  auto fs_api = HERMES_STDIO_FS;
   if (hermes::adapter::IsTracked(stream)) {
     LOG(INFO) << "Intercept fread with size: " << size << "." << std::endl;
     File f;
@@ -337,8 +314,8 @@ size_t HERMES_DECL(fread)(void *ptr, size_t size, size_t nmemb, FILE *stream) {
 
 int HERMES_DECL(fgetc)(FILE *stream) {
   bool stat_exists;
-  auto real_api = Singleton<API>::GetInstance();
-  auto fs_api = Singleton<StdioFS>::GetInstance();
+  auto real_api = HERMES_STDIO_API;
+  auto fs_api = HERMES_STDIO_FS;
   if (hermes::adapter::IsTracked(stream)) {
     LOG(INFO) << "Intercept fgetc." << std::endl;
     File f;
@@ -356,8 +333,8 @@ int HERMES_DECL(fgetc)(FILE *stream) {
 
 int HERMES_DECL(getc)(FILE *stream) {
   bool stat_exists;
-  auto real_api = Singleton<API>::GetInstance();
-  auto fs_api = Singleton<StdioFS>::GetInstance();
+  auto real_api = HERMES_STDIO_API;
+  auto fs_api = HERMES_STDIO_FS;
   if (hermes::adapter::IsTracked(stream)) {
     LOG(INFO) << "Intercept getc." << std::endl;
     File f;
@@ -375,8 +352,8 @@ int HERMES_DECL(getc)(FILE *stream) {
 
 int HERMES_DECL(getw)(FILE *stream) {
   bool stat_exists;
-  auto real_api = Singleton<API>::GetInstance();
-  auto fs_api = Singleton<StdioFS>::GetInstance();
+  auto real_api = HERMES_STDIO_API;
+  auto fs_api = HERMES_STDIO_FS;
   if (hermes::adapter::IsTracked(stream)) {
     LOG(INFO) << "Intercept getw." << std::endl;
     File f;
@@ -394,8 +371,8 @@ int HERMES_DECL(getw)(FILE *stream) {
 
 char *HERMES_DECL(fgets)(char *s, int size, FILE *stream) {
   bool stat_exists;
-  auto real_api = Singleton<API>::GetInstance();
-  auto fs_api = Singleton<StdioFS>::GetInstance();
+  auto real_api = HERMES_STDIO_API;
+  auto fs_api = HERMES_STDIO_FS;
   if (hermes::adapter::IsTracked(stream)) {
     LOG(INFO) << "Intercept fgets." << std::endl;
     File f;
@@ -429,8 +406,8 @@ char *HERMES_DECL(fgets)(char *s, int size, FILE *stream) {
 
 void HERMES_DECL(rewind)(FILE *stream) {
   bool stat_exists;
-  auto real_api = Singleton<API>::GetInstance();
-  auto fs_api = Singleton<StdioFS>::GetInstance();
+  auto real_api = HERMES_STDIO_API;
+  auto fs_api = HERMES_STDIO_FS;
   if (hermes::adapter::IsTracked(stream)) {
     LOG(INFO) << "Intercept rewind." << std::endl;
     File f;
@@ -446,8 +423,8 @@ void HERMES_DECL(rewind)(FILE *stream) {
 
 int HERMES_DECL(fseek)(FILE *stream, long offset, int whence) {
   bool stat_exists;
-  auto real_api = Singleton<API>::GetInstance();
-  auto fs_api = Singleton<StdioFS>::GetInstance();
+  auto real_api = HERMES_STDIO_API;
+  auto fs_api = HERMES_STDIO_FS;
   if (hermes::adapter::IsTracked(stream)) {
     LOG(INFO) << "Intercept fseek offset:" << offset << " whence:" << whence
               << "." << std::endl;
@@ -465,8 +442,8 @@ int HERMES_DECL(fseek)(FILE *stream, long offset, int whence) {
 
 int HERMES_DECL(fseeko)(FILE *stream, off_t offset, int whence) {
   bool stat_exists;
-  auto real_api = Singleton<API>::GetInstance();
-  auto fs_api = Singleton<StdioFS>::GetInstance();
+  auto real_api = HERMES_STDIO_API;
+  auto fs_api = HERMES_STDIO_FS;
   if (hermes::adapter::IsTracked(stream)) {
     LOG(INFO) << "Intercept fseeko offset:" << offset << " whence:" << whence
               << "." << std::endl;
@@ -484,8 +461,8 @@ int HERMES_DECL(fseeko)(FILE *stream, off_t offset, int whence) {
 
 int HERMES_DECL(fseeko64)(FILE *stream, off64_t offset, int whence) {
   bool stat_exists;
-  auto real_api = Singleton<API>::GetInstance();
-  auto fs_api = Singleton<StdioFS>::GetInstance();
+  auto real_api = HERMES_STDIO_API;
+  auto fs_api = HERMES_STDIO_FS;
   if (hermes::adapter::IsTracked(stream)) {
     LOG(INFO) << "Intercept fseeko offset:" << offset << " whence:" << whence
               << "." << std::endl;
@@ -503,8 +480,8 @@ int HERMES_DECL(fseeko64)(FILE *stream, off64_t offset, int whence) {
 
 int HERMES_DECL(fsetpos)(FILE *stream, const fpos_t *pos) {
   bool stat_exists;
-  auto real_api = Singleton<API>::GetInstance();
-  auto fs_api = Singleton<StdioFS>::GetInstance();
+  auto real_api = HERMES_STDIO_API;
+  auto fs_api = HERMES_STDIO_FS;
   off_t offset = pos->__pos;
   if (hermes::adapter::IsTracked(stream)) {
     LOG(INFO) << "Intercept fsetpos offset:" << offset << "." << std::endl;
@@ -521,8 +498,8 @@ int HERMES_DECL(fsetpos)(FILE *stream, const fpos_t *pos) {
 
 int HERMES_DECL(fsetpos64)(FILE *stream, const fpos64_t *pos) {
   bool stat_exists;
-  auto real_api = Singleton<API>::GetInstance();
-  auto fs_api = Singleton<StdioFS>::GetInstance();
+  auto real_api = HERMES_STDIO_API;
+  auto fs_api = HERMES_STDIO_FS;
   off_t offset = pos->__pos;
   if (hermes::adapter::IsTracked(stream)) {
     LOG(INFO) << "Intercept fsetpos64 offset:" << offset << "." << std::endl;
@@ -539,8 +516,8 @@ int HERMES_DECL(fsetpos64)(FILE *stream, const fpos64_t *pos) {
 
 long int HERMES_DECL(ftell)(FILE *fp) {
   bool stat_exists;
-  auto real_api = Singleton<API>::GetInstance();
-  auto fs_api = Singleton<StdioFS>::GetInstance();
+  auto real_api = HERMES_STDIO_API;
+  auto fs_api = HERMES_STDIO_FS;
   if (hermes::adapter::IsTracked(fp)) {
     LOG(INFO) << "Intercept ftell." << std::endl;
     File f;

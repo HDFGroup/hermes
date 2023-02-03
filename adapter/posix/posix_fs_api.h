@@ -17,7 +17,6 @@
 
 #include "adapter/filesystem/filesystem.h"
 #include "adapter/filesystem/filesystem_mdm.h"
-#include "posix_api_singleton_macros.h"
 #include "posix_api.h"
 #include "posix_io_client.h"
 

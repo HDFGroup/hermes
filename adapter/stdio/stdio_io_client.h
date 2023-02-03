@@ -16,7 +16,6 @@
 #include <memory>
 
 #include "adapter/filesystem/filesystem_io_client.h"
-#include "stdio_api_singleton_macros.h"
 #include "stdio_api.h"
 
 using hermes::adapter::IoClientStats;
