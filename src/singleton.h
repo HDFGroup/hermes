@@ -62,7 +62,7 @@ template<typename T>
 class EasySingleton {
  protected:
   /** static instance. */
-  static std::unique_ptr<T> instance;
+  static std::unique_ptr<T> obj_;
 
  public:
   /**
@@ -71,14 +71,14 @@ class EasySingleton {
    * @return instance of T
    */
   static T* GetInstance() {
-    if (instance == nullptr) {
-      instance = std::make_unique<T>();
+    if (obj_ == nullptr) {
+      obj_ = std::make_unique<T>();
     }
-    return instance.get();
+    return obj_.get();
   }
 };
 template <typename T>
-std::unique_ptr<T> EasySingleton<T>::instance = nullptr;
+std::unique_ptr<T> EasySingleton<T>::obj_ = nullptr;
 
 /**
  * Makes a singleton. Constructs during initialization of program.
