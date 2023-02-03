@@ -128,6 +128,8 @@ class Filesystem {
   void Wait(std::vector<uint64_t> &req_id, std::vector<size_t> &ret);
   /** seek */
   off_t Seek(File &f, AdapterStat &stat, SeekMode whence, off_t offset);
+  /** file size */
+  size_t GetSize(File &f, AdapterStat &stat);
   /** tell */
   off_t Tell(File &f, AdapterStat &stat);
   /** sync */
@@ -192,6 +194,8 @@ class Filesystem {
                        IoOptions opts);
   /** seek */
   off_t Seek(File &f, bool &stat_exists, SeekMode whence, off_t offset);
+  /** file sizes */
+  size_t GetSize(File &f, bool &stat_exists);
   /** tell */
   off_t Tell(File &f, bool &stat_exists);
   /** sync */

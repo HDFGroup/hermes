@@ -261,7 +261,7 @@ int HERMES_DECL(__fxstat)(int __ver, int fd, struct stat *buf) {
       buf->st_uid = astat.st_uid_;
       buf->st_gid = astat.st_gid_;
       buf->st_rdev = 0;
-      // buf->st_size = astat.st_size_;
+      buf->st_size = fs_api->GetSize(f, astat);
       // buf->st_blksize = astat.st_blksize_;
       buf->st_blocks = 0;
       buf->st_atime = astat.st_atim_.tv_sec;

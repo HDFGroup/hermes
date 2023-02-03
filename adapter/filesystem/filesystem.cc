@@ -199,6 +199,14 @@ void Filesystem::Wait(std::vector<uint64_t> &req_ids,
   }
 }
 
+size_t Filesystem::GetSize(File &f, AdapterStat &stat) {
+  (void) stat;
+  IoOptions opts;
+  opts.type_ = type_;
+  return stat.bkt_id_->GetSize(opts);
+
+}
+
 off_t Filesystem::Seek(File &f, AdapterStat &stat,
                        SeekMode whence, off_t offset) {
   if (stat.is_append_) {
@@ -218,9 +226,9 @@ off_t Filesystem::Seek(File &f, AdapterStat &stat,
       break;
     }
     case SeekMode::kEnd: {
-      // TODO(llogan): Fix seek end
-      // stat.st_ptr_ = stat.bkt_id_-> + offset;
-      stat.st_ptr_ = 0 + offset;
+      IoOptions opts;
+      opts.type_ = type_;
+      stat.st_ptr_ = stat.bkt_id_->GetSize(opts) + offset;
       break;
     }
     default: {
@@ -400,6 +408,17 @@ off_t Filesystem::Seek(File &f, bool &stat_exists,
   }
   stat_exists = true;
   return Seek(f, *stat, whence, offset);
+}
+
+size_t Filesystem::GetSize(File &f, bool &stat_exists) {
+  auto mdm = HERMES_FS_METADATA_MANAGER;
+  auto [stat, exists] = mdm->Find(f);
+  if (!exists) {
+    stat_exists = false;
+    return -1;
+  }
+  stat_exists = true;
+  return GetSize(f, *stat);
 }
 
 off_t Filesystem::Tell(File &f, bool &stat_exists) {
