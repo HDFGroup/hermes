@@ -72,7 +72,7 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
   size_t kPageSize = HERMES->client_config_.file_page_size_;
 
   for (const auto &p : mapping) {
-    const Blob blob_wrap((const char*)ptr + data_offset, off);
+    const Blob blob_wrap((const char*)ptr + data_offset, p.blob_size_);
     lipc::charbuf blob_name(p.CreateBlobName());
     BlobId blob_id;
     Context ctx;
@@ -111,7 +111,7 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
   size_t kPageSize = HERMES->client_config_.file_page_size_;
 
   for (const auto &p : mapping) {
-    Blob blob_wrap((const char*)ptr + data_offset, off);
+    Blob blob_wrap((const char*)ptr + data_offset, p.blob_size_);
     lipc::charbuf blob_name(p.CreateBlobName());
     BlobId blob_id;
     Context ctx;
@@ -200,7 +200,6 @@ size_t Filesystem::GetSize(File &f, AdapterStat &stat) {
   IoOptions opts;
   opts.type_ = type_;
   return stat.bkt_id_->GetSize(opts);
-
 }
 
 off_t Filesystem::Seek(File &f, AdapterStat &stat,

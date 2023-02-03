@@ -56,6 +56,9 @@ void Hermes::Finalize() {
       break;
     }
   }
+  // TODO(llogan): make re-initialization possible.
+  is_initialized_ = false;
+  is_terminated_ = true;
 }
 
 void Hermes::RunDaemon() {

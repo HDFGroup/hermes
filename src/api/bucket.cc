@@ -70,7 +70,7 @@ Status Bucket::GetBlobId(std::string blob_name,
  * Put \a blob_id Blob into the bucket
  * */
 Status Bucket::Put(std::string blob_name,
-                   const Blob blob,
+                   const Blob &blob,
                    BlobId &blob_id,
                    Context &ctx,
                    IoClientContext opts) {

@@ -11,7 +11,14 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "singleton.h"
+#include "hermes_singleton_macros.h"
 
 #include "hermes.h"
 template<> hermes::api::Hermes hermes::GlobalSingleton<
     hermes::api::Hermes>::obj_ = hermes::api::Hermes();
+
+void Finalize() {
+  HERMES->Finalize();
+}
+
+void __attribute__((destructor)) Finalize();

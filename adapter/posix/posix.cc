@@ -53,7 +53,6 @@ int HERMES_DECL(open)(const char *path, int flags, ...) {
     va_end(arg);
   }
   if (fs_api->IsPathTracked(path)) {
-    TRANSPARENT_HERMES;
     LOG(INFO) << "Intercept open for filename: " << path
               << " and mode: " << flags << " is tracked." << std::endl;
     AdapterStat stat;

@@ -100,7 +100,7 @@ class Bucket {
    * Put \a blob_name Blob into the bucket
    * */
   Status Put(std::string blob_name,
-             const Blob blob,
+             const Blob &blob,
              BlobId &blob_id,
              Context &ctx,
              IoClientContext opts = IoClientContext());

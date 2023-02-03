@@ -57,13 +57,15 @@ class Hermes {
   lipc::Allocator *main_alloc_;
   bool is_being_initialized_;
   bool is_initialized_;
+  bool is_terminated_;
   bool is_transparent_;
 
  public:
   /** Default constructor */
   Hermes() : is_being_initialized_(false),
              is_initialized_(false),
-             is_transparent_(false) {}
+             is_transparent_(false),
+             is_terminated_(false) {}
 
   /** Destructor */
   ~Hermes() {}
@@ -73,6 +75,9 @@ class Hermes {
 
   /** Whether or not Hermes is initialized */
   bool IsInitialized() { return is_initialized_; }
+
+  /** Whether or not Hermes is finalized */
+  bool IsTerminated() { return is_terminated_; }
 
   /** Initialize Hermes explicitly */
   static Hermes* Create(HermesType mode = HermesType::kClient,
@@ -154,7 +159,9 @@ class Hermes {
 };
 
 #define TRANSPARENT_HERMES\
-  if (!HERMES->IsInitialized() && !HERMES->IsBeingInitialized()) {\
+  if (!HERMES->IsInitialized() && \
+      !HERMES->IsBeingInitialized() && \
+      !HERMES->IsTerminated()) {\
     HERMES->Create(hermes::HermesType::kClient);\
     HERMES->is_transparent_ = true;\
   }

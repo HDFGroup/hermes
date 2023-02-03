@@ -33,10 +33,10 @@ static bool VerifyBuffer(char *ptr, size_t size, char nonce) {
 }
 
 int main(int argc, char **argv) {
-  int rank, nprocs;
-  MPI_Init(&argc, &argv);
+  int rank = 0, nprocs = 1;
+  /*MPI_Init(&argc, &argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+  MPI_Comm_size(MPI_COMM_WORLD, &nprocs);*/
   if (argc != 7) {
     std::cout << "USAGE: ./posix_simple_io"
               << " [path] [read] [block_size (kb)] [count]"
@@ -102,5 +102,5 @@ int main(int argc, char **argv) {
   }
 
   close(fd);
-  MPI_Finalize();
+  // MPI_Finalize();
 }
