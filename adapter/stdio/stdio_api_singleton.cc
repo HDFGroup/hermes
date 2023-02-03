@@ -10,22 +10,8 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_ADAPTER_UTILS_H_
-#define HERMES_ADAPTER_UTILS_H_
+#include "singleton.h"
 
-#include "hermes.h"
-#include "adapter/filesystem/filesystem_mdm.h"
-#include "adapter/filesystem/filesystem_mdm_singleton_macros.h"
-
-namespace stdfs = std::filesystem;
-
-namespace hermes::adapter {
-
-#define HERMES_DECL(F) F
-
-/** The maximum length of a POSIX path */
-static inline const int kMaxPathLen = 4096;
-
-}  // namespace hermes::adapter
-
-#endif  // HERMES_ADAPTER_UTILS_H_
+#include "stdio_api.h"
+template<> std::unique_ptr<hermes::adapter::fs::StdioApi>
+    hermes::Singleton<hermes::adapter::fs::StdioApi>::obj_ = nullptr;

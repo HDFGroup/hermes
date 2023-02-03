@@ -1,31 +1,35 @@
 project(StdioAdapter VERSION ${HERMES_PACKAGE_VERSION})
-include_directories(${HERMES_ADAPTER_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(
+        ${CMAKE_SOURCE_DIR}
+        ${HERMES_SRC_DIR}
+        ${HERMES_ADAPTER_DIR}
+        ${CMAKE_CURRENT_SOURCE_DIR})
 
-# STDIO src code. We only include stdio.cc as it includes other cc to reduce compilation time.
-set(STDIO_ADAPTER_SRC stdio.cc)
+# Creates the STDIO I/O client and singleton
+add_library(hermes_stdio_io_client
+        ${CMAKE_CURRENT_SOURCE_DIR}/stdio_api_singleton.cc
+        ${CMAKE_CURRENT_SOURCE_DIR}/stdio_io_client.cc)
+target_compile_options(hermes_stdio_io_client PUBLIC -fPIC)
+target_link_libraries(hermes_stdio_io_client
+        MPI::MPI_CXX glog::glog stdc++fs dl)
 
-set(HERMES_STDIO_ADAPTER_DIR ${HERMES_ADAPTER_DIR}/stdio)
-
-# Only stdio.h is the public adapter.
-set(STDIO_ADAPTER_PUBLIC_HEADER
-        ${HERMES_STDIO_ADAPTER_DIR}/real_api.h
-        ${HERMES_STDIO_ADAPTER_DIR}/fs_api.h)
-
-# Add library hermes_stdio
-add_library(hermes_stdio_backend ${CMAKE_CURRENT_SOURCE_DIR}/fs_api.cc)
-add_dependencies(hermes_stdio_backend hermes)
-target_link_libraries(hermes_stdio_backend hermes MPI::MPI_CXX glog::glog stdc++fs dl)
-
-add_library(hermes_stdio SHARED ${STDIO_ADAPTER_PUBLIC_HEADER} ${STDIO_ADAPTER_SRC})
-add_dependencies(hermes_stdio hermes_stdio_backend)
-target_link_libraries(hermes_stdio hermes_stdio_backend)
+# Create the STDIO interceptor
+set(INTERCEPTOR_DEPS
+        hermes
+        hermes_stdio_io_client
+        hermes_fs_base)
+add_library(hermes_stdio SHARED
+        ${CMAKE_CURRENT_SOURCE_DIR}/stdio.cc)
+add_dependencies(hermes_stdio ${INTERCEPTOR_DEPS})
+target_link_libraries(hermes_stdio ${INTERCEPTOR_DEPS})
+target_compile_options(hermes_stdio PUBLIC -fPIC)
 
 #-----------------------------------------------------------------------------
 # Add Target(s) to CMake Install
 #-----------------------------------------------------------------------------
 install(
         TARGETS
-        hermes_stdio_backend
+        hermes_stdio_io_client
         EXPORT
         ${HERMES_EXPORTED_TARGETS}
         LIBRARY DESTINATION ${HERMES_INSTALL_LIB_DIR}

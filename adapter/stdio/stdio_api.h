@@ -17,9 +17,6 @@
 #include <iostream>
 #include <glog/logging.h>
 #include <cstdio>
-#include "interceptor.h"
-#include "filesystem/filesystem.h"
-#include "filesystem/metadata_manager.h"
 
 #define REQUIRE_API(api_name) \
   if (api_name == nullptr) { \
@@ -59,10 +56,10 @@ typedef int (*fsetpos64_t)(FILE * stream, const fpos64_t * pos);
 typedef long int (*ftell_t)(FILE * fp);
 }
 
-namespace hermes::adapter::stdio {
+namespace hermes::adapter::fs {
 
 /** Pointers to the real stdio API */
-class API {
+class StdioApi {
  public:
   /** MPI_Init */
   MPI_Init_t MPI_Init = nullptr;
@@ -121,7 +118,7 @@ class API {
   /** ftell */
   ftell_t ftell = nullptr;
 
-  API() {
+  StdioApi() {
     void *is_intercepted = (void*)dlsym(RTLD_DEFAULT, "stdio_intercepted");
     if (is_intercepted) {
       MPI_Init = (MPI_Init_t)dlsym(RTLD_NEXT, "MPI_Init");
@@ -293,7 +290,7 @@ class API {
     REQUIRE_API(ftell)
   }
 };
-}  // namespace hermes::adapter::stdio
+}  // namespace hermes::adapter::fs
 
 #undef REQUIRE_API
 

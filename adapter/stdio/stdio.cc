@@ -14,16 +14,11 @@ bool stdio_intercepted = true;
 
 #include <limits.h>
 #include <sys/file.h>
-
-#include "interceptor.cc"
 #include <cstdio>
-#include "stdio/real_api.h"
-#include "stdio/fs_api.h"
+#include "stdio/stdio_api.h"
+#include "stdio/stdio_fs_api.h"
+#include "interceptor.h"
 
-using hermes::adapter::WeaklyCanonical;
-using hermes::adapter::stdio::API;
-using hermes::adapter::stdio::StdioFS;
-using hermes::Singleton;
 using hermes::adapter::fs::MetadataManager;
 using hermes::adapter::fs::SeekMode;
 
@@ -31,9 +26,6 @@ namespace hapi = hermes::api;
 namespace stdfs = std::filesystem;
 using hermes::u8;
 using hermes::u64;
-
-namespace hapi = hermes::api;
-namespace stdfs = std::filesystem;
 
 extern "C" {
 

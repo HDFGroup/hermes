@@ -13,16 +13,14 @@ target_link_libraries(hermes_posix_io_client
         MPI::MPI_CXX glog::glog stdc++fs dl)
 
 # Create the POSIX interceptor
+set(INTERCEPTOR_DEPS
+        hermes
+        hermes_posix_io_client
+        hermes_fs_base)
 add_library(hermes_posix SHARED
         ${CMAKE_CURRENT_SOURCE_DIR}/posix.cc)
-add_dependencies(hermes_posix
-        hermes
-        hermes_posix_io_client
-        hermes_fs_base)
-target_link_libraries(hermes_posix
-        hermes
-        hermes_posix_io_client
-        hermes_fs_base)
+add_dependencies(hermes_posix ${INTERCEPTOR_DEPS})
+target_link_libraries(hermes_posix ${INTERCEPTOR_DEPS})
 target_compile_options(hermes_posix PUBLIC -fPIC)
 
 #-----------------------------------------------------------------------------
