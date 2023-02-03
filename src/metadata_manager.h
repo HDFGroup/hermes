@@ -26,11 +26,8 @@ namespace hermes {
 /** Namespace simplification for AdapterFactory */
 using hermes::adapter::IoClientFactory;
 
-/** Namespace simplification for IoClientContext */
-using hermes::adapter::IoClientContext;
-
 /** Namespace simplification for AbstractAdapter */
-using hermes::adapter::IoClientOptions;
+using hermes::adapter::IoClientContext;
 
 /** Forward declaration of borg */
 class BufferOrganizer;
@@ -140,7 +137,7 @@ class MetadataManager {
    * @RPC_CLASS_INSTANCE mdm
    * */
   RPC BucketId LocalGetOrCreateBucket(lipc::charbuf &bkt_name,
-                                      const IoClientOptions &opts);
+                                      const IoClientContext &opts);
 
   /**
    * Get the BucketId with \a bkt_name bucket name
@@ -157,7 +154,7 @@ class MetadataManager {
    * @RPC_CLASS_INSTANCE mdm
    * */
   RPC size_t LocalGetBucketSize(BucketId bkt_id,
-                                const IoClientOptions &opts);
+                                const IoClientContext &opts);
 
   /**
    * Check whether or not \a bkt_id bucket contains
@@ -211,7 +208,7 @@ class MetadataManager {
                                    size_t orig_blob_size,
                                    size_t new_blob_size,
                                    bool did_create,
-                                   const IoClientOptions &opts);
+                                   const IoClientContext &opts);
 
   /**
    * Registers the existence of a Blob with the Bucket. Required for
@@ -273,7 +270,7 @@ class MetadataManager {
    * @RPC_CLASS_INSTANCE mdm
    * */
   RPC VBucketId LocalGetOrCreateVBucket(lipc::charbuf &vbkt_name,
-                                        const IoClientOptions &opts);
+                                        const IoClientContext &opts);
 
   /**
    * Get the VBucketId of \a vbkt_name VBucket

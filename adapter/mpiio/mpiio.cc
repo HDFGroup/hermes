@@ -38,7 +38,7 @@ using hermes::adapter::mpiio::MpiioSeekModeConv;
 using hermes::Singleton;
 
 namespace hapi = hermes::api;
-namespace stdfs = std::experimental::filesystem;
+namespace stdfs = std::filesystem;
 using hermes::adapter::WeaklyCanonical;
 
 /**

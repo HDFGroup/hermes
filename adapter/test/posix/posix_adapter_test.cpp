@@ -14,7 +14,7 @@
 #include <stdarg.h>
 #include <unistd.h>
 
-#include <experimental/filesystem>
+#include <filesystem>
 #include <iostream>
 
 #include "catch_config.h"
@@ -28,7 +28,7 @@
 
 #include "adapter_test_utils.h"
 
-namespace stdfs = std::experimental::filesystem;
+namespace stdfs = std::filesystem;
 
 namespace hermes::adapter::fs::test {
 struct Arguments {

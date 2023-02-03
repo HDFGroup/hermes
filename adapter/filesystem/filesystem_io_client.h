@@ -14,10 +14,10 @@
 #define HERMES_ADAPTER_FILESYSTEM_FILESYSTEM_IO_CLIENT_H_
 
 #include "adapter/io_client/io_client.h"
-#include <experimental/filesystem>
+#include <filesystem>
 #include <limits>
 
-namespace stdfs = std::experimental::filesystem;
+namespace stdfs = std::filesystem;
 
 namespace hermes::adapter::fs {
 
@@ -50,7 +50,7 @@ struct FsIoClientMetadata {
 /**
  * State required by Filesystem I/O clients to perform a HermesOpen
  * */
-struct FilesystemIoClientContext {
+struct FilesystemIoClientObject {
   /**
    * A pointer to the FsIoClientMetadata stored in the Filesystem
    * */
@@ -63,7 +63,7 @@ struct FilesystemIoClientContext {
   void *stat_;
 
   /** Default constructor */
-  FilesystemIoClientContext(FsIoClientMetadata *mdm, void *stat)
+  FilesystemIoClientObject(FsIoClientMetadata *mdm, void *stat)
   : mdm_(mdm), stat_(stat) {}
 };
 
@@ -77,8 +77,8 @@ class FilesystemIoClient : public IoClient {
   virtual ~FilesystemIoClient() = default;
 
   /** real open */
-  virtual void RealOpen(IoClientContext &f,
-                        IoClientStat &stat,
+  virtual void RealOpen(IoClientObject &f,
+                        IoClientStats &stat,
                         const std::string &path) = 0;
 
   /**
@@ -87,17 +87,25 @@ class FilesystemIoClient : public IoClient {
    * and hermes file handler. These are not the same as POSIX file
    * descriptor and STDIO file handler.
    * */
-  virtual void HermesOpen(IoClientContext &f,
-                          const IoClientStat &stat,
-                          FilesystemIoClientContext &fs_mdm) = 0;
+  virtual void HermesOpen(IoClientObject &f,
+                          const IoClientStats &stat,
+                          FilesystemIoClientObject &fs_mdm) = 0;
 
   /** real sync */
-  virtual int RealSync(const IoClientContext &f,
-                       const IoClientStat &stat) = 0;
+  virtual int RealSync(const IoClientObject &f,
+                       const IoClientStats &stat) = 0;
 
   /** real close */
-  virtual int RealClose(const IoClientContext &f,
-                        const IoClientStat &stat) = 0;
+  virtual int RealClose(const IoClientObject &f,
+                        const IoClientStats &stat) = 0;
+
+  /**
+   * Called before RealClose. Releases information provisioned during
+   * the allocation phase.
+   * */
+  virtual void HermesClose(IoClientObject &f,
+                           const IoClientStats &stat,
+                           FilesystemIoClientObject &fs_mdm) = 0;
 };
 
 }  // namespace hermes::adapter::fs

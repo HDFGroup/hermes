@@ -20,6 +20,7 @@ void Hermes::Init(HermesType mode,
                   std::string server_config_path,
                   std::string client_config_path) {
   mode_ = mode;
+  is_being_initialized_ = true;
   switch (mode_) {
     case HermesType::kServer: {
       InitServer(std::move(server_config_path));
@@ -37,6 +38,7 @@ void Hermes::Init(HermesType mode,
     }
   }
   is_initialized_ = true;
+  is_being_initialized_ = false;
 }
 
 void Hermes::Finalize() {
@@ -152,13 +154,13 @@ void Hermes::FinalizeColocated() {
 
 std::shared_ptr<Bucket> Hermes::GetBucket(std::string name,
                                           Context ctx,
-                                          IoClientOptions opts) {
+                                          IoClientContext opts) {
   return std::make_shared<Bucket>(name, ctx, opts);
 }
 
 std::shared_ptr<VBucket> Hermes::GetVBucket(std::string name,
                                             Context ctx,
-                                            IoClientOptions opts) {
+                                            IoClientContext opts) {
   return std::make_shared<VBucket>(name, ctx, opts);
 }
 

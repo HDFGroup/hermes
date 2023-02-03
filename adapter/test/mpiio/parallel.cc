@@ -13,10 +13,10 @@
 #include "mpi.h"
 #include <vector>
 #include <string>
-#include <experimental/filesystem>
+#include <filesystem>
 #include <cstdio>
 
-namespace stdfs = std::experimental::filesystem;
+namespace stdfs = std::filesystem;
 
 int main(int argc, char **argv) {
   MPI_File f;

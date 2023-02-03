@@ -18,7 +18,7 @@
 namespace hermes::adapter::fs {
 
 /** A structure to represent file */
-struct File : public IoClientContext {
+struct File : public IoClientObject {
   /** default constructor */
   File() = default;
 

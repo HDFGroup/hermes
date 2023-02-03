@@ -10,7 +10,7 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include <experimental/filesystem>
+#include <filesystem>
 
 #include "catch_config.h"
 #include "constants.h"
@@ -22,7 +22,7 @@ using hermes::adapter::MapperFactory;
 using hermes::adapter::fs::kMapperType;
 using hermes::adapter::fs::MetadataManager;
 
-namespace stdfs = std::experimental::filesystem;
+namespace stdfs = std::filesystem;
 
 namespace hermes::adapter::stdio::test {
 struct Arguments {

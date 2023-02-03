@@ -14,7 +14,7 @@
 #include <stdarg.h>
 #include <unistd.h>
 
-#include <experimental/filesystem>
+#include <filesystem>
 #include <iostream>
 
 #include "catch_config.h"
@@ -29,7 +29,7 @@
 #include "posix/posix_api.h"
 #endif
 
-namespace stdfs = std::experimental::filesystem;
+namespace stdfs = std::filesystem;
 
 namespace hermes::adapter::fs::test {
 struct Arguments {

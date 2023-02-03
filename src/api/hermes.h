@@ -23,6 +23,7 @@
 #include "metadata_manager.h"
 #include "buffer_pool.h"
 #include "buffer_organizer.h"
+#include "hermes_singleton_macros.h"
 
 namespace hermes::api {
 
@@ -54,14 +55,21 @@ class Hermes {
   COMM_TYPE comm_;
   RPC_TYPE rpc_;
   lipc::Allocator *main_alloc_;
+  bool is_being_initialized_;
   bool is_initialized_;
+  bool is_transparent_;
 
  public:
   /** Default constructor */
-  Hermes() : is_initialized_(false) {}
+  Hermes() : is_being_initialized_(false),
+             is_initialized_(false),
+             is_transparent_(false) {}
 
   /** Destructor */
-  ~Hermes() = default;
+  ~Hermes() {}
+
+  /** Whether or not Hermes is currently being initialized */
+  bool IsBeingInitialized() { return is_being_initialized_; }
 
   /** Whether or not Hermes is initialized */
   bool IsInitialized() { return is_initialized_; }
@@ -89,12 +97,12 @@ class Hermes {
   /** Create a Bucket in Hermes */
   std::shared_ptr<Bucket> GetBucket(std::string name,
                                     Context ctx = Context(),
-                                    IoClientOptions = IoClientOptions());
+                                    IoClientContext = IoClientContext());
 
   /** Create a VBucket in Hermes */
   std::shared_ptr<VBucket> GetVBucket(std::string name,
                                       Context ctx = Context(),
-                                      IoClientOptions = IoClientOptions());
+                                      IoClientContext = IoClientContext());
 
  private:
   /** Internal initialization of Hermes */
@@ -144,6 +152,12 @@ class Hermes {
     return val;
   }
 };
+
+#define TRANSPARENT_HERMES\
+  if (!HERMES->IsInitialized() && !HERMES->IsBeingInitialized()) {\
+    HERMES->Create(hermes::HermesType::kClient);\
+    HERMES->is_transparent_ = true;\
+  }
 
 }  // namespace hermes::api
 

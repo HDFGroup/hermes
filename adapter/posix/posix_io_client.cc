@@ -15,8 +15,8 @@
 namespace hermes::adapter::fs {
 
 /** Allocate an fd for the file f */
-void PosixIoClient::RealOpen(IoClientContext &f,
-                             IoClientStat &stat,
+void PosixIoClient::RealOpen(IoClientObject &f,
+                             IoClientStats &stat,
                              const std::string &path) {
   if (stat.flags_ & O_CREAT || stat.flags_ & O_TMPFILE) {
     stat.fd_ = real_api->open(path.c_str(), stat.flags_, stat.st_mode_);
@@ -37,43 +37,54 @@ void PosixIoClient::RealOpen(IoClientContext &f,
  * and hermes file handler. These are not the same as POSIX file
  * descriptor and STDIO file handler.
  * */
-void PosixIoClient::HermesOpen(IoClientContext &f,
-                               const IoClientStat &stat,
-                               FilesystemIoClientContext &fs_mdm) {
+void PosixIoClient::HermesOpen(IoClientObject &f,
+                               const IoClientStats &stat,
+                               FilesystemIoClientObject &fs_mdm) {
+  f.hermes_fd_ = fs_mdm.mdm_->AllocateFd();
 }
 
 /** Synchronize \a file FILE f */
-int PosixIoClient::RealSync(const IoClientContext &f,
-                            const IoClientStat &stat) {
+int PosixIoClient::RealSync(const IoClientObject &f,
+                            const IoClientStats &stat) {
   (void) f;
   return real_api->fsync(stat.fd_);
 }
 
 /** Close \a file FILE f */
-int PosixIoClient::RealClose(const IoClientContext &f,
-                             const IoClientStat &stat) {
+int PosixIoClient::RealClose(const IoClientObject &f,
+                             const IoClientStats &stat) {
   (void) f;
   return real_api->close(stat.fd_);
 }
 
+/**
+ * Called before RealClose. Releases information provisioned during
+ * the allocation phase.
+ * */
+void PosixIoClient::HermesClose(IoClientObject &f,
+                               const IoClientStats &stat,
+                               FilesystemIoClientObject &fs_mdm) {
+  fs_mdm.mdm_->ReleaseFd(f.hermes_fd_);
+}
+
 /** Get initial statistics from the backend */
 void PosixIoClient::InitBucketState(const lipc::charbuf &bkt_name,
-                                    const IoClientOptions &opts,
-                                    GlobalIoClientState &stat) {
+                                    const IoClientContext &opts,
+                                    GlobalIoClientStatse &stat) {
   // real_api->__fxstat();
   stat.true_size_ = 0;
 }
 
 /** Update backend statistics */
-void PosixIoClient::UpdateBucketState(const IoClientOptions &opts,
-                                      GlobalIoClientState &stat) {
+void PosixIoClient::UpdateBucketState(const IoClientContext &opts,
+                                      GlobalIoClientStatse &stat) {
   stat.true_size_;
 }
 
 /** Write blob to backend */
 void PosixIoClient::WriteBlob(const Blob &full_blob,
-                              const IoClientContext &io_ctx,
-                              const IoClientOptions &opts,
+                              const IoClientObject &io_ctx,
+                              const IoClientContext &opts,
                               IoStatus &status) {
   (void) opts;
   LOG(INFO) << "Writing to file: " << io_ctx.filename_
@@ -95,8 +106,8 @@ void PosixIoClient::WriteBlob(const Blob &full_blob,
 
 /** Read blob from the backend */
 void PosixIoClient::ReadBlob(Blob &full_blob,
-                             const IoClientContext &io_ctx,
-                             const IoClientOptions &opts,
+                             const IoClientObject &io_ctx,
+                             const IoClientContext &opts,
                              IoStatus &status) {
   (void) opts;
   LOG(INFO) << "Writing to file: " << io_ctx.filename_

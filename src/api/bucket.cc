@@ -24,7 +24,7 @@ namespace hermes::api {
  * */
 Bucket::Bucket(const std::string &bkt_name,
                Context &ctx,
-               const IoClientOptions &opts)
+               const IoClientContext &opts)
 : mdm_(&HERMES->mdm_), bpm_(&HERMES->bpm_) {
   lipc::string lname(bkt_name);
   id_ = mdm_->LocalGetOrCreateBucket(lname, opts);
@@ -33,7 +33,7 @@ Bucket::Bucket(const std::string &bkt_name,
 /**
  * Get the current size of the bucket
  * */
-size_t Bucket::GetSize(IoClientOptions opts) {
+size_t Bucket::GetSize(IoClientContext opts) {
   return mdm_->LocalGetBucketSize(id_, opts);
 }
 
@@ -73,7 +73,7 @@ Status Bucket::Put(std::string blob_name,
                    const Blob blob,
                    BlobId &blob_id,
                    Context &ctx,
-                   IoClientOptions opts) {
+                   IoClientContext opts) {
   // Calculate placement
   auto dpe = DPEFactory::Get(ctx.policy);
   std::vector<size_t> blob_sizes(1, blob.size());
@@ -115,8 +115,8 @@ Status Bucket::PartialPutOrCreate(const std::string &blob_name,
                                   const Blob &blob,
                                   size_t blob_off,
                                   BlobId &blob_id,
-                                  const IoClientContext &io_ctx,
-                                  const IoClientOptions &opts,
+                                  const IoClientObject &io_ctx,
+                                  const IoClientContext &opts,
                                   Context &ctx) {
   Blob full_blob;
   // Put the blob
@@ -135,10 +135,9 @@ Status Bucket::PartialPutOrCreate(const std::string &blob_name,
     IoStatus status;
     auto io_client = IoClientFactory::Get(io_ctx.type_);
     full_blob.resize(opts.backend_size_);
-    io_client->ReadBlob(full_blob,
-                        io_ctx,
-                        opts,
-                        status);
+    if (io_client) {
+      io_client->ReadBlob(full_blob, io_ctx, opts, status);
+    }
   }
   // Ensure the blob can hold the update
   full_blob.resize(std::max(full_blob.size(), blob_off + blob.size()));
@@ -175,8 +174,8 @@ Status Bucket::PartialGetOrCreate(const std::string &blob_name,
                                   size_t blob_off,
                                   size_t blob_size,
                                   BlobId &blob_id,
-                                  const IoClientContext &io_ctx,
-                                  const IoClientOptions &opts,
+                                  const IoClientObject &io_ctx,
+                                  const IoClientContext &opts,
                                   Context &ctx) {
   Blob full_blob;
   if (ContainsBlob(blob_name, blob_id)) {

@@ -19,9 +19,9 @@
 #include "mapper/mapper_factory.h"
 
 #include <fcntl.h>
-#include <experimental/filesystem>
+#include <filesystem>
 
-namespace stdfs = std::experimental::filesystem;
+namespace stdfs = std::filesystem;
 
 namespace hermes::adapter::fs {
 
@@ -46,7 +46,7 @@ void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
     stat.bkt_id_ = HERMES->GetBucket(path, ctx, opts);
     // Allocate internal hermes data
     auto stat_ptr = std::make_unique<AdapterStat>(stat);
-    FilesystemIoClientContext fs_ctx(&mdm->fs_mdm_, (void*)stat_ptr.get());
+    FilesystemIoClientObject fs_ctx(&mdm->fs_mdm_, (void*)stat_ptr.get());
     io_client_->HermesOpen(f, stat, fs_ctx);
     mdm->Create(f, stat_ptr);
   } else {
@@ -75,9 +75,11 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
     const Blob blob_wrap((const char*)ptr + data_offset, off);
     lipc::charbuf blob_name(p.CreateBlobName());
     BlobId blob_id;
-    IoClientContext io_ctx;
+    IoClientObject io_ctx;
     Context ctx;
+    io_ctx.type_ = type_;
     io_ctx.filename_ = filename;
+    opts.type_ = type_;
     opts.backend_off_ = p.page_ * kPageSize;
     opts.backend_size_ = kPageSize;
     bkt->PartialPutOrCreate(blob_name.str(),
@@ -116,11 +118,13 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
     Blob blob_wrap((const char*)ptr + data_offset, off);
     lipc::charbuf blob_name(p.CreateBlobName());
     BlobId blob_id;
-    IoClientContext io_ctx;
+    IoClientObject io_ctx;
     Context ctx;
+    io_ctx.type_ = type_;
     io_ctx.filename_ = filename;
     opts.backend_off_ = p.page_ * kPageSize;
     opts.backend_size_ = kPageSize;
+    opts.type_ = type_;
     bkt->PartialGetOrCreate(blob_name.str(),
                             blob_wrap,
                             p.blob_off_,

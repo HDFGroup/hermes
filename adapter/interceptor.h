@@ -17,7 +17,7 @@
 #include "adapter/filesystem/filesystem_mdm.h"
 #include "adapter/filesystem/filesystem_mdm_singleton_macros.h"
 
-namespace stdfs = std::experimental::filesystem;
+namespace stdfs = std::filesystem;
 
 namespace hermes::adapter {
 

@@ -20,7 +20,7 @@
 
 namespace hermes::api {
 
-using hermes::adapter::IoClientContext;
+using hermes::adapter::IoClientObject;
 
 class Bucket {
  private:
@@ -42,7 +42,7 @@ class Bucket {
    * */
   Bucket(const std::string &bkt_name,
          Context &ctx,
-         const IoClientOptions &opts);
+         const IoClientContext &opts);
 
  public:
   /**
@@ -63,7 +63,7 @@ class Bucket {
   /**
    * Get the current size of the bucket
    * */
-  size_t GetSize(IoClientOptions opts = IoClientOptions());
+  size_t GetSize(IoClientContext opts = IoClientContext());
 
   /**
    * Rename this bucket
@@ -103,7 +103,7 @@ class Bucket {
              const Blob blob,
              BlobId &blob_id,
              Context &ctx,
-             IoClientOptions opts = IoClientOptions());
+             IoClientContext opts = IoClientContext());
 
   /**
    * Put \a blob_name Blob into the bucket. Load the blob from the
@@ -121,8 +121,8 @@ class Bucket {
                             const Blob &blob,
                             size_t blob_off,
                             BlobId &blob_id,
-                            const IoClientContext &io_ctx,
-                            const IoClientOptions &opts,
+                            const IoClientObject &io_ctx,
+                            const IoClientContext &opts,
                             Context &ctx);
 
   /**
@@ -149,8 +149,8 @@ class Bucket {
                             size_t blob_off,
                             size_t blob_size,
                             BlobId &blob_id,
-                            const IoClientContext &io_ctx,
-                            const IoClientOptions &opts,
+                            const IoClientObject &io_ctx,
+                            const IoClientContext &opts,
                             Context &ctx);
 
   /**

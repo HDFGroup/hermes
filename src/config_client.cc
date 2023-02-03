@@ -24,6 +24,12 @@ void ClientConfig::ParseYAML(YAML::Node &yaml_conf) {
     file_page_size_ = ParseSize(
         yaml_conf["file_page_size"].as<std::string>());
   }
+  if (yaml_conf["path_inclusions"]) {
+    ParseVector<std::string>(yaml_conf["path_inclusions"], path_inclusions_);
+  }
+  if (yaml_conf["path_exclusions"]) {
+    ParseVector<std::string>(yaml_conf["path_inclusions"], path_exclusions_);
+  }
 }
 
 /** Load the default configuration */

@@ -34,7 +34,7 @@ class VBucket {
    * */
   VBucket(const std::string &name,
           Context &ctx,
-          const IoClientOptions &opts);
+          const IoClientContext &opts);
 
   /**
    * Rename a VBucket.

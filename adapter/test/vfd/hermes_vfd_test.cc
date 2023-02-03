@@ -16,7 +16,7 @@
 #include <unistd.h>
 #include <assert.h>
 
-#include <experimental/filesystem>
+#include <filesystem>
 #include <string>
 
 #include <mpi.h>
@@ -26,7 +26,7 @@
 #include "adapter_test_utils.h"
 #include "catch_config.h"
 
-namespace stdfs = std::experimental::filesystem;
+namespace stdfs = std::filesystem;
 using hermes::f32;
 using hermes::u32;
 

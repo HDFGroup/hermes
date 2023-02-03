@@ -1,2 +1,4 @@
 stop_daemon: true
 file_page_size: 1024KB
+path_inclusions: ["/home"]
+path_exclusions: []

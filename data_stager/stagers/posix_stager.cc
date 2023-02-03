@@ -16,7 +16,7 @@ using hermes::adapter::fs::PosixFS;
 using hermes::api::PlacementPolicyConv;
 using hermes::api::PlacementPolicy;
 using hermes::adapter::fs::IoOptions;
-namespace stdfs = std::experimental::filesystem;
+namespace stdfs = std::filesystem;
 
 namespace hermes {
 

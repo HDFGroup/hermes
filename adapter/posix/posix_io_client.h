@@ -20,8 +20,8 @@
 #include "posix_api.h"
 
 using hermes::Singleton;
-using hermes::adapter::IoClientStat;
-using hermes::adapter::IoClientOptions;
+using hermes::adapter::IoClientStats;
+using hermes::adapter::IoClientContext;
 using hermes::adapter::IoStatus;
 using hermes::adapter::fs::PosixApi;
 
@@ -41,8 +41,8 @@ class PosixIoClient : public hermes::adapter::fs::FilesystemIoClient {
 
  public:
   /** Allocate an fd for the file f */
-  void RealOpen(IoClientContext &f,
-                IoClientStat &stat,
+  void RealOpen(IoClientObject &f,
+                IoClientStats &stat,
                 const std::string &path) override;
 
   /**
@@ -51,37 +51,45 @@ class PosixIoClient : public hermes::adapter::fs::FilesystemIoClient {
    * and hermes file handler. These are not the same as POSIX file
    * descriptor and STDIO file handler.
    * */
-  void HermesOpen(IoClientContext &f,
-                  const IoClientStat &stat,
-                  FilesystemIoClientContext &fs_mdm) override;
+  void HermesOpen(IoClientObject &f,
+                  const IoClientStats &stat,
+                  FilesystemIoClientObject &fs_mdm) override;
 
   /** Synchronize \a file FILE f */
-  int RealSync(const IoClientContext &f,
-               const IoClientStat &stat) override;
+  int RealSync(const IoClientObject &f,
+               const IoClientStats &stat) override;
 
   /** Close \a file FILE f */
-  int RealClose(const IoClientContext &f,
-                const IoClientStat &stat) override;
+  int RealClose(const IoClientObject &f,
+                const IoClientStats &stat) override;
+
+  /**
+   * Called before RealClose. Releases information provisioned during
+   * the allocation phase.
+   * */
+  void HermesClose(IoClientObject &f,
+                   const IoClientStats &stat,
+                   FilesystemIoClientObject &fs_mdm) override;
 
   /** Get initial statistics from the backend */
   void InitBucketState(const lipc::charbuf &bkt_name,
-                       const IoClientOptions &opts,
-                       GlobalIoClientState &stat) override;
+                       const IoClientContext &opts,
+                       GlobalIoClientStatse &stat) override;
 
   /** Update backend statistics */
-  void UpdateBucketState(const IoClientOptions &opts,
-                         GlobalIoClientState &stat) override;
+  void UpdateBucketState(const IoClientContext &opts,
+                         GlobalIoClientStatse &stat) override;
 
   /** Write blob to backend */
   void WriteBlob(const Blob &full_blob,
-                 const IoClientContext &io_ctx,
-                 const IoClientOptions &opts,
+                 const IoClientObject &io_ctx,
+                 const IoClientContext &opts,
                  IoStatus &status) override;
 
   /** Read blob from the backend */
   void ReadBlob(Blob &full_blob,
-                const IoClientContext &io_ctx,
-                const IoClientOptions &opts,
+                const IoClientObject &io_ctx,
+                const IoClientContext &opts,
                 IoStatus &status) override;
 };
 

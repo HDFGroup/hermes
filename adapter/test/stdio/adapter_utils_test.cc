@@ -13,7 +13,7 @@
 #include "catch_config.h"
 #include "adapter_utils.h"
 
-namespace stdfs = std::experimental::filesystem;
+namespace stdfs = std::filesystem;
 
 int init(int* argc, char*** argv) {
   (void)argc;

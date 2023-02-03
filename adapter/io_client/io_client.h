@@ -32,7 +32,7 @@ enum class AdapterType {
 };
 
 /** Represents an object in the I/O client (e.g., a file) */
-struct IoClientContext {
+struct IoClientObject {
   AdapterType type_;     /**< Client to forward I/O request to */
   std::string filename_;  /**< Filename to read from */
 
@@ -44,7 +44,7 @@ struct IoClientContext {
   int mpi_status_; /**< MPI status */
 
   /** Default constructor */
-  IoClientContext()
+  IoClientObject()
       : type_(AdapterType::kNone),
         filename_(),
         hermes_fd_(-1),
@@ -62,7 +62,7 @@ struct IoClientContext {
 #define HERMES_IO_CLIENT_FLAGS_COUNT 2
 
 /** Represents any relevant settings for an I/O client operation */
-struct IoClientOptions {
+struct IoClientContext {
   // TODO(llogan): We should use an std::variant or union instead of large set
   AdapterType type_;              /**< Client to forward I/O request to */
   hapi::PlacementPolicy dpe_;     /**< data placement policy */
@@ -73,7 +73,7 @@ struct IoClientOptions {
   size_t backend_size_;   /**< Size of I/O to perform at backend */
 
   /** Default constructor */
-  IoClientOptions() : type_(AdapterType::kNone),
+  IoClientContext() : type_(AdapterType::kNone),
                       dpe_(hapi::PlacementPolicy::kNone),
                       flags_(),
                       mpi_type_(MPI_CHAR),
@@ -83,7 +83,7 @@ struct IoClientOptions {
 };
 
 /** Any relevant statistics from the I/O client */
-struct IoClientStat {
+struct IoClientStats {
   int flags_;            /**< open() flags for POSIX */
   mode_t st_mode_;       /**< protection */
   size_t backend_size_;  /**< size of the object in the backend */
@@ -107,7 +107,7 @@ struct IoClientStat {
   bool atomicity_; /**< Consistency semantics for data-access */
 
   /** Default constructor */
-  IoClientStat()
+  IoClientStats()
       : flags_(0),
         st_mode_(),
         st_ptr_(0),
@@ -129,7 +129,7 @@ struct IoClientStat {
 };
 
 /** Any statistics which need to be globally maintained across ranks */
-struct GlobalIoClientState {
+struct GlobalIoClientStatse {
   size_t true_size_;
 };
 
@@ -166,26 +166,26 @@ class IoClient {
 
   /** Get initial statistics from the backend */
   virtual void InitBucketState(const lipc::charbuf &bkt_name,
-                               const IoClientOptions &opts,
-                               GlobalIoClientState &stat) = 0;
+                               const IoClientContext &opts,
+                               GlobalIoClientStatse &stat) = 0;
 
   /**
    * What the statistics would be if all blobs were flushed from Hermes
    * to the backing storage system.
    * */
-  virtual void UpdateBucketState(const IoClientOptions &opts,
-                                 GlobalIoClientState &stat) = 0;
+  virtual void UpdateBucketState(const IoClientContext &opts,
+                                 GlobalIoClientStatse &stat) = 0;
 
   /** Write blob to backend */
   virtual void WriteBlob(const Blob &full_blob,
-                         const IoClientContext &io_ctx,
-                         const IoClientOptions &opts,
+                         const IoClientObject &io_ctx,
+                         const IoClientContext &opts,
                          IoStatus &status) = 0;
 
   /** Read blob from the backend */
   virtual void ReadBlob(Blob &full_blob,
-                        const IoClientContext &io_ctx,
-                        const IoClientOptions &opts,
+                        const IoClientObject &io_ctx,
+                        const IoClientContext &opts,
                         IoStatus &status) = 0;
 };
 

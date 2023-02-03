@@ -16,13 +16,13 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include <experimental/filesystem>
+#include <filesystem>
 #include <iostream>
 #if HERMES_INTERCEPT == 1
 #include "stdio/real_api.h"
 #endif
 
-namespace stdfs = std::experimental::filesystem;
+namespace stdfs = std::filesystem;
 
 namespace hermes::adapter::stdio::test {
 struct Arguments {

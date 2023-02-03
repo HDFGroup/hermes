@@ -116,7 +116,7 @@ void MetadataManager::shm_deserialize(MetadataManagerShmHeader *header) {
  * */
 BucketId MetadataManager::LocalGetOrCreateBucket(
     lipc::charbuf &bkt_name,
-    const IoClientOptions &opts) {
+    const IoClientContext &opts) {
   // Create unique ID for the Bucket
   BucketId bkt_id;
   bkt_id.unique_ = header_->id_alloc_.fetch_add(1);
@@ -170,7 +170,7 @@ BucketId MetadataManager::LocalGetBucketId(lipc::charbuf &bkt_name) {
  * @RPC_CLASS_INSTANCE mdm
  * */
 size_t MetadataManager::LocalGetBucketSize(BucketId bkt_id,
-                                           const IoClientOptions &opts) {
+                                           const IoClientContext &opts) {
   auto iter = bkt_map_->find(bkt_id);
   if (iter == bkt_map_->end()) {
     return 0;
@@ -241,7 +241,7 @@ Status MetadataManager::LocalBucketRegisterBlobId(
     size_t orig_blob_size,
     size_t new_blob_size,
     bool did_create,
-    const IoClientOptions &opts) {
+    const IoClientContext &opts) {
   auto iter = bkt_map_->find(bkt_id);
   if (iter == bkt_map_->end()) {
     return Status();
@@ -416,7 +416,7 @@ bool MetadataManager::LocalDestroyBlob(BucketId bkt_id,
  * */
 VBucketId MetadataManager::LocalGetOrCreateVBucket(
     lipc::charbuf &vbkt_name,
-    const IoClientOptions &opts) {
+    const IoClientContext &opts) {
   (void) opts;
   // Create unique ID for the Bucket
   VBucketId vbkt_id;

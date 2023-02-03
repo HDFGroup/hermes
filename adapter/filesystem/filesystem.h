@@ -28,6 +28,8 @@
 #include "filesystem_io_client.h"
 #include "file.h"
 
+#include <filesystem>
+
 namespace hapi = hermes::api;
 
 namespace hermes::adapter::fs {
@@ -44,7 +46,7 @@ enum class SeekMode {
 };
 
 /** A structure to represent adapter statistics */
-struct AdapterStat : public IoClientStat {
+struct AdapterStat : public IoClientStats {
   std::shared_ptr<hapi::Bucket> bkt_id_; /**< bucket associated with the file */
   /** VBucket for persisting data asynchronously. */
   std::shared_ptr<hapi::VBucket> vbkt_id_;
@@ -65,11 +67,11 @@ struct AdapterStat : public IoClientStat {
 
 /**
  * A structure to represent IO options for FS adapter.
- * For now, nothing additional than the typical IoClientOptions.
+ * For now, nothing additional than the typical IoClientContext.
  * */
-struct IoOptions : public IoClientOptions {
+struct IoOptions : public IoClientContext {
   /** Default constructor */
-  IoOptions() : IoClientOptions() {
+  IoOptions() : IoClientContext() {
     flags_.SetBits(HERMES_FS_SEEK);
   }
 
@@ -205,8 +207,8 @@ class Filesystem {
 
  public:
   /** real open */
-  void RealOpen(IoClientContext &f,
-                IoClientStat &stat,
+  void RealOpen(IoClientObject &f,
+                IoClientStats &stat,
                 const std::string &path) {
     io_client_->RealOpen(f, stat, path);
   }
@@ -217,19 +219,19 @@ class Filesystem {
    * and hermes file handler. These are not the same as POSIX file
    * descriptor and STDIO file handler.
    * */
-  virtual void HermesOpen(IoClientContext &f,
-                          IoClientStat &stat,
-                          FilesystemIoClientContext &fs_mdm) {
+  virtual void HermesOpen(IoClientObject &f,
+                          IoClientStats &stat,
+                          FilesystemIoClientObject &fs_mdm) {
     io_client_->HermesOpen(f, stat, fs_mdm);
   }
 
   /** real sync */
-  int RealSync(const IoClientContext &f, const AdapterStat &stat) {
+  int RealSync(const IoClientObject &f, const AdapterStat &stat) {
     return io_client_->RealSync(f, stat);
   }
 
   /** real close */
-  int RealClose(const IoClientContext &f, const AdapterStat &stat) {
+  int RealClose(const IoClientObject &f, const AdapterStat &stat) {
     return io_client_->RealClose(f, stat);
   }
 
@@ -239,9 +241,7 @@ class Filesystem {
     if (!HERMES->IsInitialized()) {
       return false;
     }
-    stdfs::path stdfs_path(path);
-    // TODO(llogan): use weak_canonical for performance reasons
-    std::string abs_path = stdfs::canonical(stdfs_path);
+    std::string abs_path = stdfs::weakly_canonical(path).string();
     auto &path_inclusions = HERMES->client_config_.path_inclusions_;
     auto &path_exclusions = HERMES->client_config_.path_exclusions_;
     // Check if path is included
@@ -256,7 +256,7 @@ class Filesystem {
         return false;
       }
     }
-    return true;
+    return false;
   }
 };
 

@@ -28,12 +28,12 @@ using hermes::adapter::fs::MetadataManager;
 using hermes::adapter::fs::SeekMode;
 
 namespace hapi = hermes::api;
-namespace stdfs = std::experimental::filesystem;
+namespace stdfs = std::filesystem;
 using hermes::u8;
 using hermes::u64;
 
 namespace hapi = hermes::api;
-namespace stdfs = std::experimental::filesystem;
+namespace stdfs = std::filesystem;
 
 extern "C" {
 

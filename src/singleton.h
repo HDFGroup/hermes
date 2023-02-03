@@ -28,6 +28,7 @@ template<typename T>
 class Singleton {
  private:
   static std::unique_ptr<T> obj_;
+
  public:
   Singleton() = default;
 

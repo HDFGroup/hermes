@@ -23,7 +23,7 @@ namespace hermes::api {
  * */
 VBucket::VBucket(const std::string &name,
                  Context &ctx,
-                 const IoClientOptions &opts)
+                 const IoClientContext &opts)
 : mdm_(&HERMES->mdm_), ctx_(ctx) {
   lipc::string lname(name);
   // TODO(llogan): rpcify

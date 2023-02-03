@@ -14,7 +14,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include <experimental/filesystem>
+#include <filesystem>
 #include <iostream>
 
 #include "adapter_test_utils.h"
@@ -23,7 +23,7 @@
 #include "stdio/real_api.h"
 #endif
 
-namespace stdfs = std::experimental::filesystem;
+namespace stdfs = std::filesystem;
 
 namespace hermes::adapter::stdio::test {
 struct Arguments {
