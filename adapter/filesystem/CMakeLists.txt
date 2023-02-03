@@ -5,25 +5,15 @@ include_directories(
         ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Create the metadata manager singleton + FS base class
-add_library(hermes_fs_mdm_singleton SHARED
-        ${CMAKE_CURRENT_SOURCE_DIR}/filesystem_mdm_singleton.cc)
-add_dependencies(hermes_fs_mdm_singleton
-        hermes)
-target_link_libraries(hermes_fs_mdm_singleton
-        hermes
-        MPI::MPI_CXX)
-target_compile_options(hermes_fs_mdm_singleton PUBLIC -fPIC)
-
-# Create the metadata manager singleton + FS base class
 add_library(hermes_fs_base SHARED
-        ${CMAKE_CURRENT_SOURCE_DIR}/filesystem.cc)
+        ${CMAKE_CURRENT_SOURCE_DIR}/filesystem.cc
+        ${CMAKE_CURRENT_SOURCE_DIR}/filesystem_mdm.cc
+        ${CMAKE_CURRENT_SOURCE_DIR}/filesystem_mdm_singleton.cc)
 add_dependencies(hermes_fs_base
-        hermes
-        hermes_fs_mdm_singleton)
+        hermes)
 target_link_libraries(hermes_fs_base
         MPI::MPI_CXX
-        hermes
-        hermes_fs_mdm_singleton)
+        hermes)
 target_compile_options(hermes_fs_base PUBLIC -fPIC)
 
 #-----------------------------------------------------------------------------
@@ -31,7 +21,6 @@ target_compile_options(hermes_fs_base PUBLIC -fPIC)
 #-----------------------------------------------------------------------------
 install(
         TARGETS
-        hermes_fs_mdm_singleton
         hermes_fs_base
         EXPORT
         ${HERMES_EXPORTED_TARGETS}
@@ -44,7 +33,6 @@ install(
 # Export all exported targets to the build tree for use by parent project
 #-----------------------------------------------------------------------------
 set(HERMES_EXPORTED_LIBS
-        hermes_fs_mdm_singleton
         hermes_fs_base
         ${HERMES_EXPORTED_LIBS})
 if(NOT HERMES_EXTERNALLY_CONFIGURED)

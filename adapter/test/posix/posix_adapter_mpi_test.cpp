@@ -26,7 +26,7 @@
 #include "adapter_test_utils.h"
 
 #if HERMES_INTERCEPT == 1
-#include "posix/real_api.h"
+#include "posix/posix_api.h"
 #endif
 
 namespace stdfs = std::experimental::filesystem;
@@ -190,20 +190,21 @@ int pretest() {
   if (stdfs::exists(temp_ext_file)) stdfs::remove(temp_ext_file);
   REQUIRE(info.total_size > 0);
   MPI_Barrier(MPI_COMM_WORLD);
+  // NOTE(llogan): Are flush exclusions really necessary?
 #if HERMES_INTERCEPT == 1
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.existing_file_cmp);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.new_file_cmp);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(
-      info.existing_shared_file_cmp);
+  // INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.existing_file_cmp);
+  // INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.new_file_cmp);
+  // INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.existing_shared_file_cmp);
 #endif
   return 0;
 }
 
 int posttest(bool compare_data = true) {
+  // NOTE(llogan): Are flush exclusions really necessary?
 #if HERMES_INTERCEPT == 1
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.existing_file);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.new_file);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.existing_shared_file);
+  // INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.existing_file);
+  // INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.new_file);
+  // INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.existing_shared_file);
 #endif
   if (compare_data && stdfs::exists(info.new_file) &&
       stdfs::exists(info.new_file_cmp)) {
@@ -306,14 +307,15 @@ int posttest(bool compare_data = true) {
       stdfs::remove(info.existing_shared_file_cmp);
   }
 
-#if HERMES_INTERCEPT == 1
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_file_cmp);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.new_file_cmp);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.new_file);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_file);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_shared_file);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_shared_file_cmp);
-#endif
+  // NOTE(llogan): Are flush exclusions really necessary?
+  #if HERMES_INTERCEPT == 1
+    // INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_file_cmp);
+    // INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.new_file_cmp);
+    // INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.new_file);
+    // INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_file);
+    // INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_shared_file);
+    // INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_shared_file_cmp);
+  #endif
   return 0;
 }
 

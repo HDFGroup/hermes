@@ -99,16 +99,16 @@ int pretest() {
   }
   REQUIRE(info.total_size > 0);
 #if HERMES_INTERCEPT == 1
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.existing_file_cmp);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.new_file_cmp);
+  // INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.existing_file_cmp);
+  // INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.new_file_cmp);
 #endif
   return 0;
 }
 
 int posttest(bool compare_data = true) {
 #if HERMES_INTERCEPT == 1
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.existing_file);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.new_file);
+  // INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.existing_file);
+  // INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.new_file);
 #endif
   if (compare_data && stdfs::exists(info.new_file) &&
       stdfs::exists(info.new_file_cmp)) {
@@ -179,10 +179,10 @@ int posttest(bool compare_data = true) {
     stdfs::remove(info.existing_file_cmp);
 
 #if HERMES_INTERCEPT == 1
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_file_cmp);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.new_file_cmp);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.new_file);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_file);
+  // INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_file_cmp);
+  // INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.new_file_cmp);
+  // INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.new_file);
+  // INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_file);
 #endif
   return 0;
 }

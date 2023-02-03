@@ -207,9 +207,9 @@ int pretest() {
   REQUIRE(info.total_size > 0);
   MPI_Barrier(MPI_COMM_WORLD);
 #if HERMES_INTERCEPT == 1
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.existing_file_cmp);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.new_file_cmp);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(
+  // INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.existing_file_cmp);
+  // INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.new_file_cmp);
+  // INTERCEPTOR_LIST->hermes_flush_exclusion.insert(
       info.existing_shared_file_cmp);
 #endif
   return 0;
@@ -217,9 +217,9 @@ int pretest() {
 
 int posttest(bool compare_data = true) {
 #if HERMES_INTERCEPT == 1
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.existing_file);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.new_file);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.existing_shared_file);
+  // INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.existing_file);
+  // INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.new_file);
+  // INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.existing_shared_file);
 #endif
   if (compare_data && stdfs::exists(info.new_file) &&
       stdfs::exists(info.new_file_cmp)) {
@@ -323,12 +323,12 @@ int posttest(bool compare_data = true) {
   }
 
 #if HERMES_INTERCEPT == 1
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_file_cmp);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.new_file_cmp);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.new_file);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_file);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_shared_file);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_shared_file_cmp);
+  // INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_file_cmp);
+  // INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.new_file_cmp);
+  // INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.new_file);
+  // INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_file);
+  // INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_shared_file);
+  // INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_shared_file_cmp);
 #endif
   return 0;
 }

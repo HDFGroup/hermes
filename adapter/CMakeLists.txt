@@ -9,6 +9,7 @@ if(HERMES_ENABLE_POSIX_ADAPTER)
   add_subdirectory(io_client)
   add_subdirectory(filesystem)
   add_subdirectory(posix)
+  add_subdirectory(test)
 endif()
 
 # Transparently Start Hermes in Client Mode
