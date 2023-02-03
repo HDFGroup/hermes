@@ -208,7 +208,7 @@ Status Bucket::PartialGetOrCreate(const std::string &blob_name,
 bool Bucket::ContainsBlob(const std::string &blob_name,
                           BlobId &blob_id) {
   GetBlobId(blob_name, blob_id);
-  return blob_id.IsNull();
+  return !blob_id.IsNull();
 }
 
 /**

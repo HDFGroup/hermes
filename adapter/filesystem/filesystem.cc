@@ -35,15 +35,16 @@ File Filesystem::Open(AdapterStat &stat, const std::string &path) {
 
 void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
   auto mdm = HERMES_FS_METADATA_MANAGER;
-  stat.bkt_id_ = HERMES->GetBucket(path);
+  IoOptions opts;
+  opts.type_ = type_;
+  stat.bkt_id_ = HERMES->GetBucket(path, ctx_, opts);
   std::pair<AdapterStat*, bool> exists = mdm->Find(f);
   if (!exists.second) {
     LOG(INFO) << "File not opened before by adapter" << std::endl;
     // Create the new bucket
-    Context ctx;
     IoOptions opts;
     opts.type_ = type_;
-    stat.bkt_id_ = HERMES->GetBucket(path, ctx, opts);
+    stat.bkt_id_ = HERMES->GetBucket(path, ctx_, opts);
     // Allocate internal hermes data
     auto stat_ptr = std::make_unique<AdapterStat>(stat);
     FilesystemIoClientObject fs_ctx(&mdm->fs_mdm_, (void*)stat_ptr.get());
@@ -75,7 +76,6 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
     const Blob blob_wrap((const char*)ptr + data_offset, p.blob_size_);
     lipc::charbuf blob_name(p.CreateBlobName());
     BlobId blob_id;
-    Context ctx;
     opts.type_ = type_;
     opts.backend_off_ = p.page_ * kPageSize;
     opts.backend_size_ = kPageSize;
@@ -84,7 +84,7 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
                             p.blob_off_,
                             blob_id,
                             opts,
-                            ctx);
+                            ctx_);
     data_offset += p.blob_size_;
   }
   if (opts.DoSeek()) { stat.st_ptr_ = off + data_offset; }
@@ -114,7 +114,6 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
     Blob blob_wrap((const char*)ptr + data_offset, p.blob_size_);
     lipc::charbuf blob_name(p.CreateBlobName());
     BlobId blob_id;
-    Context ctx;
     opts.backend_off_ = p.page_ * kPageSize;
     opts.backend_size_ = kPageSize;
     opts.type_ = type_;
@@ -124,7 +123,7 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
                             p.blob_size_,
                             blob_id,
                             opts,
-                            ctx);
+                            ctx_);
     data_offset += p.blob_size_;
   }
   if (opts.DoSeek()) { stat.st_ptr_ = off + data_offset; }
