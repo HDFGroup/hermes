@@ -70,7 +70,7 @@ void PosixIoClient::HermesClose(IoClientObject &f,
 /** Get initial statistics from the backend */
 void PosixIoClient::InitBucketState(const lipc::charbuf &bkt_name,
                                     const IoClientContext &opts,
-                                    GlobalIoClientStatse &stat) {
+                                    GlobalIoClientState &stat) {
   stat.true_size_ = 0;
   std::string filename = bkt_name.str();
   int fd = real_api->open(filename.c_str(), O_RDONLY);
@@ -83,7 +83,7 @@ void PosixIoClient::InitBucketState(const lipc::charbuf &bkt_name,
 
 /** Update backend statistics */
 void PosixIoClient::UpdateBucketState(const IoClientContext &opts,
-                                      GlobalIoClientStatse &stat) {
+                                      GlobalIoClientState &stat) {
   stat.true_size_ = std::max(stat.true_size_,
                              opts.backend_off_ + opts.backend_size_);
 }
@@ -101,10 +101,10 @@ void PosixIoClient::WriteBlob(const lipc::charbuf &bkt_name,
             << std::endl;
   int fd = real_api->open(bkt_name.str().c_str(), O_RDWR | O_CREAT);
   if (fd < 0) {
-    status.posix_ret_ = 0;
+    status.size_ = 0;
     return;
   }
-  status.posix_ret_ = real_api->pwrite(fd,
+  status.size_ = real_api->pwrite(fd,
                                        full_blob.data(),
                                        full_blob.size(),
                                        opts.backend_off_);
@@ -124,10 +124,10 @@ void PosixIoClient::ReadBlob(const lipc::charbuf &bkt_name,
             << std::endl;
   int fd = real_api->open(bkt_name.str().c_str(), O_RDONLY);
   if (fd < 0) {
-    status.posix_ret_ = 0;
+    status.size_ = 0;
     return;
   }
-  status.posix_ret_ = real_api->pread(fd,
+  status.size_ = real_api->pread(fd,
                                       full_blob.data(),
                                       full_blob.size(),
                                       opts.backend_off_);

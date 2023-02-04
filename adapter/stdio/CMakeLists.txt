@@ -19,7 +19,7 @@ set(INTERCEPTOR_DEPS
         hermes_stdio_io_client
         hermes_fs_base)
 add_library(hermes_stdio SHARED
-        ${CMAKE_CURRENT_SOURCE_DIR}/stdio.cc)
+        ${CMAKE_CURRENT_SOURCE_DIR}/stdio_api.cc)
 add_dependencies(hermes_stdio ${INTERCEPTOR_DEPS})
 target_link_libraries(hermes_stdio ${INTERCEPTOR_DEPS})
 target_compile_options(hermes_stdio PUBLIC -fPIC)

@@ -69,9 +69,9 @@ struct AdapterStat : public IoClientStats {
  * A structure to represent IO options for FS adapter.
  * For now, nothing additional than the typical IoClientContext.
  * */
-struct IoOptions : public IoClientContext {
+struct FsIoOptions : public IoClientContext {
   /** Default constructor */
-  IoOptions() : IoClientContext() {
+  FsIoOptions() : IoClientContext() {
     flags_.SetBits(HERMES_FS_SEEK);
   }
 
@@ -88,6 +88,14 @@ struct IoOptions : public IoClientContext {
   /** Whether or not to perform seek in FS adapter */
   bool DoSeek() {
     return flags_.OrBits(HERMES_FS_SEEK);
+  }
+
+  /** return IO options with \a mpi_type MPI data type */
+  static FsIoOptions DataType(MPI_Datatype mpi_type, bool seek = true) {
+    FsIoOptions opts;
+    opts.mpi_type_ = mpi_type;
+    if (!seek) { opts.UnsetSeek(); }
+    return opts;
   }
 };
 
@@ -111,20 +119,20 @@ class Filesystem {
   /** write */
   size_t Write(File &f, AdapterStat &stat, const void *ptr, size_t off,
                size_t total_size, IoStatus &io_status,
-               IoOptions opts = IoOptions());
+               FsIoOptions opts = FsIoOptions());
   /** read */
   size_t Read(File &f, AdapterStat &stat, void *ptr,
               size_t off, size_t total_size,
-              IoStatus &io_status, IoOptions opts = IoOptions());
+              IoStatus &io_status, FsIoOptions opts = FsIoOptions());
 
   /** write asynchronously */
   HermesRequest *AWrite(File &f, AdapterStat &stat, const void *ptr, size_t off,
                         size_t total_size, size_t req_id, IoStatus &io_status,
-                        IoOptions opts = IoOptions());
+                        FsIoOptions opts = FsIoOptions());
   /** read asynchronously */
   HermesRequest *ARead(File &f, AdapterStat &stat, void *ptr, size_t off,
                        size_t total_size, size_t req_id, IoStatus &io_status,
-                       IoOptions opts = IoOptions());
+                       FsIoOptions opts = FsIoOptions());
   /** wait for \a req_id request ID */
   size_t Wait(uint64_t req_id);
   /** wait for request IDs in \a req_id vector */
@@ -148,17 +156,17 @@ class Filesystem {
  public:
   /** write */
   size_t Write(File &f, AdapterStat &stat, const void *ptr, size_t total_size,
-               IoStatus &io_status, IoOptions opts);
+               IoStatus &io_status, FsIoOptions opts);
   /** read */
   size_t Read(File &f, AdapterStat &stat, void *ptr, size_t total_size,
-              IoStatus &io_status, IoOptions opts);
+              IoStatus &io_status, FsIoOptions opts);
   /** write asynchronously */
   HermesRequest *AWrite(File &f, AdapterStat &stat, const void *ptr,
                         size_t total_size, size_t req_id, IoStatus &io_status,
-                        IoOptions opts);
+                        FsIoOptions opts);
   /** read asynchronously */
   HermesRequest *ARead(File &f, AdapterStat &stat, void *ptr, size_t total_size,
-                       size_t req_id, IoStatus &io_status, IoOptions opts);
+                       size_t req_id, IoStatus &io_status, FsIoOptions opts);
 
   /*
    * Locates the AdapterStat data structure internally, and
@@ -168,33 +176,33 @@ class Filesystem {
  public:
   /** write */
   size_t Write(File &f, bool &stat_exists, const void *ptr, size_t total_size,
-               IoStatus &io_status, IoOptions opts = IoOptions());
+               IoStatus &io_status, FsIoOptions opts = FsIoOptions());
   /** read */
   size_t Read(File &f, bool &stat_exists, void *ptr, size_t total_size,
-              IoStatus &io_status, IoOptions opts = IoOptions());
+              IoStatus &io_status, FsIoOptions opts = FsIoOptions());
   /** write \a off offset */
   size_t Write(File &f, bool &stat_exists, const void *ptr, size_t off,
                size_t total_size, IoStatus &io_status,
-               IoOptions opts = IoOptions());
+               FsIoOptions opts = FsIoOptions());
   /** read \a off offset */
   size_t Read(File &f, bool &stat_exists, void *ptr, size_t off,
               size_t total_size, IoStatus &io_status,
-              IoOptions opts = IoOptions());
+              FsIoOptions opts = FsIoOptions());
   /** write asynchronously */
   HermesRequest *AWrite(File &f, bool &stat_exists, const void *ptr,
                         size_t total_size, size_t req_id, IoStatus &io_status,
-                        IoOptions opts);
+                        FsIoOptions opts);
   /** read asynchronously */
   HermesRequest *ARead(File &f, bool &stat_exists, void *ptr, size_t total_size,
-                       size_t req_id, IoStatus &io_status, IoOptions opts);
+                       size_t req_id, IoStatus &io_status, FsIoOptions opts);
   /** write \a off offset asynchronously */
   HermesRequest *AWrite(File &f, bool &stat_exists, const void *ptr, size_t off,
                         size_t total_size, size_t req_id, IoStatus &io_status,
-                        IoOptions opts);
+                        FsIoOptions opts);
   /** read \a off offset asynchronously */
   HermesRequest *ARead(File &f, bool &stat_exists, void *ptr, size_t off,
                        size_t total_size, size_t req_id, IoStatus &io_status,
-                       IoOptions opts);
+                       FsIoOptions opts);
   /** seek */
   off_t Seek(File &f, bool &stat_exists, SeekMode whence, off_t offset);
   /** file sizes */

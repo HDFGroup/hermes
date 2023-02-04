@@ -129,19 +129,19 @@ struct IoClientStats {
 };
 
 /** Any statistics which need to be globally maintained across ranks */
-struct GlobalIoClientStatse {
+struct GlobalIoClientState {
   size_t true_size_;
 };
 
 /** A structure to represent IO status */
 struct IoStatus {
-  size_t posix_ret_;           /**< POSIX/STDIO return value */
+  size_t size_;           /**< POSIX/STDIO return value */
   int mpi_ret_;                /**< MPI return value */
   MPI_Status mpi_status_;      /**< MPI status */
   MPI_Status *mpi_status_ptr_; /**< MPI status pointer */
 
   /** Default constructor */
-  IoStatus() : posix_ret_(0),
+  IoStatus() : size_(0),
                mpi_ret_(MPI_SUCCESS),
                mpi_status_ptr_(&mpi_status_) {}
 };
@@ -167,14 +167,14 @@ class IoClient {
   /** Get initial statistics from the backend */
   virtual void InitBucketState(const lipc::charbuf &bkt_name,
                                const IoClientContext &opts,
-                               GlobalIoClientStatse &stat) = 0;
+                               GlobalIoClientState &stat) = 0;
 
   /**
    * What the statistics would be if all blobs were flushed from Hermes
    * to the backing storage system.
    * */
   virtual void UpdateBucketState(const IoClientContext &opts,
-                                 GlobalIoClientStatse &stat) = 0;
+                                 GlobalIoClientState &stat) = 0;
 
   /** Write blob to backend */
   virtual void WriteBlob(const lipc::charbuf &bkt_name,

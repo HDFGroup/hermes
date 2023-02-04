@@ -66,13 +66,13 @@ void StdioIoClient::HermesClose(IoClientObject &f,
 /** Get initial statistics from the backend */
 void StdioIoClient::InitBucketState(const lipc::charbuf &bkt_name,
                                     const IoClientContext &opts,
-                                    GlobalIoClientStatse &stat) {
+                                    GlobalIoClientState &stat) {
   // TODO(llogan)
 }
 
 /** Update backend statistics */
 void StdioIoClient::UpdateBucketState(const IoClientContext &opts,
-                                      GlobalIoClientStatse &stat) {
+                                      GlobalIoClientState &stat) {
   stat.true_size_ = std::max(stat.true_size_,
                              opts.backend_off_ + opts.backend_size_);
 }
@@ -89,11 +89,11 @@ void StdioIoClient::WriteBlob(const lipc::charbuf &bkt_name,
             << " file_size:" << stdfs::file_size(filename) << std::endl;
   FILE *fh = real_api->fopen(filename.c_str(), "r+");
   if (fh == nullptr) {
-    status.posix_ret_ = 0;
+    status.size_ = 0;
     return;
   }
   real_api->fseek(fh, opts.backend_off_, SEEK_SET);
-  status.posix_ret_ = real_api->fwrite(full_blob.data(),
+  status.size_ = real_api->fwrite(full_blob.data(),
                                        sizeof(char),
                                        full_blob.size(),
                                        fh);
@@ -112,11 +112,11 @@ void StdioIoClient::ReadBlob(const lipc::charbuf &bkt_name,
             << " file_size:" << stdfs::file_size(filename) << std::endl;
   FILE *fh = real_api->fopen(filename.c_str(), "r");
   if (fh == nullptr) {
-    status.posix_ret_ = 0;
+    status.size_ = 0;
     return;
   }
   real_api->fseek(fh, opts.backend_off_, SEEK_SET);
-  status.posix_ret_ = real_api->fread(full_blob.data(),
+  status.size_ = real_api->fread(full_blob.data(),
                                        sizeof(char),
                                        full_blob.size(),
                                        fh);

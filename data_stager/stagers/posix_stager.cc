@@ -15,7 +15,7 @@
 using hermes::adapter::fs::PosixFS;
 using hermes::api::PlacementPolicyConv;
 using hermes::api::PlacementPolicy;
-using hermes::adapter::fs::IoOptions;
+using hermes::adapter::fs::FsIoOptions;
 namespace stdfs = std::filesystem;
 
 namespace hermes {
@@ -64,7 +64,7 @@ void PosixStager::FileStageIn(std::string path,
   IoStatus io_status;
   File f = fs_api.Open(stat, path);
   fs_api.Read(f, stat_exists, buf.data(), off, size,
-              io_status, IoOptions::WithParallelDpe(dpe));
+              io_status, FsIoOptions::WithParallelDpe(dpe));
   fs_api.Close(f, stat_exists, false);
 }
 

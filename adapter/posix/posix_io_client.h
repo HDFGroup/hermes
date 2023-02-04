@@ -73,11 +73,11 @@ class PosixIoClient : public hermes::adapter::fs::FilesystemIoClient {
   /** Get initial statistics from the backend */
   void InitBucketState(const lipc::charbuf &bkt_name,
                        const IoClientContext &opts,
-                       GlobalIoClientStatse &stat) override;
+                       GlobalIoClientState &stat) override;
 
   /** Update backend statistics */
   void UpdateBucketState(const IoClientContext &opts,
-                         GlobalIoClientStatse &stat) override;
+                         GlobalIoClientState &stat) override;
 
   /** Write blob to backend */
   void WriteBlob(const lipc::charbuf &bkt_name,

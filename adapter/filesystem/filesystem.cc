@@ -34,14 +34,14 @@ File Filesystem::Open(AdapterStat &stat, const std::string &path) {
 
 void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
   auto mdm = HERMES_FS_METADATA_MANAGER;
-  IoOptions opts;
+  FsIoOptions opts;
   opts.type_ = type_;
   stat.bkt_id_ = HERMES->GetBucket(path, ctx_, opts);
   std::shared_ptr<AdapterStat> exists = mdm->Find(f);
   if (!exists) {
     LOG(INFO) << "File not opened before by adapter" << std::endl;
     // Create the new bucket
-    IoOptions opts;
+    FsIoOptions opts;
     opts.type_ = type_;
     stat.bkt_id_ = HERMES->GetBucket(path, ctx_, opts);
     // Allocate internal hermes data
@@ -57,7 +57,7 @@ void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
 
 size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
                          size_t off, size_t total_size,
-                         IoStatus &io_status, IoOptions opts) {
+                         IoStatus &io_status, FsIoOptions opts) {
   (void) f;
   std::shared_ptr<hapi::Bucket> &bkt = stat.bkt_id_;
   std::string filename = bkt->GetName();
@@ -95,7 +95,7 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
 
 size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
                         size_t off, size_t total_size,
-                        IoStatus &io_status, IoOptions opts) {
+                        IoStatus &io_status, FsIoOptions opts) {
   (void) f;
   std::shared_ptr<hapi::Bucket> &bkt = stat.bkt_id_;
   std::string filename = bkt->GetName();
@@ -134,7 +134,7 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
 
 HermesRequest* Filesystem::AWrite(File &f, AdapterStat &stat, const void *ptr,
                                   size_t off, size_t total_size, size_t req_id,
-                                  IoStatus &io_status, IoOptions opts) {
+                                  IoStatus &io_status, FsIoOptions opts) {
   /*(void) io_status;
   LOG(INFO) << "Starting an asynchronous write" << std::endl;
   auto pool =
@@ -142,7 +142,7 @@ HermesRequest* Filesystem::AWrite(File &f, AdapterStat &stat, const void *ptr,
   HermesRequest *hreq = new HermesRequest();
   auto lambda =
       [](Filesystem *fs, File &f, AdapterStat &stat, const void *ptr,
-         size_t off, size_t total_size, IoStatus &io_status, IoOptions opts) {
+         size_t off, size_t total_size, IoStatus &io_status, FsIoOptions opts) {
     return fs->Write(f, stat, ptr, off, total_size, io_status, opts);
   };
   auto func = std::bind(lambda, this, f, stat, ptr, off,
@@ -155,14 +155,14 @@ HermesRequest* Filesystem::AWrite(File &f, AdapterStat &stat, const void *ptr,
 
 HermesRequest* Filesystem::ARead(File &f, AdapterStat &stat, void *ptr,
                                  size_t off, size_t total_size, size_t req_id,
-                                 IoStatus &io_status, IoOptions opts) {
+                                 IoStatus &io_status, FsIoOptions opts) {
   /*(void) io_status;
   auto pool =
       Singleton<ThreadPool>::GetInstance(kNumThreads);
   HermesRequest *hreq = new HermesRequest();
   auto lambda =
       [](Filesystem *fs, File &f, AdapterStat &stat, void *ptr,
-         size_t off, size_t total_size, IoStatus &io_status, IoOptions opts) {
+         size_t off, size_t total_size, IoStatus &io_status, FsIoOptions opts) {
         return fs->Read(f, stat, ptr, off, total_size, io_status, opts);
       };
   auto func = std::bind(lambda, this, f, stat,
@@ -195,7 +195,7 @@ void Filesystem::Wait(std::vector<uint64_t> &req_ids,
 
 size_t Filesystem::GetSize(File &f, AdapterStat &stat) {
   (void) stat;
-  IoOptions opts;
+  FsIoOptions opts;
   opts.type_ = type_;
   return stat.bkt_id_->GetSize(opts);
 }
@@ -219,7 +219,7 @@ off_t Filesystem::Seek(File &f, AdapterStat &stat,
       break;
     }
     case SeekMode::kEnd: {
-      IoOptions opts;
+      FsIoOptions opts;
       opts.type_ = type_;
       stat.st_ptr_ = stat.bkt_id_->GetSize(opts) + offset;
       break;
@@ -251,28 +251,28 @@ int Filesystem::Close(File &f, AdapterStat &stat, bool destroy) {
 
 size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
                          size_t total_size, IoStatus &io_status,
-                         IoOptions opts) {
+                         FsIoOptions opts) {
   off_t off = Tell(f, stat);
   return Write(f, stat, ptr, off, total_size, io_status, opts);
 }
 
 size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
                         size_t total_size,
-                        IoStatus &io_status, IoOptions opts) {
+                        IoStatus &io_status, FsIoOptions opts) {
   off_t off = Tell(f, stat);
   return Read(f, stat, ptr, off, total_size, io_status, opts);
 }
 
 HermesRequest* Filesystem::AWrite(File &f, AdapterStat &stat, const void *ptr,
                        size_t total_size, size_t req_id,
-                       IoStatus &io_status, IoOptions opts) {
+                       IoStatus &io_status, FsIoOptions opts) {
   off_t off = Tell(f, stat);
   return AWrite(f, stat, ptr, off, total_size, req_id, io_status, opts);
 }
 
 HermesRequest* Filesystem::ARead(File &f, AdapterStat &stat, void *ptr,
                       size_t total_size, size_t req_id,
-                      IoStatus &io_status, IoOptions opts) {
+                      IoStatus &io_status, FsIoOptions opts) {
   off_t off = Tell(f, stat);
   return ARead(f, stat, ptr, off, total_size, req_id, io_status, opts);
 }
@@ -285,7 +285,7 @@ HermesRequest* Filesystem::ARead(File &f, AdapterStat &stat, void *ptr,
 
 size_t Filesystem::Write(File &f, bool &stat_exists, const void *ptr,
                          size_t total_size,
-                         IoStatus &io_status, IoOptions opts) {
+                         IoStatus &io_status, FsIoOptions opts) {
   auto mdm = HERMES_FS_METADATA_MANAGER;
   auto stat = mdm->Find(f);
   if (!stat) {
@@ -298,7 +298,7 @@ size_t Filesystem::Write(File &f, bool &stat_exists, const void *ptr,
 
 size_t Filesystem::Read(File &f, bool &stat_exists, void *ptr,
                         size_t total_size,
-                        IoStatus &io_status, IoOptions opts) {
+                        IoStatus &io_status, FsIoOptions opts) {
   auto mdm = HERMES_FS_METADATA_MANAGER;
   auto stat = mdm->Find(f);
   if (!stat) {
@@ -311,7 +311,7 @@ size_t Filesystem::Read(File &f, bool &stat_exists, void *ptr,
 
 size_t Filesystem::Write(File &f, bool &stat_exists, const void *ptr,
                          size_t off, size_t total_size,
-                         IoStatus &io_status, IoOptions opts) {
+                         IoStatus &io_status, FsIoOptions opts) {
   auto mdm = HERMES_FS_METADATA_MANAGER;
   auto stat = mdm->Find(f);
   if (!stat) {
@@ -325,7 +325,7 @@ size_t Filesystem::Write(File &f, bool &stat_exists, const void *ptr,
 
 size_t Filesystem::Read(File &f, bool &stat_exists, void *ptr,
                         size_t off, size_t total_size,
-                        IoStatus &io_status, IoOptions opts) {
+                        IoStatus &io_status, FsIoOptions opts) {
   auto mdm = HERMES_FS_METADATA_MANAGER;
   auto stat = mdm->Find(f);
   if (!stat) {
@@ -339,7 +339,7 @@ size_t Filesystem::Read(File &f, bool &stat_exists, void *ptr,
 
 HermesRequest* Filesystem::AWrite(File &f, bool &stat_exists, const void *ptr,
                        size_t total_size, size_t req_id,
-                       IoStatus &io_status, IoOptions opts) {
+                       IoStatus &io_status, FsIoOptions opts) {
   auto mdm = HERMES_FS_METADATA_MANAGER;
   auto stat = mdm->Find(f);
   if (!stat) {
@@ -352,7 +352,7 @@ HermesRequest* Filesystem::AWrite(File &f, bool &stat_exists, const void *ptr,
 
 HermesRequest* Filesystem::ARead(File &f, bool &stat_exists, void *ptr,
                       size_t total_size, size_t req_id,
-                      IoStatus &io_status, IoOptions opts) {
+                      IoStatus &io_status, FsIoOptions opts) {
   auto mdm = HERMES_FS_METADATA_MANAGER;
   auto stat = mdm->Find(f);
   if (!stat) {
@@ -365,7 +365,7 @@ HermesRequest* Filesystem::ARead(File &f, bool &stat_exists, void *ptr,
 
 HermesRequest* Filesystem::AWrite(File &f, bool &stat_exists, const void *ptr,
                        size_t off, size_t total_size, size_t req_id,
-                       IoStatus &io_status, IoOptions opts) {
+                       IoStatus &io_status, FsIoOptions opts) {
   auto mdm = HERMES_FS_METADATA_MANAGER;
   auto stat = mdm->Find(f);
   if (!stat) {
@@ -379,7 +379,7 @@ HermesRequest* Filesystem::AWrite(File &f, bool &stat_exists, const void *ptr,
 
 HermesRequest* Filesystem::ARead(File &f, bool &stat_exists, void *ptr,
                       size_t off, size_t total_size, size_t req_id,
-                      IoStatus &io_status, IoOptions opts) {
+                      IoStatus &io_status, FsIoOptions opts) {
   auto mdm = HERMES_FS_METADATA_MANAGER;
   auto stat = mdm->Find(f);
   if (!stat) {

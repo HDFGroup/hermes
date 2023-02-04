@@ -19,7 +19,7 @@
 
 namespace hermes {
 
-using adapter::GlobalIoClientStatse;
+using adapter::GlobalIoClientState;
 using api::Blob;
 struct BucketInfo;     /** Forward declaration of BucketInfo */
 struct BlobInfo;       /** Forward declaration of BlobInfo */
@@ -229,7 +229,7 @@ struct ShmHeader<BucketInfo> : public lipc::ShmBaseHeader {
   lipc::TypedPointer<lipc::string> name_ar_;
   lipc::TypedPointer<lipc::vector<BlobId>> blobs_ar_;
   size_t internal_size_;
-  GlobalIoClientStatse client_state_;
+  GlobalIoClientState client_state_;
 };
 
 /** Metadata for a Bucket */

@@ -16,7 +16,7 @@ bool mpiio_intercepted = true;
 #include <bucket.h>
 #include <vbucket.h>
 
-#include "real_api.h"
+#include "mpiio_api.h"
 #include "fs_api.h"
 
 #include "constants.h"

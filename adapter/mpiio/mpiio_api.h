@@ -18,9 +18,6 @@
 #include <glog/logging.h>
 #include <mpi.h>
 #include <mpio.h>
-#include "interceptor.h"
-#include "filesystem/filesystem.h"
-#include "filesystem/metadata_manager.h"
 
 #define REQUIRE_API(api_name) \
   if (api_name == nullptr) { \
@@ -60,10 +57,10 @@ typedef int (*MPI_File_iwrite_shared_t)(MPI_File fh, const void * buf, int count
 typedef int (*MPI_File_sync_t)(MPI_File fh);
 }
 
-namespace hermes::adapter::mpiio {
+namespace hermes::adapter::fs {
 
 /** Pointers to the real mpiio API */
-class API {
+class MpiioApi {
  public:
   /** MPI_Init */
   MPI_Init_t MPI_Init = nullptr;
@@ -122,7 +119,7 @@ class API {
   /** MPI_File_sync */
   MPI_File_sync_t MPI_File_sync = nullptr;
 
-  API() {
+  MpiioApi() {
     void *is_intercepted = (void*)dlsym(RTLD_DEFAULT, "mpiio_intercepted");
     if (is_intercepted) {
       MPI_Init = (MPI_Init_t)dlsym(RTLD_NEXT, "MPI_Init");
@@ -297,5 +294,12 @@ class API {
 }  // namespace hermes::adapter::mpiio
 
 #undef REQUIRE_API
+
+#include "singleton.h"
+
+/** Simplify access to the stateless MpiioFs Singleton */
+#define HERMES_MPIIO_API \
+  hermes::EasyGlobalSingleton<hermes::adapter::fs::MpiioApi>::GetInstance()
+#define HERMES_MPIIO_API_T hermes::adapter::fs::MpiioApi*
 
 #endif  // HERMES_ADAPTER_MPIIO_H
