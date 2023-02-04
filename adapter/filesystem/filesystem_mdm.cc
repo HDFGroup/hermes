@@ -20,7 +20,7 @@ using hermes::adapter::fs::AdapterStat;
 using hermes::adapter::fs::MetadataManager;
 
 bool MetadataManager::Create(const File &f,
-                             std::unique_ptr<AdapterStat> &stat) {
+                             std::shared_ptr<AdapterStat> &stat) {
   VLOG(1) << "Create metadata for file handler." << std::endl;
   auto ret = metadata.emplace(f, std::move(stat));
   return ret.second;
@@ -37,13 +37,12 @@ bool MetadataManager::Update(const File &f, const AdapterStat &stat) {
   }
 }
 
-std::pair<AdapterStat*, bool> MetadataManager::Find(const File &f) {
-  typedef std::pair<AdapterStat, bool> MetadataReturn;
+std::shared_ptr<AdapterStat> MetadataManager::Find(const File &f) {
   auto iter = metadata.find(f);
   if (iter == metadata.end())
-    return std::pair<AdapterStat*, bool>(nullptr, false);
+    return nullptr;
   else
-    return std::pair<AdapterStat*, bool>(iter->second.get(), true);
+    return iter->second;
 }
 
 bool MetadataManager::Delete(const File &f) {

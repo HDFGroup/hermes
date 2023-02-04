@@ -26,7 +26,7 @@ namespace hermes::adapter::fs {
  */
 class MetadataManager {
  private:
-  std::unordered_map<File, std::unique_ptr<AdapterStat>>
+  std::unordered_map<File, std::shared_ptr<AdapterStat>>
       metadata; /**< Map for metadata*/
 
  public:
@@ -46,7 +46,7 @@ class MetadataManager {
    * @return    true, if operation was successful.
    *            false, if operation was unsuccessful.
    */
-  bool Create(const File& f, std::unique_ptr<AdapterStat> &stat);
+  bool Create(const File& f, std::shared_ptr<AdapterStat> &stat);
 
   /**
    * Update existing metadata entry for filesystem adapters.
@@ -71,7 +71,7 @@ class MetadataManager {
    * @return    The metadata entry if exist.
    *            The bool in pair indicated whether metadata entry exists.
    */
-  std::pair<AdapterStat*, bool> Find(const File& f);
+  std::shared_ptr<AdapterStat> Find(const File& f);
 };
 }  // namespace hermes::adapter::fs
 

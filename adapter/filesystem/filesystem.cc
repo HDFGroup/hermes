@@ -37,21 +37,21 @@ void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
   IoOptions opts;
   opts.type_ = type_;
   stat.bkt_id_ = HERMES->GetBucket(path, ctx_, opts);
-  std::pair<AdapterStat*, bool> exists = mdm->Find(f);
-  if (!exists.second) {
+  std::shared_ptr<AdapterStat> exists = mdm->Find(f);
+  if (!exists) {
     LOG(INFO) << "File not opened before by adapter" << std::endl;
     // Create the new bucket
     IoOptions opts;
     opts.type_ = type_;
     stat.bkt_id_ = HERMES->GetBucket(path, ctx_, opts);
     // Allocate internal hermes data
-    auto stat_ptr = std::make_unique<AdapterStat>(stat);
+    auto stat_ptr = std::make_shared<AdapterStat>(stat);
     FilesystemIoClientObject fs_ctx(&mdm->fs_mdm_, (void*)stat_ptr.get());
     io_client_->HermesOpen(f, stat, fs_ctx);
     mdm->Create(f, stat_ptr);
   } else {
     LOG(INFO) << "File opened by adapter" << std::endl;
-    exists.first->UpdateTime();
+    exists->UpdateTime();
   }
 }
 
@@ -287,8 +287,8 @@ size_t Filesystem::Write(File &f, bool &stat_exists, const void *ptr,
                          size_t total_size,
                          IoStatus &io_status, IoOptions opts) {
   auto mdm = HERMES_FS_METADATA_MANAGER;
-  auto [stat, exists] = mdm->Find(f);
-  if (!exists) {
+  auto stat = mdm->Find(f);
+  if (!stat) {
     stat_exists = false;
     return 0;
   }
@@ -300,8 +300,8 @@ size_t Filesystem::Read(File &f, bool &stat_exists, void *ptr,
                         size_t total_size,
                         IoStatus &io_status, IoOptions opts) {
   auto mdm = HERMES_FS_METADATA_MANAGER;
-  auto [stat, exists] = mdm->Find(f);
-  if (!exists) {
+  auto stat = mdm->Find(f);
+  if (!stat) {
     stat_exists = false;
     return 0;
   }
@@ -313,8 +313,8 @@ size_t Filesystem::Write(File &f, bool &stat_exists, const void *ptr,
                          size_t off, size_t total_size,
                          IoStatus &io_status, IoOptions opts) {
   auto mdm = HERMES_FS_METADATA_MANAGER;
-  auto [stat, exists] = mdm->Find(f);
-  if (!exists) {
+  auto stat = mdm->Find(f);
+  if (!stat) {
     stat_exists = false;
     return 0;
   }
@@ -327,8 +327,8 @@ size_t Filesystem::Read(File &f, bool &stat_exists, void *ptr,
                         size_t off, size_t total_size,
                         IoStatus &io_status, IoOptions opts) {
   auto mdm = HERMES_FS_METADATA_MANAGER;
-  auto [stat, exists] = mdm->Find(f);
-  if (!exists) {
+  auto stat = mdm->Find(f);
+  if (!stat) {
     stat_exists = false;
     return 0;
   }
@@ -341,8 +341,8 @@ HermesRequest* Filesystem::AWrite(File &f, bool &stat_exists, const void *ptr,
                        size_t total_size, size_t req_id,
                        IoStatus &io_status, IoOptions opts) {
   auto mdm = HERMES_FS_METADATA_MANAGER;
-  auto [stat, exists] = mdm->Find(f);
-  if (!exists) {
+  auto stat = mdm->Find(f);
+  if (!stat) {
     stat_exists = false;
     return 0;
   }
@@ -354,8 +354,8 @@ HermesRequest* Filesystem::ARead(File &f, bool &stat_exists, void *ptr,
                       size_t total_size, size_t req_id,
                       IoStatus &io_status, IoOptions opts) {
   auto mdm = HERMES_FS_METADATA_MANAGER;
-  auto [stat, exists] = mdm->Find(f);
-  if (!exists) {
+  auto stat = mdm->Find(f);
+  if (!stat) {
     stat_exists = false;
     return 0;
   }
@@ -367,8 +367,8 @@ HermesRequest* Filesystem::AWrite(File &f, bool &stat_exists, const void *ptr,
                        size_t off, size_t total_size, size_t req_id,
                        IoStatus &io_status, IoOptions opts) {
   auto mdm = HERMES_FS_METADATA_MANAGER;
-  auto [stat, exists] = mdm->Find(f);
-  if (!exists) {
+  auto stat = mdm->Find(f);
+  if (!stat) {
     stat_exists = false;
     return 0;
   }
@@ -381,8 +381,8 @@ HermesRequest* Filesystem::ARead(File &f, bool &stat_exists, void *ptr,
                       size_t off, size_t total_size, size_t req_id,
                       IoStatus &io_status, IoOptions opts) {
   auto mdm = HERMES_FS_METADATA_MANAGER;
-  auto [stat, exists] = mdm->Find(f);
-  if (!exists) {
+  auto stat = mdm->Find(f);
+  if (!stat) {
     stat_exists = false;
     return 0;
   }
@@ -394,8 +394,8 @@ HermesRequest* Filesystem::ARead(File &f, bool &stat_exists, void *ptr,
 off_t Filesystem::Seek(File &f, bool &stat_exists,
                        SeekMode whence, off_t offset) {
   auto mdm = HERMES_FS_METADATA_MANAGER;
-  auto [stat, exists] = mdm->Find(f);
-  if (!exists) {
+  auto stat = mdm->Find(f);
+  if (!stat) {
     stat_exists = false;
     return -1;
   }
@@ -405,8 +405,8 @@ off_t Filesystem::Seek(File &f, bool &stat_exists,
 
 size_t Filesystem::GetSize(File &f, bool &stat_exists) {
   auto mdm = HERMES_FS_METADATA_MANAGER;
-  auto [stat, exists] = mdm->Find(f);
-  if (!exists) {
+  auto stat = mdm->Find(f);
+  if (!stat) {
     stat_exists = false;
     return -1;
   }
@@ -416,8 +416,8 @@ size_t Filesystem::GetSize(File &f, bool &stat_exists) {
 
 off_t Filesystem::Tell(File &f, bool &stat_exists) {
   auto mdm = HERMES_FS_METADATA_MANAGER;
-  auto [stat, exists] = mdm->Find(f);
-  if (!exists) {
+  auto stat = mdm->Find(f);
+  if (!stat) {
     stat_exists = false;
     return -1;
   }
@@ -427,8 +427,8 @@ off_t Filesystem::Tell(File &f, bool &stat_exists) {
 
 int Filesystem::Sync(File &f, bool &stat_exists) {
   auto mdm = HERMES_FS_METADATA_MANAGER;
-  auto [stat, exists] = mdm->Find(f);
-  if (!exists) {
+  auto stat = mdm->Find(f);
+  if (!stat) {
     stat_exists = false;
     return -1;
   }
@@ -438,8 +438,8 @@ int Filesystem::Sync(File &f, bool &stat_exists) {
 
 int Filesystem::Close(File &f, bool &stat_exists, bool destroy) {
   auto mdm = HERMES_FS_METADATA_MANAGER;
-  auto [stat, exists] = mdm->Find(f);
-  if (!exists) {
+  auto stat = mdm->Find(f);
+  if (!stat) {
     stat_exists = false;
     return -1;
   }

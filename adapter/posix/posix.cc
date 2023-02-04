@@ -263,8 +263,8 @@ int HERMES_DECL(__fxstat)(int __ver, int fd, struct stat *buf) {
     LOG(INFO) << "Intercepted fstat." << std::endl;
     auto mdm = HERMES_FS_METADATA_MANAGER;
     auto existing = mdm->Find(f);
-    if (existing.second) {
-      AdapterStat &astat = *existing.first;
+    if (existing) {
+      AdapterStat &astat = *existing;
       // TODO(chogan): st_dev and st_ino need to be assigned by us, but
       // currently we get them by calling the real fstat on open.
       buf->st_dev = 0;
