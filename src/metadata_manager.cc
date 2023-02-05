@@ -318,8 +318,8 @@ std::tuple<BlobId, bool, size_t> MetadataManager::LocalBucketPutBlob(
     size_t blob_size,
     lipc::vector<BufferInfo> &buffers) {
   size_t orig_blob_size = 0;
-  // Acquire MD read lock (read blob_map_)
-  ScopedRwReadLock md_lock(lock_);
+  // Acquire MD write lock (modify blob_map_)
+  ScopedRwWriteLock md_lock(lock_);
   // Get internal blob name
   lipc::charbuf internal_blob_name = CreateBlobName(bkt_id, blob_name);
   // Create unique ID for the Blob
@@ -330,9 +330,10 @@ std::tuple<BlobId, bool, size_t> MetadataManager::LocalBucketPutBlob(
   if (did_create) {
     BlobInfo blob_info(HERMES->main_alloc_);
     blob_info.bkt_id_ = bkt_id;
-    (*blob_info.name_) = std::move(internal_blob_name);
+    (*blob_info.name_) = internal_blob_name;
     (*blob_info.buffers_) = std::move(buffers);
     blob_info.header_->blob_size_ = blob_size;
+    blob_id_map_->emplace(internal_blob_name, blob_id);
     blob_map_->emplace(blob_id, std::move(blob_info));
   } else {
     blob_id = *(*blob_id_map_)[internal_blob_name];
@@ -356,6 +357,9 @@ Blob MetadataManager::LocalBucketGetBlob(BlobId blob_id) {
   // Acquire MD read lock (read blob_map_)
   ScopedRwReadLock md_lock(lock_);
   auto iter = blob_map_->find(blob_id);
+  if (iter == blob_map_->end()) {
+    return Blob();
+  }
   lipc::ShmRef<lipc::pair<BlobId, BlobInfo>> info = (*iter);
   BlobInfo &blob_info = *info->second_;
   // Acquire blob_info read lock (read buffers)
@@ -371,7 +375,7 @@ Blob MetadataManager::LocalBucketGetBlob(BlobId blob_id) {
  * @RPC_CLASS_INSTANCE mdm
  * */
 BlobId MetadataManager::LocalGetBlobId(BucketId bkt_id,
-                                       lipc::charbuf &blob_name) {
+                                       const lipc::charbuf &blob_name) {
   // Acquire MD read lock (read blob_id_map_)
   ScopedRwReadLock md_lock(lock_);
   lipc::charbuf internal_blob_name = CreateBlobName(bkt_id, blob_name);
@@ -386,17 +390,42 @@ BlobId MetadataManager::LocalGetBlobId(BucketId bkt_id,
 /**
  * Lock the blob
  * */
-void MetadataManager::LocalLockBlob(BlobId blob_id,
+bool MetadataManager::LocalLockBlob(BucketId bkt_id,
+                                    const std::string &blob_name,
                                     MdLockType lock_type) {
-  LockMdObject(*blob_map_, blob_id, lock_type);
+  // Acquire MD write lock (might modify blob_map_)
+  BlobId blob_id = LocalGetBlobId(bkt_id, lipc::charbuf(blob_name));
+  if (blob_id.IsNull()) {
+    // Create blob if it DNE
+    ScopedRwWriteLock md_lock(lock_);
+    lipc::charbuf internal_blob_name = CreateBlobName(bkt_id,
+                                                      lipc::charbuf(blob_name));
+    auto iter = blob_id_map_->find(internal_blob_name);
+    if (iter == blob_id_map_->end()) {
+      blob_id.unique_ = header_->id_alloc_.fetch_add(1);
+      blob_id.node_id_ = rpc_->node_id_;
+      BlobInfo blob_info(HERMES->main_alloc_);
+      blob_info.bkt_id_ = bkt_id;
+      (*blob_info.name_) = internal_blob_name;
+      blob_info.header_->blob_size_ = 0;
+      blob_id_map_->emplace(internal_blob_name, blob_id);
+      blob_map_->emplace(blob_id, std::move(blob_info));
+    }
+  }
+  return LockMdObject(*blob_map_, blob_id, lock_type);
 }
 
 /**
  * Unlock the blob
  * */
-void MetadataManager::LocalUnlockBlob(BlobId blob_id,
+bool MetadataManager::LocalUnlockBlob(BucketId bkt_id,
+                                      const std::string &blob_name,
                                       MdLockType lock_type) {
-  UnlockMdObject(*blob_map_, blob_id, lock_type);
+  BlobId blob_id = LocalGetBlobId(bkt_id, lipc::charbuf(blob_name));
+  if (blob_id.IsNull()) {
+    return false;
+  }
+  return UnlockMdObject(*blob_map_, blob_id, lock_type);
 }
 
 /**

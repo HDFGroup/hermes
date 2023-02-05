@@ -109,12 +109,12 @@ class Bucket {
   /**
    * Lock the blob
    * */
-  void LockBlob(BlobId blob_id, MdLockType lock_type);
+  bool LockBlob(const std::string &blob_name, MdLockType lock_type);
 
   /**
    * Unlock the blob
    * */
-  void UnlockBlob(BlobId blob_id, MdLockType lock_type);
+  bool UnlockBlob(const std::string &blob_name, MdLockType lock_type);
 
   /**
    * Put \a blob_name Blob into the bucket
@@ -170,6 +170,16 @@ class Bucket {
                             BlobId &blob_id,
                             const IoClientContext &opts,
                             Context &ctx);
+
+  /**
+   * Flush a blob
+   * */
+  void FlushBlob(BlobId blob_id);
+
+  /**
+   * Flush the entire bucket
+   * */
+  void FlushBucket();
 
   /**
    * Determine if the bucket contains \a blob_id BLOB

@@ -83,12 +83,14 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
     opts.backend_off_ = p.page_ * kPageSize;
     opts.backend_size_ = kPageSize;
     opts.mode_ = stat.adapter_mode_;
+    bkt->LockBlob(blob_name.str(), MdLockType::kExternalWrite);
     bkt->PartialPutOrCreate(blob_name.str(),
                             blob_wrap,
                             p.blob_off_,
                             blob_id,
                             opts,
                             ctx_);
+    bkt->UnlockBlob(blob_name.str(), MdLockType::kExternalWrite);
     data_offset += p.blob_size_;
   }
   if (opts.DoSeek()) { stat.st_ptr_ = off + data_offset; }
@@ -122,6 +124,7 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
     opts.backend_size_ = kPageSize;
     opts.type_ = type_;
     opts.mode_ = stat.adapter_mode_;
+    bkt->LockBlob(blob_name.str(), MdLockType::kExternalRead);
     bkt->PartialGetOrCreate(blob_name.str(),
                             blob_wrap,
                             p.blob_off_,
@@ -129,6 +132,7 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
                             blob_id,
                             opts,
                             ctx_);
+    bkt->UnlockBlob(blob_name.str(), MdLockType::kExternalRead);
     data_offset += p.blob_size_;
   }
   if (opts.DoSeek()) { stat.st_ptr_ = off + data_offset; }

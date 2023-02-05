@@ -249,18 +249,20 @@ class MetadataManager {
    * @RPC_TARGET_NODE rpc_->node_id_
    * @RPC_CLASS_INSTANCE mdm
    * */
-  RPC BlobId LocalGetBlobId(BucketId bkt_id, lipc::charbuf &blob_name);
+  RPC BlobId LocalGetBlobId(BucketId bkt_id, const lipc::charbuf &blob_name);
 
   /**
    * Lock the blob
    * */
-  RPC void LocalLockBlob(BlobId blob_id,
+  RPC bool LocalLockBlob(BucketId bkt_id,
+                         const std::string &blob_name,
                          MdLockType lock_type);
 
   /**
    * Unlock the blob
    * */
-  RPC void LocalUnlockBlob(BlobId blob_id,
+  RPC bool LocalUnlockBlob(BucketId bkt_id,
+                           const std::string &blob_name,
                            MdLockType lock_type);
 
   /**
@@ -385,54 +387,54 @@ class MetadataManager {
  private:
   /** Acquire the external lock to Bucket or Blob */
   template<typename MapFirst, typename MapSecond, typename IdT>
-  void LockMdObject(lipc::unordered_map<MapFirst, MapSecond> &map,
+  bool LockMdObject(lipc::unordered_map<MapFirst, MapSecond> &map,
                     IdT id,
                     MdLockType lock_type) {
     ScopedRwReadLock md_lock(lock_);
     auto iter = map.find(id);
     if (iter == map.end()) {
-      return;
+      return false;
     }
     lipc::ShmRef<lipc::pair<MapFirst, MapSecond>> info = *iter;
     MapSecond &obj_info = *info->second_;
     switch (lock_type) {
       case MdLockType::kExternalRead: {
         obj_info.header_->lock_[1].ReadLock();
-        return;
+        return true;
       }
       case MdLockType::kExternalWrite: {
         obj_info.header_->lock_[1].WriteLock();
-        return;
+        return true;
       }
       default: {
-        return;
+        return false;
       }
     }
   }
 
   /** Release the external lock to Bucket or Blob */
   template<typename MapFirst, typename MapSecond, typename IdT>
-  void UnlockMdObject(lipc::unordered_map<MapFirst, MapSecond> &map,
+  bool UnlockMdObject(lipc::unordered_map<MapFirst, MapSecond> &map,
                       IdT id,
                       MdLockType lock_type) {
     ScopedRwReadLock md_lock(lock_);
     auto iter = map.find(id);
     if (iter == map.end()) {
-      return;
+      return false;
     }
     lipc::ShmRef<lipc::pair<MapFirst, MapSecond>> info = *iter;
     MapSecond &obj_info = *info->second_;
     switch (lock_type) {
       case MdLockType::kExternalRead: {
-        obj_info.header_->lock_[1].ReadLock();
-        return;
+        obj_info.header_->lock_[1].ReadUnlock();
+        return true;
       }
       case MdLockType::kExternalWrite: {
-        obj_info.header_->lock_[1].WriteLock();
-        return;
+        obj_info.header_->lock_[1].WriteUnlock();
+        return true;
       }
       default: {
-        return;
+        return false;
       }
     }
   }

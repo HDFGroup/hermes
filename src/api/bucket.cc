@@ -82,15 +82,15 @@ Status Bucket::GetBlobId(std::string blob_name,
 /**
  * Lock the bucket
  * */
-void Bucket::LockBlob(BlobId blob_id, MdLockType lock_type) {
-  mdm_->LocalLockBlob(blob_id, lock_type);
+bool Bucket::LockBlob(const std::string &blob_name, MdLockType lock_type) {
+  return mdm_->LocalLockBlob(id_, blob_name, lock_type);
 }
 
 /**
  * Unlock the bucket
  * */
-void Bucket::UnlockBlob(BlobId blob_id, MdLockType lock_type) {
-  mdm_->LocalUnlockBlob(blob_id, lock_type);
+bool Bucket::UnlockBlob(const std::string &blob_name, MdLockType lock_type) {
+  return mdm_->LocalUnlockBlob(id_, blob_name, lock_type);
 }
 
 /**
@@ -149,15 +149,19 @@ Status Bucket::PartialPutOrCreate(const std::string &blob_name,
   if (blob_off == 0 && blob.size() == opts.backend_size_) {
     // Case 1: We're overriding the entire blob
     // Put the entire blob, no need to load from storage
+    LOG(INFO) << "Putting the entire blob." << std::endl;
     return Put(blob_name, blob, blob_id, ctx);
   }
-  if (ContainsBlob(blob_id)) {
+  if (ContainsBlob(blob_name, blob_id)) {
     // Case 2: The blob already exists (read from hermes)
     // Read blob from Hermes
+    LOG(INFO) << "Blob existed. Reading from Hermes." << std::endl;
     Get(blob_id, full_blob, ctx);
-  } else {
+  }
+  if (full_blob.size() != opts.backend_size_) {
     // Case 3: The blob did not exist (need to read from backend)
     // Read blob using adapter
+    LOG(INFO) << "Blob didn't fully exist. Reading from backend." << std::endl;
     IoStatus status;
     auto io_client = IoClientFactory::Get(opts.type_);
     full_blob.resize(opts.backend_size_);
@@ -207,10 +211,13 @@ Status Bucket::PartialGetOrCreate(const std::string &blob_name,
   if (ContainsBlob(blob_name, blob_id)) {
     // Case 1: The blob already exists (read from hermes)
     // Read blob from Hermes
+    LOG(INFO) << "Blob existed. Reading blob from Hermes." << std::endl;
     Get(blob_id, full_blob, ctx);
-  } else {
+  }
+  if (full_blob.size() != opts.backend_size_) {
     // Case 2: The blob did not exist (need to read from backend)
     // Read blob using adapter
+    LOG(INFO) << "Blob did not exist. Reading blob from backend." << std::endl;
     IoStatus status;
     auto io_client = IoClientFactory::Get(opts.type_);
     full_blob.resize(opts.backend_size_);
