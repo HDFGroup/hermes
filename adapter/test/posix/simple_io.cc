@@ -59,15 +59,19 @@ int main(int argc, char **argv) {
   size_t total_size = size * nprocs;
   int off = (rank * size) + block_off * block_size;
 
-  std::stringstream ss;
-  ss << "RANK: " << rank << std::endl
-     << " PATH: " << path << std::endl
-     << " READ or WRITE: " << (do_read ? "READ" : "WRITE") << std::endl
-     << " Block Off: " << block_off << std::endl
-     << " Block Size: " << block_size << std::endl
-     << " Count: " << count  << std::endl
-     << " Proc Size (MB): " << size / (1<<20) << std::endl;
-  std::cout << ss.str() << std::endl;
+  {
+    std::stringstream ss;
+    ss << "RANK: " << rank << std::endl
+       << " PATH: " << path << std::endl
+       << " READ or WRITE: " << (do_read ? "READ" : "WRITE") << std::endl
+       << " Block Off: " << block_off << std::endl
+       << " Block Size: " << block_size << std::endl
+       << " Count: " << count << std::endl
+       << " Proc Size (MB): " << size / (1 << 20) << std::endl
+       << " Num Ranks: " << nprocs << std::endl;
+    std::cout << ss.str() << std::endl;
+  }
+  MPI_Barrier(MPI_COMM_WORLD);
 
   sleep(lag);
 
@@ -102,5 +106,12 @@ int main(int argc, char **argv) {
   }
 
   close(fd);
+
+  MPI_Barrier(MPI_COMM_WORLD);
+  {
+    std::stringstream ss;
+    ss << "SIMPLE I/O COMPLETED! (rank: " << rank << ")" << std::endl;
+    std::cout << ss.str();
+  }
   MPI_Finalize();
 }

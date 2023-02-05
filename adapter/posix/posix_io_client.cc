@@ -105,9 +105,9 @@ void PosixIoClient::WriteBlob(const lipc::charbuf &bkt_name,
     return;
   }
   status.size_ = real_api->pwrite(fd,
-                                       full_blob.data(),
-                                       full_blob.size(),
-                                       opts.backend_off_);
+                                  full_blob.data(),
+                                  full_blob.size(),
+                                  opts.backend_off_);
   real_api->close(fd);
 }
 
@@ -128,9 +128,9 @@ void PosixIoClient::ReadBlob(const lipc::charbuf &bkt_name,
     return;
   }
   status.size_ = real_api->pread(fd,
-                                      full_blob.data(),
-                                      full_blob.size(),
-                                      opts.backend_off_);
+                                 full_blob.data(),
+                                 full_blob.size(),
+                                 opts.backend_off_);
   real_api->close(fd);
 }
 

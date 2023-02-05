@@ -64,8 +64,9 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
   (void) f;
   std::shared_ptr<hapi::Bucket> &bkt = stat.bkt_id_;
   std::string filename = bkt->GetName();
-  LOG(INFO) << "Write called for filename: " << filename << " on offset: "
-            << off << " and size: " << total_size << std::endl;
+  LOG(INFO) << "Write called for filename: " << filename
+            << " on offset: " << off
+            << " and size: " << total_size << std::endl;
 
   size_t ret;
   BlobPlacements mapping;
