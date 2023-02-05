@@ -66,6 +66,16 @@ class Bucket {
   size_t GetSize(IoClientContext opts = IoClientContext());
 
   /**
+   * Lock the bucket
+   * */
+  void LockBucket(MdLockType lock_type);
+
+  /**
+   * Unlock the bucket
+   * */
+  void UnlockBucket(MdLockType lock_type);
+
+  /**
    * Rename this bucket
    * */
   void Rename(std::string new_bkt_name);
@@ -95,6 +105,16 @@ class Bucket {
    * @return The Status of the operation
    * */
   Status GetBlobId(std::string blob_name, BlobId &blob_id);
+
+  /**
+   * Lock the blob
+   * */
+  void LockBlob(BlobId blob_id, MdLockType lock_type);
+
+  /**
+   * Unlock the blob
+   * */
+  void UnlockBlob(BlobId blob_id, MdLockType lock_type);
 
   /**
    * Put \a blob_name Blob into the bucket

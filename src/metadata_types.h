@@ -20,14 +20,23 @@
 namespace hermes {
 
 using adapter::GlobalIoClientState;
-using api::Blob;
-struct BucketInfo;     /** Forward declaration of BucketInfo */
-struct BlobInfo;       /** Forward declaration of BlobInfo */
-struct VBucketInfo;    /** Forward declaration of VBucketInfo */
+using api::Blob;       /**< Namespace simplification for blob */
+struct BucketInfo;     /**< Forward declaration of BucketInfo */
+struct BlobInfo;       /**< Forward declaration of BlobInfo */
+struct VBucketInfo;    /**< Forward declaration of VBucketInfo */
 
-/** Device information required by other processes */
+/** Device information (e.g., path) */
 using config::DeviceInfo;
+/** I/O interface to use for BORG (e.g., POSIX) */
 using config::IoInterface;
+
+/** Lock type used for internal metadata */
+enum class MdLockType {
+  kInternalRead,    /**< Internal read lock used by Hermes */
+  kInternalWrite,   /**< Internal write lock by Hermes */
+  kExternalRead,    /**< External is used by programs */
+  kExternalWrite,   /**< External is used by programs */
+};
 
 /** Represents the current status of a target */
 struct TargetInfo {
@@ -104,7 +113,7 @@ struct ShmHeader<BlobInfo> : public lipc::ShmBaseHeader {
   lipc::TypedPointer<lipc::vector<BufferInfo>>
       buffers_ar_;     /**< SHM pointer to BufferInfo vector */
   size_t blob_size_;   /**< The overall size of the blob */
-  RwLock rwlock_;      /**< Ensures BlobInfo access is synchronized */
+  RwLock lock_[2];     /**< Ensures BlobInfo access is synchronized */
 
   /** Default constructor */
   ShmHeader() = default;
@@ -113,15 +122,13 @@ struct ShmHeader<BlobInfo> : public lipc::ShmBaseHeader {
   ShmHeader(const ShmHeader &other) noexcept
       : bkt_id_(other.bkt_id_), name_ar_(other.name_ar_),
         buffers_ar_(other.buffers_ar_),
-        blob_size_(other.blob_size_),
-        rwlock_() {}
+        blob_size_(other.blob_size_) {}
 
   /** Move constructor */
   ShmHeader(ShmHeader &&other) noexcept
   : bkt_id_(std::move(other.bkt_id_)), name_ar_(std::move(other.name_ar_)),
     buffers_ar_(std::move(other.buffers_ar_)),
-    blob_size_(other.blob_size_),
-    rwlock_() {}
+    blob_size_(other.blob_size_) {}
 
   /** Copy assignment */
   ShmHeader& operator=(const ShmHeader &other) {
@@ -226,10 +233,53 @@ struct BlobInfo : public lipc::ShmContainer {
 /** Represents BucketInfo in shared memory */
 template<>
 struct ShmHeader<BucketInfo> : public lipc::ShmBaseHeader {
+  /** Name of the bucket */
   lipc::TypedPointer<lipc::string> name_ar_;
+  /** Archive of blob vector */
   lipc::TypedPointer<lipc::vector<BlobId>> blobs_ar_;
-  size_t internal_size_;
+  size_t internal_size_;  /**< Current bucket size */
+  /** State needed to be maintained for I/O clients */
   GlobalIoClientState client_state_;
+  RwLock lock_[2];     /**< Ensures BucketInfo access is synchronized */
+
+  /** Default constructor */
+  ShmHeader() = default;
+
+  /** Copy constructor */
+  ShmHeader(const ShmHeader &other) noexcept
+      : name_ar_(other.name_ar_),
+        blobs_ar_(other.blobs_ar_),
+        internal_size_(other.internal_size_),
+        client_state_(other.client_state_) {}
+
+  /** Move constructor */
+  ShmHeader(ShmHeader &&other) noexcept
+      : name_ar_(other.name_ar_),
+        blobs_ar_(other.blobs_ar_),
+        internal_size_(other.internal_size_),
+        client_state_(other.client_state_) {}
+
+  /** Copy assignment */
+  ShmHeader& operator=(const ShmHeader &other) {
+    if (this != &other) {
+      name_ar_ = other.name_ar_;
+      blobs_ar_ = other.blobs_ar_;
+      internal_size_ = other.internal_size_;
+      client_state_ = other.client_state_;
+    }
+    return *this;
+  }
+
+  /** Move assignment */
+  ShmHeader& operator=(ShmHeader &&other) {
+    if (this != &other) {
+      name_ar_ = other.name_ar_;
+      blobs_ar_ = other.blobs_ar_;
+      internal_size_ = other.internal_size_;
+      client_state_ = other.client_state_;
+    }
+    return *this;
+  }
 };
 
 /** Metadata for a Bucket */
@@ -293,8 +343,40 @@ struct BucketInfo : public lipc::ShmContainer {
 /** Represents a VBucket in shared memory */
 template<>
 struct ShmHeader<VBucketInfo> : public lipc::ShmBaseHeader {
-  lipc::TypedPointer<lipc::charbuf> name_;
-  lipc::TypedPointer<lipc::unordered_map<BlobId, BlobId>> blobs_;
+  lipc::TypedPointer<lipc::charbuf> name_ar_;
+  lipc::TypedPointer<lipc::unordered_map<BlobId, BlobId>> blobs_ar_;
+  RwLock lock_;
+
+  /** Default constructor */
+  ShmHeader() = default;
+
+  /** Copy constructor */
+  ShmHeader(const ShmHeader &other) noexcept
+      : name_ar_(other.name_ar_),
+        blobs_ar_(other.blobs_ar_) {}
+
+  /** Move constructor */
+  ShmHeader(ShmHeader &&other) noexcept
+      : name_ar_(other.name_ar_),
+        blobs_ar_(other.blobs_ar_) {}
+
+  /** Copy assignment */
+  ShmHeader& operator=(const ShmHeader &other) {
+    if (this != &other) {
+      name_ar_ = other.name_ar_;
+      blobs_ar_ = other.blobs_ar_;
+    }
+    return *this;
+  }
+
+  /** Move assignment */
+  ShmHeader& operator=(ShmHeader &&other) {
+    if (this != &other) {
+      name_ar_ = other.name_ar_;
+      blobs_ar_ = other.blobs_ar_;
+    }
+    return *this;
+  }
 };
 
 /** Metadata for a VBucket */
@@ -327,14 +409,14 @@ struct VBucketInfo : public lipc::ShmContainer {
 
   /** Serialize into SHM */
   void shm_serialize_main() const {
-    name_ >> header_->name_;
-    blobs_ >> header_->blobs_;
+    name_ >> header_->name_ar_;
+    blobs_ >> header_->blobs_ar_;
   }
 
   /** Deserialize from SHM */
   void shm_deserialize_main() {
-    name_ << header_->name_;
-    blobs_ << header_->blobs_;
+    name_ << header_->name_ar_;
+    blobs_ << header_->blobs_ar_;
   }
 
   /** Move other object into this one */

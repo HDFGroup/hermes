@@ -38,6 +38,20 @@ size_t Bucket::GetSize(IoClientContext opts) {
 }
 
 /**
+ * Lock the bucket
+ * */
+void Bucket::LockBucket(MdLockType lock_type) {
+  mdm_->LocalLockBucket(id_, lock_type);
+}
+
+/**
+ * Unlock the bucket
+ * */
+void Bucket::UnlockBucket(MdLockType lock_type) {
+  mdm_->LocalUnlockBucket(id_, lock_type);
+}
+
+/**
  * Rename this bucket
  * */
 void Bucket::Rename(std::string new_bkt_name) {
@@ -65,6 +79,19 @@ Status Bucket::GetBlobId(std::string blob_name,
   return Status();
 }
 
+/**
+ * Lock the bucket
+ * */
+void Bucket::LockBlob(BlobId blob_id, MdLockType lock_type) {
+  mdm_->LocalLockBlob(blob_id, lock_type);
+}
+
+/**
+ * Unlock the bucket
+ * */
+void Bucket::UnlockBlob(BlobId blob_id, MdLockType lock_type) {
+  mdm_->LocalUnlockBlob(blob_id, lock_type);
+}
 
 /**
  * Put \a blob_id Blob into the bucket

@@ -64,6 +64,8 @@ struct MetadataManagerShmHeader {
   lipc::TypedPointer<lipc::mptr<lipc::vector<TargetInfo>>> targets_;
   /// Used to create unique ids. Starts at 1.
   std::atomic<u64> id_alloc_;
+  /// Synchronization
+  RwLock lock_;
 };
 
 /**
@@ -157,13 +159,25 @@ class MetadataManager {
                                 const IoClientContext &opts);
 
   /**
+   * Lock the bucket
+   * */
+  RPC void LocalLockBucket(BucketId bkt_id,
+                           MdLockType lock_type);
+
+  /**
+   * Unlock the bucket
+   * */
+  RPC void LocalUnlockBucket(BucketId bkt_id,
+                             MdLockType lock_type);
+
+  /**
    * Check whether or not \a bkt_id bucket contains
    * \a blob_id blob
    *
    * @RPC_TARGET_NODE rpc_->node_id_
    * @RPC_CLASS_INSTANCE mdm
    * */
-  bool LocalBucketContainsBlob(BucketId bkt_id, BlobId blob_id);
+  RPC bool LocalBucketContainsBlob(BucketId bkt_id, BlobId blob_id);
 
   /**
    * Rename \a bkt_id bucket to \a new_bkt_name new name
@@ -236,6 +250,18 @@ class MetadataManager {
    * @RPC_CLASS_INSTANCE mdm
    * */
   RPC BlobId LocalGetBlobId(BucketId bkt_id, lipc::charbuf &blob_name);
+
+  /**
+   * Lock the blob
+   * */
+  RPC void LocalLockBlob(BlobId blob_id,
+                         MdLockType lock_type);
+
+  /**
+   * Unlock the blob
+   * */
+  RPC void LocalUnlockBlob(BlobId blob_id,
+                           MdLockType lock_type);
 
   /**
    * Get \a blob_id blob's buffers
@@ -354,6 +380,61 @@ class MetadataManager {
    * */
   lipc::vector<TargetInfo> GetGlobalTargetInfo() {
     return {};
+  }
+
+ private:
+  /** Acquire the external lock to Bucket or Blob */
+  template<typename MapFirst, typename MapSecond, typename IdT>
+  void LockMdObject(lipc::unordered_map<MapFirst, MapSecond> &map,
+                    IdT id,
+                    MdLockType lock_type) {
+    ScopedRwReadLock md_lock(lock_);
+    auto iter = map.find(id);
+    if (iter == map.end()) {
+      return;
+    }
+    lipc::ShmRef<lipc::pair<MapFirst, MapSecond>> info = *iter;
+    MapSecond &obj_info = *info->second_;
+    switch (lock_type) {
+      case MdLockType::kExternalRead: {
+        obj_info.header_->lock_[1].ReadLock();
+        return;
+      }
+      case MdLockType::kExternalWrite: {
+        obj_info.header_->lock_[1].WriteLock();
+        return;
+      }
+      default: {
+        return;
+      }
+    }
+  }
+
+  /** Release the external lock to Bucket or Blob */
+  template<typename MapFirst, typename MapSecond, typename IdT>
+  void UnlockMdObject(lipc::unordered_map<MapFirst, MapSecond> &map,
+                      IdT id,
+                      MdLockType lock_type) {
+    ScopedRwReadLock md_lock(lock_);
+    auto iter = map.find(id);
+    if (iter == map.end()) {
+      return;
+    }
+    lipc::ShmRef<lipc::pair<MapFirst, MapSecond>> info = *iter;
+    MapSecond &obj_info = *info->second_;
+    switch (lock_type) {
+      case MdLockType::kExternalRead: {
+        obj_info.header_->lock_[1].ReadLock();
+        return;
+      }
+      case MdLockType::kExternalWrite: {
+        obj_info.header_->lock_[1].WriteLock();
+        return;
+      }
+      default: {
+        return;
+      }
+    }
   }
 };
 
