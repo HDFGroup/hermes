@@ -37,6 +37,9 @@ void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
   FsIoOptions opts;
   opts.type_ = type_;
   stat.bkt_id_ = HERMES->GetBucket(path, ctx_, opts);
+  // TODO(llogan): can avoid two unordered_map queries here
+  stat.adapter_mode_ = mdm->GetAdapterMode(path);
+  stat.page_size_ = mdm->GetAdapterPageSize(path);
   std::shared_ptr<AdapterStat> exists = mdm->Find(f);
   if (!exists) {
     LOG(INFO) << "File not opened before by adapter" << std::endl;
@@ -66,10 +69,10 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
 
   size_t ret;
   BlobPlacements mapping;
-  auto mapper = MapperFactory().Get(MapperType::kBalancedMapper);
-  mapper->map(off, total_size, mapping);
+  size_t kPageSize = stat.page_size_;
   size_t data_offset = 0;
-  size_t kPageSize = HERMES->client_config_.file_page_size_;
+  auto mapper = MapperFactory().Get(MapperType::kBalancedMapper);
+  mapper->map(off, total_size, kPageSize, mapping);
 
   for (const auto &p : mapping) {
     const Blob blob_wrap((const char*)ptr + data_offset, p.blob_size_);
@@ -78,6 +81,7 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
     opts.type_ = type_;
     opts.backend_off_ = p.page_ * kPageSize;
     opts.backend_size_ = kPageSize;
+    opts.mode_ = stat.adapter_mode_;
     bkt->PartialPutOrCreate(blob_name.str(),
                             blob_wrap,
                             p.blob_off_,
@@ -104,10 +108,10 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
 
   size_t ret;
   BlobPlacements mapping;
-  auto mapper = MapperFactory().Get(MapperType::kBalancedMapper);
-  mapper->map(off, total_size, mapping);
+  size_t kPageSize = stat.page_size_;
   size_t data_offset = 0;
-  size_t kPageSize = HERMES->client_config_.file_page_size_;
+  auto mapper = MapperFactory().Get(MapperType::kBalancedMapper);
+  mapper->map(off, total_size, kPageSize, mapping);
 
   for (const auto &p : mapping) {
     Blob blob_wrap((const char*)ptr + data_offset, p.blob_size_);
@@ -116,6 +120,7 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
     opts.backend_off_ = p.page_ * kPageSize;
     opts.backend_size_ = kPageSize;
     opts.type_ = type_;
+    opts.mode_ = stat.adapter_mode_;
     bkt->PartialGetOrCreate(blob_name.str(),
                             blob_wrap,
                             p.blob_off_,
@@ -135,10 +140,9 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
 HermesRequest* Filesystem::AWrite(File &f, AdapterStat &stat, const void *ptr,
                                   size_t off, size_t total_size, size_t req_id,
                                   IoStatus &io_status, FsIoOptions opts) {
-  /*(void) io_status;
+  (void) io_status;
   LOG(INFO) << "Starting an asynchronous write" << std::endl;
-  auto pool =
-      Singleton<ThreadPool>::GetInstance(kNumThreads);
+  auto pool = HERMES_FS_THREAD_POOL;
   HermesRequest *hreq = new HermesRequest();
   auto lambda =
       [](Filesystem *fs, File &f, AdapterStat &stat, const void *ptr,
@@ -150,15 +154,14 @@ HermesRequest* Filesystem::AWrite(File &f, AdapterStat &stat, const void *ptr,
   hreq->return_future = pool->run(func);
   auto mdm = HERMES_FS_METADATA_MANAGER;
   mdm->request_map.emplace(req_id, hreq);
-  return hreq;*/
+  return hreq;/**/
 }
 
 HermesRequest* Filesystem::ARead(File &f, AdapterStat &stat, void *ptr,
                                  size_t off, size_t total_size, size_t req_id,
                                  IoStatus &io_status, FsIoOptions opts) {
-  /*(void) io_status;
-  auto pool =
-      Singleton<ThreadPool>::GetInstance(kNumThreads);
+  (void) io_status;
+  auto pool = HERMES_FS_THREAD_POOL;
   HermesRequest *hreq = new HermesRequest();
   auto lambda =
       [](Filesystem *fs, File &f, AdapterStat &stat, void *ptr,
@@ -170,11 +173,11 @@ HermesRequest* Filesystem::ARead(File &f, AdapterStat &stat, void *ptr,
   hreq->return_future = pool->run(func);
   auto mdm = HERMES_FS_METADATA_MANAGER;
   mdm->request_map.emplace(req_id, hreq);
-  return hreq;*/
+  return hreq;
 }
 
 size_t Filesystem::Wait(uint64_t req_id) {
-  /*auto mdm = HERMES_FS_METADATA_MANAGER;
+  auto mdm = HERMES_FS_METADATA_MANAGER;
   auto req_iter = mdm->request_map.find(req_id);
   if (req_iter == mdm->request_map.end()) {
     return 0;
@@ -182,8 +185,7 @@ size_t Filesystem::Wait(uint64_t req_id) {
   HermesRequest *req = (*req_iter).second;
   size_t ret = req->return_future.get();
   delete req;
-  return ret;*/
-  return 0;
+  return ret;
 }
 
 void Filesystem::Wait(std::vector<uint64_t> &req_ids,

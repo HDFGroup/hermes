@@ -49,7 +49,7 @@ int StdioIoClient::RealSync(const IoClientObject &f,
 
 /** Close \a file FILE f */
 int StdioIoClient::RealClose(const IoClientObject &f,
-                             const IoClientStats &stat) {
+                             IoClientStats &stat) {
   return real_api->fclose(stat.fh_);
 }
 

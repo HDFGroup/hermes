@@ -98,7 +98,7 @@ class FilesystemIoClient : public IoClient {
 
   /** real close */
   virtual int RealClose(const IoClientObject &f,
-                        const IoClientStats &stat) = 0;
+                        IoClientStats &stat) = 0;
 
   /**
    * Called before RealClose. Releases information provisioned during

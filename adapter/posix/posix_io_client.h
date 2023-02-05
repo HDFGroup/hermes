@@ -60,7 +60,7 @@ class PosixIoClient : public hermes::adapter::fs::FilesystemIoClient {
 
   /** Close \a file FILE f */
   int RealClose(const IoClientObject &f,
-                const IoClientStats &stat) override;
+                IoClientStats &stat) override;
 
   /**
    * Called before RealClose. Releases information provisioned during

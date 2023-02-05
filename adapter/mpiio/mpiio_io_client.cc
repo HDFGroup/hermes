@@ -43,7 +43,7 @@ int MpiioIoClient::RealSync(const IoClientObject &f,
 
 /** Close \a file FILE f */
 int MpiioIoClient::RealClose(const IoClientObject &f,
-                             const IoClientStats &stat) {
+                             IoClientStats &stat) {
   return real_api->MPI_File_close(&stat.mpi_fh_);
 }
 

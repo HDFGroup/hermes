@@ -50,6 +50,10 @@ struct AdapterStat : public IoClientStats {
   std::shared_ptr<hapi::Bucket> bkt_id_; /**< bucket associated with the file */
   /** VBucket for persisting data asynchronously. */
   std::shared_ptr<hapi::VBucket> vbkt_id_;
+  /** Page size used for file */
+  size_t page_size_;
+  /** Mode used for adapter */
+  AdapterMode adapter_mode_;
 
   /** Default constructor. */
   AdapterStat()
@@ -70,6 +74,8 @@ struct AdapterStat : public IoClientStats {
  * For now, nothing additional than the typical IoClientContext.
  * */
 struct FsIoOptions : public IoClientContext {
+  AdapterMode mode_;  /**< Mode used for the adapter */
+
   /** Default constructor */
   FsIoOptions() : IoClientContext() {
     flags_.SetBits(HERMES_FS_SEEK);
@@ -240,7 +246,7 @@ class Filesystem {
   }
 
   /** real close */
-  int RealClose(const IoClientObject &f, const AdapterStat &stat) {
+  int RealClose(const IoClientObject &f, AdapterStat &stat) {
     return io_client_->RealClose(f, stat);
   }
 
@@ -251,20 +257,14 @@ class Filesystem {
       return false;
     }
     std::string abs_path = stdfs::weakly_canonical(path).string();
-    auto &path_inclusions = HERMES->client_config_.path_inclusions_;
-    auto &path_exclusions = HERMES->client_config_.path_exclusions_;
-    // Check if path is included
-    for (const std::string &pth : path_inclusions) {
-      if (abs_path.rfind(pth) != std::string::npos) {
-        return true;
+    auto &paths = HERMES->client_config_.path_list_;
+    // Check if path is included or excluded
+    for (std::pair<std::string, bool> &pth : paths) {
+      if (abs_path.rfind(pth.first) != std::string::npos) {
+        return pth.second;
       }
     }
-    // Check if path is excluded
-    for (const std::string &pth : path_exclusions) {
-      if (abs_path.rfind(pth) != std::string::npos) {
-        return false;
-      }
-    }
+    // Assume it is excluded
     return false;
   }
 };

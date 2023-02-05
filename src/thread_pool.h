@@ -24,6 +24,15 @@ namespace hermes {
    A class to represent thread pool
  */
 class ThreadPool {
+ private:
+  std::vector<std::thread> threads; /**< a vector of threads */
+  /** high-priority  queue */
+  mutable std::queue<std::packaged_task<void()>> queue_low;
+  /** low-priority queue */
+  mutable std::queue<std::packaged_task<void()>> queue_high;
+  mutable std::mutex mutex;                /**< mutex lock */
+  mutable std::condition_variable condvar; /**< conditional variable */
+
  public:
   /** construct thread pool with \a num_threads number of threads */
   explicit ThreadPool(
@@ -90,15 +99,6 @@ class ThreadPool {
       thread.join();
     }
   }
-
- private:
-  std::vector<std::thread> threads; /**< a vector of threads */
-  /** high-priority  queue */
-  mutable std::queue<std::packaged_task<void()>> queue_low;
-  /** low-priority queue */
-  mutable std::queue<std::packaged_task<void()>> queue_high;
-  mutable std::mutex mutex;                /**< mutex lock */
-  mutable std::condition_variable condvar; /**< conditional variable */
 };
 }  // namespace hermes
 #endif  // HERMES_THREAD_POOL_H_

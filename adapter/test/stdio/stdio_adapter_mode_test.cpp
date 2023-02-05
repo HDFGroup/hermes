@@ -19,12 +19,15 @@
 #include <iostream>
 
 #if HERMES_INTERCEPT == 1
-#include "stdio/real_api.h"
+#include "stdio/stdio_api.h"
 #endif
 
 #include "adapter_test_utils.h"
+#include "adapter_types.h"
+#include "hermes.h"
 
 namespace stdfs = std::filesystem;
+using hermes::adapter::AdapterMode;
 
 namespace hermes::adapter::stdio::test {
 struct Arguments {
@@ -66,8 +69,8 @@ int init(int* argc, char*** argv) {
       fullpath.string() + "_ext_cmp" + std::to_string(getpid());
   char* set_path = getenv("SET_PATH");
   if (set_path && strcmp(set_path, "1") == 0) {
-    auto paths = info.new_file + "," + info.existing_file;
-    setenv(kAdapterModeInfo, paths.c_str(), 1);
+    HERMES->client_config_.SetAdapterPathTracking(info.new_file, false);
+    HERMES->client_config_.SetAdapterPathTracking(info.existing_file, false);
   }
   MPI_Init(argc, argv);
   info.write_data = GenRandom(args.request_size);
@@ -259,10 +262,7 @@ TEST_CASE("BatchedWriteSequentialPersistent",
               std::to_string(info.num_iterations) +
               "]"
               "[pattern=sequential][file=1]") {
-  char* adapter_mode = getenv(kAdapterMode);
-  REQUIRE(adapter_mode != nullptr);
-  bool is_same = strcmp(kAdapterDefaultMode, adapter_mode) == 0;
-  REQUIRE(is_same);
+  REQUIRE(HERMES->client_config_.GetBaseAdapterMode() == AdapterMode::kDefault);
   pretest();
   SECTION("write to new file always at end") {
     test::test_fopen(info.new_file.c_str(), "w+");
@@ -289,10 +289,7 @@ TEST_CASE("BatchedWriteSequentialBypass",
               std::to_string(info.num_iterations) +
               "]"
               "[pattern=sequential][file=1]") {
-  char* adapter_mode = getenv(kAdapterMode);
-  REQUIRE(adapter_mode != nullptr);
-  bool is_same = strcmp(kAdapterBypassMode, adapter_mode) == 0;
-  REQUIRE(is_same);
+  REQUIRE(HERMES->client_config_.GetBaseAdapterMode() == AdapterMode::kBypass);
   pretest();
   SECTION("write to new file always at end") {
     test::test_fopen(info.new_file.c_str(), "w+");
@@ -319,10 +316,7 @@ TEST_CASE("BatchedWriteSequentialScratch",
               std::to_string(info.num_iterations) +
               "]"
               "[pattern=sequential][file=1]") {
-  char* adapter_mode = getenv(kAdapterMode);
-  REQUIRE(adapter_mode != nullptr);
-  bool is_same = strcmp(kAdapterScratchMode, adapter_mode) == 0;
-  REQUIRE(is_same);
+  REQUIRE(HERMES->client_config_.GetBaseAdapterMode() == AdapterMode::kScratch);
   pretest();
   SECTION("write to new file always at end") {
     test::test_fopen(info.new_file.c_str(), "w+");

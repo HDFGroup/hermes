@@ -13,13 +13,13 @@ function(gcc exec args)
 endfunction()
 
 function(mpi exec mpi_proc args)
-#    add_test(NAME Test${exec}_${mpi_proc}
-#            COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${mpi_proc}
-#            "${CMAKE_BINARY_DIR}/bin/${exec}" ${args} -d yes)
-#    set_property(TEST Test${exec}_${mpi_proc}
-#            PROPERTY ENVIRONMENT HERMES_CONF=${CMAKE_SOURCE_DIR}/adapter/test/data/hermes.yaml)
-#    set_property(TEST Test${exec}_${mpi_proc} APPEND
-#            PROPERTY ENVIRONMENT LSAN_OPTIONS=suppressions=${CMAKE_SOURCE_DIR}/test/data/asan.supp)
+    add_test(NAME Test${exec}_${mpi_proc}
+            COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${mpi_proc}
+            "${CMAKE_BINARY_DIR}/bin/${exec}" ${args} -d yes)
+    set_property(TEST Test${exec}_${mpi_proc}
+            PROPERTY ENVIRONMENT HERMES_CONF=${CMAKE_SOURCE_DIR}/adapter/test/data/hermes.yaml)
+    set_property(TEST Test${exec}_${mpi_proc} APPEND
+            PROPERTY ENVIRONMENT LSAN_OPTIONS=suppressions=${CMAKE_SOURCE_DIR}/test/data/asan.supp)
 endfunction()
 
 find_program(BASH_PROGRAM bash)
@@ -41,7 +41,7 @@ endfunction()
 enable_testing()
 
 if(HERMES_ENABLE_STDIO_ADAPTER)
-  # add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/stdio)
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/stdio)
 endif()
 
 if(HERMES_ENABLE_POSIX_ADAPTER)

@@ -52,7 +52,7 @@ int PosixIoClient::RealSync(const IoClientObject &f,
 
 /** Close \a file FILE f */
 int PosixIoClient::RealClose(const IoClientObject &f,
-                             const IoClientStats &stat) {
+                             IoClientStats &stat) {
   (void) f;
   return real_api->close(stat.fd_);
 }

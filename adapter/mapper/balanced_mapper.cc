@@ -20,11 +20,13 @@ namespace hermes::adapter {
  * Convert a range defined by \a off and \a size into specific
  * blob placements.
  */
-void BalancedMapper::map(size_t off, size_t size, BlobPlacements &ps) {
+void BalancedMapper::map(size_t off, size_t size,
+                         size_t page_size,
+                         BlobPlacements &ps) {
   VLOG(1) << "Mapping File with offset:" << off << " and size:" << size << "."
           << std::endl;
 
-  size_t kPageSize = HERMES->client_config_.file_page_size_;
+  size_t kPageSize = page_size;
   size_t size_mapped = 0;
   while (size > size_mapped) {
     BlobPlacement p;

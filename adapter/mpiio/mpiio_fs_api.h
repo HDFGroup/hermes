@@ -39,6 +39,19 @@ class MpiioFs : public Filesystem {
       : Filesystem(HERMES_MPIIO_IO_CLIENT,
                    AdapterType::kMpiio) {}
 
+  inline bool IsMpiFpTracked(MPI_File *fh, std::shared_ptr<AdapterStat> &stat) {
+    auto mdm = HERMES_FS_METADATA_MANAGER;
+    if (fh == nullptr) { return false; }
+    File f; f.hermes_mpi_fh_ = (*fh);
+    stat = mdm->Find(f);
+    return stat != nullptr;
+  }
+
+  inline bool IsMpiFpTracked(MPI_File *fh) {
+    std::shared_ptr<AdapterStat> stat;
+    return IsMpiFpTracked(fh, stat);
+  }
+
   int Read(File &f, AdapterStat &stat, void *ptr, size_t offset, int count,
            MPI_Datatype datatype, MPI_Status *status, FsIoOptions opts) {
     opts.mpi_type_ = datatype;
@@ -127,7 +140,8 @@ class MpiioFs : public Filesystem {
                     MPI_Datatype datatype, MPI_Request *request,
                     FsIoOptions opts) {
     LOG(INFO) << "Starting an asynchronous write" << std::endl;
-    auto pool = Singleton<ThreadPool>::GetInstance();
+    auto mdm = HERMES_FS_METADATA_MANAGER;
+    auto pool = HERMES_FS_THREAD_POOL;
     HermesRequest *hreq = new HermesRequest();
     auto lambda = [](MpiioFs *fs, File &f, AdapterStat &stat, const void *ptr,
                      int count, MPI_Datatype datatype, MPI_Status *status,
@@ -138,13 +152,13 @@ class MpiioFs : public Filesystem {
     auto func = std::bind(lambda, this, f, stat, ptr, count, datatype,
                           &hreq->io_status.mpi_status_, opts);
     hreq->return_future = pool->run(func);
-    auto mdm = HERMES_FS_METADATA_MANAGER;
     mdm->request_map.emplace(reinterpret_cast<size_t>(request), hreq);
     return MPI_SUCCESS;
   }
 
   int Wait(MPI_Request *req, MPI_Status *status) {
     auto mdm = HERMES_FS_METADATA_MANAGER;
+    auto real_api = HERMES_MPIIO_API;
     auto iter = mdm->request_map.find(reinterpret_cast<size_t>(req));
     if (iter != mdm->request_map.end()) {
       HermesRequest *hreq = iter->second;

@@ -15,21 +15,12 @@
 
 #include <mpi.h>
 #include "hermes_types.h"
+#include "adapter/adapter_types.h"
 #include <future>
 
 namespace hapi = hermes::api;
 
 namespace hermes::adapter {
-
-/** Adapter types */
-enum class AdapterType {
-  kNone,
-  kPosix,
-  kStdio,
-  kMpiio,
-  kPubsub,
-  kVfd
-};
 
 /** Represents an object in the I/O client (e.g., a file) */
 struct IoClientObject {

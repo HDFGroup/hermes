@@ -20,7 +20,7 @@
 #include "adapter_test_utils.h"
 #include "catch_config.h"
 #if HERMES_INTERCEPT == 1
-#include "stdio/real_api.h"
+#include "stdio/stdio_api.h"
 #endif
 
 namespace stdfs = std::filesystem;

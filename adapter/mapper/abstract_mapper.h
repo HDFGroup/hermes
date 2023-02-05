@@ -60,10 +60,12 @@ class AbstractMapper {
    *
    * @param off offset
    * @param size size
+   * @param page_size the page division factor
    * @param ps BLOB placement
    *
    */
-  virtual void map(size_t off, size_t size, BlobPlacements &ps) = 0;
+  virtual void map(size_t off, size_t size, size_t page_size,
+                   BlobPlacements &ps) = 0;
 };
 }  // namespace hermes::adapter
 
