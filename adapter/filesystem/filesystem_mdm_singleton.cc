@@ -13,6 +13,5 @@
 #include "singleton.h"
 
 #include "filesystem_mdm.h"
-template<> hermes::adapter::fs::MetadataManager
-hermes::GlobalSingleton<hermes::adapter::fs::MetadataManager>::obj_ =
-        hermes::adapter::fs::MetadataManager();
+template<> std::unique_ptr<hermes::adapter::fs::MetadataManager>
+hermes::Singleton<hermes::adapter::fs::MetadataManager>::obj_ = nullptr;

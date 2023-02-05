@@ -95,7 +95,7 @@ class MetadataManager {
 #include "singleton.h"
 
 #define HERMES_FS_METADATA_MANAGER \
-  hermes::GlobalSingleton<hermes::adapter::fs::MetadataManager>::GetInstance()
+  hermes::Singleton<hermes::adapter::fs::MetadataManager>::GetInstance()
 #define HERMES_FS_METADATA_MANAGER_T hermes::adapter::fs::MetadataManager*
 
 #define HERMES_FS_THREAD_POOL \

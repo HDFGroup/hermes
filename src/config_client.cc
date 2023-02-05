@@ -61,9 +61,9 @@ void ClientConfig::ParseYAML(YAML::Node &yaml_conf) {
     }
   }
   if (yaml_conf["file_adapter_configs"]) {
-    for (auto node : yaml_conf["file_adapter_modes"]) {
+    for (auto node : yaml_conf["file_adapter_configs"]) {
       AdapterObjectConfig conf(base_adapter_config_);
-      ParseAdapterConfig(node.second, conf);
+      ParseAdapterConfig(node, conf);
     }
   }
 }

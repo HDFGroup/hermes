@@ -1,4 +1,9 @@
 stop_daemon: true
-file_page_size: 1024KB
 path_inclusions: ["/home"]
-path_exclusions: []
+path_exclusions: ["/"]
+file_page_size: 1024KB
+base_adapter_mode: kDefault
+file_adapter_configs:
+  - path: "/"
+    page_size: 1MB
+    mode: kDefault
