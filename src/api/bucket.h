@@ -104,7 +104,16 @@ class Bucket {
    * @param blob_id (output) the returned blob_id
    * @return The Status of the operation
    * */
-  Status GetBlobId(std::string blob_name, BlobId &blob_id);
+  Status GetBlobId(const std::string &blob_name, BlobId &blob_id);
+
+  /**
+   * Get the name of a blob from the blob id
+   *
+   * @param blob_id the blob_id
+   * @param blob_name the name of the blob
+   * @return The Status of the operation
+   * */
+  Status GetBlobName(const BlobId &blob_id, std::string &blob_name);
 
   /**
    * Lock the blob
@@ -174,12 +183,13 @@ class Bucket {
   /**
    * Flush a blob
    * */
-  void FlushBlob(BlobId blob_id);
+  void FlushBlob(BlobId blob_id,
+                 const IoClientContext &opts);
 
   /**
    * Flush the entire bucket
    * */
-  void FlushBucket();
+  void Flush(const IoClientContext &opts);
 
   /**
    * Determine if the bucket contains \a blob_id BLOB
@@ -200,7 +210,14 @@ class Bucket {
   /**
    * Delete \a blob_id blob
    * */
-  void DestroyBlob(BlobId blob_id, Context &ctx);
+  void DestroyBlob(BlobId blob_id, Context &ctx,
+                   IoClientContext opts = IoClientContext());
+
+ private:
+  /**
+   * Get the set of blob IDs contained in the bucket
+   * */
+  std::vector<BlobId> GetContainedBlobIds();
 };
 
 }  // namespace hermes::api

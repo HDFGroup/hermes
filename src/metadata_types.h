@@ -236,7 +236,7 @@ struct ShmHeader<BucketInfo> : public lipc::ShmBaseHeader {
   /** Name of the bucket */
   lipc::TypedPointer<lipc::string> name_ar_;
   /** Archive of blob vector */
-  lipc::TypedPointer<lipc::vector<BlobId>> blobs_ar_;
+  lipc::TypedPointer<lipc::list<BlobId>> blobs_ar_;
   size_t internal_size_;  /**< Current bucket size */
   /** State needed to be maintained for I/O clients */
   GlobalIoClientState client_state_;
@@ -289,6 +289,7 @@ struct BucketInfo : public lipc::ShmContainer {
 
  public:
   lipc::mptr<lipc::string> name_; /**< The name of the bucket */
+  lipc::mptr<lipc::list<BlobId>> blobs_;  /**< All blobs in this Bucket */
 
  public:
   /** Default constructor */
@@ -300,6 +301,7 @@ struct BucketInfo : public lipc::ShmContainer {
     shm_init_allocator(alloc);
     shm_init_header(header);
     name_ = lipc::make_mptr<lipc::string>(alloc);
+    blobs_ = lipc::make_mptr<lipc::list<BlobId>>(alloc);
   }
 
   /** Destroy all allocated data */
@@ -310,11 +312,13 @@ struct BucketInfo : public lipc::ShmContainer {
   /** Serialize pointers */
   void shm_serialize_main() const {
     name_ >> header_->name_ar_;
+    blobs_ >> header_->blobs_ar_;
   }
 
   /** Deserialize pointers */
   void shm_deserialize_main() {
     name_ << header_->name_ar_;
+    blobs_ << header_->blobs_ar_;
   }
 
   /** Move other object into this one */
@@ -325,6 +329,7 @@ struct BucketInfo : public lipc::ShmContainer {
     shm_init_header(header);
     (*header_) = (*other.header_);
     (*name_) = (*other.name_);
+    (*blobs_) = (*other.blobs_);
     shm_serialize_main();
   }
 
@@ -336,6 +341,7 @@ struct BucketInfo : public lipc::ShmContainer {
     shm_init_header(header);
     (*header_) = (*other.header_);
     (*name_) = (*other.name_);
+    (*blobs_) = (*other.blobs_);
     shm_serialize_main();
   }
 };

@@ -72,12 +72,26 @@ void Bucket::Destroy() {
 /**
  * Get the id of a blob from the blob name
  * */
-Status Bucket::GetBlobId(std::string blob_name,
+Status Bucket::GetBlobId(const std::string &blob_name,
                          BlobId &blob_id) {
   lipc::string lblob_name(blob_name);
   blob_id = mdm_->LocalGetBlobId(GetId(), lblob_name);
   return Status();
 }
+
+/**
+ * Get the name of a blob from the blob id
+ *
+ * @param blob_id the blob_id
+ * @param blob_name the name of the blob
+ * @return The Status of the operation
+ * */
+Status Bucket::GetBlobName(const BlobId &blob_id, std::string &blob_name) {
+  lipc::string lblob_name(blob_name);
+  blob_name = mdm_->LocalGetBlobName(blob_id);
+  return Status();
+}
+
 
 /**
  * Lock the bucket
@@ -237,6 +251,38 @@ Status Bucket::PartialGetOrCreate(const std::string &blob_name,
 }
 
 /**
+ * Flush a blob
+ * */
+void Bucket::FlushBlob(BlobId blob_id,
+                       const IoClientContext &opts) {
+  Blob full_blob;
+  IoStatus status;
+  // Read blob from Hermes
+  Get(blob_id, full_blob, ctx_);
+  std::string blob_name;
+  GetBlobName(blob_id, blob_name);
+  // Write blob to backend
+  auto io_client = IoClientFactory::Get(opts.type_);
+  if (io_client) {
+    IoClientContext decode_opts = io_client->DecodeBlobName(opts, blob_name);
+    io_client->WriteBlob(lipc::charbuf(name_),
+                         full_blob,
+                         decode_opts,
+                         status);
+  }
+}
+
+/**
+ * Flush the entire bucket
+ * */
+void Bucket::Flush(const IoClientContext &opts) {
+  std::vector<BlobId> blob_ids = GetContainedBlobIds();
+  for (BlobId &blob_id : blob_ids) {
+    FlushBlob(blob_id, opts);
+  }
+}
+
+/**
  * Determine if the bucket contains \a blob_id BLOB
  * */
 bool Bucket::ContainsBlob(const std::string &blob_name,
@@ -265,8 +311,17 @@ void Bucket::RenameBlob(BlobId blob_id,
 /**
  * Delete \a blob_id blob
  * */
-void Bucket::DestroyBlob(BlobId blob_id, Context &ctx) {
+void Bucket::DestroyBlob(BlobId blob_id, Context &ctx,
+                         IoClientContext opts) {
+  mdm_->LocalBucketUnregisterBlobId(id_, blob_id, opts);
   mdm_->LocalDestroyBlob(id_, blob_id);
+}
+
+/**
+   * Get the set of blob IDs contained in the bucket
+   * */
+std::vector<BlobId> Bucket::GetContainedBlobIds() {
+  return mdm_->LocalBucketGetContainedBlobIds(id_);
 }
 
 }  // namespace hermes::api

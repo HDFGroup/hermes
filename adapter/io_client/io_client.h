@@ -161,11 +161,16 @@ class IoClient {
                                GlobalIoClientState &stat) = 0;
 
   /**
-   * What the statistics would be if all blobs were flushed from Hermes
-   * to the backing storage system.
+   * How to update the backend when registering a blob
    * */
-  virtual void UpdateBucketState(const IoClientContext &opts,
-                                 GlobalIoClientState &stat) = 0;
+  virtual void RegisterBlob(const IoClientContext &opts,
+                            GlobalIoClientState &stat) = 0;
+
+  /**
+   * How to update the backend when unregistering a blob
+   * */
+  virtual void UnregisterBlob(const IoClientContext &opts,
+                              GlobalIoClientState &stat) = 0;
 
   /** Write blob to backend */
   virtual void WriteBlob(const lipc::charbuf &bkt_name,
@@ -178,6 +183,10 @@ class IoClient {
                         Blob &full_blob,
                         const IoClientContext &opts,
                         IoStatus &status) = 0;
+
+  /** Decode I/O client context from the blob name */
+  virtual IoClientContext DecodeBlobName(const IoClientContext &opts,
+                                         const std::string &blob_name) = 0;
 };
 
 }  // namespace hermes::adapter

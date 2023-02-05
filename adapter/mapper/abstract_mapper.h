@@ -46,6 +46,11 @@ struct BlobPlacement {
   void DecodeBlobName(const lipc::charbuf &blob_name) {
     memcpy(&page_, blob_name.data(), sizeof(page_));
   }
+
+  /** decode \a blob_name BLOB name to index.  */
+  void DecodeBlobName(const std::string &blob_name) {
+    memcpy(&page_, blob_name.data(), sizeof(page_));
+  }
 };
 
 typedef std::vector<BlobPlacement> BlobPlacements;

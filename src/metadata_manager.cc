@@ -110,9 +110,6 @@ void MetadataManager::shm_deserialize(MetadataManagerShmHeader *header) {
 
 /**
  * Get or create a bucket with \a bkt_name bucket name
- *
- * @RPC_TARGET_NODE rpc_->node_id_
- * @RPC_CLASS_INSTANCE mdm
  * */
 BucketId MetadataManager::LocalGetOrCreateBucket(
     lipc::charbuf &bkt_name,
@@ -151,9 +148,6 @@ BucketId MetadataManager::LocalGetOrCreateBucket(
 
 /**
  * Get the BucketId with \a bkt_name bucket name
- *
- * @RPC_TARGET_NODE rpc_->node_id_
- * @RPC_CLASS_INSTANCE mdm
  * */
 BucketId MetadataManager::LocalGetBucketId(lipc::charbuf &bkt_name) {
   // Acquire MD read lock (reading bkt_id_map)
@@ -170,9 +164,6 @@ BucketId MetadataManager::LocalGetBucketId(lipc::charbuf &bkt_name) {
 /**
  * Get the size of the bucket. May consider the impact the bucket has
  * on the backing storage system's statistics using the io_ctx.
- *
- * @RPC_TARGET_NODE rpc_->node_id_
- * @RPC_CLASS_INSTANCE mdm
  * */
 size_t MetadataManager::LocalGetBucketSize(BucketId bkt_id,
                                            const IoClientContext &opts) {
@@ -211,9 +202,6 @@ RPC void MetadataManager::LocalUnlockBucket(BucketId blob_id,
 /**
  * Check whether or not \a bkt_id bucket contains
  * \a blob_id blob
- *
- * @RPC_TARGET_NODE rpc_->node_id_
- * @RPC_CLASS_INSTANCE mdm
  * */
 bool MetadataManager::LocalBucketContainsBlob(BucketId bkt_id,
                                               BlobId blob_id) {
@@ -230,10 +218,28 @@ bool MetadataManager::LocalBucketContainsBlob(BucketId bkt_id,
 }
 
 /**
+ * Get the set of all blobs contained in \a bkt_id BUCKET
+ * */
+std::vector<BlobId>
+MetadataManager::LocalBucketGetContainedBlobIds(BucketId bkt_id) {
+  // Acquire MD read lock (reading bkt_map_)
+  ScopedRwReadLock md_lock(lock_);
+  std::vector<BlobId> blob_ids;
+  auto iter = bkt_map_->find(bkt_id);
+  if (iter == bkt_map_->end()) {
+    return blob_ids;
+  }
+  lipc::ShmRef<lipc::pair<BucketId, BucketInfo>> info = *iter;
+  BucketInfo &bkt_info = *info->second_;
+  blob_ids.resize(bkt_info.blobs_->size());
+  for (lipc::ShmRef<BlobId> blob_id : *bkt_info.blobs_) {
+    blob_ids.emplace_back(*blob_id);
+  }
+  return blob_ids;
+}
+
+/**
  * Rename \a bkt_id bucket to \a new_bkt_name new name
- *
- * @RPC_TARGET_NODE rpc_->node_id_
- * @RPC_CLASS_INSTANCE mdm
  * */
 bool MetadataManager::LocalRenameBucket(BucketId bkt_id,
                                         lipc::charbuf &new_bkt_name) {
@@ -252,9 +258,6 @@ bool MetadataManager::LocalRenameBucket(BucketId bkt_id,
 
 /**
  * Destroy \a bkt_id bucket
- *
- * @RPC_TARGET_NODE rpc_->node_id_
- * @RPC_CLASS_INSTANCE mdm
  * */
 bool MetadataManager::LocalDestroyBucket(BucketId bkt_id) {
   // Acquire MD write lock (modifying bkt_map_)
@@ -279,26 +282,54 @@ Status MetadataManager::LocalBucketRegisterBlobId(
   }
   lipc::ShmRef<lipc::pair<BucketId, BucketInfo>> info = (*iter);
   BucketInfo &bkt_info = *info->second_;
-  // Acquire BktInfo Write Lock (modifying)
+  // Acquire BktInfo Write Lock (modifying bkt_info)
   ScopedRwWriteLock info_lock(bkt_info.header_->lock_[0]);
   // Update I/O client bucket stats
   auto io_client = IoClientFactory::Get(opts.type_);
   if (io_client) {
-    io_client->UpdateBucketState(opts, bkt_info.header_->client_state_);
+    io_client->RegisterBlob(opts, bkt_info.header_->client_state_);
   }
   // Update internal bucket size
   bkt_info.header_->internal_size_ += new_blob_size - orig_blob_size;
   // Add blob to ID vector if it didn't already exist
   if (!did_create) { return Status(); }
-  // TODO(llogan): add blob id
+  bkt_info.blobs_->emplace_back(blob_id);
   return Status();
 }
 
 /** Unregister a blob from a bucket */
 Status MetadataManager::LocalBucketUnregisterBlobId(
     BucketId bkt_id, BlobId blob_id,
-    const IoClientContext &io_ctx) {
-  // TODO(llogan)
+    const IoClientContext &opts) {
+  // Acquire MD read lock (read bkt_map_)
+  ScopedRwReadLock md_lock(lock_);
+  auto iter = bkt_map_->find(bkt_id);
+  if (iter == bkt_map_->end()) {
+    return Status();
+  }
+  // Get blob information
+  auto iter_blob = blob_map_->find(blob_id);
+  if (iter_blob == blob_map_->end()) {
+    return Status();
+  }
+  // Acquire the blob read lock (read blob_size)
+  lipc::ShmRef<lipc::pair<BlobId, BlobInfo>> info_blob = (*iter_blob);
+  BlobInfo &blob_info = *info_blob->second_;
+  size_t blob_size = blob_info.header_->blob_size_;
+  // Acquire the bkt_info write lock (modifying bkt_info)
+  lipc::ShmRef<lipc::pair<BucketId, BucketInfo>> info = (*iter);
+  BucketInfo &bkt_info = *info->second_;
+  ScopedRwWriteLock(bkt_info.header_->lock_[0]);
+  // Update I/O client bucket stats
+  auto io_client = IoClientFactory::Get(opts.type_);
+  if (io_client) {
+    io_client->UnregisterBlob(opts, bkt_info.header_->client_state_);
+  }
+  // Update internal bucket size
+  bkt_info.header_->internal_size_ -= blob_size;
+  // Remove BlobId from bucket
+  bkt_info.blobs_->erase(blob_id);
+  return Status();
 }
 
 /**
@@ -308,9 +339,6 @@ Status MetadataManager::LocalBucketUnregisterBlobId(
  * @param blob_name semantic blob name
  * @param data the data being placed
  * @param buffers the buffers to place data in
- *
- * @RPC_TARGET_NODE rpc_->node_id_
- * @RPC_CLASS_INSTANCE mdm
  * */
 std::tuple<BlobId, bool, size_t> MetadataManager::LocalBucketPutBlob(
     BucketId bkt_id,
@@ -330,7 +358,7 @@ std::tuple<BlobId, bool, size_t> MetadataManager::LocalBucketPutBlob(
   if (did_create) {
     BlobInfo blob_info(HERMES->main_alloc_);
     blob_info.bkt_id_ = bkt_id;
-    (*blob_info.name_) = internal_blob_name;
+    (*blob_info.name_) = blob_name;
     (*blob_info.buffers_) = std::move(buffers);
     blob_info.header_->blob_size_ = blob_size;
     blob_id_map_->emplace(internal_blob_name, blob_id);
@@ -349,9 +377,6 @@ std::tuple<BlobId, bool, size_t> MetadataManager::LocalBucketPutBlob(
 
 /**
  * Get \a blob_name blob from \a bkt_id bucket
- *
- * @RPC_TARGET_NODE rpc_->node_id_
- * @RPC_CLASS_INSTANCE mdm
  * */
 Blob MetadataManager::LocalBucketGetBlob(BlobId blob_id) {
   // Acquire MD read lock (read blob_map_)
@@ -370,9 +395,6 @@ Blob MetadataManager::LocalBucketGetBlob(BlobId blob_id) {
 
 /**
  * Get \a blob_name blob from \a bkt_id bucket
- *
- * @RPC_TARGET_NODE rpc_->node_id_
- * @RPC_CLASS_INSTANCE mdm
  * */
 BlobId MetadataManager::LocalGetBlobId(BucketId bkt_id,
                                        const lipc::charbuf &blob_name) {
@@ -385,6 +407,21 @@ BlobId MetadataManager::LocalGetBlobId(BucketId bkt_id,
   }
   lipc::ShmRef<lipc::pair<lipc::charbuf, BlobId>> info = *iter;
   return *info->second_;
+}
+
+/**
+ * Get \a blob_name BLOB name from \a blob_id BLOB id
+ * */
+RPC std::string MetadataManager::LocalGetBlobName(BlobId blob_id) {
+  // Acquire MD read lock (read blob_id_map_)
+  ScopedRwReadLock md_lock(lock_);
+  auto iter = blob_map_->find(blob_id);
+  if (iter == blob_map_->end()) {
+    return "";
+  }
+  lipc::ShmRef<lipc::pair<BlobId, BlobInfo>> info = *iter;
+  BlobInfo &blob_info = *info->second_;
+  return blob_info.name_->str();
 }
 
 /**
@@ -406,7 +443,7 @@ bool MetadataManager::LocalLockBlob(BucketId bkt_id,
       blob_id.node_id_ = rpc_->node_id_;
       BlobInfo blob_info(HERMES->main_alloc_);
       blob_info.bkt_id_ = bkt_id;
-      (*blob_info.name_) = internal_blob_name;
+      (*blob_info.name_) = lipc::charbuf(blob_name);
       blob_info.header_->blob_size_ = 0;
       blob_id_map_->emplace(internal_blob_name, blob_id);
       blob_map_->emplace(blob_id, std::move(blob_info));
@@ -430,9 +467,6 @@ bool MetadataManager::LocalUnlockBlob(BucketId bkt_id,
 
 /**
  * Get \a blob_id blob's buffers
- *
- * @RPC_TARGET_NODE rpc_->node_id_
- * @RPC_CLASS_INSTANCE mdm
  * */
 std::vector<BufferInfo> MetadataManager::LocalGetBlobBuffers(BlobId blob_id) {
   // Acquire MD read lock (read blob_map_)
@@ -445,21 +479,12 @@ std::vector<BufferInfo> MetadataManager::LocalGetBlobBuffers(BlobId blob_id) {
   BlobInfo &blob_info = *info->second_;
   // Acquire blob_info read lock
   ScopedRwReadLock blob_info_lock(blob_info.header_->lock_[0]);
-  // TODO(llogan): make this internal to the lipc::vec
-  std::vector<BufferInfo> v;
-  v.reserve(blob_info.buffers_->size());
-  for (lipc::ShmRef<BufferInfo> buffer_info : *blob_info.buffers_) {
-    v.emplace_back(*buffer_info);
-  }
-  return v;
+  return blob_info.buffers_->vec();
 }
 
 /**
  * Rename \a blob_id blob to \a new_blob_name new blob name
  * in \a bkt_id bucket.
- *
- * @RPC_TARGET_NODE rpc_->node_id_
- * @RPC_CLASS_INSTANCE mdm
  * */
 bool MetadataManager::LocalRenameBlob(BucketId bkt_id, BlobId blob_id,
                                       lipc::charbuf &new_blob_name) {
@@ -471,7 +496,7 @@ bool MetadataManager::LocalRenameBlob(BucketId bkt_id, BlobId blob_id,
   }
   lipc::ShmRef<lipc::pair<BlobId, BlobInfo>> info = (*iter);
   BlobInfo &blob_info = *info->second_;
-  lipc::charbuf &old_blob_name = (*blob_info.name_);
+  lipc::charbuf old_blob_name = CreateBlobName(bkt_id, *blob_info.name_);
   lipc::charbuf internal_blob_name = CreateBlobName(bkt_id, new_blob_name);
   blob_id_map_->erase(old_blob_name);
   blob_id_map_->emplace(internal_blob_name, blob_id);
@@ -480,9 +505,6 @@ bool MetadataManager::LocalRenameBlob(BucketId bkt_id, BlobId blob_id,
 
 /**
  * Destroy \a blob_id blob in \a bkt_id bucket
- *
- * @RPC_TARGET_NODE rpc_->node_id_
- * @RPC_CLASS_INSTANCE mdm
  * */
 bool MetadataManager::LocalDestroyBlob(BucketId bkt_id,
                                        BlobId blob_id) {
@@ -495,7 +517,7 @@ bool MetadataManager::LocalDestroyBlob(BucketId bkt_id,
   }
   lipc::ShmRef<lipc::pair<BlobId, BlobInfo>> info = (*iter);
   BlobInfo &blob_info = *info->second_;
-  lipc::charbuf &blob_name = (*blob_info.name_);
+  lipc::charbuf blob_name = CreateBlobName(bkt_id, *blob_info.name_);
   blob_id_map_->erase(blob_name);
   blob_map_->erase(blob_id);
   return true;
@@ -503,9 +525,6 @@ bool MetadataManager::LocalDestroyBlob(BucketId bkt_id,
 
 /**
  * Get or create \a vbkt_name VBucket
- *
- * @RPC_TARGET_NODE rpc_->node_id_
- * @RPC_CLASS_INSTANCE mdm
  * */
 VBucketId MetadataManager::LocalGetOrCreateVBucket(
     lipc::charbuf &vbkt_name,
@@ -536,9 +555,6 @@ VBucketId MetadataManager::LocalGetOrCreateVBucket(
 
 /**
  * Get the VBucketId of \a vbkt_name VBucket
- *
- * @RPC_TARGET_NODE rpc_->node_id_
- * @RPC_CLASS_INSTANCE mdm
  * */
 VBucketId MetadataManager::LocalGetVBucketId(lipc::charbuf &vbkt_name) {
   // Acquire MD read lock (read vbkt_id_map_)
@@ -554,9 +570,6 @@ VBucketId MetadataManager::LocalGetVBucketId(lipc::charbuf &vbkt_name) {
 
 /**
  * Link \a vbkt_id VBucketId
- *
- * @RPC_TARGET_NODE rpc_->node_id_
- * @RPC_CLASS_INSTANCE mdm
  * */
 bool MetadataManager::LocalVBucketLinkBlob(VBucketId vbkt_id,
                                            BlobId blob_id) {
@@ -577,9 +590,6 @@ bool MetadataManager::LocalVBucketLinkBlob(VBucketId vbkt_id,
 /**
  * Unlink \a blob_name Blob of \a bkt_id Bucket
  * from \a vbkt_id VBucket
- *
- * @RPC_TARGET_NODE rpc_->node_id_
- * @RPC_CLASS_INSTANCE mdm
  * */
 bool MetadataManager::LocalVBucketUnlinkBlob(VBucketId vbkt_id,
                                              BlobId blob_id) {
@@ -599,9 +609,6 @@ bool MetadataManager::LocalVBucketUnlinkBlob(VBucketId vbkt_id,
 
 /**
  * Get the linked blobs from \a vbkt_id VBucket
- *
- * @RPC_TARGET_NODE rpc_->node_id_
- * @RPC_CLASS_INSTANCE mdm
  * */
 std::list<BlobId> MetadataManager::LocalVBucketGetLinks(VBucketId vbkt_id) {
   // TODO(llogan)
@@ -629,9 +636,6 @@ bool MetadataManager::LocalVBucketContainsBlob(VBucketId vbkt_id,
 
 /**
  * Rename \a vbkt_id VBucket to \a new_vbkt_name name
- *
- * @RPC_TARGET_NODE rpc_->node_id_
- * @RPC_CLASS_INSTANCE mdm
  * */
 bool MetadataManager::LocalRenameVBucket(VBucketId vbkt_id,
                                          lipc::charbuf &new_vbkt_name) {
@@ -651,9 +655,6 @@ bool MetadataManager::LocalRenameVBucket(VBucketId vbkt_id,
 
 /**
  * Destroy \a vbkt_id VBucket
- *
- * @RPC_TARGET_NODE rpc_->node_id_
- * @RPC_CLASS_INSTANCE mdm
  * */
 bool MetadataManager::LocalDestroyVBucket(VBucketId vbkt_id) {
   // Acquire MD write lock (modify vbkt_map_)

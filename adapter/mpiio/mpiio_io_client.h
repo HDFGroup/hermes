@@ -66,10 +66,6 @@ class MpiioIoClient : public hermes::adapter::fs::FilesystemIoClient {
                        const IoClientContext &opts,
                        GlobalIoClientState &stat) override;
 
-  /** Update backend statistics */
-  void UpdateBucketState(const IoClientContext &opts,
-                         GlobalIoClientState &stat) override;
-
   /** Initialize I/O context using count + datatype */
   static size_t IoSizeFromCount(int count,
                                 MPI_Datatype datatype,

@@ -63,11 +63,6 @@ void MpiioIoClient::InitBucketState(const lipc::charbuf &bkt_name,
                                     GlobalIoClientState &stat) {
 }
 
-/** Update backend statistics */
-void MpiioIoClient::UpdateBucketState(const IoClientContext &opts,
-                                      GlobalIoClientState &stat) {
-}
-
 /** Initialize I/O context using count + datatype */
 size_t MpiioIoClient::IoSizeFromCount(int count,
                                       MPI_Datatype datatype,

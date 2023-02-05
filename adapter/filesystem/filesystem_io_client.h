@@ -14,6 +14,7 @@
 #define HERMES_ADAPTER_FILESYSTEM_FILESYSTEM_IO_CLIENT_H_
 
 #include "adapter/io_client/io_client.h"
+#include "adapter/mapper/balanced_mapper.h"
 #include <filesystem>
 #include <limits>
 
@@ -76,6 +77,29 @@ class FilesystemIoClient : public IoClient {
  public:
   /** virtual destructor */
   virtual ~FilesystemIoClient() = default;
+
+  /** Update backend statistics when registering a blob */
+  void RegisterBlob(const IoClientContext &opts,
+                    GlobalIoClientState &stat) override {
+    stat.true_size_ = std::max(stat.true_size_,
+                               opts.backend_off_ + opts.backend_size_);
+  }
+
+  /** Update backend statistics when unregistering a blob */
+  void UnregisterBlob(const IoClientContext &opts,
+                      GlobalIoClientState &stat) override {}
+
+  /** Decode I/O client context from the original blob name */
+  IoClientContext DecodeBlobName(const IoClientContext &opts,
+                                 const std::string &blob_name) override {
+    IoClientContext decode_opts;
+    BlobPlacement p;
+    p.DecodeBlobName(blob_name);
+    decode_opts.type_ = opts.type_;
+    decode_opts.backend_off_ = p.bucket_off_;
+    decode_opts.backend_size_ = p.blob_size_;
+    return decode_opts;
+  }
 
   /** real open */
   virtual void RealOpen(IoClientObject &f,

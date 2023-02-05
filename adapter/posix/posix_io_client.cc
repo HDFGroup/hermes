@@ -81,13 +81,6 @@ void PosixIoClient::InitBucketState(const lipc::charbuf &bkt_name,
   real_api->close(fd);
 }
 
-/** Update backend statistics */
-void PosixIoClient::UpdateBucketState(const IoClientContext &opts,
-                                      GlobalIoClientState &stat) {
-  stat.true_size_ = std::max(stat.true_size_,
-                             opts.backend_off_ + opts.backend_size_);
-}
-
 /** Write blob to backend */
 void PosixIoClient::WriteBlob(const lipc::charbuf &bkt_name,
                               const Blob &full_blob,

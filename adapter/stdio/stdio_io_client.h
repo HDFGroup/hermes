@@ -74,10 +74,6 @@ class StdioIoClient : public hermes::adapter::fs::FilesystemIoClient {
                        const IoClientContext &opts,
                        GlobalIoClientState &stat) override;
 
-  /** Update backend statistics */
-  void UpdateBucketState(const IoClientContext &opts,
-                         GlobalIoClientState &stat) override;
-
   /** Write blob to backend */
   void WriteBlob(const lipc::charbuf &bkt_name,
                  const Blob &full_blob,

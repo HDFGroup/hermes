@@ -67,7 +67,7 @@ FILE *HERMES_DECL(fdopen)(int fd, const char *mode) {
   std::shared_ptr<AdapterStat> stat;
   if (fs_api->IsFdTracked(fd, stat)) {
     LOG(INFO) << "Intercepting fdopen(" << fd << ", " << mode << ")\n";
-    fs_api->FdOpen(mode, stat);
+    return fs_api->FdOpen(mode, stat);
   } else {
     return real_api->fdopen(fd, mode);
   }

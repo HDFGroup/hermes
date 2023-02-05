@@ -134,26 +134,17 @@ class MetadataManager {
 
   /**
    * Get or create a bucket with \a bkt_name bucket name
-   *
-   * @RPC_TARGET_NODE rpc_->node_id_
-   * @RPC_CLASS_INSTANCE mdm
    * */
   RPC BucketId LocalGetOrCreateBucket(lipc::charbuf &bkt_name,
                                       const IoClientContext &opts);
 
   /**
    * Get the BucketId with \a bkt_name bucket name
-   *
-   * @RPC_TARGET_NODE rpc_->node_id_
-   * @RPC_CLASS_INSTANCE mdm
    * */
   RPC BucketId LocalGetBucketId(lipc::charbuf &bkt_name);
 
   /**
    * Get the size of a bucket (depends on the IoClient used).
-   *
-   * @RPC_TARGET_NODE rpc_->node_id_
-   * @RPC_CLASS_INSTANCE mdm
    * */
   RPC size_t LocalGetBucketSize(BucketId bkt_id,
                                 const IoClientContext &opts);
@@ -173,26 +164,22 @@ class MetadataManager {
   /**
    * Check whether or not \a bkt_id bucket contains
    * \a blob_id blob
-   *
-   * @RPC_TARGET_NODE rpc_->node_id_
-   * @RPC_CLASS_INSTANCE mdm
    * */
   RPC bool LocalBucketContainsBlob(BucketId bkt_id, BlobId blob_id);
 
   /**
+   * Get the set of all blobs contained in \a bkt_id BUCKET
+   * */
+  RPC std::vector<BlobId> LocalBucketGetContainedBlobIds(BucketId bkt_id);
+
+  /**
    * Rename \a bkt_id bucket to \a new_bkt_name new name
-   *
-   * @RPC_TARGET_NODE rpc_->node_id_
-   * @RPC_CLASS_INSTANCE mdm
    * */
   RPC bool LocalRenameBucket(BucketId bkt_id,
                              lipc::charbuf &new_bkt_name);
 
   /**
    * Destroy \a bkt_id bucket
-   *
-   * @RPC_TARGET_NODE rpc_->node_id_
-   * @RPC_CLASS_INSTANCE mdm
    * */
   RPC bool LocalDestroyBucket(BucketId bkt_id);
 
@@ -203,9 +190,6 @@ class MetadataManager {
    * @param blob_name semantic blob name
    * @param data the data being placed
    * @param buffers the buffers to place data in
-   *
-   * @RPC_TARGET_NODE rpc_->node_id_
-   * @RPC_CLASS_INSTANCE mdm
    * */
   RPC std::tuple<BlobId, bool, size_t> LocalBucketPutBlob(
       BucketId bkt_id,
@@ -230,26 +214,25 @@ class MetadataManager {
    * */
   Status LocalBucketUnregisterBlobId(BucketId bkt_id,
                                      BlobId blob_id,
-                                     const IoClientContext &io_ctx);
+                                     const IoClientContext &opts);
 
   /**
    * Get a blob from a bucket
    *
    * @param bkt_id id of the bucket
    * @param blob_id id of the blob to get
-   *
-   * @RPC_TARGET_NODE rpc_->node_id_
-   * @RPC_CLASS_INSTANCE mdm
    * */
   RPC Blob LocalBucketGetBlob(BlobId blob_id);
 
   /**
-   * Get \a blob_name blob from \a bkt_id bucket
-   *
-   * @RPC_TARGET_NODE rpc_->node_id_
-   * @RPC_CLASS_INSTANCE mdm
+   * Get \a blob_name BLOB from \a bkt_id bucket
    * */
   RPC BlobId LocalGetBlobId(BucketId bkt_id, const lipc::charbuf &blob_name);
+
+  /**
+   * Get \a blob_name BLOB name from \a blob_id BLOB id
+   * */
+  RPC std::string LocalGetBlobName(BlobId blob_id);
 
   /**
    * Lock the blob
@@ -267,69 +250,45 @@ class MetadataManager {
 
   /**
    * Get \a blob_id blob's buffers
-   *
-   * @RPC_TARGET_NODE rpc_->node_id_
-   * @RPC_CLASS_INSTANCE mdm
    * */
   RPC std::vector<BufferInfo> LocalGetBlobBuffers(BlobId blob_id);
 
   /**
    * Rename \a blob_id blob to \a new_blob_name new blob name
    * in \a bkt_id bucket.
-   *
-   * @RPC_TARGET_NODE rpc_->node_id_
-   * @RPC_CLASS_INSTANCE mdm
    * */
   RPC bool LocalRenameBlob(BucketId bkt_id, BlobId blob_id,
                            lipc::charbuf &new_blob_name);
 
   /**
    * Destroy \a blob_id blob in \a bkt_id bucket
-   *
-   * @RPC_TARGET_NODE rpc_->node_id_
-   * @RPC_CLASS_INSTANCE mdm
    * */
   RPC bool LocalDestroyBlob(BucketId bkt_id, BlobId blob_id);
 
   /**
    * Get or create \a vbkt_name VBucket
-   *
-   * @RPC_TARGET_NODE rpc_->node_id_
-   * @RPC_CLASS_INSTANCE mdm
    * */
   RPC VBucketId LocalGetOrCreateVBucket(lipc::charbuf &vbkt_name,
                                         const IoClientContext &opts);
 
   /**
    * Get the VBucketId of \a vbkt_name VBucket
-   *
-   * @RPC_TARGET_NODE rpc_->node_id_
-   * @RPC_CLASS_INSTANCE mdm
    * */
   RPC VBucketId LocalGetVBucketId(lipc::charbuf &vbkt_name);
 
   /**
    * Link \a vbkt_id VBucketId
-   *
-   * @RPC_TARGET_NODE rpc_->node_id_
-   * @RPC_CLASS_INSTANCE mdm
    * */
   RPC bool LocalVBucketLinkBlob(VBucketId vbkt_id, BlobId blob_id);
 
   /**
    * Unlink \a blob_name Blob of \a bkt_id Bucket
    * from \a vbkt_id VBucket
-   *
-   * @RPC_TARGET_NODE rpc_->node_id_
-   * @RPC_CLASS_INSTANCE mdm
    * */
   RPC bool LocalVBucketUnlinkBlob(VBucketId vbkt_id, BlobId blob_id);
 
   /**
    * Get the linked blobs from \a vbkt_id VBucket
-   *
-   * @RPC_TARGET_NODE rpc_->node_id_
-   * @RPC_CLASS_INSTANCE mdm
    * */
   RPC std::list<BlobId> LocalVBucketGetLinks(VBucketId vbkt_id);
 
@@ -340,17 +299,11 @@ class MetadataManager {
 
   /**
    * Rename \a vbkt_id VBucket to \a new_vbkt_name name
-   *
-   * @RPC_TARGET_NODE rpc_->node_id_
-   * @RPC_CLASS_INSTANCE mdm
    * */
   RPC bool LocalRenameVBucket(VBucketId vbkt_id, lipc::charbuf &new_vbkt_name);
 
   /**
    * Destroy \a vbkt_id VBucket
-   *
-   * @RPC_TARGET_NODE rpc_->node_id_
-   * @RPC_CLASS_INSTANCE mdm
    * */
   RPC bool LocalDestroyVBucket(VBucketId vbkt_id);
 
