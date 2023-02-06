@@ -11,13 +11,13 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include <iostream>
-#include <labstor/util/timer.h>
+#include <hermes_shm/util/timer.h>
 #include <mpi.h>
 #include "hermes.h"
 #include "bucket.h"
 
 namespace hapi = hermes::api;
-using Timer = labstor::HighResMonotonicTimer;
+using Timer = hermes_shm::HighResMonotonicTimer;
 
 void GatherTimes(std::string test_name, Timer &t) {
   MPI_Barrier(MPI_COMM_WORLD);

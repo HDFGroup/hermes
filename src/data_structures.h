@@ -13,21 +13,21 @@
 #ifndef HERMES_SRC_DATA_STRUCTURES_H_
 #define HERMES_SRC_DATA_STRUCTURES_H_
 
-#include <labstor/data_structures/thread_unsafe/unordered_map.h>
-#include <labstor/data_structures/thread_unsafe/vector.h>
-#include <labstor/data_structures/thread_unsafe/list.h>
-#include <labstor/data_structures/string.h>
-#include <labstor/data_structures/smart_ptr/manual_ptr.h>
-#include <labstor/types/charbuf.h>
-#include <labstor/types/atomic.h>
+#include <hermes_shm/data_structures/thread_unsafe/unordered_map.h>
+#include <hermes_shm/data_structures/thread_unsafe/vector.h>
+#include <hermes_shm/data_structures/thread_unsafe/list.h>
+#include <hermes_shm/data_structures/string.h>
+#include <hermes_shm/data_structures/smart_ptr/manual_ptr.h>
+#include <hermes_shm/types/charbuf.h>
+#include <hermes_shm/types/atomic.h>
 
-namespace lipc = labstor::ipc;
+namespace lipc = hermes_shm::ipc;
 
-using labstor::RwLock;
-using labstor::Mutex;
-using labstor::bitfield32_t;
-using labstor::ScopedRwReadLock;
-using labstor::ScopedRwWriteLock;
+using hermes_shm::RwLock;
+using hermes_shm::Mutex;
+using hermes_shm::bitfield32_t;
+using hermes_shm::ScopedRwReadLock;
+using hermes_shm::ScopedRwWriteLock;
 
 #include <unordered_map>
 #include <unordered_set>

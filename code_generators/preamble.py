@@ -45,9 +45,9 @@ labstor_preamble = """
  * Anthony Kougkas <akougkas@iit.edu>,
  * Xian-He Sun <sun@iit.edu>
  *
- * This file is part of LabStor
+ * This file is part of HermesShm
  *
- * LabStor is free software: you can redistribute it and/or modify
+ * HermesShm is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.

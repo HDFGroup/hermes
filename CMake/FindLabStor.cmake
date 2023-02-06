@@ -1,15 +1,15 @@
-# Find labstor header and library.
+# Find hermes_shm header and library.
 #
 
 # This module defines the following uncached variables:
-#  LabStor_FOUND, if false, do not try to use labstor.
-#  LabStor_INCLUDE_DIRS, where to find labstor.h.
-#  LabStor_LIBRARIES, the libraries to link against to use the labstor library
-#  LabStor_LIBRARY_DIRS, the directory where the labstor library is found.
+#  LabStor_FOUND, if false, do not try to use hermes_shm.
+#  LabStor_INCLUDE_DIRS, where to find hermes_shm.h.
+#  LabStor_LIBRARIES, the libraries to link against to use the hermes_shm library
+#  LabStor_LIBRARY_DIRS, the directory where the hermes_shm library is found.
 
 find_path(
   LabStor_INCLUDE_DIR
-  labstor/labstor.h
+  hermes_shm/hermes_shm.h
 )
 
 if( LabStor_INCLUDE_DIR )
@@ -17,7 +17,7 @@ if( LabStor_INCLUDE_DIR )
 
   find_library(
     LabStor_LIBRARY
-    NAMES labstor_data_structures
+    NAMES hermes_shm_data_structures
   )
 
   if( LabStor_LIBRARY )
@@ -29,15 +29,15 @@ if( LabStor_INCLUDE_DIR )
     set(LabStor_LIBRARIES ${LabStor_LIBRARY})
   endif(LabStor_LIBRARY)
 else(LabStor_INCLUDE_DIR)
-  message(STATUS "Findlabstor: Could not find labstor.h")
+  message(STATUS "Findlabstor: Could not find hermes_shm.h")
 endif(LabStor_INCLUDE_DIR)
 	    
 if(LabStor_FOUND)
   if(NOT LabStor_FIND_QUIETLY)
-    message(STATUS "Findlabstor: Found both labstor.h and liblabstor.a")
+    message(STATUS "Findlabstor: Found both hermes_shm.h and liblabstor.a")
   endif(NOT LabStor_FIND_QUIETLY)
 else(LabStor_FOUND)
   if(LabStor_FIND_REQUIRED)
-    message(STATUS "Findlabstor: Could not find labstor.h and/or liblabstor.a")
+    message(STATUS "Findlabstor: Could not find hermes_shm.h and/or liblabstor.a")
   endif(LabStor_FIND_REQUIRED)
 endif(LabStor_FOUND)

@@ -71,26 +71,26 @@ set(HERMES_BUILD_INCLUDE_DEPENDENCIES
 )
 
 add_library(hermes ${HERMES_SRCS})
-
 target_include_directories(hermes
   PUBLIC "$<BUILD_INTERFACE:${HERMES_BUILD_INCLUDE_DEPENDENCIES}>"
           $<INSTALL_INTERFACE:${HERMES_INSTALL_INCLUDE_INTERFACE}>
 )
-
 target_include_directories(hermes
   SYSTEM PUBLIC ${HERMES_EXT_INCLUDE_DEPENDENCIES}
 )
-
-add_dependencies(hermes hermes_adapter_io_clients)
+add_dependencies(hermes
+        hermes_adapter_io_clients
+        hermes_shm_data_structures)
 
 target_link_libraries(hermes
+  PUBLIC hermes_shm_data_structures
   PUBLIC hermes_adapter_io_clients
   PUBLIC ${GLPK_LIBRARIES}
   PUBLIC ${CMAKE_HERMES_COMMUNICATION_TYPE_LIB}
   PUBLIC ${CMAKE_HERMES_RPC_TYPE_LIB}
   PUBLIC glog::glog
   PUBLIC yaml-cpp
-  PUBLIC labstor_client labstor_data_structures
+  PUBLIC labstor_client hermes_shm_data_structures
   PUBLIC "$<$<BOOL:${HERMES_INTERCEPT_IO}>:${GOTCHA_MODULE_LIBS}>"
 )
 

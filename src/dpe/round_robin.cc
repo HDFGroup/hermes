@@ -19,7 +19,7 @@ Status RoundRobin::Placement(const std::vector<size_t> &blob_sizes,
                              const lipc::vector<TargetInfo> &targets,
                              const api::Context &ctx,
                              std::vector<PlacementSchema> &output) {
+  throw std::logic_error("Not currently implemented");
 }
-
 
 }  // namespace hermes

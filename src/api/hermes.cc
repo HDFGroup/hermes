@@ -120,7 +120,7 @@ void Hermes::LoadClientConfig(std::string config_path) {
 
 void Hermes::InitSharedMemory() {
   // Create shared-memory allocator
-  auto mem_mngr = LABSTOR_MEMORY_MANAGER;
+  auto mem_mngr = HERMES_SHM_MEMORY_MANAGER;
   mem_mngr->CreateBackend<lipc::PosixShmMmap>(
       lipc::MemoryManager::kDefaultBackendSize,
       server_config_.shmem_name_);
@@ -134,7 +134,7 @@ void Hermes::InitSharedMemory() {
 
 void Hermes::LoadSharedMemory() {
   // Load shared-memory allocator
-  auto mem_mngr = LABSTOR_MEMORY_MANAGER;
+  auto mem_mngr = HERMES_SHM_MEMORY_MANAGER;
   mem_mngr->AttachBackend(lipc::MemoryBackendType::kPosixShmMmap,
                           server_config_.shmem_name_);
   main_alloc_ = mem_mngr->GetAllocator(main_alloc_id);

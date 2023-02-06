@@ -297,13 +297,6 @@ endif()
 find_path(GLOG_INCLUDE_DIRS NAME glog PATH_SUFFIXES include/)
 include_directories(${GLOG_INCLUDE_DIRS})
 
-# LabStor
-find_package(LabStor REQUIRED)
-if(LabStor_FOUND)
-  message(STATUS "found Labstor at ${LabStor_DIR}")
-endif()
-include_directories(${LabStor_INCLUDE_DIR})
-
 # GFLAGS
 if(HERMES_ENABLE_GFLAGS)
   find_package(gflags REQUIRED)
@@ -406,15 +399,9 @@ endif()
 
 set(HERMES_EXPORTED_LIBS "")
 
+include_directories(${CMAKE_SOURCE_DIR}/hermes_shm/include)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src)
-
-if(HERMES_HAVE_GOTCHA)
-  # add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gotcha_intercept)
-endif()
-
-if(HERMES_BUILD_BUFFER_POOL_VISUALIZER AND SDL2_FOUND)
-  # add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/buffer_pool_visualizer)
-endif()
+add_subdirectory(${CMAKE_SOURCE_DIR}/hermes_shm)
 
 # add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/data_stager)
 

@@ -21,7 +21,6 @@
 #include "hermes_types.h"
 #include "metadata_types.h"
 #include "data_structures.h"
-#include <labstor/data_structures/serialization/thallium.h>
 
 namespace hermes {
 

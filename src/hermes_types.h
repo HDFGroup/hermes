@@ -208,7 +208,7 @@ struct TraitId {
 namespace hermes::api {
 
 /** A blob is an uniterpreted array of bytes */
-typedef labstor::charbuf Blob;
+typedef hermes_shm::charbuf Blob;
 
 /** Supported data placement policies */
 enum class PlacementPolicy {
