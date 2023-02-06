@@ -96,8 +96,7 @@ class FilesystemIoClient : public IoClient {
     BlobPlacement p;
     p.DecodeBlobName(blob_name);
     decode_opts.type_ = opts.type_;
-    decode_opts.backend_off_ = p.bucket_off_;
-    decode_opts.backend_size_ = p.blob_size_;
+    decode_opts.backend_off_ = p.page_ * p.blob_size_;
     return decode_opts;
   }
 

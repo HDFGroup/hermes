@@ -36,20 +36,22 @@ struct BlobPlacement {
   int time_;          /**< The order of the blob in a list of blobs */
 
   /** create a BLOB name from index. */
-  lipc::charbuf CreateBlobName() const {
-    lipc::charbuf buf(sizeof(page_));
-    memcpy(buf.data_mutable(), &page_, sizeof(page_));
+  lipc::charbuf CreateBlobName(size_t page_size) const {
+    lipc::charbuf buf(sizeof(page_) + sizeof(page_size));
+    size_t off = 0;
+    memcpy(buf.data_mutable() + off, &page_, sizeof(page_));
+    off += sizeof(page_);
+    memcpy(buf.data_mutable() + off, &page_size, sizeof(page_size));
     return buf;
   }
 
   /** decode \a blob_name BLOB name to index.  */
-  void DecodeBlobName(const lipc::charbuf &blob_name) {
+  template<typename StringT>
+  void DecodeBlobName(const StringT &blob_name) {
+    size_t off = 0;
     memcpy(&page_, blob_name.data(), sizeof(page_));
-  }
-
-  /** decode \a blob_name BLOB name to index.  */
-  void DecodeBlobName(const std::string &blob_name) {
-    memcpy(&page_, blob_name.data(), sizeof(page_));
+    off += sizeof(page_);
+    memcpy(&blob_size_, blob_name.data() + off, sizeof(blob_size_));
   }
 };
 

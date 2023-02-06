@@ -118,12 +118,12 @@ class Bucket {
   /**
    * Lock the blob
    * */
-  bool LockBlob(const std::string &blob_name, MdLockType lock_type);
+  bool LockBlob(BlobId blob_id, MdLockType lock_type);
 
   /**
    * Unlock the blob
    * */
-  bool UnlockBlob(const std::string &blob_name, MdLockType lock_type);
+  bool UnlockBlob(BlobId blob_id, MdLockType lock_type);
 
   /**
    * Create \a blob_name EMPTY BLOB if it does not already exist.

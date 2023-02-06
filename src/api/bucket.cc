@@ -96,15 +96,15 @@ Status Bucket::GetBlobName(const BlobId &blob_id, std::string &blob_name) {
 /**
  * Lock the bucket
  * */
-bool Bucket::LockBlob(const std::string &blob_name, MdLockType lock_type) {
-  return mdm_->LocalLockBlob(id_, blob_name, lock_type);
+bool Bucket::LockBlob(BlobId blob_id, MdLockType lock_type) {
+  return mdm_->LocalLockBlob(blob_id, lock_type);
 }
 
 /**
  * Unlock the bucket
  * */
-bool Bucket::UnlockBlob(const std::string &blob_name, MdLockType lock_type) {
-  return mdm_->LocalUnlockBlob(id_, blob_name, lock_type);
+bool Bucket::UnlockBlob(BlobId blob_id, MdLockType lock_type) {
+  return mdm_->LocalUnlockBlob(blob_id, lock_type);
 }
 
 /**

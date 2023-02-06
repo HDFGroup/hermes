@@ -108,6 +108,10 @@ void MetadataManager::shm_deserialize(MetadataManagerShmHeader *header) {
   devices_ << header_->devices_;
 }
 
+////////////////////////////
+/// Bucket Operations
+////////////////////////////
+
 /**
  * Get or create a bucket with \a bkt_name bucket name
  * */
@@ -231,7 +235,7 @@ MetadataManager::LocalBucketGetContainedBlobIds(BucketId bkt_id) {
   }
   lipc::ShmRef<lipc::pair<BucketId, BucketInfo>> info = *iter;
   BucketInfo &bkt_info = *info->second_;
-  blob_ids.resize(bkt_info.blobs_->size());
+  blob_ids.reserve(bkt_info.blobs_->size());
   for (lipc::ShmRef<BlobId> blob_id : *bkt_info.blobs_) {
     blob_ids.emplace_back(*blob_id);
   }
@@ -331,6 +335,10 @@ Status MetadataManager::LocalBucketUnregisterBlobId(
   bkt_info.blobs_->erase(blob_id);
   return Status();
 }
+
+////////////////////////////
+/// Blob Operations
+////////////////////////////
 
 /**
  * Creates the blob metadata
@@ -457,11 +465,8 @@ RPC std::string MetadataManager::LocalGetBlobName(BlobId blob_id) {
 /**
  * Lock the blob
  * */
-bool MetadataManager::LocalLockBlob(BucketId bkt_id,
-                                    const std::string &blob_name,
+bool MetadataManager::LocalLockBlob(BlobId blob_id,
                                     MdLockType lock_type) {
-  // Acquire MD write lock (might modify blob_map_)
-  BlobId blob_id = LocalGetBlobId(bkt_id, lipc::charbuf(blob_name));
   if (blob_id.IsNull()) {
     return false;
   }
@@ -471,10 +476,8 @@ bool MetadataManager::LocalLockBlob(BucketId bkt_id,
 /**
  * Unlock the blob
  * */
-bool MetadataManager::LocalUnlockBlob(BucketId bkt_id,
-                                      const std::string &blob_name,
+bool MetadataManager::LocalUnlockBlob(BlobId blob_id,
                                       MdLockType lock_type) {
-  BlobId blob_id = LocalGetBlobId(bkt_id, lipc::charbuf(blob_name));
   if (blob_id.IsNull()) {
     return false;
   }
@@ -538,6 +541,10 @@ bool MetadataManager::LocalDestroyBlob(BucketId bkt_id,
   blob_map_->erase(blob_id);
   return true;
 }
+
+////////////////////////////
+/// VBucket Operations
+////////////////////////////
 
 /**
  * Get or create \a vbkt_name VBucket

@@ -247,15 +247,13 @@ class MetadataManager {
   /**
    * Lock the blob
    * */
-  RPC bool LocalLockBlob(BucketId bkt_id,
-                         const std::string &blob_name,
+  RPC bool LocalLockBlob(BlobId blob_id,
                          MdLockType lock_type);
 
   /**
    * Unlock the blob
    * */
-  RPC bool LocalUnlockBlob(BucketId bkt_id,
-                           const std::string &blob_name,
+  RPC bool LocalUnlockBlob(BlobId blob_id,
                            MdLockType lock_type);
 
   /**

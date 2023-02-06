@@ -79,21 +79,21 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
 
   for (const auto &p : mapping) {
     const Blob blob_wrap((const char*)ptr + data_offset, p.blob_size_);
-    lipc::charbuf blob_name(p.CreateBlobName());
+    lipc::charbuf blob_name(p.CreateBlobName(kPageSize));
     BlobId blob_id;
     opts.type_ = type_;
     opts.backend_off_ = p.page_ * kPageSize;
     opts.backend_size_ = kPageSize;
     opts.mode_ = stat.adapter_mode_;
     bkt->TryCreateBlob(blob_name.str(), blob_id, ctx, opts);
-    bkt->LockBlob(blob_name.str(), MdLockType::kExternalWrite);
+    bkt->LockBlob(blob_id, MdLockType::kExternalWrite);
     bkt->PartialPutOrCreate(blob_name.str(),
                             blob_wrap,
                             p.blob_off_,
                             blob_id,
                             opts,
                             ctx);
-    bkt->UnlockBlob(blob_name.str(), MdLockType::kExternalWrite);
+    bkt->UnlockBlob(blob_id, MdLockType::kExternalWrite);
     data_offset += p.blob_size_;
   }
   if (opts.DoSeek()) { stat.st_ptr_ = off + data_offset; }
@@ -122,14 +122,14 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
 
   for (const auto &p : mapping) {
     Blob blob_wrap((const char*)ptr + data_offset, p.blob_size_);
-    lipc::charbuf blob_name(p.CreateBlobName());
+    lipc::charbuf blob_name(p.CreateBlobName(kPageSize));
     BlobId blob_id;
     opts.backend_off_ = p.page_ * kPageSize;
     opts.backend_size_ = kPageSize;
     opts.type_ = type_;
     opts.mode_ = stat.adapter_mode_;
     bkt->TryCreateBlob(blob_name.str(), blob_id, ctx, opts);
-    bkt->LockBlob(blob_name.str(), MdLockType::kExternalRead);
+    bkt->LockBlob(blob_id, MdLockType::kExternalRead);
     bkt->PartialGetOrCreate(blob_name.str(),
                             blob_wrap,
                             p.blob_off_,
@@ -137,7 +137,7 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
                             blob_id,
                             opts,
                             ctx);
-    bkt->UnlockBlob(blob_name.str(), MdLockType::kExternalRead);
+    bkt->UnlockBlob(blob_id, MdLockType::kExternalRead);
     data_offset += p.blob_size_;
   }
   if (opts.DoSeek()) { stat.st_ptr_ = off + data_offset; }
