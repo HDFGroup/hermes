@@ -70,7 +70,7 @@ class MpiioIoClient : public hermes::adapter::fs::FilesystemIoClient {
                    FilesystemIoClientObject &fs_mdm) override;
 
   /** Get initial statistics from the backend */
-  void InitBucketState(const lipc::charbuf &bkt_name,
+  void InitBucketState(const hipc::charbuf &bkt_name,
                        const IoClientContext &opts,
                        GlobalIoClientState &stat) override;
 
@@ -80,13 +80,13 @@ class MpiioIoClient : public hermes::adapter::fs::FilesystemIoClient {
                                 IoClientContext &opts);
 
   /** Write blob to backend */
-  void WriteBlob(const lipc::charbuf &bkt_name,
+  void WriteBlob(const hipc::charbuf &bkt_name,
                  const Blob &full_blob,
                  const IoClientContext &opts,
                  IoStatus &status) override;
 
   /** Read blob from the backend */
-  void ReadBlob(const lipc::charbuf &bkt_name,
+  void ReadBlob(const hipc::charbuf &bkt_name,
                 Blob &full_blob,
                 const IoClientContext &opts,
                 IoStatus &status) override;

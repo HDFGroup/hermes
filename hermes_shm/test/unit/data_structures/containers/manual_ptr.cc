@@ -26,7 +26,7 @@ using hermes_shm::ipc::TypedPointer;
 template<typename T>
 void ManualPtrTest() {
   Allocator *alloc = alloc_g;
-  lipc::SmartPtrTestSuite<T, mptr<T>> test;
+  hipc::SmartPtrTestSuite<T, mptr<T>> test;
   CREATE_SET_VAR_TO_INT_OR_STRING(T, num, 25);
   test.ptr_ = make_mptr<T>(num);
   test.DereferenceTest(num);
@@ -42,6 +42,6 @@ void ManualPtrTest() {
 TEST_CASE("ManualPtrOfString") {
   Allocator *alloc = alloc_g;
   REQUIRE(alloc->GetCurrentlyAllocatedSize() == 0);
-  ManualPtrTest<lipc::string>();
+  ManualPtrTest<hipc::string>();
   REQUIRE(alloc->GetCurrentlyAllocatedSize() == 0);
 }

@@ -157,7 +157,7 @@ class IoClient {
   virtual ~IoClient() = default;
 
   /** Get initial statistics from the backend */
-  virtual void InitBucketState(const lipc::charbuf &bkt_name,
+  virtual void InitBucketState(const hipc::charbuf &bkt_name,
                                const IoClientContext &opts,
                                GlobalIoClientState &stat) = 0;
 
@@ -174,13 +174,13 @@ class IoClient {
                               GlobalIoClientState &stat) = 0;
 
   /** Write blob to backend */
-  virtual void WriteBlob(const lipc::charbuf &bkt_name,
+  virtual void WriteBlob(const hipc::charbuf &bkt_name,
                          const Blob &full_blob,
                          const IoClientContext &opts,
                          IoStatus &status) = 0;
 
   /** Read blob from the backend */
-  virtual void ReadBlob(const lipc::charbuf &bkt_name,
+  virtual void ReadBlob(const hipc::charbuf &bkt_name,
                         Blob &full_blob,
                         const IoClientContext &opts,
                         IoStatus &status) = 0;

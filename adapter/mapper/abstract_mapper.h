@@ -36,8 +36,8 @@ struct BlobPlacement {
   int time_;          /**< The order of the blob in a list of blobs */
 
   /** create a BLOB name from index. */
-  lipc::charbuf CreateBlobName(size_t page_size) const {
-    lipc::charbuf buf(sizeof(page_) + sizeof(page_size));
+  hipc::charbuf CreateBlobName(size_t page_size) const {
+    hipc::charbuf buf(sizeof(page_) + sizeof(page_size));
     size_t off = 0;
     memcpy(buf.data_mutable() + off, &page_, sizeof(page_));
     off += sizeof(page_);

@@ -24,7 +24,7 @@ namespace hermes {
 void BufferPool::shm_init(BufferPoolShmHeader *header) {
   mdm_ = &HERMES->mdm_;
   borg_ = &HERMES->borg_;
-  target_allocs_ = lipc::make_mptr<lipc::vector<BufferPoolAllocator>>(
+  target_allocs_ = hipc::make_mptr<hipc::vector<BufferPoolAllocator>>(
       HERMES->main_alloc_);
   target_allocs_->resize(mdm_->targets_->size());
   shm_serialize(header);
@@ -52,17 +52,17 @@ void BufferPool::shm_deserialize(BufferPoolShmHeader *header) {
  *
  * TODO(llogan): use better allocator policy
  * */
-lipc::vector<BufferInfo>
+hipc::vector<BufferInfo>
 BufferPool::LocalAllocateAndSetBuffers(PlacementSchema &schema,
                                        const Blob &blob) {
-  lipc::vector<BufferInfo> buffers(HERMES->main_alloc_);
+  hipc::vector<BufferInfo> buffers(HERMES->main_alloc_);
   size_t blob_off_ = 0;
   for (auto plcmnt : schema.plcmnts_) {
     if (plcmnt.tid_.GetNodeId() != mdm_->rpc_->node_id_) {
       blob_off_ += plcmnt.size_;
       continue;
     }
-    lipc::ShmRef<BufferPoolAllocator> alloc =
+    hipc::ShmRef<BufferPoolAllocator> alloc =
         (*target_allocs_)[plcmnt.tid_.GetDeviceId()];
     BufferInfo info;
     info.t_off_ = alloc->cur_off_.load();
@@ -85,7 +85,7 @@ BufferPool::LocalAllocateAndSetBuffers(PlacementSchema &schema,
  *
  * TODO(llogan): actually implement
  * */
-bool BufferPool::LocalReleaseBuffers(lipc::vector<BufferInfo> &buffers) {
+bool BufferPool::LocalReleaseBuffers(hipc::vector<BufferInfo> &buffers) {
   return true;
 }
 

@@ -21,7 +21,7 @@ namespace hermes_shm {
 
 /** An uninterpreted array of bytes */
 struct charbuf {
-  lipc::Allocator *alloc_; /**< The allocator used to allocate data */
+  hipc::Allocator *alloc_; /**< The allocator used to allocate data */
   char *data_; /**< The pointer to data */
   size_t size_; /**< The size of data */
   bool destructable_;  /**< Whether or not this container owns data */
@@ -173,8 +173,8 @@ struct charbuf {
 
  private:
   /** Allocate charbuf */
-  bool Allocate(lipc::Allocator *alloc, size_t size) {
-    lipc::OffsetPointer p;
+  bool Allocate(hipc::Allocator *alloc, size_t size) {
+    hipc::OffsetPointer p;
     if (size == 0) {
       alloc_ = nullptr;
       data_ = nullptr;

@@ -26,7 +26,7 @@ void MultiThreadedPageAllocationTest(Allocator *alloc) {
 }
 
 TEST_CASE("StackAllocatorMultithreaded") {
-  auto alloc = Pretest<lipc::PosixShmMmap, lipc::StackAllocator>();
+  auto alloc = Pretest<hipc::PosixShmMmap, hipc::StackAllocator>();
   REQUIRE(alloc->GetCurrentlyAllocatedSize() == 0);
   MultiThreadedPageAllocationTest(alloc);
   REQUIRE(alloc->GetCurrentlyAllocatedSize() == 0);
@@ -34,7 +34,7 @@ TEST_CASE("StackAllocatorMultithreaded") {
 }
 
 TEST_CASE("MultiPageAllocatorMultithreaded") {
-  auto alloc = Pretest<lipc::PosixShmMmap, lipc::MultiPageAllocator>();
+  auto alloc = Pretest<hipc::PosixShmMmap, hipc::MultiPageAllocator>();
   REQUIRE(alloc->GetCurrentlyAllocatedSize() == 0);
   MultiThreadedPageAllocationTest(alloc);
   REQUIRE(alloc->GetCurrentlyAllocatedSize() == 0);

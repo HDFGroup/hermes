@@ -21,7 +21,7 @@
 #include "shm_ref.h"
 #include "shm_deserialize.h"
 
-namespace lipc = hermes_shm::ipc;
+namespace hipc = hermes_shm::ipc;
 
 namespace hermes_shm::ipc {
 

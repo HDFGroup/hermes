@@ -48,7 +48,7 @@ TEST_CASE("ListOfInt") {
 TEST_CASE("ListOfString") {
   Allocator *alloc = alloc_g;
   REQUIRE(alloc->GetCurrentlyAllocatedSize() == 0);
-  ListTest<lipc::string>();
+  ListTest<hipc::string>();
   REQUIRE(alloc->GetCurrentlyAllocatedSize() == 0);
 }
 

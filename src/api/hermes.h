@@ -40,7 +40,7 @@ class VBucket;
  * The Hermes shared-memory header
  * */
 struct HermesShmHeader {
-  lipc::Pointer ram_tier_;
+  hipc::Pointer ram_tier_;
   MetadataManagerShmHeader mdm_;
   BufferPoolShmHeader bpm_;
 };
@@ -59,7 +59,7 @@ class Hermes {
   BufferOrganizer borg_;
   COMM_TYPE comm_;
   RPC_TYPE rpc_;
-  lipc::Allocator *main_alloc_;
+  hipc::Allocator *main_alloc_;
   bool is_being_initialized_;
   bool is_initialized_;
   bool is_terminated_;

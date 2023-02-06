@@ -51,7 +51,7 @@ class ListTestSuite {
     const Container &obj = obj_;
     int fcur = 0;
     for (auto iter = obj.cbegin(); iter != obj.cend(); ++iter) {
-      lipc::ShmRef<T> num = *iter;
+      hipc::ShmRef<T> num = *iter;
       CREATE_SET_VAR_TO_INT_OR_STRING(T, fcur_conv, fcur);
       REQUIRE(*num == fcur_conv);
       ++fcur;

@@ -26,7 +26,7 @@ void Posttest() {
 }
 
 void MainPretest() {
-  Pretest<lipc::StackAllocator>();
+  Pretest<hipc::StackAllocator>();
 }
 
 void MainPosttest() {

@@ -23,8 +23,8 @@ namespace hermes {
  * */
 void BufferOrganizer::shm_init() {
   mdm_ = &HERMES->mdm_;
-  for (lipc::ShmRef<TargetInfo> target : (*mdm_->targets_)) {
-    lipc::ShmRef<DeviceInfo> dev_info =
+  for (hipc::ShmRef<TargetInfo> target : (*mdm_->targets_)) {
+    hipc::ShmRef<DeviceInfo> dev_info =
         (*mdm_->devices_)[target->id_.GetDeviceId()];
     if (dev_info->mount_dir_->size() == 0) {
       dev_info->header_->io_api_ = IoInterface::kRam;
@@ -50,13 +50,13 @@ void BufferOrganizer::shm_deserialize()  {
 
 /** Stores a blob into a set of buffers */
 RPC void BufferOrganizer::LocalPlaceBlobInBuffers(
-    const Blob &blob, lipc::vector<BufferInfo> &buffers) {
+    const Blob &blob, hipc::vector<BufferInfo> &buffers) {
   size_t blob_off = 0;
-  for (lipc::ShmRef<BufferInfo> buffer_info : buffers) {
+  for (hipc::ShmRef<BufferInfo> buffer_info : buffers) {
     if (buffer_info->tid_.GetNodeId() != mdm_->rpc_->node_id_) {
       continue;
     }
-    lipc::ShmRef<DeviceInfo> dev_info =
+    hipc::ShmRef<DeviceInfo> dev_info =
         (*mdm_->devices_)[buffer_info->tid_.GetDeviceId()];
     auto io_client = borg::BorgIoClientFactory::Get(dev_info->header_->io_api_);
     bool ret = io_client->Write(*dev_info,
@@ -72,14 +72,14 @@ RPC void BufferOrganizer::LocalPlaceBlobInBuffers(
 
 /** Stores a blob into a set of buffers */
 RPC Blob BufferOrganizer::LocalReadBlobFromBuffers(
-    lipc::vector<BufferInfo> &buffers) {
+    hipc::vector<BufferInfo> &buffers) {
   Blob blob(SumBufferBlobSizes(buffers));
   size_t blob_off = 0;
-  for (lipc::ShmRef<BufferInfo> buffer_info : buffers) {
+  for (hipc::ShmRef<BufferInfo> buffer_info : buffers) {
     if (buffer_info->tid_.GetNodeId() != mdm_->rpc_->node_id_) {
       continue;
     }
-    lipc::ShmRef<DeviceInfo> dev_info =
+    hipc::ShmRef<DeviceInfo> dev_info =
         (*mdm_->devices_)[buffer_info->tid_.GetDeviceId()];
     auto io_client = borg::BorgIoClientFactory::Get(dev_info->header_->io_api_);
     bool ret = io_client->Read(*dev_info, blob.data() + blob_off,
@@ -94,8 +94,8 @@ RPC Blob BufferOrganizer::LocalReadBlobFromBuffers(
 }
 
 /** Copies one buffer set into another buffer set */
-RPC void BufferOrganizer::LocalCopyBuffers(lipc::vector<BufferInfo> &dst,
-                                           lipc::vector<BufferInfo> &src) {
+RPC void BufferOrganizer::LocalCopyBuffers(hipc::vector<BufferInfo> &dst,
+                                           hipc::vector<BufferInfo> &src) {
 }
 
 }  // namespace hermes

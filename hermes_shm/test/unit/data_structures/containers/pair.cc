@@ -23,7 +23,7 @@ void PairTest() {
   {
     CREATE_SET_VAR_TO_INT_OR_STRING(FirstT, first, 124);
     CREATE_SET_VAR_TO_INT_OR_STRING(SecondT, second, 130);
-    lipc::pair<FirstT, SecondT> data(alloc, first, second);
+    hipc::pair<FirstT, SecondT> data(alloc, first, second);
     REQUIRE(*data.first_ == first);
     REQUIRE(*data.second_ == second);
   }
@@ -32,8 +32,8 @@ void PairTest() {
   {
     CREATE_SET_VAR_TO_INT_OR_STRING(FirstT, first, 124);
     CREATE_SET_VAR_TO_INT_OR_STRING(SecondT, second, 130);
-    lipc::pair<FirstT, SecondT> data(alloc, first, second);
-    lipc::pair<FirstT, SecondT> cpy(data);
+    hipc::pair<FirstT, SecondT> data(alloc, first, second);
+    hipc::pair<FirstT, SecondT> cpy(data);
     REQUIRE(*cpy.first_ == first);
     REQUIRE(*cpy.second_ == second);
   }
@@ -42,8 +42,8 @@ void PairTest() {
   {
     CREATE_SET_VAR_TO_INT_OR_STRING(FirstT, first, 124);
     CREATE_SET_VAR_TO_INT_OR_STRING(SecondT, second, 130);
-    lipc::pair<FirstT, SecondT> data(alloc, first, second);
-    lipc::pair<FirstT, SecondT> cpy(std::move(data));
+    hipc::pair<FirstT, SecondT> data(alloc, first, second);
+    hipc::pair<FirstT, SecondT> cpy(std::move(data));
     REQUIRE(*cpy.first_ == first);
     REQUIRE(*cpy.second_ == second);
   }
@@ -59,6 +59,6 @@ TEST_CASE("PairOfIntInt") {
 TEST_CASE("PairOfIntString") {
   Allocator *alloc = alloc_g;
   REQUIRE(alloc->GetCurrentlyAllocatedSize() == 0);
-  PairTest<int, lipc::string>();
+  PairTest<int, hipc::string>();
   REQUIRE(alloc->GetCurrentlyAllocatedSize() == 0);
 }

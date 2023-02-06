@@ -22,8 +22,8 @@ class MetadataManager;
 class BufferOrganizer;
 
 struct BufferPoolAllocator {
-  lipc::atomic<size_t> max_size_;
-  lipc::atomic<size_t> cur_off_;
+  hipc::atomic<size_t> max_size_;
+  hipc::atomic<size_t> cur_off_;
 
   /** Default constructor */
   BufferPoolAllocator() = default;
@@ -41,7 +41,7 @@ struct BufferPoolAllocator {
  * The shared-memory representation of the BufferPool
  * */
 struct BufferPoolShmHeader {
-  lipc::TypedPointer<lipc::vector<BufferPoolAllocator>> alloc_ar_;
+  hipc::TypedPointer<hipc::vector<BufferPoolAllocator>> alloc_ar_;
 };
 
 /**
@@ -52,7 +52,7 @@ class BufferPool {
   MetadataManager *mdm_;
   BufferOrganizer *borg_;
   /** Per-target allocator */
-  lipc::mptr<lipc::vector<BufferPoolAllocator>> target_allocs_;
+  hipc::mptr<hipc::vector<BufferPoolAllocator>> target_allocs_;
 
  public:
   BufferPool() = default;
@@ -75,14 +75,14 @@ class BufferPool {
   /**
    * Allocate buffers from the targets according to the schema
    * */
-  RPC lipc::vector<BufferInfo>
+  RPC hipc::vector<BufferInfo>
   LocalAllocateAndSetBuffers(PlacementSchema &schema,
                              const Blob &blob);
 
   /**
    * Free buffers from the BufferPool
    * */
-  RPC bool LocalReleaseBuffers(lipc::vector<BufferInfo> &buffers);
+  RPC bool LocalReleaseBuffers(hipc::vector<BufferInfo> &buffers);
 };
 
 }  // namespace hermes

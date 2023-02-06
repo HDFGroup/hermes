@@ -17,7 +17,7 @@
 
 namespace hermes {
 
-static const lipc::allocator_id_t main_alloc_id(0, 1);
+static const hipc::allocator_id_t main_alloc_id(0, 1);
 
 static const char* kHermesServerConf = "HERMES_CONF";
 static const char* kHermesClientConf = "HERMES_CLIENT_CONF";

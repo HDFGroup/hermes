@@ -64,14 +64,14 @@ void StdioIoClient::HermesClose(IoClientObject &f,
 }
 
 /** Get initial statistics from the backend */
-void StdioIoClient::InitBucketState(const lipc::charbuf &bkt_name,
+void StdioIoClient::InitBucketState(const hipc::charbuf &bkt_name,
                                     const IoClientContext &opts,
                                     GlobalIoClientState &stat) {
   // TODO(llogan)
 }
 
 /** Write blob to backend */
-void StdioIoClient::WriteBlob(const lipc::charbuf &bkt_name,
+void StdioIoClient::WriteBlob(const hipc::charbuf &bkt_name,
                               const Blob &full_blob,
                               const IoClientContext &opts,
                               IoStatus &status) {
@@ -94,7 +94,7 @@ void StdioIoClient::WriteBlob(const lipc::charbuf &bkt_name,
 }
 
 /** Read blob from the backend */
-void StdioIoClient::ReadBlob(const lipc::charbuf &bkt_name,
+void StdioIoClient::ReadBlob(const hipc::charbuf &bkt_name,
                              Blob &full_blob,
                              const IoClientContext &opts,
                              IoStatus &status) {

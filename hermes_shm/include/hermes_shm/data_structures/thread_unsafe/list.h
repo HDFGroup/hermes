@@ -59,7 +59,7 @@ template<typename T>
 struct list_iterator_templ {
  public:
   /**< A shm reference to the containing list object. */
-  lipc::ShmRef<list<T>> list_;
+  hipc::ShmRef<list<T>> list_;
   /**< A pointer to the entry in shared memory */
   list_entry<T> *entry_;
   /**< The offset of the entry in the shared-memory allocator */
@@ -458,7 +458,7 @@ class list : public ShmContainer {
   /** Find an element in this list */
   list_iterator<T> find(const T &entry) {
     for (auto iter = begin(); iter != end(); ++iter) {
-      lipc::ShmRef<T> ref = *iter;
+      hipc::ShmRef<T> ref = *iter;
       if (*ref == entry) {
         return iter;
       }

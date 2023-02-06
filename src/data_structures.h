@@ -21,7 +21,7 @@
 #include <hermes_shm/types/charbuf.h>
 #include <hermes_shm/types/atomic.h>
 
-namespace lipc = hermes_shm::ipc;
+namespace hipc = hermes_shm::ipc;
 
 using hermes_shm::RwLock;
 using hermes_shm::Mutex;

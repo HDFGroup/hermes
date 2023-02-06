@@ -25,7 +25,7 @@ VBucket::VBucket(const std::string &name,
                  Context &ctx,
                  const IoClientContext &opts)
 : mdm_(&HERMES->mdm_), ctx_(ctx) {
-  lipc::string lname(name);
+  hipc::string lname(name);
   // TODO(llogan): rpcify
   id_ = mdm_->LocalGetOrCreateVBucket(lname, opts);
 }
@@ -36,7 +36,7 @@ VBucket::VBucket(const std::string &name,
  * @param name the name of the new vbucket
  * */
 void VBucket::Rename(std::string name) {
-  lipc::string lname(name);
+  hipc::string lname(name);
   mdm_->LocalRenameVBucket(id_, lname);
 }
 

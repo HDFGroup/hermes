@@ -26,7 +26,7 @@ class PosixIoClient : public BorgIoClient {
  public:
   bool Init(DeviceInfo &dev_info) override {
     auto api = HERMES_POSIX_API;
-    lipc::string text = (*dev_info.mount_dir_) +
+    hipc::string text = (*dev_info.mount_dir_) +
                         "/" + "slab_" + (*dev_info.dev_name_);
     (*dev_info.mount_point_) = std::move(text);
     int fd = api->open((*dev_info.mount_point_).c_str(),

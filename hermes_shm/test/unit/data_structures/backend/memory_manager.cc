@@ -38,9 +38,9 @@ TEST_CASE("MemoryManager") {
 
   if (rank == 0) {
     std::cout << "Creating SHMEM (rank 0): " << shm_url << std::endl;
-    mem_mngr->CreateBackend<lipc::PosixShmMmap>(
+    mem_mngr->CreateBackend<hipc::PosixShmMmap>(
       MemoryManager::kDefaultBackendSize, shm_url);
-    mem_mngr->CreateAllocator<lipc::StackAllocator>(
+    mem_mngr->CreateAllocator<hipc::StackAllocator>(
       shm_url, alloc_id, 0);
   }
   MPI_Barrier(MPI_COMM_WORLD);
@@ -51,12 +51,12 @@ TEST_CASE("MemoryManager") {
   MPI_Barrier(MPI_COMM_WORLD);
   if (rank == 0) {
     std::cout << "Allocating pages (rank 0)" << std::endl;
-    lipc::Allocator *alloc = mem_mngr->GetAllocator(alloc_id);
+    hipc::Allocator *alloc = mem_mngr->GetAllocator(alloc_id);
     char *page = alloc->AllocatePtr<char>(page_size);
     memset(page, nonce, page_size);
     auto header = alloc->GetCustomHeader<SimpleHeader>();
-    lipc::Pointer p1 = mem_mngr->Convert<void>(alloc_id, page);
-    lipc::Pointer p2 = mem_mngr->Convert<char>(page);
+    hipc::Pointer p1 = mem_mngr->Convert<void>(alloc_id, page);
+    hipc::Pointer p2 = mem_mngr->Convert<char>(page);
     header->p_ = p1;
     REQUIRE(p1 == p2);
     REQUIRE(VerifyBuffer(page, page_size, nonce));
@@ -64,7 +64,7 @@ TEST_CASE("MemoryManager") {
   MPI_Barrier(MPI_COMM_WORLD);
   if (rank != 0) {
     std::cout << "Finding and checking pages (rank 1)" << std::endl;
-    lipc::Allocator *alloc = mem_mngr->GetAllocator(alloc_id);
+    hipc::Allocator *alloc = mem_mngr->GetAllocator(alloc_id);
     SimpleHeader *header = alloc->GetCustomHeader<SimpleHeader>();
     char *page = alloc->Convert<char>(header->p_);
     REQUIRE(VerifyBuffer(page, page_size, nonce));

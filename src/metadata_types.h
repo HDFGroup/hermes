@@ -107,10 +107,10 @@ struct BufferInfo {
 
 /** Represents BlobInfo in shared memory */
 template<>
-struct ShmHeader<BlobInfo> : public lipc::ShmBaseHeader {
+struct ShmHeader<BlobInfo> : public hipc::ShmBaseHeader {
   BucketId bkt_id_;  /**< The bucket containing the blob */
-  lipc::TypedPointer<lipc::string> name_ar_; /**< SHM pointer to string */
-  lipc::TypedPointer<lipc::vector<BufferInfo>>
+  hipc::TypedPointer<hipc::string> name_ar_; /**< SHM pointer to string */
+  hipc::TypedPointer<hipc::vector<BufferInfo>>
       buffers_ar_;     /**< SHM pointer to BufferInfo vector */
   size_t blob_size_;   /**< The overall size of the blob */
   RwLock lock_[2];     /**< Ensures BlobInfo access is synchronized */
@@ -154,7 +154,7 @@ struct ShmHeader<BlobInfo> : public lipc::ShmBaseHeader {
 };
 
 /** Blob metadata */
-struct BlobInfo : public lipc::ShmContainer {
+struct BlobInfo : public hipc::ShmContainer {
  public:
   SHM_CONTAINER_TEMPLATE(BlobInfo, BlobInfo, ShmHeader<BlobInfo>);
 
@@ -162,9 +162,9 @@ struct BlobInfo : public lipc::ShmContainer {
   /// The bucket containing the blob
   BucketId bkt_id_;
   /// The name of the blob
-  lipc::mptr<lipc::string> name_;
+  hipc::mptr<hipc::string> name_;
   /// The BufferInfo vector
-  lipc::mptr<lipc::vector<BufferInfo>> buffers_;
+  hipc::mptr<hipc::vector<BufferInfo>> buffers_;
   /// Synchronize access to blob
   Mutex lock_;
   /// Ensure that operations belonging to a transaction are not locked forever
@@ -175,7 +175,7 @@ struct BlobInfo : public lipc::ShmContainer {
 
   /** Initialize the data structure */
   void shm_init_main(ShmHeader<BlobInfo> *header,
-                     lipc::Allocator *alloc) {
+                     hipc::Allocator *alloc) {
     shm_init_allocator(alloc);
     shm_init_header(header);
     name_.shm_init(alloc_);
@@ -205,7 +205,7 @@ struct BlobInfo : public lipc::ShmContainer {
 
   /** Move pointers into another BlobInfo */
   void shm_weak_move_main(ShmHeader<BlobInfo> *header,
-                          lipc::Allocator *alloc,
+                          hipc::Allocator *alloc,
                           BlobInfo &other) {
     shm_init_allocator(alloc);
     shm_init_header(header);
@@ -218,7 +218,7 @@ struct BlobInfo : public lipc::ShmContainer {
 
   /** Deep copy data into another BlobInfo */
   void shm_strong_copy_main(ShmHeader<BlobInfo> *header,
-                            lipc::Allocator *alloc,
+                            hipc::Allocator *alloc,
                             const BlobInfo &other) {
     shm_init_allocator(alloc);
     shm_init_header(header);
@@ -232,11 +232,11 @@ struct BlobInfo : public lipc::ShmContainer {
 
 /** Represents BucketInfo in shared memory */
 template<>
-struct ShmHeader<BucketInfo> : public lipc::ShmBaseHeader {
+struct ShmHeader<BucketInfo> : public hipc::ShmBaseHeader {
   /** Name of the bucket */
-  lipc::TypedPointer<lipc::string> name_ar_;
+  hipc::TypedPointer<hipc::string> name_ar_;
   /** Archive of blob vector */
-  lipc::TypedPointer<lipc::list<BlobId>> blobs_ar_;
+  hipc::TypedPointer<hipc::list<BlobId>> blobs_ar_;
   size_t internal_size_;  /**< Current bucket size */
   /** State needed to be maintained for I/O clients */
   GlobalIoClientState client_state_;
@@ -283,13 +283,13 @@ struct ShmHeader<BucketInfo> : public lipc::ShmBaseHeader {
 };
 
 /** Metadata for a Bucket */
-struct BucketInfo : public lipc::ShmContainer {
+struct BucketInfo : public hipc::ShmContainer {
  public:
   SHM_CONTAINER_TEMPLATE(BucketInfo, BucketInfo, ShmHeader<BucketInfo>);
 
  public:
-  lipc::mptr<lipc::string> name_; /**< The name of the bucket */
-  lipc::mptr<lipc::list<BlobId>> blobs_;  /**< All blobs in this Bucket */
+  hipc::mptr<hipc::string> name_; /**< The name of the bucket */
+  hipc::mptr<hipc::list<BlobId>> blobs_;  /**< All blobs in this Bucket */
 
  public:
   /** Default constructor */
@@ -297,11 +297,11 @@ struct BucketInfo : public lipc::ShmContainer {
 
   /** Initialize the data structure */
   void shm_init_main(ShmHeader<BucketInfo> *header,
-                     lipc::Allocator *alloc) {
+                     hipc::Allocator *alloc) {
     shm_init_allocator(alloc);
     shm_init_header(header);
-    name_ = lipc::make_mptr<lipc::string>(alloc);
-    blobs_ = lipc::make_mptr<lipc::list<BlobId>>(alloc);
+    name_ = hipc::make_mptr<hipc::string>(alloc);
+    blobs_ = hipc::make_mptr<hipc::list<BlobId>>(alloc);
   }
 
   /** Destroy all allocated data */
@@ -323,7 +323,7 @@ struct BucketInfo : public lipc::ShmContainer {
 
   /** Move other object into this one */
   void shm_weak_move_main(ShmHeader<BucketInfo> *header,
-                          lipc::Allocator *alloc,
+                          hipc::Allocator *alloc,
                           BucketInfo &other) {
     shm_init_allocator(alloc);
     shm_init_header(header);
@@ -335,7 +335,7 @@ struct BucketInfo : public lipc::ShmContainer {
 
   /** Copy other object into this one */
   void shm_strong_copy_main(ShmHeader<BucketInfo> *header,
-                            lipc::Allocator *alloc,
+                            hipc::Allocator *alloc,
                             const BucketInfo &other) {
     shm_init_allocator(alloc);
     shm_init_header(header);
@@ -348,9 +348,9 @@ struct BucketInfo : public lipc::ShmContainer {
 
 /** Represents a VBucket in shared memory */
 template<>
-struct ShmHeader<VBucketInfo> : public lipc::ShmBaseHeader {
-  lipc::TypedPointer<lipc::charbuf> name_ar_;
-  lipc::TypedPointer<lipc::unordered_map<BlobId, BlobId>> blobs_ar_;
+struct ShmHeader<VBucketInfo> : public hipc::ShmBaseHeader {
+  hipc::TypedPointer<hipc::charbuf> name_ar_;
+  hipc::TypedPointer<hipc::unordered_map<BlobId, BlobId>> blobs_ar_;
   RwLock lock_;
 
   /** Default constructor */
@@ -386,13 +386,13 @@ struct ShmHeader<VBucketInfo> : public lipc::ShmBaseHeader {
 };
 
 /** Metadata for a VBucket */
-struct VBucketInfo : public lipc::ShmContainer {
+struct VBucketInfo : public hipc::ShmContainer {
  public:
   SHM_CONTAINER_TEMPLATE(VBucketInfo, VBucketInfo, ShmHeader<VBucketInfo>);
 
  public:
-  lipc::mptr<lipc::charbuf> name_;
-  lipc::mptr<lipc::unordered_map<BlobId, BlobId>> blobs_;
+  hipc::mptr<hipc::charbuf> name_;
+  hipc::mptr<hipc::unordered_map<BlobId, BlobId>> blobs_;
 
  public:
   /** Default constructor. */
@@ -400,11 +400,11 @@ struct VBucketInfo : public lipc::ShmContainer {
 
   /** Default SHM Constructor */
   void shm_init_main(ShmHeader<VBucketInfo> *header,
-                     lipc::Allocator *alloc) {
+                     hipc::Allocator *alloc) {
     shm_init_allocator(alloc);
     shm_init_header(header);
-    name_ = lipc::make_mptr<lipc::charbuf>(alloc_);
-    blobs_ = lipc::make_mptr<lipc::unordered_map<BlobId, BlobId>>(alloc_);
+    name_ = hipc::make_mptr<hipc::charbuf>(alloc_);
+    blobs_ = hipc::make_mptr<hipc::unordered_map<BlobId, BlobId>>(alloc_);
   }
 
   /** Free shared memory */
@@ -427,7 +427,7 @@ struct VBucketInfo : public lipc::ShmContainer {
 
   /** Move other object into this one */
   void shm_weak_move_main(ShmHeader<VBucketInfo> *header,
-                          lipc::Allocator *alloc,
+                          hipc::Allocator *alloc,
                           VBucketInfo &other) {
     shm_init_allocator(alloc);
     shm_init_header(header);
@@ -439,7 +439,7 @@ struct VBucketInfo : public lipc::ShmContainer {
 
   /** Copy other object into this one */
   void shm_strong_copy_main(ShmHeader<VBucketInfo> *header,
-                            lipc::Allocator *alloc,
+                            hipc::Allocator *alloc,
                             const VBucketInfo &other) {
     shm_init_allocator(alloc);
     shm_init_header(header);

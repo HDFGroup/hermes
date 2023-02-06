@@ -17,7 +17,7 @@ public:
 
 typedef TYPED_HEADER header_t; /** Header type query */
 header_t *header_; /**< Header of the shared-memory data structure */
-lipc::Allocator *alloc_; /**< lipc::Allocator used for this data structure */
+hipc::Allocator *alloc_; /**< hipc::Allocator used for this data structure */
 hermes_shm::bitfield32_t flags_; /**< Flags used data structure status */
 
 public:
@@ -35,16 +35,16 @@ shm_init(std::forward<Args>(args)...);
 template<typename ...Args>
 void shm_init(Args&& ...args) {
   shm_destroy(false);
-  shm_init_main(lipc::typed_nullptr<TYPED_HEADER>(),
-                lipc::typed_nullptr<lipc::Allocator>(),
+  shm_init_main(hipc::typed_nullptr<TYPED_HEADER>(),
+                hipc::typed_nullptr<hipc::Allocator>(),
                 std::forward<Args>(args)...);
 }
 
 /** Constructor. Allocate header with specific allocator. */
 template<typename ...Args>
-void shm_init(lipc::Allocator *alloc, Args&& ...args) {
+void shm_init(hipc::Allocator *alloc, Args&& ...args) {
   shm_destroy(false);
-  shm_init_main(lipc::typed_nullptr<TYPED_HEADER>(),
+  shm_init_main(hipc::typed_nullptr<TYPED_HEADER>(),
                 alloc,
                 std::forward<Args>(args)...);
 }
@@ -52,13 +52,13 @@ void shm_init(lipc::Allocator *alloc, Args&& ...args) {
 /** Constructor. Initialize an already-allocated header. */
 template<typename ...Args>
 void shm_init(TYPED_HEADER &header,
-              lipc::Allocator *alloc, Args&& ...args) {
+              hipc::Allocator *alloc, Args&& ...args) {
   shm_destroy(false);
   shm_init_main(&header, alloc, std::forward<Args>(args)...);
 }
 
 /** Initialize the data structure's allocator */
-inline void shm_init_allocator(lipc::Allocator *alloc) {
+inline void shm_init_allocator(hipc::Allocator *alloc) {
   if (IsValid()) { return; }
   if (alloc == nullptr) {
     alloc_ = HERMES_SHM_MEMORY_MANAGER->GetDefaultAllocator();
@@ -78,7 +78,7 @@ void shm_init_header(TYPED_HEADER *header,
   if (IsValid()) {
     header_->SetBits(SHM_CONTAINER_DATA_VALID);
   } else if (header == nullptr) {
-    lipc::Pointer p;
+    hipc::Pointer p;
     header_ = alloc_->template
       AllocateConstructObjs<TYPED_HEADER>(
       1, p, std::forward<Args>(args)...);
@@ -89,9 +89,9 @@ void shm_init_header(TYPED_HEADER *header,
       SHM_CONTAINER_VALID |
         SHM_CONTAINER_DESTRUCTABLE);
   } else {
-    lipc::Pointer header_ptr;
+    hipc::Pointer header_ptr;
     header_ = header;
-    lipc::Allocator::ConstructObj<TYPED_HEADER>(
+    hipc::Allocator::ConstructObj<TYPED_HEADER>(
       *header_, std::forward<Args>(args)...);
     header_->SetBits(
       SHM_CONTAINER_DATA_VALID);
@@ -106,16 +106,16 @@ void shm_init_header(TYPED_HEADER *header,
  * ===================================*/
 
 /** Serialize into a Pointer */
-void shm_serialize(lipc::TypedPointer<TYPED_CLASS> &ar) const {
+void shm_serialize(hipc::TypedPointer<TYPED_CLASS> &ar) const {
   ar = alloc_->template
-    Convert<TYPED_HEADER, lipc::Pointer>(header_);
+    Convert<TYPED_HEADER, hipc::Pointer>(header_);
   shm_serialize_main();
 }
 
 /** Serialize into an AtomicPointer */
-void shm_serialize(lipc::TypedAtomicPointer<TYPED_CLASS> &ar) const {
+void shm_serialize(hipc::TypedAtomicPointer<TYPED_CLASS> &ar) const {
   ar = alloc_->template
-    Convert<TYPED_HEADER, lipc::AtomicPointer>(header_);
+    Convert<TYPED_HEADER, hipc::AtomicPointer>(header_);
   shm_serialize_main();
 }
 
@@ -127,7 +127,7 @@ SHM_SERIALIZE_OPS((TYPED_CLASS))
  * ===================================*/
 
 /** Deserialize object from a raw pointer */
-bool shm_deserialize(const lipc::TypedPointer<TYPED_CLASS> &ar) {
+bool shm_deserialize(const hipc::TypedPointer<TYPED_CLASS> &ar) {
   return shm_deserialize(
     HERMES_SHM_MEMORY_MANAGER->GetAllocator(ar.allocator_id_),
     ar.ToOffsetPointer()
@@ -135,12 +135,12 @@ bool shm_deserialize(const lipc::TypedPointer<TYPED_CLASS> &ar) {
 }
 
 /** Deserialize object from allocator + offset */
-bool shm_deserialize(lipc::Allocator *alloc, lipc::OffsetPointer header_ptr) {
+bool shm_deserialize(hipc::Allocator *alloc, hipc::OffsetPointer header_ptr) {
   if (header_ptr.IsNull()) { return false; }
   return shm_deserialize(alloc,
                          alloc->Convert<
                            TYPED_HEADER,
-                           lipc::OffsetPointer>(header_ptr));
+                           hipc::OffsetPointer>(header_ptr));
 }
 
 /** Deserialize object from another object (weak copy) */
@@ -150,7 +150,7 @@ bool shm_deserialize(const CLASS_NAME &other) {
 }
 
 /** Deserialize object from allocator + header */
-bool shm_deserialize(lipc::Allocator *alloc,
+bool shm_deserialize(hipc::Allocator *alloc,
                      TYPED_HEADER *header) {
   flags_.UnsetBits(SHM_CONTAINER_DESTRUCTABLE);
   alloc_ = alloc;
@@ -162,7 +162,7 @@ bool shm_deserialize(lipc::Allocator *alloc,
 
 /** Constructor. Deserialize the object from the reference. */
 template<typename ...Args>
-void shm_init(lipc::ShmRef<TYPED_CLASS> &obj) {
+void shm_init(hipc::ShmRef<TYPED_CLASS> &obj) {
   shm_deserialize(obj->GetAllocator(), obj->header_);
 }
 
@@ -201,8 +201,8 @@ void shm_destroy(bool destroy_header = true) {
 /** Move constructor */
 CLASS_NAME(CLASS_NAME &&other) noexcept {
 shm_weak_move(
-  lipc::typed_nullptr<TYPED_HEADER>(),
-  lipc::typed_nullptr<lipc::Allocator>(),
+  hipc::typed_nullptr<TYPED_HEADER>(),
+  hipc::typed_nullptr<hipc::Allocator>(),
   other);
 }
 
@@ -210,8 +210,8 @@ shm_weak_move(
 CLASS_NAME& operator=(CLASS_NAME &&other) noexcept {
 if (this != &other) {
 shm_weak_move(
-  lipc::typed_nullptr<TYPED_HEADER>(),
-  lipc::typed_nullptr<lipc::Allocator>(),
+  hipc::typed_nullptr<TYPED_HEADER>(),
+  hipc::typed_nullptr<hipc::Allocator>(),
   other);
 }
 return *this;
@@ -219,14 +219,14 @@ return *this;
 
 /** Move shm_init constructor */
 void shm_init_main(TYPED_HEADER *header,
-                   lipc::Allocator *alloc,
+                   hipc::Allocator *alloc,
                    CLASS_NAME &&other) noexcept {
   shm_weak_move(header, alloc, other);
 }
 
 /** Move operation */
 void shm_weak_move(TYPED_HEADER *header,
-                   lipc::Allocator *alloc,
+                   hipc::Allocator *alloc,
                    CLASS_NAME &other) {
   if (other.IsNull()) { return; }
   if (IsValid() && other.GetAllocator() != GetAllocator()) {
@@ -256,8 +256,8 @@ CLASS_NAME(const CLASS_NAME &other) noexcept {
 CLASS_NAME& operator=(const CLASS_NAME &other) {
   if (this != &other) {
     shm_strong_copy(
-      lipc::typed_nullptr<TYPED_HEADER>(),
-      lipc::typed_nullptr<lipc::Allocator>(),
+      hipc::typed_nullptr<TYPED_HEADER>(),
+      hipc::typed_nullptr<hipc::Allocator>(),
       other);
   }
   return *this;
@@ -265,14 +265,14 @@ CLASS_NAME& operator=(const CLASS_NAME &other) {
 
 /** Copy shm_init constructor */
 void shm_init_main(TYPED_HEADER *header,
-                   lipc::Allocator *alloc,
+                   hipc::Allocator *alloc,
                    const CLASS_NAME &other) {
   shm_strong_copy(header, alloc, other);
 }
 
 /** Strong Copy operation */
 void shm_strong_copy(TYPED_HEADER *header,
-                     lipc::Allocator *alloc,
+                     hipc::Allocator *alloc,
                      const CLASS_NAME &other) {
   if (other.IsNull()) { return; }
   shm_destroy(false);
@@ -340,16 +340,16 @@ POINTER_T GetShmPointer() const {
  * ===================================*/
 
 /** Get the allocator for this container */
-lipc::Allocator* GetAllocator() {
+hipc::Allocator* GetAllocator() {
   return alloc_;
 }
 
 /** Get the allocator for this container */
-lipc::Allocator* GetAllocator() const {
+hipc::Allocator* GetAllocator() const {
   return alloc_;
 }
 
 /** Get the shared-memory allocator id */
-lipc::allocator_id_t GetAllocatorId() const {
+hipc::allocator_id_t GetAllocatorId() const {
   return alloc_->GetId();
 }

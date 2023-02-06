@@ -19,7 +19,7 @@
 namespace hermes {
 
 Status MinimizeIoTime::Placement(const std::vector<size_t> &blob_sizes,
-                                 const lipc::vector<TargetInfo> &targets,
+                                 const hipc::vector<TargetInfo> &targets,
                                  const api::Context &ctx,
                                  std::vector<PlacementSchema> &output) {
   Status result;
@@ -132,7 +132,7 @@ Status MinimizeIoTime::Placement(const std::vector<size_t> &blob_sizes,
 
 void MinimizeIoTime::PlaceBytes(size_t j, ssize_t bytes,
                                 std::vector<size_t> &vars_bytes,
-                                const lipc::vector<TargetInfo> &targets) {
+                                const hipc::vector<TargetInfo> &targets) {
   if (vars_bytes[j] == 0) {
     PlaceBytes(j+1,  bytes, vars_bytes, targets);
     return;
@@ -154,7 +154,7 @@ void MinimizeIoTime::PlaceBytes(size_t j, ssize_t bytes,
   PlaceBytes(j+1, io_diff, vars_bytes, targets);
 }
 
-void MinimizeIoTime::GetPlacementRatios(const lipc::vector<TargetInfo> &targets,
+void MinimizeIoTime::GetPlacementRatios(const hipc::vector<TargetInfo> &targets,
                                         const api::Context &ctx) {
   placement_ratios_.reserve(targets.size());
   if (ctx.minimize_io_time_options.use_placement_ratio) {

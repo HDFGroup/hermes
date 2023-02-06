@@ -82,7 +82,7 @@ bool shm_deserialize(Allocator *alloc,\
 \
 /** Constructor. Deserialize the object from the reference. */\
 template<typename ...Args>\
-void shm_init(lipc::ShmRef<TYPE_UNWRAP(TYPED_CLASS)> &obj) {\
+void shm_init(hipc::ShmRef<TYPE_UNWRAP(TYPED_CLASS)> &obj) {\
   shm_deserialize(obj->GetAllocator(), obj->header_);\
 }\
 \
@@ -130,14 +130,14 @@ return *this;\
 \
 /** Move shm_init constructor */\
 void shm_init_main(TYPE_UNWRAP(TYPED_HEADER) *header,\
-                   lipc::Allocator *alloc,\
+                   hipc::Allocator *alloc,\
                    TYPE_UNWRAP(CLASS_NAME) &&other) noexcept {\
   shm_weak_move(header, alloc, other);\
 }\
 \
 /** Move operation */\
 void shm_weak_move(TYPE_UNWRAP(TYPED_HEADER) *header,\
-                   lipc::Allocator *alloc,\
+                   hipc::Allocator *alloc,\
                    TYPE_UNWRAP(CLASS_NAME) &other) {\
   obj_.shm_weak_move(header, alloc, other);\
 }\
@@ -164,13 +164,13 @@ TYPE_UNWRAP(CLASS_NAME) &operator=(const TYPE_UNWRAP(CLASS_NAME) &other) {\
 \
 /** Copy shm_init constructor */\
 void shm_init_main(TYPE_UNWRAP(TYPED_HEADER) *header,\
-                   lipc::Allocator *alloc,\
+                   hipc::Allocator *alloc,\
                    const TYPE_UNWRAP(CLASS_NAME) &other) {\
   shm_strong_copy(header, alloc, other);\
 }\
 \
 /** Strong Copy operation */\
-void shm_strong_copy(TYPE_UNWRAP(TYPED_HEADER) *header, lipc::Allocator *alloc,\
+void shm_strong_copy(TYPE_UNWRAP(TYPED_HEADER) *header, hipc::Allocator *alloc,\
                      const TYPE_UNWRAP(CLASS_NAME) &other) {\
   if (other.IsNull()) { return; }\
   shm_destroy(false);\

@@ -40,7 +40,7 @@ Status DPE::CalculatePlacement(const std::vector<size_t> &blob_sizes,
     // Reset the output schema
     output.clear();
     // Get the capacity/bandwidth of targets
-    lipc::vector<TargetInfo> targets;
+    hipc::vector<TargetInfo> targets;
     switch (static_cast<TopologyType>(i)) {
       case TopologyType::Local: {
         targets = mdm_->LocalGetTargetInfo();

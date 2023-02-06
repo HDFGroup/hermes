@@ -49,7 +49,7 @@ void ListVecTest(size_t count) {
     {
       REQUIRE(obj.size() == count);
       int i = 0;
-      for (lipc::ShmRef<T> var : obj) {
+      for (hipc::ShmRef<T> var : obj) {
         CREATE_SET_VAR_TO_INT_OR_STRING(T, orig, i);
         REQUIRE(*var == orig);
         ++i;
@@ -61,7 +61,7 @@ void ListVecTest(size_t count) {
     {
       if (rank == 0) {
         CREATE_SET_VAR_TO_INT_OR_STRING(T, update, count);
-        lipc::ShmRef<T> first = *obj.begin();
+        hipc::ShmRef<T> first = *obj.begin();
         (*first) = update;
       }
       MPI_Barrier(MPI_COMM_WORLD);
@@ -70,7 +70,7 @@ void ListVecTest(size_t count) {
     // Check if modification received
     {
       CREATE_SET_VAR_TO_INT_OR_STRING(T, update, count);
-      lipc::ShmRef<T> first = *obj.begin();
+      hipc::ShmRef<T> first = *obj.begin();
       REQUIRE((*first) == update);
       MPI_Barrier(MPI_COMM_WORLD);
       MPI_Barrier(MPI_COMM_WORLD);
@@ -94,17 +94,17 @@ void ListVecTest(size_t count) {
 }
 
 TEST_CASE("ListOfIntMpi") {
-  ListVecTest<int, lipc::list<int>>(100);
+  ListVecTest<int, hipc::list<int>>(100);
 }
 
 TEST_CASE("ListOfStringMpi") {
-  ListVecTest<lipc::string, lipc::list<lipc::string>>(100);
+  ListVecTest<hipc::string, hipc::list<hipc::string>>(100);
 }
 
 TEST_CASE("VectorOfIntMpi") {
-  ListVecTest<int, lipc::vector<int>>(100);
+  ListVecTest<int, hipc::vector<int>>(100);
 }
 
 TEST_CASE("VectorOfStringMpi") {
-  ListVecTest<lipc::string, lipc::vector<lipc::string>>(100);
+  ListVecTest<hipc::string, hipc::vector<hipc::string>>(100);
 }

@@ -31,19 +31,19 @@ enum class IoInterface {
  * DeviceInfo shared-memory representation
  * */
 template<>
-struct ShmHeader<DeviceInfo> : public lipc::ShmBaseHeader {
+struct ShmHeader<DeviceInfo> : public hipc::ShmBaseHeader {
   /** The human-readable name of the device */
-  lipc::TypedPointer<lipc::string> dev_name_;
+  hipc::TypedPointer<hipc::string> dev_name_;
   /** The I/O interface for the device */
   IoInterface io_api_;
   /** The minimum transfer size of each device */
   size_t block_size_;
   /** The unit of each slab, a multiple of the Device's block size */
-  lipc::TypedPointer<lipc::vector<size_t>> slab_sizes_;
+  hipc::TypedPointer<hipc::vector<size_t>> slab_sizes_;
   /** The directory the device is mounted on */
-  lipc::TypedPointer<lipc::string> mount_dir_;
+  hipc::TypedPointer<hipc::string> mount_dir_;
   /** The file to create on the device */
-  lipc::TypedPointer<lipc::string> mount_point_;
+  hipc::TypedPointer<hipc::string> mount_point_;
   /** Device capacity (bytes) */
   size_t capacity_;
   /** Bandwidth of a device (MBps) */
@@ -59,24 +59,24 @@ struct ShmHeader<DeviceInfo> : public lipc::ShmBaseHeader {
 /**
  * Device information defined in server config
  * */
-struct DeviceInfo : public lipc::ShmContainer {
+struct DeviceInfo : public hipc::ShmContainer {
   SHM_CONTAINER_TEMPLATE(DeviceInfo, DeviceInfo, ShmHeader<DeviceInfo>)
 
   /** The human-readable name of the device */
-  lipc::mptr<lipc::string> dev_name_;
+  hipc::mptr<hipc::string> dev_name_;
   /** The unit of each slab, a multiple of the Device's block size */
-  lipc::mptr<lipc::vector<size_t>> slab_sizes_;
+  hipc::mptr<hipc::vector<size_t>> slab_sizes_;
   /** The directory the device is mounted on */
-  lipc::mptr<lipc::string> mount_dir_;
+  hipc::mptr<hipc::string> mount_dir_;
   /** The file to create on the device */
-  lipc::mptr<lipc::string> mount_point_;
+  hipc::mptr<hipc::string> mount_point_;
 
   /** Default Constructor */
   DeviceInfo() = default;
 
   /** Default SHM Constructor */
   void shm_init_main(ShmHeader<DeviceInfo> *header,
-                     lipc::Allocator *alloc) {
+                     hipc::Allocator *alloc) {
     shm_init_allocator(alloc);
     shm_init_header(header);
     dev_name_.shm_init(alloc_);
@@ -112,7 +112,7 @@ struct DeviceInfo : public lipc::ShmContainer {
 
   /** Move another object into this object. */
   void shm_weak_move_main(ShmHeader<DeviceInfo> *header,
-                          lipc::Allocator *alloc,
+                          hipc::Allocator *alloc,
                           DeviceInfo &other) {
     shm_init_allocator(alloc);
     shm_init_header(header);
@@ -126,7 +126,7 @@ struct DeviceInfo : public lipc::ShmContainer {
 
   /** Copy another object into this object */
   void shm_strong_copy_main(ShmHeader<DeviceInfo> *header,
-                            lipc::Allocator *alloc,
+                            hipc::Allocator *alloc,
                             const DeviceInfo &other) {
     shm_init_allocator(alloc);
     shm_init_header(header);

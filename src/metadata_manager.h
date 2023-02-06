@@ -35,33 +35,33 @@ class BufferOrganizer;
 /**
  * Type name simplification for the various map types
  * */
-typedef lipc::unordered_map<lipc::charbuf, BlobId> BLOB_ID_MAP_T;
-typedef lipc::unordered_map<lipc::charbuf, BucketId> BKT_ID_MAP_T;
-typedef lipc::unordered_map<lipc::charbuf, VBucketId> VBKT_ID_MAP_T;
-typedef lipc::unordered_map<BlobId, BlobInfo> BLOB_MAP_T;
-typedef lipc::unordered_map<BucketId, BucketInfo> BKT_MAP_T;
-typedef lipc::unordered_map<VBucketId, VBucketInfo> VBKT_MAP_T;
+typedef hipc::unordered_map<hipc::charbuf, BlobId> BLOB_ID_MAP_T;
+typedef hipc::unordered_map<hipc::charbuf, BucketId> BKT_ID_MAP_T;
+typedef hipc::unordered_map<hipc::charbuf, VBucketId> VBKT_ID_MAP_T;
+typedef hipc::unordered_map<BlobId, BlobInfo> BLOB_MAP_T;
+typedef hipc::unordered_map<BucketId, BucketInfo> BKT_MAP_T;
+typedef hipc::unordered_map<VBucketId, VBucketInfo> VBKT_MAP_T;
 
 /**
  * The SHM representation of the MetadataManager
  * */
 struct MetadataManagerShmHeader {
   /// SHM representation of blob id map
-  lipc::TypedPointer<lipc::mptr<BLOB_ID_MAP_T>> blob_id_map_ar_;
+  hipc::TypedPointer<hipc::mptr<BLOB_ID_MAP_T>> blob_id_map_ar_;
   /// SHM representation of bucket id map
-  lipc::TypedPointer<lipc::mptr<BKT_ID_MAP_T>> bkt_id_map_ar_;
+  hipc::TypedPointer<hipc::mptr<BKT_ID_MAP_T>> bkt_id_map_ar_;
   /// SHM representation of vbucket id map
-  lipc::TypedPointer<lipc::mptr<VBKT_ID_MAP_T>> vbkt_id_map_ar_;
+  hipc::TypedPointer<hipc::mptr<VBKT_ID_MAP_T>> vbkt_id_map_ar_;
   /// SHM representation of blob map
-  lipc::TypedPointer<lipc::mptr<BLOB_MAP_T>> blob_map_ar_;
+  hipc::TypedPointer<hipc::mptr<BLOB_MAP_T>> blob_map_ar_;
   /// SHM representation of bucket map
-  lipc::TypedPointer<lipc::mptr<BKT_MAP_T>> bkt_map_ar_;
+  hipc::TypedPointer<hipc::mptr<BKT_MAP_T>> bkt_map_ar_;
   /// SHM representation of vbucket map
-  lipc::TypedPointer<lipc::mptr<VBKT_MAP_T>> vbkt_map_ar_;
+  hipc::TypedPointer<hipc::mptr<VBKT_MAP_T>> vbkt_map_ar_;
   /// SHM representation of device vector
-  lipc::TypedPointer<lipc::mptr<lipc::vector<DeviceInfo>>> devices_;
+  hipc::TypedPointer<hipc::mptr<hipc::vector<DeviceInfo>>> devices_;
   /// SHM representation of target info vector
-  lipc::TypedPointer<lipc::mptr<lipc::vector<TargetInfo>>> targets_;
+  hipc::TypedPointer<hipc::mptr<hipc::vector<TargetInfo>>> targets_;
   /// Used to create unique ids. Starts at 1.
   std::atomic<u64> id_alloc_;
   /// Synchronization
@@ -80,18 +80,18 @@ class MetadataManager {
   /**
    * The manual pointers representing the different map types.
    * */
-  lipc::mptr<BLOB_ID_MAP_T> blob_id_map_;
-  lipc::mptr<BKT_ID_MAP_T> bkt_id_map_;
-  lipc::mptr<VBKT_ID_MAP_T> vbkt_id_map_;
-  lipc::mptr<BLOB_MAP_T> blob_map_;
-  lipc::mptr<BKT_MAP_T> bkt_map_;
-  lipc::mptr<VBKT_MAP_T> vbkt_map_;
+  hipc::mptr<BLOB_ID_MAP_T> blob_id_map_;
+  hipc::mptr<BKT_ID_MAP_T> bkt_id_map_;
+  hipc::mptr<VBKT_ID_MAP_T> vbkt_id_map_;
+  hipc::mptr<BLOB_MAP_T> blob_map_;
+  hipc::mptr<BKT_MAP_T> bkt_map_;
+  hipc::mptr<VBKT_MAP_T> vbkt_map_;
 
   /**
    * Information about targets and devices
    * */
-  lipc::mptr<lipc::vector<DeviceInfo>> devices_;
-  lipc::mptr<lipc::vector<TargetInfo>> targets_;
+  hipc::mptr<hipc::vector<DeviceInfo>> devices_;
+  hipc::mptr<hipc::vector<TargetInfo>> targets_;
 
   /** A global lock for simplifying MD management */
   RwLock lock_;
@@ -122,9 +122,9 @@ class MetadataManager {
    /**
     * Create a unique blob name using BucketId
     * */
-  lipc::charbuf CreateBlobName(BucketId bkt_id,
-                               const lipc::charbuf &blob_name) {
-    lipc::charbuf new_name(sizeof(bkt_id) + blob_name.size());
+  hipc::charbuf CreateBlobName(BucketId bkt_id,
+                               const hipc::charbuf &blob_name) {
+    hipc::charbuf new_name(sizeof(bkt_id) + blob_name.size());
     size_t off = 0;
     memcpy(new_name.data_mutable() + off, &bkt_id, sizeof(BucketId));
     off += sizeof(BucketId);
@@ -135,13 +135,13 @@ class MetadataManager {
   /**
    * Get or create a bucket with \a bkt_name bucket name
    * */
-  RPC BucketId LocalGetOrCreateBucket(lipc::charbuf &bkt_name,
+  RPC BucketId LocalGetOrCreateBucket(hipc::charbuf &bkt_name,
                                       const IoClientContext &opts);
 
   /**
    * Get the BucketId with \a bkt_name bucket name
    * */
-  RPC BucketId LocalGetBucketId(lipc::charbuf &bkt_name);
+  RPC BucketId LocalGetBucketId(hipc::charbuf &bkt_name);
 
   /**
    * Get the size of a bucket (depends on the IoClient used).
@@ -176,7 +176,7 @@ class MetadataManager {
    * Rename \a bkt_id bucket to \a new_bkt_name new name
    * */
   RPC bool LocalRenameBucket(BucketId bkt_id,
-                             lipc::charbuf &new_bkt_name);
+                             hipc::charbuf &new_bkt_name);
 
   /**
    * Destroy \a bkt_id bucket
@@ -193,9 +193,9 @@ class MetadataManager {
    * */
   RPC std::tuple<BlobId, bool, size_t> LocalBucketPutBlob(
       BucketId bkt_id,
-      const lipc::charbuf &blob_name,
+      const hipc::charbuf &blob_name,
       size_t blob_size,
-      lipc::vector<BufferInfo> &buffers);
+      hipc::vector<BufferInfo> &buffers);
 
   /**
    * Registers the existence of a Blob with the Bucket. Required for
@@ -224,7 +224,7 @@ class MetadataManager {
    * */
   std::pair<BlobId, bool> LocalBucketTryCreateBlob(
       BucketId bkt_id,
-      const lipc::charbuf &blob_name);
+      const hipc::charbuf &blob_name);
 
   /**
    * Get a blob from a bucket
@@ -237,7 +237,7 @@ class MetadataManager {
   /**
    * Get \a blob_name BLOB from \a bkt_id bucket
    * */
-  RPC BlobId LocalGetBlobId(BucketId bkt_id, const lipc::charbuf &blob_name);
+  RPC BlobId LocalGetBlobId(BucketId bkt_id, const hipc::charbuf &blob_name);
 
   /**
    * Get \a blob_name BLOB name from \a blob_id BLOB id
@@ -266,7 +266,7 @@ class MetadataManager {
    * in \a bkt_id bucket.
    * */
   RPC bool LocalRenameBlob(BucketId bkt_id, BlobId blob_id,
-                           lipc::charbuf &new_blob_name);
+                           hipc::charbuf &new_blob_name);
 
   /**
    * Destroy \a blob_id blob in \a bkt_id bucket
@@ -276,13 +276,13 @@ class MetadataManager {
   /**
    * Get or create \a vbkt_name VBucket
    * */
-  RPC VBucketId LocalGetOrCreateVBucket(lipc::charbuf &vbkt_name,
+  RPC VBucketId LocalGetOrCreateVBucket(hipc::charbuf &vbkt_name,
                                         const IoClientContext &opts);
 
   /**
    * Get the VBucketId of \a vbkt_name VBucket
    * */
-  RPC VBucketId LocalGetVBucketId(lipc::charbuf &vbkt_name);
+  RPC VBucketId LocalGetVBucketId(hipc::charbuf &vbkt_name);
 
   /**
    * Link \a vbkt_id VBucketId
@@ -308,7 +308,7 @@ class MetadataManager {
   /**
    * Rename \a vbkt_id VBucket to \a new_vbkt_name name
    * */
-  RPC bool LocalRenameVBucket(VBucketId vbkt_id, lipc::charbuf &new_vbkt_name);
+  RPC bool LocalRenameVBucket(VBucketId vbkt_id, hipc::charbuf &new_vbkt_name);
 
   /**
    * Destroy \a vbkt_id VBucket
@@ -327,28 +327,28 @@ class MetadataManager {
   /**
    * Update the capacity of the target device
    * */
-  RPC const lipc::vector<TargetInfo>& LocalGetTargetInfo() {
+  RPC const hipc::vector<TargetInfo>& LocalGetTargetInfo() {
     return (*targets_);
   }
 
   /**
    * Get the TargetInfo for neighborhood
    * */
-  lipc::vector<TargetInfo> GetNeighborhoodTargetInfo() {
+  hipc::vector<TargetInfo> GetNeighborhoodTargetInfo() {
     return {};
   }
 
   /**
    * Get all TargetInfo in the system
    * */
-  lipc::vector<TargetInfo> GetGlobalTargetInfo() {
+  hipc::vector<TargetInfo> GetGlobalTargetInfo() {
     return {};
   }
 
  private:
   /** Acquire the external lock to Bucket or Blob */
   template<typename MapFirst, typename MapSecond, typename IdT>
-  bool LockMdObject(lipc::unordered_map<MapFirst, MapSecond> &map,
+  bool LockMdObject(hipc::unordered_map<MapFirst, MapSecond> &map,
                     IdT id,
                     MdLockType lock_type) {
     ScopedRwReadLock md_lock(lock_);
@@ -356,7 +356,7 @@ class MetadataManager {
     if (iter == map.end()) {
       return false;
     }
-    lipc::ShmRef<lipc::pair<MapFirst, MapSecond>> info = *iter;
+    hipc::ShmRef<hipc::pair<MapFirst, MapSecond>> info = *iter;
     MapSecond &obj_info = *info->second_;
     switch (lock_type) {
       case MdLockType::kExternalRead: {
@@ -375,7 +375,7 @@ class MetadataManager {
 
   /** Release the external lock to Bucket or Blob */
   template<typename MapFirst, typename MapSecond, typename IdT>
-  bool UnlockMdObject(lipc::unordered_map<MapFirst, MapSecond> &map,
+  bool UnlockMdObject(hipc::unordered_map<MapFirst, MapSecond> &map,
                       IdT id,
                       MdLockType lock_type) {
     ScopedRwReadLock md_lock(lock_);
@@ -383,7 +383,7 @@ class MetadataManager {
     if (iter == map.end()) {
       return false;
     }
-    lipc::ShmRef<lipc::pair<MapFirst, MapSecond>> info = *iter;
+    hipc::ShmRef<hipc::pair<MapFirst, MapSecond>> info = *iter;
     MapSecond &obj_info = *info->second_;
     switch (lock_type) {
       case MdLockType::kExternalRead: {

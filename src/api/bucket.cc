@@ -28,7 +28,7 @@ Bucket::Bucket(const std::string &bkt_name,
                Context &ctx,
                const IoClientContext &opts)
 : mdm_(&HERMES->mdm_), bpm_(&HERMES->bpm_), name_(bkt_name) {
-  lipc::string lname(bkt_name);
+  hipc::string lname(bkt_name);
   id_ = mdm_->LocalGetOrCreateBucket(lname, opts);
 }
 
@@ -57,7 +57,7 @@ void Bucket::UnlockBucket(MdLockType lock_type) {
  * Rename this bucket
  * */
 void Bucket::Rename(std::string new_bkt_name) {
-  lipc::string lname(new_bkt_name);
+  hipc::string lname(new_bkt_name);
   mdm_->LocalRenameBucket(id_, lname);
 }
 
@@ -76,7 +76,7 @@ void Bucket::Destroy() {
  * */
 Status Bucket::GetBlobId(const std::string &blob_name,
                          BlobId &blob_id) {
-  lipc::string lblob_name(blob_name);
+  hipc::string lblob_name(blob_name);
   blob_id = mdm_->LocalGetBlobId(GetId(), lblob_name);
   return Status();
 }
@@ -89,7 +89,7 @@ Status Bucket::GetBlobId(const std::string &blob_name,
  * @return The Status of the operation
  * */
 Status Bucket::GetBlobName(const BlobId &blob_id, std::string &blob_name) {
-  lipc::string lblob_name(blob_name);
+  hipc::string lblob_name(blob_name);
   blob_name = mdm_->LocalGetBlobName(blob_id);
   return Status();
 }
@@ -117,7 +117,7 @@ Status Bucket::TryCreateBlob(const std::string &blob_name,
                              Context &ctx,
                              const IoClientContext &opts) {
   std::pair<BlobId, bool> ret = mdm_->LocalBucketTryCreateBlob(
-      id_, lipc::charbuf(blob_name));
+      id_, hipc::charbuf(blob_name));
   blob_id = ret.first;
   if (ret.second) {
     mdm_->LocalBucketRegisterBlobId(id_,
@@ -146,7 +146,7 @@ Status Bucket::Put(std::string blob_name,
   for (auto &schema : schemas) {
     // TODO(llogan): rpcify
     auto buffers = bpm_->LocalAllocateAndSetBuffers(schema, blob);
-    auto put_ret = mdm_->LocalBucketPutBlob(id_, lipc::string(blob_name),
+    auto put_ret = mdm_->LocalBucketPutBlob(id_, hipc::string(blob_name),
                                             blob.size(), buffers);
     blob_id = std::get<0>(put_ret);
     bool did_create = std::get<1>(put_ret);
@@ -201,7 +201,7 @@ Status Bucket::PartialPutOrCreate(const std::string &blob_name,
     auto io_client = IoClientFactory::Get(opts.type_);
     full_blob.resize(opts.backend_size_);
     if (io_client) {
-      io_client->ReadBlob(lipc::charbuf(name_),
+      io_client->ReadBlob(hipc::charbuf(name_),
                           full_blob, opts, status);
     }
   }
@@ -259,7 +259,7 @@ Status Bucket::PartialGetOrCreate(const std::string &blob_name,
     auto io_client = IoClientFactory::Get(opts.type_);
     full_blob.resize(opts.backend_size_);
     if (io_client) {
-      io_client->ReadBlob(lipc::charbuf(name_), full_blob, opts, status);
+      io_client->ReadBlob(hipc::charbuf(name_), full_blob, opts, status);
       if (opts.adapter_mode_ != AdapterMode::kBypass) {
         Put(blob_name, full_blob, blob_id, ctx);
       }
@@ -293,7 +293,7 @@ void Bucket::FlushBlob(BlobId blob_id,
   auto io_client = IoClientFactory::Get(opts.type_);
   if (io_client) {
     IoClientContext decode_opts = io_client->DecodeBlobName(opts, blob_name);
-    io_client->WriteBlob(lipc::charbuf(name_),
+    io_client->WriteBlob(hipc::charbuf(name_),
                          full_blob,
                          decode_opts,
                          status);
@@ -334,7 +334,7 @@ bool Bucket::ContainsBlob(BlobId blob_id) {
 void Bucket::RenameBlob(BlobId blob_id,
                         std::string new_blob_name,
                         Context &ctx) {
-  lipc::string lnew_blob_name(new_blob_name);
+  hipc::string lnew_blob_name(new_blob_name);
   mdm_->LocalRenameBlob(id_, blob_id, lnew_blob_name);
 }
 

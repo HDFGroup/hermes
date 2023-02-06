@@ -68,7 +68,7 @@ void PosixIoClient::HermesClose(IoClientObject &f,
 }
 
 /** Get initial statistics from the backend */
-void PosixIoClient::InitBucketState(const lipc::charbuf &bkt_name,
+void PosixIoClient::InitBucketState(const hipc::charbuf &bkt_name,
                                     const IoClientContext &opts,
                                     GlobalIoClientState &stat) {
   stat.true_size_ = 0;
@@ -82,7 +82,7 @@ void PosixIoClient::InitBucketState(const lipc::charbuf &bkt_name,
 }
 
 /** Write blob to backend */
-void PosixIoClient::WriteBlob(const lipc::charbuf &bkt_name,
+void PosixIoClient::WriteBlob(const hipc::charbuf &bkt_name,
                               const Blob &full_blob,
                               const IoClientContext &opts,
                               IoStatus &status) {
@@ -105,7 +105,7 @@ void PosixIoClient::WriteBlob(const lipc::charbuf &bkt_name,
 }
 
 /** Read blob from the backend */
-void PosixIoClient::ReadBlob(const lipc::charbuf &bkt_name,
+void PosixIoClient::ReadBlob(const hipc::charbuf &bkt_name,
                              Blob &full_blob,
                              const IoClientContext &opts,
                              IoStatus &status) {

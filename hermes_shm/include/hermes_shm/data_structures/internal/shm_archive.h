@@ -75,10 +75,10 @@ class ShmArchiveable : public ShmPredictable {
  * Enables a specific TypedPointer type to be serialized
  * */
 #define SHM_SERIALIZE_OPS(TYPED_CLASS)\
-  void operator>>(lipc::TypedPointer<TYPE_UNWRAP(TYPED_CLASS)> &ar) const {\
+  void operator>>(hipc::TypedPointer<TYPE_UNWRAP(TYPED_CLASS)> &ar) const {\
     shm_serialize(ar);\
   }\
-  void operator>>(lipc::TypedAtomicPointer<TYPE_UNWRAP(TYPED_CLASS)> &ar) const {\
+  void operator>>(hipc::TypedAtomicPointer<TYPE_UNWRAP(TYPED_CLASS)> &ar) const {\
     shm_serialize(ar);\
   }
 
@@ -86,11 +86,11 @@ class ShmArchiveable : public ShmPredictable {
  * Enables a specific TypedPointer type to be deserialized
  * */
 #define SHM_DESERIALIZE_OPS(TYPED_CLASS)\
-  void operator<<(const lipc::TypedPointer<TYPE_UNWRAP(TYPED_CLASS)> &ar) {\
+  void operator<<(const hipc::TypedPointer<TYPE_UNWRAP(TYPED_CLASS)> &ar) {\
     shm_deserialize(ar);\
   }\
   void operator<<(\
-    const lipc::TypedAtomicPointer<TYPE_UNWRAP(TYPED_CLASS)> &ar) {\
+    const hipc::TypedAtomicPointer<TYPE_UNWRAP(TYPED_CLASS)> &ar) {\
     shm_deserialize(ar);\
   }
 

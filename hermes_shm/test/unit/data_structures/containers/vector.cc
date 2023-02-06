@@ -62,7 +62,7 @@ TEST_CASE("VectorOfInt") {
 TEST_CASE("VectorOfString") {
   Allocator *alloc = alloc_g;
   REQUIRE(alloc->GetCurrentlyAllocatedSize() == 0);
-  VectorTest<lipc::string>();
+  VectorTest<hipc::string>();
   REQUIRE(alloc->GetCurrentlyAllocatedSize() == 0);
 }
 

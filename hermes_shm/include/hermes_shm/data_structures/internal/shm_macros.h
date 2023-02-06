@@ -37,7 +37,7 @@
 
 /**
  * SHM_T_OR_PTR_T: Returns T if SHM_ARCHIVEABLE, and T* otherwise. Used
- * internally by lipc::ShmRef<T>.
+ * internally by hipc::ShmRef<T>.
  *
  * @param T: The type being stored in the shmem data structure
  * */
@@ -46,12 +46,12 @@
 
 /**
  * ShmHeaderOrT: Returns TypedPointer<T> if SHM_ARCHIVEABLE, and T
- * otherwise. Used to construct an lipc::ShmRef<T>.
+ * otherwise. Used to construct an hipc::ShmRef<T>.
  *
  * @param T The type being stored in the shmem data structure
  * */
 #define SHM_ARCHIVE_OR_T(T) \
-  SHM_X_OR_Y(T, lipc::TypedPointer<T>, T)
+  SHM_X_OR_Y(T, hipc::TypedPointer<T>, T)
 
 /**
  * SHM_T_OR_SHM_STRUCT_T: Used by unique_ptr and manual_ptr to internally

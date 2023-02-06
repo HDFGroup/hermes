@@ -136,7 +136,7 @@ class ShmContainerExtendExample : public ShmContainer {
 
   /** Constructor. Deserialize the object from the reference. */
   template<typename ...Args>
-  void shm_init(lipc::ShmRef<TYPED_CLASS> &obj) {
+  void shm_init(hipc::ShmRef<TYPED_CLASS> &obj) {
     shm_deserialize(obj->GetAllocator(), obj->header_);
   }
 
@@ -184,14 +184,14 @@ class ShmContainerExtendExample : public ShmContainer {
 
   /** Move shm_init constructor */
   void shm_init_main(TYPED_HEADER *header,
-                     lipc::Allocator *alloc,
+                     hipc::Allocator *alloc,
                      CLASS_NAME &&other) noexcept {
     shm_weak_move(header, alloc, other);
   }
 
   /** Move operation */
   void shm_weak_move(TYPED_HEADER *header,
-                     lipc::Allocator *alloc,
+                     hipc::Allocator *alloc,
                      CLASS_NAME &other) {
     obj_.shm_weak_move(header, alloc, other);
   }
@@ -218,13 +218,13 @@ class ShmContainerExtendExample : public ShmContainer {
 
   /** Copy shm_init constructor */
   void shm_init_main(TYPED_HEADER *header,
-                     lipc::Allocator *alloc,
+                     hipc::Allocator *alloc,
                      const CLASS_NAME &other) {
     shm_strong_copy(header, alloc, other);
   }
 
   /** Strong Copy operation */
-  void shm_strong_copy(TYPED_HEADER *header, lipc::Allocator *alloc,
+  void shm_strong_copy(TYPED_HEADER *header, hipc::Allocator *alloc,
                        const CLASS_NAME &other) {
     if (other.IsNull()) { return; }
     shm_destroy(false);
