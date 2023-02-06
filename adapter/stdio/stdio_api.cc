@@ -36,6 +36,7 @@ extern "C" {
  */
 
 FILE *HERMES_DECL(fopen)(const char *path, const char *mode) {
+  TRANSPARENT_HERMES
   auto real_api = HERMES_STDIO_API;
   auto fs_api = HERMES_STDIO_FS;
   if (fs_api->IsPathTracked(path)) {
@@ -49,6 +50,7 @@ FILE *HERMES_DECL(fopen)(const char *path, const char *mode) {
 }
 
 FILE *HERMES_DECL(fopen64)(const char *path, const char *mode) {
+  TRANSPARENT_HERMES
   auto real_api = HERMES_STDIO_API;
   auto fs_api = HERMES_STDIO_FS;
   if (fs_api->IsPathTracked(path)) {
@@ -62,6 +64,7 @@ FILE *HERMES_DECL(fopen64)(const char *path, const char *mode) {
 }
 
 FILE *HERMES_DECL(fdopen)(int fd, const char *mode) {
+  TRANSPARENT_HERMES
   auto real_api = HERMES_STDIO_API;
   auto fs_api = HERMES_STDIO_FS;
   std::shared_ptr<AdapterStat> stat;
@@ -74,6 +77,7 @@ FILE *HERMES_DECL(fdopen)(int fd, const char *mode) {
 }
 
 FILE *HERMES_DECL(freopen)(const char *path, const char *mode, FILE *stream) {
+  TRANSPARENT_HERMES
   auto real_api = HERMES_STDIO_API;
   auto fs_api = HERMES_STDIO_FS;
   if (fs_api->IsFpTracked(stream)) {
@@ -85,6 +89,7 @@ FILE *HERMES_DECL(freopen)(const char *path, const char *mode, FILE *stream) {
 }
 
 FILE *HERMES_DECL(freopen64)(const char *path, const char *mode, FILE *stream) {
+  TRANSPARENT_HERMES
   auto real_api = HERMES_STDIO_API;
   auto fs_api = HERMES_STDIO_FS;
   if (fs_api->IsFpTracked(stream)) {

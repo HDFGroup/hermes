@@ -6,7 +6,7 @@ include_directories(
 # STDIO Adapter Internal tests
 #------------------------------------------------------------------------------
 add_executable(stdio_adapter_mapper_test stdio_adapter_mapper_test.cpp ${ADAPTER_COMMON})
-target_link_libraries(stdio_adapter_mapper_test hermes_stdio)
+target_link_libraries(stdio_adapter_mapper_test stdc++fs hermes_stdio)
 add_dependencies(stdio_adapter_mapper_test hermes_stdio)
 gcc(stdio_adapter_mapper_test "")
 

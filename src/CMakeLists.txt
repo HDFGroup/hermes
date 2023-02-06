@@ -118,10 +118,6 @@ add_executable(finalize_hermes api/finalize_hermes.cc)
 add_dependencies(finalize_hermes hermes)
 target_link_libraries(finalize_hermes hermes)
 
-add_executable(wait_for_daemon_start api/wait_for_daemon_start.cc)
-add_dependencies(wait_for_daemon_start hermes)
-target_link_libraries(wait_for_daemon_start hermes)
-
 #-----------------------------------------------------------------------------
 # Specify project header files to be installed
 #-----------------------------------------------------------------------------

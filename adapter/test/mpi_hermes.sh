@@ -1,16 +1,18 @@
 #!/bin/bash
 
-MPI_EXEC=$1
-TEST_EXEC=$2
-TEST_PROCS=$3
-HERMES_EXEC=$4
-HERMES_PROCS=$5
-CONF=$6
-TEST_ARGS="${@:7}"
+CMAKE_SOURCE_DIR=$1
+CMAKE_BINARY_DIR=$2
+$MPI_EXEC=$3
+DAEMON_PROCS=$4
+TEST_PROCS=$5
+EXEC_NAME=$6
+TEST_ARGS=$7
 SLEEP_TIME=3
 
-export HERMES_CONF="${CMAKE_SOURCE_DIR}/adapter/test/data/${CONF}_server.yaml"
-export HERMES_CLIENT_CONF="${CMAKE_SOURCE_DIR}/adapter/test/data/${CONF}_client.yaml"
+export HERMES_CONF="${CMAKE_SOURCE_DIR}/adapter/test/data/hermes_server.yaml"
+export HERMES_CLIENT_CONF="${CMAKE_SOURCE_DIR}/adapter/test/data/hermes_client.yaml"
+export TEST_EXEC="${CMAKE_BINARY_DIR}/bin/${EXEC_NAME}"
+export DAEMON_EXEC="${CMAKE_BINARY_DIR}/bin/hermes_daemon"
 
 error_ct=0
 if [[ ! -f "$MPI_EXEC" ]]; then
@@ -21,8 +23,8 @@ if [[ ! -f "${TEST_EXEC}" ]]; then
   echo "TEST_EXEC ${TEST_EXEC} does not exists." >&2
   error_ct=$((error_ct + 1))
 fi
-if [[ ! -f "${HERMES_EXEC}" ]]; then
-  echo "HERMES_EXEC ${HERMES_EXEC} does not exists." >&2
+if [[ ! -f "${DAEMON_EXEC}" ]]; then
+  echo "DAEMON_EXEC ${DAEMON_EXEC} does not exists." >&2
   error_ct=$((error_ct + 1))
 fi
 if [[ ! -f "${HERMES_CONF}" ]]; then
@@ -34,19 +36,24 @@ if [ $error_ct -gt 0 ]; then
   exit $error_ct
 fi
 
-echo "${MPI_EXEC} -n ${HERMES_PROCS} ${HERMES_EXEC} ${HERMES_CONF} &"
-${MPI_EXEC} -n ${HERMES_PROCS} ${HERMES_EXEC} ${HERMES_CONF} &
-HERMES_EXEC_PID=$!
-echo "process spawned ${HERMES_EXEC_PID}"
+# Spawn the hermes daemon
+echo "STARTING HERMES DAEMON"
+echo "${MPI_EXEC} -n ${HERMES_PROCS} ${DAEMON_EXEC} ${HERMES_CONF} &"
+${MPI_EXEC} -n ${HERMES_PROCS} ${DAEMON_EXEC} ${HERMES_CONF} &
+DAEMON_EXEC_PID=$!
+echo "process spawned ${DAEMON_EXEC_PID}"
 
+# Wait for daemon
 echo "Started hermes daemon with ${HERMES_PROCS} procs. sleeping for ${SLEEP_TIME} seconds"
 sleep ${SLEEP_TIME}
 
+# Run program
+echo "RUNNING PROGRAM"
 echo "${MPI_EXEC} -n ${TEST_PROCS} ${TEST_EXEC} ${TEST_ARGS}"
 ${MPI_EXEC} -n ${TEST_PROCS} ${TEST_EXEC} ${TEST_ARGS}
 status=$?
-echo "Killing Hermes daemon with PID ${HERMES_EXEC_PID}"
-kill ${HERMES_EXEC_PID}
+echo "Killing Hermes daemon with PID ${DAEMON_EXEC_PID}"
+kill ${DAEMON_EXEC_PID}
 if [ $status -gt 0 ]; then
   echo "Test failed with code $status!" >&2
   exit $status

@@ -26,8 +26,6 @@
    }
 
 extern "C" {
-typedef int (*MPI_Init_t)(int * argc, char *** argv);
-typedef int (*MPI_Finalize_t)( void);
 typedef FILE * (*fopen_t)(const char * path, const char * mode);
 typedef FILE * (*fopen64_t)(const char * path, const char * mode);
 typedef FILE * (*fdopen_t)(int fd, const char * mode);
@@ -61,10 +59,6 @@ namespace hermes::adapter::fs {
 /** Pointers to the real stdio API */
 class StdioApi {
  public:
-  /** MPI_Init */
-  MPI_Init_t MPI_Init = nullptr;
-  /** MPI_Finalize */
-  MPI_Finalize_t MPI_Finalize = nullptr;
   /** fopen */
   fopen_t fopen = nullptr;
   /** fopen64 */
@@ -120,18 +114,6 @@ class StdioApi {
 
   StdioApi() {
     void *is_intercepted = (void*)dlsym(RTLD_DEFAULT, "stdio_intercepted");
-    if (is_intercepted) {
-      MPI_Init = (MPI_Init_t)dlsym(RTLD_NEXT, "MPI_Init");
-    } else {
-      MPI_Init = (MPI_Init_t)dlsym(RTLD_DEFAULT, "MPI_Init");
-    }
-    REQUIRE_API(MPI_Init)
-    if (is_intercepted) {
-      MPI_Finalize = (MPI_Finalize_t)dlsym(RTLD_NEXT, "MPI_Finalize");
-    } else {
-      MPI_Finalize = (MPI_Finalize_t)dlsym(RTLD_DEFAULT, "MPI_Finalize");
-    }
-    REQUIRE_API(MPI_Finalize)
     if (is_intercepted) {
       fopen = (fopen_t)dlsym(RTLD_NEXT, "fopen");
     } else {

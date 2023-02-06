@@ -41,23 +41,24 @@ endfunction()
 function(mpi_daemon test_exec test_mpi_proc test_args arg_name daemon_procs)
     #MPI_EXEC=$1 TEST_EXEC=$2 TEST_PROCS=$3 HERMES_EXEC=$4 HERMES_PROCS=$5 HERMES_CONF=$6
     set(script ${CMAKE_SOURCE_DIR}/adapter/test/mpi_hermes.sh)
-    add_test(Test${test_exec}_${test_mpi_proc}_${arg_name}
+    add_test(Test${test_exec}_${test_mpi_proc}_${arg_name} COMMAND
             ${BASH_PROGRAM} ${script}
-            ${MPIEXEC_EXECUTABLE}
-            ${CMAKE_BINARY_DIR}/bin/${test_exec} ${test_mpi_proc}
-            ${CMAKE_BINARY_DIR}/bin/hermes_daemon ${daemon_procs}
-            hermes
-            ${test_args})
+            "${CMAKE_SOURCE_DIR}" "${CMAKE_BINARY_DIR}"
+            "${MPIEXEC_EXECUTABLE}"
+            "${daemon_procs}"
+            "${test_mpi_proc}"
+            "${test_exec}"
+            "${test_args}")
 endfunction()
 
 enable_testing()
 
-if(HERMES_ENABLE_STDIO_ADAPTER)
-  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/stdio)
+if(HERMES_ENABLE_POSIX_ADAPTER)
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/posix)
 endif()
 
-if(HERMES_ENABLE_POSIX_ADAPTER)
-  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/posix)
+if(HERMES_ENABLE_STDIO_ADAPTER)
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/stdio)
 endif()
 
 if(HERMES_ENABLE_MPIIO_ADAPTER)

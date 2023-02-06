@@ -18,6 +18,7 @@ echo "WAITING FOR DAEMON"
 sleep ${SLEEP_TIME}
 
 # Run the program
+echo "RUNNING PROGRAM"
 export LSAN_OPTIONS=suppressions="${CMAKE_SOURCE_DIR}/test/data/asan.supp"
 export ADAPTER_MODE="${MODE}"
 export SET_PATH="${DO_PATH_EXCLUDE}"
