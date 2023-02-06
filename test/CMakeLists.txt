@@ -17,6 +17,8 @@ set(API_TESTS
         test_bucket
         test_vbucket)
 
+find_program(BASH_PROGRAM bash)
+
 foreach(program ${API_TESTS})
   add_executable(${program} ${program}.cc main_mpi.cc)
   add_dependencies(${program} hermes)
@@ -26,9 +28,13 @@ foreach(program ${API_TESTS})
           $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium>
           glog::glog
           Catch2::Catch2)
+  set(script ${CMAKE_SOURCE_DIR}/test/mpi.sh)
   add_test(NAME "Test${program}"
-    COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
-    "${CMAKE_BINARY_DIR}/bin/${program}")
-  set_tests_properties("Test${program}" PROPERTIES ENVIRONMENT
-    LSAN_OPTIONS=suppressions=${CMAKE_CURRENT_SOURCE_DIR}/data/asan.supp)
+    COMMAND ${BASH_PROGRAM} ${script}
+          ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR}
+          ${MPIEXEC_EXECUTABLE}
+          ${MPIEXEC_NUMPROC_FLAG}
+          2
+          ${program}
+          "")
 endforeach()
