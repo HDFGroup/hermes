@@ -52,7 +52,7 @@ void ClientConfig::ParseYAML(YAML::Node &yaml_conf) {
     }
   }
   if (yaml_conf["file_page_size"]) {
-    std::string page_size_env = GetEnvSafe(kHermesAdapterMode);
+    std::string page_size_env = GetEnvSafe(kHermesPageSize);
     if (page_size_env.size() == 0) {
       base_adapter_config_.page_size_ =
           ParseSize(yaml_conf["file_page_size"].as<std::string>());
