@@ -134,7 +134,8 @@ class MpiioFs : public Filesystem {
   }
 
   int WriteOrdered(File &f, AdapterStat &stat, const void *ptr, int count,
-                   MPI_Datatype datatype, MPI_Status *status, FsIoOptions opts) {
+                   MPI_Datatype datatype,
+                   MPI_Status *status, FsIoOptions opts) {
     opts.mpi_type_ = datatype;
     int total;
     MPI_Scan(&count, &total, 1, MPI_INT, MPI_SUM, stat.comm_);

@@ -229,7 +229,7 @@ int HERMES_DECL(MPI_File_write_at_all)(MPI_File fh, MPI_Offset offset,
   auto fs_api = HERMES_MPIIO_FS;
   if (fs_api->IsMpiFpTracked(&fh)) {
     File f; f.hermes_mpi_fh_ = fh;
-    return fs_api->WriteAll(f, stat_exists, buf, 
+    return fs_api->WriteAll(f, stat_exists, buf,
                             offset, count, datatype, status);
   }
   return real_api->MPI_File_write_at_all(fh, offset, buf, count, datatype,

@@ -46,7 +46,7 @@ struct AdapterObjectConfig {
 class AdapterModeConv {
  public:
   static std::string str(AdapterMode mode) {
-    switch(mode) {
+    switch (mode) {
       case AdapterMode::kDefault: {
         return "AdapterMode::kDefault";
       }
@@ -77,6 +77,6 @@ class AdapterModeConv {
 };
 
 
-}  // namespace hermes
+}  // namespace hermes::adapter
 
 #endif  // HERMES_ADAPTER_ADAPTER_TYPES_H_

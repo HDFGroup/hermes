@@ -96,7 +96,8 @@ void MpiioIoClient::WriteBlob(const lipc::charbuf &bkt_name,
   MPI_File fh;
   int write_count = 0;
   status.mpi_ret_ = real_api->MPI_File_open(MPI_COMM_SELF, filename.c_str(),
-                                            MPI_MODE_RDONLY, MPI_INFO_NULL, &fh);
+                                            MPI_MODE_RDONLY,
+                                            MPI_INFO_NULL, &fh);
   if (status.mpi_ret_ != MPI_SUCCESS) {
     return;
   }
@@ -139,7 +140,8 @@ void MpiioIoClient::ReadBlob(const lipc::charbuf &bkt_name,
   MPI_File fh;
   int read_count = 0;
   status.mpi_ret_ = real_api->MPI_File_open(MPI_COMM_SELF, filename.c_str(),
-                                               MPI_MODE_RDONLY, MPI_INFO_NULL, &fh);
+                                            MPI_MODE_RDONLY, MPI_INFO_NULL,
+                                            &fh);
   if (status.mpi_ret_ != MPI_SUCCESS) {
     return;
   }
