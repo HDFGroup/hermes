@@ -20,6 +20,8 @@ set -x
 set -e
 set -o pipefail
 
+sudo apt-get install -y pkg-config
+
 # Change this especially when your $HOME doesn't have enough disk space. 
 INSTALL_DIR="${HOME}/${LOCAL}"
 
