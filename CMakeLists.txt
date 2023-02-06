@@ -399,6 +399,8 @@ if(HERMES_BUILD_BUFFER_POOL_VISUALIZER AND SDL2_FOUND)
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/buffer_pool_visualizer)
 endif()
 
+include_directories(${CMAKE_SOURCE_DIR}/hermes_shm/include)
+add_subdirectory(hermes_shm)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/data_stager)
 
 #-----------------------------------------------------------------------------
