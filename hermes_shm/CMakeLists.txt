@@ -7,9 +7,10 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 
 ###################OPTIONS
 option(BUILD_SHARED_LIBS "Build shared libraries (.dll/.so) instead of static ones (.lib/.a)" ON)
-option(BUILD_MPI_TESTS "Build tests which depend on MPI" ON)
-option(BUILD_OpenMP_TESTS "Build tests which depend on OpenMP" ON)
-option(BUILD_Boost_TESTS "Build tests which depend on libboost" ON)
+option(BUILD_TESTS "Wether or not to build unit tests" OFF)
+option(BUILD_MPI_TESTS "Build tests which depend on MPI" OFF)
+option(BUILD_OpenMP_TESTS "Build tests which depend on OpenMP" OFF)
+option(BUILD_Boost_TESTS "Build tests which depend on libboost" OFF)
 
 ##################CMAKE MODULES
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/CMake)
@@ -56,5 +57,7 @@ add_subdirectory(src)
 
 ##################MODULES & TESTS
 set(TEST_MAIN ${CMAKE_SOURCE_DIR}/test/unit)
-enable_testing()
-add_subdirectory(test)
+if (BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(test)
+endif()
