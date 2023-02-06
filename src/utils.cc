@@ -19,33 +19,6 @@
 
 namespace hermes {
 
-size_t RoundUpToMultiple(size_t val, size_t multiple) {
-  if (multiple == 0) {
-    return val;
-  }
-
-  size_t result = val;
-  size_t remainder = val % multiple;
-
-  if (remainder != 0) {
-    result += multiple - remainder;
-  }
-
-  return result;
-}
-
-size_t RoundDownToMultiple(size_t val, size_t multiple) {
-  if (multiple == 0) {
-    return val;
-  }
-
-  size_t result = val;
-  size_t remainder = val % multiple;
-  result -= remainder;
-
-  return result;
-}
-
 /**
    print an error message for \a func function that failed
  */   

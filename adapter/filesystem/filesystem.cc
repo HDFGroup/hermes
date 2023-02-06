@@ -84,7 +84,7 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
     opts.type_ = type_;
     opts.backend_off_ = p.page_ * kPageSize;
     opts.backend_size_ = kPageSize;
-    opts.mode_ = stat.adapter_mode_;
+    opts.adapter_mode_ = stat.adapter_mode_;
     bkt->TryCreateBlob(blob_name.str(), blob_id, ctx, opts);
     bkt->LockBlob(blob_id, MdLockType::kExternalWrite);
     bkt->PartialPutOrCreate(blob_name.str(),
@@ -127,7 +127,7 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
     opts.backend_off_ = p.page_ * kPageSize;
     opts.backend_size_ = kPageSize;
     opts.type_ = type_;
-    opts.mode_ = stat.adapter_mode_;
+    opts.adapter_mode_ = stat.adapter_mode_;
     bkt->TryCreateBlob(blob_name.str(), blob_id, ctx, opts);
     bkt->LockBlob(blob_id, MdLockType::kExternalRead);
     bkt->PartialGetOrCreate(blob_name.str(),

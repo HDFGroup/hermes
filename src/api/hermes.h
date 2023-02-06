@@ -17,6 +17,7 @@
 #include "config_server.h"
 #include "constants.h"
 #include "hermes_types.h"
+#include "utils.h"
 
 #include "communication_factory.h"
 #include "rpc.h"
@@ -150,16 +151,6 @@ class Hermes {
 
   /** Finalize colocated mode */
   void FinalizeColocated();
-
- private:
-  /** Get an environment variable with null safety. */
-  inline std::string GetEnvSafe(const char *env_name) {
-    char *val = getenv(env_name);
-    if (val == nullptr) {
-      return "";
-    }
-    return val;
-  }
 };
 
 #define TRANSPARENT_HERMES\

@@ -21,6 +21,9 @@ static const lipc::allocator_id_t main_alloc_id(0, 1);
 
 static const char* kHermesServerConf = "HERMES_CONF";
 static const char* kHermesClientConf = "HERMES_CLIENT_CONF";
+static const char* kHermesAdapterMode = "HERMES_ADAPTER_MODE";
+static const char* kHermesPageSize = "HERMES_PAGE_SIZE";
+static const char* kHermesStopDaemon = "HERMES_STOP_DAEMON";
 static const size_t kMaxPathLength = 4096;
 
 static const int kMaxServerNamePrefix = 32; /**< max. server name prefix */

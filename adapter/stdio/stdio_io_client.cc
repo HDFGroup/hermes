@@ -99,7 +99,7 @@ void StdioIoClient::ReadBlob(const lipc::charbuf &bkt_name,
                              const IoClientContext &opts,
                              IoStatus &status) {
   std::string filename = bkt_name.str();
-  LOG(INFO) << "Read called for filename from destination: " << filename
+  LOG(INFO) << "Reading from file: " << filename
             << " on offset: " << opts.backend_off_
             << " and size: " << opts.backend_size_ << "."
             << " file_size:" << stdfs::file_size(filename) << std::endl;

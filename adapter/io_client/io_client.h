@@ -56,6 +56,7 @@ struct IoClientObject {
 struct IoClientContext {
   // TODO(llogan): We should use an std::variant or union instead of large set
   AdapterType type_;              /**< Client to forward I/O request to */
+  AdapterMode adapter_mode_;      /**< Current adapter mode for this obj */
   hapi::PlacementPolicy dpe_;     /**< data placement policy */
   bitfield32_t flags_;            /**< various I/O flags */
   MPI_Datatype mpi_type_; /**< MPI data type */

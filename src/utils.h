@@ -14,16 +14,20 @@
 #define HERMES_UTILS_H_
 
 #include <assert.h>
-
-#include <chrono>
 #include <map>
-
-#include "hermes_types.h"
+#include <glog/logging.h>
 
 namespace hermes {
 
-size_t RoundUpToMultiple(size_t val, size_t multiple);
-size_t RoundDownToMultiple(size_t val, size_t multiple);
+/** Get an environment variable with null safety. */
+static inline std::string GetEnvSafe(const char *env_name) {
+  char *val = getenv(env_name);
+  if (val == nullptr) {
+    return "";
+  }
+  return val;
+}
+
 void FailedLibraryCall(std::string func);
 
 }  // namespace hermes

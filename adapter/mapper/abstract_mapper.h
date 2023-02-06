@@ -13,7 +13,7 @@
 #ifndef HERMES_ABSTRACT_MAPPER_H
 #define HERMES_ABSTRACT_MAPPER_H
 
-#include "utils.h"
+#include "hermes_types.h"
 
 namespace hermes::adapter {
 

@@ -91,7 +91,7 @@ int main(int argc, char **argv) {
   }
 
   for (int i = 0; i < count; ++i) {
-    char nonce = i;
+    char nonce = i + 1;
     if (!do_read) {
       memset(buf, nonce, block_size);
       write(fd, buf, block_size);

@@ -24,6 +24,7 @@
 
 #include "hermes_types.h"
 #include "constants.h"
+#include "utils.h"
 
 namespace hermes::config {
 

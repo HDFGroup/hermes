@@ -110,7 +110,7 @@ void PosixIoClient::ReadBlob(const lipc::charbuf &bkt_name,
                              const IoClientContext &opts,
                              IoStatus &status) {
   (void) opts;
-  LOG(INFO) << "Writing to file: " << bkt_name.str()
+  LOG(INFO) << "Reading from file: " << bkt_name.str()
             << " offset: " << opts.backend_off_
             << " size:" << full_blob.size() << "."
             << " file_size:" << stdfs::file_size(bkt_name.str())

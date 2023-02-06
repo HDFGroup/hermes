@@ -15,6 +15,8 @@
 
 namespace hermes::api {
 
+using hermes::adapter::AdapterMode;
+
 ///////////////////////////
 ////// Bucket Operations
 //////////////////////////
@@ -208,7 +210,9 @@ Status Bucket::PartialPutOrCreate(const std::string &blob_name,
   // Modify the blob
   memcpy(full_blob.data() + blob_off, blob.data(), blob.size());
   // Re-put the blob
-  Put(blob_name, full_blob, blob_id, ctx);
+  if (opts.adapter_mode_ != AdapterMode::kBypass) {
+    Put(blob_name, full_blob, blob_id, ctx);
+  }
   return Status();
 }
 
@@ -256,6 +260,9 @@ Status Bucket::PartialGetOrCreate(const std::string &blob_name,
     full_blob.resize(opts.backend_size_);
     if (io_client) {
       io_client->ReadBlob(lipc::charbuf(name_), full_blob, opts, status);
+      if (opts.adapter_mode_ != AdapterMode::kBypass) {
+        Put(blob_name, full_blob, blob_id, ctx);
+      }
     }
   }
   // Ensure the blob can hold the update
@@ -265,7 +272,7 @@ Status Bucket::PartialGetOrCreate(const std::string &blob_name,
   // Modify the blob
   // TODO(llogan): we can avoid a copy here
   blob.resize(blob_size);
-  memcpy(blob.data() + blob_off, full_blob.data() + blob_off, blob.size());
+  memcpy(blob.data(), full_blob.data() + blob_off, blob.size());
   return Status();
 }
 

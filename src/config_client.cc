@@ -27,8 +27,7 @@ void ClientConfig::ParseAdapterConfig(YAML::Node &yaml_conf,
     conf.mode_ = AdapterModeConv::to_enum(yaml_conf["mode"].as<std::string>());
   }
   if (yaml_conf["page_size"]) {
-    conf.page_size_ = ParseSize(
-        yaml_conf["page_size"].as<std::string>());
+    conf.page_size_ = ParseSize(yaml_conf["page_size"].as<std::string>());
   }
   SetAdapterConfig(path, conf);
 }
@@ -36,15 +35,30 @@ void ClientConfig::ParseAdapterConfig(YAML::Node &yaml_conf,
 /** parse the YAML node */
 void ClientConfig::ParseYAML(YAML::Node &yaml_conf) {
   if (yaml_conf["stop_daemon"]) {
-    stop_daemon_ = yaml_conf["stop_daemon"].as<bool>();
+    std::string stop_env = GetEnvSafe(kHermesStopDaemon);
+    if (stop_env.size() == 0) {
+      stop_daemon_ = yaml_conf["stop_daemon"].as<bool>();
+    } else {
+      std::istringstream(stop_env) >> stop_daemon_;
+    }
   }
   if (yaml_conf["base_adapter_mode"]) {
-    base_adapter_config_.mode_ = AdapterModeConv::to_enum(
-        yaml_conf["base_adapter_mode"].as<std::string>());
+    std::string mode_env = GetEnvSafe(kHermesAdapterMode);
+    if (mode_env.size() == 0) {
+      base_adapter_config_.mode_ = AdapterModeConv::to_enum(
+          yaml_conf["base_adapter_mode"].as<std::string>());
+    } else {
+      base_adapter_config_.mode_ = AdapterModeConv::to_enum(mode_env);
+    }
   }
   if (yaml_conf["file_page_size"]) {
-    base_adapter_config_.page_size_ = ParseSize(
-        yaml_conf["file_page_size"].as<std::string>());
+    std::string page_size_env = GetEnvSafe(kHermesAdapterMode);
+    if (page_size_env.size() == 0) {
+      base_adapter_config_.page_size_ =
+          ParseSize(yaml_conf["file_page_size"].as<std::string>());
+    } else {
+      base_adapter_config_.page_size_ = ParseSize(page_size_env);
+    }
   }
   if (yaml_conf["path_inclusions"]) {
     std::vector<std::string> inclusions;

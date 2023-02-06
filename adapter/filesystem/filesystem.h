@@ -74,8 +74,6 @@ struct AdapterStat : public IoClientStats {
  * For now, nothing additional than the typical IoClientContext.
  * */
 struct FsIoOptions : public IoClientContext {
-  AdapterMode mode_;  /**< Mode used for the adapter */
-
   /** Default constructor */
   FsIoOptions() : IoClientContext() {
     flags_.SetBits(HERMES_FS_SEEK);
