@@ -117,6 +117,10 @@ target_link_libraries(hermes_daemon hermes -ldl -lc MPI::MPI_CXX glog::glog)
 target_compile_definitions(hermes_daemon
         PRIVATE $<$<BOOL:${HERMES_ENABLE_TIMING}>:HERMES_ENABLE_TIMING>)
 
+add_executable(finalize_hermes api/finalize_hermes.cc)
+add_dependencies(finalize_hermes hermes)
+target_link_libraries(finalize_hermes hermes)
+
 #-----------------------------------------------------------------------------
 # Specify project header files to be installed
 #-----------------------------------------------------------------------------

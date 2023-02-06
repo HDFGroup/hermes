@@ -42,6 +42,9 @@ void Hermes::Init(HermesType mode,
 }
 
 void Hermes::Finalize() {
+  if (!is_initialized_ || is_terminated_) {
+    return;
+  }
   switch (mode_) {
     case HermesType::kServer: {
       FinalizeServer();

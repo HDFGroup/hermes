@@ -14,10 +14,6 @@ add_executable(stage_out ${CMAKE_CURRENT_SOURCE_DIR}/stage_out.cc)
 add_dependencies(stage_out hermes_data_stager)
 target_link_libraries(stage_out hermes_data_stager)
 
-add_executable(finalize_hermes ${CMAKE_CURRENT_SOURCE_DIR}/finalize_hermes.cc)
-add_dependencies(finalize_hermes hermes_posix_backend)
-target_link_libraries(finalize_hermes hermes_posix_backend)
-
 install(
         TARGETS
         hermes_data_stager

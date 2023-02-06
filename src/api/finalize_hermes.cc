@@ -10,17 +10,13 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include "filesystem/metadata_manager.h"
 #include "singleton.h"
+#include "hermes.h"
 
 using hermes::Singleton;
 
 int main(int argc, char **argv) {
-  auto mdm = Singleton<hermes::adapter::fs::MetadataManager>::GetInstance();
-  setenv("HERMES_CLIENT", "1", true);
-  setenv("HERMES_STOP_DAEMON", "1", true);
-  MPI_Init(&argc, &argv);
-  mdm->InitializeHermes(true);
-  mdm->FinalizeHermes();
-  MPI_Finalize();
+  HERMES->Create(hermes::HermesType::kClient);
+  HERMES->client_config_.stop_daemon_ = true;
+  HERMES->Finalize();
 }
