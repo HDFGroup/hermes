@@ -32,19 +32,19 @@ endfunction()
 
 ##################REQUIRED EXTERNAL LIBRARIES
 
-# YAML-CPP
-find_package(yaml-cpp REQUIRED)
-message(STATUS "found yaml-cpp at ${yaml-cpp_DIR}")
-
-# Catch2
-find_package(Catch2 3.0.1 REQUIRED)
-message(STATUS "found catch2.h at ${Catch2_CXX_INCLUDE_DIRS}")
-
-# MPICH
-if(BUILD_MPI_TESTS)
-    find_package(MPI REQUIRED COMPONENTS C CXX)
-    message(STATUS "found mpi.h at ${MPI_CXX_INCLUDE_DIRS}")
-endif()
+## YAML-CPP
+#find_package(yaml-cpp REQUIRED)
+#message(STATUS "found yaml-cpp at ${yaml-cpp_DIR}")
+#
+## Catch2
+#find_package(Catch2 3.0.1 REQUIRED)
+#message(STATUS "found catch2.h at ${Catch2_CXX_INCLUDE_DIRS}")
+#
+## MPICH
+#if(BUILD_MPI_TESTS)
+#    find_package(MPI REQUIRED COMPONENTS C CXX)
+#    message(STATUS "found mpi.h at ${MPI_CXX_INCLUDE_DIRS}")
+#endif()
 
 # OpenMP
 #if(BUILD_OpenMP_TESTS)
