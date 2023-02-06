@@ -28,7 +28,6 @@
 #include "hermes_shm/memory/backend/memory_backend_factory.h"
 #include "hermes_shm/memory/allocator/allocator_factory.h"
 #include <hermes_shm/introspect/system_info.h>
-#include <hermes_shm/constants/singleton_macros.h>
 
 namespace hermes_shm::ipc {
 
