@@ -8,7 +8,6 @@ add_executable(test_data_structure_exec
         test_init.cc
         string.cc
         pair.cc
-        tuple.cc
         list.cc
         vector.cc
         manual_ptr.cc
