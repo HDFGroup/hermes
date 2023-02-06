@@ -132,17 +132,5 @@ const char* kServerDefaultConfigStr =
 "shmem_name: \"/hermes_shm_\"\n"
 "\n"
 "# The interval in milliseconds at which to update the global system view.\n"
-"system_view_state_update_interval_ms: 1000\n"
-"\n"
-"#Paths which are ignored when buffering data\n"
-"path_exclusions: [\n"
-"    \"/bin/\", \"/boot/\", \"/dev/\",  \"/etc/\",\n"
-"    \"/lib/\", \"/opt/\",  \"/proc/\", \"/sbin/\",\n"
-"    \"/sys/\", \"/usr/\",  \"/var/\",  \"/run/\",\n"
-"    \"pipe\", \"socket:\", \"anon_inode:\"\n"
-"]\n"
-"\n"
-"#Paths which are never ignored when buffering data\n"
-"path_inclusions: [\"/var/opt/cray/dws/mounts/\"]\n"
-"\n";
+"system_view_state_update_interval_ms: 1000\n";
 #endif  // HERMES_SRC_CONFIG_SERVER_DEFAULT_H_

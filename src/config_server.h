@@ -203,19 +203,6 @@ class ServerConfig : public BaseConfig {
    */
   std::string shmem_name_;
 
-  /**
-   * Paths prefixed with the following directories are not tracked in Hermes
-   * Exclusion list used by darshan at
-   * darshan/darshan-runtime/lib/darshan-core.c
-   */
-  std::vector<std::string> path_exclusions;
-
-  /**
-   * Paths prefixed with the following directories are tracked by Hermes even if
-   * they share a root with a path listed in path_exclusions
-   */
-  std::vector<std::string> path_inclusions;
-
  public:
   ServerConfig() = default;
   void LoadDefault();

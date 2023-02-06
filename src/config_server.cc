@@ -145,15 +145,6 @@ void ServerConfig::ParseYAML(YAML::Node &yaml_conf) {
   if (yaml_conf["shmem_name"]) {
     shmem_name_ = yaml_conf["shmem_name"].as<std::string>();
   }
-
-  if (yaml_conf["path_exclusions"]) {
-    ParseVector<std::string>(yaml_conf["path_exclusions"],
-                             path_exclusions);
-  }
-  if (yaml_conf["path_inclusions"]) {
-    ParseVector<std::string>(yaml_conf["path_inclusions"],
-                             path_inclusions);
-  }
 }
 
 /** Load the default configuration */
