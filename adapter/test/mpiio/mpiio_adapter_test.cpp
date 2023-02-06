@@ -155,7 +155,7 @@ int pretest() {
   // INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.new_file_cmp);
   // INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.shared_new_file_cmp);
   // INTERCEPTOR_LIST->hermes_flush_exclusion.insert(
-      info.shared_existing_file_cmp);
+      // info.shared_existing_file_cmp);
 #endif
   return 0;
 }

@@ -5,9 +5,12 @@ TEST_EXEC=$2
 TEST_PROCS=$3
 HERMES_EXEC=$4
 HERMES_PROCS=$5
-HERMES_CONF=$6
+CONF=$6
 TEST_ARGS="${@:7}"
 SLEEP_TIME=3
+
+export HERMES_CONF="${CMAKE_SOURCE_DIR}/adapter/test/data/${CONF}_server.yaml"
+export HERMES_CLIENT_CONF="${CMAKE_SOURCE_DIR}/adapter/test/data/${CONF}_client.yaml"
 
 error_ct=0
 if [[ ! -f "$MPI_EXEC" ]]; then

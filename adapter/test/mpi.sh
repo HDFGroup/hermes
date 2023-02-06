@@ -1,11 +1,11 @@
 #!/bin/bash
 CMAKE_SOURCE_DIR=$1
 CMAKE_BINARY_DIR=$2
-EXEC_NAME=$3
-TAG_NAME=$4
-TAGS=$5
-CONF=$6
-ASYNC=$7
+MPIEXEC_EXECUTABLE=$3
+MPIEXEC_NUMPROC_FLAG=$4
+MPI_PROC=$5
+EXEC_NAME=$6
+ARGS=$7
 SLEEP_TIME=3
 
 export HERMES_CONF="${CMAKE_SOURCE_DIR}/adapter/test/data/${CONF}_client.yaml"
@@ -18,10 +18,10 @@ echo "WAITING FOR DAEMON"
 sleep ${SLEEP_TIME}
 
 # Run the program
-echo "RUNNING PROGRAM"
 export LSAN_OPTIONS=suppressions="${CMAKE_SOURCE_DIR}/test/data/asan.supp"
-export COMMAND="${CMAKE_BINARY_DIR}/bin/${EXEC_NAME}"
-"${COMMAND}" "${TAGS}" --reporter compact -d yes
+export MPI_COMMAND="${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${MPI_PROC}"
+export COMMAND="${MPI_COMMAND} ${CMAKE_BINARY_DIR}/bin/${exec}"
+"${COMMAND}" "${ARGS}" -d yes
 status=$?
 
 # Finalize the Hermes daemon
