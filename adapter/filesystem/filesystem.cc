@@ -252,6 +252,7 @@ off_t Filesystem::Tell(File &f, AdapterStat &stat) {
 int Filesystem::Sync(File &f, AdapterStat &stat) {
   IoClientContext opts;
   opts.type_ = type_;
+  opts.adapter_mode_ = stat.adapter_mode_;
   stat.bkt_id_->Flush(opts);
   return 0;
 }
