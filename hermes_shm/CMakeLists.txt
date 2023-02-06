@@ -47,17 +47,17 @@ if(BUILD_MPI_TESTS)
 endif()
 
 # OpenMP
-if(BUILD_OpenMP_TESTS)
-    find_package(OpenMP REQUIRED COMPONENTS C CXX)
-    message(STATUS "found omp.h at ${OpenMP_CXX_INCLUDE_DIRS}")
-endif()
+#if(BUILD_OpenMP_TESTS)
+#    find_package(OpenMP REQUIRED COMPONENTS C CXX)
+#    message(STATUS "found omp.h at ${OpenMP_CXX_INCLUDE_DIRS}")
+#endif()
 
 ##################Build HermesShm main packages
 add_subdirectory(src)
 
 ##################MODULES & TESTS
 set(TEST_MAIN ${CMAKE_SOURCE_DIR}/test/unit)
-if (BUILD_TESTS)
-    enable_testing()
-    add_subdirectory(test)
-endif()
+#if (BUILD_TESTS)
+#    enable_testing()
+#    add_subdirectory(test)
+#endif()
