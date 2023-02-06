@@ -110,6 +110,25 @@ bool Bucket::UnlockBlob(const std::string &blob_name, MdLockType lock_type) {
 /**
  * Put \a blob_id Blob into the bucket
  * */
+Status Bucket::TryCreateBlob(const std::string &blob_name,
+                             BlobId &blob_id,
+                             Context &ctx,
+                             const IoClientContext &opts) {
+  std::pair<BlobId, bool> ret = mdm_->LocalBucketTryCreateBlob(
+      id_, lipc::charbuf(blob_name));
+  blob_id = ret.first;
+  if (ret.second) {
+    mdm_->LocalBucketRegisterBlobId(id_,
+                                    blob_id,
+                                    0, 0, true,
+                                    opts);
+  }
+  return Status();
+}
+
+/**
+ * Put \a blob_id Blob into the bucket
+ * */
 Status Bucket::Put(std::string blob_name,
                    const Blob &blob,
                    BlobId &blob_id,
@@ -255,6 +274,7 @@ Status Bucket::PartialGetOrCreate(const std::string &blob_name,
  * */
 void Bucket::FlushBlob(BlobId blob_id,
                        const IoClientContext &opts) {
+  LOG(INFO) << "Flushing blob" << std::endl;
   Blob full_blob;
   IoStatus status;
   // Read blob from Hermes
@@ -277,6 +297,7 @@ void Bucket::FlushBlob(BlobId blob_id,
  * */
 void Bucket::Flush(const IoClientContext &opts) {
   std::vector<BlobId> blob_ids = GetContainedBlobIds();
+  LOG(INFO) << "Flushing " << blob_ids.size() << " blobs" << std::endl;
   for (BlobId &blob_id : blob_ids) {
     FlushBlob(blob_id, opts);
   }

@@ -217,6 +217,16 @@ class MetadataManager {
                                      const IoClientContext &opts);
 
   /**
+   * Creates the blob metadata
+   *
+   * @param bkt_id id of the bucket
+   * @param blob_name semantic blob name
+   * */
+  std::pair<BlobId, bool> LocalBucketTryCreateBlob(
+      BucketId bkt_id,
+      const lipc::charbuf &blob_name);
+
+  /**
    * Get a blob from a bucket
    *
    * @param bkt_id id of the bucket

@@ -110,7 +110,6 @@ class Filesystem {
  public:
   FilesystemIoClient *io_client_;
   AdapterType type_;
-  Context ctx_;
 
  public:
   /** Constructor */

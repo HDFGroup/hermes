@@ -126,6 +126,14 @@ class Bucket {
   bool UnlockBlob(const std::string &blob_name, MdLockType lock_type);
 
   /**
+   * Create \a blob_name EMPTY BLOB if it does not already exist.
+   * */
+  Status TryCreateBlob(const std::string &blob_name,
+                       BlobId &blob_id,
+                       Context &ctx,
+                       const IoClientContext &opts);
+
+  /**
    * Put \a blob_name Blob into the bucket
    * */
   Status Put(std::string blob_name,
@@ -136,7 +144,7 @@ class Bucket {
 
   /**
    * Put \a blob_name Blob into the bucket. Load the blob from the
-   * I/O backend if it does not exist.
+   * I/O backend if it does not exist or is not fully loaded.
    *
    * @param blob_name the semantic name of the blob
    * @param blob the buffer to put final data in
@@ -162,7 +170,7 @@ class Bucket {
 
   /**
    * Load \a blob_name Blob from the bucket. Load the blob from the
-   * I/O backend if it does not exist.
+   * I/O backend if it does not exist or is not fully loaded.
    *
    * @param blob_name the semantic name of the blob
    * @param blob the buffer to put final data in

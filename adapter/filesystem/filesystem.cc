@@ -35,8 +35,9 @@ File Filesystem::Open(AdapterStat &stat, const std::string &path) {
 void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
   auto mdm = HERMES_FS_METADATA_MANAGER;
   FsIoOptions opts;
+  Context ctx;
   opts.type_ = type_;
-  stat.bkt_id_ = HERMES->GetBucket(path, ctx_, opts);
+  stat.bkt_id_ = HERMES->GetBucket(path, ctx, opts);
   // TODO(llogan): can avoid two unordered_map queries here
   stat.adapter_mode_ = mdm->GetAdapterMode(path);
   stat.page_size_ = mdm->GetAdapterPageSize(path);
@@ -46,7 +47,7 @@ void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
     // Create the new bucket
     FsIoOptions opts;
     opts.type_ = type_;
-    stat.bkt_id_ = HERMES->GetBucket(path, ctx_, opts);
+    stat.bkt_id_ = HERMES->GetBucket(path, ctx, opts);
     // Allocate internal hermes data
     auto stat_ptr = std::make_shared<AdapterStat>(stat);
     FilesystemIoClientObject fs_ctx(&mdm->fs_mdm_, (void*)stat_ptr.get());
@@ -69,6 +70,7 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
             << " and size: " << total_size << std::endl;
 
   size_t ret;
+  Context ctx;
   BlobPlacements mapping;
   size_t kPageSize = stat.page_size_;
   size_t data_offset = 0;
@@ -83,13 +85,14 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
     opts.backend_off_ = p.page_ * kPageSize;
     opts.backend_size_ = kPageSize;
     opts.mode_ = stat.adapter_mode_;
+    bkt->TryCreateBlob(blob_name.str(), blob_id, ctx, opts);
     bkt->LockBlob(blob_name.str(), MdLockType::kExternalWrite);
     bkt->PartialPutOrCreate(blob_name.str(),
                             blob_wrap,
                             p.blob_off_,
                             blob_id,
                             opts,
-                            ctx_);
+                            ctx);
     bkt->UnlockBlob(blob_name.str(), MdLockType::kExternalWrite);
     data_offset += p.blob_size_;
   }
@@ -110,6 +113,7 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
             << off << " and size: " << total_size << std::endl;
 
   size_t ret;
+  Context ctx;
   BlobPlacements mapping;
   size_t kPageSize = stat.page_size_;
   size_t data_offset = 0;
@@ -124,6 +128,7 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
     opts.backend_size_ = kPageSize;
     opts.type_ = type_;
     opts.mode_ = stat.adapter_mode_;
+    bkt->TryCreateBlob(blob_name.str(), blob_id, ctx, opts);
     bkt->LockBlob(blob_name.str(), MdLockType::kExternalRead);
     bkt->PartialGetOrCreate(blob_name.str(),
                             blob_wrap,
@@ -131,7 +136,7 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
                             p.blob_size_,
                             blob_id,
                             opts,
-                            ctx_);
+                            ctx);
     bkt->UnlockBlob(blob_name.str(), MdLockType::kExternalRead);
     data_offset += p.blob_size_;
   }
@@ -245,11 +250,21 @@ off_t Filesystem::Tell(File &f, AdapterStat &stat) {
 }
 
 int Filesystem::Sync(File &f, AdapterStat &stat) {
+  IoClientContext opts;
+  opts.type_ = type_;
+  stat.bkt_id_->Flush(opts);
+  return 0;
 }
 
 int Filesystem::Close(File &f, AdapterStat &stat, bool destroy) {
+  Sync(f, stat);
+  if (destroy) {
+    stat.bkt_id_->Destroy();
+  }
+  auto mdm = HERMES_FS_METADATA_MANAGER;
+  mdm->Delete(f);
+  return 0;
 }
-
 
 /**
  * Variants of Read and Write which do not take an offset as

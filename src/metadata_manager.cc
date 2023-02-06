@@ -337,6 +337,36 @@ Status MetadataManager::LocalBucketUnregisterBlobId(
  *
  * @param bkt_id id of the bucket
  * @param blob_name semantic blob name
+ * */
+std::pair<BlobId, bool> MetadataManager::LocalBucketTryCreateBlob(
+    BucketId bkt_id,
+    const lipc::charbuf &blob_name) {
+  size_t orig_blob_size = 0;
+  // Acquire MD write lock (modify blob_map_)
+  ScopedRwWriteLock md_lock(lock_);
+  // Get internal blob name
+  lipc::charbuf internal_blob_name = CreateBlobName(bkt_id, blob_name);
+  // Create unique ID for the Blob
+  BlobId blob_id;
+  blob_id.unique_ = header_->id_alloc_.fetch_add(1);
+  blob_id.node_id_ = rpc_->node_id_;
+  bool did_create = blob_id_map_->try_emplace(internal_blob_name, blob_id);
+  if (did_create) {
+    BlobInfo blob_info(HERMES->main_alloc_);
+    blob_info.bkt_id_ = bkt_id;
+    (*blob_info.name_) = blob_name;
+    blob_info.header_->blob_size_ = 0;
+    blob_id_map_->emplace(internal_blob_name, blob_id);
+    blob_map_->emplace(blob_id, std::move(blob_info));
+  }
+  return std::pair<BlobId, bool>(blob_id, did_create);
+}
+
+/**
+ * Creates the blob metadata
+ *
+ * @param bkt_id id of the bucket
+ * @param blob_name semantic blob name
  * @param data the data being placed
  * @param buffers the buffers to place data in
  * */
@@ -433,21 +463,7 @@ bool MetadataManager::LocalLockBlob(BucketId bkt_id,
   // Acquire MD write lock (might modify blob_map_)
   BlobId blob_id = LocalGetBlobId(bkt_id, lipc::charbuf(blob_name));
   if (blob_id.IsNull()) {
-    // Create blob if it DNE
-    ScopedRwWriteLock md_lock(lock_);
-    lipc::charbuf internal_blob_name = CreateBlobName(bkt_id,
-                                                      lipc::charbuf(blob_name));
-    auto iter = blob_id_map_->find(internal_blob_name);
-    if (iter == blob_id_map_->end()) {
-      blob_id.unique_ = header_->id_alloc_.fetch_add(1);
-      blob_id.node_id_ = rpc_->node_id_;
-      BlobInfo blob_info(HERMES->main_alloc_);
-      blob_info.bkt_id_ = bkt_id;
-      (*blob_info.name_) = lipc::charbuf(blob_name);
-      blob_info.header_->blob_size_ = 0;
-      blob_id_map_->emplace(internal_blob_name, blob_id);
-      blob_map_->emplace(blob_id, std::move(blob_info));
-    }
+    return false;
   }
   return LockMdObject(*blob_map_, blob_id, lock_type);
 }
