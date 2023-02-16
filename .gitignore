@@ -5,6 +5,8 @@ GPATH
 GRTAGS
 GTAGS
 
+/compiler_data
+
 .gdb_history
 
 /cmake-build-*

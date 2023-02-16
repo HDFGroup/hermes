@@ -19,6 +19,14 @@
 
 namespace hermes {
 
+#define TEXT_HASH(text) \
+  std::hash<lipc::charbuf>{}(text);
+#define ID_HASH(id) \
+  id.bits_.node_id_
+#define BUCKET_HASH TEXT_HASH(bkt_name)
+#define BLOB_HASH TEXT_HASH(blob_name)
+#define VBUCKET_HASH TEXT_HASH(vbkt_name)
+
 using adapter::GlobalIoClientState;
 using api::Blob;       /**< Namespace simplification for blob */
 struct BucketInfo;     /**< Forward declaration of BucketInfo */

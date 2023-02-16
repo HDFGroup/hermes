@@ -16,6 +16,7 @@
 template<> hermes::api::Hermes hermes::GlobalSingleton<
     hermes::api::Hermes>::obj_ = hermes::api::Hermes();
 
+/** Finalize hermes when program exits */
 void Finalize() {
   HERMES->Finalize();
 }

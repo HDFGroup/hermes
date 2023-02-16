@@ -90,7 +90,7 @@ target_link_libraries(hermes
   PUBLIC ${CMAKE_HERMES_RPC_TYPE_LIB}
   PUBLIC glog::glog
   PUBLIC yaml-cpp
-  PUBLIC labstor_client hermes_shm_data_structures
+  PUBLIC hermes_shm_data_structures
   PUBLIC "$<$<BOOL:${HERMES_INTERCEPT_IO}>:${GOTCHA_MODULE_LIBS}>"
 )
 

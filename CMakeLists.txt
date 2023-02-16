@@ -40,6 +40,8 @@ set(HERMES_PACKAGE_VERSION_MINOR "${HERMES_VERSION_PATCH}")
 set(HERMES_PACKAGE_STRING "${HERMES_PACKAGE_NAME} ${HERMES_PACKAGE_VERSION}")
 set(HERMES_PACKAGE_TARNAME "${HERMES_PACKAGE}")
 
+#set( CMAKE_VERBOSE_MAKEFILE on )
+
 #------------------------------------------------------------------------------
 # Setup install and output Directories
 #------------------------------------------------------------------------------
@@ -59,6 +61,8 @@ endif()
 #------------------------------------------------------------------------------
 # Setup CMake Environment
 #------------------------------------------------------------------------------
+# Export compile commands for autocode generation with CLANG
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 if(APPLE)
   # We are doing a unix-style install i.e. everything will be installed in
   # CMAKE_INSTALL_PREFIX/bin and CMAKE_INSTALL_PREFIX/lib etc. as on other unix
@@ -149,7 +153,7 @@ option(HERMES_INTERCEPT_IO "Use GOTCHA as IO interception tool" OFF)
 option(HERMES_COMMUNICATION_MPI "Use MPI as the communication layer." ON)
 option(HERMES_ENABLE_DOXYGEN "Enable hermes documentation." OFF)
 option(HERMES_BUILD_BUFFER_POOL_VISUALIZER "Build the BufferPool visualizer" OFF)
-option(HERMES_USE_ADDRESS_SANITIZER "Enable -fsanitize=address in Debug builds" ON)
+option(HERMES_USE_ADDRESS_SANITIZER "Enable -fsanitize=address in Debug builds" OFF)
 option(HERMES_USE_THREAD_SANITIZER "Enable -fsanitize=thread in Debug builds" OFF)
 option(HERMES_RPC_THALLIUM "Use Thallium as the RPC library." ON)
 option(HERMES_MDM_STORAGE_STBDS
@@ -166,6 +170,7 @@ option(HERMES_ENABLE_VFD "Build the Hermes HDF5 Virtual File Driver" OFF)
 option(HERMES_ENABLE_WRAPPER "Enable hermes C API wrapper." ON)
 option(HERMES_ENABLE_GFLAGS "Enable GFLAGS support." ON)
 option(HERMES_INSTALL_TESTS "Enable installation of tests." OFF)
+
 # Calculate code coverage with debug mode
 if(HERMES_ENABLE_COVERAGE)
   if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -402,6 +407,11 @@ set(HERMES_EXPORTED_LIBS "")
 include_directories(${CMAKE_SOURCE_DIR}/hermes_shm/include)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src)
 add_subdirectory(${CMAKE_SOURCE_DIR}/hermes_shm)
+
+add_custom_target(rpc COMMAND bash
+        ${CMAKE_SOURCE_DIR}/code_generators/code_generators/rpc/rpcgen.sh
+        "${CMAKE_SOURCE_DIR}"
+        "${CMAKE_BINARY_DIR}")
 
 # add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/data_stager)
 
