@@ -43,6 +43,7 @@ typedef ssize_t (*pwrite64_t)(int fd, const void * buf, size_t count, off64_t of
 typedef off_t (*lseek_t)(int fd, off_t offset, int whence);
 typedef off64_t (*lseek64_t)(int fd, off64_t offset, int whence);
 typedef int (*__fxstat_t)(int __ver, int __filedesc, struct stat * __stat_buf);
+typedef int (*fstat_t)(int __filedesc, struct stat * __stat_buf);
 typedef int (*fsync_t)(int fd);
 typedef int (*close_t)(int fd);
 }
@@ -80,6 +81,8 @@ class PosixApi {
   lseek64_t lseek64 = nullptr;
   /** __fxstat */
   __fxstat_t __fxstat = nullptr;
+  /** fstat */
+  fstat_t fstat = nullptr;
   /** fsync */
   fsync_t fsync = nullptr;
   /** close */
@@ -170,7 +173,13 @@ class PosixApi {
     } else {
       __fxstat = (__fxstat_t)dlsym(RTLD_DEFAULT, "__fxstat");
     }
-    REQUIRE_API(__fxstat)
+    // REQUIRE_API(__fxstat)
+    if (is_intercepted) {
+      fstat = (fstat_t)dlsym(RTLD_NEXT, "fstat");
+    } else {
+      fstat = (fstat_t)dlsym(RTLD_DEFAULT, "fstat");
+    }
+    // REQUIRE_API(fstat)
     if (is_intercepted) {
       fsync = (fsync_t)dlsym(RTLD_NEXT, "fsync");
     } else {

@@ -283,6 +283,44 @@ int HERMES_DECL(__fxstat)(int __ver, int fd, struct stat *buf) {
   return result;
 }
 
+int HERMES_DECL(fstat)(int fd, struct stat *buf) {
+  int result = 0;
+  auto real_api = HERMES_POSIX_API;
+  auto fs_api = HERMES_POSIX_FS;
+  if (fs_api->IsFdTracked(fd)) {
+    File f; f.hermes_fd_ = fd;
+    LOG(INFO) << "Intercepted fstat." << std::endl;
+    auto mdm = HERMES_FS_METADATA_MANAGER;
+    auto existing = mdm->Find(f);
+    if (existing) {
+      AdapterStat &astat = *existing;
+      // TODO(chogan): st_dev and st_ino need to be assigned by us, but
+      // currently we get them by calling the real fstat on open.
+      buf->st_dev = 0;
+      buf->st_ino = 0;
+      buf->st_mode = astat.st_mode_;
+      buf->st_nlink = 0;
+      buf->st_uid = astat.st_uid_;
+      buf->st_gid = astat.st_gid_;
+      buf->st_rdev = 0;
+      buf->st_size = fs_api->GetSize(f, astat);
+      // buf->st_blksize = astat.st_blksize_;
+      buf->st_blocks = 0;
+      buf->st_atime = astat.st_atim_.tv_sec;
+      buf->st_mtime = astat.st_mtim_.tv_sec;
+      buf->st_ctime = astat.st_ctim_.tv_sec;
+    } else {
+      result = -1;
+      errno = EBADF;
+      LOG(ERROR) << "File with descriptor " << fd
+                 << " does not exist in Hermes\n";
+    }
+  } else {
+    result = real_api->fstat(fd, buf);
+  }
+  return result;
+}
+
 int HERMES_DECL(fsync)(int fd) {
   bool stat_exists;
   auto real_api = HERMES_POSIX_API;
