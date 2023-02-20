@@ -50,6 +50,9 @@ typedef int (*close_t)(int fd);
 
 namespace hermes::adapter::fs {
 
+/** Used for compatability with older kernel versions */
+static int fxstat_to_fstat(int fd, struct stat * stbuf);
+
 /** Pointers to the real posix API */
 class PosixApi {
  public:
@@ -179,6 +182,9 @@ class PosixApi {
     } else {
       fstat = (fstat_t)dlsym(RTLD_DEFAULT, "fstat");
     }
+    if (fstat == nullptr) {
+      fstat = fxstat_to_fstat;
+    }
     // REQUIRE_API(fstat)
     if (is_intercepted) {
       fsync = (fsync_t)dlsym(RTLD_NEXT, "fsync");
@@ -194,6 +200,7 @@ class PosixApi {
     REQUIRE_API(close)
   }
 };
+
 }  // namespace hermes::adapter::fs
 
 // Singleton macros
@@ -204,5 +211,14 @@ class PosixApi {
 #define HERMES_POSIX_API_T hermes::adapter::fs::PosixApi*
 
 #undef REQUIRE_API
+
+namespace hermes::adapter::fs {
+/** Used for compatability with older kernel versions */
+static int fxstat_to_fstat(int fd, struct stat *stbuf) {
+#ifdef _STAT_VER
+  return HERMES_POSIX_API->__fxstat(_STAT_VER, fd, stbuf);
+#endif
+}
+}  // namespace hermes::adapter::fs
 
 #endif  // HERMES_ADAPTER_POSIX_H

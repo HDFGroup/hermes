@@ -1466,7 +1466,7 @@ TEST_CASE("fstat") {
     REQUIRE(test::size_written_orig == args.request_size);
 
     struct stat buf = {};
-    int result = __fxstat(_STAT_VER, test::fh_orig, &buf);
+    int result = fstat(test::fh_orig, &buf);
     REQUIRE(result == 0);
     REQUIRE(buf.st_size == (off_t)test::size_written_orig);
 

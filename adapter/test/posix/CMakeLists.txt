@@ -24,6 +24,7 @@ mpi_daemon(hermes_posix_adapter_mpi_test 2 "[request_size=range-large]" "large" 
 
 include_directories(${CMAKE_SOURCE_DIR}/adapter)
 add_executable(posix_simple_io simple_io.cc)
+target_link_libraries(posix_simple_io hermes_posix)
 
 set(POSIX_TESTS
   posix_adapter_test

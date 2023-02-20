@@ -80,7 +80,7 @@ int main(int argc, char **argv) {
   lseek(fd, off, SEEK_SET);
 
   struct stat st;
-  __fxstat(_STAT_VER, fd, &st);
+  fstat(fd, &st);
   if (do_read && (st.st_size - total_size) > 3) {
     if (rank == 0) {
       std::cout << "File sizes aren't equivalent: "

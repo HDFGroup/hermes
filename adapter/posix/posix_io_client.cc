@@ -76,7 +76,7 @@ void PosixIoClient::InitBucketState(const hipc::charbuf &bkt_name,
   int fd = real_api->open(filename.c_str(), O_RDONLY);
   if (fd < 0) { return; }
   struct stat buf;
-  real_api->__fxstat(_STAT_VER, fd, &buf);
+  real_api->fstat(fd, &buf);
   stat.true_size_ = buf.st_size;
   real_api->close(fd);
 }
