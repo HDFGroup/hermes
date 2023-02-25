@@ -13,6 +13,10 @@
 #ifndef HERMES_ADAPTER_FILESYSTEM_FILESYSTEM_H_
 #define HERMES_ADAPTER_FILESYSTEM_FILESYSTEM_H_
 
+#ifndef O_TMPFILE
+#define O_TMPFILE 0x0
+#endif
+
 #include <bucket.h>
 #include <buffer_pool.h>
 #include <ftw.h>
