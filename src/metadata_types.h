@@ -122,6 +122,13 @@ struct ShmHeader<BlobInfo> : public hipc::ShmBaseHeader {
       buffers_ar_;     /**< SHM pointer to BufferInfo vector */
   size_t blob_size_;   /**< The overall size of the blob */
   RwLock lock_[2];     /**< Ensures BlobInfo access is synchronized */
+  time_t update_time_; /**< Last time statistics updated */
+  int access_count_;   /**< The number of times blob accessed */
+  /**
+   * Estimate when blob will be accessed next (ns)
+   * 0 indicates unknown
+   * */
+  size_t next_access_time_ns_;
 
   /** Default constructor */
   ShmHeader() = default;
