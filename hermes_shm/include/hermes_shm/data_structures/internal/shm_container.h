@@ -10,10 +10,11 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_SHM_CONTAINER_H_
-#define HERMES_SHM_SHM_CONTAINER_H_
 
-#include "hermes_shm/memory/memory_manager.h"
+#ifndef HERMES_SHM_CONTAINER_H_
+#define HERMES_SHM_CONTAINER_H_
+
+#include "hermes_shm/memory/memory_registry.h"
 #include "hermes_shm/constants/macros.h"
 #include "shm_container_macro.h"
 #include "shm_macros.h"
@@ -81,4 +82,4 @@ static inline T* typed_nullptr() {
 
 }  // namespace hermes_shm::ipc
 
-#endif  // HERMES_SHM_SHM_CONTAINER_H_
+#endif  // HERMES_SHM_CONTAINER_H_

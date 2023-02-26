@@ -10,17 +10,20 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+
 #include "test_init.h"
 
 void MultiThreadedPageAllocationTest(Allocator *alloc) {
   int nthreads = 8;
-  HERMES_SHM_THREAD_MANAGER->GetThreadStatic();
+  HERMES_THREAD_MANAGER->GetThreadStatic();
 
   omp_set_dynamic(0);
 #pragma omp parallel shared(alloc) num_threads(nthreads)
   {
 #pragma omp barrier
     PageAllocationTest(alloc);
+#pragma omp barrier
+    // MultiPageAllocationTest(alloc);
 #pragma omp barrier
   }
 }
@@ -33,8 +36,8 @@ TEST_CASE("StackAllocatorMultithreaded") {
   Posttest();
 }
 
-TEST_CASE("MultiPageAllocatorMultithreaded") {
-  auto alloc = Pretest<hipc::PosixShmMmap, hipc::MultiPageAllocator>();
+TEST_CASE("ScalablePageAllocatorMultithreaded") {
+  auto alloc = Pretest<hipc::PosixShmMmap, hipc::ScalablePageAllocator>();
   REQUIRE(alloc->GetCurrentlyAllocatedSize() == 0);
   MultiThreadedPageAllocationTest(alloc);
   REQUIRE(alloc->GetCurrentlyAllocatedSize() == 0);

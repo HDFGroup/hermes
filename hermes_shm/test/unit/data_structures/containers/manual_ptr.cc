@@ -10,15 +10,16 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+
 #include "hermes_shm/data_structures/smart_ptr/manual_ptr.h"
 #include "basic_test.h"
 #include "test_init.h"
 #include "hermes_shm/data_structures/string.h"
-#include "hermes_shm/memory/allocator/stack_allocator.h"
 #include "smart_ptr.h"
 
 using hermes_shm::ipc::string;
 using hermes_shm::ipc::mptr;
+using hermes_shm::ipc::uptr;
 using hermes_shm::ipc::mptr;
 using hermes_shm::ipc::make_mptr;
 using hermes_shm::ipc::TypedPointer;

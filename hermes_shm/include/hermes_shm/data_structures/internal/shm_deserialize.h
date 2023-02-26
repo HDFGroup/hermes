@@ -10,10 +10,10 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_INCLUDE_HERMES_SHM_DATA_STRUCTURES_INTERNAL_DESERIALIZE_H_
-#define HERMES_SHM_INCLUDE_HERMES_SHM_DATA_STRUCTURES_INTERNAL_DESERIALIZE_H_
+#ifndef HERMES_INCLUDE_HERMES_DATA_STRUCTURES_INTERNAL_DESERIALIZE_H_
+#define HERMES_INCLUDE_HERMES_DATA_STRUCTURES_INTERNAL_DESERIALIZE_H_
 
-#include "hermes_shm/memory/memory_manager.h"
+#include "hermes_shm/memory/memory_registry.h"
 
 namespace hermes_shm::ipc {
 
@@ -33,7 +33,7 @@ struct ShmDeserialize {
 
   /** Construct from TypedPointer */
   ShmDeserialize(const TypedPointer<ContainerT> &ar) {
-    alloc_ = HERMES_SHM_MEMORY_MANAGER->GetAllocator(ar.allocator_id_);
+    alloc_ = HERMES_MEMORY_REGISTRY->GetAllocator(ar.allocator_id_);
     header_ = alloc_->Convert<
       TypedPointer<ContainerT>,
       OffsetPointer>(ar.ToOffsetPointer());
@@ -89,4 +89,4 @@ struct ShmDeserialize {
 
 }  // namespace hermes_shm::ipc
 
-#endif //HERMES_SHM_INCLUDE_HERMES_SHM_DATA_STRUCTURES_INTERNAL_DESERIALIZE_H_
+#endif //HERMES_INCLUDE_HERMES_DATA_STRUCTURES_INTERNAL_DESERIALIZE_H_

@@ -10,8 +10,9 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_MEMORY_ALLOCATOR_STACK_ALLOCATOR_H_
-#define HERMES_SHM_MEMORY_ALLOCATOR_STACK_ALLOCATOR_H_
+
+#ifndef HERMES_MEMORY_ALLOCATOR_STACK_ALLOCATOR_H_
+#define HERMES_MEMORY_ALLOCATOR_STACK_ALLOCATOR_H_
 
 #include "allocator.h"
 #include "hermes_shm/thread/lock.h"
@@ -58,14 +59,16 @@ class StackAllocator : public Allocator {
   /**
    * Initialize the allocator in shared memory
    * */
-  void shm_init(MemoryBackend *backend,
-                allocator_id_t id,
-                size_t custom_header_size);
+  void shm_init(allocator_id_t id,
+                size_t custom_header_size,
+                char *buffer,
+                size_t buffer_size);
 
   /**
    * Attach an existing allocator from shared memory
    * */
-  void shm_deserialize(MemoryBackend *backend) override;
+  void shm_deserialize(char *buffer,
+                       size_t buffer_size) override;
 
   /**
    * Allocate a memory of \a size size. The page allocator cannot allocate
@@ -101,4 +104,4 @@ class StackAllocator : public Allocator {
 
 }  // namespace hermes_shm::ipc
 
-#endif  // HERMES_SHM_MEMORY_ALLOCATOR_STACK_ALLOCATOR_H_
+#endif  // HERMES_MEMORY_ALLOCATOR_STACK_ALLOCATOR_H_

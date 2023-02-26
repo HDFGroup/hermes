@@ -10,8 +10,9 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_MEMORY_MEMORY_H_
-#define HERMES_SHM_MEMORY_MEMORY_H_
+
+#ifndef HERMES_MEMORY_MEMORY_H_
+#define HERMES_MEMORY_MEMORY_H_
 
 #include <hermes_shm/types/basic.h>
 #include <hermes_shm/constants/data_structure_singleton_macros.h>
@@ -349,7 +350,7 @@ using TypedAtomicPointer = AtomicPointer;
 
 /** Round up to the nearest multiple of the alignment */
 static size_t NextAlignmentMultiple(size_t alignment, size_t size) {
-  auto page_size = HERMES_SHM_SYSTEM_INFO->page_size_;
+  auto page_size = HERMES_SYSTEM_INFO->page_size_;
   size_t new_size = size;
   size_t page_off = size % alignment;
   if (page_off) {
@@ -360,7 +361,7 @@ static size_t NextAlignmentMultiple(size_t alignment, size_t size) {
 
 /** Round up to the nearest multiple of page size */
 static size_t NextPageSizeMultiple(size_t size) {
-  auto page_size = HERMES_SHM_SYSTEM_INFO->page_size_;
+  auto page_size = HERMES_SYSTEM_INFO->page_size_;
   size_t new_size = NextAlignmentMultiple(page_size, size);
   return new_size;
 }
@@ -380,4 +381,4 @@ struct hash<hermes_shm::ipc::allocator_id_t> {
 }  // namespace std
 
 
-#endif  // HERMES_SHM_MEMORY_MEMORY_H_
+#endif  // HERMES_MEMORY_MEMORY_H_

@@ -10,12 +10,13 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_MEMORY_MEMORY_MANAGER_H_
-#define HERMES_SHM_MEMORY_MEMORY_MANAGER_H_
+#ifndef HERMES_MEMORY_MEMORY_MANAGER_H_
+#define HERMES_MEMORY_MEMORY_MANAGER_H_
 
-#include "hermes_shm/memory/allocator/allocator.h"
-#include "backend/memory_backend.h"
+#include "hermes_shm/memory/backend/memory_backend_factory.h"
 #include "hermes_shm/memory/allocator/allocator_factory.h"
+#include "hermes_shm/memory/memory_registry.h"
+#include "hermes_shm/constants/macros.h"
 #include <hermes_shm/constants/data_structure_singleton_macros.h>
 
 namespace hipc = hermes_shm::ipc;
@@ -23,31 +24,12 @@ namespace hipc = hermes_shm::ipc;
 namespace hermes_shm::ipc {
 
 class MemoryManager {
- private:
-  allocator_id_t root_allocator_id_;
-  PosixMmap root_backend_;
-  StackAllocator root_allocator_;
-  std::unordered_map<std::string, std::unique_ptr<MemoryBackend>> backends_;
-  std::unordered_map<allocator_id_t, std::unique_ptr<Allocator>> allocators_;
-  Allocator *default_allocator_;
-
  public:
   /** The default amount of memory a single allocator manages */
   static const size_t kDefaultBackendSize = GIGABYTES(64);
 
-  /**
-   * Constructor. Create the root allocator and backend, which is used
-   * until the user specifies a new default. The root allocator stores
-   * only private memory.
-   * */
-  MemoryManager() {
-    root_allocator_id_.bits_.major_ = 0;
-    root_allocator_id_.bits_.minor_ = -1;
-    root_backend_.shm_init(HERMES_SHM_SYSTEM_INFO->ram_size_);
-    root_backend_.Own();
-    root_allocator_.shm_init(&root_backend_, root_allocator_id_, 0);
-    default_allocator_ = &root_allocator_;
-  }
+  /** Default constructor. */
+  MemoryManager() = default;
 
   /**
    * Create a memory backend. Memory backends are divided into slots.
@@ -59,10 +41,9 @@ class MemoryManager {
   MemoryBackend* CreateBackend(size_t size,
                                const std::string &url,
                                Args&& ...args) {
-    backends_.emplace(url,
-                      MemoryBackendFactory::shm_init<BackendT>(size, url),
-                      std::forward<Args>(args)...);
-    auto backend = backends_[url].get();
+    auto backend_u = MemoryBackendFactory::shm_init<BackendT>(
+      size, url, std::forward<Args>(args)...);
+    auto backend = HERMES_MEMORY_REGISTRY->RegisterBackend(url, backend_u);
     backend->Own();
     return backend;
   }
@@ -72,8 +53,8 @@ class MemoryManager {
    * */
   MemoryBackend* AttachBackend(MemoryBackendType type,
                                const std::string &url) {
-    backends_.emplace(url, MemoryBackendFactory::shm_deserialize(type, url));
-    auto backend = backends_[url].get();
+    auto backend_u = MemoryBackendFactory::shm_deserialize(type, url);
+    auto backend = HERMES_MEMORY_REGISTRY->RegisterBackend(url, backend_u);
     ScanBackends();
     backend->Disown();
     return backend;
@@ -82,12 +63,25 @@ class MemoryManager {
   /**
    * Returns a pointer to a backend that has already been attached.
    * */
-  MemoryBackend* GetBackend(const std::string &url);
+  MemoryBackend* GetBackend(const std::string &url) {
+    return HERMES_MEMORY_REGISTRY->GetBackend(url);
+  }
 
   /**
-   * Destroys the memory allocated by the entire backend.
+   * Unregister backend
    * */
-  void DestroyBackend(const std::string &url);
+  void UnregisterBackend(const std::string &url) {
+    HERMES_MEMORY_REGISTRY->UnregisterBackend(url);
+  }
+
+  /**
+   * Destroy backend
+   * */
+  void DestroyBackend(const std::string &url) {
+    auto backend = GetBackend(url);
+    backend->Own();
+    UnregisterBackend(url);
+  }
 
   /**
    * Scans all attached backends for new memory allocators.
@@ -98,7 +92,9 @@ class MemoryManager {
    * Registers an allocator. Used internally by ScanBackends, but may
    * also be used externally.
    * */
-  void RegisterAllocator(std::unique_ptr<Allocator> &alloc);
+  void RegisterAllocator(std::unique_ptr<Allocator> &alloc) {
+    HERMES_MEMORY_REGISTRY->RegisterAllocator(alloc);
+  }
 
   /**
    * Create and register a memory allocator for a particular backend.
@@ -110,11 +106,11 @@ class MemoryManager {
                              Args&& ...args) {
     auto backend = GetBackend(url);
     if (alloc_id.IsNull()) {
-      alloc_id = allocator_id_t(HERMES_SHM_SYSTEM_INFO->pid_,
-                                allocators_.size());
+      alloc_id = allocator_id_t(HERMES_SYSTEM_INFO->pid_,
+                                HERMES_MEMORY_REGISTRY->allocators_.size());
     }
     auto alloc = AllocatorFactory::shm_init<AllocT>(
-      backend, alloc_id, custom_header_size, std::forward<Args>(args)...);
+      alloc_id, custom_header_size, backend, std::forward<Args>(args)...);
     RegisterAllocator(alloc);
     return GetAllocator(alloc_id);
   }
@@ -123,22 +119,18 @@ class MemoryManager {
    * Locates an allocator of a particular id
    * */
   Allocator* GetAllocator(allocator_id_t alloc_id) {
-    if (alloc_id.IsNull()) { return nullptr; }
-    if (alloc_id == root_allocator_.GetId()) {
-      return &root_allocator_;
-    }
-    auto iter = allocators_.find(alloc_id);
-    if (iter == allocators_.end()) {
+    auto alloc = HERMES_MEMORY_REGISTRY->GetAllocator(alloc_id);
+    if (!alloc) {
       ScanBackends();
     }
-    return reinterpret_cast<Allocator*>(allocators_[alloc_id].get());
+    return HERMES_MEMORY_REGISTRY->GetAllocator(alloc_id);
   }
 
   /**
    * Gets the allocator used for initializing other allocators.
    * */
   Allocator* GetRootAllocator() {
-    return &root_allocator_;
+    return HERMES_MEMORY_REGISTRY->GetRootAllocator();
   }
 
   /**
@@ -146,7 +138,7 @@ class MemoryManager {
    * used to construct an object.
    * */
   Allocator* GetDefaultAllocator() {
-    return default_allocator_;
+    return HERMES_MEMORY_REGISTRY->GetDefaultAllocator();
   }
 
   /**
@@ -154,7 +146,7 @@ class MemoryManager {
    * used to construct an object.
    * */
   void SetDefaultAllocator(Allocator *alloc) {
-    default_allocator_ = alloc;
+    HERMES_MEMORY_REGISTRY->SetDefaultAllocator(alloc);
   }
 
   /**
@@ -189,7 +181,7 @@ class MemoryManager {
    * */
   template<typename T, typename POINTER_T=Pointer>
   POINTER_T Convert(T *ptr) {
-    for (auto &[alloc_id, alloc] : allocators_) {
+    for (auto &[alloc_id, alloc] : HERMES_MEMORY_REGISTRY->allocators_) {
       if (alloc->ContainsPtr(ptr)) {
         return alloc->template
           Convert<T, POINTER_T>(ptr);
@@ -201,4 +193,4 @@ class MemoryManager {
 
 }  // namespace hermes_shm::ipc
 
-#endif  // HERMES_SHM_MEMORY_MEMORY_MANAGER_H_
+#endif  // HERMES_MEMORY_MEMORY_MANAGER_H_

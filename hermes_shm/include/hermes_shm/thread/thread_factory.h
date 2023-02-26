@@ -10,8 +10,8 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_THREAD_THREAD_FACTORY_H_
-#define HERMES_SHM_THREAD_THREAD_FACTORY_H_
+#ifndef HERMES_THREAD_THREAD_FACTORY_H_
+#define HERMES_THREAD_THREAD_FACTORY_H_
 
 #include "thread.h"
 #include "pthread.h"
@@ -48,4 +48,4 @@ class ThreadStaticFactory {
 
 }  // namespace hermes_shm
 
-#endif  // HERMES_SHM_THREAD_THREAD_FACTORY_H_
+#endif  // HERMES_THREAD_THREAD_FACTORY_H_

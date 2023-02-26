@@ -10,12 +10,13 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_DATA_STRUCTURES_INTERNAL_SHM_DATA_STRUCTURE_POINTER_H_
-#define HERMES_SHM_DATA_STRUCTURES_INTERNAL_SHM_DATA_STRUCTURE_POINTER_H_
+
+#ifndef HERMES_DATA_STRUCTURES_INTERNAL_SHM_DATA_STRUCTURE_POINTER_H_
+#define HERMES_DATA_STRUCTURES_INTERNAL_SHM_DATA_STRUCTURE_POINTER_H_
 
 #include "hermes_shm/memory/memory.h"
 #include "hermes_shm/memory/allocator/allocator.h"
-#include "hermes_shm/memory/memory_manager.h"
+#include "hermes_shm/memory/memory_registry.h"
 #include "hermes_shm/data_structures/internal/shm_macros.h"
 #include <hermes_shm/constants/data_structure_singleton_macros.h>
 
@@ -159,4 +160,4 @@ class ShmSmartPtr : public ShmSmartPointer {
   SHM_SERIALIZE_WRAPPER(AR_TYPE)\
   SHM_DESERIALIZE_WRAPPER(AR_TYPE)
 
-#endif  // HERMES_SHM_DATA_STRUCTURES_INTERNAL_SHM_DATA_STRUCTURE_POINTER_H_
+#endif  // HERMES_DATA_STRUCTURES_INTERNAL_SHM_DATA_STRUCTURE_POINTER_H_

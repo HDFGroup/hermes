@@ -10,8 +10,8 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_TEST_UNIT_DATA_STRUCTURES_CONTAINERS_LIST_H_
-#define HERMES_SHM_TEST_UNIT_DATA_STRUCTURES_CONTAINERS_LIST_H_
+#ifndef HERMES_TEST_UNIT_DATA_STRUCTURES_CONTAINERS_LIST_H_
+#define HERMES_TEST_UNIT_DATA_STRUCTURES_CONTAINERS_LIST_H_
 
 #include "basic_test.h"
 #include "test_init.h"
@@ -189,4 +189,4 @@ class ListTestSuite {
   }
 };
 
-#endif //HERMES_SHM_TEST_UNIT_DATA_STRUCTURES_CONTAINERS_LIST_H_
+#endif //HERMES_TEST_UNIT_DATA_STRUCTURES_CONTAINERS_LIST_H_

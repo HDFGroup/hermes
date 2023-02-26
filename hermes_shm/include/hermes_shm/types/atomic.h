@@ -10,8 +10,8 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_INCLUDE_HERMES_SHM_TYPES_ATOMIC_H_
-#define HERMES_SHM_INCLUDE_HERMES_SHM_TYPES_ATOMIC_H_
+#ifndef HERMES_INCLUDE_HERMES_TYPES_ATOMIC_H_
+#define HERMES_INCLUDE_HERMES_TYPES_ATOMIC_H_
 
 #include <atomic>
 
@@ -249,4 +249,4 @@ struct atomic {
 
 }
 
-#endif //HERMES_SHM_INCLUDE_HERMES_SHM_TYPES_ATOMIC_H_
+#endif //HERMES_INCLUDE_HERMES_TYPES_ATOMIC_H_

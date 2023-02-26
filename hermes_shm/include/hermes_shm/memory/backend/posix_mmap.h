@@ -10,8 +10,8 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_INCLUDE_MEMORY_BACKEND_POSIX_MMAP_H
-#define HERMES_SHM_INCLUDE_MEMORY_BACKEND_POSIX_MMAP_H
+#ifndef HERMES_INCLUDE_MEMORY_BACKEND_POSIX_MMAP_H
+#define HERMES_INCLUDE_MEMORY_BACKEND_POSIX_MMAP_H
 
 #include "memory_backend.h"
 #include <string>
@@ -108,4 +108,4 @@ class PosixMmap : public MemoryBackend {
 
 }  // namespace hermes_shm::ipc
 
-#endif  // HERMES_SHM_INCLUDE_MEMORY_BACKEND_POSIX_MMAP_H
+#endif  // HERMES_INCLUDE_MEMORY_BACKEND_POSIX_MMAP_H

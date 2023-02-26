@@ -10,8 +10,8 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_TEST_UNIT_BASIC_TEST_H_
-#define HERMES_SHM_TEST_UNIT_BASIC_TEST_H_
+#ifndef HERMES_TEST_UNIT_BASIC_TEST_H_
+#define HERMES_TEST_UNIT_BASIC_TEST_H_
 
 #define CATCH_CONFIG_RUNNER
 #include <catch2/catch_all.hpp>
@@ -65,4 +65,4 @@ static bool VerifyBuffer(char *ptr, size_t size, char nonce) {
 void MainPretest();
 void MainPosttest();
 
-#endif  // HERMES_SHM_TEST_UNIT_BASIC_TEST_H_
+#endif  // HERMES_TEST_UNIT_BASIC_TEST_H_

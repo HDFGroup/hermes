@@ -1,18 +1,18 @@
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Distributed under BSD 3-Clause license.                                   *
- * Copyright by The HDF Group.                                               *
- * Copyright by the Illinois Institute of Technology.                        *
- * All rights reserved.                                                      *
- *                                                                           *
- * This file is part of Hermes. The full Hermes copyright notice, including  *
- * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the top directory. If you do not  *
- * have access to the file, you may request a copy from help@hdfgroup.org.   *
- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
-#ifndef HERMES_SHM_DATA_STRUCTURES_INTERNAL_SHM_CONTAINER_EXTEND_MACRO_H_
-#define HERMES_SHM_DATA_STRUCTURES_INTERNAL_SHM_CONTAINER_EXTEND_MACRO_H_
+#ifndef HERMES_DATA_STRUCTURES_INTERNAL_SHM_CONTAINER_EXTEND_MACRO_H_
+#define HERMES_DATA_STRUCTURES_INTERNAL_SHM_CONTAINER_EXTEND_MACRO_H_
 #define SHM_CONTAINER_EXTEND_TEMPLATE(CLASS_NAME,TYPED_CLASS,TYPED_HEADER)\
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *\
+ * Distributed under BSD 3-Clause license.                                   *\
+ * Copyright by The HDF Group.                                               *\
+ * Copyright by the Illinois Institute of Technology.                        *\
+ * All rights reserved.                                                      *\
+ *                                                                           *\
+ * This file is part of Hermes. The full Hermes copyright notice, including  *\
+ * terms governing use, modification, and redistribution, is contained in    *\
+ * the COPYING file, which can be found at the top directory. If you do not  *\
+ * have access to the file, you may request a copy from help@hdfgroup.org.   *\
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */\
+\
 public:\
 /**====================================\
  * Variables & Types\
@@ -252,4 +252,4 @@ allocator_id_t GetAllocatorId() const {\
   return GetAllocator()->GetId();\
 }\
 
-#endif  // HERMES_SHM_DATA_STRUCTURES_INTERNAL_SHM_CONTAINER_EXTEND_MACRO_H_
+#endif  // HERMES_DATA_STRUCTURES_INTERNAL_SHM_CONTAINER_EXTEND_MACRO_H_

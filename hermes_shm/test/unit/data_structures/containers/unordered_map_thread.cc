@@ -15,7 +15,6 @@
 #include "test_init.h"
 #include "hermes_shm/data_structures/thread_safe/unordered_map.h"
 #include "hermes_shm/data_structures/string.h"
-#include "hermes_shm/memory/allocator/stack_allocator.h"
 #include "hermes_shm/util/errors.h"
 #include <sstream>
 
@@ -36,7 +35,7 @@ void UnorderedMapParallelInsert() {
   int entries_per_thread = 50;
   int nthreads = 4;
   int total_entries = nthreads * entries_per_thread;
-  HERMES_SHM_THREAD_MANAGER->GetThreadStatic();
+  HERMES_THREAD_MANAGER->GetThreadStatic();
 
   omp_set_dynamic(0);
 #pragma omp parallel shared(alloc, map) num_threads(nthreads)

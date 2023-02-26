@@ -10,8 +10,8 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_MACROS_H
-#define HERMES_SHM_MACROS_H
+#ifndef HERMES_MACROS_H
+#define HERMES_MACROS_H
 
 #define KILOBYTES(n) ((size_t)(n) * (1<<10))
 #define MEGABYTES(n) ((size_t)(n) * (1<<20))
@@ -27,4 +27,4 @@
 #define ESC_(...) VAN ## __VA_ARGS__
 #define VANISH
 
-#endif  // HERMES_SHM_MACROS_H
+#endif  // HERMES_MACROS_H

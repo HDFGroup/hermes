@@ -10,11 +10,11 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_INCLUDE_HERMES_SHM_TYPES_CHARBUF_H_
-#define HERMES_SHM_INCLUDE_HERMES_SHM_TYPES_CHARBUF_H_
+#ifndef HERMES_INCLUDE_HERMES_TYPES_CHARBUF_H_
+#define HERMES_INCLUDE_HERMES_TYPES_CHARBUF_H_
 
 #include "basic.h"
-#include "hermes_shm/memory/memory_manager.h"
+#include "hermes_shm/memory/memory_registry.h"
 #include <string>
 
 namespace hermes_shm {
@@ -34,12 +34,12 @@ struct charbuf {
 
   /** Size-based constructor */
   explicit charbuf(size_t size) {
-    Allocate(HERMES_SHM_MEMORY_MANAGER->GetDefaultAllocator(), size);
+    Allocate(HERMES_MEMORY_REGISTRY->GetDefaultAllocator(), size);
   }
 
   /** String-based constructor */
   explicit charbuf(const std::string &data) {
-    Allocate(HERMES_SHM_MEMORY_MANAGER->GetDefaultAllocator(), data.size());
+    Allocate(HERMES_MEMORY_REGISTRY->GetDefaultAllocator(), data.size());
     memcpy(data_, data.data(), data.size());
   }
 
@@ -58,7 +58,7 @@ struct charbuf {
 
   /** Copy constructor */
   charbuf(const charbuf &other) {
-    if (!Allocate(HERMES_SHM_MEMORY_MANAGER->GetDefaultAllocator(),
+    if (!Allocate(HERMES_MEMORY_REGISTRY->GetDefaultAllocator(),
                   other.size())) {
       return;
     }
@@ -69,7 +69,7 @@ struct charbuf {
   charbuf& operator=(const charbuf &other) {
     if (this != &other) {
       Free();
-      if (!Allocate(HERMES_SHM_MEMORY_MANAGER->GetDefaultAllocator(),
+      if (!Allocate(HERMES_MEMORY_REGISTRY->GetDefaultAllocator(),
                     other.size())) {
         return *this;
       }
@@ -109,7 +109,7 @@ struct charbuf {
       return;
     }
     if (alloc_ == nullptr) {
-      alloc_ = HERMES_SHM_MEMORY_MANAGER->GetDefaultAllocator();
+      alloc_ = HERMES_MEMORY_REGISTRY->GetDefaultAllocator();
     }
     if (destructable_) {
       data_ = alloc_->ReallocatePtr<char>(data_, new_size);
@@ -151,7 +151,7 @@ struct charbuf {
     return sum;
   }
 
-#define HERMES_SHM_STR_CMP_OPERATOR(op) \
+#define HERMES_STR_CMP_OPERATOR(op) \
   bool operator op(const char *other) const { \
     return _strncmp(data(), size(), other, strlen(other)) op 0; \
   } \
@@ -162,14 +162,14 @@ struct charbuf {
     return _strncmp(data(), size(), other.data(), other.size()) op 0; \
   }
 
-  HERMES_SHM_STR_CMP_OPERATOR(==)
-  HERMES_SHM_STR_CMP_OPERATOR(!=)
-  HERMES_SHM_STR_CMP_OPERATOR(<)
-  HERMES_SHM_STR_CMP_OPERATOR(>)
-  HERMES_SHM_STR_CMP_OPERATOR(<=)
-  HERMES_SHM_STR_CMP_OPERATOR(>=)
+  HERMES_STR_CMP_OPERATOR(==)
+  HERMES_STR_CMP_OPERATOR(!=)
+  HERMES_STR_CMP_OPERATOR(<)
+  HERMES_STR_CMP_OPERATOR(>)
+  HERMES_STR_CMP_OPERATOR(<=)
+  HERMES_STR_CMP_OPERATOR(>=)
 
-#undef HERMES_SHM_STR_CMP_OPERATOR
+#undef HERMES_STR_CMP_OPERATOR
 
  private:
   /** Allocate charbuf */
@@ -201,4 +201,4 @@ typedef charbuf string;
 
 }  // namespace hermes_shm
 
-#endif //HERMES_SHM_INCLUDE_HERMES_SHM_TYPES_CHARBUF_H_
+#endif //HERMES_INCLUDE_HERMES_TYPES_CHARBUF_H_

@@ -10,6 +10,7 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+
 #include "hermes_shm/thread/lock.h"
 #include "hermes_shm/thread/thread_manager.h"
 
@@ -19,10 +20,11 @@ namespace hermes_shm {
  * Acquire the mutex
  * */
 void Mutex::Lock() {
-  auto thread_info = HERMES_SHM_THREAD_MANAGER->GetThreadStatic();
-  while (!TryLock()) {
-    thread_info->Yield();
+  auto thread_info = HERMES_THREAD_MANAGER->GetThreadStatic();
+  for (int i = 0; i < US_TO_CLOCKS(16); ++i) {
+    if (TryLock()) { return; }
   }
+  thread_info->Yield();
 }
 
 /**
@@ -54,6 +56,7 @@ void Mutex::Unlock() {
  * */
 ScopedMutex::ScopedMutex(Mutex &lock)
 : lock_(lock), is_locked_(false) {
+  Lock();
 }
 
 /**

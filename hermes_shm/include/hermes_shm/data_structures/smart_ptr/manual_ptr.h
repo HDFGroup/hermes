@@ -10,12 +10,13 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_DATA_STRUCTURES_PTR_H_
-#define HERMES_SHM_DATA_STRUCTURES_PTR_H_
+
+#ifndef HERMES_DATA_STRUCTURES_PTR_H_
+#define HERMES_DATA_STRUCTURES_PTR_H_
 
 #include "hermes_shm/memory/memory.h"
-#include "hermes_shm/data_structures/data_structure.h"
-#include "hermes_shm/data_structures/internal/shm_archive_or_t.h"
+#include "unique_ptr.h"
+#include "hermes_shm/data_structures/internal/shm_internal.h"
 
 namespace hermes_shm::ipc {
 
@@ -109,4 +110,4 @@ struct hash<hermes_shm::ipc::manual_ptr<T>> {
 
 }  // namespace std
 
-#endif  // HERMES_SHM_DATA_STRUCTURES_PTR_H_
+#endif  // HERMES_DATA_STRUCTURES_PTR_H_

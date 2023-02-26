@@ -10,6 +10,7 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+
 #include "basic_test.h"
 
 #include <mpi.h>
@@ -33,8 +34,8 @@ TEST_CASE("MemoryManager") {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   allocator_id_t alloc_id(0, 1);
 
-  HERMES_SHM_ERROR_HANDLE_START()
-  auto mem_mngr = HERMES_SHM_MEMORY_MANAGER;
+  HERMES_ERROR_HANDLE_START()
+  auto mem_mngr = HERMES_MEMORY_MANAGER;
 
   if (rank == 0) {
     std::cout << "Creating SHMEM (rank 0): " << shm_url << std::endl;
@@ -70,9 +71,6 @@ TEST_CASE("MemoryManager") {
     REQUIRE(VerifyBuffer(page, page_size, nonce));
   }
   MPI_Barrier(MPI_COMM_WORLD);
-  if (rank == 0) {
-    mem_mngr->DestroyBackend(shm_url);
-  }
 
-  HERMES_SHM_ERROR_HANDLE_END()
+  HERMES_ERROR_HANDLE_END()
 }

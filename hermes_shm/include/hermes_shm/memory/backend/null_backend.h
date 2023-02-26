@@ -10,8 +10,8 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_INCLUDE_HERMES_SHM_MEMORY_BACKEND_NULL_H_
-#define HERMES_SHM_INCLUDE_HERMES_SHM_MEMORY_BACKEND_NULL_H_
+#ifndef HERMES_INCLUDE_HERMES_MEMORY_BACKEND_NULL_H_
+#define HERMES_INCLUDE_HERMES_MEMORY_BACKEND_NULL_H_
 
 #include "memory_backend.h"
 #include <string>
@@ -78,4 +78,4 @@ class NullBackend : public MemoryBackend {
 
 }  // namespace hermes_shm::ipc
 
-#endif //HERMES_SHM_INCLUDE_HERMES_SHM_MEMORY_BACKEND_NULL_H_
+#endif //HERMES_INCLUDE_HERMES_MEMORY_BACKEND_NULL_H_

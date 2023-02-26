@@ -10,12 +10,13 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_INCLUDE_HERMES_SHM_DATA_STRUCTURES_INTERNAL_SHM_ShmRef_H_
-#define HERMES_SHM_INCLUDE_HERMES_SHM_DATA_STRUCTURES_INTERNAL_SHM_ShmRef_H_
+#ifndef HERMES_INCLUDE_HERMES_DATA_STRUCTURES_INTERNAL_SHM_ShmRef_H_
+#define HERMES_INCLUDE_HERMES_DATA_STRUCTURES_INTERNAL_SHM_ShmRef_H_
 
 #include "hermes_shm/constants/macros.h"
 #include "shm_macros.h"
 #include "shm_archive.h"
+#include "shm_deserialize.h"
 
 namespace hermes_shm::ipc {
 
@@ -34,8 +35,13 @@ struct _ShmRefShm {
     obj_.UnsetDestructable();
   }
 
-  /** Constructor. */
+  /** Constructor. From TypedPointer. */
   explicit _ShmRefShm(TypedPointer<T> other) {
+    obj_.shm_deserialize(other);
+  }
+
+  /** Constructor. From ShmDeserialize. */
+  explicit _ShmRefShm(ShmDeserialize<T> other) {
     obj_.shm_deserialize(other);
   }
 
@@ -198,4 +204,4 @@ struct ShmRef {
 
 }  // namespace hermes_shm::ipc
 
-#endif //HERMES_SHM_INCLUDE_HERMES_SHM_DATA_STRUCTURES_INTERNAL_SHM_ShmRef_H_
+#endif //HERMES_INCLUDE_HERMES_DATA_STRUCTURES_INTERNAL_SHM_ShmRef_H_

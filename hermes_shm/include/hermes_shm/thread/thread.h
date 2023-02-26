@@ -10,8 +10,8 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_THREAD_THREAD_H_
-#define HERMES_SHM_THREAD_THREAD_H_
+#ifndef HERMES_THREAD_THREAD_H_
+#define HERMES_THREAD_THREAD_H_
 
 #include <vector>
 #include <cstdint>
@@ -44,4 +44,4 @@ class ThreadStatic {
 
 }  // namespace hermes_shm
 
-#endif  // HERMES_SHM_THREAD_THREAD_H_
+#endif  // HERMES_THREAD_THREAD_H_

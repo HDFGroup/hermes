@@ -10,8 +10,9 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_TEST_UNIT_ALLOCATORS_TEST_INIT_H_
-#define HERMES_SHM_TEST_UNIT_ALLOCATORS_TEST_INIT_H_
+
+#ifndef HERMES_TEST_UNIT_ALLOCATORS_TEST_INIT_H_
+#define HERMES_TEST_UNIT_ALLOCATORS_TEST_INIT_H_
 
 #include "basic_test.h"
 #include "omp.h"
@@ -35,7 +36,7 @@ template<typename BackendT, typename AllocT>
 Allocator* Pretest() {
   std::string shm_url = "test_allocators";
   allocator_id_t alloc_id(0, 1);
-  auto mem_mngr = HERMES_SHM_MEMORY_MANAGER;
+  auto mem_mngr = HERMES_MEMORY_MANAGER;
   mem_mngr->CreateBackend<BackendT>(
     MemoryManager::kDefaultBackendSize, shm_url);
   mem_mngr->CreateAllocator<AllocT>(
@@ -48,5 +49,6 @@ Allocator* Pretest() {
 
 void Posttest();
 void PageAllocationTest(Allocator *alloc);
+void MultiPageAllocationTest(Allocator *alloc);
 
-#endif  // HERMES_SHM_TEST_UNIT_ALLOCATORS_TEST_INIT_H_
+#endif  // HERMES_TEST_UNIT_ALLOCATORS_TEST_INIT_H_

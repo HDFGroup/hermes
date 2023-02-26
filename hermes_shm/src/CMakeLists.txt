@@ -3,19 +3,22 @@ project(hermes_shm)
 
 set(CMAKE_CXX_STANDARD 17)
 
-##################Build HermesShm main packages
-add_library(hermes_shm_data_structures
-        ${CMAKE_CURRENT_SOURCE_DIR}/thread/mutex.cc
-        ${CMAKE_CURRENT_SOURCE_DIR}/thread/rwlock.cc
-        ${CMAKE_CURRENT_SOURCE_DIR}/memory/malloc_allocator.cc
-        ${CMAKE_CURRENT_SOURCE_DIR}/memory/stack_allocator.cc
-        ${CMAKE_CURRENT_SOURCE_DIR}/memory/multi_page_allocator.cc
-        ${CMAKE_CURRENT_SOURCE_DIR}/memory/memory_manager.cc
-        ${CMAKE_CURRENT_SOURCE_DIR}/data_structure_singleton.cc)
-target_link_libraries(hermes_shm_data_structures
-        yaml-cpp pthread -lrt -ldl)
+##################Build hermes main packages
 
-##################Install HermesShm
+add_library(hermes_shm_data_structures
+        thread/mutex.cc
+        thread/rwlock.cc
+        memory/malloc_allocator.cc
+        memory/stack_allocator.cc
+        memory/fixed_page_allocator.cc
+        memory/scalable_page_allocator.cc
+        memory/memory_registry.cc
+        memory/memory_manager.cc
+        data_structure_singleton.cc)
+target_link_libraries(hermes_shm_data_structures
+        yaml-cpp pthread -lrt -ldl OpenMP::OpenMP_CXX)
+
+##################Install hermes
 install(TARGETS
         hermes_shm_data_structures
         EXPORT
@@ -37,9 +40,9 @@ set(HERMES_EXPORTED_LIBS
         ${HERMES_EXPORTED_LIBS})
 if(NOT HERMES_EXTERNALLY_CONFIGURED)
     EXPORT (
-        TARGETS
-        ${HERMES_EXPORTED_LIBS}
-        FILE
-        ${HERMES_EXPORTED_TARGETS}.cmake
+            TARGETS
+            ${HERMES_EXPORTED_LIBS}
+            FILE
+            ${HERMES_EXPORTED_TARGETS}.cmake
     )
 endif()

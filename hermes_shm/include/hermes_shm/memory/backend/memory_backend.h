@@ -10,8 +10,8 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_MEMORY_H
-#define HERMES_SHM_MEMORY_H
+#ifndef HERMES_MEMORY_H
+#define HERMES_MEMORY_H
 
 #include <cstdint>
 #include <vector>
@@ -87,4 +87,4 @@ class MemoryBackend {
 
 }  // namespace hermes_shm::ipc
 
-#endif  // HERMES_SHM_MEMORY_H
+#endif  // HERMES_MEMORY_H

@@ -10,10 +10,11 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_INCLUDE_HERMES_SHM_DATA_STRUCTURES_INTERNAL_SHM_CONTAINER_EXAMPLE_H_
-#define HERMES_SHM_INCLUDE_HERMES_SHM_DATA_STRUCTURES_INTERNAL_SHM_CONTAINER_EXAMPLE_H_
+#ifndef HERMES_INCLUDE_HERMES_DATA_STRUCTURES_INTERNAL_SHM_CONTAINER_EXAMPLE_H_
+#define HERMES_INCLUDE_HERMES_DATA_STRUCTURES_INTERNAL_SHM_CONTAINER_EXAMPLE_H_
 
 #include "hermes_shm/data_structures/internal/shm_container.h"
+#include "hermes_shm/data_structures/internal/shm_deserialize.h"
 
 namespace honey {
 
@@ -119,7 +120,7 @@ class ShmContainerExample {
   inline void shm_init_allocator(hipc::Allocator *alloc) {
     if (IsValid()) { return; }
     if (alloc == nullptr) {
-      alloc_ = HERMES_SHM_MEMORY_MANAGER->GetDefaultAllocator();
+      alloc_ = HERMES_MEMORY_REGISTRY->GetDefaultAllocator();
     } else {
       alloc_ = alloc;
     }
@@ -187,7 +188,7 @@ class ShmContainerExample {
   /** Deserialize object from a raw pointer */
   bool shm_deserialize(const hipc::TypedPointer<TYPED_CLASS> &ar) {
     return shm_deserialize(
-      HERMES_SHM_MEMORY_MANAGER->GetAllocator(ar.allocator_id_),
+      HERMES_MEMORY_REGISTRY->GetAllocator(ar.allocator_id_),
       ar.ToOffsetPointer()
     );
   }
@@ -207,6 +208,11 @@ class ShmContainerExample {
     return shm_deserialize(other.GetAllocator(), other.header_);
   }
 
+  /** Deserialize object from "Deserialize" object */
+  bool shm_deserialize(hipc::ShmDeserialize<TYPED_CLASS> other) {
+    return shm_deserialize(other.alloc_, other.header_);
+  }
+
   /** Deserialize object from allocator + header */
   bool shm_deserialize(hipc::Allocator *alloc,
                        TYPED_HEADER *header) {
@@ -222,6 +228,12 @@ class ShmContainerExample {
   template<typename ...Args>
   void shm_init(hipc::ShmRef<TYPED_CLASS> &obj) {
     shm_deserialize(obj->GetAllocator(), obj->header_);
+  }
+
+  /** Constructor. Deserialize the object deserialize reference. */
+  template<typename ...Args>
+  void shm_init(hipc::ShmDeserialize<TYPED_CLASS> other) {
+    shm_deserialize(other);
   }
 
   /** Override >> operators */
@@ -393,6 +405,11 @@ class ShmContainerExample {
     return alloc_->Convert<TYPED_HEADER, POINTER_T>(header_);
   }
 
+  /** Get a ShmDeserialize object */
+  hipc::ShmDeserialize<CLASS_NAME> GetShmDeserialize() const {
+    return hipc::ShmDeserialize<CLASS_NAME>(alloc_, header_);
+  }
+
   /**====================================
    * Query Operations
    * ===================================*/
@@ -419,4 +436,4 @@ class ShmContainerExample {
 #undef TYPED_CLASS
 #undef TYPED_HEADER
 
-#endif //HERMES_SHM_INCLUDE_HERMES_SHM_DATA_STRUCTURES_INTERNAL_SHM_CONTAINER_EXAMPLE_H_
+#endif //HERMES_INCLUDE_HERMES_DATA_STRUCTURES_INTERNAL_SHM_CONTAINER_EXAMPLE_H_

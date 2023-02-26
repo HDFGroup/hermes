@@ -8,10 +8,15 @@ add_executable(test_data_structure_exec
         test_init.cc
         string.cc
         pair.cc
+        #tuple.cc
         list.cc
+        slist.cc
         vector.cc
+        iqueue.cc
         manual_ptr.cc
+        unique_ptr.cc
         unordered_map.cc
+        #unordered_map_thread.cc
 )
 
 add_dependencies(test_data_structure_exec hermes_shm_data_structures)

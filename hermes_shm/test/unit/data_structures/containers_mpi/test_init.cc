@@ -10,10 +10,9 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+
 #include "basic_test.h"
 #include "test_init.h"
-
-#include "hermes_shm/memory/allocator/stack_allocator.h"
 
 Allocator *alloc_g = nullptr;
 
@@ -21,7 +20,7 @@ template<typename AllocT>
 void PretestRank0() {
   std::string shm_url = "test_allocators";
   allocator_id_t alloc_id(0, 1);
-  auto mem_mngr = HERMES_SHM_MEMORY_MANAGER;
+  auto mem_mngr = HERMES_MEMORY_MANAGER;
   mem_mngr->CreateBackend<PosixShmMmap>(
     MemoryManager::kDefaultBackendSize, shm_url);
   mem_mngr->CreateAllocator<AllocT>(shm_url, alloc_id, sizeof(Pointer));
@@ -31,7 +30,7 @@ void PretestRank0() {
 void PretestRankN() {
   std::string shm_url = "test_allocators";
   allocator_id_t alloc_id(0, 1);
-  auto mem_mngr = HERMES_SHM_MEMORY_MANAGER;
+  auto mem_mngr = HERMES_MEMORY_MANAGER;
   mem_mngr->AttachBackend(MemoryBackendType::kPosixShmMmap, shm_url);
   alloc_g = mem_mngr->GetAllocator(alloc_id);
 }

@@ -10,10 +10,10 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_DATA_STRUCTURES_SHM_ARCHIVE_H_
-#define HERMES_SHM_DATA_STRUCTURES_SHM_ARCHIVE_H_
 
-#include "hermes_shm/memory/memory_manager.h"
+#ifndef HERMES_DATA_STRUCTURES_SHM_ARCHIVE_H_
+#define HERMES_DATA_STRUCTURES_SHM_ARCHIVE_H_
+
 #include "shm_macros.h"
 
 namespace hermes_shm::ipc {
@@ -102,4 +102,4 @@ class ShmArchiveable : public ShmPredictable {
 
 }  // namespace hermes_shm::ipc
 
-#endif  // HERMES_SHM_DATA_STRUCTURES_SHM_ARCHIVE_H_
+#endif  // HERMES_DATA_STRUCTURES_SHM_ARCHIVE_H_

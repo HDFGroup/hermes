@@ -10,8 +10,8 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_INCLUDE_HERMES_SHM_TYPES_BITFIELD_H_
-#define HERMES_SHM_INCLUDE_HERMES_SHM_TYPES_BITFIELD_H_
+#ifndef HERMES_INCLUDE_HERMES_TYPES_BITFIELD_H_
+#define HERMES_INCLUDE_HERMES_TYPES_BITFIELD_H_
 
 #include <cstdint>
 
@@ -72,4 +72,4 @@ typedef bitfield<uint32_t> bitfield32_t;
 
 }  // namespace hermes_shm
 
-#endif //HERMES_SHM_INCLUDE_HERMES_SHM_TYPES_BITFIELD_H_
+#endif //HERMES_INCLUDE_HERMES_TYPES_BITFIELD_H_

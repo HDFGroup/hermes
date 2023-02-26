@@ -10,11 +10,10 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_INCLUDE_HERMES_SHM_DATA_STRUCTURES_PAIR_H_
-#define HERMES_SHM_INCLUDE_HERMES_SHM_DATA_STRUCTURES_PAIR_H_
+#ifndef HERMES_INCLUDE_HERMES_DATA_STRUCTURES_PAIR_H_
+#define HERMES_INCLUDE_HERMES_DATA_STRUCTURES_PAIR_H_
 
-#include "data_structure.h"
-#include "internal/shm_archive_or_t.h"
+#include "internal/shm_internal.h"
 
 namespace hermes_shm::ipc {
 
@@ -33,15 +32,20 @@ class pair;
 /** pair shared-memory header */
 template<typename FirstT, typename SecondT>
 struct ShmHeader<TYPED_CLASS> : public ShmBaseHeader {
-  ShmHeaderOrT<FirstT> first_;
-  ShmHeaderOrT<SecondT> second_;
+  ShmArchiveOrT<FirstT> first_;
+  ShmArchiveOrT<SecondT> second_;
 
   /** Default constructor */
-  ShmHeader() = default;
+  ShmHeader() {
+    first_.shm_init();
+    second_.shm_init();
+  }
 
   /** Constructor. Default shm allocate. */
-  explicit ShmHeader(Allocator *alloc)
-  : first_(alloc), second_(alloc) {}
+  explicit ShmHeader(Allocator *alloc) {
+    first_.shm_init(alloc);
+    second_.shm_init(alloc);
+  }
 
   /** Piecewise constructor. */
   template<typename FirstArgPackT, typename SecondArgPackT>
@@ -50,22 +54,25 @@ struct ShmHeader<TYPED_CLASS> : public ShmBaseHeader {
                      FirstArgPackT &&first,
                      SecondArgPackT &&second) {
     (void) hint;
-    first_.PiecewiseInit(alloc, std::forward<FirstArgPackT>(first));
-    second_.PiecewiseInit(alloc, std::forward<SecondArgPackT>(second));
+    first_.shm_init_piecewise(alloc, std::forward<FirstArgPackT>(first));
+    second_.shm_init_piecewise(alloc, std::forward<SecondArgPackT>(second));
   }
 
   /** Move constructor. */
   explicit ShmHeader(Allocator *alloc,
                      FirstT &&first,
-                     SecondT &&second)
-  : first_(alloc, std::forward<FirstT>(first)),
-    second_(alloc, std::forward<SecondT>(second)) {}
+                     SecondT &&second) {
+    first_.shm_init(alloc, std::forward<FirstT>(first));
+    second_.shm_init(alloc, std::forward<SecondT>(second));
+  }
 
   /** Copy constructor. */
   explicit ShmHeader(Allocator *alloc,
                      const FirstT &first,
-                     const SecondT &second)
-  : first_(alloc, first), second_(alloc, second) {}
+                     const SecondT &second) {
+    first_.shm_init(alloc, first);
+    second_.shm_init(alloc, second);
+  }
 
   /** Shm destructor */
   void shm_destroy(Allocator *alloc) {
@@ -200,4 +207,4 @@ class pair : public ShmContainer {
 
 }  // namespace hermes_shm::ipc
 
-#endif //HERMES_SHM_INCLUDE_HERMES_SHM_DATA_STRUCTURES_PAIR_H_
+#endif //HERMES_INCLUDE_HERMES_DATA_STRUCTURES_PAIR_H_

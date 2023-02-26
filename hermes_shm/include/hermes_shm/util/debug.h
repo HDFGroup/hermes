@@ -10,10 +10,10 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_DEBUG_H
-#define HERMES_SHM_DEBUG_H
+#ifndef HERMES_DEBUG_H
+#define HERMES_DEBUG_H
 
-#if defined(HERMES_SHM_DEBUG) && defined(__cplusplus)
+#if defined(HERMES_DEBUG) && defined(__cplusplus)
 #define AUTO_TRACE(...) \
   hermes_shm::AutoTrace auto_tracer(false, __PRETTY_FUNCTION__, __VA_ARGS__);
 #define TRACEPOINT(...) \
@@ -74,4 +74,4 @@ class AutoTrace {
 
 #endif
 
-#endif  // HERMES_SHM_DEBUG_H
+#endif  // HERMES_DEBUG_H

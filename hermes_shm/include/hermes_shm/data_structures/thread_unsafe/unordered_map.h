@@ -10,15 +10,16 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_DATA_STRUCTURES_UNORDERED_MAP_H_
-#define HERMES_SHM_DATA_STRUCTURES_UNORDERED_MAP_H_
+
+#ifndef HERMES_DATA_STRUCTURES_UNORDERED_MAP_H_
+#define HERMES_DATA_STRUCTURES_UNORDERED_MAP_H_
 
 #include "hermes_shm/thread/thread_manager.h"
 #include "hermes_shm/data_structures/thread_unsafe/vector.h"
 #include "hermes_shm/data_structures/thread_unsafe/list.h"
 #include "hermes_shm/data_structures/pair.h"
-#include "hermes_shm/data_structures/data_structure.h"
 #include "hermes_shm/types/atomic.h"
+#include "hermes_shm/data_structures/internal/shm_internal.h"
 
 namespace hermes_shm::ipc {
 
@@ -165,7 +166,7 @@ struct ShmHeader<TYPED_CLASS> : public ShmBaseHeader {
   using BUCKET_T = hipc::list<COLLISION_T>;
 
  public:
-  ShmHeaderOrT<vector<BUCKET_T>> buckets_;
+  ShmArchiveOrT<vector<BUCKET_T>> buckets_;
   RealNumber max_capacity_;
   RealNumber growth_;
   hipc::atomic<size_t> length_;
@@ -177,7 +178,8 @@ struct ShmHeader<TYPED_CLASS> : public ShmBaseHeader {
   explicit ShmHeader(Allocator *alloc,
                      int num_buckets,
                      RealNumber max_capacity,
-                     RealNumber growth) : buckets_(alloc, num_buckets) {
+                     RealNumber growth) {
+    buckets_.shm_init(alloc, num_buckets);
     max_capacity_ = max_capacity;
     growth_ = growth;
     length_ = 0;
@@ -195,7 +197,7 @@ struct ShmHeader<TYPED_CLASS> : public ShmBaseHeader {
     (*GetBuckets(alloc)) = std::move(*other.GetBuckets(other_alloc));
     max_capacity_ = other.max_capacity_;
     growth_ = other.growth_;
-    length_ = other.length_.load();/**/
+    length_ = other.length_.load();
   }
 
   /** Get a reference to the buckets */
@@ -537,4 +539,4 @@ class unordered_map : public ShmContainer {
 #undef TYPED_CLASS
 #undef TYPED_HEADER
 
-#endif  // HERMES_SHM_DATA_STRUCTURES_UNORDERED_MAP_H_
+#endif  // HERMES_DATA_STRUCTURES_UNORDERED_MAP_H_

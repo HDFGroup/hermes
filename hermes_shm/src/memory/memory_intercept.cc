@@ -19,13 +19,13 @@ using hermes_shm::ipc::Allocator;
 
 /** Allocate SIZE bytes of memory. */
 void* malloc(size_t size) {
-  auto alloc = HERMES_SHM_MEMORY_MANAGER->GetDefaultAllocator();
+  auto alloc = HERMES_MEMORY_MANAGER->GetDefaultAllocator();
   return alloc->AllocatePtr<void>(size);
 }
 
 /** Allocate NMEMB elements of SIZE bytes each, all initialized to 0. */
 void* calloc(size_t nmemb, size_t size) {
-  auto alloc = HERMES_SHM_MEMORY_MANAGER->GetDefaultAllocator();
+  auto alloc = HERMES_MEMORY_MANAGER->GetDefaultAllocator();
   return alloc->ClearAllocatePtr<void>(nmemb * size);
 }
 
@@ -34,8 +34,8 @@ void* calloc(size_t nmemb, size_t size) {
  * block SIZE bytes long.
  * */
 void* realloc(void *ptr, size_t size) {
-  Pointer p = HERMES_SHM_MEMORY_MANAGER->Convert(ptr);
-  auto alloc = HERMES_SHM_MEMORY_MANAGER->GetAllocator(p.allocator_id_);
+  Pointer p = HERMES_MEMORY_MANAGER->Convert(ptr);
+  auto alloc = HERMES_MEMORY_MANAGER->GetAllocator(p.allocator_id_);
   return alloc->AllocatePtr<void>(size);
 }
 
@@ -49,8 +49,8 @@ void* reallocarray(void *ptr, size_t nmemb, size_t size) {
 
 /** Free a block allocated by `malloc', `realloc' or `calloc'. */
 void free(void *ptr) {
-  Pointer p = HERMES_SHM_MEMORY_MANAGER->Convert(ptr);
-  auto alloc = HERMES_SHM_MEMORY_MANAGER->GetAllocator(p.allocator_id_);
+  Pointer p = HERMES_MEMORY_MANAGER->Convert(ptr);
+  auto alloc = HERMES_MEMORY_MANAGER->GetAllocator(p.allocator_id_);
   alloc->Free(p);
 }
 
@@ -62,7 +62,7 @@ void* memalign(size_t alignment, size_t size) {
 
 /** Allocate SIZE bytes on a page boundary. */
 void* valloc(size_t size) {
-  return memalign(HERMES_SHM_SYSTEM_INFO->page_size_, size);
+  return memalign(HERMES_SYSTEM_INFO->page_size_, size);
 }
 
 /**
