@@ -23,7 +23,12 @@ void MultiThreadedPageAllocationTest(Allocator *alloc) {
 #pragma omp barrier
     PageAllocationTest(alloc);
 #pragma omp barrier
-    // MultiPageAllocationTest(alloc);
+    try {
+      MultiPageAllocationTest(alloc);
+    } catch (std::shared_ptr<hermes_shm::Error> &err) {
+      err->print();
+      exit(1);
+    }
 #pragma omp barrier
   }
 }

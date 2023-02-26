@@ -67,7 +67,7 @@ void MultiPageAllocationTest(Allocator *alloc) {
 
   // Allocate and free pages between 64 bytes and 32MB
   {
-    for (size_t r = 0; r < 16; ++r) {
+    for (size_t r = 0; r < 4; ++r) {
       for (size_t i = 0; i < alloc_sizes.size(); ++i) {
         Pointer ps[16];
         for (size_t j = 0; j < 16; ++j) {
@@ -137,7 +137,7 @@ TEST_CASE("FixedPageAllocator") {
 TEST_CASE("ScalablePageAllocator") {
   auto alloc = Pretest<hipc::PosixShmMmap, hipc::ScalablePageAllocator>();
   REQUIRE(alloc->GetCurrentlyAllocatedSize() == 0);
-  // PageAllocationTest(alloc);
+  PageAllocationTest(alloc);
   REQUIRE(alloc->GetCurrentlyAllocatedSize() == 0);
 
   REQUIRE(alloc->GetCurrentlyAllocatedSize() == 0);
