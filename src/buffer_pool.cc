@@ -160,6 +160,7 @@ void BufferPool::AllocateBuffers(SubPlacement &plcmnt,
       BufferInfo info;
       info.t_off_ = slot.t_off_;
       info.t_size_ = slot.t_size_;
+      info.t_slab_ = j;
       info.blob_off_ = blob_off;
       info.blob_size_ = slot.t_size_;
       if (blob_off + info.blob_size_ > plcmnt.size_) {
@@ -250,6 +251,23 @@ std::vector<BpCoin> BufferPool::CoinSelect(hipc::ShmRef<DeviceInfo> &dev_info,
  * Free buffers from the BufferPool
  * */
 bool BufferPool::LocalReleaseBuffers(hipc::vector<BufferInfo> &buffers) {
+  int cpu = hermes_shm::NodeThreadId().hash() % HERMES_SYSTEM_INFO->ncpu_;
+
+  for (hipc::ShmRef<BufferInfo> info : buffers) {
+    // Acquire the main CPU lock for the target
+    size_t free_list_start =
+        header_->GetCpuFreeList(info->tid_.GetIndex(), cpu);
+    hipc::ShmRef<BpFreeListPair> first_free_list_p =
+        (*target_allocs_)[free_list_start];
+    hermes_shm::ScopedMutex(first_free_list_p->first_->lock_);
+
+    // Get this core's free list for the page_size
+    hipc::ShmRef<BpFreeListPair> free_list_p =
+        (*target_allocs_)[free_list_start + info->t_slab_];
+    hipc::ShmRef<BpFreeListStat> &stat = free_list_p->first_;
+    hipc::ShmRef<BpFreeList> &free_list = free_list_p->second_;
+    free_list->emplace_front(info->t_off_, info->t_size_);
+  }
   return true;
 }
 

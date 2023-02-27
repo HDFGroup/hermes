@@ -33,6 +33,8 @@ struct BpSlot {
 
   BpSlot() : t_size_(0) {}
 
+  BpSlot(size_t t_off, size_t t_size) : t_off_(t_off), t_size_(t_size) {}
+
   bool IsNull() {
     return t_size_ == 0;
   }

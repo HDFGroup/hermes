@@ -67,6 +67,7 @@ struct TargetInfo {
 /** Represents an allocated fraction of a target */
 struct BufferInfo {
   TargetId tid_;        /**< The destination target */
+  int t_slab_;          /**< The index of the slab in the target */
   size_t t_off_;        /**< Offset in the target */
   size_t t_size_;       /**< Size in the target */
   size_t blob_off_;     /**< Offset in the blob */
