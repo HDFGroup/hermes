@@ -13,6 +13,7 @@ if(NOT DEFINED CMAKE_MACOSX_RPATH)
 endif()
 
 project(HERMES)
+set(IS_HERMES_MAIN ON)
 
 #------------------------------------------------------------------------------
 # Compiler optimization

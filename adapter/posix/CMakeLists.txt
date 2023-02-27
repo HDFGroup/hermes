@@ -9,7 +9,10 @@ add_library(hermes_posix_io_client
         ${CMAKE_CURRENT_SOURCE_DIR}/posix_api_singleton.cc
         ${CMAKE_CURRENT_SOURCE_DIR}/posix_io_client.cc)
 target_compile_options(hermes_posix_io_client PUBLIC -fPIC)
+add_dependencies(hermes_posix_io_client
+        hermes_shm_data_structures)
 target_link_libraries(hermes_posix_io_client
+        hermes_shm_data_structures
         MPI::MPI_CXX glog::glog stdc++fs dl)
 
 # Create the POSIX interceptor

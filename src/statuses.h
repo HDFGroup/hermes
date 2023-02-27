@@ -27,7 +27,9 @@ const Status DPE_MIN_IO_TIME_NO_SOLUTION(
 const Status BUFFER_POOL_OUT_OF_RAM(
     "Could not allocate the ram tier of storage in BPM");
 const Status PARTIAL_GET_OR_CREATE_OVERFLOW(
-    "The read exceeds the size of the backend's data");
+    "The read exceeds the size of the backend's data (PartialGet)");
+const Status PARTIAL_PUT_OR_CREATE_OVERFLOW(
+    "The read exceeds the size of the backend's data (PartialPut)");
 
 }  // namespace hermes
 

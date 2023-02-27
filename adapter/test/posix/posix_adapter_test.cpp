@@ -20,6 +20,7 @@
 #include "catch_config.h"
 #if HERMES_INTERCEPT == 1
 #include "posix/posix_api.h"
+#include "posix/posix_fs_api.h"
 #endif
 
 #ifndef O_TMPFILE
@@ -118,19 +119,17 @@ int pretest() {
             args.request_size * info.num_iterations);
   }
   REQUIRE(info.total_size > 0);
-  // NOTE(llogan): Are flush exclusions really necessary?
 #if HERMES_INTERCEPT == 1
-  // INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.existing_file_cmp);
-  // INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.new_file_cmp);
+  HERMES->client_config_.SetAdapterPathTracking(info.existing_file_cmp, false);
+  HERMES->client_config_.SetAdapterPathTracking(info.new_file_cmp, false);
 #endif
   return 0;
 }
 
 int posttest(bool compare_data = true) {
-  // NOTE(llogan): Are flush exclusions really necessary?
 #if HERMES_INTERCEPT == 1
-  // INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.existing_file);
-  // INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.new_file);
+  HERMES->client_config_.SetAdapterPathTracking(info.existing_file_cmp, false);
+  HERMES->client_config_.SetAdapterPathTracking(info.new_file_cmp, false);
 #endif
   if (compare_data && stdfs::exists(info.new_file) &&
       stdfs::exists(info.new_file_cmp)) {

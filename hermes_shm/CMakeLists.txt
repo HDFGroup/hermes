@@ -92,34 +92,38 @@ if(BUILD_Boost_TESTS)
 endif()
 
 ##################CODE COVERAGE
-if(HERMES_ENABLE_COVERAGE)
-    set(COVERAGE_FLAGS "-fprofile-arcs -ftest-coverage" CACHE STRING
-        "Flags to the coverage program to perform coverage inspection")
-    mark_as_advanced(COVERAGE_FLAGS)
+if (NOT IS_HERMES_MAIN)
+    if(HERMES_ENABLE_COVERAGE)
+        set(COVERAGE_FLAGS "-fprofile-arcs -ftest-coverage" CACHE STRING
+            "Flags to the coverage program to perform coverage inspection")
+        mark_as_advanced(COVERAGE_FLAGS)
 
-    macro(set_coverage_flags target)
-        set_target_properties(${target}
-                PROPERTIES
-                COMPILE_FLAGS ${COVERAGE_FLAGS}
-                LINK_FLAGS ${COVERAGE_FLAGS}
-                )
-    endmacro()
+        macro(set_coverage_flags target)
+            set_target_properties(${target}
+                    PROPERTIES
+                    COMPILE_FLAGS ${COVERAGE_FLAGS}
+                    LINK_FLAGS ${COVERAGE_FLAGS}
+                    )
+        endmacro()
+    endif()
 endif()
 
 ##################DOCUMENTATION
-if(HERMES_ENABLE_DOXYGEN)
-    include(UseDoxygenDoc)
+if (NOT IS_HERMES_MAIN)
+    if(HERMES_ENABLE_DOXYGEN)
+        include(UseDoxygenDoc)
 
-    add_doxygen_doc(
-            BUILD_DIR
-            ${CMAKE_CURRENT_BINARY_DIR}/_build
-            DOXY_FILE
-            ${CMAKE_CURRENT_SOURCE_DIR}/doc/Doxyfile.in
-            TARGET_NAME
-            dox
-            COMMENT
-            "HTML documentation"
-    )
+        add_doxygen_doc(
+                BUILD_DIR
+                ${CMAKE_CURRENT_BINARY_DIR}/_build
+                DOXY_FILE
+                ${CMAKE_CURRENT_SOURCE_DIR}/doc/Doxyfile.in
+                TARGET_NAME
+                dox
+                COMMENT
+                "HTML documentation"
+        )
+    endif()
 endif()
 
 ##################Build hermes main packages

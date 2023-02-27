@@ -87,12 +87,16 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
     opts.adapter_mode_ = stat.adapter_mode_;
     bkt->TryCreateBlob(blob_name.str(), blob_id, ctx, opts);
     bkt->LockBlob(blob_id, MdLockType::kExternalWrite);
-    bkt->PartialPutOrCreate(blob_name.str(),
-                            blob_wrap,
-                            p.blob_off_,
-                            blob_id,
-                            opts,
-                            ctx);
+    auto status = bkt->PartialPutOrCreate(blob_name.str(),
+                                          blob_wrap,
+                                          p.blob_off_,
+                                          blob_id,
+                                          opts,
+                                          ctx);
+    if (status.Fail()) {
+      data_offset = 0;
+      break;
+    }
     bkt->UnlockBlob(blob_id, MdLockType::kExternalWrite);
     data_offset += p.blob_size_;
   }
@@ -130,13 +134,17 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
     opts.adapter_mode_ = stat.adapter_mode_;
     bkt->TryCreateBlob(blob_name.str(), blob_id, ctx, opts);
     bkt->LockBlob(blob_id, MdLockType::kExternalRead);
-    bkt->PartialGetOrCreate(blob_name.str(),
-                            blob_wrap,
-                            p.blob_off_,
-                            p.blob_size_,
-                            blob_id,
-                            opts,
-                            ctx);
+    auto status = bkt->PartialGetOrCreate(blob_name.str(),
+                                          blob_wrap,
+                                          p.blob_off_,
+                                          p.blob_size_,
+                                          blob_id,
+                                          opts,
+                                          ctx);
+    if (status.Fail()) {
+      data_offset = 0;
+      break;
+    }
     bkt->UnlockBlob(blob_id, MdLockType::kExternalRead);
     data_offset += p.blob_size_;
   }

@@ -20,6 +20,7 @@
 #include <iostream>
 #if HERMES_INTERCEPT == 1
 #include "stdio/stdio_api.h"
+#include "stdio/stdio_fs_api.h"
 #endif
 
 namespace stdfs = std::filesystem;
@@ -207,8 +208,8 @@ int pretest() {
   REQUIRE(info.total_size > 0);
   MPI_Barrier(MPI_COMM_WORLD);
 #if HERMES_INTERCEPT == 1
-  // INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.existing_file_cmp);
-  // INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.new_file_cmp);
+  HERMES->client_config_.SetAdapterPathTracking(info.existing_file_cmp, false);
+  HERMES->client_config_.SetAdapterPathTracking(info.new_file_cmp, false);
   // INTERCEPTOR_LIST->hermes_flush_exclusion.insert(
       // info.existing_shared_file_cmp);
 #endif
@@ -217,9 +218,9 @@ int pretest() {
 
 int posttest(bool compare_data = true) {
 #if HERMES_INTERCEPT == 1
-  // INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.existing_file);
-  // INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.new_file);
-  // INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.existing_shared_file);
+  HERMES->client_config_.SetAdapterPathTracking(info.existing_file, false);
+  HERMES->client_config_.SetAdapterPathTracking(info.new_file, false);
+  HERMES->client_config_.SetAdapterPathTracking(info.existing_shared_file, false);
 #endif
   if (compare_data && stdfs::exists(info.new_file) &&
       stdfs::exists(info.new_file_cmp)) {

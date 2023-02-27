@@ -21,6 +21,14 @@
 #include <unistd.h>
 #include <fcntl.h>
 
+#ifndef O_TMPFILE
+#define O_TMPFILE 0
+#endif
+
+#ifndef _STAT_VER
+#define _STAT_VER 0
+#endif
+
 #define REQUIRE_API(api_name) \
   if (api_name == nullptr) { \
     LOG(FATAL) << "HERMES Adapter failed to map symbol: " \

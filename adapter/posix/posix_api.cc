@@ -37,6 +37,11 @@ namespace stdfs = std::filesystem;
 
 extern "C" {
 
+/*static __attribute__((constructor(0))) void init_posix(void) {
+  auto real_api = HERMES_POSIX_API;
+  auto fs_api = HERMES_POSIX_FS;
+}*/
+
 /**
  * POSIX
  */

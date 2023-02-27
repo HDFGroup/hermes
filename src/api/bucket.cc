@@ -203,6 +203,12 @@ Status Bucket::PartialPutOrCreate(const std::string &blob_name,
     if (io_client) {
       io_client->ReadBlob(hipc::charbuf(name_),
                           full_blob, opts, status);
+      if (status.size_ != opts.backend_size_) {
+        LOG(INFO) << "Failed to read blob of size "
+                  << opts.backend_size_
+                  << "from backend (PartialPut)";
+        return PARTIAL_PUT_OR_CREATE_OVERFLOW;
+      }
     }
   }
   // Ensure the blob can hold the update
@@ -232,6 +238,7 @@ Status Bucket::Get(BlobId blob_id, Blob &blob, Context &ctx) {
  * @param blob_name the semantic name of the blob
  * @param blob the buffer to put final data in
  * @param blob_off the offset within the blob to begin the Put
+ * @param blob_size the total amount of data to read
  * @param blob_id [out] the blob id corresponding to blob_name
  * @param io_ctx information required to perform I/O to the backend
  * @param opts specific configuration of the I/O to perform
@@ -252,7 +259,7 @@ Status Bucket::PartialGetOrCreate(const std::string &blob_name,
     Get(blob_id, full_blob, ctx);
   }
   if (full_blob.size() != opts.backend_size_) {
-    // Case 2: The blob did not exist (need to read from backend)
+    // Case 2: The blob did not exist (or at least not fully)
     // Read blob using adapter
     LOG(INFO) << "Blob did not exist. Reading blob from backend." << std::endl;
     IoStatus status;
@@ -260,6 +267,12 @@ Status Bucket::PartialGetOrCreate(const std::string &blob_name,
     full_blob.resize(opts.backend_size_);
     if (io_client) {
       io_client->ReadBlob(hipc::charbuf(name_), full_blob, opts, status);
+      if (status.size_ != opts.backend_size_) {
+        LOG(INFO) << "Failed to read blob of size "
+                  << opts.backend_size_
+                  << "from backend (PartialCreate)";
+        return PARTIAL_GET_OR_CREATE_OVERFLOW;
+      }
       if (opts.adapter_mode_ != AdapterMode::kBypass) {
         Put(blob_name, full_blob, blob_id, ctx);
       }

@@ -23,7 +23,6 @@
 
 #include "data_structures.h"
 #include "constants.h"
-#include "statuses.h"
 
 /**
  * \file hermes_types.h
