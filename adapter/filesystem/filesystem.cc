@@ -45,17 +45,35 @@ void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
   if (!exists) {
     LOG(INFO) << "File not opened before by adapter" << std::endl;
     // Create the new bucket
-    FsIoOptions opts;
-    opts.type_ = type_;
     stat.bkt_id_ = HERMES->GetBucket(path, ctx, opts);
+    stat.backend_size_ = stat.bkt_id_->GetSize(IoClientContext(type_));
     // Allocate internal hermes data
     auto stat_ptr = std::make_shared<AdapterStat>(stat);
     FilesystemIoClientObject fs_ctx(&mdm->fs_mdm_, (void*)stat_ptr.get());
     io_client_->HermesOpen(f, stat, fs_ctx);
     mdm->Create(f, stat_ptr);
   } else {
-    LOG(INFO) << "File opened by adapter" << std::endl;
+    LOG(INFO) << "File already opened by adapter" << std::endl;
     exists->UpdateTime();
+  }
+}
+
+/**
+ * The amount of data to read from the backend if the blob
+ * does not exist.
+ * */
+static inline size_t GetBackendSize(size_t file_off,
+                                    size_t file_size,
+                                    size_t page_size) {
+  if (file_off + page_size <= file_size) {
+    // Case 1: The file has more than "PageSize" bytes remaining
+    return page_size;
+  } else if(file_off < file_size) {
+    // Case 2: The file has less than "PageSize" bytes remaining
+    return file_size - file_off;
+  } else {
+    // Case 3: The offset is beyond the size of the backend file
+    return 0;
   }
 }
 
@@ -81,9 +99,12 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
     const Blob blob_wrap((const char*)ptr + data_offset, p.blob_size_);
     hipc::charbuf blob_name(p.CreateBlobName(kPageSize));
     BlobId blob_id;
+    size_t file_off = off + data_offset;
     opts.type_ = type_;
     opts.backend_off_ = p.page_ * kPageSize;
-    opts.backend_size_ = kPageSize;
+    opts.backend_size_ = GetBackendSize(file_off,
+                                        stat.backend_size_,
+                                        kPageSize);
     opts.adapter_mode_ = stat.adapter_mode_;
     bkt->TryCreateBlob(blob_name.str(), blob_id, ctx, opts);
     bkt->LockBlob(blob_id, MdLockType::kExternalWrite);
@@ -91,6 +112,7 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
                                           blob_wrap,
                                           p.blob_off_,
                                           blob_id,
+                                          io_status,
                                           opts,
                                           ctx);
     if (status.Fail()) {
@@ -128,8 +150,11 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
     Blob blob_wrap((const char*)ptr + data_offset, p.blob_size_);
     hipc::charbuf blob_name(p.CreateBlobName(kPageSize));
     BlobId blob_id;
+    size_t file_off = off + data_offset;
     opts.backend_off_ = p.page_ * kPageSize;
-    opts.backend_size_ = kPageSize;
+    opts.backend_size_ = GetBackendSize(file_off,
+                                        stat.backend_size_,
+                                        kPageSize); ;
     opts.type_ = type_;
     opts.adapter_mode_ = stat.adapter_mode_;
     bkt->TryCreateBlob(blob_name.str(), blob_id, ctx, opts);
@@ -139,6 +164,7 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
                                           p.blob_off_,
                                           p.blob_size_,
                                           blob_id,
+                                          io_status,
                                           opts,
                                           ctx);
     if (status.Fail()) {

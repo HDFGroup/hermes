@@ -88,6 +88,7 @@ void MpiioIoClient::WriteBlob(const hipc::charbuf &bkt_name,
                               const IoClientContext &opts,
                               IoStatus &status) {
   std::string filename = bkt_name.str();
+  status.success_ = true;
   LOG(INFO) << "Write called for filename to destination: " << filename
             << " on offset: " << opts.backend_off_
             << " and size: " << full_blob.size() << "."
@@ -99,12 +100,14 @@ void MpiioIoClient::WriteBlob(const hipc::charbuf &bkt_name,
                                             MPI_MODE_RDONLY,
                                             MPI_INFO_NULL, &fh);
   if (status.mpi_ret_ != MPI_SUCCESS) {
+    status.success_ = false;
     return;
   }
 
   status.mpi_ret_ = real_api->MPI_File_seek(fh, opts.backend_off_,
                                             MPI_SEEK_SET);
   if (status.mpi_ret_ != MPI_SUCCESS) {
+    status.success_ = false;
     goto ERROR;
   }
   status.mpi_ret_ = real_api->MPI_File_write(fh,
@@ -115,6 +118,7 @@ void MpiioIoClient::WriteBlob(const hipc::charbuf &bkt_name,
   MPI_Get_count(status.mpi_status_ptr_,
                 opts.mpi_type_, &write_count);
   if (write_count != opts.mpi_count_) {
+    status.success_ = false;
     LOG(ERROR) << "writing failed: wrote " << write_count
                << " / " << opts.mpi_count_
                << "." << std::endl;
@@ -132,6 +136,7 @@ void MpiioIoClient::ReadBlob(const hipc::charbuf &bkt_name,
                              const IoClientContext &opts,
                              IoStatus &status) {
   std::string filename = bkt_name.str();
+  status.success_ = true;
   LOG(INFO) << "Reading from: " << filename
             << " on offset: " << opts.backend_off_
             << " and size: " << full_blob.size() << "."
@@ -143,12 +148,14 @@ void MpiioIoClient::ReadBlob(const hipc::charbuf &bkt_name,
                                             MPI_MODE_RDONLY, MPI_INFO_NULL,
                                             &fh);
   if (status.mpi_ret_ != MPI_SUCCESS) {
+    status.success_ = false;
     return;
   }
 
   status.mpi_ret_ = real_api->MPI_File_seek(fh, opts.backend_off_,
                                             MPI_SEEK_SET);
   if (status.mpi_ret_ != MPI_SUCCESS) {
+    status.success_ = false;
     goto ERROR;
   }
   status.mpi_ret_ = real_api->MPI_File_read(fh,
@@ -159,6 +166,7 @@ void MpiioIoClient::ReadBlob(const hipc::charbuf &bkt_name,
   MPI_Get_count(status.mpi_status_ptr_,
                 opts.mpi_type_, &read_count);
   if (read_count != opts.mpi_count_) {
+    status.success_ = false;
     LOG(ERROR) << "reading failed: read " << read_count
                << " / " << opts.mpi_count_
                << "." << std::endl;

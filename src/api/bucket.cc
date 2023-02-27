@@ -177,6 +177,7 @@ Status Bucket::PartialPutOrCreate(const std::string &blob_name,
                                   const Blob &blob,
                                   size_t blob_off,
                                   BlobId &blob_id,
+                                  IoStatus &status,
                                   const IoClientContext &opts,
                                   Context &ctx) {
   Blob full_blob;
@@ -193,17 +194,16 @@ Status Bucket::PartialPutOrCreate(const std::string &blob_name,
     LOG(INFO) << "Blob existed. Reading from Hermes." << std::endl;
     Get(blob_id, full_blob, ctx);
   }
-  if (full_blob.size() != opts.backend_size_) {
-    // Case 3: The blob did not exist (need to read from backend)
+  if (full_blob.size() < opts.backend_size_) {
+    // Case 3: The blob did not fully exist (need to read from backend)
     // Read blob using adapter
     LOG(INFO) << "Blob didn't fully exist. Reading from backend." << std::endl;
-    IoStatus status;
     auto io_client = IoClientFactory::Get(opts.type_);
     full_blob.resize(opts.backend_size_);
     if (io_client) {
       io_client->ReadBlob(hipc::charbuf(name_),
                           full_blob, opts, status);
-      if (status.size_ != opts.backend_size_) {
+      if (!status.success_) {
         LOG(INFO) << "Failed to read blob of size "
                   << opts.backend_size_
                   << "from backend (PartialPut)";
@@ -249,6 +249,7 @@ Status Bucket::PartialGetOrCreate(const std::string &blob_name,
                                   size_t blob_off,
                                   size_t blob_size,
                                   BlobId &blob_id,
+                                  IoStatus &status,
                                   const IoClientContext &opts,
                                   Context &ctx) {
   Blob full_blob;
@@ -262,12 +263,11 @@ Status Bucket::PartialGetOrCreate(const std::string &blob_name,
     // Case 2: The blob did not exist (or at least not fully)
     // Read blob using adapter
     LOG(INFO) << "Blob did not exist. Reading blob from backend." << std::endl;
-    IoStatus status;
     auto io_client = IoClientFactory::Get(opts.type_);
     full_blob.resize(opts.backend_size_);
     if (io_client) {
       io_client->ReadBlob(hipc::charbuf(name_), full_blob, opts, status);
-      if (status.size_ != opts.backend_size_) {
+      if (!status.success_) {
         LOG(INFO) << "Failed to read blob of size "
                   << opts.backend_size_
                   << "from backend (PartialCreate)";

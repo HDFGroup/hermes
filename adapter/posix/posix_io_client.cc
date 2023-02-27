@@ -87,6 +87,7 @@ void PosixIoClient::WriteBlob(const hipc::charbuf &bkt_name,
                               const IoClientContext &opts,
                               IoStatus &status) {
   (void) opts;
+  status.success_ = true;
   LOG(INFO) << "Writing to file: " << bkt_name.str()
             << " offset: " << opts.backend_off_
             << " size:" << full_blob.size() << "."
@@ -95,12 +96,16 @@ void PosixIoClient::WriteBlob(const hipc::charbuf &bkt_name,
   int fd = real_api->open(bkt_name.str().c_str(), O_RDWR | O_CREAT);
   if (fd < 0) {
     status.size_ = 0;
+    status.success_ = false;
     return;
   }
   status.size_ = real_api->pwrite(fd,
                                   full_blob.data(),
                                   full_blob.size(),
                                   opts.backend_off_);
+  if (status.size_ != full_blob.size()) {
+    status.success_ = false;
+  }
   real_api->close(fd);
 }
 
@@ -110,6 +115,7 @@ void PosixIoClient::ReadBlob(const hipc::charbuf &bkt_name,
                              const IoClientContext &opts,
                              IoStatus &status) {
   (void) opts;
+  status.success_ = true;
   LOG(INFO) << "Reading from file: " << bkt_name.str()
             << " offset: " << opts.backend_off_
             << " size:" << full_blob.size() << "."
@@ -118,12 +124,16 @@ void PosixIoClient::ReadBlob(const hipc::charbuf &bkt_name,
   int fd = real_api->open(bkt_name.str().c_str(), O_RDONLY);
   if (fd < 0) {
     status.size_ = 0;
+    status.success_ = false;
     return;
   }
   status.size_ = real_api->pread(fd,
                                  full_blob.data(),
                                  full_blob.size(),
                                  opts.backend_off_);
+  if (status.size_ != full_blob.size()) {
+    status.success_ = false;
+  }
   real_api->close(fd);
 }
 

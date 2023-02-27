@@ -75,6 +75,7 @@ void StdioIoClient::WriteBlob(const hipc::charbuf &bkt_name,
                               const Blob &full_blob,
                               const IoClientContext &opts,
                               IoStatus &status) {
+  status.success_ = true;
   std::string filename = bkt_name.str();
   LOG(INFO) << "Writing to file: " << filename
             << " offset: " << opts.backend_off_
@@ -83,6 +84,7 @@ void StdioIoClient::WriteBlob(const hipc::charbuf &bkt_name,
   FILE *fh = real_api->fopen(filename.c_str(), "r+");
   if (fh == nullptr) {
     status.size_ = 0;
+    status.success_ = false;
     return;
   }
   real_api->fseek(fh, opts.backend_off_, SEEK_SET);
@@ -90,6 +92,9 @@ void StdioIoClient::WriteBlob(const hipc::charbuf &bkt_name,
                                        sizeof(char),
                                        full_blob.size(),
                                        fh);
+  if (status.size_ != full_blob.size()) {
+    status.success_ = false;
+  }
   real_api->fclose(fh);
 }
 
@@ -98,6 +103,7 @@ void StdioIoClient::ReadBlob(const hipc::charbuf &bkt_name,
                              Blob &full_blob,
                              const IoClientContext &opts,
                              IoStatus &status) {
+  status.success_ = true;
   std::string filename = bkt_name.str();
   LOG(INFO) << "Reading from file: " << filename
             << " on offset: " << opts.backend_off_
@@ -106,6 +112,7 @@ void StdioIoClient::ReadBlob(const hipc::charbuf &bkt_name,
   FILE *fh = real_api->fopen(filename.c_str(), "r");
   if (fh == nullptr) {
     status.size_ = 0;
+    status.success_ = false;
     return;
   }
   real_api->fseek(fh, opts.backend_off_, SEEK_SET);
@@ -113,6 +120,9 @@ void StdioIoClient::ReadBlob(const hipc::charbuf &bkt_name,
                                        sizeof(char),
                                        full_blob.size(),
                                        fh);
+  if (status.size_ != full_blob.size()) {
+    status.success_ = false;
+  }
   real_api->fclose(fh);
 }
 

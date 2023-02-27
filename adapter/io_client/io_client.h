@@ -72,6 +72,15 @@ struct IoClientContext {
                       mpi_count_(0),
                       backend_off_(0),
                       backend_size_(0) {}
+
+  /** Contains only the AdapterType */
+  IoClientContext(AdapterType type) : type_(type),
+                                      dpe_(hapi::PlacementPolicy::kNone),
+                                      flags_(),
+                                      mpi_type_(MPI_CHAR),
+                                      mpi_count_(0),
+                                      backend_off_(0),
+                                      backend_size_(0) {}
 };
 
 /** Any relevant statistics from the I/O client */
@@ -79,7 +88,6 @@ struct IoClientStats {
   int flags_;            /**< open() flags for POSIX */
   mode_t st_mode_;       /**< protection */
   size_t backend_size_;  /**< size of the object in the backend */
-  size_t bkt_size_;      /**< size of the object in Hermes */
   uid_t st_uid_;         /**< user ID of owner */
   gid_t st_gid_;         /**< group ID of owner */
   off64_t st_ptr_;       /**< current ptr of FILE */
@@ -131,11 +139,13 @@ struct IoStatus {
   int mpi_ret_;                /**< MPI return value */
   MPI_Status mpi_status_;      /**< MPI status */
   MPI_Status *mpi_status_ptr_; /**< MPI status pointer */
+  bool success_;               /**< Whether the I/O succeeded */
 
   /** Default constructor */
   IoStatus() : size_(0),
                mpi_ret_(MPI_SUCCESS),
-               mpi_status_ptr_(&mpi_status_) {}
+               mpi_status_ptr_(&mpi_status_),
+               success_(true) {}
 };
 
 /** A structure to represent Hermes request */

@@ -158,6 +158,7 @@ class Bucket {
                             const Blob &blob,
                             size_t blob_off,
                             BlobId &blob_id,
+                            IoStatus &status,
                             const IoClientContext &opts,
                             Context &ctx);
 
@@ -185,6 +186,7 @@ class Bucket {
                             size_t blob_off,
                             size_t blob_size,
                             BlobId &blob_id,
+                            IoStatus &status,
                             const IoClientContext &opts,
                             Context &ctx);
 
