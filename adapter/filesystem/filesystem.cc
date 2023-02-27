@@ -100,10 +100,9 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
     const Blob blob_wrap((const char*)ptr + data_offset, p.blob_size_);
     hipc::charbuf blob_name(p.CreateBlobName(kPageSize));
     BlobId blob_id;
-    size_t file_off = off + data_offset;
     opts.type_ = type_;
     opts.backend_off_ = p.page_ * kPageSize;
-    opts.backend_size_ = GetBackendSize(file_off,
+    opts.backend_size_ = GetBackendSize(opts.backend_off_,
                                         stat.backend_size_,
                                         kPageSize);
     opts.adapter_mode_ = stat.adapter_mode_;
@@ -151,9 +150,8 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
     Blob blob_wrap((const char*)ptr + data_offset, p.blob_size_);
     hipc::charbuf blob_name(p.CreateBlobName(kPageSize));
     BlobId blob_id;
-    size_t file_off = off + data_offset;
     opts.backend_off_ = p.page_ * kPageSize;
-    opts.backend_size_ = GetBackendSize(file_off,
+    opts.backend_size_ = GetBackendSize(opts.backend_off_,
                                         stat.backend_size_,
                                         kPageSize); ;
     opts.type_ = type_;

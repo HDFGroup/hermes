@@ -407,14 +407,14 @@ TEST_CASE("BatchedReadSequential",
   }
 
   SECTION("read from existing file always at start") {
-    test::test_open(info.existing_file.c_str(), O_WRONLY);
+    test::test_open(info.existing_file.c_str(), O_RDONLY);
     REQUIRE(test::fh_orig != -1);
 
     for (size_t i = 0; i < info.num_iterations; ++i) {
       test::test_seek(0, SEEK_SET);
       REQUIRE(test::status_orig == 0);
-      test::test_write(info.write_data.data(), args.request_size);
-      REQUIRE(test::size_written_orig == args.request_size);
+      test::test_read(info.write_data.data(), args.request_size);
+      REQUIRE(test::size_read_orig == args.request_size);
     }
     test::test_close();
     REQUIRE(test::status_orig == 0);
