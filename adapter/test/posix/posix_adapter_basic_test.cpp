@@ -520,7 +520,7 @@ TEST_CASE("BatchedUpdateStrideFixed",
       test::test_seek(offset, SEEK_SET);
       REQUIRE(((size_t)test::status_orig) == offset);
       test::test_write(data.data(), args.request_size);
-      REQUIRE(test::size_read_orig == args.request_size);
+      REQUIRE(test::size_written_orig == args.request_size);
     }
     test::test_close();
     REQUIRE(test::status_orig == 0);
@@ -536,8 +536,6 @@ TEST_CASE("BatchedReadStrideDynamic",
               std::to_string(info.num_iterations) +
               "]"
               "[pattern=stride_dynamic][file=1]") {
-  pretest();
-
   SECTION("read from existing file") {
     test::test_open(info.existing_file.c_str(), O_RDWR);
     REQUIRE(test::fh_orig != -1);
@@ -575,7 +573,7 @@ TEST_CASE("BatchedUpdateStrideDynamic",
       test::test_seek(offset, SEEK_SET);
       REQUIRE(((size_t)test::status_orig) == offset);
       test::test_write(data.data(), args.request_size);
-      REQUIRE(test::size_read_orig == args.request_size);
+      REQUIRE(test::size_written_orig == args.request_size);
     }
     test::test_close();
     REQUIRE(test::status_orig == 0);
@@ -909,7 +907,7 @@ TEST_CASE("BatchedUpdateStrideNegative",
       test::test_seek(offset, SEEK_SET);
       REQUIRE(((size_t)test::status_orig) == offset);
       test::test_write(data.data(), args.request_size);
-      REQUIRE(test::size_read_orig == args.request_size);
+      REQUIRE(test::size_written_orig == args.request_size);
     }
     test::test_close();
     REQUIRE(test::status_orig == 0);
@@ -1047,7 +1045,7 @@ TEST_CASE("BatchedUpdateStride2D",
       test::test_seek(offset, SEEK_SET);
       REQUIRE(((size_t)test::status_orig) == offset);
       test::test_write(data.data(), args.request_size);
-      REQUIRE(test::size_read_orig == args.request_size);
+      REQUIRE(test::size_written_orig == args.request_size);
     }
     test::test_close();
     REQUIRE(test::status_orig == 0);
