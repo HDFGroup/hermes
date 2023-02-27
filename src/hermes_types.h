@@ -62,8 +62,7 @@ typedef double f64;   /**< 64-bit float */
 enum class HermesType {
   kNone,
   kServer,
-  kClient,
-  kColocated
+  kClient
 };
 
 /** The types of I/O that can be performed (for IoCall RPC) */

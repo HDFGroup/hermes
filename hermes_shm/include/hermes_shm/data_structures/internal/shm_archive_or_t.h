@@ -66,12 +66,12 @@ class _ShmArchiveOrT_Header {
 
   /** Returns a reference to the internal object */
   ShmDeserialize<T> internal_ref(Allocator *alloc) {
-    return ShmDeserialize<T>(alloc, reinterpret_cast<header_t*>(obj_hdr_));
+    return ShmDeserialize<T>(reinterpret_cast<header_t*>(obj_hdr_), alloc);
   }
 
   /** Returns a reference to the internal object */
   ShmDeserialize<T> internal_ref(Allocator *alloc) const {
-    return ShmDeserialize<T>(alloc, reinterpret_cast<header_t*>(obj_hdr_));
+    return ShmDeserialize<T>(reinterpret_cast<header_t*>(obj_hdr_), alloc);
   }
 };
 

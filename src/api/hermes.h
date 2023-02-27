@@ -42,7 +42,7 @@ class VBucket;
 struct HermesShmHeader {
   hipc::Pointer ram_tier_;
   MetadataManagerShmHeader mdm_;
-  BufferPoolShmHeader bpm_;
+  hermes::ShmHeader<BufferPool> bpm_;
 };
 
 /**
@@ -55,7 +55,7 @@ class Hermes {
   ServerConfig server_config_;
   ClientConfig client_config_;
   MetadataManager mdm_;
-  BufferPool bpm_;
+  hipc::manual_ptr<BufferPool> bpm_;
   BufferOrganizer borg_;
   COMM_TYPE comm_;
   RPC_TYPE rpc_;
@@ -148,9 +148,6 @@ class Hermes {
 
   /** Finalize client mode */
   void FinalizeClient();
-
-  /** Finalize colocated mode */
-  void FinalizeColocated();
 };
 
 #define TRANSPARENT_HERMES\

@@ -87,9 +87,8 @@ void ThalliumRpc::Finalize() {
       client_engine_->finalize();
       break;
     }
-    case HermesType::kColocated: {
-      // TODO(llogan)
-      break;
+    default: {
+      throw std::logic_error("Invalid Hermes initialization type");
     }
   }
 }

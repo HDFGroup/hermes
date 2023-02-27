@@ -658,56 +658,56 @@ class vector : public ShmContainer {
  public:
   /** Beginning of the forward iterator */
   vector_iterator<T> begin() {
-    vector_iterator<T> iter(ShmDeserialize<vector<T>>(alloc_, header_));
+    vector_iterator<T> iter(ShmDeserialize<vector<T>>(header_, alloc_));
     iter.set_begin();
     return iter;
   }
 
   /** End of the forward iterator */
   vector_iterator<T> const end() {
-    vector_iterator<T> iter(ShmDeserialize<vector<T>>(alloc_, header_));
+    vector_iterator<T> iter(ShmDeserialize<vector<T>>(header_, alloc_));
     iter.set_end();
     return iter;
   }
 
   /** Beginning of the constant forward iterator */
   vector_citerator<T> cbegin() const {
-    vector_citerator<T> iter(ShmDeserialize<vector<T>>(alloc_, header_));
+    vector_citerator<T> iter(ShmDeserialize<vector<T>>(header_, alloc_));
     iter.set_begin();
     return iter;
   }
 
   /** End of the forward iterator */
   vector_citerator<T> cend() const {
-    vector_citerator<T> iter(ShmDeserialize<vector<T>>(alloc_, header_));
+    vector_citerator<T> iter(ShmDeserialize<vector<T>>(header_, alloc_));
     iter.set_end();
     return iter;
   }
 
   /** Beginning of the reverse iterator */
   vector_riterator<T> rbegin() {
-    vector_riterator<T> iter(ShmDeserialize<vector<T>>(alloc_, header_));
+    vector_riterator<T> iter(ShmDeserialize<vector<T>>(header_, alloc_));
     iter.set_begin();
     return iter;
   }
 
   /** End of the reverse iterator */
   vector_riterator<T> rend() {
-    vector_citerator<T> iter(ShmDeserialize<vector<T>>(alloc_, header_));
+    vector_citerator<T> iter(ShmDeserialize<vector<T>>(header_, alloc_));
     iter.set_end();
     return iter;
   }
 
   /** Beginning of the constant reverse iterator */
   vector_criterator<T> crbegin() const {
-    vector_criterator<T> iter(ShmDeserialize(alloc_, header_));
+    vector_criterator<T> iter(ShmDeserialize(header_, alloc_));
     iter.set_begin();
     return iter;
   }
 
   /** End of the constant reverse iterator */
   vector_criterator<T> crend() const {
-    vector_criterator<T> iter(ShmDeserialize(alloc_, header_));
+    vector_criterator<T> iter(ShmDeserialize(header_, alloc_));
     iter.set_end();
     return iter;
   }

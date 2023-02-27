@@ -31,11 +31,6 @@ void Hermes::Init(HermesType mode,
                  std::move(client_config_path));
       break;
     }
-    case HermesType::kColocated: {
-      InitColocated(std::move(server_config_path),
-                    std::move(client_config_path));
-      break;
-    }
   }
   is_initialized_ = true;
   is_being_initialized_ = false;
@@ -54,9 +49,8 @@ void Hermes::Finalize() {
       FinalizeClient();
       break;
     }
-    case HermesType::kColocated: {
-      FinalizeColocated();
-      break;
+    default: {
+      throw std::logic_error("Invalid HermesType to launch in");
     }
   }
   // TODO(llogan): make re-initialization possible.
@@ -78,7 +72,8 @@ void Hermes::InitServer(std::string server_config_path) {
   rpc_.InitServer();
   rpc_.InitClient();
   mdm_.shm_init(&server_config_, &header_->mdm_);
-  bpm_.shm_init(&header_->bpm_);
+  bpm_ = hipc::make_mptr<BufferPool>(header_->bpm_, main_alloc_);
+  bpm_->shm_init();
   borg_.shm_init();
 }
 
@@ -89,19 +84,9 @@ void Hermes::InitClient(std::string server_config_path,
   LoadSharedMemory();
   rpc_.InitClient();
   mdm_.shm_deserialize(&header_->mdm_);
-  bpm_.shm_deserialize(&header_->bpm_);
+  bpm_ = hipc::manual_ptr(hipc::ShmDeserialize<BufferPool>(&header_->bpm_,
+                                                           main_alloc_));
   borg_.shm_deserialize();
-}
-
-void Hermes::InitColocated(std::string server_config_path,
-                           std::string client_config_path) {
-  LoadServerConfig(server_config_path);
-  LoadClientConfig(client_config_path);
-  InitSharedMemory();
-  rpc_.InitColocated();
-  mdm_.shm_init(&server_config_, &header_->mdm_);
-  bpm_.shm_init(&header_->bpm_);
-  borg_.shm_init();
 }
 
 void Hermes::LoadServerConfig(std::string config_path) {
@@ -151,10 +136,6 @@ void Hermes::FinalizeClient() {
   if (client_config_.stop_daemon_) {
     StopDaemon();
   }
-  rpc_.Finalize();
-}
-
-void Hermes::FinalizeColocated() {
   rpc_.Finalize();
 }
 

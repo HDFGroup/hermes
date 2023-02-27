@@ -347,7 +347,7 @@ POINTER_T GetShmPointer() const {
 
 /** Get a ShmDeserialize object */
 hipc::ShmDeserialize<CLASS_NAME> GetShmDeserialize() const {
-  return hipc::ShmDeserialize<CLASS_NAME>(alloc_, header_);
+  return hipc::ShmDeserialize<CLASS_NAME>(header_, alloc_);
 }
 
 /**====================================

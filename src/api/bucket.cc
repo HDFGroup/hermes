@@ -27,7 +27,7 @@ using hermes::adapter::AdapterMode;
 Bucket::Bucket(const std::string &bkt_name,
                Context &ctx,
                const IoClientContext &opts)
-: mdm_(&HERMES->mdm_), bpm_(&HERMES->bpm_), name_(bkt_name) {
+: mdm_(&HERMES->mdm_), bpm_(HERMES->bpm_.get()), name_(bkt_name) {
   hipc::string lname(bkt_name);
   id_ = mdm_->LocalGetOrCreateBucket(lname, opts);
 }

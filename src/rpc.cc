@@ -54,9 +54,6 @@ bool RpcContext::ShouldDoLocalCall(int node_id) {
     case HermesType::kServer: {
       return node_id == node_id_;
     }
-    case HermesType::kColocated: {
-      return true;
-    }
     default: {
       LOG(FATAL) << "Invalid HermesType" << std::endl;
     }

@@ -40,17 +40,23 @@ struct ShmDeserialize {
   }
 
   /** Construct from allocator + offset pointer */
-  ShmDeserialize(Allocator *alloc, TypedOffsetPointer<ContainerT> &ar) {
+  ShmDeserialize(TypedOffsetPointer<ContainerT> &ar, Allocator *alloc) {
     alloc_ = alloc;
     header_ = alloc_->Convert<
       TypedPointer<ContainerT>,
       OffsetPointer>(ar.ToOffsetPointer());
   }
 
-  /** Construct from allocator + offset pointer */
-  ShmDeserialize(Allocator *alloc, header_t *header) {
+  /** Construct from header (ptr) + allocator */
+  ShmDeserialize(header_t *header, Allocator *alloc) {
     alloc_ = alloc;
     header_ = header;
+  }
+
+  /** Construct from header (ref) + allocator */
+  ShmDeserialize(header_t &header, Allocator *alloc) {
+    alloc_ = alloc;
+    header_ = &header;
   }
 
   /** Copy constructor */

@@ -79,6 +79,11 @@ class manual_ptr : public ShmSmartPtr<T> {
     obj_.shm_deserialize(ar);
   }
 
+  /** Constructor. From a ShmDeserialize. */
+  explicit manual_ptr(const ShmDeserialize<T> &ar) {
+    obj_.shm_deserialize(ar);
+  }
+
   /** (De)serialize the obj from a TypedPointer<T> */
   SHM_SERIALIZE_DESERIALIZE_WRAPPER((T));
 };
