@@ -77,7 +77,7 @@ std::string ThalliumRpc::GetServerName(u32 node_id) {
 
 /** finalize RPC context */
 void ThalliumRpc::Finalize() {
-  switch (comm_->type_) {
+  switch (mode_) {
     case HermesType::kServer: {
       comm_->WorldBarrier();
       this->kill_requested_.store(true);

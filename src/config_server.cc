@@ -51,8 +51,13 @@ void ServerConfig::ParseDeviceInfo(YAML::Node yaml_conf) {
         ParseSize(dev_info["bandwidth"].as<std::string>());
     dev.header_->latency_ =
         ParseLatency(dev_info["latency"].as<std::string>());
-    ParseVector<size_t, hipc::vector<size_t>>(
-        dev_info["slab_sizes"], *dev.slab_sizes_);
+    std::vector<std::string> size_vec;
+    ParseVector<std::string, std::vector<std::string>>(
+        dev_info["slab_sizes"], size_vec);
+    dev.slab_sizes_->reserve(size_vec.size());
+    for (const std::string &size_str : size_vec) {
+      dev.slab_sizes_->emplace_back(ParseSize(size_str));
+    }
     devices_.emplace_back(std::move(dev));
   }
 }

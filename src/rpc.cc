@@ -20,6 +20,7 @@ void RpcContext::InitRpcContext() {
   comm_ = &HERMES->comm_;
   config_ = &HERMES->server_config_;
   port_ = config_->rpc_.port_;
+  mode_ = HERMES->mode_;
   if (hosts_.size()) { return; }
   auto &hosts = config_->rpc_.host_names_;
   // Load hosts from hostfile
@@ -47,7 +48,7 @@ void RpcContext::InitRpcContext() {
 
 /** Check if we should skip an RPC and call a function locally */
 bool RpcContext::ShouldDoLocalCall(int node_id) {
-  switch (comm_->type_) {
+  switch (mode_) {
     case HermesType::kClient: {
       return false;
     }

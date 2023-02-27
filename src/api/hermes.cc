@@ -69,6 +69,7 @@ void Hermes::StopDaemon() {
 void Hermes::InitServer(std::string server_config_path) {
   LoadServerConfig(server_config_path);
   InitSharedMemory();
+  comm_.Init(HermesType::kServer);
   rpc_.InitServer();
   rpc_.InitClient();
   mdm_.shm_init(&server_config_, &header_->mdm_);

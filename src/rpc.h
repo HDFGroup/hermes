@@ -61,6 +61,7 @@ class RpcContext {
   int port_;  /**< port number */
   int node_id_; /**< the ID of this node*/
   std::vector<HostInfo> hosts_; /**< Hostname and ip addr per-node */
+  HermesType mode_; /**< The current mode hermes is executing in */
 
  public:
   RpcContext() = default;
