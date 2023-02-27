@@ -66,9 +66,6 @@ struct AdapterStat : public IoClientStats {
   }
 };
 
-/**< Whether to perform seek */
-#define HERMES_FS_SEEK (1<< (HERMES_IO_CLIENT_FLAGS_COUNT))
-
 /**
  * A structure to represent IO options for FS adapter.
  * For now, nothing additional than the typical IoClientContext.
@@ -76,22 +73,7 @@ struct AdapterStat : public IoClientStats {
 struct FsIoOptions : public IoClientContext {
   /** Default constructor */
   FsIoOptions() : IoClientContext() {
-    flags_.SetBits(HERMES_FS_SEEK);
-  }
-
-  /** Enable seek for this I/O */
-  void SetSeek() {
-    flags_.SetBits(HERMES_FS_SEEK);
-  }
-
-  /** Disable seek for this I/O */
-  void UnsetSeek() {
-    flags_.UnsetBits(HERMES_FS_SEEK);
-  }
-
-  /** Whether or not to perform seek in FS adapter */
-  bool DoSeek() {
-    return flags_.OrBits(HERMES_FS_SEEK);
+    SetSeek();
   }
 
   /** return IO options with \a mpi_type MPI data type */

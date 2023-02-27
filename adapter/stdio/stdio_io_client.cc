@@ -26,6 +26,9 @@ void StdioIoClient::RealOpen(IoClientObject &f,
   if (stat.mode_str_.find('a') != std::string::npos) {
     stat.is_append_ = true;
   }
+  if (stat.mode_str_.find('w')) {
+    stat.is_trunc_ = true;
+  }
 }
 
 /**

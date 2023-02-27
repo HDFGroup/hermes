@@ -182,7 +182,7 @@ Status Bucket::PartialPutOrCreate(const std::string &blob_name,
                                   Context &ctx) {
   Blob full_blob;
   // Put the blob
-  if (blob_off == 0 && blob.size() == opts.backend_size_) {
+  if (blob_off == 0 && blob.size() >= opts.backend_size_) {
     // Case 1: We're overriding the entire blob
     // Put the entire blob, no need to load from storage
     LOG(INFO) << "Putting the entire blob." << std::endl;

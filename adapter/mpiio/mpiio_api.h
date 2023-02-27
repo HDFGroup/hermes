@@ -19,6 +19,10 @@
 #include <mpi.h>
 #include <mpio.h>
 
+#ifndef MPI_MODE_TRUNCATE
+#define MPI_MODE_TRUNCATE 0
+#endif
+
 #define REQUIRE_API(api_name) \
   if (api_name == nullptr) { \
     LOG(FATAL) << "HERMES Adapter failed to map symbol: " \

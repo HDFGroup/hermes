@@ -34,18 +34,19 @@ File Filesystem::Open(AdapterStat &stat, const std::string &path) {
 
 void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
   auto mdm = HERMES_FS_METADATA_MANAGER;
-  FsIoOptions opts;
   Context ctx;
-  opts.type_ = type_;
-  stat.bkt_id_ = HERMES->GetBucket(path, ctx, opts);
-  // TODO(llogan): can avoid two unordered_map queries here
-  stat.adapter_mode_ = mdm->GetAdapterMode(path);
-  stat.page_size_ = mdm->GetAdapterPageSize(path);
   std::shared_ptr<AdapterStat> exists = mdm->Find(f);
   if (!exists) {
     LOG(INFO) << "File not opened before by adapter" << std::endl;
     // Create the new bucket
+    FsIoOptions opts;
+    opts.type_ = type_;
+    if (stat.is_trunc_) { opts.MarkTruncated(); }
     stat.bkt_id_ = HERMES->GetBucket(path, ctx, opts);
+    // Update bucket stats
+    // TODO(llogan): can avoid two unordered_map queries here
+    stat.adapter_mode_ = mdm->GetAdapterMode(path);
+    stat.page_size_ = mdm->GetAdapterPageSize(path);
     stat.backend_size_ = stat.bkt_id_->GetSize(IoClientContext(type_));
     // Allocate internal hermes data
     auto stat_ptr = std::make_shared<AdapterStat>(stat);

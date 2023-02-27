@@ -46,11 +46,15 @@ struct IoClientObject {
 };
 
 /** Put or get data directly from I/O client */
-#define HERMES_IO_CLIENT_BYPASS (1<<0)
+#define HERMES_IO_CLIENT_BYPASS (1 << 0)
 /** Only put or get data from a Hermes buffer; no fallback to I/O client */
-#define HERMES_IO_CLIENT_NO_FALLBACK (1<<1)
+#define HERMES_IO_CLIENT_NO_FALLBACK (1 << 1)
+/** Whether to perform seek */
+#define HERMES_FS_SEEK (1 << 2)
+/** Whether to perform truncate */
+#define HERMES_FS_TRUNC (1 << 3)
 /** The number of I/O client flags (used for extending flag field) */
-#define HERMES_IO_CLIENT_FLAGS_COUNT 2
+#define HERMES_IO_CLIENT_FLAGS_COUNT 4
 
 /** Represents any relevant settings for an I/O client operation */
 struct IoClientContext {
@@ -81,6 +85,31 @@ struct IoClientContext {
                                       mpi_count_(0),
                                       backend_off_(0),
                                       backend_size_(0) {}
+
+  /** Enable seek for this I/O */
+  void SetSeek() {
+    flags_.SetBits(HERMES_FS_SEEK);
+  }
+
+  /** Disable seek for this I/O */
+  void UnsetSeek() {
+    flags_.UnsetBits(HERMES_FS_SEEK);
+  }
+
+  /** Whether or not to perform seek in FS adapter */
+  bool DoSeek() const {
+    return flags_.OrBits(HERMES_FS_SEEK);
+  }
+
+  /** Marks the file as truncated */
+  void MarkTruncated() {
+    flags_.SetBits(HERMES_FS_TRUNC);
+  }
+
+  /** Whether a file is marked truncated */
+  bool IsTruncated() const {
+    return flags_.OrBits(HERMES_FS_TRUNC);
+  }
 };
 
 /** Any relevant statistics from the I/O client */
@@ -100,6 +129,7 @@ struct IoClientStats {
   FILE *fh_;        /**< real STDIO file handler */
   MPI_File mpi_fh_; /**< real MPI file handler */
 
+  bool is_trunc_;  /**< File is truncated */
   bool is_append_; /**< File is in append mode */
   int amode_;      /**< access mode (MPI) */
   MPI_Info info_;  /**< Info object (handle) */
@@ -114,6 +144,7 @@ struct IoClientStats {
         st_atim_(),
         st_mtim_(),
         st_ctim_(),
+        is_trunc_(false),
         is_append_(false),
         amode_(0),
         comm_(MPI_COMM_SELF),

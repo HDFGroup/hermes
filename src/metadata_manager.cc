@@ -128,23 +128,36 @@ BucketId MetadataManager::LocalGetOrCreateBucket(
 
   // Emplace bucket if it does not already exist
   if (bkt_id_map_->try_emplace(bkt_name, bkt_id)) {
+    LOG(INFO) << "Creating bucket for the first time: "
+              << bkt_name.str() << std::endl;
     BucketInfo info(HERMES->main_alloc_);
     (*info.name_) = bkt_name;
     info.header_->internal_size_ = 0;
-    auto io_client = IoClientFactory::Get(opts.type_);
-    if (io_client) {
-      io_client->InitBucketState(bkt_name,
-                                 opts,
-                                 info.header_->client_state_);
-    }
     bkt_map_->emplace(bkt_id, std::move(info));
   } else {
+    LOG(INFO) << "Found existing bucket: "
+              << bkt_name.str() << std::endl;
     auto iter = bkt_id_map_->find(bkt_name);
     if (iter == bkt_id_map_->end()) {
       return BucketId::GetNull();
     }
-    hipc::ShmRef<hipc::pair<hipc::charbuf, BucketId>> info = (*iter);
-    bkt_id = *info->second_;
+    hipc::ShmRef<hipc::pair<hipc::charbuf, BucketId>> id_info = (*iter);
+    bkt_id = *id_info->second_;
+    if (opts.IsTruncated()) {
+      // TODO(llogan): clear bucket
+    }
+  }
+
+
+  // TODO(llogan): Optimization. This should be done only during the
+  // creation of the bucket. I'm only doing this for the sake of not
+  // refactoring the unit tests.
+  hipc::ShmRef<BucketInfo> info = (*bkt_map_)[bkt_id];
+  auto io_client = IoClientFactory::Get(opts.type_);
+  if (io_client) {
+    io_client->InitBucketState(bkt_name,
+                               opts,
+                               info->header_->client_state_);
   }
 
   return bkt_id;

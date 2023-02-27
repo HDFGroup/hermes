@@ -29,6 +29,9 @@ void PosixIoClient::RealOpen(IoClientObject &f,
   if (stat.flags_ & O_APPEND) {
     stat.is_append_ = true;
   }
+  if (stat.flags_ & O_TRUNC) {
+    stat.is_trunc_ = true;
+  }
 }
 
 /**
@@ -79,6 +82,9 @@ void PosixIoClient::InitBucketState(const hipc::charbuf &bkt_name,
   real_api->fstat(fd, &buf);
   stat.true_size_ = buf.st_size;
   real_api->close(fd);
+
+  LOG(INFO) << "The size of the file "
+            << filename << " on disk is " << stat.true_size_ << std::endl;
 }
 
 /** Write blob to backend */
