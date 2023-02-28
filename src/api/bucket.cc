@@ -186,7 +186,7 @@ Status Bucket::PartialPutOrCreate(const std::string &blob_name,
     // Case 1: We're overriding the entire blob
     // Put the entire blob, no need to load from storage
     LOG(INFO) << "Putting the entire blob." << std::endl;
-    return Put(blob_name, blob, blob_id, ctx);
+    return Put(blob_name, blob, blob_id, ctx, opts);
   }
   if (ContainsBlob(blob_name, blob_id)) {
     // Case 2: The blob already exists (read from hermes)
@@ -217,7 +217,7 @@ Status Bucket::PartialPutOrCreate(const std::string &blob_name,
   memcpy(full_blob.data() + blob_off, blob.data(), blob.size());
   // Re-put the blob
   if (opts.adapter_mode_ != AdapterMode::kBypass) {
-    Put(blob_name, full_blob, blob_id, ctx);
+    Put(blob_name, full_blob, blob_id, ctx, opts);
   }
   return Status();
 }
@@ -274,7 +274,7 @@ Status Bucket::PartialGetOrCreate(const std::string &blob_name,
         return PARTIAL_GET_OR_CREATE_OVERFLOW;
       }
       if (opts.adapter_mode_ != AdapterMode::kBypass) {
-        Put(blob_name, full_blob, blob_id, ctx);
+        Put(blob_name, full_blob, blob_id, ctx, opts);
       }
     }
   }
