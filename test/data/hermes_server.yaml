@@ -22,7 +22,7 @@ devices:
     # The number of blocks (the size of which is chosen in block_sizes_kb) that each
     # device should contain for each slab (controlled by num_slabs). This allows for
     # precise control of the distibution of buffer sizes.
-    slab_units: [1, 4, 16, 32]
+    slab_sizes: [ 4KB, 16KB, 64KB, 1MB ]
 
     # The maximum theoretical bandwidth (as advertised by the manufacturer) in
     # Possible units: KBps, MBps, GBps
@@ -51,7 +51,7 @@ devices:
     mount_point: "./"
     capacity: 50MB
     block_size: 4KB
-    slab_units: [ 1, 4, 16, 32 ]
+    slab_sizes: [ 4KB, 16KB, 64KB, 1MB ]
     bandwidth: 1GBps
     latency: 600us
     is_shared_device: false
@@ -61,7 +61,7 @@ devices:
     mount_point: "./"
     capacity: 50MB
     block_size: 4KB
-    slab_units: [ 1, 4, 16, 32 ]
+    slab_sizes: [ 4KB, 16KB, 64KB, 1MB ]
     bandwidth: 500MBps
     latency: 1200us
     is_shared_device: false
@@ -71,7 +71,7 @@ devices:
     mount_point: "./"
     capacity: inf
     block_size: 64KB # The stripe size of PFS
-    slab_units: [ 1, 4, 16, 32 ]
+    slab_sizes: [ 4KB, 16KB, 64KB, 1MB ]
     bandwidth: 100MBps # Per-device bandwidth
     latency: 200ms
     is_shared_device: true
