@@ -126,7 +126,6 @@ set(HERMES_HEADERS
   ${CMAKE_CURRENT_SOURCE_DIR}/api/hermes.h
   ${CMAKE_CURRENT_SOURCE_DIR}/api/vbucket.h
   ${CMAKE_CURRENT_SOURCE_DIR}/buffer_pool.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/buffer_pool_internal.h
   ${CMAKE_CURRENT_SOURCE_DIR}/communication.h
   ${CMAKE_CURRENT_SOURCE_DIR}/data_placement_engine.h
   ${CMAKE_CURRENT_SOURCE_DIR}/hermes_types.h
