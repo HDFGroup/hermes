@@ -129,7 +129,6 @@ set(HERMES_HEADERS
   ${CMAKE_CURRENT_SOURCE_DIR}/communication.h
   ${CMAKE_CURRENT_SOURCE_DIR}/data_placement_engine.h
   ${CMAKE_CURRENT_SOURCE_DIR}/hermes_types.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/memory_management.h
   ${CMAKE_CURRENT_SOURCE_DIR}/utils.h
 )
 
