@@ -13,7 +13,7 @@
 #ifndef HERMES_ADAPTER_POSIX_H
 #define HERMES_ADAPTER_POSIX_H
 #include <string>
-#include <dlfcn.h>
+#include "adapter/adapter_api.h"
 #include <iostream>
 #include <glog/logging.h>
 #include <sys/types.h>
@@ -62,7 +62,7 @@ namespace hermes::adapter::fs {
 static int fxstat_to_fstat(int fd, struct stat * stbuf);
 
 /** Pointers to the real posix API */
-class PosixApi {
+class PosixApi : public RealApi {
  public:
   /** open */
   open_t open = nullptr;
@@ -99,111 +99,110 @@ class PosixApi {
   /** close */
   close_t close = nullptr;
 
-  PosixApi() {
-    void *is_intercepted = (void*)dlsym(RTLD_DEFAULT, "posix_intercepted");
-    if (is_intercepted) {
-      open = (open_t)dlsym(RTLD_NEXT, "open");
+  PosixApi() : RealApi("open", "posix_intercepted") {
+    if (is_intercepted_) {
+      open = (open_t)dlsym(real_lib_next_, "open");
     } else {
-      open = (open_t)dlsym(RTLD_DEFAULT, "open");
+      open = (open_t)dlsym(real_lib_default_, "open");
     }
     REQUIRE_API(open)
-    if (is_intercepted) {
-      open64 = (open64_t)dlsym(RTLD_NEXT, "open64");
+    if (is_intercepted_) {
+      open64 = (open64_t)dlsym(real_lib_next_, "open64");
     } else {
-      open64 = (open64_t)dlsym(RTLD_DEFAULT, "open64");
+      open64 = (open64_t)dlsym(real_lib_default_, "open64");
     }
     REQUIRE_API(open64)
-    if (is_intercepted) {
-      __open_2 = (__open_2_t)dlsym(RTLD_NEXT, "__open_2");
+    if (is_intercepted_) {
+      __open_2 = (__open_2_t)dlsym(real_lib_next_, "__open_2");
     } else {
-      __open_2 = (__open_2_t)dlsym(RTLD_DEFAULT, "__open_2");
+      __open_2 = (__open_2_t)dlsym(real_lib_default_, "__open_2");
     }
     REQUIRE_API(__open_2)
-    if (is_intercepted) {
-      creat = (creat_t)dlsym(RTLD_NEXT, "creat");
+    if (is_intercepted_) {
+      creat = (creat_t)dlsym(real_lib_next_, "creat");
     } else {
-      creat = (creat_t)dlsym(RTLD_DEFAULT, "creat");
+      creat = (creat_t)dlsym(real_lib_default_, "creat");
     }
     REQUIRE_API(creat)
-    if (is_intercepted) {
-      creat64 = (creat64_t)dlsym(RTLD_NEXT, "creat64");
+    if (is_intercepted_) {
+      creat64 = (creat64_t)dlsym(real_lib_next_, "creat64");
     } else {
-      creat64 = (creat64_t)dlsym(RTLD_DEFAULT, "creat64");
+      creat64 = (creat64_t)dlsym(real_lib_default_, "creat64");
     }
     REQUIRE_API(creat64)
-    if (is_intercepted) {
-      read = (read_t)dlsym(RTLD_NEXT, "read");
+    if (is_intercepted_) {
+      read = (read_t)dlsym(real_lib_next_, "read");
     } else {
-      read = (read_t)dlsym(RTLD_DEFAULT, "read");
+      read = (read_t)dlsym(real_lib_default_, "read");
     }
     REQUIRE_API(read)
-    if (is_intercepted) {
-      write = (write_t)dlsym(RTLD_NEXT, "write");
+    if (is_intercepted_) {
+      write = (write_t)dlsym(real_lib_next_, "write");
     } else {
-      write = (write_t)dlsym(RTLD_DEFAULT, "write");
+      write = (write_t)dlsym(real_lib_default_, "write");
     }
     REQUIRE_API(write)
-    if (is_intercepted) {
-      pread = (pread_t)dlsym(RTLD_NEXT, "pread");
+    if (is_intercepted_) {
+      pread = (pread_t)dlsym(real_lib_next_, "pread");
     } else {
-      pread = (pread_t)dlsym(RTLD_DEFAULT, "pread");
+      pread = (pread_t)dlsym(real_lib_default_, "pread");
     }
     REQUIRE_API(pread)
-    if (is_intercepted) {
-      pwrite = (pwrite_t)dlsym(RTLD_NEXT, "pwrite");
+    if (is_intercepted_) {
+      pwrite = (pwrite_t)dlsym(real_lib_next_, "pwrite");
     } else {
-      pwrite = (pwrite_t)dlsym(RTLD_DEFAULT, "pwrite");
+      pwrite = (pwrite_t)dlsym(real_lib_default_, "pwrite");
     }
     REQUIRE_API(pwrite)
-    if (is_intercepted) {
-      pread64 = (pread64_t)dlsym(RTLD_NEXT, "pread64");
+    if (is_intercepted_) {
+      pread64 = (pread64_t)dlsym(real_lib_next_, "pread64");
     } else {
-      pread64 = (pread64_t)dlsym(RTLD_DEFAULT, "pread64");
+      pread64 = (pread64_t)dlsym(real_lib_default_, "pread64");
     }
     REQUIRE_API(pread64)
-    if (is_intercepted) {
-      pwrite64 = (pwrite64_t)dlsym(RTLD_NEXT, "pwrite64");
+    if (is_intercepted_) {
+      pwrite64 = (pwrite64_t)dlsym(real_lib_next_, "pwrite64");
     } else {
-      pwrite64 = (pwrite64_t)dlsym(RTLD_DEFAULT, "pwrite64");
+      pwrite64 = (pwrite64_t)dlsym(real_lib_default_, "pwrite64");
     }
     REQUIRE_API(pwrite64)
-    if (is_intercepted) {
-      lseek = (lseek_t)dlsym(RTLD_NEXT, "lseek");
+    if (is_intercepted_) {
+      lseek = (lseek_t)dlsym(real_lib_next_, "lseek");
     } else {
-      lseek = (lseek_t)dlsym(RTLD_DEFAULT, "lseek");
+      lseek = (lseek_t)dlsym(real_lib_default_, "lseek");
     }
     REQUIRE_API(lseek)
-    if (is_intercepted) {
-      lseek64 = (lseek64_t)dlsym(RTLD_NEXT, "lseek64");
+    if (is_intercepted_) {
+      lseek64 = (lseek64_t)dlsym(real_lib_next_, "lseek64");
     } else {
-      lseek64 = (lseek64_t)dlsym(RTLD_DEFAULT, "lseek64");
+      lseek64 = (lseek64_t)dlsym(real_lib_default_, "lseek64");
     }
     REQUIRE_API(lseek64)
-    if (is_intercepted) {
-      __fxstat = (__fxstat_t)dlsym(RTLD_NEXT, "__fxstat");
+    if (is_intercepted_) {
+      __fxstat = (__fxstat_t)dlsym(real_lib_next_, "__fxstat");
     } else {
-      __fxstat = (__fxstat_t)dlsym(RTLD_DEFAULT, "__fxstat");
+      __fxstat = (__fxstat_t)dlsym(real_lib_default_, "__fxstat");
     }
     // REQUIRE_API(__fxstat)
-    if (is_intercepted) {
-      fstat = (fstat_t)dlsym(RTLD_NEXT, "fstat");
+    if (is_intercepted_) {
+      fstat = (fstat_t)dlsym(real_lib_next_, "fstat");
     } else {
-      fstat = (fstat_t)dlsym(RTLD_DEFAULT, "fstat");
+      fstat = (fstat_t)dlsym(real_lib_default_, "fstat");
     }
     if (fstat == nullptr) {
       fstat = fxstat_to_fstat;
     }
     // REQUIRE_API(fstat)
-    if (is_intercepted) {
-      fsync = (fsync_t)dlsym(RTLD_NEXT, "fsync");
+    if (is_intercepted_) {
+      fsync = (fsync_t)dlsym(real_lib_next_, "fsync");
     } else {
-      fsync = (fsync_t)dlsym(RTLD_DEFAULT, "fsync");
+      fsync = (fsync_t)dlsym(real_lib_default_, "fsync");
     }
     REQUIRE_API(fsync)
-    if (is_intercepted) {
-      close = (close_t)dlsym(RTLD_NEXT, "close");
+    if (is_intercepted_) {
+      close = (close_t)dlsym(real_lib_next_, "close");
     } else {
-      close = (close_t)dlsym(RTLD_DEFAULT, "close");
+      close = (close_t)dlsym(real_lib_default_, "close");
     }
     REQUIRE_API(close)
   }

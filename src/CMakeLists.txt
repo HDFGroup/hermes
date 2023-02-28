@@ -58,7 +58,7 @@ set(HERMES_SRCS
   ${CMAKE_CURRENT_SOURCE_DIR}/dpe/random.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/dpe/round_robin.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/dpe/minimize_io_time.cc
-)
+        ../adapter/adapter_api.h)
 
 #------------------------------------------------------------------------------
 # Libraries

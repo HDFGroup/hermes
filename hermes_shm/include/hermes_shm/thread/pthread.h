@@ -88,7 +88,7 @@ class Pthread : public Thread {
 class PthreadStatic : public ThreadStatic {
  public:
   void Yield() override {
-    pthread_yield();
+    sched_yield();
   }
 
   tid_t GetTid() override {
