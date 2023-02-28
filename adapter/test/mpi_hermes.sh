@@ -9,8 +9,8 @@ EXEC_NAME=$6
 TEST_ARGS=$7
 SLEEP_TIME=3
 
-export HERMES_CONF="${CMAKE_SOURCE_DIR}/adapter/test/data/hermes_server.yaml"
-export HERMES_CLIENT_CONF="${CMAKE_SOURCE_DIR}/adapter/test/data/hermes_client.yaml"
+export HERMES_CONF="${CMAKE_SOURCE_DIR}/test/data/hermes_server.yaml"
+export HERMES_CLIENT_CONF="${CMAKE_SOURCE_DIR}/test/data/hermes_client.yaml"
 export TEST_EXEC="${CMAKE_BINARY_DIR}/bin/${EXEC_NAME}"
 export DAEMON_EXEC="${CMAKE_BINARY_DIR}/bin/hermes_daemon"
 

@@ -8,8 +8,8 @@ CONF=$6
 ASYNC=$7
 SLEEP_TIME=3
 
-export HERMES_CONF="${CMAKE_SOURCE_DIR}/adapter/test/data/${CONF}_client.yaml"
-export HERMES_CLIENT_CONF="${CMAKE_SOURCE_DIR}/adapter/test/data/${CONF}_server.yaml"
+export HERMES_CONF="${CMAKE_SOURCE_DIR}/test/data/${CONF}_client.yaml"
+export HERMES_CLIENT_CONF="${CMAKE_SOURCE_DIR}/test/data/${CONF}_server.yaml"
 
 # Start the Hermes daemon
 echo "STARTING DAEMON"
