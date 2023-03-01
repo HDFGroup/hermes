@@ -151,6 +151,7 @@ Status Bucket::Put(std::string blob_name,
     blob_id = std::get<0>(put_ret);
     bool did_create = std::get<1>(put_ret);
     size_t orig_blob_size = std::get<2>(put_ret);
+    opts.backend_size_ = blob.size();
     mdm_->LocalBucketRegisterBlobId(id_,
                                     blob_id,
                                     orig_blob_size,

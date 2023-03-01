@@ -126,7 +126,7 @@ struct OffsetPointerBase {
 
   /** Check if null */
   bool IsNull() const {
-    return off_ == -1;
+    return off_.load() == -1;
   }
 
   /** Get the null pointer */
