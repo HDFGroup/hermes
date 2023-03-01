@@ -324,10 +324,10 @@ int posttest(bool compare_data = true) {
   }
 
 #if HERMES_INTERCEPT == 1
-  // INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_file_cmp);
-  // INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.new_file_cmp);
-  // INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.new_file);
-  // INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_file);
+  HERMES->client_config_.SetAdapterPathTracking(info.existing_file_cmp, true);
+  HERMES->client_config_.SetAdapterPathTracking(info.new_file_cmp, true);
+  HERMES->client_config_.SetAdapterPathTracking(info.new_file, true);
+  HERMES->client_config_.SetAdapterPathTracking(info.existing_file, true);
   // INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_shared_file);
   // INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_shared_file_cmp);
 #endif

@@ -260,7 +260,7 @@ Status Bucket::PartialGetOrCreate(const std::string &blob_name,
     LOG(INFO) << "Blob existed. Reading blob from Hermes." << std::endl;
     Get(blob_id, full_blob, ctx);
   }
-  if (full_blob.size() != opts.backend_size_) {
+  if (full_blob.size() < opts.backend_size_) {
     // Case 2: The blob did not exist (or at least not fully)
     // Read blob using adapter
     LOG(INFO) << "Blob did not exist. Reading blob from backend." << std::endl;
