@@ -273,6 +273,9 @@ void test_read(char* ptr, size_t size) {
         break;
       }
     }
+    if (unmatching_chars != 0) {
+      std::cerr << "There were unmatching chars" << std::endl;
+    }
     REQUIRE(unmatching_chars == 0);
   }
 }

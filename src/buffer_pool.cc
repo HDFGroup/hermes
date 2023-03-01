@@ -114,7 +114,6 @@ BufferPool::LocalAllocateAndSetBuffers(PlacementSchema &schema,
                                            total_alloced_size);
 
     // Allocate buffers
-    buffers.resize(buffer_count);
     AllocateBuffers(plcmnt, buffers, coins,
                     plcmnt.tid_.GetIndex(),
                     dev_info->slab_sizes_->size(),
