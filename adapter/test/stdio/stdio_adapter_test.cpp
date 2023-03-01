@@ -103,7 +103,6 @@ int pretest() {
             args.request_size * info.num_iterations);
   }
   REQUIRE(info.total_size > 0);
-  // NOTE(llogan): Are flush exclusions really necessary?
 #if HERMES_INTERCEPT == 1
   HERMES->client_config_.SetAdapterPathTracking(info.existing_file_cmp, false);
   HERMES->client_config_.SetAdapterPathTracking(info.new_file_cmp, false);
@@ -112,7 +111,6 @@ int pretest() {
 }
 
 int posttest(bool compare_data = true) {
-  // NOTE(llogan): Are flush exclusions really necessary?
 #if HERMES_INTERCEPT == 1
   HERMES->client_config_.SetAdapterPathTracking(info.existing_file, false);
   HERMES->client_config_.SetAdapterPathTracking(info.new_file, false);

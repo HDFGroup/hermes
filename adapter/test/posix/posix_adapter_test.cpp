@@ -199,7 +199,6 @@ int posttest(bool compare_data = true) {
   if (stdfs::exists(info.existing_file_cmp))
     stdfs::remove(info.existing_file_cmp);
 
-  // NOTE(llogan): Are flush exclusions really necessary?
 #if HERMES_INTERCEPT == 1
   HERMES->client_config_.SetAdapterPathTracking(info.existing_file_cmp, true);
   HERMES->client_config_.SetAdapterPathTracking(info.new_file_cmp, true);

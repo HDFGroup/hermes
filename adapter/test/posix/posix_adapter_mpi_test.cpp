@@ -187,7 +187,6 @@ int pretest() {
   if (stdfs::exists(temp_ext_file)) stdfs::remove(temp_ext_file);
   REQUIRE(info.total_size > 0);
   MPI_Barrier(MPI_COMM_WORLD);
-  // NOTE(llogan): Are flush exclusions really necessary?
 #if HERMES_INTERCEPT == 1
   HERMES->client_config_.SetAdapterPathTracking(info.existing_file_cmp, false);
   HERMES->client_config_.SetAdapterPathTracking(info.new_file_cmp, false);
@@ -197,7 +196,6 @@ int pretest() {
 }
 
 int posttest(bool compare_data = true) {
-  // NOTE(llogan): Are flush exclusions really necessary?
 #if HERMES_INTERCEPT == 1
   HERMES->client_config_.SetAdapterPathTracking(info.existing_file, false);
   HERMES->client_config_.SetAdapterPathTracking(info.new_file, false);
@@ -304,14 +302,15 @@ int posttest(bool compare_data = true) {
       stdfs::remove(info.existing_shared_file_cmp);
   }
 
-  // NOTE(llogan): Are flush exclusions really necessary?
   #if HERMES_INTERCEPT == 1
     HERMES->client_config_.SetAdapterPathTracking(info.existing_file_cmp, true);
     HERMES->client_config_.SetAdapterPathTracking(info.new_file_cmp, true);
     HERMES->client_config_.SetAdapterPathTracking(info.new_file, true);
     HERMES->client_config_.SetAdapterPathTracking(info.existing_file, true);
-    // INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_shared_file);
-    // INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_shared_file_cmp);
+    HERMES->client_config_.SetAdapterPathTracking(
+        info.existing_shared_file, true);
+    HERMES->client_config_.SetAdapterPathTracking(
+        info.existing_shared_file_cmp, true);
   #endif
   return 0;
 }

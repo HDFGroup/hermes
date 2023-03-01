@@ -210,8 +210,8 @@ int pretest() {
 #if HERMES_INTERCEPT == 1
   HERMES->client_config_.SetAdapterPathTracking(info.existing_file_cmp, false);
   HERMES->client_config_.SetAdapterPathTracking(info.new_file_cmp, false);
-  // INTERCEPTOR_LIST->hermes_flush_exclusion.insert(
-      // info.existing_shared_file_cmp);
+  HERMES->client_config_.SetAdapterPathTracking(
+      info.existing_shared_file_cmp, false);
 #endif
   return 0;
 }
@@ -328,8 +328,8 @@ int posttest(bool compare_data = true) {
   HERMES->client_config_.SetAdapterPathTracking(info.new_file_cmp, true);
   HERMES->client_config_.SetAdapterPathTracking(info.new_file, true);
   HERMES->client_config_.SetAdapterPathTracking(info.existing_file, true);
-  // INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_shared_file);
-  // INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_shared_file_cmp);
+  HERMES->client_config_.SetAdapterPathTracking(info.existing_shared_file, true);
+  HERMES->client_config_.SetAdapterPathTracking(info.existing_shared_file_cmp, true);
 #endif
   return 0;
 }
