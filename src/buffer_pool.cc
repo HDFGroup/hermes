@@ -119,10 +119,10 @@ BufferPool::LocalAllocateAndSetBuffers(PlacementSchema &schema,
                     dev_info->slab_sizes_->size(),
                     free_list_start,
                     blob_off);
-    borg_->LocalPlaceBlobInBuffers(blob, buffers);
     mdm_->LocalUpdateTargetCapacity(plcmnt.tid_,
                                     -static_cast<off64_t>(total_alloced_size));
   }
+  borg_->LocalPlaceBlobInBuffers(blob, buffers);
   return std::move(buffers);
 }
 
@@ -162,7 +162,9 @@ void BufferPool::AllocateBuffers(SubPlacement &plcmnt,
       info.t_slab_ = j;
       info.blob_off_ = blob_off;
       info.blob_size_ = slot.t_size_;
-      if (blob_off + info.blob_size_ > plcmnt.size_) {
+      if (plcmnt.size_ < info.t_size_) {
+        info.blob_size_ = plcmnt.size_;
+      } else if (blob_off + info.blob_size_ > plcmnt.size_) {
         info.blob_size_ = plcmnt.size_ - blob_off;
       }
       info.tid_ = plcmnt.tid_;

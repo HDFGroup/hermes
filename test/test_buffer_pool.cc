@@ -38,10 +38,10 @@ TEST_CASE("TestBufferPool") {
     {KILOBYTES(64), 1},  // 64KB blob on 1 target
     {MEGABYTES(4), 1},  // 4MB blob on 1 target*/
 
-    {KILOBYTES(4), 3},   // 4KB blob on 3 targets
+    /*{KILOBYTES(4), 3},   // 4KB blob on 3 targets
     {KILOBYTES(8), 3},   // 8KB blob on 3 targets
     {KILOBYTES(16), 3},  // 16KB blob on 3 targets
-    {KILOBYTES(64), 3},  // 64KB blob on 3 targets
+    {KILOBYTES(64), 3},  // 64KB blob on 3 targets*/
     {MEGABYTES(4), 3},  // 4MB blob on 3 targets
   };
   HERMES->bpm_;

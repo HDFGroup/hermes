@@ -107,6 +107,7 @@ struct BufferInfo {
   /** Performs move/copy */
   void Copy(const BufferInfo &other) {
     tid_ = other.tid_;
+    t_slab_ = other.t_slab_;
     t_off_ = other.t_off_;
     t_size_ = other.t_size_;
     blob_off_ = other.blob_off_;
