@@ -64,7 +64,7 @@ OffsetPointer FixedPageAllocator::AllocateOffset(size_t size) {
   }
 
   // Allocate from stack if no page found
-  if (page == nullptr){
+  if (page == nullptr) {
     page = alloc_.Convert<MpPage>(alloc_.AllocateOffset(size) - sizeof(MpPage));
   }
   if (page == nullptr) {

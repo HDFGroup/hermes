@@ -152,7 +152,7 @@ struct charbuf {
   }
 
 #define HERMES_STR_CMP_OPERATOR(op) \
-  bool operator op(const char *other) const { \
+  bool operator TYPE_UNWRAP(op)(const char *other) const { \
     return _strncmp(data(), size(), other, strlen(other)) op 0; \
   } \
   bool operator op(const std::string &other) const { \
@@ -162,12 +162,12 @@ struct charbuf {
     return _strncmp(data(), size(), other.data(), other.size()) op 0; \
   }
 
-  HERMES_STR_CMP_OPERATOR(==)
-  HERMES_STR_CMP_OPERATOR(!=)
-  HERMES_STR_CMP_OPERATOR(<)
-  HERMES_STR_CMP_OPERATOR(>)
-  HERMES_STR_CMP_OPERATOR(<=)
-  HERMES_STR_CMP_OPERATOR(>=)
+  HERMES_STR_CMP_OPERATOR(==)  // NOLINT
+  HERMES_STR_CMP_OPERATOR(!=)  // NOLINT
+  HERMES_STR_CMP_OPERATOR(<)  // NOLINT
+  HERMES_STR_CMP_OPERATOR(>)  // NOLINT
+  HERMES_STR_CMP_OPERATOR(<=)  // NOLINT
+  HERMES_STR_CMP_OPERATOR(>=)  // NOLINT
 
 #undef HERMES_STR_CMP_OPERATOR
 
@@ -201,4 +201,4 @@ typedef charbuf string;
 
 }  // namespace hermes_shm
 
-#endif //HERMES_INCLUDE_HERMES_TYPES_CHARBUF_H_
+#endif  // HERMES_INCLUDE_HERMES_TYPES_CHARBUF_H_

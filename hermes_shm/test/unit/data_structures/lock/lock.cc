@@ -66,7 +66,7 @@ void RwLockTest() {
 #pragma omp parallel \
   shared(lock, nthreads, left, loop_count, count, tid_start) \
   num_threads(nthreads)
-  {
+  {  // NOLINT
     int tid = omp_get_thread_num();
 
     // Support parallel write

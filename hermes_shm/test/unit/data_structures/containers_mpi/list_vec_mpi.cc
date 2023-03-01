@@ -75,7 +75,6 @@ void ListVecTest(size_t count) {
       MPI_Barrier(MPI_COMM_WORLD);
       MPI_Barrier(MPI_COMM_WORLD);
     }
-
   } catch(HERMES_ERROR_TYPE &HERMES_ERROR_PTR) {
     std::cout << "HERE0" << std::endl;
     err->print();

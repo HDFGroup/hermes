@@ -65,4 +65,6 @@ static bool VerifyBuffer(char *ptr, size_t size, char nonce) {
 void MainPretest();
 void MainPosttest();
 
+#define PAGE_DIVIDE(TEXT)
+
 #endif  // HERMES_TEST_UNIT_BASIC_TEST_H_

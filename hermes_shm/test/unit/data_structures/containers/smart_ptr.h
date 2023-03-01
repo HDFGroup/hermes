@@ -81,4 +81,4 @@ class SmartPtrTestSuite {
 
 }  // namespace hermes_shm::ipc
 
-#endif //HERMES_TEST_UNIT_ptr__STRUCTURES_CONTAINERS_SMART_PTR_H_
+#endif  // HERMES_TEST_UNIT_ptr__STRUCTURES_CONTAINERS_SMART_PTR_H_

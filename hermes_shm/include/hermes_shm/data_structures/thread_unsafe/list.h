@@ -184,7 +184,7 @@ struct list_iterator_templ {
 
   /** Create the end iterator */
   static list_iterator_templ const end() {
-    const static list_iterator_templ end_iter(true);
+    static const list_iterator_templ end_iter(true);
     return end_iter;
   }
 
@@ -451,7 +451,7 @@ class list : public ShmContainer {
     }
     return 0;
   }
-  
+
   /** Find an element in this list */
   list_iterator<T> find(const T &entry) {
     for (auto iter = begin(); iter != end(); ++iter) {

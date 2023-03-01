@@ -26,7 +26,7 @@ struct nonatomic {
   inline nonatomic() = default;
 
   /** Full constructor */
-  inline nonatomic(T def) : x(def) {}
+  explicit inline nonatomic(T def) : x(def) {}
 
   /** Atomic fetch_add wrapper*/
   inline T fetch_add(
@@ -146,7 +146,7 @@ struct atomic {
   inline atomic() = default;
 
   /** Full constructor */
-  inline atomic(T def) : x(def) {}
+  explicit inline atomic(T def) : x(def) {}
 
   /** Atomic fetch_add wrapper*/
   inline T fetch_add(
@@ -247,6 +247,6 @@ struct atomic {
   }
 };
 
-}
+}  // namespace hermes_shm::ipc
 
-#endif //HERMES_INCLUDE_HERMES_TYPES_ATOMIC_H_
+#endif  // HERMES_INCLUDE_HERMES_TYPES_ATOMIC_H_

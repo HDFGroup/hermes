@@ -89,5 +89,6 @@ int posix_memalign(void **memptr, size_t alignment, size_t size) {
  * alignment
  * */
 void *aligned_alloc(size_t alignment, size_t size) {
-  return memalign(alignment, hermes_shm::ipc::NextAlignmentMultiple(alignment, size));
+  return memalign(alignment,
+                  hermes_shm::ipc::NextAlignmentMultiple(alignment, size));
 }

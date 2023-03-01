@@ -78,4 +78,4 @@ class NullBackend : public MemoryBackend {
 
 }  // namespace hermes_shm::ipc
 
-#endif //HERMES_INCLUDE_HERMES_MEMORY_BACKEND_NULL_H_
+#endif  // HERMES_INCLUDE_HERMES_MEMORY_BACKEND_NULL_H_

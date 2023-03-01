@@ -89,12 +89,10 @@ OffsetPointer ScalablePageAllocator::AllocateOffset(size_t size) {
   page = CheckCaches(size_mp);
 
   // Case 2: Coalesce if enough space is being wasted
-  if (page == nullptr) {
-
-  }
+  // if (page == nullptr) {}
 
   // Case 3: Allocate from stack if no page found
-  if (page == nullptr){
+  if (page == nullptr) {
     auto off = alloc_.AllocateOffset(size);
     if (!off.IsNull()) {
       page = alloc_.Convert<MpPage>(off - sizeof(MpPage));

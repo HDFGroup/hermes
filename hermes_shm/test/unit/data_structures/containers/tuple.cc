@@ -62,8 +62,8 @@ int y() {
 class Y {
  public:
   Y() = default;
-  Y(int x) {}
-  Y(int x, int w) {}
+  explicit Y(int x) {}
+  explicit Y(int x, int w) {}
 };
 
 TEST_CASE("TupleOfIntInt") {

@@ -136,7 +136,8 @@ class ShmSmartPtr : public ShmSmartPointer {
   void shm_serialize(hipc::TypedPointer<TYPE_UNWRAP(AR_TYPE)> &type) const {\
     obj_.shm_serialize(type);\
   }\
-  void shm_serialize(hipc::TypedAtomicPointer<TYPE_UNWRAP(AR_TYPE)> &type) const {\
+  void shm_serialize(\
+      hipc::TypedAtomicPointer<TYPE_UNWRAP(AR_TYPE)> &type) const {\
     obj_.shm_serialize(type);\
   }\
   SHM_SERIALIZE_OPS(AR_TYPE)
@@ -148,7 +149,8 @@ class ShmSmartPtr : public ShmSmartPointer {
   void shm_deserialize(const hipc::TypedPointer<TYPE_UNWRAP(AR_TYPE)> &type) {\
     obj_.shm_deserialize(type);\
   }\
-  void shm_deserialize(const hipc::TypedAtomicPointer<TYPE_UNWRAP(AR_TYPE)> &type) {\
+  void shm_deserialize(\
+      const hipc::TypedAtomicPointer<TYPE_UNWRAP(AR_TYPE)> &type) {\
     obj_.shm_deserialize(type);\
   }\
   SHM_DESERIALIZE_OPS(AR_TYPE)

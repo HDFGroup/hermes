@@ -1,14 +1,14 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Distributed under BSD 3-Clause license.                                   *
- * Copyright by The HDF Group.                                               *
- * Copyright by the Illinois Institute of Technology.                        *
- * All rights reserved.                                                      *
- *                                                                           *
- * This file is part of Hermes. The full Hermes copyright notice, including  *
- * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the top directory. If you do not  *
- * have access to the file, you may request a copy from help@hdfgroup.org.   *
- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+* Distributed under BSD 3-Clause license.                                   *
+* Copyright by The HDF Group.                                               *
+* Copyright by the Illinois Institute of Technology.                        *
+* All rights reserved.                                                      *
+*                                                                           *
+* This file is part of Hermes. The full Hermes copyright notice, including  *
+* terms governing use, modification, and redistribution, is contained in    *
+* the COPYING file, which can be found at the top directory. If you do not  *
+* have access to the file, you may request a copy from help@hdfgroup.org.   *
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "basic_test.h"
 #include "test_init.h"
@@ -38,7 +38,7 @@ void UnorderedMapOpTest() {
   unordered_map<Key, Val> map(alloc);
 
   // Insert 20 entries into the map (no growth trigger)
-  {
+  PAGE_DIVIDE("Insert entries") {
     for (int i = 0; i < 20; ++i) {
       CREATE_KV_PAIR(key, i, val, i);
       map.emplace(key, val);
@@ -46,7 +46,7 @@ void UnorderedMapOpTest() {
   }
 
   // Check if the 20 entries are indexable
-  {
+  PAGE_DIVIDE("Check if entries are indexable") {
     for (int i = 0; i < 20; ++i) {
       CREATE_KV_PAIR(key, i, val, i);
       REQUIRE(*(map[key]) == val);
@@ -54,7 +54,7 @@ void UnorderedMapOpTest() {
   }
 
   // Check if 20 entries are findable
-  {
+  PAGE_DIVIDE("Check if entries are findable") {
     for (int i = 0; i < 20; ++i) {
       CREATE_KV_PAIR(key, i, val, i);
       auto iter = map.find(key);
@@ -63,9 +63,7 @@ void UnorderedMapOpTest() {
   }
 
   // Iterate over the map
-  {
-    // auto prep = map.iter_prep();
-    // prep.Lock();
+  PAGE_DIVIDE("Forward iterate") {
     int i = 0;
     for (auto entry : map) {
       GET_INT_FROM_KEY(entry->GetKey());
@@ -78,7 +76,7 @@ void UnorderedMapOpTest() {
   }
 
   // Re-emplace elements
-  {
+  PAGE_DIVIDE("Re-emplace elements") {
     for (int i = 0; i < 20; ++i) {
       CREATE_KV_PAIR(key, i, val, i + 100);
       map.emplace(key, val);
@@ -87,7 +85,7 @@ void UnorderedMapOpTest() {
   }
 
   // Modify the fourth map entry (move assignment)
-  {
+  PAGE_DIVIDE("Modify the fourth map entry") {
     CREATE_KV_PAIR(key, 4, val, 25);
     auto iter = map.find(key);
     (*iter)->GetVal() = std::move(val);
@@ -95,13 +93,13 @@ void UnorderedMapOpTest() {
   }
 
   // Verify the modification took place
-  {
+  PAGE_DIVIDE("Verify the modification took place") {
     CREATE_KV_PAIR(key, 4, val, 25);
     REQUIRE(*(map[key]) == val);
   }
 
   // Modify the fourth map entry (copy assignment)
-  {
+  PAGE_DIVIDE("Copy assignment test") {
     CREATE_KV_PAIR(key, 4, val, 50);
     auto iter = map.find(key);
     (*iter)->GetVal() = val;
@@ -109,26 +107,26 @@ void UnorderedMapOpTest() {
   }
 
   // Verify the modification took place
-  {
+  PAGE_DIVIDE("Verify the copy assignment held") {
     CREATE_KV_PAIR(key, 4, val, 50);
     REQUIRE(*(map[key]) == val);
   }
 
   // Modify the fourth map entry (copy assignment)
-  {
+  PAGE_DIVIDE("Modify the fourth map entry (copy assignment)") {
     CREATE_KV_PAIR(key, 4, val, 100);
     auto x = map[key];
     (*x) = val;
   }
 
   // Verify the modification took place
-  {
+  PAGE_DIVIDE("Verify the modification took place") {
     CREATE_KV_PAIR(key, 4, val, 100);
     REQUIRE(*map[key] == val);
   }
 
   // Remove 15 entries from the map
-  {
+  PAGE_DIVIDE("Remove 15 entries from the map") {
     for (int i = 0; i < 15; ++i) {
       CREATE_KV_PAIR(key, i, val, i);
       map.erase(key);
@@ -141,7 +139,7 @@ void UnorderedMapOpTest() {
   }
 
   // Attempt to replace an existing key
-  {
+  PAGE_DIVIDE("Attempt to replace an existing key") {
     for (int i = 15; i < 20; ++i) {
       CREATE_KV_PAIR(key, i, val, 100);
       REQUIRE(map.try_emplace(key, val) == false);
@@ -153,13 +151,13 @@ void UnorderedMapOpTest() {
   }
 
   // Erase the entire map
-  {
+  PAGE_DIVIDE("Erase the entire map") {
     map.clear();
     REQUIRE(map.size() == 0);
   }
 
   // Add 100 entries to the map (should force a growth)
-  {
+  PAGE_DIVIDE("Add 100 entries to the map") {
     for (int i = 0; i < 100; ++i) {
       CREATE_KV_PAIR(key, i, val, i);
       map.emplace(key, val);
@@ -172,7 +170,7 @@ void UnorderedMapOpTest() {
   }
 
   // Copy the unordered_map
-  {
+  PAGE_DIVIDE("Copy the map") {
     unordered_map<Key, Val> cpy(map);
     for (int i = 0; i < 100; ++i) {
       CREATE_KV_PAIR(key, i, val, i);
@@ -182,7 +180,7 @@ void UnorderedMapOpTest() {
   }
 
   // Move the unordered_map
-  {
+  PAGE_DIVIDE("Move the map") {
     unordered_map<Key, Val> cpy = std::move(map);
     for (int i = 0; i < 100; ++i) {
       CREATE_KV_PAIR(key, i, val, i);
@@ -190,9 +188,6 @@ void UnorderedMapOpTest() {
     }
     map = std::move(cpy);
   }
-
-  // Emplace a move entry into the map
-
 }
 
 TEST_CASE("UnorderedMapOfIntInt") {

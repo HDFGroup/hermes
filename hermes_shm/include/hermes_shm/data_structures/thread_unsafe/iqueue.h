@@ -125,7 +125,7 @@ struct iqueue_iterator_templ {
 
   /** Create the end iterator */
   static iqueue_iterator_templ const end() {
-    const static iqueue_iterator_templ end_iter(true);
+    static const iqueue_iterator_templ end_iter(true);
     return end_iter;
   }
 

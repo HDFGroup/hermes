@@ -63,5 +63,5 @@ install:
   - spack repo add sds-repo
   - spack install mochi-thallium~cereal && spack load -r mochi-thallium~cereal
 
-script: ./ci/install_hermes.sh
+script: ./ci/install_hshm.sh
 

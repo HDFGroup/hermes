@@ -102,7 +102,7 @@ class PosixShmMmap : public MemoryBackend {
   }
 
   /** Map shared memory */
-  template<typename T=char>
+  template<typename T = char>
   T* _Map(size_t size, off64_t off) {
     T *ptr = reinterpret_cast<T*>(
       mmap64(nullptr, size, PROT_READ | PROT_WRITE,

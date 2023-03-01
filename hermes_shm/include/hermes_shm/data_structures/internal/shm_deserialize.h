@@ -32,7 +32,7 @@ struct ShmDeserialize {
   ShmDeserialize() = default;
 
   /** Construct from TypedPointer */
-  ShmDeserialize(const TypedPointer<ContainerT> &ar) {
+  explicit ShmDeserialize(const TypedPointer<ContainerT> &ar) {
     alloc_ = HERMES_MEMORY_REGISTRY->GetAllocator(ar.allocator_id_);
     header_ = alloc_->Convert<
       TypedPointer<ContainerT>,
@@ -40,7 +40,8 @@ struct ShmDeserialize {
   }
 
   /** Construct from allocator + offset pointer */
-  ShmDeserialize(TypedOffsetPointer<ContainerT> &ar, Allocator *alloc) {
+  explicit ShmDeserialize(TypedOffsetPointer<ContainerT> &ar,
+                          Allocator *alloc) {
     alloc_ = alloc;
     header_ = alloc_->Convert<
       TypedPointer<ContainerT>,
@@ -48,13 +49,13 @@ struct ShmDeserialize {
   }
 
   /** Construct from header (ptr) + allocator */
-  ShmDeserialize(header_t *header, Allocator *alloc) {
+  explicit ShmDeserialize(header_t *header, Allocator *alloc) {
     alloc_ = alloc;
     header_ = header;
   }
 
   /** Construct from header (ref) + allocator */
-  ShmDeserialize(header_t &header, Allocator *alloc) {
+  explicit ShmDeserialize(header_t &header, Allocator *alloc) {
     alloc_ = alloc;
     header_ = &header;
   }
@@ -95,4 +96,4 @@ struct ShmDeserialize {
 
 }  // namespace hermes_shm::ipc
 
-#endif //HERMES_INCLUDE_HERMES_DATA_STRUCTURES_INTERNAL_DESERIALIZE_H_
+#endif  // HERMES_INCLUDE_HERMES_DATA_STRUCTURES_INTERNAL_DESERIALIZE_H_

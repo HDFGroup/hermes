@@ -27,7 +27,7 @@ struct EndTemplateRecurrence {};
 /** Recurrence used to create argument pack */
 template<
   size_t idx,
-  typename T=EndTemplateRecurrence,
+  typename T = EndTemplateRecurrence,
   typename ...Args>
 struct ArgPackRecur {
   constexpr static bool is_rval = std::is_rvalue_reference<T>();
@@ -79,10 +79,10 @@ struct ArgPack {
   /** Variable argument pack */
   ArgPackRecur<0, Args...> recur_;
   /** Size of the argpack */
-  constexpr const static size_t size_ = sizeof...(Args);
+  static constexpr const size_t size_ = sizeof...(Args);
 
   /** General Constructor. */
-  ArgPack(Args&& ...args)
+  ArgPack(Args&& ...args)  // NOLINT
   : recur_(std::forward<Args>(args)...) {}
 
   /** Get forward reference */
@@ -166,8 +166,7 @@ class MergeArgPacks {
         // End template parameters
         std::forward<ArgPacksT>(packs),
         FORWARD_ARGPACK_PARAM(packs, cur_pack),
-        std::forward<CurArgs>(args)...
-      );
+        std::forward<CurArgs>(args)...);
     } else {
       return make_argpack(std::forward<CurArgs>(args)...);
     }
@@ -231,4 +230,4 @@ class ProductArgPacks {
 
 }  // namespace hermes_shm
 
-#endif //HERMES_INCLUDE_HERMES_TYPES_ARGPACK_H_
+#endif  // HERMES_INCLUDE_HERMES_TYPES_ARGPACK_H_

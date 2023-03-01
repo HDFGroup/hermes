@@ -37,7 +37,7 @@ class AutoTrace {
   static AutoTraceLog log_;
 
  public:
-  AutoTrace(const std::string &fname) : fname_(fname) {
+  explicit AutoTrace(const std::string &fname) : fname_(fname) {
     timer_.Resume();
   }
 
@@ -49,4 +49,4 @@ class AutoTrace {
 
 }  // namespace hermes_shm
 
-#endif //HERMES_INCLUDE_HERMES_UTIL_AUTO_TRACE_H_
+#endif  // HERMES_INCLUDE_HERMES_UTIL_AUTO_TRACE_H_

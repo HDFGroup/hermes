@@ -239,7 +239,7 @@ class unordered_map : public ShmContainer {
   void shm_init_main(TYPED_HEADER *header,
                      Allocator *alloc,
                      int num_buckets = 20,
-                     RealNumber max_capacity = RealNumber(4,5),
+                     RealNumber max_capacity = RealNumber(4, 5),
                      RealNumber growth = RealNumber(5, 4)) {
     shm_init_allocator(alloc);
     shm_init_header(header, alloc_, num_buckets, max_capacity, growth);
@@ -340,7 +340,7 @@ class unordered_map : public ShmContainer {
     if (iter == end()) return;
     // Acquire the bucket lock for a write (modifying collisions)
     hipc::ShmRef<BUCKET_T> bkt = *iter.bucket_;
-    
+
     // Erase the element from the collision list
     list<COLLISION_T> &collisions = bkt;
     collisions.erase(iter.collision_);

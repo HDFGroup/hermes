@@ -1,14 +1,14 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Distributed under BSD 3-Clause license.                                   *
- * Copyright by The HDF Group.                                               *
- * Copyright by the Illinois Institute of Technology.                        *
- * All rights reserved.                                                      *
- *                                                                           *
- * This file is part of Hermes. The full Hermes copyright notice, including  *
- * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the top directory. If you do not  *
- * have access to the file, you may request a copy from help@hdfgroup.org.   *
- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+* Distributed under BSD 3-Clause license.                                   *
+* Copyright by The HDF Group.                                               *
+* Copyright by the Illinois Institute of Technology.                        *
+* All rights reserved.                                                      *
+*                                                                           *
+* This file is part of Hermes. The full Hermes copyright notice, including  *
+* terms governing use, modification, and redistribution, is contained in    *
+* the COPYING file, which can be found at the top directory. If you do not  *
+* have access to the file, you may request a copy from help@hdfgroup.org.   *
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #ifndef HERMES_INCLUDE_HERMES_DATA_STRUCTURES_PAIR_H_
 #define HERMES_INCLUDE_HERMES_DATA_STRUCTURES_PAIR_H_
@@ -22,9 +22,9 @@ template<typename FirstT, typename SecondT>
 class pair;
 
 /**
- * MACROS used to simplify the string namespace
- * Used as inputs to the SHM_CONTAINER_TEMPLATE
- * */
+* MACROS used to simplify the string namespace
+* Used as inputs to the SHM_CONTAINER_TEMPLATE
+* */
 #define CLASS_NAME pair
 #define TYPED_CLASS pair<FirstT, SecondT>
 #define TYPED_HEADER ShmHeader<TYPED_CLASS>
@@ -82,8 +82,8 @@ struct ShmHeader<TYPED_CLASS> : public ShmBaseHeader {
 };
 
 /**
- * A string of characters.
- * */
+* A string of characters.
+* */
 template<typename FirstT, typename SecondT>
 class pair : public ShmContainer {
  public:
@@ -93,7 +93,7 @@ class pair : public ShmContainer {
   hipc::ShmRef<FirstT> first_;
   hipc::ShmRef<SecondT> second_;
 
-  public:
+ public:
   /** Default constructor */
   pair() = default;
 
@@ -161,8 +161,8 @@ class pair : public ShmContainer {
   }
 
   /**
-   * Destroy the shared-memory data.
-   * */
+  * Destroy the shared-memory data.
+  * */
   void shm_destroy_main() {
     header_->shm_destroy(alloc_);
   }
@@ -207,4 +207,4 @@ class pair : public ShmContainer {
 
 }  // namespace hermes_shm::ipc
 
-#endif //HERMES_INCLUDE_HERMES_DATA_STRUCTURES_PAIR_H_
+#endif  // HERMES_INCLUDE_HERMES_DATA_STRUCTURES_PAIR_H_

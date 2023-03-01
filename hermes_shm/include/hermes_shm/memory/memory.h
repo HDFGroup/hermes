@@ -80,7 +80,7 @@ typedef uint32_t slot_id_t;  // Uniquely ids a MemoryBackend slot
  * Stores an offset into a memory region. Assumes the developer knows
  * which allocator the pointer comes from.
  * */
-template<bool ATOMIC=false>
+template<bool ATOMIC = false>
 struct OffsetPointerBase {
   typedef typename std::conditional<ATOMIC,
     atomic<size_t>, nonatomic<size_t>>::type atomic_t;
@@ -131,7 +131,7 @@ struct OffsetPointerBase {
 
   /** Get the null pointer */
   static OffsetPointerBase GetNull() {
-    const static OffsetPointerBase p(-1);
+    static const OffsetPointerBase p(-1);
     return p;
   }
 
@@ -224,7 +224,7 @@ using TypedAtomicOffsetPointer = AtomicOffsetPointer;
  * A process-independent pointer, which stores both the allocator's
  * information and the offset within the allocator's region
  * */
-template<bool ATOMIC=false>
+template<bool ATOMIC = false>
 struct PointerBase {
   allocator_id_t allocator_id_;     /// Allocator the pointer comes from
   OffsetPointerBase<ATOMIC> off_;   /// Offset within the allocator's slot
@@ -271,7 +271,7 @@ struct PointerBase {
 
   /** Get the null pointer */
   static PointerBase GetNull() {
-    const static PointerBase p(allocator_id_t::GetNull(),
+    static const PointerBase p(allocator_id_t::GetNull(),
                                OffsetPointer::GetNull());
     return p;
   }

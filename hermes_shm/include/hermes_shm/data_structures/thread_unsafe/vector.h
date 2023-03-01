@@ -305,7 +305,7 @@ struct ShmHeader<TYPED_CLASS> : public ShmBaseHeader {
 template<typename T>
 class vector : public ShmContainer {
  public:
- SHM_CONTAINER_TEMPLATE((CLASS_NAME), (TYPED_CLASS), (TYPED_HEADER))
+  SHM_CONTAINER_TEMPLATE((CLASS_NAME), (TYPED_CLASS), (TYPED_HEADER))
 
  public:
   ////////////////////////////

@@ -204,4 +204,4 @@ struct ShmRef {
 
 }  // namespace hermes_shm::ipc
 
-#endif //HERMES_INCLUDE_HERMES_DATA_STRUCTURES_INTERNAL_SHM_ShmRef_H_
+#endif  // HERMES_INCLUDE_HERMES_DATA_STRUCTURES_INTERNAL_SHM_ShmRef_H_

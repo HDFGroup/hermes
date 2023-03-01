@@ -30,7 +30,7 @@ TEST_CASE("MemorySlot") {
   if (rank == 0) {
     {
       std::cout << "Creating SHMEM (rank 0)" << std::endl;
-      if(!backend.shm_init(MEGABYTES(1), shm_url)) {
+      if (!backend.shm_init(MEGABYTES(1), shm_url)) {
         throw std::runtime_error("Couldn't create backend");
       }
       std::cout << "Backend data: " << (void*)backend.data_ << std::endl;

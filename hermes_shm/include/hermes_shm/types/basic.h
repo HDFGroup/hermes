@@ -94,9 +94,9 @@ struct RealNumber {
     // d1 * d2
     res.decimal_ = other.decimal_ * decimal_;
     uint64_t frac =
-      (decimal_ * other.numerator_) + // d1 * n2
-      (other.decimal_ * numerator_) + // d2 * n1
-      (numerator_ * other.numerator_) / precision; // n1 * n2 / p
+      (decimal_ * other.numerator_) +  // d1 * n2
+      (other.decimal_ * numerator_) +  // d2 * n1
+      (numerator_ * other.numerator_) / precision;  // n1 * n2 / p
     res.decimal_ += frac / precision;
     res.numerator_ = frac % precision;
     return res;

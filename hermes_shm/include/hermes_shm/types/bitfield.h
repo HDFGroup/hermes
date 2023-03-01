@@ -22,7 +22,7 @@ namespace hermes_shm {
 /**
  * A generic bitfield template
  * */
-template<typename T=uint32_t>
+template<typename T = uint32_t>
 struct bitfield {
   T bits_;
 
@@ -72,4 +72,4 @@ typedef bitfield<uint32_t> bitfield32_t;
 
 }  // namespace hermes_shm
 
-#endif //HERMES_INCLUDE_HERMES_TYPES_BITFIELD_H_
+#endif  // HERMES_INCLUDE_HERMES_TYPES_BITFIELD_H_

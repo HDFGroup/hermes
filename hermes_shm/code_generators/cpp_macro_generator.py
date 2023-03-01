@@ -15,13 +15,3 @@ CppMacroGenerator().generate(
     ["CLASS_NAME", "TYPED_CLASS", "TYPED_HEADER"],
     ["TYPE_UNWRAP", "TYPE_UNWRAP", "TYPE_UNWRAP"],
     "HERMES_DATA_STRUCTURES_INTERNAL_SHM_CONTAINER_MACRO_H_")
-
-CppMacroGenerator().generate(
-    os.path.join(PROJECT_ROOT,
-                 f"{DATA_STRUCTURE_TEMPLATES}/shm_container_extend_template.h"),
-    os.path.join(PROJECT_ROOT,
-                 f"{DATA_STRUCTURE_INTERNAL}/shm_container_extend_macro.h"),
-    "SHM_CONTAINER_EXTEND_TEMPLATE",
-    ["CLASS_NAME", "TYPED_CLASS", "TYPED_HEADER"],
-    ["TYPE_UNWRAP", "TYPE_UNWRAP", "TYPE_UNWRAP"],
-    "HERMES_DATA_STRUCTURES_INTERNAL_SHM_CONTAINER_EXTEND_MACRO_H_")

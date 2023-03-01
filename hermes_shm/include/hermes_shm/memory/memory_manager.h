@@ -152,7 +152,7 @@ class MemoryManager {
   /**
    * Convert a process-independent pointer into a process-specific pointer.
    * */
-  template<typename T, typename POINTER_T=Pointer>
+  template<typename T, typename POINTER_T = Pointer>
   T* Convert(const POINTER_T &p) {
     if (p.IsNull()) {
       return nullptr;
@@ -167,7 +167,7 @@ class MemoryManager {
    * @param allocator_id the allocator the pointer belongs to
    * @param ptr the pointer to convert
    * */
-  template<typename T, typename POINTER_T=Pointer>
+  template<typename T, typename POINTER_T = Pointer>
   POINTER_T Convert(allocator_id_t allocator_id, T *ptr) {
     return GetAllocator(allocator_id)->template
       Convert<T, POINTER_T>(ptr);
@@ -179,7 +179,7 @@ class MemoryManager {
    *
    * @param ptr the pointer to convert
    * */
-  template<typename T, typename POINTER_T=Pointer>
+  template<typename T, typename POINTER_T = Pointer>
   POINTER_T Convert(T *ptr) {
     for (auto &[alloc_id, alloc] : HERMES_MEMORY_REGISTRY->allocators_) {
       if (alloc->ContainsPtr(ptr)) {

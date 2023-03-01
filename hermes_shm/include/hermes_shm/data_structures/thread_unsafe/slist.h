@@ -182,7 +182,7 @@ struct slist_iterator_templ {
 
   /** Create the end iterator */
   static slist_iterator_templ const end() {
-    const static slist_iterator_templ end_iter(true);
+    static const slist_iterator_templ end_iter(true);
     return end_iter;
   }
 
@@ -444,7 +444,7 @@ class slist : public ShmContainer {
     }
     return 0;
   }
-  
+
   /** Find an element in this slist */
   slist_iterator<T> find(const T &entry) {
     for (auto iter = begin(); iter != end(); ++iter) {

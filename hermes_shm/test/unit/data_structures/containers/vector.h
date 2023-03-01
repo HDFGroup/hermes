@@ -34,4 +34,4 @@ class VectorTestSuite : public ListTestSuite<T, Container> {
   }
 };
 
-#endif //HERMES_TEST_UNIT_DATA_STRUCTURES_CONTAINERS_VECTOR_H_
+#endif  // HERMES_TEST_UNIT_DATA_STRUCTURES_CONTAINERS_VECTOR_H_
