@@ -55,3 +55,8 @@ if(HERMES_INSTALL_TESTS)
         )
     endforeach()
 endif()
+
+preload_hermes(python hermes_posix
+        "python3 ${CMAKE_CURRENT_SOURCE_DIR}/simple_io.py /tmp/test_python.txt")
+
+#preload_hermes(python hermes_posix "ior -w -r ")

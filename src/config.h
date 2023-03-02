@@ -49,7 +49,7 @@ class BaseConfig {
     if (path.size() == 0) {
       return;
     }
-    LOG(INFO) << "ParseConfig-LoadFile" << std::endl;
+    LOG(INFO) << "ParseConfig-LoadFile: " << path << std::endl;
     YAML::Node yaml_conf = YAML::LoadFile(path);
     LOG(INFO) << "ParseConfig-LoadComplete" << std::endl;
     ParseYAML(yaml_conf);

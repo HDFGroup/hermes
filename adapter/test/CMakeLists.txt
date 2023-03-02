@@ -51,6 +51,14 @@ function(mpi_daemon test_exec test_mpi_proc test_args arg_name daemon_procs)
             "${test_args}")
 endfunction()
 
+function(preload_hermes name preload exec)
+    set(test_name Test_${preload}_${name})
+    set(script ${CMAKE_SOURCE_DIR}/adapter/test/preload.sh)
+    add_test(NAME ${test_name} COMMAND ${BASH_PROGRAM} ${script}
+            "${CMAKE_SOURCE_DIR}" "${CMAKE_BINARY_DIR}"
+            "${preload}" "${exec}")
+endfunction()
+
 enable_testing()
 
 if(HERMES_ENABLE_POSIX_ADAPTER)
