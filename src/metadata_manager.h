@@ -123,12 +123,15 @@ class MetadataManager {
    /**
     * Create a unique blob name using BucketId
     * */
-  hipc::charbuf CreateBlobName(BucketId bkt_id,
-                               const hipc::charbuf &blob_name) {
-    hipc::charbuf new_name(sizeof(bkt_id) + blob_name.size());
+  static hipc::charbuf CreateBlobName(BucketId bkt_id,
+                                      const hipc::charbuf &blob_name) {
+    hipc::charbuf new_name(sizeof(uint64_t) + sizeof(uint32_t)
+                           + blob_name.size());
     size_t off = 0;
-    memcpy(new_name.data_mutable() + off, &bkt_id, sizeof(BucketId));
-    off += sizeof(BucketId);
+    memcpy(new_name.data_mutable() + off, &bkt_id.unique_, sizeof(uint64_t));
+    off += sizeof(uint64_t);
+    memcpy(new_name.data_mutable() + off, &bkt_id.node_id_, sizeof(uint32_t));
+    off += sizeof(uint32_t);
     memcpy(new_name.data_mutable() + off, blob_name.data(), blob_name.size());
     return new_name;
   }

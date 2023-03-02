@@ -50,6 +50,7 @@ void TestManyPuts(hapi::Hermes *hermes) {
     char nonce = i % 256;
     hermes::Blob blob;
     bkt->GetBlobId(name, blob_id);
+    REQUIRE(!blob_id.IsNull());
     bkt->Get(blob_id, blob, ctx);
     REQUIRE(blob.size() == blob_size);
     REQUIRE(VerifyBuffer(blob.data(), blob_size, nonce));
@@ -135,6 +136,16 @@ void TestBlobDestroy(hapi::Hermes *hermes) {
     bkt->GetBlobId("0", blob_id_get);
     REQUIRE(blob_id_get.IsNull());
   }
+}
+
+TEST_CASE("TestCreateBlobName") {
+  hermes::BucketId bkt_id(1, 1);
+  hipc::charbuf blob_name("0");
+  hipc::charbuf n1 =
+      hermes::MetadataManager::CreateBlobName(bkt_id, blob_name);
+  hipc::charbuf n2 =
+      hermes::MetadataManager::CreateBlobName(bkt_id, blob_name);
+  REQUIRE(n1 == n2);
 }
 
 TEST_CASE("TestManyPuts") {
