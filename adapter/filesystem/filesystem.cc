@@ -98,7 +98,7 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
 
   for (const auto &p : mapping) {
     const Blob blob_wrap((const char*)ptr + data_offset, p.blob_size_);
-    hipc::charbuf blob_name(p.CreateBlobName(kPageSize));
+    hipc::charbuf blob_name(p.CreateBlobName());
     BlobId blob_id;
     opts.type_ = type_;
     opts.backend_off_ = p.page_ * kPageSize;
@@ -148,7 +148,7 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
 
   for (const auto &p : mapping) {
     Blob blob_wrap((const char*)ptr + data_offset, p.blob_size_);
-    hipc::charbuf blob_name(p.CreateBlobName(kPageSize));
+    hipc::charbuf blob_name(p.CreateBlobName());
     BlobId blob_id;
     opts.backend_off_ = p.page_ * kPageSize;
     opts.backend_size_ = GetBackendSize(opts.backend_off_,

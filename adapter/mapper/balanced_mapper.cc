@@ -32,6 +32,7 @@ void BalancedMapper::map(size_t off, size_t size,
     BlobPlacement p;
     p.bucket_off_ = off + size_mapped;
     p.page_ = p.bucket_off_ / kPageSize;
+    p.page_size_ = page_size;
     p.blob_off_ = p.bucket_off_ % kPageSize;
     auto left_size_page = kPageSize - p.blob_off_;
     p.blob_size_ = left_size_page < size - size_mapped ? left_size_page

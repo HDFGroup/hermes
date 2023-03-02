@@ -15,6 +15,7 @@ include_directories(
 set(API_TESTS
         test_rpc
         test_bucket
+        test_partial_put_get
         test_vbucket
         test_buffer_pool)
 
