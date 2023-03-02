@@ -134,7 +134,7 @@ class RpcContext {
     } else {\
       hermes_shm::PassArgPack::Call(\
           std::forward<ArgPackT>(pack),\
-          [this](auto&& ...args) constexpr {\
+          [this, node_id](auto&& ...args) constexpr {\
             if constexpr(std::is_same_v<TYPE_UNWRAP(RET), void>) {\
               this->rpc_->Call<TYPE_UNWRAP(RET)>(\
                   node_id, "Rpc" #BaseName,\
