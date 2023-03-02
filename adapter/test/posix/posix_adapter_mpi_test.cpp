@@ -330,7 +330,7 @@ int fh_cmp;
 int status_orig;
 size_t size_read_orig;
 size_t size_written_orig;
-
+bool is_scase_ = false;
 void test_open(const char* path, int flags, ...) {
   int mode = 0;
   if (flags & O_CREAT || flags & O_TMPFILE) {

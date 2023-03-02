@@ -1,3 +1,6 @@
+include_directories(${CMAKE_SOURCE_DIR}/src/api)
+include_directories(${CMAKE_SOURCE_DIR}/src)
+
 #------------------------------------------------------------------------------
 # Posix Adapter tests
 #------------------------------------------------------------------------------
@@ -9,7 +12,7 @@ add_executable(posix_adapter_mpi_test posix_adapter_mpi_test.cpp ${ADAPTER_COMMO
 mpi(posix_adapter_mpi_test 2 "")
 
 add_executable(hermes_posix_adapter_test posix_adapter_test.cpp ${ADAPTER_COMMON})
-target_link_libraries(hermes_posix_adapter_test hermes_posix)
+target_link_libraries(hermes_posix_adapter_test hermes_posix yaml-cpp)
 add_dependencies(hermes_posix_adapter_test hermes_posix hermes_daemon)
 set_target_properties(hermes_posix_adapter_test PROPERTIES COMPILE_FLAGS "-DHERMES_INTERCEPT=1")
 gcc_hermes(hermes_posix_adapter_test "" "~[request_size=range-large]" hermes 0)

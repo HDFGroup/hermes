@@ -212,6 +212,8 @@ Status Bucket::PartialPutOrCreate(const std::string &blob_name,
       }
     }
   }
+  LOG(INFO) << "Modifying full_blob at offset: " << blob_off
+            << " for total size: " << blob.size() << std::endl;
   // Ensure the blob can hold the update
   full_blob.resize(std::max(full_blob.size(), blob_off + blob.size()));
   // Modify the blob
@@ -220,6 +222,8 @@ Status Bucket::PartialPutOrCreate(const std::string &blob_name,
   if (opts.adapter_mode_ != AdapterMode::kBypass) {
     Put(blob_name, full_blob, blob_id, ctx, opts);
   }
+  LOG(INFO) << "Partially put to blob: (" << blob_id.unique_
+            << ", " << blob_id.node_id_ << ")" << std::endl;
   return Status();
 }
 

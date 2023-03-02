@@ -223,11 +223,14 @@ cl::Parser define_options() {
 }
 
 namespace test {
+std::string path_orig;
+std::string path_cmp;
 int fh_orig;
 int fh_cmp;
 int status_orig;
 size_t size_read_orig;
 size_t size_written_orig;
+bool is_scase_ = false;
 void test_open(const char* path, int flags, ...) {
   int mode = 0;
   if (flags & O_CREAT || flags & O_TMPFILE) {
@@ -244,6 +247,8 @@ void test_open(const char* path, int flags, ...) {
   } else {
     cmp_path = info.existing_file_cmp;
   }
+  path_orig = path;
+  path_cmp = cmp_path;
   if (flags & O_CREAT || flags & O_TMPFILE) {
     fh_orig = open(path, flags, mode);
     fh_cmp = open(cmp_path.c_str(), flags, mode);
@@ -261,9 +266,49 @@ void test_close() {
   REQUIRE(status == status_orig);
 }
 void test_write(const void* ptr, size_t size) {
-  size_written_orig = write(fh_orig, ptr, size);
-  size_t size_written = write(fh_cmp, ptr, size);
-  REQUIRE(size_written == size_written_orig);
+#if HERMES_INTERCEPT == 1
+  hermes::BlobId blob_id;
+  hapi::Blob orig_blob, read_blob;
+  std::shared_ptr<hapi::Bucket> bkt;
+  hapi::Context ctx;
+
+  if (is_scase_) {
+    blob_id.unique_ = 3;
+    blob_id.node_id_ = 1;
+    bkt = HERMES->GetBucket(path_orig);
+    bkt->Get(blob_id, orig_blob, ctx);
+    char *data = (char*)calloc(MEGABYTES(1), 1);
+    ssize_t ret =
+        pread(fh_cmp, data, MEGABYTES(1), 0);
+    if (ret != MEGABYTES(1)) {
+      std::cout << "Pread failed?" << std::endl;
+      exit(1);
+    }
+  }
+#endif
+
+  if (!is_scase_) {
+    size_written_orig = write(fh_orig, ptr, size);
+    size_t size_written = write(fh_cmp, ptr, size);
+    REQUIRE(size_written == size_written_orig);
+  }
+
+#if HERMES_INTERCEPT == 1
+  if (is_scase_) {
+    bkt->Get(blob_id, read_blob, ctx);
+    char *data = (char*)calloc(MEGABYTES(1), 1);
+    size_t ret = pread(fh_cmp, data, MEGABYTES(1), 0);
+    bool equal = CompareBuffers(data,
+                                read_blob.size(),
+                                read_blob.data(),
+                                read_blob.size(),
+                                65536);
+    if (!equal) {
+      std::cout << "Failed" << std::endl;
+      exit(1);
+    }
+  }
+#endif
 }
 void test_read(char* ptr, size_t size) {
   size_read_orig = read(fh_orig, ptr, size);
