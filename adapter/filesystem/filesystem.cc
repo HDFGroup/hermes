@@ -26,6 +26,8 @@ namespace hermes::adapter::fs {
 
 File Filesystem::Open(AdapterStat &stat, const std::string &path) {
   File f;
+  auto mdm = HERMES_FS_METADATA_MANAGER;
+  stat.adapter_mode_ = mdm->GetAdapterMode(path);
   io_client_->RealOpen(f, stat, path);
   if (!f.status_) { return f; }
   Open(stat, f, path);
@@ -45,7 +47,6 @@ void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
     stat.bkt_id_ = HERMES->GetBucket(path, ctx, opts);
     // Update bucket stats
     // TODO(llogan): can avoid two unordered_map queries here
-    stat.adapter_mode_ = mdm->GetAdapterMode(path);
     stat.page_size_ = mdm->GetAdapterPageSize(path);
     stat.backend_size_ = stat.bkt_id_->GetSize(IoClientContext(type_));
     // Allocate internal hermes data
@@ -286,7 +287,9 @@ int Filesystem::Sync(File &f, AdapterStat &stat) {
   IoClientContext opts;
   opts.type_ = type_;
   opts.adapter_mode_ = stat.adapter_mode_;
-  stat.bkt_id_->Flush(opts);
+  if (stat.adapter_mode_ == AdapterMode::kDefault) {
+    stat.bkt_id_->Flush(opts);
+  }
   return 0;
 }
 

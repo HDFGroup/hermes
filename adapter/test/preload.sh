@@ -17,6 +17,7 @@ sleep ${SLEEP_TIME}
 # Run the program
 echo "RUNNING PROGRAM"
 export LSAN_OPTIONS=suppressions="${CMAKE_SOURCE_DIR}/test/data/asan.supp"
+echo LD_PRELOAD=${CMAKE_BINARY_DIR}/bin/lib${PRELOAD_NAME}.so ${FULL_EXEC}
 LD_PRELOAD=${CMAKE_BINARY_DIR}/bin/lib${PRELOAD_NAME}.so \
 ${FULL_EXEC}
 status=$?

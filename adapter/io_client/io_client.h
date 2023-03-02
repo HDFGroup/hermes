@@ -124,6 +124,7 @@ struct IoClientStats {
   timespec st_mtim_;     /**< time of last modification */
   timespec st_ctim_;     /**< time of last status change */
   std::string mode_str_; /**< mode used for fopen() */
+  AdapterMode adapter_mode_;  /**< Mode used for adapter */
 
   int fd_;          /**< real file descriptor */
   FILE *fh_;        /**< real STDIO file handler */

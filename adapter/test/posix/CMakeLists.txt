@@ -59,4 +59,4 @@ endif()
 preload_hermes(python hermes_posix
         "python3 ${CMAKE_CURRENT_SOURCE_DIR}/simple_io.py /tmp/test_python.txt")
 
-#preload_hermes(python hermes_posix "ior -w -r ")
+preload_hermes(simple_ior hermes_posix "ior -w -r -o /tmp/test_ior.txt")

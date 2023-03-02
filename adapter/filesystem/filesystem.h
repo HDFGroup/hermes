@@ -52,8 +52,6 @@ struct AdapterStat : public IoClientStats {
   std::shared_ptr<hapi::VBucket> vbkt_id_;
   /** Page size used for file */
   size_t page_size_;
-  /** Mode used for adapter */
-  AdapterMode adapter_mode_;
 
   /** Default constructor. */
   AdapterStat()
