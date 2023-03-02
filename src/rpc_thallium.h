@@ -48,6 +48,11 @@ class ThalliumRpc : public RpcContext {
   void StopDaemon();
   std::string GetServerName(u32 node_id);
 
+  template<typename RpcLambda>
+  void RegisterRpc(const char *name, RpcLambda &&lambda) {
+    server_engine_->define(name, std::forward<RpcLambda>(lambda));
+  }
+
   /** RPC call */
   template <typename ReturnType, typename... Args>
   ReturnType Call(u32 node_id, const char *func_name, Args&&... args) {

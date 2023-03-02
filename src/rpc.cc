@@ -12,6 +12,7 @@
 
 #include "rpc.h"
 #include "hermes.h"
+#include <functional>
 
 namespace hermes {
 

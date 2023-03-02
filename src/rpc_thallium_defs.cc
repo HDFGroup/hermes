@@ -25,6 +25,167 @@ void ThalliumRpc::DefineRpcs() {
   RPC_CLASS_INSTANCE_DEFS_END
 
   RPC_AUTOGEN_START
+  /*RegisterRpc("RpcGetOrCreateBucket", [mdm](const request &req,
+                                            hipc::charbuf &bkt_name,
+                                            const IoClientContext &opts) {
+    auto ret = mdm->LocalGetOrCreateBucket(bkt_name, opts);
+    req.respond(ret);
+  });
+  RegisterRpc("RpcGetBucketId", [mdm](const request &req,
+                                      hipc::charbuf &bkt_name) {
+    auto ret = mdm->LocalGetBucketId(bkt_name);
+    req.respond(ret);
+  });
+  RegisterRpc("RpcRpcGetBucketSize", [mdm](const request &req,
+                                           BucketId bkt_id,
+                                           const IoClientContext &opts) {
+    auto ret = mdm->LocalGetBucketSize(bkt_id, opts);
+    req.respond(ret);
+  });
+  RegisterRpc("RpcLockBucket", [mdm](const request &req,
+                                     BucketId bkt_id,
+                                     MdLockType lock_type) {
+    mdm->LocalLockBucket(bkt_id, lock_type);
+    req.respond(true);
+  });
+  RegisterRpc("RpcUnlockBucket", [mdm](const request &req,
+                                       BucketId bkt_id,
+                                       MdLockType lock_type) {
+    mdm->LocalUnlockBucket(bkt_id, lock_type);
+    req.respond(true);
+  });
+  RegisterRpc("RpcBucketContainsBlob", [mdm](const request &req,
+                                             BucketId bkt_id,
+                                             BlobId blob_id) {
+    auto ret = mdm->LocalBucketContainsBlob(bkt_id, blob_id);
+    req.respond(ret);
+  });
+  RegisterRpc("RpcBucketGetContainedBlobIds", [mdm](const request &req,
+                                                    BucketId bkt_id) {
+    auto ret = mdm->LocalBucketGetContainedBlobIds(bkt_id);
+    req.respond(ret);
+  });
+  RegisterRpc("RpcRenameBucket", [mdm](const request &req,
+                                       BucketId bkt_id,
+                                       hipc::charbuf &new_bkt_name) {
+    auto ret = mdm->LocalRenameBucket(bkt_id, new_bkt_name);
+    req.respond(ret);
+  });
+  RegisterRpc("RpcRpcDestroyBucket", [mdm](const request &req,
+                                           BucketId bkt_id) {
+    auto ret = mdm->LocalDestroyBucket(bkt_id);
+    req.respond(ret);
+  });
+  RegisterRpc("RpcBucketPutBlob", [mdm](const request &req, BucketId bkt_id,
+                                        const hipc::charbuf &blob_name,
+                                        size_t blob_size,
+                                        hipc::vector<BufferInfo> &buffers) {
+    auto ret = mdm->LocalBucketPutBlob(bkt_id, blob_name, blob_size, buffers);
+    req.respond(ret);
+  });
+  RegisterRpc("RpcBucketRegisterBlobId", [mdm](const request &req,
+                                               BucketId bkt_id,
+                                               BlobId blob_id,
+                                               size_t orig_blob_size,
+                                               size_t new_blob_size,
+                                               bool did_create,
+                                               const IoClientContext &opts) {
+    auto ret = mdm->LocalBucketRegisterBlobId(bkt_id, blob_id,
+                                   orig_blob_size, new_blob_size,
+                                   did_create, opts);
+    req.respond(ret);
+  });
+  RegisterRpc("RpcBucketUnregisterBlobId", [mdm](const request &req,
+                                                 BucketId bkt_id,
+                                                 BlobId blob_id,
+                                                 const IoClientContext &opts) {
+    auto ret = mdm->LocalBucketUnregisterBlobId(bkt_id, blob_id, opts);
+    req.respond(ret);
+  });
+  RegisterRpc("RpcBucketTryCreateBlob", [mdm](const request &req,
+                                              BucketId bkt_id,
+                                              const hipc::charbuf &blob_name) {
+    auto ret = mdm->LocalBucketTryCreateBlob(bkt_id, blob_name);
+    req.respond(ret);
+  });
+  RegisterRpc("RpcBucketGetBlob", [mdm](const request &req,
+                                        BlobId blob_id) {
+    auto ret = mdm->LocalBucketGetBlob(blob_id);
+    req.respond(ret);
+  });
+  RegisterRpc("RpcGetBlobId", [mdm](const request &req,
+                                    BucketId bkt_id,
+                                    const hipc::charbuf &blob_name) {
+    auto ret = mdm->LocalGetBlobId(bkt_id, blob_name);
+    req.respond(ret);
+  });
+  RegisterRpc("RpcGetBlobName", [mdm](const request &req,
+                                      BlobId blob_id) {
+    auto ret = mdm->LocalGetBlobName(blob_id);
+    req.respond(ret);
+  });
+  RegisterRpc("RpcLockBlob", [mdm](const request &req,
+                                   BlobId blob_id,
+                                   MdLockType lock_type) {
+    auto ret = mdm->LocalLockBlob(blob_id, lock_type);
+    req.respond(ret);
+  });
+  RegisterRpc("RpcUnlockBlob", [mdm](const request &req,
+                                     BlobId blob_id,
+                                     MdLockType lock_type) {
+    auto ret = mdm->LocalUnlockBlob(blob_id, lock_type);
+    req.respond(ret);
+  });
+  RegisterRpc("RpcGetBlobBuffers", [mdm](const request &req,
+                                         BlobId blob_id) {
+    auto ret = mdm->LocalGetBlobBuffers(blob_id);
+    req.respond(ret);
+  });
+  RegisterRpc("RpcRenameBlob", [mdm](const request &req,
+                                     BucketId bkt_id,
+                                     BlobId blob_id,
+                                     hipc::charbuf &new_blob_name) {
+    auto ret = mdm->LocalRenameBlob(bkt_id, blob_id, new_blob_name);
+    req.respond(ret);
+  });
+  RegisterRpc("RpcDestroyBlob", [mdm](const request &req,
+                                      BucketId bkt_id,
+                                      BlobId blob_id) {
+    auto ret = mdm->LocalDestroyBlob(bkt_id, blob_id);
+    req.respond(ret);
+  });*/
+  // TODO(llogan): Are we replacing VBuckets with Tags?
+  /*
+  RegisterRpc("RpcGetOrCreateVBucket", [mdm]() {
+    mdm->LocalGetOrCreateVBucket();
+  });
+  RegisterRpc("RpcGetVBucketId", [mdm]() {
+    mdm->LocalGetVBucketId();
+  });
+  RegisterRpc("RpcVBucketLinkBlob", [mdm]() {
+    mdm->LocalVBucketLinkBlob();
+  });
+  RegisterRpc("RpcVBucketUnlinkBlob", [mdm]() {
+    mdm->LocalVBucketUnlinkBlob();
+  });
+  RegisterRpc("RpcVBucketGetLinks",[mdm]() {
+    mdm->LocalVBucketGetLinks();
+  });
+  RegisterRpc("RpcVBucketContainsBlob", [mdm]() {
+    mdm->LocalVBucketContainsBlob();
+  });
+  RegisterRpc("RpcRenameVBucket", [mdm]() {
+    mdm->LocalRenameVBucket();
+  });
+  RegisterRpc("RpcDestroyVBucket", [mdm]() {
+    mdm->LocalDestroyVBucket();
+  });*/
+  /*RegisterRpc("RpcUpdateTargetCapacity", [mdm](const request &req,
+                                               TargetId tid,
+                                               off64_t offset) {
+    mdm->LocalUpdateTargetCapacity(tid, offset);
+    req.respond(true);
+  });*/
   RPC_AUTOGEN_END
 }
 
