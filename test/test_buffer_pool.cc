@@ -32,19 +32,21 @@ void MainPosttest() {
 
 TEST_CASE("TestBufferPool") {
   std::vector<std::pair<size_t, int>> sizes = {
-    /*{KILOBYTES(4), 1},   // 4KB blob on 1 target
+    {23, 1},   // 23B blob on 1 target
+    {KILOBYTES(1), 1},   // 1KB blob on 1 target
+    {KILOBYTES(4), 1},   // 4KB blob on 1 target
     {KILOBYTES(8), 1},   // 8KB blob on 1 target
     {KILOBYTES(16), 1},  // 16KB blob on 1 target
     {KILOBYTES(64), 1},  // 64KB blob on 1 target
-    {MEGABYTES(4), 1},  // 4MB blob on 1 target*/
+    {MEGABYTES(4), 1},  // 4MB blob on 1 target
 
-    /*{KILOBYTES(4), 3},   // 4KB blob on 3 targets
+    {KILOBYTES(4), 3},   // 4KB blob on 3 targets
     {KILOBYTES(8), 3},   // 8KB blob on 3 targets
     {KILOBYTES(16), 3},  // 16KB blob on 3 targets
-    {KILOBYTES(64), 3},  // 64KB blob on 3 targets*/
+    {KILOBYTES(64), 3},  // 64KB blob on 3 targets
     {MEGABYTES(4), 3},  // 4MB blob on 3 targets
+    {MEGABYTES(4) + KILOBYTES(32), 3},  // 4MB blob on 3 targets
   };
-  HERMES->bpm_;
 
   for (auto &[size, num_targets] : sizes) {
     // Divide the blob among targets
