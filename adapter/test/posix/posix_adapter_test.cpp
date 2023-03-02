@@ -189,6 +189,11 @@ int posttest(bool compare_data = true) {
           break;
         }
       }
+      if (char_mismatch != 0) {
+        std::cout << "The files " <<  info.existing_file
+                  << " and " << info.existing_file_cmp
+                  << " had mismatched characters" << std::endl;
+      }
       REQUIRE(char_mismatch == 0);
     }
   }
