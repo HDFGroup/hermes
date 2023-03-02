@@ -4,6 +4,7 @@ set(HERMES_ADAPTER_TEST_DIR ${HERMES_ADAPTER_DIR}/test)
 
 find_package(Catch2 REQUIRED)
 find_program(BASH_PROGRAM bash)
+find_package(OpenMP REQUIRED COMPONENTS C CXX)
 
 function(gcc exec args)
     set(test_name Test${exec} COMMAND)

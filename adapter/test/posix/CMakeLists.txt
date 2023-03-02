@@ -26,22 +26,28 @@ mpi_daemon(hermes_posix_adapter_mpi_test 2 "~[request_size=range-large]" "" 1)
 mpi_daemon(hermes_posix_adapter_mpi_test 2 "[request_size=range-large]" "large" 1)
 
 include_directories(${CMAKE_SOURCE_DIR}/adapter)
-add_executable(posix_simple_io simple_io.cc)
-add_dependencies(posix_simple_io hermes_posix)
-target_link_libraries(posix_simple_io hermes_posix)
+add_executable(posix_simple_io_mpi posix_simple_io_mpi.cc)
+add_dependencies(posix_simple_io_mpi hermes_posix)
+target_link_libraries(posix_simple_io_mpi hermes_posix)
+
+add_executable(posix_simple_io_omp posix_simple_io_omp.cc)
+add_dependencies(posix_simple_io_omp hermes_posix)
+target_link_libraries(posix_simple_io_omp hermes_posix)
 
 set(POSIX_TESTS
   posix_adapter_test
   hermes_posix_adapter_test
   posix_adapter_mpi_test
   hermes_posix_adapter_mpi_test
-  posix_simple_io
+  posix_simple_io_mpi
+  posix_simple_io_omp
 )
 
 foreach(program ${POSIX_TESTS})
   target_include_directories(${program} PRIVATE ${HERMES_ADAPTER_DIR})
   target_include_directories(${program} PRIVATE ${HERMES_ADAPTER_TEST_DIR})
-  target_link_libraries(${program} Catch2::Catch2 -lstdc++fs -lc MPI::MPI_CXX)
+  target_link_libraries(${program} Catch2::Catch2 -lstdc++fs -lc
+          MPI::MPI_CXX OpenMP::OpenMP_CXX)
 endforeach()
 
 if(HERMES_INSTALL_TESTS)
