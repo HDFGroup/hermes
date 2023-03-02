@@ -25,6 +25,8 @@ class BufferPool;
 struct BpCoin {
   size_t count_;
   size_t slab_size_;
+
+  BpCoin() : count_(0) {}
 };
 
 struct BpSlot {

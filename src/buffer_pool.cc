@@ -143,6 +143,7 @@ void BufferPool::AllocateBuffers(SubPlacement &plcmnt,
   hipc::ShmRef<BpFreeListPair> target_free_list_p =
       (*target_allocs_)[target_free_list_start];
   hipc::ShmRef<BpFreeListStat> &target_stat = target_free_list_p->first_;
+  size_t rem_size = plcmnt.size_;
 
   for (size_t i = 0; i < num_slabs; ++i) {
     if (coins[i].count_ == 0) { continue; }
@@ -162,11 +163,10 @@ void BufferPool::AllocateBuffers(SubPlacement &plcmnt,
       info.t_slab_ = j;
       info.blob_off_ = blob_off;
       info.blob_size_ = slot.t_size_;
-      if (plcmnt.size_ < info.t_size_) {
-        info.blob_size_ = plcmnt.size_;
-      } else if (blob_off + info.blob_size_ > plcmnt.size_) {
-        info.blob_size_ = plcmnt.size_ - blob_off;
+      if (rem_size < slot.t_size_) {
+        info.blob_size_ = rem_size;
       }
+      rem_size -= info.blob_size_;
       info.tid_ = plcmnt.tid_;
       blob_off += info.blob_size_;
       buffers.emplace_back(info);
@@ -233,11 +233,11 @@ std::vector<BpCoin> BufferPool::CoinSelect(hipc::ShmRef<DeviceInfo> &dev_info,
 
     // Divide rem_size into slabs
     if (rem_size > slab_size) {
-      coins[i].count_ = rem_size / slab_size;
+      coins[i].count_ += rem_size / slab_size;
       coins[i].slab_size_ = slab_size;
       rem_size %= slab_size;
     } else {
-      coins[i].count_ = 1;
+      coins[i].count_ += 1;
       coins[i].slab_size_ = slab_size;
       rem_size = 0;
     }
