@@ -12,7 +12,6 @@
 
 #include "hermes.h"
 #include "bucket.h"
-#include "vbucket.h"
 
 namespace hermes::api {
 
@@ -144,12 +143,6 @@ std::shared_ptr<Bucket> Hermes::GetBucket(std::string name,
                                           Context ctx,
                                           IoClientContext opts) {
   return std::make_shared<Bucket>(name, ctx, opts);
-}
-
-std::shared_ptr<VBucket> Hermes::GetVBucket(std::string name,
-                                            Context ctx,
-                                            IoClientContext opts) {
-  return std::make_shared<VBucket>(name, ctx, opts);
 }
 
 }  // namespace hermes::api

@@ -51,7 +51,6 @@ set(HERMES_SRCS
   ${CMAKE_CURRENT_SOURCE_DIR}/metadata_manager.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/api/bucket.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/api/hermes.cc
-  ${CMAKE_CURRENT_SOURCE_DIR}/api/vbucket.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/buffer_pool.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/buffer_organizer.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/data_placement_engine.cc
@@ -124,7 +123,6 @@ target_link_libraries(finalize_hermes hermes)
 set(HERMES_HEADERS
   ${CMAKE_CURRENT_SOURCE_DIR}/api/bucket.h
   ${CMAKE_CURRENT_SOURCE_DIR}/api/hermes.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/api/vbucket.h
   ${CMAKE_CURRENT_SOURCE_DIR}/buffer_pool.h
   ${CMAKE_CURRENT_SOURCE_DIR}/communication.h
   ${CMAKE_CURRENT_SOURCE_DIR}/data_placement_engine.h

@@ -19,9 +19,7 @@
 #include <set>
 #include <string>
 
-#include "traits.h"
 #include "bucket.h"
-#include "vbucket.h"
 #include "hermes.h"
 
 #include "adapter/io_client/io_client.h"
@@ -48,15 +46,12 @@ enum class SeekMode {
 /** A structure to represent adapter statistics */
 struct AdapterStat : public IoClientStats {
   std::shared_ptr<hapi::Bucket> bkt_id_; /**< bucket associated with the file */
-  /** VBucket for persisting data asynchronously. */
-  std::shared_ptr<hapi::VBucket> vbkt_id_;
   /** Page size used for file */
   size_t page_size_;
 
   /** Default constructor. */
   AdapterStat()
-      : bkt_id_(),
-        vbkt_id_() {}
+      : bkt_id_() {}
 
   /** compare \a a BLOB and \a b BLOB.*/
   static bool CompareBlobs(const std::string &a, const std::string &b) {

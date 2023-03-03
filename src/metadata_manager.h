@@ -83,10 +83,8 @@ class MetadataManager {
    * */
   hipc::mptr<BLOB_ID_MAP_T> blob_id_map_;
   hipc::mptr<BKT_ID_MAP_T> bkt_id_map_;
-  hipc::mptr<VBKT_ID_MAP_T> vbkt_id_map_;
   hipc::mptr<BLOB_MAP_T> blob_map_;
   hipc::mptr<BKT_MAP_T> bkt_map_;
-  hipc::mptr<VBKT_MAP_T> vbkt_map_;
 
   /**
    * Information about targets and devices
@@ -316,58 +314,6 @@ class MetadataManager {
   RPC bool LocalDestroyBlob(BucketId bkt_id, BlobId blob_id);
   DEFINE_RPC(bool, DestroyBlob, 0, 
              pack.template Get<1>.GetNodeId())
-
-  /**
-   * Get or create \a vbkt_name VBucket
-   * */
-  RPC VBucketId LocalGetOrCreateVBucket(hipc::charbuf &vbkt_name,
-                                        const IoClientContext &opts);
-  DEFINE_RPC(bool, GetOrCreateVBucket, 0, std::hash<hipc::charbuf>{})
-
-  /**
-   * Get the VBucketId of \a vbkt_name VBucket
-   * */
-  RPC VBucketId LocalGetVBucketId(hipc::charbuf &vbkt_name);
-  DEFINE_RPC(VBucketId, GetVBucketId, 0, std::hash<hipc::charbuf>{})
-
-  /**
-   * Link \a vbkt_id VBucketId
-   * */
-  RPC bool LocalVBucketLinkBlob(VBucketId vbkt_id, BlobId blob_id);
-  DEFINE_RPC(bool, VBucketLinkBlob, 0, pack.template Get<0>.GetNodeId())
-
-  /**
-   * Unlink \a blob_name Blob of \a bkt_id Bucket
-   * from \a vbkt_id VBucket
-   * */
-  RPC bool LocalVBucketUnlinkBlob(VBucketId vbkt_id, BlobId blob_id);
-  DEFINE_RPC(bool, VBucketUnlinkBlob, 0, pack.template Get<0>.GetNodeId())
-
-  /**
-   * Get the linked blobs from \a vbkt_id VBucket
-   * */
-  RPC std::list<BlobId> LocalVBucketGetLinks(VBucketId vbkt_id);
-  DEFINE_RPC(std::list<BlobId>,
-             VBucketGetLinks, 0, pack.template Get<0>.GetNodeId())
-
-  /**
-   * Whether \a vbkt_id VBucket contains \a blob_id blob
-   * */
-  RPC bool LocalVBucketContainsBlob(VBucketId vbkt_id, BlobId blob_id);
-  DEFINE_RPC(bool, VBucketContainsBlob, 0, pack.template Get<0>.GetNodeId())
-
-  /**
-   * Rename \a vbkt_id VBucket to \a new_vbkt_name name
-   * */
-  RPC bool LocalRenameVBucket(VBucketId vbkt_id, hipc::charbuf &new_vbkt_name);
-  DEFINE_RPC(bool, RenameVBucket, 0, pack.template Get<0>.GetNodeId())
-
-  /**
-   * Destroy \a vbkt_id VBucket
-   * */
-  RPC bool LocalDestroyVBucket(VBucketId vbkt_id);
-  DEFINE_RPC(bool, DestroyVBucket, 0, 
-             pack.template Get<0>.GetNodeId())
 
   /**
    * Update the capacity of the target device

@@ -14,7 +14,6 @@ bool mpiio_intercepted = true;
 
 #include <hermes.h>
 #include <bucket.h>
-#include <vbucket.h>
 
 #include "mpiio_api.h"
 #include "mpiio_fs_api.h"

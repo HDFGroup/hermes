@@ -33,7 +33,6 @@
 namespace hermes::api {
 
 class Bucket;
-class VBucket;
 
 
 /**
@@ -108,11 +107,6 @@ class Hermes {
   std::shared_ptr<Bucket> GetBucket(std::string name,
                                     Context ctx = Context(),
                                     IoClientContext = IoClientContext());
-
-  /** Create a VBucket in Hermes */
-  std::shared_ptr<VBucket> GetVBucket(std::string name,
-                                      Context ctx = Context(),
-                                      IoClientContext = IoClientContext());
 
  private:
   /** Internal initialization of Hermes */

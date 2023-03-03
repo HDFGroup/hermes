@@ -14,7 +14,6 @@
 #include "constants.h"
 #include "singleton.h"
 #include "filesystem_mdm.h"
-#include "vbucket.h"
 #include "mapper/mapper_factory.h"
 
 #include <fcntl.h>

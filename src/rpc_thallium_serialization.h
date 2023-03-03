@@ -25,20 +25,6 @@
 namespace hermes {
 
 /**
- *  Lets Thallium know how to serialize a VBucketId.
- *
- * This function is called implicitly by Thallium.
- *
- * @param ar An archive provided by Thallium.
- * @param vbucket_id The VBucketId to serialize.
- */
-template <typename A>
-void serialize(A &ar, VBucketId &vbucket_id) {
-  ar &vbucket_id.unique_;
-  ar &vbucket_id.node_id_;
-}
-
-/**
  *  Lets Thallium know how to serialize a BucketId.
  *
  * This function is called implicitly by Thallium.
