@@ -10,7 +10,8 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include "mpi.h"
+#include "omp.h"
+#include "hermes.h"
 #include <string>
 #include <dlfcn.h>
 #include <iostream>
@@ -21,42 +22,18 @@
 #include <fcntl.h>
 #include <cstdlib>
 #include <cstring>
+#include "test/test_utils.h"
 
-static bool VerifyBuffer(char *ptr, size_t size, char nonce) {
-  for (size_t i = 0; i < size; ++i) {
-    if (ptr[i] != nonce) {
-      std::cout << (int)ptr[i] << " != " << (int)nonce <<  std::endl;
-      return false;
-    }
-  }
-  return true;
-}
+static const int kNumProcs = 4;
 
-int main(int argc, char **argv) {
-  int rank = 0, nprocs = 1;
-  MPI_Init(&argc, &argv);
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
-  if (argc != 7) {
-    std::cout << "USAGE: ./posix_simple_io"
-              << " [path] [read] [block_size (kb)] [count]"
-              << " [off (blocks)] [lag (sec)]";
-    exit(1);
-  }
-
-  char *path = argv[1];
-  int do_read = atoi(argv[2]);
-  int block_size = atoi(argv[3])*1024;
-  int count = atoi(argv[4]);
-  int block_off = atoi(argv[5]);
-  int lag = atoi(argv[6]);
-  if (do_read) {
-    count -= block_off;
-  } else {
-    block_off = 0;
-  }
+void TestThread(char *path,
+                int do_read,
+                int block_size,
+                int count,
+                int block_off) {
+  int rank = omp_get_thread_num();
   size_t size = count * block_size;
-  size_t total_size = size * nprocs;
+  size_t total_size = size * kNumProcs;
   int off = (rank * size) + block_off * block_size;
 
   {
@@ -68,12 +45,10 @@ int main(int argc, char **argv) {
        << " Block Size: " << block_size << std::endl
        << " Count: " << count << std::endl
        << " Proc Size (MB): " << size / (1 << 20) << std::endl
-       << " Num Ranks: " << nprocs << std::endl;
+       << " Num Ranks: " << kNumProcs << std::endl;
     std::cout << ss.str() << std::endl;
   }
-  MPI_Barrier(MPI_COMM_WORLD);
-
-  sleep(lag);
+#pragma omp barrier
 
   char *buf = (char*)malloc(size);
   int fd = open(path, O_CREAT | O_RDWR, 0666);
@@ -107,11 +82,40 @@ int main(int argc, char **argv) {
 
   close(fd);
 
-  MPI_Barrier(MPI_COMM_WORLD);
+#pragma omp barrier
   {
     std::stringstream ss;
     ss << "SIMPLE I/O COMPLETED! (rank: " << rank << ")" << std::endl;
     std::cout << ss.str();
   }
-  MPI_Finalize();
+}
+
+int main(int argc, char **argv) {
+  if (argc != 7) {
+    std::cout << "USAGE: ./posix_simple_io"
+              << " [path] [read] [block_size (kb)] [count]"
+              << " [off (blocks)]";
+    exit(1);
+  }
+
+  char *path = argv[1];
+  int do_read = atoi(argv[2]);
+  int block_size = atoi(argv[3])*1024;
+  int count = atoi(argv[4]);
+  int block_off = atoi(argv[5]);
+  if (do_read) {
+    count -= block_off;
+  } else {
+    block_off = 0;
+  }
+
+  HERMES_THREAD_MANAGER->GetThreadStatic();
+
+  omp_set_dynamic(0);
+#pragma omp parallel \
+  shared(path, do_read, block_size, count, block_off) num_threads(kNumProcs)
+  {
+#pragma omp barrier
+    TestThread(path, do_read, block_size, count, block_off);
+  }
 }

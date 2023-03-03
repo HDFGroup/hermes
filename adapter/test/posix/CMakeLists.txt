@@ -26,16 +26,20 @@ mpi_daemon(hermes_posix_adapter_mpi_test 2 "~[request_size=range-large]" "" 1)
 mpi_daemon(hermes_posix_adapter_mpi_test 2 "[request_size=range-large]" "large" 1)
 
 include_directories(${CMAKE_SOURCE_DIR}/adapter)
-add_executable(posix_simple_io simple_io.cc)
-add_dependencies(posix_simple_io hermes_posix)
-target_link_libraries(posix_simple_io hermes_posix)
+add_executable(posix_simple_io_mpi posix_simple_io_mpi.cc)
+add_dependencies(posix_simple_io_mpi hermes_posix)
+target_link_libraries(posix_simple_io_mpi hermes_posix)
+
+add_executable(posix_simple_io_omp posix_simple_io_mpi.cc)
+add_dependencies(posix_simple_io_omp hermes_posix)
+target_link_libraries(posix_simple_io_omp hermes_posix)
 
 set(POSIX_TESTS
   posix_adapter_test
   hermes_posix_adapter_test
   posix_adapter_mpi_test
   hermes_posix_adapter_mpi_test
-  posix_simple_io
+  posix_simple_io_mpi
 )
 
 foreach(program ${POSIX_TESTS})
@@ -57,6 +61,7 @@ if(HERMES_INSTALL_TESTS)
 endif()
 
 preload_hermes(python hermes_posix
-        "python3 ${CMAKE_CURRENT_SOURCE_DIR}/simple_io.py /tmp/test_python.txt")
+        "python3 ${CMAKE_CURRENT_SOURCE_DIR}/hdf5_write_read.py
+        /tmp/test_python.txt")
 
 preload_hermes(simple_ior hermes_posix "ior -w -r -o /tmp/test_ior.txt")
