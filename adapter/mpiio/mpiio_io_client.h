@@ -69,6 +69,10 @@ class MpiioIoClient : public hermes::adapter::fs::FilesystemIoClient {
                    const IoClientStats &stat,
                    FilesystemIoClientObject &fs_mdm) override;
 
+  /** Remove \a file FILE f */
+  int RealRemove(const IoClientObject &f,
+                 IoClientStats &stat) override;
+
   /** Get initial statistics from the backend */
   void InitBucketState(const hipc::charbuf &bkt_name,
                        const IoClientContext &opts,

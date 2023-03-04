@@ -72,6 +72,12 @@ void PosixIoClient::HermesClose(IoClientObject &f,
   fs_mdm.mdm_->ReleaseFd(f.hermes_fd_);
 }
 
+/** Remove \a file FILE f */
+int PosixIoClient::RealRemove(const IoClientObject &f,
+                              IoClientStats &stat) {
+  return real_api->remove(stat.path_.c_str());
+}
+
 /** Get initial statistics from the backend */
 void PosixIoClient::InitBucketState(const hipc::charbuf &bkt_name,
                                     const IoClientContext &opts,

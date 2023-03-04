@@ -12,24 +12,22 @@
 
 #include "filesystem_mdm.h"
 #include "hermes.h"
+#include <filesystem>
 
-/**
- * Namespace declarations for cleaner code.
- */
-using hermes::adapter::fs::AdapterStat;
-using hermes::adapter::fs::MetadataManager;
+namespace hermes::adapter::fs {
 
 bool MetadataManager::Create(const File &f,
                              std::shared_ptr<AdapterStat> &stat) {
   VLOG(1) << "Create metadata for file handler." << std::endl;
-  auto ret = metadata.emplace(f, std::move(stat));
+  path_to_hermes_file_.emplace(stat->path_, f);
+  auto ret = hermes_file_to_stat_.emplace(f, std::move(stat));
   return ret.second;
 }
 
 bool MetadataManager::Update(const File &f, const AdapterStat &stat) {
   VLOG(1) << "Update metadata for file handler." << std::endl;
-  auto iter = metadata.find(f);
-  if (iter != metadata.end()) {
+  auto iter = hermes_file_to_stat_.find(f);
+  if (iter != hermes_file_to_stat_.end()) {
     *(*iter).second = stat;
     return true;
   } else {
@@ -37,21 +35,33 @@ bool MetadataManager::Update(const File &f, const AdapterStat &stat) {
   }
 }
 
+File MetadataManager::Find(const std::string &path) {
+  std::string canon_path = stdfs::weakly_canonical(path).string();
+  auto iter = path_to_hermes_file_.find(canon_path);
+  if (iter == path_to_hermes_file_.end())
+    return File();
+  else
+    return iter->second;
+}
+
 std::shared_ptr<AdapterStat> MetadataManager::Find(const File &f) {
-  auto iter = metadata.find(f);
-  if (iter == metadata.end())
+  auto iter = hermes_file_to_stat_.find(f);
+  if (iter == hermes_file_to_stat_.end())
     return nullptr;
   else
     return iter->second;
 }
 
-bool MetadataManager::Delete(const File &f) {
+bool MetadataManager::Delete(const std::string &path, const File &f) {
   VLOG(1) << "Delete metadata for file handler." << std::endl;
-  auto iter = metadata.find(f);
-  if (iter != metadata.end()) {
-    metadata.erase(iter);
+  auto iter = hermes_file_to_stat_.find(f);
+  if (iter != hermes_file_to_stat_.end()) {
+    hermes_file_to_stat_.erase(iter);
     return true;
   } else {
     return false;
   }
+  path_to_hermes_file_.erase(path);
 }
+
+}  // namespace hermes::adapter::fs

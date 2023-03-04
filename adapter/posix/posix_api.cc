@@ -61,6 +61,9 @@ int HERMES_DECL(open)(const char *path, int flags, ...) {
               << " and mode: " << flags << " is tracked." << std::endl;
     AdapterStat stat;
     stat.flags_ = flags;
+    if (stat.flags_ & O_EXCL) {
+      LOG(INFO) << "Exclusive open?" << std::endl;
+    }
     stat.st_mode_ = mode;
     return fs_api->Open(stat, path).hermes_fd_;
   }
@@ -365,6 +368,36 @@ int HERMES_DECL(flock)(int fd, int operation) {
     return 0;
   }
   return real_api->close(fd);
+}
+
+int HERMES_DECL(remove)(const char *pathname) {
+  bool stat_exists;
+  auto mdm = HERMES_FS_METADATA_MANAGER;
+  auto real_api = HERMES_POSIX_API;
+  auto fs_api = HERMES_POSIX_FS;
+  if (fs_api->IsPathTracked(pathname)) {
+    LOG(INFO) << "Intercept remove(" << pathname << ")";
+    DLOG(INFO) << " -> " << pathname;
+    LOG(INFO) << std::endl;
+    File f = mdm->Find(pathname);
+    return fs_api->Remove(f, stat_exists);
+  }
+  return real_api->remove(pathname);
+}
+
+int HERMES_DECL(unlink)(const char *pathname) {
+  bool stat_exists;
+  auto mdm = HERMES_FS_METADATA_MANAGER;
+  auto real_api = HERMES_POSIX_API;
+  auto fs_api = HERMES_POSIX_FS;
+  if (fs_api->IsPathTracked(pathname)) {
+    LOG(INFO) << "Intercept unlink(" << pathname << ")";
+    DLOG(INFO) << " -> " << pathname;
+    LOG(INFO) << std::endl;
+    File f = mdm->Find(pathname);
+    return fs_api->Close(f, stat_exists);
+  }
+  return real_api->unlink(pathname);
 }
 
 }  // extern C

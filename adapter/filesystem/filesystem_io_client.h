@@ -123,6 +123,10 @@ class FilesystemIoClient : public IoClient {
   virtual int RealClose(const IoClientObject &f,
                         IoClientStats &stat) = 0;
 
+  /** real remove */
+  virtual int RealRemove(const IoClientObject &f,
+                         IoClientStats &stat) = 0;
+
   /**
    * Called before RealClose. Releases information provisioned during
    * the allocation phase.

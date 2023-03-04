@@ -66,6 +66,12 @@ void StdioIoClient::HermesClose(IoClientObject &f,
   (void) f; (void) stat; (void) fs_mdm;
 }
 
+/** Remove \a file FILE f */
+int StdioIoClient::RealRemove(const IoClientObject &f,
+                              IoClientStats &stat) {
+  return 0;
+}
+
 /** Get initial statistics from the backend */
 void StdioIoClient::InitBucketState(const hipc::charbuf &bkt_name,
                                     const IoClientContext &opts,

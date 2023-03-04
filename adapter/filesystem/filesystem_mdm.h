@@ -27,8 +27,10 @@ namespace hermes::adapter::fs {
  */
 class MetadataManager {
  private:
+  std::unordered_map<std::string, File>
+      path_to_hermes_file_; /**< Map to determine if path is buffered. */
   std::unordered_map<File, std::shared_ptr<AdapterStat>>
-      metadata; /**< Map for metadata*/
+      hermes_file_to_stat_; /**< Map for metadata */
 
  public:
   /** map for Hermes request */
@@ -79,7 +81,14 @@ class MetadataManager {
    * @return    true, if operation was successful.
    *            false, if operation was unsuccessful.
    */
-  bool Delete(const File& f);
+  bool Delete(const std::string &path, const File& f);
+
+  /**
+   * Find the hermes file relating to a path.
+   * @param path the path being checked
+   * @return The hermes file.
+   * */
+  File Find(const std::string &path);
 
   /**
    * Find existing metadata entry for filesystem adapters.

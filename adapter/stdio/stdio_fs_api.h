@@ -45,7 +45,7 @@ class StdioFs : public hermes::adapter::fs::Filesystem {
     return (FILE*)&stat;
   }
 
-  /**  */
+  /** fdopen */
   FILE* FdOpen(const std::string &mode,
                std::shared_ptr<AdapterStat> &stat) {
     auto real_api = HERMES_STDIO_API;

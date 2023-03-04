@@ -71,6 +71,8 @@ typedef ssize_t (*copy_file_range_t)(int fd_in, off64_t *off_in,
 typedef int (*posix_fadvise_t)(int fd, off_t offset,
                                off_t len, int advice);
 typedef int (*flock_t)(int fd, int operation);
+typedef int (*remove_t)(const char *pathname);
+typedef int (*unlink_t)(const char *pathname);
 }
 
 namespace hermes::adapter::fs {
@@ -117,6 +119,10 @@ class PosixApi : public RealApi {
   close_t close = nullptr;
   /** flock */
   flock_t flock = nullptr;
+  /** remove */
+  remove_t remove = nullptr;
+  /** unlink */
+  unlink_t unlink = nullptr;
 
   PosixApi() : RealApi("open", "posix_intercepted") {
     if (is_intercepted_) {
@@ -229,7 +235,19 @@ class PosixApi : public RealApi {
     } else {
       flock = (flock_t)dlsym(real_lib_default_, "flock");
     }
-    REQUIRE_API(close)
+    REQUIRE_API(flock)
+    if (is_intercepted_) {
+      remove = (remove_t)dlsym(real_lib_next_, "remove");
+    } else {
+      remove = (remove_t)dlsym(real_lib_default_, "remove");
+    }
+    REQUIRE_API(remove)
+    if (is_intercepted_) {
+      unlink = (unlink_t)dlsym(real_lib_next_, "unlink");
+    } else {
+      unlink = (unlink_t)dlsym(real_lib_default_, "unlink");
+    }
+    REQUIRE_API(unlink)
   }
 };
 
