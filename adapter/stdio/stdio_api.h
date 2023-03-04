@@ -276,11 +276,11 @@ class StdioApi {
 
 #undef REQUIRE_API
 
-#include "singleton.h"
+#include "hermes_shm/util/singleton.h"
 
 // Singleton macros
 #define HERMES_STDIO_API \
-  hermes::Singleton<hermes::adapter::fs::StdioApi>::GetInstance()
+  hermes_shm::Singleton<hermes::adapter::fs::StdioApi>::GetInstance()
 #define HERMES_STDIO_API_T hermes::adapter::fs::StdioApi*
 
 #endif  // HERMES_ADAPTER_STDIO_H

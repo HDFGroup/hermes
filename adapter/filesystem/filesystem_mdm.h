@@ -92,13 +92,13 @@ class MetadataManager {
 }  // namespace hermes::adapter::fs
 
 // Singleton macros
-#include "singleton.h"
+#include "hermes_shm/util/singleton.h"
 
 #define HERMES_FS_METADATA_MANAGER \
-  hermes::Singleton<hermes::adapter::fs::MetadataManager>::GetInstance()
+  hermes_shm::Singleton<hermes::adapter::fs::MetadataManager>::GetInstance()
 #define HERMES_FS_METADATA_MANAGER_T hermes::adapter::fs::MetadataManager*
 
 #define HERMES_FS_THREAD_POOL \
-  hermes::EasySingleton<hermes::ThreadPool>::GetInstance()
+  hermes_shm::EasySingleton<hermes::ThreadPool>::GetInstance()
 
 #endif  // HERMES_ADAPTER_METADATA_MANAGER_H

@@ -18,7 +18,6 @@
 #include <hermes_shm/data_structures/string.h>
 #include <hermes_shm/data_structures/thread_unsafe/vector.h>
 #include <hermes_shm/data_structures/thread_unsafe/list.h>
-#include <hermes_shm/data_structures/thread_safe/unordered_map.h>
 
 namespace thallium {
 

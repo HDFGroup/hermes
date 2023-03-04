@@ -166,7 +166,7 @@ struct ShmHeader<TYPED_CLASS> : public ShmBaseHeader {
   using BUCKET_T = hipc::list<COLLISION_T>;
 
  public:
-  ShmArchiveOrT<vector<BUCKET_T>> buckets_;
+  ShmArchive<vector<BUCKET_T>> buckets_;
   RealNumber max_capacity_;
   RealNumber growth_;
   hipc::atomic<size_t> length_;

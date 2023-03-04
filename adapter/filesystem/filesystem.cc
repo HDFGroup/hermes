@@ -12,7 +12,7 @@
 
 #include "filesystem.h"
 #include "constants.h"
-#include "singleton.h"
+#include "hermes_shm/util/singleton.h"
 #include "filesystem_mdm.h"
 #include "mapper/mapper_factory.h"
 

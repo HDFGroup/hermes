@@ -18,7 +18,7 @@
 #include "adapter/filesystem/filesystem_io_client.h"
 #include "posix_api.h"
 
-using hermes::Singleton;
+using hermes_shm::Singleton;
 using hermes::adapter::IoClientStats;
 using hermes::adapter::IoClientContext;
 using hermes::adapter::IoStatus;
@@ -92,7 +92,7 @@ class PosixIoClient : public hermes::adapter::fs::FilesystemIoClient {
 
 /** Simplify access to the stateless PosixIoClient Singleton */
 #define HERMES_POSIX_IO_CLIENT \
-  hermes::EasySingleton<hermes::adapter::fs::PosixIoClient>::GetInstance()
+  hermes_shm::EasySingleton<hermes::adapter::fs::PosixIoClient>::GetInstance()
 #define HERMES_POSIX_IO_CLIENT_T hermes::adapter::fs::PosixIoClient*
 
 #endif  // HERMES_ADAPTER_POSIX_POSIX_IO_CLIENT_H_

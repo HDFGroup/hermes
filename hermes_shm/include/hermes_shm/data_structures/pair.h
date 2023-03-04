@@ -32,8 +32,8 @@ class pair;
 /** pair shared-memory header */
 template<typename FirstT, typename SecondT>
 struct ShmHeader<TYPED_CLASS> : public ShmBaseHeader {
-  ShmArchiveOrT<FirstT> first_;
-  ShmArchiveOrT<SecondT> second_;
+  ShmArchive<FirstT> first_;
+  ShmArchive<SecondT> second_;
 
   /** Default constructor */
   ShmHeader() {

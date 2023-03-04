@@ -10,10 +10,7 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include "singleton.h"
+#include "hermes_shm/util/singleton.h"
 
 #include "posix_api.h"
-/*template<> hermes::adapter::fs::PosixApi hermes::GlobalSingleton<
-    hermes::adapter::fs::PosixApi>::obj_ = hermes::adapter::fs::PosixApi();*/
-template<> std::unique_ptr<hermes::adapter::fs::PosixApi>
-    hermes::Singleton<hermes::adapter::fs::PosixApi>::obj_ = nullptr;
+DEFINE_SINGLETON_CC(hermes::adapter::fs::PosixApi)

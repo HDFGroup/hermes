@@ -26,7 +26,7 @@ struct BpCoin {
   size_t count_;
   size_t slab_size_;
 
-  BpCoin() : count_(0) {}
+  BpCoin() : count_(0), slab_size_(0) {}
 };
 
 struct BpSlot {
@@ -49,6 +49,40 @@ struct BpFreeListStat {
   size_t cur_count_;  /**< Current number of pages allocated */
   size_t max_count_;  /**< Max pages allocated at one time */
   Mutex lock_;        /**< The modifier lock for this slot */
+
+  /** Default constructor */
+  BpFreeListStat() = default;
+
+  /** Copy constructor */
+  BpFreeListStat(const BpFreeListStat &other) {
+    strong_copy(other);
+  }
+
+  /** Copy assignment operator */
+  BpFreeListStat& operator=(const BpFreeListStat &other) {
+    strong_copy(other);
+    return *this;
+  }
+
+  /** Move constructor */
+  BpFreeListStat(BpFreeListStat &&other) {
+    strong_copy(other);
+  }
+
+  /** Move assignment operator */
+  BpFreeListStat& operator=(BpFreeListStat &&other) {
+    strong_copy(other);
+    return *this;
+  }
+
+  /** Internal copy */
+  void strong_copy(const BpFreeListStat &other) {
+    region_off_ = other.region_off_.load();
+    region_size_ = other.region_size_.load();
+    page_size_ = other.page_size_;
+    cur_count_ = other.cur_count_;
+    max_count_ = other.max_count_;
+  }
 };
 
 /** Represents the list of available buffers */
@@ -65,7 +99,7 @@ typedef hipc::vector<BpFreeListPair> BpTargetAllocs;
  * */
 template<>
 struct ShmHeader<BufferPool> : public hipc::ShmBaseHeader {
-  hipc::ShmArchiveOrT<BpTargetAllocs> free_lists_;
+  hipc::ShmArchive<BpTargetAllocs> free_lists_;
   size_t ntargets_;
   size_t ncpu_;
   size_t nslabs_;

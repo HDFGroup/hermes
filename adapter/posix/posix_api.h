@@ -211,10 +211,10 @@ class PosixApi : public RealApi {
 }  // namespace hermes::adapter::fs
 
 // Singleton macros
-#include "singleton.h"
+#include "hermes_shm/util/singleton.h"
 
 #define HERMES_POSIX_API \
-  hermes::Singleton<hermes::adapter::fs::PosixApi>::GetInstance()
+  hermes_shm::Singleton<hermes::adapter::fs::PosixApi>::GetInstance()
 #define HERMES_POSIX_API_T hermes::adapter::fs::PosixApi*
 
 #undef REQUIRE_API

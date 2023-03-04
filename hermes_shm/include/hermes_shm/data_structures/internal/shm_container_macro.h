@@ -1,18 +1,6 @@
 #ifndef HERMES_DATA_STRUCTURES_INTERNAL_SHM_CONTAINER_MACRO_H_
 #define HERMES_DATA_STRUCTURES_INTERNAL_SHM_CONTAINER_MACRO_H_
 #define SHM_CONTAINER_TEMPLATE(CLASS_NAME,TYPED_CLASS,TYPED_HEADER)\
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *\
- * Distributed under BSD 3-Clause license.                                   *\
- * Copyright by The HDF Group.                                               *\
- * Copyright by the Illinois Institute of Technology.                        *\
- * All rights reserved.                                                      *\
- *                                                                           *\
- * This file is part of Hermes. The full Hermes copyright notice, including  *\
- * terms governing use, modification, and redistribution, is contained in    *\
- * the COPYING file, which can be found at the top directory. If you do not  *\
- * have access to the file, you may request a copy from help@hdfgroup.org.   *\
- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */\
-\
 public:\
 /**====================================\
  * Variables & Types\
@@ -121,8 +109,14 @@ void shm_serialize(hipc::TypedAtomicPointer<TYPE_UNWRAP(TYPED_CLASS)> &ar) const
   shm_serialize_main();\
 }\
 \
-/** Override << operators */\
-SHM_SERIALIZE_OPS((TYPE_UNWRAP(TYPED_CLASS)))\
+/** Override >> operators */\
+void operator>>(hipc::TypedPointer<TYPE_UNWRAP(TYPE_UNWRAP(TYPED_CLASS))> &ar) const {\
+  shm_serialize(ar);\
+}\
+void operator>>(\
+  hipc::TypedAtomicPointer<TYPE_UNWRAP(TYPE_UNWRAP(TYPED_CLASS))> &ar) const {\
+  shm_serialize(ar);\
+}\
 \
 /**====================================\
  * Deserialization\
@@ -179,8 +173,18 @@ void shm_init(hipc::ShmDeserialize<TYPE_UNWRAP(TYPED_CLASS)> other) {\
   shm_deserialize(other);\
 }\
 \
-/** Override >> operators */\
-SHM_DESERIALIZE_OPS((TYPE_UNWRAP(TYPED_CLASS)))\
+/** Override << operators */\
+void operator<<(const hipc::TypedPointer<TYPE_UNWRAP(TYPE_UNWRAP(TYPED_CLASS))> &ar) {\
+  shm_deserialize(ar);\
+}\
+void operator<<(\
+  const hipc::TypedAtomicPointer<TYPE_UNWRAP(TYPE_UNWRAP(TYPED_CLASS))> &ar) {\
+  shm_deserialize(ar);\
+}\
+void operator<<(\
+  const hipc::ShmDeserialize<TYPE_UNWRAP(TYPE_UNWRAP(TYPED_CLASS))> &ar) {\
+  shm_deserialize(ar);\
+}\
 \
 /**====================================\
  * Destructors\

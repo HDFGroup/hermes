@@ -20,7 +20,7 @@ bool posix_intercepted = true;
 #include <filesystem>
 
 #include "hermes_types.h"
-#include "singleton.h"
+#include "hermes_shm/util/singleton.h"
 #include "interceptor.h"
 
 #include "posix_api.h"

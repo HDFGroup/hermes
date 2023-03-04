@@ -10,10 +10,10 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include "singleton.h"
+#include "hermes_shm/util/singleton.h"
 
 #include "hermes.h"
-template<> hermes::api::Hermes hermes::GlobalSingleton<
+template<> hermes::api::Hermes hermes_shm::GlobalSingleton<
     hermes::api::Hermes>::obj_ = hermes::api::Hermes();
 
 /** Finalize hermes when program exits */

@@ -24,10 +24,10 @@
 #include "metadata_manager.h"
 #include "buffer_pool.h"
 #include "buffer_organizer.h"
-#include "singleton.h"
+#include "hermes_shm/util/singleton.h"
 
 // Singleton macros
-#define HERMES hermes::GlobalSingleton<hermes::api::Hermes>::GetInstance()
+#define HERMES hermes_shm::GlobalSingleton<hermes::api::Hermes>::GetInstance()
 #define HERMES_T hermes::api::Hermes*
 
 namespace hermes::api {
@@ -63,6 +63,7 @@ class Hermes {
   bool is_initialized_;
   bool is_terminated_;
   bool is_transparent_;
+  hermes_shm::Mutex lock_;
 
  public:
   /** Default constructor */

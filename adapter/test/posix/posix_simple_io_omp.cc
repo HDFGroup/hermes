@@ -91,7 +91,7 @@ void TestThread(char *path,
 }
 
 int main(int argc, char **argv) {
-  if (argc != 7) {
+  if (argc != 6) {
     std::cout << "USAGE: ./posix_simple_io"
               << " [path] [read] [block_size (kb)] [count]"
               << " [off (blocks)]";

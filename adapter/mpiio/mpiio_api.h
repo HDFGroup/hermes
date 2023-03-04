@@ -299,11 +299,11 @@ class MpiioApi {
 
 #undef REQUIRE_API
 
-#include "singleton.h"
+#include "hermes_shm/util/singleton.h"
 
 /** Simplify access to the stateless MpiioFs Singleton */
 #define HERMES_MPIIO_API \
-  hermes::EasySingleton<hermes::adapter::fs::MpiioApi>::GetInstance()
+  hermes_shm::EasySingleton<hermes::adapter::fs::MpiioApi>::GetInstance()
 #define HERMES_MPIIO_API_T hermes::adapter::fs::MpiioApi*
 
 #endif  // HERMES_ADAPTER_MPIIO_H

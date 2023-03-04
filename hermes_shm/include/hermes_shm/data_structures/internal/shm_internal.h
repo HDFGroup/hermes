@@ -19,6 +19,5 @@
 #include "shm_smart_ptr.h"
 #include "shm_macros.h"
 #include "shm_container.h"
-#include "shm_archive_or_t.h"
 
 #endif  // HERMES_HERMES_SHM_DATA_STRUCTURES_INTERNAL_SHM_INTERNAL_H_
