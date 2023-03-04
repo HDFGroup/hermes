@@ -24,9 +24,9 @@ if __name__ == "__main__":
     d2 = np.random.random(size = (200,200))
     # print(d1.shape, d2.shape)
 
-    fname = 'test_data.h5'
+    fname = '/tmp/test_hermes/test_data.h5'
 
-    write_hdf5(fname,d1,'/tmp/test_hermes/dataset_1','w')
-    write_hdf5(fname,d2,'/tmp/test_hermes/dataset_2','a')
+    write_hdf5(fname,d1,'dataset_1','w')
+    write_hdf5(fname,d2,'dataset_2','a')
 
     read_hdf5(fname)

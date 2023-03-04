@@ -54,6 +54,23 @@ typedef int (*__fxstat_t)(int __ver, int __filedesc, struct stat * __stat_buf);
 typedef int (*fstat_t)(int __filedesc, struct stat * __stat_buf);
 typedef int (*fsync_t)(int fd);
 typedef int (*close_t)(int fd);
+
+typedef int (*fchdir_t)(int fd);
+typedef int (*fchmod_t)(int fd, mode_t mode);
+typedef int (*fchmod_t)(int fd, mode_t mode);
+typedef int (*fchown_t)(int fd, uid_t owner, gid_t group);
+typedef int (*fchownat_t)(int dirfd, const char *pathname,
+                          uid_t owner, gid_t group, int flags);
+typedef int (*close_range_t)(unsigned int first, unsigned int last,
+                             unsigned int flags);
+typedef ssize_t (*copy_file_range_t)(int fd_in, off64_t *off_in,
+                                     int fd_out, off64_t *off_out,
+                                     size_t len, unsigned int flags);
+
+// TODO(llogan): fadvise
+typedef int (*posix_fadvise_t)(int fd, off_t offset,
+                               off_t len, int advice);
+typedef int (*flock_t)(int fd, int operation);
 }
 
 namespace hermes::adapter::fs {
@@ -98,6 +115,8 @@ class PosixApi : public RealApi {
   fsync_t fsync = nullptr;
   /** close */
   close_t close = nullptr;
+  /** flock */
+  flock_t flock = nullptr;
 
   PosixApi() : RealApi("open", "posix_intercepted") {
     if (is_intercepted_) {
@@ -203,6 +222,12 @@ class PosixApi : public RealApi {
       close = (close_t)dlsym(real_lib_next_, "close");
     } else {
       close = (close_t)dlsym(real_lib_default_, "close");
+    }
+    REQUIRE_API(close)
+    if (is_intercepted_) {
+      flock = (flock_t)dlsym(real_lib_next_, "flock");
+    } else {
+      flock = (flock_t)dlsym(real_lib_default_, "flock");
     }
     REQUIRE_API(close)
   }

@@ -353,4 +353,18 @@ int HERMES_DECL(close)(int fd) {
   return real_api->close(fd);
 }
 
+int HERMES_DECL(flock)(int fd, int operation) {
+  bool stat_exists;
+  auto real_api = HERMES_POSIX_API;
+  auto fs_api = HERMES_POSIX_FS;
+  if (fs_api->IsFdTracked(fd)) {
+    LOG(INFO) << "Intercept flock(" << std::to_string(fd) << ")";
+    DLOG(INFO) << " -> " << fs_api->GetFilenameFromFD(fd);
+    LOG(INFO) << std::endl;
+    // TODO(llogan): implement
+    return 0;
+  }
+  return real_api->close(fd);
+}
+
 }  // extern C
