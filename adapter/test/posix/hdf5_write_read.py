@@ -27,6 +27,6 @@ if __name__ == "__main__":
     fname = '/tmp/test_hermes/test_data.h5'
 
     write_hdf5(fname,d1,'dataset_1','w')
-    write_hdf5(fname,d2,'dataset_2','a')
+    # (fname,d2,'dataset_2','a')
 
     read_hdf5(fname)

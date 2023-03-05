@@ -126,6 +126,9 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
   if (opts.DoSeek()) { stat.st_ptr_ = off + data_offset; }
   stat.UpdateTime();
 
+  LOG(INFO) << "The size of file after write: "
+            << GetSize(f, stat) << std::endl;
+
   ret = data_offset;
   return ret;
 }

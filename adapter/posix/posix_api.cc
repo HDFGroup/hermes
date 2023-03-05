@@ -62,10 +62,12 @@ int HERMES_DECL(open)(const char *path, int flags, ...) {
     AdapterStat stat;
     stat.flags_ = flags;
     if (stat.flags_ & O_EXCL) {
-      LOG(INFO) << "Exclusive open?" << std::endl;
+      LOG(INFO) << "Ignore exclusive open for now." << std::endl;
+      /*stat.flags_ &= ~O_EXCL;*/
     }
     stat.st_mode_ = mode;
-    return fs_api->Open(stat, path).hermes_fd_;
+    auto f = fs_api->Open(stat, path);
+    return f.hermes_fd_;
   }
   if (flags & O_CREAT || flags & O_TMPFILE) {
     return real_api->open(path, flags, mode);
