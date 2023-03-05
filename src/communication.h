@@ -23,7 +23,7 @@
  * implement a communication backend.
  *
  * NOTE: this file is only applied to HermesType::kServer.
- * This does not get used in kColocated or kClient modes.
+ * This does not get used in kClient mode.
  * It is used almost solely to ensure RPC servers remain
  * running until all nodes want to terminate their
  * Hermes core.

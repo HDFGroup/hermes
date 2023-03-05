@@ -24,8 +24,8 @@ void ThalliumRpc::DefineRpcs() {
   MetadataManager *mdm = this->mdm_;
   RPC_CLASS_INSTANCE_DEFS_END
 
-  RPC_AUTOGEN_START
-  /*RegisterRpc("RpcGetOrCreateBucket", [mdm](const request &req,
+  /*RPC_AUTOGEN_START
+  RegisterRpc("RpcGetOrCreateBucket", [mdm](const request &req,
                                             hipc::charbuf &bkt_name,
                                             const IoClientContext &opts) {
     auto ret = mdm->LocalGetOrCreateBucket(bkt_name, opts);
@@ -153,14 +153,14 @@ void ThalliumRpc::DefineRpcs() {
                                       BlobId blob_id) {
     auto ret = mdm->LocalDestroyBlob(bkt_id, blob_id);
     req.respond(ret);
-  });*/
-  /*RegisterRpc("RpcUpdateTargetCapacity", [mdm](const request &req,
+  });
+  RegisterRpc("RpcUpdateTargetCapacity", [mdm](const request &req,
                                                TargetId tid,
                                                off64_t offset) {
     mdm->LocalUpdateTargetCapacity(tid, offset);
     req.respond(true);
-  });*/
-  RPC_AUTOGEN_END
+  });
+  RPC_AUTOGEN_END*/
 }
 
 }  // namespace hermes

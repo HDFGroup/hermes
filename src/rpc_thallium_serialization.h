@@ -18,9 +18,12 @@
 #include <thallium/serialization/stl/string.hpp>
 #include <thallium/serialization/stl/vector.hpp>
 #include <thallium/serialization/stl/list.hpp>
+
 #include "hermes_types.h"
+#include "statuses.h"
 #include "metadata_types.h"
 #include "data_structures.h"
+#include "hermes_shm/data_structures/serialization/thallium.h"
 
 namespace hermes {
 
@@ -82,9 +85,50 @@ void serialize(A &ar, BufferInfo &info) {
   ar &info.blob_size_;
 }
 
+/** Let's thallium know how to serialize an MdLockType */
+template <typename A>
+void serialize(A &ar, MdLockType lock) {
+  ar &static_cast<int>(lock);
+}
+
 }  // namespace hermes
 
+namespace hermes::adapter {
+
+/** Let's thallium know how to serialize an AdapterMode */
+template <typename A>
+void serialize(A &ar, AdapterMode mode) {
+  ar &static_cast<int>(mode);
+}
+
+/** Let's thallium know how to serialize an AdapterType */
+template <typename A>
+void serialize(A &ar, AdapterType mode) {
+  ar &static_cast<int>(mode);
+}
+
+/** Let's thallium know how to serialize an IoClientContext */
+template <typename A>
+void serialize(A &ar, IoClientContext &opts) {
+  ar &opts.type_;
+  ar &opts.adapter_mode_;
+  ar &opts.dpe_;
+  ar &opts.flags_;
+  ar &opts.mpi_type_;
+  ar &opts.mpi_count_;
+  ar &opts.backend_off_;
+  ar &opts.backend_size_;
+}
+
+}  // namespace hermes::adapter
+
 namespace hermes::api {
+/** Let's thallium know how to serialize a Status */
+template <typename A>
+void serialize(A &ar, Status status) {
+  ar &status.code_;
+  ar &status.msg_;
+}
 }  // namespace hermes::api
 
 #endif  // HERMES_SRC_RPC_THALLIUM_SERIALIZATION_H_

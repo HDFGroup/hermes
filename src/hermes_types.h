@@ -81,7 +81,7 @@ enum class TopologyType {
   kCount
 };
 
-/** Represents unique ID for BlobId, BucketId, and VBucketId */
+/** Represents unique ID for BlobId and BucketId */
 template<int TYPE>
 struct UniqueId {
   u64 unique_;   /**< A unique id for the blob */
@@ -109,9 +109,7 @@ struct UniqueId {
   }
 };
 typedef UniqueId<0> BucketId;
-typedef UniqueId<1> VBucketId;
 typedef UniqueId<2> BlobId;
-typedef UniqueId<3> TransactionId;
 
 /** A definition for logging something that is not yet implemented */
 #define HERMES_NOT_IMPLEMENTED_YET \

@@ -43,12 +43,6 @@ void ThalliumRpc::InitClient() {
                               true, 1);
 }
 
-/** initialize RPC for colocated mode */
-void ThalliumRpc::InitColocated() {
-  InitRpcContext();
-  // NOTE(llogan): RPCs are never used in colocated mode.
-}
-
 /** run daemon */
 void ThalliumRpc::RunDaemon() {
   server_engine_->enable_remote_shutdown();
