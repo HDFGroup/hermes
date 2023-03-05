@@ -11,6 +11,7 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "omp.h"
+#include "hermes.h"
 #include <string>
 #include <dlfcn.h>
 #include <iostream>
@@ -21,30 +22,35 @@
 #include <fcntl.h>
 #include <cstdlib>
 #include <cstring>
-#include "hermes.h"
+#include "test/test_utils.h"
 
-static const int num_threads = 4;
+static const int kNumProcs = 4;
 
-static bool VerifyBuffer(char *ptr, size_t size, char nonce) {
-  for (size_t i = 0; i < size; ++i) {
-    if (ptr[i] != nonce) {
-      std::cout << (int)ptr[i] << " != " << (int)nonce <<  std::endl;
-      return false;
-    }
-  }
-  return true;
-}
-
-void thread(const char *path,
-            int do_read,
-            int block_size,
-            int count,
-            int block_off) {
+void TestThread(char *path,
+                int do_read,
+                int block_size,
+                int count,
+                int block_off) {
   int rank = omp_get_thread_num();
   size_t size = count * block_size;
-  size_t total_size = size * num_threads;
+  size_t total_size = size * kNumProcs;
   int off = (rank * size) + block_off * block_size;
 
+  {
+    std::stringstream ss;
+    ss << "RANK: " << rank << std::endl
+       << " PATH: " << path << std::endl
+       << " READ or WRITE: " << (do_read ? "READ" : "WRITE") << std::endl
+       << " Block Off: " << block_off << std::endl
+       << " Block Size: " << block_size << std::endl
+       << " Count: " << count << std::endl
+       << " Proc Size (MB): " << size / (1 << 20) << std::endl
+       << " Num Ranks: " << kNumProcs << std::endl;
+    std::cout << ss.str() << std::endl;
+  }
+#pragma omp barrier
+
+>>>>>>> new-borg
   char *buf = (char*)malloc(size);
   int fd = open(path, O_CREAT | O_RDWR, 0666);
   lseek(fd, off, SEEK_SET);
@@ -85,21 +91,6 @@ void thread(const char *path,
   }
 }
 
-void start_threads(const char *path,
-                   int do_read,
-                   int block_size,
-                   int count,
-                   int block_off) {
-  int nthreads = 8;
-  HERMES_THREAD_MANAGER->GetThreadStatic();
-
-  omp_set_dynamic(0);
-#pragma omp parallel shared(path, do_read, block_size, count, block_off) num_threads(nthreads)
-  {  // NOLINT
-    thread(path, do_read, block_size, count, block_off);
-  }
-}
-
 int main(int argc, char **argv) {
   if (argc != 6) {
     std::cout << "USAGE: ./posix_simple_io"
@@ -119,18 +110,13 @@ int main(int argc, char **argv) {
     block_off = 0;
   }
 
+  HERMES_THREAD_MANAGER->GetThreadStatic();
+
+  omp_set_dynamic(0);
+#pragma omp parallel \
+  shared(path, do_read, block_size, count, block_off) num_threads(kNumProcs)
   {
-    std::stringstream ss;
-    ss << "RANK: " << rank << std::endl
-       << " PATH: " << path << std::endl
-       << " READ or WRITE: " << (do_read ? "READ" : "WRITE") << std::endl
-       << " Block Off: " << block_off << std::endl
-       << " Block Size: " << block_size << std::endl
-       << " Count: " << count << std::endl
-       << " Proc Size (MB): " << size / (1 << 20) << std::endl
-       << " Num Ranks: " << num_threads << std::endl;
-    std::cout << ss.str() << std::endl;
+#pragma omp barrier
+    TestThread(path, do_read, block_size, count, block_off);
   }
-  start_threads(path, do_read, block_size, count, block_off,
-                size, total_size, off);
 }

@@ -21,16 +21,7 @@
 #include <fcntl.h>
 #include <cstdlib>
 #include <cstring>
-
-static bool VerifyBuffer(char *ptr, size_t size, char nonce) {
-  for (size_t i = 0; i < size; ++i) {
-    if (ptr[i] != nonce) {
-      std::cout << (int)ptr[i] << " != " << (int)nonce <<  std::endl;
-      return false;
-    }
-  }
-  return true;
-}
+#include "test/test_utils.h"
 
 int main(int argc, char **argv) {
   int rank = 0, nprocs = 1;

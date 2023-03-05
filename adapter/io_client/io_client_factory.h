@@ -14,7 +14,7 @@
 #define HERMES_IO_CLIENT_FACTORY_H
 
 #include "io_client.h"
-#include "singleton.h"
+#include "hermes_shm/util/singleton.h"
 
 #include "adapter/posix/posix_io_client.h"
 

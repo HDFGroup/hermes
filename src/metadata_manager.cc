@@ -34,10 +34,8 @@ void MetadataManager::shm_init(ServerConfig *config,
   // Create the metadata maps
   blob_id_map_ = hipc::make_mptr<BLOB_ID_MAP_T>(16384);
   bkt_id_map_ = hipc::make_mptr<BKT_ID_MAP_T>(16384);
-  vbkt_id_map_ = hipc::make_mptr<VBKT_ID_MAP_T>(16384);
   blob_map_ = hipc::make_mptr<BLOB_MAP_T>(16384);
   bkt_map_ = hipc::make_mptr<BKT_MAP_T>(16384);
-  vbkt_map_ = hipc::make_mptr<VBKT_MAP_T>(16384);
 
   // Create the DeviceInfo vector
   devices_ = hipc::make_mptr<hipc::vector<DeviceInfo>>(
@@ -69,10 +67,8 @@ void MetadataManager::shm_init(ServerConfig *config,
 void MetadataManager::shm_destroy() {
   blob_id_map_.shm_destroy();
   bkt_id_map_.shm_destroy();
-  vbkt_id_map_.shm_destroy();
   blob_map_.shm_destroy();
   bkt_map_.shm_destroy();
-  vbkt_map_.shm_destroy();
   targets_.shm_destroy();
   devices_.shm_destroy();
 }
@@ -83,10 +79,8 @@ void MetadataManager::shm_destroy() {
 void MetadataManager::shm_serialize() {
   blob_id_map_ >> header_->blob_id_map_ar_;
   bkt_id_map_ >> header_->bkt_id_map_ar_;
-  vbkt_id_map_ >> header_->vbkt_id_map_ar_;
   blob_map_ >> header_->blob_map_ar_;
   bkt_map_ >> header_->bkt_map_ar_;
-  vbkt_map_ >> header_->vbkt_map_ar_;
   targets_ >> header_->targets_;
   devices_ >> header_->devices_;
 }
@@ -100,10 +94,8 @@ void MetadataManager::shm_deserialize(MetadataManagerShmHeader *header) {
   borg_ = &HERMES->borg_;
   blob_id_map_ << header_->blob_id_map_ar_;
   bkt_id_map_ << header_->bkt_id_map_ar_;
-  vbkt_id_map_ << header_->vbkt_id_map_ar_;
   blob_map_ << header_->blob_map_ar_;
   bkt_map_ << header_->bkt_map_ar_;
-  vbkt_map_ << header_->vbkt_map_ar_;
   targets_ << header_->targets_;
   devices_ << header_->devices_;
 }
@@ -552,150 +544,6 @@ bool MetadataManager::LocalDestroyBlob(BucketId bkt_id,
   hipc::charbuf blob_name = CreateBlobName(bkt_id, *blob_info.name_);
   blob_id_map_->erase(blob_name);
   blob_map_->erase(blob_id);
-  return true;
-}
-
-////////////////////////////
-/// VBucket Operations
-////////////////////////////
-
-/**
- * Get or create \a vbkt_name VBucket
- * */
-VBucketId MetadataManager::LocalGetOrCreateVBucket(
-    hipc::charbuf &vbkt_name,
-    const IoClientContext &opts) {
-  (void) opts;
-  // Acquire MD write lock (read vbkt_map_)
-  ScopedRwWriteLock md_lock(lock_);
-  // Create unique ID for the Bucket
-  VBucketId vbkt_id;
-  vbkt_id.unique_ = header_->id_alloc_.fetch_add(1);
-  vbkt_id.node_id_ = rpc_->node_id_;
-
-  // Emplace bucket if it does not already exist
-  if (vbkt_id_map_->try_emplace(vbkt_name, vbkt_id)) {
-    VBucketInfo info(HERMES->main_alloc_);
-    (*info.name_) = vbkt_name;
-    vbkt_map_->emplace(vbkt_id, std::move(info));
-  } else {
-    auto iter = vbkt_id_map_->find(vbkt_name);
-    if (iter == vbkt_id_map_->end()) {
-      return VBucketId::GetNull();
-    }
-    hipc::ShmRef<hipc::pair<hipc::charbuf, VBucketId>> info = (*iter);
-    vbkt_id = *info->second_;
-  }
-  return vbkt_id;
-}
-
-/**
- * Get the VBucketId of \a vbkt_name VBucket
- * */
-VBucketId MetadataManager::LocalGetVBucketId(hipc::charbuf &vbkt_name) {
-  // Acquire MD read lock (read vbkt_id_map_)
-  ScopedRwReadLock md_lock(lock_);
-  auto iter = vbkt_id_map_->find(vbkt_name);
-  if (iter == vbkt_id_map_->end()) {
-    return VBucketId::GetNull();
-  }
-  hipc::ShmRef<hipc::pair<hipc::charbuf, VBucketId>> info = (*iter);
-  VBucketId vbkt_id = *info->second_;
-  return vbkt_id;
-}
-
-/**
- * Link \a vbkt_id VBucketId
- * */
-bool MetadataManager::LocalVBucketLinkBlob(VBucketId vbkt_id,
-                                           BlobId blob_id) {
-  // Acquire MD read lock (read vbkt_map_)
-  ScopedRwReadLock md_lock(lock_);
-  auto iter = vbkt_map_->find(vbkt_id);
-  if (iter == vbkt_map_->end()) {
-    return true;
-  }
-  hipc::ShmRef<hipc::pair<VBucketId, VBucketInfo>> info = (*iter);
-  VBucketInfo &vbkt_info = *info->second_;
-  // Acquire vbkt_info write lock (modify blobs)
-  ScopedRwWriteLock vbkt_info_lock(vbkt_info.header_->lock_);
-  vbkt_info.blobs_->emplace(blob_id, blob_id);
-  return true;
-}
-
-/**
- * Unlink \a blob_name Blob of \a bkt_id Bucket
- * from \a vbkt_id VBucket
- * */
-bool MetadataManager::LocalVBucketUnlinkBlob(VBucketId vbkt_id,
-                                             BlobId blob_id) {
-  // Acquire MD read lock (read blob_id_map_)
-  ScopedRwReadLock md_lock(lock_);
-  auto iter = vbkt_map_->find(vbkt_id);
-  if (iter == vbkt_map_->end()) {
-    return true;
-  }
-  hipc::ShmRef<hipc::pair<VBucketId, VBucketInfo>> info = (*iter);
-  VBucketInfo &vbkt_info = *info->second_;
-  // Acquire vbkt_info write lock (modify blobs)
-  ScopedRwWriteLock vbkt_info_lock(vbkt_info.header_->lock_);
-  vbkt_info.blobs_->erase(blob_id);
-  return true;
-}
-
-/**
- * Get the linked blobs from \a vbkt_id VBucket
- * */
-std::list<BlobId> MetadataManager::LocalVBucketGetLinks(VBucketId vbkt_id) {
-  // TODO(llogan)
-  return {};
-}
-
-/**
- * Whether \a vbkt_id VBucket contains \a blob_id blob
- * */
-bool MetadataManager::LocalVBucketContainsBlob(VBucketId vbkt_id,
-                                               BlobId blob_id) {
-  // Acquire MD read lock (read vbkt_map_)
-  ScopedRwReadLock md_lock(lock_);
-  auto iter = vbkt_map_->find(vbkt_id);
-  if (iter == vbkt_map_->end()) {
-    return true;
-  }
-  hipc::ShmRef<hipc::pair<VBucketId, VBucketInfo>> info = (*iter);
-  VBucketInfo &vbkt_info = *info->second_;
-  // Acquire vbkt_info read lock (read blobs)
-  ScopedRwReadLock vbkt_info_lock(vbkt_info.header_->lock_);
-  auto link_iter = vbkt_info.blobs_->find(blob_id);
-  return link_iter != vbkt_info.blobs_->end();
-}
-
-/**
- * Rename \a vbkt_id VBucket to \a new_vbkt_name name
- * */
-bool MetadataManager::LocalRenameVBucket(VBucketId vbkt_id,
-                                         hipc::charbuf &new_vbkt_name) {
-  // Acquire MD write lock (modify vbkt_id_map_)
-  ScopedRwWriteLock md_lock(lock_);
-  auto iter = vbkt_map_->find(vbkt_id);
-  if (iter == vbkt_map_->end()) {
-    return true;
-  }
-  hipc::ShmRef<hipc::pair<VBucketId, VBucketInfo>> info = (*iter);
-  VBucketInfo &vbkt_info = *info->second_;
-  hipc::string &old_bkt_name = *vbkt_info.name_;
-  vbkt_id_map_->emplace(new_vbkt_name, vbkt_id);
-  vbkt_id_map_->erase(old_bkt_name);
-  return true;
-}
-
-/**
- * Destroy \a vbkt_id VBucket
- * */
-bool MetadataManager::LocalDestroyVBucket(VBucketId vbkt_id) {
-  // Acquire MD write lock (modify vbkt_map_)
-  ScopedRwWriteLock md_lock(lock_);
-  vbkt_map_->erase(vbkt_id);
   return true;
 }
 

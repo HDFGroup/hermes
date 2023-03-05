@@ -25,7 +25,7 @@
 namespace hermes_shm::ipc {
 
 struct FixedPageAllocatorHeader : public AllocatorHeader {
-  ShmArchiveOrT<vector<iqueue<MpPage>>> free_lists_;
+  ShmArchive<vector<iqueue<MpPage>>> free_lists_;
   std::atomic<size_t> total_alloc_;
 
   FixedPageAllocatorHeader() = default;

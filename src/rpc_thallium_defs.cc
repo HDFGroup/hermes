@@ -154,32 +154,6 @@ void ThalliumRpc::DefineRpcs() {
     auto ret = mdm->LocalDestroyBlob(bkt_id, blob_id);
     req.respond(ret);
   });*/
-  // TODO(llogan): Are we replacing VBuckets with Tags?
-  /*
-  RegisterRpc("RpcGetOrCreateVBucket", [mdm]() {
-    mdm->LocalGetOrCreateVBucket();
-  });
-  RegisterRpc("RpcGetVBucketId", [mdm]() {
-    mdm->LocalGetVBucketId();
-  });
-  RegisterRpc("RpcVBucketLinkBlob", [mdm]() {
-    mdm->LocalVBucketLinkBlob();
-  });
-  RegisterRpc("RpcVBucketUnlinkBlob", [mdm]() {
-    mdm->LocalVBucketUnlinkBlob();
-  });
-  RegisterRpc("RpcVBucketGetLinks",[mdm]() {
-    mdm->LocalVBucketGetLinks();
-  });
-  RegisterRpc("RpcVBucketContainsBlob", [mdm]() {
-    mdm->LocalVBucketContainsBlob();
-  });
-  RegisterRpc("RpcRenameVBucket", [mdm]() {
-    mdm->LocalRenameVBucket();
-  });
-  RegisterRpc("RpcDestroyVBucket", [mdm]() {
-    mdm->LocalDestroyVBucket();
-  });*/
   /*RegisterRpc("RpcUpdateTargetCapacity", [mdm](const request &req,
                                                TargetId tid,
                                                off64_t offset) {

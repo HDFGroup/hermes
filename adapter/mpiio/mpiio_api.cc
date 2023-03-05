@@ -14,13 +14,12 @@ bool mpiio_intercepted = true;
 
 #include <hermes.h>
 #include <bucket.h>
-#include <vbucket.h>
 
 #include "mpiio_api.h"
 #include "mpiio_fs_api.h"
 
 #include "constants.h"
-#include "singleton.h"
+#include "hermes_shm/util/singleton.h"
 #include "interceptor.h"
 
 /**
@@ -33,7 +32,6 @@ using hermes::adapter::fs::AdapterStat;
 using hermes::adapter::fs::MpiioApi;
 using hermes::adapter::fs::MpiioFs;
 using hermes::adapter::fs::MpiioSeekModeConv;
-using hermes::Singleton;
 
 namespace hapi = hermes::api;
 

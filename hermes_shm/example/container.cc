@@ -3,7 +3,7 @@
 //
 
 #include <hermes_shm/data_structures/internal/shm_container.h>
-#include <hermes_shm/data_structures/internal/shm_archive_or_t.h>
+#include <hermes_shm/data_structures/internal/shm_archive.h>
 #include <hermes_shm/thread/lock.h>
 #include <hermes_shm/data_structures/thread_unsafe/vector.h>
 
@@ -16,7 +16,7 @@ template<>
 class ShmHeader<LockedVector> : public hipc::ShmBaseHeader {
  public:
   hermes_shm::Mutex lock_;
-  hipc::ShmArchiveOrT<hipc::vector<int>> vec_;
+  hipc::ShmArchive<hipc::vector<int>> vec_;
 
   ShmHeader(hipc::Allocator *alloc) {
     vec_.shm_init(alloc);

@@ -10,8 +10,7 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include "singleton.h"
+#include "hermes_shm/util/singleton.h"
 
 #include "mpiio_api.h"
-template<> std::unique_ptr<hermes::adapter::fs::MpiioApi>
-    hermes::Singleton<hermes::adapter::fs::MpiioApi>::obj_ = nullptr;
+DEFINE_SINGLETON_CC(hermes::adapter::fs::MpiioApi)

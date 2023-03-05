@@ -24,16 +24,15 @@
 #include "metadata_manager.h"
 #include "buffer_pool.h"
 #include "buffer_organizer.h"
-#include "singleton.h"
+#include "hermes_shm/util/singleton.h"
 
 // Singleton macros
-#define HERMES hermes::GlobalSingleton<hermes::api::Hermes>::GetInstance()
+#define HERMES hermes_shm::GlobalSingleton<hermes::api::Hermes>::GetInstance()
 #define HERMES_T hermes::api::Hermes*
 
 namespace hermes::api {
 
 class Bucket;
-class VBucket;
 
 
 /**
@@ -64,6 +63,7 @@ class Hermes {
   bool is_initialized_;
   bool is_terminated_;
   bool is_transparent_;
+  hermes_shm::Mutex lock_;
 
  public:
   /** Default constructor */
@@ -108,11 +108,6 @@ class Hermes {
   std::shared_ptr<Bucket> GetBucket(std::string name,
                                     Context ctx = Context(),
                                     IoClientContext = IoClientContext());
-
-  /** Create a VBucket in Hermes */
-  std::shared_ptr<VBucket> GetVBucket(std::string name,
-                                      Context ctx = Context(),
-                                      IoClientContext = IoClientContext());
 
  private:
   /** Internal initialization of Hermes */

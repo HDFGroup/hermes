@@ -12,9 +12,8 @@
 
 #include "filesystem.h"
 #include "constants.h"
-#include "singleton.h"
+#include "hermes_shm/util/singleton.h"
 #include "filesystem_mdm.h"
-#include "vbucket.h"
 #include "mapper/mapper_factory.h"
 
 #include <fcntl.h>
@@ -44,7 +43,8 @@ void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
     FsIoOptions opts;
     opts.type_ = type_;
     if (stat.is_trunc_) { opts.MarkTruncated(); }
-    stat.bkt_id_ = HERMES->GetBucket(path, ctx, opts);
+    stat.path_ = stdfs::weakly_canonical(path).string();
+    stat.bkt_id_ = HERMES->GetBucket(stat.path_, ctx, opts);
     // Update bucket stats
     // TODO(llogan): can avoid two unordered_map queries here
     stat.page_size_ = mdm->GetAdapterPageSize(path);
@@ -125,6 +125,9 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
   }
   if (opts.DoSeek()) { stat.st_ptr_ = off + data_offset; }
   stat.UpdateTime();
+
+  LOG(INFO) << "The size of file after write: "
+            << GetSize(f, stat) << std::endl;
 
   ret = data_offset;
   return ret;
@@ -299,7 +302,20 @@ int Filesystem::Close(File &f, AdapterStat &stat, bool destroy) {
     stat.bkt_id_->Destroy();
   }
   auto mdm = HERMES_FS_METADATA_MANAGER;
-  mdm->Delete(f);
+  FilesystemIoClientObject fs_ctx(&mdm->fs_mdm_, (void*)&stat);
+  io_client_->HermesClose(f, stat, fs_ctx);
+  io_client_->RealClose(f, stat);
+  mdm->Delete(stat.path_, f);
+  return 0;
+}
+
+int Filesystem::Remove(File &f, AdapterStat &stat) {
+  stat.bkt_id_->Destroy();
+  auto mdm = HERMES_FS_METADATA_MANAGER;
+  FilesystemIoClientObject fs_ctx(&mdm->fs_mdm_, (void*)&stat);
+  io_client_->HermesClose(f, stat, fs_ctx);
+  io_client_->RealClose(f, stat);
+  mdm->Delete(stat.path_, f);
   return 0;
 }
 
@@ -504,6 +520,17 @@ int Filesystem::Close(File &f, bool &stat_exists, bool destroy) {
   }
   stat_exists = true;
   return Close(f, *stat, destroy);
+}
+
+int Filesystem::Remove(File &f, bool &stat_exists) {
+  auto mdm = HERMES_FS_METADATA_MANAGER;
+  auto stat = mdm->Find(f);
+  if (!stat) {
+    stat_exists = false;
+    return -1;
+  }
+  stat_exists = true;
+  return Remove(f, *stat);
 }
 
 }  // namespace hermes::adapter::fs

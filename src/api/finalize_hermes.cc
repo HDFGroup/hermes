@@ -10,10 +10,8 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include "singleton.h"
+#include "hermes_shm/util/singleton.h"
 #include "hermes.h"
-
-using hermes::Singleton;
 
 int main(int argc, char **argv) {
   HERMES->Create(hermes::HermesType::kClient);

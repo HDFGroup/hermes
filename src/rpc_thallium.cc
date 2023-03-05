@@ -14,7 +14,7 @@
 
 #include "metadata_manager.h"
 #include "rpc_thallium.h"
-#include "singleton.h"
+#include "hermes_shm/util/singleton.h"
 
 namespace tl = thallium;
 

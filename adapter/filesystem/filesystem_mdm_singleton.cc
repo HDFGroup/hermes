@@ -10,8 +10,7 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include "singleton.h"
+#include "hermes_shm/util/singleton.h"
 
 #include "filesystem_mdm.h"
-template<> std::unique_ptr<hermes::adapter::fs::MetadataManager>
-hermes::Singleton<hermes::adapter::fs::MetadataManager>::obj_ = nullptr;
+DEFINE_SINGLETON_CC(hermes::adapter::fs::MetadataManager)

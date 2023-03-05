@@ -19,9 +19,7 @@
 #include <set>
 #include <string>
 
-#include "traits.h"
 #include "bucket.h"
-#include "vbucket.h"
 #include "hermes.h"
 
 #include "adapter/io_client/io_client.h"
@@ -48,15 +46,12 @@ enum class SeekMode {
 /** A structure to represent adapter statistics */
 struct AdapterStat : public IoClientStats {
   std::shared_ptr<hapi::Bucket> bkt_id_; /**< bucket associated with the file */
-  /** VBucket for persisting data asynchronously. */
-  std::shared_ptr<hapi::VBucket> vbkt_id_;
   /** Page size used for file */
   size_t page_size_;
 
   /** Default constructor. */
   AdapterStat()
-      : bkt_id_(),
-        vbkt_id_() {}
+      : bkt_id_() {}
 
   /** compare \a a BLOB and \a b BLOB.*/
   static bool CompareBlobs(const std::string &a, const std::string &b) {
@@ -130,6 +125,8 @@ class Filesystem {
   int Sync(File &f, AdapterStat &stat);
   /** close */
   int Close(File &f, AdapterStat &stat, bool destroy = true);
+  /** remove */
+  int Remove(File &f, AdapterStat &stat);
 
   /*
    * I/O APIs which seek based on the internal AdapterStat st_ptr,
@@ -196,36 +193,8 @@ class Filesystem {
   int Sync(File &f, bool &stat_exists);
   /** close */
   int Close(File &f, bool &stat_exists, bool destroy = true);
-
- public:
-  /** real open */
-  void RealOpen(IoClientObject &f,
-                IoClientStats &stat,
-                const std::string &path) {
-    io_client_->RealOpen(f, stat, path);
-  }
-
-  /**
-   * Called after real open. Allocates the Hermes representation of
-   * identifying file information, such as a hermes file descriptor
-   * and hermes file handler. These are not the same as POSIX file
-   * descriptor and STDIO file handler.
-   * */
-  virtual void HermesOpen(IoClientObject &f,
-                          IoClientStats &stat,
-                          FilesystemIoClientObject &fs_mdm) {
-    io_client_->HermesOpen(f, stat, fs_mdm);
-  }
-
-  /** real sync */
-  int RealSync(const IoClientObject &f, const AdapterStat &stat) {
-    return io_client_->RealSync(f, stat);
-  }
-
-  /** real close */
-  int RealClose(const IoClientObject &f, AdapterStat &stat) {
-    return io_client_->RealClose(f, stat);
-  }
+  /** close */
+  int Remove(File &f, bool &stat_exists);
 
  public:
   /** Whether or not \a path PATH is tracked by Hermes */

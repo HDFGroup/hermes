@@ -304,7 +304,6 @@ struct Context {
   bool disable_swap;
 
   /** Prefetching hints */
-  VBucketId vbkt_id_;
   PrefetchContext pctx_;
 
   Context();

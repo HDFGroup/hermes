@@ -44,7 +44,7 @@ class SingletonGenerator:
         lines.append("")
         for defn in self.defs:
             lines.append(f"#include {defn.include}")
-            lines.append(f"template<> std::unique_ptr<{defn.class_name}> hermes::Singleton<{defn.class_name}>::obj_ = nullptr;")
+            lines.append(f"template<> std::unique_ptr<{defn.class_name}> hermes_shm::Singleton<{defn.class_name}>::obj_ = nullptr;")
         self._save_lines(lines, path)
 
     def _generate_h(self, path):
@@ -55,7 +55,7 @@ class SingletonGenerator:
         lines.append(f"#include {self.singleton_include}")
         lines.append("")
         for defn in self.defs:
-            lines.append(f"#define {defn.macro_name} hermes::Singleton<{defn.class_name}>::GetInstance()")
+            lines.append(f"#define {defn.macro_name} hermes_shm::Singleton<{defn.class_name}>::GetInstance()")
             lines.append(f"#define {defn.type_name} {defn.class_name}*")
             lines.append("")
         lines.append(f"#endif  // HERMES_SINGLETON_{self.guard_name}_MACROS_H")

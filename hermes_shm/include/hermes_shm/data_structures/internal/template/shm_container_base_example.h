@@ -178,8 +178,14 @@ class ShmContainerExample {
     shm_serialize_main();
   }
 
-  /** Override << operators */
-  SHM_SERIALIZE_OPS((TYPED_CLASS))
+  /** Override >> operators */
+  void operator>>(hipc::TypedPointer<TYPE_UNWRAP(TYPED_CLASS)> &ar) const {
+    shm_serialize(ar);
+  }
+  void operator>>(
+    hipc::TypedAtomicPointer<TYPE_UNWRAP(TYPED_CLASS)> &ar) const {
+    shm_serialize(ar);
+  }
 
   /**====================================
    * Deserialization
@@ -236,8 +242,18 @@ class ShmContainerExample {
     shm_deserialize(other);
   }
 
-  /** Override >> operators */
-  SHM_DESERIALIZE_OPS((TYPED_CLASS))
+  /** Override << operators */
+  void operator<<(const hipc::TypedPointer<TYPE_UNWRAP(TYPED_CLASS)> &ar) {
+    shm_deserialize(ar);
+  }
+  void operator<<(
+    const hipc::TypedAtomicPointer<TYPE_UNWRAP(TYPED_CLASS)> &ar) {
+    shm_deserialize(ar);
+  }
+  void operator<<(
+    const hipc::ShmDeserialize<TYPE_UNWRAP(TYPED_CLASS)> &ar) {
+    shm_deserialize(ar);
+  }
 
   /**====================================
    * Destructors

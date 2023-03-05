@@ -15,16 +15,16 @@
 
 #include <hermes_shm/util/singleton.h>
 
-#define HERMES_SYSTEM_INFO scs::Singleton<hermes_shm::SystemInfo>::GetInstance()
+#define HERMES_SYSTEM_INFO hermes_shm::GlobalSingleton<hermes_shm::SystemInfo>::GetInstance()
 #define HERMES_SYSTEM_INFO_T hermes_shm::SystemInfo*
 
-#define HERMES_MEMORY_REGISTRY scs::Singleton<hermes_shm::ipc::MemoryRegistry>::GetInstance()
+#define HERMES_MEMORY_REGISTRY hermes_shm::GlobalSingleton<hermes_shm::ipc::MemoryRegistry>::GetInstance()
 #define HERMES_MEMORY_REGISTRY_T hermes_shm::ipc::MemoryRegistry*
 
-#define HERMES_MEMORY_MANAGER scs::Singleton<hermes_shm::ipc::MemoryManager>::GetInstance()
+#define HERMES_MEMORY_MANAGER hermes_shm::GlobalSingleton<hermes_shm::ipc::MemoryManager>::GetInstance()
 #define HERMES_MEMORY_MANAGER_T hermes_shm::ipc::MemoryManager*
 
-#define HERMES_THREAD_MANAGER scs::Singleton<hermes_shm::ThreadManager>::GetInstance()
+#define HERMES_THREAD_MANAGER hermes_shm::GlobalSingleton<hermes_shm::ThreadManager>::GetInstance()
 #define HERMES_THREAD_MANAGER_T hermes_shm::ThreadManager*
 
 #endif  // include_labstor_constants_data_structure_singleton_macros_h

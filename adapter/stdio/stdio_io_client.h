@@ -69,6 +69,10 @@ class StdioIoClient : public hermes::adapter::fs::FilesystemIoClient {
                    const IoClientStats &stat,
                    FilesystemIoClientObject &fs_mdm) override;
 
+  /** Remove \a file FILE f */
+  int RealRemove(const IoClientObject &f,
+                 IoClientStats &stat) override;
+
   /** Get initial statistics from the backend */
   void InitBucketState(const hipc::charbuf &bkt_name,
                        const IoClientContext &opts,
@@ -91,7 +95,7 @@ class StdioIoClient : public hermes::adapter::fs::FilesystemIoClient {
 
 /** Simplify access to the stateless StdioIoClient Singleton */
 #define HERMES_STDIO_IO_CLIENT \
-  hermes::EasySingleton<hermes::adapter::fs::StdioIoClient>::GetInstance()
+  hermes_shm::EasySingleton<hermes::adapter::fs::StdioIoClient>::GetInstance()
 #define HERMES_STDIO_IO_CLIENT_T hermes::adapter::fs::StdioIoClient*
 
 #endif  // HERMES_ADAPTER_STDIO_STDIO_IO_CLIENT_H_

@@ -114,6 +114,7 @@ struct IoClientContext {
 
 /** Any relevant statistics from the I/O client */
 struct IoClientStats {
+  std::string path_;     /**< The URL of this file */
   int flags_;            /**< open() flags for POSIX */
   mode_t st_mode_;       /**< protection */
   size_t backend_size_;  /**< size of the object in the backend */

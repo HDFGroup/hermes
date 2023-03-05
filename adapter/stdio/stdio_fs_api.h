@@ -45,7 +45,7 @@ class StdioFs : public hermes::adapter::fs::Filesystem {
     return (FILE*)&stat;
   }
 
-  /**  */
+  /** fdopen */
   FILE* FdOpen(const std::string &mode,
                std::shared_ptr<AdapterStat> &stat) {
     auto real_api = HERMES_STDIO_API;
@@ -98,7 +98,7 @@ class StdioFs : public hermes::adapter::fs::Filesystem {
 
 /** Simplify access to the stateless StdioFs Singleton */
 #define HERMES_STDIO_FS \
-  hermes::EasySingleton<hermes::adapter::fs::StdioFs>::GetInstance()
+  hermes_shm::EasySingleton<hermes::adapter::fs::StdioFs>::GetInstance()
 #define HERMES_STDIO_FS_T hermes::adapter::fs::StdioFs*
 
 }  // namespace hermes::adapter::fs

@@ -12,13 +12,16 @@
 
 #include "hermes.h"
 #include "bucket.h"
-#include "vbucket.h"
 
 namespace hermes::api {
 
 void Hermes::Init(HermesType mode,
                   std::string server_config_path,
                   std::string client_config_path) {
+  hermes_shm::ScopedMutex lock(lock_);
+  if (is_initialized_) {
+    return;
+  }
   mode_ = mode;
   is_being_initialized_ = true;
   switch (mode_) {
@@ -112,6 +115,7 @@ void Hermes::InitSharedMemory() {
       server_config_.shmem_name_);
   main_alloc_ =
       mem_mngr->CreateAllocator<hipc::ScalablePageAllocator>(
+      // mem_mngr->CreateAllocator<hipc::StackAllocator>(
           server_config_.shmem_name_,
           main_alloc_id,
           sizeof(HermesShmHeader));
@@ -144,12 +148,6 @@ std::shared_ptr<Bucket> Hermes::GetBucket(std::string name,
                                           Context ctx,
                                           IoClientContext opts) {
   return std::make_shared<Bucket>(name, ctx, opts);
-}
-
-std::shared_ptr<VBucket> Hermes::GetVBucket(std::string name,
-                                            Context ctx,
-                                            IoClientContext opts) {
-  return std::make_shared<VBucket>(name, ctx, opts);
 }
 
 }  // namespace hermes::api

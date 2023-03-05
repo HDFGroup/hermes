@@ -20,7 +20,7 @@ bool posix_intercepted = true;
 #include <filesystem>
 
 #include "hermes_types.h"
-#include "singleton.h"
+#include "hermes_shm/util/singleton.h"
 #include "interceptor.h"
 
 #include "posix_api.h"
@@ -61,8 +61,13 @@ int HERMES_DECL(open)(const char *path, int flags, ...) {
               << " and mode: " << flags << " is tracked." << std::endl;
     AdapterStat stat;
     stat.flags_ = flags;
+    if (stat.flags_ & O_EXCL) {
+      LOG(INFO) << "Ignore exclusive open for now." << std::endl;
+      /*stat.flags_ &= ~O_EXCL;*/
+    }
     stat.st_mode_ = mode;
-    return fs_api->Open(stat, path).hermes_fd_;
+    auto f = fs_api->Open(stat, path);
+    return f.hermes_fd_;
   }
   if (flags & O_CREAT || flags & O_TMPFILE) {
     return real_api->open(path, flags, mode);
@@ -351,6 +356,50 @@ int HERMES_DECL(close)(int fd) {
     return fs_api->Close(f, stat_exists);
   }
   return real_api->close(fd);
+}
+
+int HERMES_DECL(flock)(int fd, int operation) {
+  bool stat_exists;
+  auto real_api = HERMES_POSIX_API;
+  auto fs_api = HERMES_POSIX_FS;
+  if (fs_api->IsFdTracked(fd)) {
+    LOG(INFO) << "Intercept flock(" << std::to_string(fd) << ")";
+    DLOG(INFO) << " -> " << fs_api->GetFilenameFromFD(fd);
+    LOG(INFO) << std::endl;
+    // TODO(llogan): implement
+    return 0;
+  }
+  return real_api->close(fd);
+}
+
+int HERMES_DECL(remove)(const char *pathname) {
+  bool stat_exists;
+  auto mdm = HERMES_FS_METADATA_MANAGER;
+  auto real_api = HERMES_POSIX_API;
+  auto fs_api = HERMES_POSIX_FS;
+  if (fs_api->IsPathTracked(pathname)) {
+    LOG(INFO) << "Intercept remove(" << pathname << ")";
+    DLOG(INFO) << " -> " << pathname;
+    LOG(INFO) << std::endl;
+    File f = mdm->Find(pathname);
+    return fs_api->Remove(f, stat_exists);
+  }
+  return real_api->remove(pathname);
+}
+
+int HERMES_DECL(unlink)(const char *pathname) {
+  bool stat_exists;
+  auto mdm = HERMES_FS_METADATA_MANAGER;
+  auto real_api = HERMES_POSIX_API;
+  auto fs_api = HERMES_POSIX_FS;
+  if (fs_api->IsPathTracked(pathname)) {
+    LOG(INFO) << "Intercept unlink(" << pathname << ")";
+    DLOG(INFO) << " -> " << pathname;
+    LOG(INFO) << std::endl;
+    File f = mdm->Find(pathname);
+    return fs_api->Close(f, stat_exists);
+  }
+  return real_api->unlink(pathname);
 }
 
 }  // extern C

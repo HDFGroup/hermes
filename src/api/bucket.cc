@@ -182,18 +182,19 @@ Status Bucket::PartialPutOrCreate(const std::string &blob_name,
                                   const IoClientContext &opts,
                                   Context &ctx) {
   Blob full_blob;
-  // Put the blob
-  if (blob_off == 0 && blob.size() >= opts.backend_size_) {
-    // Case 1: We're overriding the entire blob
-    // Put the entire blob, no need to load from storage
-    LOG(INFO) << "Putting the entire blob." << std::endl;
-    return Put(blob_name, blob, blob_id, ctx, opts);
-  }
   if (ContainsBlob(blob_name, blob_id)) {
-    // Case 2: The blob already exists (read from hermes)
+    // Case 1: The blob already exists (read from hermes)
     // Read blob from Hermes
     LOG(INFO) << "Blob existed. Reading from Hermes." << std::endl;
     Get(blob_id, full_blob, ctx);
+  }
+  if (blob_off == 0 &&
+      blob.size() >= opts.backend_size_ &&
+      blob.size() >= full_blob.size()) {
+    // Case 2: We're overriding the entire blob
+    // Put the entire blob, no need to load from storage
+    LOG(INFO) << "Putting the entire blob." << std::endl;
+    return Put(blob_name, blob, blob_id, ctx, opts);
   }
   if (full_blob.size() < opts.backend_size_) {
     // Case 3: The blob did not fully exist (need to read from backend)
@@ -300,11 +301,16 @@ Status Bucket::PartialGetOrCreate(const std::string &blob_name,
 void Bucket::FlushBlob(BlobId blob_id,
                        const IoClientContext &opts) {
   LOG(INFO) << "Flushing blob" << std::endl;
-  if (opts.adapter_mode_ == AdapterMode::kScratch) { return; }
+  if (opts.adapter_mode_ == AdapterMode::kScratch) {
+    LOG(INFO) << "In scratch mode, ignoring flush" << std::endl;
+    return;
+  }
   Blob full_blob;
   IoStatus status;
   // Read blob from Hermes
   Get(blob_id, full_blob, ctx_);
+  LOG(INFO) << "The blob being flushed as size: "
+            << full_blob.size() << std::endl;
   std::string blob_name;
   GetBlobName(blob_id, blob_name);
   // Write blob to backend

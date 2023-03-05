@@ -156,6 +156,30 @@ class ShmSmartPtr : public ShmSmartPointer {
   SHM_DESERIALIZE_OPS(AR_TYPE)
 
 /**
+ * Enables a specific TypedPointer type to be serialized
+ * */
+#define SHM_SERIALIZE_OPS(TYPED_CLASS)\
+  void operator>>(hipc::TypedPointer<TYPE_UNWRAP(TYPED_CLASS)> &ar) const {\
+    shm_serialize(ar);\
+  }\
+  void operator>>(\
+      hipc::TypedAtomicPointer<TYPE_UNWRAP(TYPED_CLASS)> &ar) const {\
+    shm_serialize(ar);\
+  }
+
+/**
+ * Enables a specific TypedPointer type to be deserialized
+ * */
+#define SHM_DESERIALIZE_OPS(TYPED_CLASS)\
+  void operator<<(const hipc::TypedPointer<TYPE_UNWRAP(TYPED_CLASS)> &ar) {\
+    shm_deserialize(ar);\
+  }\
+  void operator<<(\
+    const hipc::TypedAtomicPointer<TYPE_UNWRAP(TYPED_CLASS)> &ar) {\
+    shm_deserialize(ar);\
+  }
+
+/**
  * A macro for defining shared memory (de)serializations
  * */
 #define SHM_SERIALIZE_DESERIALIZE_WRAPPER(AR_TYPE)\

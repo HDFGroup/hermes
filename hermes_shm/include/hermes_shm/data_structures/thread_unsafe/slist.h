@@ -27,7 +27,7 @@ template<typename T>
 struct slist_entry {
  public:
   OffsetPointer next_ptr_;
-  ShmArchiveOrT<T> data_;
+  ShmArchive<T> data_;
 
   /** Constructor */
   template<typename ...Args>
