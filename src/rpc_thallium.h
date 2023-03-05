@@ -42,7 +42,6 @@ class ThalliumRpc : public RpcContext {
 
   void InitServer() override;
   void InitClient() override;
-  void InitColocated() override;
   void Finalize();
   void RunDaemon();
   void StopDaemon();

@@ -20,7 +20,7 @@
 namespace hermes::api {
 
 class Status {
- private:
+ public:
   static int code_counter_;
   int code_;
   const char *msg_;

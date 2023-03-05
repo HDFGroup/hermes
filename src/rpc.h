@@ -97,7 +97,6 @@ class RpcContext {
  public:
   virtual void InitServer() = 0;
   virtual void InitClient() = 0;
-  virtual void InitColocated() = 0;
 };
 
 }  // namespace hermes

@@ -38,10 +38,8 @@ class BufferOrganizer;
  * */
 typedef hipc::unordered_map<hipc::charbuf, BlobId> BLOB_ID_MAP_T;
 typedef hipc::unordered_map<hipc::charbuf, BucketId> BKT_ID_MAP_T;
-typedef hipc::unordered_map<hipc::charbuf, VBucketId> VBKT_ID_MAP_T;
 typedef hipc::unordered_map<BlobId, BlobInfo> BLOB_MAP_T;
 typedef hipc::unordered_map<BucketId, BucketInfo> BKT_MAP_T;
-typedef hipc::unordered_map<VBucketId, VBucketInfo> VBKT_MAP_T;
 
 /**
  * The SHM representation of the MetadataManager
@@ -51,14 +49,10 @@ struct MetadataManagerShmHeader {
   hipc::TypedPointer<hipc::mptr<BLOB_ID_MAP_T>> blob_id_map_ar_;
   /// SHM representation of bucket id map
   hipc::TypedPointer<hipc::mptr<BKT_ID_MAP_T>> bkt_id_map_ar_;
-  /// SHM representation of vbucket id map
-  hipc::TypedPointer<hipc::mptr<VBKT_ID_MAP_T>> vbkt_id_map_ar_;
   /// SHM representation of blob map
   hipc::TypedPointer<hipc::mptr<BLOB_MAP_T>> blob_map_ar_;
   /// SHM representation of bucket map
   hipc::TypedPointer<hipc::mptr<BKT_MAP_T>> bkt_map_ar_;
-  /// SHM representation of vbucket map
-  hipc::TypedPointer<hipc::mptr<VBKT_MAP_T>> vbkt_map_ar_;
   /// SHM representation of device vector
   hipc::TypedPointer<hipc::mptr<hipc::vector<DeviceInfo>>> devices_;
   /// SHM representation of target info vector

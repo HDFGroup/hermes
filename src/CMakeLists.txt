@@ -158,6 +158,7 @@ message(${HERMES_EXPORTED_TARGETS})
 install(
   TARGETS
     hermes_daemon
+    finalize_hermes
   EXPORT
     ${HERMES_EXPORTED_TARGETS}
   LIBRARY DESTINATION ${HERMES_INSTALL_LIB_DIR}

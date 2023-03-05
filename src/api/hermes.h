@@ -118,10 +118,6 @@ class Hermes {
   /** Initialize Hermes as a server */
   void InitServer(std::string server_config_path);
 
-  /** Initialize Hermes as both a server and a daemon */
-  void InitColocated(std::string server_config_path,
-                     std::string client_config_path);
-
   /** Initialize Hermes as a client to the daemon */
   void InitClient(std::string server_config_path,
                   std::string client_config_path);
