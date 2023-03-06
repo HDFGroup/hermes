@@ -88,6 +88,9 @@ std::string RpcContext::GetHostNameFromNodeId(u32 node_id) {
 /** get host name from node ID */
 std::string RpcContext::GetIpAddressFromNodeId(u32 node_id) {
   // NOTE(chogan): node_id 0 is reserved as the NULL node
+  if (node_id == 0) {
+    LOG(FATAL) << "Attempted to get from node 0" << std::endl;
+  }
   u32 index = node_id - 1;
   return hosts_[index].ip_addr_;
 }

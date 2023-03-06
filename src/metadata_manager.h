@@ -147,7 +147,7 @@ class MetadataManager {
   RPC size_t LocalGetBucketSize(BucketId bkt_id,
                                 const IoClientContext &opts);
   DEFINE_RPC(size_t, GetBucketSize, 0,
-             pack.template Get<0>.GetNodeId())
+             UNIQUE_ID_TO_NODE_ID_LAMBDA)
 
   /**
    * Lock the bucket
@@ -155,7 +155,7 @@ class MetadataManager {
   RPC void LocalLockBucket(BucketId bkt_id,
                            MdLockType lock_type);
   DEFINE_RPC(void, LockBucket, 0,
-             pack.template Get<0>.GetNodeId())
+             UNIQUE_ID_TO_NODE_ID_LAMBDA)
 
   /**
    * Unlock the bucket
@@ -163,15 +163,15 @@ class MetadataManager {
   RPC void LocalUnlockBucket(BucketId bkt_id,
                              MdLockType lock_type);
   DEFINE_RPC(void, UnlockBucket, 0,
-             pack.template Get<0>.GetNodeId())
+             UNIQUE_ID_TO_NODE_ID_LAMBDA)
 
   /**
    * Check whether or not \a bkt_id bucket contains
    * \a blob_id blob
    * */
   RPC bool LocalBucketContainsBlob(BucketId bkt_id, BlobId blob_id);
-  DEFINE_RPC(void, BucketContainsBlob, 1,
-             pack.template Get<0>.GetNodeId())
+  DEFINE_RPC(bool, BucketContainsBlob, 1,
+             UNIQUE_ID_TO_NODE_ID_LAMBDA)
 
   /**
    * Get the set of all blobs contained in \a bkt_id BUCKET
@@ -179,7 +179,7 @@ class MetadataManager {
   RPC std::vector<BlobId> LocalBucketGetContainedBlobIds(BucketId bkt_id);
   DEFINE_RPC(std::vector<BlobId>,
       BucketGetContainedBlobIds, 0,
-             pack.template Get<0>.GetNodeId())
+             UNIQUE_ID_TO_NODE_ID_LAMBDA)
 
   /**
    * Rename \a bkt_id bucket to \a new_bkt_name new name
@@ -187,14 +187,14 @@ class MetadataManager {
   RPC bool LocalRenameBucket(BucketId bkt_id,
                              hipc::charbuf &new_bkt_name);
   DEFINE_RPC(bool, RenameBucket, 0,
-             pack.template Get<0>.GetNodeId())
+             UNIQUE_ID_TO_NODE_ID_LAMBDA)
 
   /**
    * Destroy \a bkt_id bucket
    * */
   RPC bool LocalDestroyBucket(BucketId bkt_id);
   DEFINE_RPC(bool, DestroyBucket, 0,
-             pack.template Get<0>.GetNodeId())
+             UNIQUE_ID_TO_NODE_ID_LAMBDA)
 
   /**
    * Put a blob in a bucket
@@ -211,7 +211,7 @@ class MetadataManager {
       hipc::vector<BufferInfo> &buffers);
   DEFINE_RPC((std::tuple<BlobId, bool, size_t>),
              BucketPutBlob, 0,
-             pack.template Get<0>.GetNodeId())
+             UNIQUE_ID_TO_NODE_ID_LAMBDA)
 
   /**
    * Registers the existence of a Blob with the Bucket. Required for
@@ -224,7 +224,7 @@ class MetadataManager {
                                    bool did_create,
                                    const IoClientContext &opts);
   DEFINE_RPC(Status, BucketRegisterBlobId, 0,
-             pack.template Get<0>.GetNodeId())
+             UNIQUE_ID_TO_NODE_ID_LAMBDA)
 
   /**
    * Registers the existence of a Blob with the Bucket. Required for
@@ -234,7 +234,7 @@ class MetadataManager {
                                      BlobId blob_id,
                                      const IoClientContext &opts);
   DEFINE_RPC(Status, BucketUnregisterBlobId, 0,
-             pack.template Get<0>.GetNodeId())
+             UNIQUE_ID_TO_NODE_ID_LAMBDA)
 
   /**
    * Creates the blob metadata
@@ -247,7 +247,7 @@ class MetadataManager {
       const hipc::charbuf &blob_name);
   DEFINE_RPC((std::pair<BlobId, bool>),
              BucketTryCreateBlob, 0,
-             pack.template Get<0>.GetNodeId())
+             UNIQUE_ID_TO_NODE_ID_LAMBDA)
 
   /**
    * Get a blob from a bucket
@@ -257,42 +257,42 @@ class MetadataManager {
    * */
   RPC Blob LocalBucketGetBlob(BlobId blob_id);
   DEFINE_RPC(Blob, BucketGetBlob, 0,
-             pack.template Get<0>.GetNodeId())
+             UNIQUE_ID_TO_NODE_ID_LAMBDA)
 
   /**
    * Get \a blob_name BLOB from \a bkt_id bucket
    * */
   RPC BlobId LocalGetBlobId(BucketId bkt_id, const hipc::charbuf &blob_name);
   DEFINE_RPC(BlobId, GetBlobId, 0,
-             pack.template Get<0>.GetNodeId())
+             UNIQUE_ID_TO_NODE_ID_LAMBDA)
 
   /**
    * Get \a blob_name BLOB name from \a blob_id BLOB id
    * */
   RPC std::string LocalGetBlobName(BlobId blob_id);
   DEFINE_RPC(std::string, GetBlobName, 0,
-             pack.template Get<0>.GetNodeId())
+             UNIQUE_ID_TO_NODE_ID_LAMBDA)
 
   /**
    * Lock the blob
    * */
   RPC bool LocalLockBlob(BlobId blob_id,
                          MdLockType lock_type);
-  DEFINE_RPC(bool, LockBlob, 0, pack.template Get<0>.GetNodeId())
+  DEFINE_RPC(bool, LockBlob, 0, UNIQUE_ID_TO_NODE_ID_LAMBDA)
 
   /**
    * Unlock the blob
    * */
   RPC bool LocalUnlockBlob(BlobId blob_id,
                            MdLockType lock_type);
-  DEFINE_RPC(bool, UnlockBlob, 0, pack.template Get<0>.GetNodeId())
+  DEFINE_RPC(bool, UnlockBlob, 0, UNIQUE_ID_TO_NODE_ID_LAMBDA)
 
   /**
    * Get \a blob_id blob's buffers
    * */
   RPC std::vector<BufferInfo> LocalGetBlobBuffers(BlobId blob_id);
   DEFINE_RPC(std::vector<BufferInfo>,
-             GetBlobBuffers, 0, pack.template Get<0>.GetNodeId())
+             GetBlobBuffers, 0, UNIQUE_ID_TO_NODE_ID_LAMBDA)
 
   /**
    * Rename \a blob_id blob to \a new_blob_name new blob name
@@ -300,14 +300,13 @@ class MetadataManager {
    * */
   RPC bool LocalRenameBlob(BucketId bkt_id, BlobId blob_id,
                            hipc::charbuf &new_blob_name);
-  DEFINE_RPC(bool, RenameBlob, 0, pack.template Get<1>.GetNodeId())
+  DEFINE_RPC(bool, RenameBlob, 1, UNIQUE_ID_TO_NODE_ID_LAMBDA)
 
   /**
    * Destroy \a blob_id blob in \a bkt_id bucket
    * */
   RPC bool LocalDestroyBlob(BucketId bkt_id, BlobId blob_id);
-  DEFINE_RPC(bool, DestroyBlob, 0,
-             pack.template Get<1>.GetNodeId())
+  DEFINE_RPC(bool, DestroyBlob, 1, UNIQUE_ID_TO_NODE_ID_LAMBDA)
 
   /**
    * Update the capacity of the target device
@@ -317,7 +316,7 @@ class MetadataManager {
     target.rem_cap_ += offset;
   }
   DEFINE_RPC(bool, UpdateTargetCapacity, 0,
-             pack.template Get<0>.GetNodeId())
+             UNIQUE_ID_TO_NODE_ID_LAMBDA)
 
   /**
    * Update the capacity of the target device

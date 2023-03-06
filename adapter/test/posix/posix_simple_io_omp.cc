@@ -50,7 +50,6 @@ void TestThread(char *path,
   }
 #pragma omp barrier
 
->>>>>>> new-borg
   char *buf = (char*)malloc(size);
   int fd = open(path, O_CREAT | O_RDWR, 0666);
   lseek(fd, off, SEEK_SET);

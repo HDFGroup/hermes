@@ -30,10 +30,11 @@ class Bucket {
   std::string name_;
   Context ctx_;
 
-  ///////////////////////////
-  /// Bucket Operations
-  //////////////////////////
  public:
+  /**====================================
+   * Bucket Operations
+   * ===================================*/
+
   /**
    * Get or create \a bkt_name bucket.
    *
@@ -92,11 +93,11 @@ class Bucket {
     return id_.IsNull();
   }
 
-
-  ///////////////////////
-  /// Blob Operations
-  ///////////////////////
  public:
+  /**====================================
+   * Blob Operations
+   * ===================================*/
+
   /**
    * Get the id of a blob from the blob name
    *

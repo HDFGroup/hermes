@@ -17,9 +17,9 @@ namespace hermes::api {
 
 using hermes::adapter::AdapterMode;
 
-///////////////////////////
-////// Bucket Operations
-//////////////////////////
+/**====================================
+ * Bucket Operations
+ * ===================================*/
 
 /**
  * Either initialize or fetch the bucket.
@@ -29,28 +29,28 @@ Bucket::Bucket(const std::string &bkt_name,
                const IoClientContext &opts)
 : mdm_(&HERMES->mdm_), bpm_(HERMES->bpm_.get()), name_(bkt_name) {
   hipc::string lname(bkt_name);
-  id_ = mdm_->LocalGetOrCreateBucket(lname, opts);
+  id_ = mdm_->GlobalGetOrCreateBucket(lname, opts);
 }
 
 /**
  * Get the current size of the bucket
  * */
 size_t Bucket::GetSize(IoClientContext opts) {
-  return mdm_->LocalGetBucketSize(id_, opts);
+  return mdm_->GlobalGetBucketSize(id_, opts);
 }
 
 /**
  * Lock the bucket
  * */
 void Bucket::LockBucket(MdLockType lock_type) {
-  mdm_->LocalLockBucket(id_, lock_type);
+  mdm_->GlobalLockBucket(id_, lock_type);
 }
 
 /**
  * Unlock the bucket
  * */
 void Bucket::UnlockBucket(MdLockType lock_type) {
-  mdm_->LocalUnlockBucket(id_, lock_type);
+  mdm_->GlobalUnlockBucket(id_, lock_type);
 }
 
 /**
@@ -58,7 +58,7 @@ void Bucket::UnlockBucket(MdLockType lock_type) {
  * */
 void Bucket::Rename(std::string new_bkt_name) {
   hipc::string lname(new_bkt_name);
-  mdm_->LocalRenameBucket(id_, lname);
+  mdm_->GlobalRenameBucket(id_, lname);
 }
 
 /**
@@ -67,9 +67,9 @@ void Bucket::Rename(std::string new_bkt_name) {
 void Bucket::Destroy() {
 }
 
-///////////////////////
-////// Blob Operations
-///////////////////////
+/**====================================
+ * Blob Operations
+ * ===================================*/
 
 /**
  * Get the id of a blob from the blob name
@@ -77,7 +77,7 @@ void Bucket::Destroy() {
 Status Bucket::GetBlobId(const std::string &blob_name,
                          BlobId &blob_id) {
   hipc::string lblob_name(blob_name);
-  blob_id = mdm_->LocalGetBlobId(GetId(), lblob_name);
+  blob_id = mdm_->GlobalGetBlobId(GetId(), lblob_name);
   return Status();
 }
 
@@ -90,7 +90,7 @@ Status Bucket::GetBlobId(const std::string &blob_name,
  * */
 Status Bucket::GetBlobName(const BlobId &blob_id, std::string &blob_name) {
   hipc::string lblob_name(blob_name);
-  blob_name = mdm_->LocalGetBlobName(blob_id);
+  blob_name = mdm_->GlobalGetBlobName(blob_id);
   return Status();
 }
 
@@ -99,14 +99,14 @@ Status Bucket::GetBlobName(const BlobId &blob_id, std::string &blob_name) {
  * Lock the bucket
  * */
 bool Bucket::LockBlob(BlobId blob_id, MdLockType lock_type) {
-  return mdm_->LocalLockBlob(blob_id, lock_type);
+  return mdm_->GlobalLockBlob(blob_id, lock_type);
 }
 
 /**
  * Unlock the bucket
  * */
 bool Bucket::UnlockBlob(BlobId blob_id, MdLockType lock_type) {
-  return mdm_->LocalUnlockBlob(blob_id, lock_type);
+  return mdm_->GlobalUnlockBlob(blob_id, lock_type);
 }
 
 /**
@@ -120,10 +120,10 @@ Status Bucket::TryCreateBlob(const std::string &blob_name,
       id_, hipc::charbuf(blob_name));
   blob_id = ret.first;
   if (ret.second) {
-    mdm_->LocalBucketRegisterBlobId(id_,
-                                    blob_id,
-                                    0, 0, true,
-                                    opts);
+    mdm_->GlobalBucketRegisterBlobId(id_,
+                                     blob_id,
+                                     0, 0, true,
+                                     opts);
   }
   return Status();
 }
@@ -349,7 +349,7 @@ bool Bucket::ContainsBlob(const std::string &blob_name,
  * Determine if the bucket contains \a blob_id BLOB
  * */
 bool Bucket::ContainsBlob(BlobId blob_id) {
-  return mdm_->LocalBucketContainsBlob(id_, blob_id);
+  return mdm_->GlobalBucketContainsBlob(id_, blob_id);
 }
 
 /**
@@ -359,7 +359,7 @@ void Bucket::RenameBlob(BlobId blob_id,
                         std::string new_blob_name,
                         Context &ctx) {
   hipc::string lnew_blob_name(new_blob_name);
-  mdm_->LocalRenameBlob(id_, blob_id, lnew_blob_name);
+  mdm_->GlobalRenameBlob(id_, blob_id, lnew_blob_name);
 }
 
 /**
@@ -367,15 +367,15 @@ void Bucket::RenameBlob(BlobId blob_id,
  * */
 void Bucket::DestroyBlob(BlobId blob_id, Context &ctx,
                          IoClientContext opts) {
-  mdm_->LocalBucketUnregisterBlobId(id_, blob_id, opts);
-  mdm_->LocalDestroyBlob(id_, blob_id);
+  mdm_->GlobalBucketUnregisterBlobId(id_, blob_id, opts);
+  mdm_->GlobalDestroyBlob(id_, blob_id);
 }
 
 /**
    * Get the set of blob IDs contained in the bucket
    * */
 std::vector<BlobId> Bucket::GetContainedBlobIds() {
-  return mdm_->LocalBucketGetContainedBlobIds(id_);
+  return mdm_->GlobalBucketGetContainedBlobIds(id_);
 }
 
 }  // namespace hermes::api

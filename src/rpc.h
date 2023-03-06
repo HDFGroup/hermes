@@ -101,6 +101,10 @@ class RpcContext {
 
 }  // namespace hermes
 
+
+#define UNIQUE_ID_TO_NODE_ID_LAMBDA \
+  [](auto &&param) { return param.GetNodeId(); }
+
 #define DEFINE_RPC(RET, BaseName, tuple_idx, hashfn)\
   template<typename ...Args>\
   TYPE_UNWRAP(RET) Global##BaseName(Args&& ...args) {\
@@ -115,7 +119,8 @@ class RpcContext {
   template<typename ArgPackT>\
   TYPE_UNWRAP(RET) _Global##BaseName(ArgPackT &&pack) {\
     int node_id = hashfn(pack.template              \
-                         Get<tuple_idx>()) % rpc_->hosts_.size();\
+                         Forward<tuple_idx>()) % rpc_->hosts_.size(); \
+    node_id += 1; \
     if (node_id == rpc_->node_id_) {\
       if constexpr(std::is_same_v<TYPE_UNWRAP(RET), void>) {\
         hermes_shm::PassArgPack::Call(\
@@ -127,11 +132,12 @@ class RpcContext {
         return hermes_shm::PassArgPack::Call(\
             std::forward<ArgPackT>(pack), \
             [this](auto &&...args) constexpr {\
-              this->Local##BaseName(std::forward<decltype(args)>(args)...);\
+              return this->Local##BaseName( \
+                  std::forward<decltype(args)>(args)...);\
             });\
       } \
     } else { \
-      hermes_shm::PassArgPack::Call( \
+      return hermes_shm::PassArgPack::Call( \
           std::forward<ArgPackT>(pack), \
           [this, node_id](auto&& ...args) constexpr { \
             if constexpr(std::is_same_v<TYPE_UNWRAP(RET), void>) { \
