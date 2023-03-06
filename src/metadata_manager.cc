@@ -419,7 +419,7 @@ std::tuple<BlobId, bool, size_t> MetadataManager::LocalBucketPutBlob(
 }
 
 /**
- * Get \a blob_name blob from \a bkt_id bucket
+ * Get \a blob_id blob from \a bkt_id bucket
  * */
 Blob MetadataManager::LocalBucketGetBlob(BlobId blob_id) {
   // Acquire MD read lock (read blob_map_)
@@ -433,7 +433,7 @@ Blob MetadataManager::LocalBucketGetBlob(BlobId blob_id) {
   // Acquire blob_info read lock (read buffers)
   ScopedRwReadLock blob_info_lock(blob_info.header_->lock_[0]);
   hipc::vector<BufferInfo> &buffers = *blob_info.buffers_;
-  return borg_->LocalReadBlobFromBuffers(buffers);;
+  return borg_->GlobalReadBlobFromBuffers(buffers);
 }
 
 /**

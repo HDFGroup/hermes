@@ -71,20 +71,17 @@ class ThalliumRpc : public RpcContext {
   }
 
   /** I/O transfers */
-  size_t IoCall(u32 node_id, IoType type, u8 *data,
-                TargetId id, size_t off, size_t size) {
+  template<typename ReturnType, typename ...Args>
+  ReturnType IoCall(u32 node_id, const char *func_name,
+                    IoType type, char *data, size_t size, Args&& ...args) {
     std::string server_name = GetServerName(node_id);
-    const char *func_name;
     tl::bulk_mode flag;
-
     switch (type) {
       case IoType::kRead: {
-        func_name = "BulkRead";
         flag = tl::bulk_mode::read_only;
         break;
       }
       case IoType::kWrite: {
-        func_name = "BulkWrite";
         flag = tl::bulk_mode::write_only;
         break;
       }
@@ -98,10 +95,53 @@ class ThalliumRpc : public RpcContext {
     segments[0].second = size;
 
     tl::bulk bulk = io_engine_->expose(segments, flag);
-    // size_t result = remote_proc.on(server)(bulk, id);
-    size_t result = remote_proc.on(server)(bulk);
+    if constexpr(std::is_same_v<ReturnType, void>) {
+      remote_proc.on(server)(bulk, std::forward<Args>(args)...);
+    } else {
+      return remote_proc.on(server)(bulk, std::forward<Args>(args)...);
+    }
+  }
 
-    return result;
+  /** Io transfer at the server */
+  size_t IoCallServer(const tl::request &req, tl::bulk &bulk,
+                      IoType type, char *data, size_t size) {
+    tl::bulk_mode flag;
+    switch (type) {
+      case IoType::kRead: {
+        // Write to the buffer the client is reading from
+        flag = tl::bulk_mode::read_only;
+        break;
+      }
+      case IoType::kWrite: {
+        // Read from the buffer the client has written to
+        flag = tl::bulk_mode::write_only;
+        break;
+      }
+    }
+
+    tl::endpoint endpoint = req.get_endpoint();
+    std::vector<std::pair<void*, size_t>> segments(1);
+    segments[0].first  = data;
+    segments[0].second = size;
+    tl::bulk local_bulk = io_engine_->expose(segments, flag);
+    size_t io_bytes;
+
+    switch (type) {
+      case IoType::kRead: {
+        // Write to the buffer the client is reading from
+        io_bytes = local_bulk >> bulk.on(endpoint);
+        break;
+      }
+      case IoType::kWrite: {
+        // Read from the buffer the client has written to
+        io_bytes = bulk.on(endpoint) >> local_bulk;
+        break;
+      }
+    }
+
+    // TODO(llogan): @errorhandling
+    assert(io_bytes == size);
+    return io_bytes;
   }
 
  private:

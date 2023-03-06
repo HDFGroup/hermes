@@ -34,6 +34,7 @@ static inline size_t SumBufferBlobSizes(hipc::vector<BufferInfo> &buffers) {
 class BufferOrganizer {
  public:
   MetadataManager *mdm_;
+  RPC_TYPE *rpc_;
 
  public:
   BufferOrganizer() = default;
@@ -56,9 +57,12 @@ class BufferOrganizer {
   /** Stores a blob into a set of buffers */
   RPC void LocalPlaceBlobInBuffers(const Blob &blob,
                                    hipc::vector<BufferInfo> &buffers);
+  RPC void GlobalPlaceBlobInBuffers(const Blob &blob,
+                                    hipc::vector<BufferInfo> &buffers);
 
   /** Stores a blob into a set of buffers */
   RPC Blob LocalReadBlobFromBuffers(hipc::vector<BufferInfo> &buffers);
+  Blob GlobalReadBlobFromBuffers(hipc::vector<BufferInfo> &buffers);
 
   /** Copies one buffer set into another buffer set */
   RPC void LocalCopyBuffers(hipc::vector<BufferInfo> &dst,

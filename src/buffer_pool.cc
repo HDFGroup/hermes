@@ -27,6 +27,7 @@ void BufferPool::shm_init_main(ShmHeader<BufferPool> *header,
   shm_init_header(header, alloc_);
   mdm_ = &HERMES->mdm_;
   borg_ = &HERMES->borg_;
+  rpc_ = &HERMES->rpc_;
   // [target] [cpu] [page_size]
   header_->ntargets_ = mdm_->targets_->size();
   header_->ncpu_ = HERMES_SYSTEM_INFO->ncpu_;
@@ -124,6 +125,64 @@ BufferPool::LocalAllocateAndSetBuffers(PlacementSchema &schema,
   }
   borg_->LocalPlaceBlobInBuffers(blob, buffers);
   return std::move(buffers);
+}
+
+/** Find instance of unique target if it exists */
+static std::vector<std::pair<TargetId, size_t>>::iterator
+FindUniqueTarget(std::vector<std::pair<TargetId, size_t>> &unique_tgts,
+                 TargetId &tid) {
+  for (auto iter = unique_tgts.begin(); iter != unique_tgts.end(); ++iter) {
+    if (iter->first == tid) {
+      return iter;
+    }
+  }
+  return unique_tgts.end();
+}
+
+/** Get the unique set of targets */
+std::vector<std::pair<TargetId, size_t>>
+GroupByTarget(PlacementSchema &schema, size_t &total_size) {
+  total_size = 0;
+  std::vector<std::pair<TargetId, size_t>> unique_tgts;
+  for (auto &plcmnt : schema.plcmnts_) {
+    auto iter = FindUniqueTarget(unique_tgts, plcmnt.tid_);
+    if (iter == unique_tgts.end()) {
+      unique_tgts.emplace_back(plcmnt.tid_, plcmnt.size_);
+    } else {
+      (*iter).second += plcmnt.size_;
+    }
+    total_size += plcmnt.size_;
+  }
+  return unique_tgts;
+}
+
+/**
+* The RPC of LocalAllocateAndSendBuffers
+* */
+hipc::vector<BufferInfo>
+BufferPool::GlobalAllocateAndSetBuffers(PlacementSchema &schema,
+                                        const Blob &blob) {
+  // Get the nodes to transfer buffers to
+  size_t total_size;
+  auto unique_tgts = GroupByTarget(schema, total_size);
+  hipc::vector<BufferInfo> info;
+
+  // Send the buffers to each node
+  for (auto &[tid, size] : unique_tgts) {
+    hipc::vector<BufferInfo> sub_info;
+    if (tid.GetNodeId() == rpc_->node_id_) {
+      sub_info = LocalAllocateAndSetBuffers(schema, blob);
+    } else {
+      sub_info = rpc_->IoCall<hipc::vector<BufferInfo>>(
+          tid.GetNodeId(), "RpcAllocateAndSetBuffers",
+          IoType::kWrite, blob.data(), blob.size(),
+          blob.size(), schema, blob);
+    }
+
+    // Concatenate
+  }
+
+  return info;
 }
 
 /**
@@ -253,7 +312,6 @@ std::vector<BpCoin> BufferPool::CoinSelect(hipc::ShmRef<DeviceInfo> &dev_info,
 * */
 bool BufferPool::LocalReleaseBuffers(hipc::vector<BufferInfo> &buffers) {
   int cpu = hermes_shm::NodeThreadId().hash() % HERMES_SYSTEM_INFO->ncpu_;
-
   for (hipc::ShmRef<BufferInfo> info : buffers) {
     // Acquire the main CPU lock for the target
     size_t free_list_start =

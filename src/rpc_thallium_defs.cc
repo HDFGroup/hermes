@@ -15,6 +15,8 @@
 #include "rpc_thallium_serialization.h"
 #include "data_structures.h"
 
+#include "hermes.h"
+
 namespace hermes {
 
 using thallium::request;
@@ -22,6 +24,8 @@ using thallium::request;
 void ThalliumRpc::DefineRpcs() {
   RPC_CLASS_INSTANCE_DEFS_START
   MetadataManager *mdm = this->mdm_;
+  BufferPool *bpm = &(*HERMES->bpm_);
+  BufferOrganizer *borg = &HERMES->borg_;
   RPC_CLASS_INSTANCE_DEFS_END
 
   /*RPC_AUTOGEN_START*/
@@ -160,6 +164,35 @@ void ThalliumRpc::DefineRpcs() {
                                                off64_t offset) {
     mdm->LocalUpdateTargetCapacity(tid, offset);
     req.respond(true);
+  });
+  RegisterRpc("RpcPlaceBlobInBuffers", [this, borg](
+                                           const request &req,
+                                           tl::bulk &bulk,
+                                           size_t blob_size,
+                                           hipc::vector<BufferInfo> &buffers) {
+    hapi::Blob blob(blob_size);
+    this->IoCallServer(req, bulk, IoType::kWrite, blob.data(), blob.size());
+    borg->LocalPlaceBlobInBuffers(blob, buffers);
+    req.respond(true);
+  });
+  RegisterRpc("RpcReadBlobFromBuffers", [this, borg](
+                                           const request &req,
+                                           tl::bulk &bulk,
+                                           hipc::vector<BufferInfo> &buffers) {
+    hapi::Blob blob;
+    blob = borg->LocalReadBlobFromBuffers(buffers);
+    this->IoCallServer(req, bulk, IoType::kRead, blob.data(), blob.size());
+    req.respond(true);
+  });
+  RegisterRpc("RpcAllocateAndSetBuffers", [this, bpm](
+                                           const request &req,
+                                           tl::bulk &bulk,
+                                           size_t blob_size,
+                                           PlacementSchema &schema) {
+    hapi::Blob blob(blob_size);
+    this->IoCallServer(req, bulk, IoType::kWrite, blob.data(), blob.size());
+    auto ret = bpm->LocalAllocateAndSetBuffers(schema, blob);
+    req.respond(ret);
   });
   RPC_AUTOGEN_END
 }

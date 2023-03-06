@@ -144,20 +144,19 @@ Status Bucket::Put(std::string blob_name,
 
   // Allocate buffers for the blob & enqueue placement
   for (auto &schema : schemas) {
-    // TODO(llogan): rpcify
     auto buffers = bpm_->LocalAllocateAndSetBuffers(schema, blob);
-    auto put_ret = mdm_->LocalBucketPutBlob(id_, hipc::string(blob_name),
-                                            blob.size(), buffers);
+    auto put_ret = mdm_->GlobalBucketPutBlob(id_, hipc::string(blob_name),
+                                             blob.size(), buffers);
     blob_id = std::get<0>(put_ret);
     bool did_create = std::get<1>(put_ret);
     size_t orig_blob_size = std::get<2>(put_ret);
     opts.backend_size_ = blob.size();
-    mdm_->LocalBucketRegisterBlobId(id_,
-                                    blob_id,
-                                    orig_blob_size,
-                                    blob.size(),
-                                    did_create,
-                                    opts);
+    mdm_->GlobalBucketRegisterBlobId(id_,
+                                     blob_id,
+                                     orig_blob_size,
+                                     blob.size(),
+                                     did_create,
+                                     opts);
   }
 
   return Status();

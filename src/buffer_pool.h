@@ -136,6 +136,7 @@ class BufferPool : public hipc::ShmContainer {
  private:
   MetadataManager *mdm_;
   BufferOrganizer *borg_;
+  RPC_TYPE *rpc_;
   /** Per-target allocator */
   hipc::ShmRef<BpTargetAllocs> target_allocs_;
 
@@ -174,6 +175,9 @@ class BufferPool : public hipc::ShmContainer {
   RPC hipc::vector<BufferInfo>
   LocalAllocateAndSetBuffers(PlacementSchema &schema,
                              const Blob &blob);
+  hipc::vector<BufferInfo>
+  GlobalAllocateAndSetBuffers(PlacementSchema &schema,
+                              const Blob &blob);
 
   /**
    * Determines a reasonable allocation of buffers based on the size of I/O.

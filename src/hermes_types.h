@@ -155,6 +155,14 @@ union TargetId {
   }
 
   bool IsNull() const  { return as_int_ == 0; }
+
+  bool operator==(const TargetId &other) const {
+    return as_int_ == other.as_int_;
+  }
+
+  bool operator!=(const TargetId &other) const {
+    return as_int_ != other.as_int_;
+  }
 };
 
 /**
@@ -162,10 +170,12 @@ union TargetId {
  * on a particular target during data placement
  * */
 struct SubPlacement {
-  size_t size_;   /**> Size (bytes) */
-  TargetId tid_;  /**> Target destination of data */
+  size_t size_;   /**< Size (bytes) */
+  TargetId tid_;  /**< Target destination of data */
 
-  SubPlacement(size_t size, TargetId tid)
+  SubPlacement() = default;
+
+  explicit SubPlacement(size_t size, TargetId tid)
       : size_(size), tid_(tid) {}
 };
 

@@ -25,7 +25,7 @@
 #include "data_structures.h"
 #include "hermes_shm/data_structures/serialization/thallium.h"
 
-/** Let's thallium know how to serialize an enum */
+/** Lets thallium know how to serialize an enum */
 #define SERIALIZE_ENUM(T)\
   template <typename A>\
   void save(A &ar, T &mode) {\
@@ -99,20 +99,33 @@ void serialize(A &ar, BufferInfo &info) {
   ar &info.blob_size_;
 }
 
-/** Let's thallium know how to serialize an MdLockType */
+/** Lets thallium know how to serialize an MdLockType */
 SERIALIZE_ENUM(MdLockType)
+
+/** Lets thallium know how to serialize a SubPlacement */
+template <typename A>
+void serialize(A &ar, SubPlacement &plcmnt) {
+  ar &plcmnt.size_;
+  ar &plcmnt.tid_;
+}
+
+/** Lets thallium know how to serialize a PlacementSchema */
+template <typename A>
+void serialize(A &ar, PlacementSchema &schema) {
+  ar &schema.plcmnts_;
+}
 
 }  // namespace hermes
 
 namespace hermes::adapter {
 
-/** Let's thallium know how to serialize an AdapterMode */
+/** Lets thallium know how to serialize an AdapterMode */
 SERIALIZE_ENUM(AdapterMode)
 
-/** Let's thallium know how to serialize an AdapterType */
+/** Lets thallium know how to serialize an AdapterType */
 SERIALIZE_ENUM(AdapterType)
 
-/** Let's thallium know how to serialize an IoClientContext */
+/** Lets thallium know how to serialize an IoClientContext */
 template <typename A>
 void serialize(A &ar, IoClientContext &opts) {
   ar &opts.type_;
@@ -129,13 +142,13 @@ void serialize(A &ar, IoClientContext &opts) {
 
 namespace hermes::api {
 
-/** Let's thallium know how to serialize a Status */
+/** Lets thallium know how to serialize a Status */
 template <typename A>
 void save(A &ar, Status &status) {
   ar << status.code_;
 }
 
-/** Let's thallium know how to deserialize a Status */
+/** Lets thallium know how to deserialize a Status */
 template <typename A>
 void load(A &ar, Status &status) {
   int code;
@@ -143,7 +156,7 @@ void load(A &ar, Status &status) {
   status = Status(code);
 }
 
-/** Let's thallium know how to serialize a PlacementPolicy */
+/** Lets thallium know how to serialize a PlacementPolicy */
 SERIALIZE_ENUM(PlacementPolicy)
 
 }  // namespace hermes::api
