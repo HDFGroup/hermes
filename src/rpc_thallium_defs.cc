@@ -24,7 +24,7 @@ void ThalliumRpc::DefineRpcs() {
   MetadataManager *mdm = this->mdm_;
   RPC_CLASS_INSTANCE_DEFS_END
 
-  /*RPC_AUTOGEN_START
+  /*RPC_AUTOGEN_START*/
   RegisterRpc("RpcGetOrCreateBucket", [mdm](const request &req,
                                             hipc::charbuf &bkt_name,
                                             const IoClientContext &opts) {
@@ -32,7 +32,7 @@ void ThalliumRpc::DefineRpcs() {
     req.respond(ret);
   });
   RegisterRpc("RpcGetBucketId", [mdm](const request &req,
-                                      hipc::charbuf &bkt_name) {
+                                        hipc::charbuf &bkt_name) {
     auto ret = mdm->LocalGetBucketId(bkt_name);
     req.respond(ret);
   });
@@ -76,7 +76,8 @@ void ThalliumRpc::DefineRpcs() {
     auto ret = mdm->LocalDestroyBucket(bkt_id);
     req.respond(ret);
   });
-  RegisterRpc("RpcBucketPutBlob", [mdm](const request &req, BucketId bkt_id,
+  RegisterRpc("RpcBucketPutBlob", [mdm](const request &req,
+                                        BucketId bkt_id,
                                         const hipc::charbuf &blob_name,
                                         size_t blob_size,
                                         hipc::vector<BufferInfo> &buffers) {
@@ -160,7 +161,7 @@ void ThalliumRpc::DefineRpcs() {
     mdm->LocalUpdateTargetCapacity(tid, offset);
     req.respond(true);
   });
-  RPC_AUTOGEN_END*/
+  RPC_AUTOGEN_END
 }
 
 }  // namespace hermes

@@ -14,6 +14,7 @@
 #define HERMES_STATUS_H_
 
 #include <iostream>
+#define MAX_STATUSES 200
 
 /** \file hermes_status.h */
 
@@ -22,6 +23,7 @@ namespace hermes::api {
 class Status {
  public:
   static int code_counter_;
+  static const char* status_table_[MAX_STATUSES];
   int code_;
   const char *msg_;
 
@@ -30,7 +32,13 @@ class Status {
 
   explicit Status(const char *msg) : msg_(msg) {
     code_ = code_counter_;
+    status_table_[code_] = msg;
     code_counter_ += 1;
+  }
+
+  explicit Status(int code) {
+    code_ = code;
+    msg_ = status_table_[code_];
   }
 
   Status(const Status &other) {

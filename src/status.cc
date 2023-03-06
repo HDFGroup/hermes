@@ -15,5 +15,6 @@
 namespace hermes::api {
 
 int Status::code_counter_ = 0;
+const char* Status::status_table_[MAX_STATUSES] = {};
 
 }  // namespace hermes::api

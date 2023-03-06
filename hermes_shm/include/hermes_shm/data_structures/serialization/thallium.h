@@ -16,12 +16,15 @@
 
 #include <thallium.hpp>
 #include <hermes_shm/data_structures/string.h>
+#include <hermes_shm/data_structures/data_structure.h>
 #include <hermes_shm/data_structures/thread_unsafe/vector.h>
 #include <hermes_shm/data_structures/thread_unsafe/list.h>
+#include <hermes_shm/types/charbuf.h>
 
 namespace thallium {
 
 namespace hipc = hermes_shm::ipc;
+namespace hshm = hermes_shm;
 
 /**
  *  Lets Thallium know how to serialize an hipc::allocator_id.
@@ -70,8 +73,8 @@ void load(A &ar, hipc::vector<T> &vec) {
   auto alloc = HERMES_MEMORY_MANAGER->GetAllocator(alloc_id);
   vec.shm_init(alloc);
   vec.resize(size);
-  for (auto iter = vec.begin(); iter != vec.end(); ++iter) {
-    vec.emplace_back(std::move(**iter));
+  for (int i = 0; i < size; ++i) {
+    ar >> *(vec[i]);
   }
 }
 
@@ -107,6 +110,69 @@ void load(A &ar, hipc::string &text) {
   auto alloc = HERMES_MEMORY_MANAGER->GetAllocator(alloc_id);
   text.shm_init(alloc, size);
   ar.read(text.data_mutable(), size);
+}
+
+/**
+ *  Lets Thallium know how to serialize an hshm::charbuf.
+ *
+ * This function is called implicitly by Thallium.
+ *
+ * @param ar An archive provided by Thallium.
+ * @param text The string to serialize
+ */
+template <typename A>
+void save(A &ar, hshm::charbuf &text) {
+  ar << text.GetAllocator()->GetId();
+  ar << text.size();
+  ar.write(text.data(), text.size());
+}
+
+/**
+ *  Lets Thallium know how to deserialize an hshm::charbuf.
+ *
+ * This function is called implicitly by Thallium.
+ *
+ * @param ar An archive provided by Thallium.
+ * @param target_id The string to deserialize.
+ */
+template <typename A>
+void load(A &ar, hshm::charbuf &text) {
+  hipc::allocator_id_t alloc_id;
+  size_t size;
+  ar >> alloc_id;
+  ar >> size;
+  auto alloc = HERMES_MEMORY_MANAGER->GetAllocator(alloc_id);
+  text = hshm::charbuf(alloc, size);
+  ar.read(text.data(), size);
+}
+
+/**
+ *  Lets Thallium know how to serialize a bitfield.
+ *
+ * This function is called implicitly by Thallium.
+ *
+ * @param ar An archive provided by Thallium.
+ * @param field the bitfield to serialize
+ */
+template <typename A>
+void save(A &ar, hshm::bitfield32_t &field) {
+  uint32_t bits = field.bits_;
+  ar << bits;
+}
+
+/**
+ *  Lets Thallium know how to deserialize a bitfield.
+ *
+ * This function is called implicitly by Thallium.
+ *
+ * @param ar An archive provided by Thallium.
+ * @param field the bitfield to serialize
+ */
+template <typename A>
+void load(A &ar, hshm::bitfield32_t &field) {
+  uint32_t bits;
+  ar >> bits;
+  field.bits_ = bits;
 }
 
 }  // namespace thallium

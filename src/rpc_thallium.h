@@ -18,6 +18,7 @@
 #include "communication.h"
 #include "config.h"
 #include "utils.h"
+#include "hermes_shm/data_structures/serialization/thallium.h"
 
 #include "rpc.h"
 

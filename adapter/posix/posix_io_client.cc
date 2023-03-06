@@ -18,14 +18,16 @@ namespace hermes::adapter::fs {
 void PosixIoClient::RealOpen(IoClientObject &f,
                              IoClientStats &stat,
                              const std::string &path) {
+  if (stat.adapter_mode_ == AdapterMode::kScratch) {
+    stat.flags_ &= ~O_CREAT;
+  }
   if (stat.flags_ & O_CREAT || stat.flags_ & O_TMPFILE) {
-    if (stat.adapter_mode_ != AdapterMode::kScratch) {
-      stat.fd_ = real_api->open(path.c_str(), stat.flags_, stat.st_mode_);
-    }
+    stat.fd_ = real_api->open(path.c_str(), stat.flags_, stat.st_mode_);
   } else {
     stat.fd_ = real_api->open(path.c_str(), stat.flags_);
   }
-  if (stat.fd_ < 0) {
+  if (stat.adapter_mode_ != AdapterMode::kScratch &&
+      stat.fd_ < 0) {
     f.status_ = false;
   }
   if (stat.flags_ & O_APPEND) {
@@ -52,6 +54,10 @@ void PosixIoClient::HermesOpen(IoClientObject &f,
 int PosixIoClient::RealSync(const IoClientObject &f,
                             const IoClientStats &stat) {
   (void) f;
+  if (stat.adapter_mode_ == AdapterMode::kScratch &&
+      stat.fd_ == -1) {
+    return 0;
+  }
   return real_api->fsync(stat.fd_);
 }
 
@@ -59,6 +65,10 @@ int PosixIoClient::RealSync(const IoClientObject &f,
 int PosixIoClient::RealClose(const IoClientObject &f,
                              IoClientStats &stat) {
   (void) f;
+  if (stat.adapter_mode_ == AdapterMode::kScratch &&
+      stat.fd_ == -1) {
+    return 0;
+  }
   return real_api->close(stat.fd_);
 }
 
@@ -75,6 +85,10 @@ void PosixIoClient::HermesClose(IoClientObject &f,
 /** Remove \a file FILE f */
 int PosixIoClient::RealRemove(const IoClientObject &f,
                               IoClientStats &stat) {
+  if (stat.adapter_mode_ == AdapterMode::kScratch &&
+      stat.fd_ == -1) {
+    return 0;
+  }
   return real_api->remove(stat.path_.c_str());
 }
 

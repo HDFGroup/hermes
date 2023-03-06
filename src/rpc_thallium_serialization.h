@@ -123,12 +123,27 @@ void serialize(A &ar, IoClientContext &opts) {
 }  // namespace hermes::adapter
 
 namespace hermes::api {
+
 /** Let's thallium know how to serialize a Status */
 template <typename A>
-void serialize(A &ar, Status status) {
-  ar &status.code_;
-  ar &status.msg_;
+void save(A &ar, Status &status) {
+  ar << status.code_;
 }
+
+/** Let's thallium know how to deserialize a Status */
+template <typename A>
+void load(A &ar, Status &status) {
+  int code;
+  ar >> code;
+  status = Status(code);
+}
+
+/** Let's thallium know how to serialize a PlacementPolicy */
+template <typename A>
+void serialize(A &ar, PlacementPolicy dpe) {
+  ar &static_cast<int>(dpe);
+}
+
 }  // namespace hermes::api
 
 #endif  // HERMES_SRC_RPC_THALLIUM_SERIALIZATION_H_

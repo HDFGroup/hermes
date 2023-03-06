@@ -28,6 +28,8 @@ struct bitfield {
 
   bitfield() : bits_(0) {}
 
+  explicit bitfield(T mask) : bits_(mask) {}
+
   inline void SetBits(T mask) {
     bits_ |= mask;
   }

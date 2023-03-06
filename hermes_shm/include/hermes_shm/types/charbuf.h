@@ -21,10 +21,18 @@ namespace hermes_shm {
 
 /** An uninterpreted array of bytes */
 struct charbuf {
+  /**====================================
+   * Variables & Types
+   * ===================================*/
+
   hipc::Allocator *alloc_; /**< The allocator used to allocate data */
   char *data_; /**< The pointer to data */
   size_t size_; /**< The size of data */
   bool destructable_;  /**< Whether or not this container owns data */
+
+  /**====================================
+   * Constructors & Assignment
+   * ===================================*/
 
   /** Default constructor */
   charbuf() : alloc_(nullptr), data_(nullptr), size_(0), destructable_(false) {}
@@ -35,6 +43,11 @@ struct charbuf {
   /** Size-based constructor */
   explicit charbuf(size_t size) {
     Allocate(HERMES_MEMORY_REGISTRY->GetDefaultAllocator(), size);
+  }
+
+  /** Allocator + Size-based constructor */
+  explicit charbuf(hipc::Allocator *alloc, size_t size) {
+    Allocate(alloc, size);
   }
 
   /** String-based constructor */
@@ -102,6 +115,10 @@ struct charbuf {
     return *this;
   }
 
+  /**====================================
+   * Methods
+   * ===================================*/
+
   /** Destroy and resize */
   void resize(size_t new_size) {
     if (new_size <= size()) {
@@ -135,9 +152,19 @@ struct charbuf {
     return size_;
   }
 
-  /**
-    * Comparison operators
-    * */
+  /** Get allocator */
+  hipc::Allocator* GetAllocator() {
+    return alloc_;
+  }
+
+  /** Convert to std::string */
+  std::string str() {
+    return std::string(data(), size());
+  }
+
+  /**====================================
+   * Comparison Operators
+   * ===================================*/
 
   int _strncmp(const char *a, size_t len_a,
                const char *b, size_t len_b) const {
@@ -172,6 +199,10 @@ struct charbuf {
 #undef HERMES_STR_CMP_OPERATOR
 
  private:
+  /**====================================
+   * Internal functions
+   * ===================================*/
+
   /** Allocate charbuf */
   bool Allocate(hipc::Allocator *alloc, size_t size) {
     hipc::OffsetPointer p;
