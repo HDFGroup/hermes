@@ -115,7 +115,7 @@ int main(int argc, char **argv) {
   omp_set_dynamic(0);
 #pragma omp parallel \
   shared(path, do_read, block_size, count, block_off) num_threads(kNumProcs)
-  {
+  {  // NOLINT
 #pragma omp barrier
     TestThread(path, do_read, block_size, count, block_off);
   }

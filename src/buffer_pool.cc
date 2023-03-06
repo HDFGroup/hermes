@@ -1,14 +1,14 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Distributed under BSD 3-Clause license.                                   *
- * Copyright by The HDF Group.                                               *
- * Copyright by the Illinois Institute of Technology.                        *
- * All rights reserved.                                                      *
- *                                                                           *
- * This file is part of Hermes. The full Hermes copyright notice, including  *
- * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the top directory. If you do not  *
- * have access to the file, you may request a copy from help@hdfgroup.org.   *
- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+* Distributed under BSD 3-Clause license.                                   *
+* Copyright by The HDF Group.                                               *
+* Copyright by the Illinois Institute of Technology.                        *
+* All rights reserved.                                                      *
+*                                                                           *
+* This file is part of Hermes. The full Hermes copyright notice, including  *
+* terms governing use, modification, and redistribution, is contained in    *
+* the COPYING file, which can be found at the top directory. If you do not  *
+* have access to the file, you may request a copy from help@hdfgroup.org.   *
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "buffer_pool.h"
 #include "metadata_manager.h"
@@ -18,9 +18,9 @@
 namespace hermes {
 
 /**
- * Initialize the BPM and its shared memory.
- * REQUIRES mdm to be initialized already.
- * */
+* Initialize the BPM and its shared memory.
+* REQUIRES mdm to be initialized already.
+* */
 void BufferPool::shm_init_main(ShmHeader<BufferPool> *header,
                                hipc::Allocator *alloc) {
   shm_init_allocator(alloc);
@@ -81,8 +81,8 @@ void BufferPool::shm_destroy_main() {
 }
 
 /**
- * Allocate buffers from the targets according to the schema
- * */
+* Allocate buffers from the targets according to the schema
+* */
 hipc::vector<BufferInfo>
 BufferPool::LocalAllocateAndSetBuffers(PlacementSchema &schema,
                                        const Blob &blob) {
@@ -127,9 +127,9 @@ BufferPool::LocalAllocateAndSetBuffers(PlacementSchema &schema,
 }
 
 /**
- * Allocate each size of buffer from either the free list or the
- * device growth allocator
- * */
+* Allocate each size of buffer from either the free list or the
+* device growth allocator
+* */
 void BufferPool::AllocateBuffers(SubPlacement &plcmnt,
                                  hipc::vector<BufferInfo> &buffers,
                                  std::vector<BpCoin> &coins,
@@ -175,9 +175,9 @@ void BufferPool::AllocateBuffers(SubPlacement &plcmnt,
 }
 
 /**
- * Allocate each size of buffer from either the free list or the
- * device growth allocator
- * */
+* Allocate each size of buffer from either the free list or the
+* device growth allocator
+* */
 BpSlot BufferPool::AllocateSlabSize(BpCoin &coin,
                                     hipc::ShmRef<BpFreeListStat> &stat,
                                     hipc::ShmRef<BpFreeList> &free_list,
@@ -207,9 +207,9 @@ BpSlot BufferPool::AllocateSlabSize(BpCoin &coin,
   LOG(FATAL) << "Ran out of space in BufferPool" << std::endl;
 }
 
-    /**
- * Determines a reasonable allocation of buffers based on the size of I/O.
- * */
+/**
+* Determines a reasonable allocation of buffers based on the size of I/O.
+* */
 std::vector<BpCoin> BufferPool::CoinSelect(hipc::ShmRef<DeviceInfo> &dev_info,
                                            size_t total_size,
                                            size_t &buffer_count,
@@ -249,8 +249,8 @@ std::vector<BpCoin> BufferPool::CoinSelect(hipc::ShmRef<DeviceInfo> &dev_info,
 }
 
 /**
- * Free buffers from the BufferPool
- * */
+* Free buffers from the BufferPool
+* */
 bool BufferPool::LocalReleaseBuffers(hipc::vector<BufferInfo> &buffers) {
   int cpu = hermes_shm::NodeThreadId().hash() % HERMES_SYSTEM_INFO->ncpu_;
 

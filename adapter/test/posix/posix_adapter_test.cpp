@@ -223,8 +223,6 @@ cl::Parser define_options() {
 }
 
 namespace test {
-std::string path_orig;
-std::string path_cmp;
 int fh_orig;
 int fh_cmp;
 int status_orig;

@@ -270,7 +270,7 @@ class MetadataManager {
    * Get \a blob_name BLOB name from \a blob_id BLOB id
    * */
   RPC std::string LocalGetBlobName(BlobId blob_id);
-  DEFINE_RPC(std::string, GetBlobName, 0, 
+  DEFINE_RPC(std::string, GetBlobName, 0,
              pack.template Get<0>.GetNodeId())
 
   /**
@@ -306,7 +306,7 @@ class MetadataManager {
    * Destroy \a blob_id blob in \a bkt_id bucket
    * */
   RPC bool LocalDestroyBlob(BucketId bkt_id, BlobId blob_id);
-  DEFINE_RPC(bool, DestroyBlob, 0, 
+  DEFINE_RPC(bool, DestroyBlob, 0,
              pack.template Get<1>.GetNodeId())
 
   /**
@@ -316,7 +316,7 @@ class MetadataManager {
     TargetInfo &target = *(*targets_)[tid.GetIndex()];
     target.rem_cap_ += offset;
   }
-  DEFINE_RPC(bool, UpdateTargetCapacity, 0, 
+  DEFINE_RPC(bool, UpdateTargetCapacity, 0,
              pack.template Get<0>.GetNodeId())
 
   /**

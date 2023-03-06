@@ -129,22 +129,22 @@ class RpcContext {
             [this](auto &&...args) constexpr {\
               this->Local##BaseName(std::forward<decltype(args)>(args)...);\
             });\
-      }\
-    } else {\
-      hermes_shm::PassArgPack::Call(\
-          std::forward<ArgPackT>(pack),\
-          [this, node_id](auto&& ...args) constexpr {\
-            if constexpr(std::is_same_v<TYPE_UNWRAP(RET), void>) {\
-              this->rpc_->Call<TYPE_UNWRAP(RET)>(\
-                  node_id, "Rpc" #BaseName,\
-                  std::forward<decltype(args)>(args)...);\
-            } else {\
-              return this->rpc_->Call<TYPE_UNWRAP(RET)>(\
-                  node_id, "Rpc" #BaseName,\
-                  std::forward<decltype(args)>(args)...);\
-            }\
-          });\
-    }\
+      } \
+    } else { \
+      hermes_shm::PassArgPack::Call( \
+          std::forward<ArgPackT>(pack), \
+          [this, node_id](auto&& ...args) constexpr { \
+            if constexpr(std::is_same_v<TYPE_UNWRAP(RET), void>) { \
+              this->rpc_->Call<TYPE_UNWRAP(RET)>( \
+                  node_id, "Rpc" #BaseName, \
+                  std::forward<decltype(args)>(args)...); \
+            } else { \
+              return this->rpc_->Call<TYPE_UNWRAP(RET)>( \
+                  node_id, "Rpc" #BaseName, \
+                  std::forward<decltype(args)>(args)...); \
+            } \
+          }); \
+    } \
   }
 #include "rpc_factory.h"
 

@@ -200,7 +200,6 @@ class ShmArchive {
 
   /** Move assignment operator */
   ShmArchive& operator=(ShmArchive &&other) = delete;
-
 };
 
 }  // namespace hermes_shm::ipc

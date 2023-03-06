@@ -78,13 +78,14 @@ struct IoClientContext {
                       backend_size_(0) {}
 
   /** Contains only the AdapterType */
-  IoClientContext(AdapterType type) : type_(type),
-                                      dpe_(hapi::PlacementPolicy::kNone),
-                                      flags_(),
-                                      mpi_type_(MPI_CHAR),
-                                      mpi_count_(0),
-                                      backend_off_(0),
-                                      backend_size_(0) {}
+  explicit IoClientContext(AdapterType type)
+      : type_(type),
+        dpe_(hapi::PlacementPolicy::kNone),
+        flags_(),
+        mpi_type_(MPI_CHAR),
+        mpi_count_(0),
+        backend_off_(0),
+        backend_size_(0) {}
 
   /** Enable seek for this I/O */
   void SetSeek() {

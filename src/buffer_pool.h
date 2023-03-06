@@ -105,7 +105,7 @@ struct ShmHeader<BufferPool> : public hipc::ShmBaseHeader {
   size_t nslabs_;
 
   /** Construct all internal objects */
-  ShmHeader(hipc::Allocator *alloc) {
+  explicit ShmHeader(hipc::Allocator *alloc) {
     free_lists_.shm_init(alloc);
   }
 
@@ -130,7 +130,9 @@ struct ShmHeader<BufferPool> : public hipc::ShmBaseHeader {
  * Responsible for managing the buffering space of all node-local targets.
  * */
 class BufferPool : public hipc::ShmContainer {
+ public:
   SHM_CONTAINER_TEMPLATE((BufferPool), (BufferPool), (ShmHeader<BufferPool>))
+
  private:
   MetadataManager *mdm_;
   BufferOrganizer *borg_;

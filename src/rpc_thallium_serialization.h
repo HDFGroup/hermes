@@ -25,6 +25,20 @@
 #include "data_structures.h"
 #include "hermes_shm/data_structures/serialization/thallium.h"
 
+/** Let's thallium know how to serialize an enum */
+#define SERIALIZE_ENUM(T)\
+  template <typename A>\
+  void save(A &ar, T &mode) {\
+    int cast = static_cast<int>(mode);\
+    ar << cast;\
+  }\
+  template <typename A>\
+  void load(A &ar, T &mode) {\
+    int cast;\
+    ar >> cast;\
+    mode = static_cast<T>(cast);\
+  }
+
 namespace hermes {
 
 /**
@@ -86,26 +100,17 @@ void serialize(A &ar, BufferInfo &info) {
 }
 
 /** Let's thallium know how to serialize an MdLockType */
-template <typename A>
-void serialize(A &ar, MdLockType lock) {
-  ar &static_cast<int>(lock);
-}
+SERIALIZE_ENUM(MdLockType)
 
 }  // namespace hermes
 
 namespace hermes::adapter {
 
 /** Let's thallium know how to serialize an AdapterMode */
-template <typename A>
-void serialize(A &ar, AdapterMode mode) {
-  ar &static_cast<int>(mode);
-}
+SERIALIZE_ENUM(AdapterMode)
 
 /** Let's thallium know how to serialize an AdapterType */
-template <typename A>
-void serialize(A &ar, AdapterType mode) {
-  ar &static_cast<int>(mode);
-}
+SERIALIZE_ENUM(AdapterType)
 
 /** Let's thallium know how to serialize an IoClientContext */
 template <typename A>
@@ -139,10 +144,7 @@ void load(A &ar, Status &status) {
 }
 
 /** Let's thallium know how to serialize a PlacementPolicy */
-template <typename A>
-void serialize(A &ar, PlacementPolicy dpe) {
-  ar &static_cast<int>(dpe);
-}
+SERIALIZE_ENUM(PlacementPolicy)
 
 }  // namespace hermes::api
 

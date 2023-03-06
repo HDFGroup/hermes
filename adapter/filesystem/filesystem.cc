@@ -70,7 +70,7 @@ static inline size_t GetBackendSize(size_t file_off,
   if (file_off + page_size <= file_size) {
     // Case 1: The file has more than "PageSize" bytes remaining
     return page_size;
-  } else if(file_off < file_size) {
+  } else if (file_off < file_size) {
     // Case 2: The file has less than "PageSize" bytes remaining
     return file_size - file_off;
   } else {
@@ -157,7 +157,7 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
     opts.backend_off_ = p.page_ * kPageSize;
     opts.backend_size_ = GetBackendSize(opts.backend_off_,
                                         stat.backend_size_,
-                                        kPageSize); ;
+                                        kPageSize);
     opts.type_ = type_;
     opts.adapter_mode_ = stat.adapter_mode_;
     bkt->TryCreateBlob(blob_name.str(), blob_id, ctx, opts);

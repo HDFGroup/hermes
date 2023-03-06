@@ -23,11 +23,11 @@
 namespace hapi = hermes::api;
 
 void MainPretest() {
- hapi::Hermes::Create(hermes::HermesType::kClient);
+  hapi::Hermes::Create(hermes::HermesType::kClient);
 }
 
 void MainPosttest() {
- HERMES->Finalize();
+  HERMES->Finalize();
 }
 
 TEST_CASE("TestBufferPool") {
