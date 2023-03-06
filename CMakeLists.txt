@@ -18,8 +18,8 @@ project(HERMES)
 # Version information
 #------------------------------------------------------------------------------
 set(HERMES_VERSION_MAJOR "0")
-set(HERMES_VERSION_MINOR "8")
-set(HERMES_VERSION_PATCH "0")
+set(HERMES_VERSION_MINOR "9")
+set(HERMES_VERSION_PATCH "5")
 set(HERMES_PACKAGE "hermes")
 set(HERMES_PACKAGE_NAME "HERMES")
 set(HERMES_PACKAGE_VERSION "${HERMES_VERSION_MAJOR}.${HERMES_VERSION_MINOR}.${HERMES_VERSION_PATCH}")
