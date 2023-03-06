@@ -72,6 +72,7 @@ void BufferPool::shm_serialize_main() const {}
 void BufferPool::shm_deserialize_main() {
   mdm_ = &HERMES->mdm_;
   borg_ = &HERMES->borg_;
+  rpc_ = &HERMES->rpc_;
   target_allocs_ = hipc::ShmRef<BpTargetAllocs>(
       header_->free_lists_.internal_ref(alloc_));
 }
@@ -165,11 +166,11 @@ BufferPool::GlobalAllocateAndSetBuffers(PlacementSchema &schema,
   // Get the nodes to transfer buffers to
   size_t total_size;
   auto unique_tgts = GroupByTarget(schema, total_size);
-  hipc::vector<BufferInfo> info;
+  hipc::vector<BufferInfo> info(0);
 
   // Send the buffers to each node
   for (auto &[tid, size] : unique_tgts) {
-    hipc::vector<BufferInfo> sub_info;
+    hipc::vector<BufferInfo> sub_info(0);
     if (tid.GetNodeId() == rpc_->node_id_) {
       sub_info = LocalAllocateAndSetBuffers(schema, blob);
     } else {
