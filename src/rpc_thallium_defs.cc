@@ -165,6 +165,8 @@ void ThalliumRpc::DefineRpcs() {
     mdm->LocalUpdateTargetCapacity(tid, offset);
     req.respond(true);
   });
+
+  // IO Calls
   RegisterRpc("RpcPlaceBlobInBuffers", [this, borg](
                                            const request &req,
                                            tl::bulk &bulk,

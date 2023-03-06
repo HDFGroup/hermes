@@ -144,7 +144,7 @@ Status Bucket::Put(std::string blob_name,
 
   // Allocate buffers for the blob & enqueue placement
   for (auto &schema : schemas) {
-    auto buffers = bpm_->LocalAllocateAndSetBuffers(schema, blob);
+    auto buffers = bpm_->GlobalAllocateAndSetBuffers(schema, blob);
     auto put_ret = mdm_->GlobalBucketPutBlob(id_, hipc::string(blob_name),
                                              blob.size(), buffers);
     blob_id = std::get<0>(put_ret);
@@ -231,7 +231,7 @@ Status Bucket::PartialPutOrCreate(const std::string &blob_name,
  * Get \a blob_id Blob from the bucket
  * */
 Status Bucket::Get(BlobId blob_id, Blob &blob, Context &ctx) {
-  Blob b = mdm_->LocalBucketGetBlob(blob_id);
+  Blob b = mdm_->GlobalBucketGetBlob(blob_id);
   blob = std::move(b);
   return Status();
 }

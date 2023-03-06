@@ -180,6 +180,10 @@ BufferPool::GlobalAllocateAndSetBuffers(PlacementSchema &schema,
     }
 
     // Concatenate
+    info.reserve(info.size() + sub_info.size());
+    for (hipc::ShmRef<BufferInfo> tmp_info : sub_info) {
+      info.emplace_back(*tmp_info);
+    }
   }
 
   return info;
