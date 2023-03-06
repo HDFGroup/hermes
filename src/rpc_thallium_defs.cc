@@ -113,6 +113,23 @@ void ThalliumRpc::DefineRpcs() {
     auto ret = mdm->LocalBucketTryCreateBlob(bkt_id, blob_name);
     req.respond(ret);
   });
+  RegisterRpc("RpcTagAddBlob", [mdm](const request &req,
+                                     const std::string &tag_name,
+                                     BlobId blob_id) {
+    auto ret = mdm->LocalTagAddBlob(tag_name, blob_id);
+    req.respond(ret);
+  });
+  RegisterRpc("RpcBucketTagBlob", [mdm](const request &req,
+                                        BlobId blob_id,
+                                        const std::string &tag_name) {
+    auto ret = mdm->LocalBucketTagBlob(blob_id, tag_name);
+    req.respond(ret);
+  });
+  RegisterRpc("RpcGroupByTag", [mdm](const request &req,
+                                     const std::string &tag_name) {
+    auto ret = mdm->LocalGroupByTag(tag_name);
+    req.respond(ret);
+  });
   RegisterRpc("RpcBucketGetBlob", [mdm](const request &req,
                                         BlobId blob_id) {
     auto ret = mdm->LocalBucketGetBlob(blob_id);
