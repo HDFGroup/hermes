@@ -38,6 +38,7 @@ class BufferOrganizer;
  * */
 typedef hipc::unordered_map<hipc::charbuf, BlobId> BLOB_ID_MAP_T;
 typedef hipc::unordered_map<hipc::charbuf, BucketId> BKT_ID_MAP_T;
+typedef hipc::unordered_map<hipc::charbuf, hipc::slist<BlobId>> TAG_MAP_T;
 typedef hipc::unordered_map<BlobId, BlobInfo> BLOB_MAP_T;
 typedef hipc::unordered_map<BucketId, BucketInfo> BKT_MAP_T;
 
@@ -53,6 +54,8 @@ struct MetadataManagerShmHeader {
   hipc::TypedPointer<hipc::mptr<BLOB_MAP_T>> blob_map_ar_;
   /// SHM representation of bucket map
   hipc::TypedPointer<hipc::mptr<BKT_MAP_T>> bkt_map_ar_;
+  /// SHM representation of tag map
+  hipc::TypedPointer<hipc::mptr<TAG_MAP_T>> tag_map_ar_;
   /// SHM representation of device vector
   hipc::TypedPointer<hipc::mptr<hipc::vector<DeviceInfo>>> devices_;
   /// SHM representation of target info vector
@@ -79,6 +82,7 @@ class MetadataManager {
   hipc::mptr<BKT_ID_MAP_T> bkt_id_map_;
   hipc::mptr<BLOB_MAP_T> blob_map_;
   hipc::mptr<BKT_MAP_T> bkt_map_;
+  hipc::mptr<TAG_MAP_T> tag_map_;
 
   /**
    * Information about targets and devices
@@ -248,6 +252,28 @@ class MetadataManager {
   DEFINE_RPC((std::pair<BlobId, bool>),
              BucketTryCreateBlob, 0,
              UNIQUE_ID_TO_NODE_ID_LAMBDA)
+
+  /**
+   * Add a blob to a tag index
+   * */
+  Status LocalTagAddBlob(const std::string &tag_name,
+                         BlobId blob_id);
+  DEFINE_RPC(Status, TagAddBlob, 0, std::hash<std::string>{});
+
+  /**
+   * Tag a blob
+   *
+   * @param blob_id id of the blob being tagged
+   * @param tag_name tag name
+   * */
+  Status LocalBucketTagBlob(BlobId blob_id, const std::string &tag_name);
+  DEFINE_RPC(Status, BucketTagBlob, 0, UNIQUE_ID_TO_NODE_ID_LAMBDA)
+
+  /**
+   * Find all blobs pertaining to a tag
+   * */
+  std::list<BlobId> LocalGroupByTag(const std::string &tag_name);
+  DEFINE_RPC(std::list<BlobId>, GroupByTag, 0, std::hash<std::string>{});
 
   /**
    * Get a blob from a bucket

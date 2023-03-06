@@ -108,7 +108,7 @@ const char* kServerDefaultConfigStr =
 "  port: 8080\n"
 "\n"
 "  # The number of handler threads for each RPC server.\n"
-"  num_threads: 1\n"
+"  num_threads: 4\n"
 "\n"
 "### Define properties of the BORG\n"
 "buffer_organizer:\n"

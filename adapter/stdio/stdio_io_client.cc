@@ -76,7 +76,17 @@ int StdioIoClient::RealRemove(const IoClientObject &f,
 void StdioIoClient::InitBucketState(const hipc::charbuf &bkt_name,
                                     const IoClientContext &opts,
                                     GlobalIoClientState &stat) {
-  // TODO(llogan)
+  stat.true_size_ = 0;
+  std::string filename = bkt_name.str();
+  int fd = open(filename.c_str(), O_RDONLY);
+  if (fd < 0) { return; }
+  struct stat buf;
+  fstat(fd, &buf);
+  stat.true_size_ = buf.st_size;
+  close(fd);
+
+  LOG(INFO) << "The size of the file "
+            << filename << " on disk is " << stat.true_size_ << std::endl;
 }
 
 /** Write blob to backend */

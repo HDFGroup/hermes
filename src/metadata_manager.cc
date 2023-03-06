@@ -36,6 +36,7 @@ void MetadataManager::shm_init(ServerConfig *config,
   bkt_id_map_ = hipc::make_mptr<BKT_ID_MAP_T>(16384);
   blob_map_ = hipc::make_mptr<BLOB_MAP_T>(16384);
   bkt_map_ = hipc::make_mptr<BKT_MAP_T>(16384);
+  tag_map_ = hipc::make_mptr<TAG_MAP_T>(256);
 
   // Create the DeviceInfo vector
   devices_ = hipc::make_mptr<hipc::vector<DeviceInfo>>(
@@ -69,6 +70,7 @@ void MetadataManager::shm_destroy() {
   bkt_id_map_.shm_destroy();
   blob_map_.shm_destroy();
   bkt_map_.shm_destroy();
+  tag_map_.shm_destroy();
   targets_.shm_destroy();
   devices_.shm_destroy();
 }
@@ -81,6 +83,7 @@ void MetadataManager::shm_serialize() {
   bkt_id_map_ >> header_->bkt_id_map_ar_;
   blob_map_ >> header_->blob_map_ar_;
   bkt_map_ >> header_->bkt_map_ar_;
+  tag_map_ >> header_->tag_map_ar_;
   targets_ >> header_->targets_;
   devices_ >> header_->devices_;
 }
@@ -96,6 +99,7 @@ void MetadataManager::shm_deserialize(MetadataManagerShmHeader *header) {
   bkt_id_map_ << header_->bkt_id_map_ar_;
   blob_map_ << header_->blob_map_ar_;
   bkt_map_ << header_->bkt_map_ar_;
+  tag_map_ << header_->tag_map_ar_;
   targets_ << header_->targets_;
   devices_ << header_->devices_;
 }
@@ -373,6 +377,73 @@ std::pair<BlobId, bool> MetadataManager::LocalBucketTryCreateBlob(
     blob_map_->emplace(blob_id, std::move(blob_info));
   }
   return std::pair<BlobId, bool>(blob_id, did_create);
+}
+
+/**
+ * Add a blob to a tag index
+ * */
+Status MetadataManager::LocalTagAddBlob(const std::string &tag_name,
+                                        BlobId blob_id) {
+  // Acquire MD write lock (modify tag_map_)
+  ScopedRwWriteLock md_lock(lock_);
+  hipc::string tag_name_shm(tag_name);
+  tag_map_->try_emplace(tag_name_shm,
+                        hipc::slist<BlobId>(HERMES->main_alloc_));
+  auto iter = tag_map_->find(tag_name_shm);
+  if (iter.is_end()) {
+    return Status();
+  }
+  hipc::ShmRef<hipc::pair<hipc::string,
+                          hipc::slist<BlobId>>> blob_list = (*iter);
+  blob_list->second_->emplace_back(blob_id);
+  return Status();
+}
+
+/**
+ * Tag a blob
+ *
+ * @param blob_id id of the blob being tagged
+ * @param tag_name tag name
+ * */
+Status MetadataManager::LocalBucketTagBlob(
+    BlobId blob_id, const std::string &blob_name) {
+  // Acquire MD read lock (read blob_map_)
+  ScopedRwReadLock md_lock(lock_);
+  auto iter = blob_map_->find(blob_id);
+  if (iter == blob_map_->end()) {
+    return Status();  // TODO(llogan): error status
+  }
+  hipc::ShmRef<hipc::pair<BlobId, BlobInfo>> info = (*iter);
+  BlobInfo &blob_info = *info->second_;
+  // Acquire blob_info read lock (read buffers)
+  ScopedRwReadLock blob_info_lock(blob_info.header_->lock_[0]);
+  blob_info.tags_->emplace_back(blob_name);
+  return Status();
+}
+
+/**
+ * Find all blobs pertaining to a tag
+ * */
+std::list<BlobId> MetadataManager::LocalGroupByTag(
+    const std::string &tag_name) {
+  // Acquire MD read lock (read tag_map_)
+  ScopedRwReadLock md_lock(lock_);
+  // Find the tag index
+  hipc::string tag_name_shm(tag_name);
+  auto iter = tag_map_->find(tag_name_shm);
+  if (iter.is_end()) {
+    return std::list<BlobId>();
+  }
+  // Load the tag index
+  hipc::ShmRef<hipc::pair<hipc::string,
+                          hipc::slist<BlobId>>> blob_list = (*iter);
+  hipc::ShmRef<hipc::slist<BlobId>> &blob_slist = blob_list->second_;
+  // Convert slist into std::list
+  std::list<BlobId> group;
+  for (hipc::ShmRef<BlobId> blob_id : (*blob_slist)) {
+    group.emplace_back(*blob_id);
+  }
+  return group;
 }
 
 /**

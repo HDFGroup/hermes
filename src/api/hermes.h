@@ -109,6 +109,9 @@ class Hermes {
                                     Context ctx = Context(),
                                     IoClientContext = IoClientContext());
 
+  /** Locate all blobs with a tag */
+  std::list<BlobId> GroupBy(std::string tag_name);
+
  private:
   /** Internal initialization of Hermes */
   void Init(HermesType mode = HermesType::kClient,

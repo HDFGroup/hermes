@@ -132,6 +132,15 @@ Status Bucket::TryCreateBlob(const std::string &blob_name,
 }
 
 /**
+ * Label \a blob_id blob with \a tag_name TAG
+ * */
+Status Bucket::TagBlob(BlobId &blob_id,
+                       const std::string &tag_name) {
+
+  return mdm_->GlobalBucketTagBlob(blob_id, tag_name);
+}
+
+/**
  * Put \a blob_id Blob into the bucket
  * */
 Status Bucket::Put(std::string blob_name,

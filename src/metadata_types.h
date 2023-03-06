@@ -122,6 +122,8 @@ struct ShmHeader<BlobInfo> : public hipc::ShmBaseHeader {
   hipc::TypedPointer<hipc::string> name_ar_; /**< SHM pointer to string */
   hipc::TypedPointer<hipc::vector<BufferInfo>>
       buffers_ar_;     /**< SHM pointer to BufferInfo vector */
+  hipc::TypedPointer<hipc::slist<hipc::string>>
+      tags_ar_;        /**< SHM pointer to tag list */
   size_t blob_size_;   /**< The overall size of the blob */
   RwLock lock_[2];     /**< Ensures BlobInfo access is synchronized */
   time_t update_time_; /**< Last time statistics updated */
@@ -136,24 +138,19 @@ struct ShmHeader<BlobInfo> : public hipc::ShmBaseHeader {
   ShmHeader() = default;
 
   /** Copy constructor */
-  ShmHeader(const ShmHeader &other) noexcept
-      : bkt_id_(other.bkt_id_), name_ar_(other.name_ar_),
-        buffers_ar_(other.buffers_ar_),
-        blob_size_(other.blob_size_) {}
+  ShmHeader(const ShmHeader &other) noexcept {
+    strong_copy(other);
+  }
 
   /** Move constructor */
-  ShmHeader(ShmHeader &&other) noexcept
-  : bkt_id_(std::move(other.bkt_id_)), name_ar_(std::move(other.name_ar_)),
-    buffers_ar_(std::move(other.buffers_ar_)),
-    blob_size_(other.blob_size_) {}
+  ShmHeader(ShmHeader &&other) noexcept {
+    strong_copy(other);
+  }
 
   /** Copy assignment */
   ShmHeader& operator=(const ShmHeader &other) {
     if (this != &other) {
-      bkt_id_ = other.bkt_id_;
-      name_ar_ = other.name_ar_;
-      buffers_ar_ = other.buffers_ar_;
-      blob_size_ = other.blob_size_;
+      strong_copy(other);
     }
     return *this;
   }
@@ -161,12 +158,17 @@ struct ShmHeader<BlobInfo> : public hipc::ShmBaseHeader {
   /** Move assignment */
   ShmHeader& operator=(ShmHeader &&other) {
     if (this != &other) {
-      bkt_id_ = std::move(other.bkt_id_);
-      name_ar_ = std::move(other.name_ar_);
-      buffers_ar_ = std::move(other.buffers_ar_);
-      blob_size_ = other.blob_size_;
+      strong_copy(other);
     }
     return *this;
+  }
+
+  void strong_copy(const ShmHeader &other) {
+    bkt_id_ = other.bkt_id_;
+    name_ar_ = other.name_ar_;
+    buffers_ar_ = other.buffers_ar_;
+    tags_ar_ = other.tags_ar_;
+    blob_size_ = other.blob_size_;
   }
 };
 
@@ -182,6 +184,8 @@ struct BlobInfo : public hipc::ShmContainer {
   hipc::mptr<hipc::string> name_;
   /// The BufferInfo vector
   hipc::mptr<hipc::vector<BufferInfo>> buffers_;
+  /// The Tag slist
+  hipc::mptr<hipc::slist<hipc::string>> tags_;
   /// Synchronize access to blob
   Mutex lock_;
 
@@ -195,6 +199,7 @@ struct BlobInfo : public hipc::ShmContainer {
     shm_init_header(header);
     name_.shm_init(alloc_);
     buffers_.shm_init(alloc_);
+    tags_.shm_init(alloc_);
     shm_serialize_main();
   }
 
@@ -202,6 +207,7 @@ struct BlobInfo : public hipc::ShmContainer {
   void shm_destroy_main() {
     name_.shm_destroy();
     buffers_.shm_destroy();
+    tags_.shm_destroy();
   }
 
   /** Serialize pointers */
@@ -209,6 +215,7 @@ struct BlobInfo : public hipc::ShmContainer {
     header_->bkt_id_ = bkt_id_;
     name_ >> header_->name_ar_;
     buffers_ >> header_->buffers_ar_;
+    tags_ >> header_->tags_ar_;
   }
 
   /** Deserialize pointers */
@@ -216,6 +223,7 @@ struct BlobInfo : public hipc::ShmContainer {
     bkt_id_ = header_->bkt_id_;
     name_ << header_->name_ar_;
     buffers_ << header_->buffers_ar_;
+    tags_ << header_->tags_ar_;
   }
 
   /** Move pointers into another BlobInfo */
@@ -228,6 +236,7 @@ struct BlobInfo : public hipc::ShmContainer {
     bkt_id_ = other.bkt_id_;
     (*name_) = std::move(*other.name_);
     (*buffers_) = std::move(*other.buffers_);
+    (*tags_) = std::move(*other.tags_);
     shm_serialize_main();
   }
 
@@ -241,6 +250,7 @@ struct BlobInfo : public hipc::ShmContainer {
     bkt_id_ = other.bkt_id_;
     (*name_) = (*other.name_);
     (*buffers_) = (*other.buffers_);
+    (*tags_) = (*other.tags_);
     shm_serialize_main();
   }
 };

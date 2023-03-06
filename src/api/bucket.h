@@ -135,6 +135,12 @@ class Bucket {
                        const IoClientContext &opts);
 
   /**
+   * Label \a blob_id blob with \a tag_name TAG
+   * */
+  Status TagBlob(BlobId &blob_id,
+                 const std::string &tag_name);
+
+  /**
    * Put \a blob_name Blob into the bucket
    * */
   Status Put(std::string blob_name,
