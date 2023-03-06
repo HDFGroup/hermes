@@ -10,10 +10,11 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_DATA_STRUCTURES_LOCKLESS_STRING_H_
-#define HERMES_SHM_DATA_STRUCTURES_LOCKLESS_STRING_H_
 
-#include "data_structure.h"
+#ifndef HERMES_DATA_STRUCTURES_LOCKLESS_STRING_H_
+#define HERMES_DATA_STRUCTURES_LOCKLESS_STRING_H_
+
+#include "internal/shm_internal.h"
 #include <string>
 
 namespace hermes_shm::ipc {
@@ -244,7 +245,7 @@ class string : public ShmContainer {
     return sum;
   }
 
-#define HERMES_SHM_STR_CMP_OPERATOR(op) \
+#define HERMES_STR_CMP_OPERATOR(op) \
   bool operator op(const char *other) const { \
     return _strncmp(data(), size(), other, strlen(other)) op 0; \
   } \
@@ -255,14 +256,14 @@ class string : public ShmContainer {
     return _strncmp(data(), size(), other.data(), other.size()) op 0; \
   }
 
-  HERMES_SHM_STR_CMP_OPERATOR(==)
-  HERMES_SHM_STR_CMP_OPERATOR(!=)
-  HERMES_SHM_STR_CMP_OPERATOR(<)
-  HERMES_SHM_STR_CMP_OPERATOR(>)
-  HERMES_SHM_STR_CMP_OPERATOR(<=)
-  HERMES_SHM_STR_CMP_OPERATOR(>=)
+  HERMES_STR_CMP_OPERATOR(==)  // NOLINT
+  HERMES_STR_CMP_OPERATOR(!=)  // NOLINT
+  HERMES_STR_CMP_OPERATOR(<)  // NOLINT
+  HERMES_STR_CMP_OPERATOR(>)  // NOLINT
+  HERMES_STR_CMP_OPERATOR(<=)  // NOLINT
+  HERMES_STR_CMP_OPERATOR(>=)  // NOLINT
 
-#undef HERMES_SHM_STR_CMP_OPERATOR
+#undef HERMES_STR_CMP_OPERATOR
 
  private:
   inline void _create_str(const char *text, size_t length) {
@@ -298,4 +299,4 @@ struct hash<hermes_shm::ipc::string> {
 #undef TYPED_CLASS
 #undef TYPED_HEADER
 
-#endif  // HERMES_SHM_DATA_STRUCTURES_LOCKLESS_STRING_H_
+#endif  // HERMES_DATA_STRUCTURES_LOCKLESS_STRING_H_

@@ -16,7 +16,7 @@
 #include "abstract_mapper.h"
 #include "balanced_mapper.cc"
 #include "balanced_mapper.h"
-#include "singleton.h"
+#include "hermes_shm/util/singleton.h"
 
 namespace hermes::adapter {
 /**
@@ -32,11 +32,11 @@ class MapperFactory {
    */
   AbstractMapper* Get(const MapperType& type) {
     switch (type) {
-      case MapperType::BALANCED: {
-        return hermes::Singleton<BalancedMapper>::GetInstance();
+      case MapperType::kBalancedMapper: {
+        return hermes_shm::EasySingleton<BalancedMapper>::GetInstance();
       }
       default: {
-        // TODO(hari): @error_handling Mapper not implemented
+        // TODO(llogan): @error_handling Mapper not implemented
       }
     }
     return NULL;

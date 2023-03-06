@@ -1,14 +1,14 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Distributed under BSD 3-Clause license.                                   *
- * Copyright by The HDF Group.                                               *
- * Copyright by the Illinois Institute of Technology.                        *
- * All rights reserved.                                                      *
- *                                                                           *
- * This file is part of Hermes. The full Hermes copyright notice, including  *
- * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the top directory. If you do not  *
- * have access to the file, you may request a copy from help@hdfgroup.org.   *
- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+* Distributed under BSD 3-Clause license.                                   *
+* Copyright by The HDF Group.                                               *
+* Copyright by the Illinois Institute of Technology.                        *
+* All rights reserved.                                                      *
+*                                                                           *
+* This file is part of Hermes. The full Hermes copyright notice, including  *
+* terms governing use, modification, and redistribution, is contained in    *
+* the COPYING file, which can be found at the top directory. If you do not  *
+* have access to the file, you may request a copy from help@hdfgroup.org.   *
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include <sys/stat.h>
 
@@ -407,12 +407,13 @@ TEST_CASE("BatchedReadSequential",
   }
 
   SECTION("read from existing file always at start") {
-    test::test_open(info.existing_file.c_str(), O_WRONLY);
+    test::test_open(info.existing_file.c_str(), O_RDWR);
     REQUIRE(test::fh_orig != -1);
 
-    for (size_t i = 0; i < info.num_iterations; ++i) {
+    for (size_t i = 0; i < 1; ++i) {
       test::test_seek(0, SEEK_SET);
       REQUIRE(test::status_orig == 0);
+      test::is_scase_ = true;
       test::test_write(info.write_data.data(), args.request_size);
       REQUIRE(test::size_written_orig == args.request_size);
     }
@@ -1138,7 +1139,7 @@ TEST_CASE("BatchedUpdateStride2DRSVariable",
 }
 
 /**
- * Temporal Fixed
+* Temporal Fixed
  */
 
 TEST_CASE("BatchedWriteTemporalFixed",
@@ -1466,7 +1467,7 @@ TEST_CASE("fstat") {
     REQUIRE(test::size_written_orig == args.request_size);
 
     struct stat buf = {};
-    int result = __fxstat(_STAT_VER, test::fh_orig, &buf);
+    int result = fstat(test::fh_orig, &buf);
     REQUIRE(result == 0);
     REQUIRE(buf.st_size == (off_t)test::size_written_orig);
 

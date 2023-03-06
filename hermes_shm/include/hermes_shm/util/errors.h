@@ -10,8 +10,8 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_ERRORS_H
-#define HERMES_SHM_ERRORS_H
+#ifndef HERMES_ERRORS_H
+#define HERMES_ERRORS_H
 
 #ifdef __cplusplus
 
@@ -59,4 +59,4 @@ namespace hermes_shm {
 
 #endif
 
-#endif  // HERMES_SHM_ERRORS_H
+#endif  // HERMES_ERRORS_H

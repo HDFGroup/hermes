@@ -10,8 +10,8 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_ERROR_SERIALIZER_H
-#define HERMES_SHM_ERROR_SERIALIZER_H
+#ifndef HERMES_ERROR_SERIALIZER_H
+#define HERMES_ERROR_SERIALIZER_H
 
 #include <memory>
 #include <vector>
@@ -97,4 +97,4 @@ class Formatter {
 
 }  // namespace hermes_shm
 
-#endif  //HERMES_SHM_ERROR_SERIALIZER_H
+#endif  //HERMES_ERROR_SERIALIZER_H

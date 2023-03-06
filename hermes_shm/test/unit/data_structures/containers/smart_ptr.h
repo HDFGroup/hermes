@@ -10,8 +10,8 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_TEST_UNIT_ptr__STRUCTURES_CONTAINERS_SMART_PTR_H_
-#define HERMES_SHM_TEST_UNIT_ptr__STRUCTURES_CONTAINERS_SMART_PTR_H_
+#ifndef HERMES_TEST_UNIT_ptr__STRUCTURES_CONTAINERS_SMART_PTR_H_
+#define HERMES_TEST_UNIT_ptr__STRUCTURES_CONTAINERS_SMART_PTR_H_
 
 #include "basic_test.h"
 #include "test_init.h"
@@ -81,4 +81,4 @@ class SmartPtrTestSuite {
 
 }  // namespace hermes_shm::ipc
 
-#endif //HERMES_SHM_TEST_UNIT_ptr__STRUCTURES_CONTAINERS_SMART_PTR_H_
+#endif  // HERMES_TEST_UNIT_ptr__STRUCTURES_CONTAINERS_SMART_PTR_H_

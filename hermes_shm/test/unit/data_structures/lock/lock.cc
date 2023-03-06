@@ -10,6 +10,7 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+
 #include "basic_test.h"
 #include "omp.h"
 #include "hermes_shm/thread/lock.h"
@@ -23,7 +24,7 @@ void MutexTest() {
   int count = 0;
   Mutex lock;
 
-  HERMES_SHM_THREAD_MANAGER->GetThreadStatic();
+  HERMES_THREAD_MANAGER->GetThreadStatic();
 
   omp_set_dynamic(0);
 #pragma omp parallel shared(lock) num_threads(nthreads)
@@ -59,13 +60,13 @@ void RwLockTest() {
   int count = 0;
   RwLock lock;
 
-  HERMES_SHM_THREAD_MANAGER->GetThreadStatic();
+  HERMES_THREAD_MANAGER->GetThreadStatic();
 
   omp_set_dynamic(0);
 #pragma omp parallel \
   shared(lock, nthreads, left, loop_count, count, tid_start) \
   num_threads(nthreads)
-  {
+  {  // NOLINT
     int tid = omp_get_thread_num();
 
     // Support parallel write

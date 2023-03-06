@@ -10,8 +10,8 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_ERROR_H
-#define HERMES_SHM_ERROR_H
+#ifndef HERMES_ERROR_H
+#define HERMES_ERROR_H
 
 // #ifdef __cplusplus
 
@@ -21,14 +21,14 @@
 #include <memory>
 #include <hermes_shm/util/formatter.h>
 
-#define HERMES_SHM_ERROR_TYPE std::shared_ptr<hermes_shm::Error>
-#define HERMES_SHM_ERROR_HANDLE_START() try {
-#define HERMES_SHM_ERROR_HANDLE_END() \
-  } catch(HERMES_SHM_ERROR_TYPE &err) { err->print(); exit(-1024); }
-#define HERMES_SHM_ERROR_HANDLE_TRY try
-#define HERMES_SHM_ERROR_PTR err
-#define HERMES_SHM_ERROR_HANDLE_CATCH catch(HERMES_SHM_ERROR_TYPE &HERMES_SHM_ERROR_PTR)
-#define HERMES_SHM_ERROR_IS(err, check) (err->get_code() == check.get_code())
+#define HERMES_ERROR_TYPE std::shared_ptr<hermes_shm::Error>
+#define HERMES_ERROR_HANDLE_START() try {
+#define HERMES_ERROR_HANDLE_END() \
+  } catch(HERMES_ERROR_TYPE &err) { err->print(); exit(-1024); }
+#define HERMES_ERROR_HANDLE_TRY try
+#define HERMES_ERROR_PTR err
+#define HERMES_ERROR_HANDLE_CATCH catch(HERMES_ERROR_TYPE &HERMES_ERROR_PTR)
+#define HERMES_ERROR_IS(err, check) (err->get_code() == check.get_code())
 
 namespace hermes_shm {
 
@@ -57,4 +57,4 @@ class Error {
 
 // #endif
 
-#endif  // HERMES_SHM_ERROR_H
+#endif  // HERMES_ERROR_H

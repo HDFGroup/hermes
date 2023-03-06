@@ -27,7 +27,8 @@ class BalancedMapper : public AbstractMapper {
    * This method maps the current Operation to Hermes data structures.
    *
    */
-  void map(size_t off, size_t size, BlobPlacements &ps) override;
+  void map(size_t off, size_t size, size_t page_size,
+           BlobPlacements &ps) override;
 };
 }  // namespace hermes::adapter
 

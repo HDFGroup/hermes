@@ -10,12 +10,12 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+
 #include "test_init.h"
 
 void Posttest() {
   std::string shm_url = "test_allocators";
-  auto mem_mngr = HERMES_SHM_MEMORY_MANAGER;
-  mem_mngr->DestroyBackend(shm_url);
+  auto mem_mngr = HERMES_MEMORY_MANAGER;
 }
 
 void MainPretest() {}

@@ -10,12 +10,13 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_DATA_STRUCTURES_INTERNAL_SHM_DATA_STRUCTURE_POINTER_H_
-#define HERMES_SHM_DATA_STRUCTURES_INTERNAL_SHM_DATA_STRUCTURE_POINTER_H_
+
+#ifndef HERMES_DATA_STRUCTURES_INTERNAL_SHM_DATA_STRUCTURE_POINTER_H_
+#define HERMES_DATA_STRUCTURES_INTERNAL_SHM_DATA_STRUCTURE_POINTER_H_
 
 #include "hermes_shm/memory/memory.h"
 #include "hermes_shm/memory/allocator/allocator.h"
-#include "hermes_shm/memory/memory_manager.h"
+#include "hermes_shm/memory/memory_registry.h"
 #include "hermes_shm/data_structures/internal/shm_macros.h"
 #include <hermes_shm/constants/data_structure_singleton_macros.h>
 
@@ -135,7 +136,8 @@ class ShmSmartPtr : public ShmSmartPointer {
   void shm_serialize(hipc::TypedPointer<TYPE_UNWRAP(AR_TYPE)> &type) const {\
     obj_.shm_serialize(type);\
   }\
-  void shm_serialize(hipc::TypedAtomicPointer<TYPE_UNWRAP(AR_TYPE)> &type) const {\
+  void shm_serialize(\
+      hipc::TypedAtomicPointer<TYPE_UNWRAP(AR_TYPE)> &type) const {\
     obj_.shm_serialize(type);\
   }\
   SHM_SERIALIZE_OPS(AR_TYPE)
@@ -147,10 +149,35 @@ class ShmSmartPtr : public ShmSmartPointer {
   void shm_deserialize(const hipc::TypedPointer<TYPE_UNWRAP(AR_TYPE)> &type) {\
     obj_.shm_deserialize(type);\
   }\
-  void shm_deserialize(const hipc::TypedAtomicPointer<TYPE_UNWRAP(AR_TYPE)> &type) {\
+  void shm_deserialize(\
+      const hipc::TypedAtomicPointer<TYPE_UNWRAP(AR_TYPE)> &type) {\
     obj_.shm_deserialize(type);\
   }\
   SHM_DESERIALIZE_OPS(AR_TYPE)
+
+/**
+ * Enables a specific TypedPointer type to be serialized
+ * */
+#define SHM_SERIALIZE_OPS(TYPED_CLASS)\
+  void operator>>(hipc::TypedPointer<TYPE_UNWRAP(TYPED_CLASS)> &ar) const {\
+    shm_serialize(ar);\
+  }\
+  void operator>>(\
+      hipc::TypedAtomicPointer<TYPE_UNWRAP(TYPED_CLASS)> &ar) const {\
+    shm_serialize(ar);\
+  }
+
+/**
+ * Enables a specific TypedPointer type to be deserialized
+ * */
+#define SHM_DESERIALIZE_OPS(TYPED_CLASS)\
+  void operator<<(const hipc::TypedPointer<TYPE_UNWRAP(TYPED_CLASS)> &ar) {\
+    shm_deserialize(ar);\
+  }\
+  void operator<<(\
+    const hipc::TypedAtomicPointer<TYPE_UNWRAP(TYPED_CLASS)> &ar) {\
+    shm_deserialize(ar);\
+  }
 
 /**
  * A macro for defining shared memory (de)serializations
@@ -159,4 +186,4 @@ class ShmSmartPtr : public ShmSmartPointer {
   SHM_SERIALIZE_WRAPPER(AR_TYPE)\
   SHM_DESERIALIZE_WRAPPER(AR_TYPE)
 
-#endif  // HERMES_SHM_DATA_STRUCTURES_INTERNAL_SHM_DATA_STRUCTURE_POINTER_H_
+#endif  // HERMES_DATA_STRUCTURES_INTERNAL_SHM_DATA_STRUCTURE_POINTER_H_

@@ -10,8 +10,9 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_MEMORY_MEMORY_H_
-#define HERMES_SHM_MEMORY_MEMORY_H_
+
+#ifndef HERMES_MEMORY_MEMORY_H_
+#define HERMES_MEMORY_MEMORY_H_
 
 #include <hermes_shm/types/basic.h>
 #include <hermes_shm/constants/data_structure_singleton_macros.h>
@@ -79,7 +80,7 @@ typedef uint32_t slot_id_t;  // Uniquely ids a MemoryBackend slot
  * Stores an offset into a memory region. Assumes the developer knows
  * which allocator the pointer comes from.
  * */
-template<bool ATOMIC=false>
+template<bool ATOMIC = false>
 struct OffsetPointerBase {
   typedef typename std::conditional<ATOMIC,
     atomic<size_t>, nonatomic<size_t>>::type atomic_t;
@@ -125,12 +126,12 @@ struct OffsetPointerBase {
 
   /** Check if null */
   bool IsNull() const {
-    return off_ == -1;
+    return off_.load() == -1;
   }
 
   /** Get the null pointer */
   static OffsetPointerBase GetNull() {
-    const static OffsetPointerBase p(-1);
+    static const OffsetPointerBase p(-1);
     return p;
   }
 
@@ -223,7 +224,7 @@ using TypedAtomicOffsetPointer = AtomicOffsetPointer;
  * A process-independent pointer, which stores both the allocator's
  * information and the offset within the allocator's region
  * */
-template<bool ATOMIC=false>
+template<bool ATOMIC = false>
 struct PointerBase {
   allocator_id_t allocator_id_;     /// Allocator the pointer comes from
   OffsetPointerBase<ATOMIC> off_;   /// Offset within the allocator's slot
@@ -270,7 +271,7 @@ struct PointerBase {
 
   /** Get the null pointer */
   static PointerBase GetNull() {
-    const static PointerBase p(allocator_id_t::GetNull(),
+    static const PointerBase p(allocator_id_t::GetNull(),
                                OffsetPointer::GetNull());
     return p;
   }
@@ -349,7 +350,7 @@ using TypedAtomicPointer = AtomicPointer;
 
 /** Round up to the nearest multiple of the alignment */
 static size_t NextAlignmentMultiple(size_t alignment, size_t size) {
-  auto page_size = HERMES_SHM_SYSTEM_INFO->page_size_;
+  auto page_size = HERMES_SYSTEM_INFO->page_size_;
   size_t new_size = size;
   size_t page_off = size % alignment;
   if (page_off) {
@@ -360,7 +361,7 @@ static size_t NextAlignmentMultiple(size_t alignment, size_t size) {
 
 /** Round up to the nearest multiple of page size */
 static size_t NextPageSizeMultiple(size_t size) {
-  auto page_size = HERMES_SHM_SYSTEM_INFO->page_size_;
+  auto page_size = HERMES_SYSTEM_INFO->page_size_;
   size_t new_size = NextAlignmentMultiple(page_size, size);
   return new_size;
 }
@@ -380,4 +381,4 @@ struct hash<hermes_shm::ipc::allocator_id_t> {
 }  // namespace std
 
 
-#endif  // HERMES_SHM_MEMORY_MEMORY_H_
+#endif  // HERMES_MEMORY_MEMORY_H_

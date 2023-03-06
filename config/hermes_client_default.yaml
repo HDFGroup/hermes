@@ -1,0 +1,9 @@
+stop_daemon: false
+path_inclusions: ["/tmp/test_hermes"]
+path_exclusions: ["/"]
+file_page_size: 1024KB
+base_adapter_mode: kDefault
+file_adapter_configs:
+  - path: "/"
+    page_size: 1MB
+    mode: kDefault

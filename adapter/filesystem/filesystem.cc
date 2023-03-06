@@ -1,548 +1,230 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-* Distributed under BSD 3-Clause license.                                   *
-* Copyright by The HDF Group.                                               *
-* Copyright by the Illinois Institute of Technology.                        *
-* All rights reserved.                                                      *
-*                                                                           *
-* This file is part of Hermes. The full Hermes copyright notice, including  *
-* terms governing use, modification, and redistribution, is contained in    *
-* the COPYING file, which can be found at the top directory. If you do not  *
-* have access to the file, you may request a copy from help@hdfgroup.org.   *
-* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+ * Distributed under BSD 3-Clause license.                                   *
+ * Copyright by The HDF Group.                                               *
+ * Copyright by the Illinois Institute of Technology.                        *
+ * All rights reserved.                                                      *
+ *                                                                           *
+ * This file is part of Hermes. The full Hermes copyright notice, including  *
+ * terms governing use, modification, and redistribution, is contained in    *
+ * the COPYING file, which can be found at the top directory. If you do not  *
+ * have access to the file, you may request a copy from help@hdfgroup.org.   *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "filesystem.h"
 #include "constants.h"
-#include "singleton.h"
+#include "hermes_shm/util/singleton.h"
+#include "filesystem_mdm.h"
 #include "mapper/mapper_factory.h"
-#include "interceptor.h"
-#include "metadata_manager.h"
-#include "vbucket.h"
-#include "adapter_utils.cc"
 
 #include <fcntl.h>
-#include <experimental/filesystem>
+#include <filesystem>
 
-namespace stdfs = std::experimental::filesystem;
+namespace stdfs = std::filesystem;
 
 namespace hermes::adapter::fs {
 
-static bool IsAsyncFlush(const std::string &path_str) {
-  bool result = (INTERCEPTOR_LIST->Persists(path_str) &&
-                 global_flushing_mode == FlushingMode::kAsynchronous);
-  return result;
-}
-
 File Filesystem::Open(AdapterStat &stat, const std::string &path) {
-  std::string path_str = WeaklyCanonical(path).string();
-  File f = _RealOpen(stat, path);
+  File f;
+  auto mdm = HERMES_FS_METADATA_MANAGER;
+  stat.adapter_mode_ = mdm->GetAdapterMode(path);
+  io_client_->RealOpen(f, stat, path);
   if (!f.status_) { return f; }
   Open(stat, f, path);
   return f;
 }
 
 void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
-  std::string path_str = WeaklyCanonical(path).string();
-  _InitFile(f);
-  auto mdm = Singleton<MetadataManager>::GetInstance();
-  auto existing = mdm->Find(f);
-  int rank = 0;
-  if (mdm->is_mpi) {
-    MPI_Comm_rank(stat.comm, &rank);
-  }
-  if (!existing.second) {
+  auto mdm = HERMES_FS_METADATA_MANAGER;
+  Context ctx;
+  std::shared_ptr<AdapterStat> exists = mdm->Find(f);
+  if (!exists) {
     LOG(INFO) << "File not opened before by adapter" << std::endl;
-    stat.ref_count = 1;
-    struct timespec ts;
-    timespec_get(&ts, TIME_UTC);
-    stat.st_atim = ts;
-    stat.st_mtim = ts;
-    stat.st_ctim = ts;
-
-    /* FIXME(hari) check if this initialization is correct. */
-    mdm->InitializeHermes();
-
-    bool bucket_exists = mdm->GetHermes()->BucketExists(path_str);
-
-    // TODO(llogan): needed for locking in parallel
-    if (mdm->is_mpi) {
-      stat.main_lock_blob = "#main_lock";
-      if (rank == 0) {
-        u8 c;
-        stat.st_bkid =
-            std::make_shared<hapi::Bucket>(path_str, mdm->GetHermes());
-        if (!stat.st_bkid->ContainsBlob(stat.main_lock_blob)) {
-          stat.st_bkid->Put(stat.main_lock_blob, &c, 1);
-        }
-      }
-      MPI_Barrier(stat.comm);
-      if (rank != 0) {
-        stat.st_bkid =
-            std::make_shared<hapi::Bucket>(path_str, mdm->GetHermes());
-      }
-
-      // Create a vbucket for storing all modified blobs (per-rank)
-
-    } else {
-      stat.st_bkid =
-          std::make_shared<hapi::Bucket>(path_str, mdm->GetHermes());
-    }
-
-    if (IsAsyncFlush(path_str)) {
-      // TODO(llogan): should we use a vbucket per-rank instead?
-      std::string vbucket_name = path_str + "#" + std::to_string(rank);
-      stat.st_vbkt =
-          std::make_shared<hapi::VBucket>(vbucket_name, mdm->GetHermes());
-      auto offset_map = std::unordered_map<std::string, u64>();
-      stat.st_persist =
-          std::make_shared<hapi::PersistTrait>(path_str, offset_map, false);
-      stat.st_vbkt->Attach(stat.st_persist.get());
-    }
-    _OpenInitStats(f, stat);
-    _OpenInitStatsInternal(stat, bucket_exists);
-    mdm->Create(f, stat);
+    // Create the new bucket
+    FsIoOptions opts;
+    opts.type_ = type_;
+    if (stat.is_trunc_) { opts.MarkTruncated(); }
+    stat.path_ = stdfs::weakly_canonical(path).string();
+    stat.bkt_id_ = HERMES->GetBucket(stat.path_, ctx, opts);
+    // Update bucket stats
+    // TODO(llogan): can avoid two unordered_map queries here
+    stat.page_size_ = mdm->GetAdapterPageSize(path);
+    stat.backend_size_ = stat.bkt_id_->GetSize(IoClientContext(type_));
+    // Allocate internal hermes data
+    auto stat_ptr = std::make_shared<AdapterStat>(stat);
+    FilesystemIoClientObject fs_ctx(&mdm->fs_mdm_, (void*)stat_ptr.get());
+    io_client_->HermesOpen(f, stat, fs_ctx);
+    mdm->Create(f, stat_ptr);
   } else {
-    LOG(INFO) << "File opened before by adapter" << std::endl;
-    existing.first.ref_count++;
-    struct timespec ts;
-    timespec_get(&ts, TIME_UTC);
-    existing.first.st_atim = ts;
-    existing.first.st_ctim = ts;
-    mdm->Update(f, existing.first);
+    LOG(INFO) << "File already opened by adapter" << std::endl;
+    exists->UpdateTime();
   }
 }
 
-void Filesystem::_PutWithFallback(AdapterStat &stat,
-                                  const std::string &blob_name,
-                                  const std::string &filename,
-                                  u8 *data, size_t size,
-                                  size_t offset,
-                                  IoStatus &io_status, IoOptions &opts) {
-  hapi::Context ctx;
-  const char *hermes_write_only = getenv(kHermesWriteOnlyVar);
-  if (hermes_write_only && hermes_write_only[0] == '1') {
-    // Custom DPE for write-only apps like VPIC
-    ctx.rr_retry = true;
-    ctx.disable_swap = true;
-  }
-  hapi::Status put_status = stat.st_bkid->Put(blob_name, data, size, ctx);
-  if (put_status.Failed()) {
-    if (opts.with_fallback_) {
-      LOG(WARNING) << "Failed to Put Blob " << blob_name << " to Bucket "
-                   << filename << ". Falling back to posix I/O." << std::endl;
-      _RealWrite(filename, offset, size, data, io_status, opts);
-    }
+/**
+ * The amount of data to read from the backend if the blob
+ * does not exist.
+ * */
+static inline size_t GetBackendSize(size_t file_off,
+                                    size_t file_size,
+                                    size_t page_size) {
+  if (file_off + page_size <= file_size) {
+    // Case 1: The file has more than "PageSize" bytes remaining
+    return page_size;
+  } else if (file_off < file_size) {
+    // Case 2: The file has less than "PageSize" bytes remaining
+    return file_size - file_off;
   } else {
-    stat.st_blobs.emplace(blob_name);
+    // Case 3: The offset is beyond the size of the backend file
+    return 0;
   }
 }
 
 size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
                          size_t off, size_t total_size,
-                         IoStatus &io_status, IoOptions opts) {
+                         IoStatus &io_status, FsIoOptions opts) {
   (void) f;
-  std::shared_ptr<hapi::Bucket> &bkt = stat.st_bkid;
+  std::shared_ptr<hapi::Bucket> &bkt = stat.bkt_id_;
   std::string filename = bkt->GetName();
-  LOG(INFO) << "Write called for filename: " << filename << " on offset: "
-            << off << " and size: " << total_size << std::endl;
+  LOG(INFO) << "Write called for filename: " << filename
+            << " on offset: " << off
+            << " and size: " << total_size << std::endl;
 
   size_t ret;
-  auto mdm = Singleton<MetadataManager>::GetInstance();
+  Context ctx;
   BlobPlacements mapping;
-  auto mapper = MapperFactory().Get(kMapperType);
-  mapper->map(off, total_size, mapping);
+  size_t kPageSize = stat.page_size_;
   size_t data_offset = 0;
+  auto mapper = MapperFactory().Get(MapperType::kBalancedMapper);
+  mapper->map(off, total_size, kPageSize, mapping);
 
   for (const auto &p : mapping) {
-    BlobPlacementIter wi(f, stat, filename, p, bkt, io_status, opts);
-    wi.blob_name_ = wi.p_.CreateBlobName();
-    wi.blob_exists_ = wi.bkt_->ContainsBlob(wi.blob_name_);
-    wi.blob_start_ = p.page_ * kPageSize;
-    wi.mem_ptr_ = (u8 *)ptr + data_offset;
-    if (p.blob_size_ != kPageSize && opts.coordinate_
-        && stat.main_lock_blob.size() > 0) {
-      _CoordinatedPut(wi);
-    } else {
-      _UncoordinatedPut(wi);
+    const Blob blob_wrap((const char*)ptr + data_offset, p.blob_size_);
+    hipc::charbuf blob_name(p.CreateBlobName());
+    BlobId blob_id;
+    opts.type_ = type_;
+    opts.backend_off_ = p.page_ * kPageSize;
+    opts.backend_size_ = GetBackendSize(opts.backend_off_,
+                                        stat.backend_size_,
+                                        kPageSize);
+    opts.adapter_mode_ = stat.adapter_mode_;
+    bkt->TryCreateBlob(blob_name.str(), blob_id, ctx, opts);
+    bkt->LockBlob(blob_id, MdLockType::kExternalWrite);
+    auto status = bkt->PartialPutOrCreate(blob_name.str(),
+                                          blob_wrap,
+                                          p.blob_off_,
+                                          blob_id,
+                                          io_status,
+                                          opts,
+                                          ctx);
+    if (status.Fail()) {
+      data_offset = 0;
+      break;
     }
+    bkt->UnlockBlob(blob_id, MdLockType::kExternalWrite);
     data_offset += p.blob_size_;
   }
-  off_t f_offset = off + data_offset;
-  if (opts.seek_) { stat.st_ptr = f_offset; }
-  stat.st_size = std::max(stat.st_size, static_cast<size_t>(f_offset));
+  if (opts.DoSeek()) { stat.st_ptr_ = off + data_offset; }
+  stat.UpdateTime();
 
-  struct timespec ts;
-  timespec_get(&ts, TIME_UTC);
-  stat.st_mtim = ts;
-  stat.st_ctim = ts;
+  LOG(INFO) << "The size of file after write: "
+            << GetSize(f, stat) << std::endl;
 
-  mdm->Update(f, stat);
   ret = data_offset;
-  _IoStats(data_offset, io_status, opts);
   return ret;
-}
-
-bool Lock(const std::string &bucket, const std::string &blob_name) {
-  auto mdm = Singleton<MetadataManager>::GetInstance();
-  auto &hermes = mdm->GetHermes();
-  SharedMemoryContext *context = &hermes->context_;
-  RpcContext *rpc = &hermes->rpc_;
-  BucketID bucket_id = GetBucketId(context, rpc, bucket.c_str());
-  BlobID lock_id = GetBlobId(context, rpc, blob_name, bucket_id, true);
-  bool ret = LockBlob(context, rpc, lock_id);
-  return ret;
-}
-
-void Unlock(const std::string &bucket, const std::string &blob_name) {
-  auto mdm = Singleton<MetadataManager>::GetInstance();
-  auto &hermes = mdm->GetHermes();
-  SharedMemoryContext *context = &hermes->context_;
-  RpcContext *rpc = &hermes->rpc_;
-  BucketID bucket_id = GetBucketId(context, rpc, bucket.c_str());
-  BlobID lock_id = GetBlobId(context, rpc, blob_name, bucket_id, true);
-  UnlockBlob(context, rpc, lock_id);
-}
-
-void Filesystem::_CoordinatedPut(BlobPlacementIter &wi) {
-  LOG(INFO) << "Starting coordinate PUT"
-            << " blob: " << wi.p_.page_
-            << " off: " << wi.p_.blob_off_
-            << " size: " << wi.p_.blob_size_
-            << " pid: " << getpid() << std::endl;
-
-  // TODO(llogan): make put async, instead of doing a lock like this
-  Lock(wi.filename_, wi.stat_.main_lock_blob);
-  LOG(INFO) << "Acquire lock: " << wi.stat_.main_lock_blob <<
-      " for process: " << getpid() << std::endl;
-  wi.blob_exists_ = wi.bkt_->ContainsBlob(wi.blob_name_);
-  _UncoordinatedPut(wi);
-  LOG(INFO) << "Unlocking for process: " << getpid() << std::endl;
-  Unlock(wi.filename_, wi.stat_.main_lock_blob);
-}
-
-void Filesystem::_UncoordinatedPut(BlobPlacementIter &wi) {
-  LOG(INFO) << "Starting uncoordinate PUT"
-            << " blob: " << wi.p_.page_
-            << " off: " << wi.p_.blob_off_
-            << " size: " << wi.p_.blob_size_
-            << " pid: " << getpid() << std::endl;
-  if (wi.blob_exists_) {
-    if (wi.p_.blob_off_ == 0) {
-      _WriteToExistingAligned(wi);
-    } else {
-      _WriteToExistingUnaligned(wi);
-    }
-  } else {
-    if (wi.p_.blob_off_ == 0) {
-      _WriteToNewAligned(wi);
-    } else {
-      _WriteToNewUnaligned(wi);
-    }
-  }
-  if (IsAsyncFlush(wi.filename_)) {
-    hapi::Trait *trait = wi.stat_.st_vbkt->GetTrait(hapi::TraitType::PERSIST);
-    if (trait) {
-      hapi::PersistTrait *persist_trait = (hapi::PersistTrait *)trait;
-      persist_trait->offset_map.emplace(wi.blob_name_, wi.blob_start_);
-    }
-    wi.stat_.st_vbkt->Link(wi.blob_name_, wi.filename_);
-  }
-}
-
-void Filesystem::_WriteToNewAligned(BlobPlacementIter &wi) {
-  LOG(INFO) << "Create new blob (aligned)"
-            << " offset: " << wi.p_.blob_off_
-            << " size: " << wi.p_.blob_size_ << std::endl;
-  _PutWithFallback(wi.stat_, wi.blob_name_, wi.filename_, wi.mem_ptr_,
-                   wi.p_.blob_size_, wi.p_.bucket_off_,
-                   wi.io_status_, wi.opts_);
-}
-
-void Filesystem::_WriteToNewUnaligned(BlobPlacementIter &wi) {
-  LOG(INFO) << "Create new blob (unaligned)"
-      << " offset: " << wi.p_.blob_off_
-      << " size: " << wi.p_.blob_size_ << std::endl;
-  hapi::Blob final_data(wi.p_.blob_off_ + wi.p_.blob_size_);
-  IoOptions opts = IoOptions::DirectIo(wi.opts_);
-  Read(wi.f_, wi.stat_, final_data.data(), wi.blob_start_,
-       wi.p_.blob_off_, wi.io_status_, opts);
-  memcpy(final_data.data() + wi.p_.blob_off_, wi.mem_ptr_,
-         wi.p_.blob_size_);
-  _PutWithFallback(wi.stat_, wi.blob_name_, wi.filename_,
-                   final_data.data(), final_data.size(), wi.blob_start_,
-                   wi.io_status_, wi.opts_);
-}
-
-void Filesystem::_WriteToExistingAligned(BlobPlacementIter &wi) {
-  LOG(INFO) << "Modify existing blob (aligned)"
-            << " offset: " << wi.p_.blob_off_
-            << " size: " << wi.p_.blob_size_ << std::endl;
-
-  hapi::Blob temp(0);
-  auto existing_blob_size = wi.bkt_->Get(wi.blob_name_, temp);
-  if (wi.p_.blob_size_ >= existing_blob_size) {
-    LOG(INFO) << "Overwrite blob " << wi.blob_name_
-              << " of size:" << wi.p_.blob_size_ << "." << std::endl;
-    _PutWithFallback(wi.stat_, wi.blob_name_, wi.filename_,
-                     wi.mem_ptr_, wi.p_.blob_size_, wi.blob_start_,
-                     wi.io_status_, wi.opts_);
-  } else {
-    LOG(INFO) << "Update blob " << wi.blob_name_
-              << " of size:" << existing_blob_size << "." << std::endl;
-    hapi::Blob existing_data(existing_blob_size);
-    wi.bkt_->Get(wi.blob_name_, existing_data);
-    memcpy(existing_data.data(), wi.mem_ptr_, wi.p_.blob_size_);
-    _PutWithFallback(wi.stat_, wi.blob_name_, wi.filename_,
-                     existing_data.data(), existing_data.size(),
-                     wi.blob_start_, wi.io_status_, wi.opts_);
-  }
-}
-
-void Filesystem::_WriteToExistingUnaligned(BlobPlacementIter &wi) {
-  LOG(INFO) << "Modify existing blob (unaligned)"
-            << " offset: " << wi.p_.blob_off_
-            << " size: " << wi.p_.blob_size_ << std::endl;
-
-  auto new_size = wi.p_.blob_off_ + wi.p_.blob_size_;
-  hapi::Blob temp(0);
-  auto existing_blob_size = wi.bkt_->Get(wi.blob_name_, temp);
-  hapi::Blob existing_data(existing_blob_size);
-  wi.bkt_->Get(wi.blob_name_, existing_data);
-  wi.bkt_->DeleteBlob(wi.blob_name_);
-  if (new_size < existing_blob_size) {
-    new_size = existing_blob_size;
-  }
-  hapi::Blob final_data(new_size);
-
-  // [0, existing_data)
-  memcpy(final_data.data(), existing_data.data(),
-         existing_data.size());
-
-  // [existing_data, blob_off)
-  if (existing_data.size() < wi.p_.blob_off_) {
-    IoOptions opts = IoOptions::DirectIo(wi.opts_);
-    Read(wi.f_, wi.stat_,
-         final_data.data() + existing_data.size(),
-         wi.blob_start_ + existing_data.size(),
-         wi.p_.blob_off_ - existing_data.size(),
-         wi.io_status_,
-         opts);
-  }
-
-  // [blob_off, blob_off + blob_size)
-  memcpy(final_data.data() + wi.p_.blob_off_, wi.mem_ptr_,
-         wi.p_.blob_size_);
-
-  // [blob_off + blob_size, existing_blob_size)
-  if (existing_blob_size > wi.p_.blob_off_ + wi.p_.blob_size_) {
-    LOG(INFO) << "Retain last portion of blob as Blob is bigger than the "
-                 "update." << std::endl;
-    auto off_t = wi.p_.blob_off_ + wi.p_.blob_size_;
-    memcpy(final_data.data() + off_t, existing_data.data() + off_t,
-           existing_blob_size - off_t);
-  }
-
-  // Store updated blob
-  _PutWithFallback(wi.stat_, wi.blob_name_, wi.filename_,
-                   final_data.data(),
-                   final_data.size(),
-                   wi.blob_start_,
-                   wi.io_status_,
-                   wi.opts_);
 }
 
 size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
                         size_t off, size_t total_size,
-                        IoStatus &io_status, IoOptions opts) {
+                        IoStatus &io_status, FsIoOptions opts) {
   (void) f;
-  std::shared_ptr<hapi::Bucket> &bkt = stat.st_bkid;
-  LOG(INFO) << "Read called for filename: " << bkt->GetName()
-            << " (fd: " << f.fd_ << ")"
-            << " on offset: " << off
-            << " and size: " << total_size
-            << " (stored file size: " << stat.st_size
-            << " true file size: " << stdfs::file_size(bkt->GetName())
-            << ")" << std::endl;
-  if (static_cast<size_t>(stat.st_ptr) >= stat.st_size)  {
-    LOG(INFO) << "The current offset: " << stat.st_ptr <<
-        " is larger than file size: " << stat.st_size << std::endl;
-    return 0;
-  }
-  size_t ret;
-  BlobPlacements mapping;
-  auto mdm = Singleton<MetadataManager>::GetInstance();
-  auto mapper = MapperFactory().Get(kMapperType);
-  mapper->map(off, total_size, mapping);
+  std::shared_ptr<hapi::Bucket> &bkt = stat.bkt_id_;
+  std::string filename = bkt->GetName();
+  LOG(INFO) << "Read called for filename: " << filename << " on offset: "
+            << off << " and size: " << total_size << std::endl;
 
+  size_t ret;
+  Context ctx;
+  BlobPlacements mapping;
+  size_t kPageSize = stat.page_size_;
   size_t data_offset = 0;
-  auto filename = bkt->GetName();
-  LOG(INFO) << "Mapping for read has " << mapping.size() << " mapping."
-            << std::endl;
+  auto mapper = MapperFactory().Get(MapperType::kBalancedMapper);
+  mapper->map(off, total_size, kPageSize, mapping);
+
   for (const auto &p : mapping) {
-    BlobPlacementIter ri(f, stat, filename, p, bkt, io_status, opts);
-    ri.blob_name_ = ri.p_.CreateBlobName();
-    ri.blob_exists_ = bkt->ContainsBlob(ri.blob_name_);
-    ri.blob_start_ = ri.p_.page_ * kPageSize;
-    ri.mem_ptr_ = (u8 *)ptr + data_offset;
-    size_t read_size;
-    if (ri.blob_exists_) {
-      size_t min_blob_size = p.blob_off_ + p.blob_size_;
-      auto existing_blob_size = bkt->Get(
-          ri.blob_name_, ri.blob_, ri.ctx_);
-      ri.blob_.resize(existing_blob_size);
-      if (existing_blob_size >= min_blob_size) {
-        read_size = _ReadExistingContained(ri);
-      } else {
-        read_size = _ReadExistingPartial(ri);
-      }
-    } else {
-      read_size = _ReadNew(ri);
+    Blob blob_wrap((const char*)ptr + data_offset, p.blob_size_);
+    hipc::charbuf blob_name(p.CreateBlobName());
+    BlobId blob_id;
+    opts.backend_off_ = p.page_ * kPageSize;
+    opts.backend_size_ = GetBackendSize(opts.backend_off_,
+                                        stat.backend_size_,
+                                        kPageSize);
+    opts.type_ = type_;
+    opts.adapter_mode_ = stat.adapter_mode_;
+    bkt->TryCreateBlob(blob_name.str(), blob_id, ctx, opts);
+    bkt->LockBlob(blob_id, MdLockType::kExternalRead);
+    auto status = bkt->PartialGetOrCreate(blob_name.str(),
+                                          blob_wrap,
+                                          p.blob_off_,
+                                          p.blob_size_,
+                                          blob_id,
+                                          io_status,
+                                          opts,
+                                          ctx);
+    if (status.Fail()) {
+      data_offset = 0;
+      break;
     }
-    data_offset += read_size;
+    bkt->UnlockBlob(blob_id, MdLockType::kExternalRead);
+    data_offset += p.blob_size_;
   }
-  if (opts.seek_) { stat.st_ptr += data_offset; }
-  struct timespec ts;
-  timespec_get(&ts, TIME_UTC);
-  stat.st_atim = ts;
-  stat.st_ctim = ts;
+  if (opts.DoSeek()) { stat.st_ptr_ = off + data_offset; }
+  stat.UpdateTime();
+
   ret = data_offset;
-  mdm->Update(f, stat);
-  _IoStats(data_offset, io_status, opts);
   return ret;
 }
 
-size_t Filesystem::_ReadExistingContained(BlobPlacementIter &ri) {
-  LOG(INFO) << "Blob exists and need to read from Hermes from blob: "
-            << ri.blob_name_ << "." << std::endl;
-  LOG(INFO) << "Blob have data and need to read from hemes "
-               "blob: "
-            << ri.blob_name_ << " offset:" << ri.p_.blob_off_
-            << " size:" << ri.p_.blob_size_ << "." << std::endl;
-
-  ri.bkt_->Get(ri.blob_name_, ri.blob_, ri.ctx_);
-  memcpy(ri.mem_ptr_, ri.blob_.data() + ri.p_.blob_off_, ri.p_.blob_size_);
-  return ri.p_.blob_size_;
-}
-
-size_t Filesystem::_ReadExistingPartial(BlobPlacementIter &ri) {
-  LOG(INFO) << "Blob exists and need to partially read from Hermes from blob: "
-            << ri.blob_name_ << "." << std::endl;
-  /*if (!stdfs::exists(filename) ||
-      stdfs::file_size(filename) < p.bucket_off_ + p.blob_off_ + p.blob_size_) {
-    return 0;
-  }*/
-  size_t min_blob_size = ri.p_.blob_off_ + ri.p_.blob_size_;
-  size_t existing_size = ri.blob_.size();
-  size_t new_blob_size = std::max(min_blob_size, existing_size);
-  size_t bytes_to_read = min_blob_size - existing_size;
-  ri.blob_.resize(new_blob_size);
-
-  LOG(INFO) << "Blob does not have data and need to read from original "
-               "filename: "
-            << ri.filename_ << " offset:" << ri.blob_start_ + existing_size
-            << " size:" << bytes_to_read << "."
-            << std::endl;
-
-  size_t ret = _RealRead(ri.filename_,
-                         ri.blob_start_ + existing_size,
-                         bytes_to_read,
-                         ri.blob_.data() + existing_size,
-                         ri.io_status_,
-                         ri.opts_);
-
-  if (ri.opts_.dpe_ != PlacementPolicy::kNone) {
-    IoOptions opts(ri.opts_);
-    opts.seek_ = false;
-    opts.with_fallback_ = false;
-    Write(ri.f_, ri.stat_,
-          ri.blob_.data() + ri.p_.blob_off_,
-          ri.p_.bucket_off_,
-          new_blob_size, ri.io_status_, opts);
-  }
-
-  if (ret != bytes_to_read) {
-    LOG(FATAL) << "Was not able to read all data from the file" << std::endl;
-  }
-
-  memcpy(ri.mem_ptr_, ri.blob_.data() + ri.p_.blob_off_, ri.p_.blob_size_);
-  return ri.p_.blob_size_;
-}
-
-size_t Filesystem::_ReadNew(BlobPlacementIter &ri) {
-  LOG(INFO)
-      << "Blob does not exists and need to read from original filename: "
-      << ri.filename_ << " offset:" << ri.p_.bucket_off_
-      << " size:" << ri.p_.blob_size_ << "." << std::endl;
-
-  /*if (!stdfs::exists(filename) ||
-      stdfs::file_size(filename) < p.bucket_off_ + p.blob_size_) {
-    return 0;
-  }*/
-
-  auto new_blob_size = ri.p_.blob_off_ + ri.p_.blob_size_;
-  ri.blob_.resize(new_blob_size);
-  size_t ret = _RealRead(ri.filename_, ri.blob_start_,
-                         new_blob_size, ri.blob_.data(),
-                         ri.io_status_, ri.opts_);
-  if (ret != new_blob_size) {
-    LOG(FATAL) << "Was not able to read full content" << std::endl;
-  }
-
-  if (ri.opts_.dpe_ != PlacementPolicy::kNone) {
-    LOG(INFO) << "Placing the read blob in the hierarchy" << std::endl;
-    IoOptions opts = IoOptions::PlaceInHermes(ri.opts_);
-    Write(ri.f_, ri.stat_,
-          ri.blob_.data() + ri.p_.blob_off_,
-          ri.p_.bucket_off_,
-          new_blob_size, ri.io_status_, opts);
-  }
-
-  memcpy(ri.mem_ptr_, ri.blob_.data() + ri.p_.blob_off_, ri.p_.blob_size_);
-  return ri.p_.blob_size_;
-}
-
 HermesRequest* Filesystem::AWrite(File &f, AdapterStat &stat, const void *ptr,
-                       size_t off, size_t total_size, size_t req_id,
-                       IoStatus &io_status, IoOptions opts) {
+                                  size_t off, size_t total_size, size_t req_id,
+                                  IoStatus &io_status, FsIoOptions opts) {
   (void) io_status;
   LOG(INFO) << "Starting an asynchronous write" << std::endl;
-  auto pool =
-      Singleton<ThreadPool>::GetInstance(kNumThreads);
+  auto pool = HERMES_FS_THREAD_POOL;
   HermesRequest *hreq = new HermesRequest();
   auto lambda =
       [](Filesystem *fs, File &f, AdapterStat &stat, const void *ptr,
-         size_t off, size_t total_size, IoStatus &io_status, IoOptions opts) {
+         size_t off, size_t total_size, IoStatus &io_status, FsIoOptions opts) {
     return fs->Write(f, stat, ptr, off, total_size, io_status, opts);
   };
   auto func = std::bind(lambda, this, f, stat, ptr, off,
                         total_size, hreq->io_status, opts);
   hreq->return_future = pool->run(func);
-  auto mdm = Singleton<MetadataManager>::GetInstance();
+  auto mdm = HERMES_FS_METADATA_MANAGER;
   mdm->request_map.emplace(req_id, hreq);
-  return hreq;
+  return hreq;/**/
 }
 
 HermesRequest* Filesystem::ARead(File &f, AdapterStat &stat, void *ptr,
-                      size_t off, size_t total_size, size_t req_id,
-                      IoStatus &io_status, IoOptions opts) {
+                                 size_t off, size_t total_size, size_t req_id,
+                                 IoStatus &io_status, FsIoOptions opts) {
   (void) io_status;
-  auto pool =
-      Singleton<ThreadPool>::GetInstance(kNumThreads);
+  auto pool = HERMES_FS_THREAD_POOL;
   HermesRequest *hreq = new HermesRequest();
   auto lambda =
       [](Filesystem *fs, File &f, AdapterStat &stat, void *ptr,
-         size_t off, size_t total_size, IoStatus &io_status, IoOptions opts) {
+         size_t off, size_t total_size, IoStatus &io_status, FsIoOptions opts) {
         return fs->Read(f, stat, ptr, off, total_size, io_status, opts);
       };
   auto func = std::bind(lambda, this, f, stat,
                         ptr, off, total_size, hreq->io_status, opts);
   hreq->return_future = pool->run(func);
-  auto mdm = Singleton<MetadataManager>::GetInstance();
+  auto mdm = HERMES_FS_METADATA_MANAGER;
   mdm->request_map.emplace(req_id, hreq);
   return hreq;
 }
 
 size_t Filesystem::Wait(uint64_t req_id) {
-  auto mdm = Singleton<MetadataManager>::GetInstance();
+  auto mdm = HERMES_FS_METADATA_MANAGER;
   auto req_iter = mdm->request_map.find(req_id);
   if (req_iter == mdm->request_map.end()) {
     return 0;
@@ -560,168 +242,82 @@ void Filesystem::Wait(std::vector<uint64_t> &req_ids,
   }
 }
 
+size_t Filesystem::GetSize(File &f, AdapterStat &stat) {
+  (void) stat;
+  FsIoOptions opts;
+  opts.type_ = type_;
+  return stat.bkt_id_->GetSize(opts);
+}
+
 off_t Filesystem::Seek(File &f, AdapterStat &stat,
                        SeekMode whence, off_t offset) {
-  if (stat.is_append) {
+  if (stat.is_append_) {
     LOG(INFO)
         << "File pointer not updating as file was opened in append mode."
         << std::endl;
     return -1;
   }
-  auto mdm = Singleton<MetadataManager>::GetInstance();
+  auto mdm = HERMES_FS_METADATA_MANAGER;
   switch (whence) {
     case SeekMode::kSet: {
-      stat.st_ptr = offset;
+      stat.st_ptr_ = offset;
       break;
     }
     case SeekMode::kCurrent: {
-      stat.st_ptr += offset;
+      stat.st_ptr_ += offset;
       break;
     }
     case SeekMode::kEnd: {
-      stat.st_ptr = stat.st_size + offset;
+      FsIoOptions opts;
+      opts.type_ = type_;
+      stat.st_ptr_ = stat.bkt_id_->GetSize(opts) + offset;
       break;
     }
     default: {
-      // TODO(hari): throw not implemented error.
+      // TODO(llogan): throw not implemented error.
     }
   }
   mdm->Update(f, stat);
-  return stat.st_ptr;
+  return stat.st_ptr_;
 }
 
 off_t Filesystem::Tell(File &f, AdapterStat &stat) {
   (void) f;
-  return stat.st_ptr;
+  return stat.st_ptr_;
 }
 
 int Filesystem::Sync(File &f, AdapterStat &stat) {
-  int rank = 0;
-  auto mdm = Singleton<MetadataManager>::GetInstance();
-  if (stat.ref_count != 1) {
-    LOG(INFO) << "File handler is opened by more than one fopen."
-              << std::endl;
-    struct timespec ts;
-    timespec_get(&ts, TIME_UTC);
-    stat.st_atim = ts;
-    stat.st_ctim = ts;
-    mdm->Update(f, stat);
-    return 0;
+  IoClientContext opts;
+  opts.type_ = type_;
+  opts.adapter_mode_ = stat.adapter_mode_;
+  if (stat.adapter_mode_ == AdapterMode::kDefault) {
+    stat.bkt_id_->Flush(opts);
   }
-  if (mdm->is_mpi) {
-    MPI_Comm_rank(stat.comm, &rank);
-    MPI_Barrier(stat.comm);
-  }
-
-  // Wait for all async requests to complete
-  for (auto &req : mdm->request_map) {
-    Wait(req.first);
-  }
-
-  hapi::Context ctx;
-  auto filename = stat.st_bkid->GetName();
-  auto persist = INTERCEPTOR_LIST->Persists(filename);
-  const auto &blob_names = stat.st_blobs;
-  if (blob_names.empty() || !persist) {
-    return 0;
-  }
-  if (IsAsyncFlush(filename)) {
-    LOG(INFO) << "Asynchronous flushing enabled" << std::endl;
-    stat.st_vbkt->WaitForBackgroundFlush();
-    return 0;
-  }
-
-  LOG(INFO) << "Filesystem Sync flushes " << blob_names.size()
-            << " blobs to filename:" << filename << "." << std::endl;
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(filename);
-
-  std::string vbucket_name = filename + "#" +
-                             std::to_string(rank) + "#sync";
-  hapi::VBucket file_vbucket(vbucket_name, mdm->GetHermes(), ctx);
-  auto offset_map = std::unordered_map<std::string, hermes::u64>();
-  for (const auto &blob_name : blob_names) {
-    auto status = file_vbucket.Link(blob_name, filename, ctx);
-    if (!status.Failed()) {
-      BlobPlacement p;
-      p.DecodeBlobName(blob_name);
-      offset_map.emplace(blob_name, p.page_ * kPageSize);
-    }
-  }
-  bool flush_synchronously = true;
-  hapi::PersistTrait persist_trait(filename, offset_map,
-                                   flush_synchronously);
-  file_vbucket.Attach(&persist_trait, ctx);
-  file_vbucket.Destroy(ctx);
-  stat.st_blobs.clear();
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(filename);
-  mdm->Update(f, stat);
-  return _RealSync(f);
-}
-
-void SaveModifiedBlobSet(AdapterStat &stat) {
-  int rank = 0;
-  auto mdm = Singleton<MetadataManager>::GetInstance();
-  if (mdm->is_mpi) {
-    MPI_Comm_rank(stat.comm, &rank);
-  }
-  auto filename = stat.st_bkid->GetName();
-  const auto &blob_names = stat.st_blobs;
-  std::string vbucket_name = filename + "#" +
-                             std::to_string(rank) + "#sync";
-  hapi::VBucket file_vbucket(vbucket_name, mdm->GetHermes());
-  auto offset_map = std::unordered_map<std::string, hermes::u64>();
-  for (const auto &blob_name : blob_names) {
-    file_vbucket.Link(blob_name, filename);
-  }
+  return 0;
 }
 
 int Filesystem::Close(File &f, AdapterStat &stat, bool destroy) {
-  hapi::Context ctx;
-  int rank = 0;
-  auto mdm = Singleton<MetadataManager>::GetInstance();
-  if (stat.ref_count > 1) {
-    LOG(INFO) << "File handler is opened by more than one fopen."
-              << std::endl;
-    stat.ref_count--;
-    struct timespec ts;
-    timespec_get(&ts, TIME_UTC);
-    stat.st_atim = ts;
-    stat.st_ctim = ts;
-    stat.st_bkid->Release(ctx);
-    if (stat.st_vbkt) { stat.st_vbkt->Release(); }
-    mdm->Update(f, stat);
-    return 0;
-  }
-  if (mdm->is_mpi) {
-    MPI_Comm_rank(stat.comm, &rank);
-    if (rank != 0) {
-      stat.st_bkid->Release(ctx);
-    }
-    MPI_Barrier(stat.comm);
-  }
-  if (INTERCEPTOR_LIST->adapter_mode == AdapterMode::kScratch ||
-      INTERCEPTOR_LIST->adapter_mode == AdapterMode::kWorkflow) {
-    destroy = false;
-  }
-
-  Sync(f, stat);  // TODO(llogan): should wait until hermes destroyed to flush
-  auto filename = stat.st_bkid->GetName();
-  if (mdm->is_mpi) { MPI_Barrier(stat.comm); }
-  if (IsAsyncFlush(filename)) {
-    stat.st_vbkt->Destroy();
-  }
-  mdm->Delete(f);
-  if (mdm->is_mpi) { MPI_Barrier(stat.comm); }
+  Sync(f, stat);
   if (destroy) {
-    stat.st_bkid->Destroy(ctx);
+    stat.bkt_id_->Destroy();
   }
-  if (stat.amode & MPI_MODE_DELETE_ON_CLOSE) {
-    stdfs::remove(filename);
-  }
-  mdm->FinalizeHermes();
-  return _RealClose(f);
+  auto mdm = HERMES_FS_METADATA_MANAGER;
+  FilesystemIoClientObject fs_ctx(&mdm->fs_mdm_, (void*)&stat);
+  io_client_->HermesClose(f, stat, fs_ctx);
+  io_client_->RealClose(f, stat);
+  mdm->Delete(stat.path_, f);
+  return 0;
 }
 
+int Filesystem::Remove(File &f, AdapterStat &stat) {
+  stat.bkt_id_->Destroy();
+  auto mdm = HERMES_FS_METADATA_MANAGER;
+  FilesystemIoClientObject fs_ctx(&mdm->fs_mdm_, (void*)&stat);
+  io_client_->HermesClose(f, stat, fs_ctx);
+  io_client_->RealClose(f, stat);
+  mdm->Delete(stat.path_, f);
+  return 0;
+}
 
 /**
  * Variants of Read and Write which do not take an offset as
@@ -730,28 +326,28 @@ int Filesystem::Close(File &f, AdapterStat &stat, bool destroy) {
 
 size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
                          size_t total_size, IoStatus &io_status,
-                         IoOptions opts) {
+                         FsIoOptions opts) {
   off_t off = Tell(f, stat);
   return Write(f, stat, ptr, off, total_size, io_status, opts);
 }
 
 size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
                         size_t total_size,
-                        IoStatus &io_status, IoOptions opts) {
+                        IoStatus &io_status, FsIoOptions opts) {
   off_t off = Tell(f, stat);
   return Read(f, stat, ptr, off, total_size, io_status, opts);
 }
 
 HermesRequest* Filesystem::AWrite(File &f, AdapterStat &stat, const void *ptr,
                        size_t total_size, size_t req_id,
-                       IoStatus &io_status, IoOptions opts) {
+                       IoStatus &io_status, FsIoOptions opts) {
   off_t off = Tell(f, stat);
   return AWrite(f, stat, ptr, off, total_size, req_id, io_status, opts);
 }
 
 HermesRequest* Filesystem::ARead(File &f, AdapterStat &stat, void *ptr,
                       size_t total_size, size_t req_id,
-                      IoStatus &io_status, IoOptions opts) {
+                      IoStatus &io_status, FsIoOptions opts) {
   off_t off = Tell(f, stat);
   return ARead(f, stat, ptr, off, total_size, req_id, io_status, opts);
 }
@@ -764,155 +360,177 @@ HermesRequest* Filesystem::ARead(File &f, AdapterStat &stat, void *ptr,
 
 size_t Filesystem::Write(File &f, bool &stat_exists, const void *ptr,
                          size_t total_size,
-                         IoStatus &io_status, IoOptions opts) {
-  auto mdm = Singleton<MetadataManager>::GetInstance();
-  auto [stat, exists] = mdm->Find(f);
-  if (!exists) {
+                         IoStatus &io_status, FsIoOptions opts) {
+  auto mdm = HERMES_FS_METADATA_MANAGER;
+  auto stat = mdm->Find(f);
+  if (!stat) {
     stat_exists = false;
     return 0;
   }
   stat_exists = true;
-  return Write(f, stat, ptr, total_size, io_status, opts);
+  return Write(f, *stat, ptr, total_size, io_status, opts);
 }
 
 size_t Filesystem::Read(File &f, bool &stat_exists, void *ptr,
                         size_t total_size,
-                        IoStatus &io_status, IoOptions opts) {
-  auto mdm = Singleton<MetadataManager>::GetInstance();
-  auto [stat, exists] = mdm->Find(f);
-  if (!exists) {
+                        IoStatus &io_status, FsIoOptions opts) {
+  auto mdm = HERMES_FS_METADATA_MANAGER;
+  auto stat = mdm->Find(f);
+  if (!stat) {
     stat_exists = false;
     return 0;
   }
   stat_exists = true;
-  return Read(f, stat, ptr, total_size, io_status, opts);
+  return Read(f, *stat, ptr, total_size, io_status, opts);
 }
 
 size_t Filesystem::Write(File &f, bool &stat_exists, const void *ptr,
                          size_t off, size_t total_size,
-                         IoStatus &io_status, IoOptions opts) {
-  auto mdm = Singleton<MetadataManager>::GetInstance();
-  auto [stat, exists] = mdm->Find(f);
-  if (!exists) {
+                         IoStatus &io_status, FsIoOptions opts) {
+  auto mdm = HERMES_FS_METADATA_MANAGER;
+  auto stat = mdm->Find(f);
+  if (!stat) {
     stat_exists = false;
     return 0;
   }
   stat_exists = true;
-  opts.seek_ = false;
-  return Write(f, stat, ptr, off, total_size, io_status, opts);
+  opts.UnsetSeek();
+  return Write(f, *stat, ptr, off, total_size, io_status, opts);
 }
 
 size_t Filesystem::Read(File &f, bool &stat_exists, void *ptr,
                         size_t off, size_t total_size,
-                        IoStatus &io_status, IoOptions opts) {
-  auto mdm = Singleton<MetadataManager>::GetInstance();
-  auto [stat, exists] = mdm->Find(f);
-  if (!exists) {
+                        IoStatus &io_status, FsIoOptions opts) {
+  auto mdm = HERMES_FS_METADATA_MANAGER;
+  auto stat = mdm->Find(f);
+  if (!stat) {
     stat_exists = false;
     return 0;
   }
   stat_exists = true;
-  opts.seek_ = false;
-  return Read(f, stat, ptr, off, total_size, io_status, opts);
+  opts.UnsetSeek();
+  return Read(f, *stat, ptr, off, total_size, io_status, opts);
 }
 
 HermesRequest* Filesystem::AWrite(File &f, bool &stat_exists, const void *ptr,
                        size_t total_size, size_t req_id,
-                       IoStatus &io_status, IoOptions opts) {
-  auto mdm = Singleton<MetadataManager>::GetInstance();
-  auto [stat, exists] = mdm->Find(f);
-  if (!exists) {
+                       IoStatus &io_status, FsIoOptions opts) {
+  auto mdm = HERMES_FS_METADATA_MANAGER;
+  auto stat = mdm->Find(f);
+  if (!stat) {
     stat_exists = false;
     return 0;
   }
   stat_exists = true;
-  return AWrite(f, stat, ptr, total_size, req_id, io_status, opts);
+  return AWrite(f, *stat, ptr, total_size, req_id, io_status, opts);
 }
 
 HermesRequest* Filesystem::ARead(File &f, bool &stat_exists, void *ptr,
                       size_t total_size, size_t req_id,
-                      IoStatus &io_status, IoOptions opts) {
-  auto mdm = Singleton<MetadataManager>::GetInstance();
-  auto [stat, exists] = mdm->Find(f);
-  if (!exists) {
+                      IoStatus &io_status, FsIoOptions opts) {
+  auto mdm = HERMES_FS_METADATA_MANAGER;
+  auto stat = mdm->Find(f);
+  if (!stat) {
     stat_exists = false;
     return 0;
   }
   stat_exists = true;
-  return ARead(f, stat, ptr, total_size, req_id, io_status, opts);
+  return ARead(f, *stat, ptr, total_size, req_id, io_status, opts);
 }
 
 HermesRequest* Filesystem::AWrite(File &f, bool &stat_exists, const void *ptr,
                        size_t off, size_t total_size, size_t req_id,
-                       IoStatus &io_status, IoOptions opts) {
-  auto mdm = Singleton<MetadataManager>::GetInstance();
-  auto [stat, exists] = mdm->Find(f);
-  if (!exists) {
+                       IoStatus &io_status, FsIoOptions opts) {
+  auto mdm = HERMES_FS_METADATA_MANAGER;
+  auto stat = mdm->Find(f);
+  if (!stat) {
     stat_exists = false;
     return 0;
   }
   stat_exists = true;
-  opts.seek_ = false;
-  return AWrite(f, stat, ptr, off, total_size, req_id, io_status, opts);
+  opts.UnsetSeek();
+  return AWrite(f, *stat, ptr, off, total_size, req_id, io_status, opts);
 }
 
 HermesRequest* Filesystem::ARead(File &f, bool &stat_exists, void *ptr,
                       size_t off, size_t total_size, size_t req_id,
-                      IoStatus &io_status, IoOptions opts) {
-  auto mdm = Singleton<MetadataManager>::GetInstance();
-  auto [stat, exists] = mdm->Find(f);
-  if (!exists) {
+                      IoStatus &io_status, FsIoOptions opts) {
+  auto mdm = HERMES_FS_METADATA_MANAGER;
+  auto stat = mdm->Find(f);
+  if (!stat) {
     stat_exists = false;
     return 0;
   }
   stat_exists = true;
-  opts.seek_ = false;
-  return ARead(f, stat, ptr, off, total_size, req_id, io_status, opts);
+  opts.UnsetSeek();
+  return ARead(f, *stat, ptr, off, total_size, req_id, io_status, opts);
 }
 
 off_t Filesystem::Seek(File &f, bool &stat_exists,
                        SeekMode whence, off_t offset) {
-  auto mdm = Singleton<MetadataManager>::GetInstance();
-  auto [stat, exists] = mdm->Find(f);
-  if (!exists) {
+  auto mdm = HERMES_FS_METADATA_MANAGER;
+  auto stat = mdm->Find(f);
+  if (!stat) {
     stat_exists = false;
     return -1;
   }
   stat_exists = true;
-  return Seek(f, stat, whence, offset);
+  return Seek(f, *stat, whence, offset);
+}
+
+size_t Filesystem::GetSize(File &f, bool &stat_exists) {
+  auto mdm = HERMES_FS_METADATA_MANAGER;
+  auto stat = mdm->Find(f);
+  if (!stat) {
+    stat_exists = false;
+    return -1;
+  }
+  stat_exists = true;
+  return GetSize(f, *stat);
 }
 
 off_t Filesystem::Tell(File &f, bool &stat_exists) {
-  auto mdm = Singleton<MetadataManager>::GetInstance();
-  auto [stat, exists] = mdm->Find(f);
-  if (!exists) {
+  auto mdm = HERMES_FS_METADATA_MANAGER;
+  auto stat = mdm->Find(f);
+  if (!stat) {
     stat_exists = false;
     return -1;
   }
   stat_exists = true;
-  return Tell(f, stat);
+  return Tell(f, *stat);
 }
 
 int Filesystem::Sync(File &f, bool &stat_exists) {
-  auto mdm = Singleton<MetadataManager>::GetInstance();
-  auto [stat, exists] = mdm->Find(f);
-  if (!exists) {
+  auto mdm = HERMES_FS_METADATA_MANAGER;
+  auto stat = mdm->Find(f);
+  if (!stat) {
     stat_exists = false;
     return -1;
   }
   stat_exists = true;
-  return Sync(f, stat);
+  return Sync(f, *stat);
 }
 
 int Filesystem::Close(File &f, bool &stat_exists, bool destroy) {
-  auto mdm = Singleton<MetadataManager>::GetInstance();
-  auto [stat, exists] = mdm->Find(f);
-  if (!exists) {
+  auto mdm = HERMES_FS_METADATA_MANAGER;
+  auto stat = mdm->Find(f);
+  if (!stat) {
     stat_exists = false;
     return -1;
   }
   stat_exists = true;
-  return Close(f, stat, destroy);
+  return Close(f, *stat, destroy);
+}
+
+int Filesystem::Remove(File &f, bool &stat_exists) {
+  auto mdm = HERMES_FS_METADATA_MANAGER;
+  auto stat = mdm->Find(f);
+  if (!stat) {
+    stat_exists = false;
+    return -1;
+  }
+  stat_exists = true;
+  return Remove(f, *stat);
 }
 
 }  // namespace hermes::adapter::fs

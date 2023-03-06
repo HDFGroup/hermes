@@ -10,8 +10,8 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_PATH_PARSER_H
-#define HERMES_SHM_PATH_PARSER_H
+#ifndef HERMES_PATH_PARSER_H
+#define HERMES_PATH_PARSER_H
 
 #include <cstdlib>
 #include <string>
@@ -47,4 +47,4 @@ std::string path_parser(std::string path) {
 
 }  // namespace scs
 
-#endif  // HERMES_SHM_PATH_PARSER_H
+#endif  // HERMES_PATH_PARSER_H

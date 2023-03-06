@@ -10,8 +10,8 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_INCLUDE_HERMES_SHM_DATA_STRUCTURES_TupleBase_H_
-#define HERMES_SHM_INCLUDE_HERMES_SHM_DATA_STRUCTURES_TupleBase_H_
+#ifndef HERMES_INCLUDE_HERMES_DATA_STRUCTURES_TupleBase_H_
+#define HERMES_INCLUDE_HERMES_DATA_STRUCTURES_TupleBase_H_
 
 #include <utility>
 #include "basic.h"
@@ -27,7 +27,7 @@ using NullWrap = T;
 template<
   template<typename> typename Wrap,
   size_t idx,
-  typename T=EndTemplateRecurrence,
+  typename T = EndTemplateRecurrence,
   typename ...Args>
 struct TupleBaseRecur {
   Wrap<T> arg_; /**< The element stored */
@@ -244,4 +244,4 @@ using ReverseIterateTuple = IterateTuple<true>;
 
 }  // namespace hermes_shm
 
-#endif //HERMES_SHM_INCLUDE_HERMES_SHM_DATA_STRUCTURES_TupleBase_H_
+#endif  // HERMES_INCLUDE_HERMES_DATA_STRUCTURES_TupleBase_H_

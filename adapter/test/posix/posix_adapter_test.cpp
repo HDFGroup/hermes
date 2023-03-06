@@ -14,12 +14,13 @@
 #include <stdarg.h>
 #include <unistd.h>
 
-#include <experimental/filesystem>
+#include <filesystem>
 #include <iostream>
 
 #include "catch_config.h"
 #if HERMES_INTERCEPT == 1
-#include "posix/real_api.h"
+#include "posix/posix_api.h"
+#include "posix/posix_fs_api.h"
 #endif
 
 #ifndef O_TMPFILE
@@ -28,9 +29,9 @@
 
 #include "adapter_test_utils.h"
 
-namespace stdfs = std::experimental::filesystem;
+namespace stdfs = std::filesystem;
 
-namespace hermes::adapter::posix::test {
+namespace hermes::adapter::fs::test {
 struct Arguments {
   std::string filename = "test.dat";
   std::string directory = "/tmp";
@@ -57,9 +58,9 @@ struct Info {
   size_t medium_min = 4 * 1024 + 1, medium_max = 256 * 1024;
   size_t large_min = 256 * 1024 + 1, large_max = 3 * 1024 * 1024;
 };
-}  // namespace hermes::adapter::posix::test
-hermes::adapter::posix::test::Arguments args;
-hermes::adapter::posix::test::Info info;
+}  // namespace hermes::adapter::fs::test
+hermes::adapter::fs::test::Arguments args;
+hermes::adapter::fs::test::Info info;
 std::vector<char> gen_random(const int len) {
   auto tmp_s = std::vector<char>(len);
   static const char alphanum[] =
@@ -119,16 +120,16 @@ int pretest() {
   }
   REQUIRE(info.total_size > 0);
 #if HERMES_INTERCEPT == 1
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.existing_file_cmp);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.new_file_cmp);
+  HERMES->client_config_.SetAdapterPathTracking(info.existing_file_cmp, false);
+  HERMES->client_config_.SetAdapterPathTracking(info.new_file_cmp, false);
 #endif
   return 0;
 }
 
 int posttest(bool compare_data = true) {
 #if HERMES_INTERCEPT == 1
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.existing_file);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.new_file);
+  HERMES->client_config_.SetAdapterPathTracking(info.existing_file_cmp, false);
+  HERMES->client_config_.SetAdapterPathTracking(info.new_file_cmp, false);
 #endif
   if (compare_data && stdfs::exists(info.new_file) &&
       stdfs::exists(info.new_file_cmp)) {
@@ -188,6 +189,11 @@ int posttest(bool compare_data = true) {
           break;
         }
       }
+      if (char_mismatch != 0) {
+        std::cout << "The files " <<  info.existing_file
+                  << " and " << info.existing_file_cmp
+                  << " had mismatched characters" << std::endl;
+      }
       REQUIRE(char_mismatch == 0);
     }
   }
@@ -199,10 +205,10 @@ int posttest(bool compare_data = true) {
     stdfs::remove(info.existing_file_cmp);
 
 #if HERMES_INTERCEPT == 1
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_file_cmp);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.new_file_cmp);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.new_file);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_file);
+  HERMES->client_config_.SetAdapterPathTracking(info.existing_file_cmp, true);
+  HERMES->client_config_.SetAdapterPathTracking(info.new_file_cmp, true);
+  HERMES->client_config_.SetAdapterPathTracking(info.new_file, true);
+  HERMES->client_config_.SetAdapterPathTracking(info.existing_file, true);
 #endif
   return 0;
 }
@@ -222,6 +228,7 @@ int fh_cmp;
 int status_orig;
 size_t size_read_orig;
 size_t size_written_orig;
+bool is_scase_ = false;
 void test_open(const char* path, int flags, ...) {
   int mode = 0;
   if (flags & O_CREAT || flags & O_TMPFILE) {
@@ -271,6 +278,9 @@ void test_read(char* ptr, size_t size) {
         unmatching_chars = i;
         break;
       }
+    }
+    if (unmatching_chars != 0) {
+      std::cerr << "There were unmatching chars" << std::endl;
     }
     REQUIRE(unmatching_chars == 0);
   }

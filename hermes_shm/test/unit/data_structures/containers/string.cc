@@ -13,7 +13,6 @@
 #include "basic_test.h"
 #include "test_init.h"
 #include "hermes_shm/data_structures/string.h"
-#include "hermes_shm/memory/allocator/stack_allocator.h"
 
 using hermes_shm::ipc::string;
 

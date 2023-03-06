@@ -5,6 +5,8 @@ GPATH
 GRTAGS
 GTAGS
 
+/compiler_data
+
 .gdb_history
 
 /cmake-build-*
@@ -15,3 +17,5 @@ __pycache__/
 /src/adapter/posix/cmake-build-debug-system/CMakeFiles/clion-log.txt
 /adapter/test/posix/Testing/Temporary/LastTest.log
 /.cache/
+
+Testing

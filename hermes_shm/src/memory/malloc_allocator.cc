@@ -10,6 +10,7 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+
 #include <hermes_shm/memory/allocator/malloc_allocator.h>
 
 namespace hermes_shm::ipc {
@@ -18,17 +19,20 @@ struct MallocPage {
   size_t page_size_;
 };
 
-void MallocAllocator::shm_init(MemoryBackend *backend,
-                               allocator_id_t id,
-                               size_t custom_header_size) {
-  backend_ = backend;
+void MallocAllocator::shm_init(allocator_id_t id,
+                               size_t custom_header_size,
+                               char *buffer,
+                               size_t buffer_size) {
+  buffer_ = buffer;
+  buffer_size_ = buffer_size;
   header_ = reinterpret_cast<MallocAllocatorHeader*>(
     malloc(sizeof(MallocAllocatorHeader) + custom_header_size));
   custom_header_ = reinterpret_cast<char*>(header_ + 1);
   header_->Configure(id, custom_header_size);
 }
 
-void MallocAllocator::shm_deserialize(MemoryBackend *backend) {
+void MallocAllocator::shm_deserialize(char *buffer,
+                                      size_t buffer_size) {
   throw NOT_IMPLEMENTED.format("MallocAllocator::shm_deserialize");
 }
 

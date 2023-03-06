@@ -10,12 +10,13 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_THREAD_PTHREAD_H_
-#define HERMES_SHM_THREAD_PTHREAD_H_
+#ifndef HERMES_THREAD_PTHREAD_H_
+#define HERMES_THREAD_PTHREAD_H_
 
 #include "thread.h"
 #include <errno.h>
 #include <hermes_shm/util/errors.h>
+#include <omp.h>
 
 namespace hermes_shm {
 
@@ -87,14 +88,15 @@ class Pthread : public Thread {
 class PthreadStatic : public ThreadStatic {
  public:
   void Yield() override {
-    pthread_yield();
+    sched_yield();
   }
 
   tid_t GetTid() override {
-    return static_cast<tid_t>(pthread_self());
+    return omp_get_thread_num();
+    // return static_cast<tid_t>(pthread_self());
   }
 };
 
 }  // namespace hermes_shm
 
-#endif  // HERMES_SHM_THREAD_PTHREAD_H_
+#endif  // HERMES_THREAD_PTHREAD_H_

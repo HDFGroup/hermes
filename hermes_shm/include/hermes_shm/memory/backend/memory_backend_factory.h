@@ -10,8 +10,9 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_MEMORY_BACKEND_MEMORY_BACKEND_FACTORY_H_
-#define HERMES_SHM_MEMORY_BACKEND_MEMORY_BACKEND_FACTORY_H_
+
+#ifndef HERMES_MEMORY_BACKEND_MEMORY_BACKEND_FACTORY_H_
+#define HERMES_MEMORY_BACKEND_MEMORY_BACKEND_FACTORY_H_
 
 #include "memory_backend.h"
 #include "posix_mmap.h"
@@ -100,4 +101,4 @@ class MemoryBackendFactory {
 
 }  // namespace hermes_shm::ipc
 
-#endif  // HERMES_SHM_MEMORY_BACKEND_MEMORY_BACKEND_FACTORY_H_
+#endif  // HERMES_MEMORY_BACKEND_MEMORY_BACKEND_FACTORY_H_

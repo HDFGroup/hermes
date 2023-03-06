@@ -10,8 +10,9 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_TEST_UNIT_DATA_STRUCTURES_TEST_INIT_H_
-#define HERMES_SHM_TEST_UNIT_DATA_STRUCTURES_TEST_INIT_H_
+
+#ifndef HERMES_TEST_UNIT_DATA_STRUCTURES_TEST_INIT_H_
+#define HERMES_TEST_UNIT_DATA_STRUCTURES_TEST_INIT_H_
 
 #include "hermes_shm/data_structures/data_structure.h"
 #include <mpi.h>
@@ -36,4 +37,4 @@ extern Allocator *alloc_g;
 
 void Posttest();
 
-#endif  // HERMES_SHM_TEST_UNIT_DATA_STRUCTURES_TEST_INIT_H_
+#endif  // HERMES_TEST_UNIT_DATA_STRUCTURES_TEST_INIT_H_

@@ -10,8 +10,9 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_MEMORY_SHM_MACROS_H_
-#define HERMES_SHM_MEMORY_SHM_MACROS_H_
+
+#ifndef HERMES_MEMORY_SHM_MACROS_H_
+#define HERMES_MEMORY_SHM_MACROS_H_
 
 #include <hermes_shm/constants/macros.h>
 
@@ -45,7 +46,7 @@
   SHM_X_OR_Y(T, T, T*)
 
 /**
- * ShmHeaderOrT: Returns TypedPointer<T> if SHM_ARCHIVEABLE, and T
+ * ShmArchive: Returns TypedPointer<T> if SHM_ARCHIVEABLE, and T
  * otherwise. Used to construct an hipc::ShmRef<T>.
  *
  * @param T The type being stored in the shmem data structure
@@ -75,6 +76,6 @@
  * SHM_ARCHIVE_OR_REF: Return value of shm_ar::internal_ref().
  * */
 #define SHM_ARCHIVE_OR_REF(T)\
-  SHM_X_OR_Y(T, TypedPointer<T>, T&)
+  SHM_X_OR_Y(T, ShmDeserialize<T>, T&)
 
-#endif  // HERMES_SHM_MEMORY_SHM_MACROS_H_
+#endif  // HERMES_MEMORY_SHM_MACROS_H_

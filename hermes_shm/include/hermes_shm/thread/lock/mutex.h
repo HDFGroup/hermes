@@ -10,8 +10,9 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_THREAD_MUTEX_H_
-#define HERMES_SHM_THREAD_MUTEX_H_
+
+#ifndef HERMES_THREAD_MUTEX_H_
+#define HERMES_THREAD_MUTEX_H_
 
 #include <atomic>
 
@@ -44,4 +45,4 @@ struct ScopedMutex {
 
 }  // namespace hermes_shm
 
-#endif  // HERMES_SHM_THREAD_MUTEX_H_
+#endif  // HERMES_THREAD_MUTEX_H_

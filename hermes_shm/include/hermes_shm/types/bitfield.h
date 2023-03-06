@@ -10,8 +10,8 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_INCLUDE_HERMES_SHM_TYPES_BITFIELD_H_
-#define HERMES_SHM_INCLUDE_HERMES_SHM_TYPES_BITFIELD_H_
+#ifndef HERMES_INCLUDE_HERMES_TYPES_BITFIELD_H_
+#define HERMES_INCLUDE_HERMES_TYPES_BITFIELD_H_
 
 #include <cstdint>
 
@@ -22,11 +22,13 @@ namespace hermes_shm {
 /**
  * A generic bitfield template
  * */
-template<typename T=uint32_t>
+template<typename T = uint32_t>
 struct bitfield {
   T bits_;
 
   bitfield() : bits_(0) {}
+
+  explicit bitfield(T mask) : bits_(mask) {}
 
   inline void SetBits(T mask) {
     bits_ |= mask;
@@ -72,4 +74,4 @@ typedef bitfield<uint32_t> bitfield32_t;
 
 }  // namespace hermes_shm
 
-#endif //HERMES_SHM_INCLUDE_HERMES_SHM_TYPES_BITFIELD_H_
+#endif  // HERMES_INCLUDE_HERMES_TYPES_BITFIELD_H_

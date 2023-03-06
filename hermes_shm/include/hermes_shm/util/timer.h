@@ -10,8 +10,8 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_TIMER_H
-#define HERMES_SHM_TIMER_H
+#ifndef HERMES_TIMER_H
+#define HERMES_TIMER_H
 
 #include <chrono>
 #include <vector>
@@ -93,4 +93,4 @@ typedef HighResMonotonicTimer Timer;
 
 }  // namespace hermes_shm
 
-#endif  // HERMES_SHM_TIMER_H
+#endif  // HERMES_TIMER_H

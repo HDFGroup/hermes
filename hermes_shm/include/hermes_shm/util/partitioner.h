@@ -10,8 +10,8 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_PARTITIONER_H
-#define HERMES_SHM_PARTITIONER_H
+#ifndef HERMES_PARTITIONER_H
+#define HERMES_PARTITIONER_H
 
 // Reference: https://stackoverflow.com/questions/63372288/getting-list-of-pids-from-proc-in-linux
 
@@ -153,4 +153,4 @@ class ProcessAffiner {
 
 }  // namespace hermes_shm
 
-#endif  // HERMES_SHM_PARTITIONER_H
+#endif  // HERMES_PARTITIONER_H

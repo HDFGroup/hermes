@@ -11,416 +11,382 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "bucket.h"
+#include "data_placement_engine_factory.h"
 
-#include <iostream>
-#include <vector>
+namespace hermes::api {
 
-#include "utils.h"
-#include "buffer_pool.h"
-#include "metadata_management.h"
+using hermes::adapter::AdapterMode;
 
-namespace hermes {
+/**====================================
+ * Bucket Operations
+ * ===================================*/
 
-namespace api {
+/**
+ * Either initialize or fetch the bucket.
+ * */
+Bucket::Bucket(const std::string &bkt_name,
+               Context &ctx,
+               const IoClientContext &opts)
+: mdm_(&HERMES->mdm_), bpm_(HERMES->bpm_.get()), name_(bkt_name) {
+  hipc::string lname(bkt_name);
+  id_ = mdm_->GlobalGetOrCreateBucket(lname, opts);
+}
 
-Bucket::Bucket(const std::string &initial_name,
-               const std::shared_ptr<Hermes> &h, Context ctx)
-  : name_(initial_name), hermes_(h), ctx_(ctx) {
-  if (IsBucketNameTooLong(name_)) {
-    id_.as_int = 0;
-    throw std::length_error("Bucket name is too long: " +
-                            std::to_string(kMaxBucketNameSize));
-  } else {
-    id_ = GetOrCreateBucketId(&hermes_->context_, &hermes_->rpc_, name_);
-    if (!IsValid()) {
-      throw std::runtime_error("Bucket id is invalid.");
-    }
+/**
+ * Get the current size of the bucket
+ * */
+size_t Bucket::GetSize(IoClientContext opts) {
+  return mdm_->GlobalGetBucketSize(id_, opts);
+}
+
+/**
+ * Lock the bucket
+ * */
+void Bucket::LockBucket(MdLockType lock_type) {
+  mdm_->GlobalLockBucket(id_, lock_type);
+}
+
+/**
+ * Unlock the bucket
+ * */
+void Bucket::UnlockBucket(MdLockType lock_type) {
+  mdm_->GlobalUnlockBucket(id_, lock_type);
+}
+
+/**
+ * Rename this bucket
+ * */
+void Bucket::Rename(std::string new_bkt_name) {
+  hipc::string lname(new_bkt_name);
+  mdm_->GlobalRenameBucket(id_, lname);
+}
+
+/**
+ * Destroys this bucket along with all its contents.
+ * */
+void Bucket::Destroy() {
+  mdm_->GlobalDestroyBucket(id_);
+}
+
+/**====================================
+ * Blob Operations
+ * ===================================*/
+
+/**
+ * Get the id of a blob from the blob name
+ * */
+Status Bucket::GetBlobId(const std::string &blob_name,
+                         BlobId &blob_id) {
+  hipc::string lblob_name(blob_name);
+  blob_id = mdm_->GlobalGetBlobId(GetId(), lblob_name);
+  return Status();
+}
+
+/**
+ * Get the name of a blob from the blob id
+ *
+ * @param blob_id the blob_id
+ * @param blob_name the name of the blob
+ * @return The Status of the operation
+ * */
+Status Bucket::GetBlobName(const BlobId &blob_id, std::string &blob_name) {
+  hipc::string lblob_name(blob_name);
+  blob_name = mdm_->GlobalGetBlobName(blob_id);
+  return Status();
+}
+
+
+/**
+ * Lock the bucket
+ * */
+bool Bucket::LockBlob(BlobId blob_id, MdLockType lock_type) {
+  return mdm_->GlobalLockBlob(blob_id, lock_type);
+}
+
+/**
+ * Unlock the bucket
+ * */
+bool Bucket::UnlockBlob(BlobId blob_id, MdLockType lock_type) {
+  return mdm_->GlobalUnlockBlob(blob_id, lock_type);
+}
+
+/**
+ * Put \a blob_id Blob into the bucket
+ * */
+Status Bucket::TryCreateBlob(const std::string &blob_name,
+                             BlobId &blob_id,
+                             Context &ctx,
+                             const IoClientContext &opts) {
+  std::pair<BlobId, bool> ret = mdm_->GlobalBucketTryCreateBlob(
+      id_, hipc::charbuf(blob_name));
+  blob_id = ret.first;
+  if (ret.second) {
+    mdm_->GlobalBucketRegisterBlobId(id_,
+                                     blob_id,
+                                     (size_t)0,
+                                     (size_t)0,
+                                     true,
+                                     opts);
   }
+  return Status();
 }
 
-Bucket::~Bucket() {
-  if (IsValid()) {
-    Context ctx;
-    Release(ctx);
-  }
+/**
+ * Label \a blob_id blob with \a tag_name TAG
+ * */
+Status Bucket::TagBlob(BlobId &blob_id,
+                       const std::string &tag_name) {
+  mdm_->GlobalTagAddBlob(tag_name, blob_id);
+  return mdm_->GlobalBucketTagBlob(blob_id, tag_name);
 }
 
-std::string Bucket::GetName() const {
-  return name_;
-}
+/**
+ * Put \a blob_id Blob into the bucket
+ * */
+Status Bucket::Put(std::string blob_name,
+                   const Blob &blob,
+                   BlobId &blob_id,
+                   Context &ctx,
+                   IoClientContext opts) {
+  // Calculate placement
+  auto dpe = DPEFactory::Get(ctx.policy);
+  std::vector<size_t> blob_sizes(1, blob.size());
+  std::vector<PlacementSchema> schemas;
+  dpe->CalculatePlacement(blob_sizes, schemas, ctx);
 
-u64 Bucket::GetId() const {
-  return id_.as_int;
-}
-
-bool Bucket::IsValid() const {
-  return !IsNullBucketId(id_);
-}
-
-Status Bucket::Put(const std::string &name, const u8 *data, size_t size,
-                   const Context &ctx) {
-  Status result;
-
-  if (size > 0 && nullptr == data) {
-    result = INVALID_BLOB;
-    LOG(ERROR) << result.Msg();
-  }
-
-  if (result.Succeeded()) {
-    std::vector<std::string> names{name};
-    // TODO(chogan): Create a PreallocatedMemory allocator for std::vector so
-    // that a single-blob-Put doesn't perform a copy
-    std::vector<Blob> blobs{Blob{data, data + size}};
-    result = Put(names, blobs, ctx);
-  }
-
-  return result;
-}
-
-Status Bucket::Put(const std::string &name, const u8 *data, size_t size) {
-  Status result = Put(name, data, size, ctx_);
-
-  return result;
-}
-
-size_t Bucket::GetTotalBlobSize() {
-  std::vector<BlobID> blob_ids = hermes::GetBlobIds(&hermes_->context_,
-                                                    &hermes_->rpc_, id_);
-  api::Context ctx;
-  size_t result = 0;
-  for (size_t i = 0; i < blob_ids.size(); ++i) {
-    ScopedTemporaryMemory scratch(&hermes_->trans_arena_);
-    result += hermes::GetBlobSizeById(&hermes_->context_, &hermes_->rpc_,
-                                      scratch, blob_ids[i]);
-  }
-
-  return result;
-}
-
-size_t Bucket::GetBlobSize(const std::string &name, const Context &ctx) {
-  ScopedTemporaryMemory scratch(&hermes_->trans_arena_);
-  size_t result = GetBlobSize(scratch, name, ctx);
-
-  return result;
-}
-
-size_t Bucket::GetBlobSize(Arena *arena, const std::string &name,
-                           const Context &ctx) {
-  (void)ctx;
-  size_t result = 0;
-
-  if (IsValid()) {
-    LOG(INFO) << "Getting Blob " << name << " size from bucket "
-              << name_ << '\n';
-    BlobID blob_id = GetBlobId(&hermes_->context_, &hermes_->rpc_, name,
-                               id_, false);
-    if (!IsNullBlobId(blob_id)) {
-      result = GetBlobSizeById(&hermes_->context_, &hermes_->rpc_, arena,
-                               blob_id);
-    }
-  }
-
-  return result;
-}
-
-size_t Bucket::Get(const std::string &name, Blob &user_blob,
-                   const Context &ctx) {
-  size_t ret = Get(name, user_blob.data(), user_blob.size(), ctx);
-
-  return ret;
-}
-
-size_t Bucket::Get(const std::string &name, Blob &user_blob) {
-  size_t result = Get(name, user_blob, ctx_);
-
-  return result;
-}
-
-size_t Bucket::Get(const std::string &name, void *user_blob, size_t blob_size,
-                   const Context &ctx) {
-  (void)ctx;
-
-  size_t ret = 0;
-
-  if (IsValid()) {
-    // TODO(chogan): Assumes scratch is big enough to hold buffer_ids
-    ScopedTemporaryMemory scratch(&hermes_->trans_arena_);
-
-    if (user_blob && blob_size != 0) {
-      hermes::Blob blob = {};
-      blob.data = (u8 *)user_blob;
-      blob.size = blob_size;
-      LOG(INFO) << "Getting Blob " << name << " from bucket " << name_ << '\n';
-      BlobID blob_id = GetBlobId(&hermes_->context_, &hermes_->rpc_,
-                                 name, id_);
-      ret = ReadBlobById(&hermes_->context_, &hermes_->rpc_,
-                         &hermes_->trans_arena_, blob, blob_id);
-    } else {
-      ret = GetBlobSize(scratch, name, ctx);
-    }
-  }
-
-  return ret;
-}
-
-std::vector<size_t> Bucket::Get(const std::vector<std::string> &names,
-                                std::vector<Blob> &blobs, const Context &ctx) {
-  std::vector<size_t> result(names.size(), 0);
-  if (names.size() == blobs.size()) {
-    for (size_t i = 0; i < result.size(); ++i) {
-      result[i] = Get(names[i], blobs[i], ctx);
-    }
-  } else {
-    LOG(ERROR) << "names.size() != blobs.size() in Bucket::Get ("
-               << names.size() << " != " << blobs.size() << ")"
-               << std::endl;
+  // Allocate buffers for the blob & enqueue placement
+  for (auto &schema : schemas) {
+    auto buffers = bpm_->GlobalAllocateAndSetBuffers(schema, blob);
+    auto put_ret = mdm_->GlobalBucketPutBlob(id_, hipc::string(blob_name),
+                                             blob.size(), buffers);
+    blob_id = std::get<0>(put_ret);
+    bool did_create = std::get<1>(put_ret);
+    size_t orig_blob_size = std::get<2>(put_ret);
+    opts.backend_size_ = blob.size();
+    mdm_->GlobalBucketRegisterBlobId(id_,
+                                     blob_id,
+                                     orig_blob_size,
+                                     blob.size(),
+                                     did_create,
+                                     opts);
   }
 
-  return result;
+  return Status();
 }
 
-size_t Bucket::GetNext(u64 blob_index, Blob &user_blob,
-                       const Context &ctx) {
-  size_t ret = GetNext(blob_index, user_blob.data(), user_blob.size(), ctx);
-
-  return ret;
-}
-
-size_t Bucket::GetNext(u64 blob_index, Blob &user_blob) {
-  size_t result = GetNext(blob_index, user_blob, ctx_);
-
-  return result;
-}
-
-size_t Bucket::GetNext(u64 blob_index, void *user_blob, size_t blob_size,
-                       const Context &ctx) {
-  (void)ctx;
-  size_t ret = 0;
-
-  if (IsValid()) {
-    std::vector<BlobID> blob_ids = GetBlobIds(&hermes_->context_,
-                                              &hermes_->rpc_,
-                                              this->id_);
-    if (blob_index > blob_ids.size()) {
-      LOG(INFO) << "Already on the tail for bucket " << name_ << '\n';
-      return ret;
-    }
-    BlobID next_blob_id = blob_ids.at(blob_index);
-    if (user_blob && blob_size != 0) {
-      hermes::Blob blob = {};
-      blob.data = (u8 *)user_blob;
-      blob.size = blob_size;
-      LOG(INFO) << "Getting Blob " << next_blob_id.as_int << " from bucket "
-                << name_ << '\n';
-      ret = ReadBlobById(&hermes_->context_, &hermes_->rpc_,
-                         &hermes_->trans_arena_, blob, next_blob_id);
-    } else {
-      LOG(INFO) << "Getting Blob " << next_blob_id.as_int <<
-          " size from bucket " << name_ << '\n';
-      ScopedTemporaryMemory scratch(&hermes_->trans_arena_);
-      if (!IsNullBlobId(next_blob_id)) {
-        ret = GetBlobSizeById(&hermes_->context_, &hermes_->rpc_, scratch,
-                              next_blob_id);
+/**
+ * Put \a blob_name Blob into the bucket. Load the blob from the
+ * I/O backend if it does not exist.
+ *
+ * @param blob_name the semantic name of the blob
+ * @param blob the buffer to put final data in
+ * @param blob_off the offset within the blob to begin the Put
+ * @param io_ctx which adapter to route I/O request if blob DNE
+ * @param opts which adapter to route I/O request if blob DNE
+ * @param ctx any additional information
+ * */
+Status Bucket::PartialPutOrCreate(const std::string &blob_name,
+                                  const Blob &blob,
+                                  size_t blob_off,
+                                  BlobId &blob_id,
+                                  IoStatus &status,
+                                  const IoClientContext &opts,
+                                  Context &ctx) {
+  Blob full_blob;
+  if (ContainsBlob(blob_name, blob_id)) {
+    // Case 1: The blob already exists (read from hermes)
+    // Read blob from Hermes
+    LOG(INFO) << "Blob existed. Reading from Hermes." << std::endl;
+    Get(blob_id, full_blob, ctx);
+  }
+  if (blob_off == 0 &&
+      blob.size() >= opts.backend_size_ &&
+      blob.size() >= full_blob.size()) {
+    // Case 2: We're overriding the entire blob
+    // Put the entire blob, no need to load from storage
+    LOG(INFO) << "Putting the entire blob." << std::endl;
+    return Put(blob_name, blob, blob_id, ctx, opts);
+  }
+  if (full_blob.size() < opts.backend_size_) {
+    // Case 3: The blob did not fully exist (need to read from backend)
+    // Read blob using adapter
+    LOG(INFO) << "Blob didn't fully exist. Reading from backend." << std::endl;
+    auto io_client = IoClientFactory::Get(opts.type_);
+    full_blob.resize(opts.backend_size_);
+    if (io_client) {
+      io_client->ReadBlob(hipc::charbuf(name_),
+                          full_blob, opts, status);
+      if (!status.success_) {
+        LOG(INFO) << "Failed to read blob of size "
+                  << opts.backend_size_
+                  << "from backend (PartialPut)";
+        return PARTIAL_PUT_OR_CREATE_OVERFLOW;
       }
     }
   }
-
-  return ret;
+  LOG(INFO) << "Modifying full_blob at offset: " << blob_off
+            << " for total size: " << blob.size() << std::endl;
+  // Ensure the blob can hold the update
+  full_blob.resize(std::max(full_blob.size(), blob_off + blob.size()));
+  // Modify the blob
+  memcpy(full_blob.data() + blob_off, blob.data(), blob.size());
+  // Re-put the blob
+  if (opts.adapter_mode_ != AdapterMode::kBypass) {
+    Put(blob_name, full_blob, blob_id, ctx, opts);
+  }
+  LOG(INFO) << "Partially put to blob: (" << blob_id.unique_
+            << ", " << blob_id.node_id_ << ")" << std::endl;
+  return Status();
 }
 
-std::vector<size_t> Bucket::GetNext(u64 blob_index, u64 count,
-                                    std::vector<Blob> &blobs,
-                                    const Context &ctx) {
-  std::vector<size_t> result(count, 0);
+/**
+ * Get \a blob_id Blob from the bucket
+ * */
+Status Bucket::Get(BlobId blob_id, Blob &blob, Context &ctx) {
+  Blob b = mdm_->GlobalBucketGetBlob(blob_id);
+  blob = std::move(b);
+  return Status();
+}
 
-  if (IsValid()) {
-    if (count == blobs.size()) {
-      for (size_t i = 0; i < result.size(); ++i) {
-        result[i] = GetNext(blob_index + i, blobs[i], ctx);
+/**
+ * Load \a blob_name Blob from the bucket. Load the blob from the
+ * I/O backend if it does not exist.
+ *
+ * @param blob_name the semantic name of the blob
+ * @param blob the buffer to put final data in
+ * @param blob_off the offset within the blob to begin the Put
+ * @param blob_size the total amount of data to read
+ * @param blob_id [out] the blob id corresponding to blob_name
+ * @param io_ctx information required to perform I/O to the backend
+ * @param opts specific configuration of the I/O to perform
+ * @param ctx any additional information
+ * */
+Status Bucket::PartialGetOrCreate(const std::string &blob_name,
+                                  Blob &blob,
+                                  size_t blob_off,
+                                  size_t blob_size,
+                                  BlobId &blob_id,
+                                  IoStatus &status,
+                                  const IoClientContext &opts,
+                                  Context &ctx) {
+  Blob full_blob;
+  if (ContainsBlob(blob_name, blob_id)) {
+    // Case 1: The blob already exists (read from hermes)
+    // Read blob from Hermes
+    LOG(INFO) << "Blob existed. Reading blob from Hermes." << std::endl;
+    Get(blob_id, full_blob, ctx);
+  }
+  if (full_blob.size() < opts.backend_size_) {
+    // Case 2: The blob did not exist (or at least not fully)
+    // Read blob using adapter
+    LOG(INFO) << "Blob did not exist. Reading blob from backend." << std::endl;
+    auto io_client = IoClientFactory::Get(opts.type_);
+    full_blob.resize(opts.backend_size_);
+    if (io_client) {
+      io_client->ReadBlob(hipc::charbuf(name_), full_blob, opts, status);
+      if (!status.success_) {
+        LOG(INFO) << "Failed to read blob of size "
+                  << opts.backend_size_
+                  << "from backend (PartialCreate)";
+        return PARTIAL_GET_OR_CREATE_OVERFLOW;
       }
-    } else {
-      LOG(ERROR) << "names.size() != blobs.size() in Bucket::Get (" << count
-                 << " != " << blobs.size() << ")" << std::endl;
+      if (opts.adapter_mode_ != AdapterMode::kBypass) {
+        Put(blob_name, full_blob, blob_id, ctx, opts);
+      }
     }
   }
-
-  return result;
-}
-
-template<class Predicate>
-Status Bucket::GetV(void *user_blob, Predicate pred, Context &ctx) {
-  (void)user_blob;
-  (void)ctx;
-  Status ret;
-
-  LOG(INFO) << "Getting blobs by predicate from bucket " << name_ << '\n';
-
-  HERMES_NOT_IMPLEMENTED_YET;
-
-  return ret;
-}
-
-Status Bucket::DeleteBlob(const std::string &name) {
-  Status result = DeleteBlob(name, ctx_);
-
-  return result;
-}
-
-Status Bucket::DeleteBlob(const std::string &name, const Context &ctx) {
-  (void)ctx;
-  Status ret;
-
-  LOG(INFO) << "Deleting Blob " << name << " from bucket " << name_ << '\n';
-  DestroyBlobByName(&hermes_->context_, &hermes_->rpc_, id_, name);
-
-  return ret;
-}
-
-Status Bucket::RenameBlob(const std::string &old_name,
-                          const std::string &new_name) {
-  Status result = RenameBlob(old_name, new_name, ctx_);
-
-  return result;
-}
-
-Status Bucket::RenameBlob(const std::string &old_name,
-                          const std::string &new_name,
-                          const Context &ctx) {
-  (void)ctx;
-  Status ret;
-
-  if (IsBlobNameTooLong(new_name)) {
-    ret = BLOB_NAME_TOO_LONG;
-    LOG(ERROR) << ret.Msg();
-    return ret;
-  } else {
-    LOG(INFO) << "Renaming Blob " << old_name << " to " << new_name << '\n';
-    hermes::RenameBlob(&hermes_->context_, &hermes_->rpc_, old_name,
-                       new_name, id_);
+  // Ensure the blob can hold the update
+  if (full_blob.size() < blob_off + blob_size) {
+    return PARTIAL_GET_OR_CREATE_OVERFLOW;
   }
-
-  return ret;
+  // Modify the blob
+  // TODO(llogan): we can avoid a copy here
+  blob.resize(blob_size);
+  memcpy(blob.data(), full_blob.data() + blob_off, blob.size());
+  return Status();
 }
 
-bool Bucket::ContainsBlob(const std::string &name) {
-  bool result = hermes::ContainsBlob(&hermes_->context_, &hermes_->rpc_, id_,
-                                     name);
-
-  return result;
-}
-
-bool Bucket::BlobIsInSwap(const std::string &name) {
-  BlobID blob_id = GetBlobId(&hermes_->context_, &hermes_->rpc_, name,
-                                   id_);
-  bool result = hermes::BlobIsInSwap(blob_id);
-
-  return result;
-}
-
-template<class Predicate>
-std::vector<std::string> Bucket::GetBlobNames(Predicate pred,
-                                              Context &ctx) {
-  (void)ctx;
-
-  LOG(INFO) << "Getting blob names by predicate from bucket " << name_ << '\n';
-
-  HERMES_NOT_IMPLEMENTED_YET;
-
-  return std::vector<std::string>();
-}
-
-Status Bucket::Rename(const std::string &new_name) {
-  Status result = Rename(new_name, ctx_);
-
-  return result;
-}
-
-Status Bucket::Rename(const std::string &new_name, const Context &ctx) {
-  (void)ctx;
-  Status ret;
-
-  if (IsBucketNameTooLong(new_name)) {
-    ret = BUCKET_NAME_TOO_LONG;
-    LOG(ERROR) << ret.Msg();
-    return ret;
-  } else {
-    LOG(INFO) << "Renaming a bucket to" << new_name << '\n';
-    RenameBucket(&hermes_->context_, &hermes_->rpc_, id_, name_, new_name);
+/**
+ * Flush a blob
+ * */
+void Bucket::FlushBlob(BlobId blob_id,
+                       const IoClientContext &opts) {
+  LOG(INFO) << "Flushing blob" << std::endl;
+  if (opts.adapter_mode_ == AdapterMode::kScratch) {
+    LOG(INFO) << "In scratch mode, ignoring flush" << std::endl;
+    return;
   }
-
-  return ret;
-}
-
-Status Bucket::Persist(const std::string &file_name) {
-  Status result = Persist(file_name, ctx_);
-
-  return result;
-}
-
-Status Bucket::Persist(const std::string &file_name, const Context &ctx) {
-  (void)ctx;
-  // TODO(chogan): Once we have Traits, we need to let users control the mode
-  // when we're, for example, updating an existing file. For now we just assume
-  // we're always creating a new file.
-  std::string open_mode = "w";
-
-  // TODO(chogan): Support other storage backends
-  Status result = StdIoPersistBucket(&hermes_->context_, &hermes_->rpc_,
-                                     &hermes_->trans_arena_, id_, file_name,
-                                     open_mode);
-
-  return result;
-}
-
-void Bucket::OrganizeBlob(const std::string &blob_name, f32 epsilon,
-                          f32 custom_importance) {
-  hermes::OrganizeBlob(&hermes_->context_, &hermes_->rpc_, id_, blob_name,
-                       epsilon, custom_importance);
-}
-
-Status Bucket::Release() {
-  Status result = Release(ctx_);
-
-  return result;
-}
-
-Status Bucket::Release(const Context &ctx) {
-  (void)ctx;
-  Status ret;
-
-  if (IsValid() && hermes_->is_initialized) {
-    LOG(INFO) << "Closing bucket '" << name_ << "'" << std::endl;
-    DecrementRefcount(&hermes_->context_, &hermes_->rpc_, id_);
-    id_.as_int = 0;
+  Blob full_blob;
+  IoStatus status;
+  // Read blob from Hermes
+  Get(blob_id, full_blob, ctx_);
+  LOG(INFO) << "The blob being flushed as size: "
+            << full_blob.size() << std::endl;
+  std::string blob_name;
+  GetBlobName(blob_id, blob_name);
+  // Write blob to backend
+  auto io_client = IoClientFactory::Get(opts.type_);
+  if (io_client) {
+    IoClientContext decode_opts = io_client->DecodeBlobName(opts, blob_name);
+    io_client->WriteBlob(hipc::charbuf(name_),
+                         full_blob,
+                         decode_opts,
+                         status);
   }
-
-  return ret;
 }
 
-Status Bucket::Destroy() {
-  Status result = Destroy(ctx_);
-
-  return result;
-}
-
-Status Bucket::Destroy(const Context &ctx) {
-  (void)ctx;
-  Status result;
-
-  if (IsValid()) {
-    LOG(INFO) << "Destroying bucket '" << name_ << "'" << std::endl;
-    bool destroyed = DestroyBucket(&hermes_->context_, &hermes_->rpc_,
-                                   name_.c_str(), id_);
-    if (destroyed) {
-      id_.as_int = 0;
-    } else {
-      result = BUCKET_IN_USE;
-      LOG(ERROR) << result.Msg();
-    }
+/**
+ * Flush the entire bucket
+ * */
+void Bucket::Flush(const IoClientContext &opts) {
+  std::vector<BlobId> blob_ids = GetContainedBlobIds();
+  if (opts.adapter_mode_ == AdapterMode::kScratch) { return; }
+  LOG(INFO) << "Flushing " << blob_ids.size() << " blobs" << std::endl;
+  for (BlobId &blob_id : blob_ids) {
+    FlushBlob(blob_id, opts);
   }
-
-  return result;
 }
 
-}  // namespace api
-}  // namespace hermes
+/**
+ * Determine if the bucket contains \a blob_id BLOB
+ * */
+bool Bucket::ContainsBlob(const std::string &blob_name,
+                          BlobId &blob_id) {
+  GetBlobId(blob_name, blob_id);
+  return !blob_id.IsNull();
+}
+
+/**
+ * Determine if the bucket contains \a blob_id BLOB
+ * */
+bool Bucket::ContainsBlob(BlobId blob_id) {
+  return mdm_->GlobalBucketContainsBlob(id_, blob_id);
+}
+
+/**
+ * Rename \a blob_id blob to \a new_blob_name new name
+ * */
+void Bucket::RenameBlob(BlobId blob_id,
+                        std::string new_blob_name,
+                        Context &ctx) {
+  hipc::string lnew_blob_name(new_blob_name);
+  mdm_->GlobalRenameBlob(id_, blob_id, lnew_blob_name);
+}
+
+/**
+ * Delete \a blob_id blob
+ * */
+void Bucket::DestroyBlob(BlobId blob_id, Context &ctx,
+                         IoClientContext opts) {
+  mdm_->GlobalBucketUnregisterBlobId(id_, blob_id, opts);
+  mdm_->GlobalDestroyBlob(id_, blob_id);
+}
+
+/**
+   * Get the set of blob IDs contained in the bucket
+   * */
+std::vector<BlobId> Bucket::GetContainedBlobIds() {
+  return mdm_->GlobalBucketGetContainedBlobIds(id_);
+}
+
+}  // namespace hermes::api

@@ -19,4 +19,4 @@ RUN git clone https://github.com/HDFGroup/hermes
 WORKDIR $PWD/hermes
 RUN git remote get-url origin
 RUN ci/install_deps.sh
-RUN ci/install_hermes.sh
+RUN ci/install_hshm.sh

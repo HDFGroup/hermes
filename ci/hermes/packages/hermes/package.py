@@ -5,6 +5,9 @@ class Hermes(CMakePackage):
     url = "https://github.com/HDFGroup/hermes/tarball/master"
     git = "https://github.com/HDFGroup/hermes.git"
     version('master', branch='master')
+    version('dev-priv', git='https://github.com/lukemartinlogan/hermes.git', branch='new-borg')
+    version('pnnl', git='https://github.com/lukemartinlogan/hermes.git',
+            branch='pnnl')
     variant('vfd', default=False, description='Enable HDF5 VFD')
     depends_on('mochi-thallium~cereal@0.8.3')
     depends_on('catch2@3.0.1')
@@ -12,6 +15,7 @@ class Hermes(CMakePackage):
     depends_on('mpich@3.3.2:')
     depends_on('glog@0.4:')
     depends_on('yaml-cpp')
+    depends_on('boost@1.7:')
     depends_on('hdf5@1.13.0:', when='+vfd')
 
     def cmake_args(self):

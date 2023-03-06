@@ -10,13 +10,13 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_MESSAGES_H
-#define HERMES_SHM_MESSAGES_H
+#ifndef HERMES_MESSAGES_H
+#define HERMES_MESSAGES_H
 
 namespace hermes_shm {
 
 enum {
-  HERMES_SHM_ADMIN_REGISTER_QP
+  HERMES_ADMIN_REGISTER_QP
 };
 
 struct admin_request {
@@ -46,4 +46,4 @@ struct setup_reply : public admin_reply {
 
 }  // namespace hermes_shm
 
-#endif  // HERMES_SHM_MESSAGES_H
+#endif  // HERMES_MESSAGES_H

@@ -34,7 +34,7 @@ class DPEFactory {
    *            data placement engine factory.
    * @return pointer to DataPlacementEngine given \a type PlacementPolicy.
    */
-  std::unique_ptr<DPE> Get(const PlacementPolicy &type) {
+  static std::unique_ptr<DPE> Get(const PlacementPolicy &type) {
     switch (type) {
       case PlacementPolicy::kRandom: {
         return std::make_unique<Random>();
@@ -47,7 +47,7 @@ class DPEFactory {
       }
       case PlacementPolicy::kNone:
       default: {
-        // TODO(luke): @errorhandling not implemented
+        // TODO(llogan): @errorhandling not implemented
         LOG(FATAL) << "PlacementPolicy not implemented" << std::endl;
         return NULL;
       }

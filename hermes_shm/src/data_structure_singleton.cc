@@ -16,8 +16,10 @@
 #include <hermes_shm/constants/data_structure_singleton_macros.h>
 
 #include <hermes_shm/introspect/system_info.h>
-template<> hermes_shm::SystemInfo scs::Singleton<hermes_shm::SystemInfo>::obj_ = hermes_shm::SystemInfo();
+template<> hermes_shm::SystemInfo hermes_shm::GlobalSingleton<hermes_shm::SystemInfo>::obj_ = hermes_shm::SystemInfo();
+#include <hermes_shm/memory/memory_registry.h>
+template<> hermes_shm::ipc::MemoryRegistry hermes_shm::GlobalSingleton<hermes_shm::ipc::MemoryRegistry>::obj_ = hermes_shm::ipc::MemoryRegistry();
 #include <hermes_shm/memory/memory_manager.h>
-template<> hermes_shm::ipc::MemoryManager scs::Singleton<hermes_shm::ipc::MemoryManager>::obj_ = hermes_shm::ipc::MemoryManager();
+template<> hermes_shm::ipc::MemoryManager hermes_shm::GlobalSingleton<hermes_shm::ipc::MemoryManager>::obj_ = hermes_shm::ipc::MemoryManager();
 #include <hermes_shm/thread/thread_manager.h>
-template<> hermes_shm::ThreadManager scs::Singleton<hermes_shm::ThreadManager>::obj_ = hermes_shm::ThreadManager();
+template<> hermes_shm::ThreadManager hermes_shm::GlobalSingleton<hermes_shm::ThreadManager>::obj_ = hermes_shm::ThreadManager();

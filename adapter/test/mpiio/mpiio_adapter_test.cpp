@@ -12,7 +12,7 @@
 
 #include <unistd.h>
 
-#include <experimental/filesystem>
+#include <filesystem>
 #include <iostream>
 
 #include "adapter_test_utils.h"
@@ -23,7 +23,7 @@
 
 #include "adapter_test_utils.h"
 
-namespace stdfs = std::experimental::filesystem;
+namespace stdfs = std::filesystem;
 
 namespace hermes::adapter::mpiio::test {
 struct Arguments {
@@ -151,19 +151,20 @@ int pretest() {
   MPI_Barrier(MPI_COMM_WORLD);
   REQUIRE(info.total_size > 0);
 #if HERMES_INTERCEPT == 1
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.existing_file_cmp);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.new_file_cmp);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.shared_new_file_cmp);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(
-      info.shared_existing_file_cmp);
+  HERMES->client_config_.SetAdapterPathTracking(info.existing_file_cmp, false);
+  HERMES->client_config_.SetAdapterPathTracking(info.new_file_cmp, false);
+  HERMES->client_config_.SetAdapterPathTracking(
+      info.shared_new_file_cmp, false);
+  HERMES->client_config_.SetAdapterPathTracking(
+      info.shared_existing_file_cmp, false);
 #endif
   return 0;
 }
 
 int posttest(bool compare_data = true) {
 #if HERMES_INTERCEPT == 1
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.existing_file);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.new_file);
+  HERMES->client_config_.SetAdapterPathTracking(info.existing_file, false);
+  HERMES->client_config_.SetAdapterPathTracking(info.new_file, false);
 #endif
   if (compare_data && stdfs::exists(info.new_file) &&
       stdfs::exists(info.new_file_cmp)) {
@@ -231,10 +232,10 @@ int posttest(bool compare_data = true) {
     stdfs::remove(info.existing_file_cmp);
 
 #if HERMES_INTERCEPT == 1
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_file_cmp);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.new_file_cmp);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.new_file);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_file);
+  HERMES->client_config_.SetAdapterPathTracking(info.existing_file_cmp, true);
+  HERMES->client_config_.SetAdapterPathTracking(info.new_file_cmp, true);
+  HERMES->client_config_.SetAdapterPathTracking(info.new_file, true);
+  HERMES->client_config_.SetAdapterPathTracking(info.existing_file, true);
 #endif
   return 0;
 }

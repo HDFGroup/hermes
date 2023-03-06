@@ -10,11 +10,11 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_DATA_STRUCTURES_THREAD_UNSAFE_LIST_H_
-#define HERMES_SHM_DATA_STRUCTURES_THREAD_UNSAFE_LIST_H_
 
-#include "hermes_shm/data_structures/data_structure.h"
-#include "hermes_shm/data_structures/internal/shm_archive_or_t.h"
+#ifndef HERMES_DATA_STRUCTURES_THREAD_UNSAFE_LIST_H_
+#define HERMES_DATA_STRUCTURES_THREAD_UNSAFE_LIST_H_
+
+#include "hermes_shm/data_structures/internal/shm_internal.h"
 
 #include <list>
 
@@ -29,12 +29,13 @@ template<typename T>
 struct list_entry {
  public:
   OffsetPointer next_ptr_, prior_ptr_;
-  ShmHeaderOrT<T> data_;
+  ShmArchive<T> data_;
 
   /** Constructor */
   template<typename ...Args>
-  explicit list_entry(Allocator *alloc, Args ...args)
-  : data_(alloc, std::forward<Args>(args)...) {}
+  explicit list_entry(Allocator *alloc, Args&& ...args) {
+    data_.shm_init(alloc, std::forward<Args>(args)...);
+  }
 
   /** Destructor */
   void shm_destroy(Allocator *alloc) {
@@ -73,11 +74,7 @@ struct list_iterator_templ {
   : entry_(nullptr), entry_ptr_(OffsetPointer::GetNull()) {}
 
   /** Construct an iterator  */
-  explicit list_iterator_templ(TypedPointer<list<T>> list)
-  : list_(list), entry_(nullptr), entry_ptr_(OffsetPointer::GetNull()) {}
-
-  /** Construct an iterator  */
-  explicit list_iterator_templ(TypedPointer<list<T>> list,
+  explicit list_iterator_templ(ShmDeserialize<list<T>> list,
                                list_entry<T> *entry,
                                OffsetPointer entry_ptr)
     : list_(list), entry_(entry), entry_ptr_(entry_ptr) {}
@@ -187,7 +184,7 @@ struct list_iterator_templ {
 
   /** Create the end iterator */
   static list_iterator_templ const end() {
-    const static list_iterator_templ end_iter(true);
+    static const list_iterator_templ end_iter(true);
     return end_iter;
   }
 
@@ -454,7 +451,7 @@ class list : public ShmContainer {
     }
     return 0;
   }
-  
+
   /** Find an element in this list */
   list_iterator<T> find(const T &entry) {
     for (auto iter = begin(); iter != end(); ++iter) {
@@ -475,7 +472,7 @@ class list : public ShmContainer {
     if (size() == 0) { return end(); }
     auto head = alloc_->template
       Convert<list_entry<T>>(header_->head_ptr_);
-    return list_iterator<T>(GetShmPointer<TypedPointer<list<T>>>(),
+    return list_iterator<T>(GetShmDeserialize(),
       head, header_->head_ptr_);
   }
 
@@ -489,7 +486,7 @@ class list : public ShmContainer {
     if (size() == 0) { return cend(); }
     auto head = alloc_->template
       Convert<list_entry<T>>(header_->head_ptr_);
-    return list_citerator<T>(GetShmPointer<TypedPointer<list<T>>>(),
+    return list_citerator<T>(GetShmDeserialize(),
       head, header_->head_ptr_);
   }
 
@@ -514,4 +511,4 @@ class list : public ShmContainer {
 #undef TYPED_CLASS
 #undef TYPED_HEADER
 
-#endif  // HERMES_SHM_DATA_STRUCTURES_THREAD_UNSAFE_LIST_H_
+#endif  // HERMES_DATA_STRUCTURES_THREAD_UNSAFE_LIST_H_

@@ -10,8 +10,8 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_INCLUDE_HERMES_SHM_DATA_STRUCTURES_INTERNAL_SHM_NULL_CONTAINER_H_
-#define HERMES_SHM_INCLUDE_HERMES_SHM_DATA_STRUCTURES_INTERNAL_SHM_NULL_CONTAINER_H_
+#ifndef HERMES_INCLUDE_HERMES_DATA_STRUCTURES_INTERNAL_SHM_NULL_CONTAINER_H_
+#define HERMES_INCLUDE_HERMES_DATA_STRUCTURES_INTERNAL_SHM_NULL_CONTAINER_H_
 
 #include "shm_container.h"
 #include <string>
@@ -124,4 +124,4 @@ namespace std {
 #undef TYPED_CLASS
 #undef TYPED_HEADER
 
-#endif //HERMES_SHM_INCLUDE_HERMES_SHM_DATA_STRUCTURES_INTERNAL_SHM_NULL_CONTAINER_H_
+#endif  // HERMES_INCLUDE_HERMES_DATA_STRUCTURES_INTERNAL_SHM_NULL_CONTAINER_H_

@@ -14,7 +14,6 @@
 #define HERMES_COMMUNICATION_H_
 
 #include "hermes_types.h"
-#include "memory_management.h"
 
 /**
  * @file communication.h
@@ -22,62 +21,36 @@
  * A generic communication interface for Hermes that can be implemented by
  * multiple backends. See communication_mpi.cc for an example of how to
  * implement a communication backend.
+ *
+ * NOTE: this file is only applied to HermesType::kServer.
+ * This does not get used in kClient mode.
+ * It is used almost solely to ensure RPC servers remain
+ * running until all nodes want to terminate their
+ * Hermes core.
  */
 
 namespace hermes {
 
-typedef void (*BarrierFunc)(void *);  /**< MPI barrier function pointer */
-typedef void (*FinalizeFunc)(void *); /**< MPI finalize function pointer */
-
 /**
  A structure to represent MPI communication context
 */
-struct CommunicationContext {
-  BarrierFunc world_barrier; /**< MPI communication world barrier */
-  BarrierFunc sub_barrier;   /**< MPI communication subset barrier */
-  FinalizeFunc finalize;     /**< MPI communication finalize */
-
-  /** Details relative to the backing communciation implementation. */
-  void *state;
+class CommunicationContext {
+ public:
   /** A unique identifier for each rank, relative to all ranks. */
-  i32 world_proc_id;
-  /** a unique identifier for each rank, releative to each ProcessKind. */
-  i32 sub_proc_id;
+  i32 world_proc_id_;
   /** The total number of ranks. */
-  i32 world_size;
-  /** The total number of Hermes cores. Currently this is only defined on ranks
-   * that have ProcessKind::kHermes */
-  i32 hermes_size;
-  /** The total number of application cores. Currently this is only defined on
-   * ranks that have ProcessKind::kApp */
-  i32 app_size;
-  /** The total number of nodes. */
-  i32 num_nodes;
-  /** A unique index for each node. Starts at 1, not 0. */
-  i32 node_id;
-  /** Distinguishes between Hermes ranks and application ranks. */
-  ProcessKind proc_kind;
-  /** True if this rank is the lowest numbered rank on the current node. Lowest
-   * is not relative to all ranks, but to each ProcessKind. This is useful for
-   * operations that only need to happen once per node. */
-  bool first_on_node;
+  i32 world_size_;
+  /** The type of communicator this is */
+  HermesType type_;
+
+ public:
+  CommunicationContext() : world_proc_id_(0), world_size_(0) {}
+  virtual void WorldBarrier() = 0; /** E.g., MPI_Barrier(MPI_COMM_WORLD)*/
+  virtual void Finalize() = 0; /** E.g., MPI_Finalize() */
 };
 
-size_t InitCommunication(CommunicationContext *comm, Arena *arena,
-                         size_t trans_arena_size_per_node,
-                         bool is_daemon = false, bool is_adapter = false);
-/** world communicator  */
-inline void WorldBarrier(CommunicationContext *comm) {
-  comm->world_barrier(comm->state);
-}
-
-/** sub-communicator */
-inline void SubBarrier(CommunicationContext *comm) {
-  comm->sub_barrier(comm->state);
-}
-
-void *GetAppCommunicator(CommunicationContext *comm);
-
 }  // namespace hermes
+
+#include "communication_factory.h"
 
 #endif  // HERMES_COMMUNICATION_H_

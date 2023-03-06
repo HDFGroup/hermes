@@ -10,14 +10,20 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_THREAD_THREAD_MANAGER_H_
-#define HERMES_SHM_THREAD_THREAD_MANAGER_H_
+
+#ifndef HERMES_THREAD_THREAD_MANAGER_H_
+#define HERMES_THREAD_THREAD_MANAGER_H_
 
 #include "thread.h"
 #include "thread_factory.h"
 #include <hermes_shm/constants/data_structure_singleton_macros.h>
+#include <hermes_shm/introspect/system_info.h>
+
+#define US_TO_CLOCKS(x) (x * 56)
 
 namespace hermes_shm {
+
+union NodeThreadId;
 
 class ThreadManager {
  public:
@@ -38,6 +44,23 @@ class ThreadManager {
   }
 };
 
+union NodeThreadId {
+  struct {
+    uint32_t tid_;
+    uint32_t pid_;
+  } bits_;
+  uint64_t as_int_;
+
+  NodeThreadId() {
+    bits_.tid_ = HERMES_THREAD_MANAGER->GetThreadStatic()->GetTid();
+    bits_.pid_ = HERMES_SYSTEM_INFO->pid_;
+  }
+
+  uint32_t hash() {
+    return as_int_;
+  }
+};
+
 }  // namespace hermes_shm
 
-#endif  // HERMES_SHM_THREAD_THREAD_MANAGER_H_
+#endif  // HERMES_THREAD_THREAD_MANAGER_H_

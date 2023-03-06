@@ -10,21 +10,43 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_BASICS_H
-#define HERMES_SHM_BASICS_H
+#ifndef HERMES_BASICS_H
+#define HERMES_BASICS_H
 
 #define MODULE_KEY_SIZE 32
 
 #include <cstdint>
 using std::size_t;
 
+#ifdef KERNEL_BUILD
+#include <linux/types.h>
+#elif __cplusplus
 #include <stdint.h>
 #include <string>
 #include <cstring>
 #include <unordered_map>
 #include <limits>
+#endif
+
+typedef uint32_t labstor_runtime_id_t;
+typedef int32_t labstor_off_t;
+
+struct labstor_id {
+  char key_[MODULE_KEY_SIZE];
+};
+
+struct labstor_credentials {
+  int pid_;
+  int uid_;
+  int gid_;
+  int priority_;
+};
+
+#ifdef __cplusplus
 
 namespace hermes_shm {
+
+typedef labstor_credentials UserCredentials;
 
 /**
  * decimal + (numerator/65536)
@@ -72,9 +94,9 @@ struct RealNumber {
     // d1 * d2
     res.decimal_ = other.decimal_ * decimal_;
     uint64_t frac =
-      (decimal_ * other.numerator_) + // d1 * n2
-      (other.decimal_ * numerator_) + // d2 * n1
-      (numerator_ * other.numerator_) / precision; // n1 * n2 / p
+      (decimal_ * other.numerator_) +  // d1 * n2
+      (other.decimal_ * numerator_) +  // d2 * n1
+      (numerator_ * other.numerator_) / precision;  // n1 * n2 / p
     res.decimal_ += frac / precision;
     res.numerator_ = frac % precision;
     return res;
@@ -136,4 +158,8 @@ struct hash<hermes_shm::id> {
 };
 }  // namespace std
 
-#endif  // HERMES_SHM_BASICS_H
+#endif
+
+
+
+#endif  // HERMES_BASICS_H

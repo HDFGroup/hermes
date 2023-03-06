@@ -1,35 +1,12 @@
-function(gcc_hermes exec tag_name tags conf async)
-  set(TEST_NAME Test${exec}_${tag_name}_${async})
-  add_test(NAME ${TEST_NAME}
-    COMMAND "${CMAKE_BINARY_DIR}/bin/${exec}" ${tags} --reporter compact -d yes)
-  set_property(TEST ${TEST_NAME}
-    PROPERTY ENVIRONMENT HERMES_CONF=${CMAKE_SOURCE_DIR}/adapter/test/data/${conf}.yaml)
-  set_property(TEST ${TEST_NAME} APPEND
-    PROPERTY ENVIRONMENT LSAN_OPTIONS=suppressions=${CMAKE_SOURCE_DIR}/test/data/asan.supp)
-
-  if ("${async}" STREQUAL "async")
-    set_property(TEST ${TEST_NAME} APPEND PROPERTY ENVIRONMENT HERMES_ASYNC_FLUSH=1)
-  endif()
-endfunction()
-
-function(gcc_hermes_mode exec tag_name tags mode path)
-    set(test_name Test${exec}_${tag_name}_${mode}_${path})
-    add_test(NAME ${test_name} COMMAND "${CMAKE_BINARY_DIR}/bin/${exec}" ${tags} --reporter compact -d yes)
-    set_property(TEST ${test_name}
-            PROPERTY ENVIRONMENT HERMES_CONF=${CMAKE_SOURCE_DIR}/adapter/test/data/hermes.yaml)
-    set_property(TEST ${test_name} APPEND
-            PROPERTY ENVIRONMENT LSAN_OPTIONS=suppressions=${CMAKE_SOURCE_DIR}/test/data/asan.supp)
-    set_property(TEST ${test_name} APPEND
-            PROPERTY ENVIRONMENT ADAPTER_MODE=${mode})
-    set_property(TEST ${test_name} APPEND
-            PROPERTY ENVIRONMENT SET_PATH=${path})
-endfunction()
+include_directories(
+        ${CMAKE_SOURCE_DIR}
+        ${CMAKE_SOURCE_DIR}/src)
 
 #------------------------------------------------------------------------------
 # STDIO Adapter Internal tests
 #------------------------------------------------------------------------------
 add_executable(stdio_adapter_mapper_test stdio_adapter_mapper_test.cpp ${ADAPTER_COMMON})
-target_link_libraries(stdio_adapter_mapper_test hermes_stdio)
+target_link_libraries(stdio_adapter_mapper_test stdc++fs hermes_stdio)
 add_dependencies(stdio_adapter_mapper_test hermes_stdio)
 gcc(stdio_adapter_mapper_test "")
 
@@ -76,11 +53,6 @@ set_target_properties(hermes_stdio_adapter_mpi_test PROPERTIES COMPILE_FLAGS "-D
 mpi_daemon(hermes_stdio_adapter_mpi_test 2 "~[request_size=range-large]" "" 1)
 mpi_daemon(hermes_stdio_adapter_mpi_test 2 "[request_size=range-large]" "large" 1)
 
-add_executable(adapter_utils_test adapter_utils_test.cc ${ADAPTER_COMMON})
-target_link_libraries(adapter_utils_test hermes_stdio)
-add_dependencies(adapter_utils_test hermes_stdio)
-gcc(adapter_utils_test "")
-
 set(STDIO_TESTS
   stdio_adapter_mapper_test
   stdio_adapter_test
@@ -89,7 +61,6 @@ set(STDIO_TESTS
   hermes_stdio_adapter_mode_test
   stdio_adapter_mpi_test
   hermes_stdio_adapter_mpi_test
-  adapter_utils_test
 )
 
 foreach(program ${STDIO_TESTS})

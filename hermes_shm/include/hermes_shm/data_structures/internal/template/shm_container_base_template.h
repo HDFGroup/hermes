@@ -1,15 +1,3 @@
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Distributed under BSD 3-Clause license.                                   *
- * Copyright by The HDF Group.                                               *
- * Copyright by the Illinois Institute of Technology.                        *
- * All rights reserved.                                                      *
- *                                                                           *
- * This file is part of Hermes. The full Hermes copyright notice, including  *
- * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the top directory. If you do not  *
- * have access to the file, you may request a copy from help@hdfgroup.org.   *
- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
 public:
 /**====================================
  * Variables & Types
@@ -20,7 +8,6 @@ header_t *header_; /**< Header of the shared-memory data structure */
 hipc::Allocator *alloc_; /**< hipc::Allocator used for this data structure */
 hermes_shm::bitfield32_t flags_; /**< Flags used data structure status */
 
-public:
 /**====================================
  * Constructors
  * ===================================*/
@@ -61,7 +48,7 @@ void shm_init(TYPED_HEADER &header,
 inline void shm_init_allocator(hipc::Allocator *alloc) {
   if (IsValid()) { return; }
   if (alloc == nullptr) {
-    alloc_ = HERMES_SHM_MEMORY_MANAGER->GetDefaultAllocator();
+    alloc_ = HERMES_MEMORY_REGISTRY->GetDefaultAllocator();
   } else {
     alloc_ = alloc;
   }
@@ -119,8 +106,14 @@ void shm_serialize(hipc::TypedAtomicPointer<TYPED_CLASS> &ar) const {
   shm_serialize_main();
 }
 
-/** Override << operators */
-SHM_SERIALIZE_OPS((TYPED_CLASS))
+/** Override >> operators */
+void operator>>(hipc::TypedPointer<TYPE_UNWRAP(TYPED_CLASS)> &ar) const {
+  shm_serialize(ar);
+}
+void operator>>(
+  hipc::TypedAtomicPointer<TYPE_UNWRAP(TYPED_CLASS)> &ar) const {
+  shm_serialize(ar);
+}
 
 /**====================================
  * Deserialization
@@ -129,7 +122,7 @@ SHM_SERIALIZE_OPS((TYPED_CLASS))
 /** Deserialize object from a raw pointer */
 bool shm_deserialize(const hipc::TypedPointer<TYPED_CLASS> &ar) {
   return shm_deserialize(
-    HERMES_SHM_MEMORY_MANAGER->GetAllocator(ar.allocator_id_),
+    HERMES_MEMORY_REGISTRY->GetAllocator(ar.allocator_id_),
     ar.ToOffsetPointer()
   );
 }
@@ -149,6 +142,11 @@ bool shm_deserialize(const CLASS_NAME &other) {
   return shm_deserialize(other.GetAllocator(), other.header_);
 }
 
+/** Deserialize object from "Deserialize" object */
+bool shm_deserialize(hipc::ShmDeserialize<TYPED_CLASS> other) {
+  return shm_deserialize(other.alloc_, other.header_);
+}
+
 /** Deserialize object from allocator + header */
 bool shm_deserialize(hipc::Allocator *alloc,
                      TYPED_HEADER *header) {
@@ -166,8 +164,24 @@ void shm_init(hipc::ShmRef<TYPED_CLASS> &obj) {
   shm_deserialize(obj->GetAllocator(), obj->header_);
 }
 
-/** Override >> operators */
-SHM_DESERIALIZE_OPS((TYPED_CLASS))
+/** Constructor. Deserialize the object deserialize reference. */
+template<typename ...Args>
+void shm_init(hipc::ShmDeserialize<TYPED_CLASS> other) {
+  shm_deserialize(other);
+}
+
+/** Override << operators */
+void operator<<(const hipc::TypedPointer<TYPE_UNWRAP(TYPED_CLASS)> &ar) {
+  shm_deserialize(ar);
+}
+void operator<<(
+  const hipc::TypedAtomicPointer<TYPE_UNWRAP(TYPED_CLASS)> &ar) {
+  shm_deserialize(ar);
+}
+void operator<<(
+  const hipc::ShmDeserialize<TYPE_UNWRAP(TYPED_CLASS)> &ar) {
+  shm_deserialize(ar);
+}
 
 /**====================================
  * Destructors
@@ -333,6 +347,11 @@ bool IsNull() const {
 template<typename POINTER_T>
 POINTER_T GetShmPointer() const {
   return alloc_->Convert<TYPED_HEADER, POINTER_T>(header_);
+}
+
+/** Get a ShmDeserialize object */
+hipc::ShmDeserialize<CLASS_NAME> GetShmDeserialize() const {
+  return hipc::ShmDeserialize<CLASS_NAME>(header_, alloc_);
 }
 
 /**====================================

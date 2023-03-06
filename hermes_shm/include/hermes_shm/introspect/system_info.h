@@ -10,8 +10,8 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_SYSINFO_INFO_H_
-#define HERMES_SHM_SYSINFO_INFO_H_
+#ifndef HERMES_SYSINFO_INFO_H_
+#define HERMES_SYSINFO_INFO_H_
 
 #include <unistd.h>
 #include <sys/sysinfo.h>
@@ -36,4 +36,4 @@ struct SystemInfo {
 
 }  // namespace hermes_shm
 
-#endif  // HERMES_SHM_SYSINFO_INFO_H_
+#endif  // HERMES_SYSINFO_INFO_H_

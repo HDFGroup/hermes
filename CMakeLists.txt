@@ -13,6 +13,19 @@ if(NOT DEFINED CMAKE_MACOSX_RPATH)
 endif()
 
 project(HERMES)
+set(IS_HERMES_MAIN ON)
+
+#------------------------------------------------------------------------------
+# Compiler optimization
+#------------------------------------------------------------------------------
+message(${CMAKE_BUILD_TYPE})
+if (CMAKE_BUILD_TYPE STREQUAL "Release")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
+  message("This IS a release build")
+else()
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0")
+  message("This is NOT a release build")
+endif()
 
 #------------------------------------------------------------------------------
 # Version information
@@ -27,6 +40,8 @@ set(HERMES_PACKAGE_VERSION_MAJOR "${HERMES_VERSION_MAJOR}.${HERMES_VERSION_MINOR
 set(HERMES_PACKAGE_VERSION_MINOR "${HERMES_VERSION_PATCH}")
 set(HERMES_PACKAGE_STRING "${HERMES_PACKAGE_NAME} ${HERMES_PACKAGE_VERSION}")
 set(HERMES_PACKAGE_TARNAME "${HERMES_PACKAGE}")
+
+#set( CMAKE_VERBOSE_MAKEFILE on )
 
 #------------------------------------------------------------------------------
 # Setup install and output Directories
@@ -47,6 +62,8 @@ endif()
 #------------------------------------------------------------------------------
 # Setup CMake Environment
 #------------------------------------------------------------------------------
+# Export compile commands for autocode generation with CLANG
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 if(APPLE)
   # We are doing a unix-style install i.e. everything will be installed in
   # CMAKE_INSTALL_PREFIX/bin and CMAKE_INSTALL_PREFIX/lib etc. as on other unix
@@ -137,7 +154,7 @@ option(HERMES_INTERCEPT_IO "Use GOTCHA as IO interception tool" OFF)
 option(HERMES_COMMUNICATION_MPI "Use MPI as the communication layer." ON)
 option(HERMES_ENABLE_DOXYGEN "Enable hermes documentation." OFF)
 option(HERMES_BUILD_BUFFER_POOL_VISUALIZER "Build the BufferPool visualizer" OFF)
-option(HERMES_USE_ADDRESS_SANITIZER "Enable -fsanitize=address in Debug builds" ON)
+option(HERMES_USE_ADDRESS_SANITIZER "Enable -fsanitize=address in Debug builds" OFF)
 option(HERMES_USE_THREAD_SANITIZER "Enable -fsanitize=thread in Debug builds" OFF)
 option(HERMES_RPC_THALLIUM "Use Thallium as the RPC library." ON)
 option(HERMES_MDM_STORAGE_STBDS
@@ -154,6 +171,8 @@ option(HERMES_ENABLE_VFD "Build the Hermes HDF5 Virtual File Driver" OFF)
 option(HERMES_ENABLE_WRAPPER "Enable hermes C API wrapper." ON)
 option(HERMES_ENABLE_GFLAGS "Enable GFLAGS support." ON)
 option(HERMES_INSTALL_TESTS "Enable installation of tests." OFF)
+option(HERMES_ONLY_RPC "Avoids the shared-memory case in RPC for testing" OFF)
+
 # Calculate code coverage with debug mode
 if(HERMES_ENABLE_COVERAGE)
   if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -385,21 +404,17 @@ endif()
 # Source
 #-----------------------------------------------------------------------------
 
+set(HERMES_EXPORTED_LIBS "")
+
+include_directories(${CMAKE_SOURCE_DIR}/hermes_shm/include)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src)
+add_subdirectory(${CMAKE_SOURCE_DIR}/hermes_shm)
 
-if(HERMES_HAVE_GOTCHA)
-  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gotcha_intercept)
-endif()
-
-if(HERMES_ENABLE_WRAPPER)
-  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/wrapper)
-endif()
-
-if(HERMES_BUILD_BUFFER_POOL_VISUALIZER AND SDL2_FOUND)
-  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/buffer_pool_visualizer)
-endif()
-
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/data_stager)
+add_custom_target(rpc COMMAND bash
+        ${CMAKE_SOURCE_DIR}/code_generators/code_generators/rpc/rpcgen.sh
+        "${CMAKE_SOURCE_DIR}"
+        "${CMAKE_BINARY_DIR}")
+# add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/data_stager)
 
 #-----------------------------------------------------------------------------
 # Testing
@@ -417,9 +432,10 @@ if(CMAKE_PROJECT_NAME STREQUAL HERMES AND BUILD_TESTING)
   endif()
   enable_testing()
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test)
-  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/data_stager/test)
+  # add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/data_stager/test)
 endif()
 
+##### ADAPTERS
 if(HERMES_ENABLE_STDIO_ADAPTER OR HERMES_ENABLE_POSIX_ADAPTER OR
     HERMES_ENABLE_MPIIO_ADAPTER OR HERMES_ENABLE_PUBSUB_ADAPTER OR
     HERMES_ENABLE_VFD)
@@ -477,7 +493,7 @@ install(
 
 install(
   FILES
-        test/data/hermes.yaml
+        test/data/hermes_server.yaml
   TYPE
     DATA
   RENAME

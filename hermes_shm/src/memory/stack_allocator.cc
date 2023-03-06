@@ -10,25 +10,30 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+
 #include <hermes_shm/memory/allocator/stack_allocator.h>
 #include <hermes_shm/memory/allocator/mp_page.h>
 
 namespace hermes_shm::ipc {
 
-void StackAllocator::shm_init(MemoryBackend *backend,
-                             allocator_id_t id,
-                             size_t custom_header_size) {
-  backend_ = backend;
-  header_ = reinterpret_cast<StackAllocatorHeader*>(backend_->data_);
+void StackAllocator::shm_init(allocator_id_t id,
+                              size_t custom_header_size,
+                              char *buffer,
+                              size_t buffer_size) {
+  buffer_ = buffer;
+  buffer_size_ = buffer_size;
+  header_ = reinterpret_cast<StackAllocatorHeader*>(buffer_);
   custom_header_ = reinterpret_cast<char*>(header_ + 1);
-  size_t region_off = (custom_header_ - backend_->data_) + custom_header_size;
-  size_t region_size = backend_->data_size_ - region_off;
+  size_t region_off = (custom_header_ - buffer_) + custom_header_size;
+  size_t region_size = buffer_size_ - region_off;
   header_->Configure(id, custom_header_size, region_off, region_size);
 }
 
-void StackAllocator::shm_deserialize(MemoryBackend *backend) {
-  backend_ = backend;
-  header_ = reinterpret_cast<StackAllocatorHeader*>(backend_->data_);
+void StackAllocator::shm_deserialize(char *buffer,
+                                     size_t buffer_size) {
+  buffer_ = buffer;
+  buffer_size_ = buffer_size;
+  header_ = reinterpret_cast<StackAllocatorHeader*>(buffer_);
   custom_header_ = reinterpret_cast<char*>(header_ + 1);
 }
 
@@ -38,10 +43,14 @@ size_t StackAllocator::GetCurrentlyAllocatedSize() {
 
 OffsetPointer StackAllocator::AllocateOffset(size_t size) {
   size += sizeof(MpPage);
+  if (header_->region_size_ < size) {
+    return OffsetPointer::GetNull();
+  }
   OffsetPointer p(header_->region_off_.fetch_add(size));
   auto hdr = Convert<MpPage>(p);
   hdr->SetAllocated();
   hdr->page_size_ = size;
+  hdr->off_ = 0;
   header_->region_size_.fetch_sub(hdr->page_size_);
   header_->total_alloc_.fetch_add(hdr->page_size_);
   return p + sizeof(MpPage);

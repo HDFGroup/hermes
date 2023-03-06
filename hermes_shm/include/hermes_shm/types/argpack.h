@@ -10,8 +10,8 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_INCLUDE_HERMES_SHM_TYPES_ARGPACK_H_
-#define HERMES_SHM_INCLUDE_HERMES_SHM_TYPES_ARGPACK_H_
+#ifndef HERMES_INCLUDE_HERMES_TYPES_ARGPACK_H_
+#define HERMES_INCLUDE_HERMES_TYPES_ARGPACK_H_
 
 #include "basic.h"
 #include  <functional>
@@ -27,7 +27,7 @@ struct EndTemplateRecurrence {};
 /** Recurrence used to create argument pack */
 template<
   size_t idx,
-  typename T=EndTemplateRecurrence,
+  typename T = EndTemplateRecurrence,
   typename ...Args>
 struct ArgPackRecur {
   constexpr static bool is_rval = std::is_rvalue_reference<T>();
@@ -79,10 +79,10 @@ struct ArgPack {
   /** Variable argument pack */
   ArgPackRecur<0, Args...> recur_;
   /** Size of the argpack */
-  constexpr const static size_t size_ = sizeof...(Args);
+  static constexpr const size_t size_ = sizeof...(Args);
 
   /** General Constructor. */
-  ArgPack(Args&& ...args)
+  ArgPack(Args&& ...args)  // NOLINT
   : recur_(std::forward<Args>(args)...) {}
 
   /** Get forward reference */
@@ -107,14 +107,14 @@ ArgPack<Args&&...> make_argpack(Args&& ...args) {
 #define FORWARD_ARGPACK_FULL_TYPE(pack, i)\
   decltype(pack.template Forward<i>())
 
-/** Get type of the forward for \a pack pack at \a index i */
-#define FORWARD_ARGPACK_BASE_TYPE(pack, i)\
-  std::remove_reference<FORWARD_ARGPACK_FULL_TYPE(pack, i)>
-
 /** Forward the param for \a pack pack at \a index i */
 #define FORWARD_ARGPACK_PARAM(pack, i)\
   std::forward<FORWARD_ARGPACK_FULL_TYPE(pack, i)>(\
     pack.template Forward<i>())
+
+/** Forward an argpack */
+#define FORWARD_ARGPACK(pack) \
+  std::forward<decltype(pack)>(pack)
 
 /** Used to pass an argument pack to a function or class method */
 class PassArgPack {
@@ -166,8 +166,7 @@ class MergeArgPacks {
         // End template parameters
         std::forward<ArgPacksT>(packs),
         FORWARD_ARGPACK_PARAM(packs, cur_pack),
-        std::forward<CurArgs>(args)...
-      );
+        std::forward<CurArgs>(args)...);
     } else {
       return make_argpack(std::forward<CurArgs>(args)...);
     }
@@ -231,4 +230,4 @@ class ProductArgPacks {
 
 }  // namespace hermes_shm
 
-#endif //HERMES_SHM_INCLUDE_HERMES_SHM_TYPES_ARGPACK_H_
+#endif  // HERMES_INCLUDE_HERMES_TYPES_ARGPACK_H_
