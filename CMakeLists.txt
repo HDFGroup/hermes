@@ -171,6 +171,7 @@ option(HERMES_ENABLE_VFD "Build the Hermes HDF5 Virtual File Driver" OFF)
 option(HERMES_ENABLE_WRAPPER "Enable hermes C API wrapper." ON)
 option(HERMES_ENABLE_GFLAGS "Enable GFLAGS support." ON)
 option(HERMES_INSTALL_TESTS "Enable installation of tests." OFF)
+option(HERMES_ONLY_RPC "Avoids the shared-memory case in RPC for testing" OFF)
 
 # Calculate code coverage with debug mode
 if(HERMES_ENABLE_COVERAGE)

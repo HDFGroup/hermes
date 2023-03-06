@@ -95,6 +95,7 @@ target_link_libraries(hermes
 
 target_compile_definitions(hermes
   PRIVATE $<$<BOOL:${HERMES_ENABLE_TIMING}>:HERMES_ENABLE_TIMING>
+  PRIVATE $<$<BOOL:${HERMES_ONLY_RPC}>:HERMES_ONLY_RPC>
 )
 
 hermes_set_lib_options(hermes "hermes" ${HERMES_LIBTYPE})

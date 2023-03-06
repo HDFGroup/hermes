@@ -23,7 +23,7 @@ using thallium::request;
 
 void ThalliumRpc::DefineRpcs() {
   RPC_CLASS_INSTANCE_DEFS_START
-  MetadataManager *mdm = this->mdm_;
+  MetadataManager *mdm = &HERMES->mdm_;
   BufferPool *bpm = &(*HERMES->bpm_);
   BufferOrganizer *borg = &HERMES->borg_;
   RPC_CLASS_INSTANCE_DEFS_END
@@ -40,7 +40,7 @@ void ThalliumRpc::DefineRpcs() {
     auto ret = mdm->LocalGetBucketId(bkt_name);
     req.respond(ret);
   });
-  RegisterRpc("RpcRpcGetBucketSize", [mdm](const request &req,
+  RegisterRpc("RpcGetBucketSize", [mdm](const request &req,
                                            BucketId bkt_id,
                                            const IoClientContext &opts) {
     auto ret = mdm->LocalGetBucketSize(bkt_id, opts);
@@ -75,7 +75,7 @@ void ThalliumRpc::DefineRpcs() {
     auto ret = mdm->LocalRenameBucket(bkt_id, new_bkt_name);
     req.respond(ret);
   });
-  RegisterRpc("RpcRpcDestroyBucket", [mdm](const request &req,
+  RegisterRpc("RpcDestroyBucket", [mdm](const request &req,
                                            BucketId bkt_id) {
     auto ret = mdm->LocalDestroyBucket(bkt_id);
     req.respond(ret);

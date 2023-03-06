@@ -177,7 +177,7 @@ BufferPool::GlobalAllocateAndSetBuffers(PlacementSchema &schema,
       sub_info = rpc_->IoCall<hipc::vector<BufferInfo>>(
           tid.GetNodeId(), "RpcAllocateAndSetBuffers",
           IoType::kWrite, blob.data(), blob.size(),
-          blob.size(), schema, blob);
+          blob.size(), schema);
     }
 
     // Concatenate

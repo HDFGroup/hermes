@@ -117,13 +117,15 @@ Status Bucket::TryCreateBlob(const std::string &blob_name,
                              BlobId &blob_id,
                              Context &ctx,
                              const IoClientContext &opts) {
-  std::pair<BlobId, bool> ret = mdm_->LocalBucketTryCreateBlob(
+  std::pair<BlobId, bool> ret = mdm_->GlobalBucketTryCreateBlob(
       id_, hipc::charbuf(blob_name));
   blob_id = ret.first;
   if (ret.second) {
     mdm_->GlobalBucketRegisterBlobId(id_,
                                      blob_id,
-                                     0, 0, true,
+                                     (size_t)0,
+                                     (size_t)0,
+                                     true,
                                      opts);
   }
   return Status();

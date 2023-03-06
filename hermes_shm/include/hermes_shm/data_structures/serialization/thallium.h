@@ -88,8 +88,9 @@ void load(A &ar, hipc::vector<T> &vec) {
  */
 template <typename A>
 void save(A &ar, hipc::string &text) {
-  ar << text.GetAllocator()->GetId();
   ar << text.size();
+  if (!text.size()) { return; }
+  ar << text.GetAllocator()->GetId();
   ar.write(text.data_mutable(), text.size());
 }
 
@@ -105,8 +106,9 @@ template <typename A>
 void load(A &ar, hipc::string &text) {
   hipc::allocator_id_t alloc_id;
   size_t size;
-  ar >> alloc_id;
   ar >> size;
+  if (!size) { return; }
+  ar >> alloc_id;
   auto alloc = HERMES_MEMORY_MANAGER->GetAllocator(alloc_id);
   text.shm_init(alloc, size);
   ar.read(text.data_mutable(), size);
@@ -122,8 +124,9 @@ void load(A &ar, hipc::string &text) {
  */
 template <typename A>
 void save(A &ar, hshm::charbuf &text) {
-  ar << text.GetAllocator()->GetId();
   ar << text.size();
+  if (!text.size()) { return; }
+  ar << text.GetAllocator()->GetId();
   ar.write(text.data(), text.size());
 }
 
@@ -139,8 +142,9 @@ template <typename A>
 void load(A &ar, hshm::charbuf &text) {
   hipc::allocator_id_t alloc_id;
   size_t size;
-  ar >> alloc_id;
   ar >> size;
+  if (!size) { return; }
+  ar >> alloc_id;
   auto alloc = HERMES_MEMORY_MANAGER->GetAllocator(alloc_id);
   text = hshm::charbuf(alloc, size);
   ar.read(text.data(), size);

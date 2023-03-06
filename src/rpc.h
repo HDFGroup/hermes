@@ -105,7 +105,11 @@ class RpcContext {
 #define UNIQUE_ID_TO_NODE_ID_LAMBDA \
   [](auto &&param) { return param.GetNodeId(); }
 
+#ifdef HERMES_ONLY_RPC
+#define NODE_ID_IS_LOCAL(node_id) false
+#else
 #define NODE_ID_IS_LOCAL(node_id) (node_id) == (rpc_->node_id_)
+#endif
 
 #define DEFINE_RPC(RET, BaseName, tuple_idx, hashfn)\
   template<typename ...Args>\
