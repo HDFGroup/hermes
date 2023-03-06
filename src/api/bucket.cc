@@ -65,6 +65,7 @@ void Bucket::Rename(std::string new_bkt_name) {
  * Destroys this bucket along with all its contents.
  * */
 void Bucket::Destroy() {
+  mdm_->GlobalDestroyBucket(id_);
 }
 
 /**====================================

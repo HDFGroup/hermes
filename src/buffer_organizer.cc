@@ -110,7 +110,7 @@ void BufferOrganizer::GlobalPlaceBlobInBuffers(
 
   // Send the buffers to each node
   for (auto &[tid, size] : unique_tgts) {
-    if (tid.GetNodeId() == rpc_->node_id_) {
+    if (NODE_ID_IS_LOCAL(tid.GetNodeId())) {
       LocalPlaceBlobInBuffers(blob, buffers);
     } else {
       rpc_->IoCall<void>(
@@ -155,7 +155,7 @@ Blob BufferOrganizer::GlobalReadBlobFromBuffers(
   std::vector<Blob> blobs;
   for (auto &[tid, size] : unique_tgts) {
     blobs.emplace_back(size);
-    if (tid.GetNodeId() == rpc_->node_id_) {
+    if (NODE_ID_IS_LOCAL(tid.GetNodeId())) {
       LocalReadBlobFromBuffers(buffers);
     } else {
       rpc_->IoCall<void>(

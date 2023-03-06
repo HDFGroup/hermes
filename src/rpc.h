@@ -105,6 +105,8 @@ class RpcContext {
 #define UNIQUE_ID_TO_NODE_ID_LAMBDA \
   [](auto &&param) { return param.GetNodeId(); }
 
+#define NODE_ID_IS_LOCAL(node_id) (node_id) == (rpc_->node_id_)
+
 #define DEFINE_RPC(RET, BaseName, tuple_idx, hashfn)\
   template<typename ...Args>\
   TYPE_UNWRAP(RET) Global##BaseName(Args&& ...args) {\
@@ -121,7 +123,7 @@ class RpcContext {
     int node_id = hashfn(pack.template              \
                          Forward<tuple_idx>()) % rpc_->hosts_.size(); \
     node_id += 1; \
-    if (node_id == rpc_->node_id_) {\
+    if (NODE_ID_IS_LOCAL(node_id)) {\
       if constexpr(std::is_same_v<TYPE_UNWRAP(RET), void>) {\
         hermes_shm::PassArgPack::Call(\
             std::forward<ArgPackT>(pack), \

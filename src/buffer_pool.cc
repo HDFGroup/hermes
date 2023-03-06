@@ -171,7 +171,7 @@ BufferPool::GlobalAllocateAndSetBuffers(PlacementSchema &schema,
   // Send the buffers to each node
   for (auto &[tid, size] : unique_tgts) {
     hipc::vector<BufferInfo> sub_info(0);
-    if (tid.GetNodeId() == rpc_->node_id_) {
+    if (NODE_ID_IS_LOCAL(tid.GetNodeId())) {
       sub_info = LocalAllocateAndSetBuffers(schema, blob);
     } else {
       sub_info = rpc_->IoCall<hipc::vector<BufferInfo>>(
