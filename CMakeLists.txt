@@ -31,8 +31,8 @@ endif()
 # Version information
 #------------------------------------------------------------------------------
 set(HERMES_VERSION_MAJOR "0")
-set(HERMES_VERSION_MINOR "8")
-set(HERMES_VERSION_PATCH "0")
+set(HERMES_VERSION_MINOR "9")
+set(HERMES_VERSION_PATCH "5")
 set(HERMES_PACKAGE "hermes")
 set(HERMES_PACKAGE_NAME "HERMES")
 set(HERMES_PACKAGE_VERSION "${HERMES_VERSION_MAJOR}.${HERMES_VERSION_MINOR}.${HERMES_VERSION_PATCH}")
@@ -414,7 +414,6 @@ add_custom_target(rpc COMMAND bash
         ${CMAKE_SOURCE_DIR}/code_generators/code_generators/rpc/rpcgen.sh
         "${CMAKE_SOURCE_DIR}"
         "${CMAKE_BINARY_DIR}")
-
 # add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/data_stager)
 
 #-----------------------------------------------------------------------------
