@@ -136,7 +136,7 @@ Status Bucket::TryCreateBlob(const std::string &blob_name,
  * */
 Status Bucket::TagBlob(BlobId &blob_id,
                        const std::string &tag_name) {
-
+  mdm_->GlobalTagAddBlob(tag_name, blob_id);
   return mdm_->GlobalBucketTagBlob(blob_id, tag_name);
 }
 

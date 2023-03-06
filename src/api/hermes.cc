@@ -150,4 +150,8 @@ std::shared_ptr<Bucket> Hermes::GetBucket(std::string name,
   return std::make_shared<Bucket>(name, ctx, opts);
 }
 
+std::list<BlobId> Hermes::GroupBy(std::string tag_name) {
+  return mdm_.GlobalGroupByTag(tag_name);
+}
+
 }  // namespace hermes::api
