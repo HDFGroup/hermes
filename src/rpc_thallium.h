@@ -116,12 +116,12 @@ class ThalliumRpc : public RpcContext {
     switch (type) {
       case IoType::kRead: {
         // Write to the buffer the client is reading from
-        flag = tl::bulk_mode::read_only;
+        flag = tl::bulk_mode::write_only;
         break;
       }
       case IoType::kWrite: {
         // Read from the buffer the client has written to
-        flag = tl::bulk_mode::write_only;
+        flag = tl::bulk_mode::read_only;
         break;
       }
     }
@@ -136,12 +136,12 @@ class ThalliumRpc : public RpcContext {
     switch (type) {
       case IoType::kRead: {
         // Write to the buffer the client is reading from
-        io_bytes = local_bulk >> bulk.on(endpoint);
+        io_bytes = bulk.on(endpoint) >> local_bulk;
         break;
       }
       case IoType::kWrite: {
         // Read from the buffer the client has written to
-        io_bytes = bulk.on(endpoint) >> local_bulk;
+        io_bytes = local_bulk >> bulk.on(endpoint);
         break;
       }
     }

@@ -159,7 +159,7 @@ Blob BufferOrganizer::GlobalReadBlobFromBuffers(
       LocalReadBlobFromBuffers(buffers);
     } else {
       rpc_->IoCall<void>(
-          tid.GetNodeId(), "ReadBlobFromBuffers",
+          tid.GetNodeId(), "RpcReadBlobFromBuffers",
           IoType::kRead, blobs.back().data(), size,
           buffers);
     }
