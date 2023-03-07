@@ -154,4 +154,8 @@ std::list<BlobId> Hermes::GroupBy(std::string tag_name) {
   return mdm_.GlobalGroupByTag(tag_name);
 }
 
+void Hermes::Clear() {
+  mdm_.GlobalClear();
+}
+
 }  // namespace hermes::api

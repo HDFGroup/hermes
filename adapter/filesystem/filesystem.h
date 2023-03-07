@@ -130,7 +130,7 @@ class Filesystem {
   /** close */
   int Close(File &f, AdapterStat &stat, bool destroy = true);
   /** remove */
-  int Remove(File &f, AdapterStat &stat);
+  int Remove(const std::string &pathname);
 
   /*
    * I/O APIs which seek based on the internal AdapterStat st_ptr,
@@ -197,8 +197,6 @@ class Filesystem {
   int Sync(File &f, bool &stat_exists);
   /** close */
   int Close(File &f, bool &stat_exists, bool destroy = true);
-  /** close */
-  int Remove(File &f, bool &stat_exists);
 
  public:
   /** Whether or not \a path PATH is tracked by Hermes */

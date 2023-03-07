@@ -94,6 +94,52 @@ typedef hipc::pair<BpFreeListStat, BpFreeList> BpFreeListPair;
 /** Represents the set of targets */
 typedef hipc::vector<BpFreeListPair> BpTargetAllocs;
 
+/** Find instance of unique target if it exists */
+static std::vector<std::pair<TargetId, size_t>>::iterator
+FindUniqueTarget(std::vector<std::pair<TargetId, size_t>> &unique_tgts,
+                 TargetId &tid) {
+  for (auto iter = unique_tgts.begin(); iter != unique_tgts.end(); ++iter) {
+    if (iter->first == tid) {
+      return iter;
+    }
+  }
+  return unique_tgts.end();
+}
+
+/** Get the unique set of targets */
+static std::vector<std::pair<TargetId, size_t>>
+GroupByTarget(hipc::vector<BufferInfo> &buffers, size_t &total_size) {
+  total_size = 0;
+  std::vector<std::pair<TargetId, size_t>> unique_tgts;
+  for (hipc::ShmRef<BufferInfo> info : buffers) {
+    auto iter = FindUniqueTarget(unique_tgts, info->tid_);
+    if (iter == unique_tgts.end()) {
+      unique_tgts.emplace_back(info->tid_, info->blob_size_);
+    } else {
+      (*iter).second += info->blob_size_;
+    }
+    total_size += info->blob_size_;
+  }
+  return unique_tgts;
+}
+
+/** Get the unique set of targets */
+static std::vector<std::pair<TargetId, size_t>>
+GroupByTarget(PlacementSchema &schema, size_t &total_size) {
+  total_size = 0;
+  std::vector<std::pair<TargetId, size_t>> unique_tgts;
+  for (auto &plcmnt : schema.plcmnts_) {
+    auto iter = FindUniqueTarget(unique_tgts, plcmnt.tid_);
+    if (iter == unique_tgts.end()) {
+      unique_tgts.emplace_back(plcmnt.tid_, plcmnt.size_);
+    } else {
+      (*iter).second += plcmnt.size_;
+    }
+    total_size += plcmnt.size_;
+  }
+  return unique_tgts;
+}
+
 /**
  * The shared-memory representation of the BufferPool
  * */
@@ -213,6 +259,7 @@ class BufferPool : public hipc::ShmContainer {
    * Free buffers from the BufferPool
    * */
   RPC bool LocalReleaseBuffers(hipc::vector<BufferInfo> &buffers);
+  bool GlobalReleaseBuffers(hipc::vector<BufferInfo> &buffers);
 };
 
 }  // namespace hermes

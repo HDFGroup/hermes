@@ -48,6 +48,7 @@ set(HERMES_SRCS
   ${CMAKE_CURRENT_SOURCE_DIR}/rpc.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/rpc_thallium.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/rpc_thallium_defs.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/metadata_types.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/metadata_manager.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/api/bucket.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/api/hermes.cc

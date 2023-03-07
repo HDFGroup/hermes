@@ -128,35 +128,6 @@ BufferPool::LocalAllocateAndSetBuffers(PlacementSchema &schema,
   return std::move(buffers);
 }
 
-/** Find instance of unique target if it exists */
-static std::vector<std::pair<TargetId, size_t>>::iterator
-FindUniqueTarget(std::vector<std::pair<TargetId, size_t>> &unique_tgts,
-                 TargetId &tid) {
-  for (auto iter = unique_tgts.begin(); iter != unique_tgts.end(); ++iter) {
-    if (iter->first == tid) {
-      return iter;
-    }
-  }
-  return unique_tgts.end();
-}
-
-/** Get the unique set of targets */
-std::vector<std::pair<TargetId, size_t>>
-GroupByTarget(PlacementSchema &schema, size_t &total_size) {
-  total_size = 0;
-  std::vector<std::pair<TargetId, size_t>> unique_tgts;
-  for (auto &plcmnt : schema.plcmnts_) {
-    auto iter = FindUniqueTarget(unique_tgts, plcmnt.tid_);
-    if (iter == unique_tgts.end()) {
-      unique_tgts.emplace_back(plcmnt.tid_, plcmnt.size_);
-    } else {
-      (*iter).second += plcmnt.size_;
-    }
-    total_size += plcmnt.size_;
-  }
-  return unique_tgts;
-}
-
 /**
 * The RPC of LocalAllocateAndSendBuffers
 * */
@@ -332,6 +303,26 @@ bool BufferPool::LocalReleaseBuffers(hipc::vector<BufferInfo> &buffers) {
     hipc::ShmRef<BpFreeList> &free_list = free_list_p->second_;
     free_list->emplace_front(info->t_off_, info->t_size_);
   }
+  return true;
+}
+
+/**
+ * Free buffers from the BufferPool (global)
+ * */
+bool BufferPool::GlobalReleaseBuffers(hipc::vector<BufferInfo> &buffers) {
+  // Get the nodes to transfer buffers to
+  size_t total_size;
+  auto unique_tgts = GroupByTarget(buffers, total_size);
+
+  // Send the buffers to each node
+  for (auto &[tid, size] : unique_tgts) {
+    if (NODE_ID_IS_LOCAL(tid.GetNodeId())) {
+      LocalReleaseBuffers(buffers);
+    } else {
+      rpc_->Call<bool>(tid.GetNodeId(), "RpcReleaseBuffers", buffers);
+    }
+  }
+
   return true;
 }
 

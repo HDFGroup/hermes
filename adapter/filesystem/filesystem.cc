@@ -309,13 +309,22 @@ int Filesystem::Close(File &f, AdapterStat &stat, bool destroy) {
   return 0;
 }
 
-int Filesystem::Remove(File &f, AdapterStat &stat) {
-  stat.bkt_id_->Destroy();
+int Filesystem::Remove(const std::string &pathname) {
   auto mdm = HERMES_FS_METADATA_MANAGER;
-  FilesystemIoClientObject fs_ctx(&mdm->fs_mdm_, (void*)&stat);
-  io_client_->HermesClose(f, stat, fs_ctx);
-  io_client_->RealClose(f, stat);
-  mdm->Delete(stat.path_, f);
+  auto files = mdm->Find(pathname);
+  if (files == nullptr) {
+    return 0;
+  }
+  for (File &f : *files) {
+    auto stat = mdm->Find(f);
+    stat->bkt_id_->Destroy();
+    auto mdm = HERMES_FS_METADATA_MANAGER;
+    FilesystemIoClientObject fs_ctx(&mdm->fs_mdm_, (void *)&stat);
+    io_client_->HermesClose(f, *stat, fs_ctx);
+    io_client_->RealClose(f, *stat);
+    io_client_->RealRemove(f, *stat);
+    mdm->Delete(stat->path_, f);
+  }
   return 0;
 }
 
@@ -520,17 +529,6 @@ int Filesystem::Close(File &f, bool &stat_exists, bool destroy) {
   }
   stat_exists = true;
   return Close(f, *stat, destroy);
-}
-
-int Filesystem::Remove(File &f, bool &stat_exists) {
-  auto mdm = HERMES_FS_METADATA_MANAGER;
-  auto stat = mdm->Find(f);
-  if (!stat) {
-    stat_exists = false;
-    return -1;
-  }
-  stat_exists = true;
-  return Remove(f, *stat);
 }
 
 }  // namespace hermes::adapter::fs

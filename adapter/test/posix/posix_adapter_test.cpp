@@ -16,6 +16,7 @@
 
 #include <filesystem>
 #include <iostream>
+#include "hermes.h"
 
 #include "catch_config.h"
 #if HERMES_INTERCEPT == 1
@@ -209,6 +210,7 @@ int posttest(bool compare_data = true) {
   HERMES->client_config_.SetAdapterPathTracking(info.new_file_cmp, true);
   HERMES->client_config_.SetAdapterPathTracking(info.new_file, true);
   HERMES->client_config_.SetAdapterPathTracking(info.existing_file, true);
+  HERMES->Clear();
 #endif
   return 0;
 }

@@ -112,6 +112,9 @@ class Hermes {
   /** Locate all blobs with a tag */
   std::list<BlobId> GroupBy(std::string tag_name);
 
+  /** Destroy all buckets and blobs in this instance */
+  void Clear();
+
  private:
   /** Internal initialization of Hermes */
   void Init(HermesType mode = HermesType::kClient,

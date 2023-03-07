@@ -19,7 +19,10 @@ namespace hermes::adapter::fs {
 bool MetadataManager::Create(const File &f,
                              std::shared_ptr<AdapterStat> &stat) {
   VLOG(1) << "Create metadata for file handler." << std::endl;
-  path_to_hermes_file_.emplace(stat->path_, f);
+  if (path_to_hermes_file_.find(stat->path_) == path_to_hermes_file_.end()) {
+    path_to_hermes_file_.emplace(stat->path_, std::list<File>());
+  }
+  path_to_hermes_file_[stat->path_].emplace_back(f);
   auto ret = hermes_file_to_stat_.emplace(f, std::move(stat));
   return ret.second;
 }
@@ -35,13 +38,13 @@ bool MetadataManager::Update(const File &f, const AdapterStat &stat) {
   }
 }
 
-File MetadataManager::Find(const std::string &path) {
+std::list<File>* MetadataManager::Find(const std::string &path) {
   std::string canon_path = stdfs::weakly_canonical(path).string();
   auto iter = path_to_hermes_file_.find(canon_path);
   if (iter == path_to_hermes_file_.end())
-    return File();
+    return nullptr;
   else
-    return iter->second;
+    return &iter->second;
 }
 
 std::shared_ptr<AdapterStat> MetadataManager::Find(const File &f) {
@@ -57,11 +60,16 @@ bool MetadataManager::Delete(const std::string &path, const File &f) {
   auto iter = hermes_file_to_stat_.find(f);
   if (iter != hermes_file_to_stat_.end()) {
     hermes_file_to_stat_.erase(iter);
+    auto &list = path_to_hermes_file_[path];
+    auto f_iter = std::find(list.begin(), list.end(), f);
+    path_to_hermes_file_[path].erase(f_iter);
+    if (list.size() == 0) {
+      path_to_hermes_file_.erase(path);
+    }
     return true;
   } else {
     return false;
   }
-  path_to_hermes_file_.erase(path);
 }
 
 }  // namespace hermes::adapter::fs

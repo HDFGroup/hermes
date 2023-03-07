@@ -381,8 +381,7 @@ int HERMES_DECL(remove)(const char *pathname) {
     LOG(INFO) << "Intercept remove(" << pathname << ")";
     DLOG(INFO) << " -> " << pathname;
     LOG(INFO) << std::endl;
-    File f = mdm->Find(pathname);
-    return fs_api->Remove(f, stat_exists);
+    return fs_api->Remove(pathname);
   }
   return real_api->remove(pathname);
 }
@@ -396,8 +395,7 @@ int HERMES_DECL(unlink)(const char *pathname) {
     LOG(INFO) << "Intercept unlink(" << pathname << ")";
     DLOG(INFO) << " -> " << pathname;
     LOG(INFO) << std::endl;
-    File f = mdm->Find(pathname);
-    return fs_api->Close(f, stat_exists);
+    return fs_api->Remove(pathname);
   }
   return real_api->unlink(pathname);
 }

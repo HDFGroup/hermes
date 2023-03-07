@@ -118,11 +118,13 @@ struct BufferInfo {
 /** Represents BlobInfo in shared memory */
 template<>
 struct ShmHeader<BlobInfo> : public hipc::ShmBaseHeader {
+  BlobId blob_id_;   /**< The identifier of this blob */
   BucketId bkt_id_;  /**< The bucket containing the blob */
-  hipc::TypedPointer<hipc::string> name_ar_; /**< SHM pointer to string */
-  hipc::TypedPointer<hipc::vector<BufferInfo>>
-      buffers_ar_;     /**< SHM pointer to BufferInfo vector */
-  hipc::TypedPointer<hipc::slist<hipc::string>>
+  hipc::ShmArchive<hipc::string>
+      name_ar_;      /**< SHM pointer to string */
+  hipc::ShmArchive<hipc::vector<BufferInfo>>
+      buffers_ar_;   /**< SHM pointer to BufferInfo vector */
+  hipc::ShmArchive<hipc::slist<hipc::string>>
       tags_ar_;        /**< SHM pointer to tag list */
   size_t blob_size_;   /**< The overall size of the blob */
   RwLock lock_[2];     /**< Ensures BlobInfo access is synchronized */
@@ -164,10 +166,8 @@ struct ShmHeader<BlobInfo> : public hipc::ShmBaseHeader {
   }
 
   void strong_copy(const ShmHeader &other) {
+    blob_id_ = other.blob_id_;
     bkt_id_ = other.bkt_id_;
-    name_ar_ = other.name_ar_;
-    buffers_ar_ = other.buffers_ar_;
-    tags_ar_ = other.tags_ar_;
     blob_size_ = other.blob_size_;
   }
 };
@@ -178,16 +178,12 @@ struct BlobInfo : public hipc::ShmContainer {
   SHM_CONTAINER_TEMPLATE(BlobInfo, BlobInfo, ShmHeader<BlobInfo>);
 
  public:
-  /// The bucket containing the blob
-  BucketId bkt_id_;
   /// The name of the blob
-  hipc::mptr<hipc::string> name_;
+  hipc::ShmRef<hipc::string> name_;
   /// The BufferInfo vector
-  hipc::mptr<hipc::vector<BufferInfo>> buffers_;
+  hipc::ShmRef<hipc::vector<BufferInfo>> buffers_;
   /// The Tag slist
-  hipc::mptr<hipc::slist<hipc::string>> tags_;
-  /// Synchronize access to blob
-  Mutex lock_;
+  hipc::ShmRef<hipc::slist<hipc::string>> tags_;
 
   /** Default constructor. Does nothing. */
   BlobInfo() = default;
@@ -197,33 +193,23 @@ struct BlobInfo : public hipc::ShmContainer {
                      hipc::Allocator *alloc) {
     shm_init_allocator(alloc);
     shm_init_header(header);
-    name_.shm_init(alloc_);
-    buffers_.shm_init(alloc_);
-    tags_.shm_init(alloc_);
-    shm_serialize_main();
+    shm_deserialize_main();
+    name_->shm_init(alloc_);
+    buffers_->shm_init(alloc_);
+    tags_->shm_init(alloc_);
   }
 
   /** Destroy all allocated data */
-  void shm_destroy_main() {
-    name_.shm_destroy();
-    buffers_.shm_destroy();
-    tags_.shm_destroy();
-  }
+  void shm_destroy_main();
 
   /** Serialize pointers */
-  void shm_serialize_main() const {
-    header_->bkt_id_ = bkt_id_;
-    name_ >> header_->name_ar_;
-    buffers_ >> header_->buffers_ar_;
-    tags_ >> header_->tags_ar_;
-  }
+  void shm_serialize_main() const {}
 
   /** Deserialize pointers */
   void shm_deserialize_main() {
-    bkt_id_ = header_->bkt_id_;
-    name_ << header_->name_ar_;
-    buffers_ << header_->buffers_ar_;
-    tags_ << header_->tags_ar_;
+    (*name_) << header_->name_ar_.internal_ref(alloc_);
+    (*buffers_) << header_->buffers_ar_.internal_ref(alloc_);
+    (*tags_) << header_->tags_ar_.internal_ref(alloc_);
   }
 
   /** Move pointers into another BlobInfo */
@@ -233,7 +219,6 @@ struct BlobInfo : public hipc::ShmContainer {
     shm_init_allocator(alloc);
     shm_init_header(header);
     (*header_) = (*other.header_);
-    bkt_id_ = other.bkt_id_;
     (*name_) = std::move(*other.name_);
     (*buffers_) = std::move(*other.buffers_);
     (*tags_) = std::move(*other.tags_);
@@ -247,7 +232,6 @@ struct BlobInfo : public hipc::ShmContainer {
     shm_init_allocator(alloc);
     shm_init_header(header);
     (*header_) = (*other.header_);
-    bkt_id_ = other.bkt_id_;
     (*name_) = (*other.name_);
     (*buffers_) = (*other.buffers_);
     (*tags_) = (*other.tags_);
@@ -258,39 +242,33 @@ struct BlobInfo : public hipc::ShmContainer {
 /** Represents BucketInfo in shared memory */
 template<>
 struct ShmHeader<BucketInfo> : public hipc::ShmBaseHeader {
-  /** Name of the bucket */
-  hipc::TypedPointer<hipc::string> name_ar_;
-  /** Archive of blob vector */
-  hipc::TypedPointer<hipc::list<BlobId>> blobs_ar_;
-  size_t internal_size_;  /**< Current bucket size */
-  /** State needed to be maintained for I/O clients */
-  GlobalIoClientState client_state_;
-  RwLock lock_[2];     /**< Ensures BucketInfo access is synchronized */
+  BucketId bkt_id_;        /**< ID of the bucket */
+  hipc::ShmArchive<hipc::string>
+      name_ar_;            /**< Name of the bucket */
+  hipc::ShmArchive<hipc::list<BlobId>>
+      blobs_ar_;           /**< Archive of blob vector */
+  size_t internal_size_;   /**< Current bucket size */
+  GlobalIoClientState
+      client_state_;       /**< State needed by I/O clients */
+  RwLock lock_[2];         /**< Ensures BucketInfo access is synchronized */
 
   /** Default constructor */
   ShmHeader() = default;
 
   /** Copy constructor */
-  ShmHeader(const ShmHeader &other) noexcept
-      : name_ar_(other.name_ar_),
-        blobs_ar_(other.blobs_ar_),
-        internal_size_(other.internal_size_),
-        client_state_(other.client_state_) {}
+  ShmHeader(const ShmHeader &other) noexcept {
+    strong_copy(other);
+  }
 
   /** Move constructor */
-  ShmHeader(ShmHeader &&other) noexcept
-      : name_ar_(other.name_ar_),
-        blobs_ar_(other.blobs_ar_),
-        internal_size_(other.internal_size_),
-        client_state_(other.client_state_) {}
+  ShmHeader(ShmHeader &&other) noexcept {
+    strong_copy(other);
+  }
 
   /** Copy assignment */
   ShmHeader& operator=(const ShmHeader &other) {
     if (this != &other) {
-      name_ar_ = other.name_ar_;
-      blobs_ar_ = other.blobs_ar_;
-      internal_size_ = other.internal_size_;
-      client_state_ = other.client_state_;
+      strong_copy(other);
     }
     return *this;
   }
@@ -298,12 +276,14 @@ struct ShmHeader<BucketInfo> : public hipc::ShmBaseHeader {
   /** Move assignment */
   ShmHeader& operator=(ShmHeader &&other) {
     if (this != &other) {
-      name_ar_ = other.name_ar_;
-      blobs_ar_ = other.blobs_ar_;
-      internal_size_ = other.internal_size_;
-      client_state_ = other.client_state_;
+      strong_copy(other);
     }
     return *this;
+  }
+
+  void strong_copy(const ShmHeader &other) {
+    internal_size_ = other.internal_size_;
+    client_state_ = other.client_state_;
   }
 };
 
@@ -313,8 +293,8 @@ struct BucketInfo : public hipc::ShmContainer {
   SHM_CONTAINER_TEMPLATE(BucketInfo, BucketInfo, ShmHeader<BucketInfo>);
 
  public:
-  hipc::mptr<hipc::string> name_; /**< The name of the bucket */
-  hipc::mptr<hipc::list<BlobId>> blobs_;  /**< All blobs in this Bucket */
+  hipc::ShmRef<hipc::string> name_;         /**< The name of the bucket */
+  hipc::ShmRef<hipc::list<BlobId>> blobs_;  /**< All blobs in this Bucket */
 
  public:
   /** Default constructor */
@@ -325,25 +305,21 @@ struct BucketInfo : public hipc::ShmContainer {
                      hipc::Allocator *alloc) {
     shm_init_allocator(alloc);
     shm_init_header(header);
-    name_ = hipc::make_mptr<hipc::string>(alloc);
-    blobs_ = hipc::make_mptr<hipc::list<BlobId>>(alloc);
+    shm_deserialize_main();
+    name_->shm_init(alloc);
+    blobs_->shm_init(alloc);
   }
 
   /** Destroy all allocated data */
-  void shm_destroy_main(bool destroy_header = true) {
-    name_.shm_destroy();
-  }
+  void shm_destroy_main();
 
   /** Serialize pointers */
-  void shm_serialize_main() const {
-    name_ >> header_->name_ar_;
-    blobs_ >> header_->blobs_ar_;
-  }
+  void shm_serialize_main() const {}
 
   /** Deserialize pointers */
   void shm_deserialize_main() {
-    name_ << header_->name_ar_;
-    blobs_ << header_->blobs_ar_;
+    (*name_) << header_->name_ar_.internal_ref(alloc_);
+    (*blobs_) << header_->blobs_ar_.internal_ref(alloc_);
   }
 
   /** Move other object into this one */
@@ -368,45 +344,6 @@ struct BucketInfo : public hipc::ShmContainer {
     (*name_) = (*other.name_);
     (*blobs_) = (*other.blobs_);
     shm_serialize_main();
-  }
-};
-
-/** Represents a VBucket in shared memory */
-template<>
-struct ShmHeader<VBucketInfo> : public hipc::ShmBaseHeader {
-  hipc::TypedPointer<hipc::charbuf> name_ar_;
-  hipc::TypedPointer<hipc::unordered_map<BlobId, BlobId>> blobs_ar_;
-  RwLock lock_;
-
-  /** Default constructor */
-  ShmHeader() = default;
-
-  /** Copy constructor */
-  ShmHeader(const ShmHeader &other) noexcept
-      : name_ar_(other.name_ar_),
-        blobs_ar_(other.blobs_ar_) {}
-
-  /** Move constructor */
-  ShmHeader(ShmHeader &&other) noexcept
-      : name_ar_(other.name_ar_),
-        blobs_ar_(other.blobs_ar_) {}
-
-  /** Copy assignment */
-  ShmHeader& operator=(const ShmHeader &other) {
-    if (this != &other) {
-      name_ar_ = other.name_ar_;
-      blobs_ar_ = other.blobs_ar_;
-    }
-    return *this;
-  }
-
-  /** Move assignment */
-  ShmHeader& operator=(ShmHeader &&other) {
-    if (this != &other) {
-      name_ar_ = other.name_ar_;
-      blobs_ar_ = other.blobs_ar_;
-    }
-    return *this;
   }
 };
 

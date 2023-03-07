@@ -50,35 +50,6 @@ void BufferOrganizer::shm_deserialize()  {
   rpc_ = &HERMES->rpc_;
 }
 
-/** Find instance of unique target if it exists */
-static std::vector<std::pair<TargetId, size_t>>::iterator
-FindUniqueTarget(std::vector<std::pair<TargetId, size_t>> &unique_tgts,
-                 TargetId &tid) {
-  for (auto iter = unique_tgts.begin(); iter != unique_tgts.end(); ++iter) {
-    if (iter->first == tid) {
-      return iter;
-    }
-  }
-  return unique_tgts.end();
-}
-
-/** Get the unique set of targets */
-std::vector<std::pair<TargetId, size_t>>
-GroupByTarget(hipc::vector<BufferInfo> &buffers, size_t &total_size) {
-  total_size = 0;
-  std::vector<std::pair<TargetId, size_t>> unique_tgts;
-  for (hipc::ShmRef<BufferInfo> info : buffers) {
-    auto iter = FindUniqueTarget(unique_tgts, info->tid_);
-    if (iter == unique_tgts.end()) {
-      unique_tgts.emplace_back(info->tid_, info->blob_size_);
-    } else {
-      (*iter).second += info->blob_size_;
-    }
-    total_size += info->blob_size_;
-  }
-  return unique_tgts;
-}
-
 /** Stores a blob into a set of buffers */
 RPC void BufferOrganizer::LocalPlaceBlobInBuffers(
     const Blob &blob, hipc::vector<BufferInfo> &buffers) {

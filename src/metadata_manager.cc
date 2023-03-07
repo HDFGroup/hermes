@@ -129,6 +129,7 @@ BucketId MetadataManager::LocalGetOrCreateBucket(
     BucketInfo info(HERMES->main_alloc_);
     (*info.name_) = bkt_name;
     info.header_->internal_size_ = 0;
+    info.header_->bkt_id_ = bkt_id;
     bkt_map_->emplace(bkt_id, std::move(info));
   } else {
     LOG(INFO) << "Found existing bucket: "
@@ -227,7 +228,7 @@ bool MetadataManager::LocalBucketContainsBlob(BucketId bkt_id,
   // Get the blob info
   hipc::ShmRef<hipc::pair<BlobId, BlobInfo>> info = (*iter);
   BlobInfo &blob_info = *info->second_;
-  return blob_info.bkt_id_ == bkt_id;
+  return blob_info.header_->bkt_id_ == bkt_id;
 }
 
 /**
@@ -370,8 +371,8 @@ std::pair<BlobId, bool> MetadataManager::LocalBucketTryCreateBlob(
   bool did_create = blob_id_map_->try_emplace(internal_blob_name, blob_id);
   if (did_create) {
     BlobInfo blob_info(HERMES->main_alloc_);
-    blob_info.bkt_id_ = bkt_id;
     (*blob_info.name_) = blob_name;
+    blob_info.header_->bkt_id_ = bkt_id;
     blob_info.header_->blob_size_ = 0;
     blob_id_map_->emplace(internal_blob_name, blob_id);
     blob_map_->emplace(blob_id, std::move(blob_info));
@@ -471,9 +472,10 @@ std::tuple<BlobId, bool, size_t> MetadataManager::LocalBucketPutBlob(
   bool did_create = blob_id_map_->try_emplace(internal_blob_name, blob_id);
   if (did_create) {
     BlobInfo blob_info(HERMES->main_alloc_);
-    blob_info.bkt_id_ = bkt_id;
     (*blob_info.name_) = blob_name;
     (*blob_info.buffers_) = std::move(buffers);
+    blob_info.header_->blob_id_ = blob_id;
+    blob_info.header_->bkt_id_ = bkt_id;
     blob_info.header_->blob_size_ = blob_size;
     blob_id_map_->emplace(internal_blob_name, blob_id);
     blob_map_->emplace(blob_id, std::move(blob_info));
@@ -617,5 +619,32 @@ bool MetadataManager::LocalDestroyBlob(BucketId bkt_id,
   blob_map_->erase(blob_id);
   return true;
 }
+
+/**
+ * Destroy all blobs + buckets
+ * */
+void MetadataManager::LocalClear() {
+  LOG(INFO) << "Clearing all buckets and blobs" << std::endl;
+  blob_id_map_.shm_destroy();
+  bkt_id_map_.shm_destroy();
+  blob_map_.shm_destroy();
+  bkt_map_.shm_destroy();
+}
+
+/**
+ * Destroy all blobs + buckets globally
+ * */
+void MetadataManager::GlobalClear() {
+  for (int i = 0; i < rpc_->hosts_.size(); ++i) {
+    int node_id = i + 1;
+    if (NODE_ID_IS_LOCAL(node_id)) {
+      LocalClear();
+    } else {
+      rpc_->Call<void>(node_id, "RpcLocalClear");
+    }
+  }
+}
+
+
 
 }  // namespace hermes

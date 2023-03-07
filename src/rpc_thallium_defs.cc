@@ -182,6 +182,16 @@ void ThalliumRpc::DefineRpcs() {
     mdm->LocalUpdateTargetCapacity(tid, offset);
     req.respond(true);
   });
+  RegisterRpc("RpcClear", [mdm](const request &req) {
+    mdm->LocalClear();
+    req.respond(true);
+  });
+  RegisterRpc("RpcReleaseBuffers", [bpm](const request &req,
+                                         hipc::vector<BufferInfo> &buffers) {
+    bpm->LocalReleaseBuffers(buffers);
+    req.respond(true);
+  });
+
 
   // IO Calls
   RegisterRpc("RpcPlaceBlobInBuffers", [this, borg](

@@ -365,6 +365,12 @@ class MetadataManager {
     return {};
   }
 
+  /**
+   * Destroy all blobs + buckets
+   * */
+  void LocalClear();
+  void GlobalClear();
+
  private:
   /** Acquire the external lock to Bucket or Blob */
   template<typename MapFirst, typename MapSecond, typename IdT>
