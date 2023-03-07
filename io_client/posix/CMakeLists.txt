@@ -1,7 +1,3 @@
-include_directories(
-        ${CMAKE_SOURCE_DIR}
-        ${HERMES_IO_CLIENT_DIR})
-
 # Creates the POSIX I/O client and singleton
 add_library(hermes_posix_io_client
         posix_api_singleton.cc

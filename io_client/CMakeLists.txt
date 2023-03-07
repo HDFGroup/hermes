@@ -1,8 +1,10 @@
 
-set(HERMES_IO_CLEINT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+set(HERMES_IO_CLIENT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+set(HERMES_SRC_DIR ${CMAKE_SOURCE_DIR}/src)
 
 include_directories(
         ${CMAKE_SOURCE_DIR}
+        ${HERMES_SRC_DIR}
         ${HERMES_IO_CLIENT_DIR})
 
 add_subdirectory(filesystem)

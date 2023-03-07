@@ -16,7 +16,7 @@
 #include "hermes_types.h"
 #include "status.h"
 #include "buffer_pool.h"
-#include "adapter/io_client/io_client_factory.h"
+#include "io_client/io_client_factory.h"
 
 namespace hermes::api {
 

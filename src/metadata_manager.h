@@ -20,7 +20,7 @@
 #include "metadata_types.h"
 #include "statuses.h"
 #include "rpc_thallium_serialization.h"
-#include "adapter/io_client/io_client_factory.h"
+#include "io_client/io_client_factory.h"
 
 namespace hermes {
 

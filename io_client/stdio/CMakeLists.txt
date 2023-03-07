@@ -1,8 +1,4 @@
 project(StdioAdapter VERSION ${HERMES_PACKAGE_VERSION})
-include_directories(
-        ${CMAKE_SOURCE_DIR}
-        ${HERMES_IO_CLIENT_DIR})
-
 # Creates the STDIO I/O client and singleton
 add_library(hermes_stdio_io_client
         stdio_api_singleton.cc

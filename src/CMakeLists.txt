@@ -69,6 +69,7 @@ set(HERMES_BUILD_INCLUDE_DEPENDENCIES
   ${CMAKE_CURRENT_BINARY_DIR}
 )
 
+include_directories(${CMAKE_SOURCE_DIR}/io_client)
 add_library(hermes ${HERMES_SRCS})
 target_include_directories(hermes
   PUBLIC "$<BUILD_INTERFACE:${HERMES_BUILD_INCLUDE_DEPENDENCIES}>"

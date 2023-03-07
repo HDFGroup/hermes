@@ -4,6 +4,7 @@
 include_directories(
   ${PROJECT_SOURCE_DIR}/src/api
   ${PROJECT_SOURCE_DIR}/gotcha_intercept
+  ${PROJECT_SOURCE_DIR}/io_client
   ${CMAKE_CURRENT_SOURCE_DIR}
   ${CMAKE_SOURCE_DIR}
   ${HERMES_INCLUDES_BUILD_TIME}
