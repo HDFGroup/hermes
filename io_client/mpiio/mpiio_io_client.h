@@ -10,32 +10,32 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_ADAPTER_STDIO_STDIO_IO_CLIENT_H_
-#define HERMES_ADAPTER_STDIO_STDIO_IO_CLIENT_H_
+#ifndef HERMES_ADAPTER_MPIIO_MPIIO_IO_CLIENT_H_
+#define HERMES_ADAPTER_MPIIO_MPIIO_IO_CLIENT_H_
 
 #include <memory>
 
-#include "adapter/filesystem/filesystem_io_client.h"
-#include "stdio_api.h"
+#include "io_client/filesystem/filesystem_io_client.h"
+#include "io_client/mpiio/mpiio_api.h"
 
 using hermes::adapter::IoClientStats;
 using hermes::adapter::IoClientContext;
 using hermes::adapter::IoStatus;
-using hermes::adapter::fs::StdioApi;
+using hermes::adapter::fs::MpiioApi;
 
 namespace hermes::adapter::fs {
 
 /** A class to represent STDIO IO file system */
-class StdioIoClient : public hermes::adapter::fs::FilesystemIoClient {
+class MpiioIoClient : public hermes::adapter::fs::FilesystemIoClient {
  private:
-  HERMES_STDIO_API_T real_api; /**< pointer to real APIs */
+  HERMES_MPIIO_API_T real_api; /**< pointer to real APIs */
 
  public:
   /** Default constructor */
-  StdioIoClient() { real_api = HERMES_STDIO_API; }
+  MpiioIoClient() { real_api = HERMES_MPIIO_API; }
 
   /** Virtual destructor */
-  virtual ~StdioIoClient() = default;
+  virtual ~MpiioIoClient() = default;
 
  public:
   /** Allocate an fd for the file f */
@@ -78,6 +78,11 @@ class StdioIoClient : public hermes::adapter::fs::FilesystemIoClient {
                        const IoClientContext &opts,
                        GlobalIoClientState &stat) override;
 
+  /** Initialize I/O context using count + datatype */
+  static size_t IoSizeFromCount(int count,
+                                MPI_Datatype datatype,
+                                IoClientContext &opts);
+
   /** Write blob to backend */
   void WriteBlob(const hipc::charbuf &bkt_name,
                  const Blob &full_blob,
@@ -89,13 +94,16 @@ class StdioIoClient : public hermes::adapter::fs::FilesystemIoClient {
                 Blob &full_blob,
                 const IoClientContext &opts,
                 IoStatus &status) override;
+
+  /** Update the I/O status after a ReadBlob or WriteBlob */
+  void UpdateIoStatus(size_t count, IoStatus &status);
 };
 
 }  // namespace hermes::adapter::fs
 
 /** Simplify access to the stateless StdioIoClient Singleton */
-#define HERMES_STDIO_IO_CLIENT \
-  hermes_shm::EasySingleton<hermes::adapter::fs::StdioIoClient>::GetInstance()
-#define HERMES_STDIO_IO_CLIENT_T hermes::adapter::fs::StdioIoClient*
+#define HERMES_MPIIO_IO_CLIENT \
+  hermes_shm::EasySingleton<hermes::adapter::fs::MpiioIoClient>::GetInstance()
+#define HERMES_MPIIO_IO_CLIENT_T hermes::adapter::fs::MpiioIoClient*
 
-#endif  // HERMES_ADAPTER_STDIO_STDIO_IO_CLIENT_H_
+#endif  // HERMES_ADAPTER_MPIIO_MPIIO_IO_CLIENT_H_

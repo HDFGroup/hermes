@@ -19,7 +19,7 @@
 #include <iostream>
 
 #if HERMES_INTERCEPT == 1
-#include "stdio/stdio_api.h"
+#include "io_client/stdio/stdio_api.h"
 #endif
 
 #include "adapter_test_utils.h"

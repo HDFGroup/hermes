@@ -10,33 +10,32 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_ADAPTER_POSIX_POSIX_IO_CLIENT_H_
-#define HERMES_ADAPTER_POSIX_POSIX_IO_CLIENT_H_
+#ifndef HERMES_ADAPTER_STDIO_STDIO_IO_CLIENT_H_
+#define HERMES_ADAPTER_STDIO_STDIO_IO_CLIENT_H_
 
 #include <memory>
 
-#include "adapter/filesystem/filesystem_io_client.h"
-#include "posix_api.h"
+#include "io_client/filesystem/filesystem_io_client.h"
+#include "stdio_api.h"
 
-using hermes_shm::Singleton;
 using hermes::adapter::IoClientStats;
 using hermes::adapter::IoClientContext;
 using hermes::adapter::IoStatus;
-using hermes::adapter::fs::PosixApi;
+using hermes::adapter::fs::StdioApi;
 
 namespace hermes::adapter::fs {
 
-/** A class to represent POSIX IO file system */
-class PosixIoClient : public hermes::adapter::fs::FilesystemIoClient {
+/** A class to represent STDIO IO file system */
+class StdioIoClient : public hermes::adapter::fs::FilesystemIoClient {
  private:
-  HERMES_POSIX_API_T real_api; /**< pointer to real APIs */
+  HERMES_STDIO_API_T real_api; /**< pointer to real APIs */
 
  public:
   /** Default constructor */
-  PosixIoClient() { real_api = HERMES_POSIX_API; }
+  StdioIoClient() { real_api = HERMES_STDIO_API; }
 
   /** Virtual destructor */
-  virtual ~PosixIoClient() = default;
+  virtual ~StdioIoClient() = default;
 
  public:
   /** Allocate an fd for the file f */
@@ -47,7 +46,7 @@ class PosixIoClient : public hermes::adapter::fs::FilesystemIoClient {
   /**
    * Called after real open. Allocates the Hermes representation of
    * identifying file information, such as a hermes file descriptor
-   * and hermes file handler. These are not the same as POSIX file
+   * and hermes file handler. These are not the same as STDIO file
    * descriptor and STDIO file handler.
    * */
   void HermesOpen(IoClientObject &f,
@@ -94,9 +93,9 @@ class PosixIoClient : public hermes::adapter::fs::FilesystemIoClient {
 
 }  // namespace hermes::adapter::fs
 
-/** Simplify access to the stateless PosixIoClient Singleton */
-#define HERMES_POSIX_IO_CLIENT \
-  hermes_shm::EasySingleton<hermes::adapter::fs::PosixIoClient>::GetInstance()
-#define HERMES_POSIX_IO_CLIENT_T hermes::adapter::fs::PosixIoClient*
+/** Simplify access to the stateless StdioIoClient Singleton */
+#define HERMES_STDIO_IO_CLIENT \
+  hermes_shm::EasySingleton<hermes::adapter::fs::StdioIoClient>::GetInstance()
+#define HERMES_STDIO_IO_CLIENT_T hermes::adapter::fs::StdioIoClient*
 
-#endif  // HERMES_ADAPTER_POSIX_POSIX_IO_CLIENT_H_
+#endif  // HERMES_ADAPTER_STDIO_STDIO_IO_CLIENT_H_

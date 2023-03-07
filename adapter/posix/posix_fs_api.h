@@ -17,8 +17,8 @@
 
 #include "adapter/filesystem/filesystem.h"
 #include "adapter/filesystem/filesystem_mdm.h"
-#include "posix_api.h"
-#include "posix_io_client.h"
+#include "io_client/posix/posix_api.h"
+#include "io_client/posix/posix_io_client.h"
 
 namespace hermes::adapter::fs {
 

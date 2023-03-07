@@ -23,7 +23,7 @@ bool posix_intercepted = true;
 #include "hermes_shm/util/singleton.h"
 #include "interceptor.h"
 
-#include "posix_api.h"
+#include "io_client/posix/posix_api.h"
 #include "posix_fs_api.h"
 #include "filesystem/filesystem.h"
 

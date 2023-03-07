@@ -1,8 +1,14 @@
-# Add library to wrap around all adapter native APIs for use internally in Hermes
+include_directories(
+        ${CMAKE_SOURCE_DIR}
+        ${HERMES_IO_CLIENT_DIR})
+
+#-----------------------------------------------------------------------------
+# Compile all I/O clients into a single library
+#-----------------------------------------------------------------------------
 set(IO_CLIENT_LIBS
         hermes_posix_io_client)
 add_library(hermes_adapter_io_clients
-        ${CMAKE_CURRENT_SOURCE_DIR}/empty.cc)
+        empty.cc)
 target_compile_options(hermes_adapter_io_clients PUBLIC -fPIC)
 add_dependencies(hermes_adapter_io_clients
         ${IO_CLIENT_LIBS})
@@ -36,4 +42,10 @@ if(NOT HERMES_EXTERNALLY_CONFIGURED)
           FILE
           ${HERMES_EXPORTED_TARGETS}.cmake
   )
+endif()
+#-----------------------------------------------------------------------------
+# Add Target(s) to Coverage
+#-----------------------------------------------------------------------------
+if(HERMES_ENABLE_COVERAGE)
+  set_coverage_flags(hermes_adapter_io_clients)
 endif()

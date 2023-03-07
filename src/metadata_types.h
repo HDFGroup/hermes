@@ -15,7 +15,7 @@
 
 #include "hermes_types.h"
 #include "config_server.h"
-#include "adapter/io_client/io_client.h"
+#include "io_client/io_client.h"
 
 namespace hermes {
 

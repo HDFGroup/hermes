@@ -16,7 +16,7 @@
 #include <cstdio>
 #include <unordered_map>
 #include "file.h"
-#include "filesystem_io_client.h"
+#include "io_client/filesystem/filesystem_io_client.h"
 #include "filesystem.h"
 #include "thread_pool.h"
 

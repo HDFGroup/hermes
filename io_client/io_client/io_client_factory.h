@@ -16,7 +16,7 @@
 #include "io_client.h"
 #include "hermes_shm/util/singleton.h"
 
-#include "adapter/posix/posix_io_client.h"
+#include "io_client/posix/posix_io_client.h"
 
 namespace hermes::adapter {
 /**

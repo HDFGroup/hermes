@@ -14,7 +14,7 @@
 #define HERMES_SRC_BORG_IO_CLIENTS_POSIX_H
 
 #include "borg_io_client.h"
-#include "adapter/posix/posix_api.h"
+#include "io_client/posix/posix_api.h"
 
 #include <filesystem>
 

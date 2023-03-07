@@ -19,8 +19,8 @@
 #include <filesystem>
 #include <iostream>
 #if HERMES_INTERCEPT == 1
-#include "stdio/stdio_api.h"
-#include "stdio/stdio_fs_api.h"
+#include "io_client/stdio/stdio_api.h"
+#include "adapter/stdio/stdio_fs_api.h"
 #endif
 
 namespace stdfs = std::filesystem;

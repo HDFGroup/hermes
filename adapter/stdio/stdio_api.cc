@@ -15,8 +15,8 @@ bool stdio_intercepted = true;
 #include <limits.h>
 #include <sys/file.h>
 #include <cstdio>
-#include "stdio/stdio_api.h"
-#include "stdio/stdio_fs_api.h"
+#include "io_client/stdio/stdio_api.h"
+#include "stdio_fs_api.h"
 #include "interceptor.h"
 
 using hermes::adapter::fs::MetadataManager;

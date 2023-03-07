@@ -26,8 +26,8 @@
 #include "bucket.h"
 #include "hermes.h"
 
-#include "adapter/io_client/io_client.h"
-#include "filesystem_io_client.h"
+#include "io_client/io_client.h"
+#include "io_client/filesystem/filesystem_io_client.h"
 #include "file.h"
 
 #include <filesystem>
