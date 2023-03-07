@@ -261,6 +261,7 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(stdfs::file_size(info.new_file) == test::size_written_orig);
   }
 
+
   SECTION("write to existing file with truncate") {
     test::test_open(info.existing_file.c_str(), O_WRONLY | O_TRUNC);
     REQUIRE(test::fh_orig != -1);

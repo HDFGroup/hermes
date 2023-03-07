@@ -218,11 +218,11 @@ struct BlobInfo : public hipc::ShmContainer {
                           BlobInfo &other) {
     shm_init_allocator(alloc);
     shm_init_header(header);
+    shm_deserialize_main();
     (*header_) = (*other.header_);
     (*name_) = std::move(*other.name_);
     (*buffers_) = std::move(*other.buffers_);
     (*tags_) = std::move(*other.tags_);
-    shm_serialize_main();
   }
 
   /** Deep copy data into another BlobInfo */
@@ -231,11 +231,11 @@ struct BlobInfo : public hipc::ShmContainer {
                             const BlobInfo &other) {
     shm_init_allocator(alloc);
     shm_init_header(header);
+    shm_deserialize_main();
     (*header_) = (*other.header_);
     (*name_) = (*other.name_);
     (*buffers_) = (*other.buffers_);
     (*tags_) = (*other.tags_);
-    shm_serialize_main();
   }
 };
 
@@ -328,10 +328,10 @@ struct BucketInfo : public hipc::ShmContainer {
                           BucketInfo &other) {
     shm_init_allocator(alloc);
     shm_init_header(header);
+    shm_deserialize_main();
     (*header_) = (*other.header_);
-    (*name_) = (*other.name_);
-    (*blobs_) = (*other.blobs_);
-    shm_serialize_main();
+    (*name_) = std::move(*other.name_);
+    (*blobs_) = std::move(*other.blobs_);
   }
 
   /** Copy other object into this one */
@@ -340,10 +340,10 @@ struct BucketInfo : public hipc::ShmContainer {
                             const BucketInfo &other) {
     shm_init_allocator(alloc);
     shm_init_header(header);
+    shm_deserialize_main();
     (*header_) = (*other.header_);
     (*name_) = (*other.name_);
     (*blobs_) = (*other.blobs_);
-    shm_serialize_main();
   }
 };
 

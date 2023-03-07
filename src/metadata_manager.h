@@ -42,6 +42,13 @@ typedef hipc::unordered_map<hipc::charbuf, hipc::slist<BlobId>> TAG_MAP_T;
 typedef hipc::unordered_map<BlobId, BlobInfo> BLOB_MAP_T;
 typedef hipc::unordered_map<BucketId, BucketInfo> BKT_MAP_T;
 
+enum MdMapLock {
+  kBlobMapLock,
+  kBktMapLock,
+  kTagMapLock,
+  kMdMapLockCount
+};
+
 /**
  * The SHM representation of the MetadataManager
  * */
@@ -63,7 +70,7 @@ struct MetadataManagerShmHeader {
   /// Used to create unique ids. Starts at 1.
   std::atomic<u64> id_alloc_;
   /// Synchronization
-  RwLock lock_;
+  RwLock lock_[kMdMapLockCount];
 };
 
 /**
@@ -89,9 +96,6 @@ class MetadataManager {
    * */
   hipc::mptr<hipc::vector<DeviceInfo>> devices_;
   hipc::mptr<hipc::vector<TargetInfo>> targets_;
-
-  /** A global lock for simplifying MD management */
-  RwLock lock_;
 
  public:
   MetadataManager() = default;
@@ -208,7 +212,8 @@ class MetadataManager {
    * @param data the data being placed
    * @param buffers the buffers to place data in
    * */
-  RPC std::tuple<BlobId, bool, size_t> LocalBucketPutBlob(
+  RPC std::tuple<BlobId, bool, size_t>
+  LocalBucketPutBlob(
       BucketId bkt_id,
       const hipc::charbuf &blob_name,
       size_t blob_size,
@@ -377,7 +382,6 @@ class MetadataManager {
   bool LockMdObject(hipc::unordered_map<MapFirst, MapSecond> &map,
                     IdT id,
                     MdLockType lock_type) {
-    ScopedRwReadLock md_lock(lock_);
     auto iter = map.find(id);
     if (iter == map.end()) {
       return false;
@@ -404,7 +408,6 @@ class MetadataManager {
   bool UnlockMdObject(hipc::unordered_map<MapFirst, MapSecond> &map,
                       IdT id,
                       MdLockType lock_type) {
-    ScopedRwReadLock md_lock(lock_);
     auto iter = map.find(id);
     if (iter == map.end()) {
       return false;

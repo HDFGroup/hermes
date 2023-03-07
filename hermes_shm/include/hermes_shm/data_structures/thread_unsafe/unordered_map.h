@@ -419,8 +419,8 @@ class unordered_map : public ShmContainer {
     auto iter = collisions.begin();
     auto iter_end = collisions.end();
     for (; iter != iter_end; ++iter) {
-      COLLISION_T entry(alloc_, **iter);
-      if (entry.GetKey() == key) {
+      hipc::ShmRef<COLLISION_T> collision = *iter;
+      if (collision->GetKey() == key) {
         return iter;
       }
     }

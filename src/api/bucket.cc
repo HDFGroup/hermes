@@ -165,8 +165,8 @@ Status Bucket::Put(std::string blob_name,
     opts.backend_size_ = blob.size();
     mdm_->GlobalBucketRegisterBlobId(id_,
                                      blob_id,
-                                     orig_blob_size,
-                                     blob.size(),
+                                     (size_t)orig_blob_size,
+                                     (size_t)blob.size(),
                                      did_create,
                                      opts);
   }
