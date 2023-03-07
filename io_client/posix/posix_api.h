@@ -13,7 +13,7 @@
 #ifndef HERMES_ADAPTER_POSIX_H
 #define HERMES_ADAPTER_POSIX_H
 #include <string>
-#include "adapter/adapter_api.h"
+#include "io_client/real_api.h"
 #include <iostream>
 #include <glog/logging.h>
 #include <sys/types.h>
