@@ -62,6 +62,13 @@ void Bucket::Rename(std::string new_bkt_name) {
 }
 
 /**
+   * Clears the buckets contents, but doesn't destroy its metadata
+   * */
+void Bucket::Clear() {
+  mdm_->GlobalClearBucket(id_);
+}
+
+/**
  * Destroys this bucket along with all its contents.
  * */
 void Bucket::Destroy() {

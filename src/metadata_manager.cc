@@ -275,6 +275,23 @@ bool MetadataManager::LocalRenameBucket(BucketId bkt_id,
 /**
  * Destroy \a bkt_id bucket
  * */
+bool MetadataManager::LocalClearBucket(BucketId bkt_id) {
+  ScopedRwWriteLock bkt_map_lock(header_->lock_[kBktMapLock]);
+  auto iter = bkt_map_->find(bkt_id);
+  if (iter == bkt_map_->end()) {
+    return true;
+  }
+  hipc::ShmRef<hipc::pair<BucketId, BucketInfo>> info = (*iter);
+  BucketInfo &bkt_info = *info->second_;
+  for (hipc::ShmRef<BlobId> blob_id : *bkt_info.blobs_) {
+    GlobalDestroyBlob(bkt_id, *blob_id);
+  }
+  return true;
+}
+
+/**
+ * Destroy \a bkt_id bucket
+ * */
 bool MetadataManager::LocalDestroyBucket(BucketId bkt_id) {
   // Acquire MD write lock (modifying bkt_map_)
   ScopedRwWriteLock bkt_map_lock(header_->lock_[kBktMapLock]);

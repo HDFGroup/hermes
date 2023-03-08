@@ -31,7 +31,7 @@ using adapter::GlobalIoClientState;
 using api::Blob;       /**< Namespace simplification for blob */
 struct BucketInfo;     /**< Forward declaration of BucketInfo */
 struct BlobInfo;       /**< Forward declaration of BlobInfo */
-struct VBucketInfo;    /**< Forward declaration of VBucketInfo */
+struct TraitInfo;    /**< Forward declaration of TraitInfo */
 
 /** Device information (e.g., path) */
 using config::DeviceInfo;
@@ -344,6 +344,107 @@ struct BucketInfo : public hipc::ShmContainer {
     (*header_) = (*other.header_);
     (*name_) = (*other.name_);
     (*blobs_) = (*other.blobs_);
+  }
+};
+
+/** Metadata header for trait info */
+template<>
+struct ShmHeader<TraitInfo> : public hipc::ShmBaseHeader {
+  hipc::ShmArchive<hipc::string> trait_uuid_ar_;
+  hipc::ShmArchive<hipc::string> trait_name_ar_;
+  hipc::Pointer trait_params_;
+
+  /** Default constructor */
+  ShmHeader() = default;
+
+  /** Copy constructor */
+  ShmHeader(const ShmHeader &other) noexcept {
+    strong_copy(other);
+  }
+
+  /** Move constructor */
+  ShmHeader(ShmHeader &&other) noexcept {
+    strong_copy(other);
+  }
+
+  /** Copy assignment */
+  ShmHeader& operator=(const ShmHeader &other) {
+    if (this != &other) {
+      strong_copy(other);
+    }
+    return *this;
+  }
+
+  /** Move assignment */
+  ShmHeader& operator=(ShmHeader &&other) {
+    if (this != &other) {
+      strong_copy(other);
+    }
+    return *this;
+  }
+
+  void strong_copy(const ShmHeader &other) {
+    trait_params_ = other.trait_params_;
+  }
+};
+
+/** Metadata for trait info */
+class TraitInfo : public hipc::ShmContainer {
+ public:
+  SHM_CONTAINER_TEMPLATE(TraitInfo, TraitInfo, ShmHeader<TraitInfo>);
+
+ public:
+  hipc::ShmRef<hipc::string> trait_uuid_;
+  hipc::ShmRef<hipc::string> trait_name_;
+
+ public:
+  /** Default constructor */
+  TraitInfo() = default;
+
+  /** Initialize the data structure */
+  void shm_init_main(ShmHeader<TraitInfo> *header,
+                     hipc::Allocator *alloc) {
+    shm_init_allocator(alloc);
+    shm_init_header(header);
+    shm_deserialize_main();
+    trait_uuid_->shm_init(alloc);
+    trait_name_->shm_init(alloc);
+  }
+
+  /** Destroy all allocated data */
+  void shm_destroy_main();
+
+  /** Serialize pointers */
+  void shm_serialize_main() const {}
+
+  /** Deserialize pointers */
+  void shm_deserialize_main() {
+    (*trait_uuid_) << header_->trait_uuid_ar_.internal_ref(alloc_);
+    (*trait_name_) << header_->trait_name_ar_.internal_ref(alloc_);
+  }
+
+  /** Move other object into this one */
+  void shm_weak_move_main(ShmHeader<TraitInfo> *header,
+                          hipc::Allocator *alloc,
+                          TraitInfo &other) {
+    shm_init_allocator(alloc);
+    shm_init_header(header);
+    shm_deserialize_main();
+    (*header_) = (*other.header_);
+    (*trait_uuid_) = std::move(*other.trait_uuid_);
+    (*trait_name_) = std::move(*other.trait_name_);
+  }
+
+  /** Copy other object into this one */
+  void shm_strong_copy_main(ShmHeader<TraitInfo> *header,
+                            hipc::Allocator *alloc,
+                            const TraitInfo &other) {
+    shm_init_allocator(alloc);
+    shm_init_header(header);
+    shm_deserialize_main();
+    (*header_) = (*other.header_);
+    (*trait_uuid_) = std::move(*other.trait_uuid_);
+    (*trait_name_) = std::move(*other.trait_name_);
   }
 };
 

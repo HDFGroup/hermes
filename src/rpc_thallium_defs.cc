@@ -75,6 +75,11 @@ void ThalliumRpc::DefineRpcs() {
     auto ret = mdm->LocalRenameBucket(bkt_id, new_bkt_name);
     req.respond(ret);
   });
+  RegisterRpc("RpcClearBucket", [mdm](const request &req,
+                                        BucketId bkt_id) {
+    auto ret = mdm->LocalClearBucket(bkt_id);
+    req.respond(ret);
+  });
   RegisterRpc("RpcDestroyBucket", [mdm](const request &req,
                                            BucketId bkt_id) {
     auto ret = mdm->LocalDestroyBucket(bkt_id);

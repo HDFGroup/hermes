@@ -38,9 +38,11 @@ class BufferOrganizer;
  * */
 typedef hipc::unordered_map<hipc::charbuf, BlobId> BLOB_ID_MAP_T;
 typedef hipc::unordered_map<hipc::charbuf, BucketId> BKT_ID_MAP_T;
-typedef hipc::unordered_map<hipc::charbuf, hipc::slist<BlobId>> TAG_MAP_T;
+typedef hipc::unordered_map<hipc::charbuf, TagId> TAG_ID_MAP_T;
 typedef hipc::unordered_map<BlobId, BlobInfo> BLOB_MAP_T;
 typedef hipc::unordered_map<BucketId, BucketInfo> BKT_MAP_T;
+typedef hipc::unordered_map<TagId, hipc::slist<BlobId>> TAG_MAP_T;
+typedef hipc::unordered_map<TagId, hipc::slist<BlobId>> TRAIT_MAP_T;
 
 enum MdMapLock {
   kBlobMapLock,
@@ -195,6 +197,13 @@ class MetadataManager {
   RPC bool LocalRenameBucket(BucketId bkt_id,
                              hipc::charbuf &new_bkt_name);
   DEFINE_RPC(bool, RenameBucket, 0,
+             UNIQUE_ID_TO_NODE_ID_LAMBDA)
+
+  /**
+   * Destroy \a bkt_id bucket
+   * */
+  RPC bool LocalClearBucket(BucketId bkt_id);
+  DEFINE_RPC(bool, ClearBucket, 0,
              UNIQUE_ID_TO_NODE_ID_LAMBDA)
 
   /**

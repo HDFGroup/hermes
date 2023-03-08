@@ -109,7 +109,8 @@ struct UniqueId {
   }
 };
 typedef UniqueId<0> BucketId;
-typedef UniqueId<2> BlobId;
+typedef UniqueId<1> BlobId;
+typedef UniqueId<2> TagId;
 
 /** A definition for logging something that is not yet implemented */
 #define HERMES_NOT_IMPLEMENTED_YET \

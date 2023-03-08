@@ -82,6 +82,11 @@ class Bucket {
   void Rename(std::string new_bkt_name);
 
   /**
+   * Clears the buckets contents, but doesn't destroy its metadata
+   * */
+  void Clear();
+
+  /**
    * Destroys this bucket along with all its contents.
    * */
   void Destroy();
