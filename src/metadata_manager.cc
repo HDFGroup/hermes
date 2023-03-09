@@ -637,6 +637,14 @@ void MetadataManager::GlobalClear() {
  * ===================================*/
 
 /**
+ * Create a tag
+ * */
+
+/**
+ * Delete a tag
+ * */
+
+/**
  * Add a blob to a tag index
  * */
 Status MetadataManager::LocalTagAddBlob(const std::string &tag_name,
@@ -679,26 +687,6 @@ std::list<BlobId> MetadataManager::LocalGroupByTag(
     group.emplace_back(*blob_id);
   }
   return group;
-}
-
-/**
- * Add a trait to a tag
- * */
-RPC void MetadataManager::LocalTraitAddTag(TraitId trait_id) {
-}
-
-/**
- * Add a trait to a tag globally
- * */
-void MetadataManager::GlobalRegisterTrait(TraitT &trait) {
-  for (int i = 0; i < rpc_->hosts_.size(); ++i) {
-    int node_id = i + 1;
-    if (NODE_ID_IS_LOCAL(node_id)) {
-      LocalRegisterTrait(trait);
-    } else {
-      rpc_->Call<void>("RpcRegister" + trait.GetName(), trait);
-    }
-  }
 }
 
 }  // namespace hermes

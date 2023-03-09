@@ -403,7 +403,7 @@ class MetadataManager {
   }
 
   /**====================================
-   * Tag + Trait Operations
+   * Tag Operations
    * ===================================*/
 
   /**
@@ -418,6 +418,34 @@ class MetadataManager {
    * */
   std::list<BlobId> LocalGroupByTag(const std::string &tag_name);
   DEFINE_RPC(std::list<BlobId>, GroupByTag, 0, std::hash<std::string>{});
+
+  /**
+   * Add a trait to a tag index
+   * */
+  RPC void LocalTagAddTrait(const std::string &tag_name, TraitId trait_id);
+
+  /**
+   * Add a trait to a tag index globally
+   * */
+  void GlobalTagAddTrait(const std::string &tag_name, TraitId trait_id) {
+    for (int i = 0; i < rpc_->hosts_.size(); ++i) {
+      int node_id = i + 1;
+      if (NODE_ID_IS_LOCAL(node_id)) {
+        LocalTagAddTrait(tag_id, trait_id);
+      } else {
+        rpc_->Call<void>("RpcTagAddTrait", tag_id, trait_id);
+      }
+    }
+  }
+
+  /**
+   * Find all traits pertaining to a tag
+   * */
+  hipc::slist<TraitInfo> GlobalTagGetTraits(TagId tag_id);
+
+  /**====================================
+   * Trait Operations
+   * ===================================*/
 
   /**
    * Register a trait
@@ -456,25 +484,6 @@ class MetadataManager {
       return 0;
     }
     return *(*iter)->second_;
-  }
-
-  /**
-   * Add a trait to a tag index
-   * */
-  RPC void LocalTagAddTrait(TagId tag_id, TraitId trait_id);
-
-  /**
-   * Add a trait to a tag index globally
-   * */
-  void GlobalTagAddTrait(TagId tag_id, TraitId trait_id) {
-    for (int i = 0; i < rpc_->hosts_.size(); ++i) {
-      int node_id = i + 1;
-      if (NODE_ID_IS_LOCAL(node_id)) {
-        LocalTagAddTrait(tag_id, trait_id);
-      } else {
-        rpc_->Call<void>("RpcTagAddTrait", tag_id, trait_id);
-      }
-    }
   }
 
  private:
