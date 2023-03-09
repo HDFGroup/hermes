@@ -204,10 +204,8 @@ struct Thresholds {
   float max_; /**< maximum threshold value */
 };
 
-/** Trait ID type */
-struct TraitId {
-  u64 type_;
-};
+/** Trait unique ID */
+typedef u64 TraitId;
 
 }  // namespace hermes
 

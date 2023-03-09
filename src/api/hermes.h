@@ -115,6 +115,24 @@ class Hermes {
   /** Destroy all buckets and blobs in this instance */
   void Clear();
 
+  /** Create a trait */
+  template<typename TraitT, typename ...Args>
+  TraitId RegisterTrait(const std::string &tag_uuid,
+                        Args&& ...args) {
+    TraitT obj(tag_uuid, std::forward<Args>(args)...);
+    HERMES->mdm_.GlobalRegisterTrait(
+        tag_uuid, obj);
+  }
+
+  /** Get trait id */
+  TraitId GetTraitId(const std::string &tag_uuid);
+
+  /** Get the trait */
+  template<typename TraitT>
+  TraitT* GetTrait(TraitId id) {
+    // TODO(llogan)
+  }
+
  private:
   /** Internal initialization of Hermes */
   void Init(HermesType mode = HermesType::kClient,
