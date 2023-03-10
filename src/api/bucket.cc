@@ -25,11 +25,10 @@ using hermes::adapter::AdapterMode;
  * Either initialize or fetch the bucket.
  * */
 Bucket::Bucket(const std::string &bkt_name,
-               Context &ctx,
-               const IoClientContext &opts)
+               Context &ctx)
 : mdm_(&HERMES->mdm_), bpm_(HERMES->bpm_.get()), name_(bkt_name) {
-  hipc::string lname(bkt_name);
-  id_ = mdm_->GlobalGetOrCreateBucket(lname, opts);
+  std::vector<TraitId> traits;
+  id_ = mdm_->GlobalGetOrCreateTag(bkt_name, true, traits);
 }
 
 /**
@@ -40,25 +39,10 @@ size_t Bucket::GetSize(IoClientContext opts) {
 }
 
 /**
- * Lock the bucket
- * */
-void Bucket::LockBucket(MdLockType lock_type) {
-  mdm_->GlobalLockBucket(id_, lock_type);
-}
-
-/**
- * Unlock the bucket
- * */
-void Bucket::UnlockBucket(MdLockType lock_type) {
-  mdm_->GlobalUnlockBucket(id_, lock_type);
-}
-
-/**
  * Rename this bucket
  * */
-void Bucket::Rename(std::string new_bkt_name) {
-  hipc::string lname(new_bkt_name);
-  mdm_->GlobalRenameBucket(id_, lname);
+void Bucket::Rename(const std::string &new_bkt_name) {
+  mdm_->GlobalRenameTag(id_, new_bkt_name);
 }
 
 /**
@@ -72,7 +56,7 @@ void Bucket::Clear() {
  * Destroys this bucket along with all its contents.
  * */
 void Bucket::Destroy() {
-  mdm_->GlobalDestroyBucket(id_);
+  mdm_->GlobalDestroyTag(id_);
 }
 
 /**====================================
@@ -122,18 +106,13 @@ bool Bucket::UnlockBlob(BlobId blob_id, MdLockType lock_type) {
  * */
 Status Bucket::TryCreateBlob(const std::string &blob_name,
                              BlobId &blob_id,
-                             Context &ctx,
-                             const IoClientContext &opts) {
-  std::pair<BlobId, bool> ret = mdm_->GlobalBucketTryCreateBlob(
+                             Context &ctx) {
+  std::pair<BlobId, bool> ret = mdm_->GlobalTryCreateBlob(
       id_, hipc::charbuf(blob_name));
   blob_id = ret.first;
   if (ret.second) {
-    mdm_->GlobalBucketRegisterBlobId(id_,
-                                     blob_id,
-                                     (size_t)0,
-                                     (size_t)0,
-                                     true,
-                                     opts);
+    mdm_->GlobalTagAddBlob(id_,
+                           blob_id);
   }
   return Status();
 }
@@ -142,9 +121,9 @@ Status Bucket::TryCreateBlob(const std::string &blob_name,
  * Label \a blob_id blob with \a tag_name TAG
  * */
 Status Bucket::TagBlob(BlobId &blob_id,
-                       const std::string &tag_name) {
-  mdm_->GlobalTagAddBlob(tag_name, blob_id);
-  return mdm_->GlobalBucketTagBlob(blob_id, tag_name);
+                       TagId &tag_id) {
+  mdm_->GlobalTagAddBlob(tag_id, blob_id);
+  return mdm_->GlobalTagBlob(blob_id, tag_id);
 }
 
 /**
@@ -164,18 +143,14 @@ Status Bucket::Put(std::string blob_name,
   // Allocate buffers for the blob & enqueue placement
   for (auto &schema : schemas) {
     auto buffers = bpm_->GlobalAllocateAndSetBuffers(schema, blob);
-    auto put_ret = mdm_->GlobalBucketPutBlob(id_, hipc::string(blob_name),
-                                             blob.size(), buffers);
+    auto put_ret = mdm_->GlobalPutBlobMetadata(id_, hipc::string(blob_name),
+                                               blob.size(), buffers);
     blob_id = std::get<0>(put_ret);
     bool did_create = std::get<1>(put_ret);
     size_t orig_blob_size = std::get<2>(put_ret);
     opts.backend_size_ = blob.size();
-    mdm_->GlobalBucketRegisterBlobId(id_,
-                                     blob_id,
-                                     (size_t)orig_blob_size,
-                                     (size_t)blob.size(),
-                                     did_create,
-                                     opts);
+    mdm_->GlobalTagAddBlob(id_,
+                           blob_id);
   }
 
   return Status();
@@ -250,8 +225,8 @@ Status Bucket::PartialPutOrCreate(const std::string &blob_name,
  * Get \a blob_id Blob from the bucket
  * */
 Status Bucket::Get(BlobId blob_id, Blob &blob, Context &ctx) {
-  Blob b = mdm_->GlobalBucketGetBlob(blob_id);
-  blob = std::move(b);
+  std::vector<BufferInfo> buffers = mdm_->GlobalGetBlobBuffers(blob_id);
+  Blob b = HERMES->borg_.GlobalReadBlobFromBuffers(buffers);
   return Status();
 }
 
@@ -316,9 +291,8 @@ Status Bucket::PartialGetOrCreate(const std::string &blob_name,
 /**
  * Flush a blob
  * */
-void Bucket::FlushBlob(BlobId blob_id,
-                       const IoClientContext &opts) {
-  LOG(INFO) << "Flushing blob" << std::endl;
+void Bucket::FlushBlob(BlobId blob_id) {
+  /*LOG(INFO) << "Flushing blob" << std::endl;
   if (opts.adapter_mode_ == AdapterMode::kScratch) {
     LOG(INFO) << "In scratch mode, ignoring flush" << std::endl;
     return;
@@ -339,19 +313,19 @@ void Bucket::FlushBlob(BlobId blob_id,
                          full_blob,
                          decode_opts,
                          status);
-  }
+  }*/
 }
 
 /**
  * Flush the entire bucket
  * */
-void Bucket::Flush(const IoClientContext &opts) {
-  std::vector<BlobId> blob_ids = GetContainedBlobIds();
+void Bucket::Flush() {
+  /*std::vector<BlobId> blob_ids = GetContainedBlobIds();
   if (opts.adapter_mode_ == AdapterMode::kScratch) { return; }
   LOG(INFO) << "Flushing " << blob_ids.size() << " blobs" << std::endl;
   for (BlobId &blob_id : blob_ids) {
     FlushBlob(blob_id, opts);
-  }
+  }*/
 }
 
 /**
@@ -367,7 +341,7 @@ bool Bucket::ContainsBlob(const std::string &blob_name,
  * Determine if the bucket contains \a blob_id BLOB
  * */
 bool Bucket::ContainsBlob(BlobId blob_id) {
-  return mdm_->GlobalBucketContainsBlob(id_, blob_id);
+  return mdm_->GlobalBlobHasTag(blob_id, id_);
 }
 
 /**
@@ -383,17 +357,18 @@ void Bucket::RenameBlob(BlobId blob_id,
 /**
  * Delete \a blob_id blob
  * */
-void Bucket::DestroyBlob(BlobId blob_id, Context &ctx,
+void Bucket::DestroyBlob(BlobId blob_id,
+                         Context &ctx,
                          IoClientContext opts) {
-  mdm_->GlobalBucketUnregisterBlobId(id_, blob_id, opts);
+  mdm_->GlobalTagRemoveBlob(id_, blob_id);
   mdm_->GlobalDestroyBlob(id_, blob_id);
 }
 
 /**
-   * Get the set of blob IDs contained in the bucket
-   * */
+ * Get the set of blob IDs owned by the bucket
+ * */
 std::vector<BlobId> Bucket::GetContainedBlobIds() {
-  return mdm_->GlobalBucketGetContainedBlobIds(id_);
+  return mdm_->GlobalGroupByTag(id_);
 }
 
 }  // namespace hermes::api

@@ -20,10 +20,10 @@
 namespace hermes {
 
 /** Calculates the total size of a blob's buffers */
-static inline size_t SumBufferBlobSizes(hipc::vector<BufferInfo> &buffers) {
+static inline size_t SumBufferBlobSizes(std::vector<BufferInfo> &buffers) {
   size_t sum = 0;
-  for (hipc::ShmRef<BufferInfo> buffer_ref : buffers) {
-    sum += (*buffer_ref).blob_size_;
+  for (BufferInfo &buffer_ref : buffers) {
+    sum += buffer_ref.blob_size_;
   }
   return sum;
 }
@@ -56,17 +56,17 @@ class BufferOrganizer {
 
   /** Stores a blob into a set of buffers */
   RPC void LocalPlaceBlobInBuffers(const Blob &blob,
-                                   hipc::vector<BufferInfo> &buffers);
+                                   std::vector<BufferInfo> &buffers);
   RPC void GlobalPlaceBlobInBuffers(const Blob &blob,
-                                    hipc::vector<BufferInfo> &buffers);
+                                    std::vector<BufferInfo> &buffers);
 
   /** Stores a blob into a set of buffers */
-  RPC Blob LocalReadBlobFromBuffers(hipc::vector<BufferInfo> &buffers);
-  Blob GlobalReadBlobFromBuffers(hipc::vector<BufferInfo> &buffers);
+  RPC Blob LocalReadBlobFromBuffers(std::vector<BufferInfo> &buffers);
+  Blob GlobalReadBlobFromBuffers(std::vector<BufferInfo> &buffers);
 
   /** Copies one buffer set into another buffer set */
-  RPC void LocalCopyBuffers(hipc::vector<BufferInfo> &dst,
-                            hipc::vector<BufferInfo> &src);
+  RPC void LocalCopyBuffers(std::vector<BufferInfo> &dst,
+                            std::vector<BufferInfo> &src);
 };
 
 }  // namespace hermes

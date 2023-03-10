@@ -42,17 +42,17 @@
 namespace hermes {
 
 /**
- *  Lets Thallium know how to serialize a BucketId.
+ *  Lets Thallium know how to serialize a TagId.
  *
  * This function is called implicitly by Thallium.
  *
  * @param ar An archive provided by Thallium.
- * @param bucket_id The BucketId to serialize.
+ * @param bucket_id The TagId to serialize.
  */
 template <typename A>
-void serialize(A &ar, BucketId &bucket_id) {
-  ar &bucket_id.unique_;
-  ar &bucket_id.node_id_;
+void serialize(A &ar, TagId &tag_id) {
+  ar &tag_id.unique_;
+  ar &tag_id.node_id_;
 }
 
 /**

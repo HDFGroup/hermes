@@ -85,10 +85,10 @@ void BufferPool::shm_destroy_main() {
 /**
 * Allocate buffers from the targets according to the schema
 * */
-hipc::vector<BufferInfo>
+std::vector<BufferInfo>
 BufferPool::LocalAllocateAndSetBuffers(PlacementSchema &schema,
                                        const Blob &blob) {
-  hipc::vector<BufferInfo> buffers(HERMES->main_alloc_);
+  std::vector<BufferInfo> buffers;
   size_t blob_off = 0;
   int cpu = hermes_shm::NodeThreadId().hash() % HERMES_SYSTEM_INFO->ncpu_;
 
@@ -131,21 +131,21 @@ BufferPool::LocalAllocateAndSetBuffers(PlacementSchema &schema,
 /**
 * The RPC of LocalAllocateAndSendBuffers
 * */
-hipc::vector<BufferInfo>
+std::vector<BufferInfo>
 BufferPool::GlobalAllocateAndSetBuffers(PlacementSchema &schema,
                                         const Blob &blob) {
   // Get the nodes to transfer buffers to
   size_t total_size;
   auto unique_tgts = GroupByTarget(schema, total_size);
-  hipc::vector<BufferInfo> info(0);
+  std::vector<BufferInfo> info;
 
   // Send the buffers to each node
   for (auto &[tid, size] : unique_tgts) {
-    hipc::vector<BufferInfo> sub_info(0);
+    std::vector<BufferInfo> sub_info;
     if (NODE_ID_IS_LOCAL(tid.GetNodeId())) {
       sub_info = LocalAllocateAndSetBuffers(schema, blob);
     } else {
-      sub_info = rpc_->IoCall<hipc::vector<BufferInfo>>(
+      sub_info = rpc_->IoCall<std::vector<BufferInfo>>(
           tid.GetNodeId(), "RpcAllocateAndSetBuffers",
           IoType::kWrite, blob.data(), blob.size(),
           blob.size(), schema);
@@ -153,8 +153,8 @@ BufferPool::GlobalAllocateAndSetBuffers(PlacementSchema &schema,
 
     // Concatenate
     info.reserve(info.size() + sub_info.size());
-    for (hipc::ShmRef<BufferInfo> tmp_info : sub_info) {
-      info.emplace_back(*tmp_info);
+    for (BufferInfo &tmp_info : sub_info) {
+      info.emplace_back(tmp_info);
     }
   }
 
@@ -166,7 +166,7 @@ BufferPool::GlobalAllocateAndSetBuffers(PlacementSchema &schema,
 * device growth allocator
 * */
 void BufferPool::AllocateBuffers(SubPlacement &plcmnt,
-                                 hipc::vector<BufferInfo> &buffers,
+                                 std::vector<BufferInfo> &buffers,
                                  std::vector<BpCoin> &coins,
                                  u16 target_id,
                                  size_t num_slabs,
@@ -286,22 +286,22 @@ std::vector<BpCoin> BufferPool::CoinSelect(hipc::ShmRef<DeviceInfo> &dev_info,
 /**
 * Free buffers from the BufferPool
 * */
-bool BufferPool::LocalReleaseBuffers(hipc::vector<BufferInfo> &buffers) {
+bool BufferPool::LocalReleaseBuffers(std::vector<BufferInfo> &buffers) {
   int cpu = hermes_shm::NodeThreadId().hash() % HERMES_SYSTEM_INFO->ncpu_;
-  for (hipc::ShmRef<BufferInfo> info : buffers) {
+  for (BufferInfo &info : buffers) {
     // Acquire the main CPU lock for the target
     size_t free_list_start =
-        header_->GetCpuFreeList(info->tid_.GetIndex(), cpu);
+        header_->GetCpuFreeList(info.tid_.GetIndex(), cpu);
     hipc::ShmRef<BpFreeListPair> first_free_list_p =
         (*target_allocs_)[free_list_start];
     hermes_shm::ScopedMutex(first_free_list_p->first_->lock_);
 
     // Get this core's free list for the page_size
     hipc::ShmRef<BpFreeListPair> free_list_p =
-        (*target_allocs_)[free_list_start + info->t_slab_];
+        (*target_allocs_)[free_list_start + info.t_slab_];
     hipc::ShmRef<BpFreeListStat> &stat = free_list_p->first_;
     hipc::ShmRef<BpFreeList> &free_list = free_list_p->second_;
-    free_list->emplace_front(info->t_off_, info->t_size_);
+    free_list->emplace_front(info.t_off_, info.t_size_);
   }
   return true;
 }
@@ -309,7 +309,7 @@ bool BufferPool::LocalReleaseBuffers(hipc::vector<BufferInfo> &buffers) {
 /**
  * Free buffers from the BufferPool (global)
  * */
-bool BufferPool::GlobalReleaseBuffers(hipc::vector<BufferInfo> &buffers) {
+bool BufferPool::GlobalReleaseBuffers(std::vector<BufferInfo> &buffers) {
   // Get the nodes to transfer buffers to
   size_t total_size;
   auto unique_tgts = GroupByTarget(buffers, total_size);

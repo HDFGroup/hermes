@@ -69,7 +69,7 @@ TEST_CASE("TestBufferPool") {
     }
 
     // Allocate the buffers and set them
-    hipc::vector<hermes::BufferInfo> buffers =
+    std::vector<hermes::BufferInfo> buffers =
         HERMES->bpm_->LocalAllocateAndSetBuffers(schema, write_blob);
 
     // Read back the buffers

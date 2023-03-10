@@ -52,20 +52,20 @@ void BufferOrganizer::shm_deserialize()  {
 
 /** Stores a blob into a set of buffers */
 RPC void BufferOrganizer::LocalPlaceBlobInBuffers(
-    const Blob &blob, hipc::vector<BufferInfo> &buffers) {
+    const Blob &blob, std::vector<BufferInfo> &buffers) {
   size_t blob_off = 0;
-  for (hipc::ShmRef<BufferInfo> buffer_info : buffers) {
-    if (buffer_info->tid_.GetNodeId() != mdm_->rpc_->node_id_) {
+  for (BufferInfo &buffer_info : buffers) {
+    if (buffer_info.tid_.GetNodeId() != mdm_->rpc_->node_id_) {
       continue;
     }
     hipc::ShmRef<DeviceInfo> dev_info =
-        (*mdm_->devices_)[buffer_info->tid_.GetDeviceId()];
+        (*mdm_->devices_)[buffer_info.tid_.GetDeviceId()];
     auto io_client = borg::BorgIoClientFactory::Get(dev_info->header_->io_api_);
     bool ret = io_client->Write(*dev_info,
                                 blob.data() + blob_off,
-                                buffer_info->t_off_,
-                                buffer_info->blob_size_);
-    blob_off += buffer_info->blob_size_;
+                                buffer_info.t_off_,
+                                buffer_info.blob_size_);
+    blob_off += buffer_info.blob_size_;
     if (!ret) {
       LOG(FATAL) << "Could not perform I/O in BORG" << std::endl;
     }
@@ -74,7 +74,7 @@ RPC void BufferOrganizer::LocalPlaceBlobInBuffers(
 
 /** Globally store a blob into a set of buffers */
 void BufferOrganizer::GlobalPlaceBlobInBuffers(
-    const Blob &blob, hipc::vector<BufferInfo> &buffers) {
+    const Blob &blob, std::vector<BufferInfo> &buffers) {
   // Get the nodes to transfer buffers to
   size_t total_size;
   auto unique_tgts = GroupByTarget(buffers, total_size);
@@ -94,20 +94,20 @@ void BufferOrganizer::GlobalPlaceBlobInBuffers(
 
 /** Stores a blob into a set of buffers */
 RPC Blob BufferOrganizer::LocalReadBlobFromBuffers(
-    hipc::vector<BufferInfo> &buffers) {
+    std::vector<BufferInfo> &buffers) {
   Blob blob(SumBufferBlobSizes(buffers));
   size_t blob_off = 0;
-  for (hipc::ShmRef<BufferInfo> buffer_info : buffers) {
-    if (buffer_info->tid_.GetNodeId() != mdm_->rpc_->node_id_) {
+  for (BufferInfo &buffer_info : buffers) {
+    if (buffer_info.tid_.GetNodeId() != mdm_->rpc_->node_id_) {
       continue;
     }
     hipc::ShmRef<DeviceInfo> dev_info =
-        (*mdm_->devices_)[buffer_info->tid_.GetDeviceId()];
+        (*mdm_->devices_)[buffer_info.tid_.GetDeviceId()];
     auto io_client = borg::BorgIoClientFactory::Get(dev_info->header_->io_api_);
     bool ret = io_client->Read(*dev_info, blob.data() + blob_off,
-                                buffer_info->t_off_,
-                                buffer_info->blob_size_);
-    blob_off += buffer_info->blob_size_;
+                                buffer_info.t_off_,
+                                buffer_info.blob_size_);
+    blob_off += buffer_info.blob_size_;
     if (!ret) {
       LOG(FATAL) << "Could not perform I/O in BORG" << std::endl;
     }
@@ -117,7 +117,7 @@ RPC Blob BufferOrganizer::LocalReadBlobFromBuffers(
 
 /** The Global form of ReadBLobFromBuffers */
 Blob BufferOrganizer::GlobalReadBlobFromBuffers(
-    hipc::vector<BufferInfo> &buffers) {
+    std::vector<BufferInfo> &buffers) {
   // Get the nodes to transfer buffers to
   size_t total_size = 0;
   auto unique_tgts = GroupByTarget(buffers, total_size);
@@ -142,21 +142,21 @@ Blob BufferOrganizer::GlobalReadBlobFromBuffers(
     auto &[tid, size] = unique_tgts[i];
     auto &tmp_blob = blobs[i];
     size_t tmp_blob_off = 0;
-    for (hipc::ShmRef<BufferInfo> info : buffers) {
-      if (info->tid_.GetNodeId() != tid.GetNodeId()) {
+    for (BufferInfo &info : buffers) {
+      if (info.tid_.GetNodeId() != tid.GetNodeId()) {
         continue;
       }
-      memcpy(blob.data() + info->blob_off_,
-             tmp_blob.data(), info->blob_size_);
-      tmp_blob_off += info->blob_size_;
+      memcpy(blob.data() + info.blob_off_,
+             tmp_blob.data(), info.blob_size_);
+      tmp_blob_off += info.blob_size_;
     }
   }
   return blob;
 }
 
 /** Copies one buffer set into another buffer set */
-RPC void BufferOrganizer::LocalCopyBuffers(hipc::vector<BufferInfo> &dst,
-                                           hipc::vector<BufferInfo> &src) {
+RPC void BufferOrganizer::LocalCopyBuffers(std::vector<BufferInfo> &dst,
+                                           std::vector<BufferInfo> &src) {
 }
 
 }  // namespace hermes

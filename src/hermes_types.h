@@ -81,7 +81,7 @@ enum class TopologyType {
   kCount
 };
 
-/** Represents unique ID for BlobId and BucketId */
+/** Represents unique ID for BlobId and TagId */
 template<int TYPE>
 struct UniqueId {
   u64 unique_;   /**< A unique id for the blob */
@@ -108,7 +108,6 @@ struct UniqueId {
     return unique_ != other.unique_ || node_id_ != other.node_id_;
   }
 };
-typedef UniqueId<0> BucketId;
 typedef UniqueId<1> BlobId;
 typedef UniqueId<2> TagId;
 

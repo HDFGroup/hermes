@@ -26,7 +26,7 @@ class Bucket {
  private:
   MetadataManager *mdm_;
   BufferPool *bpm_;
-  BucketId id_;
+  TagId id_;
   std::string name_;
   Context ctx_;
 
@@ -42,8 +42,7 @@ class Bucket {
    * be used directly.
    * */
   Bucket(const std::string &bkt_name,
-         Context &ctx,
-         const IoClientContext &opts);
+         Context &ctx);
 
  public:
   /**
@@ -57,7 +56,7 @@ class Bucket {
   /**
    * Get the identifier of this bucket
    * */
-  BucketId GetId() const {
+  TagId GetId() const {
     return id_;
   }
 
@@ -67,19 +66,9 @@ class Bucket {
   size_t GetSize(IoClientContext opts = IoClientContext());
 
   /**
-   * Lock the bucket
-   * */
-  void LockBucket(MdLockType lock_type);
-
-  /**
-   * Unlock the bucket
-   * */
-  void UnlockBucket(MdLockType lock_type);
-
-  /**
    * Rename this bucket
    * */
-  void Rename(std::string new_bkt_name);
+  void Rename(const std::string &new_bkt_name);
 
   /**
    * Clears the buckets contents, but doesn't destroy its metadata
@@ -136,14 +125,13 @@ class Bucket {
    * */
   Status TryCreateBlob(const std::string &blob_name,
                        BlobId &blob_id,
-                       Context &ctx,
-                       const IoClientContext &opts);
+                       Context &ctx);
 
   /**
    * Label \a blob_id blob with \a tag_name TAG
    * */
   Status TagBlob(BlobId &blob_id,
-                 const std::string &tag_name);
+                 TagId &tag_id);
 
   /**
    * Put \a blob_name Blob into the bucket
@@ -205,13 +193,12 @@ class Bucket {
   /**
    * Flush a blob
    * */
-  void FlushBlob(BlobId blob_id,
-                 const IoClientContext &opts);
+  void FlushBlob(BlobId blob_id);
 
   /**
    * Flush the entire bucket
    * */
-  void Flush(const IoClientContext &opts);
+  void Flush();
 
   /**
    * Determine if the bucket contains \a blob_id BLOB

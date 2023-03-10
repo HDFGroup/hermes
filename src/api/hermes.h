@@ -109,29 +109,35 @@ class Hermes {
                                     Context ctx = Context(),
                                     IoClientContext = IoClientContext());
 
+  /** Create a generic tag in Hermes */
+  TagId CreateTag(const std::string &tag_name) {
+    std::vector<TraitId> traits;
+    return mdm_.GlobalGetOrCreateTag(tag_name, false, traits);
+  }
+
   /** Locate all blobs with a tag */
-  std::list<BlobId> GroupBy(std::string tag_name);
+  std::vector<BlobId> GroupBy(TagId tag_id);
 
   /** Destroy all buckets and blobs in this instance */
   void Clear();
 
-  /** Create a trait */
+  /** Create a trait
   template<typename TraitT, typename ...Args>
   TraitId RegisterTrait(const std::string &tag_uuid,
                         Args&& ...args) {
     TraitT obj(tag_uuid, std::forward<Args>(args)...);
     HERMES->mdm_.GlobalRegisterTrait(
         tag_uuid, obj);
-  }
+  }*/
 
-  /** Get trait id */
-  TraitId GetTraitId(const std::string &tag_uuid);
+  /** Get trait id
+  TraitId GetTraitId(const std::string &tag_uuid);*/
 
-  /** Get the trait */
+  /** Get the trait
   template<typename TraitT>
   TraitT* GetTrait(TraitId id) {
     // TODO(llogan)
-  }
+  }*/
 
  private:
   /** Internal initialization of Hermes */

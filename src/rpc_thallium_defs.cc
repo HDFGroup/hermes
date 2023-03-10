@@ -28,120 +28,54 @@ void ThalliumRpc::DefineRpcs() {
   BufferOrganizer *borg = &HERMES->borg_;
   RPC_CLASS_INSTANCE_DEFS_END
 
-  /*RPC_AUTOGEN_START*/
-  RegisterRpc("RpcGetOrCreateBucket", [mdm](const request &req,
-                                            hipc::charbuf &bkt_name,
-                                            const IoClientContext &opts) {
-    auto ret = mdm->LocalGetOrCreateBucket(bkt_name, opts);
-    req.respond(ret);
-  });
-  RegisterRpc("RpcGetBucketId", [mdm](const request &req,
-                                        hipc::charbuf &bkt_name) {
-    auto ret = mdm->LocalGetBucketId(bkt_name);
-    req.respond(ret);
-  });
+  /**====================================
+   * Bucket Operations
+   * ===================================*/
+
   RegisterRpc("RpcGetBucketSize", [mdm](const request &req,
-                                           BucketId bkt_id,
+                                           TagId bkt_id,
                                            const IoClientContext &opts) {
     auto ret = mdm->LocalGetBucketSize(bkt_id, opts);
     req.respond(ret);
   });
-  RegisterRpc("RpcLockBucket", [mdm](const request &req,
-                                     BucketId bkt_id,
-                                     MdLockType lock_type) {
-    mdm->LocalLockBucket(bkt_id, lock_type);
-    req.respond(true);
-  });
-  RegisterRpc("RpcUnlockBucket", [mdm](const request &req,
-                                       BucketId bkt_id,
-                                       MdLockType lock_type) {
-    mdm->LocalUnlockBucket(bkt_id, lock_type);
-    req.respond(true);
-  });
-  RegisterRpc("RpcBucketContainsBlob", [mdm](const request &req,
-                                             BucketId bkt_id,
-                                             BlobId blob_id) {
-    auto ret = mdm->LocalBucketContainsBlob(bkt_id, blob_id);
-    req.respond(ret);
-  });
-  RegisterRpc("RpcBucketGetContainedBlobIds", [mdm](const request &req,
-                                                    BucketId bkt_id) {
-    auto ret = mdm->LocalBucketGetContainedBlobIds(bkt_id);
-    req.respond(ret);
-  });
-  RegisterRpc("RpcRenameBucket", [mdm](const request &req,
-                                       BucketId bkt_id,
-                                       hipc::charbuf &new_bkt_name) {
-    auto ret = mdm->LocalRenameBucket(bkt_id, new_bkt_name);
-    req.respond(ret);
-  });
   RegisterRpc("RpcClearBucket", [mdm](const request &req,
-                                        BucketId bkt_id) {
+                                        TagId bkt_id) {
     auto ret = mdm->LocalClearBucket(bkt_id);
     req.respond(ret);
   });
-  RegisterRpc("RpcDestroyBucket", [mdm](const request &req,
-                                           BucketId bkt_id) {
-    auto ret = mdm->LocalDestroyBucket(bkt_id);
+
+  /**====================================
+   * Blob Operations
+   * ===================================*/
+
+  RegisterRpc("PutBlobMetadata", [mdm](const request &req,
+                                       TagId bkt_id,
+                                       const hipc::charbuf &blob_name,
+                                       size_t blob_size,
+                                       std::vector<BufferInfo> &buffers) {
+    auto ret = mdm->LocalPutBlobMetadata(bkt_id, blob_name, blob_size, buffers);
     req.respond(ret);
   });
-  RegisterRpc("RpcBucketPutBlob", [mdm](const request &req,
-                                        BucketId bkt_id,
-                                        const hipc::charbuf &blob_name,
-                                        size_t blob_size,
-                                        hipc::vector<BufferInfo> &buffers) {
-    auto ret = mdm->LocalBucketPutBlob(bkt_id, blob_name, blob_size, buffers);
+  RegisterRpc("RpcTryCreateBlob", [mdm](const request &req,
+                                        TagId bkt_id,
+                                        const hipc::charbuf &blob_name) {
+    auto ret = mdm->LocalTryCreateBlob(bkt_id, blob_name);
     req.respond(ret);
   });
-  RegisterRpc("RpcBucketRegisterBlobId", [mdm](const request &req,
-                                               BucketId bkt_id,
-                                               BlobId blob_id,
-                                               size_t orig_blob_size,
-                                               size_t new_blob_size,
-                                               bool did_create,
-                                               const IoClientContext &opts) {
-    auto ret = mdm->LocalBucketRegisterBlobId(bkt_id, blob_id,
-                                   orig_blob_size, new_blob_size,
-                                   did_create, opts);
+  RegisterRpc("RpcTagBlob", [mdm](const request &req,
+                                  BlobId blob_id,
+                                  TagId tag_id) {
+    auto ret = mdm->LocalTagBlob(blob_id, tag_id);
     req.respond(ret);
   });
-  RegisterRpc("RpcBucketUnregisterBlobId", [mdm](const request &req,
-                                                 BucketId bkt_id,
-                                                 BlobId blob_id,
-                                                 const IoClientContext &opts) {
-    auto ret = mdm->LocalBucketUnregisterBlobId(bkt_id, blob_id, opts);
-    req.respond(ret);
-  });
-  RegisterRpc("RpcBucketTryCreateBlob", [mdm](const request &req,
-                                              BucketId bkt_id,
-                                              const hipc::charbuf &blob_name) {
-    auto ret = mdm->LocalBucketTryCreateBlob(bkt_id, blob_name);
-    req.respond(ret);
-  });
-  RegisterRpc("RpcTagAddBlob", [mdm](const request &req,
-                                     const std::string &tag_name,
-                                     BlobId blob_id) {
-    auto ret = mdm->LocalTagAddBlob(tag_name, blob_id);
-    req.respond(ret);
-  });
-  RegisterRpc("RpcBucketTagBlob", [mdm](const request &req,
-                                        BlobId blob_id,
-                                        const std::string &tag_name) {
-    auto ret = mdm->LocalBucketTagBlob(blob_id, tag_name);
-    req.respond(ret);
-  });
-  RegisterRpc("RpcGroupByTag", [mdm](const request &req,
-                                     const std::string &tag_name) {
-    auto ret = mdm->LocalGroupByTag(tag_name);
-    req.respond(ret);
-  });
-  RegisterRpc("RpcBucketGetBlob", [mdm](const request &req,
-                                        BlobId blob_id) {
-    auto ret = mdm->LocalBucketGetBlob(blob_id);
+  RegisterRpc("RpcBlobHasTag", [mdm](const request &req,
+                                     BlobId blob_id,
+                                     TagId tag_id) {
+    auto ret = mdm->LocalBlobHasTag(blob_id, tag_id);
     req.respond(ret);
   });
   RegisterRpc("RpcGetBlobId", [mdm](const request &req,
-                                    BucketId bkt_id,
+                                    TagId bkt_id,
                                     const hipc::charbuf &blob_name) {
     auto ret = mdm->LocalGetBlobId(bkt_id, blob_name);
     req.respond(ret);
@@ -169,18 +103,23 @@ void ThalliumRpc::DefineRpcs() {
     req.respond(ret);
   });
   RegisterRpc("RpcRenameBlob", [mdm](const request &req,
-                                     BucketId bkt_id,
+                                     TagId bkt_id,
                                      BlobId blob_id,
                                      hipc::charbuf &new_blob_name) {
     auto ret = mdm->LocalRenameBlob(bkt_id, blob_id, new_blob_name);
     req.respond(ret);
   });
   RegisterRpc("RpcDestroyBlob", [mdm](const request &req,
-                                      BucketId bkt_id,
+                                      TagId bkt_id,
                                       BlobId blob_id) {
     auto ret = mdm->LocalDestroyBlob(bkt_id, blob_id);
     req.respond(ret);
   });
+
+  /**====================================
+   * Target Operations
+   * ===================================*/
+
   RegisterRpc("RpcUpdateTargetCapacity", [mdm](const request &req,
                                                TargetId tid,
                                                off64_t offset) {
@@ -191,19 +130,58 @@ void ThalliumRpc::DefineRpcs() {
     mdm->LocalClear();
     req.respond(true);
   });
+
+  /**====================================
+   * Tag Operations
+   * ===================================*/
+
+  RegisterRpc("RpcGetTagId", [mdm](const request &req,
+                                   std::string &tag_name) {
+    auto ret = mdm->LocalGetTagId(tag_name);
+    req.respond(ret);
+  });
+  RegisterRpc("RpcTagAddBlob", [mdm](const request &req,
+                                     TagId tag_id,
+                                     BlobId blob_id) {
+    auto ret = mdm->LocalTagAddBlob(tag_id, blob_id);
+    req.respond(ret);
+  });
+  RegisterRpc("RpcGroupByTag", [mdm](const request &req,
+                                     TagId tag_id) {
+    auto ret = mdm->LocalGroupByTag(tag_id);
+    req.respond(ret);
+  });
+
+  /**====================================
+   * Buffer Pool Operations
+   * ===================================*/
+
   RegisterRpc("RpcReleaseBuffers", [bpm](const request &req,
-                                         hipc::vector<BufferInfo> &buffers) {
+                                         std::vector<BufferInfo> &buffers) {
     bpm->LocalReleaseBuffers(buffers);
     req.respond(true);
   });
+  RegisterRpc("RpcAllocateAndSetBuffers", [this, bpm](
+                                              const request &req,
+                                              tl::bulk &bulk,
+                                              size_t blob_size,
+                                              PlacementSchema &schema) {
+    hapi::Blob blob(blob_size);
+    this->IoCallServer(req, bulk, IoType::kWrite, blob.data(), blob.size());
+    auto ret = bpm->LocalAllocateAndSetBuffers(schema, blob);
+    req.respond(ret);
+  });
 
 
-  // IO Calls
+  /**====================================
+   * Buffer Organizer Operations
+   * ===================================*/
+
   RegisterRpc("RpcPlaceBlobInBuffers", [this, borg](
                                            const request &req,
                                            tl::bulk &bulk,
                                            size_t blob_size,
-                                           hipc::vector<BufferInfo> &buffers) {
+                                           std::vector<BufferInfo> &buffers) {
     hapi::Blob blob(blob_size);
     this->IoCallServer(req, bulk, IoType::kWrite, blob.data(), blob.size());
     borg->LocalPlaceBlobInBuffers(blob, buffers);
@@ -212,22 +190,13 @@ void ThalliumRpc::DefineRpcs() {
   RegisterRpc("RpcReadBlobFromBuffers", [this, borg](
                                            const request &req,
                                            tl::bulk &bulk,
-                                           hipc::vector<BufferInfo> &buffers) {
+                                           std::vector<BufferInfo> &buffers) {
     hapi::Blob blob;
     blob = borg->LocalReadBlobFromBuffers(buffers);
     this->IoCallServer(req, bulk, IoType::kRead, blob.data(), blob.size());
     req.respond(true);
   });
-  RegisterRpc("RpcAllocateAndSetBuffers", [this, bpm](
-                                           const request &req,
-                                           tl::bulk &bulk,
-                                           size_t blob_size,
-                                           PlacementSchema &schema) {
-    hapi::Blob blob(blob_size);
-    this->IoCallServer(req, bulk, IoType::kWrite, blob.data(), blob.size());
-    auto ret = bpm->LocalAllocateAndSetBuffers(schema, blob);
-    req.respond(ret);
-  });
+
   RPC_AUTOGEN_END
 }
 

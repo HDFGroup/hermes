@@ -72,6 +72,7 @@ class ThalliumRpc : public RpcContext {
     } catch (tl::margo_exception &err) {
       LOG(ERROR) << "Thallium failed on function: " << func_name << std::endl;
       LOG(FATAL) << err.what() << std::endl;
+      exit(1);
     }
   }
 

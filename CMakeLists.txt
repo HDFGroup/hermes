@@ -440,7 +440,7 @@ endif()
 if(HERMES_ENABLE_STDIO_ADAPTER OR HERMES_ENABLE_POSIX_ADAPTER OR
     HERMES_ENABLE_MPIIO_ADAPTER OR HERMES_ENABLE_PUBSUB_ADAPTER OR
     HERMES_ENABLE_VFD)
-  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/adapter)
+  # add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/adapter)
 endif()
 
 #-----------------------------------------------------------------------------

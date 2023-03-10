@@ -139,7 +139,7 @@ void TestBlobDestroy(hapi::Hermes *hermes) {
 }
 
 TEST_CASE("TestCreateBlobName") {
-  hermes::BucketId bkt_id(1, 1);
+  hermes::TagId bkt_id(1, 1);
   hipc::charbuf blob_name("0");
   hipc::charbuf n1 =
       hermes::MetadataManager::CreateBlobName(bkt_id, blob_name);

@@ -108,17 +108,17 @@ FindUniqueTarget(std::vector<std::pair<TargetId, size_t>> &unique_tgts,
 
 /** Get the unique set of targets */
 static std::vector<std::pair<TargetId, size_t>>
-GroupByTarget(hipc::vector<BufferInfo> &buffers, size_t &total_size) {
+GroupByTarget(std::vector<BufferInfo> &buffers, size_t &total_size) {
   total_size = 0;
   std::vector<std::pair<TargetId, size_t>> unique_tgts;
-  for (hipc::ShmRef<BufferInfo> info : buffers) {
-    auto iter = FindUniqueTarget(unique_tgts, info->tid_);
+  for (BufferInfo &info : buffers) {
+    auto iter = FindUniqueTarget(unique_tgts, info.tid_);
     if (iter == unique_tgts.end()) {
-      unique_tgts.emplace_back(info->tid_, info->blob_size_);
+      unique_tgts.emplace_back(info.tid_, info.blob_size_);
     } else {
-      (*iter).second += info->blob_size_;
+      (*iter).second += info.blob_size_;
     }
-    total_size += info->blob_size_;
+    total_size += info.blob_size_;
   }
   return unique_tgts;
 }
@@ -218,10 +218,10 @@ class BufferPool : public hipc::ShmContainer {
   /**
    * Allocate buffers from the targets according to the schema
    * */
-  RPC hipc::vector<BufferInfo>
+  RPC std::vector<BufferInfo>
   LocalAllocateAndSetBuffers(PlacementSchema &schema,
                              const Blob &blob);
-  hipc::vector<BufferInfo>
+  std::vector<BufferInfo>
   GlobalAllocateAndSetBuffers(PlacementSchema &schema,
                               const Blob &blob);
 
@@ -248,7 +248,7 @@ class BufferPool : public hipc::ShmContainer {
    * device growth allocator
    * */
   void AllocateBuffers(SubPlacement &plcmnt,
-                       hipc::vector<BufferInfo> &buffers,
+                       std::vector<BufferInfo> &buffers,
                        std::vector<BpCoin> &coins,
                        u16 target_id,
                        size_t num_slabs,
@@ -258,8 +258,8 @@ class BufferPool : public hipc::ShmContainer {
   /**
    * Free buffers from the BufferPool
    * */
-  RPC bool LocalReleaseBuffers(hipc::vector<BufferInfo> &buffers);
-  bool GlobalReleaseBuffers(hipc::vector<BufferInfo> &buffers);
+  RPC bool LocalReleaseBuffers(std::vector<BufferInfo> &buffers);
+  bool GlobalReleaseBuffers(std::vector<BufferInfo> &buffers);
 };
 
 }  // namespace hermes

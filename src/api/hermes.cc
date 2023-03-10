@@ -147,11 +147,11 @@ void Hermes::FinalizeClient() {
 std::shared_ptr<Bucket> Hermes::GetBucket(std::string name,
                                           Context ctx,
                                           IoClientContext opts) {
-  return std::make_shared<Bucket>(name, ctx, opts);
+  return std::make_shared<Bucket>(name, ctx);
 }
 
-std::list<BlobId> Hermes::GroupBy(std::string tag_name) {
-  return mdm_.GlobalGroupByTag(tag_name);
+std::vector<BlobId> Hermes::GroupBy(TagId tag_id) {
+  return mdm_.GlobalGroupByTag(tag_id);
 }
 
 void Hermes::Clear() {

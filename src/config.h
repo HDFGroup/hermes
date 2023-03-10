@@ -165,6 +165,7 @@ static size_t ParseSize(const std::string &size_text) {
     return GIGABYTES(size);
   } else {
     LOG(FATAL) << "Could not parse the size: " << size_text << std::endl;
+    exit(1);
   }
 }
 
@@ -189,6 +190,7 @@ static size_t ParseLatency(const std::string &latency_text) {
     return GIGABYTES(size);
   }
   LOG(FATAL) << "Could not parse the latency: " << latency_text << std::endl;
+  exit(1);
 }
 
 }  // namespace hermes::config
