@@ -179,6 +179,14 @@ void load(A &ar, hshm::bitfield32_t &field) {
   field.bits_ = bits;
 }
 
+/**
+ * Lets Thallium know how to serialize a ShmRef object
+ * */
+template<typename A, typename T>
+void serialize(A &ar, hipc::ShmRef<T> &ref) {
+  ar &(*ref);
+}
+
 }  // namespace thallium
 
 #endif  // HERMES_DATA_STRUCTURES_SERIALIZATION_THALLIUM_H_

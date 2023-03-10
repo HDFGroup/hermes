@@ -434,14 +434,9 @@ TagId MetadataManager::LocalGetOrCreateTag(const std::string &tag_name,
   bkt_id.unique_ = header_->id_alloc_.fetch_add(1);
   bkt_id.node_id_ = rpc_->node_id_;
   hipc::string tag_name_shm(tag_name);
-  
-  // Check if tag already exists
-  auto iter = tag_id_map_->find(tag_name_shm);
-  if (iter == tag_id_map_->end()) {
-    return TagId::GetNull();
-  }
 
   // Emplace bucket if it does not already exist
+  auto iter = tag_id_map_->find(tag_name_shm);
   if (iter.is_end()) {
     LOG(INFO) << "Creating tag for the first time: "
               << tag_name << std::endl;

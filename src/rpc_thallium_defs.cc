@@ -48,11 +48,11 @@ void ThalliumRpc::DefineRpcs() {
    * Blob Operations
    * ===================================*/
 
-  RegisterRpc("PutBlobMetadata", [mdm](const request &req,
-                                       TagId bkt_id,
-                                       const hipc::charbuf &blob_name,
-                                       size_t blob_size,
-                                       std::vector<BufferInfo> &buffers) {
+  RegisterRpc("RpcPutBlobMetadata", [mdm](const request &req,
+                                          TagId bkt_id,
+                                          const hipc::charbuf &blob_name,
+                                          size_t blob_size,
+                                          std::vector<BufferInfo> &buffers) {
     auto ret = mdm->LocalPutBlobMetadata(bkt_id, blob_name, blob_size, buffers);
     req.respond(ret);
   });
@@ -135,15 +135,39 @@ void ThalliumRpc::DefineRpcs() {
    * Tag Operations
    * ===================================*/
 
+  RegisterRpc("RpcGetOrCreateTag", [mdm](const request &req,
+                                         const std::string &tag_name,
+                                         bool owner,
+                                         std::vector<TraitId> &traits) {
+    auto ret = mdm->LocalGetOrCreateTag(tag_name, owner, traits);
+    req.respond(ret);
+  });
   RegisterRpc("RpcGetTagId", [mdm](const request &req,
                                    std::string &tag_name) {
     auto ret = mdm->LocalGetTagId(tag_name);
     req.respond(ret);
   });
+  RegisterRpc("RpcRenameTag", [mdm](const request &req,
+                                    TagId tag,
+                                    const std::string &new_name) {
+    mdm->LocalRenameTag(tag, new_name);
+    req.respond(true);
+  });
+  RegisterRpc("RpcDestroyTag", [mdm](const request &req,
+                                     TagId tag) {
+    mdm->LocalDestroyTag(tag);
+    req.respond(true);
+  });
   RegisterRpc("RpcTagAddBlob", [mdm](const request &req,
                                      TagId tag_id,
                                      BlobId blob_id) {
     auto ret = mdm->LocalTagAddBlob(tag_id, blob_id);
+    req.respond(ret);
+  });
+  RegisterRpc("RpcTagRemoveBlob", [mdm](const request &req,
+                                        TagId tag_id,
+                                        BlobId blob_id) {
+    auto ret = mdm->LocalTagRemoveBlob(tag_id, blob_id);
     req.respond(ret);
   });
   RegisterRpc("RpcGroupByTag", [mdm](const request &req,
