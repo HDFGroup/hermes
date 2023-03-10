@@ -50,7 +50,6 @@ void TestTag(hapi::Hermes *hermes) {
 
   // Create two tags
   TagId tag1 = HERMES->CreateTag("tag1");
-  TagId tag2 = HERMES->CreateTag("tag2");
 
   // Tag some blobs
   for (size_t i = 0; i < num_blobs; ++i) {
@@ -58,7 +57,7 @@ void TestTag(hapi::Hermes *hermes) {
   }
 
   // Query by tag
-  auto tags = HERMES->GroupBy(tag2);
+  auto tags = HERMES->GroupBy(tag1);
   REQUIRE(tags.size() == 100);
 }
 

@@ -543,7 +543,7 @@ std::vector<BlobId> MetadataManager::LocalGroupByTag(TagId tag_id) {
   hipc::ShmRef<TagInfo> tag_info = (*tag_map_)[tag_id];
   // Convert slist into std::vector
   std::vector<BlobId> group;
-  group.resize(tag_info->blobs_->size());
+  group.reserve(tag_info->blobs_->size());
   for (hipc::ShmRef<BlobId> blob_id : (*tag_info->blobs_)) {
     group.emplace_back(*blob_id);
   }
