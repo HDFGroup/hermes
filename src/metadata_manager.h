@@ -338,14 +338,14 @@ class MetadataManager {
   /**
    * Rename a tag
    * */
-  RPC void LocalRenameTag(TagId tag, const std::string &new_name);
-  DEFINE_RPC(void, RenameTag, 0, UNIQUE_ID_TO_NODE_ID_LAMBDA)
+  RPC bool LocalRenameTag(TagId tag, const std::string &new_name);
+  DEFINE_RPC(bool, RenameTag, 0, UNIQUE_ID_TO_NODE_ID_LAMBDA)
 
   /**
    * Delete a tag
    * */
-  void LocalDestroyTag(TagId tag);
-  DEFINE_RPC(void, DestroyTag, 0, UNIQUE_ID_TO_NODE_ID_LAMBDA)
+  bool LocalDestroyTag(TagId tag);
+  DEFINE_RPC(bool, DestroyTag, 0, UNIQUE_ID_TO_NODE_ID_LAMBDA)
 
   /**
    * Add a blob to a tag index.

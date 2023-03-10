@@ -475,29 +475,30 @@ TagId MetadataManager::LocalGetTagId(const std::string &tag_name) {
 /**
  * Rename a tag
  * */
-void MetadataManager::LocalRenameTag(TagId tag_id,
+bool MetadataManager::LocalRenameTag(TagId tag_id,
                                      const std::string &new_name) {
   // Acquire MD write lock (modifying tag_map_)
   ScopedRwWriteLock tag_map_lock(header_->lock_[kTagMapLock]);
   auto iter = tag_map_->find(tag_id);
   if (iter == tag_map_->end()) {
-    return;
+    return true;
   }
   hipc::string new_name_shm(new_name);
   hipc::ShmRef<hipc::pair<TagId, TagInfo>> info = (*iter);
   hipc::string &old_bkt_name = *info->second_->name_;
   tag_id_map_->emplace(new_name_shm, tag_id);
   tag_id_map_->erase(old_bkt_name);
-  return;
+  return true;
 }
 
 /**
  * Delete a tag
  * */
-void MetadataManager::LocalDestroyTag(TagId tag_id) {
+bool MetadataManager::LocalDestroyTag(TagId tag_id) {
   // Acquire MD write lock (modifying tag_map_)
   ScopedRwWriteLock tag_map_lock(header_->lock_[kTagMapLock]);
   tag_map_->erase(tag_id);
+  return true;
 }
 
 /**

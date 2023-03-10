@@ -226,7 +226,7 @@ Status Bucket::PartialPutOrCreate(const std::string &blob_name,
  * */
 Status Bucket::Get(BlobId blob_id, Blob &blob, Context &ctx) {
   std::vector<BufferInfo> buffers = mdm_->GlobalGetBlobBuffers(blob_id);
-  Blob b = HERMES->borg_.GlobalReadBlobFromBuffers(buffers);
+  blob = HERMES->borg_.GlobalReadBlobFromBuffers(buffers);
   return Status();
 }
 
