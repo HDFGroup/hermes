@@ -175,6 +175,34 @@ void ThalliumRpc::DefineRpcs() {
     auto ret = mdm->LocalGroupByTag(tag_id);
     req.respond(ret);
   });
+  RegisterRpc("RpcTagAddTrait", [mdm](const request &req,
+                                      TagId tag_id,
+                                      TraitId trait_id) {
+    mdm->LocalTagAddTrait(tag_id, trait_id);
+    req.respond(true);
+  });
+  RegisterRpc("RpcTagGetTraits", [mdm](const request &req,
+                                      TagId tag_id) {
+    auto ret = mdm->LocalTagGetTraits(tag_id);
+    req.respond(ret);
+  });
+
+  /**====================================
+   * Trait Operations
+   * ===================================*/
+
+  RegisterRpc("RpcRegisterTrait", [mdm](const request &req,
+                                        TraitId trait_id,
+                                        const std::string &trait_uuid,
+                                        hipc::charbuf &trait_params) {
+    auto ret = mdm->LocalRegisterTrait(trait_id, trait_uuid, trait_params);
+    req.respond(ret);
+  });
+  RegisterRpc("RpcGetTraitInfo", [mdm](const request &req,
+                                       const std::string &trait_uuid) {
+    auto ret = mdm->LocalGetTraitInfo(trait_uuid);
+    req.respond(ret);
+  });
 
   /**====================================
    * Buffer Pool Operations

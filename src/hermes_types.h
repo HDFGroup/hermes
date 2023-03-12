@@ -110,6 +110,7 @@ struct UniqueId {
 };
 typedef UniqueId<1> BlobId;
 typedef UniqueId<2> TagId;
+typedef UniqueId<3> TraitId;
 
 /** A definition for logging something that is not yet implemented */
 #define HERMES_NOT_IMPLEMENTED_YET \
@@ -202,9 +203,6 @@ struct Thresholds {
   float min_; /**< minimum threshold value */
   float max_; /**< maximum threshold value */
 };
-
-/** Trait unique ID */
-typedef u64 TraitId;
 
 }  // namespace hermes
 

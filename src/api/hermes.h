@@ -17,6 +17,7 @@
 #include "config_server.h"
 #include "constants.h"
 #include "hermes_types.h"
+#include "trait.h"
 #include "utils.h"
 
 #include "communication_factory.h"
@@ -66,6 +67,10 @@ class Hermes {
   hermes_shm::Mutex lock_;
 
  public:
+  /**====================================
+   * PUBLIC Init Operations
+   * ===================================*/
+
   /** Default constructor */
   Hermes() : is_being_initialized_(false),
              is_initialized_(false),
@@ -94,6 +99,10 @@ class Hermes {
   }
 
  public:
+  /**====================================
+   * PUBLIC Finalize Operations
+   * ===================================*/
+
   /** Finalize Hermes explicitly */
   void Finalize();
 
@@ -104,6 +113,10 @@ class Hermes {
   void StopDaemon();
 
  public:
+  /**====================================
+   * PUBLIC Global Operations
+   * ===================================*/
+
   /** Create a Bucket in Hermes */
   std::shared_ptr<Bucket> GetBucket(std::string name,
                                     Context ctx = Context(),
@@ -121,25 +134,46 @@ class Hermes {
   /** Destroy all buckets and blobs in this instance */
   void Clear();
 
-  /** Create a trait
+  /** Create a trait */
   template<typename TraitT, typename ...Args>
   TraitId RegisterTrait(const std::string &tag_uuid,
                         Args&& ...args) {
     TraitT obj(tag_uuid, std::forward<Args>(args)...);
-    HERMES->mdm_.GlobalRegisterTrait(
-        tag_uuid, obj);
-  }*/
+    return HERMES->mdm_.GlobalRegisterTrait(tag_uuid, obj.ToCharbuf());
+  }
 
-  /** Get trait id
-  TraitId GetTraitId(const std::string &tag_uuid);*/
+  /** Get trait id */
+  TraitId GetTraitId(const std::string &tag_uuid) {
+    return HERMES->mdm_.GlobalGetTraitId(tag_uuid);
+  }
 
-  /** Get the trait
+  /** Get the trait */
   template<typename TraitT>
-  TraitT* GetTrait(TraitId id) {
-    // TODO(llogan)
-  }*/
+  TraitT* GetTrait(TraitId trait_id) {
+    return HERMES->mdm_.GlobalGetTrait<TraitT>(trait_id);
+  }
+
+  /** Attach a trait to a tag */
+  void AttachTrait(TagId tag_id, TraitId trait_id) {
+    HERMES->mdm_.GlobalTagAddTrait(tag_id, trait_id);
+  }
+
+  /** Get traits attached to tag */
+  std::vector<Trait*> GetTraits(TagId tag_id) {
+    hipc::slist<TraitId> trait_ids = HERMES->mdm_.GlobalTagGetTraits(tag_id);
+    std::vector<Trait*> traits;
+    traits.reserve(trait_ids.size());
+    for (hipc::ShmRef<TraitId> trait_id : trait_ids) {
+      traits.emplace_back(GetTrait<Trait>(*trait_id));
+    }
+    return traits;
+  }
 
  private:
+  /**====================================
+   * PRIVATE Init + Finalize Operations
+   * ===================================*/
+
   /** Internal initialization of Hermes */
   void Init(HermesType mode = HermesType::kClient,
             std::string server_config_path = "",

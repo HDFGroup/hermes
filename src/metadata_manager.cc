@@ -539,7 +539,7 @@ Status MetadataManager::LocalTagRemoveBlob(TagId tag_id,
  * */
 std::vector<BlobId> MetadataManager::LocalGroupByTag(TagId tag_id) {
   // Acquire MD read lock (read tag_map_)
-  ScopedRwReadLock tag_map_lock(header_->lock_[kTagMapLock]);;
+  ScopedRwReadLock tag_map_lock(header_->lock_[kTagMapLock]);
   // Get the tag info
   hipc::ShmRef<TagInfo> tag_info = (*tag_map_)[tag_id];
   // Convert slist into std::vector
@@ -549,6 +549,27 @@ std::vector<BlobId> MetadataManager::LocalGroupByTag(TagId tag_id) {
     group.emplace_back(*blob_id);
   }
   return group;
+}
+
+/**
+ * Add a trait to a tag index. Create tag if it does not exist.
+ * */
+bool MetadataManager::LocalTagAddTrait(TagId tag_id, TraitId trait_id) {
+  // Acquire MD read lock (read tag_map_)
+  ScopedRwReadLock tag_map_lock(header_->lock_[kTagMapLock]);
+  hipc::ShmRef<TagInfo> tag_info = (*tag_map_)[tag_id];
+  tag_info->traits_->emplace_back(trait_id);
+  return true;
+}
+
+/**
+   * Find all traits pertaining to a tag
+   * */
+hipc::slist<TraitId> MetadataManager::LocalTagGetTraits(TagId tag_id) {
+  // Acquire MD read lock (read tag_map_)
+  ScopedRwReadLock tag_map_lock(header_->lock_[kTagMapLock]);
+  hipc::ShmRef<TagInfo> tag_info = (*tag_map_)[tag_id];
+  return *tag_info->traits_;
 }
 
 }  // namespace hermes

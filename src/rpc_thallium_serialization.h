@@ -70,6 +70,20 @@ void serialize(A &ar, BlobId &blob_id) {
 }
 
 /**
+ *  Lets Thallium know how to serialize a TraitId.
+ *
+ * This function is called implicitly by Thallium.
+ *
+ * @param ar An archive provided by Thallium.
+ * @param blob_id The BlobId to serialize.
+ */
+template <typename A>
+void serialize(A &ar, TraitId &trait_id) {
+  ar &trait_id.unique_;
+  ar &trait_id.node_id_;
+}
+
+/**
  *  Lets Thallium know how to serialize a TargetId.
  *
  * This function is called implicitly by Thallium.
