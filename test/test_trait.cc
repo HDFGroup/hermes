@@ -17,6 +17,7 @@
 #include <glog/logging.h>
 #include "hermes.h"
 #include "bucket.h"
+#include "traits/example/example_trait.h"
 
 #include "basic_test.h"
 
@@ -40,9 +41,21 @@ void TestTrait() {
   std::vector<hermes::BlobId> blob_ids(num_blobs);
 
   // Create a trait
-  HERMES->RegisterTrait<>();
+  HERMES->RegisterTrait<hapi::ExampleTrait>("ex", 5);
+
+  // Get the trait id
+  hermes::TraitId trait_id = HERMES->GetTraitId("ex");
+  REQUIRE(!trait_id.IsNull());
+
+  // Get the trait itself
+  auto *trait = HERMES->GetTrait<hapi::ExampleTrait>(trait_id);
+  hapi::ExampleTraitParams params;
+  trait->Run(0, &params);
+  auto hello = params.hello_;
+  REQUIRE(hello == 5);
 }
 
-TEST_CASE("TestTag") {
+TEST_CASE("TestTrait") {
   TestTrait();
 }
+

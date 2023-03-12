@@ -21,6 +21,14 @@ namespace hermes {
 using api::Bucket;
 
 /**
+ * Initialize the process-specific data for the
+ * metadata manager
+ * */
+void MetadataManager::local_init() {
+  local_trait_map_.shm_init(256);
+}
+
+/**
  * Explicitly initialize the MetadataManager
  * Doesn't require anything to be initialized.
  * */
@@ -33,10 +41,10 @@ void MetadataManager::shm_init(ServerConfig *config,
 
   // Create the metadata maps
   blob_id_map_ = hipc::make_mptr<BLOB_ID_MAP_T>(16384);
-  tag_id_map_ = hipc::make_mptr<TAG_ID_MAP_T>(16384);
-  trait_id_map_ = hipc::make_mptr<TRAIT_ID_MAP_T>(16384);
   blob_map_ = hipc::make_mptr<BLOB_MAP_T>(16384);
+  tag_id_map_ = hipc::make_mptr<TAG_ID_MAP_T>(256);
   tag_map_ = hipc::make_mptr<TAG_MAP_T>(256);
+  trait_id_map_ = hipc::make_mptr<TRAIT_ID_MAP_T>(16384);
   trait_map_ = hipc::make_mptr<TRAIT_MAP_T>(256);
 
   // Create the DeviceInfo vector
@@ -68,10 +76,12 @@ void MetadataManager::shm_init(ServerConfig *config,
  * */
 void MetadataManager::shm_destroy() {
   blob_id_map_.shm_destroy();
-  tag_id_map_.shm_destroy();
   blob_map_.shm_destroy();
+  tag_id_map_.shm_destroy();
   tag_map_.shm_destroy();
-  tag_map_.shm_destroy();
+  trait_id_map_.shm_destroy();
+  trait_map_.shm_destroy();
+
   targets_.shm_destroy();
   devices_.shm_destroy();
 }
@@ -81,10 +91,11 @@ void MetadataManager::shm_destroy() {
  * */
 void MetadataManager::shm_serialize() {
   blob_id_map_ >> header_->blob_id_map_ar_;
-  tag_id_map_ >> header_->tag_id_map_ar_;
   blob_map_ >> header_->blob_map_ar_;
+  tag_id_map_ >> header_->tag_id_map_ar_;
   tag_map_ >> header_->tag_map_ar_;
-  tag_map_ >> header_->tag_map_ar_;
+  trait_id_map_ >> header_->trait_id_map_ar_;
+  trait_map_ >> header_->trait_map_ar_;
   targets_ >> header_->targets_;
   devices_ >> header_->devices_;
 }
@@ -97,10 +108,11 @@ void MetadataManager::shm_deserialize(MetadataManagerShmHeader *header) {
   rpc_ = &HERMES->rpc_;
   borg_ = &HERMES->borg_;
   blob_id_map_ << header_->blob_id_map_ar_;
-  tag_id_map_ << header_->tag_id_map_ar_;
   blob_map_ << header_->blob_map_ar_;
+  tag_id_map_ << header_->tag_id_map_ar_;
   tag_map_ << header_->tag_map_ar_;
-  tag_map_ << header_->tag_map_ar_;
+  trait_id_map_ << header_->trait_id_map_ar_;
+  trait_map_ << header_->trait_map_ar_;
   targets_ << header_->targets_;
   devices_ << header_->devices_;
 }

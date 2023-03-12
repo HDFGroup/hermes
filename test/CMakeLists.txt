@@ -2,6 +2,7 @@
 # Include source and build directories
 #------------------------------------------------------------------------------
 include_directories(
+  ${PROJECT_SOURCE_DIR}
   ${PROJECT_SOURCE_DIR}/src/api
   ${PROJECT_SOURCE_DIR}/gotcha_intercept
   ${PROJECT_SOURCE_DIR}/io_client
@@ -17,6 +18,7 @@ set(API_TESTS
         test_bucket
         test_partial_put_get
         test_buffer_pool
+        test_trait
         test_tag)
 
 find_program(BASH_PROGRAM bash)

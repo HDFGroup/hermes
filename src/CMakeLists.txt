@@ -57,8 +57,7 @@ set(HERMES_SRCS
   ${CMAKE_CURRENT_SOURCE_DIR}/data_placement_engine.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/dpe/random.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/dpe/round_robin.cc
-  ${CMAKE_CURRENT_SOURCE_DIR}/dpe/minimize_io_time.cc
-        ../io_client/io_client/real_api.h)
+  ${CMAKE_CURRENT_SOURCE_DIR}/dpe/minimize_io_time.cc)
 
 #------------------------------------------------------------------------------
 # Libraries
@@ -80,12 +79,14 @@ target_include_directories(hermes
   SYSTEM PUBLIC ${HERMES_EXT_INCLUDE_DEPENDENCIES}
 )
 add_dependencies(hermes
+        hermes_shm_data_structures
         hermes_adapter_io_clients
-        hermes_shm_data_structures)
+        hermes_example_trait)
 
 target_link_libraries(hermes
   PUBLIC hermes_shm_data_structures
   PUBLIC hermes_adapter_io_clients
+  PUBLIC hermes_example_trait
   PUBLIC ${GLPK_LIBRARIES}
   PUBLIC ${CMAKE_HERMES_COMMUNICATION_TYPE_LIB}
   PUBLIC ${CMAKE_HERMES_RPC_TYPE_LIB}

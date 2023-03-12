@@ -75,6 +75,7 @@ void Hermes::InitServer(std::string server_config_path) {
   comm_.Init(HermesType::kServer);
   rpc_.InitServer();
   rpc_.InitClient();
+  mdm_.local_init();
   mdm_.shm_init(&server_config_, &header_->mdm_);
   bpm_ = hipc::make_mptr<BufferPool>(header_->bpm_, main_alloc_);
   bpm_->shm_init();
@@ -87,6 +88,7 @@ void Hermes::InitClient(std::string server_config_path,
   LoadClientConfig(client_config_path);
   LoadSharedMemory();
   rpc_.InitClient();
+  mdm_.local_init();
   mdm_.shm_deserialize(&header_->mdm_);
   bpm_ = hipc::manual_ptr(hipc::ShmDeserialize<BufferPool>(&header_->bpm_,
                                                            main_alloc_));

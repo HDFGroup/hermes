@@ -21,6 +21,7 @@
 #include "statuses.h"
 #include "rpc_thallium_serialization.h"
 #include "io_client/io_client_factory.h"
+#include "trait.h"
 
 namespace hermes {
 
@@ -97,7 +98,7 @@ class MetadataManager {
   hipc::mptr<BLOB_MAP_T> blob_map_;
   hipc::mptr<TAG_MAP_T> tag_map_;
   hipc::mptr<TRAIT_MAP_T> trait_map_;
-  hipc::unordered_map<TraitId, void *> local_trait_map_;
+  hipc::unordered_map<TraitId, hapi::Trait*> local_trait_map_;
   RwLock local_lock_;
 
   /**====================================
@@ -113,6 +114,12 @@ class MetadataManager {
 
   /** Default constructor */
   MetadataManager() = default;
+
+  /**
+   * Initialize the process-specific data for the
+   * metadata manager
+   * */
+  void local_init();
 
   /**
    * Explicitly initialize the MetadataManager
@@ -390,7 +397,7 @@ class MetadataManager {
     trait_map_->emplace(trait_id, trait_params);
     return trait_id;
   }
-  DEFINE_RPC(TraitId, RegisterTrait, 0, std::hash<std::string>{});
+  DEFINE_RPC(TraitId, RegisterTrait, 1, std::hash<std::string>{});
 
   /**
    * Get trait info from main trait md structure
@@ -446,7 +453,7 @@ class MetadataManager {
     }
     hipc::ShmRef<hipc::pair<TraitId, hipc::charbuf>> trait_params_p = *iter;
     TraitT *trait = new TraitT(*trait_params_p->second_);
-    local_trait_map_.emplace(trait_id, (void*)trait);
+    local_trait_map_.emplace(trait_id, trait);
     return trait;
   }
 
@@ -458,11 +465,15 @@ class MetadataManager {
     ScopedRwReadLock md_lock(local_lock_);
     auto iter = local_trait_map_.find(trait_id);
     if (iter.is_end()) {
-      md_lock.Unlock();
-      return LocalConstructTrait<TraitT>(trait_id);
+      if constexpr(std::is_same_v<TraitT, hapi::Trait>) {
+        return nullptr;
+      } else {
+        md_lock.Unlock();
+        return LocalConstructTrait<TraitT>(trait_id);
+      }
     }
-    hipc::ShmRef<hipc::pair<TraitId, void*>> trait_pair = *iter;
-    return reinterpret_cast<TraitT*>((*trait_pair->second_));
+    hipc::ShmRef<hipc::pair<TraitId, hapi::Trait*>> trait_pair = *iter;
+    return dynamic_cast<TraitT*>((*trait_pair->second_));
   }
 
   /**====================================

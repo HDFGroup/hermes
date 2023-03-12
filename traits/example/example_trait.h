@@ -5,7 +5,7 @@
 #ifndef HERMES_TRAITS_EXAMPLE_EXAMPLE_TRAIT_H_
 #define HERMES_TRAITS_EXAMPLE_EXAMPLE_TRAIT_H_
 
-#include "hermes.h"
+#include "trait.h"
 
 namespace hermes::api {
 
@@ -13,7 +13,12 @@ struct ExampleTraitHeader : public TraitHeader {
   int hello_;
 
   explicit ExampleTraitHeader(const std::string &trait_uuid, int hello)
-      : TraitHeader(trait_uuid, TraitClass::kBucket), hello_(hello) {}
+      : TraitHeader("example_trait", trait_uuid, TraitClass::kBucket),
+        hello_(hello) {}
+};
+
+struct ExampleTraitParams {
+  int hello_;
 };
 
 class ExampleTrait : public hapi::Trait {
@@ -25,7 +30,7 @@ class ExampleTrait : public hapi::Trait {
     hdr->hello_ = hello;
   }
 
-  void Run();
+  void Run(int method, void *params) override;
 };
 
 }  // namespace hermes::api

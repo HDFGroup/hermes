@@ -139,7 +139,8 @@ class Hermes {
   TraitId RegisterTrait(const std::string &tag_uuid,
                         Args&& ...args) {
     TraitT obj(tag_uuid, std::forward<Args>(args)...);
-    return HERMES->mdm_.GlobalRegisterTrait(tag_uuid, obj.ToCharbuf());
+    return HERMES->mdm_.GlobalRegisterTrait(TraitId::GetNull(),
+                                            tag_uuid, obj.trait_info_);
   }
 
   /** Get trait id */

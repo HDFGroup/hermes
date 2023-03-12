@@ -1,11 +1,21 @@
-//
-// Created by lukemartinlogan on 3/7/23.
-//
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+* Distributed under BSD 3-Clause license.                                   *
+* Copyright by The HDF Group.                                               *
+* Copyright by the Illinois Institute of Technology.                        *
+* All rights reserved.                                                      *
+*                                                                           *
+* This file is part of Hermes. The full Hermes copyright notice, including  *
+* terms governing use, modification, and redistribution, is contained in    *
+* the COPYING file, which can be found at the top directory. If you do not  *
+* have access to the file, you may request a copy from help@hdfgroup.org.   *
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #ifndef HERMES_SRC_API_TRAIT_H_
 #define HERMES_SRC_API_TRAIT_H_
 
 #include "hermes_types.h"
+
+namespace hapi = hermes::api;
 
 namespace hermes::api {
 
@@ -16,14 +26,24 @@ enum class TraitClass {
 
 struct TraitHeader {
   char trait_uuid_[64];
+  char trait_name_[64];
   TraitClass trait_class_;
 
-  explicit TraitHeader(const std::string &trait_uuid, TraitClass trait_class) {
+  explicit TraitHeader(const std::string &trait_uuid,
+                       const std::string &trait_name,
+                       TraitClass trait_class) {
     memcpy(trait_uuid_, trait_uuid.c_str(), trait_uuid.size());
+    memcpy(trait_name_, trait_name.c_str(), trait_name.size());
+    trait_uuid_[trait_uuid.size()] = 0;
+    trait_name_[trait_name.size()] = 0;
     trait_class_ = trait_class;
   }
 };
 
+/**
+ * Represents a custom operation to perform.
+ * Traits are independent of Hermes.
+ * */
 class Trait {
  public:
   hipc::charbuf trait_info_;
@@ -37,6 +57,10 @@ class Trait {
       : trait_info_(trait_info),
         header_(reinterpret_cast<TraitHeader*>(trait_info_.data())) {}
 
+  /** Run a method of the trait */
+  virtual void Run(int method, void *params) = 0;
+
+  /** Create the header for the trait */
   template<typename HeaderT, typename ...Args>
   HeaderT* CreateHeader(Args&& ...args) {
     trait_info_ = hipc::charbuf(sizeof(HeaderT));
@@ -47,6 +71,7 @@ class Trait {
     return GetHeader<HeaderT>();
   }
 
+  /** Get the header of the trait */
   template<typename HeaderT>
   HeaderT* GetHeader() {
     return reinterpret_cast<HeaderT*>(header_);
