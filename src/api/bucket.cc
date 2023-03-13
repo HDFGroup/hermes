@@ -25,17 +25,20 @@ using hermes::adapter::AdapterMode;
  * Either initialize or fetch the bucket.
  * */
 Bucket::Bucket(const std::string &bkt_name,
-               Context &ctx)
+               Context &ctx,
+               size_t backend_size)
 : mdm_(&HERMES->mdm_), bpm_(HERMES->bpm_.get()), name_(bkt_name) {
   std::vector<TraitId> traits;
-  id_ = mdm_->GlobalGetOrCreateTag(bkt_name, true, traits);
+  auto ret = mdm_->GlobalGetOrCreateTag(bkt_name, true, traits, backend_size);
+  id_ = ret.first;
+  did_create_ = ret.second;
 }
 
 /**
  * Get the current size of the bucket
  * */
-size_t Bucket::GetSize(IoClientContext opts) {
-  return mdm_->GlobalGetBucketSize(id_, opts);
+size_t Bucket::GetSize(bool backend) {
+  return mdm_->GlobalGetBucketSize(id_, backend);
 }
 
 /**
@@ -132,8 +135,7 @@ Status Bucket::TagBlob(BlobId &blob_id,
 Status Bucket::Put(std::string blob_name,
                    const Blob &blob,
                    BlobId &blob_id,
-                   Context &ctx,
-                   IoClientContext opts) {
+                   Context &ctx) {
   // Calculate placement
   auto dpe = DPEFactory::Get(ctx.policy);
   std::vector<size_t> blob_sizes(1, blob.size());
@@ -147,10 +149,12 @@ Status Bucket::Put(std::string blob_name,
                                                blob.size(), buffers);
     blob_id = std::get<0>(put_ret);
     bool did_create = std::get<1>(put_ret);
-    size_t orig_blob_size = std::get<2>(put_ret);
-    opts.backend_size_ = blob.size();
-    mdm_->GlobalTagAddBlob(id_,
-                           blob_id);
+    ssize_t orig_blob_size = (ssize_t)std::get<2>(put_ret);
+    ssize_t new_blob_size = blob.size();
+    mdm_->GlobalTagAddBlob(id_, blob_id);
+    mdm_->GlobalUpdateBucketSize(id_,
+                                 new_blob_size - orig_blob_size,
+                                 BucketUpdate::kBoth);
   }
 
   return Status();
@@ -187,7 +191,7 @@ Status Bucket::PartialPutOrCreate(const std::string &blob_name,
     // Case 2: We're overriding the entire blob
     // Put the entire blob, no need to load from storage
     LOG(INFO) << "Putting the entire blob." << std::endl;
-    return Put(blob_name, blob, blob_id, ctx, opts);
+    return Put(blob_name, blob, blob_id, ctx);
   }
   if (full_blob.size() < opts.backend_size_) {
     // Case 3: The blob did not fully exist (need to read from backend)
@@ -214,7 +218,7 @@ Status Bucket::PartialPutOrCreate(const std::string &blob_name,
   memcpy(full_blob.data() + blob_off, blob.data(), blob.size());
   // Re-put the blob
   if (opts.adapter_mode_ != AdapterMode::kBypass) {
-    Put(blob_name, full_blob, blob_id, ctx, opts);
+    Put(blob_name, full_blob, blob_id, ctx);
   }
   LOG(INFO) << "Partially put to blob: (" << blob_id.unique_
             << ", " << blob_id.node_id_ << ")" << std::endl;
@@ -273,7 +277,7 @@ Status Bucket::PartialGetOrCreate(const std::string &blob_name,
         return PARTIAL_GET_OR_CREATE_OVERFLOW;
       }
       if (opts.adapter_mode_ != AdapterMode::kBypass) {
-        Put(blob_name, full_blob, blob_id, ctx, opts);
+        Put(blob_name, full_blob, blob_id, ctx);
       }
     }
   }
@@ -291,8 +295,9 @@ Status Bucket::PartialGetOrCreate(const std::string &blob_name,
 /**
  * Flush a blob
  * */
-void Bucket::FlushBlob(BlobId blob_id) {
-  /*LOG(INFO) << "Flushing blob" << std::endl;
+void Bucket::FlushBlob(BlobId blob_id,
+                       const IoClientContext &opts) {
+  LOG(INFO) << "Flushing blob" << std::endl;
   if (opts.adapter_mode_ == AdapterMode::kScratch) {
     LOG(INFO) << "In scratch mode, ignoring flush" << std::endl;
     return;
@@ -313,19 +318,19 @@ void Bucket::FlushBlob(BlobId blob_id) {
                          full_blob,
                          decode_opts,
                          status);
-  }*/
+  }
 }
 
 /**
  * Flush the entire bucket
  * */
-void Bucket::Flush() {
-  /*std::vector<BlobId> blob_ids = GetContainedBlobIds();
+void Bucket::Flush(const IoClientContext &opts) {
+  std::vector<BlobId> blob_ids = GetContainedBlobIds();
   if (opts.adapter_mode_ == AdapterMode::kScratch) { return; }
   LOG(INFO) << "Flushing " << blob_ids.size() << " blobs" << std::endl;
   for (BlobId &blob_id : blob_ids) {
     FlushBlob(blob_id, opts);
-  }*/
+  }
 }
 
 /**

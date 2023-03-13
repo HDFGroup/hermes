@@ -29,6 +29,7 @@ class Bucket {
   TagId id_;
   std::string name_;
   Context ctx_;
+  bool did_create_;
 
  public:
   /**====================================
@@ -42,7 +43,8 @@ class Bucket {
    * be used directly.
    * */
   Bucket(const std::string &bkt_name,
-         Context &ctx);
+         Context &ctx,
+         size_t backend_size = 0);
 
  public:
   /**
@@ -63,7 +65,7 @@ class Bucket {
   /**
    * Get the current size of the bucket
    * */
-  size_t GetSize(IoClientContext opts = IoClientContext());
+  size_t GetSize(bool backend = false);
 
   /**
    * Rename this bucket
@@ -139,8 +141,7 @@ class Bucket {
   Status Put(std::string blob_name,
              const Blob &blob,
              BlobId &blob_id,
-             Context &ctx,
-             IoClientContext opts = IoClientContext());
+             Context &ctx);
 
   /**
    * Put \a blob_name Blob into the bucket. Load the blob from the
@@ -193,12 +194,12 @@ class Bucket {
   /**
    * Flush a blob
    * */
-  void FlushBlob(BlobId blob_id);
+  void FlushBlob(BlobId blob_id, const IoClientContext &opts);
 
   /**
    * Flush the entire bucket
    * */
-  void Flush();
+  void Flush(const IoClientContext &opts);
 
   /**
    * Determine if the bucket contains \a blob_id BLOB

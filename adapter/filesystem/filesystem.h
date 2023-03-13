@@ -127,6 +127,8 @@ class Filesystem {
   off_t Tell(File &f, AdapterStat &stat);
   /** sync */
   int Sync(File &f, AdapterStat &stat);
+  /** truncate */
+  int Truncate(File &f, AdapterStat &stat, size_t new_size);
   /** close */
   int Close(File &f, AdapterStat &stat, bool destroy = true);
   /** remove */
@@ -195,6 +197,8 @@ class Filesystem {
   off_t Tell(File &f, bool &stat_exists);
   /** sync */
   int Sync(File &f, bool &stat_exists);
+  /** truncate */
+  int Truncate(File &f, bool &stat_exists, size_t new_size);
   /** close */
   int Close(File &f, bool &stat_exists, bool destroy = true);
 

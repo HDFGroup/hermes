@@ -78,16 +78,8 @@ class FilesystemIoClient : public IoClient {
   /** virtual destructor */
   virtual ~FilesystemIoClient() = default;
 
-  /** Update backend statistics when registering a blob */
-  void RegisterBlob(const IoClientContext &opts,
-                    GlobalIoClientState &stat) override {
-    stat.true_size_ = std::max(stat.true_size_,
-                               opts.backend_off_ + opts.backend_size_);
-  }
-
-  /** Update backend statistics when unregistering a blob */
-  void UnregisterBlob(const IoClientContext &opts,
-                      GlobalIoClientState &stat) override {}
+  /** Get initial statistics from the backend */
+  virtual size_t GetSize(const hipc::charbuf &bkt_name) = 0;
 
   /** Decode I/O client context from the original blob name */
   IoClientContext DecodeBlobName(const IoClientContext &opts,

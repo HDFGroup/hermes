@@ -126,7 +126,7 @@ void MetadataManager::shm_deserialize(MetadataManagerShmHeader *header) {
  * on the backing storage system's statistics using the io_ctx.
  * */
 size_t MetadataManager::LocalGetBucketSize(TagId bkt_id,
-                                           const IoClientContext &opts) {
+                                           bool backend) {
   // Acquire MD read lock (reading tag_map)
   ScopedRwReadLock tag_map_lock(header_->lock_[kTagMapLock]);
   auto iter = tag_map_->find(bkt_id);
@@ -135,12 +135,42 @@ size_t MetadataManager::LocalGetBucketSize(TagId bkt_id,
   }
   hipc::ShmRef<hipc::pair<TagId, TagInfo>> info = (*iter);
   TagInfo &bkt_info = *info->second_;
-  auto io_client = IoClientFactory::Get(opts.type_);
-  if (io_client) {
+  if (backend) {
     return bkt_info.header_->client_state_.true_size_;
   } else {
     return bkt_info.header_->internal_size_;
   }
+}
+
+/**
+ * Update \a bkt_id BUCKET stats
+ * */
+bool MetadataManager::LocalUpdateBucketSize(TagId bkt_id,
+                                            ssize_t delta,
+                                            BucketUpdate mode) {
+  // Acquire MD read lock (reading tag_map)
+  ScopedRwReadLock tag_map_lock(header_->lock_[kTagMapLock]);
+  auto iter = tag_map_->find(bkt_id);
+  if (iter == tag_map_->end()) {
+    return 0;
+  }
+  hipc::ShmRef<hipc::pair<TagId, TagInfo>> info = (*iter);
+  TagInfo &bkt_info = *info->second_;
+  switch (mode) {
+    case BucketUpdate::kInternal: {
+      bkt_info.header_->internal_size_ += delta;
+      break;
+    }
+    case BucketUpdate::kBackend: {
+      bkt_info.header_->client_state_.true_size_ += delta;
+      break;
+    }
+    case BucketUpdate::kBoth: {
+      bkt_info.header_->client_state_.true_size_ += delta;
+      bkt_info.header_->internal_size_ += delta;
+    }
+  }
+  return true;
 }
 
 /**
@@ -157,6 +187,7 @@ bool MetadataManager::LocalClearBucket(TagId bkt_id) {
   for (hipc::ShmRef<BlobId> blob_id : *bkt_info.blobs_) {
     GlobalDestroyBlob(bkt_id, *blob_id);
   }
+  bkt_info.header_->internal_size_ = 0;
   return true;
 }
 
@@ -435,9 +466,11 @@ void MetadataManager::GlobalClear() {
 /**
  * Get or create a bucket with \a bkt_name bucket name
  * */
-TagId MetadataManager::LocalGetOrCreateTag(const std::string &tag_name,
-                                           bool owner,
-                                           std::vector<TraitId> &traits) {
+std::pair<TagId, bool> MetadataManager::LocalGetOrCreateTag(
+    const std::string &tag_name,
+    bool owner,
+    std::vector<TraitId> &traits,
+    size_t backend_size) {
   // Acquire MD write lock (modifying tag_map)
   ScopedRwWriteLock tag_map_lock(header_->lock_[kTagMapLock]);
 
@@ -456,7 +489,9 @@ TagId MetadataManager::LocalGetOrCreateTag(const std::string &tag_name,
     TagInfo info(HERMES->main_alloc_);
     (*info.name_) = tag_name_shm;
     info.header_->internal_size_ = 0;
+    info.header_->client_state_.true_size_ = backend_size;
     info.header_->tag_id_ = bkt_id;
+    info.header_->owner_ = owner;
     tag_map_->emplace(bkt_id, std::move(info));
   } else {
     LOG(INFO) << "Found existing tag: "
@@ -465,7 +500,7 @@ TagId MetadataManager::LocalGetOrCreateTag(const std::string &tag_name,
     bkt_id = *id_info->second_;
   }
 
-  return bkt_id;
+  return {bkt_id, iter.is_end()};
 }
 
 /**
@@ -525,7 +560,8 @@ Status MetadataManager::LocalTagAddBlob(TagId tag_id,
     return Status();
   }
   hipc::ShmRef<hipc::pair<TagId, TagInfo>> blob_list = (*iter);
-  blob_list->second_->blobs_->emplace_back(blob_id);
+  TagInfo &info = *blob_list->second_;
+  info.blobs_->emplace_back(blob_id);
   return Status();
 }
 
@@ -541,7 +577,8 @@ Status MetadataManager::LocalTagRemoveBlob(TagId tag_id,
     return Status();
   }
   hipc::ShmRef<hipc::pair<TagId, TagInfo>> blob_list = (*iter);
-  blob_list->second_->blobs_->erase(blob_id);
+  TagInfo &info = *blob_list->second_;
+  info.blobs_->erase(blob_id);
   return Status();
 }
 

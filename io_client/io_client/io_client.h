@@ -188,6 +188,13 @@ struct HermesRequest {
   IoStatus io_status;                /**< IO status */
 };
 
+/** Request used by Bucket to pass information to IoClient */
+struct IoClientParams {
+  const hipc::charbuf *bkt_name;
+  const IoClientContext *opts;
+  GlobalIoClientState *stat;
+};
+
 /**
  * A class to represent abstract I/O client.
  * Used internally by BORG and certain adapter classes.
@@ -199,23 +206,6 @@ class IoClient {
 
   /** Virtual destructor */
   virtual ~IoClient() = default;
-
-  /** Get initial statistics from the backend */
-  virtual void InitBucketState(const hipc::charbuf &bkt_name,
-                               const IoClientContext &opts,
-                               GlobalIoClientState &stat) = 0;
-
-  /**
-   * How to update the backend when registering a blob
-   * */
-  virtual void RegisterBlob(const IoClientContext &opts,
-                            GlobalIoClientState &stat) = 0;
-
-  /**
-   * How to update the backend when unregistering a blob
-   * */
-  virtual void UnregisterBlob(const IoClientContext &opts,
-                              GlobalIoClientState &stat) = 0;
 
   /** Write blob to backend */
   virtual void WriteBlob(const hipc::charbuf &bkt_name,

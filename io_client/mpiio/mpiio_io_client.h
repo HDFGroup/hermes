@@ -74,9 +74,7 @@ class MpiioIoClient : public hermes::adapter::fs::FilesystemIoClient {
                  IoClientStats &stat) override;
 
   /** Get initial statistics from the backend */
-  void InitBucketState(const hipc::charbuf &bkt_name,
-                       const IoClientContext &opts,
-                       GlobalIoClientState &stat) override;
+  size_t GetSize(const hipc::charbuf &bkt_name) override;
 
   /** Initialize I/O context using count + datatype */
   static size_t IoSizeFromCount(int count,

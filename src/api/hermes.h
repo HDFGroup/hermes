@@ -125,7 +125,7 @@ class Hermes {
   /** Create a generic tag in Hermes */
   TagId CreateTag(const std::string &tag_name) {
     std::vector<TraitId> traits;
-    return mdm_.GlobalGetOrCreateTag(tag_name, false, traits);
+    return mdm_.GlobalCreateTag(tag_name, false, traits);
   }
 
   /** Locate all blobs with a tag */

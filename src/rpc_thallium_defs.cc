@@ -34,8 +34,15 @@ void ThalliumRpc::DefineRpcs() {
 
   RegisterRpc("RpcGetBucketSize", [mdm](const request &req,
                                            TagId bkt_id,
-                                           const IoClientContext &opts) {
-    auto ret = mdm->LocalGetBucketSize(bkt_id, opts);
+                                           bool backend) {
+    auto ret = mdm->LocalGetBucketSize(bkt_id, backend);
+    req.respond(ret);
+  });
+  RegisterRpc("RpcUpdateBucketSize", [mdm](const request &req,
+                                           TagId bkt_id,
+                                           ssize_t delta,
+                                           BucketUpdate mode) {
+    auto ret = mdm->LocalUpdateBucketSize(bkt_id, delta, mode);
     req.respond(ret);
   });
   RegisterRpc("RpcClearBucket", [mdm](const request &req,
@@ -138,8 +145,9 @@ void ThalliumRpc::DefineRpcs() {
   RegisterRpc("RpcGetOrCreateTag", [mdm](const request &req,
                                          const std::string &tag_name,
                                          bool owner,
-                                         std::vector<TraitId> &traits) {
-    auto ret = mdm->LocalGetOrCreateTag(tag_name, owner, traits);
+                                         std::vector<TraitId> &traits,
+                                         size_t backend_size) {
+    auto ret = mdm->LocalGetOrCreateTag(tag_name, owner, traits, backend_size);
     req.respond(ret);
   });
   RegisterRpc("RpcGetTagId", [mdm](const request &req,

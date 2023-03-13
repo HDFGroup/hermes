@@ -116,6 +116,9 @@ void serialize(A &ar, BufferInfo &info) {
 /** Lets thallium know how to serialize an MdLockType */
 SERIALIZE_ENUM(MdLockType)
 
+/** Lets thallium know how to serialize a BucketUpdate */
+SERIALIZE_ENUM(BucketUpdate)
+
 /** Lets thallium know how to serialize a SubPlacement */
 template <typename A>
 void serialize(A &ar, SubPlacement &plcmnt) {

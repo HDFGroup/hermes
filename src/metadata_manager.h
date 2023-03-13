@@ -162,10 +162,18 @@ class MetadataManager {
    * ===================================*/
 
   /**
-   * Get the size of a bucket (depends on the IoClient used).
+   * Get the size of a bucket
    * */
-  RPC size_t LocalGetBucketSize(TagId bkt_id, const IoClientContext &opts);
+  RPC size_t LocalGetBucketSize(TagId bkt_id, bool backend);
   DEFINE_RPC(size_t, GetBucketSize, 0, UNIQUE_ID_TO_NODE_ID_LAMBDA)
+
+  /**
+   * Update \a bkt_id BUCKET stats
+   * */
+  RPC bool LocalUpdateBucketSize(TagId bkt_id,
+                                 ssize_t delta,
+                                 BucketUpdate mode);
+  DEFINE_RPC(bool, UpdateBucketSize, 0, UNIQUE_ID_TO_NODE_ID_LAMBDA)
 
   /**
    * Destroy \a bkt_id bucket
@@ -313,9 +321,17 @@ class MetadataManager {
   /**
    * Create a tag
    * */
-  TagId LocalGetOrCreateTag(const std::string &tag_name, bool owner,
-                            std::vector<TraitId> &traits);
-  DEFINE_RPC(TagId, GetOrCreateTag, 0, std::hash<std::string>{})
+  std::pair<TagId, bool> LocalGetOrCreateTag(const std::string &tag_name,
+                                             bool owner,
+                                             std::vector<TraitId> &traits,
+                                             size_t backend_size);
+  DEFINE_RPC((std::pair<TagId, bool>),
+             GetOrCreateTag, 0, std::hash<std::string>{})
+  TagId GlobalCreateTag(const std::string &tag_name,
+                        bool owner,
+                        std::vector<TraitId> &traits) {
+    return LocalGetOrCreateTag(tag_name, owner, traits, 0).first;
+  }
 
   /**
    * Get the id of a tag
