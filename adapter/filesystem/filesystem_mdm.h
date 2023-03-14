@@ -31,11 +31,11 @@ class MetadataManager {
       path_to_hermes_file_; /**< Map to determine if path is buffered. */
   std::unordered_map<File, std::shared_ptr<AdapterStat>>
       hermes_file_to_stat_; /**< Map for metadata */
+  RwLock lock_;             /**< Lock to synchronize MD updates*/
 
  public:
   /** map for Hermes request */
   std::unordered_map<uint64_t, HermesRequest*> request_map;
-  std::mutex lock_; /**< Lock for metadata updates */
   FsIoClientMetadata fs_mdm_; /**< Context needed for I/O clients */
 
   /** Constructor */
@@ -43,16 +43,19 @@ class MetadataManager {
 
   /** Get the current adapter mode */
   AdapterMode GetBaseAdapterMode() {
+    ScopedRwReadLock md_lock(lock_);
     return HERMES->client_config_.GetBaseAdapterMode();
   }
 
   /** Get the adapter mode for a particular file */
   AdapterMode GetAdapterMode(const std::string &path) {
+    ScopedRwReadLock md_lock(lock_);
     return HERMES->client_config_.GetAdapterConfig(path).mode_;
   }
 
   /** Get the adapter page size for a particular file */
   size_t GetAdapterPageSize(const std::string &path) {
+    ScopedRwReadLock md_lock(lock_);
     return HERMES->client_config_.GetAdapterConfig(path).page_size_;
   }
 

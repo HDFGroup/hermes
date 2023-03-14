@@ -148,8 +148,8 @@ void Hermes::FinalizeClient() {
 
 std::shared_ptr<Bucket> Hermes::GetBucket(std::string name,
                                           Context ctx,
-                                          IoClientContext opts) {
-  return std::make_shared<Bucket>(name, ctx);
+                                          size_t backend_size) {
+  return std::make_shared<Bucket>(name, ctx, backend_size);
 }
 
 std::vector<BlobId> Hermes::GroupBy(TagId tag_id) {

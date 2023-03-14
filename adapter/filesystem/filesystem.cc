@@ -40,11 +40,13 @@ void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
   if (!exists) {
     LOG(INFO) << "File not opened before by adapter" << std::endl;
     // Create the new bucket
-    FsIoOptions opts;
-    opts.type_ = type_;
-    if (stat.is_trunc_) { opts.MarkTruncated(); }
     stat.path_ = stdfs::weakly_canonical(path).string();
-    stat.bkt_id_ = HERMES->GetBucket(stat.path_, ctx, opts);
+    size_t file_size = io_client_->GetSize(hipc::charbuf(stat.path_));
+    stat.bkt_id_ = HERMES->GetBucket(stat.path_, ctx, file_size);
+    if (stat.is_trunc_) {
+      // TODO(llogan): Clear the bucket & reset file size to 0
+      stat.bkt_id_->Clear();
+    }
     // Update bucket stats
     // TODO(llogan): can avoid two unordered_map queries here
     stat.page_size_ = mdm->GetAdapterPageSize(path);
@@ -116,6 +118,11 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
                                           io_status,
                                           opts,
                                           ctx);
+    size_t new_file_size = opts.backend_off_ + blob_wrap.size();
+    if (new_file_size > stat.backend_size_) {
+      bkt->UpdateSize(new_file_size - stat.backend_size_,
+                      BucketUpdate::kBackend);
+    }
     if (status.Fail()) {
       data_offset = 0;
       break;
@@ -123,7 +130,9 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
     bkt->UnlockBlob(blob_id, MdLockType::kExternalWrite);
     data_offset += p.blob_size_;
   }
-  if (opts.DoSeek()) { stat.st_ptr_ = off + data_offset; }
+  if (opts.DoSeek()) {
+    stat.st_ptr_ = off + data_offset;
+  }
   stat.UpdateTime();
 
   LOG(INFO) << "The size of file after write: "

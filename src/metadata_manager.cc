@@ -156,6 +156,8 @@ bool MetadataManager::LocalUpdateBucketSize(TagId bkt_id,
   }
   hipc::ShmRef<hipc::pair<TagId, TagInfo>> info = (*iter);
   TagInfo &bkt_info = *info->second_;
+  LOG(INFO) << "Updating the size of bucket: " <<  bkt_info.name_->str() <<
+      " by: " << delta << " bytes" << std::endl;
   switch (mode) {
     case BucketUpdate::kInternal: {
       bkt_info.header_->internal_size_ += delta;

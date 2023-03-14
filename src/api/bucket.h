@@ -68,6 +68,12 @@ class Bucket {
   size_t GetSize(bool backend = false);
 
   /**
+   * Update the size of the bucket
+   * Needed for the adapters for now.
+   * */
+  void UpdateSize(ssize_t delta, BucketUpdate mode);
+
+  /**
    * Rename this bucket
    * */
   void Rename(const std::string &new_bkt_name);

@@ -42,6 +42,16 @@ size_t Bucket::GetSize(bool backend) {
 }
 
 /**
+   * Update the size of the bucket
+   * Needed for the adapters for now.
+   * */
+void Bucket::UpdateSize(ssize_t delta, BucketUpdate mode) {
+  mdm_->GlobalUpdateBucketSize(id_,
+                               delta,
+                               mode);
+}
+
+/**
  * Rename this bucket
  * */
 void Bucket::Rename(const std::string &new_bkt_name) {
@@ -152,9 +162,7 @@ Status Bucket::Put(std::string blob_name,
     ssize_t orig_blob_size = (ssize_t)std::get<2>(put_ret);
     ssize_t new_blob_size = blob.size();
     mdm_->GlobalTagAddBlob(id_, blob_id);
-    mdm_->GlobalUpdateBucketSize(id_,
-                                 new_blob_size - orig_blob_size,
-                                 BucketUpdate::kBoth);
+    UpdateSize(new_blob_size - orig_blob_size, BucketUpdate::kInternal);
   }
 
   return Status();

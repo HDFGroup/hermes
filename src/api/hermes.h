@@ -120,7 +120,7 @@ class Hermes {
   /** Create a Bucket in Hermes */
   std::shared_ptr<Bucket> GetBucket(std::string name,
                                     Context ctx = Context(),
-                                    IoClientContext = IoClientContext());
+                                    size_t backend_size = 0);
 
   /** Create a generic tag in Hermes */
   TagId CreateTag(const std::string &tag_name) {
