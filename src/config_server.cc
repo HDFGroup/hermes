@@ -20,6 +20,7 @@
 #include <glog/logging.h>
 #include "utils.h"
 #include "config.h"
+#include "hermes_shm/util/path_parser.h"
 #include <iomanip>
 
 #include "config_server.h"
@@ -35,7 +36,8 @@ void ServerConfig::ParseDeviceInfo(YAML::Node yaml_conf) {
     hipc::Ref<DeviceInfo> dev = devices_->back();
     auto dev_info = device.second;
     (*dev->dev_name_) = device.first.as<std::string>();
-    (*dev->mount_dir_) = dev_info["mount_point"].as<std::string>();
+    (*dev->mount_dir_) = hshm::path_parser(
+        dev_info["mount_point"].as<std::string>());
     dev->header_->borg_min_thresh_ =
         dev_info["borg_capacity_thresh"][0].as<float>();
     dev->header_->borg_max_thresh_ =
@@ -68,7 +70,7 @@ void ServerConfig::ParseRpcInfo(YAML::Node yaml_conf) {
 
   if (yaml_conf["host_file"]) {
     rpc_.host_file_ =
-        yaml_conf["host_file"].as<std::string>();
+        hshm::path_parser(yaml_conf["host_file"].as<std::string>());
   }
   if (yaml_conf["base_name"]) {
     base_name = yaml_conf["base_name"].as<std::string>();

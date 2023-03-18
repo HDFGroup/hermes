@@ -12,6 +12,7 @@
 
 #include "config_client.h"
 #include "config_client_default.h"
+#include "hermes_shm/util/path_parser.h"
 #include <filesystem>
 
 namespace stdfs = std::filesystem;
@@ -22,6 +23,7 @@ namespace hermes::config {
 void ClientConfig::ParseAdapterConfig(YAML::Node &yaml_conf,
                                       AdapterObjectConfig &conf) {
   std::string path = yaml_conf["path"].as<std::string>();
+  path = hshm::path_parser(path);
   path = stdfs::weakly_canonical(path).string();
   if (yaml_conf["mode"]) {
     conf.mode_ = AdapterModeConv::to_enum(yaml_conf["mode"].as<std::string>());
@@ -64,6 +66,7 @@ void ClientConfig::ParseYAML(YAML::Node &yaml_conf) {
     std::vector<std::string> inclusions;
     ParseVector<std::string>(yaml_conf["path_inclusions"], inclusions);
     for (auto &entry : inclusions) {
+      entry = hshm::path_parser(entry);
       SetAdapterPathTracking(std::move(entry), true);
     }
   }
@@ -71,6 +74,7 @@ void ClientConfig::ParseYAML(YAML::Node &yaml_conf) {
     std::vector<std::string> exclusions;
     ParseVector<std::string>(yaml_conf["path_inclusions"], exclusions);
     for (auto &entry : exclusions) {
+      entry = hshm::path_parser(entry);
       SetAdapterPathTracking(std::move(entry), false);
     }
   }

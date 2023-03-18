@@ -18,9 +18,9 @@
 #include <regex>
 #include <list>
 
-namespace scs {
+namespace hermes_shm {
 
-std::string path_parser(std::string path) {
+static std::string path_parser(std::string path) {
   std::smatch env_names;
   std::regex expr("\\$\\{[^\\}]+\\}");
   if (!std::regex_search(path, env_names, expr)) {

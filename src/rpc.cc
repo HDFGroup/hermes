@@ -13,8 +13,28 @@
 #include "rpc.h"
 #include "hermes.h"
 #include <functional>
+#include <iostream>
+#include <fstream>
 
 namespace hermes {
+
+/** parse hostfile */
+std::vector<std::string> RpcContext::ParseHostfile() {
+  std::vector<std::string> hosts;
+  std::string &path = config_->rpc_.host_file_;
+  std::ifstream file(path);
+  if (file.is_open()) {
+    std::string line;
+    while (std::getline(file, line)) {
+      hosts.emplace_back(line);
+    }
+    file.close();
+  }
+  else {
+    LOG(FATAL) << "Could not open the hostfile: " << path << std::endl;
+  }
+  return hosts;
+}
 
 /** initialize host info list */
 void RpcContext::InitRpcContext() {
@@ -23,10 +43,11 @@ void RpcContext::InitRpcContext() {
   port_ = config_->rpc_.port_;
   mode_ = HERMES->mode_;
   if (hosts_.size()) { return; }
+  // Uses hosts produced by base_name + host_number_range
   auto &hosts = config_->rpc_.host_names_;
   // Load hosts from hostfile
   if (!config_->rpc_.host_file_.empty()) {
-    // TODO(llogan): load host names from hostfile
+    hosts = ParseHostfile();
   }
 
   // Get all host info
