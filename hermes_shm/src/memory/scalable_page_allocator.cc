@@ -64,7 +64,7 @@ void ScalablePageAllocator::shm_deserialize(char *buffer,
   size_t region_off = (custom_header_ - buffer_) + header_->custom_header_size_;
   size_t region_size = buffer_size_ - region_off;
   alloc_.shm_deserialize(buffer + region_off, region_size);
-  free_lists_ = make_ref<vector<pair<FreeListStats, iqueue<MpPage>>>>(
+  free_lists_ = Ref<vector<pair<FreeListStats, iqueue<MpPage>>>>(
     header_->free_lists_, alloc);
 }
 
