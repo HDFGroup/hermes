@@ -86,11 +86,13 @@ class ThalliumRpc : public RpcContext {
     tl::bulk_mode flag;
     switch (type) {
       case IoType::kRead: {
-        flag = tl::bulk_mode::read_only;
+        // The "bulk" object will be modified
+        flag = tl::bulk_mode::write_only;
         break;
       }
       case IoType::kWrite: {
-        flag = tl::bulk_mode::write_only;
+        // The "bulk" object will only be read from
+        flag = tl::bulk_mode::read_only;
         break;
       }
     }
@@ -116,13 +118,13 @@ class ThalliumRpc : public RpcContext {
     tl::bulk_mode flag;
     switch (type) {
       case IoType::kRead: {
-        // Write to the buffer the client is reading from
-        flag = tl::bulk_mode::write_only;
+        // The "local_bulk" object will only be read from
+        flag = tl::bulk_mode::read_only;
         break;
       }
       case IoType::kWrite: {
-        // Read from the buffer the client has written to
-        flag = tl::bulk_mode::read_only;
+        // The "local_bulk" object will only be written to
+        flag = tl::bulk_mode::write_only;
         break;
       }
     }
@@ -136,13 +138,13 @@ class ThalliumRpc : public RpcContext {
 
     switch (type) {
       case IoType::kRead: {
-        // Write to the buffer the client is reading from
-        io_bytes = bulk.on(endpoint) >> local_bulk;
+        // Read from "local_bulk" to "bulk"
+        io_bytes = bulk.on(endpoint) << local_bulk;
         break;
       }
       case IoType::kWrite: {
-        // Read from the buffer the client has written to
-        io_bytes = local_bulk >> bulk.on(endpoint);
+        // Write to "local_bulk" from "bulk"
+        io_bytes = bulk.on(endpoint) >> local_bulk;
         break;
       }
     }
