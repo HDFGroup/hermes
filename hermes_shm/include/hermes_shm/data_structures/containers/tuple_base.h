@@ -201,15 +201,6 @@ using tuple = TupleBase<false, NullWrap, Containers...>;
 template<template<typename> typename Wrap, typename ...Containers>
 using tuple_wrap = TupleBase<false, Wrap, Containers...>;
 
-/** Used to emulate constexpr to lambda */
-template<typename T, T Val>
-struct MakeConstexpr {
-  constexpr static T val_ = Val;
-  constexpr static T Get() {
-    return val_;
-  }
-};
-
 /** Apply a function over an entire TupleBase / tuple */
 template<bool reverse>
 class IterateTuple {

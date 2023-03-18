@@ -19,13 +19,10 @@
 #include "hermes.h"
 
 #include "catch_config.h"
-#if HERMES_INTERCEPT == 1
 #include "io_client/posix/posix_api.h"
-#include "adapter/posix/posix_fs_api.h"
-#endif
 
-#ifndef O_TMPFILE
-#define O_TMPFILE 0
+#if HERMES_INTERCEPT == 1
+#include "adapter/posix/posix_fs_api.h"
 #endif
 
 #include "adapter_test_utils.h"
