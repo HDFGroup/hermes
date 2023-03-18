@@ -17,12 +17,17 @@
 
 namespace hermes {
 
+/**====================================
+ * Default Constructor
+ * ===================================*/
+
 /**
  * Initialize the BORG
  * REQUIRES mdm to be initialized already.
  * */
-void BufferOrganizer::shm_init() {
-  mdm_ = &(*HERMES->mdm_);
+BufferOrganizer::BufferOrganizer(ShmHeader<BufferOrganizer> *header,
+                                 hipc::Allocator *alloc) {
+  mdm_ = HERMES->mdm_.get();
   rpc_ = &HERMES->rpc_;
   for (hipc::Ref<TargetInfo> target : (*mdm_->targets_)) {
     hipc::Ref<DeviceInfo> dev_info =
@@ -37,14 +42,26 @@ void BufferOrganizer::shm_init() {
   }
 }
 
-/** Finalize the BORG */
-void BufferOrganizer::shm_destroy() {}
+/**====================================
+ * SHM Deserialization
+ * ===================================*/
 
 /** Deserialize the BORG from shared memory */
-void BufferOrganizer::shm_deserialize()  {
-  mdm_ = &(*HERMES->mdm_);
+void BufferOrganizer::shm_deserialize_main()  {
+  mdm_ = HERMES->mdm_.get();
   rpc_ = &HERMES->rpc_;
 }
+
+/**====================================
+ * Destructors
+ * ===================================*/
+
+/** Finalize the BORG */
+void BufferOrganizer::shm_destroy_main() {}
+
+/**====================================
+ * BORG Methods
+ * ===================================*/
 
 /** Stores a blob into a set of buffers */
 RPC void BufferOrganizer::LocalPlaceBlobInBuffers(

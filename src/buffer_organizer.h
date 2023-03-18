@@ -29,30 +29,60 @@ static inline size_t SumBufferBlobSizes(std::vector<BufferInfo> &buffers) {
 }
 
 /**
+ * Any state needed by BORG in SHM
+ * */
+template<>
+struct ShmHeader<BufferOrganizer> {
+};
+
+/**
  * Manages the organization of blobs in the hierarchy.
  * */
 class BufferOrganizer : public hipc::ShmContainer {
  public:
+  SHM_CONTAINER_TEMPLATE(BufferOrganizer,
+                         BufferOrganizer,
+                         ShmHeader<BufferOrganizer>)
   MetadataManager *mdm_;
   RPC_TYPE *rpc_;
 
  public:
-  BufferOrganizer() = default;
+  /**====================================
+   * Default Constructor
+   * ===================================*/
 
   /**
    * Initialize the BORG
    * REQUIRES mdm to be initialized already.
    * */
-  void shm_init();
+  explicit BufferOrganizer(ShmHeader<BufferOrganizer> *header,
+                           hipc::Allocator *alloc);
 
-  /** Finalize the BORG */
-  void shm_destroy();
-
-  /** Serialize the BORG into shared memory */
-  void shm_serialize();
+  /**====================================
+   * SHM Deserialization
+   * ===================================*/
 
   /** Deserialize the BORG from shared memory */
-  void shm_deserialize();
+  void shm_deserialize_main();
+
+  /**====================================
+   * Destructors
+   * ===================================*/
+
+  /** Check if BORG is NULL */
+  bool IsNull() const {
+    return false;
+  }
+
+  /** Set BORG to NULL */
+  void SetNull() {}
+
+  /** Finalize the BORG */
+  void shm_destroy_main();
+
+  /**====================================
+   * BORG Methods
+   * ===================================*/
 
   /** Stores a blob into a set of buffers */
   RPC void LocalPlaceBlobInBuffers(const Blob &blob,

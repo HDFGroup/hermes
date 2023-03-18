@@ -27,7 +27,7 @@ using hermes::adapter::AdapterMode;
 Bucket::Bucket(const std::string &bkt_name,
                Context &ctx,
                size_t backend_size)
-: mdm_(&HERMES->mdm_), bpm_(HERMES->bpm_.get()), name_(bkt_name) {
+: mdm_(HERMES->mdm_.get()), bpm_(HERMES->bpm_.get()), name_(bkt_name) {
   std::vector<TraitId> traits;
   auto ret = mdm_->GlobalGetOrCreateTag(bkt_name, true, traits, backend_size);
   id_ = ret.first;
@@ -81,8 +81,7 @@ void Bucket::Destroy() {
  * */
 Status Bucket::GetBlobId(const std::string &blob_name,
                          BlobId &blob_id) {
-  hipc::string lblob_name(blob_name);
-  blob_id = mdm_->GlobalGetBlobId(GetId(), lblob_name);
+  blob_id = mdm_->GlobalGetBlobId(GetId(), blob_name);
   return Status();
 }
 
@@ -94,7 +93,6 @@ Status Bucket::GetBlobId(const std::string &blob_name,
  * @return The Status of the operation
  * */
 Status Bucket::GetBlobName(const BlobId &blob_id, std::string &blob_name) {
-  hipc::string lblob_name(blob_name);
   blob_name = mdm_->GlobalGetBlobName(blob_id);
   return Status();
 }
@@ -120,8 +118,7 @@ bool Bucket::UnlockBlob(BlobId blob_id, MdLockType lock_type) {
 Status Bucket::TryCreateBlob(const std::string &blob_name,
                              BlobId &blob_id,
                              Context &ctx) {
-  std::pair<BlobId, bool> ret = mdm_->GlobalTryCreateBlob(
-      id_, hipc::charbuf(blob_name));
+  std::pair<BlobId, bool> ret = mdm_->GlobalTryCreateBlob(id_, blob_name);
   blob_id = ret.first;
   if (ret.second) {
     mdm_->GlobalTagAddBlob(id_,
@@ -155,7 +152,7 @@ Status Bucket::Put(std::string blob_name,
   // Allocate buffers for the blob & enqueue placement
   for (auto &schema : schemas) {
     auto buffers = bpm_->GlobalAllocateAndSetBuffers(schema, blob);
-    auto put_ret = mdm_->GlobalPutBlobMetadata(id_, hipc::string(blob_name),
+    auto put_ret = mdm_->GlobalPutBlobMetadata(id_, blob_name,
                                                blob.size(), buffers);
     blob_id = std::get<0>(put_ret);
     bool did_create = std::get<1>(put_ret);
@@ -210,7 +207,8 @@ Status Bucket::PartialPutOrCreate(const std::string &blob_name,
     auto io_client = IoClientFactory::Get(opts.type_);
     full_blob.resize(opts.backend_size_);
     if (io_client) {
-      io_client->ReadBlob(hipc::charbuf(name_),
+      auto name_shm = hipc::make_uptr<hipc::charbuf>(name_);
+      io_client->ReadBlob(*name_shm,
                           full_blob, opts, status);
       if (!status.success_) {
         LOG(INFO) << "Failed to read blob of size "
@@ -240,7 +238,7 @@ Status Bucket::PartialPutOrCreate(const std::string &blob_name,
  * */
 Status Bucket::Get(BlobId blob_id, Blob &blob, Context &ctx) {
   std::vector<BufferInfo> buffers = mdm_->GlobalGetBlobBuffers(blob_id);
-  blob = HERMES->borg_.GlobalReadBlobFromBuffers(buffers);
+  blob = HERMES->borg_->GlobalReadBlobFromBuffers(buffers);
   return Status();
 }
 
@@ -279,7 +277,8 @@ Status Bucket::PartialGetOrCreate(const std::string &blob_name,
     auto io_client = IoClientFactory::Get(opts.type_);
     full_blob.resize(opts.backend_size_);
     if (io_client) {
-      io_client->ReadBlob(hipc::charbuf(name_), full_blob, opts, status);
+      auto name_shm = hipc::make_uptr<hipc::charbuf>(name_);
+      io_client->ReadBlob(*name_shm, full_blob, opts, status);
       if (!status.success_) {
         LOG(INFO) << "Failed to read blob of size "
                   << opts.backend_size_
@@ -324,7 +323,8 @@ void Bucket::FlushBlob(BlobId blob_id,
   auto io_client = IoClientFactory::Get(opts.type_);
   if (io_client) {
     IoClientContext decode_opts = io_client->DecodeBlobName(opts, blob_name);
-    io_client->WriteBlob(hipc::charbuf(name_),
+    auto name_shm = hipc::make_uptr<hipc::charbuf>(name_);
+    io_client->WriteBlob(*name_shm,
                          full_blob,
                          decode_opts,
                          status);
@@ -365,8 +365,7 @@ bool Bucket::ContainsBlob(BlobId blob_id) {
 void Bucket::RenameBlob(BlobId blob_id,
                         std::string new_blob_name,
                         Context &ctx) {
-  hipc::string lnew_blob_name(new_blob_name);
-  mdm_->GlobalRenameBlob(id_, blob_id, lnew_blob_name);
+  mdm_->GlobalRenameBlob(id_, blob_id, new_blob_name);
 }
 
 /**

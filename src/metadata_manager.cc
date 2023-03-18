@@ -30,7 +30,7 @@ MetadataManager::MetadataManager(
     ServerConfig *config) {
   shm_init_header(header, alloc);
   rpc_ = &HERMES->rpc_;
-  borg_ = &(*HERMES->borg_);
+  borg_ = HERMES->borg_.get();
   header_->id_alloc_ = 1;
 
   // Create the metadata maps
@@ -49,20 +49,20 @@ MetadataManager::MetadataManager(
 
   // Create the DeviceInfo vector
   devices_ = hipc::make_ref<hipc::vector<DeviceInfo>>(
-      header_->devices_, HERMES->main_alloc_, config->devices_);
+      header_->devices_, HERMES->main_alloc_, *config->devices_);
   targets_ = hipc::make_ref<hipc::vector<TargetInfo>>(
       header_->targets_, HERMES->main_alloc_);
 
   // Create the TargetInfo vector
   targets_->reserve(devices_->size());
   int dev_id = 0;
-  for (auto &dev_info : config->devices_) {
+  for (hipc::Ref<DeviceInfo> dev_info : *config->devices_) {
     targets_->emplace_back(
         TargetId(rpc_->node_id_, dev_id, dev_id),
-        dev_info.header_->capacity_,
-        dev_info.header_->capacity_,
-        dev_info.header_->bandwidth_,
-        dev_info.header_->latency_);
+        dev_info->header_->capacity_,
+        dev_info->header_->capacity_,
+        dev_info->header_->bandwidth_,
+        dev_info->header_->latency_);
     ++dev_id;
   }
 }
@@ -90,7 +90,7 @@ void MetadataManager::shm_destroy_main() {
  * */
 void MetadataManager::shm_deserialize_main() {
   rpc_ = &HERMES->rpc_;
-  borg_ = &(*HERMES->borg_);
+  borg_ = HERMES->borg_.get();
   auto alloc = HERMES->main_alloc_;
   blob_id_map_ = hipc::Ref<BLOB_ID_MAP_T>(header_->blob_id_map_ar_, alloc);
   blob_map_ = hipc::Ref<BLOB_MAP_T>(header_->blob_map_ar_, alloc);
@@ -309,7 +309,7 @@ std::tuple<BlobId, bool, size_t> MetadataManager::LocalPutBlobMetadata(
  * Get \a blob_name blob from \a bkt_id bucket
  * */
 BlobId MetadataManager::LocalGetBlobId(TagId bkt_id,
-                                       const hipc::charbuf &blob_name) {
+                                       const std::string &blob_name) {
   // Acquire MD read lock (read blob_id_map_)
   ScopedRwReadLock blob_map_lock(header_->lock_[kBlobMapLock]);
   hipc::uptr<hipc::charbuf> internal_blob_name =
@@ -384,7 +384,7 @@ std::vector<BufferInfo> MetadataManager::LocalGetBlobBuffers(BlobId blob_id) {
  * in \a bkt_id bucket.
  * */
 bool MetadataManager::LocalRenameBlob(TagId bkt_id, BlobId blob_id,
-                                      hipc::charbuf &new_blob_name) {
+                                      const std::string &new_blob_name) {
   // Acquire MD write lock (modify blob_id_map_)
   ScopedRwWriteLock blob_map_lock(header_->lock_[kBlobMapLock]);
   auto iter = (*blob_map_).find(blob_id);
@@ -416,8 +416,9 @@ bool MetadataManager::LocalDestroyBlob(TagId bkt_id,
   }
   hipc::Ref<hipc::pair<BlobId, BlobInfo>> info = (*iter);
   BlobInfo &blob_info = *info->second_;
-  hipc::charbuf blob_name = CreateBlobName(bkt_id, *blob_info.name_);
-  blob_id_map_->erase(blob_name);
+  hipc::uptr<hipc::charbuf> blob_name =
+      CreateBlobName(bkt_id, *blob_info.name_);
+  blob_id_map_->erase(*blob_name);
   blob_map_->erase(blob_id);
   return true;
 }

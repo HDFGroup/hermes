@@ -27,8 +27,8 @@ namespace hermes {
 * */
 BufferPool::BufferPool(ShmHeader<BufferPool> *header, hipc::Allocator *alloc) {
   shm_init_header(header, alloc);
-  mdm_ = &(*HERMES->mdm_);
-  borg_ = &(*HERMES->borg_);
+  mdm_ = HERMES->mdm_.get();
+  borg_ = HERMES->borg_.get();
   rpc_ = &HERMES->rpc_;
   // Initialize header
   hipc::make_ref<BpTargetAllocs>(header_->free_lists_, alloc);
@@ -84,8 +84,8 @@ void BufferPool::shm_destroy_main() {
 
 /** Deserialize the BPM from shared memory */
 void BufferPool::shm_deserialize_main() {
-  mdm_ = &HERMES->mdm_;
-  borg_ = &HERMES->borg_;
+  mdm_ = HERMES->mdm_.get();
+  borg_ = HERMES->borg_.get();
   rpc_ = &HERMES->rpc_;
   target_allocs_ = hipc::Ref<BpTargetAllocs>(header_->free_lists_, alloc_);
 }

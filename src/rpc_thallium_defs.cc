@@ -23,9 +23,9 @@ using thallium::request;
 
 void ThalliumRpc::DefineRpcs() {
   RPC_CLASS_INSTANCE_DEFS_START
-  MetadataManager *mdm = &HERMES->mdm_;
-  BufferPool *bpm = &(*HERMES->bpm_);
-  BufferOrganizer *borg = &HERMES->borg_;
+  MetadataManager *mdm = HERMES->mdm_.get();
+  BufferPool *bpm = HERMES->bpm_.get();
+  BufferOrganizer *borg = HERMES->borg_.get();
   RPC_CLASS_INSTANCE_DEFS_END
 
   /**====================================
@@ -65,7 +65,7 @@ void ThalliumRpc::DefineRpcs() {
   });
   RegisterRpc("RpcTryCreateBlob", [mdm](const request &req,
                                         TagId bkt_id,
-                                        const hipc::charbuf &blob_name) {
+                                        const std::string &blob_name) {
     auto ret = mdm->LocalTryCreateBlob(bkt_id, blob_name);
     req.respond(ret);
   });
@@ -83,7 +83,7 @@ void ThalliumRpc::DefineRpcs() {
   });
   RegisterRpc("RpcGetBlobId", [mdm](const request &req,
                                     TagId bkt_id,
-                                    const hipc::charbuf &blob_name) {
+                                    const std::string &blob_name) {
     auto ret = mdm->LocalGetBlobId(bkt_id, blob_name);
     req.respond(ret);
   });
@@ -112,7 +112,7 @@ void ThalliumRpc::DefineRpcs() {
   RegisterRpc("RpcRenameBlob", [mdm](const request &req,
                                      TagId bkt_id,
                                      BlobId blob_id,
-                                     hipc::charbuf &new_blob_name) {
+                                     const std::string &new_blob_name) {
     auto ret = mdm->LocalRenameBlob(bkt_id, blob_id, new_blob_name);
     req.respond(ret);
   });
@@ -202,7 +202,7 @@ void ThalliumRpc::DefineRpcs() {
   RegisterRpc("RpcRegisterTrait", [mdm](const request &req,
                                         TraitId trait_id,
                                         const std::string &trait_uuid,
-                                        hipc::charbuf &trait_params) {
+                                        hshm::charbuf &trait_params) {
     auto ret = mdm->LocalRegisterTrait(trait_id, trait_uuid, trait_params);
     req.respond(ret);
   });

@@ -24,292 +24,198 @@
 
 namespace thallium {
 
-namespace hipc = hermes_shm::ipc;
-namespace hshm = hermes_shm;
+/**====================================
+ * Identifier Serialization
+ * ===================================*/
 
-/**
- *  Lets Thallium know how to serialize an hipc::allocator_id.
- *
- * This function is called implicitly by Thallium.
- *
- * @param ar An archive provided by Thallium.
- * @param vec The vector to serialize.
- */
+/** Lets Thallium know how to serialize an hipc::allocator_id */
 template <typename A>
 void serialize(A &ar, hipc::allocator_id_t &alloc_id) {
   ar &alloc_id.int_;
 }
 
-/**
- *  Lets Thallium know how to serialize a linear container type
- *  (e.g., vector).
- *
- * This function is called implicitly by Thallium.
- *
- * @param ar An archive provided by Thallium.
- * @param vec The vector to serialize.
- */
+/**====================================
+ * Vector Serialization
+ * ===================================*/
+
+/** Lets Thallium know how to serialize a generic vector */
 template <typename A, typename ContainerT, typename T>
 void save_vec(A &ar, ContainerT &obj) {
-  ar << obj.GetAllocatorId();
   ar << obj.size();
   for (auto iter = obj.cbegin(); iter != obj.cend(); ++iter) {
     ar << *(*iter);
   }
 }
 
-/**
- *  Lets Thallium know how to deserialize a linear container type
- *  (e.g., vector).
- *
- * This function is called implicitly by Thallium.
- *
- * @param ar An archive provided by Thallium.
- * @param target_id The vector to serialize.
- */
+/** Lets Thallium know how to deserialize a generic vector */
 template <typename A, typename ContainerT, typename T>
 void load_vec(A &ar, ContainerT &obj) {
   size_t size;
   hipc::allocator_id_t alloc_id;
-  ar >> alloc_id;
   ar >> size;
-  auto alloc = HERMES_MEMORY_MANAGER->GetAllocator(alloc_id);
-  auto obj_tmp = hipc::make_mptr<ContainerT>(alloc);
-  obj_tmp->resize(size);
+  obj.resize(size);
   for (int i = 0; i < size; ++i) {
     ar >> *(obj[i]);
   }
-  obj << obj_tmp->GetShmDeserialize();
 }
 
-/**
- *  Lets Thallium know how to serialize a linear container type
- *  (e.g., vector).
- *
- * This function is called implicitly by Thallium.
- *
- * @param ar An archive provided by Thallium.
- * @param vec The vector to serialize.
- */
+/** Lets Thallium know how to serialize an hipc::vector. */
+template <typename A, typename T>
+void save(A &ar, hipc::vector<T> &vec) {
+  save_vec<A, hipc::vector<T>, T>(ar, vec);
+}
+template <typename A, typename T>
+void save(A &ar, hipc::uptr<hipc::vector<T>> &vec) {
+  save_vec<A, hipc::vector<T>, T>(ar, *vec);
+}
+
+/** Lets Thallium know how to deserialize an hipc::vector. */
+template <typename A, typename T>
+void load(A &ar, hipc::vector<T> &vec) {
+  load_vec<A, hipc::vector<T>, T>(ar, vec);
+}
+template <typename A, typename T>
+void load(A &ar, hipc::uptr<hipc::vector<T>> &vec) {
+  vec = hipc::make_uptr<hipc::vector<T>>();
+  load_vec<A, hipc::vector<T>, T>(ar, *vec);
+}
+
+/**====================================
+ * List Serialization
+ * ===================================*/
+
+/** Lets Thallium know how to serialize a generic list */
 template <typename A, typename ContainerT, typename T>
 void save_list(A &ar, ContainerT &obj) {
-  ar << obj.GetAllocatorId();
   ar << obj.size();
   for (auto iter = obj.cbegin(); iter != obj.cend(); ++iter) {
     ar << *(*iter);
   }
 }
 
-/**
- *  Lets Thallium know how to deserialize a linear container type
- *  (e.g., vector).
- *
- * This function is called implicitly by Thallium.
- *
- * @param ar An archive provided by Thallium.
- * @param target_id The vector to serialize.
- */
+/** Lets Thallium know how to deserialize a generic list */
 template <typename A, typename ContainerT, typename T>
 void load_list(A &ar, ContainerT &obj) {
   size_t size;
-  hipc::allocator_id_t alloc_id;
-  ar >> alloc_id;
   ar >> size;
-  auto alloc = HERMES_MEMORY_MANAGER->GetAllocator(alloc_id);
-  auto obj_tmp = hipc::make_mptr<ContainerT>(alloc);
   for (int i = 0; i < size; ++i) {
-    T elmt;
-    ar >> elmt;
-    obj_tmp->emplace_back(std::move(elmt));
+    obj->emplace_back();
+    auto last = obj->back();
+    ar >> (*last);
   }
-  obj << obj_tmp->GetShmDeserialize();
 }
 
-/**
- *  Lets Thallium know how to serialize an hipc::vector.
- *
- * This function is called implicitly by Thallium.
- *
- * @param ar An archive provided by Thallium.
- * @param vec The vector to serialize.
- */
-template <typename A, typename T>
-void save(A &ar, hipc::vector<T> &vec) {
-  save_vec<A, hipc::vector<T>, T>(ar, vec);
-}
-
-/**
- *  Lets Thallium know how to deserialize an hipc::vector.
- *
- * This function is called implicitly by Thallium.
- *
- * @param ar An archive provided by Thallium.
- * @param target_id The vector to serialize.
- */
-template <typename A, typename T>
-void load(A &ar, hipc::vector<T> &vec) {
-  load_vec<A, hipc::vector<T>, T>(ar, vec);
-}
-
-/**
- *  Lets Thallium know how to serialize an hipc::slist.
- *
- * This function is called implicitly by Thallium.
- *
- * @param ar An archive provided by Thallium.
- * @param vec The vector to serialize.
- */
+/** Lets Thallium know how to serialize an hipc::slist. */
 template <typename A, typename T>
 void save(A &ar, hipc::slist<T> &lp) {
   save_list<A, hipc::slist<T>, T>(ar, lp);
 }
+template <typename A, typename T>
+void save(A &ar, hipc::uptr<hipc::slist<T>> &lp) {
+  save_list<A, hipc::slist<T>, T>(ar, *lp);
+}
 
-/**
- *  Lets Thallium know how to deserialize an hipc::slist.
- *
- * This function is called implicitly by Thallium.
- *
- * @param ar An archive provided by Thallium.
- * @param target_id The vector to serialize.
- */
+/** Lets Thallium know how to deserialize an hipc::slist. */
 template <typename A, typename T>
 void load(A &ar, hipc::slist<T> &lp) {
   load_list<A, hipc::slist<T>, T>(ar, lp);
 }
-
-/**
- *  Lets Thallium know how to serialize an hipc::list.
- *
- * This function is called implicitly by Thallium.
- *
- * @param ar An archive provided by Thallium.
- * @param vec The vector to serialize.
- */
 template <typename A, typename T>
-void save(A &ar, hipc::list<T> &lp) {
-  save_list<A, hipc::list<T>, T>(ar, lp);
+void load(A &ar, hipc::uptr<hipc::slist<T>> &lp) {
+  lp = hipc::make_uptr<hipc::slist<T>>();
+  load_list<A, hipc::slist<T>, T>(ar, *lp);
 }
 
-/**
- *  Lets Thallium know how to deserialize an hipc::list.
- *
- * This function is called implicitly by Thallium.
- *
- * @param ar An archive provided by Thallium.
- * @param target_id The vector to serialize.
- */
+/** Lets Thallium know how to serialize an hipc::list. */
+template <typename A, typename T>
+void save(A &ar, const hipc::list<T> &lp) {
+  save_list<A, hipc::list<T>, T>(ar, *lp);
+}
+template <typename A, typename T>
+void save(A &ar, hipc::uptr<hipc::list<T>> &lp) {
+  save_list<A, hipc::list<T>, T>(ar, *lp);
+}
+
+/** Lets Thallium know how to deserialize an hipc::list. */
 template <typename A, typename T>
 void load(A &ar, hipc::list<T> &lp) {
   load_list<A, hipc::list<T>, T>(ar, lp);
 }
+template <typename A, typename T>
+void load(A &ar, hipc::uptr<hipc::list<T>> &lp) {
+  lp = hipc::make_uptr<hipc::list<T>>();
+  load_list<A, hipc::list<T>, T>(ar, *lp);
+}
 
-/**
- *  Lets Thallium know how to serialize an hipc::string.
- *
- * This function is called implicitly by Thallium.
- *
- * @param ar An archive provided by Thallium.
- * @param text The string to serialize
- */
+/**====================================
+ * String Serialization
+ * ===================================*/
+
+/** Lets Thallium know how to serialize a generic string. */
+template <typename A, typename StringT>
+void save_string(A &ar, StringT &text) {
+  ar << text.size();
+  ar.write(text.data(), text.size());
+}
+/** Lets Thallium know how to serialize a generic string. */
+template <typename A, typename StringT>
+void load_string(A &ar, StringT &text) {
+  size_t size;
+  ar >> size;
+  text.resize(size);
+  ar.read(text.data(), text.size());
+}
+
+/** Lets Thallium know how to serialize an hipc::string. */
 template <typename A>
 void save(A &ar, hipc::string &text) {
-  ar << text.size();
-  if (!text.size()) { return; }
-  ar << text.GetAllocator()->GetId();
-  ar.write(text.data(), text.size());
+  save_string<A, hipc::string>(ar, text);
+}
+template <typename A>
+void save(A &ar, hipc::uptr<hipc::string> &text) {
+  save_string<A, hipc::string>(ar, *text);
 }
 
-/**
- *  Lets Thallium know how to deserialize an hipc::string.
- *
- * This function is called implicitly by Thallium.
- *
- * @param ar An archive provided by Thallium.
- * @param target_id The string to deserialize.
- */
+/** Lets Thallium know how to deserialize an hipc::string. */
 template <typename A>
 void load(A &ar, hipc::string &text) {
-  hipc::allocator_id_t alloc_id;
-  size_t size;
-  ar >> size;
-  if (!size) { return; }
-  ar >> alloc_id;
-  auto alloc = HERMES_MEMORY_MANAGER->GetAllocator(alloc_id);
-  text = hipc::text();
-  ar.read(text_tmp->data(), size);
+  load_string<A, hipc::string>(ar, text);
+}
+template <typename A>
+void load(A &ar, hipc::uptr<hipc::string> &text) {
+  text = hipc::make_uptr<hipc::string>();
+  load_string<A, hipc::string>(ar, *text);
 }
 
-/**
- *  Lets Thallium know how to serialize an hshm::charbuf.
- *
- * This function is called implicitly by Thallium.
- *
- * @param ar An archive provided by Thallium.
- * @param text The string to serialize
- */
+/** Lets Thallium know how to serialize an hshm::charbuf. */
 template <typename A>
 void save(A &ar, hshm::charbuf &text) {
-  ar << text.size();
-  if (!text.size()) { return; }
-  ar << text.GetAllocator()->GetId();
-  ar.write(text.data(), text.size());
+  save_string<A, hshm::charbuf>(ar, text);
 }
 
-/**
- *  Lets Thallium know how to deserialize an hshm::charbuf.
- *
- * This function is called implicitly by Thallium.
- *
- * @param ar An archive provided by Thallium.
- * @param target_id The string to deserialize.
- */
+/** Lets Thallium know how to deserialize an hshm::charbuf. */
 template <typename A>
 void load(A &ar, hshm::charbuf &text) {
-  hipc::allocator_id_t alloc_id;
-  size_t size;
-  ar >> size;
-  if (!size) { return; }
-  ar >> alloc_id;
-  auto alloc = HERMES_MEMORY_MANAGER->GetAllocator(alloc_id);
-  text = hshm::charbuf(alloc, size);
-  ar.read(text.data(), size);
+  load_string<A, hshm::charbuf>(ar, text);
 }
 
-/**
- *  Lets Thallium know how to serialize a bitfield.
- *
- * This function is called implicitly by Thallium.
- *
- * @param ar An archive provided by Thallium.
- * @param field the bitfield to serialize
- */
+/**====================================
+ * Bitfield Serialization
+ * ===================================*/
+
+/** Lets Thallium know how to serialize a bitfield. */
 template <typename A>
 void save(A &ar, hshm::bitfield32_t &field) {
   uint32_t bits = field.bits_;
   ar << bits;
 }
 
-/**
- *  Lets Thallium know how to deserialize a bitfield.
- *
- * This function is called implicitly by Thallium.
- *
- * @param ar An archive provided by Thallium.
- * @param field the bitfield to serialize
- */
+/** Lets Thallium know how to deserialize a bitfield. */
 template <typename A>
 void load(A &ar, hshm::bitfield32_t &field) {
   uint32_t bits;
   ar >> bits;
   field.bits_ = bits;
-}
-
-/**
- * Lets Thallium know how to serialize a Ref object
- * */
-template<typename A, typename T>
-void serialize(A &ar, hipc::Ref<T> &ref) {
-  ar &(*ref);
 }
 
 }  // namespace thallium

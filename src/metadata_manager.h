@@ -304,8 +304,8 @@ class MetadataManager : public hipc::ShmContainer {
   /**
    * Update the capacity of the target device
    * */
-  RPC const hipc::vector<TargetInfo> &LocalGetTargetInfo() {
-    return (*targets_);
+  RPC std::vector<TargetInfo> LocalGetTargetInfo() {
+    return hshm::to_stl_vector<TargetInfo>(*targets_);
   }
 
   /**

@@ -181,7 +181,7 @@ struct BorgInfo {
 class ServerConfig : public BaseConfig {
  public:
   /** The device information */
-  std::vector<DeviceInfo> devices_;
+  hipc::uptr<hipc::vector<DeviceInfo>> devices_;
 
   /** The RPC information */
   RpcInfo rpc_;

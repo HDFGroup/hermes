@@ -163,11 +163,11 @@ class Hermes {
 
   /** Get traits attached to tag */
   std::vector<Trait*> GetTraits(TagId tag_id) {
-    hipc::slist<TraitId> trait_ids = HERMES->mdm_->GlobalTagGetTraits(tag_id);
+    std::vector<TraitId> trait_ids = HERMES->mdm_->GlobalTagGetTraits(tag_id);
     std::vector<Trait*> traits;
     traits.reserve(trait_ids.size());
-    for (hipc::Ref<TraitId> trait_id : trait_ids) {
-      traits.emplace_back(GetTrait<Trait>(*trait_id));
+    for (TraitId &trait_id : trait_ids) {
+      traits.emplace_back(GetTrait<Trait>(trait_id));
     }
     return traits;
   }

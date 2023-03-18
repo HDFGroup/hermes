@@ -13,16 +13,16 @@ void BlobInfo::shm_destroy_main() {
   auto &bpm = HERMES->bpm_;
   auto buffers_std = buffers_->vec();
   bpm->GlobalReleaseBuffers(buffers_std);
-  name_->shm_destroy();
-  buffers_->shm_destroy();
-  tags_->shm_destroy();
+  name_.shm_destroy();
+  buffers_.shm_destroy();
+  tags_.shm_destroy();
 }
 
 void TagInfo::shm_destroy_main() {
-  auto mdm = &HERMES->mdm_;
+  auto mdm = HERMES->mdm_.get();
   name_->shm_destroy();
   if (header_->owner_) {
-    for (hipc::ShmRef<BlobId> blob_id : *blobs_) {
+    for (hipc::Ref<BlobId> blob_id : *blobs_) {
       mdm->GlobalDestroyBlob(header_->tag_id_, *blob_id);
     }
   }

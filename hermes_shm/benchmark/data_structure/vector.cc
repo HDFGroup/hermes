@@ -60,15 +60,15 @@ class VectorTest {
   VectorTest() {
     if constexpr(std::is_same_v<std::vector<T>, VecT>) {
       vec_shm = hipc::make_mptr<VecT>();
-      vec = &(*vec_shm);
+      vec = vec_shm.get();
       vec_type = "std::vector";
     } else if constexpr(std::is_same_v<hipc::vector<T>, VecT>) {
       vec_shm = hipc::make_mptr<VecT>();
-      vec = &(*vec_shm);
+      vec = vec_shm.get();
       vec_type = "hipc::vector";
     } else if constexpr(std::is_same_v<boost::container::vector<T>, VecT>) {
       vec_shm = hipc::make_mptr<VecT>();
-      vec = &(*vec_shm);
+      vec = vec_shm.get();
       vec_type = "boost::vector";
     } else if constexpr(std::is_same_v<bipc::vector<T>, VecT>) {
       vec = BoostIpcVector();

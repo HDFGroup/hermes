@@ -27,7 +27,7 @@ class MinimizeIoTime : public DPE {
   MinimizeIoTime() = default;
   ~MinimizeIoTime() = default;
   Status Placement(const std::vector<size_t> &blob_sizes,
-                   const hipc::vector<TargetInfo> &targets,
+                   const std::vector<TargetInfo> &targets,
                    const api::Context &ctx,
                    std::vector<PlacementSchema> &output);
 
@@ -35,10 +35,11 @@ class MinimizeIoTime : public DPE {
   /** get the absolute difference value from \a x size and \a y size */
   size_t AbsDiff(size_t x, size_t y, bool &y_gt_x);
   /** place bytes */
-  void PlaceBytes(size_t j, ssize_t bytes, std::vector<size_t> &vars_bytes,
-                  const hipc::vector<TargetInfo> &targets);
+  void PlaceBytes(size_t j, ssize_t bytes,
+                  std::vector<size_t> &vars_bytes,
+                  const std::vector<TargetInfo> &targets);
   /** get placement ratios from node states in \a ctx  context */
-  void GetPlacementRatios(const hipc::vector<TargetInfo> &targets,
+  void GetPlacementRatios(const std::vector<TargetInfo> &targets,
                           const api::Context &ctx);
 };
 

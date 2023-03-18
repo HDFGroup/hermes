@@ -19,7 +19,7 @@
 namespace hermes {
 
 Status MinimizeIoTime::Placement(const std::vector<size_t> &blob_sizes,
-                                 const hipc::vector<TargetInfo> &targets,
+                                 const std::vector<TargetInfo> &targets,
                                  const api::Context &ctx,
                                  std::vector<PlacementSchema> &output) {
   Status result;
@@ -61,9 +61,9 @@ Status MinimizeIoTime::Placement(const std::vector<size_t> &blob_sizes,
   // Constraint #2: Capacity constraints
   for (size_t j = 0; j < num_targets; ++j) {
     double rem_cap_thresh =
-        static_cast<double>((*targets[j]).rem_cap_) *
+        static_cast<double>((targets[j]).rem_cap_) *
         (1 - minimum_remaining_capacity);
-    double est_rem_cap = capacity_change_threshold * (*targets[j]).rem_cap_;
+    double est_rem_cap = capacity_change_threshold * (targets[j]).rem_cap_;
     double max_capacity = std::max({rem_cap_thresh, est_rem_cap});
     if (max_capacity > 0) {
       lp.AddConstraint("rem_cap_", GLP_DB, 0.0, max_capacity);
@@ -82,7 +82,7 @@ Status MinimizeIoTime::Placement(const std::vector<size_t> &blob_sizes,
     for (size_t j = 0; j < num_targets; ++j) {
       lp.SetObjectiveCoeff(var.Get(i, j),
                            static_cast<double>(blob_sizes[i])/
-                               (*targets[j]).bandwidth_);
+                               (targets[j]).bandwidth_);
     }
   }
 
@@ -122,7 +122,7 @@ Status MinimizeIoTime::Placement(const std::vector<size_t> &blob_sizes,
     for (size_t j = 0; j < num_targets; ++j) {
       size_t io_to_target = vars_bytes[j];
       if (io_to_target != 0) {
-        schema.AddSubPlacement(io_to_target, (*targets[j]).id_);
+        schema.AddSubPlacement(io_to_target, (targets[j]).id_);
       }
     }
     output.emplace_back(std::move(schema));
@@ -132,12 +132,12 @@ Status MinimizeIoTime::Placement(const std::vector<size_t> &blob_sizes,
 
 void MinimizeIoTime::PlaceBytes(size_t j, ssize_t bytes,
                                 std::vector<size_t> &vars_bytes,
-                                const hipc::vector<TargetInfo> &targets) {
+                                const std::vector<TargetInfo> &targets) {
   if (vars_bytes[j] == 0) {
     PlaceBytes(j+1,  bytes, vars_bytes, targets);
     return;
   }
-  ssize_t node_cap = static_cast<ssize_t>((*targets[j]).rem_cap_);
+  ssize_t node_cap = static_cast<ssize_t>((targets[j]).rem_cap_);
   ssize_t req_bytes = static_cast<ssize_t>(vars_bytes[j]);
   req_bytes += bytes;
   ssize_t io_diff = req_bytes - node_cap;
@@ -154,19 +154,19 @@ void MinimizeIoTime::PlaceBytes(size_t j, ssize_t bytes,
   PlaceBytes(j+1, io_diff, vars_bytes, targets);
 }
 
-void MinimizeIoTime::GetPlacementRatios(const hipc::vector<TargetInfo> &targets,
+void MinimizeIoTime::GetPlacementRatios(const std::vector<TargetInfo> &targets,
                                         const api::Context &ctx) {
   placement_ratios_.reserve(targets.size());
   if (ctx.minimize_io_time_options.use_placement_ratio) {
     // Total number of bytes remaining across all targets
     size_t total_bytes = 0;
     for (auto iter = targets.cbegin(); iter != targets.cend(); ++iter) {
-      total_bytes += (**iter).rem_cap_;
+      total_bytes += (*iter).rem_cap_;
     }
     double total = static_cast<double>(total_bytes);
     // Get percentage of total capacity each target has
     for (size_t j = 0; j < targets.size() - 1; ++j) {
-      double target_cap = static_cast<double>((*targets[j]).rem_cap_);
+      double target_cap = static_cast<double>((targets[j]).rem_cap_);
       double placement_ratio = target_cap / total;
       placement_ratios_.emplace_back(placement_ratio);
     }
