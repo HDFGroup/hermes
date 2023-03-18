@@ -34,17 +34,17 @@ MetadataManager::MetadataManager(
   header_->id_alloc_ = 1;
 
   // Create the metadata maps
-  blob_id_map_ = hipc::make_ref<BLOB_ID_MAP_T>(header_->blob_id_map_ar_,
+  blob_id_map_ = hipc::make_ref<BLOB_ID_MAP_T>(header_->blob_id_map,
                                                alloc_, 16384);
-  blob_map_ = hipc::make_ref<BLOB_MAP_T>(header_->blob_map_ar_,
+  blob_map_ = hipc::make_ref<BLOB_MAP_T>(header_->blob_map,
                                          alloc_, 16384);
-  tag_id_map_ = hipc::make_ref<TAG_ID_MAP_T>(header_->tag_id_map_ar_,
+  tag_id_map_ = hipc::make_ref<TAG_ID_MAP_T>(header_->tag_id_map,
                                              alloc_, 256);
-  tag_map_ = hipc::make_ref<TAG_MAP_T>(header_->tag_map_ar_,
+  tag_map_ = hipc::make_ref<TAG_MAP_T>(header_->tag_map,
                                        alloc_, 256);
-  trait_id_map_ = hipc::make_ref<TRAIT_ID_MAP_T>(header_->trait_id_map_ar_,
+  trait_id_map_ = hipc::make_ref<TRAIT_ID_MAP_T>(header_->trait_id_map,
                                                  alloc_, 256);
-  trait_map_ = hipc::make_ref<TRAIT_MAP_T>(header_->trait_map_ar_,
+  trait_map_ = hipc::make_ref<TRAIT_MAP_T>(header_->trait_map,
                                            alloc_, 256);
 
   // Create the DeviceInfo vector
@@ -92,12 +92,12 @@ void MetadataManager::shm_deserialize_main() {
   rpc_ = &HERMES->rpc_;
   borg_ = HERMES->borg_.get();
   auto alloc = HERMES->main_alloc_;
-  blob_id_map_ = hipc::Ref<BLOB_ID_MAP_T>(header_->blob_id_map_ar_, alloc);
-  blob_map_ = hipc::Ref<BLOB_MAP_T>(header_->blob_map_ar_, alloc);
-  tag_id_map_ = hipc::Ref<TAG_ID_MAP_T>(header_->tag_id_map_ar_, alloc);
-  tag_map_ = hipc::Ref<TAG_MAP_T>(header_->tag_map_ar_, alloc);
-  trait_id_map_ = hipc::Ref<TRAIT_ID_MAP_T>(header_->trait_id_map_ar_, alloc);
-  trait_map_ = hipc::Ref<TRAIT_MAP_T>(header_->trait_map_ar_, alloc);
+  blob_id_map_ = hipc::Ref<BLOB_ID_MAP_T>(header_->blob_id_map, alloc);
+  blob_map_ = hipc::Ref<BLOB_MAP_T>(header_->blob_map, alloc);
+  tag_id_map_ = hipc::Ref<TAG_ID_MAP_T>(header_->tag_id_map, alloc);
+  tag_map_ = hipc::Ref<TAG_MAP_T>(header_->tag_map, alloc);
+  trait_id_map_ = hipc::Ref<TRAIT_ID_MAP_T>(header_->trait_id_map, alloc);
+  trait_map_ = hipc::Ref<TRAIT_MAP_T>(header_->trait_map, alloc);
   targets_ = hipc::Ref<hipc::vector<TargetInfo>>(header_->targets_, alloc);
   devices_ = hipc::Ref<hipc::vector<DeviceInfo>>(header_->devices_, alloc);
 }

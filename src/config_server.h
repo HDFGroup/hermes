@@ -118,6 +118,94 @@ struct DeviceInfo : public hipc::ShmContainer {
   }
 
   /**====================================
+   * Copy Constructors
+   * ===================================*/
+
+  /** SHM copy constructor. From DeviceInfo. */
+  explicit DeviceInfo(ShmHeader<DeviceInfo> *header,
+                      hipc::Allocator *alloc,
+                      const DeviceInfo &other) {
+    shm_init_header(header, alloc);
+    shm_strong_copy_constructor_main(other);
+  }
+
+  /** Copy constructor main. */
+  void shm_strong_copy_constructor_main(const DeviceInfo &other) {
+    (*header_) = (*other.header_);
+    dev_name_ = hipc::make_ref<hipc::string>(
+        header_->dev_name_, alloc_, *other.dev_name_);
+    slab_sizes_ = hipc::make_ref<hipc::vector<size_t>>(
+        header_->slab_sizes_, alloc_, *other.slab_sizes_);
+    mount_dir_ = hipc::make_ref<hipc::string>(
+        header_->mount_dir_, alloc_, *other.mount_dir_);
+    mount_point_= hipc::make_ref<hipc::string>
+        (header_->mount_point_, alloc_, *other.mount_point_);
+  }
+
+  /** SHM copy assignment operator. From DeviceInfo. */
+  DeviceInfo& operator=(const DeviceInfo &other) {
+    if (this != &other) {
+      shm_destroy();
+      shm_strong_copy_op_main(other);
+    }
+    return *this;
+  }
+
+  /** Copy assignment operator main. */
+  void shm_strong_copy_op_main(const DeviceInfo &other) {
+    (*header_) = (*other.header_);
+    (*dev_name_) = (*other.dev_name_);
+    (*slab_sizes_) = (*other.slab_sizes_);
+    (*mount_dir_) = (*other.mount_dir_);
+    (*mount_point_) = (*other.mount_point_);
+  }
+
+  /**====================================
+   * Move Constructors
+   * ===================================*/
+
+  /** SHM move constructor. */
+  DeviceInfo(ShmHeader<DeviceInfo> *header,
+             hipc::Allocator *alloc,
+             DeviceInfo &&other) {
+    shm_init_header(header, alloc);
+    if (alloc_ == other.alloc_) {
+      (*header_) = (*other.header_);
+      dev_name_ = hipc::make_ref<hipc::string>(
+          header_->dev_name_, alloc_, std::move(*other.dev_name_));
+      slab_sizes_ = hipc::make_ref<hipc::vector<size_t>>(
+          header_->slab_sizes_, alloc_, std::move(*other.slab_sizes_));
+      mount_dir_ = hipc::make_ref<hipc::string>(
+          header_->mount_dir_, alloc_, std::move(*other.mount_dir_));
+      mount_point_= hipc::make_ref<hipc::string>
+          (header_->mount_point_, alloc_, std::move(*other.mount_point_));
+      other.SetNull();
+    } else {
+      shm_strong_copy_constructor_main(other);
+      other.shm_destroy();
+    }
+  }
+
+  /** SHM move assignment operator. */
+  DeviceInfo& operator=(DeviceInfo &&other) noexcept {
+    if (this != &other) {
+      shm_destroy();
+      if (alloc_ == other.alloc_) {
+        (*header_) = (*other.header_);
+        (*dev_name_) = std::move(*other.dev_name_);
+        (*slab_sizes_) = std::move(*other.slab_sizes_);
+        (*mount_dir_) = std::move(*other.mount_dir_);
+        (*mount_point_) = std::move(*other.mount_point_);
+        other.SetNull();
+      } else {
+        shm_strong_copy_op_main(other);
+        other.shm_destroy();
+      }
+    }
+    return *this;
+  }
+
+  /**====================================
    * Destructor
    * ===================================*/
 

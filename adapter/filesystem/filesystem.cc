@@ -41,7 +41,8 @@ void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
     LOG(INFO) << "File not opened before by adapter" << std::endl;
     // Create the new bucket
     stat.path_ = stdfs::weakly_canonical(path).string();
-    size_t file_size = io_client_->GetSize(hipc::charbuf(stat.path_));
+    auto path_shm = hipc::make_mptr<hipc::charbuf>(stat.path_);
+    size_t file_size = io_client_->GetSize(*path_shm);
     if (stat.is_trunc_) {
       // TODO(llogan): Need to add back bucket lock
       stat.bkt_id_ = HERMES->GetBucket(stat.path_, ctx, 0);
@@ -104,7 +105,7 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
 
   for (const auto &p : mapping) {
     const Blob blob_wrap((const char*)ptr + data_offset, p.blob_size_);
-    hipc::charbuf blob_name(p.CreateBlobName());
+    hshm::charbuf blob_name(p.CreateBlobName());
     BlobId blob_id;
     opts.type_ = type_;
     opts.backend_off_ = p.page_ * kPageSize;
@@ -164,7 +165,7 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
 
   for (const auto &p : mapping) {
     Blob blob_wrap((const char*)ptr + data_offset, p.blob_size_);
-    hipc::charbuf blob_name(p.CreateBlobName());
+    hshm::charbuf blob_name(p.CreateBlobName());
     BlobId blob_id;
     opts.backend_off_ = p.page_ * kPageSize;
     opts.backend_size_ = GetBackendSize(opts.backend_off_,

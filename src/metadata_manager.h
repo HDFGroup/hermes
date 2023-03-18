@@ -60,17 +60,17 @@ enum MdMapLock {
 template<>
 struct ShmHeader<MetadataManager> {
   /// SHM representation of blob id map
-  hipc::ShmArchive<BLOB_ID_MAP_T> blob_id_map_ar_;
+  hipc::ShmArchive<BLOB_ID_MAP_T> blob_id_map;
   /// SHM representation of blob map
-  hipc::ShmArchive<BLOB_MAP_T> blob_map_ar_;
+  hipc::ShmArchive<BLOB_MAP_T> blob_map;
   /// SHM representation of tag id map
-  hipc::ShmArchive<TAG_ID_MAP_T> tag_id_map_ar_;
+  hipc::ShmArchive<TAG_ID_MAP_T> tag_id_map;
   /// SHM representation of tag map
-  hipc::ShmArchive<TAG_MAP_T> tag_map_ar_;
+  hipc::ShmArchive<TAG_MAP_T> tag_map;
   /// SHM representation of trait id map
-  hipc::ShmArchive<TRAIT_ID_MAP_T> trait_id_map_ar_;
+  hipc::ShmArchive<TRAIT_ID_MAP_T> trait_id_map;
   /// SHM representation of trait map
-  hipc::ShmArchive<TRAIT_MAP_T> trait_map_ar_;
+  hipc::ShmArchive<TRAIT_MAP_T> trait_map;
   /// SHM representation of device vector
   hipc::ShmArchive<hipc::vector<DeviceInfo>> devices_;
   /// SHM representation of target info vector
@@ -474,7 +474,9 @@ class MetadataManager : public hipc::ShmContainer {
       return nullptr;
     }
     hipc::Ref<hipc::pair<TraitId, hipc::charbuf>> trait_params_p = *iter;
-    TraitT *trait = new TraitT((*trait_params_p->second_).str());
+    auto trait_params =
+        hshm::to_charbuf<hipc::string>(*trait_params_p->second_);
+    TraitT *trait = new TraitT(trait_params);
     local_trait_map_.emplace(trait_id, trait);
     return trait;
   }
