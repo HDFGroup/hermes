@@ -182,7 +182,7 @@ class MetadataManager : public hipc::ShmContainer {
   /**
    * Destroy \a bkt_id bucket
    * */
-  RPC bool LocalClearBucket(TagId bkt_id);
+  RPC bool LocalClearBucket(TagId bkt_id, bool backend);
   DEFINE_RPC(bool, ClearBucket, 0, UNIQUE_ID_TO_NODE_ID_LAMBDA)
 
   /**====================================

@@ -46,8 +46,9 @@ void ThalliumRpc::DefineRpcs() {
     req.respond(ret);
   });
   RegisterRpc("RpcClearBucket", [mdm](const request &req,
-                                        TagId bkt_id) {
-    auto ret = mdm->LocalClearBucket(bkt_id);
+                                      TagId bkt_id,
+                                      bool backend) {
+    auto ret = mdm->LocalClearBucket(bkt_id, backend);
     req.respond(ret);
   });
 

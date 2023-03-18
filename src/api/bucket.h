@@ -81,7 +81,7 @@ class Bucket {
   /**
    * Clears the buckets contents, but doesn't destroy its metadata
    * */
-  void Clear();
+  void Clear(bool backend = false);
 
   /**
    * Destroys this bucket along with all its contents.

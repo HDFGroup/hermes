@@ -163,7 +163,7 @@ bool MetadataManager::LocalUpdateBucketSize(TagId bkt_id,
 /**
  * Clear \a bkt_id bucket
  * */
-bool MetadataManager::LocalClearBucket(TagId bkt_id) {
+bool MetadataManager::LocalClearBucket(TagId bkt_id, bool backend) {
   ScopedRwWriteLock tag_map_lock(header_->lock_[kTagMapLock]);
   auto iter = tag_map_->find(bkt_id);
   if (iter == tag_map_->end()) {
@@ -176,6 +176,9 @@ bool MetadataManager::LocalClearBucket(TagId bkt_id) {
   }
   bkt_info.blobs_->clear();
   bkt_info.header_->internal_size_ = 0;
+  if (backend) {
+    bkt_info.header_->client_state_.true_size_ = 0;
+  }
   return true;
 }
 

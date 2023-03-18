@@ -46,8 +46,7 @@ void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
     if (stat.is_trunc_) {
       // TODO(llogan): Need to add back bucket lock
       stat.bkt_id_ = HERMES->GetBucket(stat.path_, ctx, 0);
-      stat.bkt_id_->Clear();
-      stat.bkt_id_->UpdateSize(-file_size, BucketUpdate::kBackend);
+      stat.bkt_id_->Clear(true);
     } else {
       stat.bkt_id_ = HERMES->GetBucket(stat.path_, ctx, file_size);
     }
@@ -328,12 +327,14 @@ int Filesystem::Close(File &f, AdapterStat &stat, bool destroy) {
 
 int Filesystem::Remove(const std::string &pathname) {
   auto mdm = HERMES_FS_METADATA_MANAGER;
-  auto files = mdm->Find(pathname);
-  if (files == nullptr) {
+  std::list<File>* filesp = mdm->Find(pathname);
+  if (filesp == nullptr) {
     return 0;
   }
-  for (File &f : *files) {
+  std::list<File> files = *filesp;
+  for (File &f : files) {
     auto stat = mdm->Find(f);
+    if (stat == nullptr) { continue; }
     stat->bkt_id_->Destroy();
     auto mdm = HERMES_FS_METADATA_MANAGER;
     FilesystemIoClientObject fs_ctx(&mdm->fs_mdm_, (void *)&stat);
