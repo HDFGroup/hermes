@@ -284,6 +284,7 @@ std::tuple<BlobId, bool, size_t> MetadataManager::LocalPutBlobMetadata(
   blob_id.node_id_ = rpc_->node_id_;
   bool did_create = blob_id_map_->try_emplace(*internal_blob_name, blob_id);
   if (did_create) {
+    LOG(INFO) << "Creating new blob: " << blob_name  << std::endl;
     blob_map_->emplace(blob_id);
     auto iter = blob_map_->find(blob_id);
     hipc::Ref<hipc::pair<BlobId, BlobInfo>> info = (*iter);
@@ -294,6 +295,7 @@ std::tuple<BlobId, bool, size_t> MetadataManager::LocalPutBlobMetadata(
     blob_info.header_->tag_id_ = bkt_id;
     blob_info.header_->blob_size_ = blob_size;
   } else {
+    LOG(INFO) << "Found existing blob: " << blob_name << std::endl;
     blob_id = *(*blob_id_map_)[*internal_blob_name];
     auto iter = blob_map_->find(blob_id);
     hipc::Ref<hipc::pair<BlobId, BlobInfo>> info = (*iter);
@@ -540,6 +542,10 @@ bool MetadataManager::LocalRenameTag(TagId tag_id,
 bool MetadataManager::LocalDestroyTag(TagId tag_id) {
   // Acquire MD write lock (modifying tag_map_)
   ScopedRwWriteLock tag_map_lock(header_->lock_[kTagMapLock]);
+  auto iter = tag_map_->find(tag_id);
+  hipc::Ref<hipc::pair<TagId, TagInfo>> info_pair = *iter;
+  auto &tag_info = *info_pair->second_;
+  tag_id_map_->erase(*tag_info.name_);
   tag_map_->erase(tag_id);
   return true;
 }

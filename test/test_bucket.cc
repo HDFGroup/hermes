@@ -30,7 +30,7 @@ void MainPosttest() {
   HERMES->Finalize();
 }
 
-void TestManyPuts(hapi::Hermes *hermes) {
+void TestBlobCreates(hapi::Hermes *hermes) {
   auto bkt = hermes->GetBucket("hello");
   int num_blobs = 1;
   size_t blob_size = MEGABYTES(150);
@@ -42,7 +42,7 @@ void TestManyPuts(hapi::Hermes *hermes) {
     std::string name = std::to_string(i);
     char nonce = i % 256;
     memset(blob.data(), nonce, blob_size);
-    bkt->Put(name, std::move(blob), blob_id, ctx);
+    bkt->Put(name, blob, blob_id, ctx);
   }
 
   for (size_t i = 0; i < num_blobs; ++i) {
@@ -64,12 +64,12 @@ void TestBlobOverride(hapi::Hermes *hermes) {
   hermes::BlobId blob_id;
   hermes::Blob blob(1024);
   for (size_t i = 0; i < 1024; ++i) {
-    memset(blob.data(), 10, 1024);
-    bkt2->Put("0", std::move(blob), blob_id, ctx);
+    memset(blob.data(), i, 1024);
+    bkt2->Put("0", blob, blob_id, ctx);
     hermes::Blob ret;
     bkt->Get(blob_id, ret, ctx);
     REQUIRE(ret.size() == 1024);
-    REQUIRE(VerifyBuffer(ret.data(), 1024, 10));
+    REQUIRE(VerifyBuffer(ret.data(), 1024, i));
   }
 }
 
@@ -100,6 +100,11 @@ void TestBucketDestroy(hapi::Hermes *hermes) {
   }
 
   bkt->Destroy();
+
+  // Check if the bucket can be re-obtained
+  auto new_bkt = hermes->GetBucket("hello");
+  REQUIRE(bkt->GetId() != new_bkt->GetId());
+  REQUIRE(new_bkt->GetSize() == 0);
 }
 
 void TestBlobRename(hapi::Hermes *hermes) {
@@ -148,8 +153,8 @@ TEST_CASE("TestCreateBlobName") {
   REQUIRE(*n1 == *n2);
 }
 
-TEST_CASE("TestManyPuts") {
-  TestManyPuts(HERMES);
+TEST_CASE("TestBlobCreates") {
+  TestBlobCreates(HERMES);
 }
 
 TEST_CASE("TestBlobOverride") {

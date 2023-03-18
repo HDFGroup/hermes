@@ -138,10 +138,11 @@ Blob BufferOrganizer::GlobalReadBlobFromBuffers(
   // Send the buffers to each node
   std::vector<Blob> blobs;
   for (auto &[tid, size] : unique_tgts) {
-    blobs.emplace_back(size);
     if (NODE_ID_IS_LOCAL(tid.GetNodeId())) {
-      LocalReadBlobFromBuffers(buffers);
+      Blob b = LocalReadBlobFromBuffers(buffers);
+      blobs.emplace_back(b);
     } else {
+      blobs.emplace_back(size);
       rpc_->IoCall<void>(
           tid.GetNodeId(), "RpcReadBlobFromBuffers",
           IoType::kRead, blobs.back().data(), size,
