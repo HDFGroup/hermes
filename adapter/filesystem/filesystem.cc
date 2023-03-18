@@ -41,7 +41,7 @@ void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
     LOG(INFO) << "File not opened before by adapter" << std::endl;
     // Create the new bucket
     stat.path_ = stdfs::weakly_canonical(path).string();
-    auto path_shm = hipc::make_mptr<hipc::charbuf>(stat.path_);
+    auto path_shm = hipc::make_uptr<hipc::charbuf>(stat.path_);
     size_t file_size = io_client_->GetSize(*path_shm);
     if (stat.is_trunc_) {
       // TODO(llogan): Need to add back bucket lock

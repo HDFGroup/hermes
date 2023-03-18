@@ -31,8 +31,7 @@ namespace hermes::config {
 void ServerConfig::ParseDeviceInfo(YAML::Node yaml_conf) {
   devices_ = hipc::make_uptr<hipc::vector<DeviceInfo>>();
   for (auto device : yaml_conf) {
-    // TODO(llogan): fix
-    // devices_->emplace_back();
+    devices_->emplace_back();
     hipc::Ref<DeviceInfo> dev = devices_->back();
     auto dev_info = device.second;
     (*dev->dev_name_) = device.first.as<std::string>();
