@@ -31,7 +31,8 @@ enum class IoInterface {
  * DeviceInfo shared-memory representation
  * */
 template<>
-struct ShmHeader<DeviceInfo> : public hipc::ShmBaseHeader {
+struct ShmHeader<DeviceInfo> {
+  SHM_CONTAINER_HEADER_TEMPLATE(ShmHeader)
   /** The human-readable name of the device */
   hipc::ShmArchive<hipc::string> dev_name_;
   /** The unit of each slab, a multiple of the Device's block size */
@@ -55,31 +56,6 @@ struct ShmHeader<DeviceInfo> : public hipc::ShmBaseHeader {
   /** BORG's minimum and maximum capacity threshold for device */
   f32 borg_min_thresh_, borg_max_thresh_;
 
-  /** Default Constructor */
-  ShmHeader() = default;
-
-  /** Copy constructor */
-  ShmHeader(const ShmHeader &other) {
-    strong_copy(other);
-  }
-
-  /** Copy assignment operator */
-  ShmHeader& operator=(const ShmHeader &other) {
-    strong_copy(other);
-    return *this;
-  }
-
-  /** Move constructor */
-  ShmHeader(ShmHeader &&other) {
-    strong_copy(other);
-  }
-
-  /** Move assignment operator */
-  ShmHeader& operator=(ShmHeader &&other) {
-    strong_copy(other);
-    return *this;
-  }
-
   /** Internal copy */
   void strong_copy(const ShmHeader &other) {
     io_api_ = other.io_api_;
@@ -100,28 +76,56 @@ struct DeviceInfo : public hipc::ShmContainer {
   SHM_CONTAINER_TEMPLATE(DeviceInfo, DeviceInfo, ShmHeader<DeviceInfo>)
 
   /** The human-readable name of the device */
-  hipc::ShmRef<hipc::string> dev_name_;
+  hipc::Ref<hipc::string> dev_name_;
   /** The unit of each slab, a multiple of the Device's block size */
-  hipc::ShmRef<hipc::vector<size_t>> slab_sizes_;
+  hipc::Ref<hipc::vector<size_t>> slab_sizes_;
   /** The directory the device is mounted on */
-  hipc::ShmRef<hipc::string> mount_dir_;
+  hipc::Ref<hipc::string> mount_dir_;
   /** The file to create on the device */
-  hipc::ShmRef<hipc::string> mount_point_;
+  hipc::Ref<hipc::string> mount_point_;
 
-  /** Default Constructor */
-  DeviceInfo() = default;
+  /**====================================
+   * Default Constructor
+   * ===================================*/
 
-  /** Default SHM Constructor */
-  void shm_init_main(ShmHeader<DeviceInfo> *header,
-                     hipc::Allocator *alloc) {
-    shm_init_allocator(alloc);
-    shm_init_header(header);
-    shm_deserialize_main();
-    dev_name_->shm_init(alloc_);
-    slab_sizes_->shm_init(alloc_);
-    mount_dir_->shm_init(alloc_);
-    mount_point_->shm_init(alloc_);
+  /** SHM Constructor. Default. */
+  explicit DeviceInfo(ShmHeader<DeviceInfo> *header, hipc::Allocator *alloc) {
+    shm_init_header(header, alloc);
+    dev_name_ = hipc::make_ref<hipc::string>(
+        header_->dev_name_, alloc_);
+    slab_sizes_ = hipc::make_ref<hipc::vector<size_t>>(
+        header_->slab_sizes_, alloc_);
+    mount_dir_ = hipc::make_ref<hipc::string>(
+        header_->mount_dir_, alloc_);
+    mount_point_= hipc::make_ref<hipc::string>
+        (header_->mount_point_, alloc_);
   }
+
+  /**====================================
+   * SHM Deserialization
+   * ===================================*/
+
+  /** Deserialize from SHM */
+  void shm_deserialize_main() {
+    dev_name_ = hipc::Ref<hipc::string>(
+        header_->dev_name_, alloc_);
+    slab_sizes_ = hipc::Ref<hipc::vector<size_t>>(
+        header_->slab_sizes_, alloc_);
+    mount_dir_ = hipc::Ref<hipc::string>(
+        header_->mount_dir_, alloc_);
+    mount_point_= hipc::Ref<hipc::string>
+        (header_->mount_point_, alloc_);
+  }
+
+  /**====================================
+   * Destructor
+   * ===================================*/
+
+  /** Whether DeviceInfo is NULL */
+  bool IsNull() { return false; }
+
+  /** Set DeviceInfo to NULL */
+  void SetNull() {}
 
   /** Free shared memory */
   void shm_destroy_main() {
@@ -129,42 +133,6 @@ struct DeviceInfo : public hipc::ShmContainer {
      slab_sizes_->shm_destroy();
      mount_dir_->shm_destroy();
      mount_point_->shm_destroy();
-  }
-
-  /** Serialize into SHM */
-  void shm_serialize_main() const {}
-
-  /** Deserialize from SHM */
-  void shm_deserialize_main() {
-    (*dev_name_) << header_->dev_name_.internal_ref(alloc_);
-    (*slab_sizes_) << header_->slab_sizes_.internal_ref(alloc_);
-    (*mount_dir_) << header_->mount_dir_.internal_ref(alloc_);
-    (*mount_point_) << header_->mount_point_.internal_ref(alloc_);
-  }
-
-  /** Move another object into this object. */
-  void shm_weak_move_main(ShmHeader<DeviceInfo> *header,
-                          hipc::Allocator *alloc,
-                          DeviceInfo &other) {
-    shm_init_allocator(alloc);
-    shm_init_header(header);
-    (*header_) = (*other.header_);
-    (*dev_name_) = std::move(*other.dev_name_);
-    (*slab_sizes_) = std::move(*other.slab_sizes_);
-    (*mount_dir_) = std::move(*other.mount_dir_);
-    (*mount_point_) = std::move(*other.mount_point_);
-  }
-
-  /** Copy another object into this object */
-  void shm_strong_copy_main(ShmHeader<DeviceInfo> *header,
-                            hipc::Allocator *alloc,
-                            const DeviceInfo &other) {
-    shm_init_main(header, alloc);
-    (*header_) = (*other.header_);
-    (*dev_name_) = (*other.dev_name_);
-    (*slab_sizes_) = (*other.slab_sizes_);
-    (*mount_dir_) = (*other.mount_dir_);
-    (*mount_point_) = (*other.mount_point_);
   }
 };
 

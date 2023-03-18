@@ -144,15 +144,20 @@ GroupByTarget(PlacementSchema &schema, size_t &total_size) {
  * The shared-memory representation of the BufferPool
  * */
 template<>
-struct ShmHeader<BufferPool> : public hipc::ShmBaseHeader {
+struct ShmHeader<BufferPool> {
+  SHM_CONTAINER_HEADER_TEMPLATE(ShmHeader)
   hipc::ShmArchive<BpTargetAllocs> free_lists_;
   size_t ntargets_;
   size_t ncpu_;
   size_t nslabs_;
 
-  /** Construct all internal objects */
-  explicit ShmHeader(hipc::Allocator *alloc) {
-    free_lists_.shm_init(alloc);
+  /**
+   * Copy one header into another
+   * */
+  void strong_copy(const ShmHeader &other) {
+    ntargets_ = other.ntargets_;
+    ncpu_ = other.ncpu_;
+    nslabs_ = other.nslabs_;
   }
 
   /**
@@ -184,36 +189,42 @@ class BufferPool : public hipc::ShmContainer {
   BufferOrganizer *borg_;
   RPC_TYPE *rpc_;
   /** Per-target allocator */
-  hipc::ShmRef<BpTargetAllocs> target_allocs_;
+  hipc::Ref<BpTargetAllocs> target_allocs_;
 
  public:
-  BufferPool() = default;
+  /**====================================
+   * Default Constructor
+   * ===================================*/
 
   /**
    * Initialize the BPM and its shared memory.
    * REQUIRES mdm to be initialized already.
    * */
-  void shm_init_main(ShmHeader<BufferPool> *header,
-                     hipc::Allocator *alloc);
+  explicit BufferPool(ShmHeader<BufferPool> *header, hipc::Allocator *alloc);
+
+  /**====================================
+   * Destructor
+   * ===================================*/
+
+  /** Whether the BufferPool is NULL */
+  bool IsNull() { return false; }
+
+  /** Set to NULL */
+  void SetNull() {}
 
   /** Destroy the BPM shared memory. */
   void shm_destroy_main();
 
-  /** Store the BPM in shared memory */
-  void shm_serialize_main() const;
+  /**====================================
+   * SHM Deserialize
+   * ===================================*/
 
   /** Deserialize the BPM from shared memory */
   void shm_deserialize_main();
 
-  /** Weak move */
-  void shm_weak_move_main(ShmHeader<BufferPool> *header,
-                          hipc::Allocator *alloc,
-                          BufferPool &other) {}
-
-  /** Strong copy */
-  void shm_strong_copy_main(ShmHeader<BufferPool> *header,
-                            hipc::Allocator *alloc,
-                            const BufferPool &other) {}
+  /**====================================
+   * BufferPool Methods
+   * ===================================*/
 
   /**
    * Allocate buffers from the targets according to the schema
@@ -229,7 +240,7 @@ class BufferPool : public hipc::ShmContainer {
    * Determines a reasonable allocation of buffers based on the size of I/O.
    * Returns the number of each page size to allocate
    * */
-  std::vector<BpCoin> CoinSelect(hipc::ShmRef<DeviceInfo> &dev_info,
+  std::vector<BpCoin> CoinSelect(hipc::Ref<DeviceInfo> &dev_info,
                                  size_t total_size,
                                  size_t &buffer_count,
                                  size_t &total_alloced_size);
@@ -239,9 +250,9 @@ class BufferPool : public hipc::ShmContainer {
    * device growth allocator
    * */
   BpSlot AllocateSlabSize(BpCoin &coin,
-                          hipc::ShmRef<BpFreeListStat> &stat,
-                          hipc::ShmRef<BpFreeList> &free_list,
-                          hipc::ShmRef<BpFreeListStat> &target_stat);
+                          hipc::Ref<BpFreeListStat> &stat,
+                          hipc::Ref<BpFreeList> &free_list,
+                          hipc::Ref<BpFreeListStat> &target_stat);
 
   /**
    * Allocate each size of buffer from either the free list or the

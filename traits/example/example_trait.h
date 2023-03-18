@@ -23,7 +23,7 @@ struct ExampleTraitParams {
 
 class ExampleTrait : public hapi::Trait {
  public:
-  explicit ExampleTrait(hipc::charbuf &data) : Trait(data) {}
+  explicit ExampleTrait(hshm::charbuf &data) : Trait(data) {}
 
   explicit ExampleTrait(const std::string &trait_uuid, int hello) {
     auto hdr = CreateHeader<ExampleTraitHeader>(trait_uuid, hello);

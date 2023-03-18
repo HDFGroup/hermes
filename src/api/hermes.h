@@ -39,10 +39,12 @@ class Bucket;
 /**
  * The Hermes shared-memory header
  * */
-struct HermesShmHeader {
+template<>
+struct ShmHeader<Hermes> {
   hipc::Pointer ram_tier_;
-  MetadataManagerShmHeader mdm_;
-  hermes::ShmHeader<BufferPool> bpm_;
+  hipc::ShmArchive<MetadataManager> mdm_;
+  hipc::ShmArchive<BufferPool> bpm_;
+  hipc::ShmArchive<BufferOrganizer> borg_;
 };
 
 /**
@@ -51,12 +53,12 @@ struct HermesShmHeader {
 class Hermes {
  public:
   HermesType mode_;
-  HermesShmHeader *header_;
+  ShmHeader<Hermes> *header_;
   ServerConfig server_config_;
   ClientConfig client_config_;
-  MetadataManager mdm_;
-  hipc::manual_ptr<BufferPool> bpm_;
-  BufferOrganizer borg_;
+  hipc::Ref<MetadataManager> mdm_;
+  hipc::Ref<BufferPool> bpm_;
+  hipc::Ref<BufferOrganizer> borg_;
   COMM_TYPE comm_;
   RPC_TYPE rpc_;
   hipc::Allocator *main_alloc_;
@@ -125,7 +127,7 @@ class Hermes {
   /** Create a generic tag in Hermes */
   TagId CreateTag(const std::string &tag_name) {
     std::vector<TraitId> traits;
-    return mdm_.GlobalCreateTag(tag_name, false, traits);
+    return mdm_->GlobalCreateTag(tag_name, false, traits);
   }
 
   /** Locate all blobs with a tag */
@@ -139,32 +141,32 @@ class Hermes {
   TraitId RegisterTrait(const std::string &tag_uuid,
                         Args&& ...args) {
     TraitT obj(tag_uuid, std::forward<Args>(args)...);
-    return HERMES->mdm_.GlobalRegisterTrait(TraitId::GetNull(),
+    return HERMES->mdm_->GlobalRegisterTrait(TraitId::GetNull(),
                                             tag_uuid, obj.trait_info_);
   }
 
   /** Get trait id */
   TraitId GetTraitId(const std::string &tag_uuid) {
-    return HERMES->mdm_.GlobalGetTraitId(tag_uuid);
+    return HERMES->mdm_->GlobalGetTraitId(tag_uuid);
   }
 
   /** Get the trait */
   template<typename TraitT>
   TraitT* GetTrait(TraitId trait_id) {
-    return HERMES->mdm_.GlobalGetTrait<TraitT>(trait_id);
+    return HERMES->mdm_->GlobalGetTrait<TraitT>(trait_id);
   }
 
   /** Attach a trait to a tag */
   void AttachTrait(TagId tag_id, TraitId trait_id) {
-    HERMES->mdm_.GlobalTagAddTrait(tag_id, trait_id);
+    HERMES->mdm_->GlobalTagAddTrait(tag_id, trait_id);
   }
 
   /** Get traits attached to tag */
   std::vector<Trait*> GetTraits(TagId tag_id) {
-    hipc::slist<TraitId> trait_ids = HERMES->mdm_.GlobalTagGetTraits(tag_id);
+    hipc::slist<TraitId> trait_ids = HERMES->mdm_->GlobalTagGetTraits(tag_id);
     std::vector<Trait*> traits;
     traits.reserve(trait_ids.size());
-    for (hipc::ShmRef<TraitId> trait_id : trait_ids) {
+    for (hipc::Ref<TraitId> trait_id : trait_ids) {
       traits.emplace_back(GetTrait<Trait>(*trait_id));
     }
     return traits;

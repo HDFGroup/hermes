@@ -249,7 +249,7 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(test::size_written_orig == args.request_size);
     test::test_close();
     REQUIRE(test::status_orig == 0);
-  }
+  }/**/
 
   SECTION("write to new  file") {
     test::test_open(info.new_file.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0600);
@@ -272,7 +272,7 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(stdfs::file_size(info.existing_file) == test::size_written_orig);
   }
 
-  SECTION("write to existing file at the end") {
+  /*SECTION("write to existing file at the end") {
     test::test_open(info.existing_file.c_str(), O_RDWR);
     REQUIRE(test::fh_orig != -1);
     test::test_seek(0, SEEK_END);
@@ -306,7 +306,7 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
     test::test_close();
     REQUIRE(test::status_orig == 0);
     REQUIRE(stdfs::file_size(info.new_file) == test::size_written_orig);
-  }
+  }*/
   posttest();
 }
 

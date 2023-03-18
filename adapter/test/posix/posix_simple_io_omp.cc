@@ -52,6 +52,10 @@ void TestThread(char *path,
 
   char *buf = (char*)malloc(size);
   int fd = open(path, O_CREAT | O_RDWR, 0666);
+  if (fd < 0 && rank == 0) {
+    std::cout << "Failed to open the file" << std::endl;
+    exit(1);
+  }
   lseek(fd, off, SEEK_SET);
 
   if (do_read) {
@@ -88,10 +92,6 @@ void TestThread(char *path,
   }
 
 #pragma omp barrier
-
-  close(fd);
-
-#pragma omp barrier
   if (!do_read) {
     struct stat st;
     fstat(fd, &st);
@@ -108,6 +108,9 @@ void TestThread(char *path,
       }
     }
   }
+
+#pragma omp barrier
+  close(fd);
 
 #pragma omp barrier
   {

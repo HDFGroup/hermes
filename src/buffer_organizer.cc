@@ -22,10 +22,10 @@ namespace hermes {
  * REQUIRES mdm to be initialized already.
  * */
 void BufferOrganizer::shm_init() {
-  mdm_ = &HERMES->mdm_;
+  mdm_ = &(*HERMES->mdm_);
   rpc_ = &HERMES->rpc_;
-  for (hipc::ShmRef<TargetInfo> target : (*mdm_->targets_)) {
-    hipc::ShmRef<DeviceInfo> dev_info =
+  for (hipc::Ref<TargetInfo> target : (*mdm_->targets_)) {
+    hipc::Ref<DeviceInfo> dev_info =
         (*mdm_->devices_)[target->id_.GetDeviceId()];
     if (dev_info->mount_dir_->size() == 0) {
       dev_info->header_->io_api_ = IoInterface::kRam;
@@ -40,13 +40,9 @@ void BufferOrganizer::shm_init() {
 /** Finalize the BORG */
 void BufferOrganizer::shm_destroy() {}
 
-/** Serialize the BORG into shared memory */
-void BufferOrganizer::shm_serialize()  {
-}
-
 /** Deserialize the BORG from shared memory */
 void BufferOrganizer::shm_deserialize()  {
-  mdm_ = &HERMES->mdm_;
+  mdm_ = &(*HERMES->mdm_);
   rpc_ = &HERMES->rpc_;
 }
 
@@ -58,7 +54,7 @@ RPC void BufferOrganizer::LocalPlaceBlobInBuffers(
     if (buffer_info.tid_.GetNodeId() != mdm_->rpc_->node_id_) {
       continue;
     }
-    hipc::ShmRef<DeviceInfo> dev_info =
+    hipc::Ref<DeviceInfo> dev_info =
         (*mdm_->devices_)[buffer_info.tid_.GetDeviceId()];
     auto io_client = borg::BorgIoClientFactory::Get(dev_info->header_->io_api_);
     bool ret = io_client->Write(*dev_info,
@@ -101,7 +97,7 @@ RPC Blob BufferOrganizer::LocalReadBlobFromBuffers(
     if (buffer_info.tid_.GetNodeId() != mdm_->rpc_->node_id_) {
       continue;
     }
-    hipc::ShmRef<DeviceInfo> dev_info =
+    hipc::Ref<DeviceInfo> dev_info =
         (*mdm_->devices_)[buffer_info.tid_.GetDeviceId()];
     auto io_client = borg::BorgIoClientFactory::Get(dev_info->header_->io_api_);
     bool ret = io_client->Read(*dev_info, blob.data() + blob_off,

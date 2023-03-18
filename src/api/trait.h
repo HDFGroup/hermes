@@ -46,14 +46,14 @@ struct TraitHeader {
  * */
 class Trait {
  public:
-  hipc::charbuf trait_info_;
+  hshm::charbuf trait_info_;
   TraitHeader *header_;
 
   /** Default constructor */
   Trait() = default;
 
   /** Deserialization constructor */
-  explicit Trait(hipc::charbuf &trait_info)
+  explicit Trait(hshm::charbuf &trait_info)
       : trait_info_(trait_info),
         header_(reinterpret_cast<TraitHeader*>(trait_info_.data())) {}
 
@@ -63,7 +63,7 @@ class Trait {
   /** Create the header for the trait */
   template<typename HeaderT, typename ...Args>
   HeaderT* CreateHeader(Args&& ...args) {
-    trait_info_ = hipc::charbuf(sizeof(HeaderT));
+    trait_info_ = hshm::charbuf(sizeof(HeaderT));
     header_ = reinterpret_cast<TraitHeader*>(trait_info_.data());
     hipc::Allocator::ConstructObj<HeaderT>(
         *GetHeader<HeaderT>(),

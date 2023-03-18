@@ -25,7 +25,6 @@ namespace hermes {
   id.bits_.node_id_
 #define BUCKET_HASH TEXT_HASH(bkt_name)
 #define BLOB_HASH TEXT_HASH(blob_name)
-#define VBUCKET_HASH TEXT_HASH(vbkt_name)
 
 using adapter::GlobalIoClientState;
 using api::Blob;       /**< Namespace simplification for blob */
@@ -125,7 +124,8 @@ struct BufferInfo {
 
 /** Represents BlobInfo in shared memory */
 template<>
-struct ShmHeader<BlobInfo> : public hipc::ShmBaseHeader {
+struct ShmHeader<BlobInfo> {
+  SHM_CONTAINER_HEADER_TEMPLATE(ShmHeader)
   BlobId blob_id_;   /**< The identifier of this blob */
   TagId tag_id_;  /**< The bucket containing the blob */
   hipc::ShmArchive<hipc::string>
@@ -144,35 +144,6 @@ struct ShmHeader<BlobInfo> : public hipc::ShmBaseHeader {
    * */
   size_t next_access_time_ns_;
 
-  /** Default constructor */
-  ShmHeader() = default;
-
-  /** Copy constructor */
-  ShmHeader(const ShmHeader &other) noexcept {
-    strong_copy(other);
-  }
-
-  /** Move constructor */
-  ShmHeader(ShmHeader &&other) noexcept {
-    strong_copy(other);
-  }
-
-  /** Copy assignment */
-  ShmHeader& operator=(const ShmHeader &other) {
-    if (this != &other) {
-      strong_copy(other);
-    }
-    return *this;
-  }
-
-  /** Move assignment */
-  ShmHeader& operator=(ShmHeader &&other) {
-    if (this != &other) {
-      strong_copy(other);
-    }
-    return *this;
-  }
-
   void strong_copy(const ShmHeader &other) {
     blob_id_ = other.blob_id_;
     tag_id_ = other.tag_id_;
@@ -187,69 +158,53 @@ struct BlobInfo : public hipc::ShmContainer {
 
  public:
   /// The name of the blob
-  hipc::ShmRef<hipc::string> name_;
+  hipc::Ref<hipc::string> name_;
   /// The BufferInfo vector
-  hipc::ShmRef<hipc::vector<BufferInfo>> buffers_;
+  hipc::Ref<hipc::vector<BufferInfo>> buffers_;
   /// The Tag slist
-  hipc::ShmRef<hipc::slist<TagId>> tags_;
+  hipc::Ref<hipc::slist<TagId>> tags_;
 
-  /** Default constructor. Does nothing. */
-  BlobInfo() = default;
+  /**====================================
+   * Default Constructor
+   * ===================================*/
 
   /** Initialize the data structure */
-  void shm_init_main(ShmHeader<BlobInfo> *header,
-                     hipc::Allocator *alloc) {
-    shm_init_allocator(alloc);
-    shm_init_header(header);
-    shm_deserialize_main();
-    name_->shm_init(alloc_);
-    buffers_->shm_init(alloc_);
-    tags_->shm_init(alloc_);
+  explicit BlobInfo(ShmHeader<BlobInfo> *header, hipc::Allocator *alloc) {
+    shm_init_header(header, alloc);
+    name_ = hipc::make_ref<hipc::string>(header_->name_ar_, alloc_);
+    buffers_ = hipc::make_ref<hipc::vector<BufferInfo>>(
+        header_->buffers_ar_, alloc_);
+    tags_ = hipc::make_ref<hipc::slist<TagId>>(
+        header_->tags_ar_, alloc_);
   }
-
-  /** Destroy all allocated data */
-  void shm_destroy_main();
-
-  /** Serialize pointers */
-  void shm_serialize_main() const {}
 
   /** Deserialize pointers */
   void shm_deserialize_main() {
-    (*name_) << header_->name_ar_.internal_ref(alloc_);
-    (*buffers_) << header_->buffers_ar_.internal_ref(alloc_);
-    (*tags_) << header_->tags_ar_.internal_ref(alloc_);
+    name_ = hipc::Ref<hipc::string>(header_->name_ar_, alloc_);
+    buffers_ = hipc::Ref<hipc::vector<BufferInfo>>(
+        header_->buffers_ar_, alloc_);
+    tags_ = hipc::Ref<hipc::slist<TagId>>(
+        header_->tags_ar_, alloc_);
   }
 
-  /** Move pointers into another BlobInfo */
-  void shm_weak_move_main(ShmHeader<BlobInfo> *header,
-                          hipc::Allocator *alloc,
-                          BlobInfo &other) {
-    shm_init_allocator(alloc);
-    shm_init_header(header);
-    shm_deserialize_main();
-    (*header_) = (*other.header_);
-    (*name_) = std::move(*other.name_);
-    (*buffers_) = std::move(*other.buffers_);
-    (*tags_) = std::move(*other.tags_);
-  }
+  /**====================================
+   * Destructor
+   * ===================================*/
 
-  /** Deep copy data into another BlobInfo */
-  void shm_strong_copy_main(ShmHeader<BlobInfo> *header,
-                            hipc::Allocator *alloc,
-                            const BlobInfo &other) {
-    shm_init_allocator(alloc);
-    shm_init_header(header);
-    shm_deserialize_main();
-    (*header_) = (*other.header_);
-    (*name_) = (*other.name_);
-    (*buffers_) = (*other.buffers_);
-    (*tags_) = (*other.tags_);
-  }
+  /** Whether the TagInfo is NULL */
+  bool IsNull() { return false; }
+
+  /** Set the TagInfo to NULL */
+  void SetNull() {}
+
+  /** Destroy all allocated data */
+  void shm_destroy_main();
 };
 
 /** Represents TagInfo in shared memory */
 template<>
-struct ShmHeader<TagInfo> : public hipc::ShmBaseHeader {
+struct ShmHeader<TagInfo> {
+  SHM_CONTAINER_HEADER_TEMPLATE(ShmHeader)
   TagId tag_id_;           /**< ID of the tag */
   hipc::ShmArchive<hipc::string>
       name_ar_;            /**< Archive of tag name */
@@ -261,35 +216,6 @@ struct ShmHeader<TagInfo> : public hipc::ShmBaseHeader {
   GlobalIoClientState
       client_state_;       /**< State needed by I/O clients */
   bool owner_;             /**< Whether this tag owns the blobs */
-
-  /** Default constructor */
-  ShmHeader() : owner_(false) {}
-
-  /** Copy constructor */
-  ShmHeader(const ShmHeader &other) noexcept {
-    strong_copy(other);
-  }
-
-  /** Move constructor */
-  ShmHeader(ShmHeader &&other) noexcept {
-    strong_copy(other);
-  }
-
-  /** Copy assignment */
-  ShmHeader& operator=(const ShmHeader &other) {
-    if (this != &other) {
-      strong_copy(other);
-    }
-    return *this;
-  }
-
-  /** Move assignment */
-  ShmHeader& operator=(ShmHeader &&other) {
-    if (this != &other) {
-      strong_copy(other);
-    }
-    return *this;
-  }
 
   void strong_copy(const ShmHeader &other) {
     internal_size_ = other.internal_size_;
@@ -304,63 +230,46 @@ struct TagInfo : public hipc::ShmContainer {
   SHM_CONTAINER_TEMPLATE(TagInfo, TagInfo, ShmHeader<TagInfo>);
 
  public:
-  hipc::ShmRef<hipc::string> name_;           /**< The name of this Tag */
-  hipc::ShmRef<hipc::slist<BlobId>> blobs_;   /**< All blobs of this Tag */
-  hipc::ShmRef<hipc::slist<TraitId>> traits_; /**< All traits of this Tag */
+  hipc::Ref<hipc::string> name_;           /**< The name of this Tag */
+  hipc::Ref<hipc::slist<BlobId>> blobs_;   /**< All blobs of this Tag */
+  hipc::Ref<hipc::slist<TraitId>> traits_; /**< All traits of this Tag */
 
  public:
-  /** Default constructor */
-  TagInfo() = default;
+  /**====================================
+   * Default Constructor
+   * ===================================*/
 
-  /** Initialize the data structure */
-  void shm_init_main(ShmHeader<TagInfo> *header,
-                     hipc::Allocator *alloc) {
-    shm_init_allocator(alloc);
-    shm_init_header(header);
-    shm_deserialize_main();
-    name_->shm_init(alloc);
-    blobs_->shm_init(alloc);
-    traits_->shm_init(alloc);
+  /** SHM constructor. Default. */
+  explicit TagInfo(ShmHeader<TagInfo> *header, hipc::Allocator *alloc) {
+    shm_init_header(header, alloc);
+    name_ = hipc::make_ref<hipc::string>(header_->name_ar_, alloc_);
+    blobs_ = hipc::make_ref<hipc::slist<BlobId>>(header_->blobs_ar_, alloc_);
+    traits_ = hipc::make_ref<hipc::slist<TraitId>>(header_->traits_ar_, alloc_);
   }
 
-  /** Destroy all allocated data */
-  void shm_destroy_main();
-
-  /** Serialize pointers */
-  void shm_serialize_main() const {}
+  /**====================================
+   * SHM Deserialization
+   * ===================================*/
 
   /** Deserialize pointers */
   void shm_deserialize_main() {
-    (*name_) << header_->name_ar_.internal_ref(alloc_);
-    (*blobs_) << header_->blobs_ar_.internal_ref(alloc_);
-    (*traits_) << header_->traits_ar_.internal_ref(alloc_);
+    name_ = hipc::Ref<hipc::string>(header_->name_ar_, alloc_);
+    blobs_ = hipc::Ref<hipc::slist<BlobId>>(header_->blobs_ar_, alloc_);
+    traits_ = hipc::Ref<hipc::slist<TraitId>>(header_->traits_ar_, alloc_);
   }
 
-  /** Move other object into this one */
-  void shm_weak_move_main(ShmHeader<TagInfo> *header,
-                          hipc::Allocator *alloc,
-                          TagInfo &other) {
-    shm_init_allocator(alloc);
-    shm_init_header(header);
-    shm_deserialize_main();
-    (*header_) = (*other.header_);
-    (*name_) = std::move(*other.name_);
-    (*blobs_) = std::move(*other.blobs_);
-    (*traits_) = std::move(*other.traits_);
-  }
+  /**====================================
+   * Destructor
+   * ===================================*/
 
-  /** Copy other object into this one */
-  void shm_strong_copy_main(ShmHeader<TagInfo> *header,
-                            hipc::Allocator *alloc,
-                            const TagInfo &other) {
-    shm_init_allocator(alloc);
-    shm_init_header(header);
-    shm_deserialize_main();
-    (*header_) = (*other.header_);
-    (*name_) = (*other.name_);
-    (*blobs_) = (*other.blobs_);
-    (*traits_) = (*other.traits_);
-  }
+  /** Whether the TagInfo is NULL */
+  bool IsNull() { return false; }
+
+  /** Set the TagInfo to NULL */
+  void SetNull() {}
+
+  /** Destroy all allocated data */
+  void shm_destroy_main();
 };
 
 }  // namespace hermes

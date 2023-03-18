@@ -3,8 +3,8 @@ import pathlib, os
 
 PROJECT_ROOT=pathlib.Path(__file__).parent.parent.resolve()
 
-DATA_STRUCTURE_TEMPLATES='include/hermes_shm/data_structures/internal/template'
-DATA_STRUCTURE_INTERNAL='include/hermes_shm/data_structures/internal'
+DATA_STRUCTURE_TEMPLATES='include/hermes_shm/data_structures/ipc/internal/template'
+DATA_STRUCTURE_INTERNAL='include/hermes_shm/data_structures/ipc/internal'
 
 CppMacroGenerator().generate(
     os.path.join(PROJECT_ROOT,

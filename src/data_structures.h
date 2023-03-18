@@ -13,25 +13,23 @@
 #ifndef HERMES_SRC_DATA_STRUCTURES_H_
 #define HERMES_SRC_DATA_STRUCTURES_H_
 
-#include <hermes_shm/data_structures/thread_unsafe/unordered_map.h>
-#include <hermes_shm/data_structures/thread_unsafe/vector.h>
-#include <hermes_shm/data_structures/thread_unsafe/list.h>
-#include <hermes_shm/data_structures/thread_unsafe/slist.h>
+#include <hermes_shm/data_structures/ipc/unordered_map.h>
+#include <hermes_shm/data_structures/ipc/vector.h>
+#include <hermes_shm/data_structures/ipc/list.h>
+#include <hermes_shm/data_structures/ipc/slist.h>
 #include <hermes_shm/data_structures/data_structure.h>
-#include <hermes_shm/data_structures/string.h>
-#include <hermes_shm/data_structures/smart_ptr/manual_ptr.h>
+#include <hermes_shm/data_structures/ipc/string.h>
+#include <hermes_shm/data_structures/containers/charbuf.h>
+#include <hermes_shm/data_structures/containers/converters.h>
 #include <hermes_shm/thread/lock.h>
 #include <hermes_shm/thread/thread_manager.h>
-#include <hermes_shm/types/charbuf.h>
 #include <hermes_shm/types/atomic.h>
 
-namespace hipc = hermes_shm::ipc;
-
-using hermes_shm::RwLock;
-using hermes_shm::Mutex;
-using hermes_shm::bitfield32_t;
-using hermes_shm::ScopedRwReadLock;
-using hermes_shm::ScopedRwWriteLock;
+using hshm::RwLock;
+using hshm::Mutex;
+using hshm::bitfield32_t;
+using hshm::ScopedRwReadLock;
+using hshm::ScopedRwWriteLock;
 
 #include <unordered_map>
 #include <unordered_set>

@@ -14,7 +14,7 @@
 #include "test_init.h"
 
 #include <string>
-#include <hermes_shm/data_structures/string.h>
+#include "hermes_shm/data_structures/ipc/string.h"
 #include "omp.h"
 
 /** Stringstream for storing test output */

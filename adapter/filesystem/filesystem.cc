@@ -42,10 +42,13 @@ void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
     // Create the new bucket
     stat.path_ = stdfs::weakly_canonical(path).string();
     size_t file_size = io_client_->GetSize(hipc::charbuf(stat.path_));
-    stat.bkt_id_ = HERMES->GetBucket(stat.path_, ctx, file_size);
     if (stat.is_trunc_) {
-      // TODO(llogan): Clear the bucket & reset file size to 0
+      // TODO(llogan): Need to add back bucket lock
+      stat.bkt_id_ = HERMES->GetBucket(stat.path_, ctx, 0);
       stat.bkt_id_->Clear();
+      stat.bkt_id_->UpdateSize(-file_size, BucketUpdate::kBackend);
+    } else {
+      stat.bkt_id_ = HERMES->GetBucket(stat.path_, ctx, file_size);
     }
     // Update bucket stats
     // TODO(llogan): can avoid two unordered_map queries here

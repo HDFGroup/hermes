@@ -11,7 +11,7 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "test_init.h"
-#include "hermes_shm/data_structures/thread_unsafe/vector.h"
+#include "hermes_shm/data_structures/ipc/vector.h"
 #include "hermes_shm/memory/allocator/stack_allocator.h"
 
 std::unique_ptr<void_allocator> alloc_inst_g;

@@ -4,7 +4,7 @@
 
 #include <mpi.h>
 #include <cassert>
-#include "hermes_shm/data_structures/thread_unsafe/list.h"
+#include "hermes_shm/data_structures/ipc/list.h"
 #include "hermes_shm/data_structures/data_structure.h"
 
 struct CustomHeader {
@@ -45,15 +45,15 @@ int main(int argc, char **argv) {
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Create the list
-  hipc::list<int> obj;
+  hipc::uptr<hipc::list<int>> obj;
   if (rank == 0) {
     // Initialize in shared memory
-    obj.shm_init(alloc);
+    obj = hipc::make_uptr<hipc::list<int>>(alloc);
     // Save the list inside the allocator's header
-    header->obj_ = obj.GetShmPointer<hipc::Pointer>();
+    header->obj_ = obj->GetShmPointer<hipc::Pointer>();
     // Emplace 1024 elements
     for (int i = 0; i < 1024; ++i) {
-      obj.emplace_back(10);
+      obj->emplace_back(10);
     }
   }
   MPI_Barrier(MPI_COMM_WORLD);
@@ -64,7 +64,7 @@ int main(int argc, char **argv) {
   }
 
   // Read list on all ranks
-  for (hipc::ShmRef<int> x : obj) {
+  for (hipc::Ref<int> x : *obj) {
     assert(*x == 10);
   }
   MPI_Barrier(MPI_COMM_WORLD);

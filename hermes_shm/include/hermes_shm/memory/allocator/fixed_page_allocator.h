@@ -16,9 +16,9 @@
 
 #include "allocator.h"
 #include "hermes_shm/thread/lock.h"
-#include "hermes_shm/data_structures/pair.h"
-#include "hermes_shm/data_structures/thread_unsafe/vector.h"
-#include "hermes_shm/data_structures/thread_unsafe/list.h"
+#include "hermes_shm/data_structures/ipc/pair.h"
+#include "hermes_shm/data_structures/ipc/vector.h"
+#include "hermes_shm/data_structures/ipc/list.h"
 #include <hermes_shm/memory/allocator/stack_allocator.h>
 #include "mp_page.h"
 
@@ -36,7 +36,7 @@ struct FixedPageAllocatorHeader : public AllocatorHeader {
     AllocatorHeader::Configure(alloc_id,
                                AllocatorType::kFixedPageAllocator,
                                custom_header_size);
-    free_lists_.shm_init(alloc);
+    make_ref<vector<iqueue<MpPage>>>(free_lists_, alloc);
     total_alloc_ = 0;
   }
 };
@@ -44,7 +44,7 @@ struct FixedPageAllocatorHeader : public AllocatorHeader {
 class FixedPageAllocator : public Allocator {
  private:
   FixedPageAllocatorHeader *header_;
-  hipc::ShmRef<vector<iqueue<MpPage>>> free_lists_;
+  hipc::Ref<vector<iqueue<MpPage>>> free_lists_;
   StackAllocator alloc_;
 
  public:

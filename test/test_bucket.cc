@@ -140,12 +140,12 @@ void TestBlobDestroy(hapi::Hermes *hermes) {
 
 TEST_CASE("TestCreateBlobName") {
   hermes::TagId bkt_id(1, 1);
-  hipc::charbuf blob_name("0");
-  hipc::charbuf n1 =
+  std::string blob_name("0");
+  hipc::uptr<hipc::charbuf> n1 =
       hermes::MetadataManager::CreateBlobName(bkt_id, blob_name);
-  hipc::charbuf n2 =
+  hipc::uptr<hipc::charbuf> n2 =
       hermes::MetadataManager::CreateBlobName(bkt_id, blob_name);
-  REQUIRE(n1 == n2);
+  REQUIRE(*n1 == *n2);
 }
 
 TEST_CASE("TestManyPuts") {

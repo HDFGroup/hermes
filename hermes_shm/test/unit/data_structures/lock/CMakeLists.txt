@@ -17,3 +17,9 @@ add_test(NAME test_mutex COMMAND
 add_test(NAME test_rw_lock COMMAND
         ${CMAKE_CURRENT_BINARY_DIR}/test_lock_exec "RwLock")
 
+#------------------------------------------------------------------------------
+# Code Coverage
+#------------------------------------------------------------------------------
+if(HERMES_ENABLE_COVERAGE)
+    set_coverage_flags(test_lock_exec)
+endif()

@@ -57,7 +57,7 @@ void ThalliumRpc::DefineRpcs() {
 
   RegisterRpc("RpcPutBlobMetadata", [mdm](const request &req,
                                           TagId bkt_id,
-                                          const hipc::charbuf &blob_name,
+                                          const std::string &blob_name,
                                           size_t blob_size,
                                           std::vector<BufferInfo> &buffers) {
     auto ret = mdm->LocalPutBlobMetadata(bkt_id, blob_name, blob_size, buffers);
@@ -227,7 +227,8 @@ void ThalliumRpc::DefineRpcs() {
                                               size_t blob_size,
                                               PlacementSchema &schema) {
     hapi::Blob blob(blob_size);
-    this->IoCallServer(req, bulk, IoType::kWrite, blob.data(), blob.size());
+    this->IoCallServer(req, bulk, IoType::kWrite, blob.data(),
+                       blob.size());
     auto ret = bpm->LocalAllocateAndSetBuffers(schema, blob);
     req.respond(ret);
   });

@@ -20,3 +20,10 @@ add_test(NAME test_reserve COMMAND
         ${CMAKE_CURRENT_BINARY_DIR}/test_memory_exec "BackendReserve")
 add_test(NAME test_memory_manager COMMAND
         mpirun -n 2 ${CMAKE_CURRENT_BINARY_DIR}/test_memory_exec "MemoryManager")
+
+#------------------------------------------------------------------------------
+# Code Coverage
+#------------------------------------------------------------------------------
+if(HERMES_ENABLE_COVERAGE)
+    set_coverage_flags(test_memory_exec)
+endif()

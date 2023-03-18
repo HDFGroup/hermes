@@ -61,10 +61,6 @@ int HERMES_DECL(open)(const char *path, int flags, ...) {
               << " and mode: " << flags << " is tracked." << std::endl;
     AdapterStat stat;
     stat.flags_ = flags;
-    if (stat.flags_ & O_EXCL) {
-      LOG(INFO) << "Ignore exclusive open for now." << std::endl;
-      /*stat.flags_ &= ~O_EXCL;*/
-    }
     stat.st_mode_ = mode;
     auto f = fs_api->Open(stat, path);
     return f.hermes_fd_;

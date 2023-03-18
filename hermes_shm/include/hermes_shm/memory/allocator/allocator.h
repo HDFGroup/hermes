@@ -293,9 +293,9 @@ class Allocator {
    *
    * @return A process-specific pointer
    * */
-  template<typename T, typename POINTER_T = Pointer>
+  template<typename T>
   inline T* AllocateObjs(size_t count) {
-    POINTER_T p;
+    OffsetPointer p;
     return AllocateObjs<T>(count, p);
   }
 
@@ -471,7 +471,7 @@ class Allocator {
    * @return a process-independent pointer
    * */
   template<typename T, typename POINTER_T = Pointer>
-  inline POINTER_T Convert(T *ptr) {
+  inline POINTER_T Convert(const T *ptr) {
     if (ptr == nullptr) { return POINTER_T::GetNull(); }
     return POINTER_T(GetId(),
                      reinterpret_cast<size_t>(ptr) -

@@ -27,8 +27,8 @@
 #include <vector>
 
 // hermes
-#include <hermes_shm/data_structures/string.h>
-#include <hermes_shm/data_structures/thread_unsafe/vector.h>
+#include "hermes_shm/data_structures/ipc/string.h"
+#include <hermes_shm/data_structures/ipc/vector.h>
 
 #include "basic_test.h"
 #include "test_init.h"
@@ -54,17 +54,21 @@ class VectorTest {
  public:
   std::string vec_type;
   std::string internal_type;
+  hipc::mptr<VecT> vec_shm;
   VecT *vec;
 
   VectorTest() {
     if constexpr(std::is_same_v<std::vector<T>, VecT>) {
-      vec = new VecT();
+      vec_shm = hipc::make_mptr<VecT>();
+      vec = &(*vec_shm);
       vec_type = "std::vector";
     } else if constexpr(std::is_same_v<hipc::vector<T>, VecT>) {
-      vec = new VecT();
+      vec_shm = hipc::make_mptr<VecT>();
+      vec = &(*vec_shm);
       vec_type = "hipc::vector";
     } else if constexpr(std::is_same_v<boost::container::vector<T>, VecT>) {
-      vec = new VecT();
+      vec_shm = hipc::make_mptr<VecT>();
+      vec = &(*vec_shm);
       vec_type = "boost::vector";
     } else if constexpr(std::is_same_v<bipc::vector<T>, VecT>) {
       vec = BoostIpcVector();
@@ -93,9 +97,7 @@ class VectorTest {
 
   void ResizeTest(VecT &vec, int count) {
     Timer t;
-    T var;
-
-    SET_VAR_TO_INT_OR_STRING(T, var, 124);
+    CREATE_SET_VAR_TO_INT_OR_STRING(T, var, 124);
 
     t.Resume();
     vec.resize(count);
@@ -106,8 +108,7 @@ class VectorTest {
 
   void ReserveEmplaceTest(VecT &vec, int count) {
     Timer t;
-    T var;
-    SET_VAR_TO_INT_OR_STRING(T, var, 124);
+    CREATE_SET_VAR_TO_INT_OR_STRING(T, var, 124);
 
     t.Resume();
     vec.reserve(count);
@@ -121,8 +122,7 @@ class VectorTest {
 
   void GetTest(VecT &vec, int count) {
     Timer t;
-    T var;
-    SET_VAR_TO_INT_OR_STRING(T, var, 124);
+    CREATE_SET_VAR_TO_INT_OR_STRING(T, var, 124);
 
     vec.reserve(count);
     for (int i = 0; i < count; ++i) {
@@ -140,8 +140,7 @@ class VectorTest {
 
   void ForwardIteratorTest(VecT &vec, int count) {
     Timer t;
-    T var;
-    SET_VAR_TO_INT_OR_STRING(T, var, 124);
+    CREATE_SET_VAR_TO_INT_OR_STRING(T, var, 124);
 
     vec.reserve(count);
     for (int i = 0; i < count; ++i) {
@@ -160,8 +159,7 @@ class VectorTest {
 
   void CopyTest(VecT &vec, int count) {
     Timer t;
-    T var;
-    SET_VAR_TO_INT_OR_STRING(T, var, 124);
+    CREATE_SET_VAR_TO_INT_OR_STRING(T, var, 124);
 
     vec.reserve(count);
     for (int i = 0; i < count; ++i) {
@@ -177,8 +175,7 @@ class VectorTest {
 
   void MoveTest(VecT &vec, int count) {
     Timer t;
-    T var;
-    SET_VAR_TO_INT_OR_STRING(T, var, 124);
+    CREATE_SET_VAR_TO_INT_OR_STRING(T, var, 124);
 
     vec.reserve(count);
     for (int i = 0; i < count; ++i) {

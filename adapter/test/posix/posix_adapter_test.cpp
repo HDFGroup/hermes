@@ -35,7 +35,7 @@ namespace stdfs = std::filesystem;
 namespace hermes::adapter::fs::test {
 struct Arguments {
   std::string filename = "test.dat";
-  std::string directory = "/tmp";
+  std::string directory = "/tmp/test_hermes";
   size_t request_size = 65536;
 };
 struct Info {
@@ -242,8 +242,8 @@ void test_open(const char* path, int flags, ...) {
   std::string cmp_path;
   if (strcmp(path, info.new_file.c_str()) == 0) {
     cmp_path = info.new_file_cmp;
-  } else if (strcmp(path, "/tmp") == 0) {
-    cmp_path = "/tmp";
+  } else if (strcmp(path, "/tmp/test_hermes") == 0) {
+    cmp_path = "/tmp/test_hermes";
   } else {
     cmp_path = info.existing_file_cmp;
   }

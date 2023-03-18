@@ -57,23 +57,24 @@ enum MdMapLock {
 /**
  * The SHM representation of the MetadataManager
  * */
-struct MetadataManagerShmHeader {
+template<>
+struct ShmHeader<MetadataManager> {
   /// SHM representation of blob id map
-  hipc::TypedPointer<hipc::mptr<BLOB_ID_MAP_T>> blob_id_map_ar_;
-  /// SHM representation of tag id map
-  hipc::TypedPointer<hipc::mptr<TAG_ID_MAP_T>> tag_id_map_ar_;
-  /// SHM representation of trait id map
-  hipc::TypedPointer<hipc::mptr<TAG_ID_MAP_T>> trait_id_map_ar_;
+  hipc::ShmArchive<BLOB_ID_MAP_T> blob_id_map_ar_;
   /// SHM representation of blob map
-  hipc::TypedPointer<hipc::mptr<BLOB_MAP_T>> blob_map_ar_;
+  hipc::ShmArchive<BLOB_MAP_T> blob_map_ar_;
+  /// SHM representation of tag id map
+  hipc::ShmArchive<TAG_ID_MAP_T> tag_id_map_ar_;
   /// SHM representation of tag map
-  hipc::TypedPointer<hipc::mptr<TAG_MAP_T>> tag_map_ar_;
+  hipc::ShmArchive<TAG_MAP_T> tag_map_ar_;
+  /// SHM representation of trait id map
+  hipc::ShmArchive<TRAIT_ID_MAP_T> trait_id_map_ar_;
   /// SHM representation of trait map
-  hipc::TypedPointer<hipc::mptr<TRAIT_MAP_T>> trait_map_ar_;
+  hipc::ShmArchive<TRAIT_MAP_T> trait_map_ar_;
   /// SHM representation of device vector
-  hipc::TypedPointer<hipc::mptr<hipc::vector<DeviceInfo>>> devices_;
+  hipc::ShmArchive<hipc::vector<DeviceInfo>> devices_;
   /// SHM representation of target info vector
-  hipc::TypedPointer<hipc::mptr<hipc::vector<TargetInfo>>> targets_;
+  hipc::ShmArchive<hipc::vector<TargetInfo>> targets_;
   /// Used to create unique ids. Starts at 1.
   std::atomic<u64> id_alloc_;
   /// Synchronization
@@ -83,77 +84,80 @@ struct MetadataManagerShmHeader {
 /**
  * Manages the metadata for blobs, buckets, and vbuckets.
  * */
-class MetadataManager {
+class MetadataManager : public hipc::ShmContainer {
  public:
+  SHM_CONTAINER_TEMPLATE((MetadataManager),
+                         (MetadataManager),
+                         (ShmHeader<MetadataManager>))
   RPC_TYPE *rpc_;
-  MetadataManagerShmHeader *header_;
   BufferOrganizer *borg_;
 
   /**====================================
    * Maps
    * ===================================*/
-  hipc::mptr<BLOB_ID_MAP_T> blob_id_map_;
-  hipc::mptr<TAG_ID_MAP_T> tag_id_map_;
-  hipc::mptr<TRAIT_ID_MAP_T> trait_id_map_;
-  hipc::mptr<BLOB_MAP_T> blob_map_;
-  hipc::mptr<TAG_MAP_T> tag_map_;
-  hipc::mptr<TRAIT_MAP_T> trait_map_;
-  hipc::unordered_map<TraitId, hapi::Trait*> local_trait_map_;
+  hipc::Ref<BLOB_ID_MAP_T> blob_id_map_;
+  hipc::Ref<TAG_ID_MAP_T> tag_id_map_;
+  hipc::Ref<TRAIT_ID_MAP_T> trait_id_map_;
+  hipc::Ref<BLOB_MAP_T> blob_map_;
+  hipc::Ref<TAG_MAP_T> tag_map_;
+  hipc::Ref<TRAIT_MAP_T> trait_map_;
+  std::unordered_map<TraitId, hapi::Trait*> local_trait_map_;
   RwLock local_lock_;
 
   /**====================================
    * Targets + devices
    * ===================================*/
-  hipc::mptr<hipc::vector<DeviceInfo>> devices_;
-  hipc::mptr<hipc::vector<TargetInfo>> targets_;
+  hipc::Ref<hipc::vector<DeviceInfo>> devices_;
+  hipc::Ref<hipc::vector<TargetInfo>> targets_;
 
  public:
   /**====================================
-   * SHM Overrides
+   * Default Constructor
    * ===================================*/
 
   /** Default constructor */
-  MetadataManager() = default;
+  MetadataManager(ShmHeader<MetadataManager> *header,
+                  hipc::Allocator *alloc,
+                  ServerConfig *config);
 
-  /**
-   * Initialize the process-specific data for the
-   * metadata manager
-   * */
-  void local_init();
+  /**====================================
+   * Destructor
+   * ===================================*/
 
-  /**
-   * Explicitly initialize the MetadataManager
-   * */
-  void shm_init(ServerConfig *config, MetadataManagerShmHeader *header);
+  /** Whether the MetadataManager is NULL */
+  bool IsNull() { return false; }
+
+  /** Set the MetadataManager to NULL */
+  void SetNull() {}
 
   /**
    * Explicitly destroy the MetadataManager
    * */
-  void shm_destroy();
+  void shm_destroy_main();
+
+  /**====================================
+   * SHM Deserialize
+   * ===================================*/
 
   /**
-   * Store the MetadataManager in shared memory.
+   * Unload the MetadataManager from shared memory
    * */
-  void shm_serialize();
+  void shm_deserialize_main();
 
   /**
-    * Unload the MetadtaManager from shared memory
-    * */
-  void shm_deserialize(MetadataManagerShmHeader *header);
-
-  /**
-    * Create a unique blob name using TagId
-    * */
-  static hipc::charbuf CreateBlobName(TagId bkt_id,
-                                      const hipc::charbuf &blob_name) {
-    hipc::charbuf new_name(sizeof(uint64_t) + sizeof(uint32_t) +
-                           blob_name.size());
+   * Create a unique blob name using TagId
+   * */
+  template<typename StringT>
+  static hipc::uptr<hipc::charbuf> CreateBlobName(
+      TagId bkt_id, const StringT &blob_name) {
+    auto new_name = hipc::make_uptr<hipc::charbuf>(
+        sizeof(uint64_t) + sizeof(uint32_t) + blob_name.size());
     size_t off = 0;
-    memcpy(new_name.data_mutable() + off, &bkt_id.unique_, sizeof(uint64_t));
+    memcpy(new_name->data() + off, &bkt_id.unique_, sizeof(uint64_t));
     off += sizeof(uint64_t);
-    memcpy(new_name.data_mutable() + off, &bkt_id.node_id_, sizeof(uint32_t));
+    memcpy(new_name->data() + off, &bkt_id.node_id_, sizeof(uint32_t));
     off += sizeof(uint32_t);
-    memcpy(new_name.data_mutable() + off, blob_name.data(), blob_name.size());
+    memcpy(new_name->data() + off, blob_name.data(), blob_name.size());
     return new_name;
   }
 
@@ -194,7 +198,7 @@ class MetadataManager {
    * @param buffers the buffers to place data in
    * */
   RPC std::tuple<BlobId, bool, size_t> LocalPutBlobMetadata(
-      TagId bkt_id, const hipc::charbuf &blob_name, size_t blob_size,
+      TagId bkt_id, const std::string &blob_name, size_t blob_size,
       std::vector<BufferInfo> &buffers);
   DEFINE_RPC((std::tuple<BlobId, bool, size_t>), PutBlobMetadata, 0,
              UNIQUE_ID_TO_NODE_ID_LAMBDA)
@@ -206,7 +210,7 @@ class MetadataManager {
    * @param blob_name semantic blob name
    * */
   std::pair<BlobId, bool> LocalTryCreateBlob(TagId bkt_id,
-                                             const hipc::charbuf &blob_name);
+                                             const std::string &blob_name);
   DEFINE_RPC((std::pair<BlobId, bool>), TryCreateBlob, 0,
              UNIQUE_ID_TO_NODE_ID_LAMBDA)
 
@@ -228,7 +232,7 @@ class MetadataManager {
   /**
    * Get \a blob_name BLOB from \a bkt_id bucket
    * */
-  RPC BlobId LocalGetBlobId(TagId bkt_id, const hipc::charbuf &blob_name);
+  RPC BlobId LocalGetBlobId(TagId bkt_id, const std::string &blob_name);
   DEFINE_RPC(BlobId, GetBlobId, 0, UNIQUE_ID_TO_NODE_ID_LAMBDA)
 
   /**
@@ -261,7 +265,7 @@ class MetadataManager {
    * in \a bkt_id bucket.
    * */
   RPC bool LocalRenameBlob(TagId bkt_id, BlobId blob_id,
-                           hipc::charbuf &new_blob_name);
+                           const std::string &new_blob_name);
   DEFINE_RPC(bool, RenameBlob, 1, UNIQUE_ID_TO_NODE_ID_LAMBDA)
 
   /**
@@ -307,12 +311,12 @@ class MetadataManager {
   /**
    * Get the TargetInfo for neighborhood
    * */
-  hipc::vector<TargetInfo> GetNeighborhoodTargetInfo() { return {}; }
+  // hipc::vector<TargetInfo> GetNeighborhoodTargetInfo() { return {}; }
 
   /**
    * Get all TargetInfo in the system
    * */
-  hipc::vector<TargetInfo> GetGlobalTargetInfo() { return {}; }
+  // hipc::vector<TargetInfo> GetGlobalTargetInfo() { return {}; }
 
   /**====================================
    * Tag Operations
@@ -378,8 +382,8 @@ class MetadataManager {
   /**
    * Find all traits pertaining to a tag
    * */
-  hipc::slist<TraitId> LocalTagGetTraits(TagId tag_id);
-  DEFINE_RPC(hipc::slist<TraitId>, TagGetTraits, 0,
+  std::vector<TraitId> LocalTagGetTraits(TagId tag_id);
+  DEFINE_RPC(std::vector<TraitId>, TagGetTraits, 0,
              UNIQUE_ID_TO_NODE_ID_LAMBDA);
 
   /**====================================
@@ -391,14 +395,14 @@ class MetadataManager {
    * */
   RPC TraitId LocalRegisterTrait(TraitId trait_id,
                                  const std::string &trait_uuid,
-                                 hipc::charbuf &trait_params)
+                                 const hshm::charbuf &trait_params)
   {
     // Acquire md write lock (modifying trait map)
     ScopedRwWriteLock md_lock(header_->lock_[kTraitMapLock]);
 
     // Check if trait exists
-    hipc::charbuf trait_uuid_shm(trait_uuid);
-    auto iter = trait_id_map_->find(trait_uuid_shm);
+    auto trait_uuid_shm = hipc::make_uptr<hipc::charbuf>(trait_uuid);
+    auto iter = trait_id_map_->find(*trait_uuid_shm);
     if (!iter.is_end()) {
       trait_id = *(*iter)->second_;
       return trait_id;
@@ -409,7 +413,7 @@ class MetadataManager {
       trait_id.unique_ = header_->id_alloc_.fetch_add(1);
       trait_id.node_id_ = rpc_->node_id_;
     }
-    trait_id_map_->emplace(trait_uuid_shm, trait_id);
+    trait_id_map_->emplace(*trait_uuid_shm, trait_id);
     trait_map_->emplace(trait_id, trait_params);
     return trait_id;
   }
@@ -418,21 +422,22 @@ class MetadataManager {
   /**
    * Get trait info from main trait md structure
    * */
-  RPC std::pair<TraitId, hipc::charbuf>
+  RPC std::pair<TraitId, hshm::charbuf>
   LocalGetTraitInfo(const std::string &trait_uuid) {
     // Acquire md read lock (reading trait_id_map)
     ScopedRwReadLock md_lock(header_->lock_[kTraitMapLock]);
     // Check if trait exists
-    auto iter = trait_id_map_->find(hipc::string(trait_uuid));
+    auto trait_uuid_shm = hipc::make_uptr<hipc::charbuf>(trait_uuid);
+    auto iter = trait_id_map_->find(*trait_uuid_shm);
     if (iter.is_end()) {
-      return std::pair<TraitId, hipc::charbuf>(TraitId::GetNull(),
-                                               hipc::charbuf());
+      return std::pair<TraitId, hshm::charbuf>(
+          TraitId::GetNull(), hshm::charbuf());
     }
     TraitId trait_id = *(*iter)->second_;
-    return std::pair<TraitId, hipc::charbuf>(trait_id,
-                                             *(*trait_map_)[trait_id]);
+    return std::pair<TraitId, hshm::charbuf>(trait_id,
+                                             (*trait_map_)[trait_id]->str());
   }
-  DEFINE_RPC((std::pair<TraitId, hipc::charbuf>),
+  DEFINE_RPC((std::pair<TraitId, hshm::charbuf>),
              GetTraitInfo, 0, std::hash<std::string>{});
 
   /**
@@ -441,7 +446,8 @@ class MetadataManager {
   TraitId GlobalGetTraitId(const std::string &trait_uuid) {
     // Acquire md read lock (reading trait_id_map)
     ScopedRwReadLock md_lock(header_->lock_[kTraitMapLock]);
-    auto iter = trait_id_map_->find(hipc::string(trait_uuid));
+    auto trait_uuid_shm = hipc::make_uptr<hipc::charbuf>(trait_uuid);
+    auto iter = trait_id_map_->find(*trait_uuid_shm);
     if (iter.is_end()) {
       md_lock.Unlock();
       auto info = GlobalGetTraitInfo(trait_uuid);
@@ -467,8 +473,8 @@ class MetadataManager {
     if (iter.is_end()) {
       return nullptr;
     }
-    hipc::ShmRef<hipc::pair<TraitId, hipc::charbuf>> trait_params_p = *iter;
-    TraitT *trait = new TraitT(*trait_params_p->second_);
+    hipc::Ref<hipc::pair<TraitId, hipc::charbuf>> trait_params_p = *iter;
+    TraitT *trait = new TraitT((*trait_params_p->second_).str());
     local_trait_map_.emplace(trait_id, trait);
     return trait;
   }
@@ -480,7 +486,7 @@ class MetadataManager {
   TraitT* GlobalGetTrait(TraitId trait_id) {
     ScopedRwReadLock md_lock(local_lock_);
     auto iter = local_trait_map_.find(trait_id);
-    if (iter.is_end()) {
+    if (iter == local_trait_map_.end()) {
       if constexpr(std::is_same_v<TraitT, hapi::Trait>) {
         return nullptr;
       } else {
@@ -488,8 +494,8 @@ class MetadataManager {
         return LocalConstructTrait<TraitT>(trait_id);
       }
     }
-    hipc::ShmRef<hipc::pair<TraitId, hapi::Trait*>> trait_pair = *iter;
-    return dynamic_cast<TraitT*>((*trait_pair->second_));
+    std::pair<TraitId, hapi::Trait*> trait_pair = *iter;
+    return dynamic_cast<TraitT*>(trait_pair.second);
   }
 
   /**====================================
@@ -506,7 +512,7 @@ class MetadataManager {
     if (iter == map.end()) {
       return false;
     }
-    hipc::ShmRef<hipc::pair<MapFirst, MapSecond>> info = *iter;
+    hipc::Ref<hipc::pair<MapFirst, MapSecond>> info = *iter;
     MapSecond &obj_info = *info->second_;
     switch (lock_type) {
       case MdLockType::kExternalRead: {
@@ -532,7 +538,7 @@ class MetadataManager {
     if (iter == map.end()) {
       return false;
     }
-    hipc::ShmRef<hipc::pair<MapFirst, MapSecond>> info = *iter;
+    hipc::Ref<hipc::pair<MapFirst, MapSecond>> info = *iter;
     MapSecond &obj_info = *info->second_;
     switch (lock_type) {
       case MdLockType::kExternalRead: {

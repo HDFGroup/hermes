@@ -31,12 +31,11 @@ namespace hermes::config {
 void ServerConfig::ParseDeviceInfo(YAML::Node yaml_conf) {
   devices_.clear();
   for (auto device : yaml_conf) {
-    DeviceInfo dev(hipc::typed_nullptr<hipc::Allocator>());
+    devices_.emplace_back();
+    DeviceInfo &dev = devices_.back();
     auto dev_info = device.second;
-    (*dev.dev_name_) = hipc::string(
-        device.first.as<std::string>());
-    (*dev.mount_dir_) = hipc::string(
-        dev_info["mount_point"].as<std::string>());
+    (*dev.dev_name_) = device.first.as<std::string>();
+    (*dev.mount_dir_) = dev_info["mount_point"].as<std::string>();
     dev.header_->borg_min_thresh_ =
         dev_info["borg_capacity_thresh"][0].as<float>();
     dev.header_->borg_max_thresh_ =
@@ -58,7 +57,6 @@ void ServerConfig::ParseDeviceInfo(YAML::Node yaml_conf) {
     for (const std::string &size_str : size_vec) {
       dev.slab_sizes_->emplace_back(ParseSize(size_str));
     }
-    devices_.emplace_back(std::move(dev));
   }
 }
 

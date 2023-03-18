@@ -3,6 +3,10 @@ project(hermes_shm)
 
 set(CMAKE_CXX_STANDARD 17)
 
+#------------------------------------------------------------------------------
+# Build Tests
+#------------------------------------------------------------------------------
+
 add_executable(test_data_structure_exec
         ${TEST_MAIN}/main.cc
         test_init.cc
@@ -58,3 +62,10 @@ add_test(NAME test_unordered_map_of_str_int COMMAND
         ${CMAKE_CURRENT_BINARY_DIR}/test_data_structure_exec "UnorderedMapOfStringInt")
 add_test(NAME test_unordered_map_of_str_str COMMAND
         ${CMAKE_CURRENT_BINARY_DIR}/test_data_structure_exec "UnorderedMapOfStringString")
+
+#------------------------------------------------------------------------------
+# Code Coverage
+#------------------------------------------------------------------------------
+if(HERMES_ENABLE_COVERAGE)
+    set_coverage_flags(test_data_structure_exec)
+endif()

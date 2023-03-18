@@ -31,7 +31,7 @@ static inline size_t SumBufferBlobSizes(std::vector<BufferInfo> &buffers) {
 /**
  * Manages the organization of blobs in the hierarchy.
  * */
-class BufferOrganizer {
+class BufferOrganizer : public hipc::ShmContainer {
  public:
   MetadataManager *mdm_;
   RPC_TYPE *rpc_;

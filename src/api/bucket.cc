@@ -161,7 +161,9 @@ Status Bucket::Put(std::string blob_name,
     bool did_create = std::get<1>(put_ret);
     ssize_t orig_blob_size = (ssize_t)std::get<2>(put_ret);
     ssize_t new_blob_size = blob.size();
-    mdm_->GlobalTagAddBlob(id_, blob_id);
+    if (did_create) {
+      mdm_->GlobalTagAddBlob(id_, blob_id);
+    }
     UpdateSize(new_blob_size - orig_blob_size, BucketUpdate::kInternal);
   }
 
@@ -314,7 +316,7 @@ void Bucket::FlushBlob(BlobId blob_id,
   IoStatus status;
   // Read blob from Hermes
   Get(blob_id, full_blob, ctx_);
-  LOG(INFO) << "The blob being flushed as size: "
+  LOG(INFO) << "The blob being flushed has size: "
             << full_blob.size() << std::endl;
   std::string blob_name;
   GetBlobName(blob_id, blob_name);
