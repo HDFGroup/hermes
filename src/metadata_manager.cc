@@ -174,6 +174,7 @@ bool MetadataManager::LocalClearBucket(TagId bkt_id) {
   for (hipc::Ref<BlobId> blob_id : *bkt_info.blobs_) {
     GlobalDestroyBlob(bkt_id, *blob_id);
   }
+  bkt_info.blobs_->clear();
   bkt_info.header_->internal_size_ = 0;
   return true;
 }

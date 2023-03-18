@@ -84,6 +84,28 @@ void TestBucketRename(hapi::Hermes *hermes) {
   REQUIRE(bkt->GetId() == bkt2->GetId());
 }
 
+void TestBucketClear(hapi::Hermes *hermes) {
+  auto bkt = hermes->GetBucket("hello");
+  int num_blobs = 16;
+  size_t blob_size = MEGABYTES(150);
+  hermes::api::Context ctx;
+  hermes::BlobId blob_id;
+
+  for (size_t i = 0; i < num_blobs; ++i) {
+    hermes::Blob blob(blob_size);
+    std::string name = std::to_string(i);
+    char nonce = i % 256;
+    memset(blob.data(), nonce, blob_size);
+    bkt->Put(name, std::move(blob), blob_id, ctx);
+  }
+
+  bkt->Clear();
+
+  REQUIRE(bkt->GetSize() == 0);
+  auto blobs = bkt->GetContainedBlobIds();
+  REQUIRE(blobs.size() == 0);
+}
+
 void TestBucketDestroy(hapi::Hermes *hermes) {
   auto bkt = hermes->GetBucket("hello");
   int num_blobs = 1;
@@ -163,6 +185,10 @@ TEST_CASE("TestBlobOverride") {
 
 TEST_CASE("TestBucketRename") {
   TestBucketRename(HERMES);
+}
+
+TEST_CASE("TestBucketClear") {
+  TestBucketClear(HERMES);
 }
 
 TEST_CASE("TestBucketDestroy") {

@@ -229,7 +229,6 @@ class Bucket {
   void DestroyBlob(BlobId blob_id, Context &ctx,
                    IoClientContext opts = IoClientContext());
 
- private:
   /**
    * Get the set of blob IDs contained in the bucket
    * */
