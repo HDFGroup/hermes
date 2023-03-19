@@ -28,8 +28,7 @@ std::vector<std::string> RpcContext::ParseHostfile(const std::string &path) {
       hosts.emplace_back(line);
     }
     file.close();
-  }
-  else {
+  } else {
     LOG(FATAL) << "Could not open the hostfile: " << path << std::endl;
   }
   return hosts;

@@ -473,12 +473,11 @@ void MetadataManager::GlobalClear() {
 /**
  * Get or create a bucket with \a bkt_name bucket name
  * */
-std::pair<TagId, bool> MetadataManager::LocalGetOrCreateTag(
-  const std::string &tag_name,
-  bool owner,
-  std::vector<TraitId> &traits,
-  size_t backend_size) {
-
+std::pair<TagId, bool>
+MetadataManager::LocalGetOrCreateTag(const std::string &tag_name,
+                                     bool owner,
+                                     std::vector<TraitId> &traits,
+                                     size_t backend_size) {
   // Acquire MD write lock (modifying tag_map)
   ScopedRwWriteLock tag_map_lock(header_->lock_[kTagMapLock]);
 

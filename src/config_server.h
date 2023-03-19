@@ -97,7 +97,7 @@ struct DeviceInfo : public hipc::ShmContainer {
         header_->slab_sizes_, alloc_);
     mount_dir_ = hipc::make_ref<hipc::string>(
         header_->mount_dir_, alloc_);
-    mount_point_= hipc::make_ref<hipc::string>
+    mount_point_ = hipc::make_ref<hipc::string>
         (header_->mount_point_, alloc_);
   }
 
@@ -113,7 +113,7 @@ struct DeviceInfo : public hipc::ShmContainer {
         header_->slab_sizes_, alloc_);
     mount_dir_ = hipc::Ref<hipc::string>(
         header_->mount_dir_, alloc_);
-    mount_point_= hipc::Ref<hipc::string>
+    mount_point_ = hipc::Ref<hipc::string>
         (header_->mount_point_, alloc_);
   }
 
@@ -138,7 +138,7 @@ struct DeviceInfo : public hipc::ShmContainer {
         header_->slab_sizes_, alloc_, *other.slab_sizes_);
     mount_dir_ = hipc::make_ref<hipc::string>(
         header_->mount_dir_, alloc_, *other.mount_dir_);
-    mount_point_= hipc::make_ref<hipc::string>
+    mount_point_ = hipc::make_ref<hipc::string>
         (header_->mount_point_, alloc_, *other.mount_point_);
   }
 
@@ -177,7 +177,7 @@ struct DeviceInfo : public hipc::ShmContainer {
           header_->slab_sizes_, alloc_, std::move(*other.slab_sizes_));
       mount_dir_ = hipc::make_ref<hipc::string>(
           header_->mount_dir_, alloc_, std::move(*other.mount_dir_));
-      mount_point_= hipc::make_ref<hipc::string>
+      mount_point_ = hipc::make_ref<hipc::string>
           (header_->mount_point_, alloc_, std::move(*other.mount_point_));
       other.SetNull();
     } else {

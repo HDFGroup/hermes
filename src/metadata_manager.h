@@ -398,8 +398,7 @@ class MetadataManager : public hipc::ShmContainer {
    * */
   RPC TraitId LocalRegisterTrait(TraitId trait_id,
                                  const std::string &trait_uuid,
-                                 const hshm::charbuf &trait_params)
-  {
+                                 const hshm::charbuf &trait_params) {
     // Acquire md write lock (modifying trait map)
     ScopedRwWriteLock md_lock(header_->lock_[kTraitMapLock]);
 
