@@ -19,9 +19,8 @@
 namespace hermes {
 
 /** parse hostfile */
-std::vector<std::string> RpcContext::ParseHostfile() {
+std::vector<std::string> RpcContext::ParseHostfile(const std::string &path) {
   std::vector<std::string> hosts;
-  std::string &path = config_->rpc_.host_file_;
   std::ifstream file(path);
   if (file.is_open()) {
     std::string line;
@@ -47,7 +46,7 @@ void RpcContext::InitRpcContext() {
   auto &hosts = config_->rpc_.host_names_;
   // Load hosts from hostfile
   if (!config_->rpc_.host_file_.empty()) {
-    hosts = ParseHostfile();
+    hosts = ParseHostfile(config_->rpc_.host_file_);
   }
 
   // Get all host info

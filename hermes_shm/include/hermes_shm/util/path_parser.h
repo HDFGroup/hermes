@@ -45,6 +45,6 @@ static std::string path_parser(std::string path) {
   return path;
 }
 
-}  // namespace scs
+}  // namespace hermes_shm
 
 #endif  // HERMES_PATH_PARSER_H

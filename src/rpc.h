@@ -67,7 +67,7 @@ class RpcContext {
   RpcContext() = default;
 
   /** Parse a hostfile */
-  std::vector<std::string> ParseHostfile();
+  static std::vector<std::string> ParseHostfile(const std::string &path);
 
   /** initialize host info list */
   void InitRpcContext();

@@ -19,6 +19,7 @@ set(API_TESTS
         test_partial_put_get
         test_buffer_pool
         test_trait
+        test_config
         test_tag)
 
 find_program(BASH_PROGRAM bash)
