@@ -61,7 +61,7 @@ jobs:
         run: ci/install_deps.sh
 
       - name: Build and Test
-        run: ci/install_hshm.sh
+        run: ci/install_hermes.sh
 
       - name: Install
         run: pushd build && make install && popd
