@@ -23,7 +23,7 @@ using api::Bucket;
 
 /**
  * Explicitly initialize the MetadataManager
- * Doesn't require anything to be initialized.
+ * Requires RPC to be initialized
  * */
 MetadataManager::MetadataManager(
     ShmHeader<MetadataManager> *header, hipc::Allocator *alloc,
@@ -34,6 +34,9 @@ MetadataManager::MetadataManager(
   header_->id_alloc_ = 1;
 
   LOG(INFO) << "Initializing MDM" << std::endl;
+
+  // Put the node_id in SHM
+  header_->node_id_ = rpc_->node_id_;
 
   // Create the metadata maps
   blob_id_map_ = hipc::make_ref<BLOB_ID_MAP_T>(header_->blob_id_map,
@@ -89,6 +92,7 @@ void MetadataManager::shm_destroy_main() {
 
 /**
  * Store the MetadataManager in shared memory.
+ * Does not require anything to be initialized.
  * */
 void MetadataManager::shm_deserialize_main() {
   rpc_ = &HERMES->rpc_;

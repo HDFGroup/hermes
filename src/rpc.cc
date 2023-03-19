@@ -65,7 +65,6 @@ void RpcContext::InitRpcContext() {
     MPI_Comm_rank(MPI_COMM_WORLD, &node_id_);
     MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
     node_id_ += 1;
-    mdm_->header_->node_id_ = node_id_;
     if (nprocs != hosts_.size()) {
       LOG(FATAL) << hshm::Formatter::format(
           "Must run the daemon on EVERY node in the hostfile."
