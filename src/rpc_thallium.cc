@@ -15,6 +15,7 @@
 #include "metadata_manager.h"
 #include "rpc_thallium.h"
 #include "hermes_shm/util/singleton.h"
+#include <fstream>
 
 namespace tl = thallium;
 
@@ -56,7 +57,6 @@ void ThalliumRpc::InitClient() {
 
 /** run daemon */
 void ThalliumRpc::RunDaemon() {
-  LOG(INFO) << "Running the daemon on node " << node_id_ << std::endl;
   server_engine_->enable_remote_shutdown();
   auto prefinalize_callback = [this]() {
     LOG(INFO) << "Beginning finalization on node: " <<
@@ -65,9 +65,16 @@ void ThalliumRpc::RunDaemon() {
     LOG(INFO) << "Finished finalization callback on node: " <<
         this->node_id_ << std::endl;
   };
+
+  // TODO(llogan): and config param to do this
+  std::ofstream daemon_started_fs;
+  daemon_started_fs.open("/tmp/hermes_daemon_log.txt");
+  daemon_started_fs << HERMES_SYSTEM_INFO->pid_;
+  daemon_started_fs.close();
+  LOG(INFO) << "Running the daemon on node " << node_id_ << std::endl;
+
   server_engine_->push_prefinalize_callback(prefinalize_callback);
   server_engine_->wait_for_finalize();
-  client_engine_->finalize();
   LOG(INFO) << "Daemon has stopped on node: " <<
       this->node_id_ << std::endl;
 }
@@ -101,6 +108,7 @@ void ThalliumRpc::Finalize() {
       // comm_->WorldBarrier();
       this->kill_requested_.store(true);
       server_engine_->finalize();
+      client_engine_->finalize();
       break;
     }
     case HermesType::kClient: {
