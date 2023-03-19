@@ -61,9 +61,16 @@ void RpcContext::InitRpcContext() {
 
   // Get id of current host
   if (HERMES->mode_ == HermesType::kServer) {
+    int nprocs;
     MPI_Comm_rank(MPI_COMM_WORLD, &node_id_);
+    MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
     node_id_ += 1;
     mdm_->header_->node_id_ = node_id_;
+    if (nprocs != hosts_.size()) {
+      LOG(FATAL) << hshm::Formatter::format(
+          "Must run the daemon on EVERY node in the hostfile."
+          "{}/{} were launched.", nprocs, hosts_.size()) << std::endl;
+    }
   } else {
     node_id_ = mdm_->header_->node_id_;
   }

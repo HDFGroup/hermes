@@ -35,9 +35,10 @@ void ThalliumRpc::InitServer() {
   }
   std::string rpc_server_name = server_engine_->self();
   LOG(INFO) << hshm::Formatter::format(
-                   "Serving {} (i.e., {}) with {} RPC threads",
+                   "Serving {} (i.e., {}) with {} RPC threads as node id {}",
                    rpc_server_name, addr,
-                   config_->rpc_.num_threads_) << std::endl;
+                   config_->rpc_.num_threads_,
+                   node_id_) << std::endl;
   DefineRpcs();
 }
 
@@ -48,6 +49,9 @@ void ThalliumRpc::InitClient() {
   client_engine_ = std::make_unique<tl::engine>(protocol,
                               THALLIUM_CLIENT_MODE,
                               true, 1);
+  LOG(INFO) << hshm::Formatter::format(
+                   "This client is on node {} (i.e., {})",
+                   node_id_, GetHostNameFromNodeId(node_id_)) << std::endl;
 }
 
 /** run daemon */
