@@ -27,7 +27,7 @@ INSTALL_DIR="${HOME}/${LOCAL}"
 SPACK_DIR=${INSTALL_DIR}/spack
 SPACK_VERSION=0.18.1
 
-# Spack
+# Install spack
 echo "Installing dependencies at ${INSTALL_DIR}"
 mkdir -p ${INSTALL_DIR}
 git clone https://github.com/spack/spack ${SPACK_DIR}
