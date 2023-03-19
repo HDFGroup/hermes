@@ -43,6 +43,7 @@ void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
     stat.path_ = stdfs::weakly_canonical(path).string();
     auto path_shm = hipc::make_uptr<hipc::charbuf>(stat.path_);
     size_t file_size = io_client_->GetSize(*path_shm);
+    // The file was opened with TRUNCATION
     if (stat.is_trunc_) {
       // TODO(llogan): Need to add back bucket lock
       stat.bkt_id_ = HERMES->GetBucket(stat.path_, ctx, 0);
@@ -50,10 +51,14 @@ void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
     } else {
       stat.bkt_id_ = HERMES->GetBucket(stat.path_, ctx, file_size);
     }
-    // Update bucket stats
+    // Update page size and file size
     // TODO(llogan): can avoid two unordered_map queries here
     stat.page_size_ = mdm->GetAdapterPageSize(path);
     stat.backend_size_ = stat.bkt_id_->GetSize(true);
+    // The file was opened with APPEND
+    if (stat.is_append_) {
+      stat.st_ptr_ =  stat.backend_size_;
+    }
     // Allocate internal hermes data
     auto stat_ptr = std::make_shared<AdapterStat>(stat);
     FilesystemIoClientObject fs_ctx(&mdm->fs_mdm_, (void*)stat_ptr.get());
@@ -92,6 +97,7 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
   std::string filename = bkt->GetName();
   LOG(INFO) << "Write called for filename: " << filename
             << " on offset: " << off
+            << " from position: " << stat.st_ptr_
             << " and size: " << total_size << std::endl;
 
   size_t ret;
@@ -151,8 +157,10 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
   (void) f;
   std::shared_ptr<hapi::Bucket> &bkt = stat.bkt_id_;
   std::string filename = bkt->GetName();
-  LOG(INFO) << "Read called for filename: " << filename << " on offset: "
-            << off << " and size: " << total_size << std::endl;
+  LOG(INFO) << "Read called for filename: " << filename
+            << " on offset: " << off
+            << " from position: " << stat.st_ptr_
+            << " and size: " << total_size << std::endl;
 
   size_t ret;
   Context ctx;
@@ -189,7 +197,9 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
     bkt->UnlockBlob(blob_id, MdLockType::kExternalRead);
     data_offset += p.blob_size_;
   }
-  if (opts.DoSeek()) { stat.st_ptr_ = off + data_offset; }
+  if (opts.DoSeek()) {
+    stat.st_ptr_ = off + data_offset;
+  }
   stat.UpdateTime();
 
   ret = data_offset;
