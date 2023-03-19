@@ -11,9 +11,19 @@
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include <hermes_shm/util/formatter.h>
+#include <hermes_shm/util/path_parser.h>
 #include "basic_test.h"
 
 namespace hshm = hermes_shm;
+
+TEST_CASE("TestPathParser") {
+  setenv("PATH_PARSER_TEST", "HOME", true);
+  auto x = hshm::path_parser("${PATH_PARSER_TEST}/hello");
+  unsetenv("PATH_PARSER_TEST");
+  auto y = hshm::path_parser("${PATH_PARSER_TEST}/hello");
+  REQUIRE(x == "HOME/hello");
+  REQUIRE(y == "${PATH_PARSER_TEST}/hello");
+}
 
 TEST_CASE("TestFormatter") {
   int rank = 0;
