@@ -192,7 +192,7 @@ class MetadataManager : public hipc::ShmContainer {
    * ===================================*/
 
   /**
-   * Put a blob in a bucket
+   * Create a blob's metadata
    *
    * @param bkt_id id of the bucket
    * @param blob_name semantic blob name
@@ -202,8 +202,8 @@ class MetadataManager : public hipc::ShmContainer {
   RPC std::tuple<BlobId, bool, size_t> LocalPutBlobMetadata(
       TagId bkt_id, const std::string &blob_name, size_t blob_size,
       std::vector<BufferInfo> &buffers);
-  DEFINE_RPC((std::tuple<BlobId, bool, size_t>), PutBlobMetadata, 0,
-             UNIQUE_ID_TO_NODE_ID_LAMBDA)
+  DEFINE_RPC((std::tuple<BlobId, bool, size_t>), PutBlobMetadata, 1,
+             std::hash<std::string>{})
 
   /**
    * Creates the blob metadata
@@ -213,8 +213,8 @@ class MetadataManager : public hipc::ShmContainer {
    * */
   std::pair<BlobId, bool> LocalTryCreateBlob(TagId bkt_id,
                                              const std::string &blob_name);
-  DEFINE_RPC((std::pair<BlobId, bool>), TryCreateBlob, 0,
-             UNIQUE_ID_TO_NODE_ID_LAMBDA)
+  DEFINE_RPC((std::pair<BlobId, bool>), TryCreateBlob, 1,
+             std::hash<std::string>{})
 
   /**
    * Tag a blob
@@ -235,7 +235,8 @@ class MetadataManager : public hipc::ShmContainer {
    * Get \a blob_name BLOB from \a bkt_id bucket
    * */
   RPC BlobId LocalGetBlobId(TagId bkt_id, const std::string &blob_name);
-  DEFINE_RPC(BlobId, GetBlobId, 0, UNIQUE_ID_TO_NODE_ID_LAMBDA)
+  DEFINE_RPC(BlobId, GetBlobId, 1,
+             std::hash<std::string>{})
 
   /**
    * Get \a blob_name BLOB name from \a blob_id BLOB id
