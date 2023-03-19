@@ -49,9 +49,8 @@ cp ci/packages.yaml ${SPACK_DIR}/etc/spack/packages.yaml
 # a custom package when the same package is available from Spack.
 spack repo add ./ci/hermes
 
-THALLIUM_SPEC="mochi-thallium@${THALLIUM_VERSION} ^mercury~boostsys"
-
-HERMES_VERSION=0.9.8
+# NOTE(llogan): Modify version string per release.
+HERMES_VERSION=1.0.0
 spack install hermes
 SPACK_STAGING_DIR=~/spack_staging
 mkdir -p ${SPACK_STAGING_DIR}

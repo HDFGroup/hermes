@@ -15,6 +15,10 @@ INSTALL_PREFIX="${HOME}/install"
 # Need h5diff and ior on the PATH
 export PATH="${DEPENDENCY_PREFIX}/bin:${PATH}"
 
+# NOTE(llogan): Modify version string per release.
+HERMES_VERSION=1.0.0
+spack load --only dependencies hermes@HERMES_VERSION
+
 export CXXFLAGS="${CXXFLAGS} -std=c++17 -Werror -Wall -Wextra"
 cmake                                                      \
     -DCMAKE_INSTALL_PREFIX=${INSTALL_PREFIX}               \
