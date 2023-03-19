@@ -70,10 +70,15 @@ void ThalliumRpc::RunDaemon() {
 
 /** stop daemon (from client) */
 void ThalliumRpc::StopDaemon() {
-  for (int node_id = 1; node_id < hosts_.size() + 1; ++node_id) {
-    std::string server_name = GetServerName(node_id);
-    tl::endpoint server = client_engine_->lookup(server_name.c_str());
-    client_engine_->shutdown_remote_engine(server);
+  LOG(INFO) << "Sending stop signal to daemons" << std::endl;
+  try {
+    for (int node_id = 1; node_id < hosts_.size() + 1; ++node_id) {
+      std::string server_name = GetServerName(node_id);
+      tl::endpoint server = client_engine_->lookup(server_name.c_str());
+      client_engine_->shutdown_remote_engine(server);
+    }
+  } catch (std::exception &e) {
+    LOG(FATAL) << e.what() << std::endl;
   }
 }
 
