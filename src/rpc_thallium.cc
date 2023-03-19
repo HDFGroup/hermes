@@ -70,9 +70,9 @@ void ThalliumRpc::RunDaemon() {
 
 /** stop daemon (from client) */
 void ThalliumRpc::StopDaemon() {
-  LOG(INFO) << "Sending stop signal to daemons" << std::endl;
   try {
     for (int node_id = 1; node_id < hosts_.size() + 1; ++node_id) {
+      LOG(INFO) << "Sending stop signal to: " << node_id << std::endl;
       std::string server_name = GetServerName(node_id);
       tl::endpoint server = client_engine_->lookup(server_name.c_str());
       client_engine_->shutdown_remote_engine(server);
@@ -94,7 +94,7 @@ std::string ThalliumRpc::GetServerName(u32 node_id) {
 void ThalliumRpc::Finalize() {
   switch (mode_) {
     case HermesType::kServer: {
-      comm_->WorldBarrier();
+      // comm_->WorldBarrier();
       this->kill_requested_.store(true);
       break;
     }
