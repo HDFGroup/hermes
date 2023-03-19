@@ -96,10 +96,10 @@ rpc:
 
   # The RPC protocol. This must come from the documentation of the specific RPC
   # library in use.
-  protocol: "ofi+verbs"
+  protocol: "ofi+tcp"
 
   # RPC domain name for verbs transport. Blank for tcp.
-  domain: "mlx5_0"
+  domain: ""
 
   # Desired RPC port number.
   port: 8080

@@ -79,6 +79,8 @@ struct ShmHeader<MetadataManager> {
   std::atomic<u64> id_alloc_;
   /// Synchronization
   RwLock lock_[kMdMapLockCount];
+  /// The ID of THIS node
+  int node_id_;
 };
 
 /**

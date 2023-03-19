@@ -72,9 +72,6 @@ void Hermes::StopDaemon() {
 void Hermes::InitServer(std::string server_config_path) {
   LoadServerConfig(server_config_path);
   InitSharedMemory();
-  comm_.Init(HermesType::kServer);
-  rpc_.InitServer();
-  rpc_.InitClient();
 
   // Initialize references to SHM types
   mdm_ = hipc::Ref<MetadataManager>(header_->mdm_, main_alloc_);
@@ -84,6 +81,9 @@ void Hermes::InitServer(std::string server_config_path) {
   // Construct the reference objects
   mdm_ = hipc::make_ref<MetadataManager>(header_->mdm_, main_alloc_,
                                          &server_config_);
+  comm_.Init(HermesType::kServer);
+  rpc_.InitServer();
+  rpc_.InitClient();
   bpm_ = hipc::make_ref<BufferPool>(header_->bpm_, main_alloc_);
   borg_ = hipc::make_ref<BufferOrganizer>(header_->borg_, main_alloc_);
 }
@@ -93,10 +93,10 @@ void Hermes::InitClient(std::string server_config_path,
   LoadServerConfig(server_config_path);
   LoadClientConfig(client_config_path);
   LoadSharedMemory();
-  rpc_.InitClient();
 
   // Initialize references to SHM types
   mdm_ = hipc::Ref<MetadataManager>(header_->mdm_, main_alloc_);
+  rpc_.InitClient();
   bpm_ = hipc::Ref<BufferPool>(header_->bpm_, main_alloc_);
   borg_ = hipc::Ref<BufferOrganizer>(header_->borg_, main_alloc_);
 }

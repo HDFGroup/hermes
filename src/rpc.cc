@@ -35,10 +35,14 @@ std::vector<std::string> RpcContext::ParseHostfile(const std::string &path) {
   return hosts;
 }
 
-/** initialize host info list */
+/**
+ * initialize host info list
+ * Requires the MetadataManager to be initialized.
+ * */
 void RpcContext::InitRpcContext() {
   comm_ = &HERMES->comm_;
   config_ = &HERMES->server_config_;
+  mdm_ = &(*HERMES->mdm_);
   port_ = config_->rpc_.port_;
   mode_ = HERMES->mode_;
   if (hosts_.size()) { return; }
@@ -56,14 +60,15 @@ void RpcContext::InitRpcContext() {
   }
 
   // Get id of current host
-  int node_id = 1;  // NOTE(llogan): node_ids start from 1 (0 is NULL)
-  std::string my_ip = _GetMyIpAddress();
-  for (const auto& host_info : hosts_) {
-    if (host_info.ip_addr_ == my_ip) {
-      node_id_ = node_id;
-      break;
-    }
-    ++node_id;
+  if (HERMES->mode_ == HermesType::kServer) {
+    MPI_Comm_rank(MPI_COMM_WORLD, &node_id_);
+    node_id_ += 1;
+    mdm_->header_->node_id_ = node_id_;
+  } else {
+    node_id_ = mdm_->header_->node_id_;
+  }
+  if (node_id_ == 0 || node_id_ > hosts_.size()) {
+    LOG(FATAL) << "Couldn't identify this host" << std::endl;
   }
 }
 
@@ -122,7 +127,9 @@ std::string RpcContext::GetProtocol() {
 
 /** Get the IPv4 address of this machine */
 std::string RpcContext::_GetMyIpAddress() {
-  return _GetIpAddress("localhost");
+  char hostname_buffer[4096];
+  gethostname(hostname_buffer, 4096);
+  return _GetIpAddress(hostname_buffer);
 }
 
 /** Get IPv4 address from the host with "host_name" */

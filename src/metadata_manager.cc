@@ -33,6 +33,8 @@ MetadataManager::MetadataManager(
   borg_ = HERMES->borg_.get();
   header_->id_alloc_ = 1;
 
+  LOG(INFO) << "Initializing MDM" << std::endl;
+
   // Create the metadata maps
   blob_id_map_ = hipc::make_ref<BLOB_ID_MAP_T>(header_->blob_id_map,
                                                alloc_, 16384);

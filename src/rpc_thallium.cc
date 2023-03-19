@@ -22,15 +22,22 @@ namespace hermes {
 
 /** start Thallium RPC server */
 void ThalliumRpc::InitServer() {
+  LOG(INFO) << "Initializing RPC server" << std::endl;
   InitRpcContext();
   std::string addr = GetMyRpcAddress();
-  server_engine_ = std::make_unique<tl::engine>(addr,
-                              THALLIUM_SERVER_MODE,
-                              true,
-                              config_->rpc_.num_threads_);
+  LOG(INFO) << "Attempting to start server on: " << addr << std::endl;
+  try {
+    server_engine_ = std::make_unique<tl::engine>(
+        addr, THALLIUM_SERVER_MODE, true, config_->rpc_.num_threads_);
+  } catch (std::exception &e) {
+    LOG(FATAL) << "RPC init failed for host: " << addr
+               << std::endl << e.what() << std::endl;
+  }
   std::string rpc_server_name = server_engine_->self();
-  LOG(INFO) << "Serving at " << rpc_server_name << " with "
-            << config_->rpc_.num_threads_ << " RPC threads" << std::endl;
+  LOG(INFO) << hshm::Formatter::format(
+                   "Serving {} (i.e., {}) with {} RPC threads",
+                   rpc_server_name, addr,
+                   config_->rpc_.num_threads_) << std::endl;
   DefineRpcs();
 }
 

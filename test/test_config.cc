@@ -19,7 +19,7 @@ void MainPretest() {
 void MainPosttest() {
 }
 
-TEST_CASE("AresConfig") {
+TEST_CASE("Hostfile") {
   auto vec = hermes::RpcContext::ParseHostfile("hostfile.txt");
   REQUIRE(vec.size() == 2);
   REQUIRE(vec[0] == "ares-comp-01");
