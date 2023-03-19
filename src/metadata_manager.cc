@@ -423,7 +423,7 @@ bool MetadataManager::LocalDestroyBlob(TagId bkt_id,
   ScopedRwWriteLock blob_map_lock(header_->lock_[kBlobMapLock]);
   (void)bkt_id;
   auto iter = (*blob_map_).find(blob_id);
-  if (iter == blob_map_->end()) {
+  if (iter.is_end()) {
     return true;
   }
   hipc::Ref<hipc::pair<BlobId, BlobInfo>> info = (*iter);
@@ -552,6 +552,9 @@ bool MetadataManager::LocalDestroyTag(TagId tag_id) {
   // Acquire MD write lock (modifying tag_map_)
   ScopedRwWriteLock tag_map_lock(header_->lock_[kTagMapLock]);
   auto iter = tag_map_->find(tag_id);
+  if (iter.is_end()) {
+    return true;
+  }
   hipc::Ref<hipc::pair<TagId, TagInfo>> info_pair = *iter;
   auto &tag_info = *info_pair->second_;
   tag_id_map_->erase(*tag_info.name_);
@@ -601,7 +604,12 @@ std::vector<BlobId> MetadataManager::LocalGroupByTag(TagId tag_id) {
   // Acquire MD read lock (read tag_map_)
   ScopedRwReadLock tag_map_lock(header_->lock_[kTagMapLock]);
   // Get the tag info
-  hipc::Ref<TagInfo> tag_info = (*tag_map_)[tag_id];
+  auto iter = tag_map_->find(tag_id);
+  if (iter.is_end()) {
+    return std::vector<BlobId>();
+  }
+  auto tag_info_pair = *iter;
+  hipc::Ref<TagInfo> &tag_info = tag_info_pair->second_;
   // Convert slist into std::vector
   return hshm::to_stl_vector<BlobId>(*tag_info->blobs_);
 }
@@ -612,7 +620,12 @@ std::vector<BlobId> MetadataManager::LocalGroupByTag(TagId tag_id) {
 bool MetadataManager::LocalTagAddTrait(TagId tag_id, TraitId trait_id) {
   // Acquire MD read lock (read tag_map_)
   ScopedRwReadLock tag_map_lock(header_->lock_[kTagMapLock]);
-  hipc::Ref<TagInfo> tag_info = (*tag_map_)[tag_id];
+  auto iter = tag_map_->find(tag_id);
+  if (iter.is_end()) {
+    return true;
+  }
+  auto tag_info_pair = *iter;
+  hipc::Ref<TagInfo> &tag_info = tag_info_pair->second_;
   tag_info->traits_->emplace_back(trait_id);
   return true;
 }
@@ -623,7 +636,12 @@ bool MetadataManager::LocalTagAddTrait(TagId tag_id, TraitId trait_id) {
 std::vector<TraitId> MetadataManager::LocalTagGetTraits(TagId tag_id) {
   // Acquire MD read lock (read tag_map_)
   ScopedRwReadLock tag_map_lock(header_->lock_[kTagMapLock]);
-  hipc::Ref<TagInfo> tag_info = (*tag_map_)[tag_id];
+  auto iter = tag_map_->find(tag_id);
+  if (iter.is_end()) {
+    return std::vector<TraitId>();
+  }
+  auto tag_info_pair = *iter;
+  hipc::Ref<TagInfo> &tag_info = tag_info_pair->second_;
   return hshm::to_stl_vector<TraitId>(*tag_info->traits_);
 }
 
