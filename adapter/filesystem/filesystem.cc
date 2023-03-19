@@ -469,7 +469,7 @@ size_t Filesystem::_ReadExistingPartial(BlobPlacementIter &ri) {
 
 size_t Filesystem::_ReadNew(BlobPlacementIter &ri) {
   LOG(INFO)
-      << "Blob does not exists and need to read from original filename: "
+      << "Blob does not exist and needs to read from original filename: "
       << ri.filename_ << " offset:" << ri.p_.bucket_off_
       << " size:" << ri.p_.blob_size_ << "." << std::endl;
 
