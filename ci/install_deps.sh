@@ -22,15 +22,14 @@ set -o pipefail
 
 sudo apt-get install -y pkg-config
 
-# Change this especially when your $HOME doesn't have enough disk space. 
+# Change this especially when your $HOME doesn't have enough disk space.
 INSTALL_DIR="${HOME}/${LOCAL}"
-
 SPACK_DIR=${INSTALL_DIR}/spack
-
-echo "Installing dependencies at ${INSTALL_DIR}"
-mkdir -p ${INSTALL_DIR}
+SPACK_VERSION=0.18.1
 
 # Spack
+echo "Installing dependencies at ${INSTALL_DIR}"
+mkdir -p ${INSTALL_DIR}
 git clone https://github.com/spack/spack ${SPACK_DIR}
 pushd ${SPACK_DIR}
 git checkout v${SPACK_VERSION}
