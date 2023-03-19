@@ -79,13 +79,13 @@ void Hermes::InitServer(std::string server_config_path) {
   borg_ = hipc::Ref<BufferOrganizer>(header_->borg_, main_alloc_);
 
   // Initialize RPC
+  comm_.Init(HermesType::kServer);
   rpc_.InitServer();
   rpc_.InitClient();
 
   // Construct the reference objects
   mdm_ = hipc::make_ref<MetadataManager>(header_->mdm_, main_alloc_,
                                          &server_config_);
-  comm_.Init(HermesType::kServer);
   bpm_ = hipc::make_ref<BufferPool>(header_->bpm_, main_alloc_);
   borg_ = hipc::make_ref<BufferOrganizer>(header_->borg_, main_alloc_);
 }

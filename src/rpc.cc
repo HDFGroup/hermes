@@ -67,7 +67,7 @@ void RpcContext::InitRpcContext() {
     node_id_ += 1;
     if (nprocs != hosts_.size()) {
       LOG(FATAL) << hshm::Formatter::format(
-          "Must run the daemon on EVERY node in the hostfile."
+          "Must run the daemon on EVERY node in the hostfile. "
           "{}/{} were launched.", nprocs, hosts_.size()) << std::endl;
     }
   } else {
