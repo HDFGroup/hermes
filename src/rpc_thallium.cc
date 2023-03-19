@@ -100,6 +100,7 @@ void ThalliumRpc::Finalize() {
     case HermesType::kServer: {
       // comm_->WorldBarrier();
       this->kill_requested_.store(true);
+      server_engine_->finalize();
       break;
     }
     case HermesType::kClient: {
