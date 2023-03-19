@@ -62,10 +62,14 @@ void ThalliumRpc::RunDaemon() {
     LOG(INFO) << "Beginning finalization on node: " <<
         this->node_id_ << std::endl;
     Finalize();
+    LOG(INFO) << "Finished finalization callback on node: " <<
+        this->node_id_ << std::endl;
   };
   server_engine_->push_prefinalize_callback(prefinalize_callback);
   server_engine_->wait_for_finalize();
   client_engine_->finalize();
+  LOG(INFO) << "Daemon has stopped on node: " <<
+      this->node_id_ << std::endl;
 }
 
 /** stop daemon (from client) */
