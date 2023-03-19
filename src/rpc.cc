@@ -111,16 +111,25 @@ std::string RpcContext::GetMyRpcAddress() {
 
 /** get host name from node ID */
 std::string RpcContext::GetHostNameFromNodeId(u32 node_id) {
-  // NOTE(chogan): node_id 0 is reserved as the NULL node
+  // NOTE(llogan): node_id 0 is reserved as the NULL node
+  if (node_id <= 0 || node_id > hosts_.size()) {
+    LOG(FATAL) << hshm::Formatter::format(
+                      "Attempted to get from node {}, which is out of "
+                      "the range 1-{}", node_id, hosts_.size() + 1)
+               << std::endl;
+  }
   u32 index = node_id - 1;
   return hosts_[index].hostname_;
 }
 
 /** get host name from node ID */
 std::string RpcContext::GetIpAddressFromNodeId(u32 node_id) {
-  // NOTE(chogan): node_id 0 is reserved as the NULL node
-  if (node_id == 0) {
-    LOG(FATAL) << "Attempted to get from node 0" << std::endl;
+  // NOTE(llogan): node_id 0 is reserved as the NULL node
+  if (node_id <= 0 || node_id > hosts_.size()) {
+    LOG(FATAL) << hshm::Formatter::format(
+                      "Attempted to get from node {}, which is out of "
+                      "the range 1-{}", node_id, hosts_.size() + 1)
+               << std::endl;
   }
   u32 index = node_id - 1;
   return hosts_[index].ip_addr_;
