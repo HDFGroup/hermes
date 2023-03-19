@@ -56,8 +56,11 @@ void ThalliumRpc::InitClient() {
 
 /** run daemon */
 void ThalliumRpc::RunDaemon() {
+  LOG(INFO) << "Running the daemon on node " << node_id_ << std::endl;
   server_engine_->enable_remote_shutdown();
   auto prefinalize_callback = [this]() {
+    LOG(INFO) << "Beginning finalization on node: " <<
+        this->node_id_ << std::endl;
     Finalize();
   };
   server_engine_->push_prefinalize_callback(prefinalize_callback);
