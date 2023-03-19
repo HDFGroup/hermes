@@ -54,9 +54,5 @@ spack install hermes
 SPACK_STAGING_DIR=~/spack_staging
 mkdir -p ${SPACK_STAGING_DIR}
 
-# Spack installation directory has hash value.
-# This will simplify and consolidate the installation path.
-spack view --verbose symlink ${SPACK_STAGING_DIR} ${ALL_SPECS}
-
 # Copy what Spack installed in a temporary location to your desired location.
 cp -LRnv ${SPACK_STAGING_DIR}/* ${INSTALL_DIR}
