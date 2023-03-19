@@ -203,7 +203,7 @@ class MetadataManager : public hipc::ShmContainer {
       TagId bkt_id, const std::string &blob_name, size_t blob_size,
       std::vector<BufferInfo> &buffers);
   DEFINE_RPC((std::tuple<BlobId, bool, size_t>), PutBlobMetadata, 1,
-             std::hash<std::string>{})
+             STRING_HASH_LAMBDA)
 
   /**
    * Creates the blob metadata
@@ -214,7 +214,7 @@ class MetadataManager : public hipc::ShmContainer {
   std::pair<BlobId, bool> LocalTryCreateBlob(TagId bkt_id,
                                              const std::string &blob_name);
   DEFINE_RPC((std::pair<BlobId, bool>), TryCreateBlob, 1,
-             std::hash<std::string>{})
+             STRING_HASH_LAMBDA)
 
   /**
    * Tag a blob
@@ -236,7 +236,7 @@ class MetadataManager : public hipc::ShmContainer {
    * */
   RPC BlobId LocalGetBlobId(TagId bkt_id, const std::string &blob_name);
   DEFINE_RPC(BlobId, GetBlobId, 1,
-             std::hash<std::string>{})
+             STRING_HASH_LAMBDA)
 
   /**
    * Get \a blob_name BLOB name from \a blob_id BLOB id
@@ -333,7 +333,7 @@ class MetadataManager : public hipc::ShmContainer {
                                              std::vector<TraitId> &traits,
                                              size_t backend_size);
   DEFINE_RPC((std::pair<TagId, bool>),
-             GetOrCreateTag, 0, std::hash<std::string>{})
+             GetOrCreateTag, 0, STRING_HASH_LAMBDA)
   TagId GlobalCreateTag(const std::string &tag_name,
                         bool owner,
                         std::vector<TraitId> &traits) {
@@ -344,7 +344,7 @@ class MetadataManager : public hipc::ShmContainer {
    * Get the id of a tag
    * */
   TagId LocalGetTagId(const std::string &tag_name);
-  DEFINE_RPC(TagId, GetTagId, 0, std::hash<std::string>{})
+  DEFINE_RPC(TagId, GetTagId, 0, STRING_HASH_LAMBDA)
 
   /**
    * Rename a tag
@@ -420,7 +420,7 @@ class MetadataManager : public hipc::ShmContainer {
     trait_map_->emplace(trait_id, trait_params);
     return trait_id;
   }
-  DEFINE_RPC(TraitId, RegisterTrait, 1, std::hash<std::string>{});
+  DEFINE_RPC(TraitId, RegisterTrait, 1, STRING_HASH_LAMBDA);
 
   /**
    * Get trait info from main trait md structure
@@ -441,7 +441,7 @@ class MetadataManager : public hipc::ShmContainer {
                                              (*trait_map_)[trait_id]->str());
   }
   DEFINE_RPC((std::pair<TraitId, hshm::charbuf>),
-             GetTraitInfo, 0, std::hash<std::string>{});
+             GetTraitInfo, 0, STRING_HASH_LAMBDA);
 
   /**
    * Get the identity of a trait
