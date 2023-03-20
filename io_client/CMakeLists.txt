@@ -9,6 +9,13 @@ include_directories(
 
 add_subdirectory(filesystem)
 add_subdirectory(io_client)
-add_subdirectory(mpiio)
-add_subdirectory(posix)
-add_subdirectory(stdio)
+
+if(HERMES_ENABLE_POSIX_ADAPTER)
+    add_subdirectory(posix)
+endif()
+if(HERMES_ENABLE_STDIO_ADAPTER)
+    add_subdirectory(stdio)
+endif()
+if(HERMES_ENABLE_MPIIO_ADAPTER)
+    add_subdirectory(mpiio)
+endif()

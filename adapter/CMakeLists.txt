@@ -12,10 +12,16 @@ include_directories(
         ${HERMES_IO_CLIENT_DIR}
         ${CMAKE_CURRENT_SOURCE_DIR})
 
+add_subdirectory(filesystem)
 if(HERMES_ENABLE_POSIX_ADAPTER)
-  add_subdirectory(filesystem)
   add_subdirectory(posix)
+endif()
+if(HERMES_ENABLE_STDIO_ADAPTER)
   add_subdirectory(stdio)
+endif()
+if(HERMES_ENABLE_MPIIO_ADAPTER)
   add_subdirectory(mpiio)
-  # add_subdirectory(test)
+endif()
+if(HERMES_BUILD_ADAPTER_TESTS)
+  add_subdirectory(test)
 endif()

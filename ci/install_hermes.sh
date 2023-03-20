@@ -42,9 +42,9 @@ cmake                                                      \
     -DHERMES_USE_THREAD_SANITIZER=OFF                      \
     -DHERMES_RPC_THALLIUM=ON                               \
     -DHERMES_DEBUG_HEAP=OFF                                \
-    -DHERMES_ENABLE_VFD=ON                                 \
     -DBUILD_TESTING=ON                                     \
     ..
+# -DHERMES_ENABLE_VFD=ON                                 \
 cmake --build . -- -j4
 
 # Run unit tests
