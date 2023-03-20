@@ -118,7 +118,6 @@ struct IoClientStats {
   std::string path_;     /**< The URL of this file */
   int flags_;            /**< open() flags for POSIX */
   mode_t st_mode_;       /**< protection */
-  size_t backend_size_;  /**< size of the object in the backend */
   uid_t st_uid_;         /**< user ID of owner */
   gid_t st_gid_;         /**< group ID of owner */
   off64_t st_ptr_;       /**< current ptr of FILE */

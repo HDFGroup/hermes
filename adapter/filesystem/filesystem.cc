@@ -54,10 +54,9 @@ void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
     // Update page size and file size
     // TODO(llogan): can avoid two unordered_map queries here
     stat.page_size_ = mdm->GetAdapterPageSize(path);
-    stat.backend_size_ = stat.bkt_id_->GetSize(true);
     // The file was opened with APPEND
     if (stat.is_append_) {
-      stat.st_ptr_ =  stat.backend_size_;
+      stat.st_ptr_ =  stat.bkt_id_->GetSize(true);
     }
     // Allocate internal hermes data
     auto stat_ptr = std::make_shared<AdapterStat>(stat);
@@ -107,6 +106,7 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
   size_t data_offset = 0;
   auto mapper = MapperFactory().Get(MapperType::kBalancedMapper);
   mapper->map(off, total_size, kPageSize, mapping);
+  size_t backend_size = stat.bkt_id_->GetSize(true);
 
   for (const auto &p : mapping) {
     const Blob blob_wrap((const char*)ptr + data_offset, p.blob_size_);
@@ -115,7 +115,7 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
     opts.type_ = type_;
     opts.backend_off_ = p.page_ * kPageSize;
     opts.backend_size_ = GetBackendSize(opts.backend_off_,
-                                        stat.backend_size_,
+                                        backend_size,
                                         kPageSize);
     opts.adapter_mode_ = stat.adapter_mode_;
     bkt->TryCreateBlob(blob_name.str(), blob_id, ctx);
@@ -128,8 +128,8 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
                                           opts,
                                           ctx);
     size_t new_file_size = opts.backend_off_ + blob_wrap.size();
-    if (new_file_size > stat.backend_size_) {
-      bkt->UpdateSize(new_file_size - stat.backend_size_,
+    if (new_file_size > backend_size) {
+      bkt->UpdateSize(new_file_size - backend_size,
                       BucketUpdate::kBackend);
     }
     if (status.Fail()) {
@@ -169,6 +169,7 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
   size_t data_offset = 0;
   auto mapper = MapperFactory().Get(MapperType::kBalancedMapper);
   mapper->map(off, total_size, kPageSize, mapping);
+  size_t backend_size = stat.bkt_id_->GetSize(true);
 
   for (const auto &p : mapping) {
     Blob blob_wrap((const char*)ptr + data_offset, p.blob_size_);
@@ -176,7 +177,7 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
     BlobId blob_id;
     opts.backend_off_ = p.page_ * kPageSize;
     opts.backend_size_ = GetBackendSize(opts.backend_off_,
-                                        stat.backend_size_,
+                                        backend_size,
                                         kPageSize);
     opts.type_ = type_;
     opts.adapter_mode_ = stat.adapter_mode_;

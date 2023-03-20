@@ -315,6 +315,9 @@ void test_read(char* ptr, size_t size) {
 void test_seek(long offset, int whence) {
   status_orig = lseek(fh_orig, offset, whence);
   int status = lseek(fh_cmp, offset, whence);
+  if (status != status_orig) {
+    LOG(FATAL) << "Failed for seek" << std::endl;
+  }
   REQUIRE(status == status_orig);
 }
 }  // namespace test
