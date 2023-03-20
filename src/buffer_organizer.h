@@ -94,9 +94,8 @@ class BufferOrganizer : public hipc::ShmContainer {
   RPC Blob LocalReadBlobFromBuffers(std::vector<BufferInfo> &buffers);
   Blob GlobalReadBlobFromBuffers(std::vector<BufferInfo> &buffers);
 
-  /** Copies one buffer set into another buffer set */
-  RPC void LocalCopyBuffers(std::vector<BufferInfo> &dst,
-                            std::vector<BufferInfo> &src);
+  /** Re-organize blobs based on a score */
+  void GlobalReorganizeBlob(TagId bkt_id, BlobId blob_id, float score);
 };
 
 }  // namespace hermes

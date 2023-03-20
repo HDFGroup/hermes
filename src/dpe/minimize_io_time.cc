@@ -20,7 +20,7 @@ namespace hermes {
 
 Status MinimizeIoTime::Placement(const std::vector<size_t> &blob_sizes,
                                  const std::vector<TargetInfo> &targets,
-                                 const api::Context &ctx,
+                                 api::Context &ctx,
                                  std::vector<PlacementSchema> &output) {
   Status result;
   const size_t num_targets = targets.size();

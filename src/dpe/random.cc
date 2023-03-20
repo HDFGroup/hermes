@@ -20,7 +20,7 @@ namespace hermes {
 
 Status Random::Placement(const std::vector<size_t> &blob_sizes,
                          const std::vector<TargetInfo> &targets,
-                         const api::Context &ctx,
+                         api::Context &ctx,
                          std::vector<PlacementSchema> &output) {
   throw std::logic_error("Not currently implemented");
 }

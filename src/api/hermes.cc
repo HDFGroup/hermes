@@ -162,6 +162,10 @@ std::shared_ptr<Bucket> Hermes::GetBucket(std::string name,
   return std::make_shared<Bucket>(name, ctx, backend_size);
 }
 
+std::shared_ptr<Bucket> Hermes::GetBucket(TagId tag_id) {
+  return std::make_shared<Bucket>(tag_id);
+}
+
 std::vector<BlobId> Hermes::GroupBy(TagId tag_id) {
   return mdm_->GlobalGroupByTag(tag_id);
 }

@@ -21,8 +21,13 @@ void Prefetcher::Init() {
   rpc_ = &HERMES->rpc_;
   auto conf = HERMES->server_config_;
   mdm_->enable_io_tracing_ = conf.prefetcher_.enabled_;
+  epoch_ms_ = (double)conf.prefetcher_.epoch_ms_;
   if (!conf.prefetcher_.enabled_ ||
       conf.prefetcher_.trace_path_.size() == 0) {
+    return;
+  }
+  if (HERMES->mode_ == HermesType::kClient) {
+    // NOTE(llogan): Prefetcher is per-daemon.
     return;
   }
 
@@ -48,10 +53,39 @@ void Prefetcher::Init() {
   } catch (std::exception &e) {
     LOG(FATAL) << e.what() << std::endl;
   }
+
+  // Spawn the prefetcher thread
+  auto prefetcher = [](void *args) {
+    LOG(INFO) << "Prefetcher has started" << std::endl;
+    (void) args;
+    Prefetcher *prefetch = &HERMES->prefetch_;
+    while (!HERMES->rpc_.kill_requested_.load()) {
+      prefetch->Run();
+      tl::thread::self().sleep(*HERMES->rpc_.server_engine_,
+                               prefetch->epoch_ms_);
+    }
+  };
+
+  ABT_xstream_create(ABT_SCHED_NULL, &execution_stream_);
+  ABT_thread_create_on_xstream(execution_stream_,
+                               prefetcher, nullptr,
+                               ABT_THREAD_ATTR_NULL, NULL);
 }
 
 /** Parse the MDM's I/O pattern log */
 void Prefetcher::Run() {
+  size_t log_size = mdm_->io_pattern_log_->size();
+  auto trace_iter = trace_.begin();
+  auto client_iter = mdm_->io_pattern_log_->begin();
+  for (size_t i = 0; i < log_size; ++i) {
+    hipc::Ref<IoStat> stat = (*client_iter);
+    IoTrace &trace_entry = *trace_iter;
+
+    // TODO(llogan)
+
+    ++client_iter;
+    ++trace_iter;
+  }
 }
 
-}
+}  // namespace hermes

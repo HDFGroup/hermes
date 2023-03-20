@@ -35,6 +35,16 @@ Bucket::Bucket(const std::string &bkt_name,
 }
 
 /**
+ * Either initialize or fetch the bucket.
+ * */
+Bucket::Bucket(TagId tag_id)
+    : mdm_(HERMES->mdm_.get()), bpm_(HERMES->bpm_.get()) {
+  // TODO(llogan): Get tag name
+  id_ = tag_id;
+  did_create_ = false;
+}
+
+/**
  * Get the current size of the bucket
  * */
 size_t Bucket::GetSize(bool backend) {
@@ -89,12 +99,20 @@ Status Bucket::GetBlobId(const std::string &blob_name,
  * Get the name of a blob from the blob id
  *
  * @param blob_id the blob_id
- * @param blob_name the name of the blob
  * @return The Status of the operation
  * */
-Status Bucket::GetBlobName(const BlobId &blob_id, std::string &blob_name) {
-  blob_name = mdm_->GlobalGetBlobName(blob_id);
-  return Status();
+std::string Bucket::GetBlobName(const BlobId &blob_id) {
+  return mdm_->GlobalGetBlobName(blob_id);
+}
+
+/**
+ * Get the score of a blob from the blob id
+ *
+ * @param blob_id the blob_id
+ * @return The Status of the operation
+ * */
+float Bucket::GetBlobScore(const BlobId &blob_id) {
+  return mdm_->GlobalGetBlobScore(blob_id);
 }
 
 
@@ -153,7 +171,8 @@ Status Bucket::Put(std::string blob_name,
   for (auto &schema : schemas) {
     auto buffers = bpm_->GlobalAllocateAndSetBuffers(schema, blob);
     auto put_ret = mdm_->GlobalPutBlobMetadata(id_, blob_name,
-                                               blob.size(), buffers);
+                                               blob.size(), buffers,
+                                               ctx.blob_score_);
     blob_id = std::get<0>(put_ret);
     bool did_create = std::get<1>(put_ret);
     ssize_t orig_blob_size = (ssize_t)std::get<2>(put_ret);
@@ -326,8 +345,7 @@ void Bucket::FlushBlob(BlobId blob_id,
   Get(blob_id, full_blob, ctx_);
   LOG(INFO) << "The blob being flushed has size: "
             << full_blob.size() << std::endl;
-  std::string blob_name;
-  GetBlobName(blob_id, blob_name);
+  std::string blob_name = GetBlobName(blob_id);
   // Write blob to backend
   auto io_client = IoClientFactory::Get(opts.type_);
   if (io_client) {

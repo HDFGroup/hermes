@@ -14,6 +14,7 @@
 #include "metadata_manager.h"
 #include "borg_io_clients/borg_io_client_factory.h"
 #include "hermes.h"
+#include "bucket.h"
 
 namespace hermes {
 
@@ -168,9 +169,34 @@ Blob BufferOrganizer::GlobalReadBlobFromBuffers(
   return blob;
 }
 
-/** Copies one buffer set into another buffer set */
-RPC void BufferOrganizer::LocalCopyBuffers(std::vector<BufferInfo> &dst,
-                                           std::vector<BufferInfo> &src) {
+/** Re-organize blobs based on a score */
+void BufferOrganizer::GlobalReorganizeBlob(TagId bkt_id,
+                                           BlobId blob_id,
+                                           float score) {
+  auto bkt = HERMES->GetBucket(bkt_id);
+  std::string blob_name = bkt->GetBlobName(blob_id);
+  float blob_score = bkt->GetBlobScore(blob_id);
+  Context ctx;
+
+  // Skip organizing if below threshold
+  if (abs(blob_score - score) < .05) {
+    return;
+  }
+
+  // Lock the blob to ensure it doesn't get modified
+  bkt->LockBlob(blob_id, MdLockType::kExternalWrite);
+
+  // Get the blob
+  hapi::Blob blob;
+  bkt->Get(blob_id, blob, ctx);
+
+  // Re-emplace the blob with new score
+  BlobId tmp_id;
+  ctx.blob_score_ = score;
+  bkt->Put(blob_name, blob, tmp_id, ctx);
+
+  // Unlock the blob
+  bkt->UnlockBlob(blob_id, MdLockType::kExternalWrite);
 }
 
 }  // namespace hermes

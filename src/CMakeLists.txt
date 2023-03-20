@@ -54,6 +54,7 @@ set(HERMES_SRCS
   ${CMAKE_CURRENT_SOURCE_DIR}/api/hermes.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/buffer_pool.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/buffer_organizer.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/prefetcher.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/data_placement_engine.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/dpe/random.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/dpe/round_robin.cc

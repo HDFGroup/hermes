@@ -302,13 +302,6 @@ enum class PrefetchHint {
   kMachineLearning
 };
 
-struct PrefetchContext {
-  PrefetchHint hint_;
-  int read_ahead_;
-  float decay_;
-  PrefetchContext() : hint_(PrefetchHint::kNone), read_ahead_(1), decay_(.5) {}
-};
-
 /** Hermes API call context */
 struct Context {
   /** The blob placement policy */
@@ -326,8 +319,8 @@ struct Context {
   /** Whether swapping is disabled */
   bool disable_swap;
 
-  /** Prefetching hints */
-  PrefetchContext pctx_;
+  /** The blob's score */
+  float blob_score_;
 
   Context();
 };

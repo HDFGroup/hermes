@@ -43,7 +43,7 @@ typedef hipc::unordered_map<hipc::charbuf, TraitId> TRAIT_ID_MAP_T;
 typedef hipc::unordered_map<BlobId, BlobInfo> BLOB_MAP_T;
 typedef hipc::unordered_map<TagId, TagInfo> TAG_MAP_T;
 typedef hipc::unordered_map<TraitId, hipc::charbuf> TRAIT_MAP_T;
-typedef hipc::slist<IoStat> IO_PATTERN_LOG_T
+typedef hipc::slist<IoStat> IO_PATTERN_LOG_T;
 
 enum MdmLock {
   kBlobMapLock,
@@ -211,7 +211,7 @@ class MetadataManager : public hipc::ShmContainer {
    * */
   RPC std::tuple<BlobId, bool, size_t> LocalPutBlobMetadata(
       TagId bkt_id, const std::string &blob_name, size_t blob_size,
-      std::vector<BufferInfo> &buffers);
+      std::vector<BufferInfo> &buffers, float score);
   DEFINE_RPC((std::tuple<BlobId, bool, size_t>), PutBlobMetadata, 1,
              STRING_HASH_LAMBDA)
 
@@ -253,6 +253,12 @@ class MetadataManager : public hipc::ShmContainer {
    * */
   RPC std::string LocalGetBlobName(BlobId blob_id);
   DEFINE_RPC(std::string, GetBlobName, 0, UNIQUE_ID_TO_NODE_ID_LAMBDA)
+
+  /**
+   * Get \a score from \a blob_id BLOB id
+   * */
+  RPC float LocalGetBlobScore(BlobId blob_id);
+  DEFINE_RPC(float, GetBlobScore, 0, UNIQUE_ID_TO_NODE_ID_LAMBDA)
 
   /**
    * Lock the blob

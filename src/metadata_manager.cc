@@ -284,11 +284,12 @@ std::pair<BlobId, bool> MetadataManager::LocalTryCreateBlob(
  * @param data the data being placed
  * @param buffers the buffers to place data in
  * */
-std::tuple<BlobId, bool, size_t> MetadataManager::LocalPutBlobMetadata(
-    TagId bkt_id,
-    const std::string &blob_name,
-    size_t blob_size,
-    std::vector<BufferInfo> &buffers) {
+std::tuple<BlobId, bool, size_t>
+MetadataManager::LocalPutBlobMetadata(TagId bkt_id,
+                                      const std::string &blob_name,
+                                      size_t blob_size,
+                                      std::vector<BufferInfo> &buffers,
+                                      float score) {
   size_t orig_blob_size = 0;
   // Acquire MD write lock (modify blob_map_)
   ScopedRwWriteLock blob_map_lock(header_->lock_[kBlobMapLock]);
@@ -311,6 +312,7 @@ std::tuple<BlobId, bool, size_t> MetadataManager::LocalPutBlobMetadata(
     blob_info.header_->blob_id_ = blob_id;
     blob_info.header_->tag_id_ = bkt_id;
     blob_info.header_->blob_size_ = blob_size;
+    blob_info.header_->score_ = score;
   } else {
     LOG(INFO) << "Found existing blob: " << blob_name << std::endl;
     blob_id = *(*blob_id_map_)[*internal_blob_name];
@@ -320,6 +322,7 @@ std::tuple<BlobId, bool, size_t> MetadataManager::LocalPutBlobMetadata(
     // Acquire blob_info write lock before modifying buffers
     ScopedRwWriteLock(blob_info.header_->lock_[0]);
     (*blob_info.buffers_) = buffers;
+    blob_info.header_->score_ = score;
   }
   return std::tuple<BlobId, bool, size_t>(blob_id, did_create, orig_blob_size);
 }
@@ -344,7 +347,7 @@ BlobId MetadataManager::LocalGetBlobId(TagId bkt_id,
 /**
  * Get \a blob_name BLOB name from \a blob_id BLOB id
  * */
-RPC std::string MetadataManager::LocalGetBlobName(BlobId blob_id) {
+std::string MetadataManager::LocalGetBlobName(BlobId blob_id) {
   // Acquire MD read lock (read blob_id_map_)
   ScopedRwReadLock blob_map_lock(header_->lock_[kBlobMapLock]);
   auto iter = blob_map_->find(blob_id);
@@ -354,6 +357,21 @@ RPC std::string MetadataManager::LocalGetBlobName(BlobId blob_id) {
   hipc::Ref<hipc::pair<BlobId, BlobInfo>> info = *iter;
   BlobInfo &blob_info = *info->second_;
   return blob_info.name_->str();
+}
+
+/**
+   * Get \a score from \a blob_id BLOB id
+   * */
+float MetadataManager::LocalGetBlobScore(BlobId blob_id) {
+  // Acquire MD read lock (read blob_id_map_)
+  ScopedRwReadLock blob_map_lock(header_->lock_[kBlobMapLock]);
+  auto iter = blob_map_->find(blob_id);
+  if (iter == blob_map_->end()) {
+    return -1;
+  }
+  hipc::Ref<hipc::pair<BlobId, BlobInfo>> info = *iter;
+  BlobInfo &blob_info = *info->second_;
+  return blob_info.header_->score_;
 }
 
 /**

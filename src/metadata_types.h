@@ -136,8 +136,8 @@ struct ShmHeader<BlobInfo> {
       tags_;        /**< SHM pointer to tag list */
   size_t blob_size_;   /**< The overall size of the blob */
   RwLock lock_[2];     /**< Ensures BlobInfo access is synchronized */
-  time_t update_time_; /**< Last time statistics updated */
-  int access_count_;   /**< The number of times blob accessed */
+  float score_;        /**< The priority of this blob */
+
   /**
    * Estimate when blob will be accessed next (ns)
    * 0 indicates unknown

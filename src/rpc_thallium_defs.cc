@@ -60,8 +60,10 @@ void ThalliumRpc::DefineRpcs() {
                                           TagId bkt_id,
                                           const std::string &blob_name,
                                           size_t blob_size,
-                                          std::vector<BufferInfo> &buffers) {
-    auto ret = mdm->LocalPutBlobMetadata(bkt_id, blob_name, blob_size, buffers);
+                                          std::vector<BufferInfo> &buffers,
+                                          float score) {
+    auto ret = mdm->LocalPutBlobMetadata(bkt_id, blob_name,
+                                         blob_size, buffers, score);
     req.respond(ret);
   });
   RegisterRpc("RpcTryCreateBlob", [mdm](const request &req,
@@ -91,6 +93,11 @@ void ThalliumRpc::DefineRpcs() {
   RegisterRpc("RpcGetBlobName", [mdm](const request &req,
                                       BlobId blob_id) {
     auto ret = mdm->LocalGetBlobName(blob_id);
+    req.respond(ret);
+  });
+  RegisterRpc("RpcGetBlobScore", [mdm](const request &req,
+                                      BlobId blob_id) {
+    auto ret = mdm->LocalGetBlobScore(blob_id);
     req.respond(ret);
   });
   RegisterRpc("RpcLockBlob", [mdm](const request &req,

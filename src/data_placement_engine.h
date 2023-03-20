@@ -45,7 +45,7 @@ class DPE {
    * */
   virtual Status Placement(const std::vector<size_t> &blob_sizes,
                            const std::vector<TargetInfo> &targets,
-                           const api::Context &ctx,
+                           api::Context &ctx,
                            std::vector<PlacementSchema> &output) = 0;
 
   /**
@@ -54,7 +54,7 @@ class DPE {
    * */
   Status CalculatePlacement(const std::vector<size_t> &blob_sizes,
                             std::vector<PlacementSchema> &output,
-                            const api::Context &api_context);
+                            api::Context &api_context);
 };
 
 }  // namespace hermes

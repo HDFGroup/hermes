@@ -25,6 +25,9 @@ class Prefetcher {
   std::list<IoTrace> trace_;
   MetadataManager *mdm_;
   RPC_TYPE *rpc_;
+  tl::engine *engine;            /**< Argobots execution engine */
+  ABT_xstream execution_stream_; /**< Argobots execution stream */
+  double epoch_ms_;              /**< Milliseconds to sleep */
 
  public:
   /** Initialize each candidate prefetcher, including trace info */

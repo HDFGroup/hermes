@@ -31,7 +31,7 @@ DPE::DPE() : mdm_(HERMES->mdm_.get()) {}
 /** calculate data placement */
 Status DPE::CalculatePlacement(const std::vector<size_t> &blob_sizes,
                                std::vector<PlacementSchema> &output,
-                               const api::Context &ctx) {
+                               api::Context &ctx) {
   Status result;
 
   // NOTE(chogan): Start with local targets and gradually expand the target

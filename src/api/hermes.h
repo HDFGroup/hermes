@@ -122,10 +122,13 @@ class Hermes {
    * PUBLIC Global Operations
    * ===================================*/
 
-  /** Create a Bucket in Hermes */
+  /** Get or create a Bucket in Hermes */
   std::shared_ptr<Bucket> GetBucket(std::string name,
                                     Context ctx = Context(),
                                     size_t backend_size = 0);
+
+  /** Get an existing Bucket in Hermes */
+  std::shared_ptr<Bucket> GetBucket(TagId bkt_id);
 
   /** Create a generic tag in Hermes */
   TagId CreateTag(const std::string &tag_name) {

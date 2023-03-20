@@ -46,6 +46,11 @@ class Bucket {
          Context &ctx,
          size_t backend_size = 0);
 
+  /**
+   * Get an existing bucket.
+   * */
+  Bucket(TagId tag_id);
+
  public:
   /**
    * Get the name of this bucket. Name is cached instead of
@@ -116,7 +121,16 @@ class Bucket {
    * @param blob_name the name of the blob
    * @return The Status of the operation
    * */
-  Status GetBlobName(const BlobId &blob_id, std::string &blob_name);
+  std::string GetBlobName(const BlobId &blob_id);
+
+
+  /**
+   * Get the score of a blob from the blob id
+   *
+   * @param blob_id the blob_id
+   * @return The Status of the operation
+   * */
+  float GetBlobScore(const BlobId &blob_id);
 
   /**
    * Lock the blob
