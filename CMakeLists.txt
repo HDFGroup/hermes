@@ -18,12 +18,12 @@ set(IS_HERMES_MAIN ON)
 #------------------------------------------------------------------------------
 # Compiler optimization
 #------------------------------------------------------------------------------
-if (CMAKE_BUILD_TYPE STREQUAL "Release")
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O1")
+  message("This is NOT a release build: ${CMAKE_BUILD_TYPE}")
+else()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
   message("This IS a release build")
-else()
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0")
-  message("This is NOT a release build: ${CMAKE_BUILD_TYPE}")
 endif()
 
 #------------------------------------------------------------------------------

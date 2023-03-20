@@ -203,7 +203,10 @@ Status Bucket::PartialPutOrCreate(const std::string &blob_name,
   if (full_blob.size() < opts.backend_size_) {
     // Case 3: The blob did not fully exist (need to read from backend)
     // Read blob using adapter
-    LOG(INFO) << "Blob didn't fully exist. Reading from backend." << std::endl;
+    LOG(INFO) << "Blob did not fully exist. Reading blob from backend. "
+              << " cur_size: " << full_blob.size()
+              << " backend_size: " << opts.backend_size_
+              << std::endl;
     auto io_client = IoClientFactory::Get(opts.type_);
     full_blob.resize(opts.backend_size_);
     if (io_client) {
@@ -213,8 +216,8 @@ Status Bucket::PartialPutOrCreate(const std::string &blob_name,
       if (!status.success_) {
         LOG(INFO) << "Failed to read blob of size "
                   << opts.backend_size_
-                  << "from backend (PartialPut)";
-        return PARTIAL_PUT_OR_CREATE_OVERFLOW;
+                  << " from backend (PartialPut)";
+        // return PARTIAL_PUT_OR_CREATE_OVERFLOW;
       }
     }
   }
@@ -267,13 +270,19 @@ Status Bucket::PartialGetOrCreate(const std::string &blob_name,
   if (ContainsBlob(blob_name, blob_id)) {
     // Case 1: The blob already exists (read from hermes)
     // Read blob from Hermes
-    LOG(INFO) << "Blob existed. Reading blob from Hermes." << std::endl;
+    LOG(INFO) << "Blob existed. Reading blob from Hermes."
+              << " offset: " << opts.backend_off_
+              << " size: " << blob_size
+              << std::endl;
     Get(blob_id, full_blob, ctx);
   }
   if (full_blob.size() < opts.backend_size_) {
     // Case 2: The blob did not exist (or at least not fully)
     // Read blob using adapter
-    LOG(INFO) << "Blob did not exist. Reading blob from backend." << std::endl;
+    LOG(INFO) << "Blob did not fully exist. Reading blob from backend. "
+              << " cur_size: " << full_blob.size()
+              << " backend_size: " << opts.backend_size_
+              << std::endl;
     auto io_client = IoClientFactory::Get(opts.type_);
     full_blob.resize(opts.backend_size_);
     if (io_client) {

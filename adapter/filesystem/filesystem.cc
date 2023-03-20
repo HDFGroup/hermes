@@ -94,10 +94,13 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
   (void) f;
   std::shared_ptr<hapi::Bucket> &bkt = stat.bkt_id_;
   std::string filename = bkt->GetName();
+  size_t backend_size = stat.bkt_id_->GetSize(true);
   LOG(INFO) << "Write called for filename: " << filename
             << " on offset: " << off
             << " from position: " << stat.st_ptr_
-            << " and size: " << total_size << std::endl;
+            << " and size: " << total_size
+            << " and current file size: " << backend_size
+            << std::endl;
 
   size_t ret;
   Context ctx;
@@ -106,7 +109,6 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
   size_t data_offset = 0;
   auto mapper = MapperFactory().Get(MapperType::kBalancedMapper);
   mapper->map(off, total_size, kPageSize, mapping);
-  size_t backend_size = stat.bkt_id_->GetSize(true);
 
   for (const auto &p : mapping) {
     const Blob blob_wrap((const char*)ptr + data_offset, p.blob_size_);
@@ -127,14 +129,15 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
                                           io_status,
                                           opts,
                                           ctx);
+    if (status.Fail()) {
+      data_offset = 0;
+      break;
+    }
     size_t new_file_size = opts.backend_off_ + blob_wrap.size();
     if (new_file_size > backend_size) {
       bkt->UpdateSize(new_file_size - backend_size,
                       BucketUpdate::kBackend);
-    }
-    if (status.Fail()) {
-      data_offset = 0;
-      break;
+      backend_size = new_file_size;
     }
     bkt->UnlockBlob(blob_id, MdLockType::kExternalWrite);
     data_offset += p.blob_size_;

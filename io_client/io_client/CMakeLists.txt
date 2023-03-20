@@ -6,6 +6,7 @@ include_directories(
 # Compile all I/O clients into a single library
 #-----------------------------------------------------------------------------
 set(IO_CLIENT_LIBS
+        hermes_stdio_io_client
         hermes_posix_io_client)
 add_library(hermes_adapter_io_clients
         empty.cc)

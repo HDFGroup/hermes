@@ -85,7 +85,7 @@ class StdioFs : public hermes::adapter::fs::Filesystem {
   }
 
   /** get the file name from \a fp file pointer */
-  inline std::string GetFilenameFromFP(FILE* fp) {
+  static std::string GetFilenameFromFP(FILE* fp) {
     char proclnk[kMaxPathLen];
     char filename[kMaxPathLen];
     int fno = fileno(fp);

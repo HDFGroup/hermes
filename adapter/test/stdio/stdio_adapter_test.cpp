@@ -19,10 +19,22 @@
 
 #include "adapter_test_utils.h"
 #include "catch_config.h"
-#if HERMES_INTERCEPT == 1
 #include "io_client/stdio/stdio_api.h"
+#if HERMES_INTERCEPT == 1
 #include "adapter/stdio/stdio_fs_api.h"
 #endif
+
+static const int kMaxPathLen = 4096;
+
+static std::string GetFilenameFromFP(FILE* fp) {
+  char proclnk[kMaxPathLen];
+  char filename[kMaxPathLen];
+  int fno = fileno(fp);
+  snprintf(proclnk, kMaxPathLen, "/proc/self/fd/%d", fno);
+  size_t r = readlink(proclnk, filename, kMaxPathLen);
+  filename[r] = '\0';
+  return filename;
+}
 
 #include "glog/logging.h"
 #include "adapter_test_utils.h"
@@ -203,7 +215,13 @@ int posttest(bool compare_data = true) {
       REQUIRE(status == 0);
       size_t char_mismatch = 0;
       for (size_t pos = 0; pos < size; ++pos) {
-        if (d1[pos] != d2[pos]) char_mismatch++;
+        if (d1[pos] != d2[pos]) {
+          auto p1 = d1[pos];
+          auto p2 = d2[pos];
+          char_mismatch++;
+          LOG(FATAL) << "Failed to match chars: " <<
+              p1 << " vs " << p2 << std::endl;
+        }
       }
       REQUIRE(char_mismatch == 0);
     }

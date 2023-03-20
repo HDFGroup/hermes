@@ -142,19 +142,6 @@ SERIALIZE_ENUM(AdapterMode)
 /** Lets thallium know how to serialize an AdapterType */
 SERIALIZE_ENUM(AdapterType)
 
-/** Lets thallium know how to serialize an IoClientContext */
-template <typename A>
-void serialize(A &ar, IoClientContext &opts) {
-  ar &opts.type_;
-  ar &opts.adapter_mode_;
-  ar &opts.dpe_;
-  ar &opts.flags_;
-  ar &opts.mpi_type_;
-  ar &opts.mpi_count_;
-  ar &opts.backend_off_;
-  ar &opts.backend_size_;
-}
-
 }  // namespace hermes::adapter
 
 namespace hermes::api {

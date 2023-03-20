@@ -17,6 +17,7 @@
 #include "hermes_shm/util/singleton.h"
 
 #include "io_client/posix/posix_io_client.h"
+#include "io_client/stdio/stdio_io_client.h"
 
 namespace hermes::adapter {
 /**
@@ -36,7 +37,7 @@ class IoClientFactory {
         return HERMES_POSIX_IO_CLIENT;
       }
       case AdapterType::kStdio: {
-        return nullptr;
+        return HERMES_STDIO_IO_CLIENT;
       }
       case AdapterType::kMpiio: {
         return nullptr;

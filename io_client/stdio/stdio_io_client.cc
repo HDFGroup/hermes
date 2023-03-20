@@ -134,9 +134,9 @@ void StdioIoClient::ReadBlob(const hipc::charbuf &bkt_name,
   }
   real_api->fseek(fh, opts.backend_off_, SEEK_SET);
   status.size_ = real_api->fread(full_blob.data(),
-                                       sizeof(char),
-                                       full_blob.size(),
-                                       fh);
+                                 sizeof(char),
+                                 full_blob.size(),
+                                 fh);
   if (status.size_ != full_blob.size()) {
     status.success_ = false;
   }
