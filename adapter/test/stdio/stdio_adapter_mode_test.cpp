@@ -32,7 +32,7 @@ using hermes::adapter::AdapterMode;
 namespace hermes::adapter::stdio::test {
 struct Arguments {
   std::string filename = "test.dat";
-  std::string directory = "/tmp";
+  std::string directory = "/tmp/test_hermes";
   size_t request_size = 65536;
 };
 struct Info {
@@ -262,6 +262,7 @@ TEST_CASE("BatchedWriteSequentialPersistent",
               std::to_string(info.num_iterations) +
               "]"
               "[pattern=sequential][file=1]") {
+  HERMES->client_config_.SetBaseAdapterMode(AdapterMode::kDefault);
   REQUIRE(HERMES->client_config_.GetBaseAdapterMode() == AdapterMode::kDefault);
   pretest();
   SECTION("write to new file always at end") {
@@ -289,6 +290,7 @@ TEST_CASE("BatchedWriteSequentialBypass",
               std::to_string(info.num_iterations) +
               "]"
               "[pattern=sequential][file=1]") {
+  HERMES->client_config_.SetBaseAdapterMode(AdapterMode::kBypass);
   REQUIRE(HERMES->client_config_.GetBaseAdapterMode() == AdapterMode::kBypass);
   pretest();
   SECTION("write to new file always at end") {
@@ -316,6 +318,7 @@ TEST_CASE("BatchedWriteSequentialScratch",
               std::to_string(info.num_iterations) +
               "]"
               "[pattern=sequential][file=1]") {
+  HERMES->client_config_.SetBaseAdapterMode(AdapterMode::kScratch);
   REQUIRE(HERMES->client_config_.GetBaseAdapterMode() == AdapterMode::kScratch);
   pretest();
   SECTION("write to new file always at end") {
@@ -328,7 +331,7 @@ TEST_CASE("BatchedWriteSequentialScratch",
     }
     test::test_fclose();
     REQUIRE(test::status_orig == 0);
-    REQUIRE(stdfs::file_size(info.new_file) == 0);
+     REQUIRE(stdfs::file_size(info.new_file) == 0);
   }
   posttest(false);
 }

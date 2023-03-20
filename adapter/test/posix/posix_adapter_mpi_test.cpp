@@ -31,7 +31,7 @@ namespace stdfs = std::filesystem;
 namespace hermes::adapter::fs::test {
 struct Arguments {
   std::string filename = "test.dat";
-  std::string directory = "/tmp";
+  std::string directory = "/tmp/test_hermes";
   size_t request_size = 65536;
 };
 struct Info {

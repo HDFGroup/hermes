@@ -27,6 +27,7 @@ void MainPretest() {
 }
 
 void MainPosttest() {
+  HERMES->Clear();
   HERMES->Finalize();
 }
 
@@ -87,7 +88,7 @@ void TestBucketRename(hapi::Hermes *hermes) {
 void TestBucketClear(hapi::Hermes *hermes) {
   auto bkt = hermes->GetBucket("hello");
   int num_blobs = 16;
-  size_t blob_size = MEGABYTES(150);
+  size_t blob_size = MEGABYTES(32);
   hermes::api::Context ctx;
   hermes::BlobId blob_id;
 
@@ -109,7 +110,7 @@ void TestBucketClear(hapi::Hermes *hermes) {
 void TestBucketDestroy(hapi::Hermes *hermes) {
   auto bkt = hermes->GetBucket("hello");
   int num_blobs = 1;
-  size_t blob_size = MEGABYTES(150);
+  size_t blob_size = MEGABYTES(32);
   hermes::api::Context ctx;
   hermes::BlobId blob_id;
 

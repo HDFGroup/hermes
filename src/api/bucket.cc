@@ -345,7 +345,9 @@ void Bucket::FlushBlob(BlobId blob_id,
  * */
 void Bucket::Flush(const IoClientContext &opts) {
   std::vector<BlobId> blob_ids = GetContainedBlobIds();
-  if (opts.adapter_mode_ == AdapterMode::kScratch) { return; }
+  if (opts.adapter_mode_ == AdapterMode::kScratch) {
+    return;
+  }
   LOG(INFO) << "Flushing " << blob_ids.size() << " blobs" << std::endl;
   for (BlobId &blob_id : blob_ids) {
     FlushBlob(blob_id, opts);

@@ -46,6 +46,10 @@ class ClientConfig : public BaseConfig {
   ClientConfig() = default;
   void LoadDefault() override;
 
+  void SetBaseAdapterMode(AdapterMode mode) {
+    base_adapter_config_.mode_ = mode;
+  }
+
   AdapterMode GetBaseAdapterMode() {
     return base_adapter_config_.mode_;
   }

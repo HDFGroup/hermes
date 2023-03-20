@@ -19,10 +19,19 @@ set(API_TESTS
         test_partial_put_get
         test_buffer_pool
         test_trait
-        test_config
         test_tag)
 
 find_program(BASH_PROGRAM bash)
+
+add_executable(test_config test_config.cc main.cc)
+add_dependencies(test_config hermes)
+target_link_libraries(test_config ${LIBRT}
+        hermes
+        MPI::MPI_CXX
+        $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium>
+        glog::glog
+        Catch2::Catch2)
+add_test(Testtest_config COMMAND ${CMAKE_BINARY_DIR}/test_config)
 
 foreach(program ${API_TESTS})
   add_executable(${program} ${program}.cc main_mpi.cc)
