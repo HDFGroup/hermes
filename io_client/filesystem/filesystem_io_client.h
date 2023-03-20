@@ -116,8 +116,7 @@ class FilesystemIoClient : public IoClient {
                         IoClientStats &stat) = 0;
 
   /** real remove */
-  virtual int RealRemove(const IoClientObject &f,
-                         IoClientStats &stat) = 0;
+  virtual int RealRemove(const std::string &path) = 0;
 
   /**
    * Called before RealClose. Releases information provisioned during

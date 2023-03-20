@@ -85,13 +85,8 @@ void PosixIoClient::HermesClose(IoClientObject &f,
 }
 
 /** Remove \a file FILE f */
-int PosixIoClient::RealRemove(const IoClientObject &f,
-                              IoClientStats &stat) {
-  if (stat.adapter_mode_ == AdapterMode::kScratch &&
-      stat.fd_ == -1) {
-    return 0;
-  }
-  return real_api->remove(stat.path_.c_str());
+int PosixIoClient::RealRemove(const std::string &path) {
+  return real_api->remove(path.c_str());
 }
 
 /** Get initial statistics from the backend */

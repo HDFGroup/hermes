@@ -70,8 +70,7 @@ class MpiioIoClient : public hermes::adapter::fs::FilesystemIoClient {
                    FilesystemIoClientObject &fs_mdm) override;
 
   /** Remove \a file FILE f */
-  int RealRemove(const IoClientObject &f,
-                 IoClientStats &stat) override;
+  int RealRemove(const std::string &path) override;
 
   /** Get initial statistics from the backend */
   size_t GetSize(const hipc::charbuf &bkt_name) override;

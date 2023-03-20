@@ -85,10 +85,10 @@ int main(int argc, char **argv) {
     char nonce = i + 1;
     if (!do_read) {
       memset(buf, nonce, block_size);
-      write(fd, buf, block_size);
+      int ret = write(fd, buf, block_size);
     } else {
       memset(buf, 0, block_size);
-      read(fd, buf, block_size);
+      int ret = read(fd, buf, block_size);
       if (!VerifyBuffer(buf, block_size, nonce)) {
         std::cout << "Buffer verification failed!" << std::endl;
         exit(1);

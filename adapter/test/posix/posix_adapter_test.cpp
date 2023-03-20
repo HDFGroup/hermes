@@ -17,6 +17,7 @@
 #include <filesystem>
 #include <iostream>
 #include "hermes.h"
+#include <stdio.h>
 
 #include "catch_config.h"
 #include "io_client/posix/posix_api.h"
@@ -101,6 +102,27 @@ void TrackFiles() {
 #endif
 }
 
+void RemoveFile(const std::string &path) {
+  if (stdfs::exists(path)) {
+    LOG(INFO) << path
+              << " EXISTS, so removing" <<  std::endl;
+  } else {
+    LOG(INFO) << path
+              << " does NOT exist, so not removing" << std::endl;
+  }
+  int ret = stdfs::remove(path);
+  if (stdfs::exists(path)) {
+    LOG(FATAL) << "Failed to remove: " << path << std::endl;
+  }
+}
+
+void RemoveFiles() {
+  RemoveFile(info.new_file);
+  RemoveFile(info.new_file_cmp);
+  RemoveFile(info.existing_file);
+  RemoveFile(info.existing_file_cmp);
+}
+
 int pretest() {
   // Initialize path names
   stdfs::path fullpath = args.directory;
@@ -116,17 +138,10 @@ int pretest() {
   IgnoreAllFiles();
 
   // Remove existing files from the FS
-  if (stdfs::exists(info.new_file))
-    stdfs::remove(info.new_file);
-  if (stdfs::exists(info.new_file_cmp))
-    stdfs::remove(info.new_file_cmp);
-  if (stdfs::exists(info.existing_file))
-    stdfs::remove(info.existing_file);
-  if (stdfs::exists(info.existing_file_cmp))
-    stdfs::remove(info.existing_file_cmp);
+  RemoveFiles();
 
   // Create the file which is untracked by Hermes
-  if (!stdfs::exists(info.existing_file_cmp)) {
+  if (true) {
     std::string cmd = "{ tr -dc '[:alnum:]' < /dev/urandom | head -c " +
                       std::to_string(args.request_size * info.num_iterations) +
                       "; } > " + info.existing_file_cmp + " 2> /dev/null";
@@ -138,11 +153,11 @@ int pretest() {
   }
 
   // Create the file that is being tracks by Hermes
-  if (!stdfs::exists(info.existing_file)) {
+  if (true) {
     std::string cmd = "cp " + info.existing_file_cmp + " " + info.existing_file;
     int status = system(cmd.c_str());
     REQUIRE(status != -1);
-    auto check = stdfs::file_size(info.existing_file_cmp) ==
+    auto check = stdfs::file_size(info.existing_file) ==
                  args.request_size * info.num_iterations;
     if (!check) {
       LOG(FATAL) << "File sizes weren't equivalent after copy" << std::endl;
@@ -226,14 +241,7 @@ int posttest(bool compare_data = true) {
   }
   /* Delete the files from both Hermes and the backend. */
   TrackFiles();
-  if (stdfs::exists(info.new_file))
-    stdfs::remove(info.new_file);
-  if (stdfs::exists(info.existing_file))
-    stdfs::remove(info.existing_file);
-  if (stdfs::exists(info.new_file_cmp))
-    stdfs::remove(info.new_file_cmp);
-  if (stdfs::exists(info.existing_file_cmp))
-    stdfs::remove(info.existing_file_cmp);
+  RemoveFiles();
   return 0;
 }
 
@@ -270,9 +278,11 @@ void test_open(const char* path, int flags, ...) {
     cmp_path = info.existing_file_cmp;
   }
   if (flags & O_CREAT || flags & O_TMPFILE) {
+    LOG(INFO) << "No create?" << std::endl;
     fh_orig = open(path, flags, mode);
     fh_cmp = open(cmp_path.c_str(), flags, mode);
   } else {
+    LOG(INFO) << "With create?" << std::endl;
     fh_orig = open(path, flags);
     fh_cmp = open(cmp_path.c_str(), flags);
   }

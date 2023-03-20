@@ -65,8 +65,16 @@ int HERMES_DECL(open)(const char *path, int flags, ...) {
     auto f = fs_api->Open(stat, path);
     return f.hermes_fd_;
   }
+
   if (flags & O_CREAT || flags & O_TMPFILE) {
+    if (HERMES->is_initialized_) {
+      LOG(INFO) << "NOT intercepting open" << std::endl;
+    }
     return real_api->open(path, flags, mode);
+  }
+
+  if (HERMES->is_initialized_) {
+    LOG(INFO) << "NOT intercepting open" << std::endl;
   }
   return real_api->open(path, flags);
 }
@@ -91,7 +99,13 @@ int HERMES_DECL(open64)(const char *path, int flags, ...) {
     return fs_api->Open(stat, path).hermes_fd_;
   }
   if (flags & O_CREAT) {
+    if (HERMES->is_initialized_) {
+      LOG(INFO) << "NOT intercepting open" << std::endl;
+    }
     return real_api->open64(path, flags, mode);
+  }
+  if (HERMES->is_initialized_) {
+    LOG(INFO) << "NOT intercepting open" << std::endl;
   }
   return real_api->open64(path, flags);
 }
@@ -374,9 +388,7 @@ int HERMES_DECL(remove)(const char *pathname) {
   auto real_api = HERMES_POSIX_API;
   auto fs_api = HERMES_POSIX_FS;
   if (fs_api->IsPathTracked(pathname)) {
-    LOG(INFO) << "Intercept remove(" << pathname << ")";
-    DLOG(INFO) << " -> " << pathname;
-    LOG(INFO) << std::endl;
+    LOG(INFO) << "Intercept remove(" << pathname << ")" << std::endl;
     return fs_api->Remove(pathname);
   }
   return real_api->remove(pathname);
@@ -388,9 +400,7 @@ int HERMES_DECL(unlink)(const char *pathname) {
   auto real_api = HERMES_POSIX_API;
   auto fs_api = HERMES_POSIX_FS;
   if (fs_api->IsPathTracked(pathname)) {
-    LOG(INFO) << "Intercept unlink(" << pathname << ")";
-    DLOG(INFO) << " -> " << pathname;
-    LOG(INFO) << std::endl;
+    LOG(INFO) << "Intercept unlink(" << pathname << ")" << std::endl;
     return fs_api->Remove(pathname);
   }
   return real_api->unlink(pathname);

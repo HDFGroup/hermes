@@ -91,6 +91,7 @@ target_link_libraries(hermes
   PUBLIC ${CMAKE_HERMES_COMMUNICATION_TYPE_LIB}
   PUBLIC ${CMAKE_HERMES_RPC_TYPE_LIB}
   PUBLIC glog::glog
+  PUBLIC MPI::MPI_CXX
   PUBLIC yaml-cpp
   PUBLIC hermes_shm_data_structures
   PUBLIC "$<$<BOOL:${HERMES_INTERCEPT_IO}>:${GOTCHA_MODULE_LIBS}>"

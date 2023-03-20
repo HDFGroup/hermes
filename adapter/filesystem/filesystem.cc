@@ -338,9 +338,10 @@ int Filesystem::Close(File &f, AdapterStat &stat, bool destroy) {
 
 int Filesystem::Remove(const std::string &pathname) {
   auto mdm = HERMES_FS_METADATA_MANAGER;
+  int ret = io_client_->RealRemove(pathname);
   std::list<File>* filesp = mdm->Find(pathname);
   if (filesp == nullptr) {
-    return 0;
+    return ret;
   }
   std::list<File> files = *filesp;
   for (File &f : files) {
@@ -351,10 +352,12 @@ int Filesystem::Remove(const std::string &pathname) {
     FilesystemIoClientObject fs_ctx(&mdm->fs_mdm_, (void *)&stat);
     io_client_->HermesClose(f, *stat, fs_ctx);
     io_client_->RealClose(f, *stat);
-    io_client_->RealRemove(f, *stat);
     mdm->Delete(stat->path_, f);
+    if (stat->adapter_mode_ == AdapterMode::kScratch) {
+      ret = 0;
+    }
   }
-  return 0;
+  return ret;
 }
 
 

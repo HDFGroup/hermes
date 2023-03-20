@@ -67,8 +67,7 @@ void StdioIoClient::HermesClose(IoClientObject &f,
 }
 
 /** Remove \a file FILE f */
-int StdioIoClient::RealRemove(const IoClientObject &f,
-                              IoClientStats &stat) {
+int StdioIoClient::RealRemove(const std::string &path) {
   return 0;
 }
 
