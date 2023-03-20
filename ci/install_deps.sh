@@ -51,8 +51,4 @@ spack repo add ./ci/hermes
 # NOTE(llogan): Modify version string per release.
 HERMES_VERSION=1.0.0
 spack install hermes
-SPACK_STAGING_DIR=~/spack_staging
-mkdir -p ${SPACK_STAGING_DIR}
 
-# Copy what Spack installed in a temporary location to your desired location.
-cp -LRnv ${SPACK_STAGING_DIR}/* ${INSTALL_DIR}
