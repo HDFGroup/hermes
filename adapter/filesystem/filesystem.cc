@@ -40,15 +40,25 @@ void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
   if (!exists) {
     LOG(INFO) << "File not opened before by adapter" << std::endl;
     // Create the new bucket
-    FsIoOptions opts;
-    opts.type_ = type_;
-    if (stat.is_trunc_) { opts.MarkTruncated(); }
     stat.path_ = stdfs::weakly_canonical(path).string();
-    stat.bkt_id_ = HERMES->GetBucket(stat.path_, ctx, opts);
-    // Update bucket stats
+    auto path_shm = hipc::make_uptr<hipc::charbuf>(stat.path_);
+    size_t file_size = io_client_->GetSize(*path_shm);
+    // The file was opened with TRUNCATION
+    if (stat.is_trunc_) {
+      // TODO(llogan): Need to add back bucket lock
+      stat.bkt_id_ = HERMES->GetBucket(stat.path_, ctx, 0);
+      stat.bkt_id_->Clear(true);
+    } else {
+      stat.bkt_id_ = HERMES->GetBucket(stat.path_, ctx, file_size);
+    }
+    // Update page size and file size
     // TODO(llogan): can avoid two unordered_map queries here
     stat.page_size_ = mdm->GetAdapterPageSize(path);
-    stat.backend_size_ = stat.bkt_id_->GetSize(IoClientContext(type_));
+    stat.backend_size_ = stat.bkt_id_->GetSize(true);
+    // The file was opened with APPEND
+    if (stat.is_append_) {
+      stat.st_ptr_ =  stat.backend_size_;
+    }
     // Allocate internal hermes data
     auto stat_ptr = std::make_shared<AdapterStat>(stat);
     FilesystemIoClientObject fs_ctx(&mdm->fs_mdm_, (void*)stat_ptr.get());
@@ -87,6 +97,7 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
   std::string filename = bkt->GetName();
   LOG(INFO) << "Write called for filename: " << filename
             << " on offset: " << off
+            << " from position: " << stat.st_ptr_
             << " and size: " << total_size << std::endl;
 
   size_t ret;
@@ -99,7 +110,7 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
 
   for (const auto &p : mapping) {
     const Blob blob_wrap((const char*)ptr + data_offset, p.blob_size_);
-    hipc::charbuf blob_name(p.CreateBlobName());
+    hshm::charbuf blob_name(p.CreateBlobName());
     BlobId blob_id;
     opts.type_ = type_;
     opts.backend_off_ = p.page_ * kPageSize;
@@ -107,7 +118,7 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
                                         stat.backend_size_,
                                         kPageSize);
     opts.adapter_mode_ = stat.adapter_mode_;
-    bkt->TryCreateBlob(blob_name.str(), blob_id, ctx, opts);
+    bkt->TryCreateBlob(blob_name.str(), blob_id, ctx);
     bkt->LockBlob(blob_id, MdLockType::kExternalWrite);
     auto status = bkt->PartialPutOrCreate(blob_name.str(),
                                           blob_wrap,
@@ -116,6 +127,11 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
                                           io_status,
                                           opts,
                                           ctx);
+    size_t new_file_size = opts.backend_off_ + blob_wrap.size();
+    if (new_file_size > stat.backend_size_) {
+      bkt->UpdateSize(new_file_size - stat.backend_size_,
+                      BucketUpdate::kBackend);
+    }
     if (status.Fail()) {
       data_offset = 0;
       break;
@@ -123,7 +139,9 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
     bkt->UnlockBlob(blob_id, MdLockType::kExternalWrite);
     data_offset += p.blob_size_;
   }
-  if (opts.DoSeek()) { stat.st_ptr_ = off + data_offset; }
+  if (opts.DoSeek()) {
+    stat.st_ptr_ = off + data_offset;
+  }
   stat.UpdateTime();
 
   LOG(INFO) << "The size of file after write: "
@@ -139,8 +157,10 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
   (void) f;
   std::shared_ptr<hapi::Bucket> &bkt = stat.bkt_id_;
   std::string filename = bkt->GetName();
-  LOG(INFO) << "Read called for filename: " << filename << " on offset: "
-            << off << " and size: " << total_size << std::endl;
+  LOG(INFO) << "Read called for filename: " << filename
+            << " on offset: " << off
+            << " from position: " << stat.st_ptr_
+            << " and size: " << total_size << std::endl;
 
   size_t ret;
   Context ctx;
@@ -152,7 +172,7 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
 
   for (const auto &p : mapping) {
     Blob blob_wrap((const char*)ptr + data_offset, p.blob_size_);
-    hipc::charbuf blob_name(p.CreateBlobName());
+    hshm::charbuf blob_name(p.CreateBlobName());
     BlobId blob_id;
     opts.backend_off_ = p.page_ * kPageSize;
     opts.backend_size_ = GetBackendSize(opts.backend_off_,
@@ -160,7 +180,7 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
                                         kPageSize);
     opts.type_ = type_;
     opts.adapter_mode_ = stat.adapter_mode_;
-    bkt->TryCreateBlob(blob_name.str(), blob_id, ctx, opts);
+    bkt->TryCreateBlob(blob_name.str(), blob_id, ctx);
     bkt->LockBlob(blob_id, MdLockType::kExternalRead);
     auto status = bkt->PartialGetOrCreate(blob_name.str(),
                                           blob_wrap,
@@ -177,7 +197,9 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
     bkt->UnlockBlob(blob_id, MdLockType::kExternalRead);
     data_offset += p.blob_size_;
   }
-  if (opts.DoSeek()) { stat.st_ptr_ = off + data_offset; }
+  if (opts.DoSeek()) {
+    stat.st_ptr_ = off + data_offset;
+  }
   stat.UpdateTime();
 
   ret = data_offset;
@@ -244,9 +266,7 @@ void Filesystem::Wait(std::vector<uint64_t> &req_ids,
 
 size_t Filesystem::GetSize(File &f, AdapterStat &stat) {
   (void) stat;
-  FsIoOptions opts;
-  opts.type_ = type_;
-  return stat.bkt_id_->GetSize(opts);
+  return stat.bkt_id_->GetSize(true);
 }
 
 off_t Filesystem::Seek(File &f, AdapterStat &stat,
@@ -270,7 +290,7 @@ off_t Filesystem::Seek(File &f, AdapterStat &stat,
     case SeekMode::kEnd: {
       FsIoOptions opts;
       opts.type_ = type_;
-      stat.st_ptr_ = stat.bkt_id_->GetSize(opts) + offset;
+      stat.st_ptr_ = stat.bkt_id_->GetSize(true) + offset;
       break;
     }
     default: {
@@ -296,6 +316,12 @@ int Filesystem::Sync(File &f, AdapterStat &stat) {
   return 0;
 }
 
+int Filesystem::Truncate(File &f, AdapterStat &stat, size_t new_size) {
+  std::shared_ptr<hapi::Bucket> &bkt = stat.bkt_id_;
+  // TODO(llogan)
+  return 0;
+}
+
 int Filesystem::Close(File &f, AdapterStat &stat, bool destroy) {
   Sync(f, stat);
   if (destroy) {
@@ -309,15 +335,27 @@ int Filesystem::Close(File &f, AdapterStat &stat, bool destroy) {
   return 0;
 }
 
-int Filesystem::Remove(File &f, AdapterStat &stat) {
-  stat.bkt_id_->Destroy();
+int Filesystem::Remove(const std::string &pathname) {
   auto mdm = HERMES_FS_METADATA_MANAGER;
-  FilesystemIoClientObject fs_ctx(&mdm->fs_mdm_, (void*)&stat);
-  io_client_->HermesClose(f, stat, fs_ctx);
-  io_client_->RealClose(f, stat);
-  mdm->Delete(stat.path_, f);
+  std::list<File>* filesp = mdm->Find(pathname);
+  if (filesp == nullptr) {
+    return 0;
+  }
+  std::list<File> files = *filesp;
+  for (File &f : files) {
+    auto stat = mdm->Find(f);
+    if (stat == nullptr) { continue; }
+    stat->bkt_id_->Destroy();
+    auto mdm = HERMES_FS_METADATA_MANAGER;
+    FilesystemIoClientObject fs_ctx(&mdm->fs_mdm_, (void *)&stat);
+    io_client_->HermesClose(f, *stat, fs_ctx);
+    io_client_->RealClose(f, *stat);
+    io_client_->RealRemove(f, *stat);
+    mdm->Delete(stat->path_, f);
+  }
   return 0;
 }
+
 
 /**
  * Variants of Read and Write which do not take an offset as
@@ -511,6 +549,17 @@ int Filesystem::Sync(File &f, bool &stat_exists) {
   return Sync(f, *stat);
 }
 
+int Filesystem::Truncate(File &f, bool &stat_exists, size_t new_size) {
+  auto mdm = HERMES_FS_METADATA_MANAGER;
+  auto stat = mdm->Find(f);
+  if (!stat) {
+    stat_exists = false;
+    return -1;
+  }
+  stat_exists = true;
+  return Truncate(f, *stat, new_size);
+}
+
 int Filesystem::Close(File &f, bool &stat_exists, bool destroy) {
   auto mdm = HERMES_FS_METADATA_MANAGER;
   auto stat = mdm->Find(f);
@@ -520,17 +569,6 @@ int Filesystem::Close(File &f, bool &stat_exists, bool destroy) {
   }
   stat_exists = true;
   return Close(f, *stat, destroy);
-}
-
-int Filesystem::Remove(File &f, bool &stat_exists) {
-  auto mdm = HERMES_FS_METADATA_MANAGER;
-  auto stat = mdm->Find(f);
-  if (!stat) {
-    stat_exists = false;
-    return -1;
-  }
-  stat_exists = true;
-  return Remove(f, *stat);
 }
 
 }  // namespace hermes::adapter::fs

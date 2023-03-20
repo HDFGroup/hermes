@@ -22,8 +22,8 @@
 #include "adapter_test_utils.h"
 
 #if HERMES_INTERCEPT == 1
-#include "posix/posix_api.h"
-#include "posix/posix_fs_api.h"
+#include "io_client/posix/posix_api.h"
+#include "adapter/posix/posix_fs_api.h"
 #endif
 
 namespace stdfs = std::filesystem;

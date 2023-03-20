@@ -17,8 +17,8 @@
 
 #include "adapter/filesystem/filesystem.h"
 #include "adapter/filesystem/filesystem_mdm.h"
-#include "mpiio_api.h"
-#include "mpiio_io_client.h"
+#include "io_client/mpiio/mpiio_api.h"
+#include "io_client/mpiio/mpiio_io_client.h"
 
 namespace hermes::adapter::fs {
 

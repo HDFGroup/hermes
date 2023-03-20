@@ -18,13 +18,12 @@ set(IS_HERMES_MAIN ON)
 #------------------------------------------------------------------------------
 # Compiler optimization
 #------------------------------------------------------------------------------
-message(${CMAKE_BUILD_TYPE})
 if (CMAKE_BUILD_TYPE STREQUAL "Release")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
   message("This IS a release build")
 else()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0")
-  message("This is NOT a release build")
+  message("This is NOT a release build: ${CMAKE_BUILD_TYPE}")
 endif()
 
 #------------------------------------------------------------------------------
@@ -409,6 +408,7 @@ set(HERMES_EXPORTED_LIBS "")
 include_directories(${CMAKE_SOURCE_DIR}/hermes_shm/include)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src)
 add_subdirectory(${CMAKE_SOURCE_DIR}/hermes_shm)
+add_subdirectory(${CMAKE_SOURCE_DIR}/io_client)
 
 add_custom_target(rpc COMMAND bash
         ${CMAKE_SOURCE_DIR}/code_generators/code_generators/rpc/rpcgen.sh
@@ -440,6 +440,7 @@ if(HERMES_ENABLE_STDIO_ADAPTER OR HERMES_ENABLE_POSIX_ADAPTER OR
     HERMES_ENABLE_MPIIO_ADAPTER OR HERMES_ENABLE_PUBSUB_ADAPTER OR
     HERMES_ENABLE_VFD)
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/adapter)
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/traits)
 endif()
 
 #-----------------------------------------------------------------------------

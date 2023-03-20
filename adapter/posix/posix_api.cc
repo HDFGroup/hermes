@@ -23,7 +23,7 @@ bool posix_intercepted = true;
 #include "hermes_shm/util/singleton.h"
 #include "interceptor.h"
 
-#include "posix_api.h"
+#include "io_client/posix/posix_api.h"
 #include "posix_fs_api.h"
 #include "filesystem/filesystem.h"
 
@@ -61,10 +61,6 @@ int HERMES_DECL(open)(const char *path, int flags, ...) {
               << " and mode: " << flags << " is tracked." << std::endl;
     AdapterStat stat;
     stat.flags_ = flags;
-    if (stat.flags_ & O_EXCL) {
-      LOG(INFO) << "Ignore exclusive open for now." << std::endl;
-      /*stat.flags_ &= ~O_EXCL;*/
-    }
     stat.st_mode_ = mode;
     auto f = fs_api->Open(stat, path);
     return f.hermes_fd_;
@@ -381,8 +377,7 @@ int HERMES_DECL(remove)(const char *pathname) {
     LOG(INFO) << "Intercept remove(" << pathname << ")";
     DLOG(INFO) << " -> " << pathname;
     LOG(INFO) << std::endl;
-    File f = mdm->Find(pathname);
-    return fs_api->Remove(f, stat_exists);
+    return fs_api->Remove(pathname);
   }
   return real_api->remove(pathname);
 }
@@ -396,8 +391,7 @@ int HERMES_DECL(unlink)(const char *pathname) {
     LOG(INFO) << "Intercept unlink(" << pathname << ")";
     DLOG(INFO) << " -> " << pathname;
     LOG(INFO) << std::endl;
-    File f = mdm->Find(pathname);
-    return fs_api->Close(f, stat_exists);
+    return fs_api->Remove(pathname);
   }
   return real_api->unlink(pathname);
 }

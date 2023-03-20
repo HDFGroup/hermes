@@ -26,8 +26,8 @@
 #include "bucket.h"
 #include "hermes.h"
 
-#include "adapter/io_client/io_client.h"
-#include "filesystem_io_client.h"
+#include "io_client/io_client.h"
+#include "io_client/filesystem/filesystem_io_client.h"
 #include "file.h"
 
 #include <filesystem>
@@ -127,10 +127,12 @@ class Filesystem {
   off_t Tell(File &f, AdapterStat &stat);
   /** sync */
   int Sync(File &f, AdapterStat &stat);
+  /** truncate */
+  int Truncate(File &f, AdapterStat &stat, size_t new_size);
   /** close */
   int Close(File &f, AdapterStat &stat, bool destroy = true);
   /** remove */
-  int Remove(File &f, AdapterStat &stat);
+  int Remove(const std::string &pathname);
 
   /*
    * I/O APIs which seek based on the internal AdapterStat st_ptr,
@@ -195,10 +197,10 @@ class Filesystem {
   off_t Tell(File &f, bool &stat_exists);
   /** sync */
   int Sync(File &f, bool &stat_exists);
+  /** truncate */
+  int Truncate(File &f, bool &stat_exists, size_t new_size);
   /** close */
   int Close(File &f, bool &stat_exists, bool destroy = true);
-  /** close */
-  int Remove(File &f, bool &stat_exists);
 
  public:
   /** Whether or not \a path PATH is tracked by Hermes */

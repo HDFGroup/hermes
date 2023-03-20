@@ -21,6 +21,7 @@
 #include <sstream>
 #include <limits>
 #include "data_structures.h"
+#include "hermes_shm/util/path_parser.h"
 
 #include "hermes_types.h"
 #include "constants.h"
@@ -49,10 +50,15 @@ class BaseConfig {
     if (path.size() == 0) {
       return;
     }
-    LOG(INFO) << "ParseConfig-LoadFile: " << path << std::endl;
-    YAML::Node yaml_conf = YAML::LoadFile(path);
-    LOG(INFO) << "ParseConfig-LoadComplete" << std::endl;
-    ParseYAML(yaml_conf);
+    auto real_path = hshm::path_parser(path);
+    LOG(INFO) << "ParseConfig-LoadFile: " << real_path << std::endl;
+    try {
+      YAML::Node yaml_conf = YAML::LoadFile(real_path);
+      LOG(INFO) << "ParseConfig-LoadComplete" << std::endl;
+      ParseYAML(yaml_conf);
+    } catch (std::exception &e) {
+      LOG(FATAL) << e.what() << std::endl;
+    }
   }
 
   /** load the default configuration */
@@ -165,6 +171,7 @@ static size_t ParseSize(const std::string &size_text) {
     return GIGABYTES(size);
   } else {
     LOG(FATAL) << "Could not parse the size: " << size_text << std::endl;
+    exit(1);
   }
 }
 
@@ -189,6 +196,7 @@ static size_t ParseLatency(const std::string &latency_text) {
     return GIGABYTES(size);
   }
   LOG(FATAL) << "Could not parse the latency: " << latency_text << std::endl;
+  exit(1);
 }
 
 }  // namespace hermes::config

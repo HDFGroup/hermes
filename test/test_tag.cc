@@ -22,6 +22,8 @@
 
 namespace hapi = hermes::api;
 
+using hermes::TagId;
+
 void MainPretest() {
   hapi::Hermes::Create(hermes::HermesType::kClient);
 }
@@ -46,13 +48,16 @@ void TestTag(hapi::Hermes *hermes) {
     bkt->Put(name, std::move(blob), blob_ids[i], ctx);
   }
 
+  // Create two tags
+  TagId tag1 = HERMES->CreateTag("tag1");
+
   // Tag some blobs
   for (size_t i = 0; i < num_blobs; ++i) {
-    bkt->TagBlob(blob_ids[i], "tag1");
+    bkt->TagBlob(blob_ids[i], tag1);
   }
 
   // Query by tag
-  auto tags = HERMES->GroupBy("tag1");
+  auto tags = HERMES->GroupBy(tag1);
   REQUIRE(tags.size() == 100);
 }
 

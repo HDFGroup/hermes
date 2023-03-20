@@ -48,6 +48,7 @@ set(HERMES_SRCS
   ${CMAKE_CURRENT_SOURCE_DIR}/rpc.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/rpc_thallium.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/rpc_thallium_defs.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/metadata_types.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/metadata_manager.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/api/bucket.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/api/hermes.cc
@@ -56,8 +57,7 @@ set(HERMES_SRCS
   ${CMAKE_CURRENT_SOURCE_DIR}/data_placement_engine.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/dpe/random.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/dpe/round_robin.cc
-  ${CMAKE_CURRENT_SOURCE_DIR}/dpe/minimize_io_time.cc
-        ../adapter/adapter_api.h)
+  ${CMAKE_CURRENT_SOURCE_DIR}/dpe/minimize_io_time.cc)
 
 #------------------------------------------------------------------------------
 # Libraries
@@ -69,6 +69,7 @@ set(HERMES_BUILD_INCLUDE_DEPENDENCIES
   ${CMAKE_CURRENT_BINARY_DIR}
 )
 
+include_directories(${CMAKE_SOURCE_DIR}/io_client)
 add_library(hermes ${HERMES_SRCS})
 target_include_directories(hermes
   PUBLIC "$<BUILD_INTERFACE:${HERMES_BUILD_INCLUDE_DEPENDENCIES}>"
@@ -78,12 +79,14 @@ target_include_directories(hermes
   SYSTEM PUBLIC ${HERMES_EXT_INCLUDE_DEPENDENCIES}
 )
 add_dependencies(hermes
+        hermes_shm_data_structures
         hermes_adapter_io_clients
-        hermes_shm_data_structures)
+        hermes_example_trait)
 
 target_link_libraries(hermes
   PUBLIC hermes_shm_data_structures
   PUBLIC hermes_adapter_io_clients
+  PUBLIC hermes_example_trait
   PUBLIC ${GLPK_LIBRARIES}
   PUBLIC ${CMAKE_HERMES_COMMUNICATION_TYPE_LIB}
   PUBLIC ${CMAKE_HERMES_RPC_TYPE_LIB}

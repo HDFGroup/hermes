@@ -54,7 +54,7 @@ TEST_CASE("TestBufferPool") {
     size_t tgt_size = size / num_targets;
     size_t last_size = tgt_size + (size % num_targets);
     for (int i = 0; i < num_targets; ++i) {
-      hipc::ShmRef<hermes::TargetInfo> target = (*HERMES->mdm_.targets_)[i];
+      hipc::Ref<hermes::TargetInfo> target = (*HERMES->mdm_->targets_)[i];
       if (i < num_targets - 1) {
         schema.plcmnts_.emplace_back(tgt_size, target->id_);
       } else {
@@ -69,12 +69,12 @@ TEST_CASE("TestBufferPool") {
     }
 
     // Allocate the buffers and set them
-    hipc::vector<hermes::BufferInfo> buffers =
+    std::vector<hermes::BufferInfo> buffers =
         HERMES->bpm_->LocalAllocateAndSetBuffers(schema, write_blob);
 
     // Read back the buffers
     hermes::Blob read_blob =
-        HERMES->borg_.LocalReadBlobFromBuffers(buffers);
+        HERMES->borg_->LocalReadBlobFromBuffers(buffers);
 
     // Verify they are the same
     REQUIRE(read_blob == write_blob);

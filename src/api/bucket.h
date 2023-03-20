@@ -16,7 +16,7 @@
 #include "hermes_types.h"
 #include "status.h"
 #include "buffer_pool.h"
-#include "adapter/io_client/io_client_factory.h"
+#include "io_client/io_client_factory.h"
 
 namespace hermes::api {
 
@@ -26,9 +26,10 @@ class Bucket {
  private:
   MetadataManager *mdm_;
   BufferPool *bpm_;
-  BucketId id_;
+  TagId id_;
   std::string name_;
   Context ctx_;
+  bool did_create_;
 
  public:
   /**====================================
@@ -43,7 +44,7 @@ class Bucket {
    * */
   Bucket(const std::string &bkt_name,
          Context &ctx,
-         const IoClientContext &opts);
+         size_t backend_size = 0);
 
  public:
   /**
@@ -57,29 +58,30 @@ class Bucket {
   /**
    * Get the identifier of this bucket
    * */
-  BucketId GetId() const {
+  TagId GetId() const {
     return id_;
   }
 
   /**
    * Get the current size of the bucket
    * */
-  size_t GetSize(IoClientContext opts = IoClientContext());
+  size_t GetSize(bool backend = false);
 
   /**
-   * Lock the bucket
+   * Update the size of the bucket
+   * Needed for the adapters for now.
    * */
-  void LockBucket(MdLockType lock_type);
-
-  /**
-   * Unlock the bucket
-   * */
-  void UnlockBucket(MdLockType lock_type);
+  void UpdateSize(ssize_t delta, BucketUpdate mode);
 
   /**
    * Rename this bucket
    * */
-  void Rename(std::string new_bkt_name);
+  void Rename(const std::string &new_bkt_name);
+
+  /**
+   * Clears the buckets contents, but doesn't destroy its metadata
+   * */
+  void Clear(bool backend = false);
 
   /**
    * Destroys this bucket along with all its contents.
@@ -131,14 +133,13 @@ class Bucket {
    * */
   Status TryCreateBlob(const std::string &blob_name,
                        BlobId &blob_id,
-                       Context &ctx,
-                       const IoClientContext &opts);
+                       Context &ctx);
 
   /**
    * Label \a blob_id blob with \a tag_name TAG
    * */
   Status TagBlob(BlobId &blob_id,
-                 const std::string &tag_name);
+                 TagId &tag_id);
 
   /**
    * Put \a blob_name Blob into the bucket
@@ -146,8 +147,7 @@ class Bucket {
   Status Put(std::string blob_name,
              const Blob &blob,
              BlobId &blob_id,
-             Context &ctx,
-             IoClientContext opts = IoClientContext());
+             Context &ctx);
 
   /**
    * Put \a blob_name Blob into the bucket. Load the blob from the
@@ -200,8 +200,7 @@ class Bucket {
   /**
    * Flush a blob
    * */
-  void FlushBlob(BlobId blob_id,
-                 const IoClientContext &opts);
+  void FlushBlob(BlobId blob_id, const IoClientContext &opts);
 
   /**
    * Flush the entire bucket
@@ -230,7 +229,6 @@ class Bucket {
   void DestroyBlob(BlobId blob_id, Context &ctx,
                    IoClientContext opts = IoClientContext());
 
- private:
   /**
    * Get the set of blob IDs contained in the bucket
    * */

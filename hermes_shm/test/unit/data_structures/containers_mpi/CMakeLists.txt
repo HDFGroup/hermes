@@ -26,3 +26,10 @@ add_test(NAME test_list_of_string_mpi COMMAND
         mpirun -n 2 ${CMAKE_CURRENT_BINARY_DIR}/test_data_structure_mpi_exec "ListOfStringMpi")
 
 message("mpirun -n 1 ${CMAKE_CURRENT_BINARY_DIR}/test_data_structure_mpi_exec ListOfStringMpi")
+
+#------------------------------------------------------------------------------
+# Code Coverage
+#------------------------------------------------------------------------------
+if(HERMES_ENABLE_COVERAGE)
+    set_coverage_flags(test_data_structure_mpi_exec)
+endif()

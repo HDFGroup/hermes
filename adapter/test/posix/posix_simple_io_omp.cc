@@ -52,19 +52,30 @@ void TestThread(char *path,
 
   char *buf = (char*)malloc(size);
   int fd = open(path, O_CREAT | O_RDWR, 0666);
-  lseek(fd, off, SEEK_SET);
-
-  struct stat st;
-  fstat(fd, &st);
-  if (do_read && (st.st_size - total_size) > 3) {
-    if (rank == 0) {
-      std::cout << "File sizes aren't equivalent: "
-                << " stat: " << st.st_size
-                << " real: " << total_size << std::endl;
-    }
+  if (fd < 0 && rank == 0) {
+    std::cout << "Failed to open the file" << std::endl;
     exit(1);
   }
+  lseek(fd, off, SEEK_SET);
 
+  if (do_read) {
+    struct stat st;
+    fstat(fd, &st);
+    if (rank == 0) {
+      if (st.st_size != total_size) {
+        std::cout << "File sizes are NOT equivalent: "
+                  << " stat: " << st.st_size << " real: " << total_size
+                  << std::endl;
+        exit(1);
+      } else {
+        std::cout << "File sizes are equivalent: "
+                  << " stat: " << st.st_size << " real: " << total_size
+                  << std::endl;
+      }
+    }
+  }
+
+#pragma omp barrier
   for (int i = 0; i < count; ++i) {
     char nonce = i + 1;
     if (!do_read) {
@@ -80,6 +91,25 @@ void TestThread(char *path,
     }
   }
 
+#pragma omp barrier
+  if (!do_read) {
+    struct stat st;
+    fstat(fd, &st);
+    if (rank == 0) {
+      if (st.st_size != total_size) {
+        std::cout << "File sizes are NOT equivalent: "
+                  << " stat: " << st.st_size << " real: " << total_size
+                  << std::endl;
+        exit(1);
+      } else {
+        std::cout << "File sizes are equivalent: "
+                  << " stat: " << st.st_size << " real: " << total_size
+                  << std::endl;
+      }
+    }
+  }
+
+#pragma omp barrier
   close(fd);
 
 #pragma omp barrier

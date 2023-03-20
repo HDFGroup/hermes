@@ -4,7 +4,7 @@
 
 #include <mpi.h>
 #include <cassert>
-#include "hermes_shm/data_structures/thread_unsafe/vector.h"
+#include "hermes_shm/data_structures/ipc/vector.h"
 #include "hermes_shm/data_structures/data_structure.h"
 
 struct CustomHeader {
@@ -62,7 +62,7 @@ int main(int argc, char **argv) {
   }
 
   // Read vector on all ranks
-  for (hipc::ShmRef<int> x : obj) {
+  for (hipc::Ref<int> x : obj) {
     assert(*x == 10);
   }
   MPI_Barrier(MPI_COMM_WORLD);

@@ -2,6 +2,7 @@ include_directories(
         ${CMAKE_SOURCE_DIR}
         ${HERMES_SRC_DIR}
         ${HERMES_ADAPTER_DIR}
+        ${HERMES_IO_CLIENT_DIR}
         ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Create the metadata manager singleton + FS base class

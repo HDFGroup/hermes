@@ -11,7 +11,7 @@
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "basic_test.h"
-#include <hermes_shm/types/tuple_base.h>
+#include "hermes_shm/data_structures/containers/tuple_base.h"
 #include <utility>
 
 void test_argpack0_pass() {

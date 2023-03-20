@@ -16,15 +16,13 @@
 
 #include <filesystem>
 #include <iostream>
+#include "hermes.h"
 
 #include "catch_config.h"
-#if HERMES_INTERCEPT == 1
-#include "posix/posix_api.h"
-#include "posix/posix_fs_api.h"
-#endif
+#include "io_client/posix/posix_api.h"
 
-#ifndef O_TMPFILE
-#define O_TMPFILE 0
+#if HERMES_INTERCEPT == 1
+#include "adapter/posix/posix_fs_api.h"
 #endif
 
 #include "adapter_test_utils.h"
@@ -34,7 +32,7 @@ namespace stdfs = std::filesystem;
 namespace hermes::adapter::fs::test {
 struct Arguments {
   std::string filename = "test.dat";
-  std::string directory = "/tmp";
+  std::string directory = "/tmp/test_hermes";
   size_t request_size = 65536;
 };
 struct Info {
@@ -43,15 +41,15 @@ struct Info {
   bool supports_tmpfile;
   std::vector<char> write_data;
   std::vector<char> read_data;
-  std::string new_file;
-  std::string existing_file;
-  std::string new_file_cmp;
-  std::string existing_file_cmp;
+  std::string new_file;       // Tracked by Hermes
+  std::string existing_file;  // Tracked by Hermes
+  std::string new_file_cmp;   // NOT tracked by Hermes
+  std::string existing_file_cmp;  // NOT tracekd by Hermes
   size_t num_iterations = 64;
   unsigned int offset_seed = 1;
   unsigned int rs_seed = 1;
   unsigned int temporal_interval_seed = 5;
-  size_t total_size;
+  size_t total_size;    // The size of the EXISTING file
   size_t stride_size = 1024;
   unsigned int temporal_interval_ms = 1;
   size_t small_min = 1, small_max = 4 * 1024;
@@ -87,7 +85,24 @@ int finalize() {
   return 0;
 }
 
+void IgnoreAllFiles() {
+#if HERMES_INTERCEPT == 1
+  HERMES->client_config_.SetAdapterPathTracking(info.existing_file_cmp, false);
+  HERMES->client_config_.SetAdapterPathTracking(info.new_file_cmp, false);
+  HERMES->client_config_.SetAdapterPathTracking(info.new_file, false);
+  HERMES->client_config_.SetAdapterPathTracking(info.existing_file, false);
+#endif
+}
+
+void TrackFiles() {
+#if HERMES_INTERCEPT == 1
+  HERMES->client_config_.SetAdapterPathTracking(info.new_file, true);
+  HERMES->client_config_.SetAdapterPathTracking(info.existing_file, true);
+#endif
+}
+
 int pretest() {
+  // Initialize path names
   stdfs::path fullpath = args.directory;
   fullpath /= args.filename;
   info.new_file = fullpath.string() + "_new_" + std::to_string(getpid());
@@ -96,43 +111,55 @@ int pretest() {
       fullpath.string() + "_new_cmp" + "_" + std::to_string(getpid());
   info.existing_file_cmp =
       fullpath.string() + "_ext_cmp" + "_" + std::to_string(getpid());
-  if (stdfs::exists(info.new_file)) stdfs::remove(info.new_file);
-  if (stdfs::exists(info.new_file_cmp)) stdfs::remove(info.new_file_cmp);
-  if (stdfs::exists(info.existing_file)) stdfs::remove(info.existing_file);
+
+  // Ignore all files
+  IgnoreAllFiles();
+
+  // Remove existing files from the FS
+  if (stdfs::exists(info.new_file))
+    stdfs::remove(info.new_file);
+  if (stdfs::exists(info.new_file_cmp))
+    stdfs::remove(info.new_file_cmp);
+  if (stdfs::exists(info.existing_file))
+    stdfs::remove(info.existing_file);
   if (stdfs::exists(info.existing_file_cmp))
     stdfs::remove(info.existing_file_cmp);
-  if (!stdfs::exists(info.existing_file)) {
+
+  // Create the file which is untracked by Hermes
+  if (!stdfs::exists(info.existing_file_cmp)) {
     std::string cmd = "{ tr -dc '[:alnum:]' < /dev/urandom | head -c " +
                       std::to_string(args.request_size * info.num_iterations) +
-                      "; } > " + info.existing_file + " 2> /dev/null";
-    int status = system(cmd.c_str());
-    REQUIRE(status != -1);
-    REQUIRE(stdfs::file_size(info.existing_file) ==
-            args.request_size * info.num_iterations);
-    info.total_size = stdfs::file_size(info.existing_file);
-  }
-  if (!stdfs::exists(info.existing_file_cmp)) {
-    std::string cmd = "cp " + info.existing_file + " " + info.existing_file_cmp;
+                      "; } > " + info.existing_file_cmp + " 2> /dev/null";
     int status = system(cmd.c_str());
     REQUIRE(status != -1);
     REQUIRE(stdfs::file_size(info.existing_file_cmp) ==
             args.request_size * info.num_iterations);
+    info.total_size = stdfs::file_size(info.existing_file_cmp);
+  }
+
+  // Create the file that is being tracks by Hermes
+  if (!stdfs::exists(info.existing_file)) {
+    std::string cmd = "cp " + info.existing_file_cmp + " " + info.existing_file;
+    int status = system(cmd.c_str());
+    REQUIRE(status != -1);
+    auto check = stdfs::file_size(info.existing_file_cmp) ==
+                 args.request_size * info.num_iterations;
+    if (!check) {
+      LOG(FATAL) << "File sizes weren't equivalent after copy" << std::endl;
+    }
+    REQUIRE(check);
   }
   REQUIRE(info.total_size > 0);
-#if HERMES_INTERCEPT == 1
-  HERMES->client_config_.SetAdapterPathTracking(info.existing_file_cmp, false);
-  HERMES->client_config_.SetAdapterPathTracking(info.new_file_cmp, false);
-#endif
+
+  // Begin tracking the Hermes files
+  TrackFiles();
   return 0;
 }
 
 int posttest(bool compare_data = true) {
-#if HERMES_INTERCEPT == 1
-  HERMES->client_config_.SetAdapterPathTracking(info.existing_file_cmp, false);
-  HERMES->client_config_.SetAdapterPathTracking(info.new_file_cmp, false);
-#endif
   if (compare_data && stdfs::exists(info.new_file) &&
       stdfs::exists(info.new_file_cmp)) {
+    // Verify the NEW file is the same in Hermes + the backend
     size_t size = stdfs::file_size(info.new_file);
     REQUIRE(size == stdfs::file_size(info.new_file_cmp));
     if (size > 0) {
@@ -197,19 +224,16 @@ int posttest(bool compare_data = true) {
       REQUIRE(char_mismatch == 0);
     }
   }
-  /* Clean up. */
-  if (stdfs::exists(info.new_file)) stdfs::remove(info.new_file);
-  if (stdfs::exists(info.existing_file)) stdfs::remove(info.existing_file);
-  if (stdfs::exists(info.new_file_cmp)) stdfs::remove(info.new_file_cmp);
+  /* Delete the files from both Hermes and the backend. */
+  TrackFiles();
+  if (stdfs::exists(info.new_file))
+    stdfs::remove(info.new_file);
+  if (stdfs::exists(info.existing_file))
+    stdfs::remove(info.existing_file);
+  if (stdfs::exists(info.new_file_cmp))
+    stdfs::remove(info.new_file_cmp);
   if (stdfs::exists(info.existing_file_cmp))
     stdfs::remove(info.existing_file_cmp);
-
-#if HERMES_INTERCEPT == 1
-  HERMES->client_config_.SetAdapterPathTracking(info.existing_file_cmp, true);
-  HERMES->client_config_.SetAdapterPathTracking(info.new_file_cmp, true);
-  HERMES->client_config_.SetAdapterPathTracking(info.new_file, true);
-  HERMES->client_config_.SetAdapterPathTracking(info.existing_file, true);
-#endif
   return 0;
 }
 
@@ -254,6 +278,9 @@ void test_open(const char* path, int flags, ...) {
   }
   bool is_same =
       (fh_cmp != -1 && fh_orig != -1) || (fh_cmp == -1 && fh_orig == -1);
+  if (!is_same) {
+    LOG(FATAL) << "Was not the same" << std::endl;
+  }
   REQUIRE(is_same);
 }
 void test_close() {

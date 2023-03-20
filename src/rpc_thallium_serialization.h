@@ -42,17 +42,17 @@
 namespace hermes {
 
 /**
- *  Lets Thallium know how to serialize a BucketId.
+ *  Lets Thallium know how to serialize a TagId.
  *
  * This function is called implicitly by Thallium.
  *
  * @param ar An archive provided by Thallium.
- * @param bucket_id The BucketId to serialize.
+ * @param bucket_id The TagId to serialize.
  */
 template <typename A>
-void serialize(A &ar, BucketId &bucket_id) {
-  ar &bucket_id.unique_;
-  ar &bucket_id.node_id_;
+void serialize(A &ar, TagId &tag_id) {
+  ar &tag_id.unique_;
+  ar &tag_id.node_id_;
 }
 
 /**
@@ -67,6 +67,20 @@ template <typename A>
 void serialize(A &ar, BlobId &blob_id) {
   ar &blob_id.unique_;
   ar &blob_id.node_id_;
+}
+
+/**
+ *  Lets Thallium know how to serialize a TraitId.
+ *
+ * This function is called implicitly by Thallium.
+ *
+ * @param ar An archive provided by Thallium.
+ * @param blob_id The BlobId to serialize.
+ */
+template <typename A>
+void serialize(A &ar, TraitId &trait_id) {
+  ar &trait_id.unique_;
+  ar &trait_id.node_id_;
 }
 
 /**
@@ -101,6 +115,9 @@ void serialize(A &ar, BufferInfo &info) {
 
 /** Lets thallium know how to serialize an MdLockType */
 SERIALIZE_ENUM(MdLockType)
+
+/** Lets thallium know how to serialize a BucketUpdate */
+SERIALIZE_ENUM(BucketUpdate)
 
 /** Lets thallium know how to serialize a SubPlacement */
 template <typename A>

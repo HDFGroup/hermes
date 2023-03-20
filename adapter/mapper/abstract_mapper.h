@@ -37,12 +37,12 @@ struct BlobPlacement {
   int time_;          /**< The order of the blob in a list of blobs */
 
   /** create a BLOB name from index. */
-  hipc::charbuf CreateBlobName() const {
-    hipc::charbuf buf(sizeof(page_) + sizeof(blob_off_));
+  hshm::charbuf CreateBlobName() const {
+    hshm::charbuf buf(sizeof(page_) + sizeof(blob_off_));
     size_t off = 0;
-    memcpy(buf.data_mutable() + off, &page_, sizeof(page_));
+    memcpy(buf.data() + off, &page_, sizeof(page_));
     off += sizeof(page_);
-    memcpy(buf.data_mutable() + off, &page_size_, sizeof(page_size_));
+    memcpy(buf.data() + off, &page_size_, sizeof(page_size_));
     return buf;
   }
 

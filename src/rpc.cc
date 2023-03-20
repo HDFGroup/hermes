@@ -13,20 +13,43 @@
 #include "rpc.h"
 #include "hermes.h"
 #include <functional>
+#include <iostream>
+#include <fstream>
 
 namespace hermes {
 
-/** initialize host info list */
+/** parse hostfile */
+std::vector<std::string> RpcContext::ParseHostfile(const std::string &path) {
+  std::vector<std::string> hosts;
+  std::ifstream file(path);
+  if (file.is_open()) {
+    std::string line;
+    while (std::getline(file, line)) {
+      hosts.emplace_back(line);
+    }
+    file.close();
+  } else {
+    LOG(FATAL) << "Could not open the hostfile: " << path << std::endl;
+  }
+  return hosts;
+}
+
+/**
+ * initialize host info list
+ * Requires the MetadataManager to be initialized.
+ * */
 void RpcContext::InitRpcContext() {
   comm_ = &HERMES->comm_;
   config_ = &HERMES->server_config_;
+  mdm_ = &(*HERMES->mdm_);
   port_ = config_->rpc_.port_;
   mode_ = HERMES->mode_;
   if (hosts_.size()) { return; }
+  // Uses hosts produced by base_name + host_number_range
   auto &hosts = config_->rpc_.host_names_;
   // Load hosts from hostfile
   if (!config_->rpc_.host_file_.empty()) {
-    // TODO(llogan): load host names from hostfile
+    hosts = ParseHostfile(config_->rpc_.host_file_);
   }
 
   // Get all host info
@@ -36,14 +59,21 @@ void RpcContext::InitRpcContext() {
   }
 
   // Get id of current host
-  int node_id = 1;  // NOTE(llogan): node_ids start from 1 (0 is NULL)
-  std::string my_ip = _GetMyIpAddress();
-  for (const auto& host_info : hosts_) {
-    if (host_info.ip_addr_ == my_ip) {
-      node_id_ = node_id;
-      break;
+  if (HERMES->mode_ == HermesType::kServer) {
+    int nprocs;
+    MPI_Comm_rank(MPI_COMM_WORLD, &node_id_);
+    MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+    node_id_ += 1;
+    if (nprocs != hosts_.size()) {
+      LOG(FATAL) << hshm::Formatter::format(
+          "Must run the daemon on EVERY node in the hostfile. "
+          "{}/{} were launched.", nprocs, hosts_.size()) << std::endl;
     }
-    ++node_id;
+  } else {
+    node_id_ = mdm_->header_->node_id_;
+  }
+  if (node_id_ == 0 || node_id_ > hosts_.size()) {
+    LOG(FATAL) << "Couldn't identify this host" << std::endl;
   }
 }
 
@@ -80,16 +110,25 @@ std::string RpcContext::GetMyRpcAddress() {
 
 /** get host name from node ID */
 std::string RpcContext::GetHostNameFromNodeId(u32 node_id) {
-  // NOTE(chogan): node_id 0 is reserved as the NULL node
+  // NOTE(llogan): node_id 0 is reserved as the NULL node
+  if (node_id <= 0 || node_id > hosts_.size()) {
+    LOG(FATAL) << hshm::Formatter::format(
+                      "Attempted to get from node {}, which is out of "
+                      "the range 1-{}", node_id, hosts_.size() + 1)
+               << std::endl;
+  }
   u32 index = node_id - 1;
   return hosts_[index].hostname_;
 }
 
 /** get host name from node ID */
 std::string RpcContext::GetIpAddressFromNodeId(u32 node_id) {
-  // NOTE(chogan): node_id 0 is reserved as the NULL node
-  if (node_id == 0) {
-    LOG(FATAL) << "Attempted to get from node 0" << std::endl;
+  // NOTE(llogan): node_id 0 is reserved as the NULL node
+  if (node_id <= 0 || node_id > hosts_.size()) {
+    LOG(FATAL) << hshm::Formatter::format(
+                      "Attempted to get from node {}, which is out of "
+                      "the range 1-{}", node_id, hosts_.size() + 1)
+               << std::endl;
   }
   u32 index = node_id - 1;
   return hosts_[index].ip_addr_;
@@ -102,7 +141,9 @@ std::string RpcContext::GetProtocol() {
 
 /** Get the IPv4 address of this machine */
 std::string RpcContext::_GetMyIpAddress() {
-  return _GetIpAddress("localhost");
+  char hostname_buffer[4096];
+  gethostname(hostname_buffer, 4096);
+  return _GetIpAddress(hostname_buffer);
 }
 
 /** Get IPv4 address from the host with "host_name" */

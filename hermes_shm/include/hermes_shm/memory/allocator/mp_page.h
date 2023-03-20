@@ -13,7 +13,7 @@
 #ifndef HERMES_INCLUDE_HERMES_MEMORY_ALLOCATOR_MP_PAGE_H_
 #define HERMES_INCLUDE_HERMES_MEMORY_ALLOCATOR_MP_PAGE_H_
 
-#include "hermes_shm/data_structures/thread_unsafe/iqueue.h"
+#include "hermes_shm/data_structures/ipc/iqueue.h"
 
 namespace hermes_shm::ipc {
 

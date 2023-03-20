@@ -30,3 +30,10 @@ foreach(ALLOCATOR ${MT_ALLOCATORS})
     add_test(NAME test_${ALLOCATOR}_4t COMMAND
             ${CMAKE_CURRENT_BINARY_DIR}/test_allocator_exec "${ALLOCATOR}Multithreaded")
 endforeach()
+
+#------------------------------------------------------------------------------
+# Code Coverage
+#------------------------------------------------------------------------------
+if(HERMES_ENABLE_COVERAGE)
+    set_coverage_flags(test_allocator_exec)
+endif()

@@ -94,19 +94,70 @@ typedef hipc::pair<BpFreeListStat, BpFreeList> BpFreeListPair;
 /** Represents the set of targets */
 typedef hipc::vector<BpFreeListPair> BpTargetAllocs;
 
+/** Find instance of unique target if it exists */
+static std::vector<std::pair<TargetId, size_t>>::iterator
+FindUniqueTarget(std::vector<std::pair<TargetId, size_t>> &unique_tgts,
+                 TargetId &tid) {
+  for (auto iter = unique_tgts.begin(); iter != unique_tgts.end(); ++iter) {
+    if (iter->first == tid) {
+      return iter;
+    }
+  }
+  return unique_tgts.end();
+}
+
+/** Get the unique set of targets */
+static std::vector<std::pair<TargetId, size_t>>
+GroupByTarget(std::vector<BufferInfo> &buffers, size_t &total_size) {
+  total_size = 0;
+  std::vector<std::pair<TargetId, size_t>> unique_tgts;
+  for (BufferInfo &info : buffers) {
+    auto iter = FindUniqueTarget(unique_tgts, info.tid_);
+    if (iter == unique_tgts.end()) {
+      unique_tgts.emplace_back(info.tid_, info.blob_size_);
+    } else {
+      (*iter).second += info.blob_size_;
+    }
+    total_size += info.blob_size_;
+  }
+  return unique_tgts;
+}
+
+/** Get the unique set of targets */
+static std::vector<std::pair<TargetId, size_t>>
+GroupByTarget(PlacementSchema &schema, size_t &total_size) {
+  total_size = 0;
+  std::vector<std::pair<TargetId, size_t>> unique_tgts;
+  for (auto &plcmnt : schema.plcmnts_) {
+    auto iter = FindUniqueTarget(unique_tgts, plcmnt.tid_);
+    if (iter == unique_tgts.end()) {
+      unique_tgts.emplace_back(plcmnt.tid_, plcmnt.size_);
+    } else {
+      (*iter).second += plcmnt.size_;
+    }
+    total_size += plcmnt.size_;
+  }
+  return unique_tgts;
+}
+
 /**
  * The shared-memory representation of the BufferPool
  * */
 template<>
-struct ShmHeader<BufferPool> : public hipc::ShmBaseHeader {
+struct ShmHeader<BufferPool> {
+  SHM_CONTAINER_HEADER_TEMPLATE(ShmHeader)
   hipc::ShmArchive<BpTargetAllocs> free_lists_;
   size_t ntargets_;
   size_t ncpu_;
   size_t nslabs_;
 
-  /** Construct all internal objects */
-  explicit ShmHeader(hipc::Allocator *alloc) {
-    free_lists_.shm_init(alloc);
+  /**
+   * Copy one header into another
+   * */
+  void strong_copy(const ShmHeader &other) {
+    ntargets_ = other.ntargets_;
+    ncpu_ = other.ncpu_;
+    nslabs_ = other.nslabs_;
   }
 
   /**
@@ -138,44 +189,50 @@ class BufferPool : public hipc::ShmContainer {
   BufferOrganizer *borg_;
   RPC_TYPE *rpc_;
   /** Per-target allocator */
-  hipc::ShmRef<BpTargetAllocs> target_allocs_;
+  hipc::Ref<BpTargetAllocs> target_allocs_;
 
  public:
-  BufferPool() = default;
+  /**====================================
+   * Default Constructor
+   * ===================================*/
 
   /**
    * Initialize the BPM and its shared memory.
    * REQUIRES mdm to be initialized already.
    * */
-  void shm_init_main(ShmHeader<BufferPool> *header,
-                     hipc::Allocator *alloc);
+  explicit BufferPool(ShmHeader<BufferPool> *header, hipc::Allocator *alloc);
+
+  /**====================================
+   * Destructor
+   * ===================================*/
+
+  /** Whether the BufferPool is NULL */
+  bool IsNull() { return false; }
+
+  /** Set to NULL */
+  void SetNull() {}
 
   /** Destroy the BPM shared memory. */
   void shm_destroy_main();
 
-  /** Store the BPM in shared memory */
-  void shm_serialize_main() const;
+  /**====================================
+   * SHM Deserialize
+   * ===================================*/
 
   /** Deserialize the BPM from shared memory */
   void shm_deserialize_main();
 
-  /** Weak move */
-  void shm_weak_move_main(ShmHeader<BufferPool> *header,
-                          hipc::Allocator *alloc,
-                          BufferPool &other) {}
-
-  /** Strong copy */
-  void shm_strong_copy_main(ShmHeader<BufferPool> *header,
-                            hipc::Allocator *alloc,
-                            const BufferPool &other) {}
+  /**====================================
+   * BufferPool Methods
+   * ===================================*/
 
   /**
    * Allocate buffers from the targets according to the schema
    * */
-  RPC hipc::vector<BufferInfo>
+  RPC std::vector<BufferInfo>
   LocalAllocateAndSetBuffers(PlacementSchema &schema,
                              const Blob &blob);
-  hipc::vector<BufferInfo>
+  std::vector<BufferInfo>
   GlobalAllocateAndSetBuffers(PlacementSchema &schema,
                               const Blob &blob);
 
@@ -183,7 +240,7 @@ class BufferPool : public hipc::ShmContainer {
    * Determines a reasonable allocation of buffers based on the size of I/O.
    * Returns the number of each page size to allocate
    * */
-  std::vector<BpCoin> CoinSelect(hipc::ShmRef<DeviceInfo> &dev_info,
+  std::vector<BpCoin> CoinSelect(hipc::Ref<DeviceInfo> &dev_info,
                                  size_t total_size,
                                  size_t &buffer_count,
                                  size_t &total_alloced_size);
@@ -193,16 +250,16 @@ class BufferPool : public hipc::ShmContainer {
    * device growth allocator
    * */
   BpSlot AllocateSlabSize(BpCoin &coin,
-                          hipc::ShmRef<BpFreeListStat> &stat,
-                          hipc::ShmRef<BpFreeList> &free_list,
-                          hipc::ShmRef<BpFreeListStat> &target_stat);
+                          hipc::Ref<BpFreeListStat> &stat,
+                          hipc::Ref<BpFreeList> &free_list,
+                          hipc::Ref<BpFreeListStat> &target_stat);
 
   /**
    * Allocate each size of buffer from either the free list or the
    * device growth allocator
    * */
   void AllocateBuffers(SubPlacement &plcmnt,
-                       hipc::vector<BufferInfo> &buffers,
+                       std::vector<BufferInfo> &buffers,
                        std::vector<BpCoin> &coins,
                        u16 target_id,
                        size_t num_slabs,
@@ -212,7 +269,8 @@ class BufferPool : public hipc::ShmContainer {
   /**
    * Free buffers from the BufferPool
    * */
-  RPC bool LocalReleaseBuffers(hipc::vector<BufferInfo> &buffers);
+  RPC bool LocalReleaseBuffers(std::vector<BufferInfo> &buffers);
+  bool GlobalReleaseBuffers(std::vector<BufferInfo> &buffers);
 };
 
 }  // namespace hermes

@@ -16,10 +16,10 @@
 
 #include "allocator.h"
 #include "hermes_shm/thread/lock.h"
-#include "hermes_shm/data_structures/pair.h"
-#include "hermes_shm/data_structures/thread_unsafe/vector.h"
-#include "hermes_shm/data_structures/thread_unsafe/list.h"
-#include "hermes_shm/data_structures/pair.h"
+#include "hermes_shm/data_structures/ipc/pair.h"
+#include "hermes_shm/data_structures/ipc/vector.h"
+#include "hermes_shm/data_structures/ipc/list.h"
+#include "hermes_shm/data_structures/ipc/pair.h"
 #include <hermes_shm/memory/allocator/stack_allocator.h>
 #include "mp_page.h"
 
@@ -95,7 +95,7 @@ struct ScalablePageAllocatorHeader : public AllocatorHeader {
     AllocatorHeader::Configure(alloc_id,
                                AllocatorType::kScalablePageAllocator,
                                custom_header_size);
-    free_lists_.shm_init(alloc);
+    make_ref<vector<pair<FreeListStats, iqueue<MpPage>>>>(free_lists_, alloc);
     total_alloc_ = 0;
     coalesce_trigger_ = (coalesce_trigger * buffer_size).as_int();
     coalesce_window_ = coalesce_window;
@@ -106,7 +106,7 @@ struct ScalablePageAllocatorHeader : public AllocatorHeader {
 class ScalablePageAllocator : public Allocator {
  private:
   ScalablePageAllocatorHeader *header_;
-  hipc::ShmRef<vector<pair<FreeListStats, iqueue<MpPage>>>> free_lists_;
+  hipc::Ref<vector<pair<FreeListStats, iqueue<MpPage>>>> free_lists_;
   StackAllocator alloc_;
   /** The power-of-two exponent of the minimum size that can be cached */
   static const size_t min_cached_size_exp_ = 5;
@@ -168,14 +168,14 @@ class ScalablePageAllocator : public Allocator {
    * Find the first fit of an element in a free list
    * */
   MpPage* FindFirstFit(size_t size_mp,
-                       hipc::ShmRef<FreeListStats> &stats,
-                       hipc::ShmRef<iqueue<MpPage>> &free_list);
+                       hipc::Ref<FreeListStats> &stats,
+                       hipc::Ref<iqueue<MpPage>> &free_list);
 
   /**
    * Divide a page into smaller pages and cache them
    * */
-  void DividePage(hipc::ShmRef<FreeListStats> &stats,
-                  hipc::ShmRef<iqueue<MpPage>> &free_list,
+  void DividePage(hipc::Ref<FreeListStats> &stats,
+                  hipc::Ref<iqueue<MpPage>> &free_list,
                   MpPage *fit_page,
                   MpPage *&rem_page,
                   size_t size_mp,

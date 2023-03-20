@@ -57,7 +57,6 @@ void GetTest(hapi::Hermes *hermes,
   auto bkt = hermes->GetBucket("hello");
   hermes::api::Context ctx;
   hermes::BlobId blob_id;
-  hermes::Blob blob(blob_size);
   t.Resume();
   for (int j = 0; j < repeat; ++j) {
     for (size_t i = 0; i < blobs_per_rank; ++i) {

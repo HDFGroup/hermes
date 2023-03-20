@@ -228,6 +228,49 @@ class ProductArgPacks {
   }
 };
 
+/** Used to emulate constexpr to lambda */
+template<typename T, T Val>
+struct MakeConstexpr {
+  constexpr static T val_ = Val;
+  constexpr static T Get() {
+    return val_;
+  }
+};
+
+/** Apply a function over an entire TupleBase / tuple */
+template<bool reverse>
+class IterateArgpack {
+ public:
+  /** Apply a function to every element of a tuple */
+  template<typename TupleT, typename F>
+  constexpr static void Apply(TupleT &&pack, F &&f) {
+    _Apply<0, TupleT, F>(std::forward<TupleT>(pack), std::forward<F>(f));
+  }
+
+ private:
+  /** Apply the function recursively */
+  template<size_t i, typename TupleT, typename F>
+  constexpr static void _Apply(TupleT &&pack, F &&f) {
+    if constexpr(i < TupleT::Size()) {
+      if constexpr(reverse) {
+        _Apply<i + 1, TupleT, F>(std::forward<TupleT>(pack),
+                                 std::forward<F>(f));
+        f(MakeConstexpr<size_t, i>(), pack.template Forward<i>());
+      } else {
+        f(MakeConstexpr<size_t, i>(), pack.template Forward<i>());
+        _Apply<i + 1, TupleT, F>(std::forward<TupleT>(pack),
+                                 std::forward<F>(f));
+      }
+    }
+  }
+};
+
+/** Forward iterate over tuple and apply function  */
+using ForwardIterateArgpack = IterateArgpack<false>;
+
+/** Reverse iterate over tuple and apply function */
+using ReverseIterateArgpack = IterateArgpack<true>;
+
 }  // namespace hermes_shm
 
 #endif  // HERMES_INCLUDE_HERMES_TYPES_ARGPACK_H_

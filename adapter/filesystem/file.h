@@ -13,7 +13,7 @@
 #ifndef HERMES_ADAPTER_FILESYSTEM_FILESYSTEM_TYPES_H_
 #define HERMES_ADAPTER_FILESYSTEM_FILESYSTEM_TYPES_H_
 
-#include "adapter/io_client/io_client.h"
+#include "io_client/io_client.h"
 
 namespace hermes::adapter::fs {
 

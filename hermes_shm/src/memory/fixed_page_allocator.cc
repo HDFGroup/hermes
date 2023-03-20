@@ -28,7 +28,7 @@ void FixedPageAllocator::shm_init(allocator_id_t id,
   size_t region_size = buffer_size_ - region_off;
   alloc_.shm_init(id, 0, buffer + region_off, region_size);
   header_->Configure(id, custom_header_size, &alloc_);
-  free_lists_->shm_deserialize(header_->free_lists_.internal_ref(&alloc_));
+  free_lists_ = Ref<vector<iqueue<MpPage>>>(header_->free_lists_, &alloc_);
 }
 
 void FixedPageAllocator::shm_deserialize(char *buffer,
@@ -40,7 +40,7 @@ void FixedPageAllocator::shm_deserialize(char *buffer,
   size_t region_off = (custom_header_ - buffer_) + header_->custom_header_size_;
   size_t region_size = buffer_size_ - region_off;
   alloc_.shm_deserialize(buffer + region_off, region_size);
-  free_lists_->shm_deserialize(header_->free_lists_.internal_ref(&alloc_));
+  free_lists_ = Ref<vector<iqueue<MpPage>>>(header_->free_lists_, &alloc_);
 }
 
 size_t FixedPageAllocator::GetCurrentlyAllocatedSize() {
@@ -52,7 +52,7 @@ OffsetPointer FixedPageAllocator::AllocateOffset(size_t size) {
   size_t size_mp = size + sizeof(MpPage);
 
   // Check if page of this size is already cached
-  for (hipc::ShmRef<iqueue<MpPage>> free_list : *free_lists_) {
+  for (hipc::Ref<iqueue<MpPage>> free_list : *free_lists_) {
     if (free_list->size()) {
       auto test_page = free_list->peek();
       if (test_page->page_size_ != size_mp) {
@@ -99,7 +99,7 @@ void FixedPageAllocator::FreeOffsetNoNullCheck(OffsetPointer p) {
   header_->total_alloc_.fetch_sub(hdr->page_size_);
 
   // Append to a free list
-  for (hipc::ShmRef<iqueue<MpPage>> free_list : *free_lists_) {
+  for (hipc::Ref<iqueue<MpPage>> free_list : *free_lists_) {
     if (free_list->size()) {
       MpPage *page = free_list->peek();
       if (page->page_size_ != hdr->page_size_) {
@@ -112,7 +112,7 @@ void FixedPageAllocator::FreeOffsetNoNullCheck(OffsetPointer p) {
 
   // Extend the set of cached pages
   free_lists_->emplace_back();
-  hipc::ShmRef<iqueue<MpPage>> free_list =
+  hipc::Ref<iqueue<MpPage>> free_list =
     (*free_lists_)[free_lists_->size() - 1];
   free_list->enqueue(hdr);
 }

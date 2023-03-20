@@ -72,13 +72,22 @@ void Hermes::StopDaemon() {
 void Hermes::InitServer(std::string server_config_path) {
   LoadServerConfig(server_config_path);
   InitSharedMemory();
+
+  // Initialize references to SHM types
+  mdm_ = hipc::Ref<MetadataManager>(header_->mdm_, main_alloc_);
+  bpm_ = hipc::Ref<BufferPool>(header_->bpm_, main_alloc_);
+  borg_ = hipc::Ref<BufferOrganizer>(header_->borg_, main_alloc_);
+
+  // Initialize RPC
   comm_.Init(HermesType::kServer);
   rpc_.InitServer();
   rpc_.InitClient();
-  mdm_.shm_init(&server_config_, &header_->mdm_);
-  bpm_ = hipc::make_mptr<BufferPool>(header_->bpm_, main_alloc_);
-  bpm_->shm_init();
-  borg_.shm_init();
+
+  // Construct the reference objects
+  mdm_ = hipc::make_ref<MetadataManager>(header_->mdm_, main_alloc_,
+                                         &server_config_);
+  bpm_ = hipc::make_ref<BufferPool>(header_->bpm_, main_alloc_);
+  borg_ = hipc::make_ref<BufferOrganizer>(header_->borg_, main_alloc_);
 }
 
 void Hermes::InitClient(std::string server_config_path,
@@ -86,11 +95,12 @@ void Hermes::InitClient(std::string server_config_path,
   LoadServerConfig(server_config_path);
   LoadClientConfig(client_config_path);
   LoadSharedMemory();
+
+  // Initialize references to SHM types
+  mdm_ = hipc::Ref<MetadataManager>(header_->mdm_, main_alloc_);
   rpc_.InitClient();
-  mdm_.shm_deserialize(&header_->mdm_);
-  bpm_ = hipc::manual_ptr(hipc::ShmDeserialize<BufferPool>(&header_->bpm_,
-                                                           main_alloc_));
-  borg_.shm_deserialize();
+  bpm_ = hipc::Ref<BufferPool>(header_->bpm_, main_alloc_);
+  borg_ = hipc::Ref<BufferOrganizer>(header_->borg_, main_alloc_);
 }
 
 void Hermes::LoadServerConfig(std::string config_path) {
@@ -118,8 +128,8 @@ void Hermes::InitSharedMemory() {
       // mem_mngr->CreateAllocator<hipc::StackAllocator>(
           server_config_.shmem_name_,
           main_alloc_id,
-          sizeof(HermesShmHeader));
-  header_ = main_alloc_->GetCustomHeader<HermesShmHeader>();
+          sizeof(ShmHeader<Hermes>));
+  header_ = main_alloc_->GetCustomHeader<ShmHeader<Hermes>>();
 }
 
 void Hermes::LoadSharedMemory() {
@@ -128,7 +138,7 @@ void Hermes::LoadSharedMemory() {
   mem_mngr->AttachBackend(hipc::MemoryBackendType::kPosixShmMmap,
                           server_config_.shmem_name_);
   main_alloc_ = mem_mngr->GetAllocator(main_alloc_id);
-  header_ = main_alloc_->GetCustomHeader<HermesShmHeader>();
+  header_ = main_alloc_->GetCustomHeader<ShmHeader<Hermes>>();
 }
 
 void Hermes::FinalizeServer() {
@@ -146,12 +156,16 @@ void Hermes::FinalizeClient() {
 
 std::shared_ptr<Bucket> Hermes::GetBucket(std::string name,
                                           Context ctx,
-                                          IoClientContext opts) {
-  return std::make_shared<Bucket>(name, ctx, opts);
+                                          size_t backend_size) {
+  return std::make_shared<Bucket>(name, ctx, backend_size);
 }
 
-std::list<BlobId> Hermes::GroupBy(std::string tag_name) {
-  return mdm_.GlobalGroupByTag(tag_name);
+std::vector<BlobId> Hermes::GroupBy(TagId tag_id) {
+  return mdm_->GlobalGroupByTag(tag_id);
+}
+
+void Hermes::Clear() {
+  mdm_->GlobalClear();
 }
 
 }  // namespace hermes::api

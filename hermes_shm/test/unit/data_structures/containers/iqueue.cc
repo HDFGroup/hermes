@@ -13,15 +13,18 @@
 #include "basic_test.h"
 #include "test_init.h"
 #include "iqueue.h"
-#include "hermes_shm/data_structures/thread_unsafe/iqueue.h"
+#include "hermes_shm/data_structures/ipc/iqueue.h"
+#include "hermes_shm/data_structures/smart_ptr/smart_ptr_base.h"
 
+using hermes_shm::ipc::mptr;
+using hermes_shm::ipc::make_mptr;
 using hermes_shm::ipc::iqueue;
 
 template<typename T>
 void IqueueTest() {
   Allocator *alloc = alloc_g;
-  iqueue<T> lp(alloc);
-  IqueueTestSuite<T, iqueue<T>> test(lp, alloc);
+  auto lp = hipc::make_uptr<iqueue<T>>(alloc);
+  IqueueTestSuite<T, iqueue<T>> test(*lp, alloc);
 
   test.EnqueueTest(30);
   test.ForwardIteratorTest();

@@ -15,7 +15,7 @@
 
 #include "basic_test.h"
 #include "test_init.h"
-#include <hermes_shm/data_structures/string.h>
+#include "hermes_shm/data_structures/ipc/string.h"
 
 template<typename T, typename Container>
 class ListTestSuite {
@@ -51,7 +51,7 @@ class ListTestSuite {
     const Container &obj = obj_;
     int fcur = 0;
     for (auto iter = obj.cbegin(); iter != obj.cend(); ++iter) {
-      hipc::ShmRef<T> num = *iter;
+      hipc::Ref<T> num = *iter;
       CREATE_SET_VAR_TO_INT_OR_STRING(T, fcur_conv, fcur);
       REQUIRE(*num == fcur_conv);
       ++fcur;
@@ -61,35 +61,35 @@ class ListTestSuite {
   /// Copy constructor
   void CopyConstructorTest() {
     int count = obj_.size();
-    Container cpy(obj_);
-    VerifyCopy(obj_, cpy, count);
+    auto cpy = hipc::make_uptr<Container>(obj_);
+    VerifyCopy(obj_, *cpy, count);
   }
 
   /// Copy assignment
   void CopyAssignmentTest() {
     int count = obj_.size();
-    Container cpy;
-    cpy = obj_;
-    VerifyCopy(obj_, cpy, count);
+    auto cpy = hipc::make_uptr<Container>();
+    *cpy = obj_;
+    VerifyCopy(obj_, *cpy, count);
   }
 
   /// Move constructor
   void MoveConstructorTest() {
     int count = obj_.size();
-    Container cpy(std::move(obj_));
-    VerifyMove(obj_, cpy, count);
-    obj_ = std::move(cpy);
-    VerifyMove(cpy, obj_, count);
+    auto cpy = hipc::make_uptr<Container>(std::move(obj_));
+    VerifyMove(obj_, *cpy, count);
+    obj_ = std::move(*cpy);
+    VerifyMove(*cpy, obj_, count);
   }
 
   /// Move assignment
   void MoveAssignmentTest() {
     int count = obj_.size();
-    Container cpy;
-    cpy = std::move(obj_);
-    VerifyMove(obj_, cpy, count);
-    obj_ = std::move(cpy);
-    VerifyMove(cpy, obj_, count);
+    auto cpy = hipc::make_uptr<Container>();
+    (*cpy) = std::move(obj_);
+    VerifyMove(obj_, *cpy, count);
+    obj_ = std::move(*cpy);
+    VerifyMove(*cpy, obj_, count);
   }
 
   /// Emplace and erase front
@@ -178,7 +178,7 @@ class ListTestSuite {
     // Verify move into cpy worked
     {
       int fcur = 0;
-      REQUIRE(orig_obj.size() == 0);
+      REQUIRE(orig_obj.IsNull());
       REQUIRE(new_obj.size() == count);
       for (auto num : new_obj) {
         CREATE_SET_VAR_TO_INT_OR_STRING(T, fcur_conv, fcur);

@@ -66,6 +66,9 @@ class RpcContext {
  public:
   RpcContext() = default;
 
+  /** Parse a hostfile */
+  static std::vector<std::string> ParseHostfile(const std::string &path);
+
   /** initialize host info list */
   void InitRpcContext();
 
@@ -103,7 +106,14 @@ class RpcContext {
 
 
 #define UNIQUE_ID_TO_NODE_ID_LAMBDA \
-  [](auto &&param) { return param.GetNodeId(); }
+  [this](auto &&param) { return param.GetNodeId(); }
+
+#define STRING_HASH_LAMBDA \
+  [this](auto &&param) {   \
+    auto hash = std::hash<std::string>{}(param); \
+    hash %= this->rpc_->hosts_.size(); \
+    return hash + 1; \
+  }
 
 #ifdef HERMES_ONLY_RPC
 #define NODE_ID_IS_LOCAL(node_id) false
@@ -125,8 +135,7 @@ class RpcContext {
   template<typename ArgPackT>\
   TYPE_UNWRAP(RET) _Global##BaseName(ArgPackT &&pack) {\
     int node_id = hashfn(pack.template              \
-                         Forward<tuple_idx>()) % rpc_->hosts_.size(); \
-    node_id += 1; \
+                         Forward<tuple_idx>()); \
     if (NODE_ID_IS_LOCAL(node_id)) {\
       if constexpr(std::is_same_v<TYPE_UNWRAP(RET), void>) {\
         hermes_shm::PassArgPack::Call(\

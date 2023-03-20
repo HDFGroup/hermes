@@ -15,7 +15,7 @@
 #include "omp.h"
 
 #include <string>
-#include <hermes_shm/data_structures/string.h>
+#include "hermes_shm/data_structures/ipc/string.h"
 
 /** Test cases for the allocator */
 class AllocatorTestSuite {

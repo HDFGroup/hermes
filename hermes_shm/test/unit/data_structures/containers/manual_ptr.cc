@@ -11,10 +11,10 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
-#include "hermes_shm/data_structures/smart_ptr/manual_ptr.h"
+#include "hermes_shm/data_structures/smart_ptr/smart_ptr_base.h"
 #include "basic_test.h"
 #include "test_init.h"
-#include "hermes_shm/data_structures/string.h"
+#include "hermes_shm/data_structures/ipc/string.h"
 #include "smart_ptr.h"
 
 using hermes_shm::ipc::string;
@@ -29,7 +29,7 @@ void ManualPtrTest() {
   Allocator *alloc = alloc_g;
   hipc::SmartPtrTestSuite<T, mptr<T>> test;
   CREATE_SET_VAR_TO_INT_OR_STRING(T, num, 25);
-  test.ptr_ = make_mptr<T>(num);
+  test.ptr_ = hipc::make_mptr<T>(num);
   test.DereferenceTest(num);
   test.MoveConstructorTest(num);
   test.MoveAssignmentTest(num);
@@ -38,6 +38,13 @@ void ManualPtrTest() {
   test.SerializeationConstructorTest(num);
   test.SerializeationOperatorTest(num);
   test.ptr_.shm_destroy();
+}
+
+TEST_CASE("ManualPtrOfInt") {
+  Allocator *alloc = alloc_g;
+  REQUIRE(alloc->GetCurrentlyAllocatedSize() == 0);
+  ManualPtrTest<hipc::string>();
+  REQUIRE(alloc->GetCurrentlyAllocatedSize() == 0);
 }
 
 TEST_CASE("ManualPtrOfString") {

@@ -12,33 +12,64 @@
 
 #include "basic_test.h"
 #include "test_init.h"
-#include "hermes_shm/data_structures/string.h"
+#include "hermes_shm/data_structures/ipc/string.h"
 
 using hermes_shm::ipc::string;
 
 void TestString() {
   Allocator *alloc = alloc_g;
 
-  auto text1 = string("hello1");
-  REQUIRE(text1 == "hello1");
-  REQUIRE(text1 != "h");
-  REQUIRE(text1 != "asdfklaf");
+  PAGE_DIVIDE("Test construction from const char*") {
+    auto text = hipc::make_uptr<hipc::string>(alloc, "hello1");
+    REQUIRE(*text == "hello1");
+    REQUIRE(*text != "h");
+    REQUIRE(*text != "asdfklaf");
+  }
 
-  auto text2 = string("hello2");
-  REQUIRE(text2 == "hello2");
+  PAGE_DIVIDE("Test construction from std::string") {
+    auto text = hipc::make_uptr<hipc::string>(alloc, std::string("hello1"));
+    REQUIRE(*text == "hello1");
+    REQUIRE(*text != "h");
+    REQUIRE(*text != "asdfklaf");
+  }
 
-  string text3 = text1 + text2;
-  REQUIRE(text3 == "hello1hello2");
+  PAGE_DIVIDE("Test the mutability of the string") {
+    auto text = hipc::make_uptr<hipc::string>(alloc, 6);
+    memcpy(text->data(), "hello4", strlen("hello4"));
+    REQUIRE(*text == "hello4");
+  }
 
-  string text4(6);
-  memcpy(text4.data_mutable(), "hello4", strlen("hello4"));
+  PAGE_DIVIDE("Test copy assign from hipc::string") {
+    auto text1 = hipc::make_uptr<hipc::string>(alloc, "hello");
+    auto text2 = hipc::make_uptr<hipc::string>(alloc);
+    (*text2) = (*text1);
+    REQUIRE(*text1 == "hello");
+    REQUIRE(text1->header_ != text2->header_);
+  }
 
-  string text5 = text4;
-  REQUIRE(text5 == "hello4");
-  REQUIRE(text5.header_ != text4.header_);
+  PAGE_DIVIDE("Test copy assign from std::string") {
+    auto text1 = hipc::make_uptr<hipc::string>(alloc, "hello");
+    (*text1) = std::string("hello2");
+    REQUIRE(*text1 == "hello2");
+  }
 
-  string text6 = std::move(text5);
-  REQUIRE(text6 == "hello4");
+  PAGE_DIVIDE("Test move assign from hipc::string") {
+    auto text1 = hipc::make_uptr<hipc::string>(alloc, "hello");
+    auto text2 = hipc::make_uptr<hipc::string>(alloc);
+    (*text2) = std::move(*text1);
+    REQUIRE(*text2 == "hello");
+    REQUIRE(text1->header_ != text2->header_);
+  }
+
+  PAGE_DIVIDE("Move from a string. Re-assign moved string.") {
+    auto text1 = hipc::make_uptr<hipc::string>(alloc, "hello");
+    auto text2 = hipc::make_uptr<hipc::string>(alloc);
+    (*text2) = std::move(*text1);
+    (*text1) = "hello2";
+    REQUIRE(*text2 == "hello");
+    REQUIRE(*text1 == "hello2");
+    REQUIRE(text1->header_ != text2->header_);
+  }
 }
 
 TEST_CASE("String") {

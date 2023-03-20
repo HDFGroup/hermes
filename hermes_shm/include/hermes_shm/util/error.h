@@ -32,24 +32,28 @@
 
 namespace hermes_shm {
 
-class Error {
+class Error : std::exception {
  private:
   std::string fmt_;
   std::string msg_;
  public:
   Error() : fmt_() {}
   explicit Error(std::string fmt) : fmt_(std::move(fmt)) {}
-  ~Error() = default;
+  ~Error() override = default;
 
   template<typename ...Args>
-  std::shared_ptr<Error> format(Args&& ...args) const {
-    std::shared_ptr<Error> err = std::make_shared<Error>(fmt_);
-    err->msg_ = Formatter::format(fmt_, std::forward<Args>(args)...);
+  Error format(Args&& ...args) const {
+    Error err = Error(fmt_);
+    err.msg_ = Formatter::format(fmt_, std::forward<Args>(args)...);
     return err;
   }
 
+  const char* what() const throw() {
+    return msg_.c_str();
+  }
+
   void print() {
-    std::cout << msg_ << std::endl;
+    std::cout << what() << std::endl;
   }
 };
 

@@ -14,12 +14,15 @@
 #ifndef HERMES_DATA_STRUCTURES_DATA_STRUCTURE_H_
 #define HERMES_DATA_STRUCTURES_DATA_STRUCTURE_H_
 
-#include "hermes_shm/data_structures/internal/shm_internal.h"
+#include "hermes_shm/data_structures/ipc/internal/shm_internal.h"
 #include "hermes_shm/memory/memory_manager.h"
-// #include "pair.h"
-// #include "string.h"
-// #include "thread_unsafe/list.h"
-// #include "thread_unsafe/vector.h"
-// #include "thread_unsafe/unordered_map.h"
+#include "hermes_shm/data_structures/ipc/pair.h"
+#include "hermes_shm/data_structures/ipc/string.h"
+#include "ipc/list.h"
+#include "ipc/vector.h"
+#include "ipc/unordered_map.h"
+
+namespace hipc = hermes_shm::ipc;
+namespace hshm = hermes_shm;
 
 #endif  // HERMES_DATA_STRUCTURES_DATA_STRUCTURE_H_

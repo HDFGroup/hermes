@@ -12,8 +12,8 @@
 
 #include "basic_test.h"
 #include "test_init.h"
-#include "hermes_shm/data_structures/thread_unsafe/unordered_map.h"
-#include "hermes_shm/data_structures/string.h"
+#include "hermes_shm/data_structures/ipc/unordered_map.h"
+#include "hermes_shm/data_structures/ipc/string.h"
 
 using hermes_shm::ipc::MemoryBackendType;
 using hermes_shm::ipc::MemoryBackend;
@@ -35,7 +35,8 @@ using hermes_shm::ipc::string;
 template<typename Key, typename Val>
 void UnorderedMapOpTest() {
   Allocator *alloc = alloc_g;
-  unordered_map<Key, Val> map(alloc);
+  auto map_p = hipc::make_uptr<unordered_map<Key, Val>>(alloc);
+  auto &map = *map_p;
 
   // Insert 20 entries into the map (no growth trigger)
   PAGE_DIVIDE("Insert entries") {
@@ -88,7 +89,7 @@ void UnorderedMapOpTest() {
   PAGE_DIVIDE("Modify the fourth map entry") {
     CREATE_KV_PAIR(key, 4, val, 25);
     auto iter = map.find(key);
-    (*iter)->GetVal() = std::move(val);
+    (*iter)->GetVal() = val;
     REQUIRE((*iter)->GetVal() == val);
   }
 
@@ -169,24 +170,26 @@ void UnorderedMapOpTest() {
     }
   }
 
-  // Copy the unordered_map
+  // Copy assignment operator
   PAGE_DIVIDE("Copy the map") {
-    unordered_map<Key, Val> cpy(map);
+    auto cpy = hipc::make_uptr<unordered_map<Key, Val>>(alloc);
+    (*cpy) = map;
     for (int i = 0; i < 100; ++i) {
       CREATE_KV_PAIR(key, i, val, i);
-      REQUIRE(map.find(key) != map.end());
-      REQUIRE(cpy.find(key) != cpy.end());
+      REQUIRE(!map.find(key).is_end());
+      REQUIRE(!cpy->find(key).is_end());
     }
   }
 
-  // Move the unordered_map
+  // Move assignment operator
   PAGE_DIVIDE("Move the map") {
-    unordered_map<Key, Val> cpy = std::move(map);
+    auto cpy = hipc::make_uptr<unordered_map<Key, Val>>(alloc);
+    (*cpy) = std::move(map);
     for (int i = 0; i < 100; ++i) {
       CREATE_KV_PAIR(key, i, val, i);
-      REQUIRE(cpy.find(key) != cpy.end());
+      REQUIRE(!cpy->find(key).is_end());
     }
-    map = std::move(cpy);
+    map = std::move(*cpy);
   }
 }
 

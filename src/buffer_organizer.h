@@ -20,53 +20,83 @@
 namespace hermes {
 
 /** Calculates the total size of a blob's buffers */
-static inline size_t SumBufferBlobSizes(hipc::vector<BufferInfo> &buffers) {
+static inline size_t SumBufferBlobSizes(std::vector<BufferInfo> &buffers) {
   size_t sum = 0;
-  for (hipc::ShmRef<BufferInfo> buffer_ref : buffers) {
-    sum += (*buffer_ref).blob_size_;
+  for (BufferInfo &buffer_ref : buffers) {
+    sum += buffer_ref.blob_size_;
   }
   return sum;
 }
 
 /**
+ * Any state needed by BORG in SHM
+ * */
+template<>
+struct ShmHeader<BufferOrganizer> {
+};
+
+/**
  * Manages the organization of blobs in the hierarchy.
  * */
-class BufferOrganizer {
+class BufferOrganizer : public hipc::ShmContainer {
  public:
+  SHM_CONTAINER_TEMPLATE(BufferOrganizer,
+                         BufferOrganizer,
+                         ShmHeader<BufferOrganizer>)
   MetadataManager *mdm_;
   RPC_TYPE *rpc_;
 
  public:
-  BufferOrganizer() = default;
+  /**====================================
+   * Default Constructor
+   * ===================================*/
 
   /**
    * Initialize the BORG
    * REQUIRES mdm to be initialized already.
    * */
-  void shm_init();
+  explicit BufferOrganizer(ShmHeader<BufferOrganizer> *header,
+                           hipc::Allocator *alloc);
 
-  /** Finalize the BORG */
-  void shm_destroy();
-
-  /** Serialize the BORG into shared memory */
-  void shm_serialize();
+  /**====================================
+   * SHM Deserialization
+   * ===================================*/
 
   /** Deserialize the BORG from shared memory */
-  void shm_deserialize();
+  void shm_deserialize_main();
+
+  /**====================================
+   * Destructors
+   * ===================================*/
+
+  /** Check if BORG is NULL */
+  bool IsNull() const {
+    return false;
+  }
+
+  /** Set BORG to NULL */
+  void SetNull() {}
+
+  /** Finalize the BORG */
+  void shm_destroy_main();
+
+  /**====================================
+   * BORG Methods
+   * ===================================*/
 
   /** Stores a blob into a set of buffers */
   RPC void LocalPlaceBlobInBuffers(const Blob &blob,
-                                   hipc::vector<BufferInfo> &buffers);
+                                   std::vector<BufferInfo> &buffers);
   RPC void GlobalPlaceBlobInBuffers(const Blob &blob,
-                                    hipc::vector<BufferInfo> &buffers);
+                                    std::vector<BufferInfo> &buffers);
 
   /** Stores a blob into a set of buffers */
-  RPC Blob LocalReadBlobFromBuffers(hipc::vector<BufferInfo> &buffers);
-  Blob GlobalReadBlobFromBuffers(hipc::vector<BufferInfo> &buffers);
+  RPC Blob LocalReadBlobFromBuffers(std::vector<BufferInfo> &buffers);
+  Blob GlobalReadBlobFromBuffers(std::vector<BufferInfo> &buffers);
 
   /** Copies one buffer set into another buffer set */
-  RPC void LocalCopyBuffers(hipc::vector<BufferInfo> &dst,
-                            hipc::vector<BufferInfo> &src);
+  RPC void LocalCopyBuffers(std::vector<BufferInfo> &dst,
+                            std::vector<BufferInfo> &src);
 };
 
 }  // namespace hermes

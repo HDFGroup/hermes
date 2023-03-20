@@ -16,7 +16,7 @@
 #include "adapter_constants.h"
 #include "src/hermes_types.h"
 #include "mapper/mapper_factory.h"
-#include "stdio/stdio_fs_api.h"
+#include "adapter/stdio/stdio_fs_api.h"
 
 using hermes::adapter::BlobPlacements;
 using hermes::adapter::MapperFactory;

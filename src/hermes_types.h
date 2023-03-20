@@ -81,7 +81,7 @@ enum class TopologyType {
   kCount
 };
 
-/** Represents unique ID for BlobId and BucketId */
+/** Represents unique ID for BlobId and TagId */
 template<int TYPE>
 struct UniqueId {
   u64 unique_;   /**< A unique id for the blob */
@@ -108,8 +108,9 @@ struct UniqueId {
     return unique_ != other.unique_ || node_id_ != other.node_id_;
   }
 };
-typedef UniqueId<0> BucketId;
-typedef UniqueId<2> BlobId;
+typedef UniqueId<1> BlobId;
+typedef UniqueId<2> TagId;
+typedef UniqueId<3> TraitId;
 
 /** A definition for logging something that is not yet implemented */
 #define HERMES_NOT_IMPLEMENTED_YET \
@@ -201,11 +202,6 @@ struct PlacementSchema {
 struct Thresholds {
   float min_; /**< minimum threshold value */
   float max_; /**< maximum threshold value */
-};
-
-/** Trait ID type */
-struct TraitId {
-  u64 type_;
 };
 
 }  // namespace hermes
