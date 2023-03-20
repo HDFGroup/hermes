@@ -116,31 +116,38 @@ int pretest() {
   IgnoreAllFiles();
 
   // Remove existing files from the FS
-  if (stdfs::exists(info.new_file)) stdfs::remove(info.new_file);
-  if (stdfs::exists(info.new_file_cmp)) stdfs::remove(info.new_file_cmp);
-  if (stdfs::exists(info.existing_file)) stdfs::remove(info.existing_file);
+  if (stdfs::exists(info.new_file))
+    stdfs::remove(info.new_file);
+  if (stdfs::exists(info.new_file_cmp))
+    stdfs::remove(info.new_file_cmp);
+  if (stdfs::exists(info.existing_file))
+    stdfs::remove(info.existing_file);
   if (stdfs::exists(info.existing_file_cmp))
     stdfs::remove(info.existing_file_cmp);
 
-  // Create the file to be tracked by hermes
-  if (!stdfs::exists(info.existing_file)) {
+  // Create the file which is untracked by Hermes
+  if (!stdfs::exists(info.existing_file_cmp)) {
     std::string cmd = "{ tr -dc '[:alnum:]' < /dev/urandom | head -c " +
                       std::to_string(args.request_size * info.num_iterations) +
-                      "; } > " + info.existing_file + " 2> /dev/null";
-    int status = system(cmd.c_str());
-    REQUIRE(status != -1);
-    REQUIRE(stdfs::file_size(info.existing_file) ==
-            args.request_size * info.num_iterations);
-    info.total_size = stdfs::file_size(info.existing_file);
-  }
-
-  // Copy the existing file to compare against later
-  if (!stdfs::exists(info.existing_file_cmp)) {
-    std::string cmd = "cp " + info.existing_file + " " + info.existing_file_cmp;
+                      "; } > " + info.existing_file_cmp + " 2> /dev/null";
     int status = system(cmd.c_str());
     REQUIRE(status != -1);
     REQUIRE(stdfs::file_size(info.existing_file_cmp) ==
             args.request_size * info.num_iterations);
+    info.total_size = stdfs::file_size(info.existing_file_cmp);
+  }
+
+  // Create the file that is being tracks by Hermes
+  if (!stdfs::exists(info.existing_file)) {
+    std::string cmd = "cp " + info.existing_file_cmp + " " + info.existing_file;
+    int status = system(cmd.c_str());
+    REQUIRE(status != -1);
+    auto check = stdfs::file_size(info.existing_file_cmp) ==
+                 args.request_size * info.num_iterations;
+    if (!check) {
+      LOG(FATAL) << "File sizes weren't equivalent after copy" << std::endl;
+    }
+    REQUIRE(check);
   }
   REQUIRE(info.total_size > 0);
 
@@ -218,9 +225,13 @@ int posttest(bool compare_data = true) {
     }
   }
   /* Delete the files from both Hermes and the backend. */
-  if (stdfs::exists(info.new_file)) stdfs::remove(info.new_file);
-  if (stdfs::exists(info.existing_file)) stdfs::remove(info.existing_file);
-  if (stdfs::exists(info.new_file_cmp)) stdfs::remove(info.new_file_cmp);
+  TrackFiles();
+  if (stdfs::exists(info.new_file))
+    stdfs::remove(info.new_file);
+  if (stdfs::exists(info.existing_file))
+    stdfs::remove(info.existing_file);
+  if (stdfs::exists(info.new_file_cmp))
+    stdfs::remove(info.new_file_cmp);
   if (stdfs::exists(info.existing_file_cmp))
     stdfs::remove(info.existing_file_cmp);
   return 0;
@@ -253,8 +264,8 @@ void test_open(const char* path, int flags, ...) {
   std::string cmp_path;
   if (strcmp(path, info.new_file.c_str()) == 0) {
     cmp_path = info.new_file_cmp;
-  } else if (strcmp(path, "/tmp/test_hermes") == 0) {
-    cmp_path = "/tmp/test_hermes";
+  } else if (strcmp(path, "/tmp") == 0) {
+    cmp_path = "/tmp";
   } else {
     cmp_path = info.existing_file_cmp;
   }
@@ -267,6 +278,9 @@ void test_open(const char* path, int flags, ...) {
   }
   bool is_same =
       (fh_cmp != -1 && fh_orig != -1) || (fh_cmp == -1 && fh_orig == -1);
+  if (!is_same) {
+    LOG(FATAL) << "Was not the same" << std::endl;
+  }
   REQUIRE(is_same);
 }
 void test_close() {

@@ -22,7 +22,9 @@ void PosixIoClient::RealOpen(IoClientObject &f,
     stat.flags_ &= ~O_CREAT;
   }
   if (stat.flags_ & O_CREAT || stat.flags_ & O_TMPFILE) {
-    stat.fd_ = real_api->open(path.c_str(), stat.flags_, stat.st_mode_);
+    if (stat.adapter_mode_ != AdapterMode::kScratch) {
+      stat.fd_ = real_api->open(path.c_str(), stat.flags_, stat.st_mode_);
+    }
   } else {
     stat.fd_ = real_api->open(path.c_str(), stat.flags_);
   }
