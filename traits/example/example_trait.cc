@@ -7,6 +7,7 @@
 namespace hermes::api {
 
 void ExampleTrait::Run(int method, void *params) {
+  (void) method;
   auto cast = reinterpret_cast<ExampleTraitParams*>(params);
   cast->hello_ = GetHeader<ExampleTraitHeader>()->hello_;
 }

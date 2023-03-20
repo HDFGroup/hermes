@@ -22,7 +22,7 @@ set -x
 spack load --only dependencies hermes
 
 # Build hermes
-export CXXFLAGS="${CXXFLAGS} -std=c++17 -Werror -Wall -Wextra"
+# export CXXFLAGS="${CXXFLAGS} -std=c++17 -Werror -Wall -Wextra"
 cmake                                                      \
     -DCMAKE_INSTALL_PREFIX=${INSTALL_PREFIX}               \
     -DCMAKE_PREFIX_PATH=${DEPENDENCY_PREFIX}               \

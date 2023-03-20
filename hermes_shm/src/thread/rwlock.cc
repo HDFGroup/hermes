@@ -97,24 +97,6 @@ void RwLock::WriteUnlock() {
 }
 
 /**
- * Verify the reference count for reads (for debugging)
- * */
-void RwLock::assert_r_refcnt(int ref) {
-  if (RwLockPayload(payload_).bits_.r_ != ref) {
-    throw 1;
-  }
-}
-
-/**
- * Verify the reference count for writes (for debugging)
- * */
-void RwLock::assert_w_refcnt(int ref) {
-  if (RwLockPayload(payload_).bits_.w_ > 1) {
-    throw 1;
-  }
-}
-
-/**
  * SCOPED R/W READ LOCK
  * */
 

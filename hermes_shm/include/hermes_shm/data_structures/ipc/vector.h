@@ -189,7 +189,7 @@ struct vector_iterator_templ {
   /** Set this iterator to end */
   inline void set_end() {
     if constexpr(FORWARD_ITER) {
-      i_ = vec_->size();
+      i_ = (off64_t)vec_->size();
     } else {
       i_ = -1;
     }
@@ -200,7 +200,7 @@ struct vector_iterator_templ {
     if constexpr(FORWARD_ITER) {
       i_ = 0;
     } else {
-      i_ = vec_->size() - 1;
+      i_ = (off64_t)vec_->size() - 1;
     }
   }
 
@@ -209,7 +209,7 @@ struct vector_iterator_templ {
     if constexpr(FORWARD_ITER) {
       return (i_ == 0);
     } else {
-      return (i_ == vec_->size() - 1);
+      return (i_ == (off64_t)vec_->size() - 1);
     }
   }
 

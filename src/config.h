@@ -137,7 +137,7 @@ static void ParseRangeList(YAML::Node list_node, std::string var,
 
 /** parse the suffix of \a num_text NUMBER text */
 static std::string ParseNumberSuffix(const std::string &num_text) {
-  int i;
+  size_t i;
   for (i = 0; i < num_text.size(); ++i) {
     char c = num_text[i];
     if ('0' <= c && c <= '9') continue;

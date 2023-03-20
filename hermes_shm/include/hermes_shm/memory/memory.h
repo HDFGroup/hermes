@@ -121,12 +121,12 @@ struct OffsetPointerBase {
 
   /** Set to null */
   void SetNull() {
-    off_ = -1;
+    off_ = (size_t)-1;
   }
 
   /** Check if null */
   bool IsNull() const {
-    return off_.load() == -1;
+    return off_.load() == (size_t)-1;
   }
 
   /** Get the null pointer */

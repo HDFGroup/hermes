@@ -68,9 +68,6 @@ struct RwLock {
 
   void WriteLock();
   void WriteUnlock();
-
-  void assert_r_refcnt(int ref);
-  void assert_w_refcnt(int ref);
 };
 
 struct ScopedRwReadLock {
