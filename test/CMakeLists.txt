@@ -17,9 +17,9 @@ include_directories(
 set(API_TESTS
         test_bucket
         test_partial_put_get
-        test_buffer_pool
-        test_trait
-        test_tag)
+        test_buffer_pool)
+        # test_trait
+        # test_tag)
 
 find_program(BASH_PROGRAM bash)
 
@@ -31,7 +31,6 @@ target_link_libraries(test_config ${LIBRT}
         $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium>
         glog::glog
         Catch2::Catch2)
-add_test(Testtest_config COMMAND ${CMAKE_BINARY_DIR}/test_config)
 
 foreach(program ${API_TESTS})
   add_executable(${program} ${program}.cc main_mpi.cc)

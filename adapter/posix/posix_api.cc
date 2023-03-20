@@ -67,14 +67,7 @@ int HERMES_DECL(open)(const char *path, int flags, ...) {
   }
 
   if (flags & O_CREAT || flags & O_TMPFILE) {
-    if (HERMES->is_initialized_) {
-      LOG(INFO) << "NOT intercepting open" << std::endl;
-    }
     return real_api->open(path, flags, mode);
-  }
-
-  if (HERMES->is_initialized_) {
-    LOG(INFO) << "NOT intercepting open" << std::endl;
   }
   return real_api->open(path, flags);
 }
@@ -99,13 +92,7 @@ int HERMES_DECL(open64)(const char *path, int flags, ...) {
     return fs_api->Open(stat, path).hermes_fd_;
   }
   if (flags & O_CREAT) {
-    if (HERMES->is_initialized_) {
-      LOG(INFO) << "NOT intercepting open" << std::endl;
-    }
     return real_api->open64(path, flags, mode);
-  }
-  if (HERMES->is_initialized_) {
-    LOG(INFO) << "NOT intercepting open" << std::endl;
   }
   return real_api->open64(path, flags);
 }

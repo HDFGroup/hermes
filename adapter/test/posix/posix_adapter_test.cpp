@@ -271,19 +271,14 @@ void test_open(const char* path, int flags, ...) {
     cmp_path = info.existing_file_cmp;
   }
   if (flags & O_CREAT || flags & O_TMPFILE) {
-    LOG(INFO) << "No create?" << std::endl;
     fh_orig = open(path, flags, mode);
     fh_cmp = open(cmp_path.c_str(), flags, mode);
   } else {
-    LOG(INFO) << "With create?" << std::endl;
     fh_orig = open(path, flags);
     fh_cmp = open(cmp_path.c_str(), flags);
   }
   bool is_same =
       (fh_cmp != -1 && fh_orig != -1) || (fh_cmp == -1 && fh_orig == -1);
-  if (!is_same) {
-    LOG(FATAL) << "Was not the same" << std::endl;
-  }
   REQUIRE(is_same);
 }
 void test_close() {
@@ -318,9 +313,6 @@ void test_read(char* ptr, size_t size) {
 void test_seek(long offset, int whence) {
   status_orig = lseek(fh_orig, offset, whence);
   int status = lseek(fh_cmp, offset, whence);
-  if (status != status_orig) {
-    LOG(FATAL) << "Failed for seek" << std::endl;
-  }
   REQUIRE(status == status_orig);
 }
 }  // namespace test
