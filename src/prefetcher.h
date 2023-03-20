@@ -22,9 +22,11 @@ namespace hermes {
 
 class Prefetcher {
  public:
-  std::list<IoTrace> trace_;
+  std::vector<std::list<IoTrace>> trace_;
+  std::vector<std::list<IoTrace>::iterator> trace_off_;
   MetadataManager *mdm_;
   RPC_TYPE *rpc_;
+  BufferOrganizer *borg_;
   tl::engine *engine;            /**< Argobots execution engine */
   ABT_xstream execution_stream_; /**< Argobots execution stream */
   double epoch_ms_;              /**< Milliseconds to sleep */

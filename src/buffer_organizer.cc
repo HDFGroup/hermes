@@ -170,11 +170,12 @@ Blob BufferOrganizer::GlobalReadBlobFromBuffers(
 }
 
 /** Re-organize blobs based on a score */
-void BufferOrganizer::GlobalReorganizeBlob(TagId bkt_id,
-                                           BlobId blob_id,
-                                           float score) {
-  auto bkt = HERMES->GetBucket(bkt_id);
-  std::string blob_name = bkt->GetBlobName(blob_id);
+void BufferOrganizer::GlobalOrganizeBlob(const std::string &bucket_name,
+                                         const std::string &blob_name,
+                                         float score) {
+  auto bkt = HERMES->GetBucket(bucket_name);
+  BlobId blob_id;
+  bkt->GetBlobId(blob_name, blob_id);
   float blob_score = bkt->GetBlobScore(blob_id);
   Context ctx;
 

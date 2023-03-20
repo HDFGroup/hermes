@@ -42,14 +42,14 @@ class Bucket {
    * Called from hermes.h in GetBucket(). Should not
    * be used directly.
    * */
-  Bucket(const std::string &bkt_name,
-         Context &ctx,
-         size_t backend_size = 0);
+  explicit Bucket(const std::string &bkt_name,
+                  Context &ctx,
+                  size_t backend_size = 0);
 
   /**
    * Get an existing bucket.
    * */
-  Bucket(TagId tag_id);
+  explicit Bucket(TagId tag_id);
 
  public:
   /**

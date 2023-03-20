@@ -12,7 +12,7 @@ devices:
 
     # The maximum buffering capacity in MiB of each device. Here we say that all 4
     # devices get 50 MiB of buffering capacity.
-    capacity: 5000MB
+    capacity: 8000MB
 
     # The size of the smallest available buffer in KiB. In general this should be
     # the page size of your system for byte addressable storage, and the block size
@@ -49,7 +49,7 @@ devices:
 
   nvme:
     mount_point: "./"
-    capacity: 50MB
+    capacity: 10GB
     block_size: 4KB
     slab_sizes: [ 4KB, 16KB, 64KB, 1MB ]
     bandwidth: 1GBps
@@ -59,7 +59,7 @@ devices:
 
   ssd:
     mount_point: "./"
-    capacity: 50MB
+    capacity: 10GB
     block_size: 4KB
     slab_sizes: [ 4KB, 16KB, 64KB, 1MB ]
     bandwidth: 500MBps
@@ -124,16 +124,16 @@ dpe:
   # into a random number of smaller Blobs.
   default_rr_split: 0
 
-### Define prefetcher properties
-prefetch:
-  enabled: false
-  io_trace_path: ""
-  epoch_ms: 50
-  is_mpi: true
-
 # The shared memory prefix for the hermes shared memory segment. A user name
 # will be automatically appended.
 shmem_name: "/hermes_shm_"
 
 # The interval in milliseconds at which to update the global system view.
 system_view_state_update_interval_ms: 1000
+
+### Define prefetcher properties
+prefetch:
+  enabled: true
+  io_trace_path: "${HOME}/test/trace.yaml"
+  epoch_ms: 50
+  is_mpi: true

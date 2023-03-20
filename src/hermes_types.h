@@ -115,9 +115,11 @@ typedef UniqueId<3> TraitId;
 
 /** Indicates a PUT or GET for a particular blob */
 struct IoStat {
+  IoType type_;
   BlobId blob_id_;
   TagId tag_id_;
   size_t blob_size_;
+  int rank_;
 };
 
 /** Used as hints to the prefetcher */
@@ -129,6 +131,7 @@ struct IoTrace {
   size_t blob_size_;
   int organize_next_n_;
   float score_;
+  int rank_;
 };
 
 /** A definition for logging something that is not yet implemented */

@@ -183,6 +183,9 @@ Status Bucket::Put(std::string blob_name,
     UpdateSize(new_blob_size - orig_blob_size, BucketUpdate::kInternal);
   }
 
+  // Update the local MDM I/O log
+  mdm_->AddIoStat(id_, blob_id, blob.size(), IoType::kWrite);
+
   return Status();
 }
 
@@ -261,6 +264,8 @@ Status Bucket::PartialPutOrCreate(const std::string &blob_name,
 Status Bucket::Get(BlobId blob_id, Blob &blob, Context &ctx) {
   std::vector<BufferInfo> buffers = mdm_->GlobalGetBlobBuffers(blob_id);
   blob = HERMES->borg_->GlobalReadBlobFromBuffers(buffers);
+  // Update the local MDM I/O log
+  mdm_->AddIoStat(id_, blob_id, blob.size(), IoType::kRead);
   return Status();
 }
 

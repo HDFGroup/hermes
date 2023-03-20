@@ -159,7 +159,7 @@ option(HERMES_RPC_THALLIUM "Use Thallium as the RPC library." ON)
 option(HERMES_MDM_STORAGE_STBDS
   "Use the STB library and shared memory to store metadata" ON)
 option(HERMES_DEBUG_HEAP "Store Heap debug information for visualization." OFF)
-option(HERMES_BUILD_BENCHMARKS "Build the Hermes benchmark suite." OFF)
+option(HERMES_BUILD_BENCHMARKS "Build the Hermes benchmark suite." ON)
 option(HERMES_ENABLE_TIMING "Turn on timing of selected functions." OFF)
 option(HERMES_ENABLE_COVERAGE "Enable code coverage." OFF)
 option(HERMES_ENABLE_POSIX_ADAPTER "Build the Hermes POSIX adapter." ON)
@@ -467,6 +467,7 @@ endif()
 # Benchmarks
 #-----------------------------------------------------------------------------
 if(HERMES_BUILD_BENCHMARKS)
+  message("Building benchmarks")
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/benchmarks)
 endif()
 

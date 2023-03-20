@@ -140,6 +140,9 @@ void ServerConfig::ParsePrefetchInfo(YAML::Node yaml_conf) {
   if (yaml_conf["epoch_ms"]) {
     prefetcher_.epoch_ms_ = yaml_conf["epoch_ms"].as<size_t>();
   }
+  if (yaml_conf["is_mpi"]) {
+    prefetcher_.is_mpi_ = yaml_conf["is_mpi"].as<bool>();
+  }
 }
 
 /** parse the YAML node */

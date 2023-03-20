@@ -95,7 +95,9 @@ class BufferOrganizer : public hipc::ShmContainer {
   Blob GlobalReadBlobFromBuffers(std::vector<BufferInfo> &buffers);
 
   /** Re-organize blobs based on a score */
-  void GlobalReorganizeBlob(TagId bkt_id, BlobId blob_id, float score);
+  void GlobalOrganizeBlob(const std::string &bucket_name,
+                          const std::string &blob_name,
+                          float score);
 };
 
 }  // namespace hermes

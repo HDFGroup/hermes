@@ -684,14 +684,23 @@ std::vector<TraitId> MetadataManager::LocalTagGetTraits(TagId tag_id) {
  * ===================================*/
 
 /** Add an I/O statistic to the internal log */
-void MetadataManager::AddIoStat(BlobId blob_id,
-                                TagId tag_id,
-                                size_t blob_size) {
+void MetadataManager::AddIoStat(TagId tag_id,
+                                BlobId blob_id,
+                                size_t blob_size,
+                                IoType type) {
+  if (!enable_io_tracing_) {
+    return;
+  }
   ScopedRwWriteLock io_pattern_lock(header_->lock_[kIoPatternLog]);
   IoStat stat;
   stat.blob_id_ = blob_id;
   stat.tag_id_ = tag_id;
   stat.blob_size_ = blob_size;
+  stat.type_ = type;
+  stat.rank_ = 0;
+  if (is_mpi_) {
+    MPI_Comm_rank(MPI_COMM_WORLD, &stat.rank_);
+  }
   io_pattern_log_->emplace_back(stat);
 }
 

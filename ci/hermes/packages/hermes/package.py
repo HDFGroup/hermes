@@ -12,7 +12,6 @@ class Hermes(CMakePackage):
     variant('vfd', default=False, description='Enable HDF5 VFD')
     depends_on('mochi-thallium~cereal@0.8.3')
     depends_on('catch2@3.0.1')
-    depends_on('glpk@4:')
     depends_on('mpich@3.3.2:')
     depends_on('glog@0.4:')
     depends_on('yaml-cpp')

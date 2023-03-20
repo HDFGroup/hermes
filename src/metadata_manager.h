@@ -115,6 +115,7 @@ class MetadataManager : public hipc::ShmContainer {
    * ===================================*/
   hipc::Ref<IO_PATTERN_LOG_T> io_pattern_log_;
   bool enable_io_tracing_;
+  bool is_mpi_;
 
   /**====================================
    * Targets + devices
@@ -523,7 +524,7 @@ class MetadataManager : public hipc::ShmContainer {
    * ===================================*/
 
   /** Add an I/O statistic to the internal log */
-  void AddIoStat(BlobId blob_id, TagId tag_id, size_t blob_size);
+  void AddIoStat(TagId tag_id, BlobId blob_id, size_t blob_size, IoType type);
 
   /** Add an I/O statistic to the internal log */
   void ClearIoStats(size_t count);

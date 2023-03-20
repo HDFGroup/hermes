@@ -270,6 +270,7 @@ struct PrefetchInfo {
   bool enabled_;
   std::string trace_path_;
   size_t epoch_ms_;
+  bool is_mpi_;
 };
 
 /**

@@ -8,6 +8,7 @@ include_directories(
 set(BENCHMARKS put_get_bench)
 
 foreach(benchmark ${BENCHMARKS})
+  message("Building ${benchmark}")
   add_executable(${benchmark} ${benchmark}.cc)
   add_dependencies(${benchmark} hermes)
   target_link_libraries(${benchmark} hermes MPI::MPI_CXX
