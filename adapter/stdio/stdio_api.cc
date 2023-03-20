@@ -130,11 +130,18 @@ size_t HERMES_DECL(fwrite)(const void *ptr, size_t size, size_t nmemb,
   auto real_api = HERMES_STDIO_API;
   auto fs_api = HERMES_STDIO_FS;
   if (fs_api->IsFpTracked(fp)) {
-    LOG(INFO) << "Intercepting fwrite(" << ptr << ", " << size << ", " << nmemb
-              << ", " << fp << ")\n";
+    LOG(INFO) << "Intercept fwrite with size: "
+              << size
+              << " and nmemb: " << nmemb
+              << "." << std::endl;
     File f; f.hermes_fh_ = fp;
     IoStatus io_status;
-    return fs_api->Write(f, stat_exists, ptr, size * nmemb, io_status);
+    int ret = fs_api->Write(f, stat_exists, ptr, size * nmemb, io_status);
+    if (ret > 0) {
+      return ret / size;
+    } else {
+      return ret;
+    }
   }
   return real_api->fwrite(ptr, size, nmemb, fp);
 }
@@ -243,10 +250,18 @@ size_t HERMES_DECL(fread)(void *ptr, size_t size, size_t nmemb, FILE *stream) {
   auto real_api = HERMES_STDIO_API;
   auto fs_api = HERMES_STDIO_FS;
   if (fs_api->IsFpTracked(stream)) {
-    LOG(INFO) << "Intercept fread with size: " << size << "." << std::endl;
+    LOG(INFO) << "Intercept fread with size: "
+              << size
+              << " and nmemb: " << nmemb
+              << "." << std::endl;
     File f; f.hermes_fh_ = stream;
     IoStatus io_status;
-    return fs_api->Read(f, stat_exists, ptr, size * nmemb, io_status);
+    int ret = fs_api->Read(f, stat_exists, ptr, size * nmemb, io_status);
+    if (ret > 0) {
+      return ret / size;
+    } else {
+      return ret;
+    }
   }
   return real_api->fread(ptr, size, nmemb, stream);
 }

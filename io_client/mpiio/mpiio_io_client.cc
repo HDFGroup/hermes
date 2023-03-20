@@ -67,7 +67,7 @@ void MpiioIoClient::HermesClose(IoClientObject &f,
 
 /** Remove \a file FILE f */
 int MpiioIoClient::RealRemove(const std::string &path) {
-  return 0;
+  return remove(path.c_str());
 }
 
 /** Get initial statistics from the backend */

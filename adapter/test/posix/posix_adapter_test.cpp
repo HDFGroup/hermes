@@ -103,14 +103,7 @@ void TrackFiles() {
 }
 
 void RemoveFile(const std::string &path) {
-  if (stdfs::exists(path)) {
-    LOG(INFO) << path
-              << " EXISTS, so removing" <<  std::endl;
-  } else {
-    LOG(INFO) << path
-              << " does NOT exist, so not removing" << std::endl;
-  }
-  int ret = stdfs::remove(path);
+  stdfs::remove(path);
   if (stdfs::exists(path)) {
     LOG(FATAL) << "Failed to remove: " << path << std::endl;
   }
