@@ -43,15 +43,17 @@ typedef hipc::unordered_map<hipc::charbuf, TraitId> TRAIT_ID_MAP_T;
 typedef hipc::unordered_map<BlobId, BlobInfo> BLOB_MAP_T;
 typedef hipc::unordered_map<TagId, TagInfo> TAG_MAP_T;
 typedef hipc::unordered_map<TraitId, hipc::charbuf> TRAIT_MAP_T;
+typedef hipc::slist<IoStat> IO_PATTERN_LOG_T
 
-enum MdMapLock {
+enum MdmLock {
   kBlobMapLock,
   kBktMapLock,
   kTagMapLock,
   kTraitMapLock,
   kLocalTraitMapLock,
+  kIoPatternLog,
 
-  kMdMapLockCount
+  kMdmLockCount
 };
 
 /**
@@ -75,10 +77,12 @@ struct ShmHeader<MetadataManager> {
   hipc::ShmArchive<hipc::vector<DeviceInfo>> devices_;
   /// SHM representation of target info vector
   hipc::ShmArchive<hipc::vector<TargetInfo>> targets_;
+  /// SHM representation of prefetcher stats log
+  hipc::ShmArchive<IO_PATTERN_LOG_T> io_pattern_log_;
   /// Used to create unique ids. Starts at 1.
   std::atomic<u64> id_alloc_;
   /// Synchronization
-  RwLock lock_[kMdMapLockCount];
+  RwLock lock_[kMdmLockCount];
   /// The ID of THIS node
   int node_id_;
 };
@@ -105,6 +109,12 @@ class MetadataManager : public hipc::ShmContainer {
   hipc::Ref<TRAIT_MAP_T> trait_map_;
   std::unordered_map<TraitId, hapi::Trait*> local_trait_map_;
   RwLock local_lock_;
+
+  /**====================================
+   * I/O pattern log
+   * ===================================*/
+  hipc::Ref<IO_PATTERN_LOG_T> io_pattern_log_;
+  bool enable_io_tracing_;
 
   /**====================================
    * Targets + devices
@@ -501,6 +511,16 @@ class MetadataManager : public hipc::ShmContainer {
     std::pair<TraitId, hapi::Trait*> trait_pair = *iter;
     return dynamic_cast<TraitT*>(trait_pair.second);
   }
+
+  /**====================================
+   * Statistics Operations
+   * ===================================*/
+
+  /** Add an I/O statistic to the internal log */
+  void AddIoStat(BlobId blob_id, TagId tag_id, size_t blob_size);
+
+  /** Add an I/O statistic to the internal log */
+  void ClearIoStats(size_t count);
 
   /**====================================
    * Private Operations

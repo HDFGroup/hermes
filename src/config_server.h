@@ -264,6 +264,15 @@ struct BorgInfo {
 };
 
 /**
+ * Prefetcher information in server config
+ * */
+struct PrefetchInfo {
+  bool enabled_;
+  std::string trace_path_;
+  size_t epoch_ms_;
+};
+
+/**
  * System configuration for Hermes
  */
 class ServerConfig : public BaseConfig {
@@ -279,6 +288,9 @@ class ServerConfig : public BaseConfig {
 
   /** Buffer organizer (BORG) information */
   BorgInfo borg_;
+
+  /** Prefetcher information */
+  PrefetchInfo prefetcher_;
 
   /** The length of a view state epoch */
   u32 system_view_state_update_interval_ms;
@@ -299,6 +311,7 @@ class ServerConfig : public BaseConfig {
   void ParseDeviceInfo(YAML::Node yaml_conf);
   void ParseDpeInfo(YAML::Node yaml_conf);
   void ParseBorgInfo(YAML::Node yaml_conf);
+  void ParsePrefetchInfo(YAML::Node yaml_conf);
 };
 
 }  // namespace hermes::config

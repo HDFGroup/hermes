@@ -67,7 +67,8 @@ enum class HermesType {
 /** The types of I/O that can be performed (for IoCall RPC) */
 enum class IoType {
   kRead,
-  kWrite
+  kWrite,
+  KNone
 };
 
 typedef u16 DeviceID; /**< device id in unsigned 16-bit integer */
@@ -111,6 +112,24 @@ struct UniqueId {
 typedef UniqueId<1> BlobId;
 typedef UniqueId<2> TagId;
 typedef UniqueId<3> TraitId;
+
+/** Indicates a PUT or GET for a particular blob */
+struct IoStat {
+  BlobId blob_id_;
+  TagId tag_id_;
+  size_t blob_size_;
+};
+
+/** Used as hints to the prefetcher */
+struct IoTrace {
+  int node_id_;
+  IoType type_;
+  std::string blob_name_;
+  std::string tag_name_;
+  size_t blob_size_;
+  int organize_next_n_;
+  float score_;
+};
 
 /** A definition for logging something that is not yet implemented */
 #define HERMES_NOT_IMPLEMENTED_YET \

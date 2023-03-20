@@ -124,6 +124,12 @@ dpe:
   # into a random number of smaller Blobs.
   default_rr_split: 0
 
+### Define prefetcher properties
+prefetch:
+  enabled: false
+  io_trace_path: ""
+  epoch_ms: 50
+
 # The shared memory prefix for the hermes shared memory segment. A user name
 # will be automatically appended.
 shmem_name: "/hermes_shm_"

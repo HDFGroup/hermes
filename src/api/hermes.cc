@@ -88,6 +88,7 @@ void Hermes::InitServer(std::string server_config_path) {
                                          &server_config_);
   bpm_ = hipc::make_ref<BufferPool>(header_->bpm_, main_alloc_);
   borg_ = hipc::make_ref<BufferOrganizer>(header_->borg_, main_alloc_);
+  prefetch_.Init();
 }
 
 void Hermes::InitClient(std::string server_config_path,
@@ -101,6 +102,7 @@ void Hermes::InitClient(std::string server_config_path,
   rpc_.InitClient();
   bpm_ = hipc::Ref<BufferPool>(header_->bpm_, main_alloc_);
   borg_ = hipc::Ref<BufferOrganizer>(header_->borg_, main_alloc_);
+  prefetch_.Init();
 }
 
 void Hermes::LoadServerConfig(std::string config_path) {

@@ -70,6 +70,10 @@ MetadataManager::MetadataManager(
         dev_info->header_->latency_);
     ++dev_id;
   }
+
+  // Create the log used to track I/O pattern
+  io_pattern_log_ = hipc::make_ref<IO_PATTERN_LOG_T>(
+      header_->io_pattern_log_, alloc_);
 }
 
 /**
@@ -84,6 +88,7 @@ void MetadataManager::shm_destroy_main() {
   trait_map_.shm_destroy();
   targets_.shm_destroy();
   devices_.shm_destroy();
+  io_pattern_log_.shm_destroy();
 }
 
 /**====================================
@@ -106,6 +111,8 @@ void MetadataManager::shm_deserialize_main() {
   trait_map_ = hipc::Ref<TRAIT_MAP_T>(header_->trait_map, alloc);
   targets_ = hipc::Ref<hipc::vector<TargetInfo>>(header_->targets_, alloc);
   devices_ = hipc::Ref<hipc::vector<DeviceInfo>>(header_->devices_, alloc);
+  io_pattern_log_ = hipc::Ref<IO_PATTERN_LOG_T>(header_->io_pattern_log_,
+                                                alloc);
 }
 
 /**====================================
@@ -643,6 +650,30 @@ std::vector<TraitId> MetadataManager::LocalTagGetTraits(TagId tag_id) {
   auto tag_info_pair = *iter;
   hipc::Ref<TagInfo> &tag_info = tag_info_pair->second_;
   return hshm::to_stl_vector<TraitId>(*tag_info->traits_);
+}
+
+/**====================================
+ * Statistics Operations
+ * ===================================*/
+
+/** Add an I/O statistic to the internal log */
+void MetadataManager::AddIoStat(BlobId blob_id,
+                                TagId tag_id,
+                                size_t blob_size) {
+  ScopedRwWriteLock io_pattern_lock(header_->lock_[kIoPatternLog]);
+  IoStat stat;
+  stat.blob_id_ = blob_id;
+  stat.tag_id_ = tag_id;
+  stat.blob_size_ = blob_size;
+  io_pattern_log_->emplace_back(stat);
+}
+
+/** Add an I/O statistic to the internal log */
+void MetadataManager::ClearIoStats(size_t count) {
+  ScopedRwWriteLock io_pattern_lock(header_->lock_[kIoPatternLog]);
+  auto first = io_pattern_log_->begin();
+  auto end = io_pattern_log_->begin() + count;
+  io_pattern_log_->erase(first, end);
 }
 
 }  // namespace hermes

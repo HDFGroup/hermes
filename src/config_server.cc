@@ -129,6 +129,19 @@ void ServerConfig::ParseBorgInfo(YAML::Node yaml_conf) {
   }
 }
 
+/** parse prefetch information from YAML config */
+void ServerConfig::ParsePrefetchInfo(YAML::Node yaml_conf) {
+  if (yaml_conf["enabled"]) {
+    prefetcher_.enabled_ = yaml_conf["enabled"].as<bool>();
+  }
+  if (yaml_conf["io_trace_path"]) {
+    prefetcher_.trace_path_ = yaml_conf["io_trace_path"].as<std::string>();
+  }
+  if (yaml_conf["epoch_ms"]) {
+    prefetcher_.epoch_ms_ = yaml_conf["epoch_ms"].as<size_t>();
+  }
+}
+
 /** parse the YAML node */
 void ServerConfig::ParseYAML(YAML::Node &yaml_conf) {
   if (yaml_conf["devices"]) {
@@ -142,6 +155,9 @@ void ServerConfig::ParseYAML(YAML::Node &yaml_conf) {
   }
   if (yaml_conf["buffer_organizer"]) {
     ParseBorgInfo(yaml_conf["buffer_organizer"]);
+  }
+  if (yaml_conf["prefetch"]) {
+    ParsePrefetchInfo(yaml_conf["prefetch"]);
   }
   if (yaml_conf["system_view_state_update_interval_ms"]) {
     system_view_state_update_interval_ms =

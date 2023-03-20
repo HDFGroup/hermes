@@ -25,6 +25,8 @@
 #include "metadata_manager.h"
 #include "buffer_pool.h"
 #include "buffer_organizer.h"
+#include "prefetcher.h"
+
 #include "hermes_shm/util/singleton.h"
 
 // Singleton macros
@@ -59,6 +61,7 @@ class Hermes {
   hipc::Ref<MetadataManager> mdm_;
   hipc::Ref<BufferPool> bpm_;
   hipc::Ref<BufferOrganizer> borg_;
+  Prefetcher prefetch_;
   COMM_TYPE comm_;
   RPC_TYPE rpc_;
   hipc::Allocator *main_alloc_;
