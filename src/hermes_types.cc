@@ -25,6 +25,6 @@ Context::Context()
       rr_split(HERMES->server_config_.dpe_.default_rr_split_),
       rr_retry(false),
       disable_swap(false),
-      blob_score_(0) {}
+      blob_score_(-1) {}
 
 }  // namespace hermes::api

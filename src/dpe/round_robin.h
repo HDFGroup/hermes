@@ -27,7 +27,7 @@ class RoundRobin : public DPE {
   RoundRobin() = default;
 
   Status Placement(const std::vector<size_t> &blob_sizes,
-                   const std::vector<TargetInfo> &targets,
+                   std::vector<TargetInfo> &targets,
                    api::Context &ctx,
                    std::vector<PlacementSchema> &output);
 };

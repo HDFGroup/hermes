@@ -60,6 +60,7 @@ struct TargetInfo {
   size_t rem_cap_;      /**< remaining capacity of the target */
   double bandwidth_;    /**< the bandwidth of the device */
   double latency_;      /**< the latency of the device */
+  float score_;         /**< Relative importance of this tier */
 
   /** Default constructor */
   TargetInfo() = default;

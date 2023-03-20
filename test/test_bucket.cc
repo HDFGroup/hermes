@@ -33,8 +33,8 @@ void MainPosttest() {
 
 void TestBlobCreates(hapi::Hermes *hermes) {
   auto bkt = hermes->GetBucket("hello");
-  int num_blobs = 1;
-  size_t blob_size = MEGABYTES(150);
+  int num_blobs = 256;
+  size_t blob_size = KILOBYTES(4);
   hermes::api::Context ctx;
   hermes::BlobId blob_id;
 

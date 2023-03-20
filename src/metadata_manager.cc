@@ -61,6 +61,7 @@ MetadataManager::MetadataManager(
   // Create the TargetInfo vector
   targets_->reserve(devices_->size());
   int dev_id = 0;
+  float maxbw = 0;
   for (hipc::Ref<DeviceInfo> dev_info : *config->devices_) {
     targets_->emplace_back(
         TargetId(rpc_->node_id_, dev_id, dev_id),
@@ -68,7 +69,15 @@ MetadataManager::MetadataManager(
         dev_info->header_->capacity_,
         dev_info->header_->bandwidth_,
         dev_info->header_->latency_);
+    if (maxbw < dev_info->header_->bandwidth_) {
+      maxbw = dev_info->header_->bandwidth_;
+    }
     ++dev_id;
+  }
+
+  // Assign a score to each target
+  for (hipc::Ref<TargetInfo> target_info : *targets_) {
+    target_info->score_ = (target_info->bandwidth_ / maxbw);
   }
 
   // Create the log used to track I/O pattern
