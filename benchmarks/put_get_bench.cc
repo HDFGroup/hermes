@@ -65,6 +65,7 @@ void GetTest(hapi::Hermes *hermes,
       hermes::Blob ret;
       bkt->GetBlobId(name, blob_id);
       bkt->Get(blob_id, ret, ctx);
+      sleep(6);
     }
   }
   t.Pause();
@@ -76,9 +77,9 @@ int main(int argc, char **argv) {
   MPI_Init(&argc, &argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   auto hermes = hapi::Hermes::Create(hermes::HermesType::kClient);
-  int blobs_per_rank = 1024;
+  int blobs_per_rank = 16;
 
-  size_t blob_size = KILOBYTES(64);
+  size_t blob_size = GIGABYTES(1);
   MPI_Barrier(MPI_COMM_WORLD);
   PutTest(hermes, rank, 1, blobs_per_rank, blob_size);
   MPI_Barrier(MPI_COMM_WORLD);

@@ -96,6 +96,9 @@ void Prefetcher::Run() {
   size_t log_size = mdm_->io_pattern_log_->size();
   auto trace_iter = trace_.begin();
   auto client_iter = mdm_->io_pattern_log_->begin();
+  if (log_size == 0) {
+    return;
+  }
 
   // Group I/O pattern log by rank
   int nprocs;
@@ -122,9 +125,9 @@ void Prefetcher::Run() {
       for (int j = 0; j < trace.organize_next_n_; ++j) {
         ++trace_off_[i];
         trace = *trace_off_[i];
-        borg_->GlobalOrganizeBlob(trace.tag_name_,
+        /*borg_->GlobalOrganizeBlob(trace.tag_name_,
                                   trace.blob_name_,
-                                  trace.score_);
+                                  trace.score_);*/
       }
       ++trace_off_[i];
       break;

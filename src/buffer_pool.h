@@ -223,7 +223,7 @@ class BufferPool : public hipc::ShmContainer {
   void shm_deserialize_main();
 
   /**====================================
-   * BufferPool Methods
+   * Allocate Buffers
    * ===================================*/
 
   /**
@@ -238,33 +238,73 @@ class BufferPool : public hipc::ShmContainer {
 
   /**
    * Determines a reasonable allocation of buffers based on the size of I/O.
-   * Returns the number of each page size to allocate
+   * Returns the number of each slab size to allocate
    * */
   std::vector<BpCoin> CoinSelect(hipc::Ref<DeviceInfo> &dev_info,
                                  size_t total_size,
-                                 size_t &buffer_count,
-                                 size_t &total_alloced_size);
+                                 size_t &buffer_count);
 
   /**
-   * Allocate each size of buffer from either the free list or the
-   * device growth allocator
+   * Allocate requested slabs from this target.
+   * If the target runs out of space, it will provision from the next target.
+   * We assume there is a baseline target, which can house an infinite amount
+   * of data. This would be the PFS in an HPC machine.
+   *
+   * @param total_size the total amount of data being placed in this target
+   * @param coins The requested number of slabs to allocate from this target
+   * @param target_id The ID of the (ideal) target to allocate from
+   * @param blob_off [out] The current size of the blob which has been placed
+   * @param buffers [out] The buffers which were allocated
    * */
-  BpSlot AllocateSlabSize(BpCoin &coin,
-                          hipc::Ref<BpFreeListStat> &stat,
+  void AllocateBuffers(size_t total_size,
+                       std::vector<BpCoin> &coins,
+                       TargetId tid,
+                       size_t &blob_off,
+                       std::vector<BufferInfo> &buffers);
+
+  /**
+   * Allocate a set of slabs of particular size from this target.
+   *
+   * @param rem_size the amount of data remaining that needs to be allocated
+   * @param slab_size Size of the slabs to allocate
+   * @param slab_count The count of this slab size to allocate
+   * @param slab_id The offset of the slab in the device's slab list
+   * @param tid The target to allocate slabs from
+   * @param free_list The CPU free list for this slab size
+   * @param free_list_stat The metadata for the free list
+   * @param target_stat The metadata for the CPU core
+   * @param blob_off [out] The current size of the blob which has been placed
+   * @param buffers [out] The buffers which were allocated
+   * */
+  void AllocateSlabs(size_t &rem_size,
+                     size_t slab_size,
+                     size_t &slab_count,
+                     size_t slab_id,
+                     TargetId tid,
+                     hipc::Ref<BpFreeList> &free_list,
+                     hipc::Ref<BpFreeListStat> &free_list_stat,
+                     hipc::Ref<BpFreeListStat> &target_stat,
+                     size_t &blob_off,
+                     std::vector<BufferInfo> &buffers);
+
+  /**
+   * Allocate a buffer of a particular size
+   *
+   * @param slab_id The size of slab to allocate
+   * @param tid The target to (ideally) allocate the slab from
+   * @param coin The buffer size information
+   *
+   * @return returns a BufferPool (BP) slot. The slot is NULL if the
+   * target didn't have enough remaining space.
+   * */
+  BpSlot AllocateSlabSize(size_t slab_size,
                           hipc::Ref<BpFreeList> &free_list,
+                          hipc::Ref<BpFreeListStat> &stat,
                           hipc::Ref<BpFreeListStat> &target_stat);
 
-  /**
-   * Allocate each size of buffer from either the free list or the
-   * device growth allocator
-   * */
-  void AllocateBuffers(SubPlacement &plcmnt,
-                       std::vector<BufferInfo> &buffers,
-                       std::vector<BpCoin> &coins,
-                       u16 target_id,
-                       size_t num_slabs,
-                       size_t free_list_start,
-                       size_t &blob_off);
+  /**====================================
+   * Free Buffers
+   * ===================================*/
 
   /**
    * Free buffers from the BufferPool

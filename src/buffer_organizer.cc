@@ -41,6 +41,9 @@ BufferOrganizer::BufferOrganizer(ShmHeader<BufferOrganizer> *header,
     auto io_client = borg::BorgIoClientFactory::Get(dev_info->header_->io_api_);
     io_client->Init(*dev_info);
   }
+
+  // Print out device info
+  mdm_->PrintDeviceInfo();
 }
 
 /**====================================
@@ -81,7 +84,14 @@ RPC void BufferOrganizer::LocalPlaceBlobInBuffers(
                                 buffer_info.blob_size_);
     blob_off += buffer_info.blob_size_;
     if (!ret) {
-      LOG(FATAL) << "Could not perform I/O in BORG" << std::endl;
+      mdm_->PrintDeviceInfo();
+      LOG(FATAL) << hshm::Formatter::format(
+          "Could not perform I/O in BORG."
+          " Reading from target ID:"
+          " (node_id: {}, tgt_id: {}, dev_id: {})",
+          buffer_info.tid_.GetNodeId(),
+          buffer_info.tid_.GetIndex(),
+          buffer_info.tid_.GetDeviceId()) << std::endl;
     }
   }
 }
@@ -178,6 +188,9 @@ void BufferOrganizer::GlobalOrganizeBlob(const std::string &bucket_name,
   bkt->GetBlobId(blob_name, blob_id);
   float blob_score = bkt->GetBlobScore(blob_id);
   Context ctx;
+
+  LOG(INFO) << "Changing blob score from: " << blob_score
+            << " to: " << score << std::endl;
 
   // Skip organizing if below threshold
   if (abs(blob_score - score) < .05) {

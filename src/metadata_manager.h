@@ -585,6 +585,23 @@ class MetadataManager : public hipc::ShmContainer {
       }
     }
   }
+
+  /**====================================
+   * Debugging Logs
+   * ===================================*/
+ public:
+  void PrintDeviceInfo() {
+    int id = 0;
+    for (hipc::Ref<DeviceInfo> dev_info : *devices_) {
+      LOG(INFO) << hshm::Formatter::format(
+              "Device {} is mounted on {} with capacity {} bytes",
+                       id,
+                       dev_info->mount_point_->str(),
+                       dev_info->header_->capacity_)
+                << std::endl;
+      ++id;
+    }
+  }
 };
 
 }  // namespace hermes

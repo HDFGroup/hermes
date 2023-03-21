@@ -33,8 +33,6 @@ MetadataManager::MetadataManager(
   borg_ = HERMES->borg_.get();
   header_->id_alloc_ = 1;
 
-  LOG(INFO) << "Initializing MDM" << std::endl;
-
   // Put the node_id in SHM
   header_->node_id_ = rpc_->node_id_;
 
@@ -55,10 +53,10 @@ MetadataManager::MetadataManager(
   // Create the DeviceInfo vector
   devices_ = hipc::make_ref<hipc::vector<DeviceInfo>>(
       header_->devices_, HERMES->main_alloc_, *config->devices_);
-  targets_ = hipc::make_ref<hipc::vector<TargetInfo>>(
-      header_->targets_, HERMES->main_alloc_);
 
   // Create the TargetInfo vector
+  targets_ = hipc::make_ref<hipc::vector<TargetInfo>>(
+      header_->targets_, HERMES->main_alloc_);
   targets_->reserve(devices_->size());
   int dev_id = 0;
   float maxbw = 0;

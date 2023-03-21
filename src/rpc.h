@@ -126,10 +126,10 @@ class RpcContext {
   TYPE_UNWRAP(RET) Global##BaseName(Args&& ...args) {\
     if constexpr(std::is_same_v<TYPE_UNWRAP(RET), void>) {\
       _Global##BaseName(\
-          hermes_shm::make_argpack(std::forward<Args>(args)...));\
+          hshm::make_argpack(std::forward<Args>(args)...));\
     } else {\
       return _Global##BaseName(\
-          hermes_shm::make_argpack(std::forward<Args>(args)...));\
+          hshm::make_argpack(std::forward<Args>(args)...));\
     }\
   }\
   template<typename ArgPackT>\
@@ -138,13 +138,13 @@ class RpcContext {
                          Forward<tuple_idx>()); \
     if (NODE_ID_IS_LOCAL(node_id)) {\
       if constexpr(std::is_same_v<TYPE_UNWRAP(RET), void>) {\
-        hermes_shm::PassArgPack::Call(\
+        hshm::PassArgPack::Call(\
             std::forward<ArgPackT>(pack), \
             [this](auto &&...args) constexpr {\
               this->Local##BaseName(std::forward<decltype(args)>(args)...);\
             });\
       } else {\
-        return hermes_shm::PassArgPack::Call(\
+        return hshm::PassArgPack::Call(\
             std::forward<ArgPackT>(pack), \
             [this](auto &&...args) constexpr {\
               return this->Local##BaseName( \
@@ -152,7 +152,7 @@ class RpcContext {
             });\
       } \
     } else { \
-      return hermes_shm::PassArgPack::Call( \
+      return hshm::PassArgPack::Call( \
           std::forward<ArgPackT>(pack), \
           [this, node_id](auto&& ...args) constexpr { \
             if constexpr(std::is_same_v<TYPE_UNWRAP(RET), void>) { \

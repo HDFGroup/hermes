@@ -13,8 +13,8 @@ output = sys.argv[2]
 blobs_per_rank = 16
 ranks_per_node = nprocs
 bkt_name = "hello"
-blob_size = 8 * (1 << 30)
-ram_size = 8 * (1 << 30)
+blob_size = 1 * (1 << 30)
+ram_size = 4 * (1 << 30)
 prefetch_per_rank = 1
 
 entries = []
@@ -24,7 +24,7 @@ for rank in range(nprocs):
     i = 0
     while i < blobs_per_rank:
         entries.append({
-            'node_id': 0,
+            'node_id': 1,
             'type': 1,
             'blob_name': rank * blobs_per_rank + i,
             'tag_name': bkt_name,
@@ -44,7 +44,7 @@ for rank in range(nprocs):
             if blob_name - k < 0:
                 break
             entries.append({
-                'node_id': 0,
+                'node_id': 1,
                 'type': 3,
                 'blob_name': blob_name - k - 1,
                 'tag_name': bkt_name,
@@ -59,7 +59,7 @@ for rank in range(nprocs):
             if blob_name + k + 1 < 0:
                 break
             entries.append({
-                'node_id': 0,
+                'node_id': 1,
                 'type': 1,
                 'blob_name': blob_name,
                 'tag_name': bkt_name,

@@ -103,6 +103,7 @@ void Hermes::InitClient(std::string server_config_path,
   bpm_ = hipc::Ref<BufferPool>(header_->bpm_, main_alloc_);
   borg_ = hipc::Ref<BufferOrganizer>(header_->borg_, main_alloc_);
   prefetch_.Init();
+  mdm_->PrintDeviceInfo();
 }
 
 void Hermes::LoadServerConfig(std::string config_path) {

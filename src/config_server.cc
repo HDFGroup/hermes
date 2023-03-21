@@ -135,7 +135,8 @@ void ServerConfig::ParsePrefetchInfo(YAML::Node yaml_conf) {
     prefetcher_.enabled_ = yaml_conf["enabled"].as<bool>();
   }
   if (yaml_conf["io_trace_path"]) {
-    prefetcher_.trace_path_ = yaml_conf["io_trace_path"].as<std::string>();
+    prefetcher_.trace_path_ = hshm::path_parser(
+        yaml_conf["io_trace_path"].as<std::string>());
   }
   if (yaml_conf["epoch_ms"]) {
     prefetcher_.epoch_ms_ = yaml_conf["epoch_ms"].as<size_t>();
