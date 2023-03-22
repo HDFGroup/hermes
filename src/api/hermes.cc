@@ -416,7 +416,11 @@ std::shared_ptr<Hermes> InitHermes(const char *config_file, bool is_daemon,
     LOG(FATAL) << "Big endian machines not supported yet." << std::endl;
   }
 
-  LOG(INFO) << "Initializing hermes config with " << config_file << std::endl;
+  if (config_file != NULL) {
+    LOG(INFO) << "Initializing hermes with " << config_file << std::endl;
+  } else {
+    LOG(INFO) << "Initializing hermes without conf file" << std::endl;
+  }
 
   hermes::Config config = {};
   hermes::InitConfig(&config, config_file);
