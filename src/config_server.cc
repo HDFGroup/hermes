@@ -74,8 +74,10 @@ void ServerConfig::ParseRpcInfo(YAML::Node yaml_conf) {
   }
   if (yaml_conf["host_names"] && rpc_.host_file_.size() == 0) {
     // NOTE(llogan): host file is prioritized
-    host_names = yaml_conf["host_names"].as<std::string>();
-    ParseHostNameString(host_names, host_numbers);
+    for (YAML::Node host_name_gen : yaml_conf["host_names"]) {
+      host_names = host_name_gen.as<std::string>();
+      ParseHostNameString(host_names, host_numbers);
+    }
   }
   if (yaml_conf["domain"]) {
     rpc_.domain_ = yaml_conf["domain"].as<std::string>();

@@ -90,7 +90,7 @@ rpc:
   # can be either a single number, or a range, which is 2 numbers separated by a
   # hyphen (-). For example the list {01, 03-05, 07, 08-10} will be expanded to
   # {01, 03, 04, 05, 07, 08, 09, 10}.
-  host_names: "localhost"
+  host_names: ["localhost"]
 
   # The RPC protocol. This must come from the documentation of the specific RPC
   # library in use.
