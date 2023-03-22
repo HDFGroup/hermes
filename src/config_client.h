@@ -66,7 +66,7 @@ class ClientConfig : public BaseConfig {
     adapter_config_.emplace(path, conf);
   }
 
-  void SetAdapterPathTracking(const std::string &path, bool include) {
+  void CreateAdapterPathTracking(const std::string &path, bool include) {
     path_list_.emplace_back(path, include);
     std::sort(path_list_.begin(),
               path_list_.end(),
@@ -74,6 +74,25 @@ class ClientConfig : public BaseConfig {
                  const std::pair<std::string, bool> &b) {
                 return a.first.size() > b.first.size();
               });
+  }
+
+  void SetAdapterPathTracking(const std::string &path, bool include) {
+    for (auto &pth : path_list_) {
+      if (pth.first == path) {
+        pth.second = include;
+        return;
+      }
+    }
+    CreateAdapterPathTracking(path, include);
+  }
+
+  bool GetAdapterPathTracking(const std::string &path) {
+    for (auto &pth : path_list_) {
+      if (pth.first == path) {
+        return pth.second;
+      }
+    }
+    return false;
   }
 
  private:

@@ -82,12 +82,40 @@ int finalize() {
   return 0;
 }
 
+void IgnoreAllFiles() {
+#if HERMES_INTERCEPT == 1
+  HERMES->client_config_.SetAdapterPathTracking(info.existing_file_cmp, false);
+  HERMES->client_config_.SetAdapterPathTracking(info.new_file_cmp, false);
+  HERMES->client_config_.SetAdapterPathTracking(info.new_file, false);
+  HERMES->client_config_.SetAdapterPathTracking(info.existing_file, false);
+#endif
+}
+
+void TrackFiles() {
+#if HERMES_INTERCEPT == 1
+  HERMES->client_config_.SetAdapterPathTracking(info.new_file, true);
+  HERMES->client_config_.SetAdapterPathTracking(info.existing_file, true);
+#endif
+}
+
+void RemoveFile(const std::string &path) {
+  stdfs::remove(path);
+  if (stdfs::exists(path)) {
+    LOG(FATAL) << "Failed to remove: " << path << std::endl;
+  }
+}
+
+void RemoveFiles() {
+  RemoveFile(info.new_file);
+  RemoveFile(info.new_file_cmp);
+  RemoveFile(info.existing_file);
+  RemoveFile(info.existing_file_cmp);
+}
+
 int pretest() {
-  if (stdfs::exists(info.new_file)) stdfs::remove(info.new_file);
-  if (stdfs::exists(info.new_file_cmp)) stdfs::remove(info.new_file_cmp);
-  if (stdfs::exists(info.existing_file)) stdfs::remove(info.existing_file);
-  if (stdfs::exists(info.existing_file_cmp))
-    stdfs::remove(info.existing_file_cmp);
+  IgnoreAllFiles();
+  RemoveFiles();
+
   if (!stdfs::exists(info.existing_file)) {
     std::string cmd = "{ tr -dc '[:alnum:]' < /dev/urandom | head -c " +
                       std::to_string(args.request_size * info.num_iterations) +
@@ -106,18 +134,12 @@ int pretest() {
             args.request_size * info.num_iterations);
   }
   REQUIRE(info.total_size > 0);
-#if HERMES_INTERCEPT == 1
-  HERMES->client_config_.SetAdapterPathTracking(info.existing_file_cmp, false);
-  HERMES->client_config_.SetAdapterPathTracking(info.new_file_cmp, false);
-#endif
+
+  TrackFiles();
   return 0;
 }
 
 int posttest(bool compare_data = true) {
-#if HERMES_INTERCEPT == 1
-  HERMES->client_config_.SetAdapterPathTracking(info.existing_file, false);
-  HERMES->client_config_.SetAdapterPathTracking(info.new_file, false);
-#endif
   if (compare_data && stdfs::exists(info.new_file) &&
       stdfs::exists(info.new_file_cmp)) {
     size_t size = stdfs::file_size(info.new_file);
@@ -177,18 +199,8 @@ int posttest(bool compare_data = true) {
     }
   }
   /* Clean up. */
-  if (stdfs::exists(info.new_file)) stdfs::remove(info.new_file);
-  if (stdfs::exists(info.existing_file)) stdfs::remove(info.existing_file);
-  if (stdfs::exists(info.new_file_cmp)) stdfs::remove(info.new_file_cmp);
-  if (stdfs::exists(info.existing_file_cmp))
-    stdfs::remove(info.existing_file_cmp);
-
-#if HERMES_INTERCEPT == 1
-  HERMES->client_config_.SetAdapterPathTracking(info.existing_file_cmp, true);
-  HERMES->client_config_.SetAdapterPathTracking(info.new_file_cmp, true);
-  HERMES->client_config_.SetAdapterPathTracking(info.new_file, true);
-  HERMES->client_config_.SetAdapterPathTracking(info.existing_file, true);
-#endif
+  TrackFiles();
+  RemoveFiles();
   return 0;
 }
 
@@ -331,7 +343,9 @@ TEST_CASE("BatchedWriteSequentialScratch",
     }
     test::test_fclose();
     REQUIRE(test::status_orig == 0);
-     REQUIRE(stdfs::file_size(info.new_file) == 0);
+    IgnoreAllFiles();
+    REQUIRE(stdfs::file_size(info.new_file) == 0);
+    TrackFiles();
   }
   posttest(false);
 }
