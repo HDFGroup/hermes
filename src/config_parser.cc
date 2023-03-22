@@ -87,19 +87,25 @@ void PrintExpectedAndFail(const std::string &expected, u32 line_number = 0) {
   LOG(FATAL) << msg.str();
 }
 
-/** log an error message when the number of devices is 0 in \a config */
+/** log an error message when the number of devices is < 1 in \a config */
 void RequireNumDevices(Config *config) {
-  if (config->num_devices == 0) {
-    LOG(FATAL) << "The configuration variable 'num_devices' must be defined "
-               << "first" << std::endl;
+  if (config->num_devices < 1 || config->num_devices > kMaxDevices) {
+    LOG(FATAL) << "The configuration variable 'num_devices' is out of range: "
+               << config->num_devices << std::endl;
   }
 }
 
-/** log an error message when the number of slabs is 0 in \a config  */
+/** log an error message when the number of any slab is < 1 in \a config  */
 void RequireNumSlabs(Config *config) {
-  if (config->num_slabs == 0) {
-    LOG(FATAL) << "The configuration variable 'num_slabs' must be defined first"
-               << std::endl;
+  for (int device = 0; device < config->num_devices; ++device) {
+    if (config->num_slabs[device] < 1) {
+      LOG(FATAL)
+        << "The configuration variable 'num_slabs' for device "
+        << device
+        << " is invalid: "
+        << config->num_slabs[device]
+        << std::endl;
+    }
   }
 }
 
