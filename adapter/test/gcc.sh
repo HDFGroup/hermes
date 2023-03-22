@@ -5,8 +5,8 @@ EXEC_NAME=$3
 ARGS=$4
 SLEEP_TIME=3
 
-export HERMES_CONF="${CMAKE_SOURCE_DIR}/test/data/hermes_server.yaml"
 export HERMES_CLIENT_CONF="${CMAKE_SOURCE_DIR}/test/data/hermes_client.yaml"
+export HERMES_CONF="${CMAKE_SOURCE_DIR}/test/data/hermes_server.yaml"
 
 # Start the Hermes daemon
 echo "STARTING DAEMON"

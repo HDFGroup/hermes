@@ -8,8 +8,8 @@ CONF=$6
 ASYNC=$7
 SLEEP_TIME=3
 
-export HERMES_CONF="${CMAKE_SOURCE_DIR}/test/data/${CONF}_client.yaml"
-export HERMES_CLIENT_CONF="${CMAKE_SOURCE_DIR}/test/data/${CONF}_server.yaml"
+export HERMES_CLIENT_CONF="${CMAKE_SOURCE_DIR}/test/data/${CONF}_client.yaml"
+export HERMES_CONF="${CMAKE_SOURCE_DIR}/test/data/${CONF}_server.yaml"
 
 # Start the Hermes daemon
 echo "STARTING DAEMON"
@@ -21,6 +21,7 @@ sleep ${SLEEP_TIME}
 echo "RUNNING PROGRAM"
 export LSAN_OPTIONS=suppressions="${CMAKE_SOURCE_DIR}/test/data/asan.supp"
 export COMMAND="${CMAKE_BINARY_DIR}/bin/${EXEC_NAME}"
+echo ""${COMMAND}" "${TAGS}" --reporter compact -d yes"
 "${COMMAND}" "${TAGS}" --reporter compact -d yes
 status=$?
 

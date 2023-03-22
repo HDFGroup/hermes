@@ -12,7 +12,7 @@ devices:
 
     # The maximum buffering capacity in MiB of each device. Here we say that all 4
     # devices get 50 MiB of buffering capacity.
-    capacity: 5000MB
+    capacity: 50MB
 
     # The size of the smallest available buffer in KiB. In general this should be
     # the page size of your system for byte addressable storage, and the block size
@@ -69,7 +69,7 @@ devices:
 
   pfs:
     mount_point: "./"
-    capacity: inf
+    capacity: 4GB
     block_size: 64KB # The stripe size of PFS
     slab_sizes: [ 4KB, 16KB, 64KB, 1MB ]
     bandwidth: 100MBps # Per-device bandwidth

@@ -148,7 +148,7 @@ struct ShmHeader<BufferPool> {
   SHM_CONTAINER_HEADER_TEMPLATE(ShmHeader)
   hipc::ShmArchive<BpTargetAllocs> free_lists_;
   u16 ntargets_;
-  size_t ncpu_;
+  size_t concurrency_;
   size_t nslabs_;
 
   /**
@@ -156,7 +156,7 @@ struct ShmHeader<BufferPool> {
    * */
   void strong_copy(const ShmHeader &other) {
     ntargets_ = other.ntargets_;
-    ncpu_ = other.ncpu_;
+    concurrency_ = other.concurrency_;
     nslabs_ = other.nslabs_;
   }
 
@@ -165,7 +165,7 @@ struct ShmHeader<BufferPool> {
    * This is where region_off_ & region_size_ in the BpFreeListStat are valid
    * */
   size_t GetCpuTargetStat(u16 target, int cpu) {
-    return target * ncpu_ * nslabs_ + cpu * nslabs_;
+    return target * concurrency_ * nslabs_ + cpu * nslabs_;
   }
 
   /**
@@ -175,7 +175,7 @@ struct ShmHeader<BufferPool> {
    * [target] [cpu] [slab_id]
    * */
   size_t GetCpuFreeList(u16 target, int cpu, int slab_id) {
-    return target * ncpu_ * nslabs_ + cpu * nslabs_ + slab_id;
+    return target * concurrency_ * nslabs_ + cpu * nslabs_ + slab_id;
   }
 };
 
@@ -256,7 +256,6 @@ class BufferPool : public hipc::ShmContainer {
    * @param coins The requested number of slabs to allocate from this target
    * @param tid The ID of the (ideal) target to allocate from
    * @param cpu The CPU we are currently scheduled on
-   * @param target_stat The metadata for the target on this CPU
    * @param blob_off [out] The current size of the blob which has been placed
    * @param buffers [out] The buffers which were allocated
    * */
@@ -264,7 +263,6 @@ class BufferPool : public hipc::ShmContainer {
                        std::vector<BpCoin> &coins,
                        TargetId tid,
                        int cpu,
-                       hipc::Ref<BpFreeListStat> &target_stat,
                        size_t &blob_off,
                        std::vector<BufferInfo> &buffers);
 
@@ -276,9 +274,6 @@ class BufferPool : public hipc::ShmContainer {
    * @param slab_count The count of this slab size to allocate
    * @param slab_id The offset of the slab in the device's slab list
    * @param tid The target to allocate slabs from
-   * @param free_list The CPU free list for this slab size
-   * @param free_list_stat The metadata for the free list
-   * @param target_stat The metadata for the CPU core
    * @param blob_off [out] The current size of the blob which has been placed
    * @param buffers [out] The buffers which were allocated
    * */
@@ -287,9 +282,7 @@ class BufferPool : public hipc::ShmContainer {
                      size_t &slab_count,
                      size_t slab_id,
                      TargetId tid,
-                     hipc::Ref<BpFreeList> &free_list,
-                     hipc::Ref<BpFreeListStat> &free_list_stat,
-                     hipc::Ref<BpFreeListStat> &target_stat,
+                     int cpu,
                      size_t &blob_off,
                      std::vector<BufferInfo> &buffers);
 
@@ -303,7 +296,8 @@ class BufferPool : public hipc::ShmContainer {
    * @return returns a BufferPool (BP) slot. The slot is NULL if the
    * target didn't have enough remaining space.
    * */
-  BpSlot AllocateSlabSize(size_t slab_size,
+  BpSlot AllocateSlabSize(int cpu,
+                          size_t slab_size,
                           hipc::Ref<BpFreeList> &free_list,
                           hipc::Ref<BpFreeListStat> &stat,
                           hipc::Ref<BpFreeListStat> &target_stat);
