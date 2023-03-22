@@ -35,6 +35,9 @@ class Prefetcher {
   /** Initialize each candidate prefetcher, including trace info */
   void Init();
 
+  /** Finalize the prefetcher thread */
+  void Finalize();
+
   /** Parse the MDM's I/O pattern log */
   void Run();
 };

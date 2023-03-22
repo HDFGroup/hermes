@@ -83,12 +83,19 @@ void Prefetcher::Init() {
       tl::thread::self().sleep(*HERMES->rpc_.server_engine_,
                                prefetch->epoch_ms_);
     }
+    LOG(INFO) << "Prefetcher has stopped" << std::endl;
   };
 
   ABT_xstream_create(ABT_SCHED_NULL, &execution_stream_);
   ABT_thread_create_on_xstream(execution_stream_,
                                prefetcher, nullptr,
                                ABT_THREAD_ATTR_NULL, NULL);
+}
+
+/** Finalize the prefetcher thread */
+void Prefetcher::Finalize() {
+  ABT_xstream_join(execution_stream_);
+  ABT_xstream_free(&execution_stream_);
 }
 
 /** Parse the MDM's I/O pattern log */

@@ -12,9 +12,11 @@
 
 #include <string>
 
+#include "hermes.h"
 #include "metadata_manager.h"
 #include "rpc_thallium.h"
 #include "hermes_shm/util/singleton.h"
+#include "prefetcher.h"
 #include <fstream>
 
 namespace tl = thallium;
@@ -61,7 +63,7 @@ void ThalliumRpc::RunDaemon() {
   auto prefinalize_callback = [this]() {
     LOG(INFO) << "Beginning finalization on node: " <<
         this->node_id_ << std::endl;
-    Finalize();
+    this->Finalize();
     LOG(INFO) << "Finished finalization callback on node: " <<
         this->node_id_ << std::endl;
   };
@@ -105,14 +107,24 @@ std::string ThalliumRpc::GetServerName(u32 node_id) {
 void ThalliumRpc::Finalize() {
   switch (mode_) {
     case HermesType::kServer: {
-      // comm_->WorldBarrier();
+      LOG(INFO) << "Stopping (server mode)" << std::endl;
       this->kill_requested_.store(true);
-      server_engine_->finalize();
-      client_engine_->finalize();
+      HERMES->prefetch_.Finalize();
+      try {
+        // NOTE(llogan): Don't use finalize with unique_ptr. finalize() is
+        // called in the destructor of the tl::enigne, and will segfault if
+        // called twice.
+        // server_engine_->finalize();
+        server_engine_.release();
+      } catch (std::exception &e) {
+        LOG(INFO) << "Ignoring margo finalization error: "
+                  << e.what() << std::endl;
+      }
       break;
     }
     case HermesType::kClient: {
-      client_engine_->finalize();
+      LOG(INFO) << "Stopping (client mode)" << std::endl;
+      client_engine_.release();
       break;
     }
     default: {

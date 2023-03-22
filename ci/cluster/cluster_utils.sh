@@ -16,7 +16,7 @@ host2=${project_name}_${node_names[1]}_1
 # Build images and start a cluster
 function hermes_cluster_up() {
     local num_workers=${1:-1}
-    local conf_path=${script_dir}/../../test/data/hermes.yaml
+    local conf_path=${script_dir}/../../test/data/hermes_server.yaml
 
     # Build the images, passing our user id and group id so the container user can
     # modify the .gcda coverage files
@@ -59,7 +59,7 @@ function hermes_cluster_test() {
                    --user ${docker_user}                               \
                    -w ${hermes_build_dir}                              \
                    ${node_names[0]}                                    \
-                   mpirun -n 4 -ppn 2 -hosts ${hosts} bin/end_to_end_test ${cluster_conf}
+                   mpirun -n 4 -ppn 2 -hosts ${hosts} bin/test_multinode_put_get ${cluster_conf}
 }
 
 # Stop the cluster
