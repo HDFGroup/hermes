@@ -32,6 +32,7 @@ DPE::DPE() : mdm_(HERMES->mdm_.get()) {}
 Status DPE::CalculatePlacement(const std::vector<size_t> &blob_sizes,
                                std::vector<PlacementSchema> &output,
                                api::Context &ctx) {
+  AUTO_TRACE(1)
   Status result;
 
   // NOTE(chogan): Start with local targets and gradually expand the target

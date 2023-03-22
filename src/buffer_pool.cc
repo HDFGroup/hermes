@@ -105,6 +105,7 @@ void BufferPool::shm_deserialize_main() {
 std::vector<BufferInfo>
 BufferPool::LocalAllocateAndSetBuffers(PlacementSchema &schema,
                                        const Blob &blob) {
+  AUTO_TRACE(1)
   std::vector<BufferInfo> buffers;
   size_t blob_off = 0;
   int cpu = hermes_shm::NodeThreadId().hash() % header_->ncpu_;
@@ -148,19 +149,20 @@ BufferPool::LocalAllocateAndSetBuffers(PlacementSchema &schema,
 std::vector<BufferInfo>
 BufferPool::GlobalAllocateAndSetBuffers(PlacementSchema &schema,
                                         const Blob &blob) {
+  AUTO_TRACE(1)
   // Get the nodes to transfer buffers to
   size_t total_size;
-  auto unique_tgts = GroupByTarget(schema, total_size);
+  auto unique_nodes = GroupByNodeId(schema, total_size);
   std::vector<BufferInfo> info;
 
   // Send the buffers to each node
-  for (auto &[tid, size] : unique_tgts) {
+  for (auto &[node_id, size] : unique_nodes) {
     std::vector<BufferInfo> sub_info;
-    if (NODE_ID_IS_LOCAL(tid.GetNodeId())) {
+    if (NODE_ID_IS_LOCAL(node_id)) {
       sub_info = LocalAllocateAndSetBuffers(schema, blob);
     } else {
       sub_info = rpc_->IoCall<std::vector<BufferInfo>>(
-          tid.GetNodeId(), "RpcAllocateAndSetBuffers",
+          node_id, "RpcAllocateAndSetBuffers",
           IoType::kWrite, blob.data(), blob.size(),
           blob.size(), schema);
     }
@@ -362,6 +364,7 @@ std::vector<BpCoin> BufferPool::CoinSelect(hipc::Ref<DeviceInfo> &dev_info,
  * Free buffers from the BufferPool
  * */
 bool BufferPool::LocalReleaseBuffers(std::vector<BufferInfo> &buffers) {
+  AUTO_TRACE(1)
   int cpu = hermes_shm::NodeThreadId().hash() % header_->ncpu_;
   for (BufferInfo &info : buffers) {
     // Acquire the main CPU lock for the target
@@ -383,16 +386,17 @@ bool BufferPool::LocalReleaseBuffers(std::vector<BufferInfo> &buffers) {
  * Free buffers from the BufferPool (global)
  * */
 bool BufferPool::GlobalReleaseBuffers(std::vector<BufferInfo> &buffers) {
+  AUTO_TRACE(1)
   // Get the nodes to transfer buffers to
   size_t total_size;
-  auto unique_tgts = GroupByTarget(buffers, total_size);
+  auto unique_nodes = GroupByNodeId(buffers, total_size);
 
   // Send the buffers to each node
-  for (auto &[tid, size] : unique_tgts) {
-    if (NODE_ID_IS_LOCAL(tid.GetNodeId())) {
+  for (auto &[node_id, size] : unique_nodes) {
+    if (NODE_ID_IS_LOCAL(node_id)) {
       LocalReleaseBuffers(buffers);
     } else {
-      rpc_->Call<bool>(tid.GetNodeId(), "RpcReleaseBuffers", buffers);
+      rpc_->Call<bool>(node_id, "RpcReleaseBuffers", buffers);
     }
   }
 

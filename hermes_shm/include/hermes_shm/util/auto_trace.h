@@ -18,32 +18,35 @@
 
 namespace hermes_shm {
 
-#define AUTO_TRACE() AutoTrace(__PRETTY_FUNCTION__);
-
-/** An in-memory log of trace times */
-class AutoTraceLog {
- public:
-  std::stringstream ss_;
-  void emplace_back(const std::string &fname, Timer timer) {
-    ss_ << fname << "," << timer.GetUsec() << "," << std::endl;
-  }
-};
+#define AUTO_TRACE(LOG_LEVEL) \
+  hermes_shm::AutoTrace<LOG_LEVEL> hsm_tracer_(__PRETTY_FUNCTION__);
 
 /** Trace function execution times */
+template<int LOG_LEVEL>
 class AutoTrace {
  private:
   HighResMonotonicTimer timer_;
   std::string fname_;
-  static AutoTraceLog log_;
 
  public:
-  explicit AutoTrace(const std::string &fname) : fname_(fname) {
-    timer_.Resume();
+  template<typename ...Args>
+  explicit AutoTrace(const char *fname) : fname_(fname) {
+#ifdef HERMES_ENABLE_PROFILING
+    if constexpr(LOG_LEVEL <= HERMES_ENABLE_PROFILING) {
+      timer_.Resume();
+    }
+#endif
   }
 
   ~AutoTrace() {
-    timer_.Pause();
-    log_.emplace_back(fname_, timer_);
+#ifdef HERMES_ENABLE_PROFILING
+    if constexpr(LOG_LEVEL <= HERMES_ENABLE_PROFILING) {
+      timer_.Pause();
+      std::cout << hshm::Formatter::format("{};{}ns\n",
+                                           fname_,
+                                           timer_.GetNsec());
+    }
+#endif
   }
 };
 

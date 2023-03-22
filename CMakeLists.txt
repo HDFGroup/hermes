@@ -167,11 +167,11 @@ option(HERMES_ENABLE_STDIO_ADAPTER "Build the Hermes stdio adapter." ON)
 option(HERMES_ENABLE_MPIIO_ADAPTER "Build the Hermes MPI-IO adapter." OFF)
 option(HERMES_ENABLE_PUBSUB_ADAPTER "Build the Hermes pub/sub adapter." ON)
 option(HERMES_ENABLE_VFD "Build the Hermes HDF5 Virtual File Driver" OFF)
-option(HERMES_ENABLE_WRAPPER "Enable hermes C API wrapper." ON)
 option(HERMES_ENABLE_GFLAGS "Enable GFLAGS support." ON)
 option(HERMES_BUILD_ADAPTER_TESTS "Enable installation of tests." ON)
 option(HERMES_INSTALL_TESTS "Enable installation of tests." OFF)
 option(HERMES_ONLY_RPC "Avoids the shared-memory case in RPC for testing" OFF)
+option(HERMES_ENABLE_PROFILING "Enables profiling of certain functoins" OFF)
 
 # Calculate code coverage with debug mode
 if(HERMES_ENABLE_COVERAGE)

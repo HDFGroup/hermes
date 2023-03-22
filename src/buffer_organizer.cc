@@ -70,6 +70,7 @@ void BufferOrganizer::shm_destroy_main() {}
 /** Stores a blob into a set of buffers */
 RPC void BufferOrganizer::LocalPlaceBlobInBuffers(
     const Blob &blob, std::vector<BufferInfo> &buffers) {
+  AUTO_TRACE(1)
   size_t blob_off = 0;
   for (BufferInfo &buffer_info : buffers) {
     if (buffer_info.tid_.GetNodeId() != mdm_->rpc_->node_id_) {
@@ -109,17 +110,18 @@ RPC void BufferOrganizer::LocalPlaceBlobInBuffers(
 /** Globally store a blob into a set of buffers */
 void BufferOrganizer::GlobalPlaceBlobInBuffers(
     const Blob &blob, std::vector<BufferInfo> &buffers) {
+  AUTO_TRACE(1)
   // Get the nodes to transfer buffers to
   size_t total_size;
-  auto unique_tgts = GroupByTarget(buffers, total_size);
+  auto unique_nodes = GroupByNodeId(buffers, total_size);
 
   // Send the buffers to each node
-  for (auto &[tid, size] : unique_tgts) {
-    if (NODE_ID_IS_LOCAL(tid.GetNodeId())) {
+  for (auto &[node_id, size] : unique_nodes) {
+    if (NODE_ID_IS_LOCAL(node_id)) {
       LocalPlaceBlobInBuffers(blob, buffers);
     } else {
       rpc_->IoCall<void>(
-          tid.GetNodeId(), "RpcPlaceBlobInBuffers",
+          node_id, "RpcPlaceBlobInBuffers",
           IoType::kWrite, blob.data(), blob.size(),
           blob.size(), buffers);
     }
@@ -128,8 +130,8 @@ void BufferOrganizer::GlobalPlaceBlobInBuffers(
 
 /** Stores a blob into a set of buffers */
 RPC Blob BufferOrganizer::LocalReadBlobFromBuffers(
-    std::vector<BufferInfo> &buffers) {
-  Blob blob(SumBufferBlobSizes(buffers));
+    Blob &blob, std::vector<BufferInfo> &buffers) {
+  AUTO_TRACE(1)
   size_t blob_off = 0;
   for (BufferInfo &buffer_info : buffers) {
     if (buffer_info.tid_.GetNodeId() != mdm_->rpc_->node_id_) {
@@ -162,37 +164,44 @@ RPC Blob BufferOrganizer::LocalReadBlobFromBuffers(
 /** The Global form of ReadBLobFromBuffers */
 Blob BufferOrganizer::GlobalReadBlobFromBuffers(
     std::vector<BufferInfo> &buffers) {
+  AUTO_TRACE(1)
   // Get the nodes to transfer buffers to
   size_t total_size = 0;
-  auto unique_tgts = GroupByTarget(buffers, total_size);
+  auto unique_nodes = GroupByNodeId(buffers, total_size);
 
   // Send the buffers to each node
   std::vector<Blob> blobs;
-  for (auto &[tid, size] : unique_tgts) {
-    if (NODE_ID_IS_LOCAL(tid.GetNodeId())) {
-      Blob b = LocalReadBlobFromBuffers(buffers);
-      blobs.emplace_back(b);
+  for (auto &[node_id, size] : unique_nodes) {
+    if (NODE_ID_IS_LOCAL(node_id)) {
+      blobs.emplace_back(size);
+      LocalReadBlobFromBuffers(blobs.back(), buffers);
     } else {
       blobs.emplace_back(size);
       rpc_->IoCall<void>(
-          tid.GetNodeId(), "RpcReadBlobFromBuffers",
+          node_id, "RpcReadBlobFromBuffers",
           IoType::kRead, blobs.back().data(), size,
-          buffers);
+          size, buffers);
     }
+  }
+
+  // If the blob was only on one node
+  if (unique_nodes.size() == 1) {
+    return blobs.back();
   }
 
   // Merge the blobs at the end
   hapi::Blob blob(total_size);
-  for (size_t i = 0; i < unique_tgts.size(); ++i) {
-    auto &[tid, size] = unique_tgts[i];
+  for (size_t i = 0; i < unique_nodes.size(); ++i) {
+    auto &[node_id, size] = unique_nodes[i];
     auto &tmp_blob = blobs[i];
     size_t tmp_blob_off = 0;
     for (BufferInfo &info : buffers) {
-      if (info.tid_.GetNodeId() != tid.GetNodeId()) {
+      if (info.tid_.GetNodeId() != node_id) {
         continue;
       }
       memcpy(blob.data() + info.blob_off_,
-             tmp_blob.data(), info.blob_size_);
+             tmp_blob.data() + tmp_blob_off,
+             info.blob_size_);
       tmp_blob_off += info.blob_size_;
     }
   }
@@ -203,6 +212,7 @@ Blob BufferOrganizer::GlobalReadBlobFromBuffers(
 void BufferOrganizer::GlobalOrganizeBlob(const std::string &bucket_name,
                                          const std::string &blob_name,
                                          float score) {
+  AUTO_TRACE(1)
   auto bkt = HERMES->GetBucket(bucket_name);
   BlobId blob_id;
   bkt->GetBlobId(blob_name, blob_id);

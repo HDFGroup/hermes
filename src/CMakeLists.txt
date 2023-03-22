@@ -97,9 +97,14 @@ target_link_libraries(hermes
   PUBLIC "$<$<BOOL:${HERMES_INTERCEPT_IO}>:${GOTCHA_MODULE_LIBS}>"
 )
 
+if (HERMES_ENABLE_PROFILING)
+  message("profiling is enabled: ${HERMES_ENABLE_PROFILING}")
+endif()
+
 target_compile_definitions(hermes
   PRIVATE $<$<BOOL:${HERMES_ENABLE_TIMING}>:HERMES_ENABLE_TIMING>
   PRIVATE $<$<BOOL:${HERMES_ONLY_RPC}>:HERMES_ONLY_RPC>
+  PRIVATE $<$<BOOL:${HERMES_ENABLE_PROFILING}>:HERMES_ENABLE_PROFILING>
 )
 
 hermes_set_lib_options(hermes "hermes" ${HERMES_LIBTYPE})

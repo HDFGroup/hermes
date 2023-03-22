@@ -74,8 +74,8 @@ TEST_CASE("TestBufferPool") {
         HERMES->bpm_->LocalAllocateAndSetBuffers(schema, write_blob);
 
     // Read back the buffers
-   hermes::Blob read_blob =
-        HERMES->borg_->LocalReadBlobFromBuffers(buffers);
+   hermes::Blob read_blob(size);
+   HERMES->borg_->LocalReadBlobFromBuffers(read_blob, buffers);
 
    // Verify they are the same
    REQUIRE(read_blob.size() == size);

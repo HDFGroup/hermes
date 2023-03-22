@@ -259,9 +259,10 @@ void ThalliumRpc::DefineRpcs() {
   RegisterRpc("RpcReadBlobFromBuffers", [this, borg](
                                            const request &req,
                                            tl::bulk &bulk,
+                                           size_t size,
                                            std::vector<BufferInfo> &buffers) {
-    hapi::Blob blob;
-    blob = borg->LocalReadBlobFromBuffers(buffers);
+    hapi::Blob blob(size);
+    borg->LocalReadBlobFromBuffers(blob, buffers);
     this->IoCallServer(req, bulk, IoType::kRead, blob.data(), blob.size());
     req.respond(true);
   });
