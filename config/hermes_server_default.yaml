@@ -84,14 +84,10 @@ rpc:
   # option is not empty, it will override anything in `rpc_server_base_name`.
   host_file: ""
 
-  # Host names are constructed as "base_name +
-  # host_number + rpc_server_suffix." Each entry in the rpc_host_number_range_list
-  # can be either a single number, or a range, which is 2 numbers separated by a
-  # hyphen (-). For example the list {01, 03-05, 07, 08-10} will be expanded to
-  # {01, 03, 04, 05, 07, 08, 09, 10}.
-  base_name: "localhost"
-  host_number_range: []
-  suffix: ""
+  # Host names can be defined using the following syntax:
+  # ares-comp-[0-9]-40g will convert to ares-comp-0-40g, ares-comp-1-40g, ...
+  # ares-comp[00-09] will convert to ares-comp-00, ares-comp-01, ...
+  host_names: "localhost"
 
   # The RPC protocol. This must come from the documentation of the specific RPC
   # library in use.

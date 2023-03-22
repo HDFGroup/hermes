@@ -95,41 +95,97 @@ static void ParseVector(YAML::Node list_node, VEC_TYPE &list) {
   }
 }
 
-/** parse range list from configuration file in YAML */
-static void ParseRangeList(YAML::Node list_node, std::string var,
-                           std::vector<std::string> &list) {
-  int min, max, width = 0;
-  for (auto val_node : list_node) {
-    std::string val = val_node.as<std::string>();
-    if (val.find('-') == std::string::npos) {
-      min = val_node.as<int>();
-      max = min;
+/**
+ * parse a hostfile string
+ * [] represents a range to generate
+ * ; represents a new host name completely
+ *
+ * Example: hello[00-09,10]-40g;hello2[11-13]-40g
+ * */
+static void ParseHostNameString(std::string hostname_set_str,
+                                std::vector<std::string> &list) {
+  // Remove all whitespace characters from host name
+  std::remove(hostname_set_str.begin(), hostname_set_str.end(), ' ');
+  std::remove(hostname_set_str.begin(), hostname_set_str.end(), '\n');
+  std::remove(hostname_set_str.begin(), hostname_set_str.end(), '\r');
+  std::remove(hostname_set_str.begin(), hostname_set_str.end(), '\t');
+  if (hostname_set_str.size() == 0) {
+    return;
+  }
+  // Expand hostnames
+  std::stringstream ss(hostname_set_str);
+  while (ss.good()) {
+    // Get the current host
+    std::string hostname;
+    std::getline(ss, hostname, ';');
+
+    // Divide the hostname string into prefix, ranges, and suffix
+    auto lbracket = hostname.find_first_of('[');
+    auto rbracket = hostname.find_last_of(']');
+    std::string prefix, ranges_str, suffix;
+    if (lbracket != std::string::npos && rbracket != std::string::npos) {
+      /*
+       * For example, hello[00-09]-40g
+       * lbracket = 5
+       * rbracket = 11
+       * prefix = hello (length: 5)
+       * range = 00-09 (length: 5)
+       * suffix = -40g (length: 4)
+       * */
+      prefix = hostname.substr(0, lbracket);
+      ranges_str = hostname.substr(lbracket + 1, rbracket - lbracket - 1);
+      suffix = hostname.substr(rbracket + 1);
     } else {
-      std::stringstream ss(val);
-      std::string word;
-      std::vector<std::string> words;
-      while (std::getline(ss, word, '-')) {
-        words.push_back(word);
-      }
-      if (words.size() != 2) {
-        LOG(FATAL) << var <<
-            " has invalid range definition " << val << std::endl;
-        return;
-      }
-      min = std::stoi(words[0]);
-      max = std::stoi(words[1]);
-      width = words[0].size();
+      list.emplace_back(hostname);
+      continue;
     }
 
-    if (width > 0) {
-      for (int i = min; i <= max; ++i) {
-        std::stringstream ss;
-        ss << std::setw(width) << std::setfill('0') << i;
-        list.emplace_back(ss.str());
+    // Parse the range list into a tuple of (min, max, num_width)
+    std::stringstream ss_ranges(ranges_str);
+    std::vector<std::tuple<int, int, int>> ranges;
+    while (ss_ranges.good()) {
+      // Parse ',' and remove spaces
+      std::string range_str;
+      std::getline(ss_ranges, range_str, ',');
+      std::remove(range_str.begin(), range_str.end(), ' ');
+
+      // Divide the range by '-'
+      auto dash = range_str.find_first_of('-');
+      if (dash != std::string::npos) {
+        int min, max;
+        // Get the minimum and maximum value
+        std::string min_str = range_str.substr(0, dash);
+        std::string max_str = range_str.substr(dash + 1);
+        std::stringstream(min_str) >> min;
+        std::stringstream(max_str) >> max;
+
+        // Check for leading 0s
+        int num_width = 0;
+        if (min_str.size() == max_str.size()) {
+          num_width = min_str.size();
+        }
+
+        // Place the range with width
+        ranges.emplace_back(min, max, num_width);
+      } else if (range_str.size()) {
+        int val;
+        std::stringstream(range_str) >> val;
+        ranges.emplace_back(val, val, range_str.size());
       }
-    } else {
+    }
+
+    // Expand the host names by each range
+    for (auto &range : ranges) {
+      int min = std::get<0>(range);
+      int max = std::get<1>(range);
+      int num_width = std::get<2>(range);
+
       for (int i = min; i <= max; ++i) {
-        list.emplace_back(std::to_string(i));
+        std::stringstream host_ss;
+        host_ss << prefix;
+        host_ss << std::setw(num_width) << std::setfill('0') << i;
+        host_ss << suffix;
+        list.emplace_back(host_ss.str());
       }
     }
   }

@@ -64,7 +64,7 @@ void ServerConfig::ParseDeviceInfo(YAML::Node yaml_conf) {
 
 /** parse RPC information from YAML config */
 void ServerConfig::ParseRpcInfo(YAML::Node yaml_conf) {
-  std::string base_name;
+  std::string host_names;
   std::string suffix;
   std::vector<std::string> host_numbers;
 
@@ -72,15 +72,10 @@ void ServerConfig::ParseRpcInfo(YAML::Node yaml_conf) {
     rpc_.host_file_ =
         hshm::path_parser(yaml_conf["host_file"].as<std::string>());
   }
-  if (yaml_conf["base_name"]) {
-    base_name = yaml_conf["base_name"].as<std::string>();
-  }
-  if (yaml_conf["suffix"]) {
-    suffix = yaml_conf["suffix"].as<std::string>();
-  }
-  if (yaml_conf["number_range"]) {
-    ParseRangeList(yaml_conf["rpc_host_number_range"], "rpc_host_number_range",
-                   host_numbers);
+  if (yaml_conf["host_names"] && rpc_.host_file_.size() == 0) {
+    // NOTE(llogan): host file is prioritized
+    host_names = yaml_conf["host_names"].as<std::string>();
+    ParseHostNameString(host_names, host_numbers);
   }
   if (yaml_conf["domain"]) {
     rpc_.domain_ = yaml_conf["domain"].as<std::string>();
@@ -96,16 +91,16 @@ void ServerConfig::ParseRpcInfo(YAML::Node yaml_conf) {
   }
 
   // Remove all default host names
-  if (rpc_.host_file_.size() > 0 || base_name.size() > 0) {
+  if (rpc_.host_file_.size() > 0 || host_names.size() > 0) {
     rpc_.host_names_.clear();
   }
 
-  if (base_name.size()) {
+  if (host_names.size()) {
     if (host_numbers.size() == 0) {
       host_numbers.emplace_back("");
     }
     for (auto host_number : host_numbers) {
-      rpc_.host_names_.emplace_back(base_name + host_number + suffix);
+      rpc_.host_names_.emplace_back(host_names + host_number + suffix);
     }
   }
 }

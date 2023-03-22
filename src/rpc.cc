@@ -45,7 +45,7 @@ void RpcContext::InitRpcContext() {
   port_ = config_->rpc_.port_;
   mode_ = HERMES->mode_;
   if (hosts_.size()) { return; }
-  // Uses hosts produced by base_name + host_number_range
+  // Uses hosts produced by host_names
   auto &hosts = config_->rpc_.host_names_;
   // Load hosts from hostfile
   if (!config_->rpc_.host_file_.empty()) {
