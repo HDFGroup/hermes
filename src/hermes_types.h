@@ -165,6 +165,10 @@ union TargetId {
     bits_.index_ = index;
   }
 
+  TargetId(const TargetId &other) {
+    as_int_ = other.as_int_;
+  }
+
   u32 GetNodeId() {
     return bits_.node_id_;
   }

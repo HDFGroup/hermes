@@ -107,7 +107,7 @@ BufferPool::LocalAllocateAndSetBuffers(PlacementSchema &schema,
                                        const Blob &blob) {
   std::vector<BufferInfo> buffers;
   size_t blob_off = 0;
-  int cpu = hermes_shm::NodeThreadId().hash() % HERMES_SYSTEM_INFO->ncpu_;
+  int cpu = hermes_shm::NodeThreadId().hash() % header_->ncpu_;
 
   for (SubPlacement &plcmnt : schema.plcmnts_) {
     // Get the target and device in the placement schema
@@ -214,13 +214,14 @@ void BufferPool::AllocateBuffers(size_t total_size,
 
       // Go to the next target if there was not enough space in this target
       if (slab_count > 0) {
-        tid.bits_.index_ += 1;
-        if (tid.GetIndex() >= mdm_->targets_->size()) {
+        int target_id = tid.GetIndex() + 1;
+        if (target_id >= mdm_->targets_->size()) {
           LOG(FATAL) << "BORG ran out of space on all targets."
                      << "This shouldn't happen."
                      << "Please increase the amount of space dedicated to PFS"
                      << std::endl;
         }
+        tid = (*mdm_->targets_)[target_id]->id_;
         GetTargetStatForCpu(tid.GetIndex(), cpu, target_stat);
       }
     }
@@ -361,7 +362,7 @@ std::vector<BpCoin> BufferPool::CoinSelect(hipc::Ref<DeviceInfo> &dev_info,
  * Free buffers from the BufferPool
  * */
 bool BufferPool::LocalReleaseBuffers(std::vector<BufferInfo> &buffers) {
-  int cpu = hermes_shm::NodeThreadId().hash() % HERMES_SYSTEM_INFO->ncpu_;
+  int cpu = hermes_shm::NodeThreadId().hash() % header_->ncpu_;
   for (BufferInfo &info : buffers) {
     // Acquire the main CPU lock for the target
     hipc::Ref<BpFreeListStat> target_stat;
