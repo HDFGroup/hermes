@@ -21,9 +21,15 @@ void MainPosttest() {
 
 TEST_CASE("Hostfile") {
   auto vec = hermes::RpcContext::ParseHostfile("hostfile.txt");
-  REQUIRE(vec.size() == 2);
+  REQUIRE(vec.size() == 8);
   REQUIRE(vec[0] == "ares-comp-01");
   REQUIRE(vec[1] == "ares-comp-02");
+  REQUIRE(vec[2] == "ares-comp-03");
+  REQUIRE(vec[3] == "ares-comp-04");
+  REQUIRE(vec[4] == "ares-comp-05");
+  REQUIRE(vec[5] == "ares-comp-08");
+  REQUIRE(vec[6] == "ares-comp-09");
+  REQUIRE(vec[7] == "ares-comp-10");
 }
 
 TEST_CASE("HostName") {
