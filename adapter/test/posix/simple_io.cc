@@ -76,7 +76,7 @@ int main(int argc, char **argv) {
   lseek(fd, off, SEEK_SET);
 
   struct stat st;
-  __fxstat(_STAT_VER, fd, &st);
+  fstat(fd, &st);
   if (do_read && (st.st_size - total_size) > 3) {
     if (rank == 0) {
       std::cout << "File sizes aren't equivalent: "
@@ -88,12 +88,34 @@ int main(int argc, char **argv) {
 
   for (int i = 0; i < count; ++i) {
     char nonce = i;
+    ssize_t res;
     if (!do_read) {
       memset(buf, nonce, block_size);
-      write(fd, buf, block_size);
+      res = write(fd, buf, block_size);
+      if (res != block_size) {
+        std::cout << "Wrote " << res << " for bsz=" << block_size << std::endl;
+      }
+      if (res == -1) {
+        std::cout << "write() failed. " << std::endl;
+      }
+      if (res == 0) {
+        std::cout << "write() succeeded. " << std::endl;
+      }
+
     } else {
       memset(buf, 0, block_size);
-      read(fd, buf, block_size);
+      res = read(fd, buf, block_size);
+
+      if (res != block_size) {
+        std::cout << "Read " << res << " for bsz=" << block_size << std::endl;
+      }
+      if (res == -1) {
+        std::cout << "read() failed. " << std::endl;
+      }
+      if (res == 0) {
+        std::cout << "read() succeeded. " << std::endl;
+      }
+
       if (!VerifyBuffer(buf, block_size, nonce)) {
         std::cout << "Buffer verification failed!" << std::endl;
         exit(1);
