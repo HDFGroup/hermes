@@ -47,7 +47,7 @@ foreach(program ${API_TESTS})
           ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR}
           ${MPIEXEC_EXECUTABLE}
           ${MPIEXEC_NUMPROC_FLAG}
-          2
+          1
           ${program}
           "")
 endforeach()

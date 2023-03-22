@@ -23,6 +23,7 @@ export LSAN_OPTIONS=suppressions="${CMAKE_SOURCE_DIR}/test/data/asan.supp"
 ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${MPI_PROC} \
 ${CMAKE_BINARY_DIR}/bin/${EXEC_NAME} "${ARGS}" -d yes
 status=$?
+echo "STATUS: $status"
 
 # Finalize the Hermes daemon
 ${CMAKE_BINARY_DIR}/bin/finalize_hermes
