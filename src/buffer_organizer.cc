@@ -150,9 +150,10 @@ RPC Blob BufferOrganizer::LocalReadBlobFromBuffers(
                         dev_info->mount_point_->str()) << std::endl;
     }
     auto io_client = borg::BorgIoClientFactory::Get(dev_info->header_->io_api_);
-    bool ret = io_client->Read(*dev_info, blob.data() + blob_off,
-                                buffer_info.t_off_,
-                                buffer_info.blob_size_);
+    bool ret = io_client->Read(*dev_info,
+                               blob.data() + blob_off,
+                               buffer_info.t_off_,
+                               buffer_info.blob_size_);
     blob_off += buffer_info.blob_size_;
     if (!ret) {
       LOG(FATAL) << "Could not perform I/O in BORG" << std::endl;
@@ -170,13 +171,12 @@ Blob BufferOrganizer::GlobalReadBlobFromBuffers(
   auto unique_nodes = GroupByNodeId(buffers, total_size);
 
   // Send the buffers to each node
-  std::vector<Blob> blobs;
+  std::vector<Blob> blobs(unique_nodes.size());
   for (auto &[node_id, size] : unique_nodes) {
+    blobs.emplace_back(size);
     if (NODE_ID_IS_LOCAL(node_id)) {
-      blobs.emplace_back(size);
       LocalReadBlobFromBuffers(blobs.back(), buffers);
     } else {
-      blobs.emplace_back(size);
       rpc_->IoCall<void>(
           node_id, "RpcReadBlobFromBuffers",
           IoType::kRead, blobs.back().data(), size,
@@ -186,7 +186,7 @@ Blob BufferOrganizer::GlobalReadBlobFromBuffers(
 
   // If the blob was only on one node
   if (unique_nodes.size() == 1) {
-    return blobs.back();
+    return std::move(blobs.back());
   }
 
   // Merge the blobs at the end
