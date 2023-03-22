@@ -106,6 +106,10 @@ class Formatter {
     };
     ForwardIterateArgpack::Apply(
       make_argpack(std::forward<Args>(args)...), lambda);
+    if (offsets.back().second > 0) {
+      auto &sub = offsets.back();
+      ss << fmt.substr(sub.first, sub.second);
+    }
     return ss.str();
   }
 

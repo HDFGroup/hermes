@@ -38,6 +38,13 @@ class RamIoClient : public BorgIoClient {
     auto &hermes_header = HERMES->header_;
     auto &main_alloc = HERMES->main_alloc_;
     char *ram_ptr = main_alloc->Convert<char>(hermes_header->ram_tier_);
+    if (off + size > dev_info.header_->capacity_) {
+      LOG(INFO) << hshm::Formatter::format(
+        "Out of bounds: attempting to write to offset: {} / {}",
+                       off + size,
+                       dev_info.header_->capacity_) << std::endl;
+      return false;
+    }
     memcpy(ram_ptr + off, data, size);
     return true;
   }

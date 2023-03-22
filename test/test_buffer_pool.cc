@@ -67,20 +67,22 @@ TEST_CASE("TestBufferPool") {
 
     // Create the blob to write
     hermes::Blob write_blob(size);
-    for (size_t i = 0; i < size; ++i) {
-      write_blob.data()[i] = i;
-    }
+    memset(write_blob.data(), 10, size);
 
     // Allocate the buffers and set them
     std::vector<hermes::BufferInfo> buffers =
         HERMES->bpm_->LocalAllocateAndSetBuffers(schema, write_blob);
 
     // Read back the buffers
-    hermes::Blob read_blob =
+   hermes::Blob read_blob =
         HERMES->borg_->LocalReadBlobFromBuffers(buffers);
 
-    // Verify they are the same
-    REQUIRE(read_blob == write_blob);
+   // Verify they are the same
+   REQUIRE(read_blob.size() == size);
+   REQUIRE(VerifyBuffer(read_blob.data(), size, 10));
+
+   // Release buffers
+   HERMES->bpm_->LocalReleaseBuffers(buffers);
   }
 }
 

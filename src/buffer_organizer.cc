@@ -77,6 +77,16 @@ RPC void BufferOrganizer::LocalPlaceBlobInBuffers(
     }
     hipc::Ref<DeviceInfo> dev_info =
         (*mdm_->devices_)[buffer_info.tid_.GetDeviceId()];
+    if (buffer_info.t_off_ + buffer_info.blob_size_ >
+        dev_info->header_->capacity_) {
+      LOG(FATAL) << hshm::Formatter::format(
+                        "Out of bounds: attempting to write to offset: {} / {} "
+                        "on device {}: {}",
+                        buffer_info.t_off_ + buffer_info.blob_size_,
+                        dev_info->header_->capacity_,
+                        buffer_info.tid_.GetDeviceId(),
+                        dev_info->mount_point_->str()) << std::endl;
+    }
     auto io_client = borg::BorgIoClientFactory::Get(dev_info->header_->io_api_);
     bool ret = io_client->Write(*dev_info,
                                 blob.data() + blob_off,
@@ -127,6 +137,16 @@ RPC Blob BufferOrganizer::LocalReadBlobFromBuffers(
     }
     hipc::Ref<DeviceInfo> dev_info =
         (*mdm_->devices_)[buffer_info.tid_.GetDeviceId()];
+    if (buffer_info.t_off_ + buffer_info.blob_size_ >
+        dev_info->header_->capacity_) {
+      LOG(FATAL) << hshm::Formatter::format(
+                        "Out of bounds: attempting to read from offset: {} / {}"
+                        " on device {}: {}",
+                        buffer_info.t_off_ + buffer_info.blob_size_,
+                        dev_info->header_->capacity_,
+                        buffer_info.tid_.GetDeviceId(),
+                        dev_info->mount_point_->str()) << std::endl;
+    }
     auto io_client = borg::BorgIoClientFactory::Get(dev_info->header_->io_api_);
     bool ret = io_client->Read(*dev_info, blob.data() + blob_off,
                                 buffer_info.t_off_,

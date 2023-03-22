@@ -147,7 +147,7 @@ template<>
 struct ShmHeader<BufferPool> {
   SHM_CONTAINER_HEADER_TEMPLATE(ShmHeader)
   hipc::ShmArchive<BpTargetAllocs> free_lists_;
-  size_t ntargets_;
+  u16 ntargets_;
   size_t ncpu_;
   size_t nslabs_;
 
@@ -164,16 +164,18 @@ struct ShmHeader<BufferPool> {
    * Get the free list of the target
    * This is where region_off_ & region_size_ in the BpFreeListStat are valid
    * */
-  size_t GetTargetFreeList(u16 target) {
-    return target * ncpu_ * nslabs_;
+  size_t GetCpuTargetStat(u16 target, int cpu) {
+    return target * ncpu_ * nslabs_ + cpu * nslabs_;
   }
 
   /**
    * Get the start of the vector of the free list for the CPU in the target
    * This is where page_size_, cur_count_, and max_count_ are valid.
+   *
+   * [target] [cpu] [slab_id]
    * */
-  size_t GetCpuFreeList(int target, int cpu) {
-    return target * ncpu_ * nslabs_ + cpu * nslabs_;
+  size_t GetCpuFreeList(u16 target, int cpu, int slab_id) {
+    return target * ncpu_ * nslabs_ + cpu * nslabs_ + slab_id;
   }
 };
 
@@ -252,13 +254,17 @@ class BufferPool : public hipc::ShmContainer {
    *
    * @param total_size the total amount of data being placed in this target
    * @param coins The requested number of slabs to allocate from this target
-   * @param target_id The ID of the (ideal) target to allocate from
+   * @param tid The ID of the (ideal) target to allocate from
+   * @param cpu The CPU we are currently scheduled on
+   * @param target_stat The metadata for the target on this CPU
    * @param blob_off [out] The current size of the blob which has been placed
    * @param buffers [out] The buffers which were allocated
    * */
   void AllocateBuffers(size_t total_size,
                        std::vector<BpCoin> &coins,
                        TargetId tid,
+                       int cpu,
+                       hipc::Ref<BpFreeListStat> &target_stat,
                        size_t &blob_off,
                        std::vector<BufferInfo> &buffers);
 
@@ -302,6 +308,7 @@ class BufferPool : public hipc::ShmContainer {
                           hipc::Ref<BpFreeListStat> &stat,
                           hipc::Ref<BpFreeListStat> &target_stat);
 
+
   /**====================================
    * Free Buffers
    * ===================================*/
@@ -311,6 +318,19 @@ class BufferPool : public hipc::ShmContainer {
    * */
   RPC bool LocalReleaseBuffers(std::vector<BufferInfo> &buffers);
   bool GlobalReleaseBuffers(std::vector<BufferInfo> &buffers);
+
+  /**====================================
+   * Helper Methods
+   * ===================================*/
+
+  /** Get a free list reference */
+  void GetFreeListForCpu(u16 target_id, int cpu, int slab_id,
+                         hipc::Ref<BpFreeList> &free_list,
+                         hipc::Ref<BpFreeListStat> &free_list_stat);
+
+  /** Get the stack allocator from the cpu */
+  void GetTargetStatForCpu(u16 target_id, int cpu,
+                           hipc::Ref<BpFreeListStat> &target_stat);
 };
 
 }  // namespace hermes
