@@ -32,7 +32,7 @@ void MainPosttest() {
 
 TEST_CASE("TestBufferPool") {
   std::vector<std::pair<size_t, int>> sizes = {
-    /*{23, 1},   // 23B blob on 1 target
+    {23, 1},   // 23B blob on 1 target
     {KILOBYTES(1), 1},   // 1KB blob on 1 target
     {KILOBYTES(4), 1},   // 4KB blob on 1 target
     {KILOBYTES(8), 1},   // 8KB blob on 1 target
@@ -45,7 +45,7 @@ TEST_CASE("TestBufferPool") {
     {KILOBYTES(16), 3},  // 16KB blob on 3 targets
     {KILOBYTES(64), 3},  // 64KB blob on 3 targets
     {MEGABYTES(4), 3},  // 4MB blob on 3 targets
-    {MEGABYTES(4) + KILOBYTES(32), 3},  // 4MB blob on 3 targets*/
+    {MEGABYTES(4) + KILOBYTES(32), 3},  // 4MB blob on 3 targets
 
     // This will test the ability to "trickle down"
     {MEGABYTES(256), 1},  // 256MB blob on 1 target
@@ -74,15 +74,14 @@ TEST_CASE("TestBufferPool") {
         HERMES->bpm_->LocalAllocateAndSetBuffers(schema, write_blob);
 
     // Read back the buffers
-   hermes::Blob read_blob(size);
-   HERMES->borg_->LocalReadBlobFromBuffers(read_blob, buffers);
+    hermes::Blob read_blob(size);
+    HERMES->borg_->LocalReadBlobFromBuffers(read_blob, buffers);
 
-   // Verify they are the same
-   REQUIRE(read_blob.size() == size);
-   REQUIRE(VerifyBuffer(read_blob.data(), size, 10));
+    // Verify they are the same
+    REQUIRE(read_blob.size() == size);
+    REQUIRE(VerifyBuffer(read_blob.data(), size, 10));
 
-   // Release buffers
-   HERMES->bpm_->LocalReleaseBuffers(buffers);
+    // Release buffers
+    HERMES->bpm_->LocalReleaseBuffers(buffers);
   }
 }
-

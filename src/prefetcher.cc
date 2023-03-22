@@ -113,7 +113,7 @@ void Prefetcher::Run() {
   }
 
   // Analyze the per-rank prefetching decisions
-  for(int i = 0; i < nprocs; ++i) {
+  for (int i = 0; i < nprocs; ++i) {
     for (IoStat &stat : patterns[i]) {
       // We assume rank I/O is exactly the same as it was in the trace
       IoTrace &trace = *trace_off_[i];

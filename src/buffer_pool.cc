@@ -58,8 +58,9 @@ BufferPool::BufferPool(ShmHeader<BufferPool> *header, hipc::Allocator *alloc) {
       size_t size_per_core = target->max_cap_ / header_->ncpu_;
       if (size_per_core < KILOBYTES(1)) {
         LOG(FATAL) << hshm::Formatter::format(
-                          "The capacity of the target {} ({} bytes) cannot be divided among"
-                          "the {} CPU cores",
+                          "The capacity of the target {} ({} bytes)"
+                          " cannot be divided among"
+                          " the {} CPU cores",
                           dev_info->mount_point_->str(),
                           target->max_cap_, header_->ncpu_) << std::endl;
       }
@@ -203,7 +204,7 @@ void BufferPool::AllocateBuffers(size_t total_size,
   for (size_t slab_id = 0; slab_id < coins.size(); ++slab_id) {
     size_t slab_size = coins[slab_id].slab_size_;
     size_t slab_count = coins[slab_id].count_;
-    while(slab_count) {
+    while (slab_count) {
       // Get this core's free list for the current slab size
       hipc::Ref<BpFreeListStat> free_list_stat;
       hipc::Ref<BpFreeList> free_list;
