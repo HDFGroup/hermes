@@ -344,7 +344,7 @@ TEST_CASE("BatchedWriteSequentialScratch",
     test::test_fclose();
     REQUIRE(test::status_orig == 0);
     IgnoreAllFiles();
-    REQUIRE(stdfs::file_size(info.new_file) == 0);
+    REQUIRE(stdfs::exists(info.new_file) == 0);
     TrackFiles();
   }
   posttest(false);

@@ -229,8 +229,8 @@ Status Bucket::PartialPutOrCreate(const std::string &blob_name,
               << " cur_size: " << full_blob.size()
               << " backend_size: " << opts.backend_size_
               << std::endl;
-    auto io_client = IoClientFactory::Get(opts.type_);
     full_blob.resize(opts.backend_size_);
+    auto io_client = IoClientFactory::Get(opts.type_);
     if (io_client) {
       auto name_shm = hipc::make_uptr<hipc::charbuf>(name_);
       io_client->ReadBlob(*name_shm,
@@ -250,9 +250,7 @@ Status Bucket::PartialPutOrCreate(const std::string &blob_name,
   // Modify the blob
   memcpy(full_blob.data() + blob_off, blob.data(), blob.size());
   // Re-put the blob
-  if (opts.adapter_mode_ != AdapterMode::kBypass) {
-    Put(blob_name, full_blob, blob_id, ctx);
-  }
+  Put(blob_name, full_blob, blob_id, ctx);
   LOG(INFO) << "Partially put to blob: (" << blob_id.unique_
             << ", " << blob_id.node_id_ << ")" << std::endl;
   return Status();
@@ -307,8 +305,8 @@ Status Bucket::PartialGetOrCreate(const std::string &blob_name,
               << " cur_size: " << full_blob.size()
               << " backend_size: " << opts.backend_size_
               << std::endl;
-    auto io_client = IoClientFactory::Get(opts.type_);
     full_blob.resize(opts.backend_size_);
+    auto io_client = IoClientFactory::Get(opts.type_);
     if (io_client) {
       auto name_shm = hipc::make_uptr<hipc::charbuf>(name_);
       io_client->ReadBlob(*name_shm, full_blob, opts, status);
@@ -318,9 +316,7 @@ Status Bucket::PartialGetOrCreate(const std::string &blob_name,
                   << "from backend (PartialCreate)";
         return PARTIAL_GET_OR_CREATE_OVERFLOW;
       }
-      if (opts.adapter_mode_ != AdapterMode::kBypass) {
-        Put(blob_name, full_blob, blob_id, ctx);
-      }
+      Put(blob_name, full_blob, blob_id, ctx);
     }
   }
   // Ensure the blob can hold the update

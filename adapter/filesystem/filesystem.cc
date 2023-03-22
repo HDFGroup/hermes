@@ -100,7 +100,31 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
             << " from position: " << stat.st_ptr_
             << " and size: " << total_size
             << " and current file size: " << backend_size
+            << " and adapter mode: " << AdapterModeConv::str(stat.adapter_mode_)
             << std::endl;
+
+  if (stat.adapter_mode_ == AdapterMode::kBypass) {
+    // Bypass mode is handled differently
+    auto io_client = IoClientFactory::Get(type_);
+    if (io_client) {
+      opts.backend_size_ = total_size;
+      opts.backend_off_ = off;
+      Blob blob_wrap((char*)ptr, total_size);
+      auto name_shm = hipc::make_uptr<hipc::charbuf>(bkt->GetName());
+      io_client->WriteBlob(*name_shm, blob_wrap, opts, io_status);
+      if (!io_status.success_) {
+        LOG(INFO) << "Failed to write blob of size " << opts.backend_size_
+                  << " to backend (PartialPut)";
+        return 0;
+      }
+    } else {
+      LOG(FATAL) << "Bypass mode requires a backend for PUTs" << std::endl;
+    }
+    if (opts.DoSeek()) {
+      stat.st_ptr_ = off + total_size;
+    }
+    return total_size;
+  }
 
   size_t ret;
   Context ctx;
@@ -164,6 +188,29 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
             << " on offset: " << off
             << " from position: " << stat.st_ptr_
             << " and size: " << total_size << std::endl;
+
+  if (stat.adapter_mode_ == AdapterMode::kBypass) {
+    // Bypass mode is handled differently
+    auto io_client = IoClientFactory::Get(type_);
+    if (io_client) {
+      opts.backend_size_ = total_size;
+      opts.backend_off_ = off;
+      Blob blob_wrap((char*)ptr, total_size);
+      auto name_shm = hipc::make_uptr<hipc::charbuf>(bkt->GetName());
+      io_client->ReadBlob(*name_shm, blob_wrap, opts, io_status);
+      if (!io_status.success_) {
+        LOG(INFO) << "Failed to read blob of size " << opts.backend_size_
+                  << " to backend (PartialPut)";
+        return 0;
+      }
+    } else {
+      LOG(FATAL) << "Bypass mode requires a backend for PUTs" << std::endl;
+    }
+    if (opts.DoSeek()) {
+      stat.st_ptr_ = off + total_size;
+    }
+    return total_size;
+  }
 
   size_t ret;
   Context ctx;
@@ -270,7 +317,11 @@ void Filesystem::Wait(std::vector<uint64_t> &req_ids,
 
 size_t Filesystem::GetSize(File &f, AdapterStat &stat) {
   (void) stat;
-  return stat.bkt_id_->GetSize(true);
+  if (stat.adapter_mode_ != AdapterMode::kBypass) {
+    return stat.bkt_id_->GetSize(true);
+  } else {
+    return stdfs::file_size(stat.path_);
+  }
 }
 
 off_t Filesystem::Seek(File &f, AdapterStat &stat,

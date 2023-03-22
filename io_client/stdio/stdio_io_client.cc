@@ -21,7 +21,7 @@ void StdioIoClient::RealOpen(IoClientObject &f,
   if (stat.mode_str_.find('w') != std::string::npos) {
     stat.is_trunc_ = true;
   }
-  if (!(stat.is_trunc_ && stat.adapter_mode_ == AdapterMode::kBypass)) {
+  if (!(stat.is_trunc_ && stat.adapter_mode_ == AdapterMode::kScratch)) {
     stat.fh_ = real_api->fopen(path.c_str(), stat.mode_str_.c_str());
     if (stat.fh_ == nullptr) {
       f.status_ = false;
@@ -49,12 +49,20 @@ void StdioIoClient::HermesOpen(IoClientObject &f,
 int StdioIoClient::RealSync(const IoClientObject &f,
                             const IoClientStats &stat) {
   (void) f;
+  if (stat.adapter_mode_ == AdapterMode::kScratch &&
+      stat.fh_ == nullptr) {
+    return 0;
+  }
   return real_api->fflush(stat.fh_);
 }
 
 /** Close \a file FILE f */
 int StdioIoClient::RealClose(const IoClientObject &f,
                              IoClientStats &stat) {
+  if (stat.adapter_mode_ == AdapterMode::kScratch &&
+      stat.fh_ == nullptr) {
+    return 0;
+  }
   return real_api->fclose(stat.fh_);
 }
 

@@ -59,6 +59,9 @@ class AdapterModeConv {
       case AdapterMode::kWorkflow: {
         return "AdapterMode::kWorkflow";
       }
+      default: {
+        return "Unkown adapter mode";
+      }
     }
   }
 
