@@ -213,8 +213,6 @@ class Filesystem {
     // Check if path is included or excluded
     for (std::pair<std::string, bool> &pth : paths) {
       if (abs_path.rfind(pth.first) != std::string::npos) {
-        LOG(INFO) << hshm::Formatter::format(
-            "Found: {} in {} with tracking {}\n", path, pth.first, pth.second);
         return pth.second;
       }
     }

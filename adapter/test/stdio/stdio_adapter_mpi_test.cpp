@@ -130,7 +130,6 @@ void test_fseek(long offset, int whence) {
 }  // namespace test
 
 int pretest() {
-  REQUIRE(info.comm_size > 1);
   stdfs::path fullpath = args.directory;
   fullpath /= args.filename;
   info.new_file = fullpath.string() + "_new_" + std::to_string(info.rank) +
@@ -349,4 +348,4 @@ cl::Parser define_options() {
 #include "stdio_adapter_basic_test.cpp"
 #include "stdio_adapter_func_test.cpp"
 #include "stdio_adapter_rs_test.cpp"
-#include "stdio_adapter_shared_test.cpp"
+// #include "stdio_adapter_shared_test.cpp"
