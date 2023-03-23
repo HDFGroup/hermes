@@ -6,9 +6,8 @@ target_link_libraries(hermes_mpiio_adapter_test hermes_mpiio)
 add_dependencies(hermes_mpiio_adapter_test hermes_mpiio hermes_daemon)
 set_target_properties(hermes_mpiio_adapter_test PROPERTIES COMPILE_FLAGS "-DHERMES_INTERCEPT=1")
 
-# TODO(llogan): add back
-# mpi_daemon(hermes_mpiio_adapter_test 2 "[synchronicity=async] -d yes" "async" 1)
-# mpi_daemon(hermes_mpiio_adapter_test 2 "[synchronicity=sync] -d yes" "sync" 1)
+mpi_daemon(hermes_mpiio_adapter_test 2 "[synchronicity=async] -d yes" "async" 1)
+mpi_daemon(hermes_mpiio_adapter_test 2 "[synchronicity=sync] -d yes" "sync" 1)
 
 set(MPIIO_TESTS
   mpiio_adapter_test
