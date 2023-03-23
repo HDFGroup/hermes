@@ -46,6 +46,8 @@ function hermes_cluster_up() {
         docker exec ${h} bash -c "cp ${HOME}/.ssh/id_rsa.pub ${docker_home}/.ssh/id_rsa.pub"
         docker exec ${h} bash -c "cp ${HOME}/.ssh/id_rsa.pub ${docker_home}/.ssh/authorized_keys"
         docker exec ${h} chown -R ${docker_user}:${docker_user} ${docker_home}/.ssh
+        # Create the data directory
+        docker exec ${h} bash -c "mkdir /tmp/test_hermes"
     done
 }
 
