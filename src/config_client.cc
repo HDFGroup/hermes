@@ -72,7 +72,7 @@ void ClientConfig::ParseYAML(YAML::Node &yaml_conf) {
   }
   if (yaml_conf["path_exclusions"]) {
     std::vector<std::string> exclusions;
-    ParseVector<std::string>(yaml_conf["path_inclusions"], exclusions);
+    ParseVector<std::string>(yaml_conf["path_exclusions"], exclusions);
     for (auto &entry : exclusions) {
       entry = hshm::path_parser(entry);
       SetAdapterPathTracking(std::move(entry), false);
