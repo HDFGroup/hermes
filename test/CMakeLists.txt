@@ -17,9 +17,9 @@ include_directories(
 set(API_TESTS
         test_bucket
         test_partial_put_get
-        test_buffer_pool)
-        # test_trait
-        # test_tag)
+        test_buffer_pool
+        test_trait
+        test_tag)
 
 find_program(BASH_PROGRAM bash)
 

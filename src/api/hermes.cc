@@ -86,6 +86,7 @@ void Hermes::InitServer(std::string server_config_path) {
   // Construct the reference objects
   mdm_ = hipc::make_ref<MetadataManager>(header_->mdm_, main_alloc_,
                                          &server_config_);
+  mdm_->local_init();
   bpm_ = hipc::make_ref<BufferPool>(header_->bpm_, main_alloc_);
   borg_ = hipc::make_ref<BufferOrganizer>(header_->borg_, main_alloc_);
   prefetch_.Init();
@@ -99,6 +100,7 @@ void Hermes::InitClient(std::string server_config_path,
 
   // Initialize references to SHM types
   mdm_ = hipc::Ref<MetadataManager>(header_->mdm_, main_alloc_);
+  mdm_->local_init();
   rpc_.InitClient();
   bpm_ = hipc::Ref<BufferPool>(header_->bpm_, main_alloc_);
   borg_ = hipc::Ref<BufferOrganizer>(header_->borg_, main_alloc_);

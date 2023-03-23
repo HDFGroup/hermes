@@ -128,6 +128,12 @@ class MetadataManager : public hipc::ShmContainer {
    * Default Constructor
    * ===================================*/
 
+  /** Initialize local unordered_map */
+  void local_init() {
+    local_trait_map_ = std::unordered_map<TraitId, hapi::Trait*>();
+    local_lock_.Init();
+  }
+
   /** Default constructor */
   MetadataManager(ShmHeader<MetadataManager> *header,
                   hipc::Allocator *alloc,
