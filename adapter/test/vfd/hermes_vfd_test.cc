@@ -415,7 +415,6 @@ int init(int* argc, char*** argv) {
   info.existing_file = fullpath.string() + "_ext_" + suffix;
   info.new_file_cmp = fullpath.string() + "_new_cmp_" + suffix;
   info.existing_file_cmp = fullpath.string() + "_ext_cmp_" + suffix;
-  
   IgnoreAllFiles();
   RemoveFiles();
   return 0;
