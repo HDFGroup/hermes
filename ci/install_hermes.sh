@@ -49,6 +49,6 @@ cmake --build . -- -j4
 
 # Run unit tests
 mkdir /tmp/test_hermes
-# ctest -VV
+ctest -VV
 
 popd

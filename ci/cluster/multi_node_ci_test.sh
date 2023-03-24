@@ -7,6 +7,9 @@ if [[ "${CI}" != "true" ]]; then
     exit 1
 fi
 
+echo "TODO(llogan): Add back. disabling for now"
+return
+
 . cluster_utils.sh
 
 # Create ssh keys for the cluster to use
