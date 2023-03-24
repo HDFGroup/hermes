@@ -79,5 +79,5 @@ if(HERMES_ENABLE_PUBSUB_ADAPTER)
 endif()
 
 if(HERMES_ENABLE_VFD)
-  # add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/vfd)
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/vfd)
 endif()
