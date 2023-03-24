@@ -41,10 +41,8 @@ function(set_vfd_test_properties test_name)
     PROPERTY ENVIRONMENT HDF5_PLUGIN_PATH=${HERMES_VFD_LIBRARY_DIR})
   set_property(TEST ${test_name} APPEND
     PROPERTY ENVIRONMENT HDF5_DRIVER=hermes)
-  #set_property(TEST ${test_name} APPEND
-  #  PROPERTY ENVIRONMENT LD_PRELOAD=${LIBASAN_PATH}:$<TARGET_FILE:hdf5_hermes_vfd>)
   set_property(TEST ${test_name} APPEND
-          PROPERTY ENVIRONMENT LD_PRELOAD=${LIBASAN_PATH}:$<TARGET_FILE:hermes_posix>)
+    PROPERTY ENVIRONMENT LD_PRELOAD=${LIBASAN_PATH}:$<TARGET_FILE:hdf5_hermes_vfd>)
   set_property(TEST ${test_name} APPEND
     PROPERTY ENVIRONMENT LSAN_OPTIONS=suppressions=${CMAKE_SOURCE_DIR}/test/data/asan.supp)
 endfunction()

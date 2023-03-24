@@ -70,7 +70,6 @@ struct TestInfo {
   // size_t large_min = KILOBYTES(256) + 1;
   // size_t large_max = MEGABYTES(3);
   size_t nelems_per_dataset;    /**< number of elements per dataset */
-  bool scratch_mode = false;    /**< flag for scratch mode */
 };
 
 /**
@@ -419,16 +418,6 @@ int init(int* argc, char*** argv) {
   
   IgnoreAllFiles();
   RemoveFiles();
-
-  char *driver_config = getenv("HDF5_DRIVER_CONFIG");
-  if (driver_config) {
-    std::string looking_for("false");
-    std::string conf_str(driver_config);
-    if (!conf_str.compare(0, looking_for.size(), looking_for)) {
-      info.scratch_mode = true;
-    }
-  }
-
   return 0;
 }
 
@@ -479,7 +468,8 @@ void CheckResults(const std::string &file1, const std::string &file2) {
  * Called after each individual test.
  */
 int Posttest() {
-  if (!info.scratch_mode) {
+  if (HERMES->client_config_.GetBaseAdapterMode()
+      != hermes::adapter::AdapterMode::kScratch) {
     // NOTE(chogan): This is necessary so that h5diff doesn't use the Hermes VFD
     // in CheckResults. We don't need to reset LD_PRELOAD because it only has an
     // effect when an application first starts.
