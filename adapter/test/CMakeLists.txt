@@ -53,11 +53,19 @@ function(mpi_daemon test_exec test_mpi_proc test_args arg_name daemon_procs)
 endfunction()
 
 function(preload_hermes name preload exec)
-    set(test_name Test_${preload}_${name})
+    set(test_name Test${preload}_${name})
     set(script ${CMAKE_SOURCE_DIR}/adapter/test/preload.sh)
     add_test(NAME ${test_name} COMMAND ${BASH_PROGRAM} ${script}
             "${CMAKE_SOURCE_DIR}" "${CMAKE_BINARY_DIR}"
             "${preload}" "${exec}")
+endfunction()
+
+function(preload_vfd name adapter_mode exec args)
+    set(test_name Test${name})
+    set(script ${CMAKE_SOURCE_DIR}/adapter/test/preload_vfd.sh)
+    add_test(NAME ${test_name} COMMAND ${BASH_PROGRAM} ${script}
+            "${CMAKE_SOURCE_DIR}" "${CMAKE_BINARY_DIR}" "${adapter_mode}"
+            "${exec}" "${args}")
 endfunction()
 
 enable_testing()

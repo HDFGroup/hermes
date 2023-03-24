@@ -710,7 +710,7 @@ TEST_CASE("ScratchMode", "[scratch]") {
     REQUIRE(test::hermes_herr >= 0);
 
     if (HERMES->client_config_.GetBaseAdapterMode()
-        != hermes::adapter::AdapterMode::kScratch) {
+        == hermes::adapter::AdapterMode::kScratch) {
       REQUIRE(!stdfs::exists(info.new_file));
     }
   }
