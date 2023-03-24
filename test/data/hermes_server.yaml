@@ -69,7 +69,7 @@ devices:
 
   pfs:
     mount_point: "./"
-    capacity: 4GB
+    capacity: 16GB
     block_size: 64KB # The stripe size of PFS
     slab_sizes: [ 4KB, 16KB, 64KB, 1MB ]
     bandwidth: 100MBps # Per-device bandwidth

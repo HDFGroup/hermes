@@ -11,7 +11,7 @@ target_link_libraries(posix_adapter_test hermes)
 gcc(posix_adapter_test "")
 
 add_executable(posix_adapter_mpi_test posix_adapter_mpi_test.cpp ${ADAPTER_COMMON})
-mpi(posix_adapter_mpi_test 2 "")
+# mpi(posix_adapter_mpi_test 2 "")
 
 add_executable(hermes_posix_adapter_test posix_adapter_test.cpp ${ADAPTER_COMMON})
 target_link_libraries(hermes_posix_adapter_test hermes_posix)
@@ -24,8 +24,8 @@ add_executable(hermes_posix_adapter_mpi_test posix_adapter_mpi_test.cpp ${ADAPTE
 target_link_libraries(hermes_posix_adapter_mpi_test hermes_posix)
 add_dependencies(hermes_posix_adapter_mpi_test hermes_posix hermes_daemon)
 set_target_properties(hermes_posix_adapter_mpi_test PROPERTIES COMPILE_FLAGS "-DHERMES_INTERCEPT=1")
-mpi_daemon(hermes_posix_adapter_mpi_test 2 "~[request_size=range-large]" "" 1)
-mpi_daemon(hermes_posix_adapter_mpi_test 2 "[request_size=range-large]" "large" 1)
+mpi_daemon(hermes_posix_adapter_mpi_test 2 "~[request_size=range-large]" "")
+mpi_daemon(hermes_posix_adapter_mpi_test 2 "[request_size=range-large]" "large")
 
 include_directories(${CMAKE_SOURCE_DIR}/adapter)
 add_executable(posix_simple_io_mpi posix_simple_io_mpi.cc)

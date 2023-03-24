@@ -39,14 +39,13 @@ function(gcc_hermes_mode exec tag_name tags mode path)
             "${exec}" "${tag_name}" "${tags}" "${mode}" "${path}")
 endfunction()
 
-function(mpi_daemon test_exec test_mpi_proc test_args arg_name daemon_procs)
+function(mpi_daemon test_exec test_mpi_proc test_args arg_name)
     #MPI_EXEC=$1 TEST_EXEC=$2 TEST_PROCS=$3 HERMES_EXEC=$4 HERMES_PROCS=$5 HERMES_CONF=$6
     set(script ${CMAKE_SOURCE_DIR}/adapter/test/mpi_hermes.sh)
     add_test(NAME Test${test_exec}_${test_mpi_proc}_${arg_name} COMMAND
             ${BASH_PROGRAM} ${script}
             "${CMAKE_SOURCE_DIR}" "${CMAKE_BINARY_DIR}"
             "${MPIEXEC_EXECUTABLE}"
-            "${daemon_procs}"
             "${test_mpi_proc}"
             "${test_exec}"
             "${test_args}")

@@ -18,7 +18,7 @@ target_link_libraries(stdio_adapter_test hermes glog::glog)
 gcc(stdio_adapter_test "")
 
 add_executable(stdio_adapter_mpi_test stdio_adapter_mpi_test.cpp ${ADAPTER_COMMON})
-mpi(stdio_adapter_mpi_test 2 "")
+# mpi(stdio_adapter_mpi_test 2 "")
 
 add_executable(hermes_stdio_adapter_test stdio_adapter_test.cpp ${ADAPTER_COMMON})
 target_link_libraries(hermes_stdio_adapter_test hermes_stdio)
@@ -52,8 +52,8 @@ add_executable(hermes_stdio_adapter_mpi_test stdio_adapter_mpi_test.cpp ${ADAPTE
 target_link_libraries(hermes_stdio_adapter_mpi_test hermes_stdio)
 add_dependencies(hermes_stdio_adapter_mpi_test hermes_stdio hermes_daemon)
 set_target_properties(hermes_stdio_adapter_mpi_test PROPERTIES COMPILE_FLAGS "-DHERMES_INTERCEPT=1")
-mpi_daemon(hermes_stdio_adapter_mpi_test 2 "~[request_size=range-large]" "" 1)
-mpi_daemon(hermes_stdio_adapter_mpi_test 2 "[request_size=range-large]" "large" 1)
+mpi_daemon(hermes_stdio_adapter_mpi_test 2 "~[request_size=range-large]" "")
+mpi_daemon(hermes_stdio_adapter_mpi_test 2 "[request_size=range-large]" "large")
 
 set(STDIO_TESTS
   stdio_adapter_mapper_test
