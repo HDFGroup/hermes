@@ -50,5 +50,5 @@ spack repo add ./ci/hermes
 
 # NOTE(llogan): Modify version string per release.
 HERMES_VERSION=1.0.0
-spack install hermes
+spack install hermes +vfd
 
