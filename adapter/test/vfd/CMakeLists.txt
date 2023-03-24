@@ -12,13 +12,12 @@ target_include_directories(hermes_vfd_test
 )
 
 target_link_libraries(hermes_vfd_test
-  hermes
-  Catch2::Catch2
-  MPI::MPI_CXX
-  glog::glog
-  stdc++fs
-  ${HDF5_HERMES_VFD_EXT_LIB_DEPENDENCIES}
-)
+        hermes
+        Catch2::Catch2
+        MPI::MPI_CXX
+        glog::glog
+        stdc++fs
+        ${HDF5_HERMES_VFD_EXT_LIB_DEPENDENCIES})
 
 if(HERMES_USE_ADDRESS_SANITIZER)
   execute_process(COMMAND ${CMAKE_C_COMPILER} -print-file-name=libasan.so
