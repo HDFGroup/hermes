@@ -116,6 +116,7 @@ void ThalliumRpc::Finalize() {
         // called twice.
         // server_engine_->finalize();
         server_engine_.release();
+        client_engine_.release();
       } catch (std::exception &e) {
         LOG(INFO) << "Ignoring margo finalization error: "
                   << e.what() << std::endl;
