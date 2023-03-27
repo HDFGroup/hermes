@@ -168,6 +168,12 @@ option(HERMES_BUILD_ADAPTER_TESTS "Enable installation of tests." ON)
 option(HERMES_INSTALL_TESTS "Enable installation of tests." OFF)
 option(HERMES_ONLY_RPC "Avoids the shared-memory case in RPC for testing" OFF)
 option(HERMES_ENABLE_PROFILING "Enables profiling of certain functions" OFF)
+option(HERMES_DISABLE_INFO_LOGS "Disables GLOG info" OFF)
+
+# Disable informatoinal logging
+if(HERMES_DISABLE_INFO_LOGS)
+  add_compile_options(-DNDEBUG)
+endif()
 
 # Calculate code coverage with debug mode
 if(HERMES_ENABLE_COVERAGE)

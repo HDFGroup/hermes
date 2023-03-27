@@ -8,7 +8,7 @@ if [[ "${CI}" != "true" ]]; then
 fi
 
 echo "TODO(llogan): Add back. disabling for now"
-return
+exit 0
 
 . cluster_utils.sh
 

@@ -10,6 +10,8 @@
 * have access to the file, you may request a copy from help@hdfgroup.org.   *
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+// #define HERMES_ENABLE_PROFILING 1
+
 #include "mpi.h"
 #include <stdlib.h>
 #include "hermes.h"
@@ -39,7 +41,7 @@ void PutTest(int rank, int repeat, int blobs_per_rank, size_t blob_size) {
   t.Resume();
   for (int j = 0; j < repeat; ++j) {
     for (size_t i = 0; i < blobs_per_rank; ++i) {
-      size_t blob_off = rank * blobs_per_rank + i;
+      size_t blob_off = (rank * blobs_per_rank + i) * blob_size;
       memcpy(backend.data_ + blob_off, data.data(), data.size());
     }
   }
@@ -53,7 +55,7 @@ void GetTest(int rank, int repeat, int blobs_per_rank, size_t blob_size) {
   t.Resume();
   for (int j = 0; j < repeat; ++j) {
     for (size_t i = 0; i < blobs_per_rank; ++i) {
-      size_t blob_off = rank * blobs_per_rank + i;
+      size_t blob_off = (rank * blobs_per_rank + i) * blob_size;
       memcpy(data.data(), backend.data_ + blob_off, data.size());
     }
   }

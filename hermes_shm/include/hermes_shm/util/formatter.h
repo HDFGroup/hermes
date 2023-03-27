@@ -135,6 +135,7 @@ class Formatter {
         // The remaining size is: 12 - 7 = 5 (length of "there").
         i += 2;
         offsets.emplace_back(std::pair<size_t, size_t>(i, fmt.size() - i));
+        continue;
       }
       ++i;
     }

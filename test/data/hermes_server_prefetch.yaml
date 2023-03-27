@@ -22,7 +22,7 @@ devices:
     # The number of blocks (the size of which is chosen in block_sizes_kb) that each
     # device should contain for each slab (controlled by num_slabs). This allows for
     # precise control of the distibution of buffer sizes.
-    slab_sizes: [ 4KB, 16KB, 64KB, 1MB ]
+    slab_sizes: [ 4KB, 16KB, 64KB, 1MB, 16MB ]
 
     # The maximum theoretical bandwidth (as advertised by the manufacturer) in
     # Possible units: KBps, MBps, GBps

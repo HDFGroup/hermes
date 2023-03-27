@@ -159,7 +159,7 @@ RPC Blob BufferOrganizer::LocalReadBlobFromBuffers(
       LOG(FATAL) << "Could not perform I/O in BORG" << std::endl;
     }
   }
-  return blob;
+  return std::move(blob);
 }
 
 /** The Global form of ReadBLobFromBuffers */
