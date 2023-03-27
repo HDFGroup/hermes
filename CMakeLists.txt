@@ -156,8 +156,6 @@ option(HERMES_BUILD_BUFFER_POOL_VISUALIZER "Build the BufferPool visualizer" OFF
 option(HERMES_USE_ADDRESS_SANITIZER "Enable -fsanitize=address in Debug builds" OFF)
 option(HERMES_USE_THREAD_SANITIZER "Enable -fsanitize=thread in Debug builds" OFF)
 option(HERMES_RPC_THALLIUM "Use Thallium as the RPC library." ON)
-option(HERMES_MDM_STORAGE_STBDS
-  "Use the STB library and shared memory to store metadata" ON)
 option(HERMES_BUILD_BENCHMARKS "Build the Hermes benchmark suite." ON)
 option(HERMES_ENABLE_COVERAGE "Enable code coverage." OFF)
 option(HERMES_ENABLE_POSIX_ADAPTER "Build the Hermes POSIX adapter." ON)
@@ -191,8 +189,6 @@ endif()
 mark_as_advanced(HERMES_COMMUNICATION_MPI)
 # TODO(chogan): Expose this once we support more than one RPC layer
 mark_as_advanced(HERMES_RPC_THALLIUM)
-mark_as_advanced(HERMES_MDM_STORAGE_STBDS)
-mark_as_advanced(HERMES_DEBUG_HEAP)
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
   if (NOT "${CMAKE_CXX_FLAGS_DEBUG}" MATCHES ".*-g3.*")
