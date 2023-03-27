@@ -26,9 +26,12 @@ static inline const char* kHermesPageSize = "HERMES_PAGE_SIZE";
 static inline const char* kHermesStopDaemon = "HERMES_STOP_DAEMON";
 static inline const size_t kMaxPathLength = 4096;
 
-static inline const int kMaxServerNamePrefix = 32; /**< max. server name prefix */
-static inline const int kMaxServerNamePostfix = 8; /**< max. server name suffix */
-static inline const char kBoPrefix[] = "BO::";     /**< buffer organizer prefix */
+static inline const int
+    kMaxServerNamePrefix = 32; /**< max. server name prefix */
+static inline const int
+    kMaxServerNamePostfix = 8; /**< max. server name suffix */
+static inline const char
+    kBoPrefix[] = "BO::";     /**< buffer organizer prefix */
 
 /** buffer organizer prefix length */
 static inline const int kBoPrefixLength = sizeof(kBoPrefix) - 1;
