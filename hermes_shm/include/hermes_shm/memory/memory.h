@@ -349,7 +349,7 @@ template<typename T>
 using TypedAtomicPointer = AtomicPointer;
 
 /** Round up to the nearest multiple of the alignment */
-static size_t NextAlignmentMultiple(size_t alignment, size_t size) {
+static inline size_t NextAlignmentMultiple(size_t alignment, size_t size) {
   auto page_size = HERMES_SYSTEM_INFO->page_size_;
   size_t new_size = size;
   size_t page_off = size % alignment;
@@ -360,7 +360,7 @@ static size_t NextAlignmentMultiple(size_t alignment, size_t size) {
 }
 
 /** Round up to the nearest multiple of page size */
-static size_t NextPageSizeMultiple(size_t size) {
+static inline size_t NextPageSizeMultiple(size_t size) {
   auto page_size = HERMES_SYSTEM_INFO->page_size_;
   size_t new_size = NextAlignmentMultiple(page_size, size);
   return new_size;

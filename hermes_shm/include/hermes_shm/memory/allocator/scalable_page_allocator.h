@@ -210,7 +210,7 @@ class ScalablePageAllocator : public Allocator {
 
  private:
   /** Round a number up to the nearest page size. */
-  size_t RoundUp(size_t num, int &exp);
+  size_t RoundUp(size_t num, size_t &exp);
 };
 
 }  // namespace hermes_shm::ipc

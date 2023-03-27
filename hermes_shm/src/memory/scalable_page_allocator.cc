@@ -37,7 +37,7 @@ void ScalablePageAllocator::shm_init(allocator_id_t id,
   // Cache every power-of-two between 32B and 16KB
   size_t ncpu = HERMES_SYSTEM_INFO->ncpu_;
   free_lists_->resize(ncpu * num_free_lists_);
-  for (size_t i = 0; i < HERMES_SYSTEM_INFO->ncpu_; ++i) {
+  for (int i = 0; i < HERMES_SYSTEM_INFO->ncpu_; ++i) {
     for (size_t j = 0; j < num_free_lists_; ++j) {
       hipc::Ref<pair<FreeListStats, iqueue<MpPage>>>
         free_list = (*free_lists_)[i * num_free_lists_ + j];
@@ -73,8 +73,8 @@ size_t ScalablePageAllocator::GetCurrentlyAllocatedSize() {
 }
 
 /** Round a number up to the nearest page size. */
-size_t ScalablePageAllocator::RoundUp(size_t num, int &exp) {
-  int round;
+size_t ScalablePageAllocator::RoundUp(size_t num, size_t &exp) {
+  size_t round;
   for (exp = 0; exp < num_caches_; ++exp) {
     round = 1 << (exp + min_cached_size_exp_);
     round += sizeof(MpPage);
@@ -126,7 +126,7 @@ MpPage *ScalablePageAllocator::CheckCaches(size_t size_mp) {
 
   // Check the small buffer caches
   if (size_mp <= max_cached_size_) {
-    int exp;
+    size_t exp;
     // Check the nearest buffer cache
     size_mp = RoundUp(size_mp, exp);
     hipc::Ref<pair<FreeListStats, iqueue<MpPage>>> free_list =
@@ -142,7 +142,7 @@ MpPage *ScalablePageAllocator::CheckCaches(size_t size_mp) {
     }
 
     // Check all upper buffer caches
-    for (int i = exp + 1; i < num_caches_; ++i) {
+    for (size_t i = exp + 1; i < num_caches_; ++i) {
       hipc::Ref<pair<FreeListStats, iqueue<MpPage>>> high_free_list =
         (*free_lists_)[cpu_start + i];
       if (high_free_list->second_->size()) {

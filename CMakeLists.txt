@@ -158,20 +158,18 @@ option(HERMES_USE_THREAD_SANITIZER "Enable -fsanitize=thread in Debug builds" OF
 option(HERMES_RPC_THALLIUM "Use Thallium as the RPC library." ON)
 option(HERMES_MDM_STORAGE_STBDS
   "Use the STB library and shared memory to store metadata" ON)
-option(HERMES_DEBUG_HEAP "Store Heap debug information for visualization." OFF)
 option(HERMES_BUILD_BENCHMARKS "Build the Hermes benchmark suite." ON)
-option(HERMES_ENABLE_TIMING "Turn on timing of selected functions." OFF)
 option(HERMES_ENABLE_COVERAGE "Enable code coverage." OFF)
 option(HERMES_ENABLE_POSIX_ADAPTER "Build the Hermes POSIX adapter." ON)
 option(HERMES_ENABLE_STDIO_ADAPTER "Build the Hermes stdio adapter." ON)
 option(HERMES_ENABLE_MPIIO_ADAPTER "Build the Hermes MPI-IO adapter." ON)
 option(HERMES_ENABLE_PUBSUB_ADAPTER "Build the Hermes pub/sub adapter." ON)
-option(HERMES_ENABLE_VFD "Build the Hermes HDF5 Virtual File Driver" ON)
+option(HERMES_ENABLE_VFD "Build the Hermes HDF5 Virtual File Driver" OFF)
 option(HERMES_ENABLE_GFLAGS "Enable GFLAGS support." ON)
 option(HERMES_BUILD_ADAPTER_TESTS "Enable installation of tests." ON)
 option(HERMES_INSTALL_TESTS "Enable installation of tests." OFF)
 option(HERMES_ONLY_RPC "Avoids the shared-memory case in RPC for testing" OFF)
-option(HERMES_ENABLE_PROFILING "Enables profiling of certain functoins" OFF)
+option(HERMES_ENABLE_PROFILING "Enables profiling of certain functions" OFF)
 
 # Calculate code coverage with debug mode
 if(HERMES_ENABLE_COVERAGE)

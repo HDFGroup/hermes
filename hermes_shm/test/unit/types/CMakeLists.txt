@@ -7,7 +7,7 @@ add_executable(test_types
         ${TEST_MAIN}/main.cc
         test_init.cc
         test_argpack.cc
-        test_formatter.cc)
+        test_util.cc)
 target_link_libraries(test_types
         Catch2::Catch2 MPI::MPI_CXX OpenMP::OpenMP_CXX)
 

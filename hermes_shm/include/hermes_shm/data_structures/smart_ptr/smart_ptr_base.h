@@ -102,10 +102,10 @@ class _RefShm {
 
   /** Destroy the data allocated by this pointer */
   void shm_destroy() {
-    auto header = get()->header_;
-    auto alloc = get()->alloc_;
     get()->shm_destroy();
     if constexpr(destructable) {
+      auto header = get()->header_;
+      auto alloc = get()->alloc_;
       alloc->template FreePtr<header_t>(header);
     }
   }
