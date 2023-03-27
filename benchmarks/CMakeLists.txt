@@ -5,7 +5,9 @@ include_directories(
   ${PROJECT_SOURCE_DIR}/io_client
 )
 
-set(BENCHMARKS put_get_bench)
+set(BENCHMARKS
+        put_get_bench
+        memcpy_bench)
 
 foreach(benchmark ${BENCHMARKS})
   message("Building ${benchmark}")

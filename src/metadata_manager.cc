@@ -132,6 +132,7 @@ void MetadataManager::shm_deserialize_main() {
  * */
 size_t MetadataManager::LocalGetBucketSize(TagId bkt_id,
                                            bool backend) {
+  AUTO_TRACE(1);
   // Acquire MD read lock (reading tag_map)
   ScopedRwReadLock tag_map_lock(header_->lock_[kTagMapLock]);
   auto iter = tag_map_->find(bkt_id);
@@ -153,6 +154,7 @@ size_t MetadataManager::LocalGetBucketSize(TagId bkt_id,
 bool MetadataManager::LocalUpdateBucketSize(TagId bkt_id,
                                             ssize_t delta,
                                             BucketUpdate mode) {
+  AUTO_TRACE(1);
   // Acquire MD read lock (reading tag_map)
   ScopedRwReadLock tag_map_lock(header_->lock_[kTagMapLock]);
   auto iter = tag_map_->find(bkt_id);
@@ -184,6 +186,7 @@ bool MetadataManager::LocalUpdateBucketSize(TagId bkt_id,
  * Clear \a bkt_id bucket
  * */
 bool MetadataManager::LocalClearBucket(TagId bkt_id, bool backend) {
+  AUTO_TRACE(1);
   ScopedRwWriteLock tag_map_lock(header_->lock_[kTagMapLock]);
   auto iter = tag_map_->find(bkt_id);
   if (iter == tag_map_->end()) {
@@ -214,6 +217,7 @@ bool MetadataManager::LocalClearBucket(TagId bkt_id, bool backend) {
  * */
 Status MetadataManager::LocalTagBlob(
     BlobId blob_id, TagId tag_id) {
+  AUTO_TRACE(1);
   // Acquire MD read lock (read blob_map_)
   ScopedRwReadLock blob_map_lock(header_->lock_[kBlobMapLock]);
   auto iter = blob_map_->find(blob_id);
@@ -233,6 +237,7 @@ Status MetadataManager::LocalTagBlob(
  * */
 bool MetadataManager::LocalBlobHasTag(BlobId blob_id,
                                       TagId tag_id) {
+  AUTO_TRACE(1);
   // Acquire MD read lock (reading blob_map_)
   ScopedRwReadLock blob_map_lock(header_->lock_[kBlobMapLock]);
   auto iter = blob_map_->find(blob_id);
@@ -260,6 +265,7 @@ bool MetadataManager::LocalBlobHasTag(BlobId blob_id,
 std::pair<BlobId, bool> MetadataManager::LocalTryCreateBlob(
     TagId bkt_id,
     const std::string &blob_name) {
+  AUTO_TRACE(1);
   size_t orig_blob_size = 0;
   // Acquire MD write lock (modify blob_map_)
   ScopedRwWriteLock blob_map_lock(header_->lock_[kBlobMapLock]);
@@ -297,6 +303,7 @@ MetadataManager::LocalPutBlobMetadata(TagId bkt_id,
                                       size_t blob_size,
                                       std::vector<BufferInfo> &buffers,
                                       float score) {
+  AUTO_TRACE(1);
   size_t orig_blob_size = 0;
   // Acquire MD write lock (modify blob_map_)
   ScopedRwWriteLock blob_map_lock(header_->lock_[kBlobMapLock]);
@@ -339,6 +346,7 @@ MetadataManager::LocalPutBlobMetadata(TagId bkt_id,
  * */
 BlobId MetadataManager::LocalGetBlobId(TagId bkt_id,
                                        const std::string &blob_name) {
+  AUTO_TRACE(1);
   // Acquire MD read lock (read blob_id_map_)
   ScopedRwReadLock blob_map_lock(header_->lock_[kBlobMapLock]);
   hipc::uptr<hipc::charbuf> internal_blob_name =
@@ -355,6 +363,7 @@ BlobId MetadataManager::LocalGetBlobId(TagId bkt_id,
  * Get \a blob_name BLOB name from \a blob_id BLOB id
  * */
 std::string MetadataManager::LocalGetBlobName(BlobId blob_id) {
+  AUTO_TRACE(1);
   // Acquire MD read lock (read blob_id_map_)
   ScopedRwReadLock blob_map_lock(header_->lock_[kBlobMapLock]);
   auto iter = blob_map_->find(blob_id);
@@ -370,6 +379,7 @@ std::string MetadataManager::LocalGetBlobName(BlobId blob_id) {
    * Get \a score from \a blob_id BLOB id
    * */
 float MetadataManager::LocalGetBlobScore(BlobId blob_id) {
+  AUTO_TRACE(1);
   // Acquire MD read lock (read blob_id_map_)
   ScopedRwReadLock blob_map_lock(header_->lock_[kBlobMapLock]);
   auto iter = blob_map_->find(blob_id);
@@ -386,6 +396,7 @@ float MetadataManager::LocalGetBlobScore(BlobId blob_id) {
  * */
 bool MetadataManager::LocalLockBlob(BlobId blob_id,
                                     MdLockType lock_type) {
+  AUTO_TRACE(1);
   if (blob_id.IsNull()) {
     return false;
   }
@@ -398,6 +409,7 @@ bool MetadataManager::LocalLockBlob(BlobId blob_id,
  * */
 bool MetadataManager::LocalUnlockBlob(BlobId blob_id,
                                       MdLockType lock_type) {
+  AUTO_TRACE(1);
   if (blob_id.IsNull()) {
     return false;
   }
@@ -409,6 +421,7 @@ bool MetadataManager::LocalUnlockBlob(BlobId blob_id,
  * Get \a blob_id blob's buffers
  * */
 std::vector<BufferInfo> MetadataManager::LocalGetBlobBuffers(BlobId blob_id) {
+  AUTO_TRACE(1);
   // Acquire MD read lock (read blob_map_)
   ScopedRwReadLock blob_map_lock(header_->lock_[kBlobMapLock]);
   auto iter = blob_map_->find(blob_id);
@@ -429,6 +442,7 @@ std::vector<BufferInfo> MetadataManager::LocalGetBlobBuffers(BlobId blob_id) {
  * */
 bool MetadataManager::LocalRenameBlob(TagId bkt_id, BlobId blob_id,
                                       const std::string &new_blob_name) {
+  AUTO_TRACE(1);
   // Acquire MD write lock (modify blob_id_map_)
   ScopedRwWriteLock blob_map_lock(header_->lock_[kBlobMapLock]);
   auto iter = (*blob_map_).find(blob_id);
@@ -451,6 +465,7 @@ bool MetadataManager::LocalRenameBlob(TagId bkt_id, BlobId blob_id,
  * */
 bool MetadataManager::LocalDestroyBlob(TagId bkt_id,
                                        BlobId blob_id) {
+  AUTO_TRACE(1);
   // Acquire MD write lock (modify blob_id_map & blob_map_)
   ScopedRwWriteLock blob_map_lock(header_->lock_[kBlobMapLock]);
   (void)bkt_id;
@@ -475,6 +490,7 @@ bool MetadataManager::LocalDestroyBlob(TagId bkt_id,
  * Destroy all blobs + buckets
  * */
 void MetadataManager::LocalClear() {
+  AUTO_TRACE(1);
   LOG(INFO) << "Clearing all buckets and blobs" << std::endl;
   ScopedRwWriteLock tag_map_lock(header_->lock_[kTagMapLock]);
   tag_id_map_->clear();
@@ -488,6 +504,7 @@ void MetadataManager::LocalClear() {
  * Destroy all blobs + buckets globally
  * */
 void MetadataManager::GlobalClear() {
+  AUTO_TRACE(1);
   for (int i = 0; i < rpc_->hosts_.size(); ++i) {
     int node_id = i + 1;
     if (NODE_ID_IS_LOCAL(node_id)) {
@@ -510,6 +527,7 @@ MetadataManager::LocalGetOrCreateTag(const std::string &tag_name,
                                      bool owner,
                                      std::vector<TraitId> &traits,
                                      size_t backend_size) {
+  AUTO_TRACE(1);
   // Acquire MD write lock (modifying tag_map)
   ScopedRwWriteLock tag_map_lock(header_->lock_[kTagMapLock]);
 
@@ -546,6 +564,7 @@ MetadataManager::LocalGetOrCreateTag(const std::string &tag_name,
  * Get the TagId with \a bkt_name bucket name
  * */
 TagId MetadataManager::LocalGetTagId(const std::string &tag_name) {
+  AUTO_TRACE(1);
   // Acquire MD read lock (reading tag_id_map)
   ScopedRwReadLock tag_map_lock(header_->lock_[kTagMapLock]);
   auto tag_name_shm = hipc::make_uptr<hipc::string>(tag_name);
@@ -563,6 +582,7 @@ TagId MetadataManager::LocalGetTagId(const std::string &tag_name) {
  * */
 bool MetadataManager::LocalRenameTag(TagId tag_id,
                                      const std::string &new_name) {
+  AUTO_TRACE(1);
   // Acquire MD write lock (modifying tag_map_)
   ScopedRwWriteLock tag_map_lock(header_->lock_[kTagMapLock]);
   auto iter = tag_map_->find(tag_id);
@@ -581,6 +601,7 @@ bool MetadataManager::LocalRenameTag(TagId tag_id,
  * Delete a tag
  * */
 bool MetadataManager::LocalDestroyTag(TagId tag_id) {
+  AUTO_TRACE(1);
   // Acquire MD write lock (modifying tag_map_)
   ScopedRwWriteLock tag_map_lock(header_->lock_[kTagMapLock]);
   auto iter = tag_map_->find(tag_id);
@@ -599,6 +620,7 @@ bool MetadataManager::LocalDestroyTag(TagId tag_id) {
  * */
 Status MetadataManager::LocalTagAddBlob(TagId tag_id,
                                         BlobId blob_id) {
+  AUTO_TRACE(1);
   // Acquire MD write lock (modify tag_map_)
   ScopedRwWriteLock tag_map_lock(header_->lock_[kTagMapLock]);
   auto iter = tag_map_->find(tag_id);
@@ -616,6 +638,7 @@ Status MetadataManager::LocalTagAddBlob(TagId tag_id,
  * */
 Status MetadataManager::LocalTagRemoveBlob(TagId tag_id,
                                            BlobId blob_id) {
+  AUTO_TRACE(1);
   // Acquire MD write lock (modify tag_map_)
   ScopedRwWriteLock tag_map_lock(header_->lock_[kTagMapLock]);
   auto iter = tag_map_->find(tag_id);
@@ -633,6 +656,7 @@ Status MetadataManager::LocalTagRemoveBlob(TagId tag_id,
  * Find all blobs pertaining to a tag
  * */
 std::vector<BlobId> MetadataManager::LocalGroupByTag(TagId tag_id) {
+  AUTO_TRACE(1);
   // Acquire MD read lock (read tag_map_)
   ScopedRwReadLock tag_map_lock(header_->lock_[kTagMapLock]);
   // Get the tag info
@@ -650,6 +674,7 @@ std::vector<BlobId> MetadataManager::LocalGroupByTag(TagId tag_id) {
  * Add a trait to a tag index. Create tag if it does not exist.
  * */
 bool MetadataManager::LocalTagAddTrait(TagId tag_id, TraitId trait_id) {
+  AUTO_TRACE(1);
   // Acquire MD read lock (read tag_map_)
   ScopedRwReadLock tag_map_lock(header_->lock_[kTagMapLock]);
   auto iter = tag_map_->find(tag_id);
@@ -666,6 +691,7 @@ bool MetadataManager::LocalTagAddTrait(TagId tag_id, TraitId trait_id) {
  * Find all traits pertaining to a tag
  * */
 std::vector<TraitId> MetadataManager::LocalTagGetTraits(TagId tag_id) {
+  AUTO_TRACE(1);
   // Acquire MD read lock (read tag_map_)
   ScopedRwReadLock tag_map_lock(header_->lock_[kTagMapLock]);
   auto iter = tag_map_->find(tag_id);

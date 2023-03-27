@@ -75,10 +75,15 @@ int main(int argc, char **argv) {
   int rank;
   MPI_Init(&argc, &argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  auto hermes = hapi::Hermes::Create(hermes::HermesType::kClient);
-  int blobs_per_rank = 1;
+  if (argc != 3) {
+    printf("USAGE: ./put_get_bench [blob_size (K/M/G)] [blobs_per_rank]\n");
+    exit(1);
+  }
 
-  size_t blob_size = GIGABYTES(1);
+  auto hermes = hapi::Hermes::Create(hermes::HermesType::kClient);
+  size_t blob_size = hermes::config::ParseSize(argv[1]);
+  int blobs_per_rank = atoi(argv[2]);
+
   MPI_Barrier(MPI_COMM_WORLD);
   PutTest(hermes, rank, 1, blobs_per_rank, blob_size);
   MPI_Barrier(MPI_COMM_WORLD);
