@@ -111,6 +111,7 @@ BufferPool::LocalAllocateAndSetBuffers(PlacementSchema &schema,
   size_t blob_off = 0;
   int cpu = hermes_shm::NodeThreadId().hash() % header_->concurrency_;
 
+  TIMER_START("AllocateBuffers")
   for (SubPlacement &plcmnt : schema.plcmnts_) {
     // Get the target and device in the placement schema
     if (plcmnt.tid_.GetNodeId() != mdm_->rpc_->node_id_) {
@@ -134,6 +135,7 @@ BufferPool::LocalAllocateAndSetBuffers(PlacementSchema &schema,
                     blob_off,
                     buffers);
   }
+  TIMER_END()
   borg_->LocalPlaceBlobInBuffers(blob, buffers);
   return buffers;
 }

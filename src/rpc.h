@@ -117,7 +117,6 @@ class RpcContext {
 
 #ifdef HERMES_ONLY_RPC
 #define NODE_ID_IS_LOCAL(node_id) false
-#error "This is supposed to be disabled"
 #else
 #define NODE_ID_IS_LOCAL(node_id) (node_id) == (rpc_->node_id_)
 #endif

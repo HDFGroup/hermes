@@ -76,6 +76,7 @@ RPC void BufferOrganizer::LocalPlaceBlobInBuffers(
     if (buffer_info.tid_.GetNodeId() != mdm_->rpc_->node_id_) {
       continue;
     }
+    TIMER_START("DeviceInfo")
     hipc::Ref<DeviceInfo> dev_info =
         (*mdm_->devices_)[buffer_info.tid_.GetDeviceId()];
     if (buffer_info.t_off_ + buffer_info.blob_size_ >
@@ -89,10 +90,14 @@ RPC void BufferOrganizer::LocalPlaceBlobInBuffers(
                         dev_info->mount_point_->str()) << std::endl;
     }
     auto io_client = borg::BorgIoClientFactory::Get(dev_info->header_->io_api_);
+    TIMER_END()
+
+    TIMER_START("IO")
     bool ret = io_client->Write(*dev_info,
                                 blob.data() + blob_off,
                                 buffer_info.t_off_,
                                 buffer_info.blob_size_);
+    TIMER_END()
     blob_off += buffer_info.blob_size_;
     if (!ret) {
       mdm_->PrintDeviceInfo();

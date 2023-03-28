@@ -21,19 +21,7 @@ configure_file(rpc_factory.h.in rpc_factory.h)
 #------------------------------------------------------------------------------
 # External dependencies
 #------------------------------------------------------------------------------
-# GNU Linear Programming Kit
-find_package(GLPK REQUIRED)
-if(GLPK_FOUND)
-  include_directories(${GLPK_INCLUDE_DIRS})
-  message(STATUS "Found GLPK")
-  # set(HERMES_EXT_INCLUDE_DEPENDENCIES ${GLPK_INCLUDE_DIRS}
-  #     ${HERMES_EXT_INCLUDE_DEPENDENCIES}
-  # )
-  set(HERMES_EXT_LIB_DEPENDENCIES
-      ${GLPK_LIBRARIES} ${HERMES_EXT_LIB_DEPENDENCIES})
-else()
-  message(STATUS "GLPK not found")
-endif()
+# None for now
 
 #------------------------------------------------------------------------------
 # Set sources

@@ -20,7 +20,7 @@
 namespace hermes_shm {
 
 #define AUTO_TRACE(LOG_LEVEL) \
-  hermes_shm::AutoTrace<LOG_LEVEL> hshm_tracer_(__PRETTY_FUNCTION__);
+  hermes_shm::AutoTrace<LOG_LEVEL> hshm_tracer_(__func__);
 
 #define TIMER_START(NAME) \
   hshm_tracer_.StartTimer(NAME);
@@ -61,6 +61,9 @@ class AutoTrace {
   void _StartTimer(HighResMonotonicTimer &timer) {
 #ifdef HERMES_ENABLE_PROFILING
     if constexpr(LOG_LEVEL <= HERMES_ENABLE_PROFILING) {
+      std::cout << hermes_shm::Formatter::format("start;{}{}\n",
+                                                 fname_,
+                                                 internal_name_);
       timer.Resume();
     }
 #endif
@@ -70,7 +73,7 @@ class AutoTrace {
 #ifdef HERMES_ENABLE_PROFILING
     if constexpr(LOG_LEVEL <= HERMES_ENABLE_PROFILING) {
       timer.Pause();
-      std::cout << hermes_shm::Formatter::format("{}{};{}ns\n",
+      std::cout << hermes_shm::Formatter::format("end;{}{};{}ns\n",
                                                  fname_,
                                                  internal_name_,
                                                  timer.GetNsec());
