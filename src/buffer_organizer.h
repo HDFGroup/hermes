@@ -91,7 +91,7 @@ class BufferOrganizer : public hipc::ShmContainer {
                                     std::vector<BufferInfo> &buffers);
 
   /** Stores a blob into a set of buffers */
-  RPC Blob LocalReadBlobFromBuffers(Blob &blob,
+  RPC void LocalReadBlobFromBuffers(Blob &blob,
                                     std::vector<BufferInfo> &buffers);
   Blob GlobalReadBlobFromBuffers(std::vector<BufferInfo> &buffers);
 

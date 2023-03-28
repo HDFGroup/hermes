@@ -134,7 +134,7 @@ void BufferOrganizer::GlobalPlaceBlobInBuffers(
 }
 
 /** Stores a blob into a set of buffers */
-RPC Blob BufferOrganizer::LocalReadBlobFromBuffers(
+RPC void BufferOrganizer::LocalReadBlobFromBuffers(
     Blob &blob, std::vector<BufferInfo> &buffers) {
   AUTO_TRACE(1)
   size_t blob_off = 0;
@@ -164,7 +164,6 @@ RPC Blob BufferOrganizer::LocalReadBlobFromBuffers(
       LOG(FATAL) << "Could not perform I/O in BORG" << std::endl;
     }
   }
-  return std::move(blob);
 }
 
 /** The Global form of ReadBLobFromBuffers */
@@ -176,7 +175,8 @@ Blob BufferOrganizer::GlobalReadBlobFromBuffers(
   auto unique_nodes = GroupByNodeId(buffers, total_size);
 
   // Send the buffers to each node
-  std::vector<Blob> blobs(unique_nodes.size());
+  std::vector<Blob> blobs;
+  blobs.reserve(unique_nodes.size());
   for (auto &[node_id, size] : unique_nodes) {
     blobs.emplace_back(size);
     if (NODE_ID_IS_LOCAL(node_id)) {
