@@ -22,7 +22,7 @@
 #include "hermes_shm/data_structures/ipc/internal/shm_archive.h"
 #include "hermes_shm/data_structures/ipc/internal/shm_smart_ptr.h"
 
-namespace hermes_shm::ipc {
+namespace hshm::ipc {
 
 /**
  * When T is a SHM object
@@ -459,7 +459,7 @@ static PointerT make_ptr_base(Args&& ...args) {
 /** Creates a smart_ptr by merging two argpacks */
 template<typename PointerT, typename ArgPackT_1, typename ArgPackT_2>
 static PointerT make_piecewise(ArgPackT_1 &&args1, ArgPackT_2 &&args2) {
-  return hermes_shm::PassArgPack::Call(
+  return hshm::PassArgPack::Call(
     MergeArgPacks::Merge(
       std::forward<ArgPackT_1>(args1),
       std::forward<ArgPackT_2>(args2)),
@@ -508,7 +508,7 @@ uptr<T> make_uptr(Allocator *alloc, Args&& ...args) {
   return make_ptr_base<uptr<T>>(alloc, std::forward<Args>(args)...);
 }
 
-}  // namespace hermes_shm::ipc
+}  // namespace hshm::ipc
 
 #undef CLASS_NAME
 #undef TYPED_CLASS
@@ -520,16 +520,16 @@ namespace std {
 
 /** Hash function for mptr */
 template<typename T>
-struct hash<hermes_shm::ipc::mptr<T>> {
-  size_t operator()(const hermes_shm::ipc::mptr<T> &obj) const {
+struct hash<hshm::ipc::mptr<T>> {
+  size_t operator()(const hshm::ipc::mptr<T> &obj) const {
     return obj.hash();
   }
 };
 
 /** Hash function for uptr */
 template<typename T>
-struct hash<hermes_shm::ipc::uptr<T>> {
-  size_t operator()(const hermes_shm::ipc::uptr<T> &obj) const {
+struct hash<hshm::ipc::uptr<T>> {
+  size_t operator()(const hshm::ipc::uptr<T> &obj) const {
     return obj.hash();
   }
 };
@@ -537,8 +537,8 @@ struct hash<hermes_shm::ipc::uptr<T>> {
 
 /** Hash function for ref */
 template<typename T>
-struct hash<hermes_shm::ipc::Ref<T>> {
-  size_t operator()(const hermes_shm::ipc::Ref<T> &obj) const {
+struct hash<hshm::ipc::Ref<T>> {
+  size_t operator()(const hshm::ipc::Ref<T> &obj) const {
     return obj.hash();
   }
 };

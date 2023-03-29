@@ -18,7 +18,7 @@ namespace hermes::api {
 void Hermes::Init(HermesType mode,
                   std::string server_config_path,
                   std::string client_config_path) {
-  hermes_shm::ScopedMutex lock(lock_);
+  hshm::ScopedMutex lock(lock_);
   if (is_initialized_) {
     return;
   }
@@ -33,6 +33,9 @@ void Hermes::Init(HermesType mode,
       InitClient(std::move(server_config_path),
                  std::move(client_config_path));
       break;
+    }
+    case HermesType::kNone: {
+      LOG(FATAL) << "Cannot have none HermesType" << std::endl;
     }
   }
   is_initialized_ = true;

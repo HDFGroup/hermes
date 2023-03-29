@@ -20,7 +20,7 @@
 #include <hermes_shm/types/bitfield.h>
 #include <hermes_shm/types/atomic.h>
 
-namespace hermes_shm::ipc {
+namespace hshm::ipc {
 
 /**
  * The identifier for an allocator
@@ -366,14 +366,14 @@ static inline size_t NextPageSizeMultiple(size_t size) {
   return new_size;
 }
 
-}  // namespace hermes_shm::ipc
+}  // namespace hshm::ipc
 
 namespace std {
 
 /** Allocator ID hash */
 template <>
-struct hash<hermes_shm::ipc::allocator_id_t> {
-  std::size_t operator()(const hermes_shm::ipc::allocator_id_t &key) const {
+struct hash<hshm::ipc::allocator_id_t> {
+  std::size_t operator()(const hshm::ipc::allocator_id_t &key) const {
     return std::hash<uint64_t>{}(key.int_);
   }
 };

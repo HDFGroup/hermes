@@ -14,7 +14,7 @@
 #include <hermes_shm/memory/allocator/stack_allocator.h>
 #include <hermes_shm/memory/allocator/mp_page.h>
 
-namespace hermes_shm::ipc {
+namespace hshm::ipc {
 
 void StackAllocator::shm_init(allocator_id_t id,
                               size_t custom_header_size,
@@ -82,4 +82,4 @@ void StackAllocator::FreeOffsetNoNullCheck(OffsetPointer p) {
   header_->total_alloc_.fetch_sub(hdr->page_size_);
 }
 
-}  // namespace hermes_shm::ipc
+}  // namespace hshm::ipc

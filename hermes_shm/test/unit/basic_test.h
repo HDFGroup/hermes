@@ -41,7 +41,8 @@ static inline bool VerifyBuffer(char *ptr, size_t size, char nonce) {
   } else {\
     TMP_VAR = hipc::make_uptr<int>(VAL);\
   }\
-  TYPE &VAR = *TMP_VAR;
+  TYPE &VAR = *TMP_VAR;\
+  (void)VAR;
 
 /** TYPE VAR = TYPE(VAL) */
 #define CREATE_SET_VAR_TO_INT_OR_STRING(TYPE, VAR, VAL)\

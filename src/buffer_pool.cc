@@ -109,7 +109,7 @@ BufferPool::LocalAllocateAndSetBuffers(PlacementSchema &schema,
   AUTO_TRACE(1)
   std::vector<BufferInfo> buffers;
   size_t blob_off = 0;
-  int cpu = hermes_shm::NodeThreadId().hash() % header_->concurrency_;
+  int cpu = hshm::NodeThreadId().hash() % header_->concurrency_;
 
   TIMER_START("AllocateBuffers")
   for (SubPlacement &plcmnt : schema.plcmnts_) {
@@ -377,12 +377,12 @@ std::vector<BpCoin> BufferPool::CoinSelect(hipc::Ref<DeviceInfo> &dev_info,
  * */
 bool BufferPool::LocalReleaseBuffers(std::vector<BufferInfo> &buffers) {
   AUTO_TRACE(1)
-  int cpu = hermes_shm::NodeThreadId().hash() % header_->concurrency_;
+  int cpu = hshm::NodeThreadId().hash() % header_->concurrency_;
   for (BufferInfo &info : buffers) {
     // Acquire the main CPU lock for the target
     hipc::Ref<BpFreeListStat> target_stat;
     GetTargetStatForCpu(info.tid_.GetIndex(), cpu, target_stat);
-    hermes_shm::ScopedMutex(target_stat->lock_);
+    hshm::ScopedMutex(target_stat->lock_);
 
     // Get this core's free list for the page_size
     hipc::Ref<BpFreeListStat> free_list_stat;

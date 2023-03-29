@@ -86,9 +86,15 @@ int main(int argc, char **argv) {
     if (!do_read) {
       memset(buf, nonce, block_size);
       int ret = write(fd, buf, block_size);
+      if (ret != block_size) {
+        std::cout << "Buffer write failed!" << std::endl;
+      }
     } else {
       memset(buf, 0, block_size);
       int ret = read(fd, buf, block_size);
+      if (ret != block_size) {
+        std::cout << "Buffer read failed!" << std::endl;
+      }
       if (!VerifyBuffer(buf, block_size, nonce)) {
         std::cout << "Buffer verification failed!" << std::endl;
         exit(1);

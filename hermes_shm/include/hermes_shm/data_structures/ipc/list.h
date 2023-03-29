@@ -18,7 +18,7 @@
 
 #include <list>
 
-namespace hermes_shm::ipc {
+namespace hshm::ipc {
 
 /** forward pointer for list */
 template<typename T>
@@ -299,7 +299,8 @@ class list : public ShmContainer {
   list(TYPED_HEADER *header, Allocator *alloc, list &&other) noexcept {
     shm_init_header(header, alloc);
     if (alloc_ == other.alloc_) {
-      memcpy(header_, other.header_, sizeof(*header_));
+      // memcpy((void*)header_, (void*)other.header_, sizeof(*header_));
+      (*header_) = (*other.header_);
       other.SetNull();
     } else {
       shm_strong_copy_construct_and_op<list>(other);
@@ -312,7 +313,8 @@ class list : public ShmContainer {
     if (this != &other) {
       shm_destroy();
       if (alloc_ == other.alloc_) {
-        memcpy((void *) header_, (void *) other.header_, sizeof(*header_));
+        // memcpy((void*)header_, (void*)other.header_, sizeof(*header_));
+        (*header_) = (*other.header_);
         other.SetNull();
       } else {
         shm_strong_copy_construct_and_op<list>(other);
@@ -525,7 +527,7 @@ class list : public ShmContainer {
   }
 };
 
-}  // namespace hermes_shm::ipc
+}  // namespace hshm::ipc
 
 #undef CLASS_NAME
 #undef TYPED_CLASS

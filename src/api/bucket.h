@@ -16,11 +16,8 @@
 #include "hermes_types.h"
 #include "status.h"
 #include "buffer_pool.h"
-#include "io_client/io_client_factory.h"
 
 namespace hermes::api {
-
-using hermes::adapter::IoClientObject;
 
 class Bucket {
  private:
@@ -65,6 +62,13 @@ class Bucket {
    * */
   TagId GetId() const {
     return id_;
+  }
+
+  /**
+   * Get the context object of this bucket
+   * */
+  Context& GetContext() {
+    return ctx_;
   }
 
   /**
@@ -164,62 +168,11 @@ class Bucket {
              Context &ctx);
 
   /**
-   * Put \a blob_name Blob into the bucket. Load the blob from the
-   * I/O backend if it does not exist or is not fully loaded.
-   *
-   * @param blob_name the semantic name of the blob
-   * @param blob the buffer to put final data in
-   * @param blob_off the offset within the blob to begin the Put
-   * @param blob_id [out] the blob id corresponding to blob_name
-   * @param io_ctx information required to perform I/O to the backend
-   * @param opts specific configuration of the I/O to perform
-   * @param ctx any additional information
-   * */
-  Status PartialPutOrCreate(const std::string &blob_name,
-                            const Blob &blob,
-                            size_t blob_off,
-                            BlobId &blob_id,
-                            IoStatus &status,
-                            const IoClientContext &opts,
-                            Context &ctx);
-
-  /**
    * Get \a blob_id Blob from the bucket
    * */
   Status Get(BlobId blob_id,
              Blob &blob,
              Context &ctx);
-
-  /**
-   * Load \a blob_name Blob from the bucket. Load the blob from the
-   * I/O backend if it does not exist or is not fully loaded.
-   *
-   * @param blob_name the semantic name of the blob
-   * @param blob the buffer to put final data in
-   * @param blob_off the offset within the blob to begin the Put
-   * @param blob_id [out] the blob id corresponding to blob_name
-   * @param io_ctx information required to perform I/O to the backend
-   * @param opts specific configuration of the I/O to perform
-   * @param ctx any additional information
-   * */
-  Status PartialGetOrCreate(const std::string &blob_name,
-                            Blob &blob,
-                            size_t blob_off,
-                            size_t blob_size,
-                            BlobId &blob_id,
-                            IoStatus &status,
-                            const IoClientContext &opts,
-                            Context &ctx);
-
-  /**
-   * Flush a blob
-   * */
-  void FlushBlob(BlobId blob_id, const IoClientContext &opts);
-
-  /**
-   * Flush the entire bucket
-   * */
-  void Flush(const IoClientContext &opts);
 
   /**
    * Determine if the bucket contains \a blob_id BLOB
@@ -240,8 +193,7 @@ class Bucket {
   /**
    * Delete \a blob_id blob
    * */
-  void DestroyBlob(BlobId blob_id, Context &ctx,
-                   IoClientContext opts = IoClientContext());
+  void DestroyBlob(BlobId blob_id, Context &ctx);
 
   /**
    * Get the set of blob IDs contained in the bucket

@@ -19,9 +19,9 @@
 #include "hermes_shm/constants/macros.h"
 #include <hermes_shm/constants/data_structure_singleton_macros.h>
 
-namespace hipc = hermes_shm::ipc;
+namespace hipc = hshm::ipc;
 
-namespace hermes_shm::ipc {
+namespace hshm::ipc {
 
 class MemoryManager {
  public:
@@ -191,6 +191,6 @@ class MemoryManager {
   }
 };
 
-}  // namespace hermes_shm::ipc
+}  // namespace hshm::ipc
 
 #endif  // HERMES_MEMORY_MEMORY_MANAGER_H_

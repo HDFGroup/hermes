@@ -57,8 +57,8 @@ class SingletonGenerator:
         lines.append("")
         for defn in self.defs:
             lines.append(f"#include <{defn.include}>")
-            lines.append(f"template<> {defn.class_name} hermes_shm::GlobalSingleton<{defn.class_name}>::obj_ = {defn.class_name}();")
-            #lines.append(f"template<> hermes_shm::Mutex hermes_shm::GlobalSingleton<{defn.class_name}>::lock_ = hermes_shm::Mutex();")
+            lines.append(f"template<> {defn.class_name} hshm::GlobalSingleton<{defn.class_name}>::obj_ = {defn.class_name}();")
+            #lines.append(f"template<> hshm::Mutex hshm::GlobalSingleton<{defn.class_name}>::lock_ = hshm::Mutex();")
         self._SaveLines(lines, path)
 
     def _GenerateH(self, path):
@@ -70,7 +70,7 @@ class SingletonGenerator:
         lines.append("#include <hermes_shm/util/singleton.h>")
         lines.append("")
         for defn in self.defs:
-            lines.append(f"#define {defn.macro_name} hermes_shm::GlobalSingleton<{defn.class_name}>::GetInstance()")
+            lines.append(f"#define {defn.macro_name} hshm::GlobalSingleton<{defn.class_name}>::GetInstance()")
             lines.append(f"#define {defn.type_name} {defn.class_name}*")
             lines.append("")
         lines.append(f"#endif  // {guard}")
@@ -92,7 +92,7 @@ gen.Generate("src/singleton.cc",
 
 gen = SingletonGenerator()
 gen.Add("hermes", "SystemInfo", "hermes_shm/introspect/system_info.h")
-gen.Add("hermes_shm::ipc", "MemoryManager", "hermes_shm/memory/memory_manager.h")
+gen.Add("hshm::ipc", "MemoryManager", "hermes_shm/memory/memory_manager.h")
 gen.Add("hermes", "ThreadManager", "hermes_shm/thread/thread_manager.h")
 gen.Generate("src/data_structure_singleton.cc",
              "include/hermes_shm/constants/data_structure_singleton_macros.h")

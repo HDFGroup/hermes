@@ -22,7 +22,6 @@
 #include <vector>
 
 #include "data_structures.h"
-#include "constants.h"
 
 /**
  * \file hermes_types.h
@@ -57,6 +56,27 @@ typedef int64_t i64;  /**< 64-bit signed integer */
 typedef float f32;    /**< 32-bit float */
 typedef double f64;   /**< 64-bit float */
 
+/** Identifier of the Hermes allocator */
+extern const hipc::allocator_id_t main_alloc_id;
+
+/** Hermes server environment variable */
+extern const char* kHermesServerConf;
+
+/** Hermes client environment variable */
+extern const char* kHermesClientConf;
+
+/** Hermes adapter mode environment variable */
+extern const char* kHermesAdapterMode;
+
+/** Filesystem page size environment variable */
+extern const char* kHermesPageSize;
+
+/** Stop daemon environment variable */
+extern const char* kHermesStopDaemon;
+
+/** Maximum path length environment variable */
+extern const size_t kMaxPathLength;
+
 /** The mode Hermes is launched in */
 enum class HermesType {
   kNone,
@@ -68,7 +88,7 @@ enum class HermesType {
 enum class IoType {
   kRead,
   kWrite,
-  KNone
+  kNone
 };
 
 typedef u16 DeviceID; /**< device id in unsigned 16-bit integer */
@@ -124,7 +144,7 @@ struct IoStat {
 
 /** Used as hints to the prefetcher */
 struct IoTrace {
-  int node_id_;
+  i32 node_id_;
   IoType type_;
   std::string blob_name_;
   std::string tag_name_;
@@ -146,7 +166,7 @@ union TargetId {
   /** The Target ID as bitfield */
   struct {
     /** The ID of the node in charge of this target. */
-    u32 node_id_;
+    i32 node_id_;
     /** The ID of the virtual device that backs this target. It is an index into
      * the Device array. */
     u16 device_id_;
@@ -159,7 +179,7 @@ union TargetId {
 
   TargetId() = default;
 
-  TargetId(u32 node_id, u16 device_id, u16 index) {
+  TargetId(i32 node_id, u16 device_id, u16 index) {
     bits_.node_id_ = node_id;
     bits_.device_id_ = device_id;
     bits_.index_ = index;
@@ -169,7 +189,7 @@ union TargetId {
     as_int_ = other.as_int_;
   }
 
-  u32 GetNodeId() {
+  i32 GetNodeId() {
     return bits_.node_id_;
   }
 
@@ -236,7 +256,7 @@ struct Thresholds {
 namespace hermes::api {
 
 /** A blob is an uniterpreted array of bytes */
-typedef hermes_shm::charbuf Blob;
+typedef hshm::charbuf Blob;
 
 /** Supported data placement policies */
 enum class PlacementPolicy {

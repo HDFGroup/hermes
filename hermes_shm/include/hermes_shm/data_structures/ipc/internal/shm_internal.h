@@ -20,7 +20,6 @@
 #include "shm_macros.h"
 #include "shm_container.h"
 
-namespace hipc = hermes_shm::ipc;
-namespace hshm = hermes_shm;
+namespace hipc = hshm::ipc;
 
 #endif  // HERMES_HERMES_SHM_DATA_STRUCTURES_INTERNAL_SHM_INTERNAL_H_

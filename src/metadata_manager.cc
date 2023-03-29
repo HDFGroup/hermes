@@ -506,7 +506,7 @@ void MetadataManager::LocalClear() {
 void MetadataManager::GlobalClear() {
   AUTO_TRACE(1);
   for (int i = 0; i < rpc_->hosts_.size(); ++i) {
-    int node_id = i + 1;
+    i32 node_id = i + 1;
     if (NODE_ID_IS_LOCAL(node_id)) {
       LocalClear();
     } else {

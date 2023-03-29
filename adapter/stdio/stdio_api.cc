@@ -421,7 +421,7 @@ int HERMES_DECL(fsetpos64)(FILE *stream, const fpos64_t *pos) {
   if (fs_api->IsFpTracked(stream)) {
     LOG(INFO) << "Intercept fsetpos64 offset:" << offset << "." << std::endl;
     File f; f.hermes_fh_ = stream;
-    off_t ret = fs_api->Seek(f, stat_exists, SeekMode::kSet, offset);
+    fs_api->Seek(f, stat_exists, SeekMode::kSet, offset);
     return 0;
   }
   return real_api->fsetpos64(stream, pos);

@@ -15,6 +15,6 @@
 
 #include <hermes_shm/util/timer.h>
 
-using Timer = hermes_shm::HighResMonotonicTimer;
+using Timer = hshm::HighResMonotonicTimer;
 
 #endif //HERMES_BENCHMARK_DATA_STRUCTURE_TEST_INIT_H_

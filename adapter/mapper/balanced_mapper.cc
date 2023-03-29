@@ -11,7 +11,6 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "balanced_mapper.h"
-#include "constants.h"
 #include "api/hermes.h"
 
 namespace hermes::adapter {

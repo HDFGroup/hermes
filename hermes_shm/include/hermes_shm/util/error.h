@@ -21,7 +21,7 @@
 #include <memory>
 #include <hermes_shm/util/formatter.h>
 
-#define HERMES_ERROR_TYPE std::shared_ptr<hermes_shm::Error>
+#define HERMES_ERROR_TYPE std::shared_ptr<hshm::Error>
 #define HERMES_ERROR_HANDLE_START() try {
 #define HERMES_ERROR_HANDLE_END() \
   } catch(HERMES_ERROR_TYPE &err) { err->print(); exit(-1024); }
@@ -30,7 +30,7 @@
 #define HERMES_ERROR_HANDLE_CATCH catch(HERMES_ERROR_TYPE &HERMES_ERROR_PTR)
 #define HERMES_ERROR_IS(err, check) (err->get_code() == check.get_code())
 
-namespace hermes_shm {
+namespace hshm {
 
 class Error : std::exception {
  private:
@@ -57,7 +57,7 @@ class Error : std::exception {
   }
 };
 
-}  // namespace hermes_shm
+}  // namespace hshm
 
 // #endif
 

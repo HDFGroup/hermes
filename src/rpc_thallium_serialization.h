@@ -20,6 +20,7 @@
 #include <thallium/serialization/stl/list.hpp>
 
 #include "hermes_types.h"
+#include "adapter/adapter_types.h"
 #include "statuses.h"
 #include "metadata_types.h"
 #include "data_structures.h"

@@ -16,7 +16,7 @@
 #include "shm_container.h"
 #include <string>
 
-namespace hermes_shm::ipc {
+namespace hshm::ipc {
 
 /** forward declaration for string */
 class NullContainer;
@@ -114,7 +114,7 @@ class NullContainer : public ShmContainer {
   void shm_deserialize_main() {}
 };
 
-}  // namespace hermes_shm::ipc
+}  // namespace hshm::ipc
 
 namespace std {
 

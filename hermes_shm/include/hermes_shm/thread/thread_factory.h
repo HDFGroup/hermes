@@ -16,7 +16,7 @@
 #include "thread.h"
 #include "pthread.h"
 
-namespace hermes_shm {
+namespace hshm {
 
 template<typename BIND>
 class ThreadFactory {
@@ -46,6 +46,6 @@ class ThreadStaticFactory {
   }
 };
 
-}  // namespace hermes_shm
+}  // namespace hshm
 
 #endif  // HERMES_THREAD_THREAD_FACTORY_H_

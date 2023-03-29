@@ -17,7 +17,7 @@
 #include <vector>
 #include <list>
 
-namespace hermes_shm {
+namespace hshm {
 
 /** Convert an iterable object into a vector */
 template<typename T, typename SharedT>
@@ -52,6 +52,6 @@ hshm::charbuf to_charbuf(StringT &other) {
   return text;
 }
 
-}  // namespace hermes_shm
+}  // namespace hshm
 
 #endif  // HERMES_SHM_INCLUDE_HERMES_SHM_DATA_STRUCTURES_IPC_CONVERTERS_H_

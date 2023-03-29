@@ -18,7 +18,7 @@
 #include <regex>
 #include <list>
 
-namespace hermes_shm {
+namespace hshm {
 
 static std::string path_parser(std::string path) {
   std::smatch env_names;
@@ -45,6 +45,6 @@ static std::string path_parser(std::string path) {
   return path;
 }
 
-}  // namespace hermes_shm
+}  // namespace hshm
 
 #endif  // HERMES_PATH_PARSER_H

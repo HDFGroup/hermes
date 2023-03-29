@@ -16,7 +16,7 @@
 #include "hermes_shm/memory/memory_registry.h"
 #include "shm_archive.h"
 
-namespace hermes_shm::ipc {
+namespace hshm::ipc {
 
 /**
  * Indicates that a data structure can be archived in shared memory
@@ -116,6 +116,6 @@ struct ShmDeserialize {
   }
 };
 
-}  // namespace hermes_shm::ipc
+}  // namespace hshm::ipc
 
 #endif  // HERMES_INCLUDE_HERMES_DATA_STRUCTURES_INTERNAL_DESERIALIZE_H_

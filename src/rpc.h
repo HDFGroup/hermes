@@ -43,7 +43,7 @@ enum class RpcType {
 
 /** Uniquely identify a host machine */
 struct HostInfo {
-  int node_id_;
+  i32 node_id_;
   std::string hostname_;
   std::string ip_addr_;
 
@@ -59,7 +59,7 @@ class RpcContext {
   ServerConfig *config_;
   MetadataManager *mdm_;
   int port_;  /**< port number */
-  int node_id_; /**< the ID of this node*/
+  i32 node_id_; /**< the ID of this node*/
   std::vector<HostInfo> hosts_; /**< Hostname and ip addr per-node */
   HermesType mode_; /**< The current mode hermes is executing in */
 
@@ -73,19 +73,19 @@ class RpcContext {
   void InitRpcContext();
 
   /** Check if we should skip an RPC and call a function locally */
-  bool ShouldDoLocalCall(int node_id);
+  bool ShouldDoLocalCall(i32 node_id);
 
   /** get RPC address */
-  std::string GetRpcAddress(u32 node_id, int port);
+  std::string GetRpcAddress(i32 node_id, int port);
 
   /** Get RPC address for this node */
   std::string GetMyRpcAddress();
 
   /** get host name from node ID */
-  std::string GetHostNameFromNodeId(u32 node_id);
+  std::string GetHostNameFromNodeId(i32 node_id);
 
   /** get host name from node ID */
-  std::string GetIpAddressFromNodeId(u32 node_id);
+  std::string GetIpAddressFromNodeId(i32 node_id);
 
   /** Get RPC protocol */
   std::string GetProtocol();
@@ -134,7 +134,7 @@ class RpcContext {
   }\
   template<typename ArgPackT>\
   TYPE_UNWRAP(RET) _Global##BaseName(ArgPackT &&pack) {\
-    int node_id = hashfn(pack.template              \
+    i32 node_id = hashfn(pack.template              \
                          Forward<tuple_idx>()); \
     if (NODE_ID_IS_LOCAL(node_id)) {\
       if constexpr(std::is_same_v<TYPE_UNWRAP(RET), void>) {\

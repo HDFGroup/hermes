@@ -15,7 +15,7 @@ class LockedVector;
 template<>
 class ShmHeader<LockedVector> : public hipc::ShmBaseHeader {
  public:
-  hermes_shm::Mutex lock_;
+  hshm::Mutex lock_;
   hipc::ShmArchive<hipc::vector<int>> vec_;
 };
 

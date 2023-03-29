@@ -16,7 +16,7 @@
 #include "basic_test.h"
 #include "test_init.h"
 
-namespace hermes_shm::ipc {
+namespace hshm::ipc {
 
 template<typename T, typename PointerT>
 class SmartPtrTestSuite {
@@ -77,6 +77,6 @@ class SmartPtrTestSuite {
   }
 };
 
-}  // namespace hermes_shm::ipc
+}  // namespace hshm::ipc
 
 #endif  // HERMES_TEST_UNIT_ptr__STRUCTURES_CONTAINERS_SMART_PTR_H_

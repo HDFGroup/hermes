@@ -29,7 +29,7 @@
 #include <hermes_shm/constants/macros.h>
 #include <hermes_shm/introspect/system_info.h>
 
-namespace hermes_shm::ipc {
+namespace hshm::ipc {
 
 class PosixMmap : public MemoryBackend {
  private:
@@ -106,6 +106,6 @@ class PosixMmap : public MemoryBackend {
   }
 };
 
-}  // namespace hermes_shm::ipc
+}  // namespace hshm::ipc
 
 #endif  // HERMES_INCLUDE_MEMORY_BACKEND_POSIX_MMAP_H

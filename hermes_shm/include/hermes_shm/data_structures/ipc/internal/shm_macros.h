@@ -20,13 +20,13 @@
  * Determine whether or not \a T type is designed for shared memory
  * */
 #define IS_SHM_ARCHIVEABLE(T) \
-  std::is_base_of<hermes_shm::ipc::ShmArchiveable, T>::value
+  std::is_base_of<hshm::ipc::ShmArchiveable, T>::value
 
 /**
  * Determine whether or not \a T type is a SHM smart pointer
  * */
 #define IS_SHM_SMART_POINTER(T) \
-  std::is_base_of<hermes_shm::ipc::ShmSmartPointer, T>::value
+  std::is_base_of<hshm::ipc::ShmSmartPointer, T>::value
 
 /**
  * SHM_X_OR_Y: X if T is SHM_SERIALIZEABLE, Y otherwise

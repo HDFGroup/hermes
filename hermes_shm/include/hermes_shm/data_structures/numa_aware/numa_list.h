@@ -17,7 +17,7 @@
 #include "hermes_shm/data_structures/ipc/list.h"
 #include "hermes_shm/data_structures/ipc/vector.h"
 
-namespace hermes_shm::ipc {
+namespace hshm::ipc {
 
 template<typename T>
 class numa_list;
@@ -164,6 +164,6 @@ class numa_list : public ShmContainer {
   static list_citerator<T> const cend() {
   }
 };
-}  // namespace hermes_shm::ipc
+}  // namespace hshm::ipc
 
 #endif  // HERMES_SHM_INCLUDE_HERMES_SHM_DATA_STRUCTURES_NUMA_AWARE_LIST_H_

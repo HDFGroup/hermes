@@ -16,7 +16,7 @@
 #include <unistd.h>
 #include <sys/sysinfo.h>
 
-namespace hermes_shm {
+namespace hshm {
 
 struct SystemInfo {
   int pid_;
@@ -34,6 +34,6 @@ struct SystemInfo {
   }
 };
 
-}  // namespace hermes_shm
+}  // namespace hshm
 
 #endif  // HERMES_SYSINFO_INFO_H_

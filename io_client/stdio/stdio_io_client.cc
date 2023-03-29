@@ -15,8 +15,8 @@
 namespace hermes::adapter::fs {
 
 /** Allocate an fd for the file f */
-void StdioIoClient::RealOpen(IoClientObject &f,
-                             IoClientStats &stat,
+void StdioIoClient::RealOpen(File &f,
+                             AdapterStat &stat,
                              const std::string &path) {
   if (stat.mode_str_.find('w') != std::string::npos) {
     stat.is_trunc_ = true;
@@ -39,15 +39,15 @@ void StdioIoClient::RealOpen(IoClientObject &f,
  * and hermes file handler. These are not the same as POSIX file
  * descriptor and STDIO file handler.
  * */
-void StdioIoClient::HermesOpen(IoClientObject &f,
-                               const IoClientStats &stat,
-                               FilesystemIoClientObject &fs_mdm) {
+void StdioIoClient::HermesOpen(File &f,
+                               const AdapterStat &stat,
+                               FilesystemIoClientState &fs_mdm) {
   f.hermes_fh_ = (FILE*)fs_mdm.stat_;
 }
 
 /** Synchronize \a file FILE f */
-int StdioIoClient::RealSync(const IoClientObject &f,
-                            const IoClientStats &stat) {
+int StdioIoClient::RealSync(const File &f,
+                            const AdapterStat &stat) {
   (void) f;
   if (stat.adapter_mode_ == AdapterMode::kScratch &&
       stat.fh_ == nullptr) {
@@ -57,8 +57,8 @@ int StdioIoClient::RealSync(const IoClientObject &f,
 }
 
 /** Close \a file FILE f */
-int StdioIoClient::RealClose(const IoClientObject &f,
-                             IoClientStats &stat) {
+int StdioIoClient::RealClose(const File &f,
+                             AdapterStat &stat) {
   if (stat.adapter_mode_ == AdapterMode::kScratch &&
       stat.fh_ == nullptr) {
     return 0;
@@ -70,9 +70,9 @@ int StdioIoClient::RealClose(const IoClientObject &f,
  * Called before RealClose. Releases information provisioned during
  * the allocation phase.
  * */
-void StdioIoClient::HermesClose(IoClientObject &f,
-                               const IoClientStats &stat,
-                               FilesystemIoClientObject &fs_mdm) {
+void StdioIoClient::HermesClose(File &f,
+                               const AdapterStat &stat,
+                               FilesystemIoClientState &fs_mdm) {
   (void) f; (void) stat; (void) fs_mdm;
 }
 
@@ -100,7 +100,7 @@ size_t StdioIoClient::GetSize(const hipc::charbuf &bkt_name) {
 /** Write blob to backend */
 void StdioIoClient::WriteBlob(const hipc::charbuf &bkt_name,
                               const Blob &full_blob,
-                              const IoClientContext &opts,
+                              const FsIoOptions &opts,
                               IoStatus &status) {
   status.success_ = true;
   std::string filename = bkt_name.str();
@@ -128,7 +128,7 @@ void StdioIoClient::WriteBlob(const hipc::charbuf &bkt_name,
 /** Read blob from the backend */
 void StdioIoClient::ReadBlob(const hipc::charbuf &bkt_name,
                              Blob &full_blob,
-                             const IoClientContext &opts,
+                             const FsIoOptions &opts,
                              IoStatus &status) {
   status.success_ = true;
   std::string filename = bkt_name.str();

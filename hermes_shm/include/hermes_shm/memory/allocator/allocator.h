@@ -17,7 +17,7 @@
 #include <hermes_shm/memory/memory.h>
 #include <hermes_shm/util/errors.h>
 
-namespace hermes_shm::ipc {
+namespace hshm::ipc {
 
 /**
  * The allocator type.
@@ -492,6 +492,6 @@ class Allocator {
   }
 };
 
-}  // namespace hermes_shm::ipc
+}  // namespace hshm::ipc
 
 #endif  // HERMES_MEMORY_ALLOCATOR_ALLOCATOR_H_

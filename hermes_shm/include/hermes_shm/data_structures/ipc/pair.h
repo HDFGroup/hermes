@@ -16,7 +16,7 @@
 #include "hermes_shm/data_structures/ipc/internal/shm_internal.h"
 #include "hermes_shm/data_structures/smart_ptr/smart_ptr_base.h"
 
-namespace hermes_shm::ipc {
+namespace hshm::ipc {
 
 /** forward declaration for string */
 template<typename FirstT, typename SecondT>
@@ -228,6 +228,6 @@ class pair : public ShmContainer {
 #undef TYPED_CLASS
 #undef TYPED_HEADER
 
-}  // namespace hermes_shm::ipc
+}  // namespace hshm::ipc
 
 #endif  // HERMES_INCLUDE_HERMES_DATA_STRUCTURES_PAIR_H_

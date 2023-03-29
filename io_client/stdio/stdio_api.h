@@ -17,6 +17,7 @@
 #include <iostream>
 #include <glog/logging.h>
 #include <cstdio>
+#include "io_client/real_api.h"
 
 #define REQUIRE_API(api_name) \
   if (api_name == nullptr) { \
@@ -280,7 +281,7 @@ class StdioApi {
 
 // Singleton macros
 #define HERMES_STDIO_API \
-  hermes_shm::Singleton<hermes::adapter::fs::StdioApi>::GetInstance()
+  hshm::Singleton<hermes::adapter::fs::StdioApi>::GetInstance()
 #define HERMES_STDIO_API_T hermes::adapter::fs::StdioApi*
 
 #endif  // HERMES_ADAPTER_STDIO_H

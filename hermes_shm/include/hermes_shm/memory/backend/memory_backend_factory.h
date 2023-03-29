@@ -20,7 +20,7 @@
 #include "null_backend.h"
 #include "array_backend.h"
 
-namespace hermes_shm::ipc {
+namespace hshm::ipc {
 
 class MemoryBackendFactory {
  public:
@@ -99,6 +99,6 @@ class MemoryBackendFactory {
   }
 };
 
-}  // namespace hermes_shm::ipc
+}  // namespace hshm::ipc
 
 #endif  // HERMES_MEMORY_BACKEND_MEMORY_BACKEND_FACTORY_H_

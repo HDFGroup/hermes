@@ -25,7 +25,7 @@ std::vector<std::string> RpcContext::ParseHostfile(const std::string &path) {
   if (file.is_open()) {
     std::string line;
     while (std::getline(file, line)) {
-      hermes::config::ParseHostNameString(line, hosts);
+      hermes::config::BaseConfig::ParseHostNameString(line, hosts);
     }
     file.close();
   } else {
@@ -78,7 +78,7 @@ void RpcContext::InitRpcContext() {
 }
 
 /** Check if we should skip an RPC and call a function locally */
-bool RpcContext::ShouldDoLocalCall(int node_id) {
+bool RpcContext::ShouldDoLocalCall(i32 node_id) {
   switch (mode_) {
     case HermesType::kClient: {
       return false;
@@ -93,7 +93,7 @@ bool RpcContext::ShouldDoLocalCall(int node_id) {
 }
 
 /** get RPC address */
-std::string RpcContext::GetRpcAddress(u32 node_id, int port) {
+std::string RpcContext::GetRpcAddress(i32 node_id, int port) {
   std::string result = config_->rpc_.protocol_ + "://";
   if (!config_->rpc_.domain_.empty()) {
     result += config_->rpc_.domain_ + "/";
@@ -109,7 +109,7 @@ std::string RpcContext::GetMyRpcAddress() {
 }
 
 /** get host name from node ID */
-std::string RpcContext::GetHostNameFromNodeId(u32 node_id) {
+std::string RpcContext::GetHostNameFromNodeId(i32 node_id) {
   // NOTE(llogan): node_id 0 is reserved as the NULL node
   if (node_id <= 0 || node_id > hosts_.size()) {
     LOG(FATAL) << hshm::Formatter::format(
@@ -122,7 +122,7 @@ std::string RpcContext::GetHostNameFromNodeId(u32 node_id) {
 }
 
 /** get host name from node ID */
-std::string RpcContext::GetIpAddressFromNodeId(u32 node_id) {
+std::string RpcContext::GetIpAddressFromNodeId(i32 node_id) {
   // NOTE(llogan): node_id 0 is reserved as the NULL node
   if (node_id <= 0 || node_id > hosts_.size()) {
     LOG(FATAL) << hshm::Formatter::format(

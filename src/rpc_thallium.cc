@@ -84,7 +84,7 @@ void ThalliumRpc::RunDaemon() {
 /** stop daemon (from client) */
 void ThalliumRpc::StopDaemon() {
   try {
-    for (int node_id = 1; node_id < hosts_.size() + 1; ++node_id) {
+    for (i32 node_id = 1; node_id < (int)hosts_.size() + 1; ++node_id) {
       LOG(INFO) << "Sending stop signal to: " << node_id << std::endl;
       std::string server_name = GetServerName(node_id);
       tl::endpoint server = client_engine_->lookup(server_name.c_str());
@@ -96,7 +96,7 @@ void ThalliumRpc::StopDaemon() {
 }
 
 /** get server name */
-std::string ThalliumRpc::GetServerName(u32 node_id) {
+std::string ThalliumRpc::GetServerName(i32 node_id) {
   std::string ip_address = GetIpAddressFromNodeId(node_id);
   return config_->rpc_.protocol_ + "://" +
          std::string(ip_address) +

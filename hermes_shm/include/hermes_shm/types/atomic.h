@@ -15,7 +15,7 @@
 
 #include <atomic>
 
-namespace hermes_shm::ipc {
+namespace hshm::ipc {
 
 /** Provides the API of an atomic, without being atomic */
 template<typename T>
@@ -247,6 +247,6 @@ struct atomic {
   }
 };
 
-}  // namespace hermes_shm::ipc
+}  // namespace hshm::ipc
 
 #endif  // HERMES_INCLUDE_HERMES_TYPES_ATOMIC_H_

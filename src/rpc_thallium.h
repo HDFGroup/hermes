@@ -44,7 +44,7 @@ class ThalliumRpc : public RpcContext {
   void Finalize();
   void RunDaemon();
   void StopDaemon();
-  std::string GetServerName(u32 node_id);
+  std::string GetServerName(i32 node_id);
 
   template<typename RpcLambda>
   void RegisterRpc(const char *name, RpcLambda &&lambda) {
@@ -53,7 +53,7 @@ class ThalliumRpc : public RpcContext {
 
   /** RPC call */
   template <typename ReturnType, typename... Args>
-  ReturnType Call(u32 node_id, const char *func_name, Args&&... args) {
+  ReturnType Call(i32 node_id, const char *func_name, Args&&... args) {
     LOG(INFO) << "Calling " << func_name << " " << node_id_
               << " -> " << node_id << std::endl;
     try {
@@ -76,7 +76,7 @@ class ThalliumRpc : public RpcContext {
 
   /** I/O transfers */
   template<typename ReturnType, typename ...Args>
-  ReturnType IoCall(u32 node_id, const char *func_name,
+  ReturnType IoCall(i32 node_id, const char *func_name,
                     IoType type, char *data, size_t size, Args&& ...args) {
     LOG(INFO) << "Calling " << func_name << " " << node_id_
               << " -> " << node_id << std::endl;
@@ -92,6 +92,10 @@ class ThalliumRpc : public RpcContext {
         // The "bulk" object will only be read from
         flag = tl::bulk_mode::read_only;
         break;
+      }
+      case IoType::kNone: {
+        // TODO(llogan)
+        LOG(FATAL) << "Cannot have none I/O type" << std::endl;
       }
     }
 
@@ -125,6 +129,9 @@ class ThalliumRpc : public RpcContext {
         flag = tl::bulk_mode::write_only;
         break;
       }
+      case IoType::kNone: {
+        LOG(FATAL) << "Should never use this flag" << std::endl;
+      }
     }
 
     tl::endpoint endpoint = req.get_endpoint();
@@ -144,6 +151,9 @@ class ThalliumRpc : public RpcContext {
         // Write to "local_bulk" from "bulk"
         io_bytes = bulk.on(endpoint) >> local_bulk;
         break;
+      }
+      case IoType::kNone: {
+        LOG(FATAL) << "Should never be called" << std::endl;
       }
     }
 

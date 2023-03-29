@@ -22,9 +22,9 @@
 #include "hermes_shm/data_structures/smart_ptr/smart_ptr_base.h"
 #include "shm_deserialize.h"
 
-namespace hipc = hermes_shm::ipc;
+namespace hipc = hshm::ipc;
 
-namespace hermes_shm::ipc {
+namespace hshm::ipc {
 
 /** Bits used for determining how to destroy an object */
 /// The container should free all data when destroyed
@@ -82,6 +82,6 @@ static inline T* typed_nullptr() {
   return reinterpret_cast<T*>(NULL);
 }
 
-}  // namespace hermes_shm::ipc
+}  // namespace hshm::ipc
 
 #endif  // HERMES_SHM_CONTAINER_H_

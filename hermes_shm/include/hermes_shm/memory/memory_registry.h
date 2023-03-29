@@ -16,9 +16,9 @@
 #include "hermes_shm/memory/allocator/allocator.h"
 #include "backend/memory_backend.h"
 
-namespace hipc = hermes_shm::ipc;
+namespace hipc = hshm::ipc;
 
-namespace hermes_shm::ipc {
+namespace hshm::ipc {
 
 class MemoryRegistry {
  public:
@@ -126,6 +126,6 @@ class MemoryRegistry {
   }
 };
 
-}  // namespace hermes_shm::ipc
+}  // namespace hshm::ipc
 
 #endif  // HERMES_SHM_INCLUDE_HERMES_SHM_MEMORY_MEMORY_REGISTRY_H_

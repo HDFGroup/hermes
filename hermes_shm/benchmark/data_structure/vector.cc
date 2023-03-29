@@ -95,7 +95,7 @@ class VectorTest {
            t.GetMsec());
   }
 
-  void ResizeTest(VecT &vec, int count) {
+  void ResizeTest(VecT &vec, size_t count) {
     Timer t;
     CREATE_SET_VAR_TO_INT_OR_STRING(T, var, 124);
 
@@ -106,7 +106,7 @@ class VectorTest {
     TestOutput("FixedResize", t);
   }
 
-  void ReserveEmplaceTest(VecT &vec, int count) {
+  void ReserveEmplaceTest(VecT &vec, size_t count) {
     Timer t;
     CREATE_SET_VAR_TO_INT_OR_STRING(T, var, 124);
 
@@ -120,7 +120,7 @@ class VectorTest {
     TestOutput("FixedEmplace", t);
   }
 
-  void GetTest(VecT &vec, int count) {
+  void GetTest(VecT &vec, size_t count) {
     Timer t;
     CREATE_SET_VAR_TO_INT_OR_STRING(T, var, 124);
 
@@ -138,7 +138,7 @@ class VectorTest {
     TestOutput("FixedGet", t);
   }
 
-  void ForwardIteratorTest(VecT &vec, int count) {
+  void ForwardIteratorTest(VecT &vec, size_t count) {
     Timer t;
     CREATE_SET_VAR_TO_INT_OR_STRING(T, var, 124);
 
@@ -157,7 +157,7 @@ class VectorTest {
     TestOutput("ForwardIterator", t);
   }
 
-  void CopyTest(VecT &vec, int count) {
+  void CopyTest(VecT &vec, size_t count) {
     Timer t;
     CREATE_SET_VAR_TO_INT_OR_STRING(T, var, 124);
 
@@ -173,7 +173,7 @@ class VectorTest {
     TestOutput("Copy", t);
   }
 
-  void MoveTest(VecT &vec, int count) {
+  void MoveTest(VecT &vec, size_t count) {
     Timer t;
     CREATE_SET_VAR_TO_INT_OR_STRING(T, var, 124);
 

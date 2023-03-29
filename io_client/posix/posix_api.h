@@ -13,13 +13,13 @@
 #ifndef HERMES_ADAPTER_POSIX_H
 #define HERMES_ADAPTER_POSIX_H
 #include <string>
-#include "io_client/real_api.h"
 #include <iostream>
 #include <glog/logging.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include "io_client/real_api.h"
 
 #ifndef O_TMPFILE
 #define O_TMPFILE 0
@@ -257,7 +257,7 @@ class PosixApi : public RealApi {
 #include "hermes_shm/util/singleton.h"
 
 #define HERMES_POSIX_API \
-  hermes_shm::Singleton<hermes::adapter::fs::PosixApi>::GetInstance()
+  hshm::Singleton<hermes::adapter::fs::PosixApi>::GetInstance()
 #define HERMES_POSIX_API_T hermes::adapter::fs::PosixApi*
 
 #undef REQUIRE_API

@@ -21,7 +21,7 @@
 #include "hermes_shm/types/atomic.h"
 #include "hermes_shm/data_structures/ipc/internal/shm_internal.h"
 
-namespace hermes_shm::ipc {
+namespace hshm::ipc {
 
 /** forward pointer for unordered_map */
 template<typename Key, typename T, class Hash = std::hash<Key>>
@@ -558,7 +558,7 @@ class unordered_map : public ShmContainer {
   }
 };
 
-}  // namespace hermes_shm::ipc
+}  // namespace hshm::ipc
 
 #undef CLASS_NAME
 #undef TYPED_CLASS

@@ -155,11 +155,11 @@ endif()
 #------------------------------------------------------------------------------
 # Build tests + benchmarks
 #------------------------------------------------------------------------------
-set(TEST_MAIN ${HERMES_SHM_ROOT}/test/unit)
-enable_testing()
-# add_subdirectory(test)
-# add_subdirectory(benchmark)
-# add_subdirectory(example)
+#set(TEST_MAIN ${HERMES_SHM_ROOT}/test/unit)
+#enable_testing()
+#add_subdirectory(test)
+#add_subdirectory(benchmark)
+#add_subdirectory(example)
 
 #------------------------------------------------------------------------------
 # Install hshm

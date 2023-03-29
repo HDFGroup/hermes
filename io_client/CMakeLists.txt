@@ -8,7 +8,6 @@ include_directories(
         ${HERMES_IO_CLIENT_DIR})
 
 add_subdirectory(filesystem)
-add_subdirectory(io_client)
 
 if(HERMES_ENABLE_POSIX_ADAPTER)
     add_subdirectory(posix)

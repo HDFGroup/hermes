@@ -15,8 +15,8 @@
 namespace hermes::adapter::fs {
 
 /** Allocate an fd for the file f */
-void PosixIoClient::RealOpen(IoClientObject &f,
-                             IoClientStats &stat,
+void PosixIoClient::RealOpen(File &f,
+                             AdapterStat &stat,
                              const std::string &path) {
   if (stat.adapter_mode_ == AdapterMode::kScratch) {
     stat.flags_ &= ~O_CREAT;
@@ -46,15 +46,15 @@ void PosixIoClient::RealOpen(IoClientObject &f,
  * and hermes file handler. These are not the same as POSIX file
  * descriptor and STDIO file handler.
  * */
-void PosixIoClient::HermesOpen(IoClientObject &f,
-                               const IoClientStats &stat,
-                               FilesystemIoClientObject &fs_mdm) {
+void PosixIoClient::HermesOpen(File &f,
+                               const AdapterStat &stat,
+                               FilesystemIoClientState &fs_mdm) {
   f.hermes_fd_ = fs_mdm.mdm_->AllocateFd();
 }
 
 /** Synchronize \a file FILE f */
-int PosixIoClient::RealSync(const IoClientObject &f,
-                            const IoClientStats &stat) {
+int PosixIoClient::RealSync(const File &f,
+                            const AdapterStat &stat) {
   (void) f;
   if (stat.adapter_mode_ == AdapterMode::kScratch &&
       stat.fd_ == -1) {
@@ -64,8 +64,8 @@ int PosixIoClient::RealSync(const IoClientObject &f,
 }
 
 /** Close \a file FILE f */
-int PosixIoClient::RealClose(const IoClientObject &f,
-                             IoClientStats &stat) {
+int PosixIoClient::RealClose(const File &f,
+                             AdapterStat &stat) {
   (void) f;
   if (stat.adapter_mode_ == AdapterMode::kScratch &&
       stat.fd_ == -1) {
@@ -78,9 +78,9 @@ int PosixIoClient::RealClose(const IoClientObject &f,
  * Called before RealClose. Releases information provisioned during
  * the allocation phase.
  * */
-void PosixIoClient::HermesClose(IoClientObject &f,
-                               const IoClientStats &stat,
-                               FilesystemIoClientObject &fs_mdm) {
+void PosixIoClient::HermesClose(File &f,
+                               const AdapterStat &stat,
+                               FilesystemIoClientState &fs_mdm) {
   fs_mdm.mdm_->ReleaseFd(f.hermes_fd_);
 }
 
@@ -108,7 +108,7 @@ size_t PosixIoClient::GetSize(const hipc::charbuf &bkt_name) {
 /** Write blob to backend */
 void PosixIoClient::WriteBlob(const hipc::charbuf &bkt_name,
                               const Blob &full_blob,
-                              const IoClientContext &opts,
+                              const FsIoOptions &opts,
                               IoStatus &status) {
   (void) opts;
   status.success_ = true;
@@ -136,7 +136,7 @@ void PosixIoClient::WriteBlob(const hipc::charbuf &bkt_name,
 /** Read blob from the backend */
 void PosixIoClient::ReadBlob(const hipc::charbuf &bkt_name,
                              Blob &full_blob,
-                             const IoClientContext &opts,
+                             const FsIoOptions &opts,
                              IoStatus &status) {
   (void) opts;
   status.success_ = true;

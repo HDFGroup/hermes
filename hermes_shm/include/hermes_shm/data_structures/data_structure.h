@@ -22,7 +22,6 @@
 #include "ipc/vector.h"
 #include "ipc/unordered_map.h"
 
-namespace hipc = hermes_shm::ipc;
-namespace hshm = hermes_shm;
+namespace hipc = hshm::ipc;
 
 #endif  // HERMES_DATA_STRUCTURES_DATA_STRUCTURE_H_

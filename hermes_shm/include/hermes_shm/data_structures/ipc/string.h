@@ -18,7 +18,7 @@
 #include "hermes_shm/data_structures/containers/charbuf.h"
 #include <string>
 
-namespace hermes_shm::ipc {
+namespace hshm::ipc {
 
 /** forward declaration for string */
 class string;
@@ -148,7 +148,8 @@ class string : public ShmContainer {
   string(TYPED_HEADER *header, Allocator *alloc, string &&other) {
     shm_init_header(header, alloc);
     if (alloc_ == other.alloc_) {
-      memcpy((void *) header_, (void *) other.header_, sizeof(*header_));
+      // memcpy((void*)header_, (void*)other.header_, sizeof(*header_));
+      (*header_) = (*other.header_);
       shm_deserialize_main();
       other.SetNull();
     } else {
@@ -162,7 +163,8 @@ class string : public ShmContainer {
     if (this != &other) {
       shm_destroy();
       if (alloc_ == other.alloc_) {
-        memcpy((void *) header_, (void *) other.header_, sizeof(*header_));
+        // memcpy((void*)header_, (void*)other.header_, sizeof(*header_));
+        (*header_) = (*other.header_);
         shm_deserialize_main();
         other.SetNull();
       } else {
@@ -302,14 +304,14 @@ class string : public ShmContainer {
 /** Consider the string as an uniterpreted set of bytes */
 typedef string charbuf;
 
-}  // namespace hermes_shm::ipc
+}  // namespace hshm::ipc
 
 namespace std {
 
 /** Hash function for string */
 template<>
-struct hash<hermes_shm::ipc::string> {
-  size_t operator()(const hermes_shm::ipc::string &text) const {
+struct hash<hshm::ipc::string> {
+  size_t operator()(const hshm::ipc::string &text) const {
     size_t sum = 0;
     for (size_t i = 0; i < text.size(); ++i) {
       auto shift = static_cast<size_t>(i % sizeof(size_t));

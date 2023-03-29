@@ -118,7 +118,7 @@ void BufferOrganizer::GlobalPlaceBlobInBuffers(
   AUTO_TRACE(1)
   // Get the nodes to transfer buffers to
   size_t total_size;
-  auto unique_nodes = GroupByNodeId(buffers, total_size);
+  auto unique_nodes = BufferPool::GroupByNodeId(buffers, total_size);
 
   // Send the buffers to each node
   for (auto &[node_id, size] : unique_nodes) {
@@ -172,7 +172,7 @@ Blob BufferOrganizer::GlobalReadBlobFromBuffers(
   AUTO_TRACE(1)
   // Get the nodes to transfer buffers to
   size_t total_size = 0;
-  auto unique_nodes = GroupByNodeId(buffers, total_size);
+  auto unique_nodes = BufferPool::GroupByNodeId(buffers, total_size);
 
   // Send the buffers to each node
   std::vector<Blob> blobs;

@@ -13,40 +13,12 @@
 #ifndef HERMES_BASICS_H
 #define HERMES_BASICS_H
 
-#define MODULE_KEY_SIZE 32
-
 #include <cstdint>
-using std::size_t;
-
-#ifdef KERNEL_BUILD
-#include <linux/types.h>
-#elif __cplusplus
-#include <stdint.h>
-#include <string>
-#include <cstring>
-#include <unordered_map>
-#include <limits>
-#endif
-
-typedef uint32_t labstor_runtime_id_t;
-typedef int32_t labstor_off_t;
-
-struct labstor_id {
-  char key_[MODULE_KEY_SIZE];
-};
-
-struct labstor_credentials {
-  int pid_;
-  int uid_;
-  int gid_;
-  int priority_;
-};
+#include <cstddef>
 
 #ifdef __cplusplus
 
-namespace hermes_shm {
-
-typedef labstor_credentials UserCredentials;
+namespace hshm {
 
 /**
  * decimal + (numerator/65536)
@@ -117,46 +89,7 @@ struct RealNumber {
   }
 };
 
-struct id {
-  char key_[MODULE_KEY_SIZE];
-  id() = default;
-  ~id() = default;
-  explicit id(const std::string &key_str) {
-    snprintf(key_, MODULE_KEY_SIZE, "%s", key_str.c_str());
-  }
-  explicit id(const char* key_str) {
-    snprintf(key_, MODULE_KEY_SIZE, "%s", key_str);
-  }
-  bool operator==(const id &other) const {
-    return strncmp(key_, other.key_, MODULE_KEY_SIZE) == 0;
-  }
-  void copy(const std::string &str) {
-    memcpy(key_, str.c_str(), str.size());
-    key_[str.size()] = 0;
-  }
-  const char& operator[](int i) {
-    return key_[i];
-  }
-};
-
-typedef int32_t off_t;
-
-}  // namespace hermes_shm
-
-namespace std {
-template<>
-struct hash<hermes_shm::id> {
-  size_t operator()(const hermes_shm::id &id) const {
-    size_t sum = 0;
-    int len = strnlen(id.key_, MODULE_KEY_SIZE);
-    for (int i = 0; i < len; ++i) {
-      if (id.key_[i] == 0) { break; }
-      sum += id.key_[i] << (i % 8);
-    }
-    return sum;
-  }
-};
-}  // namespace std
+}  // namespace hshm
 
 #endif
 

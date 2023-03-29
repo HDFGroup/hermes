@@ -18,7 +18,6 @@ bool mpiio_intercepted = true;
 #include "io_client/mpiio/mpiio_api.h"
 #include "mpiio_fs_api.h"
 
-#include "constants.h"
 #include "hermes_shm/util/singleton.h"
 #include "interceptor.h"
 

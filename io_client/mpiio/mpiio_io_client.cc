@@ -15,8 +15,8 @@
 namespace hermes::adapter::fs {
 
 /** Allocate an fd for the file f */
-void MpiioIoClient::RealOpen(IoClientObject &f,
-                             IoClientStats &stat,
+void MpiioIoClient::RealOpen(File &f,
+                             AdapterStat &stat,
                              const std::string &path) {
   f.mpi_status_ = real_api->MPI_File_open(stat.comm_,
                                           path.c_str(),
@@ -37,21 +37,21 @@ void MpiioIoClient::RealOpen(IoClientObject &f,
  * and hermes file handler. These are not the same as POSIX file
  * descriptor and STDIO file handler.
  * */
-void MpiioIoClient::HermesOpen(IoClientObject &f,
-                               const IoClientStats &stat,
-                               FilesystemIoClientObject &fs_mdm) {
+void MpiioIoClient::HermesOpen(File &f,
+                               const AdapterStat &stat,
+                               FilesystemIoClientState &fs_mdm) {
   f.hermes_mpi_fh_ = (MPI_File)fs_mdm.stat_;
 }
 
 /** Synchronize \a file FILE f */
-int MpiioIoClient::RealSync(const IoClientObject &f,
-                            const IoClientStats &stat) {
+int MpiioIoClient::RealSync(const File &f,
+                            const AdapterStat &stat) {
   return real_api->MPI_File_sync(stat.mpi_fh_);
 }
 
 /** Close \a file FILE f */
-int MpiioIoClient::RealClose(const IoClientObject &f,
-                             IoClientStats &stat) {
+int MpiioIoClient::RealClose(const File &f,
+                             AdapterStat &stat) {
   return real_api->MPI_File_close(&stat.mpi_fh_);
 }
 
@@ -59,9 +59,9 @@ int MpiioIoClient::RealClose(const IoClientObject &f,
  * Called before RealClose. Releases information provisioned during
  * the allocation phase.
  * */
-void MpiioIoClient::HermesClose(IoClientObject &f,
-                                const IoClientStats &stat,
-                                FilesystemIoClientObject &fs_mdm) {
+void MpiioIoClient::HermesClose(File &f,
+                                const AdapterStat &stat,
+                                FilesystemIoClientState &fs_mdm) {
   (void) f; (void) stat; (void) fs_mdm;
 }
 
@@ -89,7 +89,7 @@ size_t MpiioIoClient::GetSize(const hipc::charbuf &bkt_name) {
 /** Initialize I/O context using count + datatype */
 size_t MpiioIoClient::IoSizeFromCount(int count,
                                       MPI_Datatype datatype,
-                                      IoClientContext &opts) {
+                                      FsIoOptions &opts) {
   int datatype_size;
   opts.mpi_type_ = datatype;
   opts.mpi_count_ = count;
@@ -100,7 +100,7 @@ size_t MpiioIoClient::IoSizeFromCount(int count,
 /** Write blob to backend */
 void MpiioIoClient::WriteBlob(const hipc::charbuf &bkt_name,
                               const Blob &full_blob,
-                              const IoClientContext &opts,
+                              const FsIoOptions &opts,
                               IoStatus &status) {
   std::string filename = bkt_name.str();
   status.success_ = true;
@@ -148,7 +148,7 @@ ERROR:
 /** Read blob from the backend */
 void MpiioIoClient::ReadBlob(const hipc::charbuf &bkt_name,
                              Blob &full_blob,
-                             const IoClientContext &opts,
+                             const FsIoOptions &opts,
                              IoStatus &status) {
   std::string filename = bkt_name.str();
   status.success_ = true;

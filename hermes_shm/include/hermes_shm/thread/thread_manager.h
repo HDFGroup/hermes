@@ -21,7 +21,7 @@
 
 #define US_TO_CLOCKS(x) (x * 56)
 
-namespace hermes_shm {
+namespace hshm {
 
 union NodeThreadId;
 
@@ -61,6 +61,6 @@ union NodeThreadId {
   }
 };
 
-}  // namespace hermes_shm
+}  // namespace hshm
 
 #endif  // HERMES_THREAD_THREAD_MANAGER_H_

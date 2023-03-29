@@ -94,52 +94,6 @@ typedef hipc::pair<BpFreeListStat, BpFreeList> BpFreeListPair;
 /** Represents the set of targets */
 typedef hipc::vector<BpFreeListPair> BpTargetAllocs;
 
-/** Find instance of unique target if it exists */
-static std::vector<std::pair<i32, size_t>>::iterator
-FindUniqueNodeId(std::vector<std::pair<i32, size_t>> &unique_nodes,
-                 i32 node_id) {
-  for (auto iter = unique_nodes.begin(); iter != unique_nodes.end(); ++iter) {
-    if (iter->first == node_id) {
-      return iter;
-    }
-  }
-  return unique_nodes.end();
-}
-
-/** Get the unique set of targets */
-static std::vector<std::pair<i32, size_t>>
-GroupByNodeId(std::vector<BufferInfo> &buffers, size_t &total_size) {
-  total_size = 0;
-  std::vector<std::pair<i32, size_t>> unique_nodes;
-  for (BufferInfo &info : buffers) {
-    auto iter = FindUniqueNodeId(unique_nodes, info.tid_.GetNodeId());
-    if (iter == unique_nodes.end()) {
-      unique_nodes.emplace_back(info.tid_.GetNodeId(), info.blob_size_);
-    } else {
-      (*iter).second += info.blob_size_;
-    }
-    total_size += info.blob_size_;
-  }
-  return unique_nodes;
-}
-
-/** Get the unique set of targets */
-static std::vector<std::pair<i32, size_t>>
-GroupByNodeId(PlacementSchema &schema, size_t &total_size) {
-  total_size = 0;
-  std::vector<std::pair<i32, size_t>> unique_nodes;
-  for (auto &plcmnt : schema.plcmnts_) {
-    auto iter = FindUniqueNodeId(unique_nodes, plcmnt.tid_.GetNodeId());
-    if (iter == unique_nodes.end()) {
-      unique_nodes.emplace_back(plcmnt.tid_.GetNodeId(), plcmnt.size_);
-    } else {
-      (*iter).second += plcmnt.size_;
-    }
-    total_size += plcmnt.size_;
-  }
-  return unique_nodes;
-}
-
 /**
  * The shared-memory representation of the BufferPool
  * */
@@ -325,6 +279,52 @@ class BufferPool : public hipc::ShmContainer {
   /** Get the stack allocator from the cpu */
   void GetTargetStatForCpu(u16 target_id, int cpu,
                            hipc::Ref<BpFreeListStat> &target_stat);
+
+  /** Find instance of unique target if it exists */
+  static std::vector<std::pair<i32, size_t>>::iterator
+  FindUniqueNodeId(std::vector<std::pair<i32, size_t>> &unique_nodes,
+                   i32 node_id) {
+    for (auto iter = unique_nodes.begin(); iter != unique_nodes.end(); ++iter) {
+      if (iter->first == node_id) {
+        return iter;
+      }
+    }
+    return unique_nodes.end();
+  }
+
+  /** Get the unique set of targets */
+  static std::vector<std::pair<i32, size_t>>
+  GroupByNodeId(std::vector<BufferInfo> &buffers, size_t &total_size) {
+    total_size = 0;
+    std::vector<std::pair<i32, size_t>> unique_nodes;
+    for (BufferInfo &info : buffers) {
+      auto iter = FindUniqueNodeId(unique_nodes, info.tid_.GetNodeId());
+      if (iter == unique_nodes.end()) {
+        unique_nodes.emplace_back(info.tid_.GetNodeId(), info.blob_size_);
+      } else {
+        (*iter).second += info.blob_size_;
+      }
+      total_size += info.blob_size_;
+    }
+    return unique_nodes;
+  }
+
+  /** Get the unique set of targets */
+  static std::vector<std::pair<i32, size_t>>
+  GroupByNodeId(PlacementSchema &schema, size_t &total_size) {
+    total_size = 0;
+    std::vector<std::pair<i32, size_t>> unique_nodes;
+    for (auto &plcmnt : schema.plcmnts_) {
+      auto iter = FindUniqueNodeId(unique_nodes, plcmnt.tid_.GetNodeId());
+      if (iter == unique_nodes.end()) {
+        unique_nodes.emplace_back(plcmnt.tid_.GetNodeId(), plcmnt.size_);
+      } else {
+        (*iter).second += plcmnt.size_;
+      }
+      total_size += plcmnt.size_;
+    }
+    return unique_nodes;
+  }
 };
 
 }  // namespace hermes

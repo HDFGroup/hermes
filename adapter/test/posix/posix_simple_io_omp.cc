@@ -81,9 +81,17 @@ void TestThread(char *path,
     if (!do_read) {
       memset(buf, nonce, block_size);
       int ret = write(fd, buf, block_size);
+      if (ret != block_size) {
+        std::cout << "Write failed!" << std::endl;
+        exit(1);
+      }
     } else {
       memset(buf, 0, block_size);
       int ret = read(fd, buf, block_size);
+      if (ret != block_size) {
+        std::cout << "Read failed!" << std::endl;
+        exit(1);
+      }
       if (!VerifyBuffer(buf, block_size, nonce)) {
         std::cout << "Buffer verification failed!" << std::endl;
         exit(1);

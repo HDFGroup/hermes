@@ -26,16 +26,6 @@
 
 static const int kMaxPathLen = 4096;
 
-static std::string GetFilenameFromFP(FILE* fp) {
-  char proclnk[kMaxPathLen];
-  char filename[kMaxPathLen];
-  int fno = fileno(fp);
-  snprintf(proclnk, kMaxPathLen, "/proc/self/fd/%d", fno);
-  size_t r = readlink(proclnk, filename, kMaxPathLen);
-  filename[r] = '\0';
-  return filename;
-}
-
 #include "glog/logging.h"
 #include "adapter_test_utils.h"
 

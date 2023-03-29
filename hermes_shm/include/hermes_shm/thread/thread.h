@@ -18,7 +18,7 @@
 #include <memory>
 #include <atomic>
 
-namespace hermes_shm {
+namespace hshm {
 
 typedef uint32_t tid_t;
 
@@ -42,6 +42,6 @@ class ThreadStatic {
   virtual tid_t GetTid() = 0;
 };
 
-}  // namespace hermes_shm
+}  // namespace hshm
 
 #endif  // HERMES_THREAD_THREAD_H_

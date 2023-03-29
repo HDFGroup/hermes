@@ -18,7 +18,7 @@
 #include <hermes_shm/util/errors.h>
 #include <omp.h>
 
-namespace hermes_shm {
+namespace hshm {
 
 template<typename BIND> class Pthread;
 
@@ -97,6 +97,6 @@ class PthreadStatic : public ThreadStatic {
   }
 };
 
-}  // namespace hermes_shm
+}  // namespace hshm
 
 #endif  // HERMES_THREAD_PTHREAD_H_

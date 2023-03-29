@@ -17,9 +17,9 @@
 #include "hermes_shm/data_structures/ipc/string.h"
 #include "vector.h"
 
-using hermes_shm::ipc::vector;
-using hermes_shm::ipc::list;
-using hermes_shm::ipc::string;
+using hshm::ipc::vector;
+using hshm::ipc::list;
+using hshm::ipc::string;
 
 template<typename T>
 void VectorTestRunner(VectorTestSuite<T, vector<T>> &test) {

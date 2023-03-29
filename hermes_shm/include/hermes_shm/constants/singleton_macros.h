@@ -15,10 +15,10 @@
 
 #include <hermes_shm/util/singleton.h>
 
-#define HERMES_IPC_MANAGER hermes_shm::GlobalSingleton<hermes_shm::IpcManager>::GetInstance()
-#define HERMES_IPC_MANAGER_T hermes_shm::IpcManager*
+#define HERMES_IPC_MANAGER hshm::GlobalSingleton<hshm::IpcManager>::GetInstance()
+#define HERMES_IPC_MANAGER_T hshm::IpcManager*
 
-#define HERMES_CONFIGURATION_MANAGER hermes_shm::GlobalSingleton<hermes_shm::ConfigurationManager>::GetInstance()
-#define HERMES_CONFIGURATION_MANAGER_T hermes_shm::ConfigurationManager*
+#define HERMES_CONFIGURATION_MANAGER hshm::GlobalSingleton<hshm::ConfigurationManager>::GetInstance()
+#define HERMES_CONFIGURATION_MANAGER_T hshm::ConfigurationManager*
 
 #endif  // include_labstor_constants_singleton_macros_h

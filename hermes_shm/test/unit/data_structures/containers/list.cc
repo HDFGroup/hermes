@@ -16,7 +16,7 @@
 #include "hermes_shm/data_structures/ipc/list.h"
 #include "hermes_shm/data_structures/ipc/string.h"
 
-using hermes_shm::ipc::list;
+using hshm::ipc::list;
 
 template<typename T>
 void ListTestRunner(ListTestSuite<T, list<T>> &test) {

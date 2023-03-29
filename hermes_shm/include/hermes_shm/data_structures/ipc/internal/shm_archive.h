@@ -18,7 +18,7 @@
 #include "hermes_shm/memory/memory.h"
 #include "shm_deserialize.h"
 
-namespace hermes_shm::ipc {
+namespace hshm::ipc {
 
 /**
  * Constructs a TypedPointer in-place
@@ -96,6 +96,6 @@ class ShmArchive {
   ShmArchive& operator=(ShmArchive &&other) = delete;
 };
 
-}  // namespace hermes_shm::ipc
+}  // namespace hshm::ipc
 
 #endif  // HERMES_DATA_STRUCTURES_SHM_ARCHIVE_H_

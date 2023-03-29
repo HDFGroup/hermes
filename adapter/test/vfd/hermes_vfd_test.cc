@@ -16,7 +16,7 @@
 #include <unistd.h>
 #include <assert.h>
 
-#include <experimental/filesystem>
+#include <filesystem>
 #include <string>
 
 #include <mpi.h>
@@ -29,6 +29,7 @@
 
 using hermes::f32;
 using hermes::u32;
+namespace stdfs = std::filesystem;
 
 namespace hermes::adapter::vfd::test {
 

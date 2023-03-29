@@ -13,7 +13,7 @@
 #include "hermes_shm/util/singleton.h"
 
 #include "hermes.h"
-template<> hermes::api::Hermes hermes_shm::GlobalSingleton<
+template<> hermes::api::Hermes hshm::GlobalSingleton<
     hermes::api::Hermes>::obj_ = hermes::api::Hermes();
 
 /** Finalize hermes when program exits */

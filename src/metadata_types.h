@@ -15,7 +15,6 @@
 
 #include "hermes_types.h"
 #include "config_server.h"
-#include "io_client/io_client.h"
 
 namespace hermes {
 
@@ -26,11 +25,15 @@ namespace hermes {
 #define BUCKET_HASH TEXT_HASH(bkt_name)
 #define BLOB_HASH TEXT_HASH(blob_name)
 
-using adapter::GlobalIoClientState;
 using api::Blob;       /**< Namespace simplification for blob */
 struct TagInfo;     /**< Forward declaration of TagInfo */
 struct BlobInfo;       /**< Forward declaration of BlobInfo */
 struct TraitInfo;    /**< Forward declaration of TraitInfo */
+
+/** Any statistics which need to be globally maintained across ranks */
+struct GlobalIoClientState {
+  size_t true_size_;
+};
 
 /** Device information (e.g., path) */
 using config::DeviceInfo;

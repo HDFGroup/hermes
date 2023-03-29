@@ -15,7 +15,6 @@
 
 #include "config_client.h"
 #include "config_server.h"
-#include "constants.h"
 #include "hermes_types.h"
 #include "trait.h"
 #include "utils.h"
@@ -30,13 +29,12 @@
 #include "hermes_shm/util/singleton.h"
 
 // Singleton macros
-#define HERMES hermes_shm::GlobalSingleton<hermes::api::Hermes>::GetInstance()
+#define HERMES hshm::GlobalSingleton<hermes::api::Hermes>::GetInstance()
 #define HERMES_T hermes::api::Hermes*
 
 namespace hermes::api {
 
 class Bucket;
-
 
 /**
  * The Hermes shared-memory header
@@ -69,7 +67,7 @@ class Hermes {
   bool is_initialized_;
   bool is_terminated_;
   bool is_transparent_;
-  hermes_shm::Mutex lock_;
+  hshm::Mutex lock_;
 
  public:
   /**====================================
@@ -79,8 +77,8 @@ class Hermes {
   /** Default constructor */
   Hermes() : is_being_initialized_(false),
              is_initialized_(false),
-             is_transparent_(false),
-             is_terminated_(false) {}
+             is_terminated_(false),
+             is_transparent_(false) {}
 
   /** Destructor */
   ~Hermes() {}

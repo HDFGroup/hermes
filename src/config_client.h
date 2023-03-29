@@ -14,7 +14,6 @@
 #define HERMES_SRC_CONFIG_CLIENT_H_
 
 #include "config.h"
-#include "constants.h"
 #include "adapter/adapter_types.h"
 
 namespace hermes::config {

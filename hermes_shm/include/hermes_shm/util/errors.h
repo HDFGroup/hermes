@@ -17,7 +17,7 @@
 
 #include <hermes_shm/util/error.h>
 
-namespace hermes_shm {
+namespace hshm {
   const Error FILE_NOT_FOUND("File not found at {}");
   const Error INVALID_STORAGE_TYPE("{} is not a valid storage method");
   const Error INVALID_SERIALIZER_TYPE("{} is not a valid serializer type");
@@ -55,7 +55,7 @@ namespace hermes_shm {
   const Error DOUBLE_FREE("Freeing the same memory twice!");
 
   const Error UNORDERED_MAP_CANT_FIND("Could not find key in unordered_map");
-}  // namespace hermes_shm
+}  // namespace hshm
 
 #endif
 

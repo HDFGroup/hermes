@@ -17,7 +17,7 @@
 #include "bucket.h"
 
 namespace hapi = hermes::api;
-using Timer = hermes_shm::HighResMonotonicTimer;
+using Timer = hshm::HighResMonotonicTimer;
 
 void GatherTimes(std::string test_name, Timer &t) {
   MPI_Barrier(MPI_COMM_WORLD);
@@ -33,7 +33,7 @@ void GatherTimes(std::string test_name, Timer &t) {
 }
 
 void PutTest(hapi::Hermes *hermes,
-             int rank, int repeat, int blobs_per_rank, size_t blob_size) {
+             int rank, int repeat, size_t blobs_per_rank, size_t blob_size) {
   Timer t;
   auto bkt = hermes->GetBucket("hello");
   hermes::api::Context ctx;
@@ -52,7 +52,7 @@ void PutTest(hapi::Hermes *hermes,
 }
 
 void GetTest(hapi::Hermes *hermes,
-             int rank, int repeat, int blobs_per_rank, size_t blob_size) {
+             int rank, int repeat, size_t blobs_per_rank, size_t blob_size) {
   Timer t;
   auto bkt = hermes->GetBucket("hello");
   hermes::api::Context ctx;
@@ -81,8 +81,8 @@ int main(int argc, char **argv) {
   }
 
   auto hermes = hapi::Hermes::Create(hermes::HermesType::kClient);
-  size_t blob_size = hermes::config::ParseSize(argv[1]);
-  int blobs_per_rank = atoi(argv[2]);
+  size_t blob_size = hermes::config::BaseConfig::ParseSize(argv[1]);
+  size_t blobs_per_rank = atoi(argv[2]);
 
   MPI_Barrier(MPI_COMM_WORLD);
   PutTest(hermes, rank, 1, blobs_per_rank, blob_size);

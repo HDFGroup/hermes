@@ -15,7 +15,6 @@
 
 #include <cstdio>
 #include <unordered_map>
-#include "file.h"
 #include "io_client/filesystem/filesystem_io_client.h"
 #include "filesystem.h"
 #include "thread_pool.h"
@@ -107,10 +106,10 @@ class MetadataManager {
 #include "hermes_shm/util/singleton.h"
 
 #define HERMES_FS_METADATA_MANAGER \
-  hermes_shm::Singleton<hermes::adapter::fs::MetadataManager>::GetInstance()
+  hshm::Singleton<hermes::adapter::fs::MetadataManager>::GetInstance()
 #define HERMES_FS_METADATA_MANAGER_T hermes::adapter::fs::MetadataManager*
 
 #define HERMES_FS_THREAD_POOL \
-  hermes_shm::EasySingleton<hermes::ThreadPool>::GetInstance()
+  hshm::EasySingleton<hermes::ThreadPool>::GetInstance()
 
 #endif  // HERMES_ADAPTER_METADATA_MANAGER_H

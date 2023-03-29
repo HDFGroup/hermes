@@ -14,7 +14,7 @@
 #include "hermes_shm/thread/lock.h"
 #include "hermes_shm/thread/thread_manager.h"
 
-namespace hermes_shm {
+namespace hshm {
 
 /**
  * Acquire the mutex
@@ -98,4 +98,4 @@ void ScopedMutex::Unlock() {
   }
 }
 
-}  // namespace hermes_shm
+}  // namespace hshm

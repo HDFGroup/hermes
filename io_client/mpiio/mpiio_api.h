@@ -18,6 +18,7 @@
 #include <glog/logging.h>
 #include <mpi.h>
 #include <mpio.h>
+#include "io_client/real_api.h"
 
 #ifndef MPI_MODE_TRUNCATE
 #define MPI_MODE_TRUNCATE 0
@@ -303,7 +304,7 @@ class MpiioApi {
 
 /** Simplify access to the stateless MpiioFs Singleton */
 #define HERMES_MPIIO_API \
-  hermes_shm::EasySingleton<hermes::adapter::fs::MpiioApi>::GetInstance()
+  hshm::EasySingleton<hermes::adapter::fs::MpiioApi>::GetInstance()
 #define HERMES_MPIIO_API_T hermes::adapter::fs::MpiioApi*
 
 #endif  // HERMES_ADAPTER_MPIIO_H

@@ -28,7 +28,7 @@ bool posix_intercepted = true;
 #include "filesystem/filesystem.h"
 
 using hermes::adapter::fs::AdapterStat;
-using hermes::adapter::IoStatus;
+using hermes::adapter::fs::IoStatus;
 using hermes::adapter::fs::File;
 using hermes::adapter::fs::SeekMode;
 
@@ -356,7 +356,6 @@ int HERMES_DECL(close)(int fd) {
 }
 
 int HERMES_DECL(flock)(int fd, int operation) {
-  bool stat_exists;
   auto real_api = HERMES_POSIX_API;
   auto fs_api = HERMES_POSIX_FS;
   if (fs_api->IsFdTracked(fd)) {
@@ -370,8 +369,6 @@ int HERMES_DECL(flock)(int fd, int operation) {
 }
 
 int HERMES_DECL(remove)(const char *pathname) {
-  bool stat_exists;
-  auto mdm = HERMES_FS_METADATA_MANAGER;
   auto real_api = HERMES_POSIX_API;
   auto fs_api = HERMES_POSIX_FS;
   if (fs_api->IsPathTracked(pathname)) {
@@ -382,8 +379,6 @@ int HERMES_DECL(remove)(const char *pathname) {
 }
 
 int HERMES_DECL(unlink)(const char *pathname) {
-  bool stat_exists;
-  auto mdm = HERMES_FS_METADATA_MANAGER;
   auto real_api = HERMES_POSIX_API;
   auto fs_api = HERMES_POSIX_FS;
   if (fs_api->IsPathTracked(pathname)) {

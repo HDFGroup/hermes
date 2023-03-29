@@ -24,20 +24,20 @@
 #include "hermes_shm/data_structures/data_structure.h"
 #include <hermes_shm/util/timer.h>
 
-using hermes_shm::ipc::MemoryBackendType;
-using hermes_shm::ipc::MemoryBackend;
-using hermes_shm::ipc::allocator_id_t;
-using hermes_shm::ipc::AllocatorType;
-using hermes_shm::ipc::Allocator;
-using hermes_shm::ipc::Pointer;
+using hshm::ipc::MemoryBackendType;
+using hshm::ipc::MemoryBackend;
+using hshm::ipc::allocator_id_t;
+using hshm::ipc::AllocatorType;
+using hshm::ipc::Allocator;
+using hshm::ipc::Pointer;
 
-using hermes_shm::ipc::MemoryBackendType;
-using hermes_shm::ipc::MemoryBackend;
-using hermes_shm::ipc::allocator_id_t;
-using hermes_shm::ipc::AllocatorType;
-using hermes_shm::ipc::Allocator;
-using hermes_shm::ipc::MemoryManager;
-using hermes_shm::ipc::Pointer;
+using hshm::ipc::MemoryBackendType;
+using hshm::ipc::MemoryBackend;
+using hshm::ipc::allocator_id_t;
+using hshm::ipc::AllocatorType;
+using hshm::ipc::Allocator;
+using hshm::ipc::MemoryManager;
+using hshm::ipc::Pointer;
 
 namespace bipc = boost::interprocess;
 
@@ -49,6 +49,6 @@ bipc::allocator<void, segment_manager_t>>
 extern std::unique_ptr<void_allocator> alloc_inst_g;
 extern std::unique_ptr<bipc::managed_shared_memory> segment_g;
 
-using Timer = hermes_shm::HighResMonotonicTimer;
+using Timer = hshm::HighResMonotonicTimer;
 
 #endif //HERMES_BENCHMARK_DATA_STRUCTURE_TEST_INIT_H_

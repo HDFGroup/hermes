@@ -20,16 +20,9 @@
 #include "metadata_types.h"
 #include "statuses.h"
 #include "rpc_thallium_serialization.h"
-#include "io_client/io_client_factory.h"
 #include "trait.h"
 
 namespace hermes {
-
-/** Namespace simplification for AdapterFactory */
-using hermes::adapter::IoClientFactory;
-
-/** Namespace simplification for AbstractAdapter */
-using hermes::adapter::IoClientContext;
 
 /** Forward declaration of borg */
 class BufferOrganizer;
@@ -84,7 +77,7 @@ struct ShmHeader<MetadataManager> {
   /// Synchronization
   RwLock lock_[kMdmLockCount];
   /// The ID of THIS node
-  int node_id_;
+  i32 node_id_;
 };
 
 /**

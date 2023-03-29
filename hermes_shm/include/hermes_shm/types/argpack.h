@@ -16,7 +16,7 @@
 #include "basic.h"
 #include  <functional>
 
-namespace hermes_shm {
+namespace hshm {
 
 /** Type which indicates that a constructor takes ArgPacks as input */
 struct PiecewiseConstruct {};
@@ -271,6 +271,6 @@ using ForwardIterateArgpack = IterateArgpack<false>;
 /** Reverse iterate over tuple and apply function */
 using ReverseIterateArgpack = IterateArgpack<true>;
 
-}  // namespace hermes_shm
+}  // namespace hshm
 
 #endif  // HERMES_INCLUDE_HERMES_TYPES_ARGPACK_H_

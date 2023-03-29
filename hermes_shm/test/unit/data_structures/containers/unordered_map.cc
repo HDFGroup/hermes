@@ -15,15 +15,15 @@
 #include "hermes_shm/data_structures/ipc/unordered_map.h"
 #include "hermes_shm/data_structures/ipc/string.h"
 
-using hermes_shm::ipc::MemoryBackendType;
-using hermes_shm::ipc::MemoryBackend;
-using hermes_shm::ipc::allocator_id_t;
-using hermes_shm::ipc::AllocatorType;
-using hermes_shm::ipc::Allocator;
-using hermes_shm::ipc::MemoryManager;
-using hermes_shm::ipc::Pointer;
-using hermes_shm::ipc::unordered_map;
-using hermes_shm::ipc::string;
+using hshm::ipc::MemoryBackendType;
+using hshm::ipc::MemoryBackend;
+using hshm::ipc::allocator_id_t;
+using hshm::ipc::AllocatorType;
+using hshm::ipc::Allocator;
+using hshm::ipc::MemoryManager;
+using hshm::ipc::Pointer;
+using hshm::ipc::unordered_map;
+using hshm::ipc::string;
 
 #define GET_INT_FROM_KEY(VAR) CREATE_GET_INT_FROM_VAR(Key, key_ret, VAR)
 #define GET_INT_FROM_VAL(VAR) CREATE_GET_INT_FROM_VAR(Val, val_ret, VAR)

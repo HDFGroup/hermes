@@ -22,7 +22,7 @@
 #include <hermes_shm/memory/allocator/stack_allocator.h>
 #include "mp_page.h"
 
-namespace hermes_shm::ipc {
+namespace hshm::ipc {
 
 struct FixedPageAllocatorHeader : public AllocatorHeader {
   ShmArchive<vector<iqueue<MpPage>>> free_lists_;
@@ -107,6 +107,6 @@ class FixedPageAllocator : public Allocator {
   size_t GetCurrentlyAllocatedSize() override;
 };
 
-}  // namespace hermes_shm::ipc
+}  // namespace hshm::ipc
 
 #endif  // HERMES_MEMORY_ALLOCATOR_FIXED_ALLOCATOR_H_

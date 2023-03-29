@@ -190,73 +190,6 @@ Status Bucket::Put(std::string blob_name,
 }
 
 /**
- * Put \a blob_name Blob into the bucket. Load the blob from the
- * I/O backend if it does not exist.
- *
- * @param blob_name the semantic name of the blob
- * @param blob the buffer to put final data in
- * @param blob_off the offset within the blob to begin the Put
- * @param io_ctx which adapter to route I/O request if blob DNE
- * @param opts which adapter to route I/O request if blob DNE
- * @param ctx any additional information
- * */
-Status Bucket::PartialPutOrCreate(const std::string &blob_name,
-                                  const Blob &blob,
-                                  size_t blob_off,
-                                  BlobId &blob_id,
-                                  IoStatus &status,
-                                  const IoClientContext &opts,
-                                  Context &ctx) {
-  Blob full_blob;
-  if (ContainsBlob(blob_name, blob_id)) {
-    // Case 1: The blob already exists (read from hermes)
-    // Read blob from Hermes
-    LOG(INFO) << "Blob existed. Reading from Hermes." << std::endl;
-    Get(blob_id, full_blob, ctx);
-  }
-  if (blob_off == 0 &&
-      blob.size() >= opts.backend_size_ &&
-      blob.size() >= full_blob.size()) {
-    // Case 2: We're overriding the entire blob
-    // Put the entire blob, no need to load from storage
-    LOG(INFO) << "Putting the entire blob." << std::endl;
-    return Put(blob_name, blob, blob_id, ctx);
-  }
-  if (full_blob.size() < opts.backend_size_) {
-    // Case 3: The blob did not fully exist (need to read from backend)
-    // Read blob using adapter
-    LOG(INFO) << "Blob did not fully exist. Reading blob from backend. "
-              << " cur_size: " << full_blob.size()
-              << " backend_size: " << opts.backend_size_
-              << std::endl;
-    full_blob.resize(opts.backend_size_);
-    auto io_client = IoClientFactory::Get(opts.type_);
-    if (io_client) {
-      auto name_shm = hipc::make_uptr<hipc::charbuf>(name_);
-      io_client->ReadBlob(*name_shm,
-                          full_blob, opts, status);
-      if (!status.success_) {
-        LOG(INFO) << "Failed to read blob of size "
-                  << opts.backend_size_
-                  << " from backend (PartialPut)";
-        // return PARTIAL_PUT_OR_CREATE_OVERFLOW;
-      }
-    }
-  }
-  LOG(INFO) << "Modifying full_blob at offset: " << blob_off
-            << " for total size: " << blob.size() << std::endl;
-  // Ensure the blob can hold the update
-  full_blob.resize(std::max(full_blob.size(), blob_off + blob.size()));
-  // Modify the blob
-  memcpy(full_blob.data() + blob_off, blob.data(), blob.size());
-  // Re-put the blob
-  Put(blob_name, full_blob, blob_id, ctx);
-  LOG(INFO) << "Partially put to blob: (" << blob_id.unique_
-            << ", " << blob_id.node_id_ << ")" << std::endl;
-  return Status();
-}
-
-/**
  * Get \a blob_id Blob from the bucket
  * */
 Status Bucket::Get(BlobId blob_id, Blob &blob, Context &ctx) {
@@ -265,112 +198,6 @@ Status Bucket::Get(BlobId blob_id, Blob &blob, Context &ctx) {
   // Update the local MDM I/O log
   mdm_->AddIoStat(id_, blob_id, blob.size(), IoType::kRead);
   return Status();
-}
-
-/**
- * Load \a blob_name Blob from the bucket. Load the blob from the
- * I/O backend if it does not exist.
- *
- * @param blob_name the semantic name of the blob
- * @param blob the buffer to put final data in
- * @param blob_off the offset within the blob to begin the Put
- * @param blob_size the total amount of data to read
- * @param blob_id [out] the blob id corresponding to blob_name
- * @param io_ctx information required to perform I/O to the backend
- * @param opts specific configuration of the I/O to perform
- * @param ctx any additional information
- * */
-Status Bucket::PartialGetOrCreate(const std::string &blob_name,
-                                  Blob &blob,
-                                  size_t blob_off,
-                                  size_t blob_size,
-                                  BlobId &blob_id,
-                                  IoStatus &status,
-                                  const IoClientContext &opts,
-                                  Context &ctx) {
-  Blob full_blob;
-  if (ContainsBlob(blob_name, blob_id)) {
-    // Case 1: The blob already exists (read from hermes)
-    // Read blob from Hermes
-    LOG(INFO) << "Blob existed. Reading blob from Hermes."
-              << " offset: " << opts.backend_off_
-              << " size: " << blob_size
-              << std::endl;
-    Get(blob_id, full_blob, ctx);
-  }
-  if (full_blob.size() < opts.backend_size_) {
-    // Case 2: The blob did not exist (or at least not fully)
-    // Read blob using adapter
-    LOG(INFO) << "Blob did not fully exist. Reading blob from backend. "
-              << " cur_size: " << full_blob.size()
-              << " backend_size: " << opts.backend_size_
-              << std::endl;
-    full_blob.resize(opts.backend_size_);
-    auto io_client = IoClientFactory::Get(opts.type_);
-    if (io_client) {
-      auto name_shm = hipc::make_uptr<hipc::charbuf>(name_);
-      io_client->ReadBlob(*name_shm, full_blob, opts, status);
-      if (!status.success_) {
-        LOG(INFO) << "Failed to read blob of size "
-                  << opts.backend_size_
-                  << "from backend (PartialCreate)";
-        return PARTIAL_GET_OR_CREATE_OVERFLOW;
-      }
-      Put(blob_name, full_blob, blob_id, ctx);
-    }
-  }
-  // Ensure the blob can hold the update
-  if (full_blob.size() < blob_off + blob_size) {
-    return PARTIAL_GET_OR_CREATE_OVERFLOW;
-  }
-  // Modify the blob
-  // TODO(llogan): we can avoid a copy here
-  blob.resize(blob_size);
-  memcpy(blob.data(), full_blob.data() + blob_off, blob.size());
-  return Status();
-}
-
-/**
- * Flush a blob
- * */
-void Bucket::FlushBlob(BlobId blob_id,
-                       const IoClientContext &opts) {
-  LOG(INFO) << "Flushing blob" << std::endl;
-  if (opts.adapter_mode_ == AdapterMode::kScratch) {
-    LOG(INFO) << "In scratch mode, ignoring flush" << std::endl;
-    return;
-  }
-  Blob full_blob;
-  IoStatus status;
-  // Read blob from Hermes
-  Get(blob_id, full_blob, ctx_);
-  LOG(INFO) << "The blob being flushed has size: "
-            << full_blob.size() << std::endl;
-  std::string blob_name = GetBlobName(blob_id);
-  // Write blob to backend
-  auto io_client = IoClientFactory::Get(opts.type_);
-  if (io_client) {
-    IoClientContext decode_opts = io_client->DecodeBlobName(opts, blob_name);
-    auto name_shm = hipc::make_uptr<hipc::charbuf>(name_);
-    io_client->WriteBlob(*name_shm,
-                         full_blob,
-                         decode_opts,
-                         status);
-  }
-}
-
-/**
- * Flush the entire bucket
- * */
-void Bucket::Flush(const IoClientContext &opts) {
-  std::vector<BlobId> blob_ids = GetContainedBlobIds();
-  if (opts.adapter_mode_ == AdapterMode::kScratch) {
-    return;
-  }
-  LOG(INFO) << "Flushing " << blob_ids.size() << " blobs" << std::endl;
-  for (BlobId &blob_id : blob_ids) {
-    FlushBlob(blob_id, opts);
-  }
 }
 
 /**
@@ -402,8 +229,7 @@ void Bucket::RenameBlob(BlobId blob_id,
  * Delete \a blob_id blob
  * */
 void Bucket::DestroyBlob(BlobId blob_id,
-                         Context &ctx,
-                         IoClientContext opts) {
+                         Context &ctx) {
   mdm_->GlobalTagRemoveBlob(id_, blob_id);
   mdm_->GlobalDestroyBlob(id_, blob_id);
 }

@@ -16,7 +16,7 @@
 
 #include <atomic>
 
-namespace hermes_shm {
+namespace hshm {
 
 struct Mutex {
   std::atomic<uint32_t> lock_;
@@ -43,6 +43,6 @@ struct ScopedMutex {
   void Unlock();
 };
 
-}  // namespace hermes_shm
+}  // namespace hshm
 
 #endif  // HERMES_THREAD_MUTEX_H_

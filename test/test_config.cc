@@ -35,14 +35,15 @@ TEST_CASE("Hostfile") {
 TEST_CASE("HostName") {
   SECTION("Simple host name") {
     std::vector<std::string> host_names;
-    hermes::config::ParseHostNameString("localhost", host_names);
+    hermes::config::BaseConfig::ParseHostNameString("localhost", host_names);
     REQUIRE(host_names.size() == 1);
     REQUIRE(host_names[0] == "localhost");
   }
 
   SECTION("Host name with range at the end") {
     std::vector<std::string> host_names;
-    hermes::config::ParseHostNameString("ares-comp-[0-4]", host_names);
+    hermes::config::BaseConfig::ParseHostNameString("ares-comp-[0-4]",
+                                                    host_names);
     REQUIRE(host_names.size() == 5);
     REQUIRE(host_names[0] == "ares-comp-0");
     REQUIRE(host_names[1] == "ares-comp-1");
@@ -53,7 +54,8 @@ TEST_CASE("HostName") {
 
   SECTION("Host name with fixed number range") {
     std::vector<std::string> host_names;
-    hermes::config::ParseHostNameString("ares-comp-[08-12]", host_names);
+    hermes::config::BaseConfig::ParseHostNameString("ares-comp-[08-12]",
+                                                    host_names);
     REQUIRE(host_names.size() == 5);
     REQUIRE(host_names[0] == "ares-comp-08");
     REQUIRE(host_names[1] == "ares-comp-09");
@@ -64,7 +66,8 @@ TEST_CASE("HostName") {
 
   SECTION("Host name with fixed number range and suffix") {
     std::vector<std::string> host_names;
-    hermes::config::ParseHostNameString("ares-comp-[08-12]-hello", host_names);
+    hermes::config::BaseConfig::ParseHostNameString("ares-comp-[08-12]-hello",
+                                        host_names);
     REQUIRE(host_names.size() == 5);
     REQUIRE(host_names[0] == "ares-comp-08-hello");
     REQUIRE(host_names[1] == "ares-comp-09-hello");
@@ -75,8 +78,8 @@ TEST_CASE("HostName") {
 
   SECTION("Host name with multiple ranges") {
     std::vector<std::string> host_names;
-    hermes::config::ParseHostNameString("ares-comp-[08-10,13-14,25]-hello",
-                                        host_names);
+    hermes::config::BaseConfig::ParseHostNameString(
+        "ares-comp-[08-10,13-14,25]-hello", host_names);
     REQUIRE(host_names.size() == 6);
     REQUIRE(host_names[0] == "ares-comp-08-hello");
     REQUIRE(host_names[1] == "ares-comp-09-hello");

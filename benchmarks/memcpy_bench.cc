@@ -18,8 +18,8 @@
 #include "hermes_shm/memory/backend/posix_shm_mmap.h"
 #include <hermes_shm/util/timer.h>
 
-using hermes_shm::ipc::PosixShmMmap;
-using Timer = hermes_shm::HighResMonotonicTimer;
+using hshm::ipc::PosixShmMmap;
+using Timer = hshm::HighResMonotonicTimer;
 PosixShmMmap backend;
 
 void GatherTimes(std::string test_name, Timer &t) {
@@ -35,7 +35,7 @@ void GatherTimes(std::string test_name, Timer &t) {
   }
 }
 
-void PutTest(int rank, int repeat, int blobs_per_rank, size_t blob_size) {
+void PutTest(int rank, int repeat, size_t blobs_per_rank, size_t blob_size) {
   Timer t;
   std::vector<char> data(blob_size);
   t.Resume();
@@ -49,7 +49,7 @@ void PutTest(int rank, int repeat, int blobs_per_rank, size_t blob_size) {
   GatherTimes("Put", t);
 }
 
-void GetTest(int rank, int repeat, int blobs_per_rank, size_t blob_size) {
+void GetTest(int rank, int repeat, size_t blobs_per_rank, size_t blob_size) {
   Timer t;
   std::vector<char> data(blob_size);
   t.Resume();
@@ -72,8 +72,8 @@ int main(int argc, char **argv) {
     printf("USAGE: ./memcpy_bench [blob_size (K/M/G)] [blobs_per_rank]\n");
     exit(1);
   }
-  size_t blob_size = hermes::config::ParseSize(argv[1]);
-  int blobs_per_rank = atoi(argv[2]);
+  size_t blob_size = hermes::config::BaseConfig::ParseSize(argv[1]);
+  size_t blobs_per_rank = atoi(argv[2]);
   size_t backend_size = nprocs * blob_size * blobs_per_rank;
 
   std::string shm_url = "test_mem_backend";

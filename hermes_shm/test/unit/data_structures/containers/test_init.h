@@ -16,21 +16,21 @@
 
 #include "hermes_shm/data_structures/data_structure.h"
 
-using hermes_shm::ipc::PosixShmMmap;
-using hermes_shm::ipc::MemoryBackendType;
-using hermes_shm::ipc::MemoryBackend;
-using hermes_shm::ipc::allocator_id_t;
-using hermes_shm::ipc::AllocatorType;
-using hermes_shm::ipc::Allocator;
-using hermes_shm::ipc::Pointer;
+using hshm::ipc::PosixShmMmap;
+using hshm::ipc::MemoryBackendType;
+using hshm::ipc::MemoryBackend;
+using hshm::ipc::allocator_id_t;
+using hshm::ipc::AllocatorType;
+using hshm::ipc::Allocator;
+using hshm::ipc::Pointer;
 
-using hermes_shm::ipc::MemoryBackendType;
-using hermes_shm::ipc::MemoryBackend;
-using hermes_shm::ipc::allocator_id_t;
-using hermes_shm::ipc::AllocatorType;
-using hermes_shm::ipc::Allocator;
-using hermes_shm::ipc::MemoryManager;
-using hermes_shm::ipc::Pointer;
+using hshm::ipc::MemoryBackendType;
+using hshm::ipc::MemoryBackend;
+using hshm::ipc::allocator_id_t;
+using hshm::ipc::AllocatorType;
+using hshm::ipc::Allocator;
+using hshm::ipc::MemoryManager;
+using hshm::ipc::Pointer;
 
 extern Allocator *alloc_g;
 

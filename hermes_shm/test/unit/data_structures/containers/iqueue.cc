@@ -16,9 +16,9 @@
 #include "hermes_shm/data_structures/ipc/iqueue.h"
 #include "hermes_shm/data_structures/smart_ptr/smart_ptr_base.h"
 
-using hermes_shm::ipc::mptr;
-using hermes_shm::ipc::make_mptr;
-using hermes_shm::ipc::iqueue;
+using hshm::ipc::mptr;
+using hshm::ipc::make_mptr;
+using hshm::ipc::iqueue;
 
 template<typename T>
 void IqueueTest() {
