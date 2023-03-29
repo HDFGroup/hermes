@@ -178,8 +178,6 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
       LOG(INFO) << "Failed to write blob of size " << opts.backend_size_
                 << " to backend (PartialPut)";
       return 0;
-    } else {
-      LOG(FATAL) << "Bypass mode requires a backend for PUTs" << std::endl;
     }
     if (opts.DoSeek()) {
       stat.st_ptr_ = off + total_size;
