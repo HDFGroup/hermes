@@ -101,7 +101,7 @@ void Prefetcher::Finalize() {
 /** Parse the MDM's I/O pattern log */
 void Prefetcher::Run() {
   size_t log_size = mdm_->io_pattern_log_->size();
-  auto trace_iter = trace_.begin();
+  // auto trace_iter = trace_.begin();
   auto client_iter = mdm_->io_pattern_log_->begin();
   if (log_size == 0) {
     return;
@@ -122,6 +122,7 @@ void Prefetcher::Run() {
   // Analyze the per-rank prefetching decisions
   for (int i = 0; i < nprocs; ++i) {
     for (IoStat &stat : patterns[i]) {
+      (void) stat;
       // We assume rank I/O is exactly the same as it was in the trace
       IoTrace &trace = *trace_off_[i];
       if (trace.organize_next_n_ == 0) {

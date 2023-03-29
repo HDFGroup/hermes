@@ -206,8 +206,8 @@ void BufferPool::AllocateBuffers(size_t total_size,
 
       // Go to the next target if there was not enough space in this target
       if (slab_count > 0) {
-        int target_id = tid.GetIndex() + 1;
-        if (target_id >= mdm_->targets_->size()) {
+        i32 target_id = tid.GetIndex() + 1;
+        if (target_id >= (i32)mdm_->targets_->size()) {
           LOG(FATAL) << "BORG ran out of space on all targets."
                      << "This shouldn't happen."
                      << "Please increase the amount of space dedicated to PFS"

@@ -26,7 +26,7 @@ namespace hshm {
 template<typename T>
 class Singleton {
  private:
-  static std::unique_ptr<T> obj_;
+  static T* obj_;
   static hshm::Mutex lock_;
 
  public:
@@ -37,14 +37,18 @@ class Singleton {
     if (!obj_) {
       hshm::ScopedMutex lock(lock_);
       if (obj_ == nullptr) {
-        obj_ = std::make_unique<T>();
+        obj_ = new T();
       }
     }
-    return obj_.get();
+    return obj_;
   }
 };
+template <typename T>
+T* Singleton<T>::obj_;
+template <typename T>
+hshm::Mutex Singleton<T>::lock_;
 #define DEFINE_SINGLETON_CC(T)\
-  template<> std::unique_ptr<T>\
+  template<> T*\
     hshm::Singleton<T>::obj_ = nullptr;\
   template<> hshm::Mutex\
     hshm::Singleton<T>::lock_ =\
@@ -64,6 +68,8 @@ class GlobalSingleton {
     return &obj_;
   }
 };
+template <typename T>
+T GlobalSingleton<T>::obj_;
 #define DEFINE_GLOBAL_SINGLETON_CC(T)\
   template<> T\
     hshm::GlobalSingleton<T>::obj_ = T();

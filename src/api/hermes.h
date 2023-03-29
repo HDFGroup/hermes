@@ -29,7 +29,7 @@
 #include "hermes_shm/util/singleton.h"
 
 // Singleton macros
-#define HERMES hshm::GlobalSingleton<hermes::api::Hermes>::GetInstance()
+#define HERMES hshm::Singleton<hermes::api::Hermes>::GetInstance()
 #define HERMES_T hermes::api::Hermes*
 
 namespace hermes::api {

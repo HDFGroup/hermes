@@ -55,6 +55,9 @@ Status DPE::CalculatePlacement(const std::vector<size_t> &blob_sizes,
         // targets = mdm_->GetGlobalTargetInfo();
         break;
       }
+      case TopologyType::kCount: {
+        LOG(FATAL) << "Not a valid topology type" << std::endl;
+      }
     }
     if (targets.size() == 0) {
       result = DPE_PLACEMENT_SCHEMA_EMPTY;

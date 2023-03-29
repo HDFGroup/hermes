@@ -178,6 +178,9 @@ bool MetadataManager::LocalUpdateBucketSize(TagId bkt_id,
       bkt_info.header_->client_state_.true_size_ += delta;
       bkt_info.header_->internal_size_ += delta;
     }
+    case BucketUpdate::kNone: {
+      LOG(FATAL) << "None is not valid here" << std::endl;
+    }
   }
   return true;
 }
@@ -266,7 +269,6 @@ std::pair<BlobId, bool> MetadataManager::LocalTryCreateBlob(
     TagId bkt_id,
     const std::string &blob_name) {
   AUTO_TRACE(1);
-  size_t orig_blob_size = 0;
   // Acquire MD write lock (modify blob_map_)
   ScopedRwWriteLock blob_map_lock(header_->lock_[kBlobMapLock]);
   // Get internal blob name
@@ -505,7 +507,7 @@ void MetadataManager::LocalClear() {
  * */
 void MetadataManager::GlobalClear() {
   AUTO_TRACE(1);
-  for (int i = 0; i < rpc_->hosts_.size(); ++i) {
+  for (i32 i = 0; i < (i32)rpc_->hosts_.size(); ++i) {
     i32 node_id = i + 1;
     if (NODE_ID_IS_LOCAL(node_id)) {
       LocalClear();

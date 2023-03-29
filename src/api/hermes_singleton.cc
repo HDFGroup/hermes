@@ -13,12 +13,9 @@
 #include "hermes_shm/util/singleton.h"
 
 #include "hermes.h"
-template<> hermes::api::Hermes hshm::GlobalSingleton<
-    hermes::api::Hermes>::obj_ = hermes::api::Hermes();
+DEFINE_SINGLETON_CC(hermes::api::Hermes)
 
 /** Finalize hermes when program exits */
-void Finalize() {
+void __attribute__((destructor)) Finalize() {
   HERMES->Finalize();
 }
-
-void __attribute__((destructor)) Finalize();

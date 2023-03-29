@@ -242,7 +242,7 @@ OffsetPointer ScalablePageAllocator::ReallocateOffsetNoNullCheck(
   OffsetPointer new_p;
   void *ptr = AllocatePtr<void*, OffsetPointer>(new_size, new_p);
   MpPage *hdr = Convert<MpPage>(p - sizeof(MpPage));
-  void *old = (void*) (hdr + 1);
+  void *old = (void*)(hdr + 1);
   memcpy(ptr, old, hdr->page_size_ - sizeof(MpPage));
   FreeOffsetNoNullCheck(p);
   return new_p;

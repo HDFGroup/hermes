@@ -16,7 +16,7 @@
 
 #include "hermes_shm/thread/thread_manager.h"
 #include "hermes_shm/data_structures/ipc/vector.h"
-#include "hermes_shm/data_structures/ipc/list.h"
+#include "hermes_shm/data_structures/ipc/slist.h"
 #include "pair.h"
 #include "hermes_shm/types/atomic.h"
 #include "hermes_shm/data_structures/ipc/internal/shm_internal.h"
@@ -28,18 +28,18 @@ template<typename Key, typename T, class Hash = std::hash<Key>>
 class unordered_map;
 
 /**
- * The unordered map iterator (bucket_iter, list_iter)
+ * The unordered map iterator (bucket_iter, slist_iter)
  * */
 template<typename Key, typename T, class Hash>
 struct unordered_map_iterator {
  public:
   using COLLISION_T = hipc::pair<Key, T>;
-  using BUCKET_T = hipc::list<COLLISION_T>;
+  using BUCKET_T = hipc::slist<COLLISION_T>;
 
  public:
   hipc::Ref<unordered_map<Key, T, Hash>> map_;
   vector_iterator<BUCKET_T> bucket_;
-  list_iterator<COLLISION_T> collision_;
+  slist_iterator<COLLISION_T> collision_;
 
   /** Default constructor */
   unordered_map_iterator() = default;
@@ -104,7 +104,7 @@ struct unordered_map_iterator {
         return false;
       }
       BUCKET_T& bkt = (**bucket_);
-      list<COLLISION_T> &collisions = bkt;
+      slist<COLLISION_T> &collisions = bkt;
       if (collision_ != collisions.end()) {
         return true;
       } else {
@@ -113,7 +113,7 @@ struct unordered_map_iterator {
           return false;
         }
         BUCKET_T& new_bkt = (**bucket_);
-        list<COLLISION_T> &new_collisions = new_bkt;
+        slist<COLLISION_T> &new_collisions = new_bkt;
         collision_ = collisions.begin();
       }
     } while (true);
@@ -165,7 +165,7 @@ struct ShmHeader<TYPED_CLASS> {
  public:
   SHM_CONTAINER_HEADER_TEMPLATE(ShmHeader)
   using COLLISION_T = hipc::pair<Key, T>;
-  using BUCKET_T = hipc::list<COLLISION_T>;
+  using BUCKET_T = hipc::slist<COLLISION_T>;
 
  public:
   ShmArchive<vector<BUCKET_T>> buckets_;
@@ -197,7 +197,7 @@ class unordered_map : public ShmContainer {
 
  public:
   using COLLISION_T = hipc::pair<Key, T>;
-  using BUCKET_T = hipc::list<COLLISION_T>;
+  using BUCKET_T = hipc::slist<COLLISION_T>;
 
  public:
   /**====================================
@@ -381,7 +381,7 @@ class unordered_map : public ShmContainer {
     hipc::Ref<BUCKET_T> bkt = (*buckets)[bkt_id];
 
     // Insert into the map
-    list<COLLISION_T> &collisions = *bkt;
+    slist<COLLISION_T> &collisions = *bkt;
     auto has_key_iter = find_collision(key, collisions);
     if (!has_key_iter.is_end()) {
       if constexpr(!modify_existing) {
@@ -414,8 +414,8 @@ class unordered_map : public ShmContainer {
     size_t bkt_id = Hash{}(key) % buckets->size();
     hipc::Ref<BUCKET_T> bkt = (*buckets)[bkt_id];
 
-    // Find and remove key from collision list
-    list<COLLISION_T> &collisions = *bkt;
+    // Find and remove key from collision slist
+    slist<COLLISION_T> &collisions = *bkt;
     auto iter = find_collision(key, collisions);
     if (iter.is_end()) {
       return;
@@ -434,8 +434,8 @@ class unordered_map : public ShmContainer {
     // Acquire the bucket lock for a write (modifying collisions)
     hipc::Ref<BUCKET_T> bkt = *iter.bucket_;
 
-    // Erase the element from the collision list
-    list<COLLISION_T> &collisions = bkt;
+    // Erase the element from the collision slist
+    slist<COLLISION_T> &collisions = bkt;
     collisions.erase(iter.collision_);
 
     // Decrement the size of the map
@@ -480,7 +480,7 @@ class unordered_map : public ShmContainer {
     size_t bkt_id = Hash{}(key) % buckets->size();
     iter.bucket_ = buckets->begin() + bkt_id;
     hipc::Ref<BUCKET_T> bkt = (*iter.bucket_);
-    list<COLLISION_T> &collisions = *bkt;
+    slist<COLLISION_T> &collisions = *bkt;
 
     // Get the specific collision iterator
     iter.collision_ = find_collision(key, collisions);
@@ -490,9 +490,9 @@ class unordered_map : public ShmContainer {
     return iter;
   }
 
-  /** Find a key in the collision list */
-  list_iterator<COLLISION_T>
-  find_collision(const Key &key, list<COLLISION_T> &collisions) {
+  /** Find a key in the collision slist */
+  slist_iterator<COLLISION_T>
+  find_collision(const Key &key, slist<COLLISION_T> &collisions) {
     auto iter = collisions.begin();
     auto iter_end = collisions.end();
     for (; iter != iter_end; ++iter) {
@@ -532,9 +532,9 @@ class unordered_map : public ShmContainer {
       return iter;
     }
     hipc::Ref<BUCKET_T> bkt = (*buckets)[0];
-    list<COLLISION_T> &list = *bkt;
+    slist<COLLISION_T> &slist = *bkt;
     iter.bucket_ = buckets->cbegin();
-    iter.collision_ = list.begin();
+    iter.collision_ = slist.begin();
     iter.make_correct();
     return iter;
   }

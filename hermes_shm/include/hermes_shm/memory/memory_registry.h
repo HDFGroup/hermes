@@ -15,6 +15,8 @@
 
 #include "hermes_shm/memory/allocator/allocator.h"
 #include "backend/memory_backend.h"
+#include "hermes_shm/memory/allocator/stack_allocator.h"
+#include "hermes_shm/memory/backend/posix_mmap.h"
 
 namespace hipc = hshm::ipc;
 
@@ -23,8 +25,8 @@ namespace hshm::ipc {
 class MemoryRegistry {
  public:
   allocator_id_t root_allocator_id_;
-  std::unique_ptr<MemoryBackend> root_backend_;
-  std::unique_ptr<Allocator> root_allocator_;
+  PosixMmap root_backend_;
+  StackAllocator root_allocator_;
   std::unordered_map<std::string, std::unique_ptr<MemoryBackend>> backends_;
   std::unordered_map<allocator_id_t, std::unique_ptr<Allocator>> allocators_;
   Allocator *default_allocator_;
@@ -68,7 +70,7 @@ class MemoryRegistry {
   Allocator* RegisterAllocator(std::unique_ptr<Allocator> &alloc) {
     auto ptr = alloc.get();
     if (default_allocator_ == nullptr ||
-        default_allocator_ == root_allocator_.get() ||
+        default_allocator_ == &root_allocator_ ||
         default_allocator_->GetId() == alloc->GetId()) {
       default_allocator_ = alloc.get();
     }
@@ -82,7 +84,7 @@ class MemoryRegistry {
   /** Unregisters an allocator */
   void UnregisterAllocator(allocator_id_t alloc_id) {
     if (alloc_id == default_allocator_->GetId()) {
-      default_allocator_ = root_allocator_.get();
+      default_allocator_ = &root_allocator_;
     }
     allocators_.erase(alloc_id);
   }
@@ -92,8 +94,8 @@ class MemoryRegistry {
    * */
   Allocator* GetAllocator(allocator_id_t alloc_id) {
     if (alloc_id.IsNull()) { return nullptr; }
-    if (alloc_id == root_allocator_->GetId()) {
-      return root_allocator_.get();
+    if (alloc_id == root_allocator_.GetId()) {
+      return &root_allocator_;
     }
     auto iter = allocators_.find(alloc_id);
     if (iter == allocators_.end()) {
@@ -106,7 +108,7 @@ class MemoryRegistry {
    * Gets the allocator used for initializing other allocators.
    * */
   Allocator* GetRootAllocator() {
-    return root_allocator_.get();
+    return &root_allocator_;
   }
 
   /**

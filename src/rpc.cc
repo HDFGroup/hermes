@@ -64,7 +64,7 @@ void RpcContext::InitRpcContext() {
     MPI_Comm_rank(MPI_COMM_WORLD, &node_id_);
     MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
     node_id_ += 1;
-    if (nprocs != hosts_.size()) {
+    if (nprocs != (int)hosts_.size()) {
       LOG(FATAL) << hshm::Formatter::format(
           "Must run the daemon on EVERY node in the hostfile. "
           "{}/{} were launched.", nprocs, hosts_.size()) << std::endl;
@@ -72,7 +72,7 @@ void RpcContext::InitRpcContext() {
   } else {
     node_id_ = mdm_->header_->node_id_;
   }
-  if (node_id_ == 0 || node_id_ > hosts_.size()) {
+  if (node_id_ == 0 || node_id_ > (i32)hosts_.size()) {
     LOG(FATAL) << "Couldn't identify this host" << std::endl;
   }
 }
@@ -111,7 +111,7 @@ std::string RpcContext::GetMyRpcAddress() {
 /** get host name from node ID */
 std::string RpcContext::GetHostNameFromNodeId(i32 node_id) {
   // NOTE(llogan): node_id 0 is reserved as the NULL node
-  if (node_id <= 0 || node_id > hosts_.size()) {
+  if (node_id <= 0 || node_id > (i32)hosts_.size()) {
     LOG(FATAL) << hshm::Formatter::format(
                       "Attempted to get from node {}, which is out of "
                       "the range 1-{}", node_id, hosts_.size() + 1)
@@ -124,7 +124,7 @@ std::string RpcContext::GetHostNameFromNodeId(i32 node_id) {
 /** get host name from node ID */
 std::string RpcContext::GetIpAddressFromNodeId(i32 node_id) {
   // NOTE(llogan): node_id 0 is reserved as the NULL node
-  if (node_id <= 0 || node_id > hosts_.size()) {
+  if (node_id <= 0 || node_id > (i32)hosts_.size()) {
     LOG(FATAL) << hshm::Formatter::format(
                       "Attempted to get from node {}, which is out of "
                       "the range 1-{}", node_id, hosts_.size() + 1)

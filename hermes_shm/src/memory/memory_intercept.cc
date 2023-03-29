@@ -78,7 +78,7 @@ void* pvalloc(size_t size) {
  * Allocates size bytes and places the address of the
  * allocated memory in *memptr. The address of the allocated memory
  * will be a multiple of alignment, which must be a power of two and a multiple
- * of sizeof(void *). Returns NULL if size is 0. */
+ * of sizeof(void*). Returns NULL if size is 0. */
 int posix_memalign(void **memptr, size_t alignment, size_t size) {
   (*memptr) = memalign(alignment, size);
   return 0;

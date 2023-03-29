@@ -18,8 +18,8 @@
 #include <hermes_shm/introspect/system_info.h>
 template<> hshm::SystemInfo hshm::GlobalSingleton<hshm::SystemInfo>::obj_ = hshm::SystemInfo();
 #include <hermes_shm/memory/memory_registry.h>
-template<> hshm::ipc::MemoryRegistry hshm::GlobalSingleton<hshm::ipc::MemoryRegistry>::obj_ = hshm::ipc::MemoryRegistry();
+DEFINE_GLOBAL_SINGLETON_CC(hshm::ipc::MemoryRegistry)
 #include <hermes_shm/memory/memory_manager.h>
-template<> hshm::ipc::MemoryManager hshm::GlobalSingleton<hshm::ipc::MemoryManager>::obj_ = hshm::ipc::MemoryManager();
+DEFINE_GLOBAL_SINGLETON_CC(hshm::ipc::MemoryManager)
 #include <hermes_shm/thread/thread_manager.h>
-template<> hshm::ThreadManager hshm::GlobalSingleton<hshm::ThreadManager>::obj_ = hshm::ThreadManager();
+DEFINE_GLOBAL_SINGLETON_CC(hshm::ThreadManager)
