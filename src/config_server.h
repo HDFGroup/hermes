@@ -17,7 +17,7 @@
 
 namespace hermes::config {
 
-class DeviceInfo; /** Forward declaration of DeviceInfo */
+struct DeviceInfo; /** Forward declaration of DeviceInfo */
 
 /**
  * The type of interface the device exposes

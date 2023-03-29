@@ -21,10 +21,11 @@ namespace hermes::borg {
 
 class RamIoClient : public BorgIoClient {
  public:
+  virtual ~RamIoClient() = default;
+
   bool Init(DeviceInfo &dev_info) override {
     auto &hermes_header = HERMES->header_;
     auto &main_alloc = HERMES->main_alloc_;
-    auto &server_config = HERMES->server_config_;
     hermes_header->ram_tier_ = main_alloc->
                                Allocate(dev_info.header_->capacity_);
     if (hermes_header->ram_tier_.IsNull()) {

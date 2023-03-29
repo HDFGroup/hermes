@@ -20,6 +20,7 @@ namespace hermes {
 
 class BorgIoClient {
  public:
+  virtual ~BorgIoClient() = default;
   virtual bool Init(DeviceInfo &dev_info) = 0;
   virtual bool Write(DeviceInfo &dev_info,
                      const char *data, size_t off, size_t size) = 0;

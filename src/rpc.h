@@ -33,7 +33,7 @@ class Hermes;
 
 namespace hermes {
 
-struct MetadataManager;
+class MetadataManager;
 using api::Hermes;
 
 /** RPC types */
@@ -106,7 +106,7 @@ class RpcContext {
 
 
 #define UNIQUE_ID_TO_NODE_ID_LAMBDA \
-  [this](auto &&param) { return param.GetNodeId(); }
+  [](auto &&param) { return param.GetNodeId(); }
 
 #define STRING_HASH_LAMBDA \
   [this](auto &&param) {   \

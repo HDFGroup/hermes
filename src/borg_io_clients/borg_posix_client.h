@@ -24,6 +24,8 @@ namespace hermes::borg {
 
 class PosixIoClient : public BorgIoClient {
  public:
+  virtual ~PosixIoClient() = default;
+
   bool Init(DeviceInfo &dev_info) override {
     auto api = HERMES_POSIX_API;
     std::string text = (*dev_info.mount_dir_).str() +
