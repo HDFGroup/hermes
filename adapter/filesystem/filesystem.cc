@@ -530,7 +530,7 @@ int Filesystem::Sync(File &f, AdapterStat &stat) {
 }
 
 int Filesystem::Truncate(File &f, AdapterStat &stat, size_t new_size) {
-  std::shared_ptr<hapi::Bucket> &bkt = stat.bkt_id_;
+  // std::shared_ptr<hapi::Bucket> &bkt = stat.bkt_id_;
   // TODO(llogan)
   return 0;
 }

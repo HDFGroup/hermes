@@ -75,7 +75,9 @@ struct FsIoOptions {
                   mpi_type_(MPI_CHAR),
                   mpi_count_(0),
                   backend_off_(0),
-                  backend_size_(0) {}
+                  backend_size_(0) {
+    SetSeek();
+  }
 
   /** Enable seek for this I/O */
   void SetSeek() {
