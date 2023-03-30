@@ -24,8 +24,6 @@
 #include "adapter/stdio/stdio_fs_api.h"
 #endif
 
-static const int kMaxPathLen = 4096;
-
 #include "glog/logging.h"
 #include "adapter_test_utils.h"
 

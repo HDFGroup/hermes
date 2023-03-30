@@ -37,7 +37,7 @@ void ListVecTest(size_t count) {
     // Write 100 objects from rank 0
     {
       if (rank == 0) {
-        for (int i = 0; i < count; ++i) {
+        for (size_t i = 0; i < count; ++i) {
           CREATE_SET_VAR_TO_INT_OR_STRING(T, var, i);
           obj.emplace_back(var);
         }

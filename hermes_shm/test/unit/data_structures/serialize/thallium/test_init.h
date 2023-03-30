@@ -35,23 +35,28 @@ using hshm::ipc::Allocator;
 using hshm::ipc::MemoryManager;
 using hshm::ipc::Pointer;
 
+namespace thallium {
+class Constants {
+ public:
+  static inline const char *kServerName = "ofi+sockets://127.0.0.1:8080";
+  static inline const char *kTestString = "012344823723642364723874623";
+
+  /** Test cases */
+  static inline const char *kStringTest0 = "kStringTest0";
+  static inline const char *kStringTestLarge = "kStringTestLarge";
+  static inline const char *kCharbufTest0 = "kCharbufTest0";
+  static inline const char *kCharbufTestLarge = "kCharbufTestLarge";
+  static inline const char *kVecOfInt0Test = "kVecOfInt0Test";
+  static inline const char *kVecOfIntLargeTest = "kVecOfIntLargeTest";
+  static inline const char *kVecOfString0Test = "kVecOfString0Test";
+  static inline const char *kVecOfStringLargeTest = "kVecOfStringLargeTest";
+  static inline const char *kBitfieldTest = "kBitfieldTest";
+};
+}  // namespace thallium
+using tcnst = thallium::Constants;
+
 namespace tl = thallium;
 using thallium::request;
-
-static const char* kTestString = "012344823723642364723874623";
-static const char* kServerName = "ofi+sockets://127.0.0.1:8080";
-
-/** Test cases */
-static const char* kStringTest0 = "kStringTest0";
-static const char* kStringTestLarge = "kStringTestLarge";
-static const char* kCharbufTest0 = "kCharbufTest0";
-static const char* kCharbufTestLarge = "kCharbufTestLarge";
-static const char* kVecOfInt0Test = "kVecOfInt0Test";
-static const char* kVecOfIntLargeTest = "kVecOfIntLargeTest";
-static const char* kVecOfString0Test = "kVecOfString0Test";
-static const char* kVecOfStringLargeTest = "kVecOfStringLargeTest";
-static const char* kBitfieldTest = "kBitfieldTest";
-static const char* kVecOfIntRefTest = "kVecOfIntRefTest";
 
 /** Test init */
 template<typename AllocT>

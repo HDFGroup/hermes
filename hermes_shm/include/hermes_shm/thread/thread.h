@@ -32,7 +32,7 @@ class Thread {
   virtual void Resume() = 0;
   virtual void Join() = 0;
   void SetAffinity(int cpu_id) { SetAffinity(cpu_id, 1); }
-  virtual void SetAffinity(int cpu_start, int count) = 0;
+  virtual void SetAffinity(int cpu_start, size_t count) = 0;
 };
 
 class ThreadStatic {

@@ -219,8 +219,7 @@ class iqueue : public ShmContainer {
 
   /** SHM copy constructor + operator */
   void shm_strong_copy_construct_and_op(const iqueue &other) {
-    // memcpy((void*)header_, (void*)other.header_, sizeof(*header_));
-    (*header_) = (*other.header_);
+    memcpy((void*)header_, (void*)other.header_, sizeof(*header_));
   }
 
   /**====================================
@@ -231,8 +230,7 @@ class iqueue : public ShmContainer {
   iqueue(TYPED_HEADER *header, Allocator *alloc, iqueue &&other) noexcept {
     shm_init_header(header, alloc);
     if (alloc_ == other.alloc_) {
-      // memcpy((void*)header_, (void*)other.header_, sizeof(*header_));
-      (*header_) = (*other.header_);
+      memcpy((void*)header_, (void*)other.header_, sizeof(*header_));
       other.SetNull();
     } else {
       shm_strong_copy_construct_and_op(other);
@@ -245,8 +243,7 @@ class iqueue : public ShmContainer {
     if (this != &other) {
       shm_destroy();
       if (this != &other) {
-        // memcpy((void*)header_, (void*)other.header_, sizeof(*header_));
-        (*header_) = (*other.header_);
+        memcpy((void *) header_, (void *) other.header_, sizeof(*header_));
         other.SetNull();
       } else {
         shm_strong_copy_construct_and_op(other);

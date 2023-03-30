@@ -92,7 +92,6 @@ typedef struct H5FD_hermes_fapl_t {
 
 /* Prototypes */
 static herr_t H5FD__hermes_term(void);
-static herr_t H5FD__hermes_fapl_free(void *_fa);
 static H5FD_t *H5FD__hermes_open(const char *name, unsigned flags,
                                  hid_t fapl_id, haddr_t maxaddr);
 static herr_t H5FD__hermes_close(H5FD_t *_file);
@@ -220,7 +219,6 @@ H5FD__hermes_open(const char *name, unsigned flags, hid_t fapl_id,
   H5FD_hermes_t  *file = NULL; /* hermes VFD info          */
   int fd = -1;
   int o_flags = 0;
-  struct stat st;
 
   /* Build the open flags */
   o_flags = (H5F_ACC_RDWR & flags) ? O_RDWR : O_RDONLY;
@@ -242,7 +240,7 @@ H5FD__hermes_open(const char *name, unsigned flags, hid_t fapl_id,
   File f = fs_api->Open(stat, name);
   fd = f.hermes_fd_;
   if (fd < 0) {
-    int myerrno = errno;
+    // int myerrno = errno;
     return nullptr;
   }
 

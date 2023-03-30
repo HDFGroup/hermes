@@ -31,7 +31,7 @@ template<typename T, bool FORWARD_ITER>
 struct vector_iterator_templ {
  public:
   hipc::Ref<vector<T>> vec_;
-  int64_t i_;
+  off64_t i_;
 
   /** Default constructor */
   vector_iterator_templ() = default;
@@ -42,8 +42,8 @@ struct vector_iterator_templ {
 
   /** Construct an iterator at \a i offset */
   inline explicit vector_iterator_templ(const hipc::Ref<vector<T>> &vec,
-                                        int64_t i)
-  : vec_(vec), i_(i) {}
+                                        size_t i)
+  : vec_(vec), i_(static_cast<off64_t>(i)) {}
 
   /** Copy constructor */
   inline vector_iterator_templ(const vector_iterator_templ &other)
@@ -189,7 +189,7 @@ struct vector_iterator_templ {
   /** Set this iterator to end */
   inline void set_end() {
     if constexpr(FORWARD_ITER) {
-      i_ = (int64_t)vec_->size();
+      i_ = vec_->size();
     } else {
       i_ = -1;
     }
@@ -200,7 +200,7 @@ struct vector_iterator_templ {
     if constexpr(FORWARD_ITER) {
       i_ = 0;
     } else {
-      i_ = (size_t)(vec_->size() - 1);
+      i_ = vec_->size() - 1;
     }
   }
 
@@ -209,14 +209,14 @@ struct vector_iterator_templ {
     if constexpr(FORWARD_ITER) {
       return (i_ == 0);
     } else {
-      return ((size_t)i_ == vec_->size() - 1);
+      return (i_ == (int64_t)vec_->size() - 1);
     }
   }
 
   /** Determine whether this iterator is the end iterator */
   inline bool is_end() const {
     if constexpr(FORWARD_ITER) {
-      return (size_t)i_ == vec_->size();
+      return i_ == (int64_t)vec_->size();
     } else {
       return i_ == -1;
     }
@@ -355,8 +355,7 @@ class vector : public ShmContainer {
   vector(TYPED_HEADER *header, Allocator *alloc, vector &&other) {
     shm_init_header(header, alloc);
     if (alloc_ == other.alloc_) {
-      // memcpy((void*)header_, (void*)other.header_, sizeof(*header_));
-      (*header_) = (*other.header_);
+      memcpy((void *) header_, (void *) other.header_, sizeof(*header_));
       other.SetNull();
     } else {
       shm_strong_copy_main<vector>(other);
@@ -369,7 +368,7 @@ class vector : public ShmContainer {
     if (this != &other) {
       shm_destroy();
       if (alloc_ == other.alloc_) {
-        (*header_) = (*other.header_);
+        memcpy((void *) header_, (void *) other.header_, sizeof(*header_));
         other.SetNull();
       } else {
         shm_strong_copy_main<vector>(other);
@@ -645,14 +644,14 @@ class vector : public ShmContainer {
    * @param pos the starting position
    * @param count the amount to shift left by
    * */
-  void shift_left(const vector_iterator<T> pos, int count = 1) {
+  void shift_left(const vector_iterator<T> pos, size_t count = 1) {
     ShmArchive<T> *vec = data_ar();
-    for (int i = 0; i < count; ++i) {
+    for (size_t i = 0; i < count; ++i) {
       hipc::Ref<T>(vec[pos.i_ + i], alloc_).shm_destroy();
     }
     auto dst = vec + pos.i_;
     auto src = dst + count;
-    for (auto i = pos.i_ + count; i < (int64_t)size(); ++i) {
+    for (auto i = pos.i_ + count; i < size(); ++i) {
       memcpy((void*)dst, (void*)src, sizeof(ShmArchive<T>));
       dst += 1; src += 1;
     }
@@ -666,10 +665,10 @@ class vector : public ShmContainer {
    * @param pos the starting position
    * @param count the amount to shift right by
    * */
-  void shift_right(const vector_iterator<T> pos, int count = 1) {
+  void shift_right(const vector_iterator<T> pos, size_t count = 1) {
     auto src = data_ar() + size() - 1;
     auto dst = src + count;
-    auto sz = static_cast<int64_t>(size());
+    auto sz = static_cast<off64_t>(size());
     for (auto i = sz - 1; i >= pos.i_; --i) {
       memcpy((void*)dst, (void*)src, sizeof(ShmArchive<T>));
       dst -= 1; src -= 1;

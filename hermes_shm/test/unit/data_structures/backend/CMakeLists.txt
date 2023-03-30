@@ -22,6 +22,17 @@ add_test(NAME test_memory_manager COMMAND
         mpirun -n 2 ${CMAKE_CURRENT_BINARY_DIR}/test_memory_exec "MemoryManager")
 
 #------------------------------------------------------------------------------
+# Install Targets
+#------------------------------------------------------------------------------
+install(TARGETS
+        test_memory_exec
+        EXPORT
+        ${HERMES_EXPORTED_TARGETS}
+        LIBRARY DESTINATION ${HERMES_INSTALL_LIB_DIR}
+        ARCHIVE DESTINATION ${HERMES_INSTALL_LIB_DIR}
+        RUNTIME DESTINATION ${HERMES_INSTALL_BIN_DIR})
+
+#------------------------------------------------------------------------------
 # Code Coverage
 #------------------------------------------------------------------------------
 if(HERMES_ENABLE_COVERAGE)

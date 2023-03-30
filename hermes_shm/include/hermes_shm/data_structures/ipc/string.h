@@ -148,8 +148,7 @@ class string : public ShmContainer {
   string(TYPED_HEADER *header, Allocator *alloc, string &&other) {
     shm_init_header(header, alloc);
     if (alloc_ == other.alloc_) {
-      // memcpy((void*)header_, (void*)other.header_, sizeof(*header_));
-      (*header_) = (*other.header_);
+      memcpy((void *) header_, (void *) other.header_, sizeof(*header_));
       shm_deserialize_main();
       other.SetNull();
     } else {
@@ -163,8 +162,7 @@ class string : public ShmContainer {
     if (this != &other) {
       shm_destroy();
       if (alloc_ == other.alloc_) {
-        // memcpy((void*)header_, (void*)other.header_, sizeof(*header_));
-        (*header_) = (*other.header_);
+        memcpy((void *) header_, (void *) other.header_, sizeof(*header_));
         shm_deserialize_main();
         other.SetNull();
       } else {
@@ -262,11 +260,12 @@ class string : public ShmContainer {
     if (len_a != len_b) {
       return int((int64_t)len_a - (int64_t)len_b);
     }
-    int sum = 0;
     for (size_t i = 0; i < len_a; ++i) {
-      sum += a[i] - b[i];
+      if (a[i] != b[i]) {
+        return a[i] - b[i];
+      }
     }
-    return sum;
+    return 0;
   }
 
 #define HERMES_STR_CMP_OPERATOR(op) \

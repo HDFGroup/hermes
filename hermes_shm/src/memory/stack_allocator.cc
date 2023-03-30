@@ -68,7 +68,7 @@ OffsetPointer StackAllocator::ReallocateOffsetNoNullCheck(OffsetPointer p,
   auto hdr = Convert<MpPage>(p - sizeof(MpPage));
   size_t old_size = hdr->page_size_ - sizeof(MpPage);
   void *dst = AllocatePtr<void, OffsetPointer>(new_size, new_p);
-  memcpy(dst, src, old_size);
+  memcpy((void*)dst, (void*)src, old_size);
   Free(p);
   return new_p;
 }

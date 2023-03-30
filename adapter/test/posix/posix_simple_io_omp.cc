@@ -62,7 +62,7 @@ void TestThread(char *path,
     struct stat st;
     fstat(fd, &st);
     if (rank == 0) {
-      if (st.st_size != total_size) {
+      if ((size_t)st.st_size != total_size) {
         std::cout << "File sizes are NOT equivalent: "
                   << " stat: " << st.st_size << " real: " << total_size
                   << std::endl;
@@ -104,7 +104,7 @@ void TestThread(char *path,
     struct stat st;
     fstat(fd, &st);
     if (rank == 0) {
-      if (st.st_size != total_size) {
+      if ((size_t)st.st_size != total_size) {
         std::cout << "File sizes are NOT equivalent: "
                   << " stat: " << st.st_size << " real: " << total_size
                   << std::endl;

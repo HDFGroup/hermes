@@ -34,7 +34,7 @@ void MainPosttest() {
 
 void TestTag(hapi::Hermes *hermes) {
   auto bkt = hermes->GetBucket("hello");
-  int num_blobs = 100;
+  size_t num_blobs = 100;
   size_t blob_size = KILOBYTES(4);
   hermes::api::Context ctx;
   std::vector<hermes::BlobId> blob_ids(num_blobs);

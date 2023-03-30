@@ -28,6 +28,6 @@ void MainPretest() {
 }
 
 void MainPosttest() {
-  tl::endpoint server = client_->lookup(kServerName);
+  tl::endpoint server = client_->lookup(tcnst::kServerName);
   client_->shutdown_remote_engine(server);
 }

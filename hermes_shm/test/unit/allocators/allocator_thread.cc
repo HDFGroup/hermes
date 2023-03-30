@@ -14,7 +14,7 @@
 #include "test_init.h"
 
 void MultiThreadedPageAllocationTest(Allocator *alloc) {
-  int nthreads = 8;
+  size_t nthreads = 8;
   HERMES_THREAD_MANAGER->GetThreadStatic();
 
   omp_set_dynamic(0);

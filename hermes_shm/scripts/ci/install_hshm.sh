@@ -19,4 +19,6 @@ cd build
 spack load --only dependencies hermes_shm
 cmake ../ -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=${HOME}/install
 cmake --build . -- -j4
+
+export CXXFLAGS=-Wall
 ctest -VV

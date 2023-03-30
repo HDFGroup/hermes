@@ -16,7 +16,7 @@
 #include <hermes_shm/constants/data_structure_singleton_macros.h>
 
 #include <hermes_shm/introspect/system_info.h>
-template<> hshm::SystemInfo hshm::GlobalSingleton<hshm::SystemInfo>::obj_ = hshm::SystemInfo();
+DEFINE_GLOBAL_SINGLETON_CC(hshm::SystemInfo)
 #include <hermes_shm/memory/memory_registry.h>
 DEFINE_GLOBAL_SINGLETON_CC(hshm::ipc::MemoryRegistry)
 #include <hermes_shm/memory/memory_manager.h>

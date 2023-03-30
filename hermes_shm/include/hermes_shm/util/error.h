@@ -48,7 +48,7 @@ class Error : std::exception {
     return err;
   }
 
-  const char* what() const throw() override{
+  const char* what() const throw() override {
     return msg_.c_str();
   }
 

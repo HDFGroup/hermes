@@ -64,6 +64,17 @@ add_test(NAME test_unordered_map_of_str_str COMMAND
         ${CMAKE_CURRENT_BINARY_DIR}/test_data_structure_exec "UnorderedMapOfStringString")
 
 #------------------------------------------------------------------------------
+# Install Targets
+#------------------------------------------------------------------------------
+install(TARGETS
+        test_data_structure_exec
+        EXPORT
+        ${HERMES_EXPORTED_TARGETS}
+        LIBRARY DESTINATION ${HERMES_INSTALL_LIB_DIR}
+        ARCHIVE DESTINATION ${HERMES_INSTALL_LIB_DIR}
+        RUNTIME DESTINATION ${HERMES_INSTALL_BIN_DIR})
+
+#------------------------------------------------------------------------------
 # Code Coverage
 #------------------------------------------------------------------------------
 if(HERMES_ENABLE_COVERAGE)

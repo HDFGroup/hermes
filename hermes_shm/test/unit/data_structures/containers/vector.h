@@ -27,7 +27,7 @@ class VectorTestSuite : public ListTestSuite<T, Container> {
 
   /// Test vector index operator
   void IndexTest() {
-    for (int i = 0; i < obj_.size(); ++i) {
+    for (size_t i = 0; i < obj_.size(); ++i) {
       CREATE_SET_VAR_TO_INT_OR_STRING(T, var, i);
       REQUIRE(*obj_[i] == var);
     }

@@ -61,9 +61,27 @@ void VectorOfListOfStringTest() {
   auto vec = hipc::make_uptr<vector<list<string>>>(alloc);
 
   vec->resize(10);
-  for (hipc::Ref<list<string>> bkt : *vec) {
-    bkt->emplace_back("hello");
+
+  PAGE_DIVIDE("Emplace an element into each bucket") {
+    size_t count = 0;
+    for (hipc::Ref<list<string>> bkt : *vec) {
+      bkt->emplace_back(std::to_string(count));
+      count += 1;
+    }
+    REQUIRE(count == 10);
   }
+
+  PAGE_DIVIDE("Get string from each bucket") {
+    size_t count = 0;
+    for (hipc::Ref<list<string>> bkt : *vec) {
+      for (hipc::Ref<string> val : *bkt) {
+        REQUIRE(*val == std::to_string(count));
+      }
+      count += 1;
+    }
+    REQUIRE(count == 10);
+  }
+
   vec->clear();
 }
 

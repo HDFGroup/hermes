@@ -35,8 +35,7 @@ void MainPosttest() {
 
 void TestTrait() {
   auto bkt = HERMES->GetBucket("hello");
-  int num_blobs = 100;
-  size_t blob_size = KILOBYTES(4);
+  size_t num_blobs = 100;
   hermes::api::Context ctx;
   std::vector<hermes::BlobId> blob_ids(num_blobs);
 

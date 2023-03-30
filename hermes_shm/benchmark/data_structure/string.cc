@@ -35,14 +35,14 @@ class StringTestSuite {
   }
 
   /** Construct + destruct in a loop */
-  void ConstructDestructTest(int count, int length) {
+  void ConstructDestructTest(size_t count, int length) {
     char *data = (char *) malloc(length + 1);
     data[length] = 0;
     memset(data, 1, length);
 
     Timer t;
     t.Resume();
-    for (int i = 0; i < count; ++i) {
+    for (size_t i = 0; i < count; ++i) {
       T hello(data);
     }
     t.Pause();
@@ -51,7 +51,7 @@ class StringTestSuite {
   }
 
   /** Construct in a loop, and then destruct in a loop */
-  void ConstructThenDestructTest(int count, int length) {
+  void ConstructThenDestructTest(size_t count, int length) {
     char *data = (char *) malloc(length + 1);
     data[length] = 0;
     memset(data, 1, length);
@@ -60,7 +60,7 @@ class StringTestSuite {
 
     Timer t;
     t.Resume();
-    for (int i = 0; i < count; ++i) {
+    for (size_t i = 0; i < count; ++i) {
       vec[i] = T(data);
     }
     vec.clear();

@@ -63,6 +63,9 @@ typedef std::vector<BlobPlacement> BlobPlacements;
 */
 class AbstractMapper {
  public:
+  /** Virtual destructor */
+  virtual ~AbstractMapper() = default;
+
   /**
    * This method maps the current operation to Hermes data structures.
    *

@@ -112,7 +112,7 @@ class VectorTest {
 
     t.Resume();
     vec.reserve(count);
-    for (int i = 0; i < count; ++i) {
+    for (size_t i = 0; i < count; ++i) {
       vec.emplace_back(var);
     }
     t.Pause();
@@ -125,12 +125,12 @@ class VectorTest {
     CREATE_SET_VAR_TO_INT_OR_STRING(T, var, 124);
 
     vec.reserve(count);
-    for (int i = 0; i < count; ++i) {
+    for (size_t i = 0; i < count; ++i) {
       vec.emplace_back(var);
     }
 
     t.Resume();
-    for (int i = 0; i < count; ++i) {
+    for (size_t i = 0; i < count; ++i) {
       auto x = vec[i];
     }
     t.Pause();
@@ -143,7 +143,7 @@ class VectorTest {
     CREATE_SET_VAR_TO_INT_OR_STRING(T, var, 124);
 
     vec.reserve(count);
-    for (int i = 0; i < count; ++i) {
+    for (size_t i = 0; i < count; ++i) {
       vec.emplace_back(var);
     }
 
@@ -162,7 +162,7 @@ class VectorTest {
     CREATE_SET_VAR_TO_INT_OR_STRING(T, var, 124);
 
     vec.reserve(count);
-    for (int i = 0; i < count; ++i) {
+    for (size_t i = 0; i < count; ++i) {
       vec.emplace_back(var);
     }
 
@@ -178,7 +178,7 @@ class VectorTest {
     CREATE_SET_VAR_TO_INT_OR_STRING(T, var, 124);
 
     vec.reserve(count);
-    for (int i = 0; i < count; ++i) {
+    for (size_t i = 0; i < count; ++i) {
       vec.emplace_back(var);
     }
 

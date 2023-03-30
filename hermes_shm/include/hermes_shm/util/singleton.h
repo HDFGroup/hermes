@@ -26,33 +26,41 @@ namespace hshm {
 template<typename T>
 class Singleton {
  private:
-  static T* obj_;
-  static hshm::Mutex lock_;
+  static T *obj_;
+  static hshm::Mutex *lock_;
 
  public:
   Singleton() = default;
 
   /** Get or create an instance of type T */
-  inline static T* GetInstance() {
+  inline static T *GetInstance() {
     if (!obj_) {
-      hshm::ScopedMutex lock(lock_);
+      hshm::ScopedMutex lock(*lock_);
       if (obj_ == nullptr) {
         obj_ = new T();
       }
     }
     return obj_;
   }
+
+  /** Static initialization method for obj */
+  static T *_GetObj();
+
+  /** Static initialization method for lock */
+  static hshm::Mutex *_GetLock();
 };
-template <typename T>
-T* Singleton<T>::obj_;
-template <typename T>
-hshm::Mutex Singleton<T>::lock_;
+template<typename T>
+T* Singleton<T>::obj_ = Singleton<T>::_GetObj();
+template<typename T>
+hshm::Mutex* Singleton<T>::lock_ = Singleton<T>::_GetLock();
 #define DEFINE_SINGLETON_CC(T)\
-  template<> T*\
-    hshm::Singleton<T>::obj_ = nullptr;\
-  template<> hshm::Mutex\
-    hshm::Singleton<T>::lock_ =\
-    hshm::Mutex();
+  template<> T* hshm::Singleton<T>::_GetObj() {\
+    return nullptr;\
+  }\
+  template<> hshm::Mutex* hshm::Singleton<T>::_GetLock() {\
+    static hshm::Mutex lock;\
+    return &lock;\
+  }
 
 /**
  * Makes a singleton. Constructs during initialization of program.
@@ -61,18 +69,25 @@ hshm::Mutex Singleton<T>::lock_;
 template<typename T>
 class GlobalSingleton {
  private:
-  static T obj_;
+  static T *obj_;
  public:
   GlobalSingleton() = default;
+
+  /** Get instance of type T */
   static T* GetInstance() {
-    return &obj_;
+    return obj_;
   }
+
+  /** Static initialization method for obj */
+  static T *_GetObj();
 };
-template <typename T>
-T GlobalSingleton<T>::obj_;
+template<typename T>
+T* GlobalSingleton<T>::obj_ = GlobalSingleton<T>::_GetObj();
 #define DEFINE_GLOBAL_SINGLETON_CC(T)\
-  template<> T\
-    hshm::GlobalSingleton<T>::obj_ = T();
+  template<> T* hshm::GlobalSingleton<T>::_GetObj() {\
+    static T obj;\
+    return &obj;\
+  }
 
 /**
  * A class to represent singleton pattern

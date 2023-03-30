@@ -23,10 +23,10 @@ namespace hermes::adapter {
  */
 class BalancedMapper : public AbstractMapper {
  public:
-  /**
-   * This method maps the current Operation to Hermes data structures.
-   *
-   */
+  /** Virtual destructor */
+  virtual ~BalancedMapper() = default;
+
+  /** Divides an I/O size evenly by into units of page_size */
   void map(size_t off, size_t size, size_t page_size,
            BlobPlacements &ps) override;
 };

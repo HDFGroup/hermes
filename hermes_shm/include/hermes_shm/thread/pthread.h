@@ -62,7 +62,7 @@ class Pthread : public Thread {
     pthread_join(pthread_, &ret);
   }
 
-  void SetAffinity(int cpu_start, int count) override {
+  void SetAffinity(int cpu_start, size_t count) override {
     /*cpu_set_t cpus[n_cpu_];
     CPU_ZERO(cpus);
     CPU_SET(cpu_id, cpus);

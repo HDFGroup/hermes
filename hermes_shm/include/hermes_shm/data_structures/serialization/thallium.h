@@ -54,7 +54,7 @@ void load_vec(A &ar, ContainerT &obj) {
   hipc::allocator_id_t alloc_id;
   ar >> size;
   obj.resize(size);
-  for (int i = 0; i < size; ++i) {
+  for (size_t i = 0; i < size; ++i) {
     ar >> *(obj[i]);
   }
 }

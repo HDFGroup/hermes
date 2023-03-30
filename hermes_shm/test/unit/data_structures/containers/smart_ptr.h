@@ -21,7 +21,11 @@ namespace hshm::ipc {
 template<typename T, typename PointerT>
 class SmartPtrTestSuite {
  public:
-  PointerT ptr_;
+  PointerT &ptr_;
+  PointerT &ptr2_;
+
+  explicit SmartPtrTestSuite(PointerT &ptr,
+                             PointerT &ptr2) : ptr_(ptr), ptr2_(ptr2) {}
 
  public:
   // Test dereference
@@ -39,10 +43,10 @@ class SmartPtrTestSuite {
 
   // Test move assignment operator
   void MoveAssignmentTest(T &num) {
-    PointerT ptr2 = std::move(ptr_);
+    ptr2_ = std::move(ptr_);
     // REQUIRE(ptr_.IsNull());
-    REQUIRE(std::hash<PointerT>{}(ptr2) == std::hash<T>{}(num));
-    ptr_ = std::move(ptr2);
+    REQUIRE(std::hash<PointerT>{}(ptr2_) == std::hash<T>{}(num));
+    ptr_ = std::move(ptr2_);
   }
 
   // Test copy constructor

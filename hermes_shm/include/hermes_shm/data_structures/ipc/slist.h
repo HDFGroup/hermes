@@ -303,8 +303,7 @@ class slist : public ShmContainer {
   slist(TYPED_HEADER *header, Allocator *alloc, slist &&other) noexcept {
     shm_init_header(header, alloc);
     if (alloc_ == other.alloc_) {
-      // memcpy((void*)header_, (void*)other.header_, sizeof(*header_));
-      (*header_) = (*other.header_);
+      memcpy((void*)header_, (void*)other.header_, sizeof(*header_));
       other.SetNull();
     } else {
       shm_strong_copy_construct_and_op<slist>(other);
@@ -317,8 +316,7 @@ class slist : public ShmContainer {
     if (this != &other) {
       shm_destroy();
       if (alloc_ == other.alloc_) {
-        // memcpy((void*)header_, (void*)other.header_, sizeof(*header_));
-        (*header_) = (*other.header_);
+        memcpy((void *) header_, (void *) other.header_, sizeof(*header_));
         other.SetNull();
       } else {
         shm_strong_copy_construct_and_op<slist>(other);

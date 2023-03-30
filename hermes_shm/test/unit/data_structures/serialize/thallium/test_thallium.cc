@@ -15,33 +15,38 @@
 #include "hermes_shm/data_structures/ipc/string.h"
 
 TEST_CASE("SerializeString") {
-  tl::endpoint server = client_->lookup(kServerName);
-  tl::remote_procedure string0_proc = client_->define(kStringTest0);
-  tl::remote_procedure string_large_proc = client_->define(kStringTestLarge);
+  tl::endpoint server = client_->lookup(tcnst::kServerName);
+  tl::remote_procedure string0_proc = client_->define(tcnst::kStringTest0);
+  tl::remote_procedure string_large_proc = client_->define(
+    tcnst::kStringTestLarge);
 
   auto empty_str = hipc::make_uptr<hipc::string>("");
-  auto large_str = hipc::make_uptr<hipc::string>(kTestString);
+  auto large_str = hipc::make_uptr<hipc::string>(tcnst::kTestString);
 
   REQUIRE(string0_proc.on(server)(empty_str));
   REQUIRE(string_large_proc.on(server)(large_str));
 }
 
 TEST_CASE("SerializeCharBuf") {
-  tl::endpoint server = client_->lookup(kServerName);
-  tl::remote_procedure string0_proc = client_->define(kCharbufTest0);
-  tl::remote_procedure string_large_proc = client_->define(kCharbufTestLarge);
+  tl::endpoint server = client_->lookup(tcnst::kServerName);
+  tl::remote_procedure string0_proc = client_->define(
+    tcnst::kCharbufTest0);
+  tl::remote_procedure string_large_proc = client_->define(
+    tcnst::kCharbufTestLarge);
 
   hshm::charbuf empty_str("");
-  hshm::charbuf large_str(kTestString);
+  hshm::charbuf large_str(tcnst::kTestString);
 
   REQUIRE(string0_proc.on(server)(empty_str));
   REQUIRE(string_large_proc.on(server)(large_str));
 }
 
 TEST_CASE("SerializeVectorOfInt") {
-  tl::endpoint server = client_->lookup(kServerName);
-  tl::remote_procedure vec_int0_proc = client_->define(kVecOfInt0Test);
-  tl::remote_procedure vec_int_proc = client_->define(kVecOfIntLargeTest);
+  tl::endpoint server = client_->lookup(tcnst::kServerName);
+  tl::remote_procedure vec_int0_proc = client_->define(
+    tcnst::kVecOfInt0Test);
+  tl::remote_procedure vec_int_proc = client_->define(
+    tcnst::kVecOfIntLargeTest);
 
   // Send empty vector
   auto vec_int = hipc::make_uptr<hipc::vector<int>>();
@@ -55,9 +60,11 @@ TEST_CASE("SerializeVectorOfInt") {
 }
 
 TEST_CASE("SerializeVectorOfString") {
-  tl::endpoint server = client_->lookup(kServerName);
-  tl::remote_procedure vec_string0_proc = client_->define(kVecOfString0Test);
-  tl::remote_procedure vec_string_proc = client_->define(kVecOfStringLargeTest);
+  tl::endpoint server = client_->lookup(tcnst::kServerName);
+  tl::remote_procedure vec_string0_proc = client_->define(
+    tcnst::kVecOfString0Test);
+  tl::remote_procedure vec_string_proc = client_->define(
+    tcnst::kVecOfStringLargeTest);
 
   // Send empty vector
   auto vec_string = hipc::make_uptr<hipc::vector<hipc::string>>();
@@ -71,8 +78,10 @@ TEST_CASE("SerializeVectorOfString") {
 }
 
 TEST_CASE("SerializeBitfield") {
-  tl::endpoint server = client_->lookup(kServerName);
-  tl::remote_procedure bitfield_proc = client_->define(kBitfieldTest);
+  tl::endpoint server = client_->lookup(
+    tcnst::kServerName);
+  tl::remote_procedure bitfield_proc = client_->define(
+    tcnst::kBitfieldTest);
 
   // Send bitfield
   hshm::bitfield32_t field;

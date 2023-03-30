@@ -191,11 +191,12 @@ struct charbuf {
     if (len_a != len_b) {
       return int((int64_t)len_a - (int64_t)len_b);
     }
-    int sum = 0;
     for (size_t i = 0; i < len_a; ++i) {
-      sum += a[i] - b[i];
+      if (a[i] != b[i]) {
+        return a[i] - b[i];
+      }
     }
-    return sum;
+    return 0;
   }
 
 #define HERMES_STR_CMP_OPERATOR(op) \

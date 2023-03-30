@@ -18,6 +18,17 @@ add_test(NAME test_rw_lock COMMAND
         ${CMAKE_CURRENT_BINARY_DIR}/test_lock_exec "RwLock")
 
 #------------------------------------------------------------------------------
+# Install Targets
+#------------------------------------------------------------------------------
+install(TARGETS
+        test_lock_exec
+        EXPORT
+        ${HERMES_EXPORTED_TARGETS}
+        LIBRARY DESTINATION ${HERMES_INSTALL_LIB_DIR}
+        ARCHIVE DESTINATION ${HERMES_INSTALL_LIB_DIR}
+        RUNTIME DESTINATION ${HERMES_INSTALL_BIN_DIR})
+
+#------------------------------------------------------------------------------
 # Code Coverage
 #------------------------------------------------------------------------------
 if(HERMES_ENABLE_COVERAGE)

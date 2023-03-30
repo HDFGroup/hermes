@@ -41,7 +41,7 @@ int main() {
 
   // Create thallium server
   server_ = std::make_unique<tl::engine>(
-    kServerName,
+    tcnst::kServerName,
     THALLIUM_SERVER_MODE,
     true, 1);
   std::cout << "Server running at address " << server_->self() << std::endl;
@@ -52,15 +52,15 @@ int main() {
     bool ret = (*text == "");
     req.respond(ret);
   };
-  server_->define(kStringTest0, string_test0);
+  server_->define(tcnst::kStringTest0, string_test0);
 
   // Test transfer of long string
   auto string_test1 = [](const request &req,
                          hipc::uptr<hipc::string> &text) {
-    bool ret = (*text == kTestString);
+    bool ret = (*text == tcnst::kTestString);
     req.respond(ret);
   };
-  server_->define(kStringTestLarge, string_test1);
+  server_->define(tcnst::kStringTestLarge, string_test1);
 
   // Test transfer of 0-length charbuf
   auto charbuf_test0 = [](const request &req,
@@ -68,15 +68,15 @@ int main() {
     bool ret = (text == "");
     req.respond(ret);
   };
-  server_->define(kCharbufTest0, charbuf_test0);
+  server_->define(tcnst::kCharbufTest0, charbuf_test0);
 
   // Test transfer of long charbuf
   auto charbuf_test1 = [](const request &req,
                           hshm::charbuf &text) {
-    bool ret = (text == kTestString);
+    bool ret = (text == tcnst::kTestString);
     req.respond(ret);
   };
-  server_->define(kCharbufTestLarge, charbuf_test1);
+  server_->define(tcnst::kCharbufTestLarge, charbuf_test1);
 
   // Test transfer of empty vector
   auto vec_of_int0_test = [](const request &req,
@@ -84,7 +84,7 @@ int main() {
     bool ret = vec->size() == 0;
     req.respond(ret);
   };
-  server_->define(kVecOfInt0Test, vec_of_int0_test);
+  server_->define(tcnst::kVecOfInt0Test, vec_of_int0_test);
 
   // Test transfer of large vector
   auto vec_of_int_large_test = [](const request &req,
@@ -92,7 +92,7 @@ int main() {
     bool ret = VerifyVector(*vec);
     req.respond(ret);
   };
-  server_->define(kVecOfIntLargeTest, vec_of_int_large_test);
+  server_->define(tcnst::kVecOfIntLargeTest, vec_of_int_large_test);
 
   // Test transfer of empty string vector
   auto vec_of_string0_test = [](const request &req,
@@ -100,7 +100,7 @@ int main() {
     bool ret = vec->size() == 0;
     req.respond(ret);
   };
-  server_->define(kVecOfString0Test, vec_of_string0_test);
+  server_->define(tcnst::kVecOfString0Test, vec_of_string0_test);
 
   // Test transfer of large string vector
   auto vec_of_string_large_test = [](
@@ -108,14 +108,14 @@ int main() {
     bool ret = VerifyVector(*vec);
     req.respond(ret);
   };
-  server_->define(kVecOfStringLargeTest, vec_of_string_large_test);
+  server_->define(tcnst::kVecOfStringLargeTest, vec_of_string_large_test);
 
   // Test transfer of bitfield
   auto bitfield_test = [](const request &req, hshm::bitfield32_t &field) {
     bool ret = field.OrBits(0x8);
     req.respond(ret);
   };
-  server_->define(kBitfieldTest, bitfield_test);
+  server_->define(tcnst::kBitfieldTest, bitfield_test);
 
   // Start daemon
   server_->enable_remote_shutdown();

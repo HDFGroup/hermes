@@ -49,10 +49,10 @@ class AllocatorTestSuite {
   }
 
   /** Allocate and Free a single size in a single loop */
-  void AllocateAndFreeFixedSize(int count, size_t size) {
+  void AllocateAndFreeFixedSize(size_t count, size_t size) {
     Timer t;
     t.Resume();
-    for (int i = 0; i < count; ++i) {
+    for (size_t i = 0; i < count; ++i) {
       Pointer p = alloc_->Allocate(size);
       alloc_->Free(p);
     }
@@ -63,14 +63,14 @@ class AllocatorTestSuite {
   }
 
   /** Allocate a fixed size in a loop, and then free in another loop */
-  void AllocateThenFreeFixedSize(int count, size_t size) {
+  void AllocateThenFreeFixedSize(size_t count, size_t size) {
     Timer t;
     std::vector<Pointer> cache(count);
     t.Resume();
-    for (int i = 0; i < count; ++i) {
+    for (size_t i = 0; i < count; ++i) {
       cache[i] = alloc_->Allocate(size);
     }
-    for (int i = 0; i < count; ++i) {
+    for (size_t i = 0; i < count; ++i) {
       alloc_->Free(cache[i]);
     }
 #pragma omp barrier
