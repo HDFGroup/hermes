@@ -22,11 +22,18 @@ sleep ${SLEEP_TIME}
 # Run the program
 echo "RUNNING PROGRAM"
 export LSAN_OPTIONS=suppressions="${CMAKE_SOURCE_DIR}/test/data/asan.supp"
-export ADAPTER_MODE="${MODE}"
+export HERMES_ADAPTER_MODE="${MODE}"
 export SET_PATH="${DO_PATH_EXCLUDE}"
 export COMMAND="${CMAKE_BINARY_DIR}/bin/${EXEC_NAME}"
-"${COMMAND}" "${TAGS}" --reporter compact -d yes
+
+echo ${MODE}
+echo ${HERMES_CLIENT_CONF}
+echo ${HERMES_CONF}
+echo "${COMMAND}" "${TAGS}" --reporter compact -d yes
+/home/lukemartinlogan/Documents/Projects/PhD/hermes/cmake-build-debug-gcc/bin/hermes_stdio_adapter_mode_test [hermes_mode=persistent] --reporter compact -d yes
+#${COMMAND} ${TAGS} --reporter compact -d yes
 status=$?
+echo "COMMAND FINISHED"
 
 # Finalize the Hermes daemon
 ${CMAKE_BINARY_DIR}/bin/finalize_hermes
