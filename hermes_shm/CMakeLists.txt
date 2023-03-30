@@ -13,7 +13,7 @@ include_directories(${HERMES_SHM_ROOT}/include)
 # Options
 #------------------------------------------------------------------------------
 option(BUILD_SHARED_LIBS "Build shared libraries (.dll/.so) instead of static ones (.lib/.a)" ON)
-option(BUILD_HSHM_TESTS "Build tests" ON)
+option(BUILD_HSHM_TESTS "Build tests" OFF)
 option(BUILD_MPI_TESTS "Build tests which depend on MPI" ON)
 option(BUILD_OpenMP_TESTS "Build tests which depend on OpenMP" ON)
 option(BUILD_Boost_TESTS "Build tests which depend on libboost" ON)
