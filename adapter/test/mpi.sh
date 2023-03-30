@@ -8,6 +8,8 @@ EXEC_NAME=$6
 ARGS=$7
 SLEEP_TIME=3
 
+mkdir /tmp/test_hermes
+
 # Run the program
 echo "RUNNING PROGRAM (MPI)"
 export LSAN_OPTIONS=suppressions="${CMAKE_SOURCE_DIR}/test/data/asan.supp"

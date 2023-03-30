@@ -8,6 +8,8 @@ EXEC_NAME=$5
 TEST_ARGS=$6
 SLEEP_TIME=3
 
+mkdir /tmp/test_hermes
+
 export HERMES_CLIENT_CONF="${CMAKE_SOURCE_DIR}/test/data/hermes_client.yaml"
 export HERMES_CONF="${CMAKE_SOURCE_DIR}/test/data/hermes_server.yaml"
 TEST_EXEC="${CMAKE_BINARY_DIR}/bin/${EXEC_NAME}"
