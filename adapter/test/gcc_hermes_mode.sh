@@ -30,8 +30,7 @@ echo ${MODE}
 echo ${HERMES_CLIENT_CONF}
 echo ${HERMES_CONF}
 echo "${COMMAND}" "${TAGS}" --reporter compact -d yes
-/home/lukemartinlogan/Documents/Projects/PhD/hermes/cmake-build-debug-gcc/bin/hermes_stdio_adapter_mode_test [hermes_mode=persistent] --reporter compact -d yes
-#${COMMAND} ${TAGS} --reporter compact -d yes
+${COMMAND} ${TAGS} --reporter compact -d yes
 status=$?
 echo "COMMAND FINISHED"
 
