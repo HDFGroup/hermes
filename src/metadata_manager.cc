@@ -81,6 +81,9 @@ MetadataManager::MetadataManager(
   // Create the log used to track I/O pattern
   io_pattern_log_ = hipc::make_ref<IO_PATTERN_LOG_T>(
       header_->io_pattern_log_, alloc_);
+
+  // Initialize local maps
+  local_init();
 }
 
 /**
@@ -120,6 +123,9 @@ void MetadataManager::shm_deserialize_main() {
   devices_ = hipc::Ref<hipc::vector<DeviceInfo>>(header_->devices_, alloc);
   io_pattern_log_ = hipc::Ref<IO_PATTERN_LOG_T>(header_->io_pattern_log_,
                                                 alloc);
+
+  // Initialize local maps
+  local_init();
 }
 
 /**====================================
