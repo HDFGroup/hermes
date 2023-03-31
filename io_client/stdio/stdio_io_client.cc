@@ -92,7 +92,7 @@ size_t StdioIoClient::GetSize(const hipc::charbuf &bkt_name) {
   true_size = buf.st_size;
   close(fd);
 
-  LOG(INFO) << "The size of the file "
+  VLOG(kDebug) << "The size of the file "
             << filename << " on disk is " << true_size << std::endl;
   return true_size;
 }
@@ -104,7 +104,7 @@ void StdioIoClient::WriteBlob(const hipc::charbuf &bkt_name,
                               IoStatus &status) {
   status.success_ = true;
   std::string filename = bkt_name.str();
-  LOG(INFO) << "Writing to file: " << filename
+  VLOG(kDebug) << "Writing to file: " << filename
             << " offset: " << opts.backend_off_
             << " size:" << opts.backend_size_ << "."
             << " file_size:" << stdfs::file_size(filename) << std::endl;
@@ -132,7 +132,7 @@ void StdioIoClient::ReadBlob(const hipc::charbuf &bkt_name,
                              IoStatus &status) {
   status.success_ = true;
   std::string filename = bkt_name.str();
-  LOG(INFO) << "Reading from file: " << filename
+  VLOG(kDebug) << "Reading from file: " << filename
             << " on offset: " << opts.backend_off_
             << " and size: " << opts.backend_size_ << "."
             << " file_size:" << stdfs::file_size(filename) << std::endl;

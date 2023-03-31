@@ -54,7 +54,7 @@ class ThalliumRpc  : public RpcContext {
   /** RPC call */
   template <typename ReturnType, typename... Args>
   ReturnType Call(i32 node_id, const char *func_name, Args&&... args) {
-    LOG(INFO) << "Calling " << func_name << " " << node_id_
+    VLOG(kDebug) << "Calling " << func_name << " " << node_id_
               << " -> " << node_id << std::endl;
     try {
       std::string server_name = GetServerName(node_id);
@@ -78,7 +78,7 @@ class ThalliumRpc  : public RpcContext {
   template<typename ReturnType, typename ...Args>
   ReturnType IoCall(i32 node_id, const char *func_name,
                     IoType type, char *data, size_t size, Args&& ...args) {
-    LOG(INFO) << "Calling " << func_name << " " << node_id_
+    VLOG(kDebug) << "Calling " << func_name << " " << node_id_
               << " -> " << node_id << std::endl;
     std::string server_name = GetServerName(node_id);
     tl::bulk_mode flag;

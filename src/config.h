@@ -50,10 +50,10 @@ class BaseConfig {
       return;
     }
     auto real_path = hshm::path_parser(path);
-    LOG(INFO) << "ParseConfig-LoadFile: " << real_path << std::endl;
+    VLOG(kDebug) << "ParseConfig-LoadFile: " << real_path << std::endl;
     try {
       YAML::Node yaml_conf = YAML::LoadFile(real_path);
-      LOG(INFO) << "ParseConfig-LoadComplete" << std::endl;
+      VLOG(kDebug) << "ParseConfig-LoadComplete" << std::endl;
       ParseYAML(yaml_conf);
     } catch (std::exception &e) {
       LOG(FATAL) << e.what() << std::endl;

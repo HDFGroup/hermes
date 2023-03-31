@@ -100,7 +100,7 @@ size_t PosixIoClient::GetSize(const hipc::charbuf &bkt_name) {
   true_size = buf.st_size;
   real_api->close(fd);
 
-  LOG(INFO) << "The size of the file "
+  VLOG(kDebug) << "The size of the file "
             << filename << " on disk is " << true_size << std::endl;
   return true_size;
 }
@@ -112,7 +112,7 @@ void PosixIoClient::WriteBlob(const hipc::charbuf &bkt_name,
                               IoStatus &status) {
   (void) opts;
   status.success_ = true;
-  LOG(INFO) << "Writing to file: " << bkt_name.str()
+  VLOG(kDebug) << "Writing to file: " << bkt_name.str()
             << " offset: " << opts.backend_off_
             << " size:" << full_blob.size() << "."
             << " file_size:" << stdfs::file_size(bkt_name.str())
@@ -140,7 +140,7 @@ void PosixIoClient::ReadBlob(const hipc::charbuf &bkt_name,
                              IoStatus &status) {
   (void) opts;
   status.success_ = true;
-  LOG(INFO) << "Reading from file: " << bkt_name.str()
+  VLOG(kDebug) << "Reading from file: " << bkt_name.str()
             << " offset: " << opts.backend_off_
             << " size:" << full_blob.size() << "."
             << " file_size:" << stdfs::file_size(bkt_name.str())

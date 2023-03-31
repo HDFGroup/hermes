@@ -40,7 +40,7 @@ FILE *HERMES_DECL(fopen)(const char *path, const char *mode) {
   auto real_api = HERMES_STDIO_API;
   auto fs_api = HERMES_STDIO_FS;
   if (fs_api->IsPathTracked(path)) {
-    LOG(INFO) << "Intercepting fopen(" << path << ", " << mode << ")\n";
+    VLOG(kDebug) << "Intercepting fopen(" << path << ", " << mode << ")\n";
     AdapterStat stat;
     stat.mode_str_ = mode;
     return fs_api->Open(stat, path).hermes_fh_;
@@ -54,7 +54,7 @@ FILE *HERMES_DECL(fopen64)(const char *path, const char *mode) {
   auto real_api = HERMES_STDIO_API;
   auto fs_api = HERMES_STDIO_FS;
   if (fs_api->IsPathTracked(path)) {
-    LOG(INFO) << "Intercepting fopen64(" << path << ", " << mode << ")\n";
+    VLOG(kDebug) << "Intercepting fopen64(" << path << ", " << mode << ")\n";
     AdapterStat stat;
     stat.mode_str_ = mode;
     return fs_api->Open(stat, path).hermes_fh_;
@@ -69,7 +69,7 @@ FILE *HERMES_DECL(fdopen)(int fd, const char *mode) {
   auto fs_api = HERMES_STDIO_FS;
   std::shared_ptr<AdapterStat> stat;
   if (fs_api->IsFdTracked(fd, stat)) {
-    LOG(INFO) << "Intercepting fdopen(" << fd << ", " << mode << ")\n";
+    VLOG(kDebug) << "Intercepting fdopen(" << fd << ", " << mode << ")\n";
     return fs_api->FdOpen(mode, stat);
   } else {
     return real_api->fdopen(fd, mode);
@@ -81,7 +81,7 @@ FILE *HERMES_DECL(freopen)(const char *path, const char *mode, FILE *stream) {
   auto real_api = HERMES_STDIO_API;
   auto fs_api = HERMES_STDIO_FS;
   if (fs_api->IsFpTracked(stream)) {
-    LOG(INFO) << "Intercepting freopen(" << path << ", " << mode << ", "
+    VLOG(kDebug) << "Intercepting freopen(" << path << ", " << mode << ", "
               << stream << ")\n";
     return fs_api->Reopen(path, mode, *(AdapterStat*)stream);
   }
@@ -93,7 +93,7 @@ FILE *HERMES_DECL(freopen64)(const char *path, const char *mode, FILE *stream) {
   auto real_api = HERMES_STDIO_API;
   auto fs_api = HERMES_STDIO_FS;
   if (fs_api->IsFpTracked(stream)) {
-    LOG(INFO) << "Intercepting freopen64(" << path << ", " << mode << ", "
+    VLOG(kDebug) << "Intercepting freopen64(" << path << ", " << mode << ", "
               << stream << ")\n";
     return fs_api->Reopen(path, mode, *(AdapterStat*)stream);
   }
@@ -117,7 +117,7 @@ int HERMES_DECL(fclose)(FILE *fp) {
   auto real_api = HERMES_STDIO_API;
   auto fs_api = HERMES_STDIO_FS;
   if (fs_api->IsFpTracked(fp)) {
-    LOG(INFO) << "Intercepting fclose(" << fp << ")\n";
+    VLOG(kDebug) << "Intercepting fclose(" << fp << ")\n";
     File f; f.hermes_fh_ = fp;
     return fs_api->Close(f, stat_exists);
   }
@@ -130,7 +130,7 @@ size_t HERMES_DECL(fwrite)(const void *ptr, size_t size, size_t nmemb,
   auto real_api = HERMES_STDIO_API;
   auto fs_api = HERMES_STDIO_FS;
   if (fs_api->IsFpTracked(fp)) {
-    LOG(INFO) << "Intercept fwrite with size: "
+    VLOG(kDebug) << "Intercept fwrite with size: "
               << size
               << " and nmemb: " << nmemb
               << "." << std::endl;
@@ -151,7 +151,7 @@ int HERMES_DECL(fputc)(int c, FILE *fp) {
   auto real_api = HERMES_STDIO_API;
   auto fs_api = HERMES_STDIO_FS;
   if (fs_api->IsFpTracked(fp)) {
-    LOG(INFO) << "Intercepting fputc(" << c << ", " << fp << ")\n";
+    VLOG(kDebug) << "Intercepting fputc(" << c << ", " << fp << ")\n";
     File f; f.hermes_fh_ = fp;
     IoStatus io_status;
     fs_api->Write(f, stat_exists, &c, 1, io_status);
@@ -168,7 +168,7 @@ int HERMES_DECL(fgetpos)(FILE *fp, fpos_t *pos) {
   auto fs_api = HERMES_STDIO_FS;
   if (fs_api->IsFpTracked(fp) && pos) {
     File f; f.hermes_fh_ = fp;
-    LOG(INFO) << "Intercept fgetpos." << std::endl;
+    VLOG(kDebug) << "Intercept fgetpos." << std::endl;
     // TODO(chogan): @portability In the GNU C Library, fpos_t is an opaque
     // data structure that contains internal data to represent file offset and
     // conversion state information. In other systems, it might have a
@@ -188,7 +188,7 @@ int HERMES_DECL(fgetpos64)(FILE *fp, fpos64_t *pos) {
   auto fs_api = HERMES_STDIO_FS;
   if (fs_api->IsFpTracked(fp) && pos) {
     File f; f.hermes_fh_ = fp;
-    LOG(INFO) << "Intercept fgetpos64." << std::endl;
+    VLOG(kDebug) << "Intercept fgetpos64." << std::endl;
     // TODO(chogan): @portability In the GNU C Library, fpos_t is an opaque
     // data structure that contains internal data to represent file offset and
     // conversion state information. In other systems, it might have a
@@ -207,7 +207,7 @@ int HERMES_DECL(putc)(int c, FILE *fp) {
   if (fs_api->IsFpTracked(fp)) {
     File f; f.hermes_fh_ = fp;
     IoStatus io_status;
-    LOG(INFO) << "Intercept putc." << std::endl;
+    VLOG(kDebug) << "Intercept putc." << std::endl;
     fs_api->Write(f, stat_exists, &c, 1, io_status);
     return c;
   }
@@ -219,7 +219,7 @@ int HERMES_DECL(putw)(int w, FILE *fp) {
   auto real_api = HERMES_STDIO_API;
   auto fs_api = HERMES_STDIO_FS;
   if (fs_api->IsFpTracked(fp)) {
-    LOG(INFO) << "Intercept putw." << std::endl;
+    VLOG(kDebug) << "Intercept putw." << std::endl;
     File f; f.hermes_fh_ = fp;
     IoStatus io_status;
     int ret = fs_api->Write(f, stat_exists, &w, sizeof(w), io_status);
@@ -237,7 +237,7 @@ int HERMES_DECL(fputs)(const char *s, FILE *stream) {
   auto real_api = HERMES_STDIO_API;
   auto fs_api = HERMES_STDIO_FS;
   if (fs_api->IsFpTracked(stream)) {
-    LOG(INFO) << "Intercept fputs." << std::endl;
+    VLOG(kDebug) << "Intercept fputs." << std::endl;
     File f; f.hermes_fh_ = stream;
     IoStatus io_status;
     return fs_api->Write(f, stat_exists, s, strlen(s), io_status);
@@ -250,7 +250,7 @@ size_t HERMES_DECL(fread)(void *ptr, size_t size, size_t nmemb, FILE *stream) {
   auto real_api = HERMES_STDIO_API;
   auto fs_api = HERMES_STDIO_FS;
   if (fs_api->IsFpTracked(stream)) {
-    LOG(INFO) << "Intercept fread with size: "
+    VLOG(kDebug) << "Intercept fread with size: "
               << size
               << " and nmemb: " << nmemb
               << "." << std::endl;
@@ -271,7 +271,7 @@ int HERMES_DECL(fgetc)(FILE *stream) {
   auto real_api = HERMES_STDIO_API;
   auto fs_api = HERMES_STDIO_FS;
   if (fs_api->IsFpTracked(stream)) {
-    LOG(INFO) << "Intercept fgetc." << std::endl;
+    VLOG(kDebug) << "Intercept fgetc." << std::endl;
     File f; f.hermes_fh_ = stream;
     IoStatus io_status;
     u8 value;
@@ -286,7 +286,7 @@ int HERMES_DECL(getc)(FILE *stream) {
   auto real_api = HERMES_STDIO_API;
   auto fs_api = HERMES_STDIO_FS;
   if (fs_api->IsFpTracked(stream)) {
-    LOG(INFO) << "Intercept getc." << std::endl;
+    VLOG(kDebug) << "Intercept getc." << std::endl;
     File f; f.hermes_fh_ = stream;
     IoStatus io_status;
     u8 value;
@@ -301,7 +301,7 @@ int HERMES_DECL(getw)(FILE *stream) {
   auto real_api = HERMES_STDIO_API;
   auto fs_api = HERMES_STDIO_FS;
   if (fs_api->IsFpTracked(stream)) {
-    LOG(INFO) << "Intercept getw." << std::endl;
+    VLOG(kDebug) << "Intercept getw." << std::endl;
     File f; f.hermes_fh_ = stream;
     IoStatus io_status;
     int value;
@@ -316,7 +316,7 @@ char *HERMES_DECL(fgets)(char *s, int size, FILE *stream) {
   auto real_api = HERMES_STDIO_API;
   auto fs_api = HERMES_STDIO_FS;
   if (fs_api->IsFpTracked(stream)) {
-    LOG(INFO) << "Intercept fgets." << std::endl;
+    VLOG(kDebug) << "Intercept fgets." << std::endl;
     File f; f.hermes_fh_ = stream;
     IoStatus io_status;
     size_t read_size = size - 1;
@@ -349,7 +349,7 @@ void HERMES_DECL(rewind)(FILE *stream) {
   auto real_api = HERMES_STDIO_API;
   auto fs_api = HERMES_STDIO_FS;
   if (fs_api->IsFpTracked(stream)) {
-    LOG(INFO) << "Intercept rewind." << std::endl;
+    VLOG(kDebug) << "Intercept rewind." << std::endl;
     File f; f.hermes_fh_ = stream;
     fs_api->Seek(f, stat_exists, SeekMode::kSet, 0);
     return;
@@ -362,7 +362,7 @@ int HERMES_DECL(fseek)(FILE *stream, long offset, int whence) {
   auto real_api = HERMES_STDIO_API;
   auto fs_api = HERMES_STDIO_FS;
   if (fs_api->IsFpTracked(stream)) {
-    LOG(INFO) << "Intercept fseek offset:" << offset << " whence:" << whence
+    VLOG(kDebug) << "Intercept fseek offset:" << offset << " whence:" << whence
               << "." << std::endl;
     File f; f.hermes_fh_ = stream;
     fs_api->Seek(f, stat_exists, static_cast<SeekMode>(whence), offset);
@@ -376,7 +376,7 @@ int HERMES_DECL(fseeko)(FILE *stream, off_t offset, int whence) {
   auto real_api = HERMES_STDIO_API;
   auto fs_api = HERMES_STDIO_FS;
   if (fs_api->IsFpTracked(stream)) {
-    LOG(INFO) << "Intercept fseeko offset:" << offset << " whence:" << whence
+    VLOG(kDebug) << "Intercept fseeko offset:" << offset << " whence:" << whence
               << "." << std::endl;
     File f; f.hermes_fh_ = stream;
     fs_api->Seek(f, stat_exists, static_cast<SeekMode>(whence), offset);
@@ -390,7 +390,7 @@ int HERMES_DECL(fseeko64)(FILE *stream, off64_t offset, int whence) {
   auto real_api = HERMES_STDIO_API;
   auto fs_api = HERMES_STDIO_FS;
   if (fs_api->IsFpTracked(stream)) {
-    LOG(INFO) << "Intercept fseeko offset:" << offset << " whence:" << whence
+    VLOG(kDebug) << "Intercept fseeko offset:" << offset << " whence:" << whence
               << "." << std::endl;
     File f; f.hermes_fh_ = stream;
     fs_api->Seek(f, stat_exists, static_cast<SeekMode>(whence), offset);
@@ -405,7 +405,7 @@ int HERMES_DECL(fsetpos)(FILE *stream, const fpos_t *pos) {
   auto fs_api = HERMES_STDIO_FS;
   off_t offset = pos->__pos;
   if (fs_api->IsFpTracked(stream)) {
-    LOG(INFO) << "Intercept fsetpos offset:" << offset << "." << std::endl;
+    VLOG(kDebug) << "Intercept fsetpos offset:" << offset << "." << std::endl;
     File f; f.hermes_fh_ = stream;
     fs_api->Seek(f, stat_exists, SeekMode::kSet, offset);
     return 0;
@@ -419,7 +419,7 @@ int HERMES_DECL(fsetpos64)(FILE *stream, const fpos64_t *pos) {
   auto fs_api = HERMES_STDIO_FS;
   off_t offset = pos->__pos;
   if (fs_api->IsFpTracked(stream)) {
-    LOG(INFO) << "Intercept fsetpos64 offset:" << offset << "." << std::endl;
+    VLOG(kDebug) << "Intercept fsetpos64 offset:" << offset << "." << std::endl;
     File f; f.hermes_fh_ = stream;
     fs_api->Seek(f, stat_exists, SeekMode::kSet, offset);
     return 0;
@@ -432,7 +432,7 @@ long int HERMES_DECL(ftell)(FILE *fp) {
   auto real_api = HERMES_STDIO_API;
   auto fs_api = HERMES_STDIO_FS;
   if (fs_api->IsFpTracked(fp)) {
-    LOG(INFO) << "Intercept ftell." << std::endl;
+    VLOG(kDebug) << "Intercept ftell." << std::endl;
     File f; f.hermes_fh_ = fp;
     off_t ret = fs_api->Tell(f, stat_exists);
     return ret;

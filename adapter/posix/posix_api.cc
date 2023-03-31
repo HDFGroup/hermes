@@ -16,7 +16,7 @@ bool posix_intercepted = true;
 #include <fcntl.h>
 #include <stdarg.h>
 #include <sys/stat.h>
-#include <glog/logging.h>
+#include "logging.h"
 #include <filesystem>
 
 #include "hermes_types.h"
@@ -57,7 +57,7 @@ int HERMES_DECL(open)(const char *path, int flags, ...) {
     va_end(arg);
   }
   if (fs_api->IsPathTracked(path)) {
-    LOG(INFO) << "Intercept open for filename: " << path
+    VLOG(kDebug) << "Intercept open for filename: " << path
               << " and mode: " << flags << " is tracked." << std::endl;
     AdapterStat stat;
     stat.flags_ = flags;
@@ -84,7 +84,7 @@ int HERMES_DECL(open64)(const char *path, int flags, ...) {
     va_end(arg);
   }
   if (fs_api->IsPathTracked(path)) {
-    LOG(INFO) << "Intercept open64 for filename: " << path
+    VLOG(kDebug) << "Intercept open64 for filename: " << path
               << " and mode: " << flags << " is tracked." << std::endl;
     AdapterStat stat;
     stat.flags_ = flags;
@@ -102,7 +102,7 @@ int HERMES_DECL(__open_2)(const char *path, int oflag) {
   auto real_api = HERMES_POSIX_API;
   auto fs_api = HERMES_POSIX_FS;
   if (fs_api->IsPathTracked(path)) {
-    LOG(INFO) << "Intercept __open_2 for filename: " << path
+    VLOG(kDebug) << "Intercept __open_2 for filename: " << path
               << " and mode: " << oflag << " is tracked." << std::endl;
     AdapterStat stat;
     stat.flags_ = oflag;
@@ -118,7 +118,7 @@ int HERMES_DECL(creat)(const char *path, mode_t mode) {
   auto real_api = HERMES_POSIX_API;
   auto fs_api = HERMES_POSIX_FS;
   if (fs_api->IsPathTracked(path)) {
-    LOG(INFO) << "Intercept creat for filename: " << path
+    VLOG(kDebug) << "Intercept creat for filename: " << path
               << " and mode: " << mode << " is tracked." << std::endl;
     AdapterStat stat;
     stat.flags_ = O_CREAT;
@@ -134,7 +134,7 @@ int HERMES_DECL(creat64)(const char *path, mode_t mode) {
   auto real_api = HERMES_POSIX_API;
   auto fs_api = HERMES_POSIX_FS;
   if (fs_api->IsPathTracked(path)) {
-    LOG(INFO) << "Intercept creat64 for filename: " << path
+    VLOG(kDebug) << "Intercept creat64 for filename: " << path
               << " and mode: " << mode << " is tracked." << std::endl;
     AdapterStat stat;
     stat.flags_ = O_CREAT;
@@ -149,7 +149,7 @@ ssize_t HERMES_DECL(read)(int fd, void *buf, size_t count) {
   auto real_api = HERMES_POSIX_API;
   auto fs_api = HERMES_POSIX_FS;
   if (fs_api->IsFdTracked(fd)) {
-    LOG(INFO) << "Intercept read." << std::endl;
+    VLOG(kDebug) << "Intercept read." << std::endl;
     File f; f.hermes_fd_ = fd; IoStatus io_status;
     size_t ret = fs_api->Read(f, stat_exists, buf, count, io_status);
     if (stat_exists) return ret;
@@ -162,7 +162,7 @@ ssize_t HERMES_DECL(write)(int fd, const void *buf, size_t count) {
   auto real_api = HERMES_POSIX_API;
   auto fs_api = HERMES_POSIX_FS;
   if (fs_api->IsFdTracked(fd)) {
-    LOG(INFO) << "Intercept write." << std::endl;
+    VLOG(kDebug) << "Intercept write." << std::endl;
     File f; f.hermes_fd_ = fd; IoStatus io_status;
     size_t ret = fs_api->Write(f, stat_exists, buf, count, io_status);
     if (stat_exists) return ret;
@@ -175,7 +175,7 @@ ssize_t HERMES_DECL(pread)(int fd, void *buf, size_t count, off_t offset) {
   auto real_api = HERMES_POSIX_API;
   auto fs_api = HERMES_POSIX_FS;
   if (fs_api->IsFdTracked(fd)) {
-    LOG(INFO) << "Intercept pread." << std::endl;
+    VLOG(kDebug) << "Intercept pread." << std::endl;
     File f; f.hermes_fd_ = fd; IoStatus io_status;
     size_t ret = fs_api->Read(f, stat_exists, buf, offset, count, io_status);
     if (stat_exists) return ret;
@@ -190,7 +190,7 @@ ssize_t HERMES_DECL(pwrite)(int fd, const void *buf, size_t count,
   auto fs_api = HERMES_POSIX_FS;
   if (fs_api->IsFdTracked(fd)) {
     File f; f.hermes_fd_ = fd; IoStatus io_status;
-    LOG(INFO) << "Intercept pwrite." << std::endl;
+    VLOG(kDebug) << "Intercept pwrite." << std::endl;
     size_t ret = fs_api->Write(f, stat_exists, buf, offset, count, io_status);
     if (stat_exists) return ret;
   }
@@ -203,7 +203,7 @@ ssize_t HERMES_DECL(pread64)(int fd, void *buf, size_t count, off64_t offset) {
   auto fs_api = HERMES_POSIX_FS;
   if (fs_api->IsFdTracked(fd)) {
     File f; f.hermes_fd_ = fd; IoStatus io_status;
-    LOG(INFO) << "Intercept pread64." << std::endl;
+    VLOG(kDebug) << "Intercept pread64." << std::endl;
     size_t ret = fs_api->Read(f, stat_exists, buf, offset, count, io_status);
     if (stat_exists) return ret;
   }
@@ -217,7 +217,7 @@ ssize_t HERMES_DECL(pwrite64)(int fd, const void *buf, size_t count,
   auto fs_api = HERMES_POSIX_FS;
   if (fs_api->IsFdTracked(fd)) {
     File f; f.hermes_fd_ = fd; IoStatus io_status;
-    LOG(INFO) << "Intercept pwrite." << std::endl;
+    VLOG(kDebug) << "Intercept pwrite." << std::endl;
     size_t ret = fs_api->Write(f, stat_exists, buf, offset, count, io_status);
     if (stat_exists) return ret;
   }
@@ -230,7 +230,7 @@ off_t HERMES_DECL(lseek)(int fd, off_t offset, int whence) {
   auto fs_api = HERMES_POSIX_FS;
   if (fs_api->IsFdTracked(fd)) {
     File f; f.hermes_fd_ = fd;
-    LOG(INFO) << "Intercept lseek offset:" << offset << " whence:" << whence
+    VLOG(kDebug) << "Intercept lseek offset:" << offset << " whence:" << whence
               << "." << std::endl;
     return fs_api->Seek(f, stat_exists,
                         static_cast<SeekMode>(whence), offset);
@@ -244,8 +244,9 @@ off64_t HERMES_DECL(lseek64)(int fd, off64_t offset, int whence) {
   auto fs_api = HERMES_POSIX_FS;
   if (fs_api->IsFdTracked(fd)) {
     File f; f.hermes_fd_ = fd;
-    LOG(INFO) << "Intercept lseek64 offset:" << offset << " whence:" << whence
-              << "." << std::endl;
+    VLOG(kDebug) << "Intercept lseek64 offset:"
+                 << offset << " whence:" << whence
+                 << "." << std::endl;
     return fs_api->Seek(f, stat_exists,
                         static_cast<SeekMode>(whence), offset);
   }
@@ -258,7 +259,7 @@ int HERMES_DECL(__fxstat)(int __ver, int fd, struct stat *buf) {
   auto fs_api = HERMES_POSIX_FS;
   if (fs_api->IsFdTracked(fd)) {
     File f; f.hermes_fd_ = fd;
-    LOG(INFO) << "Intercepted fstat." << std::endl;
+    VLOG(kDebug) << "Intercepted fstat." << std::endl;
     auto mdm = HERMES_FS_METADATA_MANAGER;
     auto existing = mdm->Find(f);
     if (existing) {
@@ -296,7 +297,7 @@ int HERMES_DECL(fstat)(int fd, struct stat *buf) {
   auto fs_api = HERMES_POSIX_FS;
   if (fs_api->IsFdTracked(fd)) {
     File f; f.hermes_fd_ = fd;
-    LOG(INFO) << "Intercepted fstat." << std::endl;
+    VLOG(kDebug) << "Intercepted fstat." << std::endl;
     auto mdm = HERMES_FS_METADATA_MANAGER;
     auto existing = mdm->Find(f);
     if (existing) {
@@ -334,7 +335,7 @@ int HERMES_DECL(fsync)(int fd) {
   auto fs_api = HERMES_POSIX_FS;
   if (fs_api->IsFdTracked(fd)) {
     File f; f.hermes_fd_ = fd;
-    LOG(INFO) << "Intercept fsync." << std::endl;
+    VLOG(kDebug) << "Intercept fsync." << std::endl;
     return fs_api->Sync(f, stat_exists);
   }
   return real_api->fsync(fd);
@@ -345,9 +346,9 @@ int HERMES_DECL(close)(int fd) {
   auto real_api = HERMES_POSIX_API;
   auto fs_api = HERMES_POSIX_FS;
   if (fs_api->IsFdTracked(fd)) {
-    LOG(INFO) << "Intercept close(" << std::to_string(fd) << ")";
-    DLOG(INFO) << " -> " << fs_api->GetFilenameFromFD(fd);
-    LOG(INFO) << std::endl;
+    VLOG(kDebug) << "Intercept close(" << std::to_string(fd) << ")";
+    DVLOG(kDebug) << " -> " << fs_api->GetFilenameFromFD(fd);
+    VLOG(kDebug) << std::endl;
 
     File f; f.hermes_fd_ = fd;
     return fs_api->Close(f, stat_exists);
@@ -359,9 +360,9 @@ int HERMES_DECL(flock)(int fd, int operation) {
   auto real_api = HERMES_POSIX_API;
   auto fs_api = HERMES_POSIX_FS;
   if (fs_api->IsFdTracked(fd)) {
-    LOG(INFO) << "Intercept flock(" << std::to_string(fd) << ")";
-    DLOG(INFO) << " -> " << fs_api->GetFilenameFromFD(fd);
-    LOG(INFO) << std::endl;
+    VLOG(kDebug) << "Intercept flock(" << std::to_string(fd) << ")";
+    DVLOG(kDebug) << " -> " << fs_api->GetFilenameFromFD(fd);
+    VLOG(kDebug) << std::endl;
     // TODO(llogan): implement
     return 0;
   }
@@ -372,7 +373,7 @@ int HERMES_DECL(remove)(const char *pathname) {
   auto real_api = HERMES_POSIX_API;
   auto fs_api = HERMES_POSIX_FS;
   if (fs_api->IsPathTracked(pathname)) {
-    LOG(INFO) << "Intercept remove(" << pathname << ")" << std::endl;
+    VLOG(kDebug) << "Intercept remove(" << pathname << ")" << std::endl;
     return fs_api->Remove(pathname);
   }
   return real_api->remove(pathname);
@@ -382,7 +383,7 @@ int HERMES_DECL(unlink)(const char *pathname) {
   auto real_api = HERMES_POSIX_API;
   auto fs_api = HERMES_POSIX_FS;
   if (fs_api->IsPathTracked(pathname)) {
-    LOG(INFO) << "Intercept unlink(" << pathname << ")" << std::endl;
+    VLOG(kDebug) << "Intercept unlink(" << pathname << ")" << std::endl;
     return fs_api->Remove(pathname);
   }
   return real_api->unlink(pathname);

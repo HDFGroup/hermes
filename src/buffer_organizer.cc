@@ -224,7 +224,7 @@ void BufferOrganizer::GlobalOrganizeBlob(const std::string &bucket_name,
   float blob_score = bkt->GetBlobScore(blob_id);
   Context ctx;
 
-  LOG(INFO) << "Changing blob score from: " << blob_score
+  VLOG(kDebug) << "Changing blob score from: " << blob_score
             << " to: " << score << std::endl;
 
   // Skip organizing if below threshold

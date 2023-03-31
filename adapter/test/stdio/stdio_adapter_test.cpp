@@ -24,7 +24,7 @@
 #include "adapter/stdio/stdio_fs_api.h"
 #endif
 
-#include "glog/logging.h"
+#include "logging.h"
 #include "adapter_test_utils.h"
 
 namespace stdfs = std::filesystem;

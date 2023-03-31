@@ -14,7 +14,7 @@
 #include <string>
 
 #include <mpi.h>
-#include <glog/logging.h>
+#include "logging.h"
 #include "hermes.h"
 #include "bucket.h"
 #include "traits/example/example_trait.h"

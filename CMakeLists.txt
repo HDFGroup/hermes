@@ -23,6 +23,9 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
   message("This is NOT a release build: ${CMAKE_BUILD_TYPE}")
 else()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
+  # Ensure that debug logging is disabled
+  # This will remove logs beneath priority "1" (debug logging has priority 0)
+  add_compile_options("-DHERMES_LOG_VERBOSITY=0")
   message("This IS a release build")
 endif()
 

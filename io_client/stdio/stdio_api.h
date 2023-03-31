@@ -15,7 +15,7 @@
 #include <string>
 #include <dlfcn.h>
 #include <iostream>
-#include <glog/logging.h>
+#include "logging.h"
 #include <cstdio>
 #include "io_client/real_api.h"
 

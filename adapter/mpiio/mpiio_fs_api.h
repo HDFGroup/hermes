@@ -148,7 +148,7 @@ class MpiioFs : public Filesystem {
   int AWriteOrdered(File &f, AdapterStat &stat, const void *ptr, int count,
                     MPI_Datatype datatype, MPI_Request *request,
                     FsIoOptions opts) {
-    LOG(INFO) << "Starting an asynchronous write" << std::endl;
+    VLOG(kDebug) << "Starting an asynchronous write" << std::endl;
     auto mdm = HERMES_FS_METADATA_MANAGER;
     auto pool = HERMES_FS_THREAD_POOL;
     HermesRequest *hreq = new HermesRequest();

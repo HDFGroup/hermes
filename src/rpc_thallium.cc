@@ -25,10 +25,10 @@ namespace hermes {
 
 /** start Thallium RPC server */
 void ThalliumRpc::InitServer() {
-  LOG(INFO) << "Initializing RPC server" << std::endl;
+  VLOG(kInfo) << "Initializing RPC server" << std::endl;
   InitRpcContext();
   std::string addr = GetMyRpcAddress();
-  LOG(INFO) << "Attempting to start server on: " << addr << std::endl;
+  VLOG(kInfo) << "Attempting to start server on: " << addr << std::endl;
   try {
     server_engine_ = std::make_unique<tl::engine>(
         addr, THALLIUM_SERVER_MODE, true, config_->rpc_.num_threads_);
@@ -37,7 +37,7 @@ void ThalliumRpc::InitServer() {
                << std::endl << e.what() << std::endl;
   }
   std::string rpc_server_name = server_engine_->self();
-  LOG(INFO) << hshm::Formatter::format(
+  VLOG(kInfo) << hshm::Formatter::format(
                    "Serving {} (i.e., {}) with {} RPC threads as node id {}",
                    rpc_server_name, addr,
                    config_->rpc_.num_threads_,
@@ -52,7 +52,7 @@ void ThalliumRpc::InitClient()  {
   client_engine_ = std::make_unique<tl::engine>(protocol,
                               THALLIUM_CLIENT_MODE,
                               true, 1);
-  LOG(INFO) << hshm::Formatter::format(
+  VLOG(kInfo) << hshm::Formatter::format(
                    "This client is on node {} (i.e., {})",
                    node_id_, GetHostNameFromNodeId(node_id_)) << std::endl;
 }
@@ -61,10 +61,10 @@ void ThalliumRpc::InitClient()  {
 void ThalliumRpc::RunDaemon() {
   server_engine_->enable_remote_shutdown();
   auto prefinalize_callback = [this]() {
-    LOG(INFO) << "Beginning finalization on node: " <<
+    VLOG(kInfo) << "Beginning finalization on node: " <<
         this->node_id_ << std::endl;
     this->Finalize();
-    LOG(INFO) << "Finished finalization callback on node: " <<
+    VLOG(kInfo) << "Finished finalization callback on node: " <<
         this->node_id_ << std::endl;
   };
 
@@ -73,11 +73,11 @@ void ThalliumRpc::RunDaemon() {
   daemon_started_fs.open("/tmp/hermes_daemon_log.txt");
   daemon_started_fs << HERMES_SYSTEM_INFO->pid_;
   daemon_started_fs.close();
-  LOG(INFO) << "Running the daemon on node " << node_id_ << std::endl;
+  VLOG(kInfo) << "Running the daemon on node " << node_id_ << std::endl;
 
   server_engine_->push_prefinalize_callback(prefinalize_callback);
   server_engine_->wait_for_finalize();
-  LOG(INFO) << "Daemon has stopped on node: " <<
+  VLOG(kInfo) << "Daemon has stopped on node: " <<
       this->node_id_ << std::endl;
 }
 
@@ -85,7 +85,7 @@ void ThalliumRpc::RunDaemon() {
 void ThalliumRpc::StopDaemon() {
   try {
     for (i32 node_id = 1; node_id < (int)hosts_.size() + 1; ++node_id) {
-      LOG(INFO) << "Sending stop signal to: " << node_id << std::endl;
+      VLOG(kInfo) << "Sending stop signal to: " << node_id << std::endl;
       std::string server_name = GetServerName(node_id);
       tl::endpoint server = client_engine_->lookup(server_name.c_str());
       client_engine_->shutdown_remote_engine(server);
@@ -107,7 +107,7 @@ std::string ThalliumRpc::GetServerName(i32 node_id) {
 void ThalliumRpc::Finalize() {
   switch (mode_) {
     case HermesType::kServer: {
-      LOG(INFO) << "Stopping (server mode)" << std::endl;
+      VLOG(kInfo) << "Stopping (server mode)" << std::endl;
       this->kill_requested_.store(true);
       HERMES->prefetch_.Finalize();
       // NOTE(llogan): Don't use finalize with unique_ptr. finalize() is
@@ -119,7 +119,7 @@ void ThalliumRpc::Finalize() {
       break;
     }
     case HermesType::kClient: {
-      LOG(INFO) << "Stopping (client mode)" << std::endl;
+      VLOG(kInfo) << "Stopping (client mode)" << std::endl;
       // client_engine_.release();
       break;
     }

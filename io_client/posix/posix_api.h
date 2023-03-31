@@ -14,7 +14,7 @@
 #define HERMES_ADAPTER_POSIX_H
 #include <string>
 #include <iostream>
-#include <glog/logging.h>
+#include "logging.h"
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>

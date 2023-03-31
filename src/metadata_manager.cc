@@ -169,7 +169,7 @@ bool MetadataManager::LocalUpdateBucketSize(TagId bkt_id,
   }
   hipc::Ref<hipc::pair<TagId, TagInfo>> info = (*iter);
   TagInfo &bkt_info = *info->second_;
-  LOG(INFO) << "Updating the size of bucket: " <<  bkt_info.name_->str() <<
+  VLOG(kDebug) << "Updating the size of bucket: " <<  bkt_info.name_->str() <<
       " by: " << delta << " bytes" << std::endl;
   switch (mode) {
     case BucketUpdate::kInternal: {
@@ -324,7 +324,7 @@ MetadataManager::LocalPutBlobMetadata(TagId bkt_id,
   blob_id.node_id_ = rpc_->node_id_;
   bool did_create = blob_id_map_->try_emplace(*internal_blob_name, blob_id);
   if (did_create) {
-    LOG(INFO) << "Creating new blob: " << blob_name  << std::endl;
+    VLOG(kDebug) << "Creating new blob: " << blob_name  << std::endl;
     blob_map_->emplace(blob_id);
     auto iter = blob_map_->find(blob_id);
     hipc::Ref<hipc::pair<BlobId, BlobInfo>> info = (*iter);
@@ -336,7 +336,7 @@ MetadataManager::LocalPutBlobMetadata(TagId bkt_id,
     blob_info.header_->blob_size_ = blob_size;
     blob_info.header_->score_ = score;
   } else {
-    LOG(INFO) << "Found existing blob: " << blob_name << std::endl;
+    VLOG(kDebug) << "Found existing blob: " << blob_name << std::endl;
     blob_id = *(*blob_id_map_)[*internal_blob_name];
     auto iter = blob_map_->find(blob_id);
     hipc::Ref<hipc::pair<BlobId, BlobInfo>> info = (*iter);
@@ -499,7 +499,7 @@ bool MetadataManager::LocalDestroyBlob(TagId bkt_id,
  * */
 void MetadataManager::LocalClear() {
   AUTO_TRACE(1);
-  LOG(INFO) << "Clearing all buckets and blobs" << std::endl;
+  VLOG(kDebug) << "Clearing all buckets and blobs" << std::endl;
   ScopedRwWriteLock tag_map_lock(header_->lock_[kTagMapLock]);
   tag_id_map_->clear();
   tag_map_->clear();
@@ -548,7 +548,8 @@ MetadataManager::LocalGetOrCreateTag(const std::string &tag_name,
 
   // Emplace bucket if it does not already exist
   if (did_create) {
-    LOG(INFO) << "Creating tag for the first time: " << tag_name << std::endl;
+    VLOG(kDebug) << "Creating tag for the first time: "
+                 << tag_name << std::endl;
     tag_map_->emplace(tag_id);
     auto iter = tag_map_->find(tag_id);
     hipc::Ref<hipc::pair<TagId, TagInfo>> info_pair = *iter;
@@ -559,7 +560,7 @@ MetadataManager::LocalGetOrCreateTag(const std::string &tag_name,
     info.header_->tag_id_ = tag_id;
     info.header_->owner_ = owner;
   } else {
-    LOG(INFO) << "Found existing tag: " << tag_name << std::endl;
+    VLOG(kDebug) << "Found existing tag: " << tag_name << std::endl;
     auto iter = tag_id_map_->find(*tag_name_shm);
     hipc::Ref<hipc::pair<hipc::charbuf, TagId>> id_info = (*iter);
     tag_id = *id_info->second_;

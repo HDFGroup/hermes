@@ -45,7 +45,7 @@ class PosixIoClient : public BorgIoClient {
     auto mount_point = (*dev_info.mount_point_).str();
     int fd = api->open(mount_point.c_str(), O_RDWR);
     if (fd < 0) {
-      LOG(INFO) << "Failed to open (write): "
+      VLOG(kDebug) << "Failed to open (write): "
                 << dev_info.mount_point_->str() << std::endl;
       return false;
     }
@@ -60,7 +60,7 @@ class PosixIoClient : public BorgIoClient {
     auto mount_point = (*dev_info.mount_point_).str();
     int fd = api->open(mount_point.c_str(), O_RDWR);
     if (fd < 0) {
-      LOG(INFO) << "Failed to open (read): "
+      VLOG(kDebug) << "Failed to open (read): "
                 << dev_info.mount_point_->str() << std::endl;
       return false;
     }
