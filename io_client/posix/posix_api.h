@@ -14,7 +14,7 @@
 #define HERMES_ADAPTER_POSIX_H
 #include <string>
 #include <iostream>
-#include "logging.h"
+#include "hermes_shm/util/logging.h"
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -31,10 +31,8 @@
 
 #define REQUIRE_API(api_name) \
   if (api_name == nullptr) { \
-    LOG(FATAL) << "HERMES Adapter failed to map symbol: " \
-    #api_name << std::endl; \
-    std::exit(1); \
-   }
+    HELOG(kFatal, "HERMES Adapter failed to map symbol: {}", #api_name); \
+  }
 
 extern "C" {
 typedef int (*open_t)(const char * path, int flags,  ...);

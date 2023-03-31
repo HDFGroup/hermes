@@ -15,7 +15,7 @@
 #include <string>
 #include <dlfcn.h>
 #include <iostream>
-#include "logging.h"
+#include "hermes_shm/util/logging.h"
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>

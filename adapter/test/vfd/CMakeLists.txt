@@ -15,7 +15,6 @@ target_link_libraries(hermes_vfd_test
         hermes
         Catch2::Catch2
         MPI::MPI_CXX
-        glog::glog
         stdc++fs
         ${HDF5_HERMES_VFD_EXT_LIB_DEPENDENCIES})
 

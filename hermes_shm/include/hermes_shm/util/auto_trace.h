@@ -15,12 +15,13 @@
 
 #include "formatter.h"
 #include "timer.h"
+#include "logging.h"
 #include <iostream>
 
 namespace hshm {
 
 #define AUTO_TRACE(LOG_LEVEL) \
-  hshm::AutoTrace<LOG_LEVEL> hshm_tracer_(__PRETTY_FUNCTION__);
+  hshm::AutoTrace<LOG_LEVEL> hshm_tracer_(__func__);
 
 #define TIMER_START(NAME) \
   hshm_tracer_.StartTimer(NAME);
@@ -59,25 +60,24 @@ class AutoTrace {
  private:
   template<typename ...Args>
   void _StartTimer(HighResMonotonicTimer &timer) {
-#ifdef HERMES_ENABLE_PROFILING
-    if constexpr(LOG_LEVEL <= HERMES_ENABLE_PROFILING) {
+    if constexpr(LOG_LEVEL <= HERMES_LOG_VERBOSITY) {
       timer.Resume();
+      HILOG(LOG_LEVEL, "{}{}",
+           fname_,
+           internal_name_)
     }
-#endif
   }
 
   void _EndTimer(HighResMonotonicTimer &timer) {
-#ifdef HERMES_ENABLE_PROFILING
-    if constexpr(LOG_LEVEL <= HERMES_ENABLE_PROFILING) {
+    if constexpr(LOG_LEVEL <= HERMES_LOG_VERBOSITY) {
       timer.Pause();
-      std::cout << hshm::Formatter::format("{}{};{}ns\n",
-                                                 fname_,
-                                                 internal_name_,
-                                                 timer.GetNsec());
+      HILOG(LOG_LEVEL, "{}{} {}ns",
+           fname_,
+           internal_name_,
+           timer.GetNsec())
       timer.Reset();
       internal_name_.clear();
     }
-#endif
   }
 };
 

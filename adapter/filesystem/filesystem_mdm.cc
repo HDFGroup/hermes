@@ -18,7 +18,7 @@ namespace hermes::adapter::fs {
 
 bool MetadataManager::Create(const File &f,
                              std::shared_ptr<AdapterStat> &stat) {
-  VLOG(1) << "Create metadata for file handler." << std::endl;
+  HILOG(kDebug, "Create metadata for file handler")
   ScopedRwWriteLock md_lock(lock_);
   if (path_to_hermes_file_.find(stat->path_) == path_to_hermes_file_.end()) {
     path_to_hermes_file_.emplace(stat->path_, std::list<File>());
@@ -29,7 +29,7 @@ bool MetadataManager::Create(const File &f,
 }
 
 bool MetadataManager::Update(const File &f, const AdapterStat &stat) {
-  VLOG(1) << "Update metadata for file handler." << std::endl;
+  HILOG(kDebug, "Update metadata for file handler")
   ScopedRwWriteLock md_lock(lock_);
   auto iter = hermes_file_to_stat_.find(f);
   if (iter != hermes_file_to_stat_.end()) {
@@ -60,7 +60,7 @@ std::shared_ptr<AdapterStat> MetadataManager::Find(const File &f) {
 }
 
 bool MetadataManager::Delete(const std::string &path, const File &f) {
-  VLOG(1) << "Delete metadata for file handler." << std::endl;
+  HILOG(kDebug, "Delete metadata for file handler")
   ScopedRwWriteLock md_lock(lock_);
   auto iter = hermes_file_to_stat_.find(f);
   if (iter != hermes_file_to_stat_.end()) {

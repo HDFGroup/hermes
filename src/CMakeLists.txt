@@ -77,7 +77,6 @@ target_link_libraries(hermes
   PUBLIC ${GLPK_LIBRARIES}
   PUBLIC ${CMAKE_HERMES_COMMUNICATION_TYPE_LIB}
   PUBLIC ${CMAKE_HERMES_RPC_TYPE_LIB}
-  PUBLIC glog::glog
   PUBLIC yaml-cpp
   PUBLIC hermes_posix_io_real
   PUBLIC "$<$<BOOL:${HERMES_INTERCEPT_IO}>:${GOTCHA_MODULE_LIBS}>"
@@ -105,7 +104,7 @@ set(HERMES_EXPORTED_LIBS hermes ${HERMES_EXPORTED_LIBS})
 find_package(Catch2 REQUIRED)
 add_executable(hermes_daemon api/hermes_daemon.cc)
 add_dependencies(hermes_daemon hermes)
-target_link_libraries(hermes_daemon hermes -ldl -lc MPI::MPI_CXX glog::glog)
+target_link_libraries(hermes_daemon hermes -ldl -lc MPI::MPI_CXX)
 target_compile_definitions(hermes_daemon
         PRIVATE $<$<BOOL:${HERMES_ENABLE_PROFILING}>:HERMES_ENABLE_PROFILING>)
 

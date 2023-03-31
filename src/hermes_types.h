@@ -13,7 +13,7 @@
 #ifndef HERMES_TYPES_H_
 #define HERMES_TYPES_H_
 
-#include "logging.h"
+#include "hermes_shm/util/logging.h"
 #include <stdint.h>
 
 #include <functional>
@@ -159,10 +159,7 @@ struct IoTrace {
 
 /** A definition for logging something that is not yet implemented */
 #define HERMES_NOT_IMPLEMENTED_YET \
-  LOG(FATAL) << __func__ << " not implemented yet\n"
-
-/** A definition for logging invalid code path */
-#define HERMES_INVALID_CODE_PATH LOG(FATAL) << "Invalid code path." << std::endl
+  HELOG(kFatal, "not implemented yet")
 
 /** A TargetId uniquely identifies a buffering target within the system. */
 union TargetId {

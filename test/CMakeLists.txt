@@ -28,7 +28,6 @@ target_link_libraries(test_config ${LIBRT}
         hermes
         MPI::MPI_CXX
         $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium>
-        glog::glog
         Catch2::Catch2)
 
 foreach(program ${API_TESTS})
@@ -38,7 +37,6 @@ foreach(program ${API_TESTS})
           hermes
           MPI::MPI_CXX
           $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium>
-          glog::glog
           Catch2::Catch2)
   set(script ${CMAKE_SOURCE_DIR}/test/mpi.sh)
   add_test(NAME "Test${program}"
@@ -66,7 +64,6 @@ foreach(program ${API_TESTS})
           hermes
           MPI::MPI_CXX
           $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium>
-          glog::glog
           Catch2::Catch2)
   set(script ${CMAKE_SOURCE_DIR}/test/mpi.sh)
   add_test(NAME "Test${program}"

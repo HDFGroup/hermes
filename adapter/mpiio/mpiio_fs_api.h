@@ -148,7 +148,7 @@ class MpiioFs : public Filesystem {
   int AWriteOrdered(File &f, AdapterStat &stat, const void *ptr, int count,
                     MPI_Datatype datatype, MPI_Request *request,
                     FsIoOptions opts) {
-    VLOG(kDebug) << "Starting an asynchronous write" << std::endl;
+    HILOG(kDebug, "Starting an asynchronous write")
     auto mdm = HERMES_FS_METADATA_MANAGER;
     auto pool = HERMES_FS_THREAD_POOL;
     HermesRequest *hreq = new HermesRequest();
@@ -205,14 +205,12 @@ class MpiioFs : public Filesystem {
                   stat.comm_);
     MPI_Allreduce(&whence, &sum_whence, 1, MPI_INT, MPI_SUM, stat.comm_);
     if (sum_offset / comm_participators != offset) {
-      LOG(ERROR)
-          << "Same offset should be passed across the opened file communicator."
-          << std::endl;
+      HELOG(kError, "Same offset should be passed "
+            "across the opened file communicator.")
     }
     if (sum_whence / comm_participators != whence) {
-      LOG(ERROR)
-          << "Same whence should be passed across the opened file communicator."
-          << std::endl;
+      HELOG(kError, "Same whence should be passed "
+            "across the opened file communicator.")
     }
     Seek(f, stat, offset, whence);
     return 0;

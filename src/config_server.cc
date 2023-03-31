@@ -17,7 +17,7 @@
 #include <string.h>
 #include <yaml-cpp/yaml.h>
 #include <ostream>
-#include "logging.h"
+#include "hermes_shm/util/logging.h"
 #include "utils.h"
 #include "config.h"
 #include "hermes_shm/util/path_parser.h"

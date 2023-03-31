@@ -24,7 +24,7 @@
 #include "adapter/stdio/stdio_fs_api.h"
 #endif
 
-#include "logging.h"
+#include "hermes_shm/util/logging.h"
 #include "adapter_test_utils.h"
 
 namespace stdfs = std::filesystem;
@@ -91,7 +91,7 @@ void TrackFiles() {
 void RemoveFile(const std::string &path) {
   stdfs::remove(path);
   if (stdfs::exists(path)) {
-    LOG(FATAL) << "Failed to remove: " << path << std::endl;
+    HELOG(kFatal, "Failed to remove: {}", path)
   }
 }
 
@@ -207,8 +207,6 @@ int posttest(bool compare_data = true) {
           auto p1 = d1[pos];
           auto p2 = d2[pos];
           char_mismatch++;
-          LOG(FATAL) << "Failed to match chars: " <<
-              p1 << " vs " << p2 << std::endl;
         }
       }
       REQUIRE(char_mismatch == 0);

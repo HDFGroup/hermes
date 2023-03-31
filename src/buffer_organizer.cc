@@ -81,13 +81,12 @@ RPC void BufferOrganizer::LocalPlaceBlobInBuffers(
         (*mdm_->devices_)[buffer_info.tid_.GetDeviceId()];
     if (buffer_info.t_off_ + buffer_info.blob_size_ >
         dev_info->header_->capacity_) {
-      LOG(FATAL) << hshm::Formatter::format(
-                        "Out of bounds: attempting to write to offset: {} / {} "
-                        "on device {}: {}",
-                        buffer_info.t_off_ + buffer_info.blob_size_,
-                        dev_info->header_->capacity_,
-                        buffer_info.tid_.GetDeviceId(),
-                        dev_info->mount_point_->str()) << std::endl;
+      HELOG(kFatal, "Out of bounds: attempting to write to offset: {} / {} "
+            "on device {}: {}",
+            buffer_info.t_off_ + buffer_info.blob_size_,
+            dev_info->header_->capacity_,
+            buffer_info.tid_.GetDeviceId(),
+            dev_info->mount_point_->str())
     }
     auto io_client = borg::BorgIoClientFactory::Get(dev_info->header_->io_api_);
     TIMER_END()
@@ -101,13 +100,12 @@ RPC void BufferOrganizer::LocalPlaceBlobInBuffers(
     blob_off += buffer_info.blob_size_;
     if (!ret) {
       mdm_->PrintDeviceInfo();
-      LOG(FATAL) << hshm::Formatter::format(
-          "Could not perform I/O in BORG."
-          " Reading from target ID:"
-          " (node_id: {}, tgt_id: {}, dev_id: {})",
-          buffer_info.tid_.GetNodeId(),
-          buffer_info.tid_.GetIndex(),
-          buffer_info.tid_.GetDeviceId()) << std::endl;
+      HELOG(kFatal, "Could not perform I/O in BORG."
+            " Reading from target ID:"
+            " (node_id: {}, tgt_id: {}, dev_id: {})",
+            buffer_info.tid_.GetNodeId(),
+            buffer_info.tid_.GetIndex(),
+            buffer_info.tid_.GetDeviceId())
     }
   }
 }
@@ -146,13 +144,12 @@ RPC void BufferOrganizer::LocalReadBlobFromBuffers(
         (*mdm_->devices_)[buffer_info.tid_.GetDeviceId()];
     if (buffer_info.t_off_ + buffer_info.blob_size_ >
         dev_info->header_->capacity_) {
-      LOG(FATAL) << hshm::Formatter::format(
-                        "Out of bounds: attempting to read from offset: {} / {}"
-                        " on device {}: {}",
-                        buffer_info.t_off_ + buffer_info.blob_size_,
-                        dev_info->header_->capacity_,
-                        buffer_info.tid_.GetDeviceId(),
-                        dev_info->mount_point_->str()) << std::endl;
+      HELOG(kFatal, "Out of bounds: attempting to read from offset: {} / {}"
+            " on device {}: {}",
+            buffer_info.t_off_ + buffer_info.blob_size_,
+            dev_info->header_->capacity_,
+            buffer_info.tid_.GetDeviceId(),
+            dev_info->mount_point_->str())
     }
     auto io_client = borg::BorgIoClientFactory::Get(dev_info->header_->io_api_);
     bool ret = io_client->Read(*dev_info,
@@ -161,7 +158,7 @@ RPC void BufferOrganizer::LocalReadBlobFromBuffers(
                                buffer_info.blob_size_);
     blob_off += buffer_info.blob_size_;
     if (!ret) {
-      LOG(FATAL) << "Could not perform I/O in BORG" << std::endl;
+      HELOG(kFatal, "Could not perform I/O in BORG");
     }
   }
 }
@@ -224,8 +221,7 @@ void BufferOrganizer::GlobalOrganizeBlob(const std::string &bucket_name,
   float blob_score = bkt->GetBlobScore(blob_id);
   Context ctx;
 
-  VLOG(kDebug) << "Changing blob score from: " << blob_score
-            << " to: " << score << std::endl;
+  HILOG(kDebug, "Changing blob score from: {} to {}", blob_score, score)
 
   // Skip organizing if below threshold
   if (abs(blob_score - score) < .05) {

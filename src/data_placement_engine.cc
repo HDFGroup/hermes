@@ -56,7 +56,7 @@ Status DPE::CalculatePlacement(const std::vector<size_t> &blob_sizes,
         break;
       }
       case TopologyType::kCount: {
-        LOG(FATAL) << "Not a valid topology type" << std::endl;
+        HELOG(kFatal, "Not a valid topology type")
       }
     }
     if (targets.size() == 0) {

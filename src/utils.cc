@@ -24,8 +24,7 @@ namespace hermes {
  */   
 void FailedLibraryCall(std::string func) {
   int saved_errno = errno;
-  LOG(FATAL) << func << " failed with error: "  << strerror(saved_errno)
-             << std::endl;
+  HELOG(kFatal, strerror(saved_errno));
 }
 
 }  // namespace hermes

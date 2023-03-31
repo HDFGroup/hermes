@@ -377,7 +377,7 @@ void TrackFiles() {
 void RemoveFile(const std::string &path) {
   stdfs::remove(path);
   if (stdfs::exists(path)) {
-    LOG(FATAL) << "Failed to remove: " << path << std::endl;
+    HELOG(kFatal, "Failed to remove: {}", path)
   }
 }
 
@@ -396,7 +396,7 @@ int init(int* argc, char*** argv) {
   MPI_Init(argc, argv);
 
   if (args.request_size % info.element_size != 0) {
-    LOG(FATAL) << "request_size must be a multiple of " << info.element_size;
+    HELOG(kFatal, "request_size must be a multiple of: {}", info.element_size)
   }
   info.nelems_per_dataset = args.request_size / info.element_size;
 
@@ -458,7 +458,7 @@ void CheckResults(const std::string &file1, const std::string &file2) {
     std::string h5diff_cmd = "h5diff " + file1 + " " + file2;
     int status = system(h5diff_cmd.c_str());
     if (status != 0) {
-      LOG(ERROR) << "Failing h5diff command: " << h5diff_cmd;
+      HELOG(kError, "Failing h5diff command: {}", h5diff_cmd)
     }
     REQUIRE(status == 0);
   }

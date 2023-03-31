@@ -5,7 +5,7 @@ add_library(hermes_example_trait
         example_trait.cc)
 target_compile_options(hermes_example_trait PUBLIC -fPIC)
 target_link_libraries(hermes_example_trait
-        MPI::MPI_CXX glog::glog stdc++fs dl)
+        MPI::MPI_CXX stdc++fs dl)
 
 #-----------------------------------------------------------------------------
 # Add Target(s) to CMake Install

@@ -11,7 +11,7 @@ add_dependencies(hermes_stdio_io_client
         hermes hermes_stdio_io_real)
 target_link_libraries(hermes_stdio_io_client
         hermes hermes_stdio_io_real
-        MPI::MPI_CXX glog::glog stdc++fs dl)
+        MPI::MPI_CXX stdc++fs dl)
 
 #-----------------------------------------------------------------------------
 # Add Target(s) to CMake Install

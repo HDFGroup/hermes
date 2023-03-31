@@ -29,7 +29,7 @@ class RamIoClient : public BorgIoClient {
     hermes_header->ram_tier_ = main_alloc->
                                Allocate(dev_info.header_->capacity_);
     if (hermes_header->ram_tier_.IsNull()) {
-      LOG(FATAL) << BUFFER_POOL_OUT_OF_RAM.Msg() << std::endl;
+      HELOG(kFatal, BUFFER_POOL_OUT_OF_RAM.Msg());
     }
     return true;
   }
@@ -40,10 +40,8 @@ class RamIoClient : public BorgIoClient {
     auto &main_alloc = HERMES->main_alloc_;
     char *ram_ptr = main_alloc->Convert<char>(hermes_header->ram_tier_);
     if (off + size > dev_info.header_->capacity_) {
-      VLOG(kDebug) << hshm::Formatter::format(
-        "Out of bounds: attempting to write to offset: {} / {}",
-                       off + size,
-                       dev_info.header_->capacity_) << std::endl;
+      HILOG(kDebug, "Out of bounds: attempting to write to offset: {} / {}",
+            off + size, dev_info.header_->capacity_);
       return false;
     }
     memcpy(ram_ptr + off, data, size);

@@ -10,11 +10,10 @@
 * have access to the file, you may request a copy from help@hdfgroup.org.   *
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-
-#define HERMES_ENABLE_PROFILING 1
 #include <hermes_shm/util/formatter.h>
 #include <hermes_shm/util/path_parser.h>
 #include <hermes_shm/util/auto_trace.h>
+#include <hermes_shm/util/logging.h>
 #include "basic_test.h"
 #include "hermes_shm/util/singleton.h"
 #include <unistd.h>
@@ -28,12 +27,40 @@ TEST_CASE("TestPathParser") {
   REQUIRE(y == "${PATH_PARSER_TEST}/hello");
 }
 
+TEST_CASE("TestTerminal") {
+  std::cout << "\033[1m" << "Bold text" << "\033[0m" << std::endl;
+  std::cout << "\033[4m" << "Underlined text" << "\033[0m" << std::endl;
+  std::cout << "\033[31m" << "Red text" << "\033[0m" << std::endl;
+  std::cout << "\033[32m" << "Green text" << "\033[0m" << std::endl;
+  std::cout << "\033[33m" << "Yellow text" << "\033[0m" << std::endl;
+  std::cout << "\033[34m" << "Blue text" << "\033[0m" << std::endl;
+  std::cout << "\033[35m" << "Magenta text" << "\033[0m" << std::endl;
+  std::cout << "\033[36m" << "Cyan text" << "\033[0m" << std::endl;
+
+  std::cout << "\033]8;;https://www.example.com\a" << "Click here to visit example.com" << "\033]8;;\a" << std::endl;
+
+}
+
 TEST_CASE("TestAutoTrace") {
   AUTO_TRACE(0)
 
   TIMER_START("Example")
   sleep(1);
   TIMER_END()
+}
+
+TEST_CASE("TestLogger") {
+  HILOG(kInfo, "I'm more likely to be printed: {}", 0)
+  HILOG(kDebug, "I'm not likely to be printed: {}", 10)
+
+  HERMES_LOG->SetVerbosity(kInfo);
+  HILOG(kInfo, "I'm more likely to be printed (2): {}", 0)
+  HILOG(kDebug, "I won't be printed: {}", 10)
+
+#ifdef TEST_ERRORS
+  HELOG(kError, "I will NOT cause an EXIT!")
+  HELOG(kFatal, "I will cause an EXIT!")
+#endif
 }
 
 TEST_CASE("TestFormatter") {

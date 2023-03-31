@@ -39,9 +39,8 @@ class StdioFs : public hermes::adapter::fs::Filesystem {
       return ret;
     }
     stat.fh_ = ret;
-    VLOG(kDebug) << "Reopen file for filename "
-                 << user_path << " in mode " << mode
-              << std::endl;
+    HILOG(kDebug, "Reopen file for filename: {} in mode {}",
+          user_path, mode)
     stat.UpdateTime();
     return (FILE*)&stat;
   }

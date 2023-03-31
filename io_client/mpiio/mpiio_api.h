@@ -15,7 +15,7 @@
 #include <string>
 #include <dlfcn.h>
 #include <iostream>
-#include "logging.h"
+#include "hermes_shm/util/logging.h"
 #include <mpi.h>
 #include <mpio.h>
 #include "io_client/real_api.h"
@@ -26,10 +26,8 @@
 
 #define REQUIRE_API(api_name) \
   if (api_name == nullptr) { \
-    LOG(FATAL) << "HERMES Adapter failed to map symbol: " \
-    #api_name << std::endl; \
-    std::exit(1); \
-   }
+    HELOG(kFatal, "HERMES Adapter failed to map symbol: {}", #api_name); \
+  }
 
 extern "C" {
 typedef int (*MPI_Init_t)(int * argc, char *** argv);

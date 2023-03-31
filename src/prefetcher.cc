@@ -45,8 +45,8 @@ void Prefetcher::Init() {
       return;
     }
     YAML::Node io_trace = YAML::LoadFile(conf.prefetcher_.trace_path_);
-    VLOG(kDebug) << "Parsing the I/O trace at: "
-              << conf.prefetcher_.trace_path_ << std::endl;
+    HILOG(kDebug, "Parsing the I/O trace at: {}",
+          conf.prefetcher_.trace_path_)
     int nprocs;
     MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
     trace_.resize(nprocs);
@@ -71,12 +71,12 @@ void Prefetcher::Init() {
       trace_off_[i] = trace_[i].begin();
     }
   } catch (std::exception &e) {
-    LOG(FATAL) << e.what() << std::endl;
+    HELOG(kFatal, e.what())
   }
 
   // Spawn the prefetcher thread
   auto prefetcher = [](void *args) {
-    VLOG(kInfo) << "Prefetcher has started" << std::endl;
+    HILOG(kDebug, "Prefetcher has started")
     (void) args;
     Prefetcher *prefetch = &HERMES->prefetch_;
     while (!HERMES->rpc_.kill_requested_.load()) {
@@ -84,7 +84,7 @@ void Prefetcher::Init() {
       tl::thread::self().sleep(*HERMES->rpc_.server_engine_,
                                prefetch->epoch_ms_);
     }
-    VLOG(kInfo) << "Prefetcher has stopped" << std::endl;
+    HILOG(kDebug, "Prefetcher has stopped")
   };
 
   ABT_xstream_create(ABT_SCHED_NULL, &execution_stream_);

@@ -54,8 +54,7 @@ class ThalliumRpc  : public RpcContext {
   /** RPC call */
   template <typename ReturnType, typename... Args>
   ReturnType Call(i32 node_id, const char *func_name, Args&&... args) {
-    VLOG(kDebug) << "Calling " << func_name << " " << node_id_
-              << " -> " << node_id << std::endl;
+    HILOG(kDebug, "Calling {} {} -> {}", func_name, node_id_, node_id)
     try {
       std::string server_name = GetServerName(node_id);
       tl::remote_procedure remote_proc = client_engine_->define(func_name);
@@ -68,8 +67,8 @@ class ThalliumRpc  : public RpcContext {
         return result;
       }
     } catch (tl::margo_exception &err) {
-      LOG(ERROR) << "Thallium failed on function: " << func_name << std::endl;
-      LOG(FATAL) << err.what() << std::endl;
+      HELOG(kFatal, "Thallium failed on function: {}\n{}",
+            func_name, err.what())
       exit(1);
     }
   }
@@ -78,8 +77,7 @@ class ThalliumRpc  : public RpcContext {
   template<typename ReturnType, typename ...Args>
   ReturnType IoCall(i32 node_id, const char *func_name,
                     IoType type, char *data, size_t size, Args&& ...args) {
-    VLOG(kDebug) << "Calling " << func_name << " " << node_id_
-              << " -> " << node_id << std::endl;
+    HILOG(kDebug, "Calling {} {} -> {}", func_name, node_id_, node_id)
     std::string server_name = GetServerName(node_id);
     tl::bulk_mode flag;
     switch (type) {
@@ -95,7 +93,8 @@ class ThalliumRpc  : public RpcContext {
       }
       case IoType::kNone: {
         // TODO(llogan)
-        LOG(FATAL) << "Cannot have none I/O type" << std::endl;
+        HELOG(kFatal, "Cannot have none I/O type")
+        exit(1);
       }
     }
 
@@ -130,7 +129,8 @@ class ThalliumRpc  : public RpcContext {
         break;
       }
       case IoType::kNone: {
-        LOG(FATAL) << "Should never use this flag" << std::endl;
+        HELOG(kFatal, "Cannot have none I/O type")
+        exit(1);
       }
     }
 
@@ -153,7 +153,7 @@ class ThalliumRpc  : public RpcContext {
         break;
       }
       case IoType::kNone: {
-        LOG(FATAL) << "Should never be called" << std::endl;
+        HELOG(kFatal, "Cannot have none I/O type")
       }
     }
 

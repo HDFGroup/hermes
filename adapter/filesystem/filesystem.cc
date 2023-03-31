@@ -37,7 +37,7 @@ void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
   Context ctx;
   std::shared_ptr<AdapterStat> exists = mdm->Find(f);
   if (!exists) {
-    VLOG(kDebug) << "File not opened before by adapter" << std::endl;
+    HILOG(kDebug, "File not opened before by adapter")
     // Create the new bucket
     stat.path_ = stdfs::weakly_canonical(path).string();
     auto path_shm = hipc::make_uptr<hipc::charbuf>(stat.path_);
@@ -63,7 +63,7 @@ void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
     io_client_->HermesOpen(f, stat, fs_ctx);
     mdm->Create(f, stat_ptr);
   } else {
-    VLOG(kDebug) << "File already opened by adapter" << std::endl;
+    HILOG(kDebug, "File already opened by adapter")
     exists->UpdateTime();
   }
 }
@@ -110,7 +110,7 @@ Status Filesystem::PartialPutOrCreate(std::shared_ptr<hapi::Bucket> bkt,
   if (bkt->ContainsBlob(blob_name, blob_id)) {
     // Case 1: The blob already exists (read from hermes)
     // Read blob from Hermes
-    VLOG(kDebug) << "Blob existed. Reading from Hermes." << std::endl;
+    HILOG(kDebug, "Blob existed. Reading from Hermes.")
     bkt->Get(blob_id, full_blob, ctx);
   }
   if (blob_off == 0 &&
@@ -118,37 +118,38 @@ Status Filesystem::PartialPutOrCreate(std::shared_ptr<hapi::Bucket> bkt,
       blob.size() >= full_blob.size()) {
     // Case 2: We're overriding the entire blob
     // Put the entire blob, no need to load from storage
-    VLOG(kDebug) << "Putting the entire blob." << std::endl;
+    HILOG(kDebug, "Putting the entire blob.")
     return bkt->Put(blob_name, blob, blob_id, ctx);
   }
   if (full_blob.size() < opts.backend_size_) {
     // Case 3: The blob did not fully exist (need to read from backend)
     // Read blob using adapter
-    VLOG(kDebug) << "Blob did not fully exist. Reading blob from backend. "
-              << " cur_size: " << full_blob.size()
-              << " backend_size: " << opts.backend_size_
-              << std::endl;
+    HILOG(kDebug, "Blob did not fully exist. Reading blob from backend."
+          " cur_size: {}"
+          " backend_size: {}",
+          full_blob.size(), opts.backend_size_)
     full_blob.resize(opts.backend_size_);
     auto name_shm = hipc::make_uptr<hipc::charbuf>(bkt->GetName());
     io_client_->ReadBlob(*name_shm,
                         full_blob, opts, status);
     if (!status.success_) {
-      VLOG(kDebug) << "Failed to read blob of size "
-                << opts.backend_size_
-                << " from backend (PartialPut)";
+      HILOG(kDebug, "Failed to read blob from backend (PartialPut)."
+            " cur_size: {}"
+            " backend_size: {}",
+            full_blob.size(), opts.backend_size_)
       // return PARTIAL_PUT_OR_CREATE_OVERFLOW;
     }
   }
-  VLOG(kDebug) << "Modifying full_blob at offset: " << blob_off
-            << " for total size: " << blob.size() << std::endl;
+  HILOG(kDebug, "Modifying full_blob at offset: {} for total size: {}",
+        blob_off, blob.size())
   // Ensure the blob can hold the update
   full_blob.resize(std::max(full_blob.size(), blob_off + blob.size()));
   // Modify the blob
   memcpy(full_blob.data() + blob_off, blob.data(), blob.size());
   // Re-put the blob
   bkt->Put(blob_name, full_blob, blob_id, ctx);
-  VLOG(kDebug) << "Partially put to blob: (" << blob_id.unique_
-            << ", " << blob_id.node_id_ << ")" << std::endl;
+  HILOG(kDebug, "Partially put to blob: ({}, {})",
+        blob_id.unique_, blob_id.node_id_)
   return Status();
 }
 
@@ -159,14 +160,14 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
   std::shared_ptr<hapi::Bucket> &bkt = stat.bkt_id_;
   std::string filename = bkt->GetName();
   size_t backend_size = stat.bkt_id_->GetSize(true);
-  VLOG(kDebug) << "Write called for filename: " << filename
-            << " on offset: " << off
-            << " from position: " << stat.st_ptr_
-            << " and size: " << total_size
-            << " and current file size: " << backend_size
-            << " and adapter mode: " << AdapterModeConv::str(stat.adapter_mode_)
-            << std::endl;
-
+  HILOG(kDebug, "Write called for filename: {}"
+        " on offset: {}"
+        " from position: {}"
+        " and size: {}"
+        " and current file size: {}"
+        " and adapter mode: {}",
+        filename, off, stat.st_ptr_, total_size, backend_size,
+        AdapterModeConv::str(stat.adapter_mode_))
   if (stat.adapter_mode_ == AdapterMode::kBypass) {
     // Bypass mode is handled differently
     opts.backend_size_ = total_size;
@@ -175,8 +176,8 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
     auto name_shm = hipc::make_uptr<hipc::charbuf>(bkt->GetName());
     io_client_->WriteBlob(*name_shm, blob_wrap, opts, io_status);
     if (!io_status.success_) {
-      VLOG(kDebug) << "Failed to write blob of size " << opts.backend_size_
-                << " to backend (PartialPut)";
+      HILOG(kDebug, "Failed to write blob of size {} to backend",
+            opts.backend_size_)
       return 0;
     }
     if (opts.DoSeek()) {
@@ -230,9 +231,8 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
   }
   stat.UpdateTime();
 
-  VLOG(kDebug) << "The size of file after write: "
-            << GetSize(f, stat) << std::endl;
-
+  HILOG(kDebug, "The size of file after write: {}",
+        GetSize(f, stat))
   ret = data_offset;
   return ret;
 }
@@ -263,26 +263,27 @@ Status Filesystem::PartialGetOrCreate(std::shared_ptr<hapi::Bucket> bkt,
   if (bkt->ContainsBlob(blob_name, blob_id)) {
     // Case 1: The blob already exists (read from hermes)
     // Read blob from Hermes
-    VLOG(kDebug) << "Blob existed. Reading blob from Hermes."
-              << " offset: " << opts.backend_off_
-              << " size: " << blob_size
-              << std::endl;
+    HILOG(kDebug, "Blob existed. Reading from Hermes."
+          " offset: {}"
+          " size: {}",
+          opts.backend_off_, blob_size)
     bkt->Get(blob_id, full_blob, ctx);
   }
   if (full_blob.size() < opts.backend_size_) {
     // Case 2: The blob did not exist (or at least not fully)
     // Read blob using adapter
-    VLOG(kDebug) << "Blob did not fully exist. Reading blob from backend. "
-              << " cur_size: " << full_blob.size()
-              << " backend_size: " << opts.backend_size_
-              << std::endl;
+    HILOG(kDebug, "Blob did not fully exist. Reading blob from backend."
+          " cur_size: {}"
+          " backend_size: {}",
+          full_blob.size(), opts.backend_size_)
     full_blob.resize(opts.backend_size_);
     auto name_shm = hipc::make_uptr<hipc::charbuf>(bkt->GetName());
     io_client_->ReadBlob(*name_shm, full_blob, opts, status);
     if (!status.success_) {
-      VLOG(kDebug) << "Failed to read blob of size "
-                << opts.backend_size_
-                << "from backend (PartialCreate)";
+      HILOG(kDebug, "Failed to read blob from backend (PartialGet)."
+            " cur_size: {}"
+            " backend_size: {}",
+            full_blob.size(), opts.backend_size_)
       return PARTIAL_GET_OR_CREATE_OVERFLOW;
     }
     bkt->Put(blob_name, full_blob, blob_id, ctx);
@@ -304,10 +305,11 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
   (void) f;
   std::shared_ptr<hapi::Bucket> &bkt = stat.bkt_id_;
   std::string filename = bkt->GetName();
-  VLOG(kDebug) << "Read called for filename: " << filename
-            << " on offset: " << off
-            << " from position: " << stat.st_ptr_
-            << " and size: " << total_size << std::endl;
+  HILOG(kDebug, "Read called for filename: {}"
+        " on offset: {}"
+        " from position: {}"
+        " and size: {}",
+        filename, off, stat.st_ptr_, total_size)
 
   if (stat.adapter_mode_ == AdapterMode::kBypass) {
     // Bypass mode is handled differently
@@ -317,8 +319,8 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
     auto name_shm = hipc::make_uptr<hipc::charbuf>(bkt->GetName());
     io_client_->ReadBlob(*name_shm, blob_wrap, opts, io_status);
     if (!io_status.success_) {
-      VLOG(kDebug) << "Failed to read blob of size " << opts.backend_size_
-                << " to backend (PartialPut)";
+      HILOG(kDebug, "Failed to read blob of size {} from backend",
+            opts.backend_size_)
       return 0;
     }
     if (opts.DoSeek()) {
@@ -376,7 +378,8 @@ HermesRequest* Filesystem::AWrite(File &f, AdapterStat &stat, const void *ptr,
                                   size_t off, size_t total_size, size_t req_id,
                                   IoStatus &io_status, FsIoOptions opts) {
   (void) io_status;
-  VLOG(kDebug) << "Starting an asynchronous write" << std::endl;
+  HILOG(kDebug, "Starting an asynchronous write",
+        opts.backend_size_)
   auto pool = HERMES_FS_THREAD_POOL;
   HermesRequest *hreq = new HermesRequest();
   auto lambda =
@@ -442,9 +445,7 @@ size_t Filesystem::GetSize(File &f, AdapterStat &stat) {
 off_t Filesystem::Seek(File &f, AdapterStat &stat,
                        SeekMode whence, off_t offset) {
   if (stat.is_append_) {
-    VLOG(kDebug)
-        << "File pointer not updating as file was opened in append mode."
-        << std::endl;
+    HILOG(kDebug, "File pointer not updating because append mode")
     return -1;
   }
   auto mdm = HERMES_FS_METADATA_MANAGER;
@@ -481,17 +482,17 @@ void Filesystem::FlushBlob(std::shared_ptr<hapi::Bucket> &bkt,
                            BlobId blob_id,
                            AdapterMode mode,
                            Context &ctx) {
-  VLOG(kDebug) << "Flushing blob" << std::endl;
+  HILOG(kDebug, "Flushing blob")
   if (mode == AdapterMode::kScratch) {
-    VLOG(kDebug) << "In scratch mode, ignoring flush" << std::endl;
+    HILOG(kDebug, "In scratch mode, ignoring flush")
     return;
   }
   Blob full_blob;
   IoStatus status;
   // Read blob from Hermes
   bkt->Get(blob_id, full_blob, ctx);
-  VLOG(kDebug) << "The blob being flushed has size: "
-            << full_blob.size() << std::endl;
+  HILOG(kDebug, "The blob being flushed has size: {}",
+        full_blob.size())
   std::string blob_name = bkt->GetBlobName(blob_id);
   // Write blob to backend
   FsIoOptions decode_opts = io_client_->DecodeBlobName(blob_name);
@@ -512,7 +513,7 @@ void Filesystem::Flush(std::shared_ptr<hapi::Bucket> &bkt,
   if (mode == AdapterMode::kScratch) {
     return;
   }
-  VLOG(kDebug) << "Flushing " << blob_ids.size() << " blobs" << std::endl;
+  HILOG(kDebug, "Flushing: {} blobs", blob_ids.size())
   for (BlobId &blob_id : blob_ids) {
     FlushBlob(bkt, blob_id, mode, ctx);
   }

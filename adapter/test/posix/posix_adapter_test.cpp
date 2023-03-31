@@ -105,7 +105,7 @@ void TrackFiles() {
 void RemoveFile(const std::string &path) {
   stdfs::remove(path);
   if (stdfs::exists(path)) {
-    LOG(FATAL) << "Failed to remove: " << path << std::endl;
+    HELOG(kFatal, "Failed to remove: {}", path)
   }
 }
 
@@ -153,7 +153,7 @@ int pretest() {
     auto check = stdfs::file_size(info.existing_file) ==
                  args.request_size * info.num_iterations;
     if (!check) {
-      LOG(FATAL) << "File sizes weren't equivalent after copy" << std::endl;
+      HELOG(kFatal, "File sizes weren't equivalent after copy")
     }
     REQUIRE(check);
   }

@@ -101,7 +101,7 @@ void TrackFiles() {
 void RemoveFile(const std::string &path) {
   stdfs::remove(path);
   if (stdfs::exists(path)) {
-    LOG(FATAL) << "Failed to remove: " << path << std::endl;
+    HELOG(kFatal, "Failed to remove: {}", path)
   }
 }
 

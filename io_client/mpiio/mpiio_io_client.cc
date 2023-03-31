@@ -81,8 +81,8 @@ size_t MpiioIoClient::GetSize(const hipc::charbuf &bkt_name) {
   true_size = buf.st_size;
   close(fd);
 
-  VLOG(kDebug) << "The size of the file "
-            << filename << " on disk is " << true_size << std::endl;
+  HILOG(kDebug, "The size of the file {} on disk is {} bytes",
+        filename, true_size)
   return true_size;
 }
 
@@ -104,11 +104,13 @@ void MpiioIoClient::WriteBlob(const hipc::charbuf &bkt_name,
                               IoStatus &status) {
   std::string filename = bkt_name.str();
   status.success_ = true;
-  VLOG(kDebug) << "Write called for filename to destination: " << filename
-            << " on offset: " << opts.backend_off_
-            << " and size: " << full_blob.size() << "."
-            << " file_size:" << stdfs::file_size(filename)
-            << " pid: " << getpid() << std::endl;
+  HILOG(kDebug,
+        "Write called for: {}"
+        " on offset: {}"
+        " and size: {}"
+        " file_size: {}",
+        filename, opts.backend_off_, full_blob.size(),
+        stdfs::file_size(filename))
   MPI_File fh;
   int write_count = 0;
   status.mpi_ret_ = real_api->MPI_File_open(MPI_COMM_SELF, filename.c_str(),
@@ -134,9 +136,8 @@ void MpiioIoClient::WriteBlob(const hipc::charbuf &bkt_name,
                 opts.mpi_type_, &write_count);
   if (write_count != opts.mpi_count_) {
     status.success_ = false;
-    LOG(ERROR) << "writing failed: wrote " << write_count
-               << " / " << opts.mpi_count_
-               << "." << std::endl;
+    HELOG(kError, "writing failed: wrote {} / {}",
+          write_count, opts.mpi_count_)
   }
 
 ERROR:
@@ -152,11 +153,13 @@ void MpiioIoClient::ReadBlob(const hipc::charbuf &bkt_name,
                              IoStatus &status) {
   std::string filename = bkt_name.str();
   status.success_ = true;
-  VLOG(kDebug) << "Reading from: " << filename
-            << " on offset: " << opts.backend_off_
-            << " and size: " << full_blob.size() << "."
-            << " file_size:" << stdfs::file_size(filename)
-            << " pid: " << getpid() << std::endl;
+  HILOG(kDebug,
+        "Reading from: {}"
+        " on offset: {}"
+        " and size: {}"
+        " file_size: {}",
+        filename, opts.backend_off_, full_blob.size(),
+        stdfs::file_size(filename))
   MPI_File fh;
   int read_count = 0;
   status.mpi_ret_ = real_api->MPI_File_open(MPI_COMM_SELF, filename.c_str(),
@@ -182,9 +185,8 @@ void MpiioIoClient::ReadBlob(const hipc::charbuf &bkt_name,
                 opts.mpi_type_, &read_count);
   if (read_count != opts.mpi_count_) {
     status.success_ = false;
-    LOG(ERROR) << "reading failed: read " << read_count
-               << " / " << opts.mpi_count_
-               << "." << std::endl;
+    HELOG(kError, "reading failed: read {} / {}",
+          read_count, opts.mpi_count_)
   }
 
 ERROR:

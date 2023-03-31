@@ -14,7 +14,7 @@ gcc(stdio_adapter_mapper_test "")
 # STDIO Adapter End to End tests
 #------------------------------------------------------------------------------
 add_executable(stdio_adapter_test stdio_adapter_test.cpp ${ADAPTER_COMMON})
-target_link_libraries(stdio_adapter_test hermes glog::glog)
+target_link_libraries(stdio_adapter_test hermes)
 gcc(stdio_adapter_test "")
 
 add_executable(stdio_adapter_mpi_test stdio_adapter_mpi_test.cpp ${ADAPTER_COMMON})

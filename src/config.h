@@ -50,13 +50,12 @@ class BaseConfig {
       return;
     }
     auto real_path = hshm::path_parser(path);
-    VLOG(kDebug) << "ParseConfig-LoadFile: " << real_path << std::endl;
-    try {
+    HILOG(kDebug, "Start load config {}", real_path)try {
       YAML::Node yaml_conf = YAML::LoadFile(real_path);
-      VLOG(kDebug) << "ParseConfig-LoadComplete" << std::endl;
+      HILOG(kDebug, "Complete load config {}", real_path)
       ParseYAML(yaml_conf);
     } catch (std::exception &e) {
-      LOG(FATAL) << e.what() << std::endl;
+      HELOG(kFatal, e.what())
     }
   }
 
@@ -64,19 +63,6 @@ class BaseConfig {
   virtual void LoadDefault() = 0;
 
  public:
-  /** print \a expected value and fail when an error occurs */
-  static void PrintExpectedAndFail(const std::string &expected,
-                                   u32 line_number = 0) {
-    std::ostringstream msg;
-    msg << "Configuration parser expected '" << expected << "'";
-    if (line_number > 0) {
-      msg << " on line " << line_number;
-    }
-    msg << "\n";
-
-    LOG(FATAL) << msg.str();
-  }
-
   /** parse \a list_node vector from configuration file in YAML */
   template<typename T, typename VEC_TYPE = std::vector<T>>
   static void ParseVector(YAML::Node list_node, VEC_TYPE &list) {
@@ -222,7 +208,7 @@ class BaseConfig {
     } else if (suffix[0] == 'g' || suffix[0] == 'G') {
       return GIGABYTES(size);
     } else {
-      LOG(FATAL) << "Could not parse the size: " << size_text << std::endl;
+      HELOG(kFatal, "Could not parse the size: {}", size_text)
       exit(1);
     }
   }
@@ -247,7 +233,7 @@ class BaseConfig {
     } else if (suffix[0] == 's' || suffix[0] == 'S') {
       return GIGABYTES(size);
     }
-    LOG(FATAL) << "Could not parse the latency: " << latency_text << std::endl;
+    HELOG(kFatal, "Could not parse the latency: {}", latency_text)
     exit(1);
   }
 

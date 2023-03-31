@@ -14,7 +14,7 @@
 #include <string>
 
 #include <mpi.h>
-#include "logging.h"
+#include "hermes_shm/util/logging.h"
 #include "hermes.h"
 #include "buffer_pool.h"
 

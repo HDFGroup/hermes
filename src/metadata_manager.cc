@@ -169,8 +169,8 @@ bool MetadataManager::LocalUpdateBucketSize(TagId bkt_id,
   }
   hipc::Ref<hipc::pair<TagId, TagInfo>> info = (*iter);
   TagInfo &bkt_info = *info->second_;
-  VLOG(kDebug) << "Updating the size of bucket: " <<  bkt_info.name_->str() <<
-      " by: " << delta << " bytes" << std::endl;
+  HILOG(kDebug, "Updating the size of bucket: {} by: {} bytes",
+        bkt_info.name_->str(), delta)
   switch (mode) {
     case BucketUpdate::kInternal: {
       bkt_info.header_->internal_size_ += delta;
@@ -185,7 +185,7 @@ bool MetadataManager::LocalUpdateBucketSize(TagId bkt_id,
       bkt_info.header_->internal_size_ += delta;
     }
     case BucketUpdate::kNone: {
-      LOG(FATAL) << "None is not valid here" << std::endl;
+      HELOG(kFatal, "Cannot have kNone bucket type")
     }
   }
   return true;
@@ -324,7 +324,7 @@ MetadataManager::LocalPutBlobMetadata(TagId bkt_id,
   blob_id.node_id_ = rpc_->node_id_;
   bool did_create = blob_id_map_->try_emplace(*internal_blob_name, blob_id);
   if (did_create) {
-    VLOG(kDebug) << "Creating new blob: " << blob_name  << std::endl;
+    HILOG(kDebug, "Creating new blob: {}", blob_name)
     blob_map_->emplace(blob_id);
     auto iter = blob_map_->find(blob_id);
     hipc::Ref<hipc::pair<BlobId, BlobInfo>> info = (*iter);
@@ -336,7 +336,7 @@ MetadataManager::LocalPutBlobMetadata(TagId bkt_id,
     blob_info.header_->blob_size_ = blob_size;
     blob_info.header_->score_ = score;
   } else {
-    VLOG(kDebug) << "Found existing blob: " << blob_name << std::endl;
+    HILOG(kDebug, "Found existing blob: {}", blob_name)
     blob_id = *(*blob_id_map_)[*internal_blob_name];
     auto iter = blob_map_->find(blob_id);
     hipc::Ref<hipc::pair<BlobId, BlobInfo>> info = (*iter);
@@ -499,7 +499,7 @@ bool MetadataManager::LocalDestroyBlob(TagId bkt_id,
  * */
 void MetadataManager::LocalClear() {
   AUTO_TRACE(1);
-  VLOG(kDebug) << "Clearing all buckets and blobs" << std::endl;
+  HILOG(kDebug, "Clearing all buckets and blobs")
   ScopedRwWriteLock tag_map_lock(header_->lock_[kTagMapLock]);
   tag_id_map_->clear();
   tag_map_->clear();
@@ -548,8 +548,7 @@ MetadataManager::LocalGetOrCreateTag(const std::string &tag_name,
 
   // Emplace bucket if it does not already exist
   if (did_create) {
-    VLOG(kDebug) << "Creating tag for the first time: "
-                 << tag_name << std::endl;
+    HILOG(kDebug, "Creating tag for the first time: {}", tag_name)
     tag_map_->emplace(tag_id);
     auto iter = tag_map_->find(tag_id);
     hipc::Ref<hipc::pair<TagId, TagInfo>> info_pair = *iter;
@@ -560,7 +559,7 @@ MetadataManager::LocalGetOrCreateTag(const std::string &tag_name,
     info.header_->tag_id_ = tag_id;
     info.header_->owner_ = owner;
   } else {
-    VLOG(kDebug) << "Found existing tag: " << tag_name << std::endl;
+    HILOG(kDebug, "Found existing tag: {}", tag_name)
     auto iter = tag_id_map_->find(*tag_name_shm);
     hipc::Ref<hipc::pair<hipc::charbuf, TagId>> id_info = (*iter);
     tag_id = *id_info->second_;

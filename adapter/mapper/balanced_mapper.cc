@@ -22,9 +22,7 @@ namespace hermes::adapter {
 void BalancedMapper::map(size_t off, size_t size,
                          size_t page_size,
                          BlobPlacements &ps) {
-  VLOG(1) << "Mapping File with offset:" << off << " and size:" << size << "."
-          << std::endl;
-
+  HILOG(kDebug, "Mapping File with offset {} and size {}", off, size);
   size_t kPageSize = page_size;
   size_t size_mapped = 0;
   while (size > size_mapped) {

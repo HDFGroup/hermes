@@ -29,7 +29,7 @@ std::vector<std::string> RpcContext::ParseHostfile(const std::string &path) {
     }
     file.close();
   } else {
-    LOG(FATAL) << "Could not open the hostfile: " << path << std::endl;
+    HELOG(kFatal, "Could not open the hostfile: {}", path)
   }
   return hosts;
 }
@@ -65,15 +65,14 @@ void RpcContext::InitRpcContext() {
     MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
     node_id_ += 1;
     if (nprocs != (int)hosts_.size()) {
-      LOG(FATAL) << hshm::Formatter::format(
-          "Must run the daemon on EVERY node in the hostfile. "
-          "{}/{} were launched.", nprocs, hosts_.size()) << std::endl;
+      HELOG(kFatal, "Must run the daemon on EVERY node in the hostfile. "
+            "{}/{} were launched.", nprocs, hosts_.size())
     }
   } else {
     node_id_ = mdm_->header_->node_id_;
   }
   if (node_id_ == 0 || node_id_ > (i32)hosts_.size()) {
-    LOG(FATAL) << "Couldn't identify this host" << std::endl;
+    HELOG(kFatal, "Couldn't identify this host.")
   }
 }
 
@@ -87,7 +86,8 @@ bool RpcContext::ShouldDoLocalCall(i32 node_id) {
       return node_id == node_id_;
     }
     default: {
-      LOG(FATAL) << "Invalid HermesType" << std::endl;
+      HELOG(kFatal, "Invalid HermesType.")
+      exit(1);
     }
   }
 }
@@ -112,10 +112,8 @@ std::string RpcContext::GetMyRpcAddress() {
 std::string RpcContext::GetHostNameFromNodeId(i32 node_id) {
   // NOTE(llogan): node_id 0 is reserved as the NULL node
   if (node_id <= 0 || node_id > (i32)hosts_.size()) {
-    LOG(FATAL) << hshm::Formatter::format(
-                      "Attempted to get from node {}, which is out of "
-                      "the range 1-{}", node_id, hosts_.size() + 1)
-               << std::endl;
+    HELOG(kFatal, "Attempted to get from node {}, which is out of "
+          "the range 1-{}", node_id, hosts_.size() + 1)
   }
   u32 index = node_id - 1;
   return hosts_[index].hostname_;
@@ -125,10 +123,8 @@ std::string RpcContext::GetHostNameFromNodeId(i32 node_id) {
 std::string RpcContext::GetIpAddressFromNodeId(i32 node_id) {
   // NOTE(llogan): node_id 0 is reserved as the NULL node
   if (node_id <= 0 || node_id > (i32)hosts_.size()) {
-    LOG(FATAL) << hshm::Formatter::format(
-                      "Attempted to get from node {}, which is out of "
-                      "the range 1-{}", node_id, hosts_.size() + 1)
-               << std::endl;
+    HELOG(kFatal, "Attempted to get from node {}, which is out of "
+          "the range 1-{}", node_id, hosts_.size() + 1)
   }
   u32 index = node_id - 1;
   return hosts_[index].ip_addr_;
@@ -160,12 +156,12 @@ std::string RpcContext::_GetIpAddress(const std::string &host_name) {
       gethostbyname_r(host_name.c_str(), &hostname_info, hostname_buffer,
                       4096, &hostname_result, &hostname_error);
   if (gethostbyname_result != 0) {
-    LOG(FATAL) << hstrerror(h_errno);
+    HELOG(kFatal, hstrerror(h_errno))
   }
   in_addr **addr_list = (struct in_addr **)hostname_info.h_addr_list;
 #endif
   if (!addr_list[0]) {
-    LOG(FATAL) << hstrerror(h_errno);
+    HELOG(kFatal, hstrerror(h_errno))
   }
 
   char ip_address[INET_ADDRSTRLEN];

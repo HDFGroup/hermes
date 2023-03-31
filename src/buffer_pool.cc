@@ -57,12 +57,11 @@ BufferPool::BufferPool(ShmHeader<BufferPool> *header, hipc::Allocator *alloc) {
       hipc::Ref<DeviceInfo> dev_info = (*mdm_->devices_)[dev_id];
       size_t size_per_core = target->max_cap_ / header_->concurrency_;
       if (size_per_core < MEGABYTES(1)) {
-        LOG(FATAL) << hshm::Formatter::format(
-                          "The capacity of the target {} ({} bytes)"
-                          " is not enough to give each of the {} CPUs at least"
-                          " 1MB of space",
-                          dev_info->mount_point_->str(),
-                          target->max_cap_, header_->concurrency_) << std::endl;
+        HELOG(kFatal, "The capacity of the target {} ({} bytes)"
+              " is not enough to give each of the {} CPUs at least"
+              " 1MB of space",
+              dev_info->mount_point_->str(),
+              target->max_cap_, header_->concurrency_)
       }
 
       // Initialize the core's metadata
@@ -208,10 +207,9 @@ void BufferPool::AllocateBuffers(size_t total_size,
       if (slab_count > 0) {
         i32 target_id = tid.GetIndex() + 1;
         if (target_id >= (i32)mdm_->targets_->size()) {
-          LOG(FATAL) << "BORG ran out of space on all targets."
-                     << "This shouldn't happen."
-                     << "Please increase the amount of space dedicated to PFS"
-                     << std::endl;
+          HELOG(kFatal, "BORG ran out of space on all targets."
+                " This shouldn't happen."
+                " Please increase the amount of space dedicated to PFS.")
         }
         tid = (*mdm_->targets_)[target_id]->id_;
       }
@@ -426,8 +424,8 @@ void BufferPool::GetFreeListForCpu(u16 target_id, int cpu, int slab_id,
   size_t cpu_free_list_idx = header_->GetCpuFreeList(target_id,
                                                      cpu, slab_id);
   if (cpu_free_list_idx >= target_allocs_->size()) {
-    LOG(FATAL) << "For some reason, the CPU free list was "
-                  "not allocated properly and overflowed." << std::endl;
+    HELOG(kFatal, "For some reason, the CPU free list was "
+          "not allocated properly and overflowed.")
   }
   hipc::Ref<BpFreeListPair> free_list_p =
       (*target_allocs_)[cpu_free_list_idx];

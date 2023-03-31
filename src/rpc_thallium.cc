@@ -25,23 +25,21 @@ namespace hermes {
 
 /** start Thallium RPC server */
 void ThalliumRpc::InitServer() {
-  VLOG(kInfo) << "Initializing RPC server" << std::endl;
+  HILOG(kInfo, "Initializing RPC server");
   InitRpcContext();
   std::string addr = GetMyRpcAddress();
-  VLOG(kInfo) << "Attempting to start server on: " << addr << std::endl;
+  HILOG(kInfo, "Attempting to start server on: {}", addr);
   try {
     server_engine_ = std::make_unique<tl::engine>(
         addr, THALLIUM_SERVER_MODE, true, config_->rpc_.num_threads_);
   } catch (std::exception &e) {
-    LOG(FATAL) << "RPC init failed for host: " << addr
-               << std::endl << e.what() << std::endl;
+    HELOG(kFatal, "RPC init failed for host: {}\n{}", addr, e.what());
   }
   std::string rpc_server_name = server_engine_->self();
-  VLOG(kInfo) << hshm::Formatter::format(
-                   "Serving {} (i.e., {}) with {} RPC threads as node id {}",
-                   rpc_server_name, addr,
-                   config_->rpc_.num_threads_,
-                   node_id_) << std::endl;
+  HILOG(kInfo, "Serving {} (i.e., {}) with {} RPC threads as node id {}",
+        rpc_server_name, addr,
+        config_->rpc_.num_threads_,
+        node_id_);
   DefineRpcs();
 }
 
@@ -52,46 +50,42 @@ void ThalliumRpc::InitClient()  {
   client_engine_ = std::make_unique<tl::engine>(protocol,
                               THALLIUM_CLIENT_MODE,
                               true, 1);
-  VLOG(kInfo) << hshm::Formatter::format(
-                   "This client is on node {} (i.e., {})",
-                   node_id_, GetHostNameFromNodeId(node_id_)) << std::endl;
+  HILOG(kInfo, "This client is on node {} (i.e., {})",
+        node_id_, GetHostNameFromNodeId(node_id_));
 }
 
 /** run daemon */
 void ThalliumRpc::RunDaemon() {
   server_engine_->enable_remote_shutdown();
   auto prefinalize_callback = [this]() {
-    VLOG(kInfo) << "Beginning finalization on node: " <<
-        this->node_id_ << std::endl;
+    HILOG(kInfo, "Beginning finalization on node: {}", this->node_id_);
     this->Finalize();
-    VLOG(kInfo) << "Finished finalization callback on node: " <<
-        this->node_id_ << std::endl;
+    HILOG(kInfo, "Finished finalization on node: {}", this->node_id_);
   };
 
-  // TODO(llogan): and config param to do this
+  // TODO(llogan): add config param to do this
   std::ofstream daemon_started_fs;
   daemon_started_fs.open("/tmp/hermes_daemon_log.txt");
   daemon_started_fs << HERMES_SYSTEM_INFO->pid_;
   daemon_started_fs.close();
-  VLOG(kInfo) << "Running the daemon on node " << node_id_ << std::endl;
+  HILOG(kInfo, "Running the daemon on node: {}", node_id_);
 
   server_engine_->push_prefinalize_callback(prefinalize_callback);
   server_engine_->wait_for_finalize();
-  VLOG(kInfo) << "Daemon has stopped on node: " <<
-      this->node_id_ << std::endl;
+  HILOG(kInfo, "Daemon has stopped on node: {}", node_id_);
 }
 
 /** stop daemon (from client) */
 void ThalliumRpc::StopDaemon() {
   try {
     for (i32 node_id = 1; node_id < (int)hosts_.size() + 1; ++node_id) {
-      VLOG(kInfo) << "Sending stop signal to: " << node_id << std::endl;
+      HILOG(kInfo, "Sending stop signal to: {}", node_id);
       std::string server_name = GetServerName(node_id);
       tl::endpoint server = client_engine_->lookup(server_name.c_str());
       client_engine_->shutdown_remote_engine(server);
     }
   } catch (std::exception &e) {
-    LOG(FATAL) << e.what() << std::endl;
+    HELOG(kFatal, e.what());
   }
 }
 
@@ -107,7 +101,7 @@ std::string ThalliumRpc::GetServerName(i32 node_id) {
 void ThalliumRpc::Finalize() {
   switch (mode_) {
     case HermesType::kServer: {
-      VLOG(kInfo) << "Stopping (server mode)" << std::endl;
+      HILOG(kInfo, "Stopping (server mode)");
       this->kill_requested_.store(true);
       HERMES->prefetch_.Finalize();
       // NOTE(llogan): Don't use finalize with unique_ptr. finalize() is
@@ -119,7 +113,11 @@ void ThalliumRpc::Finalize() {
       break;
     }
     case HermesType::kClient: {
-      VLOG(kInfo) << "Stopping (client mode)" << std::endl;
+      HILOG(kInfo, "Stopping (client mode)");
+      // NOTE(llogan): Don't use finalize with unique_ptr. finalize() is
+      // called in the destructor of the tl::enigne, and will segfault if
+      // called twice.
+
       // client_engine_.release();
       break;
     }

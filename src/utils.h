@@ -15,7 +15,7 @@
 
 #include <assert.h>
 #include <map>
-#include "logging.h"
+#include "hermes_shm/util/logging.h"
 
 namespace hermes {
 
