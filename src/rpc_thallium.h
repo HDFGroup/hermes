@@ -29,7 +29,7 @@ namespace hermes {
 /**
    A structure to represent Thallium state
 */
-class ThalliumRpc : public RpcContext {
+class ThalliumRpc  : public RpcContext {
  public:
   std::atomic<bool> kill_requested_; /**< is kill requested? */
   std::unique_ptr<tl::engine> client_engine_; /**< pointer to client engine */

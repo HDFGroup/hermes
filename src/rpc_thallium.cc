@@ -46,7 +46,7 @@ void ThalliumRpc::InitServer() {
 }
 
 /** initialize RPC clients */
-void ThalliumRpc::InitClient() {
+void ThalliumRpc::InitClient()  {
   InitRpcContext();
   std::string protocol = GetProtocol();
   client_engine_ = std::make_unique<tl::engine>(protocol,
@@ -110,22 +110,17 @@ void ThalliumRpc::Finalize() {
       LOG(INFO) << "Stopping (server mode)" << std::endl;
       this->kill_requested_.store(true);
       HERMES->prefetch_.Finalize();
-      try {
-        // NOTE(llogan): Don't use finalize with unique_ptr. finalize() is
-        // called in the destructor of the tl::enigne, and will segfault if
-        // called twice.
-        // server_engine_->finalize();
-        server_engine_.release();
-        client_engine_.release();
-      } catch (std::exception &e) {
-        LOG(INFO) << "Ignoring margo finalization error: "
-                  << e.what() << std::endl;
-      }
+      // NOTE(llogan): Don't use finalize with unique_ptr. finalize() is
+      // called in the destructor of the tl::enigne, and will segfault if
+      // called twice.
+
+      // server_engine_->finalize()
+      // client_engine_->finalize()
       break;
     }
     case HermesType::kClient: {
       LOG(INFO) << "Stopping (client mode)" << std::endl;
-      client_engine_.release();
+      // client_engine_.release();
       break;
     }
     default: {

@@ -30,6 +30,7 @@ class Prefetcher {
   tl::engine *engine;            /**< Argobots execution engine */
   ABT_xstream execution_stream_; /**< Argobots execution stream */
   double epoch_ms_;              /**< Milliseconds to sleep */
+  bool is_enabled_;              /**< Whether the prefetcher is enabled */
 
  public:
   /** Initialize each candidate prefetcher, including trace info */

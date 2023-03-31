@@ -23,8 +23,9 @@ void Prefetcher::Init() {
   auto conf = HERMES->server_config_;
 
   // Make sure that prefetcher is enabled
-  mdm_->enable_io_tracing_ = conf.prefetcher_.enabled_;
-  if (!conf.prefetcher_.enabled_) {
+  is_enabled_ = conf.prefetcher_.enabled_;
+  mdm_->enable_io_tracing_ = is_enabled_;
+  if (!is_enabled_) {
     return;
   }
 
@@ -93,9 +94,11 @@ void Prefetcher::Init() {
 }
 
 /** Finalize the prefetcher thread */
-void Prefetcher::Finalize() {
-  ABT_xstream_join(execution_stream_);
-  ABT_xstream_free(&execution_stream_);
+void Prefetcher::Finalize()  {
+  if (is_enabled_) {
+    ABT_xstream_join(execution_stream_);
+    ABT_xstream_free(&execution_stream_);
+  }
 }
 
 /** Parse the MDM's I/O pattern log */
