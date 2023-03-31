@@ -25,7 +25,9 @@ namespace hermes::adapter::fs {
 File Filesystem::Open(AdapterStat &stat, const std::string &path) {
   File f;
   auto mdm = HERMES_FS_METADATA_MANAGER;
-  stat.adapter_mode_ = mdm->GetAdapterMode(path);
+  if (stat.adapter_mode_ == AdapterMode::kNone) {
+    stat.adapter_mode_ = mdm->GetAdapterMode(path);
+  }
   io_client_->RealOpen(f, stat, path);
   if (!f.status_) { return f; }
   Open(stat, f, path);
@@ -217,9 +219,9 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
       data_offset = 0;
       break;
     }
-    size_t new_file_size = opts.backend_off_ + blob_wrap.size();
+    size_t new_file_size = off + data_offset + blob_wrap.size();
     if (new_file_size > backend_size) {
-      bkt->UpdateSize(new_file_size - backend_size,
+      bkt->UpdateSize(new_file_size,
                       BucketUpdate::kBackend);
       backend_size = new_file_size;
     }
@@ -784,19 +786,6 @@ int Filesystem::Close(File &f, bool &stat_exists, bool destroy) {
   }
   stat_exists = true;
   return Close(f, *stat, destroy);
-}
-
-/**
- * Helper methods
- * */
-
-File Filesystem::GetFileFromPath(const std::string &path) {
-  auto mdm = HERMES_FS_METADATA_MANAGER;
-  std::list<File>* filesp = mdm->Find(path);
-  if (filesp == nullptr || filesp->size() == 0) {
-    return File();
-  }
-  return filesp->front();
 }
 
 }  // namespace hermes::adapter::fs

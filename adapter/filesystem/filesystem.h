@@ -221,9 +221,6 @@ class Filesystem {
   int Close(File &f, bool &stat_exists, bool destroy = true);
 
  public:
-  /** Get a File from a path name */
-  File GetFileFromPath(const std::string &path);
-
   /** Whether or not \a path PATH is tracked by Hermes */
   static bool IsPathTracked(const std::string &path) {
     if (!HERMES->IsInitialized()) {

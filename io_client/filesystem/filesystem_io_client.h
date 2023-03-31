@@ -208,6 +208,7 @@ struct AdapterStat {
         st_atim_(),
         st_mtim_(),
         st_ctim_(),
+        adapter_mode_(AdapterMode::kNone),
         fd_(-1),
         fh_(nullptr),
         mpi_fh_(nullptr),

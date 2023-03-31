@@ -27,6 +27,7 @@ enum class AdapterType {
 
 /** Adapter modes */
 enum class AdapterMode {
+  kNone,
   kDefault,
   kBypass,
   kScratch,

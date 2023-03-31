@@ -106,10 +106,8 @@ void StdioIoClient::WriteBlob(const hipc::charbuf &bkt_name,
   std::string filename = bkt_name.str();
   HILOG(kDebug, "Writing to file: {}"
         " offset: {}"
-        " size: {}"
-        " file_size: {}",
-        bkt_name.str(), opts.backend_off_, full_blob.size(),
-        stdfs::file_size(bkt_name.str()))
+        " size: {}",
+        bkt_name.str(), opts.backend_off_, full_blob.size())
   FILE *fh = real_api->fopen(filename.c_str(), "r+");
   if (fh == nullptr) {
     status.size_ = 0;
@@ -136,10 +134,8 @@ void StdioIoClient::ReadBlob(const hipc::charbuf &bkt_name,
   std::string filename = bkt_name.str();
   HILOG(kDebug, "Reading from file: {}"
         " offset: {}"
-        " size: {}"
-        " file_size: {}",
-        bkt_name.str(), opts.backend_off_, full_blob.size(),
-        stdfs::file_size(bkt_name.str()))
+        " size: {}",
+        bkt_name.str(), opts.backend_off_, full_blob.size())
   FILE *fh = real_api->fopen(filename.c_str(), "r");
   if (fh == nullptr) {
     status.size_ = 0;

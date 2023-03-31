@@ -107,10 +107,8 @@ void MpiioIoClient::WriteBlob(const hipc::charbuf &bkt_name,
   HILOG(kDebug,
         "Write called for: {}"
         " on offset: {}"
-        " and size: {}"
-        " file_size: {}",
-        filename, opts.backend_off_, full_blob.size(),
-        stdfs::file_size(filename))
+        " and size: {}",
+        filename, opts.backend_off_, full_blob.size())
   MPI_File fh;
   int write_count = 0;
   status.mpi_ret_ = real_api->MPI_File_open(MPI_COMM_SELF, filename.c_str(),
@@ -156,10 +154,8 @@ void MpiioIoClient::ReadBlob(const hipc::charbuf &bkt_name,
   HILOG(kDebug,
         "Reading from: {}"
         " on offset: {}"
-        " and size: {}"
-        " file_size: {}",
-        filename, opts.backend_off_, full_blob.size(),
-        stdfs::file_size(filename))
+        " and size: {}",
+        filename, opts.backend_off_, full_blob.size())
   MPI_File fh;
   int read_count = 0;
   status.mpi_ret_ = real_api->MPI_File_open(MPI_COMM_SELF, filename.c_str(),

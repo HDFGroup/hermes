@@ -55,9 +55,9 @@ size_t Bucket::GetSize(bool backend) {
    * Update the size of the bucket
    * Needed for the adapters for now.
    * */
-void Bucket::UpdateSize(ssize_t delta, BucketUpdate mode) {
+void Bucket::UpdateSize(ssize_t new_size, BucketUpdate mode) {
   mdm_->GlobalUpdateBucketSize(id_,
-                               delta,
+                               new_size,
                                mode);
 }
 

@@ -91,6 +91,10 @@ typedef int (*unlink_t)(const char *pathname);
 
 namespace hermes::adapter::fs {
 
+
+/** Used for compatability with older kernel versions */
+static int fxstat_to_fstat(int fd, struct stat * stbuf);
+
 /** Pointers to the real posix API */
 class PosixApi : public RealApi {
  public:
@@ -194,6 +198,11 @@ class PosixApi : public RealApi {
     fstat = (fstat_t)dlsym(real_lib_, "fstat");
     REQUIRE_API(fstat || __fxstat || __fxstatat)
     REQUIRE_API(stat || __xstat || __lxstat)
+    if (!fstat) {
+      // NOTE(llogan): We use real_api->fstat in a couple of places
+      // fstat does need to be mapped always, or Hermes may segfault.
+      fstat = fxstat_to_fstat;
+    }
 
     // Try to hook a stat64 function
     __fxstat64 = (__fxstat64_t)dlsym(real_lib_, "__fxstat64");
@@ -224,5 +233,14 @@ class PosixApi : public RealApi {
 #define HERMES_POSIX_API \
   hshm::Singleton<hermes::adapter::fs::PosixApi>::GetInstance()
 #define HERMES_POSIX_API_T hermes::adapter::fs::PosixApi*
+
+namespace hermes::adapter::fs {
+/** Used for compatability with older kernel versions */
+static int fxstat_to_fstat(int fd, struct stat *stbuf) {
+#ifdef _STAT_VER
+  return HERMES_POSIX_API->__fxstat(_STAT_VER, fd, stbuf);
+#endif
+}
+}  // namespace hermes::adapter::fs
 
 #endif  // HERMES_ADAPTER_POSIX_H

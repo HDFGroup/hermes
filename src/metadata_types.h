@@ -53,7 +53,6 @@ enum class BucketUpdate {
   kNone,      /**< Do not update bucket stats */
   kInternal,  /**< Update the internal bucket stats only */
   kBackend,   /**< Update I/O client bucket stats */
-  kBoth       /**< Update both at the same time */
 };
 
 /** Represents the current status of a target */

@@ -169,25 +169,26 @@ bool MetadataManager::LocalUpdateBucketSize(TagId bkt_id,
   }
   hipc::Ref<hipc::pair<TagId, TagInfo>> info = (*iter);
   TagInfo &bkt_info = *info->second_;
-  HILOG(kDebug, "Updating the size of bucket: {} by: {} bytes",
-        bkt_info.name_->str(), delta)
   switch (mode) {
     case BucketUpdate::kInternal: {
       bkt_info.header_->internal_size_ += delta;
       break;
     }
     case BucketUpdate::kBackend: {
-      bkt_info.header_->client_state_.true_size_ += delta;
+      bkt_info.header_->client_state_.true_size_ = std::max(
+          bkt_info.header_->client_state_.true_size_, (size_t)delta);
       break;
-    }
-    case BucketUpdate::kBoth: {
-      bkt_info.header_->client_state_.true_size_ += delta;
-      bkt_info.header_->internal_size_ += delta;
     }
     case BucketUpdate::kNone: {
       HELOG(kFatal, "Cannot have kNone bucket type")
     }
   }
+  HILOG(kDebug, "Updating the size of bucket: {} by: {} bytes"
+                " New internal size: {}"
+                " New backend size: {}",
+        bkt_info.name_->str(), delta,
+        bkt_info.header_->internal_size_,
+        bkt_info.header_->client_state_.true_size_)
   return true;
 }
 
