@@ -36,9 +36,6 @@ TEST_CASE("TestTerminal") {
   std::cout << "\033[34m" << "Blue text" << "\033[0m" << std::endl;
   std::cout << "\033[35m" << "Magenta text" << "\033[0m" << std::endl;
   std::cout << "\033[36m" << "Cyan text" << "\033[0m" << std::endl;
-
-  std::cout << "\033]8;;https://www.example.com\a" << "Click here to visit example.com" << "\033]8;;\a" << std::endl;
-
 }
 
 TEST_CASE("TestAutoTrace") {

@@ -46,7 +46,7 @@ struct Arguments {
    A structure to represent test information
 */
 struct TestInfo {
-  static const int element_size = sizeof(f32); /**< test element size */
+  static inline const int element_size = sizeof(f32); /**< test element size */
 
   // int rank = 0;
   int comm_size = 1;            /**< communicator size */

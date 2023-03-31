@@ -28,7 +28,7 @@ else()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
   # Ensure that debug logging is disabled
   # This will keep only VLOGs which have priroity 0
-  add_compile_options("-DHERMES_LOG_VERBOSITY=0")
+  add_compile_options("-DHERMES_LOG_VERBOSITY=1")
   message("This IS a release build")
 endif()
 
