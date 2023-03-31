@@ -154,6 +154,7 @@ class ThalliumRpc  : public RpcContext {
       }
       case IoType::kNone: {
         HELOG(kFatal, "Cannot have none I/O type")
+        exit(1);
       }
     }
 

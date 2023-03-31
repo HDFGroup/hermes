@@ -204,8 +204,6 @@ int posttest(bool compare_data = true) {
       size_t char_mismatch = 0;
       for (size_t pos = 0; pos < size; ++pos) {
         if (d1[pos] != d2[pos]) {
-          auto p1 = d1[pos];
-          auto p2 = d2[pos];
           char_mismatch++;
         }
       }
