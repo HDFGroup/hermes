@@ -24,11 +24,6 @@
 #define MPI_MODE_TRUNCATE 0
 #endif
 
-#define REQUIRE_API(api_name) \
-  if (api_name == nullptr) { \
-    HELOG(kFatal, "HERMES Adapter failed to map symbol: {}", #api_name); \
-  }
-
 extern "C" {
 typedef int (*MPI_Init_t)(int * argc, char *** argv);
 typedef int (*MPI_Finalize_t)( void);
@@ -295,8 +290,6 @@ class MpiioApi {
   }
 };
 }  // namespace hermes::adapter::mpiio
-
-#undef REQUIRE_API
 
 #include "hermes_shm/util/singleton.h"
 

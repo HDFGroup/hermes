@@ -60,15 +60,18 @@ class AutoTrace {
  private:
   template<typename ...Args>
   void _StartTimer(HighResMonotonicTimer &timer) {
+#ifdef HERMES_ENABLE_PROFILING
     if constexpr(LOG_LEVEL <= HERMES_LOG_VERBOSITY) {
       timer.Resume();
       HILOG(LOG_LEVEL, "{}{}",
            fname_,
            internal_name_)
     }
+#endif
   }
 
   void _EndTimer(HighResMonotonicTimer &timer) {
+#ifdef HERMES_ENABLE_PROFILING
     if constexpr(LOG_LEVEL <= HERMES_LOG_VERBOSITY) {
       timer.Pause();
       HILOG(LOG_LEVEL, "{}{} {}ns",
@@ -78,6 +81,7 @@ class AutoTrace {
       timer.Reset();
       internal_name_.clear();
     }
+#endif
   }
 };
 

@@ -221,12 +221,15 @@ class Filesystem {
   int Close(File &f, bool &stat_exists, bool destroy = true);
 
  public:
+  /** Get a File from a path name */
+  File GetFileFromPath(const std::string &path);
+
   /** Whether or not \a path PATH is tracked by Hermes */
   static bool IsPathTracked(const std::string &path) {
     if (!HERMES->IsInitialized()) {
       return false;
     }
-    std::string abs_path = stdfs::weakly_canonical(path).string();
+    std::string abs_path = stdfs::absolute(path).string();
     auto &paths = HERMES->client_config_.path_list_;
     // Check if path is included or excluded
     for (std::pair<std::string, bool> &pth : paths) {

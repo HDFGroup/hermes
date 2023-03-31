@@ -84,7 +84,8 @@ void PosixIoClient::HermesClose(File &f,
   fs_mdm.mdm_->ReleaseFd(f.hermes_fd_);
 }
 
-/** Remove \a file FILE f */
+/** Remo
+ * ve \a file FILE f */
 int PosixIoClient::RealRemove(const std::string &path) {
   return real_api->remove(path.c_str());
 }

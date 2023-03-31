@@ -22,14 +22,15 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0")
   # Ensure that debug logging is enabled
   # This will keep logs which have beneath priority 10
-  add_compile_options("-DHERMES_LOG_VERBOSITY=10")
-  message("This is NOT a release build: ${CMAKE_BUILD_TYPE}")
+  add_compile_definitions(HERMES_LOG_VERBOSITY=10)
+  message("This is NOT a release build: ${CMAKE_BUILD_TYPE} ${CMAKE_CXX_FLAGS}")
 else()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
   # Ensure that debug logging is disabled
   # This will keep only VLOGs which have priroity 0
-  add_compile_options("-DHERMES_LOG_VERBOSITY=1")
-  message("This IS a release build")
+  message("IS THIS HERE?????")
+  add_compile_definitions(HERMES_LOG_VERBOSITY=1)
+  message("This IS a release build: ${CMAKE_BUILD_TYPE} ${CMAKE_CXX_FLAGS}")
 endif()
 
 #------------------------------------------------------------------------------

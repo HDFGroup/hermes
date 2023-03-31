@@ -24,7 +24,7 @@ void ClientConfig::ParseAdapterConfig(YAML::Node &yaml_conf,
                                       AdapterObjectConfig &conf) {
   std::string path = yaml_conf["path"].as<std::string>();
   path = hshm::path_parser(path);
-  path = stdfs::weakly_canonical(path).string();
+  path = stdfs::absolute(path).string();
   if (yaml_conf["mode"]) {
     conf.mode_ = AdapterModeConv::to_enum(yaml_conf["mode"].as<std::string>());
   }

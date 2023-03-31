@@ -19,11 +19,6 @@
 #include <cstdio>
 #include "io_client/real_api.h"
 
-#define REQUIRE_API(api_name) \
-  if (api_name == nullptr) { \
-    HELOG(kFatal, "HERMES Adapter failed to map symbol: {}", #api_name); \
-  }
-
 extern "C" {
 typedef FILE * (*fopen_t)(const char * path, const char * mode);
 typedef FILE * (*fopen64_t)(const char * path, const char * mode);
@@ -272,8 +267,6 @@ class StdioApi {
   }
 };
 }  // namespace hermes::adapter::fs
-
-#undef REQUIRE_API
 
 #include "hermes_shm/util/singleton.h"
 

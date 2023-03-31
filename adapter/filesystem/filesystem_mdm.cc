@@ -41,7 +41,7 @@ bool MetadataManager::Update(const File &f, const AdapterStat &stat) {
 }
 
 std::list<File>* MetadataManager::Find(const std::string &path) {
-  std::string canon_path = stdfs::weakly_canonical(path).string();
+  std::string canon_path = stdfs::absolute(path).string();
   ScopedRwReadLock md_lock(lock_);
   auto iter = path_to_hermes_file_.find(canon_path);
   if (iter == path_to_hermes_file_.end())

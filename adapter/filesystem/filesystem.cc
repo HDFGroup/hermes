@@ -39,7 +39,7 @@ void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
   if (!exists) {
     HILOG(kDebug, "File not opened before by adapter")
     // Create the new bucket
-    stat.path_ = stdfs::weakly_canonical(path).string();
+    stat.path_ = stdfs::absolute(path).string();
     auto path_shm = hipc::make_uptr<hipc::charbuf>(stat.path_);
     size_t file_size = io_client_->GetSize(*path_shm);
     // The file was opened with TRUNCATION
@@ -784,6 +784,19 @@ int Filesystem::Close(File &f, bool &stat_exists, bool destroy) {
   }
   stat_exists = true;
   return Close(f, *stat, destroy);
+}
+
+/**
+ * Helper methods
+ * */
+
+File Filesystem::GetFileFromPath(const std::string &path) {
+  auto mdm = HERMES_FS_METADATA_MANAGER;
+  std::list<File>* filesp = mdm->Find(path);
+  if (filesp == nullptr || filesp->size() == 0) {
+    return File();
+  }
+  return filesp->front();
 }
 
 }  // namespace hermes::adapter::fs

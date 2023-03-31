@@ -16,6 +16,11 @@
 #include <dlfcn.h>
 #include <link.h>
 
+#define REQUIRE_API(api_name) \
+  if (!(api_name)) { \
+    HELOG(kFatal, "HERMES Adapter failed to map symbol: {}", #api_name); \
+  }
+
 namespace hermes::adapter {
 
 struct RealApiIter {
@@ -29,8 +34,9 @@ struct RealApiIter {
 };
 
 struct RealApi {
-  void *real_lib_next_;
-  void *real_lib_default_;
+  void *real_lib_next_;     /**< TODO(llogan): remove */
+  void *real_lib_default_;  /**< TODO(llogan): remove */
+  void *real_lib_;
   bool is_intercepted_;
 
   static int callback(struct dl_phdr_info *info, size_t size, void *data) {
@@ -51,7 +57,8 @@ struct RealApi {
     RealApiIter iter(symbol_name, is_intercepted);
     dl_iterate_phdr(callback, (void*)&iter);
     if (iter.lib_path_) {
-      real_lib_next_ = dlopen(iter.lib_path_, RTLD_GLOBAL | RTLD_NOW);
+      real_lib_ = dlopen(iter.lib_path_, RTLD_GLOBAL | RTLD_NOW);
+      real_lib_next_ = real_lib_;
       real_lib_default_ = real_lib_next_;
     }
     void *is_intercepted_ptr = (void*)dlsym(RTLD_DEFAULT,
