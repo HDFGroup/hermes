@@ -45,7 +45,7 @@ void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
     auto path_shm = hipc::make_uptr<hipc::charbuf>(stat.path_);
     size_t file_size = io_client_->GetSize(*path_shm);
     // The file was opened with TRUNCATION
-    if (stat.is_trunc_) {
+    if (stat.hflags_.OrBits(HERMES_FS_TRUNC)) {
       // TODO(llogan): Need to add back bucket lock
       stat.bkt_id_ = HERMES->GetBucket(stat.path_, ctx, 0);
       stat.bkt_id_->Clear(true);
@@ -56,7 +56,7 @@ void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
     // TODO(llogan): can avoid two unordered_map queries here
     stat.page_size_ = mdm->GetAdapterPageSize(path);
     // The file was opened with APPEND
-    if (stat.is_append_) {
+    if (stat.hflags_.OrBits(HERMES_FS_APPEND)) {
       stat.st_ptr_ =  stat.bkt_id_->GetSize(true);
     }
     // Allocate internal hermes data
@@ -446,7 +446,7 @@ size_t Filesystem::GetSize(File &f, AdapterStat &stat) {
 
 off_t Filesystem::Seek(File &f, AdapterStat &stat,
                        SeekMode whence, off_t offset) {
-  if (stat.is_append_) {
+  if (stat.hflags_.OrBits(HERMES_FS_APPEND)) {
     HILOG(kDebug, "File pointer not updating because append mode")
     return -1;
   }
@@ -552,15 +552,20 @@ int Filesystem::Close(File &f, AdapterStat &stat, bool destroy) {
 int Filesystem::Remove(const std::string &pathname) {
   auto mdm = HERMES_FS_METADATA_MANAGER;
   int ret = io_client_->RealRemove(pathname);
+  // Destroy the bucket. It's created if it doesn't exist
+  auto bkt = HERMES->GetBucket(pathname);
+  HILOG(kDebug, "Destroying the bucket: {}", bkt->GetName());
+  bkt->Destroy();
+  // Destroy all file descriptors
   std::list<File>* filesp = mdm->Find(pathname);
   if (filesp == nullptr) {
     return ret;
   }
+  HILOG(kDebug, "Destroying the file descriptors: {}", pathname);
   std::list<File> files = *filesp;
   for (File &f : files) {
     auto stat = mdm->Find(f);
     if (stat == nullptr) { continue; }
-    stat->bkt_id_->Destroy();
     auto mdm = HERMES_FS_METADATA_MANAGER;
     FilesystemIoClientState fs_ctx(&mdm->fs_mdm_, (void *)&stat);
     io_client_->HermesClose(f, *stat, fs_ctx);

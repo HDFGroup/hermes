@@ -21,6 +21,8 @@ namespace hshm {
 struct SystemInfo {
   int pid_;
   int ncpu_;
+  int uid_;
+  int gid_;
   int page_size_;
   size_t ram_size_;
 
@@ -31,6 +33,8 @@ struct SystemInfo {
     struct sysinfo info;
     sysinfo(&info);
     ram_size_ = info.totalram;
+    uid_ = getuid();
+    gid_ = getgid();
   }
 };
 

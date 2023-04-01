@@ -25,15 +25,17 @@ namespace stdfs = std::filesystem;
 namespace hermes::adapter::fs {
 
 /** Put or get data directly from I/O client */
-#define HERMES_IO_CLIENT_BYPASS (1 << 0)
+#define HERMES_IO_CLIENT_BYPASS BIT_OPT(uint32_t, 0)
 /** Only put or get data from a Hermes buffer; no fallback to I/O client */
-#define HERMES_IO_CLIENT_NO_FALLBACK (1 << 1)
+#define HERMES_IO_CLIENT_NO_FALLBACK BIT_OPT(uint32_t, 1)
 /** Whether to perform seek */
-#define HERMES_FS_SEEK (1 << 2)
+#define HERMES_FS_SEEK BIT_OPT(uint32_t, 2)
+/** Whether to perform create */
+#define HERMES_FS_CREATE BIT_OPT(uint32_t, 3)
+/** Whether in append mode */
+#define HERMES_FS_APPEND BIT_OPT(uint32_t, 4)
 /** Whether to perform truncate */
-#define HERMES_FS_TRUNC (1 << 3)
-/** The number of I/O client flags (used for extending flag field) */
-#define HERMES_IO_CLIENT_FLAGS_COUNT 4
+#define HERMES_FS_TRUNC BIT_OPT(uint32_t, 5)
 
 /** A structure to represent IO status */
 struct IoStatus {
@@ -175,6 +177,7 @@ struct File {
 struct AdapterStat {
   std::string path_;     /**< The URL of this file */
   int flags_;            /**< open() flags for POSIX */
+  bitfield32_t hflags_;  /**< Flags used by FS adapter */
   mode_t st_mode_;       /**< protection */
   uid_t st_uid_;         /**< user ID of owner */
   gid_t st_gid_;         /**< group ID of owner */
@@ -189,8 +192,6 @@ struct AdapterStat {
   FILE *fh_;        /**< real STDIO file handler */
   MPI_File mpi_fh_; /**< real MPI file handler */
 
-  bool is_trunc_;  /**< File is truncated */
-  bool is_append_; /**< File is in append mode */
   int amode_;      /**< access mode (MPI) */
   MPI_Info info_;  /**< Info object (handle) */
   MPI_Comm comm_;  /**< Communicator for the file.*/
@@ -203,6 +204,7 @@ struct AdapterStat {
   /** Default constructor */
   AdapterStat()
       : flags_(0),
+        hflags_(),
         st_mode_(),
         st_ptr_(0),
         st_atim_(),
@@ -212,8 +214,6 @@ struct AdapterStat {
         fd_(-1),
         fh_(nullptr),
         mpi_fh_(nullptr),
-        is_trunc_(false),
-        is_append_(false),
         amode_(0),
         comm_(MPI_COMM_SELF),
         atomicity_(false),

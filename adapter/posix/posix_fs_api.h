@@ -34,18 +34,17 @@ class PosixFs : public hermes::adapter::fs::Filesystem {
     auto existing = mdm->Find(f);
     if (existing) {
       AdapterStat &astat = *existing;
-      // TODO(chogan): st_dev and st_ino need to be assigned by us, but
-      // currently we get them by calling the real fstat on open.
+      /*memset(buf, 0, sizeof(StatT));
       buf->st_dev = 0;
-      buf->st_ino = 0;
-      buf->st_mode = astat.st_mode_;
-      buf->st_nlink = 0;
-      buf->st_uid = astat.st_uid_;
-      buf->st_gid = astat.st_gid_;
-      buf->st_rdev = 0;
+      buf->st_ino = 0;*/
+      buf->st_mode = 0100644; // astat.st_mode_;
+      /*buf->st_nlink = 1;*/
+      buf->st_uid = HERMES_SYSTEM_INFO->uid_; // astat.st_uid_;
+      buf->st_gid = HERMES_SYSTEM_INFO->gid_; // astat.st_gid_;
+      // buf->st_rdev = 0;
       buf->st_size = GetSize(f, astat);
-      // buf->st_blksize = astat.st_blksize_;
-      buf->st_blocks = 0;
+      /*buf->st_blksize = 0;
+      buf->st_blocks = 0;*/
       buf->st_atime = astat.st_atim_.tv_sec;
       buf->st_mtime = astat.st_mtim_.tv_sec;
       buf->st_ctime = astat.st_ctim_.tv_sec;
@@ -66,6 +65,10 @@ class PosixFs : public hermes::adapter::fs::Filesystem {
     stat.st_mode_ = 0;
     stat.adapter_mode_ = AdapterMode::kScratch;
     File f = Open(stat, __filename);
+    if (!f.status_) {
+      memset(buf, 0, sizeof(StatT));
+      return -1;
+    }
     int result = Stat(f, buf);
     Close(f, stat_exists);
     return result;

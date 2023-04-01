@@ -18,25 +18,28 @@ namespace hermes::adapter::fs {
 void PosixIoClient::RealOpen(File &f,
                              AdapterStat &stat,
                              const std::string &path) {
-  if (stat.adapter_mode_ == AdapterMode::kScratch) {
-    stat.flags_ &= ~O_CREAT;
+  if (stat.flags_ & O_APPEND) {
+    stat.hflags_.SetBits(HERMES_FS_APPEND);
   }
+  if (stat.flags_ & O_CREAT) {
+    stat.hflags_.SetBits(HERMES_FS_CREATE);
+  }
+  if (stat.flags_ & O_TRUNC) {
+    stat.hflags_.SetBits(HERMES_FS_TRUNC);
+  }
+
+  bool scratch = false;
   if (stat.flags_ & O_CREAT || stat.flags_ & O_TMPFILE) {
     if (stat.adapter_mode_ != AdapterMode::kScratch) {
       stat.fd_ = real_api->open(path.c_str(), stat.flags_, stat.st_mode_);
+    } else {
+      scratch = true;
     }
   } else {
     stat.fd_ = real_api->open(path.c_str(), stat.flags_);
   }
-  if (stat.adapter_mode_ != AdapterMode::kScratch &&
-      stat.fd_ < 0) {
+  if (stat.fd_ < 0 && !scratch) {
     f.status_ = false;
-  }
-  if (stat.flags_ & O_APPEND) {
-    stat.is_append_ = true;
-  }
-  if (stat.flags_ & O_TRUNC) {
-    stat.is_trunc_ = true;
   }
 }
 

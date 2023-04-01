@@ -44,6 +44,13 @@ class Bucket {
                   size_t backend_size = 0);
 
   /**
+   * Check if the bucket was created in the constructor
+   * */
+  bool DidCreate() {
+    return did_create_;
+  }
+
+  /**
    * Get an existing bucket.
    * */
   explicit Bucket(TagId tag_id);
