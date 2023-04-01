@@ -142,17 +142,14 @@ void ServerConfig::ParsePrefetchInfo(YAML::Node yaml_conf) {
 
 /** parse prefetch information from YAML config */
 void ServerConfig::ParseTraitInfo(YAML::Node yaml_conf) {
-  for (YAML::Node trait_repo : yaml_conf) {
-    std::string dir = hshm::path_parser(
-        trait_repo["path"].as<std::string>());
-    std::vector<std::string> trait_names;
-    ParseVector<std::string, std::vector<std::string>>(
-        yaml_conf["traits"], trait_names);
-    trait_paths_.reserve(trait_names.size());
-    for (auto &name : trait_names) {
-      trait_paths_.emplace_back(
-          hshm::Formatter::format("{}/lib{}.so", dir, name));
-    }
+  std::vector<std::string> trait_names;
+  ParseVector<std::string, std::vector<std::string>>(
+      yaml_conf, trait_names);
+  trait_paths_.reserve(trait_names.size());
+  for (auto &name : trait_names) {
+    name = hshm::path_parser(name);
+    trait_paths_.emplace_back(
+        hshm::Formatter::format("lib{}.so", name));
   }
 }
 

@@ -138,12 +138,9 @@ shmem_name: "/hermes_shm_"
 # The interval in milliseconds at which to update the global system view.
 system_view_state_update_interval_ms: 1000
 
-### Define the locations of traits
-trait_repos:
-  hermes_install:
-    path: "${HERMES_INSTALL}"
-    traits:
-      - "posix"
-      - "stdio"
-      - "mpiio"
-      - "example_trait"
+### Define the names of the traits to search LD_LIBRARY_PATH for
+traits:
+  - "hermes_posix_io_client"
+  - "hermes_stdio_io_client"
+  - "hermes_mpiio_io_client"
+  - "hermes_example_trait"

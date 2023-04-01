@@ -122,6 +122,11 @@ const char* kServerDefaultConfigStr =
 "  # into a random number of smaller Blobs.\n"
 "  default_rr_split: 0\n"
 "\n"
+"### Define I/O tracing properties\n"
+"tracing:\n"
+"  enabled: false\n"
+"  output: \"\"\n"
+"\n"
 "### Define prefetcher properties\n"
 "prefetch:\n"
 "  enabled: false\n"
@@ -134,5 +139,12 @@ const char* kServerDefaultConfigStr =
 "shmem_name: \"/hermes_shm_\"\n"
 "\n"
 "# The interval in milliseconds at which to update the global system view.\n"
-"system_view_state_update_interval_ms: 1000\n";
+"system_view_state_update_interval_ms: 1000\n"
+"\n"
+"### Define the names of the traits to search LD_LIBRARY_PATH for\n"
+"traits:\n"
+"  - \"hermes_posix_io_client\"\n"
+"  - \"hermes_stdio_io_client\"\n"
+"  - \"hermes_mpiio_io_client\"\n"
+"  - \"hermes_example_trait\"\n";
 #endif  // HERMES_SRC_CONFIG_SERVER_DEFAULT_H_

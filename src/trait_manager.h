@@ -106,6 +106,11 @@ public:
     api::Trait *trait = info.create_trait_(params);
     return trait;
   }
+
+private:
+  /** Find the trait library on disk and load it */
+  bool FindLoadTrait(const std::string &paths,
+                     const std::string &trait_rel_path);
 };
 
 }
