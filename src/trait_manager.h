@@ -43,7 +43,7 @@ struct TraitHeader {
  * Traits are independent of Hermes.
  * */
 class Trait {
-public:
+ public:
   hshm::charbuf trait_info_;
   TraitHeader *header_;
   TraitId trait_id_;
@@ -169,10 +169,10 @@ struct TraitLibInfo {
 
 /** A module manager to keep track of trait binaries */
 class TraitManager {
-private:
+ private:
   std::unordered_map<std::string, TraitLibInfo> traits_;
 
-public:
+ public:
   /** Identify the set of all traits and load them */
   void Init();
 
@@ -190,12 +190,12 @@ public:
     return trait;
   }
 
-private:
+ private:
   /** Find the trait library on disk and load it */
   bool FindLoadTrait(const std::string &paths,
                      const std::string &trait_rel_path);
 };
 
-}
+}  // namespace hermes
 
-#endif // HERMES_SRC_TRAIT_MANAGER_H_
+#endif  // HERMES_SRC_TRAIT_MANAGER_H_

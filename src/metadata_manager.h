@@ -504,7 +504,7 @@ class MetadataManager : public hipc::ShmContainer {
    * Get or create the trait
    * If TraitT is Trait, it will not perform create and return null.
    * */
-  template<typename TraitT=Trait>
+  template<typename TraitT = Trait>
   TraitT* GlobalGetTrait(TraitId trait_id) {
     ScopedRwReadLock md_lock(local_lock_);
     auto iter = local_trait_map_.find(trait_id);

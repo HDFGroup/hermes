@@ -43,7 +43,7 @@ void TraitManager::Init() {
 
   // Find each trait in LD_LIBRARY_PATH
   for (std::string &trait_rel_path : config->trait_paths_) {
-    if(!FindLoadTrait(paths, trait_rel_path)) {
+    if (!FindLoadTrait(paths, trait_rel_path)) {
       HELOG(kWarning, "Failed to load the trait: {}", trait_rel_path);
     }
   }
