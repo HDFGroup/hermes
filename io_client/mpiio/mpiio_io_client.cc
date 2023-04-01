@@ -14,6 +14,10 @@
 
 namespace hermes::adapter::fs {
 
+/** Callback used for custom trait execution */
+void MpiioIoClient::Run(int method, void *params) {
+}
+
 /** Allocate an fd for the file f */
 void MpiioIoClient::RealOpen(File &f,
                              AdapterStat &stat,
@@ -199,3 +203,5 @@ void MpiioIoClient::UpdateIoStatus(size_t count, IoStatus &status) {
 }
 
 }  // namespace hermes::adapter::fs
+
+HERMES_TRAIT_CC(hermes::adapter::fs::MpiioIoClient)

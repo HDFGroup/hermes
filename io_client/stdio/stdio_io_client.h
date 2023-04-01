@@ -25,19 +25,45 @@ using hermes::adapter::fs::StdioApi;
 
 namespace hermes::adapter::fs {
 
+/** State for the STDIO I/O trait */
+struct StdioIoClientHeader : public api::TraitHeader {
+  explicit StdioIoClientHeader(const std::string &trait_uuid)
+      : TraitHeader(trait_uuid, api::TraitClass::kBucket) {}
+};
+
 /** A class to represent STDIO IO file system */
 class StdioIoClient : public hermes::adapter::fs::FilesystemIoClient {
+ public:
+  HERMES_TRAIT_H("stdio_io_client")
+
  private:
   HERMES_STDIO_API_T real_api; /**< pointer to real APIs */
 
  public:
   /** Default constructor */
-  StdioIoClient() { real_api = HERMES_STDIO_API; }
+  StdioIoClient() {
+    real_api = HERMES_STDIO_API;
+    CreateHeader<StdioIoClientHeader>("stdio_io_client_");
+  }
+
+  /** Trait constructor */
+  explicit StdioIoClient(const std::string &trait_uuid) {
+    CreateHeader<StdioIoClientHeader>(trait_uuid);
+  }
+
+  /** Trait deserialization constructor */
+  explicit StdioIoClient(hshm::charbuf &params) {
+    (void) params;
+    CreateHeader<StdioIoClientHeader>("stdio_io_client_");
+  }
 
   /** Virtual destructor */
   virtual ~StdioIoClient() = default;
 
  public:
+  /** Callback used for custom trait execution */
+  void Run(int method, void *params) override;
+
   /** Allocate an fd for the file f */
   void RealOpen(File &f,
                 AdapterStat &stat,

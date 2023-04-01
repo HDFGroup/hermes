@@ -14,6 +14,10 @@
 
 namespace hermes::adapter::fs {
 
+/** Callback used for custom trait execution */
+void StdioIoClient::Run(int method, void *params) {
+}
+
 /** Allocate an fd for the file f */
 void StdioIoClient::RealOpen(File &f,
                              AdapterStat &stat,
@@ -156,3 +160,5 @@ void StdioIoClient::ReadBlob(const hipc::charbuf &bkt_name,
 }
 
 }  // namespace hermes::adapter::fs
+
+HERMES_TRAIT_CC(hermes::adapter::fs::StdioIoClient)

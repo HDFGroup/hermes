@@ -26,19 +26,45 @@ using hermes::adapter::fs::PosixApi;
 
 namespace hermes::adapter::fs {
 
+/** State for the POSIX I/O trait */
+struct PosixIoClientHeader : public api::TraitHeader {
+  explicit PosixIoClientHeader(const std::string &trait_uuid)
+      : TraitHeader(trait_uuid, api::TraitClass::kBucket) {}
+};
+
 /** A class to represent POSIX IO file system */
 class PosixIoClient : public hermes::adapter::fs::FilesystemIoClient {
+ public:
+   HERMES_TRAIT_H("posix_io_client")
+
  private:
   HERMES_POSIX_API_T real_api; /**< pointer to real APIs */
 
  public:
   /** Default constructor */
-  PosixIoClient() { real_api = HERMES_POSIX_API; }
+  PosixIoClient() {
+    real_api = HERMES_POSIX_API;
+    CreateHeader<PosixIoClientHeader>("posix_io_client_");
+  }
+
+  /** Trait constructor */
+  explicit PosixIoClient(const std::string &trait_uuid) {
+    CreateHeader<PosixIoClientHeader>(trait_uuid);
+  }
+
+  /** Trait deserialization constructor */
+  explicit PosixIoClient(hshm::charbuf &params) {
+    (void) params;
+    CreateHeader<PosixIoClientHeader>("posix_io_client_");
+  }
 
   /** Virtual destructor */
   virtual ~PosixIoClient() = default;
 
  public:
+  /** Callback used for custom trait execution */
+  void Run(int method, void *params) override;
+
   /** Allocate an fd for the file f */
   void RealOpen(File &f,
                 AdapterStat &stat,

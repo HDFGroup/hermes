@@ -27,7 +27,9 @@ namespace hermes::adapter::fs {
 class StdioFs : public hermes::adapter::fs::Filesystem {
  public:
   StdioFs() : hermes::adapter::fs::Filesystem(HERMES_STDIO_IO_CLIENT,
-                                              AdapterType::kStdio) {}
+                                              AdapterType::kStdio) {
+    HERMES->RegisterTrait<StdioIoClient>("stdio_trait_");
+  }
 
   /** Close an existing stream and then open with new path */
   FILE* Reopen(const std::string &user_path, const char *mode,

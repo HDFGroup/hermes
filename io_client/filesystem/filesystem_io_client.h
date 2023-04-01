@@ -284,7 +284,7 @@ struct FilesystemIoClientState {
  * Defines I/O clients which are compatible with the filesystem
  * base class.
  * */
-class FilesystemIoClient {
+class FilesystemIoClient : public api::Trait {
  public:
   /** Decode I/O client context from the original blob name */
   FsIoOptions DecodeBlobName(const std::string &blob_name) {

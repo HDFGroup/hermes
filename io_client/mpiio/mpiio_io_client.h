@@ -25,19 +25,45 @@ using hermes::adapter::fs::MpiioApi;
 
 namespace hermes::adapter::fs {
 
+/** State for the MPI I/O trait */
+struct MpiioIoClientHeader : public api::TraitHeader {
+  explicit MpiioIoClientHeader(const std::string &trait_uuid)
+      : TraitHeader(trait_uuid, api::TraitClass::kBucket) {}
+};
+
 /** A class to represent STDIO IO file system */
 class MpiioIoClient : public hermes::adapter::fs::FilesystemIoClient {
+public:
+  HERMES_TRAIT_H("mpiio_io_client")
+
  private:
   HERMES_MPIIO_API_T real_api; /**< pointer to real APIs */
 
  public:
   /** Default constructor */
-  MpiioIoClient() { real_api = HERMES_MPIIO_API; }
+  MpiioIoClient() {
+    real_api = HERMES_MPIIO_API;
+    CreateHeader<MpiioIoClientHeader>("mpiio_io_client_");
+  }
+
+  /** Trait constructor */
+  explicit MpiioIoClient(const std::string &trait_uuid) {
+    CreateHeader<MpiioIoClientHeader>(trait_uuid);
+  }
+
+  /** Trait deserialization constructor */
+  explicit MpiioIoClient(hshm::charbuf &params) {
+    (void) params;
+    CreateHeader<MpiioIoClientHeader>("mpiio_io_client_");
+  }
 
   /** Virtual destructor */
   virtual ~MpiioIoClient() = default;
 
  public:
+  /** Callback used for custom trait execution */
+  void Run(int method, void *params) override;
+
   /** Allocate an fd for the file f */
   void RealOpen(File &f,
                 AdapterStat &stat,
