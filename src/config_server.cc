@@ -140,6 +140,22 @@ void ServerConfig::ParsePrefetchInfo(YAML::Node yaml_conf) {
   }
 }
 
+/** parse prefetch information from YAML config */
+void ServerConfig::ParseTraitInfo(YAML::Node yaml_conf) {
+  for (YAML::Node trait_repo : yaml_conf) {
+    std::string dir = hshm::path_parser(
+        trait_repo["path"].as<std::string>());
+    std::vector<std::string> trait_names;
+    ParseVector<std::string, std::vector<std::string>>(
+        yaml_conf["traits"], trait_names);
+    trait_paths_.reserve(trait_names.size());
+    for (auto &name : trait_names) {
+      trait_paths_.emplace_back(
+          hshm::Formatter::format("{}/lib{}.so", dir, name));
+    }
+  }
+}
+
 /** parse the YAML node */
 void ServerConfig::ParseYAML(YAML::Node &yaml_conf) {
   if (yaml_conf["devices"]) {
@@ -164,13 +180,8 @@ void ServerConfig::ParseYAML(YAML::Node &yaml_conf) {
     system_view_state_update_interval_ms =
         yaml_conf["system_view_state_update_interval_ms"].as<int>();
   }
-  if (yaml_conf["trait_repos"]) {
-    std::vector<std::string> trait_paths;
-    ParseVector<std::string, std::vector<std::string>>(
-        yaml_conf["trait_repos"], trait_paths);
-    for (auto &path : trait_paths) {
-      path = hshm::path_parser(path);
-    }
+  if (yaml_conf["traits"]) {
+    ParseTraitInfo(yaml_conf["traits"]);
   }
   if (yaml_conf["shmem_name"]) {
     shmem_name_ = yaml_conf["shmem_name"].as<std::string>();

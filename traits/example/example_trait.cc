@@ -13,3 +13,5 @@ void ExampleTrait::Run(int method, void *params) {
 }
 
 }  // namespace hermes::api
+
+HERMES_TRAIT_CC(hermes::api::ExampleTrait)

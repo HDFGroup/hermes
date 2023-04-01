@@ -305,7 +305,7 @@ class ServerConfig : public BaseConfig {
   PrefetchInfo prefetcher_;
 
   /** Trait repo information */
-  std::vector<std::string> trait_repos_;
+  std::vector<std::string> trait_paths_;
 
   /** The length of a view state epoch */
   u32 system_view_state_update_interval_ms;
@@ -328,6 +328,7 @@ class ServerConfig : public BaseConfig {
   void ParseBorgInfo(YAML::Node yaml_conf);
   void ParsePrefetchInfo(YAML::Node yaml_conf);
   void ParseTracingInfo(YAML::Node yaml_conf);
+  void ParseTraitInfo(YAML::Node yaml_conf);
 };
 
 }  // namespace hermes::config

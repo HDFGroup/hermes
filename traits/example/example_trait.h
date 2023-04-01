@@ -11,9 +11,8 @@ namespace hermes::api {
 
 struct ExampleTraitHeader : public TraitHeader {
   int hello_;
-
   explicit ExampleTraitHeader(const std::string &trait_uuid, int hello)
-      : TraitHeader("example_trait", trait_uuid, TraitClass::kBucket),
+      : TraitHeader(trait_uuid, TraitClass::kBucket),
         hello_(hello) {}
 };
 
@@ -22,6 +21,9 @@ struct ExampleTraitParams {
 };
 
 class ExampleTrait : public hapi::Trait {
+ public:
+  HERMES_TRAIT_H("ExampleTrait");
+
  public:
   explicit ExampleTrait(hshm::charbuf &data) : Trait(data) {}
 

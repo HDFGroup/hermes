@@ -18,6 +18,7 @@
 #include "status.h"
 #include "rpc.h"
 #include "metadata_types.h"
+#include "trait_manager.h"
 #include "statuses.h"
 #include "rpc_thallium_serialization.h"
 #include "trait.h"
@@ -90,6 +91,7 @@ class MetadataManager : public hipc::ShmContainer {
                          (ShmHeader<MetadataManager>))
   RPC_TYPE *rpc_;
   BufferOrganizer *borg_;
+  TraitManager *traits_;
 
   /**====================================
    * Maps
@@ -494,15 +496,16 @@ class MetadataManager : public hipc::ShmContainer {
     hipc::Ref<hipc::pair<TraitId, hipc::charbuf>> trait_params_p = *iter;
     auto trait_params =
         hshm::to_charbuf<hipc::string>(*trait_params_p->second_);
-    TraitT *trait = new TraitT(trait_params);
+    api::Trait *trait = traits_->ConstructTrait<TraitT>(trait_params);
     local_trait_map_.emplace(trait_id, trait);
-    return trait;
+    return dynamic_cast<TraitT*>(trait);
   }
 
   /**
-   * Get the trait
+   * Get or create the trait
+   * If TraitT is api::Trait, it will not perform create and return null.
    * */
-  template<typename TraitT>
+  template<typename TraitT=api::Trait>
   TraitT* GlobalGetTrait(TraitId trait_id) {
     ScopedRwReadLock md_lock(local_lock_);
     auto iter = local_trait_map_.find(trait_id);

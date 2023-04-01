@@ -87,6 +87,9 @@ void Hermes::InitServer(std::string server_config_path) {
   rpc_.InitServer();
   rpc_.InitClient();
 
+  // Load the trait libraries
+  traits_.Init();
+
   // Construct the reference objects
   mdm_ = hipc::make_ref<MetadataManager>(header_->mdm_, main_alloc_,
                                          &server_config_);
@@ -108,6 +111,9 @@ void Hermes::InitClient(std::string server_config_path,
   borg_ = hipc::Ref<BufferOrganizer>(header_->borg_, main_alloc_);
   prefetch_.Init();
   mdm_->PrintDeviceInfo();
+
+  // Load the trait libraries
+  traits_.Init();
 }
 
 void Hermes::LoadServerConfig(std::string config_path) {

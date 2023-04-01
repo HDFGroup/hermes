@@ -31,6 +31,7 @@ MetadataManager::MetadataManager(
   shm_init_header(header, alloc);
   rpc_ = &HERMES->rpc_;
   borg_ = HERMES->borg_.get();
+  traits_ = &HERMES->traits_;
   header_->id_alloc_ = 1;
 
   // Put the node_id in SHM
@@ -112,6 +113,7 @@ void MetadataManager::shm_destroy_main() {
 void MetadataManager::shm_deserialize_main() {
   rpc_ = &HERMES->rpc_;
   borg_ = HERMES->borg_.get();
+  traits_ = &HERMES->traits_;
   auto alloc = HERMES->main_alloc_;
   blob_id_map_ = hipc::Ref<BLOB_ID_MAP_T>(header_->blob_id_map, alloc);
   blob_map_ = hipc::Ref<BLOB_MAP_T>(header_->blob_map, alloc);

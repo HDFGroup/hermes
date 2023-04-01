@@ -14,28 +14,28 @@
 #define HERMES_SRC_API_TRAIT_H_
 
 #include "hermes_types.h"
+#include "trait_manager.h"
 
 namespace hapi = hermes::api;
 
 namespace hermes::api {
 
+/** Determines where the trait is used within Hermes */
 enum class TraitClass {
   kGroupBy,
   kBucket,
 };
 
+/** The basic state needed to be stored by every trait */
 struct TraitHeader {
-  char trait_uuid_[64];
-  char trait_name_[64];
-  TraitClass trait_class_;
+  char trait_uuid_[64];   /**< Unique name for this instance of trait */
+  TraitClass trait_class_;  /**< Where the trait is useful */
 
+  /** Constructor. */
   explicit TraitHeader(const std::string &trait_uuid,
-                       const std::string &trait_name,
                        TraitClass trait_class) {
     memcpy(trait_uuid_, trait_uuid.c_str(), trait_uuid.size());
-    memcpy(trait_name_, trait_name.c_str(), trait_name.size());
     trait_uuid_[trait_uuid.size()] = 0;
-    trait_name_[trait_name.size()] = 0;
     trait_class_ = trait_class;
   }
 };
@@ -77,11 +77,6 @@ class Trait {
     return reinterpret_cast<HeaderT*>(header_);
   }
 };
-
-template<typename TraitT>
-inline void ExecuteTrait(Trait *trait) {
-  reinterpret_cast<TraitT>(trait)->Run();
-}
 
 }  // namespace hermes::api
 
