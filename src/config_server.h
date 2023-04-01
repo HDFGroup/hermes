@@ -274,6 +274,14 @@ struct PrefetchInfo {
 };
 
 /**
+ * Tracing information in server config
+ * */
+struct TracingInfo {
+  bool enabled_;
+  std::string output_;
+};
+
+/**
  * System configuration for Hermes
  */
 class ServerConfig : public BaseConfig {
@@ -290,8 +298,14 @@ class ServerConfig : public BaseConfig {
   /** Buffer organizer (BORG) information */
   BorgInfo borg_;
 
+  /** Tracing information */
+  TracingInfo tracing_;
+
   /** Prefetcher information */
   PrefetchInfo prefetcher_;
+
+  /** Trait repo information */
+  std::vector<std::string> trait_repos_;
 
   /** The length of a view state epoch */
   u32 system_view_state_update_interval_ms;
@@ -313,6 +327,7 @@ class ServerConfig : public BaseConfig {
   void ParseDpeInfo(YAML::Node yaml_conf);
   void ParseBorgInfo(YAML::Node yaml_conf);
   void ParsePrefetchInfo(YAML::Node yaml_conf);
+  void ParseTracingInfo(YAML::Node yaml_conf);
 };
 
 }  // namespace hermes::config

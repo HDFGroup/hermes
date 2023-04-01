@@ -119,6 +119,11 @@ dpe:
   # into a random number of smaller Blobs.
   default_rr_split: 0
 
+### Define I/O tracing properties
+tracing:
+  enabled: false
+  output: ""
+
 ### Define prefetcher properties
 prefetch:
   enabled: false
@@ -132,3 +137,9 @@ shmem_name: "/hermes_shm_"
 
 # The interval in milliseconds at which to update the global system view.
 system_view_state_update_interval_ms: 1000
+
+### Define the locations of traits
+trait_repos:
+  - "${HERMES_INSTALL}"
+  - "${HERMES_ROOT}/traits"
+  - "${HERMES_ROOT}/io_client"

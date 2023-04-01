@@ -112,6 +112,17 @@ void ServerConfig::ParseBorgInfo(YAML::Node yaml_conf) {
   }
 }
 
+/** parse I/O tracing information from YAML config */
+void ServerConfig::ParseTracingInfo(YAML::Node yaml_conf) {
+  if (yaml_conf["enabled"]) {
+    tracing_.enabled_ = yaml_conf["enabled"].as<bool>();
+  }
+  if (yaml_conf["output"]) {
+    tracing_.output_ = hshm::path_parser(
+        yaml_conf["output"].as<std::string>());
+  }
+}
+
 /** parse prefetch information from YAML config */
 void ServerConfig::ParsePrefetchInfo(YAML::Node yaml_conf) {
   if (yaml_conf["enabled"]) {
@@ -143,12 +154,23 @@ void ServerConfig::ParseYAML(YAML::Node &yaml_conf) {
   if (yaml_conf["buffer_organizer"]) {
     ParseBorgInfo(yaml_conf["buffer_organizer"]);
   }
+  if (yaml_conf["tracing"]) {
+    ParsePrefetchInfo(yaml_conf["tracing"]);
+  }
   if (yaml_conf["prefetch"]) {
     ParsePrefetchInfo(yaml_conf["prefetch"]);
   }
   if (yaml_conf["system_view_state_update_interval_ms"]) {
     system_view_state_update_interval_ms =
         yaml_conf["system_view_state_update_interval_ms"].as<int>();
+  }
+  if (yaml_conf["trait_repos"]) {
+    std::vector<std::string> trait_paths;
+    ParseVector<std::string, std::vector<std::string>>(
+        yaml_conf["trait_repos"], trait_paths);
+    for (auto &path : trait_paths) {
+      path = hshm::path_parser(path);
+    }
   }
   if (yaml_conf["shmem_name"]) {
     shmem_name_ = yaml_conf["shmem_name"].as<std::string>();
