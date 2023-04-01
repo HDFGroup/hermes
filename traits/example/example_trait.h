@@ -5,7 +5,7 @@
 #ifndef HERMES_TRAITS_EXAMPLE_EXAMPLE_TRAIT_H_
 #define HERMES_TRAITS_EXAMPLE_EXAMPLE_TRAIT_H_
 
-#include "trait.h"
+#include "hermes.h"
 
 namespace hermes::api {
 
@@ -20,9 +20,9 @@ struct ExampleTraitParams {
   int hello_;
 };
 
-class ExampleTrait : public hapi::Trait {
+class ExampleTrait : public Trait {
  public:
-  HERMES_TRAIT_H("ExampleTrait");
+  HERMES_TRAIT_H(ExampleTrait, "ExampleTrait");
 
  public:
   explicit ExampleTrait(hshm::charbuf &data) : Trait(data) {}

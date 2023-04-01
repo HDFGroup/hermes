@@ -21,7 +21,6 @@
 #include "trait_manager.h"
 #include "statuses.h"
 #include "rpc_thallium_serialization.h"
-#include "trait.h"
 
 namespace hermes {
 
@@ -102,7 +101,7 @@ class MetadataManager : public hipc::ShmContainer {
   hipc::Ref<BLOB_MAP_T> blob_map_;
   hipc::Ref<TAG_MAP_T> tag_map_;
   hipc::Ref<TRAIT_MAP_T> trait_map_;
-  std::unordered_map<TraitId, hapi::Trait*> local_trait_map_;
+  std::unordered_map<TraitId, Trait*> local_trait_map_;
   RwLock local_lock_;
 
   /**====================================
@@ -496,28 +495,28 @@ class MetadataManager : public hipc::ShmContainer {
     hipc::Ref<hipc::pair<TraitId, hipc::charbuf>> trait_params_p = *iter;
     auto trait_params =
         hshm::to_charbuf<hipc::string>(*trait_params_p->second_);
-    api::Trait *trait = traits_->ConstructTrait<TraitT>(trait_params);
+    Trait *trait = traits_->ConstructTrait<TraitT>(trait_params);
     local_trait_map_.emplace(trait_id, trait);
     return dynamic_cast<TraitT*>(trait);
   }
 
   /**
    * Get or create the trait
-   * If TraitT is api::Trait, it will not perform create and return null.
+   * If TraitT is Trait, it will not perform create and return null.
    * */
-  template<typename TraitT=api::Trait>
+  template<typename TraitT=Trait>
   TraitT* GlobalGetTrait(TraitId trait_id) {
     ScopedRwReadLock md_lock(local_lock_);
     auto iter = local_trait_map_.find(trait_id);
     if (iter == local_trait_map_.end()) {
-      if constexpr(std::is_same_v<TraitT, hapi::Trait>) {
+      if constexpr(std::is_same_v<TraitT, Trait>) {
         return nullptr;
       } else {
         md_lock.Unlock();
         return LocalConstructTrait<TraitT>(trait_id);
       }
     }
-    std::pair<TraitId, hapi::Trait*> trait_pair = *iter;
+    std::pair<TraitId, Trait*> trait_pair = *iter;
     return dynamic_cast<TraitT*>(trait_pair.second);
   }
 

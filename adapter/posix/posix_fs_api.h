@@ -26,9 +26,7 @@ namespace hermes::adapter::fs {
 class PosixFs : public hermes::adapter::fs::Filesystem {
  public:
   PosixFs() : hermes::adapter::fs::Filesystem(HERMES_POSIX_IO_CLIENT,
-                                              AdapterType::kPosix) {
-    HERMES->RegisterTrait<PosixIoClient>("posix_trait_");
-  }
+                                              AdapterType::kPosix) {}
 
   template<typename StatT>
   int Stat(File &f, StatT *buf) {

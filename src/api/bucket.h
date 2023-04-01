@@ -79,6 +79,11 @@ class Bucket {
   }
 
   /**
+   * Attach a trait to the bucket
+   * */
+  void AttachTrait(TraitId trait_id);
+
+  /**
    * Get the current size of the bucket
    * */
   size_t GetSize(bool backend = false);

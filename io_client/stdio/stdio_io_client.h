@@ -26,15 +26,15 @@ using hermes::adapter::fs::StdioApi;
 namespace hermes::adapter::fs {
 
 /** State for the STDIO I/O trait */
-struct StdioIoClientHeader : public api::TraitHeader {
+struct StdioIoClientHeader : public TraitHeader {
   explicit StdioIoClientHeader(const std::string &trait_uuid)
-      : TraitHeader(trait_uuid, api::TraitClass::kBucket) {}
+      : TraitHeader(trait_uuid, TraitClass::kBucket) {}
 };
 
 /** A class to represent STDIO IO file system */
 class StdioIoClient : public hermes::adapter::fs::FilesystemIoClient {
  public:
-  HERMES_TRAIT_H("stdio_io_client")
+  HERMES_TRAIT_H(StdioIoClient, "stdio_io_client")
 
  private:
   HERMES_STDIO_API_T real_api; /**< pointer to real APIs */

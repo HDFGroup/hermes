@@ -16,30 +16,113 @@
 #include <dlfcn.h>
 #include "hermes_types.h"
 
-/** Forward declaration of trait */
-namespace hermes::api {
-class Trait;
-}
+namespace hermes {
+
+/** Determines where the trait is used within Hermes */
+enum class TraitClass {
+  kGroupBy,
+  kBucket,
+};
+
+/** The basic state needed to be stored by every trait */
+struct TraitHeader {
+  char trait_uuid_[64];   /**< Unique name for this instance of trait */
+  TraitClass trait_class_;  /**< Where the trait is useful */
+
+  /** Constructor. */
+  explicit TraitHeader(const std::string &trait_uuid,
+                       TraitClass trait_class) {
+    memcpy(trait_uuid_, trait_uuid.c_str(), trait_uuid.size());
+    trait_uuid_[trait_uuid.size()] = 0;
+    trait_class_ = trait_class;
+  }
+};
+
+/**
+ * Represents a custom operation to perform.
+ * Traits are independent of Hermes.
+ * */
+class Trait {
+public:
+  hshm::charbuf trait_info_;
+  TraitHeader *header_;
+  TraitId trait_id_;
+  std::string trait_uuid_;
+
+  /** Default constructor */
+  Trait() : trait_id_(TraitId::GetNull()) {}
+
+  /** Virtual destructor */
+  virtual ~Trait() = default;
+
+  /** Deserialization constructor */
+  explicit Trait(hshm::charbuf &trait_info)
+      : trait_info_(trait_info),
+        header_(reinterpret_cast<TraitHeader*>(trait_info_.data())),
+        trait_id_(TraitId::GetNull()) {}
+
+  /** Get trait ID */
+  TraitId GetTraitId() {
+    return trait_id_;
+  }
+
+  /** Get trait uuid */
+  const std::string& GetUuid() {
+    return trait_uuid_;
+  }
+
+  /** Run a method of the trait */
+  virtual void Run(int method, void *params) = 0;
+
+  /** Create the header for the trait */
+  template<typename HeaderT, typename ...Args>
+  HeaderT* CreateHeader(const std::string &trait_uuid,
+                        Args&& ...args) {
+    trait_info_ = hshm::charbuf(sizeof(HeaderT));
+    trait_uuid_ = trait_uuid;
+    header_ = reinterpret_cast<TraitHeader*>(trait_info_.data());
+    hipc::Allocator::ConstructObj<HeaderT>(
+        *GetHeader<HeaderT>(),
+        trait_uuid,
+        std::forward<Args>(args)...);
+    return GetHeader<HeaderT>();
+  }
+
+  /** Get the header of the trait */
+  template<typename HeaderT>
+  HeaderT* GetHeader() {
+    return reinterpret_cast<HeaderT*>(header_);
+  }
+
+  /**
+   * Method to register a trait with Hermes.
+   * Defined automatically in HERMES_TRAIT_H
+   * */
+  virtual void Register() = 0;
+};
 
 extern "C" {
 /** The two methods provided by all traits */
-typedef hermes::api::Trait* (*create_trait_t)(hshm::charbuf &trait_info);
+typedef Trait* (*create_trait_t)(hshm::charbuf &trait_info);
 typedef const char* (*get_trait_id_t)(void);
 }
-
-namespace hermes {
 
 /**
  * Used internally by trait header file
  * Must be used after a "public:"
  * */
-#define HERMES_TRAIT_H(TRAIT_ID) \
-  static inline const char* trait_name_ = TRAIT_ID;
+#define HERMES_TRAIT_H(TYPED_CLASS, TRAIT_ID) \
+  static inline const char* trait_name_ = TRAIT_ID; \
+  void Register() override { \
+    if (trait_id_.IsNull()) { \
+      trait_id_ = HERMES->RegisterTrait<TYPE_UNWRAP(TYPED_CLASS)>(this); \
+    } \
+  }
 
 /** Used internally by trait source file */
 #define HERMES_TRAIT_CC(TRAIT_CLASS) \
     extern "C" {                              \
-        hermes::api::Trait* create_trait(hshm::charbuf &trait_info) { \
+        hermes::Trait* create_trait(hshm::charbuf &trait_info) { \
           return new TYPE_UNWRAP(TRAIT_CLASS)(trait_info); \
         } \
         const char* get_trait_id(void) { return TRAIT_CLASS::trait_name_; } \
@@ -95,7 +178,7 @@ public:
 
   /** Construct a trait */
   template<typename TraitT>
-  api::Trait* ConstructTrait(hshm::charbuf &params) {
+  Trait* ConstructTrait(hshm::charbuf &params) {
     auto iter = traits_.find(TraitT::trait_name_);
     if (iter == traits_.end()) {
       HELOG(kError, "Could not find the trait with name: {}",
@@ -103,7 +186,7 @@ public:
       return nullptr;
     }
     TraitLibInfo &info = iter->second;
-    api::Trait *trait = info.create_trait_(params);
+    Trait *trait = info.create_trait_(params);
     return trait;
   }
 

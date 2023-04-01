@@ -27,15 +27,15 @@ using hermes::adapter::fs::PosixApi;
 namespace hermes::adapter::fs {
 
 /** State for the POSIX I/O trait */
-struct PosixIoClientHeader : public api::TraitHeader {
+struct PosixIoClientHeader : public TraitHeader {
   explicit PosixIoClientHeader(const std::string &trait_uuid)
-      : TraitHeader(trait_uuid, api::TraitClass::kBucket) {}
+      : TraitHeader(trait_uuid, TraitClass::kBucket) {}
 };
 
 /** A class to represent POSIX IO file system */
 class PosixIoClient : public hermes::adapter::fs::FilesystemIoClient {
  public:
-   HERMES_TRAIT_H("posix_io_client")
+   HERMES_TRAIT_H(PosixIoClient, "posix_io_client")
 
  private:
   HERMES_POSIX_API_T real_api; /**< pointer to real APIs */

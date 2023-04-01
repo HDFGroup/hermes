@@ -69,12 +69,10 @@ target_include_directories(hermes
   SYSTEM PUBLIC ${HERMES_EXT_INCLUDE_DEPENDENCIES})
 add_dependencies(hermes
         hermes_shm_data_structures
-        hermes_posix_io_real
-        hermes_example_trait)
+        hermes_posix_io_real)
 
 target_link_libraries(hermes
   PUBLIC hermes_shm_data_structures
-  PUBLIC hermes_example_trait
   PUBLIC ${GLPK_LIBRARIES}
   PUBLIC ${CMAKE_HERMES_COMMUNICATION_TYPE_LIB}
   PUBLIC ${CMAKE_HERMES_RPC_TYPE_LIB}

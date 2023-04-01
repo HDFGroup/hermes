@@ -16,7 +16,6 @@
 #include "config_client.h"
 #include "config_server.h"
 #include "hermes_types.h"
-#include "trait.h"
 #include "utils.h"
 
 #include "communication_factory.h"
@@ -32,6 +31,8 @@
 // Singleton macros
 #define HERMES hshm::Singleton<hermes::api::Hermes>::GetInstance()
 #define HERMES_T hermes::api::Hermes*
+
+namespace hapi = hermes::api;
 
 namespace hermes::api {
 
@@ -144,16 +145,32 @@ class Hermes {
 
   /** Create a trait */
   template<typename TraitT, typename ...Args>
-  TraitId RegisterTrait(const std::string &tag_uuid,
-                        Args&& ...args) {
-    TraitT obj(tag_uuid, std::forward<Args>(args)...);
+  TraitId RegisterTrait(TraitT *trait) {
+    TraitId id = GetTraitId(trait->GetUuid());
+    if (!id.IsNull()) {
+      return id;
+    }
     return HERMES->mdm_->GlobalRegisterTrait(TraitId::GetNull(),
-                                            tag_uuid, obj.trait_info_);
+                                             trait->GetUuid(),
+                                             trait->trait_info_);
+  }
+
+  /** Create a trait */
+  template<typename TraitT, typename ...Args>
+  TraitId RegisterTrait(const std::string &trait_uuid,
+                        Args&& ...args) {
+    TraitId id = GetTraitId(trait_uuid);
+    if (!id.IsNull()) {
+      return id;
+    }
+    TraitT obj(trait_uuid, std::forward<Args>(args)...);
+    return HERMES->mdm_->GlobalRegisterTrait(TraitId::GetNull(),
+                                            trait_uuid, obj.trait_info_);
   }
 
   /** Get trait id */
-  TraitId GetTraitId(const std::string &tag_uuid) {
-    return HERMES->mdm_->GlobalGetTraitId(tag_uuid);
+  TraitId GetTraitId(const std::string &trait_uuid) {
+    return HERMES->mdm_->GlobalGetTraitId(trait_uuid);
   }
 
   /** Get the trait */

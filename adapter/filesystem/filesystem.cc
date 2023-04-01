@@ -44,14 +44,18 @@ void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
     stat.path_ = stdfs::absolute(path).string();
     auto path_shm = hipc::make_uptr<hipc::charbuf>(stat.path_);
     size_t file_size = io_client_->GetSize(*path_shm);
-    // The file was opened with TRUNCATION
+    io_client_->Register();
+    // Create the bucket
     if (stat.hflags_.OrBits(HERMES_FS_TRUNC)) {
       // TODO(llogan): Need to add back bucket lock
+      // The file was opened with TRUNCATION
       stat.bkt_id_ = HERMES->GetBucket(stat.path_, ctx, 0);
       stat.bkt_id_->Clear(true);
     } else {
+      // The file was opened regularly
       stat.bkt_id_ = HERMES->GetBucket(stat.path_, ctx, file_size);
     }
+    stat.bkt_id_->AttachTrait(io_client_->GetTraitId());
     // Update page size and file size
     // TODO(llogan): can avoid two unordered_map queries here
     stat.page_size_ = mdm->GetAdapterPageSize(path);

@@ -26,15 +26,15 @@ using hermes::adapter::fs::MpiioApi;
 namespace hermes::adapter::fs {
 
 /** State for the MPI I/O trait */
-struct MpiioIoClientHeader : public api::TraitHeader {
+struct MpiioIoClientHeader : public TraitHeader {
   explicit MpiioIoClientHeader(const std::string &trait_uuid)
-      : TraitHeader(trait_uuid, api::TraitClass::kBucket) {}
+      : TraitHeader(trait_uuid, TraitClass::kBucket) {}
 };
 
 /** A class to represent STDIO IO file system */
 class MpiioIoClient : public hermes::adapter::fs::FilesystemIoClient {
 public:
-  HERMES_TRAIT_H("mpiio_io_client")
+  HERMES_TRAIT_H(MpiioIoClient, "mpiio_io_client")
 
  private:
   HERMES_MPIIO_API_T real_api; /**< pointer to real APIs */

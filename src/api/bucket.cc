@@ -45,6 +45,13 @@ Bucket::Bucket(TagId tag_id)
 }
 
 /**
+ * Attach a trait to the bucket
+ * */
+void Bucket::AttachTrait(TraitId trait_id) {
+  HERMES->AttachTrait(id_, trait_id);
+}
+
+/**
  * Get the current size of the bucket
  * */
 size_t Bucket::GetSize(bool backend) {

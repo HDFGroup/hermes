@@ -45,9 +45,7 @@ class MpiioFs : public Filesystem {
  public:
   MpiioFs()
       : Filesystem(HERMES_MPIIO_IO_CLIENT,
-                   AdapterType::kMpiio) {
-    HERMES->RegisterTrait<MpiioIoClient>("mpiio_trait_");
-  }
+                   AdapterType::kMpiio) {}
 
   inline bool IsMpiFpTracked(MPI_File *fh, std::shared_ptr<AdapterStat> &stat) {
     auto mdm = HERMES_FS_METADATA_MANAGER;

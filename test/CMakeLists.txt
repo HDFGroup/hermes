@@ -32,9 +32,9 @@ target_link_libraries(test_config ${LIBRT}
 
 foreach(program ${API_TESTS})
   add_executable(${program} ${program}.cc main_mpi.cc)
-  add_dependencies(${program} hermes)
+  add_dependencies(${program} hermes hermes_example_trait)
   target_link_libraries(${program} ${LIBRT}
-          hermes
+          hermes hermes_example_trait
           MPI::MPI_CXX
           $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium>
           Catch2::Catch2)
