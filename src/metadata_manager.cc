@@ -686,6 +686,9 @@ std::vector<BlobId> MetadataManager::LocalGroupByTag(TagId tag_id) {
  * */
 bool MetadataManager::LocalTagAddTrait(TagId tag_id, TraitId trait_id) {
   AUTO_TRACE(1);
+  HILOG(kDebug, "Adding trait {}.{} to tag {}.{}",
+        trait_id.node_id_, trait_id.unique_,
+        tag_id.node_id_, tag_id.unique_)
   // Acquire MD read lock (read tag_map_)
   ScopedRwReadLock tag_map_lock(header_->lock_[kTagMapLock]);
   auto iter = tag_map_->find(tag_id);

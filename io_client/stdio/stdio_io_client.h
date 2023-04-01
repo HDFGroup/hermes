@@ -46,11 +46,6 @@ class StdioIoClient : public hermes::adapter::fs::FilesystemIoClient {
     CreateHeader<StdioIoClientHeader>("stdio_io_client_");
   }
 
-  /** Trait constructor */
-  explicit StdioIoClient(const std::string &trait_uuid) {
-    CreateHeader<StdioIoClientHeader>(trait_uuid);
-  }
-
   /** Trait deserialization constructor */
   explicit StdioIoClient(hshm::charbuf &params) {
     (void) params;

@@ -46,11 +46,6 @@ public:
     CreateHeader<MpiioIoClientHeader>("mpiio_io_client_");
   }
 
-  /** Trait constructor */
-  explicit MpiioIoClient(const std::string &trait_uuid) {
-    CreateHeader<MpiioIoClientHeader>(trait_uuid);
-  }
-
   /** Trait deserialization constructor */
   explicit MpiioIoClient(hshm::charbuf &params) {
     (void) params;

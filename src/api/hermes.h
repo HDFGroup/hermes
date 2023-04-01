@@ -148,11 +148,16 @@ class Hermes {
   TraitId RegisterTrait(TraitT *trait) {
     TraitId id = GetTraitId(trait->GetUuid());
     if (!id.IsNull()) {
+      HILOG(kDebug, "Found existing trait trait: {}", trait->GetUuid())
       return id;
     }
-    return HERMES->mdm_->GlobalRegisterTrait(TraitId::GetNull(),
+    HILOG(kDebug, "Registering a new trait: {}", trait->GetUuid())
+    id = HERMES->mdm_->GlobalRegisterTrait(TraitId::GetNull(),
                                              trait->GetUuid(),
                                              trait->trait_info_);
+    HILOG(kDebug, "Giving trait {} id {}.{}",
+          trait->GetUuid(), id.node_id_, id.unique_)
+    return id;
   }
 
   /** Create a trait */
@@ -161,11 +166,16 @@ class Hermes {
                         Args&& ...args) {
     TraitId id = GetTraitId(trait_uuid);
     if (!id.IsNull()) {
+      HILOG(kDebug, "Found existing trait trait: {}", trait_uuid)
       return id;
     }
+    HILOG(kDebug, "Registering a new trait: {}", trait_uuid)
     TraitT obj(trait_uuid, std::forward<Args>(args)...);
-    return HERMES->mdm_->GlobalRegisterTrait(TraitId::GetNull(),
-                                            trait_uuid, obj.trait_info_);
+    id = HERMES->mdm_->GlobalRegisterTrait(TraitId::GetNull(),
+                                           trait_uuid, obj.trait_info_);
+    HILOG(kDebug, "Giving trait {} id {}.{}",
+          trait_uuid, id.node_id_, id.unique_)
+    return id;
   }
 
   /** Get trait id */

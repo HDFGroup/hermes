@@ -35,6 +35,7 @@ void TagInfo::shm_destroy_main() {
     }
   }
   blobs_->shm_destroy();
+  traits_->shm_destroy();
 }
 
 }  // namespace hermes

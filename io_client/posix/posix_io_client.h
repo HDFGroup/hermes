@@ -47,11 +47,6 @@ class PosixIoClient : public hermes::adapter::fs::FilesystemIoClient {
     CreateHeader<PosixIoClientHeader>("posix_io_client_");
   }
 
-  /** Trait constructor */
-  explicit PosixIoClient(const std::string &trait_uuid) {
-    CreateHeader<PosixIoClientHeader>(trait_uuid);
-  }
-
   /** Trait deserialization constructor */
   explicit PosixIoClient(hshm::charbuf &params) {
     (void) params;

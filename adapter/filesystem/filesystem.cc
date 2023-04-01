@@ -55,7 +55,9 @@ void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
       // The file was opened regularly
       stat.bkt_id_ = HERMES->GetBucket(stat.path_, ctx, file_size);
     }
-    stat.bkt_id_->AttachTrait(io_client_->GetTraitId());
+    if (stat.bkt_id_->DidCreate()) {
+      stat.bkt_id_->AttachTrait(io_client_->GetTraitId());
+    }
     // Update page size and file size
     // TODO(llogan): can avoid two unordered_map queries here
     stat.page_size_ = mdm->GetAdapterPageSize(path);

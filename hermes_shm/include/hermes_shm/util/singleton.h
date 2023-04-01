@@ -97,7 +97,7 @@ template<typename T>
 class EasySingleton {
  protected:
   /** static instance. */
-  static std::unique_ptr<T> obj_;
+  static T* obj_;
   static hshm::Mutex lock_;
 
  public:
@@ -110,14 +110,14 @@ class EasySingleton {
     if (obj_ == nullptr) {
       hshm::ScopedMutex lock(lock_);
       if (obj_ == nullptr) {
-        obj_ = std::make_unique<T>();
+        obj_ = new T();
       }
     }
-    return obj_.get();
+    return obj_;
   }
 };
 template <typename T>
-std::unique_ptr<T> EasySingleton<T>::obj_ = nullptr;
+T* EasySingleton<T>::obj_ = nullptr;
 template <typename T>
 hshm::Mutex EasySingleton<T>::lock_ = hshm::Mutex();
 
