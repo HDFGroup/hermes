@@ -37,10 +37,10 @@ class PosixFs : public hermes::adapter::fs::Filesystem {
       /*memset(buf, 0, sizeof(StatT));
       buf->st_dev = 0;
       buf->st_ino = 0;*/
-      buf->st_mode = 0100644; // astat.st_mode_;
+      buf->st_mode = 0100644;
       /*buf->st_nlink = 1;*/
-      buf->st_uid = HERMES_SYSTEM_INFO->uid_; // astat.st_uid_;
-      buf->st_gid = HERMES_SYSTEM_INFO->gid_; // astat.st_gid_;
+      buf->st_uid = HERMES_SYSTEM_INFO->uid_;
+      buf->st_gid = HERMES_SYSTEM_INFO->gid_;
       // buf->st_rdev = 0;
       buf->st_size = GetSize(f, astat);
       /*buf->st_blksize = 0;
