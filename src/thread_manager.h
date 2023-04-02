@@ -31,7 +31,7 @@ class ThreadManager {
   }
 
   /** Spawn a for handling a function or lambda */
-  template<typename FuncT, typename ParamsT=void>
+  template<typename FuncT, typename ParamsT = void>
   void Spawn(FuncT &&func, ParamsT *params = nullptr) {
     ABT_thread_create_on_xstream(execution_stream_,
                                  func, (void*)params,
