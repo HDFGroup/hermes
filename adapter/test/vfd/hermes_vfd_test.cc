@@ -362,6 +362,10 @@ using hermes::adapter::vfd::test::GenHdf5File;
 using hermes::adapter::vfd::test::GenNextRandom;
 using hermes::adapter::vfd::test::GenRandom0to1;
 
+void Flush() {
+  HERMES->Flush();
+}
+
 void IgnoreAllFiles() {
   HERMES->client_config_.SetAdapterPathTracking(info.existing_file_cmp, false);
   HERMES->client_config_.SetAdapterPathTracking(info.new_file_cmp, false);
@@ -468,6 +472,7 @@ void CheckResults(const std::string &file1, const std::string &file2) {
  * Called after each individual test.
  */
 int Posttest() {
+  Flush();
   if (HERMES->client_config_.GetBaseAdapterMode()
       != hermes::adapter::AdapterMode::kScratch) {
     // NOTE(chogan): This is necessary so that h5diff doesn't use the Hermes VFD

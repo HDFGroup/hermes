@@ -15,6 +15,11 @@
 
 namespace hermes::api {
 
+/**====================================
+ * PRIVATE Init + Finalize Operations
+ * ===================================*/
+
+/** Internal initialization of Hermes */
 void Hermes::Init(HermesType mode,
                   std::string server_config_path,
                   std::string client_config_path) {
@@ -43,36 +48,7 @@ void Hermes::Init(HermesType mode,
   is_being_initialized_ = false;
 }
 
-void Hermes::Finalize() {
-  if (!is_initialized_ || is_terminated_) {
-    return;
-  }
-  switch (mode_) {
-    case HermesType::kServer: {
-      FinalizeServer();
-      break;
-    }
-    case HermesType::kClient: {
-      FinalizeClient();
-      break;
-    }
-    default: {
-      throw std::logic_error("Invalid HermesType to launch in");
-    }
-  }
-  // TODO(llogan): make re-initialization possible.
-  is_initialized_ = false;
-  is_terminated_ = true;
-}
-
-void Hermes::RunDaemon() {
-  rpc_.RunDaemon();
-}
-
-void Hermes::StopDaemon() {
-  rpc_.StopDaemon();
-}
-
+/** Initialize Hermes as a server */
 void Hermes::InitServer(std::string server_config_path) {
   LoadServerConfig(server_config_path);
   InitSharedMemory();
@@ -98,6 +74,7 @@ void Hermes::InitServer(std::string server_config_path) {
   prefetch_.Init();
 }
 
+/** Initialize Hermes as a client to the daemon */
 void Hermes::InitClient(std::string server_config_path,
                         std::string client_config_path) {
   LoadServerConfig(server_config_path);
@@ -116,6 +93,7 @@ void Hermes::InitClient(std::string server_config_path,
   traits_.Init();
 }
 
+/** Load the server-side configuration */
 void Hermes::LoadServerConfig(std::string config_path) {
   if (config_path.size() == 0) {
     config_path = GetEnvSafe(kHermesServerConf);
@@ -123,6 +101,7 @@ void Hermes::LoadServerConfig(std::string config_path) {
   server_config_.LoadFromFile(config_path);
 }
 
+/** Load the client-side configuration */
 void Hermes::LoadClientConfig(std::string config_path) {
   if (config_path.size() == 0) {
     config_path = GetEnvSafe(kHermesClientConf);
@@ -130,6 +109,7 @@ void Hermes::LoadClientConfig(std::string config_path) {
   client_config_.LoadFromFile(config_path);
 }
 
+/** Initialize shared-memory between daemon and client */
 void Hermes::InitSharedMemory() {
   // Create shared-memory allocator
   auto mem_mngr = HERMES_MEMORY_MANAGER;
@@ -145,6 +125,7 @@ void Hermes::InitSharedMemory() {
   header_ = main_alloc_->GetCustomHeader<ShmHeader<Hermes>>();
 }
 
+/** Connect to a Daemon's shared memory */
 void Hermes::LoadSharedMemory() {
   // Load shared-memory allocator
   auto mem_mngr = HERMES_MEMORY_MANAGER;
@@ -154,12 +135,14 @@ void Hermes::LoadSharedMemory() {
   header_ = main_alloc_->GetCustomHeader<ShmHeader<Hermes>>();
 }
 
+/** Finalize Daemon mode */
 void Hermes::FinalizeServer() {
   // NOTE(llogan): rpc_.Finalize() is called internally by daemon in this case
   // bpm_.shm_destroy();
   // mdm_.shm_destroy();
 }
 
+/** Finalize client mode */
 void Hermes::FinalizeClient() {
   if (client_config_.stop_daemon_) {
     StopDaemon();
@@ -167,22 +150,81 @@ void Hermes::FinalizeClient() {
   rpc_.Finalize();
 }
 
+/**====================================
+ * PUBLIC Finalize Operations
+ * ===================================*/
+
+/** Finalize Hermes explicitly */
+void Hermes::Finalize() {
+  if (!is_initialized_ || is_terminated_) {
+    return;
+  }
+  switch (mode_) {
+    case HermesType::kServer: {
+      FinalizeServer();
+      break;
+    }
+    case HermesType::kClient: {
+      FinalizeClient();
+      break;
+    }
+    default: {
+      throw std::logic_error("Invalid HermesType to launch in");
+    }
+  }
+  is_initialized_ = false;
+  is_terminated_ = true;
+}
+
+/** Run the Hermes core Daemon */
+void Hermes::RunDaemon() {
+  rpc_.RunDaemon();
+}
+
+/** Stop the Hermes core Daemon */
+void Hermes::StopDaemon() {
+  rpc_.StopDaemon();
+}
+
+/**====================================
+ * PUBLIC Bucket Operations
+ * ===================================*/
+
+/** Get or create a Bucket in Hermes */
 std::shared_ptr<Bucket> Hermes::GetBucket(std::string name,
                                           Context ctx,
                                           size_t backend_size) {
   return std::make_shared<Bucket>(name, ctx, backend_size);
 }
 
+/** Get an existing Bucket in Hermes */
 std::shared_ptr<Bucket> Hermes::GetBucket(TagId tag_id) {
   return std::make_shared<Bucket>(tag_id);
 }
 
+/**====================================
+ * PUBLIC I/O Operations
+ * ===================================*/
+
+/** Waits for all blobs to finish being flushed */
+void Hermes::Flush() {
+  borg_->GlobalWaitForFullFlush();
+}
+
+/** Destroy all buckets and blobs in this instance */
+void Hermes::Clear() {
+  mdm_->GlobalClear();
+}
+
+/**====================================
+ * PUBLIC Tag Operations
+ * ===================================*/
+
+/** Locate all blobs with a tag */
 std::vector<BlobId> Hermes::GroupBy(TagId tag_id) {
   return mdm_->GlobalGroupByTag(tag_id);
 }
 
-void Hermes::Clear() {
-  mdm_->GlobalClear();
-}
+
 
 }  // namespace hermes::api

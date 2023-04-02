@@ -120,7 +120,7 @@ class Hermes {
 
  public:
   /**====================================
-   * PUBLIC Global Operations
+   * PUBLIC Bucket Operations
    * ===================================*/
 
   /** Get or create a Bucket in Hermes */
@@ -131,6 +131,20 @@ class Hermes {
   /** Get an existing Bucket in Hermes */
   std::shared_ptr<Bucket> GetBucket(TagId bkt_id);
 
+  /**====================================
+   * PUBLIC I/O Operations
+   * ===================================*/
+
+  /** Waits for all blobs to finish being flushed */
+  void Flush();
+
+  /** Destroy all buckets and blobs in this instance */
+  void Clear();
+
+  /**====================================
+   * PUBLIC Tag Operations
+   * ===================================*/
+
   /** Create a generic tag in Hermes */
   TagId CreateTag(const std::string &tag_name) {
     std::vector<TraitId> traits;
@@ -140,8 +154,9 @@ class Hermes {
   /** Locate all blobs with a tag */
   std::vector<BlobId> GroupBy(TagId tag_id);
 
-  /** Destroy all buckets and blobs in this instance */
-  void Clear();
+  /**====================================
+   * PUBLIC Trait Operations
+   * ===================================*/
 
   /** Create a trait */
   template<typename TraitT, typename ...Args>

@@ -378,4 +378,20 @@ void BufferOrganizer::LocalProcessFlushes(BorgIoThreadQueue &bq) {
   }
 }
 
+/** Barrier for all flushing to complete */
+void BufferOrganizer::LocalWaitForFullFlush() {
+  HILOG(kInfo, "Full synchronous flush on node {}", rpc_->node_id_)
+  LocalEnqueueFlushes();
+  HERMES_BORG_IO_THREAD_MANAGER->WaitForFlush();
+}
+
+/** Barrier for all I/O in Hermes to flush */
+void BufferOrganizer::GlobalWaitForFullFlush() {
+  for (int i = 0; i < (int)rpc_->hosts_.size(); ++i) {
+    int node_id = i + 1;
+    HILOG(kInfo, "Wait for flush on node {}", node_id)
+    rpc_->Call<bool>(node_id, "RpcWaitForFullFlush");
+  }
+}
+
 }  // namespace hermes

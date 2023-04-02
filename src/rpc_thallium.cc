@@ -102,9 +102,10 @@ void ThalliumRpc::Finalize() {
   switch (mode_) {
     case HermesType::kServer: {
       HILOG(kInfo, "Stopping (server mode)");
+      // NOTE(llogan): HERMES->Flush() is called in finalize_hermes to avoid
+      // margo exception.
       HERMES_THREAD_MANAGER->Join();
       HERMES->prefetch_.Finalize();
-      comm_->WorldBarrier();
       // NOTE(llogan): Don't use finalize with unique_ptr. finalize() is
       // called in the destructor of the tl::enigne, and will segfault if
       // called twice.

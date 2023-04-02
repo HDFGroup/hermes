@@ -163,6 +163,7 @@ int pretest() {
 
 int posttest(bool compare_data = true) {
 #if HERMES_INTERCEPT == 1
+  HERMES->Flush();
   HERMES->client_config_.SetAdapterPathTracking(info.existing_file, false);
   HERMES->client_config_.SetAdapterPathTracking(info.new_file, false);
 #endif

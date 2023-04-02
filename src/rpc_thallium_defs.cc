@@ -255,6 +255,11 @@ void ThalliumRpc::DefineRpcs() {
    * Buffer Organizer Operations
    * ===================================*/
 
+  RegisterRpc("RpcWaitForFullFlush", [borg](
+      const request &req) {
+    borg->LocalWaitForFullFlush();
+    req.respond(true);
+  });
   RegisterRpc("RpcPlaceBlobInBuffers", [this, borg](
                                            const request &req,
                                            tl::bulk &bulk,

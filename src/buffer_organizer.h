@@ -125,6 +125,14 @@ class BorgIoThreadManager {
   /** Spawn the I/O threads */
   void SpawnFlushWorkers(int num_threads);
 
+  /** Wait for flushing to complete */
+  void WaitForFlush() {
+    while (IsFlushing()) {
+      LockAll();
+      UnlockAll();
+    }
+  }
+
   /** Check if a flush is still happening */
   bool IsFlushing() {
     for (BorgIoThreadQueue &bq : queues_) {
@@ -265,6 +273,12 @@ class BufferOrganizer : public hipc::ShmContainer {
 
   /** Actually process flush operations */
   static void LocalProcessFlushes(BorgIoThreadQueue &bq);
+
+  /** Barrier for all flushing to complete */
+  void LocalWaitForFullFlush();
+
+  /** Barrier for all I/O in Hermes to flush */
+  void GlobalWaitForFullFlush();
 };
 
 }  // namespace hermes

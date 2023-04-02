@@ -86,6 +86,12 @@ int finalize() {
   return 0;
 }
 
+void Flush() {
+#if HERMES_INTERCEPT == 1
+  HERMES->Flush();
+#endif
+}
+
 void IgnoreAllFiles() {
 #if HERMES_INTERCEPT == 1
   HERMES->client_config_.SetAdapterPathTracking(info.existing_file_cmp, false);
@@ -165,6 +171,8 @@ int pretest() {
 }
 
 int posttest(bool compare_data = true) {
+  Flush();
+  IgnoreAllFiles();
   if (compare_data && stdfs::exists(info.new_file) &&
       stdfs::exists(info.new_file_cmp)) {
     // Verify the NEW file is the same in Hermes + the backend

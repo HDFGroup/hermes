@@ -16,5 +16,6 @@
 int main(int argc, char **argv) {
   HERMES->Create(hermes::HermesType::kClient);
   HERMES->client_config_.stop_daemon_ = true;
+  HERMES->Flush();
   HERMES->Finalize();
 }
