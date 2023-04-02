@@ -12,6 +12,7 @@ mkdir /tmp/test_hermes
 
 export HERMES_CLIENT_CONF="${CMAKE_SOURCE_DIR}/test/data/hermes_client.yaml"
 export HERMES_CONF="${CMAKE_SOURCE_DIR}/test/data/hermes_server.yaml"
+export HERMES_TRAIT_PATH=${CMAKE_BINARY_DIR}/bin
 
 # Start the Hermes daemon
 echo "STARTING DAEMON"
@@ -23,6 +24,9 @@ sleep ${SLEEP_TIME}
 echo "RUNNING PROGRAM"
 export LSAN_OPTIONS=suppressions="${CMAKE_SOURCE_DIR}/test/data/asan.supp"
 ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${MPI_PROC} \
+-genv HERMES_CLIENT_CONF=${HERMES_CLIENT_CONF} \
+-genv HERMES_CONF=${HERMES_CONF} \
+-genv HERMES_TRAIT_PATH=${HERMES_TRAIT_PATH} \
 ${CMAKE_BINARY_DIR}/bin/${EXEC_NAME} "${ARGS}" -d yes
 status=$?
 echo "STATUS: $status"

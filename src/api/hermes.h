@@ -217,6 +217,7 @@ class Hermes {
     traits.reserve(trait_ids.size());
     for (TraitId &trait_id : trait_ids) {
       auto trait = GetTrait<Trait>(trait_id);
+      if (!trait) { continue; }
       if (trait->GetTraitFlags().Any(flags)) {
         traits.emplace_back(trait);
       }

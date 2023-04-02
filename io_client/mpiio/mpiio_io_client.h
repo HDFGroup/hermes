@@ -51,6 +51,7 @@ public:
   /** Trait deserialization constructor */
   explicit MpiioIoClient(hshm::charbuf &params) {
     (void) params;
+    real_api = HERMES_MPIIO_API;
     CreateHeader<MpiioIoClientHeader>("mpiio_io_client_", trait_name_);
   }
 

@@ -44,13 +44,14 @@ class StdioIoClient : public hermes::adapter::fs::FilesystemIoClient {
   /** Default constructor */
   StdioIoClient() {
     real_api = HERMES_STDIO_API;
-    CreateHeader<StdioIoClientHeader>("stdio_io_client_", trait_name_);
+    CreateHeader<StdioIoClientHeader>(trait_name_, trait_name_);
   }
 
   /** Trait deserialization constructor */
   explicit StdioIoClient(hshm::charbuf &params) {
     (void) params;
-    CreateHeader<StdioIoClientHeader>("stdio_io_client_", trait_name_);
+    real_api = HERMES_STDIO_API;
+    CreateHeader<StdioIoClientHeader>(trait_name_, trait_name_);
   }
 
   /** Virtual destructor */

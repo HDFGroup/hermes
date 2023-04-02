@@ -47,7 +47,6 @@ struct BorgIoTask {
   TagId bkt_id_;
   BlobId blob_id_;
   size_t blob_size_;
-  hipc::Ref<BlobInfo> blob_info_;
   std::vector<Trait*> traits_;
 
   /** Default constructor */
@@ -55,10 +54,8 @@ struct BorgIoTask {
 
   /** Emplace constructor */
   explicit BorgIoTask(TagId bkt_id, BlobId blob_id, size_t blob_size,
-                      hipc::Ref<BlobInfo> &blob_info,
                       std::vector<Trait*> &&traits)
     : bkt_id_(bkt_id), blob_id_(blob_id), blob_size_(blob_size),
-      blob_info_(blob_info),
       traits_(std::forward<std::vector<Trait*>>(traits)) {}
 
   /** Copy constructor */
@@ -66,7 +63,6 @@ struct BorgIoTask {
       : bkt_id_(other.bkt_id_),
         blob_id_(other.blob_id_),
         blob_size_(other.blob_size_),
-        blob_info_(other.blob_info_),
         traits_(other.traits_) {}
 
   /** Move constructor */
@@ -74,7 +70,6 @@ struct BorgIoTask {
       : bkt_id_(std::move(other.bkt_id_)),
         blob_id_(std::move(other.blob_id_)),
         blob_size_(std::move(other.blob_size_)),
-        blob_info_(std::move(other.blob_info_)),
         traits_(std::move(other.traits_)) {}
 };
 
@@ -127,10 +122,11 @@ class BorgIoThreadManager {
 
   /** Wait for flushing to complete */
   void WaitForFlush() {
+    HILOG(kDebug, "Waiting for all flushing to complete")
     while (IsFlushing()) {
-      LockAll();
-      UnlockAll();
+      HSHM_THREAD_MANAGER->GetThreadStatic()->Yield();
     }
+    HILOG(kDebug, "Waiting for all flushing to complete")
   }
 
   /** Check if a flush is still happening */
@@ -159,11 +155,10 @@ class BorgIoThreadManager {
 
   /** Enqueue a flushing task to a worker */
   void Enqueue(TagId bkt_id, BlobId blob_id, size_t blob_size,
-               hipc::Ref<BlobInfo> &info, std::vector<Trait*> &&traits) {
+               std::vector<Trait*> &&traits) {
     BorgIoThreadQueue& bq = FindLowestQueue();
     bq.load_.fetch_add(blob_size);
     bq.queue_.emplace(bkt_id, blob_id, blob_size,
-                      info,
                       std::forward<std::vector<Trait*>>(traits));
   }
 
@@ -269,10 +264,10 @@ class BufferOrganizer : public hipc::ShmContainer {
    * ===================================*/
 
   /** Flush all blobs registered in this daemon */
-  static void LocalEnqueueFlushes();
+  void LocalEnqueueFlushes();
 
   /** Actually process flush operations */
-  static void LocalProcessFlushes(BorgIoThreadQueue &bq);
+  void LocalProcessFlushes(BorgIoThreadQueue &bq);
 
   /** Barrier for all flushing to complete */
   void LocalWaitForFullFlush();

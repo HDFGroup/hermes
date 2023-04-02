@@ -9,6 +9,7 @@ mkdir /tmp/test_hermes
 
 export HERMES_CLIENT_CONF="${CMAKE_SOURCE_DIR}/test/data/hermes_client.yaml"
 export HERMES_CONF="${CMAKE_SOURCE_DIR}/test/data/hermes_server.yaml"
+export HERMES_TRAIT_PATH=${CMAKE_BINARY_DIR}/bin
 
 # Start the Hermes daemon
 echo "STARTING DAEMON"
