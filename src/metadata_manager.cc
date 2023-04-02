@@ -338,6 +338,8 @@ MetadataManager::LocalPutBlobMetadata(TagId bkt_id,
     blob_info.header_->tag_id_ = bkt_id;
     blob_info.header_->blob_size_ = blob_size;
     blob_info.header_->score_ = score;
+    blob_info.header_->mod_count_ = 1;
+    blob_info.header_->last_flush_ = 0;
   } else {
     HILOG(kDebug, "Found existing blob: {}", blob_name)
     blob_id = *(*blob_id_map_)[*internal_blob_name];
@@ -348,6 +350,7 @@ MetadataManager::LocalPutBlobMetadata(TagId bkt_id,
     ScopedRwWriteLock(blob_info.header_->lock_[0]);
     (*blob_info.buffers_) = buffers;
     blob_info.header_->score_ = score;
+    blob_info.header_->mod_count_.fetch_add(1);
   }
   return std::tuple<BlobId, bool, size_t>(blob_id, did_create, orig_blob_size);
 }

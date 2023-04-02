@@ -14,10 +14,6 @@
 
 namespace hermes::adapter::fs {
 
-/** Callback used for custom trait execution */
-void PosixIoClient::Run(int method, void *params) {
-}
-
 /** Allocate an fd for the file f */
 void PosixIoClient::RealOpen(File &f,
                              AdapterStat &stat,
@@ -114,7 +110,7 @@ size_t PosixIoClient::GetSize(const hipc::charbuf &bkt_name) {
 }
 
 /** Write blob to backend */
-void PosixIoClient::WriteBlob(const hipc::charbuf &bkt_name,
+void PosixIoClient::WriteBlob(const std::string &bkt_name,
                               const Blob &full_blob,
                               const FsIoOptions &opts,
                               IoStatus &status) {
@@ -123,8 +119,8 @@ void PosixIoClient::WriteBlob(const hipc::charbuf &bkt_name,
   HILOG(kDebug, "Writing to file: {}"
         " offset: {}"
         " size: {}",
-        bkt_name.str(), opts.backend_off_, full_blob.size())
-  int fd = real_api->open(bkt_name.str().c_str(), O_RDWR | O_CREAT);
+        bkt_name, opts.backend_off_, full_blob.size())
+  int fd = real_api->open(bkt_name.c_str(), O_RDWR | O_CREAT);
   if (fd < 0) {
     status.size_ = 0;
     status.success_ = false;
@@ -141,7 +137,7 @@ void PosixIoClient::WriteBlob(const hipc::charbuf &bkt_name,
 }
 
 /** Read blob from the backend */
-void PosixIoClient::ReadBlob(const hipc::charbuf &bkt_name,
+void PosixIoClient::ReadBlob(const std::string &bkt_name,
                              Blob &full_blob,
                              const FsIoOptions &opts,
                              IoStatus &status) {
@@ -150,8 +146,8 @@ void PosixIoClient::ReadBlob(const hipc::charbuf &bkt_name,
   HILOG(kDebug, "Reading from file: {}"
         " offset: {}"
         " size: {}",
-        bkt_name.str(), opts.backend_off_, full_blob.size())
-  int fd = real_api->open(bkt_name.str().c_str(), O_RDONLY);
+        bkt_name, opts.backend_off_, full_blob.size())
+  int fd = real_api->open(bkt_name.c_str(), O_RDONLY);
   if (fd < 0) {
     status.size_ = 0;
     status.success_ = false;

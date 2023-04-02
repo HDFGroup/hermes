@@ -60,7 +60,7 @@ class Bucket {
    * Get the name of this bucket. Name is cached instead of
    * making an RPC. Not coherent if Rename is called.
    * */
-  std::string GetName() const {
+  const std::string& GetName() const {
     return name_;
   }
 

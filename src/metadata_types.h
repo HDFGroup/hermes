@@ -132,25 +132,24 @@ struct ShmHeader<BlobInfo> {
   BlobId blob_id_;   /**< The identifier of this blob */
   TagId tag_id_;  /**< The bucket containing the blob */
   hipc::ShmArchive<hipc::string>
-      name_;      /**< SHM pointer to string */
+      name_;      /**< SHM pointer to name string */
   hipc::ShmArchive<hipc::vector<BufferInfo>>
       buffers_;   /**< SHM pointer to BufferInfo vector */
   hipc::ShmArchive<hipc::slist<TagId>>
       tags_;        /**< SHM pointer to tag list */
-  size_t blob_size_;   /**< The overall size of the blob */
   RwLock lock_[2];     /**< Ensures BlobInfo access is synchronized */
+  size_t blob_size_;   /**< The overall size of the blob */
   float score_;        /**< The priority of this blob */
-
-  /**
-   * Estimate when blob will be accessed next (ns)
-   * 0 indicates unknown
-   * */
-  size_t next_access_time_ns_;
+  std::atomic<size_t> mod_count_;   /**< The number of times blob modified */
+  std::atomic<size_t> last_flush_;  /**< The last mod that was flushed */
 
   void strong_copy(const ShmHeader &other) {
     blob_id_ = other.blob_id_;
     tag_id_ = other.tag_id_;
     blob_size_ = other.blob_size_;
+    score_ = other.score_;
+    mod_count_ = other.mod_count_.load();
+    last_flush_ = other.last_flush_.load();
   }
 };
 

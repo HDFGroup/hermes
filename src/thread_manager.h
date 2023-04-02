@@ -47,7 +47,7 @@ class ThreadManager {
 
   /** Whether the threads in this thread manager should still be executing */
   bool Alive() {
-    return kill_requested_.load();
+    return !kill_requested_.load();
   }
 };
 

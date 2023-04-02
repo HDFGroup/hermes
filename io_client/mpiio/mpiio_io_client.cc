@@ -14,10 +14,6 @@
 
 namespace hermes::adapter::fs {
 
-/** Callback used for custom trait execution */
-void MpiioIoClient::Run(int method, void *params) {
-}
-
 /** Allocate an fd for the file f */
 void MpiioIoClient::RealOpen(File &f,
                              AdapterStat &stat,
@@ -103,20 +99,19 @@ size_t MpiioIoClient::IoSizeFromCount(int count,
 }
 
 /** Write blob to backend */
-void MpiioIoClient::WriteBlob(const hipc::charbuf &bkt_name,
+void MpiioIoClient::WriteBlob(const std::string &bkt_name,
                               const Blob &full_blob,
                               const FsIoOptions &opts,
                               IoStatus &status) {
-  std::string filename = bkt_name.str();
   status.success_ = true;
   HILOG(kDebug,
         "Write called for: {}"
         " on offset: {}"
         " and size: {}",
-        filename, opts.backend_off_, full_blob.size())
+        bkt_name, opts.backend_off_, full_blob.size())
   MPI_File fh;
   int write_count = 0;
-  status.mpi_ret_ = real_api->MPI_File_open(MPI_COMM_SELF, filename.c_str(),
+  status.mpi_ret_ = real_api->MPI_File_open(MPI_COMM_SELF, bkt_name.c_str(),
                                             MPI_MODE_RDONLY,
                                             MPI_INFO_NULL, &fh);
   if (status.mpi_ret_ != MPI_SUCCESS) {
@@ -150,20 +145,19 @@ ERROR:
 }
 
 /** Read blob from the backend */
-void MpiioIoClient::ReadBlob(const hipc::charbuf &bkt_name,
+void MpiioIoClient::ReadBlob(const std::string &bkt_name,
                              Blob &full_blob,
                              const FsIoOptions &opts,
                              IoStatus &status) {
-  std::string filename = bkt_name.str();
   status.success_ = true;
   HILOG(kDebug,
         "Reading from: {}"
         " on offset: {}"
         " and size: {}",
-        filename, opts.backend_off_, full_blob.size())
+        bkt_name, opts.backend_off_, full_blob.size())
   MPI_File fh;
   int read_count = 0;
-  status.mpi_ret_ = real_api->MPI_File_open(MPI_COMM_SELF, filename.c_str(),
+  status.mpi_ret_ = real_api->MPI_File_open(MPI_COMM_SELF, bkt_name.c_str(),
                                             MPI_MODE_RDONLY, MPI_INFO_NULL,
                                             &fh);
   if (status.mpi_ret_ != MPI_SUCCESS) {

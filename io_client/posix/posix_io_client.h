@@ -57,9 +57,6 @@ class PosixIoClient : public hermes::adapter::fs::FilesystemIoClient {
   virtual ~PosixIoClient() = default;
 
  public:
-  /** Callback used for custom trait execution */
-  void Run(int method, void *params) override;
-
   /** Allocate an fd for the file f */
   void RealOpen(File &f,
                 AdapterStat &stat,
@@ -98,13 +95,13 @@ class PosixIoClient : public hermes::adapter::fs::FilesystemIoClient {
   size_t GetSize(const hipc::charbuf &bkt_name) override;
 
   /** Write blob to backend */
-  void WriteBlob(const hipc::charbuf &bkt_name,
+  void WriteBlob(const std::string &bkt_name,
                  const Blob &full_blob,
                  const FsIoOptions &opts,
                  IoStatus &status) override;
 
   /** Read blob from the backend */
-  void ReadBlob(const hipc::charbuf &bkt_name,
+  void ReadBlob(const std::string &bkt_name,
                 Blob &full_blob,
                 const FsIoOptions &opts,
                 IoStatus &status) override;

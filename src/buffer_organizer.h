@@ -38,6 +38,7 @@ static inline size_t SumBufferBlobSizes(std::vector<BufferInfo> &buffers) {
 /** Information needed by traits called internally by Flush */
 struct FlushTraitParams {
   Blob *blob_;
+  std::string *blob_name_;
   std::shared_ptr<api::Bucket> *bkt_;
 };
 
@@ -46,6 +47,7 @@ struct BorgIoTask {
   TagId bkt_id_;
   BlobId blob_id_;
   size_t blob_size_;
+  BlobInfo *blob_info_;
   std::vector<Trait*> traits_;
 
   /** Default constructor */
@@ -53,8 +55,9 @@ struct BorgIoTask {
 
   /** Emplace constructor */
   explicit BorgIoTask(TagId bkt_id, BlobId blob_id, size_t blob_size,
-                      std::vector<Trait*> &&traits)
+                      BlobInfo *blob_info, std::vector<Trait*> &&traits)
     : bkt_id_(bkt_id), blob_id_(blob_id), blob_size_(blob_size),
+      blob_info_(blob_info),
       traits_(std::forward<std::vector<Trait*>>(traits)) {}
 };
 
@@ -76,17 +79,34 @@ struct BorgIoThreadQueue {
 class BorgIoThreadManager {
  public:
   std::vector<BorgIoThreadQueue> queues_;  /**< The set of worker queues */
+  std::atomic<bool> kill_requested_;
 
  public:
+  /** Constructor */
+  BorgIoThreadManager() {
+    kill_requested_.store(false);
+  }
+
+  /** Indicate that no more modifications will take place to blobs */
+  void Join() {
+    kill_requested_.store(true);
+  }
+
+  /** Check if IoThreadManager is still alive */
+  bool Alive() {
+    return !kill_requested_.load();
+  }
+
   /** Spawn the I/O threads */
   void Spawn(int num_threads);
 
   /** Enqueue a flushing task to a worker */
   void Enqueue(TagId bkt_id, BlobId blob_id, size_t blob_size,
-               std::vector<Trait*> &&traits) {
+               BlobInfo &info, std::vector<Trait*> &&traits) {
     BorgIoThreadQueue& bq = FindLowestQueue();
     bq.load_.fetch_add(blob_size);
     bq.queue_.emplace(bkt_id, blob_id, blob_size,
+                      &info,
                       std::forward<std::vector<Trait*>>(traits));
   }
 
@@ -179,8 +199,16 @@ class BufferOrganizer : public hipc::ShmContainer {
                           const std::string &blob_name,
                           float score);
 
+ public:
+  /**====================================
+   * BORG Flushing methods
+   * ===================================*/
+
   /** Flush all blobs registered in this daemon */
-  void LocalFlush();
+  static void LocalEnqueueFlushes();
+
+  /** Actually process flush operations */
+  static void LocalProcessFlushes(BorgIoThreadQueue &bq);
 };
 
 }  // namespace hermes

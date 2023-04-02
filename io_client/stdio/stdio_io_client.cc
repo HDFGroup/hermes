@@ -14,10 +14,6 @@
 
 namespace hermes::adapter::fs {
 
-/** Callback used for custom trait execution */
-void StdioIoClient::Run(int method, void *params) {
-}
-
 /** Allocate an fd for the file f */
 void StdioIoClient::RealOpen(File &f,
                              AdapterStat &stat,
@@ -30,7 +26,7 @@ void StdioIoClient::RealOpen(File &f,
     stat.hflags_.SetBits(HERMES_FS_APPEND);
   }
 
-  if (!(stat.adapter_mode_ == AdapterMode::kScratch)) {
+  if (stat.adapter_mode_ != AdapterMode::kScratch) {
     stat.fh_ = real_api->fopen(path.c_str(), stat.mode_str_.c_str());
     if (stat.fh_ == nullptr) {
       f.status_ = false;
@@ -104,17 +100,16 @@ size_t StdioIoClient::GetSize(const hipc::charbuf &bkt_name) {
 }
 
 /** Write blob to backend */
-void StdioIoClient::WriteBlob(const hipc::charbuf &bkt_name,
+void StdioIoClient::WriteBlob(const std::string &bkt_name,
                               const Blob &full_blob,
                               const FsIoOptions &opts,
                               IoStatus &status) {
   status.success_ = true;
-  std::string filename = bkt_name.str();
   HILOG(kDebug, "Writing to file: {}"
         " offset: {}"
         " size: {}",
-        bkt_name.str(), opts.backend_off_, full_blob.size())
-  FILE *fh = real_api->fopen(filename.c_str(), "r+");
+        bkt_name, opts.backend_off_, full_blob.size())
+  FILE *fh = real_api->fopen(bkt_name.c_str(), "r+");
   if (fh == nullptr) {
     status.size_ = 0;
     status.success_ = false;
@@ -132,17 +127,16 @@ void StdioIoClient::WriteBlob(const hipc::charbuf &bkt_name,
 }
 
 /** Read blob from the backend */
-void StdioIoClient::ReadBlob(const hipc::charbuf &bkt_name,
+void StdioIoClient::ReadBlob(const std::string &bkt_name,
                              Blob &full_blob,
                              const FsIoOptions &opts,
                              IoStatus &status) {
   status.success_ = true;
-  std::string filename = bkt_name.str();
   HILOG(kDebug, "Reading from file: {}"
         " offset: {}"
         " size: {}",
-        bkt_name.str(), opts.backend_off_, full_blob.size())
-  FILE *fh = real_api->fopen(filename.c_str(), "r");
+        bkt_name, opts.backend_off_, full_blob.size())
+  FILE *fh = real_api->fopen(bkt_name.c_str(), "r");
   if (fh == nullptr) {
     status.size_ = 0;
     status.success_ = false;

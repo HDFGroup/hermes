@@ -104,6 +104,7 @@ void ThalliumRpc::Finalize() {
       HILOG(kInfo, "Stopping (server mode)");
       HERMES_THREAD_MANAGER->Join();
       HERMES->prefetch_.Finalize();
+      comm_->WorldBarrier();
       // NOTE(llogan): Don't use finalize with unique_ptr. finalize() is
       // called in the destructor of the tl::enigne, and will segfault if
       // called twice.

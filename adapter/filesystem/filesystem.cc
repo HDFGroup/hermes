@@ -137,8 +137,7 @@ Status Filesystem::PartialPutOrCreate(std::shared_ptr<hapi::Bucket> bkt,
           " backend_size: {}",
           full_blob.size(), opts.backend_size_)
     full_blob.resize(opts.backend_size_);
-    auto name_shm = hipc::make_uptr<hipc::charbuf>(bkt->GetName());
-    io_client_->ReadBlob(*name_shm,
+    io_client_->ReadBlob(bkt->GetName(),
                         full_blob, opts, status);
     if (!status.success_) {
       HILOG(kDebug, "Failed to read blob from backend (PartialPut)."
@@ -181,8 +180,7 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
     opts.backend_size_ = total_size;
     opts.backend_off_ = off;
     Blob blob_wrap((char*)ptr, total_size);
-    auto name_shm = hipc::make_uptr<hipc::charbuf>(bkt->GetName());
-    io_client_->WriteBlob(*name_shm, blob_wrap, opts, io_status);
+    io_client_->WriteBlob(bkt->GetName(), blob_wrap, opts, io_status);
     if (!io_status.success_) {
       HILOG(kDebug, "Failed to write blob of size {} to backend",
             opts.backend_size_)
@@ -285,8 +283,7 @@ Status Filesystem::PartialGetOrCreate(std::shared_ptr<hapi::Bucket> bkt,
           " backend_size: {}",
           full_blob.size(), opts.backend_size_)
     full_blob.resize(opts.backend_size_);
-    auto name_shm = hipc::make_uptr<hipc::charbuf>(bkt->GetName());
-    io_client_->ReadBlob(*name_shm, full_blob, opts, status);
+    io_client_->ReadBlob(bkt->GetName(), full_blob, opts, status);
     if (!status.success_) {
       HILOG(kDebug, "Failed to read blob from backend (PartialGet)."
             " cur_size: {}"
@@ -324,8 +321,7 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
     opts.backend_size_ = total_size;
     opts.backend_off_ = off;
     Blob blob_wrap((char*)ptr, total_size);
-    auto name_shm = hipc::make_uptr<hipc::charbuf>(bkt->GetName());
-    io_client_->ReadBlob(*name_shm, blob_wrap, opts, io_status);
+    io_client_->ReadBlob(bkt->GetName(), blob_wrap, opts, io_status);
     if (!io_status.success_) {
       HILOG(kDebug, "Failed to read blob of size {} from backend",
             opts.backend_size_)
@@ -490,7 +486,7 @@ void Filesystem::FlushBlob(std::shared_ptr<hapi::Bucket> &bkt,
                            BlobId blob_id,
                            AdapterMode mode,
                            Context &ctx) {
-  HILOG(kDebug, "Flushing blob")
+  /*HILOG(kDebug, "Flushing blob")
   if (mode == AdapterMode::kScratch) {
     HILOG(kDebug, "In scratch mode, ignoring flush")
     return;
@@ -504,11 +500,10 @@ void Filesystem::FlushBlob(std::shared_ptr<hapi::Bucket> &bkt,
   std::string blob_name = bkt->GetBlobName(blob_id);
   // Write blob to backend
   FsIoOptions decode_opts = io_client_->DecodeBlobName(blob_name);
-  auto name_shm = hipc::make_uptr<hipc::charbuf>(bkt->GetName());
-  io_client_->WriteBlob(*name_shm,
+  io_client_->WriteBlob(bkt->GetName(),
                         full_blob,
                         decode_opts,
-                        status);
+                        status);*/
 }
 
 /**
@@ -517,14 +512,14 @@ void Filesystem::FlushBlob(std::shared_ptr<hapi::Bucket> &bkt,
 void Filesystem::Flush(std::shared_ptr<hapi::Bucket> &bkt,
                        AdapterMode mode,
                        Context &ctx) {
-  std::vector<BlobId> blob_ids = bkt->GetContainedBlobIds();
+  /*std::vector<BlobId> blob_ids = bkt->GetContainedBlobIds();
   if (mode == AdapterMode::kScratch) {
     return;
   }
   HILOG(kDebug, "Flushing: {} blobs", blob_ids.size())
   for (BlobId &blob_id : blob_ids) {
     FlushBlob(bkt, blob_id, mode, ctx);
-  }
+  }*/
 }
 
 int Filesystem::Sync(File &f, AdapterStat &stat) {

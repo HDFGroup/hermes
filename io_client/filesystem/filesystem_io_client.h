@@ -298,17 +298,36 @@ class FilesystemIoClient : public Trait {
   /** virtual destructor */
   virtual ~FilesystemIoClient() = default;
 
+  /** Callback used for custom trait execution */
+  void Run(int method, void *params) {
+    FlushTraitParams *info = (FlushTraitParams*)params;
+    switch (method) {
+      case HERMES_TRAIT_FLUSH: {
+        FsIoOptions opts = DecodeBlobName(*info->blob_name_);
+        IoStatus status;
+        WriteBlob((*info->bkt_)->GetName(),
+                  (*info->blob_),
+                  opts,
+                  status);
+        break;
+      }
+      default: {
+        HELOG(kError, "Invalid I/O client run method: {}\n", method)
+      }
+    }
+  }
+
   /** Get initial statistics from the backend */
   virtual size_t GetSize(const hipc::charbuf &bkt_name) = 0;
 
   /** Write blob to backend */
-  virtual void WriteBlob(const hipc::charbuf &bkt_name,
+  virtual void WriteBlob(const std::string &bkt_name,
                          const Blob &full_blob,
                          const FsIoOptions &opts,
                          IoStatus &status) = 0;
 
   /** Read blob from the backend */
-  virtual void ReadBlob(const hipc::charbuf &bkt_name,
+  virtual void ReadBlob(const std::string &bkt_name,
                         Blob &full_blob,
                         const FsIoOptions &opts,
                         IoStatus &status) = 0;
