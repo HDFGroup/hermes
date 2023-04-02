@@ -38,7 +38,7 @@ static inline size_t SumBufferBlobSizes(std::vector<BufferInfo> &buffers) {
 /** Information needed by traits called internally by Flush */
 struct FlushTraitParams {
   Blob *blob_;
-  std::string *blob_name_;
+  std::string blob_name_;
   std::shared_ptr<api::Bucket> *bkt_;
 };
 
@@ -47,7 +47,7 @@ struct BorgIoTask {
   TagId bkt_id_;
   BlobId blob_id_;
   size_t blob_size_;
-  BlobInfo *blob_info_;
+  hipc::Ref<BlobInfo> blob_info_;
   std::vector<Trait*> traits_;
 
   /** Default constructor */
@@ -55,10 +55,27 @@ struct BorgIoTask {
 
   /** Emplace constructor */
   explicit BorgIoTask(TagId bkt_id, BlobId blob_id, size_t blob_size,
-                      BlobInfo *blob_info, std::vector<Trait*> &&traits)
+                      hipc::Ref<BlobInfo> &blob_info,
+                      std::vector<Trait*> &&traits)
     : bkt_id_(bkt_id), blob_id_(blob_id), blob_size_(blob_size),
       blob_info_(blob_info),
       traits_(std::forward<std::vector<Trait*>>(traits)) {}
+
+  /** Copy constructor */
+  BorgIoTask(const BorgIoTask &other)
+      : bkt_id_(other.bkt_id_),
+        blob_id_(other.blob_id_),
+        blob_size_(other.blob_size_),
+        blob_info_(other.blob_info_),
+        traits_(other.traits_) {}
+
+  /** Move constructor */
+  BorgIoTask(BorgIoTask &&other)
+      : bkt_id_(std::move(other.bkt_id_)),
+        blob_id_(std::move(other.blob_id_)),
+        blob_size_(std::move(other.blob_size_)),
+        blob_info_(std::move(other.blob_info_)),
+        traits_(std::move(other.traits_)) {}
 };
 
 /** A queue for holding BORG I/O flushing tasks */
@@ -66,14 +83,19 @@ struct BorgIoThreadQueue {
   std::queue<BorgIoTask> queue_;  /**< Holds pending tasks*/
   std::atomic<size_t> load_;      /**< Data being processed on queue */
   int id_;                        /**< ID of this worker queue */
+  hshm::Mutex lock_;              /**< Synchronize enqueue / flush phases */
 
   /** Default constructor */
-  BorgIoThreadQueue() = default;
+  BorgIoThreadQueue() : load_(0) {}
 
   /** Copy constructor */
   BorgIoThreadQueue(const BorgIoThreadQueue &other)
   : queue_(other.queue_), load_(other.load_.load()), id_(other.id_) {}
 };
+
+/** Macro to simplify thread manager singleton */
+#define HERMES_BORG_IO_THREAD_MANAGER \
+  hshm::EasySingleton<BorgIoThreadManager>::GetInstance()
 
 /** Manages the I/O flushing threads for BORG */
 class BorgIoThreadManager {
@@ -97,22 +119,49 @@ class BorgIoThreadManager {
     return !kill_requested_.load();
   }
 
+  /** Spawn the enqueuing thread */
+  void SpawnFlushMonitor(int num_threads);
+
   /** Spawn the I/O threads */
-  void Spawn(int num_threads);
+  void SpawnFlushWorkers(int num_threads);
+
+  /** Check if a flush is still happening */
+  bool IsFlushing() {
+    for (BorgIoThreadQueue &bq : queues_) {
+      if (bq.queue_.size() > 0) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /** Lock all queues */
+  void LockAll() {
+    for (BorgIoThreadQueue &bq : queues_) {
+      bq.lock_.Lock();
+    }
+  }
+
+  /** Unlock all queues */
+  void UnlockAll() {
+    for (BorgIoThreadQueue &bq : queues_) {
+      bq.lock_.Unlock();
+    }
+  }
 
   /** Enqueue a flushing task to a worker */
   void Enqueue(TagId bkt_id, BlobId blob_id, size_t blob_size,
-               BlobInfo &info, std::vector<Trait*> &&traits) {
+               hipc::Ref<BlobInfo> &info, std::vector<Trait*> &&traits) {
     BorgIoThreadQueue& bq = FindLowestQueue();
     bq.load_.fetch_add(blob_size);
     bq.queue_.emplace(bkt_id, blob_id, blob_size,
-                      &info,
+                      info,
                       std::forward<std::vector<Trait*>>(traits));
   }
 
   /** Find the queue with the least burden */
   BorgIoThreadQueue& FindLowestQueue() {
-    BorgIoThreadQueue *bq;
+    BorgIoThreadQueue *bq(nullptr);
     size_t load = std::numeric_limits<uint64_t>::max();
     for (BorgIoThreadQueue &temp_bq : queues_) {
       if (temp_bq.load_ < load) {
@@ -123,9 +172,16 @@ class BorgIoThreadManager {
   }
 };
 
-/** Macro to simplify thread manager singleton */
-#define HERMES_BORG_IO_THREAD_MANAGER \
-  hshm::EasySingleton<BorgIoThreadManager>::GetInstance()
+/** A scoped mutex for the BORG I/O thread manager */
+struct ScopedBorgIoThreadMutex {
+  ScopedBorgIoThreadMutex() {
+    HERMES_BORG_IO_THREAD_MANAGER->LockAll();
+  }
+
+  ~ScopedBorgIoThreadMutex() {
+    HERMES_BORG_IO_THREAD_MANAGER->UnlockAll();
+  }
+};
 
 /**
  * Any state needed by BORG in SHM

@@ -28,8 +28,10 @@ namespace hermes::adapter::fs {
 
 /** State for the POSIX I/O trait */
 struct PosixIoClientHeader : public TraitHeader {
-  explicit PosixIoClientHeader(const std::string &trait_uuid)
-      : TraitHeader(trait_uuid, HERMES_TRAIT_FLUSH) {}
+  explicit PosixIoClientHeader(const std::string &trait_uuid,
+                               const std::string &trait_name)
+      : TraitHeader(trait_uuid, trait_name,
+                    HERMES_TRAIT_FLUSH) {}
 };
 
 /** A class to represent POSIX IO file system */
@@ -44,13 +46,14 @@ class PosixIoClient : public hermes::adapter::fs::FilesystemIoClient {
   /** Default constructor */
   PosixIoClient() {
     real_api = HERMES_POSIX_API;
-    CreateHeader<PosixIoClientHeader>("posix_io_client_");
+    CreateHeader<PosixIoClientHeader>("posix_io_client_", trait_name_);
   }
 
   /** Trait deserialization constructor */
   explicit PosixIoClient(hshm::charbuf &params) {
     (void) params;
-    CreateHeader<PosixIoClientHeader>("posix_io_client_");
+    real_api = HERMES_POSIX_API;
+    CreateHeader<PosixIoClientHeader>("posix_io_client_", trait_name_);
   }
 
   /** Virtual destructor */

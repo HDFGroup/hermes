@@ -19,8 +19,10 @@ namespace hermes::api {
 
 struct ExampleTraitHeader : public TraitHeader {
   int hello_;
-  explicit ExampleTraitHeader(const std::string &trait_uuid, int hello)
-      : TraitHeader(trait_uuid, HERMES_TRAIT_PUT_GET),
+  explicit ExampleTraitHeader(const std::string &trait_uuid,
+                              const std::string &trait_name,
+                              int hello)
+      : TraitHeader(trait_uuid, trait_name, HERMES_TRAIT_PUT_GET),
         hello_(hello) {}
 };
 
@@ -36,7 +38,7 @@ class ExampleTrait : public Trait {
   explicit ExampleTrait(hshm::charbuf &data) : Trait(data) {}
 
   explicit ExampleTrait(const std::string &trait_uuid, int hello) {
-    auto hdr = CreateHeader<ExampleTraitHeader>(trait_uuid, hello);
+    auto hdr = CreateHeader<ExampleTraitHeader>(trait_uuid, trait_name_, hello);
     hdr->hello_ = hello;
   }
 

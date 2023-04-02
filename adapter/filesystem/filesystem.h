@@ -148,7 +148,7 @@ class Filesystem {
   /** truncate */
   int Truncate(File &f, AdapterStat &stat, size_t new_size);
   /** close */
-  int Close(File &f, AdapterStat &stat, bool destroy = true);
+  int Close(File &f, AdapterStat &stat);
   /** remove */
   int Remove(const std::string &pathname);
 
@@ -218,7 +218,7 @@ class Filesystem {
   /** truncate */
   int Truncate(File &f, bool &stat_exists, size_t new_size);
   /** close */
-  int Close(File &f, bool &stat_exists, bool destroy = true);
+  int Close(File &f, bool &stat_exists);
 
  public:
   /** Whether or not \a path PATH is tracked by Hermes */

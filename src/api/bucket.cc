@@ -39,7 +39,7 @@ Bucket::Bucket(const std::string &bkt_name,
  * */
 Bucket::Bucket(TagId tag_id)
     : mdm_(HERMES->mdm_.get()), bpm_(HERMES->bpm_.get()) {
-  // TODO(llogan): Get tag name
+  name_ = mdm_->GlobalGetTagName(tag_id);
   id_ = tag_id;
   did_create_ = false;
 }

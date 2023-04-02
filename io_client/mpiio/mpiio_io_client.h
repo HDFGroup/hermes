@@ -27,8 +27,10 @@ namespace hermes::adapter::fs {
 
 /** State for the MPI I/O trait */
 struct MpiioIoClientHeader : public TraitHeader {
-  explicit MpiioIoClientHeader(const std::string &trait_uuid)
-      : TraitHeader(trait_uuid, HERMES_TRAIT_FLUSH) {}
+  explicit MpiioIoClientHeader(const std::string &trait_uuid,
+                               const std::string &trait_name)
+      : TraitHeader(trait_uuid, trait_name,
+                    HERMES_TRAIT_FLUSH) {}
 };
 
 /** A class to represent STDIO IO file system */
@@ -43,13 +45,13 @@ public:
   /** Default constructor */
   MpiioIoClient() {
     real_api = HERMES_MPIIO_API;
-    CreateHeader<MpiioIoClientHeader>("mpiio_io_client_");
+    CreateHeader<MpiioIoClientHeader>("mpiio_io_client_", trait_name_);
   }
 
   /** Trait deserialization constructor */
   explicit MpiioIoClient(hshm::charbuf &params) {
     (void) params;
-    CreateHeader<MpiioIoClientHeader>("mpiio_io_client_");
+    CreateHeader<MpiioIoClientHeader>("mpiio_io_client_", trait_name_);
   }
 
   /** Virtual destructor */

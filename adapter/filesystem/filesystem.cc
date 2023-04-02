@@ -537,11 +537,8 @@ int Filesystem::Truncate(File &f, AdapterStat &stat, size_t new_size) {
   return 0;
 }
 
-int Filesystem::Close(File &f, AdapterStat &stat, bool destroy) {
+int Filesystem::Close(File &f, AdapterStat &stat) {
   Sync(f, stat);
-  if (destroy) {
-    stat.bkt_id_->Destroy();
-  }
   auto mdm = HERMES_FS_METADATA_MANAGER;
   FilesystemIoClientState fs_ctx(&mdm->fs_mdm_, (void*)&stat);
   io_client_->HermesClose(f, stat, fs_ctx);
@@ -783,7 +780,7 @@ int Filesystem::Truncate(File &f, bool &stat_exists, size_t new_size) {
   return Truncate(f, *stat, new_size);
 }
 
-int Filesystem::Close(File &f, bool &stat_exists, bool destroy) {
+int Filesystem::Close(File &f, bool &stat_exists) {
   auto mdm = HERMES_FS_METADATA_MANAGER;
   auto stat = mdm->Find(f);
   if (!stat) {
@@ -791,7 +788,7 @@ int Filesystem::Close(File &f, bool &stat_exists, bool destroy) {
     return -1;
   }
   stat_exists = true;
-  return Close(f, *stat, destroy);
+  return Close(f, *stat);
 }
 
 }  // namespace hermes::adapter::fs

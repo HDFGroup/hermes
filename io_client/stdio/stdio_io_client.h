@@ -27,8 +27,9 @@ namespace hermes::adapter::fs {
 
 /** State for the STDIO I/O trait */
 struct StdioIoClientHeader : public TraitHeader {
-  explicit StdioIoClientHeader(const std::string &trait_uuid)
-      : TraitHeader(trait_uuid, HERMES_TRAIT_FLUSH) {}
+  explicit StdioIoClientHeader(const std::string &trait_uuid,
+                               const std::string &trait_name)
+      : TraitHeader(trait_uuid, trait_name, HERMES_TRAIT_FLUSH) {}
 };
 
 /** A class to represent STDIO IO file system */
@@ -43,13 +44,13 @@ class StdioIoClient : public hermes::adapter::fs::FilesystemIoClient {
   /** Default constructor */
   StdioIoClient() {
     real_api = HERMES_STDIO_API;
-    CreateHeader<StdioIoClientHeader>("stdio_io_client_");
+    CreateHeader<StdioIoClientHeader>("stdio_io_client_", trait_name_);
   }
 
   /** Trait deserialization constructor */
   explicit StdioIoClient(hshm::charbuf &params) {
     (void) params;
-    CreateHeader<StdioIoClientHeader>("stdio_io_client_");
+    CreateHeader<StdioIoClientHeader>("stdio_io_client_", trait_name_);
   }
 
   /** Virtual destructor */

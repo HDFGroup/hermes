@@ -364,6 +364,12 @@ class MetadataManager : public hipc::ShmContainer {
   DEFINE_RPC(TagId, GetTagId, 0, STRING_HASH_LAMBDA)
 
   /**
+   * Get the name of a tag
+   * */
+  RPC std::string LocalGetTagName(TagId tag);
+  DEFINE_RPC(std::string, GetTagName, 0, UNIQUE_ID_TO_NODE_ID_LAMBDA)
+
+  /**
    * Rename a tag
    * */
   RPC bool LocalRenameTag(TagId tag, const std::string &new_name);
@@ -411,114 +417,32 @@ class MetadataManager : public hipc::ShmContainer {
    * ===================================*/
 
   /**
-   * Register a trait
+   * Register a trait. Stores the state of the trait in a way that can
+   * be queried by all processes.
    * */
   RPC TraitId LocalRegisterTrait(TraitId trait_id,
-                                 const std::string &trait_uuid,
-                                 const hshm::charbuf &trait_params) {
-    // Acquire md write lock (modifying trait map)
-    ScopedRwWriteLock md_lock(header_->lock_[kTraitMapLock]);
-
-    // Check if trait exists
-    auto trait_uuid_shm = hipc::make_uptr<hipc::charbuf>(trait_uuid);
-    auto iter = trait_id_map_->find(*trait_uuid_shm);
-    if (!iter.is_end()) {
-      trait_id = *(*iter)->second_;
-      return trait_id;
-    }
-
-    // Create new trait
-    if (trait_id.IsNull()) {
-      trait_id.unique_ = header_->id_alloc_.fetch_add(1);
-      trait_id.node_id_ = rpc_->node_id_;
-    }
-    trait_id_map_->emplace(*trait_uuid_shm, trait_id);
-    trait_map_->emplace(trait_id, trait_params);
-    return trait_id;
-  }
-  DEFINE_RPC(TraitId, RegisterTrait, 1, STRING_HASH_LAMBDA);
+                                 const hshm::charbuf &trait_params);
+  DEFINE_RPC(TraitId, RegisterTrait, 1, TRAIT_PARAMS_HASH_LAMBDA);
 
   /**
-   * Get trait info from main trait md structure
+   * Get trait identifier
    * */
-  RPC std::pair<TraitId, hshm::charbuf>
-  LocalGetTraitInfo(const std::string &trait_uuid) {
-    // Acquire md read lock (reading trait_id_map)
-    ScopedRwReadLock md_lock(header_->lock_[kTraitMapLock]);
-    // Check if trait exists
-    auto trait_uuid_shm = hipc::make_uptr<hipc::charbuf>(trait_uuid);
-    auto iter = trait_id_map_->find(*trait_uuid_shm);
-    if (iter.is_end()) {
-      return std::pair<TraitId, hshm::charbuf>(
-          TraitId::GetNull(), hshm::charbuf());
-    }
-    TraitId trait_id = *(*iter)->second_;
-    return std::pair<TraitId, hshm::charbuf>(trait_id,
-                                             (*trait_map_)[trait_id]->str());
-  }
-  DEFINE_RPC((std::pair<TraitId, hshm::charbuf>),
-             GetTraitInfo, 0, STRING_HASH_LAMBDA);
+  RPC TraitId LocalGetTraitId(const std::string &trait_uuid);
+  DEFINE_RPC((TraitId), GetTraitId, 0, STRING_HASH_LAMBDA);
 
   /**
-   * Get the identity of a trait
+   * Get trait parameters
    * */
-  TraitId GlobalGetTraitId(const std::string &trait_uuid) {
-    // Acquire md read lock (reading trait_id_map)
-    ScopedRwReadLock md_lock(header_->lock_[kTraitMapLock]);
-    auto trait_uuid_shm = hipc::make_uptr<hipc::charbuf>(trait_uuid);
-    auto iter = trait_id_map_->find(*trait_uuid_shm);
-    if (iter.is_end()) {
-      md_lock.Unlock();
-      auto info = GlobalGetTraitInfo(trait_uuid);
-      if (info.first.IsNull()) {
-        return info.first;
-      }
-      LocalRegisterTrait(info.first, trait_uuid, info.second);
-      return info.first;
-    }
-    return *(*iter)->second_;
-  }
+  RPC hshm::charbuf LocalGetTraitParams(TraitId trait_id);
+  DEFINE_RPC((hshm::charbuf),
+             GetTraitParams, 0,
+             UNIQUE_ID_TO_NODE_ID_LAMBDA);
 
   /**
-   * Induct a trait into this process's address space
+   * Get an existing trait. Will load the trait into this process's
+   * address space if necessary.
    * */
-  template<typename TraitT>
-  TraitT* LocalConstructTrait(TraitId trait_id) {
-    // Acquire md read lock (reading trait_map)
-    ScopedRwReadLock md_lock(header_->lock_[kTraitMapLock]);
-    // Acquire local write lock (modifying local_trait_map)
-    ScopedRwWriteLock local_md_lock(local_lock_);
-    auto iter = trait_map_->find(trait_id);
-    if (iter.is_end()) {
-      return nullptr;
-    }
-    hipc::Ref<hipc::pair<TraitId, hipc::charbuf>> trait_params_p = *iter;
-    auto trait_params =
-        hshm::to_charbuf<hipc::string>(*trait_params_p->second_);
-    Trait *trait = traits_->ConstructTrait<TraitT>(trait_params);
-    local_trait_map_.emplace(trait_id, trait);
-    return dynamic_cast<TraitT*>(trait);
-  }
-
-  /**
-   * Get or create the trait
-   * If TraitT is Trait, it will not perform create and return null.
-   * */
-  template<typename TraitT = Trait>
-  TraitT* GlobalGetTrait(TraitId trait_id) {
-    ScopedRwReadLock md_lock(local_lock_);
-    auto iter = local_trait_map_.find(trait_id);
-    if (iter == local_trait_map_.end()) {
-      if constexpr(std::is_same_v<TraitT, Trait>) {
-        return nullptr;
-      } else {
-        md_lock.Unlock();
-        return LocalConstructTrait<TraitT>(trait_id);
-      }
-    }
-    std::pair<TraitId, Trait*> trait_pair = *iter;
-    return dynamic_cast<TraitT*>(trait_pair.second);
-  }
+  Trait* GlobalGetTrait(TraitId trait_id);
 
   /**====================================
    * Statistics Operations

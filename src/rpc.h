@@ -106,9 +106,11 @@ class RpcContext {
 }  // namespace hermes
 
 
+/** Decide the node to send an RPC based on a UniqueId template */
 #define UNIQUE_ID_TO_NODE_ID_LAMBDA \
   [](auto &&param) { return param.GetNodeId(); }
 
+/** Decide the node to send an RPC based on a std::string */
 #define STRING_HASH_LAMBDA \
   [this](auto &&param) {   \
     auto hash = std::hash<std::string>{}(param); \
@@ -116,12 +118,37 @@ class RpcContext {
     return hash + 1; \
   }
 
+/** Decide the node to send an RPC based on serialized trait parameters */
+#define TRAIT_PARAMS_HASH_LAMBDA \
+  [this](auto &&param) { \
+      TraitHeader *hdr = reinterpret_cast<TraitHeader*>(param.data()); \
+      std::string trait_uuid = hdr->trait_uuid_; \
+      auto hash = std::hash<std::string>{}(trait_uuid); \
+      hash %= this->rpc_->hosts_.size(); \
+      return hash + 1; \
+    }
+
+/** A helper to test RPCs in hermes */
 #ifdef HERMES_ONLY_RPC
 #define NODE_ID_IS_LOCAL(node_id) false
 #else
 #define NODE_ID_IS_LOCAL(node_id) (node_id) == (rpc_->node_id_)
 #endif
 
+/**
+ * For a function which need to be called as an RPC,
+ * this will create the global form of that function.
+ *
+ * E.g., let's say you have a function:
+ * BlobId LocalGetBlobId(std::string name)
+ *
+ * @param RET the return value of the RPC
+ * @param BaseName the base of the function name. E.g., GetBlobId()
+ * @param tuple_idx the offset of the parameter in the function prototype to
+ * determine where to send the RPC. E.g., 0 -> std::string name
+ * @param hashfn the hash function used to actually compute the node id.
+ * E.g., STRING_HASH_LAMBDA
+ * */
 #define DEFINE_RPC(RET, BaseName, tuple_idx, hashfn)\
   template<typename ...Args>\
   TYPE_UNWRAP(RET) Global##BaseName(Args&& ...args) {\

@@ -28,7 +28,6 @@ namespace hermes {
 using api::Blob;       /**< Namespace simplification for blob */
 struct TagInfo;     /**< Forward declaration of TagInfo */
 struct BlobInfo;       /**< Forward declaration of BlobInfo */
-struct TraitInfo;    /**< Forward declaration of TraitInfo */
 
 /** Any statistics which need to be globally maintained across ranks */
 struct GlobalIoClientState {

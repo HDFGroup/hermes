@@ -28,13 +28,17 @@ namespace hermes {
 /** The basic state needed to be stored by every trait */
 struct TraitHeader {
   char trait_uuid_[64];   /**< Unique name for this instance of trait */
+  char trait_name_[64];   /**< The name of the trait shared object */
   bitfield32_t flags_;    /**< Where the trait is useful */
 
   /** Constructor. */
   explicit TraitHeader(const std::string &trait_uuid,
+                       const std::string &trait_name,
                        uint32_t flags) {
     memcpy(trait_uuid_, trait_uuid.c_str(), trait_uuid.size());
+    memcpy(trait_name_, trait_name.c_str(), trait_name.size());
     trait_uuid_[trait_uuid.size()] = 0;
+    trait_name_[trait_name.size()] = 0;
     flags_.SetBits(flags);
   }
 };
@@ -182,13 +186,13 @@ class TraitManager {
   /** Identify the set of all traits and load them */
   void Init();
 
-  /** Construct a trait */
-  template<typename TraitT>
+  /** Construct a trait from a serialized parameter set */
   Trait* ConstructTrait(hshm::charbuf &params) {
-    auto iter = traits_.find(TraitT::trait_name_);
+    auto hdr = reinterpret_cast<TraitHeader*>(params.data());
+    auto iter = traits_.find(hdr->trait_name_);
     if (iter == traits_.end()) {
       HELOG(kError, "Could not find the trait with name: {}",
-            TraitT::trait_name_);
+            hdr->trait_name_);
       return nullptr;
     }
     TraitLibInfo &info = iter->second;

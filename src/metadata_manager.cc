@@ -327,8 +327,9 @@ MetadataManager::LocalPutBlobMetadata(TagId bkt_id,
   blob_id.node_id_ = rpc_->node_id_;
   bool did_create = blob_id_map_->try_emplace(*internal_blob_name, blob_id);
   if (did_create) {
-    HILOG(kDebug, "Creating new blob: {}", blob_name)
     blob_map_->emplace(blob_id);
+    HILOG(kDebug, "Creating new blob: {}. Total num blobs: {}",
+          blob_name, blob_map_->size())
     auto iter = blob_map_->find(blob_id);
     hipc::Ref<hipc::pair<BlobId, BlobInfo>> info = (*iter);
     BlobInfo &blob_info = *info->second_;
@@ -341,7 +342,8 @@ MetadataManager::LocalPutBlobMetadata(TagId bkt_id,
     blob_info.header_->mod_count_ = 1;
     blob_info.header_->last_flush_ = 0;
   } else {
-    HILOG(kDebug, "Found existing blob: {}", blob_name)
+    HILOG(kDebug, "Found existing blob: {}. Total num blobs: {}",
+          blob_name, blob_map_->size())
     blob_id = *(*blob_id_map_)[*internal_blob_name];
     auto iter = blob_map_->find(blob_id);
     hipc::Ref<hipc::pair<BlobId, BlobInfo>> info = (*iter);
@@ -456,6 +458,7 @@ std::vector<BufferInfo> MetadataManager::LocalGetBlobBuffers(BlobId blob_id) {
  * */
 bool MetadataManager::LocalRenameBlob(TagId bkt_id, BlobId blob_id,
                                       const std::string &new_blob_name) {
+  HILOG(kDebug, "Renaming the blob: {}.{}", blob_id.node_id_, blob_id.unique_)
   AUTO_TRACE(1);
   // Acquire MD write lock (modify blob_id_map_)
   ScopedRwWriteLock blob_map_lock(header_->lock_[kBlobMapLock]);
@@ -479,6 +482,7 @@ bool MetadataManager::LocalRenameBlob(TagId bkt_id, BlobId blob_id,
  * */
 bool MetadataManager::LocalDestroyBlob(TagId bkt_id,
                                        BlobId blob_id) {
+  HILOG(kDebug, "Destroying the blob: {}.{}", blob_id.node_id_, blob_id.unique_)
   AUTO_TRACE(1);
   // Acquire MD write lock (modify blob_id_map & blob_map_)
   ScopedRwWriteLock blob_map_lock(header_->lock_[kBlobMapLock]);
@@ -592,10 +596,30 @@ TagId MetadataManager::LocalGetTagId(const std::string &tag_name) {
 }
 
 /**
+ * Get the name of a tag
+ * */
+std::string MetadataManager::LocalGetTagName(TagId tag_id) {
+  HILOG(kDebug, "Finding the name of tag: {}.{}",
+        tag_id.node_id_, tag_id.unique_)
+  AUTO_TRACE(1);
+  // Acquire MD read lock (reading tag_map_)
+  ScopedRwReadLock tag_map_lock(header_->lock_[kTagMapLock]);
+  auto iter = tag_map_->find(tag_id);
+  if (iter == tag_map_->end()) {
+    return "";
+  }
+  hipc::Ref<hipc::pair<TagId, TagInfo>> info = (*iter);
+  hipc::string &bkt_name = *info->second_->name_;
+  return bkt_name.str();
+}
+
+/**
  * Rename a tag
  * */
 bool MetadataManager::LocalRenameTag(TagId tag_id,
                                      const std::string &new_name) {
+  HILOG(kDebug, "Renaming the tag: {}.{} to {}",
+        tag_id.node_id_, tag_id.unique_, new_name)
   AUTO_TRACE(1);
   // Acquire MD write lock (modifying tag_map_)
   ScopedRwWriteLock tag_map_lock(header_->lock_[kTagMapLock]);
@@ -615,6 +639,7 @@ bool MetadataManager::LocalRenameTag(TagId tag_id,
  * Delete a tag
  * */
 bool MetadataManager::LocalDestroyTag(TagId tag_id) {
+  HILOG(kDebug, "Destroying the tag: {}.{}", tag_id.node_id_, tag_id.unique_)
   AUTO_TRACE(1);
   // Acquire MD write lock (modifying tag_map_)
   ScopedRwWriteLock tag_map_lock(header_->lock_[kTagMapLock]);
@@ -718,6 +743,125 @@ std::vector<TraitId> MetadataManager::LocalTagGetTraits(TagId tag_id) {
   auto tag_info_pair = *iter;
   hipc::Ref<TagInfo> &tag_info = tag_info_pair->second_;
   return hshm::to_stl_vector<TraitId>(*tag_info->traits_);
+}
+
+/**====================================
+ * Trait Operations
+ * ===================================*/
+
+/**
+ * Register a trait. Stores the state of the trait in a way that can
+ * be queried by all processes.
+ * */
+RPC TraitId MetadataManager::LocalRegisterTrait(
+    TraitId trait_id,
+    const hshm::charbuf &trait_params) {
+  // Acquire md write lock (modifying trait map)
+  ScopedRwWriteLock md_lock(header_->lock_[kTraitMapLock]);
+  auto hdr = reinterpret_cast<TraitHeader*>(trait_params.data());
+  std::string trait_uuid = hdr->trait_uuid_;
+
+  // Check if trait exists
+  auto trait_uuid_shm = hipc::make_uptr<hipc::charbuf>(trait_uuid);
+  auto iter = trait_id_map_->find(*trait_uuid_shm);
+  if (!iter.is_end()) {
+    trait_id = *(*iter)->second_;
+    return trait_id;
+  }
+
+  // Create new trait
+  if (trait_id.IsNull()) {
+    trait_id.unique_ = header_->id_alloc_.fetch_add(1);
+    trait_id.node_id_ = rpc_->node_id_;
+  }
+  trait_id_map_->emplace(*trait_uuid_shm, trait_id);
+  trait_map_->emplace(trait_id, trait_params);
+  return trait_id;
+}
+
+/**
+ * Get trait identifier
+ * */
+RPC TraitId
+MetadataManager::LocalGetTraitId(const std::string &trait_uuid) {
+  // Acquire md read lock (reading trait_id_map)
+  ScopedRwReadLock md_lock(header_->lock_[kTraitMapLock]);
+  // Check if trait exists
+  auto trait_uuid_shm = hipc::make_uptr<hipc::charbuf>(trait_uuid);
+  auto iter = trait_id_map_->find(*trait_uuid_shm);
+  if (iter.is_end()) {
+    return TraitId::GetNull();
+  }
+  TraitId trait_id = *(*iter)->second_;
+  return trait_id;
+}
+
+/**
+ * Get trait parameters
+ * */
+RPC hshm::charbuf
+MetadataManager::LocalGetTraitParams(TraitId trait_id) {
+  // Acquire md read lock (reading trait_map)
+  ScopedRwReadLock md_lock(header_->lock_[kTraitMapLock]);
+
+  // Get the trait parameters from the map
+  auto iter = trait_map_->find(trait_id);
+  if (iter.is_end()) {
+    return hshm::charbuf();
+  }
+  hipc::Ref<hipc::pair<TraitId, hipc::charbuf>> trait_pair = *iter;
+  return hshm::to_charbuf(*(*iter)->second_);
+}
+
+/**
+ * Get an existing trait
+ * */
+Trait* MetadataManager::GlobalGetTrait(TraitId trait_id) {
+  Trait *trait = nullptr;
+
+  // Check if trait is already constructed
+  local_lock_.ReadLock();
+  auto iter = local_trait_map_.find(trait_id);
+  if (iter != local_trait_map_.end()) {
+    std::pair<TraitId, Trait*> trait_pair = *iter;
+    trait = trait_pair.second;
+    local_lock_.ReadUnlock();
+    return trait;
+  }
+  local_lock_.ReadUnlock();
+
+  // Construct the trait based on the parameters
+  ScopedRwWriteLock md_lock(local_lock_);
+
+  // Get the trait state locally or globally
+  hshm::charbuf params = LocalGetTraitParams(trait_id);
+  if (params.size() == 0) {
+    params = GlobalGetTraitParams(trait_id);
+    if (params.size() == 0) {
+      HELOG(kError, "Could not find the trait {}.{}",
+            trait_id.node_id_, trait_id.unique_)
+      return nullptr;
+    }
+    LocalRegisterTrait(trait_id, params);
+  }
+
+  // Check if the trait exists now
+  iter = local_trait_map_.find(trait_id);
+  if (iter != local_trait_map_.end()) {
+    std::pair<TraitId, Trait*> trait_pair = *iter;
+    trait = trait_pair.second;
+    return trait;
+  }
+
+  // Construct the trait
+  trait = traits_->ConstructTrait(params);
+  if (trait == nullptr) {
+    return nullptr;
+  }
+
+  // Induct the trait
+  local_trait_map_.emplace(trait_id, trait);
+  return trait;
 }
 
 /**====================================

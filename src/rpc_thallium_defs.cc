@@ -163,6 +163,11 @@ void ThalliumRpc::DefineRpcs() {
     auto ret = mdm->LocalGetTagId(tag_name);
     req.respond(ret);
   });
+  RegisterRpc("RpcGetTagName", [mdm](const request &req,
+                                     TagId tag) {
+    auto ret = mdm->LocalGetTagName(tag);
+    req.respond(ret);
+  });
   RegisterRpc("RpcRenameTag", [mdm](const request &req,
                                     TagId tag,
                                     const std::string &new_name) {
@@ -209,14 +214,18 @@ void ThalliumRpc::DefineRpcs() {
 
   RegisterRpc("RpcRegisterTrait", [mdm](const request &req,
                                         TraitId trait_id,
-                                        const std::string &trait_uuid,
                                         hshm::charbuf &trait_params) {
-    auto ret = mdm->LocalRegisterTrait(trait_id, trait_uuid, trait_params);
+    auto ret = mdm->LocalRegisterTrait(trait_id, trait_params);
     req.respond(ret);
   });
-  RegisterRpc("RpcGetTraitInfo", [mdm](const request &req,
+  RegisterRpc("RpcGetTraitId", [mdm](const request &req,
                                        const std::string &trait_uuid) {
-    auto ret = mdm->LocalGetTraitInfo(trait_uuid);
+    auto ret = mdm->LocalGetTraitId(trait_uuid);
+    req.respond(ret);
+  });
+  RegisterRpc("RpcGetTraitParams", [mdm](const request &req,
+                                         TraitId &trait_id) {
+    auto ret = mdm->LocalGetTraitParams(trait_id);
     req.respond(ret);
   });
 

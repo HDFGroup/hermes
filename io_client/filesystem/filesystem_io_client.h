@@ -303,7 +303,7 @@ class FilesystemIoClient : public Trait {
     FlushTraitParams *info = (FlushTraitParams*)params;
     switch (method) {
       case HERMES_TRAIT_FLUSH: {
-        FsIoOptions opts = DecodeBlobName(*info->blob_name_);
+        FsIoOptions opts = DecodeBlobName(info->blob_name_);
         IoStatus status;
         WriteBlob((*info->bkt_)->GetName(),
                   (*info->blob_),

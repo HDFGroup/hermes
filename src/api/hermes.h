@@ -153,8 +153,7 @@ class Hermes {
     }
     HILOG(kDebug, "Registering a new trait: {}", trait->GetTraitUuid())
     id = HERMES->mdm_->GlobalRegisterTrait(TraitId::GetNull(),
-                                             trait->GetTraitUuid(),
-                                             trait->trait_info_);
+                                           trait->trait_info_);
     HILOG(kDebug, "Giving trait {} id {}.{}",
           trait->GetTraitUuid(), id.node_id_, id.unique_)
     return id;
@@ -169,11 +168,11 @@ class Hermes {
       HILOG(kDebug, "Found existing trait trait: {}", trait_uuid)
       return id;
     }
-    HILOG(kDebug, "Registering a new trait: {}", trait_uuid)
+    HILOG(kDebug, "Registering new trait: {}", trait_uuid)
     TraitT obj(trait_uuid, std::forward<Args>(args)...);
     id = HERMES->mdm_->GlobalRegisterTrait(TraitId::GetNull(),
-                                           trait_uuid, obj.trait_info_);
-    HILOG(kDebug, "Giving trait {} id {}.{}",
+                                           obj.trait_info_);
+    HILOG(kDebug, "Giving trait \"{}\" id {}.{}",
           trait_uuid, id.node_id_, id.unique_)
     return id;
   }
@@ -184,9 +183,10 @@ class Hermes {
   }
 
   /** Get the trait */
-  template<typename TraitT>
+  template<typename TraitT = Trait>
   TraitT* GetTrait(TraitId trait_id) {
-    return HERMES->mdm_->GlobalGetTrait<TraitT>(trait_id);
+    return dynamic_cast<TraitT*>(
+        mdm_->GlobalGetTrait(trait_id));
   }
 
   /** Attach a trait to a tag */

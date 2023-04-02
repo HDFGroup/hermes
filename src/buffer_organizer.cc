@@ -22,29 +22,48 @@ namespace hermes {
  * BORG I/O thread manager
  * ===================================*/
 
-/** Spawn the flushing I/O threads */
-void BorgIoThreadManager::Spawn(int num_threads) {
+/** Spawn the enqueuing thread */
+void BorgIoThreadManager::SpawnFlushMonitor(int num_threads) {
   // Create the queues
   queues_.resize(num_threads);
 
+  auto flush_scheduler = [](void *args) {
+    HILOG(kDebug, "Flushing scheduler thread has started")
+    (void) args;
+    while (HERMES_THREAD_MANAGER->Alive()) {
+      BufferOrganizer::LocalEnqueueFlushes();
+      // TODO(llogan): make configurable
+      tl::thread::self().sleep(*HERMES->rpc_.server_engine_, 1000);
+    }
+    // Check one last time for remaining blobs
+    BufferOrganizer::LocalEnqueueFlushes();
+    HERMES_BORG_IO_THREAD_MANAGER->Join();
+    HILOG(kDebug, "Flush scheduler thread has stopped")
+  };
+  HERMES_THREAD_MANAGER->Spawn(flush_scheduler);
+}
+
+/** Spawn the flushing I/O threads */
+void BorgIoThreadManager::SpawnFlushWorkers(int num_threads) {
   // Define flush worker thread function
   // The function will continue working until all pending flushes have
   // been processed
   auto flush = [](void *params) {
     HILOG(kDebug, "Flushing worker has started")
-    auto bq = reinterpret_cast<BorgIoThreadQueue&>(params);
+    auto bq = reinterpret_cast<BorgIoThreadQueue*>(params);
     while (HERMES_THREAD_MANAGER->Alive() ||
-        !(HERMES_THREAD_MANAGER->Alive() && bq.queue_.size())) {
-      BufferOrganizer::LocalProcessFlushes(bq);
+        !(HERMES_THREAD_MANAGER->Alive() && bq->queue_.size())) {
+      BufferOrganizer::LocalProcessFlushes(*bq);
       tl::thread::self().sleep(*HERMES->rpc_.server_engine_, 50);
     }
   };
 
   // Create the flushing threads
   for (int i = 0; i < num_threads; ++i) {
-    queues_[i].id_ = i;
-    queues_[i].load_ = 0;
-    HERMES_THREAD_MANAGER->Spawn(flush, &queues_[i]);
+    BorgIoThreadQueue &bq = queues_[i];
+    bq.id_ = i;
+    bq.load_ = 0;
+    HERMES_THREAD_MANAGER->Spawn(flush, &bq);
   }
 }
 
@@ -77,21 +96,11 @@ BufferOrganizer::BufferOrganizer(ShmHeader<BufferOrganizer> *header,
   // Print out device info
   mdm_->PrintDeviceInfo();
 
-  // Spawn the thread for finding which blobs need to be flushed
-  auto flush_scheduler = [](void *args) {
-    HILOG(kDebug, "Flushing scheduler thread has started")
-    (void) args;
-    while (HERMES_THREAD_MANAGER->Alive()) {
-      BufferOrganizer::LocalEnqueueFlushes();
-      // TODO(llogan): make configurable
-      tl::thread::self().sleep(*HERMES->rpc_.server_engine_, 1000);
-    }
-    // Check one last time for remaining blobs
-    BufferOrganizer::LocalEnqueueFlushes();
-    HERMES_BORG_IO_THREAD_MANAGER->Join();
-    HILOG(kDebug, "Flush scheduler thread has stopped")
-  };
-  HERMES_THREAD_MANAGER->Spawn(flush_scheduler);
+
+  // Spawn the thread for flushing blobs
+  int num_threads = HERMES->server_config_.borg_.num_threads_;
+  HERMES_BORG_IO_THREAD_MANAGER->SpawnFlushMonitor(num_threads);
+  HERMES_BORG_IO_THREAD_MANAGER->SpawnFlushWorkers(num_threads);
 }
 
 /**====================================
@@ -299,17 +308,24 @@ void BufferOrganizer::GlobalOrganizeBlob(const std::string &bucket_name,
 /** Flush all blobs registered in this daemon */
 void BufferOrganizer::LocalEnqueueFlushes() {
   auto mdm = HERMES->mdm_.get();
+  // Wait for pending flushing tasks to complete
+  // This avoids waiting for the lock below
+  if (HERMES_BORG_IO_THREAD_MANAGER->IsFlushing()) {
+    return;
+  }
+  // Acquire the lock on all flush queues
+  ScopedBorgIoThreadMutex flush_lock;
+  // Acquire the read lock on the blob map
   ScopedRwReadLock(mdm->header_->lock_[kBlobMapLock]);
-  HILOG(kDebug, "Checking if {} blobs need flushing",
-        mdm->blob_map_->size());
+  // Begin checking for blobs which need flushing
   for (hipc::Ref<hipc::pair<BlobId, BlobInfo>> blob_p : *mdm->blob_map_) {
-    // Get the bucket corresponding to this blob &
-    // check if it has a FLUSH trait
     BlobId &blob_id = *blob_p->first_;
     BlobInfo &info = *blob_p->second_;
+    // Verify that flush is needing to happen
     if (info.header_->mod_count_ == info.header_->last_flush_) {
       continue;
     }
+    // Check if bucket has flush trait
     TagId &bkt_id = info.header_->tag_id_;
     size_t blob_size = info.header_->blob_size_;
     std::vector<Trait*> traits = HERMES->GetTraits(bkt_id,
@@ -323,16 +339,16 @@ void BufferOrganizer::LocalEnqueueFlushes() {
     //  it in blob delete
     info.header_->lock_[0].ReadLock();
     HERMES_BORG_IO_THREAD_MANAGER->Enqueue(bkt_id, blob_id, blob_size,
-                                           info, std::move(traits));
+                                           blob_p->second_,
+                                           std::move(traits));
   }
 }
 
 /** Actually process flush operations */
 void BufferOrganizer::LocalProcessFlushes(BorgIoThreadQueue &bq) {
-  /**
-   * In addition, the Hermes daemon may terminate before all daemons
-   * finish. We need to add back MPI_Barrier.
-   * */
+  // Acquire the queue lock to ensure no parallel enqueues
+  hshm::ScopedMutex lock(bq.lock_);
+  // Process all flushing tasks
   while (bq.queue_.size()) {
     Blob blob;
     BorgIoTask& info = bq.queue_.front();
@@ -345,6 +361,7 @@ void BufferOrganizer::LocalProcessFlushes(BorgIoThreadQueue &bq) {
     FlushTraitParams trait_params;
     for (Trait* trait : info.traits_) {
       trait_params.blob_ = &blob;
+      trait_params.blob_name_ = info.blob_info_->name_->str();
       trait_params.bkt_ = &bkt;
       trait->Run(HERMES_TRAIT_FLUSH, &trait_params);
     }
@@ -353,6 +370,10 @@ void BufferOrganizer::LocalProcessFlushes(BorgIoThreadQueue &bq) {
     info.blob_info_->header_->lock_[0].ReadUnlock();
     bq.queue_.pop();
     bq.load_.fetch_sub(info.blob_size_);
+
+    HILOG(kDebug, "Finished flushing blob {}.{}",
+          info.blob_id_.node_id_,
+          info.blob_id_.unique_)
   }
 }
 
