@@ -49,13 +49,14 @@ void BorgIoThreadManager::SpawnFlushWorkers(int num_threads) {
   // The function will continue working until all pending flushes have
   // been processed
   auto flush = [](void *params) {
-    HILOG(kDebug, "Flushing worker has started")
     auto bq = reinterpret_cast<BorgIoThreadQueue*>(params);
-    while (HERMES_THREAD_MANAGER->Alive() ||
-        !(HERMES_THREAD_MANAGER->Alive() && bq->queue_.size())) {
+    HILOG(kDebug, "Flushing worker {} has started", bq->id_)
+    while (HERMES_BORG_IO_THREAD_MANAGER->Alive() ||
+          (!HERMES_BORG_IO_THREAD_MANAGER->Alive() && bq->queue_.size())) {
       BufferOrganizer::LocalProcessFlushes(*bq);
       tl::thread::self().sleep(*HERMES->rpc_.server_engine_, 50);
     }
+    HILOG(kDebug, "Flushing worker {} has stopped", bq->id_)
   };
 
   // Create the flushing threads
