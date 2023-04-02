@@ -20,7 +20,7 @@ namespace hshm {
  * Acquire the mutex
  * */
 void Mutex::Lock() {
-  auto thread_info = HERMES_THREAD_MANAGER->GetThreadStatic();
+  auto thread_info = HSHM_THREAD_MANAGER->GetThreadStatic();
   do {
     for (int i = 0; i < US_TO_CLOCKS(16); ++i) {
       if (TryLock()) { return; }

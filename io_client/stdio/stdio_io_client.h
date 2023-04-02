@@ -28,7 +28,7 @@ namespace hermes::adapter::fs {
 /** State for the STDIO I/O trait */
 struct StdioIoClientHeader : public TraitHeader {
   explicit StdioIoClientHeader(const std::string &trait_uuid)
-      : TraitHeader(trait_uuid, TraitClass::kBucket) {}
+      : TraitHeader(trait_uuid, HERMES_TRAIT_FLUSH) {}
 };
 
 /** A class to represent STDIO IO file system */

@@ -45,7 +45,7 @@ void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
     auto path_shm = hipc::make_uptr<hipc::charbuf>(stat.path_);
     size_t file_size = io_client_->GetSize(*path_shm);
     // Create the bucket
-    if (stat.hflags_.OrBits(HERMES_FS_TRUNC)) {
+    if (stat.hflags_.Any(HERMES_FS_TRUNC)) {
       // TODO(llogan): Need to add back bucket lock
       // The file was opened with TRUNCATION
       stat.bkt_id_ = HERMES->GetBucket(stat.path_, ctx, 0);
@@ -62,7 +62,7 @@ void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
     // TODO(llogan): can avoid two unordered_map queries here
     stat.page_size_ = mdm->GetAdapterPageSize(path);
     // The file was opened with APPEND
-    if (stat.hflags_.OrBits(HERMES_FS_APPEND)) {
+    if (stat.hflags_.Any(HERMES_FS_APPEND)) {
       stat.st_ptr_ =  stat.bkt_id_->GetSize(true);
     }
     // Allocate internal hermes data
@@ -452,7 +452,7 @@ size_t Filesystem::GetSize(File &f, AdapterStat &stat) {
 
 off_t Filesystem::Seek(File &f, AdapterStat &stat,
                        SeekMode whence, off_t offset) {
-  if (stat.hflags_.OrBits(HERMES_FS_APPEND)) {
+  if (stat.hflags_.Any(HERMES_FS_APPEND)) {
     HILOG(kDebug, "File pointer not updating because append mode")
     return -1;
   }

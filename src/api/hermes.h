@@ -146,17 +146,17 @@ class Hermes {
   /** Create a trait */
   template<typename TraitT, typename ...Args>
   TraitId RegisterTrait(TraitT *trait) {
-    TraitId id = GetTraitId(trait->GetUuid());
+    TraitId id = GetTraitId(trait->GetTraitUuid());
     if (!id.IsNull()) {
-      HILOG(kDebug, "Found existing trait trait: {}", trait->GetUuid())
+      HILOG(kDebug, "Found existing trait trait: {}", trait->GetTraitUuid())
       return id;
     }
-    HILOG(kDebug, "Registering a new trait: {}", trait->GetUuid())
+    HILOG(kDebug, "Registering a new trait: {}", trait->GetTraitUuid())
     id = HERMES->mdm_->GlobalRegisterTrait(TraitId::GetNull(),
-                                             trait->GetUuid(),
+                                             trait->GetTraitUuid(),
                                              trait->trait_info_);
     HILOG(kDebug, "Giving trait {} id {}.{}",
-          trait->GetUuid(), id.node_id_, id.unique_)
+          trait->GetTraitUuid(), id.node_id_, id.unique_)
     return id;
   }
 
@@ -195,12 +195,16 @@ class Hermes {
   }
 
   /** Get traits attached to tag */
-  std::vector<Trait*> GetTraits(TagId tag_id) {
+  std::vector<Trait*> GetTraits(TagId tag_id,
+                                uint32_t flags = ALL_BITS(uint32_t)) {
     std::vector<TraitId> trait_ids = HERMES->mdm_->GlobalTagGetTraits(tag_id);
     std::vector<Trait*> traits;
     traits.reserve(trait_ids.size());
     for (TraitId &trait_id : trait_ids) {
-      traits.emplace_back(GetTrait<Trait>(trait_id));
+      auto trait = GetTrait<Trait>(trait_id);
+      if (trait->GetTraitFlags().Any(flags)) {
+        traits.emplace_back(trait);
+      }
     }
     return traits;
   }

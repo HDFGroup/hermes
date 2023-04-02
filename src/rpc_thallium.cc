@@ -102,7 +102,7 @@ void ThalliumRpc::Finalize() {
   switch (mode_) {
     case HermesType::kServer: {
       HILOG(kInfo, "Stopping (server mode)");
-      this->kill_requested_.store(true);
+      HERMES_THREAD_MANAGER->Join();
       HERMES->prefetch_.Finalize();
       // NOTE(llogan): Don't use finalize with unique_ptr. finalize() is
       // called in the destructor of the tl::enigne, and will segfault if
@@ -114,6 +114,7 @@ void ThalliumRpc::Finalize() {
     }
     case HermesType::kClient: {
       HILOG(kInfo, "Stopping (client mode)");
+      HERMES_THREAD_MANAGER->Join();
       // NOTE(llogan): Don't use finalize with unique_ptr. finalize() is
       // called in the destructor of the tl::enigne, and will segfault if
       // called twice.

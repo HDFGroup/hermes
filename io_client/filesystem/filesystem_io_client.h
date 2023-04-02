@@ -93,7 +93,7 @@ struct FsIoOptions {
 
   /** Whether or not to perform seek in FS adapter */
   bool DoSeek() const {
-    return flags_.OrBits(HERMES_FS_SEEK);
+    return flags_.Any(HERMES_FS_SEEK);
   }
 
   /** Marks the file as truncated */
@@ -103,7 +103,7 @@ struct FsIoOptions {
 
   /** Whether a file is marked truncated */
   bool IsTruncated() const {
-    return flags_.OrBits(HERMES_FS_TRUNC);
+    return flags_.Any(HERMES_FS_TRUNC);
   }
 
   /** return IO options with \a mpi_type MPI data type */

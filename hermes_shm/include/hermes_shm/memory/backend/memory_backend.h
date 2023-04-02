@@ -55,7 +55,7 @@ class MemoryBackend {
 
   /** Check if data is valid */
   bool IsInitialized() {
-    return flags_.OrBits(MEMORY_BACKEND_INITIALIZED);
+    return flags_.Any(MEMORY_BACKEND_INITIALIZED);
   }
 
   /** Mark data as invalid */
@@ -70,7 +70,7 @@ class MemoryBackend {
 
   /** This is owned */
   bool IsOwned() {
-    return flags_.OrBits(MEMORY_BACKEND_OWNED);
+    return flags_.Any(MEMORY_BACKEND_OWNED);
   }
 
   /** This is not the process which destroys the backend */

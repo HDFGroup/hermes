@@ -22,7 +22,7 @@ namespace hshm {
 void RwLock::ReadLock() {
   bool ret = false;
   RwLockPayload expected, desired;
-  auto thread_info = HERMES_THREAD_MANAGER->GetThreadStatic();
+  auto thread_info = HSHM_THREAD_MANAGER->GetThreadStatic();
   do {
     for (int i = 0; i < US_TO_CLOCKS(8); ++i) {
       expected.as_int_ = payload_.load();
@@ -62,7 +62,7 @@ void RwLock::ReadUnlock() {
 void RwLock::WriteLock() {
   bool ret = false;
   RwLockPayload expected, desired;
-  auto thread_info = HERMES_THREAD_MANAGER->GetThreadStatic();
+  auto thread_info = HSHM_THREAD_MANAGER->GetThreadStatic();
   do {
     for (int i = 0; i < US_TO_CLOCKS(8); ++i) {
       expected.as_int_ = payload_.load();

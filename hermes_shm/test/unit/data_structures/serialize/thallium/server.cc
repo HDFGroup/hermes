@@ -112,7 +112,7 @@ int main() {
 
   // Test transfer of bitfield
   auto bitfield_test = [](const request &req, hshm::bitfield32_t &field) {
-    bool ret = field.OrBits(0x8);
+    bool ret = field.Any(0x8);
     req.respond(ret);
   };
   server_->define(tcnst::kBitfieldTest, bitfield_test);

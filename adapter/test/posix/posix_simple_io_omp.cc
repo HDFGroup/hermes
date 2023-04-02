@@ -147,8 +147,6 @@ int main(int argc, char **argv) {
     block_off = 0;
   }
 
-  HERMES_THREAD_MANAGER->GetThreadStatic();
-
   omp_set_dynamic(0);
 #pragma omp parallel \
   shared(path, do_read, block_size, count, block_off) num_threads(kNumProcs)

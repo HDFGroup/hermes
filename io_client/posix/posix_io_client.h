@@ -29,7 +29,7 @@ namespace hermes::adapter::fs {
 /** State for the POSIX I/O trait */
 struct PosixIoClientHeader : public TraitHeader {
   explicit PosixIoClientHeader(const std::string &trait_uuid)
-      : TraitHeader(trait_uuid, TraitClass::kBucket) {}
+      : TraitHeader(trait_uuid, HERMES_TRAIT_FLUSH) {}
 };
 
 /** A class to represent POSIX IO file system */

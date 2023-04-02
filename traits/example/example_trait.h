@@ -20,7 +20,7 @@ namespace hermes::api {
 struct ExampleTraitHeader : public TraitHeader {
   int hello_;
   explicit ExampleTraitHeader(const std::string &trait_uuid, int hello)
-      : TraitHeader(trait_uuid, TraitClass::kBucket),
+      : TraitHeader(trait_uuid, HERMES_TRAIT_PUT_GET),
         hello_(hello) {}
 };
 

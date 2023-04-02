@@ -253,7 +253,7 @@ class smart_ptr_base {
   /** Destructor. Does not free data. */
   ~smart_ptr_base() {
     if constexpr(unique) {
-      if (flags_.OrBits(POINTER_IS_OWNED)) {
+      if (flags_.Any(POINTER_IS_OWNED)) {
         shm_destroy();
       }
     }

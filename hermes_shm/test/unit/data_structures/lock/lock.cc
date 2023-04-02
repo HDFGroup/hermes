@@ -24,7 +24,7 @@ void MutexTest() {
   size_t count = 0;
   Mutex lock;
 
-  HERMES_THREAD_MANAGER->GetThreadStatic();
+  HSHM_THREAD_MANAGER->GetThreadStatic();
 
   omp_set_dynamic(0);
 #pragma omp parallel shared(lock) num_threads(nthreads)
@@ -60,7 +60,7 @@ void RwLockTest() {
   size_t count = 0;
   RwLock lock;
 
-  HERMES_THREAD_MANAGER->GetThreadStatic();
+  HSHM_THREAD_MANAGER->GetThreadStatic();
 
   omp_set_dynamic(0);
 #pragma omp parallel \

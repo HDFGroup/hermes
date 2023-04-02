@@ -18,6 +18,7 @@
 namespace hshm {
 
 #define BIT_OPT(T, n) (((T)1) << n)
+#define ALL_BITS(T) (~((T)0))
 
 /**
  * A generic bitfield template
@@ -38,8 +39,12 @@ struct bitfield {
     bits_ &= ~mask;
   }
 
-  inline bool OrBits(T mask) const {
+  inline bool Any(T mask) const {
     return bits_ & mask;
+  }
+
+  inline bool All(T mask) const {
+    return Any(mask) == mask;
   }
 
   inline void CopyBits(bitfield field, T mask) {
@@ -61,8 +66,8 @@ typedef bitfield<uint32_t> bitfield32_t;
   inline void UnsetBits(MASK_T mask) {\
     BITFIELD_VAR.UnsetBits(mask);\
   }\
-  inline bool OrBits(MASK_T mask) const {\
-    return BITFIELD_VAR.OrBits(mask);\
+  inline bool Any(MASK_T mask) const {\
+    return BITFIELD_VAR.Any(mask);\
   }\
   inline void Clear() {\
     BITFIELD_VAR.Clear();\

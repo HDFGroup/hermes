@@ -14,6 +14,7 @@
 #define HERMES_SRC_PREFETCHER_H_
 
 #include "hermes_types.h"
+#include "thread_manager.h"
 #include "metadata_manager.h"
 #include "rpc.h"
 #include <list>
@@ -28,7 +29,6 @@ class Prefetcher {
   RPC_TYPE *rpc_;
   BufferOrganizer *borg_;
   tl::engine *engine;            /**< Argobots execution engine */
-  ABT_xstream execution_stream_; /**< Argobots execution stream */
   double epoch_ms_;              /**< Milliseconds to sleep */
   bool is_enabled_;              /**< Whether the prefetcher is enabled */
 

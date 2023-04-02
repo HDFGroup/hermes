@@ -26,6 +26,7 @@
 #include "decorator.h"
 #include "config_server.h"
 #include "utils.h"
+#include "thread_manager.h"
 
 namespace hermes::api {
 class Hermes;

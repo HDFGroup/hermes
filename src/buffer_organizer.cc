@@ -19,6 +19,56 @@
 namespace hermes {
 
 /**====================================
+ * BORG I/O thread manager
+ * ===================================*/
+
+/** Spawn the I/O threads */
+void BorgIoThreadManager::Spawn(int num_threads) {
+  // Create the queues
+  queues_.resize(num_threads);
+
+  // Define flush worker thread function
+  // The function will continue working until all pending flushes have
+  // been processed
+  auto flush = [](void *params) {
+    BorgIoThreadQueue &bq = reinterpret_cast<BorgIoThreadQueue&>(params);
+    while (HERMES_THREAD_MANAGER->Alive() ||
+           !(HERMES_THREAD_MANAGER->Alive() && bq.queue_.size())) {
+      /**
+       * NOTE(llogan): this while condition is unsafe. The flushing thread
+       * may not yet be scheduled and the server terminates. We need to
+       * make this safer.
+       *
+       * In addition, the Hermes daemon may terminate before all daemons
+       * finish. We need to add back MPI_Barrier.
+       * */
+      while (bq.queue_.size()) {
+        Blob blob;
+        BorgIoTask& info = bq.queue_.front();
+        std::shared_ptr<api::Bucket> bkt = HERMES->GetBucket(info.bkt_id_);
+        bkt->Get(info.blob_id_, blob, bkt->GetContext());
+        FlushTraitParams trait_params;
+        for (Trait* trait : info.traits_) {
+          trait_params.blob_ = &blob;
+          trait_params.bkt_ = &bkt;
+          trait->Run(HERMES_TRAIT_FLUSH, &trait_params);
+        }
+        bq.queue_.pop();
+        bq.load_.fetch_sub(info.blob_size_);
+      }
+      tl::thread::self().sleep(*HERMES->rpc_.server_engine_, 50);
+    }
+  };
+
+  // Create the flushing threads
+  for (int i = 0; i < num_threads; ++i) {
+    queues_[i].id_ = i;
+    queues_[i].load_ = 0;
+    HERMES_THREAD_MANAGER->Spawn(flush, &queues_[i]);
+  }
+}
+
+/**====================================
  * Default Constructor
  * ===================================*/
 
@@ -30,6 +80,8 @@ BufferOrganizer::BufferOrganizer(ShmHeader<BufferOrganizer> *header,
                                  hipc::Allocator *alloc) {
   mdm_ = HERMES->mdm_.get();
   rpc_ = &HERMES->rpc_;
+
+  // Initialize device information
   for (hipc::Ref<TargetInfo> target : (*mdm_->targets_)) {
     hipc::Ref<DeviceInfo> dev_info =
         (*mdm_->devices_)[target->id_.GetDeviceId()];
@@ -44,6 +96,20 @@ BufferOrganizer::BufferOrganizer(ShmHeader<BufferOrganizer> *header,
 
   // Print out device info
   mdm_->PrintDeviceInfo();
+
+  // Spawn the thread for flushing the bucket map
+  auto flush_scheduler = [](void *args) {
+    HILOG(kDebug, "Flushing scheduler thread has started")
+    (void) args;
+    BufferOrganizer *borg = HERMES->borg_.get();
+    while (HERMES_THREAD_MANAGER->Alive()) {
+      borg->LocalFlush();
+      // TODO(llogan): make configurable
+      tl::thread::self().sleep(*HERMES->rpc_.server_engine_, 1000);
+    }
+    HILOG(kDebug, "Flush scheduler thread has stopped")
+  };
+  HERMES_THREAD_MANAGER->Spawn(flush_scheduler);
 }
 
 /**====================================
@@ -242,6 +308,28 @@ void BufferOrganizer::GlobalOrganizeBlob(const std::string &bucket_name,
 
   // Unlock the blob
   bkt->UnlockBlob(blob_id, MdLockType::kExternalWrite);
+}
+
+/** Flush all blobs registered in this daemon */
+void BufferOrganizer::LocalFlush() {
+  mdm_->header_->lock_[kBlobMapLock].ReadLock();
+  for (hipc::Ref<hipc::pair<BlobId, BlobInfo>> blob_p : *mdm_->blob_map_) {
+    // Get the bucket corresponding to this blob &
+    // check if it has a FLUSH trait
+    BlobId &blob_id = *blob_p->first_;
+    BlobInfo &info = *blob_p->second_;
+    TagId &bkt_id = info.header_->tag_id_;
+    size_t blob_size = info.header_->blob_size_;
+    std::vector<Trait*> traits = HERMES->GetTraits(bkt_id,
+                                                   HERMES_TRAIT_FLUSH);
+    if (traits.size() == 0) {
+      continue;
+    }
+    // Schedule the blob on an I/O worker thread
+    HERMES_BORG_IO_THREAD_MANAGER->Enqueue(bkt_id, blob_id, blob_size,
+                                           std::move(traits));
+  }
+  mdm_->header_->lock_[kBlobMapLock].ReadUnlock();
 }
 
 }  // namespace hermes

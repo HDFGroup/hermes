@@ -18,23 +18,24 @@
 
 namespace hermes {
 
-/** Determines where the trait is used within Hermes */
-enum class TraitClass {
-  kGroupBy,
-  kBucket,
-};
+/** This trait is useful to the GroupBy function */
+#define HERMES_TRAIT_GROUP_BY BIT_OPT(uint32_t, 0)
+/** This trait is useful to Put & Get */
+#define HERMES_TRAIT_PUT_GET BIT_OPT(uint32_t, 1)
+/** This trait is useful to BORG's Flush operation */
+#define HERMES_TRAIT_FLUSH BIT_OPT(uint32_t, 2)
 
 /** The basic state needed to be stored by every trait */
 struct TraitHeader {
   char trait_uuid_[64];   /**< Unique name for this instance of trait */
-  TraitClass trait_class_;  /**< Where the trait is useful */
+  bitfield32_t flags_;    /**< Where the trait is useful */
 
   /** Constructor. */
   explicit TraitHeader(const std::string &trait_uuid,
-                       TraitClass trait_class) {
+                       uint32_t flags) {
     memcpy(trait_uuid_, trait_uuid.c_str(), trait_uuid.size());
     trait_uuid_[trait_uuid.size()] = 0;
-    trait_class_ = trait_class;
+    flags_.SetBits(flags);
   }
 };
 
@@ -67,8 +68,13 @@ class Trait {
   }
 
   /** Get trait uuid */
-  const std::string& GetUuid() {
+  const std::string& GetTraitUuid() {
     return trait_uuid_;
+  }
+
+  /** Get trait class */
+  bitfield32_t& GetTraitFlags() {
+    return header_->flags_;
   }
 
   /** Run a method of the trait */

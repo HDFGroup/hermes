@@ -28,7 +28,7 @@ namespace hermes::adapter::fs {
 /** State for the MPI I/O trait */
 struct MpiioIoClientHeader : public TraitHeader {
   explicit MpiioIoClientHeader(const std::string &trait_uuid)
-      : TraitHeader(trait_uuid, TraitClass::kBucket) {}
+      : TraitHeader(trait_uuid, HERMES_TRAIT_FLUSH) {}
 };
 
 /** A class to represent STDIO IO file system */
