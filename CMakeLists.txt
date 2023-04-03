@@ -28,7 +28,6 @@ else()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
   # Ensure that debug logging is disabled
   # This will keep only VLOGs which have priroity 0
-  message("IS THIS HERE?????")
   add_compile_definitions(HERMES_LOG_VERBOSITY=1)
   message("This IS a release build: ${CMAKE_BUILD_TYPE} ${CMAKE_CXX_FLAGS}")
 endif()
