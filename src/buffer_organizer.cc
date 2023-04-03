@@ -325,10 +325,10 @@ void BufferOrganizer::LocalEnqueueFlushes() {
   if (HERMES_BORG_IO_THREAD_MANAGER->IsFlushing()) {
     return;
   }
-  // Acquire the lock on all flush queues
-  ScopedBorgIoThreadMutex flush_lock;
+  // Wait for flushing to complete
+  hshm::ScopedRwWriteLock flush_lock(HERMES_BORG_IO_THREAD_MANAGER->lock_);
   // Acquire the read lock on the blob map
-  ScopedRwReadLock(mdm->header_->lock_[kBlobMapLock]);
+  ScopedRwReadLock blob_map_lock(mdm->header_->lock_[kBlobMapLock]);
   // Begin checking for blobs which need flushing
   size_t count = 0;
   for (hipc::Ref<hipc::pair<BlobId, BlobInfo>> blob_p : *mdm->blob_map_) {
@@ -360,12 +360,12 @@ void BufferOrganizer::LocalEnqueueFlushes() {
 
 /** Actually process flush operations */
 void BufferOrganizer::LocalProcessFlushes(BorgIoThreadQueue &bq) {
-  // Acquire the queue lock to ensure no parallel enqueues
-  hshm::ScopedMutex lock(bq.lock_);
+  // Ensure no parallel enqueues during the flush
+  hshm::ScopedRwReadLock flush_lock(HERMES_BORG_IO_THREAD_MANAGER->lock_);
   // Process all flushing tasks
   while (bq.queue_.size()) {
     // Acquire blob map read lock
-    ScopedRwReadLock md_lock(mdm_->header_->lock_[kBlobMapLock]);
+    ScopedRwReadLock blob_map_lock(mdm_->header_->lock_[kBlobMapLock]);
     Blob blob;
     BorgIoTask& info = bq.queue_.front();
 
@@ -377,7 +377,7 @@ void BufferOrganizer::LocalProcessFlushes(BorgIoThreadQueue &bq) {
     hipc::Ref<hipc::pair<BlobId, BlobInfo>> blob_info_p = *iter;
     BlobInfo &blob_info = *blob_info_p->second_;
     ScopedRwReadLock blob_lock(blob_info.header_->lock_[0]);
-    md_lock.Unlock();
+    blob_lock.Unlock();
     std::string blob_name = blob_info.name_->str();
 
     // Get the current blob from Hermes

@@ -78,7 +78,6 @@ struct BorgIoThreadQueue {
   std::queue<BorgIoTask> queue_;  /**< Holds pending tasks*/
   std::atomic<size_t> load_;      /**< Data being processed on queue */
   int id_;                        /**< ID of this worker queue */
-  hshm::Mutex lock_;              /**< Synchronize enqueue / flush phases */
 
   /** Default constructor */
   BorgIoThreadQueue() : load_(0) {}
@@ -97,6 +96,7 @@ class BorgIoThreadManager {
  public:
   std::vector<BorgIoThreadQueue> queues_;  /**< The set of worker queues */
   std::atomic<bool> kill_requested_;
+  hshm::RwLock lock_;
 
  public:
   /** Constructor */
@@ -133,20 +133,6 @@ class BorgIoThreadManager {
     return false;
   }
 
-  /** Lock all queues */
-  void LockAll() {
-    for (BorgIoThreadQueue &bq : queues_) {
-      bq.lock_.Lock();
-    }
-  }
-
-  /** Unlock all queues */
-  void UnlockAll() {
-    for (BorgIoThreadQueue &bq : queues_) {
-      bq.lock_.Unlock();
-    }
-  }
-
   /** Enqueue a flushing task to a worker */
   void Enqueue(TagId bkt_id, BlobId blob_id, size_t blob_size,
                std::vector<Trait*> &&traits) {
@@ -166,17 +152,6 @@ class BorgIoThreadManager {
       }
     }
     return *bq;
-  }
-};
-
-/** A scoped mutex for the BORG I/O thread manager */
-struct ScopedBorgIoThreadMutex {
-  ScopedBorgIoThreadMutex() {
-    HERMES_BORG_IO_THREAD_MANAGER->LockAll();
-  }
-
-  ~ScopedBorgIoThreadMutex() {
-    HERMES_BORG_IO_THREAD_MANAGER->UnlockAll();
   }
 };
 

@@ -181,7 +181,7 @@ bool MetadataManager::LocalLockBucket(TagId bkt_id,
   if (bkt_id.IsNull()) {
     return false;
   }
-  ScopedRwReadLock blob_map_lock(header_->lock_[kTagMapLock]);
+  ScopedRwReadLock tag_map_lock(header_->lock_[kTagMapLock]);
   return LockMdObject(*tag_map_, bkt_id, lock_type);
 }
 
@@ -194,7 +194,7 @@ bool MetadataManager::LocalUnlockBucket(TagId bkt_id,
   if (bkt_id.IsNull()) {
     return false;
   }
-  ScopedRwReadLock blob_map_lock(header_->lock_[kTagMapLock]);
+  ScopedRwReadLock tag_map_lock(header_->lock_[kTagMapLock]);
   return UnlockMdObject(*tag_map_, bkt_id, lock_type);
 }
 

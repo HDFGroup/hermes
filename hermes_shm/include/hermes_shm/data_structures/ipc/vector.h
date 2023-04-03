@@ -216,7 +216,7 @@ struct vector_iterator_templ {
   /** Determine whether this iterator is the end iterator */
   inline bool is_end() const {
     if constexpr(FORWARD_ITER) {
-      return i_ == (int64_t)vec_->size();
+      return i_ >= (int64_t)vec_->size();
     } else {
       return i_ == -1;
     }

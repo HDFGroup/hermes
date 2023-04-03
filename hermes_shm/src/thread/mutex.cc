@@ -13,6 +13,7 @@
 
 #include "hermes_shm/thread/lock.h"
 #include "hermes_shm/thread/thread_manager.h"
+#include "hermes_shm/util/logging.h"
 
 namespace hshm {
 
@@ -21,11 +22,21 @@ namespace hshm {
  * */
 void Mutex::Lock() {
   auto thread_info = HSHM_THREAD_MANAGER->GetThreadStatic();
+  size_t count = 0;
   do {
-    for (int i = 0; i < US_TO_CLOCKS(16); ++i) {
+    if (count > 500) {
+      HILOG(kDebug, "Taking a while");
+      count = 5;
+    }
+    for (int i = 0; i < US_TO_CLOCKS(8); ++i) {
       if (TryLock()) { return; }
     }
-    thread_info->Yield();
+    if (count < 5) {
+      thread_info->Yield();
+    } else {
+      usleep(100);
+    }
+    ++count;
   } while (true);
 }
 
