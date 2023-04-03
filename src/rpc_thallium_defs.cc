@@ -33,22 +33,31 @@ void ThalliumRpc::DefineRpcs() {
    * ===================================*/
 
   RegisterRpc("RpcGetBucketSize", [mdm](const request &req,
-                                           TagId bkt_id,
-                                           bool backend) {
-    auto ret = mdm->LocalGetBucketSize(bkt_id, backend);
+                                           TagId bkt_id) {
+    auto ret = mdm->LocalGetBucketSize(bkt_id);
     req.respond(ret);
   });
-  RegisterRpc("RpcUpdateBucketSize", [mdm](const request &req,
-                                           TagId bkt_id,
-                                           ssize_t delta,
-                                           BucketUpdate mode) {
-    auto ret = mdm->LocalUpdateBucketSize(bkt_id, delta, mode);
+  RegisterRpc("RpcSetBucketSize", [mdm](const request &req,
+                                        TagId bkt_id,
+                                        size_t new_size) {
+    auto ret = mdm->LocalSetBucketSize(bkt_id, new_size);
+    req.respond(ret);
+  });
+  RegisterRpc("RpcLockBucket", [mdm](const request &req,
+                                     TagId bkt_id,
+                                     MdLockType lock_type) {
+    auto ret = mdm->LocalLockBucket(bkt_id, lock_type);
+    req.respond(ret);
+  });
+  RegisterRpc("RpcUnlockBucket", [mdm](const request &req,
+                                       TagId bkt_id,
+                                       MdLockType lock_type) {
+    auto ret = mdm->LocalUnlockBucket(bkt_id, lock_type);
     req.respond(ret);
   });
   RegisterRpc("RpcClearBucket", [mdm](const request &req,
-                                      TagId bkt_id,
-                                      bool backend) {
-    auto ret = mdm->LocalClearBucket(bkt_id, backend);
+                                      TagId bkt_id) {
+    auto ret = mdm->LocalClearBucket(bkt_id);
     req.respond(ret);
   });
 

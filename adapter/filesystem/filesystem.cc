@@ -43,28 +43,28 @@ void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
     // Create the new bucket
     stat.path_ = stdfs::absolute(path).string();
     auto path_shm = hipc::make_uptr<hipc::charbuf>(stat.path_);
-    size_t file_size = io_client_->GetSize(*path_shm);
     // Create the bucket
     if (stat.hflags_.Any(HERMES_FS_TRUNC)) {
-      // TODO(llogan): Need to add back bucket lock
       // The file was opened with TRUNCATION
       stat.bkt_id_ = HERMES->GetBucket(stat.path_, ctx, 0);
-      stat.bkt_id_->Clear(true);
+      stat.bkt_id_->Clear();
     } else {
       // The file was opened regularly
+      size_t file_size = io_client_->GetSize(*path_shm);
       stat.bkt_id_ = HERMES->GetBucket(stat.path_, ctx, file_size);
     }
     if (stat.bkt_id_->DidCreate()) {
       io_client_->Register();
-      stat.bkt_id_->AttachTrait(io_client_->GetTraitId());
+      if (stat.adapter_mode_ != AdapterMode::kScratch) {
+        stat.bkt_id_->AttachTrait(io_client_->GetTraitId());
+      }
     }
-    // Update page size and file size
-    // TODO(llogan): can avoid two unordered_map queries here
-    stat.page_size_ = mdm->GetAdapterPageSize(path);
-    // The file was opened with APPEND
+    // Update file position pointer
     if (stat.hflags_.Any(HERMES_FS_APPEND)) {
-      stat.st_ptr_ =  stat.bkt_id_->GetSize(true);
+      stat.st_ptr_ = std::numeric_limits<size_t>::max();
     }
+    // Update page size
+    stat.page_size_ = mdm->GetAdapterPageSize(path);
     // Allocate internal hermes data
     auto stat_ptr = std::make_shared<AdapterStat>(stat);
     FilesystemIoClientState fs_ctx(&mdm->fs_mdm_, (void*)stat_ptr.get());
@@ -166,7 +166,18 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
   (void) f;
   std::shared_ptr<hapi::Bucket> &bkt = stat.bkt_id_;
   std::string filename = bkt->GetName();
-  size_t backend_size = stat.bkt_id_->GetSize(true);
+  size_t backend_size;
+
+  // Update the size of the bucket
+  size_t orig_off = off;
+  stat.bkt_id_->LockBucket(MdLockType::kExternalWrite);
+  backend_size = stat.bkt_id_->GetSize();
+  if (off == std::numeric_limits<size_t>::max()) {
+    off = backend_size;
+  }
+  stat.bkt_id_->SetSize(off + total_size);
+  stat.bkt_id_->UnlockBucket(MdLockType::kExternalWrite);
+
   HILOG(kDebug, "Write called for filename: {}"
         " on offset: {}"
         " from position: {}"
@@ -186,7 +197,7 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
             opts.backend_size_)
       return 0;
     }
-    if (opts.DoSeek()) {
+    if (opts.DoSeek() && orig_off != std::numeric_limits<size_t>::max()) {
       stat.st_ptr_ = off + total_size;
     }
     return total_size;
@@ -221,19 +232,14 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
                                      ctx);
     if (status.Fail()) {
       data_offset = 0;
+      bkt->UnlockBlob(blob_id, MdLockType::kExternalWrite);
       break;
-    }
-    size_t new_file_size = off + data_offset + blob_wrap.size();
-    if (new_file_size > backend_size) {
-      bkt->UpdateSize(new_file_size,
-                      BucketUpdate::kBackend);
-      backend_size = new_file_size;
     }
     bkt->UnlockBlob(blob_id, MdLockType::kExternalWrite);
     data_offset += p.blob_size_;
   }
-  if (opts.DoSeek()) {
-    stat.st_ptr_ = off + data_offset;
+  if (opts.DoSeek() && orig_off != std::numeric_limits<size_t>::max()) {
+    stat.st_ptr_ = off + total_size;
   }
   stat.UpdateTime();
 
@@ -310,6 +316,12 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
   (void) f;
   std::shared_ptr<hapi::Bucket> &bkt = stat.bkt_id_;
   std::string filename = bkt->GetName();
+
+  size_t orig_off = off;
+  if (off == std::numeric_limits<size_t>::max()) {
+    off = stat.bkt_id_->GetSize();
+  }
+
   HILOG(kDebug, "Read called for filename: {}"
         " on offset: {}"
         " from position: {}"
@@ -327,7 +339,7 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
             opts.backend_size_)
       return 0;
     }
-    if (opts.DoSeek()) {
+    if (opts.DoSeek() && orig_off != std::numeric_limits<size_t>::max()) {
       stat.st_ptr_ = off + total_size;
     }
     return total_size;
@@ -340,7 +352,7 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
   size_t data_offset = 0;
   auto mapper = MapperFactory().Get(MapperType::kBalancedMapper);
   mapper->map(off, total_size, kPageSize, mapping);
-  size_t backend_size = stat.bkt_id_->GetSize(true);
+  size_t backend_size = stat.bkt_id_->GetSize();
 
   for (const auto &p : mapping) {
     Blob blob_wrap((const char*)ptr + data_offset, p.blob_size_);
@@ -364,13 +376,14 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
                                      ctx);
     if (status.Fail()) {
       data_offset = 0;
+      bkt->UnlockBlob(blob_id, MdLockType::kExternalRead);
       break;
     }
     bkt->UnlockBlob(blob_id, MdLockType::kExternalRead);
     data_offset += p.blob_size_;
   }
-  if (opts.DoSeek()) {
-    stat.st_ptr_ = off + data_offset;
+  if (opts.DoSeek() && orig_off != std::numeric_limits<size_t>::max()) {
+    stat.st_ptr_ = off + total_size;
   }
   stat.UpdateTime();
 
@@ -440,7 +453,7 @@ void Filesystem::Wait(std::vector<uint64_t> &req_ids,
 size_t Filesystem::GetSize(File &f, AdapterStat &stat) {
   (void) stat;
   if (stat.adapter_mode_ != AdapterMode::kBypass) {
-    return stat.bkt_id_->GetSize(true);
+    return stat.bkt_id_->GetSize();
   } else {
     return stdfs::file_size(stat.path_);
   }
@@ -448,10 +461,6 @@ size_t Filesystem::GetSize(File &f, AdapterStat &stat) {
 
 off_t Filesystem::Seek(File &f, AdapterStat &stat,
                        SeekMode whence, off_t offset) {
-  if (stat.hflags_.Any(HERMES_FS_APPEND)) {
-    HILOG(kDebug, "File pointer not updating because append mode")
-    return -1;
-  }
   auto mdm = HERMES_FS_METADATA_MANAGER;
   switch (whence) {
     case SeekMode::kSet: {
@@ -460,10 +469,17 @@ off_t Filesystem::Seek(File &f, AdapterStat &stat,
     }
     case SeekMode::kCurrent: {
       stat.st_ptr_ += offset;
+      offset = stat.st_ptr_;
       break;
     }
     case SeekMode::kEnd: {
-      stat.st_ptr_ = stat.bkt_id_->GetSize(true) + offset;
+      if (offset == 0) {
+        stat.st_ptr_ = std::numeric_limits<size_t>::max();
+        offset = stat.bkt_id_->GetSize();
+      } else {
+        stat.st_ptr_ = stat.bkt_id_->GetSize() - offset;
+        offset = stat.st_ptr_;
+      }
       break;
     }
     default: {
@@ -471,62 +487,23 @@ off_t Filesystem::Seek(File &f, AdapterStat &stat,
     }
   }
   mdm->Update(f, stat);
-  return stat.st_ptr_;
+  return offset;
 }
 
 off_t Filesystem::Tell(File &f, AdapterStat &stat) {
   (void) f;
-  return stat.st_ptr_;
-}
-
-/**
- * Flush a blob
- * */
-void Filesystem::FlushBlob(std::shared_ptr<hapi::Bucket> &bkt,
-                           BlobId blob_id,
-                           AdapterMode mode,
-                           Context &ctx) {
-  /*HILOG(kDebug, "Flushing blob")
-  if (mode == AdapterMode::kScratch) {
-    HILOG(kDebug, "In scratch mode, ignoring flush")
-    return;
+  if (stat.st_ptr_ != std::numeric_limits<size_t>::max()) {
+    return stat.st_ptr_;
+  } else {
+    return stat.bkt_id_->GetSize();
   }
-  Blob full_blob;
-  IoStatus status;
-  // Read blob from Hermes
-  bkt->Get(blob_id, full_blob, ctx);
-  HILOG(kDebug, "The blob being flushed has size: {}",
-        full_blob.size())
-  std::string blob_name = bkt->GetBlobName(blob_id);
-  // Write blob to backend
-  FsIoOptions decode_opts = io_client_->DecodeBlobName(blob_name);
-  io_client_->WriteBlob(bkt->GetName(),
-                        full_blob,
-                        decode_opts,
-                        status);*/
-}
-
-/**
- * Flush the entire bucket
- * */
-void Filesystem::Flush(std::shared_ptr<hapi::Bucket> &bkt,
-                       AdapterMode mode,
-                       Context &ctx) {
-  /*std::vector<BlobId> blob_ids = bkt->GetContainedBlobIds();
-  if (mode == AdapterMode::kScratch) {
-    return;
-  }
-  HILOG(kDebug, "Flushing: {} blobs", blob_ids.size())
-  for (BlobId &blob_id : blob_ids) {
-    FlushBlob(bkt, blob_id, mode, ctx);
-  }*/
 }
 
 int Filesystem::Sync(File &f, AdapterStat &stat) {
-  FsIoOptions opts;
-  opts.adapter_mode_ = stat.adapter_mode_;
-  if (stat.adapter_mode_ == AdapterMode::kDefault) {
-    Flush(stat.bkt_id_, stat.adapter_mode_, stat.bkt_id_->GetContext());
+  if (HERMES->client_config_.flushing_mode_ == FlushingMode::kSync) {
+    // NOTE(llogan): only for the unit tests
+    // Please don't enable synchronous flushing
+    HERMES->Flush();
   }
   return 0;
 }
@@ -585,28 +562,28 @@ int Filesystem::Remove(const std::string &pathname) {
 size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
                          size_t total_size, IoStatus &io_status,
                          FsIoOptions opts) {
-  off_t off = Tell(f, stat);
+  off_t off = stat.st_ptr_;
   return Write(f, stat, ptr, off, total_size, io_status, opts);
 }
 
 size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
                         size_t total_size,
                         IoStatus &io_status, FsIoOptions opts) {
-  off_t off = Tell(f, stat);
+  off_t off = stat.st_ptr_;
   return Read(f, stat, ptr, off, total_size, io_status, opts);
 }
 
 HermesRequest* Filesystem::AWrite(File &f, AdapterStat &stat, const void *ptr,
                        size_t total_size, size_t req_id,
                        IoStatus &io_status, FsIoOptions opts) {
-  off_t off = Tell(f, stat);
+  off_t off = stat.st_ptr_;
   return AWrite(f, stat, ptr, off, total_size, req_id, io_status, opts);
 }
 
 HermesRequest* Filesystem::ARead(File &f, AdapterStat &stat, void *ptr,
                       size_t total_size, size_t req_id,
                       IoStatus &io_status, FsIoOptions opts) {
-  off_t off = Tell(f, stat);
+  off_t off = stat.st_ptr_;
   return ARead(f, stat, ptr, off, total_size, req_id, io_status, opts);
 }
 

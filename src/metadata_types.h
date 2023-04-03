@@ -298,13 +298,11 @@ struct ShmHeader<TagInfo> {
   hipc::ShmArchive<hipc::slist<TraitId>>
       traits_;             /**< Archive of trait list */
   size_t internal_size_;   /**< Current bucket size */
-  GlobalIoClientState
-      client_state_;       /**< State needed by I/O clients */
   bool owner_;             /**< Whether this tag owns the blobs */
+  RwLock lock_[2];         /**< Lock the bucket */
 
   void strong_copy(const ShmHeader &other) {
     internal_size_ = other.internal_size_;
-    client_state_ = other.client_state_;
     owner_ = other.owner_;
   }
 };

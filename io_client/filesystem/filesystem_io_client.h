@@ -181,7 +181,7 @@ struct AdapterStat {
   mode_t st_mode_;       /**< protection */
   uid_t st_uid_;         /**< user ID of owner */
   gid_t st_gid_;         /**< group ID of owner */
-  off64_t st_ptr_;       /**< current ptr of FILE */
+  size_t st_ptr_;        /**< current ptr of FILE */
   timespec st_atim_;     /**< time of last access */
   timespec st_mtim_;     /**< time of last modification */
   timespec st_ctim_;     /**< time of last status change */

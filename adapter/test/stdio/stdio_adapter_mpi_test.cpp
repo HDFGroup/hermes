@@ -215,6 +215,12 @@ int pretest() {
   return 0;
 }
 
+void Clear() {
+#if HERMES_INTERCEPT == 1
+  HERMES->Clear();
+#endif
+}
+
 int posttest(bool compare_data = true) {
 #if HERMES_INTERCEPT == 1
   HERMES->Flush();
@@ -323,6 +329,7 @@ int posttest(bool compare_data = true) {
     if (stdfs::exists(info.existing_shared_file_cmp))
       stdfs::remove(info.existing_shared_file_cmp);
   }
+  Clear();
 
 #if HERMES_INTERCEPT == 1
   HERMES->client_config_.SetAdapterPathTracking(info.existing_file_cmp, true);

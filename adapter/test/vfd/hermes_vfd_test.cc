@@ -363,7 +363,10 @@ using hermes::adapter::vfd::test::GenNextRandom;
 using hermes::adapter::vfd::test::GenRandom0to1;
 
 void Flush() {
+#if HERMES_INTERCEPT == 1
+  HERMES->client_config_.flushing_mode_ = hermes::FlushingMode::kSync;
   HERMES->Flush();
+#endif
 }
 
 void IgnoreAllFiles() {

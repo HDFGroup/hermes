@@ -134,15 +134,6 @@ class Filesystem {
   size_t GetSize(File &f, AdapterStat &stat);
   /** tell */
   off_t Tell(File &f, AdapterStat &stat);
-  /** Flush a blob */
-  void FlushBlob(std::shared_ptr<hapi::Bucket> &bkt,
-                 BlobId blob_id,
-                 AdapterMode mode,
-                 Context &ctx);
-  /** Flush the entire bucket */
-  void Flush(std::shared_ptr<hapi::Bucket> &bkt,
-             AdapterMode mode,
-             Context &ctx);
   /** sync */
   int Sync(File &f, AdapterStat &stat);
   /** truncate */

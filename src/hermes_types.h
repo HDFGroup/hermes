@@ -87,6 +87,26 @@ enum class HermesType {
   kClient
 };
 
+/** The flushing mode */
+enum class FlushingMode {
+  kSync,
+  kAsync
+};
+
+/** Convert flushing modes to strings */
+class FlushingModeConv {
+ public:
+  static FlushingMode GetEnum(const std::string &str) {
+    if (str == "kSync") {
+      return FlushingMode::kSync;
+    }
+    if (str == "kAsync") {
+      return FlushingMode::kAsync;
+    }
+    return FlushingMode::kAsync;
+  }
+};
+
 /** The types of I/O that can be performed (for IoCall RPC) */
 enum class IoType {
   kRead,
@@ -135,6 +155,13 @@ struct UniqueId {
 typedef UniqueId<1> BlobId;
 typedef UniqueId<2> TagId;
 typedef UniqueId<3> TraitId;
+
+/** Allow unique ids to be printed as strings */
+template<int num>
+std::ostream &operator<<(std::ostream &os, UniqueId<num> const &obj) {
+  return os << (std::to_string(obj.node_id_) + "."
+               + std::to_string(obj.unique_));
+}
 
 /** Indicates a PUT or GET for a particular blob */
 struct IoStat {

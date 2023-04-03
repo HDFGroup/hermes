@@ -321,6 +321,7 @@ void BufferOrganizer::LocalEnqueueFlushes() {
   // Acquire the read lock on the blob map
   ScopedRwReadLock(mdm->header_->lock_[kBlobMapLock]);
   // Begin checking for blobs which need flushing
+  size_t count = 0;
   for (hipc::Ref<hipc::pair<BlobId, BlobInfo>> blob_p : *mdm->blob_map_) {
     BlobId &blob_id = *blob_p->first_;
     BlobInfo &info = *blob_p->second_;
@@ -341,6 +342,10 @@ void BufferOrganizer::LocalEnqueueFlushes() {
     //  it in blob delete
     HERMES_BORG_IO_THREAD_MANAGER->Enqueue(bkt_id, blob_id, blob_size,
                                            std::move(traits));
+    count += 1;
+  }
+  if (count) {
+    HILOG(kDebug, "Flushing {} blobs", count);
   }
 }
 

@@ -181,21 +181,31 @@ class MetadataManager : public hipc::ShmContainer {
   /**
    * Get the size of a bucket
    * */
-  RPC size_t LocalGetBucketSize(TagId bkt_id, bool backend);
+  RPC size_t LocalGetBucketSize(TagId bkt_id);
   DEFINE_RPC(size_t, GetBucketSize, 0, UNIQUE_ID_TO_NODE_ID_LAMBDA)
 
   /**
    * Update \a bkt_id BUCKET stats
    * */
-  RPC bool LocalUpdateBucketSize(TagId bkt_id,
-                                 ssize_t delta,
-                                 BucketUpdate mode);
-  DEFINE_RPC(bool, UpdateBucketSize, 0, UNIQUE_ID_TO_NODE_ID_LAMBDA)
+  RPC bool LocalSetBucketSize(TagId bkt_id, size_t new_size);
+  DEFINE_RPC(bool, SetBucketSize, 0, UNIQUE_ID_TO_NODE_ID_LAMBDA)
+
+  /**
+   * Lock the bucket
+   * */
+  bool LocalLockBucket(TagId bkt_id, MdLockType lock_type);
+  DEFINE_RPC(bool, LockBucket, 0, UNIQUE_ID_TO_NODE_ID_LAMBDA)
+
+  /**
+   * Unlock the bucket
+   * */
+  bool LocalUnlockBucket(TagId bkt_id, MdLockType lock_type);
+  DEFINE_RPC(bool, UnlockBucket, 0, UNIQUE_ID_TO_NODE_ID_LAMBDA)
 
   /**
    * Destroy \a bkt_id bucket
    * */
-  RPC bool LocalClearBucket(TagId bkt_id, bool backend);
+  RPC bool LocalClearBucket(TagId bkt_id);
   DEFINE_RPC(bool, ClearBucket, 0, UNIQUE_ID_TO_NODE_ID_LAMBDA)
 
   /**====================================

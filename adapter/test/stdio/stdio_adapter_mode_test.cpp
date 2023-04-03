@@ -83,7 +83,8 @@ int finalize() {
 }
 
 void Flush() {
-#if HERMES_INTERCPET == 1
+#if HERMES_INTERCEPT == 1
+  HERMES->client_config_.flushing_mode_ = hermes::FlushingMode::kSync;
   HERMES->Flush();
 #endif
 }
@@ -116,6 +117,12 @@ void RemoveFiles() {
   RemoveFile(info.new_file_cmp);
   RemoveFile(info.existing_file);
   RemoveFile(info.existing_file_cmp);
+}
+
+void Clear() {
+#if HERMES_INTERCEPT == 1
+  HERMES->Clear();
+#endif
 }
 
 int pretest() {
@@ -209,6 +216,7 @@ int posttest(bool compare_data = true) {
   /* Clean up. */
   TrackFiles();
   RemoveFiles();
+  Clear();
   return 0;
 }
 

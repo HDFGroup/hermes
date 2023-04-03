@@ -63,7 +63,6 @@ class PosixFs : public hermes::adapter::fs::Filesystem {
     AdapterStat stat;
     stat.flags_ = O_RDONLY;
     stat.st_mode_ = 0;
-    stat.adapter_mode_ = AdapterMode::kScratch;
     File f = Open(stat, __filename);
     if (!f.status_) {
       memset(buf, 0, sizeof(StatT));

@@ -54,18 +54,30 @@ void Bucket::AttachTrait(TraitId trait_id) {
 /**
  * Get the current size of the bucket
  * */
-size_t Bucket::GetSize(bool backend) {
-  return mdm_->GlobalGetBucketSize(id_, backend);
+size_t Bucket::GetSize() {
+  return mdm_->GlobalGetBucketSize(id_);
 }
 
 /**
    * Update the size of the bucket
    * Needed for the adapters for now.
    * */
-void Bucket::UpdateSize(ssize_t new_size, BucketUpdate mode) {
-  mdm_->GlobalUpdateBucketSize(id_,
-                               new_size,
-                               mode);
+void Bucket::SetSize(size_t new_size) {
+  mdm_->GlobalSetBucketSize(id_, new_size);
+}
+
+/**
+ * Lock a bucket
+ * */
+void Bucket::LockBucket(MdLockType type) {
+  mdm_->GlobalLockBucket(id_, type);
+}
+
+/**
+ * Unlock a bucket
+ * */
+void Bucket::UnlockBucket(MdLockType type) {
+  mdm_->GlobalUnlockBucket(id_, type);
 }
 
 /**
@@ -78,8 +90,8 @@ void Bucket::Rename(const std::string &new_bkt_name) {
 /**
    * Clears the buckets contents, but doesn't destroy its metadata
    * */
-void Bucket::Clear(bool backend) {
-  mdm_->GlobalClearBucket(id_, backend);
+void Bucket::Clear() {
+  mdm_->GlobalClearBucket(id_);
 }
 
 /**
@@ -182,12 +194,9 @@ Status Bucket::Put(std::string blob_name,
                                                ctx.blob_score_);
     blob_id = std::get<0>(put_ret);
     bool did_create = std::get<1>(put_ret);
-    ssize_t orig_blob_size = (ssize_t)std::get<2>(put_ret);
-    ssize_t new_blob_size = blob.size();
     if (did_create) {
       mdm_->GlobalTagAddBlob(id_, blob_id);
     }
-    UpdateSize(new_blob_size - orig_blob_size, BucketUpdate::kInternal);
   }
 
   // Update the local MDM I/O log

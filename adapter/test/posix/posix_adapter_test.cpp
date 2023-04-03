@@ -88,6 +88,7 @@ int finalize() {
 
 void Flush() {
 #if HERMES_INTERCEPT == 1
+  HERMES->client_config_.flushing_mode_ = hermes::FlushingMode::kSync;
   HERMES->Flush();
 #endif
 }
@@ -170,6 +171,12 @@ int pretest() {
   return 0;
 }
 
+void Clear() {
+#if HERMES_INTERCEPT == 1
+  HERMES->Clear();
+#endif
+}
+
 int posttest(bool compare_data = true) {
   Flush();
   IgnoreAllFiles();
@@ -243,6 +250,7 @@ int posttest(bool compare_data = true) {
   /* Delete the files from both Hermes and the backend. */
   TrackFiles();
   RemoveFiles();
+  Clear();
   return 0;
 }
 

@@ -83,7 +83,14 @@ int pretest() {
   return 0;
 }
 
+void Clear() {
+#if HERMES_INTERCEPT == 1
+  HERMES->Clear();
+#endif
+}
+
 int posttest() {
+  Clear();
   if (stdfs::exists(info.new_file)) stdfs::remove(info.new_file);
   if (stdfs::exists(info.existing_file)) stdfs::remove(info.existing_file);
   return 0;

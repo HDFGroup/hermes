@@ -78,6 +78,10 @@ void ClientConfig::ParseYAML(YAML::Node &yaml_conf) {
       SetAdapterPathTracking(std::move(entry), false);
     }
   }
+  if (yaml_conf["flushing_mode"]) {
+    flushing_mode_ =
+        FlushingModeConv::GetEnum(yaml_conf["flushing_mode"].as<std::string>());
+  }
   if (yaml_conf["file_adapter_configs"]) {
     for (auto node : yaml_conf["file_adapter_configs"]) {
       AdapterObjectConfig conf(base_adapter_config_);

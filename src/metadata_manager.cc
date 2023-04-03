@@ -138,8 +138,7 @@ void MetadataManager::shm_deserialize_main() {
  * Get the size of the bucket. May consider the impact the bucket has
  * on the backing storage system's statistics using the io_ctx.
  * */
-size_t MetadataManager::LocalGetBucketSize(TagId bkt_id,
-                                           bool backend) {
+size_t MetadataManager::LocalGetBucketSize(TagId bkt_id) {
   AUTO_TRACE(1);
   // Acquire MD read lock (reading tag_map)
   ScopedRwReadLock tag_map_lock(header_->lock_[kTagMapLock]);
@@ -149,55 +148,60 @@ size_t MetadataManager::LocalGetBucketSize(TagId bkt_id,
   }
   hipc::Ref<hipc::pair<TagId, TagInfo>> info = (*iter);
   TagInfo &bkt_info = *info->second_;
-  if (backend) {
-    return bkt_info.header_->client_state_.true_size_;
-  } else {
-    return bkt_info.header_->internal_size_;
-  }
+  return bkt_info.header_->internal_size_;
 }
 
 /**
  * Update \a bkt_id BUCKET stats
  * */
-bool MetadataManager::LocalUpdateBucketSize(TagId bkt_id,
-                                            ssize_t delta,
-                                            BucketUpdate mode) {
+bool MetadataManager::LocalSetBucketSize(TagId bkt_id,
+                                         size_t new_size) {
   AUTO_TRACE(1);
   // Acquire MD read lock (reading tag_map)
   ScopedRwReadLock tag_map_lock(header_->lock_[kTagMapLock]);
   auto iter = tag_map_->find(bkt_id);
   if (iter == tag_map_->end()) {
-    return 0;
+    return false;
   }
   hipc::Ref<hipc::pair<TagId, TagInfo>> info = (*iter);
   TagInfo &bkt_info = *info->second_;
-  switch (mode) {
-    case BucketUpdate::kInternal: {
-      bkt_info.header_->internal_size_ += delta;
-      break;
-    }
-    case BucketUpdate::kBackend: {
-      bkt_info.header_->client_state_.true_size_ = std::max(
-          bkt_info.header_->client_state_.true_size_, (size_t)delta);
-      break;
-    }
-    case BucketUpdate::kNone: {
-      HELOG(kFatal, "Cannot have kNone bucket type")
-    }
-  }
-  HILOG(kDebug, "Updating the size of bucket: {} by: {} bytes"
-                " New internal size: {}"
-                " New backend size: {}",
-        bkt_info.name_->str(), delta,
-        bkt_info.header_->internal_size_,
-        bkt_info.header_->client_state_.true_size_)
+  bkt_info.header_->internal_size_ = new_size;
+  HILOG(kDebug, "The new size of the bucket {} ({}) is {}",
+        bkt_info.name_->str(), bkt_id,
+        bkt_info.header_->internal_size_)
   return true;
+}
+
+/**
+ * Lock the bucket
+ * */
+bool MetadataManager::LocalLockBucket(TagId bkt_id,
+                                      MdLockType lock_type) {
+  AUTO_TRACE(1);
+  if (bkt_id.IsNull()) {
+    return false;
+  }
+  ScopedRwReadLock blob_map_lock(header_->lock_[kTagMapLock]);
+  return LockMdObject(*tag_map_, bkt_id, lock_type);
+}
+
+/**
+ * Unlock the bucket
+ * */
+bool MetadataManager::LocalUnlockBucket(TagId bkt_id,
+                                        MdLockType lock_type) {
+  AUTO_TRACE(1);
+  if (bkt_id.IsNull()) {
+    return false;
+  }
+  ScopedRwReadLock blob_map_lock(header_->lock_[kTagMapLock]);
+  return UnlockMdObject(*tag_map_, bkt_id, lock_type);
 }
 
 /**
  * Clear \a bkt_id bucket
  * */
-bool MetadataManager::LocalClearBucket(TagId bkt_id, bool backend) {
+bool MetadataManager::LocalClearBucket(TagId bkt_id) {
   AUTO_TRACE(1);
   ScopedRwWriteLock tag_map_lock(header_->lock_[kTagMapLock]);
   auto iter = tag_map_->find(bkt_id);
@@ -211,9 +215,6 @@ bool MetadataManager::LocalClearBucket(TagId bkt_id, bool backend) {
   }
   bkt_info.blobs_->clear();
   bkt_info.header_->internal_size_ = 0;
-  if (backend) {
-    bkt_info.header_->client_state_.true_size_ = 0;
-  }
   return true;
 }
 
@@ -564,10 +565,9 @@ MetadataManager::LocalGetOrCreateTag(const std::string &tag_name,
     hipc::Ref<hipc::pair<TagId, TagInfo>> info_pair = *iter;
     TagInfo &info = *info_pair->second_;
     (*info.name_) = *tag_name_shm;
-    info.header_->internal_size_ = 0;
-    info.header_->client_state_.true_size_ = backend_size;
     info.header_->tag_id_ = tag_id;
     info.header_->owner_ = owner;
+    info.header_->internal_size_ = backend_size;
   } else {
     HILOG(kDebug, "Found existing tag: {}", tag_name)
     auto iter = tag_id_map_->find(*tag_name_shm);

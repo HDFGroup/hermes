@@ -86,13 +86,23 @@ class Bucket {
   /**
    * Get the current size of the bucket
    * */
-  size_t GetSize(bool backend = false);
+  size_t GetSize();
 
   /**
    * Update the size of the bucket
    * Needed for the adapters for now.
    * */
-  void UpdateSize(ssize_t delta, BucketUpdate mode);
+  void SetSize(size_t new_size);
+
+  /**
+   * Lock a bucket
+   * */
+  void LockBucket(MdLockType type);
+
+  /**
+   * Unlock a bucket
+   * */
+  void UnlockBucket(MdLockType type);
 
   /**
    * Rename this bucket
@@ -102,7 +112,7 @@ class Bucket {
   /**
    * Clears the buckets contents, but doesn't destroy its metadata
    * */
-  void Clear(bool backend = false);
+  void Clear();
 
   /**
    * Destroys this bucket along with all its contents.

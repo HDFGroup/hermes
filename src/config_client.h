@@ -33,7 +33,10 @@ static inline const bool do_exclude = false;
  * */
 class ClientConfig : public BaseConfig {
  public:
-  bool stop_daemon_;         /**< Whether or not to stop daemon at exit */
+  /** Whether or not to stop daemon at exit */
+  bool stop_daemon_;
+  /** The flushing mode to use */
+  FlushingMode flushing_mode_;
   /** The set of paths to monitor or exclude, ordered by length */
   std::vector<std::pair<std::string, bool>> path_list_;
   /** The default adapter config */
