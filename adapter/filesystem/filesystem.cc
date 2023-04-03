@@ -53,6 +53,8 @@ void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
       size_t file_size = io_client_->GetSize(*path_shm);
       stat.bkt_id_ = HERMES->GetBucket(stat.path_, ctx, file_size);
     }
+    HILOG(kDebug, "File has size: {}", stat.bkt_id_->GetSize());
+    // Attach trait to bucket (if not scratch mode)
     if (stat.bkt_id_->DidCreate()) {
       io_client_->Register();
       if (stat.adapter_mode_ != AdapterMode::kScratch) {
@@ -166,16 +168,18 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
   (void) f;
   std::shared_ptr<hapi::Bucket> &bkt = stat.bkt_id_;
   std::string filename = bkt->GetName();
-  size_t backend_size;
 
   // Update the size of the bucket
   size_t orig_off = off;
   stat.bkt_id_->LockBucket(MdLockType::kExternalWrite);
-  backend_size = stat.bkt_id_->GetSize();
+  size_t backend_size = stat.bkt_id_->GetSize();
   if (off == std::numeric_limits<size_t>::max()) {
     off = backend_size;
   }
-  stat.bkt_id_->SetSize(off + total_size);
+  size_t new_size = off + total_size;
+  if (new_size > backend_size) {
+    stat.bkt_id_->SetSize(off + total_size);
+  }
   stat.bkt_id_->UnlockBucket(MdLockType::kExternalWrite);
 
   HILOG(kDebug, "Write called for filename: {}"
@@ -316,17 +320,26 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
   (void) f;
   std::shared_ptr<hapi::Bucket> &bkt = stat.bkt_id_;
   std::string filename = bkt->GetName();
-
-  size_t orig_off = off;
-  if (off == std::numeric_limits<size_t>::max()) {
-    off = stat.bkt_id_->GetSize();
-  }
+  size_t file_size = stat.bkt_id_->GetSize();
 
   HILOG(kDebug, "Read called for filename: {}"
-        " on offset: {}"
-        " from position: {}"
-        " and size: {}",
+                " on offset: {}"
+                " from position: {}"
+                " and size: {}",
         filename, off, stat.st_ptr_, total_size)
+
+  // SEEK_END is not a valid read position
+  if (off == std::numeric_limits<size_t>::max()) {
+    return 0;
+  }
+
+  // Ensure the amount being read makes sense
+  if (off + total_size > file_size) {
+    total_size = file_size - off;
+  }
+  if (total_size == 0) {
+    return 0;
+  }
 
   if (stat.adapter_mode_ == AdapterMode::kBypass) {
     // Bypass mode is handled differently
@@ -339,7 +352,7 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
             opts.backend_size_)
       return 0;
     }
-    if (opts.DoSeek() && orig_off != std::numeric_limits<size_t>::max()) {
+    if (opts.DoSeek()) {
       stat.st_ptr_ = off + total_size;
     }
     return total_size;
@@ -382,7 +395,7 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
     bkt->UnlockBlob(blob_id, MdLockType::kExternalRead);
     data_offset += p.blob_size_;
   }
-  if (opts.DoSeek() && orig_off != std::numeric_limits<size_t>::max()) {
+  if (opts.DoSeek()) {
     stat.st_ptr_ = off + total_size;
   }
   stat.UpdateTime();
@@ -460,7 +473,7 @@ size_t Filesystem::GetSize(File &f, AdapterStat &stat) {
 }
 
 off_t Filesystem::Seek(File &f, AdapterStat &stat,
-                       SeekMode whence, off_t offset) {
+                       SeekMode whence, off64_t offset) {
   auto mdm = HERMES_FS_METADATA_MANAGER;
   switch (whence) {
     case SeekMode::kSet: {
@@ -468,8 +481,13 @@ off_t Filesystem::Seek(File &f, AdapterStat &stat,
       break;
     }
     case SeekMode::kCurrent: {
-      stat.st_ptr_ += offset;
-      offset = stat.st_ptr_;
+      if (stat.st_ptr_ != std::numeric_limits<size_t>::max()) {
+        stat.st_ptr_ = (off64_t)stat.st_ptr_ + offset;
+        offset = stat.st_ptr_;
+      } else {
+        stat.st_ptr_ = (off64_t)stat.bkt_id_->GetSize() + offset;
+        offset = stat.st_ptr_;
+      }
       break;
     }
     case SeekMode::kEnd: {
@@ -477,13 +495,14 @@ off_t Filesystem::Seek(File &f, AdapterStat &stat,
         stat.st_ptr_ = std::numeric_limits<size_t>::max();
         offset = stat.bkt_id_->GetSize();
       } else {
-        stat.st_ptr_ = stat.bkt_id_->GetSize() - offset;
+        stat.st_ptr_ = (off64_t)stat.bkt_id_->GetSize() + offset;
         offset = stat.st_ptr_;
       }
       break;
     }
     default: {
-      // TODO(llogan): throw not implemented error.
+      HELOG(kError, "Invalid seek mode");
+      return -1;
     }
   }
   mdm->Update(f, stat);

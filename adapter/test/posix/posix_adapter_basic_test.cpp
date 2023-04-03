@@ -240,7 +240,7 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
                              "[request_size=type-fixed][repetition=1]"
                              "[file=1]") {
   pretest();
-  /*SECTION("write to existing file") {
+  SECTION("write to existing file") {
     test::test_open(info.existing_file.c_str(), O_RDWR);
     REQUIRE(test::fh_orig != -1);
     test::test_seek(0, SEEK_SET);
@@ -284,7 +284,7 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(test::status_orig == 0);
     REQUIRE(stdfs::file_size(info.existing_file) ==
             test::size_written_orig + args.request_size * info.num_iterations);
-  }*/
+  }
 
   SECTION("append to existing file") {
     auto existing_size = stdfs::file_size(info.existing_file);

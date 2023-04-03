@@ -121,13 +121,7 @@ class BorgIoThreadManager {
   void SpawnFlushWorkers(int num_threads);
 
   /** Wait for flushing to complete */
-  void WaitForFlush() {
-    HILOG(kDebug, "Waiting for all flushing to complete")
-    while (IsFlushing()) {
-      HSHM_THREAD_MANAGER->GetThreadStatic()->Yield();
-    }
-    HILOG(kDebug, "Waiting for all flushing to complete")
-  }
+  void WaitForFlush();
 
   /** Check if a flush is still happening */
   bool IsFlushing() {

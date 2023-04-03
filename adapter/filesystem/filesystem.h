@@ -129,7 +129,7 @@ class Filesystem {
   /** wait for request IDs in \a req_id vector */
   void Wait(std::vector<uint64_t> &req_id, std::vector<size_t> &ret);
   /** seek */
-  off_t Seek(File &f, AdapterStat &stat, SeekMode whence, off_t offset);
+  off_t Seek(File &f, AdapterStat &stat, SeekMode whence, off64_t offset);
   /** file size */
   size_t GetSize(File &f, AdapterStat &stat);
   /** tell */
