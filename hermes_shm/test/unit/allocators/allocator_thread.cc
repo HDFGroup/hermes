@@ -15,8 +15,6 @@
 
 void MultiThreadedPageAllocationTest(Allocator *alloc) {
   size_t nthreads = 8;
-  HSHM_THREAD_MANAGER->GetThreadStatic();
-
   omp_set_dynamic(0);
 #pragma omp parallel shared(alloc) num_threads(nthreads)
   {

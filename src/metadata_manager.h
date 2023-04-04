@@ -482,11 +482,11 @@ class MetadataManager : public hipc::ShmContainer {
     MapSecond &obj_info = *info->second_;
     switch (lock_type) {
       case MdLockType::kExternalRead: {
-        obj_info.header_->lock_[1].ReadLock();
+        obj_info.header_->lock_[1].ReadLock(0);
         return true;
       }
       case MdLockType::kExternalWrite: {
-        obj_info.header_->lock_[1].WriteLock();
+        obj_info.header_->lock_[1].WriteLock(0);
         return true;
       }
       default: {

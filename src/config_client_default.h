@@ -6,6 +6,7 @@ const char* kClientDefaultConfigStr =
 "path_exclusions: [\"/\"]\n"
 "file_page_size: 1024KB\n"
 "base_adapter_mode: kDefault\n"
+"flushing_mode: kAsync\n"
 "file_adapter_configs:\n"
 "  - path: \"/\"\n"
 "    page_size: 1MB\n"

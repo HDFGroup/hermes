@@ -14,7 +14,7 @@
 #ifndef HERMES_DATA_STRUCTURES_UNORDERED_MAP_H_
 #define HERMES_DATA_STRUCTURES_UNORDERED_MAP_H_
 
-#include "hermes_shm/thread/thread_manager.h"
+#include "hermes_shm/thread/thread_model_manager.h"
 #include "hermes_shm/data_structures/ipc/vector.h"
 #include "hermes_shm/data_structures/ipc/slist.h"
 #include "pair.h"

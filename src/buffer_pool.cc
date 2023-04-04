@@ -247,7 +247,7 @@ void BufferPool::AllocateSlabs(size_t &rem_size,
   GetFreeListForCpu(tid.GetIndex(), cpu, slab_id, free_list,
                     free_list_stat);
   GetTargetStatForCpu(tid.GetIndex(), cpu, target_stat);
-  target_stat->lock_.Lock();
+  target_stat->lock_.Lock(0);
 
   while (slab_count > 0) {
     BpSlot slot =
@@ -260,7 +260,7 @@ void BufferPool::AllocateSlabs(size_t &rem_size,
         GetFreeListForCpu(tid.GetIndex(), cpu, slab_id, free_list,
                           free_list_stat);
         GetTargetStatForCpu(tid.GetIndex(), cpu, target_stat);
-        target_stat->lock_.Lock();
+        target_stat->lock_.Lock(0);
         cpu_off += 1;
         continue;
       } else {
@@ -380,7 +380,7 @@ bool BufferPool::LocalReleaseBuffers(std::vector<BufferInfo> &buffers) {
     // Acquire the main CPU lock for the target
     hipc::Ref<BpFreeListStat> target_stat;
     GetTargetStatForCpu(info.tid_.GetIndex(), cpu, target_stat);
-    hshm::ScopedMutex(target_stat->lock_);
+    hshm::ScopedMutex(target_stat->lock_, 0);
 
     // Get this core's free list for the page_size
     hipc::Ref<BpFreeListStat> free_list_stat;

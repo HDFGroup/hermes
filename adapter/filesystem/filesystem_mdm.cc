@@ -19,7 +19,7 @@ namespace hermes::adapter::fs {
 bool MetadataManager::Create(const File &f,
                              std::shared_ptr<AdapterStat> &stat) {
   HILOG(kDebug, "Create metadata for file handler")
-  ScopedRwWriteLock md_lock(lock_);
+  ScopedRwWriteLock md_lock(lock_, kMDM_Create);
   if (path_to_hermes_file_.find(stat->path_) == path_to_hermes_file_.end()) {
     path_to_hermes_file_.emplace(stat->path_, std::list<File>());
   }
@@ -30,7 +30,7 @@ bool MetadataManager::Create(const File &f,
 
 bool MetadataManager::Update(const File &f, const AdapterStat &stat) {
   HILOG(kDebug, "Update metadata for file handler")
-  ScopedRwWriteLock md_lock(lock_);
+  ScopedRwWriteLock md_lock(lock_, kMDM_Update);
   auto iter = hermes_file_to_stat_.find(f);
   if (iter != hermes_file_to_stat_.end()) {
     *(*iter).second = stat;
@@ -42,7 +42,7 @@ bool MetadataManager::Update(const File &f, const AdapterStat &stat) {
 
 std::list<File>* MetadataManager::Find(const std::string &path) {
   std::string canon_path = stdfs::absolute(path).string();
-  ScopedRwReadLock md_lock(lock_);
+  ScopedRwReadLock md_lock(lock_, kMDM_Find);
   auto iter = path_to_hermes_file_.find(canon_path);
   if (iter == path_to_hermes_file_.end())
     return nullptr;
@@ -51,7 +51,7 @@ std::list<File>* MetadataManager::Find(const std::string &path) {
 }
 
 std::shared_ptr<AdapterStat> MetadataManager::Find(const File &f) {
-  ScopedRwReadLock md_lock(lock_);
+  ScopedRwReadLock md_lock(lock_, kMDM_Find2);
   auto iter = hermes_file_to_stat_.find(f);
   if (iter == hermes_file_to_stat_.end())
     return nullptr;
@@ -61,7 +61,7 @@ std::shared_ptr<AdapterStat> MetadataManager::Find(const File &f) {
 
 bool MetadataManager::Delete(const std::string &path, const File &f) {
   HILOG(kDebug, "Delete metadata for file handler")
-  ScopedRwWriteLock md_lock(lock_);
+  ScopedRwWriteLock md_lock(lock_, kMDM_Delete);
   auto iter = hermes_file_to_stat_.find(f);
   if (iter != hermes_file_to_stat_.end()) {
     hermes_file_to_stat_.erase(iter);

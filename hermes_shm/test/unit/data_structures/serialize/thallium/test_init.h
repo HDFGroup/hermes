@@ -14,8 +14,8 @@
 #define HERMES_SHM_TEST_UNIT_DATA_STRUCTURES_SERIALIZE_THALLIUM_TEST_INIT_H_
 
 #include <thallium.hpp>
-#include "hermes_shm/thread/thread_manager.h"
-#include "hermes_shm/thread/thread_factory.h"
+#include "hermes_shm/thread/thread_model_manager.h"
+#include "hermes_shm/thread/thread_model/thread_model_factory.h"
 #include "hermes_shm/data_structures/data_structure.h"
 #include "hermes_shm/data_structures/serialization/thallium.h"
 

@@ -74,6 +74,10 @@ std::vector<char> gen_random(const int len) {
 }
 
 int init(int* argc, char*** argv) {
+#if HERMES_INTERCEPT == 1
+  setenv("HERMES_FLUSH_MODE", "kSync", 1);
+  HERMES->client_config_.flushing_mode_ = hermes::FlushingMode::kSync;
+#endif
   MPI_Init(argc, argv);
   info.write_data = gen_random(args.request_size);
   info.read_data = std::vector<char>(args.request_size, 'r');
@@ -84,13 +88,6 @@ int init(int* argc, char*** argv) {
 int finalize() {
   MPI_Finalize();
   return 0;
-}
-
-void Flush() {
-#if HERMES_INTERCEPT == 1
-  HERMES->client_config_.flushing_mode_ = hermes::FlushingMode::kSync;
-  HERMES->Flush();
-#endif
 }
 
 void IgnoreAllFiles() {
@@ -178,7 +175,6 @@ void Clear() {
 }
 
 int posttest(bool compare_data = true) {
-  Flush();
   IgnoreAllFiles();
   if (compare_data && stdfs::exists(info.new_file) &&
       stdfs::exists(info.new_file_cmp)) {

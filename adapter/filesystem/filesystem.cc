@@ -540,6 +540,14 @@ int Filesystem::Close(File &f, AdapterStat &stat) {
   io_client_->HermesClose(f, stat, fs_ctx);
   io_client_->RealClose(f, stat);
   mdm->Delete(stat.path_, f);
+  if (stat.amode_ & MPI_MODE_DELETE_ON_CLOSE) {
+    Remove(stat.path_);
+  }
+  if (HERMES->client_config_.flushing_mode_ == FlushingMode::kSync) {
+    // NOTE(llogan): only for the unit tests
+    // Please don't enable synchronous flushing
+    stat.bkt_id_->Destroy();
+  }
   return 0;
 }
 

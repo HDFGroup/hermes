@@ -27,15 +27,21 @@ class ThreadManager {
  public:
   /** Default constructor */
   ThreadManager() : kill_requested_(false) {
-    ABT_xstream_create(ABT_SCHED_NULL, &execution_stream_);
+    int ret = ABT_xstream_create(ABT_SCHED_NULL, &execution_stream_);
+    if (ret != ABT_SUCCESS) {
+      HELOG(kFatal, "Could not create argobots xstream");
+    }
   }
 
   /** Spawn a for handling a function or lambda */
   template<typename FuncT, typename ParamsT = void>
   void Spawn(FuncT &&func, ParamsT *params = nullptr) {
-    ABT_thread_create_on_xstream(execution_stream_,
+    int ret = ABT_thread_create_on_xstream(execution_stream_,
                                  func, (void*)params,
                                  ABT_THREAD_ATTR_NULL, NULL);
+    if (ret != ABT_SUCCESS) {
+      HELOG(kFatal, "Couldn't spawn worker");
+    }
   }
 
   /** Begin terminating threads */

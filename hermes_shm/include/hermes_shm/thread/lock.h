@@ -16,6 +16,6 @@
 
 #include "lock/mutex.h"
 #include "lock/rwlock.h"
-#include "thread_manager.h"
+#include "thread_model_manager.h"
 
 #endif  // HERMES_THREAD_LOCK_H_

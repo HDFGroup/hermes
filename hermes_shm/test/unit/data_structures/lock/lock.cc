@@ -24,15 +24,13 @@ void MutexTest() {
   size_t count = 0;
   Mutex lock;
 
-  HSHM_THREAD_MANAGER->GetThreadStatic();
-
   omp_set_dynamic(0);
 #pragma omp parallel shared(lock) num_threads(nthreads)
   {
     // Support parallel write
 #pragma omp barrier
     for (size_t i = 0; i < loop_count; ++i) {
-      lock.Lock();
+      lock.Lock(i);
       count += 1;
       lock.Unlock();
     }
@@ -52,54 +50,39 @@ void barrier_for_reads(std::vector<int> &tid_start, size_t left) {
   } while (count < left);
 }
 
-void RwLockTest() {
-  size_t nthreads = 8;
-  size_t left = nthreads / 2;
-  std::vector<int> tid_start(left, 0);
-  size_t loop_count = 100000;
+void RwLockTest(int producers, int consumers) {
+  size_t nthreads = producers + consumers;
+  size_t loop_count = US_TO_CLOCKS(1000000);
   size_t count = 0;
   RwLock lock;
 
-  HSHM_THREAD_MANAGER->GetThreadStatic();
-
   omp_set_dynamic(0);
 #pragma omp parallel \
-  shared(lock, nthreads, left, loop_count, count, tid_start) \
+  shared(lock, nthreads, producers, consumers, loop_count, count) \
   num_threads(nthreads)
   {  // NOLINT
     int tid = omp_get_thread_num();
 
-    // Support parallel write
 #pragma omp barrier
-    for (size_t i = 0; i < loop_count; ++i) {
-      lock.WriteLock();
-      count += 1;
-      lock.WriteUnlock();
-    }
-#pragma omp barrier
-    REQUIRE(count == loop_count * nthreads);
-#pragma omp barrier
-
-    // Support for parallel read and write
-#pragma omp barrier
-
-    size_t cur_count = count;
-    if ((size_t)tid < left) {
-      lock.ReadLock();
-      tid_start[tid] = 1;
-      barrier_for_reads(tid_start, left);
+    size_t total_size = producers * loop_count;
+    if (tid < consumers) {
+      // The left 2 threads will be readers
+      lock.ReadLock(tid);
       for (size_t i = 0; i < loop_count; ++i) {
-        REQUIRE(count == cur_count);
+        REQUIRE(count < total_size);
       }
       lock.ReadUnlock();
     } else {
-      barrier_for_reads(tid_start, left);
-      lock.WriteLock();
+      // The right 4 threads will be writers
+      lock.WriteLock(tid);
       for (size_t i = 0; i < loop_count; ++i) {
         count += 1;
       }
       lock.WriteUnlock();
     }
+
+#pragma omp barrier
+    REQUIRE(count == total_size);
   }
 }
 
@@ -108,5 +91,7 @@ TEST_CASE("Mutex") {
 }
 
 TEST_CASE("RwLock") {
-  RwLockTest();
+  RwLockTest(8, 0);
+  RwLockTest(7, 1);
+  RwLockTest(4, 4);
 }

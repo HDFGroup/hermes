@@ -60,6 +60,10 @@ hermes::adapter::stdio::test::Arguments args;
 hermes::adapter::stdio::test::Info info;
 
 int init(int* argc, char*** argv) {
+#if HERMES_INTERCEPT == 1
+  setenv("HERMES_FLUSH_MODE", "kSync", 1);
+  HERMES->client_config_.flushing_mode_ = hermes::FlushingMode::kSync;
+#endif
   stdfs::path fullpath = args.directory;
   fullpath /= args.filename;
   info.new_file = fullpath.string() + "_new" + std::to_string(getpid());
@@ -80,13 +84,6 @@ int init(int* argc, char*** argv) {
 int finalize() {
   MPI_Finalize();
   return 0;
-}
-
-void Flush() {
-#if HERMES_INTERCEPT == 1
-  HERMES->client_config_.flushing_mode_ = hermes::FlushingMode::kSync;
-  HERMES->Flush();
-#endif
 }
 
 void IgnoreAllFiles() {
@@ -153,7 +150,6 @@ int pretest() {
 }
 
 int posttest(bool compare_data = true) {
-  Flush();
   IgnoreAllFiles();
   if (compare_data && stdfs::exists(info.new_file) &&
       stdfs::exists(info.new_file_cmp)) {

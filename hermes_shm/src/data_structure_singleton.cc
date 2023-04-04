@@ -21,5 +21,5 @@ DEFINE_GLOBAL_SINGLETON_CC(hshm::SystemInfo)
 DEFINE_GLOBAL_SINGLETON_CC(hshm::ipc::MemoryRegistry)
 #include <hermes_shm/memory/memory_manager.h>
 DEFINE_GLOBAL_SINGLETON_CC(hshm::ipc::MemoryManager)
-#include <hermes_shm/thread/thread_manager.h>
-DEFINE_GLOBAL_SINGLETON_CC(hshm::ThreadManager)
+#include <hermes_shm/thread/thread_model_manager.h>
+DEFINE_GLOBAL_SINGLETON_CC(hshm::ThreadModelManager)

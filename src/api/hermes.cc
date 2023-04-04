@@ -24,7 +24,7 @@ void Hermes::Init(HermesType mode,
                   std::string server_config_path,
                   std::string client_config_path) {
   // Initialize hermes
-  hshm::ScopedMutex lock(lock_);
+  hshm::ScopedMutex lock(lock_, 0);
   if (is_initialized_) {
     return;
   }

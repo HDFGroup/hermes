@@ -415,4 +415,57 @@ struct hash<hermes::UniqueId<TYPE>> {
   }
 };
 }  // namespace std
+
+namespace hermes {
+
+/** Used for debugging concurrency issues with locks */
+enum LockOwners {
+  kNone = 0,
+  kMDM_Create = 1,
+  kMDM_Update = 2,
+  kMDM_Find = 3,
+  kMDM_Find2 = 4,
+  kMDM_Delete = 5,
+  kFS_GetBaseAdapterMode = 6,
+  kFS_GetAdapterMode = 7,
+  kFS_GetAdapterPageSize = 8,
+  kBORG_LocalEnqueueFlushes = 9,
+  kBORG_LocalProcessFlushes = 10,
+  kMDM_LocalGetBucketSize = 12,
+  kMDM_LocalSetBucketSize = 13,
+  kMDM_LocalLockBucket = 14,
+  kMDM_LocalUnlockBucket = 15,
+  kMDM_LocalClearBucket = 16,
+  kMDM_LocalTagBlob = 17,
+  kMDM_LocalBlobHasTag = 18,
+  kMDM_LocalTryCreateBlob = 19,
+  kMDM_LocalPutBlobMetadata = 20,
+  kMDM_LocalGetBlobId = 21,
+  kMDM_LocalGetBlobName = 22,
+  kMDM_LocalGetBlobScore = 24,
+  kMDM_LocalLockBlob = 26,
+  kMDM_LocalUnlockBlob = 27,
+  kMDM_LocalGetBlobBuffers = 28,
+  kMDM_LocalRenameBlob = 29,
+  kMDM_LocalDestroyBlob = 30,
+  kMDM_LocalClear = 31,
+  kMDM_LocalGetOrCreateTag = 32,
+  kMDM_LocalGetTagId = 33,
+  kMDM_LocalGetTagName = 34,
+  kMDM_LocalRenameTag = 35,
+  kMDM_LocalDestroyTag = 36,
+  kMDM_LocalTagAddBlob = 37,
+  kMDM_LocalTagRemoveBlob = 38,
+  kMDM_LocalGroupByTag = 39,
+  kMDM_LocalTagAddTrait = 40,
+  kMDM_LocalTagGetTraits = 41,
+  kMDM_LocalRegisterTrait = 42,
+  kMDM_LocalGetTraitId = 43,
+  kMDM_LocalGetTraitParams = 44,
+  kMDM_GlobalGetTrait = 45,
+  kMDM_AddIoStat = 46,
+  kMDM_ClearIoStats = 47
+};
+
+}  // namespace hermes
 #endif  // HERMES_TYPES_H_

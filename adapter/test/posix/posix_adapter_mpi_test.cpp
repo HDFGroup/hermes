@@ -82,6 +82,10 @@ std::vector<char> gen_random(const int len) {
 }
 
 int init(int* argc, char*** argv) {
+#if HERMES_INTERCEPT == 1
+  setenv("HERMES_FLUSH_MODE", "kSync", 1);
+  HERMES->client_config_.flushing_mode_ = hermes::FlushingMode::kSync;
+#endif
   MPI_Init(argc, argv);
   info.write_data = gen_random(args.request_size);
   info.read_data = std::vector<char>(args.request_size, 'r');
@@ -204,7 +208,6 @@ void Clear() {
 
 int posttest(bool compare_data = true) {
 #if HERMES_INTERCEPT == 1
-  HERMES->Flush();
   HERMES->client_config_.SetAdapterPathTracking(info.existing_file, false);
   HERMES->client_config_.SetAdapterPathTracking(info.new_file, false);
   HERMES->client_config_.SetAdapterPathTracking(

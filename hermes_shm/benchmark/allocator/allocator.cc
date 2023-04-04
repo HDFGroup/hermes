@@ -199,8 +199,6 @@ void FullAllocatorTestPerThread() {
 
 /** Spawn multiple threads and run allocator tests */
 void FullAllocatorTestThreaded(int nthreads) {
-  HSHM_THREAD_MANAGER->GetThreadStatic();
-
   omp_set_dynamic(0);
 #pragma omp parallel num_threads(nthreads)
   {

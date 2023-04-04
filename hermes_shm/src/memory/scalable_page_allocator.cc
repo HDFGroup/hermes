@@ -117,12 +117,12 @@ OffsetPointer ScalablePageAllocator::AllocateOffset(size_t size) {
 
 MpPage *ScalablePageAllocator::CheckCaches(size_t size_mp) {
   MpPage *page;
-  ScopedRwReadLock coalesce_lock(header_->coalesce_lock_);
+  ScopedRwReadLock coalesce_lock(header_->coalesce_lock_, 0);
   uint32_t cpu = NodeThreadId().hash() % HERMES_SYSTEM_INFO->ncpu_;
   uint32_t cpu_start = cpu * num_free_lists_;
   hipc::Ref<pair<FreeListStats, iqueue<MpPage>>> first_free_list =
     (*free_lists_)[cpu_start];
-  ScopedMutex first_list_lock(first_free_list->first_->lock_);
+  ScopedMutex first_list_lock(first_free_list->first_->lock_, 0);
 
   // Check the small buffer caches
   if (size_mp <= max_cached_size_) {
@@ -263,7 +263,7 @@ void ScalablePageAllocator::FreeOffsetNoNullCheck(OffsetPointer p) {
   uint32_t cpu_start = cpu * num_free_lists_;
   hipc::Ref<pair<FreeListStats, iqueue<MpPage>>> first_free_list =
     (*free_lists_)[cpu_start];
-  ScopedMutex first_list_lock(first_free_list->first_->lock_);
+  ScopedMutex first_list_lock(first_free_list->first_->lock_, 0);
 
   // Append to small buffer cache free list
   if (hdr->page_size_ <= max_cached_size_) {

@@ -23,7 +23,7 @@
 #include <hermes_shm/data_structures/containers/converters.h>
 #include <hermes_shm/util/auto_trace.h>
 #include <hermes_shm/thread/lock.h>
-#include <hermes_shm/thread/thread_manager.h>
+#include <hermes_shm/thread/thread_model_manager.h>
 #include <hermes_shm/types/atomic.h>
 
 using hshm::RwLock;

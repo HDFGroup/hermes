@@ -24,7 +24,7 @@
 #define HERMES_MEMORY_MANAGER hshm::GlobalSingleton<hshm::ipc::MemoryManager>::GetInstance()
 #define HERMES_MEMORY_MANAGER_T hshm::ipc::MemoryManager*
 
-#define HSHM_THREAD_MANAGER hshm::GlobalSingleton<hshm::ThreadManager>::GetInstance()
-#define HSHM_THREAD_MANAGER_T hshm::ThreadManager*
+#define HERMES_THREAD_MODEL hshm::GlobalSingleton<hshm::ThreadModelManager>::GetInstance()
+#define HERMES_THREAD_MODEL_T hshm::ThreadModelManager*
 
-#endif  // include_labstor_constants_data_structure_singleton_macros_h
+#endif  // HERMES_INCLUDE_HERMES_CONSTANTS_DATA_STRUCTURE_SINGLETON_MACROS_H_H

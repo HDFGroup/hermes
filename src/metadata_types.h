@@ -47,13 +47,6 @@ enum class MdLockType {
   kExternalWrite,   /**< External is used by programs */
 };
 
-/** Represents different updates for bucket statistics */
-enum class BucketUpdate {
-  kNone,      /**< Do not update bucket stats */
-  kInternal,  /**< Update the internal bucket stats only */
-  kBackend,   /**< Update I/O client bucket stats */
-};
-
 /** Represents the current status of a target */
 struct TargetInfo {
   TargetId id_;         /**< unique Target ID */

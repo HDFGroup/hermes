@@ -54,28 +54,114 @@ struct bitfield {
   inline void Clear() {
     bits_ = 0;
   }
+
+  static T MakeMask(int start, int length) {
+    return ((((T)1) << length) - 1) << start;
+  }
 } __attribute__((packed));
 typedef bitfield<uint8_t> bitfield8_t;
 typedef bitfield<uint16_t> bitfield16_t;
 typedef bitfield<uint32_t> bitfield32_t;
 
-#define INHERIT_BITFIELD_OPS(BITFIELD_VAR, MASK_T)\
-  inline void SetBits(MASK_T mask) {\
-    BITFIELD_VAR.SetBits(mask);\
-  }\
-  inline void UnsetBits(MASK_T mask) {\
-    BITFIELD_VAR.UnsetBits(mask);\
-  }\
-  inline bool Any(MASK_T mask) const {\
-    return BITFIELD_VAR.Any(mask);\
-  }\
-  inline void Clear() {\
-    BITFIELD_VAR.Clear();\
-  }\
-  template<typename BITFIELD_T>\
-  inline void CopyBits(BITFIELD_T field, MASK_T mask) {\
-    BITFIELD_VAR.CopyBits(field, mask);\
+/**
+ * A helper type needed for std::conditional
+ * */
+template<size_t LEN>
+struct len_bits {
+  static constexpr size_t value = LEN;
+};
+
+/**
+ * A generic bitfield template
+ * */
+template<size_t NUM_BITS,
+  typename LEN = typename std::conditional<
+    ((NUM_BITS % 32 == 0) && (NUM_BITS > 0)),
+    len_bits<(NUM_BITS / 32)>,
+    len_bits<(NUM_BITS / 32) + 1>>::type>
+struct big_bitfield {
+  bitfield32_t bits_[LEN::value];
+
+  big_bitfield() : bits_() {}
+
+  inline size_t size() const {
+    return LEN::value;
   }
+
+  inline void SetBits(int start, int length) {
+    int bf_idx = start / 32;
+    int bf_idx_count = 32 - bf_idx;
+    int rem = length;
+    while (rem) {
+      bits_[bf_idx].SetBits(bitfield32_t::MakeMask(start, bf_idx_count));
+      rem -= bf_idx_count;
+      bf_idx += 1;
+      if (rem >= 32) {
+        bf_idx_count = 32;
+      } else {
+        bf_idx_count = rem;
+      }
+    }
+  }
+
+  inline void UnsetBits(int start, int length) {
+    int bf_idx = start / 32;
+    int bf_idx_count = 32 - bf_idx;
+    int rem = length;
+    while (rem) {
+      bits_[bf_idx].SetBits(bitfield32_t::MakeMask(start, bf_idx_count));
+      rem -= bf_idx_count;
+      bf_idx += 1;
+      if (rem >= 32) {
+        bf_idx_count = 32;
+      } else {
+        bf_idx_count = rem;
+      }
+    }
+  }
+
+  inline bool Any(int start, int length) const {
+    int bf_idx = start / 32;
+    int bf_idx_count = 32 - bf_idx;
+    int rem = length;
+    while (rem) {
+      if (bits_[bf_idx].Any(bitfield32_t::MakeMask(start, bf_idx_count))) {
+        return true;
+      }
+      rem -= bf_idx_count;
+      bf_idx += 1;
+      if (rem >= 32) {
+        bf_idx_count = 32;
+      } else {
+        bf_idx_count = rem;
+      }
+    }
+    return false;
+  }
+
+  inline bool All(int start, int length) const {
+    int bf_idx = start / 32;
+    int bf_idx_count = 32 - bf_idx;
+    int rem = length;
+    while (rem) {
+      if (!bits_[bf_idx].All(bitfield32_t::MakeMask(start, bf_idx_count))) {
+        return false;
+      }
+      rem -= bf_idx_count;
+      bf_idx += 1;
+      if (rem >= 32) {
+        bf_idx_count = 32;
+      } else {
+        bf_idx_count = rem;
+      }
+    }
+    return true;
+  }
+
+  inline void Clear() {
+    memset((void*)bits_, 0, sizeof(bitfield32_t) * LEN::value);
+  }
+} __attribute__((packed));
 
 }  // namespace hshm
 

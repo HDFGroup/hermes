@@ -16,7 +16,8 @@ add_library(hermes_shm_data_structures
         memory/memory_manager.cc
         data_structure_singleton.cc)
 target_link_libraries(hermes_shm_data_structures
-        yaml-cpp pthread -lrt -ldl OpenMP::OpenMP_CXX)
+        yaml-cpp pthread -lrt -ldl OpenMP::OpenMP_CXX
+        $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium>)
 
 ##################Install hermes
 install(TARGETS

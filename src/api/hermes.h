@@ -198,10 +198,8 @@ class Hermes {
   }
 
   /** Get the trait */
-  template<typename TraitT = Trait>
-  TraitT* GetTrait(TraitId trait_id) {
-    return dynamic_cast<TraitT*>(
-        mdm_->GlobalGetTrait(trait_id));
+  Trait* GetTrait(TraitId trait_id) {
+    return mdm_->GlobalGetTrait(trait_id);
   }
 
   /** Attach a trait to a tag */
@@ -216,7 +214,7 @@ class Hermes {
     std::vector<Trait*> traits;
     traits.reserve(trait_ids.size());
     for (TraitId &trait_id : trait_ids) {
-      auto trait = GetTrait<Trait>(trait_id);
+      auto trait = GetTrait(trait_id);
       if (!trait) { continue; }
       if (trait->GetTraitFlags().Any(flags)) {
         traits.emplace_back(trait);

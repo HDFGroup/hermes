@@ -81,6 +81,10 @@ void ClientConfig::ParseYAML(YAML::Node &yaml_conf) {
   if (yaml_conf["flushing_mode"]) {
     flushing_mode_ =
         FlushingModeConv::GetEnum(yaml_conf["flushing_mode"].as<std::string>());
+    auto flush_mode_env = getenv("HERMES_FLUSH_MODE");
+    if (flush_mode_env) {
+      flushing_mode_ = FlushingModeConv::GetEnum(flush_mode_env);
+    }
   }
   if (yaml_conf["file_adapter_configs"]) {
     for (auto node : yaml_conf["file_adapter_configs"]) {

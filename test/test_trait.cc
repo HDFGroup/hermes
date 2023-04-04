@@ -47,7 +47,7 @@ void TestTrait() {
   REQUIRE(!trait_id.IsNull());
 
   // Get the trait itself
-  auto *trait = HERMES->GetTrait<hapi::ExampleTrait>(trait_id);
+  auto *trait = HERMES->GetTrait(trait_id);
   hapi::ExampleTraitParams params;
   trait->Run(0, &params);
   auto hello = params.hello_;

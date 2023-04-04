@@ -13,7 +13,7 @@ include_directories(${HERMES_SHM_ROOT}/include)
 # Options
 #------------------------------------------------------------------------------
 option(BUILD_SHARED_LIBS "Build shared libraries (.dll/.so) instead of static ones (.lib/.a)" ON)
-option(BUILD_HSHM_TESTS "Build tests" OFF)
+option(BUILD_HSHM_TESTS "Build tests" ON)
 option(BUILD_MPI_TESTS "Build tests which depend on MPI" ON)
 option(BUILD_OpenMP_TESTS "Build tests which depend on OpenMP" ON)
 option(BUILD_Boost_TESTS "Build tests which depend on libboost" ON)
@@ -21,6 +21,18 @@ option(HERMES_RPC_THALLIUM "Build tests which depend on thallium" ON)
 option(HERMES_ENABLE_COVERAGE "Check how well tests cover code" OFF)
 option(HERMES_ENABLE_DOXYGEN "Check how well the code is documented" ON)
 option(HERMES_CXX_PROFILE "Generate profiling data from benchmarks" OFF)
+option(HERMES_PTHREADS_ENABLED "Support spawning pthreads" ON)
+option(HERMES_DEBUG_LOCK "Used for debugging locks" OFF)
+
+if (HERMES_PTHREADS_ENABLED)
+    add_compile_definitions(HERMES_PTHREADS_ENABLED)
+endif()
+if (HERMES_RPC_THALLIUM)
+    add_compile_definitions(HERMES_RPC_THALLIUM)
+endif()
+if (HERMES_DEBUG_LOCK)
+    add_compile_definitions(HERMES_DEBUG_LOCK)
+endif()
 
 #------------------------------------------------------------------------------
 # Setup install and output Directories
