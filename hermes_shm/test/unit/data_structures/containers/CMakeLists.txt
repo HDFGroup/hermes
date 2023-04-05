@@ -20,12 +20,13 @@ add_executable(test_data_structure_exec
         manual_ptr.cc
         unique_ptr.cc
         unordered_map.cc
-        #unordered_map_thread.cc
+        mpsc_queue.cc
 )
 
 add_dependencies(test_data_structure_exec hermes_shm_data_structures)
 target_link_libraries(test_data_structure_exec
-        hermes_shm_data_structures Catch2::Catch2 MPI::MPI_CXX OpenMP::OpenMP_CXX)
+        hermes_shm_data_structures Catch2::Catch2
+        MPI::MPI_CXX OpenMP::OpenMP_CXX)
 
 # STRING TESTS
 add_test(NAME test_string COMMAND

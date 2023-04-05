@@ -176,6 +176,21 @@ option(HERMES_ONLY_RPC "Avoids the shared-memory case in RPC for testing" OFF)
 option(HERMES_ENABLE_PROFILING "Enables profiling of certain functions" OFF)
 option(HERMES_DISABLE_INFO_LOGS "Disables GLOG info" OFF)
 
+option(HERMES_PTHREADS_ENABLED "Support spawning pthreads" ON)
+option(HERMES_DEBUG_LOCK "Used for debugging locks" OFF)
+
+# Compile definitions
+if (HERMES_PTHREADS_ENABLED)
+  add_compile_definitions(HERMES_PTHREADS_ENABLED)
+endif()
+if (HERMES_RPC_THALLIUM)
+  add_compile_definitions(HERMES_RPC_THALLIUM)
+endif()
+if (HERMES_DEBUG_LOCK)
+  message("Lock debugging enabled")
+  add_compile_definitions(HERMES_DEBUG_LOCK)
+endif()
+
 # Disable informatoinal logging
 if(HERMES_DISABLE_INFO_LOGS)
   add_compile_options(-DNDEBUG)

@@ -29,10 +29,12 @@ void RwLock::ReadLock(uint32_t owner) {
   RwLockPayload expected, desired;
   size_t count = 0;
   do {
+#ifdef HERMES_DEBUG_LOCK
     if (count > US_TO_CLOCKS(1000000)) {
       HILOG(kDebug, "Taking a while");
       count = 5;
     }
+#endif
     for (int i = 0; i < 1; ++i) {
       expected.as_int_ = payload_.load();
       if (expected.IsWriteLocked()) {
@@ -46,9 +48,6 @@ void RwLock::ReadLock(uint32_t owner) {
       if (ret) {
 #ifdef HERMES_DEBUG_LOCK
         owner_ = owner;
-        if (owner == 10) {
-          HILOG(kDebug, "Locking kBORG_LocalProcessFlushes");
-        }
 #endif
         return;
       }
@@ -65,9 +64,6 @@ void RwLock::ReadUnlock() {
   bool ret;
   RwLockPayload expected, desired;
 #ifdef HERMES_DEBUG_LOCK
-  if (owner_ == 10) {
-    HILOG(kDebug, "Unlocking kBORG_LocalProcessFlushes");
-  }
   owner_ = 0;
 #endif
   do {
@@ -88,10 +84,12 @@ void RwLock::WriteLock(uint32_t owner) {
   RwLockPayload expected, desired;
   size_t count = 0;
   do {
+#ifdef HERMES_DEBUG_LOCK
     if (count > US_TO_CLOCKS(1000000)) {
       HILOG(kDebug, "Taking a while");
       count = 5;
     }
+#endif
     for (int i = 0; i < 1; ++i) {
       expected.as_int_ = payload_.load();
       if (expected.IsReadLocked() || expected.IsWriteLocked()) {
@@ -105,9 +103,6 @@ void RwLock::WriteLock(uint32_t owner) {
       if (ret) {
 #ifdef HERMES_DEBUG_LOCK
         owner_ = owner;
-        if (owner == 10) {
-          HILOG(kDebug, "Locking kBORG_LocalProcessFlushes");
-        }
 #endif
         return;
       }
@@ -129,9 +124,6 @@ void RwLock::WriteUnlock() {
   bool ret;
   RwLockPayload expected, desired;
 #ifdef HERMES_DEBUG_LOCK
-  if (owner_ == 10) {
-    HILOG(kDebug, "Unlocking kBORG_LocalProcessFlushes");
-  }
   owner_ = 0;
 #endif
   do {

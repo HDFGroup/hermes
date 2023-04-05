@@ -141,7 +141,8 @@ void MetadataManager::shm_deserialize_main() {
 size_t MetadataManager::LocalGetBucketSize(TagId bkt_id) {
   AUTO_TRACE(1);
   // Acquire MD read lock (reading tag_map)
-  ScopedRwReadLock tag_map_lock(header_->lock_[kTagMapLock], kMDM_LocalGetBucketSize);
+  ScopedRwReadLock tag_map_lock(header_->lock_[kTagMapLock],
+                                kMDM_LocalGetBucketSize);
   auto iter = tag_map_->find(bkt_id);
   if (iter == tag_map_->end()) {
     return 0;
@@ -158,7 +159,8 @@ bool MetadataManager::LocalSetBucketSize(TagId bkt_id,
                                          size_t new_size) {
   AUTO_TRACE(1);
   // Acquire MD read lock (reading tag_map)
-  ScopedRwReadLock tag_map_lock(header_->lock_[kTagMapLock], kMDM_LocalSetBucketSize);
+  ScopedRwReadLock tag_map_lock(header_->lock_[kTagMapLock],
+                                kMDM_LocalSetBucketSize);
   auto iter = tag_map_->find(bkt_id);
   if (iter == tag_map_->end()) {
     return false;
@@ -181,7 +183,8 @@ bool MetadataManager::LocalLockBucket(TagId bkt_id,
   if (bkt_id.IsNull()) {
     return false;
   }
-  ScopedRwReadLock tag_map_lock(header_->lock_[kTagMapLock], kMDM_LocalLockBucket);
+  ScopedRwReadLock tag_map_lock(header_->lock_[kTagMapLock],
+                                kMDM_LocalLockBucket);
   return LockMdObject(*tag_map_, bkt_id, lock_type);
 }
 
@@ -204,6 +207,7 @@ bool MetadataManager::LocalUnlockBucket(TagId bkt_id,
  * */
 bool MetadataManager::LocalClearBucket(TagId bkt_id) {
   AUTO_TRACE(1);
+  // Acquire tag map write lock
   ScopedRwWriteLock tag_map_lock(header_->lock_[kTagMapLock],
                                  kMDM_LocalClearBucket);
   auto iter = tag_map_->find(bkt_id);
@@ -213,6 +217,7 @@ bool MetadataManager::LocalClearBucket(TagId bkt_id) {
   hipc::Ref<hipc::pair<TagId, TagInfo>> info = (*iter);
   TagInfo &bkt_info = *info->second_;
   for (hipc::Ref<BlobId> blob_id : *bkt_info.blobs_) {
+    // This will acquire the blob_map_lock
     GlobalDestroyBlob(bkt_id, *blob_id);
   }
   bkt_info.blobs_->clear();
@@ -499,11 +504,11 @@ bool MetadataManager::LocalRenameBlob(TagId bkt_id, BlobId blob_id,
  * */
 bool MetadataManager::LocalDestroyBlob(TagId bkt_id,
                                        BlobId blob_id) {
-  HILOG(kDebug, "Destroying the blob: {}.{}", blob_id.node_id_, blob_id.unique_)
+  HILOG(kDebug, "Marking the blob destroyed: {}", blob_id)
   AUTO_TRACE(1);
   // Acquire MD write lock (modify blob_id_map & blob_map_)
-  ScopedRwWriteLock blob_map_lock(header_->lock_[kBlobMapLock],
-                                  kMDM_LocalDestroyBlob);
+  ScopedRwReadLock blob_map_lock(header_->lock_[kBlobMapLock],
+                                 kMDM_LocalDestroyBlob);
   (void)bkt_id;
   auto iter = (*blob_map_).find(blob_id);
   if (iter.is_end()) {
@@ -511,10 +516,8 @@ bool MetadataManager::LocalDestroyBlob(TagId bkt_id,
   }
   hipc::Ref<hipc::pair<BlobId, BlobInfo>> info = (*iter);
   BlobInfo &blob_info = *info->second_;
-  hipc::uptr<hipc::charbuf> blob_name =
-      CreateBlobName(bkt_id, *blob_info.name_);
-  blob_id_map_->erase(*blob_name);
-  blob_map_->erase(blob_id);
+  HERMES_BORG_IO_THREAD_MANAGER->EnqueueDelete(bkt_id, blob_id,
+                                               blob_info.header_->mod_count_);
   return true;
 }
 
@@ -528,14 +531,11 @@ bool MetadataManager::LocalDestroyBlob(TagId bkt_id,
 void MetadataManager::LocalClear() {
   AUTO_TRACE(1);
   HILOG(kDebug, "Clearing all buckets and blobs")
+  // Modify tag map
   ScopedRwWriteLock tag_map_lock(header_->lock_[kTagMapLock],
                                  kMDM_LocalClear);
   tag_id_map_->clear();
   tag_map_->clear();
-  ScopedRwWriteLock blob_map_lock(header_->lock_[kBlobMapLock],
-                                  kMDM_LocalClear);
-  blob_id_map_->clear();
-  blob_map_->clear();
 }
 
 /**
@@ -908,7 +908,7 @@ void MetadataManager::AddIoStat(TagId tag_id,
   if (!enable_io_tracing_) {
     return;
   }
-  ScopedRwWriteLock io_pattern_lock(header_->lock_[kIoPatternLog],
+  ScopedRwWriteLock io_pattern_lock(header_->lock_[kIoPatternLogLock],
                                     kMDM_AddIoStat);
   IoStat stat;
   stat.blob_id_ = blob_id;
@@ -924,7 +924,7 @@ void MetadataManager::AddIoStat(TagId tag_id,
 
 /** Add an I/O statistic to the internal log */
 void MetadataManager::ClearIoStats(size_t count) {
-  ScopedRwWriteLock io_pattern_lock(header_->lock_[kIoPatternLog],
+  ScopedRwWriteLock io_pattern_lock(header_->lock_[kIoPatternLogLock],
                                     kMDM_ClearIoStats);
   auto first = io_pattern_log_->begin();
   auto end = io_pattern_log_->begin() + count;

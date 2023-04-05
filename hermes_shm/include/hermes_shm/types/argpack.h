@@ -13,7 +13,7 @@
 #ifndef HERMES_INCLUDE_HERMES_TYPES_ARGPACK_H_
 #define HERMES_INCLUDE_HERMES_TYPES_ARGPACK_H_
 
-#include "basic.h"
+#include "real_number.h"
 #include  <functional>
 
 namespace hshm {

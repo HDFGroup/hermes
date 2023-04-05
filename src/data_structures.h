@@ -19,6 +19,7 @@
 #include <hermes_shm/data_structures/ipc/slist.h>
 #include <hermes_shm/data_structures/data_structure.h>
 #include <hermes_shm/data_structures/ipc/string.h>
+#include <hermes_shm/data_structures/ipc/mpsc_queue.h>
 #include <hermes_shm/data_structures/containers/charbuf.h>
 #include <hermes_shm/data_structures/containers/converters.h>
 #include <hermes_shm/util/auto_trace.h>

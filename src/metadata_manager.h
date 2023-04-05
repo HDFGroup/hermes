@@ -42,9 +42,10 @@ enum MdmLock {
   kBlobMapLock,
   kBktMapLock,
   kTagMapLock,
+  kTagDeleteLock,
   kTraitMapLock,
   kLocalTraitMapLock,
-  kIoPatternLog,
+  kIoPatternLogLock,
 
   kMdmLockCount
 };

@@ -27,10 +27,12 @@ namespace hshm {
 void Mutex::Lock(uint32_t owner) {
   size_t count = 0;
   do {
+#ifdef HERMES_DEBUG_LOCK
     if (count > US_TO_CLOCKS(1000000)) {
       HILOG(kDebug, "Taking a while");
       count = 5;
     }
+#endif
     for (int i = 0; i < 1; ++i) {
       if (TryLock(owner)) { return; }
     }

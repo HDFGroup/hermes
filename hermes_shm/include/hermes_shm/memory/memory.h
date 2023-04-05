@@ -14,7 +14,7 @@
 #ifndef HERMES_MEMORY_MEMORY_H_
 #define HERMES_MEMORY_MEMORY_H_
 
-#include <hermes_shm/types/basic.h>
+#include <hermes_shm/types/real_number.h>
 #include <hermes_shm/constants/data_structure_singleton_macros.h>
 #include <hermes_shm/introspect/system_info.h>
 #include <hermes_shm/types/bitfield.h>

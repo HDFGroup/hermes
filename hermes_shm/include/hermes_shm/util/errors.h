@@ -54,6 +54,8 @@ namespace hshm {
   const Error INVALID_FREE("{}: could not free memory of size {}");
   const Error DOUBLE_FREE("Freeing the same memory twice!");
 
+  const Error IPC_ARGS_NOT_SHM_COMPATIBLE("Args are not compatible with SHM");
+
   const Error UNORDERED_MAP_CANT_FIND("Could not find key in unordered_map");
 }  // namespace hshm
 

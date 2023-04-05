@@ -14,7 +14,7 @@
 #define HERMES_INCLUDE_HERMES_DATA_STRUCTURES_TupleBase_H_
 
 #include <utility>
-#include "hermes_shm/types/basic.h"
+#include "hermes_shm/types/real_number.h"
 #include "hermes_shm/types/argpack.h"
 
 namespace hshm {

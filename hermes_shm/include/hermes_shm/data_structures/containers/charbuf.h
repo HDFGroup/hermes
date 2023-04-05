@@ -13,7 +13,7 @@
 #ifndef HERMES_INCLUDE_HERMES_TYPES_CHARBUF_H_
 #define HERMES_INCLUDE_HERMES_TYPES_CHARBUF_H_
 
-#include "hermes_shm/types/basic.h"
+#include "hermes_shm/types/real_number.h"
 #include "hermes_shm/memory/memory_registry.h"
 #include <string>
 

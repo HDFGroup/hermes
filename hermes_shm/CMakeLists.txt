@@ -31,7 +31,10 @@ if (HERMES_RPC_THALLIUM)
     add_compile_definitions(HERMES_RPC_THALLIUM)
 endif()
 if (HERMES_DEBUG_LOCK)
+    message("Lock debugging enabled")
     add_compile_definitions(HERMES_DEBUG_LOCK)
+else()
+    message("Lock debugging disabled")
 endif()
 
 #------------------------------------------------------------------------------

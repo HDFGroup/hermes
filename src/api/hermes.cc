@@ -50,6 +50,7 @@ void Hermes::Init(HermesType mode,
 
 /** Initialize Hermes as a server */
 void Hermes::InitServer(std::string server_config_path) {
+  HERMES_THREAD_MODEL->SetThreadModel(hshm::ThreadType::kArgobots);
   LoadServerConfig(server_config_path);
   InitSharedMemory();
 

@@ -495,6 +495,14 @@ mptr<T> make_mptr(Allocator *alloc, Args&& ...args) {
   return make_ptr_base<mptr<T>>(alloc, std::forward<Args>(args)...);
 }
 
+/** Convert a manual pointer to a ref */
+template<typename T>
+Ref<T> to_ref(mptr<T> &obj) {
+  Ref<T> obj_ref;
+  obj_ref.shm_deserialize(*obj);
+  return obj_ref;
+}
+
 /** Create a unique pointer with default allocator */
 template<typename T, typename ...Args>
 uptr<T> make_uptr(Args&& ...args) {
@@ -506,6 +514,14 @@ uptr<T> make_uptr(Args&& ...args) {
 template<typename T, typename ...Args>
 uptr<T> make_uptr(Allocator *alloc, Args&& ...args) {
   return make_ptr_base<uptr<T>>(alloc, std::forward<Args>(args)...);
+}
+
+/** Convert a manual pointer to a ref */
+template<typename T>
+Ref<T> to_ref(uptr<T> &obj) {
+  Ref<T> obj_ref;
+  obj_ref.shm_deserialize(*obj);
+  return obj_ref;
 }
 
 }  // namespace hshm::ipc

@@ -383,7 +383,7 @@ class vector : public ShmContainer {
    * ===================================*/
 
   /** Check if null */
-  bool IsNull() {
+  bool IsNull() const {
     return header_->vec_ptr_.IsNull();
   }
 
@@ -445,7 +445,10 @@ class vector : public ShmContainer {
    * */
   template<typename ...Args>
   void resize(size_t length, Args&& ...args) {
-    if (length == 0) { return; }
+    if (length == 0) {
+      header_->length_ = 0;
+      return;
+    }
     grow_vector(data_ar(), length, true, std::forward<Args>(args)...);
     header_->length_ = length;
   }
@@ -503,6 +506,17 @@ class vector : public ShmContainer {
     shift_right(pos);
     make_ref<T>(vec[pos.i_], alloc_, std::forward<Args>(args)...);
     ++header_->length_;
+  }
+
+  /** Replace an element at a position */
+  template<typename ...Args>
+  void replace(vector_iterator<T> pos, Args&&... args) {
+    if (pos.is_end()) {
+      return;
+    }
+    ShmArchive<T> *vec = data_ar();
+    (*this)[pos.i_].shm_destroy();
+    make_ref<T>(vec[pos.i_], alloc_, std::forward<Args>(args)...);
   }
 
   /** Delete the element at \a pos position */
@@ -588,7 +602,7 @@ class vector : public ShmContainer {
    * */
   template<typename ...Args>
   ShmArchive<T>* grow_vector(ShmArchive<T> *vec, size_t max_length,
-                                   bool resize, Args&& ...args) {
+                             bool resize, Args&& ...args) {
     // Grow vector by 25%
     if (max_length == 0) {
       max_length = 5 * header_->max_length_ / 4;
