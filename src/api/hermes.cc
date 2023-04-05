@@ -118,8 +118,8 @@ void Hermes::InitSharedMemory() {
       hipc::MemoryManager::kDefaultBackendSize,
       server_config_.shmem_name_);
   main_alloc_ =
-      // mem_mngr->CreateAllocator<hipc::ScalablePageAllocator>(
-      mem_mngr->CreateAllocator<hipc::StackAllocator>(
+      mem_mngr->CreateAllocator<hipc::ScalablePageAllocator>(
+      // mem_mngr->CreateAllocator<hipc::StackAllocator>(
           server_config_.shmem_name_,
           main_alloc_id,
           sizeof(ShmHeader<Hermes>));
