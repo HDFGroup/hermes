@@ -29,7 +29,7 @@ void Mutex::Lock(uint32_t owner) {
   do {
 #ifdef HERMES_DEBUG_LOCK
     if (count > US_TO_CLOCKS(1000000)) {
-      HILOG(kDebug, "Taking a while");
+      HILOG(kDebug, "Taking a while: {} -> {}", owner_, owner);
       count = 5;
     }
 #endif

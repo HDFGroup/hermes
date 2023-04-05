@@ -80,22 +80,50 @@ struct BorgIoTask {
   BorgIoTask& operator=(BorgIoTask &&other) = default;
 };
 
-/** A queue for holding BORG I/O flushing tasks */
-struct BorgIoThreadQueue {
-  hipc::uptr<hipc::mpsc_queue<BorgIoTask>>
-    queue_;  /**< Holds pending tasks */
+/** Info about a BORG I/O queue */
+struct BorgIoThreadQueueInfo {
   std::atomic<size_t> load_;      /**< Data being processed on queue */
-  int id_;                        /**< ID of this worker queue */
+  int id_;  /**< Unique ID of worker */
 
   /** Default constructor */
-  BorgIoThreadQueue() : load_(0) {
-    queue_ = hipc::make_uptr<hipc::mpsc_queue<BorgIoTask>>();
+  BorgIoThreadQueueInfo() {
+    load_ = 0;
+    id_ = 0;
   }
 
   /** Copy constructor */
-  BorgIoThreadQueue(const BorgIoThreadQueue &other)
-  : queue_(other.queue_), load_(other.load_.load()), id_(other.id_) {}
+  BorgIoThreadQueueInfo(const BorgIoThreadQueueInfo &other)
+  : load_(other.load_.load()), id_(other.id_) {}
+
+  /** Copy assignment  */
+  BorgIoThreadQueueInfo& operator=(const BorgIoThreadQueueInfo &other) {
+    if (this != &other) {
+      load_ = other.load_.load();
+      id_ = other.id_;
+    }
+    return *this;
+  }
+
+  /** Move constructor */
+  BorgIoThreadQueueInfo(BorgIoThreadQueueInfo &&other)
+  : load_(other.load_.load()), id_(other.id_) {}
+
+  /** Move assignment  */
+  BorgIoThreadQueueInfo& operator=(BorgIoThreadQueueInfo &&other) {
+    if (this != &other) {
+      load_ = other.load_.load();
+      id_ = other.id_;
+    }
+    return *this;
+  }
 };
+
+/** A SHM queue for holding BORG I/O flushing tasks */
+typedef hipc::mpsc_queue<BorgIoTask> _BorgIoThreadQueue;
+
+/** A SHM queue for holding tasks + statistics */
+typedef hipc::pair<_BorgIoThreadQueue, BorgIoThreadQueueInfo>
+    BorgIoThreadQueue;
 
 /** Macro to simplify thread manager singleton */
 #define HERMES_BORG_IO_THREAD_MANAGER \
@@ -136,7 +164,8 @@ class BorgIoThreadManager {
   /** Check if a flush is still happening */
   bool IsFlushing() {
     for (hipc::Ref<BorgIoThreadQueue> bq : *queues_) {
-      if (bq->load_ > 0) {
+      hipc::Ref<BorgIoThreadQueueInfo> bq_info = bq->second_;
+      if (bq_info->load_ > 0) {
         return true;
       }
     }
@@ -147,16 +176,20 @@ class BorgIoThreadManager {
   void Enqueue(TagId bkt_id, BlobId blob_id, size_t blob_size,
                std::vector<Trait*> &&traits) {
     hipc::Ref<BorgIoThreadQueue> bq = HashToQueue(blob_id);
-    bq->load_.fetch_add(blob_size);
-    bq->queue_->emplace(bkt_id, blob_id, blob_size,
-                        std::forward<std::vector<Trait*>>(traits));
+    hipc::Ref<BorgIoThreadQueueInfo> bq_info = bq->second_;
+    hipc::Ref<_BorgIoThreadQueue> queue = bq->first_;
+    bq_info->load_.fetch_add(blob_size);
+    queue->emplace(bkt_id, blob_id, blob_size,
+                   std::forward<std::vector<Trait*>>(traits));
   }
 
   /** Enqueue a deletion task to a worker */
   void EnqueueDelete(TagId bkt_id, BlobId blob_id, size_t last_modified) {
     hipc::Ref<BorgIoThreadQueue> bq = HashToQueue(blob_id);
-    bq->load_.fetch_add(1);
-    bq->queue_->emplace(bkt_id, blob_id, 1, last_modified);
+    hipc::Ref<BorgIoThreadQueueInfo> bq_info = bq->second_;
+    hipc::Ref<_BorgIoThreadQueue> queue = bq->first_;
+    bq_info->load_.fetch_add(1);
+    queue->emplace(bkt_id, blob_id, 1, last_modified);
   }
 
   /** Hash request to a queue */
@@ -250,7 +283,8 @@ class BufferOrganizer : public hipc::ShmContainer {
   void LocalEnqueueFlushes();
 
   /** Actually process flush operations */
-  void LocalProcessFlushes(BorgIoThreadQueue &bq);
+  void LocalProcessFlushes(hipc::Ref<BorgIoThreadQueueInfo> &bq_info,
+                           hipc::Ref<_BorgIoThreadQueue> &queue);
 
   /** Barrier for all flushing to complete */
   void LocalWaitForFullFlush();

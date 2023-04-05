@@ -24,7 +24,7 @@ void Hermes::Init(HermesType mode,
                   std::string server_config_path,
                   std::string client_config_path) {
   // Initialize hermes
-  hshm::ScopedMutex lock(lock_, 0);
+  hshm::ScopedMutex lock(lock_, 1);
   if (is_initialized_) {
     return;
   }
@@ -118,8 +118,8 @@ void Hermes::InitSharedMemory() {
       hipc::MemoryManager::kDefaultBackendSize,
       server_config_.shmem_name_);
   main_alloc_ =
-      mem_mngr->CreateAllocator<hipc::ScalablePageAllocator>(
-      // mem_mngr->CreateAllocator<hipc::StackAllocator>(
+      // mem_mngr->CreateAllocator<hipc::ScalablePageAllocator>(
+      mem_mngr->CreateAllocator<hipc::StackAllocator>(
           server_config_.shmem_name_,
           main_alloc_id,
           sizeof(ShmHeader<Hermes>));

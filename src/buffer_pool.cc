@@ -31,7 +31,8 @@ BufferPool::BufferPool(ShmHeader<BufferPool> *header, hipc::Allocator *alloc) {
   borg_ = HERMES->borg_.get();
   rpc_ = &HERMES->rpc_;
   // Initialize header
-  hipc::make_ref<BpTargetAllocs>(header_->free_lists_, alloc);
+  target_allocs_ =
+      hipc::make_ref<BpTargetAllocs>(header_->free_lists_, alloc);
   // [target] [cpu] [page_size]
   header_->ntargets_ = mdm_->targets_->size();
   header_->concurrency_ = HERMES_SYSTEM_INFO->ncpu_;
@@ -45,7 +46,6 @@ BufferPool::BufferPool(ShmHeader<BufferPool> *header, hipc::Allocator *alloc) {
     }
   }
   // Create target free lists
-  shm_deserialize_main();
   target_allocs_->resize(header_->ntargets_ * header_->concurrency_ *
                          header_->nslabs_);
   // Initialize target free lists
@@ -92,7 +92,8 @@ void BufferPool::shm_deserialize_main() {
   mdm_ = HERMES->mdm_.get();
   borg_ = HERMES->borg_.get();
   rpc_ = &HERMES->rpc_;
-  target_allocs_ = hipc::Ref<BpTargetAllocs>(header_->free_lists_, alloc_);
+  target_allocs_ =
+      hipc::Ref<BpTargetAllocs>(header_->free_lists_, alloc_);
 }
 
 /**====================================
@@ -247,7 +248,7 @@ void BufferPool::AllocateSlabs(size_t &rem_size,
   GetFreeListForCpu(tid.GetIndex(), cpu, slab_id, free_list,
                     free_list_stat);
   GetTargetStatForCpu(tid.GetIndex(), cpu, target_stat);
-  target_stat->lock_.Lock(0);
+  target_stat->lock_.Lock(10);
 
   while (slab_count > 0) {
     BpSlot slot =
@@ -260,7 +261,7 @@ void BufferPool::AllocateSlabs(size_t &rem_size,
         GetFreeListForCpu(tid.GetIndex(), cpu, slab_id, free_list,
                           free_list_stat);
         GetTargetStatForCpu(tid.GetIndex(), cpu, target_stat);
-        target_stat->lock_.Lock(0);
+        target_stat->lock_.Lock(11);
         cpu_off += 1;
         continue;
       } else {
@@ -375,12 +376,13 @@ std::vector<BpCoin> BufferPool::CoinSelect(hipc::Ref<DeviceInfo> &dev_info,
  * */
 bool BufferPool::LocalReleaseBuffers(std::vector<BufferInfo> &buffers) {
   AUTO_TRACE(1)
+  HILOG(kDebug, "Releasing buffers")
   int cpu = hshm::NodeThreadId().hash() % header_->concurrency_;
   for (BufferInfo &info : buffers) {
     // Acquire the main CPU lock for the target
     hipc::Ref<BpFreeListStat> target_stat;
     GetTargetStatForCpu(info.tid_.GetIndex(), cpu, target_stat);
-    hshm::ScopedMutex(target_stat->lock_, 0);
+    hshm::ScopedMutex bpm_lock(target_stat->lock_, 12);
 
     // Get this core's free list for the page_size
     hipc::Ref<BpFreeListStat> free_list_stat;

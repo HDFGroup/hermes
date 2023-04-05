@@ -20,7 +20,6 @@ namespace hermes {
 /** Namespace simplification for Bucket */
 using api::Bucket;
 
-
 /**
  * Explicitly initialize the MetadataManager
  * Requires RPC to be initialized
@@ -217,7 +216,6 @@ bool MetadataManager::LocalClearBucket(TagId bkt_id) {
   hipc::Ref<hipc::pair<TagId, TagInfo>> info = (*iter);
   TagInfo &bkt_info = *info->second_;
   for (hipc::Ref<BlobId> blob_id : *bkt_info.blobs_) {
-    // This will acquire the blob_map_lock
     GlobalDestroyBlob(bkt_id, *blob_id);
   }
   bkt_info.blobs_->clear();

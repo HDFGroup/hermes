@@ -50,21 +50,24 @@ void BorgIoThreadManager::SpawnFlushWorkers(int num_threads) {
     BufferOrganizer *borg = HERMES->borg_.get();
     int *id = reinterpret_cast<int*>(params);
     hipc::Ref<BorgIoThreadQueue> bq = (*borg->queues_)[*id];
-    HILOG(kDebug, "Flushing worker {} has started", bq->id_)
+    hipc::Ref<BorgIoThreadQueueInfo> bq_info = bq->second_;
+    hipc::Ref<_BorgIoThreadQueue> queue = bq->first_;
+    HILOG(kDebug, "Flushing worker {} has started", bq_info->id_)
     while (HERMES_BORG_IO_THREAD_MANAGER->Alive() ||
-          (!HERMES_BORG_IO_THREAD_MANAGER->Alive() && bq->load_)) {
-      borg->LocalProcessFlushes(*bq);
-      tl::thread::self().sleep(*HERMES->rpc_.server_engine_, 50);
+          (!HERMES_BORG_IO_THREAD_MANAGER->Alive() && bq_info->load_)) {
+      borg->LocalProcessFlushes(bq_info, queue);
+      tl::thread::self().sleep(*HERMES->rpc_.server_engine_, 1);
     }
-    HILOG(kDebug, "Flushing worker {} has stopped", bq->id_)
+    HILOG(kDebug, "Flushing worker {} has stopped", bq_info->id_)
   };
 
   // Create the flushing threads
   for (int i = 0; i < num_threads; ++i) {
     hipc::Ref<BorgIoThreadQueue> bq = (*queues_)[i];
-    bq->id_ = i;
-    bq->load_ = 0;
-    HERMES_THREAD_MANAGER->Spawn(flush, &bq->id_);
+    hipc::Ref<BorgIoThreadQueueInfo> bq_info = bq->second_;
+    bq_info->id_ = i;
+    bq_info->load_ = 0;
+    HERMES_THREAD_MANAGER->Spawn(flush, &bq_info->id_);
   }
 }
 
@@ -87,6 +90,7 @@ void BorgIoThreadManager::WaitForFlush() {
  * */
 BufferOrganizer::BufferOrganizer(ShmHeader<BufferOrganizer> *header,
                                  hipc::Allocator *alloc) {
+  shm_init_header(header, alloc);
   mdm_ = HERMES->mdm_.get();
   rpc_ = &HERMES->rpc_;
 
@@ -109,7 +113,7 @@ BufferOrganizer::BufferOrganizer(ShmHeader<BufferOrganizer> *header,
   // Spawn the thread for flushing blobs
   int num_threads = HERMES->server_config_.borg_.num_threads_;
   queues_ = hipc::make_ref<hipc::vector<BorgIoThreadQueue>>(
-      header_->queues_, HERMES->main_alloc_, num_threads);
+      header_->queues_, alloc_, num_threads);
   HERMES_BORG_IO_THREAD_MANAGER->queues_ = queues_;
   HERMES_BORG_IO_THREAD_MANAGER->SpawnFlushMonitor(num_threads);
   HERMES_BORG_IO_THREAD_MANAGER->SpawnFlushWorkers(num_threads);
@@ -124,7 +128,7 @@ void BufferOrganizer::shm_deserialize_main()  {
   mdm_ = HERMES->mdm_.get();
   rpc_ = &HERMES->rpc_;
   queues_ = hipc::Ref<hipc::vector<BorgIoThreadQueue>>(
-      header_->queues_, HERMES->main_alloc_);
+      header_->queues_, alloc_);
   HERMES_BORG_IO_THREAD_MANAGER->queues_ = queues_;
 }
 
@@ -361,12 +365,14 @@ void BufferOrganizer::LocalEnqueueFlushes() {
 }
 
 /** Actually process flush operations */
-void BufferOrganizer::LocalProcessFlushes(BorgIoThreadQueue &bq) {
+void BufferOrganizer::LocalProcessFlushes(
+    hipc::Ref<BorgIoThreadQueueInfo> &bq_info,
+    hipc::Ref<_BorgIoThreadQueue> &queue) {
   // Process tasks
   auto entry = hipc::make_uptr<BorgIoTask>();
   auto entry_ref = hipc::to_ref(entry);
-  hipc::qtok_t qtok;
-  while (!(qtok = bq.queue_->pop(entry_ref)).IsNull()) {
+
+  while (!queue->pop(entry_ref).IsNull()) {
     BorgIoTask &info = *entry_ref;
     if (entry_ref->delete_) {
       HILOG(kDebug, "Attempting to delete blob {}", info.blob_id_);
@@ -431,7 +437,7 @@ void BufferOrganizer::LocalProcessFlushes(BorgIoThreadQueue &bq) {
 
     // Dequeue
     end:
-    bq.load_.fetch_sub(info.blob_size_);
+    bq_info->load_.fetch_sub(info.blob_size_);
     HILOG(kDebug, "Finished flushing blob {}.{}",
           info.blob_id_.node_id_,
           info.blob_id_.unique_)

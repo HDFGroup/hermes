@@ -159,6 +159,9 @@ void TestBlobDestroy(hapi::Hermes *hermes) {
   hapi::Context ctx;
   bkt->Put("0", blob, blob_id, ctx);
   bkt->DestroyBlob(blob_id, ctx);
+  // NOTE(llogan): deletes happen asynchronously
+  // Will this mess up unit tests and software?
+  HERMES->Flush();
   {
     hermes::BlobId blob_id_get;
     bkt->GetBlobId("0", blob_id_get);
