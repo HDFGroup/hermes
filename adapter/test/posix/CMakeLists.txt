@@ -76,5 +76,5 @@ endif()
 #        /tmp/test_python.txt")
 
 if (IOR_EXE)
-    preload_hermes(simple_ior hermes_posix "ior -w -r -o /tmp/test_ior.txt")
+    preload_hermes(simple_ior hermes_posix "ior -w -r -o /tmp/test_hermes/test_ior.txt")
 endif()
