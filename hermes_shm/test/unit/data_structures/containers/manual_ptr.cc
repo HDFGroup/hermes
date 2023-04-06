@@ -28,7 +28,7 @@ template<typename T>
 void ManualPtrTest() {
   CREATE_SET_VAR_TO_INT_OR_STRING(T, num, 25);
   auto ptr = hipc::make_mptr<T>(num);
-  auto ptr2 = hipc::make_mptr<T>(num);
+  hipc::mptr<T> ptr2;
   hipc::SmartPtrTestSuite<T, mptr<T>> test(ptr, ptr2);
   test.DereferenceTest(num);
   test.MoveConstructorTest(num);
@@ -37,7 +37,7 @@ void ManualPtrTest() {
   test.CopyAssignmentTest(num);
   test.SerializeationConstructorTest(num);
   test.SerializeationOperatorTest(num);
-  test.ptr_.shm_destroy();
+  ptr.shm_destroy();
 }
 
 TEST_CASE("ManualPtrOfInt") {

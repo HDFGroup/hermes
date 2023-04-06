@@ -3,6 +3,9 @@ project(hermes_shm)
 
 set(CMAKE_CXX_STANDARD 17)
 
+#------------------------------------------------------------------------------
+# Build Tests
+#------------------------------------------------------------------------------
 add_executable(test_types
         ${TEST_MAIN}/main.cc
         test_init.cc

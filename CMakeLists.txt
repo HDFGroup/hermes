@@ -178,6 +178,7 @@ option(HERMES_DISABLE_INFO_LOGS "Disables GLOG info" OFF)
 option(HERMES_ENABLE_C_BINDINGS "Used for compiling java API" OFF)
 option(HERMES_ENABLE_JAVA_BINDINGS "Used for compiling java API" OFF)
 option(HERMES_ENABLE_PYTHON_BINDINGS "Used for compiling python API" OFF)
+option(BUILD_HSHM_TESTS "Build data structure tests" OFF)
 
 option(HERMES_PTHREADS_ENABLED "Support spawning pthreads" ON)
 option(HERMES_DEBUG_LOCK "Used for debugging locks" OFF)

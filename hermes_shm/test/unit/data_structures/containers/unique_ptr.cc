@@ -26,7 +26,7 @@ template<typename T>
 void UniquePtrTest() {
   CREATE_SET_VAR_TO_INT_OR_STRING(T, num, 25);
   auto ptr = hipc::make_uptr<T>(num);
-  auto ptr2 = hipc::make_uptr<T>(num);
+  hipc::uptr<T> ptr2;
   hipc::SmartPtrTestSuite<T, uptr<T>> test(ptr, ptr2);
   test.DereferenceTest(num);
   test.MoveConstructorTest(num);

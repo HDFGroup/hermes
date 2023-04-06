@@ -48,7 +48,7 @@ class QueueTestSuite {
     auto entry_ref = hipc::to_ref(entry);
 
     // Consume everything
-    while(entries.size() < total_size) {
+    while (entries.size() < total_size) {
       auto qtok = queue_->pop(entry_ref);
       if (qtok.IsNull()) {
         HERMES_THREAD_MODEL->Yield();

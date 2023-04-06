@@ -3,10 +3,14 @@ project(hermes_shm)
 
 set(CMAKE_CXX_STANDARD 17)
 
+#------------------------------------------------------------------------------
+# Build Tests
+#------------------------------------------------------------------------------
 add_executable(test_thread_exec
         ${TEST_MAIN}/main.cc
         test_init.cc
-        test_thread.cc)
+        test_thread.cc
+        test_lock.cc)
 add_dependencies(test_thread_exec hermes_shm_data_structures)
 target_link_libraries(test_thread_exec
         hermes_shm_data_structures
@@ -15,8 +19,11 @@ target_link_libraries(test_thread_exec
         MPI::MPI_CXX
         OpenMP::OpenMP_CXX)
 
+#------------------------------------------------------------------------------
+# Test Cases
+#------------------------------------------------------------------------------
 add_test(NAME test_thread COMMAND
-        ${CMAKE_CURRENT_BINARY_DIR}/test_lock_exec "Mutex")
+        ${CMAKE_BINARY_DIR}/bin/test_thread_exec)
 
 #------------------------------------------------------------------------------
 # Install Targets

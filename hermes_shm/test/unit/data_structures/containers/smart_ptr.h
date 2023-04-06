@@ -21,8 +21,8 @@ namespace hshm::ipc {
 template<typename T, typename PointerT>
 class SmartPtrTestSuite {
  public:
-  PointerT &ptr_;
-  PointerT &ptr2_;
+  PointerT &ptr_;     /**< Allocated. Used for all tests. */
+  PointerT &ptr2_;    /**< Unallocated. Used for move tests. */
 
   explicit SmartPtrTestSuite(PointerT &ptr,
                              PointerT &ptr2) : ptr_(ptr), ptr2_(ptr2) {}
