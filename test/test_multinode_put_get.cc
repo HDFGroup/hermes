@@ -44,7 +44,7 @@ void PutTest(int rank) {
   for (size_t i = 0; i < kBlobsPerRank; ++i) {
     std::string name = std::to_string(i);
     memset(blob.data(), i, kBlobSize);
-    bkt->Put(name, blob, blob_id, ctx);
+    bkt.Put(name, blob, blob_id, ctx);
   }
 }
 
@@ -58,8 +58,8 @@ void GetTest(int rank, int nprocs) {
   for (size_t i = 0; i < kBlobsPerRank; ++i) {
     std::string name = std::to_string(i);
     hermes::Blob ret;
-    bkt->GetBlobId(name, blob_id);
-    bkt->Get(blob_id, ret, ctx);
+    bkt.GetBlobId(name, blob_id);
+    bkt.Get(blob_id, ret, ctx);
     REQUIRE(VerifyBuffer(ret.data(), kBlobSize, i));
   }
 }

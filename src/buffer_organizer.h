@@ -39,7 +39,7 @@ static inline size_t SumBufferBlobSizes(std::vector<BufferInfo> &buffers) {
 struct FlushTraitParams {
   Blob *blob_;
   std::string blob_name_;
-  std::shared_ptr<api::Bucket> *bkt_;
+  api::Bucket *bkt_;
 };
 
 /** An I/O flushing task spawned by BORG */

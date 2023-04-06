@@ -25,6 +25,7 @@
 #include "buffer_organizer.h"
 #include "prefetcher.h"
 #include "trait_manager.h"
+#include "bucket.h"
 
 #include "hermes_shm/util/singleton.h"
 
@@ -35,8 +36,6 @@
 namespace hapi = hermes::api;
 
 namespace hermes::api {
-
-class Bucket;
 
 /**
  * The Hermes shared-memory header
@@ -124,12 +123,12 @@ class Hermes {
    * ===================================*/
 
   /** Get or create a Bucket in Hermes */
-  std::shared_ptr<Bucket> GetBucket(std::string name,
-                                    Context ctx = Context(),
-                                    size_t backend_size = 0);
+  Bucket GetBucket(std::string name,
+                   Context ctx = Context(),
+                   size_t backend_size = 0);
 
   /** Get an existing Bucket in Hermes */
-  std::shared_ptr<Bucket> GetBucket(TagId bkt_id);
+  Bucket GetBucket(TagId bkt_id);
 
   /**====================================
    * PUBLIC I/O Operations

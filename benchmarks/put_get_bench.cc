@@ -44,7 +44,7 @@ void PutTest(hapi::Hermes *hermes,
     for (size_t i = 0; i < blobs_per_rank; ++i) {
       size_t blob_name_int = rank * blobs_per_rank + i;
       std::string name = std::to_string(blob_name_int);
-      bkt->Put(name, blob, blob_id, ctx);
+      bkt.Put(name, blob, blob_id, ctx);
     }
   }
   t.Pause();
@@ -63,8 +63,8 @@ void GetTest(hapi::Hermes *hermes,
       size_t blob_name_int = rank * blobs_per_rank + i;
       std::string name = std::to_string(blob_name_int);
       hermes::Blob ret;
-      bkt->GetBlobId(name, blob_id);
-      bkt->Get(blob_id, ret, ctx);
+      bkt.GetBlobId(name, blob_id);
+      bkt.Get(blob_id, ret, ctx);
     }
   }
   t.Pause();

@@ -192,15 +192,15 @@ void Hermes::StopDaemon() {
  * ===================================*/
 
 /** Get or create a Bucket in Hermes */
-std::shared_ptr<Bucket> Hermes::GetBucket(std::string name,
-                                          Context ctx,
-                                          size_t backend_size) {
-  return std::make_shared<Bucket>(name, ctx, backend_size);
+Bucket Hermes::GetBucket(std::string name,
+                         Context ctx,
+                         size_t backend_size) {
+  return Bucket(name, ctx, backend_size);
 }
 
 /** Get an existing Bucket in Hermes */
-std::shared_ptr<Bucket> Hermes::GetBucket(TagId tag_id) {
-  return std::make_shared<Bucket>(tag_id);
+Bucket Hermes::GetBucket(TagId tag_id) {
+  return Bucket(tag_id);
 }
 
 /**====================================

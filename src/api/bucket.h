@@ -44,16 +44,31 @@ class Bucket {
                   size_t backend_size = 0);
 
   /**
+   * Get an existing bucket.
+   * */
+  explicit Bucket(TagId tag_id);
+
+  /**
    * Check if the bucket was created in the constructor
    * */
   bool DidCreate() {
     return did_create_;
   }
 
-  /**
-   * Get an existing bucket.
-   * */
-  explicit Bucket(TagId tag_id);
+  /** Default constructor */
+  Bucket() = default;
+
+  /** Default copy constructor */
+  Bucket(const Bucket &other) = default;
+
+  /** Default copy assign */
+  Bucket& operator=(const Bucket &other) = default;
+
+  /** Default move constructor */
+  Bucket(Bucket &&other) = default;
+
+  /** Default move assign */
+  Bucket& operator=(Bucket &&other) = default;
 
  public:
   /**

@@ -74,7 +74,7 @@ class Filesystem {
    * @param opts specific configuration of the I/O to perform
    * @param ctx any additional information
    * */
-  Status PartialPutOrCreate(std::shared_ptr<hapi::Bucket> bkt,
+  Status PartialPutOrCreate(hapi::Bucket &bkt,
                             const std::string &blob_name,
                             const Blob &blob,
                             size_t blob_off,
@@ -101,7 +101,7 @@ class Filesystem {
    * @param opts specific configuration of the I/O to perform
    * @param ctx any additional information
    * */
-  Status PartialGetOrCreate(std::shared_ptr<hapi::Bucket> bkt,
+  Status PartialGetOrCreate(hapi::Bucket &bkt,
                             const std::string &blob_name,
                             Blob &blob,
                             size_t blob_off,

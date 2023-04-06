@@ -45,7 +45,7 @@ void TestTag(hapi::Hermes *hermes) {
     std::string name = std::to_string(i);
     char nonce = i % 256;
     memset(blob.data(), nonce, blob_size);
-    bkt->Put(name, std::move(blob), blob_ids[i], ctx);
+    bkt.Put(name, std::move(blob), blob_ids[i], ctx);
   }
 
   // Create two tags
@@ -53,7 +53,7 @@ void TestTag(hapi::Hermes *hermes) {
 
   // Tag some blobs
   for (size_t i = 0; i < num_blobs; ++i) {
-    bkt->TagBlob(blob_ids[i], tag1);
+    bkt.TagBlob(blob_ids[i], tag1);
   }
 
   // Query by tag

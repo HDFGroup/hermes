@@ -197,7 +197,7 @@ struct AdapterStat {
   MPI_Comm comm_;  /**< Communicator for the file.*/
   bool atomicity_; /**< Consistency semantics for data-access */
 
-  std::shared_ptr<hapi::Bucket> bkt_id_; /**< bucket associated with the file */
+  hapi::Bucket bkt_id_; /**< bucket associated with the file */
   /** Page size used for file */
   size_t page_size_;
 
@@ -216,8 +216,7 @@ struct AdapterStat {
         mpi_fh_(nullptr),
         amode_(0),
         comm_(MPI_COMM_SELF),
-        atomicity_(false),
-        bkt_id_() {}
+        atomicity_(false) {}
 
   /** Update to the current time */
   void UpdateTime() {
@@ -305,7 +304,7 @@ class FilesystemIoClient : public Trait {
       case HERMES_TRAIT_FLUSH: {
         FsIoOptions opts = DecodeBlobName(info->blob_name_);
         IoStatus status;
-        WriteBlob((*info->bkt_)->GetName(),
+        WriteBlob((*info->bkt_).GetName(),
                   (*info->blob_),
                   opts,
                   status);

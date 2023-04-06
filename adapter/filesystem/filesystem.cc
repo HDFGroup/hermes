@@ -47,18 +47,18 @@ void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
     if (stat.hflags_.Any(HERMES_FS_TRUNC)) {
       // The file was opened with TRUNCATION
       stat.bkt_id_ = HERMES->GetBucket(stat.path_, ctx, 0);
-      stat.bkt_id_->Clear();
+      stat.bkt_id_.Clear();
     } else {
       // The file was opened regularly
       size_t file_size = io_client_->GetSize(*path_shm);
       stat.bkt_id_ = HERMES->GetBucket(stat.path_, ctx, file_size);
     }
-    HILOG(kDebug, "File has size: {}", stat.bkt_id_->GetSize());
+    HILOG(kDebug, "File has size: {}", stat.bkt_id_.GetSize());
     // Attach trait to bucket (if not scratch mode)
-    if (stat.bkt_id_->DidCreate()) {
+    if (stat.bkt_id_.DidCreate()) {
       io_client_->Register();
       if (stat.adapter_mode_ != AdapterMode::kScratch) {
-        stat.bkt_id_->AttachTrait(io_client_->GetTraitId());
+        stat.bkt_id_.AttachTrait(io_client_->GetTraitId());
       }
     }
     // Update file position pointer
@@ -108,7 +108,7 @@ static inline size_t GetBackendSize(size_t file_off,
  * @param opts which adapter to route I/O request if blob DNE
  * @param ctx any additional information
  * */
-Status Filesystem::PartialPutOrCreate(std::shared_ptr<hapi::Bucket> bkt,
+Status Filesystem::PartialPutOrCreate(hapi::Bucket &bkt,
                                       const std::string &blob_name,
                                       const Blob &blob,
                                       size_t blob_off,
@@ -117,11 +117,11 @@ Status Filesystem::PartialPutOrCreate(std::shared_ptr<hapi::Bucket> bkt,
                                       const FsIoOptions &opts,
                                       Context &ctx) {
   Blob full_blob;
-  if (bkt->ContainsBlob(blob_name, blob_id)) {
+  if (bkt.ContainsBlob(blob_name, blob_id)) {
     // Case 1: The blob already exists (read from hermes)
     // Read blob from Hermes
     HILOG(kDebug, "Blob existed. Reading from Hermes.")
-    bkt->Get(blob_id, full_blob, ctx);
+    bkt.Get(blob_id, full_blob, ctx);
   }
   if (blob_off == 0 &&
       blob.size() >= opts.backend_size_ &&
@@ -129,7 +129,7 @@ Status Filesystem::PartialPutOrCreate(std::shared_ptr<hapi::Bucket> bkt,
     // Case 2: We're overriding the entire blob
     // Put the entire blob, no need to load from storage
     HILOG(kDebug, "Putting the entire blob.")
-    return bkt->Put(blob_name, blob, blob_id, ctx);
+    return bkt.Put(blob_name, blob, blob_id, ctx);
   }
   if (full_blob.size() < opts.backend_size_) {
     // Case 3: The blob did not fully exist (need to read from backend)
@@ -139,7 +139,7 @@ Status Filesystem::PartialPutOrCreate(std::shared_ptr<hapi::Bucket> bkt,
           " backend_size: {}",
           full_blob.size(), opts.backend_size_)
     full_blob.resize(opts.backend_size_);
-    io_client_->ReadBlob(bkt->GetName(),
+    io_client_->ReadBlob(bkt.GetName(),
                         full_blob, opts, status);
     if (!status.success_) {
       HILOG(kDebug, "Failed to read blob from backend (PartialPut)."
@@ -156,7 +156,7 @@ Status Filesystem::PartialPutOrCreate(std::shared_ptr<hapi::Bucket> bkt,
   // Modify the blob
   memcpy(full_blob.data() + blob_off, blob.data(), blob.size());
   // Re-put the blob
-  bkt->Put(blob_name, full_blob, blob_id, ctx);
+  bkt.Put(blob_name, full_blob, blob_id, ctx);
   HILOG(kDebug, "Partially put to blob: ({}, {})",
         blob_id.unique_, blob_id.node_id_)
   return Status();
@@ -166,21 +166,21 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
                          size_t off, size_t total_size,
                          IoStatus &io_status, FsIoOptions opts) {
   (void) f;
-  std::shared_ptr<hapi::Bucket> &bkt = stat.bkt_id_;
-  std::string filename = bkt->GetName();
+  hapi::Bucket &bkt = stat.bkt_id_;
+  std::string filename = bkt.GetName();
 
   // Update the size of the bucket
   size_t orig_off = off;
-  stat.bkt_id_->LockBucket(MdLockType::kExternalWrite);
-  size_t backend_size = stat.bkt_id_->GetSize();
+  stat.bkt_id_.LockBucket(MdLockType::kExternalWrite);
+  size_t backend_size = stat.bkt_id_.GetSize();
   if (off == std::numeric_limits<size_t>::max()) {
     off = backend_size;
   }
   size_t new_size = off + total_size;
   if (new_size > backend_size) {
-    stat.bkt_id_->SetSize(off + total_size);
+    stat.bkt_id_.SetSize(off + total_size);
   }
-  stat.bkt_id_->UnlockBucket(MdLockType::kExternalWrite);
+  stat.bkt_id_.UnlockBucket(MdLockType::kExternalWrite);
 
   HILOG(kDebug, "Write called for filename: {}"
         " on offset: {}"
@@ -195,7 +195,7 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
     opts.backend_size_ = total_size;
     opts.backend_off_ = off;
     Blob blob_wrap((char*)ptr, total_size);
-    io_client_->WriteBlob(bkt->GetName(), blob_wrap, opts, io_status);
+    io_client_->WriteBlob(bkt.GetName(), blob_wrap, opts, io_status);
     if (!io_status.success_) {
       HILOG(kDebug, "Failed to write blob of size {} to backend",
             opts.backend_size_)
@@ -224,8 +224,8 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
                                         backend_size,
                                         kPageSize);
     opts.adapter_mode_ = stat.adapter_mode_;
-    bkt->TryCreateBlob(blob_name.str(), blob_id, ctx);
-    bkt->LockBlob(blob_id, MdLockType::kExternalWrite);
+    bkt.TryCreateBlob(blob_name.str(), blob_id, ctx);
+    bkt.LockBlob(blob_id, MdLockType::kExternalWrite);
     auto status = PartialPutOrCreate(bkt,
                                      blob_name.str(),
                                      blob_wrap,
@@ -236,10 +236,10 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
                                      ctx);
     if (status.Fail()) {
       data_offset = 0;
-      bkt->UnlockBlob(blob_id, MdLockType::kExternalWrite);
+      bkt.UnlockBlob(blob_id, MdLockType::kExternalWrite);
       break;
     }
-    bkt->UnlockBlob(blob_id, MdLockType::kExternalWrite);
+    bkt.UnlockBlob(blob_id, MdLockType::kExternalWrite);
     data_offset += p.blob_size_;
   }
   if (opts.DoSeek() && orig_off != std::numeric_limits<size_t>::max()) {
@@ -266,7 +266,7 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
  * @param opts specific configuration of the I/O to perform
  * @param ctx any additional information
  * */
-Status Filesystem::PartialGetOrCreate(std::shared_ptr<hapi::Bucket> bkt,
+Status Filesystem::PartialGetOrCreate(hapi::Bucket &bkt,
                                       const std::string &blob_name,
                                       Blob &blob,
                                       size_t blob_off,
@@ -276,14 +276,14 @@ Status Filesystem::PartialGetOrCreate(std::shared_ptr<hapi::Bucket> bkt,
                                       const FsIoOptions &opts,
                                       Context &ctx) {
   Blob full_blob;
-  if (bkt->ContainsBlob(blob_name, blob_id)) {
+  if (bkt.ContainsBlob(blob_name, blob_id)) {
     // Case 1: The blob already exists (read from hermes)
     // Read blob from Hermes
     HILOG(kDebug, "Blob existed. Reading from Hermes."
           " offset: {}"
           " size: {}",
           opts.backend_off_, blob_size)
-    bkt->Get(blob_id, full_blob, ctx);
+    bkt.Get(blob_id, full_blob, ctx);
   }
   if (full_blob.size() < opts.backend_size_) {
     // Case 2: The blob did not exist (or at least not fully)
@@ -293,7 +293,7 @@ Status Filesystem::PartialGetOrCreate(std::shared_ptr<hapi::Bucket> bkt,
           " backend_size: {}",
           full_blob.size(), opts.backend_size_)
     full_blob.resize(opts.backend_size_);
-    io_client_->ReadBlob(bkt->GetName(), full_blob, opts, status);
+    io_client_->ReadBlob(bkt.GetName(), full_blob, opts, status);
     if (!status.success_) {
       HILOG(kDebug, "Failed to read blob from backend (PartialGet)."
             " cur_size: {}"
@@ -301,7 +301,7 @@ Status Filesystem::PartialGetOrCreate(std::shared_ptr<hapi::Bucket> bkt,
             full_blob.size(), opts.backend_size_)
       return PARTIAL_GET_OR_CREATE_OVERFLOW;
     }
-    bkt->Put(blob_name, full_blob, blob_id, ctx);
+    bkt.Put(blob_name, full_blob, blob_id, ctx);
   }
   // Ensure the blob can hold the update
   if (full_blob.size() < blob_off + blob_size) {
@@ -318,9 +318,9 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
                         size_t off, size_t total_size,
                         IoStatus &io_status, FsIoOptions opts) {
   (void) f;
-  std::shared_ptr<hapi::Bucket> &bkt = stat.bkt_id_;
-  std::string filename = bkt->GetName();
-  size_t file_size = stat.bkt_id_->GetSize();
+  hapi::Bucket &bkt = stat.bkt_id_;
+  std::string filename = bkt.GetName();
+  size_t file_size = stat.bkt_id_.GetSize();
 
   HILOG(kDebug, "Read called for filename: {}"
                 " on offset: {}"
@@ -346,7 +346,7 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
     opts.backend_size_ = total_size;
     opts.backend_off_ = off;
     Blob blob_wrap((char*)ptr, total_size);
-    io_client_->ReadBlob(bkt->GetName(), blob_wrap, opts, io_status);
+    io_client_->ReadBlob(bkt.GetName(), blob_wrap, opts, io_status);
     if (!io_status.success_) {
       HILOG(kDebug, "Failed to read blob of size {} from backend",
             opts.backend_size_)
@@ -365,7 +365,7 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
   size_t data_offset = 0;
   auto mapper = MapperFactory().Get(MapperType::kBalancedMapper);
   mapper->map(off, total_size, kPageSize, mapping);
-  size_t backend_size = stat.bkt_id_->GetSize();
+  size_t backend_size = stat.bkt_id_.GetSize();
 
   for (const auto &p : mapping) {
     Blob blob_wrap((const char*)ptr + data_offset, p.blob_size_);
@@ -376,8 +376,8 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
                                         backend_size,
                                         kPageSize);
     opts.adapter_mode_ = stat.adapter_mode_;
-    bkt->TryCreateBlob(blob_name.str(), blob_id, ctx);
-    bkt->LockBlob(blob_id, MdLockType::kExternalRead);
+    bkt.TryCreateBlob(blob_name.str(), blob_id, ctx);
+    bkt.LockBlob(blob_id, MdLockType::kExternalRead);
     auto status = PartialGetOrCreate(stat.bkt_id_,
                                      blob_name.str(),
                                      blob_wrap,
@@ -389,10 +389,10 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
                                      ctx);
     if (status.Fail()) {
       data_offset = 0;
-      bkt->UnlockBlob(blob_id, MdLockType::kExternalRead);
+      bkt.UnlockBlob(blob_id, MdLockType::kExternalRead);
       break;
     }
-    bkt->UnlockBlob(blob_id, MdLockType::kExternalRead);
+    bkt.UnlockBlob(blob_id, MdLockType::kExternalRead);
     data_offset += p.blob_size_;
   }
   if (opts.DoSeek()) {
@@ -466,7 +466,7 @@ void Filesystem::Wait(std::vector<uint64_t> &req_ids,
 size_t Filesystem::GetSize(File &f, AdapterStat &stat) {
   (void) stat;
   if (stat.adapter_mode_ != AdapterMode::kBypass) {
-    return stat.bkt_id_->GetSize();
+    return stat.bkt_id_.GetSize();
   } else {
     return stdfs::file_size(stat.path_);
   }
@@ -485,7 +485,7 @@ off_t Filesystem::Seek(File &f, AdapterStat &stat,
         stat.st_ptr_ = (off64_t)stat.st_ptr_ + offset;
         offset = stat.st_ptr_;
       } else {
-        stat.st_ptr_ = (off64_t)stat.bkt_id_->GetSize() + offset;
+        stat.st_ptr_ = (off64_t)stat.bkt_id_.GetSize() + offset;
         offset = stat.st_ptr_;
       }
       break;
@@ -493,9 +493,9 @@ off_t Filesystem::Seek(File &f, AdapterStat &stat,
     case SeekMode::kEnd: {
       if (offset == 0) {
         stat.st_ptr_ = std::numeric_limits<size_t>::max();
-        offset = stat.bkt_id_->GetSize();
+        offset = stat.bkt_id_.GetSize();
       } else {
-        stat.st_ptr_ = (off64_t)stat.bkt_id_->GetSize() + offset;
+        stat.st_ptr_ = (off64_t)stat.bkt_id_.GetSize() + offset;
         offset = stat.st_ptr_;
       }
       break;
@@ -514,7 +514,7 @@ off_t Filesystem::Tell(File &f, AdapterStat &stat) {
   if (stat.st_ptr_ != std::numeric_limits<size_t>::max()) {
     return stat.st_ptr_;
   } else {
-    return stat.bkt_id_->GetSize();
+    return stat.bkt_id_.GetSize();
   }
 }
 
@@ -528,7 +528,7 @@ int Filesystem::Sync(File &f, AdapterStat &stat) {
 }
 
 int Filesystem::Truncate(File &f, AdapterStat &stat, size_t new_size) {
-  // std::shared_ptr<hapi::Bucket> &bkt = stat.bkt_id_;
+  // hapi::Bucket &bkt = stat.bkt_id_;
   // TODO(llogan)
   return 0;
 }
@@ -546,7 +546,7 @@ int Filesystem::Close(File &f, AdapterStat &stat) {
   if (HERMES->client_config_.flushing_mode_ == FlushingMode::kSync) {
     // NOTE(llogan): only for the unit tests
     // Please don't enable synchronous flushing
-    stat.bkt_id_->Destroy();
+    stat.bkt_id_.Destroy();
   }
   return 0;
 }
@@ -556,8 +556,8 @@ int Filesystem::Remove(const std::string &pathname) {
   int ret = io_client_->RealRemove(pathname);
   // Destroy the bucket. It's created if it doesn't exist
   auto bkt = HERMES->GetBucket(pathname);
-  HILOG(kDebug, "Destroying the bucket: {}", bkt->GetName());
-  bkt->Destroy();
+  HILOG(kDebug, "Destroying the bucket: {}", bkt.GetName());
+  bkt.Destroy();
   // Destroy all file descriptors
   std::list<File>* filesp = mdm->Find(pathname);
   if (filesp == nullptr) {

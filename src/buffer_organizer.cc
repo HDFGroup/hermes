@@ -295,8 +295,8 @@ void BufferOrganizer::GlobalOrganizeBlob(const std::string &bucket_name,
   AUTO_TRACE(1)
   auto bkt = HERMES->GetBucket(bucket_name);
   BlobId blob_id;
-  bkt->GetBlobId(blob_name, blob_id);
-  float blob_score = bkt->GetBlobScore(blob_id);
+  bkt.GetBlobId(blob_name, blob_id);
+  float blob_score = bkt.GetBlobScore(blob_id);
   Context ctx;
 
   HILOG(kDebug, "Changing blob score from: {} to {}", blob_score, score)
@@ -307,19 +307,19 @@ void BufferOrganizer::GlobalOrganizeBlob(const std::string &bucket_name,
   }
 
   // Lock the blob to ensure it doesn't get modified
-  bkt->LockBlob(blob_id, MdLockType::kExternalWrite);
+  bkt.LockBlob(blob_id, MdLockType::kExternalWrite);
 
   // Get the blob
   hapi::Blob blob;
-  bkt->Get(blob_id, blob, ctx);
+  bkt.Get(blob_id, blob, ctx);
 
   // Re-emplace the blob with new score
   BlobId tmp_id;
   ctx.blob_score_ = score;
-  bkt->Put(blob_name, blob, tmp_id, ctx);
+  bkt.Put(blob_name, blob, tmp_id, ctx);
 
   // Unlock the blob
-  bkt->UnlockBlob(blob_id, MdLockType::kExternalWrite);
+  bkt.UnlockBlob(blob_id, MdLockType::kExternalWrite);
 }
 
 /**====================================
@@ -419,8 +419,8 @@ void BufferOrganizer::LocalProcessFlushes(
       blob_lock.Unlock();
 
       // Get the current blob from Hermes
-      std::shared_ptr<api::Bucket> bkt = HERMES->GetBucket(info.bkt_id_);
-      bkt->Get(info.blob_id_, blob, bkt->GetContext());
+      api::Bucket bkt = HERMES->GetBucket(info.bkt_id_);
+      bkt.Get(info.blob_id_, blob, bkt.GetContext());
       HILOG(kDebug, "Flushing blob {} ({}.{}) of size {}",
             blob_name,
             info.blob_id_.node_id_,

@@ -43,16 +43,16 @@ void TestBlobCreates(hapi::Hermes *hermes) {
     std::string name = std::to_string(i);
     char nonce = i % 256;
     memset(blob.data(), nonce, blob_size);
-    bkt->Put(name, blob, blob_id, ctx);
+    bkt.Put(name, blob, blob_id, ctx);
   }
 
   for (size_t i = 0; i < num_blobs; ++i) {
     std::string name = std::to_string(i);
     char nonce = i % 256;
     hermes::Blob blob;
-    bkt->GetBlobId(name, blob_id);
+    bkt.GetBlobId(name, blob_id);
     REQUIRE(!blob_id.IsNull());
-    bkt->Get(blob_id, blob, ctx);
+    bkt.Get(blob_id, blob, ctx);
     REQUIRE(blob.size() == blob_size);
     REQUIRE(VerifyBuffer(blob.data(), blob_size, nonce));
   }
@@ -66,9 +66,9 @@ void TestBlobOverride(hapi::Hermes *hermes) {
   hermes::Blob blob(1024);
   for (size_t i = 0; i < 1024; ++i) {
     memset(blob.data(), i, 1024);
-    bkt2->Put("0", blob, blob_id, ctx);
+    bkt2.Put("0", blob, blob_id, ctx);
     hermes::Blob ret;
-    bkt->Get(blob_id, ret, ctx);
+    bkt.Get(blob_id, ret, ctx);
     REQUIRE(ret.size() == 1024);
     REQUIRE(VerifyBuffer(ret.data(), 1024, i));
   }
@@ -76,13 +76,13 @@ void TestBlobOverride(hapi::Hermes *hermes) {
 
 void TestBucketRename(hapi::Hermes *hermes) {
   auto bkt = hermes->GetBucket("hello");
-  bkt->Rename("hello2");
+  bkt.Rename("hello2");
   auto bkt1 = hermes->GetBucket("hello");
   auto bkt2 = hermes->GetBucket("hello2");
 
-  REQUIRE(!bkt2->IsNull());
-  REQUIRE(bkt1->GetId() != bkt2->GetId());
-  REQUIRE(bkt->GetId() == bkt2->GetId());
+  REQUIRE(!bkt2.IsNull());
+  REQUIRE(bkt1.GetId() != bkt2.GetId());
+  REQUIRE(bkt.GetId() == bkt2.GetId());
 }
 
 void TestBucketClear(hapi::Hermes *hermes) {
@@ -97,13 +97,13 @@ void TestBucketClear(hapi::Hermes *hermes) {
     std::string name = std::to_string(i);
     char nonce = i % 256;
     memset(blob.data(), nonce, blob_size);
-    bkt->Put(name, std::move(blob), blob_id, ctx);
+    bkt.Put(name, std::move(blob), blob_id, ctx);
   }
 
-  bkt->Clear();
+  bkt.Clear();
 
-  REQUIRE(bkt->GetSize() == 0);
-  auto blobs = bkt->GetContainedBlobIds();
+  REQUIRE(bkt.GetSize() == 0);
+  auto blobs = bkt.GetContainedBlobIds();
   REQUIRE(blobs.size() == 0);
 }
 
@@ -119,15 +119,15 @@ void TestBucketDestroy(hapi::Hermes *hermes) {
     std::string name = std::to_string(i);
     char nonce = i % 256;
     memset(blob.data(), nonce, blob_size);
-    bkt->Put(name, std::move(blob), blob_id, ctx);
+    bkt.Put(name, std::move(blob), blob_id, ctx);
   }
 
-  bkt->Destroy();
+  bkt.Destroy();
 
   // Check if the bucket can be re-obtained
   auto new_bkt = hermes->GetBucket("hello");
-  REQUIRE(bkt->GetId() != new_bkt->GetId());
-  REQUIRE(new_bkt->GetSize() == 0);
+  REQUIRE(bkt.GetId() != new_bkt.GetId());
+  REQUIRE(new_bkt.GetSize() == 0);
 }
 
 void TestBlobRename(hapi::Hermes *hermes) {
@@ -135,18 +135,18 @@ void TestBlobRename(hapi::Hermes *hermes) {
   hapi::Blob blob(1024);
   hermes::BlobId blob_id;
   hapi::Context ctx;
-  bkt->Put("0", blob, blob_id, ctx);
-  bkt->RenameBlob(blob_id, "1", ctx);
+  bkt.Put("0", blob, blob_id, ctx);
+  bkt.RenameBlob(blob_id, "1", ctx);
 
   {
     hermes::BlobId blob_get_id;
-    bkt->GetBlobId("0", blob_get_id);
+    bkt.GetBlobId("0", blob_get_id);
     REQUIRE(blob_get_id.IsNull());
   }
 
   {
     hermes::BlobId blob_get_id;
-    bkt->GetBlobId("1", blob_get_id);
+    bkt.GetBlobId("1", blob_get_id);
     REQUIRE(!blob_get_id.IsNull());
     REQUIRE(blob_get_id == blob_id);
   }
@@ -157,14 +157,14 @@ void TestBlobDestroy(hapi::Hermes *hermes) {
   hapi::Blob blob(1024);
   hermes::BlobId blob_id;
   hapi::Context ctx;
-  bkt->Put("0", blob, blob_id, ctx);
-  bkt->DestroyBlob(blob_id, ctx);
+  bkt.Put("0", blob, blob_id, ctx);
+  bkt.DestroyBlob(blob_id, ctx);
   // NOTE(llogan): deletes happen asynchronously
   // Will this mess up unit tests and software?
   HERMES->Flush();
   {
     hermes::BlobId blob_id_get;
-    bkt->GetBlobId("0", blob_id_get);
+    bkt.GetBlobId("0", blob_id_get);
     REQUIRE(blob_id_get.IsNull());
   }
 }
