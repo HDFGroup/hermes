@@ -127,9 +127,10 @@ class ThalliumRpc  : public RpcContext {
         flag = tl::bulk_mode::write_only;
         break;
       }
-      case IoType::kNone: {
+      default: {
+        // NOTE(llogan): Avoids "uninitalized" warning
+        flag = tl::bulk_mode::write_only;
         HELOG(kFatal, "Cannot have none I/O type")
-        exit(1);
       }
     }
 
