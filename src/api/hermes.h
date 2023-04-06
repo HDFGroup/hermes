@@ -150,6 +150,11 @@ class Hermes {
     return mdm_->GlobalCreateTag(tag_name, false, traits);
   }
 
+  /** Get the TagId  */
+  TagId GetTagId(const std::string &tag_name) {
+    return mdm_->GlobalGetTagId(tag_name);
+  }
+
   /** Locate all blobs with a tag */
   std::vector<BlobId> GroupBy(TagId tag_id);
 

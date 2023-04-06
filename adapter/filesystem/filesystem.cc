@@ -42,15 +42,20 @@ void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
   std::shared_ptr<AdapterStat> exists = mdm->Find(f);
   if (!exists) {
     HILOG(kDebug, "File not opened before by adapter")
+    // Normalize path strings
+    stat.path_ = stdfs::absolute(path).string();
+    auto path_shm = hipc::make_uptr<hipc::charbuf>(stat.path_);
     // Verify the bucket exists if not in CREATE mode
     if (stat.adapter_mode_ == AdapterMode::kScratch &&
         !stat.hflags_.Any(HERMES_FS_EXISTS) &&
         !stat.hflags_.Any(HERMES_FS_CREATE)) {
-
+      TagId bkt_id = HERMES->GetTagId(stat.path_);
+      if (bkt_id.IsNull()) {
+        f.status_ = false;
+        return;
+      }
     }
-    // Create the bucket
-    stat.path_ = stdfs::absolute(path).string();
-    auto path_shm = hipc::make_uptr<hipc::charbuf>(stat.path_);
+    // Get or create the bucket
     if (stat.hflags_.Any(HERMES_FS_TRUNC)) {
       // The file was opened with TRUNCATION
       stat.bkt_id_ = HERMES->GetBucket(stat.path_, ctx, 0);
