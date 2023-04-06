@@ -10,18 +10,13 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include <float.h>
-#include <limits.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <yaml-cpp/yaml.h>
 #include <ostream>
 #include "hermes_shm/util/logging.h"
 #include "utils.h"
 #include "config.h"
-#include "hermes_shm/util/path_parser.h"
-#include <iomanip>
+#include "hermes_shm/util/config_parse.h"
 
 #include "config_server.h"
 #include "config_server_default.h"
@@ -36,7 +31,7 @@ void ServerConfig::ParseDeviceInfo(YAML::Node yaml_conf) {
     hipc::Ref<DeviceInfo> dev = devices_->back();
     auto dev_info = device.second;
     (*dev->dev_name_) = device.first.as<std::string>();
-    (*dev->mount_dir_) = hshm::path_parser(
+    (*dev->mount_dir_) = hshm::ConfigParse::ExpandPath(
         dev_info["mount_point"].as<std::string>());
     dev->header_->borg_min_thresh_ =
         dev_info["borg_capacity_thresh"][0].as<float>();
@@ -45,19 +40,19 @@ void ServerConfig::ParseDeviceInfo(YAML::Node yaml_conf) {
     dev->header_->is_shared_ =
         dev_info["is_shared_device"].as<bool>();
     dev->header_->block_size_ =
-        ParseSize(dev_info["block_size"].as<std::string>());
+        hshm::ConfigParse::ParseSize(dev_info["block_size"].as<std::string>());
     dev->header_->capacity_ =
-        ParseSize(dev_info["capacity"].as<std::string>());
+        hshm::ConfigParse::ParseSize(dev_info["capacity"].as<std::string>());
     dev->header_->bandwidth_ =
-        ParseSize(dev_info["bandwidth"].as<std::string>());
+        hshm::ConfigParse::ParseSize(dev_info["bandwidth"].as<std::string>());
     dev->header_->latency_ =
-        ParseLatency(dev_info["latency"].as<std::string>());
+        hshm::ConfigParse::ParseLatency(dev_info["latency"].as<std::string>());
     std::vector<std::string> size_vec;
     ParseVector<std::string, std::vector<std::string>>(
         dev_info["slab_sizes"], size_vec);
     dev->slab_sizes_->reserve(size_vec.size());
     for (const std::string &size_str : size_vec) {
-      dev->slab_sizes_->emplace_back(ParseSize(size_str));
+      dev->slab_sizes_->emplace_back(hshm::ConfigParse::ParseSize(size_str));
     }
   }
 }
@@ -68,7 +63,7 @@ void ServerConfig::ParseRpcInfo(YAML::Node yaml_conf) {
 
   if (yaml_conf["host_file"]) {
     rpc_.host_file_ =
-        hshm::path_parser(yaml_conf["host_file"].as<std::string>());
+        hshm::ConfigParse::ExpandPath(yaml_conf["host_file"].as<std::string>());
     rpc_.host_names_.clear();
   }
   if (yaml_conf["host_names"] && rpc_.host_file_.size() == 0) {
@@ -76,7 +71,7 @@ void ServerConfig::ParseRpcInfo(YAML::Node yaml_conf) {
     rpc_.host_names_.clear();
     for (YAML::Node host_name_gen : yaml_conf["host_names"]) {
       std::string host_names = host_name_gen.as<std::string>();
-      ParseHostNameString(host_names, rpc_.host_names_);
+      hshm::ConfigParse::ParseHostNameString(host_names, rpc_.host_names_);
     }
   }
   if (yaml_conf["domain"]) {
@@ -118,7 +113,7 @@ void ServerConfig::ParseTracingInfo(YAML::Node yaml_conf) {
     tracing_.enabled_ = yaml_conf["enabled"].as<bool>();
   }
   if (yaml_conf["output"]) {
-    tracing_.output_ = hshm::path_parser(
+    tracing_.output_ = hshm::ConfigParse::ExpandPath(
         yaml_conf["output"].as<std::string>());
   }
 }
@@ -129,7 +124,7 @@ void ServerConfig::ParsePrefetchInfo(YAML::Node yaml_conf) {
     prefetcher_.enabled_ = yaml_conf["enabled"].as<bool>();
   }
   if (yaml_conf["io_trace_path"]) {
-    prefetcher_.trace_path_ = hshm::path_parser(
+    prefetcher_.trace_path_ = hshm::ConfigParse::ExpandPath(
         yaml_conf["io_trace_path"].as<std::string>());
   }
   if (yaml_conf["epoch_ms"]) {
@@ -147,7 +142,7 @@ void ServerConfig::ParseTraitInfo(YAML::Node yaml_conf) {
       yaml_conf, trait_names);
   trait_paths_.reserve(trait_names.size());
   for (auto &name : trait_names) {
-    name = hshm::path_parser(name);
+    name = hshm::ConfigParse::ExpandPath(name);
     trait_paths_.emplace_back(
         hshm::Formatter::format("lib{}.so", name));
   }

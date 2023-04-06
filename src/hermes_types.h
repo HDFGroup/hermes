@@ -14,6 +14,7 @@
 #define HERMES_TYPES_H_
 
 #include "hermes_shm/util/logging.h"
+#include "hermes_shm/constants/macros.h"
 #include <stdint.h>
 
 #include <functional>
@@ -27,21 +28,6 @@
  * \file hermes_types.h
  * Types used in Hermes.
  */
-
-/** Convert kilobytes to bytes */
-#ifndef KILOBYTES
-#define KILOBYTES(n) (((size_t)n) * 1024)                     /**< KB */
-#endif
-
-/** Convert megabytes to bytes */
-#ifndef MEGABYTES
-#define MEGABYTES(n) (((size_t)n) * 1024 * 1024)              /**< MB */
-#endif
-
-/** Convert gigabytes to bytes */
-#ifndef GIGABYTES
-#define GIGABYTES(n) (((size_t)n) * 1024UL * 1024UL * 1024UL) /**< GB */
-#endif
 
 /**
  * \namespace hermes

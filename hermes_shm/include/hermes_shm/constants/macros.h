@@ -13,14 +13,40 @@
 #ifndef HERMES_MACROS_H
 #define HERMES_MACROS_H
 
-#define KILOBYTES(n) ((size_t)(n) * (1<<10))
-#define MEGABYTES(n) ((size_t)(n) * (1<<20))
-#define GIGABYTES(n) ((size_t)(n) * (1<<30))
+/** KILOBYTES -> Bytes */
+#ifndef KILOBYTES
+#define KILOBYTES(n) ((size_t)(n) * (((size_t)1)<<10))
+#endif
 
-#define TYPE_BITS(type) ((sizeof(type)*8))
+/** MEGABYTES -> Bytes */
+#ifndef MEGABYTES
+#define MEGABYTES(n) ((size_t)(n) * (((size_t)1)<<20))
+#endif
 
-#define TYPE_WRAP(...) (__VA_ARGS__)
+/** GIGABYTES -> Bytes */
+#ifndef GIGABYTES
+#define GIGABYTES(n) ((size_t)(n) * (((size_t)1)<<30))
+#endif
 
+/** TERABYTES -> Bytes */
+#ifndef TERABYTES
+#define TERABYTES(n) ((size_t)(n) * (((size_t)1)<<40))
+#endif
+
+/** PETABYTES -> Bytes */
+#ifndef PETABYTES
+#define PETABYTES(n) ((size_t)(n) * (((size_t)1)<<50))
+#endif
+
+/**
+ * Remove parenthesis surrounding "X" if it has parenthesis
+ * Used for helper macros which take templated types as parameters
+ * E.g., let's say we have:
+ *
+ * #define HELPER_MACRO(T) TYPE_UNWRAP(T)
+ * HELPER_MACRO( (std::vector<std::pair<int, int>>) )
+ * will return std::vector<std::pair<int, int>> without the parenthesis
+ * */
 #define TYPE_UNWRAP(X) ESC(ISH X)
 #define ISH(...) ISH __VA_ARGS__
 #define ESC(...) ESC_(__VA_ARGS__)

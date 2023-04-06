@@ -35,7 +35,7 @@ class Singleton {
   /** Get or create an instance of type T */
   inline static T *GetInstance() {
     if (!obj_) {
-      hshm::ScopedMutex lock(*lock_, 10);
+      hshm::ScopedMutex lock(*lock_, 0);
       if (obj_ == nullptr) {
         obj_ = new T();
       }
@@ -108,7 +108,7 @@ class EasySingleton {
    */
   static T* GetInstance() {
     if (obj_ == nullptr) {
-      hshm::ScopedMutex lock(lock_, 10);
+      hshm::ScopedMutex lock(lock_, 0);
       if (obj_ == nullptr) {
         obj_ = new T();
       }

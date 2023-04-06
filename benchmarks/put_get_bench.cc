@@ -81,7 +81,7 @@ int main(int argc, char **argv) {
   }
 
   auto hermes = hapi::Hermes::Create(hermes::HermesType::kClient);
-  size_t blob_size = hermes::config::BaseConfig::ParseSize(argv[1]);
+  size_t blob_size = hshm::ConfigParse::ParseSize(argv[1]);
   size_t blobs_per_rank = atoi(argv[2]);
 
   MPI_Barrier(MPI_COMM_WORLD);

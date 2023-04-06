@@ -52,4 +52,4 @@ class Argobots : public ThreadModel {
 
 }  // namespace hshm::thread_model
 
-#endif //HERMES_SHM_INCLUDE_HERMES_SHM_THREAD_THALLIUM_H_
+#endif  // HERMES_SHM_INCLUDE_HERMES_SHM_THREAD_THALLIUM_H_

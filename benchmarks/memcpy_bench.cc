@@ -72,7 +72,7 @@ int main(int argc, char **argv) {
     printf("USAGE: ./memcpy_bench [blob_size (K/M/G)] [blobs_per_rank]\n");
     exit(1);
   }
-  size_t blob_size = hermes::config::BaseConfig::ParseSize(argv[1]);
+  size_t blob_size = hshm::ConfigParse::ParseSize(argv[1]);
   size_t blobs_per_rank = atoi(argv[2]);
   size_t backend_size = nprocs * blob_size * blobs_per_rank;
 

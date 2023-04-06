@@ -11,7 +11,7 @@
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include <hermes_shm/util/formatter.h>
-#include <hermes_shm/util/path_parser.h>
+#include <hermes_shm/util/config_parse.h>
 #include <hermes_shm/util/auto_trace.h>
 #include <hermes_shm/util/logging.h>
 #include "basic_test.h"
@@ -20,9 +20,9 @@
 
 TEST_CASE("TestPathParser") {
   setenv("PATH_PARSER_TEST", "HOME", true);
-  auto x = hshm::path_parser("${PATH_PARSER_TEST}/hello");
+  auto x = hshm::ConfigParse::ExpandPath("${PATH_PARSER_TEST}/hello");
   unsetenv("PATH_PARSER_TEST");
-  auto y = hshm::path_parser("${PATH_PARSER_TEST}/hello");
+  auto y = hshm::ConfigParse::ExpandPath("${PATH_PARSER_TEST}/hello");
   REQUIRE(x == "HOME/hello");
   REQUIRE(y == "${PATH_PARSER_TEST}/hello");
 }

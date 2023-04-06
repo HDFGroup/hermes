@@ -25,7 +25,7 @@ std::vector<std::string> RpcContext::ParseHostfile(const std::string &path) {
   if (file.is_open()) {
     std::string line;
     while (std::getline(file, line)) {
-      hermes::config::BaseConfig::ParseHostNameString(line, hosts);
+      hshm::ConfigParse::ParseHostNameString(line, hosts);
     }
     file.close();
   } else {

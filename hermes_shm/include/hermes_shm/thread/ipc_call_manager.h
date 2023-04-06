@@ -32,7 +32,7 @@ struct IpcFuture {
   IpcFuture() = default;
 
   /** Emplace constructor */
-  IpcFuture(char *ptr) {
+  explicit IpcFuture(char *ptr) {
     completion_ = reinterpret_cast<bitfield32_t*>(ptr);
   }
 

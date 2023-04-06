@@ -234,7 +234,7 @@ class mpsc_queue_templ : public ShmContainer {
           (*queue_) = std::move(*new_queue);
         }
       } else {
-        while(1) {
+        while (1) {
           head = header_->head_.load();
           size = tail - head + 1;
           if (size <= queue_->size()) {
