@@ -27,6 +27,29 @@ TEST_CASE("TestPathParser") {
   REQUIRE(y == "${PATH_PARSER_TEST}/hello");
 }
 
+TEST_CASE("TestNumberParser") {
+  REQUIRE(KILOBYTES(1.5) == 1536);
+  REQUIRE(MEGABYTES(1.5) == 1572864);
+  REQUIRE(GIGABYTES(1.5) == 1610612736);
+  REQUIRE(TERABYTES(1.5) == 1649267441664);
+  REQUIRE(PETABYTES(1.5) == 1688849860263936);
+
+  std::pair<std::string, size_t> sizes[] = {
+    {"1", 1},
+    {"1.5", 1},
+    {"1KB", KILOBYTES(1)},
+    {"1.5MB", MEGABYTES(1.5)},
+    {"1.5GB", GIGABYTES(1.5)},
+    {"2TB", TERABYTES(2)},
+    {"1.5PB", PETABYTES(1.5)},
+  };
+
+  for (auto &[text, val] : sizes) {
+    REQUIRE(hshm::ConfigParse::ParseSize(text) == val);
+  }
+  REQUIRE(hshm::ConfigParse::ParseSize("inf"));
+}
+
 TEST_CASE("TestTerminal") {
   std::cout << "\033[1m" << "Bold text" << "\033[0m" << std::endl;
   std::cout << "\033[4m" << "Underlined text" << "\033[0m" << std::endl;

@@ -132,29 +132,43 @@ class ConfigParse {
     size_t i;
     for (i = 0; i < num_text.size(); ++i) {
       char c = num_text[i];
-      if ('0' <= c && c <= '9') continue;
-      if (c == ' ' || c == '\t' || c == '\n' || c == '\r') continue;
+      // Skip numbers
+      if ('0' <= c && c <= '9') {
+        continue;
+      }
+      // Skip whitespace
+      if (c == ' ' || c == '\t' || c == '\n' || c == '\r') {
+        continue;
+      }
+      // Skip period (for floats)
+      if (c == '.') {
+        continue;
+      }
       break;
     }
     return std::string(num_text.begin() + i, num_text.end());;
   }
 
   /** parse the number of \a num_text NUMBER text */
-  static size_t ParseNumber(const std::string &num_text) {
-    size_t size;
+  template<typename T>
+  static T ParseNumber(const std::string &num_text) {
+    T size;
+    if (num_text == "inf") {
+      return std::numeric_limits<T>::max();
+    }
     std::stringstream(num_text) >> size;
     return size;
   }
 
   /** Converts \a size_text SIZE text into a size_t */
   static size_t ParseSize(const std::string &size_text) {
-    size_t size = ParseNumber(size_text);
+    auto size = ParseNumber<float>(size_text);
     if (size_text == "inf") {
       return std::numeric_limits<size_t>::max();
     }
     std::string suffix = ParseNumberSuffix(size_text);
-    if (suffix.size() == 0) {
-      return size;
+    if (suffix.empty()) {
+      return BYTES(size);
     } else if (suffix[0] == 'k' || suffix[0] == 'K') {
       return KILOBYTES(size);
     } else if (suffix[0] == 'm' || suffix[0] == 'M') {
@@ -178,12 +192,12 @@ class ConfigParse {
 
   /** Returns latency (nanoseconds) */
   static size_t ParseLatency(const std::string &latency_text) {
-    size_t size = ParseNumber(latency_text);
+    auto size = ParseNumber<float>(latency_text);
     std::string suffix = ParseNumberSuffix(latency_text);
-    if (suffix.size() == 0) {
-      return size;
+    if (suffix.empty()) {
+      return BYTES(size);
     } else if (suffix[0] == 'n' || suffix[0] == 'N') {
-      return size;
+      return BYTES(size);
     } else if (suffix[0] == 'u' || suffix[0] == 'U') {
       return KILOBYTES(size);
     } else if (suffix[0] == 'm' || suffix[0] == 'M') {
