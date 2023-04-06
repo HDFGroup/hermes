@@ -11,7 +11,6 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "omp.h"
-#include "hermes.h"
 #include <string>
 #include <dlfcn.h>
 #include <iostream>

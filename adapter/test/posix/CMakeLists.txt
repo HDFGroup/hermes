@@ -32,12 +32,16 @@ add_executable(posix_simple_io_mpi posix_simple_io_mpi.cc)
 add_dependencies(posix_simple_io_mpi hermes_posix)
 target_link_libraries(posix_simple_io_mpi hermes_posix)
 
-add_executable(posix_simple_io_omp posix_simple_io_omp.cc)
-add_dependencies(posix_simple_io_omp hermes_posix)
-target_link_libraries(posix_simple_io_omp hermes_posix)
+add_executable(hermes_posix_simple_io_omp posix_simple_io_omp.cc)
+add_dependencies(hermes_posix_simple_io_omp hermes_posix)
+target_link_libraries(hermes_posix_simple_io_omp hermes_posix)
 
-gcc_hermes_full(posix_simple_io_omp "" kDefault "/tmp/test_hermes/hi.txt 0 4 64 0")
-gcc_hermes_full(posix_simple_io_omp "" kScratch "/tmp/test_hermes/hi.txt 0 4 64 0")
+add_executable(posix_simple_io_omp posix_simple_io_omp.cc)
+target_link_libraries(posix_simple_io_omp)
+
+gcc_hermes_full(hermes_posix_simple_io_omp "" kDefault "/tmp/test_hermes/hi.txt 0 1024 8 0")
+gcc_hermes_full(hermes_posix_simple_io_omp "" kScratch "/tmp/test_hermes/hi.txt 0 1024 8 0")
+preload_hermes(posix_simple_io_omp hermes_posix "${CMAKE_BINARY_DIR}/bin/posix_simple_io_omp /tmp/test_hermes/hi.txt 0 1024 8 0")
 
 set(POSIX_TESTS
   posix_adapter_test
