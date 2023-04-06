@@ -36,6 +36,9 @@ add_executable(posix_simple_io_omp posix_simple_io_omp.cc)
 add_dependencies(posix_simple_io_omp hermes_posix)
 target_link_libraries(posix_simple_io_omp hermes_posix)
 
+gcc_hermes_full(posix_simple_io_omp "" kDefault "/tmp/test_hermes/hi.txt 0 4 64 0")
+gcc_hermes_full(posix_simple_io_omp "" kScratch "/tmp/test_hermes/hi.txt 0 4 64 0")
+
 set(POSIX_TESTS
   posix_adapter_test
   hermes_posix_adapter_test

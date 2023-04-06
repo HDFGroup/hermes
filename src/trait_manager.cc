@@ -24,12 +24,10 @@ void TraitManager::Init() {
 
   // Load the LD_LIBRARY_PATH variable
   auto ld_lib_path_env = getenv("LD_LIBRARY_PATH");
-  if (!ld_lib_path_env) {
-    HELOG(kError, "LD_LIBRARY_PATH is not defined. "
-                  "Cannot search for traits.");
-    return;
+  std::string ld_lib_path;
+  if (ld_lib_path_env) {
+    ld_lib_path = ld_lib_path_env;
   }
-  std::string ld_lib_path(ld_lib_path_env);
 
   // Load the HERMES_TRAIT_PATH variable
   std::string hermes_trait_path;
