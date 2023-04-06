@@ -48,6 +48,7 @@ class PosixFs : public hermes::adapter::fs::Filesystem {
       buf->st_atime = astat.st_atim_.tv_sec;
       buf->st_mtime = astat.st_mtim_.tv_sec;
       buf->st_ctime = astat.st_ctim_.tv_sec;
+      errno = 0;
       return 0;
     } else {
       errno = EBADF;
@@ -65,6 +66,7 @@ class PosixFs : public hermes::adapter::fs::Filesystem {
     stat.st_mode_ = 0;
     File f = Open(stat, __filename);
     if (!f.status_) {
+      HILOG(kInfo, "Failed to stat the file {}", __filename);
       memset(buf, 0, sizeof(StatT));
       return -1;
     }

@@ -18,20 +18,27 @@ namespace hermes::adapter::fs {
 void StdioIoClient::RealOpen(File &f,
                              AdapterStat &stat,
                              const std::string &path) {
-  stat.hflags_.SetBits(HERMES_FS_CREATE);
   if (stat.mode_str_.find('w') != std::string::npos) {
     stat.hflags_.SetBits(HERMES_FS_TRUNC);
+    stat.hflags_.SetBits(HERMES_FS_CREATE);
   }
   if (stat.mode_str_.find('a') != std::string::npos) {
     stat.hflags_.SetBits(HERMES_FS_APPEND);
+    stat.hflags_.SetBits(HERMES_FS_CREATE);
   }
 
-  if (stat.adapter_mode_ != AdapterMode::kScratch) {
+  if (stat.hflags_.Any(HERMES_FS_CREATE) &&
+      stat.adapter_mode_ != AdapterMode::kScratch) {
     stat.fh_ = real_api->fopen(path.c_str(), stat.mode_str_.c_str());
-    if (stat.fh_ == nullptr) {
-      f.status_ = false;
-      return;
-    }
+  } else {
+    stat.fh_ = real_api->fopen(path.c_str(), stat.mode_str_.c_str());
+  }
+
+  if (stat.fh_ != nullptr) {
+    stat.hflags_.SetBits(HERMES_FS_EXISTS);
+  }
+  if (stat.fh_ == nullptr && stat.adapter_mode_ != AdapterMode::kScratch) {
+    f.status_ = false;
   }
 }
 

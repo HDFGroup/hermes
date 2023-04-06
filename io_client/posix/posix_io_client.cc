@@ -28,17 +28,18 @@ void PosixIoClient::RealOpen(File &f,
     stat.hflags_.SetBits(HERMES_FS_TRUNC);
   }
 
-  bool scratch = false;
   if (stat.flags_ & O_CREAT || stat.flags_ & O_TMPFILE) {
     if (stat.adapter_mode_ != AdapterMode::kScratch) {
       stat.fd_ = real_api->open(path.c_str(), stat.flags_, stat.st_mode_);
-    } else {
-      scratch = true;
     }
   } else {
     stat.fd_ = real_api->open(path.c_str(), stat.flags_);
   }
-  if (stat.fd_ < 0 && !scratch) {
+
+  if (stat.fd_ >= 0) {
+    stat.hflags_.SetBits(HERMES_FS_EXISTS);
+  }
+  if (stat.fd_ < 0 && stat.adapter_mode_ != AdapterMode::kScratch) {
     f.status_ = false;
   }
 }

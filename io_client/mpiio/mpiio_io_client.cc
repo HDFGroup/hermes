@@ -18,17 +18,25 @@ namespace hermes::adapter::fs {
 void MpiioIoClient::RealOpen(File &f,
                              AdapterStat &stat,
                              const std::string &path) {
-  stat.hflags_.SetBits(HERMES_FS_CREATE);
+  if (stat.amode_ & MPI_MODE_CREATE) {
+    stat.hflags_.SetBits(HERMES_FS_CREATE);
+    stat.hflags_.SetBits(HERMES_FS_TRUNC);
+  }
   if (stat.amode_ & MPI_MODE_APPEND) {
-    stat.hflags_.SetBits(MPI_MODE_APPEND);
+    stat.hflags_.SetBits(HERMES_FS_APPEND);
   }
 
   if (stat.adapter_mode_ != AdapterMode::kScratch) {
     f.mpi_status_ = real_api->MPI_File_open(
         stat.comm_, path.c_str(), stat.amode_, stat.info_, &stat.mpi_fh_);
-    if (f.mpi_status_ != MPI_SUCCESS) {
-      f.status_ = false;
-    }
+  }
+
+  if (f.mpi_status_ == MPI_SUCCESS) {
+    stat.hflags_.SetBits(HERMES_FS_EXISTS);
+  }
+  if (f.mpi_status_ != MPI_SUCCESS &&
+      stat.adapter_mode_ != AdapterMode::kScratch) {
+    f.status_ = false;
   }
 }
 

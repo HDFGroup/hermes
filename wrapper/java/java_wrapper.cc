@@ -14,7 +14,11 @@
 #include "c/c_wrapper.h"
 #include <jni.h>
 
-JNIEXPORT void JNICALL Java_com_example_MyClass_printChars(JNIEnv *env, jobject obj, jstring str) {
+/** Get Hermes instance */
+
+/** Create Hermes instance */
+JNIEXPORT void JNICALL Java_com_hermes_Hermes_create(
+    JNIEnv *env, jobject obj, jstring str) {
   const char* cstr = env->GetStringUTFChars(str, NULL);
   env->ReleaseStringUTFChars(str, cstr);
 }

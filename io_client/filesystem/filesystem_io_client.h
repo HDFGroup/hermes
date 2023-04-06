@@ -36,6 +36,8 @@ namespace hermes::adapter::fs {
 #define HERMES_FS_APPEND BIT_OPT(uint32_t, 4)
 /** Whether to perform truncate */
 #define HERMES_FS_TRUNC BIT_OPT(uint32_t, 5)
+/** Whether the file was found on-disk */
+#define HERMES_FS_EXISTS BIT_OPT(uint32_t, 6)
 
 /** A structure to represent IO status */
 struct IoStatus {
