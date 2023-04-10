@@ -90,8 +90,7 @@ void BorgIoThreadManager::WaitForFlush() {
  * */
 void BufferOrganizer::shm_init(hipc::ShmArchive<BufferOrganizerShm> &header,
                                hipc::Allocator *alloc) {
-  mdm_ = &HERMES->mdm_;
-  rpc_ = &HERMES->rpc_;
+  shm_deserialize(header);
 
   // Initialize device information
   for (TargetInfo &target : (*mdm_->targets_)) {

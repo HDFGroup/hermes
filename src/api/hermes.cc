@@ -128,7 +128,6 @@ void Hermes::LoadSharedMemory() {
                           server_config_.shmem_name_);
   main_alloc_ = mem_mngr->GetAllocator(main_alloc_id);
   header_ = main_alloc_->GetCustomHeader<HermesShm>();
-  mem_mngr->ScanBackends();
 }
 
 /** Finalize Daemon mode */
