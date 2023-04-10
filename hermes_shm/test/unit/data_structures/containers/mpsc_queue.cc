@@ -45,7 +45,7 @@ class QueueTestSuite {
     size_t total_size = nproducers * count_per_rank;
     entries.reserve(count_per_rank);
     auto entry = hipc::make_uptr<T>();
-    auto entry_ref = hipc::to_ref(entry);
+    auto &entry_ref = *entry;
 
     // Consume everything
     while (entries.size() < total_size) {
@@ -54,7 +54,7 @@ class QueueTestSuite {
         HERMES_THREAD_MODEL->Yield();
         continue;
       }
-      CREATE_GET_INT_FROM_VAR(T, entry_int, *entry_ref)
+      CREATE_GET_INT_FROM_VAR(T, entry_int, entry_ref)
       entries.emplace_back(entry_int);
     }
 

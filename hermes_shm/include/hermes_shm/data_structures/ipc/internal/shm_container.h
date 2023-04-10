@@ -19,8 +19,6 @@
 #include "shm_container_macro.h"
 #include "shm_macros.h"
 #include "shm_archive.h"
-#include "hermes_shm/data_structures/smart_ptr/smart_ptr_base.h"
-#include "shm_deserialize.h"
 
 namespace hipc = hshm::ipc;
 
@@ -74,7 +72,7 @@ struct ShmWrapperHeader {};
  * ShmContainers all have a header, which is stored in
  * shared memory as a TypedPointer.
  * */
-class ShmContainer : public ShmArchiveable {};
+class ShmContainer {};
 
 /** Typed nullptr */
 template<typename T>

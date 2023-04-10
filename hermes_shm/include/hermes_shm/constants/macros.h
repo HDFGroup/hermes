@@ -15,32 +15,32 @@
 
 /** Bytes -> Bytes */
 #ifndef BYTES
-#define BYTES(n) (size_t)((n) * (((size_t)1)<<0))
+#define BYTES(n) (size_t)((n) * (((size_t)1) << 0))
 #endif
 
 /** KILOBYTES -> Bytes */
 #ifndef KILOBYTES
-#define KILOBYTES(n) (size_t)((n) * (((size_t)1)<<10))
+#define KILOBYTES(n) (size_t)((n) * (((size_t)1) << 10))
 #endif
 
 /** MEGABYTES -> Bytes */
 #ifndef MEGABYTES
-#define MEGABYTES(n) (size_t)((n) * (((size_t)1)<<20))
+#define MEGABYTES(n) (size_t)((n) * (((size_t)1) << 20))
 #endif
 
 /** GIGABYTES -> Bytes */
 #ifndef GIGABYTES
-#define GIGABYTES(n) (size_t)((n) * (((size_t)1)<<30))
+#define GIGABYTES(n) (size_t)((n) * (((size_t)1) << 30))
 #endif
 
 /** TERABYTES -> Bytes */
 #ifndef TERABYTES
-#define TERABYTES(n) (size_t)((n) * (((size_t)1)<<40))
+#define TERABYTES(n) (size_t)((n) * (((size_t)1) << 40))
 #endif
 
 /** PETABYTES -> Bytes */
 #ifndef PETABYTES
-#define PETABYTES(n) (size_t)((n) * (((size_t)1)<<50))
+#define PETABYTES(n) (size_t)((n) * (((size_t)1) << 50))
 #endif
 
 /**
@@ -57,5 +57,11 @@
 #define ESC(...) ESC_(__VA_ARGS__)
 #define ESC_(...) VAN ## __VA_ARGS__
 #define VANISH
+
+/**
+ * Ensure that the compiler ALWAYS inlines a particular function.
+ * */
+#define HSHM_ALWAYS_INLINE \
+  __attribute__((always_inline))
 
 #endif  // HERMES_MACROS_H

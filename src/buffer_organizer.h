@@ -132,8 +132,8 @@ typedef hipc::pair<_BorgIoThreadQueue, BorgIoThreadQueueInfo>
 /** Manages the I/O flushing threads for BORG */
 class BorgIoThreadManager {
  public:
-  hipc::Ref<hipc::vector<BorgIoThreadQueue>>
-    queues_;  /**< Shared-memory request queues */
+  hipc::vector<BorgIoThreadQueue>
+    *queues_;  /**< Shared-memory request queues */
   std::atomic<bool> kill_requested_;  /**< Kill flushing threads eventually */
 
  public:
@@ -163,9 +163,9 @@ class BorgIoThreadManager {
 
   /** Check if a flush is still happening */
   bool IsFlushing() {
-    for (hipc::Ref<BorgIoThreadQueue> bq : *queues_) {
-      hipc::Ref<BorgIoThreadQueueInfo> bq_info = bq->second_;
-      if (bq_info->load_ > 0) {
+    for (BorgIoThreadQueue &bq : *queues_) {
+      BorgIoThreadQueueInfo& bq_info = bq.GetSecond();
+      if (bq_info.load_ > 0) {
         return true;
       }
     }
@@ -175,25 +175,25 @@ class BorgIoThreadManager {
   /** Enqueue a flushing task to a worker */
   void Enqueue(TagId bkt_id, BlobId blob_id, size_t blob_size,
                std::vector<Trait*> &&traits) {
-    hipc::Ref<BorgIoThreadQueue> bq = HashToQueue(blob_id);
-    hipc::Ref<BorgIoThreadQueueInfo> bq_info = bq->second_;
-    hipc::Ref<_BorgIoThreadQueue> queue = bq->first_;
-    bq_info->load_.fetch_add(blob_size);
-    queue->emplace(bkt_id, blob_id, blob_size,
+    BorgIoThreadQueue &bq = HashToQueue(blob_id);
+    BorgIoThreadQueueInfo& bq_info = bq.GetSecond();
+    _BorgIoThreadQueue& queue = bq.GetFirst();
+    bq_info.load_.fetch_add(blob_size);
+    queue.emplace(bkt_id, blob_id, blob_size,
                    std::forward<std::vector<Trait*>>(traits));
   }
 
   /** Enqueue a deletion task to a worker */
   void EnqueueDelete(TagId bkt_id, BlobId blob_id, size_t last_modified) {
-    hipc::Ref<BorgIoThreadQueue> bq = HashToQueue(blob_id);
-    hipc::Ref<BorgIoThreadQueueInfo> bq_info = bq->second_;
-    hipc::Ref<_BorgIoThreadQueue> queue = bq->first_;
-    bq_info->load_.fetch_add(1);
-    queue->emplace(bkt_id, blob_id, 1, last_modified);
+    BorgIoThreadQueue &bq = HashToQueue(blob_id);
+    BorgIoThreadQueueInfo& bq_info = bq.GetSecond();
+    _BorgIoThreadQueue& queue = bq.GetFirst();
+    bq_info.load_.fetch_add(1);
+    queue.emplace(bkt_id, blob_id, 1, last_modified);
   }
 
   /** Hash request to a queue */
-  hipc::Ref<BorgIoThreadQueue> HashToQueue(BlobId blob_id) {
+  BorgIoThreadQueue& HashToQueue(BlobId blob_id) {
     size_t qid = std::hash<BlobId>{}(blob_id) % queues_->size();
     return (*queues_)[qid];
   }
@@ -202,22 +202,18 @@ class BorgIoThreadManager {
 /**
  * Any state needed by BORG in SHM
  * */
-template<>
-struct ShmHeader<BufferOrganizer> {
+struct BufferOrganizerShm {
   hipc::ShmArchive<hipc::vector<BorgIoThreadQueue>> queues_;
 };
 
 /**
  * Manages the organization of blobs in the hierarchy.
  * */
-class BufferOrganizer : public hipc::ShmContainer {
+class BufferOrganizer {
  public:
-  SHM_CONTAINER_TEMPLATE(BufferOrganizer,
-                         BufferOrganizer,
-                         ShmHeader<BufferOrganizer>)
   MetadataManager *mdm_;
   RPC_TYPE *rpc_;
-  hipc::Ref<hipc::vector<BorgIoThreadQueue>>
+  hipc::vector<BorgIoThreadQueue>*
     queues_; /** Async tasks for BORG. */
 
  public:
@@ -225,31 +221,30 @@ class BufferOrganizer : public hipc::ShmContainer {
    * Default Constructor
    * ===================================*/
 
+  /** Default constructor */
+  BufferOrganizer() = default;
+
+  /**====================================
+   * SHM Init
+   * ===================================*/
+
   /**
    * Initialize the BORG
    * REQUIRES mdm to be initialized already.
    * */
-  explicit BufferOrganizer(ShmHeader<BufferOrganizer> *header,
-                           hipc::Allocator *alloc);
+  void shm_init(hipc::ShmArchive<BufferOrganizerShm> &header,
+                hipc::Allocator *alloc);
 
   /**====================================
    * SHM Deserialization
    * ===================================*/
 
   /** Deserialize the BORG from shared memory */
-  void shm_deserialize_main();
+  void shm_deserialize(hipc::ShmArchive<BufferOrganizerShm> &header);
 
   /**====================================
    * Destructors
    * ===================================*/
-
-  /** Check if BORG is NULL */
-  bool IsNull() const {
-    return false;
-  }
-
-  /** Set BORG to NULL */
-  void SetNull() {}
 
   /** Finalize the BORG */
   void shm_destroy_main();
@@ -283,8 +278,8 @@ class BufferOrganizer : public hipc::ShmContainer {
   void LocalEnqueueFlushes();
 
   /** Actually process flush operations */
-  void LocalProcessFlushes(hipc::Ref<BorgIoThreadQueueInfo> &bq_info,
-                           hipc::Ref<_BorgIoThreadQueue> &queue);
+  void LocalProcessFlushes(BorgIoThreadQueueInfo &bq_info,
+                           _BorgIoThreadQueue &queue);
 
   /** Barrier for all flushing to complete */
   void LocalWaitForFullFlush();

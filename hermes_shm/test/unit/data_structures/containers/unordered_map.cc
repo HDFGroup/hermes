@@ -49,9 +49,9 @@ void UnorderedMapOpTest() {
   // Iterate over the map
   PAGE_DIVIDE("Forward iterate") {
     std::vector<int> keys, vals;
-    for (auto entry : map) {
-      GET_INT_FROM_KEY(entry->GetKey());
-      GET_INT_FROM_VAL(entry->GetVal());
+    for (auto &entry : map) {
+      GET_INT_FROM_KEY(entry.GetKey());
+      GET_INT_FROM_VAL(entry.GetVal());
       keys.emplace_back(key_ret);
       vals.emplace_back(val_ret);
     }
@@ -69,7 +69,7 @@ void UnorderedMapOpTest() {
   PAGE_DIVIDE("Check if entries are indexable") {
     for (int i = 0; i < 20; ++i) {
       CREATE_KV_PAIR(key, i, val, i);
-      REQUIRE(*(map[key]) == val);
+      REQUIRE((map[key]) == val);
     }
   }
 
@@ -78,8 +78,8 @@ void UnorderedMapOpTest() {
     for (int i = 0; i < 20; ++i) {
       CREATE_KV_PAIR(key, i, val, i);
       auto iter = map.find(key);
-      hipc::Ref<hipc::pair<Key, Val>> pair = *iter;
-      REQUIRE(pair->GetVal() == val);
+      hipc::pair<Key, Val> &pair = *iter;
+      REQUIRE(pair.GetVal() == val);
     }
   }
 
@@ -88,7 +88,7 @@ void UnorderedMapOpTest() {
     for (int i = 0; i < 20; ++i) {
       CREATE_KV_PAIR(key, i, val, i + 100);
       map.emplace(key, val);
-      REQUIRE(*(map[key]) == val);
+      REQUIRE((map[key]) == val);
     }
   }
 
@@ -96,43 +96,43 @@ void UnorderedMapOpTest() {
   PAGE_DIVIDE("Modify the fourth map entry") {
     CREATE_KV_PAIR(key, 4, val, 25);
     auto iter = map.find(key);
-    hipc::Ref<hipc::pair<Key, Val>> pair = *iter;
-    pair->GetVal() = val;
-    REQUIRE(pair->GetVal() == val);
+    hipc::pair<Key, Val>& pair = *iter;
+    pair.GetVal() = val;
+    REQUIRE(pair.GetVal() == val);
   }
 
   // Verify the modification took place
   PAGE_DIVIDE("Verify the modification took place") {
     CREATE_KV_PAIR(key, 4, val, 25);
-    REQUIRE(*(map[key]) == val);
+    REQUIRE((map[key]) == val);
   }
 
   // Modify the fourth map entry (copy assignment)
   PAGE_DIVIDE("Copy assignment test") {
     CREATE_KV_PAIR(key, 4, val, 50);
     auto iter = map.find(key);
-    hipc::Ref<hipc::pair<Key, Val>> pair = *iter;
-    pair->GetVal() = val;
-    REQUIRE(pair->GetVal() == val);
+    hipc::pair<Key, Val>& pair = *iter;
+    pair.GetVal() = val;
+    REQUIRE(pair.GetVal() == val);
   }
 
   // Verify the modification took place
   PAGE_DIVIDE("Verify the copy assignment held") {
     CREATE_KV_PAIR(key, 4, val, 50);
-    REQUIRE(*(map[key]) == val);
+    REQUIRE((map[key]) == val);
   }
 
   // Modify the fourth map entry (copy assignment)
   PAGE_DIVIDE("Modify the fourth map entry (copy assignment)") {
     CREATE_KV_PAIR(key, 4, val, 100);
-    auto x = map[key];
-    (*x) = val;
+    auto &x = map[key];
+    x = val;
   }
 
   // Verify the modification took place
   PAGE_DIVIDE("Verify the modification took place") {
     CREATE_KV_PAIR(key, 4, val, 100);
-    REQUIRE(*map[key] == val);
+    REQUIRE(map[key] == val);
   }
 
   // Remove 15 entries from the map
@@ -156,7 +156,7 @@ void UnorderedMapOpTest() {
     }
     for (int i = 15; i < 20; ++i) {
       CREATE_KV_PAIR(key, i, val, 100);
-      GET_INT_FROM_VAL(*map[key])
+      GET_INT_FROM_VAL(map[key])
       REQUIRE(val_ret == i + 100);
     }
   }
@@ -177,9 +177,9 @@ void UnorderedMapOpTest() {
       CREATE_KV_PAIR(key, i, val, i);
       auto iter = map.find(key);
       REQUIRE(iter != map.end());
-      hipc::Ref<hipc::pair<Key, Val>> pair = *iter;
-      REQUIRE(pair->GetKey() == key);
-      REQUIRE(pair->GetVal() == val);
+      hipc::pair<Key, Val>& pair = *iter;
+      REQUIRE(pair.GetKey() == key);
+      REQUIRE(pair.GetVal() == val);
     }
   }
 
@@ -192,14 +192,14 @@ void UnorderedMapOpTest() {
       auto iter1 = map.find(key);
       auto iter2 = cpy->find(key);
       REQUIRE(!iter1.is_end());
-      hipc::Ref<hipc::pair<Key, Val>> pair1 = *iter1;
-      REQUIRE(pair1->GetKey() == key);
-      REQUIRE(pair1->GetVal() == val);
+      hipc::pair<Key, Val>& pair1 = *iter1;
+      REQUIRE(pair1.GetKey() == key);
+      REQUIRE(pair1.GetVal() == val);
 
       REQUIRE(!iter2.is_end());
-      hipc::Ref<hipc::pair<Key, Val>> pair2 = *iter2;
-      REQUIRE(pair2->GetKey() == key);
-      REQUIRE(pair2->GetVal() == val);
+      hipc::pair<Key, Val>& pair2 = *iter2;
+      REQUIRE(pair2.GetKey() == key);
+      REQUIRE(pair2.GetVal() == val);
     }
   }
 
@@ -211,9 +211,9 @@ void UnorderedMapOpTest() {
       CREATE_KV_PAIR(key, i, val, i);
       auto iter = cpy->find(key);
       REQUIRE(!iter.is_end());
-      hipc::Ref<hipc::pair<Key, Val>> pair = *iter;
-      REQUIRE(pair->GetKey() == key);
-      REQUIRE(pair->GetVal() == val);
+      hipc::pair<Key, Val>& pair = *iter;
+      REQUIRE(pair.GetKey() == key);
+      REQUIRE(pair.GetVal() == val);
     }
     map = std::move(*cpy);
   }

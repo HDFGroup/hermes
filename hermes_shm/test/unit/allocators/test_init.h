@@ -38,7 +38,7 @@ Allocator* Pretest() {
   allocator_id_t alloc_id(0, 1);
   auto mem_mngr = HERMES_MEMORY_MANAGER;
   mem_mngr->CreateBackend<BackendT>(
-    MemoryManager::kDefaultBackendSize, shm_url);
+    MemoryManager::GetDefaultBackendSize(), shm_url);
   mem_mngr->CreateAllocator<AllocT>(
     shm_url, alloc_id, sizeof(SimpleAllocatorHeader));
   auto alloc = mem_mngr->GetAllocator(alloc_id);

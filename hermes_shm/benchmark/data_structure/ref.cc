@@ -10,24 +10,32 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+#include "basic_test.h"
+#include "test_init.h"
 
-#ifndef HERMES_MEMORY_SHM_MACROS_H_
-#define HERMES_MEMORY_SHM_MACROS_H_
+#include <string>
+#include "hermes_shm/data_structures/ipc/string.h"
 
-#include "hermes_shm/constants/macros.h"
+template<typename T, bool SHM>
+void TestCase() {
+  std::string str_type = InternalTypeName<T>::Get();
+  /*size_t count = 1000000;
+  auto test2 = hipc::make_uptr<hipc::string>();
+  auto alloc = test2->GetAllocator();
+  size_t x;
+  hipc::ShmArchive<T> ar;
+  void *ptr_; */
 
-/**
- * Determine whether or not \a T type is designed for shared memory
- * */
-#define IS_SHM_ARCHIVEABLE(T) \
-  std::is_base_of<hshm::ipc::ShmContainer, TYPE_UNWRAP(T)>::value
+  Timer t;
+  t.Resume();
+  t.Pause();
 
-/**
- * SHM_X_OR_Y: X if T is SHM_SERIALIZEABLE, Y otherwise
- * */
-#define SHM_X_OR_Y(T, X, Y) \
-  typename std::conditional<         \
-    IS_SHM_ARCHIVEABLE(T), \
-    TYPE_UNWRAP(X), TYPE_UNWRAP(Y)>::type
+  HIPRINT("{},{},{}\n",
+          str_type, SHM, t.GetMsec())
+}
 
-#endif  // HERMES_MEMORY_SHM_MACROS_H_
+TEST_CASE("RefBenchmark") {
+  TestCase<size_t, false>();
+  // TestCase<size_t, true>();
+  // TestCase<hipc::string, true>();
+}

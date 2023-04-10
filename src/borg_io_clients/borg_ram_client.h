@@ -27,7 +27,7 @@ class RamIoClient : public BorgIoClient {
     auto &hermes_header = HERMES->header_;
     auto &main_alloc = HERMES->main_alloc_;
     hermes_header->ram_tier_ = main_alloc->
-                               Allocate(dev_info.header_->capacity_);
+                               Allocate(dev_info.capacity_);
     if (hermes_header->ram_tier_.IsNull()) {
       HELOG(kFatal, BUFFER_POOL_OUT_OF_RAM.Msg());
     }
@@ -39,9 +39,9 @@ class RamIoClient : public BorgIoClient {
     auto &hermes_header = HERMES->header_;
     auto &main_alloc = HERMES->main_alloc_;
     char *ram_ptr = main_alloc->Convert<char>(hermes_header->ram_tier_);
-    if (off + size > dev_info.header_->capacity_) {
+    if (off + size > dev_info.capacity_) {
       HILOG(kDebug, "Out of bounds: attempting to write to offset: {} / {}",
-            off + size, dev_info.header_->capacity_);
+            off + size, dev_info.capacity_);
       return false;
     }
     memcpy(ram_ptr + off, data, size);

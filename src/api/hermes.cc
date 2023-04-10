@@ -54,11 +54,6 @@ void Hermes::InitServer(std::string server_config_path) {
   LoadServerConfig(server_config_path);
   InitSharedMemory();
 
-  // Initialize references to SHM types
-  mdm_ = hipc::Ref<MetadataManager>(header_->mdm_, main_alloc_);
-  bpm_ = hipc::Ref<BufferPool>(header_->bpm_, main_alloc_);
-  borg_ = hipc::Ref<BufferOrganizer>(header_->borg_, main_alloc_);
-
   // Initialize RPC
   comm_.Init(HermesType::kServer);
   rpc_.InitServer();
@@ -68,10 +63,10 @@ void Hermes::InitServer(std::string server_config_path) {
   traits_.Init();
 
   // Construct the reference objects
-  mdm_ = hipc::make_ref<MetadataManager>(header_->mdm_, main_alloc_,
-                                         &server_config_);
-  bpm_ = hipc::make_ref<BufferPool>(header_->bpm_, main_alloc_);
-  borg_ = hipc::make_ref<BufferOrganizer>(header_->borg_, main_alloc_);
+  mdm_.shm_init(header_->mdm_, main_alloc_, &server_config_);
+  rpc_.InitClient();
+  bpm_.shm_init(header_->bpm_, main_alloc_);
+  borg_.shm_init(header_->borg_, main_alloc_);
   prefetch_.Init();
 }
 
@@ -83,12 +78,12 @@ void Hermes::InitClient(std::string server_config_path,
   LoadSharedMemory();
 
   // Initialize references to SHM types
-  mdm_ = hipc::Ref<MetadataManager>(header_->mdm_, main_alloc_);
+  mdm_.shm_deserialize(header_->mdm_);
   rpc_.InitClient();
-  bpm_ = hipc::Ref<BufferPool>(header_->bpm_, main_alloc_);
-  borg_ = hipc::Ref<BufferOrganizer>(header_->borg_, main_alloc_);
+  bpm_.shm_deserialize(header_->bpm_);
+  borg_.shm_deserialize(header_->borg_);
   prefetch_.Init();
-  mdm_->PrintDeviceInfo();
+  mdm_.PrintDeviceInfo();
 
   // Load the trait libraries
   traits_.Init();
@@ -115,15 +110,14 @@ void Hermes::InitSharedMemory() {
   // Create shared-memory allocator
   auto mem_mngr = HERMES_MEMORY_MANAGER;
   mem_mngr->CreateBackend<hipc::PosixShmMmap>(
-      hipc::MemoryManager::kDefaultBackendSize,
+      hipc::MemoryManager::GetDefaultBackendSize(),
       server_config_.shmem_name_);
   main_alloc_ =
       mem_mngr->CreateAllocator<hipc::ScalablePageAllocator>(
-      // mem_mngr->CreateAllocator<hipc::StackAllocator>(
           server_config_.shmem_name_,
           main_alloc_id,
-          sizeof(ShmHeader<Hermes>));
-  header_ = main_alloc_->GetCustomHeader<ShmHeader<Hermes>>();
+          sizeof(HermesShm));
+  header_ = main_alloc_->GetCustomHeader<HermesShm>();
 }
 
 /** Connect to a Daemon's shared memory */
@@ -133,7 +127,8 @@ void Hermes::LoadSharedMemory() {
   mem_mngr->AttachBackend(hipc::MemoryBackendType::kPosixShmMmap,
                           server_config_.shmem_name_);
   main_alloc_ = mem_mngr->GetAllocator(main_alloc_id);
-  header_ = main_alloc_->GetCustomHeader<ShmHeader<Hermes>>();
+  header_ = main_alloc_->GetCustomHeader<HermesShm>();
+  mem_mngr->ScanBackends();
 }
 
 /** Finalize Daemon mode */
@@ -209,12 +204,12 @@ Bucket Hermes::GetBucket(TagId tag_id) {
 
 /** Waits for all blobs to finish being flushed */
 void Hermes::Flush() {
-  borg_->GlobalWaitForFullFlush();
+  borg_.GlobalWaitForFullFlush();
 }
 
 /** Destroy all buckets and blobs in this instance */
 void Hermes::Clear() {
-  mdm_->GlobalClear();
+  mdm_.GlobalClear();
 }
 
 /**====================================
@@ -223,7 +218,7 @@ void Hermes::Clear() {
 
 /** Locate all blobs with a tag */
 std::vector<BlobId> Hermes::GroupBy(TagId tag_id) {
-  return mdm_->GlobalGroupByTag(tag_id);
+  return mdm_.GlobalGroupByTag(tag_id);
 }
 
 

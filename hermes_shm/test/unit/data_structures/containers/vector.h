@@ -29,7 +29,7 @@ class VectorTestSuite : public ListTestSuite<T, Container> {
   void IndexTest() {
     for (size_t i = 0; i < obj_.size(); ++i) {
       CREATE_SET_VAR_TO_INT_OR_STRING(T, var, i);
-      REQUIRE(*obj_[i] == var);
+      REQUIRE(obj_[i] == var);
     }
   }
 };

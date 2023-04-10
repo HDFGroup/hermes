@@ -16,7 +16,6 @@
 
 #include "shm_archive.h"
 #include "shm_container.h"
-#include "shm_smart_ptr.h"
 #include "shm_macros.h"
 #include "shm_container.h"
 

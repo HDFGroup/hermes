@@ -47,11 +47,12 @@ void VectorTest() {
 
 void VectorOfVectorOfStringTest() {
   Allocator *alloc = alloc_g;
-  auto vec = hipc::make_uptr<vector<vector<string>>>(alloc);
+  auto vec = hipc::make_uptr<
+    vector<vector<string>>>(alloc);
 
   vec->resize(10);
-  for (hipc::Ref<vector<string>> bkt : *vec) {
-    bkt->emplace_back("hello");
+  for (vector<string> &bkt : *vec) {
+    bkt.emplace_back("hello");
   }
   vec->clear();
 }
@@ -64,8 +65,8 @@ void VectorOfListOfStringTest() {
 
   PAGE_DIVIDE("Emplace an element into each bucket") {
     size_t count = 0;
-    for (hipc::Ref<list<string>> bkt : *vec) {
-      bkt->emplace_back(std::to_string(count));
+    for (list<string> &bkt : *vec) {
+      bkt.emplace_back(std::to_string(count));
       count += 1;
     }
     REQUIRE(count == 10);
@@ -73,9 +74,9 @@ void VectorOfListOfStringTest() {
 
   PAGE_DIVIDE("Get string from each bucket") {
     size_t count = 0;
-    for (hipc::Ref<list<string>> bkt : *vec) {
-      for (hipc::Ref<string> val : *bkt) {
-        REQUIRE(*val == std::to_string(count));
+    for (list<string> &bkt : *vec) {
+      for (string &val : bkt) {
+        REQUIRE(val == std::to_string(count));
       }
       count += 1;
     }
@@ -113,12 +114,14 @@ TEST_CASE("VectorOfVectorOfString") {
   Allocator *alloc = alloc_g;
   REQUIRE(alloc->GetCurrentlyAllocatedSize() == 0);
   VectorOfVectorOfStringTest();
+  VectorOfVectorOfStringTest();
   REQUIRE(alloc->GetCurrentlyAllocatedSize() == 0);
 }
 
 TEST_CASE("VectorOfListOfString") {
   Allocator *alloc = alloc_g;
   REQUIRE(alloc->GetCurrentlyAllocatedSize() == 0);
+  VectorOfListOfStringTest();
   VectorOfListOfStringTest();
   REQUIRE(alloc->GetCurrentlyAllocatedSize() == 0);
 }

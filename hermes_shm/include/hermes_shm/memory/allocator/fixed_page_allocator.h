@@ -36,7 +36,7 @@ struct FixedPageAllocatorHeader : public AllocatorHeader {
     AllocatorHeader::Configure(alloc_id,
                                AllocatorType::kFixedPageAllocator,
                                custom_header_size);
-    make_ref<vector<iqueue<MpPage>>>(free_lists_, alloc);
+    HSHM_MAKE_AR0(free_lists_, alloc);
     total_alloc_ = 0;
   }
 };
@@ -44,7 +44,8 @@ struct FixedPageAllocatorHeader : public AllocatorHeader {
 class FixedPageAllocator : public Allocator {
  private:
   FixedPageAllocatorHeader *header_;
-  hipc::Ref<vector<iqueue<MpPage>>> free_lists_;
+  vector<iqueue<MpPage>> *free_lists_;
+  std::atomic<size_t> total_alloc_;
   StackAllocator alloc_;
 
  public:
@@ -57,7 +58,7 @@ class FixedPageAllocator : public Allocator {
   /**
    * Get the ID of this allocator from shared memory
    * */
-  allocator_id_t GetId() override {
+  allocator_id_t &GetId() override {
     return header_->allocator_id_;
   }
 

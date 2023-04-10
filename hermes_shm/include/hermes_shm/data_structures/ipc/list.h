@@ -15,6 +15,7 @@
 #define HERMES_DATA_STRUCTURES_THREAD_UNSAFE_LIST_H_
 
 #include "hermes_shm/data_structures/ipc/internal/shm_internal.h"
+#include "hermes_shm/data_structures/containers/functional.h"
 
 #include <list>
 
@@ -30,16 +31,6 @@ struct list_entry {
  public:
   OffsetPointer next_ptr_, prior_ptr_;
   ShmArchive<T> data_;
-
-  /** Returns the element stored in the list */
-  Ref<T> internal_ref(Allocator *alloc) {
-    return Ref<T>(data_, alloc);
-  }
-
-  /** Returns the element stored in the list */
-  Ref<T> internal_ref(Allocator *alloc) const {
-    return Ref<T>(data_, alloc);
-  }
 };
 
 /**
@@ -49,7 +40,7 @@ template<typename T>
 struct list_iterator_templ {
  public:
   /**< A shm reference to the containing list object. */
-  hipc::Ref<list<T>> list_;
+  list<T> *list_;
   /**< A pointer to the entry in shared memory */
   list_entry<T> *entry_;
   /**< The offset of the entry in the shared-memory allocator */
@@ -58,15 +49,11 @@ struct list_iterator_templ {
   /** Default constructor */
   list_iterator_templ() = default;
 
-  /** End iterator */
-  explicit list_iterator_templ(bool)
-  : entry_(nullptr), entry_ptr_(OffsetPointer::GetNull()) {}
-
   /** Construct an iterator  */
-  explicit list_iterator_templ(ShmDeserialize<list<T>> list,
+  explicit list_iterator_templ(list<T> &list,
                                list_entry<T> *entry,
                                OffsetPointer entry_ptr)
-    : list_(list), entry_(entry), entry_ptr_(entry_ptr) {}
+    : list_(&list), entry_(entry), entry_ptr_(entry_ptr) {}
 
   /** Copy constructor */
   list_iterator_templ(const list_iterator_templ &other) {
@@ -86,20 +73,20 @@ struct list_iterator_templ {
   }
 
   /** Get the object the iterator points to */
-  Ref<T> operator*() {
-    return entry_->internal_ref(list_->GetAllocator());
+  T& operator*() {
+    return entry_->data_.get_ref();
   }
 
   /** Get the object the iterator points to */
-  const Ref<T> operator*() const {
-    return entry_->internal_ref();
+  const T& operator*() const {
+    return entry_->data_.get_ref();
   }
 
   /** Get the next iterator (in place) */
   list_iterator_templ& operator++() {
     if (is_end()) { return *this; }
     entry_ptr_ = entry_->next_ptr_;
-    entry_ = list_->alloc_->template
+    entry_ = list_->GetAllocator()->template
       Convert<list_entry<T>>(entry_->next_ptr_);
     return *this;
   }
@@ -108,7 +95,7 @@ struct list_iterator_templ {
   list_iterator_templ& operator--() {
     if (is_end() || is_begin()) { return *this; }
     entry_ptr_ = entry_->prior_ptr_;
-    entry_ = list_->alloc_->template
+    entry_ = list_->GetAllocator()->template
       Convert<list_entry<T>>(entry_->prior_ptr_);
     return *this;
   }
@@ -171,12 +158,6 @@ struct list_iterator_templ {
     return !(a.is_end() && b.is_end()) && (a.entry_ != b.entry_);
   }
 
-  /** Create the end iterator */
-  static list_iterator_templ const end() {
-    static const list_iterator_templ end_iter(true);
-    return end_iter;
-  }
-
   /** Determine whether this iterator is the end iterator */
   bool is_end() const {
     return entry_ == nullptr;
@@ -192,15 +173,6 @@ struct list_iterator_templ {
   }
 };
 
-/** forward iterator typedef */
-template<typename T>
-using list_iterator = list_iterator_templ<T>;
-
-/** const forward iterator typedef */
-template<typename T>
-using list_citerator = list_iterator_templ<T>;
-
-
 /**
  * MACROS used to simplify the list namespace
  * Used as inputs to the SHM_CONTAINER_TEMPLATE
@@ -210,29 +182,24 @@ using list_citerator = list_iterator_templ<T>;
 #define TYPED_HEADER ShmHeader<list<T>>
 
 /**
- * The list shared-memory header
- * */
-template<typename T>
-struct ShmHeader<list<T>> {
-  SHM_CONTAINER_HEADER_TEMPLATE(ShmHeader)
-  OffsetPointer head_ptr_, tail_ptr_;
-  size_t length_;
-
-  /** Strong copy operation */
-  void strong_copy(const ShmHeader &other) {
-    head_ptr_ = other.head_ptr_;
-    tail_ptr_ = other.tail_ptr_;
-    length_ = other.length_;
-  }
-};
-
-/**
  * Doubly linked list implementation
  * */
 template<typename T>
 class list : public ShmContainer {
  public:
-  SHM_CONTAINER_TEMPLATE((CLASS_NAME), (TYPED_CLASS), (TYPED_HEADER))
+  SHM_CONTAINER_TEMPLATE((CLASS_NAME), (TYPED_CLASS))
+  OffsetPointer head_ptr_, tail_ptr_;
+  size_t length_;
+
+ public:
+  /**====================================
+   * Typedefs
+   * ===================================*/
+
+  /** forward iterator typedef */
+  typedef list_iterator_templ<T> iterator_t;
+  /** const forward iterator typedef */
+  typedef list_iterator_templ<T> citerator_t;
 
  public:
   /**====================================
@@ -240,8 +207,8 @@ class list : public ShmContainer {
    * ===================================*/
 
   /** SHM constructor. Default. */
-  explicit list(TYPED_HEADER *header, Allocator *alloc) {
-    shm_init_header(header, alloc);
+  explicit list(Allocator *alloc) {
+    shm_init_container(alloc);
     SetNull();
   }
 
@@ -250,9 +217,9 @@ class list : public ShmContainer {
    * ===================================*/
 
   /** SHM copy constructor */
-  explicit list(TYPED_HEADER *header, Allocator *alloc,
+  explicit list(Allocator *alloc,
                 const list &other) {
-    shm_init_header(header, alloc);
+    shm_init_container(alloc);
     SetNull();
     shm_strong_copy_construct_and_op<list>(other);
   }
@@ -267,9 +234,9 @@ class list : public ShmContainer {
   }
 
   /** SHM copy constructor. From std::list */
-  explicit list(TYPED_HEADER *header, Allocator *alloc,
+  explicit list(Allocator *alloc,
                 std::list<T> &other) {
-    shm_init_header(header, alloc);
+    shm_init_container(alloc);
     SetNull();
     shm_strong_copy_construct_and_op<std::list<T>>(other);
   }
@@ -287,7 +254,7 @@ class list : public ShmContainer {
   template<typename ListT>
   void shm_strong_copy_construct_and_op(const ListT &other) {
     for (auto iter = other.cbegin(); iter != other.cend(); ++iter) {
-      emplace_back(**iter);
+      emplace_back(*iter);
     }
   }
 
@@ -296,10 +263,10 @@ class list : public ShmContainer {
    * ===================================*/
 
   /** SHM move constructor. */
-  list(TYPED_HEADER *header, Allocator *alloc, list &&other) noexcept {
-    shm_init_header(header, alloc);
-    if (alloc_ == other.alloc_) {
-      memcpy((void*)header_, (void*)other.header_, sizeof(*header_));
+  list(Allocator *alloc, list &&other) noexcept {
+    shm_init_container(alloc);
+    if (GetAllocator() == other.GetAllocator()) {
+      memcpy((void*) this, (void *) &other, sizeof(*this));
       other.SetNull();
     } else {
       shm_strong_copy_construct_and_op<list>(other);
@@ -311,8 +278,8 @@ class list : public ShmContainer {
   list& operator=(list &&other) noexcept {
     if (this != &other) {
       shm_destroy();
-      if (alloc_ == other.alloc_) {
-        memcpy((void *) header_, (void *) other.header_, sizeof(*header_));
+      if (GetAllocator() == other.GetAllocator()) {
+        memcpy((void *) this, (void *) &other, sizeof(*this));
         other.SetNull();
       } else {
         shm_strong_copy_construct_and_op<list>(other);
@@ -333,22 +300,15 @@ class list : public ShmContainer {
 
   /** Check if the list is empty */
   bool IsNull() const {
-    return header_->length_ == 0;
+    return length_ == 0;
   }
 
   /** Sets this list as empty */
   void SetNull() {
-    header_->length_ = 0;
-    header_->head_ptr_.SetNull();
-    header_->tail_ptr_.SetNull();
+    length_ = 0;
+    head_ptr_.SetNull();
+    tail_ptr_.SetNull();
   }
-
-  /**====================================
-   * SHM Deserialization
-   * ===================================*/
-
-  /** Load from shared memory */
-  void shm_deserialize_main() {}
 
   /**====================================
    * list Methods
@@ -368,39 +328,39 @@ class list : public ShmContainer {
 
   /** Construct an element at \a pos position in the list */
   template<typename ...Args>
-  void emplace(list_iterator<T> pos, Args&&... args) {
+  void emplace(iterator_t pos, Args&&... args) {
     OffsetPointer entry_ptr;
     auto entry = _create_entry(entry_ptr, std::forward<Args>(args)...);
     if (size() == 0) {
       entry->prior_ptr_.SetNull();
       entry->next_ptr_.SetNull();
-      header_->head_ptr_ = entry_ptr;
-      header_->tail_ptr_ = entry_ptr;
+      head_ptr_ = entry_ptr;
+      tail_ptr_ = entry_ptr;
     } else if (pos.is_begin()) {
       entry->prior_ptr_.SetNull();
-      entry->next_ptr_ = header_->head_ptr_;
-      auto head = alloc_->template
-        Convert<list_entry<T>>(header_->tail_ptr_);
+      entry->next_ptr_ = head_ptr_;
+      auto head = GetAllocator()->template
+        Convert<list_entry<T>>(tail_ptr_);
       head->prior_ptr_ = entry_ptr;
-      header_->head_ptr_ = entry_ptr;
+      head_ptr_ = entry_ptr;
     } else if (pos.is_end()) {
-      entry->prior_ptr_ = header_->tail_ptr_;
+      entry->prior_ptr_ = tail_ptr_;
       entry->next_ptr_.SetNull();
-      auto tail = alloc_->template
-        Convert<list_entry<T>>(header_->tail_ptr_);
+      auto tail = GetAllocator()->template
+        Convert<list_entry<T>>(tail_ptr_);
       tail->next_ptr_ = entry_ptr;
-      header_->tail_ptr_ = entry_ptr;
+      tail_ptr_ = entry_ptr;
     } else {
-      auto next = alloc_->template
+      auto next = GetAllocator()->template
         Convert<list_entry<T>>(pos.entry_->next_ptr_);
-      auto prior = alloc_->template
+      auto prior = GetAllocator()->template
         Convert<list_entry<T>>(pos.entry_->prior_ptr_);
       entry->next_ptr_ = pos.entry_->next_ptr_;
       entry->prior_ptr_ = pos.entry_->prior_ptr_;
       next->prior_ptr_ = entry_ptr;
       prior->next_ptr_ = entry_ptr;
     }
-    ++header_->length_;
+    ++length_;
   }
 
   /** Erase element with ID */
@@ -410,34 +370,34 @@ class list : public ShmContainer {
   }
 
   /** Erase the element at pos */
-  void erase(list_iterator<T> pos) {
+  void erase(iterator_t pos) {
     erase(pos, pos+1);
   }
 
   /** Erase all elements between first and last */
-  void erase(list_iterator<T> first,
-             list_iterator<T> last) {
+  void erase(iterator_t first,
+             iterator_t last) {
     if (first.is_end()) { return; }
     auto first_prior_ptr = first.entry_->prior_ptr_;
     auto pos = first;
     while (pos != last) {
       auto next = pos + 1;
-      pos.entry_->internal_ref(alloc_).shm_destroy();
-      alloc_->Free(pos.entry_ptr_);
-      --header_->length_;
+      HSHM_DESTROY_AR(pos.entry_->data_)
+      GetAllocator()->Free(pos.entry_ptr_);
+      --length_;
       pos = next;
     }
 
     if (first_prior_ptr.IsNull()) {
-      header_->head_ptr_ = last.entry_ptr_;
+      head_ptr_ = last.entry_ptr_;
     } else {
-      auto first_prior = alloc_->template
+      auto first_prior = GetAllocator()->template
         Convert<list_entry<T>>(first_prior_ptr);
       first_prior->next_ptr_ = last.entry_ptr_;
     }
 
     if (last.entry_ptr_.IsNull()) {
-      header_->tail_ptr_ = first_prior_ptr;
+      tail_ptr_ = first_prior_ptr;
     } else {
       last.entry_->prior_ptr_ = first_prior_ptr;
     }
@@ -449,29 +409,23 @@ class list : public ShmContainer {
   }
 
   /** Get the object at the front of the list */
-  Ref<T> front() {
+  T& front() {
     return *begin();
   }
 
   /** Get the object at the back of the list */
-  Ref<T> back() {
+  T& back() {
     return *last();
   }
 
   /** Get the number of elements in the list */
   size_t size() const {
-    return header_->length_;
+    return length_;
   }
 
   /** Find an element in this list */
-  list_iterator<T> find(const T &entry) {
-    for (auto iter = begin(); iter != end(); ++iter) {
-      hipc::Ref<T> ref = *iter;
-      if (*ref == entry) {
-        return iter;
-      }
-    }
-    return end();
+  iterator_t find(const T &entry) {
+    return hshm::find(begin(), end(), entry);
   }
 
   /**====================================
@@ -479,48 +433,49 @@ class list : public ShmContainer {
    * ===================================*/
 
   /** Forward iterator begin */
-  list_iterator<T> begin() {
+  iterator_t begin() {
     if (size() == 0) { return end(); }
-    auto head = alloc_->template
-      Convert<list_entry<T>>(header_->head_ptr_);
-    return list_iterator<T>(GetShmDeserialize(),
-      head, header_->head_ptr_);
+    auto head = GetAllocator()->template
+      Convert<list_entry<T>>(head_ptr_);
+    return iterator_t(*this,
+      head, head_ptr_);
   }
 
   /** Last iterator begin */
-  list_iterator<T> last() {
+  iterator_t last() {
     if (size() == 0) { return end(); }
-    auto head = alloc_->template
-      Convert<list_entry<T>>(header_->tail_ptr_);
-    return list_iterator<T>(GetShmDeserialize(),
-                            head, header_->tail_ptr_);
+    auto tail = GetAllocator()->template
+      Convert<list_entry<T>>(tail_ptr_);
+    return iterator_t(*this, tail, tail_ptr_);
   }
 
   /** Forward iterator end */
-  static list_iterator<T> const end() {
-    return list_iterator<T>::end();
+  iterator_t end() {
+    return iterator_t(*this, nullptr, OffsetPointer::GetNull());
   }
 
   /** Constant forward iterator begin */
-  list_citerator<T> cbegin() const {
+  citerator_t cbegin() const {
     if (size() == 0) { return cend(); }
-    auto head = alloc_->template
-      Convert<list_entry<T>>(header_->head_ptr_);
-    return list_citerator<T>(GetShmDeserialize(),
-      head, header_->head_ptr_);
+    auto head = GetAllocator()->template
+      Convert<list_entry<T>>(head_ptr_);
+    return citerator_t(const_cast<list&>(*this),
+                       head, head_ptr_);
   }
 
   /** Constant forward iterator end */
-  static list_citerator<T> const cend() {
-    return list_citerator<T>::end();
+  citerator_t cend() const {
+    return iterator_t(const_cast<list&>(*this),
+                      nullptr, OffsetPointer::GetNull());
   }
 
  private:
   template<typename ...Args>
-  list_entry<T>* _create_entry(OffsetPointer &p, Args&& ...args) {
-    auto entry = alloc_->template
+  HSHM_ALWAYS_INLINE list_entry<T>* _create_entry(
+    OffsetPointer &p, Args&& ...args) {
+    auto entry = GetAllocator()->template
       AllocateObjs<list_entry<T>>(1, p);
-    make_ref<T>(entry->data_, alloc_, std::forward<Args>(args)...);
+    HSHM_MAKE_AR(entry->data_, GetAllocator(), std::forward<Args>(args)...)
     return entry;
   }
 };

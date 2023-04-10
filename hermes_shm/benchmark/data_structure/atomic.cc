@@ -49,6 +49,7 @@ class AtomicInstructionTestSuite {
  public:
   std::string memory_order_;
   std::string atomic_type_;
+  void *ptr_;
 
  public:
   /////////////////
@@ -137,6 +138,7 @@ class AtomicInstructionTestSuite {
     t.Resume();
     for (size_t i = 0; i < count; ++i) {
       size_t x = GlobalAtomicCounter<AtomicT>::count_.load(MemoryOrder);
+      USE(x);
     }
 #pragma omp barrier
     t.Pause();

@@ -14,6 +14,7 @@ include_directories(${HERMES_SHM_ROOT}/include)
 #------------------------------------------------------------------------------
 option(BUILD_SHARED_LIBS "Build shared libraries (.dll/.so) instead of static ones (.lib/.a)" ON)
 option(BUILD_HSHM_TESTS "Build tests" ON)
+option(BUILD_HSHM_BENCHMARKS "Build benchmarks" ON)
 option(BUILD_MPI_TESTS "Build tests which depend on MPI" ON)
 option(BUILD_OpenMP_TESTS "Build tests which depend on OpenMP" ON)
 option(BUILD_Boost_TESTS "Build tests which depend on libboost" ON)
@@ -23,6 +24,7 @@ option(HERMES_ENABLE_DOXYGEN "Check how well the code is documented" ON)
 option(HERMES_CXX_PROFILE "Generate profiling data from benchmarks" OFF)
 option(HERMES_PTHREADS_ENABLED "Support spawning pthreads" ON)
 option(HERMES_DEBUG_LOCK "Used for debugging locks" OFF)
+option(HERMES_ENABLE_PROFILING "View profiling logs" OFF)
 
 if (HERMES_PTHREADS_ENABLED)
     add_compile_definitions(HERMES_PTHREADS_ENABLED)
@@ -31,10 +33,20 @@ if (HERMES_RPC_THALLIUM)
     add_compile_definitions(HERMES_RPC_THALLIUM)
 endif()
 if (HERMES_DEBUG_LOCK)
-    message("Lock debugging enabled")
     add_compile_definitions(HERMES_DEBUG_LOCK)
-else()
-    message("Lock debugging disabled")
+endif()
+
+#------------------------------------------------------------------------------
+# Setup CMake Environment
+#------------------------------------------------------------------------------
+if(NOT HERMES_EXTERNALLY_CONFIGURED)
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY
+            ${PROJECT_BINARY_DIR}/bin CACHE PATH "Single Directory for all Executables.")
+    set(EXECUTABLE_OUTPUT_PATH ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY
+            ${PROJECT_BINARY_DIR}/bin CACHE PATH "Single Directory for all Libraries")
+    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY
+            ${PROJECT_BINARY_DIR}/bin CACHE PATH "Single Directory for all static libraries.")
 endif()
 
 #------------------------------------------------------------------------------
@@ -147,7 +159,7 @@ if (NOT IS_HERMES_MAIN)
         include(UseDoxygenDoc)
         add_doxygen_doc(
                 BUILD_DIR
-                ${CMAKE_CURRENT_BINARY_DIR}/_build
+                ${CMAKE_BINARY_DIR}/bin/_build
                 DOXY_FILE
                 ${CMAKE_CURRENT_SOURCE_DIR}/doc/Doxyfile.in
                 TARGET_NAME
@@ -177,7 +189,10 @@ if (BUILD_HSHM_TESTS)
   message("Building HSHM unit tests")
   add_subdirectory(test)
 endif()
-#add_subdirectory(benchmark)
+if (BUILD_HSHM_BENCHMARKS)
+  message("Building HSHM benchmarks")
+  add_subdirectory(benchmark)
+endif()
 #add_subdirectory(example)
 
 #------------------------------------------------------------------------------

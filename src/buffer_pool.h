@@ -97,22 +97,11 @@ typedef hipc::vector<BpFreeListPair> BpTargetAllocs;
 /**
  * The shared-memory representation of the BufferPool
  * */
-template<>
-struct ShmHeader<BufferPool> {
-  SHM_CONTAINER_HEADER_TEMPLATE(ShmHeader)
+struct BufferPoolShm {
   hipc::ShmArchive<BpTargetAllocs> free_lists_;
   u16 ntargets_;
   size_t concurrency_;
   size_t nslabs_;
-
-  /**
-   * Copy one header into another
-   * */
-  void strong_copy(const ShmHeader &other) {
-    ntargets_ = other.ntargets_;
-    concurrency_ = other.concurrency_;
-    nslabs_ = other.nslabs_;
-  }
 
   /**
    * Get the free list of the target
@@ -136,47 +125,47 @@ struct ShmHeader<BufferPool> {
 /**
  * Responsible for managing the buffering space of all node-local targets.
  * */
-class BufferPool : public hipc::ShmContainer {
- public:
-  SHM_CONTAINER_TEMPLATE((BufferPool), (BufferPool), (ShmHeader<BufferPool>))
-
+class BufferPool {
  private:
   MetadataManager *mdm_;
   BufferOrganizer *borg_;
   RPC_TYPE *rpc_;
+  BufferPoolShm *header_;
   /** Per-target allocator */
-  hipc::Ref<BpTargetAllocs> target_allocs_;
+  BpTargetAllocs *target_allocs_;
 
  public:
   /**====================================
    * Default Constructor
    * ===================================*/
 
+  /** Default constructor */
+  BufferPool() = default;
+
+  /**====================================
+   * SHM Init
+   * ===================================*/
+
   /**
    * Initialize the BPM and its shared memory.
    * REQUIRES mdm to be initialized already.
    * */
-  explicit BufferPool(ShmHeader<BufferPool> *header, hipc::Allocator *alloc);
-
-  /**====================================
-   * Destructor
-   * ===================================*/
-
-  /** Whether the BufferPool is NULL */
-  bool IsNull() { return false; }
-
-  /** Set to NULL */
-  void SetNull() {}
-
-  /** Destroy the BPM shared memory. */
-  void shm_destroy_main();
+  void shm_init(hipc::ShmArchive<BufferPoolShm> &header,
+                hipc::Allocator *alloc);
 
   /**====================================
    * SHM Deserialize
    * ===================================*/
 
   /** Deserialize the BPM from shared memory */
-  void shm_deserialize_main();
+  void shm_deserialize(hipc::ShmArchive<BufferPoolShm> &header);
+
+  /**====================================
+   * Destructor
+   * ===================================*/
+
+  /** Destroy the BPM shared memory. */
+  void shm_destroy_main();
 
   /**====================================
    * Allocate Buffers
@@ -196,7 +185,7 @@ class BufferPool : public hipc::ShmContainer {
    * Determines a reasonable allocation of buffers based on the size of I/O.
    * Returns the number of each slab size to allocate
    * */
-  std::vector<BpCoin> CoinSelect(hipc::Ref<DeviceInfo> &dev_info,
+  std::vector<BpCoin> CoinSelect(DeviceInfo &dev_info,
                                  size_t total_size,
                                  size_t &buffer_count);
 
@@ -252,9 +241,9 @@ class BufferPool : public hipc::ShmContainer {
    * */
   BpSlot AllocateSlabSize(int cpu,
                           size_t slab_size,
-                          hipc::Ref<BpFreeList> &free_list,
-                          hipc::Ref<BpFreeListStat> &stat,
-                          hipc::Ref<BpFreeListStat> &target_stat);
+                          BpFreeList *free_list,
+                          BpFreeListStat *stat,
+                          BpFreeListStat *target_stat);
 
 
   /**====================================
@@ -273,12 +262,12 @@ class BufferPool : public hipc::ShmContainer {
 
   /** Get a free list reference */
   void GetFreeListForCpu(u16 target_id, int cpu, int slab_id,
-                         hipc::Ref<BpFreeList> &free_list,
-                         hipc::Ref<BpFreeListStat> &free_list_stat);
+                         BpFreeList* &free_list,
+                         BpFreeListStat* &free_list_stat);
 
   /** Get the stack allocator from the cpu */
   void GetTargetStatForCpu(u16 target_id, int cpu,
-                           hipc::Ref<BpFreeListStat> &target_stat);
+                           BpFreeListStat* &target_stat);
 
   /** Find instance of unique target if it exists */
   static std::vector<std::pair<i32, size_t>>::iterator

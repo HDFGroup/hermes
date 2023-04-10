@@ -26,7 +26,7 @@
 namespace hermes {
 
 /** Constructor. */
-DPE::DPE() : mdm_(HERMES->mdm_.get()) {}
+DPE::DPE() : mdm_(&HERMES->mdm_) {}
 
 /** calculate data placement */
 Status DPE::CalculatePlacement(const std::vector<size_t> &blob_sizes,

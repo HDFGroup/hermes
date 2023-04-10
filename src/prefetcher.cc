@@ -17,9 +17,9 @@ namespace hermes {
 
 /** Initialize each candidate prefetcher, including trace info */
 void Prefetcher::Init() {
-  mdm_ = HERMES->mdm_.get();
+  mdm_ = &HERMES->mdm_;
   rpc_ = &HERMES->rpc_;
-  borg_ = HERMES->borg_.get();
+  borg_ = &HERMES->borg_;
   auto conf = HERMES->server_config_;
 
   // Make sure that prefetcher is enabled
@@ -108,9 +108,9 @@ void Prefetcher::Run() {
   std::vector<std::list<IoStat>> patterns;
   patterns.resize(nprocs);
   for (size_t i = 0; i < log_size; ++i) {
-    hipc::Ref<IoStat> stat = (*client_iter);
-    int rank = stat->rank_;
-    patterns[rank].emplace_back(*stat);
+    IoStat &stat = (*client_iter);
+    int rank = stat.rank_;
+    patterns[rank].emplace_back(stat);
     ++client_iter;
   }
 

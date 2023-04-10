@@ -40,19 +40,4 @@ using hshm::ScopedRwWriteLock;
 #include <list>
 #include <queue>
 
-namespace hermes {
-template<typename T>
-struct ShmHeader;
-}  // namespace hermes
-
-namespace hermes::api {
-template<typename T>
-struct ShmHeader;
-}  // namespace hermes::api
-
-namespace hermes::config {
-template<typename T>
-struct ShmHeader;
-}  // namespace hermes::config
-
 #endif  // HERMES_SRC_DATA_STRUCTURES_H_

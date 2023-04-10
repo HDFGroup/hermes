@@ -40,14 +40,16 @@ TEST_CASE("MemoryManager") {
   if (rank == 0) {
     std::cout << "Creating SHMEM (rank 0): " << shm_url << std::endl;
     mem_mngr->CreateBackend<hipc::PosixShmMmap>(
-      MemoryManager::kDefaultBackendSize, shm_url);
+      MemoryManager::GetDefaultBackendSize(), shm_url);
     mem_mngr->CreateAllocator<hipc::StackAllocator>(
       shm_url, alloc_id, 0);
+    mem_mngr->ScanBackends();
   }
   MPI_Barrier(MPI_COMM_WORLD);
   if (rank != 0) {
     std::cout << "Attaching SHMEM (rank 1): " << shm_url << std::endl;
     mem_mngr->AttachBackend(MemoryBackendType::kPosixShmMmap, shm_url);
+    mem_mngr->ScanBackends();
   }
   MPI_Barrier(MPI_COMM_WORLD);
   if (rank == 0) {

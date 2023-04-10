@@ -44,7 +44,6 @@ void TestString() {
     auto text2 = hipc::make_uptr<hipc::string>(alloc);
     (*text2) = (*text1);
     REQUIRE(*text1 == "hello");
-    REQUIRE(text1->header_ != text2->header_);
   }
 
   PAGE_DIVIDE("Test copy assign from std::string") {
@@ -58,7 +57,6 @@ void TestString() {
     auto text2 = hipc::make_uptr<hipc::string>(alloc);
     (*text2) = std::move(*text1);
     REQUIRE(*text2 == "hello");
-    REQUIRE(text1->header_ != text2->header_);
   }
 
   PAGE_DIVIDE("Move from a string. Re-assign moved string.") {
@@ -68,7 +66,6 @@ void TestString() {
     (*text1) = "hello2";
     REQUIRE(*text2 == "hello");
     REQUIRE(*text1 == "hello2");
-    REQUIRE(text1->header_ != text2->header_);
   }
 }
 

@@ -22,13 +22,16 @@ namespace hipc = hshm::ipc;
 
 namespace hshm::ipc {
 
+#define MAX_ALLOCATORS 64
+
 class MemoryRegistry {
  public:
   allocator_id_t root_allocator_id_;
   PosixMmap root_backend_;
   StackAllocator root_allocator_;
   std::unordered_map<std::string, std::unique_ptr<MemoryBackend>> backends_;
-  std::unordered_map<allocator_id_t, std::unique_ptr<Allocator>> allocators_;
+  std::unique_ptr<Allocator> allocators_made_[MAX_ALLOCATORS];
+  Allocator *allocators_[MAX_ALLOCATORS];
   Allocator *default_allocator_;
 
  public:
@@ -68,17 +71,21 @@ class MemoryRegistry {
 
   /** Registers an allocator. */
   Allocator* RegisterAllocator(std::unique_ptr<Allocator> &alloc) {
-    auto ptr = alloc.get();
     if (default_allocator_ == nullptr ||
         default_allocator_ == &root_allocator_ ||
         default_allocator_->GetId() == alloc->GetId()) {
       default_allocator_ = alloc.get();
     }
-    if (allocators_.find(alloc->GetId()) != allocators_.end()) {
-      allocators_.erase(alloc->GetId());
-    }
-    allocators_.emplace(alloc->GetId(), std::move(alloc));
-    return ptr;
+    auto idx = alloc->GetId().ToIndex();
+    allocators_made_[idx] = std::move(alloc);
+    allocators_[idx] = allocators_made_[idx].get();
+    return allocators_[idx];
+  }
+
+  /** Registers an allocator. */
+  void RegisterAllocator(Allocator *alloc) {
+    auto idx = alloc->GetId().ToIndex();
+    allocators_[idx] = alloc;
   }
 
   /** Unregisters an allocator */
@@ -86,28 +93,21 @@ class MemoryRegistry {
     if (alloc_id == default_allocator_->GetId()) {
       default_allocator_ = &root_allocator_;
     }
-    allocators_.erase(alloc_id);
+    allocators_made_[alloc_id.ToIndex()] = nullptr;
+    allocators_[alloc_id.ToIndex()] = nullptr;
   }
 
   /**
    * Locates an allocator of a particular id
    * */
-  Allocator* GetAllocator(allocator_id_t alloc_id) {
-    if (alloc_id.IsNull()) { return nullptr; }
-    if (alloc_id == root_allocator_.GetId()) {
-      return &root_allocator_;
-    }
-    auto iter = allocators_.find(alloc_id);
-    if (iter == allocators_.end()) {
-      return nullptr;
-    }
-    return reinterpret_cast<Allocator*>(allocators_[alloc_id].get());
+  HSHM_ALWAYS_INLINE Allocator* GetAllocator(allocator_id_t alloc_id) {
+    return allocators_[alloc_id.ToIndex()];
   }
 
   /**
    * Gets the allocator used for initializing other allocators.
    * */
-  Allocator* GetRootAllocator() {
+  HSHM_ALWAYS_INLINE Allocator* GetRootAllocator() {
     return &root_allocator_;
   }
 
@@ -115,15 +115,15 @@ class MemoryRegistry {
    * Gets the allocator used by default when no allocator is
    * used to construct an object.
    * */
-  Allocator* GetDefaultAllocator() {
-    return default_allocator_;
+  HSHM_ALWAYS_INLINE Allocator* GetDefaultAllocator() {
+    return reinterpret_cast<Allocator*>(default_allocator_);
   }
 
   /**
    * Sets the allocator used by default when no allocator is
    * used to construct an object.
    * */
-  void SetDefaultAllocator(Allocator *alloc) {
+  HSHM_ALWAYS_INLINE void SetDefaultAllocator(Allocator *alloc) {
     default_allocator_ = alloc;
   }
 };

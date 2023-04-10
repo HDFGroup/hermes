@@ -14,32 +14,27 @@
 #include "hermes_shm/data_structures/ipc/vector.h"
 #include "hermes_shm/memory/allocator/stack_allocator.h"
 
-std::unique_ptr<void_allocator> alloc_inst_g;
-std::unique_ptr<bipc::managed_shared_memory> segment_g;
-
 void MainPretest() {
-  // Boost shared memory
-  bipc::shared_memory_object::remove("LabStorBoostBench");
-  segment_g = std::make_unique<bipc::managed_shared_memory>(
-    bipc::create_only, "LabStorBoostBench", GIGABYTES(4));
-  alloc_inst_g = std::make_unique<void_allocator>(
-    segment_g->get_segment_manager());
-
   // hermes shared memory
-  std::string shm_url = "LabStorSelfBench";
+  std::string shm_url = "HermesBench";
   allocator_id_t alloc_id(0, 1);
   auto mem_mngr = HERMES_MEMORY_MANAGER;
-  mem_mngr->CreateBackend<hipc::PosixShmMmap>(
-    MemoryManager::kDefaultBackendSize, shm_url);
-  auto alloc = mem_mngr->CreateAllocator<hipc::StackAllocator>(
+  auto backend = mem_mngr->CreateBackend<hipc::PosixShmMmap>(
+    MemoryManager::GetDefaultBackendSize(), shm_url);
+  // TODO(llogan): back to good allocator
+  mem_mngr->CreateAllocator<hipc::ScalablePageAllocator>(
     shm_url, alloc_id, 0);
 
-  for (int i = 0; i < 1000000; ++i) {
-    Pointer p;
-    void *ptr = alloc->AllocatePtr<void>(KILOBYTES(4), p);
-    memset(ptr, 0, KILOBYTES(4));
-    alloc->Free(p);
-  }
+  // Boost shared memory
+  BOOST_SEGMENT;
+  BOOST_ALLOCATOR(char);
+  BOOST_ALLOCATOR(size_t);
+  BOOST_ALLOCATOR(std::string);
+  BOOST_ALLOCATOR(bipc_string);
+  BOOST_ALLOCATOR((std::pair<size_t, char>));
+  BOOST_ALLOCATOR((std::pair<size_t, size_t>));
+  BOOST_ALLOCATOR((std::pair<size_t, std::string>));
+  BOOST_ALLOCATOR((std::pair<size_t, bipc_string>));
 }
 
 void MainPosttest() {

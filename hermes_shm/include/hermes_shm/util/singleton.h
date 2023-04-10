@@ -15,6 +15,7 @@
 
 #include <memory>
 #include "hermes_shm/thread/lock/mutex.h"
+#include "hermes_shm/constants/macros.h"
 
 namespace hshm {
 
@@ -68,25 +69,31 @@ hshm::Mutex* Singleton<T>::lock_ = Singleton<T>::_GetLock();
  * */
 template<typename T>
 class GlobalSingleton {
- private:
+ public:
   static T *obj_;
+
  public:
   GlobalSingleton() = default;
 
   /** Get instance of type T */
-  static T* GetInstance() {
+  HSHM_ALWAYS_INLINE static T* GetInstance() {
     return obj_;
   }
 
+  /** Get ref of type T */
+  HSHM_ALWAYS_INLINE static T& GetRef() {
+    return *obj_;
+  }
+
   /** Static initialization method for obj */
-  static T *_GetObj();
+  static T& _GetObj();
 };
 template<typename T>
-T* GlobalSingleton<T>::obj_ = GlobalSingleton<T>::_GetObj();
+T* GlobalSingleton<T>::obj_ = &GlobalSingleton<T>::_GetObj();
 #define DEFINE_GLOBAL_SINGLETON_CC(T)\
-  template<> T* hshm::GlobalSingleton<T>::_GetObj() {\
-    static T obj;\
-    return &obj;\
+  template<> T& hshm::GlobalSingleton<T>::_GetObj() {\
+    static T obj; \
+    return obj;\
   }
 
 /**

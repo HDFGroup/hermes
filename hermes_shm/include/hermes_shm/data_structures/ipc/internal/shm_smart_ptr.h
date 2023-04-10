@@ -45,10 +45,6 @@ class ShmSmartPointer {};
   void operator<<(\
     const hipc::TypedAtomicPointer<TYPE_UNWRAP(TYPED_CLASS)> &ar) {\
     shm_deserialize(ar);\
-  }\
-  void operator<<(\
-    const hipc::ShmDeserialize<TYPE_UNWRAP(TYPED_CLASS)> &ar) {\
-    shm_deserialize(ar);\
   }
 
 /**

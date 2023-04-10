@@ -30,26 +30,18 @@ class pair;
 #define TYPED_CLASS pair<FirstT, SecondT>
 #define TYPED_HEADER ShmHeader<TYPED_CLASS>
 
-/** pair shared-memory header */
-template<typename FirstT, typename SecondT>
-struct ShmHeader<TYPED_CLASS> {
-  SHM_CONTAINER_HEADER_TEMPLATE(ShmHeader)
-  ShmArchive<FirstT> first_;
-  ShmArchive<SecondT> second_;
-  void strong_copy() {}
-};
-
 /**
 * A pair of two objects.
 * */
 template<typename FirstT, typename SecondT>
 class pair : public ShmContainer {
  public:
-  SHM_CONTAINER_TEMPLATE((CLASS_NAME), (TYPED_CLASS), (TYPED_HEADER))
-
- public:
-  hipc::Ref<FirstT> first_;
-  hipc::Ref<SecondT> second_;
+  /**====================================
+   * Variables
+   * ===================================*/
+  SHM_CONTAINER_TEMPLATE((CLASS_NAME), (TYPED_CLASS))
+  ShmArchive<FirstT> first_;
+  ShmArchive<SecondT> second_;
 
  public:
   /**====================================
@@ -57,10 +49,10 @@ class pair : public ShmContainer {
    * ===================================*/
 
   /** SHM constructor. Default. */
-  explicit pair(TYPED_HEADER *header, Allocator *alloc) {
-    shm_init_header(header, alloc);
-    first_ = make_ref<FirstT>(header_->first_, alloc_);
-    second_ = make_ref<SecondT>(header_->second_, alloc_);
+  explicit pair(Allocator *alloc) {
+    shm_init_container(alloc);
+    HSHM_MAKE_AR0(first_, GetAllocator())
+    HSHM_MAKE_AR0(second_, GetAllocator())
   }
 
   /**====================================
@@ -68,36 +60,34 @@ class pair : public ShmContainer {
    * ===================================*/
 
   /** SHM constructor. Move parameters. */
-  explicit pair(TYPED_HEADER *header, Allocator *alloc,
+  explicit pair(Allocator *alloc,
                 FirstT &&first, SecondT &&second) {
-    shm_init_header(header, alloc);
-    first_ = make_ref<FirstT>(header_->first_,
-                              alloc_, std::forward<FirstT>(first));
-    second_ = make_ref<SecondT>(header_->second_,
-                                alloc_, std::forward<SecondT>(second));
+    shm_init_container(alloc);
+    HSHM_MAKE_AR(first_, GetAllocator(),
+                 std::forward<FirstT>(first))
+    HSHM_MAKE_AR(second_, GetAllocator(),
+                 std::forward<SecondT>(second))
   }
 
   /** SHM constructor. Copy parameters. */
-  explicit pair(TYPED_HEADER *header, Allocator *alloc,
+  explicit pair(Allocator *alloc,
                 const FirstT &first, const SecondT &second) {
-    shm_init_header(header, alloc);
-    first_ = make_ref<FirstT>(header_->first_, alloc_, first);
-    second_ = make_ref<SecondT>(header_->second_, alloc_, second);
+    shm_init_container(alloc);
+    HSHM_MAKE_AR(first_, GetAllocator(), first)
+    HSHM_MAKE_AR(second_, GetAllocator(), second)
   }
 
   /** SHM constructor. Piecewise emplace. */
   template<typename FirstArgPackT, typename SecondArgPackT>
-  explicit pair(TYPED_HEADER *header, Allocator *alloc,
+  explicit pair(Allocator *alloc,
                 PiecewiseConstruct &&hint,
                 FirstArgPackT &&first,
                 SecondArgPackT &&second) {
-    shm_init_header(header, alloc);
-    first_ = make_ref_piecewise<FirstT>(
-      make_argpack(header_->first_, alloc_),
-      std::forward<FirstArgPackT>(first));
-    second_ = make_ref_piecewise<SecondT>(
-      make_argpack(header_->second_, alloc_),
-      std::forward<SecondArgPackT>(second));
+    shm_init_container(alloc);
+    HSHM_MAKE_AR_PW(first_, GetAllocator(),
+                    std::forward<FirstArgPackT>(first))
+    HSHM_MAKE_AR_PW(second_, GetAllocator(),
+                    std::forward<SecondArgPackT>(second))
   }
 
   /**====================================
@@ -105,17 +95,15 @@ class pair : public ShmContainer {
    * ===================================*/
 
   /** SHM copy constructor. From pair. */
-  explicit pair(TYPED_HEADER *header, Allocator *alloc, const pair &other) {
-    shm_init_header(header, alloc);
+  explicit pair(Allocator *alloc, const pair &other) {
+    shm_init_container(alloc);
     shm_strong_copy_construct(other);
   }
 
   /** SHM copy constructor main */
   void shm_strong_copy_construct(const pair &other) {
-    first_ = hipc::make_ref<FirstT>(header_->first_, alloc_,
-                                    *other.first_);
-    second_ = hipc::make_ref<SecondT>(header_->second_, alloc_,
-                                      *other.second_);
+    HSHM_MAKE_AR(first_, GetAllocator(), *other.first_)
+    HSHM_MAKE_AR(second_, GetAllocator(), *other.second_)
   }
 
   /** SHM copy assignment operator. From pair. */
@@ -129,8 +117,8 @@ class pair : public ShmContainer {
 
   /** SHM copy assignment operator main */
   void shm_strong_copy_assign_op(const pair &other) {
-    (*first_) = (*other.first_);
-    (*second_) = (*other.second_);
+    (first_.get_ref()) = (*other.first_);
+    (second_.get_ref()) = (*other.second_);
   }
 
   /**====================================
@@ -138,13 +126,13 @@ class pair : public ShmContainer {
    * ===================================*/
 
   /** SHM move constructor. From pair. */
-  explicit pair(TYPED_HEADER *header, Allocator *alloc, pair &&other) {
-    shm_init_header(header, alloc);
-    if (alloc_ == other.alloc_) {
-      first_ = hipc::make_ref<FirstT>(header_->first_, alloc_,
-                                      std::forward<FirstT>(*other.first_));
-      second_ = hipc::make_ref<SecondT>(header_->second_, alloc_,
-                                        std::forward<SecondT>(*other.second_));
+  explicit pair(Allocator *alloc, pair &&other) {
+    shm_init_container(alloc);
+    if (GetAllocator() == other.GetAllocator()) {
+      HSHM_MAKE_AR(first_, GetAllocator(),
+                   std::forward<FirstT>(*other.first_))
+      HSHM_MAKE_AR(second_, GetAllocator(),
+                   std::forward<SecondT>(*other.second_))
     } else {
       shm_strong_copy_construct(other);
       other.shm_destroy();
@@ -155,7 +143,7 @@ class pair : public ShmContainer {
   pair& operator=(pair &&other) noexcept {
     if (this != &other) {
       shm_destroy();
-      if (alloc_ == other.alloc_) {
+      if (GetAllocator() == other.GetAllocator()) {
         (*first_) = std::move(*other.first_);
         (*second_) = std::move(*other.second_);
         other.SetNull();
@@ -172,27 +160,17 @@ class pair : public ShmContainer {
    * ===================================*/
 
   /** Check if the pair is empty */
-  bool IsNull() const {
+  HSHM_ALWAYS_INLINE bool IsNull() const {
     return false;
   }
 
   /** Sets this pair as empty */
-  void SetNull() {}
+  HSHM_ALWAYS_INLINE void SetNull() {}
 
   /** Destroy the shared-memory data */
-  void shm_destroy_main() {
-    first_.shm_destroy();
-    second_.shm_destroy();
-  }
-
-  /**====================================
-   * SHM Deserialization
-   * ===================================*/
-
-  /** Load from shared memory */
-  void shm_deserialize_main() {
-    first_ = hipc::Ref<FirstT>(header_->first_, alloc_);
-    second_ = hipc::Ref<SecondT>(header_->second_, alloc_);
+  HSHM_ALWAYS_INLINE void shm_destroy_main() {
+    HSHM_DESTROY_AR(first_)
+    HSHM_DESTROY_AR(second_)
   }
 
   /**====================================
@@ -200,28 +178,28 @@ class pair : public ShmContainer {
    * ===================================*/
 
   /** Get the first object */
-  FirstT& GetFirst() { return *first_; }
+  HSHM_ALWAYS_INLINE FirstT& GetFirst() { return first_.get_ref(); }
 
   /** Get the first object (const) */
-  FirstT& GetFirst() const { return *first_; }
+  HSHM_ALWAYS_INLINE FirstT& GetFirst() const { return first_.get_ref(); }
 
   /** Get the second object */
-  SecondT& GetSecond() { return *second_; }
+  HSHM_ALWAYS_INLINE SecondT& GetSecond() { return second_.get_ref(); }
 
   /** Get the second object (const) */
-  SecondT& GetSecond() const { return *second_; }
+  HSHM_ALWAYS_INLINE SecondT& GetSecond() const { return second_.get_ref(); }
 
   /** Get the first object (treated as key) */
-  FirstT& GetKey() { return *first_; }
+  HSHM_ALWAYS_INLINE FirstT& GetKey() { return first_.get_ref(); }
 
   /** Get the first object (treated as key) (const) */
-  FirstT& GetKey() const { return *first_; }
+  HSHM_ALWAYS_INLINE FirstT& GetKey() const { return first_.get_ref(); }
 
   /** Get the second object (treated as value) */
-  SecondT& GetVal() { return *second_; }
+  HSHM_ALWAYS_INLINE SecondT& GetVal() { return second_.get_ref(); }
 
   /** Get the second object (treated as value) (const) */
-  SecondT& GetVal() const { return *second_; }
+  HSHM_ALWAYS_INLINE SecondT& GetVal() const { return second_.get_ref(); }
 };
 
 #undef CLASS_NAME

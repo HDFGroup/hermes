@@ -56,6 +56,12 @@ namespace hshm {
 #define kWarning 2   /**< Something might be wrong */
 
 /**
+ * Hermes Print. Like printf, except types are inferred
+ * */
+#define HIPRINT(...) \
+  HERMES_LOG->Print(__VA_ARGS__);
+
+/**
  * Hermes Info (HI) Log
  * LOG_LEVEL indicates the priority of the log.
  * LOG_LEVEL 0 is considered required
@@ -103,6 +109,14 @@ class Logger {
     if (verbosity_ < 0) {
       verbosity_ = 0;
     }
+  }
+
+  template<typename ...Args>
+  void Print(const char *fmt,
+             Args&& ...args) {
+    std::string msg =
+      hshm::Formatter::format(fmt, std::forward<Args>(args)...);
+    std::cout << msg;
   }
 
   template<typename ...Args>

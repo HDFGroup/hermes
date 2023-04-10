@@ -20,14 +20,18 @@
 
 namespace hshm {
 
+#ifdef HERMES_ENABLE_PROFILING
 #define AUTO_TRACE(LOG_LEVEL) \
   hshm::AutoTrace<LOG_LEVEL> hshm_tracer_(__func__);
-
 #define TIMER_START(NAME) \
   hshm_tracer_.StartTimer(NAME);
-
 #define TIMER_END()  \
   hshm_tracer_.EndTimer();
+#else
+#define AUTO_TRACE(LOG_LEVEL)
+#define TIMER_START(NAME)
+#define TIMER_END()
+#endif
 
 /** Trace function execution times */
 template<int LOG_LEVEL>

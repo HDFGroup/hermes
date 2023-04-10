@@ -28,31 +28,31 @@ void ServerConfig::ParseDeviceInfo(YAML::Node yaml_conf) {
   devices_ = hipc::make_uptr<hipc::vector<DeviceInfo>>();
   for (auto device : yaml_conf) {
     devices_->emplace_back();
-    hipc::Ref<DeviceInfo> dev = devices_->back();
+    DeviceInfo &dev = devices_->back();
     auto dev_info = device.second;
-    (*dev->dev_name_) = device.first.as<std::string>();
-    (*dev->mount_dir_) = hshm::ConfigParse::ExpandPath(
+    (*dev.dev_name_) = device.first.as<std::string>();
+    (*dev.mount_dir_) = hshm::ConfigParse::ExpandPath(
         dev_info["mount_point"].as<std::string>());
-    dev->header_->borg_min_thresh_ =
+    dev.borg_min_thresh_ =
         dev_info["borg_capacity_thresh"][0].as<float>();
-    dev->header_->borg_max_thresh_ =
+    dev.borg_max_thresh_ =
         dev_info["borg_capacity_thresh"][1].as<float>();
-    dev->header_->is_shared_ =
+    dev.is_shared_ =
         dev_info["is_shared_device"].as<bool>();
-    dev->header_->block_size_ =
+    dev.block_size_ =
         hshm::ConfigParse::ParseSize(dev_info["block_size"].as<std::string>());
-    dev->header_->capacity_ =
+    dev.capacity_ =
         hshm::ConfigParse::ParseSize(dev_info["capacity"].as<std::string>());
-    dev->header_->bandwidth_ =
+    dev.bandwidth_ =
         hshm::ConfigParse::ParseSize(dev_info["bandwidth"].as<std::string>());
-    dev->header_->latency_ =
+    dev.latency_ =
         hshm::ConfigParse::ParseLatency(dev_info["latency"].as<std::string>());
     std::vector<std::string> size_vec;
     ParseVector<std::string, std::vector<std::string>>(
         dev_info["slab_sizes"], size_vec);
-    dev->slab_sizes_->reserve(size_vec.size());
+    dev.slab_sizes_->reserve(size_vec.size());
     for (const std::string &size_str : size_vec) {
-      dev->slab_sizes_->emplace_back(hshm::ConfigParse::ParseSize(size_str));
+      dev.slab_sizes_->emplace_back(hshm::ConfigParse::ParseSize(size_str));
     }
   }
 }

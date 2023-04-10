@@ -19,5 +19,5 @@ foreach (EXAMPLE ${EXAMPLES})
             OpenMP::OpenMP_CXX)
 
     add_test(NAME test_example_${EXAMPLE} COMMAND
-            mpirun -n 4 ${CMAKE_CURRENT_BINARY_DIR}/example_${EXAMPLE})
+            mpirun -n 4 ${CMAKE_BINARY_DIR}/bin/example_${EXAMPLE})
 endforeach()

@@ -53,20 +53,19 @@ enum MdmLock {
 /**
  * The SHM representation of the MetadataManager
  * */
-template<>
-struct ShmHeader<MetadataManager> {
+struct MetadataManagerShm {
   /// SHM representation of blob id map
-  hipc::ShmArchive<BLOB_ID_MAP_T> blob_id_map;
+  hipc::ShmArchive<BLOB_ID_MAP_T> blob_id_map_;
   /// SHM representation of blob map
-  hipc::ShmArchive<BLOB_MAP_T> blob_map;
+  hipc::ShmArchive<BLOB_MAP_T> blob_map_;
   /// SHM representation of tag id map
-  hipc::ShmArchive<TAG_ID_MAP_T> tag_id_map;
+  hipc::ShmArchive<TAG_ID_MAP_T> tag_id_map_;
   /// SHM representation of tag map
-  hipc::ShmArchive<TAG_MAP_T> tag_map;
+  hipc::ShmArchive<TAG_MAP_T> tag_map_;
   /// SHM representation of trait id map
-  hipc::ShmArchive<TRAIT_ID_MAP_T> trait_id_map;
+  hipc::ShmArchive<TRAIT_ID_MAP_T> trait_id_map_;
   /// SHM representation of trait map
-  hipc::ShmArchive<TRAIT_MAP_T> trait_map;
+  hipc::ShmArchive<TRAIT_MAP_T> trait_map_;
   /// SHM representation of device vector
   hipc::ShmArchive<hipc::vector<DeviceInfo>> devices_;
   /// SHM representation of target info vector
@@ -84,55 +83,63 @@ struct ShmHeader<MetadataManager> {
 /**
  * Manages the metadata for blobs, buckets, and vbuckets.
  * */
-class MetadataManager : public hipc::ShmContainer {
+class MetadataManager {
  public:
-  SHM_CONTAINER_TEMPLATE((MetadataManager),
-                         (MetadataManager),
-                         (ShmHeader<MetadataManager>))
   RPC_TYPE *rpc_;
   BufferOrganizer *borg_;
   TraitManager *traits_;
+  MetadataManagerShm *header_;
 
   /**====================================
    * Maps
    * ===================================*/
-  hipc::Ref<BLOB_ID_MAP_T> blob_id_map_;
-  hipc::Ref<TAG_ID_MAP_T> tag_id_map_;
-  hipc::Ref<TRAIT_ID_MAP_T> trait_id_map_;
-  hipc::Ref<BLOB_MAP_T> blob_map_;
-  hipc::Ref<TAG_MAP_T> tag_map_;
-  hipc::Ref<TRAIT_MAP_T> trait_map_;
+  BLOB_ID_MAP_T *blob_id_map_;
+  TAG_ID_MAP_T *tag_id_map_;
+  TRAIT_ID_MAP_T *trait_id_map_;
+  BLOB_MAP_T *blob_map_;
+  TAG_MAP_T *tag_map_;
+  TRAIT_MAP_T *trait_map_;
   std::unordered_map<TraitId, Trait*> local_trait_map_;
   RwLock local_lock_;
 
   /**====================================
    * I/O pattern log
    * ===================================*/
-  hipc::Ref<IO_PATTERN_LOG_T> io_pattern_log_;
+  IO_PATTERN_LOG_T *io_pattern_log_;
   bool enable_io_tracing_;
   bool is_mpi_;
 
   /**====================================
    * Targets + devices
    * ===================================*/
-  hipc::Ref<hipc::vector<DeviceInfo>> devices_;
-  hipc::Ref<hipc::vector<TargetInfo>> targets_;
+  hipc::vector<DeviceInfo> *devices_;
+  hipc::vector<TargetInfo> *targets_;
 
  public:
   /**====================================
    * Default Constructor
    * ===================================*/
 
-  /** Initialize local unordered_map */
-  void local_init() {
-    hipc::Allocator::ConstructObj(local_trait_map_);
-    hipc::Allocator::ConstructObj(local_lock_);
-  }
+  /** Default constructor */
+  MetadataManager() = default;
+
+  /**====================================
+   * SHM Init
+   * ===================================*/
 
   /** Default constructor */
-  MetadataManager(ShmHeader<MetadataManager> *header,
-                  hipc::Allocator *alloc,
-                  ServerConfig *config);
+  void shm_init(hipc::ShmArchive<MetadataManagerShm> &header,
+                hipc::Allocator *alloc,
+                ServerConfig *config);
+
+  /**====================================
+   * SHM Deserialize
+   * ===================================*/
+
+  /**
+   * Unload the MetadataManager from shared memory
+   * */
+  void shm_deserialize(hipc::ShmArchive<MetadataManagerShm> &header);
 
   /**====================================
    * Destructor
@@ -147,16 +154,7 @@ class MetadataManager : public hipc::ShmContainer {
   /**
    * Explicitly destroy the MetadataManager
    * */
-  void shm_destroy_main();
-
-  /**====================================
-   * SHM Deserialize
-   * ===================================*/
-
-  /**
-   * Unload the MetadataManager from shared memory
-   * */
-  void shm_deserialize_main();
+  void shm_destroy();
 
   /**
    * Create a unique blob name using TagId
@@ -327,7 +325,7 @@ class MetadataManager : public hipc::ShmContainer {
    * Update the capacity of the target device
    * */
   RPC void LocalUpdateTargetCapacity(TargetId tid, off64_t offset) {
-    TargetInfo &target = *(*targets_)[tid.GetIndex()];
+    TargetInfo &target = (*targets_)[tid.GetIndex()];
     target.rem_cap_ += offset;
   }
   DEFINE_RPC(bool, UpdateTargetCapacity, 0, UNIQUE_ID_TO_NODE_ID_LAMBDA)
@@ -479,15 +477,15 @@ class MetadataManager : public hipc::ShmContainer {
     if (iter == map.end()) {
       return false;
     }
-    hipc::Ref<hipc::pair<MapFirst, MapSecond>> info = *iter;
-    MapSecond &obj_info = *info->second_;
+    hipc::pair<MapFirst, MapSecond> &info = *iter;
+    MapSecond &obj_info = info.GetSecond();
     switch (lock_type) {
       case MdLockType::kExternalRead: {
-        obj_info.header_->lock_[1].ReadLock(0);
+        obj_info.lock_[1].ReadLock(0);
         return true;
       }
       case MdLockType::kExternalWrite: {
-        obj_info.header_->lock_[1].WriteLock(0);
+        obj_info.lock_[1].WriteLock(0);
         return true;
       }
       default: {
@@ -505,15 +503,15 @@ class MetadataManager : public hipc::ShmContainer {
     if (iter == map.end()) {
       return false;
     }
-    hipc::Ref<hipc::pair<MapFirst, MapSecond>> info = *iter;
-    MapSecond &obj_info = *info->second_;
+    hipc::pair<MapFirst, MapSecond> &info = *iter;
+    MapSecond &obj_info = info.GetSecond();
     switch (lock_type) {
       case MdLockType::kExternalRead: {
-        obj_info.header_->lock_[1].ReadUnlock();
+        obj_info.lock_[1].ReadUnlock();
         return true;
       }
       case MdLockType::kExternalWrite: {
-        obj_info.header_->lock_[1].WriteUnlock();
+        obj_info.lock_[1].WriteUnlock();
         return true;
       }
       default: {
@@ -528,11 +526,11 @@ class MetadataManager : public hipc::ShmContainer {
  public:
   void PrintDeviceInfo() {
     int id = 0;
-    for (hipc::Ref<DeviceInfo> dev_info : *devices_) {
+    for (DeviceInfo &dev_info : *devices_) {
       HILOG(kInfo, "Device {} is mounted on {} with capacity {} bytes",
             id,
-            dev_info->mount_point_->str(),
-            dev_info->header_->capacity_)
+            dev_info.mount_point_->str(),
+            dev_info.capacity_)
       ++id;
     }
   }

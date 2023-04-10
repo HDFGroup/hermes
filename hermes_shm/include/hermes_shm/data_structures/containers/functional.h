@@ -10,32 +10,22 @@
 * have access to the file, you may request a copy from help@hdfgroup.org.   *
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include "metadata_types.h"
-#include "buffer_pool.h"
-#include "metadata_manager.h"
-#include "hermes.h"
+#ifndef HERMES_SHM_SHM_DATA_STRUCTURES_CONTAINERS_FUNCTIONAL_H_
+#define HERMES_SHM_SHM_DATA_STRUCTURES_CONTAINERS_FUNCTIONAL_H_
 
-namespace hermes {
+namespace hshm {
 
-void BlobInfo::shm_destroy_main() {
-  auto &bpm = HERMES->bpm_;
-  auto buffers_std = (*buffers_).vec();
-  bpm.GlobalReleaseBuffers(buffers_std);
-  (*name_).shm_destroy();
-  (*buffers_).shm_destroy();
-  (*tags_).shm_destroy();
-}
-
-void TagInfo::shm_destroy_main() {
-  auto mdm = &HERMES->mdm_;
-  (*name_).shm_destroy();
-  if (owner_) {
-    for (BlobId &blob_id : *blobs_) {
-      mdm->GlobalDestroyBlob(tag_id_, blob_id);
+template<typename T, typename IteratorT>
+IteratorT find(IteratorT start, const IteratorT &end, T &val) {
+  for (; start != end; ++start) {
+    T &ref = *start;
+    if (ref == val) {
+      return start;
     }
   }
-  (*blobs_).shm_destroy();
-  (*traits_).shm_destroy();
+  return end;
 }
 
-}  // namespace hermes
+}  // namespace hshm
+
+#endif  // HERMES_SHM_SHM_DATA_STRUCTURES_CONTAINERS_FUNCTIONAL_H_

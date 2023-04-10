@@ -41,7 +41,7 @@ std::vector<std::string> RpcContext::ParseHostfile(const std::string &path) {
 void RpcContext::InitRpcContext() {
   comm_ = &HERMES->comm_;
   config_ = &HERMES->server_config_;
-  mdm_ = &(*HERMES->mdm_);
+  mdm_ = &HERMES->mdm_;
   port_ = config_->rpc_.port_;
   mode_ = HERMES->mode_;
   if (hosts_.size()) { return; }

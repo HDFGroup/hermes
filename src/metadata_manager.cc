@@ -24,81 +24,51 @@ using api::Bucket;
  * Explicitly initialize the MetadataManager
  * Requires RPC to be initialized
  * */
-MetadataManager::MetadataManager(
-    ShmHeader<MetadataManager> *header, hipc::Allocator *alloc,
-    ServerConfig *config) {
-  shm_init_header(header, alloc);
-  rpc_ = &HERMES->rpc_;
-  borg_ = HERMES->borg_.get();
-  traits_ = &HERMES->traits_;
+void MetadataManager::shm_init(hipc::ShmArchive<MetadataManagerShm> &header,
+                               hipc::Allocator *alloc,
+                               ServerConfig *config) {
+  shm_deserialize(header);
   header_->id_alloc_ = 1;
 
   // Put the node_id in SHM
   header_->node_id_ = rpc_->node_id_;
 
   // Create the metadata maps
-  blob_id_map_ = hipc::make_ref<BLOB_ID_MAP_T>(header_->blob_id_map,
-                                               alloc_, 16384);
-  blob_map_ = hipc::make_ref<BLOB_MAP_T>(header_->blob_map,
-                                         alloc_, 16384);
-  tag_id_map_ = hipc::make_ref<TAG_ID_MAP_T>(header_->tag_id_map,
-                                             alloc_, 256);
-  tag_map_ = hipc::make_ref<TAG_MAP_T>(header_->tag_map,
-                                       alloc_, 256);
-  trait_id_map_ = hipc::make_ref<TRAIT_ID_MAP_T>(header_->trait_id_map,
-                                                 alloc_, 256);
-  trait_map_ = hipc::make_ref<TRAIT_MAP_T>(header_->trait_map,
-                                           alloc_, 256);
+  HSHM_MAKE_AR(header_->blob_id_map_, alloc, 16384)
+  HSHM_MAKE_AR(header_->blob_map_, alloc, 16384)
+  HSHM_MAKE_AR(header_->tag_id_map_, alloc, 256)
+  HSHM_MAKE_AR(header_->tag_map_, alloc, 256)
+  HSHM_MAKE_AR(header_->trait_id_map_, alloc, 256)
+  HSHM_MAKE_AR(header_->trait_map_, alloc, 256)
 
   // Create the DeviceInfo vector
-  devices_ = hipc::make_ref<hipc::vector<DeviceInfo>>(
-      header_->devices_, HERMES->main_alloc_, *config->devices_);
+  HSHM_MAKE_AR(header_->devices_, alloc, *config->devices_)
 
   // Create the TargetInfo vector
-  targets_ = hipc::make_ref<hipc::vector<TargetInfo>>(
-      header_->targets_, HERMES->main_alloc_);
+  HSHM_MAKE_AR0(header_->targets_, alloc)
   targets_->reserve(devices_->size());
   int dev_id = 0;
   float maxbw = 0;
-  for (hipc::Ref<DeviceInfo> dev_info : *config->devices_) {
+  for (DeviceInfo &dev_info : *config->devices_) {
     targets_->emplace_back(
         TargetId(rpc_->node_id_, dev_id, dev_id),
-        dev_info->header_->capacity_,
-        dev_info->header_->capacity_,
-        dev_info->header_->bandwidth_,
-        dev_info->header_->latency_);
-    if (maxbw < dev_info->header_->bandwidth_) {
-      maxbw = dev_info->header_->bandwidth_;
+        dev_info.capacity_,
+        dev_info.capacity_,
+        dev_info.bandwidth_,
+        dev_info.latency_);
+    if (maxbw < dev_info.bandwidth_) {
+      maxbw = dev_info.bandwidth_;
     }
     ++dev_id;
   }
 
   // Assign a score to each target
-  for (hipc::Ref<TargetInfo> target_info : *targets_) {
-    target_info->score_ = (target_info->bandwidth_ / maxbw);
+  for (TargetInfo &target_info : *targets_) {
+    target_info.score_ = (target_info.bandwidth_ / maxbw);
   }
 
   // Create the log used to track I/O pattern
-  io_pattern_log_ = hipc::make_ref<IO_PATTERN_LOG_T>(
-      header_->io_pattern_log_, alloc_);
-
-  // Initialize local maps
-  local_init();
-}
-
-/**
- * Explicitly destroy the MetadataManager
- * */
-void MetadataManager::shm_destroy_main() {
-  blob_id_map_.shm_destroy();
-  blob_map_.shm_destroy();
-  tag_id_map_.shm_destroy();
-  tag_map_.shm_destroy();
-  trait_id_map_.shm_destroy();
-  trait_map_.shm_destroy();
-  targets_.shm_destroy();
-  devices_.shm_destroy();
-  io_pattern_log_.shm_destroy();
+  HSHM_MAKE_AR0(header_->io_pattern_log_, alloc);
 }
 
 /**====================================
@@ -109,24 +79,41 @@ void MetadataManager::shm_destroy_main() {
  * Store the MetadataManager in shared memory.
  * Does not require anything to be initialized.
  * */
-void MetadataManager::shm_deserialize_main() {
+void MetadataManager::shm_deserialize(
+    hipc::ShmArchive<MetadataManagerShm> &header) {
   rpc_ = &HERMES->rpc_;
-  borg_ = HERMES->borg_.get();
+  borg_ = &HERMES->borg_;
   traits_ = &HERMES->traits_;
-  auto alloc = HERMES->main_alloc_;
-  blob_id_map_ = hipc::Ref<BLOB_ID_MAP_T>(header_->blob_id_map, alloc);
-  blob_map_ = hipc::Ref<BLOB_MAP_T>(header_->blob_map, alloc);
-  tag_id_map_ = hipc::Ref<TAG_ID_MAP_T>(header_->tag_id_map, alloc);
-  tag_map_ = hipc::Ref<TAG_MAP_T>(header_->tag_map, alloc);
-  trait_id_map_ = hipc::Ref<TRAIT_ID_MAP_T>(header_->trait_id_map, alloc);
-  trait_map_ = hipc::Ref<TRAIT_MAP_T>(header_->trait_map, alloc);
-  targets_ = hipc::Ref<hipc::vector<TargetInfo>>(header_->targets_, alloc);
-  devices_ = hipc::Ref<hipc::vector<DeviceInfo>>(header_->devices_, alloc);
-  io_pattern_log_ = hipc::Ref<IO_PATTERN_LOG_T>(header_->io_pattern_log_,
-                                                alloc);
 
-  // Initialize local maps
-  local_init();
+  header_ = header.get();
+  blob_id_map_ = header_->blob_id_map_.get();
+  blob_map_ = header_->blob_map_.get();
+  tag_id_map_ = header_->tag_id_map_.get();
+  tag_map_ = header_->tag_map_.get();
+  trait_id_map_ = header_->trait_id_map_.get();
+  trait_map_ = header_->trait_map_.get();
+  targets_ = header_->targets_.get();
+  devices_ = header_->devices_.get();
+  io_pattern_log_ = header_->io_pattern_log_.get();
+}
+
+/**====================================
+ * Destructor
+ * ===================================*/
+
+/**
+ * Explicitly destroy the MetadataManager
+ * */
+void MetadataManager::shm_destroy() {
+  (*blob_id_map_).shm_destroy();
+  (*blob_map_).shm_destroy();
+  (*tag_id_map_).shm_destroy();
+  (*tag_map_).shm_destroy();
+  (*trait_id_map_).shm_destroy();
+  (*trait_map_).shm_destroy();
+  (*targets_).shm_destroy();
+  (*devices_).shm_destroy();
+  (*io_pattern_log_).shm_destroy();
 }
 
 /**====================================
@@ -146,9 +133,9 @@ size_t MetadataManager::LocalGetBucketSize(TagId bkt_id) {
   if (iter == tag_map_->end()) {
     return 0;
   }
-  hipc::Ref<hipc::pair<TagId, TagInfo>> info = (*iter);
-  TagInfo &bkt_info = *info->second_;
-  return bkt_info.header_->internal_size_;
+  hipc::pair<TagId, TagInfo> &info = (*iter);
+  TagInfo &bkt_info = info.GetSecond();
+  return bkt_info.internal_size_;
 }
 
 /**
@@ -164,12 +151,12 @@ bool MetadataManager::LocalSetBucketSize(TagId bkt_id,
   if (iter == tag_map_->end()) {
     return false;
   }
-  hipc::Ref<hipc::pair<TagId, TagInfo>> info = (*iter);
-  TagInfo &bkt_info = *info->second_;
-  bkt_info.header_->internal_size_ = new_size;
+  hipc::pair<TagId, TagInfo> &info = (*iter);
+  TagInfo &bkt_info = info.GetSecond();
+  bkt_info.internal_size_ = new_size;
   HILOG(kDebug, "The new size of the bucket {} ({}) is {}",
         bkt_info.name_->str(), bkt_id,
-        bkt_info.header_->internal_size_)
+        bkt_info.internal_size_)
   return true;
 }
 
@@ -213,13 +200,13 @@ bool MetadataManager::LocalClearBucket(TagId bkt_id) {
   if (iter == tag_map_->end()) {
     return true;
   }
-  hipc::Ref<hipc::pair<TagId, TagInfo>> info = (*iter);
-  TagInfo &bkt_info = *info->second_;
-  for (hipc::Ref<BlobId> blob_id : *bkt_info.blobs_) {
-    GlobalDestroyBlob(bkt_id, *blob_id);
+  hipc::pair<TagId, TagInfo> &info = (*iter);
+  TagInfo &bkt_info = info.GetSecond();
+  for (BlobId &blob_id : *bkt_info.blobs_) {
+    GlobalDestroyBlob(bkt_id, blob_id);
   }
   bkt_info.blobs_->clear();
-  bkt_info.header_->internal_size_ = 0;
+  bkt_info.internal_size_ = 0;
   return true;
 }
 
@@ -243,10 +230,10 @@ Status MetadataManager::LocalTagBlob(
   if (iter == blob_map_->end()) {
     return Status();  // TODO(llogan): error status
   }
-  hipc::Ref<hipc::pair<BlobId, BlobInfo>> info = (*iter);
-  BlobInfo &blob_info = *info->second_;
+  hipc::pair<BlobId, BlobInfo>& info = (*iter);
+  BlobInfo &blob_info = info.GetSecond();
   // Acquire blob_info read lock (read buffers)
-  ScopedRwReadLock blob_info_lock(blob_info.header_->lock_[0],
+  ScopedRwReadLock blob_info_lock(blob_info.lock_[0],
                                   kMDM_LocalTagBlob);
   blob_info.tags_->emplace_back(tag_id);
   return Status();
@@ -266,11 +253,11 @@ bool MetadataManager::LocalBlobHasTag(BlobId blob_id,
     return false;
   }
   // Get the blob info
-  hipc::Ref<hipc::pair<BlobId, BlobInfo>> info = (*iter);
-  BlobInfo &blob_info = *info->second_;
+  hipc::pair<BlobId, BlobInfo>& info = (*iter);
+  BlobInfo &blob_info = info.GetSecond();
   // Iterate over tags
-  for (hipc::Ref<TagId> tag_cmp : *blob_info.tags_) {
-    if (blob_info.header_->tag_id_ == tag_id) {
+  for (TagId &tag_cmp : *blob_info.tags_) {
+    if (tag_cmp == tag_id) {
       return true;
     }
   }
@@ -301,11 +288,11 @@ std::pair<BlobId, bool> MetadataManager::LocalTryCreateBlob(
   if (did_create) {
     blob_map_->emplace(blob_id);
     auto iter = blob_map_->find(blob_id);
-    hipc::Ref<hipc::pair<BlobId, BlobInfo>> info = (*iter);
-    BlobInfo &blob_info = *info->second_;
+    hipc::pair<BlobId, BlobInfo>& info = (*iter);
+    BlobInfo &blob_info = info.GetSecond();
     (*blob_info.name_) = blob_name;
-    blob_info.header_->tag_id_ = bkt_id;
-    blob_info.header_->blob_size_ = 0;
+    blob_info.tag_id_ = bkt_id;
+    blob_info.blob_size_ = 0;
   }
   return std::pair<BlobId, bool>(blob_id, did_create);
 }
@@ -342,29 +329,29 @@ MetadataManager::LocalPutBlobMetadata(TagId bkt_id,
     HILOG(kDebug, "Creating new blob: {}. Total num blobs: {}",
           blob_name, blob_map_->size())
     auto iter = blob_map_->find(blob_id);
-    hipc::Ref<hipc::pair<BlobId, BlobInfo>> info = (*iter);
-    BlobInfo &blob_info = *info->second_;
+    hipc::pair<BlobId, BlobInfo>& info = (*iter);
+    BlobInfo &blob_info = info.GetSecond();
     (*blob_info.name_) = blob_name;
     (*blob_info.buffers_) = buffers;
-    blob_info.header_->blob_id_ = blob_id;
-    blob_info.header_->tag_id_ = bkt_id;
-    blob_info.header_->blob_size_ = blob_size;
-    blob_info.header_->score_ = score;
-    blob_info.header_->mod_count_ = 1;
-    blob_info.header_->last_flush_ = 0;
+    blob_info.blob_id_ = blob_id;
+    blob_info.tag_id_ = bkt_id;
+    blob_info.blob_size_ = blob_size;
+    blob_info.score_ = score;
+    blob_info.mod_count_ = 1;
+    blob_info.last_flush_ = 0;
   } else {
     HILOG(kDebug, "Found existing blob: {}. Total num blobs: {}",
           blob_name, blob_map_->size())
-    blob_id = *(*blob_id_map_)[*internal_blob_name];
+    blob_id = (*blob_id_map_)[*internal_blob_name];
     auto iter = blob_map_->find(blob_id);
-    hipc::Ref<hipc::pair<BlobId, BlobInfo>> info = (*iter);
-    BlobInfo &blob_info = *info->second_;
+    hipc::pair<BlobId, BlobInfo>& info = (*iter);
+    BlobInfo &blob_info = info.GetSecond();
     // Acquire blob_info write lock before modifying buffers
-    ScopedRwWriteLock(blob_info.header_->lock_[0],
+    ScopedRwWriteLock(blob_info.lock_[0],
                       kMDM_LocalPutBlobMetadata);
     (*blob_info.buffers_) = buffers;
-    blob_info.header_->score_ = score;
-    blob_info.header_->mod_count_.fetch_add(1);
+    blob_info.score_ = score;
+    blob_info.mod_count_.fetch_add(1);
   }
   return std::tuple<BlobId, bool, size_t>(blob_id, did_create, orig_blob_size);
 }
@@ -384,8 +371,8 @@ BlobId MetadataManager::LocalGetBlobId(TagId bkt_id,
   if (iter == blob_id_map_->end()) {
     return BlobId::GetNull();
   }
-  hipc::Ref<hipc::pair<hipc::charbuf, BlobId>> info = *iter;
-  return *info->second_;
+  hipc::pair<hipc::charbuf, BlobId> &info = *iter;
+  return info.GetSecond();
 }
 
 /**
@@ -400,8 +387,8 @@ std::string MetadataManager::LocalGetBlobName(BlobId blob_id) {
   if (iter == blob_map_->end()) {
     return "";
   }
-  hipc::Ref<hipc::pair<BlobId, BlobInfo>> info = *iter;
-  BlobInfo &blob_info = *info->second_;
+  hipc::pair<BlobId, BlobInfo>& info = *iter;
+  BlobInfo &blob_info = info.GetSecond();
   return blob_info.name_->str();
 }
 
@@ -417,9 +404,9 @@ float MetadataManager::LocalGetBlobScore(BlobId blob_id) {
   if (iter == blob_map_->end()) {
     return -1;
   }
-  hipc::Ref<hipc::pair<BlobId, BlobInfo>> info = *iter;
-  BlobInfo &blob_info = *info->second_;
-  return blob_info.header_->score_;
+  hipc::pair<BlobId, BlobInfo>& info = *iter;
+  BlobInfo &blob_info = info.GetSecond();
+  return blob_info.score_;
 }
 
 /**
@@ -462,10 +449,10 @@ std::vector<BufferInfo> MetadataManager::LocalGetBlobBuffers(BlobId blob_id) {
   if (iter == blob_map_->end()) {
     return std::vector<BufferInfo>();
   }
-  hipc::Ref<hipc::pair<BlobId, BlobInfo>> info = (*iter);
-  BlobInfo &blob_info = *info->second_;
+  hipc::pair<BlobId, BlobInfo>& info = (*iter);
+  BlobInfo &blob_info = info.GetSecond();
   // Acquire blob_info read lock
-  ScopedRwReadLock blob_info_lock(blob_info.header_->lock_[0],
+  ScopedRwReadLock blob_info_lock(blob_info.lock_[0],
                                   kMDM_LocalGetBlobBuffers);
   auto vec = blob_info.buffers_->vec();
   return vec;
@@ -486,8 +473,8 @@ bool MetadataManager::LocalRenameBlob(TagId bkt_id, BlobId blob_id,
   if (iter == blob_map_->end()) {
     return true;
   }
-  hipc::Ref<hipc::pair<BlobId, BlobInfo>> info = (*iter);
-  BlobInfo &blob_info = *info->second_;
+  hipc::pair<BlobId, BlobInfo>& info = (*iter);
+  BlobInfo &blob_info = info.GetSecond();
   hipc::uptr<hipc::charbuf> old_blob_name_internal =
       CreateBlobName(bkt_id, *blob_info.name_);
   hipc::uptr<hipc::charbuf> new_blob_name_internal =
@@ -512,10 +499,10 @@ bool MetadataManager::LocalDestroyBlob(TagId bkt_id,
   if (iter.is_end()) {
     return true;
   }
-  hipc::Ref<hipc::pair<BlobId, BlobInfo>> info = (*iter);
-  BlobInfo &blob_info = *info->second_;
+  hipc::pair<BlobId, BlobInfo>& info = (*iter);
+  BlobInfo &blob_info = info.GetSecond();
   HERMES_BORG_IO_THREAD_MANAGER->EnqueueDelete(bkt_id, blob_id,
-                                               blob_info.header_->mod_count_);
+                                               blob_info.mod_count_);
   return true;
 }
 
@@ -580,17 +567,17 @@ MetadataManager::LocalGetOrCreateTag(const std::string &tag_name,
     HILOG(kDebug, "Creating tag for the first time: {}", tag_name)
     tag_map_->emplace(tag_id);
     auto iter = tag_map_->find(tag_id);
-    hipc::Ref<hipc::pair<TagId, TagInfo>> info_pair = *iter;
-    TagInfo &info = *info_pair->second_;
+    hipc::pair<TagId, TagInfo> &info_pair = *iter;
+    TagInfo &info = info_pair.GetSecond();
     (*info.name_) = *tag_name_shm;
-    info.header_->tag_id_ = tag_id;
-    info.header_->owner_ = owner;
-    info.header_->internal_size_ = backend_size;
+    info.tag_id_ = tag_id;
+    info.owner_ = owner;
+    info.internal_size_ = backend_size;
   } else {
     HILOG(kDebug, "Found existing tag: {}", tag_name)
     auto iter = tag_id_map_->find(*tag_name_shm);
-    hipc::Ref<hipc::pair<hipc::charbuf, TagId>> id_info = (*iter);
-    tag_id = *id_info->second_;
+    hipc::pair<hipc::charbuf, TagId> &id_info = (*iter);
+    tag_id = id_info.GetSecond();
   }
 
   return {tag_id, did_create};
@@ -609,8 +596,8 @@ TagId MetadataManager::LocalGetTagId(const std::string &tag_name) {
   if (iter == tag_id_map_->end()) {
     return TagId::GetNull();
   }
-  hipc::Ref<hipc::pair<hipc::charbuf, TagId>> info = (*iter);
-  TagId bkt_id = *info->second_;
+  hipc::pair<hipc::charbuf, TagId> &info_pair = (*iter);
+  TagId bkt_id = info_pair.GetSecond();
   return bkt_id;
 }
 
@@ -628,8 +615,8 @@ std::string MetadataManager::LocalGetTagName(TagId tag_id) {
   if (iter == tag_map_->end()) {
     return "";
   }
-  hipc::Ref<hipc::pair<TagId, TagInfo>> info = (*iter);
-  hipc::string &bkt_name = *info->second_->name_;
+  hipc::pair<TagId, TagInfo> &info_pair = (*iter);
+  hipc::string &bkt_name = *info_pair.GetSecond().name_;
   return bkt_name.str();
 }
 
@@ -649,8 +636,8 @@ bool MetadataManager::LocalRenameTag(TagId tag_id,
     return true;
   }
   auto new_name_shm = hipc::make_uptr<hipc::string>(new_name);
-  hipc::Ref<hipc::pair<TagId, TagInfo>> info = (*iter);
-  hipc::string &old_bkt_name = *info->second_->name_;
+  hipc::pair<TagId, TagInfo> &info_pair = (*iter);
+  hipc::string &old_bkt_name = *info_pair.GetSecond().name_;
   tag_id_map_->erase(old_bkt_name);
   tag_id_map_->emplace(*new_name_shm, tag_id);
   return true;
@@ -669,8 +656,8 @@ bool MetadataManager::LocalDestroyTag(TagId tag_id) {
   if (iter.is_end()) {
     return true;
   }
-  hipc::Ref<hipc::pair<TagId, TagInfo>> info_pair = *iter;
-  auto &tag_info = *info_pair->second_;
+  hipc::pair<TagId, TagInfo> &info_pair = *iter;
+  auto &tag_info = info_pair.GetSecond();
   tag_id_map_->erase(*tag_info.name_);
   tag_map_->erase(tag_id);
   return true;
@@ -689,8 +676,8 @@ Status MetadataManager::LocalTagAddBlob(TagId tag_id,
   if (iter.is_end()) {
     return Status();
   }
-  hipc::Ref<hipc::pair<TagId, TagInfo>> blob_list = (*iter);
-  TagInfo &info = *blob_list->second_;
+  hipc::pair<TagId, TagInfo> &blob_list = (*iter);
+  TagInfo &info = blob_list.GetSecond();
   info.blobs_->emplace_back(blob_id);
   return Status();
 }
@@ -708,8 +695,8 @@ Status MetadataManager::LocalTagRemoveBlob(TagId tag_id,
   if (iter.is_end()) {
     return Status();
   }
-  hipc::Ref<hipc::pair<TagId, TagInfo>> blob_list = (*iter);
-  TagInfo &info = *blob_list->second_;
+  hipc::pair<TagId, TagInfo> &blob_list = (*iter);
+  TagInfo &info = blob_list.GetSecond();
   info.blobs_->erase(blob_id);
   return Status();
 }
@@ -728,10 +715,10 @@ std::vector<BlobId> MetadataManager::LocalGroupByTag(TagId tag_id) {
   if (iter.is_end()) {
     return std::vector<BlobId>();
   }
-  auto tag_info_pair = *iter;
-  hipc::Ref<TagInfo> &tag_info = tag_info_pair->second_;
+  auto &tag_info_pair = *iter;
+  TagInfo &tag_info = tag_info_pair.GetSecond();
   // Convert slist into std::vector
-  return hshm::to_stl_vector<BlobId>(*tag_info->blobs_);
+  return hshm::to_stl_vector<BlobId>(*tag_info.blobs_);
 }
 
 /**
@@ -749,9 +736,9 @@ bool MetadataManager::LocalTagAddTrait(TagId tag_id, TraitId trait_id) {
   if (iter.is_end()) {
     return true;
   }
-  auto tag_info_pair = *iter;
-  hipc::Ref<TagInfo> &tag_info = tag_info_pair->second_;
-  tag_info->traits_->emplace_back(trait_id);
+  auto &tag_info_pair = *iter;
+  TagInfo &tag_info = tag_info_pair.GetSecond();
+  tag_info.traits_->emplace_back(trait_id);
   return true;
 }
 
@@ -767,9 +754,9 @@ std::vector<TraitId> MetadataManager::LocalTagGetTraits(TagId tag_id) {
   if (iter.is_end()) {
     return std::vector<TraitId>();
   }
-  auto tag_info_pair = *iter;
-  hipc::Ref<TagInfo> &tag_info = tag_info_pair->second_;
-  return hshm::to_stl_vector<TraitId>(*tag_info->traits_);
+  auto &tag_info_pair = *iter;
+  TagInfo &tag_info = tag_info_pair.GetSecond();
+  return hshm::to_stl_vector<TraitId>(*tag_info.traits_);
 }
 
 /**====================================
@@ -793,7 +780,7 @@ RPC TraitId MetadataManager::LocalRegisterTrait(
   auto trait_uuid_shm = hipc::make_uptr<hipc::charbuf>(trait_uuid);
   auto iter = trait_id_map_->find(*trait_uuid_shm);
   if (!iter.is_end()) {
-    trait_id = *(*iter)->second_;
+    trait_id = (*iter).GetSecond();
     return trait_id;
   }
 
@@ -821,7 +808,7 @@ MetadataManager::LocalGetTraitId(const std::string &trait_uuid) {
   if (iter.is_end()) {
     return TraitId::GetNull();
   }
-  TraitId trait_id = *(*iter)->second_;
+  TraitId trait_id = (*iter).GetSecond();
   return trait_id;
 }
 
@@ -839,8 +826,8 @@ MetadataManager::LocalGetTraitParams(TraitId trait_id) {
   if (iter.is_end()) {
     return hshm::charbuf();
   }
-  hipc::Ref<hipc::pair<TraitId, hipc::charbuf>> trait_pair = *iter;
-  return hshm::to_charbuf(*(*iter)->second_);
+  hipc::pair<TraitId, hipc::charbuf> &trait_pair = *iter;
+  return hshm::to_charbuf(trait_pair.GetSecond());
 }
 
 /**
@@ -850,18 +837,20 @@ Trait* MetadataManager::GlobalGetTrait(TraitId trait_id) {
   Trait *trait = nullptr;
 
   // Check if trait is already constructed
-  local_lock_.ReadLock(kMDM_GlobalGetTrait);
+  ScopedRwReadLock trait_lock(header_->lock_[kTraitMapLock],
+                              kMDM_GlobalGetTrait);
   auto iter = local_trait_map_.find(trait_id);
   if (iter != local_trait_map_.end()) {
     std::pair<TraitId, Trait*> trait_pair = *iter;
     trait = trait_pair.second;
-    local_lock_.ReadUnlock();
+    trait_lock.Unlock();
     return trait;
   }
-  local_lock_.ReadUnlock();
+  trait_lock.Unlock();
 
   // Construct the trait based on the parameters
-  ScopedRwWriteLock md_lock(local_lock_, kMDM_GlobalGetTrait);
+  ScopedRwWriteLock md_lock(header_->lock_[kTraitMapLock],
+                            kMDM_GlobalGetTrait);
 
   // Get the trait state locally or globally
   hshm::charbuf params = LocalGetTraitParams(trait_id);

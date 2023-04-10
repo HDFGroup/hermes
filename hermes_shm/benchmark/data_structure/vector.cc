@@ -10,17 +10,11 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-// Boost interprocess
-#include <boost/interprocess/allocators/allocator.hpp>
-#include <boost/interprocess/containers/string.hpp>
-#include <boost/interprocess/containers/vector.hpp>
-#include <boost/interprocess/managed_shared_memory.hpp>
-#include <boost/interprocess/allocators/allocator.hpp>
+#include "basic_test.h"
+#include "test_init.h"
 
-// Boost private
-#include <boost/container/scoped_allocator.hpp>
-#include <boost/container/string.hpp>
-#include <boost/container/vector.hpp>
+// Boost interprocess
+#include <boost/interprocess/containers/vector.hpp>
 
 // Std
 #include <string>
@@ -30,202 +24,319 @@
 #include "hermes_shm/data_structures/ipc/string.h"
 #include <hermes_shm/data_structures/ipc/vector.h>
 
-#include "basic_test.h"
-#include "test_init.h"
-
-namespace bipc = boost::interprocess;
-
-#define SET_VAR_TO_INT_OR_STRING(TYPE, VAR, VAL)\
-  if constexpr(std::is_same_v<TYPE, hipc::string>) {\
-    VAR = hipc::string(std::to_string(VAL));\
-  } else if constexpr(std::is_same_v<TYPE, std::string>) {\
-    VAR = std::string(std::to_string(VAL));\
-  } else {\
-    VAR = VAL;\
-  }
+template<typename T>
+using bipc_vector = bipc::vector<T, typename BoostAllocator<T>::alloc_t>;
 
 /**
  * A series of performance tests for vectors
  * OUTPUT:
  * [test_name] [vec_type] [internal_type] [time_ms]
  * */
-template<typename T, typename VecT>
+template<typename T, typename VecT,
+  typename VecTPtr=SHM_X_OR_Y(VecT, hipc::mptr<VecT>, VecT*)>
 class VectorTest {
  public:
-  std::string vec_type;
-  std::string internal_type;
-  hipc::mptr<VecT> vec_shm;
-  VecT *vec;
+  std::string vec_type_;
+  std::string internal_type_;
+  VecT *vec_;
+  VecTPtr vec_ptr_;
+  void *ptr_;
 
+  /**====================================
+   * Test Runner
+   * ===================================*/
+
+  /** Test case constructor */
   VectorTest() {
     if constexpr(std::is_same_v<std::vector<T>, VecT>) {
-      vec_shm = hipc::make_mptr<VecT>();
-      vec = vec_shm.get();
-      vec_type = "std::vector";
+      vec_type_ = "std::vector";
     } else if constexpr(std::is_same_v<hipc::vector<T>, VecT>) {
-      vec_shm = hipc::make_mptr<VecT>();
-      vec = vec_shm.get();
-      vec_type = "hipc::vector";
-    } else if constexpr(std::is_same_v<boost::container::vector<T>, VecT>) {
-      vec_shm = hipc::make_mptr<VecT>();
-      vec = vec_shm.get();
-      vec_type = "boost::vector";
-    } else if constexpr(std::is_same_v<bipc::vector<T>, VecT>) {
-      vec = BoostIpcVector();
-      vec_type = "bipc::vector";
+      vec_type_ = "hipc::vector";
+    } else if constexpr(std::is_same_v<bipc_vector<T>, VecT>) {
+      vec_type_ = "bipc_vector";
     } else {
       std::cout << "INVALID: none of the vector tests matched" << std::endl;
       return;
     }
-
-    if constexpr(std::is_same_v<T, hipc::string>) {
-      internal_type = "hipc::string";
-    } else if constexpr(std::is_same_v<T, std::string>) {
-      internal_type = "std::string";
-    } else if constexpr(std::is_same_v<T, int>) {
-      internal_type = "int";
-    }
+    internal_type_ = InternalTypeName<T>::Get();
   }
 
-  void TestOutput(const std::string &test_name, Timer &t) {
-    printf("%s, %s, %s, %lf\n",
-           test_name.c_str(),
-           vec_type.c_str(),
-           internal_type.c_str(),
-           t.GetMsec());
+  /** Run the tests */
+  void Test() {
+    size_t count = 1000000;
+    // AllocateTest(count);
+    // ResizeTest(count);
+    ReserveEmplaceTest(count);
+    GetTest(count);
+    BeginIteratorTest(count);
+    EndIteratorTest(count);
+    ForwardIteratorTest(count);
+    // CopyTest(count);
+    // MoveTest(count);
   }
 
-  void ResizeTest(VecT &vec, size_t count) {
+  /**====================================
+   * Tests
+   * ===================================*/
+
+  /** Test performance of vector allocation */
+  void AllocateTest(size_t count) {
     Timer t;
-    CREATE_SET_VAR_TO_INT_OR_STRING(T, var, 124);
-
     t.Resume();
-    vec.resize(count);
+    for (size_t i = 0; i < count; ++i) {
+      Allocate();
+      Destroy();
+    }
+    t.Pause();
+
+    TestOutput("Allocate", t);
+  }
+
+  /** Test the performance of a resize */
+  void ResizeTest(size_t count) {
+    Timer t;
+    StringOrInt<T> var(124);
+
+    Allocate();
+    t.Resume();
+    vec_->resize(count);
     t.Pause();
 
     TestOutput("FixedResize", t);
+    Destroy();
   }
 
-  void ReserveEmplaceTest(VecT &vec, size_t count) {
+  /** Emplace after reserving enough space */
+  void ReserveEmplaceTest(size_t count) {
     Timer t;
-    CREATE_SET_VAR_TO_INT_OR_STRING(T, var, 124);
+    StringOrInt<T> var(124);
 
+    Allocate();
     t.Resume();
-    vec.reserve(count);
-    for (size_t i = 0; i < count; ++i) {
-      vec.emplace_back(var);
-    }
+    vec_->reserve(count);
+    Emplace(count);
     t.Pause();
 
     TestOutput("FixedEmplace", t);
+    Destroy();
   }
 
-  void GetTest(VecT &vec, size_t count) {
+  /** Get performance */
+  void GetTest(size_t count) {
     Timer t;
-    CREATE_SET_VAR_TO_INT_OR_STRING(T, var, 124);
+    StringOrInt<T> var(124);
 
-    vec.reserve(count);
-    for (size_t i = 0; i < count; ++i) {
-      vec.emplace_back(var);
-    }
+    Allocate();
+    vec_->reserve(count);
+    Emplace(count);
 
     t.Resume();
     for (size_t i = 0; i < count; ++i) {
-      auto x = vec[i];
+      Get(i);
     }
     t.Pause();
 
     TestOutput("FixedGet", t);
+    Destroy();
   }
 
-  void ForwardIteratorTest(VecT &vec, size_t count) {
+  /** Begin iterator performance */
+  void BeginIteratorTest(size_t count) {
     Timer t;
-    CREATE_SET_VAR_TO_INT_OR_STRING(T, var, 124);
+    StringOrInt<T> var(124);
 
-    vec.reserve(count);
-    for (size_t i = 0; i < count; ++i) {
-      vec.emplace_back(var);
+    Allocate();
+    vec_->reserve(count);
+    Emplace(count);
+
+    t.Resume();
+    if constexpr(IS_SHM_ARCHIVEABLE(VecT)) {
+      auto iter = vec_->begin();
+      USE(iter);
+    } else {
+      auto iter = vec_->begin();
+      USE(iter);
     }
+    t.Pause();
+
+    TestOutput("BeginIterator", t);
+    Destroy();
+  }
+
+  /** End iterator performance */
+  void EndIteratorTest(size_t count) {
+    Timer t;
+    StringOrInt<T> var(124);
+
+    Allocate();
+    vec_->reserve(count);
+    Emplace(count);
+
+    t.Resume();
+    if constexpr(IS_SHM_ARCHIVEABLE(VecT)) {
+      auto iter = vec_->end();
+      USE(iter);
+    } else {
+      auto iter = vec_->end();
+      USE(iter);
+    }
+    t.Pause();
+
+    TestOutput("EndIterator", t);
+    Destroy();
+  }
+
+  /** Iterator performance */
+  void ForwardIteratorTest(size_t count) {
+    Timer t;
+    StringOrInt<T> var(124);
+
+    Allocate();
+    vec_->reserve(count);
+    Emplace(count);
 
     t.Resume();
     int i = 0;
-    for (auto x : vec) {
+    for (auto &x : *vec_) {
+      USE(x);
       ++i;
     }
     t.Pause();
 
-    TestOutput("ForwardIterator", t);
-  }
-
-  void CopyTest(VecT &vec, size_t count) {
-    Timer t;
-    CREATE_SET_VAR_TO_INT_OR_STRING(T, var, 124);
-
-    vec.reserve(count);
-    for (size_t i = 0; i < count; ++i) {
-      vec.emplace_back(var);
+    if (ptr_ == nullptr) {
+      std::cout << "hm" << std::endl;
     }
 
+    TestOutput("ForwardIterator", t);
+    Destroy();
+  }
+
+  /** Copy performance */
+  void CopyTest(size_t count) {
+    Timer t;
+    StringOrInt<T> var(124);
+
+    Allocate();
+    vec_->reserve(count);
+    Emplace(count);
+
     t.Resume();
-    VecT vec2(vec);
+    if constexpr(IS_SHM_ARCHIVEABLE(VecT)) {
+      auto vec2 = hipc::make_uptr<VecT>(*vec_);
+      USE(vec2);
+    } else {
+      VecT vec2(*vec_);
+      USE(vec2);
+    }
     t.Pause();
 
     TestOutput("Copy", t);
+    Destroy();
   }
 
-  void MoveTest(VecT &vec, size_t count) {
+  /** Move performance */
+  void MoveTest(size_t count) {
     Timer t;
-    CREATE_SET_VAR_TO_INT_OR_STRING(T, var, 124);
 
-    vec.reserve(count);
-    for (size_t i = 0; i < count; ++i) {
-      vec.emplace_back(var);
-    }
+    Allocate();
+    vec_->reserve(count);
+    Emplace(count);
 
     t.Resume();
-    VecT vec2(std::move(vec));
+    if constexpr(IS_SHM_ARCHIVEABLE(VecT)) {
+      auto vec2 = hipc::make_uptr<VecT>(std::move(*vec_));
+      USE(vec2)
+    } else {
+      VecT vec2(*vec_);
+      USE(vec2)
+    }
     t.Pause();
 
     TestOutput("Move", t);
+    Destroy();
   }
 
-  VecT *BoostIpcVector() {
-    void_allocator &alloc_inst = *alloc_inst_g;
-    bipc::managed_shared_memory &segment = *segment_g;
-    VecT *vec = segment.construct<VecT>("BoostVector")(alloc_inst);
-    return vec;
+ private:
+  /**====================================
+   * Helpers
+   * ===================================*/
+
+  /** Output as CSV */
+  void TestOutput(const std::string &test_name, Timer &t) {
+    HIPRINT("{},{},{},{}\n",
+            test_name, vec_type_, internal_type_, t.GetMsec())
   }
 
-  void Test() {
-    ResizeTest(*vec, 1000000);
-    ReserveEmplaceTest(*vec, 1000000);
-    GetTest(*vec, 1000000);
-    ForwardIteratorTest(*vec, 1000000);
-    CopyTest(*vec, 1000000);
-    MoveTest(*vec, 1000000);
+  /** Get element at position i */
+  void Get(size_t i) {
+    if constexpr(std::is_same_v<std::vector<T>, VecT>) {
+      T &x = (*vec_)[i];
+      USE(x);
+    } else if constexpr(std::is_same_v<hipc::vector<T>, VecT>) {
+      T &x = (*vec_)[i];
+      USE(x);
+    } else if constexpr(std::is_same_v<bipc_vector<T>, VecT>) {
+      T &x = (*vec_)[i];
+      USE(x);
+      if (!ptr_) { std::cout << "h" << std::endl; }
+    }
+  }
+
+  /** Emplace elements into the vector */
+  void Emplace(size_t count) {
+    StringOrInt<T> var(124);
+    for (size_t i = 0; i < count; ++i) {
+      if constexpr(std::is_same_v<std::vector<T>, VecT>) {
+        vec_->emplace_back(var.Get());
+      } else if constexpr(std::is_same_v<hipc::vector<T>, VecT>) {
+        vec_->emplace_back(var.Get());
+      } else if constexpr(std::is_same_v<bipc_vector<T>, VecT>) {
+        vec_->emplace_back(var.Get());
+      }
+    }
+  }
+
+  /** Allocate an arbitrary vector for the test cases */
+  void Allocate() {
+    if constexpr(std::is_same_v<std::vector<T>, VecT>) {
+      vec_ptr_ = new std::vector<T>();
+      vec_ = vec_ptr_;
+    } else if constexpr(std::is_same_v<hipc::vector<T>, VecT>) {
+      vec_ptr_ = hipc::make_mptr<VecT>();
+      vec_ = vec_ptr_.get();
+    } else if constexpr(std::is_same_v<bipc_vector<T>, VecT>) {
+      vec_ptr_ = BOOST_SEGMENT->construct<VecT>("BoostVector")(
+        BOOST_ALLOCATOR((std::pair<int, T>)));
+      vec_ = vec_ptr_;
+    }
+  }
+
+  /** Destroy the vector */
+  void Destroy() {
+    if constexpr(std::is_same_v<std::vector<T>, VecT>) {
+      delete vec_ptr_;
+    } else if constexpr(std::is_same_v<hipc::vector<T>, VecT>) {
+      vec_ptr_.shm_destroy();
+    } else if constexpr(std::is_same_v<bipc_vector<T>, VecT>) {
+      BOOST_SEGMENT->destroy<VecT>("BoostVector");
+    }
   }
 };
 
 void FullVectorTest() {
   // std::vector tests
-  VectorTest<int, std::vector<int>>().Test();
-  // VectorTest<std::string, std::vector<std::string>>().Test();
-  // VectorTest<hipc::string, std::vector<hipc::string>>().Test();
-
-  // boost::vector tests
-//  VectorTest<int, boost::container::vector<int>>().Test();
-//  VectorTest<std::string, boost::container::vector<std::string>>().Test();
-//  VectorTest<hipc::string, boost::container::vector<hipc::string>>().Test();
+  VectorTest<size_t, std::vector<size_t>>().Test();
+  VectorTest<std::string, std::vector<std::string>>().Test();
 
   // boost::ipc::vector tests
-  // VectorTest<int, bipc::vector<int>>().Test();
-  // VectorTest<std::string, bipc::vector<std::string>>().Test();
-  // VectorTest<hipc::string, bipc::vector<hipc::string>>().Test();
+  VectorTest<size_t, bipc_vector<size_t>>().Test();
+  VectorTest<std::string, bipc_vector<std::string>>().Test();
+  VectorTest<bipc_string, bipc_vector<bipc_string>>().Test();
 
   // hipc::vector tests
-  VectorTest<int, hipc::vector<int>>().Test();
-  // VectorTest<std::string, hipc::vector<std::string>>().Test();
-  // VectorTest<hipc::string, hipc::vector<hipc::string>>().Test();
+  VectorTest<size_t, hipc::vector<size_t>>().Test();
+  VectorTest<std::string, hipc::vector<std::string>>().Test();
+  VectorTest<hipc::string, hipc::vector<hipc::string>>().Test();
 }
 
 TEST_CASE("VectorBenchmark") {

@@ -46,7 +46,7 @@ class MallocAllocator : public Allocator {
   /**
    * Get the ID of this allocator from shared memory
    * */
-  allocator_id_t GetId() override {
+  allocator_id_t &GetId() override {
     return header_->allocator_id_;
   }
 

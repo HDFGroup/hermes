@@ -23,9 +23,9 @@ using thallium::request;
 
 void ThalliumRpc::DefineRpcs() {
   RPC_CLASS_INSTANCE_DEFS_START
-  MetadataManager *mdm = HERMES->mdm_.get();
-  BufferPool *bpm = HERMES->bpm_.get();
-  BufferOrganizer *borg = HERMES->borg_.get();
+  MetadataManager *mdm = &HERMES->mdm_;
+  BufferPool *bpm = &HERMES->bpm_;
+  BufferOrganizer *borg = &HERMES->borg_;
   RPC_CLASS_INSTANCE_DEFS_END
 
   /**====================================

@@ -26,8 +26,8 @@ std::vector<T> to_stl_vector(const SharedT &other) {
   vec.reserve(other.size());
   auto end = other.cend();
   for (auto iter = other.cbegin(); iter != end; ++iter) {
-    hipc::Ref<T> obj = (*iter);
-    vec.emplace_back(*obj);
+    T &obj = (*iter);
+    vec.emplace_back(obj);
   }
   return vec;
 }
@@ -38,8 +38,8 @@ std::list<T> to_stl_list(const SharedT &other) {
   std::list<T> vec;
   auto end = other.cend();
   for (auto iter = other.cbegin(); iter != end; ++iter) {
-    hipc::Ref<T> obj = (*iter);
-    vec.emplace_back(*obj);
+    T& obj = (*iter);
+    vec.emplace_back(obj);
   }
   return vec;
 }

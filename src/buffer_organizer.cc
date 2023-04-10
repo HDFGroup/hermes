@@ -27,7 +27,7 @@ void BorgIoThreadManager::SpawnFlushMonitor(int num_threads) {
   auto flush_scheduler = [](void *args) {
     HILOG(kDebug, "Flushing scheduler thread has started")
     (void) args;
-    BufferOrganizer *borg = HERMES->borg_.get();
+    BufferOrganizer *borg = &HERMES->borg_;
     while (HERMES_THREAD_MANAGER->Alive()) {
       // borg->LocalEnqueueFlushes();
       // TODO(llogan): make configurable
@@ -47,27 +47,27 @@ void BorgIoThreadManager::SpawnFlushWorkers(int num_threads) {
   // The function will continue working until all pending flushes have
   // been processed
   auto flush = [](void *params) {
-    BufferOrganizer *borg = HERMES->borg_.get();
+    BufferOrganizer *borg = &HERMES->borg_;
     int *id = reinterpret_cast<int*>(params);
-    hipc::Ref<BorgIoThreadQueue> bq = (*borg->queues_)[*id];
-    hipc::Ref<BorgIoThreadQueueInfo> bq_info = bq->second_;
-    hipc::Ref<_BorgIoThreadQueue> queue = bq->first_;
-    HILOG(kDebug, "Flushing worker {} has started", bq_info->id_)
+    BorgIoThreadQueue &bq = (*borg->queues_)[*id];
+    BorgIoThreadQueueInfo& bq_info = bq.GetSecond();
+    _BorgIoThreadQueue& queue = bq.GetFirst();
+    HILOG(kDebug, "Flushing worker {} has started", bq_info.id_)
     while (HERMES_BORG_IO_THREAD_MANAGER->Alive() ||
-          (!HERMES_BORG_IO_THREAD_MANAGER->Alive() && bq_info->load_)) {
+          (!HERMES_BORG_IO_THREAD_MANAGER->Alive() && bq_info.load_)) {
       borg->LocalProcessFlushes(bq_info, queue);
       tl::thread::self().sleep(*HERMES->rpc_.server_engine_, 1);
     }
-    HILOG(kDebug, "Flushing worker {} has stopped", bq_info->id_)
+    HILOG(kDebug, "Flushing worker {} has stopped", bq_info.id_)
   };
 
   // Create the flushing threads
   for (int i = 0; i < num_threads; ++i) {
-    hipc::Ref<BorgIoThreadQueue> bq = (*queues_)[i];
-    hipc::Ref<BorgIoThreadQueueInfo> bq_info = bq->second_;
-    bq_info->id_ = i;
-    bq_info->load_ = 0;
-    HERMES_THREAD_MANAGER->Spawn(flush, &bq_info->id_);
+    BorgIoThreadQueue &bq = (*queues_)[i];
+    BorgIoThreadQueueInfo& bq_info = bq.GetSecond();
+    bq_info.id_ = i;
+    bq_info.load_ = 0;
+    HERMES_THREAD_MANAGER->Spawn(flush, &bq_info.id_);
   }
 }
 
@@ -81,30 +81,29 @@ void BorgIoThreadManager::WaitForFlush() {
 }
 
 /**====================================
- * Default Constructor
+ * SHM Init
  * ===================================*/
 
 /**
  * Initialize the BORG
  * REQUIRES mdm to be initialized already.
  * */
-BufferOrganizer::BufferOrganizer(ShmHeader<BufferOrganizer> *header,
-                                 hipc::Allocator *alloc) {
-  shm_init_header(header, alloc);
-  mdm_ = HERMES->mdm_.get();
+void BufferOrganizer::shm_init(hipc::ShmArchive<BufferOrganizerShm> &header,
+                               hipc::Allocator *alloc) {
+  mdm_ = &HERMES->mdm_;
   rpc_ = &HERMES->rpc_;
 
   // Initialize device information
-  for (hipc::Ref<TargetInfo> target : (*mdm_->targets_)) {
-    hipc::Ref<DeviceInfo> dev_info =
-        (*mdm_->devices_)[target->id_.GetDeviceId()];
-    if (dev_info->mount_dir_->size() == 0) {
-      dev_info->header_->io_api_ = IoInterface::kRam;
+  for (TargetInfo &target : (*mdm_->targets_)) {
+    DeviceInfo &dev_info =
+        (*mdm_->devices_)[target.id_.GetDeviceId()];
+    if (dev_info.mount_dir_->size() == 0) {
+      dev_info.io_api_ = IoInterface::kRam;
     } else {
-      dev_info->header_->io_api_ = IoInterface::kPosix;
+      dev_info.io_api_ = IoInterface::kPosix;
     }
-    auto io_client = borg::BorgIoClientFactory::Get(dev_info->header_->io_api_);
-    io_client->Init(*dev_info);
+    auto io_client = borg::BorgIoClientFactory::Get(dev_info.io_api_);
+    io_client->Init(dev_info);
   }
 
   // Print out device info
@@ -112,8 +111,7 @@ BufferOrganizer::BufferOrganizer(ShmHeader<BufferOrganizer> *header,
 
   // Spawn the thread for flushing blobs
   int num_threads = HERMES->server_config_.borg_.num_threads_;
-  queues_ = hipc::make_ref<hipc::vector<BorgIoThreadQueue>>(
-      header_->queues_, alloc_, num_threads);
+  HSHM_MAKE_AR((*header).queues_, alloc, num_threads)
   HERMES_BORG_IO_THREAD_MANAGER->queues_ = queues_;
   HERMES_BORG_IO_THREAD_MANAGER->SpawnFlushMonitor(num_threads);
   HERMES_BORG_IO_THREAD_MANAGER->SpawnFlushWorkers(num_threads);
@@ -124,11 +122,11 @@ BufferOrganizer::BufferOrganizer(ShmHeader<BufferOrganizer> *header,
  * ===================================*/
 
 /** Deserialize the BORG from shared memory */
-void BufferOrganizer::shm_deserialize_main()  {
-  mdm_ = HERMES->mdm_.get();
+void BufferOrganizer::shm_deserialize(
+    hipc::ShmArchive<BufferOrganizerShm> &header)  {
+  mdm_ = &HERMES->mdm_;
   rpc_ = &HERMES->rpc_;
-  queues_ = hipc::Ref<hipc::vector<BorgIoThreadQueue>>(
-      header_->queues_, alloc_);
+  queues_ = (*header).queues_.get();
   HERMES_BORG_IO_THREAD_MANAGER->queues_ = queues_;
 }
 
@@ -155,22 +153,22 @@ RPC void BufferOrganizer::LocalPlaceBlobInBuffers(
       continue;
     }
     TIMER_START("DeviceInfo")
-    hipc::Ref<DeviceInfo> dev_info =
+    DeviceInfo &dev_info =
         (*mdm_->devices_)[buffer_info.tid_.GetDeviceId()];
     if (buffer_info.t_off_ + buffer_info.blob_size_ >
-        dev_info->header_->capacity_) {
+        dev_info.capacity_) {
       HELOG(kFatal, "Out of bounds: attempting to write to offset: {} / {} "
             "on device {}: {}",
             buffer_info.t_off_ + buffer_info.blob_size_,
-            dev_info->header_->capacity_,
+            dev_info.capacity_,
             buffer_info.tid_.GetDeviceId(),
-            dev_info->mount_point_->str())
+            dev_info.mount_point_->str())
     }
-    auto io_client = borg::BorgIoClientFactory::Get(dev_info->header_->io_api_);
+    auto io_client = borg::BorgIoClientFactory::Get(dev_info.io_api_);
     TIMER_END()
 
     TIMER_START("IO")
-    bool ret = io_client->Write(*dev_info,
+    bool ret = io_client->Write(dev_info,
                                 blob.data() + blob_off,
                                 buffer_info.t_off_,
                                 buffer_info.blob_size_);
@@ -218,19 +216,19 @@ RPC void BufferOrganizer::LocalReadBlobFromBuffers(
     if (buffer_info.tid_.GetNodeId() != mdm_->rpc_->node_id_) {
       continue;
     }
-    hipc::Ref<DeviceInfo> dev_info =
+    DeviceInfo &dev_info =
         (*mdm_->devices_)[buffer_info.tid_.GetDeviceId()];
     if (buffer_info.t_off_ + buffer_info.blob_size_ >
-        dev_info->header_->capacity_) {
+        dev_info.capacity_) {
       HELOG(kFatal, "Out of bounds: attempting to read from offset: {} / {}"
             " on device {}: {}",
             buffer_info.t_off_ + buffer_info.blob_size_,
-            dev_info->header_->capacity_,
+            dev_info.capacity_,
             buffer_info.tid_.GetDeviceId(),
-            dev_info->mount_point_->str())
+            dev_info.mount_point_->str())
     }
-    auto io_client = borg::BorgIoClientFactory::Get(dev_info->header_->io_api_);
-    bool ret = io_client->Read(*dev_info,
+    auto io_client = borg::BorgIoClientFactory::Get(dev_info.io_api_);
+    bool ret = io_client->Read(dev_info,
                                blob.data() + blob_off,
                                buffer_info.t_off_,
                                buffer_info.blob_size_);
@@ -328,7 +326,7 @@ void BufferOrganizer::GlobalOrganizeBlob(const std::string &bucket_name,
 
 /** Flush all blobs registered in this daemon */
 void BufferOrganizer::LocalEnqueueFlushes() {
-  auto mdm = HERMES->mdm_.get();
+  auto mdm = &HERMES->mdm_;
   // Wait for pending flushing tasks to complete
   // This avoids waiting for the lock below
   if (HERMES_BORG_IO_THREAD_MANAGER->IsFlushing()) {
@@ -339,16 +337,16 @@ void BufferOrganizer::LocalEnqueueFlushes() {
                                  kBORG_LocalEnqueueFlushes);
   // Begin checking for blobs which need flushing
   size_t count = 0;
-  for (hipc::Ref<hipc::pair<BlobId, BlobInfo>> blob_p : *mdm->blob_map_) {
-    BlobId &blob_id = *blob_p->first_;
-    BlobInfo &info = *blob_p->second_;
+  for (hipc::pair<BlobId, BlobInfo>& blob_p : *mdm->blob_map_) {
+    BlobId &blob_id = blob_p.GetFirst();
+    BlobInfo &info = blob_p.GetSecond();
     // Verify that flush is needing to happen
-    if (info.header_->mod_count_ == info.header_->last_flush_) {
+    if (info.mod_count_ == info.last_flush_) {
       continue;
     }
     // Check if bucket has flush trait
-    TagId &bkt_id = info.header_->tag_id_;
-    size_t blob_size = info.header_->blob_size_;
+    TagId &bkt_id = info.tag_id_;
+    size_t blob_size = info.blob_size_;
     std::vector<Trait*> traits = HERMES->GetTraits(bkt_id,
                                                    HERMES_TRAIT_FLUSH);
     if (traits.size() == 0) {
@@ -366,15 +364,14 @@ void BufferOrganizer::LocalEnqueueFlushes() {
 
 /** Actually process flush operations */
 void BufferOrganizer::LocalProcessFlushes(
-    hipc::Ref<BorgIoThreadQueueInfo> &bq_info,
-    hipc::Ref<_BorgIoThreadQueue> &queue) {
+    BorgIoThreadQueueInfo &bq_info,
+    _BorgIoThreadQueue& queue) {
   // Process tasks
   auto entry = hipc::make_uptr<BorgIoTask>();
-  auto entry_ref = hipc::to_ref(entry);
 
-  while (!queue->pop(entry_ref).IsNull()) {
-    BorgIoTask &info = *entry_ref;
-    if (entry_ref->delete_) {
+  while (!queue.pop(*entry).IsNull()) {
+    BorgIoTask &info = *entry;
+    if (entry->delete_) {
       HILOG(kDebug, "Attempting to delete blob {}", info.blob_id_);
       // Acquire blob map write lock
       ScopedRwWriteLock blob_map_lock(mdm_->header_->lock_[kBlobMapLock],
@@ -385,17 +382,19 @@ void BufferOrganizer::LocalProcessFlushes(
       if (iter.is_end()) {
         goto end;
       }
-      hipc::Ref<hipc::pair<BlobId, BlobInfo>> blob_info_p = *iter;
-      BlobInfo &blob_info = *blob_info_p->second_;
-      if (blob_info.header_->mod_count_ != info.last_modified_) {
+      hipc::pair<BlobId, BlobInfo>& blob_info_p = *iter;
+      BlobInfo &blob_info = blob_info_p.GetSecond();
+      if (blob_info.mod_count_ != info.last_modified_) {
         goto end;
       }
 
       // Proceed with deletion
+      HILOG(kDebug, "Begin deleting blob {}", info.blob_id_);
       hipc::uptr<hipc::charbuf> blob_name =
           mdm_->CreateBlobName(info.bkt_id_, *blob_info.name_);
       mdm_->blob_id_map_->erase(*blob_name);
       mdm_->blob_map_->erase(info.blob_id_);
+      HILOG(kDebug, "Finished deleting blob {}", info.blob_id_);
     } else {
       HILOG(kDebug, "Attempting to flush blob {}", info.blob_id_);
 
@@ -409,13 +408,13 @@ void BufferOrganizer::LocalProcessFlushes(
       if (iter.is_end()) {
         goto end;
       }
-      hipc::Ref<hipc::pair<BlobId, BlobInfo>> blob_info_p = *iter;
-      BlobInfo &blob_info = *blob_info_p->second_;
-      ScopedRwReadLock blob_lock(blob_info.header_->lock_[0],
+      hipc::pair<BlobId, BlobInfo>& blob_info_p = *iter;
+      BlobInfo &blob_info = blob_info_p.GetSecond();
+      ScopedRwReadLock blob_lock(blob_info.lock_[0],
                                  kBORG_LocalProcessFlushes);
       std::string blob_name = blob_info.name_->str();
-      size_t last_flush = blob_info.header_->mod_count_;
-      blob_info.header_->last_flush_ = last_flush;
+      size_t last_flush = blob_info.mod_count_;
+      blob_info.last_flush_ = last_flush;
       blob_lock.Unlock();
 
       // Get the current blob from Hermes
@@ -437,7 +436,7 @@ void BufferOrganizer::LocalProcessFlushes(
 
     // Dequeue
     end:
-    bq_info->load_.fetch_sub(info.blob_size_);
+    bq_info.load_.fetch_sub(info.blob_size_);
     HILOG(kDebug, "Finished flushing blob {}.{}",
           info.blob_id_.node_id_,
           info.blob_id_.unique_)

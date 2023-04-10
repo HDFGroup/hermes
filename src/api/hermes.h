@@ -40,12 +40,11 @@ namespace hermes::api {
 /**
  * The Hermes shared-memory header
  * */
-template<>
-struct ShmHeader<Hermes> {
+struct HermesShm {
   hipc::Pointer ram_tier_;
-  hipc::ShmArchive<MetadataManager> mdm_;
-  hipc::ShmArchive<BufferPool> bpm_;
-  hipc::ShmArchive<BufferOrganizer> borg_;
+  hipc::ShmArchive<MetadataManagerShm> mdm_;
+  hipc::ShmArchive<BufferPoolShm> bpm_;
+  hipc::ShmArchive<BufferOrganizerShm> borg_;
 };
 
 /**
@@ -54,12 +53,12 @@ struct ShmHeader<Hermes> {
 class Hermes {
  public:
   HermesType mode_;
-  ShmHeader<Hermes> *header_;
+  HermesShm *header_;
   ServerConfig server_config_;
   ClientConfig client_config_;
-  hipc::Ref<MetadataManager> mdm_;
-  hipc::Ref<BufferPool> bpm_;
-  hipc::Ref<BufferOrganizer> borg_;
+  MetadataManager mdm_;
+  BufferPool bpm_;
+  BufferOrganizer borg_;
   TraitManager traits_;
   Prefetcher prefetch_;
   COMM_TYPE comm_;
@@ -147,12 +146,12 @@ class Hermes {
   /** Create a generic tag in Hermes */
   TagId CreateTag(const std::string &tag_name) {
     std::vector<TraitId> traits;
-    return mdm_->GlobalCreateTag(tag_name, false, traits);
+    return mdm_.GlobalCreateTag(tag_name, false, traits);
   }
 
   /** Get the TagId  */
   TagId GetTagId(const std::string &tag_name) {
-    return mdm_->GlobalGetTagId(tag_name);
+    return mdm_.GlobalGetTagId(tag_name);
   }
 
   /** Locate all blobs with a tag */
@@ -171,8 +170,8 @@ class Hermes {
       return id;
     }
     HILOG(kDebug, "Registering a new trait: {}", trait->GetTraitUuid())
-    id = HERMES->mdm_->GlobalRegisterTrait(TraitId::GetNull(),
-                                           trait->trait_info_);
+    id = HERMES->mdm_.GlobalRegisterTrait(TraitId::GetNull(),
+                                          trait->trait_info_);
     HILOG(kDebug, "Giving trait {} id {}.{}",
           trait->GetTraitUuid(), id.node_id_, id.unique_)
     return id;
@@ -189,7 +188,7 @@ class Hermes {
     }
     HILOG(kDebug, "Registering new trait: {}", trait_uuid)
     TraitT obj(trait_uuid, std::forward<Args>(args)...);
-    id = HERMES->mdm_->GlobalRegisterTrait(TraitId::GetNull(),
+    id = HERMES->mdm_.GlobalRegisterTrait(TraitId::GetNull(),
                                            obj.trait_info_);
     HILOG(kDebug, "Giving trait \"{}\" id {}.{}",
           trait_uuid, id.node_id_, id.unique_)
@@ -198,23 +197,23 @@ class Hermes {
 
   /** Get trait id */
   TraitId GetTraitId(const std::string &trait_uuid) {
-    return HERMES->mdm_->GlobalGetTraitId(trait_uuid);
+    return HERMES->mdm_.GlobalGetTraitId(trait_uuid);
   }
 
   /** Get the trait */
   Trait* GetTrait(TraitId trait_id) {
-    return mdm_->GlobalGetTrait(trait_id);
+    return mdm_.GlobalGetTrait(trait_id);
   }
 
   /** Attach a trait to a tag */
   void AttachTrait(TagId tag_id, TraitId trait_id) {
-    HERMES->mdm_->GlobalTagAddTrait(tag_id, trait_id);
+    HERMES->mdm_.GlobalTagAddTrait(tag_id, trait_id);
   }
 
   /** Get traits attached to tag */
   std::vector<Trait*> GetTraits(TagId tag_id,
                                 uint32_t flags = ALL_BITS(uint32_t)) {
-    std::vector<TraitId> trait_ids = HERMES->mdm_->GlobalTagGetTraits(tag_id);
+    std::vector<TraitId> trait_ids = HERMES->mdm_.GlobalTagGetTraits(tag_id);
     std::vector<Trait*> traits;
     traits.reserve(trait_ids.size());
     for (TraitId &trait_id : trait_ids) {

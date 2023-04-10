@@ -23,11 +23,11 @@ template<typename T>
 bool VerifyVector(hipc::vector<T> &vec) {
   for (int i = 0; i < 20; ++i) {
     if constexpr(std::is_same_v<T, int>) {
-      if (*vec[i] != i) {
+      if (vec[i] != i) {
         return false;
       }
     } else {
-      if (*vec[i] != std::to_string(i)) {
+      if (vec[i] != std::to_string(i)) {
         return false;
       }
     }

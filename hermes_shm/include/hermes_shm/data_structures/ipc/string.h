@@ -21,39 +21,47 @@
 namespace hshm::ipc {
 
 /** forward declaration for string */
-class string;
+template<size_t SSO>
+class string_templ;
 
 /**
  * MACROS used to simplify the string namespace
  * Used as inputs to the SHM_CONTAINER_TEMPLATE
  * */
-#define CLASS_NAME string
-#define TYPED_CLASS string
-#define TYPED_HEADER ShmHeader<string>
+#define CLASS_NAME string_templ
+#define TYPED_CLASS string_templ<SSO>
+#define TYPED_HEADER ShmHeader<string_templ<SSO>>
 
 /** string shared-memory header */
-template<>
-struct ShmHeader<string> {
+template<size_t SSO>
+struct ShmHeader<string_templ<SSO>> {
   SHM_CONTAINER_HEADER_TEMPLATE(ShmHeader)
   size_t length_;
+  char sso_[SSO];
   Pointer text_;
 
   /** Strong copy operation */
   void strong_copy(const ShmHeader &other) {
     length_ = other.length_;
     text_ = other.text_;
+    if (length_ < SSO) {
+      memcpy(sso_, other.sso_, other.length_ + 1);
+    }
   }
 };
 
 /**
  * A string of characters.
  * */
-class string : public ShmContainer {
+template<size_t SSO>
+class string_templ : public ShmContainer {
  public:
-  SHM_CONTAINER_TEMPLATE((CLASS_NAME), (TYPED_CLASS), (TYPED_HEADER))
+  SHM_CONTAINER_TEMPLATE((CLASS_NAME), (TYPED_CLASS))
 
  public:
-  char *text_;
+  size_t length_;
+  Pointer text_;
+  char sso_[SSO];
 
  public:
   /**====================================
@@ -61,8 +69,8 @@ class string : public ShmContainer {
    * ===================================*/
 
   /** SHM Constructor. Default. */
-  explicit string(TYPED_HEADER *header, Allocator *alloc) {
-    shm_init_header(header, alloc);
+  explicit string_templ(Allocator *alloc) {
+    shm_init_container(alloc);
     SetNull();
   }
 
@@ -71,9 +79,9 @@ class string : public ShmContainer {
    * ===================================*/
 
   /** SHM Constructor. Just allocate space. */
-  explicit string(TYPED_HEADER *header, Allocator *alloc,
-                  size_t length) {
-    shm_init_header(header, alloc);
+  explicit string_templ(Allocator *alloc,
+                        size_t length) {
+    shm_init_container(alloc);
     _create_str(length);
   }
 
@@ -82,57 +90,57 @@ class string : public ShmContainer {
    * ===================================*/
 
   /** SHM Constructor. From const char* */
-  explicit string(TYPED_HEADER *header, Allocator *alloc,
-                  const char *text) {
-    shm_init_header(header, alloc);
+  explicit string_templ(Allocator *alloc,
+                        const char *text) {
+    shm_init_container(alloc);
     size_t length = strlen(text);
     _create_str(text, length);
   }
 
   /** SHM Constructor. From const char* and size */
-  explicit string(TYPED_HEADER *header, Allocator *alloc,
-                  const char *text, size_t length) {
-    shm_init_header(header, alloc);
+  explicit string_templ(Allocator *alloc,
+                        const char *text, size_t length) {
+    shm_init_container(alloc);
     _create_str(text, length);
   }
 
   /** SHM Constructor. From std::string */
-  explicit string(TYPED_HEADER *header, Allocator *alloc,
-                  const std::string &text) {
-    shm_init_header(header, alloc);
+  explicit string_templ(Allocator *alloc,
+                        const std::string &text) {
+    shm_init_container(alloc);
     _create_str(text.data(), text.size());
   }
 
   /** SHM copy assignment operator. From std::string. */
-  string& operator=(const std::string &other) {
+  string_templ& operator=(const std::string &other) {
     shm_destroy();
     _create_str(other.data(), other.size());
     return *this;
   }
 
   /** SHM Constructor. From std::string */
-  explicit string(TYPED_HEADER *header, Allocator *alloc,
-                  const hshm::charbuf &text) {
-    shm_init_header(header, alloc);
+  explicit string_templ(Allocator *alloc,
+                        const hshm::charbuf &text) {
+    shm_init_container(alloc);
     _create_str(text.data(), text.size());
   }
 
   /** SHM copy assignment operator. From std::string. */
-  string& operator=(const hshm::charbuf &other) {
+  string_templ& operator=(const hshm::charbuf &other) {
     shm_destroy();
     _create_str(other.data(), other.size());
     return *this;
   }
 
   /** SHM copy constructor. From string. */
-  explicit string(TYPED_HEADER *header, Allocator *alloc,
-                  const string &other) {
-    shm_init_header(header, alloc);
+  explicit string_templ(Allocator *alloc,
+                        const string_templ &other) {
+    shm_init_container(alloc);
     _create_str(other.data(), other.size());
   }
 
   /** SHM copy assignment operator. From string. */
-  string& operator=(const string &other) {
+  string_templ& operator=(const string_templ &other) {
     if (this != &other) {
       shm_destroy();
       _create_str(other.data(), other.size());
@@ -144,12 +152,20 @@ class string : public ShmContainer {
    * Move Constructors
    * ===================================*/
 
+  /** Strong copy operation */
+  HSHM_ALWAYS_INLINE void strong_copy(const string_templ &other) {
+    length_ = other.length_;
+    text_ = other.text_;
+    if (length_ < SSO) {
+      memcpy(sso_, other.sso_, other.length_ + 1);
+    }
+  }
+
   /** SHM move constructor. */
-  string(TYPED_HEADER *header, Allocator *alloc, string &&other) {
-    shm_init_header(header, alloc);
-    if (alloc_ == other.alloc_) {
-      memcpy((void *) header_, (void *) other.header_, sizeof(*header_));
-      shm_deserialize_main();
+  string_templ(Allocator *alloc, string_templ &&other) {
+    shm_init_container(alloc);
+    if (GetAllocator() == other.GetAllocator()) {
+      strong_copy(other);
       other.SetNull();
     } else {
       _create_str(other.data(), other.size());
@@ -158,12 +174,11 @@ class string : public ShmContainer {
   }
 
   /** SHM move assignment operator. */
-  string& operator=(string &&other) noexcept {
+  string_templ& operator=(string_templ &&other) noexcept {
     if (this != &other) {
       shm_destroy();
-      if (alloc_ == other.alloc_) {
-        memcpy((void *) header_, (void *) other.header_, sizeof(*header_));
-        shm_deserialize_main();
+      if (GetAllocator() == other.GetAllocator()) {
+        strong_copy(other);
         other.SetNull();
       } else {
         _create_str(other.data(), other.size());
@@ -178,30 +193,20 @@ class string : public ShmContainer {
    * ===================================*/
 
   /** Check if this string is NULL */
-  bool IsNull() const {
-    return header_->text_.IsNull();
+  HSHM_ALWAYS_INLINE bool IsNull() const {
+    return length_ == 0;
   }
 
   /** Set this string to NULL */
-  void SetNull() {
-    header_->text_.SetNull();
-    header_->length_ = 0;
+  HSHM_ALWAYS_INLINE void SetNull() {
+    text_.SetNull();
+    length_ = 0;
   }
 
   /** Destroy the shared-memory data. */
-  void shm_destroy_main() {
-    alloc_->Free(header_->text_);
-  }
-
-  /**====================================
-   * SHM Deserialization
-   * ===================================*/
-
-  /** Load from shared memory */
-  void shm_deserialize_main() {
-    if (!IsNull()) {
-      text_ = alloc_->template
-        Convert<char>(header_->text_);
+  HSHM_ALWAYS_INLINE void shm_destroy_main() {
+    if (size() >= SSO) {
+      GetAllocator()->Free(text_);
     }
   }
 
@@ -210,33 +215,46 @@ class string : public ShmContainer {
    * ===================================*/
 
   /** Get character at index i in the string */
-  char& operator[](size_t i) const {
-    return text_[i];
+  HSHM_ALWAYS_INLINE char& operator[](size_t i) {
+    return data()[i];
+  }
+
+  /** Get character at index i in the string */
+  HSHM_ALWAYS_INLINE const char& operator[](size_t i) const {
+    return data()[i];
   }
 
   /** Convert into a std::string */
-  std::string str() const {
-    return {text_, header_->length_};
+  HSHM_ALWAYS_INLINE std::string str() const {
+    return {c_str(), length_};
   }
 
   /** Get the size of the current string */
-  size_t size() const {
-    return header_->length_;
+  HSHM_ALWAYS_INLINE size_t size() const {
+    return length_;
   }
 
   /** Get a constant reference to the C-style string */
-  char* c_str() const {
-    return text_;
+  HSHM_ALWAYS_INLINE const char* c_str() const {
+    return data();
   }
 
   /** Get a constant reference to the C-style string */
-  char* data() const {
-    return text_;
+  HSHM_ALWAYS_INLINE const char* data() const {
+    if (length_ < SSO) {
+      return sso_;
+    } else {
+      return GetAllocator()->template Convert<char, Pointer>(text_);
+    }
   }
 
   /** Get a mutable reference to the C-style string */
-  char* data() {
-    return text_;
+  HSHM_ALWAYS_INLINE char* data() {
+    if (length_ < SSO) {
+      return sso_;
+    } else {
+      return GetAllocator()->template Convert<char, Pointer>(text_);
+    }
   }
 
   /** Resize this string */
@@ -244,10 +262,10 @@ class string : public ShmContainer {
     if (IsNull()) {
       _create_str(new_size);
     } else if (new_size > size()) {
-      text_ = alloc_->ReallocatePtr<char, Pointer>(header_->text_, new_size);
-      header_->length_ = new_size;
+      GetAllocator()->template Reallocate<Pointer>(text_, new_size);
+      length_ = new_size;
     } else {
-      header_->length_ = new_size;
+      length_ = new_size;
     }
   }
 
@@ -275,7 +293,7 @@ class string : public ShmContainer {
   bool operator op(const std::string &other) const { \
     return _strncmp(data(), size(), other.data(), other.size()) op 0; \
   } \
-  bool operator op(const string &other) const { \
+  bool operator op(const string_templ &other) const { \
     return _strncmp(data(), size(), other.data(), other.size()) op 0; \
   }
 
@@ -289,16 +307,25 @@ class string : public ShmContainer {
 #undef HERMES_STR_CMP_OPERATOR
 
  private:
-  inline void _create_str(size_t length) {
-    text_ = alloc_->AllocatePtr<char>(length + 1, header_->text_);
-    header_->length_ = length;
+  HSHM_ALWAYS_INLINE void _create_str(size_t length) {
+    if (length < SSO) {
+      // NOTE(llogan): less than and not equal because length doesn't
+      // account for trailing 0.
+    } else {
+      text_ = GetAllocator()->Allocate(length + 1);
+    }
+    length_ = length;
   }
-  inline void _create_str(const char *text, size_t length) {
+  HSHM_ALWAYS_INLINE void _create_str(const char *text, size_t length) {
     _create_str(length);
-    memcpy(text_, text, length);
-    text_[length] = 0;
+    char *str = data();
+    memcpy(str, text, length);
+    str[length] = 0;
   }
 };
+
+/** Our default SSO value */
+typedef string_templ<32> string;
 
 /** Consider the string as an uniterpreted set of bytes */
 typedef string charbuf;
@@ -308,9 +335,9 @@ typedef string charbuf;
 namespace std {
 
 /** Hash function for string */
-template<>
-struct hash<hshm::ipc::string> {
-  size_t operator()(const hshm::ipc::string &text) const {
+template<size_t SSO>
+struct hash<hshm::ipc::string_templ<SSO>> {
+  size_t operator()(const hshm::ipc::string_templ<SSO> &text) const {
     size_t sum = 0;
     for (size_t i = 0; i < text.size(); ++i) {
       auto shift = static_cast<size_t>(i % sizeof(size_t));

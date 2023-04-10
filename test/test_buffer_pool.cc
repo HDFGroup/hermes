@@ -57,11 +57,11 @@ TEST_CASE("TestBufferPool") {
     size_t tgt_size = size / num_targets;
     size_t last_size = tgt_size + (size % num_targets);
     for (int i = 0; i < num_targets; ++i) {
-      hipc::Ref<hermes::TargetInfo> target = (*HERMES->mdm_->targets_)[i];
+      hermes::TargetInfo &target = (*HERMES->mdm_.targets_)[i];
       if (i < num_targets - 1) {
-        schema.plcmnts_.emplace_back(tgt_size, target->id_);
+        schema.plcmnts_.emplace_back(tgt_size, target.id_);
       } else {
-        schema.plcmnts_.emplace_back(last_size, target->id_);
+        schema.plcmnts_.emplace_back(last_size, target.id_);
       }
     }
 
@@ -71,17 +71,17 @@ TEST_CASE("TestBufferPool") {
 
     // Allocate the buffers and set them
     std::vector<hermes::BufferInfo> buffers =
-        HERMES->bpm_->LocalAllocateAndSetBuffers(schema, write_blob);
+        HERMES->bpm_.LocalAllocateAndSetBuffers(schema, write_blob);
 
     // Read back the buffers
     hermes::Blob read_blob(size);
-    HERMES->borg_->LocalReadBlobFromBuffers(read_blob, buffers);
+    HERMES->borg_.LocalReadBlobFromBuffers(read_blob, buffers);
 
     // Verify they are the same
     REQUIRE(read_blob.size() == size);
     REQUIRE(VerifyBuffer(read_blob.data(), size, 10));
 
     // Release buffers
-    HERMES->bpm_->LocalReleaseBuffers(buffers);
+    HERMES->bpm_.LocalReleaseBuffers(buffers);
   }
 }

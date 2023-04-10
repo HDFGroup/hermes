@@ -39,9 +39,9 @@ class ListTestSuite {
   /// Forward iterator
   void ForwardIteratorTest(size_t count = 30) {
     size_t fcur = 0;
-    for (auto num : obj_) {
+    for (auto &num : obj_) {
       CREATE_SET_VAR_TO_INT_OR_STRING(T, fcur_conv, fcur);
-      REQUIRE(*num == fcur_conv);
+      REQUIRE(num == fcur_conv);
       ++fcur;
     }
   }
@@ -51,9 +51,9 @@ class ListTestSuite {
     const Container &obj = obj_;
     size_t fcur = 0;
     for (auto iter = obj.cbegin(); iter != obj.cend(); ++iter) {
-      hipc::Ref<T> num = *iter;
+      T& num = *iter;
       CREATE_SET_VAR_TO_INT_OR_STRING(T, fcur_conv, fcur);
-      REQUIRE(*num == fcur_conv);
+      REQUIRE(num == fcur_conv);
       ++fcur;
     }
   }
@@ -97,7 +97,7 @@ class ListTestSuite {
     CREATE_SET_VAR_TO_INT_OR_STRING(T, i0, 100);
     size_t old_size = obj_.size();
     obj_.emplace_front(i0);
-    REQUIRE(*obj_.front() == i0);
+    REQUIRE(obj_.front() == i0);
     REQUIRE(obj_.size() == old_size + 1);
     obj_.erase(obj_.begin(), obj_.begin() + 1);
   }
@@ -108,14 +108,14 @@ class ListTestSuite {
     {
       CREATE_SET_VAR_TO_INT_OR_STRING(T, i4, 25);
       auto iter = obj_.begin() + 4;
-      (**iter) = i4;
+      (*iter) = i4;
     }
 
     // Verify the modification took place
     {
       CREATE_SET_VAR_TO_INT_OR_STRING(T, i4, 25);
       auto iter = obj_.begin() + 4;
-      REQUIRE((**iter) == i4);
+      REQUIRE((*iter) == i4);
     }
   }
 
@@ -125,14 +125,14 @@ class ListTestSuite {
     {
       CREATE_SET_VAR_TO_INT_OR_STRING(T, i4, 25);
       auto iter = obj_.begin() + 4;
-      (**iter) = std::move(i4);
+      (*iter) = std::move(i4);
     }
 
     // Verify the modification took place
     {
       CREATE_SET_VAR_TO_INT_OR_STRING(T, i4, 25);
       auto iter = obj_.begin() + 4;
-      REQUIRE((**iter) == i4);
+      REQUIRE((*iter) == i4);
     }
   }
 
@@ -153,9 +153,9 @@ class ListTestSuite {
     // Verify obj
     {
       size_t fcur = 0;
-      for (auto num : obj_) {
+      for (auto &num : obj_) {
         CREATE_SET_VAR_TO_INT_OR_STRING(T, fcur_conv, fcur);
-        REQUIRE(*num == fcur_conv);
+        REQUIRE(num == fcur_conv);
         ++fcur;
       }
     }
@@ -163,9 +163,9 @@ class ListTestSuite {
     // Verify copy
     {
       size_t fcur = 0;
-      for (auto num : cpy) {
+      for (auto &num : cpy) {
         CREATE_SET_VAR_TO_INT_OR_STRING(T, fcur_conv, fcur);
-        REQUIRE(*num == fcur_conv);
+        REQUIRE(num == fcur_conv);
         ++fcur;
       }
     }
@@ -180,9 +180,9 @@ class ListTestSuite {
       size_t fcur = 0;
       REQUIRE(orig_obj.IsNull());
       REQUIRE(new_obj.size() == count);
-      for (auto num : new_obj) {
+      for (auto &num : new_obj) {
         CREATE_SET_VAR_TO_INT_OR_STRING(T, fcur_conv, fcur);
-        REQUIRE(*num == fcur_conv);
+        REQUIRE(num == fcur_conv);
         ++fcur;
       }
     }

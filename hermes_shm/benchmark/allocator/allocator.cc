@@ -25,9 +25,9 @@ class AllocatorTestSuite {
   static std::stringstream ss_;
   static int test_count_;
 
-  ////////////////////
-  /// Test Cases
-  ////////////////////
+  /**====================================
+   * Test Runner
+   * ===================================*/
 
   /** Constructor */
   AllocatorTestSuite(AllocatorType alloc_type, Allocator *alloc)
@@ -45,8 +45,20 @@ class AllocatorTestSuite {
         alloc_type_ = "hipc::FixedPageAllocator";
         break;
       }
+      case AllocatorType::kScalablePageAllocator: {
+        alloc_type_ = "hipc::ScalablePageAllocator";
+        break;
+      }
+      default: {
+        HELOG(kFatal, "Could not find this allocator type");
+        break;
+      }
     }
   }
+
+  /**====================================
+   * Test Cases
+   * ===================================*/
 
   /** Allocate and Free a single size in a single loop */
   void AllocateAndFreeFixedSize(size_t count, size_t size) {
@@ -81,9 +93,9 @@ class AllocatorTestSuite {
 
   /** Allocate, Free, Reallocate, Free in a loop */
 
-  ////////////////////
-  /// Test Output
-  ////////////////////
+  /**====================================
+   * Test Output
+   * ===================================*/
 
   /** The CSV header */
   void TestOutputHeader() {
@@ -123,6 +135,7 @@ int AllocatorTestSuite::test_count_ = 0;
 
 /** The minor number to use for allocators */
 static int minor = 1;
+const std::string shm_url = "test_allocators";
 
 /** Create the allocator + backend for the test */
 template<typename BackendT, typename AllocT, typename ...Args>
@@ -135,9 +148,8 @@ Allocator* Pretest(MemoryBackendType backend_type,
 
   if (rank == 0) {
     // Create the allocator + backend
-    std::string shm_url = "test_allocators";
     mem_mngr->CreateBackend<BackendT>(
-      MemoryManager::kDefaultBackendSize, shm_url);
+      MemoryManager::GetDefaultBackendSize(), shm_url);
     alloc = mem_mngr->CreateAllocator<AllocT>(
       shm_url, alloc_id, 0, std::forward<Args>(args)...);
   }
@@ -145,11 +157,6 @@ Allocator* Pretest(MemoryBackendType backend_type,
   if (rank != 0){
     // Retrieve the allocator + backend
     alloc = mem_mngr->GetAllocator(alloc_id);
-  }
-
-# pragma omp barrier
-  if (rank == 0) {
-    minor += 1;
   }
 
   return alloc;
@@ -160,8 +167,14 @@ void Posttest() {
   int rank = omp_get_thread_num();
 #pragma omp barrier
   if (rank == 0) {
-    std::string shm_url = "test_allocators";
-    auto mem_mngr = HERMES_MEMORY_MANAGER;
+    allocator_id_t alloc_id(0, minor);
+    HERMES_MEMORY_MANAGER->UnregisterAllocator(
+      alloc_id);
+    HERMES_MEMORY_MANAGER->DestroyBackend(shm_url);
+  }
+# pragma omp barrier
+  if (rank == 0) {
+    minor += 1;
   }
 }
 
@@ -172,12 +185,13 @@ void AllocatorTest(AllocatorType alloc_type,
                    Args&& ...args) {
   Allocator *alloc = Pretest<BackendT, AllocT>(
     backend_type, std::forward<Args>(args)...);
-  // Allocate many, and then free many
+  size_t count = 100000;
+  // Allocate many and then free many
   AllocatorTestSuite(alloc_type, alloc).AllocateThenFreeFixedSize(
-    (2<<10), MEGABYTES(1));
+    count, KILOBYTES(1));
   // Allocate and free immediately
   AllocatorTestSuite(alloc_type, alloc).AllocateAndFreeFixedSize(
-    (2<<10), MEGABYTES(1));
+    count, KILOBYTES(1));
   Posttest();
 }
 
@@ -194,6 +208,10 @@ void FullAllocatorTestPerThread() {
   // Fixed page allocator
   AllocatorTest<hipc::PosixShmMmap, hipc::FixedPageAllocator>(
     AllocatorType::kFixedPageAllocator,
+    MemoryBackendType::kPosixShmMmap);
+  // Fixed page allocator
+  AllocatorTest<hipc::PosixShmMmap, hipc::ScalablePageAllocator>(
+    AllocatorType::kScalablePageAllocator,
     MemoryBackendType::kPosixShmMmap);
 }
 

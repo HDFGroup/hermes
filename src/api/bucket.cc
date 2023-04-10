@@ -27,7 +27,7 @@ using hermes::adapter::AdapterMode;
 Bucket::Bucket(const std::string &bkt_name,
                Context &ctx,
                size_t backend_size)
-: mdm_(HERMES->mdm_.get()), bpm_(HERMES->bpm_.get()), name_(bkt_name) {
+: mdm_(&HERMES->mdm_), bpm_(&HERMES->bpm_), name_(bkt_name) {
   std::vector<TraitId> traits;
   auto ret = mdm_->GlobalGetOrCreateTag(bkt_name, true, traits, backend_size);
   id_ = ret.first;
@@ -38,7 +38,7 @@ Bucket::Bucket(const std::string &bkt_name,
  * Either initialize or fetch the bucket.
  * */
 Bucket::Bucket(TagId tag_id)
-    : mdm_(HERMES->mdm_.get()), bpm_(HERMES->bpm_.get()) {
+    : mdm_(&HERMES->mdm_), bpm_(&HERMES->bpm_) {
   name_ = mdm_->GlobalGetTagName(tag_id);
   id_ = tag_id;
   did_create_ = false;
@@ -210,7 +210,7 @@ Status Bucket::Put(std::string blob_name,
  * */
 Status Bucket::Get(BlobId blob_id, Blob &blob, Context &ctx) {
   std::vector<BufferInfo> buffers = mdm_->GlobalGetBlobBuffers(blob_id);
-  blob = HERMES->borg_->GlobalReadBlobFromBuffers(buffers);
+  blob = HERMES->borg_.GlobalReadBlobFromBuffers(buffers);
   // Update the local MDM I/O log
   mdm_->AddIoStat(id_, blob_id, blob.size(), IoType::kRead);
   return Status();
