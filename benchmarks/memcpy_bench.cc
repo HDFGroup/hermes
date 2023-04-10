@@ -33,12 +33,23 @@ void GatherTimes(const std::string &backend_type,
   MPI_Reduce(&time, &max,
              1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
   if (rank == 0) {
-    HIPRINT("{} {}: MBps: {}\n",
-            backend_type, test_name,
+    HIPRINT("{} {} {}: MBps: {}\n",
+            rank, backend_type, test_name,
             size_per_rank * nprocs / t.GetUsec())
   }
 }
 
+template<bool SHM>
+size_t GetBlobOff(int rank, size_t i,
+                  size_t blobs_per_rank, size_t blob_size) {
+  if constexpr(SHM) {
+    return (rank * blobs_per_rank + i) * blob_size;
+  } else {
+    return i * blob_size;
+  }
+}
+
+template<bool SHM>
 void PutTest(const std::string &backend_type, int rank, int repeat,
              size_t blobs_per_rank, size_t blob_size) {
   Timer t;
@@ -46,7 +57,7 @@ void PutTest(const std::string &backend_type, int rank, int repeat,
   t.Resume();
   for (int j = 0; j < repeat; ++j) {
     for (size_t i = 0; i < blobs_per_rank; ++i) {
-      size_t blob_off = (rank * blobs_per_rank + i) * blob_size;
+      size_t blob_off = GetBlobOff<SHM>(rank, i, blobs_per_rank, blob_size);
       memcpy(backend->data_ + blob_off, data.data(), data.size());
     }
   }
@@ -54,6 +65,7 @@ void PutTest(const std::string &backend_type, int rank, int repeat,
   GatherTimes(backend_type, "Put", blobs_per_rank * blob_size * repeat, t);
 }
 
+template<bool SHM>
 void GetTest(const std::string &backend_type, int rank, int repeat,
              size_t blobs_per_rank, size_t blob_size) {
   Timer t;
@@ -61,7 +73,7 @@ void GetTest(const std::string &backend_type, int rank, int repeat,
   t.Resume();
   for (int j = 0; j < repeat; ++j) {
     for (size_t i = 0; i < blobs_per_rank; ++i) {
-      size_t blob_off = (rank * blobs_per_rank + i) * blob_size;
+      size_t blob_off = GetBlobOff<SHM>(rank, i, blobs_per_rank, blob_size);
       memcpy(data.data(), backend->data_ + blob_off, data.size());
     }
   }
@@ -69,7 +81,7 @@ void GetTest(const std::string &backend_type, int rank, int repeat,
   GatherTimes(backend_type, "Get", blobs_per_rank * blob_size * repeat, t);
 }
 
-template<typename BackendT>
+template<typename BackendT, bool SHM>
 void MemcpyBench(int nprocs, int rank,
                  size_t blob_size,
                  size_t blobs_per_rank) {
@@ -85,24 +97,42 @@ void MemcpyBench(int nprocs, int rank,
   } else if constexpr(std::is_same_v<BackendT, hipc::PosixMmap>) {
     backend_type = "kPosixMmap";
     type = hipc::MemoryBackendType::kPosixMmap;
-    backend_size = nprocs * blob_size * blobs_per_rank;
+    backend_size = blob_size * blobs_per_rank;
   } else {
+    (void) type;
     HELOG(kFatal, "Invalid backend type");
   }
 
-  if (rank == 0) {
-    backend = HERMES_MEMORY_MANAGER->
-        CreateBackend<BackendT>(backend_size, shm_url);
+  // Create the backend
+  try {
+    if constexpr(std::is_same_v<BackendT, hipc::PosixShmMmap>) {
+      MPI_Barrier(MPI_COMM_WORLD);
+      if (rank == 0) {
+        backend = HERMES_MEMORY_MANAGER->
+            CreateBackend<BackendT>(backend_size, shm_url);
+      }
+      MPI_Barrier(MPI_COMM_WORLD);
+      if (rank != 0) {
+        backend = HERMES_MEMORY_MANAGER->AttachBackend(type, shm_url);
+      }
+      MPI_Barrier(MPI_COMM_WORLD);
+    } else if constexpr(std::is_same_v<BackendT, hipc::PosixMmap>) {
+      MPI_Barrier(MPI_COMM_WORLD);
+      backend = HERMES_MEMORY_MANAGER->
+          CreateBackend<BackendT>(backend_size, shm_url);
+      MPI_Barrier(MPI_COMM_WORLD);
+    }
+  } catch (std::exception &e) {
+    HELOG(kFatal, "{}\n", e.what());
   }
-  MPI_Barrier(MPI_COMM_WORLD);
-  if (rank != 0) {
-    HERMES_MEMORY_MANAGER->AttachBackend(type, shm_url);
-  }
-  MPI_Barrier(MPI_COMM_WORLD);
 
-  PutTest(backend_type, rank, 1, blobs_per_rank, blob_size);
+  if (backend == nullptr) {
+    HELOG(kFatal, "Backend was null: {}", backend_type)
+  }
+
+  PutTest<SHM>(backend_type, rank, 1, blobs_per_rank, blob_size);
   MPI_Barrier(MPI_COMM_WORLD);
-  GetTest(backend_type, rank, 1, blobs_per_rank, blob_size);
+  GetTest<SHM>(backend_type, rank, 1, blobs_per_rank, blob_size);
 }
 
 int main(int argc, char **argv) {
@@ -117,8 +147,9 @@ int main(int argc, char **argv) {
   size_t blob_size = hshm::ConfigParse::ParseSize(argv[1]);
   size_t blobs_per_rank = atoi(argv[2]);
 
-  MemcpyBench<hipc::PosixMmap>(nprocs, rank, blob_size, blobs_per_rank);
-  MemcpyBench<hipc::PosixShmMmap>(nprocs, rank, blob_size, blobs_per_rank);
+  MemcpyBench<hipc::PosixMmap, false>(nprocs, rank, blob_size, blobs_per_rank);
+  MemcpyBench<hipc::PosixShmMmap, true>(nprocs, rank,
+                                        blob_size, blobs_per_rank);
 
   MPI_Finalize();
 }
