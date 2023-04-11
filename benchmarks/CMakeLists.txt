@@ -6,7 +6,7 @@ include_directories(
 )
 
 set(BENCHMARKS
-        put_get_bench
+        api_bench
         memcpy_bench)
 
 foreach(benchmark ${BENCHMARKS})
