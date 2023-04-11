@@ -20,22 +20,23 @@ namespace hapi = hermes::api;
 using Timer = hshm::HighResMonotonicTimer;
 
 /** Gather times per-process */
-void GatherTimes(std::string test_name, Timer &t) {
+void GatherTimes(std::string test_name, size_t io_size, Timer &t) {
   MPI_Barrier(MPI_COMM_WORLD);
-  int nprocs, rank;
-  MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+  int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   double time = t.GetSec(), max;
   MPI_Reduce(&time, &max,
              1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
   if (rank == 0) {
-    std::cout << test_name << ": Time (sec): " << max << std::endl;
+    double mbps = io_size / max;
+    HIPRINT("{}: Time: {}, MBps (or MOps): {}", test_name, max, mbps);
   }
 }
 
 /** Each process PUTS into the same bucket, but with different blob names */
 void PutTest(hapi::Hermes *hermes,
-             int rank, int repeat, size_t blobs_per_rank, size_t blob_size) {
+             int nprocs, int rank,
+             int repeat, size_t blobs_per_rank, size_t blob_size) {
   Timer t;
   auto bkt = hermes->GetBucket("hello");
   hermes::api::Context ctx;
@@ -50,7 +51,7 @@ void PutTest(hapi::Hermes *hermes,
     }
   }
   t.Pause();
-  GatherTimes("Put", t);
+  GatherTimes("Put", nprocs * blobs_per_rank * blob_size * repeat, t);
 }
 
 /**
@@ -58,7 +59,8 @@ void PutTest(hapi::Hermes *hermes,
  * MUST run PutTest first.
  * */
 void GetTest(hapi::Hermes *hermes,
-             int rank, int repeat, size_t blobs_per_rank) {
+             int nprocs, int rank,
+             int repeat, size_t blobs_per_rank, size_t blob_size) {
   Timer t;
   auto bkt = hermes->GetBucket("hello");
   hermes::api::Context ctx;
@@ -74,19 +76,21 @@ void GetTest(hapi::Hermes *hermes,
     }
   }
   t.Pause();
-  GatherTimes("Get", t);
+  GatherTimes("Get", nprocs * blobs_per_rank * blob_size * repeat, t);
 }
 
 /** Each process PUTs then GETs */
 void PutGetTest(hapi::Hermes *hermes,
-                int rank, int repeat, size_t blobs_per_rank, size_t blob_size) {
-  PutTest(hermes, rank, repeat, blobs_per_rank, blob_size);
+                int nprocs, int rank, int repeat,
+                size_t blobs_per_rank, size_t blob_size) {
+  PutTest(hermes, nprocs, rank, repeat, blobs_per_rank, blob_size);
   MPI_Barrier(MPI_COMM_WORLD);
-  GetTest(hermes, rank, repeat, blobs_per_rank);
+  GetTest(hermes, nprocs, rank, repeat, blobs_per_rank, blob_size);
 }
 
 /** Each process creates a set of buckets */
-void CreateBucketTest(hapi::Hermes *hermes, int rank, size_t bkts_per_rank) {
+void CreateBucketTest(hapi::Hermes *hermes, int nprocs, int rank,
+                      size_t bkts_per_rank) {
   Timer t;
   t.Resume();
   for (size_t i = 0; i < bkts_per_rank; ++i) {
@@ -94,11 +98,12 @@ void CreateBucketTest(hapi::Hermes *hermes, int rank, size_t bkts_per_rank) {
     hapi::Bucket bkt = hermes->GetBucket(std::to_string(bkt_name));
   }
   t.Pause();
-  GatherTimes("CreateBucket", t);
+  GatherTimes("CreateBucket", bkts_per_rank * nprocs, t);
 }
 
 /** Each process gets existing buckets */
-void GetBucketTest(hapi::Hermes *hermes, int rank, size_t bkts_per_rank) {
+void GetBucketTest(hapi::Hermes *hermes, int nprocs, int rank,
+                   size_t bkts_per_rank) {
   // Initially create the buckets
   for (size_t i = 0; i < bkts_per_rank; ++i) {
     int bkt_name = rank * bkts_per_rank + i;
@@ -113,11 +118,12 @@ void GetBucketTest(hapi::Hermes *hermes, int rank, size_t bkts_per_rank) {
     hapi::Bucket bkt = hermes->GetBucket(std::to_string(bkt_name));
   }
   t.Pause();
-  GatherTimes("CreateBucket", t);
+  GatherTimes("CreateBucket", bkts_per_rank * nprocs, t);
 }
 
 /** Each process creates (no data) a blob in a single bucket */
-void CreateBlobOneBucketTest(hapi::Hermes *hermes, int rank,
+void CreateBlobOneBucketTest(hapi::Hermes *hermes,
+                             int nprocs, int rank,
                              size_t blobs_per_rank) {
   Timer t;
   hapi::Bucket bkt = hermes->GetBucket("CreateBlobOneBucket");
@@ -131,11 +137,12 @@ void CreateBlobOneBucketTest(hapi::Hermes *hermes, int rank,
     bkt.TryCreateBlob(name, blob_id, ctx);
   }
   t.Pause();
-  GatherTimes("CreateBlobOneBucket", t);
+  GatherTimes("CreateBlobOneBucket", blobs_per_rank * nprocs, t);
 }
 
 /** Each process creates (no data) a blob in a process-specific bucket */
-void CreateBlobPerBucketTest(hapi::Hermes *hermes, int rank,
+void CreateBlobPerBucketTest(hapi::Hermes *hermes,
+                             int nprocs, int rank,
                              size_t blobs_per_rank) {
   Timer t;
   hapi::Bucket bkt = hermes->GetBucket(
@@ -150,12 +157,12 @@ void CreateBlobPerBucketTest(hapi::Hermes *hermes, int rank,
     bkt.TryCreateBlob(name, blob_id, ctx);
   }
   t.Pause();
-  GatherTimes("CreateBlobPerBucket", t);
+  GatherTimes("CreateBlobPerBucket", nprocs * blobs_per_rank, t);
 }
 
 /** Each process deletes a number of buckets */
 void DeleteBucketTest(hapi::Hermes *hermes,
-                      int rank,
+                      int nprocs, int rank,
                       size_t bkt_per_rank,
                       size_t blobs_per_bucket) {
   Timer t;
@@ -182,14 +189,15 @@ void DeleteBucketTest(hapi::Hermes *hermes,
     bkt.TryCreateBlob(name, blob_id, ctx);
   }
   t.Pause();
-  GatherTimes("DeleteBucket", t);
+  GatherTimes("DeleteBucket", nprocs * bkt_per_rank, t);
 }
 
 /** Each process deletes blobs from a single bucket */
 void DeleteBlobOneBucket(hapi::Hermes *hermes,
-                         int rank, size_t blobs_per_rank) {
+                         int nprocs, int rank,
+                         size_t blobs_per_rank) {
   Timer t;
-  CreateBlobOneBucketTest(hermes, rank, blobs_per_rank);
+  CreateBlobOneBucketTest(hermes, nprocs, rank, blobs_per_rank);
   MPI_Barrier(MPI_COMM_WORLD);
   hapi::Bucket bkt = hermes->GetBucket("CreateBlobOneBucket");
   hermes::BlobId blob_id;
@@ -203,17 +211,19 @@ void DeleteBlobOneBucket(hapi::Hermes *hermes,
     bkt.TryCreateBlob(name, blob_id, ctx);
   }
   t.Pause();
-  GatherTimes("CreateBlobOneBucket", t);
+  GatherTimes("CreateBlobOneBucket", nprocs * blobs_per_rank, t);
 }
 
 
 #define REQUIRE_ARGC_GE(N) \
   if (argc < (N)) { \
+    HIPRINT("Requires fewer than {} params\n", N); \
     help(); \
   }
 
 #define REQUIRE_ARGC(N) \
   if (argc != (N)) { \
+    HIPRINT("Requires exactly {} params\n", N); \
     help(); \
   }
 
@@ -231,9 +241,10 @@ void help() {
 }
 
 int main(int argc, char **argv) {
-  int rank;
+  int rank, nprocs;
   MPI_Init(&argc, &argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
   auto hermes = hapi::Hermes::Create(hermes::HermesType::kClient);
 
   // Get mode
@@ -247,37 +258,37 @@ int main(int argc, char **argv) {
     REQUIRE_ARGC(4)
     size_t blob_size = hshm::ConfigParse::ParseSize(argv[2]);
     size_t blobs_per_rank = atoi(argv[3]);
-    PutTest(hermes, rank, 1, blobs_per_rank, blob_size);
+    PutTest(hermes, nprocs, rank, 1, blobs_per_rank, blob_size);
   } else if (mode == "putget") {
     REQUIRE_ARGC(4)
     size_t blob_size = hshm::ConfigParse::ParseSize(argv[2]);
     size_t blobs_per_rank = atoi(argv[3]);
-    PutGetTest(hermes, rank, 1, blobs_per_rank, blob_size);
+    PutGetTest(hermes, nprocs, rank, 1, blobs_per_rank, blob_size);
   } else if (mode == "create_bkt") {
     REQUIRE_ARGC(3)
     size_t bkts_per_rank = atoi(argv[2]);
-    CreateBucketTest(hermes, rank, bkts_per_rank);
+    CreateBucketTest(hermes, nprocs, rank, bkts_per_rank);
   } else if (mode == "get_bkt") {
     REQUIRE_ARGC(3)
     size_t bkts_per_rank = atoi(argv[2]);
-    GetBucketTest(hermes, rank, bkts_per_rank);
+    GetBucketTest(hermes, nprocs, rank, bkts_per_rank);
   } else if (mode == "create_blob_1bkt") {
     REQUIRE_ARGC(3)
     size_t blobs_per_rank = atoi(argv[2]);
-    CreateBlobOneBucketTest(hermes, rank, blobs_per_rank);
+    CreateBlobOneBucketTest(hermes, nprocs, rank, blobs_per_rank);
   } else if (mode == "create_blob_Nbkt") {
     REQUIRE_ARGC(3)
     size_t blobs_per_rank = atoi(argv[2]);
-    CreateBlobPerBucketTest(hermes, rank, blobs_per_rank);
+    CreateBlobPerBucketTest(hermes, nprocs, rank, blobs_per_rank);
   } else if (mode == "del_bkt") {
     REQUIRE_ARGC(4)
     size_t bkt_per_rank = atoi(argv[2]);
     size_t blobs_per_bkt = atoi(argv[3]);
-    DeleteBucketTest(hermes, rank, bkt_per_rank, blobs_per_bkt);
+    DeleteBucketTest(hermes, nprocs, rank, bkt_per_rank, blobs_per_bkt);
   } else if (mode == "del_blobs") {
     REQUIRE_ARGC(4)
     size_t blobs_per_rank = atoi(argv[2]);
-    DeleteBlobOneBucket(hermes, rank, blobs_per_rank);
+    DeleteBlobOneBucket(hermes, nprocs, rank, blobs_per_rank);
   }
 
   hermes->Finalize();
