@@ -34,7 +34,7 @@ void GatherTimes(const std::string &backend_type,
              1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
   if (rank == 0) {
     HIPRINT("{} {} {}: MBps: {}\n",
-            rank, backend_type, test_name,
+            nprocs, backend_type, test_name,
             size_per_rank * nprocs / t.GetUsec())
   }
 }

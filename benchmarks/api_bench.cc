@@ -22,15 +22,16 @@ using Timer = hshm::HighResMonotonicTimer;
 /** Gather times per-process */
 void GatherTimes(std::string test_name, size_t io_size, Timer &t) {
   MPI_Barrier(MPI_COMM_WORLD);
-  int rank;
+  int rank, nprocs;
+  MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   double time = t.GetSec(), max;
   MPI_Reduce(&time, &max,
              1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
   if (rank == 0) {
     double mbps = io_size / (max * 1000000);
-    HIPRINT("{}: Time: {} sec, MBps (or MOps): {}, Count: {}\n",
-            test_name, max, mbps, io_size);
+    HIPRINT("{}: Time: {} sec, MBps (or MOps): {}, Count: {}, Nprocs: {}\n",
+            test_name, max, mbps, io_size, nprocs);
   }
 }
 
