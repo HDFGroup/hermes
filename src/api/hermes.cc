@@ -83,7 +83,7 @@ void Hermes::InitClient(std::string server_config_path,
   bpm_.shm_deserialize(header_->bpm_);
   borg_.shm_deserialize(header_->borg_);
   prefetch_.Init();
-  mdm_.PrintDeviceInfo();
+  // mdm_.PrintDeviceInfo();
 
   // Load the trait libraries
   traits_.Init();
@@ -94,7 +94,9 @@ void Hermes::LoadServerConfig(std::string config_path) {
   if (config_path.size() == 0) {
     config_path = GetEnvSafe(kHermesServerConf);
   }
-  HILOG(kInfo, "Loading server configuration: {}", config_path)
+  if (mode_ == HermesType::kServer) {
+    HILOG(kInfo, "Loading server configuration: {}", config_path)
+  }
   server_config_.LoadFromFile(config_path);
 }
 
@@ -103,7 +105,7 @@ void Hermes::LoadClientConfig(std::string config_path) {
   if (config_path.size() == 0) {
     config_path = GetEnvSafe(kHermesClientConf);
   }
-  HILOG(kInfo, "Loading client configuration: {}", config_path)
+  // HILOG(kInfo, "Loading client configuration: {}", config_path)
   client_config_.LoadFromFile(config_path);
 }
 

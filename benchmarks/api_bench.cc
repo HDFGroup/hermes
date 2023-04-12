@@ -190,7 +190,7 @@ void DeleteBucketTest(hapi::Hermes *hermes,
     bkt.TryCreateBlob(name, blob_id, ctx);
   }
   t.Pause();
-  GatherTimes("DeleteBucket", nprocs * bkt_per_rank, t);
+  GatherTimes("DeleteBucket", nprocs * bkt_per_rank * blobs_per_bucket, t);
 }
 
 /** Each process deletes blobs from a single bucket */
@@ -209,7 +209,8 @@ void DeleteBlobOneBucket(hapi::Hermes *hermes,
   for (size_t i = 0; i < blobs_per_rank; ++i) {
     size_t blob_name_int = rank * blobs_per_rank + i;
     std::string name = std::to_string(blob_name_int);
-    bkt.TryCreateBlob(name, blob_id, ctx);
+    bkt.GetBlobId(name, blob_id);
+    bkt.DestroyBlob(blob_id, ctx);
   }
   t.Pause();
   GatherTimes("CreateBlobOneBucket", nprocs * blobs_per_rank, t);
