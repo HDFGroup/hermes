@@ -65,6 +65,10 @@ void RpcContext::InitRpcContext() {
     MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
     node_id_ += 1;
     if (nprocs != (int)hosts_.size()) {
+      HELOG(kError, "Daemon was not spawned properly")
+      for (HostInfo &host : hosts_) {
+        HILOG(kInfo, "  Host: {}", host.hostname_)
+      }
       HELOG(kFatal, "Must run the daemon on EVERY node in the hostfile. "
             "{}/{} were launched.", nprocs, hosts_.size())
     }
