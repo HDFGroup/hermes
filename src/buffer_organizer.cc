@@ -176,11 +176,14 @@ RPC void BufferOrganizer::LocalPlaceBlobInBuffers(
     if (!ret) {
       mdm_->PrintDeviceInfo();
       HELOG(kFatal, "Could not perform I/O in BORG."
-            " Reading from target ID:"
-            " (node_id: {}, tgt_id: {}, dev_id: {})",
+            " Writing to target ID:"
+            " (node_id: {}, tgt_id: {}, dev_id: {},"
+            " t_off: {}, blob_size: {})",
             buffer_info.tid_.GetNodeId(),
             buffer_info.tid_.GetIndex(),
-            buffer_info.tid_.GetDeviceId())
+            buffer_info.tid_.GetDeviceId(),
+            buffer_info.t_off_,
+            buffer_info.blob_size_)
     }
   }
 }
@@ -233,7 +236,15 @@ RPC void BufferOrganizer::LocalReadBlobFromBuffers(
                                buffer_info.blob_size_);
     blob_off += buffer_info.blob_size_;
     if (!ret) {
-      HELOG(kFatal, "Could not perform I/O in BORG");
+      HELOG(kFatal, "Could not perform I/O in BORG."
+                    " reading from target ID:"
+                    " (node_id: {}, tgt_id: {}, dev_id: {},"
+                    " t_off: {}, blob_size: {})",
+            buffer_info.tid_.GetNodeId(),
+            buffer_info.tid_.GetIndex(),
+            buffer_info.tid_.GetDeviceId(),
+            buffer_info.t_off_,
+            buffer_info.blob_size_)
     }
   }
 }

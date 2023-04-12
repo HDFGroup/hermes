@@ -28,8 +28,9 @@ void GatherTimes(std::string test_name, size_t io_size, Timer &t) {
   MPI_Reduce(&time, &max,
              1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
   if (rank == 0) {
-    double mbps = io_size / max;
-    HIPRINT("{}: Time: {}, MBps (or MOps): {}", test_name, max, mbps);
+    double mbps = io_size / (max * 1000000);
+    HIPRINT("{}: Time: {} sec, MBps (or MOps): {}, Count: {}\n",
+            test_name, max, mbps, io_size);
   }
 }
 

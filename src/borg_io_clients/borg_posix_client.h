@@ -51,7 +51,12 @@ class PosixIoClient : public BorgIoClient {
     }
     size_t count = api->pwrite(fd, data, size, off);
     api->close(fd);
-    return count == size;
+    if (count != size) {
+      HELOG(kError, "BORG: wrote {} bytes, but expected {}",
+            count, size);
+      return false;
+    }
+    return true;
   }
 
   bool Read(DeviceInfo &dev_info, char *data,
@@ -66,7 +71,12 @@ class PosixIoClient : public BorgIoClient {
     }
     size_t count = api->pread(fd, data, size, off);
     api->close(fd);
-    return count == size;
+    if (count != size) {
+      HELOG(kError, "BORG: read {} bytes, but expected {}",
+            count, size);
+      return false;
+    }
+    return true;
   }
 };
 

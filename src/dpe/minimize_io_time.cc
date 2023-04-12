@@ -34,9 +34,9 @@ Status MinimizeIoTime::Placement(const std::vector<size_t> &blob_sizes,
 
     for (TargetInfo &target : targets) {
       // NOTE(llogan): We skip targets that are too high of priority or
-      // targets whose space will be wasted by storing the blob there
+      // targets that can't fit the ENTIRE blob
       if (target.score_ > score ||
-          target.rem_cap_ < blob_size / 20) {
+          target.rem_cap_ < blob_size) {
         // TODO(llogan): add other considerations of this DPE
         continue;
       }
