@@ -16,7 +16,7 @@ class Hermes(CMakePackage):
     depends_on('mpich@3.3.2:')
     depends_on('yaml-cpp')
     depends_on('boost@1.7:')
-    depends_on('libfabric@1.14.1 fabrics=efa,gni,mlx,mrail,psm,psm2,psm3,rxm,rxd,shm,sockets,tcp,udp,usnic,verbs,xpmem',
+    depends_on('libfabric@1.15.1 fabrics=efa,gni,mlx,mrail,psm,psm2,psm3,rxm,rxd,shm,sockets,tcp,udp,usnic,verbs,xpmem',
                when='+fabric')
     depends_on('hdf5@1.13.0:', when='+vfd')
 
