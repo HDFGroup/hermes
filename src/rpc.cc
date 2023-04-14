@@ -138,6 +138,7 @@ int RpcContext::_FindThisHost() {
     if(_IsAddressLocal(host.ip_addr_)) {
       return node_id;
     }
+    ++node_id;
   }
   HELOG(kFatal, "Could not identify this host");
   return -1;
