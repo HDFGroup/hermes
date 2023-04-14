@@ -105,7 +105,12 @@ class Logger {
     }
     SetVerbosity(verbosity);
 
-    fout_ = fopen("/tmp/hermes_log.txt", "w");
+    auto env = getenv("HERMES_LOG_OUT");
+    if (env == nullptr) {
+      fout_ = nullptr;
+    } else {
+      fout_ = fopen(env, "w");
+    }
   }
 
   void SetVerbosity(int LOG_LEVEL) {
@@ -119,7 +124,7 @@ class Logger {
   void Print(const char *fmt,
              Args&& ...args) {
     std::string out =
-      hshm::Formatter::format(fmt, std::forward<Args>(args)...);
+        hshm::Formatter::format(fmt, std::forward<Args>(args)...);
     std::cout << out;
     fwrite(out.data(), 1, out.size(), fout_);
   }
@@ -133,13 +138,15 @@ class Logger {
                Args&& ...args) {
     if (LOG_LEVEL > verbosity_) { return; }
     std::string msg =
-      hshm::Formatter::format(fmt, std::forward<Args>(args)...);
+        hshm::Formatter::format(fmt, std::forward<Args>(args)...);
     int tid = gettid();
     std::string out = hshm::Formatter::format(
-      "{}:{} {} {} {}\n",
-      path, line, tid, func, msg);
+        "{}:{} {} {} {}\n",
+        path, line, tid, func, msg);
     std::cerr << out;
-    fout_ << out;
+    if (fout_) {
+      fwrite(out.data(), 1, out.size(), fout_);
+    }
   }
 
   template<typename ...Args>
@@ -177,7 +184,9 @@ class Logger {
         "{}:{} {} {} {} {}\n",
         path, line, level, tid, func, msg);
     std::cerr << out;
-    fwrite(out.data(), 1, out.size(), fout_);
+    if (fout_) {
+      fwrite(out.data(), 1, out.size(), fout_);
+    }
     if (LOG_LEVEL == kFatal) {
       exit(1);
     }
