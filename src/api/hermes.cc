@@ -50,9 +50,11 @@ void Hermes::Init(HermesType mode,
 
 /** Initialize Hermes as a server */
 void Hermes::InitServer(std::string server_config_path) {
+  HILOG(kDebug, "Initializing in Server mode")
   HERMES_THREAD_MODEL->SetThreadModel(hshm::ThreadType::kArgobots);
   LoadServerConfig(server_config_path);
   InitSharedMemory();
+  HILOG(kDebug, "Initialized SHM")
 
   // Initialize RPC
   comm_.Init(HermesType::kServer);
