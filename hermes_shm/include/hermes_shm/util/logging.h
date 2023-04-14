@@ -18,6 +18,7 @@
 
 #include <vector>
 #include <iostream>
+#include <fstream>
 #include <iomanip>
 #include <filesystem>
 #include "formatter.h"
@@ -88,6 +89,7 @@ namespace hshm {
 class Logger {
  public:
   int verbosity_;
+  std::ofstream fout_;
 
  public:
   Logger() {
@@ -102,6 +104,8 @@ class Logger {
       }
     }
     SetVerbosity(verbosity);
+
+    fout_ = std::ofstream("/tmp/hermes_log.txt", std::ofstream::out);
   }
 
   void SetVerbosity(int LOG_LEVEL) {
@@ -114,9 +118,10 @@ class Logger {
   template<typename ...Args>
   void Print(const char *fmt,
              Args&& ...args) {
-    std::string msg =
+    std::string out =
       hshm::Formatter::format(fmt, std::forward<Args>(args)...);
-    std::cout << msg;
+    std::cout << out;
+    fout_ << out;
   }
 
   template<typename ...Args>
@@ -130,9 +135,11 @@ class Logger {
     std::string msg =
       hshm::Formatter::format(fmt, std::forward<Args>(args)...);
     int tid = gettid();
-    std::cout << hshm::Formatter::format(
+    std::string out = hshm::Formatter::format(
       "{}:{} {} {} {}\n",
       path, line, tid, func, msg);
+    std::cerr << out;
+    fout_ << out;
   }
 
   template<typename ...Args>
@@ -166,9 +173,11 @@ class Logger {
     std::string msg =
         hshm::Formatter::format(fmt, std::forward<Args>(args)...);
     int tid = gettid();
-    std::cout << hshm::Formatter::format(
+    std::string out = hshm::Formatter::format(
         "{}:{} {} {} {} {}\n",
         path, line, level, tid, func, msg);
+    std::cerr << out;
+    fout_ << out;
     if (LOG_LEVEL == kFatal) {
       exit(1);
     }
