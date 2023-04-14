@@ -102,8 +102,7 @@ std::string RpcContext::GetRpcAddress(i32 node_id, int port) {
   if (!config_->rpc_.domain_.empty()) {
     result += config_->rpc_.domain_ + "/";
   }
-  // std::string host_name = GetHostNameFromNodeId(node_id);
-  std::string host_name = GetIpAddressFromNodeId(node_id);
+  std::string host_name = GetHostNameFromNodeId(node_id);
   result += host_name + ":" + std::to_string(port);
   return result;
 }
@@ -132,13 +131,6 @@ std::string RpcContext::GetIpAddressFromNodeId(i32 node_id) {
           "the range 1-{}", node_id, hosts_.size() + 1)
   }
   u32 index = node_id - 1;
-
-  int idx = 1;
-  for (auto &host : hosts_) {
-    HILOG(kDebug, "HOST {}: {}", idx, host.ip_addr_);
-    idx += 1;
-  }
-
   return hosts_[index].ip_addr_;
 }
 
