@@ -24,10 +24,12 @@ void Hermes::Init(HermesType mode,
                   std::string server_config_path,
                   std::string client_config_path) {
   // Initialize hermes
+  HILOG(kDebug, "Acquiring the lock")
   hshm::ScopedMutex lock(lock_, 1);
   if (is_initialized_) {
     return;
   }
+  HILOG(kDebug, "Acquired the lock")
   mode_ = mode;
   is_being_initialized_ = true;
   switch (mode_) {
