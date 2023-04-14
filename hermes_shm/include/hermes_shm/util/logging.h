@@ -89,7 +89,7 @@ namespace hshm {
 class Logger {
  public:
   int verbosity_;
-  std::ofstream fout_;
+  FILE *fout_;
 
  public:
   Logger() {
@@ -105,7 +105,7 @@ class Logger {
     }
     SetVerbosity(verbosity);
 
-    fout_ = std::ofstream("/tmp/hermes_log.txt", std::ofstream::out);
+    fout_ = fopen("/tmp/hermes_log.txt", "w");
   }
 
   void SetVerbosity(int LOG_LEVEL) {
@@ -121,7 +121,7 @@ class Logger {
     std::string out =
       hshm::Formatter::format(fmt, std::forward<Args>(args)...);
     std::cout << out;
-    fout_ << out;
+    fwrite(out.data(), 1, out.size(), fout_);
   }
 
   template<typename ...Args>
@@ -177,7 +177,7 @@ class Logger {
         "{}:{} {} {} {} {}\n",
         path, line, level, tid, func, msg);
     std::cerr << out;
-    fout_ << out;
+    fwrite(out.data(), 1, out.size(), fout_);
     if (LOG_LEVEL == kFatal) {
       exit(1);
     }
