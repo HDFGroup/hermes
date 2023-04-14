@@ -12,8 +12,6 @@
 
 #include <cstdlib>
 #include <string>
-
-#include <mpi.h>
 #include "hermes_shm/util/logging.h"
 #include "hermes.h"
 
@@ -21,7 +19,6 @@ namespace hapi = hermes::api;
 
 int main(int argc, char* argv[]) {
   HILOG(kDebug, "Hermes start daemon begins")
-  MPI_Init(&argc, &argv);
   std::string hermes_config = "";
   if (argc == 2) {
     hermes_config = argv[1];
@@ -33,6 +30,5 @@ int main(int argc, char* argv[]) {
 
   hermes->RunDaemon();
   hermes->Finalize();
-  MPI_Finalize();
   return 0;
 }

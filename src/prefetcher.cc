@@ -47,8 +47,9 @@ void Prefetcher::Init() {
     YAML::Node io_trace = YAML::LoadFile(conf.prefetcher_.trace_path_);
     HILOG(kDebug, "Parsing the I/O trace at: {}",
           conf.prefetcher_.trace_path_)
-    int nprocs;
-    MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+    int nprocs = 1;
+    // TODO(llogan): make MPI-awareness configurable
+    // MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
     trace_.resize(nprocs);
     for (YAML::Node log_entry : io_trace) {
       IoTrace trace;
@@ -103,8 +104,9 @@ void Prefetcher::Run() {
   }
 
   // Group I/O pattern log by rank
-  int nprocs;
-  MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+  int nprocs = 1;
+  // TODO(llogan): make MPI-awareness configurable
+  // MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
   std::vector<std::list<IoStat>> patterns;
   patterns.resize(nprocs);
   for (size_t i = 0; i < log_size; ++i) {

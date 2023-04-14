@@ -2,14 +2,6 @@ include_directories(${CMAKE_SOURCE_DIR})
 
 configure_file(hermes_version.h.in hermes_version.h)
 
-# Create communication factory
-set(CMAKE_HERMES_COMMUNICATION_TYPE HERMES_RPC_NONE)
-if (HERMES_COMMUNICATION_MPI)
-  set(CMAKE_HERMES_COMMUNICATION_TYPE HERMES_COMMUNICATION_MPI)
-  set(CMAKE_HERMES_COMMUNICATION_TYPE_LIB MPI::MPI_CXX)
-endif()
-configure_file(communication_factory.h.in communication_factory.h)
-
 # Create rpc factory
 set(CMAKE_HERMES_COMMUNICATION_TYPE HERMES_RPC_NONE)
 if (HERMES_RPC_THALLIUM)
@@ -118,7 +110,6 @@ set(HERMES_HEADERS
   ${CMAKE_CURRENT_SOURCE_DIR}/api/bucket.h
   ${CMAKE_CURRENT_SOURCE_DIR}/api/hermes.h
   ${CMAKE_CURRENT_SOURCE_DIR}/buffer_pool.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/communication.h
   ${CMAKE_CURRENT_SOURCE_DIR}/data_placement_engine.h
   ${CMAKE_CURRENT_SOURCE_DIR}/hermes_types.h
   ${CMAKE_CURRENT_SOURCE_DIR}/utils.h

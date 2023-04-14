@@ -55,7 +55,6 @@ void Hermes::InitServer(std::string server_config_path) {
   InitSharedMemory();
 
   // Initialize RPC
-  comm_.Init(HermesType::kServer);
   rpc_.InitServer();
   rpc_.InitClient();
 

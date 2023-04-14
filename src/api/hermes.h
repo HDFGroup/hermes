@@ -18,7 +18,6 @@
 #include "hermes_types.h"
 #include "utils.h"
 
-#include "communication_factory.h"
 #include "rpc.h"
 #include "metadata_manager.h"
 #include "buffer_pool.h"
@@ -61,7 +60,6 @@ class Hermes {
   BufferOrganizer borg_;
   TraitManager traits_;
   Prefetcher prefetch_;
-  COMM_TYPE comm_;
   RPC_TYPE rpc_;
   hipc::Allocator *main_alloc_;
   bool is_being_initialized_;

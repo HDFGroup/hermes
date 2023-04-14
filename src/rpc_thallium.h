@@ -15,7 +15,6 @@
 
 #include <thallium.hpp>
 #include "rpc_thallium_serialization.h"
-#include "communication.h"
 #include "config.h"
 #include "utils.h"
 #include "hermes_shm/data_structures/serialization/thallium.h"
@@ -158,9 +157,9 @@ class ThalliumRpc  : public RpcContext {
         exit(1);
       }
     }
-
-    // TODO(llogan): @errorhandling
-    assert(io_bytes == size);
+    if (io_bytes != size) {
+      HELOG(kFatal, "Failed to perform bulk I/O thallium")
+    }
     return io_bytes;
   }
 

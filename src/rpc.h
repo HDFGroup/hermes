@@ -22,7 +22,6 @@
 #include <vector>
 
 #include "hermes_types.h"
-#include "communication.h"
 #include "decorator.h"
 #include "config_server.h"
 #include "utils.h"
@@ -56,7 +55,6 @@ struct HostInfo {
 /** A structure to represent RPC context. */
 class RpcContext {
  public:
-  COMM_TYPE *comm_;
   ServerConfig *config_;
   MetadataManager *mdm_;
   int port_;  /**< port number */

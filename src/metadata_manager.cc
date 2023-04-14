@@ -903,9 +903,10 @@ void MetadataManager::AddIoStat(TagId tag_id,
   stat.blob_size_ = blob_size;
   stat.type_ = type;
   stat.rank_ = 0;
-  if (is_mpi_) {
+  // TODO(llogan): make MPI-awareness configurable
+  /*if (is_mpi_) {
     MPI_Comm_rank(MPI_COMM_WORLD, &stat.rank_);
-  }
+  }*/
   io_pattern_log_->emplace_back(stat);
 }
 

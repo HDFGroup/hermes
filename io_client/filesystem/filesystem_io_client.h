@@ -19,6 +19,7 @@
 #include <filesystem>
 #include <limits>
 #include <future>
+#include <mpi.h>
 
 namespace stdfs = std::filesystem;
 
