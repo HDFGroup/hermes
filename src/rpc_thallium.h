@@ -58,6 +58,7 @@ class ThalliumRpc  : public RpcContext {
       std::string server_name = GetServerName(node_id);
       tl::remote_procedure remote_proc = client_engine_->define(func_name);
       tl::endpoint server = client_engine_->lookup(server_name);
+      HILOG(kDebug, "Found the server: {}", server_name)
       if constexpr (std::is_same<ReturnType, void>::value) {
         remote_proc.disable_response();
         remote_proc.on(server)(std::forward<Args>(args)...);

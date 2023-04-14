@@ -73,11 +73,13 @@ void BorgIoThreadManager::SpawnFlushWorkers(int num_threads) {
 
 /** Wait for flushing to complete */
 void BorgIoThreadManager::WaitForFlush() {
-  HILOG(kDebug, "Waiting for all flushing to complete")
+  HILOG(kDebug, "Waiting for all flushing to complete {}",
+        HERMES->rpc_.node_id_)
   while (IsFlushing()) {
     tl::thread::self().sleep(*HERMES->rpc_.server_engine_, 5);
   }
-  HILOG(kDebug, "Waiting for all flushing to complete")
+  HILOG(kDebug, "Finished flushing {}",
+        HERMES->rpc_.node_id_)
 }
 
 /**====================================
