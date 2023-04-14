@@ -102,7 +102,8 @@ std::string RpcContext::GetRpcAddress(i32 node_id, int port) {
   if (!config_->rpc_.domain_.empty()) {
     result += config_->rpc_.domain_ + "/";
   }
-  std::string host_name = GetHostNameFromNodeId(node_id);
+  // std::string host_name = GetHostNameFromNodeId(node_id);
+  std::string host_name = GetIpAddressFromNodeId(node_id);
   result += host_name + ":" + std::to_string(port);
   return result;
 }
