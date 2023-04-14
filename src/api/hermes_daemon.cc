@@ -20,6 +20,7 @@
 namespace hapi = hermes::api;
 
 int main(int argc, char* argv[]) {
+  HILOG(kDebug, "Hermes start daemon begins")
   MPI_Init(&argc, &argv);
   std::string hermes_config = "";
   if (argc == 2) {
