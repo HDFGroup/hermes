@@ -12,6 +12,9 @@
 
 #include "rpc.h"
 #include "hermes.h"
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <ifaddrs.h>
 #include <functional>
 #include <iostream>
 #include <fstream>
@@ -60,18 +63,7 @@ void RpcContext::InitRpcContext() {
 
   // Get id of current host
   if (HERMES->mode_ == HermesType::kServer) {
-    int nprocs;
-    MPI_Comm_rank(MPI_COMM_WORLD, &node_id_);
-    MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
-    node_id_ += 1;
-    if (nprocs != (int)hosts_.size()) {
-      HELOG(kError, "Daemon was not spawned properly")
-      for (HostInfo &host : hosts_) {
-        HILOG(kInfo, "  Host: {}", host.hostname_)
-      }
-      HELOG(kFatal, "Must run the daemon on EVERY node in the hostfile. "
-            "{}/{} were launched.", nprocs, hosts_.size())
-    }
+    node_id_ = _FindThisHost();
   } else {
     node_id_ = mdm_->header_->node_id_;
   }
@@ -139,11 +131,47 @@ std::string RpcContext::GetProtocol() {
   return config_->rpc_.protocol_;
 }
 
-/** Get the IPv4 address of this machine */
-std::string RpcContext::_GetMyIpAddress() {
-  char hostname_buffer[4096];
-  gethostname(hostname_buffer, 4096);
-  return _GetIpAddress(hostname_buffer);
+/** Get the node ID of this machine according to hostfile */
+int RpcContext::_FindThisHost() {
+  int node_id = 1;
+  for (HostInfo &host : hosts_) {
+    if(_IsAddressLocal(host.ip_addr_)) {
+      return node_id;
+    }
+  }
+  HELOG(kFatal, "Could not identify this host");
+  return -1;
+}
+
+/** Check if an IP address is local to this machine */
+bool RpcContext::_IsAddressLocal(const std::string &addr) {
+  struct ifaddrs* ifAddrList = nullptr;
+  bool found = false;
+
+  if (getifaddrs(&ifAddrList) == -1) {
+    perror("getifaddrs");
+    return false;
+  }
+
+  for (struct ifaddrs* ifAddr = ifAddrList;
+       ifAddr != nullptr; ifAddr = ifAddr->ifa_next) {
+    if (ifAddr->ifa_addr == nullptr ||
+        ifAddr->ifa_addr->sa_family != AF_INET) {
+      continue;
+    }
+
+    struct sockaddr_in* sin = reinterpret_cast<struct sockaddr_in*>(ifAddr->ifa_addr);
+    char ipAddress[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &(sin->sin_addr), ipAddress, INET_ADDRSTRLEN);
+
+    if (addr == ipAddress) {
+      found = true;
+      break;
+    }
+  }
+
+  freeifaddrs(ifAddrList);
+  return found;
 }
 
 /** Get IPv4 address from the host with "host_name" */

@@ -92,8 +92,11 @@ class RpcContext {
   std::string GetProtocol();
 
  private:
-  /** Get the IPv4 address of this machine */
-  std::string _GetMyIpAddress();
+  /** Get the node ID of this machine according to hostfile */
+  int _FindThisHost();
+
+  /** Check if an IP address is local */
+  bool _IsAddressLocal(const std::string &addr);
 
   /** Get IPv4 address from the host with "host_name" */
   std::string _GetIpAddress(const std::string &host_name);

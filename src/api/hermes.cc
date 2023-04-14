@@ -24,12 +24,10 @@ void Hermes::Init(HermesType mode,
                   std::string server_config_path,
                   std::string client_config_path) {
   // Initialize hermes
-  HILOG(kDebug, "Acquiring the lock")
   hshm::ScopedMutex lock(lock_, 1);
   if (is_initialized_) {
     return;
   }
-  HILOG(kDebug, "Acquired the lock")
   mode_ = mode;
   is_being_initialized_ = true;
   switch (mode_) {
@@ -52,11 +50,9 @@ void Hermes::Init(HermesType mode,
 
 /** Initialize Hermes as a server */
 void Hermes::InitServer(std::string server_config_path) {
-  HILOG(kDebug, "Initializing in Server mode")
   HERMES_THREAD_MODEL->SetThreadModel(hshm::ThreadType::kArgobots);
   LoadServerConfig(server_config_path);
   InitSharedMemory();
-  HILOG(kDebug, "Initialized SHM")
 
   // Initialize RPC
   comm_.Init(HermesType::kServer);
