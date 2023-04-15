@@ -19,7 +19,7 @@ void MainPretest() {
   std::string shm_url = "HermesBench";
   allocator_id_t alloc_id(0, 1);
   auto mem_mngr = HERMES_MEMORY_MANAGER;
-  auto backend = mem_mngr->CreateBackend<hipc::PosixShmMmap>(
+  mem_mngr->CreateBackend<hipc::PosixShmMmap>(
     MemoryManager::GetDefaultBackendSize(), shm_url);
   // TODO(llogan): back to good allocator
   mem_mngr->CreateAllocator<hipc::ScalablePageAllocator>(

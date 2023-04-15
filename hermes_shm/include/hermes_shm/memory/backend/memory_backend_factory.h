@@ -36,7 +36,7 @@ class MemoryBackendFactory {
     } else if constexpr(std::is_same_v<PosixMmap, BackendT>) {
       // PosixMmap
       auto backend = std::make_unique<PosixMmap>();
-      backend->shm_init(size, url, std::forward<args>(args)...);
+      backend->shm_init(size, std::forward<args>(args)...);
       return backend;
     } else if constexpr(std::is_same_v<NullBackend, BackendT>) {
       // NullBackend
