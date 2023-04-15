@@ -118,7 +118,7 @@ struct BufferInfo {
 };
 
 /** Represents BlobInfo in shared memory */
- struct BlobInfo : public hipc::ShmContainer {
+struct BlobInfo : public hipc::ShmContainer {
   SHM_CONTAINER_TEMPLATE(BlobInfo, BlobInfo)
 
   BlobId blob_id_;   /**< The identifier of this blob */

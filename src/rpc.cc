@@ -134,7 +134,7 @@ std::string RpcContext::GetProtocol() {
 int RpcContext::_FindThisHost() {
   int node_id = 1;
   for (HostInfo &host : hosts_) {
-    if(_IsAddressLocal(host.ip_addr_)) {
+    if (_IsAddressLocal(host.ip_addr_)) {
       return node_id;
     }
     ++node_id;
@@ -160,7 +160,8 @@ bool RpcContext::_IsAddressLocal(const std::string &addr) {
       continue;
     }
 
-    struct sockaddr_in* sin = reinterpret_cast<struct sockaddr_in*>(ifAddr->ifa_addr);
+    struct sockaddr_in* sin =
+        reinterpret_cast<struct sockaddr_in*>(ifAddr->ifa_addr);
     char ipAddress[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &(sin->sin_addr), ipAddress, INET_ADDRSTRLEN);
 

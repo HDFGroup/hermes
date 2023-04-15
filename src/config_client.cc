@@ -29,7 +29,8 @@ void ClientConfig::ParseAdapterConfig(YAML::Node &yaml_conf,
     conf.mode_ = AdapterModeConv::to_enum(yaml_conf["mode"].as<std::string>());
   }
   if (yaml_conf["page_size"]) {
-    conf.page_size_ = hshm::ConfigParse::ParseSize(yaml_conf["page_size"].as<std::string>());
+    conf.page_size_ = hshm::ConfigParse::ParseSize(
+        yaml_conf["page_size"].as<std::string>());
   }
   SetAdapterConfig(path, conf);
 }
@@ -57,9 +58,11 @@ void ClientConfig::ParseYAML(YAML::Node &yaml_conf) {
     std::string page_size_env = GetEnvSafe(kHermesPageSize);
     if (page_size_env.size() == 0) {
       base_adapter_config_.page_size_ =
-          hshm::ConfigParse::ParseSize(yaml_conf["file_page_size"].as<std::string>());
+          hshm::ConfigParse::ParseSize(
+              yaml_conf["file_page_size"].as<std::string>());
     } else {
-      base_adapter_config_.page_size_ = hshm::ConfigParse::ParseSize(page_size_env);
+      base_adapter_config_.page_size_ =
+          hshm::ConfigParse::ParseSize(page_size_env);
     }
   }
   if (yaml_conf["path_inclusions"]) {
