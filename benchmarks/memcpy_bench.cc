@@ -147,8 +147,7 @@ int main(int argc, char **argv) {
   size_t blob_size = hshm::ConfigParse::ParseSize(argv[1]);
   size_t blobs_per_rank = atoi(argv[2]);
 
-  MemcpyBench<hipc::PosixMmap, false>(nprocs, rank, blob_size, blobs_per_rankinclude
-benchmark);
+  MemcpyBench<hipc::PosixMmap, false>(nprocs, rank, blob_size, blobs_per_rank);
   MemcpyBench<hipc::PosixShmMmap, true>(nprocs, rank,
                                         blob_size, blobs_per_rank);
 
