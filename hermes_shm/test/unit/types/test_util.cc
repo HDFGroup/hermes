@@ -46,8 +46,10 @@ TEST_CASE("TestPathParser") {
   auto x = hshm::ConfigParse::ExpandPath("${PATH_PARSER_TEST}/hello");
   unsetenv("PATH_PARSER_TEST");
   auto y = hshm::ConfigParse::ExpandPath("${PATH_PARSER_TEST}/hello");
+  auto z = hshm::ConfigParse::ExpandPath("${HOME}/hello");
   REQUIRE(x == "HOME/hello");
   REQUIRE(y == "${PATH_PARSER_TEST}/hello");
+  REQUIRE(z != "${HOME}/hello");
 }
 
 TEST_CASE("TestNumberParser") {
