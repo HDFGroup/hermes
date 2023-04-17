@@ -212,7 +212,8 @@ void Hermes::Flush(bool finalize) {
 /** Waits for all other Hermes processes to begin finalizing */
 void Hermes::WaitForFinalize() {
   for (size_t i = 0; i < rpc_.hosts_.size(); ++i) {
-    while (!(*mdm_.finalize_)[i]) {
+    int node_id = i + 1;
+    while (!(*mdm_.finalize_)[node_id]) {
       HERMES_THREAD_MODEL->SleepForUs(20000);
     }
   }
