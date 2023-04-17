@@ -162,7 +162,7 @@ bool RpcContext::_IsAddressLocal(const std::string &addr) {
 
     struct sockaddr_in* sin =
         reinterpret_cast<struct sockaddr_in*>(ifAddr->ifa_addr);
-    char ipAddress[INET_ADDRSTRLEN];
+    char ipAddress[INET_ADDRSTRLEN] = {0};
     inet_ntop(AF_INET, &(sin->sin_addr), ipAddress, INET_ADDRSTRLEN);
 
     if (addr == ipAddress) {
@@ -197,7 +197,7 @@ std::string RpcContext::_GetIpAddress(const std::string &host_name) {
     HELOG(kFatal, hstrerror(h_errno))
   }
 
-  char ip_address[INET_ADDRSTRLEN];
+  char ip_address[INET_ADDRSTRLEN] = {0};
   const char *inet_result =
       inet_ntop(AF_INET, addr_list[0], ip_address, INET_ADDRSTRLEN);
   if (!inet_result) {
