@@ -132,10 +132,7 @@ class Hermes {
    * ===================================*/
 
   /** Waits for all blobs to finish being flushed */
-  void Flush(bool finalize = false);
-
-  /** Waits for all other Hermes processes to begin finalizing */
-  void WaitForFinalize();
+  void Flush();
 
   /** Destroy all buckets and blobs in this instance */
   void Clear();

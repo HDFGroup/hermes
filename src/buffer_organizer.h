@@ -282,10 +282,10 @@ class BufferOrganizer {
                            _BorgIoThreadQueue &queue);
 
   /** Barrier for all flushing to complete */
-  void LocalWaitForFullFlush(int finalize);
+  void LocalWaitForFullFlush();
 
   /** Barrier for all I/O in Hermes to flush */
-  void GlobalWaitForFullFlush(bool finalize);
+  void GlobalWaitForFullFlush();
 };
 
 }  // namespace hermes
