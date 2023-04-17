@@ -37,16 +37,17 @@ namespace stdfs = std::filesystem;
 
 extern "C" {
 
-/*static __attribute__((constructor(0))) void init_posix(void) {
-  auto real_api = HERMES_POSIX_API;
-  auto fs_api = HERMES_POSIX_FS;
-}*/
+static __attribute__((constructor(101))) void init_posix(void) {
+  HERMES_POSIX_API;
+  HERMES_POSIX_FS;
+  TRANSPARENT_HERMES;
+}/**/
 
 /**
  * POSIX
  */
 int HERMES_DECL(open)(const char *path, int flags, ...) {
-  TRANSPARENT_HERMES
+//  TRANSPARENT_HERMES
   int mode = 0;
   auto real_api = HERMES_POSIX_API;
   auto fs_api = HERMES_POSIX_FS;
@@ -74,7 +75,7 @@ int HERMES_DECL(open)(const char *path, int flags, ...) {
 }
 
 int HERMES_DECL(open64)(const char *path, int flags, ...) {
-  TRANSPARENT_HERMES
+//  TRANSPARENT_HERMES
   int mode = 0;
   auto real_api = HERMES_POSIX_API;
   auto fs_api = HERMES_POSIX_FS;
@@ -100,7 +101,7 @@ int HERMES_DECL(open64)(const char *path, int flags, ...) {
 }
 
 int HERMES_DECL(__open_2)(const char *path, int oflag) {
-  TRANSPARENT_HERMES
+//  TRANSPARENT_HERMES
   auto real_api = HERMES_POSIX_API;
   auto fs_api = HERMES_POSIX_FS;
   if (fs_api->IsPathTracked(path)) {
@@ -116,7 +117,7 @@ int HERMES_DECL(__open_2)(const char *path, int oflag) {
 }
 
 int HERMES_DECL(creat)(const char *path, mode_t mode) {
-  TRANSPARENT_HERMES
+//  TRANSPARENT_HERMES
   std::string path_str(path);
   auto real_api = HERMES_POSIX_API;
   auto fs_api = HERMES_POSIX_FS;
@@ -133,7 +134,7 @@ int HERMES_DECL(creat)(const char *path, mode_t mode) {
 }
 
 int HERMES_DECL(creat64)(const char *path, mode_t mode) {
-  TRANSPARENT_HERMES
+//  TRANSPARENT_HERMES
   std::string path_str(path);
   auto real_api = HERMES_POSIX_API;
   auto fs_api = HERMES_POSIX_FS;
