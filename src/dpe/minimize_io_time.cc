@@ -48,6 +48,8 @@ Status MinimizeIoTime::Placement(const std::vector<size_t> &blob_sizes,
         target.rem_cap_ -= rem_blob_size;
         rem_blob_size = 0;
       } else {
+        // NOTE(llogan): this code technically never gets called,
+        // but it might in the future
         blob_schema.plcmnts_.emplace_back(target.rem_cap_,
                                           target.id_);
         rem_blob_size -= target.rem_cap_;

@@ -14,6 +14,8 @@
 #define HERMES_SRC_DPE_RANDOM_H_
 
 #include "data_placement_engine.h"
+#include <cstdlib>
+#include <ctime>
 
 namespace hermes {
 /**
@@ -21,7 +23,10 @@ namespace hermes {
 */
 class Random : public DPE {
  public:
-  Random() = default;
+  Random() {
+    // TODO(llogan): make seed configurable
+    std::srand(2989248848);
+  }
   ~Random() = default;
   Status Placement(const std::vector<size_t> &blob_sizes,
                    std::vector<TargetInfo> &targets,

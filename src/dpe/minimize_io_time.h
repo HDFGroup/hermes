@@ -20,9 +20,6 @@ namespace hermes {
  A class to represent data placement engine that minimizes I/O time.
 */
 class MinimizeIoTime : public DPE {
- private:
-  std::vector<double> placement_ratios_; /**< a vector of placement ratios */
-
  public:
   MinimizeIoTime() = default;
   ~MinimizeIoTime() = default;
