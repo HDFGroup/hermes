@@ -33,8 +33,6 @@ void BorgIoThreadManager::SpawnFlushMonitor(int num_threads) {
       // TODO(llogan): make configurable
       tl::thread::self().sleep(*HERMES->rpc_.server_engine_, 1000);
     }
-    // Check one last time for remaining blobs
-    borg->LocalEnqueueFlushes();
     HERMES_BORG_IO_THREAD_MANAGER->Join();
     HILOG(kDebug, "Flush scheduler thread has stopped")
   };
