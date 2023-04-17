@@ -456,18 +456,22 @@ void BufferOrganizer::LocalProcessFlushes(
 }
 
 /** Barrier for all flushing to complete */
-void BufferOrganizer::LocalWaitForFullFlush() {
+void BufferOrganizer::LocalWaitForFullFlush(int finalize) {
   HILOG(kInfo, "Full synchronous flush on node {}", rpc_->node_id_)
   LocalEnqueueFlushes();
   HERMES_BORG_IO_THREAD_MANAGER->WaitForFlush();
+  if (finalize != -1) {
+    (*mdm_->finalize_)[finalize] = true;
+  }
 }
 
 /** Barrier for all I/O in Hermes to flush */
-void BufferOrganizer::GlobalWaitForFullFlush() {
+void BufferOrganizer::GlobalWaitForFullFlush(bool finalize) {
+  int finalize_node_id = finalize ? rpc_->node_id_ : -1;
   for (int i = 0; i < (int)rpc_->hosts_.size(); ++i) {
     int node_id = i + 1;
     HILOG(kInfo, "Wait for flush on node {}", node_id)
-    rpc_->Call<bool>(node_id, "RpcWaitForFullFlush");
+    rpc_->Call<bool>(node_id, "RpcWaitForFullFlush", finalize_node_id);
   }
 }
 

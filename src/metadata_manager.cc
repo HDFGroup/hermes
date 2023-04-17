@@ -69,6 +69,10 @@ void MetadataManager::shm_init(hipc::ShmArchive<MetadataManagerShm> &header,
 
   // Create the log used to track I/O pattern
   HSHM_MAKE_AR0(header_->io_pattern_log_, alloc);
+
+  // Create the vector used to track finalizing Hermes
+  // All values initially false
+  HSHM_MAKE_AR(header_->finalize_, alloc, false)
 }
 
 /**====================================
@@ -95,6 +99,7 @@ void MetadataManager::shm_deserialize(
   targets_ = header_->targets_.get();
   devices_ = header_->devices_.get();
   io_pattern_log_ = header_->io_pattern_log_.get();
+  finalize_ = header_->finalize_.get();
 }
 
 /**====================================

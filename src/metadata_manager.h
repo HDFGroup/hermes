@@ -72,6 +72,8 @@ struct MetadataManagerShm {
   hipc::ShmArchive<hipc::vector<TargetInfo>> targets_;
   /// SHM representation of prefetcher stats log
   hipc::ShmArchive<IO_PATTERN_LOG_T> io_pattern_log_;
+  /// SHM representation of the host finalization vector
+  hipc::ShmArchive<hipc::vector<bool>> finalize_;
   /// Used to create unique ids. Starts at 1.
   std::atomic<u64> id_alloc_;
   /// Synchronization
@@ -114,6 +116,11 @@ class MetadataManager {
    * ===================================*/
   hipc::vector<DeviceInfo> *devices_;
   hipc::vector<TargetInfo> *targets_;
+
+  /**====================================
+   * Hermes finalization information
+   * ===================================*/
+  hipc::vector<bool> *finalize_;
 
  public:
   /**====================================

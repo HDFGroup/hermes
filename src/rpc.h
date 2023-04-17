@@ -43,9 +43,9 @@ enum class RpcType {
 
 /** Uniquely identify a host machine */
 struct HostInfo {
-  i32 node_id_;
-  std::string hostname_;
-  std::string ip_addr_;
+  i32 node_id_;           /**< Hermes-assigned node id */
+  std::string hostname_;  /**< Host name */
+  std::string ip_addr_;   /**< Host IP address */
 
   HostInfo() = default;
   explicit HostInfo(const std::string &hostname, const std::string &ip_addr)

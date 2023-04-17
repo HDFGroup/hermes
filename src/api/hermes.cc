@@ -205,8 +205,17 @@ Bucket Hermes::GetBucket(TagId tag_id) {
  * ===================================*/
 
 /** Waits for all blobs to finish being flushed */
-void Hermes::Flush() {
-  borg_.GlobalWaitForFullFlush();
+void Hermes::Flush(bool finalize) {
+  borg_.GlobalWaitForFullFlush(finalize);
+}
+
+/** Waits for all other Hermes processes to begin finalizing */
+void Hermes::WaitForFinalize() {
+  for (size_t i = 0; i < rpc_.hosts_.size(); ++i) {
+    while (!(*mdm_.finalize_)[i]) {
+      HERMES_THREAD_MODEL->SleepForUs(20000);
+    }
+  }
 }
 
 /** Destroy all buckets and blobs in this instance */
