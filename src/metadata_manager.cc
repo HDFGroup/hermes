@@ -72,7 +72,7 @@ void MetadataManager::shm_init(hipc::ShmArchive<MetadataManagerShm> &header,
 
   // Create the vector used to track finalizing Hermes
   // All values initially false
-  HSHM_MAKE_AR(header_->finalize_, alloc, false)
+  HSHM_MAKE_AR(header_->finalize_, alloc, rpc_->hosts_.size(), false)
 }
 
 /**====================================
