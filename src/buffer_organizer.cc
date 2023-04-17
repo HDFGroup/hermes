@@ -27,7 +27,6 @@ void BorgIoThreadManager::SpawnFlushMonitor(int num_threads) {
   auto flush_scheduler = [](void *args) {
     HILOG(kDebug, "Flushing scheduler thread has started")
     (void) args;
-    BufferOrganizer *borg = &HERMES->borg_;
     while (HERMES_THREAD_MANAGER->Alive()) {
       // borg->LocalEnqueueFlushes();
       // TODO(llogan): make configurable
