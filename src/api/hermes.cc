@@ -211,6 +211,7 @@ void Hermes::Flush() {
 
 /** Destroy all buckets and blobs in this instance */
 void Hermes::Clear() {
+  Flush();
   mdm_.GlobalClear();
 }
 

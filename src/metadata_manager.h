@@ -46,6 +46,7 @@ enum MdmLock {
   kTraitMapLock,
   kLocalTraitMapLock,
   kIoPatternLogLock,
+  kFlushLock,
 
   kMdmLockCount
 };

@@ -126,6 +126,8 @@ void MetadataManager::shm_destroy() {
  * */
 size_t MetadataManager::LocalGetBucketSize(TagId bkt_id) {
   AUTO_TRACE(1);
+  // Avoid flushing
+  ScopedRwReadLock flush_lock(header_->lock_[kFlushLock], kMDM_LocalClear);
   // Acquire MD read lock (reading tag_map)
   ScopedRwReadLock tag_map_lock(header_->lock_[kTagMapLock],
                                 kMDM_LocalGetBucketSize);
@@ -144,6 +146,8 @@ size_t MetadataManager::LocalGetBucketSize(TagId bkt_id) {
 bool MetadataManager::LocalSetBucketSize(TagId bkt_id,
                                          size_t new_size) {
   AUTO_TRACE(1);
+  // Avoid flushing
+  ScopedRwReadLock flush_lock(header_->lock_[kFlushLock], kMDM_LocalClear);
   // Acquire MD read lock (reading tag_map)
   ScopedRwReadLock tag_map_lock(header_->lock_[kTagMapLock],
                                 kMDM_LocalSetBucketSize);
@@ -193,6 +197,9 @@ bool MetadataManager::LocalUnlockBucket(TagId bkt_id,
  * */
 bool MetadataManager::LocalClearBucket(TagId bkt_id) {
   AUTO_TRACE(1);
+  HILOG(kDebug, "Clearing the bucket {}", bkt_id)
+  // Avoid flushing
+  ScopedRwReadLock flush_lock(header_->lock_[kFlushLock], kMDM_LocalClear);
   // Acquire tag map write lock
   ScopedRwWriteLock tag_map_lock(header_->lock_[kTagMapLock],
                                  kMDM_LocalClearBucket);
@@ -223,6 +230,8 @@ bool MetadataManager::LocalClearBucket(TagId bkt_id) {
 Status MetadataManager::LocalTagBlob(
     BlobId blob_id, TagId tag_id) {
   AUTO_TRACE(1);
+  // Avoid flushing
+  ScopedRwReadLock flush_lock(header_->lock_[kFlushLock], kMDM_LocalClear);
   // Acquire MD read lock (read blob_map_)
   ScopedRwReadLock blob_map_lock(header_->lock_[kBlobMapLock],
                                  kMDM_LocalTagBlob);
@@ -245,6 +254,8 @@ Status MetadataManager::LocalTagBlob(
 bool MetadataManager::LocalBlobHasTag(BlobId blob_id,
                                       TagId tag_id) {
   AUTO_TRACE(1);
+  // Avoid flushing
+  ScopedRwReadLock flush_lock(header_->lock_[kFlushLock], kMDM_LocalClear);
   // Acquire MD read lock (reading blob_map_)
   ScopedRwReadLock blob_map_lock(header_->lock_[kBlobMapLock],
                                  kMDM_LocalBlobHasTag);
@@ -274,6 +285,8 @@ std::pair<BlobId, bool> MetadataManager::LocalTryCreateBlob(
     TagId bkt_id,
     const std::string &blob_name) {
   AUTO_TRACE(1);
+  // Avoid flushing
+  ScopedRwReadLock flush_lock(header_->lock_[kFlushLock], kMDM_LocalClear);
   // Acquire MD write lock (modify blob_map_)
   ScopedRwWriteLock blob_map_lock(header_->lock_[kBlobMapLock],
                                   kMDM_LocalTryCreateBlob);
@@ -291,6 +304,7 @@ std::pair<BlobId, bool> MetadataManager::LocalTryCreateBlob(
     hipc::pair<BlobId, BlobInfo>& info = (*iter);
     BlobInfo &blob_info = info.GetSecond();
     (*blob_info.name_) = blob_name;
+    blob_info.blob_id_ = blob_id;
     blob_info.tag_id_ = bkt_id;
     blob_info.blob_size_ = 0;
   }
@@ -313,6 +327,8 @@ MetadataManager::LocalPutBlobMetadata(TagId bkt_id,
                                       float score) {
   AUTO_TRACE(1);
   size_t orig_blob_size = 0;
+  // Avoid flushing
+  ScopedRwReadLock flush_lock(header_->lock_[kFlushLock], kMDM_LocalClear);
   // Acquire MD write lock (modify blob_map_)
   ScopedRwWriteLock blob_map_lock(header_->lock_[kBlobMapLock],
                                   kMDM_LocalPutBlobMetadata);
@@ -466,6 +482,8 @@ bool MetadataManager::LocalRenameBlob(TagId bkt_id, BlobId blob_id,
                                       const std::string &new_blob_name) {
   HILOG(kDebug, "Renaming the blob: {}.{}", blob_id.node_id_, blob_id.unique_)
   AUTO_TRACE(1);
+  // Avoid flushing
+  ScopedRwReadLock flush_lock(header_->lock_[kFlushLock], kMDM_LocalClear);
   // Acquire MD write lock (modify blob_id_map_)
   ScopedRwWriteLock blob_map_lock(header_->lock_[kBlobMapLock],
                                   kMDM_LocalRenameBlob);
@@ -489,11 +507,13 @@ bool MetadataManager::LocalRenameBlob(TagId bkt_id, BlobId blob_id,
  * */
 bool MetadataManager::LocalDestroyBlob(TagId bkt_id,
                                        BlobId blob_id) {
-  HILOG(kDebug, "Marking the blob destroyed: {}", blob_id)
+  HILOG(kDebug, "Destroying the blob: {}", blob_id)
   AUTO_TRACE(1);
+  // Avoid flushing
+  ScopedRwReadLock flush_lock(header_->lock_[kFlushLock], kMDM_LocalClear);
   // Acquire MD write lock (modify blob_id_map & blob_map_)
-  ScopedRwReadLock blob_map_lock(header_->lock_[kBlobMapLock],
-                                 kMDM_LocalDestroyBlob);
+  ScopedRwWriteLock blob_map_lock(header_->lock_[kBlobMapLock],
+                                  kMDM_LocalDestroyBlob);
   (void)bkt_id;
   auto iter = (*blob_map_).find(blob_id);
   if (iter.is_end()) {
@@ -501,8 +521,8 @@ bool MetadataManager::LocalDestroyBlob(TagId bkt_id,
   }
   hipc::pair<BlobId, BlobInfo>& info = (*iter);
   BlobInfo &blob_info = info.GetSecond();
-  HERMES_BORG_IO_THREAD_MANAGER->EnqueueDelete(bkt_id, blob_id,
-                                               blob_info.mod_count_);
+  blob_id_map_->erase(*blob_info.name_);
+  blob_map_->erase(blob_id);
   return true;
 }
 
@@ -516,6 +536,8 @@ bool MetadataManager::LocalDestroyBlob(TagId bkt_id,
 void MetadataManager::LocalClear() {
   AUTO_TRACE(1);
   HILOG(kDebug, "Clearing all buckets and blobs")
+  // Avoid flushing
+  ScopedRwReadLock flush_lock(header_->lock_[kFlushLock], kMDM_LocalClear);
   // Modify tag map
   ScopedRwWriteLock tag_map_lock(header_->lock_[kTagMapLock],
                                  kMDM_LocalClear);
@@ -551,6 +573,8 @@ MetadataManager::LocalGetOrCreateTag(const std::string &tag_name,
                                      std::vector<TraitId> &traits,
                                      size_t backend_size) {
   AUTO_TRACE(1);
+  // Avoid flushing
+  ScopedRwReadLock flush_lock(header_->lock_[kFlushLock], kMDM_LocalClear);
   // Acquire MD write lock (modifying tag_map)
   ScopedRwWriteLock tag_map_lock(header_->lock_[kTagMapLock],
                                  kMDM_LocalGetOrCreateTag);
@@ -564,7 +588,7 @@ MetadataManager::LocalGetOrCreateTag(const std::string &tag_name,
 
   // Emplace bucket if it does not already exist
   if (did_create) {
-    HILOG(kDebug, "Creating tag for the first time: {}", tag_name)
+    HILOG(kDebug, "Creating tag for the first time: {} {}", tag_name, tag_id)
     tag_map_->emplace(tag_id);
     auto iter = tag_map_->find(tag_id);
     hipc::pair<TagId, TagInfo> &info_pair = *iter;
@@ -628,6 +652,8 @@ bool MetadataManager::LocalRenameTag(TagId tag_id,
   HILOG(kDebug, "Renaming the tag: {}.{} to {}",
         tag_id.node_id_, tag_id.unique_, new_name)
   AUTO_TRACE(1);
+  // Avoid flushing
+  ScopedRwReadLock flush_lock(header_->lock_[kFlushLock], kMDM_LocalClear);
   // Acquire MD write lock (modifying tag_map_)
   ScopedRwWriteLock tag_map_lock(header_->lock_[kTagMapLock],
                                  kMDM_LocalRenameTag);
@@ -647,19 +673,23 @@ bool MetadataManager::LocalRenameTag(TagId tag_id,
  * Delete a tag
  * */
 bool MetadataManager::LocalDestroyTag(TagId tag_id) {
-  HILOG(kDebug, "Destroying the tag: {}.{}", tag_id.node_id_, tag_id.unique_)
+  HILOG(kDebug, "Destroying the tag: {}", tag_id)
   AUTO_TRACE(1);
+  // Avoid flushing
+  ScopedRwReadLock flush_lock(header_->lock_[kFlushLock], kMDM_LocalClear);
   // Acquire MD write lock (modifying tag_map_)
   ScopedRwWriteLock tag_map_lock(header_->lock_[kTagMapLock],
                                  kMDM_LocalDestroyTag);
   auto iter = tag_map_->find(tag_id);
   if (iter.is_end()) {
+    HILOG(kDebug, "Could NOT destroy: {}", tag_id)
     return true;
   }
   hipc::pair<TagId, TagInfo> &info_pair = *iter;
   auto &tag_info = info_pair.GetSecond();
   tag_id_map_->erase(*tag_info.name_);
   tag_map_->erase(tag_id);
+  HILOG(kDebug, "Destroyed the tag: {}", tag_id)
   return true;
 }
 
@@ -669,6 +699,8 @@ bool MetadataManager::LocalDestroyTag(TagId tag_id) {
 Status MetadataManager::LocalTagAddBlob(TagId tag_id,
                                         BlobId blob_id) {
   AUTO_TRACE(1);
+  // Avoid flushing
+  ScopedRwReadLock flush_lock(header_->lock_[kFlushLock], kMDM_LocalClear);
   // Acquire MD write lock (modify tag_map_)
   ScopedRwWriteLock tag_map_lock(header_->lock_[kTagMapLock],
                                  kMDM_LocalTagAddBlob);
@@ -688,6 +720,8 @@ Status MetadataManager::LocalTagAddBlob(TagId tag_id,
 Status MetadataManager::LocalTagRemoveBlob(TagId tag_id,
                                            BlobId blob_id) {
   AUTO_TRACE(1);
+  // Avoid flushing
+  ScopedRwReadLock flush_lock(header_->lock_[kFlushLock], kMDM_LocalClear);
   // Acquire MD write lock (modify tag_map_)
   ScopedRwWriteLock tag_map_lock(header_->lock_[kTagMapLock],
                                  kMDM_LocalTagRemoveBlob);
@@ -707,6 +741,8 @@ Status MetadataManager::LocalTagRemoveBlob(TagId tag_id,
  * */
 std::vector<BlobId> MetadataManager::LocalGroupByTag(TagId tag_id) {
   AUTO_TRACE(1);
+  // Avoid flushing
+  ScopedRwReadLock flush_lock(header_->lock_[kFlushLock], kMDM_LocalClear);
   // Acquire MD read lock (read tag_map_)
   ScopedRwReadLock tag_map_lock(header_->lock_[kTagMapLock],
                                 kMDM_LocalGroupByTag);
@@ -726,19 +762,24 @@ std::vector<BlobId> MetadataManager::LocalGroupByTag(TagId tag_id) {
  * */
 bool MetadataManager::LocalTagAddTrait(TagId tag_id, TraitId trait_id) {
   AUTO_TRACE(1);
-  HILOG(kDebug, "Adding trait {}.{} to tag {}.{}",
-        trait_id.node_id_, trait_id.unique_,
-        tag_id.node_id_, tag_id.unique_)
+  HILOG(kDebug, "Adding trait {} to tag {}",
+        trait_id, tag_id);
+  // Avoid flushing
+  ScopedRwReadLock flush_lock(header_->lock_[kFlushLock], kMDM_LocalClear);
   // Acquire MD read lock (read tag_map_)
   ScopedRwReadLock tag_map_lock(header_->lock_[kTagMapLock],
                                 kMDM_LocalTagAddTrait);
   auto iter = tag_map_->find(tag_id);
   if (iter.is_end()) {
+    HILOG(kDebug, "Could NOT add trait to tag {}")
     return true;
   }
   auto &tag_info_pair = *iter;
   TagInfo &tag_info = tag_info_pair.GetSecond();
+  ScopedRwWriteLock tag_lock(tag_info.lock_[0], kMDM_LocalTagAddTrait);
   tag_info.traits_->emplace_back(trait_id);
+  HILOG(kDebug, "Added trait {} to tag {}",
+        trait_id, tag_id);
   return true;
 }
 
@@ -747,6 +788,8 @@ bool MetadataManager::LocalTagAddTrait(TagId tag_id, TraitId trait_id) {
  * */
 std::vector<TraitId> MetadataManager::LocalTagGetTraits(TagId tag_id) {
   AUTO_TRACE(1);
+  // Avoid flushing
+  ScopedRwReadLock flush_lock(header_->lock_[kFlushLock], kMDM_LocalClear);
   // Acquire MD read lock (read tag_map_)
   ScopedRwReadLock tag_map_lock(header_->lock_[kTagMapLock],
                                 kMDM_LocalTagGetTraits);
@@ -770,6 +813,9 @@ std::vector<TraitId> MetadataManager::LocalTagGetTraits(TagId tag_id) {
 RPC TraitId MetadataManager::LocalRegisterTrait(
     TraitId trait_id,
     const hshm::charbuf &trait_params) {
+  HILOG(kDebug, "Registering trait {}", trait_id)
+  // Avoid flushing
+  ScopedRwReadLock flush_lock(header_->lock_[kFlushLock], kMDM_LocalClear);
   // Acquire md write lock (modifying trait map)
   ScopedRwWriteLock md_lock(header_->lock_[kTraitMapLock],
                             kMDM_LocalRegisterTrait);
@@ -799,6 +845,9 @@ RPC TraitId MetadataManager::LocalRegisterTrait(
  * */
 RPC TraitId
 MetadataManager::LocalGetTraitId(const std::string &trait_uuid) {
+  HILOG(kDebug, "Getting trait id for {}", trait_uuid)
+  // Avoid flushing
+  ScopedRwReadLock flush_lock(header_->lock_[kFlushLock], kMDM_LocalClear);
   // Acquire md read lock (reading trait_id_map)
   ScopedRwReadLock md_lock(header_->lock_[kTraitMapLock],
                            kMDM_LocalGetTraitId);
@@ -817,6 +866,8 @@ MetadataManager::LocalGetTraitId(const std::string &trait_uuid) {
  * */
 RPC hshm::charbuf
 MetadataManager::LocalGetTraitParams(TraitId trait_id) {
+  // Avoid flushing
+  ScopedRwReadLock flush_lock(header_->lock_[kFlushLock], kMDM_LocalClear);
   // Acquire md read lock (reading trait_map)
   ScopedRwReadLock md_lock(header_->lock_[kTraitMapLock],
                            kMDM_LocalGetTraitParams);
@@ -834,7 +885,11 @@ MetadataManager::LocalGetTraitParams(TraitId trait_id) {
  * Get an existing trait
  * */
 Trait* MetadataManager::GlobalGetTrait(TraitId trait_id) {
+  HILOG(kDebug, "Getting the trait {}", trait_id)
   Trait *trait = nullptr;
+
+  // Avoid flushing
+  ScopedRwReadLock flush_lock(header_->lock_[kFlushLock], kMDM_LocalClear);
 
   // Check if trait is already constructed
   ScopedRwReadLock trait_lock(header_->lock_[kTraitMapLock],
@@ -848,10 +903,6 @@ Trait* MetadataManager::GlobalGetTrait(TraitId trait_id) {
   }
   trait_lock.Unlock();
 
-  // Construct the trait based on the parameters
-  ScopedRwWriteLock md_lock(header_->lock_[kTraitMapLock],
-                            kMDM_GlobalGetTrait);
-
   // Get the trait state locally or globally
   hshm::charbuf params = LocalGetTraitParams(trait_id);
   if (params.size() == 0) {
@@ -863,6 +914,11 @@ Trait* MetadataManager::GlobalGetTrait(TraitId trait_id) {
     }
     LocalRegisterTrait(trait_id, params);
   }
+
+  // Construct the trait based on the parameters
+  ScopedRwWriteLock trait_lock_w(header_->lock_[kTraitMapLock],
+                                 kMDM_GlobalGetTrait);
+  HILOG(kDebug, "Acquired trait lock w for {}", trait_id)
 
   // Check if the trait exists now
   iter = local_trait_map_.find(trait_id);

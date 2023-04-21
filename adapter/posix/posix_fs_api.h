@@ -66,7 +66,7 @@ class PosixFs : public hermes::adapter::fs::Filesystem {
     stat.st_mode_ = 0;
     File f = Open(stat, __filename);
     if (!f.status_) {
-      HILOG(kInfo, "Failed to stat the file {}", __filename);
+      // HILOG(kInfo, "Failed to stat the file {}", __filename);
       memset(buf, 0, sizeof(StatT));
       return -1;
     }

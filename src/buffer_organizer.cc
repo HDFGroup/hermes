@@ -27,8 +27,9 @@ void BorgIoThreadManager::SpawnFlushMonitor(int num_threads) {
   auto flush_scheduler = [](void *args) {
     HILOG(kDebug, "Flushing scheduler thread has started")
     (void) args;
+    auto borg = &HERMES->borg_;
     while (HERMES_THREAD_MANAGER->Alive()) {
-      // borg->LocalEnqueueFlushes();
+      borg->LocalEnqueueFlushes();
       // TODO(llogan): make configurable
       tl::thread::self().sleep(*HERMES->rpc_.server_engine_, 1000);
     }
@@ -336,11 +337,9 @@ void BufferOrganizer::GlobalOrganizeBlob(const std::string &bucket_name,
 /** Flush all blobs registered in this daemon */
 void BufferOrganizer::LocalEnqueueFlushes() {
   auto mdm = &HERMES->mdm_;
-  // Wait for pending flushing tasks to complete
-  // This avoids waiting for the lock below
-  if (HERMES_BORG_IO_THREAD_MANAGER->IsFlushing()) {
-    return;
-  }
+  // Avoid flushing
+  ScopedRwReadLock flush_lock(mdm_->header_->lock_[kFlushLock],
+                              kMDM_LocalClear);
   // Acquire the read lock on the blob map
   ScopedRwReadLock blob_map_lock(mdm->header_->lock_[kBlobMapLock],
                                  kBORG_LocalEnqueueFlushes);
@@ -375,80 +374,54 @@ void BufferOrganizer::LocalEnqueueFlushes() {
 void BufferOrganizer::LocalProcessFlushes(
     BorgIoThreadQueueInfo &bq_info,
     _BorgIoThreadQueue& queue) {
+  // Begin flushing
+  ScopedRwWriteLock flush_lock(mdm_->header_->lock_[kFlushLock],
+                               kBORG_LocalProcessFlushes);
   // Process tasks
   auto entry = hipc::make_uptr<BorgIoTask>();
-
   while (!queue.pop(*entry).IsNull()) {
     BorgIoTask &info = *entry;
-    if (entry->delete_) {
-      HILOG(kDebug, "Attempting to delete blob {}", info.blob_id_);
-      // Acquire blob map write lock
-      ScopedRwWriteLock blob_map_lock(mdm_->header_->lock_[kBlobMapLock],
-                                      kBORG_LocalProcessFlushes);
+    HILOG(kDebug, "Attempting to flush blob {}", info.blob_id_);
+    Blob blob;
 
-      // Verify the blob exists & that it hasn't been modified
-      auto iter = mdm_->blob_map_->find(info.blob_id_);
-      if (iter.is_end()) {
-        goto end;
-      }
-      hipc::pair<BlobId, BlobInfo>& blob_info_p = *iter;
-      BlobInfo &blob_info = blob_info_p.GetSecond();
-      if (blob_info.mod_count_ != info.last_modified_) {
-        goto end;
-      }
+    // Verify the blob exists and then read lock it
+    auto iter = mdm_->blob_map_->find(info.blob_id_);
+    if (iter.is_end()) {
+      bq_info.load_.fetch_sub(info.blob_size_);
+      HILOG(kDebug, "Finished BORG task for {}, {}",
+            info.blob_id_, bq_info.load_.load());
+      continue;
+    }
+    hipc::pair<BlobId, BlobInfo>& blob_info_p = *iter;
+    BlobInfo &blob_info = blob_info_p.GetSecond();
+    std::string blob_name = blob_info.name_->str();
 
-      // Proceed with deletion
-      HILOG(kDebug, "Begin deleting blob {}", info.blob_id_);
-      hipc::uptr<hipc::charbuf> blob_name =
-          mdm_->CreateBlobName(info.bkt_id_, *blob_info.name_);
-      mdm_->blob_id_map_->erase(*blob_name);
-      mdm_->blob_map_->erase(info.blob_id_);
-      HILOG(kDebug, "Finished deleting blob {}", info.blob_id_);
-    } else {
-      HILOG(kDebug, "Attempting to flush blob {}", info.blob_id_);
+    // Verify that flush is needing to happen
+    if (blob_info.mod_count_ == blob_info.last_flush_) {
+      continue;
+    }
+    size_t last_flush = blob_info.mod_count_;
+    blob_info.last_flush_ = last_flush;
 
-      // Acquire blob map read lock
-      ScopedRwReadLock blob_map_lock(mdm_->header_->lock_[kBlobMapLock],
-                                     kBORG_LocalProcessFlushes);
-      Blob blob;
-
-      // Verify the blob exists and then read lock it
-      auto iter = mdm_->blob_map_->find(info.blob_id_);
-      if (iter.is_end()) {
-        goto end;
-      }
-      hipc::pair<BlobId, BlobInfo>& blob_info_p = *iter;
-      BlobInfo &blob_info = blob_info_p.GetSecond();
-      ScopedRwReadLock blob_lock(blob_info.lock_[0],
-                                 kBORG_LocalProcessFlushes);
-      std::string blob_name = blob_info.name_->str();
-      size_t last_flush = blob_info.mod_count_;
-      blob_info.last_flush_ = last_flush;
-      blob_lock.Unlock();
-
-      // Get the current blob from Hermes
-      api::Bucket bkt = HERMES->GetBucket(info.bkt_id_);
-      bkt.Get(info.blob_id_, blob, bkt.GetContext());
-      HILOG(kDebug, "Flushing blob {} ({}.{}) of size {}",
-            blob_name,
-            info.blob_id_.node_id_,
-            info.blob_id_.unique_,
-            blob.size())
-      FlushTraitParams trait_params;
-      for (Trait *trait : info.traits_) {
-        trait_params.blob_ = &blob;
-        trait_params.blob_name_ = blob_name;
-        trait_params.bkt_ = &bkt;
-        trait->Run(HERMES_TRAIT_FLUSH, &trait_params);
-      }
+    // Get the current blob from Hermes
+    api::Bucket bkt = HERMES->GetBucket(info.bkt_id_);
+    bkt.Get(info.blob_id_, blob, bkt.GetContext());
+    HILOG(kDebug, "Flushing blob {} ({}) of size {}",
+          blob_name,
+          info.blob_id_,
+          blob.size())
+    FlushTraitParams trait_params;
+    for (Trait *trait : info.traits_) {
+      trait_params.blob_ = &blob;
+      trait_params.blob_name_ = blob_name;
+      trait_params.bkt_ = &bkt;
+      trait->Run(HERMES_TRAIT_FLUSH, &trait_params);
     }
 
     // Dequeue
-    end:
     bq_info.load_.fetch_sub(info.blob_size_);
-    HILOG(kDebug, "Finished flushing blob {}.{}",
-          info.blob_id_.node_id_,
-          info.blob_id_.unique_)
+    HILOG(kDebug, "Finished BORG task for {}, {}",
+          info.blob_id_, bq_info.load_.load())
   }
 }
 

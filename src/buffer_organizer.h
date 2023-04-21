@@ -48,7 +48,6 @@ struct BorgIoTask {
   BlobId blob_id_;
   size_t blob_size_;
   size_t last_modified_;
-  bool delete_;
   std::vector<Trait*> traits_;
 
   /** Default constructor */
@@ -58,14 +57,7 @@ struct BorgIoTask {
   explicit BorgIoTask(TagId bkt_id, BlobId blob_id, size_t blob_size,
                       std::vector<Trait*> &&traits)
     : bkt_id_(bkt_id), blob_id_(blob_id), blob_size_(blob_size),
-      delete_(false),
       traits_(std::forward<std::vector<Trait*>>(traits)) {}
-
-  /** Delete emplace constructor */
-  explicit BorgIoTask(TagId bkt_id, BlobId blob_id, size_t blob_size,
-                      size_t last_modified)
-  : bkt_id_(bkt_id), blob_id_(blob_id), blob_size_(blob_size),
-    last_modified_(last_modified), delete_(true) {}
 
   /** Copy constructor */
   BorgIoTask(const BorgIoTask &other) = default;
@@ -181,15 +173,6 @@ class BorgIoThreadManager {
     bq_info.load_.fetch_add(blob_size);
     queue.emplace(bkt_id, blob_id, blob_size,
                    std::forward<std::vector<Trait*>>(traits));
-  }
-
-  /** Enqueue a deletion task to a worker */
-  void EnqueueDelete(TagId bkt_id, BlobId blob_id, size_t last_modified) {
-    BorgIoThreadQueue &bq = HashToQueue(blob_id);
-    BorgIoThreadQueueInfo& bq_info = bq.GetSecond();
-    _BorgIoThreadQueue& queue = bq.GetFirst();
-    bq_info.load_.fetch_add(1);
-    queue.emplace(bkt_id, blob_id, 1, last_modified);
   }
 
   /** Hash request to a queue */

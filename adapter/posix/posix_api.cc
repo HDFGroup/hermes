@@ -294,7 +294,7 @@ int HERMES_DECL(__xstat)(int __ver, const char *__filename,
   auto real_api = HERMES_POSIX_API;
   auto fs_api = HERMES_POSIX_FS;
   if (fs_api->IsPathTracked(__filename)) {
-    HILOG(kDebug, "Intercepted __xstat for file {}.", __filename)
+    // HILOG(kDebug, "Intercepted __xstat for file {}.", __filename)
     result = fs_api->Stat(__filename, __stat_buf);
   } else {
     result = real_api->__xstat(__ver, __filename, __stat_buf);
