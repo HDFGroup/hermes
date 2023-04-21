@@ -26,7 +26,7 @@
 #include "bucket.h"
 #include "hermes.h"
 
-#include "io_client/filesystem/filesystem_io_client.h"
+#include "filesystem_io_client.h"
 #include <filesystem>
 
 namespace hapi = hermes::api;

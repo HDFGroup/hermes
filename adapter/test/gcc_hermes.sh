@@ -6,7 +6,7 @@ TAG_NAME=$4
 TAGS=$5
 CONF=$6
 ASYNC=$7
-SLEEP_TIME=3
+SLEEP_TIME=5
 
 mkdir /tmp/test_hermes
 
@@ -21,7 +21,7 @@ echo "WAITING FOR DAEMON"
 sleep ${SLEEP_TIME}
 
 # Run the program
-echo "RUNNING PROGRAM"
+echo "RUNNING PROGRAM: "
 export LSAN_OPTIONS=suppressions="${CMAKE_SOURCE_DIR}/test/data/asan.supp"
 export COMMAND="${CMAKE_BINARY_DIR}/bin/${EXEC_NAME}"
 echo ""${COMMAND}" "${TAGS}" --reporter compact -d yes"

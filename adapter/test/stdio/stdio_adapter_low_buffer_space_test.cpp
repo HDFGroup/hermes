@@ -20,7 +20,7 @@
 #include "adapter_test_utils.h"
 #include "catch_config.h"
 #if HERMES_INTERCEPT == 1
-#include "io_client/stdio/stdio_api.h"
+#include "adapter/stdio/stdio_api.h"
 #include "adapter/stdio/stdio_fs_api.h"
 #endif
 

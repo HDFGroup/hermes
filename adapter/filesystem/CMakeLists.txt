@@ -29,6 +29,14 @@ install(
         ARCHIVE DESTINATION ${HERMES_INSTALL_LIB_DIR}
         RUNTIME DESTINATION ${HERMES_INSTALL_BIN_DIR}
 )
+install(
+        FILES
+        filesystem_io_client.h
+        DESTINATION
+        ${HERMES_INSTALL_INCLUDE_DIR}
+        COMPONENT
+        headers
+)
 
 #-----------------------------------------------------------------------------
 # Export all exported targets to the build tree for use by parent project

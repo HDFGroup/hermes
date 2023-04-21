@@ -14,7 +14,7 @@
 #define HERMES_SRC_BORG_IO_CLIENTS_RAM_H_
 
 #include "borg_io_client.h"
-#include "io_client/posix/posix_api.h"
+#include "adapter/posix/posix_api.h"
 #include "hermes.h"
 
 namespace hermes::borg {

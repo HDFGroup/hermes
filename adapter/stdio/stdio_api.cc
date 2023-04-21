@@ -15,7 +15,7 @@ bool stdio_intercepted = true;
 #include <limits.h>
 #include <sys/file.h>
 #include <cstdio>
-#include "io_client/stdio/stdio_api.h"
+#include "stdio_api.h"
 #include "stdio_fs_api.h"
 #include "interceptor.h"
 

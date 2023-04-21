@@ -15,7 +15,7 @@
 
 #include <memory>
 
-#include "io_client/filesystem/filesystem_io_client.h"
+#include "adapter/filesystem/filesystem_io_client.h"
 #include "posix_api.h"
 
 using hshm::Singleton;

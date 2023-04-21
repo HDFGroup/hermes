@@ -12,6 +12,7 @@ echo "RUNNING PROGRAM"
 export LSAN_OPTIONS=suppressions="${CMAKE_SOURCE_DIR}/test/data/asan.supp"
 export COMMAND="${CMAKE_BINARY_DIR}/bin/${EXEC_NAME}"
 echo "RUNNING PROGRAM"
+echo "${COMMAND}" "${ARGS}"
 "${COMMAND}" "${ARGS}"
 status=$?
 

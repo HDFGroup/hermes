@@ -12,5 +12,5 @@
 
 #include "hermes_shm/util/singleton.h"
 
-#include "io_client/mpiio/mpiio_api.h"
+#include "mpiio_api.h"
 DEFINE_SINGLETON_CC(hermes::adapter::fs::MpiioApi)

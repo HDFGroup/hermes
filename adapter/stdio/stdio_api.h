@@ -17,7 +17,7 @@
 #include <iostream>
 #include "hermes_shm/util/logging.h"
 #include <cstdio>
-#include "io_client/real_api.h"
+#include "adapter/real_api.h"
 
 extern "C" {
 typedef FILE * (*fopen_t)(const char * path, const char * mode);

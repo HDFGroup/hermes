@@ -20,7 +20,7 @@
 #include <stdio.h>
 
 #include "catch_config.h"
-#include "io_client/posix/posix_api.h"
+#include "adapter/posix/posix_api.h"
 
 #if HERMES_INTERCEPT == 1
 #include "adapter/posix/posix_fs_api.h"

@@ -415,7 +415,6 @@ set(HERMES_EXPORTED_LIBS "")
 include_directories(${CMAKE_SOURCE_DIR}/hermes_shm/include)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src)
 add_subdirectory(${CMAKE_SOURCE_DIR}/hermes_shm)
-add_subdirectory(${CMAKE_SOURCE_DIR}/io_client)
 add_subdirectory(${CMAKE_SOURCE_DIR}/wrapper)
 
 add_custom_target(rpc COMMAND bash

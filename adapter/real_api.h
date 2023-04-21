@@ -44,7 +44,7 @@ struct RealApi {
     auto lib = dlopen(info->dlpi_name, RTLD_GLOBAL | RTLD_NOW);
     auto exists = dlsym(lib, iter->symbol_name_);
     void *is_intercepted =
-        (void*)dlsym(lib, "posix_intercepted");
+        (void*)dlsym(lib, iter->is_intercepted_);
     if (!is_intercepted && exists) {
       iter->lib_path_ = info->dlpi_name;
     }
@@ -59,7 +59,7 @@ struct RealApi {
     if (iter.lib_path_) {
       real_lib_ = dlopen(iter.lib_path_, RTLD_GLOBAL | RTLD_NOW);
       real_lib_next_ = real_lib_;
-      real_lib_default_ = real_lib_next_;
+      real_lib_default_ = real_lib_;
     }
     void *is_intercepted_ptr = (void*)dlsym(RTLD_DEFAULT,
                                              is_intercepted);

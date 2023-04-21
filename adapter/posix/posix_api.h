@@ -19,7 +19,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include "io_client/real_api.h"
+#include "adapter/real_api.h"
 
 #ifndef O_TMPFILE
 #define O_TMPFILE 0
