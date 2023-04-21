@@ -558,7 +558,7 @@ int Filesystem::Close(File &f, AdapterStat &stat) {
   if (HERMES->client_config_.flushing_mode_ == FlushingMode::kSync) {
     // NOTE(llogan): only for the unit tests
     // Please don't enable synchronous flushing
-    stat.bkt_id_.Destroy();
+    // stat.bkt_id_.Destroy();
   }
   return 0;
 }

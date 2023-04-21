@@ -126,8 +126,6 @@ void MetadataManager::shm_destroy() {
  * */
 size_t MetadataManager::LocalGetBucketSize(TagId bkt_id) {
   AUTO_TRACE(1);
-  // Avoid flushing
-  ScopedRwReadLock flush_lock(header_->lock_[kFlushLock], kMDM_LocalClear);
   // Acquire MD read lock (reading tag_map)
   ScopedRwReadLock tag_map_lock(header_->lock_[kTagMapLock],
                                 kMDM_LocalGetBucketSize);
@@ -146,8 +144,6 @@ size_t MetadataManager::LocalGetBucketSize(TagId bkt_id) {
 bool MetadataManager::LocalSetBucketSize(TagId bkt_id,
                                          size_t new_size) {
   AUTO_TRACE(1);
-  // Avoid flushing
-  ScopedRwReadLock flush_lock(header_->lock_[kFlushLock], kMDM_LocalClear);
   // Acquire MD read lock (reading tag_map)
   ScopedRwReadLock tag_map_lock(header_->lock_[kTagMapLock],
                                 kMDM_LocalSetBucketSize);
@@ -230,8 +226,6 @@ bool MetadataManager::LocalClearBucket(TagId bkt_id) {
 Status MetadataManager::LocalTagBlob(
     BlobId blob_id, TagId tag_id) {
   AUTO_TRACE(1);
-  // Avoid flushing
-  ScopedRwReadLock flush_lock(header_->lock_[kFlushLock], kMDM_LocalClear);
   // Acquire MD read lock (read blob_map_)
   ScopedRwReadLock blob_map_lock(header_->lock_[kBlobMapLock],
                                  kMDM_LocalTagBlob);
@@ -254,8 +248,6 @@ Status MetadataManager::LocalTagBlob(
 bool MetadataManager::LocalBlobHasTag(BlobId blob_id,
                                       TagId tag_id) {
   AUTO_TRACE(1);
-  // Avoid flushing
-  ScopedRwReadLock flush_lock(header_->lock_[kFlushLock], kMDM_LocalClear);
   // Acquire MD read lock (reading blob_map_)
   ScopedRwReadLock blob_map_lock(header_->lock_[kBlobMapLock],
                                  kMDM_LocalBlobHasTag);
@@ -366,6 +358,7 @@ MetadataManager::LocalPutBlobMetadata(TagId bkt_id,
     ScopedRwWriteLock(blob_info.lock_[0],
                       kMDM_LocalPutBlobMetadata);
     (*blob_info.buffers_) = buffers;
+    blob_info.blob_size_ = blob_size;
     blob_info.score_ = score;
     blob_info.mod_count_.fetch_add(1);
   }
@@ -699,17 +692,16 @@ bool MetadataManager::LocalDestroyTag(TagId tag_id) {
 Status MetadataManager::LocalTagAddBlob(TagId tag_id,
                                         BlobId blob_id) {
   AUTO_TRACE(1);
-  // Avoid flushing
-  ScopedRwReadLock flush_lock(header_->lock_[kFlushLock], kMDM_LocalClear);
   // Acquire MD write lock (modify tag_map_)
-  ScopedRwWriteLock tag_map_lock(header_->lock_[kTagMapLock],
-                                 kMDM_LocalTagAddBlob);
+  ScopedRwReadLock tag_map_lock(header_->lock_[kTagMapLock],
+                                kMDM_LocalTagAddBlob);
   auto iter = tag_map_->find(tag_id);
   if (iter.is_end()) {
     return Status();
   }
   hipc::pair<TagId, TagInfo> &blob_list = (*iter);
   TagInfo &info = blob_list.GetSecond();
+  ScopedRwWriteLock tag_lock(info.lock_[0], kMDM_LocalTagRemoveBlob);
   info.blobs_->emplace_back(blob_id);
   return Status();
 }
@@ -720,17 +712,16 @@ Status MetadataManager::LocalTagAddBlob(TagId tag_id,
 Status MetadataManager::LocalTagRemoveBlob(TagId tag_id,
                                            BlobId blob_id) {
   AUTO_TRACE(1);
-  // Avoid flushing
-  ScopedRwReadLock flush_lock(header_->lock_[kFlushLock], kMDM_LocalClear);
   // Acquire MD write lock (modify tag_map_)
-  ScopedRwWriteLock tag_map_lock(header_->lock_[kTagMapLock],
-                                 kMDM_LocalTagRemoveBlob);
+  ScopedRwReadLock tag_map_lock(header_->lock_[kTagMapLock],
+                                kMDM_LocalTagRemoveBlob);
   auto iter = tag_map_->find(tag_id);
   if (iter.is_end()) {
     return Status();
   }
   hipc::pair<TagId, TagInfo> &blob_list = (*iter);
   TagInfo &info = blob_list.GetSecond();
+  ScopedRwWriteLock tag_lock(info.lock_[0], kMDM_LocalTagRemoveBlob);
   info.blobs_->erase(blob_id);
   return Status();
 }
@@ -741,8 +732,6 @@ Status MetadataManager::LocalTagRemoveBlob(TagId tag_id,
  * */
 std::vector<BlobId> MetadataManager::LocalGroupByTag(TagId tag_id) {
   AUTO_TRACE(1);
-  // Avoid flushing
-  ScopedRwReadLock flush_lock(header_->lock_[kFlushLock], kMDM_LocalClear);
   // Acquire MD read lock (read tag_map_)
   ScopedRwReadLock tag_map_lock(header_->lock_[kTagMapLock],
                                 kMDM_LocalGroupByTag);
@@ -764,8 +753,6 @@ bool MetadataManager::LocalTagAddTrait(TagId tag_id, TraitId trait_id) {
   AUTO_TRACE(1);
   HILOG(kDebug, "Adding trait {} to tag {}",
         trait_id, tag_id);
-  // Avoid flushing
-  ScopedRwReadLock flush_lock(header_->lock_[kFlushLock], kMDM_LocalClear);
   // Acquire MD read lock (read tag_map_)
   ScopedRwReadLock tag_map_lock(header_->lock_[kTagMapLock],
                                 kMDM_LocalTagAddTrait);
@@ -788,8 +775,6 @@ bool MetadataManager::LocalTagAddTrait(TagId tag_id, TraitId trait_id) {
  * */
 std::vector<TraitId> MetadataManager::LocalTagGetTraits(TagId tag_id) {
   AUTO_TRACE(1);
-  // Avoid flushing
-  ScopedRwReadLock flush_lock(header_->lock_[kFlushLock], kMDM_LocalClear);
   // Acquire MD read lock (read tag_map_)
   ScopedRwReadLock tag_map_lock(header_->lock_[kTagMapLock],
                                 kMDM_LocalTagGetTraits);
@@ -814,8 +799,6 @@ RPC TraitId MetadataManager::LocalRegisterTrait(
     TraitId trait_id,
     const hshm::charbuf &trait_params) {
   HILOG(kDebug, "Registering trait {}", trait_id)
-  // Avoid flushing
-  ScopedRwReadLock flush_lock(header_->lock_[kFlushLock], kMDM_LocalClear);
   // Acquire md write lock (modifying trait map)
   ScopedRwWriteLock md_lock(header_->lock_[kTraitMapLock],
                             kMDM_LocalRegisterTrait);
@@ -846,8 +829,6 @@ RPC TraitId MetadataManager::LocalRegisterTrait(
 RPC TraitId
 MetadataManager::LocalGetTraitId(const std::string &trait_uuid) {
   HILOG(kDebug, "Getting trait id for {}", trait_uuid)
-  // Avoid flushing
-  ScopedRwReadLock flush_lock(header_->lock_[kFlushLock], kMDM_LocalClear);
   // Acquire md read lock (reading trait_id_map)
   ScopedRwReadLock md_lock(header_->lock_[kTraitMapLock],
                            kMDM_LocalGetTraitId);
@@ -866,8 +847,6 @@ MetadataManager::LocalGetTraitId(const std::string &trait_uuid) {
  * */
 RPC hshm::charbuf
 MetadataManager::LocalGetTraitParams(TraitId trait_id) {
-  // Avoid flushing
-  ScopedRwReadLock flush_lock(header_->lock_[kFlushLock], kMDM_LocalClear);
   // Acquire md read lock (reading trait_map)
   ScopedRwReadLock md_lock(header_->lock_[kTraitMapLock],
                            kMDM_LocalGetTraitParams);
@@ -887,9 +866,6 @@ MetadataManager::LocalGetTraitParams(TraitId trait_id) {
 Trait* MetadataManager::GlobalGetTrait(TraitId trait_id) {
   HILOG(kDebug, "Getting the trait {}", trait_id)
   Trait *trait = nullptr;
-
-  // Avoid flushing
-  ScopedRwReadLock flush_lock(header_->lock_[kFlushLock], kMDM_LocalClear);
 
   // Check if trait is already constructed
   ScopedRwReadLock trait_lock(header_->lock_[kTraitMapLock],

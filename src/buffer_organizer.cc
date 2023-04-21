@@ -338,8 +338,8 @@ void BufferOrganizer::GlobalOrganizeBlob(const std::string &bucket_name,
 void BufferOrganizer::LocalEnqueueFlushes() {
   auto mdm = &HERMES->mdm_;
   // Avoid flushing
-  ScopedRwReadLock flush_lock(mdm_->header_->lock_[kFlushLock],
-                              kMDM_LocalClear);
+  /* ScopedRwReadLock flush_lock(mdm_->header_->lock_[kFlushLock],
+                                 kMDM_LocalClear);*/
   // Acquire the read lock on the blob map
   ScopedRwReadLock blob_map_lock(mdm->header_->lock_[kBlobMapLock],
                                  kBORG_LocalEnqueueFlushes);
@@ -347,14 +347,14 @@ void BufferOrganizer::LocalEnqueueFlushes() {
   size_t count = 0;
   for (hipc::pair<BlobId, BlobInfo>& blob_p : *mdm->blob_map_) {
     BlobId &blob_id = blob_p.GetFirst();
-    BlobInfo &info = blob_p.GetSecond();
+    BlobInfo &blob_info = blob_p.GetSecond();
     // Verify that flush is needing to happen
-    if (info.mod_count_ == info.last_flush_) {
+    if (blob_info.mod_count_ == blob_info.last_flush_) {
       continue;
     }
     // Check if bucket has flush trait
-    TagId &bkt_id = info.tag_id_;
-    size_t blob_size = info.blob_size_;
+    TagId &bkt_id = blob_info.tag_id_;
+    size_t blob_size = blob_info.blob_size_;
     std::vector<Trait*> traits = HERMES->GetTraits(bkt_id,
                                                    HERMES_TRAIT_FLUSH);
     if (traits.size() == 0) {
@@ -380,16 +380,16 @@ void BufferOrganizer::LocalProcessFlushes(
   // Process tasks
   auto entry = hipc::make_uptr<BorgIoTask>();
   while (!queue.pop(*entry).IsNull()) {
-    BorgIoTask &info = *entry;
-    HILOG(kDebug, "Attempting to flush blob {}", info.blob_id_);
+    BorgIoTask &task = *entry;
+    HILOG(kDebug, "Attempting to flush blob {}", task.blob_id_);
     Blob blob;
 
     // Verify the blob exists and then read lock it
-    auto iter = mdm_->blob_map_->find(info.blob_id_);
+    auto iter = mdm_->blob_map_->find(task.blob_id_);
     if (iter.is_end()) {
-      bq_info.load_.fetch_sub(info.blob_size_);
-      HILOG(kDebug, "Finished BORG task for {}, {}",
-            info.blob_id_, bq_info.load_.load());
+      bq_info.load_.fetch_sub(task.blob_size_);
+      HILOG(kDebug, "Finished BORG task for blob {} and load {}",
+            task.blob_id_, bq_info.load_.load())
       continue;
     }
     hipc::pair<BlobId, BlobInfo>& blob_info_p = *iter;
@@ -398,20 +398,23 @@ void BufferOrganizer::LocalProcessFlushes(
 
     // Verify that flush is needing to happen
     if (blob_info.mod_count_ == blob_info.last_flush_) {
+      bq_info.load_.fetch_sub(task.blob_size_);
+      HILOG(kDebug, "Finished BORG task for blob {} and load {}",
+            task.blob_id_, bq_info.load_.load())
       continue;
     }
     size_t last_flush = blob_info.mod_count_;
     blob_info.last_flush_ = last_flush;
 
     // Get the current blob from Hermes
-    api::Bucket bkt = HERMES->GetBucket(info.bkt_id_);
-    bkt.Get(info.blob_id_, blob, bkt.GetContext());
+    api::Bucket bkt = HERMES->GetBucket(task.bkt_id_);
+    bkt.Get(task.blob_id_, blob, bkt.GetContext());
     HILOG(kDebug, "Flushing blob {} ({}) of size {}",
           blob_name,
-          info.blob_id_,
+          task.blob_id_,
           blob.size())
     FlushTraitParams trait_params;
-    for (Trait *trait : info.traits_) {
+    for (Trait *trait : task.traits_) {
       trait_params.blob_ = &blob;
       trait_params.blob_name_ = blob_name;
       trait_params.bkt_ = &bkt;
@@ -419,9 +422,9 @@ void BufferOrganizer::LocalProcessFlushes(
     }
 
     // Dequeue
-    bq_info.load_.fetch_sub(info.blob_size_);
-    HILOG(kDebug, "Finished BORG task for {}, {}",
-          info.blob_id_, bq_info.load_.load())
+    bq_info.load_.fetch_sub(task.blob_size_);
+    HILOG(kDebug, "Finished BORG task for blob {} and load {}",
+          task.blob_id_, bq_info.load_.load())
   }
 }
 
