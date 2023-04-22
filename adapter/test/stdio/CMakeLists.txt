@@ -8,52 +8,45 @@ include_directories(
 add_executable(stdio_adapter_mapper_test stdio_adapter_mapper_test.cpp ${ADAPTER_COMMON})
 target_link_libraries(stdio_adapter_mapper_test stdc++fs hermes_stdio)
 add_dependencies(stdio_adapter_mapper_test hermes_stdio)
-gcc_hermes(stdio_adapter_mapper_test "" "" hermes "")
+pytest(stdio test_hermes_stdio_adapter_mapper)
 
 #------------------------------------------------------------------------------
 # STDIO Adapter End to End tests
 #------------------------------------------------------------------------------
 add_executable(stdio_adapter_test stdio_adapter_test.cpp ${ADAPTER_COMMON})
 target_link_libraries(stdio_adapter_test hermes)
-gcc(stdio_adapter_test "")
+pytest(stdio test_stdio_basic)
 
 add_executable(stdio_adapter_mpi_test stdio_adapter_mpi_test.cpp ${ADAPTER_COMMON})
-# mpi(stdio_adapter_mpi_test 2 "")
+# pytest(stdio test_stdio_basic_mpi 2 "")
 
 add_executable(hermes_stdio_adapter_test stdio_adapter_test.cpp ${ADAPTER_COMMON})
 target_link_libraries(hermes_stdio_adapter_test hermes_stdio)
 add_dependencies(hermes_stdio_adapter_test hermes_stdio hermes_daemon)
 set_target_properties(hermes_stdio_adapter_test PROPERTIES COMPILE_FLAGS "-DHERMES_INTERCEPT=1")
-gcc_hermes(hermes_stdio_adapter_test "" "~[request_size=range-large]" hermes "")
-gcc_hermes(hermes_stdio_adapter_test "large" "[request_size=range-large]" hermes "")
-gcc_hermes(hermes_stdio_adapter_test "" "~[request_size=range-large]" hermes async)
-gcc_hermes(hermes_stdio_adapter_test "large" "[request_size=range-large]" hermes async)
+pytest(stdio test_hermes_stdio_basic_small)
+pytest(stdio test_hermes_stdio_basic_large)
 
 add_executable(hermes_stdio_low_buf_adapter_test stdio_adapter_low_buffer_space_test.cpp ${ADAPTER_COMMON})
 target_link_libraries(hermes_stdio_low_buf_adapter_test hermes_stdio)
 add_dependencies(hermes_stdio_low_buf_adapter_test hermes_stdio hermes_daemon)
 set_target_properties(hermes_stdio_low_buf_adapter_test PROPERTIES COMPILE_FLAGS "-DHERMES_INTERCEPT=1")
-# TODO(llogan): should use small buffer hermes config, not default here
-gcc_hermes(hermes_stdio_low_buf_adapter_test "" "" hermes "")
-gcc_hermes(hermes_stdio_low_buf_adapter_test "" "" hermes async)
+pytest(stdio test_hermes_stdio_low_buf)
 
 add_executable(hermes_stdio_adapter_mode_test stdio_adapter_mode_test.cpp ${ADAPTER_COMMON})
 target_link_libraries(hermes_stdio_adapter_mode_test hermes_stdio)
 add_dependencies(hermes_stdio_adapter_mode_test hermes_stdio hermes_daemon)
 set_target_properties(hermes_stdio_adapter_mode_test PROPERTIES COMPILE_FLAGS "-DHERMES_INTERCEPT=1")
-gcc_hermes_mode(hermes_stdio_adapter_mode_test "persistent" "[hermes_mode=persistent]" "DEFAULT" "0")
-gcc_hermes_mode(hermes_stdio_adapter_mode_test "scratch" "[hermes_mode=scratch]" "kScratch" "0")
-gcc_hermes_mode(hermes_stdio_adapter_mode_test "bypass" "[hermes_mode=bypass]" "kBypass" "0")
-gcc_hermes_mode(hermes_stdio_adapter_mode_test "persistent" "[hermes_mode=persistent]" "kDefault" "1")
-gcc_hermes_mode(hermes_stdio_adapter_mode_test "scratch" "[hermes_mode=scratch]" "kScratch" "1")
-gcc_hermes_mode(hermes_stdio_adapter_mode_test "bypass" "[hermes_mode=bypass]" "kBypass" "1")
+pytest(stdio test_hermes_stdio_bypass)
+pytest(stdio test_hermes_stdio_default)
+pytest(stdio test_hermes_stdio_scratch)
 
 add_executable(hermes_stdio_adapter_mpi_test stdio_adapter_mpi_test.cpp ${ADAPTER_COMMON})
 target_link_libraries(hermes_stdio_adapter_mpi_test hermes_stdio)
 add_dependencies(hermes_stdio_adapter_mpi_test hermes_stdio hermes_daemon)
 set_target_properties(hermes_stdio_adapter_mpi_test PROPERTIES COMPILE_FLAGS "-DHERMES_INTERCEPT=1")
-mpi_daemon(hermes_stdio_adapter_mpi_test 2 "~[request_size=range-large]" "")
-mpi_daemon(hermes_stdio_adapter_mpi_test 2 "[request_size=range-large]" "large")
+pytest(stdio test_hermes_stdio_mpi_small)
+pytest(stdio test_hermes_stdio_mpi_large)
 
 set(STDIO_TESTS
   stdio_adapter_mapper_test

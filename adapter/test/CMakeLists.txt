@@ -6,73 +6,11 @@ find_package(Catch2 REQUIRED)
 find_program(BASH_PROGRAM bash)
 find_package(OpenMP REQUIRED COMPONENTS C CXX)
 
-function(gcc exec args)
-    set(test_name Test${exec} COMMAND)
-    set(script ${CMAKE_SOURCE_DIR}/adapter/test/gcc.sh)
-    add_test(NAME ${test_name} COMMAND ${BASH_PROGRAM} ${script}
-            "${CMAKE_SOURCE_DIR}" "${CMAKE_BINARY_DIR}"
-            "${exec}" "${args}")
-endfunction()
-
-function(mpi exec mpi_proc args)
-    set(test_name Test${exec}_${mpi_proc} COMMAND)
-    set(script ${CMAKE_SOURCE_DIR}/adapter/test/mpi.sh)
-    add_test(NAME ${test_name} COMMAND ${BASH_PROGRAM} ${script}
-            "${CMAKE_SOURCE_DIR}" "${CMAKE_BINARY_DIR}"
-            "${MPIEXEC_EXECUTABLE}" "${MPIEXEC_NUMPROC_FLAG}" "${mpi_proc}"
-            "${exec}" "${args}")
-endfunction()
-
-function(gcc_hermes exec tag_name tags conf async)
-    set(test_name Test${exec}_${tag_name}_${async} COMMAND)
-    set(script ${CMAKE_SOURCE_DIR}/adapter/test/gcc_hermes.sh)
-    add_test(NAME ${test_name} COMMAND ${BASH_PROGRAM} ${script}
-            "${CMAKE_SOURCE_DIR}" "${CMAKE_BINARY_DIR}"
-            "${exec}" "${tag_name}" "${tags}" "${conf}" "${async}")
-endfunction()
-
-function(gcc_hermes_mode exec tag_name tags mode path)
-    set(test_name Test${exec}_${tag_name}_${mode}_${path})
-    set(script ${CMAKE_SOURCE_DIR}/adapter/test/gcc_hermes_mode.sh)
-    add_test(NAME ${test_name} COMMAND ${BASH_PROGRAM} ${script}
-            "${CMAKE_SOURCE_DIR}" "${CMAKE_BINARY_DIR}"
-            "${exec}" "${tag_name}" "${tags}" "${mode}" "${path}")
-endfunction()
-
-function(gcc_hermes_full exec id mode params)
-    set(test_name Test${exec}_${id}_${mode})
-    set(script ${CMAKE_SOURCE_DIR}/adapter/test/gcc_hermes_full.sh)
-    add_test(NAME ${test_name} COMMAND ${BASH_PROGRAM} ${script}
-            "${CMAKE_SOURCE_DIR}" "${CMAKE_BINARY_DIR}"
-            "${exec}" "${mode}" "${params}")
-endfunction()
-
-function(mpi_daemon test_exec test_mpi_proc test_args arg_name)
-    #MPI_EXEC=$1 TEST_EXEC=$2 TEST_PROCS=$3 HERMES_EXEC=$4 HERMES_PROCS=$5 HERMES_CONF=$6
-    set(script ${CMAKE_SOURCE_DIR}/adapter/test/mpi_hermes.sh)
-    add_test(NAME Test${test_exec}_${test_mpi_proc}_${arg_name} COMMAND
-            ${BASH_PROGRAM} ${script}
-            "${CMAKE_SOURCE_DIR}" "${CMAKE_BINARY_DIR}"
-            "${MPIEXEC_EXECUTABLE}"
-            "${test_mpi_proc}"
-            "${test_exec}"
-            "${test_args}")
-endfunction()
-
-function(preload_hermes name preload exec)
-    set(test_name Test${preload}_${name})
-    set(script ${CMAKE_SOURCE_DIR}/adapter/test/preload.sh)
-    add_test(NAME ${test_name} COMMAND ${BASH_PROGRAM} ${script}
-            "${CMAKE_SOURCE_DIR}" "${CMAKE_BINARY_DIR}"
-            "${preload}" "${exec}")
-endfunction()
-
-function(preload_vfd name adapter_mode exec args)
-    set(test_name Test${name})
-    set(script ${CMAKE_SOURCE_DIR}/adapter/test/preload_vfd.sh)
-    add_test(NAME ${test_name} COMMAND ${BASH_PROGRAM} ${script}
-            "${CMAKE_SOURCE_DIR}" "${CMAKE_BINARY_DIR}" "${adapter_mode}"
-            "${exec}" "${args}")
+function(pytest test_type test_name)
+    set(test_name Test${test_name})
+    set(script ${CMAKE_SOURCE_DIR}/ci/py_hermes_ci/bin/run_test)
+    add_test(NAME ${test_name}
+            COMMAND ${script} ${test_type} ${test_name} ${CMAKE_BINARY_DIR})
 endfunction()
 
 enable_testing()

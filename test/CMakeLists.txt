@@ -38,15 +38,7 @@ foreach(program ${API_TESTS})
           MPI::MPI_CXX
           $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium>
           Catch2::Catch2)
-  set(script ${CMAKE_SOURCE_DIR}/test/mpi.sh)
-  add_test(NAME "Test${program}"
-    COMMAND ${BASH_PROGRAM} ${script}
-          ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR}
-          ${MPIEXEC_EXECUTABLE}
-          ${MPIEXEC_NUMPROC_FLAG}
-          1
-          ${program}
-          "")
+  pytest(native ${program})
 endforeach()
 
 #------------------------------------------------------------------------------
@@ -66,12 +58,5 @@ foreach(program ${API_TESTS})
           $<$<BOOL:${HERMES_RPC_THALLIUM}>:thallium>
           Catch2::Catch2)
   set(script ${CMAKE_SOURCE_DIR}/test/mpi.sh)
-  add_test(NAME "Test${program}"
-          COMMAND ${BASH_PROGRAM} ${script}
-          ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR}
-          ${MPIEXEC_EXECUTABLE}
-          ${MPIEXEC_NUMPROC_FLAG}
-          2
-          ${program}
-          "")
+  pytest(native ${program})
 endforeach()
