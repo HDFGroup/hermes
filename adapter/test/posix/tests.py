@@ -24,7 +24,7 @@ class PosixTestManager(TestManager):
         posix_cmd = f"{self.HERMES_POSIX_CMD} " \
                     f"~[request_size=range-large]  " \
                     f"--reporter compact -d yes"
-        print(f"CMD: {posix_cmd}")
+
         spawn_info = self.spawn_info(nprocs=1,
                                      hermes_conf='hermes_server')
         self.start_daemon(spawn_info)

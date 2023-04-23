@@ -63,10 +63,7 @@ class TestManager(ABC):
                                            f"{hermes_conf}.yaml")
 
         # Basic environment variables
-        env = {
-            'PATH': os.getenv('PATH'),
-            'LD_LIBRARY_PATH': os.getenv('LD_LIBRARY_PATH')
-        }
+        env = {}
         if use_hermes:
             env.update({
                 'HERMES_LOG_OUT': "/tmp/hermes_log.txt",
