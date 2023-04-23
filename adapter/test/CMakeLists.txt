@@ -6,13 +6,6 @@ find_package(Catch2 REQUIRED)
 find_program(BASH_PROGRAM bash)
 find_package(OpenMP REQUIRED COMPONENTS C CXX)
 
-function(pytest test_type test_name)
-    set(test_name Test${test_name})
-    set(script ${CMAKE_SOURCE_DIR}/ci/py_hermes_ci/bin/run_test)
-    add_test(NAME ${test_name}
-            COMMAND ${script} ${test_type} ${test_name} ${CMAKE_BINARY_DIR})
-endfunction()
-
 enable_testing()
 
 if(HERMES_ENABLE_POSIX_ADAPTER)

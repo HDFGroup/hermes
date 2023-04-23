@@ -60,8 +60,7 @@ target_include_directories(hermes
 target_include_directories(hermes
   SYSTEM PUBLIC ${HERMES_EXT_INCLUDE_DEPENDENCIES})
 add_dependencies(hermes
-        hermes_shm_data_structures
-        hermes_posix_io_real)
+        hermes_shm_data_structures)
 
 target_link_libraries(hermes
   PUBLIC hermes_shm_data_structures
@@ -69,7 +68,6 @@ target_link_libraries(hermes
   PUBLIC ${CMAKE_HERMES_COMMUNICATION_TYPE_LIB}
   PUBLIC ${CMAKE_HERMES_RPC_TYPE_LIB}
   PUBLIC yaml-cpp
-  PUBLIC hermes_posix_io_real
   PUBLIC "$<$<BOOL:${HERMES_INTERCEPT_IO}>:${GOTCHA_MODULE_LIBS}>"
 )
 

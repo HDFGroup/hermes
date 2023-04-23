@@ -427,6 +427,15 @@ add_custom_target(rpc COMMAND bash
 # Testing
 #-----------------------------------------------------------------------------
 include(CTest)
+
+# General function used to hook ctest to python test tool lib
+function(pytest test_type test_name)
+  set(script ${CMAKE_SOURCE_DIR}/ci/py_hermes_ci/bin/run_test)
+  add_test(NAME ${test_name}
+          COMMAND ${script} ${test_type} ${test_name} ${CMAKE_BINARY_DIR})
+endfunction()
+
+# Add testing directory
 if(CMAKE_PROJECT_NAME STREQUAL HERMES AND BUILD_TESTING)
   find_package(Catch2 3.0.1 REQUIRED)  
   find_program(IOR_EXE ior)
@@ -506,7 +515,7 @@ install(
   TYPE
     DATA
   RENAME
-    hermes_sample.conf
+    hermes_sample.yaml
 )
 
 #-----------------------------------------------------------------------------

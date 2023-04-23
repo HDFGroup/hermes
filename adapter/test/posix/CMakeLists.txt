@@ -11,7 +11,7 @@ target_link_libraries(posix_adapter_test hermes)
 pytest(posix test_posix_basic)
 
 add_executable(posix_adapter_mpi_test posix_adapter_mpi_test.cpp ${ADAPTER_COMMON})
-# pytest(posix test_posix_basic_mpi)
+pytest(posix test_posix_basic_mpi)
 
 add_executable(hermes_posix_adapter_test posix_adapter_test.cpp ${ADAPTER_COMMON})
 target_link_libraries(hermes_posix_adapter_test hermes_posix)

@@ -7,18 +7,13 @@ include_directories(
         ${HERMES_IO_CLIENT_DIR}
         ${CMAKE_CURRENT_SOURCE_DIR})
 
-# Create the MPIIO singleton
-add_library(hermes_mpiio_real mpiio_api_singleton.cc)
-target_link_libraries(hermes_mpiio_real
-        MPI::MPI_CXX stdc++fs dl)
-
 # Create the MPIIO I/O client
 add_library(hermes_mpiio_io_client mpiio_io_client.cc)
 target_compile_options(hermes_mpiio_io_client PUBLIC -fPIC)
 add_dependencies(hermes_mpiio_io_client
-        hermes hermes_mpiio_real)
+        hermes)
 target_link_libraries(hermes_mpiio_io_client
-        hermes hermes_mpiio_real MPI::MPI_CXX stdc++fs dl)
+        hermes MPI::MPI_CXX stdc++fs dl)
 
 # Create the MPIIO interceptor
 set(INTERCEPTOR_DEPS
@@ -36,7 +31,6 @@ target_compile_options(hermes_mpiio PUBLIC -fPIC)
 #-----------------------------------------------------------------------------
 install(
         TARGETS
-        hermes_mpiio_real
         hermes_mpiio_io_client
         hermes_mpiio
         EXPORT
@@ -49,7 +43,6 @@ install(
 # Add Target(s) to Coverage
 #-----------------------------------------------------------------------------
 if(HERMES_ENABLE_COVERAGE)
-    set_coverage_flags(hermes_mpiio_real)
     set_coverage_flags(hermes_mpiio_io_client)
     set_coverage_flags(hermes_mpiio)
 endif()

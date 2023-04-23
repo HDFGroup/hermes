@@ -34,9 +34,10 @@ class TestManager(ABC):
         self.CMAKE_SOURCE_DIR = cmake_source_dir
         self.CMAKE_BINARY_DIR = cmake_binary_dir
         self.HERMES_TRAIT_PATH = f"{self.CMAKE_BINARY_DIR}/bin"
-        self.HERMES_CLIENT_CONF = f"{self.CMAKE_SOURCE_DIR}/test/data/hermes_client.conf"
+        self.HERMES_CLIENT_CONF = f"{self.CMAKE_SOURCE_DIR}/test/data/hermes_client.yaml"
         self.daemon = None
 
+        os.makedirs("/tmp/test_hermes", exist_ok=True)
         self.tests_ = {}
         self.devices = {}
         self.set_devices()
@@ -176,7 +177,7 @@ class TestManager(ABC):
                                collect_output=False,
                                hide_output=False,
                                exec_async=True))
-        time.sleep(30)
+        time.sleep(5)
         print("Launched")
 
     def stop_daemon(self, spawn_info):

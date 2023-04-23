@@ -6,17 +6,13 @@ include_directories(
         ${HERMES_IO_CLIENT_DIR}
         ${CMAKE_CURRENT_SOURCE_DIR})
 
-# Creates the STDIO I/O singleton
-add_library(hermes_stdio_io_real stdio_api_singleton.cc)
-target_link_libraries(hermes_stdio_io_real stdc++fs dl)
-
 # Creates the STDIO I/O client
 add_library(hermes_stdio_io_client stdio_io_client.cc)
 target_compile_options(hermes_stdio_io_client PUBLIC -fPIC)
 add_dependencies(hermes_stdio_io_client
-        hermes hermes_stdio_io_real)
+        hermes)
 target_link_libraries(hermes_stdio_io_client
-        hermes hermes_stdio_io_real
+        hermes
         MPI::MPI_CXX stdc++fs dl)
 
 # Create the STDIO interceptor
@@ -35,7 +31,6 @@ target_compile_options(hermes_stdio PUBLIC -fPIC)
 #-----------------------------------------------------------------------------
 install(
         TARGETS
-        hermes_stdio_io_real
         hermes_stdio_io_client
         hermes_stdio
         EXPORT
@@ -49,7 +44,6 @@ install(
 # Export all exported targets to the build tree for use by parent project
 #-----------------------------------------------------------------------------
 set(HERMES_EXPORTED_LIBS
-        hermes_stdio_io_real
         hermes_stdio_io_client
         hermes_stdio
         ${HERMES_EXPORTED_LIBS})
@@ -66,7 +60,6 @@ endif()
 # Add Target(s) to Coverage
 #-----------------------------------------------------------------------------
 if(HERMES_ENABLE_COVERAGE)
-    set_coverage_flags(hermes_stdio_io_real)
     set_coverage_flags(hermes_stdio_io_client)
     set_coverage_flags(hermes_stdio)
 endif()
