@@ -11,7 +11,7 @@ class MpiioTestManager(TestManager):
         self.MPIIO_CMD = f"{self.CMAKE_BINARY_DIR}/bin/mpiio_adapter_test"
         self.HERMES_MPIIO_CMD = f"{self.CMAKE_BINARY_DIR}/bin/hermes_mpiio_adapter_test"
 
-    def test_hermes_mpiio_mpi_sync(self):
+    def test_hermes_mpiio_basic_sync(self):
         mpiio_cmd = f"{self.HERMES_MPIIO_CMD} " \
                     f"[synchronicity=sync]  " \
                     f"--reporter compact -d yes"
@@ -22,7 +22,7 @@ class MpiioTestManager(TestManager):
         self.stop_daemon(spawn_info)
         return node.exit_code
 
-    def test_hermes_mpiio_mpi_async(self):
+    def test_hermes_mpiio_basic_async(self):
         mpiio_cmd = f"{self.HERMES_MPIIO_CMD} " \
                     f"[synchronicity=async]  " \
                     f"--reporter compact -d yes"

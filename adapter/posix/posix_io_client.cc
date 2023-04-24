@@ -21,14 +21,14 @@ void PosixIoClient::RealOpen(File &f,
   if (stat.flags_ & O_APPEND) {
     stat.hflags_.SetBits(HERMES_FS_APPEND);
   }
-  if (stat.flags_ & O_CREAT) {
+  if (stat.flags_ & O_CREAT || stat.flags_ & O_TMPFILE) {
     stat.hflags_.SetBits(HERMES_FS_CREATE);
   }
   if (stat.flags_ & O_TRUNC) {
     stat.hflags_.SetBits(HERMES_FS_TRUNC);
   }
 
-  if (stat.flags_ & O_CREAT || stat.flags_ & O_TMPFILE) {
+  if (stat.hflags_.Any(HERMES_FS_CREATE)) {
     if (stat.adapter_mode_ != AdapterMode::kScratch) {
       stat.fd_ = real_api->open(path.c_str(), stat.flags_, stat.st_mode_);
     }

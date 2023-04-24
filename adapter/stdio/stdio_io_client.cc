@@ -27,9 +27,10 @@ void StdioIoClient::RealOpen(File &f,
     stat.hflags_.SetBits(HERMES_FS_CREATE);
   }
 
-  if (stat.hflags_.Any(HERMES_FS_CREATE) &&
-      stat.adapter_mode_ != AdapterMode::kScratch) {
-    stat.fh_ = real_api->fopen(path.c_str(), stat.mode_str_.c_str());
+  if (stat.hflags_.Any(HERMES_FS_CREATE)) {
+    if (stat.adapter_mode_ != AdapterMode::kScratch) {
+      stat.fh_ = real_api->fopen(path.c_str(), stat.mode_str_.c_str());
+    }
   } else {
     stat.fh_ = real_api->fopen(path.c_str(), stat.mode_str_.c_str());
   }

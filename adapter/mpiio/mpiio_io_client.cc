@@ -26,7 +26,12 @@ void MpiioIoClient::RealOpen(File &f,
     stat.hflags_.SetBits(HERMES_FS_APPEND);
   }
 
-  if (stat.adapter_mode_ != AdapterMode::kScratch) {
+  if (stat.hflags_.Any(HERMES_FS_CREATE)) {
+    if (stat.adapter_mode_ != AdapterMode::kScratch) {
+      f.mpi_status_ = real_api->MPI_File_open(
+          stat.comm_, path.c_str(), stat.amode_, stat.info_, &stat.mpi_fh_);
+    }
+  } else {
     f.mpi_status_ = real_api->MPI_File_open(
         stat.comm_, path.c_str(), stat.amode_, stat.info_, &stat.mpi_fh_);
   }
