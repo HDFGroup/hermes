@@ -37,7 +37,7 @@ struct PosixIoClientHeader : public TraitHeader {
 /** A class to represent POSIX IO file system */
 class PosixIoClient : public hermes::adapter::fs::FilesystemIoClient {
  public:
-   HERMES_TRAIT_H(PosixIoClient, "posix_io_client")
+  HERMES_TRAIT_H(PosixIoClient, "posix_io_client")
 
  private:
   HERMES_POSIX_API_T real_api; /**< pointer to real APIs */

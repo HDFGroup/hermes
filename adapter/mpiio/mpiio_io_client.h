@@ -35,7 +35,7 @@ struct MpiioIoClientHeader : public TraitHeader {
 
 /** A class to represent STDIO IO file system */
 class MpiioIoClient : public hermes::adapter::fs::FilesystemIoClient {
-public:
+ public:
   HERMES_TRAIT_H(MpiioIoClient, "mpiio_io_client")
 
  private:
