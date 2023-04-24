@@ -34,6 +34,7 @@ TEST_CASE("H5FOpen", "[process=" + std::to_string(info.comm_size) +
   Pretest();
   SECTION("open non-existent file") {
     MuteHdf5Errors mute;
+    HILOG(kInfo, "Why? Why? Why?")
     test::TestOpen(info.new_file, H5F_ACC_RDONLY);
     REQUIRE(test::hermes_hid == H5I_INVALID_HID);
     test::TestOpen(info.new_file, H5F_ACC_RDWR);

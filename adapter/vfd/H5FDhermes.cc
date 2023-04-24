@@ -200,6 +200,7 @@ H5FD__hermes_term(void) {
   /* Reset VFL ID */
   H5FD_HERMES_g = H5I_INVALID_HID;
 
+  HERMES->Finalize();
   return ret_value;
 } /* end H5FD__hermes_term() */
 
@@ -216,6 +217,7 @@ H5FD__hermes_term(void) {
 static H5FD_t *
 H5FD__hermes_open(const char *name, unsigned flags, hid_t fapl_id,
                   haddr_t maxaddr) {
+  TRANSPARENT_HERMES
   H5FD_hermes_t  *file = NULL; /* hermes VFD info          */
   int fd = -1;
   int o_flags = 0;
@@ -483,17 +485,6 @@ H5PLget_plugin_type(void) {
 const void*
 H5PLget_plugin_info(void) {
   return &H5FD_hermes_g;
-}
-
-herr_t H5_init_library() {
-  herr_t ret_value = SUCCEED;
-  MAP_OR_FAIL(H5_init_library);
-  ret_value = real_H5_init_library_();
-  TRANSPARENT_HERMES
-  if (H5FD_HERMES_g < 0) {
-    H5FD_hermes_init();
-  }
-  return ret_value;
 }
 
 }  // extern C

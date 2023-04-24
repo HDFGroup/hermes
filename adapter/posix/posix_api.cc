@@ -445,8 +445,8 @@ int HERMES_DECL(close)(int fd) {
   auto real_api = HERMES_POSIX_API;
   auto fs_api = HERMES_POSIX_FS;
   if (fs_api->IsFdTracked(fd)) {
-    HILOG(kDebug, "Intercepted close({}) -> {}.",
-          fd, fs_api->GetFilenameFromFD(fd))
+    HILOG(kDebug, "Intercepted close({}).",
+          fd)
     File f; f.hermes_fd_ = fd;
     return fs_api->Close(f, stat_exists);
   }
@@ -457,8 +457,8 @@ int HERMES_DECL(flock)(int fd, int operation) {
   auto real_api = HERMES_POSIX_API;
   auto fs_api = HERMES_POSIX_FS;
   if (fs_api->IsFdTracked(fd)) {
-    HILOG(kDebug, "Intercepted flock({}) -> {}.",
-          fd, fs_api->GetFilenameFromFD(fd))
+    HILOG(kDebug, "Intercepted flock({}).",
+          fd)
     // TODO(llogan): implement?
     return 0;
   }
