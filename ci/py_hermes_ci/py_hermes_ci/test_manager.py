@@ -86,14 +86,14 @@ class TestManager(ABC):
             elif api == 'mpiio':
                 env['LD_PRELOAD'] = f"{self.CMAKE_BINARY_DIR}/bin" \
                                     f"/libhermes_mpiio.so"
-            elif api == 'hdf5':
+            elif api == 'vfd':
                 env['HDF5_PLUGIN_PATH'] = f"{self.CMAKE_BINARY_DIR}/bin"
                 env['HDF5_DRIVER'] = 'hdf5_hermes_vfd'
 
         # Get libasan path
-        if 'LD_PRELOAD' in env:
+        # if 'LD_PRELOAD' in env:
             # gcc -print-file-name=libasan.so
-            env['LD_PRELOAD'] = '/usr/lib/gcc/x86_64-linux-gnu/9/libasan.so:' + env['LD_PRELOAD']
+            # env['LD_PRELOAD'] = '/usr/lib/gcc/x86_64-linux-gnu/9/libasan.so:' + env['LD_PRELOAD']
 
         # Hermes mode
         if hermes_mode == 'kDefault':

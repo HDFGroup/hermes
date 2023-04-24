@@ -12,7 +12,7 @@ target_include_directories(hermes_vfd_adapter_test
 )
 set_target_properties(hermes_vfd_adapter_test
         PROPERTIES COMPILE_FLAGS "-DHERMES_INTERCEPT=1")
-
+add_dependencies(hermes_vfd_adapter_test hermes)
 target_link_libraries(hermes_vfd_adapter_test
         hermes
         Catch2::Catch2

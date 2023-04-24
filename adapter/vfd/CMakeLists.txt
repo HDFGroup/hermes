@@ -38,9 +38,9 @@ target_include_directories(hdf5_hermes_vfd
   SYSTEM PUBLIC ${HDF5_HERMES_VFD_EXT_INCLUDE_DEPENDENCIES}
 )
 add_dependencies(hdf5_hermes_vfd
-        hermes_posix)
+        hermes hermes_posix_io_client)
 target_link_libraries(hdf5_hermes_vfd
-        hermes_posix_io_client
+        hermes hermes_posix_io_client
         MPI::MPI_CXX
         ${HDF5_HERMES_VFD_EXT_LIB_DEPENDENCIES})
 

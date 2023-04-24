@@ -42,6 +42,12 @@
 #include "adapter/posix/posix_io_client.h"
 #include "posix/posix_fs_api.h"
 
+/**
+ * Make this adapter use Hermes.
+ * Disabling will use POSIX.
+ * */
+#define USE_HERMES
+
 /* The driver identification number, initialized at runtime */
 static hid_t H5FD_HERMES_g = H5I_INVALID_HID;
 
@@ -241,6 +247,7 @@ H5FD__hermes_open(const char *name, unsigned flags, hid_t fapl_id,
   stat.st_mode_ = H5FD_HERMES_POSIX_CREATE_MODE_RW;
   File f = fs_api->Open(stat, name);
   fd = f.hermes_fd_;
+  HILOG(kDebug, "")
 #else
   fd = open(name, o_flags);
 #endif
@@ -292,6 +299,7 @@ static herr_t H5FD__hermes_close(H5FD_t *_file) {
   File f; f.hermes_fd_ = file->fd;
   bool stat_exists;
   fs_api->Close(f, stat_exists);
+  HILOG(kDebug, "")
 #else
   close(file->fd);
 #endif
@@ -451,6 +459,7 @@ static herr_t H5FD__hermes_read(H5FD_t *_file, H5FD_mem_t type,
   auto fs_api = HERMES_POSIX_FS;
   File f; f.hermes_fd_ = file->fd; IoStatus io_status;
   size_t count = fs_api->Read(f, stat_exists, buf, addr, size, io_status);
+  HILOG(kDebug, "")
 #else
   size_t count = read(file->fd, (char*)buf + addr, size);
 #endif
@@ -486,6 +495,7 @@ static herr_t H5FD__hermes_write(H5FD_t *_file, H5FD_mem_t type,
   auto fs_api = HERMES_POSIX_FS;
   File f; f.hermes_fd_ = file->fd; IoStatus io_status;
   size_t count = fs_api->Write(f, stat_exists, buf, addr, size, io_status);
+  HILOG(kDebug, "")
 #else
   size_t count = write(file->fd, (char*)buf + addr, size);
 #endif

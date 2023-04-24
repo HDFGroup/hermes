@@ -399,6 +399,7 @@ void RemoveFiles() {
 int init(int* argc, char*** argv) {
 #if HERMES_INTERCEPT == 1
   setenv("HERMES_FLUSH_MODE", "kSync", 1);
+  TRANSPARENT_HERMES
   HERMES->client_config_.flushing_mode_ = hermes::FlushingMode::kSync;
 #endif
   MPI_Init(argc, argv);

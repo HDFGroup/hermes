@@ -17,7 +17,7 @@ class VfdTestManager(TestManager):
         return node.exit_code
 
     def test_hermes_vfd_default(self):
-        vfd_cmd = f"{self.HERMES_VFD_CMD}"
+        vfd_cmd = f"{self.HERMES_VFD_CMD} SingleWrite"
         spawn_info = self.spawn_info(nprocs=1,
                                      hermes_conf='hermes_server',
                                      hermes_mode='kDefault',
