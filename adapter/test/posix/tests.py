@@ -11,9 +11,9 @@ class PosixTestManager(TestManager):
         self.POSIX_CMD = f"{self.CMAKE_BINARY_DIR}/bin/posix_adapter_test"
         self.HERMES_POSIX_CMD = f"{self.CMAKE_BINARY_DIR}/bin/hermes_posix_adapter_test"
         self.POSIX_MPI_CMD = f"{self.CMAKE_BINARY_DIR}/bin/posix_adapter_mpi_test"
-        self.HERMES_POSIX_MPI_CMD = f"{self.CMAKE_BINARY_DIR}/bin/hermes_posix_adapter_test_mpi"
-        self.POSIX_SIMPLE_IO_CMD = f"{self.CMAKE_BINARY_DIR}/bin/posix_simple_io"
-        self.HERMES_POSIX_SIMPLE_IO_CMD = f"{self.CMAKE_BINARY_DIR}/bin/hermes_posix_simple_io"
+        self.HERMES_POSIX_MPI_CMD = f"{self.CMAKE_BINARY_DIR}/bin/hermes_posix_adapter_mpi_test"
+        self.POSIX_SIMPLE_IO_CMD = f"{self.CMAKE_BINARY_DIR}/bin/posix_simple_io_omp"
+        self.HERMES_POSIX_SIMPLE_IO_CMD = f"{self.CMAKE_BINARY_DIR}/bin/hermes_posix_simple_io_omp"
 
     def test_posix_basic(self):
         posix_cmd = f"{self.POSIX_CMD}"
@@ -50,7 +50,7 @@ class PosixTestManager(TestManager):
         return node.exit_code
 
     def test_hermes_posix_basic_mpi_small(self):
-        posix_cmd = f"{self.HERMES_POSIX_CMD} " \
+        posix_cmd = f"{self.HERMES_POSIX_MPI_CMD} " \
                     f"~[request_size=range-large]  " \
                     f"--reporter compact -d yes"
         spawn_info = self.spawn_info(nprocs=2,
@@ -61,7 +61,7 @@ class PosixTestManager(TestManager):
         return node.exit_code
 
     def test_hermes_posix_basic_mpi_large(self):
-        posix_cmd = f"{self.HERMES_POSIX_CMD} " \
+        posix_cmd = f"{self.HERMES_POSIX_MPI_CMD} " \
                     f"[request_size=range-large]  " \
                     f"--reporter compact -d yes"
         spawn_info = self.spawn_info(nprocs=2,
@@ -94,7 +94,7 @@ class PosixTestManager(TestManager):
         return node.exit_code
 
     def test_hermes_posix_simple_io_omp_preload(self):
-        posix_cmd = f"{self.HERMES_POSIX_SIMPLE_IO_CMD} " \
+        posix_cmd = f"{self.POSIX_SIMPLE_IO_CMD} " \
                     f"/tmp/test_hermes/hi.txt 0 1024 8 0"
         spawn_info = self.spawn_info(nprocs=2,
                                      hermes_conf='hermes_server',

@@ -13,10 +13,11 @@ from abc import ABC, abstractmethod
 
 class SpawnInfo(MpiExecInfo):
     def __init__(self, nprocs, hermes_conf=None, hermes_mode=None, api=None,
-                 **kwargs):
+                 daemon_env=None, **kwargs):
         super().__init__(nprocs=nprocs, **kwargs)
         self.hermes_conf = hermes_conf
         self.hermes_mode = hermes_mode
+        self.daemon_env = daemon_env
         self.api = api
 
 
@@ -29,7 +30,7 @@ class TestManager(ABC):
         Initialize test manager
         """
         jutil = JutilManager.get_instance()
-        jutil.collect_output = True
+        jutil.collect_output = False
         jutil.hide_output = False
         self.CMAKE_SOURCE_DIR = cmake_source_dir
         self.CMAKE_BINARY_DIR = cmake_binary_dir
@@ -45,7 +46,7 @@ class TestManager(ABC):
 
     def spawn_info(self, nprocs=None, ppn=None, hostfile=None,
                    hermes_conf=None, hermes_mode=None, api=None,
-                   file_output=None):
+                   pipe_stdout=None, pipe_stderr=None):
         # Whether to deploy hermes
         use_hermes = hermes_mode is not None \
                      or api == 'native' \
@@ -98,14 +99,20 @@ class TestManager(ABC):
         if hermes_mode == 'kBypass':
             env['HERMES_ADAPTER_MODE'] = 'kBypass'
 
+        daemon_env = env.copy()
+        if 'LD_PRELOAD' in daemon_env:
+            del daemon_env['LD_PRELOAD']
+
         return SpawnInfo(nprocs=nprocs,
                          ppn=ppn,
                          hostfile=hostfile,
                          hermes_conf=hermes_conf,
                          hermes_mode=hermes_mode,
-                         file_output=file_output,
+                         pipe_stdout=pipe_stdout,
+                         pipe_stderr=pipe_stderr,
                          api=api,
-                         env=env)
+                         env=env,
+                         daemon_env=daemon_env)
 
     @abstractmethod
     def set_paths(self):
@@ -161,7 +168,7 @@ class TestManager(ABC):
         :param env: Hermes environment variables
         :return: None
         """
-        Kill("hermes_daemon",
+        Kill("hermes",
              PsshExecInfo(
                  hostfile=spawn_info.hostfile,
                  collect_output=False))
@@ -170,7 +177,7 @@ class TestManager(ABC):
         self.daemon = Exec(f"{self.CMAKE_BINARY_DIR}/bin/hermes_daemon",
                            PsshExecInfo(
                                hostfile=spawn_info.hostfile,
-                               env=spawn_info.env,
+                               env=spawn_info.daemon_env,
                                collect_output=False,
                                hide_output=False,
                                exec_async=True))
@@ -187,7 +194,7 @@ class TestManager(ABC):
         print("Stop daemon")
         Exec(f"{self.CMAKE_BINARY_DIR}/bin/finalize_hermes",
              LocalExecInfo(
-                 env=spawn_info.env,
+                 env=spawn_info.daemon_env,
                  collect_output=False))
         self.daemon.wait()
         print("Stopped daemon")
