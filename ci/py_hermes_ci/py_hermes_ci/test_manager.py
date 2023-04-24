@@ -45,8 +45,7 @@ class TestManager(ABC):
         self.find_tests()
 
     def spawn_info(self, nprocs=None, ppn=None, hostfile=None,
-                   hermes_conf=None, hermes_mode=None, api=None,
-                   pipe_stdout=None, pipe_stderr=None):
+                   hermes_conf=None, hermes_mode=None, api=None):
         # Whether to deploy hermes
         use_hermes = hermes_mode is not None \
                      or api == 'native' \
@@ -91,9 +90,12 @@ class TestManager(ABC):
                 env['HDF5_DRIVER'] = 'hdf5_hermes_vfd'
 
         # Get libasan path
-        # if 'LD_PRELOAD' in env:
-            # gcc -print-file-name=libasan.so
-            # env['LD_PRELOAD'] = '/usr/lib/gcc/x86_64-linux-gnu/9/libasan.so:' + env['LD_PRELOAD']
+        # Assumes GCC for now
+        # TODO(llogan): check if ADDRESS_SANITIZER is enabled...
+        if 'LD_PRELOAD' in env:
+            node = Exec('gcc -print-file-name=libasan.so',
+                        LocalExecInfo(collect_output=True, hide_output=True))
+            env['LD_PRELOAD'] = f"{node.stdout.strip()}:{env['LD_PRELOAD']}"
 
         # Hermes mode
         if hermes_mode == 'kDefault':
@@ -112,8 +114,6 @@ class TestManager(ABC):
                          hostfile=hostfile,
                          hermes_conf=hermes_conf,
                          hermes_mode=hermes_mode,
-                         pipe_stdout=pipe_stdout,
-                         pipe_stderr=pipe_stderr,
                          api=api,
                          env=env,
                          daemon_env=daemon_env)
