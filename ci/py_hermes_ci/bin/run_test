@@ -25,6 +25,8 @@ if __name__ == '__main__':
         pkg_dir = f"{ADAPTER_TEST_ROOT}/{test_type}"
     elif test_type == 'mpiio':
         pkg_dir = f"{ADAPTER_TEST_ROOT}/{test_type}"
+    elif test_type == 'vfd':
+        pkg_dir = f"{ADAPTER_TEST_ROOT}/{test_type}"
     elif test_type == 'native':
         pkg_dir = f"{HERMES_ROOT}/test"
     else:
