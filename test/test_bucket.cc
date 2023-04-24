@@ -119,7 +119,7 @@ void TestBucketDestroy(hapi::Hermes *hermes) {
     std::string name = std::to_string(i);
     char nonce = i % 256;
     memset(blob.data(), nonce, blob_size);
-    bkt.Put(name, std::move(blob), blob_id, ctx);
+    bkt.Put(name, blob, blob_id, ctx);
   }
 
   bkt.Destroy();
@@ -159,9 +159,6 @@ void TestBlobDestroy(hapi::Hermes *hermes) {
   hapi::Context ctx;
   bkt.Put("0", blob, blob_id, ctx);
   bkt.DestroyBlob(blob_id, ctx);
-  // NOTE(llogan): deletes happen asynchronously
-  // Will this mess up unit tests and software?
-  HERMES->Flush();
   {
     hermes::BlobId blob_id_get;
     bkt.GetBlobId("0", blob_id_get);
@@ -170,6 +167,7 @@ void TestBlobDestroy(hapi::Hermes *hermes) {
 }
 
 TEST_CASE("TestCreateBlobName") {
+  HERMES->Clear();
   hermes::TagId bkt_id(1, 1);
   std::string blob_name("0");
   hipc::uptr<hipc::charbuf> n1 =
@@ -180,6 +178,7 @@ TEST_CASE("TestCreateBlobName") {
 }
 
 TEST_CASE("TestBlobCreates") {
+  HERMES->Clear();
   TestBlobCreates(HERMES);
 }
 
@@ -188,21 +187,26 @@ TEST_CASE("TestBlobOverride") {
 }
 
 TEST_CASE("TestBucketRename") {
+  HERMES->Clear();
   TestBucketRename(HERMES);
 }
 
 TEST_CASE("TestBucketClear") {
+  HERMES->Clear();
   TestBucketClear(HERMES);
 }
 
 TEST_CASE("TestBucketDestroy") {
+  HERMES->Clear();
   TestBucketDestroy(HERMES);
 }
 
 TEST_CASE("TestBlobRename") {
+  HERMES->Clear();
   TestBlobRename(HERMES);
 }
 
 TEST_CASE("TestBlobDestroy") {
+  HERMES->Clear();
   TestBlobDestroy(HERMES);
 }

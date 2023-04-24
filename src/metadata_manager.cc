@@ -514,7 +514,9 @@ bool MetadataManager::LocalDestroyBlob(TagId bkt_id,
   }
   hipc::pair<BlobId, BlobInfo>& info = (*iter);
   BlobInfo &blob_info = info.GetSecond();
-  blob_id_map_->erase(*blob_info.name_);
+  hipc::uptr<hipc::charbuf> blob_name_internal =
+      CreateBlobName(bkt_id, *blob_info.name_);
+  blob_id_map_->erase(*blob_name_internal);
   blob_map_->erase(blob_id);
   return true;
 }
