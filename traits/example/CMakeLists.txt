@@ -3,7 +3,6 @@
 # Creates an example trait
 add_library(hermes_example_trait
         example_trait.cc)
-target_compile_options(hermes_example_trait PUBLIC -fPIC)
 add_dependencies(hermes_example_trait hermes)
 target_link_libraries(hermes_example_trait
         hermes MPI::MPI_CXX stdc++fs dl)

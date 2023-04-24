@@ -11,7 +11,6 @@ message("Found JNI at ${JNI_INCLUDE_DIRS} and ${JNI_LIBRARIES}")
 include_directories(${JNI_INCLUDE_DIRS})
 add_library(hermes_java_wrapper
         java_wrapper.cc)
-target_compile_options(hermes_java_wrapper PUBLIC -fPIC)
 add_dependencies(hermes_java_wrapper hermes hermes_c_wrapper)
 target_link_libraries(hermes_java_wrapper
         hermes hermes_c_wrapper

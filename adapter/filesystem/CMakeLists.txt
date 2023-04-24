@@ -15,7 +15,6 @@ add_dependencies(hermes_fs_base
 target_link_libraries(hermes_fs_base
         MPI::MPI_CXX
         hermes)
-target_compile_options(hermes_fs_base PUBLIC -fPIC)
 
 #-----------------------------------------------------------------------------
 # Add Target(s) to CMake Install

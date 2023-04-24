@@ -9,7 +9,6 @@ include_directories(
 
 # Create the MPIIO I/O client
 add_library(hermes_mpiio_io_client mpiio_io_client.cc)
-target_compile_options(hermes_mpiio_io_client PUBLIC -fPIC)
 add_dependencies(hermes_mpiio_io_client
         hermes)
 target_link_libraries(hermes_mpiio_io_client
@@ -24,7 +23,6 @@ add_library(hermes_mpiio SHARED
         ${CMAKE_CURRENT_SOURCE_DIR}/mpiio_api.cc)
 add_dependencies(hermes_mpiio ${INTERCEPTOR_DEPS})
 target_link_libraries(hermes_mpiio ${INTERCEPTOR_DEPS})
-target_compile_options(hermes_mpiio PUBLIC -fPIC)
 
 #-----------------------------------------------------------------------------
 # Add Target(s) to CMake Install

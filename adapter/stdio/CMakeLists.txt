@@ -8,7 +8,6 @@ include_directories(
 
 # Creates the STDIO I/O client
 add_library(hermes_stdio_io_client stdio_io_client.cc)
-target_compile_options(hermes_stdio_io_client PUBLIC -fPIC)
 add_dependencies(hermes_stdio_io_client
         hermes)
 target_link_libraries(hermes_stdio_io_client
@@ -24,7 +23,6 @@ add_library(hermes_stdio SHARED
         ${CMAKE_CURRENT_SOURCE_DIR}/stdio_api.cc)
 add_dependencies(hermes_stdio ${INTERCEPTOR_DEPS})
 target_link_libraries(hermes_stdio ${INTERCEPTOR_DEPS})
-target_compile_options(hermes_stdio PUBLIC -fPIC)
 
 #-----------------------------------------------------------------------------
 # Add Target(s) to CMake Install

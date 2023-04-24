@@ -18,6 +18,7 @@ set(IS_HERMES_MAIN ON)
 #------------------------------------------------------------------------------
 # Compiler optimization
 #------------------------------------------------------------------------------
+add_compile_options("-fPIC")
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0")
   # Ensure that debug logging is enabled

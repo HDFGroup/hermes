@@ -7,7 +7,6 @@ include_directories(
 
 # Creates the POSIX I/O client
 add_library(hermes_posix_io_client posix_io_client.cc)
-target_compile_options(hermes_posix_io_client PUBLIC -fPIC)
 add_dependencies(hermes_posix_io_client
         hermes)
 target_link_libraries(hermes_posix_io_client
@@ -23,7 +22,6 @@ add_library(hermes_posix SHARED
         ${CMAKE_CURRENT_SOURCE_DIR}/posix_api.cc)
 add_dependencies(hermes_posix ${INTERCEPTOR_DEPS})
 target_link_libraries(hermes_posix ${INTERCEPTOR_DEPS})
-target_compile_options(hermes_posix PUBLIC -fPIC)
 
 #-----------------------------------------------------------------------------
 # Add Target(s) to CMake Install

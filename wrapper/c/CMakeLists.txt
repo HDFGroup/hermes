@@ -3,7 +3,6 @@
 # Creates an example trait
 add_library(hermes_c_wrapper
         c_wrapper.cc)
-target_compile_options(hermes_c_wrapper PUBLIC -fPIC)
 add_dependencies(hermes_c_wrapper hermes)
 target_link_libraries(hermes_c_wrapper
         hermes MPI::MPI_CXX stdc++fs dl)
