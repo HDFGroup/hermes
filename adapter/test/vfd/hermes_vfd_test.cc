@@ -363,15 +363,19 @@ using hermes::adapter::vfd::test::GenNextRandom;
 using hermes::adapter::vfd::test::GenRandom0to1;
 
 void IgnoreAllFiles() {
+#if HERMES_INTERCEPT == 1
   HERMES->client_config_.SetAdapterPathTracking(info.existing_file_cmp, false);
   HERMES->client_config_.SetAdapterPathTracking(info.new_file_cmp, false);
   HERMES->client_config_.SetAdapterPathTracking(info.new_file, false);
   HERMES->client_config_.SetAdapterPathTracking(info.existing_file, false);
+#endif
 }
 
 void TrackFiles() {
+#if HERMES_INTERCEPT == 1
   HERMES->client_config_.SetAdapterPathTracking(info.new_file, true);
   HERMES->client_config_.SetAdapterPathTracking(info.existing_file, true);
+#endif
 }
 
 void RemoveFile(const std::string &path) {
@@ -484,7 +488,9 @@ int Posttest() {
   }
 
   RemoveFiles();
+#if HERMES_INTERCEPT == 1
   HERMES->Clear();
+#endif
 
   return 0;
 }

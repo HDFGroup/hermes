@@ -49,7 +49,7 @@ void TestThread(char *path,
   }
 #pragma omp barrier
 
-  char *buf = (char*)malloc(size);
+  std::vector<char> buf(size);
   int fd = open(path, O_CREAT | O_RDWR, 0666);
   if (fd < 0 && rank == 0) {
     std::cout << "Failed to open the file" << std::endl;
@@ -78,20 +78,20 @@ void TestThread(char *path,
   for (int i = 0; i < count; ++i) {
     char nonce = i + 1;
     if (!do_read) {
-      memset(buf, nonce, block_size);
-      int ret = write(fd, buf, block_size);
+      memset(buf.data(), nonce, block_size);
+      int ret = write(fd, buf.data(), block_size);
       if (ret != block_size) {
         std::cout << "Write failed!" << std::endl;
         exit(1);
       }
     } else {
-      memset(buf, 0, block_size);
-      int ret = read(fd, buf, block_size);
+      memset(buf.data(), 0, block_size);
+      int ret = read(fd, buf.data(), block_size);
       if (ret != block_size) {
         std::cout << "Read failed!" << std::endl;
         exit(1);
       }
-      if (!VerifyBuffer(buf, block_size, nonce)) {
+      if (!VerifyBuffer(buf.data(), block_size, nonce)) {
         std::cout << "Buffer verification failed!" << std::endl;
         exit(1);
       }

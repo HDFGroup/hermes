@@ -217,7 +217,6 @@ H5FD__hermes_term(void) {
 static H5FD_t *
 H5FD__hermes_open(const char *name, unsigned flags, hid_t fapl_id,
                   haddr_t maxaddr) {
-  TRANSPARENT_HERMES
   H5FD_hermes_t  *file = NULL; /* hermes VFD info          */
   int fd = -1;
   int o_flags = 0;
@@ -234,6 +233,7 @@ H5FD__hermes_open(const char *name, unsigned flags, hid_t fapl_id,
     o_flags |= O_EXCL;
   }
 
+#ifdef USE_HERMES
   auto fs_api = HERMES_POSIX_FS;
   bool stat_exists;
   AdapterStat stat;
@@ -241,6 +241,9 @@ H5FD__hermes_open(const char *name, unsigned flags, hid_t fapl_id,
   stat.st_mode_ = H5FD_HERMES_POSIX_CREATE_MODE_RW;
   File f = fs_api->Open(stat, name);
   fd = f.hermes_fd_;
+#else
+  fd = open(name, o_flags);
+#endif
   if (fd < 0) {
     // int myerrno = errno;
     return nullptr;
@@ -259,7 +262,13 @@ H5FD__hermes_open(const char *name, unsigned flags, hid_t fapl_id,
   file->fd = fd;
   file->op = OP_UNKNOWN;
   file->flags = flags;
+
+#ifdef USE_HERMES
   file->eof = (haddr_t)fs_api->GetSize(f, stat_exists);
+#else
+  file->eof = stdfs::file_size(name);
+#endif
+
 
   return (H5FD_t *)file;
 } /* end H5FD__hermes_open() */
@@ -278,10 +287,14 @@ static herr_t H5FD__hermes_close(H5FD_t *_file) {
   H5FD_hermes_t *file = (H5FD_hermes_t *)_file;
   herr_t ret_value = SUCCEED; /* Return value */
   assert(file);
+#ifdef USE_HERMES
   auto fs_api = HERMES_POSIX_FS;
   File f; f.hermes_fd_ = file->fd;
   bool stat_exists;
   fs_api->Close(f, stat_exists);
+#else
+  close(file->fd);
+#endif
   if (file->filename_) {
     free(file->filename_);
   }
@@ -433,10 +446,14 @@ static herr_t H5FD__hermes_read(H5FD_t *_file, H5FD_mem_t type,
   H5FD_hermes_t *file = (H5FD_hermes_t *)_file;
   herr_t ret_value = SUCCEED;
 
+#ifdef USE_HERMES
   bool stat_exists;
   auto fs_api = HERMES_POSIX_FS;
   File f; f.hermes_fd_ = file->fd; IoStatus io_status;
   size_t count = fs_api->Read(f, stat_exists, buf, addr, size, io_status);
+#else
+  size_t count = read(file->fd, (char*)buf + addr, size);
+#endif
 
   if (count < size) {
     // TODO(llogan)
@@ -464,10 +481,14 @@ static herr_t H5FD__hermes_write(H5FD_t *_file, H5FD_mem_t type,
   (void) dxpl_id; (void) type;
   H5FD_hermes_t *file = (H5FD_hermes_t *)_file;
   herr_t ret_value = SUCCEED;
+#ifdef USE_HERMES
   bool stat_exists;
   auto fs_api = HERMES_POSIX_FS;
   File f; f.hermes_fd_ = file->fd; IoStatus io_status;
   size_t count = fs_api->Write(f, stat_exists, buf, addr, size, io_status);
+#else
+  size_t count = write(file->fd, (char*)buf + addr, size);
+#endif
   if (count < size) {
     // TODO(llogan)
   }
@@ -479,12 +500,20 @@ static herr_t H5FD__hermes_write(H5FD_t *_file, H5FD_mem_t type,
  */
 H5PL_type_t
 H5PLget_plugin_type(void) {
+  TRANSPARENT_HERMES
   return H5PL_TYPE_VFD;
 }
 
 const void*
 H5PLget_plugin_info(void) {
+  TRANSPARENT_HERMES
   return &H5FD_hermes_g;
 }
+
+/** Initialize Hermes */
+/*static __attribute__((constructor(101))) void init_hermes_in_vfd(void) {
+  std::cout << "IN VFD" << std::endl;
+  TRANSPARENT_HERMES;
+}*/
 
 }  // extern C

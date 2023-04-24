@@ -23,7 +23,6 @@ set(HERMES_SRCS
   ${CMAKE_CURRENT_SOURCE_DIR}/config_client.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/config_server.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/hermes_types.cc
-  ${CMAKE_CURRENT_SOURCE_DIR}/status.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/utils.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/rpc.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/rpc_thallium.cc

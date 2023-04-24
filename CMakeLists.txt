@@ -20,13 +20,13 @@ set(IS_HERMES_MAIN ON)
 #------------------------------------------------------------------------------
 add_compile_options("-fPIC")
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -fPIC")
   # Ensure that debug logging is enabled
   # This will keep logs which have beneath priority 10
   add_compile_definitions(HERMES_LOG_VERBOSITY=10)
   message("This is NOT a release build: ${CMAKE_BUILD_TYPE} ${CMAKE_CXX_FLAGS}")
 else()
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fPIC")
   # Ensure that debug logging is disabled
   # This will keep only VLOGs which have priroity 0
   add_compile_definitions(HERMES_LOG_VERBOSITY=1)

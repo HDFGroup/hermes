@@ -19,17 +19,40 @@ namespace hermes {
 
 using api::Status;
 
-const Status NOT_IMPLEMENTED("The function was not implemented");
-const Status DPE_PLACEMENT_SCHEMA_EMPTY("Placement failed. Non-fatal.");
-const Status DPE_NO_SPACE("DPE has no remaining space.");
-const Status DPE_MIN_IO_TIME_NO_SOLUTION(
-    "DPE could not find solution for the minimize I/O time DPE");
-const Status BUFFER_POOL_OUT_OF_RAM(
-    "Could not allocate the ram tier of storage in BPM");
-const Status PARTIAL_GET_OR_CREATE_OVERFLOW(
-    "The read exceeds the size of the backend's data (PartialGet)");
-const Status PARTIAL_PUT_OR_CREATE_OVERFLOW(
-    "The read exceeds the size of the backend's data (PartialPut)");
+class StatusTable {
+ public:
+  std::vector<Status> table_;
+
+ public:
+  StatusTable() {
+    table_.reserve(500);
+    Define(0, "The function was not implemented");
+    Define(100, "Placement failed. Non-fatal.");
+    Define(102, "DPE could not find solution for the minimize I/O time DPE");
+    Define(200, "Could not allocate the ram tier of storage in BPM");
+    Define(300, "The read exceeds the size of the backend's data (PartialGet)");
+    Define(301, "The read exceeds the size of the backend's data (PartialPut)");
+  }
+
+  void Define(int code, const char *msg) {
+    table_.emplace_back(code, msg);
+  }
+
+  Status Get(int code) {
+    return table_[code];
+  }
+};
+#define HERMES_STATUS \
+  hshm::EasySingleton<hermes::StatusTable>::GetInstance()
+#define HERMES_STATUS_T hermes::StatusTable*
+
+const Status NOT_IMPLEMENTED = HERMES_STATUS->Get(0);
+const Status DPE_PLACEMENT_SCHEMA_EMPTY = HERMES_STATUS->Get(100);
+const Status DPE_NO_SPACE = HERMES_STATUS->Get(101);
+const Status DPE_MIN_IO_TIME_NO_SOLUTION = HERMES_STATUS->Get(102);
+const Status BUFFER_POOL_OUT_OF_RAM = HERMES_STATUS->Get(200);
+const Status PARTIAL_GET_OR_CREATE_OVERFLOW = HERMES_STATUS->Get(300);
+const Status PARTIAL_PUT_OR_CREATE_OVERFLOW = HERMES_STATUS->Get(301);
 
 }  // namespace hermes
 

@@ -90,6 +90,11 @@ class TestManager(ABC):
                 env['HDF5_PLUGIN_PATH'] = f"{self.CMAKE_BINARY_DIR}/bin"
                 env['HDF5_DRIVER'] = 'hdf5_hermes_vfd'
 
+        # Get libasan path
+        if 'LD_PRELOAD' in env:
+            # gcc -print-file-name=libasan.so
+            env['LD_PRELOAD'] = '/usr/lib/gcc/x86_64-linux-gnu/9/libasan.so:' + env['LD_PRELOAD']
+
         # Hermes mode
         if hermes_mode == 'kDefault':
             env['HERMES_ADAPTER_MODE'] = 'kDefault'

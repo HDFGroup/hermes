@@ -155,7 +155,7 @@ template <typename A>
 void load(A &ar, Status &status) {
   int code;
   ar >> code;
-  status = Status(code);
+  status = HERMES_STATUS->Get(code);
 }
 
 /** Lets thallium know how to serialize a PlacementPolicy */
