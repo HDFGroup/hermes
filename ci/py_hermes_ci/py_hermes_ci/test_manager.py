@@ -87,9 +87,8 @@ class TestManager(ABC):
                 env['LD_PRELOAD'] = f"{self.CMAKE_BINARY_DIR}/bin" \
                                     f"/libhermes_mpiio.so"
             elif api == 'hdf5':
-                env['LD_PRELOAD'] = f"{self.CMAKE_BINARY_DIR}/bin" \
-                                    f"/libhdf5_hermes_vfd.so"
                 env['HDF5_PLUGIN_PATH'] = f"{self.CMAKE_BINARY_DIR}/bin"
+                env['HDF5_DRIVER'] = 'hdf5_hermes_vfd'
 
         # Hermes mode
         if hermes_mode == 'kDefault':
