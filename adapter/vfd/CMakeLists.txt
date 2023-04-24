@@ -40,9 +40,10 @@ target_include_directories(hdf5_hermes_vfd
 add_dependencies(hdf5_hermes_vfd
         hermes_posix)
 target_link_libraries(hdf5_hermes_vfd
-        hermes_posix
+        hermes_posix_io_client
         MPI::MPI_CXX
         ${HDF5_HERMES_VFD_EXT_LIB_DEPENDENCIES})
+target_compile_options(hdf5_hermes_vfd PUBLIC -fPIC)
 
 set(HDF5_HERMES_VFD_EXPORTED_LIBS hdf5_hermes_vfd ${HDF5_HERMES_VFD_EXPORTED_LIBS} PARENT_SCOPE)
 

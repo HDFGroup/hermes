@@ -68,7 +68,7 @@ endif()
 # Setup CMake Environment
 #------------------------------------------------------------------------------
 # Export compile commands for autocode generation with CLANG
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+# set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 if(APPLE)
   # We are doing a unix-style install i.e. everything will be installed in
   # CMAKE_INSTALL_PREFIX/bin and CMAKE_INSTALL_PREFIX/lib etc. as on other unix
