@@ -19,6 +19,11 @@ set +x
 set -x
 spack load --only dependencies hermes
 
+# Build unit test framework
+cd ci/jarvis-util
+python3 -m pip install -r requirements.txt
+python3 -m pip install -e .
+
 # Build hermes
 # export CXXFLAGS="${CXXFLAGS} -std=c++17 -Werror -Wall -Wextra"
 cmake                                                      \
