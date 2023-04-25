@@ -49,11 +49,11 @@ cp ci/packages.yaml ${SPACK_DIR}/etc/spack/packages.yaml
 # a custom package when the same package is available from Spack.
 spack repo add ./ci/hermes
 
-# NOTE(llogan): Modify version string per release.
-HERMES_VERSION=1.0.0
-spack install hermes +vfd
-
 # This will build our small python library for running unit tests
 cd ci/jarvis-util
 python3 -m pip install -r requirements.txt
 python3 -m pip install -e .
+
+# NOTE(llogan): Modify version string per release.
+HERMES_VERSION=1.0.0
+spack install hermes +vfd
