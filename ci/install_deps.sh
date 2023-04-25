@@ -1,21 +1,5 @@
 #!/bin/bash
 
-# Hermes dependency installation script
-#
-# Hermes depends on the following packages (in alphabetical order):
-#
-# Catch2
-# GLOG
-# GLPK
-# HDF5
-# IOR (for performance testing)
-# Thallium
-# yaml-cpp
-#
-# This script will build and install them via Spack from source
-# because Hermes requires a very specific version and configuration options
-# for each package.
-
 set -x
 set -e
 set -o pipefail
@@ -56,4 +40,4 @@ python3 -m pip install -e .
 
 # NOTE(llogan): Modify version string per release.
 HERMES_VERSION=1.0.0
-spack install hermes +vfd
+spack install hermes@${HERMES_VERSION} +vfd
