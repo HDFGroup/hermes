@@ -220,9 +220,13 @@ class Filesystem {
     std::string abs_path = stdfs::absolute(path).string();
     auto &paths = HERMES->client_config_.path_list_;
     // Check if path is included or excluded
-    for (std::pair<std::string, bool> &pth : paths) {
-      if (abs_path.rfind(pth.first) != std::string::npos) {
-        return pth.second;
+    for (config::UserPathInfo &pth : paths) {
+      if (abs_path.rfind(pth.path_) != std::string::npos) {
+        if (abs_path == pth.path_ && pth.is_directory_) {
+          // Do not include if path is a directory
+          return false;
+        }
+        return pth.include_;
       }
     }
     // Assume it is excluded
