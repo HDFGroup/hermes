@@ -7,6 +7,7 @@
 mkdir build
 pushd build
 
+#LOCAL=local
 INSTALL_PREFIX="${HOME}/${LOCAL}"
 
 export CXXFLAGS="${CXXFLAGS} -std=c++17 -Werror -Wall -Wextra"

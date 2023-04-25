@@ -23,6 +23,7 @@ set -o pipefail
 sudo apt-get install -y pkg-config
 
 # Change this especially when your $HOME doesn't have enough disk space.
+#LOCAL=local
 INSTALL_DIR="${HOME}/${LOCAL}"
 SPACK_DIR=${INSTALL_DIR}/spack
 SPACK_VERSION=0.18.1
@@ -52,3 +53,7 @@ spack repo add ./ci/hermes
 HERMES_VERSION=1.0.0
 spack install hermes +vfd
 
+# This will build our small python library for running unit tests
+cd ci/jarvis-util
+python3 -m pip install -r requirements.txt
+python3 -m pip install -e .
