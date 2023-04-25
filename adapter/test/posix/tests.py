@@ -15,7 +15,7 @@ class PosixTestManager(TestManager):
         self.POSIX_SIMPLE_IO_CMD = f"{self.CMAKE_BINARY_DIR}/bin/posix_simple_io_omp"
         self.HERMES_POSIX_SIMPLE_IO_CMD = f"{self.CMAKE_BINARY_DIR}/bin/hermes_posix_simple_io_omp"
 
-        self.disable_testing = True
+        self.disable_testing = False
 
     def test_posix_basic(self):
         posix_cmd = f"{self.POSIX_CMD}"
