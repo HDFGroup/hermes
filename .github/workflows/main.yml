@@ -41,7 +41,9 @@ jobs:
         uses: actions/cache@v3
         id: spack-cache
         with:
-          path: ${HOME}/spack
+          path: |
+            ~/spack
+            ~/.spack
           key: ${{ runner.os }}-${{ hashFiles('ci/install_deps.sh') }}
 
       - name: Install APT Dependencies
@@ -62,7 +64,9 @@ jobs:
         run: ci/install_deps.sh
 
       - name: Check if spack exists
-        run: ls ${HOME}/spack
+        run: |
+          ls ~/spack
+          ls ~/.spack
 
 #      - name: Build and Test
 #        run: ci/install_hermes.sh
