@@ -38,11 +38,11 @@ jobs:
         run: pip install cpplint==1.5.4 && bash ci/lint.sh `pwd`
 
       - name: Cache Spack packages
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         id: spack-cache
         with:
-          path: ~/${{ env.LOCAL }}
-          key: ${{ runner.os }}-${{ hashFiles('ci/**') }}
+          path: ${HOME}/${LOCAL}/spack
+          key: ${{ runner.os }}-${{ hashFiles('ci/install_deps.sh') }}
 
       - name: Install APT Dependencies
         run: |
