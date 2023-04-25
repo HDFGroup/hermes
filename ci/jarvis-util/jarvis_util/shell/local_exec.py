@@ -58,7 +58,6 @@ class LocalExec(Executable):
         if self.sudo:
             self.cmd = f"sudo {self.cmd}"
         time.sleep(self.sleep_ms)
-        print(f"CMD: {self.cmd}")
         self.proc = subprocess.Popen(self.cmd,
                                      stdin=self.stdin,
                                      stdout=subprocess.PIPE,
@@ -66,14 +65,12 @@ class LocalExec(Executable):
                                      cwd=self.cwd,
                                      env=self.env,
                                      shell=True)
-        print("CMD started")
         self.print_stdout_thread = threading.Thread(
             target=self.print_stdout_worker)
         self.print_stderr_thread = threading.Thread(
             target=self.print_stderr_worker)
         self.print_stdout_thread.start()
         self.print_stderr_thread.start()
-        print("PRINTS STARTED")
         if not self.exec_async:
             self.wait()
 

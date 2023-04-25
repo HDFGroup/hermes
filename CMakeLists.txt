@@ -26,6 +26,12 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
   # This will keep logs which have beneath priority 10
   add_compile_definitions(HERMES_LOG_VERBOSITY=10)
   message("This is NOT a release build: ${CMAKE_BUILD_TYPE} ${CMAKE_CXX_FLAGS}")
+elseif(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fPIC")
+  # Ensure that debug logging is enabled
+  # This will keep logs which have beneath priority 10
+  add_compile_definitions(HERMES_LOG_VERBOSITY=10)
+  message("This IS a release + debug build: ${CMAKE_BUILD_TYPE} ${CMAKE_CXX_FLAGS}")
 else()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fPIC")
   # Ensure that debug logging is disabled
@@ -434,7 +440,7 @@ include(CTest)
 function(pytest test_type test_name)
   set(script ${CMAKE_SOURCE_DIR}/ci/py_hermes_ci/bin/run_test)
   add_test(NAME ${test_name}
-          COMMAND ${script} ${test_type} ${test_name} ${CMAKE_BINARY_DIR})
+          COMMAND ${script} ${test_type} ${test_name} ${CMAKE_BINARY_DIR} ${HERMES_USE_ADDRESS_SANITIZER})
 endfunction()
 
 # Add testing directory

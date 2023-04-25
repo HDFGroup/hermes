@@ -25,7 +25,7 @@ class TestManager(ABC):
     """======================================================================"""
     """ Test Case Constructor """
     """======================================================================"""
-    def __init__(self, cmake_source_dir, cmake_binary_dir):
+    def __init__(self, cmake_source_dir, cmake_binary_dir, address_sanitizer):
         """
         Initialize test manager
         """
@@ -36,6 +36,7 @@ class TestManager(ABC):
         self.CMAKE_BINARY_DIR = cmake_binary_dir
         self.HERMES_TRAIT_PATH = f"{self.CMAKE_BINARY_DIR}/bin"
         self.HERMES_CLIENT_CONF = f"{self.CMAKE_SOURCE_DIR}/test/data/hermes_client.yaml"
+        self.ADDRESS_SANITIZER = address_sanitizer
         self.daemon = None
 
         os.makedirs("/tmp/test_hermes", exist_ok=True)
@@ -106,7 +107,7 @@ class TestManager(ABC):
             env['HERMES_ADAPTER_MODE'] = 'kBypass'
 
         daemon_env = env.copy()
-        if 'LD_PRELOAD' in daemon_env:
+        if 'LD_PRELOAD' in daemon_env and self.ADDRESS_SANITIZER:
             del daemon_env['LD_PRELOAD']
 
         return SpawnInfo(nprocs=nprocs,
