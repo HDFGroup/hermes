@@ -538,6 +538,8 @@ void MetadataManager::LocalClear() {
                                  kMDM_LocalClear);
   tag_id_map_->clear();
   tag_map_->clear();
+  blob_id_map_->clear();
+  blob_map_->clear();
 }
 
 /**
