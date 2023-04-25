@@ -8,6 +8,12 @@ INSTALL_DIR="${HOME}"
 INSTALL_PREFIX="${HOME}/install"
 mkdir -p "${INSTALL_PREFIX}"
 
+# This will build our small python library for running unit tests
+pushd ci/jarvis-util
+python3 -m pip install -r requirements.txt
+python3 -m pip install -e .
+popd
+
 mkdir build
 pushd build
 
@@ -18,11 +24,6 @@ set +x
 . ${SPACK_DIR}/share/spack/setup-env.sh
 set -x
 spack load --only dependencies hermes
-
-# Build unit test framework
-cd ci/jarvis-util
-python3 -m pip install -r requirements.txt
-python3 -m pip install -e .
 
 # Build hermes
 # export CXXFLAGS="${CXXFLAGS} -std=c++17 -Werror -Wall -Wextra"
