@@ -14,9 +14,7 @@
 #include "test_init.h"
 
 void MultiThreadedPageAllocationTest(Allocator *alloc) {
-  int nthreads = 8;
-  HERMES_THREAD_MANAGER->GetThreadStatic();
-
+  size_t nthreads = 8;
   omp_set_dynamic(0);
 #pragma omp parallel shared(alloc) num_threads(nthreads)
   {
@@ -25,7 +23,7 @@ void MultiThreadedPageAllocationTest(Allocator *alloc) {
 #pragma omp barrier
     try {
       MultiPageAllocationTest(alloc);
-    } catch (std::shared_ptr<hermes_shm::Error> &err) {
+    } catch (std::shared_ptr<hshm::Error> &err) {
       err->print();
       exit(1);
     }

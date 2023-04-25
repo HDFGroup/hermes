@@ -34,21 +34,20 @@ class DPEFactory {
    *            data placement engine factory.
    * @return pointer to DataPlacementEngine given \a type PlacementPolicy.
    */
-  static std::unique_ptr<DPE> Get(const PlacementPolicy &type) {
+  static DPE* Get(const PlacementPolicy &type) {
     switch (type) {
       case PlacementPolicy::kRandom: {
-        return std::make_unique<Random>();
+        return hshm::EasySingleton<Random>::GetInstance();
       }
       case PlacementPolicy::kRoundRobin: {
-        return std::make_unique<RoundRobin>();
+        return hshm::EasySingleton<RoundRobin>::GetInstance();
       }
       case PlacementPolicy::kMinimizeIoTime: {
-        return std::make_unique<MinimizeIoTime>();
+        return hshm::EasySingleton<MinimizeIoTime>::GetInstance();
       }
       case PlacementPolicy::kNone:
       default: {
-        // TODO(llogan): @errorhandling not implemented
-        LOG(FATAL) << "PlacementPolicy not implemented" << std::endl;
+        HELOG(kFatal, "PlacementPolicy not implemented")
         return NULL;
       }
     }

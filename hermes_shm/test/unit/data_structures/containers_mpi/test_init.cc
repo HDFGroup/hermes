@@ -22,7 +22,7 @@ void PretestRank0() {
   allocator_id_t alloc_id(0, 1);
   auto mem_mngr = HERMES_MEMORY_MANAGER;
   mem_mngr->CreateBackend<PosixShmMmap>(
-    MemoryManager::kDefaultBackendSize, shm_url);
+    MemoryManager::GetDefaultBackendSize(), shm_url);
   mem_mngr->CreateAllocator<AllocT>(shm_url, alloc_id, sizeof(Pointer));
   alloc_g = mem_mngr->GetAllocator(alloc_id);
 }

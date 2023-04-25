@@ -15,9 +15,9 @@
 #include "hermes_shm/memory/backend/memory_backend_factory.h"
 #include "hermes_shm/memory/allocator/allocator_factory.h"
 #include <hermes_shm/introspect/system_info.h>
-#include <hermes_shm/constants/singleton_macros.h>
+#include "hermes_shm/constants/data_structure_singleton_macros.h"
 
-namespace hermes_shm::ipc {
+namespace hshm::ipc {
 
 void MemoryManager::ScanBackends() {
   for (auto &[url, backend] : HERMES_MEMORY_REGISTRY->backends_) {
@@ -26,4 +26,4 @@ void MemoryManager::ScanBackends() {
   }
 }
 
-}  // namespace hermes_shm::ipc
+}  // namespace hshm::ipc

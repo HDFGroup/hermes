@@ -15,19 +15,33 @@
 namespace hermes::adapter::fs {
 
 /** Allocate an fd for the file f */
-void MpiioIoClient::RealOpen(IoClientObject &f,
-                             IoClientStats &stat,
+void MpiioIoClient::RealOpen(File &f,
+                             AdapterStat &stat,
                              const std::string &path) {
-  f.mpi_status_ = real_api->MPI_File_open(stat.comm_,
-                                          path.c_str(),
-                                          stat.amode_,
-                                          stat.info_,
-                                          &stat.mpi_fh_);
-  if (f.mpi_status_ != MPI_SUCCESS) {
-    f.status_ = false;
+  if (stat.amode_ & MPI_MODE_CREATE) {
+    stat.hflags_.SetBits(HERMES_FS_CREATE);
+    stat.hflags_.SetBits(HERMES_FS_TRUNC);
   }
   if (stat.amode_ & MPI_MODE_APPEND) {
-    stat.is_append_ = true;
+    stat.hflags_.SetBits(HERMES_FS_APPEND);
+  }
+
+  if (stat.hflags_.Any(HERMES_FS_CREATE)) {
+    if (stat.adapter_mode_ != AdapterMode::kScratch) {
+      f.mpi_status_ = real_api->MPI_File_open(
+          stat.comm_, path.c_str(), stat.amode_, stat.info_, &stat.mpi_fh_);
+    }
+  } else {
+    f.mpi_status_ = real_api->MPI_File_open(
+        stat.comm_, path.c_str(), stat.amode_, stat.info_, &stat.mpi_fh_);
+  }
+
+  if (f.mpi_status_ == MPI_SUCCESS) {
+    stat.hflags_.SetBits(HERMES_FS_EXISTS);
+  }
+  if (f.mpi_status_ != MPI_SUCCESS &&
+      stat.adapter_mode_ != AdapterMode::kScratch) {
+    f.status_ = false;
   }
 }
 
@@ -37,21 +51,21 @@ void MpiioIoClient::RealOpen(IoClientObject &f,
  * and hermes file handler. These are not the same as POSIX file
  * descriptor and STDIO file handler.
  * */
-void MpiioIoClient::HermesOpen(IoClientObject &f,
-                               const IoClientStats &stat,
-                               FilesystemIoClientObject &fs_mdm) {
+void MpiioIoClient::HermesOpen(File &f,
+                               const AdapterStat &stat,
+                               FilesystemIoClientState &fs_mdm) {
   f.hermes_mpi_fh_ = (MPI_File)fs_mdm.stat_;
 }
 
 /** Synchronize \a file FILE f */
-int MpiioIoClient::RealSync(const IoClientObject &f,
-                            const IoClientStats &stat) {
+int MpiioIoClient::RealSync(const File &f,
+                            const AdapterStat &stat) {
   return real_api->MPI_File_sync(stat.mpi_fh_);
 }
 
 /** Close \a file FILE f */
-int MpiioIoClient::RealClose(const IoClientObject &f,
-                             IoClientStats &stat) {
+int MpiioIoClient::RealClose(const File &f,
+                             AdapterStat &stat) {
   return real_api->MPI_File_close(&stat.mpi_fh_);
 }
 
@@ -59,39 +73,37 @@ int MpiioIoClient::RealClose(const IoClientObject &f,
  * Called before RealClose. Releases information provisioned during
  * the allocation phase.
  * */
-void MpiioIoClient::HermesClose(IoClientObject &f,
-                                const IoClientStats &stat,
-                                FilesystemIoClientObject &fs_mdm) {
+void MpiioIoClient::HermesClose(File &f,
+                                const AdapterStat &stat,
+                                FilesystemIoClientState &fs_mdm) {
   (void) f; (void) stat; (void) fs_mdm;
 }
 
 /** Remove \a file FILE f */
-int MpiioIoClient::RealRemove(const IoClientObject &f,
-                              IoClientStats &stat) {
-  return 0;
+int MpiioIoClient::RealRemove(const std::string &path) {
+  return remove(path.c_str());
 }
 
 /** Get initial statistics from the backend */
-void MpiioIoClient::InitBucketState(const hipc::charbuf &bkt_name,
-                                    const IoClientContext &opts,
-                                    GlobalIoClientState &stat) {
-  stat.true_size_ = 0;
+size_t MpiioIoClient::GetSize(const hipc::charbuf &bkt_name) {
+  size_t true_size = 0;
   std::string filename = bkt_name.str();
   int fd = open(filename.c_str(), O_RDONLY);
-  if (fd < 0) { return; }
+  if (fd < 0) { return 0; }
   struct stat buf;
   fstat(fd, &buf);
-  stat.true_size_ = buf.st_size;
+  true_size = buf.st_size;
   close(fd);
 
-  LOG(INFO) << "The size of the file "
-            << filename << " on disk is " << stat.true_size_ << std::endl;
+  HILOG(kDebug, "The size of the file {} on disk is {} bytes",
+        filename, true_size)
+  return true_size;
 }
 
 /** Initialize I/O context using count + datatype */
 size_t MpiioIoClient::IoSizeFromCount(int count,
                                       MPI_Datatype datatype,
-                                      IoClientContext &opts) {
+                                      FsIoOptions &opts) {
   int datatype_size;
   opts.mpi_type_ = datatype;
   opts.mpi_count_ = count;
@@ -100,20 +112,19 @@ size_t MpiioIoClient::IoSizeFromCount(int count,
 }
 
 /** Write blob to backend */
-void MpiioIoClient::WriteBlob(const hipc::charbuf &bkt_name,
+void MpiioIoClient::WriteBlob(const std::string &bkt_name,
                               const Blob &full_blob,
-                              const IoClientContext &opts,
+                              const FsIoOptions &opts,
                               IoStatus &status) {
-  std::string filename = bkt_name.str();
   status.success_ = true;
-  LOG(INFO) << "Write called for filename to destination: " << filename
-            << " on offset: " << opts.backend_off_
-            << " and size: " << full_blob.size() << "."
-            << " file_size:" << stdfs::file_size(filename)
-            << " pid: " << getpid() << std::endl;
+  HILOG(kDebug,
+        "Write called for: {}"
+        " on offset: {}"
+        " and size: {}",
+        bkt_name, opts.backend_off_, full_blob.size())
   MPI_File fh;
   int write_count = 0;
-  status.mpi_ret_ = real_api->MPI_File_open(MPI_COMM_SELF, filename.c_str(),
+  status.mpi_ret_ = real_api->MPI_File_open(MPI_COMM_SELF, bkt_name.c_str(),
                                             MPI_MODE_RDONLY,
                                             MPI_INFO_NULL, &fh);
   if (status.mpi_ret_ != MPI_SUCCESS) {
@@ -136,9 +147,8 @@ void MpiioIoClient::WriteBlob(const hipc::charbuf &bkt_name,
                 opts.mpi_type_, &write_count);
   if (write_count != opts.mpi_count_) {
     status.success_ = false;
-    LOG(ERROR) << "writing failed: wrote " << write_count
-               << " / " << opts.mpi_count_
-               << "." << std::endl;
+    HELOG(kError, "writing failed: wrote {} / {}",
+          write_count, opts.mpi_count_)
   }
 
 ERROR:
@@ -148,20 +158,19 @@ ERROR:
 }
 
 /** Read blob from the backend */
-void MpiioIoClient::ReadBlob(const hipc::charbuf &bkt_name,
+void MpiioIoClient::ReadBlob(const std::string &bkt_name,
                              Blob &full_blob,
-                             const IoClientContext &opts,
+                             const FsIoOptions &opts,
                              IoStatus &status) {
-  std::string filename = bkt_name.str();
   status.success_ = true;
-  LOG(INFO) << "Reading from: " << filename
-            << " on offset: " << opts.backend_off_
-            << " and size: " << full_blob.size() << "."
-            << " file_size:" << stdfs::file_size(filename)
-            << " pid: " << getpid() << std::endl;
+  HILOG(kDebug,
+        "Reading from: {}"
+        " on offset: {}"
+        " and size: {}",
+        bkt_name, opts.backend_off_, full_blob.size())
   MPI_File fh;
   int read_count = 0;
-  status.mpi_ret_ = real_api->MPI_File_open(MPI_COMM_SELF, filename.c_str(),
+  status.mpi_ret_ = real_api->MPI_File_open(MPI_COMM_SELF, bkt_name.c_str(),
                                             MPI_MODE_RDONLY, MPI_INFO_NULL,
                                             &fh);
   if (status.mpi_ret_ != MPI_SUCCESS) {
@@ -184,9 +193,8 @@ void MpiioIoClient::ReadBlob(const hipc::charbuf &bkt_name,
                 opts.mpi_type_, &read_count);
   if (read_count != opts.mpi_count_) {
     status.success_ = false;
-    LOG(ERROR) << "reading failed: read " << read_count
-               << " / " << opts.mpi_count_
-               << "." << std::endl;
+    HELOG(kError, "reading failed: read {} / {}",
+          read_count, opts.mpi_count_)
   }
 
 ERROR:
@@ -202,3 +210,5 @@ void MpiioIoClient::UpdateIoStatus(size_t count, IoStatus &status) {
 }
 
 }  // namespace hermes::adapter::fs
+
+HERMES_TRAIT_CC(hermes::adapter::fs::MpiioIoClient)

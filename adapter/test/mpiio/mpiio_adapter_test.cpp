@@ -28,7 +28,7 @@ namespace stdfs = std::filesystem;
 namespace hermes::adapter::mpiio::test {
 struct Arguments {
   std::string filename = "test.dat";
-  std::string directory = "/tmp";
+  std::string directory = "/tmp/test_hermes";
   size_t request_size = 65536;
 };
 struct Info {
@@ -61,6 +61,10 @@ hermes::adapter::mpiio::test::Arguments args;
 hermes::adapter::mpiio::test::Info info;
 
 int init(int* argc, char*** argv) {
+#if HERMES_INTERCEPT == 1
+  setenv("HERMES_FLUSH_MODE", "kSync", 1);
+  HERMES->client_config_.flushing_mode_ = hermes::FlushingMode::kSync;
+#endif
   MPI_Init(argc, argv);
   info.write_data = GenRandom(args.request_size);
   info.read_data = std::string(args.request_size, 'r');
@@ -161,6 +165,12 @@ int pretest() {
   return 0;
 }
 
+void Clear() {
+#if HERMES_INTERCEPT == 1
+  HERMES->Clear();
+#endif
+}
+
 int posttest(bool compare_data = true) {
 #if HERMES_INTERCEPT == 1
   HERMES->client_config_.SetAdapterPathTracking(info.existing_file, false);
@@ -230,6 +240,7 @@ int posttest(bool compare_data = true) {
   if (stdfs::exists(info.new_file_cmp)) stdfs::remove(info.new_file_cmp);
   if (stdfs::exists(info.existing_file_cmp))
     stdfs::remove(info.existing_file_cmp);
+  Clear();
 
 #if HERMES_INTERCEPT == 1
   HERMES->client_config_.SetAdapterPathTracking(info.existing_file_cmp, true);

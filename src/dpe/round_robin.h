@@ -23,12 +23,15 @@ using api::Status;
 
 /** Represents the state of a Round-Robin data placement strategy */
 class RoundRobin : public DPE {
+ private:
+  std::atomic<size_t> counter_;
+
  public:
-  RoundRobin() = default;
+  RoundRobin() : counter_(0) {}
 
   Status Placement(const std::vector<size_t> &blob_sizes,
-                   const hipc::vector<TargetInfo> &targets,
-                   const api::Context &ctx,
+                   std::vector<TargetInfo> &targets,
+                   api::Context &ctx,
                    std::vector<PlacementSchema> &output);
 };
 

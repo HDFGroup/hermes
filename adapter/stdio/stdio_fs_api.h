@@ -39,8 +39,8 @@ class StdioFs : public hermes::adapter::fs::Filesystem {
       return ret;
     }
     stat.fh_ = ret;
-    LOG(INFO) << "Reopen file for filename " << user_path << " in mode " << mode
-              << std::endl;
+    HILOG(kDebug, "Reopen file for filename: {} in mode {}",
+          user_path, mode)
     stat.UpdateTime();
     return (FILE*)&stat;
   }
@@ -85,7 +85,7 @@ class StdioFs : public hermes::adapter::fs::Filesystem {
   }
 
   /** get the file name from \a fp file pointer */
-  inline std::string GetFilenameFromFP(FILE* fp) {
+  static std::string GetFilenameFromFP(FILE* fp) {
     char proclnk[kMaxPathLen];
     char filename[kMaxPathLen];
     int fno = fileno(fp);
@@ -98,7 +98,7 @@ class StdioFs : public hermes::adapter::fs::Filesystem {
 
 /** Simplify access to the stateless StdioFs Singleton */
 #define HERMES_STDIO_FS \
-  hermes_shm::EasySingleton<hermes::adapter::fs::StdioFs>::GetInstance()
+  hshm::EasySingleton<hermes::adapter::fs::StdioFs>::GetInstance()
 #define HERMES_STDIO_FS_T hermes::adapter::fs::StdioFs*
 
 }  // namespace hermes::adapter::fs

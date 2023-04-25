@@ -15,19 +15,31 @@
 namespace hermes::adapter::fs {
 
 /** Allocate an fd for the file f */
-void StdioIoClient::RealOpen(IoClientObject &f,
-                             IoClientStats &stat,
+void StdioIoClient::RealOpen(File &f,
+                             AdapterStat &stat,
                              const std::string &path) {
-  stat.fh_ = real_api->fopen(path.c_str(), stat.mode_str_.c_str());
-  if (stat.fh_ == nullptr) {
-    f.status_ = false;
-    return;
+  if (stat.mode_str_.find('w') != std::string::npos) {
+    stat.hflags_.SetBits(HERMES_FS_TRUNC);
+    stat.hflags_.SetBits(HERMES_FS_CREATE);
   }
   if (stat.mode_str_.find('a') != std::string::npos) {
-    stat.is_append_ = true;
+    stat.hflags_.SetBits(HERMES_FS_APPEND);
+    stat.hflags_.SetBits(HERMES_FS_CREATE);
   }
-  if (stat.mode_str_.find('w')) {
-    stat.is_trunc_ = true;
+
+  if (stat.hflags_.Any(HERMES_FS_CREATE)) {
+    if (stat.adapter_mode_ != AdapterMode::kScratch) {
+      stat.fh_ = real_api->fopen(path.c_str(), stat.mode_str_.c_str());
+    }
+  } else {
+    stat.fh_ = real_api->fopen(path.c_str(), stat.mode_str_.c_str());
+  }
+
+  if (stat.fh_ != nullptr) {
+    stat.hflags_.SetBits(HERMES_FS_EXISTS);
+  }
+  if (stat.fh_ == nullptr && stat.adapter_mode_ != AdapterMode::kScratch) {
+    f.status_ = false;
   }
 }
 
@@ -37,22 +49,30 @@ void StdioIoClient::RealOpen(IoClientObject &f,
  * and hermes file handler. These are not the same as POSIX file
  * descriptor and STDIO file handler.
  * */
-void StdioIoClient::HermesOpen(IoClientObject &f,
-                               const IoClientStats &stat,
-                               FilesystemIoClientObject &fs_mdm) {
+void StdioIoClient::HermesOpen(File &f,
+                               const AdapterStat &stat,
+                               FilesystemIoClientState &fs_mdm) {
   f.hermes_fh_ = (FILE*)fs_mdm.stat_;
 }
 
 /** Synchronize \a file FILE f */
-int StdioIoClient::RealSync(const IoClientObject &f,
-                            const IoClientStats &stat) {
+int StdioIoClient::RealSync(const File &f,
+                            const AdapterStat &stat) {
   (void) f;
+  if (stat.adapter_mode_ == AdapterMode::kScratch &&
+      stat.fh_ == nullptr) {
+    return 0;
+  }
   return real_api->fflush(stat.fh_);
 }
 
 /** Close \a file FILE f */
-int StdioIoClient::RealClose(const IoClientObject &f,
-                             IoClientStats &stat) {
+int StdioIoClient::RealClose(const File &f,
+                             AdapterStat &stat) {
+  if (stat.adapter_mode_ == AdapterMode::kScratch &&
+      stat.fh_ == nullptr) {
+    return 0;
+  }
   return real_api->fclose(stat.fh_);
 }
 
@@ -60,47 +80,44 @@ int StdioIoClient::RealClose(const IoClientObject &f,
  * Called before RealClose. Releases information provisioned during
  * the allocation phase.
  * */
-void StdioIoClient::HermesClose(IoClientObject &f,
-                               const IoClientStats &stat,
-                               FilesystemIoClientObject &fs_mdm) {
+void StdioIoClient::HermesClose(File &f,
+                               const AdapterStat &stat,
+                               FilesystemIoClientState &fs_mdm) {
   (void) f; (void) stat; (void) fs_mdm;
 }
 
 /** Remove \a file FILE f */
-int StdioIoClient::RealRemove(const IoClientObject &f,
-                              IoClientStats &stat) {
-  return 0;
+int StdioIoClient::RealRemove(const std::string &path) {
+  return remove(path.c_str());
 }
 
 /** Get initial statistics from the backend */
-void StdioIoClient::InitBucketState(const hipc::charbuf &bkt_name,
-                                    const IoClientContext &opts,
-                                    GlobalIoClientState &stat) {
-  stat.true_size_ = 0;
+size_t StdioIoClient::GetSize(const hipc::charbuf &bkt_name) {
+  size_t true_size = 0;
   std::string filename = bkt_name.str();
   int fd = open(filename.c_str(), O_RDONLY);
-  if (fd < 0) { return; }
+  if (fd < 0) { return 0; }
   struct stat buf;
   fstat(fd, &buf);
-  stat.true_size_ = buf.st_size;
+  true_size = buf.st_size;
   close(fd);
 
-  LOG(INFO) << "The size of the file "
-            << filename << " on disk is " << stat.true_size_ << std::endl;
+  HILOG(kDebug, "The size of the file {} on disk is {}",
+        filename, true_size)
+  return true_size;
 }
 
 /** Write blob to backend */
-void StdioIoClient::WriteBlob(const hipc::charbuf &bkt_name,
+void StdioIoClient::WriteBlob(const std::string &bkt_name,
                               const Blob &full_blob,
-                              const IoClientContext &opts,
+                              const FsIoOptions &opts,
                               IoStatus &status) {
   status.success_ = true;
-  std::string filename = bkt_name.str();
-  LOG(INFO) << "Writing to file: " << filename
-            << " offset: " << opts.backend_off_
-            << " size:" << opts.backend_size_ << "."
-            << " file_size:" << stdfs::file_size(filename) << std::endl;
-  FILE *fh = real_api->fopen(filename.c_str(), "r+");
+  HILOG(kDebug, "Writing to file: {}"
+        " offset: {}"
+        " size: {}",
+        bkt_name, opts.backend_off_, full_blob.size())
+  FILE *fh = real_api->fopen(bkt_name.c_str(), "r+");
   if (fh == nullptr) {
     status.size_ = 0;
     status.success_ = false;
@@ -118,17 +135,16 @@ void StdioIoClient::WriteBlob(const hipc::charbuf &bkt_name,
 }
 
 /** Read blob from the backend */
-void StdioIoClient::ReadBlob(const hipc::charbuf &bkt_name,
+void StdioIoClient::ReadBlob(const std::string &bkt_name,
                              Blob &full_blob,
-                             const IoClientContext &opts,
+                             const FsIoOptions &opts,
                              IoStatus &status) {
   status.success_ = true;
-  std::string filename = bkt_name.str();
-  LOG(INFO) << "Reading from file: " << filename
-            << " on offset: " << opts.backend_off_
-            << " and size: " << opts.backend_size_ << "."
-            << " file_size:" << stdfs::file_size(filename) << std::endl;
-  FILE *fh = real_api->fopen(filename.c_str(), "r");
+  HILOG(kDebug, "Reading from file: {}"
+        " offset: {}"
+        " size: {}",
+        bkt_name, opts.backend_off_, full_blob.size())
+  FILE *fh = real_api->fopen(bkt_name.c_str(), "r");
   if (fh == nullptr) {
     status.size_ = 0;
     status.success_ = false;
@@ -136,9 +152,9 @@ void StdioIoClient::ReadBlob(const hipc::charbuf &bkt_name,
   }
   real_api->fseek(fh, opts.backend_off_, SEEK_SET);
   status.size_ = real_api->fread(full_blob.data(),
-                                       sizeof(char),
-                                       full_blob.size(),
-                                       fh);
+                                 sizeof(char),
+                                 full_blob.size(),
+                                 fh);
   if (status.size_ != full_blob.size()) {
     status.success_ = false;
   }
@@ -146,3 +162,5 @@ void StdioIoClient::ReadBlob(const hipc::charbuf &bkt_name,
 }
 
 }  // namespace hermes::adapter::fs
+
+HERMES_TRAIT_CC(hermes::adapter::fs::StdioIoClient)

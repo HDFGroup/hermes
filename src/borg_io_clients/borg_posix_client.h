@@ -24,11 +24,14 @@ namespace hermes::borg {
 
 class PosixIoClient : public BorgIoClient {
  public:
+  virtual ~PosixIoClient() = default;
+
   bool Init(DeviceInfo &dev_info) override {
     auto api = HERMES_POSIX_API;
-    hipc::string text = (*dev_info.mount_dir_) +
-                        "/" + "slab_" + (*dev_info.dev_name_);
-    (*dev_info.mount_point_) = std::move(text);
+    std::string text = (*dev_info.mount_dir_).str() +
+                        "/" + "slab_" + (*dev_info.dev_name_).str();
+    auto canon = stdfs::weakly_canonical(text).string();
+    (*dev_info.mount_point_) = canon;
     int fd = api->open((*dev_info.mount_point_).c_str(),
                        O_TRUNC | O_CREAT, 0666);
     if (fd < 0) { return false; }
@@ -39,29 +42,41 @@ class PosixIoClient : public BorgIoClient {
   bool Write(DeviceInfo &dev_info, const char *data,
              size_t off, size_t size) override {
     auto api = HERMES_POSIX_API;
-    int fd = api->open((*dev_info.mount_point_).c_str(), O_RDWR);
+    auto mount_point = (*dev_info.mount_point_).str();
+    int fd = api->open(mount_point.c_str(), O_RDWR);
     if (fd < 0) {
-      LOG(INFO) << "Failed to open (write): "
-                << dev_info.mount_point_->str() << std::endl;
+      HELOG(kError, "Failed to open (write): {}",
+            dev_info.mount_point_->str())
       return false;
     }
     size_t count = api->pwrite(fd, data, size, off);
     api->close(fd);
-    return count == size;
+    if (count != size) {
+      HELOG(kError, "BORG: wrote {} bytes, but expected {}",
+            count, size);
+      return false;
+    }
+    return true;
   }
 
   bool Read(DeviceInfo &dev_info, char *data,
             size_t off, size_t size) override {
     auto api = HERMES_POSIX_API;
-    int fd = api->open((*dev_info.mount_point_).c_str(), O_RDWR);
+    auto mount_point = (*dev_info.mount_point_).str();
+    int fd = api->open(mount_point.c_str(), O_RDWR);
     if (fd < 0) {
-      LOG(INFO) << "Failed to open (read): "
-                << dev_info.mount_point_->str() << std::endl;
+      HELOG(kError, "Failed to open (read): {}",
+            dev_info.mount_point_->str())
       return false;
     }
     size_t count = api->pread(fd, data, size, off);
     api->close(fd);
-    return count == size;
+    if (count != size) {
+      HELOG(kError, "BORG: read {} bytes, but expected {}",
+            count, size);
+      return false;
+    }
+    return true;
   }
 };
 

@@ -353,7 +353,7 @@ TEST_CASE("BatchedUpdateStrideFixed",
       auto offset = (i * info.stride_size) % info.total_size;
       test::test_fseek(offset, SEEK_SET);
       REQUIRE(test::status_orig == 0);
-      test::test_fwrite(data.data(), args.request_size);
+      test::test_fread(data.data(), args.request_size);
       REQUIRE(test::size_read_orig == args.request_size);
     }
     test::test_fclose();
@@ -408,7 +408,7 @@ TEST_CASE("BatchedUpdateStrideDynamic",
                                     info.total_size);
       test::test_fseek(offset, SEEK_SET);
       REQUIRE(test::status_orig == 0);
-      test::test_fwrite(data.data(), args.request_size);
+      test::test_fread(data.data(), args.request_size);
       REQUIRE(test::size_read_orig == args.request_size);
     }
     test::test_fclose();
@@ -742,10 +742,11 @@ TEST_CASE("BatchedUpdateStrideNegative",
     std::string data(args.request_size, '1');
     for (size_t i = 0; i < info.num_iterations; ++i) {
       auto offset =
-          info.total_size - ((i * info.stride_size) % info.total_size);
+          info.total_size - args.request_size -
+          ((i * info.stride_size) % info.total_size);
       test::test_fseek(offset, SEEK_SET);
       REQUIRE(test::status_orig == 0);
-      test::test_fwrite(data.data(), args.request_size);
+      test::test_fread(data.data(), args.request_size);
       REQUIRE(test::size_read_orig == args.request_size);
     }
     test::test_fclose();
@@ -883,7 +884,7 @@ TEST_CASE("BatchedUpdateStride2D",
                     (info.total_size - args.request_size);
       test::test_fseek(offset, SEEK_SET);
       REQUIRE(test::status_orig == 0);
-      test::test_fwrite(data.data(), args.request_size);
+      test::test_fread(data.data(), args.request_size);
       REQUIRE(test::size_read_orig == args.request_size);
     }
     test::test_fclose();

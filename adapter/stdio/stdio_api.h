@@ -15,15 +15,9 @@
 #include <string>
 #include <dlfcn.h>
 #include <iostream>
-#include <glog/logging.h>
+#include "hermes_shm/util/logging.h"
 #include <cstdio>
-
-#define REQUIRE_API(api_name) \
-  if (api_name == nullptr) { \
-    LOG(FATAL) << "HERMES Adapter failed to map symbol: " \
-    #api_name << std::endl; \
-    std::exit(1); \
-   }
+#include "adapter/real_api.h"
 
 extern "C" {
 typedef FILE * (*fopen_t)(const char * path, const char * mode);
@@ -274,13 +268,11 @@ class StdioApi {
 };
 }  // namespace hermes::adapter::fs
 
-#undef REQUIRE_API
-
 #include "hermes_shm/util/singleton.h"
 
 // Singleton macros
 #define HERMES_STDIO_API \
-  hermes_shm::Singleton<hermes::adapter::fs::StdioApi>::GetInstance()
+  hshm::EasySingleton<hermes::adapter::fs::StdioApi>::GetInstance()
 #define HERMES_STDIO_API_T hermes::adapter::fs::StdioApi*
 
 #endif  // HERMES_ADAPTER_STDIO_H

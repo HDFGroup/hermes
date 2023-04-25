@@ -15,8 +15,9 @@
 
 #include <memory>
 #include "hermes_shm/thread/lock/mutex.h"
+#include "hermes_shm/constants/macros.h"
 
-namespace hermes_shm {
+namespace hshm {
 
 /**
  * Makes a singleton. Constructs the first time GetInstance is called.
@@ -26,29 +27,41 @@ namespace hermes_shm {
 template<typename T>
 class Singleton {
  private:
-  static std::unique_ptr<T> obj_;
-  static hermes_shm::Mutex lock_;
+  static T *obj_;
+  static hshm::Mutex *lock_;
 
  public:
   Singleton() = default;
 
   /** Get or create an instance of type T */
-  inline static T* GetInstance() {
+  inline static T *GetInstance() {
     if (!obj_) {
-      hermes_shm::ScopedMutex lock(lock_);
+      hshm::ScopedMutex lock(*lock_, 0);
       if (obj_ == nullptr) {
-        obj_ = std::make_unique<T>();
+        obj_ = new T();
       }
     }
-    return obj_.get();
+    return obj_;
   }
+
+  /** Static initialization method for obj */
+  static T *_GetObj();
+
+  /** Static initialization method for lock */
+  static hshm::Mutex *_GetLock();
 };
+template<typename T>
+T* Singleton<T>::obj_ = Singleton<T>::_GetObj();
+template<typename T>
+hshm::Mutex* Singleton<T>::lock_ = Singleton<T>::_GetLock();
 #define DEFINE_SINGLETON_CC(T)\
-  template<> std::unique_ptr<T>\
-    hermes_shm::Singleton<T>::obj_ = nullptr;\
-  template<> hermes_shm::Mutex\
-    hermes_shm::Singleton<T>::lock_ =\
-    hermes_shm::Mutex();
+  template<> T* hshm::Singleton<T>::_GetObj() {\
+    return nullptr;\
+  }\
+  template<> hshm::Mutex* hshm::Singleton<T>::_GetLock() {\
+    static hshm::Mutex lock;\
+    return &lock;\
+  }
 
 /**
  * Makes a singleton. Constructs during initialization of program.
@@ -56,17 +69,32 @@ class Singleton {
  * */
 template<typename T>
 class GlobalSingleton {
- private:
-  static T obj_;
+ public:
+  static T *obj_;
+
  public:
   GlobalSingleton() = default;
-  static T* GetInstance() {
-    return &obj_;
+
+  /** Get instance of type T */
+  HSHM_ALWAYS_INLINE static T* GetInstance() {
+    return obj_;
   }
+
+  /** Get ref of type T */
+  HSHM_ALWAYS_INLINE static T& GetRef() {
+    return *obj_;
+  }
+
+  /** Static initialization method for obj */
+  static T& _GetObj();
 };
+template<typename T>
+T* GlobalSingleton<T>::obj_ = &GlobalSingleton<T>::_GetObj();
 #define DEFINE_GLOBAL_SINGLETON_CC(T)\
-  template<> T\
-    hermes_shm::GlobalSingleton<T>::obj_ = T();
+  template<> T& hshm::GlobalSingleton<T>::_GetObj() {\
+    static T obj; \
+    return obj;\
+  }
 
 /**
  * A class to represent singleton pattern
@@ -76,8 +104,8 @@ template<typename T>
 class EasySingleton {
  protected:
   /** static instance. */
-  static std::unique_ptr<T> obj_;
-  static hermes_shm::Mutex lock_;
+  static T* obj_;
+  static hshm::Mutex lock_;
 
  public:
   /**
@@ -87,18 +115,18 @@ class EasySingleton {
    */
   static T* GetInstance() {
     if (obj_ == nullptr) {
-      hermes_shm::ScopedMutex lock(lock_);
+      hshm::ScopedMutex lock(lock_, 0);
       if (obj_ == nullptr) {
-        obj_ = std::make_unique<T>();
+        obj_ = new T();
       }
     }
-    return obj_.get();
+    return obj_;
   }
 };
 template <typename T>
-std::unique_ptr<T> EasySingleton<T>::obj_ = nullptr;
+T* EasySingleton<T>::obj_ = nullptr;
 template <typename T>
-hermes_shm::Mutex EasySingleton<T>::lock_ = hermes_shm::Mutex();
+hshm::Mutex EasySingleton<T>::lock_ = hshm::Mutex();
 
 /**
  * Makes a singleton. Constructs during initialization of program.
@@ -117,6 +145,6 @@ class EasyGlobalSingleton {
 template <typename T>
 T EasyGlobalSingleton<T>::obj_;
 
-}  // namespace hermes_shm
+}  // namespace hshm
 
 #endif  // HERMES_SHM_SINGLETON_H

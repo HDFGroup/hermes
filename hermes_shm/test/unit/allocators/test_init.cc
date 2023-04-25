@@ -14,8 +14,6 @@
 #include "test_init.h"
 
 void Posttest() {
-  std::string shm_url = "test_allocators";
-  auto mem_mngr = HERMES_MEMORY_MANAGER;
 }
 
 void MainPretest() {}

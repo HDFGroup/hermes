@@ -5,8 +5,7 @@ def write_hdf5(fname, dset, dset_name, mode):
     with h5py.File(fname, mode, swmr=False) as h5_file: #swmr=False has async issue
         h5_file.create_dataset(
                     dset_name,
-                    data=dset,
-                    )
+                    data=dset)
 
     print(f"{dset_name} {dset.shape} write complete ...")
 

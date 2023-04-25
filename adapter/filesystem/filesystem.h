@@ -26,10 +26,7 @@
 #include "bucket.h"
 #include "hermes.h"
 
-#include "adapter/io_client/io_client.h"
 #include "filesystem_io_client.h"
-#include "file.h"
-
 #include <filesystem>
 
 namespace hapi = hermes::api;
@@ -47,41 +44,6 @@ enum class SeekMode {
   kEnd = SEEK_END
 };
 
-/** A structure to represent adapter statistics */
-struct AdapterStat : public IoClientStats {
-  std::shared_ptr<hapi::Bucket> bkt_id_; /**< bucket associated with the file */
-  /** Page size used for file */
-  size_t page_size_;
-
-  /** Default constructor. */
-  AdapterStat()
-      : bkt_id_() {}
-
-  /** compare \a a BLOB and \a b BLOB.*/
-  static bool CompareBlobs(const std::string &a, const std::string &b) {
-    return std::stol(a) < std::stol(b);
-  }
-};
-
-/**
- * A structure to represent IO options for FS adapter.
- * For now, nothing additional than the typical IoClientContext.
- * */
-struct FsIoOptions : public IoClientContext {
-  /** Default constructor */
-  FsIoOptions() : IoClientContext() {
-    SetSeek();
-  }
-
-  /** return IO options with \a mpi_type MPI data type */
-  static FsIoOptions DataType(MPI_Datatype mpi_type, bool seek = true) {
-    FsIoOptions opts;
-    opts.mpi_type_ = mpi_type;
-    if (!seek) { opts.UnsetSeek(); }
-    return opts;
-  }
-};
-
 /** A class to represent file system */
 class Filesystem {
  public:
@@ -95,13 +57,60 @@ class Filesystem {
 
   /** open \a path */
   File Open(AdapterStat &stat, const std::string &path);
+
   /** open \a f File in \a path*/
   void Open(AdapterStat &stat, File &f, const std::string &path);
+
+  /**
+   * Put \a blob_name Blob into the bucket. Load the blob from the
+   * I/O backend if it does not exist or is not fully loaded.
+   *
+   * @param bkt the bucket to use for the partial operation
+   * @param blob_name the semantic name of the blob
+   * @param blob the buffer to put final data in
+   * @param blob_off the offset within the blob to begin the Put
+   * @param blob_id [out] the blob id corresponding to blob_name
+   * @param io_ctx information required to perform I/O to the backend
+   * @param opts specific configuration of the I/O to perform
+   * @param ctx any additional information
+   * */
+  Status PartialPutOrCreate(hapi::Bucket &bkt,
+                            const std::string &blob_name,
+                            const Blob &blob,
+                            size_t blob_off,
+                            BlobId &blob_id,
+                            IoStatus &status,
+                            const FsIoOptions &opts,
+                            Context &ctx);
 
   /** write */
   size_t Write(File &f, AdapterStat &stat, const void *ptr, size_t off,
                size_t total_size, IoStatus &io_status,
                FsIoOptions opts = FsIoOptions());
+
+  /**
+   * Load \a blob_name Blob from the bucket. Load the blob from the
+   * I/O backend if it does not exist or is not fully loaded.
+   *
+   * @param bkt the bucket to use for the partial operation
+   * @param blob_name the semantic name of the blob
+   * @param blob the buffer to put final data in
+   * @param blob_off the offset within the blob to begin the Put
+   * @param blob_id [out] the blob id corresponding to blob_name
+   * @param io_ctx information required to perform I/O to the backend
+   * @param opts specific configuration of the I/O to perform
+   * @param ctx any additional information
+   * */
+  Status PartialGetOrCreate(hapi::Bucket &bkt,
+                            const std::string &blob_name,
+                            Blob &blob,
+                            size_t blob_off,
+                            size_t blob_size,
+                            BlobId &blob_id,
+                            IoStatus &status,
+                            const FsIoOptions &opts,
+                            Context &ctx);
+
   /** read */
   size_t Read(File &f, AdapterStat &stat, void *ptr,
               size_t off, size_t total_size,
@@ -120,17 +129,19 @@ class Filesystem {
   /** wait for request IDs in \a req_id vector */
   void Wait(std::vector<uint64_t> &req_id, std::vector<size_t> &ret);
   /** seek */
-  off_t Seek(File &f, AdapterStat &stat, SeekMode whence, off_t offset);
+  off_t Seek(File &f, AdapterStat &stat, SeekMode whence, off64_t offset);
   /** file size */
   size_t GetSize(File &f, AdapterStat &stat);
   /** tell */
   off_t Tell(File &f, AdapterStat &stat);
   /** sync */
   int Sync(File &f, AdapterStat &stat);
+  /** truncate */
+  int Truncate(File &f, AdapterStat &stat, size_t new_size);
   /** close */
-  int Close(File &f, AdapterStat &stat, bool destroy = true);
+  int Close(File &f, AdapterStat &stat);
   /** remove */
-  int Remove(File &f, AdapterStat &stat);
+  int Remove(const std::string &pathname);
 
   /*
    * I/O APIs which seek based on the internal AdapterStat st_ptr,
@@ -195,10 +206,10 @@ class Filesystem {
   off_t Tell(File &f, bool &stat_exists);
   /** sync */
   int Sync(File &f, bool &stat_exists);
+  /** truncate */
+  int Truncate(File &f, bool &stat_exists, size_t new_size);
   /** close */
-  int Close(File &f, bool &stat_exists, bool destroy = true);
-  /** close */
-  int Remove(File &f, bool &stat_exists);
+  int Close(File &f, bool &stat_exists);
 
  public:
   /** Whether or not \a path PATH is tracked by Hermes */
@@ -206,12 +217,16 @@ class Filesystem {
     if (!HERMES->IsInitialized()) {
       return false;
     }
-    std::string abs_path = stdfs::weakly_canonical(path).string();
+    std::string abs_path = stdfs::absolute(path).string();
     auto &paths = HERMES->client_config_.path_list_;
     // Check if path is included or excluded
-    for (std::pair<std::string, bool> &pth : paths) {
-      if (abs_path.rfind(pth.first) != std::string::npos) {
-        return pth.second;
+    for (config::UserPathInfo &pth : paths) {
+      if (abs_path.rfind(pth.path_) != std::string::npos) {
+        if (abs_path == pth.path_ && pth.is_directory_) {
+          // Do not include if path is a tracked directory
+          return false;
+        }
+        return pth.include_;
       }
     }
     // Assume it is excluded

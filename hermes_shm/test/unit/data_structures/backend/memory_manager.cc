@@ -16,14 +16,14 @@
 #include <mpi.h>
 #include "hermes_shm/memory/memory_manager.h"
 
-using hermes_shm::ipc::MemoryBackendType;
-using hermes_shm::ipc::MemoryBackend;
-using hermes_shm::ipc::allocator_id_t;
-using hermes_shm::ipc::AllocatorType;
-using hermes_shm::ipc::MemoryManager;
+using hshm::ipc::MemoryBackendType;
+using hshm::ipc::MemoryBackend;
+using hshm::ipc::allocator_id_t;
+using hshm::ipc::AllocatorType;
+using hshm::ipc::MemoryManager;
 
 struct SimpleHeader {
-  hermes_shm::ipc::Pointer p_;
+  hshm::ipc::Pointer p_;
 };
 
 TEST_CASE("MemoryManager") {
@@ -40,14 +40,16 @@ TEST_CASE("MemoryManager") {
   if (rank == 0) {
     std::cout << "Creating SHMEM (rank 0): " << shm_url << std::endl;
     mem_mngr->CreateBackend<hipc::PosixShmMmap>(
-      MemoryManager::kDefaultBackendSize, shm_url);
+      MemoryManager::GetDefaultBackendSize(), shm_url);
     mem_mngr->CreateAllocator<hipc::StackAllocator>(
       shm_url, alloc_id, 0);
+    mem_mngr->ScanBackends();
   }
   MPI_Barrier(MPI_COMM_WORLD);
   if (rank != 0) {
     std::cout << "Attaching SHMEM (rank 1): " << shm_url << std::endl;
     mem_mngr->AttachBackend(MemoryBackendType::kPosixShmMmap, shm_url);
+    mem_mngr->ScanBackends();
   }
   MPI_Barrier(MPI_COMM_WORLD);
   if (rank == 0) {

@@ -14,13 +14,15 @@
 #include <string>
 
 #include <mpi.h>
-#include <glog/logging.h>
+#include "hermes_shm/util/logging.h"
 #include "hermes.h"
 #include "bucket.h"
 
 #include "basic_test.h"
 
 namespace hapi = hermes::api;
+
+using hermes::TagId;
 
 void MainPretest() {
   hapi::Hermes::Create(hermes::HermesType::kClient);
@@ -32,7 +34,7 @@ void MainPosttest() {
 
 void TestTag(hapi::Hermes *hermes) {
   auto bkt = hermes->GetBucket("hello");
-  int num_blobs = 100;
+  size_t num_blobs = 100;
   size_t blob_size = KILOBYTES(4);
   hermes::api::Context ctx;
   std::vector<hermes::BlobId> blob_ids(num_blobs);
@@ -43,16 +45,19 @@ void TestTag(hapi::Hermes *hermes) {
     std::string name = std::to_string(i);
     char nonce = i % 256;
     memset(blob.data(), nonce, blob_size);
-    bkt->Put(name, std::move(blob), blob_ids[i], ctx);
+    bkt.Put(name, std::move(blob), blob_ids[i], ctx);
   }
+
+  // Create two tags
+  TagId tag1 = HERMES->CreateTag("tag1");
 
   // Tag some blobs
   for (size_t i = 0; i < num_blobs; ++i) {
-    bkt->TagBlob(blob_ids[i], "tag1");
+    bkt.TagBlob(blob_ids[i], tag1);
   }
 
   // Query by tag
-  auto tags = HERMES->GroupBy("tag1");
+  auto tags = HERMES->GroupBy(tag1);
   REQUIRE(tags.size() == 100);
 }
 

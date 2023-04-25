@@ -2,10 +2,10 @@
 // Created by lukemartinlogan on 2/22/23.
 //
 
-#include <hermes_shm/data_structures/internal/shm_container.h>
-#include <hermes_shm/data_structures/internal/shm_archive.h>
+#include <hermes_shm/data_structures/ipc/internal/shm_container.h>
+#include <hermes_shm/data_structures/ipc/internal/shm_archive.h>
 #include <hermes_shm/thread/lock.h>
-#include <hermes_shm/data_structures/thread_unsafe/vector.h>
+#include <hermes_shm/data_structures/ipc/vector.h>
 
 template<typename T>
 class ShmHeader;
@@ -15,12 +15,8 @@ class LockedVector;
 template<>
 class ShmHeader<LockedVector> : public hipc::ShmBaseHeader {
  public:
-  hermes_shm::Mutex lock_;
+  hshm::Mutex lock_;
   hipc::ShmArchive<hipc::vector<int>> vec_;
-
-  ShmHeader(hipc::Allocator *alloc) {
-    vec_.shm_init(alloc);
-  }
 };
 
 class LockedVector {
@@ -31,26 +27,24 @@ class LockedVector {
   /**====================================
    * Variables
    * ===================================*/
-  hipc::ShmRef<hipc::vector<int>> vec_;
+  hipc::mptr<hipc::vector<int>> vec_;
 
  public:
   /**====================================
    * Shm Overrides
    * ===================================*/
 
-  /** Default constructor */
-  LockedVector() = default;
-
   /** Default shm constructor. Initializes the vector with 0 elements. */
   void shm_init_main(header_t *header,
                      hipc::Allocator *alloc) {
     shm_init_allocator(alloc);
-    shm_init_header(header, alloc_);
+    shm_make_header(header, alloc_);
     shm_deserialize_main();
+    vec_->shm_init(alloc_);
   }
 
   /** Move constructor */
-  void shm_weak_move_main(ShmHeader<LockedVector> *header,
+  void shm_strong_move_main(ShmHeader<LockedVector> *header,
                           hipc::Allocator *alloc,
                           LockedVector &other) {
     shm_init_main(header, alloc);
@@ -85,7 +79,7 @@ class LockedVector {
     vec_->emplace_back(num);
   }
 
-  hipc::ShmRef<int> operator[](size_t i) {
+  hipc::Ref<int> operator[](size_t i) {
     return (*vec_)[i];
   }
 };

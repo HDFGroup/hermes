@@ -16,7 +16,7 @@
 #include "adapter_constants.h"
 #include "src/hermes_types.h"
 #include "mapper/mapper_factory.h"
-#include "stdio/stdio_fs_api.h"
+#include "adapter/stdio/stdio_fs_api.h"
 
 using hermes::adapter::BlobPlacements;
 using hermes::adapter::MapperFactory;
@@ -29,7 +29,7 @@ namespace stdfs = std::filesystem;
 namespace hermes::adapter::stdio::test {
 struct Arguments {
   std::string filename = "test.dat";
-  std::string directory = "/tmp";
+  std::string directory = "/tmp/test_hermes";
   size_t request_size = 65536;
   size_t num_iterations = 1024;
 };
@@ -51,6 +51,10 @@ hermes::adapter::stdio::test::Arguments args;
 hermes::adapter::stdio::test::Info info;
 
 int init(int* argc, char*** argv) {
+#if HERMES_INTERCEPT == 1
+  setenv("HERMES_FLUSH_MODE", "kSync", 1);
+  HERMES->client_config_.flushing_mode_ = hermes::FlushingMode::kSync;
+#endif
   MPI_Init(argc, argv);
 
   return 0;
@@ -83,7 +87,14 @@ int pretest() {
   return 0;
 }
 
+void Clear() {
+#if HERMES_INTERCEPT == 1
+  HERMES->Clear();
+#endif
+}
+
 int posttest() {
+  Clear();
   if (stdfs::exists(info.new_file)) stdfs::remove(info.new_file);
   if (stdfs::exists(info.existing_file)) stdfs::remove(info.existing_file);
   return 0;

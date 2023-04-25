@@ -18,29 +18,50 @@
 #include "adapter/filesystem/filesystem_io_client.h"
 #include "mpiio_api.h"
 
-using hermes::adapter::IoClientStats;
-using hermes::adapter::IoClientContext;
-using hermes::adapter::IoStatus;
+using hermes::adapter::fs::AdapterStat;
+using hermes::adapter::fs::FsIoOptions;
+using hermes::adapter::fs::IoStatus;
 using hermes::adapter::fs::MpiioApi;
 
 namespace hermes::adapter::fs {
 
+/** State for the MPI I/O trait */
+struct MpiioIoClientHeader : public TraitHeader {
+  explicit MpiioIoClientHeader(const std::string &trait_uuid,
+                               const std::string &trait_name)
+      : TraitHeader(trait_uuid, trait_name,
+                    HERMES_TRAIT_FLUSH) {}
+};
+
 /** A class to represent STDIO IO file system */
 class MpiioIoClient : public hermes::adapter::fs::FilesystemIoClient {
+ public:
+  HERMES_TRAIT_H(MpiioIoClient, "mpiio_io_client")
+
  private:
   HERMES_MPIIO_API_T real_api; /**< pointer to real APIs */
 
  public:
   /** Default constructor */
-  MpiioIoClient() { real_api = HERMES_MPIIO_API; }
+  MpiioIoClient() {
+    real_api = HERMES_MPIIO_API;
+    CreateHeader<MpiioIoClientHeader>("mpiio_io_client_", trait_name_);
+  }
+
+  /** Trait deserialization constructor */
+  explicit MpiioIoClient(hshm::charbuf &params) {
+    (void) params;
+    real_api = HERMES_MPIIO_API;
+    CreateHeader<MpiioIoClientHeader>("mpiio_io_client_", trait_name_);
+  }
 
   /** Virtual destructor */
   virtual ~MpiioIoClient() = default;
 
  public:
   /** Allocate an fd for the file f */
-  void RealOpen(IoClientObject &f,
-                IoClientStats &stat,
+  void RealOpen(File &f,
+                AdapterStat &stat,
                 const std::string &path) override;
 
   /**
@@ -49,50 +70,47 @@ class MpiioIoClient : public hermes::adapter::fs::FilesystemIoClient {
    * and hermes file handler. These are not the same as STDIO file
    * descriptor and STDIO file handler.
    * */
-  void HermesOpen(IoClientObject &f,
-                  const IoClientStats &stat,
-                  FilesystemIoClientObject &fs_mdm) override;
+  void HermesOpen(File &f,
+                  const AdapterStat &stat,
+                  FilesystemIoClientState &fs_mdm) override;
 
   /** Synchronize \a file FILE f */
-  int RealSync(const IoClientObject &f,
-               const IoClientStats &stat) override;
+  int RealSync(const File &f,
+               const AdapterStat &stat) override;
 
   /** Close \a file FILE f */
-  int RealClose(const IoClientObject &f,
-                IoClientStats &stat) override;
+  int RealClose(const File &f,
+                AdapterStat &stat) override;
 
   /**
    * Called before RealClose. Releases information provisioned during
    * the allocation phase.
    * */
-  void HermesClose(IoClientObject &f,
-                   const IoClientStats &stat,
-                   FilesystemIoClientObject &fs_mdm) override;
+  void HermesClose(File &f,
+                   const AdapterStat &stat,
+                   FilesystemIoClientState &fs_mdm) override;
 
   /** Remove \a file FILE f */
-  int RealRemove(const IoClientObject &f,
-                 IoClientStats &stat) override;
+  int RealRemove(const std::string &path) override;
 
   /** Get initial statistics from the backend */
-  void InitBucketState(const hipc::charbuf &bkt_name,
-                       const IoClientContext &opts,
-                       GlobalIoClientState &stat) override;
+  size_t GetSize(const hipc::charbuf &bkt_name) override;
 
   /** Initialize I/O context using count + datatype */
   static size_t IoSizeFromCount(int count,
                                 MPI_Datatype datatype,
-                                IoClientContext &opts);
+                                FsIoOptions &opts);
 
   /** Write blob to backend */
-  void WriteBlob(const hipc::charbuf &bkt_name,
+  void WriteBlob(const std::string &bkt_name,
                  const Blob &full_blob,
-                 const IoClientContext &opts,
+                 const FsIoOptions &opts,
                  IoStatus &status) override;
 
   /** Read blob from the backend */
-  void ReadBlob(const hipc::charbuf &bkt_name,
+  void ReadBlob(const std::string &bkt_name,
                 Blob &full_blob,
-                const IoClientContext &opts,
+                const FsIoOptions &opts,
                 IoStatus &status) override;
 
   /** Update the I/O status after a ReadBlob or WriteBlob */
@@ -103,7 +121,7 @@ class MpiioIoClient : public hermes::adapter::fs::FilesystemIoClient {
 
 /** Simplify access to the stateless StdioIoClient Singleton */
 #define HERMES_MPIIO_IO_CLIENT \
-  hermes_shm::EasySingleton<hermes::adapter::fs::MpiioIoClient>::GetInstance()
+  hshm::EasySingleton<hermes::adapter::fs::MpiioIoClient>::GetInstance()
 #define HERMES_MPIIO_IO_CLIENT_T hermes::adapter::fs::MpiioIoClient*
 
 #endif  // HERMES_ADAPTER_MPIIO_MPIIO_IO_CLIENT_H_

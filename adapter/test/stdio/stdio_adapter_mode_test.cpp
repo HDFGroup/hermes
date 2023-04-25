@@ -19,7 +19,7 @@
 #include <iostream>
 
 #if HERMES_INTERCEPT == 1
-#include "stdio/stdio_api.h"
+#include "adapter/stdio/stdio_api.h"
 #endif
 
 #include "adapter_test_utils.h"
@@ -32,7 +32,7 @@ using hermes::adapter::AdapterMode;
 namespace hermes::adapter::stdio::test {
 struct Arguments {
   std::string filename = "test.dat";
-  std::string directory = "/tmp";
+  std::string directory = "/tmp/test_hermes";
   size_t request_size = 65536;
 };
 struct Info {
@@ -60,6 +60,10 @@ hermes::adapter::stdio::test::Arguments args;
 hermes::adapter::stdio::test::Info info;
 
 int init(int* argc, char*** argv) {
+#if HERMES_INTERCEPT == 1
+  setenv("HERMES_FLUSH_MODE", "kSync", 1);
+  HERMES->client_config_.flushing_mode_ = hermes::FlushingMode::kSync;
+#endif
   stdfs::path fullpath = args.directory;
   fullpath /= args.filename;
   info.new_file = fullpath.string() + "_new" + std::to_string(getpid());
@@ -82,12 +86,46 @@ int finalize() {
   return 0;
 }
 
+void IgnoreAllFiles() {
+#if HERMES_INTERCEPT == 1
+  HERMES->client_config_.SetAdapterPathTracking(info.existing_file_cmp, false);
+  HERMES->client_config_.SetAdapterPathTracking(info.new_file_cmp, false);
+  HERMES->client_config_.SetAdapterPathTracking(info.new_file, false);
+  HERMES->client_config_.SetAdapterPathTracking(info.existing_file, false);
+#endif
+}
+
+void TrackFiles() {
+#if HERMES_INTERCEPT == 1
+  HERMES->client_config_.SetAdapterPathTracking(info.new_file, true);
+  HERMES->client_config_.SetAdapterPathTracking(info.existing_file, true);
+#endif
+}
+
+void RemoveFile(const std::string &path) {
+  stdfs::remove(path);
+  if (stdfs::exists(path)) {
+    HELOG(kFatal, "Failed to remove: {}", path)
+  }
+}
+
+void RemoveFiles() {
+  RemoveFile(info.new_file);
+  RemoveFile(info.new_file_cmp);
+  RemoveFile(info.existing_file);
+  RemoveFile(info.existing_file_cmp);
+}
+
+void Clear() {
+#if HERMES_INTERCEPT == 1
+  HERMES->Clear();
+#endif
+}
+
 int pretest() {
-  if (stdfs::exists(info.new_file)) stdfs::remove(info.new_file);
-  if (stdfs::exists(info.new_file_cmp)) stdfs::remove(info.new_file_cmp);
-  if (stdfs::exists(info.existing_file)) stdfs::remove(info.existing_file);
-  if (stdfs::exists(info.existing_file_cmp))
-    stdfs::remove(info.existing_file_cmp);
+  IgnoreAllFiles();
+  RemoveFiles();
+
   if (!stdfs::exists(info.existing_file)) {
     std::string cmd = "{ tr -dc '[:alnum:]' < /dev/urandom | head -c " +
                       std::to_string(args.request_size * info.num_iterations) +
@@ -106,18 +144,13 @@ int pretest() {
             args.request_size * info.num_iterations);
   }
   REQUIRE(info.total_size > 0);
-#if HERMES_INTERCEPT == 1
-  HERMES->client_config_.SetAdapterPathTracking(info.existing_file_cmp, false);
-  HERMES->client_config_.SetAdapterPathTracking(info.new_file_cmp, false);
-#endif
+
+  TrackFiles();
   return 0;
 }
 
 int posttest(bool compare_data = true) {
-#if HERMES_INTERCEPT == 1
-  HERMES->client_config_.SetAdapterPathTracking(info.existing_file, false);
-  HERMES->client_config_.SetAdapterPathTracking(info.new_file, false);
-#endif
+  IgnoreAllFiles();
   if (compare_data && stdfs::exists(info.new_file) &&
       stdfs::exists(info.new_file_cmp)) {
     size_t size = stdfs::file_size(info.new_file);
@@ -177,18 +210,9 @@ int posttest(bool compare_data = true) {
     }
   }
   /* Clean up. */
-  if (stdfs::exists(info.new_file)) stdfs::remove(info.new_file);
-  if (stdfs::exists(info.existing_file)) stdfs::remove(info.existing_file);
-  if (stdfs::exists(info.new_file_cmp)) stdfs::remove(info.new_file_cmp);
-  if (stdfs::exists(info.existing_file_cmp))
-    stdfs::remove(info.existing_file_cmp);
-
-#if HERMES_INTERCEPT == 1
-  HERMES->client_config_.SetAdapterPathTracking(info.existing_file_cmp, true);
-  HERMES->client_config_.SetAdapterPathTracking(info.new_file_cmp, true);
-  HERMES->client_config_.SetAdapterPathTracking(info.new_file, true);
-  HERMES->client_config_.SetAdapterPathTracking(info.existing_file, true);
-#endif
+  TrackFiles();
+  RemoveFiles();
+  Clear();
   return 0;
 }
 
@@ -262,6 +286,7 @@ TEST_CASE("BatchedWriteSequentialPersistent",
               std::to_string(info.num_iterations) +
               "]"
               "[pattern=sequential][file=1]") {
+  HERMES->client_config_.SetBaseAdapterMode(AdapterMode::kDefault);
   REQUIRE(HERMES->client_config_.GetBaseAdapterMode() == AdapterMode::kDefault);
   pretest();
   SECTION("write to new file always at end") {
@@ -289,6 +314,7 @@ TEST_CASE("BatchedWriteSequentialBypass",
               std::to_string(info.num_iterations) +
               "]"
               "[pattern=sequential][file=1]") {
+  HERMES->client_config_.SetBaseAdapterMode(AdapterMode::kBypass);
   REQUIRE(HERMES->client_config_.GetBaseAdapterMode() == AdapterMode::kBypass);
   pretest();
   SECTION("write to new file always at end") {
@@ -316,6 +342,7 @@ TEST_CASE("BatchedWriteSequentialScratch",
               std::to_string(info.num_iterations) +
               "]"
               "[pattern=sequential][file=1]") {
+  HERMES->client_config_.SetBaseAdapterMode(AdapterMode::kScratch);
   REQUIRE(HERMES->client_config_.GetBaseAdapterMode() == AdapterMode::kScratch);
   pretest();
   SECTION("write to new file always at end") {
@@ -328,7 +355,9 @@ TEST_CASE("BatchedWriteSequentialScratch",
     }
     test::test_fclose();
     REQUIRE(test::status_orig == 0);
-    REQUIRE(stdfs::file_size(info.new_file) == 0);
+    IgnoreAllFiles();
+    REQUIRE(stdfs::exists(info.new_file) == 0);
+    TrackFiles();
   }
   posttest(false);
 }

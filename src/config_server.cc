@@ -10,17 +10,13 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include <float.h>
-#include <limits.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <yaml-cpp/yaml.h>
 #include <ostream>
-#include <glog/logging.h>
+#include "hermes_shm/util/logging.h"
 #include "utils.h"
 #include "config.h"
-#include <iomanip>
+#include "hermes_shm/util/config_parse.h"
 
 #include "config_server.h"
 #include "config_server_default.h"
@@ -29,58 +25,54 @@ namespace hermes::config {
 
 /** parse device information from YAML config */
 void ServerConfig::ParseDeviceInfo(YAML::Node yaml_conf) {
-  devices_.clear();
+  devices_ = hipc::make_uptr<hipc::vector<DeviceInfo>>();
   for (auto device : yaml_conf) {
-    DeviceInfo dev(hipc::typed_nullptr<hipc::Allocator>());
+    devices_->emplace_back();
+    DeviceInfo &dev = devices_->back();
     auto dev_info = device.second;
-    (*dev.dev_name_) = hipc::string(
-        device.first.as<std::string>());
-    (*dev.mount_dir_) = hipc::string(
+    (*dev.dev_name_) = device.first.as<std::string>();
+    (*dev.mount_dir_) = hshm::ConfigParse::ExpandPath(
         dev_info["mount_point"].as<std::string>());
-    dev.header_->borg_min_thresh_ =
+    dev.borg_min_thresh_ =
         dev_info["borg_capacity_thresh"][0].as<float>();
-    dev.header_->borg_max_thresh_ =
+    dev.borg_max_thresh_ =
         dev_info["borg_capacity_thresh"][1].as<float>();
-    dev.header_->is_shared_ =
+    dev.is_shared_ =
         dev_info["is_shared_device"].as<bool>();
-    dev.header_->block_size_ =
-        ParseSize(dev_info["block_size"].as<std::string>());
-    dev.header_->capacity_ =
-        ParseSize(dev_info["capacity"].as<std::string>());
-    dev.header_->bandwidth_ =
-        ParseSize(dev_info["bandwidth"].as<std::string>());
-    dev.header_->latency_ =
-        ParseLatency(dev_info["latency"].as<std::string>());
+    dev.block_size_ =
+        hshm::ConfigParse::ParseSize(dev_info["block_size"].as<std::string>());
+    dev.capacity_ =
+        hshm::ConfigParse::ParseSize(dev_info["capacity"].as<std::string>());
+    dev.bandwidth_ =
+        hshm::ConfigParse::ParseSize(dev_info["bandwidth"].as<std::string>());
+    dev.latency_ =
+        hshm::ConfigParse::ParseLatency(dev_info["latency"].as<std::string>());
     std::vector<std::string> size_vec;
     ParseVector<std::string, std::vector<std::string>>(
         dev_info["slab_sizes"], size_vec);
     dev.slab_sizes_->reserve(size_vec.size());
     for (const std::string &size_str : size_vec) {
-      dev.slab_sizes_->emplace_back(ParseSize(size_str));
+      dev.slab_sizes_->emplace_back(hshm::ConfigParse::ParseSize(size_str));
     }
-    devices_.emplace_back(std::move(dev));
   }
 }
 
 /** parse RPC information from YAML config */
 void ServerConfig::ParseRpcInfo(YAML::Node yaml_conf) {
-  std::string base_name;
   std::string suffix;
-  std::vector<std::string> host_numbers;
 
   if (yaml_conf["host_file"]) {
     rpc_.host_file_ =
-        yaml_conf["host_file"].as<std::string>();
+        hshm::ConfigParse::ExpandPath(yaml_conf["host_file"].as<std::string>());
+    rpc_.host_names_.clear();
   }
-  if (yaml_conf["base_name"]) {
-    base_name = yaml_conf["base_name"].as<std::string>();
-  }
-  if (yaml_conf["suffix"]) {
-    suffix = yaml_conf["suffix"].as<std::string>();
-  }
-  if (yaml_conf["number_range"]) {
-    ParseRangeList(yaml_conf["rpc_host_number_range"], "rpc_host_number_range",
-                   host_numbers);
+  if (yaml_conf["host_names"] && rpc_.host_file_.size() == 0) {
+    // NOTE(llogan): host file is prioritized
+    rpc_.host_names_.clear();
+    for (YAML::Node host_name_gen : yaml_conf["host_names"]) {
+      std::string host_names = host_name_gen.as<std::string>();
+      hshm::ConfigParse::ParseHostNameString(host_names, rpc_.host_names_);
+    }
   }
   if (yaml_conf["domain"]) {
     rpc_.domain_ = yaml_conf["domain"].as<std::string>();
@@ -93,20 +85,6 @@ void ServerConfig::ParseRpcInfo(YAML::Node yaml_conf) {
   }
   if (yaml_conf["num_threads"]) {
     rpc_.num_threads_ = yaml_conf["num_threads"].as<int>();
-  }
-
-  // Remove all default host names
-  if (rpc_.host_file_.size() > 0 || base_name.size() > 0) {
-    rpc_.host_names_.clear();
-  }
-
-  if (base_name.size()) {
-    if (host_numbers.size() == 0) {
-      host_numbers.emplace_back("");
-    }
-    for (auto host_number : host_numbers) {
-      rpc_.host_names_.emplace_back(base_name + host_number + suffix);
-    }
   }
 }
 
@@ -129,6 +107,47 @@ void ServerConfig::ParseBorgInfo(YAML::Node yaml_conf) {
   }
 }
 
+/** parse I/O tracing information from YAML config */
+void ServerConfig::ParseTracingInfo(YAML::Node yaml_conf) {
+  if (yaml_conf["enabled"]) {
+    tracing_.enabled_ = yaml_conf["enabled"].as<bool>();
+  }
+  if (yaml_conf["output"]) {
+    tracing_.output_ = hshm::ConfigParse::ExpandPath(
+        yaml_conf["output"].as<std::string>());
+  }
+}
+
+/** parse prefetch information from YAML config */
+void ServerConfig::ParsePrefetchInfo(YAML::Node yaml_conf) {
+  if (yaml_conf["enabled"]) {
+    prefetcher_.enabled_ = yaml_conf["enabled"].as<bool>();
+  }
+  if (yaml_conf["io_trace_path"]) {
+    prefetcher_.trace_path_ = hshm::ConfigParse::ExpandPath(
+        yaml_conf["io_trace_path"].as<std::string>());
+  }
+  if (yaml_conf["epoch_ms"]) {
+    prefetcher_.epoch_ms_ = yaml_conf["epoch_ms"].as<size_t>();
+  }
+  if (yaml_conf["is_mpi"]) {
+    prefetcher_.is_mpi_ = yaml_conf["is_mpi"].as<bool>();
+  }
+}
+
+/** parse prefetch information from YAML config */
+void ServerConfig::ParseTraitInfo(YAML::Node yaml_conf) {
+  std::vector<std::string> trait_names;
+  ParseVector<std::string, std::vector<std::string>>(
+      yaml_conf, trait_names);
+  trait_paths_.reserve(trait_names.size());
+  for (auto &name : trait_names) {
+    name = hshm::ConfigParse::ExpandPath(name);
+    trait_paths_.emplace_back(
+        hshm::Formatter::format("lib{}.so", name));
+  }
+}
+
 /** parse the YAML node */
 void ServerConfig::ParseYAML(YAML::Node &yaml_conf) {
   if (yaml_conf["devices"]) {
@@ -143,9 +162,18 @@ void ServerConfig::ParseYAML(YAML::Node &yaml_conf) {
   if (yaml_conf["buffer_organizer"]) {
     ParseBorgInfo(yaml_conf["buffer_organizer"]);
   }
+  if (yaml_conf["tracing"]) {
+    ParsePrefetchInfo(yaml_conf["tracing"]);
+  }
+  if (yaml_conf["prefetch"]) {
+    ParsePrefetchInfo(yaml_conf["prefetch"]);
+  }
   if (yaml_conf["system_view_state_update_interval_ms"]) {
     system_view_state_update_interval_ms =
         yaml_conf["system_view_state_update_interval_ms"].as<int>();
+  }
+  if (yaml_conf["traits"]) {
+    ParseTraitInfo(yaml_conf["traits"]);
   }
   if (yaml_conf["shmem_name"]) {
     shmem_name_ = yaml_conf["shmem_name"].as<std::string>();

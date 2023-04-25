@@ -7,6 +7,7 @@
 mkdir build
 pushd build
 
+#LOCAL=local
 INSTALL_PREFIX="${HOME}/${LOCAL}"
 
 export CXXFLAGS="${CXXFLAGS} -std=c++17 -Werror -Wall -Wextra"
@@ -29,7 +30,6 @@ cmake                                                      \
     -DHERMES_USE_ADDRESS_SANITIZER=ON                      \
     -DHERMES_USE_THREAD_SANITIZER=OFF                      \
     -DHERMES_RPC_THALLIUM=ON                               \
-    -DHERMES_DEBUG_HEAP=OFF                                \
     -DHERMES_ENABLE_VFD=ON                                 \
     -DBUILD_TESTING=ON                                     \
     ..

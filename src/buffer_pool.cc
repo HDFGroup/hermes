@@ -17,81 +17,98 @@
 
 namespace hermes {
 
+/**====================================
+ * Default Constructor
+ * ===================================*/
+
 /**
 * Initialize the BPM and its shared memory.
 * REQUIRES mdm to be initialized already.
 * */
-void BufferPool::shm_init_main(ShmHeader<BufferPool> *header,
-                               hipc::Allocator *alloc) {
-  shm_init_allocator(alloc);
-  shm_init_header(header, alloc_);
-  mdm_ = &HERMES->mdm_;
-  borg_ = &HERMES->borg_;
-  rpc_ = &HERMES->rpc_;
+void BufferPool::shm_init(hipc::ShmArchive<BufferPoolShm> &header,
+                          hipc::Allocator *alloc) {
+  shm_deserialize(header);
+  // Initialize header
+  HSHM_MAKE_AR0(header_->free_lists_, alloc);
   // [target] [cpu] [page_size]
   header_->ntargets_ = mdm_->targets_->size();
-  header_->ncpu_ = HERMES_SYSTEM_INFO->ncpu_;
+  header_->concurrency_ = HERMES_SYSTEM_INFO->ncpu_;
   header_->nslabs_ = 0;
-  // Get the maximum number of slabs over all targets
-  for (hipc::ShmRef<TargetInfo> target : *mdm_->targets_) {
-    int dev_id = target->id_.GetDeviceId();
-    hipc::ShmRef<DeviceInfo> dev_info = (*mdm_->devices_)[dev_id];
-    if (header_->nslabs_ < dev_info->slab_sizes_->size()) {
-      header_->nslabs_ = dev_info->slab_sizes_->size();
+  // Get the maximum number of slab sizes over all targets
+  for (TargetInfo &target : *mdm_->targets_) {
+    int dev_id = target.id_.GetDeviceId();
+    DeviceInfo &dev_info = (*mdm_->devices_)[dev_id];
+    if (header_->nslabs_ < dev_info.slab_sizes_->size()) {
+      header_->nslabs_ = dev_info.slab_sizes_->size();
     }
   }
   // Create target free lists
-  shm_deserialize_main();
-  target_allocs_->resize(header_->ntargets_ * header_->ncpu_ *
+  target_allocs_->resize(header_->ntargets_ * header_->concurrency_ *
                          header_->nslabs_);
   // Initialize target free lists
-  for (size_t i = 0; i < header_->ntargets_; ++i) {
-    for (size_t j = 0; j < header_->ncpu_; ++j) {
-      size_t free_list_start = header_->GetCpuFreeList(i, j);
-      hipc::ShmRef<TargetInfo> target = (*mdm_->targets_)[i];
-      int dev_id = target->id_.GetDeviceId();
-      hipc::ShmRef<DeviceInfo> dev_info = (*mdm_->devices_)[dev_id];
-      for (size_t k = 0; k < dev_info->slab_sizes_->size(); ++k) {
-        hipc::ShmRef<BpFreeListPair> free_list_p =
-            (*target_allocs_)[free_list_start + k];
-        hipc::ShmRef<BpFreeListStat> &stat = free_list_p->first_;
-        hipc::ShmRef<BpFreeList> &free_list = free_list_p->second_;
-        stat->page_size_ = *(*dev_info->slab_sizes_)[k];
-        stat->region_off_ = 0;
-        stat->region_size_ = target->max_cap_;
-        stat->lock_.Init();
+  for (u16 target_id = 0; target_id < header_->ntargets_; ++target_id) {
+    for (size_t cpu = 0; cpu < header_->concurrency_; ++cpu) {
+      // Get the target + device info
+      TargetInfo &target = (*mdm_->targets_)[target_id];
+      int dev_id = target.id_.GetDeviceId();
+      DeviceInfo &dev_info = (*mdm_->devices_)[dev_id];
+      size_t size_per_core = target.max_cap_ / header_->concurrency_;
+      if (size_per_core < MEGABYTES(1)) {
+        HELOG(kFatal, "The capacity of the target {} ({} bytes)"
+              " is not enough to give each of the {} CPUs at least"
+              " 1MB of space",
+              dev_info.mount_point_->str(),
+              target.max_cap_, header_->concurrency_)
       }
+
+      // Initialize the core's metadata
+      BpFreeListStat *target_stat;
+      GetTargetStatForCpu(target_id, cpu, target_stat);
+      target_stat->region_off_ = cpu * size_per_core;
+      target_stat->region_size_ = size_per_core;
+      target_stat->lock_.Init();
     }
   }
 }
 
-/** Store the BPM in shared memory */
-void BufferPool::shm_serialize_main() const {}
+/**====================================
+ * SHM Deserialize
+ * ===================================*/
 
 /** Deserialize the BPM from shared memory */
-void BufferPool::shm_deserialize_main() {
+void BufferPool::shm_deserialize(hipc::ShmArchive<BufferPoolShm> &header) {
   mdm_ = &HERMES->mdm_;
   borg_ = &HERMES->borg_;
   rpc_ = &HERMES->rpc_;
-  target_allocs_ = hipc::ShmRef<BpTargetAllocs>(
-      header_->free_lists_.internal_ref(alloc_));
+  header_ = header.get();
+  target_allocs_ = header_->free_lists_.get();
 }
+
+/**====================================
+ * Destructor
+ * ===================================*/
 
 /** Destroy the BPM shared memory. */
 void BufferPool::shm_destroy_main() {
   target_allocs_->shm_destroy();
 }
 
+/**====================================
+ * Allocate Buffers
+ * ===================================*/
+
 /**
 * Allocate buffers from the targets according to the schema
 * */
-hipc::vector<BufferInfo>
+std::vector<BufferInfo>
 BufferPool::LocalAllocateAndSetBuffers(PlacementSchema &schema,
                                        const Blob &blob) {
-  hipc::vector<BufferInfo> buffers(HERMES->main_alloc_);
+  AUTO_TRACE(1)
+  std::vector<BufferInfo> buffers;
   size_t blob_off = 0;
-  int cpu = hermes_shm::NodeThreadId().hash() % HERMES_SYSTEM_INFO->ncpu_;
+  int cpu = hshm::NodeThreadId().hash() % header_->concurrency_;
 
+  TIMER_START("AllocateBuffers")
   for (SubPlacement &plcmnt : schema.plcmnts_) {
     // Get the target and device in the placement schema
     if (plcmnt.tid_.GetNodeId() != mdm_->rpc_->node_id_) {
@@ -99,91 +116,55 @@ BufferPool::LocalAllocateAndSetBuffers(PlacementSchema &schema,
       continue;
     }
     int dev_id = plcmnt.tid_.GetDeviceId();
-    hipc::ShmRef<DeviceInfo> dev_info = (*mdm_->devices_)[dev_id];
-
-    // Get the first CPU free list pair & acquire lock
-    size_t free_list_start = header_->GetCpuFreeList(
-        plcmnt.tid_.GetIndex(), cpu);
-    hipc::ShmRef<BpFreeListPair> first_free_list_p =
-        (*target_allocs_)[free_list_start];
-    hermes_shm::ScopedMutex(first_free_list_p->first_->lock_);
+    DeviceInfo &dev_info = (*mdm_->devices_)[dev_id];
 
     // Get the number of each buffer size to allocate
-    size_t buffer_count, total_alloced_size;
+    size_t buffer_count;
     std::vector<BpCoin> coins = CoinSelect(dev_info,
                                            plcmnt.size_,
-                                           buffer_count,
-                                           total_alloced_size);
+                                           buffer_count);
 
     // Allocate buffers
-    AllocateBuffers(plcmnt, buffers, coins,
-                    plcmnt.tid_.GetIndex(),
-                    dev_info->slab_sizes_->size(),
-                    free_list_start,
-                    blob_off);
-    mdm_->LocalUpdateTargetCapacity(plcmnt.tid_,
-                                    -static_cast<off64_t>(total_alloced_size));
+    AllocateBuffers(plcmnt.size_,
+                    coins,
+                    plcmnt.tid_,
+                    cpu,
+                    blob_off,
+                    buffers);
   }
+  TIMER_END()
   borg_->LocalPlaceBlobInBuffers(blob, buffers);
-  return std::move(buffers);
-}
-
-/** Find instance of unique target if it exists */
-static std::vector<std::pair<TargetId, size_t>>::iterator
-FindUniqueTarget(std::vector<std::pair<TargetId, size_t>> &unique_tgts,
-                 TargetId &tid) {
-  for (auto iter = unique_tgts.begin(); iter != unique_tgts.end(); ++iter) {
-    if (iter->first == tid) {
-      return iter;
-    }
-  }
-  return unique_tgts.end();
-}
-
-/** Get the unique set of targets */
-std::vector<std::pair<TargetId, size_t>>
-GroupByTarget(PlacementSchema &schema, size_t &total_size) {
-  total_size = 0;
-  std::vector<std::pair<TargetId, size_t>> unique_tgts;
-  for (auto &plcmnt : schema.plcmnts_) {
-    auto iter = FindUniqueTarget(unique_tgts, plcmnt.tid_);
-    if (iter == unique_tgts.end()) {
-      unique_tgts.emplace_back(plcmnt.tid_, plcmnt.size_);
-    } else {
-      (*iter).second += plcmnt.size_;
-    }
-    total_size += plcmnt.size_;
-  }
-  return unique_tgts;
+  return buffers;
 }
 
 /**
-* The RPC of LocalAllocateAndSendBuffers
-* */
-hipc::vector<BufferInfo>
+ * The RPC of LocalAllocateAndSendBuffers
+ * */
+std::vector<BufferInfo>
 BufferPool::GlobalAllocateAndSetBuffers(PlacementSchema &schema,
                                         const Blob &blob) {
+  AUTO_TRACE(1)
   // Get the nodes to transfer buffers to
   size_t total_size;
-  auto unique_tgts = GroupByTarget(schema, total_size);
-  hipc::vector<BufferInfo> info(0);
+  auto unique_nodes = GroupByNodeId(schema, total_size);
+  std::vector<BufferInfo> info;
 
   // Send the buffers to each node
-  for (auto &[tid, size] : unique_tgts) {
-    hipc::vector<BufferInfo> sub_info(0);
-    if (NODE_ID_IS_LOCAL(tid.GetNodeId())) {
+  for (auto &[node_id, size] : unique_nodes) {
+    std::vector<BufferInfo> sub_info;
+    if (NODE_ID_IS_LOCAL(node_id)) {
       sub_info = LocalAllocateAndSetBuffers(schema, blob);
     } else {
-      sub_info = rpc_->IoCall<hipc::vector<BufferInfo>>(
-          tid.GetNodeId(), "RpcAllocateAndSetBuffers",
+      sub_info = rpc_->IoCall<std::vector<BufferInfo>>(
+          node_id, "RpcAllocateAndSetBuffers",
           IoType::kWrite, blob.data(), blob.size(),
           blob.size(), schema);
     }
 
     // Concatenate
     info.reserve(info.size() + sub_info.size());
-    for (hipc::ShmRef<BufferInfo> tmp_info : sub_info) {
-      info.emplace_back(*tmp_info);
+    for (BufferInfo &tmp_info : sub_info) {
+      info.emplace_back(tmp_info);
     }
   }
 
@@ -191,109 +172,181 @@ BufferPool::GlobalAllocateAndSetBuffers(PlacementSchema &schema,
 }
 
 /**
-* Allocate each size of buffer from either the free list or the
-* device growth allocator
-* */
-void BufferPool::AllocateBuffers(SubPlacement &plcmnt,
-                                 hipc::vector<BufferInfo> &buffers,
+ * Allocate requested slabs from this target.
+ * If the target runs out of space, it will provision from the next target.
+ * We assume there is a baseline target, which can house an infinite amount
+ * of data. This would be the PFS in an HPC machine.
+ *
+ * @param total_size the total amount of data being placed in this target
+ * @param coins The requested number of slabs to allocate from this target
+ * @param target_id The ID of the (ideal) target to allocate from
+ * @param blob_off [out] The current size of the blob which has been placed
+ * @param buffers [out] The buffers which were allocated
+ * */
+void BufferPool::AllocateBuffers(size_t total_size,
                                  std::vector<BpCoin> &coins,
-                                 u16 target_id,
-                                 size_t num_slabs,
-                                 size_t free_list_start,
-                                 size_t &blob_off) {
+                                 TargetId tid,
+                                 int cpu,
+                                 size_t &blob_off,
+                                 std::vector<BufferInfo> &buffers) {
   // Get this target's stack allocator
-  size_t target_free_list_start = header_->GetTargetFreeList(
-      target_id);
-  hipc::ShmRef<BpFreeListPair> target_free_list_p =
-      (*target_allocs_)[target_free_list_start];
-  hipc::ShmRef<BpFreeListStat> &target_stat = target_free_list_p->first_;
-  size_t rem_size = plcmnt.size_;
+  size_t rem_size = total_size;
 
-  for (size_t i = 0; i < num_slabs; ++i) {
-    if (coins[i].count_ == 0) { continue; }
+  // Allocate each slab size
+  for (size_t slab_id = 0; slab_id < coins.size(); ++slab_id) {
+    size_t slab_size = coins[slab_id].slab_size_;
+    size_t slab_count = coins[slab_id].count_;
+    while (slab_count) {
+      // Allocate slabs
+      AllocateSlabs(rem_size, slab_size, slab_count, slab_id, tid,
+                    cpu, blob_off, buffers);
 
-    // Get this core's free list for the page_size
-    hipc::ShmRef<BpFreeListPair> free_list_p =
-        (*target_allocs_)[free_list_start + i];
-    hipc::ShmRef<BpFreeListStat> &stat = free_list_p->first_;
-    hipc::ShmRef<BpFreeList> &free_list = free_list_p->second_;
-
-    // Allocate slabs
-    for (size_t j = 0; j < coins[i].count_; ++j) {
-      BpSlot slot = AllocateSlabSize(coins[i], stat, free_list, target_stat);
-      BufferInfo info;
-      info.t_off_ = slot.t_off_;
-      info.t_size_ = slot.t_size_;
-      info.t_slab_ = j;
-      info.blob_off_ = blob_off;
-      info.blob_size_ = slot.t_size_;
-      if (rem_size < slot.t_size_) {
-        info.blob_size_ = rem_size;
+      // Go to the next target if there was not enough space in this target
+      if (slab_count > 0) {
+        i32 target_id = tid.GetIndex() + 1;
+        if (target_id >= (i32)mdm_->targets_->size()) {
+          HELOG(kFatal, "BORG ran out of space on all targets."
+                " This shouldn't happen."
+                " Please increase the amount of space dedicated to PFS.")
+        }
+        tid = (*mdm_->targets_)[target_id].id_;
       }
-      rem_size -= info.blob_size_;
-      info.tid_ = plcmnt.tid_;
-      blob_off += info.blob_size_;
-      buffers.emplace_back(info);
     }
   }
 }
 
 /**
-* Allocate each size of buffer from either the free list or the
-* device growth allocator
-* */
-BpSlot BufferPool::AllocateSlabSize(BpCoin &coin,
-                                    hipc::ShmRef<BpFreeListStat> &stat,
-                                    hipc::ShmRef<BpFreeList> &free_list,
-                                    hipc::ShmRef<BpFreeListStat> &target_stat) {
-  BpSlot slot;
+ * Allocate a set of slabs of particular size from this target.
+ *
+ * @param rem_size the amount of data remaining that needs to be allocated
+ * @param slab_size Size of the slabs to allocate
+ * @param slab_count The count of this slab size to allocate
+ * @param slab_id The offset of the slab in the device's slab list
+ * @param tid The target to allocate slabs from
+ * @param cpu the CPU this node is on
+ * @param blob_off [out] The current size of the blob which has been placed
+ * @param buffers [out] The buffers which were allocated
+ * */
+void BufferPool::AllocateSlabs(size_t &rem_size,
+                               size_t slab_size,
+                               size_t &slab_count,
+                               size_t slab_id,
+                               TargetId tid,
+                               int cpu,
+                               size_t &blob_off,
+                               std::vector<BufferInfo> &buffers) {
+  int cpu_off = 0;
+  int ncpu = header_->concurrency_;
+
+  // Get the free list for this CPU
+  BpFreeList *free_list;
+  BpFreeListStat *free_list_stat;
+  BpFreeListStat *target_stat;
+  GetFreeListForCpu(tid.GetIndex(), cpu, slab_id, free_list,
+                    free_list_stat);
+  GetTargetStatForCpu(tid.GetIndex(), cpu, target_stat);
+  target_stat->lock_.Lock(10);
+
+  while (slab_count > 0) {
+    BpSlot slot =
+        AllocateSlabSize(cpu, slab_size,
+                         free_list, free_list_stat, target_stat);
+    if (slot.IsNull()) {
+      if (cpu_off < ncpu) {
+        cpu = (cpu + 1) % ncpu;
+        target_stat->lock_.Unlock();
+        GetFreeListForCpu(tid.GetIndex(), cpu, slab_id, free_list,
+                          free_list_stat);
+        GetTargetStatForCpu(tid.GetIndex(), cpu, target_stat);
+        target_stat->lock_.Lock(11);
+        cpu_off += 1;
+        continue;
+      } else {
+        target_stat->lock_.Unlock();
+        return;
+      }
+    }
+    buffers.emplace_back();
+    BufferInfo &info = buffers.back();
+    info.t_off_ = slot.t_off_;
+    info.t_size_ = slot.t_size_;
+    info.t_slab_ = slab_id;
+    info.blob_off_ = blob_off;
+    info.blob_size_ = slot.t_size_;
+    if (rem_size < slot.t_size_) {
+      info.blob_size_ = rem_size;
+    }
+    rem_size -= info.blob_size_;
+    info.tid_ = tid;
+    blob_off += info.blob_size_;
+    mdm_->LocalUpdateTargetCapacity(tid, -static_cast<off64_t>(slab_size));
+    --slab_count;
+  }
+  target_stat->lock_.Unlock();
+}
+
+/**
+ * Allocate a buffer of a particular size
+ *
+ * @param slab_id The size of slab to allocate
+ * @param tid The target to (ideally) allocate the slab from
+ * @param coin The buffer size information
+ *
+ * @return returns a BufferPool (BP) slot. The slot is NULL if the
+ * target didn't have enough remaining space.
+ * */
+BpSlot BufferPool::AllocateSlabSize(int cpu,
+                                    size_t slab_size,
+                                    BpFreeList *free_list,
+                                    BpFreeListStat *free_list_stat,
+                                    BpFreeListStat *target_stat) {
+  BpSlot slot(0, 0);
 
   // Case 1: Slab is cached on this core
   if (free_list->size()) {
     auto first = free_list->begin();
-    slot = **first;
+    slot = *first;
     free_list->erase(first);
     return slot;
   }
 
   // Case 2: Allocate slab from stack
-  if (slot.IsNull()) {
-    slot.t_off_ = target_stat->region_off_.fetch_add(coin.slab_size_);
-    slot.t_size_ = coin.slab_size_;
-    target_stat->region_size_ -= coin.slab_size_;
+  if (slot.IsNull() && target_stat->region_size_ >= slab_size) {
+    slot.t_off_ = target_stat->region_off_.fetch_add(slab_size);
+    slot.t_size_ = slab_size;
+    target_stat->region_size_.fetch_sub(slab_size);
     return slot;
   }
 
   // Case 3: Coalesce
   // TOOD(llogan)
 
-  // Case 4: Out of space
-  LOG(FATAL) << "Ran out of space in BufferPool" << std::endl;
+  // Case 4: No more space left in this target.
+  return slot;
 }
 
 /**
-* Determines a reasonable allocation of buffers based on the size of I/O.
-* */
-std::vector<BpCoin> BufferPool::CoinSelect(hipc::ShmRef<DeviceInfo> &dev_info,
+   * Determines a reasonable allocation of buffers based on the size of I/O.
+   * Returns the number of each slab size to allocate
+   * */
+std::vector<BpCoin> BufferPool::CoinSelect(DeviceInfo &dev_info,
                                            size_t total_size,
-                                           size_t &buffer_count,
-                                           size_t &total_alloced_size) {
-  std::vector<BpCoin> coins(dev_info->slab_sizes_->size());
+                                           size_t &buffer_count) {
+  std::vector<BpCoin> coins(dev_info.slab_sizes_->size());
   size_t rem_size = total_size;
   buffer_count = 0;
-  total_alloced_size = 0;
 
   while (rem_size) {
     // Find the slab size nearest to the rem_size
     size_t i = 0, slab_size = 0;
-    for (hipc::ShmRef<size_t> tmp_slab_size : *dev_info->slab_sizes_) {
-      slab_size = *tmp_slab_size;
+    for (size_t &tmp_slab_size : *dev_info.slab_sizes_) {
+      slab_size = tmp_slab_size;
       if (slab_size >= rem_size) {
         break;
       }
       ++i;
     }
-    if (i == dev_info->slab_sizes_->size()) { i -= 1; }
+    if (i == dev_info.slab_sizes_->size()) { i -= 1; }
 
     // Divide rem_size into slabs
     if (rem_size > slab_size) {
@@ -306,33 +359,86 @@ std::vector<BpCoin> BufferPool::CoinSelect(hipc::ShmRef<DeviceInfo> &dev_info,
       rem_size = 0;
     }
     buffer_count += coins[i].count_;
-    total_alloced_size += coins[i].count_ * coins[i].slab_size_;
   }
 
   return coins;
 }
 
+/**====================================
+ * Free Buffers
+ * ===================================*/
+
 /**
-* Free buffers from the BufferPool
-* */
-bool BufferPool::LocalReleaseBuffers(hipc::vector<BufferInfo> &buffers) {
-  int cpu = hermes_shm::NodeThreadId().hash() % HERMES_SYSTEM_INFO->ncpu_;
-  for (hipc::ShmRef<BufferInfo> info : buffers) {
+ * Free buffers from the BufferPool
+ * */
+bool BufferPool::LocalReleaseBuffers(std::vector<BufferInfo> &buffers) {
+  AUTO_TRACE(1)
+  HILOG(kDebug, "Releasing buffers")
+  int cpu = hshm::NodeThreadId().hash() % header_->concurrency_;
+  for (BufferInfo &info : buffers) {
     // Acquire the main CPU lock for the target
-    size_t free_list_start =
-        header_->GetCpuFreeList(info->tid_.GetIndex(), cpu);
-    hipc::ShmRef<BpFreeListPair> first_free_list_p =
-        (*target_allocs_)[free_list_start];
-    hermes_shm::ScopedMutex(first_free_list_p->first_->lock_);
+    BpFreeListStat *target_stat;
+    GetTargetStatForCpu(info.tid_.GetIndex(), cpu, target_stat);
+    hshm::ScopedMutex bpm_lock(target_stat->lock_, 12);
 
     // Get this core's free list for the page_size
-    hipc::ShmRef<BpFreeListPair> free_list_p =
-        (*target_allocs_)[free_list_start + info->t_slab_];
-    hipc::ShmRef<BpFreeListStat> &stat = free_list_p->first_;
-    hipc::ShmRef<BpFreeList> &free_list = free_list_p->second_;
-    free_list->emplace_front(info->t_off_, info->t_size_);
+    BpFreeListStat *free_list_stat;
+    BpFreeList *free_list;
+    GetFreeListForCpu(info.tid_.GetIndex(), cpu, info.t_slab_,
+                      free_list, free_list_stat);
+    free_list->emplace_front(info.t_off_, info.t_size_);
   }
   return true;
+}
+
+/**
+ * Free buffers from the BufferPool (global)
+ * */
+bool BufferPool::GlobalReleaseBuffers(std::vector<BufferInfo> &buffers) {
+  AUTO_TRACE(1)
+  // Get the nodes to transfer buffers to
+  size_t total_size;
+  auto unique_nodes = GroupByNodeId(buffers, total_size);
+
+  // Send the buffers to each node
+  for (auto &[node_id, size] : unique_nodes) {
+    if (NODE_ID_IS_LOCAL(node_id)) {
+      LocalReleaseBuffers(buffers);
+    } else {
+      rpc_->Call<bool>(node_id, "RpcReleaseBuffers", buffers);
+    }
+  }
+
+  return true;
+}
+
+/**====================================
+ * Helper Methods
+ * ===================================*/
+
+/** Get a free list reference */
+void BufferPool::GetFreeListForCpu(u16 target_id, int cpu, int slab_id,
+                                   BpFreeList* &free_list,
+                                   BpFreeListStat* &free_list_stat) {
+  size_t cpu_free_list_idx = header_->GetCpuFreeList(target_id,
+                                                     cpu, slab_id);
+  if (cpu_free_list_idx >= target_allocs_->size()) {
+    HELOG(kFatal, "For some reason, the CPU free list was "
+          "not allocated properly and overflowed.")
+  }
+  BpFreeListPair &free_list_p =
+      (*target_allocs_)[cpu_free_list_idx];
+  free_list_stat = &free_list_p.GetFirst();
+  free_list = &free_list_p.GetSecond();
+}
+
+/** Get the stack allocator from the cpu */
+void BufferPool::GetTargetStatForCpu(u16 target_id, int cpu,
+                                     BpFreeListStat* &target_stat) {
+  size_t tgt_free_list_start = header_->GetCpuTargetStat(target_id, cpu);
+  BpFreeListPair &free_list_p =
+      (*target_allocs_)[tgt_free_list_start];
+  target_stat = &free_list_p.GetFirst();
 }
 
 }  // namespace hermes

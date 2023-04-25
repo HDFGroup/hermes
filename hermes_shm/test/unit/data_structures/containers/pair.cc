@@ -12,8 +12,8 @@
 
 #include "basic_test.h"
 #include "test_init.h"
-#include "hermes_shm/data_structures/pair.h"
-#include "hermes_shm/data_structures/string.h"
+#include "hermes_shm/data_structures/ipc/pair.h"
+#include "hermes_shm/data_structures/ipc/string.h"
 
 template<typename FirstT, typename SecondT>
 void PairTest() {
@@ -23,29 +23,60 @@ void PairTest() {
   PAGE_DIVIDE("Construct") {
     CREATE_SET_VAR_TO_INT_OR_STRING(FirstT, first, 124);
     CREATE_SET_VAR_TO_INT_OR_STRING(SecondT, second, 130);
-    hipc::pair<FirstT, SecondT> data(alloc, first, second);
-    REQUIRE(*data.first_ == first);
-    REQUIRE(*data.second_ == second);
+    auto data = hipc::make_uptr<hipc::pair<FirstT, SecondT>>(
+      alloc, first, second);
+    REQUIRE(*data->first_ == first);
+    REQUIRE(*data->second_ == second);
   }
 
-  // Copy test
-  PAGE_DIVIDE("COPY") {
+  // Copy constructor test
+  PAGE_DIVIDE("Copy constructor") {
     CREATE_SET_VAR_TO_INT_OR_STRING(FirstT, first, 124);
     CREATE_SET_VAR_TO_INT_OR_STRING(SecondT, second, 130);
-    hipc::pair<FirstT, SecondT> data(alloc, first, second);
-    hipc::pair<FirstT, SecondT> cpy(data);
-    REQUIRE(*cpy.first_ == first);
-    REQUIRE(*cpy.second_ == second);
+    auto data = hipc::make_uptr<hipc::pair<FirstT, SecondT>>(
+      alloc, first, second);
+    auto cpy = hipc::make_uptr<hipc::pair<FirstT, SecondT>>(
+      alloc, *data);
+    REQUIRE(*cpy->first_ == first);
+    REQUIRE(*cpy->second_ == second);
   }
 
-  // Move test
-  PAGE_DIVIDE("MOVE") {
+  // Copy assignment test
+  PAGE_DIVIDE("Copy assignment operator") {
     CREATE_SET_VAR_TO_INT_OR_STRING(FirstT, first, 124);
     CREATE_SET_VAR_TO_INT_OR_STRING(SecondT, second, 130);
-    hipc::pair<FirstT, SecondT> data(alloc, first, second);
-    hipc::pair<FirstT, SecondT> cpy(std::move(data));
-    REQUIRE(*cpy.first_ == first);
-    REQUIRE(*cpy.second_ == second);
+    auto data = hipc::make_uptr<hipc::pair<FirstT, SecondT>>(
+      alloc, first, second);
+    auto cpy = hipc::make_uptr<hipc::pair<FirstT, SecondT>>(
+      alloc);
+    *cpy = *data;
+    REQUIRE(*cpy->first_ == first);
+    REQUIRE(*cpy->second_ == second);
+  }
+
+  // Move constructor test
+  PAGE_DIVIDE("Move constructor") {
+    CREATE_SET_VAR_TO_INT_OR_STRING(FirstT, first, 124);
+    CREATE_SET_VAR_TO_INT_OR_STRING(SecondT, second, 130);
+    auto data = hipc::make_uptr<hipc::pair<FirstT, SecondT>>(
+      alloc, first, second);
+    auto cpy = hipc::make_uptr<hipc::pair<FirstT, SecondT>>(
+      alloc, std::move(*data));
+    REQUIRE(*cpy->first_ == first);
+    REQUIRE(*cpy->second_ == second);
+  }
+
+  // Move assignment test
+  PAGE_DIVIDE("Move assignment operator") {
+    CREATE_SET_VAR_TO_INT_OR_STRING(FirstT, first, 124);
+    CREATE_SET_VAR_TO_INT_OR_STRING(SecondT, second, 130);
+    auto data = hipc::make_uptr<hipc::pair<FirstT, SecondT>>(
+      alloc, first, second);
+    auto cpy = hipc::make_uptr<hipc::pair<FirstT, SecondT>>(
+      alloc);
+    *cpy = std::move(*data);
+    REQUIRE(*cpy->first_ == first);
+    REQUIRE(*cpy->second_ == second);
   }
 }
 

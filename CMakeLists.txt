@@ -18,21 +18,34 @@ set(IS_HERMES_MAIN ON)
 #------------------------------------------------------------------------------
 # Compiler optimization
 #------------------------------------------------------------------------------
-message(${CMAKE_BUILD_TYPE})
-if (CMAKE_BUILD_TYPE STREQUAL "Release")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
-  message("This IS a release build")
+set(CMAKE_CXX_STANDARD 17)
+add_compile_options("-fPIC")
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -fPIC")
+  # Ensure that debug logging is enabled
+  # This will keep logs which have beneath priority 10
+  add_compile_definitions(HERMES_LOG_VERBOSITY=10)
+  message("This is NOT a release build: ${CMAKE_BUILD_TYPE} ${CMAKE_CXX_FLAGS}")
+elseif(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fPIC")
+  # Ensure that debug logging is enabled
+  # This will keep logs which have beneath priority 10
+  add_compile_definitions(HERMES_LOG_VERBOSITY=10)
+  message("This IS a release + debug build: ${CMAKE_BUILD_TYPE} ${CMAKE_CXX_FLAGS}")
 else()
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0")
-  message("This is NOT a release build")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fPIC")
+  # Ensure that debug logging is disabled
+  # This will keep only VLOGs which have priroity 0
+  add_compile_definitions(HERMES_LOG_VERBOSITY=1)
+  message("This IS a release build: ${CMAKE_BUILD_TYPE} ${CMAKE_CXX_FLAGS}")
 endif()
 
 #------------------------------------------------------------------------------
 # Version information
 #------------------------------------------------------------------------------
-set(HERMES_VERSION_MAJOR "0")
-set(HERMES_VERSION_MINOR "9")
-set(HERMES_VERSION_PATCH "8")
+set(HERMES_VERSION_MAJOR "1")
+set(HERMES_VERSION_MINOR "0")
+set(HERMES_VERSION_PATCH "0")
 set(HERMES_PACKAGE "hermes")
 set(HERMES_PACKAGE_NAME "HERMES")
 set(HERMES_PACKAGE_VERSION "${HERMES_VERSION_MAJOR}.${HERMES_VERSION_MINOR}.${HERMES_VERSION_PATCH}")
@@ -63,7 +76,7 @@ endif()
 # Setup CMake Environment
 #------------------------------------------------------------------------------
 # Export compile commands for autocode generation with CLANG
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+# set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 if(APPLE)
   # We are doing a unix-style install i.e. everything will be installed in
   # CMAKE_INSTALL_PREFIX/bin and CMAKE_INSTALL_PREFIX/lib etc. as on other unix
@@ -157,21 +170,42 @@ option(HERMES_BUILD_BUFFER_POOL_VISUALIZER "Build the BufferPool visualizer" OFF
 option(HERMES_USE_ADDRESS_SANITIZER "Enable -fsanitize=address in Debug builds" OFF)
 option(HERMES_USE_THREAD_SANITIZER "Enable -fsanitize=thread in Debug builds" OFF)
 option(HERMES_RPC_THALLIUM "Use Thallium as the RPC library." ON)
-option(HERMES_MDM_STORAGE_STBDS
-  "Use the STB library and shared memory to store metadata" ON)
-option(HERMES_DEBUG_HEAP "Store Heap debug information for visualization." OFF)
-option(HERMES_BUILD_BENCHMARKS "Build the Hermes benchmark suite." OFF)
-option(HERMES_ENABLE_TIMING "Turn on timing of selected functions." OFF)
+option(HERMES_BUILD_BENCHMARKS "Build the Hermes benchmark suite." ON)
 option(HERMES_ENABLE_COVERAGE "Enable code coverage." OFF)
-option(HERMES_ENABLE_STDIO_ADAPTER "Build the Hermes stdio adapter." ON)
 option(HERMES_ENABLE_POSIX_ADAPTER "Build the Hermes POSIX adapter." ON)
+option(HERMES_ENABLE_STDIO_ADAPTER "Build the Hermes stdio adapter." ON)
 option(HERMES_ENABLE_MPIIO_ADAPTER "Build the Hermes MPI-IO adapter." ON)
 option(HERMES_ENABLE_PUBSUB_ADAPTER "Build the Hermes pub/sub adapter." ON)
 option(HERMES_ENABLE_VFD "Build the Hermes HDF5 Virtual File Driver" OFF)
-option(HERMES_ENABLE_WRAPPER "Enable hermes C API wrapper." ON)
-option(HERMES_ENABLE_GFLAGS "Enable GFLAGS support." ON)
+option(HERMES_BUILD_ADAPTER_TESTS "Enable installation of tests." ON)
 option(HERMES_INSTALL_TESTS "Enable installation of tests." OFF)
 option(HERMES_ONLY_RPC "Avoids the shared-memory case in RPC for testing" OFF)
+option(HERMES_ENABLE_PROFILING "Enables profiling of certain functions" OFF)
+option(HERMES_DISABLE_INFO_LOGS "Disables GLOG info" OFF)
+option(HERMES_ENABLE_C_BINDINGS "Used for compiling java API" OFF)
+option(HERMES_ENABLE_JAVA_BINDINGS "Used for compiling java API" OFF)
+option(HERMES_ENABLE_PYTHON_BINDINGS "Used for compiling python API" OFF)
+option(BUILD_HSHM_TESTS "Build data structure tests" OFF)
+
+option(HERMES_PTHREADS_ENABLED "Support spawning pthreads" ON)
+option(HERMES_DEBUG_LOCK "Used for debugging locks" OFF)
+
+# Compile definitions
+if (HERMES_PTHREADS_ENABLED)
+  add_compile_definitions(HERMES_PTHREADS_ENABLED)
+endif()
+if (HERMES_RPC_THALLIUM)
+  add_compile_definitions(HERMES_RPC_THALLIUM)
+endif()
+if (HERMES_DEBUG_LOCK)
+  message("Lock debugging enabled")
+  add_compile_definitions(HERMES_DEBUG_LOCK)
+endif()
+
+# Disable informatoinal logging
+if(HERMES_DISABLE_INFO_LOGS)
+  add_compile_options(-DNDEBUG)
+endif()
 
 # Calculate code coverage with debug mode
 if(HERMES_ENABLE_COVERAGE)
@@ -193,8 +227,6 @@ endif()
 mark_as_advanced(HERMES_COMMUNICATION_MPI)
 # TODO(chogan): Expose this once we support more than one RPC layer
 mark_as_advanced(HERMES_RPC_THALLIUM)
-mark_as_advanced(HERMES_MDM_STORAGE_STBDS)
-mark_as_advanced(HERMES_DEBUG_HEAP)
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
   if (NOT "${CMAKE_CXX_FLAGS_DEBUG}" MATCHES ".*-g3.*")
@@ -296,24 +328,6 @@ if(yaml-cpp_FOUND)
   message(STATUS "found yaml-cpp at ${yaml-cpp_DIR}")
 endif()
 
-# GLOG
-find_package(glog REQUIRED)
-if(glog_FOUND)
-  message(STATUS "found GLOG at ${glog_DIR}")
-endif()
-find_path(GLOG_INCLUDE_DIRS NAME glog PATH_SUFFIXES include/)
-include_directories(${GLOG_INCLUDE_DIRS})
-
-# GFLAGS
-if(HERMES_ENABLE_GFLAGS)
-  find_package(gflags REQUIRED)
-  if(gflags_FOUND)
-    message(STATUS "found GFLAGS at ${gflags_DIR}")
-    find_path(GFLAG_INCLUDE_DIRS NAME gflags PATH_SUFFIXES include/)
-    include_directories(${GFLAG_INCLUDE_DIRS})
-  endif()
-endif()
-
 # GOTCHA
 if(HERMES_INTERCEPT_IO)
   find_package(gotcha REQUIRED)
@@ -330,10 +344,10 @@ if(HERMES_INTERCEPT_IO)
   endif()
 endif()
 
-if(HERMES_COMMUNICATION_MPI)
-  find_package(MPI REQUIRED COMPONENTS C CXX)
-  message(STATUS "found mpi.h at ${MPI_CXX_INCLUDE_DIRS}")
-endif()
+#if(HERMES_COMMUNICATION_MPI)
+find_package(MPI REQUIRED COMPONENTS C CXX)
+message(STATUS "found mpi.h at ${MPI_CXX_INCLUDE_DIRS}")
+#endif()
 
 # librt
 if(NOT APPLE)
@@ -409,6 +423,7 @@ set(HERMES_EXPORTED_LIBS "")
 include_directories(${CMAKE_SOURCE_DIR}/hermes_shm/include)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src)
 add_subdirectory(${CMAKE_SOURCE_DIR}/hermes_shm)
+add_subdirectory(${CMAKE_SOURCE_DIR}/wrapper)
 
 add_custom_target(rpc COMMAND bash
         ${CMAKE_SOURCE_DIR}/code_generators/code_generators/rpc/rpcgen.sh
@@ -420,6 +435,15 @@ add_custom_target(rpc COMMAND bash
 # Testing
 #-----------------------------------------------------------------------------
 include(CTest)
+
+# General function used to hook ctest to python test tool lib
+function(pytest test_type test_name)
+  set(script ${CMAKE_SOURCE_DIR}/ci/py_hermes_ci/bin/run_test)
+  add_test(NAME ${test_name}
+          COMMAND ${script} ${test_type} ${test_name} ${CMAKE_BINARY_DIR} ${HERMES_USE_ADDRESS_SANITIZER})
+endfunction()
+
+# Add testing directory
 if(CMAKE_PROJECT_NAME STREQUAL HERMES AND BUILD_TESTING)
   find_package(Catch2 3.0.1 REQUIRED)  
   find_program(IOR_EXE ior)
@@ -431,7 +455,7 @@ if(CMAKE_PROJECT_NAME STREQUAL HERMES AND BUILD_TESTING)
     set(HERMES_HAVE_IOR "NO")
   endif()
   enable_testing()
-  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test)
+  add_subdirectory(test)
   # add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/data_stager/test)
 endif()
 
@@ -440,6 +464,7 @@ if(HERMES_ENABLE_STDIO_ADAPTER OR HERMES_ENABLE_POSIX_ADAPTER OR
     HERMES_ENABLE_MPIIO_ADAPTER OR HERMES_ENABLE_PUBSUB_ADAPTER OR
     HERMES_ENABLE_VFD)
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/adapter)
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/traits)
 endif()
 
 #-----------------------------------------------------------------------------
@@ -465,6 +490,7 @@ endif()
 # Benchmarks
 #-----------------------------------------------------------------------------
 if(HERMES_BUILD_BENCHMARKS)
+  message("Building benchmarks")
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/benchmarks)
 endif()
 
@@ -497,7 +523,7 @@ install(
   TYPE
     DATA
   RENAME
-    hermes_sample.conf
+    hermes_sample.yaml
 )
 
 #-----------------------------------------------------------------------------

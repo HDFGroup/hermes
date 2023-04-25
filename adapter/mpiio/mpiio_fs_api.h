@@ -148,7 +148,7 @@ class MpiioFs : public Filesystem {
   int AWriteOrdered(File &f, AdapterStat &stat, const void *ptr, int count,
                     MPI_Datatype datatype, MPI_Request *request,
                     FsIoOptions opts) {
-    LOG(INFO) << "Starting an asynchronous write" << std::endl;
+    HILOG(kDebug, "Starting an asynchronous write")
     auto mdm = HERMES_FS_METADATA_MANAGER;
     auto pool = HERMES_FS_THREAD_POOL;
     HermesRequest *hreq = new HermesRequest();
@@ -205,14 +205,12 @@ class MpiioFs : public Filesystem {
                   stat.comm_);
     MPI_Allreduce(&whence, &sum_whence, 1, MPI_INT, MPI_SUM, stat.comm_);
     if (sum_offset / comm_participators != offset) {
-      LOG(ERROR)
-          << "Same offset should be passed across the opened file communicator."
-          << std::endl;
+      HELOG(kError, "Same offset should be passed "
+            "across the opened file communicator.")
     }
     if (sum_whence / comm_participators != whence) {
-      LOG(ERROR)
-          << "Same whence should be passed across the opened file communicator."
-          << std::endl;
+      HELOG(kError, "Same whence should be passed "
+            "across the opened file communicator.")
     }
     Seek(f, stat, offset, whence);
     return 0;
@@ -478,7 +476,7 @@ class MpiioFs : public Filesystem {
 
 /** Simplify access to the stateless StdioFs Singleton */
 #define HERMES_MPIIO_FS \
-  hermes_shm::EasySingleton<hermes::adapter::fs::MpiioFs>::GetInstance()
+  hshm::EasySingleton<hermes::adapter::fs::MpiioFs>::GetInstance()
 #define HERMES_STDIO_FS_T hermes::adapter::fs::MpiioFs*
 
 #endif  // HERMES_ADAPTER_MPIIO_MPIIO_FS_API_H_

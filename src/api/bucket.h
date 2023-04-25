@@ -16,19 +16,17 @@
 #include "hermes_types.h"
 #include "status.h"
 #include "buffer_pool.h"
-#include "adapter/io_client/io_client_factory.h"
 
 namespace hermes::api {
-
-using hermes::adapter::IoClientObject;
 
 class Bucket {
  private:
   MetadataManager *mdm_;
   BufferPool *bpm_;
-  BucketId id_;
+  TagId id_;
   std::string name_;
   Context ctx_;
+  bool did_create_;
 
  public:
   /**====================================
@@ -41,45 +39,95 @@ class Bucket {
    * Called from hermes.h in GetBucket(). Should not
    * be used directly.
    * */
-  Bucket(const std::string &bkt_name,
-         Context &ctx,
-         const IoClientContext &opts);
+  explicit Bucket(const std::string &bkt_name,
+                  Context &ctx,
+                  size_t backend_size = 0);
+
+  /**
+   * Get an existing bucket.
+   * */
+  explicit Bucket(TagId tag_id);
+
+  /**
+   * Check if the bucket was created in the constructor
+   * */
+  bool DidCreate() {
+    return did_create_;
+  }
+
+  /** Default constructor */
+  Bucket() = default;
+
+  /** Default copy constructor */
+  Bucket(const Bucket &other) = default;
+
+  /** Default copy assign */
+  Bucket& operator=(const Bucket &other) = default;
+
+  /** Default move constructor */
+  Bucket(Bucket &&other) = default;
+
+  /** Default move assign */
+  Bucket& operator=(Bucket &&other) = default;
 
  public:
   /**
    * Get the name of this bucket. Name is cached instead of
    * making an RPC. Not coherent if Rename is called.
    * */
-  std::string GetName() const {
+  const std::string& GetName() const {
     return name_;
   }
 
   /**
    * Get the identifier of this bucket
    * */
-  BucketId GetId() const {
+  TagId GetId() const {
     return id_;
   }
 
   /**
+   * Get the context object of this bucket
+   * */
+  Context& GetContext() {
+    return ctx_;
+  }
+
+  /**
+   * Attach a trait to the bucket
+   * */
+  void AttachTrait(TraitId trait_id);
+
+  /**
    * Get the current size of the bucket
    * */
-  size_t GetSize(IoClientContext opts = IoClientContext());
+  size_t GetSize();
 
   /**
-   * Lock the bucket
+   * Update the size of the bucket
+   * Needed for the adapters for now.
    * */
-  void LockBucket(MdLockType lock_type);
+  void SetSize(size_t new_size);
 
   /**
-   * Unlock the bucket
+   * Lock a bucket
    * */
-  void UnlockBucket(MdLockType lock_type);
+  void LockBucket(MdLockType type);
+
+  /**
+   * Unlock a bucket
+   * */
+  void UnlockBucket(MdLockType type);
 
   /**
    * Rename this bucket
    * */
-  void Rename(std::string new_bkt_name);
+  void Rename(const std::string &new_bkt_name);
+
+  /**
+   * Clears the buckets contents, but doesn't destroy its metadata
+   * */
+  void Clear();
 
   /**
    * Destroys this bucket along with all its contents.
@@ -114,7 +162,16 @@ class Bucket {
    * @param blob_name the name of the blob
    * @return The Status of the operation
    * */
-  Status GetBlobName(const BlobId &blob_id, std::string &blob_name);
+  std::string GetBlobName(const BlobId &blob_id);
+
+
+  /**
+   * Get the score of a blob from the blob id
+   *
+   * @param blob_id the blob_id
+   * @return The Status of the operation
+   * */
+  float GetBlobScore(const BlobId &blob_id);
 
   /**
    * Lock the blob
@@ -131,14 +188,13 @@ class Bucket {
    * */
   Status TryCreateBlob(const std::string &blob_name,
                        BlobId &blob_id,
-                       Context &ctx,
-                       const IoClientContext &opts);
+                       Context &ctx);
 
   /**
    * Label \a blob_id blob with \a tag_name TAG
    * */
   Status TagBlob(BlobId &blob_id,
-                 const std::string &tag_name);
+                 TagId &tag_id);
 
   /**
    * Put \a blob_name Blob into the bucket
@@ -146,28 +202,7 @@ class Bucket {
   Status Put(std::string blob_name,
              const Blob &blob,
              BlobId &blob_id,
-             Context &ctx,
-             IoClientContext opts = IoClientContext());
-
-  /**
-   * Put \a blob_name Blob into the bucket. Load the blob from the
-   * I/O backend if it does not exist or is not fully loaded.
-   *
-   * @param blob_name the semantic name of the blob
-   * @param blob the buffer to put final data in
-   * @param blob_off the offset within the blob to begin the Put
-   * @param blob_id [out] the blob id corresponding to blob_name
-   * @param io_ctx information required to perform I/O to the backend
-   * @param opts specific configuration of the I/O to perform
-   * @param ctx any additional information
-   * */
-  Status PartialPutOrCreate(const std::string &blob_name,
-                            const Blob &blob,
-                            size_t blob_off,
-                            BlobId &blob_id,
-                            IoStatus &status,
-                            const IoClientContext &opts,
-                            Context &ctx);
+             Context &ctx);
 
   /**
    * Get \a blob_id Blob from the bucket
@@ -175,38 +210,6 @@ class Bucket {
   Status Get(BlobId blob_id,
              Blob &blob,
              Context &ctx);
-
-  /**
-   * Load \a blob_name Blob from the bucket. Load the blob from the
-   * I/O backend if it does not exist or is not fully loaded.
-   *
-   * @param blob_name the semantic name of the blob
-   * @param blob the buffer to put final data in
-   * @param blob_off the offset within the blob to begin the Put
-   * @param blob_id [out] the blob id corresponding to blob_name
-   * @param io_ctx information required to perform I/O to the backend
-   * @param opts specific configuration of the I/O to perform
-   * @param ctx any additional information
-   * */
-  Status PartialGetOrCreate(const std::string &blob_name,
-                            Blob &blob,
-                            size_t blob_off,
-                            size_t blob_size,
-                            BlobId &blob_id,
-                            IoStatus &status,
-                            const IoClientContext &opts,
-                            Context &ctx);
-
-  /**
-   * Flush a blob
-   * */
-  void FlushBlob(BlobId blob_id,
-                 const IoClientContext &opts);
-
-  /**
-   * Flush the entire bucket
-   * */
-  void Flush(const IoClientContext &opts);
 
   /**
    * Determine if the bucket contains \a blob_id BLOB
@@ -227,10 +230,8 @@ class Bucket {
   /**
    * Delete \a blob_id blob
    * */
-  void DestroyBlob(BlobId blob_id, Context &ctx,
-                   IoClientContext opts = IoClientContext());
+  void DestroyBlob(BlobId blob_id, Context &ctx);
 
- private:
   /**
    * Get the set of blob IDs contained in the bucket
    * */

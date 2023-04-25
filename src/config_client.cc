@@ -12,6 +12,7 @@
 
 #include "config_client.h"
 #include "config_client_default.h"
+#include "hermes_shm/util/config_parse.h"
 #include <filesystem>
 
 namespace stdfs = std::filesystem;
@@ -22,12 +23,14 @@ namespace hermes::config {
 void ClientConfig::ParseAdapterConfig(YAML::Node &yaml_conf,
                                       AdapterObjectConfig &conf) {
   std::string path = yaml_conf["path"].as<std::string>();
-  path = stdfs::weakly_canonical(path).string();
+  path = hshm::ConfigParse::ExpandPath(path);
+  path = stdfs::absolute(path).string();
   if (yaml_conf["mode"]) {
     conf.mode_ = AdapterModeConv::to_enum(yaml_conf["mode"].as<std::string>());
   }
   if (yaml_conf["page_size"]) {
-    conf.page_size_ = ParseSize(yaml_conf["page_size"].as<std::string>());
+    conf.page_size_ = hshm::ConfigParse::ParseSize(
+        yaml_conf["page_size"].as<std::string>());
   }
   SetAdapterConfig(path, conf);
 }
@@ -55,23 +58,35 @@ void ClientConfig::ParseYAML(YAML::Node &yaml_conf) {
     std::string page_size_env = GetEnvSafe(kHermesPageSize);
     if (page_size_env.size() == 0) {
       base_adapter_config_.page_size_ =
-          ParseSize(yaml_conf["file_page_size"].as<std::string>());
+          hshm::ConfigParse::ParseSize(
+              yaml_conf["file_page_size"].as<std::string>());
     } else {
-      base_adapter_config_.page_size_ = ParseSize(page_size_env);
+      base_adapter_config_.page_size_ =
+          hshm::ConfigParse::ParseSize(page_size_env);
     }
   }
   if (yaml_conf["path_inclusions"]) {
     std::vector<std::string> inclusions;
     ParseVector<std::string>(yaml_conf["path_inclusions"], inclusions);
     for (auto &entry : inclusions) {
+      entry = hshm::ConfigParse::ExpandPath(entry);
       SetAdapterPathTracking(std::move(entry), true);
     }
   }
   if (yaml_conf["path_exclusions"]) {
     std::vector<std::string> exclusions;
-    ParseVector<std::string>(yaml_conf["path_inclusions"], exclusions);
+    ParseVector<std::string>(yaml_conf["path_exclusions"], exclusions);
     for (auto &entry : exclusions) {
+      entry = hshm::ConfigParse::ExpandPath(entry);
       SetAdapterPathTracking(std::move(entry), false);
+    }
+  }
+  if (yaml_conf["flushing_mode"]) {
+    flushing_mode_ =
+        FlushingModeConv::GetEnum(yaml_conf["flushing_mode"].as<std::string>());
+    auto flush_mode_env = getenv("HERMES_FLUSH_MODE");
+    if (flush_mode_env) {
+      flushing_mode_ = FlushingModeConv::GetEnum(flush_mode_env);
     }
   }
   if (yaml_conf["file_adapter_configs"]) {

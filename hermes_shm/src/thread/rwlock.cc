@@ -12,19 +12,30 @@
 
 
 #include "hermes_shm/thread/lock/rwlock.h"
-#include "hermes_shm/thread/thread_manager.h"
+#include "hermes_shm/thread/thread_model_manager.h"
+#include "hermes_shm/util/logging.h"
 
-namespace hermes_shm {
+namespace hshm {
+
+/**====================================
+ * Rw Lock
+ * ===================================*/
 
 /**
  * Acquire the read lock
  * */
-void RwLock::ReadLock() {
+void RwLock::ReadLock(uint32_t owner) {
   bool ret = false;
   RwLockPayload expected, desired;
-  auto thread_info = HERMES_THREAD_MANAGER->GetThreadStatic();
+  size_t count = 0;
   do {
-    for (int i = 0; i < US_TO_CLOCKS(8); ++i) {
+#ifdef HERMES_DEBUG_LOCK
+    if (count > US_TO_CLOCKS(1000000)) {
+      HILOG(kDebug, "Taking a while");
+      count = 5;
+    }
+#endif
+    for (int i = 0; i < 1; ++i) {
       expected.as_int_ = payload_.load();
       if (expected.IsWriteLocked()) {
         continue;
@@ -34,9 +45,15 @@ void RwLock::ReadLock() {
       ret = payload_.compare_exchange_weak(
         expected.as_int_,
         desired.as_int_);
-      if (ret) { return; }
+      if (ret) {
+#ifdef HERMES_DEBUG_LOCK
+        owner_ = owner;
+#endif
+        return;
+      }
     }
-    thread_info->Yield();
+    HERMES_THREAD_MODEL->Yield();
+    ++count;
   } while (true);
 }
 
@@ -46,6 +63,9 @@ void RwLock::ReadLock() {
 void RwLock::ReadUnlock() {
   bool ret;
   RwLockPayload expected, desired;
+#ifdef HERMES_DEBUG_LOCK
+  owner_ = 0;
+#endif
   do {
     expected.as_int_ = payload_.load();
     desired = expected;
@@ -59,12 +79,18 @@ void RwLock::ReadUnlock() {
 /**
  * Acquire the write lock
  * */
-void RwLock::WriteLock() {
+void RwLock::WriteLock(uint32_t owner) {
   bool ret = false;
   RwLockPayload expected, desired;
-  auto thread_info = HERMES_THREAD_MANAGER->GetThreadStatic();
+  size_t count = 0;
   do {
-    for (int i = 0; i < US_TO_CLOCKS(8); ++i) {
+#ifdef HERMES_DEBUG_LOCK
+    if (count > US_TO_CLOCKS(1000000)) {
+      HILOG(kDebug, "Taking a while");
+      count = 5;
+    }
+#endif
+    for (int i = 0; i < 1; ++i) {
       expected.as_int_ = payload_.load();
       if (expected.IsReadLocked() || expected.IsWriteLocked()) {
         continue;
@@ -74,9 +100,20 @@ void RwLock::WriteLock() {
       ret = payload_.compare_exchange_weak(
         expected.as_int_,
         desired.as_int_);
-      if (ret) { return; }
+      if (ret) {
+#ifdef HERMES_DEBUG_LOCK
+        owner_ = owner;
+#endif
+        return;
+      }
     }
-    thread_info->Yield();
+
+    if (count < 5) {
+      HERMES_THREAD_MODEL->Yield();
+    } else {
+      usleep(100);
+    }
+    ++count;
   } while (true);
 }
 
@@ -86,6 +123,9 @@ void RwLock::WriteLock() {
 void RwLock::WriteUnlock() {
   bool ret;
   RwLockPayload expected, desired;
+#ifdef HERMES_DEBUG_LOCK
+  owner_ = 0;
+#endif
   do {
     expected.as_int_ = payload_.load();
     desired = expected;
@@ -96,34 +136,16 @@ void RwLock::WriteUnlock() {
   } while (!ret);
 }
 
-/**
- * Verify the reference count for reads (for debugging)
- * */
-void RwLock::assert_r_refcnt(int ref) {
-  if (RwLockPayload(payload_).bits_.r_ != ref) {
-    throw 1;
-  }
-}
-
-/**
- * Verify the reference count for writes (for debugging)
- * */
-void RwLock::assert_w_refcnt(int ref) {
-  if (RwLockPayload(payload_).bits_.w_ > 1) {
-    throw 1;
-  }
-}
-
-/**
- * SCOPED R/W READ LOCK
- * */
+/**====================================
+ * ScopedRwReadLock
+ * ===================================*/
 
 /**
  * Constructor
  * */
-ScopedRwReadLock::ScopedRwReadLock(RwLock &lock)
+ScopedRwReadLock::ScopedRwReadLock(RwLock &lock, uint32_t owner)
 : lock_(lock), is_locked_(false) {
-  Lock();
+  Lock(owner);
 }
 
 /**
@@ -136,9 +158,9 @@ ScopedRwReadLock::~ScopedRwReadLock() {
 /**
  * Acquire the read lock
  * */
-void ScopedRwReadLock::Lock() {
+void ScopedRwReadLock::Lock(uint32_t owner) {
   if (!is_locked_) {
-    lock_.ReadLock();
+    lock_.ReadLock(owner);
     is_locked_ = true;
   }
 }
@@ -153,16 +175,16 @@ void ScopedRwReadLock::Unlock() {
   }
 }
 
-/**
- * SCOPED R/W WRITE LOCK
- * */
+/**====================================
+ * ScopedRwWriteLock
+ * ===================================*/
 
 /**
  * Constructor
  * */
-ScopedRwWriteLock::ScopedRwWriteLock(RwLock &lock)
+ScopedRwWriteLock::ScopedRwWriteLock(RwLock &lock, uint32_t owner)
 : lock_(lock), is_locked_(false) {
-  Lock();
+  Lock(owner);
 }
 
 /**
@@ -175,9 +197,9 @@ ScopedRwWriteLock::~ScopedRwWriteLock() {
 /**
  * Acquire the write lock
  * */
-void ScopedRwWriteLock::Lock() {
+void ScopedRwWriteLock::Lock(uint32_t owner) {
   if (!is_locked_) {
-    lock_.WriteLock();
+    lock_.WriteLock(owner);
     is_locked_ = true;
   }
 }
@@ -192,4 +214,4 @@ void ScopedRwWriteLock::Unlock() {
   }
 }
 
-}  // namespace hermes_shm
+}  // namespace hshm

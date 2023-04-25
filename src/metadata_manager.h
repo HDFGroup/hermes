@@ -18,17 +18,11 @@
 #include "status.h"
 #include "rpc.h"
 #include "metadata_types.h"
+#include "trait_manager.h"
 #include "statuses.h"
 #include "rpc_thallium_serialization.h"
-#include "adapter/io_client/io_client_factory.h"
 
 namespace hermes {
-
-/** Namespace simplification for AdapterFactory */
-using hermes::adapter::IoClientFactory;
-
-/** Namespace simplification for AbstractAdapter */
-using hermes::adapter::IoClientContext;
 
 /** Forward declaration of borg */
 class BufferOrganizer;
@@ -37,33 +31,54 @@ class BufferOrganizer;
  * Type name simplification for the various map types
  * */
 typedef hipc::unordered_map<hipc::charbuf, BlobId> BLOB_ID_MAP_T;
-typedef hipc::unordered_map<hipc::charbuf, BucketId> BKT_ID_MAP_T;
-typedef hipc::unordered_map<hipc::charbuf, hipc::slist<BlobId>> TAG_MAP_T;
+typedef hipc::unordered_map<hipc::charbuf, TagId> TAG_ID_MAP_T;
+typedef hipc::unordered_map<hipc::charbuf, TraitId> TRAIT_ID_MAP_T;
 typedef hipc::unordered_map<BlobId, BlobInfo> BLOB_MAP_T;
-typedef hipc::unordered_map<BucketId, BucketInfo> BKT_MAP_T;
+typedef hipc::unordered_map<TagId, TagInfo> TAG_MAP_T;
+typedef hipc::unordered_map<TraitId, hipc::charbuf> TRAIT_MAP_T;
+typedef hipc::slist<IoStat> IO_PATTERN_LOG_T;
+
+enum MdmLock {
+  kBlobMapLock,
+  kBktMapLock,
+  kTagMapLock,
+  kTagDeleteLock,
+  kTraitMapLock,
+  kLocalTraitMapLock,
+  kIoPatternLogLock,
+  kFlushLock,
+
+  kMdmLockCount
+};
 
 /**
  * The SHM representation of the MetadataManager
  * */
-struct MetadataManagerShmHeader {
+struct MetadataManagerShm {
   /// SHM representation of blob id map
-  hipc::TypedPointer<hipc::mptr<BLOB_ID_MAP_T>> blob_id_map_ar_;
-  /// SHM representation of bucket id map
-  hipc::TypedPointer<hipc::mptr<BKT_ID_MAP_T>> bkt_id_map_ar_;
+  hipc::ShmArchive<BLOB_ID_MAP_T> blob_id_map_;
   /// SHM representation of blob map
-  hipc::TypedPointer<hipc::mptr<BLOB_MAP_T>> blob_map_ar_;
-  /// SHM representation of bucket map
-  hipc::TypedPointer<hipc::mptr<BKT_MAP_T>> bkt_map_ar_;
+  hipc::ShmArchive<BLOB_MAP_T> blob_map_;
+  /// SHM representation of tag id map
+  hipc::ShmArchive<TAG_ID_MAP_T> tag_id_map_;
   /// SHM representation of tag map
-  hipc::TypedPointer<hipc::mptr<TAG_MAP_T>> tag_map_ar_;
+  hipc::ShmArchive<TAG_MAP_T> tag_map_;
+  /// SHM representation of trait id map
+  hipc::ShmArchive<TRAIT_ID_MAP_T> trait_id_map_;
+  /// SHM representation of trait map
+  hipc::ShmArchive<TRAIT_MAP_T> trait_map_;
   /// SHM representation of device vector
-  hipc::TypedPointer<hipc::mptr<hipc::vector<DeviceInfo>>> devices_;
+  hipc::ShmArchive<hipc::vector<DeviceInfo>> devices_;
   /// SHM representation of target info vector
-  hipc::TypedPointer<hipc::mptr<hipc::vector<TargetInfo>>> targets_;
+  hipc::ShmArchive<hipc::vector<TargetInfo>> targets_;
+  /// SHM representation of prefetcher stats log
+  hipc::ShmArchive<IO_PATTERN_LOG_T> io_pattern_log_;
   /// Used to create unique ids. Starts at 1.
   std::atomic<u64> id_alloc_;
   /// Synchronization
-  RwLock lock_;
+  RwLock lock_[kMdmLockCount];
+  /// The ID of THIS node
+  i32 node_id_;
 };
 
 /**
@@ -72,34 +87,70 @@ struct MetadataManagerShmHeader {
 class MetadataManager {
  public:
   RPC_TYPE *rpc_;
-  MetadataManagerShmHeader *header_;
   BufferOrganizer *borg_;
+  TraitManager *traits_;
+  MetadataManagerShm *header_;
 
-  /**
-   * The manual pointers representing the different map types.
-   * */
-  hipc::mptr<BLOB_ID_MAP_T> blob_id_map_;
-  hipc::mptr<BKT_ID_MAP_T> bkt_id_map_;
-  hipc::mptr<BLOB_MAP_T> blob_map_;
-  hipc::mptr<BKT_MAP_T> bkt_map_;
-  hipc::mptr<TAG_MAP_T> tag_map_;
+  /**====================================
+   * Maps
+   * ===================================*/
+  BLOB_ID_MAP_T *blob_id_map_;
+  TAG_ID_MAP_T *tag_id_map_;
+  TRAIT_ID_MAP_T *trait_id_map_;
+  BLOB_MAP_T *blob_map_;
+  TAG_MAP_T *tag_map_;
+  TRAIT_MAP_T *trait_map_;
+  std::unordered_map<TraitId, Trait*> local_trait_map_;
+  RwLock local_lock_;
 
-  /**
-   * Information about targets and devices
-   * */
-  hipc::mptr<hipc::vector<DeviceInfo>> devices_;
-  hipc::mptr<hipc::vector<TargetInfo>> targets_;
+  /**====================================
+   * I/O pattern log
+   * ===================================*/
+  IO_PATTERN_LOG_T *io_pattern_log_;
+  bool enable_io_tracing_;
+  bool is_mpi_;
 
-  /** A global lock for simplifying MD management */
-  RwLock lock_;
+  /**====================================
+   * Targets + devices
+   * ===================================*/
+  hipc::vector<DeviceInfo> *devices_;
+  hipc::vector<TargetInfo> *targets_;
 
  public:
+  /**====================================
+   * Default Constructor
+   * ===================================*/
+
+  /** Default constructor */
   MetadataManager() = default;
 
+  /**====================================
+   * SHM Init
+   * ===================================*/
+
+  /** Default constructor */
+  void shm_init(hipc::ShmArchive<MetadataManagerShm> &header,
+                hipc::Allocator *alloc,
+                ServerConfig *config);
+
+  /**====================================
+   * SHM Deserialize
+   * ===================================*/
+
   /**
-   * Explicitly initialize the MetadataManager
+   * Unload the MetadataManager from shared memory
    * */
-  void shm_init(ServerConfig *config, MetadataManagerShmHeader *header);
+  void shm_deserialize(hipc::ShmArchive<MetadataManagerShm> &header);
+
+  /**====================================
+   * Destructor
+   * ===================================*/
+
+  /** Whether the MetadataManager is NULL */
+  bool IsNull() { return false; }
+
+  /** Set the MetadataManager to NULL */
+  void SetNull() {}
 
   /**
    * Explicitly destroy the MetadataManager
@@ -107,138 +158,73 @@ class MetadataManager {
   void shm_destroy();
 
   /**
-   * Store the MetadataManager in shared memory.
+   * Create a unique blob name using TagId
    * */
-  void shm_serialize();
-
-   /**
-    * Unload the MetadtaManager from shared memory
-    * */
-  void shm_deserialize(MetadataManagerShmHeader *header);
-
-   /**
-    * Create a unique blob name using BucketId
-    * */
-  static hipc::charbuf CreateBlobName(BucketId bkt_id,
-                                      const hipc::charbuf &blob_name) {
-    hipc::charbuf new_name(sizeof(uint64_t) + sizeof(uint32_t)
-                           + blob_name.size());
+  template<typename StringT>
+  static hipc::uptr<hipc::charbuf> CreateBlobName(
+      TagId bkt_id, const StringT &blob_name) {
+    auto new_name = hipc::make_uptr<hipc::charbuf>(
+        sizeof(uint64_t) + sizeof(uint32_t) + blob_name.size());
     size_t off = 0;
-    memcpy(new_name.data_mutable() + off, &bkt_id.unique_, sizeof(uint64_t));
+    memcpy(new_name->data() + off, &bkt_id.unique_, sizeof(uint64_t));
     off += sizeof(uint64_t);
-    memcpy(new_name.data_mutable() + off, &bkt_id.node_id_, sizeof(uint32_t));
+    memcpy(new_name->data() + off, &bkt_id.node_id_, sizeof(uint32_t));
     off += sizeof(uint32_t);
-    memcpy(new_name.data_mutable() + off, blob_name.data(), blob_name.size());
+    memcpy(new_name->data() + off, blob_name.data(), blob_name.size());
     return new_name;
   }
 
-  /**
-   * Get or create a bucket with \a bkt_name bucket name
-   * */
-  RPC BucketId LocalGetOrCreateBucket(hipc::charbuf &bkt_name,
-                                      const IoClientContext &opts);
-  DEFINE_RPC(BucketId, GetOrCreateBucket, 0, std::hash<hipc::charbuf>{})
+  /**====================================
+   * Bucket Operations
+   * ===================================*/
 
   /**
-   * Get the BucketId with \a bkt_name bucket name
+   * Get the size of a bucket
    * */
-  RPC BucketId LocalGetBucketId(hipc::charbuf &bkt_name);
-  DEFINE_RPC(BucketId, GetBucketId, 0, std::hash<hipc::charbuf>{})
+  RPC size_t LocalGetBucketSize(TagId bkt_id);
+  DEFINE_RPC(size_t, GetBucketSize, 0, UNIQUE_ID_TO_NODE_ID_LAMBDA)
 
   /**
-   * Get the size of a bucket (depends on the IoClient used).
+   * Update \a bkt_id BUCKET stats
    * */
-  RPC size_t LocalGetBucketSize(BucketId bkt_id,
-                                const IoClientContext &opts);
-  DEFINE_RPC(size_t, GetBucketSize, 0,
-             UNIQUE_ID_TO_NODE_ID_LAMBDA)
+  RPC bool LocalSetBucketSize(TagId bkt_id, size_t new_size);
+  DEFINE_RPC(bool, SetBucketSize, 0, UNIQUE_ID_TO_NODE_ID_LAMBDA)
 
   /**
    * Lock the bucket
    * */
-  RPC void LocalLockBucket(BucketId bkt_id,
-                           MdLockType lock_type);
-  DEFINE_RPC(void, LockBucket, 0,
-             UNIQUE_ID_TO_NODE_ID_LAMBDA)
+  bool LocalLockBucket(TagId bkt_id, MdLockType lock_type);
+  DEFINE_RPC(bool, LockBucket, 0, UNIQUE_ID_TO_NODE_ID_LAMBDA)
 
   /**
    * Unlock the bucket
    * */
-  RPC void LocalUnlockBucket(BucketId bkt_id,
-                             MdLockType lock_type);
-  DEFINE_RPC(void, UnlockBucket, 0,
-             UNIQUE_ID_TO_NODE_ID_LAMBDA)
-
-  /**
-   * Check whether or not \a bkt_id bucket contains
-   * \a blob_id blob
-   * */
-  RPC bool LocalBucketContainsBlob(BucketId bkt_id, BlobId blob_id);
-  DEFINE_RPC(bool, BucketContainsBlob, 1,
-             UNIQUE_ID_TO_NODE_ID_LAMBDA)
-
-  /**
-   * Get the set of all blobs contained in \a bkt_id BUCKET
-   * */
-  RPC std::vector<BlobId> LocalBucketGetContainedBlobIds(BucketId bkt_id);
-  DEFINE_RPC(std::vector<BlobId>,
-      BucketGetContainedBlobIds, 0,
-             UNIQUE_ID_TO_NODE_ID_LAMBDA)
-
-  /**
-   * Rename \a bkt_id bucket to \a new_bkt_name new name
-   * */
-  RPC bool LocalRenameBucket(BucketId bkt_id,
-                             hipc::charbuf &new_bkt_name);
-  DEFINE_RPC(bool, RenameBucket, 0,
-             UNIQUE_ID_TO_NODE_ID_LAMBDA)
+  bool LocalUnlockBucket(TagId bkt_id, MdLockType lock_type);
+  DEFINE_RPC(bool, UnlockBucket, 0, UNIQUE_ID_TO_NODE_ID_LAMBDA)
 
   /**
    * Destroy \a bkt_id bucket
    * */
-  RPC bool LocalDestroyBucket(BucketId bkt_id);
-  DEFINE_RPC(bool, DestroyBucket, 0,
-             UNIQUE_ID_TO_NODE_ID_LAMBDA)
+  RPC bool LocalClearBucket(TagId bkt_id);
+  DEFINE_RPC(bool, ClearBucket, 0, UNIQUE_ID_TO_NODE_ID_LAMBDA)
+
+  /**====================================
+   * Blob Operations
+   * ===================================*/
 
   /**
-   * Put a blob in a bucket
+   * Create a blob's metadata
    *
    * @param bkt_id id of the bucket
    * @param blob_name semantic blob name
    * @param data the data being placed
    * @param buffers the buffers to place data in
    * */
-  RPC std::tuple<BlobId, bool, size_t> LocalBucketPutBlob(
-      BucketId bkt_id,
-      const hipc::charbuf &blob_name,
-      size_t blob_size,
-      hipc::vector<BufferInfo> &buffers);
-  DEFINE_RPC((std::tuple<BlobId, bool, size_t>),
-             BucketPutBlob, 0,
-             UNIQUE_ID_TO_NODE_ID_LAMBDA)
-
-  /**
-   * Registers the existence of a Blob with the Bucket. Required for
-   * deletion and statistics.
-   * */
-  Status LocalBucketRegisterBlobId(BucketId bkt_id,
-                                   BlobId blob_id,
-                                   size_t orig_blob_size,
-                                   size_t new_blob_size,
-                                   bool did_create,
-                                   const IoClientContext &opts);
-  DEFINE_RPC(Status, BucketRegisterBlobId, 0,
-             UNIQUE_ID_TO_NODE_ID_LAMBDA)
-
-  /**
-   * Registers the existence of a Blob with the Bucket. Required for
-   * deletion and statistics.
-   * */
-  Status LocalBucketUnregisterBlobId(BucketId bkt_id,
-                                     BlobId blob_id,
-                                     const IoClientContext &opts);
-  DEFINE_RPC(Status, BucketUnregisterBlobId, 0,
-             UNIQUE_ID_TO_NODE_ID_LAMBDA)
+  RPC std::tuple<BlobId, bool, size_t> LocalPutBlobMetadata(
+      TagId bkt_id, const std::string &blob_name, size_t blob_size,
+      std::vector<BufferInfo> &buffers, float score);
+  DEFINE_RPC((std::tuple<BlobId, bool, size_t>), PutBlobMetadata, 1,
+             STRING_HASH_LAMBDA)
 
   /**
    * Creates the blob metadata
@@ -246,19 +232,10 @@ class MetadataManager {
    * @param bkt_id id of the bucket
    * @param blob_name semantic blob name
    * */
-  std::pair<BlobId, bool> LocalBucketTryCreateBlob(
-      BucketId bkt_id,
-      const hipc::charbuf &blob_name);
-  DEFINE_RPC((std::pair<BlobId, bool>),
-             BucketTryCreateBlob, 0,
-             UNIQUE_ID_TO_NODE_ID_LAMBDA)
-
-  /**
-   * Add a blob to a tag index
-   * */
-  Status LocalTagAddBlob(const std::string &tag_name,
-                         BlobId blob_id);
-  DEFINE_RPC(Status, TagAddBlob, 0, std::hash<std::string>{});
+  std::pair<BlobId, bool> LocalTryCreateBlob(TagId bkt_id,
+                                             const std::string &blob_name);
+  DEFINE_RPC((std::pair<BlobId, bool>), TryCreateBlob, 1,
+             STRING_HASH_LAMBDA)
 
   /**
    * Tag a blob
@@ -266,104 +243,230 @@ class MetadataManager {
    * @param blob_id id of the blob being tagged
    * @param tag_name tag name
    * */
-  Status LocalBucketTagBlob(BlobId blob_id, const std::string &tag_name);
-  DEFINE_RPC(Status, BucketTagBlob, 0, UNIQUE_ID_TO_NODE_ID_LAMBDA)
+  Status LocalTagBlob(BlobId blob_id, TagId tag_id);
+  DEFINE_RPC(Status, TagBlob, 0, UNIQUE_ID_TO_NODE_ID_LAMBDA)
 
   /**
-   * Find all blobs pertaining to a tag
+   * Check if blob has a tag
    * */
-  std::list<BlobId> LocalGroupByTag(const std::string &tag_name);
-  DEFINE_RPC(std::list<BlobId>, GroupByTag, 0, std::hash<std::string>{});
-
-  /**
-   * Get a blob from a bucket
-   *
-   * @param bkt_id id of the bucket
-   * @param blob_id id of the blob to get
-   * */
-  RPC Blob LocalBucketGetBlob(BlobId blob_id);
-  DEFINE_RPC(Blob, BucketGetBlob, 0,
-             UNIQUE_ID_TO_NODE_ID_LAMBDA)
+  bool LocalBlobHasTag(BlobId blob_id, TagId tag_id);
+  DEFINE_RPC(bool, BlobHasTag, 0, UNIQUE_ID_TO_NODE_ID_LAMBDA)
 
   /**
    * Get \a blob_name BLOB from \a bkt_id bucket
    * */
-  RPC BlobId LocalGetBlobId(BucketId bkt_id, const hipc::charbuf &blob_name);
-  DEFINE_RPC(BlobId, GetBlobId, 0,
-             UNIQUE_ID_TO_NODE_ID_LAMBDA)
+  RPC BlobId LocalGetBlobId(TagId bkt_id, const std::string &blob_name);
+  DEFINE_RPC(BlobId, GetBlobId, 1,
+             STRING_HASH_LAMBDA)
 
   /**
    * Get \a blob_name BLOB name from \a blob_id BLOB id
    * */
   RPC std::string LocalGetBlobName(BlobId blob_id);
-  DEFINE_RPC(std::string, GetBlobName, 0,
-             UNIQUE_ID_TO_NODE_ID_LAMBDA)
+  DEFINE_RPC(std::string, GetBlobName, 0, UNIQUE_ID_TO_NODE_ID_LAMBDA)
+
+  /**
+   * Get \a score from \a blob_id BLOB id
+   * */
+  RPC float LocalGetBlobScore(BlobId blob_id);
+  DEFINE_RPC(float, GetBlobScore, 0, UNIQUE_ID_TO_NODE_ID_LAMBDA)
 
   /**
    * Lock the blob
    * */
-  RPC bool LocalLockBlob(BlobId blob_id,
-                         MdLockType lock_type);
+  RPC bool LocalLockBlob(BlobId blob_id, MdLockType lock_type);
   DEFINE_RPC(bool, LockBlob, 0, UNIQUE_ID_TO_NODE_ID_LAMBDA)
 
   /**
    * Unlock the blob
    * */
-  RPC bool LocalUnlockBlob(BlobId blob_id,
-                           MdLockType lock_type);
+  RPC bool LocalUnlockBlob(BlobId blob_id, MdLockType lock_type);
   DEFINE_RPC(bool, UnlockBlob, 0, UNIQUE_ID_TO_NODE_ID_LAMBDA)
 
   /**
    * Get \a blob_id blob's buffers
    * */
   RPC std::vector<BufferInfo> LocalGetBlobBuffers(BlobId blob_id);
-  DEFINE_RPC(std::vector<BufferInfo>,
-             GetBlobBuffers, 0, UNIQUE_ID_TO_NODE_ID_LAMBDA)
+  DEFINE_RPC(std::vector<BufferInfo>, GetBlobBuffers, 0,
+             UNIQUE_ID_TO_NODE_ID_LAMBDA)
 
   /**
    * Rename \a blob_id blob to \a new_blob_name new blob name
    * in \a bkt_id bucket.
    * */
-  RPC bool LocalRenameBlob(BucketId bkt_id, BlobId blob_id,
-                           hipc::charbuf &new_blob_name);
+  RPC bool LocalRenameBlob(TagId bkt_id, BlobId blob_id,
+                           const std::string &new_blob_name);
   DEFINE_RPC(bool, RenameBlob, 1, UNIQUE_ID_TO_NODE_ID_LAMBDA)
 
   /**
    * Destroy \a blob_id blob in \a bkt_id bucket
    * */
-  RPC bool LocalDestroyBlob(BucketId bkt_id, BlobId blob_id);
+  RPC bool LocalDestroyBlob(TagId bkt_id, BlobId blob_id);
   DEFINE_RPC(bool, DestroyBlob, 1, UNIQUE_ID_TO_NODE_ID_LAMBDA)
+
+  /**====================================
+   * Bucket + Blob Operations
+   * ===================================*/
+
+  /**
+   * Destroy all blobs + buckets
+   * */
+  void LocalClear();
+
+  /**
+   * Destroy all blobs + buckets globally
+   * */
+  void GlobalClear();
+
+  /**====================================
+   * Target Operations
+   * ===================================*/
 
   /**
    * Update the capacity of the target device
    * */
   RPC void LocalUpdateTargetCapacity(TargetId tid, off64_t offset) {
-    TargetInfo &target = *(*targets_)[tid.GetIndex()];
+    TargetInfo &target = (*targets_)[tid.GetIndex()];
     target.rem_cap_ += offset;
   }
-  DEFINE_RPC(bool, UpdateTargetCapacity, 0,
-             UNIQUE_ID_TO_NODE_ID_LAMBDA)
+  DEFINE_RPC(bool, UpdateTargetCapacity, 0, UNIQUE_ID_TO_NODE_ID_LAMBDA)
 
   /**
    * Update the capacity of the target device
    * */
-  RPC const hipc::vector<TargetInfo>& LocalGetTargetInfo() {
-    return (*targets_);
+  RPC std::vector<TargetInfo> LocalGetTargetInfo() {
+    return hshm::to_stl_vector<TargetInfo>(*targets_);
   }
 
   /**
    * Get the TargetInfo for neighborhood
    * */
-  hipc::vector<TargetInfo> GetNeighborhoodTargetInfo() {
-    return {};
-  }
+  // hipc::vector<TargetInfo> GetNeighborhoodTargetInfo() { return {}; }
 
   /**
    * Get all TargetInfo in the system
    * */
-  hipc::vector<TargetInfo> GetGlobalTargetInfo() {
-    return {};
+  // hipc::vector<TargetInfo> GetGlobalTargetInfo() { return {}; }
+
+  /**====================================
+   * Tag Operations
+   * ===================================*/
+
+  /**
+   * Create a tag
+   * */
+  std::pair<TagId, bool> LocalGetOrCreateTag(const std::string &tag_name,
+                                             bool owner,
+                                             std::vector<TraitId> &traits,
+                                             size_t backend_size);
+  DEFINE_RPC((std::pair<TagId, bool>),
+             GetOrCreateTag, 0, STRING_HASH_LAMBDA)
+  TagId GlobalCreateTag(const std::string &tag_name,
+                        bool owner,
+                        std::vector<TraitId> &traits) {
+    return LocalGetOrCreateTag(tag_name, owner, traits, 0).first;
   }
+
+  /**
+   * Get the id of a tag
+   * */
+  TagId LocalGetTagId(const std::string &tag_name);
+  DEFINE_RPC(TagId, GetTagId, 0, STRING_HASH_LAMBDA)
+
+  /**
+   * Get the name of a tag
+   * */
+  RPC std::string LocalGetTagName(TagId tag);
+  DEFINE_RPC(std::string, GetTagName, 0, UNIQUE_ID_TO_NODE_ID_LAMBDA)
+
+  /**
+   * Rename a tag
+   * */
+  RPC bool LocalRenameTag(TagId tag, const std::string &new_name);
+  DEFINE_RPC(bool, RenameTag, 0, UNIQUE_ID_TO_NODE_ID_LAMBDA)
+
+  /**
+   * Delete a tag
+   * */
+  bool LocalDestroyTag(TagId tag);
+  DEFINE_RPC(bool, DestroyTag, 0, UNIQUE_ID_TO_NODE_ID_LAMBDA)
+
+  /**
+   * Add a blob to a tag index.
+   * */
+  Status LocalTagAddBlob(TagId tag_id, BlobId blob_id);
+  DEFINE_RPC(Status, TagAddBlob, 0, UNIQUE_ID_TO_NODE_ID_LAMBDA);
+
+  /**
+   * Remove a blob from a tag index.
+   * */
+  Status LocalTagRemoveBlob(TagId tag_id, BlobId blob_id);
+  DEFINE_RPC(Status, TagRemoveBlob, 0, UNIQUE_ID_TO_NODE_ID_LAMBDA);
+
+  /**
+   * Find all blobs pertaining to a tag
+   * */
+  std::vector<BlobId> LocalGroupByTag(TagId tag_id);
+  DEFINE_RPC(std::vector<BlobId>, GroupByTag, 0, UNIQUE_ID_TO_NODE_ID_LAMBDA);
+
+  /**
+   * Add a trait to a tag index. Create tag if it does not exist.
+   * */
+  RPC bool LocalTagAddTrait(TagId tag_id, TraitId trait_id);
+  DEFINE_RPC(bool, TagAddTrait, 0, UNIQUE_ID_TO_NODE_ID_LAMBDA);
+
+  /**
+   * Find all traits pertaining to a tag
+   * */
+  std::vector<TraitId> LocalTagGetTraits(TagId tag_id);
+  DEFINE_RPC(std::vector<TraitId>, TagGetTraits, 0,
+             UNIQUE_ID_TO_NODE_ID_LAMBDA);
+
+  /**====================================
+   * Trait Operations
+   * ===================================*/
+
+  /**
+   * Register a trait. Stores the state of the trait in a way that can
+   * be queried by all processes.
+   * */
+  RPC TraitId LocalRegisterTrait(TraitId trait_id,
+                                 const hshm::charbuf &trait_params);
+  DEFINE_RPC(TraitId, RegisterTrait, 1, TRAIT_PARAMS_HASH_LAMBDA);
+
+  /**
+   * Get trait identifier
+   * */
+  RPC TraitId LocalGetTraitId(const std::string &trait_uuid);
+  DEFINE_RPC((TraitId), GetTraitId, 0, STRING_HASH_LAMBDA);
+
+  /**
+   * Get trait parameters
+   * */
+  RPC hshm::charbuf LocalGetTraitParams(TraitId trait_id);
+  DEFINE_RPC((hshm::charbuf),
+             GetTraitParams, 0,
+             UNIQUE_ID_TO_NODE_ID_LAMBDA);
+
+  /**
+   * Get an existing trait. Will load the trait into this process's
+   * address space if necessary.
+   * */
+  Trait* GlobalGetTrait(TraitId trait_id);
+
+  /**====================================
+   * Statistics Operations
+   * ===================================*/
+
+  /** Add an I/O statistic to the internal log */
+  void AddIoStat(TagId tag_id, BlobId blob_id, size_t blob_size, IoType type);
+
+  /** Add an I/O statistic to the internal log */
+  void ClearIoStats(size_t count);
+
+  /**====================================
+   * Private Operations
+   * ===================================*/
 
  private:
   /** Acquire the external lock to Bucket or Blob */
@@ -371,20 +474,19 @@ class MetadataManager {
   bool LockMdObject(hipc::unordered_map<MapFirst, MapSecond> &map,
                     IdT id,
                     MdLockType lock_type) {
-    ScopedRwReadLock md_lock(lock_);
     auto iter = map.find(id);
     if (iter == map.end()) {
       return false;
     }
-    hipc::ShmRef<hipc::pair<MapFirst, MapSecond>> info = *iter;
-    MapSecond &obj_info = *info->second_;
+    hipc::pair<MapFirst, MapSecond> &info = *iter;
+    MapSecond &obj_info = info.GetSecond();
     switch (lock_type) {
       case MdLockType::kExternalRead: {
-        obj_info.header_->lock_[1].ReadLock();
+        obj_info.lock_[1].ReadLock(0);
         return true;
       }
       case MdLockType::kExternalWrite: {
-        obj_info.header_->lock_[1].WriteLock();
+        obj_info.lock_[1].WriteLock(0);
         return true;
       }
       default: {
@@ -398,25 +500,39 @@ class MetadataManager {
   bool UnlockMdObject(hipc::unordered_map<MapFirst, MapSecond> &map,
                       IdT id,
                       MdLockType lock_type) {
-    ScopedRwReadLock md_lock(lock_);
     auto iter = map.find(id);
     if (iter == map.end()) {
       return false;
     }
-    hipc::ShmRef<hipc::pair<MapFirst, MapSecond>> info = *iter;
-    MapSecond &obj_info = *info->second_;
+    hipc::pair<MapFirst, MapSecond> &info = *iter;
+    MapSecond &obj_info = info.GetSecond();
     switch (lock_type) {
       case MdLockType::kExternalRead: {
-        obj_info.header_->lock_[1].ReadUnlock();
+        obj_info.lock_[1].ReadUnlock();
         return true;
       }
       case MdLockType::kExternalWrite: {
-        obj_info.header_->lock_[1].WriteUnlock();
+        obj_info.lock_[1].WriteUnlock();
         return true;
       }
       default: {
         return false;
       }
+    }
+  }
+
+  /**====================================
+   * Debugging Logs
+   * ===================================*/
+ public:
+  void PrintDeviceInfo() {
+    int id = 0;
+    for (DeviceInfo &dev_info : *devices_) {
+      HILOG(kInfo, "Device {} is mounted on {} with capacity {} bytes",
+            id,
+            dev_info.mount_point_->str(),
+            dev_info.capacity_)
+      ++id;
     }
   }
 };

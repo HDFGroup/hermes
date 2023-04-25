@@ -13,7 +13,8 @@
 #ifndef HERMES_TYPES_H_
 #define HERMES_TYPES_H_
 
-#include <glog/logging.h>
+#include "hermes_shm/util/logging.h"
+#include "hermes_shm/constants/macros.h"
 #include <stdint.h>
 
 #include <functional>
@@ -22,24 +23,11 @@
 #include <vector>
 
 #include "data_structures.h"
-#include "constants.h"
 
 /**
  * \file hermes_types.h
  * Types used in Hermes.
  */
-
-#ifndef KILOBYTES
-#define KILOBYTES(n) (((size_t)n) * 1024)                     /**< KB */
-#endif
-
-#ifndef MEGABYTES
-#define MEGABYTES(n) (((size_t)n) * 1024 * 1024)              /**< MB */
-#endif
-
-#ifndef GIGABYTES
-#define GIGABYTES(n) (((size_t)n) * 1024UL * 1024UL * 1024UL) /**< GB */
-#endif
 
 /**
  * \namespace hermes
@@ -57,6 +45,27 @@ typedef int64_t i64;  /**< 64-bit signed integer */
 typedef float f32;    /**< 32-bit float */
 typedef double f64;   /**< 64-bit float */
 
+/** Identifier of the Hermes allocator */
+extern const hipc::allocator_id_t main_alloc_id;
+
+/** Hermes server environment variable */
+extern const char* kHermesServerConf;
+
+/** Hermes client environment variable */
+extern const char* kHermesClientConf;
+
+/** Hermes adapter mode environment variable */
+extern const char* kHermesAdapterMode;
+
+/** Filesystem page size environment variable */
+extern const char* kHermesPageSize;
+
+/** Stop daemon environment variable */
+extern const char* kHermesStopDaemon;
+
+/** Maximum path length environment variable */
+extern const size_t kMaxPathLength;
+
 /** The mode Hermes is launched in */
 enum class HermesType {
   kNone,
@@ -64,10 +73,31 @@ enum class HermesType {
   kClient
 };
 
+/** The flushing mode */
+enum class FlushingMode {
+  kSync,
+  kAsync
+};
+
+/** Convert flushing modes to strings */
+class FlushingModeConv {
+ public:
+  static FlushingMode GetEnum(const std::string &str) {
+    if (str == "kSync") {
+      return FlushingMode::kSync;
+    }
+    if (str == "kAsync") {
+      return FlushingMode::kAsync;
+    }
+    return FlushingMode::kAsync;
+  }
+};
+
 /** The types of I/O that can be performed (for IoCall RPC) */
 enum class IoType {
   kRead,
-  kWrite
+  kWrite,
+  kNone
 };
 
 typedef u16 DeviceID; /**< device id in unsigned 16-bit integer */
@@ -81,7 +111,7 @@ enum class TopologyType {
   kCount
 };
 
-/** Represents unique ID for BlobId and BucketId */
+/** Represents unique ID for BlobId and TagId */
 template<int TYPE>
 struct UniqueId {
   u64 unique_;   /**< A unique id for the blob */
@@ -108,22 +138,48 @@ struct UniqueId {
     return unique_ != other.unique_ || node_id_ != other.node_id_;
   }
 };
-typedef UniqueId<0> BucketId;
-typedef UniqueId<2> BlobId;
+typedef UniqueId<1> BlobId;
+typedef UniqueId<2> TagId;
+typedef UniqueId<3> TraitId;
+
+/** Allow unique ids to be printed as strings */
+template<int num>
+std::ostream &operator<<(std::ostream &os, UniqueId<num> const &obj) {
+  return os << (std::to_string(obj.node_id_) + "."
+               + std::to_string(obj.unique_));
+}
+
+/** Indicates a PUT or GET for a particular blob */
+struct IoStat {
+  IoType type_;
+  BlobId blob_id_;
+  TagId tag_id_;
+  size_t blob_size_;
+  int rank_;
+};
+
+/** Used as hints to the prefetcher */
+struct IoTrace {
+  i32 node_id_;
+  IoType type_;
+  std::string blob_name_;
+  std::string tag_name_;
+  size_t blob_size_;
+  int organize_next_n_;
+  float score_;
+  int rank_;
+};
 
 /** A definition for logging something that is not yet implemented */
 #define HERMES_NOT_IMPLEMENTED_YET \
-  LOG(FATAL) << __func__ << " not implemented yet\n"
-
-/** A definition for logging invalid code path */
-#define HERMES_INVALID_CODE_PATH LOG(FATAL) << "Invalid code path." << std::endl
+  HELOG(kFatal, "not implemented yet")
 
 /** A TargetId uniquely identifies a buffering target within the system. */
 union TargetId {
   /** The Target ID as bitfield */
   struct {
     /** The ID of the node in charge of this target. */
-    u32 node_id_;
+    i32 node_id_;
     /** The ID of the virtual device that backs this target. It is an index into
      * the Device array. */
     u16 device_id_;
@@ -136,13 +192,17 @@ union TargetId {
 
   TargetId() = default;
 
-  TargetId(u32 node_id, u16 device_id, u16 index) {
+  TargetId(i32 node_id, u16 device_id, u16 index) {
     bits_.node_id_ = node_id;
     bits_.device_id_ = device_id;
     bits_.index_ = index;
   }
 
-  u32 GetNodeId() {
+  TargetId(const TargetId &other) {
+    as_int_ = other.as_int_;
+  }
+
+  i32 GetNodeId() {
     return bits_.node_id_;
   }
 
@@ -203,18 +263,13 @@ struct Thresholds {
   float max_; /**< maximum threshold value */
 };
 
-/** Trait ID type */
-struct TraitId {
-  u64 type_;
-};
-
 }  // namespace hermes
 
 
 namespace hermes::api {
 
 /** A blob is an uniterpreted array of bytes */
-typedef hermes_shm::charbuf Blob;
+typedef hshm::charbuf Blob;
 
 /** Supported data placement policies */
 enum class PlacementPolicy {
@@ -287,13 +342,6 @@ enum class PrefetchHint {
   kMachineLearning
 };
 
-struct PrefetchContext {
-  PrefetchHint hint_;
-  int read_ahead_;
-  float decay_;
-  PrefetchContext() : hint_(PrefetchHint::kNone), read_ahead_(1), decay_(.5) {}
-};
-
 /** Hermes API call context */
 struct Context {
   /** The blob placement policy */
@@ -311,8 +359,8 @@ struct Context {
   /** Whether swapping is disabled */
   bool disable_swap;
 
-  /** Prefetching hints */
-  PrefetchContext pctx_;
+  /** The blob's score */
+  float blob_score_;
 
   Context();
 };
@@ -353,4 +401,57 @@ struct hash<hermes::UniqueId<TYPE>> {
   }
 };
 }  // namespace std
+
+namespace hermes {
+
+/** Used for debugging concurrency issues with locks */
+enum LockOwners {
+  kNone = 0,
+  kMDM_Create = 1,
+  kMDM_Update = 2,
+  kMDM_Find = 3,
+  kMDM_Find2 = 4,
+  kMDM_Delete = 5,
+  kFS_GetBaseAdapterMode = 6,
+  kFS_GetAdapterMode = 7,
+  kFS_GetAdapterPageSize = 8,
+  kBORG_LocalEnqueueFlushes = 9,
+  kBORG_LocalProcessFlushes = 10,
+  kMDM_LocalGetBucketSize = 12,
+  kMDM_LocalSetBucketSize = 13,
+  kMDM_LocalLockBucket = 14,
+  kMDM_LocalUnlockBucket = 15,
+  kMDM_LocalClearBucket = 16,
+  kMDM_LocalTagBlob = 17,
+  kMDM_LocalBlobHasTag = 18,
+  kMDM_LocalTryCreateBlob = 19,
+  kMDM_LocalPutBlobMetadata = 20,
+  kMDM_LocalGetBlobId = 21,
+  kMDM_LocalGetBlobName = 22,
+  kMDM_LocalGetBlobScore = 24,
+  kMDM_LocalLockBlob = 26,
+  kMDM_LocalUnlockBlob = 27,
+  kMDM_LocalGetBlobBuffers = 28,
+  kMDM_LocalRenameBlob = 29,
+  kMDM_LocalDestroyBlob = 30,
+  kMDM_LocalClear = 31,
+  kMDM_LocalGetOrCreateTag = 32,
+  kMDM_LocalGetTagId = 33,
+  kMDM_LocalGetTagName = 34,
+  kMDM_LocalRenameTag = 35,
+  kMDM_LocalDestroyTag = 36,
+  kMDM_LocalTagAddBlob = 37,
+  kMDM_LocalTagRemoveBlob = 38,
+  kMDM_LocalGroupByTag = 39,
+  kMDM_LocalTagAddTrait = 40,
+  kMDM_LocalTagGetTraits = 41,
+  kMDM_LocalRegisterTrait = 42,
+  kMDM_LocalGetTraitId = 43,
+  kMDM_LocalGetTraitParams = 44,
+  kMDM_GlobalGetTrait = 45,
+  kMDM_AddIoStat = 46,
+  kMDM_ClearIoStats = 47
+};
+
+}  // namespace hermes
 #endif  // HERMES_TYPES_H_

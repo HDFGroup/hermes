@@ -1,0 +1,4 @@
+ares-comp-01
+ares-comp-02
+
+ares-comp-[03-05,08-10]

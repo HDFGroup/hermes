@@ -27,6 +27,7 @@ enum class AdapterType {
 
 /** Adapter modes */
 enum class AdapterMode {
+  kNone,
   kDefault,
   kBypass,
   kScratch,
@@ -58,6 +59,9 @@ class AdapterModeConv {
       }
       case AdapterMode::kWorkflow: {
         return "AdapterMode::kWorkflow";
+      }
+      default: {
+        return "Unkown adapter mode";
       }
     }
   }

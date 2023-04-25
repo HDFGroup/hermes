@@ -17,7 +17,7 @@
 #include "allocator.h"
 #include "hermes_shm/thread/lock.h"
 
-namespace hermes_shm::ipc {
+namespace hshm::ipc {
 
 struct MallocAllocatorHeader : public AllocatorHeader {
   std::atomic<size_t> total_alloc_size_;
@@ -46,7 +46,7 @@ class MallocAllocator : public Allocator {
   /**
    * Get the ID of this allocator from shared memory
    * */
-  allocator_id_t GetId() override {
+  allocator_id_t &GetId() override {
     return header_->allocator_id_;
   }
 
@@ -96,6 +96,6 @@ class MallocAllocator : public Allocator {
   size_t GetCurrentlyAllocatedSize() override;
 };
 
-}  // namespace hermes_shm::ipc
+}  // namespace hshm::ipc
 
 #endif  // HERMES_MEMORY_ALLOCATOR_MALLOC_ALLOCATOR_H_

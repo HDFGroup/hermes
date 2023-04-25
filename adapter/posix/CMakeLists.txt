@@ -2,18 +2,16 @@ include_directories(
         ${CMAKE_SOURCE_DIR}
         ${HERMES_SRC_DIR}
         ${HERMES_ADAPTER_DIR}
+        ${HERMES_IO_CLIENT_DIR}
         ${CMAKE_CURRENT_SOURCE_DIR})
 
-# Creates the POSIX I/O client and singleton
-add_library(hermes_posix_io_client
-        ${CMAKE_CURRENT_SOURCE_DIR}/posix_api_singleton.cc
-        ${CMAKE_CURRENT_SOURCE_DIR}/posix_io_client.cc)
-target_compile_options(hermes_posix_io_client PUBLIC -fPIC)
+# Creates the POSIX I/O client
+add_library(hermes_posix_io_client posix_io_client.cc)
 add_dependencies(hermes_posix_io_client
-        hermes_shm_data_structures)
+        hermes)
 target_link_libraries(hermes_posix_io_client
-        hermes_shm_data_structures
-        MPI::MPI_CXX glog::glog stdc++fs dl)
+        hermes
+        MPI::MPI_CXX stdc++fs dl)
 
 # Create the POSIX interceptor
 set(INTERCEPTOR_DEPS
@@ -24,7 +22,6 @@ add_library(hermes_posix SHARED
         ${CMAKE_CURRENT_SOURCE_DIR}/posix_api.cc)
 add_dependencies(hermes_posix ${INTERCEPTOR_DEPS})
 target_link_libraries(hermes_posix ${INTERCEPTOR_DEPS})
-target_compile_options(hermes_posix PUBLIC -fPIC)
 
 #-----------------------------------------------------------------------------
 # Add Target(s) to CMake Install
@@ -54,4 +51,12 @@ EXPORT (
         FILE
         ${HERMES_EXPORTED_TARGETS}.cmake
 )
+endif()
+
+#-----------------------------------------------------------------------------
+# Add Target(s) to Coverage
+#-----------------------------------------------------------------------------
+if(HERMES_ENABLE_COVERAGE)
+    set_coverage_flags(hermes_posix_io_client)
+    set_coverage_flags(hermes_posix)
 endif()

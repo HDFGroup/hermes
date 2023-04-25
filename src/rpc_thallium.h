@@ -15,7 +15,6 @@
 
 #include <thallium.hpp>
 #include "rpc_thallium_serialization.h"
-#include "communication.h"
 #include "config.h"
 #include "utils.h"
 #include "hermes_shm/data_structures/serialization/thallium.h"
@@ -29,14 +28,11 @@ namespace hermes {
 /**
    A structure to represent Thallium state
 */
-class ThalliumRpc : public RpcContext {
+class ThalliumRpc  : public RpcContext {
  public:
   std::atomic<bool> kill_requested_; /**< is kill requested? */
   std::unique_ptr<tl::engine> client_engine_; /**< pointer to client engine */
   std::unique_ptr<tl::engine> server_engine_; /**< pointer to server engine */
-  std::unique_ptr<tl::engine> bo_engine_;     /**< pointer to borg engine */
-  std::unique_ptr<tl::engine> io_engine_;     /**< pointer to I/O engine */
-  ABT_xstream execution_stream_;     /**< Argobots execution stream */
 
   /** initialize RPC context  */
   ThalliumRpc() : RpcContext() {}
@@ -46,7 +42,7 @@ class ThalliumRpc : public RpcContext {
   void Finalize();
   void RunDaemon();
   void StopDaemon();
-  std::string GetServerName(u32 node_id);
+  std::string GetServerName(i32 node_id);
 
   template<typename RpcLambda>
   void RegisterRpc(const char *name, RpcLambda &&lambda) {
@@ -55,13 +51,13 @@ class ThalliumRpc : public RpcContext {
 
   /** RPC call */
   template <typename ReturnType, typename... Args>
-  ReturnType Call(u32 node_id, const char *func_name, Args&&... args) {
-    LOG(INFO) << "Calling " << func_name << " on node " << node_id
-              << " from node " << node_id << std::endl;
+  ReturnType Call(i32 node_id, const char *func_name, Args&&... args) {
+    HILOG(kDebug, "Calling {} {} -> {}", func_name, node_id_, node_id)
     try {
       std::string server_name = GetServerName(node_id);
       tl::remote_procedure remote_proc = client_engine_->define(func_name);
       tl::endpoint server = client_engine_->lookup(server_name);
+      HILOG(kDebug, "Found the server: {}", server_name)
       if constexpr (std::is_same<ReturnType, void>::value) {
         remote_proc.disable_response();
         remote_proc.on(server)(std::forward<Args>(args)...);
@@ -70,27 +66,34 @@ class ThalliumRpc : public RpcContext {
         return result;
       }
     } catch (tl::margo_exception &err) {
-      LOG(ERROR) << "Thallium failed on function: " << func_name << std::endl;
-      LOG(FATAL) << err.what() << std::endl;
+      HELOG(kFatal, "Thallium failed on function: {}\n{}",
+            func_name, err.what())
+      exit(1);
     }
   }
 
   /** I/O transfers */
   template<typename ReturnType, typename ...Args>
-  ReturnType IoCall(u32 node_id, const char *func_name,
+  ReturnType IoCall(i32 node_id, const char *func_name,
                     IoType type, char *data, size_t size, Args&& ...args) {
-    LOG(INFO) << "Calling " << func_name << " on node " << node_id
-              << " from node " << node_id << std::endl;
+    HILOG(kDebug, "Calling {} {} -> {}", func_name, node_id_, node_id)
     std::string server_name = GetServerName(node_id);
     tl::bulk_mode flag;
     switch (type) {
       case IoType::kRead: {
-        flag = tl::bulk_mode::read_only;
+        // The "bulk" object will be modified
+        flag = tl::bulk_mode::write_only;
         break;
       }
       case IoType::kWrite: {
-        flag = tl::bulk_mode::write_only;
+        // The "bulk" object will only be read from
+        flag = tl::bulk_mode::read_only;
         break;
+      }
+      case IoType::kNone: {
+        // TODO(llogan)
+        HELOG(kFatal, "Cannot have none I/O type")
+        exit(1);
       }
     }
 
@@ -115,14 +118,19 @@ class ThalliumRpc : public RpcContext {
     tl::bulk_mode flag;
     switch (type) {
       case IoType::kRead: {
-        // Write to the buffer the client is reading from
-        flag = tl::bulk_mode::write_only;
+        // The "local_bulk" object will only be read from
+        flag = tl::bulk_mode::read_only;
         break;
       }
       case IoType::kWrite: {
-        // Read from the buffer the client has written to
-        flag = tl::bulk_mode::read_only;
+        // The "local_bulk" object will only be written to
+        flag = tl::bulk_mode::write_only;
         break;
+      }
+      default: {
+        // NOTE(llogan): Avoids "uninitalized" warning
+        flag = tl::bulk_mode::write_only;
+        HELOG(kFatal, "Cannot have none I/O type")
       }
     }
 
@@ -135,19 +143,23 @@ class ThalliumRpc : public RpcContext {
 
     switch (type) {
       case IoType::kRead: {
-        // Write to the buffer the client is reading from
-        io_bytes = bulk.on(endpoint) >> local_bulk;
+        // Read from "local_bulk" to "bulk"
+        io_bytes = bulk.on(endpoint) << local_bulk;
         break;
       }
       case IoType::kWrite: {
-        // Read from the buffer the client has written to
-        io_bytes = local_bulk >> bulk.on(endpoint);
+        // Write to "local_bulk" from "bulk"
+        io_bytes = bulk.on(endpoint) >> local_bulk;
         break;
       }
+      case IoType::kNone: {
+        HELOG(kFatal, "Cannot have none I/O type")
+        exit(1);
+      }
     }
-
-    // TODO(llogan): @errorhandling
-    assert(io_bytes == size);
+    if (io_bytes != size) {
+      HELOG(kFatal, "Failed to perform bulk I/O thallium")
+    }
     return io_bytes;
   }
 

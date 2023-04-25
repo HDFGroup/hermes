@@ -14,7 +14,7 @@
 #include <string>
 
 #include <mpi.h>
-#include <glog/logging.h>
+#include "hermes_shm/util/logging.h"
 #include "hermes.h"
 #include "buffer_pool.h"
 
@@ -46,6 +46,9 @@ TEST_CASE("TestBufferPool") {
     {KILOBYTES(64), 3},  // 64KB blob on 3 targets
     {MEGABYTES(4), 3},  // 4MB blob on 3 targets
     {MEGABYTES(4) + KILOBYTES(32), 3},  // 4MB blob on 3 targets
+
+    // This will test the ability to "trickle down"
+    {MEGABYTES(256), 1},  // 256MB blob on 1 target
   };
 
   for (auto &[size, num_targets] : sizes) {
@@ -54,30 +57,31 @@ TEST_CASE("TestBufferPool") {
     size_t tgt_size = size / num_targets;
     size_t last_size = tgt_size + (size % num_targets);
     for (int i = 0; i < num_targets; ++i) {
-      hipc::ShmRef<hermes::TargetInfo> target = (*HERMES->mdm_.targets_)[i];
+      hermes::TargetInfo &target = (*HERMES->mdm_.targets_)[i];
       if (i < num_targets - 1) {
-        schema.plcmnts_.emplace_back(tgt_size, target->id_);
+        schema.plcmnts_.emplace_back(tgt_size, target.id_);
       } else {
-        schema.plcmnts_.emplace_back(last_size, target->id_);
+        schema.plcmnts_.emplace_back(last_size, target.id_);
       }
     }
 
     // Create the blob to write
     hermes::Blob write_blob(size);
-    for (size_t i = 0; i < size; ++i) {
-      write_blob.data()[i] = i;
-    }
+    memset(write_blob.data(), 10, size);
 
     // Allocate the buffers and set them
-    hipc::vector<hermes::BufferInfo> buffers =
-        HERMES->bpm_->LocalAllocateAndSetBuffers(schema, write_blob);
+    std::vector<hermes::BufferInfo> buffers =
+        HERMES->bpm_.LocalAllocateAndSetBuffers(schema, write_blob);
 
     // Read back the buffers
-    hermes::Blob read_blob =
-        HERMES->borg_.LocalReadBlobFromBuffers(buffers);
+    hermes::Blob read_blob(size);
+    HERMES->borg_.LocalReadBlobFromBuffers(read_blob, buffers);
 
     // Verify they are the same
-    REQUIRE(read_blob == write_blob);
+    REQUIRE(read_blob.size() == size);
+    REQUIRE(VerifyBuffer(read_blob.data(), size, 10));
+
+    // Release buffers
+    HERMES->bpm_.LocalReleaseBuffers(buffers);
   }
 }
-

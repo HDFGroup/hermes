@@ -14,7 +14,7 @@
 #include <string>
 
 #include <mpi.h>
-#include <glog/logging.h>
+#include "hermes_shm/util/logging.h"
 #include "hermes.h"
 #include "bucket.h"
 
@@ -27,13 +27,14 @@ void MainPretest() {
 }
 
 void MainPosttest() {
+  HERMES->Clear();
   HERMES->Finalize();
 }
 
-void TestManyPuts(hapi::Hermes *hermes) {
+void TestBlobCreates(hapi::Hermes *hermes) {
   auto bkt = hermes->GetBucket("hello");
-  int num_blobs = 1;
-  size_t blob_size = MEGABYTES(150);
+  size_t num_blobs = 256;
+  size_t blob_size = KILOBYTES(4);
   hermes::api::Context ctx;
   hermes::BlobId blob_id;
 
@@ -42,16 +43,16 @@ void TestManyPuts(hapi::Hermes *hermes) {
     std::string name = std::to_string(i);
     char nonce = i % 256;
     memset(blob.data(), nonce, blob_size);
-    bkt->Put(name, std::move(blob), blob_id, ctx);
+    bkt.Put(name, blob, blob_id, ctx);
   }
 
   for (size_t i = 0; i < num_blobs; ++i) {
     std::string name = std::to_string(i);
     char nonce = i % 256;
     hermes::Blob blob;
-    bkt->GetBlobId(name, blob_id);
+    bkt.GetBlobId(name, blob_id);
     REQUIRE(!blob_id.IsNull());
-    bkt->Get(blob_id, blob, ctx);
+    bkt.Get(blob_id, blob, ctx);
     REQUIRE(blob.size() == blob_size);
     REQUIRE(VerifyBuffer(blob.data(), blob_size, nonce));
   }
@@ -64,30 +65,30 @@ void TestBlobOverride(hapi::Hermes *hermes) {
   hermes::BlobId blob_id;
   hermes::Blob blob(1024);
   for (size_t i = 0; i < 1024; ++i) {
-    memset(blob.data(), 10, 1024);
-    bkt2->Put("0", std::move(blob), blob_id, ctx);
+    memset(blob.data(), i, 1024);
+    bkt2.Put("0", blob, blob_id, ctx);
     hermes::Blob ret;
-    bkt->Get(blob_id, ret, ctx);
+    bkt.Get(blob_id, ret, ctx);
     REQUIRE(ret.size() == 1024);
-    REQUIRE(VerifyBuffer(ret.data(), 1024, 10));
+    REQUIRE(VerifyBuffer(ret.data(), 1024, i));
   }
 }
 
 void TestBucketRename(hapi::Hermes *hermes) {
   auto bkt = hermes->GetBucket("hello");
-  bkt->Rename("hello2");
+  bkt.Rename("hello2");
   auto bkt1 = hermes->GetBucket("hello");
   auto bkt2 = hermes->GetBucket("hello2");
 
-  REQUIRE(!bkt2->IsNull());
-  REQUIRE(bkt1->GetId() != bkt2->GetId());
-  REQUIRE(bkt->GetId() == bkt2->GetId());
+  REQUIRE(!bkt2.IsNull());
+  REQUIRE(bkt1.GetId() != bkt2.GetId());
+  REQUIRE(bkt.GetId() == bkt2.GetId());
 }
 
-void TestBucketDestroy(hapi::Hermes *hermes) {
+void TestBucketClear(hapi::Hermes *hermes) {
   auto bkt = hermes->GetBucket("hello");
-  int num_blobs = 1;
-  size_t blob_size = MEGABYTES(150);
+  size_t num_blobs = 16;
+  size_t blob_size = MEGABYTES(32);
   hermes::api::Context ctx;
   hermes::BlobId blob_id;
 
@@ -96,10 +97,37 @@ void TestBucketDestroy(hapi::Hermes *hermes) {
     std::string name = std::to_string(i);
     char nonce = i % 256;
     memset(blob.data(), nonce, blob_size);
-    bkt->Put(name, std::move(blob), blob_id, ctx);
+    bkt.Put(name, std::move(blob), blob_id, ctx);
   }
 
-  bkt->Destroy();
+  bkt.Clear();
+
+  REQUIRE(bkt.GetSize() == 0);
+  auto blobs = bkt.GetContainedBlobIds();
+  REQUIRE(blobs.size() == 0);
+}
+
+void TestBucketDestroy(hapi::Hermes *hermes) {
+  auto bkt = hermes->GetBucket("hello");
+  size_t num_blobs = 1;
+  size_t blob_size = MEGABYTES(32);
+  hermes::api::Context ctx;
+  hermes::BlobId blob_id;
+
+  for (size_t i = 0; i < num_blobs; ++i) {
+    hermes::Blob blob(blob_size);
+    std::string name = std::to_string(i);
+    char nonce = i % 256;
+    memset(blob.data(), nonce, blob_size);
+    bkt.Put(name, blob, blob_id, ctx);
+  }
+
+  bkt.Destroy();
+
+  // Check if the bucket can be re-obtained
+  auto new_bkt = hermes->GetBucket("hello");
+  REQUIRE(bkt.GetId() != new_bkt.GetId());
+  REQUIRE(new_bkt.GetSize() == 0);
 }
 
 void TestBlobRename(hapi::Hermes *hermes) {
@@ -107,18 +135,18 @@ void TestBlobRename(hapi::Hermes *hermes) {
   hapi::Blob blob(1024);
   hermes::BlobId blob_id;
   hapi::Context ctx;
-  bkt->Put("0", blob, blob_id, ctx);
-  bkt->RenameBlob(blob_id, "1", ctx);
+  bkt.Put("0", blob, blob_id, ctx);
+  bkt.RenameBlob(blob_id, "1", ctx);
 
   {
     hermes::BlobId blob_get_id;
-    bkt->GetBlobId("0", blob_get_id);
+    bkt.GetBlobId("0", blob_get_id);
     REQUIRE(blob_get_id.IsNull());
   }
 
   {
     hermes::BlobId blob_get_id;
-    bkt->GetBlobId("1", blob_get_id);
+    bkt.GetBlobId("1", blob_get_id);
     REQUIRE(!blob_get_id.IsNull());
     REQUIRE(blob_get_id == blob_id);
   }
@@ -129,27 +157,29 @@ void TestBlobDestroy(hapi::Hermes *hermes) {
   hapi::Blob blob(1024);
   hermes::BlobId blob_id;
   hapi::Context ctx;
-  bkt->Put("0", blob, blob_id, ctx);
-  bkt->DestroyBlob(blob_id, ctx);
+  bkt.Put("0", blob, blob_id, ctx);
+  bkt.DestroyBlob(blob_id, ctx);
   {
     hermes::BlobId blob_id_get;
-    bkt->GetBlobId("0", blob_id_get);
+    bkt.GetBlobId("0", blob_id_get);
     REQUIRE(blob_id_get.IsNull());
   }
 }
 
 TEST_CASE("TestCreateBlobName") {
-  hermes::BucketId bkt_id(1, 1);
-  hipc::charbuf blob_name("0");
-  hipc::charbuf n1 =
+  HERMES->Clear();
+  hermes::TagId bkt_id(1, 1);
+  std::string blob_name("0");
+  hipc::uptr<hipc::charbuf> n1 =
       hermes::MetadataManager::CreateBlobName(bkt_id, blob_name);
-  hipc::charbuf n2 =
+  hipc::uptr<hipc::charbuf> n2 =
       hermes::MetadataManager::CreateBlobName(bkt_id, blob_name);
-  REQUIRE(n1 == n2);
+  REQUIRE(*n1 == *n2);
 }
 
-TEST_CASE("TestManyPuts") {
-  TestManyPuts(HERMES);
+TEST_CASE("TestBlobCreates") {
+  HERMES->Clear();
+  TestBlobCreates(HERMES);
 }
 
 TEST_CASE("TestBlobOverride") {
@@ -157,17 +187,26 @@ TEST_CASE("TestBlobOverride") {
 }
 
 TEST_CASE("TestBucketRename") {
+  HERMES->Clear();
   TestBucketRename(HERMES);
 }
 
+TEST_CASE("TestBucketClear") {
+  HERMES->Clear();
+  TestBucketClear(HERMES);
+}
+
 TEST_CASE("TestBucketDestroy") {
+  HERMES->Clear();
   TestBucketDestroy(HERMES);
 }
 
 TEST_CASE("TestBlobRename") {
+  HERMES->Clear();
   TestBlobRename(HERMES);
 }
 
 TEST_CASE("TestBlobDestroy") {
+  HERMES->Clear();
   TestBlobDestroy(HERMES);
 }

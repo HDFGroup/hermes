@@ -3,19 +3,51 @@ project(hermes_shm)
 
 set(CMAKE_CXX_STANDARD 17)
 
-###################GLOBAL VARIABLES
+#------------------------------------------------------------------------------
+# Global variables
+#------------------------------------------------------------------------------
 set(HERMES_SHM_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${HERMES_SHM_ROOT}/include)
 
-###################OPTIONS
+#------------------------------------------------------------------------------
+# Options
+#------------------------------------------------------------------------------
 option(BUILD_SHARED_LIBS "Build shared libraries (.dll/.so) instead of static ones (.lib/.a)" ON)
+option(BUILD_HSHM_TESTS "Build tests" ON)
+option(BUILD_HSHM_BENCHMARKS "Build benchmarks" ON)
 option(BUILD_MPI_TESTS "Build tests which depend on MPI" ON)
 option(BUILD_OpenMP_TESTS "Build tests which depend on OpenMP" ON)
 option(BUILD_Boost_TESTS "Build tests which depend on libboost" ON)
 option(HERMES_RPC_THALLIUM "Build tests which depend on thallium" ON)
-option(HERMES_ENABLE_COVERAGE "Check how well tests cover code" ON)
+option(HERMES_ENABLE_COVERAGE "Check how well tests cover code" OFF)
 option(HERMES_ENABLE_DOXYGEN "Check how well the code is documented" ON)
 option(HERMES_CXX_PROFILE "Generate profiling data from benchmarks" OFF)
+option(HERMES_PTHREADS_ENABLED "Support spawning pthreads" ON)
+option(HERMES_DEBUG_LOCK "Used for debugging locks" OFF)
+option(HERMES_ENABLE_PROFILING "View profiling logs" OFF)
+
+if (HERMES_PTHREADS_ENABLED)
+    add_compile_definitions(HERMES_PTHREADS_ENABLED)
+endif()
+if (HERMES_RPC_THALLIUM)
+    add_compile_definitions(HERMES_RPC_THALLIUM)
+endif()
+if (HERMES_DEBUG_LOCK)
+    add_compile_definitions(HERMES_DEBUG_LOCK)
+endif()
+
+#------------------------------------------------------------------------------
+# Setup CMake Environment
+#------------------------------------------------------------------------------
+if(NOT HERMES_EXTERNALLY_CONFIGURED)
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY
+            ${PROJECT_BINARY_DIR}/bin CACHE PATH "Single Directory for all Executables.")
+    set(EXECUTABLE_OUTPUT_PATH ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY
+            ${PROJECT_BINARY_DIR}/bin CACHE PATH "Single Directory for all Libraries")
+    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY
+            ${PROJECT_BINARY_DIR}/bin CACHE PATH "Single Directory for all static libraries.")
+endif()
 
 #------------------------------------------------------------------------------
 # Setup install and output Directories
@@ -33,19 +65,23 @@ if(NOT HERMES_INSTALL_DATA_DIR)
     set(HERMES_INSTALL_DATA_DIR ${CMAKE_INSTALL_PREFIX}/share)
 endif()
 
-##################CMAKE MODULES
+#------------------------------------------------------------------------------
+# CMake Modules
+#------------------------------------------------------------------------------
 if (NOT IS_HERMES_MAIN)
     set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/CMake)
     message(${CMAKE_MODULE_PATH})
 endif()
 
-##################OPTIMIZATION
+#------------------------------------------------------------------------------
+# Optimization
+#------------------------------------------------------------------------------
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     message("IN DEBUG MODE")
-    set(CMAKE_CXX_FLAGS "-g -O0")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0")
 elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
     message("IN RELEASE MODE")
-    set(CMAKE_CXX_FLAGS "-g -O3")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O3")
 endif()
 if(HERMES_CXX_PROFILE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
@@ -58,7 +94,9 @@ function(make_gprof exec_name exec_dir)
       COMMAND gprof -b -A -p -q ${exec_dir}/${exec_name} gmon.out)
 endfunction()
 
-##################REQUIRED EXTERNAL LIBRARIES
+#------------------------------------------------------------------------------
+# External libraries
+#------------------------------------------------------------------------------
 
 # YAML-CPP
 find_package(yaml-cpp REQUIRED)
@@ -94,7 +132,9 @@ if(BUILD_Boost_TESTS)
     message(STATUS "found boost.h at ${Boost_INCLUDE_DIRS}")
 endif()
 
-##################CODE COVERAGE
+#------------------------------------------------------------------------------
+# Code Coverage
+#------------------------------------------------------------------------------
 if (NOT IS_HERMES_MAIN)
     if(HERMES_ENABLE_COVERAGE)
         set(COVERAGE_FLAGS "-fprofile-arcs -ftest-coverage" CACHE STRING
@@ -111,14 +151,15 @@ if (NOT IS_HERMES_MAIN)
     endif()
 endif()
 
-##################DOCUMENTATION
-
+#------------------------------------------------------------------------------
+# Documentation
+#------------------------------------------------------------------------------
 if (NOT IS_HERMES_MAIN)
     if(HERMES_ENABLE_DOXYGEN)
         include(UseDoxygenDoc)
         add_doxygen_doc(
                 BUILD_DIR
-                ${CMAKE_CURRENT_BINARY_DIR}/_build
+                ${CMAKE_BINARY_DIR}/bin/_build
                 DOXY_FILE
                 ${CMAKE_CURRENT_SOURCE_DIR}/doc/Doxyfile.in
                 TARGET_NAME
@@ -129,8 +170,9 @@ if (NOT IS_HERMES_MAIN)
     endif()
 endif()
 
-##################Build hermes main packages
-
+#------------------------------------------------------------------------------
+# Build hermes_shm
+#------------------------------------------------------------------------------
 add_subdirectory(src)
 
 if (NOT IS_HERMES_MAIN)
@@ -138,12 +180,22 @@ if (NOT IS_HERMES_MAIN)
     add_custom_target(preamble COMMAND python3 ${HERMES_SHM_ROOT}/scripts/preamble.py ${HERMES_SHM_ROOT})
 endif()
 
-##################MODULES & TESTS
+#------------------------------------------------------------------------------
+# Build tests + benchmarks
+#------------------------------------------------------------------------------
 set(TEST_MAIN ${HERMES_SHM_ROOT}/test/unit)
 enable_testing()
-add_subdirectory(test)
-add_subdirectory(benchmark)
-add_subdirectory(example)
+if (BUILD_HSHM_TESTS)
+  message("Building HSHM unit tests")
+  add_subdirectory(test)
+endif()
+if (BUILD_HSHM_BENCHMARKS)
+  message("Building HSHM benchmarks")
+  add_subdirectory(benchmark)
+endif()
+#add_subdirectory(example)
 
-##################Install hermes
+#------------------------------------------------------------------------------
+# Install hshm
+#------------------------------------------------------------------------------
 install(DIRECTORY include DESTINATION ${CMAKE_INSTALL_PREFIX})

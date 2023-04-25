@@ -12,21 +12,17 @@
 
 #include "basic_test.h"
 #include "test_init.h"
-#include "hermes_shm/data_structures/thread_unsafe/vector.h"
-#include "hermes_shm/data_structures/thread_unsafe/list.h"
-#include "hermes_shm/data_structures/string.h"
+#include "hermes_shm/data_structures/ipc/vector.h"
+#include "hermes_shm/data_structures/ipc/list.h"
+#include "hermes_shm/data_structures/ipc/string.h"
 #include "vector.h"
 
-using hermes_shm::ipc::vector;
-using hermes_shm::ipc::list;
-using hermes_shm::ipc::string;
+using hshm::ipc::vector;
+using hshm::ipc::list;
+using hshm::ipc::string;
 
 template<typename T>
-void VectorTest() {
-  Allocator *alloc = alloc_g;
-  vector<T> vec(alloc);
-  VectorTestSuite<T, vector<T>> test(vec, alloc);
-
+void VectorTestRunner(VectorTestSuite<T, vector<T>> &test) {
   test.EmplaceTest(15);
   test.IndexTest();
   test.ForwardIteratorTest();
@@ -41,41 +37,91 @@ void VectorTest() {
   test.EraseTest();
 }
 
+template<typename T, bool ptr>
+void VectorTest() {
+  Allocator *alloc = alloc_g;
+  auto vec = hipc::make_uptr<vector<T>>(alloc);
+  VectorTestSuite<T, vector<T>> test(*vec, alloc);
+  VectorTestRunner<T>(test);
+}
+
+void VectorOfVectorOfStringTest() {
+  Allocator *alloc = alloc_g;
+  auto vec = hipc::make_uptr<
+    vector<vector<string>>>(alloc);
+
+  vec->resize(10);
+  for (vector<string> &bkt : *vec) {
+    bkt.emplace_back("hello");
+  }
+  vec->clear();
+}
+
 void VectorOfListOfStringTest() {
   Allocator *alloc = alloc_g;
-  vector<list<string>> vec(alloc);
+  auto vec = hipc::make_uptr<vector<list<string>>>(alloc);
 
-  vec.resize(10);
-  for (auto bkt : vec) {
-    (*bkt).emplace_back("hello");
+  vec->resize(10);
+
+  PAGE_DIVIDE("Emplace an element into each bucket") {
+    size_t count = 0;
+    for (list<string> &bkt : *vec) {
+      bkt.emplace_back(std::to_string(count));
+      count += 1;
+    }
+    REQUIRE(count == 10);
   }
-  vec.clear();
+
+  PAGE_DIVIDE("Get string from each bucket") {
+    size_t count = 0;
+    for (list<string> &bkt : *vec) {
+      for (string &val : bkt) {
+        REQUIRE(val == std::to_string(count));
+      }
+      count += 1;
+    }
+    REQUIRE(count == 10);
+  }
+
+  vec->clear();
 }
 
 TEST_CASE("VectorOfInt") {
   Allocator *alloc = alloc_g;
   REQUIRE(alloc->GetCurrentlyAllocatedSize() == 0);
-  VectorTest<int>();
+  VectorTest<int, false>();
+  VectorTest<int, true>();
   REQUIRE(alloc->GetCurrentlyAllocatedSize() == 0);
 }
 
 TEST_CASE("VectorOfString") {
   Allocator *alloc = alloc_g;
   REQUIRE(alloc->GetCurrentlyAllocatedSize() == 0);
-  VectorTest<hipc::string>();
+  VectorTest<hipc::string, false>();
+  VectorTest<int, true>();
   REQUIRE(alloc->GetCurrentlyAllocatedSize() == 0);
 }
 
 TEST_CASE("VectorOfStdString") {
   Allocator *alloc = alloc_g;
   REQUIRE(alloc->GetCurrentlyAllocatedSize() == 0);
-  VectorTest<std::string>();
+  VectorTest<std::string, false>();
+  VectorTest<int, true>();
+  REQUIRE(alloc->GetCurrentlyAllocatedSize() == 0);
+}
+
+TEST_CASE("VectorOfVectorOfString") {
+  Allocator *alloc = alloc_g;
+  REQUIRE(alloc->GetCurrentlyAllocatedSize() == 0);
+  VectorOfVectorOfStringTest();
+  VectorOfVectorOfStringTest();
   REQUIRE(alloc->GetCurrentlyAllocatedSize() == 0);
 }
 
 TEST_CASE("VectorOfListOfString") {
   Allocator *alloc = alloc_g;
   REQUIRE(alloc->GetCurrentlyAllocatedSize() == 0);
+  VectorOfListOfStringTest();
   VectorOfListOfStringTest();
   REQUIRE(alloc->GetCurrentlyAllocatedSize() == 0);
 }

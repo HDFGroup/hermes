@@ -13,16 +13,16 @@
 #include "basic_test.h"
 #include "test_init.h"
 #include "list.h"
-#include "hermes_shm/data_structures/thread_unsafe/slist.h"
-#include "hermes_shm/data_structures/string.h"
+#include "hermes_shm/data_structures/ipc/slist.h"
+#include "hermes_shm/data_structures/ipc/string.h"
 
-using hermes_shm::ipc::slist;
+using hshm::ipc::slist;
 
 template<typename T>
 void ListTest() {
   Allocator *alloc = alloc_g;
-  slist<T> lp(alloc);
-  ListTestSuite<T, slist<T>> test(lp, alloc);
+  auto lp = hipc::make_uptr<slist<T>>(alloc);
+  ListTestSuite<T, slist<T>> test(*lp, alloc);
 
   test.EmplaceTest(30);
   test.ForwardIteratorTest();

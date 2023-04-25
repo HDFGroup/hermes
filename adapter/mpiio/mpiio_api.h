@@ -15,20 +15,14 @@
 #include <string>
 #include <dlfcn.h>
 #include <iostream>
-#include <glog/logging.h>
+#include "hermes_shm/util/logging.h"
 #include <mpi.h>
 #include <mpio.h>
+#include "adapter/real_api.h"
 
 #ifndef MPI_MODE_TRUNCATE
 #define MPI_MODE_TRUNCATE 0
 #endif
-
-#define REQUIRE_API(api_name) \
-  if (api_name == nullptr) { \
-    LOG(FATAL) << "HERMES Adapter failed to map symbol: " \
-    #api_name << std::endl; \
-    std::exit(1); \
-   }
 
 extern "C" {
 typedef int (*MPI_Init_t)(int * argc, char *** argv);
@@ -297,13 +291,11 @@ class MpiioApi {
 };
 }  // namespace hermes::adapter::mpiio
 
-#undef REQUIRE_API
-
 #include "hermes_shm/util/singleton.h"
 
 /** Simplify access to the stateless MpiioFs Singleton */
 #define HERMES_MPIIO_API \
-  hermes_shm::EasySingleton<hermes::adapter::fs::MpiioApi>::GetInstance()
+  hshm::EasySingleton<hermes::adapter::fs::MpiioApi>::GetInstance()
 #define HERMES_MPIIO_API_T hermes::adapter::fs::MpiioApi*
 
 #endif  // HERMES_ADAPTER_MPIIO_H

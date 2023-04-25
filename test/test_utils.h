@@ -16,7 +16,7 @@
 #include <iostream>
 #include <cstdlib>
 
-static bool VerifyBuffer(char *ptr, size_t size, char nonce) {
+static inline bool VerifyBuffer(char *ptr, size_t size, char nonce) {
   for (size_t i = 0; i < size; ++i) {
     if (ptr[i] != nonce) {
       std::cout << "Mismatch at: " << (int)i << std::endl;
@@ -26,7 +26,7 @@ static bool VerifyBuffer(char *ptr, size_t size, char nonce) {
   return true;
 }
 
-static bool CompareBuffers(char *p1, size_t s1, char *p2, size_t s2,
+static inline bool CompareBuffers(char *p1, size_t s1, char *p2, size_t s2,
                            size_t off) {
   if (s1 != s2) {
     return false;

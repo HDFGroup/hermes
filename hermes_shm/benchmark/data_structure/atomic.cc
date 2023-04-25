@@ -14,7 +14,7 @@
 #include "test_init.h"
 
 #include <string>
-#include <hermes_shm/data_structures/string.h>
+#include "hermes_shm/data_structures/ipc/string.h"
 #include "omp.h"
 
 /** Stringstream for storing test output */
@@ -49,6 +49,7 @@ class AtomicInstructionTestSuite {
  public:
   std::string memory_order_;
   std::string atomic_type_;
+  void *ptr_;
 
  public:
   /////////////////
@@ -137,6 +138,7 @@ class AtomicInstructionTestSuite {
     t.Resume();
     for (size_t i = 0; i < count; ++i) {
       size_t x = GlobalAtomicCounter<AtomicT>::count_.load(MemoryOrder);
+      USE(x);
     }
 #pragma omp barrier
     t.Pause();
@@ -167,7 +169,7 @@ class AtomicInstructionTestSuite {
     if (test_count == 0) {
       TestOutputHeader();
     }
-    int nthreads = omp_get_num_threads();
+    size_t nthreads = omp_get_num_threads();
     ss << test_name << ","
        << atomic_type_ << ","
        << sizeof(T) << ","
@@ -187,7 +189,7 @@ class AtomicInstructionTestSuite {
  * */
 template<typename AtomicT, typename T, std::memory_order MemoryOrder>
 void TestAtomicInstructionsPerThread() {
-  int count = (1<<20);
+  size_t count = (1<<20);
   AtomicInstructionTestSuite<AtomicT, T, MemoryOrder>().AtomicIncrement(count);
   AtomicInstructionTestSuite<AtomicT, T, MemoryOrder>().AtomicFetchAdd(count);
   AtomicInstructionTestSuite<AtomicT, T, MemoryOrder>().AtomicAssign(count);

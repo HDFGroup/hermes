@@ -15,13 +15,16 @@
 
 #include <unistd.h>
 #include <sys/sysinfo.h>
+#include "hermes_shm/constants/data_structure_singleton_macros.h"
 
-namespace hermes_shm {
+namespace hshm {
 
 struct SystemInfo {
   int pid_;
   int ncpu_;
   int page_size_;
+  int uid_;
+  int gid_;
   size_t ram_size_;
 
   SystemInfo() {
@@ -30,10 +33,12 @@ struct SystemInfo {
     page_size_ = getpagesize();
     struct sysinfo info;
     sysinfo(&info);
+    uid_ = getuid();
+    gid_ = getgid();
     ram_size_ = info.totalram;
   }
 };
 
-}  // namespace hermes_shm
+}  // namespace hshm
 
 #endif  // HERMES_SYSINFO_INFO_H_

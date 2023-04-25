@@ -19,11 +19,12 @@
 
 #include "adapter_test_utils.h"
 #include "catch_config.h"
+#include "adapter/stdio/stdio_api.h"
 #if HERMES_INTERCEPT == 1
-#include "stdio/stdio_api.h"
-#include "stdio/stdio_fs_api.h"
+#include "adapter/stdio/stdio_fs_api.h"
 #endif
 
+#include "hermes_shm/util/logging.h"
 #include "adapter_test_utils.h"
 
 namespace stdfs = std::filesystem;
@@ -31,7 +32,7 @@ namespace stdfs = std::filesystem;
 namespace hermes::adapter::stdio::test {
 struct Arguments {
   std::string filename = "test.dat";
-  std::string directory = "/tmp";
+  std::string directory = "/tmp/test_hermes";
   size_t request_size = 65536;
 };
 struct Info {
@@ -60,6 +61,10 @@ hermes::adapter::stdio::test::Arguments args;
 hermes::adapter::stdio::test::Info info;
 
 int init(int* argc, char*** argv) {
+#if HERMES_INTERCEPT == 1
+  setenv("HERMES_FLUSH_MODE", "kSync", 1);
+  HERMES->client_config_.flushing_mode_ = hermes::FlushingMode::kSync;
+#endif
   MPI_Init(argc, argv);
   info.write_data = GenRandom(args.request_size);
   info.read_data = std::string(args.request_size, 'r');
@@ -71,7 +76,44 @@ int finalize() {
   return 0;
 }
 
+void IgnoreAllFiles() {
+#if HERMES_INTERCEPT == 1
+  HERMES->client_config_.SetAdapterPathTracking(info.existing_file_cmp, false);
+  HERMES->client_config_.SetAdapterPathTracking(info.new_file_cmp, false);
+  HERMES->client_config_.SetAdapterPathTracking(info.new_file, false);
+  HERMES->client_config_.SetAdapterPathTracking(info.existing_file, false);
+#endif
+}
+
+void TrackFiles() {
+#if HERMES_INTERCEPT == 1
+  HERMES->client_config_.SetAdapterPathTracking(info.new_file, true);
+  HERMES->client_config_.SetAdapterPathTracking(info.existing_file, true);
+#endif
+}
+
+void RemoveFile(const std::string &path) {
+  stdfs::remove(path);
+  if (stdfs::exists(path)) {
+    HELOG(kFatal, "Failed to remove: {}", path)
+  }
+}
+
+void RemoveFiles() {
+  RemoveFile(info.new_file);
+  RemoveFile(info.new_file_cmp);
+  RemoveFile(info.existing_file);
+  RemoveFile(info.existing_file_cmp);
+}
+
+void Clear() {
+#if HERMES_INTERCEPT == 1
+  HERMES->Clear();
+#endif
+}
+
 int pretest() {
+  // Create path names
   stdfs::path fullpath = args.directory;
   fullpath /= args.filename;
   info.new_file = fullpath.string() + "_new_" + std::to_string(getpid());
@@ -80,41 +122,43 @@ int pretest() {
       fullpath.string() + "_new_cmp" + "_" + std::to_string(getpid());
   info.existing_file_cmp =
       fullpath.string() + "_ext_cmp" + "_" + std::to_string(getpid());
-  if (stdfs::exists(info.new_file)) stdfs::remove(info.new_file);
-  if (stdfs::exists(info.new_file_cmp)) stdfs::remove(info.new_file_cmp);
-  if (stdfs::exists(info.existing_file)) stdfs::remove(info.existing_file);
-  if (stdfs::exists(info.existing_file_cmp))
-    stdfs::remove(info.existing_file_cmp);
-  if (!stdfs::exists(info.existing_file)) {
+
+  // Temporarily ignore all files
+  IgnoreAllFiles();
+
+  // Remove all files
+  RemoveFiles();
+
+  // Create the file NOT buffered by Hermes
+  if (!stdfs::exists(info.existing_file_cmp)) {
     std::string cmd = "{ tr -dc '[:alnum:]' < /dev/urandom | head -c " +
                       std::to_string(args.request_size * info.num_iterations) +
-                      "; } > " + info.existing_file + " 2> /dev/null";
-    int status = system(cmd.c_str());
-    REQUIRE(status != -1);
-    REQUIRE(stdfs::file_size(info.existing_file) ==
-            args.request_size * info.num_iterations);
-    info.total_size = stdfs::file_size(info.existing_file);
-  }
-  if (!stdfs::exists(info.existing_file_cmp)) {
-    std::string cmd = "cp " + info.existing_file + " " + info.existing_file_cmp;
+                      "; } > " + info.existing_file_cmp + " 2> /dev/null";
     int status = system(cmd.c_str());
     REQUIRE(status != -1);
     REQUIRE(stdfs::file_size(info.existing_file_cmp) ==
             args.request_size * info.num_iterations);
+    info.total_size = stdfs::file_size(info.existing_file_cmp);
   }
+
+  // Create the file that IS buffered by Hermes
+  if (!stdfs::exists(info.existing_file)) {
+    std::string cmd = "cp " + info.existing_file_cmp + " " + info.existing_file;
+    int status = system(cmd.c_str());
+    REQUIRE(status != -1);
+    REQUIRE(stdfs::file_size(info.existing_file) ==
+            args.request_size * info.num_iterations);
+  }
+
   REQUIRE(info.total_size > 0);
-#if HERMES_INTERCEPT == 1
-  HERMES->client_config_.SetAdapterPathTracking(info.existing_file_cmp, false);
-  HERMES->client_config_.SetAdapterPathTracking(info.new_file_cmp, false);
-#endif
+
+  // Begin interception
+  TrackFiles();
   return 0;
 }
 
 int posttest(bool compare_data = true) {
-#if HERMES_INTERCEPT == 1
-  HERMES->client_config_.SetAdapterPathTracking(info.existing_file, false);
-  HERMES->client_config_.SetAdapterPathTracking(info.new_file, false);
-#endif
+  IgnoreAllFiles();
   if (compare_data && stdfs::exists(info.new_file) &&
       stdfs::exists(info.new_file_cmp)) {
     size_t size = stdfs::file_size(info.new_file);
@@ -170,24 +214,17 @@ int posttest(bool compare_data = true) {
       REQUIRE(status == 0);
       size_t char_mismatch = 0;
       for (size_t pos = 0; pos < size; ++pos) {
-        if (d1[pos] != d2[pos]) char_mismatch++;
+        if (d1[pos] != d2[pos]) {
+          char_mismatch++;
+        }
       }
       REQUIRE(char_mismatch == 0);
     }
   }
-  /* Clean up. */
-  if (stdfs::exists(info.new_file)) stdfs::remove(info.new_file);
-  if (stdfs::exists(info.existing_file)) stdfs::remove(info.existing_file);
-  if (stdfs::exists(info.new_file_cmp)) stdfs::remove(info.new_file_cmp);
-  if (stdfs::exists(info.existing_file_cmp))
-    stdfs::remove(info.existing_file_cmp);
-
-#if HERMES_INTERCEPT == 1
-  HERMES->client_config_.SetAdapterPathTracking(info.existing_file_cmp, true);
-  HERMES->client_config_.SetAdapterPathTracking(info.new_file_cmp, true);
-  HERMES->client_config_.SetAdapterPathTracking(info.new_file, true);
-  HERMES->client_config_.SetAdapterPathTracking(info.existing_file, true);
-#endif
+  /* Delete the files from both Hermes and the backend. */
+  TrackFiles();
+  RemoveFiles();
+  Clear();
   return 0;
 }
 

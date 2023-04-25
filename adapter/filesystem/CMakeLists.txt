@@ -2,6 +2,7 @@ include_directories(
         ${CMAKE_SOURCE_DIR}
         ${HERMES_SRC_DIR}
         ${HERMES_ADAPTER_DIR}
+        ${HERMES_IO_CLIENT_DIR}
         ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Create the metadata manager singleton + FS base class
@@ -14,7 +15,6 @@ add_dependencies(hermes_fs_base
 target_link_libraries(hermes_fs_base
         MPI::MPI_CXX
         hermes)
-target_compile_options(hermes_fs_base PUBLIC -fPIC)
 
 #-----------------------------------------------------------------------------
 # Add Target(s) to CMake Install
@@ -27,6 +27,14 @@ install(
         LIBRARY DESTINATION ${HERMES_INSTALL_LIB_DIR}
         ARCHIVE DESTINATION ${HERMES_INSTALL_LIB_DIR}
         RUNTIME DESTINATION ${HERMES_INSTALL_BIN_DIR}
+)
+install(
+        FILES
+        filesystem_io_client.h
+        DESTINATION
+        ${HERMES_INSTALL_INCLUDE_DIR}
+        COMPONENT
+        headers
 )
 
 #-----------------------------------------------------------------------------

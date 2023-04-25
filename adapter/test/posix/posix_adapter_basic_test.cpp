@@ -261,6 +261,7 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(stdfs::file_size(info.new_file) == test::size_written_orig);
   }
 
+
   SECTION("write to existing file with truncate") {
     test::test_open(info.existing_file.c_str(), O_WRONLY | O_TRUNC);
     REQUIRE(test::fh_orig != -1);
@@ -520,7 +521,7 @@ TEST_CASE("BatchedUpdateStrideFixed",
       size_t offset = (i * info.stride_size) % info.total_size;
       test::test_seek(offset, SEEK_SET);
       REQUIRE(((size_t)test::status_orig) == offset);
-      test::test_write(data.data(), args.request_size);
+      test::test_read(data.data(), args.request_size);
       REQUIRE(test::size_read_orig == args.request_size);
     }
     test::test_close();
@@ -575,7 +576,7 @@ TEST_CASE("BatchedUpdateStrideDynamic",
                                       info.total_size);
       test::test_seek(offset, SEEK_SET);
       REQUIRE(((size_t)test::status_orig) == offset);
-      test::test_write(data.data(), args.request_size);
+      test::test_read(data.data(), args.request_size);
       REQUIRE(test::size_read_orig == args.request_size);
     }
     test::test_close();
@@ -910,7 +911,7 @@ TEST_CASE("BatchedUpdateStrideNegative",
       test::test_seek(offset, SEEK_SET);
       REQUIRE(((size_t)test::status_orig) == offset);
       test::test_write(data.data(), args.request_size);
-      REQUIRE(test::size_read_orig == args.request_size);
+      REQUIRE(test::size_written_orig == args.request_size);
     }
     test::test_close();
     REQUIRE(test::status_orig == 0);

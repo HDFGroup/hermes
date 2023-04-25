@@ -31,7 +31,8 @@ DPE::DPE() : mdm_(&HERMES->mdm_) {}
 /** calculate data placement */
 Status DPE::CalculatePlacement(const std::vector<size_t> &blob_sizes,
                                std::vector<PlacementSchema> &output,
-                               const api::Context &ctx) {
+                               api::Context &ctx) {
+  AUTO_TRACE(1)
   Status result;
 
   // NOTE(chogan): Start with local targets and gradually expand the target
@@ -40,7 +41,7 @@ Status DPE::CalculatePlacement(const std::vector<size_t> &blob_sizes,
     // Reset the output schema
     output.clear();
     // Get the capacity/bandwidth of targets
-    hipc::vector<TargetInfo> targets;
+    std::vector<TargetInfo> targets;
     switch (static_cast<TopologyType>(i)) {
       case TopologyType::Local: {
         targets = mdm_->LocalGetTargetInfo();
@@ -53,6 +54,9 @@ Status DPE::CalculatePlacement(const std::vector<size_t> &blob_sizes,
       case TopologyType::Global: {
         // targets = mdm_->GetGlobalTargetInfo();
         break;
+      }
+      case TopologyType::kCount: {
+        HELOG(kFatal, "Not a valid topology type")
       }
     }
     if (targets.size() == 0) {

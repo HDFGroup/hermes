@@ -12,7 +12,7 @@
 
 #include "basic_test.h"
 #include "test_init.h"
-#include "hermes_shm/data_structures/string.h"
+#include "hermes_shm/data_structures/ipc/string.h"
 
 template<typename FirstT, typename SecondT>
 void TupleTest() {
@@ -25,8 +25,8 @@ void TupleTest() {
     hipc::ShmHeader<hipc::ShmStruct<FirstT, SecondT>> hdr;
     hipc::ShmStruct<FirstT, SecondT>
       data(hdr, alloc,
-           hermes_shm::make_argpack(first),
-           hermes_shm::make_argpack(second));
+           hshm::make_argpack(first),
+           hshm::make_argpack(second));
     REQUIRE(data.template Get<0>() == first);
     REQUIRE(data.template Get<1>() == second);
   }

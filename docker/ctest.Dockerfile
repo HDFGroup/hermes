@@ -1,7 +1,9 @@
 FROM ubuntu:20.04
 ARG  DEBIAN_FRONTEND=noninteractive
 RUN apt update
-RUN apt-get install -y --no-install-recommends autoconf \
+RUN apt-get install -y --no-install-recommends  \
+    gcc g++ gfortran \
+    autoconf \
     automake \
     libtool \
     libtool-bin \
@@ -19,4 +21,4 @@ RUN git clone https://github.com/HDFGroup/hermes
 WORKDIR $PWD/hermes
 RUN git remote get-url origin
 RUN ci/install_deps.sh
-RUN ci/install_hshm.sh
+RUN ci/install_hermes.sh

@@ -17,7 +17,7 @@
 
 namespace hermes::config {
 
-class DeviceInfo; /** Forward declaration of DeviceInfo */
+struct DeviceInfo; /** Forward declaration of DeviceInfo */
 
 /**
  * The type of interface the device exposes
@@ -30,8 +30,9 @@ enum class IoInterface {
 /**
  * DeviceInfo shared-memory representation
  * */
-template<>
-struct ShmHeader<DeviceInfo> : public hipc::ShmBaseHeader {
+class DeviceInfo : public hipc::ShmContainer {
+  SHM_CONTAINER_TEMPLATE(DeviceInfo, DeviceInfo)
+
   /** The human-readable name of the device */
   hipc::ShmArchive<hipc::string> dev_name_;
   /** The unit of each slab, a multiple of the Device's block size */
@@ -55,33 +56,32 @@ struct ShmHeader<DeviceInfo> : public hipc::ShmBaseHeader {
   /** BORG's minimum and maximum capacity threshold for device */
   f32 borg_min_thresh_, borg_max_thresh_;
 
-  /** Default Constructor */
-  ShmHeader() = default;
+  /**====================================
+   * Default Constructor
+   * ===================================*/
 
-  /** Copy constructor */
-  ShmHeader(const ShmHeader &other) {
-    strong_copy(other);
+  /** SHM Constructor. Default. */
+  explicit DeviceInfo(hipc::Allocator *alloc) {
+    shm_init_container(alloc);
+    HSHM_MAKE_AR0(dev_name_, alloc);
+    HSHM_MAKE_AR0(slab_sizes_, alloc);
+    HSHM_MAKE_AR0(mount_dir_, alloc);
+    HSHM_MAKE_AR0(mount_point_, alloc);
   }
 
-  /** Copy assignment operator */
-  ShmHeader& operator=(const ShmHeader &other) {
-    strong_copy(other);
-    return *this;
-  }
+  /**====================================
+   * Copy Constructors
+   * ===================================*/
 
-  /** Move constructor */
-  ShmHeader(ShmHeader &&other) {
-    strong_copy(other);
-  }
-
-  /** Move assignment operator */
-  ShmHeader& operator=(ShmHeader &&other) {
-    strong_copy(other);
-    return *this;
+  /** SHM copy constructor. From DeviceInfo. */
+  explicit DeviceInfo(hipc::Allocator *alloc,
+                      const DeviceInfo &other) {
+    shm_init_container(alloc);
+    shm_strong_copy_constructor_main(alloc, other);
   }
 
   /** Internal copy */
-  void strong_copy(const ShmHeader &other) {
+  void strong_copy(const DeviceInfo &other) {
     io_api_ = other.io_api_;
     block_size_ = other.block_size_;
     capacity_ = other.capacity_;
@@ -91,80 +91,91 @@ struct ShmHeader<DeviceInfo> : public hipc::ShmBaseHeader {
     borg_min_thresh_ = other.borg_min_thresh_;
     borg_max_thresh_ = other.borg_max_thresh_;
   }
-};
 
-/**
- * Device information defined in server config
- * */
-struct DeviceInfo : public hipc::ShmContainer {
-  SHM_CONTAINER_TEMPLATE(DeviceInfo, DeviceInfo, ShmHeader<DeviceInfo>)
-
-  /** The human-readable name of the device */
-  hipc::ShmRef<hipc::string> dev_name_;
-  /** The unit of each slab, a multiple of the Device's block size */
-  hipc::ShmRef<hipc::vector<size_t>> slab_sizes_;
-  /** The directory the device is mounted on */
-  hipc::ShmRef<hipc::string> mount_dir_;
-  /** The file to create on the device */
-  hipc::ShmRef<hipc::string> mount_point_;
-
-  /** Default Constructor */
-  DeviceInfo() = default;
-
-  /** Default SHM Constructor */
-  void shm_init_main(ShmHeader<DeviceInfo> *header,
-                     hipc::Allocator *alloc) {
-    shm_init_allocator(alloc);
-    shm_init_header(header);
-    shm_deserialize_main();
-    dev_name_->shm_init(alloc_);
-    slab_sizes_->shm_init(alloc_);
-    mount_dir_->shm_init(alloc_);
-    mount_point_->shm_init(alloc_);
+  /** Copy constructor main. */
+  void shm_strong_copy_constructor_main(hipc::Allocator *alloc,
+                                        const DeviceInfo &other) {
+    strong_copy(other);
+    HSHM_MAKE_AR(dev_name_, alloc, *other.dev_name_);
+    HSHM_MAKE_AR(slab_sizes_, alloc, *other.slab_sizes_);
+    HSHM_MAKE_AR(mount_dir_, alloc, *other.mount_dir_);
+    HSHM_MAKE_AR(mount_point_, alloc, *other.mount_point_);
   }
 
-  /** Free shared memory */
-  void shm_destroy_main() {
-     dev_name_->shm_destroy();
-     slab_sizes_->shm_destroy();
-     mount_dir_->shm_destroy();
-     mount_point_->shm_destroy();
+  /** SHM copy assignment operator. From DeviceInfo. */
+  DeviceInfo& operator=(const DeviceInfo &other) {
+    if (this != &other) {
+      shm_destroy();
+      shm_strong_copy_op_main(other);
+    }
+    return *this;
   }
 
-  /** Serialize into SHM */
-  void shm_serialize_main() const {}
-
-  /** Deserialize from SHM */
-  void shm_deserialize_main() {
-    (*dev_name_) << header_->dev_name_.internal_ref(alloc_);
-    (*slab_sizes_) << header_->slab_sizes_.internal_ref(alloc_);
-    (*mount_dir_) << header_->mount_dir_.internal_ref(alloc_);
-    (*mount_point_) << header_->mount_point_.internal_ref(alloc_);
-  }
-
-  /** Move another object into this object. */
-  void shm_weak_move_main(ShmHeader<DeviceInfo> *header,
-                          hipc::Allocator *alloc,
-                          DeviceInfo &other) {
-    shm_init_allocator(alloc);
-    shm_init_header(header);
-    (*header_) = (*other.header_);
-    (*dev_name_) = std::move(*other.dev_name_);
-    (*slab_sizes_) = std::move(*other.slab_sizes_);
-    (*mount_dir_) = std::move(*other.mount_dir_);
-    (*mount_point_) = std::move(*other.mount_point_);
-  }
-
-  /** Copy another object into this object */
-  void shm_strong_copy_main(ShmHeader<DeviceInfo> *header,
-                            hipc::Allocator *alloc,
-                            const DeviceInfo &other) {
-    shm_init_main(header, alloc);
-    (*header_) = (*other.header_);
+  /** Copy assignment operator main. */
+  void shm_strong_copy_op_main(const DeviceInfo &other) {
+    strong_copy(other);
     (*dev_name_) = (*other.dev_name_);
     (*slab_sizes_) = (*other.slab_sizes_);
     (*mount_dir_) = (*other.mount_dir_);
     (*mount_point_) = (*other.mount_point_);
+  }
+
+  /**====================================
+   * Move Constructors
+   * ===================================*/
+
+  /** SHM move constructor. */
+  DeviceInfo(hipc::Allocator *alloc,
+             DeviceInfo &&other) {
+    shm_init_container(alloc);
+    if (GetAllocator() == other.GetAllocator()) {
+      strong_copy(other);
+      HSHM_MAKE_AR(dev_name_, alloc, std::move(*other.dev_name_));
+      HSHM_MAKE_AR(slab_sizes_, alloc, std::move(*other.slab_sizes_));
+      HSHM_MAKE_AR(mount_dir_, alloc, std::move(*other.mount_dir_));
+      HSHM_MAKE_AR(mount_point_, alloc, std::move(*other.mount_point_));
+      other.SetNull();
+    } else {
+      shm_strong_copy_constructor_main(alloc, other);
+      other.shm_destroy();
+    }
+  }
+
+  /** SHM move assignment operator. */
+  DeviceInfo& operator=(DeviceInfo &&other) noexcept {
+    if (this != &other) {
+      shm_destroy();
+      if (GetAllocator() == other.GetAllocator()) {
+        strong_copy(other);
+        (*dev_name_) = std::move(*other.dev_name_);
+        (*slab_sizes_) = std::move(*other.slab_sizes_);
+        (*mount_dir_) = std::move(*other.mount_dir_);
+        (*mount_point_) = std::move(*other.mount_point_);
+        other.SetNull();
+      } else {
+        shm_strong_copy_op_main(other);
+        other.shm_destroy();
+      }
+    }
+    return *this;
+  }
+
+  /**====================================
+   * Destructor
+   * ===================================*/
+
+  /** Whether DeviceInfo is NULL */
+  bool IsNull() { return false; }
+
+  /** Set DeviceInfo to NULL */
+  void SetNull() {}
+
+  /** Free shared memory */
+  void shm_destroy_main() {
+    (*dev_name_).shm_destroy();
+    (*slab_sizes_).shm_destroy();
+    (*mount_dir_).shm_destroy();
+    (*mount_point_).shm_destroy();
   }
 };
 
@@ -208,12 +219,30 @@ struct BorgInfo {
 };
 
 /**
+ * Prefetcher information in server config
+ * */
+struct PrefetchInfo {
+  bool enabled_;
+  std::string trace_path_;
+  size_t epoch_ms_;
+  bool is_mpi_;
+};
+
+/**
+ * Tracing information in server config
+ * */
+struct TracingInfo {
+  bool enabled_;
+  std::string output_;
+};
+
+/**
  * System configuration for Hermes
  */
 class ServerConfig : public BaseConfig {
  public:
   /** The device information */
-  std::vector<DeviceInfo> devices_;
+  hipc::uptr<hipc::vector<DeviceInfo>> devices_;
 
   /** The RPC information */
   RpcInfo rpc_;
@@ -223,6 +252,15 @@ class ServerConfig : public BaseConfig {
 
   /** Buffer organizer (BORG) information */
   BorgInfo borg_;
+
+  /** Tracing information */
+  TracingInfo tracing_;
+
+  /** Prefetcher information */
+  PrefetchInfo prefetcher_;
+
+  /** Trait repo information */
+  std::vector<std::string> trait_paths_;
 
   /** The length of a view state epoch */
   u32 system_view_state_update_interval_ms;
@@ -243,6 +281,9 @@ class ServerConfig : public BaseConfig {
   void ParseDeviceInfo(YAML::Node yaml_conf);
   void ParseDpeInfo(YAML::Node yaml_conf);
   void ParseBorgInfo(YAML::Node yaml_conf);
+  void ParsePrefetchInfo(YAML::Node yaml_conf);
+  void ParseTracingInfo(YAML::Node yaml_conf);
+  void ParseTraitInfo(YAML::Node yaml_conf);
 };
 
 }  // namespace hermes::config

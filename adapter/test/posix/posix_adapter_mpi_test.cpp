@@ -22,8 +22,8 @@
 #include "adapter_test_utils.h"
 
 #if HERMES_INTERCEPT == 1
-#include "posix/posix_api.h"
-#include "posix/posix_fs_api.h"
+#include "adapter/posix/posix_api.h"
+#include "adapter/posix/posix_fs_api.h"
 #endif
 
 namespace stdfs = std::filesystem;
@@ -31,7 +31,7 @@ namespace stdfs = std::filesystem;
 namespace hermes::adapter::fs::test {
 struct Arguments {
   std::string filename = "test.dat";
-  std::string directory = "/tmp";
+  std::string directory = "/tmp/test_hermes";
   size_t request_size = 65536;
 };
 struct Info {
@@ -82,6 +82,10 @@ std::vector<char> gen_random(const int len) {
 }
 
 int init(int* argc, char*** argv) {
+#if HERMES_INTERCEPT == 1
+  setenv("HERMES_FLUSH_MODE", "kSync", 1);
+  HERMES->client_config_.flushing_mode_ = hermes::FlushingMode::kSync;
+#endif
   MPI_Init(argc, argv);
   info.write_data = gen_random(args.request_size);
   info.read_data = std::vector<char>(args.request_size, 'r');
@@ -196,6 +200,12 @@ int pretest() {
   return 0;
 }
 
+void Clear() {
+#if HERMES_INTERCEPT == 1
+  HERMES->Clear();
+#endif
+}
+
 int posttest(bool compare_data = true) {
 #if HERMES_INTERCEPT == 1
   HERMES->client_config_.SetAdapterPathTracking(info.existing_file, false);
@@ -303,6 +313,7 @@ int posttest(bool compare_data = true) {
     if (stdfs::exists(info.existing_shared_file_cmp))
       stdfs::remove(info.existing_shared_file_cmp);
   }
+  Clear();
 
   #if HERMES_INTERCEPT == 1
     HERMES->client_config_.SetAdapterPathTracking(info.existing_file_cmp, true);

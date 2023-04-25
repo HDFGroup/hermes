@@ -14,14 +14,14 @@
 #include "test_init.h"
 
 void PageAllocationTest(Allocator *alloc) {
-  int count = 1024;
+  size_t count = 1024;
   size_t page_size = KILOBYTES(4);
   auto mem_mngr = HERMES_MEMORY_MANAGER;
 
   // Allocate pages
   std::vector<Pointer> ps(count);
   void *ptrs[count];
-  for (int i = 0; i < count; ++i) {
+  for (size_t i = 0; i < count; ++i) {
     ptrs[i] = alloc->AllocatePtr<void>(page_size, ps[i]);
     memset(ptrs[i], i, page_size);
     REQUIRE(ps[i].off_.load() != 0);
@@ -30,7 +30,7 @@ void PageAllocationTest(Allocator *alloc) {
   }
 
   // Convert process pointers into independent pointers
-  for (int i = 0; i < count; ++i) {
+  for (size_t i = 0; i < count; ++i) {
     Pointer p = mem_mngr->Convert(ptrs[i]);
     REQUIRE(p == ps[i]);
     REQUIRE(VerifyBuffer((char*)ptrs[i], page_size, i));
@@ -41,19 +41,19 @@ void PageAllocationTest(Allocator *alloc) {
   REQUIRE(hdr->checksum_ == HEADER_CHECKSUM);
 
   // Free pages
-  for (int i = 0; i < count; ++i) {
+  for (size_t i = 0; i < count; ++i) {
     alloc->Free(ps[i]);
   }
 
   // Reallocate pages
-  for (int i = 0; i < count; ++i) {
+  for (size_t i = 0; i < count; ++i) {
     ptrs[i] = alloc->AllocatePtr<void>(page_size, ps[i]);
     REQUIRE(ps[i].off_.load() != 0);
     REQUIRE(!ps[i].IsNull());
   }
 
   // Free again
-  for (int i = 0; i < count; ++i) {
+  for (size_t i = 0; i < count; ++i) {
     alloc->Free(ps[i]);
   }
 }

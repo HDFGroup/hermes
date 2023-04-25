@@ -17,7 +17,7 @@
 #include <hermes_shm/memory/memory.h>
 #include <hermes_shm/util/errors.h>
 
-namespace hermes_shm::ipc {
+namespace hshm::ipc {
 
 /**
  * The allocator type.
@@ -95,7 +95,7 @@ class Allocator {
    * Allocate a region of memory to a specific pointer type
    * */
   template<typename POINTER_T = Pointer>
-  POINTER_T Allocate(size_t size) {
+  HSHM_ALWAYS_INLINE POINTER_T Allocate(size_t size) {
     return POINTER_T(GetId(), AllocateOffset(size).load());
   }
 
@@ -111,7 +111,7 @@ class Allocator {
    * Allocate a region of memory to a specific pointer type
    * */
   template<typename POINTER_T = Pointer>
-  POINTER_T AlignedAllocate(size_t size, size_t alignment) {
+  HSHM_ALWAYS_INLINE POINTER_T AlignedAllocate(size_t size, size_t alignment) {
     return POINTER_T(GetId(), AlignedAllocateOffset(size, alignment).load());
   }
 
@@ -121,7 +121,7 @@ class Allocator {
    * alignmnet is 0.
    * */
   template<typename POINTER_T = Pointer>
-  inline POINTER_T Allocate(size_t size, size_t alignment) {
+  HSHM_ALWAYS_INLINE  POINTER_T Allocate(size_t size, size_t alignment) {
     if (alignment == 0) {
       return Allocate<POINTER_T>(size);
     } else {
@@ -136,7 +136,7 @@ class Allocator {
    * @return true if p was modified.
    * */
   template<typename POINTER_T = Pointer>
-  inline bool Reallocate(POINTER_T &p, size_t new_size) {
+  HSHM_ALWAYS_INLINE bool Reallocate(POINTER_T &p, size_t new_size) {
     if (p.IsNull()) {
       p = Allocate<POINTER_T>(new_size);
       return true;
@@ -161,7 +161,7 @@ class Allocator {
    * Free the memory pointed to by \a ptr Pointer
    * */
   template<typename T = void>
-  inline void FreePtr(T *ptr) {
+  HSHM_ALWAYS_INLINE void FreePtr(T *ptr) {
     if (ptr == nullptr) {
       throw INVALID_FREE.format();
     }
@@ -172,7 +172,7 @@ class Allocator {
    * Free the memory pointed to by \a p Pointer
    * */
   template<typename POINTER_T = Pointer>
-  inline void Free(POINTER_T &p) {
+  HSHM_ALWAYS_INLINE void Free(POINTER_T &p) {
     if (p.IsNull()) {
       throw INVALID_FREE.format();
     }
@@ -187,7 +187,7 @@ class Allocator {
   /**
    * Get the allocator identifier
    * */
-  virtual allocator_id_t GetId() = 0;
+  virtual allocator_id_t &GetId() = 0;
 
   /**
    * Get the amount of memory that was allocated, but not yet freed.
@@ -195,17 +195,17 @@ class Allocator {
    * */
   virtual size_t GetCurrentlyAllocatedSize() = 0;
 
-
-  ///////////////////////////////////////
-  /////////// POINTER ALLOCATORS
-  ///////////////////////////////////////
+  /**====================================
+  * Pointer Allocators
+  * ===================================*/
 
   /**
    * Allocate a pointer of \a size size and return \a p process-independent
    * pointer and a process-specific pointer.
    * */
   template<typename T, typename POINTER_T = Pointer>
-  inline T* AllocatePtr(size_t size, POINTER_T &p, size_t alignment = 0) {
+  HSHM_ALWAYS_INLINE T* AllocatePtr(size_t size,
+                                    POINTER_T &p, size_t alignment = 0) {
     p = Allocate<POINTER_T>(size, alignment);
     if (p.IsNull()) { return nullptr; }
     return reinterpret_cast<T*>(buffer_ + p.off_.load());
@@ -215,7 +215,7 @@ class Allocator {
    * Allocate a pointer of \a size size
    * */
   template<typename T, typename POINTER_T = Pointer>
-  inline T* AllocatePtr(size_t size, size_t alignment = 0) {
+  HSHM_ALWAYS_INLINE T* AllocatePtr(size_t size, size_t alignment = 0) {
     POINTER_T p;
     return AllocatePtr<T, POINTER_T>(size, p, alignment);
   }
@@ -224,7 +224,7 @@ class Allocator {
    * Allocate a pointer of \a size size
    * */
   template<typename T, typename POINTER_T = Pointer>
-  inline T* ClearAllocatePtr(size_t size, size_t alignment = 0) {
+  HSHM_ALWAYS_INLINE T* ClearAllocatePtr(size_t size, size_t alignment = 0) {
     POINTER_T p;
     return ClearAllocatePtr<T, POINTER_T>(size, p, alignment);
   }
@@ -234,7 +234,8 @@ class Allocator {
    * pointer and a process-specific pointer.
    * */
   template<typename T, typename POINTER_T = Pointer>
-  inline T* ClearAllocatePtr(size_t size, POINTER_T &p, size_t alignment = 0) {
+  HSHM_ALWAYS_INLINE T* ClearAllocatePtr(size_t size,
+                                         POINTER_T &p, size_t alignment = 0) {
     p = Allocate<POINTER_T>(size, alignment);
     if (p.IsNull()) { return nullptr; }
     auto ptr = reinterpret_cast<T*>(buffer_ + p.off_.load());
@@ -253,7 +254,8 @@ class Allocator {
    * @return A process-specific pointer
    * */
   template<typename T, typename POINTER_T = Pointer>
-  inline T* ReallocatePtr(POINTER_T &p, size_t new_size, bool &modified) {
+  HSHM_ALWAYS_INLINE T* ReallocatePtr(POINTER_T &p, size_t new_size,
+                                      bool &modified) {
     modified = Reallocate<POINTER_T>(p, new_size);
     return Convert<T>(p);
   }
@@ -266,7 +268,7 @@ class Allocator {
    * @return A process-specific pointer
    * */
   template<typename T, typename POINTER_T = Pointer>
-  inline T* ReallocatePtr(POINTER_T &p, size_t new_size) {
+  HSHM_ALWAYS_INLINE T* ReallocatePtr(POINTER_T &p, size_t new_size) {
     Reallocate<POINTER_T>(p, new_size);
     return Convert<T>(p);
   }
@@ -279,23 +281,23 @@ class Allocator {
    * @return A process-specific pointer
    * */
   template<typename T>
-  inline T* ReallocatePtr(T *old_ptr, size_t new_size) {
+  HSHM_ALWAYS_INLINE T* ReallocatePtr(T *old_ptr, size_t new_size) {
     OffsetPointer p = Convert<T, OffsetPointer>(old_ptr);
     return ReallocatePtr<T, OffsetPointer>(p, new_size);
   }
 
-  ///////////////////////////////////////
-  /// OBJECT ALLOCATORS
-  ///////////////////////////////////////
+  /**====================================
+  * Object Allocators
+  * ===================================*/
 
   /**
    * Allocate an array of objects (but don't construct).
    *
    * @return A process-specific pointer
    * */
-  template<typename T, typename POINTER_T = Pointer>
-  inline T* AllocateObjs(size_t count) {
-    POINTER_T p;
+  template<typename T>
+  HSHM_ALWAYS_INLINE T* AllocateObjs(size_t count) {
+    OffsetPointer p;
     return AllocateObjs<T>(count, p);
   }
 
@@ -307,7 +309,7 @@ class Allocator {
    * @return A process-specific pointer
    * */
   template<typename T, typename POINTER_T = Pointer>
-  inline T* AllocateObjs(size_t count, POINTER_T &p) {
+  HSHM_ALWAYS_INLINE T* AllocateObjs(size_t count, POINTER_T &p) {
     return AllocatePtr<T>(count * sizeof(T), p);
   }
 
@@ -319,7 +321,7 @@ class Allocator {
    * @return A process-specific pointer
    * */
   template<typename T, typename POINTER_T = Pointer>
-  inline T* ClearAllocateObjs(size_t count, POINTER_T &p) {
+  HSHM_ALWAYS_INLINE T* ClearAllocateObjs(size_t count, POINTER_T &p) {
     return ClearAllocatePtr<T>(count * sizeof(T), p);
   }
 
@@ -335,7 +337,8 @@ class Allocator {
     typename T,
     typename POINTER_T = Pointer,
     typename ...Args>
-  inline T* AllocateConstructObjs(size_t count, POINTER_T &p, Args&& ...args) {
+  HSHM_ALWAYS_INLINE T* AllocateConstructObjs(size_t count,
+                                              POINTER_T &p, Args&& ...args) {
     T *ptr = AllocateObjs<T>(count, p);
     ConstructObjs<T>(ptr, 0, count, std::forward<Args>(args)...);
     return ptr;
@@ -351,7 +354,7 @@ class Allocator {
    * @return A process-specific pointer
    * */
   template<typename T, typename POINTER_T = Pointer>
-  inline T* ReallocateObjs(POINTER_T &p, size_t new_count) {
+  HSHM_ALWAYS_INLINE T* ReallocateObjs(POINTER_T &p, size_t new_count) {
     T *ptr = ReallocatePtr<T>(p, new_count*sizeof(T));
     return ptr;
   }
@@ -371,14 +374,33 @@ class Allocator {
     typename T,
     typename POINTER_T = Pointer,
     typename ...Args>
-  inline T* ReallocateConstructObjs(POINTER_T &p,
-                                    size_t old_count,
-                                    size_t new_count,
-                                    Args&& ...args) {
+  HSHM_ALWAYS_INLINE T* ReallocateConstructObjs(POINTER_T &p,
+                                                size_t old_count,
+                                                size_t new_count,
+                                                Args&& ...args) {
     T *ptr = ReallocatePtr<T>(p, new_count*sizeof(T));
     ConstructObjs<T>(ptr, old_count, new_count, std::forward<Args>(args)...);
     return ptr;
   }
+
+  /**====================================
+  * Object Deallocators
+  * ===================================*/
+
+  /**
+   * Free + destruct objects
+   * */
+  template <typename T>
+  HSHM_ALWAYS_INLINE void FreeDestructObjs(T *ptr, size_t count) {
+    DestructObjs<T>(ptr, count);
+    auto p = Convert<T, OffsetPointer>(ptr);
+    Free(p);
+  }
+
+
+  /**====================================
+  * Object Constructors
+  * ===================================*/
 
   /**
    * Construct each object in an array of objects.
@@ -392,7 +414,7 @@ class Allocator {
   template<
       typename T,
       typename ...Args>
-  inline static void ConstructObjs(T *ptr,
+  HSHM_ALWAYS_INLINE static void ConstructObjs(T *ptr,
                                    size_t old_count,
                                    size_t new_count, Args&& ...args) {
     if (ptr == nullptr) { return; }
@@ -411,7 +433,7 @@ class Allocator {
   template<
     typename T,
     typename ...Args>
-  inline static void ConstructObj(T &obj, Args&& ...args) {
+  HSHM_ALWAYS_INLINE static void ConstructObj(T &obj, Args&& ...args) {
     new (&obj) T(std::forward<Args>(args)...);
   }
 
@@ -423,10 +445,10 @@ class Allocator {
    * @return None
    * */
   template<typename T>
-  inline static void DestructObjs(T *ptr, size_t count) {
+  HSHM_ALWAYS_INLINE static void DestructObjs(T *ptr, size_t count) {
     if (ptr == nullptr) { return; }
     for (size_t i = 0; i < count; ++i) {
-      DestructObj<T>((ptr + i));
+      DestructObj<T>(*(ptr + i));
     }
   }
 
@@ -438,9 +460,13 @@ class Allocator {
    * @return None
    * */
   template<typename T>
-  inline static void DestructObj(T &obj) {
+  HSHM_ALWAYS_INLINE static void DestructObj(T &obj) {
     obj.~T();
   }
+
+  /**====================================
+  * Helpers
+  * ===================================*/
 
   /**
    * Get the custom header of the shared-memory allocator
@@ -448,7 +474,7 @@ class Allocator {
    * @return Custom header pointer
    * */
   template<typename HEADER_T>
-  inline HEADER_T* GetCustomHeader() {
+  HSHM_ALWAYS_INLINE HEADER_T* GetCustomHeader() {
     return reinterpret_cast<HEADER_T*>(custom_header_);
   }
 
@@ -459,7 +485,7 @@ class Allocator {
    * @return a process-specific pointer
    * */
   template<typename T, typename POINTER_T = Pointer>
-  inline T* Convert(const POINTER_T &p) {
+  HSHM_ALWAYS_INLINE T* Convert(const POINTER_T &p) {
     if (p.IsNull()) { return nullptr; }
     return reinterpret_cast<T*>(buffer_ + p.off_.load());
   }
@@ -471,7 +497,7 @@ class Allocator {
    * @return a process-independent pointer
    * */
   template<typename T, typename POINTER_T = Pointer>
-  inline POINTER_T Convert(T *ptr) {
+  HSHM_ALWAYS_INLINE POINTER_T Convert(const T *ptr) {
     if (ptr == nullptr) { return POINTER_T::GetNull(); }
     return POINTER_T(GetId(),
                      reinterpret_cast<size_t>(ptr) -
@@ -486,12 +512,12 @@ class Allocator {
    * @return True or false
    * */
   template<typename T = void>
-  inline bool ContainsPtr(T *ptr) {
+  HSHM_ALWAYS_INLINE bool ContainsPtr(T *ptr) {
     return  reinterpret_cast<size_t>(ptr) >=
             reinterpret_cast<size_t>(buffer_);
   }
 };
 
-}  // namespace hermes_shm::ipc
+}  // namespace hshm::ipc
 
 #endif  // HERMES_MEMORY_ALLOCATOR_ALLOCATOR_H_

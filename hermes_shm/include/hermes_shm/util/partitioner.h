@@ -21,7 +21,7 @@
 #include <sched.h>
 #include <string>
 
-namespace hermes_shm {
+namespace hshm {
 
 class ProcessAffiner {
  private:
@@ -74,7 +74,7 @@ class ProcessAffiner {
   int AffineAll(void) {
     DIR *procdir;
     struct dirent *entry;
-    int count = 0;
+    size_t count = 0;
 
     // Open /proc directory.
     procdir = opendir("/proc");
@@ -101,7 +101,7 @@ class ProcessAffiner {
   }
   int Affine(std::vector<pid_t> &pids) {
     // Set the affinity of all running process to this mask
-    int count = 0;
+    size_t count = 0;
     for (pid_t &pid : pids) {
       count += Affine(pid);
     }
@@ -151,6 +151,6 @@ class ProcessAffiner {
   }
 };
 
-}  // namespace hermes_shm
+}  // namespace hshm
 
 #endif  // HERMES_PARTITIONER_H

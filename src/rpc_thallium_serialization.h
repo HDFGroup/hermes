@@ -20,6 +20,7 @@
 #include <thallium/serialization/stl/list.hpp>
 
 #include "hermes_types.h"
+#include "adapter/adapter_types.h"
 #include "statuses.h"
 #include "metadata_types.h"
 #include "data_structures.h"
@@ -42,17 +43,17 @@
 namespace hermes {
 
 /**
- *  Lets Thallium know how to serialize a BucketId.
+ *  Lets Thallium know how to serialize a TagId.
  *
  * This function is called implicitly by Thallium.
  *
  * @param ar An archive provided by Thallium.
- * @param bucket_id The BucketId to serialize.
+ * @param bucket_id The TagId to serialize.
  */
 template <typename A>
-void serialize(A &ar, BucketId &bucket_id) {
-  ar &bucket_id.unique_;
-  ar &bucket_id.node_id_;
+void serialize(A &ar, TagId &tag_id) {
+  ar &tag_id.unique_;
+  ar &tag_id.node_id_;
 }
 
 /**
@@ -67,6 +68,20 @@ template <typename A>
 void serialize(A &ar, BlobId &blob_id) {
   ar &blob_id.unique_;
   ar &blob_id.node_id_;
+}
+
+/**
+ *  Lets Thallium know how to serialize a TraitId.
+ *
+ * This function is called implicitly by Thallium.
+ *
+ * @param ar An archive provided by Thallium.
+ * @param blob_id The BlobId to serialize.
+ */
+template <typename A>
+void serialize(A &ar, TraitId &trait_id) {
+  ar &trait_id.unique_;
+  ar &trait_id.node_id_;
 }
 
 /**
@@ -125,19 +140,6 @@ SERIALIZE_ENUM(AdapterMode)
 /** Lets thallium know how to serialize an AdapterType */
 SERIALIZE_ENUM(AdapterType)
 
-/** Lets thallium know how to serialize an IoClientContext */
-template <typename A>
-void serialize(A &ar, IoClientContext &opts) {
-  ar &opts.type_;
-  ar &opts.adapter_mode_;
-  ar &opts.dpe_;
-  ar &opts.flags_;
-  ar &opts.mpi_type_;
-  ar &opts.mpi_count_;
-  ar &opts.backend_off_;
-  ar &opts.backend_size_;
-}
-
 }  // namespace hermes::adapter
 
 namespace hermes::api {
@@ -153,7 +155,7 @@ template <typename A>
 void load(A &ar, Status &status) {
   int code;
   ar >> code;
-  status = Status(code);
+  status = HERMES_STATUS->Get(code);
 }
 
 /** Lets thallium know how to serialize a PlacementPolicy */

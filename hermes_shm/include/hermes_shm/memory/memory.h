@@ -14,13 +14,14 @@
 #ifndef HERMES_MEMORY_MEMORY_H_
 #define HERMES_MEMORY_MEMORY_H_
 
-#include <hermes_shm/types/basic.h>
+#include <hermes_shm/types/real_number.h>
 #include <hermes_shm/constants/data_structure_singleton_macros.h>
 #include <hermes_shm/introspect/system_info.h>
 #include <hermes_shm/types/bitfield.h>
 #include <hermes_shm/types/atomic.h>
+#include <hermes_shm/constants/macros.h>
 
-namespace hermes_shm::ipc {
+namespace hshm::ipc {
 
 /**
  * The identifier for an allocator
@@ -32,15 +33,12 @@ union allocator_id_t {
   } bits_;
   uint64_t int_;
 
-  /**
-   * Null allocator ID is -1 (for now)
-   * */
-  allocator_id_t() : int_(0) {}
+  HSHM_ALWAYS_INLINE allocator_id_t() = default;
 
   /**
    * Constructor which sets major & minor
    * */
-  explicit allocator_id_t(uint32_t major, uint32_t minor) {
+  HSHM_ALWAYS_INLINE explicit allocator_id_t(uint32_t major, uint32_t minor) {
     bits_.major_ = major;
     bits_.minor_ = minor;
   }
@@ -48,29 +46,34 @@ union allocator_id_t {
   /**
    * Set this allocator to null
    * */
-  void SetNull() {
+  HSHM_ALWAYS_INLINE void SetNull() {
     int_ = 0;
   }
 
   /**
    * Check if this is the null allocator
    * */
-  bool IsNull() const { return int_ == 0; }
+  HSHM_ALWAYS_INLINE bool IsNull() const { return int_ == 0; }
 
   /** Equality check */
-  bool operator==(const allocator_id_t &other) const {
+  HSHM_ALWAYS_INLINE bool operator==(const allocator_id_t &other) const {
     return other.int_ == int_;
   }
 
   /** Inequality check */
-  bool operator!=(const allocator_id_t &other) const {
+  HSHM_ALWAYS_INLINE bool operator!=(const allocator_id_t &other) const {
     return other.int_ != int_;
   }
 
   /** Get the null allocator */
-  static allocator_id_t GetNull() {
+  HSHM_ALWAYS_INLINE static allocator_id_t GetNull() {
     static allocator_id_t alloc(0, 0);
     return alloc;
+  }
+
+  /** To index */
+  HSHM_ALWAYS_INLINE uint32_t ToIndex() {
+    return bits_.major_ * 4 + bits_.minor_;
   }
 };
 
@@ -121,12 +124,12 @@ struct OffsetPointerBase {
 
   /** Set to null */
   void SetNull() {
-    off_ = -1;
+    off_ = (size_t)-1;
   }
 
   /** Check if null */
   bool IsNull() const {
-    return off_.load() == -1;
+    return off_.load() == (size_t)-1;
   }
 
   /** Get the null pointer */
@@ -349,7 +352,7 @@ template<typename T>
 using TypedAtomicPointer = AtomicPointer;
 
 /** Round up to the nearest multiple of the alignment */
-static size_t NextAlignmentMultiple(size_t alignment, size_t size) {
+static inline size_t NextAlignmentMultiple(size_t alignment, size_t size) {
   auto page_size = HERMES_SYSTEM_INFO->page_size_;
   size_t new_size = size;
   size_t page_off = size % alignment;
@@ -360,20 +363,20 @@ static size_t NextAlignmentMultiple(size_t alignment, size_t size) {
 }
 
 /** Round up to the nearest multiple of page size */
-static size_t NextPageSizeMultiple(size_t size) {
+static inline size_t NextPageSizeMultiple(size_t size) {
   auto page_size = HERMES_SYSTEM_INFO->page_size_;
   size_t new_size = NextAlignmentMultiple(page_size, size);
   return new_size;
 }
 
-}  // namespace hermes_shm::ipc
+}  // namespace hshm::ipc
 
 namespace std {
 
 /** Allocator ID hash */
 template <>
-struct hash<hermes_shm::ipc::allocator_id_t> {
-  std::size_t operator()(const hermes_shm::ipc::allocator_id_t &key) const {
+struct hash<hshm::ipc::allocator_id_t> {
+  std::size_t operator()(const hshm::ipc::allocator_id_t &key) const {
     return std::hash<uint64_t>{}(key.int_);
   }
 };

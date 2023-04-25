@@ -44,8 +44,8 @@ class DPE {
    * algorithm given a context.
    * */
   virtual Status Placement(const std::vector<size_t> &blob_sizes,
-                           const hipc::vector<TargetInfo> &targets,
-                           const api::Context &ctx,
+                           std::vector<TargetInfo> &targets,
+                           api::Context &ctx,
                            std::vector<PlacementSchema> &output) = 0;
 
   /**
@@ -54,7 +54,7 @@ class DPE {
    * */
   Status CalculatePlacement(const std::vector<size_t> &blob_sizes,
                             std::vector<PlacementSchema> &output,
-                            const api::Context &api_context);
+                            api::Context &api_context);
 };
 
 }  // namespace hermes

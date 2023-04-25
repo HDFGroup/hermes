@@ -11,11 +11,10 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "omp.h"
-#include "hermes.h"
 #include <string>
 #include <dlfcn.h>
 #include <iostream>
-#include <glog/logging.h>
+#include "hermes_shm/util/logging.h"
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -50,36 +49,74 @@ void TestThread(char *path,
   }
 #pragma omp barrier
 
-  char *buf = (char*)malloc(size);
+  std::vector<char> buf(size);
   int fd = open(path, O_CREAT | O_RDWR, 0666);
-  lseek(fd, off, SEEK_SET);
-
-  struct stat st;
-  fstat(fd, &st);
-  if (do_read && (st.st_size - total_size) > 3) {
-    if (rank == 0) {
-      std::cout << "File sizes aren't equivalent: "
-                << " stat: " << st.st_size
-                << " real: " << total_size << std::endl;
-    }
+  if (fd < 0 && rank == 0) {
+    std::cout << "Failed to open the file" << std::endl;
     exit(1);
   }
+  lseek(fd, off, SEEK_SET);
 
+  if (do_read) {
+    struct stat st;
+    fstat(fd, &st);
+    if (rank == 0) {
+      if ((size_t)st.st_size != total_size) {
+        std::cout << "File sizes are NOT equivalent: "
+                  << " stat: " << st.st_size << " real: " << total_size
+                  << std::endl;
+        exit(1);
+      } else {
+        std::cout << "File sizes are equivalent: "
+                  << " stat: " << st.st_size << " real: " << total_size
+                  << std::endl;
+      }
+    }
+  }
+
+#pragma omp barrier
   for (int i = 0; i < count; ++i) {
     char nonce = i + 1;
     if (!do_read) {
-      memset(buf, nonce, block_size);
-      write(fd, buf, block_size);
+      memset(buf.data(), nonce, block_size);
+      int ret = write(fd, buf.data(), block_size);
+      if (ret != block_size) {
+        std::cout << "Write failed!" << std::endl;
+        exit(1);
+      }
     } else {
-      memset(buf, 0, block_size);
-      read(fd, buf, block_size);
-      if (!VerifyBuffer(buf, block_size, nonce)) {
+      memset(buf.data(), 0, block_size);
+      int ret = read(fd, buf.data(), block_size);
+      if (ret != block_size) {
+        std::cout << "Read failed!" << std::endl;
+        exit(1);
+      }
+      if (!VerifyBuffer(buf.data(), block_size, nonce)) {
         std::cout << "Buffer verification failed!" << std::endl;
         exit(1);
       }
     }
   }
 
+#pragma omp barrier
+  if (!do_read) {
+    struct stat st;
+    fstat(fd, &st);
+    if (rank == 0) {
+      if ((size_t)st.st_size != total_size) {
+        std::cout << "File sizes are NOT equivalent: "
+                  << " stat: " << st.st_size << " real: " << total_size
+                  << std::endl;
+        exit(1);
+      } else {
+        std::cout << "File sizes are equivalent: "
+                  << " stat: " << st.st_size << " real: " << total_size
+                  << std::endl;
+      }
+    }
+  }
+
+#pragma omp barrier
   close(fd);
 
 #pragma omp barrier
@@ -108,8 +145,6 @@ int main(int argc, char **argv) {
   } else {
     block_off = 0;
   }
-
-  HERMES_THREAD_MANAGER->GetThreadStatic();
 
   omp_set_dynamic(0);
 #pragma omp parallel \

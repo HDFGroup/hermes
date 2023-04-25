@@ -14,7 +14,9 @@
 #include "hermes.h"
 
 int main(int argc, char **argv) {
+  HILOG(kDebug, "Finalize Hermes begins")
   HERMES->Create(hermes::HermesType::kClient);
   HERMES->client_config_.stop_daemon_ = true;
+  HERMES->Flush();
   HERMES->Finalize();
 }
