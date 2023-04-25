@@ -59,7 +59,10 @@ jobs:
 
       - name: Build And Install Dependencies
         if: steps.spack-cache.outputs.cache-hit != 'true'
-        run: ci/install_deps.sh && ls ${HOME}/spack
+        run: ci/install_deps.sh
+
+      - name: Check if spack exists
+        run: ls ${HOME}/spack
 
 #      - name: Build and Test
 #        run: ci/install_hermes.sh
