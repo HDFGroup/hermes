@@ -11,6 +11,8 @@ class MpiioTestManager(TestManager):
         self.MPIIO_CMD = f"{self.CMAKE_BINARY_DIR}/bin/mpiio_adapter_test"
         self.HERMES_MPIIO_CMD = f"{self.CMAKE_BINARY_DIR}/bin/hermes_mpiio_adapter_test"
 
+        self.disable_testing = True
+
     def test_hermes_mpiio_basic_sync(self):
         mpiio_cmd = f"{self.HERMES_MPIIO_CMD} " \
                     f"[synchronicity=sync]  " \

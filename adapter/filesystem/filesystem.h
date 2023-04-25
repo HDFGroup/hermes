@@ -223,7 +223,7 @@ class Filesystem {
     for (config::UserPathInfo &pth : paths) {
       if (abs_path.rfind(pth.path_) != std::string::npos) {
         if (abs_path == pth.path_ && pth.is_directory_) {
-          // Do not include if path is a directory
+          // Do not include if path is a tracked directory
           return false;
         }
         return pth.include_;

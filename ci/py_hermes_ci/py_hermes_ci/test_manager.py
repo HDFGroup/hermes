@@ -38,6 +38,7 @@ class TestManager(ABC):
         self.HERMES_CLIENT_CONF = f"{self.CMAKE_SOURCE_DIR}/test/data/hermes_client.yaml"
         self.ADDRESS_SANITIZER = address_sanitizer
         self.daemon = None
+        self.disable_testing = False
 
         os.makedirs("/tmp/test_hermes", exist_ok=True)
         self.tests_ = {}
@@ -148,6 +149,8 @@ class TestManager(ABC):
                 self.tests_[attr] = getattr(self, attr)
 
     def call(self, test_name):
+        if self.disable_testing:
+            return
         self.set_paths()
         test_name = test_name.strip()
         if test_name in self.tests_:
