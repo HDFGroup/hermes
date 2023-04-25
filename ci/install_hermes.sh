@@ -2,5 +2,5 @@
 
 . ci/build_hermes.sh
 pushd build
-ctest
+ctest -VV
 popd
