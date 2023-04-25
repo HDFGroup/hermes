@@ -149,9 +149,9 @@ class TestManager(ABC):
                 self.tests_[attr] = getattr(self, attr)
 
     def call(self, test_name):
+        self.set_paths()
         if self.disable_testing:
             return
-        self.set_paths()
         test_name = test_name.strip()
         if test_name in self.tests_:
             print(f"Running test: {test_name}")
