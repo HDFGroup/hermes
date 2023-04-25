@@ -61,33 +61,33 @@ jobs:
         if: steps.spack-cache.outputs.cache-hit != 'true'
         run: ci/install_deps.sh
 
-#      - name: Build and Test
-#        run: ci/install_hermes.sh
-#
-#      - name: Install
-#        run: pushd build && make install && popd
-#
-#      # Enable tmate debugging of manually-triggered workflows if the input option was provided
-#      - name: Setup tmate session
-#        uses: mxschmitt/action-tmate@v3
-#        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.debug_enabled && (failure() || !failure()) }}
-#
-##      - name: Multi-node Test
-##        run: pushd ci/cluster && ./multi_node_ci_test.sh
-#
-#      - name: Generate coverage file
-#        run: |
-#          COVERAGE_DIR=${GITHUB_WORKSPACE}/coverage
-#          mkdir -p ${COVERAGE_DIR}
-#          pushd ${GITHUB_WORKSPACE}/build
-#          lcov -c -d . -o "${COVERAGE_DIR}/tmp.info"
-#          lcov --remove "${COVERAGE_DIR}/tmp.info"   \
-#                        "/usr/include/*"             \
-#                        "${HOME}/${LOCAL}/*"         \
-#                        "*/stb_ds.h"                 \
-#                        -o ${COVERAGE_DIR}/lcov.info
-#
-#      - name: Coveralls
-#        uses: coverallsapp/github-action@master
-#        with:
-#          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and Test
+        run: ci/install_hermes.sh
+
+      - name: Install
+        run: pushd build && make install && popd
+
+      # Enable tmate debugging of manually-triggered workflows if the input option was provided
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.debug_enabled && (failure() || !failure()) }}
+
+#      - name: Multi-node Test
+#        run: pushd ci/cluster && ./multi_node_ci_test.sh
+
+      - name: Generate coverage file
+        run: |
+          COVERAGE_DIR=${GITHUB_WORKSPACE}/coverage
+          mkdir -p ${COVERAGE_DIR}
+          pushd ${GITHUB_WORKSPACE}/build
+          lcov -c -d . -o "${COVERAGE_DIR}/tmp.info"
+          lcov --remove "${COVERAGE_DIR}/tmp.info"   \
+                        "/usr/include/*"             \
+                        "${HOME}/${LOCAL}/*"         \
+                        "*/stb_ds.h"                 \
+                        -o ${COVERAGE_DIR}/lcov.info
+
+      - name: Coveralls
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
