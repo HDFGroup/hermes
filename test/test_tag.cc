@@ -57,8 +57,8 @@ void TestTag(hapi::Hermes *hermes) {
   }
 
   // Query by tag
-  // auto tags = HERMES->GroupBy(tag1);
-  // REQUIRE(tags.size() == 100);
+  auto tags = HERMES->GroupBy(tag1);
+  REQUIRE(tags.size() == 100);
 }
 
 TEST_CASE("TestTag") {
