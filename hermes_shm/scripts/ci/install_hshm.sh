@@ -8,7 +8,7 @@ set -e
 set -o pipefail
 
 # Set spack env
-INSTALL_DIR="${HOME}/${LOCAL}"
+INSTALL_DIR="${HOME}"
 SPACK_DIR=${INSTALL_DIR}/spack
 . ${SPACK_DIR}/share/spack/setup-env.sh
 

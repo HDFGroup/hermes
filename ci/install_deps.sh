@@ -6,9 +6,9 @@ set -o pipefail
 
 sudo apt-get install -y pkg-config
 
-# Change this especially when your $HOME doesn't have enough disk space.
-#LOCAL=local
-INSTALL_DIR="${HOME}/${LOCAL}"
+# Where to install data
+INSTALL_DIR="${HOME}"
+INSTALL_PREFIX="${HOME}/install"
 SPACK_DIR=${INSTALL_DIR}/spack
 SPACK_VERSION=0.18.1
 
@@ -40,4 +40,4 @@ python3 -m pip install -e .
 
 # NOTE(llogan): Modify version string per release.
 HERMES_VERSION=1.0.0
-spack install hermes@${HERMES_VERSION} +vfd
+# spack install hermes@${HERMES_VERSION} +vfd
