@@ -108,7 +108,7 @@ rpc:
 ### Define properties of the BORG
 buffer_organizer:
   # The number of threads used in the background organization of internal Hermes buffers.
-  num_threads: 4
+  num_threads: 1
 
   # Desired RPC port number for buffer organizer.
   port: 8081

@@ -108,7 +108,7 @@ const char* kServerDefaultConfigStr =
 "### Define properties of the BORG\n"
 "buffer_organizer:\n"
 "  # The number of threads used in the background organization of internal Hermes buffers.\n"
-"  num_threads: 4\n"
+"  num_threads: 1\n"
 "\n"
 "  # Desired RPC port number for buffer organizer.\n"
 "  port: 8081\n"
