@@ -47,12 +47,12 @@ jobs:
           key: ${{ runner.os }}-${{ hashFiles('ci/install_deps.sh') }}
 
       - name: Cache Hermes
-          uses: actions/cache@v3
-          id: hermes-cache
-          with:
-            path: |
-              ~/build
-            key: ${{ runner.os }}-${{ hashFiles('wrapper', 'traits', 'test', 'src', 'hermes_shm', 'benchmarks', 'adapter') }}
+        uses: actions/cache@v3
+        id: hermes-cache
+        with:
+          path: |
+            ~/build
+          key: ${{ runner.os }}-${{ hashFiles('wrapper', 'traits', 'test', 'src', 'hermes_shm', 'benchmarks', 'adapter') }}
 
       - name: Install APT Dependencies
         run: |
