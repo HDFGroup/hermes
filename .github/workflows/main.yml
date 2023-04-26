@@ -76,7 +76,7 @@ jobs:
         run: ci/build_hermes.sh
 
       - name: Test
-        run: cd build && ctest -VV -R test_hermes_mpiio_sync
+        run: cd build && ctest -VV -R test_hermes_mpiio_basic_sync
 
       - name: Install
         run: pushd build && make install && popd
