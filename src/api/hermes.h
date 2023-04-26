@@ -211,7 +211,7 @@ class Hermes {
   /** Get traits attached to tag */
   std::vector<Trait*> GetTraits(TagId tag_id,
                                 uint32_t flags = ALL_BITS(uint32_t)) {
-    // HILOG(kDebug, "Getting the traits for tag {}", tag_id)
+    HILOG(kDebug, "Getting the traits for tag {}", tag_id)
     std::vector<TraitId> trait_ids = HERMES->mdm_.GlobalTagGetTraits(tag_id);
     std::vector<Trait*> traits;
     traits.reserve(trait_ids.size());
