@@ -186,8 +186,6 @@ class TestManager(ABC):
                            PsshExecInfo(
                                hostfile=spawn_info.hostfile,
                                env=spawn_info.daemon_env,
-                               collect_output=False,
-                               hide_output=False,
                                exec_async=True))
         time.sleep(5)
         print("Launched")
@@ -202,7 +200,6 @@ class TestManager(ABC):
         print("Stop daemon")
         Exec(f"{self.CMAKE_BINARY_DIR}/bin/finalize_hermes",
              LocalExecInfo(
-                 env=spawn_info.daemon_env,
-                 collect_output=False))
+                 env=spawn_info.daemon_env))
         self.daemon.wait()
         print("Stopped daemon")

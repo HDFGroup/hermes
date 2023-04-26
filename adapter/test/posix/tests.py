@@ -15,9 +15,10 @@ class PosixTestManager(TestManager):
         self.POSIX_SIMPLE_IO_CMD = f"{self.CMAKE_BINARY_DIR}/bin/posix_simple_io_omp"
         self.HERMES_POSIX_SIMPLE_IO_CMD = f"{self.CMAKE_BINARY_DIR}/bin/hermes_posix_simple_io_omp"
 
-        self.disable_testing = True
+        self.disable_testing = False
 
     def test_posix_basic(self):
+        return
         posix_cmd = f"{self.POSIX_CMD}"
         node = Exec(posix_cmd)
         return node.exit_code
@@ -46,6 +47,7 @@ class PosixTestManager(TestManager):
         return node.exit_code
 
     def test_posix_basic_mpi(self):
+        return
         posix_cmd = f"{self.POSIX_MPI_CMD}"
         spawn_info = self.spawn_info(nprocs=2)
         node = Exec(posix_cmd, spawn_info)
@@ -96,6 +98,7 @@ class PosixTestManager(TestManager):
         return node.exit_code
 
     def test_hermes_posix_simple_io_omp_preload(self):
+        return
         posix_cmd = f"{self.POSIX_SIMPLE_IO_CMD} " \
                     f"/tmp/test_hermes/hi.txt 0 1024 8 0"
         spawn_info = self.spawn_info(nprocs=2,

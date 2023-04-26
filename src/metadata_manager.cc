@@ -507,7 +507,6 @@ bool MetadataManager::LocalDestroyBlob(TagId bkt_id,
   // Acquire MD write lock (modify blob_id_map & blob_map_)
   ScopedRwWriteLock blob_map_lock(header_->lock_[kBlobMapLock],
                                   kMDM_LocalDestroyBlob);
-  (void)bkt_id;
   auto iter = (*blob_map_).find(blob_id);
   if (iter.is_end()) {
     return true;
@@ -538,6 +537,9 @@ void MetadataManager::LocalClear() {
                                  kMDM_LocalClear);
   tag_id_map_->clear();
   tag_map_->clear();
+  // Modify blob map
+  ScopedRwWriteLock blob_map_lock(header_->lock_[kBlobMapLock],
+                                  kMDM_LocalClear);
   blob_id_map_->clear();
   blob_map_->clear();
 }

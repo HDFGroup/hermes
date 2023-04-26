@@ -337,9 +337,6 @@ void BufferOrganizer::GlobalOrganizeBlob(const std::string &bucket_name,
 /** Flush all blobs registered in this daemon */
 void BufferOrganizer::LocalEnqueueFlushes() {
   auto mdm = &HERMES->mdm_;
-  // Avoid flushing
-  /* ScopedRwReadLock flush_lock(mdm_->header_->lock_[kFlushLock],
-                                 kMDM_LocalClear);*/
   // Acquire the read lock on the blob map
   ScopedRwReadLock blob_map_lock(mdm->header_->lock_[kBlobMapLock],
                                  kBORG_LocalEnqueueFlushes);
@@ -433,6 +430,7 @@ void BufferOrganizer::LocalWaitForFullFlush() {
   HILOG(kInfo, "Full synchronous flush on node {}", rpc_->node_id_)
   LocalEnqueueFlushes();
   HERMES_BORG_IO_THREAD_MANAGER->WaitForFlush();
+  HILOG(kInfo, "Finished synchronous flush on node {}", rpc_->node_id_)
 }
 
 /** Barrier for all I/O in Hermes to flush */

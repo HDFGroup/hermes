@@ -181,7 +181,6 @@ option(HERMES_BUILD_ADAPTER_TESTS "Enable installation of tests." ON)
 option(HERMES_INSTALL_TESTS "Enable installation of tests." OFF)
 option(HERMES_ONLY_RPC "Avoids the shared-memory case in RPC for testing" OFF)
 option(HERMES_ENABLE_PROFILING "Enables profiling of certain functions" OFF)
-option(HERMES_DISABLE_INFO_LOGS "Disables GLOG info" OFF)
 option(HERMES_ENABLE_C_BINDINGS "Used for compiling java API" OFF)
 option(HERMES_ENABLE_JAVA_BINDINGS "Used for compiling java API" OFF)
 option(HERMES_ENABLE_PYTHON_BINDINGS "Used for compiling python API" OFF)
@@ -200,11 +199,6 @@ endif()
 if (HERMES_DEBUG_LOCK)
   message("Lock debugging enabled")
   add_compile_definitions(HERMES_DEBUG_LOCK)
-endif()
-
-# Disable informatoinal logging
-if(HERMES_DISABLE_INFO_LOGS)
-  add_compile_options(-DNDEBUG)
 endif()
 
 # Calculate code coverage with debug mode

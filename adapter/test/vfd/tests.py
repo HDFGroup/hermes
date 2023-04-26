@@ -10,7 +10,7 @@ class VfdTestManager(TestManager):
     def set_paths(self):
         self.VFD_CMD = f"{self.CMAKE_BINARY_DIR}/bin/vfd_adapter_test"
         self.HERMES_VFD_CMD = f"{self.CMAKE_BINARY_DIR}/bin/hermes_vfd_adapter_test"
-        self.disable_testing = True
+        self.disable_testing = False
 
     def test_vfd_basic(self):
         vfd_cmd = f"{self.VFD_CMD}"
