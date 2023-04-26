@@ -433,6 +433,7 @@ void BufferOrganizer::LocalWaitForFullFlush() {
   HILOG(kInfo, "Full synchronous flush on node {}", rpc_->node_id_)
   LocalEnqueueFlushes();
   HERMES_BORG_IO_THREAD_MANAGER->WaitForFlush();
+  HILOG(kInfo, "Finished synchronous flush on node {}", rpc_->node_id_)
 }
 
 /** Barrier for all I/O in Hermes to flush */
