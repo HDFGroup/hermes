@@ -338,8 +338,8 @@ void BufferOrganizer::GlobalOrganizeBlob(const std::string &bucket_name,
 void BufferOrganizer::LocalEnqueueFlushes() {
   auto mdm = &HERMES->mdm_;
   // Avoid flushing
-  /* ScopedRwReadLock flush_lock(mdm_->header_->lock_[kFlushLock],
-                                 kMDM_LocalClear);*/
+  ScopedRwReadLock flush_lock(mdm_->header_->lock_[kFlushLock],
+                                 kMDM_LocalClear);/* */
   // Acquire the read lock on the blob map
   ScopedRwReadLock blob_map_lock(mdm->header_->lock_[kBlobMapLock],
                                  kBORG_LocalEnqueueFlushes);
