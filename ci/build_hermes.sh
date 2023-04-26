@@ -39,6 +39,7 @@ cmake                                                      \
     -DHERMES_RPC_THALLIUM=ON                               \
     -DBUILD_TESTING=ON                                     \
     -DHERMES_ENABLE_VFD=ON                                 \
+    -DHERMES_DEBUG_LOCK=ON                                 \
     ..
 cmake --build . -- -j4
 
