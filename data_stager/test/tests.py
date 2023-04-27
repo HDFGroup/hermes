@@ -58,7 +58,7 @@ class DataStagerTestManager(TestManager):
         return node.exit_code
 
     def test_data_stager_directory(self):
-        os.makedirs('/tmp/test_hermes/a', exists_ok=True)
+        os.makedirs('/tmp/test_hermes/a', exist_ok=True)
         path = '/tmp/test_hermes/a/test_data_stager_posix_small_misaligned.bin'
         self._make_file(path + "0", '64m')
         self._make_file(path + "1", '128m')
