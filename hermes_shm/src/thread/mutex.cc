@@ -25,19 +25,14 @@ namespace hshm {
  * Acquire the mutex
  * */
 void Mutex::Lock(uint32_t owner) {
-  size_t count = 0;
-  do {
 #ifdef HERMES_DEBUG_LOCK
-    if (count > US_TO_CLOCKS(1000000)) {
-      HILOG(kDebug, "Taking a while");
-      count = 5;
-    }
+  HILOG(kDebug, "Acquiring mutex for {}", owner)
 #endif
+  do {
     for (int i = 0; i < 1; ++i) {
       if (TryLock(owner)) { return; }
     }
     HERMES_THREAD_MODEL->Yield();
-    ++count;
   } while (true);
 }
 
