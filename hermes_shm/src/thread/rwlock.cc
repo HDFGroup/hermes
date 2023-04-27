@@ -27,9 +27,6 @@ namespace hshm {
 void RwLock::ReadLock(uint32_t owner) {
   bool ret = false;
   RwLockPayload expected, desired;
-#ifdef HERMES_DEBUG_LOCK
-  HILOG(kDebug, "Acquiring read lock for {} from {}", owner, owner_);
-#endif
   do {
     for (int i = 0; i < 1; ++i) {
       expected.as_int_ = payload_.load();
@@ -78,9 +75,6 @@ void RwLock::ReadUnlock() {
 void RwLock::WriteLock(uint32_t owner) {
   bool ret = false;
   RwLockPayload expected, desired;
-#ifdef HERMES_DEBUG_LOCK
-  HILOG(kDebug, "Acquiring write lock for {} from {}", owner, owner_);
-#endif
   do {
     for (int i = 0; i < 1; ++i) {
       expected.as_int_ = payload_.load();

@@ -82,10 +82,6 @@ target_compile_definitions(hermes
 
 hermes_set_lib_options(hermes "hermes" ${HERMES_LIBTYPE})
 
-if(HERMES_ENABLE_COVERAGE)
-  set_coverage_flags(hermes)
-endif()
-
 set(HERMES_EXPORTED_LIBS hermes ${HERMES_EXPORTED_LIBS})
 
 # HERMES DAEMON
@@ -130,15 +126,6 @@ install(
 install(
   TARGETS
     hermes
-  EXPORT
-    ${HERMES_EXPORTED_TARGETS}
-  LIBRARY DESTINATION ${HERMES_INSTALL_LIB_DIR}
-  ARCHIVE DESTINATION ${HERMES_INSTALL_LIB_DIR}
-  RUNTIME DESTINATION ${HERMES_INSTALL_BIN_DIR}
-)
-message(${HERMES_EXPORTED_TARGETS})
-install(
-  TARGETS
     hermes_daemon
     finalize_hermes
   EXPORT
@@ -189,3 +176,10 @@ set(HERMES_INCLUDES_INSTALL_TIME
   ${HERMES_EXT_INCLUDE_DEPENDENCIES}
   PARENT_SCOPE
 )
+
+#------------------------------------------------------------------------------
+# Coverage
+#------------------------------------------------------------------------------
+if(HERMES_ENABLE_COVERAGE)
+  set_coverage_flags(hermes)
+endif()

@@ -129,7 +129,9 @@ class Logger {
     std::string out =
       hshm::Formatter::format(fmt, std::forward<Args>(args)...);
     std::cout << out;
-    fwrite(out.data(), 1, out.size(), fout_);
+    if (fout_) {
+      fwrite(out.data(), 1, out.size(), fout_);
+    }
   }
 
   template<typename ...Args>
@@ -199,7 +201,7 @@ class Logger {
 #ifdef SYS_gettid
     return (pid_t)syscall(SYS_gettid);
 #else
-#warning "GetTid is not defined"
+    #warning "GetTid is not defined"
     return GetPid();
 #endif
   }
@@ -208,7 +210,7 @@ class Logger {
 #ifdef SYS_getpid
     return (pid_t)syscall(SYS_getpid);
 #else
-#warning "GetPid is not defined"
+    #warning "GetPid is not defined"
     return 0;
 #endif
   }

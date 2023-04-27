@@ -49,10 +49,3 @@ install(TARGETS
         LIBRARY DESTINATION ${HERMES_INSTALL_LIB_DIR}
         ARCHIVE DESTINATION ${HERMES_INSTALL_LIB_DIR}
         RUNTIME DESTINATION ${HERMES_INSTALL_BIN_DIR})
-
-#------------------------------------------------------------------------------
-# Code Coverage
-#------------------------------------------------------------------------------
-if(HERMES_ENABLE_COVERAGE)
-    set_coverage_flags(test_allocator_exec)
-endif()
