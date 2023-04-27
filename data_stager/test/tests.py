@@ -1,6 +1,7 @@
 from py_hermes_ci.test_manager import TestManager
 from jarvis_util.shell.exec import Exec
 from jarvis_util.shell.local_exec import LocalExecInfo
+from jarvis_util.util.size_conv import SizeConv
 
 
 class DataStagerTestManager(TestManager):
@@ -16,7 +17,7 @@ class DataStagerTestManager(TestManager):
         spawn_info = self.spawn_info(nprocs=4,
                                      hermes_conf='hermes_server')
         self.start_daemon(spawn_info)
-        node = Exec(f"{self.TEST_STAGE_IN_CMD} {path} 0 128m",
+        node = Exec(f"{self.TEST_STAGE_IN_CMD} {path} 0 128m kMinimizeIoTime",
                     spawn_info)
         self.stop_daemon(spawn_info)
         return node.exit_code
@@ -27,7 +28,8 @@ class DataStagerTestManager(TestManager):
         spawn_info = self.spawn_info(nprocs=4,
                                      hermes_conf='hermes_server')
         self.start_daemon(spawn_info)
-        node = Exec(f"{self.TEST_STAGE_IN_CMD} {path} .5m 127.5m",
+        node = Exec(f"{self.TEST_STAGE_IN_CMD} {path} .5m 127.5m "
+                    f"kMinimizeIoTime",
                     spawn_info)
         self.stop_daemon(spawn_info)
         return node.exit_code
@@ -38,7 +40,7 @@ class DataStagerTestManager(TestManager):
         spawn_info = self.spawn_info(nprocs=4,
                                      hermes_conf='hermes_server')
         self.start_daemon(spawn_info)
-        node = Exec(f"{self.TEST_STAGE_IN_CMD} {path} 0 64m",
+        node = Exec(f"{self.TEST_STAGE_IN_CMD} {path} 0 64m kMinimizeIoTime",
                     spawn_info)
         self.stop_daemon(spawn_info)
         return node.exit_code
@@ -49,7 +51,7 @@ class DataStagerTestManager(TestManager):
         spawn_info = self.spawn_info(nprocs=4,
                                      hermes_conf='hermes_server')
         self.start_daemon(spawn_info)
-        node = Exec(f"{self.TEST_STAGE_IN_CMD} {path} .5m 63.5m",
+        node = Exec(f"{self.TEST_STAGE_IN_CMD} {path} .5m 63.5m kMinimizeIoTime",
                     spawn_info)
         self.stop_daemon(spawn_info)
         return node.exit_code
@@ -64,7 +66,7 @@ class DataStagerTestManager(TestManager):
         spawn_info = self.spawn_info(nprocs=4,
                                      hermes_conf='hermes_server')
         self.start_daemon(spawn_info)
-        node = Exec(f"{self.TEST_STAGE_IN_CMD} {path} 0 0",
+        node = Exec(f"{self.TEST_STAGE_IN_CMD} {path} 0 0 kMinimizeIoTime",
                     spawn_info)
         self.stop_daemon(spawn_info)
         return node.exit_code
@@ -72,4 +74,4 @@ class DataStagerTestManager(TestManager):
     def _make_file(self, path, size):
         size = SizeConv.to_int(size)
         with open(path, 'w') as fp:
-            fp.write(b"\0" * size)
+            fp.write("\0" * size)
