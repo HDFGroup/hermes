@@ -8,16 +8,15 @@ include_directories(
 # Creates the POSIX I/O client
 add_library(hermes_posix_io_client posix_io_client.cc)
 add_dependencies(hermes_posix_io_client
-        hermes)
+        hermes hermes_fs_base)
 target_link_libraries(hermes_posix_io_client
-        hermes
+        hermes hermes_fs_base
         MPI::MPI_CXX stdc++fs dl)
 
 # Create the POSIX interceptor
 set(INTERCEPTOR_DEPS
         hermes
-        hermes_posix_io_client
-        hermes_fs_base)
+        hermes_posix_io_client)
 add_library(hermes_posix SHARED
         ${CMAKE_CURRENT_SOURCE_DIR}/posix_api.cc)
 add_dependencies(hermes_posix ${INTERCEPTOR_DEPS})

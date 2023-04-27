@@ -116,6 +116,13 @@ struct FsIoOptions {
     if (!seek) { opts.UnsetSeek(); }
     return opts;
   }
+
+  /** Return Io options with \a DPE */
+  static FsIoOptions WithDpe(hapi::PlacementPolicy dpe) {
+    FsIoOptions opts;
+    opts.dpe_ = dpe;
+    return opts;
+  }
 };
 
 /** Represents an object in the I/O client (e.g., a file) */

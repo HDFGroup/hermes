@@ -9,16 +9,15 @@ include_directories(
 # Creates the STDIO I/O client
 add_library(hermes_stdio_io_client stdio_io_client.cc)
 add_dependencies(hermes_stdio_io_client
-        hermes)
+        hermes hermes_fs_base)
 target_link_libraries(hermes_stdio_io_client
-        hermes
+        hermes hermes_fs_base
         MPI::MPI_CXX stdc++fs dl)
 
 # Create the STDIO interceptor
 set(INTERCEPTOR_DEPS
         hermes
-        hermes_stdio_io_client
-        hermes_fs_base)
+        hermes_stdio_io_client)
 add_library(hermes_stdio SHARED
         ${CMAKE_CURRENT_SOURCE_DIR}/stdio_api.cc)
 add_dependencies(hermes_stdio ${INTERCEPTOR_DEPS})

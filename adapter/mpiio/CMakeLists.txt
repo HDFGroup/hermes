@@ -10,15 +10,14 @@ include_directories(
 # Create the MPIIO I/O client
 add_library(hermes_mpiio_io_client mpiio_io_client.cc)
 add_dependencies(hermes_mpiio_io_client
-        hermes)
+        hermes hermes_fs_base)
 target_link_libraries(hermes_mpiio_io_client
-        hermes MPI::MPI_CXX stdc++fs dl)
+        hermes hermes_fs_base MPI::MPI_CXX stdc++fs dl)
 
 # Create the MPIIO interceptor
 set(INTERCEPTOR_DEPS
         hermes
-        hermes_mpiio_io_client
-        hermes_fs_base)
+        hermes_mpiio_io_client)
 add_library(hermes_mpiio SHARED
         ${CMAKE_CURRENT_SOURCE_DIR}/mpiio_api.cc)
 add_dependencies(hermes_mpiio ${INTERCEPTOR_DEPS})

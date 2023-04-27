@@ -423,7 +423,7 @@ add_custom_target(rpc COMMAND bash
         ${CMAKE_SOURCE_DIR}/code_generators/code_generators/rpc/rpcgen.sh
         "${CMAKE_SOURCE_DIR}"
         "${CMAKE_BINARY_DIR}")
-# add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/data_stager)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/data_stager)
 
 #-----------------------------------------------------------------------------
 # Testing
