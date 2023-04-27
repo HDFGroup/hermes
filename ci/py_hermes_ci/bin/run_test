@@ -7,6 +7,7 @@ if __name__ == '__main__':
     if len(sys.argv) != 5:
         print("USAGE: ./run_test [TEST_TYPE] [TEST_NAME] [CMAKE_BINARY_DIR] [ADDRESS_SANITIZER]")
         exit(1)
+    print("HERE!!!!!!!!!!")
     test_type = sys.argv[1]
     test_name = sys.argv[2]
     cmake_binary_dir = sys.argv[3]
@@ -34,6 +35,8 @@ if __name__ == '__main__':
         pkg_dir = f"{ADAPTER_TEST_ROOT}/{test_type}"
     elif test_type == 'native':
         pkg_dir = f"{HERMES_ROOT}/test"
+    elif test_type == 'data_stager':
+        pkg_dir = f"{HERMES_ROOT}/data_stager/test"
     else:
         raise Exception("Could not find the unit test")
     # Load the unit test

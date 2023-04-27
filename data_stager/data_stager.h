@@ -52,23 +52,9 @@ class DataStager {
     MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
     int ranks_for_io = nprocs;
 
-    // Ensure that all ranks perform at least 1GB of I/O
-    size_t min_io_per_rank = GIGABYTES(1);
+    // Ensure that all ranks perform at least 32MB of I/O
+    size_t min_io_per_rank = MEGABYTES(32);
     if (size < nprocs * min_io_per_rank) {
-      /**
-       * Let's say we have 4 MPI processes.
-       * 1. File 1: 16GB
-       * - Each rank performs 4GB of I/O. Even split.
-       * - 16GB is NOT less than 4GB
-       * 2. File 2: 2GB
-       * - 2 ranks perform 2GB of I/O. Two ranks do nothing.
-       * - 2GB IS less than 4GB
-       * - roundup(2GB / GIGABYTES(1)) = 2 ranks
-       * 3. File 3: 4KB I/O
-       * - 1 rank performs 4KB of I/O. Three ranks do nothing.
-       * - 4KB IS less than 4GB
-       * - roundup(4KB / GIGABYTES(1)) = 1 rank
-       * */
       ranks_for_io = size / min_io_per_rank;
       if (size % min_io_per_rank) {
         ranks_for_io += 1;

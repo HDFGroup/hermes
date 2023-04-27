@@ -29,11 +29,9 @@ int main(int argc, char **argv) {
   }
   MPI_Init(&argc, &argv);
   HERMES->Create(hermes::HermesType::kClient);
-  off_t off;
-  size_t size;
   std::string url = argv[1];
-  std::stringstream(argv[2]) >> off;
-  std::stringstream(argv[3]) >> size;
+  size_t off = hshm::ConfigParse::ParseSize(argv[2]);
+  size_t size = hshm::ConfigParse::ParseSize(argv[3]);
   PlacementPolicy dpe = PlacementPolicyConv::to_enum(argv[4]);
   auto stager = DataStagerFactory::Get(url);
   if (size == 0) {

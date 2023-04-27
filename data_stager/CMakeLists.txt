@@ -1,3 +1,6 @@
+#-----------------------------------------------------------------------------
+# Build Stage In
+#-----------------------------------------------------------------------------
 include_directories(
         ${CMAKE_SOURCE_DIR}
         ${CMAKE_SOURCE_DIR}/adapter
@@ -12,3 +15,9 @@ target_link_libraries(hermes_data_stager hermes_posix_io_client)
 add_executable(stage_in ${CMAKE_CURRENT_SOURCE_DIR}/stage_in.cc)
 add_dependencies(stage_in hermes_data_stager)
 target_link_libraries(stage_in hermes_data_stager)
+
+add_executable(stage_out ${CMAKE_CURRENT_SOURCE_DIR}/stage_out.cc)
+add_dependencies(stage_out hermes_data_stager)
+target_link_libraries(stage_out hermes_data_stager)
+
+# NOTE(llogan): testing is enabled in ${CMAKE_SOURCE_DIR}/CMakeLists.txt

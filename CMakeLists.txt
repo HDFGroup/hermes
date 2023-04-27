@@ -412,6 +412,13 @@ endif()
 # Source
 #-----------------------------------------------------------------------------
 
+# General function used to hook ctest to python test tool lib
+function(pytest test_type test_name)
+  set(script ${CMAKE_SOURCE_DIR}/ci/py_hermes_ci/bin/run_test)
+  add_test(NAME ${test_name}
+          COMMAND ${script} ${test_type} ${test_name} ${CMAKE_BINARY_DIR} ${HERMES_USE_ADDRESS_SANITIZER})
+endfunction()
+
 set(HERMES_EXPORTED_LIBS "")
 
 include_directories(${CMAKE_SOURCE_DIR}/hermes_shm/include)
@@ -430,13 +437,6 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/data_stager)
 #-----------------------------------------------------------------------------
 include(CTest)
 
-# General function used to hook ctest to python test tool lib
-function(pytest test_type test_name)
-  set(script ${CMAKE_SOURCE_DIR}/ci/py_hermes_ci/bin/run_test)
-  add_test(NAME ${test_name}
-          COMMAND ${script} ${test_type} ${test_name} ${CMAKE_BINARY_DIR} ${HERMES_USE_ADDRESS_SANITIZER})
-endfunction()
-
 # Add testing directory
 if(CMAKE_PROJECT_NAME STREQUAL HERMES AND BUILD_TESTING)
   find_package(Catch2 3.0.1 REQUIRED)  
@@ -450,7 +450,7 @@ if(CMAKE_PROJECT_NAME STREQUAL HERMES AND BUILD_TESTING)
   endif()
   enable_testing()
   add_subdirectory(test)
-  # add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/data_stager/test)
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/data_stager/test)
 endif()
 
 ##### ADAPTERS
