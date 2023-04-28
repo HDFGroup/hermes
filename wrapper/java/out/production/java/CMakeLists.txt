@@ -8,24 +8,20 @@ message("Found JNI at ${JNI_INCLUDE_DIRS} and ${JNI_LIBRARIES}")
 #-----------------------------------------------------------------------------
 # Build C++ Java wrapper
 #-----------------------------------------------------------------------------
-function(java_wrapper name path)
-    include_directories(${JNI_INCLUDE_DIRS})
-    add_library(${name} ${path})
-    add_dependencies(${name} hermes hermes_c_wrapper)
-    target_link_libraries(${name}
-            hermes hermes_c_wrapper
-            MPI::MPI_CXX stdc++fs dl ${JNI_LIBRARIES})
-endfunction()
-java_wrapper(hermes_src_main_Bucket src/main/cpp/src_main_Bucket.cc)
-java_wrapper(hermes_src_main_Hermes src/main/cpp/src_main_Hermes.cc)
+include_directories(${JNI_INCLUDE_DIRS})
+add_library(hermes_java_wrapper
+        java_wrapper.cc)
+add_dependencies(hermes_java_wrapper hermes hermes_c_wrapper)
+target_link_libraries(hermes_java_wrapper
+        hermes hermes_c_wrapper
+        MPI::MPI_CXX stdc++fs dl ${JNI_LIBRARIES})
 
 #-----------------------------------------------------------------------------
 # Add Target(s) to CMake Install
 #-----------------------------------------------------------------------------
 install(
         TARGETS
-        hermes_src_main_Bucket
-        hermes_src_main_Hermes
+        hermes_java_wrapper
         EXPORT
         ${HERMES_EXPORTED_TARGETS}
         LIBRARY DESTINATION ${HERMES_INSTALL_LIB_DIR}
@@ -36,8 +32,7 @@ install(
 # Export all exported targets to the build tree for use by parent project
 #-----------------------------------------------------------------------------
 set(HERMES_EXPORTED_LIBS
-        hermes_src_main_Bucket
-        hermes_src_main_Hermes
+        hermes_java_wrapper
         ${HERMES_EXPORTED_LIBS})
 if(NOT HERMES_EXTERNALLY_CONFIGURED)
     EXPORT (
@@ -51,6 +46,5 @@ endif()
 # Add Target(s) to Coverage
 #-----------------------------------------------------------------------------
 if(HERMES_ENABLE_COVERAGE)
-    set_coverage_flags(hermes_src_main_Bucket)
-    set_coverage_flags(hermes_src_main_Hermes)
+    set_coverage_flags(hermes_java_wrapper)
 endif()

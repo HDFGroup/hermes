@@ -11,7 +11,9 @@ include_directories(
         ${HERMES_WRAPPER_DIR}
         ${HERMES_IO_CLIENT_DIR})
 
-if (HERMES_ENABLE_C_BINDINGS)
+if (HERMES_ENABLE_C_BINDINGS OR
+        HERMES_ENABLE_JAVA_BINDINGS OR
+        HERMES_ENABLE_PYTHON_BINDINGS)
     add_subdirectory(c)
 endif()
 
