@@ -11,13 +11,12 @@ GTAGS
 
 .gdb_history
 
-/cmake-build-*
-/.idea/
-/.clang-format
+cmake-build-*
+.idea
+.clang-format
 __pycache__/
-/cmake-build-debug-system/
 /src/adapter/posix/cmake-build-debug-system/CMakeFiles/clion-log.txt
 /adapter/test/posix/Testing/Temporary/LastTest.log
-/.cache/
+.cache
 
 Testing
