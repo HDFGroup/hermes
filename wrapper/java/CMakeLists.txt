@@ -3,6 +3,8 @@
 # Find Java JNI
 #-----------------------------------------------------------------------------
 find_package(JNI REQUIRED)
+find_package(Java REQUIRED)
+include(UseJava)
 message("Found JNI at ${JNI_INCLUDE_DIRS} and ${JNI_LIBRARIES}")
 
 #-----------------------------------------------------------------------------
@@ -19,6 +21,19 @@ endfunction()
 java_wrapper(hermes_src_main_Blob src/main/cpp/src_main_Blob.cc)
 java_wrapper(hermes_src_main_Bucket src/main/cpp/src_main_Bucket.cc)
 java_wrapper(hermes_src_main_Hermes src/main/cpp/src_main_Hermes.cc)
+
+#-----------------------------------------------------------------------------
+# Build Java API
+#-----------------------------------------------------------------------------
+add_custom_command(TARGET hermes_src_main_Hermes POST_BUILD
+        COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR} &&
+                ${CMAKE_CURRENT_SOURCE_DIR}/gradlew build -x test)
+add_custom_target(build_hermes_java
+        COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR} &&
+                ${CMAKE_CURRENT_SOURCE_DIR}/gradlew build -x test)
+add_test(test_hermes_java_wrapper
+        cd ${CMAKE_CURRENT_SOURCE_DIR} &&
+        ${CMAKE_CURRENT_SOURCE_DIR}/gradlew test)
 
 #-----------------------------------------------------------------------------
 # Add Target(s) to CMake Install
