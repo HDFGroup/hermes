@@ -19,4 +19,6 @@ __pycache__/
 /adapter/test/posix/Testing/Temporary/LastTest.log
 .cache
 
+wrapper/java/out
+
 Testing

@@ -1,13 +1,19 @@
 package src.main.java;
-
+import Blob;
 public class Bucket {
-    public native void Destroy();
+    public UniqueId bkt_id_;
 
-    public native String Get(UniqueId blob_id);
+    public Bucket(UniqueId bkt_id) {
+        bkt_id_ = bkt_id;
+    }
 
-    public native UniqueId Put(String blob_name, String data);
+    public native void destroy();
 
-    public native void DestroyBlob(UniqueId blob_id);
+    public native Blob get(UniqueId blob_id);
+
+    public native UniqueId put(String blob_name, Blob data);
+
+    public native void destroyBlob(UniqueId blob_id);
 
     static {
         System.loadLibrary("hermes_src_main_Bucket");

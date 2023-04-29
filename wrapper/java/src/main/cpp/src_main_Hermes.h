@@ -12,7 +12,7 @@ extern "C" {
  * Method:    create
  * Signature: ()V
  */
-JNIEXPORT void JNICALL Java_src_main_Hermes_create
+JNIEXPORT void JNICALL Java_src_main_java_Hermes_create
   (JNIEnv *, jobject);
 
 /*
@@ -20,7 +20,7 @@ JNIEXPORT void JNICALL Java_src_main_Hermes_create
  * Method:    getBucket
  * Signature: (Ljava/lang/String;)Lsrc/main/Bucket;
  */
-JNIEXPORT jobject JNICALL Java_src_main_Hermes_getBucket
+JNIEXPORT jobject JNICALL Java_src_main_java_Hermes_getBucket
   (JNIEnv *, jobject, jstring);
 
 #ifdef __cplusplus

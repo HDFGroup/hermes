@@ -16,6 +16,7 @@ function(java_wrapper name path)
             hermes hermes_c_wrapper
             MPI::MPI_CXX stdc++fs dl ${JNI_LIBRARIES})
 endfunction()
+java_wrapper(hermes_src_main_Blob src/main/cpp/src_main_Blob.cc)
 java_wrapper(hermes_src_main_Bucket src/main/cpp/src_main_Bucket.cc)
 java_wrapper(hermes_src_main_Hermes src/main/cpp/src_main_Hermes.cc)
 
@@ -24,6 +25,7 @@ java_wrapper(hermes_src_main_Hermes src/main/cpp/src_main_Hermes.cc)
 #-----------------------------------------------------------------------------
 install(
         TARGETS
+        hermes_src_main_Blob
         hermes_src_main_Bucket
         hermes_src_main_Hermes
         EXPORT
@@ -36,6 +38,7 @@ install(
 # Export all exported targets to the build tree for use by parent project
 #-----------------------------------------------------------------------------
 set(HERMES_EXPORTED_LIBS
+        hermes_src_main_Blob
         hermes_src_main_Bucket
         hermes_src_main_Hermes
         ${HERMES_EXPORTED_LIBS})
@@ -51,6 +54,7 @@ endif()
 # Add Target(s) to Coverage
 #-----------------------------------------------------------------------------
 if(HERMES_ENABLE_COVERAGE)
+    set_coverage_flags(hermes_src_main_Blob)
     set_coverage_flags(hermes_src_main_Bucket)
     set_coverage_flags(hermes_src_main_Hermes)
 endif()
