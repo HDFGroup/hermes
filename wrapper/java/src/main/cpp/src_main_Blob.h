@@ -9,11 +9,19 @@ extern "C" {
 #endif
 /*
  * Class:     src_main_java_Blob
+ * Method:    fromString
+ * Signature: (Ljava/lang/String;)Lsrc/main/java/Blob;
+ */
+JNIEXPORT jobject JNICALL Java_src_main_java_Blob_fromString
+    (JNIEnv *, jclass, jstring);
+
+/*
+ * Class:     src_main_java_Blob
  * Method:    close
  * Signature: ()V
  */
 JNIEXPORT void JNICALL Java_src_main_java_Blob_close
-  (JNIEnv *, jobject);
+    (JNIEnv *, jobject);
 
 #ifdef __cplusplus
 }

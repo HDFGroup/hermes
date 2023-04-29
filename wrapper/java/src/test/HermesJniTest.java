@@ -9,10 +9,10 @@ public class HermesJniTest {
         Hermes hermes = Hermes.getInstance();
         hermes.create();
         Bucket bkt = hermes.getBucket("hello");
-        String data = "this is my DATA!";
-        UniqueId blob_id = bkt.Put("0", data);
-        String my_data = bkt.Get(blob_id);
-        bkt.Destroy();
+        Blob data = "this is my DATA!";
+        UniqueId blob_id = bkt.put("0", data);
+        Blob my_data = bkt.get(blob_id);
+        bkt.destroy();
         assert(my_data.equals(data));
     }
 }

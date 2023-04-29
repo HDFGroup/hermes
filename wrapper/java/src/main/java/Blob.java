@@ -12,6 +12,8 @@ public class Blob {
         alloc_ = alloc;
     }
 
+    public static native Blob fromString(String data);
+
     protected native void close();
 
     static {
