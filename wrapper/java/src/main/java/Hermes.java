@@ -1,4 +1,5 @@
 package src.main.java;
+import src.main.java.Bucket;
 
 public class Hermes {
     private static Hermes instance_ = null;
