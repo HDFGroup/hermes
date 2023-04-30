@@ -25,12 +25,68 @@ struct JavaStringWrap {
 
 class HermesJavaWrapper {
  public:
+  /** UniqueId Java class */
+  jclass id_class;
+  jmethodID id_cstor;
+  jfieldID unique_fid;
+  jfieldID node_id_fid;
+
+  /** Bucket Java class */
+  jclass bkt_class;
+  jmethodID bkt_constructor;
+  jfieldID bkt_id_fid;
+
+  /** Blob java class */
+  jclass blob_class;
+  jmethodID blob_cstor;
+  jfieldID blob_data_fid;
+  jfieldID blob_size_fid;
+  jfieldID blob_alloc_fid;
+
+  /** Blob ID vector methods */
+  jclass vector_class;
+  jmethodID vector_cstor;
+  jmethodID vector_add;
+
+ public:
+  HermesJavaWrapper(JNIEnv *env) {
+    /* UniqueId methods */
+    id_class = env->FindClass("src/main/java/UniqueId");
+    id_cstor = env->GetMethodID(id_class, "<init>", "(JI)V");
+    unique_fid = env->GetFieldID(id_class, "unique_", "J");
+    node_id_fid = env->GetFieldID(id_class, "node_id_", "I");
+
+    /* Bucket methods */
+    bkt_class = env->FindClass("src/main/java/Bucket");
+    bkt_id_fid = env->GetFieldID(bkt_class, "bkt_id_",
+                                 "Lsrc/main/java/UniqueId;");
+    bkt_constructor = env->GetMethodID(
+        bkt_class,
+        "<init>",
+        "(Lsrc/main/java/UniqueId;)V");
+
+    /* Blob methods */
+    blob_class = env->FindClass("src/main/java/Blob");
+    blob_cstor = env->GetMethodID(
+        blob_class,
+        "<init>",
+        "(Ljava/nio/ByteBuffer;JJJ)V");
+    blob_data_fid = env->GetFieldID(blob_class, "data_ptr_", "J");
+    blob_size_fid = env->GetFieldID(blob_class, "size_", "J");
+    blob_alloc_fid = env->GetFieldID(blob_class, "alloc_", "J");
+
+    /* Blob vector methods */
+    vector_class = env->FindClass("java/util/Vector");
+    vector_cstor = env->
+        GetMethodID(vector_class, "<init>", "(J)V");
+    vector_add = env->GetMethodID(
+        vector_class, "add", "(Lsrc/main/java/Blob;)Z");
+  }
+
   /** Convert a C++ UniqueId to Java UniqueId */
   template<typename IdT>
   jobject ConvertUniqueIdToJava(JNIEnv *env,
                                 const IdT &id) {
-    jclass id_class = env->FindClass("src/main/java/UniqueId");
-    jmethodID id_cstor = env->GetMethodID(id_class, "<init>", "(JI)V");
     jobject id_java = env->NewObject(id_class, id_cstor,
                                      id.unique_, id.node_id_);
     return id_java;
@@ -40,9 +96,6 @@ class HermesJavaWrapper {
   template<typename IdT>
   IdT GetUniqueIdFromJava(JNIEnv *env,
                           jobject bkt_id_java) {
-    jclass bkt_id_class = env->GetObjectClass(bkt_id_java);
-    jfieldID unique_fid = env->GetFieldID(bkt_id_class, "unique_", "J");
-    jfieldID node_id_fid = env->GetFieldID(bkt_id_class, "node_id_", "I");
     IdT tag_id;
     tag_id.unique_ = env->GetLongField(bkt_id_java, unique_fid);
     tag_id.node_id_ = env->GetIntField(bkt_id_java, node_id_fid);
@@ -52,11 +105,6 @@ class HermesJavaWrapper {
   /** Convert a C++ BUCKET to Java Bucket */
   jobject ConvertBucketToJava(JNIEnv *env,
                               hapi::Bucket &bkt) {
-    jclass bkt_class = env->FindClass("src/main/java/Bucket");
-    jmethodID bkt_constructor = env->GetMethodID(
-        bkt_class,
-        "<init>",
-        "(Lsrc/main/java/UniqueId;)V");
     auto bkt_id_java = ConvertUniqueIdToJava<hermes::TagId>(env, bkt.GetId());
     jobject bkt_java = env->NewObject(bkt_class, bkt_constructor, bkt_id_java);
     return bkt_java;
@@ -65,9 +113,6 @@ class HermesJavaWrapper {
   /** Get a C++ BUCKET from Java Bucket */
   hapi::Bucket GetBucketFromJava(JNIEnv *env,
                                  jobject bkt_java) {
-    jclass bkt_class = env->GetObjectClass(bkt_java);
-    jfieldID bkt_id_fid = env->GetFieldID(bkt_class, "bkt_id_",
-                                          "Lsrc/main/java/UniqueId;");
     jobject bkt_id_java = env->GetObjectField(bkt_java, bkt_id_fid);
     auto tag_id = GetUniqueIdFromJava<hermes::TagId>(env, bkt_id_java);
     return hapi::Bucket(tag_id);
@@ -82,11 +127,6 @@ class HermesJavaWrapper {
     hipc::Allocator *alloc = blob.GetAllocator();
 
     // Allocate new Blob java
-    jclass blob_class = env->FindClass("src/main/java/Blob");
-    jmethodID blob_cstor = env->GetMethodID(
-        blob_class,
-        "<init>",
-        "(Ljava/nio/ByteBuffer;JJJ)V");
     jobject blob_java = env->NewObject(blob_class, blob_cstor,
                                        data_java,
                                        (uint64_t)blob.data(),
@@ -98,10 +138,6 @@ class HermesJavaWrapper {
   /** Get a C++ BLOB from Java Blob */
   hapi::Blob GetBlobFromJava(JNIEnv *env,
                              jobject blob_java) {
-    jclass blob_class = env->GetObjectClass(blob_java);
-    jfieldID blob_data_fid = env->GetFieldID(blob_class, "data_ptr_", "J");
-    jfieldID blob_size_fid = env->GetFieldID(blob_class, "size_", "J");
-    jfieldID blob_alloc_fid = env->GetFieldID(blob_class, "alloc_", "J");
     hapi::Blob blob;
     blob.data_ = reinterpret_cast<char*>(
         env->GetLongField(blob_java, blob_data_fid));
@@ -110,9 +146,22 @@ class HermesJavaWrapper {
         env->GetLongField(blob_java, blob_alloc_fid));
     return blob;
   }
+
+  /** Convert a blob ID vector to a Java vector */
+  jobject ConvertBlobIdVectorToJava(JNIEnv *env,
+                                    std::vector<hermes::BlobId> &blob_ids) {
+    // Allocate new Blob java
+    jobject blob_ids_java = env->NewObject(vector_class, vector_cstor,
+                                     blob_ids.size());
+    for (hermes::BlobId &blob_id : blob_ids) {
+      jobject blob_id_java = ConvertUniqueIdToJava(env, blob_id);
+      env->CallBooleanMethod(blob_ids_java, vector_add, blob_id_java);
+    }
+    return blob_ids_java;
+  }
 };
 
 #define HERMES_JAVA_WRAPPER \
-  hshm::EasySingleton<HermesJavaWrapper>::GetInstance()
+  hshm::EasySingleton<HermesJavaWrapper>::GetInstance(env)
 
 #endif //HERMES_WRAPPER_JAVA_SRC_MAIN_CPP_HERMES_JAVA_WRAPPER_H_

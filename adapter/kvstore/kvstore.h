@@ -130,7 +130,8 @@ struct KVRecord {
 };
 
 /** Denotes a set of records */
-struct KVTable {
+class KVTable {
+ public:
   hapi::Bucket bkt_;
 
   /** Emplace Constructor */
@@ -163,6 +164,7 @@ struct KVTable {
 
 /** The key-value store instance */
 class KVStore {
+ public:
   /** Connect to Hermes */
   void Connect();
 

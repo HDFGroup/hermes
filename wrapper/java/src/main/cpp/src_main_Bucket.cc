@@ -8,6 +8,51 @@
 extern "C" {
 #endif
 
+/**====================================
+ * BUCKET operations
+ * ===================================*/
+
+/*
+ * Class:     src_main_java_Bucket
+ * Method:    lock
+ * Signature: ()V
+ */
+JNIEXPORT void JNICALL Java_src_main_java_Bucket_lock(JNIEnv *env,
+                                                      jobject bkt_java,
+                                                      jint lock_type_java) {
+  auto bkt = HERMES_JAVA_WRAPPER->
+      GetBucketFromJava(env, bkt_java);
+  auto lock_type = static_cast<hermes::MdLockType>(lock_type_java);
+  bkt.LockBucket(lock_type);
+}
+
+/*
+ * Class:     src_main_java_Bucket
+ * Method:    unlock
+ * Signature: ()V
+ */
+JNIEXPORT void JNICALL Java_src_main_java_Bucket_unlock(JNIEnv *env,
+                                                        jobject bkt_java,
+                                                        jint lock_type_java) {
+  auto bkt = HERMES_JAVA_WRAPPER->
+      GetBucketFromJava(env, bkt_java);
+  auto lock_type = static_cast<hermes::MdLockType>(lock_type_java);
+  bkt.UnlockBucket(lock_type);
+}
+
+/*
+ * Class:     src_main_java_Bucket
+ * Method:    getContainedBlobIds
+ * Signature: ()Ljava/util/List;
+ */
+JNIEXPORT jobject JNICALL Java_src_main_java_Bucket_getContainedBlobIds(
+    JNIEnv *env, jobject bkt_java) {
+  auto bkt = HERMES_JAVA_WRAPPER->
+      GetBucketFromJava(env, bkt_java);
+  std::vector<hermes::BlobId> blob_ids = bkt.GetContainedBlobIds();
+  return HERMES_JAVA_WRAPPER->ConvertBlobIdVectorToJava(env, blob_ids);
+}
+
 /*
  * Class:     src_main_Bucket
  * Method:    Destroy
@@ -19,9 +64,13 @@ JNIEXPORT void JNICALL Java_src_main_java_Bucket_destroy(JNIEnv *env,
   bkt.Destroy();
 }
 
+/**====================================
+ * BLOB operations
+ * ===================================*/
+
 /*
  * Class:     src_main_Bucket
- * Method:    Get
+ * Method:    get
  * Signature: (Lsrc/main/UniqueId;)Ljava/lang/String;
  */
 JNIEXPORT jobject JNICALL Java_src_main_java_Bucket_get(JNIEnv *env,
@@ -40,7 +89,7 @@ JNIEXPORT jobject JNICALL Java_src_main_java_Bucket_get(JNIEnv *env,
 
 /*
  * Class:     src_main_Bucket
- * Method:    Put
+ * Method:    put
  * Signature: (Ljava/lang/String;Ljava/lang/String;)Lsrc/main/UniqueId;
  */
 JNIEXPORT jobject JNICALL Java_src_main_java_Bucket_put(JNIEnv *env,
@@ -54,6 +103,36 @@ JNIEXPORT jobject JNICALL Java_src_main_java_Bucket_put(JNIEnv *env,
   JavaStringWrap blob_name(env, blob_name_java);
   bkt.Put(blob_name.data_, blob, blob_id, ctx);
   return HERMES_JAVA_WRAPPER->ConvertUniqueIdToJava(env, blob_id);
+}
+
+/*
+ * Class:     src_main_java_Bucket
+ * Method:    lockBlob
+ * Signature: (Lsrc/main/java/UniqueId;)V
+ */
+JNIEXPORT void JNICALL Java_src_main_java_Bucket_lockBlob
+  (JNIEnv *env, jobject bkt_java, jobject blob_id_java, jint lock_type_java) {
+  auto blob_id = HERMES_JAVA_WRAPPER->
+      GetUniqueIdFromJava<hermes::BlobId>(env, blob_id_java);
+  auto bkt = HERMES_JAVA_WRAPPER->
+      GetBucketFromJava(env, bkt_java);
+  auto lock_type = static_cast<hermes::MdLockType>(lock_type_java);
+  bkt.LockBlob(blob_id, lock_type);
+}
+
+/*
+ * Class:     src_main_java_Bucket
+ * Method:    unlockBlob
+ * Signature: (Lsrc/main/java/UniqueId;)V
+ */
+JNIEXPORT void JNICALL Java_src_main_java_Bucket_unlockBlob
+  (JNIEnv *env, jobject bkt_java, jobject blob_id_java, jint lock_type_java) {
+  auto blob_id = HERMES_JAVA_WRAPPER->
+      GetUniqueIdFromJava<hermes::BlobId>(env, blob_id_java);
+  auto bkt = HERMES_JAVA_WRAPPER->
+      GetBucketFromJava(env, bkt_java);
+  auto lock_type = static_cast<hermes::MdLockType>(lock_type_java);
+  bkt.UnlockBlob(blob_id, lock_type);
 }
 
 /*

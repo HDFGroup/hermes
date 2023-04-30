@@ -8,4 +8,8 @@ public class UniqueId {
         unique_ = unique;
         node_id_ = node_id;
     }
+
+    public boolean equals(UniqueId other) {
+        return unique_ == other.unique_ && node_id_ == other.node_id_;
+    }
 }

@@ -9,11 +9,35 @@ extern "C" {
 #endif
 /*
  * Class:     src_main_java_Bucket
+ * Method:    lock
+ * Signature: (I)V
+ */
+JNIEXPORT void JNICALL Java_src_main_java_Bucket_lock
+  (JNIEnv *, jobject, jint);
+
+/*
+ * Class:     src_main_java_Bucket
+ * Method:    unlock
+ * Signature: (I)V
+ */
+JNIEXPORT void JNICALL Java_src_main_java_Bucket_unlock
+  (JNIEnv *, jobject, jint);
+
+/*
+ * Class:     src_main_java_Bucket
+ * Method:    getContainedBlobIds
+ * Signature: ()Ljava/util/List;
+ */
+JNIEXPORT jobject JNICALL Java_src_main_java_Bucket_getContainedBlobIds
+  (JNIEnv *, jobject);
+
+/*
+ * Class:     src_main_java_Bucket
  * Method:    destroy
  * Signature: ()V
  */
 JNIEXPORT void JNICALL Java_src_main_java_Bucket_destroy
-    (JNIEnv *, jobject);
+  (JNIEnv *, jobject);
 
 /*
  * Class:     src_main_java_Bucket
@@ -21,7 +45,7 @@ JNIEXPORT void JNICALL Java_src_main_java_Bucket_destroy
  * Signature: (Lsrc/main/java/UniqueId;)Lsrc/main/java/Blob;
  */
 JNIEXPORT jobject JNICALL Java_src_main_java_Bucket_get
-    (JNIEnv *, jobject, jobject);
+  (JNIEnv *, jobject, jobject);
 
 /*
  * Class:     src_main_java_Bucket
@@ -29,7 +53,23 @@ JNIEXPORT jobject JNICALL Java_src_main_java_Bucket_get
  * Signature: (Ljava/lang/String;Lsrc/main/java/Blob;)Lsrc/main/java/UniqueId;
  */
 JNIEXPORT jobject JNICALL Java_src_main_java_Bucket_put
-    (JNIEnv *, jobject, jstring, jobject);
+  (JNIEnv *, jobject, jstring, jobject);
+
+/*
+ * Class:     src_main_java_Bucket
+ * Method:    lockBlob
+ * Signature: (Lsrc/main/java/UniqueId;I)V
+ */
+JNIEXPORT void JNICALL Java_src_main_java_Bucket_lockBlob
+  (JNIEnv *, jobject, jobject, jint);
+
+/*
+ * Class:     src_main_java_Bucket
+ * Method:    unlockBlob
+ * Signature: (Lsrc/main/java/UniqueId;I)V
+ */
+JNIEXPORT void JNICALL Java_src_main_java_Bucket_unlockBlob
+  (JNIEnv *, jobject, jobject, jint);
 
 /*
  * Class:     src_main_java_Bucket
@@ -37,7 +77,7 @@ JNIEXPORT jobject JNICALL Java_src_main_java_Bucket_put
  * Signature: (Lsrc/main/java/UniqueId;)V
  */
 JNIEXPORT void JNICALL Java_src_main_java_Bucket_destroyBlob
-    (JNIEnv *, jobject, jobject);
+  (JNIEnv *, jobject, jobject);
 
 #ifdef __cplusplus
 }

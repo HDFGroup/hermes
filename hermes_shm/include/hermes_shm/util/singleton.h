@@ -113,11 +113,12 @@ class EasySingleton {
    * @tparam T
    * @return instance of T
    */
-  static T* GetInstance() {
+  template<typename ...Args>
+  static T* GetInstance(Args&& ...args) {
     if (obj_ == nullptr) {
       hshm::ScopedMutex lock(lock_, 0);
       if (obj_ == nullptr) {
-        obj_ = new T();
+        obj_ = new T(std::forward<Args>(args)...);
       }
     }
     return obj_;
