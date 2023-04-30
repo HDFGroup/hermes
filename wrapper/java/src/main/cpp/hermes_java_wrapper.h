@@ -25,6 +25,7 @@ struct JavaStringWrap {
 
 class HermesJavaWrapper {
  public:
+  JNIEnv *env_;
   /** UniqueId Java class */
   jclass id_class;
   jmethodID id_cstor;
@@ -49,15 +50,15 @@ class HermesJavaWrapper {
   jmethodID vector_add;
 
  public:
-  HermesJavaWrapper(JNIEnv *env) {
+  HermesJavaWrapper(JNIEnv *env) : env_(env) {
     /* UniqueId methods */
-    id_class = env->FindClass("src/main/java/UniqueId");
+    id_class = FindClass("src/main/java/UniqueId");
     id_cstor = env->GetMethodID(id_class, "<init>", "(JI)V");
     unique_fid = env->GetFieldID(id_class, "unique_", "J");
     node_id_fid = env->GetFieldID(id_class, "node_id_", "I");
 
     /* Bucket methods */
-    bkt_class = env->FindClass("src/main/java/Bucket");
+    bkt_class = FindClass("src/main/java/Bucket");
     bkt_id_fid = env->GetFieldID(bkt_class, "bkt_id_",
                                  "Lsrc/main/java/UniqueId;");
     bkt_constructor = env->GetMethodID(
@@ -66,7 +67,7 @@ class HermesJavaWrapper {
         "(Lsrc/main/java/UniqueId;)V");
 
     /* Blob methods */
-    blob_class = env->FindClass("src/main/java/Blob");
+    blob_class = FindClass("src/main/java/Blob");
     blob_cstor = env->GetMethodID(
         blob_class,
         "<init>",
@@ -76,11 +77,15 @@ class HermesJavaWrapper {
     blob_alloc_fid = env->GetFieldID(blob_class, "alloc_", "J");
 
     /* Blob vector methods */
-    vector_class = env->FindClass("java/util/Vector");
+    vector_class = FindClass("java/util/Vector");
     vector_cstor = env->
-        GetMethodID(vector_class, "<init>", "(J)V");
+        GetMethodID(vector_class, "<init>", "(I)V");
     vector_add = env->GetMethodID(
-        vector_class, "add", "(Lsrc/main/java/Blob;)Z");
+        vector_class, "add", "(Ljava/lang/Object;)Z");
+  }
+
+  HSHM_ALWAYS_INLINE jclass FindClass(const std::string &java_class) {
+    return (jclass)env_->NewGlobalRef(env_->FindClass(java_class.c_str()));
   }
 
   /** Convert a C++ UniqueId to Java UniqueId */
@@ -152,7 +157,7 @@ class HermesJavaWrapper {
                                     std::vector<hermes::BlobId> &blob_ids) {
     // Allocate new Blob java
     jobject blob_ids_java = env->NewObject(vector_class, vector_cstor,
-                                     blob_ids.size());
+                                           (jint)blob_ids.size());
     for (hermes::BlobId &blob_id : blob_ids) {
       jobject blob_id_java = ConvertUniqueIdToJava(env, blob_id);
       env->CallBooleanMethod(blob_ids_java, vector_add, blob_id_java);

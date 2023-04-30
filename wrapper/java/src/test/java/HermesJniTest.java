@@ -13,7 +13,8 @@ import java.lang.management.ManagementFactory;
 public class HermesJniTest {
     @Test
     public void testBucketPutGet() {
-        System.out.println(ManagementFactory.getRuntimeMXBean().getName());
+        String pid = ManagementFactory.getRuntimeMXBean().getName();
+        System.out.println(pid);
         Hermes hermes = Hermes.getInstance();
         hermes.create();
         Bucket bkt = hermes.getBucket("hello");

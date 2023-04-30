@@ -76,7 +76,6 @@ JNIEXPORT void JNICALL Java_src_main_java_Bucket_destroy(JNIEnv *env,
 JNIEXPORT jobject JNICALL Java_src_main_java_Bucket_get(JNIEnv *env,
                                                         jobject bkt_java,
                                                         jobject blob_id_java) {
-  std::cout << __func__ << std::endl;
   hapi::Bucket bkt = HERMES_JAVA_WRAPPER->GetBucketFromJava(env, bkt_java);
   auto blob_id = HERMES_JAVA_WRAPPER->GetUniqueIdFromJava<hermes::BlobId>(
       env, blob_id_java);
