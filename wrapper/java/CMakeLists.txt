@@ -13,19 +13,19 @@ message("Found JNI at ${JNI_INCLUDE_DIRS} and ${JNI_LIBRARIES}")
 function(java_wrapper name path)
     include_directories(${JNI_INCLUDE_DIRS})
     add_library(${name} ${path})
-    add_dependencies(${name} hermes hermes_c_wrapper)
+    add_dependencies(${name} hermes)
     target_link_libraries(${name}
-            hermes hermes_c_wrapper
+            hermes
             MPI::MPI_CXX stdc++fs dl ${JNI_LIBRARIES})
 endfunction()
-java_wrapper(hermes_src_main_Blob src/hermes/cpp/src_main_Blob.cc)
-java_wrapper(hermes_src_main_Bucket src/hermes/cpp/src_main_Bucket.cc)
-java_wrapper(hermes_src_main_Hermes src/hermes/cpp/src_main_Hermes.cc)
+java_wrapper(hermes_java_Blob src/hermes/cpp/src_main_Blob.cc)
+java_wrapper(hermes_java_Bucket src/hermes/cpp/src_main_Bucket.cc)
+java_wrapper(hermes_java_Hermes src/hermes/cpp/src_main_Hermes.cc)
 
 #-----------------------------------------------------------------------------
 # Build Java API
 #-----------------------------------------------------------------------------
-add_custom_command(TARGET hermes_src_main_Hermes POST_BUILD
+add_custom_command(TARGET hermes_java_Blob POST_BUILD
         COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR} &&
                 ${CMAKE_CURRENT_SOURCE_DIR}/gradlew build -x test)
 add_custom_target(build_hermes_java
@@ -40,9 +40,9 @@ add_test(test_hermes_java_wrapper
 #-----------------------------------------------------------------------------
 install(
         TARGETS
-        hermes_src_main_Blob
-        hermes_src_main_Bucket
-        hermes_src_main_Hermes
+        hermes_java_Blob
+        hermes_java_Bucket
+        hermes_java_Hermes
         EXPORT
         ${HERMES_EXPORTED_TARGETS}
         LIBRARY DESTINATION ${HERMES_INSTALL_LIB_DIR}
@@ -53,9 +53,9 @@ install(
 # Export all exported targets to the build tree for use by parent project
 #-----------------------------------------------------------------------------
 set(HERMES_EXPORTED_LIBS
-        hermes_src_main_Blob
-        hermes_src_main_Bucket
-        hermes_src_main_Hermes
+        hermes_java_Blob
+        hermes_java_Bucket
+        hermes_java_Hermes
         ${HERMES_EXPORTED_LIBS})
 if(NOT HERMES_EXTERNALLY_CONFIGURED)
     EXPORT (
@@ -69,7 +69,7 @@ endif()
 # Add Target(s) to Coverage
 #-----------------------------------------------------------------------------
 if(HERMES_ENABLE_COVERAGE)
-    set_coverage_flags(hermes_src_main_Blob)
-    set_coverage_flags(hermes_src_main_Bucket)
-    set_coverage_flags(hermes_src_main_Hermes)
+#    set_coverage_flags(hermes_src_main_Blob)
+#    set_coverage_flags(hermes_src_main_Bucket)
+#    set_coverage_flags(hermes_src_main_Hermes)
 endif()

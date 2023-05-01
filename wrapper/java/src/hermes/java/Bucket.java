@@ -63,6 +63,6 @@ public class Bucket {
     public native void destroyBlob(UniqueId blob_id);
 
     static {
-        System.loadLibrary("hermes_src_main_Bucket");
+        System.loadLibrary("hermes_java_Bucket");
     }
 }

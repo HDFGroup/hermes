@@ -15,6 +15,6 @@ public class Hermes {
     public native Bucket getBucket(String bkt_name);
 
     static {
-        System.loadLibrary("hermes_src_main_Hermes");
+        System.loadLibrary("hermes_java_Hermes");
     }
 }

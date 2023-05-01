@@ -11,7 +11,7 @@ extern "C" {
  * Method:    fromString
  * Signature: (Ljava/lang/String;)V
  */
-JNIEXPORT jobject JNICALL Java_src_main_java_Blob_fromString(
+JNIEXPORT jobject JNICALL Java_hermes_java_Blob_fromString(
     JNIEnv *env, jobject blob_java, jstring data_java) {
   JavaStringWrap data(env, data_java);
   hapi::Blob blob(strlen(data.data_) + 1);
@@ -20,12 +20,12 @@ JNIEXPORT jobject JNICALL Java_src_main_java_Blob_fromString(
 }
 
 /*
- * Class:     src_main_java_Blob
- * Method:    free_native
+ * Class:     hermes_java_Blob
+ * Method:    freeNative
  * Signature: ()V
  */
-JNIEXPORT void JNICALL Java_src_main_java_Blob_free_native(JNIEnv *env,
-                                                           jobject blob_java) {
+JNIEXPORT void JNICALL Java_hermes_java_Blob_freeNative(JNIEnv *env,
+                                                         jobject blob_java) {
   hapi::Blob blob = HERMES_JAVA_WRAPPER->GetBlobFromJava(env, blob_java);
   blob.destructable_ = true;
 }

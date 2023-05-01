@@ -17,7 +17,7 @@ extern "C" {
  * Method:    lock
  * Signature: ()V
  */
-JNIEXPORT void JNICALL Java_src_main_java_Bucket_lock(JNIEnv *env,
+JNIEXPORT void JNICALL Java_hermes_java_Bucket_lock(JNIEnv *env,
                                                       jobject bkt_java,
                                                       jint lock_type_java) {
   auto bkt = HERMES_JAVA_WRAPPER->
@@ -31,7 +31,7 @@ JNIEXPORT void JNICALL Java_src_main_java_Bucket_lock(JNIEnv *env,
  * Method:    unlock
  * Signature: ()V
  */
-JNIEXPORT void JNICALL Java_src_main_java_Bucket_unlock(JNIEnv *env,
+JNIEXPORT void JNICALL Java_hermes_java_Bucket_unlock(JNIEnv *env,
                                                         jobject bkt_java,
                                                         jint lock_type_java) {
   auto bkt = HERMES_JAVA_WRAPPER->
@@ -45,7 +45,7 @@ JNIEXPORT void JNICALL Java_src_main_java_Bucket_unlock(JNIEnv *env,
  * Method:    getContainedBlobIds
  * Signature: ()Ljava/util/List;
  */
-JNIEXPORT jobject JNICALL Java_src_main_java_Bucket_getContainedBlobIds(
+JNIEXPORT jobject JNICALL Java_hermes_java_Bucket_getContainedBlobIds(
     JNIEnv *env, jobject bkt_java) {
   auto bkt = HERMES_JAVA_WRAPPER->
       GetBucketFromJava(env, bkt_java);
@@ -58,7 +58,7 @@ JNIEXPORT jobject JNICALL Java_src_main_java_Bucket_getContainedBlobIds(
  * Method:    Destroy
  * Signature: ()V
  */
-JNIEXPORT void JNICALL Java_src_main_java_Bucket_destroy(JNIEnv *env,
+JNIEXPORT void JNICALL Java_hermes_java_Bucket_destroy(JNIEnv *env,
                                                          jobject bkt_java) {
   hapi::Bucket bkt = HERMES_JAVA_WRAPPER->GetBucketFromJava(env, bkt_java);
   bkt.Destroy();
@@ -73,7 +73,7 @@ JNIEXPORT void JNICALL Java_src_main_java_Bucket_destroy(JNIEnv *env,
  * Method:    getBlobId
  * Signature: (Ljava/lang/String;)Lsrc/main/java/UniqueId;
  */
-JNIEXPORT jobject JNICALL Java_src_main_java_Bucket_getBlobId(
+JNIEXPORT jobject JNICALL Java_hermes_java_Bucket_getBlobId(
     JNIEnv *env, jobject bkt_java, jstring blob_name_java) {
   JavaStringWrap blob_name(env, blob_name_java);
   auto bkt = HERMES_JAVA_WRAPPER->GetBucketFromJava(env, bkt_java);
@@ -87,7 +87,7 @@ JNIEXPORT jobject JNICALL Java_src_main_java_Bucket_getBlobId(
  * Method:    get
  * Signature: (Lsrc/main/UniqueId;)Ljava/lang/String;
  */
-JNIEXPORT jobject JNICALL Java_src_main_java_Bucket_get(JNIEnv *env,
+JNIEXPORT jobject JNICALL Java_hermes_java_Bucket_get(JNIEnv *env,
                                                         jobject bkt_java,
                                                         jobject blob_id_java) {
   hapi::Bucket bkt = HERMES_JAVA_WRAPPER->GetBucketFromJava(env, bkt_java);
@@ -105,7 +105,7 @@ JNIEXPORT jobject JNICALL Java_src_main_java_Bucket_get(JNIEnv *env,
  * Method:    put
  * Signature: (Ljava/lang/String;Ljava/lang/String;)Lsrc/main/UniqueId;
  */
-JNIEXPORT jobject JNICALL Java_src_main_java_Bucket_put(JNIEnv *env,
+JNIEXPORT jobject JNICALL Java_hermes_java_Bucket_put(JNIEnv *env,
                                                         jobject bkt_java,
                                                         jstring blob_name_java,
                                                         jobject blob_java) {
@@ -123,7 +123,7 @@ JNIEXPORT jobject JNICALL Java_src_main_java_Bucket_put(JNIEnv *env,
  * Method:    lockBlob
  * Signature: (Lsrc/main/java/UniqueId;)V
  */
-JNIEXPORT void JNICALL Java_src_main_java_Bucket_lockBlob
+JNIEXPORT void JNICALL Java_hermes_java_Bucket_lockBlob
   (JNIEnv *env, jobject bkt_java, jobject blob_id_java, jint lock_type_java) {
   auto blob_id = HERMES_JAVA_WRAPPER->
       GetUniqueIdFromJava<hermes::BlobId>(env, blob_id_java);
@@ -138,7 +138,7 @@ JNIEXPORT void JNICALL Java_src_main_java_Bucket_lockBlob
  * Method:    unlockBlob
  * Signature: (Lsrc/main/java/UniqueId;)V
  */
-JNIEXPORT void JNICALL Java_src_main_java_Bucket_unlockBlob
+JNIEXPORT void JNICALL Java_hermes_java_Bucket_unlockBlob
   (JNIEnv *env, jobject bkt_java, jobject blob_id_java, jint lock_type_java) {
   auto blob_id = HERMES_JAVA_WRAPPER->
       GetUniqueIdFromJava<hermes::BlobId>(env, blob_id_java);
@@ -153,7 +153,7 @@ JNIEXPORT void JNICALL Java_src_main_java_Bucket_unlockBlob
  * Method:    DestroyBlob
  * Signature: (Lsrc/main/UniqueId;)V
  */
-JNIEXPORT void JNICALL Java_src_main_java_Bucket_destroyBlob(
+JNIEXPORT void JNICALL Java_hermes_java_Bucket_destroyBlob(
     JNIEnv *env, jobject bkt_java, jobject blob_id_java) {
   hapi::Context ctx;
   auto blob_id = HERMES_JAVA_WRAPPER->GetUniqueIdFromJava<hermes::BlobId>(

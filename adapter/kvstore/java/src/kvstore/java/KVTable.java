@@ -26,7 +26,7 @@ public class KVTable {
   }
 
   /** Serialize a Map into a blob */
-  private Blob mapToBlob(Map<String, ByteBuffer> map) {
+  private <T> Blob mapToBlob(Map<String, T> map) {
     try {
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       ObjectOutputStream oos = new ObjectOutputStream(baos);
@@ -41,20 +41,20 @@ public class KVTable {
   }
 
   /** Deserialize a Map from a blob */
-  private Map<String, ByteBuffer> blobToMap(Blob blob) {
+  private <T> Map<String, T> blobToMap(Blob blob) {
     try {
       ObjectInputStream ois = new ObjectInputStream(
               new ByteArrayInputStream(blob.array()));
-      Map<String, ByteBuffer> map = (Map<String, ByteBuffer>) ois.readObject();
+      Map<String, T> map = (Map<String, T>) ois.readObject();
       ois.close();
       blob.close();
       return map;
     } catch (IOException e) {
       e.printStackTrace();
-      return new HashMap<String, ByteBuffer>();
+      return new HashMap<String, T>();
     } catch (ClassNotFoundException e) {
       e.printStackTrace();
-      return new HashMap<String, ByteBuffer>();
+      return new HashMap<String, T>();
     }
   }
 
@@ -65,7 +65,7 @@ public class KVTable {
    * @param val the values to update in the record
    * @return None
    * */
-  public void update(String key, Map<String, ByteBuffer> val) {
+  public <T> void update(String key, Map<String, T> val) {
     UniqueId blob_id = bkt_.getBlobId(key);
     if (blob_id.isNull()) {
       bkt_.lockBlob(blob_id, MdLockType.kExternalWrite);
@@ -76,8 +76,8 @@ public class KVTable {
     } else {
       bkt_.lockBlob(blob_id, MdLockType.kExternalWrite);
       Blob orig_blob = bkt_.get(blob_id);
-      Map<String, ByteBuffer> old_val = blobToMap(orig_blob);
-      for (Map.Entry<String, ByteBuffer> entry : val.entrySet()) {
+      Map<String, T> old_val = blobToMap(orig_blob);
+      for (Map.Entry<String, T> entry : val.entrySet()) {
         old_val.put(entry.getKey(), entry.getValue());
       }
       Blob new_blob = mapToBlob(old_val);
@@ -94,11 +94,11 @@ public class KVTable {
    * @param field the field in the record to update
    * @return The blob containing only the field's data
    * */
-  public Map<String, ByteBuffer> read(String key, Set<String> field_set) {
+  public <T> Map<String, T> read(String key, Set<String> field_set) {
     UniqueId blob_id = bkt_.getBlobId(key);
     bkt_.lockBlob(blob_id, MdLockType.kExternalRead);
     Blob orig_blob = bkt_.get(blob_id);
-    Map<String, ByteBuffer> old_val = blobToMap(orig_blob);
+    Map<String, T> old_val = blobToMap(orig_blob);
     bkt_.unlockBlob(blob_id, MdLockType.kExternalRead);
     return old_val;
   }

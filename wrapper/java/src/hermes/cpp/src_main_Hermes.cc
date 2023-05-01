@@ -25,7 +25,7 @@ extern "C" {
  * Method:    create
  * Signature: ()V
  */
-JNIEXPORT void JNICALL Java_src_main_java_Hermes_create(
+JNIEXPORT void JNICALL Java_hermes_java_Hermes_create(
     JNIEnv *env, jobject obj) {
   (void) env; (void) obj;
   HERMES->Create(hermes::HermesType::kClient);
@@ -36,7 +36,7 @@ JNIEXPORT void JNICALL Java_src_main_java_Hermes_create(
  * Method:    getBucket
  * Signature: (Ljava/lang/String;)Lsrc/main/Bucket;
  */
-JNIEXPORT jobject JNICALL Java_src_main_java_Hermes_getBucket(
+JNIEXPORT jobject JNICALL Java_hermes_java_Hermes_getBucket(
     JNIEnv *env, jobject obj, jstring bkt_name_java) {
   (void) obj;
   JavaStringWrap bkt_name(env, bkt_name_java);

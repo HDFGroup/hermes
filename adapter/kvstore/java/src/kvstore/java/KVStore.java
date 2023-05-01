@@ -8,7 +8,7 @@ public class KVStore {
         hermes.create();
     }
 
-    public KVTable getTable(String table_name) {
+    public static KVTable getTable(String table_name) {
         return new KVTable(table_name);
     }
 }

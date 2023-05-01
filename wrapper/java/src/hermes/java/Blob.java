@@ -33,12 +33,12 @@ public class Blob {
     }
 
     /** Free data allocated by JNI */
-    private native void free_native();
+    private native void freeNative();
 
     /** Release this blob */
     public void close() {
         if (is_native_) {
-            free_native();
+            freeNative();
         }
     }
 
@@ -47,6 +47,6 @@ public class Blob {
     }
 
     static {
-        System.loadLibrary("hermes_src_main_Blob");
+        System.loadLibrary("hermes_java_Blob");
     }
 }

@@ -36,6 +36,12 @@ sourceSets {
             srcDir 'src/kvstore/java'
         }
     }
+
+    test {
+        java {
+            srcDir 'src/test/java'
+        }
+    }
 }
 
 test {

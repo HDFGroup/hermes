@@ -2,8 +2,8 @@
 // Created by lukemartinlogan on 4/28/23.
 //
 
-#ifndef HERMES_WRAPPER_JAVA_SRC_MAIN_CPP_HERMES_JAVA_WRAPPER_H_
-#define HERMES_WRAPPER_JAVA_SRC_MAIN_CPP_HERMES_JAVA_WRAPPER_H_
+#ifndef HERMES_WRAPPER_Java_src_hermes_CPP_HERMES_JAVA_WRAPPER_H_
+#define HERMES_WRAPPER_Java_src_hermes_CPP_HERMES_JAVA_WRAPPER_H_
 
 #include <jni.h>
 #include "hermes.h"
@@ -52,22 +52,22 @@ class HermesJavaWrapper {
  public:
   HermesJavaWrapper(JNIEnv *env) : env_(env) {
     /* UniqueId methods */
-    id_class = FindClass("src/main/java/UniqueId");
+    id_class = FindClass("hermes/java/UniqueId");
     id_cstor = env->GetMethodID(id_class, "<init>", "(JI)V");
     unique_fid = env->GetFieldID(id_class, "unique_", "J");
     node_id_fid = env->GetFieldID(id_class, "node_id_", "I");
 
     /* Bucket methods */
-    bkt_class = FindClass("src/main/java/Bucket");
+    bkt_class = FindClass("hermes/java/Bucket");
     bkt_id_fid = env->GetFieldID(bkt_class, "bkt_id_",
-                                 "Lsrc/main/java/UniqueId;");
+                                 "Lhermes/java/UniqueId;");
     bkt_constructor = env->GetMethodID(
         bkt_class,
         "<init>",
-        "(Lsrc/main/java/UniqueId;)V");
+        "(Lhermes/java/UniqueId;)V");
 
     /* Blob methods */
-    blob_class = FindClass("src/main/java/Blob");
+    blob_class = FindClass("hermes/java/Blob");
     blob_cstor = env->GetMethodID(
         blob_class,
         "<init>",
@@ -169,4 +169,4 @@ class HermesJavaWrapper {
 #define HERMES_JAVA_WRAPPER \
   hshm::EasySingleton<HermesJavaWrapper>::GetInstance(env)
 
-#endif //HERMES_WRAPPER_JAVA_SRC_MAIN_CPP_HERMES_JAVA_WRAPPER_H_
+#endif //HERMES_WRAPPER_Java_src_hermes_CPP_HERMES_JAVA_WRAPPER_H_

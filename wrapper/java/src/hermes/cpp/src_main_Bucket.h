@@ -12,7 +12,7 @@ extern "C" {
  * Method:    lock
  * Signature: (I)V
  */
-JNIEXPORT void JNICALL Java_src_main_java_Bucket_lock
+JNIEXPORT void JNICALL Java_hermes_java_Bucket_lock
   (JNIEnv *, jobject, jint);
 
 /*
@@ -20,7 +20,7 @@ JNIEXPORT void JNICALL Java_src_main_java_Bucket_lock
  * Method:    unlock
  * Signature: (I)V
  */
-JNIEXPORT void JNICALL Java_src_main_java_Bucket_unlock
+JNIEXPORT void JNICALL Java_hermes_java_Bucket_unlock
   (JNIEnv *, jobject, jint);
 
 /*
@@ -28,7 +28,7 @@ JNIEXPORT void JNICALL Java_src_main_java_Bucket_unlock
  * Method:    getContainedBlobIds
  * Signature: ()Ljava/util/Vector;
  */
-JNIEXPORT jobject JNICALL Java_src_main_java_Bucket_getContainedBlobIds
+JNIEXPORT jobject JNICALL Java_hermes_java_Bucket_getContainedBlobIds
   (JNIEnv *, jobject);
 
 /*
@@ -36,7 +36,7 @@ JNIEXPORT jobject JNICALL Java_src_main_java_Bucket_getContainedBlobIds
  * Method:    destroy
  * Signature: ()V
  */
-JNIEXPORT void JNICALL Java_src_main_java_Bucket_destroy
+JNIEXPORT void JNICALL Java_hermes_java_Bucket_destroy
   (JNIEnv *, jobject);
 
 /*
@@ -44,7 +44,7 @@ JNIEXPORT void JNICALL Java_src_main_java_Bucket_destroy
  * Method:    getBlobId
  * Signature: (Ljava/lang/String;)Lsrc/main/java/UniqueId;
  */
-JNIEXPORT jobject JNICALL Java_src_main_java_Bucket_getBlobId
+JNIEXPORT jobject JNICALL Java_hermes_java_Bucket_getBlobId
   (JNIEnv *, jobject, jstring);
 
 /*
@@ -52,7 +52,7 @@ JNIEXPORT jobject JNICALL Java_src_main_java_Bucket_getBlobId
  * Method:    get
  * Signature: (Lsrc/main/java/UniqueId;)Lsrc/main/java/Blob;
  */
-JNIEXPORT jobject JNICALL Java_src_main_java_Bucket_get
+JNIEXPORT jobject JNICALL Java_hermes_java_Bucket_get
   (JNIEnv *, jobject, jobject);
 
 /*
@@ -60,7 +60,7 @@ JNIEXPORT jobject JNICALL Java_src_main_java_Bucket_get
  * Method:    put
  * Signature: (Ljava/lang/String;Lsrc/main/java/Blob;)Lsrc/main/java/UniqueId;
  */
-JNIEXPORT jobject JNICALL Java_src_main_java_Bucket_put
+JNIEXPORT jobject JNICALL Java_hermes_java_Bucket_put
   (JNIEnv *, jobject, jstring, jobject);
 
 /*
@@ -68,7 +68,7 @@ JNIEXPORT jobject JNICALL Java_src_main_java_Bucket_put
  * Method:    lockBlob
  * Signature: (Lsrc/main/java/UniqueId;I)V
  */
-JNIEXPORT void JNICALL Java_src_main_java_Bucket_lockBlob
+JNIEXPORT void JNICALL Java_hermes_java_Bucket_lockBlob
   (JNIEnv *, jobject, jobject, jint);
 
 /*
@@ -76,7 +76,7 @@ JNIEXPORT void JNICALL Java_src_main_java_Bucket_lockBlob
  * Method:    unlockBlob
  * Signature: (Lsrc/main/java/UniqueId;I)V
  */
-JNIEXPORT void JNICALL Java_src_main_java_Bucket_unlockBlob
+JNIEXPORT void JNICALL Java_hermes_java_Bucket_unlockBlob
   (JNIEnv *, jobject, jobject, jint);
 
 /*
@@ -84,7 +84,7 @@ JNIEXPORT void JNICALL Java_src_main_java_Bucket_unlockBlob
  * Method:    destroyBlob
  * Signature: (Lsrc/main/java/UniqueId;)V
  */
-JNIEXPORT void JNICALL Java_src_main_java_Bucket_destroyBlob
+JNIEXPORT void JNICALL Java_hermes_java_Bucket_destroyBlob
   (JNIEnv *, jobject, jobject);
 
 #ifdef __cplusplus
