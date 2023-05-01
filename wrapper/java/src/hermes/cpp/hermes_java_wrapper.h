@@ -43,6 +43,7 @@ class HermesJavaWrapper {
   jfieldID blob_data_fid;
   jfieldID blob_size_fid;
   jfieldID blob_alloc_fid;
+  jfieldID is_native_fid;
 
   /** Blob ID vector methods */
   jclass vector_class;
@@ -71,10 +72,11 @@ class HermesJavaWrapper {
     blob_cstor = env->GetMethodID(
         blob_class,
         "<init>",
-        "(Ljava/nio/ByteBuffer;JJJ)V");
-    blob_data_fid = env->GetFieldID(blob_class, "data_ptr_", "J");
+        "(Ljava/nio/ByteBuffer;JJ)V");
+    blob_data_fid = env->GetFieldID(blob_class, "data_", "Ljava/nio/ByteBuffer;");
     blob_size_fid = env->GetFieldID(blob_class, "size_", "J");
     blob_alloc_fid = env->GetFieldID(blob_class, "alloc_", "J");
+    is_native_fid = env->GetFieldID(blob_class, "is_native_", "Z");
 
     /* Blob vector methods */
     vector_class = FindClass("java/util/Vector");
@@ -134,9 +136,8 @@ class HermesJavaWrapper {
     // Allocate new Blob java
     jobject blob_java = env->NewObject(blob_class, blob_cstor,
                                        data_java,
-                                       (uint64_t)blob.data(),
-                                       (uint64_t)blob.size(),
-                                       (uint64_t)alloc);
+                                       (jlong)blob.size(),
+                                       (jlong)alloc);
     return blob_java;
   }
 
@@ -144,11 +145,15 @@ class HermesJavaWrapper {
   hapi::Blob GetBlobFromJava(JNIEnv *env,
                              jobject blob_java) {
     hapi::Blob blob;
+    bool is_native = env->GetBooleanField(blob_java, is_native_fid);
+    jobject data = env->GetObjectField(blob_java, blob_data_fid);
     blob.data_ = reinterpret_cast<char*>(
-        env->GetLongField(blob_java, blob_data_fid));
+        env->GetDirectBufferAddress(data));
     blob.size_ = env->GetLongField(blob_java, blob_size_fid);
-    blob.alloc_ = reinterpret_cast<hipc::Allocator*>(
-        env->GetLongField(blob_java, blob_alloc_fid));
+    if (is_native) {
+      blob.alloc_ = reinterpret_cast<hipc::Allocator *>(
+          env->GetLongField(blob_java, blob_alloc_fid));
+    }
     return blob;
   }
 

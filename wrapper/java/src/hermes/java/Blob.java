@@ -3,29 +3,33 @@ import java.nio.ByteBuffer;
 
 public class Blob {
     public ByteBuffer data_;
-    long data_ptr_;
     long size_;
     long alloc_;
     boolean is_native_;
 
     /** Create a blob from JNI */
-    private Blob(ByteBuffer data, long data_ptr, long size, long alloc) {
+    private Blob(ByteBuffer data, long size, long alloc) {
         data_ = data;
-        data_ptr_ = data_ptr;
         size_ = size;
         alloc_ = alloc;
         is_native_ = true;
+        data_.position(0);
     }
 
-    /** Createa blob within Java */
+    /** Create a blob within Java */
     public Blob(ByteBuffer data) {
-        data_ = data;
+        data_ = ByteBuffer.allocateDirect(data.capacity());
+        data_.put(data);
         size_ = data.capacity();
+        alloc_ = 0;
         is_native_ = false;
+        data_.position(0);
     }
 
     /** Convert a string to a Blob */
-    public static native Blob fromString(String data);
+    public static Blob fromString(String data) {
+        return new Blob(ByteBuffer.wrap(data.getBytes()));
+    }
 
     /** Call ByteBuffer array method */
     public byte[] array() {

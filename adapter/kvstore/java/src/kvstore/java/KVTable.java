@@ -4,6 +4,7 @@ import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Set;
+import java.util.HashSet;
 import java.io.IOException;
 import java.io.ByteArrayOutputStream;
 import java.io.ByteArrayInputStream;
@@ -68,10 +69,8 @@ public class KVTable {
   public <T> void update(String key, Map<String, T> val) {
     UniqueId blob_id = bkt_.getBlobId(key);
     if (blob_id.isNull()) {
-      bkt_.lockBlob(blob_id, MdLockType.kExternalWrite);
       Blob blob = mapToBlob(val);
-      blob_id = bkt_.put(key, blob);
-      bkt_.unlockBlob(blob_id, MdLockType.kExternalWrite);
+      bkt_.put(key, blob);
       blob.close();
     } else {
       bkt_.lockBlob(blob_id, MdLockType.kExternalWrite);
@@ -91,7 +90,7 @@ public class KVTable {
    * Get a subset of fields from a record
    *
    * @param key the record key
-   * @param field the field in the record to update
+   * @param field_set the field in the record to update
    * @return The blob containing only the field's data
    * */
   public <T> Map<String, T> read(String key, Set<String> field_set) {
@@ -101,6 +100,10 @@ public class KVTable {
     Map<String, T> old_val = blobToMap(orig_blob);
     bkt_.unlockBlob(blob_id, MdLockType.kExternalRead);
     return old_val;
+  }
+
+  public <T> Map<String, T> read(String key) {
+    return read(key, new HashSet<String>());
   }
 
   /** Delete a record */
