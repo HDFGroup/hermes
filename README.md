@@ -72,6 +72,14 @@ After successfully building Hermes, it's a good idea to run the test suite via t
 
 Finally, install the library with `make install`. You can find a complete example build script [here](https://github.com/HDFGroup/hermes/blob/master/ci/install_hermes.sh).
 
+Before running ctests, you must install jarvis-util, which is used to execute
+the tests.
+```
+cd $HERMES_ROOT/ci/jarvis-util
+python3 -m pip install -r requirements.txt
+python3 -m pip install -e .
+```
+
 ## Contributing
 
 We follow the [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html). You can run `make lint` to ensure that your code conforms to the style. This requires the `cpplint` Python module (`pip install cpplint`). Alternatively, you can let the CI build inform you of required style changes.
