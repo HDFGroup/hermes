@@ -16,8 +16,8 @@ class Hermes(CMakePackage):
     depends_on('mpich@3.3.2:')
     depends_on('yaml-cpp')
     depends_on('boost@1.7:')
-    depends_on('python3')
     # TODO(): we need to figure out how to add a python library as a dependency
+    # depends_on('python3')
     # depends_on('jarvis-util')
     depends_on('libfabric@1.14.1 fabrics=mlx,rxd,rxm,shm,sockets,tcp,udp,verbs,xpmem',
                when='+ares')
