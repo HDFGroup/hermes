@@ -51,3 +51,10 @@ EXPORT (
         ${HERMES_EXPORTED_TARGETS}.cmake
 )
 endif()
+
+#-----------------------------------------------------------------------------
+# Add Target(s) to Coverage
+#-----------------------------------------------------------------------------
+if(HERMES_ENABLE_COVERAGE)
+    set_coverage_flags(hermes_fs_base)
+endif()
