@@ -10,31 +10,44 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include "hermes_shm/thread/lock.h"
-#include "hermes_shm/thread/thread_manager.h"
 
-namespace hermes_shm {
+#include "hermes_shm/thread/lock.h"
+#include "hermes_shm/thread/thread_model_manager.h"
+#include "hermes_shm/util/logging.h"
+
+namespace hshm {
+
+/**====================================
+ * Mutex
+ * ===================================*/
 
 /**
  * Acquire the mutex
  * */
-void Mutex::Lock() {
-  auto thread_info = HERMES_SHM_THREAD_MANAGER->GetThreadStatic();
-  while (!TryLock()) {
-    thread_info->Yield();
-  }
+void Mutex::Lock(uint32_t owner) {
+  do {
+    for (int i = 0; i < 1; ++i) {
+      if (TryLock(owner)) { return; }
+    }
+    HERMES_THREAD_MODEL->Yield();
+  } while (true);
 }
 
 /**
  * Attempt to acquire the mutex
  * */
-bool Mutex::TryLock() {
-  if (lock_.load() != 0) return false;
+bool Mutex::TryLock(uint32_t owner) {
+  if (lock_.load() != 0) {
+    return false;
+  }
   uint32_t tkt = lock_.fetch_add(1);
   if (tkt != 0) {
     lock_.fetch_sub(1);
     return false;
   }
+#ifdef HERMES_DEBUG_LOCK
+  owner_ = owner;
+#endif
   return true;
 }
 
@@ -42,18 +55,22 @@ bool Mutex::TryLock() {
  * Release the mutex
  * */
 void Mutex::Unlock() {
+#ifdef HERMES_DEBUG_LOCK
+  owner_ = 0;
+#endif
   lock_.fetch_sub(1);
 }
 
-/**
- * SCOPED MUTEX
- * */
+/**====================================
+ * Scoped Mutex
+ * ===================================*/
 
 /**
  * Constructor
  * */
-ScopedMutex::ScopedMutex(Mutex &lock)
+ScopedMutex::ScopedMutex(Mutex &lock, uint32_t owner)
 : lock_(lock), is_locked_(false) {
+  Lock(owner);
 }
 
 /**
@@ -66,9 +83,9 @@ ScopedMutex::~ScopedMutex() {
 /**
  * Acquire the mutex
  * */
-void ScopedMutex::Lock() {
+void ScopedMutex::Lock(uint32_t owner) {
   if (!is_locked_) {
-    lock_.Lock();
+    lock_.Lock(owner);
     is_locked_ = true;
   }
 }
@@ -76,9 +93,9 @@ void ScopedMutex::Lock() {
 /**
  * Attempt to acquire the mutex
  * */
-bool ScopedMutex::TryLock() {
+bool ScopedMutex::TryLock(uint32_t owner) {
   if (!is_locked_) {
-    is_locked_ = lock_.TryLock();
+    is_locked_ = lock_.TryLock(owner);
   }
   return is_locked_;
 }
@@ -93,4 +110,4 @@ void ScopedMutex::Unlock() {
   }
 }
 
-}  // namespace hermes_shm
+}  // namespace hshm

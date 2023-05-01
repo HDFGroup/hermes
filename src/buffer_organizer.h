@@ -10,148 +10,267 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_BUFFER_ORGANIZER_H_
-#define HERMES_BUFFER_ORGANIZER_H_
+#ifndef HERMES_SRC_BUFFER_ORGANIZER_H_
+#define HERMES_SRC_BUFFER_ORGANIZER_H_
 
-#include "thread_pool.h"
+#include "rpc.h"
+#include "hermes_types.h"
+#include "buffer_pool.h"
+#include "trait_manager.h"
+
+/** Forward declaration of Bucket */
+namespace hermes::api {
+class Bucket;
+}  // namespace hermes::api
 
 namespace hermes {
 
-/** move list for buffer organizer */
-using BoMoveList = std::vector<std::pair<BufferID, std::vector<BufferID>>>;
+// NOTE(llogan): I may add this back to make flushing more intelligent
+/** Calculates the total size of a blob's buffers
+static inline size_t SumBufferBlobSizes(std::vector<BufferInfo> &buffers) {
+  size_t sum = 0;
+  for (BufferInfo &buffer_ref : buffers) {
+    sum += buffer_ref.blob_size_;
+  }
+  return sum;
+}*/
 
-/** buffer organizer operations */
-enum class BoOperation {
-  kMove,
-  kCopy,
-  kDelete,
-
-  kCount
+/** Information needed by traits called internally by Flush */
+struct FlushTraitParams {
+  Blob *blob_;
+  std::string blob_name_;
+  api::Bucket *bkt_;
 };
 
-/** buffer organizer priorities */
-enum class BoPriority {
-  kLow,
-  kHigh,
+/** An I/O flushing task spawned by BORG */
+struct BorgIoTask {
+  TagId bkt_id_;
+  BlobId blob_id_;
+  size_t blob_size_;
+  size_t last_modified_;
+  std::vector<Trait*> traits_;
 
-  kCount
+  /** Default constructor */
+  BorgIoTask() = default;
+
+  /** Flush emplace constructor */
+  explicit BorgIoTask(TagId bkt_id, BlobId blob_id, size_t blob_size,
+                      std::vector<Trait*> &&traits)
+    : bkt_id_(bkt_id), blob_id_(blob_id), blob_size_(blob_size),
+      traits_(std::forward<std::vector<Trait*>>(traits)) {}
+
+  /** Copy constructor */
+  BorgIoTask(const BorgIoTask &other) = default;
+
+  /** Copy assignment operator */
+  BorgIoTask& operator=(const BorgIoTask &other) = default;
+
+  /** Move constructor */
+  BorgIoTask(BorgIoTask &&other) = default;
+
+  /** Move assignment operator */
+  BorgIoTask& operator=(BorgIoTask &&other) = default;
+};
+
+/** Info about a BORG I/O queue */
+struct BorgIoThreadQueueInfo {
+  std::atomic<size_t> load_;      /**< Data being processed on queue */
+  int id_;  /**< Unique ID of worker */
+
+  /** Default constructor */
+  BorgIoThreadQueueInfo() {
+    load_ = 0;
+    id_ = 0;
+  }
+
+  /** Copy constructor */
+  BorgIoThreadQueueInfo(const BorgIoThreadQueueInfo &other)
+  : load_(other.load_.load()), id_(other.id_) {}
+
+  /** Copy assignment  */
+  BorgIoThreadQueueInfo& operator=(const BorgIoThreadQueueInfo &other) {
+    if (this != &other) {
+      load_ = other.load_.load();
+      id_ = other.id_;
+    }
+    return *this;
+  }
+
+  /** Move constructor */
+  BorgIoThreadQueueInfo(BorgIoThreadQueueInfo &&other)
+  : load_(other.load_.load()), id_(other.id_) {}
+
+  /** Move assignment  */
+  BorgIoThreadQueueInfo& operator=(BorgIoThreadQueueInfo &&other) {
+    if (this != &other) {
+      load_ = other.load_.load();
+      id_ = other.id_;
+    }
+    return *this;
+  }
+};
+
+/** A SHM queue for holding BORG I/O flushing tasks */
+typedef hipc::mpsc_queue<BorgIoTask> _BorgIoThreadQueue;
+
+/** A SHM queue for holding tasks + statistics */
+typedef hipc::pair<_BorgIoThreadQueue, BorgIoThreadQueueInfo>
+    BorgIoThreadQueue;
+
+/** Macro to simplify thread manager singleton */
+#define HERMES_BORG_IO_THREAD_MANAGER \
+  hshm::EasySingleton<BorgIoThreadManager>::GetInstance()
+
+/** Manages the I/O flushing threads for BORG */
+class BorgIoThreadManager {
+ public:
+  hipc::vector<BorgIoThreadQueue>
+    *queues_;  /**< Shared-memory request queues */
+  std::atomic<bool> kill_requested_;  /**< Kill flushing threads eventually */
+
+ public:
+  /** Constructor */
+  BorgIoThreadManager() {
+    kill_requested_.store(false);
+  }
+
+  /** Indicate that no more modifications will take place to blobs */
+  void Join() {
+    kill_requested_.store(true);
+  }
+
+  /** Check if IoThreadManager is still alive */
+  bool Alive() {
+    return !kill_requested_.load();
+  }
+
+  /** Spawn the enqueuing thread */
+  void SpawnFlushMonitor(int num_threads);
+
+  /** Spawn the I/O threads */
+  void SpawnFlushWorkers(int num_threads);
+
+  /** Wait for flushing to complete */
+  void WaitForFlush();
+
+  /** Check if a flush is still happening */
+  bool IsFlushing() {
+    for (BorgIoThreadQueue &bq : *queues_) {
+      BorgIoThreadQueueInfo& bq_info = bq.GetSecond();
+      if (bq_info.load_ > 0) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /** Enqueue a flushing task to a worker */
+  void Enqueue(TagId bkt_id, BlobId blob_id, size_t blob_size,
+               std::vector<Trait*> &&traits) {
+    BorgIoThreadQueue &bq = HashToQueue(blob_id);
+    BorgIoThreadQueueInfo& bq_info = bq.GetSecond();
+    _BorgIoThreadQueue& queue = bq.GetFirst();
+    bq_info.load_.fetch_add(blob_size);
+    queue.emplace(bkt_id, blob_id, blob_size,
+                   std::forward<std::vector<Trait*>>(traits));
+  }
+
+  /** Hash request to a queue */
+  BorgIoThreadQueue& HashToQueue(BlobId blob_id) {
+    size_t qid = std::hash<BlobId>{}(blob_id) % queues_->size();
+    return (*queues_)[qid];
+  }
 };
 
 /**
- A union of structures to represent buffer organizer arguments
-*/
-union BoArgs {
-  /** A structure to represent move arguments */
-  struct {
-    BufferID src;  /**< source buffer ID */
-    TargetID dest; /**< destination target ID */
-  } move_args;
-  /** A structure to represent copy arguments */
-  struct {
-    BufferID src;  /**< source buffer ID */
-    TargetID dest; /**< destination target ID */
-  } copy_args;
-  /** A structure to represent delete arguments */
-  struct {
-    BufferID src; /**< source buffer ID */
-  } delete_args;
+ * Any state needed by BORG in SHM
+ * */
+struct BufferOrganizerShm {
+  hipc::ShmArchive<hipc::vector<BorgIoThreadQueue>> queues_;
 };
 
 /**
-   A structure to represent buffer organizer task
-*/
-struct BoTask {
-  BoOperation op; /**< buffer organizer operation */
-  BoArgs args;    /**< buffer organizer arguments */
+ * Manages the organization of blobs in the hierarchy.
+ * */
+class BufferOrganizer {
+ public:
+  MetadataManager *mdm_;
+  RPC_TYPE *rpc_;
+  hipc::vector<BorgIoThreadQueue>*
+    queues_; /** Async tasks for BORG. */
+
+ public:
+  /**====================================
+   * Default Constructor
+   * ===================================*/
+
+  /** Default constructor */
+  BufferOrganizer() = default;
+
+  /**====================================
+   * SHM Init
+   * ===================================*/
+
+  /**
+   * Initialize the BORG
+   * REQUIRES mdm to be initialized already.
+   * */
+  void shm_init(hipc::ShmArchive<BufferOrganizerShm> &header,
+                hipc::Allocator *alloc);
+
+  /**====================================
+   * SHM Deserialization
+   * ===================================*/
+
+  /** Deserialize the BORG from shared memory */
+  void shm_deserialize(hipc::ShmArchive<BufferOrganizerShm> &header);
+
+  /**====================================
+   * Destructors
+   * ===================================*/
+
+  /** Finalize the BORG */
+  void shm_destroy_main();
+
+  /**====================================
+   * BORG Methods
+   * ===================================*/
+
+  /** Stores a blob into a set of buffers */
+  RPC void LocalPlaceBlobInBuffers(const Blob &blob,
+                                   std::vector<BufferInfo> &buffers);
+  RPC void GlobalPlaceBlobInBuffers(const Blob &blob,
+                                    std::vector<BufferInfo> &buffers);
+
+  /** Stores a blob into a set of buffers */
+  RPC void LocalReadBlobFromBuffers(Blob &blob,
+                                    std::vector<BufferInfo> &buffers);
+  Blob GlobalReadBlobFromBuffers(std::vector<BufferInfo> &buffers);
+
+  /** Re-organize blobs based on a score */
+  void GlobalOrganizeBlob(const std::string &bucket_name,
+                          const std::string &blob_name,
+                          float score);
+
+ public:
+  /**====================================
+   * BORG Flushing methods
+   * ===================================*/
+
+  /** Flush all blobs registered in this daemon */
+  void LocalEnqueueFlushes();
+
+  /** Actually process flush operations */
+  void LocalProcessFlushes(BorgIoThreadQueueInfo &bq_info,
+                           _BorgIoThreadQueue &queue);
+
+  /** Barrier for all flushing to complete */
+  void LocalWaitForFullFlush();
+
+  /** Barrier for all I/O in Hermes to flush */
+  void GlobalWaitForFullFlush();
 };
 
-/**
-   A structure to represent buffer information
-*/
-struct BufferInfo {
-  BufferID id;        /**< buffer ID */
-  f32 bandwidth_mbps; /**< bandwidth in Megabits per second */
-  size_t size;        /**< buffer size */
-};
-
-/** comparison operator */
-bool operator==(const BufferInfo &lhs, const BufferInfo &rhs);
-
-/**
-   A structure to represent buffer organizer
-*/
-struct BufferOrganizer {
-  ThreadPool pool; /**< a pool of threads */
-  /** initialize buffer organizer with \a num_threads number of threads.  */
-  explicit BufferOrganizer(int num_threads);
-};
-
-/** enqueue flushing task locally */
-bool LocalEnqueueFlushingTask(SharedMemoryContext *context, RpcContext *rpc,
-                              BlobID blob_id, const std::string &filename,
-                              u64 offset);
-/** enqueue flushing task */
-bool EnqueueFlushingTask(RpcContext *rpc, BlobID blob_id,
-                         const std::string &filename, u64 offset);
-
-void BoMove(SharedMemoryContext *context, RpcContext *rpc,
-            const BoMoveList &moves, BlobID blob_id, BucketID bucket_id,
-            const std::string &internal_blob_name);
-void FlushBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id,
-               const std::string &filename, u64 offset, bool async = false);
-/** shut down buffer organizer locally */
-void LocalShutdownBufferOrganizer(SharedMemoryContext *context);
-/** increment flush count */
-void IncrementFlushCount(SharedMemoryContext *context, RpcContext *rpc,
-                         const std::string &vbkt_name);
-/** decrement flush count */
-void DecrementFlushCount(SharedMemoryContext *context, RpcContext *rpc,
-                         const std::string &vbkt_name);
-/** increment flush count locally */
-void LocalIncrementFlushCount(SharedMemoryContext *context,
-                              const std::string &vbkt_name);
-/** decrement flush count locally */
-void LocalDecrementFlushCount(SharedMemoryContext *context,
-                              const std::string &vbkt_name);
-/** await asynchronous flushing tasks */
-void AwaitAsyncFlushingTasks(SharedMemoryContext *context, RpcContext *rpc,
-                             VBucketID id);
-/** organize BLOB locally */
-void LocalOrganizeBlob(SharedMemoryContext *context, RpcContext *rpc,
-                       const std::string &internal_blob_name,
-                       BucketID bucket_id, f32 epsilon,
-                       f32 explicit_importance_score);
-/** organize BLOB */
-void OrganizeBlob(SharedMemoryContext *context, RpcContext *rpc,
-                  BucketID bucket_id, const std::string &blob_name, f32 epsilon,
-                  f32 importance_score = -1);
-/** organize device */
-void OrganizeDevice(SharedMemoryContext *context, RpcContext *rpc,
-                    DeviceID devices_id);
-
-/** get buffer information */
-std::vector<BufferInfo> GetBufferInfo(SharedMemoryContext *context,
-                                      RpcContext *rpc,
-                                      const std::vector<BufferID> &buffer_ids);
-/** compute BLOB access score */
-f32 ComputeBlobAccessScore(SharedMemoryContext *context,
-                           const std::vector<BufferInfo> &buffer_info);
-/**  enqueue buffer organizer move list locally */
-void LocalEnqueueBoMove(SharedMemoryContext *context, RpcContext *rpc,
-                        const BoMoveList &moves, BlobID blob_id,
-                        BucketID bucket_id,
-                        const std::string &internal_blob_name,
-                        BoPriority priority);
-/**  enqueue buffer organizer move list */
-void EnqueueBoMove(RpcContext *rpc, const BoMoveList &moves, BlobID blob_id,
-                   BucketID bucket_id, const std::string &internal_name,
-                   BoPriority priority);
-/** enforce capacity threholds */
-void EnforceCapacityThresholds(SharedMemoryContext *context, RpcContext *rpc,
-                               ViolationInfo info);
-/** enforce capacity threholds locally */
-void LocalEnforceCapacityThresholds(SharedMemoryContext *context,
-                                    RpcContext *rpc, ViolationInfo info);
 }  // namespace hermes
 
-#endif  // HERMES_BUFFER_ORGANIZER_H_
+#endif  // HERMES_SRC_BUFFER_ORGANIZER_H_

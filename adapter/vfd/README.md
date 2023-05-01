@@ -75,7 +75,6 @@ HDF5_DRIVER=hermes                                                    \
   HDF5_PLUGIN_PATH=<hermes_install_prefix/lib/hermes_vfd              \
   HDF5_DRIVER_CONFIG="true 65536"                                     \
   HERMES_CONF=<path_to>/hermes.yaml                                   \
-  LD_PRELOAD=<hermes_install_prefix>/hermes_vfd/libhdf5_hermes_vfd.so \
   ./my_hdf5_app
 ```
 

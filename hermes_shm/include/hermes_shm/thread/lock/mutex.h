@@ -10,23 +10,35 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_THREAD_MUTEX_H_
-#define HERMES_SHM_THREAD_MUTEX_H_
+
+#ifndef HERMES_THREAD_MUTEX_H_
+#define HERMES_THREAD_MUTEX_H_
 
 #include <atomic>
 
-namespace hermes_shm {
+namespace hshm {
 
 struct Mutex {
   std::atomic<uint32_t> lock_;
+#ifdef HERMES_DEBUG_LOCK
+  uint32_t owner_;
+#endif
 
+  /** Default constructor */
   Mutex() : lock_(0) {}
 
+  /** Explicit initialization */
   void Init() {
     lock_ = 0;
   }
-  void Lock();
-  bool TryLock();
+
+  /** Acquire lock */
+  void Lock(uint32_t owner);
+
+  /** Try to acquire the lock */
+  bool TryLock(uint32_t owner);
+
+  /** Unlock */
   void Unlock();
 };
 
@@ -34,14 +46,22 @@ struct ScopedMutex {
   Mutex &lock_;
   bool is_locked_;
 
-  explicit ScopedMutex(Mutex &lock);
+  /** Acquire the mutex */
+  explicit ScopedMutex(Mutex &lock, uint32_t owner);
+
+  /** Release the mutex */
   ~ScopedMutex();
 
-  void Lock();
-  bool TryLock();
+  /** Explicitly acquire the mutex */
+  void Lock(uint32_t owner);
+
+  /** Explicitly try to lock the mutex */
+  bool TryLock(uint32_t owner);
+
+  /** Explicitly unlock the mutex */
   void Unlock();
 };
 
-}  // namespace hermes_shm
+}  // namespace hshm
 
-#endif  // HERMES_SHM_THREAD_MUTEX_H_
+#endif  // HERMES_THREAD_MUTEX_H_

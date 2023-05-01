@@ -14,7 +14,7 @@
 
 #include "hermes_shm/memory/backend/posix_shm_mmap.h"
 
-using hermes_shm::ipc::PosixShmMmap;
+using hshm::ipc::PosixShmMmap;
 
 TEST_CASE("BackendReserve") {
   PosixShmMmap b1;

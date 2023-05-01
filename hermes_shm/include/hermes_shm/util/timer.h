@@ -10,14 +10,14 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_TIMER_H
-#define HERMES_SHM_TIMER_H
+#ifndef HERMES_TIMER_H
+#define HERMES_TIMER_H
 
 #include <chrono>
 #include <vector>
 #include <functional>
 
-namespace hermes_shm {
+namespace hshm {
 
 template<typename T>
 class TimerBase {
@@ -91,6 +91,6 @@ typedef TimerBase<std::chrono::high_resolution_clock> HighResCpuTimer;
 typedef TimerBase<std::chrono::steady_clock> HighResMonotonicTimer;
 typedef HighResMonotonicTimer Timer;
 
-}  // namespace hermes_shm
+}  // namespace hshm
 
-#endif  // HERMES_SHM_TIMER_H
+#endif  // HERMES_TIMER_H

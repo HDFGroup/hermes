@@ -12,9 +12,9 @@
 
 #include "basic_test.h"
 #include "test_init.h"
-#include "hermes_shm/data_structures/string.h"
-#include "hermes_shm/data_structures/thread_unsafe/list.h"
-#include "hermes_shm/data_structures/thread_unsafe/vector.h"
+#include "hermes_shm/data_structures/ipc/string.h"
+#include "hermes_shm/data_structures/ipc/list.h"
+#include "hermes_shm/data_structures/ipc/vector.h"
 #include "hermes_shm/util/error.h"
 
 template<typename T, typename ContainerT>
@@ -37,7 +37,7 @@ void ListVecTest(size_t count) {
     // Write 100 objects from rank 0
     {
       if (rank == 0) {
-        for (int i = 0; i < count; ++i) {
+        for (size_t i = 0; i < count; ++i) {
           CREATE_SET_VAR_TO_INT_OR_STRING(T, var, i);
           obj.emplace_back(var);
         }
@@ -49,7 +49,7 @@ void ListVecTest(size_t count) {
     {
       REQUIRE(obj.size() == count);
       int i = 0;
-      for (hipc::ShmRef<T> var : obj) {
+      for (hipc::Ref<T> var : obj) {
         CREATE_SET_VAR_TO_INT_OR_STRING(T, orig, i);
         REQUIRE(*var == orig);
         ++i;
@@ -61,7 +61,7 @@ void ListVecTest(size_t count) {
     {
       if (rank == 0) {
         CREATE_SET_VAR_TO_INT_OR_STRING(T, update, count);
-        hipc::ShmRef<T> first = *obj.begin();
+        hipc::Ref<T> first = *obj.begin();
         (*first) = update;
       }
       MPI_Barrier(MPI_COMM_WORLD);
@@ -70,16 +70,15 @@ void ListVecTest(size_t count) {
     // Check if modification received
     {
       CREATE_SET_VAR_TO_INT_OR_STRING(T, update, count);
-      hipc::ShmRef<T> first = *obj.begin();
+      hipc::Ref<T> first = *obj.begin();
       REQUIRE((*first) == update);
       MPI_Barrier(MPI_COMM_WORLD);
       MPI_Barrier(MPI_COMM_WORLD);
     }
-
-  } catch(HERMES_SHM_ERROR_TYPE &HERMES_SHM_ERROR_PTR) {
+  } catch(HERMES_ERROR_TYPE &HERMES_ERROR_PTR) {
     std::cout << "HERE0" << std::endl;
     err->print();
-  } catch(hermes_shm::Error &err) {
+  } catch(hshm::Error &err) {
     std::cout << "HERE1" << std::endl;
     err.print();
   } catch(int err) {

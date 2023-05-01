@@ -10,11 +10,12 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_THREAD_LOCK_H_
-#define HERMES_SHM_THREAD_LOCK_H_
+
+#ifndef HERMES_THREAD_LOCK_H_
+#define HERMES_THREAD_LOCK_H_
 
 #include "lock/mutex.h"
 #include "lock/rwlock.h"
-#include "thread_manager.h"
+#include "thread_model_manager.h"
 
-#endif  // HERMES_SHM_THREAD_LOCK_H_
+#endif  // HERMES_THREAD_LOCK_H_

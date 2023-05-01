@@ -10,8 +10,8 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_INCLUDE_HERMES_SHM_MEMORY_BACKEND_ARRAY_BACKEND_H_
-#define HERMES_SHM_INCLUDE_HERMES_SHM_MEMORY_BACKEND_ARRAY_BACKEND_H_
+#ifndef HERMES_INCLUDE_HERMES_MEMORY_BACKEND_ARRAY_BACKEND_H_
+#define HERMES_INCLUDE_HERMES_MEMORY_BACKEND_ARRAY_BACKEND_H_
 
 #include "memory_backend.h"
 #include <string>
@@ -29,7 +29,7 @@
 #include <hermes_shm/constants/macros.h>
 #include <hermes_shm/introspect/system_info.h>
 
-namespace hermes_shm::ipc {
+namespace hshm::ipc {
 
 class ArrayBackend : public MemoryBackend {
  public:
@@ -60,6 +60,6 @@ class ArrayBackend : public MemoryBackend {
   void shm_destroy() override {}
 };
 
-}  // namespace hermes_shm::ipc
+}  // namespace hshm::ipc
 
-#endif  // HERMES_SHM_INCLUDE_HERMES_SHM_MEMORY_BACKEND_ARRAY_BACKEND_H_
+#endif  // HERMES_INCLUDE_HERMES_MEMORY_BACKEND_ARRAY_BACKEND_H_

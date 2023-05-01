@@ -14,6 +14,8 @@
 #define HERMES_SRC_DPE_RANDOM_H_
 
 #include "data_placement_engine.h"
+#include <cstdlib>
+#include <ctime>
 
 namespace hermes {
 /**
@@ -21,24 +23,15 @@ namespace hermes {
 */
 class Random : public DPE {
  public:
-  Random() : DPE(PlacementPolicy::kRandom) {}
+  Random() {
+    // TODO(llogan): make seed configurable
+    std::srand(2989248848);
+  }
   ~Random() = default;
   Status Placement(const std::vector<size_t> &blob_sizes,
-                   const std::vector<u64> &node_state,
-                   const std::vector<TargetID> &targets,
-                   const api::Context &ctx,
-                   std::vector<PlacementSchema> &output);
-
- private:
-  /**
-     get the capacities of each \a node_state and \a targets and store them
-     into \a ordered_cap.*/
-  void GetOrderedCapacities(const std::vector<u64> &node_state,
-                            const std::vector<TargetID> &targets,
-                            std::multimap<u64, TargetID> &ordered_cap);
-  /** add placement schema */
-  Status AddSchema(std::multimap<u64, TargetID> &ordered_cap, size_t blob_size,
-                   PlacementSchema &schema);
+                   std::vector<TargetInfo> &targets,
+                   api::Context &ctx,
+                   std::vector<PlacementSchema> &output) override;
 };
 
 }  // namespace hermes

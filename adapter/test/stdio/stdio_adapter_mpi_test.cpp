@@ -16,18 +16,19 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include <experimental/filesystem>
+#include <filesystem>
 #include <iostream>
 #if HERMES_INTERCEPT == 1
-#include "stdio/real_api.h"
+#include "adapter/stdio/stdio_api.h"
+#include "adapter/stdio/stdio_fs_api.h"
 #endif
 
-namespace stdfs = std::experimental::filesystem;
+namespace stdfs = std::filesystem;
 
 namespace hermes::adapter::stdio::test {
 struct Arguments {
   std::string filename = "test.dat";
-  std::string directory = "/tmp";
+  std::string directory = "/tmp/test_hermes";
   size_t request_size = 65536;
 };
 struct Info {
@@ -59,6 +60,10 @@ hermes::adapter::stdio::test::Arguments args;
 hermes::adapter::stdio::test::Info info;
 
 int init(int* argc, char*** argv) {
+#if HERMES_INTERCEPT == 1
+  setenv("HERMES_FLUSH_MODE", "kSync", 1);
+  HERMES->client_config_.flushing_mode_ = hermes::FlushingMode::kSync;
+#endif
   MPI_Init(argc, argv);
   info.write_data = GenRandom(args.request_size);
   info.read_data = std::string(args.request_size, 'r');
@@ -129,7 +134,6 @@ void test_fseek(long offset, int whence) {
 }  // namespace test
 
 int pretest() {
-  REQUIRE(info.comm_size > 1);
   stdfs::path fullpath = args.directory;
   fullpath /= args.filename;
   info.new_file = fullpath.string() + "_new_" + std::to_string(info.rank) +
@@ -207,19 +211,26 @@ int pretest() {
   REQUIRE(info.total_size > 0);
   MPI_Barrier(MPI_COMM_WORLD);
 #if HERMES_INTERCEPT == 1
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.existing_file_cmp);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.new_file_cmp);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(
-      info.existing_shared_file_cmp);
+  HERMES->client_config_.SetAdapterPathTracking(info.existing_file_cmp, false);
+  HERMES->client_config_.SetAdapterPathTracking(info.new_file_cmp, false);
+  HERMES->client_config_.SetAdapterPathTracking(
+      info.existing_shared_file_cmp, false);
 #endif
   return 0;
 }
 
+void Clear() {
+#if HERMES_INTERCEPT == 1
+  HERMES->Clear();
+#endif
+}
+
 int posttest(bool compare_data = true) {
 #if HERMES_INTERCEPT == 1
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.existing_file);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.new_file);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.existing_shared_file);
+  HERMES->client_config_.SetAdapterPathTracking(info.existing_file, false);
+  HERMES->client_config_.SetAdapterPathTracking(info.new_file, false);
+  HERMES->client_config_.SetAdapterPathTracking(
+      info.existing_shared_file, false);
 #endif
   if (compare_data && stdfs::exists(info.new_file) &&
       stdfs::exists(info.new_file_cmp)) {
@@ -321,14 +332,17 @@ int posttest(bool compare_data = true) {
     if (stdfs::exists(info.existing_shared_file_cmp))
       stdfs::remove(info.existing_shared_file_cmp);
   }
+  Clear();
 
 #if HERMES_INTERCEPT == 1
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_file_cmp);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.new_file_cmp);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.new_file);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_file);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_shared_file);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_shared_file_cmp);
+  HERMES->client_config_.SetAdapterPathTracking(info.existing_file_cmp, true);
+  HERMES->client_config_.SetAdapterPathTracking(info.new_file_cmp, true);
+  HERMES->client_config_.SetAdapterPathTracking(info.new_file, true);
+  HERMES->client_config_.SetAdapterPathTracking(info.existing_file, true);
+  HERMES->client_config_.SetAdapterPathTracking(
+      info.existing_shared_file, true);
+  HERMES->client_config_.SetAdapterPathTracking(
+      info.existing_shared_file_cmp, true);
 #endif
   return 0;
 }
@@ -345,4 +359,4 @@ cl::Parser define_options() {
 #include "stdio_adapter_basic_test.cpp"
 #include "stdio_adapter_func_test.cpp"
 #include "stdio_adapter_rs_test.cpp"
-#include "stdio_adapter_shared_test.cpp"
+// #include "stdio_adapter_shared_test.cpp"

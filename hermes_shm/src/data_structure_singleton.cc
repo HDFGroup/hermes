@@ -16,8 +16,10 @@
 #include <hermes_shm/constants/data_structure_singleton_macros.h>
 
 #include <hermes_shm/introspect/system_info.h>
-template<> hermes_shm::SystemInfo scs::Singleton<hermes_shm::SystemInfo>::obj_ = hermes_shm::SystemInfo();
+DEFINE_GLOBAL_SINGLETON_CC(hshm::SystemInfo)
+#include <hermes_shm/memory/memory_registry.h>
+DEFINE_GLOBAL_SINGLETON_CC(hshm::ipc::MemoryRegistry)
 #include <hermes_shm/memory/memory_manager.h>
-template<> hermes_shm::ipc::MemoryManager scs::Singleton<hermes_shm::ipc::MemoryManager>::obj_ = hermes_shm::ipc::MemoryManager();
-#include <hermes_shm/thread/thread_manager.h>
-template<> hermes_shm::ThreadManager scs::Singleton<hermes_shm::ThreadManager>::obj_ = hermes_shm::ThreadManager();
+DEFINE_GLOBAL_SINGLETON_CC(hshm::ipc::MemoryManager)
+#include <hermes_shm/thread/thread_model_manager.h>
+DEFINE_GLOBAL_SINGLETON_CC(hshm::ThreadModelManager)

@@ -14,20 +14,21 @@
 #define HERMES_DATA_STAGER_STAGERS_POSIX_STAGE_H
 
 #include "../data_stager.h"
-#include "posix/fs_api.h"
+#include "posix/posix_fs_api.h"
+#include "posix/posix_api.h"
 
 namespace hermes {
 
 class PosixStager : public DataStager {
  public:
-  void StageIn(std::string url, PlacementPolicy dpe) override;
-  void FileStageIn(std::string path, PlacementPolicy dpe);
-  void DirectoryStageIn(std::string path, PlacementPolicy dpe);
+  void StageIn(std::string url, hapi::PlacementPolicy dpe) override;
+  void FileStageIn(std::string path, hapi::PlacementPolicy dpe);
+  void DirectoryStageIn(std::string path, hapi::PlacementPolicy dpe);
 
   void StageIn(std::string url, off_t off, size_t size,
-               PlacementPolicy dpe) override;
+               hapi::PlacementPolicy dpe) override;
   void FileStageIn(std::string path, off_t off, size_t size,
-                   PlacementPolicy dpe);
+                   hapi::PlacementPolicy dpe);
 
   void StageOut(std::string url) override;
   void FileStageOut(std::string path);

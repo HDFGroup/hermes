@@ -11,7 +11,7 @@
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include <string>
-#include "posix/fs_api.h"
+#include "posix/posix_io_client.h"
 #include "hermes_types.h"
 #include <hermes.h>
 #include "data_stager_factory.h"
@@ -22,19 +22,12 @@ using hermes::DataStager;
 using hermes::DataStagerFactory;
 
 int main(int argc, char **argv) {
-  MPI_Init(&argc, &argv);
-  if (argc != 2) {
-    std::cout << "Usage: ./stage_out [url]" << std::endl;
+  if (argc != 1) {
+    std::cout << "Usage: ./stage_out" << std::endl;
     exit(1);
   }
-  setenv("HERMES_STOP_DAEMON", "0", false);
-  setenv("HERMES_ADAPTER_MODE", "DEFAULT", true);
-  setenv("HERMES_CLIENT", "1", true);
-  auto mdm = Singleton<hermes::adapter::fs::MetadataManager>::GetInstance();
-  mdm->InitializeHermes(true);
-  std::string url = argv[1];
-  auto stager = DataStagerFactory::Get(url);
-  stager->StageOut(url);
-  mdm->FinalizeHermes();
+  HERMES->Create(hermes::HermesType::kClient);
+  HERMES->Flush();
+  HERMES->Finalize();
   MPI_Finalize();
 }

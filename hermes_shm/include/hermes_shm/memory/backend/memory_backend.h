@@ -10,8 +10,8 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_MEMORY_H
-#define HERMES_SHM_MEMORY_H
+#ifndef HERMES_MEMORY_H
+#define HERMES_MEMORY_H
 
 #include <cstdint>
 #include <vector>
@@ -20,7 +20,7 @@
 #include "hermes_shm/constants/macros.h"
 #include <limits>
 
-namespace hermes_shm::ipc {
+namespace hshm::ipc {
 
 struct MemoryBackendHeader {
   size_t data_size_;
@@ -55,7 +55,7 @@ class MemoryBackend {
 
   /** Check if data is valid */
   bool IsInitialized() {
-    return flags_.OrBits(MEMORY_BACKEND_INITIALIZED);
+    return flags_.Any(MEMORY_BACKEND_INITIALIZED);
   }
 
   /** Mark data as invalid */
@@ -70,7 +70,7 @@ class MemoryBackend {
 
   /** This is owned */
   bool IsOwned() {
-    return flags_.OrBits(MEMORY_BACKEND_OWNED);
+    return flags_.Any(MEMORY_BACKEND_OWNED);
   }
 
   /** This is not the process which destroys the backend */
@@ -85,6 +85,6 @@ class MemoryBackend {
   virtual void shm_destroy() = 0;
 };
 
-}  // namespace hermes_shm::ipc
+}  // namespace hshm::ipc
 
-#endif  // HERMES_SHM_MEMORY_H
+#endif  // HERMES_MEMORY_H

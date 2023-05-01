@@ -10,8 +10,9 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_MEMORY_BACKEND_MEMORY_BACKEND_FACTORY_H_
-#define HERMES_SHM_MEMORY_BACKEND_MEMORY_BACKEND_FACTORY_H_
+
+#ifndef HERMES_MEMORY_BACKEND_MEMORY_BACKEND_FACTORY_H_
+#define HERMES_MEMORY_BACKEND_MEMORY_BACKEND_FACTORY_H_
 
 #include "memory_backend.h"
 #include "posix_mmap.h"
@@ -19,7 +20,7 @@
 #include "null_backend.h"
 #include "array_backend.h"
 
-namespace hermes_shm::ipc {
+namespace hshm::ipc {
 
 class MemoryBackendFactory {
  public:
@@ -35,7 +36,7 @@ class MemoryBackendFactory {
     } else if constexpr(std::is_same_v<PosixMmap, BackendT>) {
       // PosixMmap
       auto backend = std::make_unique<PosixMmap>();
-      backend->shm_init(size, url, std::forward<args>(args)...);
+      backend->shm_init(size, std::forward<args>(args)...);
       return backend;
     } else if constexpr(std::is_same_v<NullBackend, BackendT>) {
       // NullBackend
@@ -98,6 +99,6 @@ class MemoryBackendFactory {
   }
 };
 
-}  // namespace hermes_shm::ipc
+}  // namespace hshm::ipc
 
-#endif  // HERMES_SHM_MEMORY_BACKEND_MEMORY_BACKEND_FACTORY_H_
+#endif  // HERMES_MEMORY_BACKEND_MEMORY_BACKEND_FACTORY_H_

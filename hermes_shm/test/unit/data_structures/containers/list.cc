@@ -13,19 +13,14 @@
 #include "basic_test.h"
 #include "test_init.h"
 #include "list.h"
-#include "hermes_shm/data_structures/thread_unsafe/list.h"
-#include "hermes_shm/data_structures/string.h"
-#include "hermes_shm/memory/allocator/stack_allocator.h"
+#include "hermes_shm/data_structures/ipc/list.h"
+#include "hermes_shm/data_structures/ipc/string.h"
 
-using hermes_shm::ipc::list;
+using hshm::ipc::list;
 
 template<typename T>
-void ListTest() {
-  Allocator *alloc = alloc_g;
-  list<T> lp(alloc);
-  ListTestSuite<T, list<T>> test(lp, alloc);
-
-  test.EmplaceTest(30);
+void ListTestRunner(ListTestSuite<T, list<T>> &test) {
+  test.EmplaceTest(15);
   test.ForwardIteratorTest();
   test.ConstForwardIteratorTest();
   test.CopyConstructorTest();
@@ -36,6 +31,14 @@ void ListTest() {
   test.ModifyEntryCopyIntoTest();
   test.ModifyEntryMoveIntoTest();
   test.EraseTest();
+}
+
+template<typename T>
+void ListTest() {
+  Allocator *alloc = alloc_g;
+  auto lp = hipc::make_uptr<list<T>>(alloc);
+  ListTestSuite<T, list<T>> test(*lp, alloc);
+  ListTestRunner(test);
 }
 
 TEST_CASE("ListOfInt") {

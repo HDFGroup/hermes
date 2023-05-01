@@ -10,24 +10,26 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include <experimental/filesystem>
+#include <filesystem>
 
 #include "catch_config.h"
-#include "constants.h"
+#include "adapter_constants.h"
+#include "src/hermes_types.h"
 #include "mapper/mapper_factory.h"
-#include "stdio/fs_api.h"
+#include "adapter/stdio/stdio_fs_api.h"
 
 using hermes::adapter::BlobPlacements;
 using hermes::adapter::MapperFactory;
-using hermes::adapter::fs::kMapperType;
+using hermes::adapter::MapperType;
+using hermes::adapter::kMapperType;
 using hermes::adapter::fs::MetadataManager;
 
-namespace stdfs = std::experimental::filesystem;
+namespace stdfs = std::filesystem;
 
 namespace hermes::adapter::stdio::test {
 struct Arguments {
   std::string filename = "test.dat";
-  std::string directory = "/tmp";
+  std::string directory = "/tmp/test_hermes";
   size_t request_size = 65536;
   size_t num_iterations = 1024;
 };
@@ -49,6 +51,10 @@ hermes::adapter::stdio::test::Arguments args;
 hermes::adapter::stdio::test::Info info;
 
 int init(int* argc, char*** argv) {
+#if HERMES_INTERCEPT == 1
+  setenv("HERMES_FLUSH_MODE", "kSync", 1);
+  HERMES->client_config_.flushing_mode_ = hermes::FlushingMode::kSync;
+#endif
   MPI_Init(argc, argv);
 
   return 0;
@@ -81,7 +87,14 @@ int pretest() {
   return 0;
 }
 
+void Clear() {
+#if HERMES_INTERCEPT == 1
+  HERMES->Clear();
+#endif
+}
+
 int posttest() {
+  Clear();
   if (stdfs::exists(info.new_file)) stdfs::remove(info.new_file);
   if (stdfs::exists(info.existing_file)) stdfs::remove(info.existing_file);
   return 0;
@@ -104,6 +117,7 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
                              "[request_size=type-fixed][repetition=1]"
                              "[pattern=sequential][file=1]") {
   pretest();
+  const size_t kPageSize = MEGABYTES(1);
   SECTION("Map a one request") {
     auto mapper = MapperFactory().Get(kMapperType);
     size_t total_size = args.request_size;
@@ -112,7 +126,7 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
     size_t offset = 0;
     REQUIRE(kPageSize > total_size + offset);
     BlobPlacements mapping;
-    mapper->map(offset, total_size, mapping);
+    mapper->map(offset, total_size, kPageSize, mapping);
     REQUIRE(mapping.size() == 1);
     REQUIRE(mapping[0].bucket_off_ == offset);
     REQUIRE(mapping[0].blob_size_ == total_size);
@@ -127,7 +141,7 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(fp != nullptr);
     size_t offset = 0;
     BlobPlacements mapping;
-    mapper->map(offset, total_size, mapping);
+    mapper->map(offset, total_size, kPageSize, mapping);
     REQUIRE(mapping.size() == ceil((double)total_size / kPageSize));
     for (const auto& item : mapping) {
       size_t mapped_size =
@@ -147,7 +161,7 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
     REQUIRE(fp != nullptr);
     size_t offset = 1;
     BlobPlacements mapping;
-    mapper->map(offset, total_size, mapping);
+    mapper->map(offset, total_size, kPageSize, mapping);
     bool has_rem = (total_size + offset) % kPageSize != 0;
     if (has_rem) {
       REQUIRE(mapping.size() == ceil((double)total_size / kPageSize) + 1);
@@ -183,7 +197,7 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
     size_t offset = 1;
     REQUIRE(kPageSize > total_size + offset);
     BlobPlacements mapping;
-    mapper->map(offset, total_size, mapping);
+    mapper->map(offset, total_size, kPageSize, mapping);
     REQUIRE(mapping.size() == 1);
     REQUIRE(mapping[0].bucket_off_ == offset);
     REQUIRE(mapping[0].blob_size_ == total_size);

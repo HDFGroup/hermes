@@ -1,7 +1,9 @@
 FROM ubuntu:20.04
 ARG  DEBIAN_FRONTEND=noninteractive
 RUN apt update
-RUN apt-get install -y --no-install-recommends autoconf \
+RUN apt-get install -y --no-install-recommends  \
+    gcc g++ gfortran \
+    autoconf \
     automake \
     libtool \
     libtool-bin \

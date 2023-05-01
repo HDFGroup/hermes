@@ -1,3 +1,0 @@
-The text file (*.txt) in this folder specifies the functions that are 
-called in hermes and supported to be intercepted by GOTCHA library. 
-Each text file lists the functions that will be intercepted from that group.

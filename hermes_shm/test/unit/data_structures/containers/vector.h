@@ -10,8 +10,8 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_TEST_UNIT_DATA_STRUCTURES_CONTAINERS_VECTOR_H_
-#define HERMES_SHM_TEST_UNIT_DATA_STRUCTURES_CONTAINERS_VECTOR_H_
+#ifndef HERMES_TEST_UNIT_DATA_STRUCTURES_CONTAINERS_VECTOR_H_
+#define HERMES_TEST_UNIT_DATA_STRUCTURES_CONTAINERS_VECTOR_H_
 
 #include "list.h"
 
@@ -27,11 +27,11 @@ class VectorTestSuite : public ListTestSuite<T, Container> {
 
   /// Test vector index operator
   void IndexTest() {
-    for (int i = 0; i < obj_.size(); ++i) {
+    for (size_t i = 0; i < obj_.size(); ++i) {
       CREATE_SET_VAR_TO_INT_OR_STRING(T, var, i);
-      REQUIRE(*obj_[i] == var);
+      REQUIRE(obj_[i] == var);
     }
   }
 };
 
-#endif //HERMES_SHM_TEST_UNIT_DATA_STRUCTURES_CONTAINERS_VECTOR_H_
+#endif  // HERMES_TEST_UNIT_DATA_STRUCTURES_CONTAINERS_VECTOR_H_

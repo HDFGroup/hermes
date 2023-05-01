@@ -10,832 +10,435 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include <sys/file.h>
-#include <algorithm>
-#include <unordered_set>
-
-#include "hermes.h"
 #include "buffer_organizer.h"
-#include "metadata_storage.h"
-#include "data_placement_engine.h"
+#include "metadata_manager.h"
+#include "borg_io_clients/borg_io_client_factory.h"
+#include "hermes.h"
+#include "bucket.h"
 
 namespace hermes {
 
-BufferOrganizer::BufferOrganizer(int num_threads) : pool(num_threads) {
+/**====================================
+ * BORG I/O thread manager
+ * ===================================*/
+
+/** Spawn the enqueuing thread */
+void BorgIoThreadManager::SpawnFlushMonitor(int num_threads) {
+  auto flush_scheduler = [](void *args) {
+    HILOG(kDebug, "Flushing scheduler thread has started")
+    (void) args;
+    auto borg = &HERMES->borg_;
+    while (HERMES_THREAD_MANAGER->Alive()) {
+      borg->LocalEnqueueFlushes();
+      // TODO(llogan): make configurable
+      tl::thread::self().sleep(*HERMES->rpc_.server_engine_, 1000);
+    }
+    HERMES_BORG_IO_THREAD_MANAGER->Join();
+    HILOG(kDebug, "Flush scheduler thread has stopped")
+  };
+  HERMES_THREAD_MANAGER->Spawn(flush_scheduler);
 }
 
-bool operator==(const BufferInfo &lhs, const BufferInfo &rhs) {
-  return (lhs.id == rhs.id && lhs.size == rhs.size &&
-          lhs.bandwidth_mbps == rhs.bandwidth_mbps);
-}
-/**
- A structure to represent Target information
-*/
-struct TargetInfo {
-  TargetID id;                  /**< unique ID */
-  f32 bandwidth_mbps;           /**< bandwidth in Megabits per second */
-  u64 capacity;                 /**< capacity */
-};
-
-/** get buffer information locally */
-BufferInfo LocalGetBufferInfo(SharedMemoryContext *context,
-                              BufferID buffer_id) {
-  BufferInfo result = {};
-
-  BufferHeader *header = GetHeaderByBufferId(context, buffer_id);
-  // TODO(chogan): Should probably use Targets to factor in remote devices.
-  // However, we currently don't distinguish between the bandwidth of a device
-  // and the same device accessed from a remote node.
-  Device *device = GetDeviceFromHeader(context, header);
-
-  result.id = buffer_id;
-  result.bandwidth_mbps = device->bandwidth_mbps;
-  result.size = header->used;
-
-  return result;
-}
-
-/** get buffer information */
-BufferInfo GetBufferInfo(SharedMemoryContext *context, RpcContext *rpc,
-                         BufferID buffer_id) {
-  BufferInfo result = {};
-  u32 target_node = buffer_id.bits.node_id;
-
-  if (target_node == rpc->node_id) {
-    result = LocalGetBufferInfo(context, buffer_id);
-  } else {
-    result = RpcCall<BufferInfo>(rpc, target_node, "RemoteGetBufferInfo",
-                                 buffer_id);
-  }
-
-  return result;
-}
-
-/** normalize access score from \a raw-score using \a size_mb */
-f32 NormalizeAccessScore(SharedMemoryContext *context, f32 raw_score,
-                         f32 size_mb) {
-  BufferPool *pool = GetBufferPoolFromContext(context);
-
-  f32 min_seconds = size_mb * (1.0 / pool->max_device_bw_mbps);
-  f32 max_seconds = size_mb * (1.0 / pool->min_device_bw_mbps);
-  f32 range = max_seconds - min_seconds;
-  f32 adjusted_score = raw_score - min_seconds;
-  f32 result = 1.0 - (adjusted_score / range);
-  assert(result >= 0.0 && result <= 1.0);
-
-  return result;
-}
-
-static inline f32 BytesToMegabytes(size_t bytes) {
-  f32 result = (f32)bytes / (f32)MEGABYTES(1);
-
-  return result;
-}
-
-std::vector<BufferInfo> GetBufferInfo(SharedMemoryContext *context,
-                                      RpcContext *rpc,
-                                      const std::vector<BufferID> &buffer_ids) {
-  std::vector<BufferInfo> result(buffer_ids.size());
-
-  for (size_t i = 0; i < buffer_ids.size(); ++i) {
-    result[i] = GetBufferInfo(context, rpc, buffer_ids[i]);
-  }
-
-  return result;
-}
-
-f32 ComputeBlobAccessScore(SharedMemoryContext *context,
-                           const std::vector<BufferInfo> &buffer_info) {
-  f32 result = 0;
-  f32 raw_score = 0;
-  f32 total_blob_size_mb = 0;
-
-  for (size_t i = 0; i < buffer_info.size(); ++i) {
-    f32 size_in_mb = BytesToMegabytes(buffer_info[i].size);
-    f32 seconds_per_mb = 1.0f / buffer_info[i].bandwidth_mbps;
-    f32 total_seconds =  size_in_mb * seconds_per_mb;
-
-    total_blob_size_mb += size_in_mb;
-    raw_score += total_seconds;
-  }
-  result = NormalizeAccessScore(context, raw_score, total_blob_size_mb);
-
-  return result;
-}
-
-/** sort buffer information */
-void SortBufferInfo(std::vector<BufferInfo> &buffer_info, bool increasing) {
-#define HERMES_BUFFER_INFO_COMPARATOR(direction, comp)    \
-  auto direction##_buffer_info_comparator =               \
-    [](const BufferInfo &lhs, const BufferInfo &rhs) {    \
-      if (lhs.bandwidth_mbps == rhs.bandwidth_mbps) {     \
-        return lhs.size > rhs.size;                       \
-      }                                                   \
-      return lhs.bandwidth_mbps comp rhs.bandwidth_mbps;  \
+/** Spawn the flushing I/O threads */
+void BorgIoThreadManager::SpawnFlushWorkers(int num_threads) {
+  // Define flush worker thread function
+  // The function will continue working until all pending flushes have
+  // been processed
+  auto flush = [](void *params) {
+    BufferOrganizer *borg = &HERMES->borg_;
+    int *id = reinterpret_cast<int*>(params);
+    BorgIoThreadQueue &bq = (*borg->queues_)[*id];
+    BorgIoThreadQueueInfo& bq_info = bq.GetSecond();
+    _BorgIoThreadQueue& queue = bq.GetFirst();
+    HILOG(kDebug, "Flushing worker {} has started", bq_info.id_)
+    while (HERMES_BORG_IO_THREAD_MANAGER->Alive() ||
+          (!HERMES_BORG_IO_THREAD_MANAGER->Alive() && bq_info.load_)) {
+      borg->LocalProcessFlushes(bq_info, queue);
+      tl::thread::self().sleep(*HERMES->rpc_.server_engine_, 1);
+    }
+    HILOG(kDebug, "Flushing worker {} has stopped", bq_info.id_)
   };
 
-  if (increasing) {
-    // Sort first by bandwidth (descending), then by size (descending)
-    HERMES_BUFFER_INFO_COMPARATOR(increasing, >);
-    std::sort(buffer_info.begin(), buffer_info.end(),
-              increasing_buffer_info_comparator);
-  } else {
-    // Sort first by bandwidth (ascending), then by size (descending)
-    HERMES_BUFFER_INFO_COMPARATOR(decreasing, <);
-    std::sort(buffer_info.begin(), buffer_info.end(),
-              decreasing_buffer_info_comparator);
-  }
-
-#undef HERMES_BUFFER_INFO_COMPARATOR
-}
-
-/** sort target information */
-void SortTargetInfo(std::vector<TargetInfo> &target_info, bool increasing) {
-  auto increasing_target_info_comparator = [](const TargetInfo &lhs,
-                                              const TargetInfo &rhs) {
-    return lhs.bandwidth_mbps > rhs.bandwidth_mbps;
-  };
-  auto decreasing_target_info_comparator = [](const TargetInfo &lhs,
-                                              const TargetInfo &rhs) {
-    return lhs.bandwidth_mbps < rhs.bandwidth_mbps;
-  };
-
-  if (increasing) {
-    std::sort(target_info.begin(), target_info.end(),
-              increasing_target_info_comparator);
-  } else {
-    std::sort(target_info.begin(), target_info.end(),
-              decreasing_target_info_comparator);
+  // Create the flushing threads
+  for (int i = 0; i < num_threads; ++i) {
+    BorgIoThreadQueue &bq = (*queues_)[i];
+    BorgIoThreadQueueInfo& bq_info = bq.GetSecond();
+    bq_info.id_ = i;
+    bq_info.load_ = 0;
+    HERMES_THREAD_MANAGER->Spawn(flush, &bq_info.id_);
   }
 }
 
-void EnqueueBoMove(RpcContext *rpc, const BoMoveList &moves, BlobID blob_id,
-                   BucketID bucket_id, const std::string &internal_name,
-                   BoPriority priority) {
-  RpcCall<bool>(rpc, rpc->node_id, "BO::EnqueueBoMove", moves, blob_id,
-                bucket_id, internal_name, priority);
+/** Wait for flushing to complete */
+void BorgIoThreadManager::WaitForFlush() {
+  HILOG(kDebug, "Waiting for all flushing to complete {}",
+        HERMES->rpc_.node_id_)
+  while (IsFlushing()) {
+    tl::thread::self().sleep(*HERMES->rpc_.server_engine_, 5);
+  }
+  HILOG(kDebug, "Finished flushing {}",
+        HERMES->rpc_.node_id_)
 }
 
-void LocalEnqueueBoMove(SharedMemoryContext *context, RpcContext *rpc,
-                        const BoMoveList &moves, BlobID blob_id,
-                        BucketID bucket_id,
-                        const std::string &internal_blob_name,
-                        BoPriority priority) {
-  ThreadPool *pool = &context->bo->pool;
-  bool is_high_priority = priority == BoPriority::kHigh;
-  VLOG(1) << "BufferOrganizer queuing Blob " << blob_id.as_int;
-  pool->run(std::bind(BoMove, context, rpc, moves, blob_id, bucket_id,
-                      internal_blob_name),
-            is_high_priority);
-}
+/**====================================
+ * SHM Init
+ * ===================================*/
 
 /**
- * Assumes all BufferIDs in destinations are local
- */
-void BoMove(SharedMemoryContext *context, RpcContext *rpc,
-            const BoMoveList &moves, BlobID blob_id, BucketID bucket_id,
-            const std::string &internal_blob_name) {
-  VLOG(1) << "Moving blob "
-          << internal_blob_name.substr(kBucketIdStringSize, std::string::npos)
-          << std::endl;
-  MetadataManager *mdm = GetMetadataManagerFromContext(context);
+ * Initialize the BORG
+ * REQUIRES mdm to be initialized already.
+ * */
+void BufferOrganizer::shm_init(hipc::ShmArchive<BufferOrganizerShm> &header,
+                               hipc::Allocator *alloc) {
+  shm_deserialize(header);
 
-  bool got_lock = BeginReaderLock(&mdm->bucket_delete_lock);
-  if (got_lock && LocalLockBlob(context, blob_id)) {
-    auto warning_string = [](BufferID id) {
-      std::ostringstream ss;
-      ss << "BufferID" << id.as_int << " not found on this node\n";
-
-      return ss.str();
-    };
-
-    std::vector<BufferID> replacement_ids;
-    std::vector<BufferID> replaced_ids;
-
-    for (size_t move_index = 0; move_index < moves.size(); ++move_index) {
-      BufferID src = moves[move_index].first;
-      BufferHeader *src_header = GetHeaderByBufferId(context, src);
-      if (src_header) {
-        std::vector<u8> src_data(src_header->used);
-        Blob blob = {};
-        blob.data = src_data.data();
-        blob.size = src_header->used;
-        LocalReadBufferById(context, src, &blob, 0);
-        size_t offset = 0;
-        i64 remaining_src_size = (i64)blob.size;
-        replaced_ids.push_back(src);
-
-        for (size_t i = 0; i < moves[move_index].second.size(); ++i) {
-          BufferID dest = moves[move_index].second[i];
-          BufferHeader *dest_header = GetHeaderByBufferId(context, dest);
-
-          if (dest_header) {
-            u32 dest_capacity = dest_header->capacity;
-            size_t portion_size = std::min((i64)dest_capacity,
-                                           remaining_src_size);
-            Blob blob_portion = {};
-            blob_portion.data = blob.data + offset;
-            blob_portion.size = portion_size;
-            LocalWriteBufferById(context, dest, blob_portion, offset);
-            offset += portion_size;
-            remaining_src_size -= portion_size;
-            replacement_ids.push_back(dest);
-          } else {
-            LOG(WARNING) << warning_string(dest);
-          }
-        }
-      } else {
-        LOG(WARNING) << warning_string(src);
-      }
+  // Initialize device information
+  for (TargetInfo &target : (*mdm_->targets_)) {
+    DeviceInfo &dev_info =
+        (*mdm_->devices_)[target.id_.GetDeviceId()];
+    if (dev_info.mount_dir_->size() == 0) {
+      dev_info.io_api_ = IoInterface::kRam;
+    } else {
+      dev_info.io_api_ = IoInterface::kPosix;
     }
-
-    if (replacement_ids.size() > 0) {
-      // TODO(chogan): Only need to allocate a new BufferIdList if
-      // replacement.size > replaced.size
-      std::vector<BufferID> buffer_ids = LocalGetBufferIdList(mdm, blob_id);
-      using BufferIdSet = std::unordered_set<BufferID, BufferIdHash>;
-      BufferIdSet new_buffer_ids(buffer_ids.begin(), buffer_ids.end());
-
-      // Remove all replaced BufferIDs from the new IDs.
-      for (size_t i = 0; i < replaced_ids.size(); ++i) {
-        new_buffer_ids.erase(replaced_ids[i]);
-      }
-
-      // Add all the replacement IDs
-      for (size_t i = 0; i < replacement_ids.size(); ++i) {
-        new_buffer_ids.insert(replacement_ids[i]);
-      }
-
-      std::vector<BufferID> ids_vec(new_buffer_ids.begin(),
-                                    new_buffer_ids.end());
-      BlobID new_blob_id = {};
-      new_blob_id.bits.node_id = blob_id.bits.node_id;
-      new_blob_id.bits.buffer_ids_offset =
-        LocalAllocateBufferIdList(mdm, ids_vec);
-
-      BlobInfo new_info = {};
-      BlobInfo *old_info = GetBlobInfoPtr(mdm, blob_id);
-      new_info.stats = old_info->stats;
-      // Invalidate the old Blob. It will get deleted when its TicketMutex
-      // reaches old_info->last
-      old_info->stop = true;
-      ReleaseBlobInfoPtr(mdm);
-      LocalPut(mdm, new_blob_id, new_info);
-
-      // update blob_id in bucket's blob list
-      ReplaceBlobIdInBucket(context, rpc, bucket_id, blob_id, new_blob_id);
-      // update BlobID map
-      LocalPut(mdm, internal_blob_name.c_str(), new_blob_id.as_int,
-               kMapType_BlobId);
-
-      if (!BlobIsInSwap(blob_id)) {
-        LocalReleaseBuffers(context, replaced_ids);
-      }
-      // NOTE(chogan): We don't free the Blob's BufferIdList here because that
-      // would make the buffer_id_list_offset available for new incoming Blobs,
-      // and we can't reuse the buffer_id_list_offset until the old BlobInfo is
-      // deleted. We take care of both in LocalLockBlob when the final
-      // outstanding operation on this BlobID is complete (which is tracked by
-      // BlobInfo::last).
-    }
-    LocalUnlockBlob(context, blob_id);
-    VLOG(1) << "Done moving blob "
-            << internal_blob_name.substr(kBucketIdStringSize, std::string::npos)
-            << std::endl;
-  } else {
-    if (got_lock) {
-      LOG(WARNING) << "Couldn't lock BlobID " << blob_id.as_int << "\n";
-    }
+    auto io_client = borg::BorgIoClientFactory::Get(dev_info.io_api_);
+    io_client->Init(dev_info);
   }
 
-  if (got_lock) {
-    EndReaderLock(&mdm->bucket_delete_lock);
-  }
+  // Print out device info
+  mdm_->PrintDeviceInfo();
+
+  // Spawn the thread for flushing blobs
+  int num_threads = HERMES->server_config_.borg_.num_threads_;
+  HSHM_MAKE_AR((*header).queues_, alloc, num_threads)
+  HERMES_BORG_IO_THREAD_MANAGER->queues_ = queues_;
+  HERMES_BORG_IO_THREAD_MANAGER->SpawnFlushMonitor(num_threads);
+  HERMES_BORG_IO_THREAD_MANAGER->SpawnFlushWorkers(num_threads);
 }
 
-void LocalOrganizeBlob(SharedMemoryContext *context, RpcContext *rpc,
-                       const std::string &internal_blob_name,
-                       BucketID bucket_id, f32 epsilon,
-                       f32 explicit_importance_score) {
-  MetadataManager *mdm = GetMetadataManagerFromContext(context);
-  BlobID blob_id = {};
-  blob_id.as_int = LocalGet(mdm, internal_blob_name.c_str(), kMapType_BlobId);
+/**====================================
+ * SHM Deserialization
+ * ===================================*/
 
-  f32 importance_score = explicit_importance_score;
-  if (explicit_importance_score == -1) {
-    importance_score = LocalGetBlobImportanceScore(context, blob_id);
-  }
+/** Deserialize the BORG from shared memory */
+void BufferOrganizer::shm_deserialize(
+    hipc::ShmArchive<BufferOrganizerShm> &header)  {
+  mdm_ = &HERMES->mdm_;
+  rpc_ = &HERMES->rpc_;
+  queues_ = (*header).queues_.get();
+  HERMES_BORG_IO_THREAD_MANAGER->queues_ = queues_;
+}
 
-  std::vector<BufferID> buffer_ids = LocalGetBufferIdList(mdm, blob_id);
-  std::vector<BufferInfo> buffer_info = GetBufferInfo(context, rpc, buffer_ids);
-  f32 access_score = ComputeBlobAccessScore(context, buffer_info);
-  bool increasing_access_score = importance_score > access_score;
-  SortBufferInfo(buffer_info, increasing_access_score);
-  std::vector<BufferInfo> new_buffer_info(buffer_info);
+/**====================================
+ * Destructors
+ * ===================================*/
 
-  BoMoveList src_dest;
+/** Finalize the BORG */
+void BufferOrganizer::shm_destroy_main() {
+  queues_->shm_destroy();
+}
 
-  for (size_t i = 0; i < buffer_info.size(); ++i) {
-    std::vector<TargetID> targets = LocalGetNodeTargets(context);
-    std::vector<f32> target_bandwidths_mbps = GetBandwidths(context, targets);
-    std::vector<u64> capacities = GetRemainingTargetCapacities(context, rpc,
-                                                               targets);
+/**====================================
+ * BORG Methods
+ * ===================================*/
 
-    std::vector<TargetInfo> target_info(targets.size());
-    for (size_t j = 0; j < target_info.size(); ++j) {
-      target_info[j].id = targets[j];
-      target_info[j].bandwidth_mbps = target_bandwidths_mbps[j];
-      target_info[j].capacity = capacities[j];
-    }
-    SortTargetInfo(target_info, increasing_access_score);
-
-    BufferID src_buffer_id = {};
-    PlacementSchema schema;
-    f32 new_bandwidth_mbps = 0;
-    for (size_t j = 0; j < target_info.size(); ++j) {
-      if (target_info[j].capacity > buffer_info[i].size) {
-        src_buffer_id = buffer_info[i].id;
-        if (src_buffer_id.bits.node_id == rpc->node_id) {
-          // Only consider local BufferIDs
-          schema.push_back(std::pair(buffer_info[i].size, target_info[j].id));
-          new_bandwidth_mbps = target_info[j].bandwidth_mbps;
-          break;
-        }
-      }
-    }
-
-    // TODO(chogan): Possibly merge multiple smaller buffers into one large
-
-    std::vector<BufferID> dest = GetBuffers(context, schema);
-    if (dest.size() == 0) {
+/** Stores a blob into a set of buffers */
+RPC void BufferOrganizer::LocalPlaceBlobInBuffers(
+    const Blob &blob, std::vector<BufferInfo> &buffers) {
+  AUTO_TRACE(1)
+  size_t blob_off = 0;
+  for (BufferInfo &buffer_info : buffers) {
+    if (buffer_info.tid_.GetNodeId() != mdm_->rpc_->node_id_) {
       continue;
     }
-
-    // Replace old BufferInfo with new so we can calculate the updated access
-    // score
-    for (size_t j = 0; j < new_buffer_info.size(); ++j) {
-      if (new_buffer_info[j].id.as_int == src_buffer_id.as_int) {
-        new_buffer_info[j].id = dest[0];
-        new_buffer_info[j].bandwidth_mbps = new_bandwidth_mbps;
-        BufferHeader *new_header = GetHeaderByBufferId(context, dest[0]);
-        // Assume we're using the full capacity
-        new_buffer_info[j].size = new_header->capacity;
-        break;
-      }
+    TIMER_START("DeviceInfo")
+    DeviceInfo &dev_info =
+        (*mdm_->devices_)[buffer_info.tid_.GetDeviceId()];
+    if (buffer_info.t_off_ + buffer_info.blob_size_ >
+        dev_info.capacity_) {
+      HELOG(kFatal, "Out of bounds: attempting to write to offset: {} / {} "
+            "on device {}: {}",
+            buffer_info.t_off_ + buffer_info.blob_size_,
+            dev_info.capacity_,
+            buffer_info.tid_.GetDeviceId(),
+            dev_info.mount_point_->str())
     }
-    for (size_t j = 1; j < dest.size(); ++j) {
-      BufferInfo new_info = {};
-      new_info.id = dest[j];
-      new_info.bandwidth_mbps = new_bandwidth_mbps;
-      BufferHeader *new_header = GetHeaderByBufferId(context, dest[0]);
-      // Assume we're using the full capacity
-      new_info.size = new_header->capacity;
-      new_buffer_info.push_back(new_info);
+    auto io_client = borg::BorgIoClientFactory::Get(dev_info.io_api_);
+    TIMER_END()
+
+    TIMER_START("IO")
+    bool ret = io_client->Write(dev_info,
+                                blob.data() + blob_off,
+                                buffer_info.t_off_,
+                                buffer_info.blob_size_);
+    TIMER_END()
+    blob_off += buffer_info.blob_size_;
+    if (!ret) {
+      mdm_->PrintDeviceInfo();
+      HELOG(kFatal, "Could not perform I/O in BORG."
+            " Writing to target ID:"
+            " (node_id: {}, tgt_id: {}, dev_id: {},"
+            " t_off: {}, blob_size: {})",
+            buffer_info.tid_.GetNodeId(),
+            buffer_info.tid_.GetIndex(),
+            buffer_info.tid_.GetDeviceId(),
+            buffer_info.t_off_,
+            buffer_info.blob_size_)
     }
+  }
+}
 
-    f32 new_access_score = ComputeBlobAccessScore(context, new_buffer_info);
+/** Globally store a blob into a set of buffers */
+void BufferOrganizer::GlobalPlaceBlobInBuffers(
+    const Blob &blob, std::vector<BufferInfo> &buffers) {
+  AUTO_TRACE(1)
+  // Get the nodes to transfer buffers to
+  size_t total_size;
+  auto unique_nodes = BufferPool::GroupByNodeId(buffers, total_size);
 
-    bool move_is_valid = true;
-    // Make sure we didn't move too far past the target
-    if (increasing_access_score) {
-      if (new_access_score > importance_score &&
-          new_access_score - importance_score > epsilon) {
-        move_is_valid = false;
-      }
+  // Send the buffers to each node
+  for (auto &[node_id, size] : unique_nodes) {
+    if (NODE_ID_IS_LOCAL(node_id)) {
+      LocalPlaceBlobInBuffers(blob, buffers);
     } else {
-      if (new_access_score < importance_score &&
-          importance_score - new_access_score > epsilon) {
-        move_is_valid = false;
-      }
+      rpc_->IoCall<void>(
+          node_id, "RpcPlaceBlobInBuffers",
+          IoType::kWrite, blob.data(), blob.size(),
+          blob.size(), buffers);
     }
+  }
+}
 
-    if (move_is_valid) {
-      src_dest.push_back(std::pair(src_buffer_id, dest));
+/** Stores a blob into a set of buffers */
+RPC void BufferOrganizer::LocalReadBlobFromBuffers(
+    Blob &blob, std::vector<BufferInfo> &buffers) {
+  AUTO_TRACE(1)
+  size_t blob_off = 0;
+  for (BufferInfo &buffer_info : buffers) {
+    if (buffer_info.tid_.GetNodeId() != mdm_->rpc_->node_id_) {
+      continue;
+    }
+    DeviceInfo &dev_info =
+        (*mdm_->devices_)[buffer_info.tid_.GetDeviceId()];
+    if (buffer_info.t_off_ + buffer_info.blob_size_ >
+        dev_info.capacity_) {
+      HELOG(kFatal, "Out of bounds: attempting to read from offset: {} / {}"
+            " on device {}: {}",
+            buffer_info.t_off_ + buffer_info.blob_size_,
+            dev_info.capacity_,
+            buffer_info.tid_.GetDeviceId(),
+            dev_info.mount_point_->str())
+    }
+    auto io_client = borg::BorgIoClientFactory::Get(dev_info.io_api_);
+    bool ret = io_client->Read(dev_info,
+                               blob.data() + blob_off,
+                               buffer_info.t_off_,
+                               buffer_info.blob_size_);
+    blob_off += buffer_info.blob_size_;
+    if (!ret) {
+      HELOG(kFatal, "Could not perform I/O in BORG."
+                    " reading from target ID:"
+                    " (node_id: {}, tgt_id: {}, dev_id: {},"
+                    " t_off: {}, blob_size: {})",
+            buffer_info.tid_.GetNodeId(),
+            buffer_info.tid_.GetIndex(),
+            buffer_info.tid_.GetDeviceId(),
+            buffer_info.t_off_,
+            buffer_info.blob_size_)
+    }
+  }
+}
+
+/** The Global form of ReadBLobFromBuffers */
+Blob BufferOrganizer::GlobalReadBlobFromBuffers(
+    std::vector<BufferInfo> &buffers) {
+  AUTO_TRACE(1)
+  // Get the nodes to transfer buffers to
+  size_t total_size = 0;
+  auto unique_nodes = BufferPool::GroupByNodeId(buffers, total_size);
+
+  // Send the buffers to each node
+  std::vector<Blob> blobs;
+  blobs.reserve(unique_nodes.size());
+  for (auto &[node_id, size] : unique_nodes) {
+    blobs.emplace_back(size);
+    if (NODE_ID_IS_LOCAL(node_id)) {
+      LocalReadBlobFromBuffers(blobs.back(), buffers);
     } else {
-      ReleaseBuffers(context, rpc, dest);
-    }
-
-    if (std::abs(importance_score - new_access_score) < epsilon) {
-      break;
-    }
-  }
-  EnqueueBoMove(rpc, src_dest, blob_id, bucket_id, internal_blob_name,
-                BoPriority::kLow);
-}
-
-void OrganizeBlob(SharedMemoryContext *context, RpcContext *rpc,
-                  BucketID bucket_id, const std::string &blob_name,
-                  f32 epsilon, f32 importance_score) {
-  MetadataManager *mdm = GetMetadataManagerFromContext(context);
-  std::string internal_name = MakeInternalBlobName(blob_name, bucket_id);
-  u32 target_node = HashString(mdm, rpc, internal_name.c_str());
-
-  if (target_node == rpc->node_id) {
-    LocalOrganizeBlob(context, rpc, internal_name, bucket_id, epsilon,
-                      importance_score);
-  } else {
-    RpcCall<void>(rpc, target_node, "BO::OrganizeBlob", internal_name,
-                  bucket_id, epsilon);
-  }
-}
-
-void EnforceCapacityThresholds(SharedMemoryContext *context, RpcContext *rpc,
-                               ViolationInfo info) {
-  u32 target_node = info.target_id.bits.node_id;
-  if (target_node == rpc->node_id) {
-    LocalEnforceCapacityThresholds(context, rpc, info);
-  } else {
-    RpcCall<void>(rpc, target_node, "RemoteEnforceCapacityThresholds", info);
-  }
-}
-
-void LocalEnforceCapacityThresholds(SharedMemoryContext *context,
-                                    RpcContext *rpc, ViolationInfo info) {
-  MetadataManager *mdm = GetMetadataManagerFromContext(context);
-
-  // TODO(chogan): Factor out the common code in the kMin and kMax cases
-  switch (info.violation) {
-    case ThresholdViolation::kMin: {
-      // TODO(chogan): Allow sorting Targets by any metric. This
-      // implementation only works if the Targets are listed in the
-      // configuration in order of decreasing bandwidth.
-      for (u16 target_index = mdm->node_targets.length - 1;
-           target_index != info.target_id.bits.index;
-           --target_index) {
-        TargetID src_target_id = {
-          info.target_id.bits.node_id, target_index, target_index
-        };
-
-        Target *src_target = GetTargetFromId(context, src_target_id);
-        BeginTicketMutex(&src_target->effective_blobs_lock);
-        std::vector<u64> blob_ids =
-          GetChunkedIdList(mdm, src_target->effective_blobs);
-        EndTicketMutex(&src_target->effective_blobs_lock);
-
-        auto compare_importance = [context](const u64 lhs, const u64 rhs) {
-          BlobID lhs_blob_id = {};
-          lhs_blob_id.as_int = lhs;
-          f32 lhs_importance_score = LocalGetBlobImportanceScore(context,
-                                                                 lhs_blob_id);
-
-          BlobID rhs_blob_id = {};
-          rhs_blob_id.as_int = rhs;
-          f32 rhs_importance_score = LocalGetBlobImportanceScore(context,
-                                                                 rhs_blob_id);
-
-          return lhs_importance_score < rhs_importance_score;
-        };
-
-        std::sort(blob_ids.begin(), blob_ids.end(), compare_importance);
-
-        size_t bytes_moved = 0;
-
-        for (size_t idx = 0;
-             idx < blob_ids.size() && bytes_moved < info.violation_size;
-             ++idx) {
-          BlobID most_important_blob {};
-          std::vector<BufferInfo> buffers_to_move;
-          most_important_blob.as_int = blob_ids[idx];
-          std::vector<BufferID> buffer_ids =
-            LocalGetBufferIdList(mdm, most_important_blob);
-
-          // Filter out BufferIDs not in the Target
-          std::vector<BufferID> buffer_ids_in_target;
-          for (size_t i = 0; i < buffer_ids.size(); ++i) {
-            BufferHeader *header = GetHeaderByBufferId(context, buffer_ids[i]);
-            DeviceID device_id = header->device_id;
-            if (device_id == src_target_id.bits.device_id) {
-              // TODO(chogan): Needs to changes when we support num_devices !=
-              // num_targets
-              buffer_ids_in_target.push_back(buffer_ids[i]);
-            }
-          }
-          std::vector<BufferInfo> buffer_info =
-            GetBufferInfo(context, rpc, buffer_ids_in_target);
-          auto buffer_info_comparator = [](const BufferInfo &lhs,
-                                           const BufferInfo &rhs) {
-            return lhs.size > rhs.size;
-          };
-          // Sort in descending order
-          std::sort(buffer_info.begin(), buffer_info.end(),
-                    buffer_info_comparator);
-          for (size_t j = 0;
-               j < buffer_info.size() && bytes_moved < info.violation_size;
-               ++j) {
-            buffers_to_move.push_back(buffer_info[j]);
-            bytes_moved += buffer_info[j].size;
-          }
-
-          BoMoveList moves;
-          for (size_t i = 0; i < buffers_to_move.size(); ++i) {
-            PlacementSchema schema;
-            using SchemaPair = std::pair<size_t, TargetID>;
-            schema.push_back(SchemaPair(buffers_to_move[i].size,
-                                        info.target_id));
-            std::vector<BufferID> dests = GetBuffers(context, schema);
-            if (dests.size() != 0) {
-              moves.push_back(std::pair(buffers_to_move[i].id, dests));
-            }
-          }
-
-          if (moves.size() > 0) {
-            // Queue BO task to move to lower tier
-            BucketID bucket_id = GetBucketIdFromBlobId(context, rpc,
-                                                       most_important_blob);
-            std::string blob_name =
-              LocalGetBlobNameFromId(context, most_important_blob);
-            std::string internal_name = MakeInternalBlobName(blob_name,
-                                                             bucket_id);
-            EnqueueBoMove(rpc, moves, most_important_blob, bucket_id,
-                          internal_name, BoPriority::kLow);
-          }
-        }
-      }
-      break;
-    }
-
-    case ThresholdViolation::kMax: {
-      Target *target = GetTargetFromId(context, info.target_id);
-
-      f32 min_importance = FLT_MAX;
-      BlobID least_important_blob = {};
-
-      BeginTicketMutex(&target->effective_blobs_lock);
-      std::vector<u64> blob_ids = GetChunkedIdList(mdm,
-                                                   target->effective_blobs);
-      EndTicketMutex(&target->effective_blobs_lock);
-
-      // Find least important blob in violated Target
-      for (size_t i = 0; i < blob_ids.size(); ++i) {
-        BlobID blob_id = {};
-        blob_id.as_int = blob_ids[i];
-        f32 importance_score = LocalGetBlobImportanceScore(context, blob_id);
-        if (importance_score < min_importance) {
-          min_importance = importance_score;
-          least_important_blob = blob_id;
-        }
-      }
-
-      assert(!IsNullBlobId(least_important_blob));
-
-      std::vector<BufferID> all_buffer_ids =
-        LocalGetBufferIdList(mdm, least_important_blob);
-      std::vector<BufferID> buffer_ids_in_target;
-      // Filter out BufferIDs not in this Target
-      for (size_t i = 0; i < all_buffer_ids.size(); ++i) {
-        BufferHeader *header = GetHeaderByBufferId(context, all_buffer_ids[i]);
-        DeviceID device_id = header->device_id;
-        if (device_id == info.target_id.bits.device_id) {
-          // TODO(chogan): Needs to changes when we support num_devices !=
-          // num_targets
-          buffer_ids_in_target.push_back(all_buffer_ids[i]);
-        }
-      }
-
-      std::vector<BufferInfo> buffer_info =
-        GetBufferInfo(context, rpc, buffer_ids_in_target);
-      auto buffer_info_comparator = [](const BufferInfo &lhs,
-                                       const BufferInfo &rhs) {
-        return lhs.size > rhs.size;
-      };
-      // Sort in descending order
-      std::sort(buffer_info.begin(), buffer_info.end(), buffer_info_comparator);
-
-      size_t bytes_moved = 0;
-      std::vector<BufferInfo> buffers_to_move;
-      size_t index = 0;
-      // Choose largest buffer until we've moved info.violation_size
-      while (bytes_moved < info.violation_size) {
-        buffers_to_move.push_back(buffer_info[index]);
-        bytes_moved += buffer_info[index].size;
-        index++;
-      }
-
-      BoMoveList moves;
-      // TODO(chogan): Combine multiple smaller buffers into fewer larger
-      // buffers
-      for (size_t i = 0; i < buffers_to_move.size(); ++i) {
-        // TODO(chogan): Allow sorting Targets by any metric. This
-        // implementation only works if the Targets are listed in the
-        // configuration in order of decreasing bandwidth.
-        for (u16 target_index = info.target_id.bits.index + 1;
-             target_index < mdm->node_targets.length;
-             ++target_index) {
-          // Select Target 1 Tier lower than violated Target
-          TargetID target_dest = {
-            info.target_id.bits.node_id, target_index, target_index
-          };
-
-          PlacementSchema schema;
-          schema.push_back(std::pair<size_t, TargetID>(bytes_moved,
-                                                       target_dest));
-          std::vector<BufferID> dests = GetBuffers(context, schema);
-          if (dests.size() != 0) {
-            moves.push_back(std::pair(buffers_to_move[i].id, dests));
-            break;
-          }
-        }
-      }
-
-      if (moves.size() > 0) {
-        // Queue BO task to move to lower tier
-        BucketID bucket_id = GetBucketIdFromBlobId(context, rpc,
-                                                   least_important_blob);
-        std::string blob_name =
-          LocalGetBlobNameFromId(context, least_important_blob);
-        std::string internal_name = MakeInternalBlobName(blob_name, bucket_id);
-        EnqueueBoMove(rpc, moves, least_important_blob, bucket_id,
-                      internal_name, BoPriority::kLow);
-      } else {
-        LOG(WARNING)
-          << "BufferOrganizer: No capacity available in lower Targets.\n";
-      }
-      break;
-    }
-    default: {
-      HERMES_INVALID_CODE_PATH;
+      rpc_->IoCall<void>(
+          node_id, "RpcReadBlobFromBuffers",
+          IoType::kRead, blobs.back().data(), size,
+          size, buffers);
     }
   }
+
+  // If the blob was only on one node
+  if (unique_nodes.size() == 1) {
+    return std::move(blobs.back());
+  }
+
+  // Merge the blobs at the end
+  hapi::Blob blob(total_size);
+  for (size_t i = 0; i < unique_nodes.size(); ++i) {
+    auto &[node_id, size] = unique_nodes[i];
+    auto &tmp_blob = blobs[i];
+    size_t tmp_blob_off = 0;
+    for (BufferInfo &info : buffers) {
+      if (info.tid_.GetNodeId() != node_id) {
+        continue;
+      }
+      memcpy(blob.data() + info.blob_off_,
+             tmp_blob.data() + tmp_blob_off,
+             info.blob_size_);
+      tmp_blob_off += info.blob_size_;
+    }
+  }
+  return blob;
 }
 
-void LocalShutdownBufferOrganizer(SharedMemoryContext *context) {
-  // NOTE(chogan): ThreadPool destructor needs to be called manually since we
-  // allocated the BO instance with placement new.
-  context->bo->pool.~ThreadPool();
+/** Re-organize blobs based on a score */
+void BufferOrganizer::GlobalOrganizeBlob(const std::string &bucket_name,
+                                         const std::string &blob_name,
+                                         float score) {
+  AUTO_TRACE(1)
+  auto bkt = HERMES->GetBucket(bucket_name);
+  BlobId blob_id;
+  bkt.GetBlobId(blob_name, blob_id);
+  float blob_score = bkt.GetBlobScore(blob_id);
+  Context ctx;
+
+  HILOG(kDebug, "Changing blob score from: {} to {}", blob_score, score)
+
+  // Skip organizing if below threshold
+  if (abs(blob_score - score) < .05) {
+    return;
+  }
+
+  // Lock the blob to ensure it doesn't get modified
+  bkt.LockBlob(blob_id, MdLockType::kExternalWrite);
+
+  // Get the blob
+  hapi::Blob blob;
+  bkt.Get(blob_id, blob, ctx);
+
+  // Re-emplace the blob with new score
+  BlobId tmp_id;
+  ctx.blob_score_ = score;
+  bkt.Put(blob_name, blob, tmp_id, ctx);
+
+  // Unlock the blob
+  bkt.UnlockBlob(blob_id, MdLockType::kExternalWrite);
 }
 
-void FlushBlob(SharedMemoryContext *context, RpcContext *rpc, BlobID blob_id,
-               const std::string &filename, u64 offset, bool async) {
-  if (LockBlob(context, rpc, blob_id)) {
-    int open_flags = 0;
-    mode_t open_mode = 0;
-    if (access(filename.c_str(), F_OK) == 0) {
-      open_flags = O_WRONLY;
-    } else {
-      open_flags = O_WRONLY | O_CREAT | O_TRUNC;
-      open_mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+/**====================================
+ * BORG Flushing methods
+ * ===================================*/
+
+/** Flush all blobs registered in this daemon */
+void BufferOrganizer::LocalEnqueueFlushes() {
+  auto mdm = &HERMES->mdm_;
+  // Acquire the read lock on the blob map
+  ScopedRwReadLock blob_map_lock(mdm->header_->lock_[kBlobMapLock],
+                                 kBORG_LocalEnqueueFlushes);
+  // Begin checking for blobs which need flushing
+  size_t count = 0;
+  for (hipc::pair<BlobId, BlobInfo>& blob_p : *mdm->blob_map_) {
+    BlobId &blob_id = blob_p.GetFirst();
+    BlobInfo &blob_info = blob_p.GetSecond();
+    // Verify that flush is needing to happen
+    if (blob_info.mod_count_ == blob_info.last_flush_) {
+      continue;
+    }
+    // Check if bucket has flush trait
+    TagId &bkt_id = blob_info.tag_id_;
+    size_t blob_size = blob_info.blob_size_;
+    std::vector<Trait*> traits = HERMES->GetTraits(bkt_id,
+                                                   HERMES_TRAIT_FLUSH);
+    if (traits.size() == 0) {
+      continue;
+    }
+    // Schedule the blob on an I/O worker thread
+    HERMES_BORG_IO_THREAD_MANAGER->Enqueue(bkt_id, blob_id, blob_size,
+                                           std::move(traits));
+    count += 1;
+  }
+  if (count) {
+    HILOG(kDebug, "Flushing {} blobs", count);
+  }
+}
+
+/** Actually process flush operations */
+void BufferOrganizer::LocalProcessFlushes(
+    BorgIoThreadQueueInfo &bq_info,
+    _BorgIoThreadQueue& queue) {
+  // Begin flushing
+  ScopedRwWriteLock flush_lock(mdm_->header_->lock_[kFlushLock],
+                               kBORG_LocalProcessFlushes);
+  // Process tasks
+  auto entry = hipc::make_uptr<BorgIoTask>();
+  while (!queue.pop(*entry).IsNull()) {
+    BorgIoTask &task = *entry;
+    HILOG(kDebug, "Attempting to flush blob {}", task.blob_id_);
+    Blob blob;
+
+    // Verify the blob exists and then read lock it
+    auto iter = mdm_->blob_map_->find(task.blob_id_);
+    if (iter.is_end()) {
+      bq_info.load_.fetch_sub(task.blob_size_);
+      HILOG(kDebug, "Finished BORG task for blob {} and load {}",
+            task.blob_id_, bq_info.load_.load())
+      continue;
+    }
+    hipc::pair<BlobId, BlobInfo>& blob_info_p = *iter;
+    BlobInfo &blob_info = blob_info_p.GetSecond();
+    std::string blob_name = blob_info.name_->str();
+
+    // Verify that flush is needing to happen
+    if (blob_info.mod_count_ == blob_info.last_flush_) {
+      bq_info.load_.fetch_sub(task.blob_size_);
+      HILOG(kDebug, "Finished BORG task for blob {} and load {}",
+            task.blob_id_, bq_info.load_.load())
+      continue;
+    }
+    size_t last_flush = blob_info.mod_count_;
+    blob_info.last_flush_ = last_flush;
+
+    // Get the current blob from Hermes
+    api::Bucket bkt = HERMES->GetBucket(task.bkt_id_);
+    bkt.Get(task.blob_id_, blob, bkt.GetContext());
+    HILOG(kDebug, "Flushing blob {} ({}) of size {}",
+          blob_name,
+          task.blob_id_,
+          blob.size())
+    FlushTraitParams trait_params;
+    for (Trait *trait : task.traits_) {
+      trait_params.blob_ = &blob;
+      trait_params.blob_name_ = blob_name;
+      trait_params.bkt_ = &bkt;
+      trait->Run(HERMES_TRAIT_FLUSH, &trait_params);
     }
 
-    int fd = open(filename.c_str(), open_flags, open_mode);
-    if (fd != -1) {
-      LOG(INFO) << "Flushing BlobID " << blob_id.as_int << " to file "
-                << filename << " at offset " << offset << "\n";
-
-      const int kFlushBufferSize = KILOBYTES(4);
-      u8 flush_buffer[kFlushBufferSize];
-      Arena local_arena = {};
-      InitArena(&local_arena, kFlushBufferSize, flush_buffer);
-
-      if (flock(fd, LOCK_EX) != 0) {
-        FailedLibraryCall("flock");
-      }
-
-      StdIoPersistBlob(context, rpc, &local_arena, blob_id, fd, offset);
-
-      if (flock(fd, LOCK_UN) != 0) {
-        FailedLibraryCall("flock");
-      }
-
-      if (close(fd) != 0) {
-        FailedLibraryCall("close");
-      }
-    } else {
-      FailedLibraryCall("open");
-    }
-    UnlockBlob(context, rpc, blob_id);
-  }
-
-  if (async) {
-    DecrementFlushCount(context, rpc, filename);
-  }
-
-  // TODO(chogan):
-  // if (DONTNEED) {
-  //   DestroyBlobById();
-  // } else {
-  //   ReplaceBlobWithSwapBlob();
-  // }
-}
-
-bool EnqueueFlushingTask(RpcContext *rpc, BlobID blob_id,
-                         const std::string &filename, u64 offset) {
-  bool result = RpcCall<bool>(rpc, rpc->node_id, "BO::EnqueueFlushingTask",
-                              blob_id, filename, offset);
-
-  return result;
-}
-
-bool LocalEnqueueFlushingTask(SharedMemoryContext *context, RpcContext *rpc,
-                              BlobID blob_id, const std::string &filename,
-                              u64 offset) {
-  bool result = false;
-
-  // TODO(chogan): Handle Swap Blobs (should work, just needs testing)
-  if (!BlobIsInSwap(blob_id)) {
-    ThreadPool *pool = &context->bo->pool;
-    IncrementFlushCount(context, rpc, filename);
-    bool async = true;
-    pool->run(std::bind(FlushBlob, context, rpc, blob_id, filename, offset,
-                        async));
-    result = true;
-  } else {
-    HERMES_NOT_IMPLEMENTED_YET;
-  }
-
-  return result;
-}
-/**
-   place BLOBs in hierarchy
-*/
-Status PlaceInHierarchy(SharedMemoryContext *context, RpcContext *rpc,
-                        SwapBlob swap_blob, const std::string &name,
-                        const api::Context &ctx) {
-  std::vector<PlacementSchema> schemas;
-  std::vector<size_t> sizes(1, swap_blob.size);
-  Status result = CalculatePlacement(context, rpc, sizes, schemas, ctx);
-
-  if (result.Succeeded()) {
-    std::vector<u8> blob_mem(swap_blob.size);
-    Blob blob = {};
-    blob.data = blob_mem.data();
-    blob.size = blob_mem.size();
-    ReadFromSwap(context, blob, swap_blob);
-    result = PlaceBlob(context, rpc, schemas[0], blob, name,
-                       swap_blob.bucket_id, ctx, true);
-  } else {
-    LOG(ERROR) << result.Msg();
-  }
-
-  return result;
-}
-
-/** adjust flush coun locally */
-void LocalAdjustFlushCount(SharedMemoryContext *context,
-                           const std::string &vbkt_name, int adjustment) {
-  MetadataManager *mdm = GetMetadataManagerFromContext(context);
-  VBucketID id = LocalGetVBucketId(context, vbkt_name.c_str());
-  BeginTicketMutex(&mdm->vbucket_mutex);
-  VBucketInfo *info = LocalGetVBucketInfoById(mdm, id);
-  if (info) {
-    int flush_count = info->async_flush_count.fetch_add(adjustment);
-    VLOG(1) << "Flush count on VBucket " << vbkt_name
-            << (adjustment > 0 ? "incremented" : "decremented") << " to "
-            << flush_count + adjustment << "\n";
-  }
-  EndTicketMutex(&mdm->vbucket_mutex);
-}
-
-void LocalIncrementFlushCount(SharedMemoryContext *context,
-                              const std::string &vbkt_name) {
-  LocalAdjustFlushCount(context, vbkt_name, 1);
-}
-
-void LocalDecrementFlushCount(SharedMemoryContext *context,
-                         const std::string &vbkt_name) {
-  LocalAdjustFlushCount(context, vbkt_name, -1);
-}
-
-void IncrementFlushCount(SharedMemoryContext *context, RpcContext *rpc,
-                         const std::string &vbkt_name) {
-  MetadataManager *mdm = GetMetadataManagerFromContext(context);
-  u32 target_node = HashString(mdm, rpc, vbkt_name.c_str());
-
-  if (target_node == rpc->node_id) {
-    LocalIncrementFlushCount(context, vbkt_name);
-  } else {
-    RpcCall<bool>(rpc, target_node, "RemoteIncrementFlushCount",
-                  vbkt_name);
+    // Dequeue
+    bq_info.load_.fetch_sub(task.blob_size_);
+    HILOG(kDebug, "Finished BORG task for blob {} and load {}",
+          task.blob_id_, bq_info.load_.load())
   }
 }
 
-void DecrementFlushCount(SharedMemoryContext *context, RpcContext *rpc,
-                         const std::string &vbkt_name) {
-  MetadataManager *mdm = GetMetadataManagerFromContext(context);
-  u32 target_node = HashString(mdm, rpc, vbkt_name.c_str());
-
-  if (target_node == rpc->node_id) {
-    LocalDecrementFlushCount(context, vbkt_name);
-  } else {
-    RpcCall<bool>(rpc, target_node, "RemoteDecrementFlushCount",
-                  vbkt_name);
-  }
+/** Barrier for all flushing to complete */
+void BufferOrganizer::LocalWaitForFullFlush() {
+  HILOG(kInfo, "Full synchronous flush on node {}", rpc_->node_id_)
+  LocalEnqueueFlushes();
+  HERMES_BORG_IO_THREAD_MANAGER->WaitForFlush();
+  HILOG(kInfo, "Finished synchronous flush on node {}", rpc_->node_id_)
 }
 
-void AwaitAsyncFlushingTasks(SharedMemoryContext *context, RpcContext *rpc,
-                             VBucketID id) {
-  auto sleep_time = std::chrono::milliseconds(500);
-  int outstanding_flushes = 0;
-  int log_every = 10;
-  int counter = 0;
-
-  while ((outstanding_flushes =
-          GetNumOutstandingFlushingTasks(context, rpc, id)) != 0) {
-    if (++counter == log_every) {
-      LOG(INFO) << "Waiting for " << outstanding_flushes
-                << " outstanding flushes" << std::endl;
-      counter = 0;
-    }
-    std::this_thread::sleep_for(sleep_time);
+/** Barrier for all I/O in Hermes to flush */
+void BufferOrganizer::GlobalWaitForFullFlush() {
+  for (int i = 0; i < (int)rpc_->hosts_.size(); ++i) {
+    int node_id = i + 1;
+    HILOG(kInfo, "Wait for flush on node {}", node_id)
+    rpc_->Call<bool>(node_id, "RpcWaitForFullFlush");
   }
 }
 

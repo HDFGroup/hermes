@@ -31,23 +31,18 @@ endif()
 
 set(HDF5_HERMES_VFD_SRCS
   ${CMAKE_CURRENT_SOURCE_DIR}/H5FDhermes.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/H5FDhermes.c
-  )
+        ${CMAKE_CURRENT_SOURCE_DIR}/H5FDhermes.cc)
 
 add_library(hdf5_hermes_vfd ${HDF5_HERMES_VFD_SRCS})
-set_target_properties(hdf5_hermes_vfd PROPERTIES LIBRARY_OUTPUT_DIRECTORY
-  ${HERMES_VFD_LIBRARY_DIR}
-)
-target_include_directories(hdf5_hermes_vfd PRIVATE ${CMAKE_SOURCE_DIR}/wrapper)
 target_include_directories(hdf5_hermes_vfd
   SYSTEM PUBLIC ${HDF5_HERMES_VFD_EXT_INCLUDE_DEPENDENCIES}
 )
-
+add_dependencies(hdf5_hermes_vfd
+        hermes hermes_posix_io_client)
 target_link_libraries(hdf5_hermes_vfd
-  hermes_wrapper
-  MPI::MPI_C
-  ${HDF5_HERMES_VFD_EXT_LIB_DEPENDENCIES}
-)
+        hermes hermes_posix_io_client
+        MPI::MPI_CXX
+        ${HDF5_HERMES_VFD_EXT_LIB_DEPENDENCIES})
 
 set(HDF5_HERMES_VFD_EXPORTED_LIBS hdf5_hermes_vfd ${HDF5_HERMES_VFD_EXPORTED_LIBS} PARENT_SCOPE)
 

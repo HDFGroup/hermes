@@ -10,18 +10,23 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_INCLUDE_HERMES_SHM_CONSTANTS_DATA_STRUCTURE_SINGLETON_MACROS_H_H
-#define HERMES_SHM_INCLUDE_HERMES_SHM_CONSTANTS_DATA_STRUCTURE_SINGLETON_MACROS_H_H
+#ifndef HERMES_INCLUDE_HERMES_CONSTANTS_DATA_STRUCTURE_SINGLETON_MACROS_H_H
+#define HERMES_INCLUDE_HERMES_CONSTANTS_DATA_STRUCTURE_SINGLETON_MACROS_H_H
 
 #include <hermes_shm/util/singleton.h>
 
-#define HERMES_SHM_SYSTEM_INFO scs::Singleton<hermes_shm::SystemInfo>::GetInstance()
-#define HERMES_SHM_SYSTEM_INFO_T hermes_shm::SystemInfo*
+#define HERMES_SYSTEM_INFO hshm::GlobalSingleton<hshm::SystemInfo>::GetInstance()
+#define HERMES_SYSTEM_INFO_T hshm::SystemInfo*
 
-#define HERMES_SHM_MEMORY_MANAGER scs::Singleton<hermes_shm::ipc::MemoryManager>::GetInstance()
-#define HERMES_SHM_MEMORY_MANAGER_T hermes_shm::ipc::MemoryManager*
+#define HERMES_MEMORY_REGISTRY hshm::GlobalSingleton<hshm::ipc::MemoryRegistry>::GetInstance()
+#define HERMES_MEMORY_REGISTRY_REF hshm::GlobalSingleton<hshm::ipc::MemoryRegistry>::GetRef()
+#define HERMES_MEMORY_REGISTRY_T hshm::ipc::MemoryRegistry*
 
-#define HERMES_SHM_THREAD_MANAGER scs::Singleton<hermes_shm::ThreadManager>::GetInstance()
-#define HERMES_SHM_THREAD_MANAGER_T hermes_shm::ThreadManager*
+#define HERMES_MEMORY_MANAGER hshm::GlobalSingleton<hshm::ipc::MemoryManager>::GetInstance()
+#define HERMES_MEMORY_MANAGER_REF hshm::GlobalSingleton<hshm::ipc::MemoryManager>::GetRef()
+#define HERMES_MEMORY_MANAGER_T hshm::ipc::MemoryManager*
 
-#endif  // include_labstor_constants_data_structure_singleton_macros_h
+#define HERMES_THREAD_MODEL hshm::GlobalSingleton<hshm::ThreadModelManager>::GetInstance()
+#define HERMES_THREAD_MODEL_T hshm::ThreadModelManager*
+
+#endif  // HERMES_INCLUDE_HERMES_CONSTANTS_DATA_STRUCTURE_SINGLETON_MACROS_H_H

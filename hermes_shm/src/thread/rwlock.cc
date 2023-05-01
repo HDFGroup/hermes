@@ -10,30 +10,44 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include "hermes_shm/thread/lock/rwlock.h"
-#include "hermes_shm/thread/thread_manager.h"
 
-namespace hermes_shm {
+#include "hermes_shm/thread/lock/rwlock.h"
+#include "hermes_shm/thread/thread_model_manager.h"
+#include "hermes_shm/util/logging.h"
+
+namespace hshm {
+
+/**====================================
+ * Rw Lock
+ * ===================================*/
 
 /**
  * Acquire the read lock
  * */
-void RwLock::ReadLock() {
+void RwLock::ReadLock(uint32_t owner) {
   bool ret = false;
   RwLockPayload expected, desired;
-  auto thread_info = HERMES_SHM_THREAD_MANAGER->GetThreadStatic();
   do {
-    expected.as_int_ = payload_.load();
-    if (expected.IsWriteLocked()) {
-      thread_info->Yield();
-      continue;
+    for (int i = 0; i < 1; ++i) {
+      expected.as_int_ = payload_.load();
+      if (expected.IsWriteLocked()) {
+        continue;
+      }
+      desired = expected;
+      desired.bits_.r_ += 1;
+      ret = payload_.compare_exchange_weak(
+        expected.as_int_,
+        desired.as_int_);
+      if (ret) {
+#ifdef HERMES_DEBUG_LOCK
+        owner_ = owner;
+        HILOG(kDebug, "Acquired read lock for {}", owner);
+#endif
+        return;
+      }
     }
-    desired = expected;
-    desired.bits_.r_ += 1;
-    ret = payload_.compare_exchange_weak(
-      expected.as_int_,
-      desired.as_int_);
-  } while (!ret);
+    HERMES_THREAD_MODEL->Yield();
+  } while (true);
 }
 
 /**
@@ -42,6 +56,9 @@ void RwLock::ReadLock() {
 void RwLock::ReadUnlock() {
   bool ret;
   RwLockPayload expected, desired;
+#ifdef HERMES_DEBUG_LOCK
+  owner_ = 0;
+#endif
   do {
     expected.as_int_ = payload_.load();
     desired = expected;
@@ -55,26 +72,30 @@ void RwLock::ReadUnlock() {
 /**
  * Acquire the write lock
  * */
-void RwLock::WriteLock() {
+void RwLock::WriteLock(uint32_t owner) {
   bool ret = false;
   RwLockPayload expected, desired;
-  auto thread_info = HERMES_SHM_THREAD_MANAGER->GetThreadStatic();
   do {
-    expected.as_int_ = payload_.load();
-    if (expected.IsReadLocked()) {
-      thread_info->Yield();
-      continue;
+    for (int i = 0; i < 1; ++i) {
+      expected.as_int_ = payload_.load();
+      if (expected.IsReadLocked() || expected.IsWriteLocked()) {
+        continue;
+      }
+      desired = expected;
+      desired.bits_.w_ += 1;
+      ret = payload_.compare_exchange_weak(
+        expected.as_int_,
+        desired.as_int_);
+      if (ret) {
+#ifdef HERMES_DEBUG_LOCK
+        owner_ = owner;
+        HILOG(kDebug, "Acquired write lock for {}", owner);
+#endif
+        return;
+      }
     }
-    if (expected.IsWriteLocked()) {
-      thread_info->Yield();
-      continue;
-    }
-    desired = expected;
-    desired.bits_.w_ += 1;
-    ret = payload_.compare_exchange_weak(
-      expected.as_int_,
-      desired.as_int_);
-  } while (!ret);
+    HERMES_THREAD_MODEL->Yield();
+  } while (true);
 }
 
 /**
@@ -83,6 +104,9 @@ void RwLock::WriteLock() {
 void RwLock::WriteUnlock() {
   bool ret;
   RwLockPayload expected, desired;
+#ifdef HERMES_DEBUG_LOCK
+  owner_ = 0;
+#endif
   do {
     expected.as_int_ = payload_.load();
     desired = expected;
@@ -93,34 +117,16 @@ void RwLock::WriteUnlock() {
   } while (!ret);
 }
 
-/**
- * Verify the reference count for reads (for debugging)
- * */
-void RwLock::assert_r_refcnt(int ref) {
-  if (RwLockPayload(payload_).bits_.r_ != ref) {
-    throw 1;
-  }
-}
-
-/**
- * Verify the reference count for writes (for debugging)
- * */
-void RwLock::assert_w_refcnt(int ref) {
-  if (RwLockPayload(payload_).bits_.w_ > 1) {
-    throw 1;
-  }
-}
-
-/**
- * SCOPED R/W READ LOCK
- * */
+/**====================================
+ * ScopedRwReadLock
+ * ===================================*/
 
 /**
  * Constructor
  * */
-ScopedRwReadLock::ScopedRwReadLock(RwLock &lock)
+ScopedRwReadLock::ScopedRwReadLock(RwLock &lock, uint32_t owner)
 : lock_(lock), is_locked_(false) {
-  Lock();
+  Lock(owner);
 }
 
 /**
@@ -133,9 +139,9 @@ ScopedRwReadLock::~ScopedRwReadLock() {
 /**
  * Acquire the read lock
  * */
-void ScopedRwReadLock::Lock() {
+void ScopedRwReadLock::Lock(uint32_t owner) {
   if (!is_locked_) {
-    lock_.ReadLock();
+    lock_.ReadLock(owner);
     is_locked_ = true;
   }
 }
@@ -150,16 +156,16 @@ void ScopedRwReadLock::Unlock() {
   }
 }
 
-/**
- * SCOPED R/W WRITE LOCK
- * */
+/**====================================
+ * ScopedRwWriteLock
+ * ===================================*/
 
 /**
  * Constructor
  * */
-ScopedRwWriteLock::ScopedRwWriteLock(RwLock &lock)
+ScopedRwWriteLock::ScopedRwWriteLock(RwLock &lock, uint32_t owner)
 : lock_(lock), is_locked_(false) {
-  Lock();
+  Lock(owner);
 }
 
 /**
@@ -172,9 +178,9 @@ ScopedRwWriteLock::~ScopedRwWriteLock() {
 /**
  * Acquire the write lock
  * */
-void ScopedRwWriteLock::Lock() {
+void ScopedRwWriteLock::Lock(uint32_t owner) {
   if (!is_locked_) {
-    lock_.WriteLock();
+    lock_.WriteLock(owner);
     is_locked_ = true;
   }
 }
@@ -189,4 +195,4 @@ void ScopedRwWriteLock::Unlock() {
   }
 }
 
-}  // namespace hermes_shm
+}  // namespace hshm

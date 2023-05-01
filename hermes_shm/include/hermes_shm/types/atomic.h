@@ -10,12 +10,13 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_INCLUDE_HERMES_SHM_TYPES_ATOMIC_H_
-#define HERMES_SHM_INCLUDE_HERMES_SHM_TYPES_ATOMIC_H_
+#ifndef HERMES_INCLUDE_HERMES_TYPES_ATOMIC_H_
+#define HERMES_INCLUDE_HERMES_TYPES_ATOMIC_H_
 
 #include <atomic>
+#include <hermes_shm/constants/macros.h>
 
-namespace hermes_shm::ipc {
+namespace hshm::ipc {
 
 /** Provides the API of an atomic, without being atomic */
 template<typename T>
@@ -23,13 +24,13 @@ struct nonatomic {
   T x;
 
   /** Constructor */
-  inline nonatomic() = default;
+  HSHM_ALWAYS_INLINE nonatomic() = default;
 
   /** Full constructor */
-  inline nonatomic(T def) : x(def) {}
+  HSHM_ALWAYS_INLINE explicit nonatomic(T def) : x(def) {}
 
   /** Atomic fetch_add wrapper*/
-  inline T fetch_add(
+  HSHM_ALWAYS_INLINE T fetch_add(
     T count, std::memory_order order = std::memory_order_seq_cst) {
     (void) order;
     x += count;
@@ -37,7 +38,7 @@ struct nonatomic {
   }
 
   /** Atomic fetch_sub wrapper*/
-  inline T fetch_sub(
+  HSHM_ALWAYS_INLINE T fetch_sub(
     T count, std::memory_order order = std::memory_order_seq_cst) {
     (void) order;
     x -= count;
@@ -45,21 +46,21 @@ struct nonatomic {
   }
 
   /** Atomic load wrapper */
-  inline T load(
+  HSHM_ALWAYS_INLINE T load(
     std::memory_order order = std::memory_order_seq_cst) const {
     (void) order;
     return x;
   }
 
   /** Atomic exchange wrapper */
-  inline void exchange(
+  HSHM_ALWAYS_INLINE void exchange(
     T count, std::memory_order order = std::memory_order_seq_cst) {
     (void) order;
     x = count;
   }
 
   /** Atomic compare exchange weak wrapper */
-  inline bool compare_exchange_weak(T& expected, T desired,
+  HSHM_ALWAYS_INLINE bool compare_exchange_weak(T& expected, T desired,
                                     std::memory_order order =
                                     std::memory_order_seq_cst) {
     (void) expected; (void) order;
@@ -68,7 +69,7 @@ struct nonatomic {
   }
 
   /** Atomic compare exchange strong wrapper */
-  inline bool compare_exchange_strong(T& expected, T desired,
+  HSHM_ALWAYS_INLINE bool compare_exchange_strong(T& expected, T desired,
                                       std::memory_order order =
                                       std::memory_order_seq_cst) {
     (void) expected; (void) order;
@@ -77,62 +78,62 @@ struct nonatomic {
   }
 
   /** Atomic pre-increment operator */
-  inline nonatomic& operator++() {
+  HSHM_ALWAYS_INLINE nonatomic& operator++() {
     ++x;
     return *this;
   }
 
   /** Atomic post-increment operator */
-  inline nonatomic operator++(int) {
+  HSHM_ALWAYS_INLINE nonatomic operator++(int) {
     return atomic(x+1);
   }
 
   /** Atomic pre-decrement operator */
-  inline nonatomic& operator--() {
+  HSHM_ALWAYS_INLINE nonatomic& operator--() {
     --x;
     return *this;
   }
 
   /** Atomic post-decrement operator */
-  inline nonatomic operator--(int) {
+  HSHM_ALWAYS_INLINE nonatomic operator--(int) {
     return atomic(x-1);
   }
 
   /** Atomic add operator */
-  inline nonatomic operator+(T count) const {
+  HSHM_ALWAYS_INLINE nonatomic operator+(T count) const {
     return nonatomic(x + count);
   }
 
   /** Atomic subtract operator */
-  inline nonatomic operator-(T count) const {
+  HSHM_ALWAYS_INLINE nonatomic operator-(T count) const {
     return nonatomic(x - count);
   }
 
   /** Atomic add assign operator */
-  inline nonatomic& operator+=(T count) {
+  HSHM_ALWAYS_INLINE nonatomic& operator+=(T count) {
     x += count;
     return *this;
   }
 
   /** Atomic subtract assign operator */
-  inline nonatomic& operator-=(T count) {
+  HSHM_ALWAYS_INLINE nonatomic& operator-=(T count) {
     x -= count;
     return *this;
   }
 
   /** Atomic assign operator */
-  inline nonatomic& operator=(T count) {
+  HSHM_ALWAYS_INLINE nonatomic& operator=(T count) {
     x = count;
     return *this;
   }
 
   /** Equality check */
-  inline bool operator==(const nonatomic &other) const {
+  HSHM_ALWAYS_INLINE bool operator==(const nonatomic &other) const {
     return (other.x == x);
   }
 
   /** Inequality check */
-  inline bool operator!=(const nonatomic &other) const {
+  HSHM_ALWAYS_INLINE bool operator!=(const nonatomic &other) const {
     return (other.x != x);
   }
 };
@@ -143,110 +144,110 @@ struct atomic {
   std::atomic<T> x;
 
   /** Constructor */
-  inline atomic() = default;
+  HSHM_ALWAYS_INLINE atomic() = default;
 
   /** Full constructor */
-  inline atomic(T def) : x(def) {}
+  HSHM_ALWAYS_INLINE explicit atomic(T def) : x(def) {}
 
   /** Atomic fetch_add wrapper*/
-  inline T fetch_add(
+  HSHM_ALWAYS_INLINE T fetch_add(
     T count, std::memory_order order = std::memory_order_seq_cst) {
     return x.fetch_add(count, order);
   }
 
   /** Atomic fetch_sub wrapper*/
-  inline T fetch_sub(
+  HSHM_ALWAYS_INLINE T fetch_sub(
     T count, std::memory_order order = std::memory_order_seq_cst) {
     return x.fetch_sub(count, order);
   }
 
   /** Atomic load wrapper */
-  inline T load(
+  HSHM_ALWAYS_INLINE T load(
     std::memory_order order = std::memory_order_seq_cst) const {
     return x.load(order);
   }
 
   /** Atomic exchange wrapper */
-  inline void exchange(
+  HSHM_ALWAYS_INLINE void exchange(
     T count, std::memory_order order = std::memory_order_seq_cst) {
     x.exchange(count, order);
   }
 
   /** Atomic compare exchange weak wrapper */
-  inline bool compare_exchange_weak(T& expected, T desired,
+  HSHM_ALWAYS_INLINE bool compare_exchange_weak(T& expected, T desired,
                                     std::memory_order order =
                                     std::memory_order_seq_cst) {
     return x.compare_exchange_weak(expected, desired, order);
   }
 
   /** Atomic compare exchange strong wrapper */
-  inline bool compare_exchange_strong(T& expected, T desired,
+  HSHM_ALWAYS_INLINE bool compare_exchange_strong(T& expected, T desired,
                                       std::memory_order order =
                                       std::memory_order_seq_cst) {
     return x.compare_exchange_strong(expected, desired, order);
   }
 
   /** Atomic pre-increment operator */
-  inline atomic& operator++() {
+  HSHM_ALWAYS_INLINE atomic& operator++() {
     ++x;
     return *this;
   }
 
   /** Atomic post-increment operator */
-  inline atomic operator++(int) {
-    return atomic(x+1);
+  HSHM_ALWAYS_INLINE atomic operator++(int) {
+    return atomic(x + 1);
   }
 
   /** Atomic pre-decrement operator */
-  inline atomic& operator--() {
+  HSHM_ALWAYS_INLINE atomic& operator--() {
     --x;
     return *this;
   }
 
   /** Atomic post-decrement operator */
-  inline atomic operator--(int) {
-    return atomic(x-1);
+  HSHM_ALWAYS_INLINE atomic operator--(int) {
+    return atomic(x - 1);
   }
 
   /** Atomic add operator */
-  inline atomic operator+(T count) const {
+  HSHM_ALWAYS_INLINE atomic operator+(T count) const {
     return x + count;
   }
 
   /** Atomic subtract operator */
-  inline atomic operator-(T count) const {
+  HSHM_ALWAYS_INLINE atomic operator-(T count) const {
     return x - count;
   }
 
   /** Atomic add assign operator */
-  inline atomic& operator+=(T count) {
+  HSHM_ALWAYS_INLINE atomic& operator+=(T count) {
     x += count;
     return *this;
   }
 
   /** Atomic subtract assign operator */
-  inline atomic& operator-=(T count) {
+  HSHM_ALWAYS_INLINE atomic& operator-=(T count) {
     x -= count;
     return *this;
   }
 
   /** Atomic assign operator */
-  inline atomic& operator=(T count) {
+  HSHM_ALWAYS_INLINE atomic& operator=(T count) {
     x.exchange(count);
     return *this;
   }
 
   /** Equality check */
-  inline bool operator==(const atomic &other) const {
+  HSHM_ALWAYS_INLINE bool operator==(const atomic &other) const {
     return (other.x == x);
   }
 
   /** Inequality check */
-  inline bool operator!=(const atomic &other) const {
+  HSHM_ALWAYS_INLINE bool operator!=(const atomic &other) const {
     return (other.x != x);
   }
 };
 
-}
+}  // namespace hshm::ipc
 
-#endif //HERMES_SHM_INCLUDE_HERMES_SHM_TYPES_ATOMIC_H_
+#endif  // HERMES_INCLUDE_HERMES_TYPES_ATOMIC_H_

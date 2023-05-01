@@ -14,26 +14,26 @@
 #include <stdarg.h>
 #include <unistd.h>
 
-#include <experimental/filesystem>
+#include <filesystem>
 #include <iostream>
+#include "hermes.h"
+#include <stdio.h>
 
 #include "catch_config.h"
-#if HERMES_INTERCEPT == 1
-#include "posix/real_api.h"
-#endif
+#include "adapter/posix/posix_api.h"
 
-#ifndef O_TMPFILE
-#define O_TMPFILE 0
+#if HERMES_INTERCEPT == 1
+#include "adapter/posix/posix_fs_api.h"
 #endif
 
 #include "adapter_test_utils.h"
 
-namespace stdfs = std::experimental::filesystem;
+namespace stdfs = std::filesystem;
 
-namespace hermes::adapter::posix::test {
+namespace hermes::adapter::fs::test {
 struct Arguments {
   std::string filename = "test.dat";
-  std::string directory = "/tmp";
+  std::string directory = "/tmp/test_hermes";
   size_t request_size = 65536;
 };
 struct Info {
@@ -42,24 +42,24 @@ struct Info {
   bool supports_tmpfile;
   std::vector<char> write_data;
   std::vector<char> read_data;
-  std::string new_file;
-  std::string existing_file;
-  std::string new_file_cmp;
-  std::string existing_file_cmp;
+  std::string new_file;       // Tracked by Hermes
+  std::string existing_file;  // Tracked by Hermes
+  std::string new_file_cmp;   // NOT tracked by Hermes
+  std::string existing_file_cmp;  // NOT tracekd by Hermes
   size_t num_iterations = 64;
   unsigned int offset_seed = 1;
   unsigned int rs_seed = 1;
   unsigned int temporal_interval_seed = 5;
-  size_t total_size;
+  size_t total_size;    // The size of the EXISTING file
   size_t stride_size = 1024;
   unsigned int temporal_interval_ms = 1;
   size_t small_min = 1, small_max = 4 * 1024;
   size_t medium_min = 4 * 1024 + 1, medium_max = 256 * 1024;
   size_t large_min = 256 * 1024 + 1, large_max = 3 * 1024 * 1024;
 };
-}  // namespace hermes::adapter::posix::test
-hermes::adapter::posix::test::Arguments args;
-hermes::adapter::posix::test::Info info;
+}  // namespace hermes::adapter::fs::test
+hermes::adapter::fs::test::Arguments args;
+hermes::adapter::fs::test::Info info;
 std::vector<char> gen_random(const int len) {
   auto tmp_s = std::vector<char>(len);
   static const char alphanum[] =
@@ -74,6 +74,10 @@ std::vector<char> gen_random(const int len) {
 }
 
 int init(int* argc, char*** argv) {
+#if HERMES_INTERCEPT == 1
+  setenv("HERMES_FLUSH_MODE", "kSync", 1);
+  HERMES->client_config_.flushing_mode_ = hermes::FlushingMode::kSync;
+#endif
   MPI_Init(argc, argv);
   info.write_data = gen_random(args.request_size);
   info.read_data = std::vector<char>(args.request_size, 'r');
@@ -86,7 +90,38 @@ int finalize() {
   return 0;
 }
 
+void IgnoreAllFiles() {
+#if HERMES_INTERCEPT == 1
+  HERMES->client_config_.SetAdapterPathTracking(info.existing_file_cmp, false);
+  HERMES->client_config_.SetAdapterPathTracking(info.new_file_cmp, false);
+  HERMES->client_config_.SetAdapterPathTracking(info.new_file, false);
+  HERMES->client_config_.SetAdapterPathTracking(info.existing_file, false);
+#endif
+}
+
+void TrackFiles() {
+#if HERMES_INTERCEPT == 1
+  HERMES->client_config_.SetAdapterPathTracking(info.new_file, true);
+  HERMES->client_config_.SetAdapterPathTracking(info.existing_file, true);
+#endif
+}
+
+void RemoveFile(const std::string &path) {
+  stdfs::remove(path);
+  if (stdfs::exists(path)) {
+    HELOG(kFatal, "Failed to remove: {}", path)
+  }
+}
+
+void RemoveFiles() {
+  RemoveFile(info.new_file);
+  RemoveFile(info.new_file_cmp);
+  RemoveFile(info.existing_file);
+  RemoveFile(info.existing_file_cmp);
+}
+
 int pretest() {
+  // Initialize path names
   stdfs::path fullpath = args.directory;
   fullpath /= args.filename;
   info.new_file = fullpath.string() + "_new_" + std::to_string(getpid());
@@ -95,43 +130,55 @@ int pretest() {
       fullpath.string() + "_new_cmp" + "_" + std::to_string(getpid());
   info.existing_file_cmp =
       fullpath.string() + "_ext_cmp" + "_" + std::to_string(getpid());
-  if (stdfs::exists(info.new_file)) stdfs::remove(info.new_file);
-  if (stdfs::exists(info.new_file_cmp)) stdfs::remove(info.new_file_cmp);
-  if (stdfs::exists(info.existing_file)) stdfs::remove(info.existing_file);
-  if (stdfs::exists(info.existing_file_cmp))
-    stdfs::remove(info.existing_file_cmp);
-  if (!stdfs::exists(info.existing_file)) {
+
+  // Ignore all files
+  IgnoreAllFiles();
+
+  // Remove existing files from the FS
+  RemoveFiles();
+
+  // Create the file which is untracked by Hermes
+  if (true) {
     std::string cmd = "{ tr -dc '[:alnum:]' < /dev/urandom | head -c " +
                       std::to_string(args.request_size * info.num_iterations) +
-                      "; } > " + info.existing_file + " 2> /dev/null";
-    int status = system(cmd.c_str());
-    REQUIRE(status != -1);
-    REQUIRE(stdfs::file_size(info.existing_file) ==
-            args.request_size * info.num_iterations);
-    info.total_size = stdfs::file_size(info.existing_file);
-  }
-  if (!stdfs::exists(info.existing_file_cmp)) {
-    std::string cmd = "cp " + info.existing_file + " " + info.existing_file_cmp;
+                      "; } > " + info.existing_file_cmp + " 2> /dev/null";
     int status = system(cmd.c_str());
     REQUIRE(status != -1);
     REQUIRE(stdfs::file_size(info.existing_file_cmp) ==
             args.request_size * info.num_iterations);
+    info.total_size = stdfs::file_size(info.existing_file_cmp);
+  }
+
+  // Create the file that is being tracks by Hermes
+  if (true) {
+    std::string cmd = "cp " + info.existing_file_cmp + " " + info.existing_file;
+    int status = system(cmd.c_str());
+    REQUIRE(status != -1);
+    auto check = stdfs::file_size(info.existing_file) ==
+                 args.request_size * info.num_iterations;
+    if (!check) {
+      HELOG(kFatal, "File sizes weren't equivalent after copy")
+    }
+    REQUIRE(check);
   }
   REQUIRE(info.total_size > 0);
-#if HERMES_INTERCEPT == 1
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.existing_file_cmp);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.new_file_cmp);
-#endif
+
+  // Begin tracking the Hermes files
+  TrackFiles();
   return 0;
 }
 
-int posttest(bool compare_data = true) {
+void Clear() {
 #if HERMES_INTERCEPT == 1
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.existing_file);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.new_file);
+  HERMES->Clear();
 #endif
+}
+
+int posttest(bool compare_data = true) {
+  IgnoreAllFiles();
   if (compare_data && stdfs::exists(info.new_file) &&
       stdfs::exists(info.new_file_cmp)) {
+    // Verify the NEW file is the same in Hermes + the backend
     size_t size = stdfs::file_size(info.new_file);
     REQUIRE(size == stdfs::file_size(info.new_file_cmp));
     if (size > 0) {
@@ -188,22 +235,18 @@ int posttest(bool compare_data = true) {
           break;
         }
       }
+      if (char_mismatch != 0) {
+        std::cout << "The files " <<  info.existing_file
+                  << " and " << info.existing_file_cmp
+                  << " had mismatched characters" << std::endl;
+      }
       REQUIRE(char_mismatch == 0);
     }
   }
-  /* Clean up. */
-  if (stdfs::exists(info.new_file)) stdfs::remove(info.new_file);
-  if (stdfs::exists(info.existing_file)) stdfs::remove(info.existing_file);
-  if (stdfs::exists(info.new_file_cmp)) stdfs::remove(info.new_file_cmp);
-  if (stdfs::exists(info.existing_file_cmp))
-    stdfs::remove(info.existing_file_cmp);
-
-#if HERMES_INTERCEPT == 1
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_file_cmp);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.new_file_cmp);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.new_file);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_file);
-#endif
+  /* Delete the files from both Hermes and the backend. */
+  TrackFiles();
+  RemoveFiles();
+  Clear();
   return 0;
 }
 
@@ -222,6 +265,7 @@ int fh_cmp;
 int status_orig;
 size_t size_read_orig;
 size_t size_written_orig;
+bool is_scase_ = false;
 void test_open(const char* path, int flags, ...) {
   int mode = 0;
   if (flags & O_CREAT || flags & O_TMPFILE) {
@@ -271,6 +315,9 @@ void test_read(char* ptr, size_t size) {
         unmatching_chars = i;
         break;
       }
+    }
+    if (unmatching_chars != 0) {
+      std::cerr << "There were unmatching chars" << std::endl;
     }
     REQUIRE(unmatching_chars == 0);
   }

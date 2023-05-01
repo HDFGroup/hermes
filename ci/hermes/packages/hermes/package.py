@@ -5,13 +5,19 @@ class Hermes(CMakePackage):
     url = "https://github.com/HDFGroup/hermes/tarball/master"
     git = "https://github.com/HDFGroup/hermes.git"
     version('master', branch='master')
+    version('1.0.0', git='https://github.com/lukemartinlogan/hermes.git', branch='new-borg')
+    version('dev-priv', git='https://github.com/lukemartinlogan/hermes.git', branch='new-borg')
+    version('pnnl', git='https://github.com/lukemartinlogan/hermes.git',
+            branch='pnnl')
     variant('vfd', default=False, description='Enable HDF5 VFD')
+    variant('ares', default=False, description='Enable full libfabric install')
     depends_on('mochi-thallium~cereal@0.8.3')
     depends_on('catch2@3.0.1')
-    depends_on('glpk@4:')
     depends_on('mpich@3.3.2:')
-    depends_on('glog@0.4:')
     depends_on('yaml-cpp')
+    depends_on('boost@1.7:')
+    depends_on('libfabric@1.14.1 fabrics=mlx,rxd,rxm,shm,sockets,tcp,udp,verbs,xpmem',
+               when='+ares')
     depends_on('hdf5@1.13.0:', when='+vfd')
 
     def cmake_args(self):
@@ -26,6 +32,7 @@ class Hermes(CMakePackage):
     def set_include(self, env, path):
         env.append_flags('CFLAGS', '-I{}'.format(path))
         env.append_flags('CXXFLAGS', '-I{}'.format(path))
+        env.append_flags('CMAKE_PREFIX_PATH', '-I{}'.format(path))
 
     def set_lib(self, env, path):
         env.prepend_path('LD_LIBRARY_PATH', path)

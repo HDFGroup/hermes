@@ -14,9 +14,10 @@
 #define HERMES_DATA_STAGER_STAGE_IN_H_
 
 #include <hermes.h>
+#include <mpi.h>
 
 #include "hermes_types.h"
-#include "posix/fs_api.h"
+#include "posix/posix_io_client.h"
 
 namespace hermes {
 
@@ -38,24 +39,32 @@ class DataStagerTypeConv {
 
 class DataStager {
  public:
-  virtual void StageIn(std::string url, PlacementPolicy dpe) = 0;
+  virtual void StageIn(std::string url, hapi::PlacementPolicy dpe) = 0;
   virtual void StageIn(std::string url, off_t off, size_t size,
-                       PlacementPolicy dpe) = 0;
+                       hapi::PlacementPolicy dpe) = 0;
   virtual void StageOut(std::string url) = 0;
 
  protected:
   void DivideRange(off_t off, size_t size, off_t &new_off, size_t &new_size) {
-    auto mdm = Singleton<hermes::adapter::fs::MetadataManager>::GetInstance();
-    int concurrency = 1;
+    int nprocs = 1;
     int rank = 0;
-    if (mdm->is_mpi) {
-      concurrency = mdm->comm_size;
-      rank = mdm->rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+    int ranks_for_io = nprocs;
+
+    // Ensure that all ranks perform at least 32MB of I/O
+    size_t min_io_per_rank = MEGABYTES(32);
+    if (size < nprocs * min_io_per_rank) {
+      ranks_for_io = size / min_io_per_rank;
+      if (size % min_io_per_rank) {
+        ranks_for_io += 1;
+      }
     }
-    new_size = size / concurrency;
+
+    new_size = size / ranks_for_io;
     new_off = off + new_size * rank;
-    if (rank == concurrency - 1) {
-      new_size += size % concurrency;
+    if (rank == ranks_for_io - 1) {
+      new_size += size % ranks_for_io;
     }
   }
 };

@@ -14,27 +14,24 @@
 #include <stdarg.h>
 #include <unistd.h>
 
-#include <experimental/filesystem>
+#include <filesystem>
 #include <iostream>
 
 #include "catch_config.h"
 
-#ifndef O_TMPFILE
-#define O_TMPFILE 0
-#endif
-
 #include "adapter_test_utils.h"
 
 #if HERMES_INTERCEPT == 1
-#include "posix/real_api.h"
+#include "adapter/posix/posix_api.h"
+#include "adapter/posix/posix_fs_api.h"
 #endif
 
-namespace stdfs = std::experimental::filesystem;
+namespace stdfs = std::filesystem;
 
-namespace hermes::adapter::posix::test {
+namespace hermes::adapter::fs::test {
 struct Arguments {
   std::string filename = "test.dat";
-  std::string directory = "/tmp";
+  std::string directory = "/tmp/test_hermes";
   size_t request_size = 65536;
 };
 struct Info {
@@ -63,10 +60,10 @@ struct Info {
   size_t medium_min = 4 * 1024 + 1, medium_max = 512 * 1024;
   size_t large_min = 512 * 1024 + 1, large_max = 3 * 1024 * 1024;
 };
-}  // namespace hermes::adapter::posix::test
+}  // namespace hermes::adapter::fs::test
 
-hermes::adapter::posix::test::Arguments args;
-hermes::adapter::posix::test::Info info;
+hermes::adapter::fs::test::Arguments args;
+hermes::adapter::fs::test::Info info;
 std::vector<char> gen_random(const int len) {
   std::vector<char> tmp_s(len);
   static const char alphanum[] =
@@ -85,6 +82,10 @@ std::vector<char> gen_random(const int len) {
 }
 
 int init(int* argc, char*** argv) {
+#if HERMES_INTERCEPT == 1
+  setenv("HERMES_FLUSH_MODE", "kSync", 1);
+  HERMES->client_config_.flushing_mode_ = hermes::FlushingMode::kSync;
+#endif
   MPI_Init(argc, argv);
   info.write_data = gen_random(args.request_size);
   info.read_data = std::vector<char>(args.request_size, 'r');
@@ -191,19 +192,26 @@ int pretest() {
   REQUIRE(info.total_size > 0);
   MPI_Barrier(MPI_COMM_WORLD);
 #if HERMES_INTERCEPT == 1
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.existing_file_cmp);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.new_file_cmp);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(
-      info.existing_shared_file_cmp);
+  HERMES->client_config_.SetAdapterPathTracking(info.existing_file_cmp, false);
+  HERMES->client_config_.SetAdapterPathTracking(info.new_file_cmp, false);
+  HERMES->client_config_.SetAdapterPathTracking(
+      info.existing_shared_file_cmp, false);
 #endif
   return 0;
 }
 
+void Clear() {
+#if HERMES_INTERCEPT == 1
+  HERMES->Clear();
+#endif
+}
+
 int posttest(bool compare_data = true) {
 #if HERMES_INTERCEPT == 1
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.existing_file);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.new_file);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.existing_shared_file);
+  HERMES->client_config_.SetAdapterPathTracking(info.existing_file, false);
+  HERMES->client_config_.SetAdapterPathTracking(info.new_file, false);
+  HERMES->client_config_.SetAdapterPathTracking(
+      info.existing_shared_file, false);
 #endif
   if (compare_data && stdfs::exists(info.new_file) &&
       stdfs::exists(info.new_file_cmp)) {
@@ -305,15 +313,18 @@ int posttest(bool compare_data = true) {
     if (stdfs::exists(info.existing_shared_file_cmp))
       stdfs::remove(info.existing_shared_file_cmp);
   }
+  Clear();
 
-#if HERMES_INTERCEPT == 1
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_file_cmp);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.new_file_cmp);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.new_file);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_file);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_shared_file);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_shared_file_cmp);
-#endif
+  #if HERMES_INTERCEPT == 1
+    HERMES->client_config_.SetAdapterPathTracking(info.existing_file_cmp, true);
+    HERMES->client_config_.SetAdapterPathTracking(info.new_file_cmp, true);
+    HERMES->client_config_.SetAdapterPathTracking(info.new_file, true);
+    HERMES->client_config_.SetAdapterPathTracking(info.existing_file, true);
+    HERMES->client_config_.SetAdapterPathTracking(
+        info.existing_shared_file, true);
+    HERMES->client_config_.SetAdapterPathTracking(
+        info.existing_shared_file_cmp, true);
+  #endif
   return 0;
 }
 
@@ -332,7 +343,7 @@ int fh_cmp;
 int status_orig;
 size_t size_read_orig;
 size_t size_written_orig;
-
+bool is_scase_ = false;
 void test_open(const char* path, int flags, ...) {
   int mode = 0;
   if (flags & O_CREAT || flags & O_TMPFILE) {

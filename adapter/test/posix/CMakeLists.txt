@@ -1,63 +1,62 @@
-function(gcc_hermes exec tag_name tags conf)
-    add_test(NAME Test${exec}_${tag_name} COMMAND "${CMAKE_BINARY_DIR}/bin/${exec}" ${tags} --reporter compact -d yes)
-    set_property(TEST Test${exec}_${tag_name}
-            PROPERTY ENVIRONMENT HERMES_CONF=${CMAKE_SOURCE_DIR}/adapter/test/data/${conf}.yaml)
-    set_property(TEST Test${exec}_${tag_name} APPEND
-            PROPERTY ENVIRONMENT LSAN_OPTIONS=suppressions=${CMAKE_SOURCE_DIR}/test/data/asan.supp)
-endfunction()
-
-function(gcc_hermes_mode exec tag_name tags mode path)
-    set(test_name Test${exec}_${tag_name}_${mode}_${path})
-    add_test(NAME ${test_name} COMMAND "${CMAKE_BINARY_DIR}/bin/${exec}" ${tags} --reporter compact -d yes)
-    set_property(TEST ${test_name}
-            PROPERTY ENVIRONMENT HERMES_CONF=${CMAKE_SOURCE_DIR}/adapter/test/data/hermes.yaml)
-    set_property(TEST ${test_name} APPEND
-            PROPERTY ENVIRONMENT LSAN_OPTIONS=suppressions=${CMAKE_SOURCE_DIR}/test/data/asan.supp)
-    set_property(TEST ${test_name} APPEND
-            PROPERTY ENVIRONMENT ADAPTER_MODE=${mode})
-    set_property(TEST ${test_name} APPEND
-            PROPERTY ENVIRONMENT SET_PATH=${path})
-endfunction()
+include_directories(${CMAKE_SOURCE_DIR}/src/api)
+include_directories(${CMAKE_SOURCE_DIR}/src)
 
 #------------------------------------------------------------------------------
 # Posix Adapter tests
 #------------------------------------------------------------------------------
 
 add_executable(posix_adapter_test posix_adapter_test.cpp ${ADAPTER_COMMON})
-gcc(posix_adapter_test "")
+add_dependencies(posix_adapter_test hermes)
+target_link_libraries(posix_adapter_test hermes)
+pytest(posix test_posix_basic)
 
 add_executable(posix_adapter_mpi_test posix_adapter_mpi_test.cpp ${ADAPTER_COMMON})
-mpi(posix_adapter_mpi_test 2 "")
+pytest(posix test_posix_basic_mpi)
 
 add_executable(hermes_posix_adapter_test posix_adapter_test.cpp ${ADAPTER_COMMON})
 target_link_libraries(hermes_posix_adapter_test hermes_posix)
 add_dependencies(hermes_posix_adapter_test hermes_posix hermes_daemon)
 set_target_properties(hermes_posix_adapter_test PROPERTIES COMPILE_FLAGS "-DHERMES_INTERCEPT=1")
-gcc_hermes(hermes_posix_adapter_test "" "~[request_size=range-large]" hermes)
-gcc_hermes(hermes_posix_adapter_test "large" "[request_size=range-large]" hermes)
+pytest(posix test_hermes_posix_basic_small)
+pytest(posix test_hermes_posix_basic_large)
 
 add_executable(hermes_posix_adapter_mpi_test posix_adapter_mpi_test.cpp ${ADAPTER_COMMON})
 target_link_libraries(hermes_posix_adapter_mpi_test hermes_posix)
 add_dependencies(hermes_posix_adapter_mpi_test hermes_posix hermes_daemon)
 set_target_properties(hermes_posix_adapter_mpi_test PROPERTIES COMPILE_FLAGS "-DHERMES_INTERCEPT=1")
-mpi_daemon(hermes_posix_adapter_mpi_test 2 "~[request_size=range-large]" "" 1)
-mpi_daemon(hermes_posix_adapter_mpi_test 2 "[request_size=range-large]" "large" 1)
+pytest(posix test_hermes_posix_basic_mpi_small)
+pytest(posix test_hermes_posix_basic_mpi_large)
 
 include_directories(${CMAKE_SOURCE_DIR}/adapter)
-add_executable(posix_simple_io simple_io.cc)
+add_executable(posix_simple_io_mpi posix_simple_io_mpi.cc)
+add_dependencies(posix_simple_io_mpi hermes_posix)
+target_link_libraries(posix_simple_io_mpi hermes_posix)
+
+add_executable(hermes_posix_simple_io_omp posix_simple_io_omp.cc)
+add_dependencies(hermes_posix_simple_io_omp hermes_posix)
+target_link_libraries(hermes_posix_simple_io_omp hermes_posix)
+
+add_executable(posix_simple_io_omp posix_simple_io_omp.cc)
+target_link_libraries(posix_simple_io_omp)
+
+pytest(posix test_hermes_posix_simple_io_omp_default)
+pytest(posix test_hermes_posix_simple_io_omp_scratch)
+pytest(posix test_hermes_posix_simple_io_omp_preload)
 
 set(POSIX_TESTS
   posix_adapter_test
   hermes_posix_adapter_test
   posix_adapter_mpi_test
   hermes_posix_adapter_mpi_test
-  posix_simple_io
+  posix_simple_io_mpi
+  posix_simple_io_omp
 )
 
 foreach(program ${POSIX_TESTS})
   target_include_directories(${program} PRIVATE ${HERMES_ADAPTER_DIR})
   target_include_directories(${program} PRIVATE ${HERMES_ADAPTER_TEST_DIR})
-  target_link_libraries(${program} Catch2::Catch2 -lstdc++fs -lc MPI::MPI_CXX)
+  target_link_libraries(${program} Catch2::Catch2 -lstdc++fs -lc
+          MPI::MPI_CXX OpenMP::OpenMP_CXX)
 endforeach()
 
 if(HERMES_INSTALL_TESTS)

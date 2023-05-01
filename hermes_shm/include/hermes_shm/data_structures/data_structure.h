@@ -10,13 +10,18 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_DATA_STRUCTURES_DATA_STRUCTURE_H_
-#define HERMES_SHM_DATA_STRUCTURES_DATA_STRUCTURE_H_
 
-#include "internal/shm_archive.h"
-#include "internal/shm_container.h"
-#include "internal/shm_smart_ptr.h"
-#include "internal/shm_macros.h"
-#include "internal/shm_container.h"
+#ifndef HERMES_DATA_STRUCTURES_DATA_STRUCTURE_H_
+#define HERMES_DATA_STRUCTURES_DATA_STRUCTURE_H_
 
-#endif  // HERMES_SHM_DATA_STRUCTURES_DATA_STRUCTURE_H_
+#include "hermes_shm/data_structures/ipc/internal/shm_internal.h"
+#include "hermes_shm/memory/memory_manager.h"
+#include "hermes_shm/data_structures/ipc/pair.h"
+#include "hermes_shm/data_structures/ipc/string.h"
+#include "ipc/list.h"
+#include "ipc/vector.h"
+#include "ipc/unordered_map.h"
+
+namespace hipc = hshm::ipc;
+
+#endif  // HERMES_DATA_STRUCTURES_DATA_STRUCTURE_H_

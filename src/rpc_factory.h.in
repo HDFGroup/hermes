@@ -1,0 +1,19 @@
+//
+// Created by lukemartinlogan on 12/4/22.
+//
+
+#ifndef HERMES_SRC_RPC_FACTORY_H_
+#define HERMES_SRC_RPC_FACTORY_H_
+
+#ifndef @CMAKE_HERMES_RPC_TYPE@
+#define @CMAKE_HERMES_RPC_TYPE@
+#endif
+
+#if defined(HERMES_RPC_THALLIUM)
+#include "rpc_thallium.h"
+#define RPC_TYPE ThalliumRpc
+#else
+#error "RPC implementation required (e.g., -DHERMES_RPC_THALLIUM)."
+#endif
+
+#endif  // HERMES_SRC_RPC_FACTORY_H_

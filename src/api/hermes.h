@@ -10,250 +10,265 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**
- * \mainpage Welcome to Hermes!
- *
- * \section sec_coordinates Important Coordinates
- *
- * - <a href="https://github.com/HDFGroup/hermes">GitHub</a>
- *
- */
+#ifndef HERMES_SRC_API_HERMES_H_
+#define HERMES_SRC_API_HERMES_H_
 
-#ifndef HERMES_H_
-#define HERMES_H_
-
-#include <glog/logging.h>
-
-#include <cstdint>
-#include <string>
-
-#include "buffer_pool.h"
+#include "config_client.h"
+#include "config_server.h"
 #include "hermes_types.h"
-#include "metadata_management.h"
+#include "utils.h"
+
 #include "rpc.h"
+#include "metadata_manager.h"
+#include "buffer_pool.h"
+#include "buffer_organizer.h"
+#include "prefetcher.h"
+#include "trait_manager.h"
+#include "bucket.h"
 
-/** \file hermes.h */
+#include "hermes_shm/util/singleton.h"
 
-namespace hermes {
-namespace api {
+// Singleton macros
+#define HERMES hshm::Singleton<hermes::api::Hermes>::GetInstance()
+#define HERMES_T hermes::api::Hermes*
 
-/** \brief Return the (semantic versioning compatible) version of Hermes.
- *
- * \return A string in the form MAJOR.MINOR.PATCH
- */
-std::string GetVersion();
+namespace hapi = hermes::api;
 
-/** Class representing an instance of a Hermes buffering system. */
-class Hermes {
- public:
-  /** \bool{Hermes is initialized} */
-  bool is_initialized;
+namespace hermes::api {
 
-  // TODO(chogan): Temporarily public to facilitate iterative development.
-  hermes::SharedMemoryContext context_; /**< shared memory context */
-  hermes::CommunicationContext comm_;   /**< communication context */
-  hermes::RpcContext rpc_;              /**< remote procedure call context */
-  hermes::Arena trans_arena_; /**< arena backed by allocated memory. */
-  /** The name of the shared memory segment in which all Hermes data is
-   * stored.
-   */
-  std::string shmem_name_;
-  /** The name of the primary RPC server. */
-  std::string rpc_server_name_;
-
-  Hermes() {}
-
-  /**
-     Constructor
-   */
-  explicit Hermes(SharedMemoryContext context) : context_(context) {}
-
-  /** \brief Return \bool{this rank is an application core}
-   *
-   * An application core is a core or rank on which user code runs as opposed to
-   * the Hermes core (or rank) which only runs Hermes services.
-   *
-   * \return \bool{this rank is an application core}
-   */
-  bool IsApplicationCore();
-
-  /** \brief Returns \bool{this is the first MPI rank on this node}
-   *
-   * Hermes assigns numeric IDs to each rank. The first rank on the node is the
-   * lowest ID on that node.
-   *
-   * \return \bool{this is the first MPI rank on this node}
-   */
-  bool IsFirstRankOnNode();
-
-  /** \brief A barrier across all application processes.
-   *
-   * Like MPI_Barrier but only involves application ranks.
-   */
-  void AppBarrier();
-
-  /** \brief Returns the rank of this process.
-   *
-   * Hermes assigns each application core a unique rank.
-   *
-   * \return The rank of this process.
-   */
-  int GetProcessRank();
-
-  /** \brief Return ID of the node this process is running on.
-   *
-   * Hermes assigns each node a numeric ID.
-   *
-   * \return The node's ID.
-   */
-  int GetNodeId();
-
-  /** \brief Returns the total number of application processes.
-   *
-   * Does not count Hermes processes.
-   *
-   * \return The number of application processes.
-   */
-  int GetNumProcesses();
-
-  /** \brief Get an application communicator handle.
-   *
-   * The handle can be cast to the appropriate type for the communication
-   * backend and used in the backend's API calls. For example, when using the
-   * MPI communication backend (the default), this function returns a pointer to
-   * an MPI_Comm object, which can then be used in any MPI call.
-   *
-   * \return A void pointer to a communicator handle.
-   */
-  void *GetAppCommunicator();
-
-  /** \brief Shutdown Hermes.
-   *
-   * This should be called by every process (application and Hermes cores)
-   * before shutting down the communication backend (e.g., MPI_Finalize).
-   *
-   * \param force_rpc_shutdown This should be \c true if Hermes was initialized
-   * as a daemon.
-   */
-  void Finalize(bool force_rpc_shutdown = false);
-
-  /** \brief Shutdown application cores.
-   *
-   * To be called from application cores that were started separately from a
-   * Hermes daemon. Normally this is called from adapters.
-   *
-   * \param stop_daemon By default this function will stop the daemon this
-   * client is connected to. Passing \c false here will keep it alive.
-   */
-  void FinalizeClient(bool stop_daemon = true);
-
-  /** \todo Is this still necessary?
-   *
-   */
-  void RemoteFinalize();
-
-  /** \brief Starts a Hermes daemon.
-   *
-   * Starts all Hermes services, then waits on the main thread to be finalized.
-   *
-   * \pre The Hermes instance must be initialized with InitHermesDaemon.
-   */
-  void RunDaemon();
-
-  /** \brief Check if a given Bucket contains a Blob.
-   *
-   * \param bucket_name The name of the Bucket to check.
-   * \param blob_name The name of the Blob to check.
-   *
-   * \return \bool{the bucket \p bucket_name contains the Blob \p blob_name}
-   */
-  bool BucketContainsBlob(const std::string &bucket_name,
-                          const std::string &blob_name);
-
-  /** \brief Returns true if \p bucket_name exists in this Hermes instance.
-   *
-   * \param bucket_name The name of the Bucket to check.
-   *
-   * \return \bool{\p bucket_name exists in this Hermes instance}
-   */
-  bool BucketExists(const std::string &bucket_name);
+/**
+ * The Hermes shared-memory header
+ * */
+struct HermesShm {
+  hipc::Pointer ram_tier_;
+  hipc::ShmArchive<MetadataManagerShm> mdm_;
+  hipc::ShmArchive<BufferPoolShm> bpm_;
+  hipc::ShmArchive<BufferOrganizerShm> borg_;
 };
 
-class Bucket;
+/**
+ * An index into all Hermes-related data structures.
+ * */
+class Hermes {
+ public:
+  HermesType mode_;
+  HermesShm *header_;
+  ServerConfig server_config_;
+  ClientConfig client_config_;
+  MetadataManager mdm_;
+  BufferPool bpm_;
+  BufferOrganizer borg_;
+  TraitManager traits_;
+  Prefetcher prefetch_;
+  RPC_TYPE rpc_;
+  hipc::Allocator *main_alloc_;
+  bool is_being_initialized_;
+  bool is_initialized_;
+  bool is_terminated_;
+  bool is_transparent_;
+  hshm::Mutex lock_;
 
-/** Renames a bucket referred to by name only */
-Status RenameBucket(const std::string &old_name, const std::string &new_name,
-                    Context &ctx);
+ public:
+  /**====================================
+   * PUBLIC Init Operations
+   * ===================================*/
 
-/** \todo Not implemented yet. */
-Status TransferBlob(const Bucket &src_bkt, const std::string &src_blob_name,
-                    Bucket &dst_bkt, const std::string &dst_blob_name,
-                    Context &ctx);
+  /** Default constructor */
+  Hermes() : is_being_initialized_(false),
+             is_initialized_(false),
+             is_terminated_(false),
+             is_transparent_(false) {}
 
-/** \brief Initialize an instance of Hermes.
- *
- * \param config_file The (relative or absolute) path to a hermes configuration
- * file
- * \param is_daemon \c true if initializing this Hermes instance as a daemon.
- * \param is_adapter \c true if initializing this Hermes instance as an adapter,
- * or client to an existing daemon.
- *
- * \pre Only one of \p is_daemon and \p is_adapter can be \c true.
- *
- * \return An initialized Hermes instance.
- */
-std::shared_ptr<api::Hermes> InitHermes(const char *config_file = NULL,
-                                        bool is_daemon = false,
-                                        bool is_adapter = false);
+  /** Destructor */
+  ~Hermes() {}
 
-}  // namespace api
+  /** Whether or not Hermes is currently being initialized */
+  bool IsBeingInitialized() { return is_being_initialized_; }
 
-/** \overload
- *
- * Allows programatically generating configurations.
- *
- * \param config a pointer to configuration
- * \param is_daemon a flag to run Hermes as a daemon
- * \param is_adapter a flag to run Hermes in adapter mode
- *
- * \return An initialized Hermes instance.
- */
-std::shared_ptr<api::Hermes> InitHermes(Config *config, bool is_daemon = false,
-                                        bool is_adapter = false);
+  /** Whether or not Hermes is initialized */
+  bool IsInitialized() { return is_initialized_; }
 
-/** \brief Initialize a Hermes instance as a daemon.
- *
- * A Hermes daemon is one or more processes (one per node) that handle all
- * Hermes background services. This includes RPC servers, thread pools, buffer
- * organization, and SystemViewState updates. A daemon is necessary in workflows
- * that involve 2 or more applications sharing buffered data. Without a daemon,
- * (i.e., co-deploying Hermes services with an application) the lifetime of
- * Hermes is tied to the app.
- *
- * \param config_file The (relative or absolute) path to a hermes configuration
- * file
- *
- * \return An initialized Hermes instance.
- */
-std::shared_ptr<api::Hermes> InitHermesDaemon(char *config_file = NULL);
+  /** Whether or not Hermes is finalized */
+  bool IsTerminated() { return is_terminated_; }
 
-/** \overload
- *
- * \param config A valid Config.
- */
-std::shared_ptr<api::Hermes> InitHermesDaemon(Config *config);
+  /** Initialize Hermes explicitly */
+  static Hermes* Create(HermesType mode = HermesType::kClient,
+                        std::string server_config_path = "",
+                        std::string client_config_path = "") {
+    auto hermes = HERMES;
+    hermes->Init(mode, server_config_path, client_config_path);
+    return hermes;
+  }
 
-/** \brief  Initialize a Hermes instance as a client or adapter.
- *
- * \param config_file The (relative or absolute) path to a hermes configuration
- * file
- *
- * \pre An existing Hermes daemon must already be running.
- *
- * \return An initialized Hermes instance.
- */
-std::shared_ptr<api::Hermes> InitHermesClient(const char *config_file = NULL);
+ public:
+  /**====================================
+   * PUBLIC Finalize Operations
+   * ===================================*/
 
-}  // namespace hermes
+  /** Finalize Hermes explicitly */
+  void Finalize();
 
-#endif  // HERMES_H_
+  /** Run the Hermes core Daemon */
+  void RunDaemon();
+
+  /** Stop the Hermes core Daemon */
+  void StopDaemon();
+
+ public:
+  /**====================================
+   * PUBLIC Bucket Operations
+   * ===================================*/
+
+  /** Get or create a Bucket in Hermes */
+  Bucket GetBucket(std::string name,
+                   Context ctx = Context(),
+                   size_t backend_size = 0);
+
+  /** Get an existing Bucket in Hermes */
+  Bucket GetBucket(TagId bkt_id);
+
+  /**====================================
+   * PUBLIC I/O Operations
+   * ===================================*/
+
+  /** Waits for all blobs to finish being flushed */
+  void Flush();
+
+  /** Destroy all buckets and blobs in this instance */
+  void Clear();
+
+  /**====================================
+   * PUBLIC Tag Operations
+   * ===================================*/
+
+  /** Create a generic tag in Hermes */
+  TagId CreateTag(const std::string &tag_name) {
+    std::vector<TraitId> traits;
+    return mdm_.GlobalCreateTag(tag_name, false, traits);
+  }
+
+  /** Get the TagId  */
+  TagId GetTagId(const std::string &tag_name) {
+    return mdm_.GlobalGetTagId(tag_name);
+  }
+
+  /** Locate all blobs with a tag */
+  std::vector<BlobId> GroupBy(TagId tag_id);
+
+  /**====================================
+   * PUBLIC Trait Operations
+   * ===================================*/
+
+  /** Create a trait */
+  template<typename TraitT, typename ...Args>
+  TraitId RegisterTrait(TraitT *trait) {
+    TraitId id = GetTraitId(trait->GetTraitUuid());
+    if (!id.IsNull()) {
+      HILOG(kDebug, "Found existing trait trait: {}", trait->GetTraitUuid())
+      return id;
+    }
+    HILOG(kDebug, "Registering a new trait: {}", trait->GetTraitUuid())
+    id = HERMES->mdm_.GlobalRegisterTrait(TraitId::GetNull(),
+                                          trait->trait_info_);
+    HILOG(kDebug, "Giving trait {} id {}.{}",
+          trait->GetTraitUuid(), id.node_id_, id.unique_)
+    return id;
+  }
+
+  /** Create a trait */
+  template<typename TraitT, typename ...Args>
+  TraitId RegisterTrait(const std::string &trait_uuid,
+                        Args&& ...args) {
+    TraitId id = GetTraitId(trait_uuid);
+    if (!id.IsNull()) {
+      HILOG(kDebug, "Found existing trait trait: {}", trait_uuid)
+      return id;
+    }
+    HILOG(kDebug, "Registering new trait: {}", trait_uuid)
+    TraitT obj(trait_uuid, std::forward<Args>(args)...);
+    id = HERMES->mdm_.GlobalRegisterTrait(TraitId::GetNull(),
+                                           obj.trait_info_);
+    HILOG(kDebug, "Giving trait \"{}\" id {}.{}",
+          trait_uuid, id.node_id_, id.unique_)
+    return id;
+  }
+
+  /** Get trait id */
+  TraitId GetTraitId(const std::string &trait_uuid) {
+    return HERMES->mdm_.GlobalGetTraitId(trait_uuid);
+  }
+
+  /** Get the trait */
+  Trait* GetTrait(TraitId trait_id) {
+    return mdm_.GlobalGetTrait(trait_id);
+  }
+
+  /** Attach a trait to a tag */
+  void AttachTrait(TagId tag_id, TraitId trait_id) {
+    HERMES->mdm_.GlobalTagAddTrait(tag_id, trait_id);
+  }
+
+  /** Get traits attached to tag */
+  std::vector<Trait*> GetTraits(TagId tag_id,
+                                uint32_t flags = ALL_BITS(uint32_t)) {
+    // HILOG(kDebug, "Getting the traits for tag {}", tag_id)
+    std::vector<TraitId> trait_ids = HERMES->mdm_.GlobalTagGetTraits(tag_id);
+    std::vector<Trait*> traits;
+    traits.reserve(trait_ids.size());
+    for (TraitId &trait_id : trait_ids) {
+      auto trait = GetTrait(trait_id);
+      if (!trait) { continue; }
+      if (trait->GetTraitFlags().Any(flags)) {
+        traits.emplace_back(trait);
+      }
+    }
+    return traits;
+  }
+
+ private:
+  /**====================================
+   * PRIVATE Init + Finalize Operations
+   * ===================================*/
+
+  /** Internal initialization of Hermes */
+  void Init(HermesType mode = HermesType::kClient,
+            std::string server_config_path = "",
+            std::string client_config_path = "");
+
+  /** Initialize Hermes as a server */
+  void InitServer(std::string server_config_path);
+
+  /** Initialize Hermes as a client to the daemon */
+  void InitClient(std::string server_config_path,
+                  std::string client_config_path);
+
+  /** Load the server-side configuration */
+  void LoadServerConfig(std::string config_path);
+
+  /** Load the client-side configuration */
+  void LoadClientConfig(std::string config_path);
+
+  /** Initialize shared-memory between daemon and client */
+  void InitSharedMemory();
+
+  /** Connect to a Daemon's shared memory */
+  void LoadSharedMemory();
+
+  /** Finalize Daemon mode */
+  void FinalizeServer();
+
+  /** Finalize client mode */
+  void FinalizeClient();
+};
+
+#define TRANSPARENT_HERMES\
+  if (!HERMES->IsInitialized() && \
+      !HERMES->IsBeingInitialized() && \
+      !HERMES->IsTerminated()) {\
+    HERMES->Create(hermes::HermesType::kClient);\
+    HERMES->is_transparent_ = true;\
+  }
+
+}  // namespace hermes::api
+
+#endif  // HERMES_SRC_API_HERMES_H_

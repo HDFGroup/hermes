@@ -10,18 +10,15 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+
 #include "basic_test.h"
 #include "test_init.h"
 #include <mpi.h>
-
-#include "hermes_shm/memory/allocator/stack_allocator.h"
 
 Allocator *alloc_g = nullptr;
 
 void Posttest() {
   std::string shm_url = "test_allocators";
-  auto mem_mngr = HERMES_SHM_MEMORY_MANAGER;
-  mem_mngr->DestroyBackend(shm_url);
   alloc_g = nullptr;
 }
 

@@ -3,6 +3,10 @@ project(hermes_shm)
 
 set(CMAKE_CXX_STANDARD 17)
 
+#------------------------------------------------------------------------------
+# Build Tests
+#------------------------------------------------------------------------------
+
 add_executable(test_allocator_exec
         ${TEST_MAIN}/main.cc
         test_init.cc
@@ -12,8 +16,36 @@ add_dependencies(test_allocator_exec hermes_shm_data_structures)
 target_link_libraries(test_allocator_exec
         hermes_shm_data_structures Catch2::Catch2 MPI::MPI_CXX OpenMP::OpenMP_CXX)
 
-# PAGE ALLOCATOR TESTS
-add_test(NAME test_page_allocator COMMAND
-        ${CMAKE_CURRENT_BINARY_DIR}/test_allocator_exec "StackAllocator")
-add_test(NAME test_page_allocator_4t COMMAND
-        ${CMAKE_CURRENT_BINARY_DIR}/test_allocator_exec "StackAllocatorMultithreaded")
+#------------------------------------------------------------------------------
+# Test Cases
+#------------------------------------------------------------------------------
+
+# ALLOCATOR tests
+set(ALLOCATORS
+        StackAllocator
+        MallocAllocator
+        ScalablePageAllocator)
+foreach(ALLOCATOR ${ALLOCATORS})
+    add_test(NAME test_${ALLOCATOR} COMMAND
+            ${CMAKE_BINARY_DIR}/bin/test_allocator_exec "${ALLOCATOR}")
+endforeach()
+
+# Multi-Thread ALLOCATOR tests
+set(MT_ALLOCATORS
+        StackAllocator
+        ScalablePageAllocator)
+foreach(ALLOCATOR ${MT_ALLOCATORS})
+    add_test(NAME test_${ALLOCATOR}_4t COMMAND
+            ${CMAKE_BINARY_DIR}/bin/test_allocator_exec "${ALLOCATOR}Multithreaded")
+endforeach()
+
+#------------------------------------------------------------------------------
+# Install Targets
+#------------------------------------------------------------------------------
+install(TARGETS
+        test_allocator_exec
+        EXPORT
+        ${HERMES_EXPORTED_TARGETS}
+        LIBRARY DESTINATION ${HERMES_INSTALL_LIB_DIR}
+        ARCHIVE DESTINATION ${HERMES_INSTALL_LIB_DIR}
+        RUNTIME DESTINATION ${HERMES_INSTALL_BIN_DIR})

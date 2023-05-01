@@ -11,416 +11,250 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "bucket.h"
+#include "data_placement_engine_factory.h"
 
-#include <iostream>
-#include <vector>
+namespace hermes::api {
 
-#include "utils.h"
-#include "buffer_pool.h"
-#include "metadata_management.h"
+using hermes::adapter::AdapterMode;
 
-namespace hermes {
+/**====================================
+ * Bucket Operations
+ * ===================================*/
 
-namespace api {
+/**
+ * Either initialize or fetch the bucket.
+ * */
+Bucket::Bucket(const std::string &bkt_name,
+               Context &ctx,
+               size_t backend_size)
+: mdm_(&HERMES->mdm_), bpm_(&HERMES->bpm_), name_(bkt_name) {
+  std::vector<TraitId> traits;
+  auto ret = mdm_->GlobalGetOrCreateTag(bkt_name, true, traits, backend_size);
+  id_ = ret.first;
+  did_create_ = ret.second;
+}
 
-Bucket::Bucket(const std::string &initial_name,
-               const std::shared_ptr<Hermes> &h, Context ctx)
-  : name_(initial_name), hermes_(h), ctx_(ctx) {
-  if (IsBucketNameTooLong(name_)) {
-    id_.as_int = 0;
-    throw std::length_error("Bucket name is too long: " +
-                            std::to_string(kMaxBucketNameSize));
-  } else {
-    id_ = GetOrCreateBucketId(&hermes_->context_, &hermes_->rpc_, name_);
-    if (!IsValid()) {
-      throw std::runtime_error("Bucket id is invalid.");
-    }
+/**
+ * Either initialize or fetch the bucket.
+ * */
+Bucket::Bucket(TagId tag_id)
+    : mdm_(&HERMES->mdm_), bpm_(&HERMES->bpm_) {
+  name_ = mdm_->GlobalGetTagName(tag_id);
+  id_ = tag_id;
+  did_create_ = false;
+}
+
+/**
+ * Attach a trait to the bucket
+ * */
+void Bucket::AttachTrait(TraitId trait_id) {
+  HERMES->AttachTrait(id_, trait_id);
+}
+
+/**
+ * Get the current size of the bucket
+ * */
+size_t Bucket::GetSize() {
+  return mdm_->GlobalGetBucketSize(id_);
+}
+
+/**
+   * Update the size of the bucket
+   * Needed for the adapters for now.
+   * */
+void Bucket::SetSize(size_t new_size) {
+  mdm_->GlobalSetBucketSize(id_, new_size);
+}
+
+/**
+ * Lock a bucket
+ * */
+void Bucket::LockBucket(MdLockType type) {
+  mdm_->GlobalLockBucket(id_, type);
+}
+
+/**
+ * Unlock a bucket
+ * */
+void Bucket::UnlockBucket(MdLockType type) {
+  mdm_->GlobalUnlockBucket(id_, type);
+}
+
+/**
+ * Rename this bucket
+ * */
+void Bucket::Rename(const std::string &new_bkt_name) {
+  mdm_->GlobalRenameTag(id_, new_bkt_name);
+}
+
+/**
+   * Clears the buckets contents, but doesn't destroy its metadata
+   * */
+void Bucket::Clear() {
+  mdm_->GlobalClearBucket(id_);
+}
+
+/**
+ * Destroys this bucket along with all its contents.
+ * */
+void Bucket::Destroy() {
+  mdm_->GlobalDestroyTag(id_);
+}
+
+/**====================================
+ * Blob Operations
+ * ===================================*/
+
+/**
+ * Get the id of a blob from the blob name
+ * */
+Status Bucket::GetBlobId(const std::string &blob_name,
+                         BlobId &blob_id) {
+  blob_id = mdm_->GlobalGetBlobId(GetId(), blob_name);
+  return Status();
+}
+
+/**
+ * Get the name of a blob from the blob id
+ *
+ * @param blob_id the blob_id
+ * @return The Status of the operation
+ * */
+std::string Bucket::GetBlobName(const BlobId &blob_id) {
+  return mdm_->GlobalGetBlobName(blob_id);
+}
+
+/**
+ * Get the score of a blob from the blob id
+ *
+ * @param blob_id the blob_id
+ * @return The Status of the operation
+ * */
+float Bucket::GetBlobScore(const BlobId &blob_id) {
+  return mdm_->GlobalGetBlobScore(blob_id);
+}
+
+
+/**
+ * Lock the bucket
+ * */
+bool Bucket::LockBlob(BlobId blob_id, MdLockType lock_type) {
+  return mdm_->GlobalLockBlob(blob_id, lock_type);
+}
+
+/**
+ * Unlock the bucket
+ * */
+bool Bucket::UnlockBlob(BlobId blob_id, MdLockType lock_type) {
+  return mdm_->GlobalUnlockBlob(blob_id, lock_type);
+}
+
+/**
+ * Put \a blob_id Blob into the bucket
+ * */
+Status Bucket::TryCreateBlob(const std::string &blob_name,
+                             BlobId &blob_id,
+                             Context &ctx) {
+  std::pair<BlobId, bool> ret = mdm_->GlobalTryCreateBlob(id_, blob_name);
+  blob_id = ret.first;
+  if (ret.second) {
+    mdm_->GlobalTagAddBlob(id_,
+                           blob_id);
   }
+  return Status();
 }
 
-Bucket::~Bucket() {
-  if (IsValid()) {
-    Context ctx;
-    Release(ctx);
-  }
+/**
+ * Label \a blob_id blob with \a tag_name TAG
+ * */
+Status Bucket::TagBlob(BlobId &blob_id,
+                       TagId &tag_id) {
+  mdm_->GlobalTagAddBlob(tag_id, blob_id);
+  return mdm_->GlobalTagBlob(blob_id, tag_id);
 }
 
-std::string Bucket::GetName() const {
-  return name_;
-}
+/**
+ * Put \a blob_id Blob into the bucket
+ * */
+Status Bucket::Put(std::string blob_name,
+                   const Blob &blob,
+                   BlobId &blob_id,
+                   Context &ctx) {
+  // Calculate placement
+  auto dpe = DPEFactory::Get(ctx.policy);
+  std::vector<size_t> blob_sizes(1, blob.size());
+  std::vector<PlacementSchema> schemas;
+  dpe->CalculatePlacement(blob_sizes, schemas, ctx);
 
-u64 Bucket::GetId() const {
-  return id_.as_int;
-}
-
-bool Bucket::IsValid() const {
-  return !IsNullBucketId(id_);
-}
-
-Status Bucket::Put(const std::string &name, const u8 *data, size_t size,
-                   const Context &ctx) {
-  Status result;
-
-  if (size > 0 && nullptr == data) {
-    result = INVALID_BLOB;
-    LOG(ERROR) << result.Msg();
-  }
-
-  if (result.Succeeded()) {
-    std::vector<std::string> names{name};
-    // TODO(chogan): Create a PreallocatedMemory allocator for std::vector so
-    // that a single-blob-Put doesn't perform a copy
-    std::vector<Blob> blobs{Blob{data, data + size}};
-    result = Put(names, blobs, ctx);
-  }
-
-  return result;
-}
-
-Status Bucket::Put(const std::string &name, const u8 *data, size_t size) {
-  Status result = Put(name, data, size, ctx_);
-
-  return result;
-}
-
-size_t Bucket::GetTotalBlobSize() {
-  std::vector<BlobID> blob_ids = hermes::GetBlobIds(&hermes_->context_,
-                                                    &hermes_->rpc_, id_);
-  api::Context ctx;
-  size_t result = 0;
-  for (size_t i = 0; i < blob_ids.size(); ++i) {
-    ScopedTemporaryMemory scratch(&hermes_->trans_arena_);
-    result += hermes::GetBlobSizeById(&hermes_->context_, &hermes_->rpc_,
-                                      scratch, blob_ids[i]);
-  }
-
-  return result;
-}
-
-size_t Bucket::GetBlobSize(const std::string &name, const Context &ctx) {
-  ScopedTemporaryMemory scratch(&hermes_->trans_arena_);
-  size_t result = GetBlobSize(scratch, name, ctx);
-
-  return result;
-}
-
-size_t Bucket::GetBlobSize(Arena *arena, const std::string &name,
-                           const Context &ctx) {
-  (void)ctx;
-  size_t result = 0;
-
-  if (IsValid()) {
-    LOG(INFO) << "Getting Blob " << name << " size from bucket "
-              << name_ << '\n';
-    BlobID blob_id = GetBlobId(&hermes_->context_, &hermes_->rpc_, name,
-                               id_, false);
-    if (!IsNullBlobId(blob_id)) {
-      result = GetBlobSizeById(&hermes_->context_, &hermes_->rpc_, arena,
-                               blob_id);
-    }
-  }
-
-  return result;
-}
-
-size_t Bucket::Get(const std::string &name, Blob &user_blob,
-                   const Context &ctx) {
-  size_t ret = Get(name, user_blob.data(), user_blob.size(), ctx);
-
-  return ret;
-}
-
-size_t Bucket::Get(const std::string &name, Blob &user_blob) {
-  size_t result = Get(name, user_blob, ctx_);
-
-  return result;
-}
-
-size_t Bucket::Get(const std::string &name, void *user_blob, size_t blob_size,
-                   const Context &ctx) {
-  (void)ctx;
-
-  size_t ret = 0;
-
-  if (IsValid()) {
-    // TODO(chogan): Assumes scratch is big enough to hold buffer_ids
-    ScopedTemporaryMemory scratch(&hermes_->trans_arena_);
-
-    if (user_blob && blob_size != 0) {
-      hermes::Blob blob = {};
-      blob.data = (u8 *)user_blob;
-      blob.size = blob_size;
-      LOG(INFO) << "Getting Blob " << name << " from bucket " << name_ << '\n';
-      BlobID blob_id = GetBlobId(&hermes_->context_, &hermes_->rpc_,
-                                 name, id_);
-      ret = ReadBlobById(&hermes_->context_, &hermes_->rpc_,
-                         &hermes_->trans_arena_, blob, blob_id);
-    } else {
-      ret = GetBlobSize(scratch, name, ctx);
-    }
-  }
-
-  return ret;
-}
-
-std::vector<size_t> Bucket::Get(const std::vector<std::string> &names,
-                                std::vector<Blob> &blobs, const Context &ctx) {
-  std::vector<size_t> result(names.size(), 0);
-  if (names.size() == blobs.size()) {
-    for (size_t i = 0; i < result.size(); ++i) {
-      result[i] = Get(names[i], blobs[i], ctx);
-    }
-  } else {
-    LOG(ERROR) << "names.size() != blobs.size() in Bucket::Get ("
-               << names.size() << " != " << blobs.size() << ")"
-               << std::endl;
-  }
-
-  return result;
-}
-
-size_t Bucket::GetNext(u64 blob_index, Blob &user_blob,
-                       const Context &ctx) {
-  size_t ret = GetNext(blob_index, user_blob.data(), user_blob.size(), ctx);
-
-  return ret;
-}
-
-size_t Bucket::GetNext(u64 blob_index, Blob &user_blob) {
-  size_t result = GetNext(blob_index, user_blob, ctx_);
-
-  return result;
-}
-
-size_t Bucket::GetNext(u64 blob_index, void *user_blob, size_t blob_size,
-                       const Context &ctx) {
-  (void)ctx;
-  size_t ret = 0;
-
-  if (IsValid()) {
-    std::vector<BlobID> blob_ids = GetBlobIds(&hermes_->context_,
-                                              &hermes_->rpc_,
-                                              this->id_);
-    if (blob_index > blob_ids.size()) {
-      LOG(INFO) << "Already on the tail for bucket " << name_ << '\n';
-      return ret;
-    }
-    BlobID next_blob_id = blob_ids.at(blob_index);
-    if (user_blob && blob_size != 0) {
-      hermes::Blob blob = {};
-      blob.data = (u8 *)user_blob;
-      blob.size = blob_size;
-      LOG(INFO) << "Getting Blob " << next_blob_id.as_int << " from bucket "
-                << name_ << '\n';
-      ret = ReadBlobById(&hermes_->context_, &hermes_->rpc_,
-                         &hermes_->trans_arena_, blob, next_blob_id);
-    } else {
-      LOG(INFO) << "Getting Blob " << next_blob_id.as_int <<
-          " size from bucket " << name_ << '\n';
-      ScopedTemporaryMemory scratch(&hermes_->trans_arena_);
-      if (!IsNullBlobId(next_blob_id)) {
-        ret = GetBlobSizeById(&hermes_->context_, &hermes_->rpc_, scratch,
-                              next_blob_id);
-      }
+  // Allocate buffers for the blob & enqueue placement
+  for (auto &schema : schemas) {
+    auto buffers = bpm_->GlobalAllocateAndSetBuffers(schema, blob);
+    auto put_ret = mdm_->GlobalPutBlobMetadata(id_, blob_name,
+                                               blob.size(), buffers,
+                                               ctx.blob_score_);
+    blob_id = std::get<0>(put_ret);
+    bool did_create = std::get<1>(put_ret);
+    if (did_create) {
+      mdm_->GlobalTagAddBlob(id_, blob_id);
     }
   }
 
-  return ret;
+  // Update the local MDM I/O log
+  mdm_->AddIoStat(id_, blob_id, blob.size(), IoType::kWrite);
+
+  return Status();
 }
 
-std::vector<size_t> Bucket::GetNext(u64 blob_index, u64 count,
-                                    std::vector<Blob> &blobs,
-                                    const Context &ctx) {
-  std::vector<size_t> result(count, 0);
-
-  if (IsValid()) {
-    if (count == blobs.size()) {
-      for (size_t i = 0; i < result.size(); ++i) {
-        result[i] = GetNext(blob_index + i, blobs[i], ctx);
-      }
-    } else {
-      LOG(ERROR) << "names.size() != blobs.size() in Bucket::Get (" << count
-                 << " != " << blobs.size() << ")" << std::endl;
-    }
-  }
-
-  return result;
+/**
+ * Get \a blob_id Blob from the bucket
+ * */
+Status Bucket::Get(BlobId blob_id, Blob &blob, Context &ctx) {
+  std::vector<BufferInfo> buffers = mdm_->GlobalGetBlobBuffers(blob_id);
+  blob = HERMES->borg_.GlobalReadBlobFromBuffers(buffers);
+  // Update the local MDM I/O log
+  mdm_->AddIoStat(id_, blob_id, blob.size(), IoType::kRead);
+  return Status();
 }
 
-template<class Predicate>
-Status Bucket::GetV(void *user_blob, Predicate pred, Context &ctx) {
-  (void)user_blob;
-  (void)ctx;
-  Status ret;
-
-  LOG(INFO) << "Getting blobs by predicate from bucket " << name_ << '\n';
-
-  HERMES_NOT_IMPLEMENTED_YET;
-
-  return ret;
+/**
+ * Determine if the bucket contains \a blob_id BLOB
+ * */
+bool Bucket::ContainsBlob(const std::string &blob_name,
+                          BlobId &blob_id) {
+  GetBlobId(blob_name, blob_id);
+  return !blob_id.IsNull();
 }
 
-Status Bucket::DeleteBlob(const std::string &name) {
-  Status result = DeleteBlob(name, ctx_);
-
-  return result;
+/**
+ * Determine if the bucket contains \a blob_id BLOB
+ * */
+bool Bucket::ContainsBlob(BlobId blob_id) {
+  return mdm_->GlobalBlobHasTag(blob_id, id_);
 }
 
-Status Bucket::DeleteBlob(const std::string &name, const Context &ctx) {
-  (void)ctx;
-  Status ret;
-
-  LOG(INFO) << "Deleting Blob " << name << " from bucket " << name_ << '\n';
-  DestroyBlobByName(&hermes_->context_, &hermes_->rpc_, id_, name);
-
-  return ret;
+/**
+ * Rename \a blob_id blob to \a new_blob_name new name
+ * */
+void Bucket::RenameBlob(BlobId blob_id,
+                        std::string new_blob_name,
+                        Context &ctx) {
+  mdm_->GlobalRenameBlob(id_, blob_id, new_blob_name);
 }
 
-Status Bucket::RenameBlob(const std::string &old_name,
-                          const std::string &new_name) {
-  Status result = RenameBlob(old_name, new_name, ctx_);
-
-  return result;
+/**
+ * Delete \a blob_id blob
+ * */
+void Bucket::DestroyBlob(BlobId blob_id,
+                         Context &ctx) {
+  mdm_->GlobalTagRemoveBlob(id_, blob_id);
+  mdm_->GlobalDestroyBlob(id_, blob_id);
 }
 
-Status Bucket::RenameBlob(const std::string &old_name,
-                          const std::string &new_name,
-                          const Context &ctx) {
-  (void)ctx;
-  Status ret;
-
-  if (IsBlobNameTooLong(new_name)) {
-    ret = BLOB_NAME_TOO_LONG;
-    LOG(ERROR) << ret.Msg();
-    return ret;
-  } else {
-    LOG(INFO) << "Renaming Blob " << old_name << " to " << new_name << '\n';
-    hermes::RenameBlob(&hermes_->context_, &hermes_->rpc_, old_name,
-                       new_name, id_);
-  }
-
-  return ret;
+/**
+ * Get the set of blob IDs owned by the bucket
+ * */
+std::vector<BlobId> Bucket::GetContainedBlobIds() {
+  return mdm_->GlobalGroupByTag(id_);
 }
 
-bool Bucket::ContainsBlob(const std::string &name) {
-  bool result = hermes::ContainsBlob(&hermes_->context_, &hermes_->rpc_, id_,
-                                     name);
-
-  return result;
-}
-
-bool Bucket::BlobIsInSwap(const std::string &name) {
-  BlobID blob_id = GetBlobId(&hermes_->context_, &hermes_->rpc_, name,
-                                   id_);
-  bool result = hermes::BlobIsInSwap(blob_id);
-
-  return result;
-}
-
-template<class Predicate>
-std::vector<std::string> Bucket::GetBlobNames(Predicate pred,
-                                              Context &ctx) {
-  (void)ctx;
-
-  LOG(INFO) << "Getting blob names by predicate from bucket " << name_ << '\n';
-
-  HERMES_NOT_IMPLEMENTED_YET;
-
-  return std::vector<std::string>();
-}
-
-Status Bucket::Rename(const std::string &new_name) {
-  Status result = Rename(new_name, ctx_);
-
-  return result;
-}
-
-Status Bucket::Rename(const std::string &new_name, const Context &ctx) {
-  (void)ctx;
-  Status ret;
-
-  if (IsBucketNameTooLong(new_name)) {
-    ret = BUCKET_NAME_TOO_LONG;
-    LOG(ERROR) << ret.Msg();
-    return ret;
-  } else {
-    LOG(INFO) << "Renaming a bucket to" << new_name << '\n';
-    RenameBucket(&hermes_->context_, &hermes_->rpc_, id_, name_, new_name);
-  }
-
-  return ret;
-}
-
-Status Bucket::Persist(const std::string &file_name) {
-  Status result = Persist(file_name, ctx_);
-
-  return result;
-}
-
-Status Bucket::Persist(const std::string &file_name, const Context &ctx) {
-  (void)ctx;
-  // TODO(chogan): Once we have Traits, we need to let users control the mode
-  // when we're, for example, updating an existing file. For now we just assume
-  // we're always creating a new file.
-  std::string open_mode = "w";
-
-  // TODO(chogan): Support other storage backends
-  Status result = StdIoPersistBucket(&hermes_->context_, &hermes_->rpc_,
-                                     &hermes_->trans_arena_, id_, file_name,
-                                     open_mode);
-
-  return result;
-}
-
-void Bucket::OrganizeBlob(const std::string &blob_name, f32 epsilon,
-                          f32 custom_importance) {
-  hermes::OrganizeBlob(&hermes_->context_, &hermes_->rpc_, id_, blob_name,
-                       epsilon, custom_importance);
-}
-
-Status Bucket::Release() {
-  Status result = Release(ctx_);
-
-  return result;
-}
-
-Status Bucket::Release(const Context &ctx) {
-  (void)ctx;
-  Status ret;
-
-  if (IsValid() && hermes_->is_initialized) {
-    LOG(INFO) << "Closing bucket '" << name_ << "'" << std::endl;
-    DecrementRefcount(&hermes_->context_, &hermes_->rpc_, id_);
-    id_.as_int = 0;
-  }
-
-  return ret;
-}
-
-Status Bucket::Destroy() {
-  Status result = Destroy(ctx_);
-
-  return result;
-}
-
-Status Bucket::Destroy(const Context &ctx) {
-  (void)ctx;
-  Status result;
-
-  if (IsValid()) {
-    LOG(INFO) << "Destroying bucket '" << name_ << "'" << std::endl;
-    bool destroyed = DestroyBucket(&hermes_->context_, &hermes_->rpc_,
-                                   name_.c_str(), id_);
-    if (destroyed) {
-      id_.as_int = 0;
-    } else {
-      result = BUCKET_IN_USE;
-      LOG(ERROR) << result.Msg();
-    }
-  }
-
-  return result;
-}
-
-}  // namespace api
-}  // namespace hermes
+}  // namespace hermes::api

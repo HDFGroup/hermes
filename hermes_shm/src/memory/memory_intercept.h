@@ -10,9 +10,7 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_SRC_MEMORY_MEMORY_INTERCEPT_H_
-#define HERMES_SHM_SRC_MEMORY_MEMORY_INTERCEPT_H_
+#ifndef HERMES_SRC_MEMORY_MEMORY_INTERCEPT_H_
+#define HERMES_SRC_MEMORY_MEMORY_INTERCEPT_H_
 
-
-
-#endif //HERMES_SHM_SRC_MEMORY_MEMORY_INTERCEPT_H_
+#endif  // HERMES_SRC_MEMORY_MEMORY_INTERCEPT_H_

@@ -15,6 +15,7 @@
 #include <cmath>
 #include <cstdio>
 #include <string>
+#include <test/basic_test.h>
 
 bool FilesystemSupportsTmpfile() {
   bool result = false;

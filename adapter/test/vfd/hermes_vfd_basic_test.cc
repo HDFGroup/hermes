@@ -101,7 +101,7 @@ TEST_CASE("SingleWrite", "[process=" + std::to_string(info.comm_size) +
   }
 
   SECTION("add dataset to existing file") {
-    test::TestOpen(info.existing_file, H5F_ACC_RDWR);
+     test::TestOpen(info.existing_file, H5F_ACC_RDWR);
     REQUIRE(test::hermes_hid != H5I_INVALID_HID);
     test::TestWriteDataset(std::to_string(info.num_iterations),
                            info.write_data);
@@ -709,7 +709,8 @@ TEST_CASE("ScratchMode", "[scratch]") {
     test::TestClose();
     REQUIRE(test::hermes_herr >= 0);
 
-    if (info.scratch_mode) {
+    if (HERMES->client_config_.GetBaseAdapterMode()
+        == hermes::adapter::AdapterMode::kScratch) {
       REQUIRE(!stdfs::exists(info.new_file));
     }
   }

@@ -24,48 +24,15 @@ using api::Status;
 /** Represents the state of a Round-Robin data placement strategy */
 class RoundRobin : public DPE {
  private:
-  static inline int current_device_index_{}; /**< The current device index */
-  static std::vector<DeviceID> devices_;     /**< A list of device targets */
-  std::mutex device_index_mutex_;            /**< Protect index updates */
+  std::atomic<size_t> counter_;
 
  public:
-  RoundRobin() : DPE(PlacementPolicy::kRoundRobin) {
-    device_index_mutex_.lock();
-  }
-  ~RoundRobin() { device_index_mutex_.unlock(); }
+  RoundRobin() : counter_(0) {}
 
   Status Placement(const std::vector<size_t> &blob_sizes,
-                   const std::vector<u64> &node_state,
-                   const std::vector<TargetID> &targets,
-                   const api::Context &ctx,
+                   std::vector<TargetInfo> &targets,
+                   api::Context &ctx,
                    std::vector<PlacementSchema> &output);
-
-  /** Retrieves the number of devices */
-  size_t GetNumDevices() const;
-
-  /** Retrieves the current device index */
-  int GetCurrentDeviceIndex() const;
-
-  /** Retrieves the device ID at a given index */
-  DeviceID GetDeviceByIndex(int i) const;
-
-  /** Re-/Sets the current device index */
-  void SetCurrentDeviceIndex(int new_device_index);
-
-  /** Initialize the static variable for devices*/
-  static void InitDevices(hermes::Config *config,
-                          std::shared_ptr<api::Hermes> result);
-  /** Initialize \a count devices with \a start_val value */
-  static void InitDevices(int count, int start_val = 0);
-
- private:
-  /**
-     add placement schema to \a output
-   */
-  Status AddSchema(size_t index, std::vector<u64> &node_state,
-                   const std::vector<size_t> &blob_sizes,
-                   const std::vector<TargetID> &targets,
-                   PlacementSchema &output);
 };
 
 }  // namespace hermes

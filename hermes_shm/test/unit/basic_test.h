@@ -10,8 +10,8 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_SHM_TEST_UNIT_BASIC_TEST_H_
-#define HERMES_SHM_TEST_UNIT_BASIC_TEST_H_
+#ifndef HERMES_TEST_UNIT_BASIC_TEST_H_
+#define HERMES_TEST_UNIT_BASIC_TEST_H_
 
 #define CATCH_CONFIG_RUNNER
 #include <catch2/catch_all.hpp>
@@ -22,7 +22,7 @@ cl::Parser define_options();
 #include <iostream>
 #include <cstdlib>
 
-static bool VerifyBuffer(char *ptr, size_t size, char nonce) {
+static inline bool VerifyBuffer(char *ptr, size_t size, char nonce) {
   for (size_t i = 0; i < size; ++i) {
     if (ptr[i] != nonce) {
       std::cout << (int)ptr[i] << std::endl;
@@ -33,19 +33,21 @@ static bool VerifyBuffer(char *ptr, size_t size, char nonce) {
 }
 
 /** var = TYPE(val) */
-#define SET_VAR_TO_INT_OR_STRING(TYPE, VAR, VAL)\
+#define _CREATE_SET_VAR_TO_INT_OR_STRING(TYPE, VAR, TMP_VAR, VAL)\
   if constexpr(std::is_same_v<TYPE, hipc::string>) {\
-    VAR = hipc::string(std::to_string(VAL));\
+    TMP_VAR = hipc::make_uptr<hipc::string>(std::to_string(VAL));\
   } else if constexpr(std::is_same_v<TYPE, std::string>) {\
-    VAR = std::string(std::to_string(VAL));\
+    TMP_VAR = hipc::make_uptr<std::string>(std::to_string(VAL));\
   } else {\
-    VAR = VAL;\
-  }
+    TMP_VAR = hipc::make_uptr<int>(VAL);\
+  }\
+  TYPE &VAR = *TMP_VAR;\
+  (void)VAR;
 
 /** TYPE VAR = TYPE(VAL) */
 #define CREATE_SET_VAR_TO_INT_OR_STRING(TYPE, VAR, VAL)\
-  TYPE VAR;\
-  SET_VAR_TO_INT_OR_STRING(TYPE, VAR, VAL);
+  hipc::uptr<TYPE> VAR##_tmp;\
+  _CREATE_SET_VAR_TO_INT_OR_STRING(TYPE, VAR, VAR##_tmp, VAL);
 
 /** RET = int(TYPE(VAR)); */
 #define GET_INT_FROM_VAR(TYPE, RET, VAR)\
@@ -65,4 +67,6 @@ static bool VerifyBuffer(char *ptr, size_t size, char nonce) {
 void MainPretest();
 void MainPosttest();
 
-#endif  // HERMES_SHM_TEST_UNIT_BASIC_TEST_H_
+#define PAGE_DIVIDE(TEXT)
+
+#endif  // HERMES_TEST_UNIT_BASIC_TEST_H_

@@ -1,73 +1,26 @@
-#------------------------------------------------------------------------------
-# Include source and build directories
-#------------------------------------------------------------------------------
+
+set(HERMES_IO_CLIENT_DIR ${CMAKE_SOURCE_DIR}/io_client)
+set(HERMES_SRC_DIR ${CMAKE_SOURCE_DIR}/src)
+set(HERMES_API_DIR ${CMAKE_SOURCE_DIR}/src/api)
+set(HERMES_WRAPPER_DIR ${CMAKE_SOURCE_DIR}/wrapper)
+
 include_directories(
-  ${PROJECT_SOURCE_DIR}/src/api
-  ${CMAKE_CURRENT_SOURCE_DIR}
-  ${HERMES_INCLUDES_BUILD_TIME}
-)
+        ${CMAKE_SOURCE_DIR}
+        ${HERMES_SRC_DIR}
+        ${HERMES_API_DIR}
+        ${HERMES_WRAPPER_DIR}
+        ${HERMES_IO_CLIENT_DIR})
 
-#------------------------------------------------------------------------------
-# Hermes Wrapper
-#------------------------------------------------------------------------------
-add_library(hermes_wrapper hermes_wrapper.cpp)
-target_link_libraries(hermes_wrapper ${LIBRT} hermes)
-target_compile_definitions(hermes_wrapper
-    PRIVATE $<$<BOOL:${HERMES_RPC_THALLIUM}>:HERMES_RPC_THALLIUM>)
-
-set(HERMES_EXPORTED_LIBS hermes_wrapper ${HERMES_EXPORTED_LIBS})
-
-#-----------------------------------------------------------------------------
-# Add file(s) to CMake Install
-#-----------------------------------------------------------------------------
-install(
-  FILES
-    hermes_wrapper.h
-  DESTINATION
-    ${HERMES_INSTALL_INCLUDE_DIR}
-  COMPONENT
-    headers
-)
-
-#-----------------------------------------------------------------------------
-# Add Target(s) to CMake Install
-#-----------------------------------------------------------------------------
-install(
-  TARGETS
-    hermes_wrapper
-  EXPORT
-    ${HERMES_EXPORTED_TARGETS}
-  LIBRARY DESTINATION ${HERMES_INSTALL_LIB_DIR}
-  ARCHIVE DESTINATION ${HERMES_INSTALL_LIB_DIR}
-  RUNTIME DESTINATION ${HERMES_INSTALL_BIN_DIR}
-)
-
-#-----------------------------------------------------------------------------
-# Export all exported targets to the build tree for use by parent project
-#-----------------------------------------------------------------------------
-if(NOT HERMES_EXTERNALLY_CONFIGURED)
-EXPORT (
-  TARGETS
-    ${HERMES_EXPORTED_LIBS}
-  FILE
-    ${HERMES_EXPORTED_TARGETS}.cmake
-)
+if (HERMES_ENABLE_C_BINDINGS OR
+        HERMES_ENABLE_JAVA_BINDINGS OR
+        HERMES_ENABLE_PYTHON_BINDINGS)
+    add_subdirectory(c)
 endif()
 
-#------------------------------------------------------------------------------
-# Set variables for parent scope
-#------------------------------------------------------------------------------
-# Used by config.cmake.build.in and Testing
-set(HERMES_INCLUDES_BUILD_TIME
-  ${CMAKE_CURRENT_SOURCE_DIR}
-  ${CMAKE_CURRENT_BINARY_DIR}
-  ${HERMES_EXT_INCLUDE_DEPENDENCIES}
-  PARENT_SCOPE
-)
+if (HERMES_ENABLE_JAVA_BINDINGS)
+    add_subdirectory(java)
+endif()
 
-# Used by config.cmake.install.in
-set(HERMES_INCLUDES_INSTALL_TIME
-  ${HERMES_INSTALL_INCLUDE_DIR}
-  ${HERMES_EXT_INCLUDE_DEPENDENCIES}
-  PARENT_SCOPE
-)
+if (HERMES_ENABLE_PYTHON_BINDINGS)
+    add_subdirectory(python)
+endif()

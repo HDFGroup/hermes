@@ -12,7 +12,7 @@
 
 #include <unistd.h>
 
-#include <experimental/filesystem>
+#include <filesystem>
 #include <iostream>
 
 #include "adapter_test_utils.h"
@@ -23,12 +23,12 @@
 
 #include "adapter_test_utils.h"
 
-namespace stdfs = std::experimental::filesystem;
+namespace stdfs = std::filesystem;
 
 namespace hermes::adapter::mpiio::test {
 struct Arguments {
   std::string filename = "test.dat";
-  std::string directory = "/tmp";
+  std::string directory = "/tmp/test_hermes";
   size_t request_size = 65536;
 };
 struct Info {
@@ -61,6 +61,10 @@ hermes::adapter::mpiio::test::Arguments args;
 hermes::adapter::mpiio::test::Info info;
 
 int init(int* argc, char*** argv) {
+#if HERMES_INTERCEPT == 1
+  setenv("HERMES_FLUSH_MODE", "kSync", 1);
+  HERMES->client_config_.flushing_mode_ = hermes::FlushingMode::kSync;
+#endif
   MPI_Init(argc, argv);
   info.write_data = GenRandom(args.request_size);
   info.read_data = std::string(args.request_size, 'r');
@@ -151,19 +155,26 @@ int pretest() {
   MPI_Barrier(MPI_COMM_WORLD);
   REQUIRE(info.total_size > 0);
 #if HERMES_INTERCEPT == 1
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.existing_file_cmp);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.new_file_cmp);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.shared_new_file_cmp);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(
-      info.shared_existing_file_cmp);
+  HERMES->client_config_.SetAdapterPathTracking(info.existing_file_cmp, false);
+  HERMES->client_config_.SetAdapterPathTracking(info.new_file_cmp, false);
+  HERMES->client_config_.SetAdapterPathTracking(
+      info.shared_new_file_cmp, false);
+  HERMES->client_config_.SetAdapterPathTracking(
+      info.shared_existing_file_cmp, false);
 #endif
   return 0;
 }
 
+void Clear() {
+#if HERMES_INTERCEPT == 1
+  HERMES->Clear();
+#endif
+}
+
 int posttest(bool compare_data = true) {
 #if HERMES_INTERCEPT == 1
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.existing_file);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.insert(info.new_file);
+  HERMES->client_config_.SetAdapterPathTracking(info.existing_file, false);
+  HERMES->client_config_.SetAdapterPathTracking(info.new_file, false);
 #endif
   if (compare_data && stdfs::exists(info.new_file) &&
       stdfs::exists(info.new_file_cmp)) {
@@ -229,12 +240,13 @@ int posttest(bool compare_data = true) {
   if (stdfs::exists(info.new_file_cmp)) stdfs::remove(info.new_file_cmp);
   if (stdfs::exists(info.existing_file_cmp))
     stdfs::remove(info.existing_file_cmp);
+  Clear();
 
 #if HERMES_INTERCEPT == 1
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_file_cmp);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.new_file_cmp);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.new_file);
-  INTERCEPTOR_LIST->hermes_flush_exclusion.erase(info.existing_file);
+  HERMES->client_config_.SetAdapterPathTracking(info.existing_file_cmp, true);
+  HERMES->client_config_.SetAdapterPathTracking(info.new_file_cmp, true);
+  HERMES->client_config_.SetAdapterPathTracking(info.new_file, true);
+  HERMES->client_config_.SetAdapterPathTracking(info.existing_file, true);
 #endif
   return 0;
 }
