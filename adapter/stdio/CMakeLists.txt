@@ -58,5 +58,5 @@ endif()
 #-----------------------------------------------------------------------------
 if(HERMES_ENABLE_COVERAGE)
     set_coverage_flags(hermes_stdio_io_client)
-    set_coverage_flags(hermes_stdio)
+    #set_coverage_flags(hermes_stdio)
 endif()

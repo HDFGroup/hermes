@@ -41,5 +41,5 @@ install(
 #-----------------------------------------------------------------------------
 if(HERMES_ENABLE_COVERAGE)
     set_coverage_flags(hermes_mpiio_io_client)
-    set_coverage_flags(hermes_mpiio)
+    #set_coverage_flags(hermes_mpiio)
 endif()
