@@ -56,7 +56,7 @@ struct BlobSerializer {
   size_t off_;
 
   /** Constructor */
-  BlobSerializer(hapi::Blob &blob) : blob_(blob), off_(0) {}
+  explicit BlobSerializer(hapi::Blob &blob) : blob_(blob), off_(0) {}
 
   /** Serialize a string type */
   template<typename StringT>
@@ -123,7 +123,7 @@ struct KVRecord {
   KVRecord() = default;
 
   /** Convert the record from a single array of bytes */
-  KVRecord(hapi::Blob &blob);
+  explicit KVRecord(hapi::Blob &blob);
 
   /** Convert the record into a single array of bytes */
   hapi::Blob value();
@@ -135,7 +135,7 @@ class KVTable {
   hapi::Bucket bkt_;
 
   /** Emplace Constructor */
-  KVTable(const hapi::Bucket &bkt) : bkt_(bkt) {}
+  explicit KVTable(const hapi::Bucket &bkt) : bkt_(bkt) {}
 
   /**
    * Create or insert a record into the table
@@ -174,4 +174,4 @@ class KVStore {
 
 }  // namespace hermes::adapter
 
-#endif //HERMES_ADAPTER_KVSTORE_KVSTORE_H_
+#endif  // HERMES_ADAPTER_KVSTORE_KVSTORE_H_

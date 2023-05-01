@@ -36,6 +36,10 @@ if __name__ == '__main__':
         pkg_dir = f"{HERMES_ROOT}/test"
     elif test_type == 'data_stager':
         pkg_dir = f"{HERMES_ROOT}/data_stager/test"
+    elif test_type == 'kvstore':
+        pkg_dir = f"{HERMES_ROOT}/adapter/kvstore"
+    elif test_type == 'java_wrapper':
+        pkg_dir = f"{HERMES_ROOT}/wrapper/java"
     else:
         raise Exception("Could not find the unit test")
     # Load the unit test

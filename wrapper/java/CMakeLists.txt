@@ -31,9 +31,7 @@ add_custom_command(TARGET hermes_java_Blob POST_BUILD
 add_custom_target(build_hermes_java
         COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR} &&
                 ${CMAKE_CURRENT_SOURCE_DIR}/gradlew build -x test)
-add_test(test_hermes_java_wrapper
-        cd ${CMAKE_CURRENT_SOURCE_DIR} &&
-        ${CMAKE_CURRENT_SOURCE_DIR}/gradlew test)
+pytest(java_wrapper test_hermes_java)
 
 #-----------------------------------------------------------------------------
 # Add Target(s) to CMake Install

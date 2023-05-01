@@ -24,9 +24,7 @@ add_custom_command(TARGET hermes_kvstore POST_BUILD
 add_custom_target(build_hermes_kvstore_java
         COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR}/java &&
         ${CMAKE_CURRENT_SOURCE_DIR}/java/gradlew build -x test)
-add_test(hermes_kvstore_java_test
-        cd ${CMAKE_CURRENT_SOURCE_DIR}/java &&
-        ${CMAKE_CURRENT_SOURCE_DIR}/java/gradlew test)
+pytest(kvstore test_hermes_kvstore_java)
 
 #-----------------------------------------------------------------------------
 # Add Target(s) to CMake Install

@@ -410,15 +410,34 @@ if(HERMES_ENABLE_COVERAGE)
 endif()
 
 #-----------------------------------------------------------------------------
-# Source
+# Enable Testing
 #-----------------------------------------------------------------------------
-
 # General function used to hook ctest to python test tool lib
 function(pytest test_type test_name)
   set(script ${CMAKE_SOURCE_DIR}/ci/py_hermes_ci/bin/run_test)
   add_test(NAME ${test_name}
           COMMAND ${script} ${test_type} ${test_name} ${CMAKE_BINARY_DIR} ${HERMES_USE_ADDRESS_SANITIZER})
 endfunction()
+
+include(CTest)
+
+# Add testing directory
+if(CMAKE_PROJECT_NAME STREQUAL HERMES AND BUILD_TESTING)
+  find_package(Catch2 3.0.1 REQUIRED)
+  find_program(IOR_EXE ior)
+  if(IOR_EXE)
+    message(STATUS "Found ior at ${IOR_EXE}")
+    set(HERMES_HAVE_IOR "YES")
+  else()
+    message(WARNING "Couldn't find the 'ior' executable. Some tests will be skipped.")
+    set(HERMES_HAVE_IOR "NO")
+  endif()
+  enable_testing()
+endif()
+
+#-----------------------------------------------------------------------------
+# Source
+#-----------------------------------------------------------------------------
 
 set(HERMES_EXPORTED_LIBS "")
 
@@ -433,33 +452,20 @@ add_custom_target(rpc COMMAND bash
         "${CMAKE_BINARY_DIR}")
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/data_stager)
 
-#-----------------------------------------------------------------------------
-# Testing
-#-----------------------------------------------------------------------------
-include(CTest)
-
-# Add testing directory
-if(CMAKE_PROJECT_NAME STREQUAL HERMES AND BUILD_TESTING)
-  find_package(Catch2 3.0.1 REQUIRED)  
-  find_program(IOR_EXE ior)
-  if(IOR_EXE)
-    message(STATUS "Found ior at ${IOR_EXE}")
-    set(HERMES_HAVE_IOR "YES")
-  else()
-    message(WARNING "Couldn't find the 'ior' executable. Some tests will be skipped.")
-    set(HERMES_HAVE_IOR "NO")
-  endif()
-  enable_testing()
-  add_subdirectory(test)
-  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/data_stager/test)
-endif()
-
 ##### ADAPTERS
 if(HERMES_ENABLE_STDIO_ADAPTER OR HERMES_ENABLE_POSIX_ADAPTER OR
     HERMES_ENABLE_MPIIO_ADAPTER OR HERMES_ENABLE_PUBSUB_ADAPTER OR
     HERMES_ENABLE_VFD)
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/adapter)
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/traits)
+endif()
+
+#-----------------------------------------------------------------------------
+# Testing Sources
+#-----------------------------------------------------------------------------
+if(CMAKE_PROJECT_NAME STREQUAL HERMES AND BUILD_TESTING)
+  add_subdirectory(test)
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/data_stager/test)
 endif()
 
 #-----------------------------------------------------------------------------

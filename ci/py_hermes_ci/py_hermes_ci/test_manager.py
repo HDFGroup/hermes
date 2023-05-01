@@ -8,6 +8,8 @@ from jarvis_util.shell.rm import Rm
 from jarvis_util.shell.exec import Exec
 import time
 import os, sys
+import pathlib
+import inspect
 from abc import ABC, abstractmethod
 
 
@@ -32,6 +34,7 @@ class TestManager(ABC):
         jutil = JutilManager.get_instance()
         jutil.collect_output = False
         jutil.hide_output = False
+        self.MY_DIR = str(pathlib.Path(inspect.getfile(LocalExecInfo)).parent)
         self.CMAKE_SOURCE_DIR = cmake_source_dir
         self.CMAKE_BINARY_DIR = cmake_binary_dir
         self.HERMES_TRAIT_PATH = f"{self.CMAKE_BINARY_DIR}/bin"
@@ -47,7 +50,7 @@ class TestManager(ABC):
         self.find_tests()
 
     def spawn_info(self, nprocs=None, ppn=None, hostfile=None,
-                   hermes_conf=None, hermes_mode=None, api=None):
+                   hermes_conf=None, hermes_mode=None, api=None, cwd=None):
         # Whether to deploy hermes
         use_hermes = hermes_mode is not None \
                      or api == 'native' \
@@ -118,7 +121,8 @@ class TestManager(ABC):
                          hermes_mode=hermes_mode,
                          api=api,
                          env=env,
-                         daemon_env=daemon_env)
+                         daemon_env=daemon_env,
+                         cwd=cwd)
 
     @abstractmethod
     def set_paths(self):
