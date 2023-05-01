@@ -18,9 +18,9 @@ function(java_wrapper name path)
             hermes hermes_c_wrapper
             MPI::MPI_CXX stdc++fs dl ${JNI_LIBRARIES})
 endfunction()
-java_wrapper(hermes_src_main_Blob src/main/cpp/src_main_Blob.cc)
-java_wrapper(hermes_src_main_Bucket src/main/cpp/src_main_Bucket.cc)
-java_wrapper(hermes_src_main_Hermes src/main/cpp/src_main_Hermes.cc)
+java_wrapper(hermes_src_main_Blob src/hermes/cpp/src_main_Blob.cc)
+java_wrapper(hermes_src_main_Bucket src/hermes/cpp/src_main_Bucket.cc)
+java_wrapper(hermes_src_main_Hermes src/hermes/cpp/src_main_Hermes.cc)
 
 #-----------------------------------------------------------------------------
 # Build Java API

@@ -2,11 +2,11 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 import java.util.Vector;
-import src.main.java.Blob;
-import src.main.java.Bucket;
-import src.main.java.Hermes;
-import src.main.java.UniqueId;
-import src.main.java.MdLockType;
+import hermes.java.Blob;
+import hermes.java.Bucket;
+import hermes.java.Hermes;
+import hermes.java.UniqueId;
+import hermes.java.MdLockType;
 
 import java.lang.management.ManagementFactory;
 

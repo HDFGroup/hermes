@@ -16,6 +16,19 @@ add_dependencies(hermes_kvstore ${INTERCEPTOR_DEPS})
 target_link_libraries(hermes_kvstore ${INTERCEPTOR_DEPS})
 
 #-----------------------------------------------------------------------------
+# Build Java API
+#-----------------------------------------------------------------------------
+add_custom_command(TARGET hermes_kvstore POST_BUILD
+        COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR}/java &&
+        ${CMAKE_CURRENT_SOURCE_DIR}/java/gradlew build)
+add_custom_target(build_hermes_kvstore_java
+        COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR}/java &&
+        ${CMAKE_CURRENT_SOURCE_DIR}/java/gradlew build)
+add_test(hermes_kvstore_java_test
+        cd ${CMAKE_CURRENT_SOURCE_DIR}/java &&
+        ${CMAKE_CURRENT_SOURCE_DIR}/java/gradlew test)
+
+#-----------------------------------------------------------------------------
 # Add Target(s) to CMake Install
 #-----------------------------------------------------------------------------
 install(

@@ -13,7 +13,7 @@
 #include "hermes_java_wrapper.h"
 #include "src_main_Hermes.h"
 #include "src_main_Bucket.h"
-#include <hermes.h>
+#include "src/api/hermes.h"
 #include <jni.h>
 
 #ifdef __cplusplus

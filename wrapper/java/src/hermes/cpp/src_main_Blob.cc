@@ -21,11 +21,11 @@ JNIEXPORT jobject JNICALL Java_src_main_java_Blob_fromString(
 
 /*
  * Class:     src_main_java_Blob
- * Method:    close
+ * Method:    free_native
  * Signature: ()V
  */
-JNIEXPORT void JNICALL Java_src_main_java_Blob_close(JNIEnv *env,
-                                                     jobject blob_java) {
+JNIEXPORT void JNICALL Java_src_main_java_Blob_free_native(JNIEnv *env,
+                                                           jobject blob_java) {
   hapi::Blob blob = HERMES_JAVA_WRAPPER->GetBlobFromJava(env, blob_java);
   blob.destructable_ = true;
 }

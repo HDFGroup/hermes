@@ -1,4 +1,4 @@
-package src.main.java;
+package hermes.java;
 
 public class UniqueId {
     public long unique_;
@@ -12,4 +12,6 @@ public class UniqueId {
     public boolean equals(UniqueId other) {
         return unique_ == other.unique_ && node_id_ == other.node_id_;
     }
+
+    public boolean isNull() { return unique_ == 0; }
 }

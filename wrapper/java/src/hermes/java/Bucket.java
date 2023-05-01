@@ -1,8 +1,8 @@
-package src.main.java;
+package hermes.java;
 import java.util.Vector;
-import src.main.java.UniqueId;
-import src.main.java.MdLockType;
-import src.main.java.Blob;
+import hermes.java.UniqueId;
+import hermes.java.MdLockType;
+import hermes.java.Blob;
 
 public class Bucket {
     public UniqueId bkt_id_;
@@ -37,6 +37,9 @@ public class Bucket {
     /**====================================
      * BLOB operations
      * ===================================*/
+
+    /** Get the ID of a blob from a bucket */
+    public native UniqueId getBlobId(String name);
 
     /** Get a blob from the bucket */
     public native Blob get(UniqueId blob_id);

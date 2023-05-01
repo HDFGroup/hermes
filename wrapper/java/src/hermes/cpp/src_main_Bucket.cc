@@ -2,7 +2,7 @@
 #include <jni.h>
 #include "src_main_Bucket.h"
 #include "hermes_java_wrapper.h"
-#include <hermes.h>
+#include "src/api/hermes.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -67,6 +67,20 @@ JNIEXPORT void JNICALL Java_src_main_java_Bucket_destroy(JNIEnv *env,
 /**====================================
  * BLOB operations
  * ===================================*/
+
+/*
+ * Class:     src_main_java_Bucket
+ * Method:    getBlobId
+ * Signature: (Ljava/lang/String;)Lsrc/main/java/UniqueId;
+ */
+JNIEXPORT jobject JNICALL Java_src_main_java_Bucket_getBlobId(
+    JNIEnv *env, jobject bkt_java, jstring blob_name_java) {
+  JavaStringWrap blob_name(env, blob_name_java);
+  auto bkt = HERMES_JAVA_WRAPPER->GetBucketFromJava(env, bkt_java);
+  hermes::BlobId blob_id;
+  bkt.GetBlobId(blob_name.data_, blob_id);
+  return HERMES_JAVA_WRAPPER->ConvertUniqueIdToJava(env, blob_id);
+}
 
 /*
  * Class:     src_main_Bucket

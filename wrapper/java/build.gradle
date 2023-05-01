@@ -31,7 +31,7 @@ dependencies {
 sourceSets {
     main {
         java {
-            srcDir 'src/main/java'
+            srcDir 'src/hermes/java'
         }
     }
 

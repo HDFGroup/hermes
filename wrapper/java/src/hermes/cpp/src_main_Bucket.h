@@ -26,7 +26,7 @@ JNIEXPORT void JNICALL Java_src_main_java_Bucket_unlock
 /*
  * Class:     src_main_java_Bucket
  * Method:    getContainedBlobIds
- * Signature: ()Ljava/util/List;
+ * Signature: ()Ljava/util/Vector;
  */
 JNIEXPORT jobject JNICALL Java_src_main_java_Bucket_getContainedBlobIds
   (JNIEnv *, jobject);
@@ -38,6 +38,14 @@ JNIEXPORT jobject JNICALL Java_src_main_java_Bucket_getContainedBlobIds
  */
 JNIEXPORT void JNICALL Java_src_main_java_Bucket_destroy
   (JNIEnv *, jobject);
+
+/*
+ * Class:     src_main_java_Bucket
+ * Method:    getBlobId
+ * Signature: (Ljava/lang/String;)Lsrc/main/java/UniqueId;
+ */
+JNIEXPORT jobject JNICALL Java_src_main_java_Bucket_getBlobId
+  (JNIEnv *, jobject, jstring);
 
 /*
  * Class:     src_main_java_Bucket

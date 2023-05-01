@@ -1,4 +1,4 @@
-package src.main.java;
+package hermes.java;
 public enum MdLockType {
     kInternalRead,    /**< Internal read lock used by Hermes */
     kInternalWrite,   /**< Internal write lock by Hermes */

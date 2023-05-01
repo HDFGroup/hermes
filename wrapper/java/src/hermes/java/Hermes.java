@@ -1,5 +1,5 @@
-package src.main.java;
-import src.main.java.Bucket;
+package hermes.java;
+import hermes.java.Bucket;
 
 public class Hermes {
     private static Hermes instance_ = null;
