@@ -44,8 +44,9 @@ public class KVTable {
   /** Deserialize a Map from a blob */
   private <T> Map<String, T> blobToMap(Blob blob) {
     try {
-      ObjectInputStream ois = new ObjectInputStream(
-              new ByteArrayInputStream(blob.array()));
+      byte[] bytes = blob.array();
+      ByteArrayInputStream istream = new ByteArrayInputStream(bytes);
+      ObjectInputStream ois = new ObjectInputStream(istream);
       Map<String, T> map = (Map<String, T>) ois.readObject();
       ois.close();
       blob.close();

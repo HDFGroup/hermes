@@ -72,9 +72,9 @@ class HermesJavaWrapper {
     blob_cstor = env->GetMethodID(
         blob_class,
         "<init>",
-        "(Ljava/nio/ByteBuffer;JJ)V");
+        "(Ljava/nio/ByteBuffer;IJ)V");
     blob_data_fid = env->GetFieldID(blob_class, "data_", "Ljava/nio/ByteBuffer;");
-    blob_size_fid = env->GetFieldID(blob_class, "size_", "J");
+    blob_size_fid = env->GetFieldID(blob_class, "size_", "I");
     blob_alloc_fid = env->GetFieldID(blob_class, "alloc_", "J");
     is_native_fid = env->GetFieldID(blob_class, "is_native_", "Z");
 
@@ -136,7 +136,7 @@ class HermesJavaWrapper {
     // Allocate new Blob java
     jobject blob_java = env->NewObject(blob_class, blob_cstor,
                                        data_java,
-                                       (jlong)blob.size(),
+                                       (jint)blob.size(),
                                        (jlong)alloc);
     return blob_java;
   }
@@ -149,7 +149,7 @@ class HermesJavaWrapper {
     jobject data = env->GetObjectField(blob_java, blob_data_fid);
     blob.data_ = reinterpret_cast<char*>(
         env->GetDirectBufferAddress(data));
-    blob.size_ = env->GetLongField(blob_java, blob_size_fid);
+    blob.size_ = env->GetIntField(blob_java, blob_size_fid);
     if (is_native) {
       blob.alloc_ = reinterpret_cast<hipc::Allocator *>(
           env->GetLongField(blob_java, blob_alloc_fid));

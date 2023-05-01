@@ -7,13 +7,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-/*
- * Class:     hermes_java_Blob
- * Method:    fromString
- * Signature: (Ljava/lang/String;)Lhermes/java/Blob;
- */
-JNIEXPORT jobject JNICALL Java_hermes_java_Blob_fromString
-  (JNIEnv *, jclass, jstring);
 
 /*
  * Class:     hermes_java_Blob

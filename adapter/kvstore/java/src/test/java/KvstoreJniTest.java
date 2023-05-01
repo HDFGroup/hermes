@@ -20,6 +20,7 @@ public class KvstoreJniTest {
         record.put("f1", "12345");
         record.put("f2", "ABCDE");
         table.update("0", record);
+        table.update("0", record);
         Map<String, String> read_record = table.read("0");
 
         for (Map.Entry<String, String> entry : read_record.entrySet()) {

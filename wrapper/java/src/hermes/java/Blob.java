@@ -3,12 +3,12 @@ import java.nio.ByteBuffer;
 
 public class Blob {
     public ByteBuffer data_;
-    long size_;
+    int size_;
     long alloc_;
     boolean is_native_;
 
     /** Create a blob from JNI */
-    private Blob(ByteBuffer data, long size, long alloc) {
+    private Blob(ByteBuffer data, int size, long alloc) {
         data_ = data;
         size_ = size;
         alloc_ = alloc;
@@ -33,7 +33,9 @@ public class Blob {
 
     /** Call ByteBuffer array method */
     public byte[] array() {
-        return data_.array();
+        byte[] bytes = new byte[size_];
+        data_.get(bytes);
+        return bytes;
     }
 
     /** Free data allocated by JNI */
