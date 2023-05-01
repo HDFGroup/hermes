@@ -1,5 +1,5 @@
-package kvstore.java;
-import kvstore.java.KVTable;
+package hermes_kvstore.java;
+import hermes_kvstore.java.KVTable;
 import hermes.java.Hermes;
 
 public class KVStore {

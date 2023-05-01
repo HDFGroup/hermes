@@ -27,7 +27,7 @@ dependencies {
     // 'test.useTestNG()' to your build script.
     testCompile 'junit:junit:4.12'
 
-    compile files('../../../wrapper/java/build/libs/hermes.jar')
+    compile files('../../../wrapper/java/build/libs/hermes-1.0.0.jar')
 }
 
 sourceSets {

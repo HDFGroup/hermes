@@ -15,4 +15,4 @@ include 'api'
 include 'services:webservice'
 */
 
-rootProject.name = 'kvstore'
+rootProject.name = 'hermes_kvstore-1.0.0'

@@ -12,7 +12,7 @@ devices:
 
     # The maximum buffering capacity in MiB of each device. Here we say that all 4
     # devices get 50 MiB of buffering capacity.
-    capacity: 50MB
+    capacity: 1000MB
 
     # The size of the smallest available buffer in KiB. In general this should be
     # the page size of your system for byte addressable storage, and the block size

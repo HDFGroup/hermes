@@ -15,4 +15,4 @@ include 'api'
 include 'services:webservice'
 */
 
-rootProject.name = 'hermes'
+rootProject.name = 'hermes-1.0.0'
