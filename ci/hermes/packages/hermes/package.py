@@ -6,7 +6,7 @@ class Hermes(CMakePackage):
     git = "https://github.com/HDFGroup/hermes.git"
     version('master', branch='master')
     version('1.0.0', git='https://github.com/lukemartinlogan/hermes.git', branch='new-borg')
-    version('dev-priv', git='https://github.com/lukemartinlogan/hermes.git', branch='new-borg')
+    version('dev-priv', git='https://github.com/lukemartinlogan/hermes.git', branch='dev')
     version('pnnl', git='https://github.com/lukemartinlogan/hermes.git',
             branch='pnnl')
     variant('vfd', default=False, description='Enable HDF5 VFD')
