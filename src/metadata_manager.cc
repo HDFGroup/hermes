@@ -34,10 +34,10 @@ void MetadataManager::shm_init(hipc::ShmArchive<MetadataManagerShm> &header,
   header_->node_id_ = rpc_->node_id_;
 
   // Create the metadata maps
-  HSHM_MAKE_AR(header_->blob_id_map_, alloc, 10000000)
-  HSHM_MAKE_AR(header_->blob_map_, alloc, 10000000)
-  HSHM_MAKE_AR(header_->tag_id_map_, alloc, 10000000)
-  HSHM_MAKE_AR(header_->tag_map_, alloc, 10000000)
+  HSHM_MAKE_AR(header_->blob_id_map_, alloc, 32000000)
+  HSHM_MAKE_AR(header_->blob_map_, alloc, 32000000)
+  HSHM_MAKE_AR(header_->tag_id_map_, alloc, 32000000)
+  HSHM_MAKE_AR(header_->tag_map_, alloc, 32000000)
   HSHM_MAKE_AR(header_->trait_id_map_, alloc, 256)
   HSHM_MAKE_AR(header_->trait_map_, alloc, 256)
 
