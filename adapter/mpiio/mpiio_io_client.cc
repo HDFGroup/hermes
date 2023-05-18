@@ -26,7 +26,15 @@ void MpiioIoClient::RealOpen(File &f,
     stat.hflags_.SetBits(HERMES_FS_APPEND);
   }
 
-  if (stat.hflags_.Any(HERMES_FS_CREATE)) {
+  // NOTE(llogan): Allowing scratch mode to create empty files for MPI to
+  // satisfy IOR.
+  f.mpi_status_ = real_api->MPI_File_open(
+    stat.comm_, path.c_str(), stat.amode_, stat.info_, &stat.mpi_fh_);
+  if (f.mpi_status_ != MPI_SUCCESS) {
+    f.status_ = false;
+  }
+
+  /*if (stat.hflags_.Any(HERMES_FS_CREATE)) {
     if (stat.adapter_mode_ != AdapterMode::kScratch) {
       f.mpi_status_ = real_api->MPI_File_open(
           stat.comm_, path.c_str(), stat.amode_, stat.info_, &stat.mpi_fh_);
@@ -42,7 +50,7 @@ void MpiioIoClient::RealOpen(File &f,
   if (f.mpi_status_ != MPI_SUCCESS &&
       stat.adapter_mode_ != AdapterMode::kScratch) {
     f.status_ = false;
-  }
+  }*/
 }
 
 /**
