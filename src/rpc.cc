@@ -201,7 +201,8 @@ std::string RpcContext::_GetIpAddress(const std::string &host_name) {
   const char *inet_result =
       inet_ntop(AF_INET, addr_list[0], ip_address, INET_ADDRSTRLEN);
   if (!inet_result) {
-    FailedLibraryCall("inet_ntop");
+    perror("inet_ntop");
+    HELOG(kFatal, "inet_ntop failed");
   }
   return ip_address;
 }

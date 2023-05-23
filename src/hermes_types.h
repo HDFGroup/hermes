@@ -117,25 +117,74 @@ struct UniqueId {
   u64 unique_;   /**< A unique id for the blob */
   i32 node_id_;  /**< The node the content is on */
 
-  bool IsNull() const { return unique_ == 0; }
-
+  /** Default constructor */
   UniqueId() = default;
 
+  /** Emplace constructor */
   UniqueId(u64 unique, i32 node_id) : unique_(unique), node_id_(node_id) {}
 
+  /** Copy constructor */
+  UniqueId(const UniqueId &other) {
+    unique_ = other.unique_;
+    node_id_ = other.node_id_;
+  }
+
+  /** Copy assignment */
+  UniqueId& operator=(const UniqueId &other) {
+    if (this != &other) {
+      unique_ = other.unique_;
+      node_id_ = other.node_id_;
+    }
+    return *this;
+  }
+
+  /** Move constructor */
+  UniqueId(UniqueId &&other) {
+    unique_ = other.unique_;
+    node_id_ = other.node_id_;
+  }
+
+  /** Move assignment */
+  UniqueId& operator=(UniqueId &&other) {
+    if (this != &other) {
+      unique_ = other.unique_;
+      node_id_ = other.node_id_;
+    }
+    return *this;
+  }
+
+  /** Check if null */
+  bool IsNull() const { return unique_ == 0; }
+
+  /** Get null id */
   static inline UniqueId GetNull() {
     static const UniqueId id(0, 0);
     return id;
   }
 
+  /** Set to null id */
+  void SetNull() {
+    node_id_ = 0;
+    unique_ = 0;
+  }
+
+  /** Get id of node from this id */
   i32 GetNodeId() const { return node_id_; }
 
+  /** Compare two ids for equality */
   bool operator==(const UniqueId &other) const {
     return unique_ == other.unique_ && node_id_ == other.node_id_;
   }
 
+  /** Compare two ids for inequality */
   bool operator!=(const UniqueId &other) const {
     return unique_ != other.unique_ || node_id_ != other.node_id_;
+  }
+
+  /** Serialize a UniqueId */
+  template<class Archive>
+  void serialize(Archive &ar) {
+    ar(unique_, node_id_);
   }
 };
 typedef UniqueId<1> BlobId;
@@ -156,6 +205,59 @@ struct IoStat {
   TagId tag_id_;
   size_t blob_size_;
   int rank_;
+
+  /** Default constructor */
+  IoStat() = default;
+
+  /** Copy constructor */
+  IoStat(const IoStat &other) {
+    Copy(other);
+  }
+
+  /** Copy assignment */
+  IoStat& operator=(const IoStat &other) {
+    if (this != &other) {
+      Copy(other);
+    }
+    return *this;
+  }
+
+  /** Move constructor */
+  IoStat(IoStat &&other) {
+    Copy(other);
+  }
+
+  /** Move assignment */
+  IoStat& operator=(IoStat &&other) {
+    if (this != &other) {
+      Copy(other);
+    }
+    return *this;
+  }
+
+  /** Generic copy / move */
+  HSHM_ALWAYS_INLINE void Copy(const IoStat &other) {
+    type_ = other.type_;
+    blob_id_ = other.blob_id_;
+    tag_id_ = other.tag_id_;
+    blob_size_ = other.blob_size_;
+    rank_ = other.rank_;
+  }
+
+  /** Serialize */
+  template<class Archive>
+  void save(Archive &ar) const {
+    int type = static_cast<int>(type_);
+    ar(type, blob_id_, tag_id_, blob_size_, rank_);
+  }
+
+  /** Deserialize */
+  template<class Archive>
+  void load(Archive &ar) {
+    int type;
+    ar(type, blob_id_, tag_id_, blob_size_, rank_);
+    type_ = static_cast<IoType>(type);
+  }
 };
 
 /** Used as hints to the prefetcher */

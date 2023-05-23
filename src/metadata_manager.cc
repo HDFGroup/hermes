@@ -68,7 +68,7 @@ void MetadataManager::shm_init(hipc::ShmArchive<MetadataManagerShm> &header,
   }
 
   // Create the log used to track I/O pattern
-  HSHM_MAKE_AR0(header_->io_pattern_log_, alloc);
+  HSHM_MAKE_AR(header_->io_pattern_log_, alloc, 8192);
 }
 
 /**====================================
@@ -945,16 +945,8 @@ void MetadataManager::AddIoStat(TagId tag_id,
   /*if (is_mpi_) {
     MPI_Comm_rank(MPI_COMM_WORLD, &stat.rank_);
   }*/
-  io_pattern_log_->emplace_back(stat);
+  io_pattern_log_->emplace(stat);
 }
 
-/** Add an I/O statistic to the internal log */
-void MetadataManager::ClearIoStats(size_t count) {
-  ScopedRwWriteLock io_pattern_lock(header_->lock_[kIoPatternLogLock],
-                                    kMDM_ClearIoStats);
-  auto first = io_pattern_log_->begin();
-  auto end = io_pattern_log_->begin() + count;
-  io_pattern_log_->erase(first, end);
-}
 
 }  // namespace hermes

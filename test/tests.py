@@ -12,6 +12,7 @@ class NativeTestManager(TestManager):
         self.TEST_BUFFER_POOL_CMD = f"{self.CMAKE_BINARY_DIR}/bin/test_buffer_pool"
         self.TEST_TRAIT_CMD = f"{self.CMAKE_BINARY_DIR}/bin/test_trait"
         self.TEST_TAG_CMD = f"{self.CMAKE_BINARY_DIR}/bin/test_tag"
+        self.TEST_BINLOG_CMD = f"{self.CMAKE_BINARY_DIR}/bin/test_binlog"
         self.TEST_MULTINODE_PUT_GET_CMD = f"{self.CMAKE_BINARY_DIR}/bin/test_multinode_put_get"
 
     def test_bucket(self):
@@ -45,6 +46,9 @@ class NativeTestManager(TestManager):
         node = Exec(self.TEST_TAG_CMD, spawn_info)
         self.stop_daemon(spawn_info)
         return node.exit_code
+
+    def test_binlog(self):
+        node = Exec(self.TEST_BINLOG_CMD)
 
     def test_multinode_put_get(self):
         spawn_info = self.spawn_info(nprocs=2,

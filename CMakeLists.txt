@@ -323,6 +323,12 @@ if(yaml-cpp_FOUND)
   message(STATUS "found yaml-cpp at ${yaml-cpp_DIR}")
 endif()
 
+#Cereal
+find_package(cereal REQUIRED)
+if(cereal)
+  message(STATUS "found cereal")
+endif()
+
 # GOTCHA
 if(HERMES_INTERCEPT_IO)
   find_package(gotcha REQUIRED)

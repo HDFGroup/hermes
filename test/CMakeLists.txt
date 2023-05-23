@@ -18,7 +18,8 @@ set(API_TESTS
         test_bucket
         test_buffer_pool
         test_trait
-        test_tag)
+        test_tag
+        test_binlog)
 
 find_program(BASH_PROGRAM bash)
 

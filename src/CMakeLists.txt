@@ -23,7 +23,6 @@ set(HERMES_SRCS
   ${CMAKE_CURRENT_SOURCE_DIR}/config_client.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/config_server.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/hermes_types.cc
-  ${CMAKE_CURRENT_SOURCE_DIR}/utils.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/rpc.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/rpc_thallium.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/rpc_thallium_defs.cc
@@ -67,6 +66,7 @@ target_link_libraries(hermes
   PUBLIC ${CMAKE_HERMES_COMMUNICATION_TYPE_LIB}
   PUBLIC ${CMAKE_HERMES_RPC_TYPE_LIB}
   PUBLIC yaml-cpp
+  PUBLIC cereal::cereal
   PUBLIC "$<$<BOOL:${HERMES_INTERCEPT_IO}>:${GOTCHA_MODULE_LIBS}>"
 )
 
