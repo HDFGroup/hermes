@@ -19,7 +19,7 @@ class Hermes(CMakePackage):
     # depends_on('py-jarvis-util')
     depends_on('libfabric@1.14.1 fabrics=mlx,rxd,rxm,shm,sockets,tcp,udp,verbs,xpmem',
                when='+ares')
-    depends_on('hdf5@1.13.0:', when='+vfd')
+    depends_on('hdf5@1.14.0:', when='+vfd')
 
     def cmake_args(self):
         args = ['-DCMAKE_INSTALL_PREFIX={}'.format(self.prefix),
