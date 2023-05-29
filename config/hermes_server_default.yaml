@@ -76,6 +76,12 @@ devices:
     is_shared_device: true
     borg_capacity_thresh: [ 0.0, 1.0 ]
 
+# Define the maximum amount of memory Hermes can use for non-buffering tasks.
+# This includes metadata management and memory allocations.
+# This memory will not be preallocated, so if you don't know, you can set it
+# to be high.
+max_memory: 8g
+
 ### Define properties of RPCs
 rpc:
   # A path to a file containing a list of server names, 1 per line. If your

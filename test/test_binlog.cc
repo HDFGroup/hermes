@@ -51,7 +51,7 @@ void verify_log(hermes::BinaryLog<hermes::IoStat> log,
   for (int rank = 0; rank < num_ranks; ++rank) {
     hermes::IoStat stat;
     size_t i = 0;
-    while (log.GetNextEntry(rank, stat)) {
+    while (log.GetEntry(rank, i, stat)) {
       REQUIRE(stat.blob_id_.node_id_ == rank);
       REQUIRE(stat.blob_id_.unique_ == i);
       i += 1;
@@ -72,13 +72,15 @@ TEST_CASE("TestBinlog") {
     chunk_bytes, num_ranks, entries_per_rank);
 
   // Attempt flushing the log
-  hermes::BinaryLog<hermes::IoStat> log(path, log_bytes);
+  hermes::BinaryLog<hermes::IoStat> log;
+  log.Init(path, log_bytes);
   log.Ingest(stats);
   verify_log(log, num_ranks, entries_per_rank);
   log.Flush();
   REQUIRE(stdfs::file_size(path) == 0);
 
   // Actually flush the log when capacity reached
+  log.Ingest(stats);
   log.Ingest(stats);
   log.Ingest(stats);
   log.Ingest(stats);

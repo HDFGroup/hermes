@@ -265,6 +265,9 @@ class ServerConfig : public BaseConfig {
   /** The length of a view state epoch */
   u32 system_view_state_update_interval_ms;
 
+  /** The max amount of memory hermes uses for non-buffering tasks */
+  size_t max_memory_;
+
   /** A base name for the BufferPool shared memory segement. Hermes appends the
    * value of the USER environment variable to this string.
    */

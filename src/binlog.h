@@ -25,68 +25,10 @@ namespace hermes {
 
 template<typename T>
 struct BinaryLogRank {
-  std::vector<T> cache_;  /**< Cached log entries */
-  size_t off_;  /**< Prefetcher's offset in the cache */
-  size_t num_cached_;  /**< The number of entries cached int the log */
+  std::vector<T> log_;  /**< Cached log entries */
+  size_t backend_off_;  /**< Entry offset in the backend file */
 
-  /** Constructor */
-  BinaryLogRank() : off_(0), num_cached_(0) {}
-
-  /** Number of elements in the cache */
-  size_t size() const {
-    return cache_.size();
-  }
-
-  /** Number of touched elements / index of first untouched element */
-  size_t touched() const {
-    return off_;
-  }
-
-  /** Number of untouched elements */
-  size_t untouched() const {
-    return size() - off_;
-  }
-
-  /** Number of uncached elements */
-  size_t uncached() {
-    return size() - num_cached_;
-  }
-
-  /** Increment the number of cached elements */
-  void increment_cached() {
-    num_cached_ += 1;
-  }
-
-  /** Get the next untouched cached entry */
-  bool next(T &next) {
-    if (off_ >= cache_.size()) { return false; }
-    next = cache_[off_];
-    off_ += 1;
-    return true;
-  }
-
-  /** Reserve more space */
-  void reserve(size_t size) {
-    cache_.reserve(size);
-  }
-
-  /** Emplace an entry to the back of the cache log */
-  void emplace_back(const T &entry) {
-    cache_.emplace_back(entry);
-  }
-
-  /** Remove touched elements from the cache log */
-  size_t clear_touched() {
-    size_t num_touched = touched();
-    cache_.erase(cache_.begin(), cache_.begin() + num_touched);
-    if (touched() <= num_cached_) {
-      num_cached_ -= num_touched;
-    } else {
-      num_cached_ = 0;
-    }
-    off_ = 0;
-    return num_touched;
-  }
+  BinaryLogRank() : backend_off_(0) {}
 };
 
 /**
@@ -94,8 +36,7 @@ struct BinaryLogRank {
  * execution traces.
  *
  * This assumes only a single thread modifies or reads
- * from the log. This is intded to be used internally
- * by the prefetcher.
+ * from the log. Intended for internal use by prefetcher.
  * */
 template<typename T>
 class BinaryLog {
@@ -106,12 +47,14 @@ class BinaryLog {
   std::string path_;  /**< Path to the backing log file */
 
  public:
+  /** Default Constructor*/
+  BinaryLog() : max_ingest_(0), cur_entry_count_(0) {}
+
   /** Constructor. */
-  BinaryLog(const std::string &path,
-            size_t max_ingest_bytes) :
-    max_ingest_(max_ingest_bytes / sizeof(T)),
-    cur_entry_count_(0),
-    path_(path) {
+  void Init(const std::string &path,
+            size_t max_ingest_bytes) {
+    max_ingest_ = max_ingest_bytes / sizeof(T);
+    path_ = path;
     // Create + truncate the file
     // This is ok because the Hermes daemons are assumed to be spawned before
     // applications start running.
@@ -140,9 +83,13 @@ class BinaryLog {
   /**
    * Get the next entry corresponding to the rank
    * */
-  bool GetNextEntry(int rank, T &entry) {
-    while (cache_[rank].untouched() == 0 && Load(max_ingest_)) {}
-    return cache_[rank].next(entry);
+  bool GetEntry(int rank, size_t off, T &entry) {
+    auto &cache = cache_[rank];
+    if (off < cache.backend_off_ + cache.log_.size()) {
+      entry = cache.log_[off];
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -154,22 +101,19 @@ class BinaryLog {
     }
 
     // Serialize all contents into the log file
-    if (path_.size()) {
+    if (path_.empty()) {
       std::ofstream output_file(path_, std::ios::out | std::ios::app);
       cereal::BinaryOutputArchive oarch(output_file);
-      for (auto &rank_cache : cache_) {
-        for (size_t i = rank_cache.uncached(); i < rank_cache.size(); ++i) {
-          auto &entry = rank_cache.cache_[i];
+      for (auto &cache : cache_) {
+        for (size_t i = 0; i < cache.log_.size(); ++i) {
+          auto &entry = cache.log_[i];
           oarch(entry);
-          rank_cache.increment_cached();
+          cache.backend_off_ += 1;
         }
+        cache.log_.clear();
       }
     }
-
-    // Remove all touched entries from the cache
-    for (auto &rank_cache : cache_) {
-      cur_entry_count_ -= rank_cache.clear_touched();
-    }
+    cur_entry_count_ = 0;
   }
 
  private:
@@ -178,30 +122,12 @@ class BinaryLog {
     if (entry.rank_ >= (int)cache_.size()) {
       cache_.resize(entry.rank_ + 1);
     }
-    if (cache_[entry.rank_].size() == 0) {
-      cache_[entry.rank_].reserve(8192);
+    auto &cache = cache_[entry.rank_];
+    if (cache.log_.size() == 0) {
+      cache.log_.reserve(8192);
     }
-    cache_[entry.rank_].emplace_back(entry);
+    cache.log_.emplace_back(entry);
     cur_entry_count_ += 1;
-  }
-
-  /**
-   * Load data from the log into memory
-   *
-   * @return true when there is still data to load from the file, false
-   * otherwise
-   * */
-  bool Load(size_t num_entries) {
-    std::vector<T> buffer;
-    buffer.reserve(num_entries);
-    std::ifstream input_file(path_, std::ios::in);
-    cereal::BinaryInputArchive iarch(input_file);
-    while (!input_file.eof()) {
-      buffer.emplace_back();
-      iarch(buffer.back());
-    }
-    Ingest(buffer);
-    return !input_file.eof();
   }
 };
 

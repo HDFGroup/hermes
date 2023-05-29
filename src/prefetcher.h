@@ -17,6 +17,7 @@
 #include "thread_manager.h"
 #include "metadata_manager.h"
 #include "rpc.h"
+#include "binlog.h"
 #include <list>
 
 namespace hermes {
@@ -31,6 +32,7 @@ class Prefetcher {
   tl::engine *engine;            /**< Argobots execution engine */
   double epoch_ms_;              /**< Milliseconds to sleep */
   bool is_enabled_;              /**< Whether the prefetcher is enabled */
+  BinaryLog<IoStat> log_;
 
  public:
   /** Initialize each candidate prefetcher, including trace info */

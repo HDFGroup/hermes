@@ -178,6 +178,10 @@ void ServerConfig::ParseYAML(YAML::Node &yaml_conf) {
   if (yaml_conf["shmem_name"]) {
     shmem_name_ = yaml_conf["shmem_name"].as<std::string>();
   }
+  if (yaml_conf["max_memory"]) {
+    max_memory_ = hshm::ConfigParse::ParseSize(
+      yaml_conf["max_memory"].as<std::string>());
+  }
 }
 
 /** Load the default configuration */

@@ -112,14 +112,17 @@ void Hermes::LoadClientConfig(std::string config_path) {
 void Hermes::InitSharedMemory() {
   // Create shared-memory allocator
   auto mem_mngr = HERMES_MEMORY_MANAGER;
+  if (server_config_.max_memory_ == 0) {
+    server_config_.max_memory_ = hipc::MemoryManager::GetDefaultBackendSize();
+  }
   mem_mngr->CreateBackend<hipc::PosixShmMmap>(
-      hipc::MemoryManager::GetDefaultBackendSize(),
-      server_config_.shmem_name_);
+    server_config_.max_memory_,
+    server_config_.shmem_name_);
   main_alloc_ =
-      mem_mngr->CreateAllocator<hipc::ScalablePageAllocator>(
-          server_config_.shmem_name_,
-          main_alloc_id,
-          sizeof(HermesShm));
+    mem_mngr->CreateAllocator<hipc::ScalablePageAllocator>(
+      server_config_.shmem_name_,
+      main_alloc_id,
+      sizeof(HermesShm));
   header_ = main_alloc_->GetCustomHeader<HermesShm>();
 }
 

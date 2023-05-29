@@ -29,6 +29,13 @@ void Prefetcher::Init() {
     return;
   }
 
+  // Create the binary log
+  /*if (conf.prefetcher_.trace_path_.empty()) {
+    log_.Init("", MEGABYTES(64));
+  } else {
+    log_.Init(conf.prefetcher_.trace_path_ + )
+  }*/
+
   // Info needed per-client and server
   mdm_->is_mpi_ = conf.prefetcher_.is_mpi_;
   if (HERMES->mode_ == HermesType::kClient) {
