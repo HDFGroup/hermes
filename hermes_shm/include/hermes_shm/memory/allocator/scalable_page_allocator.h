@@ -110,14 +110,14 @@ class ScalablePageAllocator : public Allocator {
   StackAllocator alloc_;
   /** The power-of-two exponent of the minimum size that can be cached */
   static const size_t min_cached_size_exp_ = 6;
-  /** The minimum size that can be cached directly (32 bytes) */
+  /** The minimum size that can be cached directly (64 bytes) */
   static const size_t min_cached_size_ = (1 << min_cached_size_exp_);
   /** The power-of-two exponent of the minimum size that can be cached */
-  static const size_t max_cached_size_exp_ = 20;
-  /** The maximum size that can be cached directly (16KB) */
+  static const size_t max_cached_size_exp_ = 24;
+  /** The maximum size that can be cached directly (16MB) */
   static const size_t max_cached_size_ = (1 << max_cached_size_exp_);
-  /** Cache every size between 64 (2^6) BYTES and 1MB (2^20): (15 entries) */
-  static const size_t num_caches_ = 20 - 6 + 1;
+  /** Cache every size between 64 (2^6) BYTES and 16MB (2^24): (19 entries) */
+  static const size_t num_caches_ = 24 - 6 + 1;
   /**
    * The last free list stores sizes larger than 16KB or sizes which are
    * not exactly powers-of-two.
@@ -129,7 +129,7 @@ class ScalablePageAllocator : public Allocator {
    * Allocator constructor
    * */
   ScalablePageAllocator()
-  : header_(nullptr) {}
+    : header_(nullptr) {}
 
   /**
    * Get the ID of this allocator from shared memory
