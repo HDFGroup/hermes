@@ -40,4 +40,4 @@ python3 -m pip install -e .
 
 # NOTE(llogan): Modify version string per release.
 HERMES_VERSION=1.0.0
-spack install hermes@${HERMES_VERSION} +vfd
+spack install hermes +vfd
