@@ -6,7 +6,7 @@ class Hermes(CMakePackage):
     git = "https://github.com/HDFGroup/hermes.git"
     version('master', branch='master')
     version('pnnl', branch='pnnl')
-    version('dev-priv', git='https://github.com/lukemartinlogan/hermes.git', branch='new-borg')
+    version('dev-priv', git='https://github.com/lukemartinlogan/hermes.git', branch='dev')
     variant('vfd', default=False, description='Enable HDF5 VFD')
     variant('ares', default=False, description='Enable full libfabric install')
     depends_on('mochi-thallium~cereal@0.8.3')

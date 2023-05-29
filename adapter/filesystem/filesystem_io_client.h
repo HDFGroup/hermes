@@ -192,6 +192,7 @@ struct AdapterStat {
   uid_t st_uid_;         /**< user ID of owner */
   gid_t st_gid_;         /**< group ID of owner */
   size_t st_ptr_;        /**< current ptr of FILE */
+  size_t file_size_;     /**< Size of file at backend at time of open */
   timespec st_atim_;     /**< time of last access */
   timespec st_mtim_;     /**< time of last modification */
   timespec st_ctim_;     /**< time of last status change */
@@ -217,6 +218,7 @@ struct AdapterStat {
         hflags_(),
         st_mode_(),
         st_ptr_(0),
+        file_size_(0),
         st_atim_(),
         st_mtim_(),
         st_ctim_(),

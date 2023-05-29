@@ -62,8 +62,8 @@ void Filesystem::Open(AdapterStat &stat, File &f, const std::string &path) {
       stat.bkt_id_.Clear();
     } else {
       // The file was opened regularly
-      size_t file_size = io_client_->GetSize(*path_shm);
-      stat.bkt_id_ = HERMES->GetBucket(stat.path_, ctx, file_size);
+      stat.file_size_ = io_client_->GetSize(*path_shm);
+      stat.bkt_id_ = HERMES->GetBucket(stat.path_, ctx, stat.file_size_);
     }
     HILOG(kDebug, "File has size: {}", stat.bkt_id_.GetSize());
     // Attach trait to bucket (if not scratch mode)
@@ -154,10 +154,11 @@ Status Filesystem::PartialPutOrCreate(hapi::Bucket &bkt,
     io_client_->ReadBlob(bkt.GetName(),
                         full_blob, opts, status);
     if (!status.success_) {
-      HILOG(kDebug, "Failed to read blob from backend (PartialPut)."
+      HELOG(kFatal, "Failed to read blob from {} (PartialPut)."
             " cur_size: {}"
+            " backend_off: {}"
             " backend_size: {}",
-            full_blob.size(), opts.backend_size_)
+            bkt.GetName(), full_blob.size(), opts.backend_off_, opts.backend_size_)
       // return PARTIAL_PUT_OR_CREATE_OVERFLOW;
     }
   }
@@ -233,7 +234,7 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
     BlobId blob_id;
     opts.backend_off_ = p.page_ * kPageSize;
     opts.backend_size_ = GetBackendSize(opts.backend_off_,
-                                        backend_size,
+                                        stat.file_size_,
                                         kPageSize);
     opts.adapter_mode_ = stat.adapter_mode_;
     bkt.TryCreateBlob(blob_name.str(), blob_id, ctx);
@@ -377,7 +378,6 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
   size_t data_offset = 0;
   auto mapper = MapperFactory().Get(MapperType::kBalancedMapper);
   mapper->map(off, total_size, kPageSize, mapping);
-  size_t backend_size = stat.bkt_id_.GetSize();
 
   for (const auto &p : mapping) {
     Blob blob_wrap((const char*)ptr + data_offset, p.blob_size_);
@@ -385,7 +385,7 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
     BlobId blob_id;
     opts.backend_off_ = p.page_ * kPageSize;
     opts.backend_size_ = GetBackendSize(opts.backend_off_,
-                                        backend_size,
+                                        stat.file_size_,
                                         kPageSize);
     opts.adapter_mode_ = stat.adapter_mode_;
     bkt.TryCreateBlob(blob_name.str(), blob_id, ctx);

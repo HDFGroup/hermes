@@ -27,7 +27,7 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
   add_compile_definitions(HERMES_LOG_VERBOSITY=10)
   message("This is NOT a release build: ${CMAKE_BUILD_TYPE} ${CMAKE_CXX_FLAGS}")
 elseif(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fPIC")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -fPIC")
   # Ensure that debug logging is enabled
   # This will keep logs which have beneath priority 10
   add_compile_definitions(HERMES_LOG_VERBOSITY=10)
