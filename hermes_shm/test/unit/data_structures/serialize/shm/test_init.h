@@ -10,33 +10,26 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_INCLUDE_HERMES_MEMORY_ALLOCATOR_MP_PAGE_H_
-#define HERMES_INCLUDE_HERMES_MEMORY_ALLOCATOR_MP_PAGE_H_
+#ifndef HERMES_SHM_TEST_UNIT_DATA_STRUCTURES_SERIALIZE_THALLIUM_TEST_INIT_H_
+#define HERMES_SHM_TEST_UNIT_DATA_STRUCTURES_SERIALIZE_THALLIUM_TEST_INIT_H_
 
-#include "hermes_shm/data_structures/ipc/iqueue.h"
+#include "hermes_shm/data_structures/data_structure.h"
+#include "hermes_shm/data_structures/serialization/shm_serialize.h"
 
-namespace hshm::ipc {
+using hshm::ipc::PosixShmMmap;
+using hshm::ipc::MemoryBackendType;
+using hshm::ipc::MemoryBackend;
+using hshm::ipc::allocator_id_t;
+using hshm::ipc::AllocatorType;
+using hshm::ipc::Allocator;
+using hshm::ipc::Pointer;
 
-struct MpPage {
-  iqueue_entry entry_;  /**< Position of page in free list */
-  size_t page_size_;    /**< The size of the page allocated */
-  int flags_;           /**< Page flags (e.g., is_allocated?) */
-  uint32_t off_;        /**< The offset within the page */
-  uint32_t cpu_;        /**< The CPU the page was alloc'd from */
+using hshm::ipc::MemoryBackendType;
+using hshm::ipc::MemoryBackend;
+using hshm::ipc::allocator_id_t;
+using hshm::ipc::AllocatorType;
+using hshm::ipc::Allocator;
+using hshm::ipc::MemoryManager;
+using hshm::ipc::Pointer;
 
-  void SetAllocated() {
-    flags_ = 0x1;
-  }
-
-  void UnsetAllocated() {
-    flags_ = 0;
-  }
-
-  bool IsAllocated() const {
-    return flags_ & 0x1;
-  }
-};
-
-}  // namespace hshm::ipc
-
-#endif  // HERMES_INCLUDE_HERMES_MEMORY_ALLOCATOR_MP_PAGE_H_
+#endif  // HERMES_SHM_TEST_UNIT_DATA_STRUCTURES_SERIALIZE_THALLIUM_TEST_INIT_H_

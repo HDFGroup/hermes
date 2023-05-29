@@ -115,7 +115,7 @@ class ThalliumRpc  : public RpcContext {
   /** Io transfer at the server */
   size_t IoCallServer(const tl::request &req, tl::bulk &bulk,
                       IoType type, char *data, size_t size) {
-    tl::bulk_mode flag;
+    tl::bulk_mode flag = tl::bulk_mode::write_only;
     switch (type) {
       case IoType::kRead: {
         // The "local_bulk" object will only be read from
@@ -129,7 +129,6 @@ class ThalliumRpc  : public RpcContext {
       }
       default: {
         // NOTE(llogan): Avoids "uninitalized" warning
-        flag = tl::bulk_mode::write_only;
         HELOG(kFatal, "Cannot have none I/O type")
       }
     }
@@ -139,7 +138,7 @@ class ThalliumRpc  : public RpcContext {
     segments[0].first  = data;
     segments[0].second = size;
     tl::bulk local_bulk = server_engine_->expose(segments, flag);
-    size_t io_bytes;
+    size_t io_bytes = 0;
 
     switch (type) {
       case IoType::kRead: {
@@ -154,7 +153,6 @@ class ThalliumRpc  : public RpcContext {
       }
       case IoType::kNone: {
         HELOG(kFatal, "Cannot have none I/O type")
-        exit(1);
       }
     }
     if (io_bytes != size) {

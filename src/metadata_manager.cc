@@ -355,8 +355,8 @@ MetadataManager::LocalPutBlobMetadata(TagId bkt_id,
     hipc::pair<BlobId, BlobInfo>& info = (*iter);
     BlobInfo &blob_info = info.GetSecond();
     // Acquire blob_info write lock before modifying buffers
-    ScopedRwWriteLock(blob_info.lock_[0],
-                      kMDM_LocalPutBlobMetadata);
+    ScopedRwWriteLock blob_info_lock(blob_info.lock_[0],
+                                     kMDM_LocalPutBlobMetadata);
     (*blob_info.buffers_) = buffers;
     blob_info.blob_size_ = blob_size;
     blob_info.score_ = score;

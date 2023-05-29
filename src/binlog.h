@@ -123,7 +123,7 @@ class BinaryLog {
    * */
   void Ingest(const hipc::mpsc_queue<T> &queue) {
     T entry;
-    while(!queue.pop(entry).IsNull()) {
+    while (!queue.pop(entry).IsNull()) {
       AppendEntry(entry);
     }
   }
@@ -132,7 +132,7 @@ class BinaryLog {
    * Appends all entries in the vector to the cache.
    * */
   void Ingest(const std::vector<T> &queue) {
-    for(auto &entry : queue) {
+    for (auto &entry : queue) {
       AppendEntry(entry);
     }
   }
@@ -196,7 +196,7 @@ class BinaryLog {
     buffer.reserve(num_entries);
     std::ifstream input_file(path_, std::ios::in);
     cereal::BinaryInputArchive iarch(input_file);
-    while(!input_file.eof()) {
+    while (!input_file.eof()) {
       buffer.emplace_back();
       iarch(buffer.back());
     }

@@ -109,15 +109,15 @@ class ScalablePageAllocator : public Allocator {
   vector<pair<FreeListStats, iqueue<MpPage>>> *free_lists_;
   StackAllocator alloc_;
   /** The power-of-two exponent of the minimum size that can be cached */
-  static const size_t min_cached_size_exp_ = 5;
+  static const size_t min_cached_size_exp_ = 6;
   /** The minimum size that can be cached directly (32 bytes) */
   static const size_t min_cached_size_ = (1 << min_cached_size_exp_);
   /** The power-of-two exponent of the minimum size that can be cached */
-  static const size_t max_cached_size_exp_ = 14;
+  static const size_t max_cached_size_exp_ = 20;
   /** The maximum size that can be cached directly (16KB) */
   static const size_t max_cached_size_ = (1 << max_cached_size_exp_);
-  /** Cache every size between 16 (2^4) BYTES and 16KB (2^14): (11 entries) */
-  static const size_t num_caches_ = 14 - 5 + 1;
+  /** Cache every size between 64 (2^6) BYTES and 1MB (2^20): (15 entries) */
+  static const size_t num_caches_ = 20 - 6 + 1;
   /**
    * The last free list stores sizes larger than 16KB or sizes which are
    * not exactly powers-of-two.
@@ -161,8 +161,8 @@ class ScalablePageAllocator : public Allocator {
   OffsetPointer AllocateOffset(size_t size) override;
 
  private:
-  /** Check if a cached page can be re-used */
-  MpPage *CheckCaches(size_t size_mp);
+  /** Check if a cached page on this core can be re-used */
+  MpPage* CheckLocalCaches(size_t size_mp, uint32_t cpu);
 
   /**
    * Find the first fit of an element in a free list

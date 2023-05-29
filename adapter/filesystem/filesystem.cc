@@ -116,6 +116,7 @@ static inline size_t GetBackendSize(size_t file_off,
  * @param blob_name the semantic name of the blob
  * @param blob the buffer to put final data in
  * @param blob_off the offset within the blob to begin the Put
+ * @param page_size the page size of the adapter
  * @param io_ctx which adapter to route I/O request if blob DNE
  * @param opts which adapter to route I/O request if blob DNE
  * @param ctx any additional information
@@ -124,11 +125,12 @@ Status Filesystem::PartialPutOrCreate(hapi::Bucket &bkt,
                                       const std::string &blob_name,
                                       const Blob &blob,
                                       size_t blob_off,
+                                      size_t page_size,
                                       BlobId &blob_id,
                                       IoStatus &status,
                                       const FsIoOptions &opts,
                                       Context &ctx) {
-  Blob full_blob;
+  Blob full_blob(page_size);
   if (bkt.ContainsBlob(blob_name, blob_id)) {
     // Case 1: The blob already exists (read from hermes)
     // Read blob from Hermes
@@ -158,7 +160,8 @@ Status Filesystem::PartialPutOrCreate(hapi::Bucket &bkt,
             " cur_size: {}"
             " backend_off: {}"
             " backend_size: {}",
-            bkt.GetName(), full_blob.size(), opts.backend_off_, opts.backend_size_)
+            bkt.GetName(), full_blob.size(),
+            opts.backend_off_, opts.backend_size_)
       // return PARTIAL_PUT_OR_CREATE_OVERFLOW;
     }
   }
@@ -243,6 +246,7 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
                                      blob_name.str(),
                                      blob_wrap,
                                      p.blob_off_,
+                                     kPageSize,
                                      blob_id,
                                      io_status,
                                      opts,
@@ -274,6 +278,7 @@ size_t Filesystem::Write(File &f, AdapterStat &stat, const void *ptr,
  * @param blob the buffer to put final data in
  * @param blob_off the offset within the blob to begin the Put
  * @param blob_size the total amount of data to read
+ * @param page_size the page size of the adapter
  * @param blob_id [out] the blob id corresponding to blob_name
  * @param io_ctx information required to perform I/O to the backend
  * @param opts specific configuration of the I/O to perform
@@ -284,11 +289,12 @@ Status Filesystem::PartialGetOrCreate(hapi::Bucket &bkt,
                                       Blob &blob,
                                       size_t blob_off,
                                       size_t blob_size,
+                                      size_t page_size,
                                       BlobId &blob_id,
                                       IoStatus &status,
                                       const FsIoOptions &opts,
                                       Context &ctx) {
-  Blob full_blob;
+  Blob full_blob(page_size);
   if (bkt.ContainsBlob(blob_name, blob_id)) {
     // Case 1: The blob already exists (read from hermes)
     // Read blob from Hermes
@@ -395,6 +401,7 @@ size_t Filesystem::Read(File &f, AdapterStat &stat, void *ptr,
                                      blob_wrap,
                                      p.blob_off_,
                                      p.blob_size_,
+                                     kPageSize,
                                      blob_id,
                                      io_status,
                                      opts,
