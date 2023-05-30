@@ -72,6 +72,7 @@ void Hermes::InitServer(std::string server_config_path) {
 /** Initialize Hermes as a client to the daemon */
 void Hermes::InitClient(std::string server_config_path,
                         std::string client_config_path) {
+  HERMES_THREAD_MODEL->SetThreadModel(hshm::ThreadType::kArgobots);
   LoadServerConfig(server_config_path);
   LoadClientConfig(client_config_path);
   LoadSharedMemory();
