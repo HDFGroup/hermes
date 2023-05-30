@@ -234,6 +234,7 @@ struct BorgInfo {
 struct PrefetchInfo {
   bool enabled_;
   std::string trace_path_;
+  std::string apriori_schema_path_;
   size_t epoch_ms_;
   bool is_mpi_;
 };

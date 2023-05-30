@@ -149,8 +149,9 @@ tracing:
 prefetch:
   enabled: false
   io_trace_path: ""
+  apriori_schema_path: ""
   epoch_ms: 50
-  is_mpi: true
+  is_mpi: false
 
 # The shared memory prefix for the hermes shared memory segment. A user name
 # will be automatically appended.

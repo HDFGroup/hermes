@@ -59,6 +59,7 @@ void Prefetcher::Init() {
       tl::thread::self().sleep(*HERMES->rpc_.server_engine_,
                                prefetch->epoch_ms_);
     }
+    prefetch->log_.Flush(true);
     HILOG(kDebug, "Prefetcher has stopped")
   };
   HERMES_THREAD_MANAGER->Spawn(prefetcher);
@@ -90,6 +91,8 @@ void Prefetcher::Run() {
       }
     }
   }
+
+  log_.Flush(false);
 }
 
 }  // namespace hermes

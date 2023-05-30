@@ -148,6 +148,10 @@ void ServerConfig::ParsePrefetchInfo(YAML::Node yaml_conf) {
   if (yaml_conf["is_mpi"]) {
     prefetcher_.is_mpi_ = yaml_conf["is_mpi"].as<bool>();
   }
+  if (yaml_conf["apriori_schema_path"]) {
+    prefetcher_.apriori_schema_path_ =
+      yaml_conf["apriori_schema_path"].as<std::string>();
+  }
 }
 
 /** parse prefetch information from YAML config */

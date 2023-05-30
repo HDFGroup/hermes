@@ -181,11 +181,11 @@ struct UniqueId {
     return unique_ != other.unique_ || node_id_ != other.node_id_;
   }
 
-  /** Serialize a UniqueId */
+  /** Serialize a UniqueId
   template<class Archive>
   void serialize(Archive &ar) {
     ar(unique_, node_id_);
-  }
+  }*/
 };
 typedef UniqueId<1> BlobId;
 typedef UniqueId<2> TagId;
@@ -248,14 +248,22 @@ struct IoStat {
   template<class Archive>
   void save(Archive &ar) const {
     int type = static_cast<int>(type_);
-    ar(type, blob_id_, tag_id_, blob_size_, rank_);
+    u64 ids[2] = {blob_id_.unique_, tag_id_.unique_};
+    i32 nodes[2] = {blob_id_.node_id_, tag_id_.node_id_};
+    ar(type, ids[0], nodes[0], ids[1], nodes[1], blob_size_, rank_);
   }
 
   /** Deserialize */
   template<class Archive>
   void load(Archive &ar) {
     int type;
-    ar(type, blob_id_, tag_id_, blob_size_, rank_);
+    ar(type,
+       blob_id_.unique_,
+       blob_id_.node_id_,
+       tag_id_.unique_,
+       tag_id_.node_id_,
+       blob_size_,
+       rank_);
     type_ = static_cast<IoType>(type);
   }
 };

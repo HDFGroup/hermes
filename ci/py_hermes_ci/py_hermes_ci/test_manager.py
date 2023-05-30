@@ -192,7 +192,6 @@ class TestManager(ABC):
         :return: None
         """
         print("Stop daemon")
-        return
         Exec(f"{self.CMAKE_BINARY_DIR}/bin/finalize_hermes",
              LocalExecInfo(
                  env=spawn_info.basic_env))

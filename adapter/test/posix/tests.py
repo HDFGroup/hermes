@@ -30,10 +30,9 @@ class PosixTestManager(TestManager):
         spawn_info = self.spawn_info(nprocs=1,
                                      hermes_conf='hermes_server')
         self.start_daemon(spawn_info)
-        # node = Exec(posix_cmd, spawn_info)
+        node = Exec(posix_cmd, spawn_info)
         self.stop_daemon(spawn_info)
-        # return node.exit_code
-        return 0
+        return node.exit_code
 
     def test_hermes_posix_basic_large(self):
         posix_cmd = f"{self.HERMES_POSIX_CMD} " \
