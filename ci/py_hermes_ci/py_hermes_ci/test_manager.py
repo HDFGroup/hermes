@@ -26,6 +26,8 @@ class TestManager(ABC):
         jutil = JutilManager.get_instance()
         jutil.collect_output = False
         jutil.hide_output = False
+        jutil.debug_mpi_exec = True
+        jutil.debug_local_exec = True
         self.MY_DIR = str(pathlib.Path(inspect.getfile(LocalExecInfo)).parent)
         self.CMAKE_SOURCE_DIR = cmake_source_dir
         self.CMAKE_BINARY_DIR = cmake_binary_dir
