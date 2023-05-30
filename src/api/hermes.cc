@@ -50,19 +50,19 @@ void Hermes::Init(HermesType mode,
 
 /** Initialize Hermes as a server */
 void Hermes::InitServer(std::string server_config_path) {
-  HERMES_THREAD_MODEL->SetThreadModel(hshm::ThreadType::kArgobots);
   LoadServerConfig(server_config_path);
   InitSharedMemory();
 
   // Initialize RPC
   rpc_.InitServer();
-  rpc_.InitClient();
+  HERMES_THREAD_MODEL->SetThreadModel(hshm::ThreadType::kArgobots);
 
   // Load the trait libraries
   traits_.Init();
 
   // Construct the reference objects
   mdm_.shm_init(header_->mdm_, main_alloc_, &server_config_);
+  rpc_.InitClient();
   bpm_.shm_init(header_->bpm_, main_alloc_);
   borg_.shm_init(header_->borg_, main_alloc_);
   prefetch_.Init();
@@ -78,7 +78,7 @@ void Hermes::InitClient(std::string server_config_path,
   // Initialize references to SHM types
   mdm_.shm_deserialize(header_->mdm_);
   rpc_.InitClient();
-  // HERMES_THREAD_MODEL->SetThreadModel(hshm::ThreadType::kArgobots);
+  HERMES_THREAD_MODEL->SetThreadModel(hshm::ThreadType::kArgobots);
   bpm_.shm_deserialize(header_->bpm_);
   borg_.shm_deserialize(header_->borg_);
   prefetch_.Init();
