@@ -33,7 +33,6 @@ void MpiioIoClient::RealOpen(File &f,
   if (f.mpi_status_ != MPI_SUCCESS) {
     f.status_ = false;
   }
-  f.hermes_mpi_fh_ = stat.mpi_fh_;
 
   /*if (stat.hflags_.Any(HERMES_FS_CREATE)) {
     if (stat.adapter_mode_ != AdapterMode::kScratch) {
@@ -63,7 +62,8 @@ void MpiioIoClient::RealOpen(File &f,
 void MpiioIoClient::HermesOpen(File &f,
                                const AdapterStat &stat,
                                FilesystemIoClientState &fs_mdm) {
-  f.hermes_mpi_fh_ = (MPI_File)fs_mdm.stat_;
+  // f.hermes_mpi_fh_ = (MPI_File)fs_mdm.stat_;
+  f.hermes_mpi_fh_ = stat.mpi_fh_;
 }
 
 /** Synchronize \a file FILE f */
