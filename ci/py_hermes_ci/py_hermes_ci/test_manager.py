@@ -170,11 +170,11 @@ class TestManager(ABC):
         :return: None
         """
         print("Killing daemon")
-        return
         Kill("hermes_daemon",
              LocalExecInfo(
                  hostfile=spawn_info.hostfile,
                  collect_output=False))
+        return
 
         print("Start daemon")
         self.daemon = Exec(f"{self.CMAKE_BINARY_DIR}/bin/hermes_daemon",
