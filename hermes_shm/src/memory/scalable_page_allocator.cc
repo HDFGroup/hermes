@@ -265,8 +265,7 @@ void ScalablePageAllocator::FreeOffsetNoNullCheck(OffsetPointer p) {
   header_->total_alloc_.fetch_sub(hdr->page_size_);
 
   // Get the free list to start from
-  uint32_t cpu = NodeThreadId().hash() % HERMES_SYSTEM_INFO->ncpu_;
-    // hdr->cpu_;
+  uint32_t cpu = hdr->cpu_;
   // NodeThreadId().hash() % HERMES_SYSTEM_INFO->ncpu_;
   uint32_t cpu_start = cpu * num_free_lists_;
   pair<FreeListStats, iqueue<MpPage>> &first_free_list =
