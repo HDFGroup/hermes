@@ -49,7 +49,7 @@ class Prefetcher {
 class PrefetcherPolicy {
  public:
   /** Utilize the I/O pattern log to make prefetching decisions */
-  virtual void Prefetch(BinaryLog<IoStat> &log) = 0;
+  virtual void Prefetch(BufferOrganizer *borg, BinaryLog<IoStat> &log) = 0;
 };
 
 }  // namespace hermes

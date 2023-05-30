@@ -94,6 +94,15 @@ class BinaryLog {
   }
 
   /**
+   * Get the total number of ops stored in the rank's log throughout
+   * its lifetime.
+   * */
+  size_t GetRankLogSize(int rank) {
+    auto &cache = cache_[rank];
+    return cache.log_.size() + cache.backend_off_;
+  }
+
+  /**
    * Get the next entry corresponding to the rank
    * */
   bool GetEntry(int rank, size_t off, T &entry) {

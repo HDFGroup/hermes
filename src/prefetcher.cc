@@ -87,7 +87,7 @@ void Prefetcher::Run() {
         auto *trait_hdr =
           trait->GetHeader<hermes::PrefetcherTraitHeader>();
         auto *policy = PrefetcherFactory::Get(trait_hdr->type_);
-        policy->Prefetch(log_);
+        policy->Prefetch(borg_, log_);
       }
     }
   }
