@@ -345,8 +345,10 @@ MetadataManager::LocalPutBlobMetadata(TagId bkt_id,
     blob_info.tag_id_ = bkt_id;
     blob_info.blob_size_ = blob_size;
     blob_info.score_ = score;
-    blob_info.mod_count_ = 1;
+    blob_info.mod_count_ = 0;
+    blob_info.access_freq_ = 0;
     blob_info.last_flush_ = 0;
+    blob_info.UpdateWriteStats();
   } else {
     HILOG(kDebug, "Found existing blob: {}. Total num blobs: {}",
           blob_name, blob_map_->size())
@@ -360,8 +362,9 @@ MetadataManager::LocalPutBlobMetadata(TagId bkt_id,
     (*blob_info.buffers_) = buffers;
     blob_info.blob_size_ = blob_size;
     blob_info.score_ = score;
-    blob_info.mod_count_.fetch_add(1);
+    blob_info.UpdateWriteStats();
   }
+  AddIoStat(bkt_id, blob_id, blob_size, IoType::kWrite);
   return std::tuple<BlobId, bool, size_t>(blob_id, did_create, orig_blob_size);
 }
 
@@ -463,6 +466,8 @@ std::vector<BufferInfo> MetadataManager::LocalGetBlobBuffers(BlobId blob_id) {
   // Acquire blob_info read lock
   ScopedRwReadLock blob_info_lock(blob_info.lock_[0],
                                   kMDM_LocalGetBlobBuffers);
+  AddIoStat(blob_info.tag_id_, blob_id, blob_info.blob_size_, IoType::kRead);
+  blob_info.UpdateReadStats();
   auto vec = blob_info.buffers_->vec();
   return vec;
 }

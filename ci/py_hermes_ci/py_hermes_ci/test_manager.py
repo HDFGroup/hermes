@@ -169,7 +169,9 @@ class TestManager(ABC):
         :param env: Hermes environment variables
         :return: None
         """
-        Kill("hermes",
+        print("Killing daemon")
+        return
+        Kill("hermes_daemon",
              LocalExecInfo(
                  hostfile=spawn_info.hostfile,
                  collect_output=False))
@@ -191,6 +193,7 @@ class TestManager(ABC):
         :return: None
         """
         print("Stop daemon")
+        return
         Exec(f"{self.CMAKE_BINARY_DIR}/bin/finalize_hermes",
              LocalExecInfo(
                  env=spawn_info.basic_env))
