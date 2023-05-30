@@ -81,9 +81,9 @@ const char* kServerDefaultConfigStr =
 "\n"
 "# Define the maximum amount of memory Hermes can use for non-buffering tasks.\n"
 "# This includes metadata management and memory allocations.\n"
-"# This memory will not be preallocated, so if you don\'t know, you can set it\n"
-"# to be high.\n"
-"max_memory: 8g\n"
+"# This memory will not be preallocated, so if you don\'t know, 0 indicates\n"
+"# any amount of memory\n"
+"max_memory: 0g\n"
 "\n"
 "### Define properties of RPCs\n"
 "rpc:\n"
@@ -168,5 +168,6 @@ const char* kServerDefaultConfigStr =
 "  - \"hermes_posix_io_client\"\n"
 "  - \"hermes_stdio_io_client\"\n"
 "  - \"hermes_mpiio_io_client\"\n"
-"  - \"hermes_example_trait\"\n";
+"  - \"hermes_example_trait\"\n"
+"  - \"hermes_prefetcher_trait\"\n";
 #endif  // HERMES_SRC_CONFIG_SERVER_DEFAULT_H_

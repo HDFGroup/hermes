@@ -22,6 +22,7 @@
 using hshm::ipc::PosixShmMmap;
 using Timer = hshm::HighResMonotonicTimer;
 hipc::MemoryBackend *backend;
+const char *kBucketName = "/tmp/test_hermes/hi.txt";
 
 void GatherTimes(const std::string &test_name,
                  size_t total_size,
@@ -51,7 +52,7 @@ void PutTest(int nprocs, int rank,
              size_t blob_size,
              int compute_sec) {
   Timer t, io_t;
-  auto bkt = HERMES->GetBucket("hello");
+  auto bkt = HERMES->GetBucket(kBucketName);
   hermes::api::Context ctx;
   hermes::BlobId blob_id;
   hermes::Blob blob(blob_size);
@@ -84,7 +85,7 @@ void GetTest(int nprocs, int rank,
              size_t blob_size,
              int compute_sec) {
   Timer t, io_t;
-  auto bkt = HERMES->GetBucket("hello");
+  auto bkt = HERMES->GetBucket(kBucketName);
   hermes::api::Context ctx;
   hermes::BlobId blob_id;
   t.Resume();
@@ -125,12 +126,15 @@ int main(int argc, char **argv) {
   int compute_put = atoi(argv[5]);
   int compute_get = atoi(argv[6]);
 
+  // Start Hermes
+  HERMES->Create(hermes::HermesType::kClient);
+
   // Register the Apriori trait
   hermes::TraitId apriori_trait =
     HERMES->RegisterTrait<hermes::PrefetcherTrait>(
       "apriori", hermes::PrefetcherType::kApriori);
   if (with_prefetch) {
-    auto bkt = HERMES->GetBucket("hello");
+    auto bkt = HERMES->GetBucket(kBucketName);
     bkt.AttachTrait(apriori_trait);
   }
 
@@ -139,5 +143,8 @@ int main(int argc, char **argv) {
   MPI_Barrier(MPI_COMM_WORLD);
   GetTest(nprocs, rank, blobs_per_checkpt, num_checkpts,
           blob_size, compute_get);
+
+  // Finalize
+  HERMES->Finalize();
   MPI_Finalize();
 }

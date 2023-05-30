@@ -78,9 +78,9 @@ devices:
 
 # Define the maximum amount of memory Hermes can use for non-buffering tasks.
 # This includes metadata management and memory allocations.
-# This memory will not be preallocated, so if you don't know, you can set it
-# to be high.
-max_memory: 8g
+# This memory will not be preallocated, so if you don't know, 0 indicates
+# any amount of memory
+max_memory: 0g
 
 ### Define properties of RPCs
 rpc:
@@ -166,3 +166,4 @@ traits:
   - "hermes_stdio_io_client"
   - "hermes_mpiio_io_client"
   - "hermes_example_trait"
+  - "hermes_prefetcher_trait"

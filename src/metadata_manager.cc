@@ -874,7 +874,7 @@ MetadataManager::LocalGetTraitParams(TraitId trait_id) {
  * Get an existing trait
  * */
 Trait* MetadataManager::GlobalGetTrait(TraitId trait_id) {
-  HILOG(kDebug, "Getting the trait {}", trait_id)
+  // HILOG(kDebug, "Getting the trait {}", trait_id)
   Trait *trait = nullptr;
 
   // Check if trait is already constructed

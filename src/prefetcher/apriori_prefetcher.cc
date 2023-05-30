@@ -53,7 +53,7 @@ void AprioriPrefetcher::ParseSchema(YAML::Node &schema) {
       for (YAML::Node instr_node : instr_list_node["prefetch"]) {
         instr.promotes_.emplace_back();
         auto &promote = instr.promotes_.back();
-        promote.bkt_name_ = instr_node["bucket_name"].as<std::string>();
+        promote.bkt_name_ = instr_node["bucket"].as<std::string>();
         ParseList(promote.promote_, instr_node["promote_blobs"]);
         ParseList(promote.demote_, instr_node["demote_blobs"]);
       }
