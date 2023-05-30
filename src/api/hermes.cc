@@ -91,7 +91,7 @@ void Hermes::InitClient(std::string server_config_path,
 
 /** Load the server-side configuration */
 void Hermes::LoadServerConfig(std::string config_path) {
-  if (config_path.size() == 0) {
+  if (config_path.empty()) {
     config_path = GetEnvSafe(kHermesServerConf);
   }
   if (mode_ == HermesType::kServer) {
@@ -102,7 +102,7 @@ void Hermes::LoadServerConfig(std::string config_path) {
 
 /** Load the client-side configuration */
 void Hermes::LoadClientConfig(std::string config_path) {
-  if (config_path.size() == 0) {
+  if (config_path.empty()) {
     config_path = GetEnvSafe(kHermesClientConf);
   }
   // HILOG(kInfo, "Loading client configuration: {}", config_path)
