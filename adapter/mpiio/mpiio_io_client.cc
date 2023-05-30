@@ -33,6 +33,7 @@ void MpiioIoClient::RealOpen(File &f,
   if (f.mpi_status_ != MPI_SUCCESS) {
     f.status_ = false;
   }
+  f.hermes_mpi_fh_ = stat.mpi_fh_;
 
   /*if (stat.hflags_.Any(HERMES_FS_CREATE)) {
     if (stat.adapter_mode_ != AdapterMode::kScratch) {
