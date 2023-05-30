@@ -40,12 +40,8 @@ typedef hipc::mpsc_queue<IoStat> IO_PATTERN_LOG_T;
 
 enum MdmLock {
   kBlobMapLock,
-  kBktMapLock,
   kTagMapLock,
-  kTagDeleteLock,
   kTraitMapLock,
-  kLocalTraitMapLock,
-  kIoPatternLogLock,
   kFlushLock,
 
   kMdmLockCount

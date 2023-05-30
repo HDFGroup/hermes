@@ -365,7 +365,6 @@ MetadataManager::LocalPutBlobMetadata(TagId bkt_id,
     blob_info.score_ = score;
     blob_info.UpdateWriteStats();
   }
-  AddIoStat(bkt_id, blob_id, blob_size, IoType::kWrite);
   return std::tuple<BlobId, bool, size_t>(blob_id, did_create, orig_blob_size);
 }
 
@@ -467,7 +466,6 @@ std::vector<BufferInfo> MetadataManager::LocalGetBlobBuffers(BlobId blob_id) {
   // Acquire blob_info read lock
   ScopedRwReadLock blob_info_lock(blob_info.lock_[0],
                                   kMDM_LocalGetBlobBuffers);
-  AddIoStat(blob_info.tag_id_, blob_id, blob_info.blob_size_, IoType::kRead);
   blob_info.UpdateReadStats();
   auto vec = blob_info.buffers_->vec();
   return vec;
@@ -939,15 +937,12 @@ void MetadataManager::AddIoStat(TagId tag_id,
   if (!enable_io_tracing_) {
     return;
   }
-  ScopedRwWriteLock io_pattern_lock(header_->lock_[kIoPatternLogLock],
-                                    kMDM_AddIoStat);
   IoStat stat;
   stat.blob_id_ = blob_id;
   stat.tag_id_ = tag_id;
   stat.blob_size_ = blob_size;
   stat.type_ = type;
   stat.rank_ = 0;
-  // TODO(llogan): make MPI-awareness configurable
   if (is_mpi_) {
     MPI_Comm_rank(MPI_COMM_WORLD, &stat.rank_);
   }
