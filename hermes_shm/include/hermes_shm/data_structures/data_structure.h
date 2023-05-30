@@ -21,6 +21,7 @@
 #include "ipc/list.h"
 #include "ipc/vector.h"
 #include "ipc/unordered_map.h"
+#include "hermes_shm/memory/memory_manager.h"
 
 namespace hipc = hshm::ipc;
 

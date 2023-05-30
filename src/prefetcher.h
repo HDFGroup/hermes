@@ -17,7 +17,9 @@
 #include "thread_manager.h"
 #include "metadata_manager.h"
 #include "rpc.h"
+#include "binlog.h"
 #include <list>
+#include "traits/prefetcher/prefetcher_header.h"
 
 namespace hermes {
 
@@ -31,6 +33,7 @@ class Prefetcher {
   tl::engine *engine;            /**< Argobots execution engine */
   double epoch_ms_;              /**< Milliseconds to sleep */
   bool is_enabled_;              /**< Whether the prefetcher is enabled */
+  BinaryLog<IoStat> log_;
 
  public:
   /** Initialize each candidate prefetcher, including trace info */
@@ -41,6 +44,12 @@ class Prefetcher {
 
   /** Parse the MDM's I/O pattern log */
   void Run();
+};
+
+class PrefetcherPolicy {
+ public:
+  /** Utilize the I/O pattern log to make prefetching decisions */
+  virtual void Prefetch(BufferOrganizer *borg, BinaryLog<IoStat> &log) = 0;
 };
 
 }  // namespace hermes

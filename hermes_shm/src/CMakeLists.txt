@@ -11,7 +11,6 @@ add_library(hermes_shm_data_structures
         thread/rwlock.cc
         memory/malloc_allocator.cc
         memory/stack_allocator.cc
-        memory/fixed_page_allocator.cc
         memory/scalable_page_allocator.cc
         memory/memory_registry.cc
         memory/memory_manager.cc

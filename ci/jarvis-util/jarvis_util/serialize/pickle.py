@@ -1,8 +1,17 @@
+"""
+This module contains methods to serialize and deserialize data from
+a pickle file.
+"""
+
 import pickle as pkl
 from jarvis_util.serialize.serializer import Serializer
-import sys,os
+
 
 class PickleFile(Serializer):
+    """
+    This class serializes and deserializes data from a pickle file
+    """
+
     def __init__(self, path):
         self.path = path
 

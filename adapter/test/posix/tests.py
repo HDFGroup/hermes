@@ -1,6 +1,5 @@
 from py_hermes_ci.test_manager import TestManager
-from jarvis_util.shell.exec import Exec
-from jarvis_util.shell.local_exec import LocalExecInfo
+from jarvis_util import *
 
 
 class PosixTestManager(TestManager):
@@ -25,7 +24,7 @@ class PosixTestManager(TestManager):
 
     def test_hermes_posix_basic_small(self):
         posix_cmd = f"{self.HERMES_POSIX_CMD} " \
-                    f"~[request_size=range-large]  " \
+                    f"~[request_size=range-small]  " \
                     f"--reporter compact -d yes"
 
         spawn_info = self.spawn_info(nprocs=1,

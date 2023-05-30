@@ -86,19 +86,22 @@ size_t ScalablePageAllocator::RoundUp(size_t num, size_t &exp) {
 
 OffsetPointer ScalablePageAllocator::AllocateOffset(size_t size) {
   MpPage *page = nullptr;
-  size_t size_mp = size + sizeof(MpPage);
+  size_t exp;
+  size_t size_mp = RoundUp(size + sizeof(MpPage), exp);
+  uint32_t cpu = NodeThreadId().hash() % HERMES_SYSTEM_INFO->ncpu_;
 
   // Case 1: Can we re-use an existing page?
-  page = CheckCaches(size_mp);
+  page = CheckLocalCaches(size_mp, cpu);
 
   // Case 2: Coalesce if enough space is being wasted
   // if (page == nullptr) {}
 
   // Case 3: Allocate from stack if no page found
   if (page == nullptr) {
-    auto off = alloc_.AllocateOffset(size);
+    auto off = alloc_.AllocateOffset(size_mp);
     if (!off.IsNull()) {
       page = alloc_.Convert<MpPage>(off - sizeof(MpPage));
+      page->page_size_ = size_mp;
     }
   }
 
@@ -111,13 +114,13 @@ OffsetPointer ScalablePageAllocator::AllocateOffset(size_t size) {
   header_->total_alloc_.fetch_add(page->page_size_);
   auto p = Convert<MpPage, OffsetPointer>(page);
   page->SetAllocated();
+  page->cpu_ = cpu;
   return p + sizeof(MpPage);
 }
 
-MpPage *ScalablePageAllocator::CheckCaches(size_t size_mp) {
+MpPage *ScalablePageAllocator::CheckLocalCaches(size_t size_mp, uint32_t cpu) {
   MpPage *page;
   // ScopedRwReadLock coalesce_lock(header_->coalesce_lock_, 0);
-  uint32_t cpu = NodeThreadId().hash() % HERMES_SYSTEM_INFO->ncpu_;
   uint32_t cpu_start = cpu * num_free_lists_;
   pair<FreeListStats, iqueue<MpPage>> &first_free_list =
     (*free_lists_)[cpu_start];
@@ -236,12 +239,12 @@ void ScalablePageAllocator::DividePage(FreeListStats &stats,
 }
 
 OffsetPointer ScalablePageAllocator::AlignedAllocateOffset(size_t size,
-                                                        size_t alignment) {
+                                                           size_t alignment) {
   throw ALIGNED_ALLOC_NOT_SUPPORTED.format();
 }
 
 OffsetPointer ScalablePageAllocator::ReallocateOffsetNoNullCheck(
-    OffsetPointer p, size_t new_size) {
+  OffsetPointer p, size_t new_size) {
   OffsetPointer new_p;
   void *ptr = AllocatePtr<void*, OffsetPointer>(new_size, new_p);
   MpPage *hdr = Convert<MpPage>(p - sizeof(MpPage));
@@ -262,7 +265,8 @@ void ScalablePageAllocator::FreeOffsetNoNullCheck(OffsetPointer p) {
   header_->total_alloc_.fetch_sub(hdr->page_size_);
 
   // Get the free list to start from
-  uint32_t cpu = NodeThreadId().hash() % HERMES_SYSTEM_INFO->ncpu_;
+  uint32_t cpu = hdr->cpu_;
+  // NodeThreadId().hash() % HERMES_SYSTEM_INFO->ncpu_;
   uint32_t cpu_start = cpu * num_free_lists_;
   pair<FreeListStats, iqueue<MpPage>> &first_free_list =
     (*free_lists_)[cpu_start];

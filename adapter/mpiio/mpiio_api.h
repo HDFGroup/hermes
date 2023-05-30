@@ -58,7 +58,7 @@ typedef int (*MPI_File_sync_t)(MPI_File fh);
 namespace hermes::adapter::fs {
 
 /** Pointers to the real mpiio API */
-class MpiioApi {
+class MpiioApi : public RealApi {
  public:
   /** MPI_Init */
   MPI_Init_t MPI_Init = nullptr;
@@ -117,175 +117,62 @@ class MpiioApi {
   /** MPI_File_sync */
   MPI_File_sync_t MPI_File_sync = nullptr;
 
-  MpiioApi() {
-    void *is_intercepted = (void*)dlsym(RTLD_DEFAULT, "mpiio_intercepted");
-    if (is_intercepted) {
-      MPI_Init = (MPI_Init_t)dlsym(RTLD_NEXT, "MPI_Init");
-    } else {
-      MPI_Init = (MPI_Init_t)dlsym(RTLD_DEFAULT, "MPI_Init");
-    }
+  MpiioApi() : RealApi("MPI_Init", "mpiio_intercepted") {
+    MPI_Init = (MPI_Init_t)dlsym(real_lib_, "MPI_Init");
     REQUIRE_API(MPI_Init)
-    if (is_intercepted) {
-      MPI_Finalize = (MPI_Finalize_t)dlsym(RTLD_NEXT, "MPI_Finalize");
-    } else {
-      MPI_Finalize = (MPI_Finalize_t)dlsym(RTLD_DEFAULT, "MPI_Finalize");
-    }
+    MPI_Finalize = (MPI_Finalize_t)dlsym(real_lib_, "MPI_Finalize");
     REQUIRE_API(MPI_Finalize)
-    if (is_intercepted) {
-      MPI_Wait = (MPI_Wait_t)dlsym(RTLD_NEXT, "MPI_Wait");
-    } else {
-      MPI_Wait = (MPI_Wait_t)dlsym(RTLD_DEFAULT, "MPI_Wait");
-    }
+    MPI_Wait = (MPI_Wait_t)dlsym(real_lib_, "MPI_Wait");
     REQUIRE_API(MPI_Wait)
-    if (is_intercepted) {
-      MPI_Waitall = (MPI_Waitall_t)dlsym(RTLD_NEXT, "MPI_Waitall");
-    } else {
-      MPI_Waitall = (MPI_Waitall_t)dlsym(RTLD_DEFAULT, "MPI_Waitall");
-    }
+    MPI_Waitall = (MPI_Waitall_t)dlsym(real_lib_, "MPI_Waitall");
     REQUIRE_API(MPI_Waitall)
-    if (is_intercepted) {
-      MPI_File_open = (MPI_File_open_t)dlsym(RTLD_NEXT, "MPI_File_open");
-    } else {
-      MPI_File_open = (MPI_File_open_t)dlsym(RTLD_DEFAULT, "MPI_File_open");
-    }
+    MPI_File_open = (MPI_File_open_t)dlsym(real_lib_, "MPI_File_open");
     REQUIRE_API(MPI_File_open)
-    if (is_intercepted) {
-      MPI_File_close = (MPI_File_close_t)dlsym(RTLD_NEXT, "MPI_File_close");
-    } else {
-      MPI_File_close = (MPI_File_close_t)dlsym(RTLD_DEFAULT, "MPI_File_close");
-    }
+    MPI_File_close = (MPI_File_close_t)dlsym(real_lib_, "MPI_File_close");
     REQUIRE_API(MPI_File_close)
-    if (is_intercepted) {
-      MPI_File_seek_shared = (MPI_File_seek_shared_t)dlsym(RTLD_NEXT, "MPI_File_seek_shared");
-    } else {
-      MPI_File_seek_shared = (MPI_File_seek_shared_t)dlsym(RTLD_DEFAULT, "MPI_File_seek_shared");
-    }
+    MPI_File_seek_shared = (MPI_File_seek_shared_t)dlsym(real_lib_, "MPI_File_seek_shared");
     REQUIRE_API(MPI_File_seek_shared)
-    if (is_intercepted) {
-      MPI_File_seek = (MPI_File_seek_t)dlsym(RTLD_NEXT, "MPI_File_seek");
-    } else {
-      MPI_File_seek = (MPI_File_seek_t)dlsym(RTLD_DEFAULT, "MPI_File_seek");
-    }
+    MPI_File_seek = (MPI_File_seek_t)dlsym(real_lib_, "MPI_File_seek");
     REQUIRE_API(MPI_File_seek)
-    if (is_intercepted) {
-      MPI_File_get_position = (MPI_File_get_position_t)dlsym(RTLD_NEXT, "MPI_File_get_position");
-    } else {
-      MPI_File_get_position = (MPI_File_get_position_t)dlsym(RTLD_DEFAULT, "MPI_File_get_position");
-    }
+    MPI_File_get_position = (MPI_File_get_position_t)dlsym(real_lib_, "MPI_File_get_position");
     REQUIRE_API(MPI_File_get_position)
-    if (is_intercepted) {
-      MPI_File_read_all = (MPI_File_read_all_t)dlsym(RTLD_NEXT, "MPI_File_read_all");
-    } else {
-      MPI_File_read_all = (MPI_File_read_all_t)dlsym(RTLD_DEFAULT, "MPI_File_read_all");
-    }
+    MPI_File_read_all = (MPI_File_read_all_t)dlsym(real_lib_, "MPI_File_read_all");
     REQUIRE_API(MPI_File_read_all)
-    if (is_intercepted) {
-      MPI_File_read_at_all = (MPI_File_read_at_all_t)dlsym(RTLD_NEXT, "MPI_File_read_at_all");
-    } else {
-      MPI_File_read_at_all = (MPI_File_read_at_all_t)dlsym(RTLD_DEFAULT, "MPI_File_read_at_all");
-    }
+    MPI_File_read_at_all = (MPI_File_read_at_all_t)dlsym(real_lib_, "MPI_File_read_at_all");
     REQUIRE_API(MPI_File_read_at_all)
-    if (is_intercepted) {
-      MPI_File_read_at = (MPI_File_read_at_t)dlsym(RTLD_NEXT, "MPI_File_read_at");
-    } else {
-      MPI_File_read_at = (MPI_File_read_at_t)dlsym(RTLD_DEFAULT, "MPI_File_read_at");
-    }
+    MPI_File_read_at = (MPI_File_read_at_t)dlsym(real_lib_, "MPI_File_read_at");
     REQUIRE_API(MPI_File_read_at)
-    if (is_intercepted) {
-      MPI_File_read = (MPI_File_read_t)dlsym(RTLD_NEXT, "MPI_File_read");
-    } else {
-      MPI_File_read = (MPI_File_read_t)dlsym(RTLD_DEFAULT, "MPI_File_read");
-    }
+    MPI_File_read = (MPI_File_read_t)dlsym(real_lib_, "MPI_File_read");
     REQUIRE_API(MPI_File_read)
-    if (is_intercepted) {
-      MPI_File_read_ordered = (MPI_File_read_ordered_t)dlsym(RTLD_NEXT, "MPI_File_read_ordered");
-    } else {
-      MPI_File_read_ordered = (MPI_File_read_ordered_t)dlsym(RTLD_DEFAULT, "MPI_File_read_ordered");
-    }
+    MPI_File_read_ordered = (MPI_File_read_ordered_t)dlsym(real_lib_, "MPI_File_read_ordered");
     REQUIRE_API(MPI_File_read_ordered)
-    if (is_intercepted) {
-      MPI_File_read_shared = (MPI_File_read_shared_t)dlsym(RTLD_NEXT, "MPI_File_read_shared");
-    } else {
-      MPI_File_read_shared = (MPI_File_read_shared_t)dlsym(RTLD_DEFAULT, "MPI_File_read_shared");
-    }
+    MPI_File_read_shared = (MPI_File_read_shared_t)dlsym(real_lib_, "MPI_File_read_shared");
     REQUIRE_API(MPI_File_read_shared)
-    if (is_intercepted) {
-      MPI_File_write_all = (MPI_File_write_all_t)dlsym(RTLD_NEXT, "MPI_File_write_all");
-    } else {
-      MPI_File_write_all = (MPI_File_write_all_t)dlsym(RTLD_DEFAULT, "MPI_File_write_all");
-    }
+    MPI_File_write_all = (MPI_File_write_all_t)dlsym(real_lib_, "MPI_File_write_all");
     REQUIRE_API(MPI_File_write_all)
-    if (is_intercepted) {
-      MPI_File_write_at_all = (MPI_File_write_at_all_t)dlsym(RTLD_NEXT, "MPI_File_write_at_all");
-    } else {
-      MPI_File_write_at_all = (MPI_File_write_at_all_t)dlsym(RTLD_DEFAULT, "MPI_File_write_at_all");
-    }
+    MPI_File_write_at_all = (MPI_File_write_at_all_t)dlsym(real_lib_, "MPI_File_write_at_all");
     REQUIRE_API(MPI_File_write_at_all)
-    if (is_intercepted) {
-      MPI_File_write_at = (MPI_File_write_at_t)dlsym(RTLD_NEXT, "MPI_File_write_at");
-    } else {
-      MPI_File_write_at = (MPI_File_write_at_t)dlsym(RTLD_DEFAULT, "MPI_File_write_at");
-    }
+    MPI_File_write_at = (MPI_File_write_at_t)dlsym(real_lib_, "MPI_File_write_at");
     REQUIRE_API(MPI_File_write_at)
-    if (is_intercepted) {
-      MPI_File_write = (MPI_File_write_t)dlsym(RTLD_NEXT, "MPI_File_write");
-    } else {
-      MPI_File_write = (MPI_File_write_t)dlsym(RTLD_DEFAULT, "MPI_File_write");
-    }
+    MPI_File_write = (MPI_File_write_t)dlsym(real_lib_, "MPI_File_write");
     REQUIRE_API(MPI_File_write)
-    if (is_intercepted) {
-      MPI_File_write_ordered = (MPI_File_write_ordered_t)dlsym(RTLD_NEXT, "MPI_File_write_ordered");
-    } else {
-      MPI_File_write_ordered = (MPI_File_write_ordered_t)dlsym(RTLD_DEFAULT, "MPI_File_write_ordered");
-    }
+    MPI_File_write_ordered = (MPI_File_write_ordered_t)dlsym(real_lib_, "MPI_File_write_ordered");
     REQUIRE_API(MPI_File_write_ordered)
-    if (is_intercepted) {
-      MPI_File_write_shared = (MPI_File_write_shared_t)dlsym(RTLD_NEXT, "MPI_File_write_shared");
-    } else {
-      MPI_File_write_shared = (MPI_File_write_shared_t)dlsym(RTLD_DEFAULT, "MPI_File_write_shared");
-    }
+    MPI_File_write_shared = (MPI_File_write_shared_t)dlsym(real_lib_, "MPI_File_write_shared");
     REQUIRE_API(MPI_File_write_shared)
-    if (is_intercepted) {
-      MPI_File_iread_at = (MPI_File_iread_at_t)dlsym(RTLD_NEXT, "MPI_File_iread_at");
-    } else {
-      MPI_File_iread_at = (MPI_File_iread_at_t)dlsym(RTLD_DEFAULT, "MPI_File_iread_at");
-    }
+    MPI_File_iread_at = (MPI_File_iread_at_t)dlsym(real_lib_, "MPI_File_iread_at");
     REQUIRE_API(MPI_File_iread_at)
-    if (is_intercepted) {
-      MPI_File_iread = (MPI_File_iread_t)dlsym(RTLD_NEXT, "MPI_File_iread");
-    } else {
-      MPI_File_iread = (MPI_File_iread_t)dlsym(RTLD_DEFAULT, "MPI_File_iread");
-    }
+    MPI_File_iread = (MPI_File_iread_t)dlsym(real_lib_, "MPI_File_iread");
     REQUIRE_API(MPI_File_iread)
-    if (is_intercepted) {
-      MPI_File_iread_shared = (MPI_File_iread_shared_t)dlsym(RTLD_NEXT, "MPI_File_iread_shared");
-    } else {
-      MPI_File_iread_shared = (MPI_File_iread_shared_t)dlsym(RTLD_DEFAULT, "MPI_File_iread_shared");
-    }
+    MPI_File_iread_shared = (MPI_File_iread_shared_t)dlsym(real_lib_, "MPI_File_iread_shared");
     REQUIRE_API(MPI_File_iread_shared)
-    if (is_intercepted) {
-      MPI_File_iwrite_at = (MPI_File_iwrite_at_t)dlsym(RTLD_NEXT, "MPI_File_iwrite_at");
-    } else {
-      MPI_File_iwrite_at = (MPI_File_iwrite_at_t)dlsym(RTLD_DEFAULT, "MPI_File_iwrite_at");
-    }
+    MPI_File_iwrite_at = (MPI_File_iwrite_at_t)dlsym(real_lib_, "MPI_File_iwrite_at");
     REQUIRE_API(MPI_File_iwrite_at)
-    if (is_intercepted) {
-      MPI_File_iwrite = (MPI_File_iwrite_t)dlsym(RTLD_NEXT, "MPI_File_iwrite");
-    } else {
-      MPI_File_iwrite = (MPI_File_iwrite_t)dlsym(RTLD_DEFAULT, "MPI_File_iwrite");
-    }
+    MPI_File_iwrite = (MPI_File_iwrite_t)dlsym(real_lib_, "MPI_File_iwrite");
     REQUIRE_API(MPI_File_iwrite)
-    if (is_intercepted) {
-      MPI_File_iwrite_shared = (MPI_File_iwrite_shared_t)dlsym(RTLD_NEXT, "MPI_File_iwrite_shared");
-    } else {
-      MPI_File_iwrite_shared = (MPI_File_iwrite_shared_t)dlsym(RTLD_DEFAULT, "MPI_File_iwrite_shared");
-    }
+    MPI_File_iwrite_shared = (MPI_File_iwrite_shared_t)dlsym(real_lib_, "MPI_File_iwrite_shared");
     REQUIRE_API(MPI_File_iwrite_shared)
-    if (is_intercepted) {
-      MPI_File_sync = (MPI_File_sync_t)dlsym(RTLD_NEXT, "MPI_File_sync");
-    } else {
-      MPI_File_sync = (MPI_File_sync_t)dlsym(RTLD_DEFAULT, "MPI_File_sync");
-    }
+    MPI_File_sync = (MPI_File_sync_t)dlsym(real_lib_, "MPI_File_sync");
     REQUIRE_API(MPI_File_sync)
   }
 };

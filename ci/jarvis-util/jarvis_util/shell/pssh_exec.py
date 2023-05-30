@@ -1,13 +1,28 @@
+"""
+This module provides methods to distribute a command among multiple
+nodes using SSH. This class is intended to be called from Exec,
+not by general users.
+"""
+
 from .ssh_exec import SshExec
 from .local_exec import LocalExec
-from jarvis_util.util.hostfile import Hostfile
 from .exec_info import ExecInfo, ExecType, Executable
 
 
 class PsshExec(Executable):
+    """
+    Execute commands on multiple hosts using SSH.
+    """
+
     def __init__(self, cmd, exec_info):
+        """
+        Execute commands on multiple hosts.
+
+        :param cmd: A list of commands or a single command string
+        :param exec_info: Info needed to execute command with SSH
+        """
         super().__init__()
-        self.cmd = cmd
+        self.cmd = self.smash_cmd(cmd)
         self.exec_async = exec_info.exec_async
         self.hosts = exec_info.hostfile.hosts
         self.execs_ = []
@@ -15,7 +30,9 @@ class PsshExec(Executable):
         self.stderr = {}
         if len(self.hosts):
             for host in self.hosts:
-                ssh_exec_info = exec_info.mod(hosts=host, exec_async=True)
+                ssh_exec_info = exec_info.mod(hostfile=None,
+                                              hosts=host,
+                                              exec_async=True)
                 self.execs_.append(SshExec(cmd, ssh_exec_info))
         else:
             self.execs_.append(
@@ -25,20 +42,12 @@ class PsshExec(Executable):
             self.wait()
 
     def wait(self):
-        for exe in self.execs_:
-            exe.wait()
-            if hasattr(exe, 'addr'):
-                addr = exe.addr
-            else:
-                addr = 'localhost'
-            self.stdout[addr] = exe.stdout
-            self.stdout[addr] = exe.stderr
+        self.wait_list(self.execs_)
+        self.per_host_outputs(self.execs_)
         self.set_exit_code()
 
     def set_exit_code(self):
-        for exe in self.execs_:
-            if exe.exit_code:
-                self.exit_code = exe.exit_code
+        self.set_exit_code_list(self.execs_)
 
 
 class PsshExecInfo(ExecInfo):

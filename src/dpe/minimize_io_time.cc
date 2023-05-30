@@ -25,9 +25,8 @@ Status MinimizeIoTime::Placement(const std::vector<size_t> &blob_sizes,
     // Initialize blob's size, score, and schema
     size_t rem_blob_size = blob_size;
     float score = ctx.blob_score_;
-    if (score == -1) {
+    if (ctx.blob_score_ == -1) {
       score = 1;
-      ctx.blob_score_ = 1;
     }
     output.emplace_back();
     PlacementSchema &blob_schema = output.back();
@@ -39,6 +38,9 @@ Status MinimizeIoTime::Placement(const std::vector<size_t> &blob_sizes,
           target.rem_cap_ < blob_size) {
         // TODO(llogan): add other considerations of this DPE
         continue;
+      }
+      if (ctx.blob_score_ == -1) {
+        ctx.blob_score_ = target.score_;
       }
 
       // NOTE(llogan): we assume the TargetInfo list is sorted

@@ -1,4 +1,10 @@
+"""
+This module contains methods to create strings which follow a particular
+naming convention.
+"""
+
 import re
+
 
 def to_camel_case(string):
     """
@@ -9,9 +15,10 @@ def to_camel_case(string):
     """
     if string is None:
         return
-    words = re.sub(r"(_|-)+", " ", string).split()
+    words = re.sub(r'(_|-)+', ' ', string).split()
     words = [word.capitalize() for word in words]
-    return "".join(words)
+    return ''.join(words)
+
 
 def to_snake_case(string):
     """
@@ -23,5 +30,5 @@ def to_snake_case(string):
         return
     words = re.split('([A-Z][a-z0-9_]*)', string)
     words = [word for word in words if len(word)]
-    string = "_".join(words)
+    string = '_'.join(words)
     return string.lower()

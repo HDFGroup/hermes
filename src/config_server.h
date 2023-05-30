@@ -212,10 +212,20 @@ struct DpeInfo {
  * Buffer organizer information defined in server config
  * */
 struct BorgInfo {
-  /** The RPC port number for the buffer organizer. */
-  int port_;
   /** The number of buffer organizer threads. */
   int num_threads_;
+  /** Interval (seconds) where blobs are checked for flushing */
+  size_t flush_period_;
+  /** Interval (seconds) where blobs are checked for re-organization */
+  size_t blob_reorg_period_;
+  /** Time when score is equal to 1 (seconds) */
+  float recency_min_;
+  /** Time when score is equal to 0 (seconds) */
+  float recency_max_;
+  /** Number of accesses for score to be equal to 1 (count) */
+  float freq_max_;
+  /** Number of accesses for score to be equal to 0 (count) */
+  float freq_min_;
 };
 
 /**
@@ -224,6 +234,7 @@ struct BorgInfo {
 struct PrefetchInfo {
   bool enabled_;
   std::string trace_path_;
+  std::string apriori_schema_path_;
   size_t epoch_ms_;
   bool is_mpi_;
 };
@@ -264,6 +275,9 @@ class ServerConfig : public BaseConfig {
 
   /** The length of a view state epoch */
   u32 system_view_state_update_interval_ms;
+
+  /** The max amount of memory hermes uses for non-buffering tasks */
+  size_t max_memory_;
 
   /** A base name for the BufferPool shared memory segement. Hermes appends the
    * value of the USER environment variable to this string.

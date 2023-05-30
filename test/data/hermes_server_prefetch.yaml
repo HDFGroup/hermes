@@ -133,5 +133,6 @@ system_view_state_update_interval_ms: 1000
 prefetch:
   enabled: true
   io_trace_path: "${HOME}/test/io_trace.yaml"
+  apriori_schema_path: "${HOME}/apriori_schema.yaml"
   epoch_ms: 50
   is_mpi: true

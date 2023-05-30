@@ -139,19 +139,6 @@ TEST_CASE("MallocAllocator") {
   Posttest();
 }
 
-TEST_CASE("FixedPageAllocator") {
-  auto alloc = Pretest<hipc::PosixShmMmap, hipc::FixedPageAllocator>();
-  REQUIRE(alloc->GetCurrentlyAllocatedSize() == 0);
-  PageAllocationTest(alloc);
-  REQUIRE(alloc->GetCurrentlyAllocatedSize() == 0);
-
-  REQUIRE(alloc->GetCurrentlyAllocatedSize() == 0);
-  MultiPageAllocationTest(alloc);
-  REQUIRE(alloc->GetCurrentlyAllocatedSize() == 0);
-
-  Posttest();
-}
-
 TEST_CASE("ScalablePageAllocator") {
   auto alloc = Pretest<hipc::PosixShmMmap, hipc::ScalablePageAllocator>();
   REQUIRE(alloc->GetCurrentlyAllocatedSize() == 0);

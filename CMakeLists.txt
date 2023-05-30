@@ -27,7 +27,7 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
   add_compile_definitions(HERMES_LOG_VERBOSITY=10)
   message("This is NOT a release build: ${CMAKE_BUILD_TYPE} ${CMAKE_CXX_FLAGS}")
 elseif(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fPIC")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -fPIC")
   # Ensure that debug logging is enabled
   # This will keep logs which have beneath priority 10
   add_compile_definitions(HERMES_LOG_VERBOSITY=10)
@@ -323,6 +323,12 @@ if(yaml-cpp_FOUND)
   message(STATUS "found yaml-cpp at ${yaml-cpp_DIR}")
 endif()
 
+#Cereal
+find_package(cereal REQUIRED)
+if(cereal)
+  message(STATUS "found cereal")
+endif()
+
 # GOTCHA
 if(HERMES_INTERCEPT_IO)
   find_package(gotcha REQUIRED)
@@ -362,7 +368,7 @@ endif()
 
 # HDF5
 if(HERMES_ENABLE_VFD)
-  set(HERMES_REQUIRED_HDF5_VERSION 1.13.0)
+  set(HERMES_REQUIRED_HDF5_VERSION 1.14.0)
   set(HERMES_REQUIRED_HDF5_COMPONENTS C)
   find_package(HDF5 ${HERMES_REQUIRED_HDF5_VERSION} CONFIG NAMES hdf5
     COMPONENTS ${HERMES_REQUIRED_HDF5_COMPONENTS} shared)

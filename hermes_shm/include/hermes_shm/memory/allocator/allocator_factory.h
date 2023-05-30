@@ -17,7 +17,6 @@
 #include "allocator.h"
 #include "stack_allocator.h"
 #include "malloc_allocator.h"
-#include "fixed_page_allocator.h"
 #include "scalable_page_allocator.h"
 
 namespace hshm::ipc {
@@ -44,15 +43,6 @@ class AllocatorFactory {
     } else if constexpr(std::is_same_v<MallocAllocator, AllocT>) {
       // Malloc Allocator
       auto alloc = std::make_unique<MallocAllocator>();
-      alloc->shm_init(alloc_id,
-                      custom_header_size,
-                      backend->data_,
-                      backend->data_size_,
-                      std::forward<Args>(args)...);
-      return alloc;
-    } else if constexpr(std::is_same_v<FixedPageAllocator, AllocT>) {
-      // Fixed Page Allocator
-      auto alloc = std::make_unique<FixedPageAllocator>();
       alloc->shm_init(alloc_id,
                       custom_header_size,
                       backend->data_,
@@ -90,13 +80,6 @@ class AllocatorFactory {
       // Malloc Allocator
       case AllocatorType::kMallocAllocator: {
         auto alloc = std::make_unique<MallocAllocator>();
-        alloc->shm_deserialize(backend->data_,
-                               backend->data_size_);
-        return alloc;
-      }
-      // Fixed Page Allocator
-      case AllocatorType::kFixedPageAllocator: {
-        auto alloc = std::make_unique<FixedPageAllocator>();
         alloc->shm_deserialize(backend->data_,
                                backend->data_size_);
         return alloc;

@@ -28,8 +28,6 @@ static inline std::string GetEnvSafe(const char *env_name) {
   return val;
 }
 
-void FailedLibraryCall(std::string func);
-
 }  // namespace hermes
 
 #endif  // HERMES_UTILS_H_

@@ -132,6 +132,8 @@ struct BlobInfo : public hipc::ShmContainer {
   RwLock lock_[2];     /**< Ensures BlobInfo access is synchronized */
   size_t blob_size_;   /**< The overall size of the blob */
   float score_;        /**< The priority of this blob */
+  std::atomic<u32> access_freq_;  /**< Number of times blob accessed in epoch */
+  u64 last_access_;  /**< Last time blob accessed */
   std::atomic<size_t> mod_count_;   /**< The number of times blob modified */
   std::atomic<size_t> last_flush_;  /**< The last mod that was flushed */
 
@@ -243,6 +245,28 @@ struct BlobInfo : public hipc::ShmContainer {
 
   /** Destroy all allocated data */
   void shm_destroy_main();
+
+  /**====================================
+   * Statistics
+   * ===================================*/
+
+  void UpdateWriteStats() {
+    mod_count_.fetch_add(1);
+    UpdateReadStats();
+  }
+
+  void UpdateReadStats() {
+    last_access_ = GetTimeFromStartNs();
+    access_freq_.fetch_add(1);
+  }
+
+  static u64 GetTimeFromStartNs() {
+    struct timespec currentTime;
+    clock_gettime(CLOCK_MONOTONIC, &currentTime);
+    unsigned long long nanoseconds =
+      currentTime.tv_sec * 1000000000ULL + currentTime.tv_nsec;
+    return nanoseconds;
+  }
 };
 
 /** Represents TagInfo in shared memory */

@@ -36,16 +36,12 @@ typedef hipc::unordered_map<hipc::charbuf, TraitId> TRAIT_ID_MAP_T;
 typedef hipc::unordered_map<BlobId, BlobInfo> BLOB_MAP_T;
 typedef hipc::unordered_map<TagId, TagInfo> TAG_MAP_T;
 typedef hipc::unordered_map<TraitId, hipc::charbuf> TRAIT_MAP_T;
-typedef hipc::slist<IoStat> IO_PATTERN_LOG_T;
+typedef hipc::mpsc_queue<IoStat> IO_PATTERN_LOG_T;
 
 enum MdmLock {
   kBlobMapLock,
-  kBktMapLock,
   kTagMapLock,
-  kTagDeleteLock,
   kTraitMapLock,
-  kLocalTraitMapLock,
-  kIoPatternLogLock,
   kFlushLock,
 
   kMdmLockCount
@@ -460,9 +456,6 @@ class MetadataManager {
 
   /** Add an I/O statistic to the internal log */
   void AddIoStat(TagId tag_id, BlobId blob_id, size_t blob_size, IoType type);
-
-  /** Add an I/O statistic to the internal log */
-  void ClearIoStats(size_t count);
 
   /**====================================
    * Private Operations
