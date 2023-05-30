@@ -54,7 +54,7 @@ void BorgIoThreadManager::SpawnFlushWorkers(int num_threads) {
     while (HERMES_BORG_IO_THREAD_MANAGER->Alive() ||
           (!HERMES_BORG_IO_THREAD_MANAGER->Alive() && bq_info.load_)) {
       borg->LocalProcessFlushes(bq_info, queue);
-      tl::thread::self().sleep(*HERMES->rpc_.server_engine_, 1);
+      tl::thread::self().sleep(*HERMES->rpc_.server_engine_, 25);
     }
     HILOG(kDebug, "Flushing worker {} has stopped", bq_info.id_)
   };

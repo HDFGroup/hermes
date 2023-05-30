@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 .idea
 hostfile.txt
+lcov.info
 
 # C extensions
 *.so
