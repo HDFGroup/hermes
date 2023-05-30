@@ -323,6 +323,16 @@ void BufferOrganizer::GlobalOrganizeBlob(const std::string &bucket_name,
   BlobId blob_id;
   bkt.GetBlobId(blob_name, blob_id);
   float blob_score = bkt.GetBlobScore(blob_id);
+  GlobalOrganizeBlob(bkt, blob_name, blob_id, blob_score, score);
+}
+
+/** Re-organize blobs based on a score */
+void BufferOrganizer::GlobalOrganizeBlob(hapi::Bucket &bkt,
+                                         const std::string &blob_name,
+                                         BlobId &blob_id,
+                                         float blob_score,
+                                         float score) {
+  AUTO_TRACE(1);
   Context ctx;
 
   HILOG(kDebug, "Changing blob score from: {} to {}", blob_score, score)
@@ -357,13 +367,60 @@ void BufferOrganizer::LocalAnalyzeBlobs() {
   auto mdm = &HERMES->mdm_;
   ScopedRwReadLock blob_map_lock(mdm->header_->lock_[kBlobMapLock],
                                  kBORG_LocalEnqueueFlushes);
-  float recency_max = HERMES->server_config_.borg_.recency_max_;
   float recency_min = HERMES->server_config_.borg_.recency_min_;
+  float recency_max = HERMES->server_config_.borg_.recency_max_;
   float freq_max = HERMES->server_config_.borg_.freq_max_;
   float freq_min = HERMES->server_config_.borg_.freq_min_;
 
+  // Only re-organize if there's a capacity trigger
+  bool is_below_thresh = false;
+  auto targets = mdm->LocalGetTargetInfo();
+  for (TargetInfo &target : targets) {
+    DeviceInfo &dev_info =
+      (*mdm_->devices_)[target.id_.GetDeviceId()];
+    float rem_cap = (float) target.rem_cap_ / (float)target.max_cap_;
+    if (rem_cap < dev_info.borg_min_thresh_) {
+      is_below_thresh = true;
+    }
+  }
+  if (!is_below_thresh) {
+    return;
+  }
+
+  u64 time = BlobInfo::GetTimeFromStartNs();
   for (hipc::pair<BlobId, BlobInfo>& blob_p : *mdm->blob_map_) {
-    // TODO(llogan)
+    BlobInfo &blob_info = blob_p.GetSecond();
+    // Get the recency score [0, 1]
+    float last_access_elapse = (float)(time - blob_info.last_access_);
+    float recency_score;
+    if (last_access_elapse <= recency_min) {
+      recency_score = 1;
+    } else if (last_access_elapse >= recency_max) {
+      recency_score = 0;
+    } else {
+      recency_score = (last_access_elapse - recency_min) /
+        (recency_max - recency_min);
+      recency_score = 1 - recency_score;
+    }
+
+    // Get the frequency score [0, 1]
+    float freq_score;
+    float freq = (float)blob_info.access_freq_;
+    if (freq <= freq_min) {
+      freq_score = 0;
+    } else if (freq >= freq_max) {
+      freq_score = 1;
+    } else {
+      freq_score = (freq - freq_min) / (freq_max - freq_min);
+    }
+
+    // Update the current blob score
+    auto bkt = HERMES->GetBucket(blob_info.tag_id_);
+    GlobalOrganizeBlob(bkt,
+                       blob_info.name_->str(),
+                       blob_info.blob_id_,
+                       blob_info.score_,
+                       std::max(freq_score, recency_score));
   }
 }
 

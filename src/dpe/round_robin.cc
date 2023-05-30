@@ -34,6 +34,9 @@ Status RoundRobin::Placement(const std::vector<size_t> &blob_sizes,
       if (target.rem_cap_ < blob_size) {
         continue;
       }
+      if (ctx.blob_score_ == -1) {
+        ctx.blob_score_ = target.score_;
+      }
 
       // Place the blob on this target
       blob_schema.plcmnts_.emplace_back(rem_blob_size,

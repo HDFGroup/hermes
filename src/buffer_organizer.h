@@ -255,6 +255,13 @@ class BufferOrganizer {
                           const std::string &blob_name,
                           float score);
 
+  /** Re-organize blobs based on a score */
+  void GlobalOrganizeBlob(hermes::api::Bucket &bkt,
+                          const std::string &blob_name,
+                          BlobId &blob_id,
+                          float blob_score,
+                          float score);
+
  public:
   /**====================================
    * BORG Flushing methods
