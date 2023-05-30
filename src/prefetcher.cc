@@ -12,6 +12,7 @@
 
 #include "prefetcher.h"
 #include "hermes.h"
+#include <unordered_set>
 
 namespace hermes {
 
@@ -29,18 +30,19 @@ void Prefetcher::Init() {
     return;
   }
 
-  // Create the binary log
-  /*if (conf.prefetcher_.trace_path_.empty()) {
-    log_.Init("", MEGABYTES(64));
-  } else {
-    log_.Init(conf.prefetcher_.trace_path_ + )
-  }*/
-
   // Info needed per-client and server
   mdm_->is_mpi_ = conf.prefetcher_.is_mpi_;
   if (HERMES->mode_ == HermesType::kClient) {
     // NOTE(llogan): prefetcher runs only on daemon as thread
     return;
+  }
+
+  // Create the binary log
+  if (conf.prefetcher_.trace_path_.empty()) {
+    log_.Init("", MEGABYTES(64));
+  } else {
+    log_.Init(conf.prefetcher_.trace_path_ + std::to_string(rpc_->node_id_),
+              MEGABYTES(64));
   }
 
   // Set the epoch
@@ -67,9 +69,29 @@ void Prefetcher::Finalize()  {
 
 /** Parse the MDM's I/O pattern log */
 void Prefetcher::Run() {
-  // Ingest the current I/O statistics
+  // Get the set of buckets + Ingest log
+  std::unordered_set<TagId> tags;
+  IoStat entry;
+  while (!mdm_->io_pattern_log_->pop(entry).IsNull()) {
+    log_.AppendEntry(entry);
+    tags.emplace(entry.tag_id_);
+  }
 
-  // Get the set of buckets
+  // Enact the prefetchers for each bucket
+  for (auto &bkt_id : tags) {
+    std::vector<Trait*> traits = HERMES->GetTraits(bkt_id);
+    for (auto trait : traits) {
+      if (trait->header_->flags_.Any(HERMES_TRAIT_PREFETCHER)) {
+        auto *trait_hdr =
+          trait->GetHeader<hermes::PrefetcherTraitHeader>();
+        switch (trait_hdr->type_) {
+          case PrefetcherType::kApriori: {
+
+          }
+        }
+      }
+    }
+  }
 }
 
 }  // namespace hermes

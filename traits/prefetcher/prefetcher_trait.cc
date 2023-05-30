@@ -12,7 +12,7 @@
 
 #include "prefetcher_trait.h"
 
-namespace hermes::api {
+namespace hermes {
 
 void PrefetcherTrait::Run(int method, void *params) {
   (void) method;
@@ -21,4 +21,4 @@ void PrefetcherTrait::Run(int method, void *params) {
 
 }  // namespace hermes::api
 
-HERMES_TRAIT_CC(hermes::api::PrefetcherTrait)
+HERMES_TRAIT_CC(hermes::PrefetcherTrait)

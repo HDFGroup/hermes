@@ -80,6 +80,19 @@ class BinaryLog {
     }
   }
 
+  /** Appends an entry to the cache */
+  void AppendEntry(const T &entry) {
+    if (entry.rank_ >= (int)cache_.size()) {
+      cache_.resize(entry.rank_ + 1);
+    }
+    auto &cache = cache_[entry.rank_];
+    if (cache.log_.size() == 0) {
+      cache.log_.reserve(8192);
+    }
+    cache.log_.emplace_back(entry);
+    cur_entry_count_ += 1;
+  }
+
   /**
    * Get the next entry corresponding to the rank
    * */
@@ -114,20 +127,6 @@ class BinaryLog {
       }
     }
     cur_entry_count_ = 0;
-  }
-
- private:
-  /** Appends an entry to the cache */
-  void AppendEntry(const T &entry) {
-    if (entry.rank_ >= (int)cache_.size()) {
-      cache_.resize(entry.rank_ + 1);
-    }
-    auto &cache = cache_[entry.rank_];
-    if (cache.log_.size() == 0) {
-      cache.log_.reserve(8192);
-    }
-    cache.log_.emplace_back(entry);
-    cur_entry_count_ += 1;
   }
 };
 

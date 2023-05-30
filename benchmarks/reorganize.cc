@@ -126,8 +126,9 @@ int main(int argc, char **argv) {
   int compute_get = atoi(argv[6]);
 
   // Register the Apriori trait
-  hermes::TraitId apriori_trait = HERMES->RegisterTrait<hapi::PrefetcherTrait>(
-    "apriori", hermes::PrefetcherType::kApriori);
+  hermes::TraitId apriori_trait =
+    HERMES->RegisterTrait<hermes::PrefetcherTrait>(
+      "apriori", hermes::PrefetcherType::kApriori);
   if (with_prefetch) {
     auto bkt = HERMES->GetBucket("hello");
     bkt.AttachTrait(apriori_trait);

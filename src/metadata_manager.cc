@@ -14,6 +14,7 @@
 #include "metadata_manager.h"
 #include "buffer_organizer.h"
 #include "api/bucket.h"
+#include <mpi.h>
 
 namespace hermes {
 
@@ -947,9 +948,9 @@ void MetadataManager::AddIoStat(TagId tag_id,
   stat.type_ = type;
   stat.rank_ = 0;
   // TODO(llogan): make MPI-awareness configurable
-  /*if (is_mpi_) {
+  if (is_mpi_) {
     MPI_Comm_rank(MPI_COMM_WORLD, &stat.rank_);
-  }*/
+  }
   io_pattern_log_->emplace(stat);
 }
 

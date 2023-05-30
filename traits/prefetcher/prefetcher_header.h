@@ -10,32 +10,28 @@
 * have access to the file, you may request a copy from help@hdfgroup.org.   *
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_TRAITS_EXAMPLE_EXAMPLE_TRAIT_H_
-#define HERMES_TRAITS_EXAMPLE_EXAMPLE_TRAIT_H_
+#ifndef HERMES_TRAITS_PREFETCHER_PREFETCHER_HEADER_H_
+#define HERMES_TRAITS_PREFETCHER_PREFETCHER_HEADER_H_
 
-#include "hermes.h"
-#include "prefetcher_header.h"
+#include "trait_manager.h"
 
 namespace hermes {
 
-/** Prefetcher trait */
-class PrefetcherTrait : public Trait {
- public:
-  HERMES_TRAIT_H(PrefetcherTrait, "PrefetcherTrait");
-
- public:
-  explicit PrefetcherTrait(hshm::charbuf &data) : Trait(data) {}
-
-  explicit PrefetcherTrait(const std::string &trait_uuid,
-                           hermes::PrefetcherType prefetch_type) {
-    CreateHeader<PrefetcherTraitHeader>(trait_uuid,
-                                        trait_name_,
-                                        prefetch_type);
-  }
-
-  void Run(int method, void *params) override;
+/** Types of prefetchers available */
+enum class PrefetcherType {
+  kApriori
 };
 
-}  // namespace hermes
+/** Header for prefetcher trait */
+struct PrefetcherTraitHeader : public TraitHeader {
+  hermes::PrefetcherType type_;
+  explicit PrefetcherTraitHeader(const std::string &trait_uuid,
+                                 const std::string &trait_name,
+                                 hermes::PrefetcherType type)
+    : TraitHeader(trait_uuid, trait_name, HERMES_TRAIT_PREFETCHER),
+      type_(type) {}
+};
 
-#endif  // HERMES_TRAITS_EXAMPLE_EXAMPLE_TRAIT_H_
+}  // namespace hermes::api
+
+#endif  // HERMES_TRAITS_PREFETCHER_PREFETCHER_HEADER_H_

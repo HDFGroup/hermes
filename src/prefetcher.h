@@ -19,12 +19,9 @@
 #include "rpc.h"
 #include "binlog.h"
 #include <list>
+#include "traits/prefetcher/prefetcher_header.h"
 
 namespace hermes {
-
-enum class PrefetcherType {
-  kApriori
-};
 
 class Prefetcher {
  public:
@@ -47,6 +44,12 @@ class Prefetcher {
 
   /** Parse the MDM's I/O pattern log */
   void Run();
+};
+
+class PrefetcherPolicy {
+ public:
+  /** Utilize the I/O pattern log to make prefetching decisions */
+  virtual void Prefetch(BinaryLog<IoStat> &log) = 0;
 };
 
 }  // namespace hermes

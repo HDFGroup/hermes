@@ -67,6 +67,7 @@ target_link_libraries(hermes
   PUBLIC ${CMAKE_HERMES_RPC_TYPE_LIB}
   PUBLIC yaml-cpp
   PUBLIC cereal::cereal
+  PUBLIC MPI::MPI_CXX
   PUBLIC "$<$<BOOL:${HERMES_INTERCEPT_IO}>:${GOTCHA_MODULE_LIBS}>"
 )
 

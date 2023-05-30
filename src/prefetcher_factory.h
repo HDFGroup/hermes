@@ -10,32 +10,41 @@
 * have access to the file, you may request a copy from help@hdfgroup.org.   *
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef HERMES_TRAITS_EXAMPLE_EXAMPLE_TRAIT_H_
-#define HERMES_TRAITS_EXAMPLE_EXAMPLE_TRAIT_H_
+#ifndef HERMES_SRC_PREFETCHER_FACTORY_H_
+#define HERMES_SRC_PREFETCHER_FACTORY_H_
 
-#include "hermes.h"
-#include "prefetcher_header.h"
+#include "prefetcher.h"
+#include "prefetcher/apriori_prefetcher.h"
 
 namespace hermes {
 
-/** Prefetcher trait */
-class PrefetcherTrait : public Trait {
- public:
-  HERMES_TRAIT_H(PrefetcherTrait, "PrefetcherTrait");
+using hermes::PrefetcherType;
 
+/**
+ * A class to represent Data Placement Engine Factory
+ * */
+class PrefetcherFactory {
  public:
-  explicit PrefetcherTrait(hshm::charbuf &data) : Trait(data) {}
-
-  explicit PrefetcherTrait(const std::string &trait_uuid,
-                           hermes::PrefetcherType prefetch_type) {
-    CreateHeader<PrefetcherTraitHeader>(trait_uuid,
-                                        trait_name_,
-                                        prefetch_type);
+  /**
+   * return a pointer to prefetcher policy given a policy type.
+   * This uses factory pattern.
+   *
+   * @param[in] type a prefetcher policy type
+   * @return pointer to PrefetcherPolicy
+   */
+  static PrefetcherPolicy* Get(const PrefetcherType &type) {
+    switch (type) {
+      case PrefetcherType::kApriori: {
+        return hshm::EasySingleton<AprioriPrefetcher>::GetInstance();
+      }
+      default: {
+        HELOG(kFatal, "PlacementPolicy not implemented")
+        return NULL;
+      }
+    }
   }
-
-  void Run(int method, void *params) override;
 };
 
 }  // namespace hermes
 
-#endif  // HERMES_TRAITS_EXAMPLE_EXAMPLE_TRAIT_H_
+#endif  // HERMES_SRC_PREFETCHER_FACTORY_H_

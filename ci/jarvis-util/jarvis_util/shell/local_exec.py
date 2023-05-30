@@ -40,10 +40,6 @@ class LocalExec(Executable):
         # pylint: disable=R1732
         if self.collect_output is None:
             self.collect_output = jutil.collect_output
-        if self.pipe_stdout is not None:
-            self.pipe_stdout_fp = open(self.pipe_stdout, 'wb')
-        if self.pipe_stderr is not None:
-            self.pipe_stderr_fp = open(self.pipe_stderr, 'wb')
         if self.hide_output is None:
             self.hide_output = jutil.hide_output
         # pylint: enable=R1732
@@ -52,8 +48,6 @@ class LocalExec(Executable):
         self.last_stdout_size = 0
         self.last_stderr_size = 0
         self.executing_ = True
-        self.print_stdout_thread = None
-        self.print_stderr_thread = None
         self.exit_code = 0
 
         # Copy ENV
@@ -86,18 +80,11 @@ class LocalExec(Executable):
                                      env=self.env,
                                      shell=True)
         # pylint: enable=R1732
-        self.print_stdout_thread = threading.Thread(
-            target=self.print_stdout_worker)
-        self.print_stderr_thread = threading.Thread(
-            target=self.print_stderr_worker)
-        self.print_stdout_thread.start()
-        self.print_stderr_thread.start()
         if not self.exec_async:
             self.wait()
 
     def wait(self):
         self.proc.wait()
-        self.join_print_worker()
         self.set_exit_code()
         return self.exit_code
 
@@ -109,47 +96,6 @@ class LocalExec(Executable):
             return self.proc.pid
         else:
             return None
-
-    def print_stdout_worker(self):
-        while self.executing_:
-            self.print_to_outputs(self.proc.stdout, self.stdout,
-                                  self.pipe_stdout_fp, sys.stdout)
-            time.sleep(25 / 1000)
-
-    def print_stderr_worker(self):
-        while self.executing_:
-            self.print_to_outputs(self.proc.stderr, self.stderr,
-                                  self.pipe_stderr_fp, sys.stderr)
-            time.sleep(25 / 1000)
-
-    def print_to_outputs(self, proc_sysout, self_sysout, file_sysout, sysout):
-        # pylint: disable=W0702
-        for line in proc_sysout:
-            try:
-                text = line.decode('utf-8')
-                if not self.hide_output:
-                    sysout.write(text)
-                if self.collect_output:
-                    self_sysout.write(text)
-                    self_sysout.flush()
-                if file_sysout is not None:
-                    file_sysout.write(line)
-            except:
-                pass
-        # pylint: enable=W0702
-
-    def join_print_worker(self):
-        if not self.executing_:
-            return
-        self.executing_ = False
-        self.print_stdout_thread.join()
-        self.print_stderr_thread.join()
-        self.stdout = self.stdout.getvalue()
-        self.stderr = self.stderr.getvalue()
-        if self.pipe_stdout_fp is not None:
-            self.pipe_stdout_fp.close()
-        if self.pipe_stderr_fp is not None:
-            self.pipe_stderr_fp.close()
 
 
 class LocalExecInfo(ExecInfo):
