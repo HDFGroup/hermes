@@ -50,13 +50,12 @@ void Hermes::Init(HermesType mode,
 
 /** Initialize Hermes as a server */
 void Hermes::InitServer(std::string server_config_path) {
-  HERMES_THREAD_MODEL->SetThreadModel(hshm::ThreadType::kArgobots);
   LoadServerConfig(server_config_path);
   InitSharedMemory();
 
   // Initialize RPC
   rpc_.InitServer();
-  rpc_.InitClient();
+  HERMES_THREAD_MODEL->SetThreadModel(hshm::ThreadType::kArgobots);
 
   // Load the trait libraries
   traits_.Init();
@@ -79,6 +78,7 @@ void Hermes::InitClient(std::string server_config_path,
   // Initialize references to SHM types
   mdm_.shm_deserialize(header_->mdm_);
   rpc_.InitClient();
+  HERMES_THREAD_MODEL->SetThreadModel(hshm::ThreadType::kArgobots);
   bpm_.shm_deserialize(header_->bpm_);
   borg_.shm_deserialize(header_->borg_);
   prefetch_.Init();
@@ -90,7 +90,7 @@ void Hermes::InitClient(std::string server_config_path,
 
 /** Load the server-side configuration */
 void Hermes::LoadServerConfig(std::string config_path) {
-  if (config_path.size() == 0) {
+  if (config_path.empty()) {
     config_path = GetEnvSafe(kHermesServerConf);
   }
   if (mode_ == HermesType::kServer) {
@@ -101,7 +101,7 @@ void Hermes::LoadServerConfig(std::string config_path) {
 
 /** Load the client-side configuration */
 void Hermes::LoadClientConfig(std::string config_path) {
-  if (config_path.size() == 0) {
+  if (config_path.empty()) {
     config_path = GetEnvSafe(kHermesClientConf);
   }
   // HILOG(kInfo, "Loading client configuration: {}", config_path)
@@ -112,14 +112,17 @@ void Hermes::LoadClientConfig(std::string config_path) {
 void Hermes::InitSharedMemory() {
   // Create shared-memory allocator
   auto mem_mngr = HERMES_MEMORY_MANAGER;
+  if (server_config_.max_memory_ == 0) {
+    server_config_.max_memory_ = hipc::MemoryManager::GetDefaultBackendSize();
+  }
   mem_mngr->CreateBackend<hipc::PosixShmMmap>(
-      hipc::MemoryManager::GetDefaultBackendSize(),
-      server_config_.shmem_name_);
+    server_config_.max_memory_,
+    server_config_.shmem_name_);
   main_alloc_ =
-      mem_mngr->CreateAllocator<hipc::ScalablePageAllocator>(
-          server_config_.shmem_name_,
-          main_alloc_id,
-          sizeof(HermesShm));
+    mem_mngr->CreateAllocator<hipc::ScalablePageAllocator>(
+      server_config_.shmem_name_,
+      main_alloc_id,
+      sizeof(HermesShm));
   header_ = main_alloc_->GetCustomHeader<HermesShm>();
 }
 

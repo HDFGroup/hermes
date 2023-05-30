@@ -69,6 +69,7 @@ class Filesystem {
    * @param blob_name the semantic name of the blob
    * @param blob the buffer to put final data in
    * @param blob_off the offset within the blob to begin the Put
+   * @param page_size the page size of the adapter
    * @param blob_id [out] the blob id corresponding to blob_name
    * @param io_ctx information required to perform I/O to the backend
    * @param opts specific configuration of the I/O to perform
@@ -78,6 +79,7 @@ class Filesystem {
                             const std::string &blob_name,
                             const Blob &blob,
                             size_t blob_off,
+                            size_t page_size,
                             BlobId &blob_id,
                             IoStatus &status,
                             const FsIoOptions &opts,
@@ -96,6 +98,7 @@ class Filesystem {
    * @param blob_name the semantic name of the blob
    * @param blob the buffer to put final data in
    * @param blob_off the offset within the blob to begin the Put
+   * @param page_size the page size of the adapter
    * @param blob_id [out] the blob id corresponding to blob_name
    * @param io_ctx information required to perform I/O to the backend
    * @param opts specific configuration of the I/O to perform
@@ -106,6 +109,7 @@ class Filesystem {
                             Blob &blob,
                             size_t blob_off,
                             size_t blob_size,
+                            size_t page_size,
                             BlobId &blob_id,
                             IoStatus &status,
                             const FsIoOptions &opts,

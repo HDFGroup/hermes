@@ -50,7 +50,8 @@ class BaseConfig {
       return;
     }
     auto real_path = hshm::ConfigParse::ExpandPath(path);
-    HILOG(kDebug, "Start load config {}", real_path)try {
+    HILOG(kDebug, "Start load config {}", real_path)
+    try {
       YAML::Node yaml_conf = YAML::LoadFile(real_path);
       HILOG(kDebug, "Complete load config {}", real_path)
       ParseYAML(yaml_conf);

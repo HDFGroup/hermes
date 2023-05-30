@@ -144,8 +144,11 @@ class BorgIoThreadManager {
     return !kill_requested_.load();
   }
 
+  /** Spawn a thread for re-organizing blobs */
+  void SpawnBlobMonitor();
+
   /** Spawn the enqueuing thread */
-  void SpawnFlushMonitor(int num_threads);
+  void SpawnFlushMonitor();
 
   /** Spawn the I/O threads */
   void SpawnFlushWorkers(int num_threads);
@@ -252,10 +255,20 @@ class BufferOrganizer {
                           const std::string &blob_name,
                           float score);
 
+  /** Re-organize blobs based on a score */
+  void GlobalOrganizeBlob(hermes::api::Bucket &bkt,
+                          const std::string &blob_name,
+                          BlobId &blob_id,
+                          float blob_score,
+                          float score);
+
  public:
   /**====================================
    * BORG Flushing methods
    * ===================================*/
+
+  /** Find blobs which should be re-organized */
+  void LocalAnalyzeBlobs();
 
   /** Flush all blobs registered in this daemon */
   void LocalEnqueueFlushes();

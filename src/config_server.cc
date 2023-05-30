@@ -99,11 +99,26 @@ void ServerConfig::ParseDpeInfo(YAML::Node yaml_conf) {
 
 /** parse buffer organizer information from YAML config */
 void ServerConfig::ParseBorgInfo(YAML::Node yaml_conf) {
-  if (yaml_conf["port"]) {
-    borg_.port_ = yaml_conf["port"].as<int>();
-  }
   if (yaml_conf["num_threads"]) {
     borg_.num_threads_ = yaml_conf["num_threads"].as<int>();
+  }
+  if (yaml_conf["flush_period"]) {
+    borg_.flush_period_ = yaml_conf["flush_period"].as<size_t>();
+  }
+  if (yaml_conf["blob_reorg_period"]) {
+    borg_.blob_reorg_period_ = yaml_conf["blob_reorg_period"].as<size_t>();
+  }
+  if (yaml_conf["recency_min"]) {
+    borg_.recency_min_ = yaml_conf["recency_min"].as<float>();
+  }
+  if (yaml_conf["recency_max"]) {
+    borg_.recency_max_ = yaml_conf["recency_max"].as<float>();
+  }
+  if (yaml_conf["freq_max"]) {
+    borg_.freq_max_ = yaml_conf["freq_max"].as<float>();
+  }
+  if (yaml_conf["freq_min"]) {
+    borg_.freq_min_ = yaml_conf["freq_min"].as<float>();
   }
 }
 
@@ -132,6 +147,10 @@ void ServerConfig::ParsePrefetchInfo(YAML::Node yaml_conf) {
   }
   if (yaml_conf["is_mpi"]) {
     prefetcher_.is_mpi_ = yaml_conf["is_mpi"].as<bool>();
+  }
+  if (yaml_conf["apriori_schema_path"]) {
+    prefetcher_.apriori_schema_path_ =
+      yaml_conf["apriori_schema_path"].as<std::string>();
   }
 }
 
@@ -177,6 +196,10 @@ void ServerConfig::ParseYAML(YAML::Node &yaml_conf) {
   }
   if (yaml_conf["shmem_name"]) {
     shmem_name_ = yaml_conf["shmem_name"].as<std::string>();
+  }
+  if (yaml_conf["max_memory"]) {
+    max_memory_ = hshm::ConfigParse::ParseSize(
+      yaml_conf["max_memory"].as<std::string>());
   }
 }
 

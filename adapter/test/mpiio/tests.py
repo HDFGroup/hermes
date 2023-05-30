@@ -1,6 +1,5 @@
 from py_hermes_ci.test_manager import TestManager
-from jarvis_util.shell.exec import Exec
-from jarvis_util.shell.local_exec import LocalExecInfo
+from jarvis_util import *
 
 
 class MpiioTestManager(TestManager):

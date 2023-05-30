@@ -32,7 +32,7 @@ cmake                                                      \
     -DCMAKE_BUILD_TYPE=RelWithDebInfo                      \
     -DBUILD_SHARED_LIBS=ON                                 \
     -DHERMES_ENABLE_COVERAGE=ON                            \
-    -DHERMES_BUILD_BENCHMARKS=ON                           \
+    -DHERMES_BUILD_BENCHMARKS=OFF                          \
     -DHERMES_BUILD_BUFFER_POOL_VISUALIZER=OFF              \
     -DHERMES_USE_ADDRESS_SANITIZER=OFF                     \
     -DHERMES_USE_THREAD_SANITIZER=OFF                      \
@@ -41,6 +41,6 @@ cmake                                                      \
     -DHERMES_ENABLE_VFD=ON                                 \
     -DHERMES_DEBUG_LOCK=OFF                                \
     ..
-cmake --build . -- -j4
+make -j8
 
 popd

@@ -24,12 +24,6 @@ namespace hipc = hshm::ipc;
 
 namespace hshm::ipc {
 
-/** Bits used for determining how to destroy an object */
-/// The container should free all data when destroyed
-#define SHM_PRIVATE_IS_DESTRUCTABLE BIT_OPT(uint32_t, 0)
-/// The container owns the header
-#define SHM_PRIVATE_OWNS_HEADER BIT_OPT(uint32_t, 1)
-
 /** The shared-memory header used for data structures */
 template<typename T>
 struct ShmHeader;

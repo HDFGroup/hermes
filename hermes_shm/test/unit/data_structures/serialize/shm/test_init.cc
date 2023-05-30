@@ -10,21 +10,21 @@
  * have access to the file, you may request a copy from help@hdfgroup.org.   *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include "utils.h"
-
 #include <iostream>
-#include <vector>
-#include <random>
-#include <utility>
+#include "test_init.h"
+#include "hermes_shm/data_structures/ipc/string.h"
+#include "hermes_shm/data_structures/serialization/thallium.h"
+#include "hermes_shm/data_structures/containers/charbuf.h"
+#include <memory>
 
-namespace hermes {
-
-/**
-   print an error message for \a func function that failed
- */   
-void FailedLibraryCall(std::string func) {
-  int saved_errno = errno;
-  HELOG(kFatal, strerror(saved_errno));
+void MainPretest() {
+  std::string shm_url = "test_serializers";
+  allocator_id_t alloc_id(0, 1);
+  auto mem_mngr = HERMES_MEMORY_MANAGER;
+  mem_mngr->CreateBackend<PosixShmMmap>(
+      MemoryManager::GetDefaultBackendSize(), shm_url);
+  mem_mngr->CreateAllocator<hipc::ScalablePageAllocator>(shm_url, alloc_id, 0);
 }
 
-}  // namespace hermes
+void MainPosttest() {
+}

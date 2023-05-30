@@ -76,6 +76,12 @@ devices:
     is_shared_device: true
     borg_capacity_thresh: [ 0.0, 1.0 ]
 
+# Define the maximum amount of memory Hermes can use for non-buffering tasks.
+# This includes metadata management and memory allocations.
+# This memory will not be preallocated, so if you don't know, 0 indicates
+# any amount of memory
+max_memory: 0g
+
 ### Define properties of RPCs
 rpc:
   # A path to a file containing a list of server names, 1 per line. If your
@@ -107,8 +113,23 @@ buffer_organizer:
   # The number of threads used in the background organization of internal Hermes buffers.
   num_threads: 1
 
-  # Desired RPC port number for buffer organizer.
-  port: 8081
+  # Interval (seconds) where blobs are checked for flushing
+  flush_period: 1
+
+  # Interval (seconds) where blobs are checked for re-organization
+  blob_reorg_period: 1
+
+  ## What does "recently accessed" mean?
+  # Time when score is equal to 1 (seconds)
+  recency_min: 0
+  # Time when score is equal to 0 (seconds)
+  recency_max: 60
+
+  ## What does "frequently accessed" mean?
+  # Number of accesses for score to be equal to 1 (count)
+  freq_max: 15
+  # Number of accesses for score to be equal to 0 (count)
+  freq_min: 0
 
 ### Define the default data placement policy
 dpe:
@@ -128,8 +149,9 @@ tracing:
 prefetch:
   enabled: false
   io_trace_path: ""
+  apriori_schema_path: ""
   epoch_ms: 50
-  is_mpi: true
+  is_mpi: false
 
 # The shared memory prefix for the hermes shared memory segment. A user name
 # will be automatically appended.
@@ -144,3 +166,4 @@ traits:
   - "hermes_stdio_io_client"
   - "hermes_mpiio_io_client"
   - "hermes_example_trait"
+  - "hermes_prefetcher_trait"

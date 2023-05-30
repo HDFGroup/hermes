@@ -12,7 +12,7 @@ set -e
 set -o pipefail
 
 # Change this especially when your $HOME doesn't have enough disk space. 
-INSTALL_DIR="${HOME}/${LOCAL}"
+INSTALL_DIR="${HOME}"
 SPACK_DIR=${INSTALL_DIR}/spack
 SPACK_VERSION=0.18.1
 
@@ -26,7 +26,6 @@ git checkout v${SPACK_VERSION}
 
 # Set spack env
 set +x
-SPACK_DIR=${INSTALL_DIR}/spack
 . ${SPACK_DIR}/share/spack/setup-env.sh
 set -x
 

@@ -1,0 +1,4 @@
+# .coveragerc
+[run]
+source = .
+omit = *test*

@@ -5,6 +5,19 @@ creating shell scripts within Python. This library contains wrappers
 for executing shell commands locally, SSH, SCP, MPI, argument parsing, 
 and various other random utilities.
 
+![Build](https://github.com/lukemartinlogan/jarvis-util/workflows/GitHub%20Actions/badge.svg)
+
+[![Coverage Status](https://coveralls.io/repos/github/lukemartinlogan/jarvis-util/badge.svg?branch=master)](https://coveralls.io/github/lukemartinlogan/jarvis-util?branch=master)
+
+## Installation
+
+For now, we only consider manual installation
+```bash
+cd jarvis-util
+python3 -m pip install -r requirements.txt
+python3 -m pip install -e .
+```
+
 ## Executing a program
 
 The following code will execute a command on the local machine.
@@ -86,3 +99,20 @@ ares-comp-[05-09,11,12-14]-40g
 ```
 
 These will be expanded internally by PSSH and MPI.
+
+# Unit tests
+
+We run our unit tests in a docker container, which is located underneath
+the CI directory. This is because we need to test multi-node functionality,
+without having multiple nodes. To setup unit testing, perform the following:
+
+1. Install Docker
+2. Setup our "ci" container
+3. Run the unit tests
+
+```
+```
+
+# Contributing
+
+We use the Google Python Style guide (pylintrc).

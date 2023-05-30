@@ -114,6 +114,7 @@ static herr_t H5FD__hermes_write(H5FD_t *_file, H5FD_mem_t type, hid_t fapl_id,
 
 
 static const H5FD_class_t H5FD_hermes_g = {
+  H5FD_CLASS_VERSION,      /* struct version       */
   H5FD_HERMES_VALUE,         /* value                */
   H5FD_HERMES_NAME,          /* name                 */
   MAXADDR,                   /* maxaddr              */
@@ -142,6 +143,10 @@ static const H5FD_class_t H5FD_hermes_g = {
   NULL,                      /* get_handle           */
   H5FD__hermes_read,         /* read                 */
   H5FD__hermes_write,        /* write                */
+  NULL,                      /* read_vector          */
+  NULL,                      /* write_vector         */
+  NULL,                      /* read_selection       */
+  NULL,                      /* write_selection      */
   NULL,                      /* flush                */
   NULL,                      /* truncate             */
   NULL,                      /* lock                 */

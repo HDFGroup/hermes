@@ -7,7 +7,7 @@ cd ${GITHUB_WORKSPACE}
 mkdir build
 cd build
 
-INSTALL_PREFIX="${HOME}/${LOCAL}"
+INSTALL_PREFIX="${HOME}"
 
 export CXXFLAGS="${CXXFLAGS} -std=c++17 -Werror -Wall -Wextra"
 cmake                                                      \

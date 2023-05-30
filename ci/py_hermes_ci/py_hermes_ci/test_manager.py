@@ -1,11 +1,4 @@
-from jarvis_util.jutil_manager import JutilManager
-from jarvis_util.shell.kill import Kill
-from jarvis_util.shell.exec_info import ExecType, ExecInfo
-from jarvis_util.shell.local_exec import LocalExecInfo
-from jarvis_util.shell.mpi_exec import MpiExecInfo
-from jarvis_util.shell.pssh_exec import PsshExecInfo
-from jarvis_util.shell.rm import Rm
-from jarvis_util.shell.exec import Exec
+from jarvis_util import *
 import time
 import os, sys
 import pathlib
@@ -15,11 +8,10 @@ from abc import ABC, abstractmethod
 
 class SpawnInfo(MpiExecInfo):
     def __init__(self, nprocs, hermes_conf=None, hermes_mode=None, api=None,
-                 daemon_env=None, **kwargs):
+                 **kwargs):
         super().__init__(nprocs=nprocs, **kwargs)
         self.hermes_conf = hermes_conf
         self.hermes_mode = hermes_mode
-        self.daemon_env = daemon_env
         self.api = api
 
 
@@ -34,6 +26,8 @@ class TestManager(ABC):
         jutil = JutilManager.get_instance()
         jutil.collect_output = False
         jutil.hide_output = False
+        jutil.debug_mpi_exec = True
+        jutil.debug_local_exec = True
         self.MY_DIR = str(pathlib.Path(inspect.getfile(LocalExecInfo)).parent)
         self.CMAKE_SOURCE_DIR = cmake_source_dir
         self.CMAKE_BINARY_DIR = cmake_binary_dir
@@ -110,10 +104,6 @@ class TestManager(ABC):
         if hermes_mode == 'kBypass':
             env['HERMES_ADAPTER_MODE'] = 'kBypass'
 
-        daemon_env = env.copy()
-        if 'LD_PRELOAD' in daemon_env and self.ADDRESS_SANITIZER:
-            del daemon_env['LD_PRELOAD']
-
         return SpawnInfo(nprocs=nprocs,
                          ppn=ppn,
                          hostfile=hostfile,
@@ -121,7 +111,6 @@ class TestManager(ABC):
                          hermes_mode=hermes_mode,
                          api=api,
                          env=env,
-                         daemon_env=daemon_env,
                          cwd=cwd)
 
     @abstractmethod
@@ -140,7 +129,7 @@ class TestManager(ABC):
 
     def cleanup(self):
         dirs = " ".join([os.path.join(d, '*') for d in self.devices.values()])
-        Rm(dirs, PsshExecInfo(hostfile=self.spawn_all_nodes().hostfile))
+        Rm(dirs, LocalExecInfo(hostfile=self.spawn_all_nodes().hostfile))
 
     def find_tests(self):
         # Filter the list to include only attributes that start with "test"
@@ -180,16 +169,17 @@ class TestManager(ABC):
         :param env: Hermes environment variables
         :return: None
         """
-        Kill("hermes",
-             PsshExecInfo(
+        print("Killing daemon")
+        Kill("hermes_daemon",
+             LocalExecInfo(
                  hostfile=spawn_info.hostfile,
                  collect_output=False))
 
         print("Start daemon")
         self.daemon = Exec(f"{self.CMAKE_BINARY_DIR}/bin/hermes_daemon",
-                           PsshExecInfo(
+                           LocalExecInfo(
                                hostfile=spawn_info.hostfile,
-                               env=spawn_info.daemon_env,
+                               env=spawn_info.basic_env,
                                exec_async=True))
         time.sleep(5)
         print("Launched")
@@ -204,6 +194,6 @@ class TestManager(ABC):
         print("Stop daemon")
         Exec(f"{self.CMAKE_BINARY_DIR}/bin/finalize_hermes",
              LocalExecInfo(
-                 env=spawn_info.daemon_env))
+                 env=spawn_info.basic_env))
         self.daemon.wait()
         print("Stopped daemon")

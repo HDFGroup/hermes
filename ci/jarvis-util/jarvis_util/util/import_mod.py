@@ -1,7 +1,12 @@
+"""
+This file contains helper methods to load a class dynamically from a file
+"""
+
 import sys
 
 # NOTE(llogan): To get the path of the directory this file is in, use
 # str(pathlib.Path(__file__).parent.resolve())
+
 
 def load_class(import_str, path, class_name):
     """

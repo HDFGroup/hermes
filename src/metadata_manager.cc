@@ -14,6 +14,7 @@
 #include "metadata_manager.h"
 #include "buffer_organizer.h"
 #include "api/bucket.h"
+#include <mpi.h>
 
 namespace hermes {
 
@@ -34,10 +35,10 @@ void MetadataManager::shm_init(hipc::ShmArchive<MetadataManagerShm> &header,
   header_->node_id_ = rpc_->node_id_;
 
   // Create the metadata maps
-  HSHM_MAKE_AR(header_->blob_id_map_, alloc, 128000)
-  HSHM_MAKE_AR(header_->blob_map_, alloc, 128000)
-  HSHM_MAKE_AR(header_->tag_id_map_, alloc, 128000)
-  HSHM_MAKE_AR(header_->tag_map_, alloc, 128000)
+  HSHM_MAKE_AR(header_->blob_id_map_, alloc, 32000000)
+  HSHM_MAKE_AR(header_->blob_map_, alloc, 32000000)
+  HSHM_MAKE_AR(header_->tag_id_map_, alloc, 32000000)
+  HSHM_MAKE_AR(header_->tag_map_, alloc, 32000000)
   HSHM_MAKE_AR(header_->trait_id_map_, alloc, 256)
   HSHM_MAKE_AR(header_->trait_map_, alloc, 256)
 
@@ -68,7 +69,7 @@ void MetadataManager::shm_init(hipc::ShmArchive<MetadataManagerShm> &header,
   }
 
   // Create the log used to track I/O pattern
-  HSHM_MAKE_AR0(header_->io_pattern_log_, alloc);
+  HSHM_MAKE_AR(header_->io_pattern_log_, alloc, 8192);
 }
 
 /**====================================
@@ -345,8 +346,10 @@ MetadataManager::LocalPutBlobMetadata(TagId bkt_id,
     blob_info.tag_id_ = bkt_id;
     blob_info.blob_size_ = blob_size;
     blob_info.score_ = score;
-    blob_info.mod_count_ = 1;
+    blob_info.mod_count_ = 0;
+    blob_info.access_freq_ = 0;
     blob_info.last_flush_ = 0;
+    blob_info.UpdateWriteStats();
   } else {
     HILOG(kDebug, "Found existing blob: {}. Total num blobs: {}",
           blob_name, blob_map_->size())
@@ -355,12 +358,12 @@ MetadataManager::LocalPutBlobMetadata(TagId bkt_id,
     hipc::pair<BlobId, BlobInfo>& info = (*iter);
     BlobInfo &blob_info = info.GetSecond();
     // Acquire blob_info write lock before modifying buffers
-    ScopedRwWriteLock(blob_info.lock_[0],
-                      kMDM_LocalPutBlobMetadata);
+    ScopedRwWriteLock blob_info_lock(blob_info.lock_[0],
+                                     kMDM_LocalPutBlobMetadata);
     (*blob_info.buffers_) = buffers;
     blob_info.blob_size_ = blob_size;
     blob_info.score_ = score;
-    blob_info.mod_count_.fetch_add(1);
+    blob_info.UpdateWriteStats();
   }
   return std::tuple<BlobId, bool, size_t>(blob_id, did_create, orig_blob_size);
 }
@@ -463,6 +466,7 @@ std::vector<BufferInfo> MetadataManager::LocalGetBlobBuffers(BlobId blob_id) {
   // Acquire blob_info read lock
   ScopedRwReadLock blob_info_lock(blob_info.lock_[0],
                                   kMDM_LocalGetBlobBuffers);
+  blob_info.UpdateReadStats();
   auto vec = blob_info.buffers_->vec();
   return vec;
 }
@@ -870,7 +874,7 @@ MetadataManager::LocalGetTraitParams(TraitId trait_id) {
  * Get an existing trait
  * */
 Trait* MetadataManager::GlobalGetTrait(TraitId trait_id) {
-  HILOG(kDebug, "Getting the trait {}", trait_id)
+  // HILOG(kDebug, "Getting the trait {}", trait_id)
   Trait *trait = nullptr;
 
   // Check if trait is already constructed
@@ -933,28 +937,17 @@ void MetadataManager::AddIoStat(TagId tag_id,
   if (!enable_io_tracing_) {
     return;
   }
-  ScopedRwWriteLock io_pattern_lock(header_->lock_[kIoPatternLogLock],
-                                    kMDM_AddIoStat);
   IoStat stat;
   stat.blob_id_ = blob_id;
   stat.tag_id_ = tag_id;
   stat.blob_size_ = blob_size;
   stat.type_ = type;
   stat.rank_ = 0;
-  // TODO(llogan): make MPI-awareness configurable
-  /*if (is_mpi_) {
+  if (is_mpi_) {
     MPI_Comm_rank(MPI_COMM_WORLD, &stat.rank_);
-  }*/
-  io_pattern_log_->emplace_back(stat);
+  }
+  io_pattern_log_->emplace(stat);
 }
 
-/** Add an I/O statistic to the internal log */
-void MetadataManager::ClearIoStats(size_t count) {
-  ScopedRwWriteLock io_pattern_lock(header_->lock_[kIoPatternLogLock],
-                                    kMDM_ClearIoStats);
-  auto first = io_pattern_log_->begin();
-  auto end = io_pattern_log_->begin() + count;
-  io_pattern_log_->erase(first, end);
-}
 
 }  // namespace hermes
