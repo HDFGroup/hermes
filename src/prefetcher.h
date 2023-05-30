@@ -22,6 +22,10 @@
 
 namespace hermes {
 
+enum class PrefetcherType {
+  kApriori
+};
+
 class Prefetcher {
  public:
   std::vector<std::list<IoTrace>> trace_;

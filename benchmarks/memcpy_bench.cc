@@ -88,7 +88,7 @@ void MemcpyBench(int nprocs, int rank,
   std::string shm_url = "test_mem_backend";
   std::string backend_type;
   size_t backend_size;
-  hipc::MemoryBackendType type;
+  hipc::MemoryBackendType type = hipc::MemoryBackendType::kPosixShmMmap;
 
   if constexpr(std::is_same_v<BackendT, hipc::PosixShmMmap>) {
     backend_type = "kPosixShmMmap";
@@ -99,7 +99,6 @@ void MemcpyBench(int nprocs, int rank,
     type = hipc::MemoryBackendType::kPosixMmap;
     backend_size = blob_size * blobs_per_rank;
   } else {
-    (void) type;
     HELOG(kFatal, "Invalid backend type");
   }
 

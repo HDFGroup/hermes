@@ -10,4 +10,5 @@ include_directories(
         ${HERMES_IO_CLIENT_DIR})
 
 add_subdirectory(example)
+add_subdirectory(prefetcher)
 

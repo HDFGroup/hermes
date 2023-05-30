@@ -24,6 +24,8 @@ namespace hermes {
 #define HERMES_TRAIT_PUT_GET BIT_OPT(uint32_t, 1)
 /** This trait is useful to BORG's Flush operation */
 #define HERMES_TRAIT_FLUSH BIT_OPT(uint32_t, 2)
+/** This trait is a prefetcher */
+#define HERMES_TRAIT_PREFETCHER BIT_OPT(uint32_t, 3)
 
 /** The basic state needed to be stored by every trait */
 struct TraitHeader {

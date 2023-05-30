@@ -82,9 +82,6 @@ class LocalExec(Executable):
         time.sleep(self.sleep_ms)
         # pylint: disable=R1732
         self.proc = subprocess.Popen(self.cmd,
-                                     stdin=self.stdin,
-                                     stdout=subprocess.PIPE,
-                                     stderr=subprocess.PIPE,
                                      cwd=self.cwd,
                                      env=self.env,
                                      shell=True)
