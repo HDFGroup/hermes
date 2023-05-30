@@ -24,7 +24,7 @@ class PosixTestManager(TestManager):
 
     def test_hermes_posix_basic_small(self):
         posix_cmd = f"{self.HERMES_POSIX_CMD} " \
-                    f"~[request_size=range-large]  " \
+                    f"~[request_size=range-small]  " \
                     f"--reporter compact -d yes"
 
         spawn_info = self.spawn_info(nprocs=1,
