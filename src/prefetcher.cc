@@ -12,6 +12,7 @@
 
 #include "prefetcher.h"
 #include "hermes.h"
+#include "prefetcher_factory.h"
 #include <unordered_set>
 
 namespace hermes {
@@ -84,11 +85,8 @@ void Prefetcher::Run() {
       if (trait->header_->flags_.Any(HERMES_TRAIT_PREFETCHER)) {
         auto *trait_hdr =
           trait->GetHeader<hermes::PrefetcherTraitHeader>();
-        switch (trait_hdr->type_) {
-          case PrefetcherType::kApriori: {
-
-          }
-        }
+        auto *policy = PrefetcherFactory::Get(trait_hdr->type_);
+        policy->Prefetch(log_);
       }
     }
   }
