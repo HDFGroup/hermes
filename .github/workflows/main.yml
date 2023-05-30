@@ -75,11 +75,11 @@ jobs:
         if: steps.hermes-cache.outputs.cache-hit != 'true'
         run: ci/build_hermes.sh
 
-#      - name: Test
-#        run: cd build && ctest -VV
-#
-#      - name: Install
-#        run: pushd build && make install && popd
+      - name: Test
+        run: cd build && ctest -VV
+
+      - name: Install
+        run: pushd build && make install && popd
 
       # Enable tmate debugging of manually-triggered workflows if the input option was provided
 #      - name: Setup tmate session
