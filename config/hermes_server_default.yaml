@@ -113,6 +113,12 @@ buffer_organizer:
   # The number of threads used in the background organization of internal Hermes buffers.
   num_threads: 1
 
+  # Interval (seconds) where blobs are checked for flushing
+  flush_period: 1
+
+  # Interval (seconds) where blobs are checked for re-organization
+  blob_reorg_period: 1
+
   # Desired RPC port number for buffer organizer.
   port: 8081
 

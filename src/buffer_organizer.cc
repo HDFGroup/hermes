@@ -22,8 +22,25 @@ namespace hermes {
  * BORG I/O thread manager
  * ===================================*/
 
+/** Spawn a thread for re-organizing blobs */
+void BorgIoThreadManager::SpawnBlobMonitor() {
+  auto flush_scheduler = [](void *args) {
+    HILOG(kDebug, "Blob re-organization thread has started")
+    (void) args;
+    auto borg = &HERMES->borg_;
+    while (HERMES_THREAD_MANAGER->Alive()) {
+      borg->LocalAnalyzeBlobs();
+      // TODO(llogan): make configurable
+      tl::thread::self().sleep(*HERMES->rpc_.server_engine_, 1000);
+    }
+    HERMES_BORG_IO_THREAD_MANAGER->Join();
+    HILOG(kDebug, "Blob re-organization thread has stopped")
+  };
+  HERMES_THREAD_MANAGER->Spawn(flush_scheduler);
+}
+
 /** Spawn the enqueuing thread */
-void BorgIoThreadManager::SpawnFlushMonitor(int num_threads) {
+void BorgIoThreadManager::SpawnFlushMonitor() {
   auto flush_scheduler = [](void *args) {
     HILOG(kDebug, "Flushing scheduler thread has started")
     (void) args;
@@ -112,7 +129,8 @@ void BufferOrganizer::shm_init(hipc::ShmArchive<BufferOrganizerShm> &header,
   int num_threads = HERMES->server_config_.borg_.num_threads_;
   HSHM_MAKE_AR((*header).queues_, alloc, num_threads)
   HERMES_BORG_IO_THREAD_MANAGER->queues_ = queues_;
-  HERMES_BORG_IO_THREAD_MANAGER->SpawnFlushMonitor(num_threads);
+  HERMES_BORG_IO_THREAD_MANAGER->SpawnBlobMonitor();
+  HERMES_BORG_IO_THREAD_MANAGER->SpawnFlushMonitor();
   HERMES_BORG_IO_THREAD_MANAGER->SpawnFlushWorkers(num_threads);
 }
 
@@ -333,6 +351,16 @@ void BufferOrganizer::GlobalOrganizeBlob(const std::string &bucket_name,
 /**====================================
  * BORG Flushing methods
  * ===================================*/
+
+/** Find blobs which should be re-organized */
+void BufferOrganizer::LocalAnalyzeBlobs() {
+  auto mdm = &HERMES->mdm_;
+  ScopedRwReadLock blob_map_lock(mdm->header_->lock_[kBlobMapLock],
+                                 kBORG_LocalEnqueueFlushes);
+  for (hipc::pair<BlobId, BlobInfo>& blob_p : *mdm->blob_map_) {
+    // TODO
+  }
+}
 
 /** Flush all blobs registered in this daemon */
 void BufferOrganizer::LocalEnqueueFlushes() {
