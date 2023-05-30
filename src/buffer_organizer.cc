@@ -30,8 +30,8 @@ void BorgIoThreadManager::SpawnBlobMonitor() {
     auto borg = &HERMES->borg_;
     while (HERMES_THREAD_MANAGER->Alive()) {
       borg->LocalAnalyzeBlobs();
-      // TODO(llogan): make configurable
-      tl::thread::self().sleep(*HERMES->rpc_.server_engine_, 1000);
+      tl::thread::self().sleep(*HERMES->rpc_.server_engine_,
+                               HERMES->server_config_.borg_.blob_reorg_period_);
     }
     HERMES_BORG_IO_THREAD_MANAGER->Join();
     HILOG(kDebug, "Blob re-organization thread has stopped")
@@ -47,8 +47,8 @@ void BorgIoThreadManager::SpawnFlushMonitor() {
     auto borg = &HERMES->borg_;
     while (HERMES_THREAD_MANAGER->Alive()) {
       borg->LocalEnqueueFlushes();
-      // TODO(llogan): make configurable
-      tl::thread::self().sleep(*HERMES->rpc_.server_engine_, 1000);
+      tl::thread::self().sleep(*HERMES->rpc_.server_engine_,
+                               HERMES->server_config_.borg_.flush_period_);
     }
     HERMES_BORG_IO_THREAD_MANAGER->Join();
     HILOG(kDebug, "Flush scheduler thread has stopped")
@@ -357,8 +357,13 @@ void BufferOrganizer::LocalAnalyzeBlobs() {
   auto mdm = &HERMES->mdm_;
   ScopedRwReadLock blob_map_lock(mdm->header_->lock_[kBlobMapLock],
                                  kBORG_LocalEnqueueFlushes);
+  float recency_max = HERMES->server_config_.borg_.recency_max_;
+  float recency_min = HERMES->server_config_.borg_.recency_min_;
+  float freq_max = HERMES->server_config_.borg_.freq_max_;
+  float freq_min = HERMES->server_config_.borg_.freq_min_;
+
   for (hipc::pair<BlobId, BlobInfo>& blob_p : *mdm->blob_map_) {
-    // TODO
+    // TODO(llogan)
   }
 }
 

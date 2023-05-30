@@ -212,10 +212,20 @@ struct DpeInfo {
  * Buffer organizer information defined in server config
  * */
 struct BorgInfo {
-  /** The RPC port number for the buffer organizer. */
-  int port_;
   /** The number of buffer organizer threads. */
   int num_threads_;
+  /** Interval (seconds) where blobs are checked for flushing */
+  size_t flush_period_;
+  /** Interval (seconds) where blobs are checked for re-organization */
+  size_t blob_reorg_period_;
+  /** Time when score is equal to 1 (seconds) */
+  float recency_min_;
+  /** Time when score is equal to 0 (seconds) */
+  float recency_max_;
+  /** Number of accesses for score to be equal to 1 (count) */
+  float freq_max_;
+  /** Number of accesses for score to be equal to 0 (count) */
+  float freq_min_;
 };
 
 /**

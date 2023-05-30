@@ -119,8 +119,17 @@ buffer_organizer:
   # Interval (seconds) where blobs are checked for re-organization
   blob_reorg_period: 1
 
-  # Desired RPC port number for buffer organizer.
-  port: 8081
+  ## What does "recently accessed" mean?
+  # Time when score is equal to 1 (seconds)
+  recency_min: 0
+  # Time when score is equal to 0 (seconds)
+  recency_max: 60
+
+  ## What does "frequently accessed" mean?
+  # Number of accesses for score to be equal to 1 (count)
+  freq_max: 15
+  # Number of accesses for score to be equal to 0 (count)
+  freq_min: 0
 
 ### Define the default data placement policy
 dpe:
