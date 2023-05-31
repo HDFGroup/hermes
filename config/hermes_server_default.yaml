@@ -113,11 +113,11 @@ buffer_organizer:
   # The number of threads used in the background organization of internal Hermes buffers.
   num_threads: 1
 
-  # Interval (seconds) where blobs are checked for flushing
-  flush_period: 1
+  # Interval (ms) where blobs are checked for flushing
+  flush_period: 1024
 
-  # Interval (seconds) where blobs are checked for re-organization
-  blob_reorg_period: 1
+  # Interval (ms) where blobs are checked for re-organization
+  blob_reorg_period: 1024
 
   ## What does "recently accessed" mean?
   # Time when score is equal to 1 (seconds)
