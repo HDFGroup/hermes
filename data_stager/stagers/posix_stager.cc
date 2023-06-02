@@ -29,7 +29,7 @@ void PosixStager::StageIn(std::string path, PlacementPolicy dpe) {
   } else if (stdfs::is_directory(path)) {
     DirectoryStageIn(path, dpe);
   } else {
-    HILOG(kError, "{} is neither directory or file", path);
+    HELOG(kError, "{} is neither directory or file", path);
   }
 }
 
@@ -51,10 +51,10 @@ void PosixStager::StageIn(std::string path, off_t off,
   if (stdfs::is_regular_file(path)) {
     FileStageIn(path, off, size, dpe);
   } else if (stdfs::is_directory(path)) {
-    HILOG(kError, "Posix stage-in with offset is "
+    HELOG(kError, "Posix stage-in with offset is "
                   "not supported for directories")
   } else {
-    HILOG(kError, "{} is neither directory or file", path);
+    HELOG(kError, "{} is neither directory or file", path);
   }
 }
 
@@ -65,6 +65,7 @@ void PosixStager::FileStageIn(std::string path,
   AdapterStat stat;
   bool stat_exists;
   IoStatus io_status;
+  HILOG(kInfo, "Staging in {}", path)
   File f = fs_api->Open(stat, path);
   fs_api->Read(f, stat, buf.data(), off, size,
               io_status, FsIoOptions::WithDpe(dpe));
@@ -94,6 +95,7 @@ void PosixStager::FileStageOut(std::string path) {
 }
 
 void PosixStager::DirectoryStageOut(std::string path) {
+  HILOG(kInfo, "Staging in the directory {}", path)
   for (auto &file_path : stdfs::directory_iterator(path)) {
     FileStageOut(file_path.path());
   }
