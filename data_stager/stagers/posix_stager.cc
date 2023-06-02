@@ -41,6 +41,7 @@ void PosixStager::FileStageIn(std::string path, PlacementPolicy dpe) {
 }
 
 void PosixStager::DirectoryStageIn(std::string path, PlacementPolicy dpe) {
+  HILOG(kInfo, "Staging in the directory {}", path)
   for (auto &file_path : stdfs::directory_iterator(path)) {
     FileStageIn(file_path.path(), dpe);
   }
@@ -83,19 +84,20 @@ void PosixStager::StageOut(std::string path) {
 }
 
 void PosixStager::FileStageOut(std::string path) {
+  HILOG(kInfo, "Staging out the file {}", path)
   auto fs_api = HERMES_POSIX_FS;
   AdapterStat stat;
   bool stat_exists;
   File f = fs_api->Open(stat, path);
   if (!f.status_) {
-    HILOG(kDebug, "Couldn't open file: {}", path)
+    HELOG(kError, "Couldn't open file: {}", path)
     return;
   }
   fs_api->Close(f, stat_exists);
 }
 
 void PosixStager::DirectoryStageOut(std::string path) {
-  HILOG(kInfo, "Staging in the directory {}", path)
+  HILOG(kInfo, "Staging out the directory {}", path)
   for (auto &file_path : stdfs::directory_iterator(path)) {
     FileStageOut(file_path.path());
   }
