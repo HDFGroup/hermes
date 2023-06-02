@@ -24,10 +24,10 @@ namespace stdfs = std::filesystem;
 namespace hermes {
 
 void PosixStager::StageIn(std::string path, PlacementPolicy dpe) {
-  if (stdfs::is_regular_file(path)) {
-    FileStageIn(path, dpe);
-  } else if (stdfs::is_directory(path)) {
+  if (stdfs::is_directory(path)) {
     DirectoryStageIn(path, dpe);
+  } else if (stdfs::is_regular_file(path)) {
+    FileStageIn(path, dpe);
   } else {
     HELOG(kError, "{} is neither directory or file", path);
   }
