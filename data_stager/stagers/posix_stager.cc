@@ -43,7 +43,6 @@ void PosixStager::FileStageIn(std::string path, PlacementPolicy dpe) {
 void PosixStager::DirectoryStageIn(std::string path, PlacementPolicy dpe) {
   HILOG(kInfo, "Staging in the directory {}", path)
   for (auto &file_path : stdfs::directory_iterator(path)) {
-    HILOG(kInfo, "File {}", file_path.path())
     FileStageIn(file_path.path(), dpe);
   }
 }
