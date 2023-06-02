@@ -49,11 +49,11 @@ void PosixStager::DirectoryStageIn(std::string path, PlacementPolicy dpe) {
 
 void PosixStager::StageIn(std::string path, off_t off,
                          size_t size, PlacementPolicy dpe) {
-  if (stdfs::is_regular_file(path)) {
-    FileStageIn(path, off, size, dpe);
-  } else if (stdfs::is_directory(path)) {
+  if (stdfs::is_directory(path)) {
     HELOG(kError, "Posix stage-in with offset is "
                   "not supported for directories")
+  } else if (stdfs::is_regular_file(path)) {
+    FileStageIn(path, off, size, dpe);
   } else {
     HELOG(kError, "{} is neither directory or file", path);
   }
