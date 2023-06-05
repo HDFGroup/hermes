@@ -63,21 +63,16 @@ add_dependencies(hermes
 
 target_link_libraries(hermes
   PUBLIC hermes_shm_data_structures
-  PUBLIC ${GLPK_LIBRARIES}
-  PUBLIC ${CMAKE_HERMES_COMMUNICATION_TYPE_LIB}
   PUBLIC ${CMAKE_HERMES_RPC_TYPE_LIB}
   PUBLIC yaml-cpp
   PUBLIC cereal::cereal
-  PUBLIC MPI::MPI_CXX
-  PUBLIC "$<$<BOOL:${HERMES_INTERCEPT_IO}>:${GOTCHA_MODULE_LIBS}>"
-)
+  PUBLIC MPI::MPI_CXX)
 
 if (HERMES_ENABLE_PROFILING)
   message("profiling is enabled: ${HERMES_ENABLE_PROFILING}")
 endif()
 
 target_compile_definitions(hermes
-  PRIVATE $<$<BOOL:${HERMES_ENABLE_PROFILING}>:HERMES_ENABLE_PROFILING>
   PRIVATE $<$<BOOL:${HERMES_ONLY_RPC}>:HERMES_ONLY_RPC>
   PRIVATE $<$<BOOL:${HERMES_ENABLE_PROFILING}>:HERMES_ENABLE_PROFILING>
 )
@@ -101,14 +96,11 @@ target_link_libraries(finalize_hermes hermes)
 #-----------------------------------------------------------------------------
 # Specify project header files to be installed
 #-----------------------------------------------------------------------------
+file(GLOB_RECURSE HERMES_HEADERS "*.h")
 set(HERMES_HEADERS
-  ${CMAKE_CURRENT_SOURCE_DIR}/api/bucket.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/api/hermes.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/buffer_pool.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/data_placement_engine.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/hermes_types.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/utils.h
-)
+        ${CMAKE_BINARY_DIR}/src/rpc_factory.h
+        ${CMAKE_BINARY_DIR}/src/hermes_version.h
+        ${HERMES_HEADERS})
 
 #-----------------------------------------------------------------------------
 # Add file(s) to CMake Install

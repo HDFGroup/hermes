@@ -12,3 +12,9 @@ include_directories(
 add_subdirectory(example)
 add_subdirectory(prefetcher)
 
+#-----------------------------------------------------------------------------
+# Add file(s) to CMake Install
+#-----------------------------------------------------------------------------
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        DESTINATION ${HERMES_INSTALL_INCLUDE_DIR}
+        FILES_MATCHING PATTERN "*.h")
