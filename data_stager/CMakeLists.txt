@@ -7,7 +7,7 @@ include_directories(
         ${CMAKE_CURRENT_SOURCE_DIR})
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DHERMES_RPC_THALLIUM")
 
-add_library(hermes_data_stager
+add_library(hermes_data_stager SHARED
         ${CMAKE_CURRENT_SOURCE_DIR}/stagers/posix_stager.cc)
 add_dependencies(hermes_data_stager hermes_posix_io_client)
 target_link_libraries(hermes_data_stager hermes_posix_io_client)

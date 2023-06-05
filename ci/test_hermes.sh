@@ -7,6 +7,8 @@ popd build
 
 # Set proper flags for cmake to find Hermes
 INSTALL_PREFIX="${HOME}/hermes_install"
+export LIBRARY_PATH="${INSTALL_PREFIX}/lib:${LIBRARY_PATH}"
+export LD_LIBRARY_PATH="${INSTALL_PREFIX}/lib:${LD_LIBRARY_PATH}"
 export LDFLAGS="-L${INSTALL_PREFIX}/lib:${LDFLAGS}"
 export CFLAGS="-I${INSTALL_PREFIX}/include:${CFLAGS}"
 export CPATH="${INSTALL_PREFIX}/include:${CPATH}"

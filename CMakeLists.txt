@@ -213,8 +213,7 @@ if(BUILD_SHARED_LIBS)
   set(HERMES_BUILD_SHARED_LIBS 1)
   set(HERMES_LIBTYPE SHARED)
 else()
-  set(HERMES_BUILD_SHARED_LIBS 0)
-  set(HERMES_LIBTYPE STATIC)
+  message(FATAL_ERROR "Must build hermes with shared libs")
 endif()
 
 # TODO(chogan): Expose this once we have more than one communication layer

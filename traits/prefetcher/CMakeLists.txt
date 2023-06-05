@@ -1,7 +1,7 @@
 
 
 # Creates an example trait
-add_library(hermes_prefetcher_trait
+add_library(hermes_prefetcher_trait SHARED
         prefetcher_trait.cc)
 add_dependencies(hermes_prefetcher_trait hermes)
 target_link_libraries(hermes_prefetcher_trait

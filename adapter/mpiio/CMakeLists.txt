@@ -8,7 +8,7 @@ include_directories(
         ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Create the MPIIO I/O client
-add_library(hermes_mpiio_io_client mpiio_io_client.cc)
+add_library(hermes_mpiio_io_client SHARED mpiio_io_client.cc)
 add_dependencies(hermes_mpiio_io_client
         hermes hermes_fs_base)
 target_link_libraries(hermes_mpiio_io_client

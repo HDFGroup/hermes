@@ -1,7 +1,7 @@
 
 
 # Creates an example trait
-add_library(hermes_c_wrapper
+add_library(hermes_c_wrapper SHARED
         c_wrapper.cc)
 add_dependencies(hermes_c_wrapper hermes)
 target_link_libraries(hermes_c_wrapper

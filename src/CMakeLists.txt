@@ -41,16 +41,15 @@ set(HERMES_SRCS
   ${CMAKE_CURRENT_SOURCE_DIR}/dpe/minimize_io_time.cc)
 
 #------------------------------------------------------------------------------
-# Libraries
+# Build Hermes Shared Library
 #------------------------------------------------------------------------------
-# HERMES
 set(HERMES_BUILD_INCLUDE_DEPENDENCIES
   ${CMAKE_CURRENT_SOURCE_DIR}
   ${CMAKE_CURRENT_SOURCE_DIR}/api
   ${CMAKE_CURRENT_BINARY_DIR}
 )
 
-add_library(hermes ${HERMES_SRCS})
+add_library(hermes SHARED ${HERMES_SRCS})
 include_directories(${CMAKE_SOURCE_DIR}/io_client)
 target_include_directories(hermes
   PUBLIC "$<BUILD_INTERFACE:${HERMES_BUILD_INCLUDE_DEPENDENCIES}>"
@@ -60,13 +59,12 @@ target_include_directories(hermes
   SYSTEM PUBLIC ${HERMES_EXT_INCLUDE_DEPENDENCIES})
 add_dependencies(hermes
         hermes_shm_data_structures)
-
 target_link_libraries(hermes
-  PUBLIC hermes_shm_data_structures
-  PUBLIC ${CMAKE_HERMES_RPC_TYPE_LIB}
-  PUBLIC yaml-cpp
-  PUBLIC cereal::cereal
-  PUBLIC MPI::MPI_CXX)
+  hermes_shm_data_structures
+  ${CMAKE_HERMES_RPC_TYPE_LIB}
+  yaml-cpp
+  cereal::cereal
+  MPI::MPI_CXX)
 
 if (HERMES_ENABLE_PROFILING)
   message("profiling is enabled: ${HERMES_ENABLE_PROFILING}")
@@ -78,10 +76,11 @@ target_compile_definitions(hermes
 )
 
 hermes_set_lib_options(hermes "hermes" ${HERMES_LIBTYPE})
+set(HERMES_EXPORTED_LIBS hermes hermes_daemon finalize_hermes ${HERMES_EXPORTED_LIBS})
 
-set(HERMES_EXPORTED_LIBS hermes ${HERMES_EXPORTED_LIBS})
-
-# HERMES DAEMON
+#------------------------------------------------------------------------------
+# Build Hermes Daemon
+#------------------------------------------------------------------------------
 find_package(Catch2 REQUIRED)
 add_executable(hermes_daemon api/hermes_daemon.cc)
 add_dependencies(hermes_daemon hermes)
@@ -89,6 +88,10 @@ target_link_libraries(hermes_daemon hermes -ldl -lc MPI::MPI_CXX)
 target_compile_definitions(hermes_daemon
         PRIVATE $<$<BOOL:${HERMES_ENABLE_PROFILING}>:HERMES_ENABLE_PROFILING>)
 
+
+#------------------------------------------------------------------------------
+# Build Hermes Shared Library
+#------------------------------------------------------------------------------
 add_executable(finalize_hermes api/finalize_hermes.cc)
 add_dependencies(finalize_hermes hermes)
 target_link_libraries(finalize_hermes hermes)

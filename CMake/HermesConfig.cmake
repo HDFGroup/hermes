@@ -91,5 +91,6 @@ else()
 
     # Set the Hermes library dependencies
     set(Hermes_LIBRARIES yaml-cpp thallium
-            MPI::MPI_CXX stdc++fs dl cereal::cereal hermes)
+            MPI::MPI_CXX stdc++fs dl cereal::cereal
+            hermes_shm_data_structures hermes)
 endif()
