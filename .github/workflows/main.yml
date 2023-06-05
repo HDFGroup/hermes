@@ -76,11 +76,8 @@ jobs:
         run: ci/build_hermes.sh
 #
 #      - name: Test
-#        run: cd build && ctest -VV -R test_hermes_posix_basic_small
+#        run: bash ci/test_hermes.sh
 #
-      - name: Install
-        run: pushd build && make install && popd
-
       # Enable tmate debugging of manually-triggered workflows if the input option was provided
 #      - name: Setup tmate session
 #        uses: mxschmitt/action-tmate@v3
