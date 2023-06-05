@@ -22,7 +22,6 @@ cmake                                                      \
     -DBUILD_SHARED_LIBS=ON                                 \
     -DHERMES_ENABLE_DOXYGEN=ON                             \
     -DHERMES_ENABLE_COVERAGE=ON                            \
-    -DHERMES_INTERCEPT_IO=OFF                              \
     -DHERMES_BUILD_BENCHMARKS=ON                           \
     -DHERMES_COMMUNICATION_MPI=ON                          \
     -DHERMES_BUILD_BUFFER_POOL_VISUALIZER=ON               \

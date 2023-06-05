@@ -30,13 +30,15 @@ int main(int argc, char **argv) {
   MPI_Init(&argc, &argv);
   HERMES->Create(hermes::HermesType::kClient);
   std::string url = argv[1];
-  size_t off = hshm::ConfigParse::ParseSize(argv[2]);
+  off_t off = (off_t) hshm::ConfigParse::ParseSize(argv[2]);
   size_t size = hshm::ConfigParse::ParseSize(argv[3]);
   PlacementPolicy dpe = PlacementPolicyConv::to_enum(argv[4]);
   auto stager = DataStagerFactory::Get(url);
   if (size == 0) {
+    HILOG(kInfo, "Full stage-in")
     stager->StageIn(url, dpe);
   } else {
+    HILOG(kInfo, "Partial stage-in")
     stager->StageIn(url, off, size, dpe);
   }
   HERMES->Finalize();

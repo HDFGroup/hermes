@@ -6,7 +6,7 @@ include_directories(
         ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Creates the POSIX I/O client
-add_library(hermes_posix_io_client posix_io_client.cc)
+add_library(hermes_posix_io_client SHARED posix_io_client.cc)
 add_dependencies(hermes_posix_io_client
         hermes hermes_fs_base)
 target_link_libraries(hermes_posix_io_client

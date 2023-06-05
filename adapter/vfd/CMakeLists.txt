@@ -33,7 +33,7 @@ set(HDF5_HERMES_VFD_SRCS
   ${CMAKE_CURRENT_SOURCE_DIR}/H5FDhermes.h
         ${CMAKE_CURRENT_SOURCE_DIR}/H5FDhermes.cc)
 
-add_library(hdf5_hermes_vfd ${HDF5_HERMES_VFD_SRCS})
+add_library(hdf5_hermes_vfd SHARED ${HDF5_HERMES_VFD_SRCS})
 target_include_directories(hdf5_hermes_vfd
   SYSTEM PUBLIC ${HDF5_HERMES_VFD_EXT_INCLUDE_DEPENDENCIES}
 )

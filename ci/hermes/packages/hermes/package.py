@@ -33,10 +33,12 @@ class Hermes(CMakePackage):
     def set_include(self, env, path):
         env.append_flags('CFLAGS', '-I{}'.format(path))
         env.append_flags('CXXFLAGS', '-I{}'.format(path))
+        env.append_flags('CPATH', '{}'.format(path))
         env.append_flags('CMAKE_PREFIX_PATH', '-I{}'.format(path))
 
     def set_lib(self, env, path):
         env.prepend_path('LD_LIBRARY_PATH', path)
+        env.append_flags('LIBRARY_PATH', '{}'.format(path))
         env.append_flags('LDFLAGS', '-L{}'.format(path))
 
     def set_flags(self, env):

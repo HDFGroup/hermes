@@ -42,5 +42,6 @@ cmake                                                      \
     -DHERMES_DEBUG_LOCK=OFF                                \
     ..
 make -j8
+make install
 
 popd

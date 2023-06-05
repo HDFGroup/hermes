@@ -7,7 +7,7 @@ include_directories(
         ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Creates the STDIO I/O client
-add_library(hermes_stdio_io_client stdio_io_client.cc)
+add_library(hermes_stdio_io_client SHARED stdio_io_client.cc)
 add_dependencies(hermes_stdio_io_client
         hermes hermes_fs_base)
 target_link_libraries(hermes_stdio_io_client

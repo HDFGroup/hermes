@@ -1,7 +1,7 @@
 
 
 # Creates an example trait
-add_library(hermes_example_trait
+add_library(hermes_example_trait SHARED
         example_trait.cc)
 add_dependencies(hermes_example_trait hermes)
 target_link_libraries(hermes_example_trait

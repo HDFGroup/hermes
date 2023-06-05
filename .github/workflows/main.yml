@@ -76,11 +76,8 @@ jobs:
         run: ci/build_hermes.sh
 #
 #      - name: Test
-#        run: cd build && ctest -VV -R test_hermes_posix_basic_small
+#        run: bash ci/test_hermes.sh
 #
-      - name: Install
-        run: pushd build && make install && popd
-
       # Enable tmate debugging of manually-triggered workflows if the input option was provided
 #      - name: Setup tmate session
 #        uses: mxschmitt/action-tmate@v3
@@ -90,18 +87,10 @@ jobs:
 #        run: pushd ci/cluster && ./multi_node_ci_test.sh
 
 #      - name: Generate coverage file
-#        run: |
-#          COVERAGE_DIR=${GITHUB_WORKSPACE}/coverage
-#          mkdir -p ${COVERAGE_DIR}
-#          pushd ${GITHUB_WORKSPACE}/build
-#          lcov -c -d . -o "${COVERAGE_DIR}/tmp.info"
-#          lcov --remove "${COVERAGE_DIR}/tmp.info"   \
-#                        "/usr/include/*"             \
-#                        "${HOME}/${LOCAL}/*"         \
-#                        "*/stb_ds.h"                 \
-#                        -o ${COVERAGE_DIR}/lcov.info
+#        run: bash ci/coverage.sh
 
 #      - name: Coveralls
 #        uses: coverallsapp/github-action@master
 #        with:
+#          path-to-lcov: coverage/lcov.info
 #          github-token: ${{ secrets.GITHUB_TOKEN }}

@@ -31,3 +31,20 @@ endif()
 if(HERMES_BUILD_ADAPTER_TESTS)
   add_subdirectory(test)
 endif()
+
+#-----------------------------------------------------------------------------
+# Specify project header files to be installed
+#-----------------------------------------------------------------------------
+file(GLOB_RECURSE HERMES_HEADERS "*.h")
+
+#-----------------------------------------------------------------------------
+# Add file(s) to CMake Install
+#-----------------------------------------------------------------------------
+install(
+        FILES
+        ${HERMES_HEADERS}
+        DESTINATION
+        ${HERMES_INSTALL_INCLUDE_DIR}/adapter
+        COMPONENT
+        headers
+)

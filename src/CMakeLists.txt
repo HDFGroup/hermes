@@ -41,16 +41,15 @@ set(HERMES_SRCS
   ${CMAKE_CURRENT_SOURCE_DIR}/dpe/minimize_io_time.cc)
 
 #------------------------------------------------------------------------------
-# Libraries
+# Build Hermes Shared Library
 #------------------------------------------------------------------------------
-# HERMES
 set(HERMES_BUILD_INCLUDE_DEPENDENCIES
   ${CMAKE_CURRENT_SOURCE_DIR}
   ${CMAKE_CURRENT_SOURCE_DIR}/api
   ${CMAKE_CURRENT_BINARY_DIR}
 )
 
-add_library(hermes ${HERMES_SRCS})
+add_library(hermes SHARED ${HERMES_SRCS})
 include_directories(${CMAKE_SOURCE_DIR}/io_client)
 target_include_directories(hermes
   PUBLIC "$<BUILD_INTERFACE:${HERMES_BUILD_INCLUDE_DEPENDENCIES}>"
@@ -60,33 +59,28 @@ target_include_directories(hermes
   SYSTEM PUBLIC ${HERMES_EXT_INCLUDE_DEPENDENCIES})
 add_dependencies(hermes
         hermes_shm_data_structures)
-
 target_link_libraries(hermes
-  PUBLIC hermes_shm_data_structures
-  PUBLIC ${GLPK_LIBRARIES}
-  PUBLIC ${CMAKE_HERMES_COMMUNICATION_TYPE_LIB}
-  PUBLIC ${CMAKE_HERMES_RPC_TYPE_LIB}
-  PUBLIC yaml-cpp
-  PUBLIC cereal::cereal
-  PUBLIC MPI::MPI_CXX
-  PUBLIC "$<$<BOOL:${HERMES_INTERCEPT_IO}>:${GOTCHA_MODULE_LIBS}>"
-)
+  hermes_shm_data_structures
+  ${CMAKE_HERMES_RPC_TYPE_LIB}
+  yaml-cpp
+  cereal::cereal
+  MPI::MPI_CXX)
 
 if (HERMES_ENABLE_PROFILING)
   message("profiling is enabled: ${HERMES_ENABLE_PROFILING}")
 endif()
 
 target_compile_definitions(hermes
-  PRIVATE $<$<BOOL:${HERMES_ENABLE_PROFILING}>:HERMES_ENABLE_PROFILING>
   PRIVATE $<$<BOOL:${HERMES_ONLY_RPC}>:HERMES_ONLY_RPC>
   PRIVATE $<$<BOOL:${HERMES_ENABLE_PROFILING}>:HERMES_ENABLE_PROFILING>
 )
 
 hermes_set_lib_options(hermes "hermes" ${HERMES_LIBTYPE})
+set(HERMES_EXPORTED_LIBS hermes hermes_daemon finalize_hermes ${HERMES_EXPORTED_LIBS})
 
-set(HERMES_EXPORTED_LIBS hermes ${HERMES_EXPORTED_LIBS})
-
-# HERMES DAEMON
+#------------------------------------------------------------------------------
+# Build Hermes Daemon
+#------------------------------------------------------------------------------
 find_package(Catch2 REQUIRED)
 add_executable(hermes_daemon api/hermes_daemon.cc)
 add_dependencies(hermes_daemon hermes)
@@ -94,6 +88,10 @@ target_link_libraries(hermes_daemon hermes -ldl -lc MPI::MPI_CXX)
 target_compile_definitions(hermes_daemon
         PRIVATE $<$<BOOL:${HERMES_ENABLE_PROFILING}>:HERMES_ENABLE_PROFILING>)
 
+
+#------------------------------------------------------------------------------
+# Build Hermes Shared Library
+#------------------------------------------------------------------------------
 add_executable(finalize_hermes api/finalize_hermes.cc)
 add_dependencies(finalize_hermes hermes)
 target_link_libraries(finalize_hermes hermes)
@@ -101,14 +99,11 @@ target_link_libraries(finalize_hermes hermes)
 #-----------------------------------------------------------------------------
 # Specify project header files to be installed
 #-----------------------------------------------------------------------------
+file(GLOB_RECURSE HERMES_HEADERS "*.h")
 set(HERMES_HEADERS
-  ${CMAKE_CURRENT_SOURCE_DIR}/api/bucket.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/api/hermes.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/buffer_pool.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/data_placement_engine.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/hermes_types.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/utils.h
-)
+        ${CMAKE_BINARY_DIR}/src/rpc_factory.h
+        ${CMAKE_BINARY_DIR}/src/hermes_version.h
+        ${HERMES_HEADERS})
 
 #-----------------------------------------------------------------------------
 # Add file(s) to CMake Install

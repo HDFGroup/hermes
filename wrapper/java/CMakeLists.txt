@@ -12,7 +12,7 @@ message("Found JNI at ${JNI_INCLUDE_DIRS} and ${JNI_LIBRARIES}")
 #-----------------------------------------------------------------------------
 function(java_wrapper name path)
     include_directories(${JNI_INCLUDE_DIRS})
-    add_library(${name} ${path})
+    add_library(${name} SHARED ${path})
     add_dependencies(${name} hermes)
     target_link_libraries(${name}
             hermes
