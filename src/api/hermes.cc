@@ -104,7 +104,7 @@ void Hermes::LoadClientConfig(std::string config_path) {
   if (config_path.empty()) {
     config_path = GetEnvSafe(kHermesClientConf);
   }
-  // HILOG(kInfo, "Loading client configuration: {}", config_path)
+  HILOG(kDebug, "Loading client configuration: {}", config_path)
   client_config_.LoadFromFile(config_path);
 }
 

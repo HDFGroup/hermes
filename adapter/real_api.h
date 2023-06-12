@@ -34,8 +34,6 @@ struct RealApiIter {
 };
 
 struct RealApi {
-  void *real_lib_next_;     /**< TODO(llogan): remove */
-  void *real_lib_default_;  /**< TODO(llogan): remove */
   void *real_lib_;
   bool is_intercepted_;
 
@@ -45,25 +43,27 @@ struct RealApi {
     auto exists = dlsym(lib, iter->symbol_name_);
     void *is_intercepted =
         (void*)dlsym(lib, iter->is_intercepted_);
-    if (!is_intercepted && exists) {
+    if (!is_intercepted && exists && !iter->lib_path_) {
       iter->lib_path_ = info->dlpi_name;
     }
     return 0;
   }
 
   RealApi(const char *symbol_name,
-          const char *is_intercepted)
-      : real_lib_next_(nullptr), real_lib_default_(nullptr) {
+          const char *is_intercepted) {
     RealApiIter iter(symbol_name, is_intercepted);
     dl_iterate_phdr(callback, (void*)&iter);
     if (iter.lib_path_) {
       real_lib_ = dlopen(iter.lib_path_, RTLD_GLOBAL | RTLD_NOW);
-      real_lib_next_ = real_lib_;
-      real_lib_default_ = real_lib_;
     }
     void *is_intercepted_ptr = (void*)dlsym(RTLD_DEFAULT,
                                              is_intercepted);
     is_intercepted_ = is_intercepted_ptr != nullptr;
+    /* if (is_intercepted_) {
+      real_lib_ = RTLD_NEXT;
+    } else {
+      real_lib_ = RTLD_DEFAULT;
+    }*/
   }
 };
 
