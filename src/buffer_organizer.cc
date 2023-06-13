@@ -528,7 +528,11 @@ void BufferOrganizer::GlobalWaitForFullFlush() {
   for (int i = 0; i < (int)rpc_->hosts_.size(); ++i) {
     int node_id = i + 1;
     HILOG(kInfo, "Wait for flush on node {}", node_id)
-    rpc_->Call<bool>(node_id, "RpcWaitForFullFlush");
+    if (node_id == rpc_->node_id_) {
+      LocalWaitForFullFlush();
+    } else {
+      rpc_->Call<bool>(node_id, "RpcWaitForFullFlush");
+    }
   }
 }
 
